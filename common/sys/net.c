@@ -186,18 +186,18 @@ int toconnect(const char *addr)
  */
 int toread(int fd, void *buf, int len)
 {
-    int     l;
-    for( l = 0 ; len > 0 ; )
-	if( (l = read(fd, buf, len)) <= 0 ) {
-	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
+    int     s;
+    for( s = 0 ; len > 0 ; )
+	if( (s = read(fd, buf, len)) <= 0 ) {
+	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
-	    return -1; // l;
+	    return -1; // s;
 	}else{
-	    buf += l;
-	    len -= l;
+	    buf += s;
+	    len -= s;
 	}
-    return l;
+    return s;
 }
 
 /**
@@ -205,18 +205,18 @@ int toread(int fd, void *buf, int len)
  */
 int towrite(int fd, const void *buf, int len)
 {
-    int     l;
-    for( l = 0 ; len > 0 ; )
-	if( (l = write(fd, buf, len)) <= 0){
-	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
+    int     s;
+    for( s = 0 ; len > 0 ; )
+	if( (s = write(fd, buf, len)) <= 0){
+	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
-	    return -1; // l;
+	    return -1; // s;
 	}else{
-	    buf += l;
-	    len -= l;
+	    buf += s;
+	    len -= s;
 	}
-    return l;
+    return s;
 }
 
 /**
