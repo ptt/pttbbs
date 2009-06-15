@@ -1967,8 +1967,19 @@ choose_board(int newflag)
 		    fav_type_t * ptr = getboard(bid);
 		    if (ptr != NULL) { // already in fav list
 			// move curser to item
-			for (num = 0; num<nbrdsize && bid != nbrd[num].bid; ++num);
-			assert(bid==nbrd[num].bid);
+			int i;
+			for (i = 0; i < nbrdsize; ++i) {
+			    if (bid == nbrd[i].bid) {
+				num = i;
+				break;
+			    }
+			}
+			if (i == nbrdsize) {
+			    assert(keyword[0]);
+			    vmsg("已經在我的最愛裡了, 取消關鍵字就能看到囉");
+			    keyword[0] = '\0';
+			    brdnum = -1;
+			}
 		    } else {
 			ptr = fav_add_board(bid);
 
