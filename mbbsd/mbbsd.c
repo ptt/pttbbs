@@ -36,7 +36,6 @@ static void getremotename(const struct in_addr from, char *rhost);
 #define XAUTH_GETREMOTENAME(x) x
 #endif
 
-static unsigned char enter_uflag;
 static int listen_port;
 
 #define MAX_BINDPORT 20
@@ -245,11 +244,10 @@ u_exit(const char *mode)
 	    do_aloha("<<下站通知>> -- 我走囉！");
     }
 
-    if ((cuser.uflag != enter_uflag) || dirty || diff) {
-	if (!diff && cuser.numlogins)
-	    cuser.numlogins = --cuser.numlogins;
-	/* Leeym 上站停留時間限制式 */
-    }
+    // 小於 60 秒不計 login 次數
+    if (time(0) - login_start_time < 60 && cuser.numlogins > 0)
+	--cuser.numlogins;
+
     passwd_sync_update(usernum, &cuser);
     purge_utmp(currutmp);
     log_usies(mode, NULL);
@@ -1075,9 +1073,6 @@ setup_utmp(int mode)
 	cuser.withme = 0; /* unset all if contradict */
     uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
 
-    if (enter_uflag & CLOAK_FLAG)
-	uinfo.invisible = YEA;
-
     getnewutmpent(&uinfo);
 
     //////////////////////////////////////////////////////////////////
@@ -1139,7 +1134,7 @@ inline static void welcome_msg(void)
 	    ANSI_CLRTOEND "\n"
 	    ANSI_CLRTOEND "\n"
 	    ,
-	    ++cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
+	    cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
     pressanykey();
 }
 
@@ -1237,7 +1232,8 @@ user_login(void)
 
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
-    enter_uflag = cuser.uflag;
+    if (cuser.userlevel)
+	++cuser.numlogins;
 
     /* log usies */
     log_usies("ENTER", fromhost);
