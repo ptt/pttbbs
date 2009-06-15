@@ -9,11 +9,12 @@
 // All rights reserved
 
 // TODO:
-// 1. cache guest's usernum and check if too many guests online
+// 1. [done] cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
 // 3. [done] regular check text screen files instead of HUP?
 // 4. [done] re-start mbbsd if pipe broken?
 // 5. [drop] clean mbbsd pid log files?
+// 6. handle non-block i/o
 
 #include <stdio.h>
 #include <ctype.h>
@@ -39,8 +40,9 @@
 #define LOGIND_MAX_FDS      (100000)
 #endif
 
+// some systems has hard limit of this to 128.
 #ifndef LOGIND_SOCKET_QLEN
-#define LOGIND_SOCKET_QLEN  (10)
+#define LOGIND_SOCKET_QLEN  (100)
 #endif
 
 #ifndef AUTHFAIL_SLEEP_SEC
@@ -539,23 +541,26 @@ _set_bind_opt(int sock)
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
     _set_connection_opt(sock);
 
+    // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
+    // fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK);
+
     return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////
 // Draw Screen
 
-#ifndef SITE_BANNER
-#define SITE_BANNER ANSI_RESET "\r\n【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
+#ifndef  INSCREEN
+# define INSCREEN ANSI_RESET "\r\n【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
 #endif
 
-#ifdef STR_GUEST
+#ifdef   STR_GUEST
 # define MSG_GUEST "，或以[" STR_GUEST "]參觀"
 #else
 # define MSG_GUEST ""
 #endif
 
-#ifdef STR_REGNEW
+#ifdef   STR_REGNEW
 # define MSG_REGNEW "，或以[new]註冊"
 #else
 # define MSG_REGNEW
@@ -615,7 +620,6 @@ load_text_screen_file(const char *filename, char **pptr)
     }
     wsz = sz*2 +1; // *2 for cr+lf, extra one byte for safe strchr().
 
-    // XXX TODO use realloc?
     assert(pptr);
     s = *pptr;
     s = realloc(s, wsz);  
@@ -858,8 +862,11 @@ regular_check()
     last_check_time = now;
     g_overload = 0;
     g_banned   = 0;
+
+#ifndef LOGIND_DONT_CHECK_FREE_USERID
     g_guest_too_many = 0;
     g_guest_usernum  = 0;
+#endif
 
     if (cpuload(NULL) > MAX_CPULOAD)
     {
@@ -919,6 +926,11 @@ auth_is_free_userid(const char *userid)
 static int
 auth_check_free_userid_allowance(const char *userid)
 {
+#ifdef LOGIND_DONT_CHECK_FREE_USERID
+    // XXX experimental to disable free id checking
+    return 1;
+#endif
+
 #ifdef STR_REGNEW
     // accept all 'new' command.
     if (strcasecmp(userid, STR_REGNEW) == 0)
@@ -932,6 +944,7 @@ auth_check_free_userid_allowance(const char *userid)
         g_guest_too_many = 0;
 #  else
         // if already too many guest, fast reject until next regular check.
+        // XXX TODO also cache if guest is not too many?
         if (g_guest_too_many)
             return 0;
 
@@ -953,6 +966,7 @@ auth_check_free_userid_allowance(const char *userid)
         // update the 'too many' status.
         g_guest_too_many = 
             (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
+
         if (g_verbose) fprintf(stderr, LOG_PREFIX " guests are %s\r\n",
                 g_guest_too_many ? "TOO MANY" : "ok.");
 
@@ -1338,79 +1352,74 @@ listen_cb(int lfd, short event, void *arg)
     login_conn_ctx *conn;
     bind_event *pbindev = (bind_event*) arg;
 
-    if ((fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) < 0 )
-        return;
+    while ( (fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) >= 0 ) {
 
-    if ((conn = malloc(sizeof(login_conn_ctx))) == NULL) {
-        close(fd);
-        return;
-    }
-    memset(conn, 0, sizeof(login_conn_ctx));
+        // fast draw banner (don't use buffered i/o - this banner is not really important.)
+#ifdef INSCREEN
+        write(fd, INSCREEN, sizeof(INSCREEN));
+#endif
 
-    if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
-        free(conn);
-        close(fd);
-        return;
-    }
+        if ((conn = malloc(sizeof(login_conn_ctx))) == NULL) {
+            close(fd);
+            return;
+        }
+        memset(conn, 0, sizeof(login_conn_ctx));
 
-    g_opened_fd ++;
-    reload_data();
-    login_ctx_init(&conn->ctx);
+        if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
+            free(conn);
+            close(fd);
+            return;
+        }
 
-    // initialize telnet protocol
-    telnet_ctx_init(&conn->telnet, &telnet_callback, fd);
-    telnet_ctx_set_write_arg (&conn->telnet, (void*) conn); // use conn for buffered events
-    telnet_ctx_set_resize_arg(&conn->telnet, (void*) &conn->ctx);
+        g_opened_fd ++;
+        reload_data();
+        login_ctx_init(&conn->ctx);
+
+        // initialize telnet protocol
+        telnet_ctx_init(&conn->telnet, &telnet_callback, fd);
+        telnet_ctx_set_write_arg (&conn->telnet, (void*) conn); // use conn for buffered events
+        telnet_ctx_set_resize_arg(&conn->telnet, (void*) &conn->ctx);
 #ifdef DETECT_CLIENT
-    telnet_ctx_set_cc_arg(&conn->telnet, (void*) &conn->ctx);
+        telnet_ctx_set_cc_arg(&conn->telnet, (void*) &conn->ctx);
 #endif
 #ifdef LOGIND_OPENFD_IN_AYT
-    telnet_ctx_set_ayt_arg(&conn->telnet, (void*) conn); // use conn for buffered events
+        telnet_ctx_set_ayt_arg(&conn->telnet, (void*) conn); // use conn for buffered events
 #endif
-    // better send after all parameters were set
-    telnet_ctx_send_init_cmds(&conn->telnet);
+        // better send after all parameters were set
+        telnet_ctx_send_init_cmds(&conn->telnet);
 
-    // get remote ip & local port info
-    inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
-    snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
+        // get remote ip & local port info
+        inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
+        snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
-    if (g_verbose) fprintf(stderr, LOG_PREFIX
-            "new connection: %s:%s (opened fd: %d)\r\n", 
-            conn->ctx.hostip, conn->ctx.port, g_opened_fd);
+        if (g_verbose) fprintf(stderr, LOG_PREFIX
+                "new connection: %s:%s (opened fd: %d)\r\n", 
+                conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
-    // set events
-    event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
-    event_add(&conn->ev, &idle_tv);
+        // set events
+        event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
+        event_add(&conn->ev, &idle_tv);
 
-    // check ban here?  XXX can we directly use xsin.sin_addr instead of ASCII form?
-    if (g_banned || check_banip(conn->ctx.hostip) )
-    {
-        // draw ban screen, if available. (for banip, this is empty).
-        draw_text_screen (conn, ban_screen);
-        login_conn_remove(conn, fd, BAN_SLEEP_SEC);
-        return;
-    }
+        // check ban here?  XXX can we directly use xsin.sin_addr instead of ASCII form?
+        if (g_banned || check_banip(conn->ctx.hostip) )
+        {
+            // draw ban screen, if available. (for banip, this is empty).
+            draw_text_screen (conn, ban_screen);
+            login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+            return;
+        }
 
-    // draw banner
-    // XXX for systems that needs high performance, you must reduce the
-    // string in banner.
-    _buff_write(conn, SITE_BANNER, sizeof(SITE_BANNER));
+        // XXX check system load here.
+        if (g_overload)
+        {
+            draw_overload    (conn, g_overload);
+            login_conn_remove(conn, fd, OVERLOAD_SLEEP_SEC);
+            return;
 
-    // XXX check system load here.
-    if (g_overload)
-    {
-        // let's draw the big INSCREEN if defined.
-#ifdef INSCREEN
-        _mt_clear  (conn);
-        _buff_write(conn, INSCREEN, sizeof(INSCREEN));
-#endif
-        draw_overload    (conn, g_overload);
-        login_conn_remove(conn, fd, OVERLOAD_SLEEP_SEC);
-        return;
-
-    } else {
-        draw_text_screen (conn, welcome_screen);
-        draw_userid_prompt(conn, NULL, 0);
+        } else {
+            draw_text_screen  (conn, welcome_screen);
+            draw_userid_prompt(conn, NULL, 0);
+        }
     }
 }
 
