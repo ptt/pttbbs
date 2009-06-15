@@ -202,9 +202,6 @@ setflags(int mask, int value)
 void
 u_exit(const char *mode)
 {
-    int diff = (time(0) - login_start_time) / 60;
-    int	dirty = currmode & MODE_DIRTY;
-
     currmode = 0;
 
     /* close fd 0 & 1 to terminate network */
