@@ -24,17 +24,23 @@
 #include <signal.h>
 #include <event.h>
 
+// XXX should we need to keep this definition?
 #define _BBS_UTIL_C_
+
 #include "bbs.h"
 #include "banip.h"
 #include "logind.h"
 
-#ifndef OPTIMIZE_SOCKET
-#define OPTIMIZE_SOCKET(sock) do {} while(0)
+#ifndef LOGIND_REGULAR_CHECK_DURATION
+#define LOGIND_REGULAR_CHECK_DURATION   (15)
+#endif 
+
+#ifndef LOGIND_MAX_FDS
+#define LOGIND_MAX_FDS      (100000)
 #endif
 
-#ifndef SOCKET_QLEN
-#define SOCKET_QLEN (10)
+#ifndef LOGIND_SOCKET_QLEN
+#define LOGIND_SOCKET_QLEN  (10)
 #endif
 
 #ifndef AUTHFAIL_SLEEP_SEC
@@ -53,25 +59,26 @@
 #define IDLE_TIMEOUT_SEC    (20*60)
 #endif
 
+#ifndef MAX_TEXT_SCREEN_LINES
 #define MAX_TEXT_SCREEN_LINES   (24)
+#endif
 
-#ifndef MAX_FDS
-#define MAX_FDS             (100000)
+#ifndef OPTIMIZE_SOCKET
+#define OPTIMIZE_SOCKET(sock) do {} while(0)
 #endif
 
 // to prevent flood trying services...
-#ifndef MAX_RETRY_SERVICE
-#define MAX_RETRY_SERVICE   (100)
+#ifndef LOGIND_MAX_RETRY_SERVICE
+#define LOGIND_MAX_RETRY_SERVICE   (15)
 #endif
 
+// local definiions
 #define MY_SVC_NAME  "logind"
 #define LOG_PREFIX  "[logind] "
 
 ///////////////////////////////////////////////////////////////////////
 // global variables
 int g_tunnel;           // tunnel for service daemon
-int g_reload_data = 1;  // request to reload data
-time4_t g_welcome_mtime;
 
 // server status
 int g_overload = 0;
@@ -82,6 +89,12 @@ int g_opened_fd= 0;
 // retry service
 char g_retry_cmd[PATHLEN];
 int  g_retry_times;
+
+// cache data
+int g_reload_data = 1;  // request to reload data
+time4_t g_welcome_mtime;
+int g_guest_usernum  = 0;  // numeric uid of guest account
+int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 
 ///////////////////////////////////////////////////////////////////////
 // login context, constants and states
@@ -100,7 +113,8 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
-    AUTH_RESULT_STOP   = -2,
+    AUTH_RESULT_STOP   = -3,
+    AUTH_RESULT_FREEID_TOOMANY = -2,
     AUTH_RESULT_FREEID = -1,
     AUTH_RESULT_FAIL   = 0,
     AUTH_RESULT_RETRY  = AUTH_RESULT_FAIL,
@@ -531,6 +545,10 @@ _set_bind_opt(int sock)
 ///////////////////////////////////////////////////////////////////////
 // Draw Screen
 
+#ifndef SITE_BANNER
+#define SITE_BANNER ANSI_RESET "\r\n【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
+#endif
+
 #ifdef STR_GUEST
 # define MSG_GUEST "，或以[" STR_GUEST "]參觀"
 #else
@@ -565,6 +583,14 @@ _set_bind_opt(int sock)
 #define OVERLOAD_CPU_YX     BOTTOM_YX
 #define OVERLOAD_USER_MSG   ANSI_RESET " 由於人數過多，請您稍後再來... "
 #define OVERLOAD_USER_YX    BOTTOM_YX
+
+#define REJECT_FREE_UID_MSG ANSI_RESET " 抱歉，此帳號或服務已達上限。 "
+#define REJECT_FREE_UID_YX  BOTTOM_YX
+
+#ifdef  STR_GUEST
+#define TOO_MANY_GUEST_MSG  ANSI_RESET " 抱歉，目前已有太多 " STR_GUEST " 在站上。 "
+#define TOO_MANY_GUEST_YX   BOTTOM_YX
+#endif
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
 #define FN_GOODBYE          BBSHOME "/etc/goodbye"
@@ -799,10 +825,25 @@ draw_overload(login_conn_ctx *conn, int type)
     }
 }
 
+static void
+draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
+{
+    _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
+#ifdef STR_GUEST
+    if (strcasecmp(freeid, STR_GUEST) == 0)
+    {
+        _mt_move_yx(conn, TOO_MANY_GUEST_YX); _mt_clrtoeol(conn);
+        _buff_write(conn, TOO_MANY_GUEST_MSG, sizeof(TOO_MANY_GUEST_MSG)-1);
+        return;
+    }
+#endif
+    _mt_move_yx(conn, REJECT_FREE_UID_YX); _mt_clrtoeol(conn);
+    _buff_write(conn, REJECT_FREE_UID_MSG, sizeof(REJECT_FREE_UID_MSG)-1);
+
+}
+
 ///////////////////////////////////////////////////////////////////////
 // BBS Logic
-
-#define REGULAR_CHECK_DURATION (5)
 
 static void
 regular_check()
@@ -811,12 +852,14 @@ regular_check()
     static time_t last_check_time = 0;
     time_t now = time(0);
 
-    if ( now - last_check_time < REGULAR_CHECK_DURATION)
+    if ( now - last_check_time < LOGIND_REGULAR_CHECK_DURATION)
         return;
 
     last_check_time = now;
     g_overload = 0;
     g_banned   = 0;
+    g_guest_too_many = 0;
+    g_guest_usernum  = 0;
 
     if (cpuload(NULL) > MAX_CPULOAD)
     {
@@ -873,6 +916,56 @@ auth_is_free_userid(const char *userid)
 
     return NULL;
 }
+static int
+auth_check_free_userid_allowance(const char *userid)
+{
+#ifdef STR_REGNEW
+    // accept all 'new' command.
+    if (strcasecmp(userid, STR_REGNEW) == 0)
+        return 1;
+#endif
+
+#ifdef STR_GUEST
+    if (strcasecmp(userid, STR_GUEST) == 0)
+    {
+#  ifndef MAX_GUEST
+        g_guest_too_many = 0;
+#  else
+        // if already too many guest, fast reject until next regular check.
+        if (g_guest_too_many)
+            return 0;
+
+        // now, load guest account information.
+        if (!g_guest_usernum)
+        {
+            if (g_verbose) fprintf(stderr, LOG_PREFIX " reload guest information\r\n");
+
+            // reload guest information
+            g_guest_usernum = searchuser(STR_GUEST, NULL);
+
+            if (g_guest_usernum < 1 || g_guest_usernum > MAX_USERS)
+                g_guest_usernum = 0;
+
+            // if guest is not created, it's administrator's problem...
+            assert(g_guest_usernum);
+        }
+
+        // update the 'too many' status.
+        g_guest_too_many = 
+            (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
+        if (g_verbose) fprintf(stderr, LOG_PREFIX " guests are %s\r\n",
+                g_guest_too_many ? "TOO MANY" : "ok.");
+
+#  endif // MAX_GUEST
+        return g_guest_too_many ? 0 : 1;
+    }
+#endif // STR_GUEST
+
+    // shall never reach here.
+    assert(0);
+    return 0;
+}
+
 
 // NOTE ctx->passwd will be destroyed (must > PASSLEN+1)
 // NOTE ctx->userid may be changed (must > IDLEN+1)
@@ -917,11 +1010,11 @@ retry_service()
     if (!*g_retry_cmd)
         return;
 
-    if (g_retry_times >= MAX_RETRY_SERVICE)
+    if (g_retry_times >= LOGIND_MAX_RETRY_SERVICE)
     {
         fprintf(stderr, LOG_PREFIX 
                 "retry too many times (>%d), stop and wait manually maintainance.\r\n",
-                MAX_RETRY_SERVICE);
+                LOGIND_MAX_RETRY_SERVICE);
         return;
     }
 
@@ -976,7 +1069,7 @@ static int
 auth_start(int fd, login_conn_ctx *conn)
 {
     login_ctx *ctx = &conn->ctx;
-    int isfree = 1, was_valid_uid = 0;
+    int isfree = 0, was_valid_uid = 0;
     draw_check_passwd(conn);
 
     if (is_validuserid(ctx->userid))
@@ -989,11 +1082,21 @@ auth_start(int fd, login_conn_ctx *conn)
                 logattempt(ctx->userid , '-', time(0), ctx->hostip);
                 break;
 
-            case AUTH_RESULT_OK:
-                isfree = 0;
-                logattempt(ctx->userid , ' ', time(0), ctx->hostip);
-                // share FREEID case, no break here!
             case AUTH_RESULT_FREEID:
+                isfree = 1;
+                // share FREEID case, no break here!
+            case AUTH_RESULT_OK:
+                if (!isfree)
+                {
+                    logattempt(ctx->userid , ' ', time(0), ctx->hostip);
+                }
+                else if (!auth_check_free_userid_allowance(ctx->userid))
+                {
+                    // XXX since the only case of free
+                    draw_reject_free_userid(conn, ctx->userid);
+                    return AUTH_RESULT_STOP;
+                }
+
                 draw_auth_success(conn, isfree);
 
                 if (!start_service(fd, ctx))
@@ -1283,33 +1386,30 @@ listen_cb(int lfd, short event, void *arg)
     if (g_banned || check_banip(conn->ctx.hostip) )
     {
         // draw ban screen, if available. (for banip, this is empty).
-        draw_text_screen(conn, ban_screen);
+        draw_text_screen (conn, ban_screen);
         login_conn_remove(conn, fd, BAN_SLEEP_SEC);
         return;
     }
 
     // draw banner
     // XXX for systems that needs high performance, you must reduce the
-    // string in INSCREEN/banner.
-    // if you have your own banner, define as INSCREEN in pttbbs.conf
-    // if you don't want anny benner, define NO_INSCREEN
-#ifndef NO_INSCREEN
-# ifndef   INSCREEN
-#  define  INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
-# endif
-    _mt_clear(conn);
-    _buff_write(conn, INSCREEN, sizeof(INSCREEN));
-#endif
+    // string in banner.
+    _buff_write(conn, SITE_BANNER, sizeof(SITE_BANNER));
 
     // XXX check system load here.
     if (g_overload)
     {
-        draw_overload(conn, g_overload);
+        // let's draw the big INSCREEN if defined.
+#ifdef INSCREEN
+        _mt_clear  (conn);
+        _buff_write(conn, INSCREEN, sizeof(INSCREEN));
+#endif
+        draw_overload    (conn, g_overload);
         login_conn_remove(conn, fd, OVERLOAD_SLEEP_SEC);
         return;
 
     } else {
-        draw_text_screen(conn, welcome_screen);
+        draw_text_screen (conn, welcome_screen);
         draw_userid_prompt(conn, NULL, 0);
     }
 }
@@ -1342,7 +1442,7 @@ bind_port(int port)
     snprintf(buf, sizeof(buf), "*:%d", port);
 
     fprintf(stderr, LOG_PREFIX "binding to port: %d...", port);
-    if ( (sfd = tobindex(buf, SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
+    if ( (sfd = tobindex(buf, LOGIND_SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
     {
         fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
         return -1;
@@ -1510,10 +1610,10 @@ main(int argc, char *argv[])
         }
     }
 
-    struct rlimit r = {.rlim_cur = MAX_FDS, .rlim_max = MAX_FDS};
+    struct rlimit r = {.rlim_cur = LOGIND_MAX_FDS, .rlim_max = LOGIND_MAX_FDS};
     if (setrlimit(RLIMIT_NOFILE, &r) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\r\n", MAX_FDS);
+        fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\r\n", LOGIND_MAX_FDS);
     }
 
     chdir(BBSHOME);
