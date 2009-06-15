@@ -393,8 +393,7 @@ b_config(void)
 		ANSI_COLOR(1)"自動":"不會");
 
 	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET 
-		" - " ANSI_COLOR(1;32) "(新)" ANSI_RESET
-		" 推文時 %s" ANSI_RESET " 開頭\n", 
+		" - 推文時 %s" ANSI_RESET " 開頭\n", 
 		(bp->brdattr & BRD_ALIGNEDCMT) ? 
 		ANSI_COLOR(1)"對齊":"不用對齊");
 
