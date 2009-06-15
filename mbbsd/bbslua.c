@@ -1107,6 +1107,8 @@ bbslua_attach(const char *fpath, size_t *plen)
 static void
 bbslua_detach(char *p, int len)
 {
+    assert(p);
+
 #ifdef BLCONF_MMAP_ATTACH
     munmap(p, len);
 #else // !BLCONF_MMAP_ATTACH
@@ -1695,7 +1697,7 @@ bbslua(const char *fpath)
     strlcpy(bfpath, fpath, sizeof(bfpath));
 
     // load file
-    bbslua_loadLatest(L, &ps, &ps, &pe, &pc, &sz, &lineshift, bfpath, &fpath);
+    bbslua_loadLatest(L, &bs, &ps, &pe, &pc, &sz, &lineshift, bfpath, &fpath);
 
     if (!ps || !pe || ps >= pe)
     {
