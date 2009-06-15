@@ -79,12 +79,14 @@ int more(const char *fpath, int promptend)
 	    }
 	    break;
 
-#if defined(USE_BBSLUA)
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
 	case RET_DOBBSLUA:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
 	    {
 		bbslua(fpath);
+	    } else {
+		vmsg("抱歉，此帳號無權限執行 BBS-Lua 程式。");
 	    }
 	    break;
 #endif
