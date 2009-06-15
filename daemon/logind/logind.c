@@ -87,6 +87,7 @@ int g_overload = 0;
 int g_banned   = 0;
 int g_verbose  = 0;
 int g_opened_fd= 0;
+int g_nonblock = 1; // default on
 
 // retry service
 char g_retry_cmd[PATHLEN];
@@ -513,6 +514,20 @@ telnet_callback = {
 ///////////////////////////////////////////////////////////////////////
 // Socket Option
 
+static void
+_enable_nonblock(int sock)
+{
+    // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
+    fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK);
+}
+
+static void
+_disable_nonblock(int sock)
+{
+    // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
+    fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) & (~O_NONBLOCK) );
+}
+
 static int 
 _set_connection_opt(int sock)
 {
@@ -541,8 +556,8 @@ _set_bind_opt(int sock)
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
     _set_connection_opt(sock);
 
-    // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
-    // fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK);
+    if (g_nonblock)
+        _enable_nonblock(sock);
 
     return 0;
 }
@@ -1066,16 +1081,32 @@ start_service(int fd, login_ctx *ctx)
     // XXX simulate the cache re-construction in mbbsd/login_query.
     resolve_garbage();
 
+    // since mbbsd is running in blocking mode, let's re-configure fd.
+    _disable_nonblock(fd);
+
     // deliver the fd to hosting service
     if (send_remote_fd(g_tunnel, fd) < 0)
+    {
+        if (g_verbose) fprintf(stderr, LOG_PREFIX
+                "failed in send_remote_fd\r\n");
         return ack;
+    }
    
     // deliver the login data to hosting servier
     if (towrite(g_tunnel, &ld, sizeof(ld)) <= 0)
+    {
+        if (g_verbose) fprintf(stderr, LOG_PREFIX
+                "failed in towrite\r\n");
         return ack;
+    }
 
     // wait service to response
-    read(g_tunnel, &ack, sizeof(ack));
+    if (toread(g_tunnel, &ack, sizeof(ack)) <= 0)
+    {
+        if (g_verbose) fprintf(stderr, LOG_PREFIX
+                "failed in toread\r\n");
+        return ack;
+    }
     return ack;
 }
 
@@ -1354,6 +1385,10 @@ listen_cb(int lfd, short event, void *arg)
 
     while ( (fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) >= 0 ) {
 
+        // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
+        // So we have to set blocking mode for client again here.
+        if (g_nonblock) _enable_nonblock(fd);
+
         // fast draw banner (don't use buffered i/o - this banner is not really important.)
 #ifdef INSCREEN
         write(fd, INSCREEN, sizeof(INSCREEN));
@@ -1420,6 +1455,10 @@ listen_cb(int lfd, short event, void *arg)
             draw_text_screen  (conn, welcome_screen);
             draw_userid_prompt(conn, NULL, 0);
         }
+
+        // in blocking mode, we cannot wait accept to return error.
+        if (!g_nonblock)
+            break;
     }
 }
 
@@ -1571,7 +1610,7 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDv")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDvb")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1595,17 +1634,20 @@ main(int argc, char *argv[])
         case 'D':
             as_daemon = 0;
             break;
+        case 'b':
+            g_nonblock = 0;
         case 'v':
             g_verbose++;
             break;
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-vdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-bvdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
             fprintf(stderr, 
                     "\t-v: provide verbose messages\r\n"
                     "\t-d: enter daemon mode\r\n"
                     "\t-D: do not enter daemon mode\r\n"
+                    "\t-b: use blocked socket mode (disable non-blocking)\r\n"
                     "\t-f: read configuration from file (default: %s)\r\n", 
                     BBSHOME "/" FN_CONF_BINDPORTS);
             fprintf(stderr, 

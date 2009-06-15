@@ -1990,6 +1990,9 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 	// optimize connection
 	set_connection_opt(csock);
 
+	// mbbsd is using blocking mode (tunnel daemon may use non-blocking mode)
+	fcntl(csock, F_SETFL, fcntl(csock, F_GETFL) & ~O_NONBLOCK);
+
 	if (option->flag_fork) {
 	    if (fork() == 0)
 		break;
