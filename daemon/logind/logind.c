@@ -319,6 +319,14 @@ static size_t           g_ack_queue_size,
                         g_ack_queue_capacity;
 
 static void
+ackq_gc()
+{
+    // reset queue to zero if already empty.
+    if (g_ack_queue_reuse == g_ack_queue_size)
+        g_ack_queue_reuse =  g_ack_queue_size = 0;
+}
+
+static void
 ackq_add(login_conn_ctx *ctx)
 {
     if (g_ack_queue_reuse)
@@ -331,6 +339,7 @@ ackq_add(login_conn_ctx *ctx)
                 continue;
             g_ack_queue[i] = ctx;
             g_ack_queue_reuse--;
+            ackq_gc();
             return;
         }
         assert(!"corrupted ack queue");
@@ -347,6 +356,7 @@ ackq_add(login_conn_ctx *ctx)
         assert(g_ack_queue);
     }
     g_ack_queue[g_ack_queue_size-1] = ctx;
+    ackq_gc();
 }
 
 static int
@@ -366,12 +376,12 @@ ackq_del(login_conn_ctx *ctx)
             g_ack_queue_size--;
         else
             g_ack_queue_reuse++;
+
+        ackq_gc();
+        return 1;
     }
 
-    // reset queue to zero if already empty.
-    if (g_ack_queue_reuse == g_ack_queue_size)
-        g_ack_queue_reuse =  g_ack_queue_size = 0;
-
+    ackq_gc();
     return 0;
 }
 
@@ -1294,7 +1304,10 @@ endconn_cb(int fd, short event, void *arg)
 
     // remove from ack queue
     if (conn->ctx.state == LOGIN_STATE_WAITACK)
+    {
+        // it should be already inside.
         ackq_del(conn);
+    }
 
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
@@ -1360,7 +1373,10 @@ ack_cb(int tunnel, short event, void *arg)
     if (g_verbose) fprintf(stderr, LOG_PREFIX "ack_cb is invoked: tunnel=%d\r\n", tunnel);
     arg = get_tunnel_ack(tunnel, event);
     if (!arg)
+    {
+        if (g_verbose) fprintf(stderr, LOG_PREFIX "warning: invalid ack.\r\n");
         return;
+    }
 
     // XXX success connection.
     conn = (login_conn_ctx*) arg;
