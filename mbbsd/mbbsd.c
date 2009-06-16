@@ -369,6 +369,7 @@ signal_xcpu_handler(int sig)
     // 不用 (time(0) - login_start_time) 來平均, 避免用好幾天之後突然狂吃 cpu 的狀況.
     if (last_time_exceeded != 0 && time(0) - last_time_exceeded < 86400)
 	give_more_time = false;
+    last_time_exceeded = time(0);
 
     getrlimit(RLIMIT_CPU, &rml);
 
