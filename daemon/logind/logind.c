@@ -330,9 +330,12 @@ ackq_add(login_conn_ctx *ctx)
             if (g_ack_queue[i])
                 continue;
             g_ack_queue[i] = ctx;
+            g_ack_queue_reuse--;
             return;
         }
         assert(!"corrupted ack queue");
+        // may cause leak here, since queue is corrupted.
+        return;
     }
     else if (++g_ack_queue_size > g_ack_queue_capacity)
     {
@@ -350,6 +353,7 @@ static int
 ackq_del(login_conn_ctx *ctx)
 {
     size_t i;
+
     for (i = 0; i < g_ack_queue_size; i++)
     {
         if (g_ack_queue[i] != ctx)
@@ -363,6 +367,11 @@ ackq_del(login_conn_ctx *ctx)
         else
             g_ack_queue_reuse++;
     }
+
+    // reset queue to zero if already empty.
+    if (g_ack_queue_reuse == g_ack_queue_size)
+        g_ack_queue_reuse =  g_ack_queue_size = 0;
+
     return 0;
 }
 
