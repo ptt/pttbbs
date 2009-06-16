@@ -3025,114 +3025,88 @@ static void
 match_paren(void)
 {
     char           *parens = "()[]{}";
-    int             type;
-    int             parenum = 0;
     char           *ptype;
     textline_t     *p;
     int             lino;
-    int             c, i = 0;
+    int             i = 0;
+    bool found = false;
+    char findch;
+    char quotech = '\0';
+    enum MatchState {
+	MATCH_STATE_NORMAL,
+	MATCH_STATE_C_COMMENT,
+	MATCH_STATE_QUOTE
+    };
+    enum MatchState state = MATCH_STATE_NORMAL;
+    int dir;
+    int nested = 0;
 
-    if (!(ptype = strchr(parens, curr_buf->currline->data[curr_buf->currpnt])))
+    char cursorch = curr_buf->currline->data[curr_buf->currpnt];
+    if (!(ptype = strchr(parens, cursorch)))
 	return;
 
-    type = (ptype - parens) / 2;
-    parenum = ((ptype - parens) % 2) ? -1 : 1;
+    dir = (ptype - parens) % 2 == 0 ? 1 : -1;
+    findch = *(ptype + dir);
 
-    /* FIXME CRASH */
-    /* FIXME refactoring */
-    if (parenum > 0) {
-	for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->next, lino++) {
-	    int len = strlen(p->data);
-	    for (i = (lino == curr_buf->currln) ? curr_buf->currpnt + 1 : 0; i < len; i++) {
-		if (p->data[i] == '/' && p->data[++i] == '*') {
-		    ++i;
-		    while (1) {
-			while (i < len &&
-			       !(p->data[i] == '*' && p->data[i + 1] == '/')) {
-			    i++;
-			}
-			if (i >= len && p->next) {
-			    p = p->next;
-			    len = strlen(p->data);
-			    ++lino;
-			    i = 0;
-			} else
-			    break;
-		    }
-		} else if ((c = p->data[i]) == '\'' || c == '"') {
-		    while (1) {
-			while (i < len - 1) {
-			    if (p->data[++i] == '\\' && (size_t)i < len - 2)
-				++i;
-			    else if (p->data[i] == c)
-				goto end_quote;
-			}
-			if ((size_t)i >= len - 1 && p->next) {
-			    p = p->next;
-			    len = strlen(p->data);
-			    ++lino;
-			    i = -1;
-			} else
-			    break;
-		    }
-	    end_quote:
-		    ;
-		} else if ((ptype = strchr(parens, p->data[i])) &&
-			   (ptype - parens) / 2 == type) {
-		    if (!(parenum += ((ptype - parens) % 2) ? -1 : 1))
-			goto p_outscan;
-		}
-	    }
+    p = curr_buf->currline;
+    lino = curr_buf->currln;
+    i = curr_buf->currpnt;
+    while (p && !found) {
+	// next position
+	i += dir;
+	while (p && i < 0) {
+	    p = p->prev;
+	    if (p)
+		i = p->len - 1;
+	    lino--;
+	} 
+	while (p && i >= p->len) {
+	    p = p->next;
+	    i = 0;
+	    lino++;
 	}
-    } else {
-	for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->prev, lino--) {
-	    int len = strlen(p->data);
-	    for (i = ((lino == curr_buf->currln) ?  curr_buf->currpnt - 1 : len - 1); i >= 0; i--) {
-		if (p->data[i] == '/' && p->data[--i] == '*' && i > 0) {
-		    --i;
-		    while (1) {
-			while (i > 0 &&
-				!(p->data[i] == '*' && p->data[i - 1] == '/')) {
-			    i--;
-			}
-			if (i <= 0 && p->prev) {
-			    p = p->prev;
-			    len = strlen(p->data);
-			    --lino;
-			    i = len - 1;
-			} else
-			    break;
-		    }
-		} else if ((c = p->data[i]) == '\'' || c == '"') {
-		    while (1) {
-			while (i > 0)
-			    if (i > 1 && p->data[i - 2] == '\\')
-				i -= 2;
-			    else if ((p->data[--i]) == c)
-				goto begin_quote;
-			if (i <= 0 && p->prev) {
-			    p = p->prev;
-			    len = strlen(p->data);
-			    --lino;
-			    i = len;
-			} else
-			    break;
-		    }
-begin_quote:
-		    ;
-		} else if ((ptype = strchr(parens, p->data[i])) &&
-			(ptype - parens) / 2 == type) {
-		    if (!(parenum += ((ptype - parens) % 2) ? -1 : 1))
-			goto p_outscan;
+	if (!p)
+	    break;
+	assert(0 <= i && i < p->len);
+
+	// match char
+	switch (state) {
+	    case MATCH_STATE_NORMAL:
+		if (nested == 0 && p->data[i] == findch) {
+		    found = true;
+		    break;
 		}
-	    }
+		if (p->data[i] == cursorch)
+		    nested++;
+		else if (p->data[i] == findch)
+		    nested--;
+		if (p->data[i] == '\'' || p->data[i] == '"') {
+		    quotech = p->data[i];
+		    state = MATCH_STATE_QUOTE;
+		} else if ((i+dir) >= 0 && p->data[i] == '/' && p->data[i+dir] == '*') {
+		    state = MATCH_STATE_C_COMMENT;
+		    i += dir;
+		}
+		break;
+	    case MATCH_STATE_C_COMMENT:
+		if ((i+dir) >= 0 && p->data[i] == '*' && p->data[i+dir] == '/') {
+		    state = MATCH_STATE_NORMAL;
+		    i += dir;
+		}
+		break;
+	    case MATCH_STATE_QUOTE:
+		if (p->data[i] == quotech) {
+		    if (i==0 || p->data[i-1] != '\\')
+			state = MATCH_STATE_NORMAL;
+		}
+		break;
 	}
     }
-p_outscan:
-    if (!parenum) {
+    if (found) {
 	int             top = curr_buf->currln - curr_buf->curr_window_line;
 	int             bottom = curr_buf->currln - curr_buf->curr_window_line + b_lines - 1;
 
+	assert(p);
 	curr_buf->currpnt = i;
 	curr_buf->currline = p;
 	curr_buf->curr_window_line += lino - curr_buf->currln;
@@ -3241,7 +3215,6 @@ block_color(void)
 
     p = begin;
     while (1) {
-	// FIXME CRASH p will be NULL here.
 	assert(p);
 	transform_to_color(p->data);
 	if (p == end)
