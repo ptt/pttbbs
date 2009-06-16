@@ -14,7 +14,8 @@
 // 3. [done] regular check text screen files instead of HUP?
 // 4. [done] re-start mbbsd if pipe broken?
 // 5. [drop] clean mbbsd pid log files?
-// 6. handle non-block i/o
+// 6. [done] handle non-block i/o
+// 7. [done] asynchronous tunnel handshake
 
 #include <stdio.h>
 #include <ctype.h>
@@ -53,6 +54,10 @@
 #define OVERLOAD_SLEEP_SEC  (60)
 #endif
 
+#ifndef ACK_TIMEOUT_SEC
+#define ACK_TIMEOUT_SEC     (5*60)
+#endif
+
 #ifndef BAN_SLEEP_SEC
 #define BAN_SLEEP_SEC       (60)
 #endif
@@ -87,7 +92,8 @@ int g_overload = 0;
 int g_banned   = 0;
 int g_verbose  = 0;
 int g_opened_fd= 0;
-int g_nonblock = 1; // default on
+int g_nonblock = 1;
+int g_async_ack= 1;
 
 // retry service
 char g_retry_cmd[PATHLEN];
@@ -1053,16 +1059,25 @@ retry_service()
     system(g_retry_cmd);
 }
 
+static int
+login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd);
+
 static int 
-start_service(int fd, login_ctx *ctx)
+start_service(int fd, login_conn_ctx *conn)
 {
     login_data ld = {0};
     int ack = 0;
+    login_ctx *ctx;
 
     if (!g_tunnel)
         return 0;
 
-    ld.cb = sizeof(ld);
+    assert(conn);
+    ctx = &conn->ctx;
+
+    ld.cb  = sizeof(ld);
+    ld.ack = (void*)conn;
+
     strlcpy(ld.userid, ctx->userid, sizeof(ld.userid));
     strlcpy(ld.hostip, ctx->hostip, sizeof(ld.hostip));
     strlcpy(ld.port,   ctx->port,   sizeof(ld.port));
@@ -1100,14 +1115,14 @@ start_service(int fd, login_ctx *ctx)
         return ack;
     }
 
-    // wait service to response
-    if (toread(g_tunnel, &ack, sizeof(ack)) <= 0)
+    // wait (or async) service to response
+    if (!login_conn_end_ack(conn, ld.ack, fd))
     {
         if (g_verbose) fprintf(stderr, LOG_PREFIX
                 "failed in toread\r\n");
         return ack;
     }
-    return ack;
+    return 1;
 }
 
 static int 
@@ -1144,7 +1159,7 @@ auth_start(int fd, login_conn_ctx *conn)
 
                 draw_auth_success(conn, isfree);
 
-                if (!start_service(fd, ctx))
+                if (!start_service(fd, conn))
                 {
                     // too bad, we can't start service.
                     retry_service();
@@ -1190,7 +1205,7 @@ auth_start(int fd, login_conn_ctx *conn)
 ///////////////////////////////////////////////////////////////////////
 // Event callbacks
 
-static struct event ev_sighup, ev_tunnel;
+static struct event ev_sighup, ev_tunnel, ev_ack;
 
 static void 
 sighup_cb(int signal, short event, void *arg)
@@ -1208,6 +1223,7 @@ endconn_cb(int fd, short event, void *arg)
     if (g_verbose) fprintf(stderr, LOG_PREFIX
             "login_conn_remove: removed connection (%s@%s) #%d...",
             conn->ctx.userid, conn->ctx.hostip, fd);
+
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
     close(fd);
@@ -1240,6 +1256,87 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
                 "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
                 fd, sleep_sec);
     }
+}
+
+static void *
+get_tunnel_ack(int tunnel, int event)
+{
+    void *arg = NULL;
+
+    if (!(event & EV_READ) ||
+        toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
+        !arg)
+    {
+        // sorry... broken, let's shutdown the tunnel.
+        if (g_verbose)
+            fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel (%d) is broken.\r\n", tunnel);
+
+        close(tunnel);
+        return arg;
+    }
+
+    return arg;
+
+}
+
+static void
+ack_cb(int tunnel, short event, void *arg)
+{
+    login_conn_ctx *conn = NULL;
+    assert(sizeof(arg) == sizeof(conn));
+    
+    if (g_verbose) fprintf(stderr, LOG_PREFIX "ack_cb is invoked: tunnel=%d\r\n", tunnel);
+    arg = get_tunnel_ack(tunnel, event);
+    if (!arg)
+        return;
+
+    // XXX success connection.
+    conn = (login_conn_ctx*) arg;
+    login_conn_remove(conn, conn->telnet.fd, 0);
+}
+
+
+static int
+login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
+{
+    // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: enter.\r\n");
+
+    if (g_async_ack)
+    {
+        // simply wait for ack_cb to complete
+        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: async mode.\r\n");
+
+        // set a safe timeout
+        login_conn_remove(conn, fd, ACK_TIMEOUT_SEC);
+
+    } else {
+        // wait service to complete
+        void *rack = NULL;
+
+        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: sync mode.\r\n");
+        if (!g_tunnel)
+            return 0;
+
+        rack = get_tunnel_ack(g_tunnel, EV_READ);
+        if (!rack)
+            return 0;
+
+        if (rack != ack)
+        {
+            // critical error!
+            fprintf(stderr, LOG_PREFIX 
+                    "login_conn_end_ack: failed in ack value (%08lX != %08lX).\r\n",
+                    (unsigned long)rack, (unsigned long)ack);
+
+            // XXX TODO close tunnel?
+            close(g_tunnel);
+            return 0;
+        }
+
+        // safe to close.
+        login_conn_remove(conn, fd, 0);
+    }
+    return 1;
 }
 
 static void 
@@ -1364,8 +1461,10 @@ client_cb(int fd, short event, void *arg)
             case LOGIN_HANDLE_START_AUTH:
                 if ((r = auth_start(fd, conn)) != AUTH_RESULT_RETRY)
                 {
-                    login_conn_remove(conn, fd,
-                            (r == AUTH_RESULT_OK) ? 0 : AUTHFAIL_SLEEP_SEC);
+                    // for AUTH_RESULT_OK, the connection is handled in
+                    // login_conn_end_ack.
+                    if (r != AUTH_RESULT_OK)
+                        login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
                     return;
                 }
                 break;
@@ -1469,12 +1568,21 @@ tunnel_cb(int fd, short event, void *arg)
     if ((cfd = accept(fd, NULL, NULL)) < 0 )
         return;
 
+    // got new tunnel
+    fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
     _set_connection_opt(cfd);
 
-    // got new tunnel
     if (g_tunnel) 
+    {
         close(g_tunnel);
+        event_del(&ev_ack);
+    }
     g_tunnel = cfd;
+    if (g_async_ack)
+    {
+        event_set(&ev_ack, g_tunnel, EV_READ | EV_PERSIST, ack_cb, NULL);
+        event_add(&ev_ack, NULL);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1610,45 +1718,73 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDvb")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDvba")) != -1 )
     {
         switch( ch ){
         case 'f':
             config_file = optarg;
             break;
+
         case 'l':
             log_file = optarg;
             break;
+
         case 'p':
             if (optarg) port = atoi(optarg);
             break;
+
         case 't':
             strlcpy(tunnel_path, optarg, sizeof(tunnel_path));
             break;
+
         case 'r':
             strlcpy(g_retry_cmd, optarg, sizeof(g_retry_cmd));
             break;
+
         case 'd':
             as_daemon = 1;
             break;
+
         case 'D':
             as_daemon = 0;
             break;
+
+        case 'a':
+            g_async_ack = 1;
+            break;
+
+        case 'A':
+            g_async_ack = 0;
+            break;
+
         case 'b':
+            g_nonblock = 1;
+            break;
+
+        case 'B':
             g_nonblock = 0;
+            break;
+
         case 'v':
             g_verbose++;
             break;
+
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-bvdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-aAbBvdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
             fprintf(stderr, 
                     "\t-v: provide verbose messages\r\n"
-                    "\t-d: enter daemon mode\r\n"
-                    "\t-D: do not enter daemon mode\r\n"
-                    "\t-b: use blocked socket mode (disable non-blocking)\r\n"
+                    "\t-d: enter daemon mode%s\r\n"
+                    "\t-D: do not enter daemon mode%s\r\n"
+                    "\t-a: use asynchronous service ack%s\r\n"
+                    "\t-A: do not use async service ack%s\r\n"
+                    "\t-b: use non-blocking socket mode%s\r\n"
+                    "\t-B: use blocking socket mode%s\r\n"
                     "\t-f: read configuration from file (default: %s)\r\n", 
+                    as_daemon   ? " (default)" : "", !as_daemon   ? " (default)" : "",
+                    g_async_ack ? " (default)" : "", !g_async_ack ? " (default)" : "",
+                    g_nonblock  ? " (default)" : "", !g_nonblock  ? " (default)" : "",
                     BBSHOME "/" FN_CONF_BINDPORTS);
             fprintf(stderr, 
                     "\t-l: log meesages into log_file\r\n"
