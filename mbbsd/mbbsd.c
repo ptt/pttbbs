@@ -1930,13 +1930,14 @@ static int
 tunnel_login(char *argv0, struct ProgramOption *option)
 {
     int tunnel = 0, csock = 0;
-    unsigned int pid = (unsigned int)getpid();
+    unsigned int pid;
     struct login_data dat = {0};
     char buf[PATHLEN];
     FILE *fp;
 
     /* setup standalone */
     start_daemon(option);
+    pid = (unsigned int)getpid(); // the pid will be changed after start_daemon.
     signal_restart(SIGCHLD, reapchild);
 
     assert( option->flag_tunnel_path &&
@@ -1959,7 +1960,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     snprintf(buf, sizeof(buf),
 	     "run/mbbsd.%s.%u.pid", "tunnel",pid);
     if ((fp = fopen(buf, "w"))) {
-	fprintf(fp, "%d\n", (int)getpid());
+	fprintf(fp, "%u\n", pid);
 	fclose(fp);
     }
 
