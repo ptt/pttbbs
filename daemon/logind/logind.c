@@ -55,7 +55,7 @@
 #endif
 
 #ifndef ACK_TIMEOUT_SEC
-#define ACK_TIMEOUT_SEC     (5*60)
+#define ACK_TIMEOUT_SEC     (30) // (5*60)
 #endif
 
 #ifndef BAN_SLEEP_SEC
@@ -156,6 +156,7 @@ typedef struct {
 } login_ctx;
 
 typedef struct {
+    unsigned int cb;
     struct bufferevent *bufev;
     struct event ev;
     TelnetCtx    telnet;
@@ -329,6 +330,7 @@ ackq_gc()
 static void
 ackq_add(login_conn_ctx *ctx)
 {
+    assert(ctx->cb == sizeof(login_conn_ctx));
     if (g_ack_queue_reuse)
     {
         // there's some space in the queue, let's use it.
@@ -337,6 +339,7 @@ ackq_add(login_conn_ctx *ctx)
         {
             if (g_ack_queue[i])
                 continue;
+
             g_ack_queue[i] = ctx;
             g_ack_queue_reuse--;
             ackq_gc();
@@ -346,13 +349,18 @@ ackq_add(login_conn_ctx *ctx)
         // may cause leak here, since queue is corrupted.
         return;
     }
-    else if (++g_ack_queue_size > g_ack_queue_capacity)
+
+    if (++g_ack_queue_size > g_ack_queue_capacity)
     {
         g_ack_queue_capacity *= 2;
         if (g_ack_queue_capacity < ACK_QUEUE_DEFAULT_CAPACITY)
             g_ack_queue_capacity = ACK_QUEUE_DEFAULT_CAPACITY;
+
+        fprintf(stderr, LOG_PREFIX "resize ack queue to: %u (%u in use)\r\n",
+                (unsigned int)g_ack_queue_capacity, (unsigned int)g_ack_queue_size);
+
         g_ack_queue = (login_conn_ctx**) realloc (g_ack_queue, 
-                sizeof(login_conn_ctx*) * g_ack_queue_size);
+                sizeof(login_conn_ctx*) * g_ack_queue_capacity);
         assert(g_ack_queue);
     }
     g_ack_queue[g_ack_queue_size-1] = ctx;
@@ -364,6 +372,7 @@ ackq_del(login_conn_ctx *ctx)
 {
     size_t i;
 
+    assert(ctx && ctx->cb == sizeof(login_conn_ctx));
     for (i = 0; i < g_ack_queue_size; i++)
     {
         if (g_ack_queue[i] != ctx)
@@ -381,7 +390,6 @@ ackq_del(login_conn_ctx *ctx)
         return 1;
     }
 
-    ackq_gc();
     return 0;
 }
 
@@ -1188,10 +1196,10 @@ start_service(int fd, login_conn_ctx *conn)
     }
    
     // deliver the login data to hosting servier
-    if (towrite(g_tunnel, &ld, sizeof(ld)) <= 0)
+    if (towrite(g_tunnel, &ld, sizeof(ld)) < sizeof(ld))
     {
         if (g_verbose) fprintf(stderr, LOG_PREFIX
-                "failed in towrite\r\n");
+                "failed in towrite(login_data)\r\n");
         return ack;
     }
 
@@ -1199,7 +1207,7 @@ start_service(int fd, login_conn_ctx *conn)
     if (!login_conn_end_ack(conn, ld.ack, fd))
     {
         if (g_verbose) fprintf(stderr, LOG_PREFIX
-                "failed in toread\r\n");
+                "failed in logind_conn_end_ack\r\n");
         return ack;
     }
     return 1;
@@ -1294,6 +1302,28 @@ sighup_cb(int signal, short event, void *arg)
     g_reload_data = 1;
 }
 
+static void
+stop_g_tunnel()
+{
+    if (!g_tunnel)
+        return;
+
+    close(g_tunnel);
+    if (g_async_ack) event_del(&ev_ack);
+    g_tunnel = 0;
+}
+
+static void
+stop_tunnel(int tunnel_fd)
+{
+    if (!tunnel_fd)
+        return;
+    if (tunnel_fd == g_tunnel)
+        stop_g_tunnel();
+    else
+        close(tunnel_fd);
+}
+
 static void 
 endconn_cb(int fd, short event, void *arg)
 {
@@ -1329,6 +1359,7 @@ endconn_cb_buffer(struct bufferevent * evb, short event, void *arg)
 static void 
 login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
 {
+    assert(conn->cb == sizeof(login_conn_ctx));
     if (!sleep_sec)
     {
         endconn_cb(fd, EV_TIMEOUT, (void*) conn);
@@ -1344,19 +1375,18 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
 }
 
 static void *
-get_tunnel_ack(int tunnel, int event)
+get_tunnel_ack(int tunnel)
 {
     void *arg = NULL;
 
-    if (!(event & EV_READ) ||
-        toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
+    if (toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
         !arg)
     {
         // sorry... broken, let's shutdown the tunnel.
         if (g_verbose)
             fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel (%d) is broken.\r\n", tunnel);
 
-        close(tunnel);
+        stop_tunnel(tunnel);
         return arg;
     }
 
@@ -1368,24 +1398,36 @@ static void
 ack_cb(int tunnel, short event, void *arg)
 {
     login_conn_ctx *conn = NULL;
-    assert(sizeof(arg) == sizeof(conn));
-    
-    if (g_verbose) fprintf(stderr, LOG_PREFIX "ack_cb is invoked: tunnel=%d\r\n", tunnel);
-    arg = get_tunnel_ack(tunnel, event);
-    if (!arg)
+
+    assert(tunnel);
+    if (!(event & EV_READ))
     {
-        if (g_verbose) fprintf(stderr, LOG_PREFIX "warning: invalid ack.\r\n");
+        // not read event (closed? timeout?)
+        if (g_verbose) fprintf(stderr, LOG_PREFIX 
+                "warning: invalid ack event at tunnel %d.\r\n", tunnel);
+        stop_tunnel(tunnel);
+        return;
+    }
+
+    assert(sizeof(arg) == sizeof(conn));
+    conn = (login_conn_ctx*) get_tunnel_ack(tunnel);
+    if (!conn)
+    {
+        if (g_verbose) fprintf(stderr, LOG_PREFIX 
+                "warning: invalid ack at tunnel %d.\r\n", tunnel);
         return;
     }
 
     // XXX success connection.
-    conn = (login_conn_ctx*) arg;
     if (ackq_del(conn))
     {
         // reset the state to prevent processing ackq again
         conn->ctx.state = LOGIN_STATE_AUTH;
         // this event is still in queue.
         login_conn_remove(conn, conn->telnet.fd, 0);
+    } else {
+        if  (g_verbose) fprintf(stderr, LOG_PREFIX 
+                "got invalid ack connection: (%08lX).\r\n", (unsigned long) conn);
     }
 }
 
@@ -1415,7 +1457,7 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
         if (!g_tunnel)
             return 0;
 
-        rack = get_tunnel_ack(g_tunnel, EV_READ);
+        rack = get_tunnel_ack(g_tunnel);
         if (!rack)
             return 0;
 
@@ -1426,8 +1468,7 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
                     "login_conn_end_ack: failed in ack value (%08lX != %08lX).\r\n",
                     (unsigned long)rack, (unsigned long)ack);
 
-            // XXX TODO close tunnel?
-            close(g_tunnel);
+            stop_g_tunnel();
             return 0;
         }
 
@@ -1596,6 +1637,7 @@ listen_cb(int lfd, short event, void *arg)
             return;
         }
         memset(conn, 0, sizeof(login_conn_ctx));
+        conn->cb = sizeof(login_conn_ctx);
 
         if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
             free(conn);
@@ -1625,8 +1667,8 @@ listen_cb(int lfd, short event, void *arg)
         snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
         if (g_verbose) fprintf(stderr, LOG_PREFIX
-                "new connection: %s:%s (opened fd: %d)\r\n", 
-                conn->ctx.hostip, conn->ctx.port, g_opened_fd);
+                "new connection: fd=#%d %s:%s (opened fd: %d)\r\n", 
+                fd, conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
         // set events
         event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
@@ -1670,12 +1712,9 @@ tunnel_cb(int fd, short event, void *arg)
     fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
     _set_connection_opt(cfd);
 
-    if (g_tunnel) 
-    {
-        close(g_tunnel);
-        event_del(&ev_ack);
-    }
+    stop_g_tunnel();
     g_tunnel = cfd;
+
     if (g_async_ack)
     {
         event_set(&ev_ack, g_tunnel, EV_READ | EV_PERSIST, ack_cb, NULL);
@@ -1816,7 +1855,7 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDvba")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvDdBbAa")) != -1 )
     {
         switch( ch ){
         case 'f':
