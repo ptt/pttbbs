@@ -46,7 +46,7 @@ int action_frequently(int uid)
     }
 
     if(abs(flooding[uid].lastlogin-(unsigned short)now)<=3 ||
-	    flooding[uid].minute_count>30 ||
+	    flooding[uid].minute_count>10 ||
 	    flooding[uid].hour_count>60) {
 	count_flooding++;
 	return 2;
@@ -56,7 +56,7 @@ int action_frequently(int uid)
     flooding[uid].hour_count++;
     flooding[uid].lastlogin=now;
 
-    if(flooding[uid].minute_count>5 ||
+    if(flooding[uid].minute_count>3 ||
 	    flooding[uid].hour_count>20) {
 	count_flooding++;
 	return 1;

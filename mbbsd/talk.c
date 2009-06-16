@@ -269,9 +269,9 @@ int sync_outta_server(int sfd)
 	close(sfd);
 	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
 	refresh();
-	sleep(30);
 	log_usies("REJECTLOGIN", NULL);
 	memset(currutmp, 0, sizeof(userinfo_t));
+	sleep(30);
 	exit(0);
     }
 
