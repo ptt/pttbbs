@@ -9,6 +9,7 @@ typedef struct login_data
 {
     // size of current structure
     size_t cb;
+    void   *ack;
 
     // terminal information
     int  t_lines, t_cols;
