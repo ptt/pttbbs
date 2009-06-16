@@ -1029,7 +1029,7 @@ check_register(void)
 	if (buf[0] == '#')
 	{
 	    xun = atoi(buf+1);
-	    if (xun < 0 || xun >= MAX_USERS ||
+	    if (xun <= 0 || xun > MAX_USERS ||
 		passwd_sync_query(xun, &u) < 0 ||
 		!(u.userlevel & (PERM_ACCOUNTS | PERM_ACCTREG)))
 		memset(&u, 0, sizeof(u));
