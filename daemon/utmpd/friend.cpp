@@ -13,8 +13,8 @@
 /* 除了 user 及 utmp 之外, 全部的 ref index 都是雙向的, 確保 insert & delete O(1) */
 /* 當沒有人 refer 時則 resource recycle */
 
-typedef int Uid;
-typedef int Idx;
+typedef int Uid; /* 1 <= x <= MAX_USERS */
+typedef int Idx; /* 0 <= x < USHM_SIZE */
 
 
 struct Relation {
@@ -226,10 +226,20 @@ struct BBSUser {
 	utmplist.append(utmpidx);
 	online++;
 	assert(online==utmplist.n);
-	for(int i=0; i<MAX_FRIEND && likehim[i]; i++)
+	for(int i=0; i<MAX_FRIEND && likehim[i]; i++) {
+	    if (0 >= likehim[i] || likehim[i] > MAX_USERS) {
+		fprintf(stderr, "bad %d's likehim[%d]=%d\n", utmpidx, i, likehim[i]);
+		continue;
+	    }
 	    like.add(me, likehim[i]);
-	for(int i=0; i<MAX_REJECT && hatehim[i]; i++)
+	}
+	for(int i=0; i<MAX_REJECT && hatehim[i]; i++) {
+	    if (0 >= hatehim[i] || likehim[i] > MAX_USERS) {
+		fprintf(stderr, "bad %d's hatehim[%d]=%d\n", utmpidx, i, hatehim[i]);
+		continue;
+	    }
 	    hate.add(me, hatehim[i]);
+	}
     }
 
     void logout(int utmpidx) {
@@ -255,15 +265,15 @@ struct BBSUser {
 };
 
 struct UserList {
-    BBSUser users[MAX_USERS];
+    BBSUser users[MAX_USERS+1]; // [1~MAX_USERS] (0 is unused),
 
     UserList() {
-	for(int i=0; i<MAX_USERS; i++)
+	for(int i=0; i<=MAX_USERS; i++)
 	    users[i].me=i;
     }
     void login(Uid uid, Idx idx, const Uid likehim[MAX_FRIEND], const Uid hatehim[MAX_REJECT]) {
-	assert(uid<MAX_USERS);
-	assert(idx<USHM_SIZE);
+	assert(1 <= uid && uid<=MAX_USERS);
+	assert(0 < idx && idx<USHM_SIZE);
 	/* 由於不會收到 logout event, 因此 logout 只發生在 utmp override */
 	if(utmp.utmp[idx]!=-1) users[utmp.utmp[idx]].logout(idx);
 	users[uid].login(idx, likehim, hatehim);

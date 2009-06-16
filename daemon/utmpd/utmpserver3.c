@@ -32,15 +32,15 @@ int action_frequently(int uid)
 	unsigned short lastlogin; // truncated time_t
 	unsigned char minute_count;
 	unsigned char hour_count;
-    } flooding[MAX_USERS];
+    } flooding[MAX_USERS+1];
 
     if(minute!=flood_base_minute) {
-	for(i=0; i<MAX_USERS; i++)
+	for(i=0; i<=MAX_USERS; i++)
 	    flooding[i].minute_count=0;
 	flood_base_minute=minute;
     }
     if(hour!=flood_base_hour) {
-	for(i=0; i<MAX_USERS; i++)
+	for(i=0; i<=MAX_USERS; i++)
 	    flooding[i].hour_count=0;
 	flood_base_hour=hour;
     }
@@ -242,8 +242,13 @@ void connection_client(int cfd, short event, void *arg)
 		    }
 		    evbuffer_remove(cs->evb, &index, sizeof(index));
 		    evbuffer_remove(cs->evb, &uid, sizeof(uid));
-		    if (index >= USHM_SIZE) {
+		    if (index >= USHM_SIZE || index < 0) {
 			fprintf(stderr, "bad index=%d\n", index);
+			cs->state = FSM_EXIT;
+			break;
+		    }
+		    if (uid > MAX_USERS || uid <= 0) {
+			fprintf(stderr, "bad uid=%d\n", uid);
 			cs->state = FSM_EXIT;
 			break;
 		    }
