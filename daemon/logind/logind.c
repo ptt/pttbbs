@@ -113,6 +113,7 @@ enum {
     LOGIN_STATE_USERID,
     LOGIN_STATE_PASSWD,
     LOGIN_STATE_AUTH,
+    LOGIN_STATE_WAITACK,
 
     LOGIN_HANDLE_WAIT = 1,
     LOGIN_HANDLE_BEEP,
@@ -309,6 +310,63 @@ login_ctx_handle(login_ctx *ctx, int c)
 }
 
 ///////////////////////////////////////////////////////////////////////
+// Mini Queue
+
+#define ACK_QUEUE_DEFAULT_CAPACITY  (128)
+static login_conn_ctx **g_ack_queue;
+static size_t           g_ack_queue_size,
+                        g_ack_queue_reuse,
+                        g_ack_queue_capacity;
+
+static void
+ackq_add(login_conn_ctx *ctx)
+{
+    if (g_ack_queue_reuse)
+    {
+        // there's some space in the queue, let's use it.
+        size_t i;
+        for (i = 0; i < g_ack_queue_size; i++)
+        {
+            if (g_ack_queue[i])
+                continue;
+            g_ack_queue[i] = ctx;
+            return;
+        }
+        assert(!"corrupted ack queue");
+    }
+    else if (++g_ack_queue_size > g_ack_queue_capacity)
+    {
+        g_ack_queue_capacity *= 2;
+        if (g_ack_queue_capacity < ACK_QUEUE_DEFAULT_CAPACITY)
+            g_ack_queue_capacity = ACK_QUEUE_DEFAULT_CAPACITY;
+        g_ack_queue = (login_conn_ctx**) realloc (g_ack_queue, 
+                sizeof(login_conn_ctx*) * g_ack_queue_size);
+        assert(g_ack_queue);
+    }
+    g_ack_queue[g_ack_queue_size-1] = ctx;
+}
+
+static int
+ackq_del(login_conn_ctx *ctx)
+{
+    size_t i;
+    for (i = 0; i < g_ack_queue_size; i++)
+    {
+        if (g_ack_queue[i] != ctx)
+            continue;
+
+        // found the target
+        g_ack_queue[i] = NULL;
+
+        if (i+1 == g_ack_queue_size)
+            g_ack_queue_size--;
+        else
+            g_ack_queue_reuse++;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////
 // I/O
 
 static ssize_t 
@@ -491,10 +549,13 @@ static void
 _telnet_send_ayt_cb(void *ayt_arg, int fd)
 {
     login_conn_ctx *conn = (login_conn_ctx *)ayt_arg;
-    char buf[32];
+    char buf[64];
 
     assert(conn);
-    snprintf(buf, sizeof(buf), "  %u  \r\n", g_opened_fd);
+    snprintf(buf, sizeof(buf), "  fd:%u,ack:%u(-%u)  \r\n", 
+            g_opened_fd, 
+            (unsigned int)g_ack_queue_size, 
+            (unsigned int)g_ack_queue_reuse );
     _buff_write(conn, buf, strlen(buf));
 }
 #endif
@@ -773,7 +834,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
-    if (g_verbose) fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
+    // if (g_verbose) fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
@@ -1200,8 +1261,6 @@ auth_start(int fd, login_conn_ctx *conn)
     return AUTH_RESULT_RETRY;
 }
 
-
-
 ///////////////////////////////////////////////////////////////////////
 // Event callbacks
 
@@ -1223,6 +1282,10 @@ endconn_cb(int fd, short event, void *arg)
     if (g_verbose) fprintf(stderr, LOG_PREFIX
             "login_conn_remove: removed connection (%s@%s) #%d...",
             conn->ctx.userid, conn->ctx.hostip, fd);
+
+    // remove from ack queue
+    if (conn->ctx.state == LOGIN_STATE_WAITACK)
+        ackq_del(conn);
 
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
@@ -1250,7 +1313,7 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
     } else {
         struct timeval tv = { sleep_sec, 0};
         event_del(&conn->ev);
-        event_set(&conn->ev, fd, EV_PERSIST, endconn_cb, conn);
+        event_set(&conn->ev, fd, 0, endconn_cb, conn);
         event_add(&conn->ev, &tv);
         if (g_verbose) fprintf(stderr, LOG_PREFIX
                 "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
@@ -1292,7 +1355,13 @@ ack_cb(int tunnel, short event, void *arg)
 
     // XXX success connection.
     conn = (login_conn_ctx*) arg;
-    login_conn_remove(conn, conn->telnet.fd, 0);
+    if (ackq_del(conn))
+    {
+        // reset the state to prevent processing ackq again
+        conn->ctx.state = LOGIN_STATE_AUTH;
+        // this event is still in queue.
+        login_conn_remove(conn, conn->telnet.fd, 0);
+    }
 }
 
 
@@ -1305,6 +1374,10 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
     {
         // simply wait for ack_cb to complete
         // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: async mode.\r\n");
+
+        // mark as queued for waiting ack
+        conn->ctx.state = LOGIN_STATE_WAITACK;
+        ackq_add(conn);
 
         // set a safe timeout
         login_conn_remove(conn, fd, ACK_TIMEOUT_SEC);
