@@ -1929,7 +1929,7 @@ shell_login(char *argv0, struct ProgramOption *option)
 static int
 tunnel_login(char *argv0, struct ProgramOption *option)
 {
-    int tunnel = 0, csock = 0, success = 1;
+    int tunnel = 0, csock = 0;
     unsigned int pid = (unsigned int)getpid();
     struct login_data dat = {0};
     char buf[PATHLEN];
@@ -1983,7 +1983,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 	    return 0;
 	}
 	if (toread (tunnel, &dat, sizeof(dat)) < sizeof(dat) ||
-	    towrite(tunnel, &success, sizeof(success)) < sizeof(success))
+	    towrite(tunnel, &dat.ack, sizeof(dat.ack)) < sizeof(dat.ack))
 	    return 0;
 
 	assert(dat.cb == sizeof(dat));
