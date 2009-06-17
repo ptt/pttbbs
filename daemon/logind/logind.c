@@ -579,10 +579,18 @@ _telnet_send_ayt_cb(void *ayt_arg, int fd)
     char buf[64];
 
     assert(conn);
-    snprintf(buf, sizeof(buf), "  fd:%u,ack:%u(-%u)  \r\n", 
-            g_opened_fd, 
-            (unsigned int)g_ack_queue_size, 
-            (unsigned int)g_ack_queue_reuse );
+    if (!g_async_ack)
+    {
+        snprintf(buf, sizeof(buf), "  (#%d)fd:%u  \r\n", 
+                g_retry_times, g_opened_fd);
+    }
+    else
+    {
+        snprintf(buf, sizeof(buf), "  (#%d)fd:%u,ack:%u(-%u)  \r\n", 
+                g_retry_times, g_opened_fd, 
+                (unsigned int)g_ack_queue_size, 
+                (unsigned int)g_ack_queue_reuse );
+    }
     _buff_write(conn, buf, strlen(buf));
 }
 #endif
