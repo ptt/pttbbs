@@ -55,7 +55,7 @@
 #endif
 
 #ifndef ACK_TIMEOUT_SEC
-#define ACK_TIMEOUT_SEC     (30) // (5*60)
+#define ACK_TIMEOUT_SEC     (5*60)
 #endif
 
 #ifndef BAN_SLEEP_SEC
