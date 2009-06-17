@@ -109,6 +109,12 @@ time4_t g_welcome_mtime;
 int g_guest_usernum  = 0;  // numeric uid of guest account
 int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 
+enum {
+    VERBOSE_ERROR,
+    VERBOSE_INFO,
+    VERBOSE_DEBUG
+};
+
 ///////////////////////////////////////////////////////////////////////
 // login context, constants and states
 
@@ -318,7 +324,10 @@ login_ctx_handle(login_ctx *ctx, int c)
 ///////////////////////////////////////////////////////////////////////
 // Mini Queue
 
+#ifndef ACK_QUEUE_DEFAULT_CAPACITY
 #define ACK_QUEUE_DEFAULT_CAPACITY  (128)
+#endif
+
 struct login_ack_queue
 {
     login_conn_ctx **queue;
@@ -879,7 +888,8 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
-    // if (g_verbose) fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
+    if (g_verbose > VERBOSE_DEBUG) 
+        fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
@@ -1017,12 +1027,12 @@ regular_check()
     }
 
     // check welcome screen
-    if (g_verbose) 
+    if (g_verbose > VERBOSE_INFO) 
         fprintf(stderr, LOG_PREFIX "check welcome screen.\r\n");
     if (dasht(FN_WELCOME) != g_welcome_mtime)
     {
         g_reload_data = 1;
-        if (g_verbose)
+        if (g_verbose > VERBOSE_INFO)
             fprintf(stderr, LOG_PREFIX 
                     "modified. must update welcome screen ...\r\n");
     }
@@ -1078,7 +1088,8 @@ auth_check_free_userid_allowance(const char *userid)
         // now, load guest account information.
         if (!g_guest_usernum)
         {
-            if (g_verbose) fprintf(stderr, LOG_PREFIX " reload guest information\r\n");
+            if (g_verbose > VERBOSE_INFO) 
+                fprintf(stderr, LOG_PREFIX " reload guest information\r\n");
 
             // reload guest information
             g_guest_usernum = searchuser(STR_GUEST, NULL);
@@ -1094,8 +1105,8 @@ auth_check_free_userid_allowance(const char *userid)
         g_guest_too_many = 
             (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
 
-        if (g_verbose) fprintf(stderr, LOG_PREFIX " guests are %s\r\n",
-                g_guest_too_many ? "TOO MANY" : "ok.");
+        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX 
+                " guests are %s\r\n", g_guest_too_many ? "TOO MANY" : "ok.");
 
 #  endif // MAX_GUEST
         return g_guest_too_many ? 0 : 1;
@@ -1196,8 +1207,9 @@ start_service(int fd, login_conn_ctx *conn)
     if (ctx->t_cols > ld.t_cols)
         ld.t_cols = ctx->t_cols;
 
-    if (g_verbose) fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\r\n",
-            ld.userid, ld.hostip, ld.port, fd);
+    if (g_verbose > VERBOSE_INFO) 
+        fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\r\n",
+                ld.userid, ld.hostip, ld.port, fd);
 
     // XXX simulate the cache re-construction in mbbsd/login_query.
     resolve_garbage();
@@ -1208,7 +1220,7 @@ start_service(int fd, login_conn_ctx *conn)
     // deliver the fd to hosting service
     if (send_remote_fd(g_tunnel, fd) < 0)
     {
-        if (g_verbose) fprintf(stderr, LOG_PREFIX
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "failed in send_remote_fd\r\n");
         return ack;
     }
@@ -1216,7 +1228,7 @@ start_service(int fd, login_conn_ctx *conn)
     // deliver the login data to hosting servier
     if (towrite(g_tunnel, &ld, sizeof(ld)) < sizeof(ld))
     {
-        if (g_verbose) fprintf(stderr, LOG_PREFIX
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "failed in towrite(login_data)\r\n");
         return ack;
     }
@@ -1224,7 +1236,7 @@ start_service(int fd, login_conn_ctx *conn)
     // wait (or async) service to response
     if (!login_conn_end_ack(conn, ld.ack, fd))
     {
-        if (g_verbose) fprintf(stderr, LOG_PREFIX
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "failed in logind_conn_end_ack\r\n");
         return ack;
     }
@@ -1290,8 +1302,9 @@ auth_start(int fd, login_conn_ctx *conn)
     {
         // end retry.
         draw_goodbye(conn);
-        if (g_verbose) fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
-                conn->ctx.userid, conn->ctx.hostip, fd);
+        if (g_verbose > VERBOSE_INFO) 
+            fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
+                    conn->ctx.userid, conn->ctx.hostip, fd);
         return AUTH_RESULT_STOP;
 
     }
@@ -1347,7 +1360,7 @@ static void
 endconn_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    if (g_verbose) fprintf(stderr, LOG_PREFIX
+    if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
             "login_conn_remove: removed connection (%s@%s) #%d...",
             conn->ctx.userid, conn->ctx.hostip, fd);
 
@@ -1363,7 +1376,7 @@ endconn_cb(int fd, short event, void *arg)
     close(fd);
     g_opened_fd--;
     free(conn);
-    if (g_verbose) fprintf(stderr, " done.\r\n");
+    if (g_verbose > VERBOSE_INFO) fprintf(stderr, " done.\r\n");
 }
 
 static void
@@ -1387,7 +1400,7 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
         event_del(&conn->ev);
         event_set(&conn->ev, fd, 0, endconn_cb, conn);
         event_add(&conn->ev, &tv);
-        if (g_verbose) fprintf(stderr, LOG_PREFIX
+        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
                 "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
                 fd, sleep_sec);
     }
@@ -1402,7 +1415,7 @@ get_tunnel_ack(int tunnel)
         !arg)
     {
         // sorry... broken, let's shutdown the tunnel.
-        if (g_verbose)
+        if (g_verbose > VERBOSE_ERROR)
             fprintf(stderr, LOG_PREFIX
                     "get_tunnel_ack: tunnel (%d) is broken with arg %p.\r\n", 
                     tunnel, arg);
@@ -1424,7 +1437,7 @@ ack_cb(int tunnel, short event, void *arg)
     if (!(event & EV_READ))
     {
         // not read event (closed? timeout?)
-        if (g_verbose) fprintf(stderr, LOG_PREFIX 
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
                 "warning: invalid ack event at tunnel %d.\r\n", tunnel);
         stop_tunnel(tunnel);
         return;
@@ -1434,14 +1447,14 @@ ack_cb(int tunnel, short event, void *arg)
     conn = (login_conn_ctx*) get_tunnel_ack(tunnel);
     if (!conn)
     {
-        if (g_verbose) fprintf(stderr, LOG_PREFIX 
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
                 "warning: invalid ack at tunnel %d.\r\n", tunnel);
         return;
     }
 
     if (conn->cb != sizeof(login_conn_ctx))
     {
-        fprintf(stderr, LOG_PREFIX "warning: tunnel returned invalid ack. abort?");
+        fprintf(stderr, LOG_PREFIX "warning: tunnel returned invalid ack. abort?\r\n");
         // assert(conn && conn->cb == sizeof(login_conn_ctx));
         return;
     }
@@ -1454,7 +1467,7 @@ ack_cb(int tunnel, short event, void *arg)
         // this event is still in queue.
         login_conn_remove(conn, conn->telnet.fd, 0);
     } else {
-        if  (g_verbose) fprintf(stderr, LOG_PREFIX 
+        if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
                 "got invalid ack connection: %p.\r\n", conn);
     }
 }
@@ -1593,7 +1606,7 @@ client_cb(int fd, short event, void *arg)
                 break;
 
             case LOGIN_HANDLE_REDRAW_USERID:
-                if (g_verbose) fprintf(stderr, LOG_PREFIX
+                if (g_verbose > VERBOSE_DEBUG) fprintf(stderr, LOG_PREFIX
                         "redraw userid: id=[%s], icurr=%d\r\n",
                         conn->ctx.userid, conn->ctx.icurr);
                 draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
@@ -1714,7 +1727,7 @@ listen_cb(int lfd, short event, void *arg)
         inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
         snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
-        if (g_verbose) fprintf(stderr, LOG_PREFIX
+        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
                 "new connection: fd=#%d %s:%s (opened fd: %d)\r\n", 
                 fd, conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
