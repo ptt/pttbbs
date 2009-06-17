@@ -314,34 +314,39 @@ login_ctx_handle(login_ctx *ctx, int c)
 // Mini Queue
 
 #define ACK_QUEUE_DEFAULT_CAPACITY  (128)
-static login_conn_ctx **g_ack_queue;
-static size_t           g_ack_queue_size,
-                        g_ack_queue_reuse,
-                        g_ack_queue_capacity;
+struct login_ack_queue
+{
+    login_conn_ctx **queue;
+    size_t           size;
+    size_t           reuse;
+    size_t           capacity;
+};
+
+static struct login_ack_queue g_ack_queue;
 
 static void
 ackq_gc()
 {
     // reset queue to zero if already empty.
-    if (g_ack_queue_reuse == g_ack_queue_size)
-        g_ack_queue_reuse =  g_ack_queue_size = 0;
+    if (g_ack_queue.reuse == g_ack_queue.size)
+        g_ack_queue.reuse =  g_ack_queue.size = 0;
 }
 
 static void
 ackq_add(login_conn_ctx *ctx)
 {
     assert(ctx->cb == sizeof(login_conn_ctx));
-    if (g_ack_queue_reuse)
+    if (g_ack_queue.reuse)
     {
         // there's some space in the queue, let's use it.
         size_t i;
-        for (i = 0; i < g_ack_queue_size; i++)
+        for (i = 0; i < g_ack_queue.size; i++)
         {
-            if (g_ack_queue[i])
+            if (g_ack_queue.queue[i])
                 continue;
 
-            g_ack_queue[i] = ctx;
-            g_ack_queue_reuse--;
+            g_ack_queue.queue[i] = ctx;
+            g_ack_queue.reuse--;
             ackq_gc();
             return;
         }
@@ -350,20 +355,20 @@ ackq_add(login_conn_ctx *ctx)
         return;
     }
 
-    if (++g_ack_queue_size > g_ack_queue_capacity)
+    if (++g_ack_queue.size > g_ack_queue.capacity)
     {
-        g_ack_queue_capacity *= 2;
-        if (g_ack_queue_capacity < ACK_QUEUE_DEFAULT_CAPACITY)
-            g_ack_queue_capacity = ACK_QUEUE_DEFAULT_CAPACITY;
+        g_ack_queue.capacity *= 2;
+        if (g_ack_queue.capacity < ACK_QUEUE_DEFAULT_CAPACITY)
+            g_ack_queue.capacity = ACK_QUEUE_DEFAULT_CAPACITY;
 
         fprintf(stderr, LOG_PREFIX "resize ack queue to: %u (%u in use)\r\n",
-                (unsigned int)g_ack_queue_capacity, (unsigned int)g_ack_queue_size);
+                (unsigned int)g_ack_queue.capacity, (unsigned int)g_ack_queue.size);
 
-        g_ack_queue = (login_conn_ctx**) realloc (g_ack_queue, 
-                sizeof(login_conn_ctx*) * g_ack_queue_capacity);
-        assert(g_ack_queue);
+        g_ack_queue.queue = (login_conn_ctx**) realloc (g_ack_queue.queue, 
+                sizeof(login_conn_ctx*) * g_ack_queue.capacity);
+        assert(g_ack_queue.queue);
     }
-    g_ack_queue[g_ack_queue_size-1] = ctx;
+    g_ack_queue.queue[g_ack_queue.size-1] = ctx;
     ackq_gc();
 }
 
@@ -373,18 +378,18 @@ ackq_del(login_conn_ctx *ctx)
     size_t i;
 
     assert(ctx && ctx->cb == sizeof(login_conn_ctx));
-    for (i = 0; i < g_ack_queue_size; i++)
+    for (i = 0; i < g_ack_queue.size; i++)
     {
-        if (g_ack_queue[i] != ctx)
+        if (g_ack_queue.queue[i] != ctx)
             continue;
 
         // found the target
-        g_ack_queue[i] = NULL;
+        g_ack_queue.queue[i] = NULL;
 
-        if (i+1 == g_ack_queue_size)
-            g_ack_queue_size--;
+        if (i+1 == g_ack_queue.size)
+            g_ack_queue.size--;
         else
-            g_ack_queue_reuse++;
+            g_ack_queue.reuse++;
 
         ackq_gc();
         return 1;
@@ -588,8 +593,8 @@ _telnet_send_ayt_cb(void *ayt_arg, int fd)
     {
         snprintf(buf, sizeof(buf), "  (#%d)fd:%u,ack:%u(-%u)  \r\n", 
                 g_retry_times, g_opened_fd, 
-                (unsigned int)g_ack_queue_size, 
-                (unsigned int)g_ack_queue_reuse );
+                (unsigned int)g_ack_queue.size, 
+                (unsigned int)g_ack_queue.reuse );
     }
     _buff_write(conn, buf, strlen(buf));
 }
@@ -940,7 +945,7 @@ draw_overload(login_conn_ctx *conn, int type)
         _buff_write(conn, OVERLOAD_USER_MSG, sizeof(OVERLOAD_USER_MSG)-1);
     } 
     else {
-        assert(false);
+        assert(!"unknown overload type");
         // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
         _buff_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
     }
@@ -1093,7 +1098,7 @@ auth_check_free_userid_allowance(const char *userid)
 #endif // STR_GUEST
 
     // shall never reach here.
-    assert(0);
+    assert(!"unknown free userid");
     return 0;
 }
 
@@ -1244,7 +1249,8 @@ auth_start(int fd, login_conn_ctx *conn)
             case AUTH_RESULT_OK:
                 if (!isfree)
                 {
-                    logattempt(ctx->userid , ' ', time(0), ctx->hostip);
+                    // do nothing. logattempt for auth-ok users is
+                    // now done in mbbsd.
                 }
                 else if (!auth_check_free_userid_allowance(ctx->userid))
                 {
@@ -1265,7 +1271,7 @@ auth_start(int fd, login_conn_ctx *conn)
                 return AUTH_RESULT_OK;
 
             default:
-                assert(false);
+                assert(!"unknown auth state.");
                 break;
         }
 
@@ -1719,6 +1725,12 @@ tunnel_cb(int fd, short event, void *arg)
     // got new tunnel
     fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
     _set_connection_opt(cfd);
+
+    // XXX TODO enable non-blocking for this tunnel socket?
+#if 0
+    if (g_nonblock)
+        _enable_nonblock(cfd);
+#endif
 
     stop_g_tunnel();
     g_tunnel = cfd;

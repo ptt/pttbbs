@@ -774,6 +774,7 @@ load_current_user(const char *uid)
 	}
 	/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
 	mkuserdir(cuser.userid);
+	logattempt(cuser.userid, ' ', login_start_time, fromhost);
     }
 
     // check multi user
@@ -897,7 +898,6 @@ login_query(char *ruid)
 	    } else {
 
 		strlcpy(ruid, cuser.userid, IDLEN+1);
-		logattempt(cuser.userid, ' ', login_start_time, fromhost);
 		outs("密碼正確！ 開始登入系統..."); 
 		move(22, 0); refresh();
 		clrtoeol();
