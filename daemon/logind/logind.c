@@ -16,6 +16,7 @@
 // 5. [drop] clean mbbsd pid log files?
 // 6. [done] handle non-block i/o
 // 7. [done] asynchronous tunnel handshake
+// 8. simplify async ack queue to ordered sequence
 
 #include <stdio.h>
 #include <ctype.h>
@@ -90,10 +91,13 @@ int g_tunnel;           // tunnel for service daemon
 // server status
 int g_overload = 0;
 int g_banned   = 0;
-int g_verbose  = 0;
 int g_opened_fd= 0;
 int g_nonblock = 1;
 int g_async_ack= 1;
+
+// debug and reporting
+int g_verbose  = 0;
+int g_report_timeout = 0;
 
 // retry service
 char g_retry_cmd[PATHLEN];
@@ -109,7 +113,7 @@ int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 // login context, constants and states
 
 enum {
-    LOGIN_STATE_START  = 1,
+    LOGIN_STATE_INIT  = 1,
     LOGIN_STATE_USERID,
     LOGIN_STATE_PASSWD,
     LOGIN_STATE_AUTH,
@@ -157,6 +161,7 @@ typedef struct {
 
 typedef struct {
     unsigned int cb;
+    time4_t      enter;
     struct bufferevent *bufev;
     struct event ev;
     TelnetCtx    telnet;
@@ -173,15 +178,15 @@ login_ctx_init(login_ctx *ctx)
 {
     assert(ctx);
     memset(ctx, 0, sizeof(login_ctx));
+    ctx->state = LOGIN_STATE_INIT;
     ctx->client_code = FNV1_32_INIT;
-    ctx->state = LOGIN_STATE_START;
 }
 
 int 
 login_ctx_retry(login_ctx *ctx)
 {
     assert(ctx);
-    ctx->state = LOGIN_STATE_START;
+    ctx->state = LOGIN_STATE_USERID;
     ctx->encoding = 0;
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
@@ -199,7 +204,7 @@ login_ctx_handle(login_ctx *ctx, int c)
     assert(ctx);
     switch(ctx->state)
     {
-        case LOGIN_STATE_START:
+        case LOGIN_STATE_INIT:
         case LOGIN_STATE_USERID:
             l = strlen(ctx->userid);
 
@@ -373,14 +378,14 @@ ackq_add(login_conn_ctx *ctx)
 }
 
 static int
-ackq_del(login_conn_ctx *ctx)
+ackq_del(login_conn_ctx *conn)
 {
     size_t i;
 
-    assert(ctx && ctx->cb == sizeof(login_conn_ctx));
+    assert(conn && conn->cb == sizeof(login_conn_ctx));
     for (i = 0; i < g_ack_queue.size; i++)
     {
-        if (g_ack_queue.queue[i] != ctx)
+        if (g_ack_queue.queue[i] != conn)
             continue;
 
         // found the target
@@ -1398,10 +1403,12 @@ get_tunnel_ack(int tunnel)
     {
         // sorry... broken, let's shutdown the tunnel.
         if (g_verbose)
-            fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel (%d) is broken.\r\n", tunnel);
+            fprintf(stderr, LOG_PREFIX
+                    "get_tunnel_ack: tunnel (%d) is broken with arg %p.\r\n", 
+                    tunnel, arg);
 
         stop_tunnel(tunnel);
-        return arg;
+        return NULL;
     }
 
     return arg;
@@ -1432,6 +1439,13 @@ ack_cb(int tunnel, short event, void *arg)
         return;
     }
 
+    if (conn->cb != sizeof(login_conn_ctx))
+    {
+        fprintf(stderr, LOG_PREFIX "warning: tunnel returned invalid ack. abort?");
+        // assert(conn && conn->cb == sizeof(login_conn_ctx));
+        return;
+    }
+
     // XXX success connection.
     if (ackq_del(conn))
     {
@@ -1441,7 +1455,7 @@ ack_cb(int tunnel, short event, void *arg)
         login_conn_remove(conn, conn->telnet.fd, 0);
     } else {
         if  (g_verbose) fprintf(stderr, LOG_PREFIX 
-                "got invalid ack connection: (%08lX).\r\n", (unsigned long) conn);
+                "got invalid ack connection: %p.\r\n", conn);
     }
 }
 
@@ -1479,8 +1493,8 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
         {
             // critical error!
             fprintf(stderr, LOG_PREFIX 
-                    "login_conn_end_ack: failed in ack value (%08lX != %08lX).\r\n",
-                    (unsigned long)rack, (unsigned long)ack);
+                    "login_conn_end_ack: failed in ack value (%p != %p).\r\n",
+                    rack, ack);
 
             stop_g_tunnel();
             return 0;
@@ -1502,6 +1516,25 @@ client_cb(int fd, short event, void *arg)
     // for time-out, simply close connection.
     if (event & EV_TIMEOUT)
     {
+        // report timeout conection information --
+        if (g_verbose || g_report_timeout)
+        {
+            time4_t tnow = time(NULL);
+            strlcpy((char*)buf, Cdate(&tnow), sizeof(buf));
+
+            fprintf(stderr, LOG_PREFIX
+                    "timeout: %-16s [%s -> %s : %-4ds] %08X %s%s\r\n",
+                     conn->ctx.hostip,
+                     Cdate(&conn->enter),
+                     buf,
+                     tnow - conn->enter,
+                    (unsigned int)conn->ctx.client_code,
+                    (conn->ctx.state == LOGIN_STATE_INIT) ? "(*dummy*) " : "",
+                     conn->ctx.userid
+                   );
+        }
+        // end report ---------------------------
+
         endconn_cb(fd, EV_TIMEOUT, (void*) conn);
         return;
     }
@@ -1652,6 +1685,7 @@ listen_cb(int lfd, short event, void *arg)
         }
         memset(conn, 0, sizeof(login_conn_ctx));
         conn->cb = sizeof(login_conn_ctx);
+        conn->enter = (time4_t) time(NULL);
 
         if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
             free(conn);
@@ -1875,7 +1909,7 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvDdBbAa")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvTDdBbAa")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1926,12 +1960,17 @@ main(int argc, char *argv[])
             g_verbose++;
             break;
 
+        case 'T':
+            g_report_timeout = 1;
+            break;
+
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-aAbBvdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-vTaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
             fprintf(stderr, 
                     "\t-v: provide verbose messages\r\n"
+                    "\t-T: provide timeout connection info\r\n"
                     "\t-d: enter daemon mode%s\r\n"
                     "\t-D: do not enter daemon mode%s\r\n"
                     "\t-a: use asynchronous service ack%s\r\n"
