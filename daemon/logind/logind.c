@@ -677,9 +677,6 @@ _set_bind_opt(int sock)
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
     _set_connection_opt(sock);
 
-    if (g_nonblock)
-        _enable_nonblock(sock);
-
     return 0;
 }
 
@@ -1214,7 +1211,7 @@ start_service(int fd, login_conn_ctx *conn)
     // XXX simulate the cache re-construction in mbbsd/login_query.
     resolve_garbage();
 
-    // since mbbsd is running in blocking mode, let's re-configure fd.
+    // since mbbsd may be running in blocking mode, let's re-configure fd.
     _disable_nonblock(fd);
 
     // deliver the fd to hosting service
@@ -1773,12 +1770,6 @@ tunnel_cb(int fd, short event, void *arg)
     fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
     _set_connection_opt(cfd);
 
-    // XXX TODO enable non-blocking for this tunnel socket?
-#if 0
-    if (g_nonblock)
-        _enable_nonblock(cfd);
-#endif
-
     stop_g_tunnel();
     g_tunnel = cfd;
 
@@ -1807,6 +1798,11 @@ bind_port(int port)
         fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
         return -1;
     }
+
+    // only set non-blocking to out ports (not for tunnel!)
+    if (g_nonblock)
+        _enable_nonblock(sfd);
+
     pev = malloc  (sizeof(bind_event));
     memset(pev, 0, sizeof(bind_event));
     assert(pev);
