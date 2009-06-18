@@ -41,7 +41,9 @@ int emaildb_check_email(char * email, int email_len)
 
 	default:
 	    waitpid(pid, &count, 0);
-	    count = WEXITSTATUS(count);
+	    // 0xFF: the limitation of WEXISTSTATUS
+	    if (WIFEXITED(count) && WEXITSTATUS(count) < 0xFF)
+		count = WEXITSTATUS(count);
 	    // vmsgf(ANSI_RESET "found %d emails", count);
 	    return count;
     }
@@ -112,7 +114,9 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
 
 	default:
 	    waitpid(pid, &ret, 0);
-	    ret = WEXITSTATUS(ret);
+	    // 0xFF: the limitation of WEXISTSTATUS
+	    if (WIFEXITED(ret) && WEXITSTATUS(ret) < 0xFF)
+		ret = WEXITSTATUS(ret);
 	    return ret;
     }
 #endif
