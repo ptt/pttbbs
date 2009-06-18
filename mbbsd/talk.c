@@ -1860,10 +1860,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		}
 		break;
 	    case '1':
-		prints("%s？先拿100銀兩來..", sig_des[uin->sig]);
+		prints("%s？先拿$100來..", sig_des[uin->sig]);
 		break;
 	    case '2':
-		prints("%s？先拿1000銀兩來..", sig_des[uin->sig]);
+		prints("%s？先拿$1000來..", sig_des[uin->sig]);
 		break;
 	    default:
 		prints("我現在不想 %s 啦.....:)", sig_des[uin->sig]);
@@ -3281,8 +3281,8 @@ talkreply(void)
 	    "       (D) 我要離站囉..下次再聊吧.......\n");
     prints("       (E) 有事嗎？請先來信"
 	    "       (F) " ANSI_COLOR(1;33) "我自己輸入理由好了..." ANSI_RESET "\n");
-    prints("       (1) %s？先拿100銀兩來"
-	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
+    prints("       (1) %s？先拿$100來"
+	    "  (2) %s？先拿$1000來..\n\n", sig_des[sig], sig_des[sig]);
 
     snprintf(page_requestor, sizeof(page_requestor),
 	    "%s (%s)", uip->userid, uip->nickname);

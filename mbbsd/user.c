@@ -145,7 +145,7 @@ user_display(const userec_t * u, int adminmode)
 	outs("\n");
 
     prints("\t\t電子信箱: %s\n", u->email);
-    prints("\t\t銀行帳戶: %d 銀兩\n", u->money);
+    prints("\t\t銀行帳戶: %d 元\n", u->money);
     prints("\t\t性    別: %s\n", sex[u->sex%8]);
     prints("\t\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   u->year + 1900, u->month, u->day, 
