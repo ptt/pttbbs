@@ -393,7 +393,7 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 }
 
 int
-do_innersend(const char *userid, char *mfpath, const char *title)
+do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle)
 {
     fileheader_t    mhdr;
     char            fpath[PATHLEN];
@@ -419,6 +419,7 @@ do_innersend(const char *userid, char *mfpath, const char *title)
     }
 
     strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
+    if (newtitle) strlcpy(newtitle, save_title, STRLEN);
     sethomefile(fpath, userid, FN_OVERRIDES);
     i = file_exist_record(fpath, cuser.userid);
     sethomefile(fpath, userid, FN_REJECT);
@@ -498,7 +499,8 @@ do_send(const char *userid, const char *title)
 
     } else {
 
-	ret = do_innersend(userid, fpath, save_title);
+	// XXX the title maybe changed inside do_innersend...
+	ret = do_innersend(userid, fpath, save_title, save_title);
 	if (ret == 0) // success
 	    hold_mail(fpath, userid, save_title);
 

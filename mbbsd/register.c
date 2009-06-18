@@ -1068,7 +1068,7 @@ check_register(void)
 		    setuserfile(quote_file, FN_REJECT_NOTIFY);
 		    strlcpy(quote_user, "[退註通知]", sizeof(quote_user));
 		    clear();
-		    do_innersend(u.userid, NULL, "[註冊問題] 退註相關問題");
+		    do_innersend(u.userid, NULL, "[註冊問題] 退註相關問題", NULL);
 		    abort = 1;
 		    // quick return to avoid confusing user
 		    unlink(fn);
@@ -1211,7 +1211,7 @@ toregister(char *email)
 	    if (email_count < 0) {
 		move(15, 0); clrtobot();
 		move(17, 0);
-		outs("email 認證系統發生問題, 請稍後再試。\n");
+		outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
 		pressanykey();
 		return;
 	    } else if (email_count >= EMAILDB_LIMIT) { 
@@ -1248,7 +1248,7 @@ toregister(char *email)
 	emaildb_update_email(cuser.userid, strlen(cuser.userid), email, strlen(email)) < 0) {
 	move(15, 0); clrtobot();
 	move(17, 0);
-	outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
+	outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
 	pressanykey();
 	return;
     }

@@ -89,6 +89,11 @@ end:
     if (Db != NULL)
 	sqlite3_close(Db);
 
+    // XXX exit() can only hold 0~255 for WEXISTSTATUS
+    assert(127 >= EMAILDB_LIMIT);
+    if (count > 127)
+	count = 127;
+
     if (pid == 0)
 	exit(count);
 

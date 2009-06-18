@@ -51,8 +51,10 @@ OBJS+=	 bbslua.o bbsluaext.o
 CFLAGS+= -DUSE_BBSLUA
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
 .if $(OSTYPE)=="FreeBSD"
-CFLAGS:= ${CFLAGS} ${:!pkg-config --cflags lua-5.1!}
-LDLIBS:= ${LDLIBS} ${:!pkg-config --libs lua-5.1!}
+CFLAGS:= ${CFLAGS} -I/usr/local/include/lua51  
+#${:!pkg-config --cflags lua-5.1!}
+LDLIBS:= ${LDLIBS} -L/usr/local/lib/lua51 -llua -lm  
+#${:!pkg-config --libs lua-5.1!}
 .else
 CFLAGS:= ${CFLAGS} ${:!pkg-config --cflags lua5.1!}
 LDLIBS:= ${LDLIBS} ${:!pkg-config --libs lua5.1!}
