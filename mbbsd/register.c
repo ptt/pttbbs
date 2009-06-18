@@ -1636,6 +1636,7 @@ static int
 print_regform_entry_localized(const RegformEntry *pre, FILE *fp)
 {
     char buf[STRLEN * 6];
+    buf[0] = '\0';
     concat_regform_entry_localized(pre, buf, sizeof(buf));
     fputs(buf, fp);
     return 1;
