@@ -670,6 +670,22 @@ _set_connection_opt(int sock)
 }
 
 static int
+_set_tunnel_opt(int sock)
+{
+    const int szrecv = 131072, szsend = 131072;
+
+    // adjust transmission window
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv)) < 0 ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend)) < 0)
+    {
+        fprintf(stderr, LOG_PREFIX "WARNING: "
+                "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n", szsend, szrecv);
+    }
+
+    return 0;
+}
+
+static int
 _set_bind_opt(int sock)
 {
     const int on = 1;
@@ -1769,6 +1785,7 @@ tunnel_cb(int fd, short event, void *arg)
     // got new tunnel
     fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
     _set_connection_opt(cfd);
+    _set_tunnel_opt(cfd);
 
     stop_g_tunnel();
     g_tunnel = cfd;
