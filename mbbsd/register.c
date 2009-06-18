@@ -1199,12 +1199,19 @@ toregister(char *email)
 	else if (check_regmail(email)) {
 	    char            yn[3];
 #ifdef USE_EMAILDB
-	    int email_count = emaildb_check_email(email, strlen(email));
+	    int email_count;
+
+	    // before long waiting, alert user
+	    move(18, 0); clrtobot();
+	    outs("正在確認 email, 請稍候...\n");
+	    doupdate();
+	    
+	    email_count = emaildb_check_email(email, strlen(email));
 
 	    if (email_count < 0) {
 		move(15, 0); clrtobot();
 		move(17, 0);
-		outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
+		outs("email 認證系統發生問題, 請稍後再試。\n");
 		pressanykey();
 		return;
 	    } else if (email_count >= EMAILDB_LIMIT) { 

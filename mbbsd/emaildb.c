@@ -8,10 +8,11 @@
 // define FORK model to minimize memory usage.
 #define FORK_MODEL
 
-static int emaildb_open(sqlite3 **Db) {
+static int emaildb_open(sqlite3 **Db, const char *fpath) {
     int rc;
 
-    if ((rc = sqlite3_open(EMAILDB_PATH, Db)) != SQLITE_OK)
+    assert(fpath);
+    if ((rc = sqlite3_open(fpath, Db)) != SQLITE_OK)
 	return rc;
 
     // create table if it doesn't exist
@@ -49,7 +50,7 @@ int emaildb_check_email(char * email, int email_len)
     }
 #endif
 
-    if (emaildb_open(&Db) != SQLITE_OK)
+    if (emaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
 	goto end;
 
     if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email LIKE lower(?);",
@@ -121,7 +122,7 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
     }
 #endif
 
-    if (emaildb_open(&Db) != SQLITE_OK)
+    if (emaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
 	goto end;
 
     if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
@@ -154,13 +155,14 @@ end:
 // standalone initialize builder
 
 #define TRANSCATION_PERIOD (4096)
-int main()
+int main(int argc, char *argv[])
 {
     int fd = 0;
     userec_t xuser;
     off_t sz = 0, i = 0, valids = 0;
     sqlite3 *Db = NULL;
     sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
+    const char *fpath = EMAILDB_PATH;
 
     // init passwd
     sz = dashs(FN_PASSWD);
@@ -172,10 +174,13 @@ int main()
     }
     sz /= sizeof(userec_t);
 
+    if (argc > 1)
+	fpath = argv[1];
+
     // init emaildb
-    if (emaildb_open(&Db) != SQLITE_OK)
+    if (emaildb_open(&Db, fpath) != SQLITE_OK)
     {
-	fprintf(stderr, "cannot initialize emaildb.\n");
+	fprintf(stderr, "cannot initialize emaildb: %s.\n", fpath);
 	return 0;
     }
 
