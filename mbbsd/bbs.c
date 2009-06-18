@@ -386,7 +386,10 @@ int CheckPostRestriction(int bid)
 	return 0;
     if (cuser.numlogins / 10 < (unsigned int)bp->post_limit_logins)
 	return 0;
-    if (cuser.numposts  / 10 < (unsigned int)bp->post_limit_posts)
+    // XXX numposts itself is an integer, but some records (by del post!?) may
+    // create invalid records as -1... so we'd better make it signed for real
+    // comparison.
+    if ((int)(cuser.numposts  / 10) < (int)(unsigned int)bp->post_limit_posts)
 	return 0;
 
 #ifdef ASSESS
@@ -3226,7 +3229,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (genbuf[0]=='y') {
 		    int i;
 		    char *userid=getuserid(tusernum);
-                    int rpt_bid;
  
 		    move(b_lines - 2, 0);
 		    clrtobot();
@@ -3271,7 +3273,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		       mail_id(userid, genbuf, newpath, cuser.userid);
 
 #ifdef BAD_POST_RECORD
-                       rpt_bid = getbnum(BAD_POST_RECORD);
+		     {
+		      int rpt_bid = getbnum(BAD_POST_RECORD);
                       if (rpt_bid > 0) {
 			  fileheader_t report_fh;
 			  char report_path[PATHLEN];
@@ -3290,6 +3293,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
  
                           touchbtotal(rpt_bid);
 		      }
+		     }
 #endif /* defined(BAD_POST_RECORD) */
 		   }
                 }
@@ -3328,7 +3332,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		{
 		    userec_t xuser;
 		    passwd_sync_query(tusernum, &xuser);
-		    xuser.numposts--;
+		    if (xuser.numposts)
+			xuser.numposts--;
 		    passwd_sync_update(tusernum, &xuser);
 		    sendalert_uid(tusernum, ALERT_PWD_POSTS);
 

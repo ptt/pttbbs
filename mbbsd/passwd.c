@@ -55,6 +55,9 @@ passwd_sync_update(int num, userec_t * buf)
 	    memcpy(cuser.email, u.email, sizeof(u.email));
 	}
 	cuser.numposts += u.numposts - latest_numposts;
+	// XXX bad workaround - but.... let's use it until we've solved the sync issue
+	if ((int)cuser.numposts < 0)
+	    cuser.numposts = 0;
 	currutmp->alerts &= ~ALERT_PWD;
 
 	// ALERT_PWD_RELOAD: reload all! No need to write.
