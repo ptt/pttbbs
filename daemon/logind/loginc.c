@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     int fd;
     char buf[64];
 
+    Signal(SIGPIPE, SIG_IGN);
     memset(buf, 0, sizeof(buf));
 
     if (argc < 2) {
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
     puts("start waiting!\n");
     while (1)
     {
-	int xfd = 0, ok = 1, i;
+	int xfd = 0, i;
 	const char *encoding = "";
 	login_data dat = {0};
 
@@ -38,9 +39,13 @@ int main(int argc, char *argv[])
 	    break;
 	}
 	puts("got recv_remote_fd");
-	if (read(fd, &dat, sizeof(dat)) <= 0)
+	if (toread(fd, &dat, sizeof(dat)) <= 0)
 	{
-	    fprintf(stderr, "recv error. abort.\r\n");
+	    fprintf(stderr, "toread error. abort.\r\n");
+	    break;
+	}
+	if (towrite(fd, &dat.ack, sizeof(dat.ack)) <= 0) {
+	    fprintf(stderr, "towrite error. abort.\r\n");
 	    break;
 	}
 #ifdef CONVERT
@@ -57,10 +62,9 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "got login data: userid=%s, (%dx%d) %sfrom: %s\r\n", 
 		dat.userid, dat.t_cols, dat.t_lines, 
 		encoding, dat.hostip);
-	write(fd, &ok, sizeof(ok));
 
-	dup2(xfd, 0);
-	dup2(xfd, 1);
+	if (xfd != 0) dup2(xfd, 0);
+	if (xfd != 1) dup2(xfd, 1);
 
 	// write something to user!
 	printf("\r\nwelcome, %s from %s! greetings from loginc!\r\n", dat.userid, dat.hostip);
@@ -73,7 +77,9 @@ int main(int argc, char *argv[])
 	    printf("you hit %02X\r\n", c);
 	}
 	printf("\r\ntest complete. connection closed.\r\n");
-	close(xfd);
+	close(0);
+	close(1);
+	if (xfd != 0 && xfd != 1) close(xfd);
     }
     return 0;
 }
