@@ -391,7 +391,9 @@ ackq_del(login_conn_ctx *conn)
 {
     size_t i;
 
-    assert(conn && conn->cb == sizeof(login_conn_ctx));
+    // XXX in current implementation, the conn pointer may be
+    // destroyed before getting acks, so don't check its validness.
+    // assert(conn && conn->cb == sizeof(login_conn_ctx));
     for (i = 0; i < g_ack_queue.size; i++)
     {
         if (g_ack_queue.queue[i] != conn)
@@ -1465,24 +1467,29 @@ ack_cb(int tunnel, short event, void *arg)
         return;
     }
 
+    // some connections may be removed (for example, socket close) before being acked.
+    // XXX FIXME if someone created a new connection before ack comes and re-used
+    // the memory location of previous destroyed one, we'd have problem here.
+    if (!ackq_del(conn))
+    {
+        if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
+                "drop abandoned ack connection: %p.\r\n", conn);
+        return;
+    }
+
+    // check connection
     if (conn->cb != sizeof(login_conn_ctx))
     {
-        fprintf(stderr, LOG_PREFIX "warning: tunnel returned invalid ack. abort?\r\n");
+        fprintf(stderr, LOG_PREFIX 
+                "warning: received invalid ack from tunnel. abort/reset tunnel?\r\n");
         // assert(conn && conn->cb == sizeof(login_conn_ctx));
         return;
     }
 
-    // XXX success connection.
-    if (ackq_del(conn))
-    {
-        // reset the state to prevent processing ackq again
-        conn->ctx.state = LOGIN_STATE_AUTH;
-        // this event is still in queue.
-        login_conn_remove(conn, conn->telnet.fd, 0);
-    } else {
-        if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
-                "got invalid ack connection: %p.\r\n", conn);
-    }
+    // reset the state to prevent processing ackq again
+    conn->ctx.state = LOGIN_STATE_AUTH;
+    // this event is still in queue.
+    login_conn_remove(conn, conn->telnet.fd, 0);
 }
 
 
