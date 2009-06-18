@@ -1243,8 +1243,9 @@ toregister(char *email)
 	}
     }
 #ifdef USE_EMAILDB
-    if (emaildb_update_email(cuser.userid, strlen(cuser.userid),
-		email, strlen(email)) < 0) {
+    // XXX for 'x', the check will be made later... let's simply ignore it.
+    if (strcmp(email, "x") != 0 &&
+	emaildb_update_email(cuser.userid, strlen(cuser.userid), email, strlen(email)) < 0) {
 	move(15, 0); clrtobot();
 	move(17, 0);
 	outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
