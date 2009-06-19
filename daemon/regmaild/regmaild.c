@@ -49,7 +49,7 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
 }
 
 int 
-regmaildb_check_email(char * email, int email_len, char *myid)
+regmaildb_check_email(const char * email, int email_len, const char *myid)
 {
     int count = -1;
     sqlite3 *Db = NULL;
@@ -100,7 +100,7 @@ end:
 }
 
 int 
-regmaildb_update_email(char * userid, int userid_len, char * email, int email_len)
+regmaildb_update_email(const char * userid, int userid_len, const char * email, int email_len)
 {
     int ret = -1;
 
