@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "bbs.h"
-#include "logind.h"
+#include "daemons.h"
 
 // standalone client to test logind
 

@@ -1,259 +1,74 @@
 /* $Id$ */
-#include <sqlite3.h>
-#include <sys/wait.h>
+
 #include "bbs.h"
+#include "daemons.h"
 
-#define EMAILDB_PATH BBSHOME "/emaildb.db"
+#ifdef USE_EMAILDB
 
-// define FORK model to minimize memory usage.
-#define FORK_MODEL
-
-static int emaildb_open(sqlite3 **Db, const char *fpath) {
-    int rc;
-
-    assert(fpath);
-    if ((rc = sqlite3_open(fpath, Db)) != SQLITE_OK)
-	return rc;
-
-    // create table if it doesn't exist
-    rc = sqlite3_exec(*Db, "CREATE TABLE IF NOT EXISTS emaildb (userid TEXT, email TEXT, PRIMARY KEY (userid));"
-		"CREATE INDEX IF NOT EXISTS email ON emaildb (email);",
-		NULL, NULL, NULL);
-
-    return rc;
-}
-
-#ifndef INIT_MAIN
 int emaildb_check_email(char * email, int email_len)
 {
     int count = -1;
-    pid_t pid = -1;
-    sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL;
+    int fd = -1;
+    regmaildb_req req = {0};
 
-#ifdef FORK_MODEL
-    switch((pid = fork()))
+    // initialize request
+    req.cb = sizeof(req);
+    req.operation = REGMAILDB_REQ_COUNT;
+    strlcpy(req.userid, cuser.userid, sizeof(req.userid));
+
+    if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
     {
-	case -1: // error
-	    break;
-
-	case 0: // child
-	    break;
-
-	default:
-	    waitpid(pid, &count, 0);
-	    // 0xFF: the limitation of WEXISTSTATUS
-	    if (WIFEXITED(count) && WEXITSTATUS(count) < 0xFF)
-		count = WEXITSTATUS(count);
-	    // vmsgf(ANSI_RESET "found %d emails", count);
-	    return count;
-    }
-#endif
-
-    if (emaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
-	goto end;
-
-    if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email LIKE lower(?);",
-		-1, &Stmt, NULL) != SQLITE_OK)
-	goto end;
-
-    if (sqlite3_bind_text(Stmt, 1, email, email_len, SQLITE_STATIC) != SQLITE_OK)
-	goto end;
-
-    count = 0;
-    while (sqlite3_step(Stmt) == SQLITE_ROW) {
-	char *result;
-	userec_t u;
-
-	if ((result = (char*)sqlite3_column_text(Stmt, 0)) == NULL)
-	    break;
-
-	// ignore my self, because I may be the one going to
-	// use mail.
-	if (strcasecmp(result, cuser.userid) == 0)
-	    continue;
-
-	// force update
-	u.email[0] = 0;
-	
-	if (getuser(result, &u))
-	    if (strcasecmp(email, u.email) == 0)
-		count++;
+        // perror("toconnect");
+        return -1;
     }
 
-end:
-    if (Stmt != NULL)
-	if (sqlite3_finalize(Stmt) != SQLITE_OK)
-	    count = -1;
+    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+        // perror("towrite");
+        close(fd);
+        return -1;
+    }
 
-    if (Db != NULL)
-	sqlite3_close(Db);
-
-    // XXX exit() can only hold 0~255 for WEXISTSTATUS
-    assert(127 >= EMAILDB_LIMIT);
-    if (count > 127)
-	count = 127;
-
-    if (pid == 0)
-	exit(count);
+    if (toread(fd, &count, sizeof(count)) != sizeof(count)) {
+        // perror("toread");
+        close(fd);
+        return -1;
+    }
 
     return count;
 }
-#endif
 
 int emaildb_update_email(char * userid, int userid_len, char * email, int email_len)
 {
-    int ret = -1;
-    pid_t pid = -1;
+    int result = -1;
+    int fd = -1;
+    regmaildb_req req = {0};
 
-    sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL;
+    // initialize request
+    req.cb = sizeof(req);
+    req.operation = REGMAILDB_REQ_SET;
+    strlcpy(req.userid, cuser.userid, sizeof(req.userid));
 
-#ifdef FORK_MODEL
-    switch((pid = fork()))
+    if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
     {
-	case -1: // error
-	    break;
-
-	case 0: // child
-	    break;
-
-	default:
-	    waitpid(pid, &ret, 0);
-	    // 0xFF: the limitation of WEXISTSTATUS
-	    if (WIFEXITED(ret) && WEXITSTATUS(ret) < 0xFF)
-		ret = WEXITSTATUS(ret);
-	    return ret;
+        // perror("toconnect");
+        return -1;
     }
-#endif
 
-    if (emaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
-	goto end;
+    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+        // perror("towrite");
+        close(fd);
+        return -1;
+    }
 
-    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
-		-1, &Stmt, NULL) != SQLITE_OK)
-	goto end;
+    if (toread(fd, &result, sizeof(result)) != sizeof(result)) {
+        // perror("toread");
+        close(fd);
+        return -1;
+    }
 
-    if (sqlite3_bind_text(Stmt, 1, userid, userid_len, SQLITE_STATIC) != SQLITE_OK)
-	goto end;
-
-    if (sqlite3_bind_text(Stmt, 2, email, email_len, SQLITE_STATIC) != SQLITE_OK)
-	goto end;
-
-    if (sqlite3_step(Stmt) == SQLITE_DONE)
-	ret = 0;
-
-end:
-    if (Stmt != NULL)
-	sqlite3_finalize(Stmt);
-    if (Db != NULL)
-	sqlite3_close(Db);
-
-    if (pid == 0)
-	exit(ret);
-
-    return ret;
+    return result;
 }
 
-#ifdef INIT_MAIN
-
-// standalone initialize builder
-
-#define TRANSCATION_PERIOD (4096)
-int main(int argc, char *argv[])
-{
-    int fd = 0;
-    userec_t xuser;
-    off_t sz = 0, i = 0, valids = 0;
-    sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
-    const char *fpath = EMAILDB_PATH;
-
-    // init passwd
-    sz = dashs(FN_PASSWD);
-    fd = open(FN_PASSWD, O_RDONLY);
-    if (fd < 0 || sz <= 0)
-    {
-	fprintf(stderr, "cannot open ~/.PASSWDS.\n");
-	return 0;
-    }
-    sz /= sizeof(userec_t);
-
-    if (argc > 1)
-	fpath = argv[1];
-
-    // init emaildb
-    if (emaildb_open(&Db, fpath) != SQLITE_OK)
-    {
-	fprintf(stderr, "cannot initialize emaildb: %s.\n", fpath);
-	return 0;
-    }
-
-    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
-		-1, &Stmt, NULL) != SQLITE_OK ||
-	sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
-	sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
-    {
-	fprintf(stderr, "SQLite 3 internal error.\n");
-	return 0;
-    }
-
-    sqlite3_step(tranStart);
-    sqlite3_reset(tranStart);
-    while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
-    {
-	i++;
-	// got a record
-	if (strlen(xuser.userid) < 2 || strlen(xuser.userid) > IDLEN)
-	    continue;
-	if (strlen(xuser.email) < 5)
-	    continue;
-
-	if (sqlite3_bind_text(Stmt, 1, xuser.userid, strlen(xuser.userid), 
-		    SQLITE_STATIC) != SQLITE_OK)
-	{
-	    fprintf(stderr, "\ncannot prepare userid param.\n");
-	    break;
-	}
-	if (sqlite3_bind_text(Stmt, 2, xuser.email, strlen(xuser.email), 
-		    SQLITE_STATIC) != SQLITE_OK)
-	{
-	    fprintf(stderr, "\ncannot prepare email param.\n");
-	    break;
-	}
-
-	if (sqlite3_step(Stmt) != SQLITE_DONE)
-	{
-	    fprintf(stderr, "\ncannot execute statement.\n");
-	    break;
-	}
-	sqlite3_reset(Stmt);
-
-	valids ++;
-	if (valids % 10 == 0)
-	    fprintf(stderr, "%d/%d (valid: %d)\r", 
-		    (int)i, (int)sz, (int)valids);
-	if (valids % TRANSCATION_PERIOD == 0)
-	{
-	    sqlite3_step(tranEnd);
-	    sqlite3_step(tranStart);
-	    sqlite3_reset(tranEnd);
-	    sqlite3_reset(tranStart);
-	}
-    }
-
-    if (valids % TRANSCATION_PERIOD)
-	sqlite3_step(tranEnd);
-
-    if (Stmt != NULL)
-	sqlite3_finalize(Stmt);
-
-    if (Db != NULL)
-	sqlite3_close(Db);
-
-    close(fd);
-    return 0;
-}
 #endif
 
-// vim: sw=4
+// vim:et

@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 #include "banip.h"
-#include "logind.h"
+#include "daemons.h"
 #include <sys/wait.h>
 #include <netinet/tcp.h>
 

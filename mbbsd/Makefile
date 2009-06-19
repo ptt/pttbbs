@@ -9,7 +9,7 @@ SRCROOT=	..
 
 PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o cache.o cal.o brc.o mail.o record.o fav.o
-ACCOBJS  = user.o register.o passwd.o
+ACCOBJS  = user.o register.o passwd.o emaildb.o
 NETOBJS  = mbbsd.o io.o term.o telnet.o
 TALKOBJS = talk.o chat.o friend.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
@@ -37,9 +37,7 @@ CFLAGS+= -DLOG_CRAWLER
 .endif
 
 .if !defined(WITHOUT_EMAILDB)	&& defined(WITH_EMAILDB)
-OBJS+=   emaildb.o
 CFLAGS+= -DUSE_EMAILDB
-LDLIBS+= -lsqlite3
 .endif
 
 .if !defined(WITHOUT_BBSLUA_USAGE) && defined(WITH_BBSLUA_USAGE)
@@ -111,9 +109,6 @@ $(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
 
 mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
 	$(DIETCC) $(CC) $(CFLAGS) -c $<
-
-initemaildb: emaildb.c
-	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LDLIBS)
 
 ctags:
 	ctags *.c $(SRCROOT)/include/*.h $(SRCROOT)/common/sys/*.c $(SRCROOT)/common/bbs/*.c

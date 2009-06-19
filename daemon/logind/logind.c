@@ -34,7 +34,7 @@
 
 #include "bbs.h"
 #include "banip.h"
-#include "logind.h"
+#include "daemons.h"
 
 #ifndef LOGIND_REGULAR_CHECK_DURATION
 #define LOGIND_REGULAR_CHECK_DURATION   (15)
@@ -2236,7 +2236,11 @@ main(int argc, char *argv[], char *envp[])
     }
 
     // warning: after daemonize, the directory was changed to root (/)...
-    fprintf(stderr, LOG_PREFIX "start event dispatch.\r\n");
+    {
+        time4_t tnow = time(0);
+        fprintf(stderr, LOG_PREFIX "%s: start event dispatch.\r\n",
+                Cdate(&tnow));
+    }
     event_dispatch();
 
     return 0;
