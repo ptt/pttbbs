@@ -2,7 +2,6 @@
 #include "bbs.h"
 
 #define LOGFILE "etc/othello.log"
-#define SECRET "etc/othello.secret"
 #define NR_TABLE 2
 
 #define true 1
@@ -211,21 +210,13 @@ eat(int x, int y, int color, char chessboard[][10])
 static void
 end_of_game(struct OthelloData *od, int quit)
 {
-    FILE           *fp, *fp1;
+    FILE           *fp;
     char           *opponent[] = {"", "CD-65", "", "嬰兒", "小孩", "", "大人", "專家"};
 
     move(STARTX - 1, 30);
     outs("                         ");
     move(22, 35);
     fp = fopen(LOGFILE, "a");
-    if (!quit) {
-	fp1 = fopen(SECRET, "a");
-	if (fp1) {
-	    fprintf(fp1, "%d,%d,%s,%02d,%02d\n", od->think, od->which_table,
-		    cuser.userid, od->number[0], od->number[1]);
-	    fclose(fp1);
-	}
-    }
     if (quit) {
 	if (od->number[0] == 2 && od->number[1] == 2) {
 	    if (fp)
