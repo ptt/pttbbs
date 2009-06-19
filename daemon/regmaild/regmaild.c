@@ -166,12 +166,21 @@ client_cb(int fd, short event, void *arg)
     int ret = -1;
 
     assert(ev);
+
     if ( (event & EV_TIMEOUT) ||
         !(event & EV_READ) ||
          toread(fd, &req, sizeof(req)) != sizeof(req) ||
          req.cb != sizeof(req))
     {
         fprintf(stderr, "error: corrupted request.\r\n");
+        close(fd);
+        free(ev);
+        return;
+    }
+
+    if (!*req.email)
+    {
+        fprintf(stderr, "invalid request: uid=[%s]\r\n", req.userid);
         close(fd);
         free(ev);
         return;
@@ -191,6 +200,7 @@ client_cb(int fd, short event, void *arg)
         case REGMAILDB_REQ_SET:
             ret = regmaildb_update_email(req.userid, strlen(req.userid),
                     req.email, strlen(req.email));
+            fprintf(stderr, "%s update mail to [%s]: ret=%d\r\n", req.userid, req.email, ret);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\r\n");
