@@ -15,6 +15,7 @@ int emaildb_check_email(char * email, int email_len)
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_COUNT;
     strlcpy(req.userid, cuser.userid, sizeof(req.userid));
+    strlcpy(req.email,  email,        sizeof(req.email));
 
     if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
     {
@@ -46,7 +47,8 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_SET;
-    strlcpy(req.userid, cuser.userid, sizeof(req.userid));
+    strlcpy(req.userid, userid, sizeof(req.userid));
+    strlcpy(req.email,  email,  sizeof(req.email));
 
     if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
     {
