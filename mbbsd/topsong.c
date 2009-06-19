@@ -10,7 +10,6 @@ typedef struct songcmp_t {
     int             count;
 }               songcmp_t;
 
-static int totalcount = 0;
 
 static int
 count_cmp(songcmp_t * b, songcmp_t * a)
@@ -33,6 +32,7 @@ sortsong(void)
     songcmp_t       songs[MAX_SONGS + 1];
     int             n;
     char            buf[256], cbuf[256];
+    int totalcount = 0;
 
     memset(songs, 0, sizeof(songs));
     if (!fp)
