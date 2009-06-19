@@ -17,6 +17,8 @@
 // 6. [done] handle non-block i/o
 // 7. [done] asynchronous tunnel handshake
 // 8. simplify async ack queue to ordered sequence
+// 9. force telnet_init_cmd to complete
+// 10.prioritized logattempt (and let connection to wait logattempt to end)
 
 #include <stdio.h>
 #include <ctype.h>
@@ -87,6 +89,7 @@
 ///////////////////////////////////////////////////////////////////////
 // global variables
 int g_tunnel;           // tunnel for service daemon
+int g_logattempt_pipe;  // pipe to log attempts
 
 // server status
 int g_overload = 0;
@@ -94,10 +97,12 @@ int g_banned   = 0;
 int g_opened_fd= 0;
 int g_nonblock = 1;
 int g_async_ack= 1;
+int g_async_logattempt = 1;
 
 // debug and reporting
 int g_verbose  = 0;
 int g_report_timeout = 0;
+char g_logfile_path[PATHLEN];
 
 // retry service
 char g_retry_cmd[PATHLEN];
@@ -173,6 +178,13 @@ typedef struct {
     TelnetCtx    telnet;
     login_ctx    ctx;
 } login_conn_ctx;
+
+typedef struct {
+    size_t  cb;
+    time4_t logtime;
+    char    userid[IDLEN+1];
+    char    hostip[IPV4LEN+1];
+} logattempt_ctx;
 
 typedef struct {
     struct event ev;
@@ -674,6 +686,8 @@ _set_connection_opt(int sock)
 static int
 _set_tunnel_opt(int sock)
 {
+    // XXX RCVBUF/SNDBUF seems not really required...
+#if 0
     const int szrecv = 131072, szsend = 131072;
 
     // adjust transmission window
@@ -683,7 +697,7 @@ _set_tunnel_opt(int sock)
         fprintf(stderr, LOG_PREFIX "WARNING: "
                 "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n", szsend, szrecv);
     }
-
+#endif
     return 0;
 }
 
@@ -1258,6 +1272,33 @@ start_service(int fd, login_conn_ctx *conn)
     return 1;
 }
 
+static void
+logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
+{
+    logattempt_ctx ctx = {0};
+
+    while (g_async_logattempt)
+    {
+        assert(g_logattempt_pipe);
+        ctx.cb = sizeof(ctx);
+        ctx.logtime = logtime;
+        strlcpy(ctx.userid, userid, sizeof(ctx.userid));
+        strlcpy(ctx.hostip, hostip, sizeof(ctx.hostip));
+
+        if (towrite(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
+            return;
+
+        // failed ... back to internal.
+        fprintf(stderr, LOG_PREFIX 
+                "error: cannot use logattempt daemon, change to internal.\r\n");
+        close(g_logattempt_pipe);
+        g_async_logattempt= 0;
+        g_logattempt_pipe = 0;
+        break;
+    }
+    logattempt(userid, c, logtime, hostip);
+}
+
 static int 
 auth_start(int fd, login_conn_ctx *conn)
 {
@@ -1272,7 +1313,8 @@ auth_start(int fd, login_conn_ctx *conn)
         switch (auth_user_challenge(ctx))
         {
             case AUTH_RESULT_FAIL:
-                logattempt(ctx->userid , '-', time(0), ctx->hostip);
+                // logattempt(ctx->userid , '-', time(0), ctx->hostip);
+                logattempt2(ctx->userid , '-', time(0), ctx->hostip);
                 break;
 
             case AUTH_RESULT_FREEID:
@@ -1807,6 +1849,53 @@ tunnel_cb(int fd, short event, void *arg)
 ///////////////////////////////////////////////////////////////////////
 // Main 
 
+static int
+logattempt_daemon()
+{
+    int pipe_fds[2];
+    int pid;
+    logattempt_ctx ctx = {0};
+
+    fprintf(stderr, LOG_PREFIX "forking logattempt daemon...\r\n");
+    if (pipe(pipe_fds) < 0)
+    {
+        perror("pipe");
+        return -1;
+    }
+
+    pid = fork();
+    if (pid < 0)
+    {
+        perror("fork");
+        return -1;
+    }
+
+    if (pid != 0)
+    {
+        g_logattempt_pipe = pipe_fds[1];
+        close(pipe_fds[0]);
+        return 0;
+    }
+
+    // child here.
+    g_logattempt_pipe = pipe_fds[0];
+    close(pipe_fds[1]);
+    setproctitle("[logattempts]");
+
+    // TODO change to batched processing
+    while (toread(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
+    {
+        if (ctx.cb != sizeof(ctx))
+        {
+            fprintf(stderr, LOG_PREFIX "broken pipe. abort.\r\n");
+            break;
+        }
+
+        logattempt(ctx.userid, '-', ctx.logtime, ctx.hostip);
+    }
+
+    exit(0);
+}
 static int 
 bind_port(int port)
 {
@@ -1875,9 +1964,9 @@ parse_bindports_conf(FILE *fp,
             strlcpy(tclient_cmd, vtunnel, sz_tclient_cmd);
             continue;
         }
-        if (strcmp(vport, "client_retry") == 0)
+        else if (strcmp(vport, "client_retry") == 0)
         {
-            // syntax: client command-line$
+            // syntax: client_retry command-line$
             if (*g_retry_cmd)
             {
                 fprintf(stderr, LOG_PREFIX
@@ -1892,6 +1981,25 @@ parse_bindports_conf(FILE *fp,
             }
             if (g_verbose) fprintf(stderr, "client_retry: %s\r\n", vtunnel);
             strlcpy(g_retry_cmd, vtunnel, sizeof(g_retry_cmd));
+            continue;
+        }
+        else if (strcmp(vport, "logfile") == 0)
+        {
+            // syntax: logfile file$
+            if (*g_logfile_path)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "warning: ignored configuration file due to specified log: %s\r\n",
+                        g_logfile_path);
+                continue;
+            }
+            if (sscanf(buf, "%*s%*s%s", vtunnel) != 1 || !*vtunnel)
+            {
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\r\n");
+                exit(1);
+            }
+            if (g_verbose) fprintf(stderr, "log_file: %s\r\n", vtunnel);
+            strlcpy(g_logfile_path, vtunnel, sizeof(g_logfile_path));
             continue;
         }
         else if (strcmp(vport, "tunnel") == 0)
@@ -1931,18 +2039,19 @@ parse_bindports_conf(FILE *fp,
 }
 
 int 
-main(int argc, char *argv[])
+main(int argc, char *argv[], char *envp[])
 {
     int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
     FILE   *fp;
     char tunnel_path[PATHLEN] = "", tclient_cmd[PATHLEN] = "";
     const char *config_file = FN_CONF_BINDPORTS;
-    const char *log_file = NULL;
-
+    struct event_base *evb;
+    struct rlimit r = {.rlim_cur = LOGIND_MAX_FDS, .rlim_max = LOGIND_MAX_FDS};
 
     Signal(SIGPIPE, SIG_IGN);
+    initsetproctitle(argc, argv, envp);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvTDdBbAa")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvTDdBbAaMm")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1950,7 +2059,7 @@ main(int argc, char *argv[])
             break;
 
         case 'l':
-            log_file = optarg;
+            strlcpy(g_logfile_path, optarg, sizeof(g_logfile_path));
             break;
 
         case 'p':
@@ -1989,6 +2098,14 @@ main(int argc, char *argv[])
             g_nonblock = 0;
             break;
 
+        case 'm':
+            g_async_logattempt = 1;
+            break;
+            
+        case 'M':
+            g_async_logattempt = 0;
+            break;
+
         case 'v':
             g_verbose++;
             break;
@@ -2000,20 +2117,19 @@ main(int argc, char *argv[])
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-vTaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
             fprintf(stderr, 
-                    "\t-v: provide verbose messages\r\n"
-                    "\t-T: provide timeout connection info\r\n"
-                    "\t-d: enter daemon mode%s\r\n"
-                    "\t-D: do not enter daemon mode%s\r\n"
-                    "\t-a: use asynchronous service ack%s\r\n"
-                    "\t-A: do not use async service ack%s\r\n"
-                    "\t-b: use non-blocking socket mode%s\r\n"
-                    "\t-B: use blocking socket mode%s\r\n"
+                    "\t-v:    provide verbose messages\r\n"
+                    "\t-T:    provide timeout connection info\r\n"
+                    "\t-d/-D: do/not enter daemon mode (default: %s)\r\n"
+                    "\t-a/-A: do/not use asynchronous service ack (deafult: %s)\r\n"
+                    "\t-b/-B: do/not use non-blocking socket mode (default: %s)\r\n"
+                    "\t-m/-M: do/not use asynchronous logattempts (default: %s)\r\n"
                     "\t-f: read configuration from file (default: %s)\r\n", 
-                    as_daemon   ? " (default)" : "", !as_daemon   ? " (default)" : "",
-                    g_async_ack ? " (default)" : "", !g_async_ack ? " (default)" : "",
-                    g_nonblock  ? " (default)" : "", !g_nonblock  ? " (default)" : "",
+                    as_daemon   ? "true" : "false",
+                    g_async_ack ? "true" : "false",
+                    g_nonblock  ? "true" : "false",
+                    g_async_logattempt  ? "true" : "false",
                     BBSHOME "/" FN_CONF_BINDPORTS);
             fprintf(stderr, 
                     "\t-l: log meesages into log_file\r\n"
@@ -2026,7 +2142,6 @@ main(int argc, char *argv[])
         }
     }
 
-    struct rlimit r = {.rlim_cur = LOGIND_MAX_FDS, .rlim_max = LOGIND_MAX_FDS};
     if (setrlimit(RLIMIT_NOFILE, &r) < 0)
     {
         fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\r\n", LOGIND_MAX_FDS);
@@ -2035,9 +2150,14 @@ main(int argc, char *argv[])
     chdir(BBSHOME);
     attach_SHM();
 
-    reload_data();
+    if (g_async_logattempt && logattempt_daemon() < 0)
+    {
+        fprintf(stderr, LOG_PREFIX "error: cannot fork to handle logattempts.\r\n");
+        return 5;
+    }
 
-    struct event_base *evb = event_init();
+    reload_data();
+    evb = event_init();
 
     // bind ports
     if (port && bind_port(port) < 0)
@@ -2086,8 +2206,10 @@ main(int argc, char *argv[])
     // daemonize!
     if (as_daemon)
     {
+        char *logfile_path = NULL;
+        if (g_logfile_path[0]) logfile_path = g_logfile_path;
         fprintf(stderr, LOG_PREFIX "start daemonize\r\n");
-        daemonize(BBSHOME "/run/logind.pid", log_file);
+        daemonize(BBSHOME "/run/logind.pid", logfile_path);
 
         // because many of the libraries used in this daemon (for example,
         // passwd / logging / ...) all assume cwd=BBSHOME,
