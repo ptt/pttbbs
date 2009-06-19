@@ -190,7 +190,8 @@ client_cb(int fd, short event, void *arg)
     {
         case REGMAILDB_REQ_COUNT:
             ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
-            fprintf(stderr, "%s check mail[%s]: ret=%d\r\n", req.userid, req.email, ret);
+            fprintf(stderr, "%-*s check  mail (result: %d): [%s]\r\n", 
+                    IDLEN, req.userid, ret, req.email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\r\n");
@@ -200,7 +201,8 @@ client_cb(int fd, short event, void *arg)
         case REGMAILDB_REQ_SET:
             ret = regmaildb_update_email(req.userid, strlen(req.userid),
                     req.email, strlen(req.email));
-            fprintf(stderr, "%s update mail to [%s]: ret=%d\r\n", req.userid, req.email, ret);
+            fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\r\n", 
+                    IDLEN, req.userid, ret, req.email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\r\n");
