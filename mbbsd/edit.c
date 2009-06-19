@@ -2384,7 +2384,6 @@ int synLuaKeyword(const char *text, int n, char *wlen)
     return -6;
 }
 
-static char movie_attrs[WRAPMARGIN+10];
 void syn_pmore_render(char *os, int len, char *buf)
 {
     // XXX buf should be same length as s.
@@ -2518,7 +2517,10 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	 fWord = 0;
 
     // movie syntax rendering
+#ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
+    char movie_attrs[WRAPMARGIN+10] = {0};
     char *pmattr = movie_attrs, mattr = 0;
+#endif
 
 #ifdef COLORED_SELECTION
     if ((attr & EOATTR_SELECTED) && 
@@ -2565,7 +2567,9 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
     {
+#ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
 	mattr = *pmattr++;
+#endif
 
 	if(inAnsi == 1)
 	{
