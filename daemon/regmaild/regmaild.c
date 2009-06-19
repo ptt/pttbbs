@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    // daemonize(BBSHOME "/run/regmaild.pid", NULL);
+    daemonize(BBSHOME "/run/regmaild.pid", NULL);
     regmaildb_open(&g_Db, EMAILDB_PATH);
 
     event_init();

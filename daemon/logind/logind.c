@@ -1880,7 +1880,7 @@ logattempt_daemon()
     // child here.
     g_logattempt_pipe = pipe_fds[0];
     close(pipe_fds[1]);
-    setproctitle("[logattempts]");
+    setproctitle(MY_SVC_NAME " [logattempts]");
 
     // TODO change to batched processing
     while (toread(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
