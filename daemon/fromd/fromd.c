@@ -58,7 +58,7 @@ static void listen_cb(int fd, short event, void *arg)
 int main(int argc, char *argv[])
 {
     int     ch, sfd;
-    char   *iface_ip = ":5130";
+    char   *iface_ip = FROMD_ADDR;
 
     Signal(SIGPIPE, SIG_IGN);
 
