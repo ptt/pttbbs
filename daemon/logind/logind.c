@@ -1749,10 +1749,12 @@ listen_cb(int lfd, short event, void *arg)
         // So we have to set blocking mode for client again here.
         if (g_nonblock) _enable_nonblock(fd);
 
+#ifndef LOGIND_NO_INSCREEN
         // fast draw banner (don't use buffered i/o - this banner is not really important.)
-#ifdef INSCREEN
+# ifdef INSCREEN
         write(fd, INSCREEN, sizeof(INSCREEN));
-#endif
+# endif // INSCREEN
+#endif // !LOGIND_NO_INSCREEN
 
         if ((conn = malloc(sizeof(login_conn_ctx))) == NULL) {
             close(fd);
