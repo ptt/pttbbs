@@ -12,18 +12,23 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <ctype.h>
+#include <assert.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
 
-#include <event.h>
-#include <sqlite3.h>
+#include "common.h"
+#include "pttstruct.h"
 
-#include "bbs.h"
-#include "daemons.h"
+///////////////////////////////////////////////////////////////////////
+// Common Section
+
+#include <sqlite3.h>
 
 // local definiions
 #ifndef EMAILDB_PATH
@@ -47,6 +52,118 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
 
     return rc;
 }
+
+///////////////////////////////////////////////////////////////////////
+// InitEmaildb Tool Main 
+
+#ifdef INIT_MAIN
+
+// standalone initialize builder
+
+#define TRANSCATION_PERIOD (4096)
+int main(int argc, char *argv[])
+{
+    int fd = 0;
+    userec_t xuser;
+    off_t sz = 0, i = 0, valids = 0;
+    sqlite3 *Db = NULL;
+    sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
+    const char *fpath = EMAILDB_PATH;
+
+    // init passwd
+    sz = dashs(FN_PASSWD);
+    fd = open(FN_PASSWD, O_RDONLY);
+    if (fd < 0 || sz <= 0)
+    {
+        fprintf(stderr, "cannot open ~/.PASSWDS.\n");
+        return 0;
+    }
+    sz /= sizeof(userec_t);
+
+    if (argc > 1)
+        fpath = argv[1];
+
+    // init emaildb
+    if (regmaildb_open(&Db, fpath) != SQLITE_OK)
+    {
+        fprintf(stderr, "cannot initialize emaildb: %s.\n", fpath);
+        return 0;
+    }
+
+    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
+                -1, &Stmt, NULL) != SQLITE_OK ||
+        sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
+        sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
+    {
+        fprintf(stderr, "SQLite 3 internal error.\n");
+        return 0;
+    }
+
+    sqlite3_step(tranStart);
+    sqlite3_reset(tranStart);
+    while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
+    {
+        i++;
+        // got a record
+        if (strlen(xuser.userid) < 2 || strlen(xuser.userid) > IDLEN)
+            continue;
+        if (strlen(xuser.email) < 5)
+            continue;
+
+        if (sqlite3_bind_text(Stmt, 1, xuser.userid, strlen(xuser.userid), 
+                    SQLITE_STATIC) != SQLITE_OK)
+        {
+            fprintf(stderr, "\ncannot prepare userid param.\n");
+            break;
+        }
+        if (sqlite3_bind_text(Stmt, 2, xuser.email, strlen(xuser.email), 
+                    SQLITE_STATIC) != SQLITE_OK)
+        {
+            fprintf(stderr, "\ncannot prepare email param.\n");
+            break;
+        }
+
+        if (sqlite3_step(Stmt) != SQLITE_DONE)
+        {
+            fprintf(stderr, "\ncannot execute statement.\n");
+            break;
+        }
+        sqlite3_reset(Stmt);
+
+        valids ++;
+        if (valids % 10 == 0)
+            fprintf(stderr, "%d/%d (valid: %d)\r", 
+                    (int)i, (int)sz, (int)valids);
+        if (valids % TRANSCATION_PERIOD == 0)
+        {
+            sqlite3_step(tranEnd);
+            sqlite3_step(tranStart);
+            sqlite3_reset(tranEnd);
+            sqlite3_reset(tranStart);
+        }
+    }
+
+    if (valids % TRANSCATION_PERIOD)
+        sqlite3_step(tranEnd);
+
+    if (Stmt != NULL)
+        sqlite3_finalize(Stmt);
+
+    if (Db != NULL)
+        sqlite3_close(Db);
+
+    close(fd);
+    return 0;
+}
+
+#else  // !INIT_MAIN
+
+///////////////////////////////////////////////////////////////////////
+// As Daemon
+
+#include <event.h>
+#include "bbs.h"
+#include "daemons.h"
 
 int 
 regmaildb_check_email(const char * email, int email_len, const char *myid)
@@ -222,114 +339,6 @@ client_cb(int fd, short event, void *arg)
 }
 
 ///////////////////////////////////////////////////////////////////////
-// Main 
-
-#ifdef INIT_MAIN
-
-// standalone initialize builder
-
-#define TRANSCATION_PERIOD (4096)
-int main(int argc, char *argv[])
-{
-    int fd = 0;
-    userec_t xuser;
-    off_t sz = 0, i = 0, valids = 0;
-    sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
-    const char *fpath = EMAILDB_PATH;
-
-    // init passwd
-    sz = dashs(FN_PASSWD);
-    fd = open(FN_PASSWD, O_RDONLY);
-    if (fd < 0 || sz <= 0)
-    {
-        fprintf(stderr, "cannot open ~/.PASSWDS.\n");
-        return 0;
-    }
-    sz /= sizeof(userec_t);
-
-    if (argc > 1)
-        fpath = argv[1];
-
-    // init emaildb
-    if (regmaildb_open(&Db, fpath) != SQLITE_OK)
-    {
-        fprintf(stderr, "cannot initialize emaildb: %s.\n", fpath);
-        return 0;
-    }
-
-    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
-                -1, &Stmt, NULL) != SQLITE_OK ||
-        sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
-        sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
-    {
-        fprintf(stderr, "SQLite 3 internal error.\n");
-        return 0;
-    }
-
-    sqlite3_step(tranStart);
-    sqlite3_reset(tranStart);
-    while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
-    {
-        i++;
-        // got a record
-        if (strlen(xuser.userid) < 2 || strlen(xuser.userid) > IDLEN)
-            continue;
-        if (strlen(xuser.email) < 5)
-            continue;
-
-        if (sqlite3_bind_text(Stmt, 1, xuser.userid, strlen(xuser.userid), 
-                    SQLITE_STATIC) != SQLITE_OK)
-        {
-            fprintf(stderr, "\ncannot prepare userid param.\n");
-            break;
-        }
-        if (sqlite3_bind_text(Stmt, 2, xuser.email, strlen(xuser.email), 
-                    SQLITE_STATIC) != SQLITE_OK)
-        {
-            fprintf(stderr, "\ncannot prepare email param.\n");
-            break;
-        }
-
-        if (sqlite3_step(Stmt) != SQLITE_DONE)
-        {
-            fprintf(stderr, "\ncannot execute statement.\n");
-            break;
-        }
-        sqlite3_reset(Stmt);
-
-        valids ++;
-        if (valids % 10 == 0)
-            fprintf(stderr, "%d/%d (valid: %d)\r", 
-                    (int)i, (int)sz, (int)valids);
-        if (valids % TRANSCATION_PERIOD == 0)
-        {
-            sqlite3_step(tranEnd);
-            sqlite3_step(tranStart);
-            sqlite3_reset(tranEnd);
-            sqlite3_reset(tranStart);
-        }
-    }
-
-    if (valids % TRANSCATION_PERIOD)
-        sqlite3_step(tranEnd);
-
-    if (Stmt != NULL)
-        sqlite3_finalize(Stmt);
-
-    if (Db != NULL)
-        sqlite3_close(Db);
-
-    close(fd);
-    return 0;
-}
-#endif
-
-///////////////////////////////////////////////////////////////////////
-// Event callbacks
-
-///////////////////////////////////////////////////////////////////////
-// Main 
 
 struct timeval tv = {60, 0};
 static struct event ev_listen;
@@ -346,6 +355,9 @@ static void listen_cb(int fd, short event, void *arg)
     event_set(ev, cfd, EV_READ, client_cb, ev);
     event_add(ev, &tv);
 }
+
+///////////////////////////////////////////////////////////////////////
+// Daemon Main 
 
 int main(int argc, char *argv[])
 {
@@ -386,4 +398,7 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+#endif // !INIT_MAIN
+
 // vim:et
