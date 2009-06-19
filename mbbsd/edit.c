@@ -276,15 +276,6 @@ int fix_cursor(char *str, int pos, unsigned int dir)
 #endif
 
 /* 記憶體管理與編輯處理 */
-static void
-indigestion(int i)
-{
-    vmsgf("嚴重內傷 (%d)\n", i);
-    u_exit("EDITOR FAILED");
-    assert(0);
-    exit(0);
-}
-
 static inline void
 edit_buffer_constructor(editor_internal_t *buf)
 {
@@ -676,12 +667,10 @@ window_scroll_down(void)
 {
     curr_buf->curr_window_line = 0;
 
-    if (!curr_buf->top_of_win->prev)
-	indigestion(6);
-    else {
-	curr_buf->top_of_win = curr_buf->top_of_win->prev;
-	rscroll();
-    }
+    assert(curr_buf->top_of_win && curr_buf->top_of_win->prev);
+
+    curr_buf->top_of_win = curr_buf->top_of_win->prev;
+    rscroll();
 }
 
 static inline void
@@ -689,17 +678,15 @@ window_scroll_up(void)
 {
     curr_buf->curr_window_line = b_lines - (curr_buf->phone_mode ? 2 : 1);
 
-    if (unlikely(!curr_buf->top_of_win->next))
-	indigestion(7);
-    else {
-	curr_buf->top_of_win = curr_buf->top_of_win->next;
-	if(curr_buf->phone_mode)
-	    move(b_lines-1, 0);
-	else
-	    move(b_lines, 0);
-	clrtoeol();
-	scroll();
-    }
+    assert(curr_buf->top_of_win && curr_buf->top_of_win->next);
+
+    curr_buf->top_of_win = curr_buf->top_of_win->next;
+    if(curr_buf->phone_mode)
+	move(b_lines-1, 0);
+    else
+	move(b_lines, 0);
+    clrtoeol();
+    scroll();
 }
 
 /**
@@ -766,7 +753,7 @@ alloc_line(short length)
 #endif
 	return p;
     }
-    indigestion(13);
+    assert(p);
     abort_bbs(0);
     return NULL;
 }
@@ -972,10 +959,8 @@ insert_char(int ch)
     register char  *s;
     int             wordwrap = YEA;
 
-    if (curr_buf->currpnt > i) {
-	indigestion(1);
-	return;
-    }
+    assert(curr_buf->currpnt <= i);
+
     block_cancel();
     if (curr_buf->currpnt < i && !curr_buf->insert_mode) {
 	p->data[curr_buf->currpnt++] = ch;
@@ -1144,10 +1129,7 @@ join(textline_t * line)
 	if (s == n->data)
 	    return YEA;
 	split(n, (s - n->data) + 1);
-	if (line->len + line->next->len >= WRAPMARGIN) {
-	    indigestion(0);
-	    return YEA;
-	}
+	assert(line->len + line->next->len < WRAPMARGIN);
 	join(line);
 	n = line->next;
 	ovfl = n->len - 1;
@@ -1171,10 +1153,8 @@ delete_char(void)
     register int    len;
 
     if ((len = curr_buf->currline->len)) {
-	if (unlikely(curr_buf->currpnt >= len)) {
-	    indigestion(1);
-	    return;
-	}
+	assert(curr_buf->currpnt < len);
+
 	raw_shift_left(curr_buf->currline->data + curr_buf->currpnt, curr_buf->currline->len - curr_buf->currpnt + 1);
 	curr_buf->currline->len--;
     }
@@ -1557,7 +1537,7 @@ read_file(const char *fpath, int splitSig)
 	    close(fd);
 	    return;
 	}
-	indigestion(4);
+	assert(fd >= 0);
 	abort_bbs(0);
     }
     load_file(fp, offSig);
@@ -1887,7 +1867,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 
 	assert(*fpath);
 	if ((fp = fopen(fpath, "w")) == NULL) {
-	    indigestion(5);
+	    assert(fp);
 	    abort_bbs(0);
 	}
 	if (saveheader)
