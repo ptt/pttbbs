@@ -50,7 +50,7 @@ static char    * const fcolor[11] = {
 static char     save_page_requestor[40];
 static char     page_requestor[40];
 
-userinfo_t *uip;
+static userinfo_t *uip;
 
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
@@ -1961,34 +1961,33 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
 }
 
 static const char    *
-descript(int show_mode, const userinfo_t * uentp, int diff)
+descript(int show_mode, const userinfo_t * uentp, int diff, char *description, int len)
 {
-    static char     description[30];
     switch (show_mode) {
     case 1:
-	return friend_descript(uentp, description, sizeof(description));
+	return friend_descript(uentp, description, len);
     case 0:
 	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
 		 HasUserPerm(PERM_SYSOP)) ?  uentp->from : "*");
     case 2:
-	snprintf(description, sizeof(description),
+	snprintf(description, len,
 		 "%4d/%4d/%2d %c", uentp->five_win,
 		 uentp->five_lose, uentp->five_tie,
 		 (uentp->withme&WITHME_FIVE)?'o':(uentp->withme&WITHME_NOFIVE)?'x':' ');
 	return description;
     case 3:
-	snprintf(description, sizeof(description),
+	snprintf(description, len,
 		 "%4d/%4d/%2d %c", uentp->chc_win,
 		 uentp->chc_lose, uentp->chc_tie,
 		 (uentp->withme&WITHME_CHESS)?'o':(uentp->withme&WITHME_NOCHESS)?'x':' ');
 	return description;
     case 4:
-	snprintf(description, sizeof(description),
+	snprintf(description, len,
 		 "%4d %s", uentp->chess_elo_rating, 
 		 (uentp->withme&WITHME_CHESS)?"找我下棋":(uentp->withme&WITHME_NOCHESS)?"別找我":"");
 	return description;
     case 5:
-	snprintf(description, sizeof(description),
+	snprintf(description, len,
 		 "%4d/%4d/%2d %c", uentp->go_win,
 		 uentp->go_lose, uentp->go_tie,
 		 (uentp->withme&WITHME_GO)?'o':(uentp->withme&WITHME_NOGO)?'x':' ');
@@ -2251,6 +2250,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
     char xmind[5+10] = ANSI_COLOR(33);
     char *mind = xmind+strlen(xmind);
+    char     description[30];
 
 #ifdef SHOW_IDLE_TIME
     char            idlestr[32];
@@ -2392,7 +2392,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		fcolor[state] ? xuid : uentp->userid, 
 		uentp->nickname,
 		descript(show_mode, uentp,
-		    uentp->pager & !(friend & HRM)),
+		    uentp->pager & !(friend & HRM), description, sizeof(description)),
 #if defined(SHOWBOARD) && defined(DEBUG)
 		show_board ? (uentp->brc_id == 0 ? "" :
 		    getbcache(uentp->brc_id)->brdname) :

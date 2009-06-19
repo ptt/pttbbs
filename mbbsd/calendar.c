@@ -118,7 +118,7 @@ ReadEvent(int today)
 {
     FILE           *fp;
     char            buf[PATHLEN];
-    static event_t  head;
+    event_t  head;
 
     head.next = NULL;
     sethomefile(buf, cuser.userid, "calendar");
