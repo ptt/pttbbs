@@ -2253,7 +2253,7 @@ static const char * const luaLibs[] = {
     "bbs", "bit", "math", "store", "string", "table", "toc",
     NULL
 };
-static const char** const luaLibAPI[] = {
+static const char* const * const luaLibAPI[] = {
     luaBbs, luaBit, luaMath, luaStore, luaString, luaTable, luaToc,
     NULL
 };
@@ -2261,7 +2261,7 @@ static const char** const luaLibAPI[] = {
 int synLuaKeyword(const char *text, int n, char *wlen)
 {
     int i = 0;
-    const char **tbl = NULL;
+    const char * const *tbl = NULL;
     if (*text >= 'A' && *text <= 'Z')
     {
 	// normal identifier
