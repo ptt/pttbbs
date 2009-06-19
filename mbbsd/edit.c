@@ -2188,24 +2188,24 @@ enum {
 
 };
 
-static const char *luaKeywords[] = {
+static const char * const luaKeywords[] = {
     "and",   "break", "do",  "else", "elseif",
     "end",   "for",   "if",  "in",   "not",  "or", 
     "repeat","return","then","until","while",
     NULL
 };
 
-static const char *luaDataKeywords[] = {
+static const char * const luaDataKeywords[] = {
     "false", "function", "local", "nil", "true",
     NULL
 };
 
-static const char *luaFunctions[] = {
+static const char * const luaFunctions[] = {
     "assert", "print", "tonumber", "tostring", "type",
     NULL
 };
 
-static const char *luaMath[] = {
+static const char * const luaMath[] = {
     "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh", "deg",
     "exp", "floor", "fmod", "frexp", "ldexp", "log", "log10", "max", "min",
     "modf", "pi", "pow", "rad", "random", "randomseed", "sin", "sinh", 
@@ -2213,17 +2213,17 @@ static const char *luaMath[] = {
     NULL
 };
 
-static const char *luaTable[] = {
+static const char * const luaTable[] = {
     "concat", "insert", "maxn", "remove", "sort",
     NULL
 };
 
-static const char *luaString[] = {
+static const char * const luaString[] = {
     "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", 
     "lower", "match", "rep", "reverse", "sub", "upper", NULL
 };
 
-static const char *luaBbs[] = {
+static const char * const luaBbs[] = {
     "ANSI_COLOR", "ANSI_RESET", "ESC", "addstr", "clear", "clock",
     "clrtobot", "clrtoeol", "color", "ctime", "getch","getdata",
     "getmaxyx", "getstr", "getyx", "interface", "kball", "kbhit", "kbreset", 
@@ -2233,27 +2233,27 @@ static const char *luaBbs[] = {
     NULL
 };
 
-static const char *luaToc[] = {
+static const char * const luaToc[] = {
     "author", "date", "interface", "latestref", 
     "notes", "title", "version",
     NULL
 };
 
-static const char *luaBit[] = {
+static const char * const luaBit[] = {
     "arshift", "band", "bnot", "bor", "bxor", "cast", "lshift", "rshift",
     NULL
 };
 
-static const char *luaStore[] = {
+static const char * const luaStore[] = {
     "USER", "GLOBAL", "iolimit", "limit", "load", "save",
     NULL
 };
 
-static const char *luaLibs[] = {
+static const char * const luaLibs[] = {
     "bbs", "bit", "math", "store", "string", "table", "toc",
     NULL
 };
-static const char**luaLibAPI[] = {
+static const char** const luaLibAPI[] = {
     luaBbs, luaBit, luaMath, luaStore, luaString, luaTable, luaToc,
     NULL
 };
