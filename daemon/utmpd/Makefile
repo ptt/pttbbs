@@ -1,5 +1,4 @@
 # $Id$
-#SRCROOT=	..
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
@@ -19,16 +18,16 @@ all:	${PROGRAMS}
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
-utmpserver: utmpserver.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
-utmpserver2: utmpserver2.o friend.o $(UTILOBJ)
-	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
-utmpserver3: utmpserver3.o friend.o $(UTILOBJ)
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -levent -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
+utmpserver: utmpserver.o
+	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(LDLIBS)
+utmpserver2: utmpserver2.o friend.o
+	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o friend.o $(LDLIBS)
+utmpserver3: utmpserver3.o friend.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -levent -o $* $*.o friend.o $(LDLIBS)
 utmpsync: utmpsync.o $(UTILOBJ)
 	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 
-authserver: authserver.o $(UTILOBJ)
+authserver: authserver.o
 	${CC} ${CFLAGS} ${LDFLAGS} -lcrypt -levent -o $* $> $(LDLIBS)
 
 clean:
