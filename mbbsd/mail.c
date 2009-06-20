@@ -1987,9 +1987,10 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 	int             len;
 
 	if (strchr(rcpt, '@')) {
+	    strlcpy(hacker, rcpt, sizeof(hacker));
 	    len = ptr - rcpt;
-	    memcpy(hacker, rcpt, len);
-	    hacker[len] = '\0';
+	    if (0 <= len && len < sizeof(hacker))
+		hacker[len] = '\0';
 	} else
 	    strlcpy(hacker, rcpt, sizeof(hacker));
 	return send_inner_mail(fpath, title, hacker);
