@@ -177,7 +177,8 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
     else if (regmaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
         goto end;
 
-    if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email LIKE lower(?);",
+    // XXX == is faster than LIKE in this case, although it does not support '%' and case sensitive
+    if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email == lower(?);",
                 -1, &Stmt, NULL) != SQLITE_OK)
         goto end;
 
@@ -233,7 +234,7 @@ regmaildb_update_email(const char * userid, int userid_len, const char * email, 
 
     if (strcmp(email, "x") == 0)
     {
-        if (sqlite3_prepare(Db, "DELETE FROM emaildb WHERE userid like lower(?);",
+        if (sqlite3_prepare(Db, "DELETE FROM emaildb WHERE userid == lower(?);",
                     -1, &Stmt, NULL) != SQLITE_OK)
             goto end;
 
