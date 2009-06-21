@@ -1442,7 +1442,7 @@ u_register(void)
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
-	getfield(2, "Y/n", REGNOTES_ROOT "foriegn",  "是否現在住在台灣", fore, 2);
+	getfield(2, "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
 	else

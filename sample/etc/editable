@@ -44,6 +44,7 @@ etc/registered	註冊通過通知
 etc/newuser	新使用者需知
 etc/reg_reject.notes    退註通知附加說明
 etc/regnotes/front	註冊單填寫說明
+etc/regnotes/foreign	註冊細項說明[是否現住台灣]
 etc/regnotes/name	註冊細項說明[姓名]
 etc/regnotes/career	註冊細項說明[職業]
 etc/regnotes/address	註冊細項說明[住址]
