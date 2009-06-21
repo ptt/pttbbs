@@ -43,6 +43,14 @@ etc/registered	註冊通過通知
 #etc/justify	身份確認方法	    (deprecated)
 etc/newuser	新使用者需知
 etc/reg_reject.notes    退註通知附加說明
+etc/regnotes/front	註冊單填寫說明
+etc/regnotes/name	註冊細項說明[姓名]
+etc/regnotes/career	註冊細項說明[職業]
+etc/regnotes/address	註冊細項說明[住址]
+etc/regnotes/phone	註冊細項說明[電話]
+etc/regnotes/mobile	註冊細項說明[手機]
+etc/regnotes/birthday	註冊細項說明[生日]
+etc/regnotes/sex	註冊細項說明[性別]
 # ----------------------------------------
 # 按鍵說明系列
 # ----------------------------------------
