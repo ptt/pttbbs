@@ -24,7 +24,8 @@ int getHoroscope(int m, int d)
 
     // ¼¯½~ ¤ô²~ Âù³½ ¨d¦Ï ª÷¤û Âù¤l ¥¨ÃÉ ·à¤l ³B¤k ¤Ñ¯¯ ¤ÑÃÈ ®g¤â
     const int firstday[12] = {
-	/* Jan. */ 20, 19, 21, 20, 21, 21, 23, 23, 23, 23, 22, 22
+	// Reference: http://zh.wikipedia.org/wiki/%E6%98%9F%E5%BA%A7
+	/* Jan. */ 20, 19, 21, 20, 21, 22, 23, 23, 24, 24, 22, 22
     };
     if (d >= firstday[m - 1]) {
 	if (m == 12)
