@@ -44,6 +44,9 @@
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
 
+#define ENTROPY_RATIO	(0.25f)
+#define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
+
 #if 0
 #define register 
 #define DEBUG
@@ -1765,6 +1768,21 @@ browse_sigs:
 #endif
 }
 
+#ifdef USE_POST_ENTROPY
+static int
+get_string_entropy(const char *s)
+{
+    int ent = 0;
+    while (*s)
+    {
+	char c = *s++;
+	if (!isascii(c) || isalnum(c))
+	    ent++;
+    }
+    return ent;
+}
+#endif
+
 #ifdef EXP_EDIT_UPLOAD
 static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
@@ -1773,12 +1791,13 @@ static void upload_file(void);
 // 		KEEP_EDITING	if keep editing
 // 		0		if write ok & exit
 static int
-write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], int upload, int chtitle)
+write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], int upload, int chtitle, int *pentropy)
 {
     FILE           *fp = NULL;
     textline_t     *p;
     char            ans[TTLEN], *msg;
     int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
+    int             entropy = 0;
 
     assert(!chtitle || mytitle);
     vs_hdr("ÀÉ®×³B²z");
@@ -1903,6 +1922,14 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 		    }
 		}
 	    }
+#ifdef USE_POST_ENTROPY
+	    // calculate the real content of msg
+	    if (entropy < ENTROPY_MAX)
+		entropy += get_string_entropy(msg);
+	    else
+#endif
+		entropy = ENTROPY_MAX;
+	    // write the message body
 	    fprintf(fp, "%s\n", msg);
 	}
     }
@@ -1920,6 +1947,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	    postrecord.times = 0;
     }
 
+    *pentropy = entropy;
     if (aborted)
 	return aborted;
 
@@ -3460,7 +3488,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 
     int             mode0 = currutmp->mode;
     int             destuid0 = currutmp->destuid;
-    int             money = 0;
+    int             money = 0, entropy = 0;
     int             interval = 0;
     time4_t         th = now;
     int             count = 0, tin = 0, quoted = 0;
@@ -3614,7 +3642,11 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		block_cancel();
 		tmp = write_file(fpath, saveheader, islocal, title, 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
-			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0);
+			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
+			&entropy);
+		// money or entropy?
+		if (money > (entropy * ENTROPY_RATIO) && entropy >= 0)
+		    money = (entropy * ENTROPY_RATIO) + 1;
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
