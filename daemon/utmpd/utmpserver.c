@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "daemons.h"
 #include <err.h>
 
 struct {

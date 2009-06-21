@@ -4,6 +4,7 @@
 
 // for some constant and type
 #include "bbs.h"
+#include "daemons.h"
 
 /* for each login of user, 
  * input: my index, friend[MAX_FRIEND] of uid, reject[MAX_REJECT] of uid,

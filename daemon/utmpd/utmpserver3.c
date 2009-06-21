@@ -5,6 +5,7 @@
 #include <event.h>
 
 #include "bbs.h"
+#include "daemons.h"
 
 extern void utmplogin(int uid, int index, const int like[MAX_FRIEND], const int hate[MAX_REJECT]);
 extern int genfriendlist(int uid, int index, ocfs_t *fs, int maxfs);
