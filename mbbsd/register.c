@@ -540,7 +540,7 @@ getfield(int line, const char *info, const char *desc, char *buf, int len)
     move(line+1, 0); clrtoeol();
     move(line, 0); clrtoeol();
     prints("  原先設定：%-30.30s (%s)", buf, info);
-    snprintf(prompt, sizeof(prompt), "  %s：", desc);
+    snprintf(prompt, sizeof(prompt), ">>%s：", desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);
     move(line+1, 0); clrtoeol();
@@ -1430,7 +1430,7 @@ u_register(void)
 	    fore[0] = 0;
 #endif
 	while (1) {
-	    getfield(8, 
+	    getfield(4, 
 #ifdef FOREIGN_REG
                      "請用本名",
 #else
@@ -1443,21 +1443,40 @@ u_register(void)
 		vmsg(errcode);
 	}
 
-	move(11, 0);
+	move(8, 0);
 	outs("  請盡量詳細的填寫您的服務單位，大專院校請麻煩"
 	     "加" ANSI_COLOR(1;33) "系所" ANSI_RESET "，公司單位請加" ANSI_COLOR(1;33) "職稱" ANSI_RESET "，\n"
 	     "  暫無工作請麻煩填寫" ANSI_COLOR(1;33) "畢業學校" ANSI_RESET "。\n");
+	outs("  ‧填寫單位，「校名」與「系(所)別」，並請詳填至年級。\n"
+	     "    「校名」與「系別」不接受英文簡式書寫表達,並請清楚填寫系或所!!(外國學校亦同)\n"
+	     "    如: 某某大學某某系一年級。\n"
+	     "  ‧如為工作地點請附上該單位所在縣市，並詳填至職稱。\n"
+	     ANSI_COLOR(1;32)
+	     "    另任何公司只要有分店皆須詳填至分店別，且職稱不接受職員.員工一類之相似字眼\n"
+	     ANSI_RESET
+	     "    如：XX公司XX分店XX處(課/室)秘書orXX縣(市)XX公司總務\n"
+	     "  ‧待業中、服役中、肄業請附上(畢業)校系並附註待業中/服役中/肄業。\n"
+	     "    如：xx大學畢業現待業中/服役中 // xx大學肄業現重考中/服役中\n"
+	     ANSI_COLOR(1;32)
+	     "  ‧自由業.家管.無公司行號職稱或無學籍者,請詳細填寫最終學歷及現況\n"
+	     ANSI_RESET
+	     "    如：xx大學xx系畢家管,xx高職xx科畢現為作(畫)家\n"
+	     ANSI_COLOR(1;32)
+	     "  ‧如為(臨時)工讀生/員工者,請詳細填寫最終學歷以及工作之公司名稱至分店別\n"
+	     ANSI_RESET
+	     "    如：xx高中x年級7-11北市信義區永吉店工讀生/臨時店員\n");
+
 	while (1) {
-	    getfield(9, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
+	    getfield(5, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
 		     "服務單位", career, 40);
 	    if( (errcode = isvalidcareer(career)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
-	move(10, 0); clrtobot();
+	move(6, 0); clrtobot();
 	while (1) {
-	    getfield(10, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
+	    getfield(6, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
 		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
 		     "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
@@ -1470,16 +1489,16 @@ u_register(void)
 		vmsg(errcode);
 	}
 	while (1) {
-	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    getfield(7, "不加-(), 包括長途區號", "連絡電話", phone, 11);
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
-	getfield(12, "只輸入數字 如:0912345678 (可不填)",
+	getfield(8, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
-	    getfield(13, "西元/月月/日日 如: " DATE_SAMPLE , 
+	    getfield(9, "西元/月月/日日 如: " DATE_SAMPLE , 
 		    "生日", birthday, sizeof(birthday));
 	    if (birthday[0] == 0) {
 		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
@@ -1507,7 +1526,7 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(14, "1.♂男 2.♀女 ", "性別", sex_is, 2);
+	getfield(10, "1.♂男 2.♀女 ", "性別", sex_is, 2);
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1851,17 +1870,22 @@ regform_concat_reasons(const char *reason, char *result, int maxlen)
     {
 	int i = 0;
 	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
-	    len += snprintf(result + len, maxlen - len, "[退回原因] %s\n", REASON_EXPANDABBREV(reason[i]));
+	    len += snprintf(result + len, maxlen - len, 
+		    ANSI_COLOR(1;33)
+		    "[退回原因] %s" ANSI_RESET "\n", 
+		    REASON_EXPANDABBREV(reason[i]));
 	}
     } else {
-	len += snprintf(result + len, maxlen - len, "[退回原因] %s\n", reason);
+	len += snprintf(result + len, maxlen - len, 
+		ANSI_COLOR(1;33) "[退回原因] %s" ANSI_RESET "\n", reason);
     }
 }
 
 static void
 regform_print_reasons(const char *reason, FILE *fp)
 {
-    char msg[STRLEN * REJECT_REASONS];
+    // the messages may contain ANSI escapes
+    char msg[ANSILINELEN * REJECT_REASONS];
     msg[0] = '\0';
     regform_concat_reasons(reason, msg, sizeof(msg));
     fputs(msg, fp);
