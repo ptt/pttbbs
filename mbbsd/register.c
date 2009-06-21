@@ -14,6 +14,7 @@
 #define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
 
 #define FN_REJECT_NOTES	"etc/reg_reject.notes"
+#define REGNOTES_ROOT "etc/regnotes/"	// a folder to hold detail description
 
 #define FN_JOBSPOOL_DIR	"jobspool/"
 
@@ -531,21 +532,30 @@ email_justify(const userec_t *muser)
 
 /* 使用者填寫註冊表格 */
 static void
-getfield(int line, const char *info, const char *desc, char *buf, int len)
+getfield(int line, const char *info, const char *notes_fn, const char *desc, char *buf, int len)
 {
     char            prompt[STRLEN];
-    char            genbuf[200];
+    char            genbuf[PATHLEN];
 
     // clear first
-    move(line+1, 0); clrtoeol();
-    move(line, 0); clrtoeol();
-    prints("  原先設定：%-30.30s (%s)", buf, info);
-    snprintf(prompt, sizeof(prompt), ">>%s：", desc);
+    move(line, 0); clrtobot();
+    // notes appear in line+3 (+0=msg, +1=input, +2=blank)
+    if (dashs(notes_fn) > 0 && (line+3) < b_lines )
+    {
+	show_file(notes_fn, line+3, t_lines - (line+3), SHOWFILE_ALLOW_ALL);
+    }
+    move(line, 0); prints("  原先設定：%-30.30s (%s)", buf, info);
+    snprintf(prompt, sizeof(prompt), 
+#ifdef USE_PFTERM
+	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：", 
+#else
+	    ">>%s：", 
+#endif
+	    desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);
-    move(line+1, 0); clrtoeol();
-    move(line, 0); clrtoeol();
-    prints("  %s：%s", desc, buf);
+    move(line, 0); clrtobot();
+    prints("  %s：%s\n", desc, buf);
 }
 
 
@@ -1151,14 +1161,14 @@ toregister(char *email)
 	goto REGFORM2;
     }
     move(1, 0);
-    outs("您好, 本站認證認證的方式有:\n"
+    outs("您好, 本站註冊認證的方式有:\n"
 	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
 	 "    請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
 	 "    收到後請到 (U)ser => (R)egister 輸入認證碼, 即可通過認證\n"
 	 "\n"
 	 "  2.若您沒有 E-Mail 或是一直無法收到認證信, 請輸入 x \n"
 	 "  會有站長親自人工審核註冊資料，" ANSI_COLOR(1;33)
-	   "但注意這可能會花上數週或更多時間。" ANSI_RESET "\n"
+	   "但注意這可能會花上數天或更多時間。" ANSI_RESET "\n"
 	 "**********************************************************\n"
 	 "* 注意!                                                  *\n"
 	 "* 通常應該會在輸入完成後十分鐘內收到認證信, 若過久未收到 *\n"
@@ -1174,7 +1184,7 @@ toregister(char *email)
 
     while (1) {
 	email[0] = 0;
-	getfield(15, "身分認證用", "E-Mail Address", email, 50);
+	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, 50);
 	strip_blank(email, email);
 	if (strcmp(email, "X") == 0) email[0] = 'x';
 	if (strcmp(email, "x") == 0)
@@ -1218,7 +1228,7 @@ toregister(char *email)
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
-		outs("但注意手動認證通常會花上數週以上的時間。\n");
+		outs("但注意手動認證通常會花上數天以上的時間。\n");
 	    } else {
 #endif
 	    move(17, 0);
@@ -1239,7 +1249,7 @@ toregister(char *email)
 	    outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
 	    outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
 	    outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
-	    outs("但注意手動認證通常會花上數週以上的時間。\n");
+	    outs("但注意手動認證通常會花上數天以上的時間。\n");
 	}
     }
 #ifdef USE_EMAILDB
@@ -1413,6 +1423,15 @@ u_register(void)
     if (ans[0] != 'y')
 	return FULLUPDATE;
 
+    // show REGNOTES_ROOT front page
+    if (dashs(REGNOTES_ROOT "front"))
+    {
+	clear();
+	vs_hdr("註冊單填寫說明");
+	show_file(REGNOTES_ROOT "front", 1, t_lines-2, SHOWFILE_ALLOW_ALL);
+	vmsg(NULL);
+    }
+
     move(2, 0);
     clrtobot();
     while (1) {
@@ -1423,7 +1442,7 @@ u_register(void)
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
-	getfield(2, "Y/n", "是否現在住在台灣", fore, 2);
+	getfield(2, "Y/n", REGNOTES_ROOT "foriegn",  "是否現在住在台灣", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
 	else
@@ -1436,6 +1455,7 @@ u_register(void)
 #else
                      "請用中文",
 #endif
+		     REGNOTES_ROOT "name",
                      "真實姓名", rname, 20);
 	    if( (errcode = isvalidname(rname)) == NULL )
 		break;
@@ -1443,42 +1463,19 @@ u_register(void)
 		vmsg(errcode);
 	}
 
-	move(8, 0);
-	outs("  請盡量詳細的填寫您的服務單位，大專院校請麻煩"
-	     "加" ANSI_COLOR(1;33) "系所" ANSI_RESET "，公司單位請加" ANSI_COLOR(1;33) "職稱" ANSI_RESET "，\n"
-	     "  暫無工作請麻煩填寫" ANSI_COLOR(1;33) "畢業學校" ANSI_RESET "。\n");
-	outs("  ‧填寫單位，「校名」與「系(所)別」，並請詳填至年級。\n"
-	     "    「校名」與「系別」不接受英文簡式書寫表達,並請清楚填寫系或所!!(外國學校亦同)\n"
-	     "    如: 某某大學某某系一年級。\n"
-	     "  ‧如為工作地點請附上該單位所在縣市，並詳填至職稱。\n"
-	     ANSI_COLOR(1;32)
-	     "    另任何公司只要有分店皆須詳填至分店別，且職稱不接受職員.員工一類之相似字眼\n"
-	     ANSI_RESET
-	     "    如：XX公司XX分店XX處(課/室)秘書orXX縣(市)XX公司總務\n"
-	     "  ‧待業中、服役中、肄業請附上(畢業)校系並附註待業中/服役中/肄業。\n"
-	     "    如：xx大學畢業現待業中/服役中 // xx大學肄業現重考中/服役中\n"
-	     ANSI_COLOR(1;32)
-	     "  ‧自由業.家管.無公司行號職稱或無學籍者,請詳細填寫最終學歷及現況\n"
-	     ANSI_RESET
-	     "    如：xx大學xx系畢家管,xx高職xx科畢現為作(畫)家\n"
-	     ANSI_COLOR(1;32)
-	     "  ‧如為(臨時)工讀生/員工者,請詳細填寫最終學歷以及工作之公司名稱至分店別\n"
-	     ANSI_RESET
-	     "    如：xx高中x年級7-11北市信義區永吉店工讀生/臨時店員\n");
-
 	while (1) {
 	    getfield(5, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
-		     "服務單位", career, 40);
+		    REGNOTES_ROOT "career", "服務單位", career, 40);
 	    if( (errcode = isvalidcareer(career)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
-	move(6, 0); clrtobot();
+
 	while (1) {
 	    getfield(6, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
 		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
-		     "目前住址", addr, sizeof(addr));
+		     REGNOTES_ROOT "address", "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
                 || fore[0] 
@@ -1488,18 +1485,20 @@ u_register(void)
 	    else
 		vmsg(errcode);
 	}
+
 	while (1) {
-	    getfield(7, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    getfield(7, "不加-(), 包括長途區號", 
+		    REGNOTES_ROOT "phone", "連絡電話", phone, 11);
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
 	getfield(8, "只輸入數字 如:0912345678 (可不填)",
-		 "手機號碼", mobile, 20);
+		REGNOTES_ROOT "mobile", "手機號碼", mobile, 20);
 	while (1) {
 	    getfield(9, "西元/月月/日日 如: " DATE_SAMPLE , 
-		    "生日", birthday, sizeof(birthday));
+		    REGNOTES_ROOT "birthday", "生日", birthday, sizeof(birthday));
 	    if (birthday[0] == 0) {
 		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
 			 1900 + cuser.year, cuser.month, cuser.day);
@@ -1526,7 +1525,7 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(10, "1.♂男 2.♀女 ", "性別", sex_is, 2);
+	getfield(10, "1.♂男 2.♀女 ", REGNOTES_ROOT "sex", "性別", sex_is, 2);
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
