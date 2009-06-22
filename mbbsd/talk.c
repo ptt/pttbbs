@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "daemons.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
