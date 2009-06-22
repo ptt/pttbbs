@@ -19,6 +19,7 @@ int
 initcuser(const char *userid)
 {
     usernum = passwd_load_user(userid, &cuser);
+    latest_numposts = cuser.numposts;
     return usernum;
 }
 
