@@ -2117,9 +2117,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	sethomefile(fpath, xid, FN_OVERRIDES);
 	i = file_exist_record(fpath, cuser.userid);
 	sethomefile(fpath, xid, FN_REJECT);
-	// TODO ¸Ó return ­þºØ­È¡H
+	// XXX check do_send - they simply ignore it.
 	if (!i && file_exist_record(fpath, cuser.userid))
-	    return -1;
+	    return 0;
     } while (0);
 
     if (mode == 'Z') {
