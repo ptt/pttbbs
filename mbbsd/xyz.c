@@ -276,7 +276,7 @@ Goodbye(void)
     clear();
 
 
-    more("etc/Logout", NA);
+    show_80x24_screen("etc/Logout");
 
     {
 	int diff = (now - login_start_time) / 60;

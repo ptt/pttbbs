@@ -477,7 +477,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 /* INDENT OFF */
 
 // ----------------------------------------------------------- MENU DEFINITION
-// 注意每個 menu 最多不能同時顯示超過 11 項 (80x25 標準大小的限制)
+// 注意每個 menu 最多不能同時顯示超過 11 項 (80x24 標準大小的限制)
 
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {

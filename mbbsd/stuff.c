@@ -170,10 +170,10 @@ wait_penalty(int sec)
 /**
  * 從第 y 列開始 show 出 filename 檔案中的前 lines 行。
  * mode 為 output 的模式，參數同 strip_ansi。
- * @param filename
- * @param x
- * @param lines
- * @param mode: SHOWFILE_*, see modes.h
+ * @param filename: the file to show
+ * @param y:	    starting line on screen
+ * @param lines:    max lines to be displayed
+ * @param mode:	    SHOWFILE_*, see modes.h
  * @return 失敗傳回 0，否則為 1。 
  *         2 表示有 PttPrints 碼
  */
@@ -181,7 +181,7 @@ int
 show_file(const char *filename, int y, int lines, int mode)
 {
     FILE *fp;
-    char buf[1024];
+    char buf[ANSILINELEN];
     int  ret = 1;
     int  strpmode = STRIP_ALL; 
 
@@ -218,6 +218,14 @@ show_file(const char *filename, int y, int lines, int mode)
     } else
 	return 0;
     return ret;
+}
+
+int
+show_80x24_screen(const char *filename)
+{
+    clear();
+    // max 24 lines, holding one more line for pause/messages
+    return show_file(filename, 0, 24, SHOWFILE_ALLOW_ALL);
 }
 
 // TODO
