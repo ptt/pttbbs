@@ -44,6 +44,10 @@
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
 
+#ifndef POST_MONEY_RATIO
+#define POST_MONEY_RATIO (0.5f)
+#endif
+
 #define ENTROPY_RATIO	(0.25f)
 #define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
 
@@ -3644,14 +3648,18 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
 			&entropy);
-		// money or entropy?
-		if (money > (entropy * ENTROPY_RATIO) && entropy >= 0)
-		    money = (entropy * ENTROPY_RATIO) + 1;
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
 
 		    exit_edit_buffer();
+
+		    // adjust final money
+		    money *= POST_MONEY_RATIO;
+		    // money or entropy?
+		    if (money > (entropy * ENTROPY_RATIO) && entropy >= 0)
+			money = (entropy * ENTROPY_RATIO) + 1;
+
 		    if (!tmp)
 			return money;
 		    else

@@ -1108,11 +1108,9 @@ do_general(int isbid)
 
     // money verification
 #ifdef MAX_POST_MONEY
-    if (money > MAX_POST_MONEY * 2)
+    if (money > MAX_POST_MONEY)
 	money = MAX_POST_MONEY;
-    else
 #endif
-	money /= 2;
 
     // drop money & numposts for free boards
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
