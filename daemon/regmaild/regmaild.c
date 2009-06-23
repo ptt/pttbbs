@@ -229,8 +229,6 @@ regmaildb_update_email(const char * userid, int userid_len, const char * email, 
         Db =g_Db;
     else if (regmaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
         goto end;
-    if (regmaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
-        goto end;
 
     if (strcmp(email, "x") == 0)
     {
