@@ -247,8 +247,9 @@ invalidaddr(const char *addr)
 int
 m_internet(void)
 {
-    char            receiver[60];
-    char title[STRLEN];
+    // if using STRLEN, the getdata would be too long on 80x24 screen.
+    char receiver[TTLEN];
+    char title[TTLEN];
 
     getdata(20, 0, "¦¬«H¤H¡G", receiver, sizeof(receiver), DOECHO);
     trim(receiver);
@@ -2124,6 +2125,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     if (mode == 'Z') {
 	assert(is_validuserid(cuser.userid));
+	assert(!invalidaddr(address));
+#ifdef MUTT_PATH
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
 		 MUTT_PATH " -s 'home.%s.tgz' -a /tmp/home.%s.tgz -- '%s' </dev/null;"
@@ -2132,11 +2135,13 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 		 cuser.userid, cuser.userid, address, cuser.userid);
 	system(fname);
 	return 0;
+#else
 	snprintf(fname, sizeof(fname), TAR_PATH " cfz - home/%c/%s | "
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
 	system(fname);
 	strlcpy(fname, direct, sizeof(fname));
+#endif
     } else if (mode == 'U') {
 	char            tmp_buf[128];
 
