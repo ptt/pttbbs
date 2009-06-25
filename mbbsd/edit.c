@@ -878,11 +878,7 @@ adjustline(textline_t *oldp, short len)
     char tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
 
-#ifdef deBUG
-    if(oldp->len > WRAPMARGIN || oldp->len < 0) {
-	kill(currpid, SIGSEGV);
-    }
-#endif
+    assert(0 <= oldp->len && oldp->len <= WRAPMARGIN);
 
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
     free_line(oldp);
@@ -4042,6 +4038,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 			p = curr_buf->currline->prev;
 			if (!p) {
 			    curr_buf->currline->data[0] = 0;
+			    curr_buf->currline->len = 0;
 			    break;
 			}
 			if (curr_buf->curr_window_line > 0) {
