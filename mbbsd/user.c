@@ -26,7 +26,6 @@ kill_user(int num, const char *userid)
     sethomepath(src, userid);
     snprintf(dst, sizeof(dst), "tmp/%s", userid);
     friend_delete_all(userid, FRIEND_ALOHA);
-    delete_allpost(userid);
     if (dashd(src) && Rename(src, dst) == 0) {
 	snprintf(src, sizeof(src), "/bin/rm -fr home/%c/%s >/dev/null 2>&1", userid[0], userid);
 	system(src);
@@ -333,6 +332,7 @@ violate_law(userec_t * u, int unum)
 	}
 
         kick_all(u->userid);
+	delete_allpost(u->userid);
         kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
     } else {
@@ -1074,6 +1074,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     memcpy(u, &x, sizeof(x));
     if (tokill) {
 	kick_all(x.userid);
+	delete_allpost(x.userid);
 	kill_user(unum, x.userid);
 	return;
     } else
