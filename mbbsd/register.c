@@ -729,10 +729,10 @@ new_register(void)
 	    continue;
 	}
 	strlcpy(newuser.passwd, passbuf, PASSLEN);
-	getdata(19, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
+	getdata(19, 0, "請確認密碼：", passbuf, sizeof(passbuf), NOECHO);
 	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
 	    move(19, 0);
-	    outs("密碼輸入錯誤, 請重新輸入密碼.\n");
+	    outs("設定與確認時輸入的密碼不一致, 請重新輸入密碼.\n");
 	    continue;
 	}
 	passbuf[8] = '\0';
@@ -1202,6 +1202,7 @@ toregister(char *email)
 		move(17, 0);
 		outs("指定的手機號碼不正確,"
 		       "若您無手機門號請選擇其他方式認證");
+		pressanykey();
 	    }
 
 	}
@@ -1229,6 +1230,7 @@ toregister(char *email)
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
 		outs("但注意手動認證通常會花上數天以上的時間。\n");
+		pressanykey();
 	    } else {
 #endif
 	    move(17, 0);
@@ -1250,6 +1252,7 @@ toregister(char *email)
 	    outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
 	    outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
 	    outs("但注意手動認證通常會花上數天以上的時間。\n");
+	    pressanykey();
 	}
     }
 #ifdef USE_EMAILDB
