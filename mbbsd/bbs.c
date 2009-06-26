@@ -508,7 +508,10 @@ readdoent(int num, fileheader_t * ent)
     } // if(!iscorpse)
     else {
 	// quick display
-	prints(ANSI_COLOR(1;30) "%7d    ", num);
+#ifdef USE_PFTERM
+	outs(ANSI_COLOR(1;30));
+#endif
+	prints("%7d    ", num);
 	prints("%-6.5s", ent->date);
 	prints("%-13.12s", ent->owner);
 	prints("╳ %-.*s" ANSI_RESET "\n",
@@ -668,7 +671,7 @@ outgo_post(const fileheader_t *fh, const char *board, const char *userid, const 
     }
 }
 
-static void
+static int
 cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 {
     FILE           *fin, *fout;
@@ -677,8 +680,9 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     char            genbuf[200];
     char            nick[STRLEN], fn1[PATHLEN];
     int             len = 42-strlen(currboard);
+    int		    ret = -1;
 
-    if(!fh->filename[0]) return;
+    if(!fh->filename[0]) return ret;
     setbfile(fn1, currboard, fh->filename);
     if ((fin = fopen(fn1, "r"))) {
 	brd = by_BM ? BN_DELETED : BN_JUNK;
@@ -710,11 +714,12 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 	fclose(fin);
         log_filef(fn1,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
                  cuser.userid, fromhost, Cdatelite(&now));
-	Rename(fn1, newpath);
+	ret = Rename(fn1, newpath);
 	setbdir(genbuf, brd);
 	append_record(genbuf, &postfile, sizeof(postfile));
 	setbtotal(getbnum(brd));
     }
+    return ret;
 }
 
 static void
@@ -3166,7 +3171,7 @@ static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[100], newpath[PATHLEN];
-    int             not_owned, tusernum;
+    int             not_owned, tusernum, del_ok = 0;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -3211,13 +3216,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
 
-	    cancelpost(fhdr, not_owned, newpath);
+	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
             deleteCrossPost(fhdr, bp->brdname);
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
 	    // TODO not_owned 時也要改變 numpost?
-	    if (not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
+	    if (del_ok && not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
 		if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
 		    /* post older than a week */
 		    genbuf[0] = 'n';
