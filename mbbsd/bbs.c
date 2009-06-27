@@ -3224,27 +3224,32 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
-	    // case one, owned or digest - should not give bad posts
+	    // badpost assignment
+
+	    // case one, self-owned, invalid author, or digest mode - should not give bad posts
 	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) )
 	    {
 		// do nothing
 	    } 
-	    // case 2, not owned but cannot delete (also skip badpost)
+	    // case 2, got error in file deletion (already deleted, also skip badpost)
 	    else if (!del_ok)
 	    {
 		move(1, 40); clrtoeol();
 		outs("此檔已被別人刪除(跳過劣文設定)");
 		pressanykey();
 	    }
-	    // case 3, not owned and deleted, can assign badpost
+	    // case 3, post older than one week (TODO use macro for the duration)
+	    else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
+	    {
+		move(1, 40); clrtoeol();
+		outs("文章超過一週(跳過劣文設定)");
+		pressanykey();
+	    }
+	    // case 4, can assign badpost
 	    else 
 	    {
 		// TODO not_owned 時也要改變 numpost?
-		if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
-		    /* post older than a week */
-		    genbuf[0] = 'n';
-		else
-		    getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
+		getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 
 		if (genbuf[0]=='y') {
 		    int i;
