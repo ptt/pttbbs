@@ -210,7 +210,7 @@ Rename(const char *src, const char *dst)
 	return 0;
 
     // prevent malicious shell escapes
-    if (strchr(src, ';') || !strchr(dst, ';'))
+    if (strchr(src, ';') || strchr(dst, ';'))
 	return -1;
 
     // because we need the return value, override the signal handler
