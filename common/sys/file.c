@@ -198,26 +198,35 @@ int copy_file(const char *src, const char *dst)
     return copy_file_to_file(src, dst);
 }
 
+#include <signal.h>
 int
 Rename(const char *src, const char *dst)
 {
+    pid_t pid;
+    sig_t s;
+    int ret = -1;
+
     if (rename(src, dst) == 0)
 	return 0;
-    if (!strchr(src, ';') && !strchr(dst, ';'))
+
+    // prevent malicious shell escapes
+    if (strchr(src, ';') || !strchr(dst, ';'))
+	return -1;
+
+    // because we need the return value, override the signal handler
+    s = signal(SIGCHLD, NULL);
+    pid = fork();
+
+    if (pid == 0)
+	execl("/bin/mv", "mv", "-f", src, dst, (char *)NULL);
+    else if (pid > 0)
     {
-	pid_t pid = fork();
-	if (pid == 0)
-	    execl("/bin/mv", "mv", "-f", src, dst, (char *)NULL);
-	else if (pid > 0)
-	{
-	    int status = -1;
-	    waitpid(pid, &status, 0);
-	    return WEXITSTATUS(status) == 0 ? 0 : -1;
-	}
-	else
-	    return -1;
+	waitpid(pid, &ret, 0);
+	ret = WEXITSTATUS(ret) == 0 ? 0 : -1;
     }
-    return -1;
+
+    signal(SIGCHLD, s);
+    return ret;
 }
 
 int
