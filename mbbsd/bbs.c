@@ -3233,7 +3233,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    else if (!del_ok)
 	    {
 		move(1, 40); clrtoeol();
-		outs("由於此檔已被別人刪除，禁止再次給予劣文。");
+		outs("此檔已被別人刪除(跳過劣文設定)");
 		pressanykey();
 	    }
 	    // case 3, not owned and deleted, can assign badpost
