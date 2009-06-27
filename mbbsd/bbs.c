@@ -3213,6 +3213,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	   (bp->nuser > 30 && !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct)) ||
 #endif
+	   // XXX TODO delete_record is really really dangerous - 
+	   // we should verify the header (maybe by filename) is the same.
+	   // currently race condition is easily cause by 2 BMs
 	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
 
@@ -3221,8 +3224,22 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
-	    // TODO not_owned 時也要改變 numpost?
-	    if (del_ok && not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
+	    // case one, owned or digest - should not give bad posts
+	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) )
+	    {
+		// do nothing
+	    } 
+	    // case 2, not owned but cannot delete (also skip badpost)
+	    else if (!del_ok)
+	    {
+		move(1, 40); clrtoeol();
+		outs("由於此檔已被別人刪除，禁止再次給予劣文。");
+		pressanykey();
+	    }
+	    // case 3, not owned and deleted, can assign badpost
+	    else 
+	    {
+		// TODO not_owned 時也要改變 numpost?
 		if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
 		    /* post older than a week */
 		    genbuf[0] = 'n';
