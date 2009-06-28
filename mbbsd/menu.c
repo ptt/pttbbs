@@ -225,7 +225,7 @@ show_status(void)
 	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31) 
 	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
-	  ANSI_COLOR(30) "\t[扣機]" ANSI_COLOR(31) "%s ",
+	  ANSI_COLOR(30) "\t[呼叫機]" ANSI_COLOR(31) "%s ",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
 	  ptime.tm_hour, ptime.tm_min, currutmp->birth ?
 	  "生日要請客唷" : SHM->today_is,
