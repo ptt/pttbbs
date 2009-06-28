@@ -17,6 +17,13 @@ static int view_postinfo(int ent, const fileheader_t * fhdr, const char *direct,
 
 static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
+enum {
+    RECTYPE_GOOD,
+    RECTYPE_ARROW,
+    RECTYPE_BAD,
+    RECTYPE_MAX=RECTYPE_BAD,
+};
+
 #ifdef ASSESS
 static char * const badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
@@ -2508,9 +2515,9 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     /* This is a solution to avoid most racing (still some), but cost four
      * system calls.                                                        */
 
-    if(type == 0 && fhdr->recommend < MAX_RECOMMENDS )
+    if(type == RECTYPE_GOOD && fhdr->recommend < MAX_RECOMMENDS )
           update = 1;
-    else if(type == 1 && fhdr->recommend > -MAX_RECOMMENDS)
+    else if(type == RECTYPE_BAD && fhdr->recommend > -MAX_RECOMMENDS)
           update = -1;
     fhdr->recommend += update;
 
@@ -2697,20 +2704,20 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     char	    mynick[IDLEN+1];
 #ifndef OLDRECOMMEND
     static const char *ctype[3] = {
-		       "推", "噓", "→"
+		       "推", "→", "噓", 
 		   };
     static const char *ctype_attr[3] = {
 		       ANSI_COLOR(1;33),
-		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
+		       ANSI_COLOR(1;31),
 		   }, *ctype_attr2[3] = {
 		       ANSI_COLOR(1;37),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;31),
 		   }, *ctype_long[3] = {
 		       "值得推薦",
+		       "只加→註解",
 		       "給它噓聲",
-		       "只加→註解"
 		   };
 #endif
     int             type, maxlength;
@@ -2820,7 +2827,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	  return FULLUPDATE;
 #endif
 
-    type = 0;
+    type = RECTYPE_GOOD;
 
     // why "recommend == 0" here?
     // some users are complaining that they like to fxck up system
@@ -2838,7 +2845,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif
     {
 	// owner recommend
-	type = 2;
+	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
 #ifndef OLDRECOMMEND
 	outs("作者本人, 使用 → 加註方式\n");
@@ -2858,33 +2865,42 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		90))
     {
 	// too close
-	type = 2;
+	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
 	outs("時間太近, 使用 → 加註方式\n");
     }
 #endif
 
 #ifndef OLDRECOMMEND
-    else if (!(bp->brdattr & BRD_NOBOO))
+    else
     {
 	/* most people use recommendation just for one-line reply. 
-	 * so we change default to (2)= comment only now.
-#define RECOMMEND_DEFAULT_VALUE (2)
+	 * so we change default to (RECTYPE_ARROW)= comment only now.
+#define RECOMMEND_DEFAULT_VALUE (RECTYPE_ARROW)
 	 */
-#define RECOMMEND_DEFAULT_VALUE (0) /* current user behavior */
+#define RECOMMEND_DEFAULT_VALUE (RECTYPE_GOOD) /* current user behavior */
 
 	move(b_lines, 0); clrtoeol();
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
-	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[%d]? ",
-		ctype_attr[0], ctype_long[0],
-		ctype_attr[1], ctype_long[1],
-		ctype_attr[2], ctype_long[2],
+
+	prints("%s1.%s %s2.%s ",
+		    ctype_attr[0], ctype_long[0],
+		    ctype_attr[1], ctype_long[1]);
+
+	if (!(bp->brdattr & BRD_NOBOO))
+	{
+	    assert(RECTYPE_BAD == 2);
+	    prints("%s3.%s ",
+		    ctype_attr[2], ctype_long[2]);
+	}
+
+	prints(ANSI_RESET "[%d]? ",
 		RECOMMEND_DEFAULT_VALUE+1);
 
-	// poor BBS term has problem positioning with ANSI.
-	move(b_lines, 55); 
 	type = igetch() - '1';
-	if(type < 0 || type > 2)
+	if( (bp->brdattr & BRD_NOBOO) && (type == RECTYPE_BAD))
+	    type = RECOMMEND_DEFAULT_VALUE;
+	if(type < 0 || type > RECTYPE_MAX)
 	    type = RECOMMEND_DEFAULT_VALUE;
 	move(b_lines, 0); clrtoeol();
     }
@@ -2915,8 +2931,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
     }
 
-    if(type > 2 || type < 0)
-	type = 0;
+    if(type >  RECTYPE_MAX || type < 0)
+	type = RECTYPE_ARROW;
 
     maxlength = 78 - 
 	3 /* lead */ - 
@@ -2956,8 +2972,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #else // !OLDRECOMMEND
     maxlength -= strlen(myid);
+# ifdef    USE_PFTERM
     sprintf(buf, "%s%s%s %s:", 
 	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
+# else  // !USE_PFTERM
+    sprintf(buf, "%s %s:", ctype[type], myid);
+# endif // !USE_PFTERM
 #endif // !OLDRECOMMEND
 
     move(b_lines, 0);
@@ -3042,7 +3062,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     /* 每 10 次推文 加一次 goodpost */
     // TODO 轉來的怎麼辦？
     // when recommend reaches MAX_RECOMMENDS...
-    if (type ==0 && (fhdr->filemode & FILE_MARKED) &&
+    if (type == RECTYPE_GOOD && (fhdr->filemode & FILE_MARKED) &&
 	(fhdr->recommend != oldrecom) &&
 	fhdr->recommend % 10 == 0)
     {
