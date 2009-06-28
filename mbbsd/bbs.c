@@ -27,7 +27,8 @@ enum {
     RECTYPE_BAD,
     RECTYPE_ARROW,
 
-    RECTYPE_MAX     = RECTYPE_ARROW,
+    RECTYPE_SIZE,
+    RECTYPE_MAX     = RECTYPE_SIZE-1,
     RECTYPE_DEFAULT = RECTYPE_GOOD, // match traditional user behavior
 };
 
@@ -2710,18 +2711,18 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
 #ifndef OLDRECOMMEND
-    static const char *ctype[3] = {
+    static const char *ctype[RECTYPE_SIZE] = {
 		       "推", "噓", "→", 
 		   };
-    static const char *ctype_attr[3] = {
+    static const char *ctype_attr[RECTYPE_SIZE] = {
 		       ANSI_COLOR(1;33),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
-		   }, *ctype_attr2[3] = {
+		   }, *ctype_attr2[RECTYPE_SIZE] = {
 		       ANSI_COLOR(1;37),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;31),
-		   }, *ctype_long[3] = {
+		   }, *ctype_long[RECTYPE_SIZE] = {
 		       "值得推薦",
 		       "給它噓聲",
 		       "只加→註解",
@@ -2881,21 +2882,21 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef OLDRECOMMEND
     else
     {
+	int i;
+
 	move(b_lines, 0); clrtoeol();
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 
-	prints("%s1.%s ",
-		    ctype_attr[0], ctype_long[0]);
-
-	if (!(bp->brdattr & BRD_NOBOO))
+	for (i = 0; i < RECTYPE_SIZE; i++)
 	{
-	    assert(RECTYPE_BAD == 1);
-	    prints("%s2.%s ",
-		    ctype_attr[1], ctype_long[1]);
+	    if (i == RECTYPE_BAD && (bp->brdattr & BRD_NOBOO))
+		continue;
+	    outs(ctype_attr[i]);
+	    prints("%d.", i+1);
+	    outs(ctype_long[i]);
+	    outc(' ');
 	}
-
-	prints("%s3.%s " ANSI_RESET "[%d]? ",
-		ctype_attr[2], ctype_long[2],
+	prints(ANSI_RESET "[%d]? ",
 		RECTYPE_DEFAULT+1);
 
 	type = igetch();
