@@ -19,9 +19,9 @@ static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
 enum {
     RECTYPE_GOOD,
-    RECTYPE_ARROW,
     RECTYPE_BAD,
-    RECTYPE_MAX=RECTYPE_BAD,
+    RECTYPE_ARROW,
+    RECTYPE_MAX=RECTYPE_ARROW,
 };
 
 #ifdef ASSESS
@@ -2704,20 +2704,20 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     char	    mynick[IDLEN+1];
 #ifndef OLDRECOMMEND
     static const char *ctype[3] = {
-		       "推", "→", "噓", 
+		       "推", "噓", "→", 
 		   };
     static const char *ctype_attr[3] = {
 		       ANSI_COLOR(1;33),
-		       ANSI_COLOR(1;37),
 		       ANSI_COLOR(1;31),
+		       ANSI_COLOR(1;37),
 		   }, *ctype_attr2[3] = {
 		       ANSI_COLOR(1;37),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;31),
 		   }, *ctype_long[3] = {
 		       "值得推薦",
-		       "只加→註解",
 		       "給它噓聲",
+		       "只加→註解",
 		   };
 #endif
     int             type, maxlength;
@@ -2883,18 +2883,18 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	move(b_lines, 0); clrtoeol();
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 
-	prints("%s1.%s %s2.%s ",
-		    ctype_attr[0], ctype_long[0],
-		    ctype_attr[1], ctype_long[1]);
+	prints("%s1.%s ",
+		    ctype_attr[0], ctype_long[0]);
 
 	if (!(bp->brdattr & BRD_NOBOO))
 	{
-	    assert(RECTYPE_BAD == 2);
-	    prints("%s3.%s ",
-		    ctype_attr[2], ctype_long[2]);
+	    assert(RECTYPE_BAD == 1);
+	    prints("%s2.%s ",
+		    ctype_attr[1], ctype_long[1]);
 	}
 
-	prints(ANSI_RESET "[%d]? ",
+	prints("%s3.%s " ANSI_RESET "[%d]? ",
+		ctype_attr[2], ctype_long[2],
 		RECOMMEND_DEFAULT_VALUE+1);
 
 	type = igetch() - '1';
