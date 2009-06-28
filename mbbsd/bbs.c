@@ -17,11 +17,18 @@ static int view_postinfo(int ent, const fileheader_t * fhdr, const char *direct,
 
 static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
+// recommend/comment types
+//  most people use recommendation just for one-line reply. 
+//  so we may change default to (RECTYPE_ARROW)= comment only.
+//  however, the traditional behavior (which does not have
+//  BRC info for 'new comments available') uses RECTYPE_GOOD.
 enum {
     RECTYPE_GOOD,
     RECTYPE_BAD,
     RECTYPE_ARROW,
-    RECTYPE_MAX=RECTYPE_ARROW,
+
+    RECTYPE_MAX     = RECTYPE_ARROW,
+    RECTYPE_DEFAULT = RECTYPE_GOOD, // match traditional user behavior
 };
 
 #ifdef ASSESS
@@ -2874,12 +2881,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef OLDRECOMMEND
     else
     {
-	/* most people use recommendation just for one-line reply. 
-	 * so we change default to (RECTYPE_ARROW)= comment only now.
-#define RECOMMEND_DEFAULT_VALUE (RECTYPE_ARROW)
-	 */
-#define RECOMMEND_DEFAULT_VALUE (RECTYPE_GOOD) /* current user behavior */
-
 	move(b_lines, 0); clrtoeol();
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 
@@ -2895,13 +2896,23 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 	prints("%s3.%s " ANSI_RESET "[%d]? ",
 		ctype_attr[2], ctype_long[2],
-		RECOMMEND_DEFAULT_VALUE+1);
+		RECTYPE_DEFAULT+1);
 
-	type = igetch() - '1';
+	type = igetch();
+
+	if (!isascii(type) || !isdigit(type))
+	{
+	    type = RECTYPE_DEFAULT;
+	} else {
+	    type -= '1';
+	    if (type < 0 || type > RECTYPE_MAX)
+		type = RECTYPE_DEFAULT;
+	}
+
 	if( (bp->brdattr & BRD_NOBOO) && (type == RECTYPE_BAD))
-	    type = RECOMMEND_DEFAULT_VALUE;
-	if(type < 0 || type > RECTYPE_MAX)
-	    type = RECOMMEND_DEFAULT_VALUE;
+	    type = RECTYPE_ARROW;
+	assert(type >= 0 && type <= RECTYPE_MAX);
+
 	move(b_lines, 0); clrtoeol();
     }
 #endif
