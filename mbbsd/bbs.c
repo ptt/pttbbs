@@ -4033,7 +4033,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
     { 0, NULL }, // Ctrl('N')
-    { 0, do_post_openbid }, // Ctrl('O') // BETTER NOT USE ^O - UNIX not work
+    { 0, NULL }, // Ctrl('O') // BETTER NOT USE ^O - UNIX not work
     { 0, do_post }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
     { 0, NULL }, // Ctrl('R')
