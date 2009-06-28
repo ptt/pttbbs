@@ -214,7 +214,7 @@ Rename(const char *src, const char *dst)
 	return -1;
 
     // because we need the return value, override the signal handler
-    s = signal(SIGCHLD, NULL);
+    s = signal(SIGCHLD, SIG_DFL);
     pid = fork();
 
     if (pid == 0)
