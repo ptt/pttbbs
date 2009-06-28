@@ -225,7 +225,7 @@ show_status(void)
 	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31) 
 	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
-	  ANSI_COLOR(30) "\t[呼叫機]" ANSI_COLOR(31) "%s ",
+	  ANSI_COLOR(30) "\t[呼叫器]" ANSI_COLOR(31) "%s ",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
 	  ptime.tm_hour, ptime.tm_min, currutmp->birth ?
 	  "生日要請客唷" : SHM->today_is,
@@ -650,37 +650,68 @@ int _debug_reportstruct()
 
 #endif
 
+/* XYZ tool sub menu */
+static const commands_t m_xyz_hot[] = {
+    {x_week, 0,      "WWeek          《本週五十大熱門話題》"},
+    {x_issue, 0,     "IIssue         《今日十大熱門話題》"},
+#ifdef HAVE_X_BOARDS
+    {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
+#endif
+    {NULL, 0, NULL}
+};
+
+/* XYZ tool sub menu */
+static const commands_t m_xyz_user[] = {
+    {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+    {x_today, 0,     "TToday         《今日上線人次統計》"},
+    {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
+    {NULL, 0, NULL}
+};
+
+static int
+x_hot(void)
+{
+    domenu(M_XMENU, "熱門話題與看板", 'W', m_xyz_hot);
+    return 0;
+}
+
+static int
+x_users(void)
+{
+    domenu(M_XMENU, "使用者統計資訊", 'U', m_xyz_user);
+    return 0;
+}
+
 /* XYZ tool menu */
 static const commands_t xyzlist[] = {
 #ifndef DEBUG
     /* All these are useless in debug mode. */
 #ifdef  HAVE_LICENSE
-    {x_gpl, 0,       "LLicense       GNU 使用執照"},
+    {x_gpl, 0,       "IILicense       GNU 使用執照"},
 #endif
 #ifdef HAVE_INFO
     {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
     {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
-#ifdef HAVE_X_BOARDS
-    {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
-#endif
     {x_history, 0,   "HHistory       《我們的成長》"},
     {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
-    {x_week, 0,      "WWeek          《本週五十大熱門話題》"},
-    {x_issue, 0,     "IIssue         《今日十大熱門話題》"},
-    {x_today, 0,     "TToday         《今日上線人次統計》"},
-    {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
-    {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+    {x_hot,  0,      "TTHot Topics   《熱門話題與看板》"},
+    {x_users,0,      "UUsers         《使用者相關統計》"},
+    {topsong,PERM_LOGINOK,   
+	             "GGTop Songs    《點歌排行榜》"},
 #ifdef HAVE_SYSUPDATES
     {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
 #endif
-#else
+
+#else // !DEBUG
+
     {_debug_check_keyinput, 0, 
 	    	     "MMKeycode      檢查按鍵控制碼工具"},
     {_debug_reportstruct, 0, 
 	    	     "RReportStruct  報告各種結構的大小"},
-#endif
+#endif // !DEBUG
+
     {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},
     {NULL, 0, NULL}
 };
@@ -738,7 +769,6 @@ static int chessroom();
 /* Ptt Play menu */
 static const commands_t playlist[] = {
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
-    {topsong,PERM_LOGINOK,   "TTop Songs   【 點歌排行榜 】"},
     {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) 
 			     " " BBSMNAME2 "量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, 
