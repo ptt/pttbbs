@@ -219,16 +219,6 @@ b_post_note(void)
     else if (yn[0] == 'd')
 	unlink(buf);
 
-    setbfile(buf, currboard, FN_POST_BID);
-    if (more(buf, NA) == -1)
-	more("etc/" FN_POST_BID, NA);
-    getdata(b_lines - 2, 0, "自訂競標文章注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
-	    yn, sizeof(yn), LCECHO);
-    if (yn[0] == 'y')
-	veditfile(buf);
-    else if (yn[0] == 'd')
-	unlink(buf);
-
     return FULLUPDATE;
 }
 

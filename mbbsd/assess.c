@@ -28,8 +28,6 @@ int inc_##_attr(const char *userid, int num) \
 
 modify_column(goodpost); /* inc_goodpost */
 modify_column(badpost);  /* inc_badpost */
-modify_column(goodsale); /* inc_goodsale */
-modify_column(badsale);  /* inc_badsale */
 
 #if 0 //unused function
 void set_assess(const char *userid, unsigned char num, int type)
@@ -43,12 +41,6 @@ void set_assess(const char *userid, unsigned char num, int type)
 	    break;
 	case BADPOST:
 	    xuser.badpost = num;
-	    break;
-	case GOODSALE:
-	    xuser.goodsale = num;
-	    break;
-	case BADSALE:
-	    xuser.badsale = num;
 	    break;
     }
     passwd_sync_update(uid, &xuser);

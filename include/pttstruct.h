@@ -130,8 +130,8 @@ typedef struct userec_t {
 
     uint8_t   goodpost;	/* 評價為好文章數 */
     uint8_t   badpost;	/* 評價為壞文章數 */
-    uint8_t   goodsale;	/* 競標 好的評價  */
-    uint8_t   badsale;	/* 競標 壞的評價  */
+    uint8_t   goodsale;	/* deprecated: 競標 好的評價  */
+    uint8_t   badsale;	/* deprecated: 競標 壞的評價  */
     char    myangel[IDLEN+1];	/* 我的小天使 */
     char    pad2;
     uint16_t  chess_elo_rating;	/* 象棋等級分 */

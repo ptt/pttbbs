@@ -2551,24 +2551,6 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp, const char *direc
 	      {以Ptt幣自動扣款
 	      }*/
 	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
-#ifdef ASSESS
-	    if (!(bidinfo.flag & SALE_COMMENTED) && strcmp(bidinfo.userid, currutmp->userid) == 0){
-		char tmp = vans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
-		if ('1' <= tmp && tmp <= '3'){
-		    switch(tmp){
-			case 1:
-			    inc_goodsale(bidinfo.userid, 1);
-			    break;
-			case 2:
-			    inc_badsale(bidinfo.userid, 1);
-			    break;
-		    }
-		    bidinfo.flag |= SALE_COMMENTED;
-                    
-		    substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-		}
-	    }
-#endif
 	}
 	else outs("無人得標!");
 	pressanykey();

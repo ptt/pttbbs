@@ -219,8 +219,6 @@ u_exit(const char *mode)
     /*
     cuser.goodpost = currutmp->goodpost;
     cuser.badpost = currutmp->badpost;
-    cuser.goodsale = currutmp->goodsale;
-    cuser.badsale = currutmp->badsale;
     */
 
     // no need because in later passwd_sync_update will reload money from SHM.
