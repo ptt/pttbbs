@@ -1,39 +1,57 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define MAX_VOTE_NR	20
-#define MAX_VOTE_PAGE	 5
-#define ITEM_PER_PAGE	30
+// XXX TODO bvote 跟實際的 vote control file 有時會不同步...
+// XXX TODO 開票還是給獨立的 utility 或 daemon 去跑比較好
+
+#define MAX_VOTE_NR	(20)
+#define MAX_VOTE_PAGE	(5)
+#define ITEM_PER_PAGE	(30)
 
 static const char * const STR_bv_control = "control";	/* 投票日期 選項 */
-static const char * const STR_bv_desc = "desc";		/* 投票目的 */
+static const char * const STR_bv_desc    = "desc";	/* 投票目的 */
 static const char * const STR_bv_ballots = "ballots";	/* 投的票 (per byte) */
-static const char * const STR_bv_flags = "flags";
-static const char * const STR_bv_comments = "comments";	/* 投票者的建議 */
+static const char * const STR_bv_flags   = "flags";
+static const char * const STR_bv_comments= "comments";	/* 投票者的建議 */
 static const char * const STR_bv_limited = "limited";	/* 私人投票 */
-static const char * const STR_bv_limits = "limits";	/* 投票資格限制 */
-static const char * const STR_bv_title = "vtitle";
-             
+static const char * const STR_bv_limits  = "limits";	/* 投票資格限制 */
+static const char * const STR_bv_title   = "vtitle";
+
 static const char * const STR_bv_results = "results";
 
+// XXX TODO use macros to sync the length of strings above?
 typedef struct {
-    char control[sizeof("controlXX\0")];
-    char desc[sizeof("descXX\0")];
-    char ballots[sizeof("ballotsXX\0")];
-    char flags[sizeof("flagsXX\0")];
+    char control [sizeof("controlXX\0") ];
+    char desc    [sizeof("descXX\0")    ];
+    char ballots [sizeof("ballotsXX\0") ];
+    char flags   [sizeof("flagsXX\0")   ];
     char comments[sizeof("commentsXX\0")];
-    char limited[sizeof("limitedXX\0")];
-    char limits[sizeof("limitsXX\0")];
-    char title[sizeof("vtitleXX\0")];
+    char limited [sizeof("limitedXX\0") ];
+    char limits  [sizeof("limitsXX\0")  ];
+    char title   [sizeof("vtitleXX\0")  ];
 } vote_buffer_t;
+
+static void
+votebuf_init(vote_buffer_t *vbuf, int n)
+{
+    assert(vbuf);
+    snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, n);
+    snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, n);
+    snprintf(vbuf->desc,    sizeof(vbuf->desc),    "%s%d", STR_bv_desc,    n);
+    snprintf(vbuf->flags,   sizeof(vbuf->flags),   "%s%d", STR_bv_flags,   n);
+    snprintf(vbuf->comments,sizeof(vbuf->comments),"%s%d", STR_bv_comments,n);
+    snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, n);
+    snprintf(vbuf->limits,  sizeof(vbuf->limits),  "%s%d", STR_bv_limits,  n);
+    snprintf(vbuf->title,   sizeof(vbuf->title),   "%s%d", STR_bv_title,   n);
+}
 
 void
 b_suckinfile(FILE * fp, const char *fname)
 {
-    FILE           *sfp;
+    FILE *sfp;
+    char inbuf[256];
 
     if ((sfp = fopen(fname, "r"))) {
-	char            inbuf[256];
 
 	while (fgets(inbuf, sizeof(inbuf), sfp))
 	    fputs(inbuf, fp);
@@ -93,7 +111,6 @@ b_count(const char *buf, int counts[], short item_num, int *total)
 	close(fd);
     }
 }
-
 
 static int
 b_nonzeroNum(const char *buf)
@@ -166,30 +183,22 @@ vote_report(const char *bname, const char *fname, char *fpath)
 }
 
 static void
-b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
+b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 {
     FILE           *cfp, *tfp, *frp, *xfp;
     char           *bname;
-    char            buf[STRLEN];
-    char            inbuf[80];
+    char            inbuf[ANSILINELEN];
     int            *counts;
     int             people_num;
     short	    item_num, junk;
-    char            b_control[64];
-    char            b_newresults[64];
-    char            b_report[64];
+    char            b_control   [PATHLEN];
+    char            b_newresults[PATHLEN];
+    char            b_report    [PATHLEN];
+    char            buf		[PATHLEN];
     time4_t         closetime;
 
-    fh->bvote--;
-
-    snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
-    snprintf(vbuf->control, sizeof(vbuf->control),"%s%d", STR_bv_control, ind);
-    snprintf(vbuf->desc, sizeof(vbuf->desc), "%s%d", STR_bv_desc, ind);
-    snprintf(vbuf->flags, sizeof(vbuf->flags), "%s%d", STR_bv_flags, ind);
-    snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, ind);
-    snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, ind);
-    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, ind);
-    snprintf(vbuf->title, sizeof(vbuf->title), "%s%d", STR_bv_title, ind);
+    if (fh->bvote > 0)
+	fh->bvote--;
 
     bname = fh->brdname;
 
@@ -202,6 +211,8 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     // prevent death caused by a bug, it should be remove later.
     if (item_num <= 0)
 	return;
+
+    // XXX TODO backup vote files?
 
     counts = (int *)malloc(item_num * sizeof(int));
 
@@ -282,18 +293,18 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 }
 
 static void
-b_result(vote_buffer_t *vbuf, boardheader_t * fh)
+b_result(boardheader_t * fh)
 {
     FILE           *cfp;
     time4_t         closetime;
     int             i, total;
     char            buf[STRLEN];
     char            temp[STRLEN];
+    vote_buffer_t   vbuf;
 
     for (i = 0; i < MAX_VOTE_NR; i++) {
-	snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, i);
-
-	setbfile(buf, fh->brdname, vbuf->control);
+	votebuf_init(&vbuf, i);
+	setbfile(buf, fh->brdname, vbuf.control);
 	cfp = fopen(buf, "r");
 	if (!cfp)
 	    continue;
@@ -301,14 +312,14 @@ b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 	fscanf(cfp, "%d\n", &closetime);
 	fclose(cfp);
 	if (closetime < now)
-	    b_result_one(vbuf, fh, i, &total);
+	    b_result_one(&vbuf, fh, &total);
     }
 }
 
 static int
-b_close(boardheader_t * fh, vote_buffer_t *vbuf)
+b_close(boardheader_t * fh)
 {
-    b_result(vbuf, fh);
+    b_result(fh);
     return 1;
 }
 
@@ -317,7 +328,6 @@ b_closepolls(void)
 {
     boardheader_t  *fhp;
     int             pos;
-    vote_buffer_t   vbuf;
 
 #ifndef BARRIER_HAS_BEEN_IN_SHM
     char    *fn_vote_polling = ".polling";
@@ -339,7 +349,7 @@ b_closepolls(void)
 #endif
 
     for (fhp = bcache, pos = 1; pos <= numboards; fhp++, pos++) {
-	if (fhp->bvote && b_close(fhp, &vbuf)) {
+	if (fhp->bvote && b_close(fhp)) {
 	    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 		outs(err_board_update);
 	    else
@@ -361,7 +371,7 @@ auto_close_polls(void)
 }
 
 static int
-vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
+vote_view(const vote_buffer_t *vbuf, const char *bname)
 {
     boardheader_t  *fhp;
     FILE           *fp;
@@ -369,15 +379,6 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     short	    item_num, i;
     int             num = 0, pos, *counts, total;
     time4_t         closetime;
-
-    snprintf(vbuf->ballots, sizeof(vbuf->ballots),"%s%d", STR_bv_ballots, vote_index);
-    snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, vote_index);
-    snprintf(vbuf->desc, sizeof(vbuf->desc), "%s%d", STR_bv_desc, vote_index);
-    snprintf(vbuf->flags, sizeof(vbuf->flags), "%s%d", STR_bv_flags, vote_index);
-    snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, vote_index);
-    snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, vote_index);
-    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, vote_index);
-    snprintf(vbuf->title, sizeof(vbuf->title), "%s%d", STR_bv_title, vote_index);
 
     setbfile(buf, bname, vbuf->ballots);
     if ((num = dashs(buf)) < 0) /* file size */
@@ -456,13 +457,14 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
 	setbfile(buf, bname, vbuf->title);
 	unlink(buf);
 
-	fhp->bvote--;
+	if (fhp->bvote > 0)
+	    fhp->bvote--;
 
 	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 	    outs(err_board_update);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
-	b_result_one(vbuf, fhp, vote_index, &total);
+	b_result_one(vbuf, fhp, &total);
 	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 	    outs(err_board_update);
 
@@ -472,25 +474,25 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
 }
 
 static int
-vote_view_all(vote_buffer_t *vbuf, const char *bname)
+vote_view_all(const char *bname)
 {
     int             i;
     int             x = -1;
     FILE           *fp, *xfp;
     char            buf[STRLEN], genbuf[STRLEN];
     char            inbuf[80];
+    vote_buffer_t   vbuf;
 
     move(0, 0);
     for (i = 0; i < MAX_VOTE_NR; i++) {
-	snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, i);
-	snprintf(vbuf->title, sizeof(vbuf->title), "%s%d", STR_bv_title, i);
-	setbfile(buf, bname, vbuf->control);
+	votebuf_init(&vbuf, i);
+	setbfile(buf, bname, vbuf.control);
 	if ((fp = fopen(buf, "r"))) {
 	    prints("(%d) ", i);
 	    x = i;
 	    fclose(fp);
 
-	    setbfile(buf, bname, vbuf->title);
+	    setbfile(buf, bname, vbuf.title);
 	    if ((xfp = fopen(buf, "r"))) {
 		fgets(inbuf, sizeof(inbuf), xfp);
 		fclose(xfp);
@@ -502,19 +504,19 @@ vote_view_all(vote_buffer_t *vbuf, const char *bname)
 
     if (x < 0)
 	return FULLUPDATE;
-    snprintf(buf, sizeof(buf), "要看幾號投票 [%d] ", x);
 
+    snprintf(buf, sizeof(buf), "要看幾號投票 [%d] ", x);
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
 
     if (atoi(genbuf) < 0 || atoi(genbuf) > MAX_VOTE_NR)
 	snprintf(genbuf, sizeof(genbuf), "%d", x);
-    snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, atoi(genbuf));
 
-    setbfile(buf, bname, vbuf->control);
+    votebuf_init(&vbuf, atoi(genbuf));
+    setbfile(buf, bname, vbuf.control);
 
     if (dashf(buf)) {
-	return vote_view(vbuf, bname, atoi(genbuf));
+	return vote_view(&vbuf, bname);
     } else
 	return FULLUPDATE;
 }
@@ -540,14 +542,11 @@ vote_maintain(const char *bname)
 
     if (fhp->bvote != 0) {
 
-#if 0 // convert the filenames of first vote
-    convert_first_vote(fhp);
-#endif
 	getdata(b_lines - 1, 0,
 		"(V)觀察目前投票 (M)舉辦新投票 (A)取消所有投票 (Q)繼續 [Q]",
 		genbuf, 4, LCECHO);
 	if (genbuf[0] == 'v')
-	    return vote_view_all(&vbuf, bname);
+	    return vote_view_all(bname);
 	else if (genbuf[0] == 'a') {
 	    fhp->bvote = 0;
 
@@ -578,7 +577,7 @@ vote_maintain(const char *bname)
 
     x = 1;
     do {
-	snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, x);
+	votebuf_init(&vbuf, x);
 	setbfile(buf, bname, vbuf.control);
 	x++;
     } while (dashf(buf) && x <= MAX_VOTE_NR);
@@ -594,14 +593,7 @@ vote_maintain(const char *bname)
 	return FULLUPDATE;
 
     vs_hdr("舉辦投票");
-    snprintf(vbuf.ballots, sizeof(vbuf.ballots), "%s%d", STR_bv_ballots, x);
-    snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, x);
-    snprintf(vbuf.desc, sizeof(vbuf.desc), "%s%d", STR_bv_desc, x);
-    snprintf(vbuf.flags, sizeof(vbuf.flags), "%s%d", STR_bv_flags, x);
-    snprintf(vbuf.comments, sizeof(vbuf.comments), "%s%d", STR_bv_comments, x);
-    snprintf(vbuf.limited, sizeof(vbuf.limited), "%s%d", STR_bv_limited, x);
-    snprintf(vbuf.limits, sizeof(vbuf.limits), "%s%d", STR_bv_limits, x);
-    snprintf(vbuf.title, sizeof(vbuf.title), "%s%d", STR_bv_title, x);
+    votebuf_init(&vbuf, x);
 
     clear();
     move(0, 0);
@@ -730,12 +722,10 @@ vote_maintain(const char *bname)
 }
 
 static int
-vote_flag(vote_buffer_t *vbuf, const char *bname, int index, char val)
+vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
 {
     char            buf[256], flag;
     int             fd, num, size;
-
-    snprintf(vbuf->flags, sizeof(vbuf->flags), "%s%d", STR_bv_flags, index);
 
     num = usernum - 1;
     setbfile(buf, bname, vbuf->flags);
@@ -758,9 +748,9 @@ vote_flag(vote_buffer_t *vbuf, const char *bname, int index, char val)
 }
 
 static int
-user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
+user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 {
-    FILE           *cfp, *fcm;
+    FILE           *cfp;
     char            buf[STRLEN], redo;
     boardheader_t  *fhp;
     short	    count, tickets;
@@ -768,29 +758,21 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
     time4_t         closetime;
 
-    // pos = boaord id, must be at least one int.
+    // bid = boaord id, must be at least one int.
     // fd should be int.
-    int		    pos = 0, i = 0;
+    int		    bid = 0, i = 0;
     int		    fd = 0;
 
-    snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
-    snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, ind);
-    snprintf(vbuf->desc, sizeof(vbuf->desc), "%s%d", STR_bv_desc, ind);
-    snprintf(vbuf->flags, sizeof(vbuf->flags),"%s%d", STR_bv_flags, ind);
-    snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, ind);
-    snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, ind);
-    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, ind);
-
-    setbfile(buf, bname, vbuf->control);
-    cfp = fopen(buf, "r");
-    if (!cfp)
-	return FULLUPDATE;
+    // initialize board info
+    if ((bid = getbnum(bname)) <= 0)
+	return 0;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    fhp = getbcache(bid);
 
     setbfile(buf, bname, vbuf->limited);	/* Ptt */
     if (dashf(buf)) {
 	setbfile(buf, bname, FN_CANVOTE);
 	if (!file_exist_record(buf, cuser.userid)) {
-	    fclose(cfp);
 	    vmsg("對不起! 這是私人投票..你並沒有受邀唷!");
 	    return FULLUPDATE;
 	} else {
@@ -803,17 +785,16 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	int limits_logins, limits_posts;
 	FILE * lfp = fopen(buf, "r");
 	assert(lfp);
-	fscanf(lfp, "%d", &closetime);
-	fscanf(lfp, "%d", &limits_logins);
-	fscanf(lfp, "%d", &limits_posts);
+	fscanf(lfp, "%d%d%d", &closetime, &limits_logins, &limits_posts);
 	fclose(lfp);
+	// XXX if this is a private vote (limited), I think we don't need to check limits?
 	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
 		cuser.numlogins < limits_logins) {
 	    vmsg("你不夠資深喔！");
 	    return FULLUPDATE;
 	}
     }
-    if (vote_flag(vbuf, bname, ind, '\0')) {
+    if (vote_flag(vbuf, bname, '\0')) {
 	vmsg("此次投票，你已投過了！");
 	return FULLUPDATE;
     }
@@ -822,11 +803,14 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     more(buf, YEA);
 
     vs_hdr("投票箱");
-    if ((pos = getbnum(bname)) <= 0)
-	return 0;
 
-    assert(0<=pos-1 && pos-1<MAX_BOARD);
-    fhp = bcache + pos - 1;
+    setbfile(buf, bname, vbuf->control);
+    cfp = fopen(buf, "r");
+    if (!cfp)
+    {
+	vmsg("抱歉，此投票已取消或無效。");
+	return FULLUPDATE;
+    }
 
     assert(cfp);
     fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime);
@@ -922,7 +906,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	    continue;
 	}
 
-	if (vote_flag(vbuf, bname, ind, vote[0]) != 0)
+	if (vote_flag(vbuf, bname, vote[0]) != 0)
 	    outs("重複投票! 不予計票。");
 	else {
 	    setbfile(buf, bname, vbuf->ballots);
@@ -963,7 +947,9 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 			break;
 		    setbfile(b_comments, bname, vbuf->comments);
 		    if (mycomments[0][0])
-			if ((fcm = fopen(b_comments, "a"))) {
+		    {
+			FILE *fcm = fopen(b_comments, "a");
+			if (fcm) {
 			    fprintf(fcm,
 				    ANSI_COLOR(36) "○使用者" ANSI_COLOR(1;36) " %s "
 				    ANSI_COLOR(;36) "的建議：" ANSI_RESET "\n",
@@ -973,6 +959,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 			    fprintf(fcm, "\n");
 			    fclose(fcm);
 			}
+		    }
 		}
 		move(b_lines - 1, 0);
 		outs("已完成投票！\n");
@@ -989,74 +976,67 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 static int
 user_vote(const char *bname)
 {
-    int             pos;
-    boardheader_t  *fhp;
+    int             bid;
+    boardheader_t  *bh;
     char            buf[STRLEN];
-    FILE           *fp, *xfp;
+    FILE           *fp;
     int             i, x = -1;
     char            genbuf[STRLEN];
     char            inbuf[80];
     vote_buffer_t   vbuf;
 
-    if ((pos = getbnum(bname)) <= 0)
+    if ((bid = getbnum(bname)) <= 0)
 	return 0;
 
-    assert(0<=pos-1 && pos-1<MAX_BOARD);
-    fhp = bcache + pos - 1;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bh = getbcache(bid);
 
-    move(0, 0);
-    clrtobot();
+    clear();
 
-    if (fhp->bvote == 0) {
+    if (bh->bvote == 0) {
 	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
     }
-#if 0 // convert the filenames of first vote
-    convert_first_vote(fhp);
-#endif
     if (!HasUserPerm(PERM_LOGINOK)) {
-	vmsg("對不起! 您未滿二十歲, 還沒有投票權喔!");
+	vmsg("對不起! 您未完成註冊程序, 還沒有投票權喔!");
 	return FULLUPDATE;
     }
 
-    move(0, 0);
-    for (i = 0; i < MAX_VOTE_NR; i++) {
-	snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, i);
-	snprintf(vbuf.title, sizeof(vbuf.title), "%s%d", STR_bv_title, i);
+    // XXX I think such loop is ineffective...
+    // According to the creation code, the vote is ranged as [1..MAX_VOTE_NR]
+    for (i = 1; i <= MAX_VOTE_NR; i++) {
+	votebuf_init(&vbuf, i);
 	setbfile(buf, bname, vbuf.control);
-	if ((fp = fopen(buf, "r"))) {
-	    prints("(%d) ", i);
-	    x = i;
-	    fclose(fp);
+	if (!dashf(buf))
+	    continue;
 
-	    setbfile(buf, bname, vbuf.title);
-	    if ((xfp = fopen(buf, "r"))) {
-		fgets(inbuf, sizeof(inbuf), xfp);
-		fclose(xfp);
-	    } else
-		strlcpy(inbuf, "無標題", sizeof(inbuf));
-	    prints("%s\n", inbuf);
+	x = i;
+	prints("(%d) ", x);
+
+	setbfile(buf, bname, vbuf.title);
+	fp = fopen(buf, "r");
+	if (fp) {
+	    fgets(inbuf, sizeof(inbuf), fp);
+	    fclose(fp);
+	} else {
+	    strlcpy(inbuf, "無標題", sizeof(inbuf));
 	}
+	prints("%s\n", inbuf);
     }
 
     if (x < 0)
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf), "要投幾號投票 [%d] ", x);
-
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
+    i = atoi(genbuf);
 
-    if (atoi(genbuf) < 0 || atoi(genbuf) > MAX_VOTE_NR)
-	snprintf(genbuf, sizeof(genbuf), "%d", x);
+    // x: default (max), i: user selection
+    if (i < 1 || i > MAX_VOTE_NR)
+	i = x;
 
-    snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, atoi(genbuf));
-
-    setbfile(buf, bname, vbuf.control);
-
-    if (dashf(buf)) {
-	return user_vote_one(&vbuf, bname, atoi(genbuf));
-    } else
-	return FULLUPDATE;
+    votebuf_init(&vbuf, i);
+    return user_vote_one(&vbuf, bname);
 }
 
 static int
