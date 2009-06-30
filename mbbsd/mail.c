@@ -2035,7 +2035,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     char            genbuf[PATHLEN];
     int             return_no;
 
-    if (!address[0] && strcmp(cuser.email, "x") != 0)
+    if (!address[0] && strcasecmp(cuser.email, "x") != 0)
      	strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
