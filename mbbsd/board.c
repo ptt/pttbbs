@@ -67,6 +67,14 @@ inline boardheader_t *getparent(const boardheader_t *fh)
 	return NULL;
 }
 
+// 程式中有特別用途所以不得自行 post / 修改的看板
+int
+is_readonly_board(const char *bname)
+{
+    return (strcasecmp(bname, BN_SECURITY) == 0 ||
+	    strcasecmp(bname, BN_ALLPOST ) == 0 );
+}
+
 /**
  * @param[in]	boardname	board name, case insensitive
  * @return	0	if success

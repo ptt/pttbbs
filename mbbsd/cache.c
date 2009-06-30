@@ -177,6 +177,10 @@ postperm_msg(const char *bname)
     if (!(i = getbnum(bname)))
 	return "看板不存在";
 
+    // system internal read only boards (no matter what attribute/flag set)
+    if (is_readonly_board(bname))
+	return "看板唯讀";
+
     if (HasUserPerm(PERM_SYSOP))
 	return NULL;
 
