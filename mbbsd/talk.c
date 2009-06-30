@@ -497,10 +497,7 @@ my_query(const char *uident)
 	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和\n",
 	       muser.five_win, muser.five_lose, muser.five_tie,
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
-#ifdef ASSESS
-	prints("《競標評比》 優 %d / 劣 %d", muser.goodsale, muser.badsale);
-	move(6, 40);
-#endif
+
 	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 

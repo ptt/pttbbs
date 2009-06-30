@@ -1324,27 +1324,6 @@ do_post_vote(void)
     return do_voteboard(1);
 }
 
-int
-do_post_openbid(void)
-{
-    char ans[4];
-    boardheader_t  *bp;
-
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    bp = getbcache(currbid);
-    if (!(bp->brdattr & BRD_VOTEBOARD))
-    {
-	getdata(b_lines - 1, 0,
-		"確定要公開招標嗎？ [y/N] ",
-		ans, sizeof(ans), LCECHO);
-	if(ans[0] != 'y')
-	    return FULLUPDATE;
-
-	return do_general(1);
-    }
-    return 0;
-}
-
 static void
 do_generalboardreply(/*const*/ fileheader_t * fhdr)
 {
@@ -1511,7 +1490,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     // board check
-    if (strcmp(bp->brdname, BN_SECURITY) == EQUSTR ||
+    if (is_readonly_board(bp->brdname) ||
 	(bp->brdattr & BRD_VOTEBOARD))
 	return DONOTHING;
 
@@ -2514,7 +2493,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
      */
     setdirpath(path, direct, fhdr->filename);
     if( log_file(path, 0, buf) == -1 ){ // 不 CREATE
-	vmsg("推薦/競標失敗");
+	vmsg("推薦失敗");
 	return -1;
     }
 
@@ -2747,7 +2726,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' || 
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
-	vmsg("抱歉, 禁止推薦或競標");
+	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
     }
     if (   !CheckPostPerm() || isGuest)
@@ -3141,7 +3120,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
     { 
 	// 很不幸的是有一種是信件->mail_cite->精華區
         bp = getbcache(currbid);
-	if (strcmp(bp->brdname, BN_SECURITY) == 0)
+	if (is_readonly_board(bp->brdname))
 	    return DONOTHING;
     }
 
@@ -3209,7 +3188,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (strcmp(bp->brdname, BN_SECURITY) == 0)
+    if (is_readonly_board(bp->brdname))
 	return DONOTHING;
 
     /* TODO recursive lookup */
@@ -4068,9 +4047,9 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'J'
 #endif
-    { 0, b_moved_to_config }, // 'K'
+    { 0, NULL }, // 'K'
     { 1, solve_post }, // 'L'
-    { 0, b_moved_to_config }, // 'M'
+    { 0, NULL }, // 'M'
     { 0, NULL }, // 'N'
     { 0, NULL }, // 'O'
     { 0, NULL }, // 'P'
@@ -4116,7 +4095,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, b_moved_to_config }, // 'v'
+    { 0, NULL }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, cross_post }, // 'x'
     { 1, reply_post }, // 'y'

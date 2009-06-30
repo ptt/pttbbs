@@ -545,8 +545,11 @@ give_money_ui(const char *userid)
 	    return 0;
 	}
 
+	// TODO 若是壞人，禁止編輯內文？
 	if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
+	{
 	    veditfile(fpath);
+	}
 	sendalert(id, ALERT_NEW_MAIL);
     }
     return 0;
