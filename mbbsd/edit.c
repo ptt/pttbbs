@@ -2994,20 +2994,28 @@ search_str(int mode)
 	textline_t     *p;
 	char           *pos = NULL;
 	int             lino;
+	bool found = false;
 
 	if (mode >= 0) {
-	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->next, lino++)
-		if ((pos = (*curr_buf->substr_fp)(p->data + (lino == curr_buf->currln ? curr_buf->currpnt + 1 : 0),
-				str)) && (lino != curr_buf->currln ||
-					  pos - p->data != curr_buf->currpnt))
+	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->next, lino++) {
+		int offset = (lino == curr_buf->currln ? MIN(curr_buf->currpnt + 1, curr_buf->currline->len) : 0);
+		pos = (*curr_buf->substr_fp)(p->data + offset, str);
+		if (pos) {
+		    found = true;
 		    break;
+		}
+	    }
 	} else {
-	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->prev, lino--)
-		if ((pos = (*curr_buf->substr_fp)(p->data, str)) &&
-		    (lino != curr_buf->currln || pos - p->data != curr_buf->currpnt))
+	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->prev, lino--) {
+		pos = (*curr_buf->substr_fp)(p->data, str);
+		if (pos &&
+		    (lino != curr_buf->currln || pos - p->data < curr_buf->currpnt)) {
+		    found = true;
 		    break;
+		}
+	    }
 	}
-	if (pos) {
+	if (found) {
 	    /* move window */
 	    curr_buf->currline = p;
 	    curr_buf->currln = lino;
