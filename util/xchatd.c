@@ -1761,6 +1761,7 @@ chat_makeop(ChatUser *cu, char *msg)
     char *newop;
     ChatUser *xuser;
     ChatRoom *room;
+    int wasop = 0;
 
     if (!ROOMOP(cu))
     {
@@ -1780,7 +1781,7 @@ chat_makeop(ChatUser *cu, char *msg)
 
     if (cu == xuser)
     {
-	sprintf(chatbuf, "※ 您早就已經是 Op 了啊");
+	sprintf(chatbuf, "※ 您已經是管理員(Op)了，無法改變自己的權限");
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1794,14 +1795,23 @@ chat_makeop(ChatUser *cu, char *msg)
 	return;
     }
 
-    cu->uflag &= ~PERM_ROOMOP;
-    xuser->uflag |= PERM_ROOMOP;
-
-    user_changed(cu);
+    wasop = ROOMOP(xuser) ? 1 : 0;
+    xuser->uflag ^= PERM_ROOMOP;
     user_changed(xuser);
 
-    sprintf(chatbuf, "※ %s 將 Op 權力轉移給 %s",
-	    cu->chatid, xuser->chatid);
+    if (wasop == (ROOMOP(xuser) ? 1 : 0))
+    {
+	// 動不了他
+	sprintf(chatbuf, "※ 無法改變對方的管理員(Op)權限。");
+	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+	return;
+    }
+
+    sprintf(chatbuf, "※ %s %s %s 的管理員(Op)權限",
+	    cu->chatid, 
+	    ROOMOP(xuser) ? "提昇了" : "解除了",
+	    xuser->chatid);
+
     if (!CLOAK(cu))               /* Thor: 聊天室隱身術 */
 	send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 }
@@ -2134,13 +2144,11 @@ static ChatAction speak_data[] =
     { "cheer", "喝采", "喝采", NULL },
     { "chuckle", "輕笑", "輕笑", NULL },
     { "curse", "暗幹", "暗幹", NULL },
-    /* {"curse", "咒罵", NULL}, */
     { "demand", "要求", "要求", NULL },
     { "frown", "皺眉頭", "蹙眉", NULL },
     { "groan", "呻吟", "呻吟", NULL },
     { "grumble", "發牢騷", "發牢騷", NULL },
     { "guitar", "彈唱", "邊彈著吉他，邊唱著", NULL },
-    /* {"helpme", "呼救","大聲呼救",NULL}, */
     { "hum", "喃喃", "喃喃自語", NULL },
     { "moan", "怨嘆", "怨嘆", NULL },
     { "notice", "強調", "強調", NULL },
@@ -2194,7 +2202,6 @@ static ChatAction condition_data[] =
     { "blood", "在血中", "倒在血泊之中", NULL },
     { "blush", "臉紅", "臉都紅了", NULL },
     { "broke", "心碎", "的心破碎成一片一片的", NULL },
-    /* {"bokan", "Bo Kan! Bo Kan!", NULL}, */
     { "careles", "沒人理", "嗚～～都沒有人理我 :~~~~", NULL },
     { "chew", "嗑瓜子", "很悠閒的嗑起瓜子來了", NULL },
     { "climb", "爬山", "自己慢慢爬上山來……", NULL },
@@ -2204,25 +2211,14 @@ static ChatAction condition_data[] =
     { "faint", "昏倒", "當場昏倒", NULL },
     { "flop", "香蕉皮", "踩到香蕉皮... 滑倒！", NULL },
     { "fly", "飄飄然", "飄飄然", NULL },
-    { "frown", "蹙眉", "蹙眉", NULL },
     { "gold", "拿金牌", "唱著：『金ㄍㄠˊ金ㄍㄠˊ  出國比賽! 得冠軍，拿金牌，光榮倒鄧來！』", NULL },
     { "gulu", "肚子餓", "的肚子發出咕嚕~~~咕嚕~~~的聲音", NULL },
     { "haha", "哇哈哈", "哇哈哈哈.....^o^", NULL },
-    /* {"haha", "大笑","哇哈哈哈哈哈哈哈哈~~~~!!!!!", NULL}, */
     { "helpme", "求救", "大喊~~~救命啊~~~~", NULL },
     { "hoho", "呵呵笑", "呵呵呵笑個不停", NULL },
     { "happy", "高興", "高興得在地上打滾", NULL },
-    /* {"happy", "高興", "ＹＡ！ *^_^*", NULL}, */
-    /* {"happy", "", "r-o-O-m....聽了真爽！", NULL}, */
-    /* {"hurricane", "Ｈｏ---Ｒｙｕ--Ｋａｎ！！！", NULL}, */
     { "idle", "呆住了", "呆住了", NULL },
     { "jacky", "晃晃", "痞子般的晃來晃去", NULL },
-
-#if 0
-    /* Thor.0729: 不知其意 */
-    { "lag", "網路慢", "lllllllaaaaaaaaaaaagggggggggggggg.................", NULL },
-#endif
-
     { "luck", "幸運", "哇！福氣啦！", NULL },
     { "macarn", "一種舞", "開始跳起了ＭaＣaＲeＮa～～～～", NULL },
     { "miou", "喵喵", "喵喵口苗口苗～～～～～", NULL },
@@ -2230,13 +2226,11 @@ static ChatAction condition_data[] =
     { "nani", "怎麼會", "：奈ㄝ啊捏??", NULL },
     { "nose", "流鼻血", "流鼻血", NULL },
     { "puke", "嘔吐", "嘔吐中", NULL },
-    /* {"puke", "真噁心，我聽了都想吐", NULL}, */
     { "rest", "休息", "休息中，請勿打擾", NULL },
     { "reverse", "翻肚", "翻肚", NULL },
     { "room", "開房間", "r-o-O-m-r-O-Ｏ-Mmm-rRＲ........", NULL },
     { "shake", "搖頭", "搖了搖頭", NULL },
     { "sleep", "睡著", "趴在鍵盤上睡著了，口水流進鍵盤，造成當機！", NULL },
-    /* {"sleep", "Zzzzzzzzzz，真無聊，都快睡著了", NULL}, */
     { "so", "就醬子", "就醬子!!", NULL },
     { "sorry", "道歉", "嗚啊!!我對不起大家,我對不起國家社會~~~~~~嗚啊~~~~~", NULL },
     { "story", "講古", "開始講古了", NULL },
@@ -2247,7 +2241,6 @@ static ChatAction condition_data[] =
     { "tongue", "吐舌", "吐了吐舌頭", NULL },
     { "wall", "撞牆", "跑去撞牆", NULL },
     { "wawa", "哇哇", "哇哇哇~~~~~!!!!!  ~~~>_<~~~", NULL },
-    /* {"wawa","哇哇哇......>_<",NULL},  */
     { "www", "汪汪", "汪汪汪!!!", NULL },
     { "zzz", "打呼", "呼嚕~~~~ZZzZzｚＺZZzzZzzzZZ...", NULL },
     { NULL, NULL, NULL, NULL }
