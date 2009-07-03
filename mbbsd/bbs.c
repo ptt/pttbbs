@@ -431,7 +431,7 @@ readtitle(void)
 	brd_title = bp->title + 7;
 
     showtitle(currBM, brd_title);
-    outs("[←]離開 [→]閱\讀 [^P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
+    outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
     buf[0] = 0;
 
 #ifdef USE_COOLDOWN
@@ -1231,7 +1231,7 @@ do_general(int isbid)
 	    {
 		demoney(money);    
 		addPost = 1;
-		prints("這是您的第 %d 篇文章，稿酬 %d 銀。",
+		prints("這是您的第 %d 篇有效文章，稿酬 %d 銀。",
 			++cuser.numposts, money);
 	    } else {
 		// no money, no record.

@@ -451,6 +451,11 @@ my_query(const char *uident)
 	setutmpmode(TQUERY);
 	currutmp->destuid = tuid;
 
+	// XXX some users keep complaining that query result is not synced...
+	// well, make them happy now.
+	if (tuid == usernum)
+	    memcpy(&muser, &cuser, sizeof(muser));
+
 	if ((uentp = (userinfo_t *) search_ulist(tuid)))
 	    fri_stat = friend_stat(currutmp, uentp);
 
@@ -471,9 +476,9 @@ my_query(const char *uident)
 #endif
 	move(2, 40);
 #ifdef ASSESS
-	prints("《文章篇數》%d篇 (優:%d/劣:%d)\n", muser.numposts, muser.goodpost, muser.badpost);
+	prints("《有效文章篇數》%d篇 (優:%d/劣:%d)\n", muser.numposts, muser.goodpost, muser.badpost);
 #else
-	prints("《文章篇數》%d篇\n", muser.numposts);
+	prints("《有效文章篇數》%d篇\n", muser.numposts);
 #endif
 
 	prints(ANSI_COLOR(1;33) "《目前動態》%-28.28s" ANSI_RESET,
