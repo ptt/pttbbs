@@ -295,6 +295,7 @@ receive_article()
      "OCAgIFNreXBlOmp1bnNreWVwCg==", "ooqq.bbs@bbs.wretch.cc",
      "http://jsvcd.3cc.cc", "http://bestgirl.mytw.net", "http://98.to/",
      "http://www.boss888.net", "amuro.bbs@bbs.csie.nctu.edu.tw",
+     "請問有需要幫忙報告.論文spss統計分析嗎",
      "http://www.whymsi.com", "http://www.msi-team.com/", NULL};
 #endif
 
@@ -739,7 +740,8 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 
     now = time(NULL);
     while (1) {
-	sprintf(name, "M.%ld.A", (long)++now);
+        /* TODO: extract record.c:stampfile_u() to common lib */
+	sprintf(name, "M.%ld.A.%3.3X", (long)++now, (unsigned int)(random() & 0xFFF));
 	sprintf(article, "%s/%s", homepath, name);
 	fh = open(article, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	if (fh >= 0)

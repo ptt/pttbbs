@@ -144,7 +144,8 @@ vote_report(const char *bname, const char *fname, char *fpath)
 
     dtime = now;
     for (;;) {
-	sprintf(ip, "M.%d.A", (int)++dtime);
+        /* TODO: extract record.c:stampfile_u() to common lib */
+	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, (unsigned int)(random() & 0xFFF));
 	fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	if (fd >= 0)
 	    break;
@@ -152,6 +153,7 @@ vote_report(const char *bname, const char *fname, char *fpath)
     }
     close(fd);
 
+    /* XXX: FIXME: Possible race condition */
     unlink(fpath);
     link(fname, fpath);
 
