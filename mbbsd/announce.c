@@ -8,11 +8,23 @@
 // 於是就爆炸 
 // 同理 currboard 也不該用
 // 請改用 me.bid (注意 me.bid 可能為 0, 表示進來的非看板。)
-//
-// XXX 9999 麻煩想個方式改掉
 
 // for max file size limitation here, see edit.c
 #define MAX_FILE_SIZE (32768*1024)
+
+// used to force a page refresh. 
+// TODO change this to INT_MAX in future, when we understand what is the magic 10000 value.
+#define A_INVALID_PAGE (9999)
+
+// zindex code is in the format "z-1-2-3-4" or "1. 2. 3. 4"
+// for safety reason, we expect num to be < 10 digits.
+// 9 + 1 ('-') + 3 ('...') = 13
+// however to make the prompt bar smaller, we'd reduce few more bytes.
+#define SAFE_ZINDEX_CODELEN (STRLEN-15)
+
+#ifndef _DIM
+#define _DIM(x) (sizeof(x)/sizeof(x[0]))
+#endif
 
 /* copy temp queue operation -------------------------------------- */
 
@@ -719,7 +731,7 @@ a_moveitem(menu_t * pm)
     snprintf(buf, sizeof(buf), "請輸入第 %d 選項的新次序：", pm->now + 1);
     if (!getdata(b_lines - 1, 1, buf, newnum, sizeof(newnum), DOECHO))
 	return;
-    num = (newnum[0] == '$') ? 9999 : atoi(newnum) - 1;
+    num = (newnum[0] == '$') ? A_INVALID_PAGE : atoi(newnum) - 1;
     if (num >= pm->num)
 	num = pm->num - 1;
     else if (num < 0)
@@ -1032,16 +1044,145 @@ isvisible_man(const menu_t * me)
     return 1;
 }
 
+typedef struct {
+    char bReturnToRoot;		// 用來跳出 recursion
+    int  z_indexes [STRLEN/2];	// each index code takes minimal 2 characters
+}   a_menu_session_t;
+
+// look up current location
+#define A_WHEREAMI_PREFIX_STR	"我在哪？ "
+static int 
+a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
+{
+    const menu_t *p;
+    int lvl, num;
+    const int max_lvl = t_lines -3; // 3: vs_hdr() + pause() + where_am_i
+    char zidx_buf[STRLEN-sizeof(A_WHEREAMI_PREFIX_STR)-1] = "z";
+    int  zidx_len;
+    char abuf[12] = "";  // INT_MAX + sign + NUL
+    int  last_idx_len = 0;
+    char *zidx = zidx_buf + strlen(zidx_buf);
+    char bskipping;
+
+    move(1, 0); clrtobot(); outs(A_WHEREAMI_PREFIX_STR ANSI_COLOR(1));
+
+    // decide length of last index
+    snprintf(abuf, sizeof(abuf), "-%d", current_idx);
+    last_idx_len = strlen(abuf)+1;
+    // calculate remaining length
+    zidx_len = sizeof(zidx_buf) - strlen(zidx) - last_idx_len;	
+
+    bskipping = 0;
+    // first round, quick render zidx
+    for (p = root; p != NULL; p = p->next)
+    {
+	snprintf(abuf, sizeof(abuf), "-%d", p->now+1);
+	if (p->next == NULL)
+	{
+	    // tail. always print it.
+	    strlcpy(zidx, bskipping ? abuf+1 : abuf, last_idx_len+1);
+	} else if (bskipping) {
+	    // skip iteration
+	    continue;
+	} else {
+	    // determine if there's still space to print it
+	    if (strlen(abuf) > zidx_len)
+	    {
+		// re-print from previous entry
+		char *s = strrchr(zidx_buf, '-');
+		assert(s);
+		zidx_len += strlen(s);
+		strlcpy(s, "...", zidx_len+1);  // '-%d-' enough to hold '...'
+		zidx_len -= strlen(s);
+		bskipping = 1;
+	    } else {
+		// simply print it
+		strlcpy(zidx, abuf, zidx_len);
+		zidx_len -= strlen(zidx);
+		zidx     += strlen(zidx);
+	    }
+	}
+    }
+
+    outs(zidx_buf); outs(ANSI_RESET);
+    move(2, 0); 
+	
+    bskipping = 0;
+    // second round, render text output
+    for (p = root, lvl = 0, num = 0; lvl < max_lvl; p = p->next)
+    {
+	int onum = num;
+	if (p)
+	    num = p->now +1;
+
+	if (bskipping && p)
+	    continue;
+
+	move(lvl+2, 0);
+	prints("%*s", lvl, "");
+
+	//  decide if we need to skip.
+	if (++lvl == max_lvl-1 && p && p->next)
+	{
+	    prints("... (中間已省略) ...");
+	    bskipping = 1;
+	    continue;
+	}
+
+	// in the first round, print topic and no number...
+	if (onum)
+	    prints("%2d. ", onum);
+
+	// for last round, p == NULL -> use current title
+	prints("%s\n", p ? p->mtitle : current_title);
+
+	// break at last round (p == NULL)
+	if (!p)
+	    break;
+    }
+    return 0;
+}
+
+#if 0
+int a_parse_zindexes(const char *sidx, a_menu_session_t *sess)
+{
+    int i = 0;
+
+    memset(sess->z_indexes, 0, sizeof(sess->z_indexes));
+    if (strpbrk(zidx, "0123456789") == NULL)
+	return -1;
+
+    while (NULL != (s = strpbrk(s, "0123456789")) &&
+	    i < _DIM(sess->z_indexes) )
+    {
+	sess->z_indexes[i] = atoi(s);
+	// only increase index
+	if (sess->z_indexes[i])
+	    i++;
+	while(isascii(*s) && isdigit(*s)) s++;
+    }
+    // sess->bReturnToRoot = 1;
+    // clear();
+    // for (i = 0; sess->z_indexes[i]; i++)
+    //	prints("%d\n", sess->z_indexes[i]);
+    return 0;
+}
+#endif
+
 int
 a_menu_rec(const char *maintitle, const char *path, 
 	int lastlevel, int lastbid,
 	char *trans_buffer,
-	menu_t *root, menu_t *parent)
+	a_menu_session_t *sess,
+	// we don't change root's value (but may change root pointer)
+	// we may   change parent's value (but never change parent pointer)
+	const menu_t *root, menu_t* const parent)
 {
-    static char     Fexit;	// 用來跳出 recursion
     menu_t          me = {0};
     char            fname[PATHLEN];
     int             ch, returnvalue = FULLUPDATE;
+
+    assert(sess);
 
     // prevent deep resursive directories
     if (strlen(path) + FNLEN >= PATHLEN)
@@ -1057,10 +1198,10 @@ a_menu_rec(const char *maintitle, const char *path,
     {
 	parent->next = &me;
     } else {
+	assert(root == NULL);
 	root = &me;
     }
 
-    Fexit = 0;
     me.header_size = p_lines;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
@@ -1083,7 +1224,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	if (HasUserPerm(PERM_BASIC) && (ptr = strrchr(me.mtitle, '[')))
 	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
-    me.page = 9999;
+    me.page = A_INVALID_PAGE;
     me.now = 0;
     for (;;) {
 	if (me.now >= me.num)
@@ -1097,7 +1238,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    if (!a_showmenu(&me))
 	    {
 		// some directories are invalid, restart!
-		Fexit = 1;
+		sess->bReturnToRoot = 1;
 		break;
 	    }
 	}
@@ -1109,6 +1250,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	if (ch >= '1' && ch <= '9') {
 	    if ((ch = search_num(ch, me.num)) != -1)
 		me.now = ch;
+	    // XXX what is the magic '10000' page number?
 	    me.page = 10000;
 	    continue;
 	}
@@ -1159,39 +1301,23 @@ a_menu_rec(const char *maintitle, const char *path,
 	case '/':
 	    if(me.num) {
 		me.now = a_searchtitle(&me, ch == '?');
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 	    }
 	    break;
 	case 'h':
 	    a_showhelp(me.level);
-	    me.page = 9999;
+	    me.page = A_INVALID_PAGE;
 	    break;
 
 	case Ctrl('I'):
 	    t_idle();
-	    me.page = 9999;
+	    me.page = A_INVALID_PAGE;
 	    break;
 
 	case Ctrl('W'):
-	    // XXX look up current location (utilize path and .DIR lookup)
-	    move(1, 0); clrtobot(); outs("我在哪？\n");
-	    {
-		menu_t *p;
-		int lvl = 0, num = 0;
-
-		for (p = root; p != NULL && lvl < t_lines - 3; p = p->next, lvl++)
-		{
-		    prints("%*s", lvl, "");
-		    if (num)
-			prints("%d. ", num);
-		    prints("%s\n", p->mtitle);
-
-		    // print in next round..
-		    num = p->now +1;
-		}
-	    }
+	    a_where_am_i(root, me.now, me.header[me.now - me.page].title);
 	    vmsg(NULL);
-	    me.page = 9999;
+	    me.page = A_INVALID_PAGE;
 	    break;
 
 	case 'e':
@@ -1228,7 +1354,7 @@ a_menu_rec(const char *maintitle, const char *path,
 				      sizeof(fhdr), me.now + 1);
 
 		}
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 	    }
 	    break;
 
@@ -1252,7 +1378,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		/* move down */
 		if (++me.now >= me.num)
 		    me.now = 0;
@@ -1290,7 +1416,7 @@ a_menu_rec(const char *maintitle, const char *path,
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
 				strlcpy(trans_buffer, fname, PATHLEN);
-				Fexit = 1;
+				sess->bReturnToRoot = 1;
 				if (currstat == OSONG) {
 				    log_filef(FN_USSONG, LOG_CREAT, "%s\n", fhdr->title);
 				}
@@ -1322,15 +1448,15 @@ a_menu_rec(const char *maintitle, const char *path,
 		    }
 		} else if (dashd(fname)) {
 		    a_menu_rec(me.header[me.now - me.page].title, fname, 
-			    me.level, me.bid, trans_buffer, root, &me);
+			    me.level, me.bid, trans_buffer, sess, root, &me);
 		    me.next = NULL;
 		    /* Ptt  強力跳出recursive */
-		    if (Fexit) {
+		    if (sess->bReturnToRoot) {
 			free(me.header);
 			return FULLUPDATE;
 		    }
 		}
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 	    }
 	    break;
 
@@ -1347,7 +1473,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		    /* By CharlieL */
 		} else
 		    vmsg("無法轉寄此項目");
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 	    }
 
 	    break;
@@ -1358,33 +1484,33 @@ a_menu_rec(const char *maintitle, const char *path,
 	    switch (ch) {
 	    case 'n':
 		a_newitem(&me, ADDITEM);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case 'g':
 		a_newitem(&me, ADDGROUP);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case 'p':
 		a_pasteitem(&me, 1);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case 'f':
 		a_editsign(&me);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case Ctrl('P'):
 		a_pastetagpost(&me, -1);
 		returnvalue = DIRCHANGED;
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case Ctrl('A'):
 		a_pastetagpost(&me, 1);
 		returnvalue = DIRCHANGED;
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    case 'a':
 		a_appenditem(&me, 1);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 #ifdef BLOG
 	    case 'b':
@@ -1397,7 +1523,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		    system(genbuf);
 		    vmsg("資料更新完成");
 		}
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 
 	    case 'B':
@@ -1405,7 +1531,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		{
 		    BlogMain(me.now);
 		};
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 #endif
 	    }
@@ -1414,25 +1540,25 @@ a_menu_rec(const char *maintitle, const char *path,
 		switch (ch) {
 		case 'm':
 		    a_moveitem(&me);
-		    me.page = 9999;
+		    me.page = A_INVALID_PAGE;
 		    break;
 
 		case 'D':
 		    /* Ptt me.page = -1; */
 		    a_delrange(&me);
-		    me.page = 9999;
+		    me.page = A_INVALID_PAGE;
 		    break;
 		case 'd':
 		    a_delete(&me);
-		    me.page = 9999;
+		    me.page = A_INVALID_PAGE;
 		    break;
 		case 'H':
 		    a_hideitem(&me);
-		    me.page = 9999;
+		    me.page = A_INVALID_PAGE;
 		    break;
 		case 'T':
 		    a_newtitle(&me);
-		    me.page = 9999;
+		    me.page = A_INVALID_PAGE;
 		    break;
 #ifdef CHESSCOUNTRY
 		case 'L':
@@ -1445,7 +1571,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    switch (ch) {
 	    case 'N':
 		a_showname(&me);
-		me.page = 9999;
+		me.page = A_INVALID_PAGE;
 		break;
 	    }
 	}
@@ -1459,9 +1585,10 @@ a_menu(const char *maintitle, const char *path,
 	int lastlevel, int lastbid,
 	char *trans_buffer)
 {
+    a_menu_session_t sess = {0};
     return a_menu_rec(maintitle, path, 
 	    lastlevel, lastbid, trans_buffer, 
-	    NULL, NULL);
+	    &sess, NULL, NULL);
 }
 
 int
