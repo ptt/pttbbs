@@ -1263,9 +1263,9 @@ a_menu_rec(const char *maintitle, const char *path,
 	    }
 	}
 
-	if (preselect)
+	if (preselect && *preselect && preselect[1])
 	{
-	    // enter if preselect is folder
+	    // if this is not the last preselect entry, enter it
 	    ch = KEY_ENTER;
 	} else {
 	    ch = cursor_key(2 + me.now - me.page, 0);
@@ -1275,6 +1275,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    break;
 
 	// maybe we should let 1-9=simple search and z=tree-search
+	// TODO let 'z' prefix means 'back to root'
 	if ((ch >= '1' && ch <= '9') || ch == 'z' || ch == 'Q') {
 	    int n = a_multi_search_num(isascii(ch) && isdigit(ch) ? ch : '\0', sess);
 	    me.page = A_INVALID_PAGE;
