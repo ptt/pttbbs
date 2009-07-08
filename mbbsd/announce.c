@@ -1143,17 +1143,16 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     return 0;
 }
 
-int a_parse_zindexes(const char *sidx, a_menu_session_t *sess)
+int a_parse_zindexes(const char *s, a_menu_session_t *sess)
 {
     int i = 0;
-    const char *s = sidx;
 
     memset(sess->z_indexes, 0, sizeof(sess->z_indexes));
-    if (strpbrk(sidx, "0123456789") == NULL)
+    if (strpbrk(s, "0123456789") == NULL)
 	return -1;
 
     while (NULL != (s = strpbrk(s, "0123456789")) &&
-	    i < _DIM(sess->z_indexes) )
+	    i+1 < _DIM(sess->z_indexes) )
     {
 	sess->z_indexes[i] = atoi(s);
 	// only increase index
@@ -1245,12 +1244,7 @@ a_menu_rec(const char *maintitle, const char *path,
     if (preselect && !*preselect)
 	preselect = NULL;
 
-    if (preselect)
-    {
-	me.now = *preselect-1;
-    } else {
-	me.now = 0;
-    }
+    me.now = preselect ? (*preselect -1) : 0;
 
     for (;;) {
 	if (me.now >= me.num)
@@ -1285,14 +1279,15 @@ a_menu_rec(const char *maintitle, const char *path,
 	    int n = a_multi_search_num(isascii(ch) && isdigit(ch) ? ch : '\0', sess);
 	    me.page = A_INVALID_PAGE;
 	    if (n > 0)
+	    {
 		me.now = n-1;
-	    else if (n < 0)
-		vmsg("¿é¤J¿ù»~¡C");
-	    else if (sess->z_indexes[0]) 
+		me.page = 10000; // I don't know what's the magic value 10000... 
+	    }
+	    else if (n == 0 && sess->z_indexes[0]) 
 	    {
 		// n == 0, check new preselects
 		preselect = sess->z_indexes;
-		me.now = *preselect-1;
+		me.now = *preselect - 1;
 	    }
 	    continue;
 	}
