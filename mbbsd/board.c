@@ -1819,6 +1819,8 @@ choose_board(int newflag)
 	    if (HasFavEditPerm()) {
 		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
+		brdnum = -1;
+		head = 9999;
 		if (IS_LISTING_FAV()) {
 		    if (ptr->myattr & NBRD_FAV) {
 			if (vans("你確定刪除嗎? [N/y]") != 'y')
@@ -1841,8 +1843,6 @@ choose_board(int newflag)
 			    ptr->myattr |= NBRD_FAV;
 		    }
 		}
-		brdnum = -1;
-		head = 9999;
 	    }
 	    break;
 	case 'M':
@@ -1887,6 +1887,7 @@ choose_board(int newflag)
 	case 'K':
 	    if (HasFavEditPerm()) {
 		char c, fname[80];
+		brdnum = -1;
 		if (get_current_fav() != get_fav_root()) {
 		    vmsg("請到我的最愛最上層執行本功\能");
 		    break;
@@ -1916,7 +1917,6 @@ choose_board(int newflag)
 			fav_load();
 			break;
 		}
-		brdnum = -1;
 	    }
 	    break;
 
