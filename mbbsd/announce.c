@@ -1143,13 +1143,13 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     return 0;
 }
 
-#if 0
 int a_parse_zindexes(const char *sidx, a_menu_session_t *sess)
 {
     int i = 0;
+    const char *s = sidx;
 
     memset(sess->z_indexes, 0, sizeof(sess->z_indexes));
-    if (strpbrk(zidx, "0123456789") == NULL)
+    if (strpbrk(sidx, "0123456789") == NULL)
 	return -1;
 
     while (NULL != (s = strpbrk(s, "0123456789")) &&
@@ -1161,19 +1161,35 @@ int a_parse_zindexes(const char *sidx, a_menu_session_t *sess)
 	    i++;
 	while(isascii(*s) && isdigit(*s)) s++;
     }
-    // sess->bReturnToRoot = 1;
-    // clear();
-    // for (i = 0; sess->z_indexes[i]; i++)
-    //	prints("%d\n", sess->z_indexes[i]);
     return 0;
 }
-#endif
+
+#define MULTI_SEARCH_PROMPT "新位置 (可輸入多層數字): "
+static int
+a_multi_search_num(char init, a_menu_session_t *sess)
+{
+    char buf[STRLEN - sizeof(MULTI_SEARCH_PROMPT) -1] = "";
+
+    buf[0] = init;
+    move(b_lines, 0);
+    clrtoeol();
+    outs(MULTI_SEARCH_PROMPT);
+    if (vgetstr(buf, sizeof(buf), VGET_DEFAULT, buf) < 1)
+	return -1;
+
+    a_parse_zindexes(buf, sess);
+    if (!sess->z_indexes[1])
+	return sess->z_indexes[0];
+    return 0;
+}
+
 
 int
 a_menu_rec(const char *maintitle, const char *path, 
 	int lastlevel, int lastbid,
 	char *trans_buffer,
 	a_menu_session_t *sess,
+	const int *preselect,
 	// we don't change root's value (but may change root pointer)
 	// we may   change parent's value (but never change parent pointer)
 	const menu_t *root, menu_t* const parent)
@@ -1225,7 +1241,17 @@ a_menu_rec(const char *maintitle, const char *path,
 	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
     me.page = A_INVALID_PAGE;
-    me.now = 0;
+
+    if (preselect && !*preselect)
+	preselect = NULL;
+
+    if (preselect)
+    {
+	me.now = *preselect-1;
+    } else {
+	me.now = 0;
+    }
+
     for (;;) {
 	if (me.now >= me.num)
 	    me.now = me.num - 1;
@@ -1242,16 +1268,32 @@ a_menu_rec(const char *maintitle, const char *path,
 		break;
 	    }
 	}
-	ch = cursor_key(2 + me.now - me.page, 0);
+
+	if (preselect)
+	{
+	    // enter if preselect is folder
+	    ch = KEY_ENTER;
+	} else {
+	    ch = cursor_key(2 + me.now - me.page, 0);
+	}
 
 	if (ch == 'q' || ch == 'Q' || ch == KEY_LEFT)
 	    break;
 
-	if (ch >= '1' && ch <= '9') {
-	    if ((ch = search_num(ch, me.num)) != -1)
-		me.now = ch;
-	    // XXX what is the magic '10000' page number?
-	    me.page = 10000;
+	// maybe we should let 1-9=simple search and z=tree-search
+	if ((ch >= '1' && ch <= '9') || ch == 'z' || ch == 'Q') {
+	    int n = a_multi_search_num(isascii(ch) && isdigit(ch) ? ch : '\0', sess);
+	    me.page = A_INVALID_PAGE;
+	    if (n > 0)
+		me.now = n;
+	    else if (n < 0)
+		vmsg("輸入錯誤。");
+	    else if (sess->z_indexes[0]) 
+	    {
+		// n == 0, check new preselects
+		preselect = sess->z_indexes;
+		me.now = *preselect-1;
+	    }
 	    continue;
 	}
 	switch (ch) {
@@ -1387,18 +1429,24 @@ a_menu_rec(const char *maintitle, const char *path,
 	case KEY_ENTER:
 	case KEY_RIGHT:
 	case 'r':
-	    if (me.now < me.num) {
+	    if (me.now >= me.num || me.now < 0)
+	    {
+		preselect = NULL;
+		continue;
+	    } 
+	    else
+	    {
 		fileheader_t   *fhdr = &me.header[me.now - me.page];
+		const int *newselect = preselect ? preselect+1 : NULL;
+		preselect = NULL;
+
 		if (!isvisible_man(&me))
 		    break;
 #ifdef DEBUG
 		vmsgf("%s/%s", &path[11], fhdr->filename);;
 #endif
 		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
-		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
-		  vmsg("不再支援 gopher mode, 請使用瀏覽器直接瀏覽");
-		  vmsgf("gopher://%s/1/",fhdr->filename+2);
-		} else if (dashf(fname)) {
+		if (dashf(fname)) {
 		    int             more_result;
 
 		    while ((more_result = more(fname, YEA))) {
@@ -1411,7 +1459,7 @@ a_menu_rec(const char *maintitle, const char *path,
 			    clrtoeol();
 			    getdata(22, 1,
 				    currstat == EDITEXP ?
-				    "要把範例 Plugin 到文章嗎?[y/N]" :
+				    "要把範例加入到文章內嗎?[y/N]" :
 				    "確定要點這首歌嗎?[y/N]",
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
@@ -1448,7 +1496,8 @@ a_menu_rec(const char *maintitle, const char *path,
 		    }
 		} else if (dashd(fname)) {
 		    a_menu_rec(me.header[me.now - me.page].title, fname, 
-			    me.level, me.bid, trans_buffer, sess, root, &me);
+			    me.level, me.bid, trans_buffer, 
+			    sess, newselect, root, &me);
 		    me.next = NULL;
 		    /* Ptt  強力跳出recursive */
 		    if (sess->bReturnToRoot) {
@@ -1588,7 +1637,7 @@ a_menu(const char *maintitle, const char *path,
     a_menu_session_t sess = {0};
     return a_menu_rec(maintitle, path, 
 	    lastlevel, lastbid, trans_buffer, 
-	    &sess, NULL, NULL);
+	    &sess, NULL, NULL, NULL);
 }
 
 int
