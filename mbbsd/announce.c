@@ -1285,7 +1285,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    int n = a_multi_search_num(isascii(ch) && isdigit(ch) ? ch : '\0', sess);
 	    me.page = A_INVALID_PAGE;
 	    if (n > 0)
-		me.now = n;
+		me.now = n-1;
 	    else if (n < 0)
 		vmsg("¿é¤J¿ù»~¡C");
 	    else if (sess->z_indexes[0]) 
