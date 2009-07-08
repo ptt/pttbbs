@@ -976,6 +976,7 @@ mf_search(int direction)
                 if(sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0)
                 {
                     flFound = 1;
+                    break;
                 } else
                 {
                     /* DBCS check here. */
