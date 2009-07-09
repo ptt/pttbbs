@@ -16,7 +16,6 @@
  * global pointer, 以避免 dangling pointer . 
  * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
  * 記憶體大小. 以方便測試結果.
- * 這個版本似乎還有地方沒有修正好, 可能導致 segmentation fault .
  *
  * XXX 由於各種操作都不會 maintain 區塊標記模式的 pointer/state, 
  * 因此對於會造成增刪 line 的功能, 都得自動取消標記模式(call block_cancel()).
@@ -91,9 +90,7 @@ enum {
  * 欄位來記錄，包括 currline, top_of_win, currln, currpnt, curr_window_line,
  * edit_margin。顯示出來的效果當然不只是靠這幾個資料，還會跟其他欄位有交互
  * 作用，例如 彩色編輯模式、特殊符號編輯 等等。其中最複雜的部分是在選取 block
- * （見後）的時候。比較不直覺的行為是：除非游標在開始選取跟目前（結束）的位置
- * 是同一個（此時這個範圍是選取的範圍），否則就是從開始那一列一直到目前（結束）
- * 這一列。
+ * （見後）的時候。
  *
  * editor 的使用上目前有五種 inclusive 的 mode：
  *   insert mode:
@@ -482,6 +479,8 @@ edit_buffer_check_healthy(textline_t *line)
 #endif
 }
 
+static inline int visible_window_height(void);
+
 static void
 edit_check_healthy()
 {
@@ -518,7 +517,7 @@ edit_check_healthy()
     assert(curr_buf->currln <= curr_buf->totaln);
 
     // window
-    assert(curr_buf->curr_window_line <= b_lines);
+    assert(curr_buf->curr_window_line < visible_window_height());
 
 #ifdef SLOW_CHECK_DETAIL
     // firstline -> currline (0 -> currln)
@@ -572,14 +571,15 @@ middle_line(void)
  * not enough lines.
  */
 static textline_t *
-back_line(textline_t * pos, int num)
+back_line(textline_t * pos, int num, bool changeln)
 {
     while (num-- > 0) {
 	register textline_t *item;
 
 	if (pos && (item = pos->prev)) {
 	    pos = item;
-	    curr_buf->currln--;
+	    if (changeln)
+		curr_buf->currln--;
 	}
 	else
 	    break;
@@ -587,31 +587,29 @@ back_line(textline_t * pos, int num)
     return pos;
 }
 
-/* calculate if cursor is at bottom, scroll required?
- * currently vedit does NOT handle if curr_window_line > b_lines,
- * take care if you changed curr_window_line!
- */
 static inline int
-cursor_at_bottom_line(void)
+visible_window_height(void)
 {
-    return curr_buf->curr_window_line == b_lines ||
-	   (curr_buf->phone_mode && curr_buf->curr_window_line == b_lines - 1);
+    if (curr_buf->phone_mode)
+	return b_lines - 1;
+    else
+	return b_lines;
 }
-
 
 /**
  * Return the next 'num' line.  Stop at the last line if there's not
  * enough lines.
  */
 static textline_t *
-forward_line(textline_t * pos, int num)
+forward_line(textline_t * pos, int num, bool changeln)
 {
     while (num-- > 0) {
 	register textline_t *item;
 
 	if (pos && (item = pos->next)) {
 	    pos = item;
-	    curr_buf->currln++;
+	    if (changeln)
+		curr_buf->currln++;
 	}
 	else
 	    break;
@@ -670,30 +668,47 @@ cursor_to_prev_line(void)
 }
 
 static inline void
-window_scroll_down(void)
+edit_window_adjust(void)
 {
-    curr_buf->curr_window_line = 0;
+    int offset = 0;
+    if (curr_buf->curr_window_line < 0) {
+	offset = curr_buf->curr_window_line;
+	curr_buf->curr_window_line = 0;
+	curr_buf->top_of_win = curr_buf->currline;
+    }
+    
+    if (curr_buf->curr_window_line >= visible_window_height()) {
+	offset = curr_buf->curr_window_line - visible_window_height() + 1;
+	curr_buf->curr_window_line = visible_window_height() - 1;
+	curr_buf->top_of_win = back_line(curr_buf->currline, visible_window_height() - 1, false);
+    }
 
-    assert(curr_buf->top_of_win && curr_buf->top_of_win->prev);
-
-    curr_buf->top_of_win = curr_buf->top_of_win->prev;
-    rscroll();
+    if (offset == -1)
+	rscroll();
+    else if (offset == 1) {
+	move(visible_window_height(), 0);
+	clrtoeol();
+	scroll();
+    } else if (offset != 0) {
+	curr_buf->redraw_everything = YEA;
+    }
 }
 
 static inline void
-window_scroll_up(void)
+edit_window_adjust_middle(void)
 {
-    curr_buf->curr_window_line = b_lines - (curr_buf->phone_mode ? 2 : 1);
-
-    assert(curr_buf->top_of_win && curr_buf->top_of_win->next);
-
-    curr_buf->top_of_win = curr_buf->top_of_win->next;
-    if(curr_buf->phone_mode)
-	move(b_lines-1, 0);
-    else
-	move(b_lines, 0);
-    clrtoeol();
-    scroll();
+    if (curr_buf->currln < middle_line()) {
+	curr_buf->top_of_win = curr_buf->firstline;
+	curr_buf->curr_window_line = curr_buf->currln;
+    } else {
+	int i;
+	textline_t *p = curr_buf->currline;
+	curr_buf->curr_window_line = middle_line();
+	for (i = curr_buf->curr_window_line; i; i--)
+	    p = p->prev;
+	curr_buf->top_of_win = p;
+    }
+    curr_buf->redraw_everything = YEA;
 }
 
 /**
@@ -937,8 +952,7 @@ split(textline_t * line, int pos)
 	    curr_buf->currln++;
 
 	    /* split may cause cursor hit bottom */
-	    if (cursor_at_bottom_line())
-		window_scroll_up();
+	    edit_window_adjust();
 	} else {
 	    p = adjustline(p, p->len);
 	    insert_line(line, p);
@@ -1234,10 +1248,6 @@ read_tmpbuf(int n)
     if (*ans != 'n' && (fp = fopen(fp_tmpbuf, "r"))) {
 	load_file(fp, -1);
 	fclose(fp);
-	while (curr_buf->curr_window_line >= b_lines) {
-	    curr_buf->curr_window_line--;
-	    curr_buf->top_of_win = curr_buf->top_of_win->next;
-	}
     }
 }
 
@@ -2903,7 +2913,7 @@ refresh_window(void)
     register textline_t *p;
     register int    i;
 
-    for (p = curr_buf->top_of_win, i = 0; i < b_lines; i++) {
+    for (p = curr_buf->top_of_win, i = 0; i < visible_window_height(); i++) {
 	display_textline_internal(p, i);
 
 	if (p)
@@ -2933,17 +2943,7 @@ goto_line(int lino)
 
 	curr_buf->currpnt = 0;
 
-	/* move window */
-	if (curr_buf->currln < middle_line()) {
-	    curr_buf->top_of_win = curr_buf->firstline;
-	    curr_buf->curr_window_line = curr_buf->currln;
-	} else {
-	    int i;
-	    curr_buf->curr_window_line = middle_line();
-	    for (i = curr_buf->curr_window_line; i; i--)
-		p = p->prev;
-	    curr_buf->top_of_win = p;
-	}
+	edit_window_adjust_middle();
     }
     curr_buf->redraw_everything = YEA;
 }
@@ -3020,18 +3020,8 @@ search_str(int mode)
 	    curr_buf->currline = p;
 	    curr_buf->currln = lino;
 	    curr_buf->currpnt = pos - p->data;
-	    if (lino < middle_line()) {
-		curr_buf->top_of_win = curr_buf->firstline;
-		curr_buf->curr_window_line = curr_buf->currln;
-	    } else {
-		int             i;
 
-		curr_buf->curr_window_line = middle_line();
-		for (i = curr_buf->curr_window_line; i; i--)
-		    p = p->prev;
-		curr_buf->top_of_win = p;
-	    }
-	    curr_buf->redraw_everything = YEA;
+	    edit_window_adjust_middle();
 	}
     }
     if (!mode)
@@ -3124,7 +3114,7 @@ match_paren(void)
     }
     if (found) {
 	int             top = curr_buf->currln - curr_buf->curr_window_line;
-	int             bottom = curr_buf->currln - curr_buf->curr_window_line + b_lines - 1;
+	int             bottom = top + visible_window_height() - 1;
 
 	assert(p);
 	curr_buf->currpnt = i;
@@ -3133,18 +3123,7 @@ match_paren(void)
 	curr_buf->currln = lino;
 
 	if (lino < top || lino > bottom) {
-	    if (lino < middle_line()) {
-		curr_buf->top_of_win = curr_buf->firstline;
-		curr_buf->curr_window_line = curr_buf->currln;
-	    } else {
-		int             i;
-
-		curr_buf->curr_window_line = middle_line();
-		for (i = curr_buf->curr_window_line; i; i--)
-		    p = p->prev;
-		curr_buf->top_of_win = p;
-	    }
-	    curr_buf->redraw_everything = YEA;
+	    edit_window_adjust_middle();
 	}
     }
 }
@@ -3845,10 +3824,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 			}
 			fclose(fp1);
 			curr_buf->indent_mode = indent_mode0;
-			while (curr_buf->curr_window_line >= b_lines) {
-			    curr_buf->curr_window_line--;
-			    curr_buf->top_of_win = curr_buf->top_of_win->next;
-			}
+			edit_window_adjust();
 		    }
 		}
 		curr_buf->redraw_everything = YEA;
@@ -3911,30 +3887,24 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		break;
 
 	    case Ctrl('B'):
-	    case KEY_PGUP: {
-		short tmp = curr_buf->currln;
-	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, t_lines - 2);
-	  	curr_buf->currln = tmp;
-	 	curr_buf->currline = back_line(curr_buf->currline, t_lines - 2);
+	    case KEY_PGUP:
+	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, visible_window_height() - 1, false);
+	 	curr_buf->currline = back_line(curr_buf->currline, visible_window_height() - 1, true);
 		curr_buf->curr_window_line = get_lineno_in_window();
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
 		curr_buf->redraw_everything = YEA;
 	 	break;
-	    }
 
 	    case Ctrl('F'):
-	    case KEY_PGDN: {
-		short tmp = curr_buf->currln;
-		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, t_lines - 2);
-		curr_buf->currln = tmp;
-		curr_buf->currline = forward_line(curr_buf->currline, t_lines - 2);
+	    case KEY_PGDN:
+		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, visible_window_height() - 1, false);
+		curr_buf->currline = forward_line(curr_buf->currline, visible_window_height() - 1, true);
 		curr_buf->curr_window_line = get_lineno_in_window();
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
 		curr_buf->redraw_everything = YEA;
 		break;
-	    }
 
 	    case KEY_END:
 	    case Ctrl('E'):
@@ -3946,7 +3916,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('T'):	/* tail of file */
-		curr_buf->top_of_win = back_line(curr_buf->lastline, t_lines - 1);
+		curr_buf->top_of_win = back_line(curr_buf->lastline, visible_window_height() - 1, false);
 		curr_buf->currline = curr_buf->lastline;
 		curr_buf->curr_window_line = get_lineno_in_window();
 		curr_buf->currln = curr_buf->totaln;
@@ -4076,10 +4046,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    if (curr_buf->currln < 0)
 		curr_buf->currln = 0;
 
-	    if (curr_buf->curr_window_line < 0)
-		window_scroll_down();
-	    else if (cursor_at_bottom_line())
-		window_scroll_up();
+	    edit_window_adjust();
 #ifdef DBCSAWARE	    
 	    if(mbcs_mode)
 	      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
