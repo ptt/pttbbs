@@ -1148,8 +1148,16 @@ int a_parse_zindexes(const char *s, a_menu_session_t *sess)
     int i = 0;
 
     memset(sess->z_indexes, 0, sizeof(sess->z_indexes));
+
+    // skip leading whitespaces
+    while (*s && isascii(*s) && isspace(*s)) s++;
+
+    // determine if leading character was 'z', which means 'reset root'
+    if (*s == 'z' || *s == 'Z')
+	sess->z_indexes[i++] = -1;
+
     if (strpbrk(s, "0123456789") == NULL)
-	return -1;
+	return (sess->z_indexes[i] == 0);
 
     while (NULL != (s = strpbrk(s, "0123456789")) &&
 	    i+1 < _DIM(sess->z_indexes) )
@@ -1160,7 +1168,8 @@ int a_parse_zindexes(const char *s, a_menu_session_t *sess)
 	    i++;
 	while(isascii(*s) && isdigit(*s)) s++;
     }
-    return 0;
+
+    return 1;
 }
 
 #define MULTI_SEARCH_PROMPT "新位置 (可輸入多層數字): "
@@ -1173,15 +1182,15 @@ a_multi_search_num(char init, a_menu_session_t *sess)
     move(b_lines, 0);
     clrtoeol();
     outs(MULTI_SEARCH_PROMPT);
+    sess->z_indexes[0] = sess->z_indexes[1] = 0;
     if (vgetstr(buf, sizeof(buf), VGET_DEFAULT, buf) < 1)
-	return -1;
+	return 0;
 
     a_parse_zindexes(buf, sess);
     if (!sess->z_indexes[1])
 	return sess->z_indexes[0];
     return 0;
 }
-
 
 int
 a_menu_rec(const char *maintitle, const char *path, 
@@ -1274,21 +1283,43 @@ a_menu_rec(const char *maintitle, const char *path,
 	if (ch == 'q' || ch == 'Q' || ch == KEY_LEFT)
 	    break;
 
-	// maybe we should let 1-9=simple search and z=tree-search
-	// TODO let 'z' prefix means 'back to root'
-	if ((ch >= '1' && ch <= '9') || ch == 'z' || ch == 'Q') {
-	    int n = a_multi_search_num(isascii(ch) && isdigit(ch) ? ch : '\0', sess);
+	// TODO maybe we should let 1-9=simple search and z=tree-search
+	// TODO or let 'z' prefix means 'back to root'
+	if ((ch >= '1' && ch <= '9') || (ch == 'z' || ch == 'Z')) {
+	    int n = a_multi_search_num(ch, sess);
 	    me.page = A_INVALID_PAGE;
 	    if (n > 0)
 	    {
+		// simple (single) selection
 		me.now = n-1;
 		me.page = 10000; // I don't know what's the magic value 10000... 
 	    }
-	    else if (n == 0 && sess->z_indexes[0]) 
+	    else if (n == 0 && sess->z_indexes[0] == 0)
 	    {
-		// n == 0, check new preselects
+		// empty/invalid input
+	    }
+	    else
+	    {
+		// n == 0 with multiple selects
 		preselect = sess->z_indexes;
-		me.now = *preselect - 1;
+		if (*preselect < 0)
+		{
+		    // return to root first?
+		    if (parent)
+		    {
+			sess->bReturnToRoot = 1;
+			return DONOTHING;
+		    }
+
+		    // already in root
+		    preselect ++;
+		}
+
+		// handle first preselect (maybe zero due to previous 'already in root')
+		if (*preselect > 0)
+		    me.now = *preselect - 1;
+		else
+		    preselect = NULL;
 	    }
 	    continue;
 	}
@@ -1491,14 +1522,34 @@ a_menu_rec(const char *maintitle, const char *path,
 			    break;
 		    }
 		} else if (dashd(fname)) {
-		    a_menu_rec(me.header[me.now - me.page].title, fname, 
+		    returnvalue = a_menu_rec(me.header[me.now - me.page].title, fname, 
 			    me.level, me.bid, trans_buffer, 
 			    sess, newselect, root, &me);
+		   
+		    if (returnvalue == DONOTHING)
+		    {
+			// DONOTHING will only be caused by previous a_multi_search_num + preselect.
+			assert(sess->bReturnToRoot);
+
+			if (!parent)
+			{
+			    // we've reached root menu!
+			    assert(sess->z_indexes[0] == -1);
+			    sess->bReturnToRoot = 0;
+			    returnvalue = FULLUPDATE;
+			    preselect = sess->z_indexes+1;  // skip first 'return to root'
+			    if (*preselect > 0)
+				me.now = *preselect-1;
+			}
+		    } else  {
+			returnvalue = FULLUPDATE;
+		    }
+
 		    me.next = NULL;
 		    /* Ptt  強力跳出recursive */
 		    if (sess->bReturnToRoot) {
 			free(me.header);
-			return FULLUPDATE;
+			return returnvalue;
 		    }
 		}
 		me.page = A_INVALID_PAGE;
