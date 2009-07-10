@@ -1163,6 +1163,12 @@ int a_parse_zindexes(const char *s, a_menu_session_t *sess)
 	    i+1 < _DIM(sess->z_indexes) )
     {
 	sess->z_indexes[i] = atoi(s);
+	// for overflow, ignore all remaining.
+	if (sess->z_indexes[i] < 0)
+	{
+	    sess->z_indexes[i] = 0;
+	    break;
+	}
 	// only increase index
 	if (sess->z_indexes[i])
 	    i++;
