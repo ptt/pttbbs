@@ -795,12 +795,12 @@ load_text_screen_file(const char *filename, char **pptr)
 
     // check memory buffer
     s = realloc(*pptr, wsz);  
-    *pptr = s;
     if (!s)
     {
         fclose(fp);
         return;
     }
+    *pptr = s;
 
     // prepare buffer
     memset(s, 0, wsz);
