@@ -771,46 +771,56 @@ static char *welcome_screen, *goodbye_screen, *ban_screen;
 static void
 load_text_screen_file(const char *filename, char **pptr)
 {
-    FILE *fp;
-    off_t sz, wsz, psz;
+    FILE *fp = NULL;
+    off_t sz, wsz=0, psz;
     char *p, *s = NULL;
     int max_lines = MAX_TEXT_SCREEN_LINES;
 
     sz = dashs(filename);
-    if (sz < 1)
+    if (sz > 1)
     {
-        free(*pptr);
+        wsz = sz*2 +1; // *2 for cr+lf, extra one byte for safe strchr().
+        fp = fopen(filename, "rt");
+    }
+
+    // check valid file
+    assert(pptr);
+    s = *pptr;
+    if (!fp)
+    {
+        if (s) free(s);
         *pptr = NULL;
         return;
     }
-    wsz = sz*2 +1; // *2 for cr+lf, extra one byte for safe strchr().
 
-    assert(pptr);
-    s = *pptr;
-    s = realloc(s, wsz);  
+    // check memory buffer
+    s = realloc(*pptr, wsz);  
     *pptr = s;
     if (!s)
+    {
+        fclose(fp);
         return;
+    }
 
+    // prepare buffer
     memset(s, 0, wsz);
     p = s;
     psz = wsz;
 
-    fp = fopen(filename, "rt");
-    if (!fp)
-    {
-        free(s);
-        return;
-    }
     while ( max_lines-- > 0 &&
             fgets(p, psz, fp))
     {
-        psz -= strlen(p);
-        p += strlen(p);
-        *p ++ = '\r';
+        size_t l = strlen(p);
+        psz -= l;
+        p   += l;
+        if (l > 0 && *(p-1) == '\n')
+        {
+            // convert \n to \r\n
+            *(p-1)= '\r';
+            *p ++ = '\n';
+        }
     }
     fclose(fp);
-    *pptr = s;
 }
 
 static void regular_check();
@@ -1586,7 +1596,8 @@ client_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
     int len, r;
-    unsigned char buf[64], ch, *s = buf;
+    unsigned char buf[64], ch;
+    char *s = (char*)buf;
 
     // for time-out, simply close connection.
     if (event & EV_TIMEOUT)
@@ -1639,7 +1650,7 @@ client_cb(int fd, short event, void *arg)
 
     while (len > 0)
     {
-        int c = _handle_term_keys((char**)&s, &len);
+        int c = _handle_term_keys(&s, &len);
 
         // for zero, ignore.
         if (!c)
