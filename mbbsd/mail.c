@@ -759,6 +759,10 @@ multi_send(const char *title)
 static int
 multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
+    // do not allow guest to use this
+    if (!HasUserPerm(PERM_BASIC))
+	return DONOTHING;
+
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
 
@@ -1296,6 +1300,10 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[512];
     int		    oent = ent;
     char save_title[STRLEN];
+
+    // do not allow guest to use this
+    if (!HasUserPerm(PERM_BASIC))
+	return DONOTHING;
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
