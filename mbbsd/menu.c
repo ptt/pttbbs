@@ -657,12 +657,15 @@ static const commands_t m_xyz_hot[] = {
 #ifdef HAVE_X_BOARDS
     {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
 #endif
+    {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
     {NULL, 0, NULL}
 };
 
 /* XYZ tool sub menu */
 static const commands_t m_xyz_user[] = {
     {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+    {topsong,PERM_LOGINOK,   
+	             "GGTop Songs    《使用者點歌排行榜》"},
     {x_today, 0,     "TToday         《今日上線人次統計》"},
     {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
     {NULL, 0, NULL}
@@ -684,6 +687,8 @@ x_users(void)
 
 /* XYZ tool menu */
 static const commands_t xyzlist[] = {
+    {x_hot,  0,      "TTHot Topics   《熱門話題與看板》"},
+    {x_users,0,      "UUsers         《使用者相關統計》"},
 #ifndef DEBUG
     /* All these are useless in debug mode. */
 #ifdef  HAVE_LICENSE
@@ -692,14 +697,9 @@ static const commands_t xyzlist[] = {
 #ifdef HAVE_INFO
     {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
-    {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
     {x_history, 0,   "HHistory       《我們的成長》"},
     {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
-    {x_hot,  0,      "TTHot Topics   《熱門話題與看板》"},
-    {x_users,0,      "UUsers         《使用者相關統計》"},
-    {topsong,PERM_LOGINOK,   
-	             "GGTop Songs    《點歌排行榜》"},
 #ifdef HAVE_SYSUPDATES
     {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
 #endif
