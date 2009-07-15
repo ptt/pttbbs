@@ -852,7 +852,7 @@ User(void)
 int
 Xyz(void)
 {
-    domenu(M_XMENU, "工具程式", 'M', xyzlist);
+    domenu(M_XMENU, "工具程式", 'T', xyzlist);
     return 0;
 }
 
