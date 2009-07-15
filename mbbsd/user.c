@@ -1119,6 +1119,7 @@ int
 u_info(void)
 {
     move(2, 0);
+    reload_money();
     user_display(&cuser, 0);
     uinfo_query(&cuser, 0, usernum);
     strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
