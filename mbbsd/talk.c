@@ -451,10 +451,15 @@ my_query(const char *uident)
 	setutmpmode(TQUERY);
 	currutmp->destuid = tuid;
 
-	// XXX some users keep complaining that query result is not synced...
+	// XXX some users keep complaining that query result (for numpost)
+	// is not synced...
 	// well, make them happy now.
 	if (tuid == usernum)
+	{
+	    // XXX there're still users asking why money is not updated...
+	    reload_money();
 	    memcpy(&muser, &cuser, sizeof(muser));
+	}
 
 	if ((uentp = (userinfo_t *) search_ulist(tuid)))
 	    fri_stat = friend_stat(currutmp, uentp);
