@@ -538,8 +538,6 @@ readdoent(int num, fileheader_t * ent)
     title = ent->filename[0]!='L' ? subject(ent->title) : "<本文鎖定>";
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
-    else if (ent->filemode & FILE_BID)
-	color = '6', mark = "＄";
     else if (title == ent->title)
 	color = '1', mark = "□";
     else
@@ -903,71 +901,10 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
 	touchbpostnum(bid, 1);
     }
 }
-static void 
-setupbidinfo(bid_t *bidinfo)
-{
-    char buf[PATHLEN];
-    bidinfo->enddate = gettime(20, now+DAY_SECONDS,"結束標案於");
-    do{
-	getdata_str(21, 0, "底價:", buf, 8, LCECHO, "1");
-    } while( (bidinfo->high = atoi(buf)) <= 0 );
-    do{
-	getdata_str(21, 20, "每標至少增加多少:", buf, 5, LCECHO, "1");
-    } while( (bidinfo->increment = atoi(buf)) <= 0 );
-    getdata(21,44, "直接購買價(可不設):",buf, 10, LCECHO);
-    bidinfo->buyitnow = atoi(buf);
-	
-    getdata_str(22,0,
-		"付款方式: 1." MONEYNAME "幣 2.郵局或銀行轉帳"
-		"3.支票或電匯 4.郵局貨到付款 [1]:",
-		buf, 3, LCECHO,"1");
-    bidinfo->payby = (buf[0] - '1');
-    if( bidinfo->payby < 0 || bidinfo->payby > 3)
-	bidinfo->payby = 0;
-    getdata_str(23, 0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
-    bidinfo->shipping = atoi(buf);
-    if( bidinfo->shipping < 0 )
-	bidinfo->shipping = 0;
-}
-static void
-print_bidinfo(FILE *io, bid_t bidinfo)
-{
-    char *payby[4]={MONEYNAME "幣", "郵局或銀行轉帳", 
-	"支票或電匯", "郵局貨到付款"};
-    if(io){
-	if( !bidinfo.userid[0] )
-	    fprintf(io, "起標價:    %-20d\n", bidinfo.high);
-	else 
-	    fprintf(io, "目前最高價:%-20d出價者:%-16s\n",
-		    bidinfo.high, bidinfo.userid);
-	fprintf(io, "付款方式:  %-20s結束於:%-16s\n",
-		payby[bidinfo.payby % 4], Cdate(& bidinfo.enddate));
-	if(bidinfo.buyitnow)
-	    fprintf(io, "直接購買價:%-20d", bidinfo.buyitnow);
-	if(bidinfo.shipping)
-	    fprintf(io, "運費:%d", bidinfo.shipping);
-	fprintf(io, "\n");
-    }
-    else{
-	if(!bidinfo.userid[0])
-	    prints("起標價:    %-20d\n", bidinfo.high);
-	else 
-	    prints("目前最高價:%-20d出價者:%-16s\n",
-		   bidinfo.high, bidinfo.userid);
-	prints("付款方式:  %-20s結束於:%-16s\n",
-	       payby[bidinfo.payby % 4], Cdate(& bidinfo.enddate));
-	if(bidinfo.buyitnow)
-	    prints("直接購買價:%-20d", bidinfo.buyitnow);
-	if(bidinfo.shipping)
-	    prints("運費:%d", bidinfo.shipping);
-	outc('\n');
-    }
-}
 
 static int
-do_general(int isbid)
+do_general(int garbage)
 {
-    bid_t           bidinfo;
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
     int i, j;
@@ -1010,53 +947,38 @@ do_general(int isbid)
 #endif
     clear();
 
-    if(likely(!isbid))
-       setbfile(genbuf, currboard, FN_POST_NOTE);
-    else
-       setbfile(genbuf, currboard, FN_POST_BID);
+    setbfile(genbuf, currboard, FN_POST_NOTE);
 
     if (more(genbuf, NA) == -1) {
-	if(!isbid)
-	    more("etc/" FN_POST_NOTE, NA);
-	else
-	    more("etc/" FN_POST_BID, NA);
+	more("etc/" FN_POST_NOTE, NA);
     }
     move(19, 0);
     prints("%s於【" ANSI_COLOR(33) " %s" ANSI_RESET " 】 "
 	   ANSI_COLOR(32) "%s" ANSI_RESET " 看板\n",
-           isbid?"公開招標":"發表文章",
-	  currboard, bp->title + 7);
+	   "發表文章",
+	   currboard, bp->title + 7);
 
-    if (unlikely(isbid)) {
-	memset(&bidinfo,0,sizeof(bidinfo)); 
-	setupbidinfo(&bidinfo);
-	postfile.multi.money=bidinfo.high;
-	move(20,0);
-	clrtobot();
-    }
     if (quote_file[0])
 	do_reply_title(20, currtitle, save_title);
     else {
 	char tmp_title[STRLEN]="";
-	if (!isbid) {
-	    move(21,0);
-	    outs("種類：");
-	    for(i=0; i<8 && bp->posttype[i*4]; i++)
-		strlcpy(ctype[i],bp->posttype+4*i,5);
-	    if(i==0) i=8;
-	    for(j=0; j<i; j++)
-		prints("%d.%4.4s ", j+1, ctype[j]);
-	    sprintf(buf,"(1-%d或不選)",i);
-	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
-	    posttype = tmp_title[0] - '1';
-	    if (posttype >= 0 && posttype < i)
-		snprintf(tmp_title, sizeof(tmp_title),
-			"[%s] ", ctype[posttype]);
-	    else
-	    {
-		tmp_title[0] = '\0';
-		posttype=-1;
-	    }
+	move(21,0);
+	outs("種類：");
+	for(i=0; i<8 && bp->posttype[i*4]; i++)
+	    strlcpy(ctype[i],bp->posttype+4*i,5);
+	if(i==0) i=8;
+	for(j=0; j<i; j++)
+	    prints("%d.%4.4s ", j+1, ctype[j]);
+	sprintf(buf,"(1-%d或不選)",i);
+	getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
+	posttype = tmp_title[0] - '1';
+	if (posttype >= 0 && posttype < i)
+	    snprintf(tmp_title, sizeof(tmp_title),
+		    "[%s] ", ctype[posttype]);
+	else
+	{
+	    tmp_title[0] = '\0';
+	    posttype=-1;
 	}
 	getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
 	strip_ansi(tmp_title, tmp_title, STRIP_ALL);
@@ -1077,14 +999,7 @@ do_general(int isbid)
     /* build filename */
     setbpath(fpath, currboard);
     stampfile(fpath, &postfile);
-    if(isbid) {
-	FILE    *fp;
-	if( (fp = fopen(fpath, "w")) != NULL ){
-	    print_bidinfo(fp, bidinfo);
-	    fclose(fp);
-	}
-    }
-    else if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {
+    if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {
 	setbnfile(genbuf, bp->brdname, "postsample", posttype);
 	Copy(genbuf, fpath);
     }
@@ -1145,10 +1060,7 @@ do_general(int isbid)
 	postfile.filemode |= FILE_ANONYMOUS;
 	postfile.multi.anon_uid = currutmp->uid;
     }
-    else if (isbid) {
-	money = 0;
-    }
-    else if(!isbid)
+    else
     {
 	/* general article */
 	postfile.modified = dasht(fpath);
@@ -1170,14 +1082,6 @@ do_general(int isbid)
     strcpy(genbuf, fpath);
     setbpath(fpath, currboard);
     stampfile_u(fpath, &postfile);   
-
-    // warning: filename should be retrieved from new fpath.
-    if(isbid) {
-	char bidfn[PATHLEN];
-	sprintf(bidfn, "%s.bid", fpath);
-	append_record(bidfn,(void*) &bidinfo, sizeof(bidinfo));
-	postfile.filemode |= FILE_BID ;
-    }
 
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
@@ -1223,11 +1127,7 @@ do_general(int isbid)
 	// Freeboard/BRD_BAD check was already done.
 	if (!ifuseanony) 
 	{
-            if(postfile.filemode&FILE_BID)
-	    {
-                outs("招標文章沒有稿酬。");
-	    }
-            else if (money > 0)
+            if (money > 0)
 	    {
 		demoney(money);    
 		addPost = 1;
@@ -2523,148 +2423,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     return 0;
 }
 
-static int
-do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp, const char *direct)
-{
-    char            genbuf[200], fpath[PATHLEN],say[30],*money;
-    bid_t           bidinfo;
-    int             mymax, next;
-
-    setdirpath(fpath, direct, fhdr->filename);
-    strcat(fpath, ".bid");
-    memset(&bidinfo, 0, sizeof(bidinfo));
-    if (get_record(fpath, &bidinfo, sizeof(bidinfo), 1) < 0)
-    {
-	vmsg("系統錯誤: 競標資訊已遺失，請重開新標。");
-	return FULLUPDATE;
-    }
-
-    move(18,0);
-    clrtobot();
-    prints("競標主題: %s\n", fhdr->title);
-    print_bidinfo(0, bidinfo);
-    money = bidinfo.payby ? " NT$ " : MONEYNAME "$ ";
-    if( now > bidinfo.enddate || bidinfo.high == bidinfo.buyitnow ){
-	outs("此競標已經結束,");
-	if( bidinfo.userid[0] ) {
-	    /*if(!payby && bidinfo.usermax!=-1)
-	      {以Ptt幣自動扣款
-	      }*/
-	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
-	}
-	else outs("無人得標!");
-	pressanykey();
-	return FULLUPDATE;
-    }
-
-    if( bidinfo.userid[0] ){
-        prints("下次出價至少要:%s%d", money,bidinfo.high + bidinfo.increment);
-	if( bidinfo.buyitnow )
-	     prints(" (輸入 %d 等於以直接購買結束)",bidinfo.buyitnow);
-	next = bidinfo.high + bidinfo.increment;
-    }
-    else{
-        prints("起標價: %d", bidinfo.high);
-	next=bidinfo.high;
-    }
-    if( !strcmp(cuser.userid,bidinfo.userid) ){
-	outs("你是最高得標者!");
-        pressanykey();
-	return FULLUPDATE;
-    }
-    if( strcmp(cuser.userid, fhdr->owner) == 0 ){
-	vmsg("警告! 本人不能出價!");
-	getdata_str(23, 0, "是否要提早結標? (y/N)", genbuf, 3, LCECHO,"n");
-	if( genbuf[0] != 'y' )
-	    return FULLUPDATE;
-	snprintf(genbuf, sizeof(genbuf),
-		ANSI_COLOR(1;31) "→ "
-		ANSI_COLOR(33) "賣方%s提早結標"
-		ANSI_RESET "%*s"
-		"標%15s %s\n",
-		cuser.userid, (int)(45 - strlen(cuser.userid) - strlen(money)),
-		" ", fromhost, Cdate_md(&now));
-	do_add_recommend(direct, fhdr,  ent, genbuf, 0);
-	bidinfo.enddate = now;
-	substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-	vmsg("提早結標完成");
-	return FULLUPDATE;
-    }
-    getdata_str(23, 0, "是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
-    if( genbuf[0] != 'y' )
-	return FULLUPDATE;
-
-    getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 10, NUMECHO);
-    mymax = atoi(genbuf);
-    if( mymax <= 0 ){
-	vmsg("取消下標");
-        return FULLUPDATE;
-    }
-
-    getdata(23,0,"下標感言:",say,12,DOECHO);
-    get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-
-    if( bidinfo.buyitnow && mymax > bidinfo.buyitnow )
-        mymax = bidinfo.buyitnow;
-    else if( !bidinfo.userid[0] )
-	next = bidinfo.high;
-    else
-	next = bidinfo.high + bidinfo.increment;
-
-    if( mymax< next || (bidinfo.payby == 0 && cuser.money < mymax) ){
-	vmsg("標金不足搶標");
-        return FULLUPDATE;
-    }
-    
-    snprintf(genbuf, sizeof(genbuf),
-	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%s" ANSI_RESET "%*s"
-	     "%s%-15d標%15s %s\n",
-	     cuser.userid, say,
-	     (int)(31 - strlen(cuser.userid) - strlen(say)), " ", 
-             money,
-	     next, fromhost, Cdate_md(&now));
-    do_add_recommend(direct, fhdr,  ent, genbuf, 0);
-    if( next > bidinfo.usermax ){
-	bidinfo.usermax = mymax;
-	bidinfo.high = next;
-	strcpy(bidinfo.userid, cuser.userid);
-    }
-    else if( mymax > bidinfo.usermax ) {
-	bidinfo.high = bidinfo.usermax + bidinfo.increment;
-        if( bidinfo.high > mymax )
-	    bidinfo.high = mymax; 
-	bidinfo.usermax = mymax;
-        strcpy(bidinfo.userid, cuser.userid);
-	
-        snprintf(genbuf, sizeof(genbuf),
-		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出" ANSI_RESET
-		 ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %s\n",
-		 cuser.userid, 
-		 (int)(20 - strlen(cuser.userid)), " ", money, 
-		 bidinfo.high, 
-		 Cdate_md(&now));
-        do_add_recommend(direct, fhdr,  ent, genbuf, 0);
-    }
-    else {
-	if( mymax + bidinfo.increment < bidinfo.usermax )
-	    bidinfo.high = mymax + bidinfo.increment;
-	 else
-	     bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
-        snprintf(genbuf, sizeof(genbuf),
-		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出"
-		 ANSI_RESET ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %s\n",
-		 bidinfo.userid, 
-		 (int)(20 - strlen(bidinfo.userid)), " ", money, 
-		 bidinfo.high,
-		 Cdate_md(&now));
-        do_add_recommend(direct, fhdr, ent, genbuf, 0);
-    }
-    substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-    vmsg("恭喜您! 以最高價搶標完成!");
-    return FULLUPDATE;
-}
-
- int
+int
 recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            buf[PATHLEN], msg[STRLEN];
@@ -2728,10 +2487,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 #endif
-
-    if( fhdr->filemode & FILE_BID){
-	return do_bid(ent, fhdr, bp, direct);
-    }
 
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
@@ -3068,19 +2823,18 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
     fhdr->filemode ^= FILE_MARKED;
 
 #ifdef ASSESS
-    if (!(fhdr->filemode & FILE_BID)){
-	if (fhdr->filemode & FILE_MARKED) {
-	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
-	    {
-		inc_goodpost(fhdr->owner, fhdr->recommend / 10);
-		sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
-	    }
-	}
-	else if (fhdr->recommend > 9)
+    if (fhdr->filemode & FILE_MARKED) 
+    {
+	if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
 	{
-    	    inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
+	    inc_goodpost(fhdr->owner, fhdr->recommend / 10);
 	    sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
 	}
+    }
+    else if (fhdr->recommend > 9)
+    {
+	inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
+	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
     }
 #endif
  
@@ -3326,15 +3080,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    // new rule: only articles with money need updating
 	    // numpost (to solve deleting cross-posts).
 	    // DIGEST mode 不用管
-	    // FILE_BID, FILE_ANONYMOUS 也都不用扣
+	    // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
 	    if (fhdr->multi.money < 0 || 
 		IsFreeBoardName(currboard) || (currbrdattr & BRD_BAD) ||
 		(currmode & MODE_DIGEST) ||
 		(fhdr->filemode & INVALIDMONEY_MODES) ||
-		/*
-		(fhdr->filemode & FILE_ANONYMOUS) ||
-		(fhdr->filemode & FILE_BID) ||
-		*/
 		0)
 		fhdr->multi.money = 0;
 

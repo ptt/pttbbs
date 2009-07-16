@@ -15,24 +15,6 @@
 // GCC pragma to prevent paddings
 #define PACKSTRUCT	__attribute__ ((packed))
 
-/* 競標資訊 */
-#define SALE_COMMENTED 0x1
-typedef struct bid_t {
-    int     high;	/* 目前最高價 */
-    int     buyitnow;	/* 直接購買價 */
-    int     usermax;	/* 自動競標最高價 */
-    int     increment;	/* 出價增額 */
-    char    userid[IDLEN + 1];	/* 最高出價者 */
-    // 這裡有 padding?
-    time4_t enddate;	/* 結標日期 */
-    char    payby;	/* 付款方式 */
-	/* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
-    char    flag;	/* 屬性 (是否已評價) */
-    char    pad[2];
-    int     shipping;	/* 運費 */
-} bid_t;
-// PACKSTRUCT bid_t;
-
 /* 小雞的資料 */
 typedef struct chicken_t { /* 128 bytes */
     char    name[20];

@@ -6,8 +6,8 @@
 /* do (*num) + n, n is integer. */
 inline static void inc(unsigned char *num, int n)
 {
-    if (n >= 0 && SALE_MAXVALUE - *num <= n)
-	(*num) = SALE_MAXVALUE;
+    if (n >= 0 && UCHAR_MAX - *num <= n)
+	(*num) = UCHAR_MAX;
     else if (n < 0 && *num < -n)
 	(*num) = 0;
     else
@@ -29,31 +29,13 @@ int inc_##_attr(const char *userid, int num) \
 modify_column(goodpost); /* inc_goodpost */
 modify_column(badpost);  /* inc_badpost */
 
-#if 0 //unused function
-void set_assess(const char *userid, unsigned char num, int type)
-{
-    userec_t xuser;
-    int uid = getuser(userid, &xuser);
-    if(uid<=0) return;
-    switch (type){
-	case GOODPOST:
-	    xuser.goodpost = num;
-	    break;
-	case BADPOST:
-	    xuser.badpost = num;
-	    break;
-    }
-    passwd_sync_update(uid, &xuser);
-}
-#endif
-
 // how long is AID? see read.c...
 #ifndef AIDC_LEN
 #define AIDC_LEN (20)
 #endif // AIDC_LEN
 
 // #define MAXGP (100)
-#define MAXGP (SALE_MAXVALUE)
+#define MAXGP (UCHAR_MAX)
 
 int 
 u_fixgoodpost(void)

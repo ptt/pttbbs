@@ -642,7 +642,6 @@ int _debug_reportstruct()
     prints("userinfo_t:\t%d\n", sizeof(userinfo_t));
     prints("screenline_t:\t%d\n", sizeof(screenline_t));
     prints("SHM_t:\t%d\n", sizeof(SHM_t));
-    prints("bid_t:\t%d\n", sizeof(bid_t));
     prints("userec_t:\t%d\n", sizeof(userec_t));
     pressanykey();
     return 0;
