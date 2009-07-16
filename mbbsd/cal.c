@@ -142,7 +142,7 @@ osong(void)
     reload_money();
     if (cuser.money < 200) {
 	move(22, 0);
-	vmsg("點歌要200銀唷!....");
+	vmsg("點歌要200元唷!....");
 	unlockutmpmode();
 	return 0;
     }

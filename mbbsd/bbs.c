@@ -1231,7 +1231,7 @@ do_general(int isbid)
 	    {
 		demoney(money);    
 		addPost = 1;
-		prints("這是您的第 %d 篇有效文章，稿酬 %d 銀。",
+		prints("這是您的第 %d 篇有效文章，稿酬 %d 元",
 			++cuser.numposts, money);
 	    } else {
 		// no money, no record.
@@ -3372,7 +3372,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    sendalert(cuser.userid, ALERT_PWD_POSTS);
 		}
 		demoney(-fhdr->multi.money);
-		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
+		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
 			cuser.numposts, fhdr->multi.money);
 	    }
 
@@ -3548,7 +3548,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 	if(m < 0)
 	    prints("│ 特殊文章，無價格記錄");
 	else
-	    prints("│ 這一篇文章值 %d 銀", m);
+	    prints("│ 這一篇文章值 %d 元", m);
 
     }
     prints("\n");

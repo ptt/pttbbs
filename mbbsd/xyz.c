@@ -93,7 +93,7 @@ note(void)
     notedata_t      myitem;
 
     if (cuser.money < 5) {
-	vmsg(ANSI_COLOR(1;41) " 哎呀! 要投五銀才能留言...沒錢耶.." ANSI_RESET);
+	vmsg(ANSI_COLOR(1;41) " 哎呀! 要投五元才能留言...沒錢耶.." ANSI_RESET);
 	return 0;
     }
     setutmpmode(EDNOTE);
@@ -101,7 +101,7 @@ note(void)
 	myitem.buf[0][0] = myitem.buf[1][0] = myitem.buf[2][0] = '\0';
 	move(12, 0);
 	clrtobot();
-	outs("\n投五銀... 嗶... 請留言 (至多三行)，按[Enter]結束");
+	outs("\n投五元... 嗶... 請留言 (至多三行)，按[Enter]結束");
 	for (i = 0; (i < 3) && getdata(16 + i, 0, "：", myitem.buf[i],
 				       sizeof(myitem.buf[i]) - 5, DOECHO)
 	     && *myitem.buf[i]; i++);
