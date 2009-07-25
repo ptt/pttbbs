@@ -1494,6 +1494,10 @@ u_register(void)
 		    REGNOTES_ROOT "phone", "連絡電話", phone, 11);
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
+#ifdef FOREIGN_REG
+	    else if(fore[0] && !strstr(errcode, "分隔符號"))
+		break;
+#endif
 	    else
 		vmsg(errcode);
 	}
