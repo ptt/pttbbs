@@ -41,6 +41,40 @@ mailog(msg)
 void str_decode_M3(unsigned char *str);
 #endif
 
+static const char *
+bbsmail_pretty_subject(const char *subject)
+{
+#ifdef WITHOUT_BBSMAIL_PRETTY_SUBJECT
+    return subject;
+#else
+
+    static const char *table[] = {
+	"Undelivered Mail Returned to Sender",
+	"°h«H³qª¾",
+
+	NULL,
+	NULL,
+    };
+
+    const char **pat = table;
+
+    while (*pat)
+    {
+	if (strncmp(*pat, subject, strlen(*pat)) == 0)
+	{
+	    pat++;
+	    assert(*pat);
+	    return *pat;
+	}
+	// each entry has 2 records.
+	pat += 2;
+    }
+
+    // fallback to original title
+    return subject;
+#endif
+}
+
 int mail2bbs(char *userid)
 {
     int     uid;
@@ -75,7 +109,7 @@ int mail2bbs(char *userid)
 	return -1;
     }
 
-/* parse header */
+    /* parse header */
     while( fgets(genbuf, sizeof(genbuf), stdin) ){
 	if( genbuf[0] == '\n' )
 	    break;
@@ -179,9 +213,9 @@ int mail2bbs(char *userid)
     sprintf(genbuf, "%s => %s", sender, xuser.userid);
     mailog(genbuf);
 
-/* append the record to the MAIL control file */
+    /* append the record to the MAIL control file */
     strip_ansi(title, title, 0);
-    strlcpy(mymail.title, title, sizeof(mymail.title));
+    strlcpy(mymail.title, bbsmail_pretty_subject(title), sizeof(mymail.title));
 
     if (strtok(sender, " .@\t\n\r"))
 	strcat(sender, ".");
