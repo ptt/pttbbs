@@ -37,10 +37,6 @@ mailog(msg)
     }
 }
 
-#ifdef USE_ICONV
-void str_decode_M3(unsigned char *str);
-#endif
-
 static const char *
 bbsmail_pretty_subject(const char *subject)
 {
@@ -116,7 +112,7 @@ int mail2bbs(char *userid)
 	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
 	    strlcpy(title, genbuf + 9, sizeof(title));
 #ifdef USE_ICONV
-	    str_decode_M3((unsigned char*)title);
+	    str_decode_M3(title);
 #endif
 	    continue;
 	}
