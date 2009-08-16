@@ -111,9 +111,7 @@ int mail2bbs(char *userid)
 	    break;
 	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
 	    strlcpy(title, genbuf + 9, sizeof(title));
-#ifdef USE_ICONV
 	    str_decode_M3(title);
-#endif
 	    continue;
 	}
 	if( strncmp(genbuf, "Content-Type:", 13) == 0 ){
