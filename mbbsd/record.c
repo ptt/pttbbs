@@ -373,6 +373,7 @@ stampdir(char *fpath, fileheader_t * fh)
     register char  *ip = fpath;
     time4_t          dtime = COMMON_TIME;
     struct tm      ptime;
+    int retries = 0;
 
     if (access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
@@ -380,7 +381,9 @@ stampdir(char *fpath, fileheader_t * fh)
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "D%X", (int)++dtime & 07777);
+	// XXX if directories exceed 4096(0xFFF), use 65536.
+	int mask = (++retries < 0xFFF) ? 0xFFF : 0xFFFF;
+	sprintf(ip, "D%X", (int)++dtime & mask);
     } while (mkdir(fpath, 0755) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
