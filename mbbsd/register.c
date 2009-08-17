@@ -611,7 +611,7 @@ setupnewuser(const userec_t *user)
     uid = dosearchuser("", NULL);
     if ((uid <= 0) || (uid > MAX_USERS)) {
 	passwd_unlock();
-	vmsg("抱歉，使用者帳號已經滿了，無法註冊新的帳號");
+	vmsg("抱歉，本站使用者帳號總數已達上限，暫時無法註冊新帳號。");
 	exit(1);
     }
 
