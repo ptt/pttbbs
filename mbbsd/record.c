@@ -360,6 +360,8 @@ stampfile_u(char *fpath, fileheader_t * fh)
     return 0;
 }
 
+// XXX 小心... 目前實際的 stampfile 似乎是 common/bbs/fhdr_stamp.c 打架，
+// 也就是不會去用 _u.
 inline int
 stampfile(char *fpath, fileheader_t * fh)
 {
@@ -367,25 +369,43 @@ stampfile(char *fpath, fileheader_t * fh)
   return stampfile_u(fpath, fh);
 }
 
+// XXX announce(man) directory uses a smaller range of file names.
 int
-stampdir(char *fpath, fileheader_t * fh)
+stampadir(char *fpath, fileheader_t * fh, int large_set)
 {
     register char  *ip = fpath;
-    time4_t          dtime = COMMON_TIME;
-    struct tm      ptime;
+    time4_t         dtime = COMMON_TIME;
+    struct tm       ptime;
+    const int	    mask_small = 0xFFF,	    // basic (4096)
+		    mask_large = 0xFFFF;    // large (65536)
+    int		    mask = mask_small;
     int retries = 0;
 
-    if (access(fpath, X_OK | R_OK | W_OK))
+    // try to create root path
+    if (access(fpath, X_OK | R_OK | W_OK) != 0)
 	mkdir(fpath, 0755);
 
+    // find tail
     while (*(++ip));
     *ip++ = '/';
-    do {
-	// XXX if directories exceed 4096(0xFFF), use 65536.
-	int mask = (++retries < 0xFFF) ? 0xFFF : 0xFFFF;
-	sprintf(ip, "D%X", (int)++dtime & mask);
-    } while (mkdir(fpath, 0755) == -1);
+
+    // loop to create file
     memset(fh, 0, sizeof(fileheader_t));
+    do {
+	if (++retries > mask_small && mask == mask_small)
+	{
+	    if (!large_set)
+		return -1;
+	    mask = mask_large;
+	} 
+	if (retries > mask_large)
+	    return -1;
+
+	// create minimal length file name.
+	sprintf(ip, "D%X", (int)++dtime & mask);
+
+    } while (mkdir(fpath, 0755) == -1);
+
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),

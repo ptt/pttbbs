@@ -422,7 +422,11 @@ a_newitem(menu_t * pm, int mode)
 	break;
 
     case ADDGROUP:
-	stampdir(fpath, &item);
+	if (stampadir(fpath, &item, 0) == -1)
+	{
+	    vmsg("抱歉，無法在本層建立新目錄。");
+	    return;
+	}
 	strlcpy(item.title, "◆ ", sizeof(item.title));	/* A1BB */
 	break;
     }
@@ -547,8 +551,8 @@ a_pasteitem(menu_t * pm, int mode)
 		stampfile(newpath, &item);
 		memcpy(cq->copytitle, "◇", 2);
                 Copy(cq->copyfile, newpath);
-	    } else if (dashd(cq->copyfile)) {
-		stampdir(newpath, &item);
+	    } else if (dashd(cq->copyfile) &&
+		       stampadir(newpath, &item, 0) != -1) {
 		memcpy(cq->copytitle, "◆", 2);
 		copy_file(cq->copyfile, newpath);
 	    } else {
@@ -842,7 +846,13 @@ a_delete(menu_t * pm)
 	    return;
 
 	setapath(buf, save_bn);
-	stampdir(buf, &backup);
+	// XXX because this directory will hold folders from entire site,
+	// let's allow it to use a large set of file names.
+	if (stampadir(buf, &backup, 1) != 0)
+	{
+	    vmsg("抱歉，系統目前無法刪除資料，請通知站務人員");
+	    return;
+	}
 
 	snprintf(cmd, sizeof(cmd),
 		"rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
@@ -1815,7 +1825,11 @@ void BlogMain(int num)
 	    fileheader_t item;
 	    char    fpath[PATHLEN], adir[PATHLEN], buf[PATHLEN];
 	    setapath(fpath, currboard);
-	    stampdir(fpath, &item);
+	    if (stampadir2(buf, &item, 0) != 0)
+	    {
+		vmsg("抱歉，目錄建立失敗。請減少單層目錄數量或通知站務人員協助。");
+		break;
+	    }
 	    strlcpy(item.title, "◆ Blog", sizeof(item.title));
 	    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
 

@@ -429,6 +429,7 @@ void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
 void UnTagger (int locus);
 /* record */
 int stampfile_u(char *fpath, fileheader_t *fh);
+int stampadir(char *fpath, fileheader_t * fh, int large_set);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
 void set_safedel_fhdr(fileheader_t *fhdr);
 #ifdef SAFE_ARTICLE_DELETE
