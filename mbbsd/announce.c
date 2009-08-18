@@ -1825,7 +1825,7 @@ void BlogMain(int num)
 	    fileheader_t item;
 	    char    fpath[PATHLEN], adir[PATHLEN], buf[PATHLEN];
 	    setapath(fpath, currboard);
-	    if (stampadir2(buf, &item, 0) != 0)
+	    if (stampadir(buf, &item, 0) != 0)
 	    {
 		vmsg("抱歉，目錄建立失敗。請減少單層目錄數量或通知站務人員協助。");
 		break;
