@@ -888,8 +888,14 @@ recover_chicken(chicken_t * thechicken)
 	     "你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
 	      chicken_type[(int)thechicken->type], price);
     outmsg(buf);
-    bell();
-    getdata(21, 0, "    選擇 (N:坑人嘛/y:請幫幫我): ", buf, 3, LCECHO);
+
+    // prevent user accident hit
+    do {
+	bell();
+	getdata(21, 0, "    選擇 (N:坑人嘛/y:請幫幫我): ", buf, 3, LCECHO);
+    }
+    while (buf[0] != 'y' && buf[0] != 'n');
+
     if (buf[0] == 'y') {
 	reload_money();
 	if (cuser.money < price) {
