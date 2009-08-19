@@ -191,6 +191,9 @@ const char *ask_tmpbuf(int y);
 int emaildb_check_email(char * email, int email_len);
 int emaildb_update_email(char * userid, int userid_len, char * email, int email_len);
 #endif
+#ifdef USE_REGCHECKD
+int regcheck_ambiguous_userid_exist(const char *userid);
+#endif
 
 /* fav */
 void fav_set_old_folder(fav_t *fp);

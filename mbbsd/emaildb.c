@@ -71,6 +71,40 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
     return result;
 }
 
+// XXX move to regcheck someday
+int regcheck_ambiguous_userid_exist(const char *userid)
+{
+    int result = -1;
+    int fd = -1;
+    regmaildb_req req = {0};
+
+    // initialize request
+    req.cb = sizeof(req);
+    req.operation = REGCHECK_REQ_AMBIGUOUS;
+    strlcpy(req.userid, userid, sizeof(req.userid));
+    strlcpy(req.email,  "ambiguous@check.non-exist",  sizeof(req.email));
+
+    if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
+    {
+        // perror("toconnect");
+        return -1;
+    }
+
+    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+        // perror("towrite");
+        close(fd);
+        return -1;
+    }
+
+    if (toread(fd, &result, sizeof(result)) != sizeof(result)) {
+        // perror("toread");
+        close(fd);
+        return -1;
+    }
+
+    return result;
+}
+
 #endif
 
 // vim:et

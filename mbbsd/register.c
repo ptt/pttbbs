@@ -632,70 +632,6 @@ setupnewuser(const userec_t *user)
     return uid;
 }
 
-void
-build_unambiguous_userid(char *uid)
-{
-    int i = 0;
-    const char *ambtbl[] = {
-	"0Oo",
-	"1Il",
-	NULL
-    };
-
-    for (i = 0; ambtbl[i]; )
-    {
-	size_t pos = strcspn(uid, ambtbl[i]);
-	if (!uid[pos])
-	{
-	    i++;
-	    continue;
-	}
-	uid[pos] = ambtbl[i][0];
-	uid += (pos+1);	// skip the processed character
-    }
-}
-
-int 
-find_ambiguous_userid(const char *userid)
-{
-    const char *ambchars = "0Oo1Il";
-    size_t uidlen = 0, iamb;
-    char ambuid[IDLEN+1], shmuid[IDLEN+1];
-    int i;
-
-    assert(userid && *userid);
-
-    // if NULL, found nothing.
-    iamb = strcspn(userid, ambchars);
-    if (!userid[iamb])
-	return 0;
-
-    // build un-ambiguous uid
-    uidlen = strlcpy(ambuid, userid, sizeof(ambuid));
-    build_unambiguous_userid(ambuid);
-
-    for (i = 0; i < MAX_USERS; i++)
-    {
-	const char *ruid = SHM->userid[i];
-
-	// quick test: same non-amb prefix, and remote uid has amb characters
-	if (iamb > 0 && tolower(*ruid) != tolower(*ambuid))
-	    continue;
-	if (!ruid[strcspn(ruid, ambchars)])
-	    continue;
-
-	// copy and check remote uid length
-	if (strlcpy(shmuid, ruid, sizeof(shmuid)) != uidlen)
-	    continue;
-
-	build_unambiguous_userid(shmuid);
-	if (strcasecmp(shmuid, ambuid) == 0)
-	    return 1;
-    }
-
-    return 0;
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
@@ -769,8 +705,8 @@ new_register(void)
 	} 
 	else if (reserved_user_id(passbuf))
 	    outs("此代號已由系統保留，請使用別的代號\n");
-#ifndef NO_CHECK_AMBIGUOUS_USERID
-	else if (find_ambiguous_userid(passbuf))
+#if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
+	else if (check_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
 	    outs("此代號過於近似它人帳號，請改用別的代號。\n");
 #endif
 	else // success
