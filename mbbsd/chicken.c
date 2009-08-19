@@ -877,30 +877,35 @@ recover_chicken(chicken_t * thechicken)
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
-    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 別害怕 我是來幫你的 " ANSI_RESET);
+    move(21, 0); clrtobot();
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
+	    " 別害怕 我是來幫你的 " ANSI_RESET);
     bell();
     igetch();
-    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 你無法丟到我水球 因為我是聖靈, "
-	   "最近缺錢想賺外快 " ANSI_RESET);
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
+	    " 你無法丟到我水球 因為我是聖靈, 最近缺錢想賺外快 " ANSI_RESET);
     bell();
     igetch();
-    snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " "
-	     "你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
-	      chicken_type[(int)thechicken->type], price);
+    snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45)
+	    " 你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
+	    chicken_type[(int)thechicken->type], price);
     outmsg(buf);
 
     // prevent user accident hit
     do {
 	bell();
-	getdata(21, 0, "    選擇 (N:坑人嘛/y:請幫幫我): ", buf, 3, LCECHO);
+	getdata(21, 0, " 要花錢復活寵物嗎？ (n:坑人嘛/y:請幫幫我): ", 
+		buf, 3, LCECHO);
+	move(22, 0); clrtoeol(); outs(" 請輸入 y 或 n 。\n");
     }
     while (buf[0] != 'y' && buf[0] != 'n');
+    move(22, 0); clrtoeol();
 
     if (buf[0] == 'y') {
 	reload_money();
 	if (cuser.money < price) {
-	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 什麼 錢沒帶夠 "
-		   "沒錢的小鬼 快去籌錢吧 " ANSI_RESET);
+	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
+		    " 什麼 錢沒帶夠 沒錢的小鬼 快去籌錢吧 " ANSI_RESET);
 	    bell();
 	    igetch();
 	    return 0;
@@ -917,8 +922,7 @@ recover_chicken(chicken_t * thechicken)
 	return 1;
     }
     outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
-	    " 竟然說我坑人! 這年頭命真不值錢 "
-	    "除非我再來找你 你再也沒機會了 " ANSI_RESET);
+	    " 竟然說我坑人! 這年頭命真不值錢... " ANSI_RESET);
     thechicken->lastvisit = 0;
     bell();
     igetch();
