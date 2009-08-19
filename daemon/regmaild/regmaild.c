@@ -290,12 +290,93 @@ build_unambiguous_userid(char *uid)
     }
 }
 
-// TODO XXX cache these results someday
+const char *ambchars = "0Oo1Il";    // super set of ambtbl
+char *unamb_user_list;
+int   idx_unamb_ulist   = 0;
+int   alloc_unamb_ulist = 0;
+#define init_unamb_ulist_size   (1000)
+#define inc_unamb_ulist_size    (1000)
+#define element_unamb_ulist_size    (IDLEN+1)
 
+void 
+add_unamb_ulist(const char *uid)
+{
+    assert(idx_unamb_ulist <= MAX_USERS);
+    if (idx_unamb_ulist >= alloc_unamb_ulist)
+    {
+        if (!alloc_unamb_ulist)
+            alloc_unamb_ulist = init_unamb_ulist_size;
+        else
+            alloc_unamb_ulist += inc_unamb_ulist_size;
+        unamb_user_list = realloc(unamb_user_list, alloc_unamb_ulist * element_unamb_ulist_size);
+    }
+    strlcpy(unamb_user_list + idx_unamb_ulist * element_unamb_ulist_size,
+            uid, element_unamb_ulist_size);
+    idx_unamb_ulist ++;
+}
+
+void
+print_unamb_ulist(const char *prefix)
+{
+    int i;
+    fprintf(stderr, "\n%s:\n", prefix);
+    for (i = 0; i < idx_unamb_ulist; i++)
+    {
+        fprintf(stderr, " %s\n", unamb_user_list + i*element_unamb_ulist_size);
+    }
+    fprintf(stderr, "end\n");
+}
+
+void
+build_unambiguous_user_list()
+{
+    int i;
+    char xuid[IDLEN+1];
+    idx_unamb_ulist = 0;    // rebuild ulist
+    for (i = 0; i < MAX_USERS-1; i++)
+    {
+        const char *uid = SHM->userid[i];
+        if (!uid[strcspn(uid, ambchars)])
+            continue;
+
+        strlcpy(xuid, uid, sizeof(xuid));
+        build_unambiguous_userid(xuid);
+        add_unamb_ulist(xuid);
+    }
+    fprintf(stderr, "build_unambiguous_user_list: found %d entries.\n", idx_unamb_ulist);
+    // print_unamb_ulist("ambiguous list");
+    if (idx_unamb_ulist > 1)
+        qsort(unamb_user_list, idx_unamb_ulist, sizeof(xuid),
+                (int (*)(const void *, const void *)) strcasecmp);
+    // print_unamb_ulist("unambiguous list");
+}
+
+// fast version but requires unamb_user_list
+int 
+find_ambiguous_userid2(const char *userid)
+{
+    char ambuid[element_unamb_ulist_size];
+
+    assert(userid && *userid);
+
+    // if NULL, found nothing.
+    if (!userid[strcspn(userid, ambchars)])
+	return 0;
+
+    // build un-ambiguous uid
+    strlcpy(ambuid, userid, sizeof(ambuid));
+    build_unambiguous_userid(ambuid);
+
+    if (bsearch(ambuid, unamb_user_list, idx_unamb_ulist, element_unamb_ulist_size, 
+            (int (*)(const void *, const void *)) strcasecmp) == NULL)
+        return 0;
+    return 1;
+}
+
+// slow version
 int 
 find_ambiguous_userid(const char *userid)
 {
-    const char *ambchars = "0Oo1Il";    // super set of ambtbl
     size_t uidlen = 0, iamb;
     char ambuid[IDLEN+1], shmuid[IDLEN+1];
     int i;
@@ -451,6 +532,7 @@ int main(int argc, char *argv[])
 {
     int     ch, sfd;
     char   *iface_ip = REGMAILD_ADDR;
+    int     as_daemon = 1;
 
     Signal(SIGPIPE, SIG_IGN);
 
@@ -461,22 +543,26 @@ int main(int argc, char *argv[])
     setgid(BBSGID);
     setuid(BBSUID);
 
-    while ( (ch = getopt(argc, argv, "i:h")) != -1 )
+    while ( (ch = getopt(argc, argv, "i:hD")) != -1 )
 	switch( ch ){
 	case 'i':
 	    iface_ip = optarg;
 	    break;
+        case 'D':
+            as_daemon = 0;
+            break;
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: %s [-i [interface_ip]:port]\n", argv[0]);
+	    fprintf(stderr, "usage: %s [-D] [-i [interface_ip]:port]\n", argv[0]);
 	    return 1;
 	}
 
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    daemonize(BBSHOME "/run/regmaild.pid", NULL);
+    if (as_daemon) daemonize(BBSHOME "/run/regmaild.pid", NULL);
     regmaildb_open(&g_Db, EMAILDB_PATH);
+    build_unambiguous_user_list();
 
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
