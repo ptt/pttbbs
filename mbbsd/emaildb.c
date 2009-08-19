@@ -71,6 +71,10 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
     return result;
 }
 
+#endif
+
+#ifdef USE_REGCHECKD
+
 // XXX move to regcheck someday
 int regcheck_ambiguous_userid_exist(const char *userid)
 {

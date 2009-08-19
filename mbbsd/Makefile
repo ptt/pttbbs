@@ -36,10 +36,6 @@ LDLIBS:= ${LDLIBS} ${:!mysql_config --libs!}
 CFLAGS+= -DLOG_CRAWLER 
 .endif
 
-.if !defined(WITHOUT_EMAILDB)	&& defined(WITH_EMAILDB)
-CFLAGS+= -DUSE_EMAILDB -DUSE_REGCHECKD
-.endif
-
 .if !defined(WITHOUT_BBSLUA_USAGE) && defined(WITH_BBSLUA_USAGE)
 CFLAGS+= -DBBSLUA_USAGE
 .endif
