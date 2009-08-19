@@ -19,6 +19,7 @@
 enum {
     REGMAILDB_REQ_COUNT = 1,
     REGMAILDB_REQ_SET,
+    REGCHECK_REQ_AMBIGUOUS,
 };
 
 typedef struct

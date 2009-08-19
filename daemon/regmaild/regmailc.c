@@ -36,6 +36,12 @@ int main(int argc, char *argv[])
 	strlcpy(req.userid, argv[2], sizeof(req.userid));
 	strlcpy(req.email,  argv[3], sizeof(req.email));
     }
+    else if (strcmp(argv[1], "amb") == 0)
+    {
+	op = REGCHECK_REQ_AMBIGUOUS;
+	strlcpy(req.userid, argv[2], sizeof(req.userid));
+	strlcpy(req.email,  "ambiguous@check.nonexist", sizeof(req.email));
+    }
     else
 	return 0;
 
@@ -52,7 +58,7 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    printf("count: %d\n", ret);
+    printf("result: %d\n", ret);
     return 0;
 }
 
