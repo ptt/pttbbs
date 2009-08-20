@@ -1,4 +1,4 @@
-// Register Mail Daemon
+// Register Check Daemon
 // $Id$
 //
 // sqlite portion from wens
@@ -26,7 +26,7 @@
 #include "pttstruct.h"
 
 ///////////////////////////////////////////////////////////////////////
-// Common Section
+// EmailDB Common Section
 
 #include <sqlite3.h>
 
@@ -46,9 +46,10 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
         return rc;
 
     // create table if it doesn't exist
-    rc = sqlite3_exec(*Db, "CREATE TABLE IF NOT EXISTS emaildb (userid TEXT, email TEXT, PRIMARY KEY (userid));"
-                "CREATE INDEX IF NOT EXISTS email ON emaildb (email);",
-                NULL, NULL, NULL);
+    rc = sqlite3_exec(*Db, 
+            "CREATE TABLE IF NOT EXISTS emaildb (userid TEXT, email TEXT, PRIMARY KEY (userid));"
+            "CREATE INDEX IF NOT EXISTS email ON emaildb (email);",
+            NULL, NULL, NULL);
 
     return rc;
 }
@@ -75,7 +76,7 @@ int main(int argc, char *argv[])
     fd = open(FN_PASSWD, O_RDONLY);
     if (fd < 0 || sz <= 0)
     {
-        fprintf(stderr, "cannot open ~/.PASSWDS.\n");
+        fprintf(stderr, "cannot open %s.\n", FN_PASSWD);
         return 0;
     }
     sz /= sizeof(userec_t);
@@ -183,7 +184,10 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
         goto end;
 
     if (sqlite3_bind_text(Stmt, 1, email, email_len, SQLITE_STATIC) != SQLITE_OK)
+    {
+        fprintf(stderr, "failed in sqlite3_bind_text\r\n");
         goto end;
+    }
 
     count = 0;
     while (sqlite3_step(Stmt) == SQLITE_ROW) {
@@ -208,8 +212,14 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
 
 end:
     if (Stmt != NULL)
-        if (sqlite3_finalize(Stmt) != SQLITE_OK)
+    {
+        int r = sqlite3_finalize(Stmt);
+        if (r != SQLITE_OK)
+        {
+            fprintf(stderr, "sqlite3_finalize error: %d %s\r\n", r, sqlite3_errmsg(Db));
             count = -1;
+        }
+    }
 
     if (Db != NULL && !g_Db)
         sqlite3_close(Db);
@@ -272,8 +282,8 @@ build_unambiguous_userid(char *uid)
 {
     int i = 0;
     const char *ambtbl[] = {    // need to also update ambchars if you touch these
-	"0Oo",
-	"1Il",
+	"0O",       // more candidates: o
+	"1Il",    // more candidates: Li
 	NULL
     };
 
@@ -290,12 +300,12 @@ build_unambiguous_userid(char *uid)
     }
 }
 
-const char *ambchars = "0Oo1Il";    // super set of ambtbl
+const char *ambchars = "0O1Il";    // super set of ambtbl
 char *unamb_user_list;
 int   idx_unamb_ulist   = 0;
 int   alloc_unamb_ulist = 0;
-#define init_unamb_ulist_size   (1000)
-#define inc_unamb_ulist_size    (1000)
+#define init_unamb_ulist_size   (MAX_USERS/4)  // usually 2/3 of valid accounts
+#define inc_unamb_ulist_size    (MAX_USERS/10)
 #define element_unamb_ulist_size    (IDLEN+1)
 
 void 
@@ -328,14 +338,15 @@ print_unamb_ulist(const char *prefix)
 }
 
 void
-build_unambiguous_user_list()
+rebuild_unambiguous_user_list()
 {
-    int i;
+    int i, ivalid = 0;
     char xuid[IDLEN+1];
     idx_unamb_ulist = 0;    // rebuild ulist
     for (i = 0; i < MAX_USERS-1; i++)
     {
         const char *uid = SHM->userid[i];
+        if (*uid) ivalid ++;
         if (!uid[strcspn(uid, ambchars)])
             continue;
 
@@ -343,7 +354,9 @@ build_unambiguous_user_list()
         build_unambiguous_userid(xuid);
         add_unamb_ulist(xuid);
     }
-    fprintf(stderr, "build_unambiguous_user_list: found %d entries.\n", idx_unamb_ulist);
+    fprintf(stderr, "rebuild_unambiguous_user_list: found %d/%d (%d%%) entries.\n",
+            idx_unamb_ulist, ivalid, (int)(idx_unamb_ulist / (double)ivalid * 100));
+
     // print_unamb_ulist("ambiguous list");
     if (idx_unamb_ulist > 1)
         qsort(unamb_user_list, idx_unamb_ulist, sizeof(xuid),
@@ -562,7 +575,7 @@ int main(int argc, char *argv[])
 
     if (as_daemon) daemonize(BBSHOME "/run/regmaild.pid", NULL);
     regmaildb_open(&g_Db, EMAILDB_PATH);
-    build_unambiguous_user_list();
+    rebuild_unambiguous_user_list();
 
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
