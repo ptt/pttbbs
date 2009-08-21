@@ -308,6 +308,9 @@ int   alloc_unamb_ulist = 0;
 #define inc_unamb_ulist_size    (MAX_USERS/10)
 #define element_unamb_ulist_size    (IDLEN+1)
 
+time_t  unamb_ulist_cache_ts = 0;               // timestamp of last hit
+#define unamb_ulist_cache_lifetime  (60*60*1)   // update unamb user list for every 1 hours
+
 void 
 add_unamb_ulist(const char *uid)
 {
@@ -338,10 +341,17 @@ print_unamb_ulist(const char *prefix)
 }
 
 void
-rebuild_unambiguous_user_list()
+reload_unambiguous_user_list()
 {
     int i, ivalid = 0;
     char xuid[IDLEN+1];
+    time_t now = time(NULL);
+
+    if (now < unamb_ulist_cache_ts + unamb_ulist_cache_lifetime)
+        return;
+
+    fprintf(stderr, "start to reload unambiguous user list: %s", ctime(&now));
+    unamb_ulist_cache_ts = now;
     idx_unamb_ulist = 0;    // rebuild ulist
     for (i = 0; i < MAX_USERS-1; i++)
     {
@@ -354,7 +364,7 @@ rebuild_unambiguous_user_list()
         build_unambiguous_userid(xuid);
         add_unamb_ulist(xuid);
     }
-    fprintf(stderr, "rebuild_unambiguous_user_list: found %d/%d (%d%%) entries.\n",
+    fprintf(stderr, "reload_unambiguous_user_list: found %d/%d (%d%%) entries.\n",
             idx_unamb_ulist, ivalid, (int)(idx_unamb_ulist / (double)ivalid * 100));
 
     // print_unamb_ulist("ambiguous list");
@@ -377,6 +387,7 @@ find_ambiguous_userid2(const char *userid)
 	return 0;
 
     // build un-ambiguous uid
+    reload_unambiguous_user_list();
     strlcpy(ambuid, userid, sizeof(ambuid));
     build_unambiguous_userid(ambuid);
 
@@ -432,7 +443,7 @@ regcheck_ambiguous_id(const char *userid)
 {
     if (!userid || !*userid)
         return 0;
-    if (find_ambiguous_userid(userid))
+    if (find_ambiguous_userid2(userid))
         return 1;
     return 0;
 }
@@ -446,6 +457,16 @@ regcheck_ambiguous_id(const char *userid)
 // email\n
 //
 // operation: set,count
+
+static void
+err_request(regmaildb_req *req, int fd, struct event *ev)
+{
+    fprintf(stderr, "invalid request(%d): uid=[%s]\r\n",
+            req->operation,
+            req->userid);
+    close(fd);
+    free(ev);
+}
 
 static void 
 client_cb(int fd, short event, void *arg)
@@ -467,17 +488,14 @@ client_cb(int fd, short event, void *arg)
         return;
     }
 
-    if (!*req.email)
-    {
-        fprintf(stderr, "invalid request: uid=[%s]\r\n", req.userid);
-        close(fd);
-        free(ev);
-        return;
-    }
 
     switch(req.operation)
     {
         case REGMAILDB_REQ_COUNT:
+            if (!*req.userid || !*req.email) {
+                err_request(&req, fd, ev);
+                return;
+            }
             ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
             fprintf(stderr, "%-*s check  mail (result: %d): [%s]\r\n", 
                     IDLEN, req.userid, ret, req.email);
@@ -488,6 +506,10 @@ client_cb(int fd, short event, void *arg)
             break;
 
         case REGMAILDB_REQ_SET:
+            if (!*req.userid || !*req.email) {
+                err_request(&req, fd, ev);
+                return;
+            }
             ret = regmaildb_update_email(req.userid, strlen(req.userid),
                     req.email, strlen(req.email));
             fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\r\n", 
@@ -573,9 +595,9 @@ int main(int argc, char *argv[])
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    if (as_daemon) daemonize(BBSHOME "/run/regmaild.pid", NULL);
+    if (as_daemon) daemonize(BBSHOME "/run/regmaild.pid", BBSHOME "/log/regmaild.log");
     regmaildb_open(&g_Db, EMAILDB_PATH);
-    rebuild_unambiguous_user_list();
+    reload_unambiguous_user_list();
 
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
