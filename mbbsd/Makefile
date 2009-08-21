@@ -16,7 +16,7 @@ UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
 PAGEROBJS= more.o pmore.o
 PLUGOBJS = lovepaper.o calendar.o topsong.o gamble.o vice.o angel.o
 CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
-GAMEOBJS = card.o guess.o chicken.o othello.o
+GAMEOBJS = card.o chicken.o
 OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
 	vote.o voteboard.o \
 	$(COREOBJS)  $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \

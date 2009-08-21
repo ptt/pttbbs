@@ -801,12 +801,10 @@ static int chessroom() {
 static const commands_t plist[] = {
 
     {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
-    {guess_main, PERM_LOGINOK,   "22Guess number【  猜數字  】"},
-    {othello_main, PERM_LOGINOK, "33Othello     【  黑白棋  】"},
-    {vice_main, PERM_LOGINOK,    "44Vice        【 發票對獎 】"},
-    {g_card_jack, PERM_LOGINOK,  "55Jack        【  黑傑克  】"},
-    {g_ten_helf, PERM_LOGINOK,   "66Tenhalf     【  十點半  】"},
-    {card_99, PERM_LOGINOK,      "77Nine        【  九十九  】"},
+    {vice_main, PERM_LOGINOK,    "22Vice        【 發票對獎 】"},
+    {g_card_jack, PERM_LOGINOK,  "33Jack        【  黑傑克  】"},
+    {g_ten_helf, PERM_LOGINOK,   "44Tenhalf     【  十點半  】"},
+    {card_99, PERM_LOGINOK,      "55Nine        【  九十九  】"},
     {NULL, 0, NULL}
 };
 
