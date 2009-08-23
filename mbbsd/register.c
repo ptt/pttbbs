@@ -1449,10 +1449,10 @@ u_register(void)
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.nickname);
 #ifdef FOREIGN_REG
-	fore[0] = 'y';
+	fore[0] = 0;
 	fore[1] = 0;
 	getfield(2, "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", fore, 2);
-    	if (fore[0] == 'n')
+    	if (fore[0] == 'n' || fore[0] == 'N')
 	    fore[0] |= FOREIGN;
 	else
 	    fore[0] = 0;
