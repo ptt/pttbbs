@@ -720,13 +720,13 @@ _set_bind_opt(int sock)
 #endif
 
 #ifdef   STR_GUEST
-# define MSG_GUEST "，或以[" STR_GUEST "]參觀"
+# define MSG_GUEST "，或以 " STR_GUEST " 參觀"
 #else
 # define MSG_GUEST ""
 #endif
 
 #ifdef   STR_REGNEW
-# define MSG_REGNEW "，或以[new]註冊"
+# define MSG_REGNEW "，或以 new 註冊"
 #else
 # define MSG_REGNEW
 #endif

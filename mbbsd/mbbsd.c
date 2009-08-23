@@ -818,7 +818,7 @@ login_query(char *ruid)
 	prints("current pid: %d ", getpid());
 #endif
 
-	if (getdata(20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊: ",
+	if (getdata(20, 0, "請輸入代號，或以 guest 參觀，或以 new 註冊: ",
 		uid, sizeof(uid), DOECHO) < 1)
 	{
 	    // got nothing 
