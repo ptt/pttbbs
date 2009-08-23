@@ -1297,7 +1297,8 @@ u_register(void)
 {
     char            rname[20], addr[50], mobile[16];
 #ifdef FOREIGN_REG
-    char            fore[2];
+    int             isForeign = (cuser.uflag2 & FOREIGN) ? 1 : 0;
+    char            fore[2] = "";
 #endif
     char            phone[20], career[40], email[50], birthday[11], sex_is[2];
     unsigned char   year, mon, day;
@@ -1449,13 +1450,17 @@ u_register(void)
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.nickname);
 #ifdef FOREIGN_REG
-	fore[0] = 0;
-	fore[1] = 0;
-	getfield(2, "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", fore, 2);
-    	if (fore[0] == 'n' || fore[0] == 'N')
-	    fore[0] |= FOREIGN;
-	else
-	    fore[0] = 0;
+	fore[0] = 0; // ultilize default values 
+	getfield(2, isForeign ? "y/N" : "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", fore, 2);
+	if (isForeign)
+	{
+	    // default n
+	    isForeign = (fore[0] == 'y' || fore[0] == 'Y') ? 0 : 1;
+	} else {
+	    // default y
+	    isForeign = (fore[0] == 'n' || fore[0] == 'N') ? 1 : 0;
+	}
+	move(2, 0); prints("  是否現在住在台灣: %s\n", isForeign ? "N (否)" : "Y (是)");
 #endif
 	while (1) {
 	    getfield(4, 
@@ -1487,7 +1492,7 @@ u_register(void)
 		     REGNOTES_ROOT "address", "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
-                || fore[0] 
+                || isForeign
 #endif
 		)
 		break;
@@ -1501,7 +1506,7 @@ u_register(void)
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
 #ifdef FOREIGN_REG
-	    else if(fore[0] && !strstr(errcode, "分隔符號"))
+	    else if(isForeign && !strstr(errcode, "分隔符號"))
 		break;
 #endif
 	    else
@@ -1561,7 +1566,7 @@ u_register(void)
     cuser.year = year;
 
 #ifdef FOREIGN_REG
-    if (fore[0])
+    if (isForeign)
 	cuser.uflag2 |= FOREIGN;
     else
 	cuser.uflag2 &= ~FOREIGN;
