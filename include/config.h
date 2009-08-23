@@ -90,6 +90,10 @@
 #define BN_JUNK "junk"
 #endif 
 
+#ifndef BN_UNANONYMOUS
+#define BN_UNANONYMOUS "UnAnonymous"
+#endif
+
 /* Environment */
 #ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
 #define RELAY_SERVER_IP    "127.0.0.1"

@@ -760,8 +760,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
 #ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
-	        safe_article_delete(i, &newfh, bdir);
+        if(bp && !(currmode & MODE_DIGEST))
+	        safe_article_delete(i, &newfh, bdir, NULL);
         else
 #endif
                 delete_record(bdir, sizeof(fileheader_t), i);
@@ -776,7 +776,7 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
     if(!fh || !fh->filename[0]) return;
 
     if(!strcmp(bname, BN_ALLPOST) || !strcmp(bname, "NEWIDPOST") ||
-       !strcmp(bname, BN_ALLHIDPOST) || !strcmp(bname, "UnAnonymous"))
+       !strcmp(bname, BN_ALLHIDPOST) || !strcmp(bname, BN_UNANONYMOUS))
     {
         int len=0;
 	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
@@ -888,7 +888,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     else
          setbfile(genbuf, brd, postfile->filename);
 
-    if(!strcmp(brd, "UnAnonymous"))
+    if(!strcasecmp(brd, BN_UNANONYMOUS))
        strcpy(fh.owner, cuser.userid);
 
     sprintf(fh.title,"%-*.*s.%s板",  len, len, postfile->title, currboard);
@@ -1185,7 +1185,7 @@ do_general(int garbage)
 	    curredit ^= EDIT_BOTH;
 	} // if (curredit & EDIT_BOTH)
 	if (currbrdattr & BRD_ANONYMOUS)
-            do_crosspost("UnAnonymous", &postfile, fpath, 0);
+            do_crosspost(BN_UNANONYMOUS, &postfile, fpath, 0);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
@@ -2885,7 +2885,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	    outmsg("處理中,請稍後...");
 	    refresh();
 #ifdef SAFE_ARTICLE_DELETE
-	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
+	    if(bp && !(currmode & MODE_DIGEST))
 		ret = safe_article_delete_range(direct, inum1, inum2);
 	    else
 #endif
@@ -2918,7 +2918,8 @@ static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[100], newpath[PATHLEN];
-    int             not_owned, tusernum, del_ok = 0;
+    char	    reason[PROPER_TITLE_LEN];
+    int             not_owned, is_anon, tusernum, del_ok = 0;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -2938,7 +2939,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
 
-    if(fhdr->filemode & FILE_ANONYMOUS)
+    is_anon = (fhdr->filemode & FILE_ANONYMOUS);
+    if(is_anon)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
         tusernum = fhdr->multi.anon_uid;
@@ -2953,12 +2955,78 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
-    getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
+#ifdef SAFE_ARTICLE_DELETE
+    reason[0] = 0;
+    // query if user really wants to delete it
+    if (not_owned && !is_anon && fhdr->owner[0])
+    {
+	// manager (bm, sysop, police)
+	do {
+	    char oreason[PROPER_TITLE_LEN];
+	    int  keep_cuserid = 0;
+	    const char *pat_withuid = "(已被%s刪除: %s) <%s>",
+		       *pat_anon    = "(已被刪除: %s) <%s>";
+	    int pat_withuid_modlen = 2*3,   // length caused by %s
+		pat_anon_modlen = 2*2;
+
+	    getdata(1, 0, "請確定刪除(Y/N/R加註理由)?[N]", genbuf, 3, LCECHO);
+
+	    // for y/n, skip.
+	    if (genbuf[0] != 'r')
+		break;
+
+	    // query anonymous
+	    // XXX allow only if HasUserPerm(PERM_POLICE | PERM_POLICE_MAN | PERM_SYSOP) ?
+	    move(3,0); clrtoeol();
+	    getdata(2, 0, "要留下您的 ID 嗎(Y/N)?[N]", genbuf, 3, LCECHO);
+	    if (genbuf[0] == 'y')
+		keep_cuserid = 1;
+
+	    // input reason
+	    move(4,0); clrtoeol();
+	    getdata(3, 0, "理由: ", oreason, 
+		    sizeof(oreason) - strlen(fhdr->owner) - 
+			(keep_cuserid ? strlen(pat_withuid)-pat_withuid_modlen:
+				        strlen(pat_anon)   -pat_anon_modlen) -
+			(keep_cuserid ? strlen(cuser.userid) : 0), 
+		    DOECHO);
+
+	    if (!oreason[0])
+	    {
+		vmsg("未輸入理由，放棄刪除。");
+		genbuf[0] = 'n';
+		break;
+	    }
+
+	    // build reason string (based on STR_SAFEDEL_TITLE)
+	    if (keep_cuserid)
+	    {
+		snprintf(reason, sizeof(reason),
+			pat_withuid, cuser.userid, oreason, fhdr->owner);
+	    } else {
+		snprintf(reason, sizeof(reason),
+			pat_anon, oreason, fhdr->owner);
+	    }
+
+	    // confirm again!
+	    move(3, 0); clrtoeol(); prints("將會顯示為: " ANSI_COLOR(1) 
+		    "%s" ANSI_RESET "\n", reason);
+	    move(5, 0); clrtoeol();
+	    getdata(4, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]", 
+		    genbuf, 3, LCECHO);
+
+	    // since the default y/n is same to msg_del_ny, we reuse the genbuf[0] here.
+	} while (0);
+    } else 
+#endif
+    {
+	getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
+    }
     if (genbuf[0] == 'y') {
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   (bp->nuser > 30 && !(currmode & MODE_DIGEST) &&
-            !safe_article_delete(ent, fhdr, direct)) ||
+	   (!(currmode & MODE_DIGEST) &&
+            !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
 #endif
 	   // XXX TODO delete_record is really really dangerous - 
 	   // we should verify the header (maybe by filename) is the same.

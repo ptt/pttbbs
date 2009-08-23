@@ -706,7 +706,9 @@ new_register(void)
 	else if (reserved_user_id(passbuf))
 	    outs("此代號已由系統保留，請使用別的代號\n");
 #if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
-	else if (regcheck_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
+	// XXX if we check id == 0 here, replacing an expired id will be delayed.
+	else if (/*id == 0 && */ 
+		 regcheck_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
 	    outs("此代號過於近似它人帳號，請改用別的代號。\n");
 #endif
 	else // success

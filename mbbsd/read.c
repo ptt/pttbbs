@@ -187,7 +187,7 @@ TagPruner(int bid)
 	if (vans("刪除所有標記[N]?") != 'y')
 	    return READ_REDRAW;
 #ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST) && bp->nuser>30 )
+        if(bp && !(currmode & MODE_DIGEST))
             safe_delete_range(currdirect, 0, 0);
         else
 #endif

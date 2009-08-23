@@ -165,7 +165,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
 	      (fhdr.filemode & FILE_DIGEST) ||	/* ¤åºK */
 	      (id1 && (i < id1 || i > id2)) ||	/* range */
 	      (!id1 && Tagger(atoi(t + 2), i, TAG_NIN)))) 	/* TagList */
-	    safe_article_delete(i, &fhdr, fpath);
+	    safe_article_delete(i, &fhdr, fpath, NULL);
     }
     close(fd);
 }
@@ -245,9 +245,14 @@ delete_range(const char *fpath, int id1, int id2)
 #endif // _BBS_UTIL_C_
 
 void 
-set_safedel_fhdr(fileheader_t *fhdr)
+set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 {
-    if (fhdr->filemode & FILE_ANONYMOUS ||
+    if (newtitle && *newtitle)
+    {
+	snprintf(fhdr->title, sizeof(fhdr->title),
+		"%s", newtitle);
+    }
+    else if (fhdr->filemode & FILE_ANONYMOUS ||
 	!fhdr->owner[0] ||
 	(fhdr->owner[0] == '-' && fhdr->owner[1] == 0) )
     {
@@ -275,11 +280,11 @@ set_safedel_fhdr(fileheader_t *fhdr)
 
 #ifdef SAFE_ARTICLE_DELETE
 int
-safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct)
+safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle)
 {
     fileheader_t newfhdr;
     memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
-    set_safedel_fhdr(&newfhdr);
+    set_safedel_fhdr(&newfhdr, newtitle);
     substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
     return 0;
 }
@@ -309,7 +314,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
 	    unlink(fn);
 
-	    set_safedel_fhdr(&newfhdr);
+	    set_safedel_fhdr(&newfhdr, NULL);
 	    // because off_t is unsigned, we could NOT seek backward.
 	    lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
 	    write(fd, &newfhdr, sizeof(fileheader_t));
