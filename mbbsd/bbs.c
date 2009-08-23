@@ -760,7 +760,7 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
 #ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST))
+        if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
 	        safe_article_delete(i, &newfh, bdir, NULL);
         else
 #endif
@@ -2885,7 +2885,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	    outmsg("處理中,請稍後...");
 	    refresh();
 #ifdef SAFE_ARTICLE_DELETE
-	    if(bp && !(currmode & MODE_DIGEST))
+	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30)
 		ret = safe_article_delete_range(direct, inum1, inum2);
 	    else
 #endif
@@ -3025,7 +3025,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (genbuf[0] == 'y') {
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   (!(currmode & MODE_DIGEST) &&
+	   ((reason[0] || bp->nuser > 30) && !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
 #endif
 	   // XXX TODO delete_record is really really dangerous - 
