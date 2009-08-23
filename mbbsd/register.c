@@ -1296,15 +1296,14 @@ int
 u_register(void)
 {
     char            rname[20], addr[50], mobile[16];
-#ifdef FOREIGN_REG
-    int             isForeign = (cuser.uflag2 & FOREIGN) ? 1 : 0;
-    char            fore[2] = "";
-#endif
     char            phone[20], career[40], email[50], birthday[11], sex_is[2];
     unsigned char   year, mon, day;
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
+#ifdef FOREIGN_REG
+    int             isForeign = (cuser.uflag2 & FOREIGN) ? 1 : 0;
+#endif
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
@@ -1450,15 +1449,21 @@ u_register(void)
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.nickname);
 #ifdef FOREIGN_REG
-	fore[0] = 0; // ultilize default values 
-	getfield(2, isForeign ? "y/N" : "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", fore, 2);
-	if (isForeign)
 	{
-	    // default n
-	    isForeign = (fore[0] == 'y' || fore[0] == 'Y') ? 0 : 1;
-	} else {
-	    // default y
-	    isForeign = (fore[0] == 'n' || fore[0] == 'N') ? 1 : 0;
+	    char not_fore[2] = "";  // use default values instead of pre-inputs
+
+	    getfield(2, isForeign ? "y/N" : "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", not_fore, 2);
+
+	    // XXX NOTE: the question we ask was "Aren't you a foreigner" in Chinese, so the answer
+	    // must be opposite to isForeign.
+	    if (isForeign)
+	    {
+		// default n
+		isForeign = (not_fore[0] == 'y' || not_fore[0] == 'Y') ? 0 : 1;
+	    } else {
+		// default y
+		isForeign = (not_fore[0] == 'n' || not_fore[0] == 'N') ? 1 : 0;
+	    }
 	}
 	move(2, 0); prints("  是否現在住在台灣: %s\n", isForeign ? "N (否)" : "Y (是)");
 #endif
