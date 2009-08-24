@@ -277,6 +277,8 @@ end:
 ///////////////////////////////////////////////////////////////////////
 // Ambiguous user id checking
 
+// XXX TODO add a linear queue to handle the difference between each reload?
+
 void
 build_unambiguous_userid(char *uid)
 {
@@ -301,41 +303,43 @@ build_unambiguous_userid(char *uid)
 }
 
 const char *ambchars = "0O1Il";    // super set of ambtbl
-char *unamb_user_list;
-int   idx_unamb_ulist   = 0;
-int   alloc_unamb_ulist = 0;
-#define init_unamb_ulist_size   (MAX_USERS/4)  // usually 2/3 of valid accounts
-#define inc_unamb_ulist_size    (MAX_USERS/10)
-#define element_unamb_ulist_size    (IDLEN+1)
+
+typedef struct {
+    char *list;
+    int   num;
+    int   alloc;
+} AmbUserList;
+
+AmbUserList unamb_ulist,  orig_ulist;
+#define ulist_size_init   (MAX_USERS/ 4)  // usually 2/3 of valid accounts
+#define ulist_size_inc    (MAX_USERS/10)
+#define ulist_size_element     (IDLEN+1)
 
 time_t  unamb_ulist_cache_ts = 0;               // timestamp of last hit
 #define unamb_ulist_cache_lifetime  (60*60*1)   // update unamb user list for every 1 hours
 
 void 
-add_unamb_ulist(const char *uid)
+add_amb_ulist(AmbUserList *ulist, const char *uid)
 {
-    assert(idx_unamb_ulist <= MAX_USERS);
-    if (idx_unamb_ulist >= alloc_unamb_ulist)
+    assert(ulist->num <= MAX_USERS);
+    if (ulist->num >= ulist->alloc)
     {
-        if (!alloc_unamb_ulist)
-            alloc_unamb_ulist = init_unamb_ulist_size;
-        else
-            alloc_unamb_ulist += inc_unamb_ulist_size;
-        unamb_user_list = realloc(unamb_user_list, alloc_unamb_ulist * element_unamb_ulist_size);
+        ulist->alloc += (ulist->alloc ? ulist_size_inc  : ulist_size_init);
+        ulist->list = realloc(ulist->list, ulist->alloc * ulist_size_element);
     }
-    strlcpy(unamb_user_list + idx_unamb_ulist * element_unamb_ulist_size,
-            uid, element_unamb_ulist_size);
-    idx_unamb_ulist ++;
+    strlcpy(ulist->list + ulist->num * ulist_size_element,
+            uid, ulist_size_element);
+    ulist->num++;
 }
 
 void
-print_unamb_ulist(const char *prefix)
+print_amb_ulist(AmbUserList *ulist, const char *prefix)
 {
     int i;
     fprintf(stderr, "\n%s:\n", prefix);
-    for (i = 0; i < idx_unamb_ulist; i++)
+    for (i = 0; i < ulist->num; i++)
     {
-        fprintf(stderr, " %s\n", unamb_user_list + i*element_unamb_ulist_size);
+        fprintf(stderr, " %s\n", ulist->list + i*ulist_size_element);
     }
     fprintf(stderr, "end\n");
 }
@@ -352,7 +356,9 @@ reload_unambiguous_user_list()
 
     fprintf(stderr, "start to reload unambiguous user list: %s", ctime(&now));
     unamb_ulist_cache_ts = now;
-    idx_unamb_ulist = 0;    // rebuild ulist
+    // rebuild both list
+    unamb_ulist.num = 0;
+    orig_ulist.num  = 0;
     for (i = 0; i < MAX_USERS-1; i++)
     {
         const char *uid = SHM->userid[i];
@@ -360,25 +366,32 @@ reload_unambiguous_user_list()
         if (!uid[strcspn(uid, ambchars)])
             continue;
 
+        add_amb_ulist(&orig_ulist, uid);
         strlcpy(xuid, uid, sizeof(xuid));
         build_unambiguous_userid(xuid);
-        add_unamb_ulist(xuid);
+        add_amb_ulist(&unamb_ulist, xuid);
     }
     fprintf(stderr, "reload_unambiguous_user_list: found %d/%d (%d%%) entries.\n",
-            idx_unamb_ulist, ivalid, (int)(idx_unamb_ulist / (double)ivalid * 100));
+            unamb_ulist.num, ivalid, (int)(unamb_ulist.num / (double)ivalid * 100));
 
-    // print_unamb_ulist("ambiguous list");
-    if (idx_unamb_ulist > 1)
-        qsort(unamb_user_list, idx_unamb_ulist, sizeof(xuid),
+    // print_amb_ulist(&unamb_ulist, "ambiguous list");
+    if (unamb_ulist.num > 1)
+    {
+        qsort(unamb_ulist.list, unamb_ulist.num, ulist_size_element,
                 (int (*)(const void *, const void *)) strcasecmp);
-    // print_unamb_ulist("unambiguous list");
+        qsort(orig_ulist.list, orig_ulist.num, ulist_size_element,
+                (int (*)(const void *, const void *)) strcasecmp);
+    }
+    // print_amb_ulist(&unamb_ulist, "unambiguous list");
 }
 
 // fast version but requires unamb_user_list
 int 
 find_ambiguous_userid2(const char *userid)
 {
-    char ambuid[element_unamb_ulist_size];
+    char ambuid[ulist_size_element];
+    int i;
+    char *p;
 
     assert(userid && *userid);
 
@@ -391,10 +404,35 @@ find_ambiguous_userid2(const char *userid)
     strlcpy(ambuid, userid, sizeof(ambuid));
     build_unambiguous_userid(ambuid);
 
-    if (bsearch(ambuid, unamb_user_list, idx_unamb_ulist, element_unamb_ulist_size, 
-            (int (*)(const void *, const void *)) strcasecmp) == NULL)
+    if ((p = bsearch(ambuid, unamb_ulist.list, unamb_ulist.num, ulist_size_element, 
+            (int (*)(const void *, const void *)) strcasecmp)) == NULL)
         return 0;
-    return 1;
+
+    // search the original id in our list (if not found, safe to claim as ambiguous)
+    if (bsearch(userid, orig_ulist.list, orig_ulist.num, ulist_size_element, 
+            (int (*)(const void *, const void *)) strcasecmp) == NULL)
+    {
+        // fprintf(stderr, " really ambiguous: %s\n", userid);
+        return 1;
+    }
+
+    // the id was in our list (and should be removed now). determine if it's an exact match.
+    i = (p - unamb_ulist.list) / ulist_size_element;
+    assert (i >=0 && i < unamb_ulist.num);
+
+    // forware and backward to see if this is an exact match.
+    if (i > 0 && strcasecmp(unamb_ulist.list + (i-1) * ulist_size_element, ambuid) == 0)
+    {
+        // fprintf(stderr, " ambiguous in prior: %s\n", userid);
+        return 1;
+    }
+    if (i+1 < unamb_ulist.num && strcasecmp(unamb_ulist.list + (i+1) * ulist_size_element, ambuid) == 0)
+    {
+        // fprintf(stderr, " ambiguous in next: %s\n", userid);
+        return 1;
+    }
+    // fprintf(stderr, " an exact match: %s\n", userid);
+    return 0;
 }
 
 // slow version
