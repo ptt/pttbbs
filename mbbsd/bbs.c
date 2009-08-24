@@ -2962,57 +2962,29 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     {
 	// manager (bm, sysop, police)
 	do {
-	    char oreason[PROPER_TITLE_LEN];
-	    int  keep_cuserid = 0;
-	    const char *pat_withuid = "(已被%s刪除: %s) <%s>",
-		       *pat_anon    = "(已被刪除: %s) <%s>";
-	    int pat_withuid_modlen = 2*3,   // length caused by %s
-		pat_anon_modlen = 2*2;
-
 	    getdata(1, 0, "請確定刪除(Y/N/R加註理由)?[N]", genbuf, 3, LCECHO);
 
 	    // for y/n, skip.
 	    if (genbuf[0] != 'r')
 		break;
 
-	    // query anonymous
-	    // XXX allow only if HasUserPerm(PERM_POLICE | PERM_POLICE_MAN | PERM_SYSOP) ?
-	    move(3,0); clrtoeol();
-	    getdata(2, 0, "要留下您的 ID 嗎(Y/N)?[N]", genbuf, 3, LCECHO);
-	    if (genbuf[0] == 'y')
-		keep_cuserid = 1;
+	    // build reason string (based on STR_SAFEDEL_TITLE)
+	    snprintf(reason, sizeof(reason), "(已被%s刪除) <%s>", 
+		    cuser.userid, fhdr->owner);
+	    move(3, 0); clrtoeol();
+	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: ■ ", 
+		    reason, sizeof(reason), DOECHO, reason);
 
-	    // input reason
-	    move(4,0); clrtoeol();
-	    getdata(3, 0, "理由: ", oreason, 
-		    sizeof(oreason) - strlen(fhdr->owner) - 
-			(keep_cuserid ? strlen(pat_withuid)-pat_withuid_modlen:
-				        strlen(pat_anon)   -pat_anon_modlen) -
-			(keep_cuserid ? strlen(cuser.userid) : 0), 
-		    DOECHO);
-
-	    if (!oreason[0])
+	    if (!reason[0])
 	    {
 		vmsg("未輸入理由，放棄刪除。");
 		genbuf[0] = 'n';
 		break;
 	    }
 
-	    // build reason string (based on STR_SAFEDEL_TITLE)
-	    if (keep_cuserid)
-	    {
-		snprintf(reason, sizeof(reason),
-			pat_withuid, cuser.userid, oreason, fhdr->owner);
-	    } else {
-		snprintf(reason, sizeof(reason),
-			pat_anon, oreason, fhdr->owner);
-	    }
-
 	    // confirm again!
-	    move(3, 0); clrtoeol(); prints("將會顯示為: " ANSI_COLOR(1) 
-		    "%s" ANSI_RESET "\n", reason);
-	    move(5, 0); clrtoeol();
-	    getdata(4, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]", 
+	    move(4, 0); clrtoeol();
+	    getdata(3, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]", 
 		    genbuf, 3, LCECHO);
 
 	    // since the default y/n is same to msg_del_ny, we reuse the genbuf[0] here.
