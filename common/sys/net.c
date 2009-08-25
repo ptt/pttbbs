@@ -158,7 +158,7 @@ int toconnectex(const char *addr, int timeout)
     else {
 	char buf[64], *port;
 	struct sockaddr_in serv_name;
-	int oflags = 0;
+	int was_block = 1;
 
 	if( (sock = socket(PF_INET, SOCK_STREAM, 0)) < 0 ){
 	    perror("socket");
@@ -168,7 +168,8 @@ int toconnectex(const char *addr, int timeout)
 	if (timeout > 0)
 	{
 	    // set to non-block to allow timeout
-	    oflags = fcntl(sock, F_GETFL, NULL);
+	    int oflags = fcntl(sock, F_GETFL, NULL);
+	    was_block = !(oflags & O_NONBLOCK);
 	    fcntl(sock, F_SETFL, oflags | O_NONBLOCK);
 	}
 
@@ -213,6 +214,11 @@ int toconnectex(const char *addr, int timeout)
 	if (timeout > 0)
 	{
 	    // restore flags
+	    int oflags = fcntl(sock, F_GETFL, NULL);
+	    if (was_block)
+		oflags &= ~O_NONBLOCK;
+	    else
+		oflags |= O_NONBLOCK;
 	    fcntl(sock, F_SETFL, oflags);
 	}
     }
