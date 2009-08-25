@@ -592,6 +592,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ") 
 		!= 'y')
 		return;
+	if (unum == usernum && 
+	    vans("您正試圖修改自己的帳號；這可能會造成帳號損毀，確定要繼續嗎？ (y/N): ")
+	    != 'y')
+		return;
     }
     switch (ans) {
     case 'c':
