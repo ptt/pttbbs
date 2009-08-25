@@ -4025,18 +4025,19 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             // =  -> compat24
             // -  -> ?
             // == -> ?
-            p++;
-            if (p >= end)
+            if (++p >= end)
                 return end;
             if (*p == '=')
             {
                 mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
                 mfmovie.compat24 = 1;
-                p++;
+                if (++p >= end)
+                    return end;
             }
             // MFDISP_SKIPCURLINE();
-            return p+1;
+            return p;
         } 
+#if 0
         else if (*p == 'L') 
         {
             // LOOP
@@ -4044,6 +4045,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             // m times to backward n
             break;
         } 
+#endif
         else 
         {
             // end of known control codes
