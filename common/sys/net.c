@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include <assert.h>
 #include <errno.h>
@@ -129,6 +130,11 @@ int tobind(const char * addr)
 
 int toconnect(const char *addr)
 {
+    return toconnectex(addr, -1);
+}
+
+int toconnectex(const char *addr, int timeout)
+{
     int sock;
     
     assert(addr && *addr);
@@ -152,10 +158,18 @@ int toconnect(const char *addr)
     else {
 	char buf[64], *port;
 	struct sockaddr_in serv_name;
+	int oflags = 0;
 
 	if( (sock = socket(PF_INET, SOCK_STREAM, 0)) < 0 ){
 	    perror("socket");
 	    return -1;
+	}
+
+	if (timeout > 0)
+	{
+	    // set to non-block to allow timeout
+	    oflags = fcntl(sock, F_GETFL, NULL);
+	    fcntl(sock, F_SETFL, oflags | O_NONBLOCK);
 	}
 
 	strlcpy(buf, addr, sizeof(buf));
@@ -172,9 +186,34 @@ int toconnect(const char *addr)
 	serv_name.sin_port = htons(atoi(port));
 	serv_name.sin_family = AF_INET;
 
-	if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
+	while ( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 )
+	{
+	    if (errno == EINPROGRESS) 
+	    {
+		struct timeval tv = {0}; 
+		fd_set myset; 
+
+		assert(timeout > 0);
+		tv.tv_sec = timeout;	    // set timeout here
+		FD_ZERO(&myset); 
+		FD_SET(sock, &myset); 
+
+		if (select(sock+1, NULL, &myset, NULL, &tv) > 0)
+		{
+		    // success
+		    break;
+		}
+	    }
+
+	    // various failure
 	    close(sock);
 	    return -1;
+	}
+
+	if (timeout > 0)
+	{
+	    // restore flags
+	    fcntl(sock, F_SETFL, oflags);
 	}
     }
 

@@ -78,6 +78,7 @@ extern uint32_t ipstr2int(const char *ip);
 extern int tobind   (const char *addr);
 extern int tobindex (const char *addr, int qlen, int (*setsock)(int), int do_listen);
 extern int toconnect(const char *addr);
+extern int toconnectex(const char *addr, int timeout);
 extern int toread   (int fd, void *buf, int len);
 extern int towrite  (int fd, const void *buf, int len);
 extern int send_remote_fd(int tunnel, int fd);
