@@ -399,8 +399,6 @@ int CheckPostRestriction(int bid)
     // check first-login
     if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS))
 	return 0;
-    if (cuser.numlogins / 10 < (unsigned int)bp->post_limit_logins)
-	return 0;
     // XXX numposts itself is an integer, but some records (by del post!?) may
     // create invalid records as -1... so we'd better make it signed for real
     // comparison.
@@ -1967,8 +1965,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 void
-editLimits(unsigned char *pregtime, unsigned char *plogins,
-	unsigned char *pposts, unsigned char *pbadpost)
+editLimits(unsigned char *pregtime, unsigned char *pposts, unsigned char *pbadpost)
 {
     char genbuf[STRLEN];
     int  temp;
@@ -1976,7 +1973,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     // load var
     unsigned char 
 	regtime = *pregtime, 
-	logins  = *plogins, 
 	posts   = *pposts, 
 	badpost = *pbadpost;
 
@@ -1988,14 +1984,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
-
-    sprintf(genbuf, "%u", logins*10);
-    do {
-	getdata_buf(b_lines - 1, 0, 
-		"上站次數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
-	temp = atoi(genbuf);
-    } while (temp < 0 || temp > 2550);
-    logins = (unsigned char)(temp / 10);
 
     sprintf(genbuf, "%u", posts*10);
     do {
@@ -2015,7 +2003,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
 
     // save var
     *pregtime = regtime;
-    *plogins  = logins;
     *pposts   = posts;
     *pbadpost = badpost;
 }
@@ -2044,7 +2031,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&bp->post_limit_regtime,
-		&bp->post_limit_logins,
 		&bp->post_limit_posts,
 		&bp->post_limit_badpost);
 
@@ -2058,7 +2044,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&bp->vote_limit_regtime,
-		&bp->vote_limit_logins,
 		&bp->vote_limit_posts,
 		&bp->vote_limit_badpost);
 
@@ -2072,7 +2057,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&fhdr->multi.vote_limits.regtime,
-		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);
 
@@ -2974,7 +2958,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    snprintf(reason, sizeof(reason), "(已被%s刪除) <%s>", 
 		    cuser.userid, fhdr->owner);
 	    move(3, 0); clrtoeol();
-	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: ■ ", 
+	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: □ ", 
 		    reason, sizeof(reason), DOECHO, reason);
 
 	    if (!reason[0])

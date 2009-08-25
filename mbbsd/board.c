@@ -311,8 +311,7 @@ b_config(void)
 
     while(!finished) {
 	// limits
-	uint8_t llogin = bp->post_limit_logins,
-		lpost  = bp->post_limit_posts,
+	uint8_t lpost  = bp->post_limit_posts,
 		lreg   = bp->post_limit_regtime,
 		lbp    = bp->post_limit_badpost;
 
@@ -439,21 +438,9 @@ b_config(void)
 
 	if (bp->brdattr & BRD_VOTEBOARD)
 	{
-	    llogin = bp->vote_limit_logins;
 	    lpost  = bp->vote_limit_posts;
 	    lreg   = bp->vote_limit_regtime;
 	    lbp    = bp->vote_limit_badpost;
-	}
-
-	if (llogin)
-	{
-	    move_ansi(ipostres++, COLPOSTRES);
-	    i = (int)llogin * 10;
-	    attr = (cuser.numlogins < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31));
-	    prints("上站次數 %d 次以上", i);
-	    if (attr) outs(ANSI_RESET);
-	    hasres = 1;
 	}
 
 	if (lpost)

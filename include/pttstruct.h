@@ -53,74 +53,88 @@ typedef struct userec_t {
     uint32_t	version;	/* version number of this sturcture, we
     				 * use revision number of project to denote.*/
 
-    char    userid[IDLEN + 1];	/* ID */
-    char    realname[20];	/* 真實姓名 */
-    char    nickname[24];	/* 暱稱 */
-    char    passwd[PASSLEN];	/* 密碼 */
-    char    padx;
-    uint32_t    uflag;	/* 習慣1 , see uflags.h */
-    uint32_t    uflag2;	/* 習慣2 , see uflags.h */
+    char	userid[IDLEN+1];/* 使用者ID */
+    char	realname[20];	/* 真實姓名 */
+    char	nickname[24];	/* 暱稱 */
+    char	passwd[PASSLEN];/* 密碼 */
+
+    char	pad_1;
+
+    uint32_t    uflag;		/* 習慣1 , see uflags.h */
+    uint32_t    uflag2;		/* 習慣2 , see uflags.h */
     uint32_t    userlevel;	/* 權限 */
     uint32_t    numlogins;	/* 上站次數 */
     uint32_t    numposts;	/* 文章篇數 */
-    time4_t firstlogin;		/* 註冊時間 */
-    time4_t lastlogin;		/* 最近上站時間 */
-    char    lasthost[IPV4LEN+1];/* 上次上站來源 */
+    time4_t	firstlogin;	/* 註冊時間 */
+    time4_t	lastlogin;	/* 最近上站時間 */
+    char	lasthost[IPV4LEN+1];/* 上次上站來源 */
     int32_t     money;		/* Ptt幣 */
-    char    unused[4];
-    char    email[50];		/* Email */
-    char    address[50];	/* 住址 */
-    char    justify[REGLEN + 1];    /* 審核資料 */
-    uint8_t month;	/* 生日 月 */
-    uint8_t   day;	/* 生日 日 */
-    uint8_t   year;	/* 生日 年 */
-    uint8_t   sex;	/* 性別 */
-    uint8_t   unused2;	/* unused */
-    uint8_t   pager;	/* 呼叫器狀態 */
-    uint8_t   invisible;	/* 隱形狀態 */
-    char    unused3[2];
+
+    char	unused_1[4];
+
+    char	email[50];	/* Email */
+    char	address[50];	/* 住址 */
+    char	justify[REGLEN + 1];/* 審核資料 */
+    uint8_t	month;		/* 生日 月 */
+    uint8_t	day;		/* 生日 日 */
+    uint8_t	year;		/* 生日 年 */
+    uint8_t	sex;		/* 性別 */
+
+    uint8_t	unused_2;
+
+    uint8_t	pager;		/* 呼叫器狀態 */
+    uint8_t	invisible;	/* 隱形狀態 */
+
+    char	unused_3[2];
+
     uint32_t    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
 
-    // r3968 移出 chicken 128 byte
-    // chicken_t       old_chicken;    
-    char    chkpad0[4];		/* 前面留空提高相容性(?) */
-    char    career[40];
-    char    phone[20];
-    char    chkpad1[52];
-    time4_t chkpad2[3];		/* in case 有人忘了把 time4_t 調好... */
+    // r3968 移出 sizeof(chicken_t)=128 bytes
+    char	chkpad0[4];
+
+    char	career[40];	/* 學歷職業 */
+    char	phone[20];	/* 電話 */
+
+    char	chkpad1[52];
+    time4_t	chkpad2[3];	/* in case 有人忘了把 time4_t 調好... */
     // 以上應為 sizeof(chicken_t) 同等大小
     
-    time4_t lastsong;		/* 上次點歌時間 */
-    uint32_t    loginview;	/* 進站畫面 */
-    uint8_t   channel;	/* TODO unused */
-    char    padxxx;
-    uint16_t  vl_count;	/* 違法記錄 ViolateLaw counter */
-    uint16_t  five_win;	/* 五子棋戰績 勝 */
-    uint16_t  five_lose;	/* 五子棋戰績 敗 */
-    uint16_t  five_tie;	/* 五子棋戰績 和 */
-    uint16_t  chc_win;	/* 象棋戰績 勝 */
-    uint16_t  chc_lose;	/* 象棋戰績 敗 */
-    uint16_t  chc_tie;	/* 象棋戰績 和 */
-    int32_t     mobile;		/* 手機號碼 */
-    char    mind[4];		/* 心情 not a null-terminate string */
-    uint16_t  go_win;	/* 圍棋戰績 勝 */
-    uint16_t  go_lose;	/* 圍棋戰績 敗 */
-    uint16_t  go_tie;	/* 圍棋戰績 和 */
-    char    pad0[5];		/* 從前放 ident 身份證字號，現在可以拿來做別的事了，
-				   不過最好記得要先清成 0 */
-    uint8_t   signature;	/* 慣用簽名檔 */
+    time4_t	lastsong;	/* 上次點歌時間 */
+    uint32_t	loginview;	/* 進站畫面 */
 
-    uint8_t   goodpost;	/* 評價為好文章數 */
-    uint8_t   badpost;	/* 評價為壞文章數 */
-    uint8_t   goodsale;	/* deprecated: 競標 好的評價  */
-    uint8_t   badsale;	/* deprecated: 競標 壞的評價  */
-    char    myangel[IDLEN+1];	/* 我的小天使 */
-    char    pad2;
-    uint16_t  chess_elo_rating;	/* 象棋等級分 */
-    uint32_t    withme;	/* 我想找人下棋，聊天.... */
-    time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
-    time4_t timeviolatelaw; /* 被開罰單時間 */
-    char    pad[28];
+    uint8_t	unused_4;	// was: channel
+    uint8_t	pad_2;
+
+    uint16_t	vl_count;	/* 違法記錄 ViolateLaw counter */
+    uint16_t	five_win;	/* 五子棋戰績 勝 */
+    uint16_t	five_lose;	/* 五子棋戰績 敗 */
+    uint16_t	five_tie;	/* 五子棋戰績 和 */
+    uint16_t	chc_win;	/* 象棋戰績 勝 */
+    uint16_t	chc_lose;	/* 象棋戰績 敗 */
+    uint16_t	chc_tie;	/* 象棋戰績 和 */
+    int32_t     mobile;		/* 手機號碼 */
+    char	mind[4];	/* 心情 XXX not a null-terminate string */
+    uint16_t	go_win;		/* 圍棋戰績 勝 */
+    uint16_t	go_lose;	/* 圍棋戰績 敗 */
+    uint16_t	go_tie;		/* 圍棋戰績 和 */
+
+    char	unused_5[5];	/* 從前放 ident 身份證字號，使用前請先清0 */
+
+    uint8_t	signature;	/* 慣用簽名檔 */
+    uint8_t	goodpost;	/* 評價為好文章數 */
+    uint8_t	badpost;	/* 評價為壞文章數 */
+    uint8_t	unused_6;	/* 從前放競標好評(goodsale), 使用前請先清0 */
+    uint8_t	unused_7;	/* 從前放競標壞評(badsale),  使用前請先清0 */
+    char	myangel[IDLEN+1];/* 我的小天使 */
+
+    char	pad_3;
+
+    uint16_t	chess_elo_rating;/* 象棋等級分 */
+    uint32_t    withme;		/* 我想找人下棋，聊天.... */
+    time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
+    time4_t	timeviolatelaw; /* 被開罰單時間 */
+
+    char	pad_tail[28];
 } PACKSTRUCT userec_t;
 
 /* flags in userec_t.withme */
@@ -143,38 +157,38 @@ typedef struct userec_t {
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */
-    char    brdname[IDLEN + 1];          /* bid */
+    char    brdname[IDLEN + 1];	    /* bid */
     char    title[BTLEN + 1];
-    char    BM[IDLEN * 3 + 3];           /* BMs' userid, token '/' */
+    char    BM[IDLEN * 3 + 3];	    /* BMs' userid, token '/' */
     char    pad1[3];
-    uint32_t    brdattr;             /* board的屬性 */
-    char    chesscountry;
-    uint8_t   vote_limit_posts;    /* 連署 : 文章篇數下限 */
-    uint8_t   vote_limit_logins;   /* 連署 : 登入次數下限 */
-    uint8_t   vote_limit_regtime;  /* 連署 : 註冊時間限制 */
-    time4_t bupdate;                     /* note update time */
-    uint8_t   post_limit_posts;    /* 發表文章 : 文章篇數下限 */
-    uint8_t   post_limit_logins;   /* 發表文章 : 登入次數下限 */
-    uint8_t   post_limit_regtime;  /* 發表文章 : 註冊時間限制 */
-    uint8_t   bvote;               /* 正舉辦 Vote 數 */
-    time4_t vtime;                       /* Vote close time */
-    uint32_t    level;               /* 可以看此板的權限 */
-    time4_t perm_reload;                 /* 最後設定看板的時間 */
-    int32_t     gid;                         /* 看板所屬的類別 ID */
-    int32_t     next[2];	                 /* 在同一個gid下一個看板 動態產生*/
-    int32_t     firstchild[2];	         /* 屬於這個看板的第一個子看板 */
-    int32_t     parent;
-    int32_t     childcount;                  /* 有多少個child */
-    int32_t     nuser;                       /* 多少人在這板 */
-    int32_t     postexpire;                  /* postexpire */
+    uint32_t brdattr;		    /* board的屬性 */
+    char    chesscountry;	    /* 棋國 */
+    uint8_t vote_limit_posts;	    /* 連署 : 文章篇數下限 */
+    uint8_t expired_vote_limit_logins;   /* (已停用) 連署 : 登入次數下限 */
+    uint8_t vote_limit_regtime;	    /* 連署 : 註冊時間限制 */
+    time4_t bupdate;		    /* note update time */
+    uint8_t post_limit_posts;	    /* 發表文章 : 文章篇數下限 */
+    uint8_t expired_post_limit_logins;   /* (已停用) 發表文章 : 登入次數下限 */
+    uint8_t post_limit_regtime;	    /* 發表文章 : 註冊時間限制 */
+    uint8_t bvote;		    /* 正舉辦 Vote 數 */
+    time4_t vtime;		    /* Vote close time */
+    uint32_t level;		    /* 可以看此板的權限 */
+    time4_t perm_reload;	    /* 最後設定看板的時間 */
+    int32_t gid;		    /* 看板所屬的類別 ID */
+    int32_t next[2];		    /* 在同一個gid下一個看板 動態產生*/
+    int32_t firstchild[2];	    /* 屬於這個看板的第一個子看板 */
+    int32_t parent;		    /* 這個看板的 parent 看板 bid */
+    int32_t childcount;		    /* 有多少個child */
+    int32_t nuser;		    /* 多少人在這板 */
+    int32_t postexpire;		    /* postexpire */
     time4_t endgamble;
     char    posttype[33];
     char    posttype_f;
-    uint8_t fastrecommend_pause;	/* 快速連推間隔 */
-    uint8_t vote_limit_badpost;   /* 連署 : 劣文上限 */
-    uint8_t post_limit_badpost;   /* 發表文章 : 劣文上限 */
+    uint8_t fastrecommend_pause;    /* 快速連推間隔 */
+    uint8_t vote_limit_badpost;	    /* 連署 : 劣文上限 */
+    uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
-    time4_t SRexpire;			/* SR Records expire time */
+    time4_t SRexpire;		    /* SR Records expire time */
     char    pad4[40];
 } PACKSTRUCT boardheader_t;
 
