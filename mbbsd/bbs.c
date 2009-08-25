@@ -2917,8 +2917,10 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char            genbuf[100], newpath[PATHLEN];
+#ifdef SAFE_ARTICLE_DELETE
     char	    reason[PROPER_TITLE_LEN];
+#endif
+    char            genbuf[100], newpath[PATHLEN];
     int             not_owned, is_anon, tusernum, del_ok = 0;
     boardheader_t  *bp;
 
