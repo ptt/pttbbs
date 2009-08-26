@@ -15,7 +15,7 @@ TALKOBJS = talk.o chat.o friend.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
 PAGEROBJS= more.o pmore.o
 PLUGOBJS = calendar.o topsong.o gamble.o vice.o angel.o
-CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
+CHESSOBJS= chess.o chc.o chc_tab.o ch_go.o ch_gomo.o ch_dark.o ch_reversi.o
 GAMEOBJS = card.o chicken.o
 OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
 	vote.o voteboard.o \
