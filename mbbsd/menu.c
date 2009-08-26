@@ -504,7 +504,6 @@ static const commands_t maillist[] = {
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
-    {x_love, PERM_LOGINOK,      "PPaper         情書產生器"},
 // #ifdef USE_MAIL_AUTO_FORWARD
     {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
 // #endif
