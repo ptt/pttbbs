@@ -3,35 +3,37 @@
 #define _UTIL_C_
 #include "bbs.h"
 
+#define TYPE_POST       0
+#define TYPE_MONEY      1
+
+#define TYPE_COUNT	2
+
 #define REAL_INFO
 struct manrec
 {
     char userid[IDLEN + 1];
     char nickname[23];
-    int values[3];
+    int values[TYPE_COUNT];
 };
 typedef struct manrec manrec;
-struct manrec *allman[3];
+struct manrec *allman[TYPE_COUNT];
 
 userec_t aman;
 manrec theman;
 int num;
 FILE *fp;
 
-#define TYPE_POST       0
-#define TYPE_LOGIN      1
-#define TYPE_MONEY      2
-
 
 void
  top(type)
 {
-    static char *str_type[3] =
-    {"發表次數", "進站次數", " 大富翁 "};
+    static char *str_type[TYPE_COUNT] =
+    {"發表次數", " 大富翁 "};
     int i, j, rows = (num + 1) / 2;
     char buf1[80], buf2[80];
 
-    if (type != 2)
+    assert(type < TYPE_COUNT);
+    if (type != TYPE_COUNT-1)
 	fprintf(fp, "\n\n");
 
     fprintf(fp, "\
@@ -111,11 +113,11 @@ int main(int argc, char **argv)
 	printf("Sorry, the data is not ready.\n");
 	exit(0);
     }
-    for(i=0; i<3; i++)
-     {
-       allman[i]=malloc(sizeof(manrec) * num);
-       memset(allman[i],0,sizeof(manrec) * num);    
-     }
+    for(i=0; i<TYPE_COUNT; i++)
+    {
+	allman[i]=malloc(sizeof(manrec) * num);
+	memset(allman[i],0,sizeof(manrec) * num);    
+    }
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &aman);
         aman.userid[IDLEN]=0;
@@ -129,10 +131,9 @@ int main(int argc, char **argv)
 	else {
 	    strcpy(theman.userid, aman.userid);
 	    strcpy(theman.nickname, aman.nickname);
-	    theman.values[TYPE_LOGIN] = aman.numlogins;
             theman.values[TYPE_POST] =  aman.numposts;
             theman.values[TYPE_MONEY] = aman.money;
-            for(i=0; i<3; i++)
+            for(i=0; i<TYPE_COUNT; i++)
 	     {
 	        int k,l;
                 for(k=num-1; k>=0 && allman[i][k].values[i]<theman.values[i];
@@ -158,7 +159,6 @@ int main(int argc, char **argv)
 
     top(TYPE_MONEY);
     top(TYPE_POST);
-    top(TYPE_LOGIN);
 
     fclose(fp);
     return 0;
