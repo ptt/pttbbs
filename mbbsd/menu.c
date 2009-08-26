@@ -266,7 +266,15 @@ movie(int cmdmode)
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
     } else {
-	i = N_SYSMOVIE + (int)(((float)SHM->last_film - N_SYSMOVIE + 1) * (random() / (RAND_MAX + 1.0)));
+	// do not use random. we work in slide show mode. 
+	// since menu is updated per hour, the total presentation time 
+	// should be less than one hour. 3600/MAX_MOVIE(500)=7.
+	// syncnow();
+	if (SHM->last_film > N_SYSMOVIE)
+	    i = N_SYSMOVIE + (now / (3600 / MAX_MOVIE) ) % 
+		(SHM->last_film+1-N_SYSMOVIE);
+	else
+	    i = 0; // SHM->last_film;
     }
 
     move(1, 0);
@@ -277,6 +285,10 @@ movie(int cmdmode)
     out_lines(SHM->notes[i], 11, 0);	/* 只印11行就好 */
 #endif
     outs(ANSI_RESET);
+#ifdef DEBUG
+    // XXX piaip test
+    move(FILMROW, 0); prints(" [ %d ] ", i);
+#endif
 }
 
 typedef struct {

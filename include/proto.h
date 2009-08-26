@@ -141,7 +141,6 @@ int give_money_ui(const char *userid);
 int p_give(void);
 int p_cloak(void);
 int p_from(void);
-int ordersong(void);
 int p_exmail(void);
 int mail_redenvelop(const char* from, const char* to, int money, char *fpath);
 void resolve_over18(void);
@@ -604,9 +603,9 @@ int  term_init(void);
 void term_resize(int w, int h);
 void bell(void);
 
-/* topsong */
-void sortsong(void);
-int topsong(void);
+/* ordersong */
+int  ordersong(void);
+int  topsong(void);
 
 /* user */
 int kill_user(int num, const char *userid);
