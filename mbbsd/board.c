@@ -867,7 +867,7 @@ load_boards(char *key)
 
     // override type in class root, because usually we don't need to sort
     // class root; and there may be out-of-sync in that mode.
-    if (IN_CLASSROOT)
+    if (IN_CLASSROOT())
 	type = 1;
 
     brdnum = 0;
