@@ -89,13 +89,18 @@ static int retrieve_backup(userec_t *user)
     return -1;
 }
 
-void 
+int 
 upgrade_passwd(userec_t *puser)
 {
     if (puser->version == PASSWD_VERSION)
-	return;
+	return 1;
     if (!puser->userid[0])
-	return;
+	return 1;
+    // unknown version
+    return 0;
+
+#if 0
+    // this is a sample.
     if (puser->version == 2275) // chicken change
     {
 	memset(puser->career,  0, sizeof(puser->career));
@@ -103,8 +108,10 @@ upgrade_passwd(userec_t *puser)
 	memset(puser->chkpad0, 0, sizeof(puser->chkpad0));
 	memset(puser->chkpad1, 0, sizeof(puser->chkpad1));
 	memset(puser->chkpad2, 0, sizeof(puser->chkpad2));
+	puser->lastseen= 0;
 	puser->version = PASSWD_VERSION;
 	return;
+#endif
     }
 }
 
@@ -159,7 +166,8 @@ search_key_user(const char *passwdfile, int mode)
 	}
 
 	// XXX 這裡會取舊資料，要小心 PWD 的 upgrade
-	upgrade_passwd(&user);
+	if (!upgrade_passwd(&user))
+	    continue;
 
         keymatch = NULL;
 
