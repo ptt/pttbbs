@@ -272,10 +272,15 @@ friend_validate(int type, int expire)
 	if (searchuser(buf, NULL))
 	{
 	    if (expire > 0) {
+		userec_t *pu = &u;
 		// drop user if (now-lastlogin) longer than expire*month
 		getuser(buf, &u);
 
-		if (now - u.lastlogin > expire)
+		// XXX lastlogin was NOT counting people with PERM_HIDE...
+		// although we will have 'lastseen' in future,
+		// never count people with PERM_HIDE.
+		if (!(PERM_HIDE(pu)) &&
+		    now - u.lastlogin > expire)
 		    continue;
 	    }
 	    fputs(genbuf, nfp);
