@@ -111,8 +111,8 @@ upgrade_passwd(userec_t *puser)
 	puser->lastseen= 0;
 	puser->version = PASSWD_VERSION;
 	return;
-#endif
     }
+#endif
 }
 
 static int
