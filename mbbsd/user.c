@@ -269,7 +269,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 }
 
 void
-kick_all(char *user)
+kick_all(const char *user)
 {
    userinfo_t *ui;
    int num = searchuser(user, NULL), i=1;

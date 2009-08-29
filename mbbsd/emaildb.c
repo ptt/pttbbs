@@ -5,7 +5,7 @@
 
 #ifdef USE_EMAILDB
 
-int emaildb_check_email(char * email, int email_len)
+int emaildb_check_email(const char * email, int email_len)
 {
     int count = -1;
     int fd = -1;
@@ -38,7 +38,7 @@ int emaildb_check_email(char * email, int email_len)
     return count;
 }
 
-int emaildb_update_email(char * userid, int userid_len, char * email, int email_len)
+int emaildb_update_email(const char * userid, int userid_len, const char * email, int email_len)
 {
     int result = -1;
     int fd = -1;

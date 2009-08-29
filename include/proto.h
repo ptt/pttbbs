@@ -187,8 +187,8 @@ const char *ask_tmpbuf(int y);
 
 /* emaildb */
 #ifdef USE_EMAILDB
-int emaildb_check_email(char * email, int email_len);
-int emaildb_update_email(char * userid, int userid_len, char * email, int email_len);
+int emaildb_check_email (const char *email,  int email_len);
+int emaildb_update_email(const char *userid, int userid_len, const char *email, int email_len);
 #endif
 #ifdef USE_REGCHECKD
 int regcheck_ambiguous_userid_exist(const char *userid);
@@ -615,7 +615,7 @@ int isvalidemail(char *email);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
 int u_cancelbadpost();
-void kick_all(char *user);
+void kick_all(const char *user);
 void violate_law(userec_t * u, int unum);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
 int u_info(void);
