@@ -646,11 +646,9 @@ vote_maintain(const char *bname)
 	    closetime = atoi(inbuf);	// borrow variable
 	} while (closetime < 0 || closetime > 120);
 	fprintf(fp, "%d\n", now - (MONTH_SECONDS * closetime));
-	do {
-	    getdata(6, 0, "上站次數下限", inbuf, 6, DOECHO);
-	    closetime = atoi(inbuf);	// borrow variable
-	} while (closetime < 0);
-	fprintf(fp, "%d\n", closetime);
+
+	fprintf(fp, "%d\n", 0);	// was: numlogins
+
 	do {
 	    getdata(6, 0, "文章篇數下限", inbuf, 6, DOECHO);
 	    closetime = atoi(inbuf);	// borrow variable
