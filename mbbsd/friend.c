@@ -512,17 +512,16 @@ friend_edit(int type)
 		dirty = 1;
 	    }
 	} else if (uident[0] == 'c') {
-	    int expire, badpost;
+	    int expire = 0, badpost = 0;
 	    getdata(2, 0, 
 		    "要從名單中清除幾個月沒上站(包含帳號已消失)的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
 	    expire = atoi(uident);
-	    if (HasUserPerm(PERM_BM | PERM_SYSOP))
-	    {
-		getdata(3, 0, 
-			"要從名單中清除有幾篇以上劣文的使用者？ (0=不清除)[0] ",
-			uident, 4, NUMECHO);
-	    }
+#ifdef ASSESS
+	    getdata(3, 0, 
+		    "要從名單中清除有幾篇以上劣文的使用者？ (0=不清除)[0] ",
+		    uident, 4, NUMECHO);
+#endif
 	    badpost = atoi(uident);
 
 	    // delete all users that not in list.

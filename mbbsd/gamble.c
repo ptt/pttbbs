@@ -258,7 +258,13 @@ openticket(int bid)
     do {
 	do {
 	    getdata(20, 0,
-		    ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退錢)" ANSI_RESET ":", buf, 3, LCECHO);
+#ifdef USE_PFTERM
+		ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退錢)" 
+		ANSI_RESET ":"
+#else
+		"選擇中獎的號碼(0:不開獎 99:取消退錢):"
+#endif
+		    , buf, 3, LCECHO);
 	    bet = atoi(buf);
 	    move(0, 0);
 	    clrtoeol();
@@ -267,7 +273,13 @@ openticket(int bid)
 	    unlockutmpmode();
 	    return 0;
 	}
-	getdata(21, 0, ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":", buf, 3, LCECHO);
+	getdata(21, 0, 
+#ifdef USE_PFTERM
+		ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":"
+#else
+		"再次確認輸入號碼:"
+#endif
+		, buf, 3, LCECHO);
     } while (bet != atoi(buf));
 
     // before we fork to process, 

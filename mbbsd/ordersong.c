@@ -45,15 +45,15 @@ do_order_song(void)
 	     "公然侮辱 誹謗\n"
 	     "若有上述違規情形，站方將保留決定是否公開播放的權利\n"
 	     "如不同意請按 (3) 離開。" ANSI_RESET "\n");
+	getdata(18, 0, 
 #ifdef USE_PFTERM
-	getdata(18, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
+		"請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
 		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
-		ans, sizeof(ans), DOECHO);
 #else
-	getdata(18, 0, "請選擇 1)開始點歌 2)看歌本 3)離開: ",
-		ans, sizeof(ans), DOECHO);
+		"請選擇 1)開始點歌 2)看歌本 3)離開: ",
 #endif
+		ans, sizeof(ans), DOECHO);
 
 	if (ans[0] == '1')
 	    break;

@@ -1231,7 +1231,12 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 
     if (!CheckPostRestriction(currbid))
     {
-	getdata(b_lines - 1, 0,	ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
+	getdata(b_lines - 1, 0,	
+#ifdef USE_PFTERM
+		ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
+#else
+		"▲ 無法回應至看板。 "
+#endif
 		"改回應至 (M)作者信箱 (Q)取消？[Q] ",
 		genbuf, sizeof(genbuf), LCECHO);
 	switch (genbuf[0]) {
