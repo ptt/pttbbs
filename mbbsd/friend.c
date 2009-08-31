@@ -234,7 +234,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 #define MAX_EXPIRE_MONTH (800)
 
 int
-friend_validate(int type, int expire)
+friend_validate(int type, int expire, int badpost)
 {
     FILE *fp = NULL, *nfp = NULL;
     char fpath[PATHLEN];
@@ -247,6 +247,8 @@ friend_validate(int type, int expire)
 	expire *= DAY_SECONDS *30;
     else
 	expire = 0;
+    if (badpost < 0 || badpost > UCHAR_MAX)
+	badpost = 0;
     syncnow();
 
     setfriendfile(fpath, type);
@@ -271,17 +273,25 @@ friend_validate(int type, int expire)
 
 	if (searchuser(buf, NULL))
 	{
-	    if (expire > 0) {
+	    if (expire > 0 || badpost > 0) {
 		userec_t *pu = &u;
 		// drop user if (now-lastlogin) longer than expire*month
 		getuser(buf, &u);
 
-		// XXX lastlogin was NOT counting people with PERM_HIDE...
-		// although we will have 'lastseen' in future,
-		// never count people with PERM_HIDE.
-		if (!(PERM_HIDE(pu)) &&
-		    now - u.lastlogin > expire)
-		    continue;
+		if (expire > 0)
+		{
+		    // XXX lastlogin was NOT counting people with PERM_HIDE...
+		    // although we will have 'lastseen' in future,
+		    // never count people with PERM_HIDE.
+		    if (!(PERM_HIDE(pu)) &&
+			    now - u.lastlogin > expire)
+			continue;
+		}
+		if (badpost > 0)
+		{
+		    if (u.badpost >= badpost)
+			continue;
+		}
 	    }
 	    fputs(genbuf, nfp);
 	}
@@ -491,9 +501,8 @@ friend_edit(int type)
 	}
 	getdata(1, 0, (count ?
 		    "(A)增加(D)刪除(E)修改(P)引入(L)列出(K)清空"
-		    ANSI_COLOR(33) "(C)整理有效名單" ANSI_RESET
-		    "(W)水球(Q)結束?[Q] " :
-		       "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
+		    "(C)整理有效名單(W)水球(Q)結束?[Q] " :
+		    "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
 		uident, 3, LCECHO);
 	if (uident[0] == 'a') {
 	    move(1, 0);
@@ -503,11 +512,21 @@ friend_edit(int type)
 		dirty = 1;
 	    }
 	} else if (uident[0] == 'c') {
+	    int expire, badpost;
 	    getdata(2, 0, 
-		    "要從名單中清除幾個月沒上站(包含帳號已消失)的使用者？",
+		    "要從名單中清除幾個月沒上站(包含帳號已消失)的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
+	    expire = atoi(uident);
+	    if (HasUserPerm(PERM_BM | PERM_SYSOP))
+	    {
+		getdata(3, 0, 
+			"要從名單中清除有幾篇以上劣文的使用者？ (0=不清除)[0] ",
+			uident, 4, NUMECHO);
+	    }
+	    badpost = atoi(uident);
+
 	    // delete all users that not in list.
-	    friend_validate(type, atoi(uident));
+	    friend_validate(type, expire, badpost);
 	    dirty = 1;
 	} else if (uident[0] == 'p') {
 	    friend_append(type, count);
