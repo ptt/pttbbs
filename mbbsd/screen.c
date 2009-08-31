@@ -160,7 +160,8 @@ getyx_ansi(int *py, int *px)
     if (slp->len < 1)
 	return;
     c = slp->data[x];
-    *px += (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
+    slp->data[x] = 0;
+    *px -= (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
     slp->data[x] = c;
 }
 

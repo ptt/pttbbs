@@ -3254,6 +3254,8 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     outc(' '); outs(ANSI_CLRTOEND);
     move(area_l, 0);
 
+    // TODO XXX support wide terminal someday.
+
     prints("¢z¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢{\n");
 
     aidu = fn2aidu((char *)fhdr->filename);
