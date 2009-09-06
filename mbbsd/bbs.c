@@ -1129,7 +1129,7 @@ do_general(int garbage)
 	    {
 		demoney(money);    
 		addPost = 1;
-		prints("這是您的第 %d 篇有效文章，稿酬 %d 元",
+		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元",
 			++cuser.numposts, money);
 	    } else {
 		// no money, no record.
