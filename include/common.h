@@ -43,6 +43,10 @@
 #define FN_BOARDHELP	"etc/board.help"
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
+#define FN_RECENTLOGIN	"logins.recent"	// in user directory
+#ifndef SZ_RECENTLOGIN
+#define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation
+#endif
 
 
 // 自訂刪除文章時出現的標題與檔案

@@ -570,10 +570,21 @@ static const commands_t namelist[] = {
     {NULL, 0, NULL}
 };
 
+static int u_view_recentlogin()
+{
+    char fn[PATHLEN];
+    setuserfile(fn, FN_RECENTLOGIN);
+    return more(fn, YEA);
+}
 
 static const commands_t myfilelist[] = {
     {u_editplan,    PERM_LOGINOK,   "QQueryEdit     編輯名片檔"},
     {u_editsig,	    PERM_LOGINOK,   "SSignature     編輯簽名檔"},
+    {NULL, 0, NULL}
+};
+
+static const commands_t myuserlog[] = {
+    {u_view_recentlogin, 0,   "LLRecent Login  最近上站記錄"},
     {NULL, 0, NULL}
 };
 
@@ -584,6 +595,12 @@ u_myfiles()
     return 0;
 }
 
+static int
+u_mylogs()
+{
+    domenu(M_UMENU, "個人記錄", 'L', myuserlog);
+    return 0;
+}
 
 int u_fixgoodpost(void); // assess.c
 void Customize(); // user.c
@@ -601,8 +618,9 @@ static const commands_t userlist[] = {
     {u_customize,   PERM_BASIC,	    "UUCustomize    個人化設定"},
     {u_info,	    PERM_LOGINOK,   "IInfo          設定個人資料與密碼"},
     {calendar,	    PERM_LOGINOK,   "CCalendar      行事曆"},
-    {u_loginview,   PERM_BASIC,     "LLogin View    選擇進站畫面"},
+    {u_loginview,   PERM_BASIC,     "VVLogin View    選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
+    {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線...)"},
 #if HAVE_FREECLOAK
     {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},
 #else

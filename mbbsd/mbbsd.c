@@ -1151,6 +1151,26 @@ inline static void check_bad_login(void)
     }
 }
 
+inline static void append_log_recent_login()
+{
+    char buf[STRLEN], logfn[PATHLEN];
+    int szlogfn = 0, szlogentry = 0;
+
+    // prepare log format
+    snprintf(buf, sizeof(buf), "%s %-15s\n", 
+	    Cdatelite(&login_start_time), fromhost);
+    szlogentry = strlen(buf);	// should be the same for all entries
+    
+    setuserfile(logfn, FN_RECENTLOGIN);
+    szlogfn = dashs(logfn);
+    if (szlogfn > SZ_RECENTLOGIN) {
+	// rotate to 1/4 of SZ_RECENTLOGIN
+	delete_records(logfn, szlogentry, 1, 
+		(szlogfn-(SZ_RECENTLOGIN/4)) / szlogentry);
+    }
+    log_file(logfn, LOG_CREAT, buf);
+}
+
 inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm *tmp)
 {
     if (tmp->tm_mday != ptime->tm_mday) {
@@ -1302,6 +1322,8 @@ user_login(void)
 	    if( vans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
 		currutmp->birth = 1;
 	}
+
+	append_log_recent_login();
 	check_bad_login();
 	check_mailbox_quota();
 	check_birthday();
