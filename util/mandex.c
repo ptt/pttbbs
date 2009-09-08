@@ -108,6 +108,7 @@ man_index(const char * brdname)
     stat(buf, &st);
     curr_brdinfo.k = st.st_size;
     printf("(%s)[%dK] d: %d f: %d\n", buf, curr_brdinfo.k, curr_brdinfo.ndir, curr_brdinfo.nfile);
+    fflush(stdout); // in case the output is redirected...
 
     setdirpath(fpath, buf, fn_index);
     rename(buf, fpath);
@@ -198,7 +199,7 @@ output_chart(const boardinfo_t * board, const int nbrds)
     }
     fclose(fp);
 }
-static boardinfo_t board[MAX_BOARD];
+static boardinfo_t board[MAX_BOARD+1];
 static const char dirs[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
@@ -257,10 +258,22 @@ int main(int argc, char* argv[])
 
     /* process all boards */
     if (checkrebuild &&	(fd = open("man/.rank.cache", O_RDONLY)) >= 0) {
+	int dirty = 0;
 	read(fd, board, sizeof(board));
 	close(fd);
 	qsort(board, MAX_BOARD, sizeof(boardinfo_t), sortbyname);
-	for (nb = 0; board[nb].bname[0] != 0; ++nb);
+	for (nb = 0; board[nb].bname[0] != 0; ++nb) {
+	    /* delete non-exist boards */
+	    if (getbnum(board[nb].bname) == 0) {
+		memset(&(board[nb]), 0, sizeof(boardinfo_t));
+		dirty = 1;
+	    }
+	}
+	/* sort again if dirty */
+	if (dirty) {
+	    qsort(board, MAX_BOARD, sizeof(boardinfo_t), sortbyname);
+	    for (nb = 0; board[nb].bname[0] != 0; ++nb);
+	}
 	nSorted = nb;
     } else {
 	memset(board, 0, sizeof(board));
@@ -285,6 +298,7 @@ int main(int argc, char* argv[])
 		sprintf(fpath, "man/boards/%c/%s/.rebuild", dirs[i], fname);
 		if (access(fpath, 0) < 0) {
 		    printf("skip no modify board %s\n", fname);
+		    fflush(stdout); // in case the output is redirected...
 		    continue;
 		}
 		unlink(fpath);
@@ -292,11 +306,22 @@ int main(int argc, char* argv[])
 
 	    man_index(fname);
 
-	    if (curr_brdinfo.k) {
-		if (!(biptr = bsearch(fname, board, nSorted, sizeof(boardinfo_t), sortbyname)))
-		    biptr = &board[nb++];
-		memcpy(biptr, &curr_brdinfo, sizeof(boardinfo_t));
+	    if (!curr_brdinfo.k)
+		continue;
+
+	    // determine if this board was not seen in partial update queue
+	    biptr = bsearch(fname, board, nSorted, sizeof(boardinfo_t), sortbyname);
+	    if (!biptr)
+	    {
+		// give up if exceeded max entry
+		if (nb >= MAX_BOARD)
+		    continue;
+		biptr = &board[nb++];
 	    }
+
+	    // update record
+	    assert(biptr);
+	    memcpy(biptr, &curr_brdinfo, sizeof(boardinfo_t));
 	}
 	closedir(dirp);
     }
