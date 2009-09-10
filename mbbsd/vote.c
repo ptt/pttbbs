@@ -789,7 +789,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	fclose(lfp);
 	// XXX if this is a private vote (limited), I think we don't need to check limits?
 	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
-		cuser.numlogins < limits_logins) {
+		cuser.numlogindays < limits_logins) {
 	    vmsg("你不夠資深喔！");
 	    return FULLUPDATE;
 	}

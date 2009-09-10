@@ -170,9 +170,7 @@ anticrosspost(void)
              cuser.userid, Cdatelite(&now));
     post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
 	    "Cross-post", "罰單處份");
-    cuser.userlevel |= PERM_VIOLATELAW;
-    cuser.timeviolatelaw = now;
-    cuser.vl_count++;
+    pwcuViolateLaw();
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", BBSMNAME "警察部隊");
     if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
@@ -243,17 +241,14 @@ save_violatelaw(void)
     }
 
     demoney(-1000 * cuser.vl_count);
-    cuser.userlevel &= (~PERM_VIOLATELAW);
-    // force overriding alerts
-    if(currutmp)
-	currutmp->alerts &= ~ALERT_PWD_PERM;
-    passwd_sync_update(usernum, &cuser);
-    sendalert(cuser.userid, ALERT_PWD_PERM);
+    pwcuSaveViolateLaw();
     log_filef("log/violation", LOG_CREAT,
 	    "%s %s pay-violation: $%d complete.\n", 
 	    Cdate(&now), cuser.userid, (int)cuser.vl_count*1000);
 
-    vmsg("罰單已付，請盡速重新登入。");
+    vmsg("罰單已付，請重新登入。");
+    u_exit("save_violate");
+    exit(0);
     return 0;
 }
 
@@ -345,6 +340,13 @@ CheckPostPerm(void)
     
     if (currmode & MODE_DIGEST)
 	return 0;
+
+    // check if my own permission is changed.
+    if (ISNEWPERM(currutmp))
+    {
+	currmode &= ~MODE_POSTCHECKED;
+	pwcuReload();
+    }
 
     if (currmode & MODE_POSTCHECKED)
     {
@@ -908,7 +910,8 @@ do_general(int garbage)
     int i, j;
     int             defanony, ifuseanony;
     int             money = 0;
-    char            genbuf[PATHLEN], *owner;
+    char            genbuf[PATHLEN];
+    const char	    *owner;
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
 				   "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
@@ -1128,9 +1131,10 @@ do_general(int garbage)
             if (money > 0)
 	    {
 		demoney(money);    
+		pwcuIncNumPost();
 		addPost = 1;
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元",
-			++cuser.numposts, money);
+			cuser.numposts, money);
 	    } else {
 		// no money, no record.
 		outs("本篇不列入記錄，敬請包涵。");
@@ -2351,14 +2355,6 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 5, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-#ifdef ASSESS
-    // to save resource
-    if (fhdr->recommend > 9)
-    {
-	inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
-	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
-    }
-#endif
     fhdr->recommend = 0;
 
     substitute_ref_record(direct, fhdr, ent);
@@ -2445,9 +2441,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
-#ifdef ASSESS
-    char oldrecom = fhdr->recommend;
-#endif // ASSESS
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
@@ -2726,7 +2719,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	static  int tolog = 0;
 	if( tolog == 0 )
 	    tolog =
-		(cuser.numlogins < 50 || (now - cuser.firstlogin) < DAY_SECONDS * 7)
+		(cuser.numlogindays < 50 || (now - cuser.firstlogin) < DAY_SECONDS * 7)
 		? 1 : 2;
 	if( tolog == 1 ){
 	    FILE   *fp;
@@ -2774,20 +2767,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     do_add_recommend(direct, fhdr,  ent, buf, type);
-
-#ifdef ASSESS
-    /* 每 10 次推文 加一次 goodpost */
-    // TODO 轉來的怎麼辦？
-    // when recommend reaches MAX_RECOMMENDS...
-    if (type == RECTYPE_GOOD && (fhdr->filemode & FILE_MARKED) &&
-	(fhdr->recommend != oldrecom) &&
-	fhdr->recommend % 10 == 0)
-    {
-	inc_goodpost(fhdr->owner, 1);
-	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
-    }
-#endif
-
     lastrecommend = now;
     lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
@@ -2810,23 +2789,6 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     fhdr->filemode ^= FILE_MARKED;
-
-#ifdef ASSESS
-    if (fhdr->filemode & FILE_MARKED) 
-    {
-	if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
-	{
-	    inc_goodpost(fhdr->owner, fhdr->recommend / 10);
-	    sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
-	}
-    }
-    else if (fhdr->recommend > 9)
-    {
-	inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
-	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
-    }
-#endif
- 
     substitute_ref_record(direct, fhdr, ent);
     check_locked(fhdr);
     return PART_REDRAW;
@@ -3072,7 +3034,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			xuser.timeviolatelaw = now;  
 			passwd_sync_update(tusernum, &xuser);
 		       }
-		       sendalert(userid,  ALERT_PWD_BADPOST);
+		       sendalert(userid,  ALERT_PWD_PERM);
 		       mail_id(userid, genbuf, newpath, cuser.userid);
 
 #ifdef BAD_POST_RECORD
@@ -3130,15 +3092,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (tusernum)
 		{
 		    userec_t xuser;
-		    passwd_sync_query(tusernum, &xuser);
-		    if (xuser.numposts)
-			xuser.numposts--;
-		    passwd_sync_update(tusernum, &xuser);
-		    sendalert_uid(tusernum, ALERT_PWD_POSTS);
-
-		    // TODO alert user?
+		    assert(tusernum != usernum);
+		    // TODO we're doing redundant i/o here... merge and refine someday
+		    if (passwd_sync_query(tusernum, &xuser) == 0) {
+			if (xuser.numposts > 0)
+			    xuser.numposts--;
+			passwd_sync_update(tusernum, &xuser);
+		    }
 		    deumoney(tusernum, -fhdr->multi.money);
-
+		    sendalert_uid(tusernum, ALERT_PWD_PERM);
 #ifdef USE_COOLDOWN
 		    if (bp->brdattr & BRD_COOLDOWN)
 			add_cooldowntime(tusernum, 15);
@@ -3148,11 +3110,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    else
 	    {
 		// owner case
-		if (cuser.numposts){
-		    cuser.numposts--;
-		    sendalert(cuser.userid, ALERT_PWD_POSTS);
-		}
+		pwcuDecNumPost();
 		demoney(-fhdr->multi.money);
+		sendalert(cuser.userid, ALERT_PWD_PERM);
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
 			cuser.numposts, fhdr->multi.money);
 	    }
@@ -3932,11 +3892,3 @@ Select(void)
     return do_select();
 }
 
-#ifdef HAVEMOBILE
-void
-mobile_message(const char *mobile, char *message)
-{
-    // this is for validation.
-    bsmtp(fpath, title, rcpt, "non-exist");
-}
-#endif

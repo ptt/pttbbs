@@ -1,4 +1,5 @@
 /* $Id$ */
+#define PWCU_IMPL
 #include "bbs.h"
 
 #define FN_REGISTER_LOG  "register.log"	// global registration history
@@ -245,12 +246,6 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 30 - value;
 #endif
 
-#if 0
-    if (!urec->numlogins)	/* 未 login 成功者，不保留 */
-	return -1;
-    if (urec->numlogins <= 3)	/* #login 少於三者，保留 20 天 */
-	return 20 * 24 * 60 - value;
-#endif
     /* 未完成註冊者，保留 15 天 */
     /* 一般情況，保留 120 天 */
     return (urec->userlevel & PERM_LOGINOK ? 120 : 15) * 24 * 60 - value;
@@ -264,7 +259,7 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
     if ((val = compute_user_value(urec, now)) < 0) {
 	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %s %d %d %d",
 		 uid, urec->userid, Cdatelite(&(urec->lastlogin)),
-		 urec->numlogins, urec->numposts, val);
+		 urec->numlogindays, urec->numposts, val);
 
 	// 若超過 expireRange 則砍人，
 	// 不然就 return 0
@@ -514,12 +509,7 @@ email_justify(const userec_t *muser)
 	snprintf(buf, sizeof(buf),
 		 " " BBSENAME " - [ %s ]", makeregcode(genbuf));
 
-#ifdef HAVEMOBILE
-	if (strcmp(muser->email, "m") == 0 || strcmp(muser->email, "M") == 0)
-	    mobile_message(mobile, buf);
-	else
-#endif
-	    bsmtp("etc/registermail", buf, muser->email, "non-exist");
+	bsmtp("etc/registermail", buf, muser->email, "non-exist");
         move(20,0);
         clrtobot();
 	outs("我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
@@ -958,56 +948,6 @@ check_regmail(char *email)
     return allow;
 }
 
-void 
-check_birthday(void)
-{
-    // check birthday
-    int changed = 0;
-    time_t t = (time_t)now;
-    struct tm tm;
-
-    localtime_r(&t, &tm);
-    while ( cuser.year < 40 || // magic number 40: see user.c
-	    cuser.year+3 > tm.tm_year) 
-    {
-	char birthday[sizeof("mmmm/yy/dd ")];
-	int y, m, d;
-
-	clear();
-	vs_hdr("輸入生日");
-	move(2,0);
-	outs("本站為配合實行內容分級制度，請您輸入正確的生日資訊。");
-
-	getdata(5, 0, "生日 (西元年/月/日, 如 " DATE_SAMPLE ")：", birthday,
-		sizeof(birthday), DOECHO);
-
-	if (strcmp(birthday, DATE_SAMPLE) == 0) {
-	    vmsg("不要複製範例！ 請輸入你真實生日");
-	    continue;
-	} 
-	if (ParseDate(birthday, &y, &m, &d)) {
-	    vmsg("日期格式不正確");
-	    continue;
-	} else if (y < 1930) {
-	    vmsg(MSG_ERR_TOO_OLD);
-	    continue;
-	} else if (y+3 > tm.tm_year+1900) {
-	    vmsg(MSG_ERR_TOO_YOUNG);
-	    continue;
-	}
-
-	cuser.year  = (unsigned char)(y-1900);
-	cuser.month = (unsigned char)m;
-	cuser.day   = (unsigned char)d;
-	changed = 1;
-    }
-
-    if (changed) {
-	clear();
-	resolve_over18();
-    }
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // User Registration (Phase 2: Validation)
 /////////////////////////////////////////////////////////////////////////////
@@ -1115,7 +1055,7 @@ check_register(void)
 	 "  通告站長以獲得進階使用權力。\n\n");
 
     outs("  如果您之前曾使用 email 等認證方式通過註冊認證但又看到此訊息，\n"
-	 "  代表您的認證由於資料不完整已被取消。\n");
+	 "  代表您的認證由於資料不完整已被取消 (常見於申請開新看板的板主)。\n");
 
     u_register();
 
@@ -1152,8 +1092,7 @@ create_regform_request()
     file_append_record(FN_REQLIST, cuser.userid);
 
     // save justify information
-    snprintf(cuser.justify, sizeof(cuser.justify),
-	    "<Manual>");
+    pwcuRegSetTemporaryJustify("<Manual>", "x");
     return 1;
 }
 
@@ -1182,12 +1121,6 @@ toregister(char *email)
 	 "* 輸入後發生認證碼錯誤請重填一次 E-Mail                  *\n"
 	 "**********************************************************\n");
 
-#ifdef HAVEMOBILE
-    outs("  3.若您有手機門號且想採取手機簡訊認證的方式 , 請輸入 m \n"
-	 "    我們將會寄發含有認證碼的簡訊給您 \n"
-	 "    收到後請到(U)ser => (R)egister 輸入認證碼, 即可通過認證\n");
-#endif
-
     while (1) {
 	email[0] = 0;
 	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, 50);
@@ -1195,24 +1128,6 @@ toregister(char *email)
 	if (strcmp(email, "X") == 0) email[0] = 'x';
 	if (strcmp(email, "x") == 0)
 	    break;
-#ifdef HAVEMOBILE
-	else if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0) {
-	    if (isvalidmobile(mobile)) {
-		char            yn[3];
-		getdata(16, 0, "請再次確認您輸入的手機號碼正確嘛? [y/N]",
-			yn, sizeof(yn), LCECHO);
-		if (yn[0] == 'y')
-		    break;
-	    } else {
-		move(15, 0); clrtobot();
-		move(17, 0);
-		outs("指定的手機號碼不正確,"
-		       "若您無手機門號請選擇其他方式認證");
-		pressanykey();
-	    }
-
-	}
-#endif
 	else if (check_regmail(email)) {
 	    char            yn[3];
 #ifdef USE_EMAILDB
@@ -1272,25 +1187,16 @@ toregister(char *email)
 	return;
     }
 #endif
-    strlcpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if (!create_regform_request())
-	{
 	    vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
-	}
     } else {
 	// register by mail or mobile
-	snprintf(cuser.justify, sizeof(cuser.justify), "<Email>");
-#ifdef HAVEMOBILE
-	if (phone != NULL && email[1] == 0 && tolower(email[0]) == 'm')
-	    snprintf(cuser.justify, sizeof(cuser.justify),
-		    "<Mobile>");
-#endif
-       email_justify(&cuser);
+	pwcuRegSetTemporaryJustify("<Email>", email);
+	email_justify(cuser_ref);
     }
 }
-
 
 int
 u_register(void)
@@ -1301,9 +1207,7 @@ u_register(void)
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
-#ifdef FOREIGN_REG
     int             isForeign = (cuser.uflag2 & FOREIGN) ? 1 : 0;
-#endif
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
@@ -1319,7 +1223,8 @@ u_register(void)
 	move(3, 0);
 	prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
 	outs("   * 如果您之前曾使用 email 等認證方式通過註冊認證但又看到此訊息，\n"
-	     "     代表您的認證由於資料不完整已被取消。\n\n"
+	     "     代表您的認證由於資料不完整已被取消 (由於建立新看板的流程中\n"
+	    "      有驗證板主註冊資料的程序，若您最近有申請開新看板中則屬此項)\n\n"
 	     "   * 如果您已收到註冊碼卻看到這個畫面，代表您在使用 Email 註冊後\n"
 	     "     " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
 		ANSI_RESET "\n"
@@ -1387,7 +1292,8 @@ u_register(void)
 
 	// make it case insensitive.
 	if (strcasecmp(inregcode, getregcode(regcode)) == 0) {
-	    int             unum;
+	    int  unum;
+	    char justify[sizeof(cuser.justify)] = "";
 	    delregcodefile();
 	    if ((unum = searchuser(cuser.userid, NULL)) == 0) {
 		vmsg("系統錯誤，查無此人！");
@@ -1399,15 +1305,16 @@ u_register(void)
 	    if(cuser.uflag2 & FOREIGN)
 		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
 #endif
-	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
+	    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
+	    pwcuRegCompleteJustify(justify);
 	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
-	    snprintf(cuser.justify, sizeof(cuser.justify),
-		     "<E-Mail>: %s", Cdate(&now));
 	    pressanykey();
 	    u_exit("registed");
 	    exit(0);
+	    // XXX shall never reach here.
 	    return QUIT;
+
 	} else if (strcasecmp(inregcode, "x") != 0) {
 	    if (regcode[0])
 	    {
@@ -1556,32 +1463,17 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
+#ifndef FOREIGN_REG
+    isForeign = 0;
+#endif
 
     // copy values to cuser
-    strlcpy(cuser.realname, rname,  sizeof(cuser.realname));
-    strlcpy(cuser.address,  addr,   sizeof(cuser.address));
-    strlcpy(cuser.email,    email,  sizeof(cuser.email));
-    strlcpy(cuser.career,   career, sizeof(cuser.career));
-    strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
-
-    cuser.mobile = atoi(mobile);
-    cuser.sex = (sex_is[0] - '1') % 8;
-    cuser.month = mon;
-    cuser.day = day;
-    cuser.year = year;
-
-#ifdef FOREIGN_REG
-    if (isForeign)
-	cuser.uflag2 |= FOREIGN;
-    else
-	cuser.uflag2 &= ~FOREIGN;
-#endif
+    pwcuRegisterSetInfo(rname, addr, career, phone, email,
+	    atoi(mobile), (sex_is[0] - '1') % 8,
+	    year, mon, day, isForeign);
 
     // if reach here, email is apparently 'x'.
     toregister(email);
-
-    // update cuser
-    passwd_sync_update(usernum, &cuser);
 
     return FULLUPDATE;
 }
@@ -1793,7 +1685,6 @@ regform_accept(const char *userid, const char *justify)
     // alert online users?
     if (search_ulist(unum))
     {
-	sendalert(muser.userid,  ALERT_PWD_PERM|ALERT_PWD_JUSTIFY); // force to reload perm
 	kick_all(muser.userid);
     }
 

@@ -53,11 +53,7 @@ void BlogMain(int);
 #endif
 
 /* assess */
-int inc_goodpost(const char *, int num);
 int inc_badpost(const char *, int num);
-int inc_goodsale(const char *, int num);
-int inc_badsale(const char *, int num);
-//void set_assess(int uid, unsigned char num, int type);
 
 /* bbs */
 void delete_allpost(const char *userid);
@@ -130,7 +126,7 @@ const char * postperm_msg(const char *bname);
 int give_tax(int money);
 const char* money_level(int money);
 int vice(int money, const char* item);
-#define reload_money()  cuser.money=moneyof(usernum)
+#define reload_money()  // cuser.money=moneyof(usernum)
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
@@ -458,7 +454,6 @@ int setupnewuser(const userec_t *user);
 int regform_estimate_queuesize();
 void new_register(void);
 void check_register(void);
-void check_birthday(void);
 int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
 void delregcodefile(void);
 
@@ -612,7 +607,7 @@ int kill_user(int num, const char *userid);
 int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
 int isvalidemail(char *email);
-void uinfo_query(userec_t *u, int real, int unum);
+void uinfo_query(const char *uid, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
 int u_cancelbadpost();
 void kick_all(const char *user);
@@ -692,15 +687,61 @@ void passwd_force_update(int flag);
 int  passwd_sync_update (int num, userec_t * buf);
 int  passwd_sync_query  (int num, userec_t * buf);
 
-// int  passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
-
 // current user help utilities
+int pwcuBitEnableLevel	(unsigned int mask);
+int pwcuBitDisableLevel	(unsigned int mask);
+int pwcuIncNumPost	();
+int pwcuDecNumPost	();
+int pwcuSetGoodPost	(unsigned int newgp);
+int pwcuViolateLaw	();
+int pwcuSaveViolateLaw	();
+int pwcuCancelBadpost	();
+int pwcuAddExMailBox	(int m);
+int pwcuToggleOutMail	();
+int pwcuSetLoginView	(unsigned int bits);
+int pwcuSetLastSongTime (time4_t clk);
+int pwcuSetMyAngel	(const char *angel_uid);
+int pwcuSetNickname	(const char *nickname);
+int pwcuChessResult	(int sigType, ChessGameResult);
+int pwcuSetChessEloRating(uint16_t elo_rating);
+int pwcuSaveUserFlags	();
+int pwcuRegCompleteJustify    (const char *justify);
+int pwcuRegSetTemporaryJustify(const char *justify, const char *email);
+int pwcuRegisterSetInfo (const char *rname,
+			 const char *addr,
+			 const char *career,
+			 const char *phone,
+			 const char *email,
+			 int         mobile,
+			 uint8_t     sex,
+			 uint8_t     year,
+			 uint8_t     month,
+			 uint8_t     day,
+			 uint8_t     is_foreign);
+
+// non-important based variables (only save on exit)
 int pwcuSetSignature	(unsigned char newsig);
-int pwcuBitSetLevel	(unsigned int mask);
-int pwcuBitUnsetLevel	(unsigned int mask);
+int pwcuSetWaterballMode(unsigned int bm);
+int pwcuToggleSortBoard ();
+int pwcuToggleFriendList();
+int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags
+int pwcuToggleUserFlag2	(unsigned int mask);	// not saved until pwcuSaveUserFlags
+
+// session management
+int pwcuLoginSave	();
+int pwcuExitSave	();
+int pwcuReload		();
+
+// initialization
+void pwcuInitZero	();
+void pwcuInitGuestPerm	();
+void pwcuInitGuestInfo	();
+int  pwcuInitAdminPerm	();
 
 /* calendar */
 int calendar(void);
 int ParseDate(const char *date, int *year, int *month, int *day);
+int ParseDateTime(const char *date, int *year, int *month, int *day,
+		  int *hour, int *min, int *sec);
 
 #endif

@@ -151,7 +151,7 @@ static char msg_not_here[] = "◆ [%s] 不在這間聊天室";
 
 #define FUZZY_USER      ((ChatUser *) -1)
 
-
+#undef cuser
 typedef struct userec_t ACCT;
 
 /* ----------------------------------------------------- */

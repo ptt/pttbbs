@@ -12,7 +12,7 @@ int bad_user_id(const char *userid) {
     int j;
     if (strlen(user.userid) < 2 || !isalpha(user.userid[0]))
 	return 1;
-    if (user.numlogins == 0 || user.numlogins > 15000)
+    if (user.numlogindays == 0 || user.numlogindays > 15000)
 	return 1;
     if (user.numposts > 15000)
 	return 1;
@@ -66,13 +66,13 @@ int main(argc, argv)
 	    Link(path, genbuf);
 	    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", user.userid[0], user.userid);
 	    append_record(genbuf, &mymail, sizeof(mymail));
-	    if ((user.numlogins + user.numposts) < 20)
+	    if ((user.numlogindays + user.numposts) < 20)
 		continue;
 
 	    fprintf(fp1,
 		    "   [33m[%2d/%-2d] %-14s[0m %-24s login:%-5d post:%-5d\n",
 		    ptime->tm_mon + 1, ptime->tm_mday, user.userid,
-		    user.nickname, user.numlogins, user.numposts);
+		    user.nickname, user.numlogindays, user.numposts);
 	}
     }
     fclose(fp1);

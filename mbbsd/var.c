@@ -98,7 +98,7 @@ char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
 time4_t         login_start_time;
 time4_t         start_time;
-userec_t        cuser;		/* current user structure */
+userec_t        pwcuser;	/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
 unsigned int    currstat;
@@ -371,9 +371,10 @@ char            local_article;
 char            fromhost[STRLEN] = "\0";
 char		fromhost_masked[32] = "\0"; // masked 'fromhost'
 char            water_usies = 0;
+char            over18 = 0;
+char            is_first_login_of_today = 0;
 FILE           *fp_writelog = NULL;
 water_t         *water, *swater[6], *water_which;
-char            over18 = 0;
 
 /* chc_play.c */
 

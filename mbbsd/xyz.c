@@ -273,17 +273,13 @@ Goodbye(void)
 	else if (genbuf[0] == 'n')
 	    note();
     }
-    clear();
-
-
     show_80x24_screen("etc/Logout");
-
     {
 	int diff = (now - login_start_time) / 60;
 	snprintf(genbuf, sizeof(genbuf), "此次停留時間: %d 小時 %2d 分",
 		diff / 60, diff % 60);
     }
-    if(!(cuser.userlevel & PERM_LOGINOK))
+    if(!HasUserPerm(PERM_LOGINOK))
 	vmsg("尚未完成註冊。如要提昇權限請參考本站公佈欄辦理註冊");
     else
 	vmsg(genbuf);

@@ -136,7 +136,7 @@ int check_last_login(void *data, int n, userec_t *u) {
     {
         // invalid record
         printf("使用者 %-*s (登入%3d 次, %s%s, %s [%04X])\n 最後登入日期異常 [%04X]: %s",
-                IDLEN, u->userid, u->numlogins,
+                IDLEN, u->userid, u->numlogindays,
                 (u->userlevel & PERM_LOGINOK) ? "已過認證" : "未過認證",
                 (u->userlevel & PERM_SYSOP) ? "[SYSOP]" : "",
                 buf,

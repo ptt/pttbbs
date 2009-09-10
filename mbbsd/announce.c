@@ -119,10 +119,6 @@ int copyqueue_toggle(CopyQueue *pcq)
     int i = copyqueue_locate(pcq);
     if(i >= 0)
     {
-#if 0
-	if (vans("已標記過此檔，要取消標記嗎 [y/N]: ") != 'y')
-	    return 1;
-#endif
 	/* remove it */
 	used_copyqueue --;
 	if(head_copyqueue > used_copyqueue)
@@ -172,14 +168,8 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
     //copyqueue_append(&cq);
     copyqueue_toggle(&cq);
     if (mode && flFirstAlert) {
-#if 0
-	move(b_lines-2, 0); clrtoeol();
-	prints("目前已標記 %d 個檔案。[注意] 拷貝後才能刪除原文!",
-		copyqueue_querysize());
-#else
 	vmsg("[注意] 提醒您複製/標記後要貼上(p)或附加(a)後才能刪除原文!");
 	flFirstAlert = 0;
-#endif
     }
 }
 

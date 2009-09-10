@@ -160,7 +160,7 @@ int is_BM_cache(int bid) /* bid starts from 1 */
     {
 	// auto enable BM permission
 	if (!HasUserPerm(PERM_BM))
-	    cuser.userlevel |= PERM_BM;
+	    pwcuBitEnableLevel(PERM_BM);
 	return 1;
     }
     return 0;

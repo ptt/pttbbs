@@ -1401,8 +1401,7 @@ mail_edit(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
 static int
 mail_nooutmail(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
-    cuser.uflag2 ^= REJ_OUTTAMAIL;
-    passwd_sync_update(usernum, &cuser);
+    pwcuToggleOutMail();
     return FULLUPDATE;
 
 }

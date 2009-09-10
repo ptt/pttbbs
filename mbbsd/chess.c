@@ -1441,7 +1441,7 @@ ChessPhotoInitial(ChessInfo* info)
 	switch (line) {
 	    case 0: sprintf(genbuf, " <代號> %s", xuser.userid);      break;
 	    case 1: sprintf(genbuf, " <暱稱> %.16s", xuser.nickname); break;
-	    case 2: sprintf(genbuf, " <上站> %d", xuser.numlogins);   break;
+	    case 2: sprintf(genbuf, " <上站> %d", xuser.numlogindays);   break;
 	    case 3: sprintf(genbuf, " <文章> %d", xuser.numposts);    break;
 	    case 4: sprintf(genbuf, " <職位> %-4s %s", country, level);  break;
 	    case 5: sprintf(genbuf, " <來源> %.16s", xuser.lasthost); break;
@@ -1494,7 +1494,7 @@ ChessPhotoInitial(ChessInfo* info)
 	switch (line - 9) {
 	    case 0: sprintf(PHOTO(line), "<代號> %-16.16s ", xuser.userid);   break;
 	    case 1: sprintf(PHOTO(line), "<暱稱> %-16.16s ", xuser.nickname); break;
-	    case 2: sprintf(PHOTO(line), "<上站> %-16d ", xuser.numlogins);   break;
+	    case 2: sprintf(PHOTO(line), "<上站> %-16d ", xuser.numlogindays);   break;
 	    case 3: sprintf(PHOTO(line), "<文章> %-16d ", xuser.numposts);    break;
 	    case 4: sprintf(PHOTO(line), "<職位> %-4s %-10s  ", country, level); break;
 	    case 5: sprintf(PHOTO(line), "<來源> %-16.16s ", xuser.lasthost); break;

@@ -441,28 +441,6 @@ game_log(int type, int money)
     if (money > 0)
 	card_add_money(money);
 
-    // if the money is not real user money, no need to log anymore.
-#if 0
-    FILE *fp;
-
-    switch (type) {
-    case JACK:
-	fp = fopen(BBSHOME "/etc/card/jack.log", "a");
-	if (!fp)
-	    return 0;
-	fprintf(fp, "%s win:%d\n", cuser.userid, money);
-	fclose(fp);
-	break;
-    case TEN_HALF:
-	fp = fopen(BBSHOME "/etc/card/tenhalf.log", "a");
-	if (!fp)
-	    return 0;
-	fprintf(fp, "%s win:%d\n", cuser.userid, money);
-	fclose(fp);
-	break;
-    }
-#endif 
-
     return 0;
 }
 

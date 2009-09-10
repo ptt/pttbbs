@@ -31,26 +31,56 @@ Days(int y, int m, int d)
 }
 
 /**
- * return 1 if date is invalid
+ * return 1 if date and time is invalid
  */
-int ParseDate(const char *date, int *year, int *month, int *day)
+int ParseDateTime(const char *date, int *year, int *month, int *day,
+		  int *hour, int *min, int *sec)
 {
-    char           *y, *m, *d;
+    char           *y, *m, *d, *hh, *mm, *ss;
     char           buf[128];
     char *strtok_pos;
 
     strlcpy(buf, date, sizeof(buf));
     y = strtok_r(buf, "/", &strtok_pos); if (!y) return 1;
     m = strtok_r(NULL, "/", &strtok_pos);if (!m) return 1;
-    d = strtok_r(NULL, "", &strtok_pos); if (!d) return 1;
+    d = strtok_r(NULL, " ", &strtok_pos); if (!d) return 1;
+
+    if (hour) { 
+	hh = strtok_r(NULL, ":", &strtok_pos); 
+	if (!hh) return 1; 
+	*hour = atoi(hh);
+    }
+    if (min ) { 
+	mm = strtok_r(NULL, ":", &strtok_pos); 
+	if (!mm) return 1; 
+	*min  = atoi(mm);
+    }
+    if (sec ) { 
+	ss = strtok_r(NULL, "",  &strtok_pos); 
+	if (!ss) return 1; 
+	*sec  = atoi(ss);
+    }
 
     *year = atoi(y);
     *month = atoi(m);
     *day = atoi(d);
+
+    if (hour && (*hour < 0 || *hour > 23)) return 1;
+    if (min  && (*min  < 0 || *min  > 59)) return 1;
+    if (sec  && (*sec  < 0 || *sec  > 59)) return 1;
+
     if (*year < 1 || *month < 1 || *month > 12 ||
 	*day < 1 || *day > MonthDay(*month, is_leap_year(*year)))
 	return 1;
     return 0;
+}
+
+/**
+ * return 1 if date is invalid
+ */
+int ParseDate(const char *date, int *year, int *month, int *day)
+{
+    return ParseDateTime(date, year, month, day, NULL, NULL, NULL);
 }
 
 /**

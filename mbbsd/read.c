@@ -87,14 +87,6 @@ Tagger(time4_t chrono, int recno, int mode)
     return YEA;
 }
 
-#if 0
-static void
-EnumTagName(char *fname, int locus) /* unused */
-{
-    snprintf(fname, sizeof(fname), "M.%d.A", (int)TagList[locus].chrono);
-}
-#endif
-
 void
 EnumTagFhdr(fileheader_t * fhdr, char *direct, int locus)
 {
@@ -985,7 +977,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner, &muser))) {
 		    user_display(&muser, 1);
 		    if( HasUserPerm(PERM_ACCOUNTS) )
-			uinfo_query(&muser, 1, id);
+			uinfo_query(muser.userid, 1, id);
 		    else
 			pressanykey();
 		}

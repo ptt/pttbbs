@@ -658,15 +658,6 @@ chc_ischeck(board_t board, int turn)
  */
 
 static void
-chcusr_put(userec_t* userec, const ChessUser* user)
-{
-    userec->chc_win = user->win;
-    userec->chc_lose = user->lose;
-    userec->chc_tie = user->tie;
-    userec->chess_elo_rating = user->rating;
-}
-
-static void
 chc_init_user(const userinfo_t *uinfo, ChessUser *user)
 {
     strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
@@ -848,9 +839,7 @@ chc(int s, ChessGameMode mode)
 	/* Assume that info->user1 is me. */
 	info->user1.lose++;
 	count_chess_elo_rating(&info->user1, &info->user2, 0.0);
-	passwd_sync_query(usernum, &cuser);
-	chcusr_put(&cuser, &info->user1);
-	passwd_sync_update(usernum, &cuser);
+	pwcuChessResult(SIG_CHC, CHESS_RESULT_LOST);
     }
 
     if (mode == CHESS_MODE_WATCH)
@@ -876,36 +865,38 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	    /* NOTE, 若紅方斷線則無 log */
 	    time_t t = time(NULL);
 	    char buf[100];
+	    uint16_t lose1 = user1->lose, lose2 = user2->lose;
+	    if (lose1 > 0) lose1--;
+	    if (lose2 > 0) lose2--;
 	    sprintf(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/L%d)\n",
 		    ctime(&t),
 		    user1->userid, user1->rating, user1->win,
-		    user1->tie, user1->lose - 1,
+		    user1->tie, lose1,
 		    (result == CHESS_RESULT_TIE ? "和" :
 		     result == CHESS_RESULT_WIN ? "勝" : "負"),
 		    user2->userid, user2->rating, user2->win,
-		    user2->tie, user2->lose - 1);
+		    user2->tie, lose2);
 	    buf[24] = ' '; // replace '\n'
 	    log_file(BBSHOME "/log/chc.log", LOG_CREAT, buf);
 	}
 
+	// lost was already initialized
+	if (result != CHESS_RESULT_LOST)
+	    pwcuChessResult(SIG_CHC, result);
+
 	user1->rating = user1->orig_rating;
-	user1->lose--;
+
+	// TODO update and save the elo rating
 	if (result == CHESS_RESULT_WIN) {
 	    count_chess_elo_rating(user1, user2, 1.0);
-	    user1->win++;
-	    currutmp->chc_win++;
 	} else if (result == CHESS_RESULT_LOST) {
 	    count_chess_elo_rating(user1, user2, 0.0);
-	    user1->lose++;
-	    currutmp->chc_lose++;
 	} else {
 	    count_chess_elo_rating(user1, user2, 0.5);
-	    user1->tie++;
-	    currutmp->chc_tie++;
 	}
 	currutmp->chess_elo_rating = user1->rating;
-	chcusr_put(&cuser, user1);
-	passwd_sync_update(usernum, &cuser);
+	pwcuSetChessEloRating(user1->rating);
+
     } else if (info->mode == CHESS_MODE_REPLAY) {
 	free(info->board);
 	free(info->tag);

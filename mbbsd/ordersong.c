@@ -147,7 +147,7 @@ do_order_song(void)
     log_filef("etc/osong.log",  LOG_CREAT, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address);
 
     if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
-	cuser.lastsong = now;
+	pwcuSetLastSongTime(now);
 	/* Jaky 超過 MAX_MOVIE 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:
 	// 3. ◆ <系統> 動態看板   SYSOP [01/23/08]

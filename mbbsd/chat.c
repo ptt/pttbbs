@@ -204,13 +204,15 @@ chat_query(char *arg)
 	char            buf[ANSILINELEN], *ptr;
 	FILE           *fp;
 
-	snprintf(buf, sizeof(buf), "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
+	snprintf(buf, sizeof(buf), 
+		"%s(%s) " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，發表過 %d 篇文章",
 		 xuser.userid, xuser.nickname,
-		 xuser.numlogins, xuser.numposts);
+		 xuser.numlogindays, xuser.numposts);
 	printchatline(buf);
 
 	snprintf(buf, sizeof(buf),
-		 "最近(%s)從[%s]上站", Cdate(&xuser.lastlogin),
+		 "最近(%s)從[%s]上站", 
+		 Cdate(xuser.lastseen ? &xuser.lastseen : &xuser.lastlogin),
 		(xuser.lasthost[0] ? xuser.lasthost : "(不詳)"));
 	printchatline(buf);
 

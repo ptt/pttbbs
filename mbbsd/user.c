@@ -1,4 +1,5 @@
 /* $Id$ */
+#define PWCU_IMPL
 #include "bbs.h"
 
 static char    * const sex[8] = {
@@ -65,50 +66,58 @@ u_loginview(void)
     }
 
     if (pbits != cuser.loginview) {
-	cuser.loginview = pbits;
-	passwd_sync_update(usernum, &cuser);
+	pwcuSetLoginView(pbits);
     }
     return 0;
 }
+
 int u_cancelbadpost(void)
 {
-   int day;
-   if(cuser.badpost==0)
-     {vmsg("你並沒有劣文."); return 0;}
-        
-   if(search_ulistn(usernum,2))
-     {vmsg("請登出其他視窗, 否則不受理."); return 0;}
+   int day, prev = cuser.badpost;
 
-   passwd_sync_query(usernum, &cuser);
-   if (currutmp && (currutmp->alerts & ALERT_PWD))
-       currutmp->alerts &= ~ALERT_PWD;
-
-   day = 180 - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
-   if(day>0 && day<=180)
-     {
-      vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
-      vmsg("您也可以注意站方是否有勞動服務方式刪除劣文.");
-      return 0;
-     }
-
-   if(
-      vmsg("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
-      vmsg("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
-      vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
-
-     {vmsg("請您思考清楚後再來申請刪除."); return 0;}
-
-   if(search_ulistn(usernum,2))
-     {vmsg("請登出其他視窗, 否則不受理."); return 0;}
-   if(cuser.badpost)
-   {
-       int prev = cuser.badpost--;
-       cuser.timeremovebadpost = now;
-       passwd_sync_update(usernum, &cuser);
-       log_filef("log/cancelbadpost.log", LOG_CREAT,
-	        "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
-		Cdate(&now), cuser.userid, prev, cuser.badpost);
+   // early check.
+   if(cuser.badpost==0) {
+       vmsg("你並沒有劣文."); 
+       return 0;
    }
+        
+   // early check for race condition
+   if(search_ulistn(usernum,2)) {
+       vmsg("請登出其他視窗, 否則不受理."); 
+       return 0;
+   }
+
+   // early check for time (must do again later)
+   day = 180 - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
+   if(day>0 && day<=180) {
+       vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
+       return 0;
+   }
+
+   // 無聊的 disclaimer...
+   if( vmsg("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
+       vmsg("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
+       vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
+   {
+       vmsg("請您思考清楚後再來申請刪除."); 
+       return 0;
+   }
+
+   // check again for race condition
+   if(search_ulistn(usernum,2)) {
+       vmsg("請登出其他視窗, 否則不受理."); 
+       return 0;
+   }
+
+   if (pwcuCancelBadpost() != 0) {
+       vmsg("刪除失敗，請洽站務人員。"); 
+       return 0;
+   }
+
+   log_filef("log/cancelbadpost.log", LOG_CREAT,
+	   "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
+	   Cdate(&now), cuser.userid, prev, cuser.badpost);
+
    vmsg("恭喜您已經成功\刪除一篇劣文.");
    return 0;
 }
@@ -164,8 +173,12 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t\t認證資料: %s\n", u->justify);
     }
 
-    prints("\t\t上站文章: 上站 %d 次 / 文章 %d 篇\n",
-	   u->numlogins, u->numposts);
+    // XXX enable STR_LOGINDAYS_QTY after removed old_numlogins.
+    prints("\t\t使用記錄: " STR_LOGINDAYS " %d " // STR_LOGINDAYS_QTY
+	    ,u->numlogindays);
+    if (u->old_numlogins)
+	prints("(轉換新制前結算:%d)", u->old_numlogins);
+    prints(" / 文章 %d 篇\n", u->numposts);
 
     sethomedir(genbuf, u->userid);
     prints("\t\t私人信箱: %d 封  (購買信箱: %d 封)\n",
@@ -196,8 +209,8 @@ user_display(const userec_t * u, int adminmode)
 
     // conditional fields
 #ifdef ASSESS
-    prints("\t\t優 劣 文: 優:%d / 劣:%d\n",
-           u->goodpost, u->badpost);
+    prints("\t\t劣文數目: %u (舊優文結算: %u)\n", 
+	    (unsigned int)u->badpost, (unsigned int)u->goodpost);
 #endif // ASSESS
 
 #ifdef CHESSCOUNTRY
@@ -466,12 +479,12 @@ void Customize(void)
 	    key -= 'a';
 	    dirty = 1;
 
+
 	    if(key < ic)
 	    {
-		cuser.uflag ^= masks1[key];
+		pwcuToggleUserFlag(masks1[key]);
 	    } else {
-		key -= ic;
-		cuser.uflag2 ^= masks2[key];
+		pwcuToggleUserFlag2(masks2[key-ic]);
 	    }
 	    continue;
 	}
@@ -489,8 +502,7 @@ void Customize(void)
 		{
 		    int     currentset = cuser.uflag2 & WATER_MASK;  
 		    currentset = (currentset + 1) % 3;  
-		    cuser.uflag2 &= ~WATER_MASK;  
-		    cuser.uflag2 |= currentset;  
+		    pwcuSetWaterballMode(currentset);
 		    vmsg("修正水球模式後請正常離線再重新上線");  
 		    dirty = 1;
 		}
@@ -527,7 +539,7 @@ void Customize(void)
 
     if(dirty)
     {
-	passwd_sync_update(usernum, &cuser);
+	pwcuSaveUserFlags();
 	outs("設定已儲存。\n");
     } else {
 	outs("結束設定。\n");
@@ -539,7 +551,7 @@ void Customize(void)
 
 
 void
-uinfo_query(userec_t *u, int adminmode, int unum)
+uinfo_query(const char *orig_uid, int adminmode, int unum)
 {
     userec_t        x;
     int    i = 0, fail;
@@ -553,24 +565,35 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     int money_changed;
     int tokill = 0;
     int changefrom = 0;
+    int xuid;
 
     fail = 0;
     mail_changed = money_changed = perm_changed = 0;
 
+    // verify unum
+    xuid = getuser(orig_uid, &x);
+    if (xuid == 0)
     {
-	// verify unum
-	int xuid =  getuser(u->userid, &x);
-	if (xuid != unum)
-	{
-	    move(b_lines-1, 0); clrtobot();
-	    prints(ANSI_COLOR(1;31) "錯誤資訊: unum=%d (lookup xuid=%d)"
-		    ANSI_RESET "\n", unum, xuid);
-	    vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " BN_BUGREPORT "報告。");
-	    return;
-	}
+	vmsgf("找不到使用者 %s。", orig_uid);
+	return;
+    }
+    if (xuid != unum)
+    {
+	move(b_lines-1, 0); clrtobot();
+	prints(ANSI_COLOR(1;31) "錯誤資訊: unum=%d (lookup xuid=%d)"
+		ANSI_RESET "\n", unum, xuid);
+	vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " BN_BUGREPORT "報告。");
+	return;
+    }
+    if (strcmp(orig_uid, x.userid) != 0)
+    {
+	move(b_lines-1, 0); clrtobot();
+	prints(ANSI_COLOR(1;31) "錯誤資訊: userid=%s (lookup userid=%s)"
+		ANSI_RESET "\n", orig_uid, x.userid);
+	vmsg("系統錯誤: 使用者 ID 記錄不不合。請至 " BN_BUGREPORT "報告。");
+	return;
     }
 
-    memcpy(&x, u, sizeof(userec_t));
     ans = vans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
     "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
@@ -681,23 +704,19 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    snprintf(buf, sizeof(buf), "%010d", x.mobile);
 	getdata_buf(y++, 0, "手機號碼：", buf, 11, NUMECHO);
 	x.mobile = atoi(buf);
-	snprintf(genbuf, sizeof(genbuf), "%d", (u->sex + 1) % 8);
+	snprintf(genbuf, sizeof(genbuf), "%d", (x.sex + 1) % 8);
 	getdata_str(y++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
 		    "(6)阿姨 (7)植物 (8)礦物：",
 		    buf, 3, NUMECHO, genbuf);
 	if (buf[0] >= '1' && buf[0] <= '8')
 	    x.sex = (buf[0] - '1') % 8;
 	else
-	    x.sex = u->sex % 8;
+	    x.sex = x.sex % 8;
 
 	while (1) {
 	    snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i",
-		     u->year + 1900, u->month, u->day);
-	    if (getdata_str(y, 0, "生日 西元/月月/日日：", buf, 11, DOECHO, genbuf) == 0) {
-		x.month = u->month;
-		x.day = u->day;
-		x.year = u->year;
-	    } else {
+		     x.year + 1900, x.month, x.day);
+	    if (getdata_str(y, 0, "生日 西元/月月/日日：", buf, 11, DOECHO, genbuf) != 0) {
 		int y, m, d;
 		if (ParseDate(buf, &y, &m, &d))
 		    continue;
@@ -744,7 +763,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    int j, k;
 	    FILE* fp;
 	    for(j = 0; j < 2; ++j){
-		sethomefile(genbuf, u->userid, chess_photo_name[j]);
+		sethomefile(genbuf, x.userid, chess_photo_name[j]);
 		fp = fopen(genbuf, "r");
 		if(fp != NULL){
 		    FILE* newfp;
@@ -758,7 +777,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    getdata_buf(y, 0, mybuf, genbuf + 11, 80 - 11, DOECHO);
 		    ++y;
 
-		    sethomefile(mybuf, u->userid, chess_photo_name[j]);
+		    sethomefile(mybuf, x.userid, chess_photo_name[j]);
 		    strcat(mybuf, ".new");
 		    if((newfp = fopen(mybuf, "w")) != NULL){
 			rewind(fp);
@@ -771,8 +790,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
 			fclose(newfp);
 
-			sethomefile(genbuf, u->userid, chess_photo_name[j]);
-			sethomefile(mybuf, u->userid, chess_photo_name[j]);
+			sethomefile(genbuf, x.userid, chess_photo_name[j]);
+			sethomefile(mybuf, x.userid, chess_photo_name[j]);
 			strcat(mybuf, ".new");
 			
 			Rename(mybuf, genbuf);
@@ -807,32 +826,69 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    getdata_buf(y++, 0, "最近光臨機器：",
 			x.lasthost, sizeof(x.lasthost), DOECHO);
 
-	    snprintf(genbuf, sizeof(genbuf), "%d", x.numlogins);
-	    if (getdata_str(y++, 0, "上線次數：", buf, 10, DOECHO, genbuf))
-		if ((tmp = atoi(buf)) >= 0)
-		    x.numlogins = tmp;
-	    snprintf(genbuf, sizeof(genbuf), "%d", u->numposts);
+	    while (1) {
+		struct tm t = {0};
+		time4_t clk = x.lastlogin;
+		localtime4_r(&clk, &t);
+		snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i %02i:%02i:%02i",
+			t.tm_year + 1900, t.tm_mon+1, t.tm_mday,
+			t.tm_hour, t.tm_min, t.tm_sec);
+		if (getdata_str(y, 0, "最近上線時間：", buf, 20, DOECHO, genbuf) != 0) {
+		    int y, m, d, hh, mm, ss;
+		    if (ParseDateTime(buf, &y, &m, &d, &hh, &mm, &ss))
+			continue;
+		    t.tm_year = y-1900;
+		    t.tm_mon  = m-1;
+		    t.tm_mday = d;
+		    t.tm_hour = hh;
+		    t.tm_min  = mm;
+		    t.tm_sec  = ss;
+		    clk = mktime(&t);
+		    if (!clk)
+			continue;
+		    x.lastlogin= clk;
+		}
+		y++;
+		break;
+	    }
+
+	    do {
+		int max_days = (x.lastlogin - x.firstlogin) / DAY_SECONDS;
+		snprintf(genbuf, sizeof(genbuf), "%d", x.numlogindays);
+		if (getdata_str(y++, 0, STR_LOGINDAYS, buf, 10, DOECHO, genbuf))
+		    if ((tmp = atoi(buf)) >= 0)
+			x.numlogindays = tmp;
+		if (x.numlogindays > max_days)
+		{
+		    x.numlogindays = max_days;
+		    vmsgf("根據此使用者最後上線時間，最大值為 %d.", max_days);
+		    move(--y, 0); clrtobot();
+		    continue;
+		}
+		break;
+	    } while (1);
+
+	    snprintf(genbuf, sizeof(genbuf), "%d", x.numposts);
 	    if (getdata_str(y++, 0, "文章數目：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.numposts = tmp;
 #ifdef ASSESS
-	    snprintf(genbuf, sizeof(genbuf), "%d", u->goodpost);
-	    if (getdata_str(y++, 0, "優良文章數:", buf, 10, DOECHO, genbuf))
-		if ((tmp = atoi(buf)) >= 0)
-		    x.goodpost = tmp;
-	    snprintf(genbuf, sizeof(genbuf), "%d", u->badpost);
-	    if (getdata_str(y++, 0, "惡劣文章數:", buf, 10, DOECHO, genbuf))
+	    snprintf(genbuf, sizeof(genbuf), "%d", x.badpost);
+	    if (getdata_str(y, 0, "惡劣文章數：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.badpost = tmp;
 #endif // ASSESS
+	    move(y-1, 0); clrtobot();
+	    prints("文章數目： %d (劣: %d)\n",
+		    x.numposts, x.badpost);
 
-	    snprintf(genbuf, sizeof(genbuf), "%d", u->vl_count);
+	    snprintf(genbuf, sizeof(genbuf), "%d", x.vl_count);
 	    if (getdata_str(y++, 0, "違法記錄：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.vl_count = tmp;
 
 	    snprintf(genbuf, sizeof(genbuf),
-		     "%d/%d/%d", u->five_win, u->five_lose, u->five_tie);
+		     "%d/%d/%d", x.five_win, x.five_lose, x.five_tie);
 	    if (getdata_str(y++, 0, "五子棋戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
@@ -853,8 +909,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    break;
 		}
 	    snprintf(genbuf, sizeof(genbuf),
-		     "%d/%d/%d", u->chc_win, u->chc_lose, u->chc_tie);
-	    if (getdata_str(y++, 0, "象棋戰績 勝/敗/和：", buf, 16, DOECHO,
+		     "%d/%d/%d", x.chc_win, x.chc_lose, x.chc_tie);
+	    if (getdata_str(y++, 0, " 象棋 戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
 		    char *p;
@@ -873,6 +929,33 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    x.chc_tie = atoi(p);
 		    break;
 		}
+	    snprintf(genbuf, sizeof(genbuf),
+		     "%d/%d/%d", x.go_win, x.go_lose, x.go_tie);
+	    if (getdata_str(y++, 0, " 圍棋 戰績 勝/敗/和：", buf, 16, DOECHO,
+			    genbuf))
+		while (1) {
+		    char *p;
+		    char *strtok_pos;
+		    p = strtok_r(buf, "/\r\n", &strtok_pos);
+		    if (!p)
+			break;
+		    x.go_win = atoi(p);
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
+		    if (!p)
+			break;
+		    x.go_lose = atoi(p);
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
+		    if (!p)
+			break;
+		    x.go_tie = atoi(p);
+		    break;
+		}
+	    y -= 3; // rollback games set to get more space
+	    move(y++, 0); clrtobot();
+	    prints("棋類: (五子棋)%d/%d/%d (象棋)%d/%d/%d (圍棋)%d/%d/%d\n",
+		    x.five_win, x.five_lose, x.five_tie,
+		    x.chc_win, x.chc_lose, x.chc_tie,
+		    x.go_win, x.go_lose, x.go_tie);
 #ifdef FOREIGN_REG
 	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
 		if ((tmp = atoi(buf)) > 0){
@@ -903,7 +986,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	y = 19;
 	if (!adminmode) {
 	    if (!getdata(y++, 0, "請輸入原密碼：", buf, PASSLEN, NOECHO) ||
-		!checkpasswd(u->passwd, buf)) {
+		!checkpasswd(x.passwd, buf)) {
 		outs("\n\n您輸入的密碼不正確\n");
 		fail++;
 		break;
@@ -964,7 +1047,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    }
 	    pre_confirmed = 1;
 
-	    sprintf(title, "%s 的密碼重設通知 (by %s)",u->userid, cuser.userid);
+	    sprintf(title, "%s 的密碼重設通知 (by %s)",x.userid, cuser.userid);
             unlink("etc/updatepwd.log");
 	    if(! (fp = fopen("etc/updatepwd.log", "w")))
 	    {
@@ -976,11 +1059,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
 	    fprintf(fp, "%s 要求密碼重設:\n"
 		    "見證人為 %s, %s, %s",
-		    u->userid, witness[0], witness[1], witness[2] );
+		    x.userid, witness[0], witness[1], witness[2] );
 	    fclose(fp);
 
 	    post_file(BN_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
-	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
+	    mail_id(x.userid, title, "etc/updatepwd.log", cuser.userid);
 	    for(i=0; i<3; i++)
 	    {
 		mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
@@ -1034,9 +1117,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		strlcpy(x.userid, genbuf, sizeof(x.userid));
 	}
 	break;
+
     case '6':
 	chicken_toggle_death(x.userid);
 	break;
+
     default:
 	return;
     }
@@ -1063,10 +1148,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[上帝]");
 #endif
     }
-    if (strcmp(u->userid, x.userid)) {
+
+    if (strcmp(orig_uid, x.userid)) {
 	char            src[STRLEN], dst[STRLEN];
-	kick_all(u->userid);
-	sethomepath(src, u->userid);
+	kick_all(orig_uid);
+	sethomepath(src, orig_uid);
 	sethomepath(dst, x.userid);
 	Rename(src, dst);
 	setuserid(unum, x.userid);
@@ -1075,7 +1161,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	// wait registration.
 	x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
     }
-    memcpy(u, &x, sizeof(x));
+
     if (tokill) {
 	kick_all(x.userid);
 	delete_allpost(x.userid);
@@ -1109,10 +1195,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     passwd_sync_update(unum, &x);
 
     if (adminmode)
-    {
-	sendalert(x.userid, ALERT_PWD_RELOAD);
 	kick_all(x.userid);
-    }
 
     // resolve_over18 only works for cuser
     if (!adminmode)
@@ -1124,8 +1207,9 @@ u_info(void)
 {
     move(2, 0);
     reload_money();
-    user_display(&cuser, 0);
-    uinfo_query(&cuser, 0, usernum);
+    user_display(cuser_ref, 0);
+    uinfo_query (cuser.userid, 0, usernum);
+    pwcuReload();
     strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
     return 0;
 }
@@ -1407,7 +1491,7 @@ u_list_CB(void *data, int num, userec_t * uentp)
     prints("%-14s %-27.27s%5d %5d  %s  %s\n",
 	   uentp->userid,
 	   uentp->nickname,
-	   uentp->numlogins, uentp->numposts,
+	   uentp->numlogindays, uentp->numposts,
 	   HasUserPerm(PERM_SEEULEVELS) ? permstr : "", ptr);
     ctx->usercounter++;
     ctx->y++;

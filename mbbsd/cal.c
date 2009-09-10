@@ -84,10 +84,7 @@ vice(int money, const char *item)
 static int
 inmailbox(int m)
 {
-    userec_t xuser;
-    passwd_sync_query(usernum, &xuser);
-    cuser.exmailbox = xuser.exmailbox + m;
-    passwd_sync_update(usernum, &cuser);
+    pwcuAddExMailBox(m);
     return cuser.exmailbox;
 }
 
@@ -405,7 +402,7 @@ resolve_over18_user(const userec_t *u)
 void
 resolve_over18(void)
 {
-    over18 = resolve_over18_user(&cuser);
+    over18 = resolve_over18_user(cuser_ref);
 }
 
 int

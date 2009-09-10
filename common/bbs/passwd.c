@@ -23,7 +23,10 @@
 // these cannot be used!
 #define currutmp  YOU_FAILED
 #define usernum	  YOU_FAILED
+#undef  cuser
+#undef  cuser_ref
 #define cuser     YOU_FAILED
+#define cuser_ref YOU_FAILED
 #define abort_bbs YOU_FAILED
 #define log_usies YOU_FAILED
 

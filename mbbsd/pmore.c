@@ -594,7 +594,7 @@ expand_esc_star(char *buf, const char *src, int szbuf)
             strlcpy(buf, cuser.userid, szbuf);
             return 2;
         case 'l':   // current user logins
-            snprintf(buf, szbuf, "%d", cuser.numlogins);
+            snprintf(buf, szbuf, "%d", cuser.numlogindays);
             return 2;
         case 'p':   // current user posts
             snprintf(buf, szbuf, "%d", cuser.numposts);

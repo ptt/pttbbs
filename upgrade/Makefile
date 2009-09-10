@@ -9,8 +9,7 @@ CFLAGS+= -DPTTBBS_UTIL
 BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
-	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	
+	util_var.o
 
 LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
 	  $(SRCROOT)/common/bbs/libcmbbs.a

@@ -190,15 +190,6 @@ log_usies(const char *mode, const char *mesg)
 }
 
 
-static void
-setflags(int mask, int value)
-{
-    if (value)
-	cuser.uflag |= mask;
-    else
-	cuser.uflag &= ~mask;
-}
-
 void
 u_exit(const char *mode)
 {
@@ -210,27 +201,15 @@ u_exit(const char *mode)
 
     // verify if utmp is valid. only flush data if utmp is correct.
     assert(strncmp(currutmp->userid,cuser.userid, IDLEN)==0);
-    if(strncmp(currutmp->userid,cuser.userid, IDLEN)!=0)
+    if(strncmp(currutmp->userid, cuser.userid, IDLEN)!=0)
 	return;
 
     auto_backup();
     save_brdbuf();
     brc_finalize();
-    /*
-    cuser.goodpost = currutmp->goodpost;
-    cuser.badpost = currutmp->badpost;
-    */
 
-    // no need because in later passwd_sync_update will reload money from SHM.
-    // reload_money();
-
-    setflags(PAGER_FLAG, currutmp->pager != PAGER_ON);
-    setflags(CLOAK_FLAG, currutmp->invisible);
-
-    cuser.invisible = currutmp->invisible;
-    cuser.withme = currutmp->withme;
-    cuser.pager = currutmp->pager;
-    memcpy(cuser.mind, currutmp->mind, 4);
+    // XXX TOTO for guests, skip the save process?
+    pwcuExitSave();
     setutmpbid(0);
 
     if (!SHM->GV2.e.shutdown) {
@@ -239,11 +218,6 @@ u_exit(const char *mode)
 	    do_aloha("<<下站通知>> -- 我走囉！");
     }
 
-    // 小於 60 秒不計 login 次數
-    if (time(0) - login_start_time < 60 && cuser.numlogins > 0)
-	--cuser.numlogins;
-
-    passwd_sync_update(usernum, &cuser);
     purge_utmp(currutmp);
     log_usies(mode, NULL);
 }
@@ -368,7 +342,7 @@ signal_xcpu_handler(int sig)
 	last_time_exceeded = login_start_time;
     assert(last_time_exceeded);
     // 不用 (time(0) - login_start_time) 來平均, 避免用好幾天之後突然狂吃 cpu 的狀況.
-    if (time(0) - last_time_exceeded < 86400)
+    if (time(0) - last_time_exceeded < DAY_SECONDS)
 	give_more_time = false;
     last_time_exceeded = time(0);
 
@@ -739,13 +713,7 @@ load_current_user(const char *uid)
     if (strcasecmp(uid, STR_GUEST) == 0)
     {
 	if (initcuser(STR_GUEST)< 1) exit (0) ;
-	cuser.userlevel = 0;
-	cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-	cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
-
-# ifdef GUEST_DEFAULT_DBCS_NOINTRESC
-	cuser.uflag |= DBCS_NOINTRESC;
-# endif
+	pwcuInitGuestPerm();
 	// can we prevent mkuserdir() here?
 	mkuserdir(cuser.userid);
     } else 
@@ -763,11 +731,7 @@ load_current_user(const char *uid)
 	    exit(0);
 #else /* 自動加上各個主要權限 */
 	    // TODO only allow in local connection?
-	    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
-		PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
-		PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
-		PERM_SYSOPHIDE | PERM_BM | PERM_ACCOUNTS |
-		PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
+	    pwcuInitAdminPerm();
 #endif
 	}
 	/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
@@ -811,7 +775,7 @@ login_query(char *ruid)
 	    sleep(3);
 	    exit(1);
 	}
-	bzero(&cuser, sizeof(cuser));
+	pwcuInitZero();
 
 #ifdef DEBUG
 	move(19, 0);
@@ -1022,14 +986,15 @@ where(const char *from)
 static void
 check_BM(void)
 {
-    /* XXX: -_- */
-    int             i;
+    int i;
 
-    cuser.userlevel &= ~PERM_BM;
+    assert(HasUserPerm(PERM_BM));
     for( i = 0 ; i < numboards ; ++i )
 	if( is_BM_cache(i + 1) ) /* XXXbid */
 	    return;
-    //for (i = 0, bhdr = bcache; i < numboards && !is_BM(bhdr->BM); i++, bhdr++);
+
+    // disable BM permission
+    pwcuBitDisableLevel(PERM_BM);
 }
 
 static void
@@ -1067,10 +1032,10 @@ setup_utmp(int mode)
     uinfo.go_tie    = cuser.go_tie;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager	    = cuser.pager % PAGER_MODES;
+    uinfo.withme    = cuser.withme & ~WITHME_ALLFLAG;
 
     if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
-	cuser.withme = 0; /* unset all if contradict */
-    uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
+	uinfo.withme = 0;
 
     getnewutmpent(&uinfo);
 
@@ -1083,11 +1048,6 @@ setup_utmp(int mode)
 
     strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
     strip_nonebig5((unsigned char *)currutmp->mind, sizeof(currutmp->mind));
-
-    // XXX 不用每 20 才檢查吧
-    // XXX 這個 check 花不少時間，有點間隔比較好
-    if ((cuser.userlevel & PERM_BM) && !(cuser.numlogins % 20))
-	check_BM();		/* Ptt 自動取下離職板主權力 */
 
     // resolve fromhost
 #if defined(WHERE)
@@ -1125,15 +1085,14 @@ setup_utmp(int mode)
 
 inline static void welcome_msg(void)
 {
-    prints(ANSI_RESET "      歡迎您第 " 
-	    ANSI_COLOR(1;33) "%d" ANSI_COLOR(0;37) " 度拜訪本站，上次您是從 " 
+    prints(ANSI_RESET "      歡迎您再度拜訪本站，上次您是從 " 
 	    ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，" 
 	    ANSI_CLRTOEND "\n"
 	    "     我記得那天是 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) "。"
 	    ANSI_CLRTOEND "\n"
 	    ANSI_CLRTOEND "\n"
 	    ,
-	    cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
+	    cuser.lasthost, Cdate(&(cuser.lastlogin)));
     pressanykey();
 }
 
@@ -1181,11 +1140,6 @@ inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm 
     }
 }
 
-inline static void record_lasthost(const char *fromhost)
-{
-    strlcpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
-}
-
 inline static void check_mailbox_quota(void)
 {
     if (chkmailbox())
@@ -1194,31 +1148,7 @@ inline static void check_mailbox_quota(void)
 
 static void init_guest_info(void)
 {
-    int i;
-    char           *nick[13] = {
-	"椰子", "貝殼", "內衣", "寶特瓶", "翻車魚",
-	"樹葉", "浮萍", "鞋子", "潛水艇", "魔王",
-	"鐵罐", "考卷", "大美女"
-    };
-    char           *name[13] = {
-	"大王椰子", "鸚鵡螺", "比基尼", "可口可樂", "仰泳的魚",
-	"憶", "高岡屋", "AIR Jordon", "紅色十月號", "批踢踢",
-	"SASAYA椰奶", "鴨蛋", "布魯克鱈魚香絲"
-    };
-    char           *addr[13] = {
-	"天堂樂園", "大海", "綠島小夜曲", "美國", "綠色珊瑚礁",
-	"遠方", "原本海", "NIKE", "蘇聯", "男八618室",
-	"愛之味", "天上", "藍色珊瑚礁"
-    };
-    i = login_start_time % 13;
-    snprintf(cuser.nickname, sizeof(cuser.nickname),
-	    "海邊漂來的%s", nick[(int)i]);
-    strlcpy(currutmp->nickname, cuser.nickname,
-	    sizeof(currutmp->nickname));
-    strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
-    strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
-    memset(cuser.mind, 0, sizeof(cuser.mind));
-    cuser.sex = i % 8;
+    pwcuInitGuestInfo();
     currutmp->pager = PAGER_DISABLE;
 }
 
@@ -1229,7 +1159,7 @@ inline static void foreign_warning(void){
 	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
 	}
 	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
-	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
+	    pwcuBitDisableLevel(PERM_LOGINOK | PERM_POST);
 	    vmsg("警告：請至出入境管理局申請永久居留");
 	}
     }
@@ -1251,8 +1181,6 @@ user_login(void)
 
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
-    if (cuser.userlevel)
-	++cuser.numlogins;
 
     /* log usies */
     log_usies("ENTER", fromhost);
@@ -1326,10 +1254,16 @@ user_login(void)
 	append_log_recent_login();
 	check_bad_login();
 	check_mailbox_quota();
-	check_birthday();
 	check_register();
-	record_lasthost(fromhost);
+	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	restore_backup();
+
+	// XXX 這個 check 花不少時間，有點間隔比較好
+	if (HasUserPerm(PERM_BM) && 
+	    (cuser.numlogindays % 10 == 0) &&	// when using numlogindays, check with is_first_login_of_today
+	    is_first_login_of_today )
+	    check_BM();		/* 自動取下離職板主權力 */
+
 
     } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
 
@@ -1356,33 +1290,18 @@ user_login(void)
 	/* If you wanna do incremental upgrade
 	 * (like, added a function/flag that wants user to confirm againe)
 	 * put it here.
+	 * But you must use 'lasttime' because cuser.lastlogin
+	 * is already changed.
 	 */
 
-#if defined(DBCSAWARE) && defined(DBCSAWARE_UPGRADE_STARTTIME)
-	// define the real time you upgraded in your pttbbs.conf
-	if(cuser.lastlogin < DBCSAWARE_UPGRADE_STARTTIME)
-	{
-	    if (u_detectDBCSAwareEvilClient())
-		cuser.uflag &= ~DBCSAWARE_FLAG;
-	    else
-		cuser.uflag |= DBCSAWARE_FLAG;
-	}
-#endif
 	/* login time update */
-
 	if(ptime.tm_yday!=lasttime.tm_yday)
 	    STATINC(STAT_TODAYLOGIN_MIN);
-
-
-	cuser.lastlogin = login_start_time;
-
     }
 
 #if FOREIGN_REG_DAY > 0
     foreign_warning();
 #endif
-
-    passwd_sync_update(usernum, &cuser);
 
     if(cuser.uflag2 & FAVNEW_FLAG) {
 	fav_load();

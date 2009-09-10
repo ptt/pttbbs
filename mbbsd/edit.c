@@ -1741,7 +1741,7 @@ browse_sigs:
 		ch = buf[0];
 	    else
 		ch = '1' + random() % (si.max+1);
-	    cuser.signature = buf[0];
+	    pwcuSetSignature(buf[0]);
 
 	    if (ch != '0') {
 		fpath[i] = ch;

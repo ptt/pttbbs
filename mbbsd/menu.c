@@ -602,7 +602,6 @@ u_mylogs()
     return 0;
 }
 
-int u_fixgoodpost(void); // assess.c
 void Customize(); // user.c
 
 static int 
@@ -629,7 +628,6 @@ static const commands_t userlist[] = {
     {u_register,    MENU_UNREGONLY, "RRegister      ¶ñ¼g¡mµù¥U¥Ó½Ð³æ¡n"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "BBye BadPost   ¥Ó½Ð§R°£¦H¤å"},
-    {u_fixgoodpost, PERM_LOGINOK,   "FFix GoodPost  ­×´_Àu¤å"},
 #endif // ASSESS
     {NULL, 0, NULL}
 };

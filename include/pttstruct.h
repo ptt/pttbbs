@@ -63,10 +63,10 @@ typedef struct userec_t {
     uint32_t    uflag;		/* 習慣1 , see uflags.h */
     uint32_t    uflag2;		/* 習慣2 , see uflags.h */
     uint32_t    userlevel;	/* 權限 */
-    uint32_t    numlogins;	/* 上站次數 */
+    uint32_t    numlogindays;	/* 上線資歷 (每日最多+1的登入次數) */
     uint32_t    numposts;	/* 文章篇數 */
     time4_t	firstlogin;	/* 註冊時間 */
-    time4_t	lastlogin;	/* 最近上站時間 */
+    time4_t	lastlogin;	/* 最近上站時間(包含隱身) */
     char	lasthost[IPV4LEN+1];/* 上次上站來源 */
     int32_t     money;		/* Ptt幣 */
 
@@ -95,8 +95,10 @@ typedef struct userec_t {
     char	career[40];	/* 學歷職業 */
     char	phone[20];	/* 電話 */
 
-    char	chkpad1[52];
-    time4_t	chkpad2[3];	/* in case 有人忘了把 time4_t 調好... */
+    uint32_t	old_numlogins;	/* 轉換前的 numlogins, 備份檢視用 */
+    char	chkpad1[48];
+    time4_t	lastseen;	/* 最近上站時間(隱身不計) */
+    time4_t	chkpad2[2];	/* in case 有人忘了把 time4_t 調好... */
     // 以上應為 sizeof(chicken_t) 同等大小
     
     time4_t	lastsong;	/* 上次點歌時間 */
@@ -136,6 +138,15 @@ typedef struct userec_t {
 
     char	pad_tail[28];
 } PACKSTRUCT userec_t;
+
+#ifndef NO_CONST_CUSER
+// const userec_t  cuser;
+# define cuser_ref   ((const userec_t*)&pwcuser)
+# define cuser	    (*cuser_ref)
+#else
+# define cuser_ref   (&cuser)
+# define cuser	     pwcuser
+#endif
 
 /* flags in userec_t.withme */
 #define WITHME_ALLFLAG	0x55555555
@@ -304,14 +315,8 @@ typedef struct msgque_t {
 
 #define ALERT_NEW_MAIL        (0x01)
 #define ISNEWMAIL(utmp)       (utmp->alerts & ALERT_NEW_MAIL)
-#define ALERT_PWD_PERM        (0x02)
-#define ALERT_PWD_BADPOST     (0x04)
-#define ALERT_PWD_GOODPOST    (0x08)
-#define ALERT_PWD_JUSTIFY     (0x10)
-// #define ALERT_PWD_LOGINS      (0x20)
-#define ALERT_PWD_POSTS       (0x40)
-#define ALERT_PWD_RELOAD      (0x80) // reload entire pwd
-#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST|ALERT_PWD_GOODPOST|ALERT_PWD_JUSTIFY|ALERT_PWD_POSTS|ALERT_PWD_RELOAD)
+#define ALERT_PWD_PERM	      (0x02)
+#define ISNEWPERM(utmp)	      (utmp->alerts & ALERT_PWD_PERM)
 
 // userinfo_t.angelpause values 
 #define ANGELPAUSE_NONE	    (0)	// reject none (accept all)

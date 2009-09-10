@@ -230,14 +230,6 @@ gomo_move_warn(int style, char buf[])
 	return NULL;
 }
 
-static void
-gomoku_usr_put(userec_t* userec, const ChessUser* user)
-{
-    userec->five_win = user->win;
-    userec->five_lose = user->lose;
-    userec->five_tie = user->tie;
-}
-
 static char*
 gomo_getstep(const gomo_step_t* step, char buf[])
 {
@@ -395,24 +387,11 @@ static void
 gomo_gameend(ChessInfo* info, ChessGameResult result)
 {
     if (info->mode == CHESS_MODE_VERSUS) {
-	ChessUser* const user1 = &info->user1;
-	/* ChessUser* const user2 = &info->user2; */
 
-	user1->lose--;
-	if (result == CHESS_RESULT_WIN) {
-	    user1->win++;
-	    currutmp->five_win++;
-	} else if (result == CHESS_RESULT_LOST) {
-	    user1->lose++;
-	    currutmp->five_lose++;
-	} else {
-	    user1->tie++;
-	    currutmp->five_tie++;
-	}
+	// lost was already initialized
+	if (result != CHESS_RESULT_LOST)
+	    pwcuChessResult(SIG_GOMO, result);
 
-	gomoku_usr_put(&cuser, user1);
-
-	passwd_sync_update(usernum, &cuser);
     } else if (info->mode == CHESS_MODE_REPLAY) {
 	free(info->board);
 	free(info->tag);
@@ -535,9 +514,7 @@ gomoku(int s, ChessGameMode mode)
     if (info->mode == CHESS_MODE_VERSUS) {
 	/* Assume that info->user1 is me. */
 	info->user1.lose++;
-	passwd_sync_query(usernum, &cuser);
-	gomoku_usr_put(&cuser, &info->user1);
-	passwd_sync_update(usernum, &cuser);
+	pwcuChessResult(SIG_GOMO, CHESS_RESULT_LOST);
     }
 
     if (mode == CHESS_MODE_WATCH)

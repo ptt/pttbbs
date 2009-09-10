@@ -43,7 +43,7 @@ m_user(void)
 	if ((id = getuser(genbuf, &xuser))) {
 	    user_display(&xuser, 1);
 	    if( HasUserPerm(PERM_ACCOUNTS) )
-		uinfo_query(&xuser, 1, id);
+		uinfo_query(xuser.userid, 1, id);
 	    else
 		pressanykey();
 	} else {
@@ -110,7 +110,7 @@ upgrade_passwd(userec_t *puser)
 	memset(puser->chkpad2, 0, sizeof(puser->chkpad2));
 	puser->lastseen= 0;
 	puser->version = PASSWD_VERSION;
-	return;
+	return ;
     }
 #endif
 }
@@ -216,9 +216,12 @@ search_key_user(const char *passwdfile, int mode)
 	    // user_display does not have linefeed in tail.
 
 	    if (isCurrentPwd && HasUserPerm(PERM_ACCOUNTS))
-		uinfo_query(&user, 1, unum);
+		uinfo_query(user.userid, 1, unum);
 	    else
 		outs("\n");
+
+	    // XXX don't trust 'user' variable after here
+	    // because uinfo_query may have changed it.
 
 	    outs(ANSI_COLOR(44) "               空白鍵" \
 		 ANSI_COLOR(37) ":搜尋下一個          " \

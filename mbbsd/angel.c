@@ -14,9 +14,6 @@ angel_toggle_pause()
 	return;
     currutmp->angelpause ++;
     currutmp->angelpause %= ANGELPAUSE_MODES;
-
-    // maintain deprecated value
-    cuser.uflag2 &= ~UF2_ANGEL_OLDMASK;
 }
 
 void
@@ -140,7 +137,7 @@ t_changeangel(){
 		Cdatelite(&now), cuser.userid, cuser.myangel);
 	log_file(BBSHOME "/log/changeangel.log", LOG_CREAT, buf);
 
-	cuser.myangel[0] = 0;
+	pwcuSetMyAngel("");
 	outs("小天使更新完成，下次呼叫時會選出新的小天使");
     }
     return XEASY;
@@ -269,8 +266,7 @@ FindAngel(void){
 		(u->userlevel & PERM_ANGEL) &&
 		!angel_reject_me(u) &&
 		u->userid[0]){
-	    strlcpy(cuser.myangel, u->userid, sizeof(cuser.myangel));
-	    passwd_sync_update(usernum, &cuser);
+	    pwcuSetMyAngel(u->userid);
 	    return 1;
 	}
     }while(++trial < 5);
@@ -394,7 +390,7 @@ TalkToAngel(){
 	memset(&xuser, 0, sizeof(xuser));
 	getuser(cuser.myangel, &xuser); // XXX if user doesn't exist
 	if (!(xuser.userlevel & PERM_ANGEL))
-	    cuser.myangel[0] = 0;
+	    pwcuSetMyAngel("");
     }
     AngelPermChecked = 1;
 
