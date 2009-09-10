@@ -18,14 +18,14 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r3968_chicken
     make r4035_regnew
     make r4194_passwd
-    make r4825_pwcu
+    make r4826_numlogin
 
 -----------------------------------------------------------------------------
-r4825: [numlogindays, lastseen]
+r4826: [numlogindays, lastseen]
 numlogins 的算法有調整，並且改名為 numlogindays；
 lastlogin 也多了一個叫 lastseen (別人 talk->query 到的值)
 lastlogin 只要登入就一定會更新，lastseen 則否。
-另，這個 r4825 的 upgrade 是 optional 的，不跑也不 ok,
+另，這個 r4826 的 upgrade 是 optional 的，不跑也不 ok,
 只是看你要不要一併調整 numlogin 的值。
 
 r4483: [mbbsd command option]
