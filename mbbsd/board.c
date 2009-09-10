@@ -449,7 +449,7 @@ b_config(void)
 	    i = (int)lpost * 10;
 	    attr = (cuser.numposts < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31));
-	    prints("文章篇數 %d 篇以上", i);
+	    prints("各看板有效文章共 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}
