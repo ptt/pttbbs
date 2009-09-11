@@ -1114,7 +1114,14 @@ t_display(void)
 	    else
 		vmsg("信箱儲存失敗。");
 	} else if (*ans == 'c')
-	    unlink(genbuf);
+	{
+	    getdata(b_lines - 1, 0, "確定清除？(y/N) [N] ",
+	            ans, sizeof(ans), LCECHO);
+	    if(*ans == 'Y' || *ans == 'y')
+	        unlink(genbuf);
+	    else
+	        vmsg("取消清除。");
+	}
 	return FULLUPDATE;
     }
     return DONOTHING;
