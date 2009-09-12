@@ -279,13 +279,19 @@ end:
 
 // XXX TODO add a linear queue to handle the difference between each reload?
 
+// XXX the reason to use case-insensitive letters (o, iL) here
+// is because we really see people trying to register then
+// ask SYSOP to change their id.
+#define AMBLIST1    "0Oo"
+#define AMBLIST2    "1IliL"
+
 void
 build_unambiguous_userid(char *uid)
 {
     int i = 0;
     const char *ambtbl[] = {    // need to also update ambchars if you touch these
-	"0O",       // more candidates: o
-	"1Il",    // more candidates: Li
+        AMBLIST1,
+        AMBLIST2,
 	NULL
     };
 
@@ -302,7 +308,7 @@ build_unambiguous_userid(char *uid)
     }
 }
 
-const char *ambchars = "0O1Il";    // super set of ambtbl
+const char *ambchars = AMBLIST1 AMBLIST2;    // super set of ambtbl
 
 typedef struct {
     char *list;
