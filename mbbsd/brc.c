@@ -16,11 +16,12 @@
 
 #define BRC_BLOCKSIZE   1024
 
-// Note: BRC v3 should already support MAX_BOARD > 65535 and BRC_MAXSIZE > 65535,
+// Note: BRC v3 should already support BRC_MAXSIZE > 65535,
 // but not widely tested yet.
-#if MAX_BOARD > 65535 || BRC_MAXSIZE > 65535
+// MAX_BOARD >65535 is already tested on PTT2 since 2009/09/10.
+#if BRC_MAXSIZE > 65535
 #error Max number of boards or BRC_MAXSIZE cannot fit in unsigned short, \
-please rewrite brc.c (v2)
+ please rewrite brc.c (v2)
 #endif
 
 typedef uint32_t brcbid_t;
