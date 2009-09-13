@@ -107,7 +107,6 @@ void brc_update(void);
 void brc_toggle_all_read(int bid, int is_all_read);
 
 /* cache */
-#define demoney(money) deumoney(usernum, money)
 unsigned int getutmpmode(void);
 void setutmpmode(unsigned int mode);
 void purge_utmp(userinfo_t *uentp);
@@ -126,7 +125,6 @@ const char * postperm_msg(const char *bname);
 int give_tax(int money);
 const char* money_level(int money);
 int vice(int money, const char* item);
-#define reload_money()  // cuser.money=moneyof(usernum)
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
@@ -688,6 +686,8 @@ int  passwd_sync_update (int num, userec_t * buf);
 int  passwd_sync_query  (int num, userec_t * buf);
 
 // current user help utilities
+#define reload_money()  pwcuReloadMoney()
+#define demoney(money)  pwcuDeMoney(money)
 int pwcuBitEnableLevel	(unsigned int mask);
 int pwcuBitDisableLevel	(unsigned int mask);
 int pwcuIncNumPost	();
@@ -731,6 +731,8 @@ int pwcuToggleUserFlag2	(unsigned int mask);	// not saved until pwcuSaveUserFlag
 int pwcuLoginSave	();
 int pwcuExitSave	();
 int pwcuReload		();
+int pwcuReloadMoney	();
+int pwcuDeMoney		(int money);
 
 // initialization
 void pwcuInitZero	();

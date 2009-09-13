@@ -87,6 +87,9 @@ int u_cancelbadpost(void)
        return 0;
    }
 
+   // XXX reload account here?
+   pwcuReload();
+
    // early check for time (must do again later)
    day = 180 - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
    if(day>0 && day<=180) {

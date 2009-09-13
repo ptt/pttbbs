@@ -191,6 +191,8 @@ save_violatelaw(void)
     clear();
     vs_hdr("繳罰單中心");
 
+    // XXX reload lots of stuff here?
+    pwcuReload();
     if (!(cuser.userlevel & PERM_VIOLATELAW)) {
 	vmsg("你沒有被開罰單~~");
 	return 0;

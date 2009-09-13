@@ -16,6 +16,9 @@
 static unsigned char real_outbuf[OBUFSIZE + CVTGAP*2] = "   ", 
 		     real_inbuf [IBUFSIZE + CVTGAP*2] = "   ";
 
+// we've seen such pattern - make it accessible for movie mode.
+#define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
+
 // use defines instead - it is discovered that sometimes the input/output buffer was overflow,
 // without knowing why.
 // static unsigned char *outbuf = real_outbuf + 3, *inbuf = real_inbuf + 3;

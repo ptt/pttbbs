@@ -30,6 +30,9 @@ passwd_sync_update(int num, userec_t * buf)
     if (passwd_update(num, buf) != 0)
 	return -1;
 
+    if (num == usernum)
+	cuser.money = moneyof(num);
+
     return 0;
 }
 
@@ -40,6 +43,10 @@ passwd_sync_query(int num, userec_t * buf)
 	return -1;
 
     buf->money = moneyof(num);
+
+    if (num == usernum)
+	cuser.money = moneyof(num);
+
     return 0;
 }
 
@@ -49,7 +56,7 @@ static int
 pwcuInitCUser(userec_t *u)
 {
     assert(usernum > 0 && usernum <= MAX_USERS);
-    if (passwd_query(usernum, u) != 0)
+    if (passwd_sync_query(usernum, u) != 0)
 	return -1;
     assert(strncmp(u->userid, cuser.userid, IDLEN) == 0);
     if    (strncmp(u->userid, cuser.userid, IDLEN) != 0)
@@ -62,7 +69,7 @@ pwcuFinalCUser(userec_t *u)
 {
     assert(usernum > 0 && usernum <= MAX_USERS);
     assert(strcmp(u->userid, cuser.userid) == 0);
-    if (passwd_update(usernum, u) != 0)
+    if (passwd_sync_update(usernum, u) != 0)
 	return -1;
     return 0;
 }
@@ -503,6 +510,10 @@ pwcuExitSave	()
 
     PWCU_START();
 
+    // XXX if PWCU_START uses sync_query, then money is
+    // already changed... however, maybe not a problem here,
+    // since every deumoney() should write difference.
+
     // save variables for dirty check
     uflag = u.uflag;
     uflag2= u.uflag2;
@@ -567,6 +578,21 @@ pwcuReload	()
     int r = passwd_sync_query(usernum, &cuser);
     // XXX TODO verify cuser structure?
     return r;
+}
+
+int
+pwcuReloadMoney ()
+{
+    cuser.money=moneyof(usernum);
+    return 0;
+}
+
+int
+pwcuDeMoney	(int money)
+{
+    deumoney(usernum, money);
+    cuser.money = moneyof(usernum);
+    return 0;
 }
 
 // Initialization
