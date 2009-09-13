@@ -346,10 +346,15 @@ CheckPostPerm(void)
     // check if my own permission is changed.
     if (ISNEWPERM(currutmp))
     {
-	// XXX let pwcuReload handle NEWPERM?
-	CLEAR_ALERT_NEWPERM(currutmp);
+#ifdef DEBUG
+	log_filef("log/newperm.log", LOG_CREAT,
+		"%-13s: reloaded perm %s\n",
+		cuser.userid, Cdate(&now));
+#endif
 	currmode &= ~MODE_POSTCHECKED;
 	pwcuReload();
+	// XXX let pwcuReload handle NEWPERM?
+	CLEAR_ALERT_NEWPERM(currutmp);
     }
 
     if (currmode & MODE_POSTCHECKED)
@@ -405,6 +410,10 @@ int CheckPostRestriction(int bid)
     // check first-login
     if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS))
 	return 0;
+#ifdef USE_LOGIN_LIMITS
+    if (cuser.numlogindays / 10 < (unsigned int)bp->post_limit_logins)
+	return 0;
+#endif
     // XXX numposts itself is an integer, but some records (by del post!?) may
     // create invalid records as -1... so we'd better make it signed for real
     // comparison.
@@ -939,7 +948,6 @@ do_general(int garbage)
 	return READ_REDRAW;
     }
 
-#ifndef DEBUG
     if ( !CheckPostRestriction(currbid) )
     {
 	vmsg("你不夠資深喔！ (可按 i 查看限制)");
@@ -948,7 +956,6 @@ do_general(int garbage)
 #ifdef USE_COOLDOWN
    if(check_cooldown(bp))
        return READ_REDRAW;
-#endif
 #endif
     clear();
 
@@ -1978,7 +1985,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 void
-editLimits(unsigned char *pregtime, unsigned char *pposts, unsigned char *pbadpost)
+editLimits(unsigned char *pregtime, unsigned char *plogins,
+	unsigned char *pposts, unsigned char *pbadpost)
 {
     char genbuf[STRLEN];
     int  temp;
@@ -1986,6 +1994,7 @@ editLimits(unsigned char *pregtime, unsigned char *pposts, unsigned char *pbadpo
     // load var
     unsigned char 
 	regtime = *pregtime, 
+	logins  = *plogins, 
 	posts   = *pposts, 
 	badpost = *pbadpost;
 
@@ -1997,6 +2006,17 @@ editLimits(unsigned char *pregtime, unsigned char *pposts, unsigned char *pbadpo
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
+
+#ifdef USE_LOGIN_LIMITS
+    sprintf(genbuf, "%u", logins*10);
+    do {
+	move(b_lines-1, 0); clrtoeol();	// because previous prompt has same BIG5 prefix here
+	getdata_buf(b_lines - 1, 0, 
+		STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
+	temp = atoi(genbuf);
+    } while (temp < 0 || temp > 2550);
+    logins = (unsigned char)(temp / 10);
+#endif
 
     sprintf(genbuf, "%u", posts*10);
     do {
@@ -2016,6 +2036,7 @@ editLimits(unsigned char *pregtime, unsigned char *pposts, unsigned char *pbadpo
 
     // save var
     *pregtime = regtime;
+    *plogins  = logins;
     *pposts   = posts;
     *pbadpost = badpost;
 }
@@ -2044,6 +2065,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&bp->post_limit_regtime,
+		&bp->post_limit_logins,
 		&bp->post_limit_posts,
 		&bp->post_limit_badpost);
 
@@ -2057,6 +2079,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&bp->vote_limit_regtime,
+		&bp->vote_limit_logins,
 		&bp->vote_limit_posts,
 		&bp->vote_limit_badpost);
 
@@ -2070,6 +2093,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
 	editLimits(
 		&fhdr->multi.vote_limits.regtime,
+		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);
 

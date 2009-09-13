@@ -311,7 +311,8 @@ b_config(void)
 
     while(!finished) {
 	// limits
-	uint8_t lpost  = bp->post_limit_posts,
+	uint8_t llogin = bp->post_limit_logins,
+		lpost  = bp->post_limit_posts,
 		lreg   = bp->post_limit_regtime,
 		lbp    = bp->post_limit_badpost;
 
@@ -438,10 +439,24 @@ b_config(void)
 
 	if (bp->brdattr & BRD_VOTEBOARD)
 	{
+	    llogin = bp->vote_limit_logins;
 	    lpost  = bp->vote_limit_posts;
 	    lreg   = bp->vote_limit_regtime;
 	    lbp    = bp->vote_limit_badpost;
 	}
+
+#ifdef USE_LOGIN_LIMITS
+	if (llogin)
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    i = (int)llogin * 10;
+	    attr = (cuser.numlogindays < i) ? 1 : 0;
+	    if (attr) outs(ANSI_COLOR(1;31));
+	    prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "¥H¤W", i);
+	    if (attr) outs(ANSI_RESET);
+	    hasres = 1;
+	}
+#endif
 
 	if (lpost)
 	{

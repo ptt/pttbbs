@@ -12,6 +12,10 @@ int CheckVoteRestriction(int bid)
     // check first-login
     if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].vote_limit_regtime * MONTH_SECONDS))
 	return 0;
+#ifdef USE_LOGIN_LIMITS
+    if (cuser.numlogindays / 10 < (unsigned int)bcache[bid - 1].vote_limit_logins)
+	return 0;
+#endif
     if (cuser.numposts  / 10 < (unsigned int)bcache[bid - 1].vote_limit_posts)
 	return 0;
     if  (cuser.badpost > (255 - (unsigned int)bcache[bid - 1].vote_limit_badpost))
@@ -29,6 +33,10 @@ int CheckVoteRestrictionFile(const fileheader_t * fhdr)
     // check first-login
     if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * MONTH_SECONDS))
 	return 0;
+#ifdef USE_LOGIN_LIMITS
+    if (cuser.numlogindays / 10 < (unsigned int)fhdr->multi.vote_limits.logins)
+	return 0;
+#endif
     if (cuser.numposts  / 10 < (unsigned int)fhdr->multi.vote_limits.posts)
 	return 0;
     if  (cuser.badpost > (255 - (unsigned int)fhdr->multi.vote_limits.badpost))
@@ -392,6 +400,9 @@ do_voteboard(int type)
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
     votefile.multi.vote_limits.regtime = bcache[currbid - 1].vote_limit_regtime;
+#ifdef USE_LOGIN_LIMITS
+    votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
+#endif
     votefile.multi.vote_limits.posts   = bcache[currbid - 1].vote_limit_posts;
     votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;
     setbdir(genbuf, currboard);
