@@ -27,6 +27,7 @@ do_order_song(void)
     strlcpy(buf, Cdatedate(&now), sizeof(buf));
 
     lockreturn0(OSONG, LOCK_MULTI);
+    pwcuReload();
 
     /* Jaky 一人一天點一首 */
     if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HasUserPerm(PERM_SYSOP)) {
