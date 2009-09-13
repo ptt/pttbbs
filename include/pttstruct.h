@@ -175,11 +175,11 @@ typedef struct boardheader_t { /* 256 bytes */
     uint32_t brdattr;		    /* board的屬性 */
     char    chesscountry;	    /* 棋國 */
     uint8_t vote_limit_posts;	    /* 連署 : 文章篇數下限 */
-    uint8_t expired_vote_limit_logins;   /* (已停用) 連署 : 登入次數下限 */
+    uint8_t vote_limit_logins;	    /* 連署 : 登入次數下限 */
     uint8_t vote_limit_regtime;	    /* 連署 : 註冊時間限制 */
     time4_t bupdate;		    /* note update time */
     uint8_t post_limit_posts;	    /* 發表文章 : 文章篇數下限 */
-    uint8_t expired_post_limit_logins;   /* (已停用) 發表文章 : 登入次數下限 */
+    uint8_t post_limit_logins;	    /* 發表文章 : 登入次數下限 */
     uint8_t post_limit_regtime;	    /* 發表文章 : 註冊時間限制 */
     uint8_t bvote;		    /* 正舉辦 Vote 數 */
     time4_t vtime;		    /* Vote close time */
@@ -315,8 +315,10 @@ typedef struct msgque_t {
 
 #define ALERT_NEW_MAIL        (0x01)
 #define ISNEWMAIL(utmp)       (utmp->alerts & ALERT_NEW_MAIL)
+#define CLEAR_ALERT_NEWMAIL(utmp)    { utmp->alerts &= ~ALERT_NEW_MAIL; }
 #define ALERT_PWD_PERM	      (0x02)
 #define ISNEWPERM(utmp)	      (utmp->alerts & ALERT_PWD_PERM)
+#define CLEAR_ALERT_NEWPERM(utmp)    { utmp->alerts &= ~ALERT_PWD_PERM; }
 
 // userinfo_t.angelpause values 
 #define ANGELPAUSE_NONE	    (0)	// reject none (accept all)

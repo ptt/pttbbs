@@ -346,6 +346,8 @@ CheckPostPerm(void)
     // check if my own permission is changed.
     if (ISNEWPERM(currutmp))
     {
+	// XXX let pwcuReload handle NEWPERM?
+	CLEAR_ALERT_NEWPERM(currutmp);
 	currmode &= ~MODE_POSTCHECKED;
 	pwcuReload();
     }
