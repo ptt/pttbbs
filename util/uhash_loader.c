@@ -45,6 +45,7 @@ void load_uhash(void) {
     if( err  != EEXIST ) {
 	SHM->number=SHM->loaded = 0;
 	SHM->version = SHM_VERSION;
+	SHM->size    = sizeof(SHM_t);
     }
 
     if(SHM->version != SHM_VERSION) {

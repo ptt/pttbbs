@@ -104,6 +104,12 @@ attach_SHM(void)
 	 "or use ipcrm(1) command to clean share memory.\n");
       exit(1);
     }
+    if(SHM->size != sizeof(SHM_t)) {
+      fprintf(stderr, "Error: SHM->size(%d) != sizeof(SHM_t)(%d)\n", SHM->size, sizeof(SHM_t));
+      fprintf(stderr, "Please use the configuration corresponding to SHM,\n"
+	 "or use ipcrm(1) command to clean share memory.\n");
+      exit(1);
+    }
     if (!SHM->loaded)		/* (uhash) assume fresh shared memory is
 				 * zeroed */
 	exit(1);

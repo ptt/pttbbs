@@ -21,6 +21,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4826_numlogin
 
 -----------------------------------------------------------------------------
+r4841: [shm size tag]
+由於站台設定變動後導致 SHM 大小不同 (eg, MAX_BOARDS) 然後有 utility 沒 build
+到的問題再次發生，所以我們開啟了 size check. 請重 build 所有程式並重開 SHM。
+
 r4826: [numlogindays, lastseen]
 numlogins 的算法有調整，並且改名為 numlogindays；
 lastlogin 也多了一個叫 lastseen (別人 talk->query 到的值)

@@ -482,13 +482,12 @@ typedef struct keeploc_t {
 
 // TODO
 // 哪天請好心人整理 shm: 
-// (1) 增加 shmsize
 // (2) userinfo_t 可以移掉一些已不用的
 
-#define SHM_VERSION 3276
+#define SHM_VERSION 4842
 typedef struct {
-    int     version;
-    // int	    shmsize;  // TODO add this: sizeof(SHM_t), for verification
+    int   version;  // SHM_VERSION   for verification
+    int   size;	    // sizeof(SHM_t) for verification
    
     /* uhash */
     /* uhash is a userid->uid hash table -- jochang */
