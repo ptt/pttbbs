@@ -94,22 +94,42 @@ attach_shm(int shmkey, int shmsize)
     return shmptr;
 }
 
+static void 
+shm_check_error()
+{
+    fprintf(stderr, "Please use the source code version corresponding to SHM,\n"
+	    "or use ipcrm(1) command to clean share memory.\n");
+    exit(1);
+}
+
 void
-attach_SHM(void)
+attach_check_SHM(int version, int SHM_t_size)
 {
     SHM = attach_shm(SHM_KEY, SHMSIZE);
-    if(SHM->version != SHM_VERSION) {
-      fprintf(stderr, "Error: SHM->version(%d) != SHM_VERSION(%d)\n", SHM->version, SHM_VERSION);
-      fprintf(stderr, "Please use the source code version corresponding to SHM,\n"
-	 "or use ipcrm(1) command to clean share memory.\n");
-      exit(1);
+
+    // check main program -> common bbs library
+    if (version      != SHM_VERSION) {
+	fprintf(stderr, "Error: version(%d) != SHM_VERSION(%d)\n",
+		version, SHM_VERSION);
+	shm_check_error();
     }
-    if(SHM->size != sizeof(SHM_t)) {
-      fprintf(stderr, "Error: SHM->size(%d) != sizeof(SHM_t)(%d)\n", SHM->size, sizeof(SHM_t));
-      fprintf(stderr, "Please use the configuration corresponding to SHM,\n"
-	 "or use ipcrm(1) command to clean share memory.\n");
-      exit(1);
+    if (SHM_t_size   != sizeof(SHM_t)) {
+	fprintf(stderr, "Error: SHM_t_size(%d) != sizeof(SHM_t)(%lu)\n",
+		SHM_t_size, sizeof(SHM_t));
+	shm_check_error();
     }
+    // check common bbs library -> SHM
+    if (SHM->version != SHM_VERSION) {
+	fprintf(stderr, "Error: SHM->version(%d) != SHM_VERSION(%d)\n", 
+		SHM->version, SHM_VERSION);
+	shm_check_error();
+    }
+    if (SHM->size    != sizeof(SHM_t)) {
+	fprintf(stderr, "Error: SHM->size(%d) != sizeof(SHM_t)(%lu)\n", 
+		SHM->size, sizeof(SHM_t));
+	shm_check_error();
+    }
+
     if (!SHM->loaded)		/* (uhash) assume fresh shared memory is
 				 * zeroed */
 	exit(1);

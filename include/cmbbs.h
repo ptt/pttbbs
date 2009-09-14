@@ -45,7 +45,8 @@ extern int stamplink(char *fpath, fileheader_t * fh);
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
 extern unsigned int safe_sleep(unsigned int seconds);
 extern void *attach_shm(int shmkey, int shmsize);
-extern void attach_SHM(void);
+#define attach_SHM()	attach_check_SHM(SHM_VERSION, sizeof(SHM_t))
+extern void attach_check_SHM(int version, int SHM_t_size);
 extern void add_to_uhash(int n, const char *id);
 extern void remove_from_uhash(int n);
 extern int  dosearchuser(const char *userid, char *rightid);
