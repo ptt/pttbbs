@@ -66,16 +66,16 @@ cmd_user(struct client_state *cs, const char * arg)
 void
 cmd_pass(struct client_state *cs, const char * arg)
 {
-    userec_t cuser;
+    userec_t xuser;
     char * pw;
 
-    if (passwd_query(cs->uid, &cuser) < 0) {
+    if (passwd_query(cs->uid, &xuser) < 0) {
 	evbuffer_add_printf(cs->evb_write, "-ERR user not found\r\n");
 	return;
     }
 
-    pw = crypt(arg, cuser.passwd);
-    if (strcmp(pw, cuser.passwd) == 0) {
+    pw = crypt(arg, xuser.passwd);
+    if (strcmp(pw, xuser.passwd) == 0) {
 	evbuffer_add_printf(cs->evb_write, "+OK\r\n");
 	cs->pop3_state = POP3_TRANS;
     }
@@ -253,7 +253,7 @@ cb_listen(int fd, short event, void *arg)
 
 int main(int argc, char *argv[])
 {
-    int ch, sfd, inetd = 0, daemon = 1;
+    int ch, sfd=0, inetd = 0, daemon = 1;
     char *iface_ip = "127.0.0.1:5140";
 
     Signal(SIGPIPE, SIG_IGN);
