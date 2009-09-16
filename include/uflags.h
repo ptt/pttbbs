@@ -17,8 +17,8 @@
 /* TRADITIONAL BBS UFLAG */
 //#define UNKNOWN_FLAG  0x00000001 // deprecated ?
 //#define UNKNOWN_FLAG2 0x00000002 // deprecated ?
-#define PAGER_FLAG	0x00000004 /* true if pager was OFF last session */
-#define CLOAK_FLAG      0x00000008 /* true if cloak was ON last session */
+//#define PAGER_FLAG	0x00000004 /* deprecated by cuser.pager:     true if pager was OFF last session */
+//#define CLOAK_FLAG    0x00000008 /* deprecated by cuser.invisible: true if cloak was ON last session */
 #define FRIEND_FLAG     0x00000010 /* true if show friends only */
 #define BRDSORT_FLAG    0x00000020 /* true if the boards sorted alphabetical */
 #define MOVIE_FLAG      0x00000040 /* true if show movie */
@@ -48,6 +48,7 @@
 
 /* -------------------- userec_t.uflag2 (unsigned int) */
 
+// XXX TODO move water to standalone variable just like invisible/pager.
 #define WATER_ORIG      0x00000000
 #define WATER_NEW       0x00000001
 #define WATER_OFO       0x00000002
@@ -69,17 +70,8 @@
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 
 /* ANGEL [deprecated] */
-#define UF2_ANGEL_PAUSE    0x00000800 /* true if don't want to be angel for a while */ // deprecated
-#define UF2_ANGEL_OLDMASK  0x00003800 // mask of all deprecated stuff
-// #define ANGEL_R_MAEL    0x00001000 /* true if reject male */	    // deprecated
-// #define ANGEL_R_FEMAEL  0x00002000 /* true if reject female */   // deprecated
-// #define ANGEL_MASK      0x00003000
-// #define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)    // deprecated
-// #define ANGEL_STATUS()  ((cuser.uflag2 & ANGEL_MASK) >> 12)
-/*
- #define ANGEL_SET(X)    (cuser.uflag2 = (cuser.uflag2 & ~ANGEL_MASK) | \
-                          (((X) & 3) << 12))
- */
+// #define UF2_ANGEL_PAUSE    0x00000800 /* deprecated: true if don't want to be angel for a while */
+// #define UF2_ANGEL_OLDMASK  0x00003800 // mask of all deprecated stuff
 // #define ANGEL_???    0x00004000
 // #define ANGEL_???    0x00008000
 

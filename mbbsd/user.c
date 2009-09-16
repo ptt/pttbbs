@@ -542,7 +542,6 @@ void Customize(void)
 
     if(dirty)
     {
-	pwcuSaveUserFlags();
 	outs("設定已儲存。\n");
     } else {
 	outs("結束設定。\n");

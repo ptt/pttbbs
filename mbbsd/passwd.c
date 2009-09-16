@@ -376,23 +376,42 @@ pwcuSetChessEloRating(uint16_t elo_rating)
 }
 
 int 
-pwcuSaveUserFlags()
+pwcuToggleUserFlag	(unsigned int mask)
 {
     PWCU_START();
-    u.uflag  = cuser.uflag;
-    u.uflag2 = cuser.uflag2;
+    u.uflag ^= mask;
+    _SETBY_BIT(cuser.uflag,  mask,
+	           u.uflag & mask);
     PWCU_END();
 }
 
-// non-important variables (only save on exit)
-
-int
-pwcuSetSignature(unsigned char newsig)
+int 
+pwcuToggleUserFlag2	(unsigned int mask)
 {
-    // XXX you MUST save this variable in pwcuExitSave();
-    cuser.signature = newsig;
-    return 0;
+    PWCU_START();
+    u.uflag2 ^= mask;
+    _SETBY_BIT(cuser.uflag2,  mask,
+	           u.uflag2 & mask);
+    PWCU_END();
 }
+
+int 
+pwcuToggleSortBoard ()
+{
+    // XXX if this is executed too often,
+    // put it into 'non-important variable list'.
+    return pwcuToggleUserFlag(BRDSORT_FLAG);
+}
+
+int 
+pwcuToggleFriendList()
+{
+    // XXX if this is executed too often,
+    // put it into 'non-important variable list'.
+    return pwcuToggleUserFlag(FRIEND_FLAG);
+}
+
+// non-important variables (only save on exit)
 
 int 
 pwcuSetWaterballMode(unsigned int bm)
@@ -404,35 +423,11 @@ pwcuSetWaterballMode(unsigned int bm)
     return 0;
 }
 
-int 
-pwcuToggleSortBoard ()
+int
+pwcuSetSignature(unsigned char newsig)
 {
     // XXX you MUST save this variable in pwcuExitSave();
-    cuser.uflag ^= BRDSORT_FLAG;
-    return 0;
-}
-
-int 
-pwcuToggleFriendList()
-{
-    // XXX you MUST save this variable in pwcuExitSave();
-    cuser.uflag ^= FRIEND_FLAG;
-    return 0;
-}
-
-int 
-pwcuToggleUserFlag	(unsigned int mask)
-{
-    // XXX you MUST save this variable in pwcuExitSave();
-    cuser.uflag ^= mask;
-    return 0;
-}
-
-int 
-pwcuToggleUserFlag2	(unsigned int mask)
-{
-    // XXX you MUST save this variable in pwcuExitSave();
-    cuser.uflag2 ^= mask;
+    cuser.signature = newsig;
     return 0;
 }
 
@@ -505,7 +500,7 @@ pwcuExitSave	()
 {
     int dirty = 0;
     uint32_t uflag, uflag2, withme;
-    uint8_t  invisible, pager;
+    uint8_t  invisible, pager, signature;
     int32_t  money;
 
     PWCU_START();
@@ -515,27 +510,28 @@ pwcuExitSave	()
     // since every deumoney() should write difference.
 
     // save variables for dirty check
-    uflag = u.uflag;
-    uflag2= u.uflag2;
-    withme= u.withme;
-    pager = u.pager;
+    uflag     = u.uflag;
+    uflag2    = u.uflag2;
+
+    withme    = u.withme;
+    pager     = u.pager;
     invisible = u.invisible;
-    money = u.money;
 
-    // uflag and uflag2: always trust cuser except REJ_OUTTAMAIL
-    _SETBY_BIT(cuser.uflag2, REJ_OUTTAMAIL, (u.uflag2 & REJ_OUTTAMAIL));
-    u.uflag = cuser.uflag;
-    u.uflag2= cuser.uflag2;
+    money     = u.money;
+    signature = u.signature;
+    // water is already saved in uflag2
 
-    _DISABLE_BIT(u.uflag, (PAGER_FLAG | CLOAK_FLAG));
-    if (currutmp->pager != PAGER_ON)
-	_ENABLE_BIT(u.uflag, PAGER_FLAG);
-    if (currutmp->invisible)
-	_ENABLE_BIT(u.uflag, CLOAK_FLAG);
-
-    u.invisible = currutmp->invisible;
+    // XXX TODO move water to cuser.watermode ?
+    // configure uflag2 by cuser
+    _DISABLE_BIT(u.uflag2, WATER_MASK);
+    _ENABLE_BIT (u.uflag2, (cuser.uflag2 & WATER_MASK));
+    
+    // configure new utmp values
     u.withme    = currutmp->withme;
     u.pager     = currutmp->pager;
+    u.invisible = currutmp->invisible;
+
+    u.signature = cuser.signature;
     u.money     = moneyof(usernum);
 
     // XXX 當初設計的人把 mind 設計成非 NULL terminated 的...
@@ -553,6 +549,7 @@ pwcuExitSave	()
 	withme != u.withme||
 	pager  != u.pager ||
 	money  != u.money ||
+	signature != u.signature||
 	invisible != u.invisible))
     {
 	dirty = 1;
@@ -616,8 +613,9 @@ int pwcuInitAdminPerm	()
 void pwcuInitGuestPerm	()
 {
     cuser.userlevel = 0;
-    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+    cuser.uflag = BRDSORT_FLAG;
     cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
+    cuser.pager = PAGER_OFF;
 # ifdef GUEST_DEFAULT_DBCS_NOINTRESC
     _ENABLE_BIT(cuser.uflag, DBCS_NOINTRESC);
 # endif
