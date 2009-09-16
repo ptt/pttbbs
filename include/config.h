@@ -235,6 +235,10 @@
 #define VICE_MIN	(1)	    /* 最小發票面額 */
 #endif // VICE_MIN
 
+#ifndef BADPOST_CLEAR_DURATION
+#define BADPOST_CLEAR_DURATION	(180)	// 消劣文時間限制
+#endif
+
 /* (deprecated) more.c 中文章頁數上限(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
 

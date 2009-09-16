@@ -91,9 +91,9 @@ int u_cancelbadpost(void)
    pwcuReload();
 
    // early check for time (must do again later)
-   day = 180 - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
-   if(day>0 && day<=180) {
-       vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
+   day = BADPOST_CLEAR_DURATION - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
+   if(day>0 && day<=BADPOST_CLEAR_DURATION) {
+       vmsgf("每 %d 天才能申請一次, 還剩 %d 天.", BADPOST_CLEAR_DURATION, day);
        return 0;
    }
 

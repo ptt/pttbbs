@@ -145,7 +145,7 @@ pwcuCancelBadpost()
 
     // check timebomb again
     day = (now - u.timeremovebadpost ) / DAY_SECONDS;
-    if (day <= 180)
+    if (day <= BADPOST_CLEAR_DURATION)
 	return -1;
     if (u.badpost < 1)
 	return -1;
