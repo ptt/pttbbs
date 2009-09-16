@@ -129,7 +129,7 @@ int
 p_exmail(void)
 {
     char            ans[4], buf[200];
-    int             n;
+    int             n, oldm;
 
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
 	vmsgf("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
@@ -142,6 +142,7 @@ p_exmail(void)
     // and people usually come this this by accident...
     getdata(b_lines - 2, 0, buf, ans, sizeof(ans), NUMECHO);
 
+    oldm = cuser.exmailbox;
     n = atoi(ans);
     if (!ans[0] || n<=0)
 	return 0;
@@ -159,8 +160,13 @@ p_exmail(void)
 		n, n*1000) != 'y')
 	return 0;
 
+    reload_money();
     vice(n * 1000, "購買信箱");
     inmailbox(n);
+    log_filef("log/exmailbox.log", LOG_CREAT,
+	    "%-13s %d+%d->%d %s\n", cuser.userid, 
+	    oldm, n, cuser.exmailbox, Cdatelite(&now));
+
     vmsgf("已購買信箱。新容量上限: %d", cuser.exmailbox);
     return 0;
 }
