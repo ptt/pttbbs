@@ -48,12 +48,12 @@
 
 /* -------------------- userec_t.uflag2 (unsigned int) */
 
-// XXX TODO move water to standalone variable just like invisible/pager.
-#define WATER_ORIG      0x00000000
-#define WATER_NEW       0x00000001
-#define WATER_OFO       0x00000002
-#define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
-#define WATER_MASK      0x00000003 /* water mask */
+// WATER_* is moved to PAGER_UI_* in modes.h
+// #define WATER_ORIG      0x00000000
+// #define WATER_NEW       0x00000001
+// #define WATER_OFO       0x00000002
+// #define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
+// #define WATER_MASK      0x00000003 /* water mask */
 // #define WATER_???	0x00000004
 // #define WATER_???	0x00000008
 

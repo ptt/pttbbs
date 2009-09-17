@@ -559,7 +559,7 @@ igetch(void)
 	    } 
             return ch;
 	case KEY_TAB:
-	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
+	    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
 		if (currutmp != NULL && watermode > 0) {
 		    check_water_init();
 		    watermode = (watermode + water_which->count)
@@ -574,7 +574,7 @@ igetch(void)
 		return (ch);
 
 	    if (currutmp->msgs[0].pid &&
-		WATERMODE(WATER_OFO) && wmofo == NOTREPLYING) {
+		PAGER_UI_IS(PAGER_UI_OFO) && wmofo == NOTREPLYING) {
 		int my_newfd;
 		screen_backup_t old_screen;
 
@@ -586,7 +586,7 @@ igetch(void)
 	    	scr_restore(&old_screen);
 		i_newfd = my_newfd;
 		continue;
-	    } else if (!WATERMODE(WATER_OFO)) {
+	    } else if (!PAGER_UI_IS(PAGER_UI_OFO)) {
 		check_water_init();
 		if (watermode > 0) {
 		    watermode = (watermode + water_which->count)
@@ -641,7 +641,7 @@ igetch(void)
 	    return ch;
 
 	case Ctrl('T'):
-	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW)) {
+	    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)) {
 		if (watermode > 0) {
 		    check_water_init();
 		    if (watermode > 1)
@@ -655,7 +655,7 @@ igetch(void)
             return ch;
 
 	case Ctrl('F'):
-	    if (WATERMODE(WATER_NEW)) {
+	    if (PAGER_UI_IS(PAGER_UI_NEW)) {
 		if (watermode > 0) {
 		    check_water_init();
 		    if (water_which_flag == (int)water_usies)
@@ -675,7 +675,7 @@ igetch(void)
             return ch;
 
 	case Ctrl('G'):
-	    if (WATERMODE(WATER_NEW)) {
+	    if (PAGER_UI_IS(PAGER_UI_NEW)) {
 		if (watermode > 0) {
 		    check_water_init();
 		    water_which_flag = (water_which_flag + water_usies) % (water_usies + 1);

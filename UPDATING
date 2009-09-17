@@ -19,8 +19,13 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4035_regnew
     make r4194_passwd
     make r4826_numlogin
+    make r4848_watermode
 
 -----------------------------------------------------------------------------
+r4848: [water mode]
+決定把 uflag2 的 WATERMODE (2 bit) 移出來放到獨立的變數。
+uflag / uflag2 還是放單一 bit 的東西較好。
+
 r4841: [shm size tag]
 由於站台設定變動後導致 SHM 大小不同 (eg, MAX_BOARDS) 然後有 utility 沒 build
 到的問題再次發生，所以我們開啟了 size check. 請重 build 所有程式並重開 SHM。

@@ -1011,7 +1011,7 @@ t_display_new(void)
 	t_display_new_flag = 1;
 
     check_water_init();
-    if (WATERMODE(WATER_ORIG))
+    if (PAGER_UI_IS(PAGER_UI_ORIG))
 	water_which = &water[0];
     else
 	off = 3;
@@ -1019,10 +1019,10 @@ t_display_new(void)
     if (water[0].count && watermode > 0) {
 	move(1, 0);
 	outs("───────水─球─回─顧───");
-	outs(WATERMODE(WATER_ORIG) ?
+	outs(PAGER_UI_IS(PAGER_UI_ORIG) ?
 	     "──────用[Ctrl-R Ctrl-T]鍵切換─────" :
 	     "用[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]鍵切換────");
-	if (WATERMODE(WATER_NEW)) {
+	if (PAGER_UI_IS(PAGER_UI_NEW)) {
 	    move(2, 0);
 	    clrtoeol();
 	    for (i = 0; i < 6; i++) {
@@ -1055,7 +1055,7 @@ t_display_new(void)
 	    if (len < 0)
 		len = 0;
 
-	    move(i + (WATERMODE(WATER_ORIG) ? 2 : 3), 0);
+	    move(i + (PAGER_UI_IS(PAGER_UI_ORIG) ? 2 : 3), 0);
 	    clrtoeol();
 	    if (watermode - 1 != i)
 		prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
@@ -1079,7 +1079,7 @@ t_display_new(void)
 	move(i + off, 0);
 	outs("──────────────────────"
 	     "─────────────────");
-	if (WATERMODE(WATER_NEW))
+	if (PAGER_UI_IS(PAGER_UI_NEW))
 	    while (i++ <= water[0].count) {
 		move(i + off, 0);
 		clrtoeol();
@@ -1928,7 +1928,7 @@ t_showhelp(void)
 	outs("\n" ANSI_COLOR(36) "【 交談專用鍵 】" ANSI_RESET "\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
-	     "(^W)切換水球方式 一般 / 進階 / 未來\n"
+	     "(^W)切換水球方式 一般 / 進階\n"
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
 	     "(^R)            即時回應 (有人 Call in 你時)\n");
     }
@@ -3013,20 +3013,16 @@ userlist(void)
 
 	    case Ctrl('W'):
 		if (HasUserPerm(PERM_LOGINOK)) {
-		    int             tmp;
-		    char           *wm[3] = {"一般", "進階", "未來"};
+		    static const char *wm[PAGER_UI_TYPES] = {"一般", "進階", "未來"};
 
-
-		    tmp = cuser.uflag2 & WATER_MASK;
-		    tmp = (tmp + 1) % 3;
-		    pwcuSetWaterballMode(tmp);
+		    pwcuSetWaterballMode((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
 		    /* vmsg cannot support multi lines */
 		    move(b_lines - 4, 0);
 		    clrtobot();
 		    move(b_lines - 3, 0);
-		    outs("系統提供 一般 進階 未來 三種模式\n"
+		    outs("系統提供數種水球模式可供選擇\n"
 		    "在切換後請正常下線再重新登入, 以確保結構正確\n");
-		    vmsgf( "目前切換到 %s 水球模式", wm[tmp]);
+		    vmsgf( "目前切換到 [%s] 水球模式", wm[cuser.pager_ui_type%PAGER_UI_TYPES]);
 		    redrawall = redraw = 1;
 		}
 		break;

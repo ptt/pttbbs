@@ -430,7 +430,7 @@ add_history_water(water_t * w, const msgque_t * msg)
 {
     memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
-    w->top %= WATERMODE(WATER_OFO) ? 5 : MAX_REVIEW;
+    w->top %= PAGER_UI_IS(PAGER_UI_OFO) ? 5 : MAX_REVIEW;
 
     if (w->count < MAX_REVIEW)
 	w->count++;
@@ -444,9 +444,9 @@ add_history(const msgque_t * msg)
     int             i = 0, j, waterinit = 0;
     water_t        *tmp;
     check_water_init();
-    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
+    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
 	add_history_water(&water[0], msg);
-    if (WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO)) {
+    if (PAGER_UI_IS(PAGER_UI_NEW) || PAGER_UI_IS(PAGER_UI_OFO)) {
 	for (i = 0; i < 5 && swater[i]; i++)
 	    if (swater[i]->pid == msg->pid
 #ifdef PLAY_ANGEL
@@ -478,7 +478,7 @@ add_history(const msgque_t * msg)
 	swater[0] = tmp;
 	add_history_water(swater[0], msg);
     }
-    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW)) {
+    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)) {
 	if (watermode > 0 &&
 	    (water_which == swater[0] || water_which == &water[0])) {
 	    if (watermode < water_which->count)
@@ -502,7 +502,7 @@ write_request(int sig)
 #endif
     syncnow();
     check_water_init();
-    if (WATERMODE(WATER_OFO)) {
+    if (PAGER_UI_IS(PAGER_UI_OFO)) {
 	/* 如果目前正在回水球模式的話, 就不能進行 add_history() ,
 	   因為會改寫 water[], 而使回水球目的爛掉, 所以分成幾種情況考慮.
 	   sig != 0表真的有水球進來, 故顯示.

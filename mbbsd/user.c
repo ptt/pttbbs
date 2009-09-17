@@ -439,13 +439,13 @@ void Customize(void)
 	/* extended stuff */
 	{
 	    char mindbuf[5];
-	    static const char *wm[] = 
+	    static const char *wm[PAGER_UI_TYPES+1] = 
 		{"一般", "進階", "未來", ""};
 
 	    prints("%c. %-40s%s\n",
 		    '1' + iax++,
 		    "水球模式",
-		    wm[(cuser.uflag2 & WATER_MASK)]);
+		    wm[cuser.pager_ui_type % PAGER_UI_TYPES]);
 	    memcpy(mindbuf, &currutmp->mind, 4);
 	    mindbuf[4] = 0;
 	    prints("%c. %-40s%s\n",
@@ -499,10 +499,8 @@ void Customize(void)
 	{
 	    case 0: 
 		{
-		    int     currentset = cuser.uflag2 & WATER_MASK;  
-		    currentset = (currentset + 1) % 3;  
-		    pwcuSetWaterballMode(currentset);
-		    vmsg("修正水球模式後請正常離線再重新上線");  
+		    pwcuSetWaterballMode((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
+		    vmsg("修改水球模式後請正常離線再重新上線");  
 		    dirty = 1;
 		}
 		continue;

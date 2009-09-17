@@ -334,14 +334,14 @@ int             KEY_ESC_arg;
 int             watermode = -1;
 int             wmofo = NOTREPLYING;
 /*
- * WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW):
+ * PAGER_UI_IS(PAGER_UI_ORIG) | PAGER_UI_IS(PAGER_UI_NEW):
  * ????????????????????
  * Ptt 水球回顧   (FIXME: guessed by scw)
  * watermode = -1 沒在回水球
  *           = 0   在回上一顆水球  (Ctrl-R)
  *           > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
  * 
- * WATERMODE(WATER_OFO)  by in2
+ * PAGER_UI_IS(PAGER_UI_OFO)  by in2
  * wmofo     = NOTREPLYING     沒在回水球
  *           = REPLYING        正在回水球
  *           = RECVINREPLYING  回水球間又接到水球

@@ -421,9 +421,7 @@ int
 pwcuSetWaterballMode(unsigned int bm)
 {
     // XXX you MUST save this variable in pwcuExitSave();
-    bm		 &=  WATER_MASK;
-    cuser.uflag2 &= ~WATER_MASK;  
-    cuser.uflag2 |= bm;  
+    cuser.pager_ui_type = bm % PAGER_UI_TYPES;
     return 0;
 }
 
@@ -504,7 +502,7 @@ pwcuExitSave	()
 {
     int dirty = 0;
     uint32_t uflag, uflag2, withme;
-    uint8_t  invisible, pager, signature;
+    uint8_t  invisible, pager, signature, pager_ui_type;
     int32_t  money;
 
     PWCU_START();
@@ -523,13 +521,8 @@ pwcuExitSave	()
 
     money     = u.money;
     signature = u.signature;
-    // water is already saved in uflag2
+    pager_ui_type = u.pager_ui_type;
 
-    // XXX TODO move water to cuser.watermode ?
-    // configure uflag2 by cuser
-    _DISABLE_BIT(u.uflag2, WATER_MASK);
-    _ENABLE_BIT (u.uflag2, (cuser.uflag2 & WATER_MASK));
-    
     // configure new utmp values
     u.withme    = currutmp->withme;
     u.pager     = currutmp->pager;
@@ -537,6 +530,7 @@ pwcuExitSave	()
 
     u.signature = cuser.signature;
     u.money     = moneyof(usernum);
+    u.pager_ui_type = cuser.pager_ui_type;
 
     // XXX 當初設計的人把 mind 設計成非 NULL terminated 的...
     // assert(sizeof(u.mind) == sizeof(currutmp->mind));
@@ -553,6 +547,7 @@ pwcuExitSave	()
 	withme != u.withme||
 	pager  != u.pager ||
 	money  != u.money ||
+	pager_ui_type != u.pager_ui_type ||
 	signature != u.signature||
 	invisible != u.invisible))
     {

@@ -80,8 +80,7 @@ typedef struct userec_t {
     uint8_t	year;		/* 生日 年 */
     uint8_t	sex;		/* 性別 */
 
-    uint8_t	unused_2;
-
+    uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
 

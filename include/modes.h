@@ -200,6 +200,13 @@
 
 #define PAGER_MODES 	(5)
 
+#define PAGER_UI_ORIG	    0x00000000	// was: WATER_ORIG
+#define PAGER_UI_NEW	    0x00000001	// was: WATER_NEW
+#define PAGER_UI_OFO	    0x00000002	// was: WATER_OFO
+#define PAGER_UI_IS(uitype) ((cuser.pager_ui_type%PAGER_UI_TYPES) == (uitype))
+#define PAGER_UI_TYPES	    0x00000003	// the types that we really support
+#define PAGER_UI_TYPES_USER 0x00000002	// the types we allow user to select
+
 /* stuff.c: show_file */
 #define SHOWFILE_RAW	     (0x00)
 #define SHOWFILE_ALLOW_COLOR (0x01) // ESC [ ... m
