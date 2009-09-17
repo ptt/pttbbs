@@ -58,6 +58,10 @@ pwcuInitCUser(userec_t *u)
     assert(usernum > 0 && usernum <= MAX_USERS);
     if (passwd_sync_query(usernum, u) != 0)
 	return -1;
+#ifdef DEBUG
+    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s InitCUser  invoked at %s\n", 
+	    cuser.userid, Cdatelite(&now));
+#endif
     assert(strncmp(u->userid, cuser.userid, IDLEN) == 0);
     if    (strncmp(u->userid, cuser.userid, IDLEN) != 0)
 	return -1;
@@ -69,13 +73,22 @@ pwcuFinalCUser(userec_t *u)
 {
     assert(usernum > 0 && usernum <= MAX_USERS);
     assert(strcmp(u->userid, cuser.userid) == 0);
+#ifdef DEBUG
+    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s FinalCUser invoked at %s\n", 
+	    cuser.userid, Cdatelite(&now));
+#endif
     if (passwd_sync_update(usernum, u) != 0)
 	return -1;
     return 0;
 }
 
-#define PWCU_START()  userec_t u; if(pwcuInitCUser (&u) != 0) return -1
-#define PWCU_END()    if (pwcuFinalCUser(&u) != 0) return -1; return 0
+#ifdef   DISABLE_AGGRESSIVE_PWCU_CACHE
+# define PWCU_START()	userec_t u; if(pwcuInitCUser (&u) != 0) return -1
+# define PWCU_END()	if (pwcuFinalCUser(&u) != 0) return -1; return 0
+#else
+# define PWCU_START()	userec_t u, u_orig; do { if(pwcuInitCUser (&u) != 0) return -1; memcpy(&u_orig, &u, sizeof(u)); } while(0)
+# define PWCU_END()	do { if (memcmp(&u_orig, &u, sizeof(u)) != 0 && pwcuFinalCUser(&u) != 0) return -1; return 0; } while(0)
+#endif
 
 #define _ENABLE_BIT( var,mask) var |=  (mask)
 #define _DISABLE_BIT(var,mask) var &= ~(mask)
@@ -539,14 +552,14 @@ pwcuExitSave	()
 	// u.money		= moneyof(usernum); // should be already updated by deumoney
 
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%-13s exit %s at %s\n", 
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n", 
 		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
 #endif
 	PWCU_END();
 	// XXX return 0 here (PWCU_END), following code is not executed.
     }
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%-13s exit %s at %s\n", 
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n", 
 		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
 #endif
     return 0;
