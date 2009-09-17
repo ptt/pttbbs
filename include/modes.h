@@ -205,7 +205,7 @@
 #define PAGER_UI_OFO	    0x00000002	// was: WATER_OFO
 #define PAGER_UI_IS(uitype) ((cuser.pager_ui_type%PAGER_UI_TYPES) == (uitype))
 #define PAGER_UI_TYPES	    0x00000003	// the types that we really support
-#define PAGER_UI_TYPES_USER 0x00000002	// the types we allow user to select
+#define PAGER_UI_TYPES_USER 0x00000003	// the types we allow user to select
 
 /* stuff.c: show_file */
 #define SHOWFILE_RAW	     (0x00)
