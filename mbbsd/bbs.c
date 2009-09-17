@@ -1144,8 +1144,9 @@ do_general(int garbage)
 		demoney(money);    
 		pwcuIncNumPost();
 		addPost = 1;
-		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元",
+		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元\n",
 			cuser.numposts, money);
+		prints("\n (若之後被板主刪文則此次獲得的有效文章數及稿酬將會被回收)\n\n");
 	    } else {
 		// no money, no record.
 		outs("本篇不列入記錄，敬請包涵。");
@@ -1155,6 +1156,7 @@ do_general(int garbage)
 	{
 	    outs("不列入記錄，敬請包涵。");
 	}
+	clrtobot();
 
 	/* 回應到原作者信箱 */
 
