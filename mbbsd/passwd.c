@@ -417,11 +417,19 @@ pwcuToggleFriendList()
 
 // non-important variables (only save on exit)
 
+static char 
+pwcu_dirty;
+
 int 
-pwcuSetWaterballMode(unsigned int bm)
+pwcuSetPagerUIType  (unsigned int  uitype)
 {
     // XXX you MUST save this variable in pwcuExitSave();
-    cuser.pager_ui_type = bm % PAGER_UI_TYPES;
+    uitype %= PAGER_UI_TYPES;
+    if (cuser.pager_ui_type != uitype)
+    {
+	pwcu_dirty = 1;
+	cuser.pager_ui_type = uitype;
+    }
     return 0;
 }
 
@@ -429,7 +437,11 @@ int
 pwcuSetSignature(unsigned char newsig)
 {
     // XXX you MUST save this variable in pwcuExitSave();
-    cuser.signature = newsig;
+    if (cuser.signature != newsig)
+    {
+	pwcu_dirty = 1;
+	cuser.signature = newsig;
+    }
     return 0;
 }
 
@@ -450,6 +462,7 @@ int pwcuLoginSave	()
     time4_t   baseref = 0;
     struct tm baseref_tm = {0};
 
+    // XXX one more read here... can we avoid it?
     PWCU_START();
 
     // new host from 'fromhost'
@@ -500,79 +513,51 @@ int pwcuLoginSave	()
 int 
 pwcuExitSave	()
 {
-    int dirty = 0;
-    uint32_t uflag, uflag2, withme;
-    uint8_t  invisible, pager, signature, pager_ui_type;
-    int32_t  money;
-
-    PWCU_START();
-
-    // XXX if PWCU_START uses sync_query, then money is
-    // already changed... however, maybe not a problem here,
-    // since every deumoney() should write difference.
-
-    // save variables for dirty check
-    uflag     = u.uflag;
-    uflag2    = u.uflag2;
-
-    withme    = u.withme;
-    pager     = u.pager;
-    invisible = u.invisible;
-
-    money     = u.money;
-    signature = u.signature;
-    pager_ui_type = u.pager_ui_type;
-
-    // configure new utmp values
-    u.withme    = currutmp->withme;
-    u.pager     = currutmp->pager;
-    u.invisible = currutmp->invisible;
-
-    u.signature = cuser.signature;
-    u.money     = moneyof(usernum);
-    u.pager_ui_type = cuser.pager_ui_type;
-
-    // XXX 當初設計的人把 mind 設計成非 NULL terminated 的...
-    // assert(sizeof(u.mind) == sizeof(currutmp->mind));
-    if (memcmp(u.mind, currutmp->mind, sizeof(u.mind)) != 0)
+    // determine dirty
+    if (pwcu_dirty	||
+	cuser.withme	!= currutmp->withme ||
+	cuser.pager	!= currutmp->pager  ||
+	cuser.invisible != currutmp->invisible ||
+	(memcmp(cuser.mind,currutmp->mind, sizeof(cuser.mind)) != 0) )
     {
-	memcpy(u.mind,currutmp->mind, sizeof(u.mind));
-	dirty = 1;
-    }
+	// maybe dirty, let's work harder.
+	PWCU_START();
+	pwcu_dirty = 1;
 
-    // check dirty
-    if (!dirty && (
-	uflag  != u.uflag ||
-	uflag2 != u.uflag2||
-	withme != u.withme||
-	pager  != u.pager ||
-	money  != u.money ||
-	pager_ui_type != u.pager_ui_type ||
-	signature != u.signature||
-	invisible != u.invisible))
-    {
-	dirty = 1;
-    }
+	// XXX we may work harder to determine if this is a real
+	// dirty cache, however maybe it's not that important.
+
+	// configure new utmp values
+	u.withme    = currutmp->withme;
+	u.pager     = currutmp->pager;
+	u.invisible = currutmp->invisible;
+	memcpy(u.mind, currutmp->mind, sizeof(u.mind));	// XXX u.mind is NOT NULL-terminated.
+
+	// configure those changed by 'not important variables' API
+	u.signature	= cuser.signature;
+	u.pager_ui_type = cuser.pager_ui_type;
+	// u.money		= moneyof(usernum); // should be already updated by deumoney
 
 #ifdef DEBUG
-    log_filef("log/pwcu_exitsave.log", LOG_CREAT,
-	    "%s exit %s at %s\n", u.userid,
-	    dirty ? "DIRTY" : "CLEAN",
-	    Cdatelite(&now));
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%-13s exit %s at %s\n", 
+		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
 #endif
-
-    // no need to save data.
-    if (!dirty)
-	return 0;
-
-    PWCU_END();
+	PWCU_END();
+	// XXX return 0 here (PWCU_END), following code is not executed.
+    }
+#ifdef DEBUG
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%-13s exit %s at %s\n", 
+		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
+#endif
+    return 0;
 }
 
 int 
 pwcuReload	()
 {
-    int r = passwd_sync_query(usernum, &cuser);
     // XXX TODO verify cuser structure?
+    int r = passwd_sync_query(usernum, &cuser);
+    pwcu_dirty = 0;
     return r;
 }
 

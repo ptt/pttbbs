@@ -721,7 +721,7 @@ int pwcuRegisterSetInfo (const char *rname,
 
 // non-important based variables (only save on exit)
 int pwcuSetSignature	(unsigned char newsig);
-int pwcuSetWaterballMode(unsigned int bm);
+int pwcuSetPagerUIType	(unsigned int  uitype);
 int pwcuToggleSortBoard ();
 int pwcuToggleFriendList();
 int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags

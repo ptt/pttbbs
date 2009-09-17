@@ -3015,7 +3015,7 @@ userlist(void)
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    static const char *wm[PAGER_UI_TYPES] = {"一般", "進階", "未來"};
 
-		    pwcuSetWaterballMode((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
+		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
 		    /* vmsg cannot support multi lines */
 		    move(b_lines - 4, 0);
 		    clrtobot();

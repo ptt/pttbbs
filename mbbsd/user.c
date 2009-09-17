@@ -499,7 +499,7 @@ void Customize(void)
 	{
 	    case 0: 
 		{
-		    pwcuSetWaterballMode((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
+		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
 		    vmsg("修改水球模式後請正常離線再重新上線");  
 		    dirty = 1;
 		}
