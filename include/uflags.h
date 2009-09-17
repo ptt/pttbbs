@@ -70,10 +70,11 @@
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 
 /* ANGEL [deprecated] */
-// #define UF2_ANGEL_PAUSE    0x00000800 /* deprecated: true if don't want to be angel for a while */
-// #define UF2_ANGEL_OLDMASK  0x00003800 // mask of all deprecated stuff
-// #define ANGEL_???    0x00004000
-// #define ANGEL_???    0x00008000
+// #define ANGEL_???    0x00000800 /* deprecated: true if don't want to be angel for a while */
+// #define ANGEL_???    0x00001000 // deprecated: ???
+// #define ANGEL_???    0x00002000 // deprecated: ???
+// #define ANGEL_???    0x00004000 // reserved then deprecated
+// #define ANGEL_???    0x00008000 // reserved then deprecated
 
 /* NEW ENTRY HERE */
 // #define ???_???	0x00010000

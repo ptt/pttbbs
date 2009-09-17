@@ -76,24 +76,26 @@ int u_cancelbadpost(void)
    int day, prev = cuser.badpost;
 
    // early check.
-   if(cuser.badpost==0) {
+   if(cuser.badpost == 0) {
        vmsg("你並沒有劣文."); 
        return 0;
    }
         
    // early check for race condition
+   // XXX 由於帳號API已同步化 (pwcuAPI*) 所以這個 check 可有可無
    if(search_ulistn(usernum,2)) {
        vmsg("請登出其他視窗, 否則不受理."); 
        return 0;
    }
 
-   // XXX reload account here?
+   // XXX reload account here? (also simply optional)
    pwcuReload();
 
    // early check for time (must do again later)
-   day = BADPOST_CLEAR_DURATION - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
-   if(day>0 && day<=BADPOST_CLEAR_DURATION) {
-       vmsgf("每 %d 天才能申請一次, 還剩 %d 天.", BADPOST_CLEAR_DURATION, day);
+   day = (now - cuser.timeremovebadpost ) / DAY_SECONDS;
+   if (day < BADPOST_CLEAR_DURATION) {
+       vmsgf("每 %d 天才能申請一次, 還剩 %d 天.", 
+	       BADPOST_CLEAR_DURATION, BADPOST_CLEAR_DURATION-day);
        return 0;
    }
 
@@ -103,12 +105,6 @@ int u_cancelbadpost(void)
        vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
    {
        vmsg("請您思考清楚後再來申請刪除."); 
-       return 0;
-   }
-
-   // check again for race condition
-   if(search_ulistn(usernum,2)) {
-       vmsg("請登出其他視窗, 否則不受理."); 
        return 0;
    }
 
@@ -857,7 +853,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    do {
 		int max_days = (x.lastlogin - x.firstlogin) / DAY_SECONDS;
 		snprintf(genbuf, sizeof(genbuf), "%d", x.numlogindays);
-		if (getdata_str(y++, 0, STR_LOGINDAYS, buf, 10, DOECHO, genbuf))
+		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atoi(buf)) >= 0)
 			x.numlogindays = tmp;
 		if (x.numlogindays > max_days)

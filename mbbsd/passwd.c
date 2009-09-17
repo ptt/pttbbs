@@ -143,9 +143,13 @@ pwcuCancelBadpost()
     int day;
     PWCU_START();
 
+    // no matter what, reload the timebomb
+    cuser.badpost = u.badpost;
+    cuser.timeremovebadpost = u.timeremovebadpost;
+
     // check timebomb again
     day = (now - u.timeremovebadpost ) / DAY_SECONDS;
-    if (day <= BADPOST_CLEAR_DURATION)
+    if (day < BADPOST_CLEAR_DURATION)
 	return -1;
     if (u.badpost < 1)
 	return -1;

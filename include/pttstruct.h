@@ -654,10 +654,4 @@ typedef struct
     int show_max;	/* max covered range in last display */
 } SigInfo;
 
-/* type in gomo.c, structure passing through socket */
-typedef struct {
-    char            x;
-    char            y;
-} Horder_t;
-
 #endif
