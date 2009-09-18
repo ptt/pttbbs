@@ -419,7 +419,7 @@ b_config(void)
 
 	if (!canpost)
 	    outs(ANSI_COLOR(1;31)"  ★ 您在此看板無發文或推文權限，"
-		"詳細原因請參考上面顯示為紅色的項目。"ANSI_RESET"\n");
+		"詳細原因請參考上面顯示為紅色或有 * 的項目。"ANSI_RESET"\n");
 
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
@@ -451,7 +451,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)llogin * 10;
 	    attr = (cuser.numlogindays < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31));
+	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
@@ -463,7 +463,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)lpost * 10;
 	    attr = (cuser.numposts < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31));
+	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints("各看板有效文章共 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
@@ -475,7 +475,7 @@ b_config(void)
 	    i = lreg;
 	    attr = (cuser.firstlogin > 
 		    (now - (time4_t)lreg * MONTH_SECONDS)) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31));
+	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    outs("註冊時間 ");
 	    if (i < 5)
 		prints("%d 天以上", i*30);
@@ -490,7 +490,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = 255 - lbp;
 	    attr = (cuser.badpost > i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31));
+	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints("劣文篇數 %d 篇以下", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
@@ -502,7 +502,7 @@ b_config(void)
 	    if (msg) // some reasons
 	    {
 		move_ansi(ipostres++, COLPOSTRES);
-		outs(ANSI_COLOR(1;31));
+		outs(ANSI_COLOR(1;31) "*");
 		outs(msg);
 		outs(ANSI_RESET);
 	    }
