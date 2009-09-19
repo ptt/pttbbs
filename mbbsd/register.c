@@ -622,6 +622,35 @@ setupnewuser(const userec_t *user)
     return uid;
 }
 
+int
+query_adbanner_usong_pref_changed(const userec_t *u)
+{
+    char old = (cuser.uflag & ADBANNER_USONG_FLAG) ? 1 : 0,
+	 new = 0;
+
+    assert(u);
+    if ( !(u->uflag & ADBANNER_FLAG) )
+	return 0;
+
+    vs_hdr("動態看板心情點播顯示設定");
+    // draw a box here
+    outs(
+	    "\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
+	    "\n\n\t其內容是開放給各使用者與公益團體申請的，所以會包含非商業的活動資訊，"
+	    "\n\n\t還有來自各使用者的心情點播 (可能包含該使用者的政治性言論或各種留言)。" 
+	    "\n\n\n\n"
+	    "\n\n\t" ANSI_COLOR(1) "此類由使用者自行發表的文字與圖像並不代表站方立場。" 
+	    ANSI_RESET "\n");
+    vs_rectangle_simple(1, 1, 78, MAX_ADBANNER_HEIGHT);
+
+    if (vans("請問您希望看到來自其它使用者的心情點播嗎？ [y/N]: ") == 'y')
+	new = 1;
+    else
+	new = 0;
+
+    return (new != old) ? 1 : 0;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
@@ -660,17 +689,7 @@ new_register(void)
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
 #ifdef ADBANNER_USONG_FLAG
-    vs_hdr("動態看板心情點播顯示設定");
-    // draw a box here
-    outs(
-    "\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
-    "\n\n\t其內容是開放給各使用者與公益團體申請的，所以會包含非商業的活動資訊、"
-    "\n\n\t來自各使用者的心情點播、政治性言論與各種留言。" 
-    "\n\n\n\n"
-    "\n\n\t" ANSI_COLOR(1) "此類由使用者自行發表的文字與圖像並不代表站方立場。" 
-	     ANSI_RESET "\n");
-    vs_rectangle_simple(1, 1, 78, MAX_ADBANNER_HEIGHT);
-    if (vans("請問您希望看到此類來自其它使用者的心情點播與留言嗎？ [y/N]: ") == 'y')
+    if (query_adbanner_usong_pref_changed(&newuser))
 	newuser.uflag |= ADBANNER_USONG_FLAG;
 #endif
 

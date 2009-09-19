@@ -1166,6 +1166,8 @@ inline static void foreign_warning(void){
 }
 #endif
 
+// XXX temporary...
+int query_adbanner_usong_pref_changed(const userec_t *u);
 
 static void
 user_login(void)
@@ -1265,6 +1267,14 @@ user_login(void)
 	    is_first_login_of_today )
 	    check_BM();		/* 自動取下離職板主權力 */
 
+	// XXX only for temporary...
+#ifdef ADBANNER_USONG_TIMEBOMB
+	if (last_login_time < ADBANNER_USONG_TIMEBOMB)
+	{
+	    if (query_adbanner_usong_pref_changed(cuser_ref))
+		pwcuToggleUserFlag(ADBANNER_USONG_FLAG);
+	}
+#endif
 
     } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
 
