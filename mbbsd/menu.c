@@ -268,16 +268,26 @@ adbanner(int cmdmode)
 	// @ now / (3600 / MAx_ADBANNER) means "get the index of which to show".
 	// syncnow();
 	
+	const int slideshow_duration = 3600 / MAX_ADBANNER,
+		  slideshow_index    = now  / slideshow_duration;
+
+	// index range: 0 =>[system] => N_SYSADBANNER    => [user esong] => 
+	//              last_usong   => [advertisements] => last_film
+	int valid_usong_range = (SHM->last_usong > N_SYSADBANNER &&
+				 SHM->last_usong < SHM->last_film);
+	
 	if (SHM->last_film > N_SYSADBANNER) {
-	    if (cuser.uflag & ADBANNER_USONG_FLAG)
-		i = N_SYSADBANNER + (now / (3600 / MAX_ADBANNER) ) % 
-		    (SHM->last_film+1-N_SYSADBANNER);
-	    else i = SHM->last_usong + 1 + (now / (3600 / MAX_ADBANNER) ) %
-		    (SHM->last_film - SHM->last_usong);
+	    if (cuser.uflag & ADBANNER_USONG_FLAG || !valid_usong_range)
+		i = N_SYSADBANNER +       slideshow_index % (SHM->last_film+1-N_SYSADBANNER);
+	    else 
+		i = SHM->last_usong + 1 + slideshow_index % (SHM->last_film - SHM->last_usong);
 	}
 	else
 	    i = 0; // SHM->last_film;
     }
+
+    // make it safe!
+    i %= MAX_ADBANNER;
 
     move(1, 0);
     clrtoln(1 + FILMROW);	/* 清掉上次的 */

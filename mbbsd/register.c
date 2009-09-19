@@ -660,7 +660,7 @@ new_register(void)
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
     // XXX enable this when we complete the user flag of ADBANNER_USONG_FLAG.
-#if 0
+#ifdef ADBANNER_USONG_FLAG
     clear();
     prints( "\n\t在使用 BBS 的過程中，您可能會在畫面上方看到一些動態的活動看板告示，\n"
 	    "\n\t其內容是開放給各使用者申請的，所以包含非商業的活動訊息、各種使用者的\n"
