@@ -371,24 +371,24 @@ void Customize(void)
 	ADBANNER_USONG_FLAG,
 	NO_MODMARK_FLAG	,
 	COLORED_MODMARK,
+	DEFBACKUP_FLAG,
 #ifdef DBCSAWARE
 	DBCSAWARE_FLAG,
 	DBCS_NOINTRESC,
 #endif
-	DEFBACKUP_FLAG,
 	0,
     };
 
     static const char* desc1[] = {
-	"動態看板",
-	"動態看板顯示心情點播",
+	"顯示動態看板",
+	"顯示使用者心情點播 (需開啟動態看板)",
 	"隱藏文章修改符號(推文/修文) (~)",
 	"改用色彩代替修改符號 (+)",
+	"預設備份信件與其它記錄", //"與聊天記錄",
 #ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
 	"禁止在雙位元中使用色碼(去一字雙色)",
 #endif
-	"預設備份信件與其它記錄", //"與聊天記錄",
 	0,
     };
 
