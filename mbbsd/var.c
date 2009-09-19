@@ -96,7 +96,7 @@ const char     *currboard = "\0";
 char            currBM[IDLEN * 3 + 10];
 char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
-time4_t         login_start_time;
+time4_t         login_start_time, last_login_time;
 time4_t         start_time;
 userec_t        pwcuser;	/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */

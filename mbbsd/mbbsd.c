@@ -1256,6 +1256,7 @@ user_login(void)
 	check_mailbox_quota();
 	check_register();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
+	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
 	restore_backup();
 
 	// XXX 這個 check 花不少時間，有點間隔比較好
@@ -1421,6 +1422,7 @@ start_client(struct ProgramOption *option)
     }
     // process new, register, and load user data
     load_current_user(option->flag_user);
+    last_login_time = cuser.lastlogin;	// keep a backup
 
     m_init();			/* init the user mail path */
     user_login();
