@@ -11,7 +11,7 @@ int transform(userec_t *new, userec_t *old, int i)
     if (!u->userid[0])
 	return 0;
 
-    u->uflag &= ~ADBANNER_USONG_FLAG;
+    u->uflag |= ADBANNER_USONG_FLAG;
 
     // force convert!
     // passwd_update(n+1, u);
