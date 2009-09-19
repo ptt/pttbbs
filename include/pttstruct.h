@@ -559,8 +559,7 @@ typedef struct {
     char    gap_20[sizeof(int)];
     msgque_t loginmsg;  /* 進站水球 */
     int     last_film;
-    // FIXME remove it
-    int     __never_used__max_history;
+    int     last_usong;
     time4_t Puptime;
     time4_t Ptouchtime;
     int     Pbusystate;

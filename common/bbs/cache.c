@@ -791,6 +791,9 @@ reload_pttcache(void)
 	    } // end of .DIR loop
 	    fclose(fp);
 
+	    if (strcmp(item.title+3, "ÂIºq") == 0)
+		SHM->last_usong = id - 1;
+
 	    // decide next aggressive state
 	    if (rawid && aggid*3 >= rawid) // if aggressive exceed 1/3
 		set_aggressive_state(1);

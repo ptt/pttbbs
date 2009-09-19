@@ -240,18 +240,13 @@ show_status(void)
  *   xyz.c:   adbanner(999999);  // logout
  *   menu.c:  adbanner(cmdmode); // ...
  */
-#define N_SYSADBANNER (sizeof(adbanner_map) / sizeof(adbanner_map[0]))
+#define N_SYSADBANNER 13
 void
 adbanner(int cmdmode)
 {
     int i;
 
     // adbanner 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
-    // adbanner_map 是用來依 cmdmode 挑出特定的動態看板，index 跟 mode_map 一樣。
-    const int adbanner_map[] = {
-	2, 10, 11, -1, 3, -1, 12,
-	7, 9, 8, 4, 5, 6,
-    };
 
     // don't show if stat in class or user wants to skip adbanners
     if (currstat == CLASS || !(cuser.uflag & ADBANNER_FLAG))
@@ -260,9 +255,8 @@ adbanner(int cmdmode)
     if (SHM->Pbusystate || SHM->last_film <= 0)
 	return;
 
-    if (cmdmode < N_SYSADBANNER &&
-	    0 < adbanner_map[cmdmode] && adbanner_map[cmdmode] <= SHM->last_film) {
-	i = adbanner_map[cmdmode];
+    if (cmdmode > 0 && cmdmode < N_SYSADBANNER && cmdmode < SHM->last_film) {
+	i = cmdmode;
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
     } else {
@@ -273,9 +267,14 @@ adbanner(int cmdmode)
 	// can one ADBANNER to display" to slide through every banners in one hour.
 	// @ now / (3600 / MAx_ADBANNER) means "get the index of which to show".
 	// syncnow();
-	if (SHM->last_film > N_SYSADBANNER)
-	    i = N_SYSADBANNER + (now / (3600 / MAX_ADBANNER) ) % 
-		(SHM->last_film+1-N_SYSADBANNER);
+	
+	if (SHM->last_film > N_SYSADBANNER) {
+	    if (cuser.uflag & ADBANNER_USONG_FLAG)
+		i = N_SYSADBANNER + (now / (3600 / MAX_ADBANNER) ) % 
+		    (SHM->last_film+1-N_SYSADBANNER);
+	    else i = SHM->last_usong + 1 + (now / (3600 / MAX_ADBANNER) ) %
+		    (SHM->last_film - SHM->last_usong);
+	}
 	else
 	    i = 0; // SHM->last_film;
     }
@@ -340,11 +339,10 @@ static const int mode_map[] = {
 static void
 domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr, adbannermode;
+    int             lastcmdptr;
     int             n, pos, total, i;
     int             err;
 
-    adbannermode = cmdmode;
     assert(cmdmode < M_XMAX);
     cmdmode = mode_map[cmdmode];
 
@@ -352,7 +350,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
     showtitle(cmdtitle, BBSName);
 
-    total = show_menu(adbannermode, cmdtable);
+    total = show_menu(cmdmode, cmdtable);
 
     show_status();
     lastcmdptr = pos = 0;
@@ -474,7 +472,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
 	if (refscreen) {
 	    showtitle(cmdtitle, BBSName);
-	    show_menu(adbannermode, cmdtable);
+	    show_menu(-1, cmdtable);
 	    show_status();
 	    refscreen = NA;
 	}

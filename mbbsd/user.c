@@ -368,6 +368,7 @@ void Customize(void)
     /* cuser.uflag settings */
     static const unsigned int masks1[] = {
 	ADBANNER_FLAG,
+	ADBANNER_USONG_FLAG,
 	NO_MODMARK_FLAG	,
 	COLORED_MODMARK,
 #ifdef DBCSAWARE
@@ -380,6 +381,7 @@ void Customize(void)
 
     static const char* desc1[] = {
 	"動態看板",
+	"動態看板顯示心情點播",
 	"隱藏文章修改符號(推文/修文) (~)",
 	"改用色彩代替修改符號 (+)",
 #ifdef DBCSAWARE
