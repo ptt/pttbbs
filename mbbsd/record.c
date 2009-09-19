@@ -432,6 +432,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
 	if (n + sizeof(".forward") > sizeof(buf))
 	    return -1;
+
 	memcpy(buf, fpath, n+1);
 	strcpy(buf + n + 1, ".forward");
 	if ((fp = fopen(buf, "r"))) {
@@ -460,12 +461,18 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	    }
 
 	    if (buf[0] && buf[0] != ' ' && !flIdiotSent2Self) {
+		char fwd_title[STRLEN] = "";
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
 		append_record(fpath, record, size);
 		// because too many user set wrong forward address,
-		// let's but them instead. 
-		bsmtp(buf, record->title, address, origid);
+		// let's put their own address instead. 
+		// and again because some really stupid user
+		// does not understand they've set auto-forward,
+		// let's mark this in the title.
+		snprintf(fwd_title, sizeof(fwd_title)-1,
+			"[¦Û°ÊÂà±H] %s", record->title);
+		bsmtp(buf, fwd_title, address, origid);
 		return 0;
 	    }
 	}
