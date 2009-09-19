@@ -21,7 +21,7 @@
 //#define CLOAK_FLAG    0x00000008 /* deprecated by cuser.invisible: true if cloak was ON last session */
 #define FRIEND_FLAG     0x00000010 /* true if show friends only */
 #define BRDSORT_FLAG    0x00000020 /* true if the boards sorted alphabetical */
-#define MOVIE_FLAG      0x00000040 /* true if show movie */
+#define ADBANNER_FLAG   0x00000040 /* (was: MOVIE_FLAG, true if show advertisement banner */
 /* deprecated flag */
 //#define COLOR_FLAG    0x00000080 /* true if the color mode open */
 //#define MIND_FLAG     0x00000100 /* true if mind search mode open <-Heat*/

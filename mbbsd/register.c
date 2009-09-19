@@ -653,11 +653,21 @@ new_register(void)
     memset(&newuser, 0, sizeof(newuser));
     newuser.version = PASSWD_VERSION;
     newuser.userlevel = PERM_DEFAULT;
-    newuser.uflag = BRDSORT_FLAG | MOVIE_FLAG;
+    newuser.uflag = BRDSORT_FLAG | ADBANNER_FLAG;
     newuser.uflag2 = 0;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.pager = PAGER_ON;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
+
+    // XXX enable this when we complete the user flag of ADBANNER_USONG_FLAG.
+#if 0
+    clear();
+    prints( "\n\t在使用 BBS 的過程中，您可能會在畫面上方看到一些動態的活動看板告示，\n"
+	    "\n\t其內容是開放給各使用者申請的，所以包含非商業的活動訊息、各種使用者的\n"
+	    "\n\t心情點播或政治言論；但這些文字與圖像並不代表站方立場。\n");
+    if (vans("請問您希望看到此類使用者心情點播嗎？ [y/N]: ") == 'y')
+	newuser.uflag |= ADBANNER_USONG_FLAG;
+#endif
 
 #ifdef DBCSAWARE
     if(u_detectDBCSAwareEvilClient())

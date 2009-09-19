@@ -246,8 +246,9 @@
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */
-#define MAX_MOVIE         (500)          /* 程笆篈狾计 */
-#define MAX_MOVIE_SECTION (10)		 /* 程笆篈狾摸 */
+#define MAX_ADBANNER      (500)          /* 程笆篈狾计 */
+#define MAX_ADBANNER_SECTION (10)	 /* 程笆篈狾摸 */
+#define MAX_ADBANNER_HEIGHT  (11)	 /* 程笆篈狾ず甧蔼 */
 #define MAX_ITEMS         (1000)         /* ヘ魁程Τ碭兜 */
 #define MAX_HISTORY       (12)           /* 笆篈狾玂 12 掸菌癘魁 */
 #define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */

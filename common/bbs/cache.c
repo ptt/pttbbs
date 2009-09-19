@@ -650,7 +650,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
 }
 
 /*
- * section - PTT cache (movie cache?)
+ * section - PTT cache (adbanner cache?)
  * 動態看板與其它
  */
 int 
@@ -780,13 +780,13 @@ reload_pttcache(void)
 		    }
 
 		    fclose(fp2);
-		    if (id >= MAX_MOVIE)
+		    if (id >= MAX_ADBANNER)
 			break;
 
 		} // end of file loop
 		fclose(fp1);
 
-		if (id >= MAX_MOVIE)
+		if (id >= MAX_ADBANNER)
 		    break;
 	    } // end of .DIR loop
 	    fclose(fp);

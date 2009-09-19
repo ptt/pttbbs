@@ -263,7 +263,7 @@ Goodbye(void)
     if (*genbuf != 'y')
 	return 0;
 
-    movie(999999);
+    adbanner(999999);
     if (cuser.userlevel) {
 	getdata(b_lines - 1, 0,
 		"(G)隨風而逝 (M)托夢站長 (N)酸甜苦辣流言板？[G] ",

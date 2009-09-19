@@ -1168,7 +1168,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	currstat = CLASS;
 	myrow = 6;
 	showtitle("¤ÀÃþ¬ÝªO", BBSName);
-	movie(0);
+	adbanner(0);
 	move(1, 0);
 	// TODO remove ascii art here
 	outs(

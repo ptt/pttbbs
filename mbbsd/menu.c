@@ -234,45 +234,45 @@ show_status(void)
 }
 
 /*
- * current caller of movie:
- *   board.c: movie(0);    // called when IN_CLASSROOT()
- *                         // with currstat = CLASS -> don't show movies
- *   xyz.c:   movie(999999);  // logout
- *   menu.c:  movie(cmdmode); // ...
+ * current caller of adbanner:
+ *   board.c: adbanner(0);    // called when IN_CLASSROOT()
+ *                         // with currstat = CLASS -> don't show adbanners
+ *   xyz.c:   adbanner(999999);  // logout
+ *   menu.c:  adbanner(cmdmode); // ...
  */
-#define N_SYSMOVIE (sizeof(movie_map) / sizeof(movie_map[0]))
+#define N_SYSADBANNER (sizeof(adbanner_map) / sizeof(adbanner_map[0]))
 void
-movie(int cmdmode)
+adbanner(int cmdmode)
 {
     int i;
 
-    // movie 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
-    // movie_map 是用來依 cmdmode 挑出特定的動態看板，index 跟 mode_map 一樣。
-    const int movie_map[] = {
+    // adbanner 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
+    // adbanner_map 是用來依 cmdmode 挑出特定的動態看板，index 跟 mode_map 一樣。
+    const int adbanner_map[] = {
 	2, 10, 11, -1, 3, -1, 12,
 	7, 9, 8, 4, 5, 6,
     };
 
-    // don't show if stat in class or user wants to skip movies
-    if (currstat == CLASS || !(cuser.uflag & MOVIE_FLAG))
+    // don't show if stat in class or user wants to skip adbanners
+    if (currstat == CLASS || !(cuser.uflag & ADBANNER_FLAG))
 	return;
     // also prevent SHM busy status
     if (SHM->Pbusystate || SHM->last_film <= 0)
 	return;
 
-    if (cmdmode < N_SYSMOVIE &&
-	    0 < movie_map[cmdmode] && movie_map[cmdmode] <= SHM->last_film) {
-	i = movie_map[cmdmode];
+    if (cmdmode < N_SYSADBANNER &&
+	    0 < adbanner_map[cmdmode] && adbanner_map[cmdmode] <= SHM->last_film) {
+	i = adbanner_map[cmdmode];
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
     } else {
 	// do not use random. we work in slide show mode. 
 	// since menu is updated per hour, the total presentation time 
-	// should be less than one hour. 3600/MAX_MOVIE(500)=7.
+	// should be less than one hour. 3600/MAX_ADBANNER(500)=7.
 	// syncnow();
-	if (SHM->last_film > N_SYSMOVIE)
-	    i = N_SYSMOVIE + (now / (3600 / MAX_MOVIE) ) % 
-		(SHM->last_film+1-N_SYSMOVIE);
+	if (SHM->last_film > N_SYSADBANNER)
+	    i = N_SYSADBANNER + (now / (3600 / MAX_ADBANNER) ) % 
+		(SHM->last_film+1-N_SYSADBANNER);
 	else
 	    i = 0; // SHM->last_film;
     }
@@ -298,12 +298,12 @@ typedef struct {
 } commands_t;
 
 static int
-show_menu(int moviemode, const commands_t * p)
+show_menu(int adbannermode, const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
 
-    movie(moviemode);
+    adbanner(adbannermode);
 
     // seems not everyone likes the menu in center.
 #ifdef LARGETERM_CENTER_MENU
@@ -337,11 +337,11 @@ static const int mode_map[] = {
 static void
 domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr, moviemode;
+    int             lastcmdptr, adbannermode;
     int             n, pos, total, i;
     int             err;
 
-    moviemode = cmdmode;
+    adbannermode = cmdmode;
     assert(cmdmode < M_XMAX);
     cmdmode = mode_map[cmdmode];
 
@@ -349,7 +349,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
     showtitle(cmdtitle, BBSName);
 
-    total = show_menu(moviemode, cmdtable);
+    total = show_menu(adbannermode, cmdtable);
 
     show_status();
     lastcmdptr = pos = 0;
@@ -471,7 +471,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
 	if (refscreen) {
 	    showtitle(cmdtitle, BBSName);
-	    show_menu(moviemode, cmdtable);
+	    show_menu(adbannermode, cmdtable);
 	    show_status();
 	    refscreen = NA;
 	}

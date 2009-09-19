@@ -8,7 +8,7 @@
 #define OSONGPATH "etc/SONGO"
 #define ORDER_SONG_COST   (200)	// how much to order a song
 
-#define MAX_SONGS (MAX_MOVIE-100) // (400) XXX MAX_SONGS should be fewer than MAX_MOVIE.
+#define MAX_SONGS (MAX_ADBANNER-100) // (400) XXX MAX_SONGS should be fewer than MAX_ADBANNER.
 
 static void sortsong(void);
 
@@ -149,13 +149,13 @@ do_order_song(void)
 
     if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
 	pwcuSetLastSongTime(now);
-	/* Jaky 超過 MAX_MOVIE 首歌就開始砍 */
+	/* Jaky 超過 MAX_ADBANNER 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:
 	// 3. ◆ <系統> 動態看板   SYSOP [01/23/08]
 	// 4. ◆ <點歌> 動態看板   Ptt   [08/26/09]
 	// 5. ◆ <廣告> 動態看板   SYSOP [08/22/09]
 	// 6. ◆ <看板> 動態看板   SYSOP [04/16/09]
-	// 由於點歌部份算是早載入的，不能直接用 MAX_MOVIE 不然後面都沒得玩。
+	// 由於點歌部份算是早載入的，不能直接用 MAX_ADBANNER 不然後面都沒得玩。
 	nsongs = get_num_records(OSONGPATH "/" FN_DIR, sizeof(mail));
 	if (nsongs > MAX_SONGS) {
 	    // XXX race condition
