@@ -509,6 +509,40 @@ vbarlr(const char *l, const char *r)
     outs(ANSI_RESET);
 }
 
+void
+vs_rectangle_simple(int l, int t, int r, int b)
+{
+    int ol = l;
+
+    assert( l + 4 <= r &&
+	    t + 2 <= b);
+
+    // draw top line
+    move(t++, ol); l = ol+2;
+    outs("¢z");
+    while (l < r-2) { outs("¢w"); l+= 2; }
+    outs("¢{");
+    if (l+2 < r) outs(" ");
+
+    while (t < b)
+    {
+	move(t++, ol); l = ol+2;
+	outs("¢x");
+	// while (l < r-2) { outs("  "); l+= 2; }
+	l += (r-l-1)/2*2;
+	move_ansi(t-1, l);
+	outs("¢x");
+	if (l+2 < r) outs(" ");
+    }
+
+    // draw bottom line
+    move(t++, ol); l = ol+2;
+    outs("¢|");
+    while (l < r-2) { outs("¢w"); l+= 2; }
+    outs("¢}");
+    if (l+2 < r) outs(" ");
+}
+
 // ---- THEMED FORMATTING OUTPUT -------------------------------------
 
 /**

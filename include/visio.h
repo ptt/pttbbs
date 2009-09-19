@@ -138,6 +138,8 @@ void vs_header	(const char *title,   const char *mid, const char *right);	// vs_
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_footer	(const char *caption, const char *prompt);
 
+void vs_rectangle_simple(int l, int t, int r, int b);	// draw a single line rectangle, not filling inside interior
+
 // columned output
 void vs_cols_layout (const VCOL* cols, VCOLW *ws, int n);	/// calculate VCOL to fit current screen in ws
 void vs_cols	    (const VCOL* cols, const VCOLW *ws, int n, ...);

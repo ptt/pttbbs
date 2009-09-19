@@ -659,13 +659,18 @@ new_register(void)
     newuser.pager = PAGER_ON;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
-    // XXX enable this when we complete the user flag of ADBANNER_USONG_FLAG.
 #ifdef ADBANNER_USONG_FLAG
-    clear();
-    prints( "\n\t在使用 BBS 的過程中，您可能會在畫面上方看到一些動態的活動看板告示，\n"
-	    "\n\t其內容是開放給各使用者申請的，所以包含非商業的活動訊息、各種使用者的\n"
-	    "\n\t心情點播或政治言論；但這些文字與圖像並不代表站方立場。\n");
-    if (vans("請問您希望看到此類使用者心情點播嗎？ [y/N]: ") == 'y')
+    vs_hdr("動態看板心情點播顯示設定");
+    // draw a box here
+    outs(
+    "\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
+    "\n\n\t其內容是開放給各使用者與公益團體申請的，所以會包含非商業的活動資訊、"
+    "\n\n\t來自各使用者的心情點播、政治性言論與各種留言。" 
+    "\n\n\n\n"
+    "\n\n\t" ANSI_COLOR(1) "此類由使用者自行發表的文字與圖像並不代表站方立場。" 
+	     ANSI_RESET "\n");
+    vs_rectangle_simple(1, 1, 78, MAX_ADBANNER_HEIGHT);
+    if (vans("請問您希望看到此類來自其它使用者的心情點播與留言嗎？ [y/N]: ") == 'y')
 	newuser.uflag |= ADBANNER_USONG_FLAG;
 #endif
 
