@@ -266,9 +266,12 @@ adbanner(int cmdmode)
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
     } else {
-	// do not use random. we work in slide show mode. 
-	// since menu is updated per hour, the total presentation time 
-	// should be less than one hour. 3600/MAX_ADBANNER(500)=7.
+	// To display ADBANNERs in slide show mode. 
+	// Since menu is updated per hour, the total presentation time 
+	// should be less than one hour. 60*60/MAX_ADBANNER[500]=7 (seconds).
+	// @ Note: 60 * 60 / MAX_ADBANNER =3600/MAX_ADBANNER = "how many seconds 
+	// can one ADBANNER to display" to slide through every banners in one hour.
+	// @ now / (3600 / MAx_ADBANNER) means "get the index of which to show".
 	// syncnow();
 	if (SHM->last_film > N_SYSADBANNER)
 	    i = N_SYSADBANNER + (now / (3600 / MAX_ADBANNER) ) % 
