@@ -723,20 +723,25 @@ reload_pttcache(void)
 	id = aggid = rawid = 0; // effective count, aggressive count, total (raw) count
 
 	if ((fp = fopen(buf, "r"))) {
+
 	    // .DIR loop
 	    while (fread(&item, sizeof(item), 1, fp)) {
 
 		int chkagg = 0; // should we check aggressive?
+		int is_ordersong_dir = 0;
 
 		if (item.title[3] != '<' || item.title[8] != '>')
 		    continue;
 
+#define ORDERSONG_FOLDERNAME	"<ÂIºq>"
+		if (strncmp(item.title+3, ORDERSONG_FOLDERNAME, strlen(ORDERSONG_FOLDERNAME)) == 0)
+		    is_ordersong_dir = 1;
+
 #ifdef BN_NOTE_AGGCHKDIR
 		// TODO aggressive: only count '<ÂIºq>' section
-		if (strcmp(item.title+3, BN_NOTE_AGGCHKDIR) == 0)
+		if (strncmp(item.title+3, BN_NOTE_AGGCHKDIR, strlen(BN_NOTE_AGGCHKDIR)) == 0)
 		    chkagg = 1;
 #endif
-
 		snprintf(buf, sizeof(buf), "%s/%s/" FN_DIR,
 			pbuf, item.filename);
 
@@ -786,13 +791,14 @@ reload_pttcache(void)
 		} // end of file loop
 		fclose(fp1);
 
+		if (is_ordersong_dir)
+		    SHM->last_usong = id - 1;
+
 		if (id >= MAX_ADBANNER)
 		    break;
+
 	    } // end of .DIR loop
 	    fclose(fp);
-
-	    if (strcmp(item.title+3, "ÂIºq") == 0)
-		SHM->last_usong = id - 1;
 
 	    // decide next aggressive state
 	    if (rawid && aggid*3 >= rawid) // if aggressive exceed 1/3

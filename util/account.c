@@ -398,6 +398,8 @@ main(int argc, char **argv)
     SHM->Puptime = 0;
     resolve_fcache();
     reset_garbage();
+    printf("動態看板資訊: last_usong=%d, last_film=%d\n", 
+	    SHM->last_usong, SHM->last_film);
 
     printf("計算進站畫面數: ");
     for (i = 0; i < 5; ++i) {
