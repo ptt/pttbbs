@@ -627,12 +627,16 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
 {
     char old = (cuser.uflag & ADBANNER_USONG_FLAG) ? 1 : 0,
 	 new = 0,
+	 defyes = 0,
 	 ans = 1;
 
     assert(u);
     if ( !(u->uflag & ADBANNER_FLAG) )
 	return 0;
 
+#ifdef ADBANNER_DEFAULT_YES
+    defyes = ADBANNER_DEFAULT_YES;
+#endif
     vs_hdr("動態看板心情點播顯示設定");
     // draw a box here
     outs(
@@ -648,10 +652,19 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
     vs_rectangle_simple(1, 1, 78, MAX_ADBANNER_HEIGHT);
 
     do {
+	// alert if not first rounod
 	if (ans != 1) { move(b_lines-2, 0); outs("請確實輸入 y 或 n。"); bell(); }
-	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? [y/%c]: ", force_yn ? 'n':'N');
-	if ((!force_yn) && ans != 'y')
-	    ans = 'n';
+	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? %s: ", 
+		force_yn ? "[y/n]" : defyes ? "[Y/n]" : "[y/N]");
+
+	// adjust answers
+	if (!force_yn)
+	{
+	    if (defyes && ans != 'n')
+		ans = 'y';
+	    else if (!defyes && ans != 'y')
+		ans = 'n';
+	}
     } while (ans != 'y' && ans != 'n');
 
     if (ans == 'y')
