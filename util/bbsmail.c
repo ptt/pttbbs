@@ -89,7 +89,7 @@ int mail2bbs(char *userid)
 	return -1;//EX_NOUSER;
     }
 
-    if( xuser.uflag2 & REJ_OUTTAMAIL )
+    if (REJECT_OUTTAMAIL(xuser))
 	return -1; //不接受站外信
 
     sprintf(filename, BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);

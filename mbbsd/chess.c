@@ -1010,7 +1010,7 @@ ChessGenLog(ChessInfo* info, ChessGameResult result)
 	ChessGenLogGlobal(info, result);
     }
 
-    a = vans((cuser.uflag & DEFBACKUP_FLAG) ?
+    a = vans(HasUserFlag(UF_DEFBACKUP) ?
 	    "是否將棋譜寄回信箱？ [Y/n]" :
 	    "是否將棋譜寄回信箱？ [y/N]");
 

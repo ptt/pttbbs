@@ -20,8 +20,14 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4194_passwd
     make r4826_numlogin
     make r4848_watermode
+    make r4871_uflag
 
 -----------------------------------------------------------------------------
+r4871: [uflag]
+由於兩個 uflag 實在太容易令人寫錯、而且 uflag 的空間還很大，
+決定把 uflag/uflag2 整合。
+請注意 util/bbsmail 要重 build (因為它會看 (cuser.uflags2 & REJ_OUTTAMAIL))
+
 r4848: [water mode]
 決定把 uflag2 的 WATERMODE (2 bit) 移出來放到獨立的變數。
 uflag / uflag2 還是放單一 bit 的東西較好。

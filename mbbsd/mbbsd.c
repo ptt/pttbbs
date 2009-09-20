@@ -1154,7 +1154,7 @@ static void init_guest_info(void)
 
 #if FOREIGN_REG_DAY > 0
 inline static void foreign_warning(void){
-    if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
+    if ((HasUserFlag(UF_FOREIGN)) && !(HasUserFlag(UF_LIVERIGHT))){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
 	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
 	}
@@ -1272,7 +1272,7 @@ user_login(void)
 	if (last_login_time < ADBANNER_USONG_TIMEBOMB)
 	{
 	    if (query_adbanner_usong_pref_changed(cuser_ref, 1))
-		pwcuToggleUserFlag(ADBANNER_USONG_FLAG);
+		pwcuToggleUserFlag(UF_ADBANNER_USONG);
 	}
 #endif
 
@@ -1314,7 +1314,7 @@ user_login(void)
     foreign_warning();
 #endif
 
-    if(cuser.uflag2 & FAVNEW_FLAG) {
+    if(HasUserFlag(UF_FAV_ADDNEW)) {
 	fav_load();
 	if (get_fav_root() != NULL) {
 	    int num;

@@ -482,12 +482,12 @@ readdoent(int num, fileheader_t * ent)
     if (isunread == 2)
     {
 	// ignore unread, if user doesn't want to show it.
-	if (cuser.uflag & NO_MODMARK_FLAG)
+	if (HasUserFlag(UF_NO_MODMARK))
 	{
 	    oisunread = isunread = 0;
 	}
 	// if user wants colored marks, use 'read' marks
-	else if (cuser.uflag & COLORED_MODMARK)
+	else if (HasUserFlag(UF_COLORED_MODMARK))
 	{
 	    isunread = 0;
 	    typeattr = ANSI_COLOR(36);
@@ -940,7 +940,7 @@ do_general(int garbage)
     if( !CheckPostPerm()
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
-	&& !((cuser.uflag2 & FOREIGN) && 
+	&& !(HasUserFlag(UF_FOREIGN) && 
 	    strcmp(bp->brdname, BN_FOREIGN) == 0)
 #endif
 	) {

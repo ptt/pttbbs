@@ -61,7 +61,7 @@ typedef struct userec_t {
     char	pad_1;
 
     uint32_t    uflag;		/* 策篋1 , see uflags.h */
-    uint32_t    uflag2;		/* 策篋2 , see uflags.h */
+    uint32_t    deprecated_uflag2;		/* deprecated: 策篋2 , see uflags.h */
     uint32_t    userlevel;	/* 舦 */
     uint32_t    numlogindays;	/* 絬戈菌 (–ら程+1祅Ω计) */
     uint32_t    numposts;	/* ゅ彻絞计 */

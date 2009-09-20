@@ -210,9 +210,9 @@ int
 pwcuToggleOutMail()
 {
     PWCU_START();
-    u.uflag2     ^=  REJ_OUTTAMAIL;
-    _SETBY_BIT(cuser.uflag2, REJ_OUTTAMAIL,
-	    u.uflag2 & REJ_OUTTAMAIL);
+    u.uflag     ^=  UF_REJ_OUTTAMAIL;
+    _SETBY_BIT(cuser.uflag, UF_REJ_OUTTAMAIL,
+	    u.uflag & UF_REJ_OUTTAMAIL);
     PWCU_END();
 }
 
@@ -272,7 +272,7 @@ int pwcuRegisterSetInfo (const char *rname,
     u.year   = year;
     u.month  = month;
     u.day    = day;
-    _SETBY_BIT(u.uflag2, FOREIGN, is_foreign);
+    _SETBY_BIT(u.uflag, UF_FOREIGN, is_foreign);
 
     // duplicate to cuser
     
@@ -286,7 +286,7 @@ int pwcuRegisterSetInfo (const char *rname,
     cuser.year   = year;
     cuser.month  = month;
     cuser.day    = day;
-    _SETBY_BIT(cuser.uflag2, FOREIGN, is_foreign);
+    _SETBY_BIT(cuser.uflag, UF_FOREIGN, is_foreign);
 
     PWCU_END();
 }
@@ -403,21 +403,11 @@ pwcuToggleUserFlag	(unsigned int mask)
 }
 
 int 
-pwcuToggleUserFlag2	(unsigned int mask)
-{
-    PWCU_START();
-    u.uflag2 ^= mask;
-    _SETBY_BIT(cuser.uflag2,  mask,
-	           u.uflag2 & mask);
-    PWCU_END();
-}
-
-int 
 pwcuToggleSortBoard ()
 {
     // XXX if this is executed too often,
     // put it into 'non-important variable list'.
-    return pwcuToggleUserFlag(BRDSORT_FLAG);
+    return pwcuToggleUserFlag(UF_BRDSORT);
 }
 
 int 
@@ -425,7 +415,7 @@ pwcuToggleFriendList()
 {
     // XXX if this is executed too often,
     // put it into 'non-important variable list'.
-    return pwcuToggleUserFlag(FRIEND_FLAG);
+    return pwcuToggleUserFlag(UF_FRIEND);
 }
 
 // non-important variables (only save on exit)
@@ -610,8 +600,7 @@ int pwcuInitAdminPerm	()
 void pwcuInitGuestPerm	()
 {
     cuser.userlevel = 0;
-    cuser.uflag = BRDSORT_FLAG;
-    cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
+    cuser.uflag = UF_BRDSORT;
     cuser.pager = PAGER_OFF;
 # ifdef GUEST_DEFAULT_DBCS_NOINTRESC
     _ENABLE_BIT(cuser.uflag, DBCS_NOINTRESC);

@@ -2086,7 +2086,7 @@ int
 pickup_maxpages(int pickupway, int nfriends)
 {
     int             number;
-    if (cuser.uflag & FRIEND_FLAG)
+    if (HasUserFlag(UF_FRIEND))
 	number = nfriends;
     else
 	number = SHM->UTMPnumber +
@@ -2171,7 +2171,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     /* 產生好友區 */
     which = *page * nPickups;
-    if( (cuser.uflag & FRIEND_FLAG) || /* 只顯示好友模式 */
+    if( (HasUserFlag(UF_FRIEND)) || /* 只顯示好友模式 */
 	((pickup_way == 0) &&          /* [嗨! 朋友] mode */
 	 (
 	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
@@ -2212,7 +2212,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
     } else
 	*nfriend = 0;
 
-    if (!(cuser.uflag & FRIEND_FLAG) && size < nPickups) {
+    if (!(HasUserFlag(UF_FRIEND)) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 7 : (pickup_way - 1));
 	ulist = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
@@ -2292,7 +2292,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     }
 
     if (drawall) {
-	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
+	showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天",
 		  BBSName);
 
 	move(2, 0);
@@ -2649,7 +2649,7 @@ userlist(void)
 		break;
 
 	    case 's':
-		if (!(cuser.uflag & FRIEND_FLAG)) {
+		if (!(HasUserFlag(UF_FRIEND))) {
 		    int             si;	/* utmpshm->sorted[X][0][si] */
 		    int             fi;	/* allpickuplist[fi] */
 		    char            swid[IDLEN + 1];
@@ -2759,7 +2759,7 @@ userlist(void)
 #endif
 
 	    case 'b':		/* broadcast */
-		if (cuser.uflag & FRIEND_FLAG || HasUserPerm(PERM_SYSOP)) {
+		if (HasUserFlag(UF_FRIEND) || HasUserPerm(PERM_SYSOP)) {
 		    char            genbuf[60]="[廣播]";
 		    char            ans[4];
 
@@ -2770,7 +2770,7 @@ userlist(void)
 				ans, sizeof(ans), LCECHO) ||
 			ans[0] != 'y')
 			break;
-		    if (!(cuser.uflag & FRIEND_FLAG) && HasUserPerm(PERM_SYSOP)) {
+		    if (!(HasUserFlag(UF_FRIEND)) && HasUserPerm(PERM_SYSOP)) {
 			msgque_t msg;
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);

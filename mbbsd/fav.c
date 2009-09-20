@@ -1122,7 +1122,7 @@ void fav_set_folder_title(fav_type_t *ft, char *title)
 #define BRD_NEW 1
 #define BRD_END 2
 /**
- * 如果 user 開啟 FAVNEW_FLAG 的功能:
+ * 如果 user 開啟 UF_FAV_ADDNEW 的功能:
  *  mode == 1: update 看板，並將新看板加入我的最愛。
  *  mode == 0: update 資訊但不加入。
  *
@@ -1136,7 +1136,7 @@ int updatenewfav(int mode)
     int count = 0;
     char fname[80], *brd;
 
-    if(!(cuser.uflag2 & FAVNEW_FLAG))
+    if(!(HasUserFlag(UF_FAV_ADDNEW)))
 	return 0;
 
     setuserfile(fname, FAVNB);

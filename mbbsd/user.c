@@ -136,12 +136,12 @@ user_display(const userec_t * u, int adminmode)
     prints("\t\t真實姓名: %s", u->realname);
 #if FOREIGN_REG_DAY > 0
     prints(" %s%s",
-	   u->uflag2 & FOREIGN ? "(外籍: " : "",
-	   u->uflag2 & FOREIGN ?
-		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
+	   u->uflag & UF_FOREIGN ? "(外籍: " : "",
+	   u->uflag & UF_FOREIGN ?
+		(u->uflag & UF_LIVERIGHT) ? "永久居留)" : "未取得居留權)"
 		: "");
 #elif defined(FOREIGN_REG)
-    prints(" %s", u->uflag2 & FOREIGN ? "(外籍)" : "");
+    prints(" %s", u->uflag & UF_FOREIGN ? "(外籍)" : "");
 #endif
     outs("\n"); // end of realname
     prints("\t\t職業學歷: %s\n", u->career);
@@ -367,14 +367,17 @@ void Customize(void)
 
     /* cuser.uflag settings */
     static const unsigned int masks1[] = {
-	ADBANNER_FLAG,
-	ADBANNER_USONG_FLAG,
-	NO_MODMARK_FLAG	,
-	COLORED_MODMARK,
-	DEFBACKUP_FLAG,
+	UF_ADBANNER,
+	UF_ADBANNER_USONG,
+	UF_REJ_OUTTAMAIL,
+	UF_DEFBACKUP,
+	UF_FAV_ADDNEW,
+	UF_FAV_NOHILIGHT,
+	UF_NO_MODMARK	,
+	UF_COLORED_MODMARK,
 #ifdef DBCSAWARE
-	DBCSAWARE_FLAG,
-	DBCS_NOINTRESC,
+	UF_DBCSAWARE,
+	UF_DBCS_NOINTRESC,
 #endif
 	0,
     };
@@ -382,9 +385,12 @@ void Customize(void)
     static const char* desc1[] = {
 	"顯示動態看板",
 	"顯示使用者心情點播 (需開啟動態看板)",
+	"拒收站外信",
+	"預設備份信件與其它記錄", //"與聊天記錄",
+	"新板自動進我的最愛",
+	"單色顯示我的最愛",
 	"隱藏文章修改符號(推文/修文) (~)",
 	"改用色彩代替修改符號 (+)",
-	"預設備份信件與其它記錄", //"與聊天記錄",
 #ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
 	"禁止在雙位元中使用色碼(去一字雙色)",
@@ -392,23 +398,8 @@ void Customize(void)
 	0,
     };
 
-    /* cuser.uflag2 settings */
-    static const unsigned int masks2[] = {
-	REJ_OUTTAMAIL,
-	FAVNEW_FLAG,
-	FAVNOHILIGHT,
-	0,
-    };
-
-    static const char* desc2[] = {
-	"拒收站外信",
-	"新板自動進我的最愛",
-	"單色顯示我的最愛",
-	0,
-    };
-
     while ( !done ) {
-	int i = 0, ia = 0, ic = 0; /* general uflags */
+	int i = 0, ia = 0; /* general uflags */
 	int iax = 0; /* extended flags */
 
 	clear();
@@ -424,18 +415,7 @@ void Customize(void)
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-40s%s\n",
 		    'a' + ia, desc1[i],
-		    (cuser.uflag & masks1[i]) ? 
-		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
-	}
-	ic = i;
-	/* print uflag2 options */
-	for (i = 0; masks2[i]; i++, ia++)
-	{
-	    clrtoeol();
-	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
-		    ". %-40s%s" ANSI_RESET "\n",
-		    'a' + ia, desc2[i],
-		    (cuser.uflag2 & masks2[i]) ? 
+		    HasUserFlag(masks1[i]) ? 
 		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
 	/* extended stuff */
@@ -479,14 +459,7 @@ void Customize(void)
 	    /* normal pref */
 	    key -= 'a';
 	    dirty = 1;
-
-
-	    if(key < ic)
-	    {
-		pwcuToggleUserFlag(masks1[key]);
-	    } else {
-		pwcuToggleUserFlag2(masks2[key-ic]);
-	    }
+	    pwcuToggleUserFlag(masks1[key]);
 	    continue;
 	}
 
@@ -955,23 +928,23 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    x.chc_win, x.chc_lose, x.chc_tie,
 		    x.go_win, x.go_lose, x.go_tie);
 #ifdef FOREIGN_REG
-	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
+	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag & UF_FOREIGN ? "2" : "1"))
 		if ((tmp = atoi(buf)) > 0){
 		    if (tmp == 2){
-			x.uflag2 |= FOREIGN;
+			x.uflag |= UF_FOREIGN;
 		    }
 		    else
-			x.uflag2 &= ~FOREIGN;
+			x.uflag &= ~UF_FOREIGN;
 		}
-	    if (x.uflag2 & FOREIGN)
-		if (getdata_str(y++, 0, "永久居留權 1)是 2)否：", buf, 2, DOECHO, x.uflag2 & LIVERIGHT ? "1" : "2")){
+	    if (x.uflag & UF_FOREIGN)
+		if (getdata_str(y++, 0, "永久居留權 1)是 2)否：", buf, 2, DOECHO, x.uflag & UF_LIVERIGHT ? "1" : "2")){
 		    if ((tmp = atoi(buf)) > 0){
 			if (tmp == 1){
-			    x.uflag2 |= LIVERIGHT;
+			    x.uflag |= UF_LIVERIGHT;
 			    x.userlevel |= (PERM_LOGINOK | PERM_POST);
 			}
 			else{
-			    x.uflag2 &= ~LIVERIGHT;
+			    x.uflag &= ~UF_LIVERIGHT;
 			    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
 			}
 		    }

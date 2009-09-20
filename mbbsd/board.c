@@ -876,7 +876,7 @@ cmpboardfriends(const void *brd, const void *tmp)
 static void
 load_boards(char *key)
 {
-    int             type = (cuser.uflag & BRDSORT_FLAG) ? 1 : 0;
+    int             type = (HasUserFlag(UF_BRDSORT)) ? 1 : 0;
     int             i;
     int             state;
 
@@ -1256,10 +1256,10 @@ show_brdlist(int head, int clsflag, int newflag)
 		    // fight with users... 
 		    // think about new way some otherday.
 		    prints("%sMyFavFolder" ANSI_RESET "  ¥Ø¿ý ¡¼%-34s", 
-			    !(cuser.uflag2 & FAVNOHILIGHT)?HILIGHT_COLOR  : "",
+			    !(HasUserFlag(UF_FAV_NOHILIGHT))?HILIGHT_COLOR  : "",
 			    title); 
 		    /*
-		    if (!(cuser.uflag2 & FAVNOHILIGHT))
+		    if (!(HasUserFlag(UF_FAV_NOHILIGHT)))
 			outs(HILIGHT_COLOR);
 		    prints("%-12s", "[Folder]");
 		    outs(ANSI_RESET);
@@ -1299,7 +1299,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (!IN_CLASSROOT()) {
 		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) 
 			    "%2.2s" ANSI_RESET "%-34.34s",
-			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
+			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
 			      getboard(ptr->bid) != NULL))? HILIGHT_COLOR : "",
 			    B_BH(ptr)->brdname,
 			    make_class_color(B_BH(ptr)->title),
@@ -1997,7 +1997,7 @@ choose_board(int newflag)
 	case 'F':
 	case 'f':
 	    if (HasUserPerm(PERM_SYSOP)) {
-		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0] = 0;
+		getbcache(class_bid)->firstchild[HasUserFlag(UF_BRDSORT) ? 1 : 0] = 0;
 		brdnum = -1;
 	    }
 	    break;

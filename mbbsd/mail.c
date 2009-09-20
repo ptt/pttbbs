@@ -384,7 +384,7 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
     char            buf[4];
 
     getdata(b_lines - 1, 0, 
-	    (cuser.uflag & DEFBACKUP_FLAG) ? 
+	    (HasUserFlag(UF_DEFBACKUP)) ? 
 	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
 	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
 	    buf, sizeof(buf), LCECHO);
@@ -1073,7 +1073,8 @@ mailtitle(void)
 
     showtitle("郵件選單", BBSName);
     outs("[←]離開[↑↓]選擇[→]閱\讀信件 [X]轉錄看板[F]轉寄站外 ");
-    prints(" [O]站外信:%s [h]求助\n" , REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
+    prints(" [O]站外信:%s [h]求助\n" , 
+	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
     vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
 	     buf);
@@ -1723,7 +1724,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
 	return -2;
     move(b_lines-4, 0); clrtobot();
 
-    if( strstr(address, ".bbs") && REJECT_OUTTAMAIL ){
+    if( strstr(address, ".bbs") && REJECT_OUTTAMAIL(cuser) ){
 	outs("\n您必須要打開接受站外信, 水球整理系統才能寄入結果\n"
 	     "請麻煩到【郵件選單】按大寫 O改成接受站外信 (在右上角)\n"
 	     "再重新執行本功\能 :)\n");

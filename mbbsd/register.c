@@ -625,13 +625,13 @@ setupnewuser(const userec_t *user)
 int
 query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
 {
-    char old = (cuser.uflag & ADBANNER_USONG_FLAG) ? 1 : 0,
+    char old = (u->uflag & UF_ADBANNER_USONG) ? 1 : 0,
 	 new = 0,
 	 defyes = 0,
 	 ans = 1;
 
     assert(u);
-    if ( !(u->uflag & ADBANNER_FLAG) )
+    if ( !(u->uflag & UF_ADBANNER) )
 	return 0;
 
 #ifdef ADBANNER_DEFAULT_YES
@@ -706,22 +706,21 @@ new_register(void)
     memset(&newuser, 0, sizeof(newuser));
     newuser.version = PASSWD_VERSION;
     newuser.userlevel = PERM_DEFAULT;
-    newuser.uflag = BRDSORT_FLAG | ADBANNER_FLAG;
-    newuser.uflag2 = 0;
+    newuser.uflag = UF_BRDSORT | UF_ADBANNER;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.pager = PAGER_ON;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
-#ifdef ADBANNER_USONG_FLAG
+#ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))
-	newuser.uflag |= ADBANNER_USONG_FLAG;
+	newuser.uflag |= UF_ADBANNER_USONG;
 #endif
 
 #ifdef DBCSAWARE
     if(u_detectDBCSAwareEvilClient())
-	newuser.uflag &= ~DBCSAWARE_FLAG;
+	newuser.uflag &= ~UF_DBCSAWARE;
     else
-	newuser.uflag |= DBCSAWARE_FLAG;
+	newuser.uflag |= UF_DBCSAWARE;
 #endif
 
     more("etc/register", NA);
@@ -1265,7 +1264,7 @@ u_register(void)
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
-    int             isForeign = (cuser.uflag2 & FOREIGN) ? 1 : 0;
+    int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
@@ -1360,7 +1359,7 @@ u_register(void)
 	    }
 	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
 #if FOREIGN_REG_DAY > 0
-	    if(cuser.uflag2 & FOREIGN)
+	    if(HasUserFlag(UF_FOREIGN))
 		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
 #endif
 	    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
@@ -1749,7 +1748,7 @@ regform_accept(const char *userid, const char *justify)
     // According to suggestions by PTT BBS account sysops,
     // it is better to use anonymous here.
 #if FOREIGN_REG_DAY > 0
-    if(muser.uflag2 & FOREIGN)
+    if(muser.uflag & UF_FOREIGN)
 	mail_log2id(muser.userid, "[System] Registration Complete ", "etc/foreign_welcome",
 		"[SYSTEM]", 1, 0);
     else
@@ -2180,7 +2179,7 @@ ui_display_regform_single(
 		ANSI_COLOR(1;31) "  [T:禁止使用認證碼註冊]" ANSI_RESET: 
 		"");
 	prints("0.%-12s: %s%s\n",	"真實姓名", pre->u.realname,
-		xuser->uflag2 & FOREIGN ? " (外籍)" : 
+		xuser->uflag & UF_FOREIGN ? " (外籍)" : 
 		"");
 	prints("1.%-12s: %s\n",	"服務單位", pre->u.career);
 	prints("2.%-12s: %s\n",	"目前住址", pre->u.address);

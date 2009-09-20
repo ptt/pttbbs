@@ -305,7 +305,7 @@ adbanner(int menu_index)
     int i = menu_index;
 
     // don't show if stat in class or user wants to skip adbanners
-    if (currstat == CLASS || !(cuser.uflag & ADBANNER_FLAG))
+    if (currstat == CLASS || !(HasUserFlag(UF_ADBANNER)))
 	return;
 
     // also prevent SHM busy status
@@ -336,7 +336,7 @@ adbanner(int menu_index)
 				 SHM->last_usong < SHM->last_film);
 	
 	if (SHM->last_film > N_SYSADBANNER) {
-	    if (cuser.uflag & ADBANNER_USONG_FLAG || !valid_usong_range)
+	    if (HasUserFlag(UF_ADBANNER_USONG) || !valid_usong_range)
 		i = N_SYSADBANNER +       slideshow_index % (SHM->last_film+1-N_SYSADBANNER);
 	    else 
 		i = SHM->last_usong + 1 + slideshow_index % (SHM->last_film - SHM->last_usong);

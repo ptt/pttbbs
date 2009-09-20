@@ -242,7 +242,7 @@ redrawwin(void)
 
 #ifdef DBCSAWARE
 	    if (!(bp->mode & STANDOUT) &&
-		    (cuser.uflag & DBCS_NOINTRESC) &&
+		    (HasUserFlag(UF_DBCS_NOINTRESC)) &&
 		    DBCS_RemoveIntrEscape(bp->data, &len))
 	    {
 		// if anything changed, dirty whole line.
@@ -339,7 +339,7 @@ doupdate(void)
 
 #ifdef DBCSAWARE
 	    if (!(bp->mode & STANDOUT) &&
-		(cuser.uflag & DBCS_NOINTRESC) &&
+		(HasUserFlag(UF_DBCS_NOINTRESC)) &&
 		DBCS_RemoveIntrEscape(bp->data, &len))
 	    {
 		// if anything changed, dirty whole line.
