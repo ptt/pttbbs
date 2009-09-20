@@ -347,6 +347,7 @@ int query_file_money(const fileheader_t *pfh);
 /* menu */
 void showtitle(const char *title, const char *mid);
 void adbanner(int i);
+void adbanner_goodbye();
 int main_menu(void);
 int admin(void);
 int Mail(void);

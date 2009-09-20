@@ -29,6 +29,59 @@ enum {
     TITLE_TAIL_DIGEST,
 };
 
+// 由於歷史因素，這裡會出現三種編號: 
+// MODE (定義於 modes.h)    是 BBS 對各種功能在 utmp 的編號 (var.c 要加字串)
+// Menu Index (M_*)	    是 menu.c 內部分辨選單要對應哪個 mode 的 index
+// AdBanner Index	    是動態看版要顯示什麼的值
+// 從前這是用兩個 mode map 來轉換的 (令人看得滿頭霧水)
+// 重整後 Menu Index 跟 AdBanner Index 合一，請見下面的說明
+///////////////////////////////////////////////////////////////////////
+// AdBanner (SHM->notes) 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 
+// 目錄下的文章，所以編排 Menu (M_*) 時要照其順序：
+// 精華區編號     => Menu Index => MODE
+// (AdBannerIndex)
+// ====================================
+// 00離站畫面     =>  M_GOODBYE
+// 01主選單       =>  M_MMENU   => MMENU 
+// 02系統維護區   =>  M_ADMIN   => ADMIN 
+// 03私人信件區   =>  M_MAIL    => MAIL  
+// 04休閒聊天區   =>  M_TMENU   => TMENU 
+// 05個人設定區   =>  M_UMENU   => UMENU 
+// 06系統工具區   =>  M_XMENU   => XMENU 
+// 07娛樂與休閒   =>  M_PMENU   => PMENU 
+// 08Ｐtt搜尋器   =>  M_SREG    => SREG  
+// 09Ｐtt量販店   =>  M_PSALE   => PSALE 
+// 10Ｐtt遊樂場   =>  M_AMUSE   => AMUSE 
+// 11Ｐtt棋院     =>  M_CHC     => CHC   
+// 12特別名單     =>  M_NMENU   => NMENU 
+///////////////////////////////////////////////////////////////////////
+// 由於 MODE 與 menu 的順序現在已不一致 (最早可能是一致的)，所以中間的
+// 轉換是靠 menu_mode_map 來處理。
+// 要定義新 Menu 時，請在 M_MENU_MAX 之前加入新值，並在 menu_mode_map
+// 加入對應的 MODE 值。 另外，在 Notes 下也要增加對應的 AdBanner 圖片
+// 若不想加圖片則要修改 N_SYSADBANNER
+///////////////////////////////////////////////////////////////////////
+
+enum {
+    M_GOODBYE=0,
+    M_MMENU,	 M_ADMIN, M_MAIL, M_TMENU,
+    M_UMENU,     M_XMENU, M_PMENU,M_SREG,
+    M_PSALE,	 M_AMUSE, M_CHC,  M_NMENU,
+
+    M_MENU_MAX,			// 這是 menu (M_*) 的最大值 
+    N_SYSADBANNER = M_MENU_MAX, // 定義 M_* 到多少有對應的 ADBANNER
+    M_MENU_REFRESH= -1,		// 系統用不到的 index 值 (可顯示其它活動與點歌)
+};
+
+static const int menu_mode_map[M_MENU_MAX] = {
+    0,
+    MMENU,	ADMIN,	MAIL,	TMENU,
+    UMENU,	XMENU,	PMENU,	SREG,
+    PSALE,	AMUSE,	CHC,	NMENU
+};
+
+///////////////////////////////////////////////////////////////////////
+
 void
 showtitle(const char *title, const char *mid)
 {
@@ -235,37 +288,36 @@ show_status(void)
 
 /*
  * current caller of adbanner:
- *   board.c: adbanner(0);    // called when IN_CLASSROOT()
- *                         // with currstat = CLASS -> don't show adbanners
- *   xyz.c:   adbanner(999999);  // logout
- *   menu.c:  adbanner(cmdmode); // ...
+ *   xyz.c:   adbanner_goodbye();   // logout
+ *   menu.c:  adbanner(cmdmode);    // ...
+ *   board.c: adbanner(0);	    // 後來變在 board.c 裡自己處理(應該是那隻魚)
  */
 
-#define N_SYSADBANNER (sizeof(adbanner_map) / sizeof(adbanner_map[0]))
 void
-adbanner(int cmdmode)
+adbanner_goodbye()
 {
-    const int adbanner_map[] = { 
-	2, 10, 11, -1, 3, 1, 12, 
-	7, 9, 8, 4, 5, 6, 
-    };
+    adbanner(M_GOODBYE);
+}
 
-    int i;
-
-    // adbanner 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
+void
+adbanner(int menu_index)
+{
+    int i = menu_index;
 
     // don't show if stat in class or user wants to skip adbanners
     if (currstat == CLASS || !(cuser.uflag & ADBANNER_FLAG))
 	return;
+
     // also prevent SHM busy status
     if (SHM->Pbusystate || SHM->last_film <= 0)
 	return;
 
-    if (cmdmode > 0 && cmdmode < N_SYSADBANNER &&
-	    0 < adbanner_map[cmdmode] && adbanner_map[cmdmode] <= SHM->last_film) {
-	i = adbanner_map[cmdmode];
-    } else if (cmdmode == 999999) {	/* Goodbye my friend */
-	i = 0;
+    if (    i != M_MENU_REFRESH &&
+	    i >= 0		&& 
+	    i <  N_SYSADBANNER  &&
+	    i <= SHM->last_film) 
+    {
+	// use system menu - i
     } else {
 	// To display ADBANNERs in slide show mode. 
 	// Since menu is updated per hour, the total presentation time 
@@ -317,12 +369,12 @@ typedef struct {
 } commands_t;
 
 static int
-show_menu(int adbannermode, const commands_t * p)
+show_menu(int menu_index, const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
 
-    adbanner(adbannermode);
+    adbanner(menu_index);
 
     // seems not everyone likes the menu in center.
 #ifdef LARGETERM_CENTER_MENU
@@ -342,33 +394,19 @@ show_menu(int adbannermode, const commands_t * p)
     return n - 1;
 }
 
-
-enum {
-    M_ADMIN = 0, M_AMUSE, M_CHC, M_JCEE, M_MAIL, M_MMENU, M_NMENU,
-    M_PMENU, M_PSALE, M_SREG, M_TMENU, M_UMENU, M_XMENU, M_XMAX
-};
-
-static const int mode_map[] = {
-    ADMIN, AMUSE, CHC, JCEE, MAIL, MMENU, NMENU,
-    PMENU, PSALE, SREG, TMENU, UMENU, XMENU,
-};
-
 static void
-domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
+domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr, adbannermode;
+    int             lastcmdptr, cmdmode;
     int             n, pos, total, i;
     int             err;
 
-    adbannermode = cmdmode;
-    assert(cmdmode < M_XMAX);
-    cmdmode = mode_map[cmdmode];
+    assert(0 <= menu_index && menu_index < M_MENU_MAX);
+    cmdmode = menu_mode_map[menu_index];
 
     setutmpmode(cmdmode);
-
     showtitle(cmdtitle, BBSName);
-
-    total = show_menu(adbannermode, cmdtable);
+    total = show_menu(menu_index, cmdtable);
 
     show_status();
     lastcmdptr = pos = 0;
@@ -490,7 +528,8 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
 	if (refscreen) {
 	    showtitle(cmdtitle, BBSName);
-	    show_menu(-1, cmdtable);
+	    // menu 設定 M_MENU_REFRESH 可讓 ADBanner 顯示別的資訊
+	    show_menu(M_MENU_REFRESH, cmdtable);
 	    show_status();
 	    refscreen = NA;
 	}

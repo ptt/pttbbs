@@ -1168,9 +1168,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	currstat = CLASS;
 	myrow = 6;
 	showtitle("¤ÀÃþ¬ÝªO", BBSName);
-	adbanner(0);
 	move(1, 0);
-	// TODO remove ascii art here
+	// TODO move ascii art to adbanner?
 	outs(
 	    "                                                              "
 	    "¢©  ¢~¡X" ANSI_COLOR(33) "¡´\n"
