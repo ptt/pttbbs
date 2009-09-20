@@ -53,7 +53,7 @@ int transform(userec_t *new, userec_t *old, int i)
 	if (ov == nv)
 	    continue;
 
-	if (dirty++ == 0) printf("%s: %08X => [", u->userid, u->uflag);
+	if (dirty++ == 0) printf("%-13s: %08X => [", u->userid, u->uflag);
 	u->uflag &= ~(ufmap_to[i]);
 	if (u->deprecated_uflag2 & ufmap_from[i])
 	{
