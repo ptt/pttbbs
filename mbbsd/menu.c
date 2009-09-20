@@ -263,7 +263,7 @@ adbanner(int cmdmode)
 
     if (cmdmode > 0 && cmdmode < N_SYSADBANNER &&
 	    0 < adbanner_map[cmdmode] && adbanner_map[cmdmode] <= SHM->last_film) {
-	i = cmdmode;
+	i = adbanner_map[cmdmode];
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
     } else {
