@@ -240,10 +240,16 @@ show_status(void)
  *   xyz.c:   adbanner(999999);  // logout
  *   menu.c:  adbanner(cmdmode); // ...
  */
-#define N_SYSADBANNER 13
+
+#define N_SYSADBANNER (sizeof(adbanner_map) / sizeof(adbanner_map[0]))
 void
 adbanner(int cmdmode)
 {
+    const int adbanner_map[] = { 
+	2, 10, 11, -1, 3, 1, 12, 
+	7, 9, 8, 4, 5, 6, 
+    };
+
     int i;
 
     // adbanner 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
@@ -255,7 +261,8 @@ adbanner(int cmdmode)
     if (SHM->Pbusystate || SHM->last_film <= 0)
 	return;
 
-    if (cmdmode > 0 && cmdmode < N_SYSADBANNER && cmdmode < SHM->last_film) {
+    if (cmdmode > 0 && cmdmode < N_SYSADBANNER &&
+	    0 < adbanner_map[cmdmode] && adbanner_map[cmdmode] <= SHM->last_film) {
 	i = cmdmode;
     } else if (cmdmode == 999999) {	/* Goodbye my friend */
 	i = 0;
