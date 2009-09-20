@@ -356,10 +356,11 @@ static const int mode_map[] = {
 static void
 domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr;
+    int             lastcmdptr, adbannermode;
     int             n, pos, total, i;
     int             err;
 
+    adbannermode = cmdmode;
     assert(cmdmode < M_XMAX);
     cmdmode = mode_map[cmdmode];
 
@@ -367,7 +368,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
     showtitle(cmdtitle, BBSName);
 
-    total = show_menu(cmdmode, cmdtable);
+    total = show_menu(adbannermode, cmdtable);
 
     show_status();
     lastcmdptr = pos = 0;
