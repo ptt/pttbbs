@@ -603,7 +603,7 @@ void pwcuInitGuestPerm	()
     cuser.uflag = UF_BRDSORT;
     cuser.pager = PAGER_OFF;
 # ifdef GUEST_DEFAULT_DBCS_NOINTRESC
-    _ENABLE_BIT(cuser.uflag, DBCS_NOINTRESC);
+    _ENABLE_BIT(cuser.uflag, UF_DBCS_NOINTRESC);
 # endif
 }
 

@@ -20,14 +20,14 @@
 #define HAVE_GRAYOUT
 #include "bbs.h"
 
-#ifdef  DBCS_NOINTRESC
+#ifdef  UF_DBCS_NOINTRESC
 // # ifdef  CONVERT
 // extern int bbs_convert_type;
 // #  define FT_DBCS_NOINTRESC (
-//      (cuser.uflag & DBCS_NOINTRESC) || 
+//      (cuser.uflag & UF_DBCS_NOINTRESC) || 
 //      (bbs_convert_type == CONV_UTF8))
 // # else
-#  define FT_DBCS_NOINTRESC (cuser.uflag & DBCS_NOINTRESC)
+#  define FT_DBCS_NOINTRESC (cuser.uflag & UF_DBCS_NOINTRESC)
 // # endif
 #else
 # define FT_DBCS_NOINTRESC 0
