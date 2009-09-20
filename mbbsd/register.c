@@ -623,10 +623,11 @@ setupnewuser(const userec_t *user)
 }
 
 int
-query_adbanner_usong_pref_changed(const userec_t *u)
+query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
 {
     char old = (cuser.uflag & ADBANNER_USONG_FLAG) ? 1 : 0,
-	 new = 0;
+	 new = 0,
+	 ans = 1;
 
     assert(u);
     if ( !(u->uflag & ADBANNER_FLAG) )
@@ -635,15 +636,25 @@ query_adbanner_usong_pref_changed(const userec_t *u)
     vs_hdr("動態看板心情點播顯示設定");
     // draw a box here
     outs(
-	    "\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
-	    "\n\n\t其內容是開放給各使用者與公益團體申請的，所以會包含非商業的活動資訊，"
-	    "\n\n\t還有來自各使用者的心情點播 (可能包含該使用者的政治性言論或各種留言)。" 
-	    "\n\n\n\n"
-	    "\n\n\t" ANSI_COLOR(1) "此類由使用者自行發表的文字與圖像並不代表站方立場。" 
-	    ANSI_RESET "\n");
+	"\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
+	"\n\n\t其內容開放給各使用者與公益團體申請，所以會包含非商業的活動資訊/網宣，"
+	"\n\n\t還有來自各使用者的心情點播 (可能包含該使用者的政治性言論或各種留言)。" 
+	"\n\n\n\n"
+	"\n\n\t" ANSI_COLOR(1) 
+	"此類由使用者自行發表的文字與圖像並不代表站方立場。" ANSI_RESET 
+	"\n\n\t由於心情點播部份較難定義出完整的審核標準，為了避免造成閱\讀者的不快或"
+	"\n\n\t誤會，在此要確認您是否希望顯示心情點播內容。"
+	"\n\n\t(若之後想改變此類設定，可至 (U)個人設定區->(U)個人化設定 調整)\n");
     vs_rectangle_simple(1, 1, 78, MAX_ADBANNER_HEIGHT);
 
-    if (vans("請問您希望看到來自其它使用者的心情點播嗎？ [y/N]: ") == 'y')
+    do {
+	if (ans != 1) { move(b_lines-2, 0); outs("請確實輸入 y 或 n。"); bell(); }
+	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? [y/%c]: ", force_yn ? 'n':'N');
+	if ((!force_yn) && ans != 'y')
+	    ans = 'n';
+    } while (ans != 'y' && ans != 'n');
+
+    if (ans == 'y')
 	new = 1;
     else
 	new = 0;
@@ -689,7 +700,7 @@ new_register(void)
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
 #ifdef ADBANNER_USONG_FLAG
-    if (query_adbanner_usong_pref_changed(&newuser))
+    if (query_adbanner_usong_pref_changed(&newuser, 0))
 	newuser.uflag |= ADBANNER_USONG_FLAG;
 #endif
 
