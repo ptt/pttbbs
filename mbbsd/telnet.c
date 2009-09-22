@@ -43,6 +43,65 @@ telnet_init(int do_init_cmd)
 	telnet_ctx_send_init_cmds(ctx);
 }
 
+#if defined(DBCSAWARE) && !defined(DBCSAWARE_SKIP_EVIL_REPEATS_CHECK)
+ssize_t 
+dbcs_detect_evil_repeats(unsigned char *buf, ssize_t l)
+{
+    // determine DBCS repeats by evil clients (ref: io.c)
+    if (l == 2)
+    {
+	// XXX l=2 is dangerous. hope we are not in telnet IAC state...
+	// BS:	\b
+	// BS2:	\x7f
+	if (buf[0] != buf[1])
+	    return l;
+
+	if (buf[0] == '\b' ||
+	    buf[0] == '\x1f')
+	    return l-1;
+    } 
+    else if (l == 6)
+    {
+	// RIGHT:   ESC_CHR "OC" or ESC_CHR "[C"
+	// LEFT:    ESC_CHR "OD" or ESC_CHR "[D"
+	if (buf[2] != 'C' && buf[2] != 'D')
+	    return l;
+
+	if ( buf[0] == ESC_CHR &&
+	    (buf[1] == '[' || buf[1] == 'O') &&
+	     buf[0] == buf[3] &&
+	     buf[1] == buf[4] &&
+	     buf[2] == buf[5])
+	    return l-3;
+    } 
+    else if (l == 8)
+    {
+	// RIGHT:   ESC_CHR "[OC"
+	// LEFT:    ESC_CHR "[OD"
+	// DEL:	    ESC_STR "[3~" // vt220
+	if (buf[2] != '3' && buf[2] != 'O')
+	    return l;
+
+	if (buf[0] != ESC_CHR ||
+	    buf[1] != '[' ||
+	    buf[4] != buf[0] ||
+	    buf[5] != buf[1] ||
+	    buf[6] != buf[2] ||
+	    buf[7] != buf[3])
+	    return l;
+
+	if (buf[2] == '3' &&
+	    buf[3] == '~')
+	    return l-4;
+
+	if ( buf[2] == 'O' &&
+	    (buf[3] == 'C' || buf[3] == 'D') )
+	    return l-4;
+    }
+    return l;
+}
+#endif
+
 /* tty_read
  * read from tty, process telnet commands if raw connection.
  * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
@@ -55,6 +114,11 @@ tty_read(unsigned char *buf, size_t max)
 
     if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
 	abort_bbs(0);
+
+#if defined(DBCSAWARE) && !defined(DBCSAWARE_SKIP_EVIL_REPEATS_CHECK)
+    if (ISDBCSAWARE())
+	l = dbcs_detect_evil_repeats(buf, l);
+#endif
 
     if(!raw_connection || l <= 0)
 	return l;

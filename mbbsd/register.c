@@ -717,10 +717,15 @@ new_register(void)
 #endif
 
 #ifdef DBCSAWARE
+# ifdef DBCSAWARE_SKIP_EVIL_REPEATS_CHECK
     if(u_detectDBCSAwareEvilClient())
 	newuser.uflag &= ~UF_DBCSAWARE;
     else
 	newuser.uflag |= UF_DBCSAWARE;
+# else
+    // since we check for repeats, safe to set DBCS aware to user
+    newuser.uflag |= UF_DBCSAWARE;
+# endif
 #endif
 
     more("etc/register", NA);

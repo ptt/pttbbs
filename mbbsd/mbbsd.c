@@ -1279,11 +1279,8 @@ user_login(void)
     } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
 
 	init_guest_info();
-#if 0 // def DBCSAWARE
-	u_detectDBCSAwareEvilClient();
-#else
 	pressanykey();
-#endif
+
     } else {
 	// XXX no userlevel, no guest - what is this?
 	// clear();
