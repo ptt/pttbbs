@@ -15,9 +15,7 @@ static const char * const str_dotdir = FN_DIR;
 void
 setuserfile(char *buf, const char *fname)
 {
-    assert(is_validuserid(cuser.userid));
-    assert(fname[0]);
-    snprintf(buf, PATHLEN, str_home_file, cuser.userid[0], cuser.userid, fname);
+    sethomefile(buf, cuser.userid, fname);
 }
 
 void

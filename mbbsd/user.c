@@ -248,7 +248,7 @@ user_display(const userec_t * u, int adminmode)
 	int i;
 	static const char *uflag_desc[] = {
 	    "拒收外信",
-	    "最愛自動加新板",
+	    "新板加最愛",
 	    "外藉",
 	    "居留權",
 	};
@@ -258,9 +258,13 @@ user_display(const userec_t * u, int adminmode)
 	    UF_FOREIGN,
 	    UF_LIVERIGHT,
 	};
+	char buf[PATHLEN];
 
 	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
 		"已註冊" : "未註冊");
+	sethomefile(buf, u->userid, ".forward");
+	if (dashs(buf) > 0)
+	    outs("[自動轉寄]");
 
 	for (i = 0; i < sizeof(uflag_mask)/sizeof(uflag_mask[0]); i++)
 	{
