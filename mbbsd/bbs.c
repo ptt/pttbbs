@@ -1059,9 +1059,13 @@ do_general(int garbage)
 	money = MAX_POST_MONEY;
 #endif
 
-    // drop money & numposts for free boards
+    // drop money & numposts for free boards, or user without login information
+    // (they may post on free boards like SYSOP)
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
-    if (IsFreeBoardName(currboard) || (currbrdattr&BRD_BAD) || bp->BM[0] < ' ') 
+    if (!HasUserPerm(PERM_LOGINOK) || 
+	IsFreeBoardName(currboard) || 
+	(currbrdattr&BRD_BAD) || 
+	bp->BM[0] < ' ') // XXX note: BM may contain some (chinese) text that is not userid
     {
 	money = 0;
     }
