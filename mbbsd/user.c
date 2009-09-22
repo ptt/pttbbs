@@ -238,10 +238,38 @@ user_display(const userec_t * u, int adminmode)
 
     outs("        " ANSI_COLOR(30;41) "┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴"
 	 "┬┴┬┴┬┴┬" ANSI_RESET);
+    if (!adminmode)
+    {
+	outs((u->userlevel & PERM_LOGINOK) ?
+		"\n您的註冊程序已經完成，歡迎加入本站" :
+		"\n如果要提昇權限，請參考本站公佈欄辦理註冊");
+    } else {
+	// XXX list user pref here
+	int i;
+	static const char *uflag_desc[] = {
+	    "拒收外信",
+	    "最愛自動加新板",
+	    "外藉",
+	    "居留權",
+	};
+	static uint32_t uflag_mask[] = {
+	    UF_REJ_OUTTAMAIL,
+	    UF_FAV_ADDNEW,
+	    UF_FOREIGN,
+	    UF_LIVERIGHT,
+	};
 
-    outs((u->userlevel & PERM_LOGINOK) ?
-	 "\n您的註冊程序已經完成，歡迎加入本站" :
-	 "\n如果要提昇權限，請參考本站公佈欄辦理註冊");
+	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
+		"已註冊" : "未註冊");
+
+	for (i = 0; i < sizeof(uflag_mask)/sizeof(uflag_mask[0]); i++)
+	{
+	    if (!(u->uflag & uflag_mask[i]))
+		continue;
+	    prints("[%s]", uflag_desc[i]);
+	}
+	prints("\n");
+    }
 
 #ifdef NEWUSER_LIMIT
     if ((u->lastlogin - u->firstlogin < 3 * DAY_SECONDS) && !HasUserPerm(PERM_POST))
