@@ -53,11 +53,18 @@ dbcs_detect_evil_repeats(unsigned char *buf, ssize_t l)
 	// XXX l=2 is dangerous. hope we are not in telnet IAC state...
 	// BS:	\b
 	// BS2:	\x7f
+	// DEL2: Ctrl('D') (KKMan3 also treats Ctrl('D') as DBCS DEL)
 	if (buf[0] != buf[1])
 	    return l;
 
+	// Note: BS/DEL behavior on different clients:
+	// screen/telnet:BS=0x7F, DEL=^[3~
+	// PCMan2004:    BS=0x7F, DEL=^[3~
+	// KKMan3:       BS=0x1b, DEL=0x7F
+	// WinXP telnet: BS=0x1b, DEL=0x7F
 	if (buf[0] == '\b' ||
-	    buf[0] == '\x1f')
+	    buf[0] == '\x7f' ||
+	    buf[0] == Ctrl('D'))
 	    return l-1;
     } 
     else if (l == 6)
