@@ -1283,12 +1283,11 @@ user_login(void)
 
     } else {
 	// XXX no userlevel, no guest - what is this?
-	// clear();
-	// outs("此帳號停權中");
-	// pressanykey();
-	// exit(1);
-
-	check_mailbox_quota();
+	clear();
+	outs("抱歉，您的帳號資料異常或已被停權。\n");
+	pressanykey();
+	exit(1);
+	// check_mailbox_quota();
     }
 
     if(ptime.tm_yday!=lasttime.tm_yday)
