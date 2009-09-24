@@ -397,6 +397,8 @@ void Customize(void)
     int     dirty = 0;
     int     key;
 
+    const int col_opt = 54;
+
     /* cuser.uflag settings */
     static const unsigned int masks1[] = {
 	UF_ADBANNER,
@@ -409,23 +411,25 @@ void Customize(void)
 	UF_COLORED_MODMARK,
 #ifdef DBCSAWARE
 	UF_DBCSAWARE,
+	UF_DBCS_DROP_REPEAT,
 	UF_DBCS_NOINTRESC,
 #endif
 	0,
     };
 
     static const char* desc1[] = {
-	"顯示動態看板",
-	"顯示使用者心情點播 (需開啟動態看板)",
-	"拒收站外信",
-	"預設備份信件與其它記錄", //"與聊天記錄",
-	"新板自動進我的最愛",
-	"單色顯示我的最愛",
-	"隱藏文章修改符號(推文/修文) (~)",
-	"改用色彩代替修改符號 (+)",
+	"ADBANNER   顯示動態看板",
+	"ADBANNER   顯示使用者心情點播(需開啟動態看板)",
+	"MAIL       拒收站外信",
+	"BACKUP     預設備份信件與其它記錄", //"與聊天記錄",
+	"MYFAV      新板自動進我的最愛",
+	"MYFAV      單色顯示我的最愛",
+	"MODMARK    隱藏文章修改符號(推文/修文) (~)",
+	"MODMARK    改用色彩代替修改符號 (+)",
 #ifdef DBCSAWARE
-	"自動偵測雙位元字集(如全型中文)",
-	"禁止在雙位元中使用色碼(去一字雙色)",
+	"DBCS       自動偵測雙位元字集(如全型中文)",
+	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
+	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
 #endif
 	0,
     };
@@ -437,7 +441,10 @@ void Customize(void)
 	clear();
 	showtitle("個人化設定", "個人化設定");
 	move(2, 0);
-	outs("您目前的個人化設定: ");
+	outs("您目前的個人化設定: \n");
+	prints(ANSI_COLOR(32)"   %-11s%-*s%s" ANSI_RESET "\n",
+		"分類", col_opt-11,
+		"描述", "設定值");
 	move(4, 0);
 
 	/* print uflag options */
@@ -445,8 +452,10 @@ void Customize(void)
 	{
 	    clrtoeol();
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
-		    ". %-40s%s\n",
-		    'a' + ia, desc1[i],
+		    ". %-*s%s\n",
+		    'a' + ia, 
+		    col_opt,
+		    desc1[i],
 		    HasUserFlag(masks1[i]) ? 
 		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
@@ -456,15 +465,17 @@ void Customize(void)
 	    static const char *wm[PAGER_UI_TYPES+1] = 
 		{"一般", "進階", "未來", ""};
 
-	    prints("%c. %-40s%s\n",
+	    prints("%c. %-*s%s\n",
 		    '1' + iax++,
-		    "水球模式",
+		    col_opt,
+		    "PAGER      水球模式",
 		    wm[cuser.pager_ui_type % PAGER_UI_TYPES]);
 	    memcpy(mindbuf, &currutmp->mind, 4);
 	    mindbuf[4] = 0;
-	    prints("%c. %-40s%s\n",
+	    prints("%c. %-*s%s\n",
 		    '1' + iax++,
-		    "目前的心情",
+		    col_opt,
+		    "MIND       目前的心情",
 		    mindbuf);
 #ifdef PLAY_ANGEL
 	    if (HasUserPerm(PERM_ANGEL))
@@ -474,9 +485,9 @@ void Customize(void)
 		    "停收 (只接受已回應過的小主人的問題)",
 		    "關閉 (停止接受所有小主人的問題)",
 		};
-		prints("%c. %-40s%s\n", 
+		prints("%c. %s%s\n", 
 			'1' + iax++, 
-			"小天使神諭呼叫器",
+			"ANGEL      小天使神諭呼叫器: ",
 			msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
 	    }
 #endif // PLAY_ANGEL

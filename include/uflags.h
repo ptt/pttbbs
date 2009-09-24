@@ -17,6 +17,7 @@
 // #define UF_MIND	    0x00000100	// deprecated: true if mind search mode open <-Heat
 #define UF_DBCSAWARE	    0x00000200	// true if DBCS-aware enabled.
 #define UF_DBCS_NOINTRESC   0x00000400	// no Escapes interupting DBCS characters
+#define UF_DBCS_DROP_REPEAT 0x00000800	// detect and drop repeated input from evil clients
 // #define UF_DBCS_???	    0x00000800	// reserved
 #define UF_NO_MODMARK	    0x00001000	// true if modified files are NOT marked
 #define UF_COLORED_MODMARK  0x00002000	// true if mod-mark is coloured.

@@ -43,7 +43,7 @@ telnet_init(int do_init_cmd)
 	telnet_ctx_send_init_cmds(ctx);
 }
 
-#if defined(DBCSAWARE) && !defined(DBCSAWARE_SKIP_EVIL_REPEATS_CHECK)
+#if defined(DBCSAWARE)
 ssize_t 
 dbcs_detect_evil_repeats(unsigned char *buf, ssize_t l)
 {
@@ -122,8 +122,8 @@ tty_read(unsigned char *buf, size_t max)
     if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
 	abort_bbs(0);
 
-#if defined(DBCSAWARE) && !defined(DBCSAWARE_SKIP_EVIL_REPEATS_CHECK)
-    if (ISDBCSAWARE())
+#if defined(DBCSAWARE)
+    if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
 	l = dbcs_detect_evil_repeats(buf, l);
 #endif
 
