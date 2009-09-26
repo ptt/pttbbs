@@ -709,6 +709,7 @@ new_register(void)
     newuser.uflag = UF_BRDSORT | UF_ADBANNER;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.pager = PAGER_ON;
+    newuser.numlogindays = 1;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
 #ifdef UF_ADBANNER_USONG
