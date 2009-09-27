@@ -413,7 +413,7 @@ static inline void friend_load_real(int tosort, int maxf,
 }
 
 /* type == 0 : load all */
-void friend_load(int type)
+void friend_load(int type, int do_login)
 {
     if (!type || type & FRIEND_OVERRIDE)
 	friend_load_real(1, MAX_FRIEND, &currutmp->nFriends,
@@ -425,7 +425,7 @@ void friend_load(int type)
     if (currutmp->friendtotal)
 	logout_friend_online(currutmp);
 
-    login_friend_online();
+    login_friend_online(do_login);
 }
 
 static void
@@ -611,7 +611,7 @@ friend_edit(int type)
 	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	    // log_usies("SetBoard", bp->brdname);
 	}
-	friend_load(0);
+	friend_load(0, 0);
     }
 }
 

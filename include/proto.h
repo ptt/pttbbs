@@ -236,7 +236,7 @@ void reginit_fav(void);
 
 /* friend */
 void friend_edit(int type);
-void friend_load(int);
+void friend_load(int type, int do_login);
 int t_override(void);
 int t_reject(void);
 int t_fix_aloha();
@@ -579,7 +579,7 @@ int t_talk(void);
 int t_display(void);
 int my_query(const char *uident);
 int logout_friend_online(userinfo_t*);
-void login_friend_online(void);
+void login_friend_online(int do_login);
 int isvisible_uid(int tuid);
 int friend_stat(const userinfo_t *me, const userinfo_t * ui);
 int call_in(const userinfo_t *uentp, int fri_stat);

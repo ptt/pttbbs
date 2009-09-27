@@ -244,7 +244,7 @@ reverse_friend_stat(int stat)
 }
 
 #ifdef UTMPD
-int sync_outta_server(int sfd)
+int sync_outta_server(int sfd, int do_login)
 {
     int i;
     int offset = (int)(currutmp - &SHM->uinfo[0]);
@@ -266,6 +266,16 @@ int sync_outta_server(int sfd)
 
     if(res<0)
 	return -1;
+
+    // when we are not doing real login (ex, ctrl-u a or ctrl-u d)
+    // the frequency check should be avoided.
+    if (!do_login)
+    {
+	sleep(3);   // utmpserver usually treat 3 seconds as flooding.
+	if (res == 2 || res == 1)
+	    res = 0;
+    }
+
     if(res==2) {
 	close(sfd);
 	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
@@ -305,7 +315,7 @@ int sync_outta_server(int sfd)
 }
 #endif
 
-void login_friend_online(void)
+void login_friend_online(int do_login)
 {
     userinfo_t     *uentp;
     int             i;
@@ -321,7 +331,7 @@ void login_friend_online(void)
 
     sfd = toconnect(UTMPD_ADDR);
     if(sfd>=0) {
-	int res=sync_outta_server(sfd);
+	int res=sync_outta_server(sfd, do_login);
 	if(res==0) // sfd will be closed if return 0
 	    return;
 	close(sfd);
@@ -2905,7 +2915,7 @@ userlist(void)
 		if (HasUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
 		    if (vans("確定要加入好友嗎 [N/y]") == 'y') {
 			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->nickname);
-			friend_load(FRIEND_OVERRIDE);
+			friend_load(FRIEND_OVERRIDE, 0);
 		    }
 		    redrawall = redraw = 1;
 		}
@@ -2915,7 +2925,7 @@ userlist(void)
 		if (HasUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
 		    if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
 			friend_delete(uentp->userid, FRIEND_OVERRIDE);
-			friend_load(FRIEND_OVERRIDE);
+			friend_load(FRIEND_OVERRIDE, 0);
 		    }
 		    redrawall = redraw = 1;
 		}

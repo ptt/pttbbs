@@ -1078,7 +1078,7 @@ setup_utmp(int mode)
 
     /* Very, very slow friend_load. */
     if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
-	friend_load(0);
+	friend_load(0, 1);
 
     nice(3);
 }
