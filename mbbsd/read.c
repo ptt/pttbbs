@@ -423,7 +423,6 @@ select_read(const keeploc_t * locmem, int sr_mode)
    char keyword[TTLEN + 1] = "";
    int n_recommend = 0, n_money = 0;
 
-
    if(locmem->crs_ln == 0)
        return locmem->crs_ln;
 
@@ -501,8 +500,22 @@ select_read(const keeploc_t * locmem, int sr_mode)
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
             first_select ? "SR.":p,
             sr_mode, (int)strlen(keyword), DBCS_StringHash(keyword));
-   if( strlen(genbuf) > PATHLEN - 50 )
+
+   // pre-calculate board prefix
+   if (currstat == RMAIL)
+       sethomefile(newdirect, cuser.userid, "x");
+   else
+       setbfile(newdirect, currboard, "x");
+
+   // XXX currently currdirect is 64 bytes while newdirect is 256 bytes.
+   // however if we enlarge currdirect, there may be lots of SR generated.
+   // as a result, let's make restriction here.
+   assert( sizeof(newdirect) >= sizeof(currdirect) );
+   if( strlen(genbuf) + strlen(newdirect) >= sizeof(currdirect) )
+   {
+       vmsg("抱歉，已達搜尋條件上限。");
        return  READ_REDRAW; // avoid overflow
+   }
 
    if (currstat == RMAIL)
        sethomefile(newdirect, cuser.userid, genbuf);

@@ -361,7 +361,7 @@ userinfo_t     *currutmp;
 int             TagNum = 0;		/* tag's number */
 int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
                                         /* TagBoard > 0 : bid where last taged */
-char            currdirect[64];
+char            currdirect[64];		/* XXX TODO change this to PATHLEN? */
 
 /* bbs.c */
 char            real_name[IDLEN + 1];
