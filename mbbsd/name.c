@@ -108,7 +108,7 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    return VGETCB_NEXT;
 	    break;
 
-	case KEY_BS2: case KEY_BS:  /* backspace */
+	case KEY_BS:  /* backspace */
 	    nc_int->dirty = -1;
 	    break;
 
@@ -336,7 +336,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	    }
 	    continue;
 
-	} else if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
+	} else if (ch == KEY_BS) {	/* backspace */
 	    if (ptr == 0)
 		continue;
 	    morelist = -1;

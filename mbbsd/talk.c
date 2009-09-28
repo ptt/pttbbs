@@ -1328,7 +1328,6 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 
 	// complex data change
     case KEY_BS:
-    case KEY_BS2:
 	if (twin->curcol > 0)
 	{
 	    int delta = 1;
@@ -1347,6 +1346,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	}
 	return;
 
+    case KEY_DEL:
     case Ctrl('D'):
 	if (twin->curcol < line->len) 
 	{

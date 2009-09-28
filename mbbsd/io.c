@@ -279,15 +279,7 @@ dogetch(void)
 	lastact = now;
     }
 
-    // CRLF Handle:
-    //
-    // (UNIX) LF
-    // (WIN)  CRLF
-    // (MAC)  CR
-    //
-    // to work in a compatible way, (see KEY_ENTER definition)
-    // let KEY_ENTER = CR
-
+    // see vtkbd.c for CR/LF Rules
     {
 	unsigned char c = (unsigned char) inbuf[icurrchar++];
 
@@ -301,24 +293,9 @@ dogetch(void)
 	} 
 	else if (c == KEY_LF)
 	{
-	    // XXX it is reported that still some users
-	    // experience double ENTERs. We are not sure if there
-	    // are still any stupid clients. But if any, you
-	    // can reject the LFs. According the the compatibility
-	    // test, most clients send CR only so it should be fine.
-#ifdef ACCEPT_LF
-	    return KEY_ENTER;
-#else
 	    return KEY_UNKNOWN;
-#endif
 	}
 
-	// XXX also treat ^H and 127 (KEY_BS2) the same one?
-	// else if (c == KEY_BS2)
-	// {
-	//   return KEY_BS;
-	// }
-	
 	return c;
     }
 }
@@ -400,148 +377,18 @@ _debug_check_keyinput()
 
 static int      water_which_flag = 0;
 
-#ifndef vkey
-int 
-vkey(void)
+static int 
+process_pager_keys(int ch)
 {
-    return igetch();
-}
-#endif
-
-int
-igetch(void)
-{
-    register int ch, mode = 0, last = 0;
-    while (1) {
-	ch = dogetch();
-
-	/* for escape codes, check
-	 * http://support.dell.com/support/edocs/systems/pe2650/en/ug/5g387ad0.htm
-	 */
-        if (mode == 0 && ch == KEY_ESC)
-	    mode = 1;
-        else if (mode == 1) { 
-
-	    /* Escape sequence */
-
-            if (ch == '[' || ch == 'O')
-		{ mode = 2; last = ch; }
-            else {
-                KEY_ESC_arg = ch;
-                return KEY_ESC;
-	    }
-
-        } 
-	else if (mode == 2)
-	{
-	    /* ^[ or ^O,
-	     * ordered by frequency */
-
-	    if(ch >= 'A' && ch <= 'D')  /* Cursor key */
-	    {
-		return  KEY_UP + (ch - 'A');
-	    }
-	    else if (ch >= '1' && ch <= '6') /* Ins Del Home End PgUp PgDn */
-	    { 
-		mode = 3; last = ch; 
-		continue;
-	    }
-	    else if(ch == 'O')
-	    {
-		mode = 4; 
-		continue;
-	    }
-	    else if(ch == 'Z')
-	    {
-		return KEY_STAB;
-	    }  
-	    else if (ch == '0')
-	    {
-		if (dogetch() == 'Z')
-		    return KEY_STAB;
-		else
-		    return KEY_UNKNOWN;
-	    }
-	    else if (last == 'O') {
-		/* ^[O ... */
-		if (ch >= 'A' && ch <= 'D')
-		    return KEY_UP + (ch - 'A');
-		if (ch >= 'P' && ch <= 'S')		// vt100 k1-4
-		    return KEY_F1 + (ch - 'P');
-		if (ch >= 'T' && ch <= '[')		// putty vt100+ F5-F12
-		    return KEY_F5 + (ch - 'T');
-		if (ch >= 't' && ch <= 'z')		// vt100 F5-F11
-		    return KEY_F5 + (ch - 't');
-		if (ch >= 'p' && ch <= 's')		// Old (num or fn)kbd 4 keys
-		    return KEY_F1 + (ch - 'p');
-		else if (ch == 'a')			// DELL spec
-		    return KEY_F12;
-	    }
-	    else return KEY_UNKNOWN;
-	}  
-	else if (mode == 3)
-	{ 
-	    /* ^[[1-6] */
-
-	    /* ~: Ins Del Home End PgUp PgDn */
-	    if(ch == '~')
-	    {
-		// vt220 style
-		if (last >= '1' && last <= '6')
-		    return KEY_HOME + (last - '1');
-		// else, unknown.
-		return KEY_UNKNOWN;
-	    }
-	    else if (last == '1')
-	    {
-		if (ch >= '1' && ch <= '6')
-		{
-		    // use num_in_buf() to prevent waiting keys
-		    if (num_in_buf() && dogetch() == '~') /* must be '~' */
-			return KEY_F1 + ch - '1';
-		}
-		else if (ch >= '7' && ch <= '9')
-		{
-		    // use num_in_buf() to prevent waiting keys
-		    if (num_in_buf() && dogetch() == '~') /* must be '~' */
-			return KEY_F6 + ch - '7';
-		}
-		return KEY_UNKNOWN;
-	    } 
-	    else if (last == '2')
-	    {
-		if (ch >= '0' && ch <= '4')
-		{
-		    // use inbuf() to prevent waiting keys
-		    if (num_in_buf() && dogetch() == '~') /* hope you are '~' */
-			return KEY_F9 + ch - '0';
-		}
-		return KEY_UNKNOWN;
-	    }
-	    // if fall here, then escape sequence is broken.
-	    return KEY_UNKNOWN;
-	}
-        else          //  here is switch for default keys
-	switch (ch) { // XXX: indent error
-#ifdef DEBUG
-	case Ctrl('Q'):{
-	    struct rusage ru;
-	    getrusage(RUSAGE_SELF, &ru);
-	    vmsgf("sbrk: %d KB, idrss: %d KB, isrss: %d KB",
-		 ((int)sbrk(0) - 0x8048000) / 1024,
-		 (int)ru.ru_idrss, (int)ru.ru_isrss);
-	}
-	    continue;
-#endif
-	case Ctrl('L'):
-	    redrawwin();
-	    refresh();
-	    continue;
-
-	case Ctrl('U'):
-	    if (currutmp != NULL && currutmp->mode != EDITING
-		&& currutmp->mode != LUSERS && currutmp->mode) {
-
+    assert(currutmp);
+    switch (ch) 
+    {
+	case Ctrl('U') :
+	    if ( currutmp->mode == EDITING ||
+		 currutmp->mode == LUSERS  || 
+		!currutmp->mode) {
+		return ch;
+	    } else {
 		screen_backup_t old_screen;
 		int		oldroll = roll;
 		int             my_newfd;
@@ -555,147 +402,218 @@ igetch(void)
 		i_newfd = my_newfd;
 		roll = oldroll;
 		scr_restore(&old_screen);
-		continue;
-	    } 
-            return ch;
-	case KEY_TAB:
-	    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
-		if (currutmp != NULL && watermode > 0) {
-		    check_water_init();
-		    watermode = (watermode + water_which->count)
-			% water_which->count + 1;
-		    t_display_new();
-		    continue;
-		}
-            return ch;
+	    }
+	    return KEY_INCOMPLETE;
 
+	    // TODO 醜死了的 code ，等好心人 refine
 	case Ctrl('R'):
-	    if (currutmp == NULL)
-		return (ch);
 
-	    if (currutmp->msgs[0].pid &&
-		PAGER_UI_IS(PAGER_UI_OFO) && wmofo == NOTREPLYING) {
+	    if (PAGER_UI_IS(PAGER_UI_OFO))
+	    {
 		int my_newfd;
 		screen_backup_t old_screen;
+
+		if (!currutmp->msgs[0].pid ||
+		    wmofo != NOTREPLYING)
+		    break;
 
 		scr_dump(&old_screen);
 
 		my_newfd = i_newfd;
 		i_newfd = 0;
 		my_write2();
-	    	scr_restore(&old_screen);
+		scr_restore(&old_screen);
 		i_newfd = my_newfd;
-		continue;
-	    } else if (!PAGER_UI_IS(PAGER_UI_OFO)) {
-		check_water_init();
-		if (watermode > 0) {
-		    watermode = (watermode + water_which->count)
-			% water_which->count + 1;
-		    t_display_new();
-		    continue;
-		} else if (currutmp->mode == 0 &&
-		    (currutmp->chatid[0] == 2 || currutmp->chatid[0] == 3) &&
-			   water_which->count != 0 && watermode == 0) {
-		    /* 第二次按 Ctrl-R */
-		    watermode = 1;
-		    t_display_new();
-		    continue;
-		} else if (watermode == -1 && currutmp->msgs[0].pid) {
-		    /* 第一次按 Ctrl-R (必須先被丟過水球) */
-		    screen_backup_t old_screen;
-		    int             my_newfd;
-		    scr_dump(&old_screen);
+		return KEY_INCOMPLETE;
 
-		    /* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
-		    my_newfd = i_newfd;
-		    i_newfd = 0;
-		    show_call_in(0, 0);
-		    watermode = 0;
-#ifndef PLAY_ANGEL
-		    my_write(currutmp->msgs[0].pid, "水球丟過去： ",
-			    currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
-#else
-		    switch (currutmp->msgs[0].msgmode) {
-			case MSGMODE_TALK:
-			case MSGMODE_WRITE:
-			    my_write(currutmp->msgs[0].pid, "水球丟過去： ",
-				    currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
-			    break;
-			case MSGMODE_FROMANGEL:
-			    my_write(currutmp->msgs[0].pid, "再問他一次： ",
-				    currutmp->msgs[0].userid, WATERBALL_ANGEL, NULL);
-			    break;
-			case MSGMODE_TOANGEL:
-			    my_write(currutmp->msgs[0].pid, "回答小主人： ",
-				    currutmp->msgs[0].userid, WATERBALL_ANSWER, NULL);
-			    break;
-		    }
-#endif
-		    i_newfd = my_newfd;
-
-		    /* 還原螢幕 */
-		    scr_restore(&old_screen);
-		    continue;
-		}
 	    }
-	    return ch;
+
+	    // non-UFO
+	    check_water_init();
+
+	    if (watermode > 0) 
+	    {
+		watermode = (watermode + water_which->count)
+		    % water_which->count + 1;
+		t_display_new();
+		return KEY_INCOMPLETE;
+	    } 
+	    else if (watermode == 0 &&
+		    currutmp->mode == 0 &&
+		    (currutmp->chatid[0] == 2 || currutmp->chatid[0] == 3) &&
+		    water_which->count != 0) 
+	    {
+		/* 第二次按 Ctrl-R */
+		watermode = 1;
+		t_display_new();
+		return KEY_INCOMPLETE;
+	    } 
+	    else if (watermode == -1 && 
+		    currutmp->msgs[0].pid) 
+	    {
+		/* 第一次按 Ctrl-R (必須先被丟過水球) */
+		screen_backup_t old_screen;
+		int             my_newfd;
+		scr_dump(&old_screen);
+
+		/* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
+		my_newfd = i_newfd;
+		i_newfd = 0;
+		show_call_in(0, 0);
+		watermode = 0;
+#ifndef PLAY_ANGEL
+		my_write(currutmp->msgs[0].pid, "水球丟過去： ",
+			currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+#else
+		switch (currutmp->msgs[0].msgmode) {
+		    case MSGMODE_TALK:
+		    case MSGMODE_WRITE:
+			my_write(currutmp->msgs[0].pid, "水球丟過去： ",
+				 currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+			break;
+		    case MSGMODE_FROMANGEL:
+			my_write(currutmp->msgs[0].pid, "再問他一次： ",
+				 currutmp->msgs[0].userid, WATERBALL_ANGEL, NULL);
+			break;
+		    case MSGMODE_TOANGEL:
+			my_write(currutmp->msgs[0].pid, "回答小主人： ",
+				 currutmp->msgs[0].userid, WATERBALL_ANSWER, NULL);
+			break;
+		}
+#endif
+		i_newfd = my_newfd;
+
+		/* 還原螢幕 */
+		scr_restore(&old_screen);
+		return KEY_INCOMPLETE;
+	    }
+	    break;
+
+	case KEY_TAB:
+	    if (watermode <= 0 || 
+		(!PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)))
+		break;
+
+	    check_water_init();
+	    watermode = (watermode + water_which->count)
+		% water_which->count + 1;
+	    t_display_new();
+	    return KEY_INCOMPLETE;
 
 	case Ctrl('T'):
-	    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)) {
-		if (watermode > 0) {
-		    check_water_init();
-		    if (watermode > 1)
-			watermode--;
-		    else
-			watermode = water_which->count;
-		    t_display_new();
-		    continue;
-		}
-	    }
-            return ch;
+	    if (watermode <= 0 ||
+		!(PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)))
+		   break;
+
+	    check_water_init();
+	    if (watermode > 1)
+		watermode--;
+	    else
+		watermode = water_which->count;
+	    t_display_new();
+	    return KEY_INCOMPLETE;
 
 	case Ctrl('F'):
-	    if (PAGER_UI_IS(PAGER_UI_NEW)) {
-		if (watermode > 0) {
-		    check_water_init();
-		    if (water_which_flag == (int)water_usies)
-			water_which_flag = 0;
-		    else
-			water_which_flag =
-			    (water_which_flag + 1) % (int)(water_usies + 1);
-		    if (water_which_flag == 0)
-			water_which = &water[0];
-		    else
-			water_which = swater[water_which_flag - 1];
-		    watermode = 1;
-		    t_display_new();
-		    continue;
-		}
-	    }
-            return ch;
+	    if (watermode <= 0 || !PAGER_UI_IS(PAGER_UI_NEW))
+		break;
+
+	    check_water_init();
+	    if (water_which_flag == (int)water_usies)
+		water_which_flag = 0;
+	    else
+		water_which_flag =
+		    (water_which_flag + 1) % (int)(water_usies + 1);
+	    if (water_which_flag == 0)
+		water_which = &water[0];
+	    else
+		water_which = swater[water_which_flag - 1];
+	    watermode = 1;
+	    t_display_new();
+	    return KEY_INCOMPLETE;
 
 	case Ctrl('G'):
-	    if (PAGER_UI_IS(PAGER_UI_NEW)) {
-		if (watermode > 0) {
-		    check_water_init();
-		    water_which_flag = (water_which_flag + water_usies) % (water_usies + 1);
-		    if (water_which_flag == 0)
-			water_which = &water[0];
-		    else
-			water_which = swater[water_which_flag - 1];
-		    watermode = 1;
-		    t_display_new();
-		    continue;
-		}
-	    }
-	    return ch;
+	    if (watermode <= 0 || !PAGER_UI_IS(PAGER_UI_NEW))
+		break;
 
-	default:
-            return ch;
+	    check_water_init();
+	    water_which_flag = (water_which_flag + water_usies) % (water_usies + 1);
+	    if (water_which_flag == 0)
+		water_which = &water[0];
+	    else
+		water_which = swater[water_which_flag - 1];
+
+	    watermode = 1;
+	    t_display_new();
+	    return KEY_INCOMPLETE;
+    }
+    return ch;
+}
+
+#ifndef vkey
+int 
+vkey(void)
+{
+    return igetch();
+}
+#endif
+
+// virtual terminal keyboard context
+static VtkbdCtx vtkbd_ctx;
+
+int
+igetch(void)
+{
+    register int ch;
+
+    while (1) 
+    {
+	ch = dogetch();
+
+	// convert virtual terminal keys
+	ch = vtkbd_process(ch, &vtkbd_ctx);
+	switch(ch)
+	{
+	    case KEY_INCOMPLETE:
+		// XXX what if endless?
+		continue;
+
+	    case KEY_ESC:
+		KEY_ESC_arg = vtkbd_ctx.esc_arg;
+		return ch;
+
+	    case KEY_UNKNOWN:
+		return ch;
+
+	    // common global hot keys...
+	    case Ctrl('L'):
+		redrawwin();
+		refresh();
+		continue;
+#ifdef DEBUG
+	    case Ctrl('Q'):
+		{
+		    struct rusage ru;
+		    getrusage(RUSAGE_SELF, &ru);
+		    vmsgf("sbrk: %d KB, idrss: %d KB, isrss: %d KB",
+			    ((int)sbrk(0) - 0x8048000) / 1024,
+			    (int)ru.ru_idrss, (int)ru.ru_isrss);
+		}
+		continue;
+#endif
 	}
+
+	// complex pager hot keys
+	if (currutmp)
+	{
+	    ch = process_pager_keys(ch);
+	    if (ch == KEY_INCOMPLETE)
+		continue;
+	}
+
+	return ch;
     }
     // should not reach here. just to make compiler happy.
-    return 0;
+    return ch;
 }
 
 /*

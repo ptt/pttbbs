@@ -1065,7 +1065,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		}
 		break;
 
-	    case KEY_BS: case KEY_BS2:
+	    case KEY_BS:
 		if (rt.icurr > 0) {
 		    // kill previous one charracter.
 		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);

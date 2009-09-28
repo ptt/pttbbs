@@ -43,6 +43,7 @@ extern "C" {
 #endif
 
 #include "ansi.h"
+#include "vtkbd.h"
 #include "visio.h"
 #include "statistic.h"
 #include "uflags.h"

@@ -2508,8 +2508,9 @@ regform2_validate_page(int dryrun)
 #endif
 		case 's':	// skip
 		case 'd':	// delete
-		case KEY_DEL:	//delete
-		    if (ch == KEY_DEL) ch = 'd';
+		case Ctrl('D'): // delete
+		case KEY_DEL:	// delete
+		    if (ch == KEY_DEL || ch == Ctrl('D')) ch = 'd';
 
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
 		    move_ansi(ci*2, 4); outc(ch);
