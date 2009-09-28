@@ -621,10 +621,6 @@ int u_editplan(void);
 int u_editsig(void);
 int u_cloak(void);
 int u_list(void);
-#ifdef DBCSAWARE
-int u_detectDBCSAwareEvilClient();
-#endif
-#define ISDBCSAWARE() (cuser.uflag & UF_DBCSAWARE)
 
 /* vote */
 void b_suckinfile(FILE *fp, const char *fname);

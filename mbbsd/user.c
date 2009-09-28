@@ -410,7 +410,7 @@ void Customize(void)
 	UF_NO_MODMARK	,
 	UF_COLORED_MODMARK,
 #ifdef DBCSAWARE
-	UF_DBCSAWARE,
+	UF_DBCS_AWARE,
 	UF_DBCS_DROP_REPEAT,
 	UF_DBCS_NOINTRESC,
 #endif
@@ -1542,93 +1542,6 @@ u_list(void)
     igetch();
     return 0;
 }
-
-#ifdef DBCSAWARE
-
-/* detect if user is using an evil client that sends double
- * keys for DBCS data.
- * True if client is evil.
- */
-
-int u_detectDBCSAwareEvilClient()
-{
-    int ret = 0;
-
-    clear();
-    vs_hdr("設定自動偵測雙位元字集 (全型中文)");
-    move(2, 0);
-    outs(ANSI_RESET
-    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式 (如xxMan)\n"
-    "  也會自行試圖偵測、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
-      "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
-    "* 讓連線程式處理移動容易造成顯示及移動上誤判的問題，所以我們建議您\n"
-    "  關閉該程式上的設定（通常叫「偵測(全型或雙位元組)中文」），\n"
-    "  讓 BBS 系統可以正確的控制你的畫面。\n\n"
-    ANSI_COLOR(1;33) 
-    "* 如果您看不懂上面的說明也無所謂，我們會自動偵測適合您的設定。"
-    ANSI_RESET "\n"
-    "  請在設定好連線程式成您偏好的模式後按" ANSI_COLOR(1;33)
-    "一下" ANSI_RESET "您鍵盤上的" ANSI_COLOR(1;33)
-    "←" ANSI_RESET "\n" ANSI_COLOR(1;36)
-    "  (左右方向鍵或寫 BS/Backspace 的倒退鍵與 Del 刪除鍵均可)\n"
-	    ANSI_RESET);
-
-    /* clear buffer */
-    peek_input(0.1, Ctrl('C'));
-    drop_input();
-
-    while (1)
-    {
-	int ch = 0;
-
-	move(14, 0);
-	outs("這是偵測區，您的游標會出現在" 
-		ANSI_REVERSE "這裡" ANSI_RESET);
-	move(14, 15*2);
-	ch = igetch();
-	if(ch != KEY_LEFT && ch != KEY_RIGHT &&
-	   ch != KEY_BS && ch != KEY_BS2)
-	{
-	    move(16, 0);
-	    bell();
-	    outs("請按一下上面指定的鍵！ 你按到別的鍵了！");
-	} else {
-	    move(16, 0);
-	    /* Actually you may also use num_in_buf here.  those clients
-	     * usually sends doubled keys together in one packet.
-	     * However when I was writing this, a bug (existed for more than 3
-	     * years) of num_in_buf forced me to write new wait_input.
-	     * Anyway it is fixed now.
-	     */
-	    refresh();
-	    if(wait_input(0.1, 0))
-	    // if(igetch() == ch)
-	    // if (num_in_buf() > 0)
-	    {
-		/* evil dbcs aware client */
-		outs("偵測到您的連線程式會自行處理游標移動。\n"
-			// "若日後因此造成瀏覽上的問題本站恕不處理。\n\n"
-			"已設定為「讓您的連線程式處理游標移動」\n");
-		ret = 1;
-	    } else {
-		/* good non-dbcs aware client */
-		outs("您的連線程式似乎不會多送按鍵，"
-			"這樣 BBS 可以更精準的控制畫面。\n"
-			"已設定為「讓 BBS 伺服器直接處理游標移動」\n");
-		ret = 0;
-	    }
-	    outs(  "\n若想改變設定請至 個人設定區 → 個人化設定 → \n"
-		   "    調整「自動偵測雙位元字集(如全型中文)」之設定");
-	    while(num_in_buf())
-		igetch();
-	    break;
-	}
-    }
-    drop_input();
-    pressanykey();
-    return ret;
-}
-#endif 
 
 /* vim:sw=4
  */

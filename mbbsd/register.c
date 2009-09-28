@@ -712,24 +712,15 @@ new_register(void)
     newuser.numlogindays = 1;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
+#ifdef DBCSAWARE
+    newuser.uflag |= UF_DBCS_AWARE | UF_DBCS_DROP_REPEAT;
+#endif
+
 #ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))
 	newuser.uflag |= UF_ADBANNER_USONG;
 #endif
 
-#ifdef DBCSAWARE
-# ifndef DBCSAWARE_SKIP_EVIL_REPEATS_CHECK
-    newuser.uflag |= UF_DBCS_DROP_REPEAT;
-# endif
-    // if we check for repeats, safe to set DBCS aware to user;
-    // otherwise use detection
-    if ((newuser.uflag & UF_DBCS_DROP_REPEAT) || 
-	 u_detectDBCSAwareEvilClient() ) {
-	newuser.uflag |= UF_DBCSAWARE;
-    } else {
-	newuser.uflag &= ~UF_DBCSAWARE;
-    }
-#endif
 
     more("etc/register", NA);
     try = 0;

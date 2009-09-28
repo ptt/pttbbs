@@ -15,7 +15,7 @@
 #define UF_ADBANNER	    0x00000040	// (was: MOVIE_FLAG, true if show advertisement banner
 #define UF_ADBANNER_USONG   0x00000080	// true if show user songs in banner
 // #define UF_MIND	    0x00000100	// deprecated: true if mind search mode open <-Heat
-#define UF_DBCSAWARE	    0x00000200	// true if DBCS-aware enabled.
+#define UF_DBCS_AWARE	    0x00000200	// true if DBCS-aware enabled.
 #define UF_DBCS_NOINTRESC   0x00000400	// no Escapes interupting DBCS characters
 #define UF_DBCS_DROP_REPEAT 0x00000800	// detect and drop repeated input from evil clients
 // #define UF_DBCS_???	    0x00000800	// reserved
@@ -46,6 +46,7 @@
 	(x != 'n') : \
 	(x == 'y') )
 #define REJECT_OUTTAMAIL(x) (x.uflag & UF_REJ_OUTTAMAIL)
+#define ISDBCSAWARE()	(cuser.uflag & UF_DBCS_AWARE)
 
 /* -------------------- userec_t.uflag2 (unsigned int) */
 

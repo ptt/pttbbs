@@ -23,6 +23,11 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r4886: [dbcs]
+加了 repeat detection 的 DBCS 還不錯，所以正式脫離使用 detection 界面的日子
+有需要作全站轉換的人請自見拿 r4871 去改
+NOTE: 或許未來可以把 DBCSAWARE 的 conditional compile flag 拿掉
+
 r4871: [uflag]
 由於兩個 uflag 實在太容易令人寫錯、而且 uflag 的空間還很大，
 決定把 uflag/uflag2 整合。

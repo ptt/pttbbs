@@ -3486,7 +3486,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
     currutmp->destuid = currstat;
 
 #ifdef DBCSAWARE
-    mbcs_mode = (HasUserFlag(UF_DBCSAWARE)) ? 1 : 0;
+    mbcs_mode = ISDBCSAWARE() ? 1 : 0;
 #endif
 
     enter_edit_buffer();
