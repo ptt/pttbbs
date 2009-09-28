@@ -1,10 +1,10 @@
 /* $Id$ */
+#include "vtkbd.h"
 #include "bbs.h"
 
 /*
- * visio.c
- * piaip's new implementation of visio
- * (visio: virtual screen input output, the name from Maple3)
+ * vtuikit.c (was: visio.c)
+ * piaip's new implementation of virtual terminal user interface toolkits
  *
  * This is not the original visio.c from Maple3.
  * We just borrowed its file name and few API names/prototypes
@@ -14,13 +14,11 @@
  * but won't stick to it. 
  * Maybe at the end only 'vmsg' and 'vmsgf' will still be compatible....
  *
- * m3 visio = (ptt) visio+screen/term.
+ * m3 visio = (ptt) vtuikit+vtkbd+screen/term.
  *
  * Author: Hung-Te Lin (piaip), April 2008.
  *
- * Copyright (c) 2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
- * All rights reserved.
- * 
+ * Copyright (c) 2008-2009 Hung-Te Lin <piaip@csie.ntu.edu.tw>
  * Distributed under BSD license (GPL compatible).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +34,7 @@
  * (1) name the API in prefix of 'v'.
  * (2) use only screen.c APIs.
  * (3) take care of wide screen and DBCS.
- * (4) utilize the colos in visio.h, and name asa VCLR_* (visio color)
+ * (4) utilize the colos in vtuikit.h, and name asa VCLR_* (vtuikit color)
  */
 
 // ---- DEFINITION ---------------------------------------------------

@@ -10,14 +10,14 @@ SRCROOT=	..
 PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o cache.o cal.o brc.o mail.o record.o fav.o
 ACCOBJS  = user.o register.o passwd.o emaildb.o
-NETOBJS  = mbbsd.o io.o term.o telnet.o vtkbd.o
+NETOBJS  = mbbsd.o io.o term.o telnet.o
 TALKOBJS = talk.o chat.o friend.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
 PAGEROBJS= more.o pmore.o
 PLUGOBJS = calendar.o ordersong.o gamble.o vice.o angel.o
 CHESSOBJS= chess.o chc.o chc_tab.o ch_go.o ch_gomo.o ch_dark.o ch_reversi.o
 GAMEOBJS = card.o chicken.o
-OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
+OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o vtuikit.o \
 	vote.o voteboard.o \
 	$(COREOBJS)  $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
 	$(PAGEROBJS) $(PLUGOBJS) \

@@ -3,14 +3,15 @@
 #define _VISIO_H
 
 /*
- * visio.h
- * piaip's new implementation of visio
+ * vtuikit.h
+ * piaip's new implementation of vtuikit
  * 
- * see visio.c for license, usage, and introduction.
+ * see vtuikit.c for license, usage, and introduction.
  */
 
 #include "bbs.h"
 #include "ansi.h"   // we need it.
+#include "vtkbd.h"  // we usually use it
 #include <limits.h>
 
 // THEME DEFINITION ----------------------------------------------------

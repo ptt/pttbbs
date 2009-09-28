@@ -38,9 +38,9 @@
  * ---------------------------------------------------------------------------
  * * BS/DEL Rules
  *   The BackSpace, Erase(<X]), and Delete keys are special due to history...
- *    - on vt220,       BS=0x7F, Delete=ESC[3~  (screen/xterm/PuTTY)
+ *    - on vt220,       BS=0x7F, Delete=ESC[3~  (screen/xterm/PuTTY/PCMan)
  *    - on vt100,       BS=0x7F
- *    - on vt100/xterm, BS=0x08, Delete=0x7F    (Windows/VMX/DOS telnet)
+ *    - on vt100/xterm, BS=0x08, Delete=0x7F    (VMX/Windows/DOS telnet/KKMan)
  *   So we define 
  *      KEY_BS  = BACKSPACE/ERASE = 0x08, 0x7F
  *      KEY_DEL = DELETE          = ESC[3~
@@ -74,7 +74,9 @@
  *   Num pad is also always converted to digits.
  */
 
-#include "bbs.h"
+#include <assert.h>
+#include <string.h>
+#include "vtkbd.h"
 
 /* VtkbdCtx.state */
 typedef enum {
@@ -87,6 +89,9 @@ typedef enum {
     VKSTATE_TWO,        // <Esc> [ <2> 
     VKSTATE_TLIDE,      // <Esc> [ *    (wait ~, return esc_arg)
 }   VKSTATES;
+
+#define VKRAW_BS    0x08    // \b = Ctrl('H')
+#define VKRAW_ERASE 0x7F    // <X]
 
 /* the processor API */
 int 
@@ -104,8 +109,8 @@ vtkbd_process(int c, VtkbdCtx *ctx)
             // simple mappings
             switch (c) {
                 // BS/ERASE/DEL Rules
-                case 0x7F:
-                case 0x08:
+                case VKRAW_BS:
+                case VKRAW_ERASE:
                     return KEY_BS;
             }
             return c;
@@ -274,6 +279,59 @@ vtkbd_process(int c, VtkbdCtx *ctx)
     // what to do now?
     ctx->state = VKSTATE_NORMAL;
     return KEY_UNKNOWN;
+}
+
+ssize_t 
+vtkbd_ignore_dbcs_evil_repeats(const unsigned char *buf, ssize_t len)
+{
+    // determine DBCS repeats by evil clients 
+    // NOTE: this is usually invoked before vtkbd_process,
+    // so we have to deal with the raw sequence.
+    if (len == 2)
+    {
+	// XXX len==2 is dangerous. hope we are not in telnet IAC state...
+	if (buf[0] != buf[1])
+	    return len;
+
+        // targest here:
+        //  - VKRAW_BS
+        //  - VKRAW_ERASE
+        //  - Ctrl('D')     (KKMan3 also treats Ctrl('D') as DBCS DEL)
+	if (buf[0] == VKRAW_BS ||
+	    buf[0] == VKRAW_ERASE ||
+	    buf[0] == Ctrl('D'))
+	    return len/2;
+    } 
+    else if (len == 6)
+    {
+	// RIGHT:   KEY_ESC "OC" or KEY_ESC "[C"
+	// LEFT:    KEY_ESC "OD" or KEY_ESC "[D"
+	if (buf[2] != 'C' && buf[2] != 'D')
+	    return len;
+
+	if ( buf[0] == KEY_ESC &&
+	    (buf[1] == '[' || buf[1] == 'O') &&
+	     buf[0] == buf[3] &&
+	     buf[1] == buf[4] &&
+	     buf[2] == buf[5])
+	    return len/2;
+    } 
+    else if (len == 8)
+    {
+	// DEL:	    ESC_STR "[3~" // vt220
+	if (buf[0] != KEY_ESC ||
+            buf[2] != '3' ||
+	    buf[1] != '[' ||
+	    buf[3] != '~')
+            return len;
+
+        if( buf[4] == buf[0] &&
+	    buf[5] == buf[1] &&
+	    buf[6] == buf[2] &&
+	    buf[7] == buf[3])
+	    return len/2;
+    }
+    return len;
 }
 
 // vim:sw=4:sw=4:et

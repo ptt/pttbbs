@@ -44,7 +44,7 @@ extern "C" {
 
 #include "ansi.h"
 #include "vtkbd.h"
-#include "visio.h"
+#include "vtuikit.h"
 #include "statistic.h"
 #include "uflags.h"
 #include "pttstruct.h"

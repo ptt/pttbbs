@@ -155,7 +155,6 @@
 #define ST_REJECT  (IRH | HRM)       
 
 #define QCAST           int (*)(const void *, const void *)
-#define Ctrl(c)         (c & 037)
 #define chartoupper(c)  ((c >= 'a' && c <= 'z') ? c+'A'-'a' : c)
 
 #define LEN_AUTHOR1     5

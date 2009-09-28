@@ -25,6 +25,8 @@
 #ifndef _VTKBD_H
 #define _VTKBD_H
 
+#include <sys/types.h>
+
 /* context definition */
 typedef struct {
     int     state;
@@ -32,7 +34,11 @@ typedef struct {
 } VtkbdCtx;
 
 /* vtkbd API */
-int vtkbd_process(int c, VtkbdCtx *ctx);
+int     vtkbd_process(int c, VtkbdCtx *ctx);
+ssize_t vtkbd_ignore_dbcs_evil_repeats(const unsigned char *buf, ssize_t len);
+
+/* key code macro */
+#define Ctrl(c)         (c & 0x1F)
 
 /* common ASCII compatible keys definition */
 #define KEY_TAB         9

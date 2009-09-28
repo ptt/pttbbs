@@ -158,7 +158,7 @@ static int      i_newfd = 0;
 static struct timeval i_to, *i_top = NULL;
 static int      (*flushf) () = NULL;
 
-void
+inline void
 add_io(int fd, int timeout)
 {
     i_newfd = fd;
@@ -171,7 +171,7 @@ add_io(int fd, int timeout)
 	i_top = NULL;
 }
 
-int
+inline int
 num_in_buf(void)
 {
     if (ibufsize <= icurrchar)
@@ -179,11 +179,41 @@ num_in_buf(void)
     return ibufsize - icurrchar;
 }
 
-int
+inline int
 input_isfull(void)
 {
     return ibufsize >= IBUFSIZE;
 }
+
+inline static ssize_t 
+wrapped_tty_read(unsigned char *buf, size_t max)
+{
+    /* tty_read will handle abort_bbs.
+     * len <= 0: read more */
+    ssize_t len = tty_read(buf, max);
+    if (len <= 0)
+	return len;
+
+    // apply additional converts
+#ifdef DBCSAWARE
+    if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
+	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
+#endif
+#ifdef CONVERT
+    len = input_wrapper(inbuf, len);
+#endif
+#ifdef DBG_OUTRPT
+    {
+	static char xbuf[128];
+	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
+		ESC_STR "[u", len);
+	write(1, xbuf, strlen(xbuf));
+	fsync(1);
+    }
+#endif // DBG_OUTRPT
+    return len;
+}
+
 
 /*
  * dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time, and
@@ -246,24 +276,7 @@ dogetch(void)
 	STATINC(STAT_SYSREADSOCKET);
 
 	do {
-	    len = tty_read(inbuf, IBUFSIZE);
-	    /* tty_read will handle abort_bbs.
-	     * len <= 0: read more */
-#ifdef CONVERT
-	    if(len > 0)
-		len = input_wrapper(inbuf, len);
-#endif
-#ifdef DBG_OUTRPT
-	    // if (0)
-	    {
-		static char xbuf[128];
-		sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
-			ESC_STR "[u", len);
-		write(1, xbuf, strlen(xbuf));
-		fsync(1);
-	    }
-#endif // DBG_OUTRPT
-
+	    len = wrapped_tty_read(inbuf, IBUFSIZE);
 	} while (len <= 0);
 
 	ibufsize = len;
@@ -677,11 +690,7 @@ peek_input(float f, int c)
 
     if (wait_input(f, 1) && (IBUFSIZE > ibufsize))
     {
-	int len = tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
-#ifdef CONVERT
-	if(len > 0)
-	    len = input_wrapper(inbuf+ibufsize, len);
-#endif
+	int len = wrapped_tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
 	if (len > 0)
 	    ibufsize += len;
     }
