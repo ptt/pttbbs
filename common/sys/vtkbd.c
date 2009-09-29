@@ -54,7 +54,8 @@
  *   - UNIX, LF
  *   - Win,  CR+LF
  *   - Mac,  CR
- *   When it comes to terminal,CR LF should be treated as one. 
+ *   When it comes to terminal, most terminal sends CR or CR+LF for ENTER key.
+ *   To simply processing, we treat CR+LF as single key stroke (CR).
  *   There were reports that some users getting double ENTERs if we take LF
  *   as ENTER, so we decided reject LF. We are not sure if there is any 
  *   clients sending LF only, but according the the compatibility test, 
