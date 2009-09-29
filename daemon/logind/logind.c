@@ -176,6 +176,7 @@ typedef struct {
     struct bufferevent *bufev;
     struct event ev;
     TelnetCtx    telnet;
+    VtkbdCtx     vtkbd;
     login_ctx    ctx;
 } login_conn_ctx;
 
@@ -269,10 +270,12 @@ login_ctx_handle(login_ctx *ctx, int c)
                         ctx->icurr ++;
                     return LOGIN_HANDLE_REDRAW_USERID;
 
+                case Ctrl('A'):
                 case KEY_HOME:
                     ctx->icurr = 0;
                     return LOGIN_HANDLE_REDRAW_USERID;
 
+                case Ctrl('E'):
                 case KEY_END:
                     ctx->icurr = l;
                     return LOGIN_HANDLE_REDRAW_USERID;
@@ -482,97 +485,6 @@ _mt_move_yx(login_conn_ctx *conn, const char *mcmd)
     _buff_write(conn, cmd1, sizeof(cmd1)-1);
     _buff_write(conn, mcmd, strlen(mcmd));
     _buff_write(conn, cmd2, sizeof(cmd2)-1);
-}
-
-///////////////////////////////////////////////////////////////////////
-// ANSI/vt100/vt220 special keys
-
-static int
-_handle_term_keys(char **pstr, int *plen)
-{
-    char *str = *pstr;
-
-    assert(plen && pstr && *pstr && *plen > 0);
-    // fprintf(stderr, "handle_term: input = %d\r\n", *plen);
-
-    // 1. check ESC
-    (*plen)--; (*pstr)++;
-    if (*str != ESC_CHR)
-    {
-        int c = (unsigned char)*str;
-
-        switch(c)
-        {
-            case KEY_CR:
-                return KEY_ENTER;
-
-            case KEY_LF:
-                return 0; // to ignore
-
-            case Ctrl('A'):
-                return KEY_HOME;
-            case Ctrl('E'):
-                return KEY_END;
-
-            // case '\b':
-            case Ctrl('H'):
-            case 127:
-                return KEY_BS;
-        }
-        return c;
-    }
-
-    // 2. check O / [
-    if (!*plen)
-        return KEY_ESC;
-    (*plen)--; (*pstr)++; str++;
-    if (*str != 'O' && *str != '[')
-        return *str;
-    // 3. alpha: end, digit: one more (~)
-    if (!*plen)
-        return *str;
-    (*plen)--; (*pstr)++; str++;
-    if (!isascii(*str))
-        return KEY_UNKNOWN;
-    if (isdigit(*str))
-    {
-        if (*plen)
-        {
-            (*plen)--; (*pstr)++;
-        }
-        switch(*str)
-        {
-            case '1':
-                // fprintf(stderr, "got KEY_HOME.\r\n");
-                return KEY_HOME;
-            case '4':
-                // fprintf(stderr, "got KEY_END.\r\n");
-                return KEY_END;
-            case '3':
-                // fprintf(stderr, "got KEY_DEL.\r\n");
-                return KEY_DEL;
-            default:
-                // fprintf(stderr, "got KEY_UNKNOWN.\r\n");
-                return KEY_UNKNOWN;
-        }
-    }
-    if (isalpha(*str))
-    {
-        switch(*str)
-        {
-            case 'C':
-                // fprintf(stderr, "got KEY_RIGHT.\r\n");
-                return KEY_RIGHT;
-            case 'D':
-                // fprintf(stderr, "got KEY_LEFT.\r\n");
-                return KEY_LEFT;
-            default:
-                return KEY_UNKNOWN;
-        }
-    }
-
-    // unknown
-    return KEY_UNKNOWN;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1648,12 +1560,11 @@ client_cb(int fd, short event, void *arg)
 
     len = telnet_process(&conn->telnet, buf, len);
 
-    while (len > 0)
+    while (len-- > 0)
     {
-        int c = _handle_term_keys(&s, &len);
+        int c = vtkbd_process((unsigned char)*s++, &conn->vtkbd);
 
-        // for zero, ignore.
-        if (!c)
+        if (c == KEY_INCOMPLETE)
             continue;
 
         if (c == KEY_UNKNOWN)
