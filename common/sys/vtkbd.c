@@ -33,6 +33,9 @@
  *  http://www.connectrf.com/Documents/vt220.html
  *  http://www.ibb.net/~anne/keyboard.html
  *  http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+ *  http://invisible-island.net/xterm/xterm.faq.html
+ *  http://www.vim.org/htmldoc/term.html
+ *  http://yz.kiev.ua/www/etc/putty/Section3.5.html
  *  PuTTY Source < terminal.c, term_key() >
  *  Termcap
  * ---------------------------------------------------------------------------
@@ -58,6 +61,12 @@
  *   So we define
  *      KEY_CR  = CR, CR+LF
  *      KEY_LF  = ignored.
+ *
+ * * Editing Keys (Home/End/Ins/Del/PgUp/PgDn, Find/Select/Ins/Prev/Remove/Next):
+ *   Some old terminals use location mapping instead of mnemonic mapping:
+ *     http://invisible-island.net/xterm/xterm.faq.html#xterm_keypad
+ *   Well.... I decide to follow the mnemonic mapping. Unfortunately some
+ *   terminals (may include gnome-terminal, as I've heard) may get into trouble.
  * ---------------------------------------------------------------------------
  * * The complete list to support:
  *   - Up/Down/Right/Left:          <Esc> [ <A-D>       | <Esc> O <A-D> (app)
@@ -68,6 +77,12 @@
  *   - F6-F8:                       <Esc> [ 1 <789> ~
  *   - F9-F12:                      <Esc> [ 2 <0134> ~
  *   - Num 0-9 *+,-./=ENTER:        <Esc> O <pqrstuvwxyjklmnoXM>
+ *   - (SCO) End/PgDn/Home/PgUp/Ins <Esc> [ <FGHIL>
+ *   - (SCO) Del                    <0x7F>
+ *   - (Xterm) HOME/END             <Esc> <[O> <HF>
+ *   - (putty-rxvt) HOME            <Esc> [ H
+ *   - (putty-rxvt) END             <Esc> O w
+ *   - (Old Term?) Home/Ins/Del/End/PgUp/PgDn:  <Esc> [ <214536> ~  // not supported
  *
  *   Note: we don't support some rare terms like <Esc> O <TUVWXYZA> described 
  *   in Dell 2650 in order to prevent confusion. 
@@ -152,6 +167,23 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                     ctx->state = VKSTATE_NORMAL;
                     return KEY_UP + (c - 'A');
 
+                    // SCO
+                case 'H':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_HOME;
+                case 'F':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_END;
+                case 'G':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_PGDN;
+                case 'I':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_PGUP;
+                case 'L':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_INS;
+
                 case 'P':
                 case 'Q':
                 case 'R':
@@ -159,9 +191,17 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                     ctx->state = VKSTATE_NORMAL;
                     return KEY_F1 + (c - 'P');
 
-                    // Num pads: always convert to NumLock=ON
+                    // rxvt style DELETE
+                case 'w':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_DEL;
+
+                    // Num pads: was always converted to NumLock=ON
+                    // However we let 'w' map to DEL..
+                    // XXX the 'w' may be used as Delete...
                 case 'p': case 'q': case 'r': case 's':
-                case 't': case 'u': case 'v': case 'w':
+                case 't': case 'u': case 'v': 
+                // case 'w':
                 case 'x': case 'y':
                     ctx->state = VKSTATE_NORMAL;
                     return '0' + (c - 'p');
@@ -194,6 +234,23 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 case 'D':
                     ctx->state = VKSTATE_NORMAL;
                     return KEY_UP + (c - 'A');
+
+                    // SCO
+                case 'H':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_HOME;
+                case 'F':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_END;
+                case 'G':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_PGDN;
+                case 'I':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_PGUP;
+                case 'L':
+                    ctx->state = VKSTATE_NORMAL;
+                    return KEY_INS;
 
                 case '3':
                 case '4':
