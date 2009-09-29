@@ -35,6 +35,7 @@
  *  http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
  *  http://invisible-island.net/xterm/xterm.faq.html
  *  http://www.vim.org/htmldoc/term.html
+ *  http://wiki.archlinux.org/index.php/Why_don%27t_my_Home_and_End_keys_work_in_terminals%3F
  *  http://yz.kiev.ua/www/etc/putty/Section3.5.html
  *  PuTTY Source < terminal.c, term_key() >
  *  Termcap
@@ -80,6 +81,7 @@
  *   - (SCO) End/PgDn/Home/PgUp/Ins <Esc> [ <FGHIL>
  *   - (SCO) Del                    <0x7F>
  *   - (Xterm) HOME/END             <Esc> <[O> <HF>
+     - (rxvt)  HOME/END             <Esc> [ <78> ~
  *   - (putty-rxvt) HOME            <Esc> [ H
  *   - (putty-rxvt) END             <Esc> O w
  *   - (Old Term?) Home/Ins/Del/End/PgUp/PgDn:  <Esc> [ <214536> ~  // not supported
@@ -258,6 +260,15 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 case '6':
                     ctx->state = VKSTATE_TLIDE;
                     ctx->esc_arg = KEY_DEL + (c - '3');
+                    return KEY_INCOMPLETE;
+
+                case '7':
+                    ctx->state = VKSTATE_TLIDE;
+                    ctx->esc_arg = KEY_HOME;
+                    return KEY_INCOMPLETE;
+                case '8':
+                    ctx->state = VKSTATE_TLIDE;
+                    ctx->esc_arg = KEY_END;
                     return KEY_INCOMPLETE;
 
                 case 'Z':
