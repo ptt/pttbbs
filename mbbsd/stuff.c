@@ -164,7 +164,7 @@ wait_penalty(int sec)
 }
 
 // TODO
-// move this function to visio.c
+// move this function to vtuikit.c
 /**
  * 從第 y 列開始 show 出 filename 檔案中的前 lines 行。
  * mode 為 output 的模式，參數同 strip_ansi。
@@ -227,7 +227,7 @@ show_80x24_screen(const char *filename)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 int
 search_num(int ch, int max)
 {
@@ -251,7 +251,7 @@ search_num(int ch, int max)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 void
 cursor_show(int row, int column)
 {
@@ -261,7 +261,7 @@ cursor_show(int row, int column)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 void
 cursor_clear(int row, int column)
 {
@@ -270,7 +270,7 @@ cursor_clear(int row, int column)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 int
 cursor_key(int row, int column)
 {
@@ -284,7 +284,7 @@ cursor_key(int row, int column)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 void
 printdash(const char *mesg, int msglen)
 {
@@ -327,7 +327,7 @@ log_user(const char *fmt, ...)
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 void
 show_help(const char * const helptext[])
 {
@@ -347,7 +347,7 @@ show_help(const char * const helptext[])
 }
 
 // TODO
-// move this function to visio.c or visio.c
+// move this function to vtuikit.c
 void
 show_helpfile(const char *helpfile)
 {
