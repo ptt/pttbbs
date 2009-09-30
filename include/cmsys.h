@@ -183,6 +183,7 @@ struct TelnetCallback {
     void (*term_resize)		(void *resize_arg,int w, int h);
     void (*update_client_code)	(void *cc_arg,    unsigned char seq);
     void (*send_ayt)		(void *ayt_arg,   int fd);
+    void (*ttype)		(void *ttype_arg, char *ttype, int ttype_len);
 };
 
 #define TELNET_IAC_MAXLEN (16)
@@ -204,6 +205,7 @@ struct TelnetCtx {
     void *resize_arg;	// term_resize
     void *cc_arg;	// update_client_code
     void *ayt_arg;	// send_ayt
+    void *ttype_arg;	// term_type (ttype)
 };
 typedef struct TelnetCtx TelnetCtx;
 
@@ -213,10 +215,11 @@ extern void       telnet_free_context  (TelnetCtx *ctx);
 extern void telnet_ctx_init          (TelnetCtx *ctx, const struct TelnetCallback *callback, int fd);
 extern void telnet_ctx_send_init_cmds(TelnetCtx *ctx);
 
-extern void telnet_ctx_set_cc_arg    (TelnetCtx *ctx, void *cc_arg);
-extern void telnet_ctx_set_write_arg (TelnetCtx *ctx, void *cc_arg);
-extern void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *cc_arg);
-extern void telnet_ctx_set_ayt_arg   (TelnetCtx *ctx, void *ayt_arg);
+extern void telnet_ctx_set_cc_arg    (TelnetCtx *ctx, void *arg);
+extern void telnet_ctx_set_write_arg (TelnetCtx *ctx, void *arg);
+extern void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *arg);
+extern void telnet_ctx_set_ayt_arg   (TelnetCtx *ctx, void *arg);
+extern void telnet_ctx_set_ttype_arg (TelnetCtx *ctx, void *arg);
 
 extern ssize_t telnet_process        (TelnetCtx *ctx, unsigned char *buf, ssize_t size);
 

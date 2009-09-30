@@ -4,6 +4,7 @@
  * Improved by Kuang 2009
  */
 
+// #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -56,25 +57,31 @@ void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int 
     ctx->fd = fd;
 }
 
-void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *cc_arg)
+void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *arg)
 {
-    ctx->cc_arg = cc_arg;
+    ctx->cc_arg = arg;
 }
 
-void telnet_ctx_set_write_arg(TelnetCtx *ctx, void *write_arg)
+void telnet_ctx_set_write_arg(TelnetCtx *ctx, void *arg)
 {
-    ctx->write_arg = write_arg;
+    ctx->write_arg = arg;
 }
 
-void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *resize_arg)
+void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *arg)
 {
-    ctx->resize_arg = resize_arg;
+    ctx->resize_arg = arg;
 }
 
-void telnet_ctx_set_ayt_arg(TelnetCtx *ctx, void *ayt_arg)
+void telnet_ctx_set_ayt_arg(TelnetCtx *ctx, void *arg)
 {
-    ctx->ayt_arg = ayt_arg;
+    ctx->ayt_arg = arg;
 }
+
+void telnet_ctx_set_ttype_arg (TelnetCtx *ctx, void *arg)
+{
+    ctx->ttype_arg = arg;
+}
+
 
 /* We are the boss. We don't respect to client.
  * It's client's responsibility to follow us.
@@ -313,6 +320,8 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 	    ctx->iac_buf[ctx->iac_buflen++] = c;
 	    /* no need to convert state because previous quoting will do. */
 		    
+	    // XXX BUG max length of TERMTYPE is 40 characters...
+	    // (and one extra NUL for prefix 'IS')
 	    if(ctx->iac_buflen == TELNET_IAC_MAXLEN) {
 		/* may be broken protocol?
 		 * whether finished or not, break for safety 
@@ -360,6 +369,15 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 		    }
 		    break;
 
+		case TELOPT_TTYPE:
+		    // XXX termtype is in ctx->iac_buf+2
+		    // iac_buf: TTYPE=24 IS=0 NVT_ASCII ...
+		    if (ctx->callback->ttype && ctx->iac_buflen > 2)
+			ctx->callback->ttype(
+				ctx->ttype_arg,
+				(char*)ctx->iac_buf+2,
+				ctx->iac_buflen-2);
+		    // no break here, let's also update termtype to cc.
 		default:
 		    if (ctx->cc_arg &&
 			    ctx->callback->update_client_code) {
