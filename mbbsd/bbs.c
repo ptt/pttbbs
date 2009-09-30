@@ -1427,9 +1427,13 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 #endif
 
-    // user check
-    if (!HasUserPerm(PERM_BASIC) ||	// includeing guests
-	!CheckPostPerm() )   
+    // user and permission check
+    // reason 1: BM may alter post restrictions to this board
+    // reason 2: this account may be occupied by someone else.
+    if (!HasUserPerm(PERM_BASIC) ||	// including guests
+	!CheckPostPerm() ||
+	!CheckPostRestriction(currbid)
+	)   
 	return DONOTHING;
 
     if (strcmp(fhdr->owner, cuser.userid) != EQUSTR)
@@ -2938,6 +2942,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if ((!(currmode & MODE_BOARD) && not_owned) ||
 	((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
 	!strcmp(cuser.userid, STR_GUEST))
+	return DONOTHING;
+
+    // user and permission check
+    // reason 1: BM may alter post restrictions to this board
+    // reason 2: this account may be occupied by someone else.
+    if (!HasUserPerm(PERM_BASIC) ||	// including guests
+	!CheckPostPerm() ||
+	!CheckPostRestriction(currbid)
+	)   
 	return DONOTHING;
 
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';

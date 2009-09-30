@@ -197,6 +197,13 @@ postperm_msg(const char *bname)
     if (bp->brdattr & BRD_GUESTPOST)
         return NULL;
 
+    // XXX should we enable this?
+#if 0
+    // always allow post for BM
+    if (is_BM_cache(i))
+	return NULL;
+#endif
+
     if (!HasUserPerm(PERM_POST))
 	return "無發文權限";
 
