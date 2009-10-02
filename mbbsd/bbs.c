@@ -2495,11 +2495,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
     }
-    if ((bp->brdattr & BRD_VOTEBOARD) || (fhdr->filemode & FILE_VOTE))
-    {
-	do_voteboardreply(fhdr);
-	return FULLUPDATE;
-    }
 
 #ifdef SAFE_ARTICLE_DELETE
     if (fhdr->filename[0] == '.') {
@@ -2507,6 +2502,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 #endif
+
+    if ((bp->brdattr & BRD_VOTEBOARD) || (fhdr->filemode & FILE_VOTE))
+    {
+	do_voteboardreply(fhdr);
+	return FULLUPDATE;
+    }
 
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
