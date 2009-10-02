@@ -1431,7 +1431,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
-	!CheckPostPerm() ||
+	(!CheckPostPerm() && !(currmode & MODE_DIGEST)) || // XXX it's stupid to check digest mode here, but right now CheckPostPerm early returns for digest... NOTE this is buggy but since I don't want to manintain the useless digest...
 	!CheckPostRestriction(currbid)
 	)   
 	return DONOTHING;
@@ -2949,7 +2949,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
-	!CheckPostPerm() ||
+	(!CheckPostPerm() && !(currmode & MODE_DIGEST)) || // XXX it's stupid to check digest mode here, but right now CheckPostPerm early returns for digest... NOTE this is buggy but since I don't want to manintain the useless digest...
 	!CheckPostRestriction(currbid)
 	)   
 	return DONOTHING;
