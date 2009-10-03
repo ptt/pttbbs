@@ -335,14 +335,19 @@ int IsFreeBoardName(const char *brdname)
 int
 CheckPostPerm(void)
 {
+    if (currmode & MODE_DIGEST)
+	return 0;
+    return CheckModifyPerm();
+}
+
+int
+CheckModifyPerm(void)
+{
     static time4_t last_chk_time = 0x0BAD0BB5; /* any magic number */
     static int last_board_index = 0; /* for speed up */
     int valid_index = 0;
     boardheader_t *bp = NULL;
     
-    if (currmode & MODE_DIGEST)
-	return 0;
-
     // check if my own permission is changed.
     if (ISNEWPERM(currutmp))
     {
@@ -1431,7 +1436,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
-	(!CheckPostPerm() && !(currmode & MODE_DIGEST)) || // XXX it's stupid to check digest mode here, but right now CheckPostPerm early returns for digest... NOTE this is buggy but since I don't want to manintain the useless digest...
+	!CheckPostPerm() ||		// edit needs post perm (cannot be changed in digest mode)
 	!CheckPostRestriction(currbid)
 	)   
 	return DONOTHING;
@@ -2949,7 +2954,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
-	(!CheckPostPerm() && !(currmode & MODE_DIGEST)) || // XXX it's stupid to check digest mode here, but right now CheckPostPerm early returns for digest... NOTE this is buggy but since I don't want to manintain the useless digest...
+	!( (currmode & MODE_DIGEST) ? (currmode & MODE_BOARD) : CheckPostPerm() ) || // allow BM to delete posts in digest mode
 	!CheckPostRestriction(currbid)
 	)   
 	return DONOTHING;
