@@ -89,23 +89,6 @@ inmailbox(int m)
 }
 
 
-#if !HAVE_FREECLOAK
-/* 花錢選單 */
-int
-p_cloak(void)
-{
-    if (vans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
-	return 0;
-    reload_money();
-    if (cuser.money >= 19) {
-	vice(19, "付費隱身");
-	currutmp->invisible %= 2;
-	vmsg((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
-    }
-    return 0;
-}
-#endif
-
 int
 p_from(void)
 {

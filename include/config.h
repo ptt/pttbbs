@@ -167,10 +167,6 @@
 #define FOREIGN_REG_DAY   30
 #endif
 
-#ifndef HAVE_FREECLOAK
-#define HAVE_FREECLOAK     0
-#endif
-
 #ifndef FORCE_PROCESS_REGISTER_FORM
 #define FORCE_PROCESS_REGISTER_FORM 0
 #endif

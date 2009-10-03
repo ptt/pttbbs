@@ -678,11 +678,7 @@ static const commands_t userlist[] = {
     {u_loginview,   PERM_BASIC,     "VVLogin View    選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線...)"},
-#if HAVE_FREECLOAK
     {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},
-#else
-    {u_cloak,	    PERM_CLOAK,	    "KKCloak        隱身術"},
-#endif
     {u_register,    MENU_UNREGONLY, "RRegister      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "BBye BadPost   申請刪除劣文"},
@@ -804,9 +800,6 @@ static const commands_t xyzlist[] = {
 static const commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
-#if !HAVE_FREECLOAK
-    {p_cloak, 0,        "22Cloak       切換 隱身/現身   $19  /次"},
-#endif
     {p_from, 0,         "33From        暫時修改故鄉     $49  /次"},
     {ordersong,0,       "44OSong       歐桑動態點歌機   $200 /次"},
     {p_exmail, 0,       "55Exmail      購買信箱         $1000/封"},

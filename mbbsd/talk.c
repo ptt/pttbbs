@@ -2600,13 +2600,8 @@ userlist(void)
 		break;
 
 	    case 'C':
-#if !HAVE_FREECLOAK
-		if (HasUserPerm(PERM_CLOAK))
-#endif
-		{
-		    currutmp->invisible ^= 1;
-		    redrawall = redraw = 1;
-		}
+		currutmp->invisible ^= 1;
+		redrawall = redraw = 1;
 		break;
 
 	    case ' ':
