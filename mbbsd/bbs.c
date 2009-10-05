@@ -1539,16 +1539,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		oldmt = newmt;
 		outs(ANSI_COLOR(1) 
 		    "合併成功\，新修改(或推文)已加入您的文章中。\n" 
-		    "您沒有蓋\掉任何推文或修改，請勿擔心。"
 		    ANSI_RESET "\n");
-
-#ifdef  WARN_EXP_SMARTMERGE
-		outs(ANSI_COLOR(1;33) 
-		    "自動合併 (Smart Merge) 是實驗中的新功\能，" 
-		    "請檢查一下您的文章合併後是否正常。" ANSI_RESET "\n"
-		    "若有問題請至 " BN_BUGREPORT " 板報告，謝謝。");
-#endif 
-		vmsg("合併完成");
 	    } else {
 		outs(ANSI_COLOR(31) 
 		    "自動合併失敗。 請改用人工手動編輯合併。" ANSI_RESET);
