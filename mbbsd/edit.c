@@ -1594,12 +1594,20 @@ write_header(FILE * fp,  const char *mytitle)
 			real_name, sizeof(real_name), DOECHO, mynick);
 	    } else
 #endif // PLAY_ANGEL && BN_ANGELPRAY
-	    if (defanony)
-		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]，"
-		 "或是按[r]用真名：", real_name, sizeof(real_name), DOECHO);
-	    else
-		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]使用原ID：",
+	    do {
+		getdata(3, 0, defanony ? 
+			"請輸入你想用的ID，也可直接按[Enter]，或是按[r]用真名：" :
+			"請輸入你想用的ID，也可直接按[Enter]使用原ID：",
 			real_name, sizeof(real_name), DOECHO);
+		// names with '-' prefix are considered as 'deleted'.
+		if (real_name[0] == '-') 
+		{
+		    mvouts(4, 0, "抱歉，請勿使用以 - 開頭的名稱。");
+		    continue;
+		}
+		break;
+	    } while(1);
+
 	    if (!real_name[0] && defanony) {
 		strlcpy(real_name, "Anonymous", sizeof(real_name));
 		strlcpy(postlog.author, real_name, sizeof(postlog.author));
