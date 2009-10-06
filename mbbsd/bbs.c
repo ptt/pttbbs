@@ -1668,7 +1668,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     // if file is SAFE_DELETED, skip it.
-    if (fhdr->owner[0] == '-' && fhdr->owner[1] == 0)
+    if (fhdr->owner[0] == '-')
 	return DONOTHING;
 
     setbfile(fname, currboard, fhdr->filename);
@@ -2493,7 +2493,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifdef SAFE_ARTICLE_DELETE
-    if (fhdr->filename[0] == '.') {
+    if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
 	vmsg("本文已刪除");
 	return FULLUPDATE;
     }
