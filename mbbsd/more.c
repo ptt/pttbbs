@@ -20,41 +20,184 @@
  *     documentation and/or other materials provided with the distribution.
  */
 
-#ifdef USE_PMORE
-/* use new pager: piaip's more. */
-int more(const char *fpath, int promptend)
+static int 
+check_sysop_edit_perm(const char *fpath)
 {
-    int r = pmore(fpath, promptend);
+    if (!HasUserPerm(PERM_SYSOP) ||
+	strcmp(fpath, "etc/ve.hlp") == 0)
+	return 0;
 
+#ifdef BN_SECURITY
+    if (strcmp(currboard, BN_SECURITY) == 0)
+	return 0;
+#endif // BN_SECURITY
+
+    return 1;
+}
+
+#ifdef USE_PMORE
+static int 
+common_pmore_key_handler(int ch, void *ctx)
+{
+    switch(ch)
+    {
+	// Special service keys
+	case 'z':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOCHESSREPLAY;
+
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+	case 'L':
+	case 'l':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOBBSLUA;
+#endif
+	
+	// Query information and file touch
+	case 'Q':
+	    return RET_DOQUERYINFO;
+
+	case Ctrl('T'):
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_COPY2TMP;
+
+	case 'E':
+	    if (!check_sysop_edit_perm("")) // for early check, skip file name (must check again later)
+		break;
+	    return RET_DOSYSOPEDIT;
+
+	// Making Response
+	case '%':
+	case 'X':
+	    return RET_DORECOMMEND;
+
+	case 'r': case 'R':
+	    return RET_DOREPLY;
+
+	case 'Y': case 'y':
+	    return RET_DOREPLYALL;
+
+	// Special Navigation
+	case 's':
+	    if (!HasUserPerm(PERM_BASIC) ||
+		currstat != READING)
+		break;
+	    return RET_SELECTBRD;
+	
+	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
+	// I'm not sure if these keys are all invented by SOB,
+	// but let's honor their names.
+	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
+	//                                  -- by piaip, 2008.
+	case 'A':
+	    return AUTHOR_PREV;
+	case 'a':
+	    return AUTHOR_NEXT;
+	case 'F': case 'f':
+	    return READ_NEXT;
+	case 'B': case 'b':
+	    return READ_PREV;
+
+	/* from Kaede, thread reading */
+	case ']':
+	case '+':
+	    return RELATE_NEXT;
+	case '[':
+	case '-':
+	    return RELATE_PREV;
+	case '=':
+	    return RELATE_FIRST;
+    }
+
+    return DONOTHING;
+}
+
+static const char 
+*hlp_nav [] = 
+{ "【瀏覽指令】",
+    "下篇文章  ", "f",
+    "前篇文章  ", "b",
+    "同主題下篇", "] +",
+    "同主題前篇", "[ -",
+    "同主題循序", "t",
+    "同主題首篇", "=",
+    "同作者前篇", "A",
+    "同作者下篇", "a",
+    NULL,
+},
+*hlp_reply [] = 
+{ "【回應指令】",
+    "推薦文章", "% X",
+    "回信回文", "r",
+    "全部回覆", "y",
+    NULL,
+},
+*hlp_spc [] = 
+{ "【特殊指令】",
+    "查詢資訊  ", "Q",
+    "存入暫存檔", "^T",
+    "切換看板  ", "s",
+    "棋局打譜  ", "z",
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+    "執行BBSLua", "L l",
+#endif
+    NULL,
+};
+
+// TODO make this help renderer into vtuikit or other location someday
+static int 
+common_pmore_help_handler(int y, void *ctx)
+{
+    // simply show ptt special function keys
+    int i;
+    const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
+    const int  cols[3] = { 29, 29, 19 },    // columns
+               desc[3] = { 11, 11, 13 };    // desc width
+    prints( "\n" ANSI_COLOR(1;31) "%-*s%-*s%-*s" ANSI_RESET "\n",
+            cols[0], *p[0]++, cols[1], *p[1]++, cols[2], *p[2]++);
+    // render help page
+    while (*p[0] || *p[1] || *p[2])
+    {
+        y++; outc(' ');
+        for ( i = 0; i < 3; i++ )
+        {
+            if (!*p[i]) {
+                prints("%*s", cols[i], "");
+                continue;
+            }
+            prints("%-*s", desc[i], *p[i]++);
+            prints(ANSI_COLOR(1;36) "%-*s" ANSI_RESET , cols[i]-desc[i], *p[i]++);
+        }
+        outs("\n");
+    }
+    PRESSANYKEY();
+    return 0;
+}
+
+/* use new pager: piaip's more. */
+int 
+more(const char *fpath, int promptend)
+{
+    int r = pmore2(fpath, promptend,
+	    (void*) fpath,
+	    common_pmore_key_handler, 
+	    common_pmore_help_handler);
+
+    // post processing
     switch(r)
     {
 
 	case RET_DOSYSOPEDIT:
 	    r = FULLUPDATE;
-
-	    if (!HasUserPerm(PERM_SYSOP) ||
-		    strcmp(fpath, "etc/ve.hlp") == 0)
+	    if (!check_sysop_edit_perm(fpath))
 		break;
-
-#ifdef BN_SECURITY
-	    if (strcmp(currboard, BN_SECURITY) == 0)
-		break;
-#endif // BN_SECURITY
-
 	    log_filef("log/security", LOG_CREAT,
 		    "%u %s %d %s admin edit file=%s\n", 
 		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
-
 	    veditfile(fpath);
-	    break;
-
-	case RET_SELECTBRD:
-	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-	    {
-		if (currstat == READING)
-		    return Select();
-	    }
 	    break;
 
 	case RET_COPY2TMP:
@@ -71,23 +214,24 @@ int more(const char *fpath, int promptend)
 	    }
 	    break;
 
+	case RET_SELECTBRD:
+	    r = FULLUPDATE;
+	    if (currstat == READING)
+		Select();
+	    break;
+
 	case RET_DOCHESSREPLAY:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
-	    {
 		ChessReplayGame(fpath);
-	    }
 	    break;
 
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
 	case RET_DOBBSLUA:
 	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-	    {
+	    // check permission again
+	    if (HasUserPerm(PERM_BASIC)) 
 		bbslua(fpath);
-	    } else {
-		vmsg("抱歉，此帳號無權限執行 BBS-Lua 程式。");
-	    }
 	    break;
 #endif
     }

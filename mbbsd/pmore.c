@@ -98,7 +98,6 @@
 #define PMORE_USE_ASCII_MOVIE           // support ascii movie
 #define PMORE_USE_INTERNAL_HELP         // display pmore internal help
 #define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
-#define PMORE_USE_SOB_THREAD_NAV        // use SOB-like thread navigation
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
@@ -122,16 +121,35 @@
 
 // ----------------------------------------------------------- <LOCALIZATION>
 // Messages for localization are listed here.
+
+#define PMORE_MSG_PROGVER  "pmore 2007+"
+
 #define PMORE_MSG_PREF_TITLE \
-    " piaip's more: pmore 2007 設定選項 "
+     " piaip's more: " PMORE_MSG_PROGVER " 設定選項 "
 #define PMORE_MSG_PREF_TITLE_QRAW \
-    " piaip's more: pmore 2007 快速設定選項 - 色彩(ANSI碼)顯示模式 "
+     " piaip's more: " PMORE_MSG_PROGVER " 快速設定 - 色彩(ANSI碼)顯示模式 "
+#define PMORE_MSG_HELP_TITLE \
+     " piaip's more: " PMORE_MSG_PROGVER " 瀏覽程式使用說明"
+#define PMORE_MSG_HELP_PAUSE \
+     "請按任意鍵離開此說明畫面"
 #define PMORE_MSG_WARN_FAKEUSERINFO \
-    " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
+     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_WARN_MOVECMD \
-    " ▲此頁內容含移位碼,可能會顯示偽造的系統訊息 "
+     " ▲此頁內容含移位碼,可能會顯示偽造的系統訊息 "
 #define PMORE_MSG_SEARCH_KEYWORD \
-    "[搜尋]關鍵字:"
+     "[搜尋]關鍵字:"
+#define PMORE_MSG_SEARCH_LETTERCASE \
+     "區分大小寫(Y/N/Q)? "
+#define PMORE_MSG_GOTO_PAGE \
+     "跳至此頁(若要改指定行數請在結尾加.): "
+#define PMORE_MSG_GOTO_LINE \
+             "跳至此行: "
+#define PMORE_MSG_QPREF_SUBJECT \
+             "色彩顯示方式:"
+#define PMORE_MSG_QPREF_OPTIONS \
+             "1.預設格式化內容\t2.原始ANSI控制碼\t3.純文字"
+#define PMORE_MSG_QPREF_PROMPT \
+             "請調整設定 (1-3 可直接選定，\\可切換) 或其它任意鍵結束。"
 
 #define PMORE_MSG_MOVIE_DETECTED \
     " ★ 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]"
@@ -145,6 +163,8 @@
     " >>> 動畫播放中... 可按 q, Ctrl-C 或其它任意鍵停止";
 #define PMORE_MSG_MOVIE_INTERACTION_PLAYING \
     " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
+#define PMORE_MSG_MOVIE_INTERACTION_WAITSEL \
+    " >> 請輸入選項:  (互動式動畫播放中，可按 q 或 Ctrl-C 中斷)"
 #define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
     "已強制中斷互動式系統"
 
@@ -208,6 +228,9 @@
 //       free(fimage);
 //    +#endif // M3_USE_PMORE
 //       if (!cmd)    /* ... 
+//  (3) if you want to override to override any special keys 
+//     or help pages, you may change to pmore2 and write
+//     your own key_handler and help_handler.
 #ifdef M3_USE_PMORE
  // input/output API
  #define getdata(y,x,msg,buf,size,mode)     vget(y,x,msg,buf,size,mode)
@@ -223,7 +246,6 @@
  #define READ_PREV   'k'
  // environments and features
  #undef PMORE_USE_INTERNAL_HELP
- #undef PMORE_USE_SOB_THREAD_NAV
  #undef PMORE_USE_REPLYKEY_HINTS
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
@@ -555,11 +577,16 @@ enum MFSEARCH_DIRECTION {
     fh.lines = -1; }
 
 // Artwork
-#define OPTATTR_NORMAL      ANSI_COLOR(0;34;47)
-#define OPTATTR_NORMAL_KEY  ANSI_COLOR(0;31;47)
-#define OPTATTR_SELECTED    ANSI_COLOR(0;1;37;46)
-#define OPTATTR_SELECTED_KEY ANSI_COLOR(0;31;46)
-#define OPTATTR_BAR         ANSI_COLOR(0;1;30;47)
+#define OPTATTR_NORMAL        ANSI_COLOR(0;34;47)
+#define OPTATTR_NORMAL_KEY    ANSI_COLOR(0;31;47)
+#define OPTATTR_SELECTED      ANSI_COLOR(0;1;37;46)
+#define OPTATTR_SELECTED_KEY  ANSI_COLOR(0;31;46)
+#define OPTATTR_BAR           ANSI_COLOR(0;1;30;47)
+#define PREFATTR_NORMAL       ANSI_COLOR(0)
+#define PREFATTR_NORMAL_KEY   ANSI_COLOR(0;1;31)
+#define PREFATTR_SELECTED     ANSI_COLOR(0;1;36)
+#define PREFATTR_SELECTED_KEY ANSI_COLOR(0;1;31)
+#define PREFATTR_BAR          ANSI_COLOR(0;1;30)
 
 // --------------------------- </Aux. Structures>
 
@@ -681,6 +708,8 @@ MFFPROTO int mf_movieMaskedInput(int c);
 // some magic value that your vkey() will never return
 #define MOVIE_KEY_ANY (0x4d464b41)  
 
+// some environments already converted 0x7F to 0x08,
+// but we'd still do it again here for compatibility.
 #ifndef MOVIE_KEY_BS2
 #define MOVIE_KEY_BS2 (0x7f)
 #endif
@@ -727,8 +756,10 @@ mf_attach(const char *fn)
         return 0;
     }
 
+#ifdef MADV_SEQUENTIAL
     // BSD mmap advise. comment if your OS does not support this.
     madvise(mf.start, mf.len, MADV_SEQUENTIAL);
+#endif
 
     mf.end = mf.start + mf.len;
     mf.disps = mf.dispe = mf.start;
@@ -1912,44 +1943,13 @@ mf_display()
 }
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
+
+/*
+ * sub-system prototype
+ */
 MFPROTO void pmore_Preference();
 MFPROTO void pmore_QuickRawModePref();
-// MFPROTO void pmore_Help();
-
-#ifdef PMORE_USE_INTERNAL_HELP
-static const char    * const pmore_help[] = {
-    "\0piaip's more: pmore 2007 瀏覽程式使用說明",
-    "\01游標移動",
-    "(k/↑) (j/↓/Enter)   上捲/下捲一行",
-    "(^B/PgUp/BackSpace)   上捲一頁",
-    "(^F/PgDn/Space/→)    下捲一頁",
-    "(,/</S-TAB)(./>/TAB)  左/右捲動",
-    "(0/g/Home) ($/G/End)  檔案開頭/結尾",
-    "數字鍵 1-9 (;/:)      跳至輸入的頁數或行數",
-    "\01進階瀏覽",
-    "(/)  (s)              搜尋關鍵字/切換至其它看板",
-    "(n/N)                 重複正/反向搜尋",
-    "(f/b)                 跳至下/上篇",
-    "(a/A)                 跳至同一作者下/上篇",
-    "(t/[-/]+)             主題式瀏覽: 循序/前/後篇",
-    "\01其他",
-
-    // the line below is already aligned, because of the backslash.
-   "(o)/(\\)               選項設定/色彩顯示模式",
-
-#if defined (PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
-    "(p)/(z)               播放動畫/棋局打譜",
-#endif // defined(PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
-#ifdef RET_COPY2TMP
-    "(Ctrl-T)              存入暫存檔",
-#endif
-    "(q/←) (h/H/?/F1)     結束/本說明畫面",
-#ifdef DEBUG
-    "(d)                   切換除錯(debug)模式",
-#endif
-    NULL
-};
-#endif // PMORE_USE_INTERNAL_HELP
+MFPROTO void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
 
 /*
  * pmore utility macros
@@ -1987,8 +1987,12 @@ PMORE_UINAV_FORWARDLINE()
 /*
  * piaip's more, a replacement for old more
  */
-int 
-pmore(const char *fpath, int promptend)
+int
+pmore2( 
+        const char *fpath, int promptend, void *ctx,
+        int (*key_handler) (int key, void *ctx),
+        int (*help_handler)(int y,   void *ctx)
+      )
 {
     int flExit = 0, retval = 0;
     int ch = 0;
@@ -2366,87 +2370,41 @@ pmore(const char *fpath, int promptend)
 
         /* vkey() will do refresh(); */
         ch = vkey();
-        switch (ch) {
-            /* -------------- NEW EXITING KEYS ------------------ */
-#ifdef RET_DOREPLY
-            case 'r': case 'R':
-                flExit = 1,     retval = RET_DOREPLY;
-                break;
-            case 'Y': case 'y':
-                flExit = 1,     retval = RET_DOREPLYALL;
-                break;
-#endif
-#ifdef RET_DORECOMMEND
-                // recommend
-            case '%':
-            case 'X':
-                flExit = 1,     retval = RET_DORECOMMEND;
-                break;
-#endif
-#ifdef RET_DOQUERYINFO
-            case 'Q': // info query interface
-                flExit = 1,     retval = RET_DOQUERYINFO;
-                break;
-#endif
-#ifdef RET_DOSYSOPEDIT
-            case 'E':
-                flExit = 1,     retval = RET_DOSYSOPEDIT;
-                break;
-#endif
-#ifdef RET_DOCHESSREPLAY
-            case 'z':
-                flExit = 1,     retval = RET_DOCHESSREPLAY;
-                break;
-#endif 
-#ifdef RET_COPY2TMP
-            case Ctrl('T'):
-                flExit = 1,     retval = RET_COPY2TMP;
-                break;
-#endif
-#ifdef RET_SELECTBRD
-            case 's':
-                flExit = 1,     retval = RET_SELECTBRD;
-                break;
-#endif
-            /* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
 
-#ifdef PMORE_USE_SOB_THREAD_NAV
-                // I'm not sure if these keys are all invented by SOB,
-                // but let's honor their names.
-                // Kaede, Raw, Izero, woju - you are all TWBBS heroes  
-                //                                  -- by piaip, 2008.
-            case 'A':
-                flExit = 1,     retval = AUTHOR_PREV;
-                break;
-            case 'a':
-                flExit = 1,     retval = AUTHOR_NEXT;
-                break;
-            case 'F': case 'f':
-                flExit = 1,     retval = READ_NEXT;
-                break;
-            case 'B': case 'b':
-                flExit = 1,     retval = READ_PREV;
-                break;
+        // first, try custom key_handler
+        if (key_handler)
+        {
+            int r = key_handler(ch, ctx);
+            switch(r)
+            {
+                case -1:
+                    // common return value of 'file not exist',
+                    // meaning 'bypassing this key' here.
+                    continue;
+
+                case 0:
+                    // common return value of 'do nothing', 
+                    // meaning 'continue processing this key' here.
+                    break;
+
+                default:
+                    // for all other cases, looks like handler wants us to quit.
+                    retval = r;
+                    flExit = 1;
+                    continue;
+            }
+        }
+
+        // built-in navigation keys
+        switch (ch) {
+
+            /* ------------------ EXITING KEYS --------------------- */
             case KEY_LEFT:
                 flExit = 1,     retval = FULLUPDATE;
                 break;
             case 'q':
                 flExit = 1,     retval = FULLUPDATE;
                 break;
-
-                /* from Kaede, thread reading */
-            case ']':
-            case '+':
-                flExit = 1,     retval = RELATE_NEXT;
-                break;
-            case '[':
-            case '-':
-                flExit = 1,     retval = RELATE_PREV;
-                break;
-            case '=':
-                flExit = 1,     retval = RELATE_FIRST;
-                break;
-#endif // PMORE_USE_SOB_THREAD_NAV
 
             /* ------------------ NAVIGATION KEYS ------------------ */
             /* Simple Navigation */
@@ -2485,7 +2443,6 @@ pmore(const char *fpath, int promptend)
             case 'G':
             case KEY_END:
                 mf_goBottom();
-
 #ifdef PMORE_ACCURATE_WRAPEND
                 /* allright. in design of pmore,
                  * it's possible that when user navigates to file end,
@@ -2493,13 +2450,12 @@ pmore(const char *fpath, int promptend)
                  */
                 mf_display();
                 invalidate = 0;
+                if(mf_viewedAll())
+                    break;
 
-                if(!mf_viewedAll())
-                {
-                    /* one more try. */
-                    mf_goBottom();
-                    invalidate = 1;
-                }
+                /* one more try. */
+                mf_goBottom();
+                invalidate = 1;
 #endif
                 break;
 
@@ -2586,7 +2542,9 @@ pmore(const char *fpath, int promptend)
                 else
                     PMORE_UINAV_FORWARDPAGE();
                 break;
-            /* ------------------ SEARCH  KEYS ------------------ */
+
+            /* ------------------ SEARCH AND GOTO --------------- */
+            /* Search */
             case '/':
                 {
                     char sbuf[81] = "";
@@ -2601,7 +2559,8 @@ pmore(const char *fpath, int promptend)
                             40, DOECHO);
 
                     if (sbuf[0]) {
-                        if (getdata(b_lines - 1, 0, "區分大小寫(Y/N/Q)? [N] ",
+                        if (getdata(b_lines - 1, 0, 
+                                    PMORE_MSG_SEARCH_LETTERCASE "[N] ", 
                                     ans, sizeof(ans), LCECHO) && *ans == 'y')
                             sr.cmpfunc = strncmp;
                         else if (*ans == 'q')
@@ -2621,7 +2580,8 @@ pmore(const char *fpath, int promptend)
             case 'N':
                 mf_search(MFSEARCH_BACKWARD);
                 break;
-            /* ------------------ SPECIAL KEYS ------------------ */
+
+            /* Goto */
             case '1': case '2': case '3': case '4': case '5':
             case '6': case '7': case '8': case '9':
             case ';': case ':':
@@ -2635,8 +2595,7 @@ pmore(const char *fpath, int promptend)
                     pmore_clrtoeol(b_lines-1, 0);
                     getdata_buf(b_lines-1, 0, 
                             (pageMode ? 
-                             "跳至此頁(若要改指定行數請在結尾加.): " : 
-                             "跳至此行: "),
+                             PMORE_MSG_GOTO_PAGE : PMORE_MSG_GOTO_LINE),
                             buf, 8, DOECHO);
                     if(buf[0]) {
                         i = atoi(buf);
@@ -2649,50 +2608,36 @@ pmore(const char *fpath, int promptend)
                 }
                 break;
 
-#ifdef PMORE_USE_INTERNAL_HELP
-            case 'h': case 'H': 
-            case '?':
-#ifdef KEY_F1
-            case KEY_F1:
-#endif
-                // help
-                show_help(pmore_help);
+            /* --------------- PREFERENCE AND HELP -------------- */
+            /* preference */
+            case 'o':
+                pmore_Preference();
                 MFDISP_DIRTY();
                 break;
-#endif // PMORE_USE_INTERNAL_HELP
-
-#ifdef  PMORE_NOTIFY_NEWPREF
-                //let's be backward compatible! (pmore 2005 keys)
-            case 'l':
-            case 'w':
-            case 'W':
-            case '|':
-                vmsg("這個按鍵已整合進新的設定 (o) 了");
-                break;
-
-#endif // PMORE_NOTIFY_NEWPREF
-
             case '\\':  // everyone loves backslash, let's keep it.
                 pmore_QuickRawModePref();
                 MFDISP_DIRTY();
                 break;
 
-            case 'o':
-                pmore_Preference();
+            /* internal help */
+#ifdef PMORE_USE_INTERNAL_HELP
+            case 'h': case 'H': case '?':
+#ifdef KEY_F1
+            case KEY_F1:
+#endif
+                pmore_Help(ctx, help_handler);
                 MFDISP_DIRTY();
                 break;
+#endif // PMORE_USE_INTERNAL_HELP
 
-#if defined(USE_BBSLUA) && defined(RET_DOBBSLUA)
-            case 'P':
-                vmsg("非常抱歉，BBS-Lua 的熱鍵已改為 L ，請改按 L");
-                break;
-
-            case 'L':
-            case 'l':
-                flExit = 1,     retval = RET_DOBBSLUA;
+            /* debug system */
+#ifdef DEBUG
+            case 'd':
+                debug = !debug;
+                MFDISP_DIRTY();
                 break;
 #endif
-
+            /* ------------------ MOVIE SYSTEM ------------------ */
 #ifdef PMORE_USE_ASCII_MOVIE
             case 'p':
                 /* play ascii movie again
@@ -2749,13 +2694,6 @@ pmore(const char *fpath, int promptend)
                 break;
 #endif
 
-#ifdef DEBUG
-            case 'd':
-                debug = !debug;
-                MFDISP_DIRTY();
-                break;
-#endif
-
 #ifndef PMORE_IGNORE_UNKNOWN_NAVKEYS
             default:
                 return ch;
@@ -2771,6 +2709,13 @@ pmore(const char *fpath, int promptend)
     return retval;
 }
 
+// backward compatible
+int 
+pmore(const char *fpath, int promptend)
+{
+    return pmore2(fpath, promptend, NULL, NULL, NULL);
+}
+
 // ---------------------------------------------------- Preference and Help
 
 MFPROTO void
@@ -2784,7 +2729,7 @@ pmore_prefEntry(
     int i = 23;
 
     // print key/text
-    outs(" " ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
+    outs(" " PREFATTR_NORMAL_KEY);
     if (szKey < 0)  szKey = strlen(key);
     if (szKey > 0)  pmore_outns(key, szKey);
     outs(ANSI_RESET " ");
@@ -2807,14 +2752,14 @@ pmore_prefEntry(
         }
 
         if (i > 0)
-            outs(ANSI_COLOR(1;30) " |" ANSI_RESET); //OPTATTR_BAR " | " ANSI_RESET); 
+            outs(PREFATTR_BAR " |" ANSI_RESET);
 
         // test if option has hotkey
         if (*options && *options != '\t' && 
                 *(options+1) && *(options+1) == '.')
         {
             // found hotkey
-            outs(ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
+            outs(PREFATTR_NORMAL_KEY);
             outc(*options);
             outs(ANSI_RESET);
             options +=2;
@@ -2822,7 +2767,7 @@ pmore_prefEntry(
 
         if (i == isel)
         {
-            outs(ANSI_COLOR(1;36) "*");// OPTATTR_SELECTED);
+            outs(PREFATTR_SELECTED);
         }
         else
             outc(' ');
@@ -2843,7 +2788,7 @@ pmore_PromptBar(const char *caption, int shadow)
 {
     int i = 0;
 
-    if (shadow)
+    if (shadow & 0x01)
     {
         outs(ANSI_COLOR(0;1;30));
         for(i = 0; i+2 < t_columns ; i+=2)
@@ -2858,6 +2803,14 @@ pmore_PromptBar(const char *caption, int shadow)
     for(i -= strlen(caption); i > 0; i--)
         outs(" ");
     outs(ANSI_RESET "\n");
+
+    if (shadow & 0x02)
+    {
+        outs(ANSI_COLOR(0;1;30));
+        for(i = 0; i+2 < t_columns ; i+=2)
+            outs("▔");
+        outs(ANSI_RESET "\n");
+    }
 }
 
 MFPROTO void
@@ -2877,10 +2830,9 @@ pmore_QuickRawModePref()
 
         // list options
         pmore_prefEntry(bpref.rawmode,
-                "\\", 1, "色彩顯示方式:", -1,
-                "1.預設格式化內容\t2.原始ANSI控制碼\t3.純文字");
+                "\\", 1, PMORE_MSG_QPREF_SUBJECT, -1, PMORE_MSG_QPREF_OPTIONS);
 
-        switch(vmsg("請調整設定 (1-3 可直接選定，\\可切換) 或其它任意鍵結束。"))
+        switch(vmsg( PMORE_MSG_QPREF_PROMPT ))
         {
             case '\\':
                 bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
@@ -2937,6 +2889,7 @@ pmore_Preference()
         pmore_PromptBar(PMORE_MSG_PREF_TITLE, 1);
         outs("\n");
 
+        // TODO move these strings to localization section...
         // list options
         pmore_prefEntry(bpref.rawmode,
                 "\\", 1, "色彩顯示方式:", -1,
@@ -2988,15 +2941,87 @@ pmore_Preference()
     }
 }
 
-/*
+#ifdef PMORE_USE_INTERNAL_HELP
+static const char 
+*hlp_basic[] = {
+    "【基本移動】",
+    "下翻一頁", "^F  → PgUp Space",
+    "上翻一頁", "^B  ^H PgDn BS",
+    "下捲一行", " j  ↓",
+    "上捲一行", " k  ↑",
+    "檔案結尾", " $  G  End",
+    "檔案開頭", " 0  g  Home",
+    "離開    ", " q  ←",
+    NULL,
+},
+*hlp_adv[] = {
+    "【進階移動】",
+    "搜尋關鍵字", "/",
+    "往後搜尋  ", "n",
+    "往前搜尋  ", "N",
+    "指定頁數  ", "; 0-9數字鍵",
+    "指定行數  ", ":",
+    "向右捲動  ", ".  >   TAB",
+    "向左捲動  ", ",  <   Shift-TAB",
+    NULL,
+},
+*hlp_sys[] = {
+    "【其它】",
+#ifdef PMORE_USE_ASCII_MOVIE
+    "播放動畫    ", "p",
+#endif
+    "選項設定    ", "o",
+    "色彩顯示模式", "\\",
+    "說明        ", "h ? F1",
+#ifdef DEBUG
+    "DBG 除錯模式", "d",
+#endif
+    NULL,
+};
+
 MFPROTO void
-pmore_Help()
+pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 {
+    const char ** p[3] = { hlp_basic, hlp_adv, hlp_sys};
+    const int  cols[3] = { 29, 29, 19 },    // columns
+               desc[3] = { 10, 11, 13 };    // desc width
+    int y = 0, i;
+
     clear();
-    vs_hdr("pmore 使用說明");
-    vmsg("");
+    pmore_PromptBar(PMORE_MSG_HELP_TITLE, 2);
+    prints(PREFATTR_NORMAL_KEY "%-*s%-*s%-*s" ANSI_RESET "\n",
+            cols[0], *p[0]++, 
+            cols[1], *p[1]++, 
+            cols[2], *p[2]++);
+    y = 4;
+    // render help page
+    while (*p[0] || *p[1] || *p[2])
+    {
+        y++; outc(' ');
+        for ( i = 0; i < 3; i++ )
+        {
+            if (!*p[i]) {
+                prints("%*s", cols[i], "");
+                continue;
+            }
+            prints("%-*s",  desc[i], *p[i]++);
+            prints(PREFATTR_SELECTED "%-*s" ANSI_RESET, 
+                    cols[i]-desc[i], *p[i]++);
+        }
+        outs("\n");
+    }
+    
+    // show additional help information
+    if (help_handler)
+        help_handler(y, ctx);
+    else
+#ifdef  PRESSANYKEY
+        PRESSANYKEY();
+#else
+        vmsg(PMORE_MSG_HELP_PAUSE);
+#endif
 }
-*/
+#endif // PMORE_USE_INTERNAL_HELP
 
 // ---------------------------------------------------- Extra modules
 
@@ -3123,7 +3148,7 @@ mf_moviePromptPlaying(int type)
     if (type) 
     {
         outs(ANSI_RESET ANSI_COLOR(1;34;47));
-        s = " >> 請輸入選項:  (互動式動畫播放中，可按 q 或 Ctrl-C 中斷)";
+        s = PMORE_MSG_MOVIE_INTERACTION_WAITSEL;
     } 
     else if (mfmovie.interactive)
     {
