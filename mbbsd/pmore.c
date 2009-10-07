@@ -367,6 +367,7 @@ int debug = 0;
 #define ANSI_COLOR(x)   ESC_STR "[" #x "m"
 #define ANSI_CLRTOEND   ESC_STR "[K"
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
+#define ANSI_REVERSE	ANSI_COLOR(7)
 
 #define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
         (x) == ';' || (x) == ',' || (x) == '[')
