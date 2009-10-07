@@ -3526,9 +3526,11 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 
                 // XXX this is dropping performance... 
                 // need to optimize again someday.
-                // prevent endless loop
-                if (mf_movieCurrentFrameNo() == newno)
-                    return 0;
+                // XXX by the odisps design in mf_movieNextFrame,
+                // we seems don't really need this...
+                // Prevent endless loop
+                // if (mf_movieCurrentFrameNo() == newno)
+                //     return 0;
             }
             return mf_movieGotoFrame(newno, curr);
 
