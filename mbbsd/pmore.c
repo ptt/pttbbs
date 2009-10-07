@@ -3523,10 +3523,19 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
                 // newno starts from 1
                 if (newno <= 0)
                     return 0;
+
+                // XXX this is dropping performance... 
+                // need to optimize again someday.
+                // prevent endless loop
+                curr = mf_movieCurrentFrameNo();
+                if (curr == newno)
+                    return 0;
             }
             return mf_movieGotoFrame(newno, curr);
 
         case ':':
+            // XXX need to handle endless loop case
+            
             // by names
             return mf_movieGotoNamedFrame(s+1, end);
 
@@ -3790,6 +3799,10 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     // selection is made now.
     outs(ANSI_RESET); // required because options bar may be not closed
     pmore_clrtoeol(b_lines, 0);
+
+    // if the syntax has error...
+    if (!maxsel)
+        return 0;
 
 #ifdef DEBUG
     prints("selection: %d\n", isel);
