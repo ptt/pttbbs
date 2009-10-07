@@ -2767,7 +2767,7 @@ pmore_prefEntry(
 
         if (i == isel)
         {
-            outs(PREFATTR_SELECTED);
+            outs(PREFATTR_SELECTED "*");
         }
         else
             outc(' ');
