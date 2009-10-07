@@ -120,10 +120,10 @@ static const char
 { "【瀏覽指令】",
     "下篇文章  ", "f",
     "前篇文章  ", "b",
-    "同主題下篇", "] +",
-    "同主題前篇", "[ -",
-    "同主題循序", "t",
+    "同主題下篇", "]  +",
+    "同主題前篇", "[  -",
     "同主題首篇", "=",
+    "同主題循序", "t",
     "同作者前篇", "A",
     "同作者下篇", "a",
     NULL,
@@ -155,7 +155,7 @@ common_pmore_help_handler(int y, void *ctx)
     int i;
     const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
     const int  cols[3] = { 29, 29, 19 },    // columns
-               desc[3] = { 11, 11, 13 };    // desc width
+               desc[3] = { 14, 11, 13 };    // desc width
     prints( "\n" ANSI_COLOR(1;31) "%-*s%-*s%-*s" ANSI_RESET "\n",
             cols[0], *p[0]++, cols[1], *p[1]++, cols[2], *p[2]++);
     // render help page
