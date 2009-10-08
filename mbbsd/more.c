@@ -35,220 +35,7 @@ check_sysop_edit_perm(const char *fpath)
     return 1;
 }
 
-#ifdef USE_PMORE
-static int 
-common_pmore_key_handler(int ch, void *ctx)
-{
-    switch(ch)
-    {
-	// Special service keys
-	case 'z':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOCHESSREPLAY;
-
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case 'L':
-	case 'l':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOBBSLUA;
-#endif
-	
-	// Query information and file touch
-	case 'Q':
-	    return RET_DOQUERYINFO;
-
-	case Ctrl('T'):
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_COPY2TMP;
-
-	case 'E':
-	    if (!check_sysop_edit_perm("")) // for early check, skip file name (must check again later)
-		break;
-	    return RET_DOSYSOPEDIT;
-
-	// Making Response
-	case '%':
-	case 'X':
-	    return RET_DORECOMMEND;
-
-	case 'r': case 'R':
-	    return RET_DOREPLY;
-
-	case 'Y': case 'y':
-	    return RET_DOREPLYALL;
-
-	// Special Navigation
-	case 's':
-	    if (!HasUserPerm(PERM_BASIC) ||
-		currstat != READING)
-		break;
-	    return RET_SELECTBRD;
-	
-	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
-	// I'm not sure if these keys are all invented by SOB,
-	// but let's honor their names.
-	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
-	//                                  -- by piaip, 2008.
-	case 'A':
-	    return AUTHOR_PREV;
-	case 'a':
-	    return AUTHOR_NEXT;
-	case 'F': case 'f':
-	    return READ_NEXT;
-	case 'B': case 'b':
-	    return READ_PREV;
-
-	/* from Kaede, thread reading */
-	case ']':
-	case '+':
-	    return RELATE_NEXT;
-	case '[':
-	case '-':
-	    return RELATE_PREV;
-	case '=':
-	    return RELATE_FIRST;
-    }
-
-    return DONOTHING;
-}
-
-static const char 
-*hlp_nav [] = 
-{ "【瀏覽指令】", NULL,
-    "下篇文章  ", "f",
-    "前篇文章  ", "b",
-    "同主題下篇", "]  +",
-    "同主題前篇", "[  -",
-    "同主題首篇", "=",
-    "同主題循序", "t",
-    "同作者前篇", "A",
-    "同作者下篇", "a",
-    NULL,
-},
-*hlp_reply [] = 
-{ "【回應指令】", NULL,
-    "推薦文章", "% X",
-    "回信回文", "r",
-    "全部回覆", "y",
-    NULL,
-},
-*hlp_spc [] = 
-{ "【特殊指令】", NULL,
-    "查詢資訊  ", "Q",
-    "存入暫存檔", "^T",
-    "切換看板  ", "s",
-    "棋局打譜  ", "z",
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-    "執行BBSLua", "L l",
-#endif
-    NULL,
-};
-
-#ifndef PMHLPATTR_NORMAL
-#define PMHLPATTR_NORMAL      ANSI_COLOR(0)
-#define PMHLPATTR_NORMAL_KEY  ANSI_COLOR(0;1;36)
-#define PMHLPATTR_HEADER      ANSI_COLOR(0;1;32)
-#endif
-
-// TODO make this help renderer into vtuikit or other location someday
-static int 
-common_pmore_help_handler(int y, void *ctx)
-{
-    // simply show ptt special function keys
-    int i;
-    const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
-    const int  cols[3] = { 29, 29, 20 },    // columns
-               desc[3] = { 14, 11, 13 };    // desc width
-    move(y+1, 0);
-    // render help page
-    while (*p[0] || *p[1] || *p[2])
-    {
-        y++;
-        for ( i = 0; i < 3; i++ )
-        {
-            const char *dstr = "", *kstr = "";
-            if (*p[i]) {
-                dstr = *p[i]++; kstr = *p[i]++;
-            }
-            if (!kstr)
-                prints( PMHLPATTR_HEADER "%-*s", cols[i], dstr);
-            else
-                prints( PMHLPATTR_NORMAL " %-*s"
-                        PMHLPATTR_NORMAL_KEY "%-*s",
-                        desc[i], dstr, cols[i]-desc[i]-1, kstr);
-        }
-        outs("\n");
-    }
-    PRESSANYKEY();
-    return 0;
-}
-
-/* use new pager: piaip's more. */
-int 
-more(const char *fpath, int promptend)
-{
-    int r = pmore2(fpath, promptend,
-	    (void*) fpath,
-	    common_pmore_key_handler, 
-	    common_pmore_help_handler);
-
-    // post processing
-    switch(r)
-    {
-
-	case RET_DOSYSOPEDIT:
-	    r = FULLUPDATE;
-	    if (!check_sysop_edit_perm(fpath))
-		break;
-	    log_filef("log/security", LOG_CREAT,
-		    "%u %s %d %s admin edit file=%s\n", 
-		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
-	    veditfile(fpath);
-	    break;
-
-	case RET_COPY2TMP:
-	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-	    {
-		char buf[PATHLEN];
-		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
-			buf, 4, LCECHO);
-		if (buf[0] != 'y')
-		    break;
-		setuserfile(buf, ask_tmpbuf(b_lines - 1));
-		Copy(fpath, buf);
-	    }
-	    break;
-
-	case RET_SELECTBRD:
-	    r = FULLUPDATE;
-	    if (currstat == READING)
-		Select();
-	    break;
-
-	case RET_DOCHESSREPLAY:
-	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-		ChessReplayGame(fpath);
-	    break;
-
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case RET_DOBBSLUA:
-	    r = FULLUPDATE;
-	    // check permission again
-	    if (HasUserPerm(PERM_BASIC)) 
-		bbslua(fpath);
-	    break;
-#endif
-    }
-
-    return r;
-}
-
-#else  // !USE_PMORE
+#ifndef USE_PMORE ///////////////////////////////////////////////////////////
 
 // minimore: a mini pager in exactly 130 lines
 #define PAGER_MAXLINES (2048)
@@ -389,4 +176,195 @@ int more(const char *fpath, int promptend)
     return abort > 0 ? abort : 0;
 }
 
-#endif // !USE_PMORE
+#else	// USE_PMORE ////////////////////////////////////////////////////////
+
+static int 
+common_pmore_key_handler(int ch, void *ctx)
+{
+    switch(ch)
+    {
+	// Special service keys
+	case 'z':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOCHESSREPLAY;
+
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+	case 'L':
+	case 'l':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOBBSLUA;
+#endif
+	
+	// Query information and file touch
+	case 'Q':
+	    return RET_DOQUERYINFO;
+
+	case Ctrl('T'):
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_COPY2TMP;
+
+	case 'E':
+	    // for early check, skip file name (must check again later)
+	    if (!check_sysop_edit_perm("")) 
+		break;
+	    return RET_DOSYSOPEDIT;
+
+	// Making Response
+	case '%':
+	case 'X':
+	    return RET_DORECOMMEND;
+
+	case 'r': case 'R':
+	    return RET_DOREPLY;
+
+	case 'Y': case 'y':
+	    return RET_DOREPLYALL;
+
+	// Special Navigation
+	case 's':
+	    if (!HasUserPerm(PERM_BASIC) ||
+		currstat != READING)
+		break;
+	    return RET_SELECTBRD;
+	
+	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
+	// I'm not sure if these keys are all invented by SOB,
+	// but let's honor their names.
+	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
+	//                                  -- by piaip, 2008.
+	case 'A':
+	    return AUTHOR_PREV;
+	case 'a':
+	    return AUTHOR_NEXT;
+	case 'F': case 'f':
+	    return READ_NEXT;
+	case 'B': case 'b':
+	    return READ_PREV;
+
+	/* from Kaede, thread reading */
+	case ']':
+	case '+':
+	    return RELATE_NEXT;
+	case '[':
+	case '-':
+	    return RELATE_PREV;
+	case '=':
+	    return RELATE_FIRST;
+    }
+
+    return DONOTHING;
+}
+
+static const char 
+*hlp_nav [] = 
+{ "【瀏覽指令】", NULL,
+    " 下篇文章  ", "f",
+    " 前篇文章  ", "b",
+    " 同主題下篇", "]  +",
+    " 同主題前篇", "[  -",
+    " 同主題首篇", "=",
+    " 同主題循序", "t",
+    " 同作者前篇", "A",
+    " 同作者下篇", "a",
+    NULL,
+},
+*hlp_reply [] = 
+{ "【回應指令】", NULL,
+    " 推薦文章", "% X",
+    " 回信回文", "r",
+    " 全部回覆", "y",
+    NULL,
+},
+*hlp_spc [] = 
+{ "【特殊指令】", NULL,
+    " 查詢資訊  ", "Q",
+    " 存入暫存檔", "^T",
+    " 切換看板  ", "s",
+    " 棋局打譜  ", "z",
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+    " 執行BBSLua", "L l",
+#endif
+    NULL,
+};
+
+static int 
+common_pmore_help_handler(int y, void *ctx)
+{
+    // simply show ptt special function keys
+    const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
+    const int  cols[3] = { 29, 29, 20 },    // columns, to fit pmore built-ins
+               desc[3] = { 15, 12, 14 };    // desc width
+    move(y+1, 0);
+    vs_multi_T_table_simple(p, 3, cols, desc,
+	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+    PRESSANYKEY();
+    return 0;
+}
+
+/* use new pager: piaip's more. */
+int 
+more(const char *fpath, int promptend)
+{
+    int r = pmore2(fpath, promptend,
+	    (void*) fpath,
+	    common_pmore_key_handler, 
+	    common_pmore_help_handler);
+
+    // post processing
+    switch(r)
+    {
+
+	case RET_DOSYSOPEDIT:
+	    r = FULLUPDATE;
+	    if (!check_sysop_edit_perm(fpath))
+		break;
+	    log_filef("log/security", LOG_CREAT,
+		    "%u %s %d %s admin edit file=%s\n", 
+		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
+	    veditfile(fpath);
+	    break;
+
+	case RET_COPY2TMP:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+	    {
+		char buf[PATHLEN];
+		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
+			buf, 4, LCECHO);
+		if (buf[0] != 'y')
+		    break;
+		setuserfile(buf, ask_tmpbuf(b_lines - 1));
+		Copy(fpath, buf);
+	    }
+	    break;
+
+	case RET_SELECTBRD:
+	    r = FULLUPDATE;
+	    if (currstat == READING)
+		Select();
+	    break;
+
+	case RET_DOCHESSREPLAY:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+		ChessReplayGame(fpath);
+	    break;
+
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+	case RET_DOBBSLUA:
+	    r = FULLUPDATE;
+	    // check permission again
+	    if (HasUserPerm(PERM_BASIC)) 
+		bbslua(fpath);
+	    break;
+#endif
+    }
+
+    return r;
+}
+
+#endif // USE_PMORE /////////////////////////////////////////////////////////
+

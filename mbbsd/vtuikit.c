@@ -770,6 +770,64 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
     outs(ANSI_RESET "\n");
 }
 
+/*
+ * vs_multi_T_table_simple: render multiple T-type tables
+ *
+ * @param t_tables  NOTE: the pointers inside will be changed.
+ *
+ * T table format:
+ * const char *table[] = {
+ *   "caption", NULL,
+ *   "lvar",   "rvar",
+ *   NULL
+ * };
+ */
+void
+vs_multi_T_table_simple(
+	const char ***t_tables,   int  n_t_tables, 
+	const int  *col_widths,   const int  *l_widths,
+	const char *attr_caption, const char *attr_l, const char *attr_r)
+{
+    int i;
+    int incomplete;
+
+    do 
+    {
+	incomplete = n_t_tables;
+	for (i = 0; i < n_t_tables; i++)
+	{
+	    const char *lvar = NULL, *rvar = "";
+
+	    if (*t_tables[i])
+	    {
+		lvar = *t_tables[i]++;
+		rvar = *t_tables[i]++;
+	    }
+
+	    if (!rvar) {
+		// draw caption
+		if (attr_caption) outs(attr_caption);
+		vfill(col_widths[i], 0, lvar);
+		continue;
+	    } 
+
+	    if (!lvar) {
+		// table is complete...
+		incomplete --;
+		lvar = "";
+	    }
+
+	    // draw table body
+	    if(attr_l) outs(attr_l);
+	    vfill(l_widths[i], 0, lvar);
+	    if(attr_r) outs(attr_r);
+	    vfill(col_widths[i] - l_widths[i], 0, rvar);
+	}
+	outc('\n');
+    }
+    while (incomplete);
+}
+
 ////////////////////////////////////////////////////////////////////////
 // DBCS Aware Helpers
 ////////////////////////////////////////////////////////////////////////
