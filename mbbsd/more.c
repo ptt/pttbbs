@@ -117,7 +117,7 @@ common_pmore_key_handler(int ch, void *ctx)
 
 static const char 
 *hlp_nav [] = 
-{ "【瀏覽指令】",
+{ "【瀏覽指令】", NULL,
     "下篇文章  ", "f",
     "前篇文章  ", "b",
     "同主題下篇", "]  +",
@@ -129,14 +129,14 @@ static const char
     NULL,
 },
 *hlp_reply [] = 
-{ "【回應指令】",
+{ "【回應指令】", NULL,
     "推薦文章", "% X",
     "回信回文", "r",
     "全部回覆", "y",
     NULL,
 },
 *hlp_spc [] = 
-{ "【特殊指令】",
+{ "【特殊指令】", NULL,
     "查詢資訊  ", "Q",
     "存入暫存檔", "^T",
     "切換看板  ", "s",
@@ -147,6 +147,12 @@ static const char
     NULL,
 };
 
+#ifndef PMHLPATTR_NORMAL
+#define PMHLPATTR_NORMAL      ANSI_COLOR(0)
+#define PMHLPATTR_NORMAL_KEY  ANSI_COLOR(0;1;36)
+#define PMHLPATTR_HEADER      ANSI_COLOR(0;1;32)
+#endif
+
 // TODO make this help renderer into vtuikit or other location someday
 static int 
 common_pmore_help_handler(int y, void *ctx)
@@ -154,22 +160,25 @@ common_pmore_help_handler(int y, void *ctx)
     // simply show ptt special function keys
     int i;
     const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
-    const int  cols[3] = { 29, 29, 19 },    // columns
+    const int  cols[3] = { 29, 29, 20 },    // columns
                desc[3] = { 14, 11, 13 };    // desc width
-    prints( "\n" ANSI_COLOR(1;31) "%-*s%-*s%-*s" ANSI_RESET "\n",
-            cols[0], *p[0]++, cols[1], *p[1]++, cols[2], *p[2]++);
+    move(y+1, 0);
     // render help page
     while (*p[0] || *p[1] || *p[2])
     {
-        y++; outc(' ');
+        y++;
         for ( i = 0; i < 3; i++ )
         {
-            if (!*p[i]) {
-                prints("%*s", cols[i], "");
-                continue;
+            const char *dstr = "", *kstr = "";
+            if (*p[i]) {
+                dstr = *p[i]++; kstr = *p[i]++;
             }
-            prints("%-*s", desc[i], *p[i]++);
-            prints(ANSI_COLOR(1;36) "%-*s" ANSI_RESET , cols[i]-desc[i], *p[i]++);
+            if (!kstr)
+                prints( PMHLPATTR_HEADER "%-*s", cols[i], dstr);
+            else
+                prints( PMHLPATTR_NORMAL " %-*s"
+                        PMHLPATTR_NORMAL_KEY "%-*s",
+                        desc[i], dstr, cols[i]-desc[i]-1, kstr);
         }
         outs("\n");
     }

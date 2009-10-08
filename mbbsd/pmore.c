@@ -78,10 +78,13 @@
  *  - movie: Optimization on named frames (by hash) [pending]
  *  -
  *  - (2008) Maple3 BBS porting [done, thanks to hrs113355 for initial work]
+ *  - (2009) movie: add INCLUDE/INTERRUPT command [done]
+ *  - (2009) Better help system [done]
+ *  - (2009) Customizable key and help handler [done]
+ *  - Customizable footer bar and floating prompts
  *  - Reject waterball (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Deal or disable Ctrl-U (invokes userlist then waiting one more key)
- *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
  *  - Virtual Decompression [pending]
  *  - Drop ANSI between DBCS words if outputing UTF8 [drop, done by term]
@@ -587,6 +590,14 @@ enum MFSEARCH_DIRECTION {
 #define PREFATTR_SELECTED     ANSI_COLOR(0;1;36)
 #define PREFATTR_SELECTED_KEY ANSI_COLOR(0;1;31)
 #define PREFATTR_BAR          ANSI_COLOR(0;1;30)
+#define PMHLPATTR_NORMAL      ANSI_COLOR(0)
+#define PMHLPATTR_NORMAL_KEY  ANSI_COLOR(0;1;36)
+#define PMHLPATTR_HEADER      ANSI_COLOR(0;1;32)
+
+// Prompt Bar Shadow
+#define PMORE_SHADOW_ABOVE      (1)
+#define PMORE_SHADOW_BELOW      (2)
+#define PMORE_SHADOW_NONE       (0)
 
 // --------------------------- </Aux. Structures>
 
@@ -2788,7 +2799,7 @@ pmore_PromptBar(const char *caption, int shadow)
 {
     int i = 0;
 
-    if (shadow & 0x01)
+    if (shadow & PMORE_SHADOW_ABOVE)
     {
         outs(ANSI_COLOR(0;1;30));
         for(i = 0; i+2 < t_columns ; i+=2)
@@ -2804,7 +2815,7 @@ pmore_PromptBar(const char *caption, int shadow)
         outs(" ");
     outs(ANSI_RESET "\n");
 
-    if (shadow & 0x02)
+    if (shadow & PMORE_SHADOW_BELOW)
     {
         outs(ANSI_COLOR(0;1;30));
         for(i = 0; i+2 < t_columns ; i+=2)
@@ -2826,7 +2837,7 @@ pmore_QuickRawModePref()
     {
         move(ystart, 0);
         clrtobot();
-        pmore_PromptBar(PMORE_MSG_PREF_TITLE_QRAW, 0);
+        pmore_PromptBar(PMORE_MSG_PREF_TITLE_QRAW, PMORE_SHADOW_NONE);
 
         // list options
         pmore_prefEntry(bpref.rawmode,
@@ -2886,7 +2897,7 @@ pmore_Preference()
     {
         move(ystart, 0);
         clrtobot();
-        pmore_PromptBar(PMORE_MSG_PREF_TITLE, 1);
+        pmore_PromptBar(PMORE_MSG_PREF_TITLE, PMORE_SHADOW_ABOVE);
         outs("\n");
 
         // TODO move these strings to localization section...
@@ -2944,7 +2955,7 @@ pmore_Preference()
 #ifdef PMORE_USE_INTERNAL_HELP
 static const char 
 *hlp_basic[] = {
-    "【基本移動】",
+    "【基本移動】", NULL,
     "下翻一頁", "^F  → PgUp Space",
     "上翻一頁", "^B  ^H PgDn BS",
     "下捲一行", " j  ↓",
@@ -2955,18 +2966,18 @@ static const char
     NULL,
 },
 *hlp_adv[] = {
-    "【進階移動】",
+    "【進階移動】", NULL,
     "搜尋關鍵字", "/",
     "往後搜尋  ", "n",
     "往前搜尋  ", "N",
-    "指定頁數  ", "; 0-9數字鍵",
+    "指定頁數  ", ";  0-9數字鍵",
     "指定行數  ", ":",
-    "向右捲動  ", ".  >   TAB",
-    "向左捲動  ", ",  <   Shift-TAB",
+    "向右捲動  ", ".  >  TAB",
+    "向左捲動  ", ",  <  Shift-TAB",
     NULL,
 },
 *hlp_sys[] = {
-    "【其它】",
+    "【其它】", NULL,
 #ifdef PMORE_USE_ASCII_MOVIE
     "播放動畫    ", "p",
 #endif
@@ -2983,30 +2994,29 @@ MFPROTO void
 pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 {
     const char ** p[3] = { hlp_basic, hlp_adv, hlp_sys};
-    const int  cols[3] = { 29, 29, 19 },    // columns
+    const int  cols[3] = { 29, 29, 20 },    // columns
                desc[3] = { 10, 11, 13 };    // desc width
     int y = 0, i;
 
     clear();
-    pmore_PromptBar(PMORE_MSG_HELP_TITLE, 2);
-    prints(PREFATTR_NORMAL_KEY "%-*s%-*s%-*s" ANSI_RESET "\n",
-            cols[0], *p[0]++, 
-            cols[1], *p[1]++, 
-            cols[2], *p[2]++);
-    y = 4;
+    pmore_PromptBar(PMORE_MSG_HELP_TITLE, PMORE_SHADOW_BELOW);
+    y = 2;
     // render help page
     while (*p[0] || *p[1] || *p[2])
     {
-        y++; outc(' ');
+        y++;
         for ( i = 0; i < 3; i++ )
         {
-            if (!*p[i]) {
-                prints("%*s", cols[i], "");
-                continue;
+            const char *dstr = "", *kstr = "";
+            if (*p[i]) {
+                dstr = *p[i]++; kstr = *p[i]++;
             }
-            prints("%-*s",  desc[i], *p[i]++);
-            prints(PREFATTR_SELECTED "%-*s" ANSI_RESET, 
-                    cols[i]-desc[i], *p[i]++);
+            if (!kstr)
+                prints( PMHLPATTR_HEADER "%-*s", cols[i], dstr);
+            else
+                prints( PMHLPATTR_NORMAL " %-*s"
+                        PMHLPATTR_NORMAL_KEY "%-*s",
+                        desc[i], dstr, cols[i]-desc[i]-1, kstr);
         }
         outs("\n");
     }
