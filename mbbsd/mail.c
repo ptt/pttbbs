@@ -1417,6 +1417,8 @@ mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 /* help for mail reading */
+#ifdef USE_OLD_HELP
+
 static const char    * const mail_help[] = {
     "\0電子信箱操作說明",
     "\01基本命令",
@@ -1442,10 +1444,81 @@ static const char    * const mail_help[] = {
     NULL
 };
 
+#else
+
+static const char *hlp_mailmove[] = {
+    "【移動游標】", NULL,
+    "  下封郵件", "↓ n j ",
+    "  上封郵件", "↑ p k ",
+    "  往後翻頁", "^F N PgDn 空白鍵",
+    "  往前翻頁", "^B P PgUp",
+    "  第一封信", "Home",
+    "  最後一封", "End  $",
+    "  跳至...",  "0-9數字鍵",
+    "  搜尋標題", "/",
+    "  結束離開", "← q e",
+    NULL,
+}, *hlp_mailbasic[] = {
+    "【基本操作】", NULL,
+    "  讀信",	  "→ r",
+    "  回信",	  "R",
+    "  群組回信", "y",
+    "  刪除此信", "d",
+    "  寄發新信", "^P",
+    "", "",
+    "【轉信與轉錄】", NULL,
+    "  站內轉信", "x",
+    "  站外轉寄", "F",
+    "  轉錄看板", "X",
+    NULL,
+}, *hlp_mailadv[] = {
+    "【進階指令】", NULL,
+    "  指定範圍砍信", "D",
+    "  標記重要信件", "m (避免誤刪)",
+    "  標記待刪信件", "t",
+    "  砍掉待刪信件", "^D",
+    "  整理水球後寄回", "u",
+    "  重建信箱",     "^G (毀損時才用)",
+    NULL,
+}, *hlp_mailconf[] = {
+    "【設定】", NULL,
+    "  顯示一般/大小",    "TAB",
+    "  是否接受站外信", "O",
+    NULL,
+}, *hlp_mailempty[] = {
+    "", "",
+    NULL,
+}, *hlp_mailman[] = {
+    "【私人信件夾】", NULL,
+    "  瀏覽私人信件夾", "z",
+    "  收入私人信件夾", "c",
+     NULL,
+};
+
+#endif
+
 static int
 m_help(void)
 {
+#ifdef USE_OLD_HELP
     show_help(mail_help);
+#else
+    const char ** p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
+	       ** p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
+    const int  cols[3] = { 31, 22, 24 },    // columns, to fit pmore built-ins
+               desc[3] = { 12, 14, 18 };    // desc width
+    const int  cols2[3]= { 36, 17, 24 },    // columns, to fit pmore built-ins
+               desc2[3]= { 18, 14, 18 };    // desc width
+    clear();
+    showtitle("電子信箱", "使用說明");
+    outs("\n");
+    vs_multi_T_table_simple(p1, 3, cols, desc,
+	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+    vs_multi_T_table_simple(p2, HasUserPerm(PERM_MAILLIMIT)?3:2, 
+	    cols2, desc2,
+	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+    PRESSANYKEY();
+#endif
     return FULLUPDATE;
 }
 
