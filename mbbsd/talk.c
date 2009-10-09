@@ -1917,11 +1917,91 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
+static const char 
+*hlp_talkbasic[] = {
+    "【移動游標】", NULL,
+    "  往上一行", "↑ k",
+    "  往下一行", "↓ j n",
+    "  往前翻頁", "^B PgUp",
+    "  往後翻頁", "^F PgDn 空白鍵",
+    "  本頁開頭", "Home 0",
+    "  本頁結尾", "End  $",
+    "  跳至...",  "1-9數字鍵",
+    "  搜尋ID",	  "s",
+    "  結束離開", "←   e",
+    NULL,
+},
+*hlp_talkcfg[] = {
+    "【修改資料】", NULL,
+    "  修改暱稱",    "N",
+    "  切換隱身",    "C",
+    "  切換呼叫器",  "p",
+    "  水球模式",    "^W",
+    "  增加好友",    "a",
+    "  刪除好友",    "d",
+    "  修改好友",    "o",
+    "  設定心情",    "i",
+    "  互動回應方式","y",
+    NULL,
+},
+*hlp_talkdisp[] = {
+    "【查詢資訊】", NULL,
+    "  查詢此人",    "q",
+    "  輸入查詢ID",  "Q",
+    "  查詢寵物",    "c",
+    "", "",
+    "【顯示方式】", NULL,
+    "  調整排序",	"TAB",
+    "  來源/描述/戰績",	"S",
+    "  全部/好友 列表",	"f",
+    NULL,
+},
+*hlp_talktalk[] = {
+    "【交談互動】", NULL,
+    "  與他聊天",    "→ t Enter",
+    "  熱線水球",    "w",
+    "  即時回應",    "^R (要先收到水球)",
+    "  好友廣播",    " b (要在好友列表)",
+    "  回顧訊息",    "l",
+    "  寄信給他",    "m",
+    "  給錢",	     "g",
+    NULL,
+},
+*hlp_talkmisc[] = {
+    "【其它】", NULL,
+    "  閱\讀信件",   "r",
+    "  使用說明",    "h",
+    NULL,
+},
+*hlp_talkadmin[] = {
+    "【站長專用】", NULL,
+    "  設定使用者",   "u",
+    "  切換隱形模式", "H",
+    "  踢人",	      "K",
+#if defined(SHOWBOARD) && defined(DEBUG)
+    "  顯示所在看板", "Y",
+#endif
+    NULL,
+};
+
 static void
 t_showhelp(void)
 {
     clear();
+#if 1
 
+    const char ** p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
+	       ** p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
+    const int  cols[3] = { 31, 25, 22 },    // columns, to fit pmore built-ins
+               desc[3] = { 12, 18, 16 };    // desc width
+    showtitle("休閒聊天", "使用說明");
+    outs("\n");
+    vs_multi_T_table_simple(p1, 3, cols, desc,
+	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+    if (HasUserPerm(PERM_PAGE))
+    vs_multi_T_table_simple(p2, HasUserPerm(PERM_SYSOP)?3:2, cols, desc,
+	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+#else
     outs(ANSI_COLOR(36) "【 休閒聊天使用說明 】" ANSI_RESET "\n\n"
 	 "(←)(e)         結束離開             (h)             看使用說明\n"
 	 "(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
@@ -1950,6 +2030,7 @@ t_showhelp(void)
 	outs("(Y)             顯示正在看什麼板\n");
 #endif
     }
+#endif
     PRESSANYKEY();
 }
 
