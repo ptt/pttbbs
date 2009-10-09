@@ -326,6 +326,10 @@ int IsFreeBoardName(const char *brdname)
 	return 1;
     if (strcmp(brdname, BN_ALLPOST) == 0)
 	return 1;
+    // since DEFAULT_BOARD is allowed to post without
+    // special permission, we should not give rewards.
+    if (strcasecmp(brdname, DEFAULT_BOARD) == 0)
+	return 1;
     return 0;
 }
 
