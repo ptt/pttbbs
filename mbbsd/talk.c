@@ -1917,6 +1917,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
+#ifndef USE_OLD_HELP
+
 static const char 
 *hlp_talkbasic[] = {
     "【移動游標】", NULL,
@@ -1924,8 +1926,8 @@ static const char
     "  往下一行", "↓ j n",
     "  往前翻頁", "^B PgUp",
     "  往後翻頁", "^F PgDn 空白鍵",
-    "  本頁開頭", "Home 0",
-    "  本頁結尾", "End  $",
+    "  列表開頭", "Home 0",
+    "  列表結尾", "End  $",
     "  跳至...",  "1-9數字鍵",
     "  搜尋ID",	  "s",
     "  結束離開", "←   e",
@@ -1984,16 +1986,18 @@ static const char
     NULL,
 };
 
+#endif // USE_OLD_HELP
+
 static void
 t_showhelp(void)
 {
-    clear();
-#if 1
+#ifndef USE_OLD_HELP
 
     const char ** p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
 	       ** p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
     const int  cols[3] = { 31, 25, 22 },    // columns, to fit pmore built-ins
                desc[3] = { 12, 18, 16 };    // desc width
+    clear();
     showtitle("休閒聊天", "使用說明");
     outs("\n");
     vs_multi_T_table_simple(p1, 3, cols, desc,
@@ -2001,7 +2005,10 @@ t_showhelp(void)
     if (HasUserPerm(PERM_PAGE))
     vs_multi_T_table_simple(p2, HasUserPerm(PERM_SYSOP)?3:2, cols, desc,
 	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
-#else
+
+#else // USE_OLD_HELP
+
+    clear();
     outs(ANSI_COLOR(36) "【 休閒聊天使用說明 】" ANSI_RESET "\n\n"
 	 "(←)(e)         結束離開             (h)             看使用說明\n"
 	 "(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
@@ -2030,7 +2037,7 @@ t_showhelp(void)
 	outs("(Y)             顯示正在看什麼板\n");
 #endif
     }
-#endif
+#endif // USE_OLD_HELP
     PRESSANYKEY();
 }
 
