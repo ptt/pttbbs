@@ -318,46 +318,54 @@ display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
 }
 
 #define MACROSTRLEN(x) (sizeof(x)-1)
+
 static int
 common_pmore_footer_handler(int ratio, int width, void *ctx)
 {
-#define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
 #define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 " 
+#define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
+#define FOOTERMSG_READ_MID   "(y)回應(X/%)推文 (←)離開 "
 #define FOOTERMSG_SHORT	     "(h)說明 (←/q)離開 "
 #define FOOTERMSG_VERYSHORT  "(←q)離開 "
+#define FOOTERATTR_KEY	     ANSI_COLOR(31)
+#define FOOTERATTR_TEXT	     ANSI_COLOR(30)
 
     int w;
+    // XXX if you want to refine code here to use for-loop,
+    // remember to use a pre-calculated array to hold MACROSTRLEN
+    // or use real strlen(). do not pass string pointer to MACROSTRLEN.
     if (currstat == RMAIL && (w = MACROSTRLEN(FOOTERMSG_MAIL_LONG)) <= width)
     {
-	if (width > w) prints("%*s", width-w, "");
+	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_MAIL_LONG,
-		ANSI_COLOR(31), ANSI_COLOR(30));
-	return 0;
+		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    if (currstat == READING && (w = MACROSTRLEN(FOOTERMSG_READ_LONG)) <= width)
+    else if (currstat == READING && (w = MACROSTRLEN(FOOTERMSG_READ_LONG)) <= width)
     {
-	if (width > w) prints("%*s", width-w, "");
+	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_READ_LONG,
-		ANSI_COLOR(31), ANSI_COLOR(30));
-	return 0;
+		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    if ( (w = MACROSTRLEN(FOOTERMSG_SHORT)) <= width)
+    else if (currstat == READING && (w = MACROSTRLEN(FOOTERMSG_READ_MID)) <= width)
     {
-	if (width > w) prints("%*s", width-w, "");
+	while (width-- > w) outc(' ');
+	display_hotkey_footer(FOOTERMSG_READ_MID,
+		FOOTERATTR_KEY, FOOTERATTR_TEXT);
+    }
+    else if ( (w = MACROSTRLEN(FOOTERMSG_SHORT)) <= width)
+    {
+	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_SHORT,
-		ANSI_COLOR(31), ANSI_COLOR(30));
-	return 0;
+		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    if ( (w = MACROSTRLEN(FOOTERMSG_VERYSHORT)) <= width)
+    else if ( (w = MACROSTRLEN(FOOTERMSG_VERYSHORT)) <= width)
     {
-	if (width > w) prints("%*s", width-w, "");
+	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_VERYSHORT,
-		ANSI_COLOR(31), ANSI_COLOR(30));
-	return 0;
+		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-
-    if (width > w) prints("%*s", width-w, "");
-    return -1;
+    else while (width-- > w) outc(' ');
+    return 0;
 }
 
 /* use new pager: piaip's more. */
