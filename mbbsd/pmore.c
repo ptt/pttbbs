@@ -247,6 +247,9 @@
  #define RELATE_NEXT ']'
  #define READ_NEXT   'j'
  #define READ_PREV   'k'
+ #if !defined(FULLUPDATE) && defined(XO_HEAD)
+ # define FULLUPDATE XO_HEAD
+ #endif
  // environments and features
  #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_USE_REPLYKEY_HINTS
@@ -259,6 +262,8 @@
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
  #endif // !SHOW_USER_IN_TEXT
+ // disable CLRTOEOL workaround: uncomment this if your system has problem in footer
+ // #define PMORE_NO_FORCE_CLRTOEOL
  // use m3 style separator [none]: comment these if you like Maple2.36/SOB/PTT style
  #undef MFDISP_SEP_DEFAULT
  #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
@@ -411,7 +416,12 @@ static int debug = 0;
 //   and usually messed up when output ANSI quoted string.
 // - A workaround is suggested by kcwu:
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
-#define FORCE_CLRTOEOL() outs(ANSI_CLRTOEND)
+// - If you have problem using this workaround, define PMORE_NO_FORCE_CLRTOEOL
+#ifndef PMORE_NO_FORCE_CLRTOEOL
+# define FORCE_CLRTOEOL() outs(ANSI_CLRTOEND)
+#else
+# define FORCE_CLRTOEOL() clrtoeol()
+#endif
 
 /* Again, if you have a BBS system which optimized out* without recognizing
  * ANSI escapes, scrolling with ANSI text may result in melformed text (because
@@ -1352,8 +1362,6 @@ mf_display()
              * we have to erase it here.
              */
             pmore_clrtoeol(b_lines, 0);
-            // move(b_lines, 0);
-            // clrtoeol();
         }
 
         if(scrll > MFDISP_PAGE)
@@ -1383,8 +1391,6 @@ mf_display()
             // clear the line which will be scrolled
             // to bottom (status line position).
             pmore_clrtoeol(b_lines, 0);
-            // move(b_lines, 0);
-            // clrtoeol();
         }
         else
         {
@@ -2328,8 +2334,7 @@ pmore2(
                         continue;
                     }
                     /* else, we have to clean up. */
-                    move(b_lines, 0);
-                    clrtoeol();
+                    pmore_clrtoeol(b_lines, 0);
                 }
                 break;
 
