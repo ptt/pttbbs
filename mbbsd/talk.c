@@ -1995,16 +1995,16 @@ t_showhelp(void)
 
     const char ** p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
 	       ** p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
-    const int  cols[3] = { 31, 25, 22 },    // columns, to fit pmore built-ins
+    const int  cols[3] = { 31, 25, 22 },    // column witdh
                desc[3] = { 12, 18, 16 };    // desc width
     clear();
     showtitle("休閒聊天", "使用說明");
     outs("\n");
     vs_multi_T_table_simple(p1, 3, cols, desc,
-	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
     if (HasUserPerm(PERM_PAGE))
     vs_multi_T_table_simple(p2, HasUserPerm(PERM_SYSOP)?3:2, cols, desc,
-	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
 
 #else // USE_OLD_HELP
 

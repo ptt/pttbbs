@@ -261,31 +261,31 @@ common_pmore_key_handler(int ch, void *ctx)
 static const char 
 *hlp_nav [] = 
 { "【瀏覽指令】", NULL,
-    " 下篇文章  ", "f",
-    " 前篇文章  ", "b",
-    " 同主題下篇", "]  +",
-    " 同主題前篇", "[  -",
-    " 同主題首篇", "=",
-    " 同主題循序", "t",
-    " 同作者前篇", "A",
-    " 同作者下篇", "a",
+    "  下篇文章  ", "f",
+    "  前篇文章  ", "b",
+    "  同主題下篇", "]  +",
+    "  同主題前篇", "[  -",
+    "  同主題首篇", "=",
+    "  同主題循序", "t",
+    "  同作者前篇", "A",
+    "  同作者下篇", "a",
     NULL,
 },
 *hlp_reply [] = 
 { "【回應指令】", NULL,
-    " 推薦文章", "% X",
-    " 回信回文", "r",
-    " 全部回覆", "y",
+    "  推薦文章", "% X",
+    "  回信回文", "r",
+    "  全部回覆", "y",
     NULL,
 },
 *hlp_spc [] = 
 { "【特殊指令】", NULL,
-    " 查詢資訊  ", "Q",
-    " 存入暫存檔", "^T",
-    " 切換看板  ", "s",
-    " 棋局打譜  ", "z",
+    "  查詢資訊  ", "Q",
+    "  存入暫存檔", "^T",
+    "  切換看板  ", "s",
+    "  棋局打譜  ", "z",
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-    " 執行BBSLua", "L l",
+    "  執行BBSLua", "L l",
 #endif
     NULL,
 };
@@ -293,13 +293,12 @@ static const char
 static int 
 common_pmore_help_handler(int y, void *ctx)
 {
-    // simply show ptt special function keys
     const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
-    const int  cols[3] = { 29, 29, 20 },    // columns, to fit pmore built-ins
-               desc[3] = { 15, 12, 14 };    // desc width
-    move(y+1, 0);
+    const int  cols[3] = { 29, 27, 20 },    // columns, to fit pmore built-ins
+               desc[3] = { 15, 13, 15 };    // desc width
+    move(y, 0);
     vs_multi_T_table_simple(p, 3, cols, desc,
-	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
     PRESSANYKEY();
     return 0;
 }
@@ -316,7 +315,6 @@ more(const char *fpath, int promptend)
     // post processing
     switch(r)
     {
-
 	case RET_DOSYSOPEDIT:
 	    r = FULLUPDATE;
 	    if (!check_sysop_edit_perm(fpath))

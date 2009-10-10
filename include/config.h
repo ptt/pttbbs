@@ -29,6 +29,23 @@
 #define AID_HOSTNAME	MYHOSTNAME
 #endif
 
+/* 主題配色 */
+
+#ifndef TITLE_COLOR 
+#define TITLE_COLOR       ANSI_COLOR(0;1;37;46)	/* 主畫面上方標題列 */
+#endif
+
+#ifndef HLP_CATEGORY_COLOR
+#define HLP_CATEGORY_COLOR	ANSI_COLOR(0;1;32)  /* 說明表格內分類項 */
+#endif
+#ifndef HLP_DESCRIPTION_COLOR
+#define HLP_DESCRIPTION_COLOR	ANSI_COLOR(0)	    /* 說明表格內說明項 */
+#endif
+#ifndef HLP_KEYLIST_COLOR
+#define HLP_KEYLIST_COLOR	ANSI_COLOR(0;1;36)  /* 說明表格內按鍵項 */
+#endif
+
+/* 系統帳號相關設定 */ 
 #ifndef BBSUSER
 #define BBSUSER "bbs"
 #endif
@@ -169,10 +186,6 @@
 
 #ifndef FORCE_PROCESS_REGISTER_FORM
 #define FORCE_PROCESS_REGISTER_FORM 0
-#endif
-
-#ifndef TITLE_COLOR
-#define TITLE_COLOR       ANSI_COLOR(0;1;37;46)
 #endif
 
 #ifndef SYSLOG_FACILITY

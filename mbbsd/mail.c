@@ -1505,18 +1505,17 @@ m_help(void)
 #else
     const char ** p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
 	       ** p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
-    const int  cols[3] = { 31, 22, 24 },    // columns, to fit pmore built-ins
+    const int  cols[3] = { 31, 22, 24 },    // column width
                desc[3] = { 12, 14, 18 };    // desc width
-    const int  cols2[3]= { 36, 17, 24 },    // columns, to fit pmore built-ins
+    const int  cols2[3]= { 36, 17, 24 },    // columns width
                desc2[3]= { 18, 14, 18 };    // desc width
     clear();
     showtitle("電子信箱", "使用說明");
     outs("\n");
     vs_multi_T_table_simple(p1, 3, cols, desc,
-	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
-    vs_multi_T_table_simple(p2, HasUserPerm(PERM_MAILLIMIT)?3:2, 
-	    cols2, desc2,
-	    ANSI_COLOR(1;32), ANSI_COLOR(0), ANSI_COLOR(1;36) );
+	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
+    vs_multi_T_table_simple(p2, HasUserPerm(PERM_MAILLIMIT)?3:2, cols2, desc2,
+	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
     PRESSANYKEY();
 #endif
     return FULLUPDATE;

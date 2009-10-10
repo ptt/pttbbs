@@ -2953,73 +2953,97 @@ pmore_Preference()
 }
 
 #ifdef PMORE_USE_INTERNAL_HELP
+
+// apply system colors if defined
+#ifndef HLP_CATEGORY_COLOR
+#define HLP_CATEGORY_COLOR	PMHLPATTR_HEADER
+#endif
+#ifndef HLP_DESCRIPTION_COLOR
+#define HLP_DESCRIPTION_COLOR	PMHLPATTR_NORMAL
+#endif
+#ifndef HLP_KEYLIST_COLOR
+#define HLP_KEYLIST_COLOR	PMHLPATTR_NORMAL_KEY
+#endif
+
 static const char 
 *hlp_basic[] = {
     "【基本移動】", NULL,
-    "下翻一頁", "^F  → PgUp Space",
-    "上翻一頁", "^B  ^H PgDn BS",
-    "下捲一行", " j  ↓",
-    "上捲一行", " k  ↑",
-    "檔案結尾", " $  G  End",
-    "檔案開頭", " 0  g  Home",
-    "離開    ", " q  ←",
+    "  下翻一頁", "^F → PgUp Space",
+    "  上翻一頁", "^B ^H PgDn BS",
+    "  下捲一行", " j ↓",
+    "  上捲一行", " k ↑",
+    "  檔案結尾", " $ G  End",
+    "  檔案開頭", " 0 g  Home",
+    "  離開    ", " q ←",
     NULL,
 },
 *hlp_adv[] = {
-    "【進階移動】", NULL,
-    "搜尋關鍵字", "/",
-    "往後搜尋  ", "n",
-    "往前搜尋  ", "N",
-    "指定頁數  ", ";  0-9數字鍵",
-    "指定行數  ", ":",
-    "向右捲動  ", ".  >  TAB",
-    "向左捲動  ", ",  <  Shift-TAB",
+    "【進階瀏覽】", NULL,
+    "  搜尋關鍵字", "/",
+    "  往後搜尋  ", "n",
+    "  往前搜尋  ", "N",
+    "  指定頁數  ", ";  0-9數字鍵",
+    "  指定行數  ", ":",
+    "  向右捲動  ", ". > TAB",
+    "  向左捲動  ", ", < Shift-TAB",
     NULL,
 },
 *hlp_sys[] = {
     "【其它】", NULL,
 #ifdef PMORE_USE_ASCII_MOVIE
-    "播放動畫    ", "p",
+    "  播放動畫    ", "p",
 #endif
-    "選項設定    ", "o",
-    "色彩顯示模式", "\\",
-    "說明        ", "h ? F1",
+    "  選項設定    ", "o",
+    "  色彩顯示模式", "\\",
+    "  說明        ", "h ? F1",
 #ifdef DEBUG
-    "DBG 除錯模式", "d",
+    "  DBG 除錯模式", "d",
 #endif
     NULL,
 };
 
+#define PMHLP_BLOCKS    (3)
+
 MFPROTO void
 pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 {
-    const char ** p[3] = { hlp_basic, hlp_adv, hlp_sys};
-    const int  cols[3] = { 29, 29, 20 },    // columns
-               desc[3] = { 10, 11, 13 };    // desc width
-    int y = 0, i;
+    const char **t_tables[PMHLP_BLOCKS] = { hlp_basic, hlp_adv, hlp_sys};
+    const int  col_widths[PMHLP_BLOCKS] = { 29, 27, 20 }, 
+               l_widths  [PMHLP_BLOCKS] = { 12, 13, 15 };  
+    const int n_t_tables =PMHLP_BLOCKS;
+    int i, incomplete;
+    int y = 2; // height of prompt bar
 
     clear();
     pmore_PromptBar(PMORE_MSG_HELP_TITLE, PMORE_SHADOW_BELOW);
-    y = 2;
-    // render help page
-    while (*p[0] || *p[1] || *p[2])
+    do 
     {
+        incomplete = n_t_tables;
         y++;
-        for ( i = 0; i < 3; i++ )
-        {
-            const char *dstr = "", *kstr = "";
-            if (*p[i]) {
-                dstr = *p[i]++; kstr = *p[i]++;
-            }
-            if (!kstr)
-                prints( PMHLPATTR_HEADER "%-*s", cols[i], dstr);
-            else
-                prints( PMHLPATTR_NORMAL " %-*s"
-                        PMHLPATTR_NORMAL_KEY "%-*s",
-                        desc[i], dstr, cols[i]-desc[i]-1, kstr);
-        }
-        outs("\n");
-    }
+	for (i = 0; i < n_t_tables; i++)
+	{
+	    const char *lvar = NULL, *rvar = "";
+	    if (*t_tables[i])
+	    {
+		lvar = *t_tables[i]++;
+		rvar = *t_tables[i]++;
+	    }
+	    if (!rvar) { // draw category
+                prints(HLP_CATEGORY_COLOR "%-*s", col_widths[i], lvar);
+		continue;
+	    } 
+	    if (!lvar) { // table is complete...
+		incomplete --;
+		lvar = "";
+	    }
+	    // draw table body
+            prints( HLP_DESCRIPTION_COLOR "%-*s"
+                    HLP_KEYLIST_COLOR     "%-*s",
+                    l_widths[i], lvar,
+                    col_widths[i]-l_widths[i], rvar);
+	}
+	outc('\n');
+    } while (incomplete);
     
     // show additional help information
     if (help_handler)
