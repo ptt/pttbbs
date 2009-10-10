@@ -81,7 +81,7 @@
  *  - (2009) movie: add INCLUDE/INTERRUPT command [done]
  *  - (2009) Better help system [done]
  *  - (2009) Customizable key and help handler [done]
- *  - Customizable footer bar and floating prompts
+ *  - (2009) Customizable footer bar floating prompts [done]
  *  - Reject waterball (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Deal or disable Ctrl-U (invokes userlist then waiting one more key)
@@ -357,7 +357,7 @@
  */
 
 #ifdef DEBUG
-int debug = 0;
+static int debug = 0;
 # define MFPROTO
 # define MFFPROTO
 #else
@@ -370,6 +370,10 @@ int debug = 0;
 #define ustrchr(x,y)    (unsigned char*)strchr((char*)x, y)
 #define ustrrchr(x,y)   (unsigned char*)strrchr((char*)x, y)
 
+// NOTE: this is a special strlen to speed up processing.
+// WARNING: x MUST be #define x "msg".
+// otherwise you need to use real strlen.
+#define PMORE_MACROSTRLEN(x) (sizeof(x)-1)
 
 // --------------------------------------------- <Defines and constants>
 
@@ -1953,6 +1957,198 @@ mf_display()
         move(b_lines, 0);
 }
 
+MFPROTO void
+mf_display_footer(
+        int (*footer_handler)(int ratio, int width, void *ctx), void *ctx)
+{
+    // format:
+    // |PageNo Percentage|Detail Info|Floating1 (context)|Floating2 (quit)
+    // |SUMMARY|DETAIL|HELP
+    
+    char buf[256];              // must be large enough to hold temporary data
+    int  avail = t_columns-1;   // available space
+    int  w;                     // for width calculation
+
+    /*
+     * page determination is hard.
+     * should we use starting line, or finishing line?
+     */
+    int nowpage = 
+        (int)((mf.lineno + mf.dispedlines/2) / MFNAV_PAGE)+1;
+    int allpages = -1; /* unknown yet */
+    int progress  = 
+        (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
+
+#ifdef DEBUG
+    if(debug)
+    {
+        /* in debug mode don't print ANSI codes
+         * because themselves are buggy.
+         */
+        prints("L#%ld(w%ld,lp%ld) pmt=%d Dsp:%08X/%08X/%08X, "
+                "F:%08X/%08X(%d) tScr(%dx%d)",
+                mf.lineno, mf.wraplines, mf.lastpagelines,
+                promptend,
+                (unsigned int)mf.disps, 
+                (unsigned int)mf.maxdisps,
+                (unsigned int)mf.dispe,
+                (unsigned int)mf.start, (unsigned int)mf.end,
+                (int)mf.len,
+                t_columns,
+                t_lines
+              );
+        return;
+    }
+#endif
+
+    // determine pges
+    if (mf.maxlinenoS >= 0)
+    {
+        allpages = 
+            (int)((mf.maxlinenoS + mf.lastpagelines -
+                        ((bpref.separator & MFDISP_SEP_WRAP) &&
+                         (fh.lines >= 0) ? 0:1)) / MFNAV_PAGE)+1;
+        if (mf.lineno >= mf.maxlinenoS || nowpage > allpages)
+            nowpage = allpages;
+        /*
+           nowpage = 
+           (int)((mf.lineno + mf.dispedlines-2) / MFNAV_PAGE)+1 ;
+           */
+    }
+    /* why -2 and -1?
+     * because we want to determine by nav_page,
+     * and mf.dispedlines is based on disp_page (nav_page+1)
+     * mf.lastpagelines is based on nav_page
+     */
+
+    // determine summary colours
+    outs(ANSI_RESET);
+    if(mf_viewedAll())
+        outs(PMORE_COLOR_FOOTER1_VIEWALL);
+    else if (mf_viewedNone())
+        outs(PMORE_COLOR_FOOTER1_VIEWNONE);
+    else
+        outs(PMORE_COLOR_FOOTER1);
+
+    // old status bar: quick draw
+    if(bpref.oldstatusbar)
+    {
+        prints("  瀏覽 P.%d(%d%%)  ", nowpage, progress);
+        outs(
+                PMORE_COLOR_FOOTER3      "  "
+                PMORE_COLOR_FOOTER3_KEY  "(h)" 
+                PMORE_COLOR_FOOTER3_TEXT "求助  "
+                PMORE_COLOR_FOOTER3_KEY  
+                "→↓[PgUp][PgDn][Home][End]"
+                PMORE_COLOR_FOOTER3_TEXT "游標移動  "
+                PMORE_COLOR_FOOTER3_KEY  "←[q]"
+                PMORE_COLOR_FOOTER3_TEXT "結束   "
+            );
+        return;
+    } 
+
+    // pmore style footer
+
+    // part 1, brief report (SUMMAR)
+    if(allpages >= 0)
+        snprintf(buf, sizeof(buf),
+                "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
+                nowpage,
+                allpages,
+                progress
+               );
+    else
+        snprintf(buf, sizeof(buf),
+                "  瀏覽 第 %1d 頁 (%3d%%) ",
+                nowpage,
+                progress
+               );
+    avail -= strlen(buf);
+    outs(buf);
+
+    // part 2, status report (DETAIL)
+    outs(PMORE_COLOR_FOOTER2);
+    if(override_msg)
+    {
+        buf[0] = 0;
+        if(override_attr) outs(override_attr);
+        snprintf(buf, sizeof(buf), override_msg);
+        RESET_OVERRIDE_MSG();
+    }
+    else
+    {
+        if(mf.xpos > 0)
+        {
+            snprintf(buf, sizeof(buf),
+                    " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
+                    (int)mf.xpos+1, 
+                    (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
+                    (int)(mf.lineno + 1),
+                    (int)(mf.lineno + mf.dispedlines)
+                    );
+        } else {
+            snprintf(buf, sizeof(buf),
+                    " 目前顯示: 第 %02d~%025d 行",
+                    (int)(mf.lineno + 1),
+                    (int)(mf.lineno + mf.dispedlines)
+                    );
+        }
+    }
+    avail -= strlen(buf);
+    outs(buf);
+
+    // usually avail is still > 0 here...
+    if (avail <= 0)
+        return;
+
+    // prepare the part 3
+    outs(PMORE_COLOR_FOOTER3);
+
+    // use customizable footer if available
+    if (footer_handler)
+    {
+        footer_handler(progress, avail, ctx);
+        return;
+    } 
+
+    // part 3, help: context help and quit hotkeys
+#define PMORE_MSG_FOOTER_FLOAT_SHORT \
+    PMORE_COLOR_FOOTER3_KEY  "(h)"      \
+    PMORE_COLOR_FOOTER3_TEXT "按鍵說明 "
+
+#define PMORE_MSG_FOOTER_FLOAT_LONG \
+    PMORE_MSG_FOOTER_FLOAT_SHORT \
+    PMORE_COLOR_FOOTER3_KEY  "←[q]"    \
+    PMORE_COLOR_FOOTER3_TEXT "離開 "
+
+    // first try: long (context + quit)
+    w = PMORE_MACROSTRLEN(PMORE_MSG_FOOTER_FLOAT_LONG) -
+        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_KEY) *2 -
+        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_TEXT)*2;
+    if (avail >= w)
+    {
+        if (avail > w)
+            prints("%*s", avail-w, "");
+        outs(PMORE_MSG_FOOTER_FLOAT_LONG);
+        return;
+    }
+
+    // next try: short 4 only (quit)
+    w = PMORE_MACROSTRLEN(PMORE_MSG_FOOTER_FLOAT_SHORT) -
+        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_KEY) *1 -
+        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_TEXT)*1;
+    if (avail >= w)
+    {
+        if (avail > w)
+            prints("%*s", avail-w, "");
+        outs(PMORE_MSG_FOOTER_FLOAT_SHORT);
+        return;
+    }
+
+    // final: simply fill the extra space.
+    prints("%*s", avail, "");
+}
+
 /* --------------------- MAIN PROCEDURE ------------------------- */
 
 /*
@@ -2001,8 +2197,9 @@ PMORE_UINAV_FORWARDLINE()
 int
 pmore2( 
         const char *fpath, int promptend, void *ctx,
-        int (*key_handler) (int key, void *ctx),
-        int (*help_handler)(int y,   void *ctx)
+        int (*key_handler)   (int key, void *ctx),
+        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*help_handler)  (int y,   void *ctx)
       )
 {
     int flExit = 0, retval = 0;
@@ -2205,179 +2402,10 @@ pmore2(
         }
 #endif
 
-        /* PRINT BOTTOM STATUS BAR */
-#ifdef DEBUG
-        if(debug)
-        {
-            /* in debug mode don't print ANSI codes
-             * because themselves are buggy.
-             */
-            prints("L#%ld(w%ld,lp%ld) pmt=%d Dsp:%08X/%08X/%08X, "
-                    "F:%08X/%08X(%d) tScr(%dx%d)",
-                    mf.lineno, mf.wraplines, mf.lastpagelines,
-                    promptend,
-                    (unsigned int)mf.disps, 
-                    (unsigned int)mf.maxdisps,
-                    (unsigned int)mf.dispe,
-                    (unsigned int)mf.start, (unsigned int)mf.end,
-                    (int)mf.len,
-                    t_columns,
-                    t_lines
-                  );
-        }
-        else
-#endif
-        {
-            char *printcolor;
-
-            char buf[256];      // orz
-            int prefixlen = 0;
-            int barlen = 0;
-            int postfix1len = 0, postfix2len = 0;
-
-            int progress  = 
-                (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
-            /*
-             * page determination is hard.
-             * should we use starting line, or finishing line?
-             */
-            int nowpage = 
-                (int)((mf.lineno + mf.dispedlines/2) / MFNAV_PAGE)+1;
-            int allpages = -1; /* unknown yet */
-            if (mf.maxlinenoS >= 0)
-            {
-                allpages = 
-                (int)((mf.maxlinenoS + mf.lastpagelines -
-                       ((bpref.separator & MFDISP_SEP_WRAP) &&
-                        (fh.lines >= 0) ? 0:1)) / MFNAV_PAGE)+1;
-                if (mf.lineno >= mf.maxlinenoS || nowpage > allpages)
-                    nowpage = allpages;
-                /*
-                    nowpage = 
-                        (int)((mf.lineno + mf.dispedlines-2) / MFNAV_PAGE)+1 ;
-                        */
-            }
-            /* why -2 and -1?
-             * because we want to determine by nav_page,
-             * and mf.dispedlines is based on disp_page (nav_page+1)
-             * mf.lastpagelines is based on nav_page
-             */
-
-            if(mf_viewedAll())
-                printcolor = PMORE_COLOR_FOOTER1_VIEWALL;
-            else if (mf_viewedNone())
-                printcolor = PMORE_COLOR_FOOTER1_VIEWNONE;
-            else
-                printcolor = PMORE_COLOR_FOOTER1;
-
-            outs(ANSI_RESET);
-            outs(printcolor);
-
-            if(bpref.oldstatusbar)
-            {
-
-                prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
-                        nowpage,
-                        progress,
-                        PMORE_COLOR_FOOTER3, 
-                        PMORE_COLOR_FOOTER3_KEY "(h)" 
-                        PMORE_COLOR_FOOTER3_TEXT "求助  "
-                        PMORE_COLOR_FOOTER3_KEY  "→↓[PgUp][",
-                        "PgDn][Home][End]"
-                        PMORE_COLOR_FOOTER3_TEXT "游標移動  "
-                        PMORE_COLOR_FOOTER3_KEY  "←[q]"
-                        PMORE_COLOR_FOOTER3_TEXT "結束   ");
-
-            } else {
-
-                // part 1, brief report
-                if(allpages >= 0)
-                    sprintf(buf,
-                            "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
-                            nowpage,
-                            allpages,
-                            progress
-                           );
-                else
-                    sprintf(buf,
-                            "  瀏覽 第 %1d 頁 (%3d%%) ",
-                            nowpage,
-                            progress
-                           );
-                outs(buf); prefixlen += strlen(buf);
-
-                // part 2, status report
-                outs(PMORE_COLOR_FOOTER2);
-                if(override_msg)
-                {
-                    buf[0] = 0;
-                    if(override_attr) outs(override_attr);
-                    snprintf(buf, sizeof(buf), override_msg);
-                    RESET_OVERRIDE_MSG();
-                }
-                else
-                if(mf.xpos > 0)
-                {
-                    snprintf(buf, sizeof(buf),
-                            " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
-                            (int)mf.xpos+1, 
-                            (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
-                            (int)(mf.lineno + 1),
-                            (int)(mf.lineno + mf.dispedlines)
-                           );
-                } else {
-                    snprintf(buf, sizeof(buf),
-                            " 目前顯示: 第 %02d~%02d 行",
-                            (int)(mf.lineno + 1),
-                            (int)(mf.lineno + mf.dispedlines)
-                           );
-                }
-
-                outs(buf); prefixlen += strlen(buf);
-
-                postfix1len = 12;       // check msg below
-                postfix2len = 10;
-
-#ifdef PMORE_USE_REPLYKEY_HINTS
-                if(mf_viewedAll()) postfix1len = 17;
-#endif // PMORE_USE_REPLYKEY_HINTS
-
-                if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
-                {
-                    postfix1len = 0;
-                    // try again
-                    if (prefixlen+postfix1len+postfix2len + 1 > t_columns)
-                        postfix2len = 0;
-                }
-                barlen = t_columns - 1 - postfix1len - postfix2len - prefixlen;
-
-                while(barlen-- > 0)
-                    outc(' ');
-
-                // part 3, floating help
-                outs(PMORE_COLOR_FOOTER3);
-                if(postfix1len > 0)
-                    outs(
-#ifdef PMORE_USE_REPLYKEY_HINTS
-                        mf_viewedAll() ?
-                            PMORE_COLOR_FOOTER3_KEY  "(y)" 
-                            PMORE_COLOR_FOOTER3_TEXT "回應"
-                            PMORE_COLOR_FOOTER3_KEY  "(X/%)" 
-                            PMORE_COLOR_FOOTER3_TEXT "推文 "
-                        :
-#endif // PMORE_USE_REPLYKEY_HINTS
-                            PMORE_COLOR_FOOTER3_KEY  "(h)" 
-                            PMORE_COLOR_FOOTER3_TEXT "按鍵說明 "
-                        );
-                if(postfix2len > 0)
-                    outs(
-                            PMORE_COLOR_FOOTER3_KEY  "←[q]" 
-                            PMORE_COLOR_FOOTER3_TEXT "離開 "
-                        );
-            }
-            outs(ANSI_RESET);
-            FORCE_CLRTOEOL();
-        }
+        /* PRINT FOOTER */
+        mf_display_footer(footer_handler, ctx);
+        outs(ANSI_RESET);
+        FORCE_CLRTOEOL();
 
         /* vkey() will do refresh(); */
         ch = vkey();
@@ -2724,7 +2752,7 @@ pmore2(
 int 
 pmore(const char *fpath, int promptend)
 {
-    return pmore2(fpath, promptend, NULL, NULL, NULL);
+    return pmore2(fpath, promptend, NULL, NULL, NULL, NULL);
 }
 
 // ---------------------------------------------------- Preference and Help

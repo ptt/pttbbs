@@ -374,8 +374,9 @@ int more(const char *fpath, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
 int pmore2(const char *fpath, int promptend, void *ctx, 
-	int (*key_handler) (int key, void *ctx),
-	int (*help_handler)(int y,   void *ctx));
+	int (*key_handler)   (int key, void *ctx),
+	int (*footer_handler)(int ratio, int width, void *ctx),
+	int (*help_handler)  (int y,   void *ctx));
 /* piaip's new telnet, telnet.c */
 extern void telnet_init(int do_init_cmd);
 extern ssize_t tty_read(unsigned char *buf, size_t max);

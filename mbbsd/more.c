@@ -303,6 +303,63 @@ common_pmore_help_handler(int y, void *ctx)
     return 0;
 }
 
+static void
+display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
+{
+    while (*caption)
+    {
+	int c = *caption ++;
+	if (c == '(')
+	    outs(kattr);
+	outc(c);
+	if (c == ')')
+	    outs(vattr);
+    }
+}
+
+#define MACROSTRLEN(x) (sizeof(x)-1)
+static int
+common_pmore_footer_handler(int ratio, int width, void *ctx)
+{
+#define FOOTERMSG_READ_LONG  "(y)回應 (X/%)推文 (h)說明 (←/q)離開 "
+#define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 " 
+#define FOOTERMSG_SHORT	     "(h)說明 (←/q)離開 "
+#define FOOTERMSG_VERYSHORT  "(←/q)離開 "
+
+    int w;
+    if (currstat == RMAIL && (w = MACROSTRLEN(FOOTERMSG_MAIL_LONG)) <= width)
+    {
+	if (width > w) prints("%*s", width-w, "");
+	display_hotkey_footer(FOOTERMSG_MAIL_LONG,
+		ANSI_COLOR(31), ANSI_COLOR(30));
+	return 0;
+    }
+    if (currstat == READING && (w = MACROSTRLEN(FOOTERMSG_READ_LONG)) <= width)
+    {
+	if (width > w) prints("%*s", width-w, "");
+	display_hotkey_footer(FOOTERMSG_READ_LONG,
+		ANSI_COLOR(31), ANSI_COLOR(30));
+	return 0;
+    }
+    if ( (w = MACROSTRLEN(FOOTERMSG_SHORT)) <= width)
+    {
+	if (width > w) prints("%*s", width-w, "");
+	display_hotkey_footer(FOOTERMSG_SHORT,
+		ANSI_COLOR(31), ANSI_COLOR(30));
+	return 0;
+    }
+    if ( (w = MACROSTRLEN(FOOTERMSG_VERYSHORT)) <= width)
+    {
+	if (width > w) prints("%*s", width-w, "");
+	display_hotkey_footer(FOOTERMSG_VERYSHORT,
+		ANSI_COLOR(31), ANSI_COLOR(30));
+	return 0;
+    }
+
+    if (width > w) prints("%*s", width-w, "");
+    return -1;
+}
+
 /* use new pager: piaip's more. */
 int 
 more(const char *fpath, int promptend)
@@ -310,6 +367,7 @@ more(const char *fpath, int promptend)
     int r = pmore2(fpath, promptend,
 	    (void*) fpath,
 	    common_pmore_key_handler, 
+	    common_pmore_footer_handler,
 	    common_pmore_help_handler);
 
     // post processing
