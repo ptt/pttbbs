@@ -262,8 +262,8 @@
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
  #endif // !SHOW_USER_IN_TEXT
- // disable CLRTOEOL workaround: uncomment this if your system has problem in footer
- // #define PMORE_NO_FORCE_CLRTOEOL
+ // disable CLRTOEOL workaround: old M3 may has problem with FORCE_CLRTOEOL... you can comment this if your system is OK with it.
+ #define PMORE_NO_FORCE_CLRTOEOL
  // use m3 style separator [none]: comment these if you like Maple2.36/SOB/PTT style
  #undef MFDISP_SEP_DEFAULT
  #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
