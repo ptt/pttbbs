@@ -2088,7 +2088,7 @@ mf_display_footer(
                     );
         } else {
             snprintf(buf, sizeof(buf),
-                    " 目前顯示: 第 %02d~%025d 行",
+                    " 目前顯示: 第 %02d~%02d 行",
                     (int)(mf.lineno + 1),
                     (int)(mf.lineno + mf.dispedlines)
                     );
