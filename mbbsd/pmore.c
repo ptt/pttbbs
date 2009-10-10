@@ -2162,7 +2162,10 @@ mf_display_footer(
  */
 MFPROTO void pmore_Preference();
 MFPROTO void pmore_QuickRawModePref();
+
+#ifdef PMORE_USE_INTERNAL_HELP
 MFPROTO void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
+#endif
 
 /*
  * pmore utility macros
