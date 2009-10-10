@@ -321,10 +321,10 @@ display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
 static int
 common_pmore_footer_handler(int ratio, int width, void *ctx)
 {
-#define FOOTERMSG_READ_LONG  "(y)回應 (X/%)推文 (h)說明 (←/q)離開 "
+#define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
 #define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 " 
 #define FOOTERMSG_SHORT	     "(h)說明 (←/q)離開 "
-#define FOOTERMSG_VERYSHORT  "(←/q)離開 "
+#define FOOTERMSG_VERYSHORT  "(←q)離開 "
 
     int w;
     if (currstat == RMAIL && (w = MACROSTRLEN(FOOTERMSG_MAIL_LONG)) <= width)
