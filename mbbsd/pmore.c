@@ -146,13 +146,13 @@
 #define PMORE_MSG_GOTO_PAGE \
      "跳至此頁(若要改指定行數請在結尾加.): "
 #define PMORE_MSG_GOTO_LINE \
-             "跳至此行: "
+     "跳至此行: "
 #define PMORE_MSG_QPREF_SUBJECT \
-             "色彩顯示方式:"
+     "色彩顯示方式:"
 #define PMORE_MSG_QPREF_OPTIONS \
-             "1.預設格式化內容\t2.原始ANSI控制碼\t3.純文字"
+     "1.預設格式化內容\t2.原始ANSI控制碼\t3.純文字"
 #define PMORE_MSG_QPREF_PROMPT \
-             "請調整設定 (1-3 可直接選定，\\可切換) 或其它任意鍵結束。"
+     "請調整設定 (1-3 可直接選定，\\可切換) 或其它任意鍵結束。"
 
 #define PMORE_MSG_MOVIE_DETECTED \
     " ★ 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]"
@@ -1110,14 +1110,6 @@ pmore_str_chomp(unsigned char *p)
         memmove(p, pb, ustrlen(pb)+1);
 }
 
-#if 0
-int 
-pmore_str_safe_big5len(unsigned char *p)
-{
-    return 0;
-}
-#endif
-
 /*
  * Format Related
  */
@@ -1991,10 +1983,9 @@ mf_display_footer(
         /* in debug mode don't print ANSI codes
          * because themselves are buggy.
          */
-        prints("L#%ld(w%ld,lp%ld) pmt=%d Dsp:%08X/%08X/%08X, "
+        prints("L#%ld(w%ld,lp%ld) Dsp:%08X/%08X/%08X, "
                 "F:%08X/%08X(%d) tScr(%dx%d)",
                 mf.lineno, mf.wraplines, mf.lastpagelines,
-                promptend,
                 (unsigned int)mf.disps, 
                 (unsigned int)mf.maxdisps,
                 (unsigned int)mf.dispe,
@@ -3644,6 +3635,11 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 }
 
 
+/* mf_movieOptionHandler()
+ * @return 1:  option executed
+ * @return 0:  duration timeout
+ * @return -1: invalid option
+ */
 MFPROTO int 
 mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 {
@@ -3899,7 +3895,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
     // if the syntax has error...
     if (!maxsel)
-        return 0;
+        return -1;
 
 #ifdef DEBUG
     prints("selection: %d\n", isel);
@@ -3908,9 +3904,11 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
     // Execute Selection
     if (!cmd || !szCmd)
-        return 0;
+        return -1;
 
-    return mf_movieExecuteOffsetCmd(cmd, cmd+szCmd);
+    // XXX check return value of mf_movieExecuteOffsetCmd someday?
+    mf_movieExecuteOffsetCmd(cmd, cmd+szCmd);
+    return 1;
 }
 
 /*
@@ -3936,10 +3934,14 @@ mf_movieSyncFrame()
     {
         unsigned char *opt = mfmovie.options;
         mfmovie.options = NULL;
-        mf_movieOptionHandler(opt, mf.end);
-        return 1;
+        // if executed of timeout, go for next.
+        if (mf_movieOptionHandler(opt, mf.end) != -1)
+            return 1;
+        // invalid syntax or not executed...
+        // let's treat it as normal frame.
     }
-    else if (mfmovie.synctime.tv_sec > 0)
+
+    if (mfmovie.synctime.tv_sec > 0)
     {
         /* synchronize world timeline model */
         struct timeval dv;
@@ -4224,7 +4226,12 @@ mf_movieNextFrame()
             }
 
             if (mfmovie.mode != MFDISP_MOVIE_PLAYING_OLD)
-                mf_forward(1);
+            {
+                // when the movie frame header is the last line...
+                // we need to check forward() to prevent endless loop.
+                if (mf_forward(1) <= 0)
+                    break;
+            }
 
             return 1;
         }
