@@ -36,6 +36,7 @@ extern const char *Now();	// m3 flavor time string
 extern int stampfile(char *fpath, fileheader_t * fh);
 extern int stampdir(char *fpath, fileheader_t * fh);
 extern int stamplink(char *fpath, fileheader_t * fh);
+extern int stampfile_u(char *fpath, fileheader_t *fh);	// does not zero existing data in fh
 
 /* cache.c */
 #define search_ulist(uid) search_ulistn(uid, 1)

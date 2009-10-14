@@ -2,6 +2,10 @@
 
 #include "bbs.h"
 
+#ifdef _BBS_UTIL_C_
+#error sorry, mbbsd/record.c does not support utility mode anymore. please use libcmbbs or libcmsys instead.
+#endif
+
 #define BUFSIZE 512
 
 #define safewrite       write
@@ -113,7 +117,6 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
 
 
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
-#ifndef _BBS_UTIL_C_
 int
 force_open(const char *fname)
 {
@@ -242,7 +245,6 @@ delete_range(const char *fpath, int id1, int id2)
     close(fd);
     return dcount;
 }
-#endif // _BBS_UTIL_C_
 
 void 
 set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
@@ -324,57 +326,10 @@ safe_article_delete_range(const char *direct, int from, int to)
     }
     return -1;
 }
-
-
 #endif		
 
-/* mail / post 時，依據時間建立檔案，加上郵戳 */
-/* @param[in,out] fpath input as dirname, output as filename */
-int
-stampfile_u(char *fpath, fileheader_t * fh) 
-  // Ptt: stampfile_u: won't clear fileheader
-  //      stampfile: will clear fileheader
-{
-    register char  *ip = fpath;
-    time4_t         dtime = COMMON_TIME;
-    struct tm       ptime;
-#ifdef _BBS_UTIL_C_
-    int             fp = 0;  //Ptt: don't need to check 
-    // for utils, the time may be the same between several runs, by scw
-#endif
-
-    if (access(fpath, X_OK | R_OK | W_OK))
-	mkdir(fpath, 0755);
-
-    while (*(++ip));
-    *ip++ = '/';
-#ifdef _BBS_UTIL_C_
-    do {
-#endif
-	sprintf(ip, "M.%d.A.%3.3X", (int)(++dtime), (unsigned int)(random() & 0xFFF));
-#ifdef _BBS_UTIL_C_
-	if (fp == -1 && errno != EEXIST)
-	    return -1;
-   } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
-    close(fp);
-#endif
-    strlcpy(fh->filename, ip, sizeof(fh->filename));
-    localtime4_r(&dtime, &ptime);
-    snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
-    return 0;
-}
-
-// XXX 小心... 目前實際的 stampfile 似乎是 common/bbs/fhdr_stamp.c 打架，
-// 也就是不會去用 _u.
-inline int
-stampfile(char *fpath, fileheader_t * fh)
-{
-  memset(fh, 0, sizeof(fileheader_t));
-  return stampfile_u(fpath, fh);
-}
-
 // XXX announce(man) directory uses a smaller range of file names.
+// TODO merge with common/bbs/fhdr_stamp.c
 int
 stampadir(char *fpath, fileheader_t * fh, int large_set)
 {
@@ -423,7 +378,6 @@ int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
 // #ifdef USE_MAIL_AUTO_FORWARD
-#if !defined(_BBS_UTIL_C_)
     if (get_num_records(fpath, sizeof(fileheader_t)) <= MAX_KEEPMAIL * 2) {
 	FILE           *fp;
 	char            buf[512];
@@ -477,7 +431,6 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	    }
 	}
     }
-#endif
 // #endif // USE_MAIL_AUTO_FORWARD
 
     append_record(fpath, record, size);
@@ -485,7 +438,6 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     return 0;
 }
 
-#ifndef _BBS_UTIL_C_
 void 
 setaidfile(char *buf, const char *bn, aidu_t aidu)
 {
@@ -521,4 +473,3 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     }
     close(fd);
 }
-#endif

@@ -20,6 +20,7 @@
 
 static inline int fhdr_stamp(char *fpath, fileheader_t *fh, int type) GCC_INLINE;
 int stampfile(char *fpath, fileheader_t *fh) GCC_WEAK;
+int stampfile_u(char *fpath, fileheader_t *fh) GCC_WEAK;
 int stampdir(char *fpath, fileheader_t *fh) GCC_WEAK;
 int stamplink(char *fpath, fileheader_t * fh) GCC_WEAK;
 
@@ -27,6 +28,8 @@ int stamplink(char *fpath, fileheader_t * fh) GCC_WEAK;
 #define STAMP_DIR   1
 #define STAMP_LINK  2
 
+/* mail / post 時，依據時間建立檔案或目錄，加上郵戳 */
+/* @param[in,out] fpath input as dirname, output as filename */
 static inline int
 fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 {
@@ -69,7 +72,6 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
     if (type == STAMP_FILE)
 	close(res);
 
-    memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date), "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
@@ -80,18 +82,28 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 int
 stampfile(char *fpath, fileheader_t *fh)
 {
+    memset(fh, 0, sizeof(fileheader_t));
+    return fhdr_stamp(fpath, fh, STAMP_FILE);
+}
+
+int
+stampfile_u(char *fpath, fileheader_t *fh)
+{
+    // XXX do not reset fileheader (untouched)
     return fhdr_stamp(fpath, fh, STAMP_FILE);
 }
 
 int
 stampdir(char *fpath, fileheader_t *fh)
 {
+    memset(fh, 0, sizeof(fileheader_t));
     return fhdr_stamp(fpath, fh, STAMP_DIR);
 }
 
 int
 stamplink(char *fpath, fileheader_t * fh)
 {
+    memset(fh, 0, sizeof(fileheader_t));
     return fhdr_stamp(fpath, fh, STAMP_LINK);
 }
 
