@@ -1,10 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifndef DBCSAWARE
-#define dbcs_off (1)
-#endif
-
 #define STOP_LINE (t_lines-3)
 static int      chatline;
 static FILE    *flog;

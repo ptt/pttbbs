@@ -98,7 +98,9 @@ oflush(void)
     }
 #endif // DBG_OUTRPT
 
-    fsync(1);
+    // XXX to flush, set TCP_NODELAY instead.
+    // fsync does NOT work on network sockets.
+    // fsync(1);
 }
 
 void
@@ -208,7 +210,6 @@ wrapped_tty_read(unsigned char *buf, size_t max)
 	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
 		ESC_STR "[u", len);
 	write(1, xbuf, strlen(xbuf));
-	fsync(1);
     }
 #endif // DBG_OUTRPT
     return len;
