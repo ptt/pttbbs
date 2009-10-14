@@ -182,7 +182,7 @@
 #define FRIEND_OVERRIDE 0
 #define FRIEND_REJECT   1
 #define FRIEND_ALOHA    2
-#define FRIEND_POST     3         
+// #define FRIEND_POST     3	    // deprecated
 #define FRIEND_SPECIAL  4
 #define FRIEND_CANVOTE  5
 #define BOARD_WATER     6

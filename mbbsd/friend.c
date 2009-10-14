@@ -81,7 +81,7 @@ friend_add(const char *uident, int type, const char* des)
 	/* Thor: avoid uident run away when get data */
 	strlcpy(t_uident, uident, sizeof(t_uident));
 
-	if (type != FRIEND_ALOHA && type != FRIEND_POST){
+	if (type != FRIEND_ALOHA){
            if(!des)
 	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
            else
@@ -463,7 +463,7 @@ friend_edit(int type)
 	friend_special();
     setfriendfile(fpath, type);
 
-    if (type == FRIEND_ALOHA || type == FRIEND_POST) {
+    if (type == FRIEND_ALOHA) {
 	if (dashf(fpath)) {
             snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
             Copy(fpath, genbuf);
@@ -567,13 +567,12 @@ friend_edit(int type)
 	move(2, 0);
 	outs("更新資料中..請稍候.....");
 	refresh();
-	if (type == FRIEND_ALOHA || type == FRIEND_POST) {
+	if (type == FRIEND_ALOHA) {
 	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, sizeof(line), fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident,
-			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
+		    sethomefile(genbuf, uident, "aloha");
 		    del_distinct(genbuf, cuser.userid, 0);
 		}
 		fclose(fp);
@@ -582,8 +581,7 @@ friend_edit(int type)
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident,
-			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
+		    sethomefile(genbuf, uident, "aloha");
 		    add_distinct(genbuf, cuser.userid);
 		}
 		fclose(fp);
