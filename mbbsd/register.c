@@ -410,7 +410,7 @@ _vgetcb_data_upper(int key, VGET_RUNTIME *prt, void *instance)
 }
 
 static int
-_vgetcb_data_post(int key, VGET_RUNTIME *prt, void *instance)
+_vgetcb_data_change(int key, VGET_RUNTIME *prt, void *instance)
 {
     char *s = prt->buf;
     while (*s)
@@ -422,12 +422,11 @@ _vgetcb_data_post(int key, VGET_RUNTIME *prt, void *instance)
     return VGETCB_NONE;
 }
 
-
 static int verify_captcha()
 {
     char captcha[7] = "", code[STRLEN];
     char fpath[PATHLEN];
-    VGET_CALLBACKS vge = { NULL, _vgetcb_data_upper, _vgetcb_data_post };
+    VGET_CALLBACKS vge = { NULL, _vgetcb_data_upper, _vgetcb_data_change };
     int tries = 0, i;
 
     do {
