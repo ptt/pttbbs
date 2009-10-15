@@ -56,7 +56,11 @@
 #define VGET_DIGITS		(0x04)
 #define VGET_TRANSPARENT	(0x08)
 #define VGET_ASCII_ONLY		(0x10)
-#define VGET_PASSWORD		(VGET_NOECHO | VGET_ASCII_ONLY)
+#define VGET_NO_NAV_HISTORY	(0x20)	// disable UP/DOWN
+#define VGET_NO_NAV_EDIT	(0x40)	// disable LEFT/RIGHT/HOME/END/DEL
+
+#define VGETSET_DUMB_TERM		(VGET_NO_NAV_HISTORY | VGET_NO_NAV_EDIT)
+#define VGETSET_PASSWORD		(VGET_NOECHO | VGET_ASCII_ONLY | VGETSET_DUMB_TERM)
 
 // DATATYPE DEFINITION -------------------------------------------------
 typedef void *	VREFSCR;
@@ -95,7 +99,8 @@ typedef int (*VGET_FCALLBACK)(int key, VGET_RUNTIME *prt, void *instance);
 typedef struct {
     VGET_FCALLBACK   peek;   // called immediately after key hit
     VGET_FCALLBACK   data;   // called before inserting character data
-    VGET_FCALLBACK   post;   // called after every data inserted into buffer.
+    VGET_FCALLBACK   change; // called after buffer changed (the key may be an editing key)
+    VGET_FCALLBACK   redraw; // called before drawing input box unless VGET_NOECHO
 }   VGET_CALLBACKS;
 
 // API DEFINITION ----------------------------------------------------

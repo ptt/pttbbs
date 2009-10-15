@@ -971,8 +971,8 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     // rt.iend points to NUL address, and
     // rt.icurr points to cursor.
     int line, col;
-    int abort = 0;
-    int c;
+    int abort = 0, dirty = 0;
+    int c = 0;
     char ismsgline = 0;
 
     // callback 
@@ -989,6 +989,10 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     // inputting huge line will just make troubles...
     if (len > STRLEN) len = STRLEN;
     assert(len <= sizeof(buf) && len >= 2);
+
+    // adjust flags
+    if (flags & (VGET_NOECHO | VGET_DIGITS))
+	flags |= VGET_NO_NAV_HISTORY;
 
     // memset(buf, 0, len);
     if (defstr && *defstr)
@@ -1014,8 +1018,20 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     // main loop
     while (!abort)
     {
+	if (dirty)
+	{
+	    dirty = 0;
+	    // callback: change
+	    if (_vgetcbhandler(cb.change, &abort, c, &rt, instance))
+		continue;
+	}
+
 	if (!(flags & VGET_NOECHO))
 	{
+	    // callback: redraw
+	    if (_vgetcbhandler(cb.redraw, &abort, c, &rt, instance))
+		continue;
+
 	    // print current buffer
 	    move(line, col);
 	    clrtoeol();
@@ -1038,24 +1054,80 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	}
 	c = vkey();
 
-	// callback 1: peek
+	// callback: peek
 	if (_vgetcbhandler(cb.peek, &abort, c, &rt, instance))
 	    continue;
 
 	// standard key bindings
-	switch(c) {
+	// note: if you processed anything, you must use 'continue' instead of 'break'.
+
+	if (flags & VGET_NO_NAV_EDIT) {
+	    // skip navigation editing keys
+	} else switch (c) {
+
+	    // standard navigation
+	    case KEY_HOME:  case Ctrl('A'):
+		rt.icurr = 0;
+		continue;
+
+	    case KEY_END:   case Ctrl('E'):
+		rt.icurr = rt.iend;
+		continue;
+
+	    case KEY_LEFT:  case Ctrl('B'):
+		if (rt.icurr > 0)
+		rt.icurr--;
+		else
+		    bell();
+		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr))
+		    rt.icurr--;
+		continue;
+
+	    case KEY_RIGHT: case Ctrl('F'):
+		if (rt.icurr < rt.iend)
+		rt.icurr++;
+		else
+		    bell();
+		if (rt.icurr < rt.iend && CHKDBCSTRAIL(buf, rt.icurr))
+		    rt.icurr++;
+		continue;
+
+	    // editing keys
+	    case KEY_DEL:   case Ctrl('D'):
+		if (rt.icurr+1 < rt.iend && CHKDBCSTRAIL(buf, rt.icurr+1)) {
+		    // kill next one character.
+		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
+		    rt.iend--;
+		    dirty = 1;
+		}
+		if (rt.icurr < rt.iend) {
+		    // kill next one character.
+		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
+		    rt.iend--;
+		    dirty = 1;
+		}
+		continue;
+
+	    case Ctrl('Y'):
+		rt.icurr = 0;
+		// reuse Ctrl-K code
+	    case Ctrl('K'):
+		rt.iend = rt.icurr;
+		if (!buf[rt.iend])
+		    continue;
+		buf[rt.iend] = 0;
+		dirty = 1;
+		continue;
+	}
+
+	if (flags & VGET_NO_NAV_HISTORY) {
+	    // skip navigation history keys
+	} else switch (c) {
 	    // history navigation
 	    case KEY_DOWN: case Ctrl('N'):
 		c = KEY_DOWN;
 		// let UP do the magic.
 	    case KEY_UP:   case Ctrl('P'):
-		if ((flags & VGET_NOECHO) ||
-		    (flags & VGET_DIGITS))
-		{
-		    bell(); 
-		    continue;
-		}
-
 		// NOECHO is already checked...
 		if (!InputHistoryExists(buf))
 		    InputHistoryAdd(buf);
@@ -1066,148 +1138,100 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		    InputHistoryPrev(buf, len);
 
 		rt.icurr = rt.iend = strlen(buf);
-		break;
+		dirty = 1;
+		continue;
+	}
 
+	// the basic keys
+	switch(c) 
+	{
 	    // exiting keys
 	    case KEY_ENTER:
 		abort = 1;
-		break;
+		continue;
 
 	    case Ctrl('C'):
 		rt.icurr = rt.iend = 0;
 		buf[0] = 0;
-		buf[1] = c;
+		buf[1] = c; // XXX this is a dirty hack...
 		abort = 1;
-		break;
+		continue;
 
-	    // standard navigation
-	    case KEY_HOME:  case Ctrl('A'):
-		rt.icurr = 0;
-		break;
-
-	    case KEY_END:   case Ctrl('E'):
-		rt.icurr = rt.iend;
-		break;
-
-	    case KEY_LEFT:  case Ctrl('B'):
-		if (rt.icurr > 0)
-		    rt.icurr--;
-		else
-		    bell();
-		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr))
-		    rt.icurr--;
-		break;
-
-	    case KEY_RIGHT: case Ctrl('F'):
-		if (rt.icurr < rt.iend)
-		    rt.icurr++;
-		else
-		    bell();
-		if (rt.icurr < rt.iend && CHKDBCSTRAIL(buf, rt.icurr))
-		    rt.icurr++;
-		break;
-
-	    // editing keys
-	    case KEY_DEL:   case Ctrl('D'):
-		if (rt.icurr+1 < rt.iend && CHKDBCSTRAIL(buf, rt.icurr+1)) {
-		    // kill next one character.
-		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
-		    rt.iend--;
-		}
-		if (rt.icurr < rt.iend) {
-		    // kill next one character.
-		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
-		    rt.iend--;
-		}
-		break;
-
+	    // standard editing keys: backspace
 	    case KEY_BS:
 		if (rt.icurr > 0) {
 		    // kill previous one charracter.
 		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
 		    rt.icurr--; rt.iend--;
+		    dirty = 1;
 		} else
 		    bell();
 		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr)) {
 		    // kill previous one charracter.
 		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
 		    rt.icurr--; rt.iend--;
+		    dirty = 1;
 		}
-		break;
-
-	    case Ctrl('Y'):
-		rt.icurr = 0;
-		// reuse Ctrl-K code
-	    case Ctrl('K'):
-		rt.iend = rt.icurr;
-		buf[rt.iend] = 0;
-		break;
-
-	    // defaults
-	    default:
-
-		// content filter
-		if (c < ' ' || c >= 0xFF)
-		{
-		    bell(); continue;
-		}
-		if ((flags & VGET_DIGITS) &&
-		   ( !isascii(c) || !isdigit(c)))
-		{
-		    bell(); continue;
-		}
-		if (flags & VGET_LOWERCASE)
-		{
-		    if (!isascii(c))
-		    {
-			bell(); continue;
-		    }
-		    c = tolower(c);
-		}
-		if  (flags & VGET_ASCII_ONLY)
-		{
-		    if (!isprint(c))
-		    {
-			bell(); continue;
-		    }
-		}
-
-		// size check
-		if(rt.iend+1 >= len)
-		{
-		    bell(); continue;
-		}
-
-		// prevent incomplete DBCS
-		if (c > 0x80 && num_in_buf() &&
-		    len - rt.iend < 3)	// we need 3 for DBCS+NUL.
-		{
-		    drop_input();
-		    bell(); 
-		    continue;
-		}
-
-		// callback 2: data
-		if (_vgetcbhandler(cb.data, &abort, c, &rt, instance))
-		    continue;
-
-		// size check again, due to data callback.
-		if(rt.iend+1 >= len)
-		{
-		    bell(); continue;
-		}
-
-		// add one character.
-		memmove(buf+rt.icurr+1, buf+rt.icurr, rt.iend-rt.icurr+1);
-		buf[rt.icurr++] = c;
-		rt.iend++;
-
-		// callback 3: post
-		if (_vgetcbhandler(cb.post, &abort, c, &rt, instance))
-		    continue;
-
-		break;
+		continue;
 	}
+
+	// all special keys were processed, now treat as 'input data'.
+
+	// content filter
+	if (c < ' ' || c >= 0xFF)
+	{
+	    bell(); continue;
+	}
+	if ((flags & VGET_DIGITS) &&
+		( !isascii(c) || !isdigit(c)))
+	{
+	    bell(); continue;
+	}
+	if (flags & VGET_LOWERCASE)
+	{
+	    if (!isascii(c))
+	    {
+		bell(); continue;
+	    }
+	    c = tolower(c);
+	}
+	if  (flags & VGET_ASCII_ONLY)
+	{
+	    if (!isascii(c) || !isprint(c))
+	    {
+		bell(); continue;
+	    }
+	}
+
+	// size check
+	if(rt.iend+1 >= len)
+	{
+	    bell(); continue;
+	}
+
+	// prevent incomplete DBCS
+	if (c > 0x80 && num_in_buf() &&
+		len - rt.iend < 3)	// we need 3 for DBCS+NUL.
+	{
+	    drop_input();
+	    bell(); continue;
+	}
+
+	// callback: data
+	if (_vgetcbhandler(cb.data, &abort, c, &rt, instance))
+	    continue;
+
+	// size check again, due to data callback.
+	if(rt.iend+1 >= len)
+	{
+	    bell(); continue;
+	}
+
+	// add one character.
+	memmove(buf+rt.icurr+1, buf+rt.icurr, rt.iend-rt.icurr+1);
+	buf[rt.icurr++] = c;
+	rt.iend++;
+	dirty = 1;
     }
 
     assert(rt.iend >= 0 && rt.iend < len);

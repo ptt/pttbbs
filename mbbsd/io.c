@@ -713,7 +713,7 @@ getdata2vgetflag(int echo)
     else if (echo == NUMECHO)
 	echo = VGET_DIGITS;
     else if (echo == NOECHO)
-	echo = VGET_PASSWORD;
+	echo = VGETSET_PASSWORD;
     else
 	echo = VGET_DEFAULT;
 

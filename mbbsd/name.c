@@ -108,18 +108,10 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    return VGETCB_NEXT;
 	    break;
 
-	case KEY_BS:  /* backspace */
+	case KEY_BS:	/* backspace */
+	case KEY_UP:	/* history */
+	case KEY_DOWN:	/* history */
 	    nc_int->dirty = -1;
-	    break;
-
-	case KEY_HOME:  case Ctrl('A'):
-	case KEY_END:   case Ctrl('E'):
-	case KEY_LEFT:  case Ctrl('B'):
-	case KEY_RIGHT: case Ctrl('F'):
-	case KEY_DEL:   case Ctrl('D'):
-	case Ctrl('Y'):
-	case Ctrl('K'):
-	    return VGETCB_NEXT;
 	    break;
 
 	default:
@@ -158,14 +150,15 @@ namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
     VGET_CALLBACKS vcb = {
 	.peek = nc_cb_peek,
 	.data = NULL,
-	.post = NULL,
+	.change = NULL,
+	.redraw = NULL,
     };
 
     outs(prompt);
     clrtoeol();
     Vector_init(&nc_int.sublist, IDLEN+1);
     Vector_sublist(namelist, &nc_int.sublist, "");
-    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY, NULL, &vcb, &nc_int);
+    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, NULL, &vcb, &nc_int);
     Vector_delete(&nc_int.sublist);
 }
 
