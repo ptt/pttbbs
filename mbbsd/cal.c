@@ -187,6 +187,88 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
     return 0;
 }
 
+/* 給錢與贈與稅 */
+
+#ifndef EXP_NEW_TAX
+
+int
+give_tax(int money)
+{
+    int             i, tax = 0;
+    int      tax_bound[] = {1000000, 100000, 10000, 1000, 0};
+    double   tax_rate[] = {0.4, 0.3, 0.2, 0.1, 0.08};
+    for (i = 0; i <= 4; i++)
+	if (money > tax_bound[i]) {
+	    tax += (money - tax_bound[i]) * tax_rate[i];
+	    money -= (money - tax_bound[i]);
+	}
+    return (tax <= 0) ? 1 : tax;
+}
+
+#else // EXP_NEW_TAX
+
+int
+give_tax(int money)
+{
+    int tax = money * 0.1;
+    assert (money >= 0);
+    if (money % 10)
+	tax ++;
+    return (tax < 1) ? 1 : tax;
+}
+int
+cal_before_givetax(int taxed_money)
+{
+    return taxed_money / 9.0f * 10 + 1;
+}
+
+int
+cal_after_givetax(int money)
+{
+    return money - give_tax(money);
+}
+
+static int 
+give_money_vget_changecb(int key, VGET_RUNTIME *prt, void *instance)
+{
+    int  m1 = atoi(prt->buf), m2 = m1;
+    char c1 = ' ', c2 = ' ';
+    int is_before_tax = *(int*)instance;
+
+    if (is_before_tax)
+	m2 = cal_after_givetax(m1),  c1 = '>';
+    else
+	m1 = cal_before_givetax(m2), c2 = '>';
+
+    // adjust output
+    if (m1 <= 0 || m2 <= 0)
+	m1 = m2 = 0;
+
+    move(4, 0);
+    prints(" %c 你要付出 (稅前): %d\n", c1, m1);
+    prints(" %c 對方收到 (稅後): %d\n", c2, m2);
+    return VGETCB_NONE;
+}
+
+static int 
+give_money_vget_peekcb(int key, VGET_RUNTIME *prt, void *instance)
+{
+    int *p_is_before_tax = (int*) instance;
+    
+    // digits will be refreshed later.
+    if (key >= '0' && key <= '9')
+	return VGETCB_NONE;
+    if (key != KEY_TAB)
+	return VGETCB_NONE;
+
+    // TAB - toggle mode and update display
+    assert(p_is_before_tax);
+    *p_is_before_tax = !*p_is_before_tax;
+    give_money_vget_changecb(key, prt, instance);
+    return VGETCB_NEXT;
+}
+
+#endif
 
 int do_give_money(char *id, int uid, int money)
 {
@@ -253,15 +335,34 @@ give_money_ui(const char *userid)
 	return -1;
     }
 
-    if (!getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, NUMECHO) ||
-	((m = atoi(money_buf)) < 2))
-    {
-	vmsg("金額過少，交易取消!");
+    if ((uid = searchuser(id, id)) == 0) {
+	vmsg("查無此人!");
 	return -1;
     }
 
-    if ((uid = searchuser(id, id)) == 0) {
-	vmsg("查無此人!");
+    m = 0;
+    money_buf[0] = 0;
+#ifndef EXP_NEW_TAX
+    if (getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, NUMECHO))
+	m = atoi(money_buf);
+#else
+    outs("要給他多少錢呢? (可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
+    outs(" 請輸入金額: ");  // (3, 0)
+    {
+	int is_before_tax = 1;
+	const VGET_CALLBACKS cb = { 
+	    give_money_vget_peekcb, 
+	    NULL, 
+	    give_money_vget_changecb,
+	};
+	if (vgetstring(money_buf, 7, VGET_DIGITS, "", &cb, &is_before_tax))
+	    m = atoi(money_buf);
+	if (m > 0 && !is_before_tax)
+	    m = cal_before_givetax(m);
+    }
+#endif
+    if (m < 2) {
+	vmsg("金額過少，交易取消!");
 	return -1;
     }
 

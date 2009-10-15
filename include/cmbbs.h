@@ -22,7 +22,6 @@ extern void sethomefile(char *buf, const char *userid, const char *fname);
 // setuserfile
 
 /* money.c */
-extern int give_tax(int money);
 extern const char* money_level(int money);
 
 /* string.c */  

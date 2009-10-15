@@ -123,7 +123,6 @@ int haspostperm(const char *bname);
 const char * postperm_msg(const char *bname);
 
 /* cal */
-int give_tax(int money);
 const char* money_level(int money);
 int vice(int money, const char* item);
 int lockutmpmode(int unmode, int state);
