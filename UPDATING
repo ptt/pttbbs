@@ -23,6 +23,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r4938: [remove blog]
+自此版後我們將移除部落格 (blog) 的相關程式碼。
+若有此需要的站請自行維護。
+
 r4886: [dbcs]
 加了 repeat detection 的 DBCS 還不錯，所以正式脫離使用 detection 界面的日子
 有需要作全站轉換的人請自見拿 r4871 去改

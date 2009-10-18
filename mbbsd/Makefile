@@ -27,11 +27,6 @@ OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o vtuikit.o \
 # conditional configurations and optional modules
 #######################################################################
 
-.if !defined(WITHOUT_BLOG) 	&& defined(WITH_BLOG)
-CFLAGS+= -DBLOG
-LDLIBS:= ${LDLIBS} ${:!mysql_config --libs!}
-.endif
-
 .if !defined(WITHOUT_LOG_CRAWLER) && defined(WITH_LOG_CRAWLER)
 CFLAGS+= -DLOG_CRAWLER 
 .endif

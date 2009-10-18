@@ -48,9 +48,6 @@ void pressanykey_or_callangel(void);
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
-#ifdef BLOG
-void BlogMain(int);
-#endif
 
 /* assess */
 int inc_badpost(const char *, int num);

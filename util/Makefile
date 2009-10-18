@@ -9,7 +9,7 @@ BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS= 	util_var.o
 
-MBBSD_OBJS= 	record		var
+MBBSD_OBJS= 	var
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \

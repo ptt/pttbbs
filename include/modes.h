@@ -109,7 +109,7 @@
 #define TMPJACK         77
 #define JCEE		78
 #define REEDIT		79
-#define BLOGGING        80
+// #define BLOGGING        80	/* ¤w°±¥Î */
 #define CHESSWATCHING	81
 #define UMODE_GO        82
 #define DEBUGSLEEPING	83
