@@ -3331,8 +3331,8 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
-	prints("│ 匿名管理編號: %d (同一人號碼會一樣)",
-	       fhdr->multi.anon_uid + (int)currutmp->pid);
+	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
+	   (unsigned int)ifhdr->multi.anon_uid + (unsigned int)currutmp->pid);
     else {
 	int m = query_file_money(fhdr);
 
