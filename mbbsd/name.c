@@ -237,7 +237,7 @@ gnc_complete(char *data, int *start, int *end,
 typedef struct {
     int  start, end, nmemb, ptr;
     int  morelist;
-    int  clearbot;  // YEA if screen was dirty
+    int  page_dirty;  // YEA if screen was dirty and needs a clrtobot().
     gnc_comp_func    compar;
     gnc_perm_func    permission;
     gnc_getname_func getname;
@@ -250,9 +250,10 @@ gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
     char *data = prt->buf;
     int   ret  = VGETCB_NEXT;	// reject by default
     int   i;
-    gc_int->morelist = -1;
 
-    assert(prt->icurr+1 < prt->len);
+    assert(prt->icurr+1 < prt->len);	// verify size
+    assert(prt->icurr == prt->iend);	// verify cursor position
+    gc_int->morelist = -1;
     // try to add character
     data[prt->icurr]  = key;
     data[prt->icurr+1]= 0;
@@ -270,6 +271,8 @@ gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
     data[prt->icurr]= 0;
     return ret;
 }
+
+#define GNC_PAGE_START_Y    (2)
 
 static int
 gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
@@ -311,8 +314,8 @@ gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		return VGETCB_NEXT;
 
 	    // rendef list
-	    gc_int->clearbot = YEA;
-	    move(2, 0);
+	    gc_int->page_dirty = YEA;
+	    move(GNC_PAGE_START_Y, 0);
 	    clrtobot();
 	    printdash(COMPLETE_LIST_TITLE, 0);
 	    {
@@ -348,7 +351,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	.end   = nmemb-1,
 	.nmemb = nmemb,
 	.morelist = -1,
-	.clearbot = NA,
+	.page_dirty = NA,
 	.compar     = compar,
 	.permission = permission,
 	.getname    = getname,
@@ -365,6 +368,10 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
     // init vector
     ret = vgetstring(data, len, VGET_NO_NAV_EDIT, NULL, &vcb, &gc_int);
     outc('\n');
+    if (gc_int.page_dirty) {
+	move(GNC_PAGE_START_Y, 0);
+	clrtobot();
+    }
 
     // vgetstring() return string length, but namecomplete needs to return
     // the index of input string.
