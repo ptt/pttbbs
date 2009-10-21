@@ -970,7 +970,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 {
     // rt.iend points to NUL address, and
     // rt.icurr points to cursor.
-    int line, col;
+    int line, col, line_ansi, col_ansi;
     int abort = 0, dirty = 0;
     int c = 0;
     char ismsgline = 0;
@@ -1007,6 +1007,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	cb = *pcbs;
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
+    getyx_ansi(&line_ansi, &col_ansi);
 
     // XXX be compatible with traditional...
     if (line == b_lines - msg_occupied)
@@ -1034,6 +1035,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	    // print current buffer
 	    move(line, col);
+	    SOLVE_ANSI_CACHE();
 	    clrtoeol();
 	    SOLVE_ANSI_CACHE();
 
@@ -1046,7 +1048,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		outs(ANSI_RESET);
 
 	    // move to cursor position
-	    move(line, col+rt.icurr);
+	    move(line_ansi, col_ansi+rt.icurr);
 	} else {
 	    // to simulate the "clrtoeol" behavior...
 	    // XXX make this call only once? or not?

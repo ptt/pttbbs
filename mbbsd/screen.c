@@ -348,14 +348,14 @@ doupdate(void)
 	    }
 #endif // DBCSAWARE
 
-#if 0
-	    // disabled now, bugs: 
-	    // (1) input number (goto) in bbs list (search_num)
-	    // (2) some empty lines becomes weird (eg, b_config)
-	    //
-	    // more effort to determine ANSI smod
+// disable this if you encounter some bugs.
+// bug history:
+// (1) input number (goto) in bbs list (search_num) [solved: search_num merged to vget]
+// (2) some empty lines becomes weird (eg, b_config) [not seen anymore?]
+#if 1
 	    if (bp->smod > 0)
 	    {
+		// more effort to determine ANSI smod
 		int iesc;
 		for (iesc = bp->smod-1; iesc >= 0; iesc--)
 		{
