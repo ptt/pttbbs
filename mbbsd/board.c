@@ -316,13 +316,14 @@ b_config(void)
 		lreg   = bp->post_limit_regtime,
 		lbp    = bp->post_limit_badpost;
 
-	move(ytitle-1, 0); clrtobot();
+	move(ytitle-1, 0); 
+	clrtobot();
+
 	// outs(MSG_SEPERATOR); // deprecated by grayout
 	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
 	vbarf(" 《%s》看板設定", bp->brdname);
 
 	move(ytitle +2, 0);
-	clrtobot();
 
 	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
 	prints("     板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
@@ -332,7 +333,7 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_HIDE) ? 
-		ANSI_COLOR(1)"隱形":"公開");
+		ANSI_COLOR(1;31)"隱形":"公開");
 
 	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET 
 		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n", 
@@ -611,6 +612,17 @@ b_config(void)
 		    break;
 		}
 #endif
+		{
+		    char ans[2];
+		    move(b_lines-2, 0); clrtobot();
+		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_HIDE) ? 
+			    ANSI_COLOR(1;32) " +++ 確定要解除看板隱形嗎?" ANSI_RESET " [y/N]: ":
+			    ANSI_COLOR(1;31) " --- 確定要隱形看板嗎?" ANSI_RESET " [y/N]: ", 
+			    ans, sizeof(ans), LCECHO) < 1 ||
+			    ans[0] != 'y')
+			break;
+		}
+
 		if(bp->brdattr & BRD_HIDE)
 		{
 		    bp->brdattr &= ~BRD_HIDE;
@@ -622,6 +634,9 @@ b_config(void)
 		}
 		bp->perm_reload = now;
 		touched = 1;
+		vmsg((bp->brdattr & BRD_HIDE) ?
+			" 注意: 看板已隱形" :
+			" 注意: 看板已解除隱形");
 		break;
 
 	    case 'g':
