@@ -535,11 +535,7 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
     }
     move(line, 0); prints("  原先設定：%-30.30s (%s)", buf, info);
     snprintf(prompt, sizeof(prompt), 
-#ifdef USE_PFTERM
 	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：", 
-#else
-	    ">>%s：", 
-#endif
 	    desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);

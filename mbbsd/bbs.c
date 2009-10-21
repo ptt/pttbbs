@@ -545,9 +545,8 @@ readdoent(int num, fileheader_t * ent)
     } // if(!iscorpse)
     else {
 	// quick display
-#ifdef USE_PFTERM
+	SOLVE_ANSI_CACHE();
 	outs(ANSI_COLOR(1;30));
-#endif
 	prints("%7d    ", num);
 	prints("%-6.5s", ent->date);
 	prints("%-13.12s", ent->owner);
@@ -1262,11 +1261,7 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     if (!CheckPostRestriction(currbid))
     {
 	getdata(b_lines - 1, 0,	
-#ifdef USE_PFTERM
 		ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
-#else
-		"▲ 無法回應至看板。 "
-#endif
 		"改回應至 (M)作者信箱 (Q)取消？[Q] ",
 		genbuf, sizeof(genbuf), LCECHO);
 	switch (genbuf[0]) {
@@ -2721,12 +2716,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #else // !OLDRECOMMEND
     maxlength -= strlen(myid);
-# ifdef    USE_PFTERM
     sprintf(buf, "%s%s%s %s:", 
 	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
-# else  // !USE_PFTERM
-    sprintf(buf, "%s %s:", ctype[type], myid);
-# endif // !USE_PFTERM
 #endif // !OLDRECOMMEND
 
     move(b_lines, 0);
@@ -2739,11 +2730,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	char ans[2];
 	sprintf(buf+strlen(buf), 
-#ifdef USE_PFTERM
 		ANSI_REVERSE "%-*s" ANSI_RESET " 確定[y/N]:", 
-#else
-		"%-*s 確定[y/N]:", 
-#endif
 		maxlength, msg);
 	move(b_lines, 0);
 	clrtoeol();
