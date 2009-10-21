@@ -236,11 +236,11 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 
     if ((xfp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), xfp);
-	fprintf(tfp, "%s\n』 щ布嘿: %s\n\n", msg_seperator, inbuf);
+	fprintf(tfp, "%s\n』 щ布嘿: %s\n\n", msg_separator, inbuf);
 	fclose(xfp);
     }
     fprintf(tfp, "%s\n』 щ布いゎ: %s\n\n\n』 布匡肈ヘ磞瓃:\n\n",
-	    msg_seperator, Cdate(&closetime));
+	    msg_separator, Cdate(&closetime));
     fh->vtime = now;
 
     setbfile(buf, bname, vbuf->desc);
@@ -266,12 +266,12 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     unlink(b_control);
     free(counts);
 
-    fprintf(tfp, "%s\n』 ㄏノ某\n\n", msg_seperator);
+    fprintf(tfp, "%s\n』 ㄏノ某\n\n", msg_separator);
     setbfile(buf, bname, vbuf->comments);
     b_suckinfile(tfp, buf);
     unlink(buf);
 
-    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_seperator, *total);
+    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_separator, *total);
     fclose(tfp);
 
     setbfile(b_report, bname, "report");

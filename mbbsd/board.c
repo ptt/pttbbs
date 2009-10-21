@@ -319,7 +319,7 @@ b_config(void)
 	move(ytitle-1, 0); 
 	clrtobot();
 
-	// outs(MSG_SEPERATOR); // deprecated by grayout
+	// outs(MSG_SEPARATOR); // deprecated by grayout
 	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
 	vbarf(" ¡m%s¡n¬ÝªO³]©w", bp->brdname);
 

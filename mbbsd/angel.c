@@ -305,7 +305,7 @@ NoAngelFound(const char* msg){
     
     grayout(0, b_lines-3, GRAYOUT_DARK);
     move(b_lines-4, 0); clrtobot();
-    outs(msg_seperator);
+    outs(msg_separator);
     move(b_lines-2, 0);
     if (!msg)
 	msg = "你的小天使現在不在線上";

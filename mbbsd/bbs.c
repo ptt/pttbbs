@@ -1585,12 +1585,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		{
 		    int c = 0;
 
-		    fprintf(fp, MSG_SEPERATOR "\n");
+		    fprintf(fp, MSG_SEPARATOR "\n");
 		    fprintf(fp, "以下為被修改過的最新內容: ");
 		    fprintf(fp,
 			    " (%s)\n",
 			    Cdate_mdHM(&newmt));
-		    fprintf(fp, MSG_SEPERATOR "\n");
+		    fprintf(fp, MSG_SEPARATOR "\n");
 		    while ((c = fgetc(src)) >= 0)
 			fputc(c, fp);
 		    fclose(src);

@@ -438,11 +438,11 @@ t_chat(void)
     chatline = 2;
 
     move(STOP_LINE, 0);
-    outs(msg_seperator);
+    outs(msg_separator);
     move(STOP_LINE, 56);
     outs(" /h ¬d¸ß«ü¥O  /b Â÷¶} ");
     move(1, 0);
-    outs(msg_seperator);
+    outs(msg_separator);
     print_chatid(chatid);
     memset(inbuf, 0, sizeof(inbuf));
 
