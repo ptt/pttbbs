@@ -21,6 +21,7 @@ static char    * const withme_str[] = {
 #define P_INT 20		
 #define BOARDFRI  1
 
+#ifndef EXP_CCW_TALK
 #define TALK_MAXCOL (78)
 #define TALK_BUFLEN (TALK_MAXCOL+2)
 typedef struct twpic {
@@ -33,6 +34,7 @@ typedef struct talkwin_t {
     int sline,  eline;
     twpic_t *big_picture;
 }               talkwin_t;
+#endif // EXP_CCW_TALK
 
 typedef struct pickup_t {
     userinfo_t     *ui;
@@ -48,7 +50,9 @@ static char    * const fcolor[11] = {
     ANSI_COLOR(33), ANSI_COLOR(1;33), ANSI_COLOR(1;37), ANSI_COLOR(1;37),
     ANSI_COLOR(31), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
 };
+#ifndef EXP_CCW_TALK
 static char     save_page_requestor[40];
+#endif // EXP_CCW_TALK
 static char     page_requestor[40];
 
 static userinfo_t *uip;
@@ -1132,6 +1136,7 @@ t_display(void)
     return DONOTHING;
 }
 
+#ifndef EXP_CCW_TALK
 static void
 do_talk_nextline(talkwin_t * twin)
 {
@@ -1547,6 +1552,7 @@ do_talk(int fd)
     setutmpmode(XINFO);
     redrawwin();
 }
+#endif // EXP_CCW_TALK
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
@@ -1832,8 +1838,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	add_io(0, 0);
 
 	if (c == 'y') {
+#ifndef EXP_CCW_TALK
 	    snprintf(save_page_requestor, sizeof(save_page_requestor),
 		     "%s (%s)", uin->userid, uin->nickname);
+#endif // EXP_CCW_TALK
 	    switch (uin->sig) {
 	    case SIG_DARK:
 		main_dark(msgsock, uin);
@@ -1857,7 +1865,13 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		break;
 	    case SIG_TALK:
 	    default:
+#ifndef EXP_CCW_TALK
 		do_talk(msgsock);
+#else
+		ccw_talk(msgsock, currutmp->destuid);
+#endif
+		setutmpmode(XINFO);
+		break;
 	    }
 	} else {
 	    move(9, 9);
@@ -3331,7 +3345,9 @@ establish_talk_connection(const userinfo_t *uip)
     struct sockaddr_in sin;
 
     currutmp->msgcount = 0;
+#ifndef EXP_CCW_TALK
     strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
+#endif
     memset(page_requestor, 0, sizeof(page_requestor));
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = PF_INET;
@@ -3462,7 +3478,13 @@ talkreply(void)
 	    break;
 	case SIG_TALK:
 	default:
+#ifndef EXP_CCW_TALK
 	    do_talk(a);
+#else
+	    ccw_talk(a, currutmp->destuid);
+#endif
+	    setutmpmode(XINFO);
+	    break;
 	}
     else
 	close(a);

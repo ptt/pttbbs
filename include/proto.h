@@ -144,6 +144,8 @@ int card_99(void);
 
 /* chat */
 int t_chat(void);
+int ccw_talk(int fd, int destuid);	// common chat window: private talk
+int ccw_chat();				// common chat window: chatroom
 
 /* chc */
 void chc(int s, ChessGameMode mode);

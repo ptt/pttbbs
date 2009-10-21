@@ -1,24 +1,82 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define STOP_LINE (t_lines-3)
+// shared by chat and talk.
+// Common Chat Window (CCW) layout:
+// [header]
+// [header separate line]
+// [ccw] user: message\n [CCW_INIT_LINE]
+// [ccw] ...
+// [ccw] ->\n            [CCW_STOP_LINE]
+// [footer separate line][qhelp]
+// prompt -> [input here]
+// [footer]
+
+#define CCW_STOP_LINE	(t_lines-3)
+#define CCW_INIT_LINE	(2)
+
+///////////////////////////////////////////////////////////////////////////
+// CCW helpers
+
+static void
+ccw_prepare_newline(int *p_line)
+{
+    assert(p_line);
+    move(*p_line, 0);
+
+    if (*p_line < CCW_STOP_LINE - 1)
+    {
+	// simply append
+	(*p_line)++;
+    }
+    else 
+    {
+	// TODO after resize, we may need to scroll more than once.
+	// scroll screen buffer
+	region_scroll_up(CCW_INIT_LINE, CCW_STOP_LINE - CCW_INIT_LINE);
+	move(*p_line-1, 0);
+    }
+    clrtoeol();
+}
+
+static void
+ccw_clear_main_window(int *p_line)
+{
+    int i;
+    for (i = CCW_INIT_LINE; i < CCW_STOP_LINE; i++)
+    {
+	move(i, 0);
+	SOLVE_ANSI_CACHE();
+	clrtoeol();
+    }
+    if (p_line)
+	*p_line = CCW_INIT_LINE;
+}
+
+static void
+ccw_draw_separate_lines()
+{
+    move(CCW_INIT_LINE-1, 0);
+    vpad(t_columns-1, "─");
+    move(CCW_STOP_LINE, 0);
+    vpad(t_columns-1, "─");
+}
+
+///////////////////////////////////////////////////////////////////////////
+// CHAT specific
+
 static int      chatline;
 static FILE    *flog;
+
 static void
-printchatline(const char *str)
+chat_print_line(const char *str)
 {
-    move(chatline, 0);
     if (*str == '>' && !PERM_HIDE(currutmp))
 	return;
-    else if (chatline < STOP_LINE - 1)
-	chatline++;
-    else {
-	region_scroll_up(2, STOP_LINE - 2);
-	move(STOP_LINE - 2, 0);
-    }
+
+    ccw_prepare_newline(&chatline);
     outs(str);
-    outc('\n');
-    outs("→");
+    outs("\n→");
 
     if (flog)
 	fprintf(flog, "%s\n", str);
@@ -27,31 +85,28 @@ printchatline(const char *str)
 static void
 chat_clear(char *unused GCC_UNUSED)
 {
-    for (chatline = 2; chatline < STOP_LINE; chatline++) {
-	move(chatline, 0);
-	clrtoeol();
-    }
-    move(b_lines, 0);
-    clrtoeol();
+    ccw_clear_main_window(&chatline);
+
+    // render new prompt
     move(chatline = 2, 0);
     outs("→");
 }
 
 static void
-print_footer()
+chat_footer()
 {
     vs_footer("【談天室】",
-	    " (PgUp/PgDn)回顧聊天記錄 (Ctrl-Z)快速切換 (Ctrl-C)離開聊天室");
+	    " (PgUp/PgDn)回顧聊天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開聊天室");
 }
 
 static void
-print_chatid(const char *chatid)
+chat_prompt_footer(const char *myid)
 {
     move(b_lines - 1, 0);
     clrtobot();
-    outs(chatid);
+    outs(myid);
     outc(':');
-    print_footer();
+    chat_footer();
 }
 
 static int
@@ -93,7 +148,7 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid, size_t chati
 		break;
 	    case 'n':
 		strlcpy(chatid, bptr + 2, chatid_size);
-		print_chatid(chatid);
+		chat_prompt_footer(chatid);
 		break;
 	    case 'r':
 		strlcpy(chatroom, bptr + 2, sizeof(chatroom));
@@ -105,7 +160,7 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid, size_t chati
 		       chatroom, bptr + 2);
 	    }
 	} else
-	    printchatline(bptr);
+	    chat_print_line(bptr);
 
 	c -= len;
 	bptr += len;
@@ -125,14 +180,14 @@ chathelp(const char *cmd, const char *desc)
     char            buf[STRLEN];
 
     snprintf(buf, sizeof(buf), "  %-20s- %s", cmd, desc);
-    printchatline(buf);
+    chat_print_line(buf);
 }
 
 static void
 chat_help(char *arg)
 {
     if (strstr(arg, " op")) {
-	printchatline("談天室管理員專用指令");
+	chat_print_line("談天室管理員專用指令");
 	chathelp("[/f]lag [+-][ls]", "設定鎖定、秘密狀態");
 	chathelp("[/i]nvite <id>", "邀請 <id> 加入談天室");
 	chathelp("[/k]ick <id>", "將 <id> 踢出談天室");
@@ -168,7 +223,7 @@ chat_date(char *unused GCC_UNUSED)
 
     snprintf(genbuf, sizeof(genbuf),
 	     "◆ " BBSNAME "標準時間: %s", Cdate(&now));
-    printchatline(genbuf);
+    chat_print_line(genbuf);
 }
 
 static void
@@ -183,7 +238,7 @@ chat_pager(char *unused GCC_UNUSED)
 
     snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器:[%s]",
 	     msgs[currutmp->pager = (currutmp->pager + 1) % PAGER_MODES]);
-    printchatline(genbuf);
+    chat_print_line(genbuf);
 }
 
 static void
@@ -194,7 +249,7 @@ chat_query(char *arg)
     userec_t        xuser;
     char *strtok_pos;
 
-    printchatline("");
+    chat_print_line("");
     strtok_r(arg, str_space, &strtok_pos);
     if ((uid = strtok_r(NULL, str_space, &strtok_pos)) && (tuid = getuser(uid, &xuser))) {
 	char            buf[ANSILINELEN], *ptr;
@@ -204,13 +259,13 @@ chat_query(char *arg)
 		"%s(%s) " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，發表過 %d 篇文章",
 		 xuser.userid, xuser.nickname,
 		 xuser.numlogindays, xuser.numposts);
-	printchatline(buf);
+	chat_print_line(buf);
 
 	snprintf(buf, sizeof(buf),
 		 "最近(%s)從[%s]上站", 
 		 Cdate(xuser.lastseen ? &xuser.lastseen : &xuser.lastlogin),
 		(xuser.lasthost[0] ? xuser.lasthost : "(不詳)"));
-	printchatline(buf);
+	chat_print_line(buf);
 
 	sethomefile(buf, xuser.userid, fn_plans);
 	if ((fp = fopen(buf, "r"))) {
@@ -218,12 +273,12 @@ chat_query(char *arg)
 	    while (tuid++ < MAX_QUERYLINES && fgets(buf, sizeof(buf), fp)) {
 		if ((ptr = strchr(buf, '\n')))
 		    ptr[0] = '\0';
-		printchatline(buf);
+		chat_print_line(buf);
 	    }
 	    fclose(fp);
 	}
     } else
-	printchatline(err_uid);
+	chat_print_line(err_uid);
 }
 
 typedef struct chat_command_t {
@@ -328,7 +383,7 @@ _vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
 		VREFCUR cur = vcur_save();
 		add_io(0, 0);
 		za = ZA_Select();
-		print_footer();
+		chat_footer();
 		vcur_restore(cur);
 		add_io(p->cfd, 0);
 		if (za)
@@ -339,10 +394,8 @@ _vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
     return VGETCB_NONE;
 }
 
-static int      chatid_len = 10;
-
 int
-t_chat(void)
+ccw_chat(void)
 {
     static time4_t lastEnter = 0;
 
@@ -352,6 +405,8 @@ t_chat(void)
     char            fpath[PATHLEN];
     int             cfd;
     int             chatting = YEA;
+    const  int      chatid_len = 10;
+
     struct ChatBuf  chatbuf;
     ChatCbParam	    vgetparam = {0};
 
@@ -435,16 +490,13 @@ t_chat(void)
     strlcpy(currutmp->chatid, chatid, sizeof(currutmp->chatid));
 
     clear();
-    chatline = 2;
-
-    move(STOP_LINE, 0);
-    outs(msg_separator);
-    move(STOP_LINE, 56);
-    outs(" /h 查詢指令  /b 離開 ");
-    move(1, 0);
-    outs(msg_separator);
-    print_chatid(chatid);
+    ccw_draw_separate_lines();
+#define QHELP_STR " /h 查詢指令  /b 離開 "
+    move(CCW_STOP_LINE, (t_columns - sizeof(QHELP_STR))/2*2 );
+    outs(QHELP_STR);
+    chat_prompt_footer(chatid);
     memset(inbuf, 0, sizeof(inbuf));
+    chatline = CCW_INIT_LINE;
 
     setuserfile(fpath, "chat_XXXXXX");
     flog = fdopen(mkstemp(fpath), "w");
@@ -469,7 +521,7 @@ t_chat(void)
 	    vscr_restore(scr);
 	    add_io(cfd, 0);
 	}
-	print_chatid(chatid);
+	chat_prompt_footer(chatid);
 	move(b_lines-1, chatid_len);
 
 	// chatid_len = 10, quote(:) occupies 1, so 79-11=68
@@ -533,7 +585,7 @@ t_chat(void)
 	{
 	    if (!hasnewmail)
 	    {
-		printchatline("◆ 您有未讀的新信件。");
+		chat_print_line("◆ 您有未讀的新信件。");
 		hasnewmail = 1;
 	    }
 	} else {
@@ -560,5 +612,264 @@ t_chat(void)
 	}
 	unlink(fpath);
     }
+    return 0;
+}
+
+int
+t_chat(void)
+{
+    return ccw_chat();
+}
+
+///////////////////////////////////////////////////////////////////////////
+// TALK specific
+// private talk for only 2 user (not using chat server)
+
+typedef struct {
+    int  fd;	    // remote socket
+    int  next_line; // CCW location
+    int  abort;
+    FILE *log;	    // log file
+    char dest_userid[IDLEN+1];
+} TalkCtx;
+
+static void
+talk_footer()
+{
+    vs_footer("【聊天】", " (/b)結束聊天 (/c)清除畫面\t(Ctrl-C)離開 ");
+}
+
+static ssize_t
+talk_send(int fd, const char *msg)
+{
+    // protocol: [len][msg]
+    char len = strlen(msg);
+
+    if (!len) return 0;
+    assert(len >= 0);
+
+    if (towrite(fd, &len, 1) != 1)
+	return -1;
+    if (towrite(fd, msg, len)!= len)
+	return -1;
+    return len;
+}
+
+static ssize_t 
+talk_recv(int fd, char *buf, size_t szbuf)
+{
+    char len = 0;
+    buf[0] = 0;
+    if (toread(fd, &len, 1) != 1)
+	return -1;
+    if (toread(fd, buf, len)!= len)
+	return -1;
+    assert(len >= 0 && len < szbuf);
+    buf[(size_t)len] = 0;
+    return len;
+}
+
+static void
+talk_print_line(int *p_next_line, const char *uid, const char *buf)
+{
+    ccw_prepare_newline(p_next_line);
+    if (strcmp(uid, cuser.userid) != 0)
+	outs(ANSI_COLOR(1));
+    prints("%s: %s" ANSI_RESET "\n", uid, buf);
+    // add prompt
+    outs("→");
+} 
+
+static void
+talk_add_line(TalkCtx *ctx, const char* uid, const char *buf)
+{
+    int is_self = (strcmp(uid, cuser.userid) == 0);
+
+    talk_print_line(&ctx->next_line, uid, buf);
+    if (!ctx->log) return;
+
+    fprintf(ctx->log, "%s%s: %s%s\n",
+	is_self ? "" : ANSI_COLOR(1),
+	uid,
+	buf,
+	is_self ? "" : ANSI_RESET);
+}
+
+static void
+talk_clear(TalkCtx *ctx)
+{
+    ccw_clear_main_window(&ctx->next_line);
+
+    clear();
+
+    // print header
+    prints(ANSI_COLOR(1;37;46) " 【聊天】 " ANSI_COLOR(45) " %-*s" ANSI_RESET,
+	    t_columns - 12, ctx->dest_userid);
+    // snprintf(genbuf, sizeof(genbuf), "與 %s 聊天", ctx.dest_userid);
+    // vs_hdr(genbuf);
+   
+    ccw_draw_separate_lines();
+    talk_footer();
+
+    // render new prompt
+    move(ctx->next_line, 0);
+    outs("→");
+}
+
+static int
+_talk_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
+{
+    TalkCtx *p = (TalkCtx*) instance;
+    assert(p);
+
+    switch (key) {
+	case I_OTHERDATA: // incoming
+	    {
+		char buf[STRLEN];
+		if (talk_recv(p->fd, buf, sizeof(buf)) < 1)
+		{
+		    // talk_send(p->fd, "/b"); // try to close it if still OK...
+		    p->abort = YEA;
+		    return VGETCB_ABORT;
+		}
+		// process commands
+		if (strcasecmp(buf, "/b") == 0)
+		{
+		    p->abort = YEA;
+		    return VGETCB_ABORT;
+		}
+		// received something, let's print it.
+		talk_add_line(p, p->dest_userid, buf);
+		return VGETCB_NEXT;
+	    }
+
+	case Ctrl('C'):
+	    {
+		VREFSCR scr = vscr_save();
+		add_io(0, 0);
+		if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
+		    p->abort = YEA;
+		vscr_restore(scr);
+		add_io(p->fd, 0);
+		talk_footer();
+	    }
+	    // notify dest user
+	    if (p->abort)
+		talk_send(p->fd, "/b");
+	    return VGETCB_ABORT;
+    }
+    return VGETCB_NONE;
+}
+
+int
+ccw_talk(int fd, int destuid)
+{
+    char	inbuf[STRLEN]="", genbuf[PATHLEN], fpath[PATHLEN];
+    const int   INBUF_MAXLEN = STRLEN - IDLEN - 5;
+    const char	*chatid = cuser.userid;
+    VGET_CALLBACKS vge = { _talk_vgetcb_peek };
+    TalkCtx	ctx = {
+	.fd	    = fd,
+	.abort	    = 0,
+	.next_line  = CCW_INIT_LINE,
+    };
+
+    STATINC(STAT_DOTALK);
+    setutmpmode(TALK);
+
+    // get dest user id
+    assert(getuserid(destuid));
+    strlcpy(ctx.dest_userid, getuserid(destuid), sizeof(ctx.dest_userid));
+    assert(ctx.dest_userid[0]);
+
+    // create log file
+    setuserfile(fpath, "talk_XXXXXX");
+    ctx.log = fdopen(mkstemp(fpath), "w");
+    assert(ctx.log);
+    fprintf(ctx.log, "[%s] 與 %s 聊天:\n", Cdate_mdHM(&now), ctx.dest_userid);
+
+    // initialize screen
+    talk_clear(&ctx);
+
+    // entering event loop...
+    add_io(fd, 0);
+
+    while (!ctx.abort) 
+    {
+	// print prompt
+	talk_footer();	// may be destroyed by short message / resize
+	move(b_lines-1, 0); clrtoeol();
+	prints("%s: ", chatid);	// the extra stuff must fit INBUF_MAXLEN
+	vgetstring(inbuf, INBUF_MAXLEN, VGET_TRANSPARENT, "", &vge, &ctx);
+
+	// quick check for end flag or exit command.
+	if (ctx.abort)
+	    break;
+
+	// quick continue for empty input
+	trim(inbuf);
+	if (!*inbuf)
+	    continue;
+
+	// process commands
+	if (strcasecmp(inbuf, "/h") == 0)
+	{
+	    talk_print_line(&ctx.next_line, "[說明]", "可輸入 /c 清除畫面或 /b 離開。");
+	    continue;
+	}
+	if (strcasecmp(inbuf, "/b") == 0)
+	{
+	    talk_send(ctx.fd, "/b"); // notify dest user if he's still online
+	    ctx.abort = 1;
+	    break;
+	}
+	if (strcasecmp(inbuf, "/c") == 0)
+	{
+	    talk_clear(&ctx);
+	    continue;
+	}
+
+	// accept this data
+	talk_add_line(&ctx, cuser.userid, inbuf);
+
+	// send message to server if possible.
+	ctx.abort = (talk_send(fd, inbuf) <= 0);
+    }
+
+    // clean network handle
+    add_io(0, 0);
+    close(fd);
+
+    // process log
+    if (ctx.log) {
+	char ans[3];
+
+	// flush
+	fclose(ctx.log);
+	ctx.log = NULL;
+
+	more(fpath, NA);
+
+	// force user decide how to deal with the log
+	while (1) {
+	    getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M)? [c/m]: ",
+		    ans, sizeof(ans), LCECHO);
+	    if (ans[0] == 'c' || ans[0] == 'm')
+		break;
+	    move(b_lines-2, 0);
+	    prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
+		    (int)((now % 7)+1));
+	    if (ans[0] == 0) outs("為避免誤按所以只 ENTER 是不行的。");
+	}
+
+	if (*ans == 'm') {
+	    snprintf(genbuf, sizeof(genbuf), "對話記錄 (%s)", ctx.dest_userid);
+	    if (mail_log2id(cuser.userid, genbuf, fpath, "[備.忘.錄]", 0, 1) < 0)
+		vmsg("儲存失敗。");
+	}
+	unlink(fpath);
+    }
+
+    // restore screen and session
     return 0;
 }
