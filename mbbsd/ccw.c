@@ -769,45 +769,48 @@ ccw_chat_recv(CCW_CTX *ctx)
     return 0;
 }
 
+static void
+ccw_chat_anti_flood(CCW_CTX *ctx)
+{
+#ifdef EXP_ANTIFLOOD
+    // prevent flooding */
+    static time4_t lasttime = 0;
+    static int flood = 0;
+
+    syncnow();
+    if (now - lasttime < 3 )
+    {
+	// 3 秒內洗半面是不行的 ((25-5)/2)
+	if( ++flood > 10 )
+	{
+	    // flush all input!
+	    unsigned char garbage[STRLEN];
+	    drop_input();
+	    while (wait_input(1, 0))
+	    {
+		if (num_in_buf())
+		    drop_input();
+		else
+		    tty_read(garbage, sizeof(garbage));
+	    }
+	    drop_input();
+	    vmsg("請勿大量剪貼或造成洗板面的效果。");
+
+	    // log?
+	    sleep(2);
+	}
+    } else {
+	lasttime = now;
+	flood = 0;
+    }
+#endif // anti-flood
+}
+
 static int
 ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
-#ifdef EXP_ANTIFLOOD
-    {
-	// prevent flooding */
-	static time4_t lasttime = 0;
-	static int flood = 0;
-
-	syncnow();
-	if (now - lasttime < 3 )
-	{
-	    // 3 秒內洗半面是不行的 ((25-5)/2)
-	    if( ++flood > 10 )
-	    {
-		// flush all input!
-		unsigned char garbage[STRLEN];
-		drop_input();
-		while (wait_input(1, 0))
-		{
-		    if (num_in_buf())
-			drop_input();
-		    else
-			tty_read(garbage, sizeof(garbage));
-		}
-		drop_input();
-		vmsg("請勿大量剪貼或造成洗板面的效果。");
-		// log?
-		sleep(2);
-		return 1;
-	    }
-	} else {
-	    lasttime = now;
-	    flood = 0;
-	}
-    }
-#endif // anti-flood
-
     ccw_chat_check_newmail(ctx);
+    ccw_chat_anti_flood(ctx);
 
     if (buf[0] != '/') return 0;
     buf ++;
