@@ -77,6 +77,9 @@
 #define SAY(usr)      (usr->uflag & PERM_SAY)
 /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 
+#define CHATID_LEN  (8)
+#define TOPIC_LEN   (48)
+
 
 /* ----------------------------------------------------- */
 /* ChatRoom data structure                               */
@@ -100,7 +103,7 @@ struct ChatUser
 				   * 0 for bbs only client */
     time4_t uptime;               /* Thor: unused */
     char userid[IDLEN + 1];       /* real userid */
-    char chatid[9];               /* chat id */
+    char chatid[CHATID_LEN + 1];  /* chat id */
     char lasthost[30];            /* host address */
     char ibuf[80];                /* buffer for non-blocking receiving */
     int isize;                    /* current size of ibuf */
@@ -110,8 +113,8 @@ struct ChatUser
 struct ChatRoom
 {
     struct ChatRoom *next, *prev;
-    char name[IDLEN];
-    char topic[48];               /* Let the room op to define room topic */
+    char name[IDLEN + 1];
+    char topic[TOPIC_LEN + 1];    /* Let the room op to define room topic */
     int rflag;                    /* ROOM_LOCKED, ROOM_SECRET, ROOM_OPENTOPIC */
     int occupants;                /* number of users in room */
     UserList *invite;
@@ -153,6 +156,21 @@ static char msg_not_here[] = "¡» [%s] ¤£¦b³o¶¡²á¤Ñ«Ç";
 
 #undef cuser
 typedef struct userec_t ACCT;
+
+/* ----------------------------------------------------- */
+/* string utilities					 */
+/* ----------------------------------------------------- */
+void 
+chat_safe_trim(char *s, int size)
+{
+    int len;
+    if (!s || !*s)
+	return;
+    len = strlen(s);
+    if (len >= size)
+	s[size-1] = 0;
+    DBCS_safe_trim(s);
+}
 
 /* ----------------------------------------------------- */
 /* acct_load for check acct                              */
@@ -766,6 +784,7 @@ chat_topic(ChatUser *cu, char *msg)
     assert(room);
     topic = room->topic;
     strlcpy(topic, msg, sizeof(room->topic));
+    DBCS_safe_trim(topic);
 
     if (cu->clitype)
 	send_to_room(room, topic, 0, MSG_TOPIC);
@@ -793,11 +812,12 @@ chat_version(ChatUser *cu, char *msg)
 static void
 chat_nick(ChatUser *cu, char *msg)
 {
-    char *chatid, *str;
+    char *chatid;
     ChatUser *xuser;
 
     chatid = nextword(&msg);
-    chatid[8] = '\0';
+    chat_safe_trim(chatid, sizeof(cu->chatid));
+
     if (!valid_chatid(chatid))
     {
 	send_to_user(cu, "¡° ³o­Ó²á¤Ñ¥N¸¹¬O¤£¥¿½Tªº", 0, MSG_MESSAGE);
@@ -811,14 +831,11 @@ chat_nick(ChatUser *cu, char *msg)
 	return;
     }
 
-    str = cu->chatid;
-
-    snprintf(chatbuf, sizeof(chatbuf), "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° [1;33m%s[m", str, chatid);
+    snprintf(chatbuf, sizeof(chatbuf), "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° [1;33m%s[m", cu->chatid, chatid);
     if (!CLOAK(cu))               /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 
-    strcpy(str, chatid);
-
+    strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
     user_changed(cu);
 
     if (cu->clitype)
@@ -1231,6 +1248,10 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
     int create;
 
     create = 0;
+
+    // truncate names
+    chat_safe_trim(rname, sizeof(room->name));
+
     room = croom_by_roomid(rname);
     if (room == NULL)
     {
@@ -1248,7 +1269,7 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
 	}
 
 	memset(room, 0, sizeof(ChatRoom));
-	strlcpy(room->name, rname, IDLEN);
+	strlcpy(room->name, rname, sizeof(room->name));
 	strcpy(room->topic, "³o¬O¤@­Ó·s¤Ñ¦a");
 
 	snprintf(chatbuf, sizeof(chatbuf), "+ %s 1 0 %s", room->name, room->topic);
@@ -1404,6 +1425,7 @@ login_user(ChatUser *cu, char *msg)
     userid = nextword(&msg);
     chatid = nextword(&msg);
 
+    chat_safe_trim(chatid, sizeof(cu->chatid));
 
 #ifdef  DEBUG
     logit("ENTER", userid);
@@ -1513,9 +1535,9 @@ login_user(ChatUser *cu, char *msg)
     if (!getpeername(cu->sock, (struct sockaddr *) & from, &fromlen))
     {
 	if ((hp = gethostbyaddr((char *) &from.sin_addr, sizeof(struct in_addr), from.sin_family)))
-	    strcpy(cu->lasthost, hp->h_name);
+	    strlcpy(cu->lasthost, hp->h_name, sizeof(cu->lasthost));
 	else
-	    strcpy(cu->lasthost, (char *) inet_ntoa(from.sin_addr));
+	    strlcpy(cu->lasthost, (char *) inet_ntoa(from.sin_addr), sizeof(cu->lasthost));
     }
     else
 	strcpy(cu->lasthost, "[¥~¤ÓªÅ]");
