@@ -84,6 +84,16 @@ const char * const str_permboard[] = {
     "沒想到",
 };
 
+/* modes.h */
+const char * const str_pager_modes[PAGER_MODES] = 
+{
+    "關閉",	// PAGER_OFF
+    "打開",	// PAGER_ON
+    "拔掉",	// PAGER_DISABLE
+    "防水",	// PAGER_ANTIWB
+    "好友",	// PAGER_FRIENDONLY
+};
+
 int             usernum;
 int             currmode = 0;
 int             currsrmode = 0;

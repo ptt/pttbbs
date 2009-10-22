@@ -269,7 +269,6 @@ show_status(void)
     int i;
     struct tm      ptime;
     char           *myweek = "天一二三四五六";
-    const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
 
     localtime4_r(&now, &ptime);
     i = ptime.tm_wday << 1;
@@ -283,7 +282,7 @@ show_status(void)
 	  ptime.tm_hour, ptime.tm_min, currutmp->birth ?
 	  "生日要請客唷" : SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
-	  msgs[currutmp->pager]);
+	  str_pager_modes[currutmp->pager % PAGER_MODES]);
 }
 
 /*

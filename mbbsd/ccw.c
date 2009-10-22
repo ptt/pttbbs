@@ -24,7 +24,7 @@
 // [ccw] user: message\n [CCW_INIT_LINE]
 // [ccw] ...
 // [ccw] ->\n            [CCW_STOP_LINE]
-// [footer separate line][sep_help_msg]
+// [footer separate line][sep_msg]
 // prompt -> [input here]
 // [footer]
 // --------------------------------------------------------------------------
@@ -41,21 +41,28 @@
 ///////////////////////////////////////////////////////////////////////////
 // Data Structure
 typedef struct CCW_CTX {
-    int  line;	    // position of next line to append data
+    // session
     int  abort;	    // indicate session complete
-    int  abort_vget;// temporary abort from input
+    void *arg;	    // private argument
+
+    // display
+    int  line;	    // position of next line to append data
     int  reset_scr; // need to redraw everything
-    int  local_echo;// should we echo local input?
+    char *sep_msg;  // quick help message on separators
+
+    // input (vget)
+    int		abort_vget;	// temporary abort from input
+    const int	MAX_INPUT_LEN;	// max vget length, decided at init
+
+    // logging
     FILE *log;	    // log file handle
     char *log_fpath;// path of log file
-    void *arg;	    // private argument
-    char *sep_help_msg;	// quick help message on separators
 
-    int   fd;	    // remote connection
+    // network and remote
+    int  local_echo;// should we echo local input?
+    int  fd;	    // remote connection
     char *remote_id;// remote user id
     char *local_id; // local user id
-
-    const int	    max_input_len;
 
     // layout renderers
     void (*header)	(struct CCW_CTX *);
@@ -125,10 +132,10 @@ ccw_separators(CCW_CTX *ctx)
     vpad(t_columns-2, "─");
     outc('\n');
 
-    i = ctx->sep_help_msg ? strlen(ctx->sep_help_msg) : 0;
+    i = ctx->sep_msg ? strlen(ctx->sep_msg) : 0;
     move(CCW_STOP_LINE, 0);
     vpad(t_columns-2-i, "─");
-    if (i) outs(ctx->sep_help_msg);
+    if (i) outs(ctx->sep_msg);
     outc('\n');
 }
 
@@ -300,8 +307,8 @@ ccw_process(CCW_CTX *ctx)
     char inbuf[STRLEN];
     VGET_CALLBACKS vgetcb = { ccw_vgetcb_peek };
 
-    assert( ctx->max_input_len > 2 &&
-	    ctx->max_input_len <= CCW_MAX_INPUT_LEN);
+    assert( ctx->MAX_INPUT_LEN > 2 &&
+	    ctx->MAX_INPUT_LEN <= CCW_MAX_INPUT_LEN);
     ccw_reset_scr(ctx);
 
 #ifdef DEBUG
@@ -325,7 +332,7 @@ ccw_process(CCW_CTX *ctx)
 
 	// get input
 	ctx->abort_vget = 0;
-	vgetstring(inbuf, ctx->max_input_len, VGET_TRANSPARENT, "", 
+	vgetstring(inbuf, ctx->MAX_INPUT_LEN, VGET_TRANSPARENT, "", 
 		&vgetcb, ctx);
 
 	// quick check for end flag or exit command.
@@ -572,10 +579,10 @@ ccw_talk(int fd, int destuid)
 	.log	       = NULL,
 	.log_fpath     = fpath,
 	.local_echo    = YEA,
-	.max_input_len = STRLEN - IDLEN - 5,	// 5 for ": " and more
+	.MAX_INPUT_LEN = STRLEN - IDLEN - 5,	// 5 for ": " and more
 	.remote_id     = remote_id,
 	.local_id      = local_id,
-	.sep_help_msg  = " /b 離開  /c 清除畫面 ",
+	.sep_msg       = " /b 離開  /c 清除畫面 ",
 
 	.header	    = ccw_talk_header,
 	.footer	    = ccw_talk_footer,
@@ -913,12 +920,10 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     if (ccw_partial_match(buf, "pager"))
     {
 	char genbuf[STRLEN];
-	char           *msgs[PAGER_MODES] = {
-	    /* Ref: please match PAGER* in modes.h */
-	    "關閉", "打開", "拔掉", "防水", "好友"
-	};
-	snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器:[%s]",
-		msgs[currutmp->pager = (currutmp->pager + 1) % PAGER_MODES]);
+	currutmp->pager ++;
+	currutmp->pager %= PAGER_MODES;
+	snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器已設為: [%s]",
+		str_pager_modes[currutmp->pager]);
 	ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
 	return 1;
     }
@@ -1037,11 +1042,11 @@ ccw_chat(int fd)
 	.log	       = NULL,
 	.log_fpath     = fpath,
 	.local_echo    = NA,
-	.max_input_len = STRLEN - CHAT_ID_LEN - 3, // 3 for ": "
+	.MAX_INPUT_LEN = STRLEN - CHAT_ID_LEN - 3, // 3 for ": "
 	.remote_id     = roomid,
 	.local_id      = chatid,
 	.arg	       = &ext,
-	.sep_help_msg  = " /h 查詢指令  /b 離開 ",
+	.sep_msg       = " /h 查詢指令  /b 離開 ",
 
 	.header	    = ccw_chat_header,
 	.footer	    = ccw_chat_footer,
@@ -1059,7 +1064,7 @@ ccw_chat(int fd)
 	const char *err = "無法使用此代號";
 	char cmd[200];
 
-	getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱：", chatid, sizeof(chatid), DOECHO);
+	getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱: ", chatid, sizeof(chatid), DOECHO);
 	if(!chatid[0])
 	    strlcpy(chatid, cuser.userid, sizeof(chatid));
 
