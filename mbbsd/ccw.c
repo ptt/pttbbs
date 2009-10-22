@@ -435,9 +435,9 @@ ccw_talk_header(CCW_CTX *ctx)
 static void
 ccw_talk_footer(CCW_CTX *ctx)
 {
-    vs_footer("【聊天】", " (" 
-	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE ")結束聊天 (" 
-	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR ")清除畫面"
+    vs_footer(" 【聊天】 ", " ( " 
+	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE   " )結束聊天 ( " 
+	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " )清除畫面"
 	    "\t(Ctrl-C)離開 ");
 }
 
@@ -685,7 +685,7 @@ ccw_chat_footer(CCW_CTX *ctx)
 
     // draw real footer
     vs_footer("【談天室】",
-	    " (PgUp/PgDn)回顧聊天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開聊天室");
+	    " (PgUp/PgDn)回顧談天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開談天室");
 }
 
 static void
@@ -824,7 +824,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 	    "[/o]p <id>", "將 Op 的權力轉移給 <id>",
 	    "[/t]opic <text>", "換個話題",
 	    "[/w]all", "廣播 (站長專用)",
-	    " /ban <userid>", "拒絕 <userid> 再次進入此聊天室 (加入黑名單)",
+	    " /ban <userid>", "拒絕 <userid> 再次進入此談天室 (加入黑名單)",
 	    " /unban <userid>", "把 <userid> 移出黑名單",
 	    NULL,
 	}, *hlp[] = {
@@ -929,7 +929,7 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
 		VREFSCR scr = vscr_save();
 		add_io(0, 0);
 
-		if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
+		if (vans("確定要中止談天嗎? [y/N]: ") == 'y')
 		    ctx->abort = YEA;
 
 		add_io(ctx->fd, 0);
@@ -1026,7 +1026,7 @@ ccw_chat(int fd)
 	const char *err = "無法使用此代號";
 	char cmd[200];
 
-	getdata(b_lines - 1, 0, "請輸入想使用的聊天暱稱：", chatid, sizeof(chatid), DOECHO);
+	getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱：", chatid, sizeof(chatid), DOECHO);
 	if(!chatid[0])
 	    strlcpy(chatid, cuser.userid, sizeof(chatid));
 
@@ -1049,7 +1049,7 @@ ccw_chat(int fd)
 	else if (!strcmp(cmd, CHAT_LOGIN_INVALID))
 	    err = "這個代號是錯誤的";
 	else if (!strcmp(cmd, CHAT_LOGIN_BOGUS))
-	    err = "請勿派遣分身進入聊天室 !!";
+	    err = "請勿派遣分身進入談天室 !!";
 
 	move(b_lines - 2, 0);
 	outs(err);
@@ -1066,7 +1066,7 @@ ccw_chat(int fd)
     setuserfile(fpath, "chat_XXXXXX");
     ctx.log = fdopen(mkstemp(fpath), "w");
     assert(ctx.log);
-    fprintf(ctx.log, "[%s] 進入聊天室:\n", Cdatelite(&now));
+    fprintf(ctx.log, "[%s] 進入談天室:\n", Cdatelite(&now));
 
     ccw_process(&ctx);
 
