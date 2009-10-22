@@ -31,6 +31,9 @@
 
 // TODO
 // 1. 統一 talk/chat 的中文名稱？ (eg, 現狀=聊天/談天室， maybe 交談/聊天室 ?)
+// 2. we may move anti-flood and other static variables into context...
+// 3. TAB complete...
+// 4. add F1 for help?
 
 #define CCW_MAX_INPUT_LEN   (STRLEN)
 #define CCW_INIT_LINE       (2)
@@ -545,8 +548,8 @@ ccw_talk_peek_key(CCW_CTX *ctx, int key)
                 }
                 // received something, let's print it.
                 ccw_add_line(ctx, buf, CCW_REMOTE);
-                return 1;
             }
+            return 1;
 
         case Ctrl('C'):
             {
@@ -760,48 +763,57 @@ ccw_chat_recv(CCW_CTX *ctx)
     char *bptr;
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
 
-    // ext->buf may contain up to ext->buf_remains bytes of data.
+    // ext->buf may already contain up to ext->buf_remains bytes of data.
     // xchatd protocol: msg NUL /command NUL ...
 
     len = sizeof(ext->buf) - ext->buf_remains - 1;
     if ((c = recv(ctx->fd, ext->buf + ext->buf_remains, len, 0)) <= 0)
         return -1;
-    c += ext->buf_remains;
 
+    c += ext->buf_remains;
     bptr = ext->buf;
+
     while (c > 0) {
         len = strlen(bptr) + 1;
-        if (len > c && (unsigned)len < (sizeof(ext->buf)/ 2) )
+        if (len > c && (size_t)len < (sizeof(ext->buf)/ 2) )
             break;
 
-        if (*bptr == '/') {
-            switch (bptr[1]) {
+        if (*bptr != '/') 
+        {
+            // received some data, let's print it.
+            if (*bptr != '>' || PERM_HIDE(currutmp))
+                ccw_add_line(ctx, bptr, CCW_REMOTE);
+
+        } else switch (bptr[1]) {
+
             case 'c':
                 ccw_reset_scr(ctx);
                 break;
+
             case 'n':
                 strlcpy(ctx->local_id, bptr+2, CHAT_ID_LEN+1);
                 DBCS_safe_trim(ctx->local_id);
                 ccw_prompt(ctx);
                 break;
+
             case 'r':
                 strlcpy(ctx->remote_id, bptr+2, CHAT_ROOM_LEN+1);
                 DBCS_safe_trim(ctx->remote_id);
                 ccw_header(ctx);
                 break;
-            case 't':
-                {
-                    ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
-                    strlcpy(ext->topic, bptr+2, CHAT_TOPIC_LEN+1);
-                    DBCS_safe_trim(ext->topic);
-                    ccw_header(ctx);
-                }
 
-            }
-        } else {
-            // received something, let's print it.
-            if (*bptr != '>' || PERM_HIDE(currutmp))
-                ccw_add_line(ctx, bptr, CCW_REMOTE);
+            case 't':
+                strlcpy(ext->topic, bptr+2, CHAT_TOPIC_LEN+1);
+                DBCS_safe_trim(ext->topic);
+                ccw_header(ctx);
+                break;
+
+            default:
+                // unknown command... ignore.
+#ifdef DEBUG
+                assert(!"unknown xchatd response.");
+#endif
+                break;
         }
 
         c -= len;
@@ -864,7 +876,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 
     if (ccw_partial_match(buf, "help"))
     {
-        static const char *hlp_op[] = {
+        static const char * const hlp_op[] = {
             "[/f]lag [+-][ls]", "設定鎖定、秘密狀態",
             "[/i]nvite <id>", "邀請 <id> 加入談天室",
             "[/k]ick <id>", "將 <id> 踢出談天室",
@@ -874,7 +886,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
             " /ban <userid>", "拒絕 <userid> 再次進入此談天室 (加入黑名單)",
             " /unban <userid>", "把 <userid> 移出黑名單",
             NULL,
-        }, *hlp[] = {
+        }, * const hlp[] = {
             " /help op", "談天室管理員專用指令",
             "[//]help", "MUD-like 社交動詞",
             "[/a]ct <msg>", "做一個動作",
@@ -893,7 +905,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
             NULL,
         };
 
-        const char **p = hlp;
+        const char * const *p = hlp;
         char msg[STRLEN];
 
         if (strcasestr(buf, " op"))
@@ -958,16 +970,14 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
 {
     switch (key) {
         case I_OTHERDATA: // incoming
+            if (ccw_chat_recv(ctx) == -1)
             {
-                if (ccw_chat_recv(ctx) == -1)
-                {
-                    ccw_chat_send_bye(ctx);
-                    ctx->abort = YEA;
-                    return 1;
-                }
-                ccw_chat_check_newmail(ctx);
+                ccw_chat_send_bye(ctx);
+                ctx->abort = YEA;
                 return 1;
             }
+            ccw_chat_check_newmail(ctx);
+            return 1;
 
         case Ctrl('C'):
             {
@@ -1026,8 +1036,8 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
                 vcur_restore(cur);
                 if (za)
                     ctx->abort_vget = 1;
-                return 1;
             }
+            return 1;
     }
     return 0;
 }
@@ -1127,4 +1137,5 @@ ccw_chat(int fd)
     return 0;
 }
 
+/////////////////////////////////////////////////////////////////////////////
 // vim:sw=4:ts=8:et
