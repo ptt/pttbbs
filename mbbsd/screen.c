@@ -814,9 +814,7 @@ void scr_dump(screen_backup_t *old)
 
     old->col = t_columns;
     old->row = t_lines;
-    // FIXME unfortunately, scrolling does not work...
-    // - example: chat, page_up, down, left (back)
-    // old->scroll = scrollcnt;
+    old->roll = roll;
     getyx(&old->y, &old->x);
 
     for(i = 0; i < t_lines; i++) {
@@ -838,10 +836,8 @@ void scr_restore(const screen_backup_t *old)
     screenline_t* bp = big_picture;
     const int len = MIN(old->row, t_lines);
 
-    // FIXME unfortunately, scrolling does not work...
-    // - example: chat, page_up, down, left (back)
-    // scrollcnt = old->scroll;
-    // docls = YEA;
+    // XXX simple step to solve scrolling issue...
+    roll = old->roll;
 
     for(i = 0; i < len; i++) {
 	/* restore header */

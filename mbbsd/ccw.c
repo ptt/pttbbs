@@ -509,11 +509,14 @@ ccw_talk_peek_key(CCW_CTX *ctx, int key)
 	    {
 		VREFSCR scr = vscr_save();
 		add_io(0, 0);
+
 		if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
 		    ctx->abort = YEA;
-		vscr_restore(scr);
+
 		add_io(ctx->fd, 0);
-		ccw_footer(ctx);
+		vscr_restore(scr);
+
+		// ccw_footer(ctx);
 	    }
 	    // notify remote user
 	    if (ctx->abort)
@@ -673,7 +676,9 @@ ccw_chat_footer(CCW_CTX *ctx)
 	// process ZA
 	VREFSCR scr = vscr_save();
 	add_io(0, 0);
+
 	ZA_Enter();
+
 	add_io(ctx->fd, 0);
 	vscr_restore(scr);
     }
@@ -920,11 +925,14 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
 	    {
 		VREFSCR scr = vscr_save();
 		add_io(0, 0);
+
 		if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
 		    ctx->abort = YEA;
-		vscr_restore(scr);
+
 		add_io(ctx->fd, 0);
-		ccw_footer(ctx);
+		vscr_restore(scr);
+
+		// ccw_footer(ctx);
 	    }
 	    // notify remote user
 	    if (ctx->abort)
@@ -935,9 +943,11 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
 	    {
 		VREFSCR scr = vscr_save();
 		add_io(0, 0);
+
 		t_idle();
-		vscr_restore(scr);
+
 		add_io(ctx->fd, 0);
+		vscr_restore(scr);
 	    }
 	    return 1;
 
@@ -951,12 +961,8 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
 		fflush(ctx->log);
 		more(ctx->log_fpath, YEA);
 
-		vscr_restore(scr);
 		add_io(ctx->fd, 0);
-#ifndef USE_PFTERM
-		// XXX screen is buggy when dealing with scroll...
-		ccw_reset_scr(ctx);
-#endif
+		vscr_restore(scr);
 	    }
 	    return 1;
 
