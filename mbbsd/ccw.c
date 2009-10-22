@@ -29,53 +29,56 @@
 // [footer]
 // --------------------------------------------------------------------------
 
+// TODO
+// 1. 統一 talk/chat 的中文名稱？ (eg, 現狀=聊天/談天室， maybe 交談/聊天室 ?)
+
 #define CCW_MAX_INPUT_LEN   (STRLEN)
-#define CCW_INIT_LINE	    (2)
-#define CCW_STOP_LINE	    (t_lines-3)
+#define CCW_INIT_LINE       (2)
+#define CCW_STOP_LINE       (t_lines-3)
 
 // input style
-#define CCW_REMOTE	(0)
-#define CCW_LOCAL	(1)
-#define CCW_LOCAL_MSG	(2)
+#define CCW_REMOTE      (0)
+#define CCW_LOCAL       (1)
+#define CCW_LOCAL_MSG   (2)
 
 ///////////////////////////////////////////////////////////////////////////
 // Data Structure
 typedef struct CCW_CTX {
     // session
-    int  abort;	    // indicate session complete
-    void *arg;	    // private argument
+    int  abort;     // indicate session complete
+    void *arg;      // private argument
 
     // display
-    int  line;	    // position of next line to append data
+    int  line;      // position of next line to append data
     int  reset_scr; // need to redraw everything
     char *sep_msg;  // quick help message on separators
 
     // input (vget)
-    int		abort_vget;	// temporary abort from input
-    const int	MAX_INPUT_LEN;	// max vget length, decided at init
+    int         abort_vget;     // temporary abort from input
+    const int   MAX_INPUT_LEN;  // max vget length, decided at init
 
     // logging
-    FILE *log;	    // log file handle
+    FILE *log;      // log file handle
     char *log_fpath;// path of log file
 
     // network and remote
     int  local_echo;// should we echo local input?
-    int  fd;	    // remote connection
+    int  fd;        // remote connection
     char *remote_id;// remote user id
     char *local_id; // local user id
 
     // layout renderers
-    void (*header)	(struct CCW_CTX *);
-    void (*prompt)	(struct CCW_CTX *);
-    void (*footer)	(struct CCW_CTX *);
+    void (*header)      (struct CCW_CTX *);
+    void (*prompt)      (struct CCW_CTX *);
+    void (*footer)      (struct CCW_CTX *);
     void (*separators)  (struct CCW_CTX *); // render header and footer separate lines
 
     // content processors
-    int  (*peek_key)	(struct CCW_CTX *, int key);
-    int  (*peek_cmd)	(struct CCW_CTX *, const char *buf, int local);
-    void (*print_line)  (struct CCW_CTX *, const char *buf, int local);	// print on screen
+    int  (*peek_key)    (struct CCW_CTX *, int key);
+    int  (*peek_cmd)    (struct CCW_CTX *, const char *buf, int local);
+    void (*print_line)  (struct CCW_CTX *, const char *buf, int local); // print on screen
     void (*log_line)    (struct CCW_CTX *, const char *buf, int local); // log to file
-    void (*post_input)	(struct CCW_CTX *, const char *buf, int local); // after valid input
+    void (*post_input)  (struct CCW_CTX *, const char *buf, int local); // after valid input
 } CCW_CTX;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -94,8 +97,8 @@ ccw_header(CCW_CTX *ctx)
 
     if (ctx->header)
     {
-	ctx->header(ctx);
-	return;
+        ctx->header(ctx);
+        return;
     }
 
     outs("Common Chat Window");
@@ -110,8 +113,8 @@ ccw_footer(CCW_CTX *ctx)
 
     if (ctx->footer)
     {
-	ctx->footer(ctx);
-	return;
+        ctx->footer(ctx);
+        return;
     }
 
     vs_footer(" CCW ", " (/b) 離開 ");
@@ -124,8 +127,8 @@ ccw_separators(CCW_CTX *ctx)
 
     if (ctx->separators)
     {
-	ctx->separators(ctx);
-	return;
+        ctx->separators(ctx);
+        return;
     }
 
     move(CCW_INIT_LINE-1, 0);
@@ -148,8 +151,8 @@ ccw_prompt(CCW_CTX *ctx)
 
     if (ctx->prompt)
     {
-	ctx->prompt(ctx);
-	return;
+        ctx->prompt(ctx);
+        return;
     }
 
     prints("%s: ", ctx->local_id);
@@ -159,13 +162,13 @@ static int
 ccw_peek_cmd(struct CCW_CTX *ctx, const char *buf, int local)
 {
     if (ctx->peek_cmd)
-	return ctx->peek_cmd(ctx, buf, local);
+        return ctx->peek_cmd(ctx, buf, local);
 
     // sample command: /b
     if (strcasecmp(buf, "/b") == 0)
     {
-	ctx->abort = 1;
-	return 1;
+        ctx->abort = 1;
+        return 1;
     }
     return 0;
 }
@@ -176,19 +179,19 @@ ccw_print_line (struct CCW_CTX *ctx, const char *buf, int local)
     ccw_prepare_line(ctx);
     if (ctx->print_line)
     {
-	ctx->print_line(ctx, buf, local);
-	return;
+        ctx->print_line(ctx, buf, local);
+        return;
     }
 
     if (local <= CCW_LOCAL) // local or remote, but not message
     {
-	if (local) {
-	    outs(ctx->local_id);
-	} else {
-	    outs(ANSI_COLOR(1));
-	    outs(ctx->remote_id);
-	}
-	outs(": ");
+        if (local) {
+            outs(ctx->local_id);
+        } else {
+            outs(ANSI_COLOR(1));
+            outs(ctx->remote_id);
+        }
+        outs(": ");
     }
 
     outs(buf);
@@ -199,22 +202,22 @@ static void
 ccw_log_line (struct CCW_CTX *ctx, const char *buf, int local)
 {
     if (!ctx->log) 
-	return;
+        return;
 
     if (ctx->log_line)
     {
-	ctx->log_line(ctx, buf, local);
-	return;
+        ctx->log_line(ctx, buf, local);
+        return;
     }
 
     if (local <= CCW_LOCAL) // local or remote, but not message
     {
-	fprintf(ctx->log, "%s%s: ",
-		local ? "" : ANSI_COLOR(1),
-		local ? ctx->local_id : ctx->remote_id);
+        fprintf(ctx->log, "%s%s: ",
+                local ? "" : ANSI_COLOR(1),
+                local ? ctx->local_id : ctx->remote_id);
     }
     fprintf(ctx->log, "%s%s\n",
-	    buf, local ? "" : ANSI_RESET);
+            buf, local ? "" : ANSI_RESET);
 }
 
 // CCW utilities
@@ -240,15 +243,15 @@ ccw_prepare_line(CCW_CTX *ctx)
     move(ctx->line, 0);
     if ( ctx->line+1 < CCW_STOP_LINE)
     {
-	// simply append
-	ctx->line ++;
+        // simply append
+        ctx->line ++;
     }
     else 
     {
-	// scroll screen buffer
-	region_scroll_up(CCW_INIT_LINE, CCW_STOP_LINE - CCW_INIT_LINE);
-	move(ctx->line-1, 0);
-	// TODO after resize, we may need to scroll more than once.
+        // scroll screen buffer
+        region_scroll_up(CCW_INIT_LINE, CCW_STOP_LINE - CCW_INIT_LINE);
+        move(ctx->line-1, 0);
+        // TODO after resize, we may need to scroll more than once.
     }
     clrtoeol();
 }
@@ -261,7 +264,7 @@ ccw_partial_match(const char *buf, const char *cmd)
 
     assert(*cmd);
     if (!szbuf)
-	return 0;
+        return 0;
 
     return strncasecmp(buf, cmd, szbuf) == 0;
 }
@@ -273,13 +276,13 @@ ccw_add_line (struct CCW_CTX *ctx, const char *buf, int local)
     // only print/log local when local_echo is enabled.
     if (local != CCW_LOCAL || ctx->local_echo)
     {
-	ccw_print_line(ctx, buf, local);
-	if (ctx->log)
-	    ccw_log_line(ctx, buf, local);
+        ccw_print_line(ctx, buf, local);
+        if (ctx->log)
+            ccw_log_line(ctx, buf, local);
     }
 
     if (ctx->post_input)
-	ctx->post_input(ctx, buf, local);
+        ctx->post_input(ctx, buf, local);
 }
 
 // VGET callback adaptors
@@ -290,9 +293,9 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
     CCW_CTX *ctx = (CCW_CTX*) instance;
     assert(ctx);
     if (ctx->peek_key &&
-	ctx->peek_key(ctx, key))
+        ctx->peek_key(ctx, key))
     {
-	return (ctx->abort_vget || ctx->abort) ? VGETCB_ABORT : VGETCB_NEXT;
+        return (ctx->abort_vget || ctx->abort) ? VGETCB_ABORT : VGETCB_NEXT;
     }
 
     return VGETCB_NONE;
@@ -308,52 +311,52 @@ ccw_process(CCW_CTX *ctx)
     VGET_CALLBACKS vgetcb = { ccw_vgetcb_peek };
 
     assert( ctx->MAX_INPUT_LEN > 2 &&
-	    ctx->MAX_INPUT_LEN <= CCW_MAX_INPUT_LEN);
+            ctx->MAX_INPUT_LEN <= CCW_MAX_INPUT_LEN);
     ccw_reset_scr(ctx);
 
 #ifdef DEBUG
     ccw_print_line(ctx, ANSI_COLOR(1;30)
-	    "◆ Powered by piaip's Common Chat Window" ANSI_RESET, 
-	    CCW_LOCAL_MSG);
+            "◆ Powered by piaip's Common Chat Window" ANSI_RESET, 
+            CCW_LOCAL_MSG);
 #endif
 
     while (!ctx->abort)
     {
-	// reset screen or print prompts (may be destroyed by short message)
-	if (ctx->reset_scr)
-	    ccw_reset_scr(ctx);
-	else {
-	    ccw_footer(ctx);
-	    ccw_prompt(ctx);
-	    // reset again if prompt request to redraw.
-	    if (ctx->reset_scr)
-		ccw_reset_scr(ctx);
-	}
+        // reset screen or print prompts (may be destroyed by short message)
+        if (ctx->reset_scr)
+            ccw_reset_scr(ctx);
+        else {
+            ccw_footer(ctx);
+            ccw_prompt(ctx);
+            // reset again if prompt request to redraw.
+            if (ctx->reset_scr)
+                ccw_reset_scr(ctx);
+        }
 
-	// get input
-	ctx->abort_vget = 0;
-	vgetstring(inbuf, ctx->MAX_INPUT_LEN, VGET_TRANSPARENT, "", 
-		&vgetcb, ctx);
+        // get input
+        ctx->abort_vget = 0;
+        vgetstring(inbuf, ctx->MAX_INPUT_LEN, VGET_TRANSPARENT, "", 
+                &vgetcb, ctx);
 
-	// quick check for end flag or exit command.
-	if (ctx->abort)
-	    break;
+        // quick check for end flag or exit command.
+        if (ctx->abort)
+            break;
 
-	// quick continue for empty input
-	trim(inbuf);
-	if (!*inbuf)
-	    continue;
+        // quick continue for empty input
+        trim(inbuf);
+        if (!*inbuf)
+            continue;
 
-	// process commands
-	if (ccw_peek_cmd(ctx, inbuf, CCW_LOCAL))
-	    continue;
+        // process commands
+        if (ccw_peek_cmd(ctx, inbuf, CCW_LOCAL))
+            continue;
 
-	// accept this data
-	ccw_add_line(ctx, inbuf, CCW_LOCAL);
+        // accept this data
+        ccw_add_line(ctx, inbuf, CCW_LOCAL);
     }
 
     if (ctx->log)
-	fflush(ctx->log);
+        fflush(ctx->log);
 
     return 0;
 }
@@ -368,7 +371,7 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
     const char *fpath = ctx->log_fpath;
 
     if (!ctx->log)
-	return 0;
+        return 0;
     assert(*fpath);
 
     // flush
@@ -379,40 +382,40 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
 
     // prompt user to decide how to deal with the log
     while (1) {
-	char c;
-	getdata(b_lines - 1, 0, 
-		force_decide ? "清除(C) 移至備忘錄(M)? [c/m]: " :
-			       "清除(C) 移至備忘錄(M)? [C/m]",
-		ans, sizeof(ans), LCECHO);
+        char c;
+        getdata(b_lines - 1, 0, 
+                force_decide ? "清除(C) 移至備忘錄(M)? [c/m]: " :
+                               "清除(C) 移至備忘錄(M)? [C/m]",
+                ans, sizeof(ans), LCECHO);
 
-	// decide default answer
-	c = *ans;
-	if (c != 'c' && c != 'm')
-	{
-	    if (!force_decide)
-		c = 'c';
-	}
+        // decide default answer
+        c = *ans;
+        if (c != 'c' && c != 'm')
+        {
+            if (!force_decide)
+                c = 'c';
+        }
 
-	if (c == 'c')
-	    break;
-	if (c == 'm')
-	{
-	    char subj[STRLEN];
-	    if (is_chat)
-		snprintf(subj, sizeof(subj), "會議記錄");
-	    else
-		snprintf(subj, sizeof(subj), "對話記錄 (%s)", ctx->remote_id);
+        if (c == 'c')
+            break;
+        if (c == 'm')
+        {
+            char subj[STRLEN];
+            if (is_chat)
+                snprintf(subj, sizeof(subj), "會議記錄");
+            else
+                snprintf(subj, sizeof(subj), "對話記錄 (%s)", ctx->remote_id);
 
-	    if (mail_log2id(cuser.userid, subj, fpath, "[備.忘.錄]", 0, 1) < 0)
-		vmsg("錯誤: 備忘錄儲存失敗。");
-	    break;
-	}
+            if (mail_log2id(cuser.userid, subj, fpath, "[備.忘.錄]", 0, 1) < 0)
+                vmsg("錯誤: 備忘錄儲存失敗。");
+            break;
+        }
 
-	// force user to input correct answer...
-	move(b_lines-2, 0); clrtobot();
-	prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
-		(int)((now % 7)+1));
-	if (c == 0) outs("為避免誤按所以只按 ENTER 是不行的。");
+        // force user to input correct answer...
+        move(b_lines-2, 0); clrtobot();
+        prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
+                (int)((now % 7)+1));
+        if (c == 0) outs("為避免誤按所以只按 ENTER 是不行的。");
     }
     unlink(fpath);
     return 1;
@@ -437,9 +440,9 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
     if (len < 1) return 0;
 
     if (towrite(ctx->fd, &len, 1) != 1)
-	return -1;
+        return -1;
     if (towrite(ctx->fd, msg, len)!= len)
-	return -1;
+        return -1;
     return len;
 }
 
@@ -449,9 +452,9 @@ ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
     char len = 0;
     buf[0] = 0;
     if (toread(ctx->fd, &len, 1) != 1)
-	return -1;
+        return -1;
     if (toread(ctx->fd, buf, len)!= len)
-	return -1;
+        return -1;
     assert(len >= 0 && len < szbuf);
     buf[(size_t)len] = 0;
     return len;
@@ -461,53 +464,53 @@ static ssize_t
 ccw_talk_send_bye(CCW_CTX *ctx)
 {
     return ccw_talk_send(ctx, 
-	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE);
+            CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE);
 }
 
 static void
 ccw_talk_header(CCW_CTX *ctx)
 {
     prints(ANSI_COLOR(1;37;46) " 【聊天】 " 
-	    ANSI_COLOR(45) " %-*s" ANSI_RESET "\n",
-	    t_columns - 12, ctx->remote_id);
+            ANSI_COLOR(45) " %-*s" ANSI_RESET "\n",
+            t_columns - 12, ctx->remote_id);
 }
 
 static void
 ccw_talk_footer(CCW_CTX *ctx)
 {
     vs_footer(" 【聊天】 ", " ( " 
-	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE   " )結束聊天 ( " 
-	    CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " )清除畫面"
-	    "\t(Ctrl-C)離開 ");
+            CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE   " )結束聊天 ( " 
+            CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " )清除畫面"
+            "\t(Ctrl-C)離開 ");
 }
 
 static int
 ccw_talk_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     if (buf[0] != CCW_TALK_CMD_PREFIX)
-	return 0;
+        return 0;
     buf++;
 
     // process commands
     if (ccw_partial_match(buf, CCW_TALK_CMD_HELP))
     {
-	ccw_print_line(ctx, "[說明]: 可輸入 "
-		CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " 清除畫面或 "
-		CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE " 離開。", 
-		CCW_LOCAL_MSG);
-	return 1;
+        ccw_print_line(ctx, "[說明]: 可輸入 "
+                CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " 清除畫面或 "
+                CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE " 離開。", 
+                CCW_LOCAL_MSG);
+        return 1;
     }
     if (ccw_partial_match(buf, CCW_TALK_CMD_BYE))
     {
-	ccw_talk_send_bye(ctx); // notify dest user if he's still online
-	ctx->abort = 1;
-	return 1;
+        ccw_talk_send_bye(ctx); // notify dest user if he's still online
+        ctx->abort = 1;
+        return 1;
     }
     if (ccw_partial_match(buf, CCW_TALK_CMD_CLEAR) ||
-	ccw_partial_match(buf, CCW_TALK_CMD_CLS))
+        ccw_partial_match(buf, CCW_TALK_CMD_CLS))
     {
-	ctx->reset_scr = YEA;
-	return 1;
+        ctx->reset_scr = YEA;
+        return 1;
     }
     return 0;
 }
@@ -516,7 +519,7 @@ static void
 ccw_talk_post_input(CCW_CTX *ctx, const char *buf, int local)
 {
     if (local != CCW_LOCAL)
-	return;
+        return;
 
     // send message to server if possible.
     ctx->abort = (ccw_talk_send(ctx, buf) <= 0);
@@ -526,42 +529,42 @@ static int
 ccw_talk_peek_key(CCW_CTX *ctx, int key)
 {
     switch (key) {
-	case I_OTHERDATA: // incoming
-	    {
-		char buf[STRLEN];
-		if (ccw_talk_recv(ctx, buf, sizeof(buf)) < 1)
-		{
-		    ctx->abort = YEA;
-		    return 1;
-		}
-		// process commands
-		if (strcasecmp(buf, CCW_TALK_CMD_BYE) == 0)
-		{
-		    ctx->abort = YEA;
-		    return 1;
-		}
-		// received something, let's print it.
-		ccw_add_line(ctx, buf, CCW_REMOTE);
-		return 1;
-	    }
+        case I_OTHERDATA: // incoming
+            {
+                char buf[STRLEN];
+                if (ccw_talk_recv(ctx, buf, sizeof(buf)) < 1)
+                {
+                    ctx->abort = YEA;
+                    return 1;
+                }
+                // process commands
+                if (strcasecmp(buf, CCW_TALK_CMD_BYE) == 0)
+                {
+                    ctx->abort = YEA;
+                    return 1;
+                }
+                // received something, let's print it.
+                ccw_add_line(ctx, buf, CCW_REMOTE);
+                return 1;
+            }
 
-	case Ctrl('C'):
-	    {
-		VREFSCR scr = vscr_save();
-		add_io(0, 0);
+        case Ctrl('C'):
+            {
+                VREFSCR scr = vscr_save();
+                add_io(0, 0);
 
-		if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
-		    ctx->abort = YEA;
+                if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
+                    ctx->abort = YEA;
 
-		add_io(ctx->fd, 0);
-		vscr_restore(scr);
+                add_io(ctx->fd, 0);
+                vscr_restore(scr);
 
-		// ccw_footer(ctx);
-	    }
-	    // notify remote user
-	    if (ctx->abort)
-		ccw_talk_send(ctx, CCW_TALK_CMD_BYE);
-	    return 1;
+                // ccw_footer(ctx);
+            }
+            // notify remote user
+            if (ctx->abort)
+                ccw_talk_send(ctx, CCW_TALK_CMD_BYE);
+            return 1;
     }
     return 0;
 }
@@ -573,23 +576,23 @@ ccw_talk(int fd, int destuid)
     char remote_id[IDLEN+1], local_id[IDLEN+1];
 
     CCW_CTX ctx = {
-	.fd     = fd,
-	.abort  = NA,
+        .fd     = fd,
+        .abort  = NA,
 
-	.log	       = NULL,
-	.log_fpath     = fpath,
-	.local_echo    = YEA,
-	.MAX_INPUT_LEN = STRLEN - IDLEN - 5,	// 5 for ": " and more
-	.remote_id     = remote_id,
-	.local_id      = local_id,
-	.sep_msg       = " /b 離開  /c 清除畫面 ",
+        .log           = NULL,
+        .log_fpath     = fpath,
+        .local_echo    = YEA,
+        .MAX_INPUT_LEN = STRLEN - IDLEN - 5,    // 5 for ": " and more
+        .remote_id     = remote_id,
+        .local_id      = local_id,
+        .sep_msg       = " /b 離開  /c 清除畫面 ",
 
-	.header	    = ccw_talk_header,
-	.footer	    = ccw_talk_footer,
+        .header     = ccw_talk_header,
+        .footer     = ccw_talk_footer,
 
-	.peek_key   = ccw_talk_peek_key,
-	.peek_cmd   = ccw_talk_peek_cmd,
-	.post_input = ccw_talk_post_input,
+        .peek_key   = ccw_talk_peek_key,
+        .peek_cmd   = ccw_talk_peek_cmd,
+        .post_input = ccw_talk_post_input,
     };
 
     STATINC(STAT_DOTALK);
@@ -608,14 +611,15 @@ ccw_talk(int fd, int destuid)
     assert(ctx.log);
     fprintf(ctx.log, "[%s] 與 %s 聊天:\n", Cdatelite(&now), ctx.remote_id);
 
-    // entering event loop...
+    // main processor
     add_io(fd, 0);
     ccw_process(&ctx);
 
-    // clean network handle
+    // clean network resource
     add_io(0, 0);
     close(fd);
 
+    // close log file
     ccw_talkchat_close_log(&ctx, YEA, NA);
 
     return 0;
@@ -624,16 +628,16 @@ ccw_talk(int fd, int destuid)
 /////////////////////////////////////////////////////////////////////////////
 // Chat
 
-#define CHAT_ID_LEN	(8)
-#define CHAT_ROOM_LEN	(IDLEN)
-#define CHAT_TOPIC_LEN	(48)	// must < t_columns-CHAT_ROOM_LEN
+#define CHAT_ID_LEN     (8)
+#define CHAT_ROOM_LEN   (IDLEN)
+#define CHAT_TOPIC_LEN  (48)    // must < t_columns-CHAT_ROOM_LEN
 
 typedef struct ccw_chat_ext {
     // misc
     int  newmail;
-    int  old_rows, old_cols;	// for terminal resize auto detection
+    int  old_rows, old_cols;    // for terminal resize auto detection
     // buffer
-    int  bufstart;
+    int  buf_remains;
     char buf[128];
     // topic
     char topic[CHAT_TOPIC_LEN+1];
@@ -652,15 +656,15 @@ ccw_chat_check_newmail(CCW_CTX *ctx)
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
     if (ISNEWMAIL(currutmp))
     {
-	if (!ext->newmail)
-	{
-	    // no need to log this...?
-	    ccw_print_line(ctx, "◆ 您有未讀的新信件。", CCW_LOCAL_MSG);
-	    ext->newmail = 1;
-	}
+        if (!ext->newmail)
+        {
+            // no need to log this...?
+            ccw_print_line(ctx, "◆ 您有未讀的新信件。", CCW_LOCAL_MSG);
+            ext->newmail = 1;
+        }
     }
     else if (ext->newmail)
-	ext->newmail = 0;
+        ext->newmail = 0;
 }
 
 static void
@@ -670,11 +674,11 @@ ccw_chat_check_term_resize(CCW_CTX *ctx)
 
     // detect terminal resize
     if (ext->old_rows != t_lines ||
-	ext->old_cols != t_columns)
+        ext->old_cols != t_columns)
     {
-	ext->old_rows = t_lines;
-	ext->old_cols = t_columns;
-	ctx->reset_scr = YEA;
+        ext->old_rows = t_lines;
+        ext->old_cols = t_columns;
+        ctx->reset_scr = YEA;
     }
 }
 
@@ -691,7 +695,7 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
 static int
 ccw_chat_send_bye(CCW_CTX *ctx)
 {
-    return ccw_chat_send(ctx, "/b");	// protocol: bye
+    return ccw_chat_send(ctx, "/b");    // protocol: bye
 }
 
 static void
@@ -699,10 +703,10 @@ ccw_chat_header(CCW_CTX *ctx)
 {
 
     prints(ANSI_COLOR(1;37;46) " 談天室 [%-*s] " 
-	    ANSI_COLOR(45) " 話題: %-*s" ANSI_RESET, 
-	    CHAT_ROOM_LEN, ctx->remote_id, 
-	    t_columns - CHAT_ROOM_LEN - 20,
-	    ccw_chat_get_ext(ctx)->topic);
+            ANSI_COLOR(45) " 話題: %-*s" ANSI_RESET, 
+            CHAT_ROOM_LEN, ctx->remote_id, 
+            t_columns - CHAT_ROOM_LEN - 20,
+            ccw_chat_get_ext(ctx)->topic);
 }
 
 static void
@@ -713,19 +717,19 @@ ccw_chat_footer(CCW_CTX *ctx)
     // a little weird, but this looks like the best place to do ZA here...
     if (ZA_Waiting())
     {
-	// process ZA
-	VREFSCR scr = vscr_save();
-	add_io(0, 0);
+        // process ZA
+        VREFSCR scr = vscr_save();
+        add_io(0, 0);
 
-	ZA_Enter();
+        ZA_Enter();
 
-	add_io(ctx->fd, 0);
-	vscr_restore(scr);
+        add_io(ctx->fd, 0);
+        vscr_restore(scr);
     }
 
     // draw real footer
     vs_footer("【談天室】",
-	    " (PgUp/PgDn)回顧談天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開談天室");
+            " (PgUp/PgDn)回顧談天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開談天室");
 }
 
 static void
@@ -754,58 +758,61 @@ ccw_chat_recv(CCW_CTX *ctx)
 {
     int  c, len;
     char *bptr;
-    ccw_chat_ext *cb = ccw_chat_get_ext(ctx);
+    ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
 
-    len = sizeof(cb->buf) - cb->bufstart - 1;
-    if ((c = recv(ctx->fd, cb->buf + cb->bufstart, len, 0)) <= 0)
-	return -1;
-    c += cb->bufstart;
+    // ext->buf may contain up to ext->buf_remains bytes of data.
+    // xchatd protocol: msg NUL /command NUL ...
 
-    bptr = cb->buf;
+    len = sizeof(ext->buf) - ext->buf_remains - 1;
+    if ((c = recv(ctx->fd, ext->buf + ext->buf_remains, len, 0)) <= 0)
+        return -1;
+    c += ext->buf_remains;
+
+    bptr = ext->buf;
     while (c > 0) {
-	len = strlen(bptr) + 1;
-	if (len > c && (unsigned)len < (sizeof(cb->buf)/ 2) )
-	    break;
+        len = strlen(bptr) + 1;
+        if (len > c && (unsigned)len < (sizeof(ext->buf)/ 2) )
+            break;
 
-	if (*bptr == '/') {
-	    switch (bptr[1]) {
-	    case 'c':
-		ccw_reset_scr(ctx);
-		break;
-	    case 'n':
-		strlcpy(ctx->local_id, bptr+2, CHAT_ID_LEN+1);
-		DBCS_safe_trim(ctx->local_id);
-		ccw_prompt(ctx);
-		break;
-	    case 'r':
-		strlcpy(ctx->remote_id, bptr+2, CHAT_ROOM_LEN+1);
-		DBCS_safe_trim(ctx->remote_id);
-		ccw_header(ctx);
-		break;
-	    case 't':
-		{
-		    ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
-		    strlcpy(ext->topic, bptr+2, CHAT_TOPIC_LEN+1);
-		    DBCS_safe_trim(ext->topic);
-		    ccw_header(ctx);
-		}
+        if (*bptr == '/') {
+            switch (bptr[1]) {
+            case 'c':
+                ccw_reset_scr(ctx);
+                break;
+            case 'n':
+                strlcpy(ctx->local_id, bptr+2, CHAT_ID_LEN+1);
+                DBCS_safe_trim(ctx->local_id);
+                ccw_prompt(ctx);
+                break;
+            case 'r':
+                strlcpy(ctx->remote_id, bptr+2, CHAT_ROOM_LEN+1);
+                DBCS_safe_trim(ctx->remote_id);
+                ccw_header(ctx);
+                break;
+            case 't':
+                {
+                    ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
+                    strlcpy(ext->topic, bptr+2, CHAT_TOPIC_LEN+1);
+                    DBCS_safe_trim(ext->topic);
+                    ccw_header(ctx);
+                }
 
-	    }
-	} else {
-	    // received something, let's print it.
-	    if (*bptr != '>' || PERM_HIDE(currutmp))
-		ccw_add_line(ctx, bptr, CCW_REMOTE);
-	}
+            }
+        } else {
+            // received something, let's print it.
+            if (*bptr != '>' || PERM_HIDE(currutmp))
+                ccw_add_line(ctx, bptr, CCW_REMOTE);
+        }
 
-	c -= len;
-	bptr += len;
+        c -= len;
+        bptr += len;
     }
 
     if (c > 0) {
-	memmove(cb->buf, bptr, sizeof(cb->buf)-(bptr-cb->buf));
-	cb->bufstart = len - 1;
+        memmove(ext->buf, bptr, sizeof(ext->buf)-(bptr-ext->buf));
+        ext->buf_remains = len - 1;
     } else
-	cb->bufstart = 0;
+        ext->buf_remains = 0;
     return 0;
 }
 
@@ -820,28 +827,28 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
     syncnow();
     if (now - lasttime < 3 )
     {
-	// 3 秒內洗半面是不行的 ((25-5)/2)
-	if( ++flood > 10 )
-	{
-	    // flush all input!
-	    unsigned char garbage[STRLEN];
-	    drop_input();
-	    while (wait_input(1, 0))
-	    {
-		if (num_in_buf())
-		    drop_input();
-		else
-		    tty_read(garbage, sizeof(garbage));
-	    }
-	    drop_input();
-	    vmsg("請勿大量剪貼或造成洗板面的效果。");
+        // 3 秒內洗半面是不行的 ((25-5)/2)
+        if( ++flood > 10 )
+        {
+            // flush all input!
+            unsigned char garbage[STRLEN];
+            drop_input();
+            while (wait_input(1, 0))
+            {
+                if (num_in_buf())
+                    drop_input();
+                else
+                    tty_read(garbage, sizeof(garbage));
+            }
+            drop_input();
+            vmsg("請勿大量剪貼或造成洗板面的效果。");
 
-	    // log?
-	    sleep(2);
-	}
+            // log?
+            sleep(2);
+        }
     } else {
-	lasttime = now;
-	flood = 0;
+        lasttime = now;
+        flood = 0;
     }
 #endif // anti-flood
 }
@@ -857,81 +864,81 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 
     if (ccw_partial_match(buf, "help"))
     {
-	static const char *hlp_op[] = {
-	    "[/f]lag [+-][ls]", "設定鎖定、秘密狀態",
-	    "[/i]nvite <id>", "邀請 <id> 加入談天室",
-	    "[/k]ick <id>", "將 <id> 踢出談天室",
-	    "[/o]p <id>", "將 Op 的權力轉移給 <id>",
-	    "[/t]opic <text>", "換個話題",
-	    "[/w]all", "廣播 (站長專用)",
-	    " /ban <userid>", "拒絕 <userid> 再次進入此談天室 (加入黑名單)",
-	    " /unban <userid>", "把 <userid> 移出黑名單",
-	    NULL,
-	}, *hlp[] = {
-	    " /help op", "談天室管理員專用指令",
-	    "[//]help", "MUD-like 社交動詞",
-	    "[/a]ct <msg>", "做一個動作",
-	    "[/b]ye [msg]", "道別",
-	    "[/c]lear", "清除螢幕",
-	    "[/j]oin <room>", "建立或加入談天室",
-	    "[/l]ist [room]", "列出談天室使用者",
-	    "[/m]sg <id> <msg>", "跟 <id> 說悄悄話",
-	    "[/n]ick <id>", "將談天代號換成 <id>",
-	    "[/p]ager", "切換呼叫器",
-	    "[/r]oom ", "列出一般談天室",
-	    "[/w]ho", "列出本談天室使用者",
-	    " /whoin <room>", "列出談天室<room> 的使用者",
-	    " /ignore <userid>", "忽略指定使用者的訊息",
-	    " /unignore <userid>", "停止忽略指定使用者的訊息",
-	    NULL,
-	};
+        static const char *hlp_op[] = {
+            "[/f]lag [+-][ls]", "設定鎖定、秘密狀態",
+            "[/i]nvite <id>", "邀請 <id> 加入談天室",
+            "[/k]ick <id>", "將 <id> 踢出談天室",
+            "[/o]p <id>", "將 Op 的權力轉移給 <id>",
+            "[/t]opic <text>", "換個話題",
+            "[/w]all", "廣播 (站長專用)",
+            " /ban <userid>", "拒絕 <userid> 再次進入此談天室 (加入黑名單)",
+            " /unban <userid>", "把 <userid> 移出黑名單",
+            NULL,
+        }, *hlp[] = {
+            " /help op", "談天室管理員專用指令",
+            "[//]help", "MUD-like 社交動詞",
+            "[/a]ct <msg>", "做一個動作",
+            "[/b]ye [msg]", "道別",
+            "[/c]lear", "清除螢幕",
+            "[/j]oin <room>", "建立或加入談天室",
+            "[/l]ist [room]", "列出談天室使用者",
+            "[/m]sg <id> <msg>", "跟 <id> 說悄悄話",
+            "[/n]ick <id>", "將談天代號換成 <id>",
+            "[/p]ager", "切換呼叫器",
+            "[/r]oom ", "列出一般談天室",
+            "[/w]ho", "列出本談天室使用者",
+            " /whoin <room>", "列出談天室<room> 的使用者",
+            " /ignore <userid>", "忽略指定使用者的訊息",
+            " /unignore <userid>", "停止忽略指定使用者的訊息",
+            NULL,
+        };
 
-	const char **p = hlp;
-	char msg[STRLEN];
+        const char **p = hlp;
+        char msg[STRLEN];
 
-	if (strcasestr(buf, " op"))
-	{
-	    p = hlp_op;
-	    ccw_print_line(ctx, "談天室管理員專用指令", CCW_LOCAL_MSG);
-	}
-	while (*p)
-	{
-	    snprintf(msg, sizeof(msg), "  %-20s- %s", p[0], p[1]);
-	    ccw_print_line(ctx, msg, CCW_LOCAL_MSG);
-	    p += 2;
-	}
-	return 1;
+        if (strcasestr(buf, " op"))
+        {
+            p = hlp_op;
+            ccw_print_line(ctx, "談天室管理員專用指令", CCW_LOCAL_MSG);
+        }
+        while (*p)
+        {
+            snprintf(msg, sizeof(msg), "  %-20s- %s", p[0], p[1]);
+            ccw_print_line(ctx, msg, CCW_LOCAL_MSG);
+            p += 2;
+        }
+        return 1;
     }
     if (ccw_partial_match(buf, "clear") ||
-	ccw_partial_match(buf, "cls"))
+        ccw_partial_match(buf, "cls"))
     {
-	ccw_reset_scr(ctx);
-	return 1;
+        ccw_reset_scr(ctx);
+        return 1;
     }
     if (ccw_partial_match(buf, "date"))
     {
-	char genbuf[STRLEN];
-	syncnow();
-	snprintf(genbuf, sizeof(genbuf),
-		"◆ " BBSNAME "標準時間: %s", Cdate(&now));
-	ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
-	return 1;
+        char genbuf[STRLEN];
+        syncnow();
+        snprintf(genbuf, sizeof(genbuf),
+                "◆ " BBSNAME "標準時間: %s", Cdate(&now));
+        ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
+        return 1;
     }
     if (ccw_partial_match(buf, "pager"))
     {
-	char genbuf[STRLEN];
-	currutmp->pager ++;
-	currutmp->pager %= PAGER_MODES;
-	snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器已設為: [%s]",
-		str_pager_modes[currutmp->pager]);
-	ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
-	return 1;
+        char genbuf[STRLEN];
+        currutmp->pager ++;
+        currutmp->pager %= PAGER_MODES;
+        snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器已設為: [%s]",
+                str_pager_modes[currutmp->pager]);
+        ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
+        return 1;
     }
     if (ccw_partial_match(buf, "bye"))
     {
-	ccw_chat_send_bye(ctx);
-	ctx->abort = 1;
-	return 1;
+        ccw_chat_send_bye(ctx);
+        ctx->abort = 1;
+        return 1;
     }
     return 0;
 }
@@ -940,7 +947,7 @@ static void
 ccw_chat_post_input(CCW_CTX *ctx, const char *buf, int local)
 {
     if (local != CCW_LOCAL)
-	return;
+        return;
 
     // send message to server if possible.
     ctx->abort = (ccw_chat_send(ctx, buf) <= 0);
@@ -950,77 +957,77 @@ static int
 ccw_chat_peek_key(CCW_CTX *ctx, int key)
 {
     switch (key) {
-	case I_OTHERDATA: // incoming
-	    {
-		if (ccw_chat_recv(ctx) == -1)
-		{
-		    ccw_chat_send_bye(ctx);
-		    ctx->abort = YEA;
-		    return 1;
-		}
-		ccw_chat_check_newmail(ctx);
-		return 1;
-	    }
+        case I_OTHERDATA: // incoming
+            {
+                if (ccw_chat_recv(ctx) == -1)
+                {
+                    ccw_chat_send_bye(ctx);
+                    ctx->abort = YEA;
+                    return 1;
+                }
+                ccw_chat_check_newmail(ctx);
+                return 1;
+            }
 
-	case Ctrl('C'):
-	    {
-		VREFSCR scr = vscr_save();
-		add_io(0, 0);
+        case Ctrl('C'):
+            {
+                VREFSCR scr = vscr_save();
+                add_io(0, 0);
 
-		if (vans("確定要中止談天嗎? [y/N]: ") == 'y')
-		    ctx->abort = YEA;
+                if (vans("確定要中止談天嗎? [y/N]: ") == 'y')
+                    ctx->abort = YEA;
 
-		add_io(ctx->fd, 0);
-		vscr_restore(scr);
+                add_io(ctx->fd, 0);
+                vscr_restore(scr);
 
-		// ccw_footer(ctx);
-	    }
-	    // notify remote user
-	    if (ctx->abort)
-		ccw_chat_send_bye(ctx);
-	    return 1;
+                // ccw_footer(ctx);
+            }
+            // notify remote user
+            if (ctx->abort)
+                ccw_chat_send_bye(ctx);
+            return 1;
 
-	case Ctrl('I'):
-	    {
-		VREFSCR scr = vscr_save();
-		add_io(0, 0);
+        case Ctrl('I'):
+            {
+                VREFSCR scr = vscr_save();
+                add_io(0, 0);
 
-		t_idle();
+                t_idle();
 
-		add_io(ctx->fd, 0);
-		vscr_restore(scr);
-	    }
-	    return 1;
+                add_io(ctx->fd, 0);
+                vscr_restore(scr);
+            }
+            return 1;
 
-	case KEY_PGUP:
-	case KEY_PGDN:
-	    if (ctx->log && ctx->log_fpath)
-	    {
-		VREFSCR scr = vscr_save();
-		add_io(0, 0);
+        case KEY_PGUP:
+        case KEY_PGDN:
+            if (ctx->log && ctx->log_fpath)
+            {
+                VREFSCR scr = vscr_save();
+                add_io(0, 0);
 
-		fflush(ctx->log);
-		more(ctx->log_fpath, YEA);
+                fflush(ctx->log);
+                more(ctx->log_fpath, YEA);
 
-		add_io(ctx->fd, 0);
-		vscr_restore(scr);
-	    }
-	    return 1;
+                add_io(ctx->fd, 0);
+                vscr_restore(scr);
+            }
+            return 1;
 
-	    // Support ZA because chat is mostly independent and secure.
-	case Ctrl('Z'):
-	    {
-		int za = 0;
-		VREFCUR cur = vcur_save();
-		add_io(0, 0);
-		za = ZA_Select();
-		ccw_footer(ctx);
-		add_io(ctx->fd, 0);
-		vcur_restore(cur);
-		if (za)
-		    ctx->abort_vget = 1;
-		return 1;
-	    }
+            // Support ZA because chat is mostly independent and secure.
+        case Ctrl('Z'):
+            {
+                int za = 0;
+                VREFCUR cur = vcur_save();
+                add_io(0, 0);
+                za = ZA_Select();
+                ccw_footer(ctx);
+                add_io(ctx->fd, 0);
+                vcur_restore(cur);
+                if (za)
+                    ctx->abort_vget = 1;
+                return 1;
+            }
     }
     return 0;
 }
@@ -1029,73 +1036,72 @@ int
 ccw_chat(int fd)
 {
     char chatid[CHAT_ID_LEN+1]   = "myid",
-	 roomid[CHAT_ROOM_LEN+1] = "room";
+         roomid[CHAT_ROOM_LEN+1] = "room";
     char fpath[PATHLEN];
     ccw_chat_ext ext = { 
-	.old_rows = t_lines,
-	.old_cols = t_columns,
+        .old_rows = t_lines,
+        .old_cols = t_columns,
     };
     CCW_CTX ctx = {
-	.fd     = fd,
-	.abort  = NA,
+        .fd     = fd,
+        .abort  = NA,
 
-	.log	       = NULL,
-	.log_fpath     = fpath,
-	.local_echo    = NA,
-	.MAX_INPUT_LEN = STRLEN - CHAT_ID_LEN - 3, // 3 for ": "
-	.remote_id     = roomid,
-	.local_id      = chatid,
-	.arg	       = &ext,
-	.sep_msg       = " /h 查詢指令  /b 離開 ",
+        .log           = NULL,
+        .log_fpath     = fpath,
+        .local_echo    = NA,
+        .MAX_INPUT_LEN = STRLEN - CHAT_ID_LEN - 3, // 3 for ": "
+        .remote_id     = roomid,
+        .local_id      = chatid,
+        .arg           = &ext,
+        .sep_msg       = " /h 查詢指令  /b 離開 ",
 
-	.header	    = ccw_chat_header,
-	.footer	    = ccw_chat_footer,
-	.prompt	    = ccw_chat_prompt,
-	.print_line = ccw_chat_print_line,
-	.log_line   = ccw_chat_log_line,
+        .header     = ccw_chat_header,
+        .footer     = ccw_chat_footer,
+        .prompt     = ccw_chat_prompt,
+        .print_line = ccw_chat_print_line,
+        .log_line   = ccw_chat_log_line,
 
-	.peek_key   = ccw_chat_peek_key,
-	.peek_cmd   = ccw_chat_peek_cmd,
-	.post_input = ccw_chat_post_input,
+        .peek_key   = ccw_chat_peek_key,
+        .peek_cmd   = ccw_chat_peek_cmd,
+        .post_input = ccw_chat_post_input,
     };
 
     // initialize nick
     while (1) {
-	const char *err = "無法使用此代號";
-	char cmd[200];
+        const char *err = "無法使用此代號";
+        char cmd[200];
 
-	getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱: ", chatid, sizeof(chatid), DOECHO);
-	if(!chatid[0])
-	    strlcpy(chatid, cuser.userid, sizeof(chatid));
+        getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱: ", chatid, sizeof(chatid), DOECHO);
+        if(!chatid[0])
+            strlcpy(chatid, cuser.userid, sizeof(chatid));
 
-	// safe truncate
-	DBCS_safe_trim(chatid);
+        // safe truncate
+        DBCS_safe_trim(chatid);
 
-	// login format: /! UserID ChatID password
-	snprintf(cmd, sizeof(cmd), "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
-	ccw_chat_send(&ctx, cmd);
-	if (recv(ctx.fd, cmd, 3, 0) != 3) {
-	    close(ctx.fd);
-	    vmsg("系統錯誤。");
-	    return 0;
-	}
+        // login format: /! UserID ChatID password
+        snprintf(cmd, sizeof(cmd), "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
+        ccw_chat_send(&ctx, cmd);
+        if (recv(ctx.fd, cmd, 3, 0) != 3) {
+            close(ctx.fd);
+            vmsg("系統錯誤。");
+            return 0;
+        }
 
-	if (strcmp(cmd, CHAT_LOGIN_OK) == 0)
-	    break;
-	else if (!strcmp(cmd, CHAT_LOGIN_EXISTS))
-	    err = "這個代號已經有人用了";
-	else if (!strcmp(cmd, CHAT_LOGIN_INVALID))
-	    err = "這個代號是錯誤的";
-	else if (!strcmp(cmd, CHAT_LOGIN_BOGUS))
-	    err = "請勿派遣分身進入談天室 !!";
+        if (strcmp(cmd, CHAT_LOGIN_OK) == 0)
+            break;
+        else if (!strcmp(cmd, CHAT_LOGIN_EXISTS))
+            err = "這個代號已經有人用了";
+        else if (!strcmp(cmd, CHAT_LOGIN_INVALID))
+            err = "這個代號是錯誤的";
+        else if (!strcmp(cmd, CHAT_LOGIN_BOGUS))
+            err = "請勿派遣分身進入談天室 !!";
 
-	move(b_lines - 2, 0);
-	outs(err);
-	clrtoeol();
-	bell();
+        move(b_lines - 2, 0);
+        outs(err);
+        clrtoeol();
+        bell();
     }
 
-    add_io(fd, 0);
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
     strlcpy(currutmp->chatid, chatid, sizeof(currutmp->chatid));
@@ -1106,13 +1112,19 @@ ccw_chat(int fd)
     assert(ctx.log);
     fprintf(ctx.log, "[%s] 進入談天室:\n", Cdatelite(&now));
 
+    // main processor
+    add_io(fd, 0);
     ccw_process(&ctx);
 
-    close(fd);
+    // clean network resource
     add_io(0, 0);
+    close(fd);
     currutmp->in_chat = currutmp->chatid[0] = 0;
 
+    // close log file
     ccw_talkchat_close_log(&ctx, NA, YEA);
 
     return 0;
 }
+
+// vim:sw=4:ts=8:et
