@@ -1479,7 +1479,7 @@ mf_display()
             /* case 1, header separator line */
             if (bpref.separator & MFDISP_SEP_LINE)
             {
-                outs(ANSI_COLOR(36));
+                outs(ANSI_COLOR(0;36));
                 for(col = 0; col < headerw; col+=2)
                 {
                     // prints("%02d", col);
@@ -1567,13 +1567,13 @@ mf_display()
                         (*mf.dispe == ':' || *mf.dispe == '>') && 
                         *(mf.dispe+1) == ' ')
                 {
-                    outs(ANSI_COLOR(36));
+                    outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
                 } else if (dist > 2 && 
                         (!strncmp((char*)mf.dispe, "¡°", 2) || 
                          !strncmp((char*)mf.dispe, "==>", 3)))
                 {
-                    outs(ANSI_COLOR(32));
+                    outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
                 }
             }
