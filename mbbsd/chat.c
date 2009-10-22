@@ -4,6 +4,8 @@
 #define CHAT_STOP_LINE	(t_lines-3)
 #define CHAT_INIT_LINE	(2)
 
+#ifndef EXP_CCW_CHAT
+
 ///////////////////////////////////////////////////////////////////////////
 // CHAT helpers
 
@@ -558,6 +560,8 @@ do_chat(int cfd)
     }
     return 0;
 }
+
+#endif // !EXP_CCW_CHAT
 
 int
 t_chat(void)
