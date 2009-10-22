@@ -861,7 +861,7 @@ chat_list_rooms(ChatUser *cuser, char *msg)
     if (common_client_command)
 	send_to_user(cuser, "", 0, MSG_ROOMLISTSTART);
     else
-	send_to_user(cuser, "[7m ½Í¤Ñ«Ç¦WºÙ  ¢x¤H¼Æ¢x¸ÜÃD        [m", 0, MSG_MESSAGE);
+	send_to_user(cuser, "[7m ²á¤Ñ«Ç¦WºÙ  ¢x¤H¼Æ¢x¸ÜÃD        [m", 0, MSG_MESSAGE);
 
     for(cr = &mainroom; cr; cr = cr->next) {
 	if (!SECRET(cr) || CHATSYSOP(cuser) || (cr == cuser->room && ROOMOP(cuser)))
@@ -1984,7 +1984,7 @@ chat_broadcast(ChatUser *cu, char *msg)
 	send_to_user(cu, "¡° ½Ð«ü©w¼s¼½¤º®e", 0, MSG_MESSAGE);
 	return;
     }
-    sprintf(chatbuf, "[1m¡° " BBSNAME "½Í¤Ñ«Ç¼s¼½¤¤ [%s].....[m",
+    sprintf(chatbuf, "[1m¡° " BBSNAME "²á¤Ñ«Ç¼s¼½¤¤ [%s].....[m",
 	    cu->chatid);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_MESSAGE);
     sprintf(chatbuf, "¡» %s", msg);

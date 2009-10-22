@@ -30,7 +30,7 @@
 // --------------------------------------------------------------------------
 
 // TODO
-// 1. 統一 talk/chat 的中文名稱？ (eg, 現狀=聊天/談天室， maybe 交談/聊天室 ?)
+// 1. [done] 統一 talk/chat 的中文名稱 (eg, 聊天/談天室， or 交談/聊天室)
 // 2. we may move anti-flood and other static variables into context...
 // 3. TAB complete...
 // 4. add F1 for help?
@@ -367,6 +367,16 @@ ccw_process(CCW_CTX *ctx)
 /////////////////////////////////////////////////////////////////////////////
 // Talk / Chat Adaptors
 
+#if 1
+#define CCW_CAP_TALK        "交談"
+#define CCW_CAP_CHAT        "聊天室"
+#define CCW_CAP_CHATROOM    "聊天室"
+#else
+#define CCW_CAP_TALK        "聊天"
+#define CCW_CAP_CHAT        "談天室"
+#define CCW_CAP_CHATROOM    "談天室"
+#endif
+
 int
 ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
 {
@@ -473,7 +483,7 @@ ccw_talk_send_bye(CCW_CTX *ctx)
 static void
 ccw_talk_header(CCW_CTX *ctx)
 {
-    prints(ANSI_COLOR(1;37;46) " 【聊天】 " 
+    prints(ANSI_COLOR(1;37;46) " 【" CCW_CAP_TALK "】 " 
             ANSI_COLOR(45) " %-*s" ANSI_RESET "\n",
             t_columns - 12, ctx->remote_id);
 }
@@ -481,8 +491,8 @@ ccw_talk_header(CCW_CTX *ctx)
 static void
 ccw_talk_footer(CCW_CTX *ctx)
 {
-    vs_footer(" 【聊天】 ", " ( " 
-            CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE   " )結束聊天 ( " 
+    vs_footer(" 【" CCW_CAP_TALK "】 ", " ( " 
+            CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE   " )結束" CCW_CAP_TALK " ( " 
             CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " )清除畫面"
             "\t(Ctrl-C)離開 ");
 }
@@ -556,7 +566,7 @@ ccw_talk_peek_key(CCW_CTX *ctx, int key)
                 VREFSCR scr = vscr_save();
                 add_io(0, 0);
 
-                if (vans("確定要中止聊天嗎? [y/N]: ") == 'y')
+                if (vans("確定要中止" CCW_CAP_TALK "嗎? [y/N]: ") == 'y')
                     ctx->abort = YEA;
 
                 add_io(ctx->fd, 0);
@@ -612,7 +622,7 @@ ccw_talk(int fd, int destuid)
     setuserfile(fpath, "talk_XXXXXX");
     ctx.log = fdopen(mkstemp(fpath), "w");
     assert(ctx.log);
-    fprintf(ctx.log, "[%s] 與 %s 聊天:\n", Cdatelite(&now), ctx.remote_id);
+    fprintf(ctx.log, "[%s] 與 %s " CCW_CAP_TALK ":\n", Cdatelite(&now), ctx.remote_id);
 
     // main processor
     add_io(fd, 0);
@@ -705,7 +715,7 @@ static void
 ccw_chat_header(CCW_CTX *ctx)
 {
 
-    prints(ANSI_COLOR(1;37;46) " 談天室 [%-*s] " 
+    prints(ANSI_COLOR(1;37;46) " " CCW_CAP_CHAT " [%-*s] " 
             ANSI_COLOR(45) " 話題: %-*s" ANSI_RESET, 
             CHAT_ROOM_LEN, ctx->remote_id, 
             t_columns - CHAT_ROOM_LEN - 20,
@@ -731,8 +741,8 @@ ccw_chat_footer(CCW_CTX *ctx)
     }
 
     // draw real footer
-    vs_footer("【談天室】",
-            " (PgUp/PgDn)回顧談天記錄 (Ctrl-Z)快速切換\t(Ctrl-C)離開談天室");
+    vs_footer("【" CCW_CAP_CHAT "】", " (PgUp/PgDn)回顧" CCW_CAP_CHAT "記錄 "
+            "(Ctrl-Z)快速切換\t(Ctrl-C)離開" CCW_CAP_CHAT);
 }
 
 static void
@@ -878,28 +888,28 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     {
         static const char * const hlp_op[] = {
             "[/f]lag [+-][ls]", "設定鎖定、秘密狀態",
-            "[/i]nvite <id>", "邀請 <id> 加入談天室",
-            "[/k]ick <id>", "將 <id> 踢出談天室",
+            "[/i]nvite <id>", "邀請 <id> 加入" CCW_CAP_CHATROOM,
+            "[/k]ick <id>", "將 <id> 踢出" CCW_CAP_CHATROOM,
             "[/o]p <id>", "將 Op 的權力轉移給 <id>",
             "[/t]opic <text>", "換個話題",
             "[/w]all", "廣播 (站長專用)",
-            " /ban <userid>", "拒絕 <userid> 再次進入此談天室 (加入黑名單)",
+            " /ban <userid>", "拒絕 <userid> 再次進入此" CCW_CAP_CHATROOM " (加入黑名單)",
             " /unban <userid>", "把 <userid> 移出黑名單",
             NULL,
         }, * const hlp[] = {
-            " /help op", "談天室管理員專用指令",
+            " /help op", CCW_CAP_CHAT "管理員專用指令",
             "[//]help", "MUD-like 社交動詞",
             "[/a]ct <msg>", "做一個動作",
             "[/b]ye [msg]", "道別",
             "[/c]lear", "清除螢幕",
-            "[/j]oin <room>", "建立或加入談天室",
-            "[/l]ist [room]", "列出談天室使用者",
+            "[/j]oin <room>", "建立或加入" CCW_CAP_CHATROOM,
+            "[/l]ist [room]", "列出" CCW_CAP_CHATROOM "使用者",
             "[/m]sg <id> <msg>", "跟 <id> 說悄悄話",
-            "[/n]ick <id>", "將談天代號換成 <id>",
+            "[/n]ick <id>", "將暱稱換成 <id>",
             "[/p]ager", "切換呼叫器",
-            "[/r]oom ", "列出一般談天室",
-            "[/w]ho", "列出本談天室使用者",
-            " /whoin <room>", "列出談天室<room> 的使用者",
+            "[/r]oom ", "列出一般" CCW_CAP_CHATROOM,
+            "[/w]ho", "列出本" CCW_CAP_CHATROOM "使用者",
+            " /whoin <room>", "列出" CCW_CAP_CHAT "<room> 的使用者",
             " /ignore <userid>", "忽略指定使用者的訊息",
             " /unignore <userid>", "停止忽略指定使用者的訊息",
             NULL,
@@ -911,7 +921,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
         if (strcasestr(buf, " op"))
         {
             p = hlp_op;
-            ccw_print_line(ctx, "談天室管理員專用指令", CCW_LOCAL_MSG);
+            ccw_print_line(ctx, CCW_CAP_CHAT "管理員專用指令", CCW_LOCAL_MSG);
         }
         while (*p)
         {
@@ -984,7 +994,7 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
                 VREFSCR scr = vscr_save();
                 add_io(0, 0);
 
-                if (vans("確定要中止談天嗎? [y/N]: ") == 'y')
+                if (vans("確定要中止" CCW_CAP_CHAT "嗎? [y/N]: ") == 'y')
                     ctx->abort = YEA;
 
                 add_io(ctx->fd, 0);
@@ -1081,7 +1091,8 @@ ccw_chat(int fd)
         const char *err = "無法使用此代號";
         char cmd[200];
 
-        getdata(b_lines - 1, 0, "請輸入想使用的談天暱稱: ", chatid, sizeof(chatid), DOECHO);
+        getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT "使用的暱稱: ", 
+                chatid, sizeof(chatid), DOECHO);
         if(!chatid[0])
             strlcpy(chatid, cuser.userid, sizeof(chatid));
 
@@ -1089,7 +1100,8 @@ ccw_chat(int fd)
         DBCS_safe_trim(chatid);
 
         // login format: /! UserID ChatID password
-        snprintf(cmd, sizeof(cmd), "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
+        snprintf(cmd, sizeof(cmd), 
+                "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
         ccw_chat_send(&ctx, cmd);
         if (recv(ctx.fd, cmd, 3, 0) != 3) {
             close(ctx.fd);
@@ -1104,7 +1116,7 @@ ccw_chat(int fd)
         else if (!strcmp(cmd, CHAT_LOGIN_INVALID))
             err = "這個代號是錯誤的";
         else if (!strcmp(cmd, CHAT_LOGIN_BOGUS))
-            err = "請勿派遣分身進入談天室 !!";
+            err = "請勿派遣分身進入!!";
 
         move(b_lines - 2, 0);
         outs(err);
@@ -1120,7 +1132,7 @@ ccw_chat(int fd)
     setuserfile(fpath, "chat_XXXXXX");
     ctx.log = fdopen(mkstemp(fpath), "w");
     assert(ctx.log);
-    fprintf(ctx.log, "[%s] 進入談天室:\n", Cdatelite(&now));
+    fprintf(ctx.log, "[%s] 進入" CCW_CAP_CHAT ":\n", Cdatelite(&now));
 
     // main processor
     add_io(fd, 0);

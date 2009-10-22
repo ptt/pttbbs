@@ -910,6 +910,8 @@ load_boards(char *key)
 	if(IS_LISTING_FAV()){
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
+	    // XXX TODO 很多人死在這裡，但我不確定他們是 fav 臨時壞掉還是該永久修正
+	    // workaround 應該是 nfav = fav ? get_data_number(fav) : 0;
 	    if( nfav == 0 ) {
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);

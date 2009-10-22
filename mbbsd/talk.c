@@ -8,7 +8,7 @@ static char    * const IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
 };
 static char    * const sig_des[] = {
-    "鬥雞", "聊天", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
+    "鬥雞", "交談", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
 };
 static char    * const withme_str[] = {
   "談天", "下五子棋", "鬥寵物", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
@@ -798,6 +798,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	watermode = 0;
 
 	/* should we alert if we're in disabled mode? */
+	// TODO 改成會 temporary enable, 或是問 user 要不要開
 	switch(currutmp->pager)
 	{
 	    case PAGER_DISABLE:
@@ -2039,7 +2040,7 @@ t_showhelp(void)
 
     if (HasUserPerm(PERM_PAGE)) {
 	outs("\n" ANSI_COLOR(36) "【 交談專用鍵 】" ANSI_RESET "\n"
-	     "(→)(t)(Enter)  跟他／她聊天\n"
+	     "(→)(t)(Enter)  跟他／她交談聊天\n"
 	     "(w)             熱線 Call in\n"
 	     "(^W)切換水球方式 一般 / 進階\n"
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
@@ -3315,7 +3316,7 @@ t_talk(void)
     while ((ucount = count_logins(tuid, 0)) > 1) {
 	outs("(0) 不想 talk 了...\n");
 	count_logins(tuid, 1);
-	getdata(1, 33, "請選擇一個聊天對象 [0]：", genbuf, 4, DOECHO);
+	getdata(1, 33, "請選擇一個交談對象 [0]：", genbuf, 4, DOECHO);
 	unum = atoi(genbuf);
 	if (unum == 0)
 	    return 0;
