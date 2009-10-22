@@ -800,6 +800,9 @@ static size_t screen_backupsize(int len, const screenline_t *bp)
     return sum;
 }
 
+// XXX TODO FIXME
+// scrolling is not well-supported ...
+
 void scr_dump(screen_backup_t *old)
 {
     int i;
@@ -811,6 +814,9 @@ void scr_dump(screen_backup_t *old)
 
     old->col = t_columns;
     old->row = t_lines;
+    // FIXME unfortunately, scrolling does not work...
+    // - example: chat, page_up, down, left (back)
+    // old->scroll = scrollcnt;
     getyx(&old->y, &old->x);
 
     for(i = 0; i < t_lines; i++) {
@@ -831,6 +837,11 @@ void scr_restore(const screen_backup_t *old)
     void *buf = old->raw_memory;
     screenline_t* bp = big_picture;
     const int len = MIN(old->row, t_lines);
+
+    // FIXME unfortunately, scrolling does not work...
+    // - example: chat, page_up, down, left (back)
+    // scrollcnt = old->scroll;
+    // docls = YEA;
 
     for(i = 0; i < len; i++) {
 	/* restore header */
