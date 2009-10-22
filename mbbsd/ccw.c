@@ -39,6 +39,39 @@
 #define CCW_LOCAL_MSG	(2)
 
 ///////////////////////////////////////////////////////////////////////////
+// Data Structure
+typedef struct CCW_CTX {
+    int  line;	    // position of next line to append data
+    int  abort;	    // indicate session complete
+    int  abort_vget;// temporary abort from input
+    int  reset_scr; // need to redraw everything
+    int  local_echo;// should we echo local input?
+    FILE *log;	    // log file handle
+    char *log_fpath;// path of log file
+    void *arg;	    // private argument
+    char *sep_help_msg;	// quick help message on separators
+
+    int   fd;	    // remote connection
+    char *remote_id;// remote user id
+    char *local_id; // local user id
+
+    const int	    max_input_len;
+
+    // layout renderers
+    void (*header)	(struct CCW_CTX *);
+    void (*prompt)	(struct CCW_CTX *);
+    void (*footer)	(struct CCW_CTX *);
+    void (*separators)  (struct CCW_CTX *); // render header and footer separate lines
+
+    // content processors
+    int  (*peek_key)	(struct CCW_CTX *, int key);
+    int  (*peek_cmd)	(struct CCW_CTX *, const char *buf, int local);
+    void (*print_line)  (struct CCW_CTX *, const char *buf, int local);	// print on screen
+    void (*log_line)    (struct CCW_CTX *, const char *buf, int local); // log to file
+    void (*post_input)	(struct CCW_CTX *, const char *buf, int local); // after valid input
+} CCW_CTX;
+
+///////////////////////////////////////////////////////////////////////////
 // CCW helpers
 
 // utilities declaration

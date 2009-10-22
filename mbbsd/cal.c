@@ -533,7 +533,7 @@ p_sysinfo(void)
 #ifdef REPORT_PIAIP_MODULES
     outs("\n" ANSI_COLOR(1;30)
 	    "Modules powered by piaip:\n"
-	    "\ttelnet protocol, ALOHA fixer, BRC v3\n"
+	    "\ttelnet/vkbd protocol, vtuikit, ALOHA fixer, BRC v3\n"
 #if defined(USE_PIAIP_MORE) || defined(USE_PMORE)
 	    "\tpmore (piaip's more) 2007 w/Movie\n"
 #endif
@@ -548,6 +548,9 @@ p_sysinfo(void)
 #endif
 #if defined(USE_PFTERM)
 	    "\t(EXP) pfterm (piaip's flat terminal, Perfect Term)\n"
+#endif
+#if defined(EXP_CCW_CHAT) || defined(EXP_CCW_TALK)
+	    "\t(EXP) piaip's Common Chat Window (CCW)\n"
 #endif
 #if defined(USE_BBSLUA)
 	    "\t(EXP) BBS-Lua\n"

@@ -143,7 +143,6 @@ int g_ten_helf(void);
 int card_99(void);
 
 /* ccw (common chat window) */
-// int ccw_process(CCW_CTX *ctx);
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
@@ -654,13 +653,6 @@ int x_today(void);
 int x_yesterday(void);
 int x_user100(void);
 int x_birth(void);
-#if 0
-int x_90(void);
-int x_89(void);
-int x_88(void);
-int x_87(void);
-int x_86(void);
-#endif
 int x_history(void);
 int x_weather(void);
 int x_stock(void);
