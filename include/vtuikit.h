@@ -96,7 +96,7 @@ typedef struct {
 } VGET_RUNTIME;
 
 typedef int (*VGET_FCALLBACK)(int key, VGET_RUNTIME *prt, void *instance);
-typedef struct {
+typedef struct VGET_CALLBACKS {
     VGET_FCALLBACK   peek;   // called immediately after key hit
     VGET_FCALLBACK   data;   // called before inserting character data
     VGET_FCALLBACK   change; // called after buffer changed (the key may be an editing key)

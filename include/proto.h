@@ -142,10 +142,13 @@ int g_card_jack(void);
 int g_ten_helf(void);
 int card_99(void);
 
+/* ccw (common chat window) */
+// int ccw_process(CCW_CTX *ctx);
+int ccw_talk(int fd, int destuid);	// common chat window: private talk
+int ccw_chat(int fd);			// common chat window: chatroom
+
 /* chat */
 int t_chat(void);
-int ccw_talk(int fd, int destuid);	// common chat window: private talk
-int ccw_chat();				// common chat window: chatroom
 
 /* chc */
 void chc(int s, ChessGameMode mode);
