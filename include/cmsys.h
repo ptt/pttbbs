@@ -106,6 +106,7 @@ extern unsigned StringHash(const char *s);
 /* DBCS utilities */
 extern int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
 extern int    DBCS_Status(const char *dbcstr, int pos);
+extern void   DBCS_safe_trim(char *dbcstr);
 extern char * DBCS_strcasestr(const char* pool, const char *ptr);
 extern size_t str_iconv(
 	  const char *fromcode,	/* charset of source string */

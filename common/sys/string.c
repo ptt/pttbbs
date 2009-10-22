@@ -345,6 +345,14 @@ int DBCS_Status(const char *dbcstr, int pos)
     return sts;
 }
 
+void DBCS_safe_trim(char *dbcstr)
+{
+    int len = strlen(dbcstr);
+    if (len < 1) return;
+    if (DBCS_Status(dbcstr, len-1) == DBCS_LEADING)
+	dbcstr[len-1] = 0;
+}
+
 /**
  * DBCS_strcasestr(pool, ptr): 在字串 pool 中尋找 ptr (只忽略英文大小寫)
  */
