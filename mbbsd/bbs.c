@@ -416,13 +416,10 @@ int CheckPostRestriction(int bid)
 	return 1;
     bp = getbcache(bid);
 
-    // check first-login
     if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS))
 	return 0;
-#ifdef USE_LOGIN_LIMITS
     if (cuser.numlogindays / 10 < (unsigned int)bp->post_limit_logins)
 	return 0;
-#endif
     // XXX numposts itself is an integer, but some records (by del post!?) may
     // create invalid records as -1... so we'd better make it signed for real
     // comparison.
@@ -2012,7 +2009,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
 
-#ifdef USE_LOGIN_LIMITS
     sprintf(genbuf, "%u", logins*10);
     do {
 	move(b_lines-1, 0); clrtoeol();	// because previous prompt has same BIG5 prefix here
@@ -2021,7 +2017,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
-#endif
 
     sprintf(genbuf, "%u", posts*10);
     do {

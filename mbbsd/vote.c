@@ -647,12 +647,10 @@ vote_maintain(const char *bname)
 	} while (closetime < 0 || closetime > 120);
 	fprintf(fp, "%d\n", now - (MONTH_SECONDS * closetime));
 	closetime = 0;
-#ifdef USE_LOGIN_LIMITS
 	do {
 	    getdata(6, 0, STR_LOGINDAYS "下限", inbuf, 6, DOECHO);
 	    closetime = atoi(inbuf);	// borrow variable
 	} while (closetime < 0);
-#endif
 	fprintf(fp, "%d\n", closetime);
 	do {
 	    getdata(6, 0, "文章篇數下限", inbuf, 6, DOECHO);

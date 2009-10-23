@@ -446,7 +446,6 @@ b_config(void)
 	    lbp    = bp->vote_limit_badpost;
 	}
 
-#ifdef USE_LOGIN_LIMITS
 	if (llogin)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
@@ -457,7 +456,6 @@ b_config(void)
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}
-#endif
 
 	if (lpost)
 	{
