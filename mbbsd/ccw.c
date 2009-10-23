@@ -30,12 +30,12 @@
 // --------------------------------------------------------------------------
 
 // TODO
-// 1. [done] 統一 talk/chat 的中文名稱 (eg, 聊天/談天室， or 交談/聊天室)
-// 2. we may move anti-flood and other static variables into context...
-// 3. TAB complete...
-// 4. add F1 for help?
-// 5. log recovery on crash?
-// 6. use merge all cmd processor into peek_cmd(CCW_REMOTE)
+// 1. [done] unify talk/chat caption (eg, 聊天/談天室， or 交談/聊天室)
+// 2. [done] move anti-flood and other static variables into context...
+// 3. [talk done] merge all cmd processor into peek_cmd(CCW_REMOTE)
+// 4. log recovery on crash?
+// 5. TAB complete...
+// 6. add F1 for help?
 // 7. better receive buffer
 
 #define CCW_MAX_INPUT_LEN   (STRLEN)
@@ -247,14 +247,10 @@ ccw_log_line(CCW_CTX *ctx, const char *buf, int local)
 
     if (local <= CCW_LOCAL) // local or remote, but not message
     {
-        // we don't put ANSI escapes into log now...
-        fprintf(ctx->log, "%s%s: ",
-                "", // local ? "" : ANSI_COLOR(1),
+        fprintf(ctx->log, "%s: ",
                 local ? ctx->local_id : ctx->remote_id);
     }
-    fprintf(ctx->log, "%s%s\n",
-            buf, 
-            ""); // local ? "" : ANSI_RESET);
+    fprintf(ctx->log, "%s\n", buf);
 }
 
 // CCW utilities
@@ -704,6 +700,9 @@ typedef struct ccw_chat_ext {
     // misc
     int  newmail;
     int  old_rows, old_cols;    // for terminal resize auto detection
+    // anti flood
+    int  flood;
+    time4_t lasttime;
     // buffer
     int  buf_remains;
     char buf[128];
@@ -807,11 +806,83 @@ ccw_chat_prompt(CCW_CTX *ctx)
     prints("%-*s》", CHAT_ID_LEN, ctx->local_id);
 }
 
+static int
+word_match_index(const char *buf, const char *pattern, size_t szpat)
+{
+    const char *p = buf;
+
+    if (!szpat) szpat = strlen(pattern);
+
+    while ((p = strcasestr(p, pattern)) != NULL)
+    {
+        if (p > buf && isascii(*(p-1)) && isalnum(*(p-1)))
+        {
+            p++; 
+            continue;
+        }
+        // FIXME this may skip to much, but highlights are not that important...
+        p += szpat;
+        if (isascii(*p) && isalnum(*p))
+        {
+            p++;
+            continue;
+        }
+        return p - buf - szpat;
+    }
+    return -1;
+}
+
+static void
+ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
+{
+    int m = -1, n;
+    n = strlen(cuser.userid);
+    if (n > 2) 
+        m = word_match_index(s, cuser.userid, n);
+    if (m < 0)
+    {
+        n = strlen(ctx->local_id);
+        if (n > 2)
+            m = word_match_index(s, ctx->local_id, n);
+    }
+
+    if (m >= 0)
+    {
+        outns(s, m);
+        outs(ANSI_COLOR(1;33));
+        outns(s+m, n);
+        outs(ANSI_RESET);
+        outs(s+m+n);
+    } else {
+        outs(s);
+    }
+}
+
 static void
 ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
     assert(local != CCW_LOCAL);
-    outs(buf);
+    size_t szid;
+    // let's try harder to recognize the content
+    if (local != CCW_REMOTE || buf[0] == ' '|| 
+        strchr(buf, ESC_CHR) || !strchr(buf, ':') )
+    {
+        // pre-formatted or messages
+        outs(buf);
+    }
+    else if ((szid = strlen(ctx->local_id)) &&
+              strncmp(buf, ctx->local_id, szid) == 0 &&
+              buf[szid] == ':')
+    {
+        // message from myself
+        outs(ANSI_COLOR(1)); outs(ctx->local_id); outs(ANSI_RESET);
+        outs(buf+szid);
+    } 
+    else 
+    {
+        // message from others
+        ccw_chat_print_highlights(ctx, buf);
+    }
     outs(ANSI_RESET "\n→");
 }
 
@@ -894,19 +965,17 @@ ccw_chat_recv(CCW_CTX *ctx)
     return 0;
 }
 
+// prevent flooding */
 static void
 ccw_chat_anti_flood(CCW_CTX *ctx)
 {
-#ifdef EXP_ANTIFLOOD
-    // prevent flooding */
-    static time4_t lasttime = 0;
-    static int flood = 0;
+    ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
 
     syncnow();
-    if (now - lasttime < 3 )
+    if (now - ext->lasttime < 3 )
     {
         // 3 秒內洗半面是不行的 ((25-5)/2)
-        if( ++flood > 10 )
+        if( ++ext->flood > 10 )
         {
             // flush all input!
             unsigned char garbage[STRLEN];
@@ -925,17 +994,18 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
             sleep(2);
         }
     } else {
-        lasttime = now;
-        flood = 0;
+        ext->lasttime = now;
+        ext->flood = 0;
     }
-#endif // anti-flood
 }
 
 static int
 ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     ccw_chat_check_newmail(ctx);
+#ifdef EXP_ANTIFLOOD
     ccw_chat_anti_flood(ctx);
+#endif
 
     if (buf[0] != '/') return 0;
     buf ++;
