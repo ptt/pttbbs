@@ -3406,16 +3406,16 @@ talkreply(void)
     // FIXME CRASH here
     assert(sig>=0 && sig<sizeof(sig_des)/sizeof(sig_des[0]));
     prints("       (Y) 讓我們 %s 吧！"
-	    "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
+	   "       (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
     prints("       (N) 我現在不想 %s"
-	    "      (B) 對不起，我有事情不能跟你 %s\n",
+	   "       (B) 對不起，我有事情不能跟你 %s\n",
 	    sig_des[sig], sig_des[sig]);
     prints("       (C) 請不要吵我好嗎？"
-	    "       (D) 我要離站囉..下次再聊吧.......\n");
+	   "       (D) 我要離站囉..下次再聊吧.......\n");
     prints("       (E) 有事嗎？請先來信"
-	    "       (F) " ANSI_COLOR(1;33) "我自己輸入理由好了..." ANSI_RESET "\n");
+	   "       (F) " ANSI_COLOR(1;33) "<自行輸入理由>..." ANSI_RESET "\n");
     prints("       (1) %s？先拿$100來"
-	    "  (2) %s？先拿$1000來..\n\n", sig_des[sig], sig_des[sig]);
+	   "       (2) %s？先拿$1000來..\n\n", sig_des[sig], sig_des[sig]);
 
     snprintf(page_requestor, sizeof(page_requestor),
 	    "%s (%s)", uip->userid, uip->nickname);
