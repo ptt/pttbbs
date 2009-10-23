@@ -681,6 +681,7 @@ ccw_talk(int fd, int destuid)
 
     // clean network resource
     add_io(0, 0);
+    assert(fd == ctx.fd);
     close(fd);
 
     // close log file
