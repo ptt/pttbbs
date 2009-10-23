@@ -1026,7 +1026,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
             "[/f]lag [+-][ls]", "設定鎖定、秘密狀態",
             "[/i]nvite <id>", "邀請 <id> 加入" CCW_CAP_CHATROOM,
             "[/k]ick <id>", "將 <id> 踢出" CCW_CAP_CHATROOM,
-            "[/o]p <id>", "將 Op 的權力轉移給 <id>",
+            "[/o]p <id>", "提昇或解除 <id> 的管理員(op)權限",
             "[/t]opic <text>", "換個話題",
             "[/w]all", "廣播 (站長專用)",
             " /ban <userid>", "拒絕 <userid> 再次進入此" CCW_CAP_CHATROOM " (加入黑名單)",
