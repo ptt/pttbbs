@@ -1,6 +1,6 @@
 // $Id$
-#ifndef _VISIO_H
-#define _VISIO_H
+#ifndef _VTUIKIT_H
+#define _VTUIKIT_H
 
 /*
  * vtuikit.h
@@ -19,6 +19,8 @@
 #define VCLR_HEADER_MID		ANSI_COLOR(1;33;46)
 #define VCLR_HEADER_RIGHT	ANSI_COLOR(1;37;46)
 #define VCLR_HDR		ANSI_COLOR(1;37;46)
+#define VCLR_HDR2_LEFT		ANSI_COLOR(1;37;46)
+#define VCLR_HDR2_RIGHT		ANSI_COLOR(1;37;45)
 #define VCLR_FOOTER_CAPTION     ANSI_COLOR(0;34;46)
 #define VCLR_FOOTER             ANSI_COLOR(0;30;47)
 #define VCLR_FOOTER_QUOTE       ANSI_COLOR(0;31;47)
@@ -142,6 +144,10 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
 // you cannot use ANSI escapes in these APIs.
 void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
+void vs_hdr2	(const char *left, const char *right);
+void vs_hdr2f	(const char *fmt, ...);
+void vs_hdr2bar	(const char *left, const char *right);
+void vs_hdr2barf(const char *fmt, ...);
 void vs_footer	(const char *caption, const char *prompt);
 
 void vs_rectangle_simple(int l, int t, int r, int b);	// draw a single line rectangle, not filling inside interior
@@ -160,4 +166,4 @@ void	vscr_restore(VREFSCR);
 VREFCUR vcur_save   (void);
 void	vcur_restore(VREFCUR);
 
-#endif // _VISIO_H
+#endif // _VTUIKIT_H

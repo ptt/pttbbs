@@ -36,7 +36,7 @@
 // 4. log recovery on crash?
 // 5. TAB complete...
 // 6. add F1 for help?
-// 7. better receive buffer
+// 7. better receive/send buffer
 
 #define CCW_MAX_INPUT_LEN   (STRLEN)
 #define CCW_INIT_LINE       (2)
@@ -527,9 +527,9 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
 
     // XXX if remote is closed (without MSG_NOSIGNAL), 
     // this may raise a SIGPIPE and cause BBS to abort...
-    if (send(ctx->fd, &len, sizeof(len), MSG_NOSIGNAL) != sizeof(len))
+    if (tosend(ctx->fd, &len, sizeof(len), MSG_NOSIGNAL) != sizeof(len))
         return -1;
-    if (send(ctx->fd,  msg, len, MSG_NOSIGNAL) != len)
+    if (tosend(ctx->fd,  msg, len, MSG_NOSIGNAL) != len)
         return -1;
     return len;
 }
@@ -559,9 +559,8 @@ ccw_talk_end_session(CCW_CTX *ctx)
 static void
 ccw_talk_header(CCW_CTX *ctx)
 {
-    prints(ANSI_COLOR(1;37;46) " 【" CCW_CAP_TALK "】 " 
-            ANSI_COLOR(45) " %-*s" ANSI_RESET "\n",
-            t_columns - 12, ctx->remote_id);
+    vs_hdr2barf(" 【" CCW_CAP_TALK "】 \t %s",
+            ctx->remote_id);
 }
 
 static void
@@ -761,7 +760,7 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     len = snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
     // XXX if remote is closed (without MSG_NOSIGNAL), 
     // this may raise a SIGPIPE and cause BBS to abort...
-    return (send(ctx->fd, genbuf, len, MSG_NOSIGNAL) == len);
+    return (tosend(ctx->fd, genbuf, len, MSG_NOSIGNAL) == len);
 }
 
 static void
@@ -774,12 +773,8 @@ ccw_chat_end_session(CCW_CTX *ctx)
 static void
 ccw_chat_header(CCW_CTX *ctx)
 {
-
-    prints(ANSI_COLOR(1;37;46) " " CCW_CAP_CHAT " [%-*s] " 
-            ANSI_COLOR(45) " 話題: %-*s" ANSI_RESET, 
-            CHAT_ROOM_LEN, ctx->remote_id, 
-            t_columns - CHAT_ROOM_LEN - 20,
-            ccw_chat_get_ext(ctx)->topic);
+    vs_hdr2barf(" " CCW_CAP_CHATROOM " [%s] \t 話題: %s",
+            ctx->remote_id, ccw_chat_get_ext(ctx)->topic);
 }
 
 static void

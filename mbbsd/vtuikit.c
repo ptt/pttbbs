@@ -612,6 +612,88 @@ vs_hdr(const char *title)
 }
 
 /**
+ * vs_hdr2bar(left, right): (在行首)輸出簡易左右兩段式的標題
+ *
+ * @param left:  靠左的主要標題，不會被切斷。
+ * @param right: 文字靠左，用完剩下的所有空間
+ */
+void
+vs_hdr2bar(const char *left, const char *right)
+{
+    int w = MAX_COL;
+
+    if (*left == ESC_CHR)
+	w -= strlen_noansi(left);
+    else
+	w -= strlen(left);
+
+    SOLVE_ANSI_CACHE();
+    clrtoeol();
+    outs(VCLR_HDR2_LEFT);
+    outs(left);
+    outs(VCLR_HDR2_RIGHT);
+
+    if (w <= 0)
+	return;
+
+    if (*right == ESC_CHR)
+	fillns_ansi(w, right);
+    else
+	fillns(w, right);
+
+    outs(ANSI_RESET "\n");
+}
+
+/**
+ * vs_hdr2barf(fmt, ...): (在行首)輸出格式化的簡易左右兩段式的標題
+ *
+ * @param fmt: 用 \t 分隔左右的格式字串
+ */
+void
+vs_hdr2barf(const char *fmt, ...)
+{
+    va_list args;
+    char buff[VBUFLEN];
+    char *tab = NULL;
+
+    va_start(args, fmt);
+    vsnprintf(buff, sizeof(buff), fmt, args);
+    va_end(args);
+
+    tab = strchr(buff, '\t');
+    if (*tab) *tab++ = 0;
+
+    vs_hdr2bar(buff, tab ? tab : "");
+}
+
+/**
+ * vs_hdr2(left, right): 清空螢幕並輸出簡易左右兩段式的標題
+ */
+void
+vs_hdr2(const char *left, const char *right)
+{
+    clear();
+    vs_hdr2bar(left, right);
+}
+
+void
+vs_hdr2f(const char *fmt, ...)
+{
+    va_list args;
+    char buff[VBUFLEN];
+    char *tab = NULL;
+
+    va_start(args, fmt);
+    vsnprintf(buff, sizeof(buff), fmt, args);
+    va_end(args);
+
+    tab = strchr(buff, '\t');
+    if (*tab) *tab++ = 0;
+
+    vs_hdr2(buff, tab ? tab : "");
+}
+
+/**
  * vs_footer(caption, msg): 在螢幕底部印出格式化的 caption msg (不可含 ANSI 碼)
  *
  * @param caption 左邊的分類字串
