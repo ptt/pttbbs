@@ -265,6 +265,44 @@ int towrite(int fd, const void *buf, int len)
 }
 
 /**
+ * same as recv(2), but recv until exactly size len 
+ */
+int torecv(int fd, void *buf, int len, int flag)
+{
+    int     s;
+    for( s = 0 ; len > 0 ; )
+	if( (s = recv(fd, buf, len, flag)) <= 0 ) {
+	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+		continue;
+	    // XXX we define toread/towrite as '-1 for EOF and error'.
+	    return -1; // s;
+	}else{
+	    buf += s;
+	    len -= s;
+	}
+    return s;
+}
+
+/**
+ * similiar to send(2), but send until exactly size len 
+ */
+int tosend(int fd, const void *buf, int len, int flag)
+{
+    int     s;
+    for( s = 0 ; len > 0 ; )
+	if( (s = send(fd, buf, len, flag)) <= 0){
+	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+		continue;
+	    // XXX we define toread/towrite as '-1 for EOF and error'.
+	    return -1; // s;
+	}else{
+	    buf += s;
+	    len -= s;
+	}
+    return s;
+}
+
+/**
  * fd sharing by piaip
  */
 
