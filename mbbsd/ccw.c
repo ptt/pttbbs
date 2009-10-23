@@ -806,6 +806,7 @@ ccw_chat_prompt(CCW_CTX *ctx)
     prints("%-*s¡n", CHAT_ID_LEN, ctx->local_id);
 }
 
+#ifdef EXP_CHAT_HIGHLIGHTS
 static int
 word_match_index(const char *buf, const char *pattern, size_t szpat)
 {
@@ -857,12 +858,14 @@ ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
         outs(s);
     }
 }
+#endif // EXP_CHAT_HIGHLIGHTS
 
 static void
 ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
-    assert(local != CCW_LOCAL);
+#ifdef EXP_CHAT_HIGHLIGHTS
     size_t szid;
+
     // let's try harder to recognize the content
     if (local != CCW_REMOTE || buf[0] == ' '|| 
         strchr(buf, ESC_CHR) || !strchr(buf, ':') )
@@ -883,6 +886,10 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
         // message from others
         ccw_chat_print_highlights(ctx, buf);
     }
+#else  // !EXP_CHAT_HIGHLIGHTS
+    outs(buf);
+#endif // !EXP_CHAT_HIGHLIGHTS
+    assert(local != CCW_LOCAL);
     outs(ANSI_RESET "\n¡÷");
 }
 
@@ -965,6 +972,8 @@ ccw_chat_recv(CCW_CTX *ctx)
     return 0;
 }
 
+#ifdef EXP_ANTIFLOOD
+
 // prevent flooding */
 static void
 ccw_chat_anti_flood(CCW_CTX *ctx)
@@ -998,6 +1007,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
         ext->flood = 0;
     }
 }
+#endif // EXP_ANTIFLOOD
 
 static int
 ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
@@ -1111,18 +1121,6 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
                 return 1;
             }
             ccw_chat_check_newmail(ctx);
-            return 1;
-
-        case Ctrl('I'):
-            {
-                VREFSCR scr = vscr_save();
-                add_io(0, 0);
-
-                t_idle();
-
-                add_io(ctx->fd, 0);
-                vscr_restore(scr);
-            }
             return 1;
 
             // Support ZA because chat is mostly independent and secure.

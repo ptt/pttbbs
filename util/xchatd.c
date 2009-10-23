@@ -796,7 +796,7 @@ chat_topic(ChatUser *cu, char *msg)
 
     room_changed(room);
 
-    sprintf(chatbuf, "¡» %s ±N¸ÜÃD§ï¬° [1;32m%s[m", cu->chatid, topic);
+    sprintf(chatbuf, "¡» %s ±N¸ÜÃD§ï¬° " ANSI_COLOR(1;32) "%s" ANSI_RESET, cu->chatid, topic);
     if (!CLOAK(cu))               /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 }
@@ -831,7 +831,7 @@ chat_nick(ChatUser *cu, char *msg)
 	return;
     }
 
-    snprintf(chatbuf, sizeof(chatbuf), "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° [1;33m%s[m", cu->chatid, chatid);
+    snprintf(chatbuf, sizeof(chatbuf), "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° " ANSI_COLOR(1;33) "%s" ANSI_RESET, cu->chatid, chatid);
     if (!CLOAK(cu))               /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 
@@ -861,7 +861,9 @@ chat_list_rooms(ChatUser *cuser, char *msg)
     if (common_client_command)
 	send_to_user(cuser, "", 0, MSG_ROOMLISTSTART);
     else
-	send_to_user(cuser, "[7m ²á¤Ñ«Ç¦WºÙ  ¢x¤H¼Æ¢x¸ÜÃD        [m", 0, MSG_MESSAGE);
+	send_to_user(cuser, ANSI_COLOR(7) " ²á¤Ñ«Ç¦WºÙ  ¢x¤H¼Æ¢x¸ÜÃD"
+		"                                        "  // 48-4 spaces for max topic length
+		ANSI_RESET, 0, MSG_MESSAGE);
 
     for(cr = &mainroom; cr; cr = cr->next) {
 	if (!SECRET(cr) || CHATSYSOP(cuser) || (cr == cuser->room && ROOMOP(cuser)))
@@ -910,7 +912,7 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
     if (common_client_command)
 	send_to_user(cu, "", 0, MSG_USERLISTSTART);
     else
-	send_to_user(cu, "[7m ²á¤Ñ¥N¸¹¢x¨Ï¥ÎªÌ¥N¸¹  ¢x²á¤Ñ«Ç [m", 0, MSG_MESSAGE);
+	send_to_user(cu, ANSI_COLOR(7) " ²á¤Ñ¥N¸¹¢x¨Ï¥ÎªÌ¥N¸¹  ¢x²á¤Ñ«Ç      " ANSI_RESET, 0, MSG_MESSAGE);
 
     for (user = mainuser; user; user = user->unext)
     {
@@ -1013,7 +1015,7 @@ chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: ÁÙ¨S¦³§@¤£¦P¶¡ªº */
 
     myroom = whichroom;
     send_to_user(cu,
-		 "[7m ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹ [m", 0, MSG_MESSAGE);
+		 ANSI_COLOR(7) " ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹ " ANSI_RESET, 0, MSG_MESSAGE);
 
     c = 0;
 
@@ -1159,7 +1161,7 @@ chat_private(ChatUser *cu, char *msg)
     else if (*msg)
     {
 	userno = cu->userno;
-	sprintf(chatbuf, "[1m*%s (%s)*[m ", cu->chatid, cu->userid);
+	sprintf(chatbuf, ANSI_COLOR(1) "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
 	strncat(chatbuf, msg, 80);
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
@@ -1234,7 +1236,8 @@ arrive_room(ChatUser *cuser, ChatRoom *room)
 	send_to_user(cuser, chatbuf, 0, 0);
     }
 
-    sprintf(chatbuf, "¡° [32;1m%s (%s)[m ¶i¤J [33;1m[%s][m ¥]´[",
+    sprintf(chatbuf, "¡° " ANSI_COLOR(1;32) "%s (%s)" ANSI_RESET " ¶i¤J "
+	    ANSI_COLOR(1;33) "[%s]" ANSI_RESET " ¥]´[",
 	    cuser->chatid, cuser->userid, rname);
     if (!CLOAK(cuser))            /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(room, chatbuf, cuser->userno, MSG_MESSAGE);
@@ -1386,10 +1389,10 @@ print_user_counts(ChatUser *cuser)
     number = (cuser->clitype) ? MSG_MOTD : MSG_MESSAGE;
 
     sprintf(chatbuf,
-	    "¡ó Åwªï¥úÁ{¡i§å½ð½ð¯ùÃÀÀ]¡j¡A¥Ø«e¶}¤F [1;31m%d[m ¶¡¥]´[", roomc);
+	    "¡ó Åwªï¥úÁ{¡i§å½ð½ð¯ùÃÀÀ]¡j¡A¥Ø«e¶}¤F " ANSI_COLOR(1;31) "%d" ANSI_RESET " ¶¡¥]´[", roomc);
     send_to_user(cuser, chatbuf, 0, number);
 
-    sprintf(chatbuf, "¡ó ¦@¦³ [1;36m%d[m ¤H¨ÓÂ\\Àsªù°}", userc);
+    sprintf(chatbuf, "¡ó ¦@¦³ " ANSI_COLOR(1;36) "%d" ANSI_RESET " ¤H¨ÓÂ\\Àsªù°}", userc);
     if (suserc)
 	sprintf(chatbuf + strlen(chatbuf), " [%d ¤H¦b¯µ±K²á¤Ñ«Ç]", suserc);
     send_to_user(cuser, chatbuf, 0, number);
@@ -1566,7 +1569,7 @@ chat_act(ChatUser *cu, char *msg)
 {
     if (*msg && (!RHANDUP(cu->room) || SAY(cu) || ROOMOP(cu)))
     {
-	sprintf(chatbuf, "%s [36m%s[m", cu->chatid, msg);
+	sprintf(chatbuf, "%s " ANSI_COLOR(36) "%s" ANSI_RESET, cu->chatid, msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
     }
 }
@@ -1984,7 +1987,7 @@ chat_broadcast(ChatUser *cu, char *msg)
 	send_to_user(cu, "¡° ½Ð«ü©w¼s¼½¤º®e", 0, MSG_MESSAGE);
 	return;
     }
-    sprintf(chatbuf, "[1m¡° " BBSNAME "²á¤Ñ«Ç¼s¼½¤¤ [%s].....[m",
+    sprintf(chatbuf, ANSI_COLOR(1) "¡° " BBSNAME "²á¤Ñ«Ç¼s¼½¤¤ [%s]....." ANSI_RESET,
 	    cu->chatid);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_MESSAGE);
     sprintf(chatbuf, "¡» %s", msg);
@@ -2145,7 +2148,7 @@ party_action(ChatUser *cu, char *cmd, char *party)
 		party = xuser->chatid;
 	    }
 	}
-	sprintf(chatbuf, "[1;32m%s [31m%s[33m %s [31m%s[m",
+	sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_COLOR(33) " %s " ANSI_COLOR(31) "%s" ANSI_RESET,
 		cu->chatid, cap->part1_msg, party, cap->part2_msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
@@ -2202,7 +2205,7 @@ speak_action(ChatUser *cu, char *cmd, char *msg)
     {
 	if (!str_equal(cmd, verb))
 	    continue;
-	sprintf(chatbuf, "[1;32m%s [31m%s¡G[33m %s[m",
+	sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s¡G" ANSI_COLOR(33) " %s" ANSI_RESET,
 		cu->chatid, cap->part1_msg, msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
@@ -2279,7 +2282,7 @@ condition_action(ChatUser *cu, char *cmd)
     {
 	if (str_equal(cmd, verb))
 	{
-	    sprintf(chatbuf, "[1;32m%s [31m%s[m",
+	    sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_RESET,
 		    cu->chatid, cap->part1_msg);
 	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	    return 1;
@@ -2296,9 +2299,9 @@ condition_action(ChatUser *cu, char *cmd)
 
 static char *dscrb[] =
 {
-    "[1;37m¡i Verb + Nick¡G   °Êµü + ¹ï¤è¦W¦r ¡j[36m   ¨Ò¡G//kick piggy[m",
-    "[1;37m¡i Verb + Message¡G°Êµü + ­n»¡ªº¸Ü ¡j[36m   ¨Ò¡G//sing ¤Ñ¤Ñ¤ÑÂÅ[m",
-    "[1;37m¡i Verb¡G°Êµü ¡j    ¡ô¡õ¡GÂÂ¸Ü­«´£[m", NULL
+    ANSI_COLOR(1;37) "¡i Verb + Nick¡G   °Êµü + ¹ï¤è¦W¦r ¡j" ANSI_COLOR(36) "   ¨Ò¡G//kick piggy" ANSI_RESET,
+    ANSI_COLOR(1;37) "¡i Verb + Message¡G°Êµü + ­n»¡ªº¸Ü ¡j" ANSI_COLOR(36) "   ¨Ò¡G//sing ¤Ñ¤Ñ¤ÑÂÅ" ANSI_RESET,
+    ANSI_COLOR(1;37) "¡i Verb¡G°Êµü ¡j    ¡ô¡õ¡GÂÂ¸Ü­«´£" ANSI_RESET, NULL
 };
 ChatAction *catbl[] =
 {
