@@ -525,9 +525,11 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
     assert(len >= 0 && (int)len == strlen(msg));
     if (len < 1) return 0;
 
-    if (towrite(ctx->fd, &len, 1) != 1)
+    // XXX if remote is closed (without MSG_NOSIGNAL), 
+    // this may raise a SIGPIPE and cause BBS to abort...
+    if (send(ctx->fd, &len, sizeof(len), MSG_NOSIGNAL) != sizeof(len))
         return -1;
-    if (towrite(ctx->fd, msg, len)!= len)
+    if (send(ctx->fd,  msg, len, MSG_NOSIGNAL) != len)
         return -1;
     return len;
 }
@@ -537,8 +539,8 @@ ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
 {
     char len = 0;
     buf[0] = 0;
-    // XXX blocking call here...
-    if (toread(ctx->fd, &len, 1) != 1)
+    // XXX blocking call here... (change to recv?)
+    if (toread(ctx->fd, &len, sizeof(len)) != sizeof(len))
         return -1;
     if (toread(ctx->fd, buf, len)!= len)
         return -1;
@@ -757,7 +759,9 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     char genbuf[200];
 
     len = snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
-    return (send(ctx->fd, genbuf, len, 0) == len);
+    // XXX if remote is closed (without MSG_NOSIGNAL), 
+    // this may raise a SIGPIPE and cause BBS to abort...
+    return (send(ctx->fd, genbuf, len, MSG_NOSIGNAL) == len);
 }
 
 static void
