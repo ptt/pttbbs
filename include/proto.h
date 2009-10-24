@@ -388,10 +388,12 @@ typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
 extern void namecomplete2(const struct Vector *namelist, const char *prompt, char *data);
+extern void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval);
 extern int ShowVector(struct Vector *self, int row, int column, const char *prompt, int idx);
 extern void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
 
 void usercomplete(const char *prompt, char *data);
+void usercomplete2(const char *prompt, char *data, const char *defval);
 int generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		       gnc_comp_func compar, gnc_perm_func permission,
 		       gnc_getname_func getname);

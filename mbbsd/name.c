@@ -144,6 +144,12 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 void
 namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
 {
+    return namecomplete3(namelist, prompt, data, NULL);
+}
+
+void
+namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval)
+{
     struct namecomplete_int nc_int = {
 	.base = namelist,
 	.dirty = 0,
@@ -158,18 +164,24 @@ namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     Vector_init(&nc_int.sublist, IDLEN+1);
-    Vector_sublist(namelist, &nc_int.sublist, "");
-    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, NULL, &vcb, &nc_int);
+    Vector_sublist(namelist, &nc_int.sublist, defval ? defval : "");
+    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, defval, &vcb, &nc_int);
     Vector_delete(&nc_int.sublist);
+}
+
+void
+usercomplete2(const char *prompt, char *data, const char *defval)
+{
+    struct Vector namelist;
+
+    Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
+    namecomplete3(&namelist, prompt, data, defval);
 }
 
 void
 usercomplete(const char *prompt, char *data)
 {
-    struct Vector namelist;
-
-    Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
-    namecomplete2(&namelist, prompt, data);
+    usercomplete2(prompt, data, NULL);
 }
 
 static int
