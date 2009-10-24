@@ -427,6 +427,7 @@ ccw_process(CCW_CTX *ctx)
 
         // quick continue for empty input
         trim(inbuf);
+        strip_blank(inbuf, inbuf);
         if (!*inbuf)
             continue;
 
