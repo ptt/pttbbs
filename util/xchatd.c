@@ -45,10 +45,8 @@
 
 /* name of the main room (always exists) */
 
-
 #define MAIN_NAME       "main"
 #define MAIN_TOPIC      "烹茶可貢西天佛"
-
 
 #define ROOM_LOCKED     1
 #define ROOM_SECRET     2
@@ -80,6 +78,9 @@
 #define CHATID_LEN  (8)
 #define TOPIC_LEN   (48)
 
+// 訊息色彩 (WOW style is good!)
+#define COLOR_PRIVATEMSG    ANSI_COLOR(1;35)
+#define COLOR_ANNOUNCE	    ANSI_COLOR(1;33)
 
 /* ----------------------------------------------------- */
 /* ChatRoom data structure                               */
@@ -99,8 +100,6 @@ struct ChatUser
     UserList *ignore;
     int userno;			  /* userno 是 PASSWD 來的 unum, 幾乎是唯一的 */
     int uflag;
-    int clitype;                  /* Xshadow: client type. 1 for common client,
-				   * 0 for bbs only client */
     time4_t uptime;               /* Thor: unused */
     char userid[IDLEN + 1];       /* real userid */
     char chatid[CHATID_LEN + 1];  /* chat id */
@@ -575,87 +574,52 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
     ChatUser *cu;
     fd_set wset, *wptr;
     int sock, max;
-    char sendbuf[256];
-    int clitype;                  /* 分為 bbs client 及 common client 兩次處理 */
 
-    for (clitype = (number == MSG_MESSAGE || !number) ? 0 : 1; clitype < 2; clitype++)
+    if (number != MSG_MESSAGE && number)
+	return;
+
+    FD_ZERO(wptr = &wset);
+    max = -1;
+
+    for (cu = mainuser; cu; cu = cu->unext)
     {
-
-	FD_ZERO(wptr = &wset);
-	max = -1;
-
-	for (cu = mainuser; cu; cu = cu->unext)
+	if (room == cu->room || room == ROOM_ALL)
 	{
-	    if (room == cu->room || room == ROOM_ALL)
+	    if (!userno || !list_belong(cu->ignore, userno))
 	    {
-		if (cu->clitype == clitype && (!userno || !list_belong(cu->ignore, userno)))
-		{
-		    sock = cu->sock;
-		    FD_SET(sock, wptr);
-		    if (max < sock)
-			max = sock;
-		}
+		sock = cu->sock;
+		FD_SET(sock, wptr);
+		if (max < sock)
+		    max = sock;
 	    }
 	}
-
-	if (max < 0)
-	    continue;
-
-	if (clitype)
-	{
-	    if (strlen(msg))
-		snprintf(sendbuf, sizeof(sendbuf), "%3d %s", number, msg);
-	    else
-		snprintf(sendbuf, sizeof(sendbuf), "%3d", number);
-
-	    Xdo_send(max, wptr, sendbuf);
-	}
-	else
-	    Xdo_send(max, wptr, msg);
     }
+
+    if (max < 0)
+	return;
+
+    Xdo_send(max, wptr, msg);
 }
 
 
 static void
 send_to_user(ChatUser *user, char *msg, int userno, int number)
 {
-    if (!user->clitype && number && number != MSG_MESSAGE)
+    if (number && number != MSG_MESSAGE)
 	return;
 
     if (!userno || !list_belong(user->ignore, userno))
     {
 	fd_set wset, *wptr;
 	int sock;
-	char sendbuf[256];
 
 	sock = user->sock;
 	FD_ZERO(wptr = &wset);
 	FD_SET(sock, wptr);
 
-	if (user->clitype)
-	{
-	    if (strlen(msg))
-		snprintf(sendbuf, sizeof(sendbuf), "%3d %s", number, msg);
-	    else
-		snprintf(sendbuf, sizeof(sendbuf), "%3d", number);
-	    Xdo_send(sock, wptr, sendbuf);
-	}
-	else
-	    Xdo_send(sock, wptr, msg);
+	Xdo_send(sock, wptr, msg);
     }
 }
-
-#if 0
-static void
-send_to_sock(int sock, char *msg)         /* Thor: unused */
-{
-    fd_set wset, *wptr;
-
-    FD_ZERO(wptr = &wset);
-    FD_SET(sock, wptr);
-    Xdo_send(sock, wptr, msg);
-}
-#endif
 
 /* ----------------------------------------------------- */
 
@@ -786,13 +750,8 @@ chat_topic(ChatUser *cu, char *msg)
     strlcpy(topic, msg, sizeof(room->topic));
     DBCS_safe_trim(topic);
 
-    if (cu->clitype)
-	send_to_room(room, topic, 0, MSG_TOPIC);
-    else
-    {
-	sprintf(chatbuf, "/t%s", topic);
-	send_to_room(room, chatbuf, 0, 0);
-    }
+    sprintf(chatbuf, "/t%s", topic);
+    send_to_room(room, chatbuf, 0, 0);
 
     room_changed(room);
 
@@ -838,13 +797,8 @@ chat_nick(ChatUser *cu, char *msg)
     strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
     user_changed(cu);
 
-    if (cu->clitype)
-	send_to_user(cu, chatid, 0, MSG_NICK);
-    else
-    {
-	snprintf(chatbuf, sizeof(chatbuf), "/n%s", chatid);
-	send_to_user(cu, chatbuf, 0, 0);
-    }
+    snprintf(chatbuf, sizeof(chatbuf), "/n%s", chatid);
+    send_to_user(cu, chatbuf, 0, 0);
 }
 
 static void
@@ -861,8 +815,9 @@ chat_list_rooms(ChatUser *cuser, char *msg)
     if (common_client_command)
 	send_to_user(cuser, "", 0, MSG_ROOMLISTSTART);
     else
-	send_to_user(cuser, ANSI_COLOR(7) " 聊天室名稱  │人數│話題"
-		"                                        "  // 48-4 spaces for max topic length
+	send_to_user(cuser, ANSI_COLOR(7) " 聊天室名稱  │人數│話題 "
+		// 48-4 spaces for max topic length
+		"                                        "  
 		ANSI_RESET, 0, MSG_MESSAGE);
 
     for(cr = &mainroom; cr; cr = cr->next) {
@@ -1161,25 +1116,17 @@ chat_private(ChatUser *cu, char *msg)
     else if (*msg)
     {
 	userno = cu->userno;
-	sprintf(chatbuf, ANSI_COLOR(1) "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
-	strncat(chatbuf, msg, 80);
+
+	// XXX valid size: 對方輸入時要在 NICK: /m MYNICK MSG
+	// 所以輸入的 MSG 最大為 80-NICKLEN(8)*2-5
+	// prefix 的字串要小心不能過長
+
+	sprintf(chatbuf, COLOR_PRIVATEMSG "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
+	strlcat(chatbuf, msg, sizeof(chatbuf));
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
-	if (xuser->clitype)
-	{                           /* Xshadow: 如果對方是用 client 上來的 */
-	    sprintf(chatbuf, "%s %s ", cu->userid, cu->chatid);
-	    strncat(chatbuf, msg, 80);
-	    send_to_user(xuser, chatbuf, userno, MSG_PRIVMSG);
-	}
-	if (cu->clitype)
-	{
-	    sprintf(chatbuf, "%s %s ", xuser->userid, xuser->chatid);
-	    strncat(chatbuf, msg, 80);
-	    send_to_user(cu, chatbuf, 0, MSG_MYPRIVMSG);
-	}
-
-	sprintf(chatbuf, "%s> ", xuser->chatid);
-	strncat(chatbuf, msg, 80);
+	sprintf(chatbuf, COLOR_PRIVATEMSG "%s" ANSI_RESET "> ", xuser->chatid);
+	strlcat(chatbuf, msg, sizeof(chatbuf));
     }
     else
     {
@@ -1223,18 +1170,10 @@ arrive_room(ChatUser *cuser, ChatRoom *room)
 
     room_changed(room);
 
-    if (cuser->clitype)
-    {
-	send_to_user(cuser, rname, 0, MSG_ROOM);
-	send_to_user(cuser, room->topic, 0, MSG_TOPIC);
-    }
-    else
-    {
-	sprintf(chatbuf, "/r%s", rname);
-	send_to_user(cuser, chatbuf, 0, 0);
-	sprintf(chatbuf, "/t%s", room->topic);
-	send_to_user(cuser, chatbuf, 0, 0);
-    }
+    sprintf(chatbuf, "/r%s", rname);
+    send_to_user(cuser, chatbuf, 0, 0);
+    sprintf(chatbuf, "/t%s", room->topic);
+    send_to_user(cuser, chatbuf, 0, 0);
 
     sprintf(chatbuf, "※ " ANSI_COLOR(1;32) "%s (%s)" ANSI_RESET " 進入 "
 	    ANSI_COLOR(1;33) "[%s]" ANSI_RESET " 包廂",
@@ -1386,7 +1325,7 @@ print_user_counts(ChatUser *cuser)
 	}
     }
 
-    number = (cuser->clitype) ? MSG_MOTD : MSG_MESSAGE;
+    number = MSG_MESSAGE;
 
     sprintf(chatbuf,
 	    "⊙ 歡迎光臨【批踢踢茶藝館】，目前開了 " ANSI_COLOR(1;31) "%d" ANSI_RESET " 間包廂", roomc);
@@ -1450,10 +1389,7 @@ login_user(ChatUser *cu, char *msg)
 	logit("noexist", chatid);
 #endif
 
-	if (cu->clitype)
-	    send_to_user(cu, "錯誤的使用者代號", 0, ERR_LOGIN_NOSUCHUSER);
-	else
-	    send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
+	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 
 	return -1;
     }
@@ -1464,10 +1400,7 @@ login_user(ChatUser *cu, char *msg)
 	logit("fake", chatid);
 #endif
 
-	if (cu->clitype)
-	    send_to_user(cu, "密碼錯誤", 0, ERR_LOGIN_PASSERROR);
-	else
-	    send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
+	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return -1;
     }
 
@@ -1491,9 +1424,6 @@ login_user(ChatUser *cu, char *msg)
   #ifdef  DEBUG
   logit("enter", "bogus");
   #endif
-  if (cu->clitype)
-  send_to_user(cu, "請勿派遣分身進入聊天室 !!", 0, ERR_LOGIN_USERONLINE);
-  else
   send_to_user(cu, CHAT_LOGIN_BOGUS, 0, 0);
   return -1;    
   }
@@ -1505,10 +1435,7 @@ login_user(ChatUser *cu, char *msg)
 	logit("enter", chatid);
 #endif
 
-	if (cu->clitype)
-	    send_to_user(cu, "不合法的聊天室代號 !!", 0, ERR_LOGIN_NICKERROR);
-	else
-	    send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
+	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return 0;
     }
 
@@ -1520,10 +1447,7 @@ login_user(ChatUser *cu, char *msg)
 	logit("enter", "duplicate");
 #endif
 
-	if (cu->clitype)
-	    send_to_user(cu, "這個代號已經有人使用", 0, ERR_LOGIN_NICKINUSE);
-	else
-	    send_to_user(cu, CHAT_LOGIN_EXISTS, 0, 0);
+	send_to_user(cu, CHAT_LOGIN_EXISTS, 0, 0);
 	return 0;
     }
 
@@ -1545,10 +1469,7 @@ login_user(ChatUser *cu, char *msg)
     else
 	strcpy(cu->lasthost, "[外太空]");
 
-    if (cu->clitype)
-	send_to_user(cu, "順利", 0, MSG_LOGINOK);
-    else
-	send_to_user(cu, CHAT_LOGIN_OK, 0, 0);
+    send_to_user(cu, CHAT_LOGIN_OK, 0, 0);
 
     arrive_room(cu, &mainroom);
 
@@ -2465,12 +2386,7 @@ command_execute(ChatUser *cu)
     {
 	/* MUST give special /! or /-! command if not in the room yet */
 	if(strncmp(msg, "/!", 2)==0) {
-	    cu->clitype = 0;
 	    return login_user(cu, msg+2);
-	}
-	if(strncmp(msg, "/-!", 3)==0) {
-	    cu->clitype = 1;
-	    return login_user(cu, msg+3);
 	}
 	return -1;
     }
@@ -2516,12 +2432,6 @@ command_execute(ChatUser *cu)
 	char *str;
 
 	common_client_command = 0;
-	if((*cmd == '-')) {
-	    if(cu->clitype) {
-		cmd++;                  /* Xshadow: 指令從下一個字元才開始 */
-		common_client_command = 1;
-	    }
-	}
 	for(cmdrec = chatcmdlist; (str = cmdrec->cmdstr); cmdrec++)
 	{
 		switch (cmdrec->exact)
