@@ -219,7 +219,10 @@ give_tax(int money)
 int
 cal_before_givetax(int taxed_money)
 {
-    return taxed_money / 9.0f * 10 + 1;
+    int m = taxed_money / 9.0f * 10 + 1;
+    if (m > 1 && taxed_money % 9 == 0)
+	m--;
+    return m;
 }
 
 int
