@@ -823,7 +823,7 @@ word_match_index(const char *buf, const char *pattern, size_t szpat)
 
     if (!szpat) szpat = strlen(pattern);
 
-    while ((p = strcasestr(p, pattern)) != NULL)
+    while ((p = DBCS_strcasestr(p, pattern)) != NULL)
     {
         if (p > buf && isascii(*(p-1)) && isalnum(*(p-1)))
         {
