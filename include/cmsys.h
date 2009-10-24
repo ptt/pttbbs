@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
 
@@ -219,10 +221,12 @@ extern ssize_t vbuf_recv (VBUF *v, int fd, ssize_t sz, int flags);
 
 // write from vbuf to writer
 extern ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx, 
-        ssize_t (writer)(const void *p, size_t len, void *ctx)); 
+	ssize_t (writer)(struct iovec[2], void *ctx));
+        // ssize_t (writer)(const void *p[2], size_t len[2], void *ctx)); 
 // read from reader to vbuf
 extern ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx, 
-        ssize_t (reader)(void *p, size_t len, void *ctx));
+	ssize_t (reader)(struct iovec[2], void *ctx));
+        // ssize_t (reader)(void *p[2], size_t len[2], void *ctx));
 
 /* telnet.c */
 struct TelnetCallback {

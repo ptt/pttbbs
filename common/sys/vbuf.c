@@ -27,9 +27,10 @@
 #include <errno.h>
 #include <assert.h>
 
-// for read/write/send/recv
+// for read/write/send/recv/readv/writev
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 // #include "vbuf.h"
@@ -142,7 +143,7 @@ vbuf_strchr(VBUF *v, char c)
     const char *s = v->tail, *d = v->head;
 
     if (vbuf_is_empty(v))
-	return 0;
+	return -1;
 
     if (d < s) 
 	d = v->buf_end;
@@ -158,7 +159,7 @@ vbuf_strchr(VBUF *v, char c)
 
     while (s < d)
 	if (*s++ == c)
-	    return s - v->tail -1;
+	    return (v->buf_end - v->tail) + s - v->buf -1;
 
     return -1;
 }
@@ -184,6 +185,7 @@ vbuf_get(VBUF *v, char *s, size_t sz)
         if (v->tail == v->buf_end)
             v->tail =  v->buf;
     }
+    assert(sz == 0);
     return 1;
 }
 
@@ -205,48 +207,57 @@ vbuf_put(VBUF *v, const char *s, size_t sz)
         if (v->head == v->buf_end)
             v->head =  v->buf;
     }
+    assert(sz == 0);
     return 1;
 }
 
 /* read/write callbacks */
 
 static ssize_t 
-vbuf_rw_write(const void *p, size_t len, void *ctx)
+vbuf_rw_write(struct iovec iov[2], void *ctx)
 {
     int fd = *(int*)ctx;
     ssize_t ret;
-    while ( (ret = write(fd, p, len)) < 0 &&
-	    (errno == EAGAIN || errno == EINTR));
+    while ( (ret = writev(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
+	    (errno == EINTR));
+    if (ret < 0 && errno == EAGAIN)
+	ret = 0;
     return ret;
 }
 
 static ssize_t
-vbuf_rw_read(void *p, size_t len, void *ctx)
+vbuf_rw_read(struct iovec iov[2], void *ctx)
 {
     int fd = *(int*)ctx;
     ssize_t ret;
-    while ( (ret = read(fd, p, len)) < 0 &&
-	    (errno == EAGAIN || errno == EINTR));
+    while ( (ret = readv(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
+	    (errno == EINTR));
+    if (ret < 0 && errno == EAGAIN)
+	ret = 0;
     return ret;
 }
 
 static ssize_t 
-vbuf_rw_send(const void *p, size_t len, void *ctx)
+vbuf_rw_send(struct iovec iov[2], void *ctx)
 {
     int *fdflag = (int*)ctx;
     ssize_t ret;
-    while ( (ret = send(fdflag[0], p, len, fdflag[1])) < 0 &&
-	    (errno == EAGAIN || errno == EINTR));
+    while ( (ret = send(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
+	    (errno == EINTR));
+    if (ret < 0 && errno == EAGAIN)
+	ret = 0;
     return ret;
 }
 
 static ssize_t
-vbuf_rw_recv(void *p, size_t len, void *ctx)
+vbuf_rw_recv(struct iovec iov[2], void *ctx)
 {
     int *fdflag = (int*)ctx;
     ssize_t ret;
-    while ( (ret = recv(fdflag[0], p, len, fdflag[1])) < 0 &&
-	    (errno == EAGAIN || errno == EINTR));
+    while ( (ret = recv(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
+	    (errno == EINTR));
+    if (ret < 0 && errno == EAGAIN)
+	ret = 0;
     return ret;
 }
 
@@ -283,10 +294,11 @@ vbuf_send (VBUF *v, int fd, ssize_t sz, int flags)
 // write from vbuf to writer
 ssize_t
 vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
-                  ssize_t (writer)(const void *p, size_t len, void *ctx))
+                  ssize_t (writer)(struct iovec[2], void *ctx))
 {
     ssize_t rw, copied = 0;
     int is_min = 0;
+    struct iovec iov[2] = { { NULL } };
 
     if (sz == VBUF_RWSZ_ALL)
     {
@@ -303,15 +315,21 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
     
     do {
         rw = VBUF_TAIL_SZ(v);
-        if ((size_t)rw > sz) rw = sz;
+        if (rw > sz) rw = sz;
 
-        rw = writer(v->tail, rw, ctx);
+	iov[0].iov_base= v->tail;
+	iov[0].iov_len = rw;
+	iov[1].iov_base= v->buf;
+	iov[1].iov_len = sz-rw;
+
+        rw = writer(iov, ctx);
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
+	assert(rw < VBUF_HEAD_SZ(v));
         v->tail += rw; sz -= rw;
-        if (v->tail == v->buf_end)
-            v->tail =  v->buf;
+        if (v->tail >= v->buf_end)
+            v->tail -= v->buf_end - v->buf;
 
     } while (sz > 0 && !is_min);
 
@@ -321,10 +339,11 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 // read from reader to vbuf
 ssize_t 
 vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
-                   ssize_t (reader)(void *p, size_t len, void *ctx))
+                   ssize_t (reader)(struct iovec[2], void *ctx))
 {
     ssize_t rw, copied = 0;
     int is_min = 0;
+    struct iovec iov[2] = { { NULL } };
 
     if (sz == VBUF_RWSZ_ALL)
     {
@@ -341,15 +360,21 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
     
     do {
         rw = VBUF_HEAD_SZ(v);
-        if ((size_t)rw > sz) rw = sz;
+        if (rw > sz) rw = sz;
 
-        rw = reader(v->head, rw, ctx);
+	iov[0].iov_base= v->head;
+	iov[0].iov_len = rw;
+	iov[1].iov_base= v->buf;
+	iov[1].iov_len = sz-rw;
+
+        rw = reader(iov, ctx);
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
+	assert(rw < VBUF_HEAD_SZ(v));
         v->head += rw; sz -= rw;
-        if (v->head == v->buf_end)
-            v->head =  v->buf;
+        if (v->head >= v->buf_end)
+            v->head -= v->buf_end - v->buf;
 
     } while (sz > 0 && !is_min);
 
@@ -359,6 +384,14 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
 // testing sample
 
 #ifdef _VBUF_TEST_MAIN
+void vbuf_rpt(VBUF *v)
+{
+        printf("v capacity: %u, size: %lu, empty: %s, ptr=(%p,h=%p,t=%p,%p)\n", 
+            (unsigned int)vbuf_capacity(v), vbuf_size(v), 
+	    vbuf_is_empty(v) ? "YES" : "NO", 
+	    v->buf, v->head, v->tail, v->buf_end);
+}
+
 int main()
 {
     int i;
@@ -370,15 +403,14 @@ int main()
     for (i = 0; i < 10; i++)
     {
         vbuf_put(v, "blah", sizeof("blah"));
-        printf("now capacity: %d, size: %d, empty: %s\n", 
-            vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+	vbuf_rpt(v);
     }
     for (i = 0; i < 10; i++)
     {
         char buf[64] = "";
         vbuf_get(v, buf, 5);
-        printf("[%s] now capacity: %d, size: %d, empty: %s\n",  buf,
-            vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+	printf("[got: %s] ", buf);
+	vbuf_rpt(v);
     }
 
     for (i = 0; i < 10; i++)
@@ -386,22 +418,19 @@ int main()
         char buf[64] = "";
         vbuf_put(v, "blah", sizeof("blah"));
         vbuf_get(v, buf, 5);
-        printf("[%s] now capacity: %d, size: %d, empty: %s\n", buf,
-            vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+	printf("[got: %s] ", buf);
+	vbuf_rpt(v);
     }
 
-    vbuf_clear(v);
-    printf("now capacity: %d, size: %d, empty: %s\n", 
-        vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+    // vbuf_clear(v);
+    vbuf_rpt(v);
     printf("give me some input: "); fflush(stdout);
     vbuf_read(v, 0, VBUF_RWSZ_MIN);
     printf("index of 't' = %d\n", vbuf_strchr(v, 't'));
-    printf("now capacity: %d, size: %d, empty: %s\n", 
-        vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+    vbuf_rpt(v);
     printf("give me 4 chars: "); fflush(stdout);
     vbuf_read(v, 0, 5);
-    printf("now capacity: %d, size: %d, empty: %s\n", 
-        vbuf_capacity(v), vbuf_size(v), vbuf_is_empty(v) ? "YES" : "NO");
+    vbuf_rpt(v);
     printf("\n flushing vbuf: ["); fflush(stdout);
     vbuf_write(v, 1, VBUF_RWSZ_ALL);
     printf("]\n");
