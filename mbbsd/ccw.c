@@ -38,6 +38,9 @@
 // 6. add F1 for help?
 // 7. better receive/send buffer
 
+///////////////////////////////////////////////////////////////////////////
+// Constant values
+
 #define CCW_MAX_INPUT_LEN   (STRLEN)
 #define CCW_INIT_LINE       (2)
 #define CCW_STOP_LINE       (t_lines-3)
@@ -211,6 +214,8 @@ ccw_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 static void 
 ccw_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
+    // FIXME if printed message is too long, the 2nd line will be overwritten
+    // by next print_line request.
     ccw_prepare_line(ctx);
     if (ctx->print_line)
     {
@@ -393,6 +398,9 @@ ccw_process(CCW_CTX *ctx)
     ccw_print_line(ctx, ANSI_COLOR(1;30)
             "¡» Powered by piaip's Common Chat Window" ANSI_RESET, 
             CCW_LOCAL_MSG);
+#endif
+#ifdef EXP_CCW_MOTD
+    ccw_print_line(ctx, EXP_CCW_MOTD, CCW_LOCAL_MSG);
 #endif
 
     while (!ctx->abort)
@@ -843,7 +851,7 @@ ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
     if (m < 0)
     {
         n = strlen(ctx->local_id);
-        if (n > 2)
+        if (n > 2 || !isascii(ctx->local_id[0]) )
             m = word_match_index(s, ctx->local_id, n);
     }
 
@@ -867,7 +875,7 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
     size_t szid;
 
     // let's try harder to recognize the content
-    if (local != CCW_REMOTE || buf[0] == ' '|| 
+    if (local != CCW_REMOTE  ||  buf[0] == ' '|| 
         strchr(buf, ESC_CHR) || !strchr(buf, ':') )
     {
         // pre-formatted or messages
