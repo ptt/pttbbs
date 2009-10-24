@@ -150,6 +150,7 @@ static char msg_no_such_id[] = "◆ 目前沒有人使用 [%s] 這個聊天代號";
 static char msg_no_such_uid[] = "◆ 目前沒有 [%s] 這個使用者 ID";
 static char msg_not_here[] = "◆ [%s] 不在這間聊天室";
 
+time4_t boot_time;
 
 #define FUZZY_USER      ((ChatUser *) -1)
 
@@ -605,6 +606,7 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
 static void
 send_to_user(ChatUser *user, char *msg, int userno, int number)
 {
+    // BBS clients does not take non MSG_MESSAGE
     if (number && number != MSG_MESSAGE)
 	return;
 
@@ -766,6 +768,20 @@ chat_version(ChatUser *cu, char *msg)
 {
     sprintf(chatbuf, "%d %d", XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR);
     send_to_user(cu, chatbuf, 0, MSG_VERSION);
+}
+
+static void
+chat_xinfo(ChatUser *cu, char *msg)
+{
+    // report system information
+    time4_t uptime = time(0) - boot_time;
+    int dd =  uptime / DAY_SECONDS, 
+	hh = (uptime % DAY_SECONDS) / 3600,
+	mm = (uptime % 3600) / 60;
+    sprintf(chatbuf, "⊙ 系統資訊: XCHAT 版本 %d.%02d - " __DATE__ 
+	    "，已執行 %d 天 %d 小時 %d 分",
+	    XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR, dd, hh, mm);
+    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
 
 static void
@@ -1327,11 +1343,12 @@ print_user_counts(ChatUser *cuser)
 
     number = MSG_MESSAGE;
 
-    sprintf(chatbuf,
-	    "⊙ 歡迎光臨【批踢踢茶藝館】，目前開了 " ANSI_COLOR(1;31) "%d" ANSI_RESET " 間包廂", roomc);
+    // welcome message here.
+    sprintf(chatbuf, "⊙ 歡迎光臨【批踢踢聊天室】，目前開了 " 
+	    ANSI_COLOR(1;31) "%d" ANSI_RESET " 間包廂。", roomc);
     send_to_user(cuser, chatbuf, 0, number);
 
-    sprintf(chatbuf, "⊙ 共有 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人來擺\龍門陣", userc);
+    sprintf(chatbuf, "⊙ 線上有 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人", userc);
     if (suserc)
 	sprintf(chatbuf + strlen(chatbuf), " [%d 人在秘密聊天室]", suserc);
     send_to_user(cuser, chatbuf, 0, number);
@@ -2364,6 +2381,7 @@ static ChatCmd chatcmdlist[] =
     {"list", chat_list_users, 0},
     {"topic", chat_topic, 1},
     {"version", chat_version, 1},
+    {"xinfo", chat_xinfo, 1},
 
     {NULL, NULL, 0}
 };
@@ -2882,6 +2900,7 @@ main(int argc, char *argv[])
     setgid(BBSGID);
     setuid(BBSUID);
 
+    boot_time = time(0);
     log_init();
 
 //    Signal(SIGBUS, SIG_IGN);
