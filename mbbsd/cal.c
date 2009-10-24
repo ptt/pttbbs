@@ -323,12 +323,11 @@ give_money_ui(const char *userid)
     // like user pw/id/...
     vs_hdr("給予金錢");
 
-    if (!userid || !*userid)
-	usercomplete("這位幸運兒的id: ", id);
-    else {
-	strlcpy(id, userid, sizeof(id));
-	prints("這位幸運兒的id: %s\n", id);
-    }
+    if (!userid || !*userid || strcmp(userid, cuser.userid) == 0)
+	userid = NULL;
+
+    // XXX should we prevent editing if userid is already assigned?
+    usercomplete2("這位幸運兒的id: ", id, userid);
 
     move(2, 0); clrtobot();
 

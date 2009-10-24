@@ -3045,6 +3045,7 @@ userlist(void)
 		}
 		break;
 
+		/*
 	    case 'G':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    p_give();
@@ -3052,10 +3053,10 @@ userlist(void)
 		    redrawall = redraw = 1;
 		}
 		break;
+		*/
 
 	    case 'g':
-		if (HasUserPerm(PERM_LOGINOK) &&
-		    strcmp(uentp->userid, cuser.userid) != 0) {
+		if (HasUserPerm(PERM_LOGINOK) && cuser.money) {
 		    give_money_ui(uentp->userid);
 		    redrawall = redraw = 1;
 		}
