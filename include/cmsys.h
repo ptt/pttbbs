@@ -15,7 +15,6 @@
 #define GCC_CHECK_FORMAT(a,b)
 #endif
 
-
 // flags used by strip_ansi
 enum STRIP_FLAG {
     STRIP_ALL = 0, 
@@ -179,6 +178,51 @@ extern int  Vector_match(const struct Vector *src, struct Vector *dst, const int
 extern void Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag);
 extern int  Vector_remove(struct Vector *self, const char *name);
 extern int  Vector_search(const struct Vector *self, const char *name);
+
+/* vbuf.c */
+typedef struct VBUF {
+    char    *buf;
+    char    *buf_end;   // (buf+capacity+1)
+    char    *head;      // pointer to write
+    char    *tail;      // pointer to read
+    size_t  capacity;
+} VBUF;
+
+#define vbuf_is_empty(v)    ((v)->head == (v)->tail)
+#define vbuf_is_full(v)	    (!vbuf_space(v))
+#define vbuf_capacity(v)    ((v)->capacity)
+#define vbuf_size(v)        ((size_t)((v)->head >= (v)->tail ? (v)->head - (v)->tail : (v)->buf_end - (v)->tail + (v)->head - (v)->buf))
+#define vbuf_space(v)       ((size_t)((v)->capacity - vbuf_size(v)))
+// buffer management
+extern void vbuf_new   (VBUF *v, size_t szbuf);
+extern void vbuf_delete(VBUF *v);
+extern void vbuf_attach(VBUF *v, char *buf, size_t szbuf);
+extern void vbuf_detach(VBUF *v);
+extern void vbuf_clear (VBUF *v);
+// data accessing 
+extern int  vbuf_get   (VBUF *v, char *s, size_t sz);       // get data from vbuf, return true/false
+extern int  vbuf_put   (VBUF *v, const char *s, size_t sz); // put data into vbuf, return true/false
+extern int  vbuf_peek  (VBUF *v);			    // peek one byte from vbuf, -1 if buffer empty
+extern int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, -1 if buffer empty
+extern int  vbuf_push  (VBUF *v, char c);		    // push one byte into vbuf, return true/false
+// search and test
+extern int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise -1
+
+#define VBUF_RWSZ_ALL (0)   // r/w until buffer full
+#define VBUF_RWSZ_MIN (-1)  // r/w for minimal try (do not block for more)
+
+// following APIs take VBUF_RWSZ_* in their sz parameter.
+extern ssize_t vbuf_read (VBUF *v, int fd, ssize_t sz);	// read from fd to vbuf
+extern ssize_t vbuf_write(VBUF *v, int fd, ssize_t sz);	// write from vbuf to fd
+extern ssize_t vbuf_send (VBUF *v, int fd, ssize_t sz, int flags);
+extern ssize_t vbuf_recv (VBUF *v, int fd, ssize_t sz, int flags);
+
+// write from vbuf to writer
+extern ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx, 
+        ssize_t (writer)(const void *p, size_t len, void *ctx)); 
+// read from reader to vbuf
+extern ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx, 
+        ssize_t (reader)(void *p, size_t len, void *ctx));
 
 /* telnet.c */
 struct TelnetCallback {
