@@ -190,11 +190,13 @@ typedef struct VBUF {
     size_t  capacity;
 } VBUF;
 
+// speedy macros
 #define vbuf_is_empty(v)    ((v)->head == (v)->tail)
 #define vbuf_is_full(v)	    (!vbuf_space(v))
 #define vbuf_capacity(v)    ((v)->capacity)
 #define vbuf_size(v)        ((size_t)((v)->head >= (v)->tail ? (v)->head - (v)->tail : (v)->buf_end - (v)->tail + (v)->head - (v)->buf))
 #define vbuf_space(v)       ((size_t)((v)->capacity - vbuf_size(v)))
+#define vbuf_peek(v)	    (vbuf_is_empty(v) ? EOF : (unsigned char)(*v->tail))
 // buffer management
 extern void vbuf_new   (VBUF *v, size_t szbuf);
 extern void vbuf_delete(VBUF *v);
@@ -202,13 +204,17 @@ extern void vbuf_attach(VBUF *v, char *buf, size_t szbuf);
 extern void vbuf_detach(VBUF *v);
 extern void vbuf_clear (VBUF *v);
 // data accessing 
-extern int  vbuf_get   (VBUF *v, char *s, size_t sz);       // get data from vbuf, return true/false
-extern int  vbuf_put   (VBUF *v, const char *s, size_t sz); // put data into vbuf, return true/false
-extern int  vbuf_peek  (VBUF *v);			    // peek one byte from vbuf, -1 if buffer empty
-extern int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, -1 if buffer empty
-extern int  vbuf_push  (VBUF *v, char c);		    // push one byte into vbuf, return true/false
+extern int  vbuf_getblk(VBUF *v, void *p, size_t sz);       // get data from vbuf, return true/false
+extern int  vbuf_putblk(VBUF *v, const void *p, size_t sz); // put data into vbuf, return true/false
+extern int  vbuf_peekat(VBUF *v, int i);		    // peek at given index, EOF(-1) if invalid index
+extern int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, EOF(-1) if buffer empty
+extern int  vbuf_add   (VBUF *v, char c);		    // append one byte into vbuf, return true/false
 // search and test
-extern int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise -1
+extern int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise EOF(-1)
+
+// vector of C-style NULL terminated strings
+extern char* vbuf_getstr(VBUF *v, char *s, size_t sz);	    // get a string from vbuf, return NULL if empty
+extern int   vbuf_putstr(VBUF *v, char *s);		    // put a string to vbuf (with NUL), return true/false
 
 #define VBUF_RWSZ_ALL (0)   // r/w until buffer full
 #define VBUF_RWSZ_MIN (-1)  // r/w for minimal try (do not block for more)

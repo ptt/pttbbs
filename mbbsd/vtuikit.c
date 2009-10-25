@@ -184,6 +184,22 @@ mvouts(int y, int x, const char *str)
     outs(str);
 }
 
+void
+outs_vbuf(VBUF *v)
+{
+    int c;
+    while (EOF != (c = vbuf_pop(v)))
+	outc(c);
+}
+
+void
+outns_vbuf(VBUF *v, int n)
+{
+    int c;
+    while (EOF != (c = vbuf_pop(v)) && n-- > 0)
+	outc(c);
+}
+
 /**
  * vfill(n, flags, s): 印出並填滿 n 個字元的空間
  *

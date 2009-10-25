@@ -67,6 +67,14 @@ vbuf_space(VBUF *v)
     return v->capacity - vbuf_size(v);
 }
 
+VBUFPROTO int
+vbuf_peek(VBUF *v)
+{
+    if (vbuf_is_empty(v))
+	return EOF;
+    return (unsigned char)(*v->tail);
+}
+
 #endif
 
 VBUFPROTO void
@@ -110,11 +118,18 @@ vbuf_clear(VBUF *v)
 }
 
 VBUFPROTO int
-vbuf_peek(VBUF *v)
+vbuf_peekat(VBUF *v, int i)
 {
-    if (vbuf_is_empty(v))
-	return -1;
-    return (unsigned char)(*v->tail);
+    const char *s = v->tail + i;
+    if (vbuf_is_empty(v) || i >= vbuf_capacity(v))
+	return EOF;
+    if (s < v->head)
+	return (unsigned char)*s;
+    if (s >= v->buf_end) 
+	s -= v->buf_end - v->buf;
+    if (s < v->head)
+	return (unsigned char)*s;
+    return EOF;
 }
 
 VBUFPROTO int
@@ -127,7 +142,7 @@ vbuf_pop(VBUF *v)
 }
 
 VBUFPROTO int
-vbuf_push(VBUF *v, char c)
+vbuf_add(VBUF *v, char c)
 {
     if (vbuf_is_full(v))
 	return 0;
@@ -143,7 +158,7 @@ vbuf_strchr(VBUF *v, char c)
     const char *s = v->tail, *d = v->head;
 
     if (vbuf_is_empty(v))
-	return -1;
+	return EOF;
 
     if (d < s) 
 	d = v->buf_end;
@@ -153,7 +168,7 @@ vbuf_strchr(VBUF *v, char c)
 	    return s - v->tail -1;
 
     if (v->head > v->tail)
-	return -1;
+	return EOF;
 
     s = v->buf; d = v->head;
 
@@ -161,17 +176,18 @@ vbuf_strchr(VBUF *v, char c)
 	if (*s++ == c)
 	    return (v->buf_end - v->tail) + s - v->buf -1;
 
-    return -1;
+    return EOF;
 }
 
 #define VBUF_TAIL_SZ(v) ((v->head >= v->tail) ? v->head - v->tail : v->buf_end - v->tail)
-#define VBUF_HEAD_SZ(v) ((v->head >= v->tail) ? v->buf_end - v->head : v->tail - v->head)
+#define VBUF_HEAD_SZ(v) ((v->tail >  v->head) ? v->tail - v->head : v->buf_end - v->head)
 
 // get data from vbuf
 VBUFPROTO int
-vbuf_get(VBUF *v, char *s, size_t sz)
+vbuf_getblk(VBUF *v, void *p, size_t sz)
 {
     size_t rw, i;
+    char *s = p;
     if (!sz || vbuf_size(v) < sz)
         return 0;
 
@@ -179,6 +195,7 @@ vbuf_get(VBUF *v, char *s, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_TAIL_SZ(v);
+	assert(rw >= 0 && rw <= v->capacity+1);
         if (rw > sz) rw = sz;
         memcpy(s, v->tail, rw);
         v->tail += rw; s += rw; sz -= rw;
@@ -191,9 +208,10 @@ vbuf_get(VBUF *v, char *s, size_t sz)
 
 // put data into vbuf
 VBUFPROTO int
-vbuf_put(VBUF *v, const char *s, size_t sz)
+vbuf_putblk(VBUF *v, const void *p, size_t sz)
 {
     size_t rw, i;
+    const char *s = p;
     if (!sz || vbuf_space(v) < sz)
         return 0;
 
@@ -201,6 +219,7 @@ vbuf_put(VBUF *v, const char *s, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_HEAD_SZ(v);
+	assert(rw >= 0 && rw <= v->capacity+1);
         if (rw > sz) rw = sz;
         memcpy(v->head, s, rw);
         v->head += rw; s += rw; sz -= rw;
@@ -208,6 +227,35 @@ vbuf_put(VBUF *v, const char *s, size_t sz)
             v->head =  v->buf;
     }
     assert(sz == 0);
+    return 1;
+}
+
+char * 
+vbuf_getstr (VBUF *v, char *s, size_t sz)
+{
+    char *sbase = s;
+    assert(sz > 0);
+    if (vbuf_is_empty(v))
+	return NULL;
+
+    while (sz-- > 0 && !vbuf_is_empty(v))
+    {
+	if ('\0' == (*s++ = vbuf_pop(v)))
+	    return sbase;
+    }
+
+    // need to pad NUL.
+    s[ sz == 0 ? 0 : -1] = '\0';
+    return sbase;
+}
+
+int 
+vbuf_putstr (VBUF *v, char *s)
+{
+    int len = strlen(s) + 1;
+    if (vbuf_space(v) < len)
+	return 0;
+    vbuf_putblk(v, s, len);
     return 1;
 }
 
@@ -326,7 +374,7 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
-	assert(rw < VBUF_HEAD_SZ(v));
+	assert(rw <= sz);
         v->tail += rw; sz -= rw;
         if (v->tail >= v->buf_end)
             v->tail -= v->buf_end - v->buf;
@@ -371,7 +419,7 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
-	assert(rw < VBUF_HEAD_SZ(v));
+	assert(rw <= sz);
         v->head += rw; sz -= rw;
         if (v->head >= v->buf_end)
             v->head -= v->buf_end - v->buf;
@@ -402,13 +450,13 @@ int main()
     vbuf_new(v, 50);
     for (i = 0; i < 10; i++)
     {
-        vbuf_put(v, "blah", sizeof("blah"));
+        vbuf_putblk(v, "blah", sizeof("blah"));
 	vbuf_rpt(v);
     }
     for (i = 0; i < 10; i++)
     {
         char buf[64] = "";
-        vbuf_get(v, buf, 5);
+        vbuf_getblk(v, buf, 5);
 	printf("[got: %s] ", buf);
 	vbuf_rpt(v);
     }
@@ -416,8 +464,8 @@ int main()
     for (i = 0; i < 10; i++)
     {
         char buf[64] = "";
-        vbuf_put(v, "blah", sizeof("blah"));
-        vbuf_get(v, buf, 5);
+        vbuf_putblk(v, "blah", sizeof("blah"));
+        vbuf_getblk(v, buf, 5);
 	printf("[got: %s] ", buf);
 	vbuf_rpt(v);
     }
@@ -429,11 +477,28 @@ int main()
     printf("index of 't' = %d\n", vbuf_strchr(v, 't'));
     vbuf_rpt(v);
     printf("give me 4 chars: "); fflush(stdout);
-    vbuf_read(v, 0, 5);
+    vbuf_read(v, 0, 4);
     vbuf_rpt(v);
     printf("\n flushing vbuf: ["); fflush(stdout);
     vbuf_write(v, 1, VBUF_RWSZ_ALL);
     printf("]\n");
+    vbuf_putblk(v, "peek test\n", sizeof("peek test\n"));
+    while (EOF != (i = vbuf_pop(v)))
+	putchar(i);
+
+    vbuf_clear(v);
+    vbuf_putstr(v, "string test(1)");
+    vbuf_putstr(v, "string test(2)");
+    vbuf_putstr(v, "string test(3)");
+
+    for (i = 0; i < 4; i++)
+    {
+	char xbuf[256];
+	char *s = vbuf_getstr(v, xbuf, sizeof(xbuf));
+	printf("put/getstr(%d): %s\n", i+1,
+		s ? s : "(NULL)");
+    }
+
     getchar();
     return 0;
 }

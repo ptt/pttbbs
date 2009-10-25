@@ -112,6 +112,10 @@ void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mvprints(int y, int x, const char *fmt, ...) GCC_CHECK_FORMAT(3,4);
 void mvouts(int y, int x, const char *str);
 
+// vbuf rendering
+void outs_vbuf (VBUF *v);
+void outns_vbuf(VBUF *v, int n);
+
 // input history
 int  InputHistoryAdd	(const char *s);
 int  InputHistoryExists	(const char *s);
