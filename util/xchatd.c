@@ -2379,7 +2379,7 @@ static ChatCmd chatcmdlist[] =
 
     {"who", chat_map_chatids_thisroom, 0},
     {"list", chat_list_users, 0},
-    {"topic", chat_topic, 1},
+    {"topic", chat_topic, 0},
     {"version", chat_version, 1},
     {"xinfo", chat_xinfo, 1},
 
