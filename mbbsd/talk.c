@@ -21,25 +21,6 @@ static char    * const withme_str[] = {
 #define P_INT 20		
 #define BOARDFRI  1
 
-// #ifndef EXP_CCW_TALK
-#define TALK_MAXCOL (78)
-#define TALK_BUFLEN (TALK_MAXCOL+2)
-typedef struct twpic {
-    unsigned short len;
-    unsigned char data[TALK_BUFLEN]; // bound to specific size
-}		twpic_t;
-
-typedef struct talkwin_t {
-    int curcol, curln;
-    int sline,  eline;
-    twpic_t *big_picture;
-}               talkwin_t;
-// #else
-// XXX magic value, see mbbsd.c
-#define is_ccw_enabled(uip) \
-    (uip->nonuse[1] == 'W' && uip->nonuse[2] == 'T')
-// #endif // EXP_CCW_TALK
-
 typedef struct pickup_t {
     userinfo_t     *ui;
     int             friend, uoffset;
@@ -54,9 +35,6 @@ static char    * const fcolor[11] = {
     ANSI_COLOR(33), ANSI_COLOR(1;33), ANSI_COLOR(1;37), ANSI_COLOR(1;37),
     ANSI_COLOR(31), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
 };
-// #ifndef EXP_CCW_TALK
-static char     save_page_requestor[40];
-// #endif // EXP_CCW_TALK
 static char     page_requestor[40];
 
 static userinfo_t *uip;
@@ -1141,424 +1119,6 @@ t_display(void)
     return DONOTHING;
 }
 
-// #ifndef EXP_CCW_TALK
-static void
-do_talk_nextline(talkwin_t * twin)
-{
-    twin->curcol = 0;
-    if (twin->curln < twin->eline)
-	++(twin->curln);
-    else
-    {
-	int i, iend = twin->eline - twin->sline;
-	region_scroll_up(twin->sline, twin->eline);
-	// also scroll up our buffer
-	for (i = 0; i < iend; i++)
-	{
-	    memcpy(&twin->big_picture[i], &twin->big_picture[i+1], 
-		sizeof(twpic_t));
-	}
-	// zero last line
-	memset(&twin->big_picture[iend], 0, sizeof(twpic_t));
-    }
-    move(twin->curln, twin->curcol);
-}
-
-static int 
-iscompletedbcs(const unsigned char* str)
-{
-    int isdbcs = 0;
-    while (*str)
-    {
-	if (isdbcs == 1) isdbcs = 2;
-	else if ((unsigned char)*str > 0x80) isdbcs = 1;
-	else isdbcs = 0;
-	str++;
-    }
-
-    return (isdbcs == 1) ? 0 : 1;
-}
-
-static void 
-talk_refreshline(talkwin_t *twin)
-{
-    // dirty screen
-    twpic_t *line = twin->big_picture + (twin->curln - twin->sline);
-    int iscomplete = iscompletedbcs(line->data);
-    int len = strlen((char*)line->data);
-
-    move(twin->curln, 0);
-    clrtoeol();
-    if (!iscomplete) len--;
-    outns((char*)line->data, len);
-    if (!iscomplete) outc('?');
-    move(twin->curln, twin->curcol);
-}
-
-static void
-do_talk_char(talkwin_t * twin, int ch, FILE *flog)
-{
-    twpic_t	    *line;
-    char            buf[TALK_BUFLEN] = "";
-
-    line = twin->big_picture+(twin->curln - twin->sline);
-
-    if (isprint2(ch)) {
-
-
-	if (line->len < TALK_MAXCOL)
-	    move(twin->curln, twin->curcol);
-	else
-	    do_talk_nextline(twin);
-
-	// do_talk_nextline may change current line
-	line = twin->big_picture + (twin->curln -twin->sline);
-	memmove(line->data + twin->curcol+1, line->data + twin->curcol,
-		line->len - twin->curcol +1);
-	line->data[twin->curcol++] = ch;
-	line->data[++line->len] = 0;
-
-	// dirty screen
-	talk_refreshline(twin);
-
-	if (line->len < TALK_MAXCOL)
-	    return;
-
-	// max buffer, log it.
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	
-    } else switch (ch) {
-
-    case Ctrl('G'):
-	bell();
-	return;
-
-    case Ctrl('A'):
-	twin->curcol = 0;
-	move(twin->curln, twin->curcol);
-	return;
-    case Ctrl('E'):
-	twin->curcol = line->len;
-	move(twin->curln, twin->curcol);
-	return;
-
-
-    case Ctrl('K'):
-	line->len = twin->curcol;
-	memset(line->data+line->len, 0, TALK_MAXCOL - line->len);
-	move(twin->curln, twin->curcol);
-	clrtoeol();
-	return;
-    case Ctrl('Y'):
-	twin->curcol = 0;
-	line->len = 0;
-	memset(line->data, 0, TALK_MAXCOL);
-	move(twin->curln, twin->curcol);
-	clrtoeol();
-	return;
-
-    case KEY_ENTER:
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	buf[line->len] = 0;
-	do_talk_nextline(twin);
-	break;
-
-    case Ctrl('B'):
-	if (twin->curcol > 0) {
-	    --(twin->curcol);
-#ifdef DBCSAWARE
-	    if(twin->curcol > 0 && twin->curcol < line->len && ISDBCSAWARE())
-	    {
-		if(DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
-		    twin->curcol --;
-	    }
-#endif
-	    move(twin->curln, twin->curcol);
-	}
-	return;
-
-    case Ctrl('F'):
-	if (twin->curcol < line->len) {
-	    ++(twin->curcol);
-#ifdef DBCSAWARE
-	    if(twin->curcol < TALK_MAXCOL && twin->curcol < line->len && ISDBCSAWARE())
-	    {
-		if(DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
-		    twin->curcol++;
-	    }
-#endif
-	    move(twin->curln, twin->curcol);
-	}
-	return;
-
-
-    case Ctrl('P'):
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	if (twin->curln > twin->sline) {
-	    --twin->curln;
-	    line = twin->big_picture + (twin->curln -twin->sline);
-	}
-	if (twin->curcol > line->len)
-	    twin->curcol = line->len;
-
-#ifdef DBCSAWARE
-	// curln may be changed.
-	if(twin->curcol > 0 && twin->curcol < line->len &&
-		DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
-	    twin->curcol--;
-#endif
-	move(twin->curln, twin->curcol);
-	// XXX break here (for log)?
-	break;
-
-    case Ctrl('N'):
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	if (twin->curln < twin->eline) {
-	    ++twin->curln;
-	    line = twin->big_picture + (twin->curln -twin->sline);
-	}
-	if (twin->curcol > line->len)
-	    twin->curcol = line->len;
-
-#ifdef DBCSAWARE
-	// curln may be changed.
-	line = twin->big_picture + (twin->curln -twin->sline); 
-	if(twin->curcol > 0 && twin->curcol < line->len &&
-		DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
-	    twin->curcol--;
-#endif
-	move(twin->curln, twin->curcol);
-	// XXX break here (for log)?
-	break;
-
-	// complex data change
-    case KEY_BS:
-	if (twin->curcol > 0)
-	{
-	    int delta = 1;
-
-#ifdef DBCSAWARE
-	    if (twin->curcol > 1 && ISDBCSAWARE() && 
-		    DBCS_Status((char*)line->data, twin->curcol-1) == DBCS_TRAILING)
-		delta++;
-#endif
-	    memmove(line->data + twin->curcol-delta, line->data + twin->curcol,
-		    line->len - twin->curcol +1);
-	    line->len    -= delta;
-	    twin->curcol -= delta;
-	    // dirty screen
-	    talk_refreshline(twin);
-	}
-	return;
-
-    case KEY_DEL:
-    case Ctrl('D'):
-	if (twin->curcol < line->len) 
-	{
-	    int delta = 1;
-
-#ifdef DBCSAWARE
-	    if (ISDBCSAWARE() && 
-		    DBCS_Status((char*)line->data, twin->curcol) == DBCS_LEADING)
-		delta++;
-#endif
-	    memmove(line->data + twin->curcol, line->data + twin->curcol+delta,
-		    line->len - twin->curcol -delta+1);
-	    line->len -= delta;
-	    memset(line->data + line->len, 0, TALK_MAXCOL - line->len);
-	    // dirty screen
-	    talk_refreshline(twin);
-	}
-	return;
-    }
-
-    trim(buf);
-    if (*buf)
-	fprintf(flog, "%s%s: %s%s\n",
-		(twin->eline == b_lines - 1) ? ANSI_COLOR(1;35) : "",
-		(twin->eline == b_lines - 1) ?
-		getuserid(currutmp->destuid) : cuser.userid, buf,
-		(ch == Ctrl('P')) ? ANSI_COLOR(37;45) "(Up)" ANSI_RESET : ANSI_RESET);
-}
-
-static void
-do_talk(int fd)
-{
-    struct talkwin_t mywin, itswin;
-    char            mid_line[128], data[200];
-    int             i, datac, ch;
-    int             im_leaving = 0;
-    FILE           *log, *flog;
-    char            genbuf[200], fpath[100];
-
-    STATINC(STAT_DOTALK);
-
-    setuserfile(fpath, "talk_XXXXXX");
-    flog = fdopen(mkstemp(fpath), "w");
-    assert(flog);
-
-    setuserfile(genbuf, fn_talklog);
-
-    if ((log = fopen(genbuf, "w")))
-	fprintf(log, "[%s] & %s\n",
-		Cdate_mdHM(&now),save_page_requestor);
-    setutmpmode(TALK);
-
-    ch = 58 - strlen(save_page_requestor);
-    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser.userid, cuser.nickname);
-    i = ch - strlen(genbuf);
-    if (i >= 0)
-	i = (i >> 1) + 1;
-    else {
-	genbuf[ch] = '\0';
-	i = 1;
-    }
-    memset(data, ' ', i);
-    data[i] = '\0';
-
-    snprintf(mid_line, sizeof(mid_line),
-	     ANSI_COLOR(1;46;37) "  談天說地  " ANSI_COLOR(45) "%s%s】"
-	     " 與  %s%s" ANSI_COLOR(0) "", 
-	     data, genbuf, save_page_requestor, data);
-
-    memset(&mywin, 0, sizeof(mywin));
-    memset(&itswin, 0, sizeof(itswin));
-
-    i = b_lines >> 1;
-    mywin.eline = i - 1;
-    itswin.curln = itswin.sline = i + 1;
-    itswin.eline = b_lines - 1;
-
-    // memory allocation
-    mywin.big_picture  = (twpic_t*) malloc (
-	    sizeof(twpic_t) * (mywin.eline - mywin.sline +1));
-    itswin.big_picture = (twpic_t*) malloc (
-	    sizeof(twpic_t) * (itswin.eline- itswin.sline +1));
-
-    // reset buffer
-    for (i = mywin.sline; i <= mywin.eline; i++)
-    {
-	mywin.big_picture[i - mywin.sline].len = 0;
-	memset(mywin.big_picture[i-mywin.sline].data, 0, TALK_BUFLEN);
-    }
-    for (i = itswin.sline; i <= itswin.eline; i++)
-    {
-	itswin.big_picture[i - itswin.sline].len = 0;
-	memset(itswin.big_picture[i-itswin.sline].data, 0, TALK_BUFLEN);
-    }
-
-    clear();
-    move(mywin.eline+1, 0);
-    outs(mid_line);
-    move(0, 0);
-
-    add_io(fd, 0);
-
-    while (1) {
-	ch = igetch();
-	if (ch == I_OTHERDATA) {
-	    datac = recv(fd, data, sizeof(data), 0);
-	    if (datac <= 0)
-		break;
-	    for (i = 0; i < datac; i++)
-		do_talk_char(&itswin, data[i], flog);
-	} else if (ch == KEY_UNKNOWN) {
-	  // skip
-	} else {
-	    if (ch == Ctrl('C')) {
-		if (im_leaving)
-		    break;
-		move(b_lines, 0);
-		clrtoeol();
-		outs("再按一次 Ctrl-C 就正式中止談話囉！");
-		im_leaving = 1;
-		continue;
-	    }
-	    if (im_leaving) {
-		move(b_lines, 0);
-		clrtoeol();
-		im_leaving = 0;
-	    }
-	    switch (ch) {
-	    case KEY_LEFT:	/* 把2byte的鍵改為一byte */
-		ch = Ctrl('B');
-		break;
-	    case KEY_RIGHT:
-		ch = Ctrl('F');
-		break;
-	    case KEY_UP:
-		ch = Ctrl('P');
-		break;
-	    case KEY_DOWN:
-		ch = Ctrl('N');
-		break;
-	    }
-	    data[0] = (char)ch;
-	    if (send(fd, data, 1, 0) != 1)
-		break;
-	    if (log)
-		fputc((ch == KEY_ENTER) ? '\n' : (char)*data, log);
-	    do_talk_char(&mywin, *data, flog);
-	}
-    }
-    if (log)
-	fclose(log);
-
-    add_io(0, 0);
-    close(fd);
-
-    if (flog) {
-	char            ans[4];
-
-	fprintf(flog, "\n" ANSI_COLOR(33;44) "離別畫面 [%s] ...     " ANSI_RESET "\n",
-		Cdatelite(&now));
-
-	fprintf(flog, "[%s]:\n", cuser.userid);
-	for (i = 0; i < mywin.eline - mywin.sline +1; i++)
-	    if (mywin.big_picture[i].len)
-		fprintf(flog, "%.*s\n", mywin.big_picture[i].len, mywin.big_picture[i].data);
-
-	fprintf(flog, "[%s]:\n", getuserid(currutmp->destuid));
-	for (i = 0; i < itswin.eline - itswin.sline +1; i++)
-	    if (itswin.big_picture[i].len)
-		fprintf(flog, "%.*s\n", itswin.big_picture[i].len, itswin.big_picture[i].data);
-
-	fclose(flog);
-	redrawwin();
-	more(fpath, NA);
-
-	// force user decide how to deal with the log
-	while (1) {
-	    getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (c/m)? ",
-		    ans, sizeof(ans), LCECHO);
-	    if (ans[0] == 'c' || ans[0] == 'm')
-		break;
-	    move(b_lines-2, 0);
-	    prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
-		    (int)((now % 7)+1));
-	    if (ans[0] == 0) outs("為避免誤按所以只 ENTER 是不行的。");
-	}
-
-	if (*ans == 'm') {
-	    char title[STRLEN];
-	    const char *tuid = NULL;
-	    if (currutmp) tuid = getuserid(currutmp->destuid);
-	    snprintf(title, sizeof(title), "對話記錄 (%s)", tuid ? tuid : "未知");
-	    if (mail_log2id(cuser.userid, title, fpath, "[備.忘.錄]", 0, 1) < 0)
-		vmsg("儲存失敗。");
-	}
-	unlink(fpath);
-	flog = 0;
-    }
-
-    // free memory
-    free(mywin.big_picture);
-    free(itswin.big_picture);
-    setutmpmode(XINFO);
-    redrawwin();
-}
-// #endif // EXP_CCW_TALK
-
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
 int make_connection_to_somebody(userinfo_t *uin, int timeout){
@@ -1843,10 +1403,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	add_io(0, 0);
 
 	if (c == 'y') {
-// #ifndef EXP_CCW_TALK
-	    snprintf(save_page_requestor, sizeof(save_page_requestor),
-		     "%s (%s)", uin->userid, uin->nickname);
-// #endif // EXP_CCW_TALK
 	    switch (uin->sig) {
 	    case SIG_DARK:
 		main_dark(msgsock, uin);
@@ -1870,14 +1426,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		break;
 	    case SIG_TALK:
 	    default:
-#ifndef EXP_CCW_TALK
-		do_talk(msgsock);
-#else
-		if (is_ccw_enabled(uin))
-		    ccw_talk(msgsock, currutmp->destuid);
-		else
-		    do_talk(msgsock);
-#endif
+		ccw_talk(msgsock, currutmp->destuid);
 		setutmpmode(XINFO);
 		break;
 	    }
@@ -3362,9 +2911,6 @@ establish_talk_connection(const userinfo_t *uip)
     struct sockaddr_in sin;
 
     currutmp->msgcount = 0;
-// #ifndef EXP_CCW_TALK
-    strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
-// #endif
     memset(page_requestor, 0, sizeof(page_requestor));
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = PF_INET;
@@ -3495,14 +3041,7 @@ talkreply(void)
 	    break;
 	case SIG_TALK:
 	default:
-#ifndef EXP_CCW_TALK
-	    do_talk(a);
-#else
-	    if (is_ccw_enabled(uip))
-		ccw_talk(a, currutmp->destuid);
-	    else
-		do_talk(a);
-#endif
+	    ccw_talk(a, currutmp->destuid);
 	    setutmpmode(XINFO);
 	    break;
 	}
@@ -3510,5 +3049,58 @@ talkreply(void)
 	close(a);
     clear();
     currstat = currstat0;
+}
+
+int
+t_chat(void)
+{
+    static time4_t lastEnter = 0;
+    int    fd;
+
+    if (!HasUserPerm(PERM_CHAT))
+	return -1;
+
+    if(HasUserPerm(PERM_VIOLATELAW))
+    {
+       vmsg("請先繳罰單才能使用聊天室!");
+       return -1;
+    }
+
+#ifdef CHAT_GAPMINS
+    if ((now - lastEnter)/60 < CHAT_GAPMINS)
+    {
+       vmsg("您才剛離開聊天室，裡面正在整理中。請稍後再試。");
+       return 0;
+    }
+#endif
+
+#ifdef CHAT_REGDAYS
+    if ((now - cuser.firstlogin)/DAY_SECONDS < CHAT_REGDAYS)
+    {
+	int i = CHAT_REGDAYS - (now-cuser.firstlogin)/DAY_SECONDS +1;
+	vmsgf("您還不夠資深喔 (再等 %d 天吧)", i);
+	return 0;
+    }
+#endif
+
+    // start to create connection.
+    syncnow();
+    move(b_lines, 0); clrtoeol();
+    outs(" 正在與聊天室連線... ");
+    refresh();
+    fd = toconnect(XCHATD_ADDR);
+    move(b_lines-1, 0); clrtobot();
+    if (fd < 0) {
+	outs(" 聊天室正在整理中，請稍候再試。");
+	system("bin/xchatd");
+	pressanykey();
+	return -1;
+    }
+
+    // mark for entering
+    syncnow();
+    lastEnter = now;
+
+    return ccw_chat(fd);
 }
 

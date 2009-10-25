@@ -146,9 +146,6 @@ int card_99(void);
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
-/* chat */
-int t_chat(void);
-
 /* chc */
 void chc(int s, ChessGameMode mode);
 int chc_main(void);
@@ -523,26 +520,29 @@ int search_aidu(char *bfile, aidu_t aidu);
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define pressanykey() vmsg(NULL)
-int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
-time4_t gettime(int line, time4_t dt, const char* head);
-void setcalfile(char *buf, char *userid);
-int  show_file(const char *filename, int y, int lines, int mode);
-int  show_80x24_screen(const char *filename);
-int  cursor_key(int row, int column);
-int  search_num(int ch, int max);
 void setuserfile(char *buf, const char *fname);
 void setbdir(char *buf, const char *boardname);
 void setaidfile(char *buf, const char *bn, aidu_t aidu);
-char *subject(char *title);
-int  str_checksum(const char *str);
-void show_help(const char * const helptext[]);
-void show_helpfile(const char * helpfile);
+void setcalfile(char *buf, char *userid);
+int  log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
+void syncnow(void);
+void wait_penalty(int sec);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
+int  cursor_key(int row, int column);
 void printdash(const char *mesg, int msglen);
-int userid_is_BM(const char *userid, const char *list);
-int is_uBM(const char *list, const char *id);
-// int qsort_intcompar(const void *a, const void *b);
+int  show_file(const char *filename, int y, int lines, int mode);
+int  show_80x24_screen(const char *filename);
+void show_help(const char * const helptext[]);
+void show_helpfile(const char * helpfile);
+int  search_num(int ch, int max);
+char*subject(char *title);
+int  str_checksum(const char *str);
+int  userid_is_BM(const char *userid, const char *list);
+int  is_uBM(const char *list, const char *id);
+time4_t  gettime(int line, time4_t dt, const char* head);
+unsigned DBCS_StringHash(const char *s);
+
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)
@@ -550,8 +550,6 @@ int is_uBM(const char *list, const char *id);
     void *MALLOC(int size);
     void FREE(void *ptr);
 #endif
-void syncnow(void);
-void wait_penalty(int sec);
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
@@ -583,6 +581,7 @@ int t_pager(void);
 int t_query(void);
 int t_qchicken(void);
 int t_talk(void);
+int t_chat(void);
 int t_display(void);
 int my_query(const char *uident);
 int logout_friend_online(userinfo_t*);
@@ -592,11 +591,6 @@ int friend_stat(const userinfo_t *me, const userinfo_t * ui);
 int call_in(const userinfo_t *uentp, int fri_stat);
 int make_connection_to_somebody(userinfo_t *uin, int timeout);
 int query_online(const char *userid);
-
-/* tmpjack */
-int reg_barbq(void);
-int p_ticket_main(void);
-int j_ticket_main(void);
 
 /* term */
 void init_tty(void);
@@ -661,9 +655,6 @@ int x_stock(void);
 int x_mrtmap(void);
 int note(void);
 int Goodbye(void);
-
-/* toolkit */
-unsigned DBCS_StringHash(const char *s);
 
 /* BBS-LUA */
 int bbslua(const char *fpath);
