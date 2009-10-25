@@ -185,8 +185,8 @@ extern int  Vector_search(const struct Vector *self, const char *name);
 typedef struct VBUF {
     char    *buf;
     char    *buf_end;   // (buf+capacity+1)
-    char    *head;      // pointer to write
-    char    *tail;      // pointer to read
+    char    *head;      // pointer to read  (front)
+    char    *tail;      // pointer to write (end)
     size_t  capacity;
 } VBUF;
 
@@ -194,9 +194,9 @@ typedef struct VBUF {
 #define vbuf_is_empty(v)    ((v)->head == (v)->tail)
 #define vbuf_is_full(v)	    (!vbuf_space(v))
 #define vbuf_capacity(v)    ((v)->capacity)
-#define vbuf_size(v)        ((size_t)((v)->head >= (v)->tail ? (v)->head - (v)->tail : (v)->buf_end - (v)->tail + (v)->head - (v)->buf))
+#define vbuf_size(v)        ((size_t)((v)->tail >= (v)->head ? (v)->tail - (v)->head : (v)->buf_end - (v)->head + (v)->tail - (v)->buf))
 #define vbuf_space(v)       ((size_t)((v)->capacity - vbuf_size(v)))
-#define vbuf_peek(v)	    (vbuf_is_empty(v) ? EOF : (unsigned char)(*v->tail))
+#define vbuf_peek(v)	    (vbuf_is_empty(v) ? EOF : (unsigned char)(*v->head))
 // buffer management
 extern void vbuf_new   (VBUF *v, size_t szbuf);
 extern void vbuf_delete(VBUF *v);
@@ -209,12 +209,13 @@ extern int  vbuf_putblk(VBUF *v, const void *p, size_t sz); // put data into vbu
 extern int  vbuf_peekat(VBUF *v, int i);		    // peek at given index, EOF(-1) if invalid index
 extern int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, EOF(-1) if buffer empty
 extern int  vbuf_add   (VBUF *v, char c);		    // append one byte into vbuf, return true/false
+extern void vbuf_popn  (VBUF *v, size_t n);		    // pop (remove) n bytes from vbuf
 // search and test
 extern int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise EOF(-1)
 
 // vector of C-style NULL terminated strings
 extern char* vbuf_getstr(VBUF *v, char *s, size_t sz);	    // get a string from vbuf, return NULL if empty
-extern int   vbuf_putstr(VBUF *v, char *s);		    // put a string to vbuf (with NUL), return true/false
+extern int   vbuf_putstr(VBUF *v, const char *s);	    // put a string to vbuf (with NUL), return true/false
 extern char *vbuf_cstr  (VBUF *v);			    // return flattern (unwrap) buffer and pad NUL, or NULL if empty.
 
 #define VBUF_RWSZ_ALL (0)   // r/w until buffer full

@@ -57,8 +57,8 @@ vbuf_capacity(VBUF *v)
 VBUFPROTO size_t
 vbuf_size(VBUF *v)
 {
-    return (v->head >= v->tail) ? (v->head - v->tail) :
-        (v->buf_end - v->tail + v->head - v->buf);
+    return (v->tail >= v->head) ? (v->tail - v->head) :
+        (v->buf_end - v->head + v->tail - v->buf);
 }
 
 VBUFPROTO size_t
@@ -71,8 +71,8 @@ VBUFPROTO int
 vbuf_peek(VBUF *v)
 {
     if (vbuf_is_empty(v))
-	return EOF;
-    return (unsigned char)(*v->tail);
+        return EOF;
+    return (unsigned char)(*v->head);
 }
 
 #endif
@@ -120,15 +120,15 @@ vbuf_clear(VBUF *v)
 VBUFPROTO int
 vbuf_peekat(VBUF *v, int i)
 {
-    const char *s = v->tail + i;
+    const char *s = v->head + i;
     if (vbuf_is_empty(v) || i >= vbuf_capacity(v))
-	return EOF;
-    if (s < v->head)
-	return (unsigned char)*s;
+        return EOF;
+    if (s < v->tail)
+        return (unsigned char)*s;
     if (s >= v->buf_end) 
-	s -= v->buf_end - v->buf;
-    if (s < v->head)
-	return (unsigned char)*s;
+        s -= v->buf_end - v->buf;
+    if (s < v->tail)
+        return (unsigned char)*s;
     return EOF;
 }
 
@@ -136,53 +136,139 @@ VBUFPROTO int
 vbuf_pop(VBUF *v)
 {
     int c = vbuf_peek(v);
-    if (c >= 0 && ++v->tail == v->buf_end)
-	v->tail = v->buf;
+    if (c >= 0 && ++v->head == v->buf_end)
+        v->head = v->buf;
     return c;
+}
+
+VBUFPROTO void
+vbuf_popn(VBUF *v, size_t n)
+{
+    v->head += n;
+    if (v->head < v->buf_end) 
+        return;
+
+    v->head -= (v->buf_end - v->buf);
+    if (v->head > v->tail)
+        v->head = v->tail;
 }
 
 VBUFPROTO int
 vbuf_add(VBUF *v, char c)
 {
     if (vbuf_is_full(v))
-	return 0;
-    *v->head++ = c;
-    if (v->head == v->buf_end)
-	v->head =  v->buf;
+        return 0;
+
+    *v->tail++ = c;
+    if (v->tail == v->buf_end)
+        v->tail =  v->buf;
+
     return 1;
 }
 
 VBUFPROTO int  
 vbuf_strchr(VBUF *v, char c)
 {
-    const char *s = v->tail, *d = v->head;
+    const char *s = v->head, *d = v->tail;
 
     if (vbuf_is_empty(v))
-	return EOF;
+        return EOF;
 
     if (d < s) 
-	d = v->buf_end;
+        d = v->buf_end;
 
     while (s < d)
-	if (*s++ == c)
-	    return s - v->tail -1;
+        if (*s++ == c)
+            return s - v->head -1;
 
-    if (v->head > v->tail)
-	return EOF;
+    if (v->tail > v->head)
+        return EOF;
 
-    s = v->buf; d = v->head;
+    s = v->buf; d = v->tail;
 
     while (s < d)
-	if (*s++ == c)
-	    return (v->buf_end - v->tail) + s - v->buf -1;
+        if (*s++ == c)
+            return (v->buf_end - v->head) + s - v->buf -1;
 
     return EOF;
 }
 
+/* string operation */
+
+VBUFPROTO char * 
+vbuf_getstr (VBUF *v, char *s, size_t sz)
+{
+    char *sbase = s;
+    assert(sz > 0);
+    if (vbuf_is_empty(v))
+        return NULL;
+
+    while (sz-- > 0 && !vbuf_is_empty(v))
+    {
+        if ('\0' == (*s++ = vbuf_pop(v)))
+            return sbase;
+    }
+
+    // need to pad NUL.
+    s[ sz == 0 ? 0 : -1] = '\0';
+    return sbase;
+}
+
+VBUFPROTO int 
+vbuf_putstr (VBUF *v, const char *s)
+{
+    int len = strlen(s) + 1;
+    if (vbuf_space(v) < len)
+        return 0;
+    vbuf_putblk(v, s, len);
+    return 1;
+}
+
+VBUFPROTO static void 
+vbuf_reverse(char *begin, char *end)
+{
+    char c;
+
+    assert(begin <= end);
+    while (begin < end)
+    {
+        c = *--end;
+        *end = *begin;
+        *begin++ = c;
+    }
+}
+
+VBUFPROTO char *
+vbuf_cstr  (VBUF *v)
+{
+    size_t sz;
+    if (vbuf_is_empty(v))
+        return NULL;
+
+    // if the buffer is cstr safe, simply return
+    if (v->tail > v->head)
+    {
+        *v->tail = 0;
+        return v->head;
+    }
+
+    // wrapped ring buffer. now reverse 3 times to merge:
+    // [buf head tail buf_end]
+    sz = vbuf_size(v);
+    vbuf_reverse(v->buf, v->tail);
+    vbuf_reverse(v->head, v->buf_end);
+    memmove(v->tail, v->head, v->buf_end - v->head);
+    v->head = v->buf;
+    v->tail = v->buf + sz;
+    v->buf[sz] = 0;
+    vbuf_reverse(v->head, v->tail);
+    return v->buf;
+}
+
 // NOTE: VBUF_*_SZ may return a size larger than capacity, so you must check
 // buffer availablity before using these macro.
-#define VBUF_TAIL_SZ(v) ((v->head >= v->tail) ? v->head - v->tail : v->buf_end - v->tail)
-#define VBUF_HEAD_SZ(v) ((v->tail >  v->head) ? v->tail - v->head : v->buf_end - v->head)
+#define VBUF_TAIL_SZ(v) ((v->tail >= v->head) ? v->tail - v->head : v->buf_end - v->head)
+#define VBUF_HEAD_SZ(v) ((v->head >  v->tail) ? v->head - v->tail : v->buf_end - v->tail)
 
 // get data from vbuf
 VBUFPROTO int
@@ -197,84 +283,14 @@ vbuf_getblk(VBUF *v, void *p, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_TAIL_SZ(v);
-	assert(rw >= 0 && rw <= v->capacity+1);
+        assert(rw >= 0 && rw <= v->capacity+1);
         if (rw > sz) rw = sz;
-        memcpy(s, v->tail, rw);
-        v->tail += rw; s += rw; sz -= rw;
-        if (v->tail == v->buf_end)
-            v->tail =  v->buf;
+        memcpy(s, v->head, rw);
+        v->head += rw; s += rw; sz -= rw;
+        if (v->head == v->buf_end)
+            v->head =  v->buf;
     }
     assert(sz == 0);
-    return 1;
-}
-
-static void 
-vbuf_reverse(char *begin, char *end)
-{
-    char c;
-
-    assert(begin <= end);
-    while (begin < end)
-    {
-	c = *--end;
-	*end = *begin;
-	*begin++ = c;
-    }
-}
-
-VBUFPROTO char *
-vbuf_cstr  (VBUF *v)
-{
-    size_t sz;
-    if (vbuf_is_empty(v))
-	return NULL;
-
-    // if the buffer is cstr safe, simply return
-    if (v->head > v->tail)
-    {
-	*v->head = 0;
-	return v->tail;
-    }
-
-    // wrapped ring buffer. now reverse 3 times to merge:
-    // [buf head tail buf_end]
-    sz = vbuf_size(v);
-    vbuf_reverse(v->buf, v->head);
-    vbuf_reverse(v->tail, v->buf_end);
-    memmove(v->head, v->tail, v->buf_end - v->tail);
-    v->tail = v->buf;
-    v->head = v->buf + sz;
-    v->buf[sz] = 0;
-    vbuf_reverse(v->tail, v->head);
-    return v->buf;
-}
-
-char * 
-vbuf_getstr (VBUF *v, char *s, size_t sz)
-{
-    char *sbase = s;
-    assert(sz > 0);
-    if (vbuf_is_empty(v))
-	return NULL;
-
-    while (sz-- > 0 && !vbuf_is_empty(v))
-    {
-	if ('\0' == (*s++ = vbuf_pop(v)))
-	    return sbase;
-    }
-
-    // need to pad NUL.
-    s[ sz == 0 ? 0 : -1] = '\0';
-    return sbase;
-}
-
-int 
-vbuf_putstr (VBUF *v, char *s)
-{
-    int len = strlen(s) + 1;
-    if (vbuf_space(v) < len)
-	return 0;
-    vbuf_putblk(v, s, len);
     return 1;
 }
 
@@ -291,12 +307,12 @@ vbuf_putblk(VBUF *v, const void *p, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_HEAD_SZ(v);
-	assert(rw >= 0 && rw <= v->capacity+1);
+        assert(rw >= 0 && rw <= v->capacity+1);
         if (rw > sz) rw = sz;
-        memcpy(v->head, s, rw);
-        v->head += rw; s += rw; sz -= rw;
-        if (v->head == v->buf_end)
-            v->head =  v->buf;
+        memcpy(v->tail, s, rw);
+        v->tail += rw; s += rw; sz -= rw;
+        if (v->tail == v->buf_end)
+            v->tail =  v->buf;
     }
     assert(sz == 0);
     return 1;
@@ -310,9 +326,9 @@ vbuf_rw_write(struct iovec iov[2], void *ctx)
     int fd = *(int*)ctx;
     ssize_t ret;
     while ( (ret = writev(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
-	    (errno == EINTR));
+            (errno == EINTR));
     if (ret < 0 && errno == EAGAIN)
-	ret = 0;
+        ret = 0;
     return ret;
 }
 
@@ -322,9 +338,9 @@ vbuf_rw_read(struct iovec iov[2], void *ctx)
     int fd = *(int*)ctx;
     ssize_t ret;
     while ( (ret = readv(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
-	    (errno == EINTR));
+            (errno == EINTR));
     if (ret < 0 && errno == EAGAIN)
-	ret = 0;
+        ret = 0;
     return ret;
 }
 
@@ -334,9 +350,9 @@ vbuf_rw_send(struct iovec iov[2], void *ctx)
     int *fdflag = (int*)ctx;
     ssize_t ret;
     while ( (ret = send(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
-	    (errno == EINTR));
+            (errno == EINTR));
     if (ret < 0 && errno == EAGAIN)
-	ret = 0;
+        ret = 0;
     return ret;
 }
 
@@ -346,9 +362,9 @@ vbuf_rw_recv(struct iovec iov[2], void *ctx)
     int *fdflag = (int*)ctx;
     ssize_t ret;
     while ( (ret = recv(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
-	    (errno == EINTR));
+            (errno == EINTR));
     if (ret < 0 && errno == EAGAIN)
-	ret = 0;
+        ret = 0;
     return ret;
 }
 
@@ -393,12 +409,12 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 
     if (sz == VBUF_RWSZ_ALL)
     {
-	sz = vbuf_size(v);
+        sz = vbuf_size(v);
     }
     else if (sz == VBUF_RWSZ_MIN)
     {
-	sz = vbuf_size(v);
-	is_min = 1;
+        sz = vbuf_size(v);
+        is_min = 1;
     }
 
     if (sz < 1 || vbuf_size(v) < sz)
@@ -408,19 +424,19 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
         rw = VBUF_TAIL_SZ(v);
         if (rw > sz) rw = sz;
 
-	iov[0].iov_base= v->tail;
-	iov[0].iov_len = rw;
-	iov[1].iov_base= v->buf;
-	iov[1].iov_len = sz-rw;
+        iov[0].iov_base= v->head;
+        iov[0].iov_len = rw;
+        iov[1].iov_base= v->buf;
+        iov[1].iov_len = sz-rw;
 
         rw = writer(iov, ctx);
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
-	assert(rw <= sz);
-        v->tail += rw; sz -= rw;
-        if (v->tail >= v->buf_end)
-            v->tail -= v->buf_end - v->buf;
+        assert(rw <= sz);
+        v->head += rw; sz -= rw;
+        if (v->head >= v->buf_end)
+            v->head -= v->buf_end - v->buf;
 
     } while (sz > 0 && !is_min);
 
@@ -438,12 +454,12 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
 
     if (sz == VBUF_RWSZ_ALL)
     {
-	sz = vbuf_space(v);
+        sz = vbuf_space(v);
     }
     else if (sz == VBUF_RWSZ_MIN)
     {
-	sz = vbuf_space(v);
-	is_min = 1;
+        sz = vbuf_space(v);
+        is_min = 1;
     }
 
     if (sz < 1 || vbuf_space(v) < sz)
@@ -453,19 +469,19 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
         rw = VBUF_HEAD_SZ(v);
         if (rw > sz) rw = sz;
 
-	iov[0].iov_base= v->head;
-	iov[0].iov_len = rw;
-	iov[1].iov_base= v->buf;
-	iov[1].iov_len = sz-rw;
+        iov[0].iov_base= v->tail;
+        iov[0].iov_len = rw;
+        iov[1].iov_base= v->buf;
+        iov[1].iov_len = sz-rw;
 
         rw = reader(iov, ctx);
         if (rw < 0)
             return copied > 0 ? copied : -1;
 
-	assert(rw <= sz);
-        v->head += rw; sz -= rw;
-        if (v->head >= v->buf_end)
-            v->head -= v->buf_end - v->buf;
+        assert(rw <= sz);
+        v->tail += rw; sz -= rw;
+        if (v->tail >= v->buf_end)
+            v->tail -= v->buf_end - v->buf;
 
     } while (sz > 0 && !is_min);
 
@@ -475,87 +491,134 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
 // testing sample
 
 #ifdef _VBUF_TEST_MAIN
-void vbuf_rpt(VBUF *v)
+void vbuf_dbg_rpt(VBUF *v)
 {
-        printf("v capacity: %u, size: %lu, empty: %s, ptr=(%p,h=%p,t=%p,%p)\n", 
+    printf("v: [ cap: %u, size: %2lu, empty: %s, ptr=(%p,h=%p,t=%p,%p)]\n", 
             (unsigned int)vbuf_capacity(v), vbuf_size(v), 
-	    vbuf_is_empty(v) ? "YES" : "NO", 
-	    v->buf, v->head, v->tail, v->buf_end);
+            vbuf_is_empty(v) ? "YES" : "NO", 
+            v->buf, v->head, v->tail, v->buf_end);
+    assert(v->buf_end == v->buf + v->capacity +1);
 }
 
+void vbuf_dbg_fragmentize(VBUF *v)
+{
+    v->head = v->tail = v->buf + v->capacity/2;
+}
+
+// TODO add API unit tests
 int main()
 {
-    int i;
+    int i, r;
+    const int szbuf = 40, szfrag = szbuf / 4 * 3;
+    const char src[szbuf *2] = "hello, world";
+    const char *fragstring = "1234567890ABCDEFGHIJabcdefhijk";
+    const char *s;
+    char dest[szbuf*2] = "";
     VBUF vbuf, *v = &vbuf;
+    vbuf_new(v, szbuf);
 
-    printf("start!\n");
+    // check basic structure
+    assert(v->buf && v->capacity == szbuf -1);
+    assert(v->head == v->tail && v->tail == v->buf);
+    assert(v->buf_end == v->buf + v->capacity + 1);
 
-    vbuf_new(v, 50);
+    // fragmentize it!
+    vbuf_dbg_fragmentize(v);
+    assert(vbuf_is_empty(v) && !vbuf_is_full(v));
+    vbuf_putblk(v, src, szfrag);
+
+    // check macro API
+    assert(!vbuf_is_empty(v));
+    assert(!vbuf_is_full(v));
+    assert(vbuf_capacity(v) == szbuf-1);
+    assert(vbuf_size(v) == szfrag);
+    assert(vbuf_space(v) == vbuf_capacity(v) - szfrag);
+    assert(vbuf_peek(v) == src[0]);
+
+    // try filling buffer with putblk/getblk
+    vbuf_dbg_fragmentize(v);
     for (i = 0; i < 10; i++)
     {
-        vbuf_putblk(v, "blah", sizeof("blah"));
-	vbuf_rpt(v);
+        r = vbuf_putblk(v, src, szbuf / 10);
+        vbuf_dbg_rpt(v);
+        assert( i == 9 ? !r : r);
+        assert(!vbuf_is_full(v));
     }
-    for (i = 0; i < 10; i++)
-    {
-        char buf[64] = "";
-        vbuf_getblk(v, buf, 5);
-	printf("[got: %s] ", buf);
-	vbuf_rpt(v);
-    }
+    r = vbuf_putblk(v, src, vbuf_capacity(v) - vbuf_size(v));
+    assert(r && vbuf_is_full(v) && !vbuf_is_empty(v));
 
     for (i = 0; i < 10; i++)
     {
-        char buf[64] = "";
-        vbuf_putblk(v, "blah", sizeof("blah"));
-        vbuf_getblk(v, buf, 5);
-	printf("[got: %s] ", buf);
-	vbuf_rpt(v);
+        r = vbuf_getblk(v, dest, szbuf / 10);
+        dest[szbuf/10] = 0;
+        printf("%2d. [got: %s] ", i+1, dest);
+        vbuf_dbg_rpt(v);
+        assert(i == 9 ? !r : r);
+        assert(!vbuf_is_full(v) && !vbuf_is_empty(v));
+    }
+    r = vbuf_getblk(v, dest, vbuf_size(v));
+    assert(r && vbuf_is_empty(v) && !vbuf_is_full(v));
+
+    // try unframgented
+    vbuf_clear(v);
+    r = vbuf_putblk(v, src, vbuf_capacity(v));
+    assert(r && vbuf_is_full(v));
+    r = vbuf_putblk(v, src, 1);
+    assert(!r);
+    r = vbuf_getblk(v, dest, szbuf-1);
+    assert(r && vbuf_is_empty(v));
+    r = vbuf_getblk(v, dest, 1);
+    assert(!r && vbuf_is_empty(v));
+    r = vbuf_putblk(v, src, szbuf);
+    assert(!r && vbuf_is_empty(v));
+
+    // string operation
+    vbuf_clear(v);
+    vbuf_putstr(v, "str test(1)");
+    vbuf_putstr(v, "str test(2)");
+    vbuf_putstr(v, "str test(3)");
+    for (i = 0; i < 4; i++)
+    {
+        s = vbuf_getstr(v, dest, sizeof(dest));
+        printf("put/getstr(%d): %s\n", i+1,
+                s ? s : "(NULL)");
+        assert(i < 3 ? s != NULL : s == NULL);
     }
 
-    // vbuf_clear(v);
-    vbuf_rpt(v);
-    printf("give me some input: "); fflush(stdout);
+    // cstr test
+    vbuf_clear(v);
+    vbuf_putstr(v, fragstring);
+    vbuf_dbg_rpt(v);
+    s = vbuf_cstr(v);
+    printf("cstr test(simple): %s\n", s);
+    assert(strcmp(s, fragstring)  == 0);
+    vbuf_dbg_fragmentize(v);
+    vbuf_putstr(v, fragstring);
+    vbuf_dbg_rpt(v);
+    s = vbuf_cstr(v);
+    printf("cstr test(unwrap): %s\n", s);
+    assert(strcmp(s, fragstring)  == 0);
+
+    vbuf_dbg_fragmentize(v);
+    vbuf_putblk(v, "*** peek test OK\n", sizeof("*** peek test OK\n"));
+    while (EOF != (i = vbuf_pop(v)))
+        putchar(i);
+
+    // read/write test
+    vbuf_dbg_fragmentize(v);
+    printf("give me some input for finding location of 't': "); fflush(stdout);
     vbuf_read(v, 0, VBUF_RWSZ_MIN);
     printf("index of 't' = %d\n", vbuf_strchr(v, 't'));
-    vbuf_rpt(v);
+    vbuf_dbg_rpt(v);
     printf("give me 4 chars: "); fflush(stdout);
     vbuf_read(v, 0, 4);
-    vbuf_rpt(v);
+    vbuf_dbg_rpt(v);
     printf("\n flushing vbuf: ["); fflush(stdout);
     vbuf_write(v, 1, VBUF_RWSZ_ALL);
     printf("]\n");
-    vbuf_putblk(v, "peek test\n", sizeof("peek test\n"));
-    while (EOF != (i = vbuf_pop(v)))
-	putchar(i);
 
-    vbuf_clear(v);
-    vbuf_putstr(v, "string test(1)");
-    vbuf_putstr(v, "string test(2)");
-    vbuf_putstr(v, "string test(3)");
-
-    for (i = 0; i < 4; i++)
-    {
-	char xbuf[256];
-	char *s = vbuf_getstr(v, xbuf, sizeof(xbuf));
-	printf("put/getstr(%d): %s\n", i+1,
-		s ? s : "(NULL)");
-    }
-    vbuf_clear(v);
-    vbuf_putstr(v, "1234567890ABCDEFGHIJK");
-    vbuf_rpt(v);
-    printf("cstr test(simple): %s\n", vbuf_cstr(v));
-    vbuf_clear(v);
-    for (i = 0; i < 4; i++) {
-	char xbuf[256];
-	vbuf_putstr(v, "1234567890");
-	vbuf_getstr(v, xbuf, sizeof(xbuf));
-    }
-    vbuf_putstr(v, "1234567890ABCDEFGHIJK");
-    vbuf_rpt(v);
-    printf("cstr test(unwrap): %s\n", vbuf_cstr(v));
-
-    getchar();
     return 0;
 }
 #endif 
+
+// vim:ts=8:sw=4:et
