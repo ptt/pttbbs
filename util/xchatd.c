@@ -223,6 +223,9 @@ chkpasswd(const char *passwd, const char *test)
 
 static int flog;                /* log file descriptor */
 
+#ifdef CHAT_MSG_LOGFILE
+static int mlog;		/* main room logs */
+#endif
 
 static void
 logit(char *key, char *msg)
@@ -245,6 +248,16 @@ log_init()
 {
     flog = open(CHAT_LOGFILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
     logit("START", "chat daemon");
+#ifdef CHAT_MSG_LOGFILE
+    {
+	const char *dtstr = Cdate(&boot_time);
+	const char *prefix = "\n- xchatd restart: ";
+	mlog = open(CHAT_MSG_LOGFILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	write(mlog, prefix, strlen(prefix));
+	write(mlog, dtstr, strlen(dtstr));
+	write(mlog, "\n", 1);
+    }
+#endif
 }
 
 
@@ -252,6 +265,9 @@ static void
 log_close()
 {
     close(flog);
+#ifdef CHAT_MSG_LOGFILE
+    close(mlog);
+#endif
 }
 
 
@@ -600,6 +616,19 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
 
     if (max < 0)
 	return;
+
+#ifdef CHAT_MSG_LOGFILE
+    if (room && room->name && 
+	strcmp(room->name, MAIN_NAME) == 0)
+    {
+	time4_t now = time(0);
+	const char *dtstr = Cdate_mdHM(&now);
+	write(mlog, dtstr, strlen(dtstr));
+	write(mlog, " ", 1);
+	write(mlog, msg, strlen(msg));
+	write(mlog, "\n", 1);
+    }
+#endif
 
     Xdo_send(max, wptr, msg);
 }
@@ -1173,7 +1202,7 @@ chat_query(ChatUser *cu, char *msg)
 	snprintf(chatbuf, sizeof(chatbuf),
 		"※ 聊天暱稱: %s ，" BBSMNAME " ID: %s (%s)",
 		xuser->chatid, xuser->userid, xuser->nickname);
-	send_to_user(xuser, chatbuf, 0, MSG_MESSAGE);
+	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	snprintf(chatbuf, sizeof(chatbuf),
 		"   " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，"
 		"發表過 %d 篇文章，最近從 %s 上站",
