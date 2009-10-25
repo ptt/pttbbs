@@ -227,14 +227,12 @@ extern ssize_t vbuf_write(VBUF *v, int fd, ssize_t sz);	// write from vbuf to fd
 extern ssize_t vbuf_send (VBUF *v, int fd, ssize_t sz, int flags);
 extern ssize_t vbuf_recv (VBUF *v, int fd, ssize_t sz, int flags);
 
-// write from vbuf to writer
+// write from vbuf to writer (writer should return -1 for EOF/error, 0 for EAGAIN)
 extern ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx, 
 	ssize_t (writer)(struct iovec[2], void *ctx));
-        // ssize_t (writer)(const void *p[2], size_t len[2], void *ctx)); 
-// read from reader to vbuf
+// read from reader to vbuf (reader should return -1 for EOF/error, 0 for EAGAIN)
 extern ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx, 
 	ssize_t (reader)(struct iovec[2], void *ctx));
-        // ssize_t (reader)(void *p[2], size_t len[2], void *ctx));
 
 /* telnet.c */
 struct TelnetCallback {

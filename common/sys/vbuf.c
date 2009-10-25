@@ -319,6 +319,8 @@ vbuf_putblk(VBUF *v, const void *p, size_t sz)
 }
 
 /* read/write callbacks */
+// XXX warning: the return value of these callbacks are a little differnet:
+// 0 means 'can continue (EAGAIN)', and -1 means EOF or error.
 
 static ssize_t 
 vbuf_rw_write(struct iovec iov[2], void *ctx)
@@ -327,8 +329,8 @@ vbuf_rw_write(struct iovec iov[2], void *ctx)
     ssize_t ret;
     while ( (ret = writev(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
             (errno == EINTR));
-    if (ret < 0 && errno == EAGAIN)
-        ret = 0;
+    if (ret <= 0)
+        ret = (errno == EAGAIN) ? 0 : -1;
     return ret;
 }
 
@@ -339,8 +341,8 @@ vbuf_rw_read(struct iovec iov[2], void *ctx)
     ssize_t ret;
     while ( (ret = readv(fd, iov, iov[1].iov_len ? 2 : 1)) < 0 &&
             (errno == EINTR));
-    if (ret < 0 && errno == EAGAIN)
-        ret = 0;
+    if (ret <= 0)
+        ret = (errno == EAGAIN) ? 0 : -1;
     return ret;
 }
 
@@ -351,8 +353,9 @@ vbuf_rw_send(struct iovec iov[2], void *ctx)
     ssize_t ret;
     while ( (ret = send(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
             (errno == EINTR));
-    if (ret < 0 && errno == EAGAIN)
-        ret = 0;
+    // TODO also send for iov[1]
+    if (ret <= 0)
+        ret = (errno == EAGAIN) ? 0 : -1;
     return ret;
 }
 
@@ -363,8 +366,9 @@ vbuf_rw_recv(struct iovec iov[2], void *ctx)
     ssize_t ret;
     while ( (ret = recv(fdflag[0], iov[0].iov_base, iov[0].iov_len, fdflag[1])) < 0 &&
             (errno == EINTR));
-    if (ret < 0 && errno == EAGAIN)
-        ret = 0;
+    // TODO also try reading from iov[1] with MSG_DONTWAIT
+    if (ret <= 0)
+        ret = (errno == EAGAIN) ? 0 : -1;
     return ret;
 }
 
