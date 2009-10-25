@@ -189,24 +189,6 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 
 /* 給錢與贈與稅 */
 
-#ifndef EXP_NEW_TAX
-
-int
-give_tax(int money)
-{
-    int             i, tax = 0;
-    int      tax_bound[] = {1000000, 100000, 10000, 1000, 0};
-    double   tax_rate[] = {0.4, 0.3, 0.2, 0.1, 0.08};
-    for (i = 0; i <= 4; i++)
-	if (money > tax_bound[i]) {
-	    tax += (money - tax_bound[i]) * tax_rate[i];
-	    money -= (money - tax_bound[i]);
-	}
-    return (tax <= 0) ? 1 : tax;
-}
-
-#else // EXP_NEW_TAX
-
 int
 give_tax(int money)
 {
@@ -270,8 +252,6 @@ give_money_vget_peekcb(int key, VGET_RUNTIME *prt, void *instance)
     give_money_vget_changecb(key, prt, instance);
     return VGETCB_NEXT;
 }
-
-#endif
 
 int do_give_money(char *id, int uid, int money)
 {
@@ -344,10 +324,6 @@ give_money_ui(const char *userid)
 
     m = 0;
     money_buf[0] = 0;
-#ifndef EXP_NEW_TAX
-    if (getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, NUMECHO))
-	m = atoi(money_buf);
-#else
     outs("要給他多少錢呢? (可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
     outs(" 請輸入金額: ");  // (3, 0)
     {
@@ -362,7 +338,6 @@ give_money_ui(const char *userid)
 	if (m > 0 && !is_before_tax)
 	    m = cal_before_givetax(m);
     }
-#endif
     if (m < 2) {
 	vmsg("金額過少，交易取消!");
 	return -1;
