@@ -5,7 +5,7 @@
 //
 // Author: Hung-Te Lin (piaip)
 // Create: Sat Oct 24 22:44:00 CST 2009
-// An implementation from scratch, with the API names inspired by vrb
+// An implementation from scratch, with the API names inspired by STL and vrb
 // ---------------------------------------------------------------------------
 // Copyright (c) 2009 Hung-Te Lin <piaip@csie.org>
 // All rights reserved.
@@ -179,6 +179,8 @@ vbuf_strchr(VBUF *v, char c)
     return EOF;
 }
 
+// NOTE: VBUF_*_SZ may return a size larger than capacity, so you must check
+// buffer availablity before using these macro.
 #define VBUF_TAIL_SZ(v) ((v->head >= v->tail) ? v->head - v->tail : v->buf_end - v->tail)
 #define VBUF_HEAD_SZ(v) ((v->tail >  v->head) ? v->tail - v->head : v->buf_end - v->head)
 
@@ -206,28 +208,45 @@ vbuf_getblk(VBUF *v, void *p, size_t sz)
     return 1;
 }
 
-// put data into vbuf
-VBUFPROTO int
-vbuf_putblk(VBUF *v, const void *p, size_t sz)
+static void 
+vbuf_reverse(char *begin, char *end)
 {
-    size_t rw, i;
-    const char *s = p;
-    if (!sz || vbuf_space(v) < sz)
-        return 0;
+    char c;
 
-    // two phase
-    for (i = 0; sz && i < 2; i++)
+    assert(begin <= end);
+    while (begin < end)
     {
-        rw = VBUF_HEAD_SZ(v);
-	assert(rw >= 0 && rw <= v->capacity+1);
-        if (rw > sz) rw = sz;
-        memcpy(v->head, s, rw);
-        v->head += rw; s += rw; sz -= rw;
-        if (v->head == v->buf_end)
-            v->head =  v->buf;
+	c = *--end;
+	*end = *begin;
+	*begin++ = c;
     }
-    assert(sz == 0);
-    return 1;
+}
+
+VBUFPROTO char *
+vbuf_cstr  (VBUF *v)
+{
+    size_t sz;
+    if (vbuf_is_empty(v))
+	return NULL;
+
+    // if the buffer is cstr safe, simply return
+    if (v->head > v->tail)
+    {
+	*v->head = 0;
+	return v->tail;
+    }
+
+    // wrapped ring buffer. now reverse 3 times to merge:
+    // [buf head tail buf_end]
+    sz = vbuf_size(v);
+    vbuf_reverse(v->buf, v->head);
+    vbuf_reverse(v->tail, v->buf_end);
+    memmove(v->head, v->tail, v->buf_end - v->tail);
+    v->tail = v->buf;
+    v->head = v->buf + sz;
+    v->buf[sz] = 0;
+    vbuf_reverse(v->tail, v->head);
+    return v->buf;
 }
 
 char * 
@@ -256,6 +275,30 @@ vbuf_putstr (VBUF *v, char *s)
     if (vbuf_space(v) < len)
 	return 0;
     vbuf_putblk(v, s, len);
+    return 1;
+}
+
+// put data into vbuf
+VBUFPROTO int
+vbuf_putblk(VBUF *v, const void *p, size_t sz)
+{
+    size_t rw, i;
+    const char *s = p;
+    if (!sz || vbuf_space(v) < sz)
+        return 0;
+
+    // two phase
+    for (i = 0; sz && i < 2; i++)
+    {
+        rw = VBUF_HEAD_SZ(v);
+	assert(rw >= 0 && rw <= v->capacity+1);
+        if (rw > sz) rw = sz;
+        memcpy(v->head, s, rw);
+        v->head += rw; s += rw; sz -= rw;
+        if (v->head == v->buf_end)
+            v->head =  v->buf;
+    }
+    assert(sz == 0);
     return 1;
 }
 
@@ -498,6 +541,19 @@ int main()
 	printf("put/getstr(%d): %s\n", i+1,
 		s ? s : "(NULL)");
     }
+    vbuf_clear(v);
+    vbuf_putstr(v, "1234567890ABCDEFGHIJK");
+    vbuf_rpt(v);
+    printf("cstr test(simple): %s\n", vbuf_cstr(v));
+    vbuf_clear(v);
+    for (i = 0; i < 4; i++) {
+	char xbuf[256];
+	vbuf_putstr(v, "1234567890");
+	vbuf_getstr(v, xbuf, sizeof(xbuf));
+    }
+    vbuf_putstr(v, "1234567890ABCDEFGHIJK");
+    vbuf_rpt(v);
+    printf("cstr test(unwrap): %s\n", vbuf_cstr(v));
 
     getchar();
     return 0;

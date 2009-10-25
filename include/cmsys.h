@@ -215,6 +215,7 @@ extern int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, 
 // vector of C-style NULL terminated strings
 extern char* vbuf_getstr(VBUF *v, char *s, size_t sz);	    // get a string from vbuf, return NULL if empty
 extern int   vbuf_putstr(VBUF *v, char *s);		    // put a string to vbuf (with NUL), return true/false
+extern char *vbuf_cstr  (VBUF *v);			    // return flattern (unwrap) buffer and pad NUL, or NULL if empty.
 
 #define VBUF_RWSZ_ALL (0)   // r/w until buffer full
 #define VBUF_RWSZ_MIN (-1)  // r/w for minimal try (do not block for more)
