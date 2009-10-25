@@ -101,7 +101,7 @@ vbuf_attach(VBUF *v, char *buf, size_t szbuf)
 {
     assert(szbuf > 1);
     v->head = v->tail = v->buf = buf;
-    v->buf_end = v->buf + v->capacity;
+    v->buf_end = v->buf + szbuf;
     v->capacity = szbuf-1;
 }
 
