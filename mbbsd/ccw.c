@@ -1051,6 +1051,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
             "[/m]sg <id> <msg>", "跟 <id> 說悄悄話",
             "[/n]ick <id>", "將暱稱換成 <id>",
             "[/p]ager", "切換呼叫器",
+            "[/q]uery <id>", "查詢使用者 <id>",
             "[/r]oom ", "列出一般" CCW_CAP_CHATROOM,
             "[/w]ho", "列出本" CCW_CAP_CHATROOM "使用者",
             " /whoin <room>", "列出" CCW_CAP_CHAT " <room> 的使用者",

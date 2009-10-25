@@ -95,17 +95,19 @@ typedef struct ChatAction ChatAction;
 struct ChatUser
 {
     struct ChatUser *unext;
-    int sock;                     /* user socket */
     ChatRoom *room;
     UserList *ignore;
+    int sock;                     /* user socket */
     int userno;			  /* userno 是 PASSWD 來的 unum, 幾乎是唯一的 */
     int uflag;
-    time4_t uptime;               /* Thor: unused */
-    char userid[IDLEN + 1];       /* real userid */
-    char chatid[CHATID_LEN + 1];  /* chat id */
-    char lasthost[30];            /* host address */
-    char ibuf[80];                /* buffer for non-blocking receiving */
     int isize;                    /* current size of ibuf */
+    uint32_t numlogindays;	  /* login counter */
+    uint32_t numposts;		  /* post number */
+    char userid[IDLEN+1];         /* real userid */
+    char lasthost[IPV4LEN+1];     /* host address */
+    char nickname[24];		  /* BBS nickname */
+    char chatid[CHATID_LEN + 1];  /* chat id */
+    char ibuf[80];                /* buffer for non-blocking receiving */
 };
 
 
@@ -1152,6 +1154,34 @@ chat_private(ChatUser *cu, char *msg)
 							   * 嗎? */
 }
 
+static void
+chat_query(ChatUser *cu, char *msg)
+{
+    char *recipient;
+    ChatUser *xuser;
+
+    recipient = nextword(&msg);
+    xuser = (ChatUser *) fuzzy_cuser_by_chatid(recipient);
+    if (xuser == NULL)
+	xuser = cuser_by_userid(recipient);
+    if (xuser == NULL)
+	sprintf(chatbuf, msg_no_such_id, recipient);
+    else if (xuser == FUZZY_USER)
+	strcpy(chatbuf, "※ 請清楚指明對方的聊天代號"); // ambiguous
+    else 
+    {
+	snprintf(chatbuf, sizeof(chatbuf),
+		"※ 聊天暱稱: %s ，" BBSMNAME " ID: %s (%s)",
+		xuser->chatid, xuser->userid, xuser->nickname);
+	send_to_user(xuser, chatbuf, 0, MSG_MESSAGE);
+	snprintf(chatbuf, sizeof(chatbuf),
+		"   " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，"
+		"發表過 %d 篇文章，最近從 %s 上站",
+		xuser->numlogindays, xuser->numposts, xuser->lasthost);
+    }
+    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+}
+
 
 static void
 chat_cloak(ChatUser *cu, char *msg)
@@ -1363,10 +1393,13 @@ login_user(ChatUser *cu, char *msg)
     char *passwd;
     char *userid;
     char *chatid;
+
+    // deprecated: we don't lookup real host now.
+#if 0
     struct sockaddr_in from;
     unsigned int fromlen;
     struct hostent *hp;
-
+#endif
 
     ACCT acct;
     int level;
@@ -1431,21 +1464,6 @@ login_user(ChatUser *cu, char *msg)
 #endif
     assert(utent);
 
-    /* Thor.0819: for client/server bbs */
-/*
-  for (xuser = mainuser; xuser; xuser = xuser->unext)
-  {
-  if (xuser->userno == utent)
-  {
-
-  #ifdef  DEBUG
-  logit("enter", "bogus");
-  #endif
-  send_to_user(cu, CHAT_LOGIN_BOGUS, 0, 0);
-  return -1;    
-  }
-  }
-*/
     if (!valid_chatid(chatid))
     {
 #ifdef  DEBUG
@@ -1473,7 +1491,14 @@ login_user(ChatUser *cu, char *msg)
     /* Thor: 進來先清空ROOMOP(同PERM_CHAT), CLOAK */
     strcpy(cu->userid, userid);
     strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
+    // fill user information from acct
+    strlcpy(cu->nickname, acct.nickname, sizeof(cu->nickname));
+    cu->numposts = acct.numposts;
+    cu->numlogindays = acct.numlogindays;
+    strlcpy(cu->lasthost, acct.lasthost, sizeof(cu->lasthost));
 
+    // deprecated: let's use BBS lasthost
+#if 0
     /* Xshadow: 取得 client 的來源 */
     fromlen = sizeof(from);
     if (!getpeername(cu->sock, (struct sockaddr *) & from, &fromlen))
@@ -1485,9 +1510,9 @@ login_user(ChatUser *cu, char *msg)
     }
     else
 	strcpy(cu->lasthost, "[外太空]");
+#endif
 
     send_to_user(cu, CHAT_LOGIN_OK, 0, 0);
-
     arrive_room(cu, &mainroom);
 
     send_to_user(cu, "", 0, MSG_MOTDSTART);
@@ -2370,6 +2395,7 @@ static ChatCmd chatcmdlist[] =
     {"operator", chat_makeop, 0},
     {"party", chat_party, 1},       /* Xshadow: party data for common client */
     {"partyinfo", chat_partyinfo, 1},       /* Xshadow: party info for common * client */
+    {"query", chat_query, 0},
 
     {"room", chat_list_rooms, 0},
     {"unignore", chat_unignore, 1},
