@@ -97,12 +97,18 @@ typedef struct CCW_CTX {
 ///////////////////////////////////////////////////////////////////////////
 // CCW helpers
 
+#ifndef DEBUG
+# define CCW_PROTO  static inline
+#else
+# define CCW_PROTO
+#endif
+
 // utilities declaration
-void ccw_prepare_line(CCW_CTX *ctx);
-int  ccw_partial_match(const char *buf, const char *cmd);
+CCW_PROTO void ccw_prepare_line(CCW_CTX *ctx);
+CCW_PROTO int  ccw_partial_match(const char *buf, const char *cmd);
 
 // default callback handlers
-static void
+CCW_PROTO void
 ccw_header(CCW_CTX *ctx)
 {
     move(0, 0); 
@@ -118,7 +124,7 @@ ccw_header(CCW_CTX *ctx)
     outs("Common Chat Window");
 }
 
-static void
+CCW_PROTO void
 ccw_footer(CCW_CTX *ctx)
 {
     move(b_lines, 0);
@@ -134,7 +140,7 @@ ccw_footer(CCW_CTX *ctx)
     vs_footer(" CCW ", " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
 }
 
-static void
+CCW_PROTO void
 ccw_separators(CCW_CTX *ctx)
 {
     int i;
@@ -156,7 +162,7 @@ ccw_separators(CCW_CTX *ctx)
     outc('\n');
 }
 
-static void
+CCW_PROTO void
 ccw_prompt(CCW_CTX *ctx)
 {
     move(b_lines-1, 0);
@@ -172,7 +178,7 @@ ccw_prompt(CCW_CTX *ctx)
     prints("%s: ", ctx->local_id);
 }
 
-static void
+CCW_PROTO void
 ccw_init_session(CCW_CTX *ctx)
 {
     if (ctx->init_session)
@@ -182,7 +188,7 @@ ccw_init_session(CCW_CTX *ctx)
     }
 }
 
-static void
+CCW_PROTO void
 ccw_end_session(CCW_CTX *ctx)
 {
     if (ctx->end_session)
@@ -192,7 +198,7 @@ ccw_end_session(CCW_CTX *ctx)
     }
 }
 
-static int
+CCW_PROTO int
 ccw_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     if (ctx->peek_cmd)
@@ -211,7 +217,7 @@ ccw_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     return 0;
 }
 
-static void 
+CCW_PROTO void 
 ccw_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
     // FIXME if printed message is too long, the 2nd line will be overwritten
@@ -238,7 +244,7 @@ ccw_print_line(CCW_CTX *ctx, const char *buf, int local)
     outs(ANSI_RESET "\n→");
 }
 
-static void
+CCW_PROTO void
 ccw_log_line(CCW_CTX *ctx, const char *buf, int local)
 {
     if (!ctx->log) 
@@ -261,7 +267,7 @@ ccw_log_line(CCW_CTX *ctx, const char *buf, int local)
 // CCW utilities
 
 // clear content and redraw all widgets
-void
+CCW_PROTO void
 ccw_reset_scr(CCW_CTX *ctx)
 {
     clear();
@@ -275,7 +281,7 @@ ccw_reset_scr(CCW_CTX *ctx)
 }
 
 // prepare screen buffer to display one line of text
-void
+CCW_PROTO void
 ccw_prepare_line(CCW_CTX *ctx)
 {
     move(ctx->line, 0);
@@ -295,7 +301,7 @@ ccw_prepare_line(CCW_CTX *ctx)
 }
 
 // verify if buf (separated by space) matches partial of cmd (case insensitive)
-int
+CCW_PROTO int
 ccw_partial_match(const char *buf, const char *cmd)
 {
     size_t szbuf = strcspn(buf, str_space);
@@ -308,7 +314,7 @@ ccw_partial_match(const char *buf, const char *cmd)
 }
 
 // print and log one line of text.
-void 
+CCW_PROTO void 
 ccw_add_line(CCW_CTX *ctx, const char *buf, int local)
 {
     // only print/log local when local_echo is enabled.
@@ -325,7 +331,7 @@ ccw_add_line(CCW_CTX *ctx, const char *buf, int local)
 
 // VGET callback adaptors
 
-static int
+CCW_PROTO int
 ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
 {
     CCW_CTX *ctx = (CCW_CTX*) instance;
@@ -382,7 +388,7 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
 
 // main processor
 
-int
+CCW_PROTO int
 ccw_process(CCW_CTX *ctx)
 {
     char inbuf[STRLEN];
@@ -458,7 +464,7 @@ ccw_process(CCW_CTX *ctx)
 #define CCW_CAP_CHATROOM    "談天室"
 #endif
 
-int
+CCW_PROTO int
 ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
 {
     char ans[3];
@@ -525,7 +531,7 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
 #define CCW_TALK_CMD_CLS    "cls"
 #define CCW_TALK_CMD_HELP   "help"
 
-static ssize_t
+CCW_PROTO ssize_t
 ccw_talk_send(CCW_CTX *ctx, const char *msg)
 {
     // protocol: [len][msg]
@@ -542,7 +548,7 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
     return len;
 }
 
-static ssize_t 
+CCW_PROTO ssize_t 
 ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
 {
     char len = 0;
@@ -557,28 +563,28 @@ ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
     return len;
 }
 
-static void
+CCW_PROTO void
 ccw_talk_end_session(CCW_CTX *ctx)
 {
     // XXX note the target connection may be already closed.
     ccw_talk_send(ctx, CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE);
 }
 
-static void
+CCW_PROTO void
 ccw_talk_header(CCW_CTX *ctx)
 {
     vs_hdr2barf(" 【" CCW_CAP_TALK "】 \t %s",
             ctx->remote_id);
 }
 
-static void
+CCW_PROTO void
 ccw_talk_footer(CCW_CTX *ctx)
 {
     vs_footer(" 【" CCW_CAP_TALK "】 ", 
             " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
 }
 
-static int
+CCW_PROTO int
 ccw_talk_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     if (buf[0] != CCW_TALK_CMD_PREFIX)
@@ -611,7 +617,7 @@ ccw_talk_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     return 0;
 }
 
-static void
+CCW_PROTO void
 ccw_talk_post_input(CCW_CTX *ctx, const char *buf, int local)
 {
     if (local != CCW_LOCAL)
@@ -621,7 +627,7 @@ ccw_talk_post_input(CCW_CTX *ctx, const char *buf, int local)
     ctx->abort = (ccw_talk_send(ctx, buf) <= 0);
 }
 
-static int
+CCW_PROTO int
 ccw_talk_peek_key(CCW_CTX *ctx, int key)
 {
     switch (key) {
@@ -720,14 +726,14 @@ typedef struct ccw_chat_ext {
     char topic[CHAT_TOPIC_LEN+1];
 } ccw_chat_ext;
 
-static ccw_chat_ext *
+CCW_PROTO ccw_chat_ext *
 ccw_chat_get_ext(CCW_CTX *ctx)
 {
     assert(ctx->arg);
     return (ccw_chat_ext*)ctx->arg;
 }
 
-static void
+CCW_PROTO void
 ccw_chat_check_newmail(CCW_CTX *ctx)
 {
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
@@ -744,7 +750,7 @@ ccw_chat_check_newmail(CCW_CTX *ctx)
         ext->newmail = 0;
 }
 
-static void
+CCW_PROTO void
 ccw_chat_check_term_resize(CCW_CTX *ctx)
 {
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
@@ -759,7 +765,7 @@ ccw_chat_check_term_resize(CCW_CTX *ctx)
     }
 }
 
-static int
+CCW_PROTO int
 ccw_chat_send(CCW_CTX *ctx, const char *buf)
 {
     int  len;
@@ -771,21 +777,21 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     return (tosend(ctx->fd, genbuf, len, MSG_NOSIGNAL) == len);
 }
 
-static void
+CCW_PROTO void
 ccw_chat_end_session(CCW_CTX *ctx)
 {
     // XXX note the target connection may be already closed.
     ccw_chat_send(ctx, "/bye");    // protocol: bye
 }
 
-static void
+CCW_PROTO void
 ccw_chat_header(CCW_CTX *ctx)
 {
     vs_hdr2barf(" " CCW_CAP_CHATROOM " [%s] \t 話題: %s",
             ctx->remote_id, ccw_chat_get_ext(ctx)->topic);
 }
 
-static void
+CCW_PROTO void
 ccw_chat_footer(CCW_CTX *ctx)
 {
     ccw_chat_check_term_resize(ctx);
@@ -808,14 +814,14 @@ ccw_chat_footer(CCW_CTX *ctx)
             "(Ctrl-Z)快速切換\t(Ctrl-C)離開" CCW_CAP_CHAT);
 }
 
-static void
+CCW_PROTO void
 ccw_chat_prompt(CCW_CTX *ctx)
 {
     prints("%-*s》", CHAT_ID_LEN, ctx->local_id);
 }
 
 #ifdef EXP_CHAT_HIGHLIGHTS
-static int
+CCW_PROTO int
 word_match_index(const char *buf, const char *pattern, size_t szpat)
 {
     const char *p = buf;
@@ -841,7 +847,7 @@ word_match_index(const char *buf, const char *pattern, size_t szpat)
     return -1;
 }
 
-static void
+CCW_PROTO void
 ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
 {
     int m = -1, n;
@@ -868,7 +874,7 @@ ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
 }
 #endif // EXP_CHAT_HIGHLIGHTS
 
-static void
+CCW_PROTO void
 ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
 #ifdef EXP_CHAT_HIGHLIGHTS
@@ -901,14 +907,14 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
     outs(ANSI_RESET "\n→");
 }
 
-static void
+CCW_PROTO void
 ccw_chat_log_line(CCW_CTX *ctx, const char *buf, int local)
 {
     assert(local != CCW_LOCAL);
     fprintf(ctx->log, "%s\n", buf);
 }
 
-static int
+CCW_PROTO int
 ccw_chat_recv(CCW_CTX *ctx)
 {
     int  c, len;
@@ -983,7 +989,7 @@ ccw_chat_recv(CCW_CTX *ctx)
 #ifdef EXP_ANTIFLOOD
 
 // prevent flooding */
-static void
+CCW_PROTO void
 ccw_chat_anti_flood(CCW_CTX *ctx)
 {
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
@@ -1017,7 +1023,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
 }
 #endif // EXP_ANTIFLOOD
 
-static int
+CCW_PROTO int
 ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     ccw_chat_check_newmail(ctx);
@@ -1109,7 +1115,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     return 0;
 }
 
-static void
+CCW_PROTO void
 ccw_chat_post_input(CCW_CTX *ctx, const char *buf, int local)
 {
     if (local != CCW_LOCAL)
@@ -1119,7 +1125,7 @@ ccw_chat_post_input(CCW_CTX *ctx, const char *buf, int local)
     ctx->abort = (ccw_chat_send(ctx, buf) <= 0);
 }
 
-static int
+CCW_PROTO int
 ccw_chat_peek_key(CCW_CTX *ctx, int key)
 {
     switch (key) {
