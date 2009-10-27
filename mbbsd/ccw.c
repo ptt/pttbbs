@@ -355,7 +355,7 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
             if (ctx->log && ctx->log_fpath)
             {
                 VREFSCR scr = vscr_save();
-                add_io(0, 0);
+                vkey_detach();
 
                 fflush(ctx->log);
                 more(ctx->log_fpath, YEA);
@@ -368,7 +368,7 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
         case Ctrl('C'):
             {
                 VREFSCR scr = vscr_save();
-                add_io(0, 0);
+                vkey_detach();
 
                 if (vans("確定要離開嗎? [y/N]: ") == 'y')
                     ctx->abort = YEA;
@@ -695,7 +695,7 @@ ccw_talk(int fd, int destuid)
     ccw_process(&ctx);
 
     // clean network resource
-    add_io(0, 0);
+    vkey_detach();
     assert(fd == ctx.fd);
     close(fd);
 
@@ -801,7 +801,7 @@ ccw_chat_footer(CCW_CTX *ctx)
     {
         // process ZA
         VREFSCR scr = vscr_save();
-        add_io(0, 0);
+        vkey_detach();
 
         ZA_Enter();
 
@@ -1143,7 +1143,7 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
             {
                 int za = 0;
                 VREFCUR cur = vcur_save();
-                add_io(0, 0);
+                vkey_detach();
                 za = ZA_Select();
                 ccw_footer(ctx);
                 add_io(ctx->fd, 0);
@@ -1241,7 +1241,7 @@ ccw_chat(int fd)
     ccw_process(&ctx);
 
     // clean network resource
-    add_io(0, 0);
+    vkey_detach();
     close(fd);
     currutmp->in_chat = currutmp->chatid[0] = 0;
 

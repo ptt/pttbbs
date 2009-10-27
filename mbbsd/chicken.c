@@ -1022,7 +1022,7 @@ chickenpk(int fd)
 	free_live_chicken(ochicken);
 	bell();
 	vmsg("有一方沒有寵物");	/* Ptt:妨止page時把寵物賣掉 */
-	add_io(0, 0);
+	vkey_detach();
 	close(fd);
 	unlockutmpmode();
 	return 0;
@@ -1132,7 +1132,7 @@ chickenpk(int fd)
 		break;
 	}
     }
-    add_io(0, 0);		/* 把vkey恢復回 */
+    vkey_detach();		/* 把vkey恢復回 */
     pressanykey();
     close(fd);
     showdeadth(deadtype(mychicken, mychicken));

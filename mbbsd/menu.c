@@ -713,7 +713,6 @@ x_sys_updates(void)
 #endif
 
 #ifdef DEBUG
-int _debug_check_keyinput();
 int _debug_reportstruct()
 {
     clear();
@@ -784,9 +783,6 @@ static const commands_t xyzlist[] = {
 #endif
 
 #else // !DEBUG
-
-    {_debug_check_keyinput, 0, 
-	    	     "MMKeycode      檢查按鍵控制碼工具"},
     {_debug_reportstruct, 0, 
 	    	     "RReportStruct  報告各種結構的大小"},
 #endif // !DEBUG

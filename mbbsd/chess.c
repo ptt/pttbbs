@@ -24,7 +24,7 @@
 #define CHESS_DRAWING_PHOTOED_WARN_ROW  22
 
 #define CONNECT_PEER() add_io(info->sock, 0)
-#define IGNORE_PEER()  add_io(0, 0)
+#define IGNORE_PEER()  vkey_detach()
 
 #define DO_WITHOUT_PEER(TIMEOUT,ACT,ELSE) \
     do {                                  \

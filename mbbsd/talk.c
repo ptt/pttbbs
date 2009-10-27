@@ -1183,7 +1183,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		    ch == M_FIVE || ch == CHC ||
 		    (!ch && (uin->chatid[0] == 1 ||
 			     uin->chatid[0] == 3))) {
-		add_io(0, 0);
+		vkey_detach();
 		close(sock);
 		currutmp->sockactive = currutmp->destuid = 0;
 		vmsg("¤H®a¦b¦£°Õ");
@@ -1200,7 +1200,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
 		    close(sock);
 		    currutmp->sockactive = currutmp->destuid = 0;
-		    add_io(0, 0);
+		    vkey_detach();
 		    vmsg(msg_usr_left);
 		    unlockutmpmode();
 		    return -1;
@@ -1212,7 +1212,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	    break;
 
 	if (ch == '\004') {
-	    add_io(0, 0);
+	    vkey_detach();
 	    close(sock);
 	    currutmp->sockactive = currutmp->destuid = 0;
 	    unlockutmpmode();
@@ -1385,7 +1385,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    unlockutmpmode();
 	    return;
 	}
-	add_io(0, 0);
+	vkey_detach();
 	close(sock);
 	currutmp->sockactive = NA;
 
@@ -1396,7 +1396,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	add_io(msgsock, 0);
 	while ((ch = vkey()) != I_OTHERDATA) {
 	    if (ch == Ctrl('D')) {
-		add_io(0, 0);
+		vkey_detach();
 		close(msgsock);
 		unlockutmpmode();
 		return;
@@ -1405,7 +1405,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 	if (read(msgsock, &c, sizeof(c)) != sizeof(c))
 	    c = 'n';
-	add_io(0, 0);
+	vkey_detach();
 
 	if (c == 'y') {
 	    switch (uin->sig) {

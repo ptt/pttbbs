@@ -11,10 +11,11 @@
 
 #ifdef DEBUG
 #define register
+// #define DBG_OUTRPT
 #endif
 
-static unsigned char real_outbuf[OBUFSIZE + CVTGAP*2] = "   ", 
-		     real_inbuf [IBUFSIZE + CVTGAP*2] = "   ";
+static unsigned char real_outbuf[OBUFSIZE + CVTGAP*2] = "   ";
+static unsigned char real_inbuf [IBUFSIZE + CVTGAP*2] = "   ";
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
@@ -25,8 +26,9 @@ static unsigned char real_outbuf[OBUFSIZE + CVTGAP*2] = "   ",
 #define inbuf  (real_inbuf +CVTGAP)
 #define outbuf (real_outbuf+CVTGAP)
 
-static int      obufsize = 0, ibufsize = 0;
-static int      icurrchar = 0;
+static int obufsize = 0;
+static int ibufsize = 0;
+static int icurrchar = 0;
 
 #ifdef DBG_OUTRPT
 // output counter
@@ -68,6 +70,46 @@ inline static int read_wrapper(int fd, void *buf, size_t count) {
 
 inline static int write_wrapper(int fd, void *buf, size_t count) {
     return (*write_type)(fd, buf, count);
+}
+#endif
+
+/* ----------------------------------------------------- */
+/* debug reporting                                       */
+/* ----------------------------------------------------- */
+
+#if defined(DEBUG) || defined(DBG_OUTRPT)
+void
+debug_print_input_buffer(char *s, size_t len)
+{
+    int y, x, i;
+    if (!s || !len)
+        return;
+
+    getyx_ansi(&y, &x);
+    move(b_lines, 0); clrtoeol();
+    SOLVE_ANSI_CACHE();
+    prints("Input Buffer (%d): [ ", (int)len);
+    for (i = 0; i < len; i++, s++)
+    {
+        int c = (unsigned char)*s;
+        if (!isascii(c) || !isprint(c) || c == ' ')
+        {
+            if (c == ESC_CHR)
+                outs(ANSI_COLOR(1;36) "Esc" ANSI_RESET);
+            else if (c == ' ')
+                outs(ANSI_COLOR(1;36) "Sp " ANSI_RESET);
+            else if (c == 0)
+                prints(ANSI_COLOR(1;31) "Nul" ANSI_RESET);
+            else if (c > 0 && c < ' ')
+                prints(ANSI_COLOR(1;32) "^%c", c + 'A' -1);
+            else
+                prints(ANSI_COLOR(1;33) "[%02X]" ANSI_RESET, c);
+        } else {
+            outc(c);
+        }
+    }
+    prints(" ] ");
+    move_ansi(y, x);
 }
 #endif
 
@@ -153,247 +195,14 @@ ochar(int c)
 }
 
 /* ----------------------------------------------------- */
-/* input routines                                        */
+/* pager processor                                       */
 /* ----------------------------------------------------- */
 
-static int      i_newfd = 0;
-static struct timeval i_to, *i_top = NULL;
-static int      (*flushf) () = NULL;
-
-inline void
-add_io(int fd, int timeout)
-{
-    i_newfd = fd;
-    if (timeout) {
-	i_to.tv_sec = timeout;
-	i_to.tv_usec = 16384;	/* Ptt: 改成16384 避免不按時for loop吃cpu
-				 * time 16384 約每秒64次 */
-	i_top = &i_to;
-    } else
-	i_top = NULL;
-}
-
-inline int
-num_in_buf(void)
-{
-    if (ibufsize <= icurrchar)
-	return 0;
-    return ibufsize - icurrchar;
-}
-
-inline int
-vkey_is_full(void)
-{
-    return ibufsize >= IBUFSIZE;
-}
-
-inline static ssize_t 
-wrapped_tty_read(unsigned char *buf, size_t max)
-{
-    /* tty_read will handle abort_bbs.
-     * len <= 0: read more */
-    ssize_t len = tty_read(buf, max);
-    if (len <= 0)
-	return len;
-
-    // apply additional converts
-#ifdef DBCSAWARE
-    if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
-	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
-#endif
-#ifdef CONVERT
-    len = input_wrapper(inbuf, len);
-#endif
-#ifdef DBG_OUTRPT
-    {
-	static char xbuf[128];
-	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
-		ESC_STR "[u", len);
-	write(1, xbuf, strlen(xbuf));
-    }
-#endif // DBG_OUTRPT
-    return len;
-}
-
-
-/*
- * dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time, and
- * dogetch() might be called again, and then ibufsize/icurrchar/inbuf might
- * be inconsistent. We try to not segfault here...
- */
-
-static int
-dogetch(void)
-{
-    ssize_t         len;
-    static time4_t  lastact;
-    if (ibufsize <= icurrchar) {
-
-	if (flushf)
-	    (*flushf) ();
-
-	refresh();
-
-	if (i_newfd) {
-
-	    struct timeval  timeout;
-	    fd_set          readfds;
-
-	    if (i_top)
-		timeout = *i_top;	/* copy it because select() might
-					 * change it */
-
-	    FD_ZERO(&readfds);
-	    FD_SET(0, &readfds);
-	    FD_SET(i_newfd, &readfds);
-
-	    /* jochang: modify first argument of select from FD_SETSIZE */
-	    /* since we are only waiting input from fd 0 and i_newfd(>0) */
-
-	    STATINC(STAT_SYSSELECT);
-	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
-			    i_top ? &timeout : NULL)) < 0) {
-		if (errno != EINTR)
-		    abort_bbs(0);
-		/* raise(SIGHUP); */
-	    }
-
-	    if (len == 0){
-		syncnow();
-		return I_TIMEOUT;
-	    }
-
-	    if (i_newfd && FD_ISSET(i_newfd, &readfds)){
-		syncnow();
-		return I_OTHERDATA;
-	    }
-	}
-
-#ifdef NOKILLWATERBALL
-	if( currutmp && currutmp->msgcount && !reentrant_write_request )
-	    write_request(1);
-#endif
-
-	STATINC(STAT_SYSREADSOCKET);
-
-	do {
-	    len = wrapped_tty_read(inbuf, IBUFSIZE);
-	} while (len <= 0);
-
-	ibufsize = len;
-	icurrchar = 0;
-    }
-
-    if (currutmp) {
-	syncnow();
-	/* 3 秒內超過兩 byte 才算 active, anti-antiidle.
-	 * 不過方向鍵等組合鍵不止 1 byte */
-	if (now - lastact < 3)
-	    currutmp->lastact = now;
-	lastact = now;
-    }
-
-    // see vtkbd.c for CR/LF Rules
-    {
-	unsigned char c = (unsigned char) inbuf[icurrchar++];
-
-	// CR LF are treated as one.
-	if (c == KEY_CR)
-	{
-	    // peak next character.
-	    if (icurrchar < ibufsize && inbuf[icurrchar] == KEY_LF)
-		icurrchar ++;
-	    return KEY_ENTER;
-	} 
-	else if (c == KEY_LF)
-	{
-	    return KEY_UNKNOWN;
-	}
-
-	return c;
-    }
-}
-
-#ifdef DEBUG
-/*
- * These are for terminal keys debug
- */
-void
-_debug_print_ibuffer()
-{
-    static int y = 0;
-    int i = 0;
-
-    move(y % b_lines, 0);
-    for (i = 0; i < t_columns; i++) 
-	outc(' ');
-    move(y % b_lines, 0);
-    prints("%d. Current Buffer: %d/%d, ", y+1, icurrchar, ibufsize);
-    outs(ANSI_COLOR(1) "[" ANSI_RESET);
-    for (i = 0; i < ibufsize; i++)
-    {
-	int c = (unsigned char)inbuf[i];
-	if(c < ' ')
-	{
-	    prints(ANSI_COLOR(1;33) "0x%02x" ANSI_RESET, c);
-	} else {
-	    outc(c);
-	}
-    }
-    outs(ANSI_COLOR(1) "]" ANSI_RESET);
-    y++;
-    move(y % b_lines, 0);
-    for (i = 0; i < t_columns; i++) 
-	outc(' ');
-}
-
+static int i_newfd;
 int 
-_debug_check_keyinput()
-{
-    int dbcsaware = 0;
-    int flExit = 0;
-
-    clear();
-    while(!flExit)
-    {
-	int i = 0;
-	move(b_lines, 0);
-	for(i=0; i<t_columns; i++)
-	    outc(' ');
-	move(b_lines, 0);
-	if(dbcsaware)
-	{
-	    outs( ANSI_REVERSE "游標在此" ANSI_RESET
-		    " 測試中文模式會不會亂送鍵。 'q' 離開, 'd' 回英文模式 ");
-	    move(b_lines, 4);
-	} else {
-	    outs("Waiting for key input. 'q' to exit, 'd' to try dbcs-aware");
-	}
-	refresh();
-	wait_input(-1, 0);
-	switch(dogetch())
-	{
-	    case 'd':
-		dbcsaware = !dbcsaware;
-		break;
-	    case 'q':
-		flExit = 1;
-		break;
-	}
-	_debug_print_ibuffer();
-	while(num_in_buf() > 0)
-	    dogetch();
-    }
-    return 0;
-}
-
-#endif
-
-static int      water_which_flag = 0;
-
-static int 
 process_pager_keys(int ch)
 {
+    static int water_which_flag;
     assert(currutmp);
     switch (ch) 
     {
@@ -563,6 +372,170 @@ process_pager_keys(int ch)
     return ch;
 }
 
+/* ----------------------------------------------------- */
+/* input routines                                        */
+/* ----------------------------------------------------- */
+
+static int    i_newfd = 0;
+static struct timeval i_to, *i_top = NULL;
+
+inline void
+add_io(int fd, int timeout)
+{
+    i_newfd = fd;
+    if (timeout) {
+	i_to.tv_sec = timeout;
+	i_to.tv_usec = 16384;	/* Ptt: 改成16384 避免不按時for loop吃cpu
+				 * time 16384 約每秒64次 */
+	i_top = &i_to;
+    } else
+	i_top = NULL;
+}
+
+inline int
+num_in_buf(void)
+{
+    if (ibufsize <= icurrchar)
+	return 0;
+    return ibufsize - icurrchar;
+}
+
+inline int
+vkey_is_full(void)
+{
+    return ibufsize >= IBUFSIZE;
+}
+
+inline static ssize_t 
+wrapped_tty_read(unsigned char *buf, size_t max)
+{
+    /* tty_read will handle abort_bbs.
+     * len <= 0: read more */
+    ssize_t len = tty_read(buf, max);
+    if (len <= 0)
+	return len;
+
+    // apply additional converts
+#ifdef DBCSAWARE
+    if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
+	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
+#endif
+#ifdef CONVERT
+    len = input_wrapper(inbuf, len);
+#endif
+#ifdef DBG_OUTRPT
+
+#if 1
+    if (len > 0)
+	debug_print_input_buffer((char*)inbuf, len);
+#else
+    {
+	static char xbuf[128];
+	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
+		ESC_STR "[u", len);
+	write(1, xbuf, strlen(xbuf));
+    }
+#endif
+
+#endif // DBG_OUTRPT
+    return len;
+}
+
+/*
+ * dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time, and
+ * dogetch() might be called again, and then ibufsize/icurrchar/inbuf might
+ * be inconsistent. We try to not segfault here...
+ */
+
+static int
+dogetch(void)
+{
+    ssize_t         len;
+    static time4_t  lastact;
+    if (ibufsize <= icurrchar) {
+
+	refresh();
+
+	if (i_newfd) {
+
+	    struct timeval  timeout;
+	    fd_set          readfds;
+
+	    if (i_top)
+		timeout = *i_top;	/* copy it because select() might
+					 * change it */
+
+	    FD_ZERO(&readfds);
+	    FD_SET(0, &readfds);
+	    FD_SET(i_newfd, &readfds);
+
+	    /* jochang: modify first argument of select from FD_SETSIZE */
+	    /* since we are only waiting input from fd 0 and i_newfd(>0) */
+
+	    STATINC(STAT_SYSSELECT);
+	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
+			    i_top ? &timeout : NULL)) < 0) {
+		if (errno != EINTR)
+		    abort_bbs(0);
+		/* raise(SIGHUP); */
+	    }
+
+	    if (len == 0){
+		syncnow();
+		return I_TIMEOUT;
+	    }
+
+	    if (i_newfd && FD_ISSET(i_newfd, &readfds)){
+		syncnow();
+		return I_OTHERDATA;
+	    }
+	}
+
+#ifdef NOKILLWATERBALL
+	if( currutmp && currutmp->msgcount && !reentrant_write_request )
+	    write_request(1);
+#endif
+
+	STATINC(STAT_SYSREADSOCKET);
+
+	do {
+	    len = wrapped_tty_read(inbuf, IBUFSIZE);
+	} while (len <= 0);
+
+	ibufsize = len;
+	icurrchar = 0;
+    }
+
+    if (currutmp) {
+	syncnow();
+	/* 3 秒內超過兩 byte 才算 active, anti-antiidle.
+	 * 不過方向鍵等組合鍵不止 1 byte */
+	if (now - lastact < 3)
+	    currutmp->lastact = now;
+	lastact = now;
+    }
+
+    // see vtkbd.c for CR/LF Rules
+    {
+	unsigned char c = (unsigned char) inbuf[icurrchar++];
+
+	// CR LF are treated as one.
+	if (c == KEY_CR)
+	{
+	    // peak next character.
+	    if (icurrchar < ibufsize && inbuf[icurrchar] == KEY_LF)
+		icurrchar ++;
+	    return KEY_ENTER;
+	} 
+	else if (c == KEY_LF)
+	{
+	    return KEY_UNKNOWN;
+	}
+
+	return c;
+    }
+}
+
 // virtual terminal keyboard context
 static VtkbdCtx vtkbd_ctx;
 
@@ -627,7 +600,7 @@ vkey(void)
  * if f < 0, then wait forever.
  * Return 1 if anything available.
  */
-int 
+inline int 
 wait_input(float f, int bIgnoreBuf)
 {
     int sel = 0;
@@ -664,17 +637,25 @@ wait_input(float f, int bIgnoreBuf)
     return 1;
 }
 
-void 
+inline void 
 vkey_flush(void)
 {
     icurrchar = ibufsize = 0;
+}
+
+int
+vkey_detach(void)
+{
+    int r = i_newfd;
+    add_io(0, 0);
+    return r;
 }
 
 /*
  * wait user input for f seconds.
  * return 1 if control key c is available.
  */
-int 
+inline int 
 peek_input(float f, int c)
 {
     int i = 0;

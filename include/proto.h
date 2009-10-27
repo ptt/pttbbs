@@ -277,18 +277,21 @@ void output(const char *s, int len);
 void oflush(void);
 
 // input api (old flavor)
-int  igetch(void);
 int  num_in_buf(void);
-int  input_isfull();
 int  wait_input(float f, int bIgnoreBuf);
 int  peek_input(float f, int c);
-void drop_input(void);
+// int  igetch(void);
+// int  input_isfull();
+// void drop_input(void);
 void add_io(int fd, int timeout);
 
 // new input api
 int  vkey();	     // identical to igetch
 void vkey_flush();   // identical to drop_input
 int  vkey_is_full(); // identical to input_isfull
+int  vkey_detach(void); // works like to add_io(0, 0)
+// int  vkey_attach(int fd); // works like add_io(fd, ...)
+// int  vkey_is_ready(); // works like (num_in_buf() > 0)
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);

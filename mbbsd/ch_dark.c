@@ -552,12 +552,12 @@ main_dark(int fd, userinfo_t * uin)
 	mvouts(22, 0, ANSI_COLOR(1;31) "合棋唷!! 下次在分高下吧 ^_^" ANSI_RESET);
 	break;
     default:
-	add_io(0, 0);
+	vkey_detach();
 	close(fd);
 	pressanykey();
 	return 0;
     }
-    add_io(0, 0);
+    vkey_detach();
     close(fd);
     pressanykey();
     return 0;
