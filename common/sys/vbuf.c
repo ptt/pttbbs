@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -81,7 +82,7 @@ VBUFPROTO void
 vbuf_new(VBUF *v, size_t szbuf)
 {
     assert(szbuf > 1);
-    memset(v, 0, sizeof(*v));
+    bzero(v, sizeof(*v)); // memset(v, 0, sizeof(*v));
     v->buf = (char*)malloc(szbuf);
     assert(v->buf);
     v->buf_end = v->buf + szbuf;
@@ -93,7 +94,7 @@ VBUFPROTO void
 vbuf_delete(VBUF *v)
 {
     free(v->buf);
-    memset(v, 0, sizeof(*v));
+    bzero(v, sizeof(*v)); // memset(v, 0, sizeof(*v));
 }
 
 VBUFPROTO void
@@ -108,7 +109,7 @@ vbuf_attach(VBUF *v, char *buf, size_t szbuf)
 VBUFPROTO void
 vbuf_detach(VBUF *v)
 {
-    memset(v, 0, sizeof(VBUF));
+    bzero(v, sizeof(*v)); // memset(v, 0, sizeof(*v));
 }
 
 VBUFPROTO void

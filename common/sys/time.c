@@ -107,6 +107,20 @@ Cdate_mdHM(const time4_t * clock)
     return cdate_buffer;
 }
 
+/**
+ * 13+1 bytes, "12/31 10:01:01\0"
+ */
+const char*
+Cdate_mdHMS(const time4_t * clock)
+{
+    time_t          temp = (time_t)*clock;
+    struct tm       mytm;
+
+    localtime_r(&temp, &mytm);
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d %H:%M:%S", &mytm);
+    return cdate_buffer;
+}
+
 #ifdef TIMET64
 char           *
 ctime4(const time4_t *clock)

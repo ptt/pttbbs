@@ -126,8 +126,9 @@ extern int getHoroscope(int m, int d);
 extern const char* Cdate(const time4_t *clock);
 extern const char* Cdatelite(const time4_t *clock);
 extern const char* Cdatedate(const time4_t * clock);
-extern const char * Cdate_mdHM(const time4_t * clock);
 extern const char * Cdate_md(const time4_t * clock);
+extern const char * Cdate_mdHM(const time4_t * clock);
+extern const char * Cdate_mdHMS(const time4_t * clock);
 
 #ifdef TIMET64
     struct tm*	localtime4(const time4_t *);
