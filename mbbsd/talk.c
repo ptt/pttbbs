@@ -1150,6 +1150,11 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     currutmp->sockactive = YEA;
     currutmp->sockaddr = server.sin_port;
     currutmp->destuid = uin->uid;
+    // WORKAROUND setutmpmode() checks currstat as cache of currutmp->mode.
+    // however if you invoke page -> rejected -> do something -> page again, 
+    // the currstat=PAGE but currutmp->mode!=PAGE, and then the paging will fail.
+    // so, let's temporary break currstat here.
+    currstat = IDLE;
     setutmpmode(PAGE);
     uin->destuip = currutmp - &SHM->uinfo[0];
     pid = uin->pid;
