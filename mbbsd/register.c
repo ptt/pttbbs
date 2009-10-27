@@ -454,7 +454,7 @@ static int verify_captcha()
 	    // flush out current input
 	    doupdate(); 
 	    peek_input(0.1f, Ctrl('C'));
-	    drop_input();
+	    vkey_flush();
 	    sleep(1);
 	}
 

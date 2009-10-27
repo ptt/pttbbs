@@ -182,7 +182,7 @@ num_in_buf(void)
 }
 
 inline int
-input_isfull(void)
+vkey_is_full(void)
 {
     return ibufsize >= IBUFSIZE;
 }
@@ -567,7 +567,7 @@ process_pager_keys(int ch)
 static VtkbdCtx vtkbd_ctx;
 
 inline int
-igetch(void)
+vkey(void)
 {
     register int ch;
 
@@ -622,14 +622,6 @@ igetch(void)
     return ch;
 }
 
-#ifndef vkey
-inline int 
-vkey(void)
-{
-    return igetch();
-}
-#endif
-
 /*
  * wait user input anything for f seconds.
  * if f < 0, then wait forever.
@@ -673,7 +665,7 @@ wait_input(float f, int bIgnoreBuf)
 }
 
 void 
-drop_input(void)
+vkey_flush(void)
 {
     icurrchar = ibufsize = 0;
 }
@@ -701,49 +693,6 @@ peek_input(float f, int c)
 	    return 1;
     }
     return 0;
-}
-
-static int 
-getdata2vgetflag(int echo)
-{
-    assert(echo != GCARRY);
-
-    if (echo == LCECHO)
-	echo = VGET_LOWERCASE;
-    else if (echo == NUMECHO)
-	echo = VGET_DIGITS;
-    else if (echo == NOECHO)
-	echo = VGETSET_PASSWORD;
-    else
-	echo = VGET_DEFAULT;
-
-    return echo;
-}
-
-/* Ptt */
-int
-getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
-{
-    move(line, col);
-    if(prompt && *prompt) outs(prompt);
-    return vgetstr(buf, len, getdata2vgetflag(echo), buf);
-}
-
-
-int
-getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
-{
-    move(line, col);
-    if(prompt && *prompt) outs(prompt);
-    return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
-}
-
-int
-getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
-{
-    move(line, col);
-    if(prompt && *prompt) outs(prompt);
-    return vgets(buf, len, getdata2vgetflag(echo));
 }
 
 /* vim:sw=4

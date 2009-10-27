@@ -1002,15 +1002,15 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
         {
             // flush all input!
             unsigned char garbage[STRLEN];
-            drop_input();
+            vkey_flush();
             while (wait_input(1, 0))
             {
                 if (num_in_buf())
-                    drop_input();
+                    vkey_flush();
                 else
                     tty_read(garbage, sizeof(garbage));
             }
-            drop_input();
+            vkey_flush();
             vmsg("請勿大量剪貼或造成洗板面的效果。");
 
             // log?

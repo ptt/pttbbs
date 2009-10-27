@@ -270,6 +270,13 @@ int guess_main(void);
 void set_converting_type(int which);
 
 /* io */
+
+// output 
+int  ochar(int c);
+void output(const char *s, int len);
+void oflush(void);
+
+// input api (old flavor)
 int  igetch(void);
 int  num_in_buf(void);
 int  input_isfull();
@@ -277,16 +284,11 @@ int  wait_input(float f, int bIgnoreBuf);
 int  peek_input(float f, int c);
 void drop_input(void);
 void add_io(int fd, int timeout);
-int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
-int getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
-int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
-int ochar(int c);
-void output(const char *s, int len);
-void oflush(void);
-// maple 3 API
-int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
-// int vkey(void); // P.S: in PTT system the vkey() is just alias to igetch().
-#define vkey() igetch()
+
+// new input api
+int  vkey();	     // identical to igetch
+void vkey_flush();   // identical to drop_input
+int  vkey_is_full(); // identical to input_isfull
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);
@@ -542,6 +544,10 @@ int  userid_is_BM(const char *userid, const char *list);
 int  is_uBM(const char *list, const char *id);
 time4_t  gettime(int line, time4_t dt, const char* head);
 unsigned DBCS_StringHash(const char *s);
+// vgets/getdata utilities
+int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
+int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
+int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)

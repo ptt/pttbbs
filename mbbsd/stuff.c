@@ -158,7 +158,7 @@ wait_penalty(int sec)
             sec = 5;
         sleep(sec);
         peek_input(0.1, Ctrl('C'));
-        drop_input();
+        vkey_flush();
     }
     lastWait = now;
 }
@@ -354,6 +354,48 @@ show_helpfile(const char *helpfile)
     clear();
     show_file((char *)helpfile, 0, b_lines, SHOWFILE_ALLOW_ALL);
     PRESSANYKEY();
+}
+
+// vgets/getdata compatible helpers
+static int 
+getdata2vgetflag(int echo)
+{
+    assert(echo != GCARRY);
+
+    if (echo == LCECHO)
+	echo = VGET_LOWERCASE;
+    else if (echo == NUMECHO)
+	echo = VGET_DIGITS;
+    else if (echo == NOECHO)
+	echo = VGETSET_PASSWORD;
+    else
+	echo = VGET_DEFAULT;
+
+    return echo;
+}
+
+int
+getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
+{
+    move(line, col);
+    if(prompt && *prompt) outs(prompt);
+    return vgetstr(buf, len, getdata2vgetflag(echo), buf);
+}
+
+int
+getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
+{
+    move(line, col);
+    if(prompt && *prompt) outs(prompt);
+    return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
+}
+
+int
+getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
+{
+    move(line, col);
+    if(prompt && *prompt) outs(prompt);
+    return vgets(buf, len, getdata2vgetflag(echo));
 }
 
 /* ----------------------------------------------------- */

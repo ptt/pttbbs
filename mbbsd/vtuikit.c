@@ -1313,7 +1313,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	if (c > 0x80 && num_in_buf() &&
 		len - rt.iend < 3)	// we need 3 for DBCS+NUL.
 	{
-	    drop_input();
+	    vkey_flush();
 	    bell(); continue;
 	}
 
