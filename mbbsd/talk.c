@@ -641,7 +641,7 @@ my_write2(void)
 
     which = 0;
     do {
-	switch ((ch = igetch())) {
+	switch ((ch = vkey())) {
 	case Ctrl('T'):
 	case KEY_UP:
 	    if (water_usies != 1) {
@@ -1170,7 +1170,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     add_io(sock, timeout);
 
     while (1) {
-	ch = igetch();
+	ch = vkey();
 	if (ch == I_TIMEOUT) {
 	    ch = uin->mode;
 	    if (!ch && uin->chatid[0] == 1 &&
@@ -1394,7 +1394,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    ChessEstablishRequest(msgsock);
 
 	add_io(msgsock, 0);
-	while ((ch = igetch()) != I_OTHERDATA) {
+	while ((ch = vkey()) != I_OTHERDATA) {
 	    if (ch == Ctrl('D')) {
 		add_io(0, 0);
 		close(msgsock);

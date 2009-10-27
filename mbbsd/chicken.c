@@ -400,7 +400,7 @@ ch_guess(chicken_t *mychicken)
     clrtobot();
     outs("你要出[" ANSI_COLOR(32) "1" ANSI_RESET "]" ANSI_COLOR(33) "剪刀" ANSI_RESET "(" ANSI_COLOR(32) "2" ANSI_RESET ")"
 	 ANSI_COLOR(33) "石頭" ANSI_RESET "(" ANSI_COLOR(32) "3" ANSI_RESET ")" ANSI_COLOR(33) "布" ANSI_RESET ":\n");
-    me = igetch();
+    me = vkey();
     me -= '1';
     if (me > 2 || me < 0)
 	me = 0;
@@ -791,7 +791,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 	   chicken_food[(int)mychicken->type],
 	   food_price[(int)mychicken->type]);
     do {
-	switch (ch = igetch()) {
+	switch (ch = vkey()) {
 	case '1':
 	    ch_clean(mychicken);
 	    check_sick(mychicken);
@@ -881,11 +881,11 @@ recover_chicken(chicken_t * thechicken)
     outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 	    " 別害怕 我是來幫你的 " ANSI_RESET);
     bell();
-    igetch();
+    vkey();
     outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 	    " 你無法丟到我水球 因為我是聖靈, 最近缺錢想賺外快 " ANSI_RESET);
     bell();
-    igetch();
+    vkey();
     snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45)
 	    " 你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
 	    chicken_type[(int)thechicken->type], price);
@@ -907,7 +907,7 @@ recover_chicken(chicken_t * thechicken)
 	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 		    " 什麼 錢沒帶夠 沒錢的小鬼 快去籌錢吧 " ANSI_RESET);
 	    bell();
-	    igetch();
+	    vkey();
 	    return 0;
 	}
 	revive_chicken(thechicken, 0);
@@ -918,14 +918,14 @@ recover_chicken(chicken_t * thechicken)
 	     "今天心情好，拿你$%d就好 " ANSI_RESET, money);
 	outmsg(buf);
 	bell();
-	igetch();
+	vkey();
 	return 1;
     }
     outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 	    " 竟然說我坑人! 這年頭命真不值錢... " ANSI_RESET);
     thechicken->lastvisit = 0;
     bell();
-    igetch();
+    vkey();
     return 0;
 }
 
@@ -1029,11 +1029,11 @@ chickenpk(int fd)
     }
 
     show_chicken_data(ochicken, mychicken);
-    add_io(fd, 3);		/* 把fd加到igetch監視 */
+    add_io(fd, 3);		/* 把fd加到vkey監視 */
 
     while (1) {
 	r = random();
-	ch = igetch();
+	ch = vkey();
 	show_chicken_data(ochicken, mychicken);
 	time_diff(mychicken);
 
@@ -1132,7 +1132,7 @@ chickenpk(int fd)
 		break;
 	}
     }
-    add_io(0, 0);		/* 把igetch恢復回 */
+    add_io(0, 0);		/* 把vkey恢復回 */
     pressanykey();
     close(fd);
     showdeadth(deadtype(mychicken, mychicken));

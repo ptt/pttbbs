@@ -441,7 +441,7 @@ vmsg(const char *msg)
 
     // wait for key
     do {
-	i = igetch();
+	i = vkey();
     } while( i == 0 );
 
     // clear message bar

@@ -3428,7 +3428,7 @@ upload_file(void)
 	    promptmsg = 0;
 	}
 
-	c = igetch();
+	c = vkey();
 	if (c < 0x100 && isprint2(c))
 	{
 	    insert_char(c);
@@ -3544,7 +3544,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    ch = curr_buf->currpnt - curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
-	ch = igetch();
+	ch = vkey();
 	/* jochang debug */
 	if ((interval = (now - th))) {
 	    th = now;

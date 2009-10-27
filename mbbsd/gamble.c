@@ -197,7 +197,7 @@ ticket(int bid)
 	reload_money();
 	prints(ANSI_COLOR(44) "錢: %-10d  " ANSI_RESET "\n" ANSI_COLOR(1) "請選擇要購買的種類(1~%d)"
 	       "[Q:離開]" ANSI_RESET ":", cuser.money, count);
-	ch = igetch();
+	ch = vkey();
 	/*--
 	  Tim011127
 	  為了控制CS問題 但是這邊還不能完全解決這問題,

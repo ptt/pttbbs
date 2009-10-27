@@ -484,7 +484,7 @@ do_send(const char *userid, const char *title)
 	clear();
 	prints("信件即將寄給 %s\n標題為：%s\n確定要寄出嗎? (Y/N) [Y]",
 	       userid, save_title);
-	switch (igetch()) {
+	switch (vkey()) {
 	case 'N':
 	case 'n':
 	    outs("N\n信件已取消");
@@ -980,7 +980,7 @@ read_new_mail(void * voidfptr, void *optarg)
 	vs_footer(" 信件處理 ",
 		" (R)回信 (x)站內轉寄 (y)回群組信 (d/D)刪信");
 
-	switch (igetch()) {
+	switch (vkey()) {
 	case 'r':
 	case 'R':
 	    mail_reply(arg->idc, fptr, currmaildir);

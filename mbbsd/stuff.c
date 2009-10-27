@@ -277,7 +277,7 @@ cursor_key(int row, int column)
     int             ch;
 
     cursor_show(row, column);
-    ch = igetch();
+    ch = vkey();
     move(row, column);
     outs(STR_UNCUR);
     return ch;

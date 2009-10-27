@@ -2626,7 +2626,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	prints(ANSI_RESET "[%d]? ",
 		RECTYPE_DEFAULT+1);
 
-	type = igetch();
+	type = vkey();
 
 	if (!isascii(type) || !isdigit(type))
 	{

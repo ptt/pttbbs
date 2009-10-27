@@ -665,7 +665,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    return mode;
 	
 	if( !default_ch )
-	    ch = igetch();
+	    ch = vkey();
 	else{
 	    if(new_ln != locmem->crs_ln) {// move fault
 		default_ch=0;

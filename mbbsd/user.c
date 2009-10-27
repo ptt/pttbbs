@@ -1475,7 +1475,7 @@ u_list_CB(void *data, int num, userec_t * uentp)
 	prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 人(%d%%)  " ANSI_COLOR(31;47) "  "
 	       "(Space)" ANSI_COLOR(30) " 看下一頁  " ANSI_COLOR(31) "(Q)" ANSI_COLOR(30) " 離開  " ANSI_RESET,
 	       ctx->usercounter, ctx->totalusers, ctx->usercounter * 100 / ctx->totalusers);
-	ch = igetch();
+	ch = vkey();
 	if (ch == 'q' || ch == 'Q')
 	    return -1;
 	ctx->y = 3;
@@ -1539,7 +1539,7 @@ u_list(void)
     clrtoeol();
     prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 的使用者(系統容量無上限)  "
 	   ANSI_COLOR(31;47) "  (請按任意鍵繼續)  " ANSI_RESET, ctx->usercounter, ctx->totalusers);
-    igetch();
+    vkey();
     return 0;
 }
 

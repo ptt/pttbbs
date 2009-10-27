@@ -230,7 +230,7 @@ search_key_user(const char *passwdfile, int mode)
                  "      A: add to namelist " ANSI_RESET " " :
 		 "      S: 取用備份資料    " ANSI_RESET " ");
 	    while (1) {
-		while ((ch = igetch()) == 0);
+		while ((ch = vkey()) == 0);
                 if (ch == 'a' || ch=='A' )
                   {
                    if(!friendfile[0])
@@ -293,7 +293,7 @@ search_user_bybakpwd(void)
     do {
 	move(5, 1);
 	outs("選擇 => ");
-	ch = igetch();
+	ch = vkey();
 	if (ch == 'q' || ch == 'Q')
 	    return 0;
     } while (ch < '1' || ch > '7');

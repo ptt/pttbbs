@@ -404,7 +404,7 @@ main_dark(int fd, userinfo_t * uin)
 	    end = -1;
 	    break;
 	}
-	ch = igetch();
+	ch = vkey();
 	if (ch == I_OTHERDATA) {
 	    ch = recv(fd, &dd.curr, sizeof(dd.curr), 0);
 	    if (ch != sizeof(dd.curr)) {

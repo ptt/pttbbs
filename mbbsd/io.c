@@ -563,18 +563,10 @@ process_pager_keys(int ch)
     return ch;
 }
 
-#ifndef vkey
-int 
-vkey(void)
-{
-    return igetch();
-}
-#endif
-
 // virtual terminal keyboard context
 static VtkbdCtx vtkbd_ctx;
 
-int
+inline int
 igetch(void)
 {
     register int ch;
@@ -629,6 +621,14 @@ igetch(void)
     // should not reach here. just to make compiler happy.
     return ch;
 }
+
+#ifndef vkey
+inline int 
+vkey(void)
+{
+    return igetch();
+}
+#endif
 
 /*
  * wait user input anything for f seconds.

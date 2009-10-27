@@ -382,7 +382,7 @@ bl_print(lua_State* L)
 BLAPI_PROTO
 bl_getch(lua_State* L)
 {
-    int c = igetch();
+    int c = vkey();
     if (c == BLCONF_BREAK_KEY)
     {
         drop_input();
@@ -545,7 +545,7 @@ bl_kball(lua_State *L)
 #ifdef _WIN32
     while (peekch(0))
     {
-        bl_k2s(L, igetch());
+        bl_k2s(L, vkey());
         i++;
     }
 #else
@@ -560,7 +560,7 @@ bl_kball(lua_State *L)
             (r = num_in_buf()) > 0 && oldr > r)
     {
         oldr = r;
-        bl_k2s(L, igetch());
+        bl_k2s(L, vkey());
         i++;
     }
 #endif

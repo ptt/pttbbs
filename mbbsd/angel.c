@@ -484,7 +484,7 @@ pressanykey_or_callangel(){
 	    ANSI_COLOR(37) "Ä~Äò " ANSI_COLOR(1;34) 
 	    "¢e¢e¢e¢e¢e¢e¢e¢e¢e¢e¢e¢e¢e¢e " ANSI_RESET);
     do {
-	ch = igetch();
+	ch = vkey();
 	if (ch == 'h' || ch == 'H'){
 	    CallAngel();
 	    break;

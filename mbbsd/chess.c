@@ -445,7 +445,7 @@ ChessPlayFuncMy(ChessInfo* info)
 	info->actions->movecur(info->cursor.r, info->cursor.c);
 	oflush();
 
-	ch = igetch();
+	ch = vkey();
 	if (ChessTimeCountDown(info, 0, now - last_time)) {
 	    /* ran out of time */
 	    game_result = CHESS_RESULT_LOST;
@@ -641,7 +641,7 @@ ChessPlayFuncHis(ChessInfo* info)
 	if (ChessTimeCountDown(info, 1, now - last_time)) {
 	    info->lefttime[1] = 0;
 
-	    /* to make him break out igetch() */
+	    /* to make him break out vkey() */
 	    ChessMessageSend(info, CHESS_STEP_NOP);
 	}
 	last_time = now;
@@ -650,7 +650,7 @@ ChessPlayFuncHis(ChessInfo* info)
 	move(1, 0);
 	oflush();
 
-	switch (ch = igetch()) {
+	switch (ch = vkey()) {
 	    case 'q':
 		{
 		    char buf[4];
@@ -770,7 +770,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 	ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
 	move(1, 0);
 
-	switch (igetch()) {
+	switch (vkey()) {
 	    case I_OTHERDATA: /* new step */
 		result = ChessStepReceive(info, &info->step_tmp);
 

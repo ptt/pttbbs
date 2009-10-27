@@ -2183,7 +2183,7 @@ ui_display_regform_single(
 	outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
 
 	// round to ASCII
-	while ((c = igetch()) > 0xFF);
+	while ((c = vkey()) > 0xFF);
 	c = tolower(c);
 
 	if (c == 'y' || c == 'q' || c == 'd' || c == 's')

@@ -539,7 +539,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		pos++;
 
 	cursor_show(menu_row + pos, menu_column);
-    } while (((cmd = igetch()) != EOF) || refscreen);
+    } while (((cmd = vkey()) != EOF) || refscreen);
 
     abort_bbs(0);
 }
