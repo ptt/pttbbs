@@ -651,6 +651,14 @@ vkey_detach(void)
     return r;
 }
 
+int
+vkey_attach(int fd)
+{
+    int r = i_newfd;
+    add_io(fd, 0);
+    return r;
+}
+
 /*
  * wait user input for f seconds.
  * return 1 if control key c is available.

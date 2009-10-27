@@ -1393,7 +1393,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		uin->sig == SIG_GO || uin->sig == SIG_REVERSI)
 	    ChessEstablishRequest(msgsock);
 
-	add_io(msgsock, 0);
+	vkey_attach(msgsock);
 	while ((ch = vkey()) != I_OTHERDATA) {
 	    if (ch == Ctrl('D')) {
 		vkey_detach();

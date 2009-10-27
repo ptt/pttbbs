@@ -289,8 +289,8 @@ void add_io(int fd, int timeout);
 int  vkey();	     // identical to igetch
 void vkey_flush();   // identical to drop_input
 int  vkey_is_full(); // identical to input_isfull
-int  vkey_detach(void); // works like to add_io(0, 0)
-// int  vkey_attach(int fd); // works like add_io(fd, ...)
+int  vkey_detach(void);   // works like to add_io(0, 0)
+int  vkey_attach(int fd); // works like add_io(fd, ...)
 // int  vkey_is_ready(); // works like (num_in_buf() > 0)
 
 /* kaede */

@@ -23,7 +23,7 @@
 #define CHESS_DRAWING_PHOTOED_TIME_ROW2 21
 #define CHESS_DRAWING_PHOTOED_WARN_ROW  22
 
-#define CONNECT_PEER() add_io(info->sock, 0)
+#define CONNECT_PEER() vkey_attach(info->sock)
 #define IGNORE_PEER()  vkey_detach()
 
 #define DO_WITHOUT_PEER(TIMEOUT,ACT,ELSE) \

@@ -360,7 +360,7 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
                 fflush(ctx->log);
                 more(ctx->log_fpath, YEA);
 
-                add_io(ctx->fd, 0);
+                vkey_attach(ctx->fd);
                 vscr_restore(scr);
             }
             return VGETCB_NEXT;
@@ -373,7 +373,7 @@ ccw_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
                 if (vans("確定要離開嗎? [y/N]: ") == 'y')
                     ctx->abort = YEA;
 
-                add_io(ctx->fd, 0);
+                vkey_attach(ctx->fd);
                 vscr_restore(scr);
                 // ccw_footer(ctx);
             }
@@ -691,7 +691,7 @@ ccw_talk(int fd, int destuid)
     fprintf(ctx.log, "[%s] 與 %s " CCW_CAP_TALK ":\n", Cdatelite(&now), ctx.remote_id);
 
     // main processor
-    add_io(fd, 0);
+    vkey_attach(fd);
     ccw_process(&ctx);
 
     // clean network resource
@@ -805,7 +805,7 @@ ccw_chat_footer(CCW_CTX *ctx)
 
         ZA_Enter();
 
-        add_io(ctx->fd, 0);
+        vkey_attach(ctx->fd);
         vscr_restore(scr);
     }
 
@@ -1146,7 +1146,7 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
                 vkey_detach();
                 za = ZA_Select();
                 ccw_footer(ctx);
-                add_io(ctx->fd, 0);
+                vkey_attach(ctx->fd);
                 vcur_restore(cur);
                 if (za)
                     ctx->abort_vget = 1;
@@ -1237,7 +1237,7 @@ ccw_chat(int fd)
     fprintf(ctx.log, "[%s] 進入" CCW_CAP_CHAT ":\n", Cdatelite(&now));
 
     // main processor
-    add_io(fd, 0);
+    vkey_attach(fd);
     ccw_process(&ctx);
 
     // clean network resource

@@ -398,7 +398,7 @@ main_dark(int fd, userinfo_t * uin)
     if (currutmp->turn)
 	move(cury[0], curx[0]);
 
-    add_io(fd, 0);
+    vkey_attach(fd);
     while (end <= 0) {
 	if (uin->turn == 'w' || currutmp->turn == 'w') {
 	    end = -1;
