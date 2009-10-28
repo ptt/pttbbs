@@ -638,7 +638,7 @@ wait_input(float f, int bIgnoreBuf)
 }
 
 inline void 
-vkey_flush(void)
+vkey_purge(void)
 {
     icurrchar = ibufsize = 0;
 }

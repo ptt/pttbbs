@@ -177,10 +177,10 @@ static int
 bl_peekbreak(float f)
 {
     if (vkey_is_full())
-        vkey_flush();
+        vkey_purge();
     if (peek_input(f, BLCONF_BREAK_KEY))
     {
-        vkey_flush();
+        vkey_purge();
         blrt.abort = 1;
         return 1;
     }
@@ -385,7 +385,7 @@ bl_getch(lua_State* L)
     int c = vkey();
     if (c == BLCONF_BREAK_KEY)
     {
-        vkey_flush();
+        vkey_purge();
         blrt.abort = 1;
         return lua_yield(L, 0);
     }
@@ -435,7 +435,7 @@ bl_getstr(lua_State* L)
         // such workaround.
         if (buf[1] == Ctrl('C'))
         {
-            vkey_flush();
+            vkey_purge();
             blrt.abort = 1;
             return lua_yield(L, 0);
         }
@@ -476,7 +476,7 @@ bl_kbreset(lua_State *L)
     if (bl_peekbreak(BLCONF_PEEK_TIME))
         return lua_yield(L, 0);
 
-    vkey_flush();
+    vkey_purge();
     return 0;
 }
 
@@ -580,7 +580,7 @@ bl_pause(lua_State* L)
     n = vmsg(s);
     if (n == BLCONF_BREAK_KEY)
     {
-        vkey_flush();
+        vkey_purge();
         blrt.abort = 1;
         return lua_yield(L, 0);
     }
@@ -1033,7 +1033,7 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
     // vmsg("bbslua HOOK!");
     if (blrt.abort)
     {
-        vkey_flush();
+        vkey_purge();
         lua_yield(L, 0);
         return;
     }
@@ -1046,7 +1046,7 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 
     // now, peek and check
     if (vkey_is_full())
-        vkey_flush();
+        vkey_purge();
 
     // refresh();
     
@@ -1768,7 +1768,7 @@ bbslua(const char *fpath)
 
     lua_close(L);
     blrt.running =0;
-    vkey_flush();
+    vkey_purge();
 #ifdef BBSLUA_USAGE
     {
         double cputime;

@@ -158,7 +158,7 @@ wait_penalty(int sec)
             sec = 5;
         sleep(sec);
         peek_input(0.1, Ctrl('C'));
-        vkey_flush();
+        vkey_purge();
     }
     lastWait = now;
 }
