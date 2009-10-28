@@ -18,7 +18,7 @@ extern read_write_type write_type;
 extern read_write_type read_type;
 extern convert_type    input_type;
 
-extern void init_convert();
+extern void init_convert(void);
 
 #endif // CONVERT
 #endif // _BBS_CONVERT_H

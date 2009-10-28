@@ -618,7 +618,7 @@ void user_display(const userec_t *u, int real);
 int isvalidemail(char *email);
 void uinfo_query(const char *uid, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
-int u_cancelbadpost();
+int u_cancelbadpost(void);
 void kick_all(const char *user);
 void violate_law(userec_t * u, int unum);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
@@ -687,21 +687,21 @@ int  passwd_sync_query  (int num, userec_t * buf);
 #define demoney(money)  pwcuDeMoney(money)
 int pwcuBitEnableLevel	(unsigned int mask);
 int pwcuBitDisableLevel	(unsigned int mask);
-int pwcuIncNumPost	();
-int pwcuDecNumPost	();
+int pwcuIncNumPost	(void);
+int pwcuDecNumPost	(void);
 int pwcuSetGoodPost	(unsigned int newgp);
-int pwcuViolateLaw	();
-int pwcuSaveViolateLaw	();
-int pwcuCancelBadpost	();
+int pwcuViolateLaw	(void);
+int pwcuSaveViolateLaw	(void);
+int pwcuCancelBadpost	(void);
 int pwcuAddExMailBox	(int m);
-int pwcuToggleOutMail	();
+int pwcuToggleOutMail	(void);
 int pwcuSetLoginView	(unsigned int bits);
 int pwcuSetLastSongTime (time4_t clk);
 int pwcuSetMyAngel	(const char *angel_uid);
 int pwcuSetNickname	(const char *nickname);
 int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
-int pwcuSaveUserFlags	();
+int pwcuSaveUserFlags	(void);
 int pwcuRegCompleteJustify    (const char *justify);
 int pwcuRegSetTemporaryJustify(const char *justify, const char *email);
 int pwcuRegisterSetInfo (const char *rname,
@@ -719,23 +719,23 @@ int pwcuRegisterSetInfo (const char *rname,
 // non-important based variables (only save on exit)
 int pwcuSetSignature	(unsigned char newsig);
 int pwcuSetPagerUIType	(unsigned int  uitype);
-int pwcuToggleSortBoard ();
-int pwcuToggleFriendList();
+int pwcuToggleSortBoard (void);
+int pwcuToggleFriendList(void);
 int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags
 int pwcuToggleUserFlag2	(unsigned int mask);	// not saved until pwcuSaveUserFlags
 
 // session management
-int pwcuLoginSave	();
-int pwcuExitSave	();
-int pwcuReload		();
-int pwcuReloadMoney	();
+int pwcuLoginSave	(void);
+int pwcuExitSave	(void);
+int pwcuReload		(void);
+int pwcuReloadMoney	(void);
 int pwcuDeMoney		(int money);
 
 // initialization
-void pwcuInitZero	();
-void pwcuInitGuestPerm	();
-void pwcuInitGuestInfo	();
-int  pwcuInitAdminPerm	();
+void pwcuInitZero	(void);
+void pwcuInitGuestPerm	(void);
+void pwcuInitGuestInfo	(void);
+int  pwcuInitAdminPerm	(void);
 
 /* calendar */
 int calendar(void);

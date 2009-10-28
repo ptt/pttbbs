@@ -29,7 +29,7 @@ extern void obfuscate_ipstr(char *s);
 extern bool is_valid_brdname(const char *brdname);
 
 /* time.c */
-extern const char *Now();	// m3 flavor time string
+extern const char *Now(void);	// m3 flavor time string
 
 /* fhdr_stamp.c */
 extern int stampfile(char *fpath, fileheader_t * fh);
