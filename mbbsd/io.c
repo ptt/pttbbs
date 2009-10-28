@@ -401,6 +401,12 @@ num_in_buf(void)
 }
 
 inline int
+vkey_is_ready(void)
+{
+    return num_in_buf() > 0;
+}
+
+inline int
 vkey_is_full(void)
 {
     return ibufsize >= IBUFSIZE;

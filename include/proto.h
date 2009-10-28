@@ -291,7 +291,7 @@ void vkey_purge();   // identical to drop_input
 int  vkey_is_full(); // identical to input_isfull
 int  vkey_detach(void);   // works like to add_io(0, 0)
 int  vkey_attach(int fd); // works like add_io(fd, ...)
-// int  vkey_is_ready(); // works like (num_in_buf() > 0)
+int  vkey_is_ready(); // works like (num_in_buf() > 0)
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);

@@ -3418,7 +3418,7 @@ upload_file(void)
 	 "請在您的電腦本機端複製好內容後貼上即可開始傳送。\n");
 
     do {
-	if (!num_in_buf())
+	if (!vkey_is_ready())
 	{
 	    move(10, 0); clrtobot();
 	    prints("\n\n資料接收中... %u 位元組。\n", (unsigned int)szdata);

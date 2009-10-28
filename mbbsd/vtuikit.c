@@ -1310,9 +1310,10 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	}
 
 	// prevent incomplete DBCS
-	if (c > 0x80 && num_in_buf() &&
+	if (c > 0x80 && vkey_is_ready() &&
 		len - rt.iend < 3)	// we need 3 for DBCS+NUL.
 	{
+	    // XXX should we purge here, or wait the final DBCS_safe_trim?
 	    vkey_purge();
 	    bell(); continue;
 	}
@@ -1336,6 +1337,8 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
     assert(rt.iend >= 0 && rt.iend < len);
     buf[rt.iend] = 0;
+
+    DBCS_safe_trim(buf);
 
     // final filtering
     if (rt.iend && (flags & VGET_LOWERCASE))

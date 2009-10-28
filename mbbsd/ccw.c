@@ -1005,7 +1005,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
             vkey_purge();
             while (wait_input(1, 0))
             {
-                if (num_in_buf())
+                if (vkey_is_ready())
                     vkey_purge();
                 else
                     tty_read(garbage, sizeof(garbage));

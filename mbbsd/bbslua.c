@@ -462,7 +462,7 @@ bl_kbhit(lua_State *L)
     if (f > BLCONF_KBHIT_TMAX) f = BLCONF_KBHIT_TMAX;
 
     refresh();
-    if (num_in_buf() || wait_input(f, 0))
+    if (vkey_is_ready() || wait_input(f, 0))
         lua_pushboolean(L, 1);
     else
         lua_pushboolean(L, 0);
@@ -550,7 +550,7 @@ bl_kball(lua_State *L)
     }
 #else
     // next, collect all input and return.
-    if (num_in_buf() < 1)
+    if (!vkey_is_ready())
         return 0;
 
     oldr = num_in_buf() +1;
