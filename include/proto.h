@@ -276,6 +276,9 @@ int  ochar(int c);
 void output(const char *s, int len);
 void oflush(void);
 
+// pager hotkeys processor
+int process_pager_keys(int ch);
+
 // input api (old flavor)
 int  num_in_buf(void);
 int  wait_input(float f, int bIgnoreBuf);
@@ -292,6 +295,7 @@ int  vkey_is_full(); // identical to input_isfull
 int  vkey_detach(void);   // works like to add_io(0, 0)
 int  vkey_attach(int fd); // works like add_io(fd, ...)
 int  vkey_is_ready(); // works like (num_in_buf() > 0)
+
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);

@@ -198,11 +198,11 @@ ochar(int c)
 /* pager processor                                       */
 /* ----------------------------------------------------- */
 
-static int i_newfd;
+static int i_newfd; // forward declaration
 int 
 process_pager_keys(int ch)
 {
-    static int water_which_flag;
+    static int water_which_flag = 0;
     assert(currutmp);
     switch (ch) 
     {
@@ -213,17 +213,14 @@ process_pager_keys(int ch)
 		return ch;
 	    } else {
 		screen_backup_t old_screen;
-		int		oldroll = roll;
 		int             my_newfd;
 
 		scr_dump(&old_screen);
-		my_newfd = i_newfd;
-		i_newfd = 0;
+		my_newfd = vkey_detach();
 
 		t_users();
 
-		i_newfd = my_newfd;
-		roll = oldroll;
+		vkey_attach(my_newfd);
 		scr_restore(&old_screen);
 	    }
 	    return KEY_INCOMPLETE;
@@ -242,11 +239,10 @@ process_pager_keys(int ch)
 
 		scr_dump(&old_screen);
 
-		my_newfd = i_newfd;
-		i_newfd = 0;
+		my_newfd = vkey_detach();
 		my_write2();
 		scr_restore(&old_screen);
-		i_newfd = my_newfd;
+		vkey_attach(my_newfd);
 		return KEY_INCOMPLETE;
 
 	    }
@@ -280,8 +276,7 @@ process_pager_keys(int ch)
 		scr_dump(&old_screen);
 
 		/* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
-		my_newfd = i_newfd;
-		i_newfd = 0;
+		my_newfd = vkey_detach();
 		show_call_in(0, 0);
 		watermode = 0;
 #ifndef PLAY_ANGEL
@@ -304,7 +299,7 @@ process_pager_keys(int ch)
 			break;
 		}
 #endif
-		i_newfd = my_newfd;
+		vkey_attach(my_newfd);
 
 		/* 還原螢幕 */
 		scr_restore(&old_screen);
@@ -643,9 +638,14 @@ wait_input(float f, int bIgnoreBuf)
     return 1;
 }
 
+inline int peek_input(float f, int c);	// forward declaration
+
 inline void 
 vkey_purge(void)
 {
+    icurrchar = ibufsize = 0;
+    // XXX read more from fd and discard...
+    peek_input(0.1, Ctrl('C'));
     icurrchar = ibufsize = 0;
 }
 
