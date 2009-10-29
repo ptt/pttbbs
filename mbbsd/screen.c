@@ -296,7 +296,7 @@ typeahead(int fd)
 void
 refresh(void)
 {
-    if (num_in_buf() && _typeahead)
+    if (_typeahead && vkey_is_typeahead())
 	return;
     doupdate();
 }

@@ -412,7 +412,7 @@ void    grayout     (int y, int end, int level);
 
 //// flat-term internal processor
 
-int     fterm_inbuf     (void);         // raw input  adapter
+int     fterm_typeahead (void);         // raw input  adapter
 void    fterm_rawc      (int c);        // raw output adapter
 void    fterm_rawnewline(void);         // raw output adapter
 void    fterm_rawflush  (void);         // raw output adapter
@@ -789,7 +789,7 @@ void
 refresh(void)
 {
     // prevent passive update
-    if(fterm_inbuf() && ft.typeahead)
+    if(ft.typeahead && fterm_typeahead())
         return;
     doupdate();
 }
@@ -2370,12 +2370,12 @@ region_scroll_up(int top, int bottom)
 //////////////////////////////////////////////////////////////////////////
 
 int 
-fterm_inbuf(void)
+fterm_typeahead(void)
 {
 #ifdef _PFTERM_TEST_MAIN
     return 0;
 #else
-    return num_in_buf();
+    return vkey_is_typeahead();
 #endif
 }
 

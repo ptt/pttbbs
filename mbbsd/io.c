@@ -27,8 +27,7 @@ static unsigned char real_inbuf [IBUFSIZE + CVTGAP*2] = "   ";
 #define outbuf (real_outbuf+CVTGAP)
 
 static int obufsize = 0;
-static int ibufsize = 0;
-static int icurrchar = 0;
+static int ibufsize = 0, icurrchar = 0;
 
 #ifdef DBG_OUTRPT
 // output counter
@@ -198,7 +197,6 @@ ochar(int c)
 /* pager processor                                       */
 /* ----------------------------------------------------- */
 
-static int i_newfd; // forward declaration
 int 
 process_pager_keys(int ch)
 {
@@ -397,6 +395,12 @@ num_in_buf(void)
 
 inline int
 vkey_is_ready(void)
+{
+    return num_in_buf() > 0;
+}
+
+inline int
+vkey_is_typeahead()
 {
     return num_in_buf() > 0;
 }
