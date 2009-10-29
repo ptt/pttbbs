@@ -2648,6 +2648,22 @@ start_daemon()
     limit.rlim_cur = limit.rlim_max;
     setrlimit(RLIMIT_NOFILE, &limit);
 
+#ifndef NO_ADJUST_CPU_LIMITS
+    // because xchatd may be started by BBS process, 
+    // its cpu resource may be limited and cause regular restart.
+    // to workaround this, let's enlarge CPU limit here.
+    getrlimit(RLIMIT_CPU, &limit);
+    limit.rlim_cur = limit.rlim_max;
+    setrlimit(RLIMIT_CPU, &limit);
+#endif
+
+#ifdef USE_XCHATD_COREDUMP
+    getrlimit(RLIMIT_CORE, &limit);
+    limit.rlim_cur = limit.rlim_max;
+    setrlimit(RLIMIT_CORE, &limit);
+#endif
+
+
     fd = open(CHAT_PIDFILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd >= 0)
     {
