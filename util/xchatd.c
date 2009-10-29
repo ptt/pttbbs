@@ -2653,9 +2653,12 @@ start_daemon()
     // its cpu resource may be limited and cause regular restart.
     // to workaround this, let's enlarge CPU limit here.
     getrlimit(RLIMIT_CPU, &limit);
-    limit.rlim_cur = limit.rlim_max;
+# ifndef XCHATD_CPU_LIMITS
+# define XCHATD_CPU_LIMITS limit.rlim_max
+# endif
+    limit.rlim_cur = XCHATD_CPU_LIMITS;
     setrlimit(RLIMIT_CPU, &limit);
-#endif
+#endif // !NO_ADJUST_CPU_LIMITS
 
 #ifdef USE_XCHATD_COREDUMP
     getrlimit(RLIMIT_CORE, &limit);
