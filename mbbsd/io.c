@@ -52,7 +52,7 @@ static unsigned char fakeEscFilter(unsigned char c)
 /* ----------------------------------------------------- */
 #ifdef CONVERT
 
-inline static ssize_t input_wrapper(void *buf, ssize_t count) {
+static inline ssize_t input_wrapper(void *buf, ssize_t count) {
     /* input_wrapper is a special case.
      * because we may do nothing,
      * a if-branch is better than a function-pointer call.
@@ -63,11 +63,11 @@ inline static ssize_t input_wrapper(void *buf, ssize_t count) {
 	return count;
 }
 
-inline static int read_wrapper(int fd, void *buf, size_t count) {
+static inline int read_wrapper(int fd, void *buf, size_t count) {
     return (*read_type)(fd, buf, count);
 }
 
-inline static int write_wrapper(int fd, void *buf, size_t count) {
+static inline int write_wrapper(int fd, void *buf, size_t count) {
     return (*write_type)(fd, buf, count);
 }
 #endif
@@ -369,6 +369,8 @@ process_pager_keys(int ch)
 /* input routines                                        */
 /* ----------------------------------------------------- */
 
+// traditional implementation
+
 static int    i_newfd = 0;
 static struct timeval i_to, *i_top = NULL;
 
@@ -393,25 +395,19 @@ num_in_buf(void)
     return ibufsize - icurrchar;
 }
 
-inline int
-vkey_is_ready(void)
-{
-    return num_in_buf() > 0;
-}
-
-inline int
-vkey_is_typeahead()
-{
-    return num_in_buf() > 0;
-}
-
-inline int
-vkey_is_full(void)
+static inline int
+input_isfull(void)
 {
     return ibufsize >= IBUFSIZE;
 }
 
-inline static ssize_t 
+static inline void
+drop_input(void)
+{
+    icurrchar = ibufsize = 0;
+}
+
+static inline ssize_t 
 wrapped_tty_read(unsigned char *buf, size_t max)
 {
     /* tty_read will handle abort_bbs.
@@ -544,8 +540,8 @@ dogetch(void)
 // virtual terminal keyboard context
 static VtkbdCtx vtkbd_ctx;
 
-inline int
-vkey(void)
+static inline int
+igetch(void)
 {
     register int ch;
 
@@ -642,23 +638,64 @@ wait_input(float f, int bIgnoreBuf)
     return 1;
 }
 
-inline int peek_input(float f, int c);	// forward declaration
+/*
+ * wait user input for f seconds.
+ * return 1 if control key c is available.
+ * (if c == EOF, simply read into buffer and return 0)
+ */
+inline int 
+peek_input(float f, int c)
+{
+    int i = 0;
+    assert (c == EOF || (c > 0 && c < ' ')); // only ^x keys are safe to be detected.
+    // other keys may fall into escape sequence.
+
+    if (wait_input(f, 1) && (IBUFSIZE > ibufsize))
+    {
+	int len = wrapped_tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
+	if (len > 0)
+	    ibufsize += len;
+    }
+    if (c == EOF)
+	return 0;
+
+    // scan inbuf
+    for (i = icurrchar; i < ibufsize && inbuf[i] != c; i++) ;
+    return i < ibufsize ? 1 : 0;
+}
+
+
+/* vkey system emulation */
+
+inline int
+vkey_is_ready(void)
+{
+    return num_in_buf() > 0;
+}
+
+inline int
+vkey_is_typeahead()
+{
+    return num_in_buf() > 0;
+}
+
+inline int
+vkey_is_full(void)
+{
+    return input_isfull();
+}
 
 inline void 
 vkey_purge(void)
 {
-    icurrchar = ibufsize = 0;
-    // XXX read more from fd and discard...
-    peek_input(0.1, Ctrl('C'));
-    icurrchar = ibufsize = 0;
-}
+    int max_try = 64;
+    unsigned char garbage[4096];
+    drop_input();
 
-int
-vkey_detach(void)
-{
-    int r = i_newfd;
-    add_io(0, 0);
-    return r;
+    STATINC(STAT_SYSREADSOCKET);
+    while (wait_input(0.01, 1) && max_try-- > 0) {
+	wrapped_tty_read(garbage, sizeof(garbage));
+    }
 }
 
 int
@@ -669,30 +706,20 @@ vkey_attach(int fd)
     return r;
 }
 
-/*
- * wait user input for f seconds.
- * return 1 if control key c is available.
- */
-inline int 
-peek_input(float f, int c)
+int
+vkey_detach(void)
 {
-    int i = 0;
-    assert (c > 0 && c < ' '); // only ^x keys are safe to be detected.
-    // other keys may fall into escape sequence.
-
-    if (wait_input(f, 1) && (IBUFSIZE > ibufsize))
-    {
-	int len = wrapped_tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
-	if (len > 0)
-	    ibufsize += len;
-    }
-    for (i = icurrchar; i < ibufsize; i++)
-    {
-	if (inbuf[i] == c)
-	    return 1;
-    }
-    return 0;
+    int r = i_newfd;
+    add_io(0, 0);
+    return r;
 }
+
+inline int
+vkey(void)
+{
+    return igetch();
+}
+
 
 /* vim:sw=4
  */

@@ -453,9 +453,8 @@ static int verify_captcha()
 	    prints("請仔細檢查上面的圖形， %d 秒後即可輸入...", i);
 	    // flush out current input
 	    doupdate(); 
-	    peek_input(0.1f, Ctrl('C'));
-	    vkey_purge();
 	    sleep(1);
+	    vkey_purge();
 	}
 
 	// input captcha

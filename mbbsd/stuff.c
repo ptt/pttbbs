@@ -157,7 +157,6 @@ wait_penalty(int sec)
         if (sec < 0 || sec >= 5)
             sec = 5;
         sleep(sec);
-        peek_input(0.1, Ctrl('C'));
         vkey_purge();
     }
     lastWait = now;

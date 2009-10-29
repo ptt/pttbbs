@@ -989,7 +989,7 @@ ccw_chat_recv(CCW_CTX *ctx)
 #ifdef EXP_ANTIFLOOD
 
 // prevent flooding */
-CCW_PROTO void
+CCW_PROTO int
 ccw_chat_anti_flood(CCW_CTX *ctx)
 {
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
@@ -1000,26 +1000,26 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
         // 3 秒內洗半面是不行的 ((25-5)/2)
         if( ++ext->flood > 10 )
         {
+            const char *alert_msg = "請勿大量剪貼或造成洗板面的效果。";
+            move(b_lines, 0); clrtoeol(); bell(); 
+            outs(alert_msg);
+            doupdate();
             // flush all input!
-            unsigned char garbage[STRLEN];
             vkey_purge();
-            while (wait_input(1, 0))
-            {
-                if (vkey_is_ready())
-                    vkey_purge();
-                else
-                    tty_read(garbage, sizeof(garbage));
-            }
-            vkey_purge();
-            vmsg("請勿大量剪貼或造成洗板面的效果。");
+            while (wait_input(1, 1))
+                vkey_purge();
+            vmsg(alert_msg);
 
             // log?
             sleep(2);
+            vkey_purge();
+            return 1;
         }
     } else {
         ext->lasttime = now;
         ext->flood = 0;
     }
+    return 0;
 }
 #endif // EXP_ANTIFLOOD
 
@@ -1028,7 +1028,8 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
 {
     ccw_chat_check_newmail(ctx);
 #ifdef EXP_ANTIFLOOD
-    ccw_chat_anti_flood(ctx);
+    if (ccw_chat_anti_flood(ctx))
+        return 1;
 #endif
 
     if (buf[0] != '/') return 0;
