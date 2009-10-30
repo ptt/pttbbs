@@ -51,6 +51,8 @@ int Announce(void);
 
 /* assess */
 int inc_badpost(const char *, int num);
+int bad_comment(const char *fn);
+int assign_badpost(const char *userid, fileheader_t *fhdr, const char *newpath, const char *comment);
 
 /* bbs */
 void delete_allpost(const char *userid);

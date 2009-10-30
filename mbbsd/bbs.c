@@ -32,12 +32,6 @@ enum {
     RECTYPE_DEFAULT = RECTYPE_GOOD, // match traditional user behavior
 };
 
-#ifdef ASSESS
-static char * const badpost_reason[] = {
-    "廣告", "不當用辭", "人身攻擊"
-};
-#endif
-
 /* TODO multi.money is a mess.
  * please help verify and finish these.
  */
@@ -2380,11 +2374,32 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     char            yn[5];
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
-    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 5, LCECHO);
+#if defined(ASSESS) && defined(EXP_BAD_COMMENT)
+    // supporting bad_comment
+#if 0
+    // XXX 推文可能會一直跑出來，所以...
+    if (now - atoi(fhdr->filename + 2) > 2 * 7 * 24 * 60 * 60)
+    {
+	move(b_lines-2, 0); clrtoeol();
+	outs("超過兩週，禁止劣推文。");
+    } else 
+#endif
+    {
+	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 劣推文 [1/2]? ", yn, 3, LCECHO);
+	if (yn[0] == '2')
+	{
+	    char fn[PATHLEN];
+	    setbfile(fn, currboard, fhdr->filename);
+	    bad_comment(fn);
+	    return FULLUPDATE;
+	} else if (yn[0] != '1')
+	    return FULLUPDATE;
+    }
+#endif
+    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
     fhdr->recommend = 0;
-
     substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }
@@ -2991,10 +3006,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
             deleteCrossPost(fhdr, bp->brdname);
-#ifdef ASSESS
-#define SIZE	sizeof(badpost_reason) / sizeof(char *)
-
-	    // badpost assignment
 
 	    // case one, self-owned, invalid author, or digest mode - should not give bad posts
 	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) )
@@ -3022,79 +3033,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 
 		if (genbuf[0]=='y') {
-		    int i;
-		    char *userid=getuserid(tusernum);
- 
-		    move(b_lines - 2, 0);
-		    clrtobot();
-		    for (i = 0; i < SIZE; i++)
-			prints("%d.%s ", i + 1, badpost_reason[i]);
-		    prints("%d.%s", i + 1, "其他");
-		    getdata(b_lines - 1, 0, "請選擇[0:取消劣文]:", genbuf, 3, LCECHO);
-		    i = genbuf[0] - '1';
-		    if (i >= 0 && i < SIZE)
-		        sprintf(genbuf,"劣文退回(%s)", badpost_reason[i]);
-                    else if(i==SIZE)
-                       {
-		        strcpy(genbuf,"劣文退回(");
-		        getdata_buf(b_lines, 0, "請輸入原因", genbuf+9, 
-                                 50, DOECHO);
-                        strcat(genbuf,")");
-                       }
-                    if(i>=0 && i <= SIZE)
-		    {
-                      strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
-
-#ifdef USE_COOLDOWN
-                      add_cooldowntime(tusernum, 60);
-                      add_posttimes(tusernum, 15); //Ptt: 凍結 post for 1 hour
-#endif
-
-		      if (!(inc_badpost(userid, 1) % 5)){
-                        userec_t xuser;
-			post_violatelaw(userid, BBSMNAME " 系統警察", 
-				"劣文累計 5 篇", "罰單一張");
-			mail_violatelaw(userid, BBSMNAME " 系統警察", 
-				"劣文累計 5 篇", "罰單一張");
-                        kick_all(userid);
-                        passwd_sync_query(tusernum, &xuser);
-                        xuser.money = moneyof(tusernum);
-                        xuser.vl_count++;
-		        xuser.userlevel |= PERM_VIOLATELAW;
-			xuser.timeviolatelaw = now;  
-			passwd_sync_update(tusernum, &xuser);
-		       }
-		       sendalert(userid,  ALERT_PWD_PERM);
-		       mail_id(userid, genbuf, newpath, cuser.userid);
-
-#ifdef BAD_POST_RECORD
-		     {
-		      int rpt_bid = getbnum(BAD_POST_RECORD);
-                      if (rpt_bid > 0) {
-			  fileheader_t report_fh;
-			  char report_path[PATHLEN];
-
-			  setbpath(report_path, BAD_POST_RECORD);
-			  stampfile(report_path, &report_fh);
-
-			  strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
-			  snprintf(report_fh.title, sizeof(report_fh.title),
-				  "%s 板 %s 板主給予 %s 一篇劣文",
-				  currboard, cuser.userid, userid);
-			  Copy(newpath, report_path);
-
-			  setbdir(report_path, BAD_POST_RECORD);
-			  append_record(report_path, &report_fh, sizeof(report_fh));
- 
-                          touchbtotal(rpt_bid);
-		      }
-		     }
-#endif /* defined(BAD_POST_RECORD) */
-		   }
+		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
                 }
 	    }
-#undef SIZE
-#endif
 
 	    setbtotal(currbid);
 
