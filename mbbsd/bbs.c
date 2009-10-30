@@ -3007,6 +3007,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
             deleteCrossPost(fhdr, bp->brdname);
 
+#ifdef ASSESS
+	    // badpost assignment
+
 	    // case one, self-owned, invalid author, or digest mode - should not give bad posts
 	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) )
 	    {
@@ -3036,6 +3039,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
                 }
 	    }
+#endif // ASSESS
 
 	    setbtotal(currbid);
 
