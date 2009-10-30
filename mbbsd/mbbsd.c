@@ -1049,12 +1049,6 @@ setup_utmp(int mode)
     strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
     strip_nonebig5((unsigned char *)currutmp->mind, sizeof(currutmp->mind));
 
-#ifdef EXP_CCW_TALK
-    // magic number for temporary version validation... check talk.c
-    currutmp->nonuse[1] = 'W';
-    currutmp->nonuse[2] = 'T';
-#endif
-
     // resolve fromhost
 #if defined(WHERE)
 
