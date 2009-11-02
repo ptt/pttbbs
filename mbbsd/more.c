@@ -408,7 +408,7 @@ more(const char *fpath, int promptend)
 	case RET_SELECTBRD:
 	    r = FULLUPDATE;
 	    if (currstat == READING)
-		Select();
+		r = Select();
 	    break;
 
 	case RET_DOCHESSREPLAY:
