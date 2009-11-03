@@ -139,9 +139,12 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     return 0;
 }
 
-// 推文目前的設計一整個就是無法管理，
+// XXX 推文目前的設計一整個就是無法管理，
 // 不過在重寫整套短文回應系統前也是沒辦法的事，
-// 先寫個應應急的吧
+// 先寫個應應急
+// XXX 板主造假或重複劣退的問題目前實作也難以解決
+// 可能改作 "去廣告關鍵字" 的比較實在
+// 總之這段 code 就先放著吧 orz
 int
 bad_comment(const char *fn)
 {

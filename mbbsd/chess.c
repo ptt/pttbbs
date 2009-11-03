@@ -605,8 +605,10 @@ ChessPlayFuncMy(ChessInfo* info)
 		endturn = info->actions->select(info, info->cursor, &game_result);
 		break;
 
-	    case I_TIMEOUT:
-		break;
+	    // XXX (confirmed with scw) I_TIMEOUT is never reached because we
+	    // didn't use timeout key retrieval API.
+	    // case I_TIMEOUT:
+	    //	break;
 
 	    case KEY_UNKNOWN:
 		break;
@@ -732,8 +734,10 @@ ChessPlayFuncHis(ChessInfo* info)
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		}
 
-	    case I_TIMEOUT:
-		break;
+	    // XXX (confirmed with scw) I_TIMEOUT is never reached because we
+	    // didn't use timeout key retrieval API.
+	    // case I_TIMEOUT:
+	    //	break;
 
 	    case KEY_UNKNOWN:
 		break;
