@@ -80,9 +80,15 @@ ssize_t vtkbd_ignore_dbcs_evil_repeats(const unsigned char *buf, ssize_t len);
 #define KEY_F11         0x030B
 #define KEY_F12         0x030C
 
+// XXX TODO use 0x0?00 as 'META(alt)', for example 0x0?41 = META-A instead of esc_arg
+
 /* vtkbd meta keys */
 #define KEY_INCOMPLETE  0x0420  /* 0x?20 to prevent accident usage */
-#define KEY_UNKNOWN     0x0FFF  /* unknown sequence */
+#define KEY_UNKNOWN     0x0F20  /* unknown sequence */
+
+/* vkey special data for additional fd to listen (ref: vkey_attach) */
+#define I_TIMEOUT       0x05fd /* additional fd timeout for select (replaced by vkey_poll */
+#define I_OTHERDATA     0x05fe /* data arrived in additional fd */
 
 #endif // _VTKBD_H
 

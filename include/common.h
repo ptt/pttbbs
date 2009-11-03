@@ -191,9 +191,6 @@
 #define LOCK_THIS   1    // lock這線不能重複玩
 #define LOCK_MULTI  2    // lock所有線不能重複玩   
 
-#define I_TIMEOUT   (-2)       /* Used for the getchar routine select call */
-#define I_OTHERDATA (-333)     /* interface, (-3) will conflict with chinese */
-
 #define MAX_MODES	(127)
 #define MAX_RECOMMENDS  (100)
 
@@ -242,8 +239,9 @@
 /* ----------------------------------------------------- */
 /* Constants                                             */
 /* ----------------------------------------------------- */
-#define DAY_SECONDS	(86400)
-#define MONTH_SECONDS	(DAY_SECONDS*30)
+#define DAY_SECONDS	    (86400)
+#define MONTH_SECONDS	    (DAY_SECONDS*30)
+#define MILLISECONDS	    (1000)  // milliseconds of one second
 
 /* ----------------------------------------------------- */
 /* Macros                                                */
