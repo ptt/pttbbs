@@ -282,23 +282,40 @@ void oflush(void);
 int process_pager_keys(int ch);
 
 // input api (old flavor)
-int  num_in_buf(void);
-int  wait_input(float f, int bIgnoreBuf);
-int  peek_input(float f, int c);
-// int  igetch(void);
-// int  input_isfull();
-// void drop_input(void);
-void add_io(int fd, int timeout);
+int  num_in_buf(void);			// vkey_is_ready() / vkey_is_typeahead()
+int  wait_input(float f, int bIgnoreBuf);// vkey_poll
+int  peek_input(float f, int c);	// vkey_prefetch() / vkey_is_prefeteched
+// int  igetch(void);			// -> vkey()
+// int  input_isfull();			// -> vkey_is_full()
+// void drop_input(void);		// -> vkey_purge()
+// void add_io(int fd, int timeout);	// -> vkey_attach / vkey_detach
 
 // new input api
-int  vkey();	     // identical to igetch
-void vkey_purge();   // identical to drop_input
-int  vkey_is_full(); // identical to input_isfull
-int  vkey_detach(void);   // works like to add_io(0, 0)
-int  vkey_attach(int fd); // works like add_io(fd, ...)
-int  vkey_is_ready();	      // works like (num_in_buf() > 0)
-int  vkey_is_typeahead(void); // quick check if input buffer has data arrived (maybe not ready yet)
-
+/* nios.c / io.c */
+///////// virtual key: convert from cin(fd) -> buffer -> virtual key //////////
+// timeout: in milliseconds. 0 for 'do not block' and INFTIM(-1) for 'forever'
+///////////////////////////////////////////////////////////////////////////////
+// initialization
+void vkey_init(void);	     // initialize virtual key system
+// key value retrieval
+int  vkey(void);	     // receive and block infinite time for next key
+int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
+// status
+int  vkey_poll(int timeout); // poll for timeout milliseconds. return 1 for ready oterwise 0
+int  vkey_is_ready(void);    // determine if input buffer is ready for a key input
+int  vkey_is_typeahead(void);// check if input buffer has data arrived (maybe not ready yet)
+// additional fd to listen
+int  vkey_attach(int fd);    // attach (and replace) additional fd to vkey API, returning previous attached fd
+int  vkey_detach(void);      // detach any additional fd and return previous attached fd
+// input buffer management
+int  vkey_is_full(void);     // test if input buffer is full
+void vkey_purge(void);		// discard clear all data in input buffer
+int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
+int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
+/////////////////////////////////////////////////////////////////////////////
+#ifdef  EXP_NIOS
+#define USE_NIOS_VKEY
+#endif
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);

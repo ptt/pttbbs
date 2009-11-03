@@ -1167,11 +1167,13 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	close(sock);
 	return -1;
     }
-    add_io(sock, timeout);
+
+    vkey_attach(sock); // add_io(sock, timeout);
 
     while (1) {
-	ch = vkey();
-	if (ch == I_TIMEOUT) {
+	if (vkey_poll(timeout * MILLISECONDS)) {
+	    ch = vkey();
+	} else { // if (ch == I_TIMEOUT) {
 	    ch = uin->mode;
 	    if (!ch && uin->chatid[0] == 1 &&
 		    uin->destuip == currutmp - &SHM->uinfo[0]) {
@@ -1191,10 +1193,11 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		return -1;
 	    } else {
 		// change to longer timeout
-		add_io(sock, 20);
+		timeout = 20; // add_io(sock, 20);
 		move(0, 0);
 		outs("¦A");
 		bell();
+		refresh();
 
 		uin->destuip = currutmp - &SHM->uinfo[0];
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
@@ -1211,7 +1214,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	if (ch == I_OTHERDATA)
 	    break;
 
-	if (ch == '\004') {
+	if (ch == Ctrl('D')) {
 	    vkey_detach();
 	    close(sock);
 	    currutmp->sockactive = currutmp->destuid = 0;

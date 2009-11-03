@@ -70,6 +70,10 @@ static inline int read_wrapper(int fd, void *buf, size_t count) {
 static inline int write_wrapper(int fd, void *buf, size_t count) {
     return (*write_type)(fd, buf, count);
 }
+#else
+#define write_wrapper		    write
+#define read_wrapper		    read
+// #define input_wrapper(buf,count) count
 #endif
 
 /* ----------------------------------------------------- */
@@ -120,11 +124,7 @@ oflush(void)
 {
     if (obufsize) {
 	STATINC(STAT_SYSWRITESOCKET);
-#ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
-#else
-	write(1, outbuf, obufsize);
-#endif
 	obufsize = 0;
     }
 
@@ -162,11 +162,7 @@ output(const char *s, int len)
 
     if (obufsize + len > OBUFSIZE) {
 	STATINC(STAT_SYSWRITESOCKET);
-#ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
-#else
-	write(1, outbuf, obufsize);
-#endif
 	obufsize = 0;
     }
     memcpy(outbuf + obufsize, s, len);
@@ -598,7 +594,8 @@ igetch(void)
 
 /*
  * wait user input anything for f seconds.
- * if f < 0, then wait forever.
+ * if f == 0, return immediately
+ * if f < 0,  wait forever.
  * Return 1 if anything available.
  */
 inline int 
@@ -613,24 +610,43 @@ wait_input(float f, int bIgnoreBuf)
 
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
+    if (i_newfd) FD_SET(i_newfd, &readfds);
 
+    // adjust time
     if(f > 0)
     {
 	tv.tv_sec = (long) f;
 	tv.tv_usec = (f - (long)f) * 1000000L;
-    } else
+    } 
+    else if (f == 0)
+    {
+	tv.tv_sec  = 0;
+	tv.tv_usec = 0;
+    }
+    else if (f < 0)
+    {
 	ptv = NULL;
+    }
 
 #ifdef STATINC
     STATINC(STAT_SYSSELECT);
 #endif
 
     do {
-	if(!bIgnoreBuf && num_in_buf() > 0)
-	    return 1;
-	sel = select(1, &readfds, NULL, NULL, ptv);
+	assert(i_newfd >= 0);	// if == 0, use only fd=0 => count sill u_newfd+1.
+	sel = select(i_newfd+1, &readfds, NULL, NULL, ptv);
+
     } while (sel < 0 && errno == EINTR);
     /* EINTR, interrupted. I don't care! */
+
+    // XXX should we abort? (from dogetch)
+    if (sel < 0 && errno != EINTR)
+    {
+	abort_bbs(0);
+	/* raise(SIGHUP); */
+    }
+
+    // syncnow();
 
     if(sel == 0)
 	return 0;
@@ -720,6 +736,13 @@ vkey(void)
     return igetch();
 }
 
+inline int
+vkey_poll(int ms)
+{
+    if (ms) refresh();
+    // XXX handle I_OTHERDATA?
+    return wait_input(ms / (double)MILLISECONDS, 0);
+}
 
 /* vim:sw=4
  */

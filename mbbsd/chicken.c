@@ -1029,11 +1029,11 @@ chickenpk(int fd)
     }
 
     show_chicken_data(ochicken, mychicken);
-    add_io(fd, 3);		/* 把fd加到vkey監視 */
+    vkey_attach(fd); // 把fd加到vkey監視  // add_io(fd, 3);		
 
     while (1) {
 	r = random();
-	ch = vkey();
+	ch = vkey_poll(3 * SECS2MILLISECONDS) ? vkey() : I_TIMEOUT;
 	show_chicken_data(ochicken, mychicken);
 	time_diff(mychicken);
 
