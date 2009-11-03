@@ -1033,7 +1033,7 @@ chickenpk(int fd)
 
     while (1) {
 	r = random();
-	ch = vkey_poll(3 * SECS2MILLISECONDS) ? vkey() : I_TIMEOUT;
+	ch = vkey_poll(3 * MILLISECONDS) ? vkey() : I_TIMEOUT;
 	show_chicken_data(ochicken, mychicken);
 	time_diff(mychicken);
 
