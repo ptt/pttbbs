@@ -35,7 +35,6 @@ static char    * const fcolor[11] = {
     ANSI_COLOR(33), ANSI_COLOR(1;33), ANSI_COLOR(1;37), ANSI_COLOR(1;37),
     ANSI_COLOR(31), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
 };
-static char     page_requestor[40];
 
 static userinfo_t *uip;
 
@@ -2905,7 +2904,7 @@ reply_connection_request(const userinfo_t *uip)
 
     if (uip->mode != PAGE) {
 	snprintf(genbuf, sizeof(genbuf),
-		 "%s已停止呼叫，按Enter繼續...", page_requestor);
+		 "%s 已停止呼叫，按Enter繼續...", uip->userid);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	return -1;
     }
@@ -2919,7 +2918,6 @@ establish_talk_connection(const userinfo_t *uip)
     struct sockaddr_in sin;
 
     currutmp->msgcount = 0;
-    memset(page_requestor, 0, sizeof(page_requestor));
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = PF_INET;
     sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -2980,8 +2978,6 @@ talkreply(void)
     prints("       (1) %s？先拿$100來"
 	   "       (2) %s？先拿$1000來..\n\n", sig_des[sig], sig_des[sig]);
 
-    snprintf(page_requestor, sizeof(page_requestor),
-	    "%s (%s)", uip->userid, uip->nickname);
     getuser(uip->userid, &xuser);
     currutmp->msgs[0].pid = uip->pid;
     strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
@@ -2999,8 +2995,8 @@ talkreply(void)
     }
 
     snprintf(genbuf, sizeof(genbuf),
-	    "你想跟 %s %s嗎？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
-	    page_requestor, sig_des[sig]);
+	    "你想跟 %s (%s) %s嗎？請選擇[N]: ",
+	    uip->userid, uip->nickname, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
@@ -3017,7 +3013,7 @@ talkreply(void)
 
     if (r == -1) {
 	snprintf(genbuf, sizeof(genbuf),
-		 "%s已停止呼叫，按Enter繼續...", page_requestor);
+		 "%s 已停止呼叫，按Enter繼續...", uip->userid);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	clear();
 	currstat = currstat0;
