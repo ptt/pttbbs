@@ -298,6 +298,7 @@ give_money_ui(const char *userid)
     int		    m = 0, mtax = 0, tries = 3, skipauth = 0;
     static time4_t  lastauth = 0;
     const char	    *myid = cuser.userid;
+    const char	    *uid_prompt = "這位幸運兒的id: ";
 
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
@@ -307,9 +308,11 @@ give_money_ui(const char *userid)
 	userid = NULL;
 
     // XXX should we prevent editing if userid is already assigned?
-    usercomplete2("這位幸運兒的id: ", id, userid);
-
-    move(2, 0); clrtobot();
+    usercomplete2(uid_prompt, id, userid);
+    // redraw highlighted prompt
+    move(1, 0); clrtobot();
+    outs(uid_prompt); outs(ANSI_COLOR(1)); outs(id);
+    outs(ANSI_RESET "\n");
 
     if (!id[0] || strcasecmp(cuser.userid, id) == 0)
     {
