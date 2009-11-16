@@ -483,7 +483,7 @@ tn_safe_strip(char *title)
 	return;
     assert(is_tn_announce(title));
     memmove(title, title + strlen(TN_ANNOUNCE), 
-	    strlen(title) - strlen(TN_ANNOUNCE));
+	    strlen(title) - strlen(TN_ANNOUNCE)+1);
 }
 
 static void
