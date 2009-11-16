@@ -90,6 +90,8 @@ int u_cancelbadpost(void)
 
    // XXX reload account here? (also simply optional)
    pwcuReload();
+   prev = cuser.badpost; // since we reloaded, update cache again.
+   if (prev <= 0) return 0;
 
    // early check for time (must do again later)
    day = (now - cuser.timeremovebadpost ) / DAY_SECONDS;
@@ -100,8 +102,9 @@ int u_cancelbadpost(void)
    }
 
    // 無聊的 disclaimer...
-   if( vmsg("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
-       vmsg("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
+   if( vmsgf("預計劣文將由 %d 篇變為 %d 篇，確定嗎[y/N]?", prev, prev-1) != 'y' ||
+       vmsg("我願意遵守站方規定,組規,以及板規[y/N]?")!='y' ||
+       vmsg("我願意尊重與不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
        vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
    {
        vmsg("請您思考清楚後再來申請刪除."); 
