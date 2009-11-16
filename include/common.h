@@ -110,6 +110,8 @@
 #define ERR_PASSWD      "密碼不對喔！請檢查帳號及密碼大小寫有無輸入錯誤。"
 #define ERR_FILENAME    "檔名不正確！"
 
+#define TN_ANNOUNCE	"[公告]"
+
 #define STR_AUTHOR1     "作者:"
 #define STR_AUTHOR2     "發信人:"
 #define STR_POST1       "看板:"

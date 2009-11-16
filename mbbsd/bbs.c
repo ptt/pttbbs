@@ -459,6 +459,33 @@ readtitle(void)
 	    buf);
 }
 
+static int
+is_tn_announce(const char *title)
+{
+    return strncmp(title, TN_ANNOUNCE, strlen(TN_ANNOUNCE)) == 0;
+}
+
+static int
+is_tn_allowed(const char *title)
+{
+    // TN_ANNOUNCE is prohibited for non-BMs
+    if (currmode & MODE_BOARD)
+	return 1;
+    if (is_tn_announce(title))
+	return 0;
+    return 1;
+}
+
+static void
+tn_safe_strip(char *title)
+{
+    if (is_tn_allowed(title))
+	return;
+    assert(is_tn_announce(title));
+    memmove(title, title + strlen(TN_ANNOUNCE), 
+	    strlen(title) - strlen(TN_ANNOUNCE));
+}
+
 static void
 readdoent(int num, fileheader_t * ent)
 {
@@ -573,7 +600,8 @@ readdoent(int num, fileheader_t * ent)
 	    strcpy((char*)p-3, " …");
     }
 
-    if (title[0] == '[' && !strncmp(title, "[公告]", 6))
+    // TN_ANNOUNCE: [公告]
+    if (title[0] == '[' && is_tn_announce(title))
 	special = 1;
 
     isonline = query_online(ent->owner);
@@ -925,7 +953,9 @@ do_general(int garbage)
     char            genbuf[PATHLEN];
     const char	    *owner;
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
-				   "閒聊", "請益", "公告", "情報"};
+				   "閒聊", "請益", "情報", 
+				   "公告" // TN_ANNOUNCE
+				  };
     boardheader_t  *bp;
     int             islocal, posttype=-1, edflags = 0;
     char save_title[STRLEN];
@@ -981,18 +1011,42 @@ do_general(int garbage)
 	for(j=0; j<i; j++)
 	    prints("%d.%4.4s ", j+1, ctype[j]);
 	sprintf(buf,"(1-%d或不選)",i);
-	getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
-	posttype = tmp_title[0] - '1';
-	if (posttype >= 0 && posttype < i)
-	    snprintf(tmp_title, sizeof(tmp_title),
-		    "[%s] ", ctype[posttype]);
-	else
-	{
-	    tmp_title[0] = '\0';
-	    posttype=-1;
-	}
-	getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
-	strip_ansi(tmp_title, tmp_title, STRIP_ALL);
+
+	do {
+	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
+	    posttype = tmp_title[0] - '1';
+	    if (posttype >= 0 && posttype < i)
+	    {
+		snprintf(tmp_title, sizeof(tmp_title),
+			"[%s] ", ctype[posttype]);
+	    } else {
+		tmp_title[0] = '\0';
+		posttype=-1;
+	    }
+
+	    if (!is_tn_allowed(tmp_title))
+	    {
+		// XXX the only case now is TN_ANNOUNCE.
+		mvouts(22, 0, "抱歉，" TN_ANNOUNCE " 保留給板主使用。\n");
+		continue;
+	    }
+	    break;
+	} while (1);
+
+	do {
+	    getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
+	    strip_ansi(tmp_title, tmp_title, STRIP_ALL);
+
+	    if (!is_tn_allowed(tmp_title))
+	    {
+		// XXX the only case now is TN_ANNOUNCE.
+		mvouts(21, 0, "抱歉，" TN_ANNOUNCE " 保留給板主使用。\n");
+		tn_safe_strip(tmp_title);
+		continue;
+	    }
+	    break;
+	} while (1);
+
 	strlcpy(save_title, tmp_title, sizeof(save_title));
     }
     if (save_title[0] == '\0')
@@ -1034,6 +1088,9 @@ do_general(int garbage)
 	return FULLUPDATE;
     }
     /* set owner to Anonymous for Anonymous board */
+
+    // check TN_ANNOUNCE again for non-BMs...
+    tn_safe_strip(save_title);
 
 #ifdef HAVE_ANONYMOUS
     /* Ptt and Jaky */
@@ -2267,7 +2324,7 @@ hold_gamble(void)
     if(!dashf(fn_ticket))
 	Rename(tmp, genbuf);
 
-    snprintf(genbuf, sizeof(genbuf), "[公告] %s 板 開始賭博!", currboard);
+    snprintf(genbuf, sizeof(genbuf), TN_ANNOUNCE " %s 板 開始賭博!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
     /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
@@ -2318,6 +2375,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	strlcpy(genbuf, fhdr->title, TTLEN+1);
 
     if (getdata_buf(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
+	// check TN_ANNOUNCE again for non-BMs...
+	tn_safe_strip(genbuf);
 	strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
 	dirty++;
     }

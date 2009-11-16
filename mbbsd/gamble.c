@@ -407,9 +407,9 @@ openticket(int bid)
     }
 
     if (bet != 98)
-	snprintf(buf, sizeof(buf), "[公告] %s 賭盤開獎", bh->brdname);
+	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤開獎", bh->brdname);
     else
-	snprintf(buf, sizeof(buf), "[公告] %s 賭盤取消", bh->brdname);
+	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
     post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
