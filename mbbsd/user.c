@@ -117,7 +117,8 @@ int u_cancelbadpost(void)
 	   "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
 	   Cdate(&now), cuser.userid, prev, cuser.badpost);
 
-   vmsg("恭喜您已經成功\刪除一篇劣文.");
+   vmsgf("恭喜您已成功\刪除一篇劣文 (由 %d 變為 %d 篇)",
+	   prev, cuser.badpost);
    return 0;
 }
 
