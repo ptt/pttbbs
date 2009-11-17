@@ -472,8 +472,18 @@ is_tn_allowed(const char *title)
     return 1;
 #else
     // TN_ANNOUNCE is prohibited for non-BMs
-    if (currmode & MODE_BOARD)
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
+	HasUserPerm(PERM_ACCOUNTS | PERM_BOARD | PERM_BBSADM | 
+		    PERM_VIEWSYSOP| PERM_POLICE_MAN))
 	return 1;
+
+    // Note: 關於 subgroup op 的判定目前也是一團糟 - 小組長要從自己的分類
+    // 進去才會有 GROUPOP(). 不過反正小組長跟群組長的人沒那麼多，就開放他們
+    // always 可以使用 TN_ANNOUNCE 吧。
+    if (HasUserPerm(PERM_SYSSUPERSUBOP) ||
+	HasUserPerm(PERM_SYSSUBOP))
+	return 1;
+
     if (is_tn_announce(title))
 	return 0;
     return 1;
