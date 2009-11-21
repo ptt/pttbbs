@@ -38,6 +38,22 @@ kill_user(int num, const char *userid)
     passwd_sync_update(num, &u);
     return 0;
 }
+
+int
+u_set_mind()
+{
+    char mindbuf[sizeof(currutmp->mind)+1] = "";
+
+    // XXX 以往有 check 通緝/壽星，但我實在看不出這有什麼意義
+    memcpy(mindbuf, currutmp->mind, sizeof(mindbuf));
+    getdata_buf(b_lines - 1, 0, "現在的心情? ",  mindbuf, sizeof(mindbuf), DOECHO);  
+    if (memcmp(mindbuf, currutmp->mind, sizeof(currutmp->mind)) == 0)
+	return 0;
+
+    memcpy(currutmp->mind, mindbuf, sizeof(currutmp->mind));  
+    return 1;
+}
+
 int
 u_loginview(void)
 {
@@ -527,18 +543,8 @@ void Customize(void)
 		}
 		continue;
 	    case 1:
-		{
-		    char mindbuf[6] = "";
-		    getdata(b_lines - 1, 0, "現在的心情? ",  
-			    mindbuf, 5, DOECHO);  
-		    if (strcmp(mindbuf, "通緝") == 0)  
-			vmsg("不可以把自己設通緝啦!");  
-		    else if (strcmp(mindbuf, "壽星") == 0)  
-			vmsg("你不是今天生日欸!");  
-		    else  
-			memcpy(currutmp->mind, mindbuf, 4);  
+		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK) && u_set_mind())
 		    dirty = 1;
-		}
 		continue;
 	}
 #ifdef PLAY_ANGEL

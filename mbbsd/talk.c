@@ -2526,17 +2526,8 @@ userlist(void)
 		break;
 
 	    case 'i':
-		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK)) {
-		    char            mindbuf[5];
-		    getdata(b_lines - 1, 0, "現在的心情? ",
-			    mindbuf, sizeof(mindbuf), DOECHO);
-		    if (strcmp(mindbuf, "通緝") == 0)
-			vmsg("不可以把自己設通緝啦!");
-		    else if (strcmp(mindbuf, "壽星") == 0)
-			vmsg("你不是今天生日欸!");
-		    else
-			memcpy(currutmp->mind, mindbuf, 4);
-		}
+		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK))
+		    u_set_mind();
 		redrawall = redraw = 1;
 		break;
 

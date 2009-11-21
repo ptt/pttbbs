@@ -638,6 +638,7 @@ int  topsong(void);
 /* user */
 int kill_user(int num, const char *userid);
 int u_editcalendar(void);
+int u_set_mind();
 void user_display(const userec_t *u, int real);
 int isvalidemail(char *email);
 void uinfo_query(const char *uid, int real, int unum);
