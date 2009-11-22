@@ -1374,7 +1374,7 @@ set_menu_BM(char *BM)
 	currmode |= MODE_GROUPOP;
 
 	// XXX 不是很確定是否該在這邊 save level?
-	if (!HasUserPerm(PERM_SYSSUPERSUBOP) || !HasUserPerm(PERM_BM))
+	if (!HasUserPerm(PERM_SYSSUBOP) || !HasUserPerm(PERM_BM))
 	    pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
     }
 
