@@ -1372,11 +1372,12 @@ set_menu_BM(char *BM)
 {
     if (!HasUserPerm(PERM_NOCITIZEN) && (HasUserPerm(PERM_ALLBOARD) || is_uBM(BM, cuser.userid))) {
 	currmode |= MODE_GROUPOP;
+
+	// XXX 不是很確定是否該在這邊 save level?
+	if (!HasUserPerm(PERM_SYSSUPERSUBOP) || !HasUserPerm(PERM_BM))
+	    pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
     }
 
-    // XXX 不是很確定是否該在這邊 save level?
-    if (!HasUserPerm(PERM_SYSSUPERSUBOP) || !HasUserPerm(PERM_BM))
-	pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
 }
 
 static void replace_link_by_target(boardstat_t *board)
