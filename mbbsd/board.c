@@ -637,6 +637,25 @@ b_config(void)
 			" 注意: 看板已解除隱形");
 		break;
 
+		// ii連按就會誤觸，所以再確認一下
+	    case 'i':
+		{
+		    char ans[2];
+		    move(b_lines-2, 0); clrtobot();
+		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_IPLOGRECMD) ? 
+			    ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
+			    ANSI_COLOR(1;31) " +++ 確定要記錄推文 IP 嗎?" ANSI_RESET " [y/N]: ",
+			    ans, sizeof(ans), LCECHO) < 1 ||
+			    ans[0] != 'y')
+			break;
+		}
+		bp->brdattr ^= BRD_IPLOGRECMD;
+		touched = 1;
+		vmsg((bp->brdattr & BRD_IPLOGRECMD) ?
+			" 注意: 開始記錄推文IP" :
+			" 注意: 已停止記錄推文IP");
+		break;
+
 	    case 'g':
 #ifndef BMCHS
 		if (!HasUserPerm(PERM_SYSOP))
@@ -651,11 +670,6 @@ b_config(void)
 
 	    case 'r':
 		bp->brdattr ^= BRD_NORECOMMEND;
-		touched = 1;
-		break;
-
-	    case 'i':
-		bp->brdattr ^= BRD_IPLOGRECMD;
 		touched = 1;
 		break;
 
