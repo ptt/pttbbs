@@ -2563,6 +2563,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
+
     if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' || 
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("抱歉, 禁止推薦");
@@ -2573,6 +2574,16 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
     }
+
+    // TODO 未來可以考慮作成有選項可設定。
+#ifdef BN_ONLY_OP_CAN_ADD_COMMENT
+    if (  strcmp(bp->brdname, BN_ONLY_OP_CAN_ADD_COMMENT) == 0 &&
+	!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP|PERM_SYSSUPERSUBOP|PERM_SYSSUBOP)) )
+    {
+	vmsg("本板推文限定管理人員使用。");
+	return FULLUPDATE;
+    }
+#endif
 
 #ifdef SAFE_ARTICLE_DELETE
     if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
