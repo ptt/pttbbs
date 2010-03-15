@@ -152,8 +152,8 @@ user_display(const userec_t * u, int adminmode)
 	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "  " ANSI_COLOR(1;30;45) "    使 用 者"
 	   " 資 料        "
 	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "\n");
-    prints("\t\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
-    prints("\t\t真實姓名: %s", u->realname);
+    prints("\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
+    prints("\t真實姓名: %s", u->realname);
 #if FOREIGN_REG_DAY > 0
     prints(" %s%s",
 	   u->uflag & UF_FOREIGN ? "(外籍: " : "",
@@ -164,23 +164,23 @@ user_display(const userec_t * u, int adminmode)
     prints(" %s", u->uflag & UF_FOREIGN ? "(外籍)" : "");
 #endif
     outs("\n"); // end of realname
-    prints("\t\t職業學歷: %s\n", u->career);
-    prints("\t\t居住地址: %s\n", u->address);
-    prints("\t\t電話手機: %s", u->phone);
+    prints("\t職業學歷: %s\n", u->career);
+    prints("\t居住地址: %s\n", u->address);
+    prints("\t電話手機: %s", u->phone);
 	if (u->mobile) 
 	    prints(" / %010d", u->mobile);
 	outs("\n");
 
-    prints("\t\t電子信箱: %s\n", u->email);
-    prints("\t\t銀行帳戶: %d 元\n", u->money);
-    prints("\t\t性    別: %s\n", sex[u->sex%8]);
-    prints("\t\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
+    prints("\t電子信箱: %s\n", u->email);
+    prints("\t銀行帳戶: %d 元\n", u->money);
+    prints("\t性    別: %s\n", sex[u->sex%8]);
+    prints("\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");
 
-    prints("\t\t註冊日期: %s (已滿 %d 天)\n", 
+    prints("\t註冊日期: %s (已滿 %d 天)\n", 
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
-    prints("\t\t上次上站: %s (來自 %s)\n", 
+    prints("\t上次上站: %s (來自 %s)\n", 
 	    Cdate(&u->lastlogin), u->lasthost);
 
     if (adminmode) {
@@ -188,25 +188,25 @@ user_display(const userec_t * u, int adminmode)
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
 		genbuf[diff] = '-';
-	prints("\t\t帳號權限: %s\n", genbuf);
-	prints("\t\t認證資料: %s\n", u->justify);
+	prints("\t帳號權限: %s\n", genbuf);
+	prints("\t認證資料: %s\n", u->justify);
     }
 
     // XXX enable STR_LOGINDAYS_QTY after removed old_numlogins.
-    prints("\t\t使用記錄: " STR_LOGINDAYS " %d " // STR_LOGINDAYS_QTY
+    prints("\t使用記錄: " STR_LOGINDAYS " %d " // STR_LOGINDAYS_QTY
 	    ,u->numlogindays);
     if (u->old_numlogins)
 	prints("(轉換新制前結算:%d)", u->old_numlogins);
     prints(" / 文章 %d 篇\n", u->numposts);
 
     sethomedir(genbuf, u->userid);
-    prints("\t\t私人信箱: %d 封  (購買信箱: %d 封)\n",
+    prints("\t私人信箱: %d 封  (購買信箱: %d 封)\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox);
 
     if (!adminmode) {
 	diff = (now - login_start_time) / 60;
-	prints("\t\t停留期間: %d 小時 %2d 分\n",
+	prints("\t停留期間: %d 小時 %2d 分\n",
 	       diff / 60, diff % 60);
     }
 
@@ -215,7 +215,7 @@ user_display(const userec_t * u, int adminmode)
 	int             i;
 	boardheader_t  *bhdr;
 
-	outs("\t\t擔任板主: ");
+	outs("\t擔任板主: ");
 
 	for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
 	    if (is_uBM(bhdr->BM, u->userid)) {
@@ -228,7 +228,7 @@ user_display(const userec_t * u, int adminmode)
 
     // conditional fields
 #ifdef ASSESS
-    prints("\t\t劣文數目: %u (舊優文結算: %u)\n", 
+    prints("\t劣文數目: %u (舊優文結算: %u)\n", 
 	    (unsigned int)u->badpost, (unsigned int)u->goodpost);
 #endif // ASSESS
 
@@ -252,7 +252,7 @@ user_display(const userec_t * u, int adminmode)
 
 #ifdef PLAY_ANGEL
     if (adminmode)
-	prints("\t\t小 天 使: %s\n",
+	prints("\t小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 #endif
 
