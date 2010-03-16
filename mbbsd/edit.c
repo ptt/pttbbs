@@ -1535,7 +1535,7 @@ check_quote(void)
 /* 檔案處理：讀檔、存檔、標題、簽名檔 */
 off_t loadsitesig(const char *fname);
 
-static void
+static int
 read_file(const char *fpath, int splitSig)
 {
     FILE  *fp;
@@ -1548,13 +1548,15 @@ read_file(const char *fpath, int splitSig)
 	int fd;
 	if ((fd = creat(fpath, 0600)) >= 0) {
 	    close(fd);
-	    return;
+	    return 0;
 	}
-	assert(fd >= 0);
-	abort_bbs(0);
+	
+	return -1;
     }
     load_file(fp, offSig);
     fclose(fp);
+
+    return 0;
 }
 
 void
@@ -3500,7 +3502,10 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
     enter_edit_buffer();
 
     if (*fpath) {
-	read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
+	int tmp = read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
+
+	if (tmp < 0)
+	    return tmp;
     }
 
     if (*quote_file) {
