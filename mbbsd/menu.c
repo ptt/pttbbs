@@ -685,6 +685,15 @@ static const commands_t userlist[] = {
     {NULL, 0, NULL}
 };
 
+#ifdef HAVE_USERAGREEMENT
+static int
+x_agreement(void)
+{
+    more(HAVE_USERAGREEMENT, YEA);
+    return 0;
+}
+#endif
+
 #ifdef HAVE_INFO
 static int
 x_program(void)
@@ -769,6 +778,9 @@ static const commands_t xyzlist[] = {
     {x_users,0,      "UUsers         《使用者相關統計》"},
 #ifndef DEBUG
     /* All these are useless in debug mode. */
+#ifdef HAVE_USERAGREEMENT
+    {x_agreement,0,  "AAgreement     《本站使用者條款》"},
+#endif
 #ifdef  HAVE_LICENSE
     {x_gpl, 0,       "IILicense       GNU 使用執照"},
 #endif
