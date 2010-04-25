@@ -44,6 +44,10 @@
 #define LOGIND_MAX_FDS      (100000)
 #endif
 
+#define MY_EVENT_PRIORITY_NUMBERS   (4)
+#define EVTPRIORITY_NORM    (MY_EVENT_PRIORITY_NUMBERS/2)
+#define EVTPRIORITY_ACK     (EVTPRIORITY_NORM-1)
+
 // some systems has hard limit of this to 128.
 #ifndef LOGIND_SOCKET_QLEN
 #define LOGIND_SOCKET_QLEN  (100)
@@ -386,11 +390,13 @@ ackq_add(login_conn_ctx *ctx)
 
     if (++g_ack_queue.size > g_ack_queue.capacity)
     {
+        time4_t tnow = time(NULL);
         g_ack_queue.capacity *= 2;
         if (g_ack_queue.capacity < ACK_QUEUE_DEFAULT_CAPACITY)
             g_ack_queue.capacity = ACK_QUEUE_DEFAULT_CAPACITY;
 
-        fprintf(stderr, LOG_PREFIX "resize ack queue to: %u (%u in use)\r\n",
+        fprintf(stderr, LOG_PREFIX "%s: resize ack queue to: %u (%u in use)\r\n", 
+                Cdate(&tnow),
                 (unsigned int)g_ack_queue.capacity, (unsigned int)g_ack_queue.size);
 
         g_ack_queue.queue = (login_conn_ctx**) realloc (g_ack_queue.queue, 
@@ -1183,6 +1189,11 @@ start_service(int fd, login_conn_ctx *conn)
                 "failed in towrite(login_data)\r\n");
         return ack;
     }
+
+    // to prevent buffer full, we set priority here to force all ackes processed
+    // (otherwise tunnel daemon may try to send act and 
+    event_priority_set(&conn->ev, EVTPRIORITY_ACK);
+
 
     // wait (or async) service to response
     if (!login_conn_end_ack(conn, ld.ack, fd))
@@ -2082,6 +2093,7 @@ main(int argc, char *argv[], char *envp[])
 
     reload_data();
     evb = event_init();
+    event_base_priority_init(evb, MY_EVENT_PRIORITY_NUMBERS);
 
     // bind ports
     if (port && bind_port(port) < 0)
