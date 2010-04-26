@@ -746,14 +746,14 @@ load_text_screen_file(const char *filename, char **pptr)
             // convert \n to \r\n
             *(p-1)= '\r';
             *p ++ = '\n';
-        }
-        // Remove \n from last line (breaks full screen)
-        if (max_lines == 0) {
-            *(p-2) = '\0';
-            p     -= 2;
-            psz   += 2;
-        }
 
+            // Remove \n from last line (breaks full screen)
+            if (max_lines == 0) {
+                *(p-2) = '\0';
+                p     -= 2;
+                psz   += 2;
+            }
+        }
     }
     fclose(fp);
 }
