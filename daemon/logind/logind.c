@@ -44,6 +44,10 @@
 #define LOGIND_MAX_FDS      (100000)
 #endif
 
+#ifndef LOGIND_ACKQUEUE_BOUND
+#define LOGIND_ACKQUEUE_BOUND   (255)
+#endif 
+
 #define MY_EVENT_PRIORITY_NUMBERS   (4)
 #define EVTPRIORITY_NORM    (MY_EVENT_PRIORITY_NUMBERS/2)
 #define EVTPRIORITY_ACK     (EVTPRIORITY_NORM-1)
@@ -363,6 +367,12 @@ ackq_gc()
     // reset queue to zero if already empty.
     if (g_ack_queue.reuse == g_ack_queue.size)
         g_ack_queue.reuse =  g_ack_queue.size = 0;
+}
+
+static ssize_t
+ackq_size()
+{
+    return g_ack_queue.size - g_ack_queue.reuse;
 }
 
 static void
@@ -1275,7 +1285,8 @@ auth_start(int fd, login_conn_ctx *conn)
 
                 draw_auth_success(conn, isfree);
 
-                if (!start_service(fd, conn))
+                if (ackq_size() > LOGIND_ACKQUEUE_BOUND ||
+                    !start_service(fd, conn))
                 {
                     // too bad, we can't start service.
                     retry_service();
