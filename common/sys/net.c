@@ -14,7 +14,12 @@
 
 #include "cmsys.h"
 
+#ifndef DEFAULT_TCP_QLEN
 #define DEFAULT_TCP_QLEN    (10)
+#endif 
+#ifndef DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND
+#define DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND	(10)
+#endif
 
 uint32_t
 ipstr2int(const char *ip)
@@ -226,6 +231,25 @@ int toconnectex(const char *addr, int timeout)
     return sock;
 }
 
+int is_to_readwrite_again(int s)
+{
+    if (s >= 0)
+	return 0;
+    if (errno == EINTR)
+	return 1;
+    if (errno == EAGAIN)
+    {
+#ifdef DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND
+	// you can usleep here, to reduce system overhead
+	usleep(DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND);
+#endif
+	return 1;
+    }
+
+    // all other case, failure.
+    return 0;
+}
+
 /**
  * same as read(2), but read until exactly size len 
  */
@@ -234,7 +258,7 @@ int toread(int fd, void *buf, int len)
     int     s;
     for( s = 0 ; len > 0 ; )
 	if( (s = read(fd, buf, len)) <= 0 ) {
-	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
@@ -253,7 +277,7 @@ int towrite(int fd, const void *buf, int len)
     int     s;
     for( s = 0 ; len > 0 ; )
 	if( (s = write(fd, buf, len)) <= 0){
-	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
@@ -272,7 +296,7 @@ int torecv(int fd, void *buf, int len, int flag)
     int     s;
     for( s = 0 ; len > 0 ; )
 	if( (s = recv(fd, buf, len, flag)) <= 0 ) {
-	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
@@ -291,7 +315,7 @@ int tosend(int fd, const void *buf, int len, int flag)
     int     s;
     for( s = 0 ; len > 0 ; )
 	if( (s = send(fd, buf, len, flag)) <= 0){
-	    if (s < 0 && (errno == EINTR || errno == EAGAIN))
+	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
