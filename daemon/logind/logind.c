@@ -1283,10 +1283,16 @@ auth_start(int fd, login_conn_ctx *conn)
                     return AUTH_RESULT_STOP;
                 }
 
-                draw_auth_success(conn, isfree);
+                // consider system as overloaded if ack queue indicates service unavailable
+                if (g_overload || ackq_size() > LOGIND_ACKQUEUE_BOUND)
+                {
+                    g_overload = 1; // set overload again to reject all incoming connections
+                    draw_overload(conn, 1);
+                    return AUTH_RESULT_STOP;
+                }
 
-                if (ackq_size() > LOGIND_ACKQUEUE_BOUND ||
-                    !start_service(fd, conn))
+                draw_auth_success(conn, isfree);
+                if (!start_service(fd, conn))
                 {
                     // too bad, we can't start service.
                     retry_service();
@@ -1418,6 +1424,18 @@ static void *
 get_tunnel_ack(int tunnel)
 {
     void *arg = NULL;
+
+#ifdef VERIFY_BLOCKING_TUNNEL
+    // fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel %s .\r\n", 
+    // ( fcntl(tunnel, F_GETFL) & O_NONBLOCK ) ? "nonblock" : "blocking");
+    if (fcntl(tunnel, F_GETFL) & (O_NONBLOCK))
+    {
+        fprintf(stderr, LOG_PREFIX
+                "get_tunnel_ack: warning: tunnel is nonblocking.\r\n");
+        stop_tunnel(tunnel);
+        return NULL;
+    }
+#endif
 
     if (toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
         !arg)
