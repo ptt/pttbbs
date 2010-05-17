@@ -35,6 +35,141 @@ check_sysop_edit_perm(const char *fpath)
     return 1;
 }
 
+static int 
+common_pager_key_handler(int ch, void *ctx)
+{
+    switch(ch)
+    {
+	// Special service keys
+	case 'z':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOCHESSREPLAY;
+
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+	case 'L':
+	case 'l':
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_DOBBSLUA;
+#endif
+	
+	// Query information and file touch
+	case 'Q':
+	    return RET_DOQUERYINFO;
+
+	case Ctrl('T'):
+	    if (!HasUserPerm(PERM_BASIC))
+		break;
+	    return RET_COPY2TMP;
+
+	case 'E':
+	    // for early check, skip file name (must check again later)
+	    if (!check_sysop_edit_perm("")) 
+		break;
+	    return RET_DOSYSOPEDIT;
+
+	// Making Response
+	case '%':
+	case 'X':
+	    return RET_DORECOMMEND;
+
+	case 'r': case 'R':
+	    return RET_DOREPLY;
+
+	case 'Y': case 'y':
+	    return RET_DOREPLYALL;
+
+	// Special Navigation
+	case 's':
+	    if (!HasUserPerm(PERM_BASIC) ||
+		currstat != READING)
+		break;
+	    return RET_SELECTBRD;
+	
+	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
+	// I'm not sure if these keys are all invented by SOB,
+	// but let's honor their names.
+	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
+	//                                  -- by piaip, 2008.
+	case 'A':
+	    return AUTHOR_PREV;
+	case 'a':
+	    return AUTHOR_NEXT;
+	case 'F': case 'f':
+	    return READ_NEXT;
+	case 'B': case 'b':
+	    return READ_PREV;
+
+	/* from Kaede, thread reading */
+	case ']':
+	case '+':
+	    return RELATE_NEXT;
+	case '[':
+	case '-':
+	    return RELATE_PREV;
+	case '=':
+	    return RELATE_FIRST;
+    }
+
+    return DONOTHING;
+}
+
+static int
+common_pager_exit_handler(int r, const char *fpath)
+{
+    // post processing
+    switch(r)
+    {
+	case RET_DOSYSOPEDIT:
+	    r = FULLUPDATE;
+	    if (!check_sysop_edit_perm(fpath))
+		break;
+	    log_filef("log/security", LOG_CREAT,
+		    "%u %s %d %s admin edit file=%s\n", 
+		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
+	    veditfile(fpath);
+	    break;
+
+	case RET_COPY2TMP:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+	    {
+		char buf[PATHLEN];
+		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
+			buf, 4, LCECHO);
+		if (buf[0] != 'y')
+		    break;
+		setuserfile(buf, ask_tmpbuf(b_lines - 1));
+		Copy(fpath, buf);
+	    }
+	    break;
+
+	case RET_SELECTBRD:
+	    r = FULLUPDATE;
+	    if (currstat == READING)
+		r = Select();
+	    break;
+
+	case RET_DOCHESSREPLAY:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+		ChessReplayGame(fpath);
+	    break;
+
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+	case RET_DOBBSLUA:
+	    r = FULLUPDATE;
+	    // check permission again
+	    if (HasUserPerm(PERM_BASIC)) 
+		bbslua(fpath);
+	    break;
+#endif
+    }
+    return r;
+}
+
+
 #ifndef USE_PMORE ///////////////////////////////////////////////////////////
 
 // minimore: a mini pager in exactly 130 lines
@@ -43,7 +178,7 @@ int more(const char *fpath, int promptend)
 {
     FILE *fp = fopen(fpath, "rt");
     int  lineno = 0, lines = 0, oldlineno = -1;
-    int  i = 0, abort = 0, showall = 0, colorize = 0;
+    int  i = 0, abort = 0, showall = 0, colorize = 0, vk = 0;
     int  lpos[PAGER_MAXLINES] = {0}; // line position
     char buf [ANSILINELEN];
 
@@ -129,7 +264,7 @@ int more(const char *fpath, int promptend)
 	    " (→↓[PgUp][PgDn][Home][End])游標移動\t(←/q)結束");
 	}
 	// process key
-	switch(vkey()) {
+	switch((vk = vkey())) {
 	    case KEY_UP: case 'k': case Ctrl('P'):
 		if (lineno == 0) abort = READ_PREV;
 		lineno--;		    
@@ -166,6 +301,10 @@ int more(const char *fpath, int promptend)
 	    case 'f':
 		abort = READ_NEXT;
 		break;
+
+	    default:
+		abort = common_pager_key_handler(vk, NULL);
+		break;
 	}
 	if (lineno + (t_lines-1) >= lines)
 	    lineno = lines-(t_lines-1);
@@ -173,90 +312,10 @@ int more(const char *fpath, int promptend)
 	    lineno = 0;
     }
     fclose(fp);
-    return abort > 0 ? abort : 0;
+    return abort > 0 ? common_pager_exit_handler(abort, fpath) : 0;
 }
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
-
-static int 
-common_pmore_key_handler(int ch, void *ctx)
-{
-    switch(ch)
-    {
-	// Special service keys
-	case 'z':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOCHESSREPLAY;
-
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case 'L':
-	case 'l':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOBBSLUA;
-#endif
-	
-	// Query information and file touch
-	case 'Q':
-	    return RET_DOQUERYINFO;
-
-	case Ctrl('T'):
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_COPY2TMP;
-
-	case 'E':
-	    // for early check, skip file name (must check again later)
-	    if (!check_sysop_edit_perm("")) 
-		break;
-	    return RET_DOSYSOPEDIT;
-
-	// Making Response
-	case '%':
-	case 'X':
-	    return RET_DORECOMMEND;
-
-	case 'r': case 'R':
-	    return RET_DOREPLY;
-
-	case 'Y': case 'y':
-	    return RET_DOREPLYALL;
-
-	// Special Navigation
-	case 's':
-	    if (!HasUserPerm(PERM_BASIC) ||
-		currstat != READING)
-		break;
-	    return RET_SELECTBRD;
-	
-	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
-	// I'm not sure if these keys are all invented by SOB,
-	// but let's honor their names.
-	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
-	//                                  -- by piaip, 2008.
-	case 'A':
-	    return AUTHOR_PREV;
-	case 'a':
-	    return AUTHOR_NEXT;
-	case 'F': case 'f':
-	    return READ_NEXT;
-	case 'B': case 'b':
-	    return READ_PREV;
-
-	/* from Kaede, thread reading */
-	case ']':
-	case '+':
-	    return RELATE_NEXT;
-	case '[':
-	case '-':
-	    return RELATE_PREV;
-	case '=':
-	    return RELATE_FIRST;
-    }
-
-    return DONOTHING;
-}
 
 static const char 
 *hlp_nav [] = 
@@ -374,60 +433,11 @@ more(const char *fpath, int promptend)
 {
     int r = pmore2(fpath, promptend,
 	    (void*) fpath,
-	    common_pmore_key_handler, 
+	    common_pager_key_handler, 
 	    common_pmore_footer_handler,
 	    common_pmore_help_handler);
 
-    // post processing
-    switch(r)
-    {
-	case RET_DOSYSOPEDIT:
-	    r = FULLUPDATE;
-	    if (!check_sysop_edit_perm(fpath))
-		break;
-	    log_filef("log/security", LOG_CREAT,
-		    "%u %s %d %s admin edit file=%s\n", 
-		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
-	    veditfile(fpath);
-	    break;
-
-	case RET_COPY2TMP:
-	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-	    {
-		char buf[PATHLEN];
-		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
-			buf, 4, LCECHO);
-		if (buf[0] != 'y')
-		    break;
-		setuserfile(buf, ask_tmpbuf(b_lines - 1));
-		Copy(fpath, buf);
-	    }
-	    break;
-
-	case RET_SELECTBRD:
-	    r = FULLUPDATE;
-	    if (currstat == READING)
-		r = Select();
-	    break;
-
-	case RET_DOCHESSREPLAY:
-	    r = FULLUPDATE;
-	    if (HasUserPerm(PERM_BASIC))
-		ChessReplayGame(fpath);
-	    break;
-
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case RET_DOBBSLUA:
-	    r = FULLUPDATE;
-	    // check permission again
-	    if (HasUserPerm(PERM_BASIC)) 
-		bbslua(fpath);
-	    break;
-#endif
-    }
-
-    return r;
+    return common_pager_exit_handler(r, fpath);
 }
 
 #endif // USE_PMORE /////////////////////////////////////////////////////////
