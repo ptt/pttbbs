@@ -146,7 +146,7 @@ delete_records(const char *fpath, size_t size, int id, size_t num)
     PttLock(fo, offset, locksize, F_WRLCK);
 
     if (readsize > 0) {
-	lseek(fi, offset+size, SEEK_SET);  
+	lseek(fi, offset+size*num, SEEK_SET);  
 	lseek(fo, offset, SEEK_SET);  
 	while (d < readsize && (c = read(fi, buf, BUFSIZE)) > 0) {
 	    write(fo, buf, c);
