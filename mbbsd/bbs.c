@@ -1885,7 +1885,20 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    b_suckinfile_invis(xptr, fname, currboard);
 	} else {
 	    /* public board */
-	    fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);
+	    // XXX we should add some string length checks here.
+	    // maybe someday we will define the standard aidc length
+	    // and helper functions to create aidc string with prefixes.
+	    aidu_t aidu = 0;
+	    char aidc[32] = {0};
+
+	    aidu = fn2aidu((char *)fhdr->filename);
+	    if (aidu > 0) {
+		aidc[0] = ' '; aidc[1] = '#';
+		aidu2aidc(aidc + strlen(aidc), aidu);
+		// add trailing space
+		strcat(aidc, " ");
+	    }
+	    fprintf(xptr, "※ [本文轉錄自 %s 看板%s]\n\n", currboard, aidc);
 	    b_suckinfile(xptr, fname);
 	}
 
