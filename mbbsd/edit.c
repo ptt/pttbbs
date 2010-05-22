@@ -3842,6 +3842,13 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		}
 		curr_buf->redraw_everything = YEA;
 		break;
+
+		// XXX This breaks emacs compatibility. Really bad,
+		// especially when some terminals just cannot send
+		// vt100 arrow keys. However since this key binding 
+		// has been changed for a long long time...
+		// We may need to change this back in the future, but
+		// not sure when.
             case Ctrl('P'):
 		phone_mode_switch();
                 curr_buf->redraw_everything = YEA;
@@ -3893,9 +3900,11 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		}
 		break;
 	    case KEY_UP:
+	    // case Ctrl('P'):	// XXX check phone_mode to see why this is not enabled
 		cursor_to_prev_line();
 		break;
 	    case KEY_DOWN:
+	    // case Ctrl('N'):	// XXX check phone_mode to see why this is not enabled
 		cursor_to_next_line();
 		break;
 
