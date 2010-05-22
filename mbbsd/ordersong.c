@@ -76,8 +76,15 @@ do_order_song(void)
     getdata_str(19, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
     getdata(20, 0, "點給(可匿名): ", receiver, sizeof(receiver), DOECHO);
 
-    getdata_str(21, 0, "想要要對他(她)說..:", say,
-		sizeof(say), DOECHO, "我愛妳..");
+    do {
+	getdata(21, 0, "想要要對他(她)說..:", say, sizeof(say), DOECHO);
+	strip_blank(say, say);
+	if (!say[0]) {
+	    bell();
+	    mvouts(22, 0, "請重新輸入想說的內容");
+	}
+    } while (!say[0]);
+
     snprintf(save_title, sizeof(save_title),
 	     "%s:%s", sender, say);
     getdata_str(22, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
