@@ -86,6 +86,12 @@ common_pager_key_handler(int ch, void *ctx)
 		currstat != READING)
 		break;
 	    return RET_SELECTBRD;
+
+	case '#':
+	    if (!HasUserPerm(PERM_BASIC) ||
+		currstat != READING)
+		break;
+	    return RET_SELECTAID;
 	
 	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
 	// I'm not sure if these keys are all invented by SOB,
@@ -340,6 +346,7 @@ static const char
 *hlp_spc [] = 
 { "【特殊指令】", NULL,
     "  查詢資訊  ", "Q",
+    "  文章代碼搜尋", "#",
     "  存入暫存檔", "^T",
     "  切換看板  ", "s",
     "  棋局打譜  ", "z",
