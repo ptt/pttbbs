@@ -1095,6 +1095,13 @@ do_general(int garbage)
     };
 #endif
     
+    // XXX I think the 'kind' determination looks really weird here.
+    // However legacy BBS code here was a mass... so let's workaround it.
+    edflags |= (quote_file[0] ?
+	    EDITFLAG_KIND_REPLYPOST : EDITFLAG_KIND_NEWPOST);
+    if (curredit & EDIT_BOTH)
+	edflags |= EDITFLAG_KIND_SENDMAIL;
+
     money = vedit2(fpath, YEA, &islocal, save_title, edflags);
     if (money == EDIT_ABORTED) {
 	unlink(fpath);

@@ -413,7 +413,9 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
     strlcpy(save_title, title, sizeof(save_title));
 
-    if (vedit(mfpath, YEA, NULL, save_title) == EDIT_ABORTED) {
+    if (vedit2(mfpath, YEA, NULL, save_title, 
+		EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) 
+    {
 	unlink(mfpath);
 	setutmpmode(oldstat);
 	return -2;
@@ -476,7 +478,8 @@ do_send(const char *userid, const char *title)
 	sethomepath(fpath, cuser.userid);
 	stampfile(fpath, &mhdr);
 
-	if (vedit(fpath, NA, NULL, save_title) == EDIT_ABORTED) {
+	if (vedit2(fpath, NA, NULL, save_title, 
+		    EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    clear();
 	    return -2;

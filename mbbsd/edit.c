@@ -459,6 +459,25 @@ edit_msg(void)
     vs_footer(" 編輯文章 ", buf);
 }
 
+static const char *
+get_edit_kind_prompt(int flags)
+{
+    int has_reply_post = (flags & EDITFLAG_KIND_REPLYPOST),
+	has_reply_mail = (flags & EDITFLAG_KIND_SENDMAIL),
+	has_new_post   = (flags & EDITFLAG_KIND_NEWPOST);
+
+    if (has_reply_post && has_reply_mail)
+	return ANSI_COLOR(0;1;37;45) 
+	    "注意：您即將 回信給原作者 並同時 回覆文章至看板上" ANSI_RESET;
+    if (has_reply_mail)
+	return ANSI_COLOR(0;1;31) "注意：您即將 寄出 私人信件" ANSI_RESET;
+    if (has_reply_post)
+	return ANSI_COLOR(0;1;33) "注意：您即將 回覆 文章至看板上" ANSI_RESET;
+    if (has_new_post)
+	return ANSI_COLOR(0;1;32) "注意：您即將 發表 新文章至看板上" ANSI_RESET;
+    return NULL;
+}
+
 //#define SLOW_CHECK_DETAIL
 static void
 edit_buffer_check_healthy(textline_t *line)
@@ -1811,7 +1830,8 @@ static void upload_file(void);
 // 		KEEP_EDITING	if keep editing
 // 		0		if write ok & exit
 static int
-write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], int upload, int chtitle, int *pentropy)
+write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], 
+	int upload, int chtitle, const char *kind_prompt, int *pentropy)
 {
     FILE           *fp = NULL;
     textline_t     *p;
@@ -1846,6 +1866,8 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 
     outs(" (A)放棄 (E)繼續 (R/W/D)讀寫刪暫存檔");
 
+    if (kind_prompt)
+	mvouts(4, 0, kind_prompt);
     getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
     // avoid lots pots
@@ -3643,6 +3665,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		tmp = write_file(fpath, saveheader, islocal, title, 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
+			get_edit_kind_prompt(flags),
 			&entropy);
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
