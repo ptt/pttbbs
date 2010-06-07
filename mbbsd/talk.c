@@ -3052,8 +3052,10 @@ t_chat(void)
     static time4_t lastEnter = 0;
     int    fd;
 
-    if (!HasUserPerm(PERM_CHAT))
+    if (!HasUserPerm(PERM_CHAT)) {
+	vmsg("權限不足，無法進入聊天室。");
 	return -1;
+    }
 
     if(HasUserPerm(PERM_VIOLATELAW))
     {
