@@ -1525,7 +1525,7 @@ m_help(void)
 }
 
 static int
-mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
+mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80], inputbuf[10];
     fileheader_t    xfile;
@@ -1533,6 +1533,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     int             author = 0;
     char            genbuf[200];
     char            genbuf2[4];
+    int		    xbid, ans;
 
     // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
     if (HasUserPerm(PERM_VIOLATELAW))
@@ -1559,45 +1560,52 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-    /* 借用變數 */
-    ent = StringHash(fhdr->title);
-    /* 同樣 title 不管對哪個板都算 cross post , 所以不用檢查 author */
+    xbid = getbnum(xboard);
+    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 
-    if ((ent != 0 && ent == postrecord.checksum[0])) {
-	/* 檢查 cross post 次數 */
-	if (postrecord.times++ > MAX_CROSSNUM)
-	    anticrosspost();
+    // XXX 板主常會把一系列文章轉回自己看板
+    if (is_BM_cache(xbid)) {
+	// ignore cross-post for BM
     } else {
-	postrecord.times = 0;
-	postrecord.last_bid = 0;
-	postrecord.checksum[0] = ent;
+	// process and determine 'cross-post'
+	
+	int hash = StringHash(fhdr->title);
+
+	/* 同樣 title 不管對哪個板都算 cross post , 所以不用檢查 author */
+	if ((hash != 0 && hash == postrecord.checksum[0])) {
+	    /* 檢查 cross post 次數 */
+	    if (postrecord.times++ > MAX_CROSSNUM)
+		anticrosspost();
+	} else {
+	    postrecord.times = 0;
+	    postrecord.last_bid = 0;
+	    postrecord.checksum[0] = hash;
+	}
     }
 
-    ent = getbnum(xboard);
-    assert(0<=ent-1 && ent-1<MAX_BOARD);
-    if (!CheckPostRestriction(ent))
+    if (!CheckPostRestriction(xbid))
     {
 	vmsg("你不夠資深喔！ (可在看板內按 i 查看限制)");
 	return FULLUPDATE;
     }
 
 #ifdef USE_COOLDOWN
-   if(check_cooldown(&bcache[ent - 1]))
+   if(check_cooldown(&bcache[xbid - 1]))
        return READ_REDRAW;
 #endif
 
-    ent = 1;
+    ans = 1;
     if (HasUserPerm(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2') {
-	    ent = 0;
+	    ans = 0;
 	    getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
 	    if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
 		author = 1;
 	}
     }
-    if (ent)
+    if (ans)
 	snprintf(xtitle, sizeof(xtitle), "[轉錄]%.66s", fhdr->title);
     else
 	strlcpy(xtitle, fhdr->title, sizeof(xtitle));

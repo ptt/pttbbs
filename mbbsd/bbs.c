@@ -1955,7 +1955,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 	{
 	    /* now point bp to new bord */
-	    xbid = getbnum(xboard);
+	    // NOTE: xbid should be already fetched before.
+	    assert(xbid == getbnum(xboard));
 	    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 	    bp = getbcache(xbid);
 	}
@@ -1979,7 +1980,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵) ");
 
 	// update crosspost record
-	if (hashPost == postrecord.checksum[0]) 
+	if (is_BM_cache(xbid)) {
+	    // ignore BM for cross-posting.
+	} else if (hashPost == postrecord.checksum[0]) 
 	    // && xbid != postrecord.last_bid)
 	{
 	    ++postrecord.times; // check will be done next time.
