@@ -1977,11 +1977,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	add_posttimes(usernum, 1);
 #endif
 	setbtotal(getbnum(xboard));
-	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵) ");
+	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
 	// update crosspost record
 	if (is_BM_cache(xbid)) {
 	    // ignore BM for cross-posting.
+	    outs(ANSI_COLOR(1;32) "此篇為板主轉錄，不自動檢查也不計入CP" 
+		 ANSI_RESET);
 	} else if (hashPost == postrecord.checksum[0]) 
 	    // && xbid != postrecord.last_bid)
 	{
