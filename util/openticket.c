@@ -21,6 +21,8 @@ int main(int argc, char **argv)
     attach_SHM();
     if(passwd_init())
 	exit(1);
+
+    chdir(BBSHOME);  // for sethomedir
     
     rename(BBSHOME "/etc/" FN_TICKET_RECORD,
            BBSHOME "/etc/" FN_TICKET_RECORD ".tmp");
@@ -93,11 +95,25 @@ int main(int argc, char **argv)
 	{
 	    if (mybet == bet)
 	    {
+                int oldm, newm;
 		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "幣\n"
 		       ,userid, num, betname[mybet], money * num);
-                if((uid=searchuser(userid, userid))==0) continue;
+                if((uid=searchuser(userid, userid))==0 ||
+                    !is_validuserid(userid)) 
+                    continue;
+
+                oldm = moneyof(uid);
 		deumoney(uid, money * num);
-		sprintf(genbuf, BBSHOME "/home/%c/%s", userid[0], userid);
+                newm = moneyof(uid);
+
+#ifdef FN_RECENTVICE
+                // check the format in mbbsd/cal.c:do_vice
+                sethomefile(genbuf, userid, FN_RECENTVICE);
+                log_filef(genbuf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s (%s x %d)\n",
+                        Cdatelite(&now), "收入",
+                        money * num, oldm, newm, "賭盤中獎", betname[mybet], num);
+#endif
+                sethomepath(genbuf, userid);
 		stampfile(genbuf, &mymail);
 		strcpy(mymail.owner, BBSNAME);
 		sprintf(mymail.title, "[%s] 中獎囉! $ %d", Cdatelite(&now), money * num);
