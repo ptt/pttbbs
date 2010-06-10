@@ -47,7 +47,10 @@
 #define POST_MONEY_RATIO (0.5f)
 #endif
 
+#ifndef ENTROPY_RATIO
 #define ENTROPY_RATIO	(0.25f)
+#endif
+
 #define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
 
 #if 0
