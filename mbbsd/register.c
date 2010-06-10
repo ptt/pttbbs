@@ -1638,7 +1638,7 @@ append_regform(const RegformEntry *pre, const char *logfn, const char *ext)
 	syncnow();
 	fprintf(fout, "Date: %s\n", Cdate(&now));
 	if (*ext)
-	    fprintf(fout, ext);
+	    fputs(ext, fout);
     }
     // close it
     fprintf(fout, "----\n");

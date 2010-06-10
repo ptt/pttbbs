@@ -81,7 +81,7 @@ getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney)
     return 0;
 }
 
-inline int
+int
 getindex(const char *direct, fileheader_t *fhdr, int end)
 {
   return getindex_m(direct, fhdr, end, 0);

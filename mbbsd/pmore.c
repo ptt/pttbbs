@@ -2069,7 +2069,7 @@ mf_display_footer(
     {
         buf[0] = 0;
         if(override_attr) outs(override_attr);
-        snprintf(buf, sizeof(buf), override_msg);
+        strlcpy(buf, override_msg, sizeof(buf));
         RESET_OVERRIDE_MSG();
     }
     else
