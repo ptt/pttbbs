@@ -18,7 +18,7 @@ char buf[], mode;
 	fprintf(fp, "[3%cm", state = mode);
     if (buf[0])
     {
-	fprintf(fp, buf);
+	fputs(buf, fp);
 	buf[0] = 0;
     }
 }

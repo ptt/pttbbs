@@ -127,7 +127,7 @@ int dobbsnnrp(char *serverstr, int serverid,FILE *fpscript)
 	    server[serverid].address,
 	    serverstr);
     if(fpscript)
-	fprintf(fpscript, buf);
+	fputs(buf, fpscript);
     return 0;
 }
 int main(int argc, char **argv)

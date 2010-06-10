@@ -29,7 +29,7 @@ int is_exist(char *brdname) {
     int i;
     hash_t *n;
 
-    i = string_hash(brdname);
+    i = string_hash((unsigned char*)brdname);
     for(n = hash_tbl[i]; n != NULL; n = n->next)
 	if(strcasecmp(brdname, n->brdname) == 0)
 	    return 1;
@@ -40,7 +40,7 @@ void add_hash(char *brdname) {
     int i;
     hash_t *n;
     
-    i = string_hash(brdname);
+    i = string_hash((unsigned char*)brdname);
     
     n = malloc(sizeof(*n));
     n->brdname = strdup(brdname);

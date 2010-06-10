@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
 	for (; n < MAX_DES && des[n][0] != 0; n++)
 	{
-	    fprintf(fp, des[n]);
+	    fputs(des[n], fp);
 	}
 
 	printf("\n\n¶}¼ú®É¶¡¡G %s \n\n"
