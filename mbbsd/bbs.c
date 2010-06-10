@@ -1859,6 +1859,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
 	    strlcpy(xtitle, genbuf, sizeof(xtitle));
     }
+    // FIXME 這裡可能會有人偷偷生出保留標題(如[公告])
+    // 不過算了，直接劣退這種人比較方便
+    // 反正本來就只是想解決「不小心」或是「假裝不小心」用到的情形。
+    // tn_safe_strip_board(xtitle, xboard);
 
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
 
@@ -3112,6 +3116,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	   // currently race condition is easily cause by 2 BMs
 	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
+            // do this immediately after .DIR change in case connection
+            // was closed.
+	    setbtotal(currbid);
 
 	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
             deleteCrossPost(fhdr, bp->brdname);
@@ -3127,14 +3134,14 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    // case 2, got error in file deletion (already deleted, also skip badpost)
 	    else if (!del_ok)
 	    {
-		move(1, 40); clrtoeol();
+		move_ansi(1, 40); clrtoeol();
 		outs("此檔已被別人刪除(跳過劣文設定)");
 		pressanykey();
 	    }
 	    // case 3, post older than one week (TODO use macro for the duration)
 	    else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
 	    {
-		move(1, 40); clrtoeol();
+		move_ansi(1, 40); clrtoeol();
 		outs("文章超過一週(跳過劣文設定)");
 		pressanykey();
 	    }
@@ -3142,15 +3149,17 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    else 
 	    {
 		// TODO not_owned 時也要改變 numpost?
-		getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
+		move_ansi(1, 40); clrtoeol();
+                outs("惡劣文章?(y/N) ");
+                // FIXME 有板主會在這裡不小心斷掉連線所以要小心...
+                // 重要的事最好在前面作完。
+                vgets(genbuf, 3, VGET_LOWERCASE);
 
 		if (genbuf[0]=='y') {
 		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
                 }
 	    }
 #endif // ASSESS
-
-	    setbtotal(currbid);
 
 	    // 扣錢前先把文章種類搞清楚
 	    // freebn/brd_bad: should be done before, but let's make it safer.
