@@ -2000,7 +2000,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	*islocal = local_article;
 
     if (curr_buf->sitesig_string)
-	fprintf(fp, curr_buf->sitesig_string);
+	fputs(curr_buf->sitesig_string, fp);
 
     if (currstat == POSTING || currstat == SMAIL)
     {
@@ -2771,7 +2771,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			    // 7 = *[0;1;3?
 			    if (x<0) {  attr[4] = '0'; x= -x; }
 			    attr[7] = '0' + x;
-			    prints(attr);
+			    outs(attr);
 			    doReset = 1;
 			}
 			if (!fWord)
