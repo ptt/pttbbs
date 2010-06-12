@@ -28,7 +28,6 @@
 #define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"       /* board list */
 #define FN_USEBOARD     "usboard"       /* ¬ÝªO²Î­p */
-#define FN_NOTE_ANS     "note.ans"
 #define FN_TOPSONG      "etc/topsong"
 #define FN_OVERRIDES    "overrides"
 #define FN_TICKET       "ticket"
@@ -46,6 +45,10 @@
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
 #ifndef SZ_RECENTLOGIN
 #define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation
+#endif
+#define FN_RECENTVICE	"vice.recent"	// in user directory
+#ifndef SZ_RECENTVICE
+#define SZ_RECENTVICE	(16000)		// size of max recent log before rotation
 #endif
 
 

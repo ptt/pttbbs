@@ -236,7 +236,7 @@ save_violatelaw(void)
 	return 0; 
     }
 
-    demoney(-1000 * cuser.vl_count);
+    vice(1000 * cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
     log_filef("log/violation", LOG_CREAT,
 	    "%s %s pay-violation: $%d complete.\n", 
@@ -1222,7 +1222,7 @@ do_general(int garbage)
 	{
             if (money > 0)
 	    {
-		demoney(money);    
+                vice(-money, "%s 看板發文稿酬: %s", currboard, postfile.title);
 		pwcuIncNumPost();
 		addPost = 1;
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元\n",
@@ -3017,11 +3017,9 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-#ifdef SAFE_ARTICLE_DELETE
-    char	    reason[PROPER_TITLE_LEN];
-#endif
+    char	    reason[PROPER_TITLE_LEN] = "";
     char            genbuf[100], newpath[PATHLEN];
-    int             not_owned, is_anon, tusernum, del_ok = 0;
+    int             not_owned, is_anon, tusernum, del_ok = 0, as_badpost = 0;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -3067,7 +3065,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
 #ifdef SAFE_ARTICLE_DELETE
-    reason[0] = 0;
     // query if user really wants to delete it
     if (not_owned && !is_anon && fhdr->owner[0])
     {
@@ -3157,6 +3154,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 		if (genbuf[0]=='y') {
 		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
+                    as_badpost = 1;
                 }
 	    }
 #endif // ASSESS
@@ -3192,7 +3190,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			    xuser.numposts--;
 			passwd_sync_update(tusernum, &xuser);
 		    }
-		    deumoney(tusernum, -fhdr->multi.money);
+                    vice_to(tusernum, fhdr->multi.money, 
+                            "%s 看板 文章「%s」被%s，扣除稿酬%s %s", 
+                            currboard, 
+                            fhdr->title, 
+                            as_badpost ? "劣退" : "刪除",
+                            reason[0] ? "。原因:" : "", reason);
 		    sendalert_uid(tusernum, ALERT_PWD_PERM);
 #ifdef USE_COOLDOWN
 		    if (bp->brdattr & BRD_COOLDOWN)
@@ -3204,7 +3207,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    {
 		// owner case
 		pwcuDecNumPost();
-		demoney(-fhdr->multi.money);
+                vice(fhdr->multi.money, "%s 看板 文章自刪清潔費: %s", 
+                        currboard, fhdr->title);
 		sendalert(cuser.userid, ALERT_PWD_PERM);
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
 			cuser.numposts, fhdr->multi.money);
@@ -3663,7 +3667,11 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
-	    deumoney(searchuser(fhdr->owner, NULL), -1000); // TODO if searchuser() return 0
+            int unum = searchuser(fhdr->owner, NULL);
+            if (unum > 0) {
+                vice_to(unum, 1000, "取消 %s 看板文摘", currboard);
+            }
+
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
 	    else
@@ -3709,7 +3717,10 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
-	    deumoney(searchuser(fhdr->owner, NULL), 1000); // TODO if searchuser() return 0
+            int unum = searchuser(fhdr->owner, NULL);
+            if (unum > 0) {
+                vice_to(unum, -1000, "被選入 %s 看板文摘", currboard);
+            }
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
 	    else

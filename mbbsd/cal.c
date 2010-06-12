@@ -57,28 +57,74 @@ unlockutmpmode(void)
     return 0;
 }
 
-/* 使用錢的函數 */
-#define VICE_NEW   "vice.new"
-
-/* Heat:發票 */
-int
-vice(int money, const char *item)
+static int
+do_vice(int uid, int money, const char *item, const char *reason) 
 {
-    char            buf[128];
-    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + 
-	random() % 10000;
+    char buf[PATHLEN];
+    int oldm, newm;
+    const char *userid;
 
-    // new logic: do not send useless vice tickets
-    demoney(-money);
-    if (money < VICE_MIN)
-	return 0;
+    assert(money != 0);
+    userid = getuserid(uid);
+    assert(userid);
+    assert(reason);
 
-    setuserfile(buf, VICE_NEW);
-    log_filef(buf, LOG_CREAT, "%8.8d\n", viceserial);
-    snprintf(buf, sizeof(buf),
-	    "%s 花了$%d 編號[%08d]", item, money, viceserial);
-    mail_id(cuser.userid, buf, "etc/vice.txt", BBSMNAME "經濟部");
-    return 0;
+    // if we cannot find user, abort
+    if (!userid)
+        return -1;
+
+    oldm = moneyof(uid);
+    newm = deumoney(uid, -money);
+    if (uid == usernum)
+        reload_money();
+
+    sethomefile(buf, userid, FN_RECENTVICE);
+    rotate_text_logfile(buf, SZ_RECENTVICE, 0.2);
+    syncnow();
+
+
+    log_filef(buf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s\n",
+            Cdatelite(&now), 
+            money >= 0 ? "支出" : "收入",
+            money >= 0 ? money : -money, 
+            oldm, newm, reason);
+    return newm;
+}
+
+int
+vice_to(int uid, int money, const char *item, ...)
+{
+    va_list ap;
+    char reason[STRLEN*3] ="";
+
+    if (!money)
+        return 0;
+
+    if (item) {
+        va_start(ap, item);
+        vsnprintf(reason, sizeof(reason)-1, item, ap);
+        va_end(ap);
+    }
+
+    return do_vice(uid, money, item, reason);
+}
+
+int
+vice(int money, const char *item, ...)
+{
+    va_list ap;
+    char reason[STRLEN*3] ="";
+
+    if (!money)
+        return 0;
+
+    if (item) {
+        va_start(ap, item);
+        vsnprintf(reason, sizeof(reason)-1, item, ap);
+        va_end(ap);
+    }
+
+    return do_vice(usernum, money, item, reason);
 }
 
 static int
@@ -88,21 +134,15 @@ inmailbox(int m)
     return cuser.exmailbox;
 }
 
-
 int
 p_from(void)
 {
     char tmp_from[sizeof(currutmp->from)];
-    if (vans("確定要改故鄉?[y/N]") != 'y')
-	return 0;
-    reload_money();
-    if (cuser.money < 49)
-	return 0;
+    strlcpy(tmp_from, currutmp->from, sizeof(tmp_from));
     if (getdata(b_lines - 1, 0, "請輸入新故鄉:",
 		tmp_from, sizeof(tmp_from), DOECHO) &&
 	strcmp(tmp_from, currutmp->from) != 0) 
     {
-	vice(49, "更改故鄉");
 	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
     }
     return 0;
@@ -253,7 +293,7 @@ give_money_vget_peekcb(int key, VGET_RUNTIME *prt, void *instance)
     return VGETCB_NEXT;
 }
 
-int do_give_money(char *id, int uid, int money)
+int do_give_money(char *id, int uid, int money, const char *myid)
 {
     int tax;
 
@@ -266,10 +306,17 @@ int do_give_money(char *id, int uid, int money)
 	return -1;		/* 繳完稅就沒錢給了 */
 
     // 實際給予金錢。
-    deumoney(uid, money - tax);
-    demoney(-money);
     log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
 	    cuser.userid, id, money, money - tax, Cdate(&now));
+
+    if (strcmp(myid, cuser.userid) != 0) 
+        vice(money, "以 %s 的名義轉帳給 %s (稅後 $%d)", 
+             myid, id, money - tax);
+    else
+        vice(money, "轉帳給 %s (稅後 $%d)", id, money - tax);
+
+    vice_to(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)",
+            myid, money);
 
     // penalty
     if (money < 50) {
@@ -418,7 +465,7 @@ give_money_ui(const char *userid)
     outs("\n交易正在進行中，請稍候...\n"); 
     refresh();
 
-    if(do_give_money(id, uid, m) < 0)
+    if(do_give_money(id, uid, m, myid) < 0)
     {
 	outs(ANSI_COLOR(1;31) "交易失敗！" ANSI_RESET "\n");
 	vmsg("交易失敗。");
@@ -426,6 +473,9 @@ give_money_ui(const char *userid)
     }
 
     outs(ANSI_COLOR(1;33) "交易完成！" ANSI_RESET "\n");
+    outs("您可以於下列位置找到最近的交易記錄:\n"
+         "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => "
+         "(V)RecentVice 最近交易記錄\n");
 
     // transaction complete.
     {

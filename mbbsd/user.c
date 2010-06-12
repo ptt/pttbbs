@@ -62,9 +62,14 @@ u_loginview(void)
 
     clear();
     move(4, 0);
-    for (i = 0; i < NUMVIEWFILE && loginview_file[i][0]; i++)
+    for (i = 0; i < NUMVIEWFILE && loginview_file[i][0]; i++) {
+        // skip deprecated items
+        const char *desc = loginview_file[i][1];
+        if (!desc || !*desc)
+            desc = "(«O¯d)";
 	prints("    %c. %-20s %-15s \n", 'A' + i,
-	       loginview_file[i][1], ((pbits >> i) & 1 ? "£¾" : "¢æ"));
+	       desc, ((pbits >> i) & 1 ? "£¾" : "¢æ"));
+    }
     in = i;
 
     clrtobot();

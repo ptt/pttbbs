@@ -123,13 +123,14 @@ const char * postperm_msg(const char *bname);
 
 /* cal */
 const char* money_level(int money);
-int vice(int money, const char* item);
+int vice(int money, const char* item, ...) GCC_CHECK_FORMAT(2,3);
+int vice_to(int money, int uid, const char* item, ...) GCC_CHECK_FORMAT(3, 4);
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
 int give_money(void);
 int p_sysinfo(void);
-int do_give_money(char *id, int uid, int money);
+int do_give_money(char *id, int uid, int money, const char *myid);
 int give_money_ui(const char *userid);
 int p_give(void);
 int p_cloak(void);
@@ -477,6 +478,9 @@ int get_sum_records(const char* fpath, int size);
 int substitute_ref_record(const char* direct, fileheader_t *fhdr, int ent);
 inline
 int getindex(const char *fpath, fileheader_t *fh, int start);
+int rotate_bin_logfile(const char *filename, off_t record_size, 
+                       off_t max_size, float keep_ratio);
+int rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio);
 
 /* register */
 int u_register(void);
@@ -664,9 +668,6 @@ int b_results(void);
 int b_vote(void);
 int b_vote_maintain(void);
 void auto_close_polls(void);
-
-/* vice */
-int vice_main(void);
 
 /* voteboard */
 int do_voteboard(int);

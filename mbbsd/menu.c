@@ -634,6 +634,22 @@ static int u_view_recentlogin()
     return more(fn, YEA);
 }
 
+static int u_view_recentvice()
+{
+    char fn[PATHLEN];
+    clear();
+    move(10, 0);
+
+    outs("\t請注意 - 此資料仍在實驗中，僅供參考。\n\n"
+         "\t部份金錢交易種類(如系統賭盤開獎)可能暫時不會出現在列表內。\n"
+         "\t也就是說您手上的金錢數目有可能與最後列出數字不合。\n\n"
+         );
+    pressanykey();
+
+    setuserfile(fn, FN_RECENTVICE);
+    return more(fn, YEA);
+}
+
 static const commands_t myfilelist[] = {
     {u_editplan,    PERM_LOGINOK,   "QQueryEdit     編輯名片檔"},
     {u_editsig,	    PERM_LOGINOK,   "SSignature     編輯簽名檔"},
@@ -641,7 +657,8 @@ static const commands_t myfilelist[] = {
 };
 
 static const commands_t myuserlog[] = {
-    {u_view_recentlogin, 0,   "LLRecent Login  最近上站記錄"},
+    {u_view_recentlogin, 0, "LLRecent Login  最近上站記錄"},
+    {u_view_recentvice,  0, "VVRecent Vice   最近交易記錄"},
     {NULL, 0, NULL}
 };
 
@@ -676,7 +693,7 @@ static const commands_t userlist[] = {
     {calendar,	    PERM_LOGINOK,   "CCalendar      行事曆"},
     {u_loginview,   PERM_BASIC,     "VVLogin View    選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
-    {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線...)"},
+    {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線,金錢...)"},
     {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},
     {u_register,    MENU_UNREGONLY, "RRegister      填寫《註冊申請單》"},
 #ifdef ASSESS
@@ -788,7 +805,6 @@ static const commands_t xyzlist[] = {
     {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
     {x_history, 0,   "HHistory       《我們的成長》"},
-    {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
 #ifdef HAVE_SYSUPDATES
     {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
@@ -807,9 +823,9 @@ static const commands_t xyzlist[] = {
 static const commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
-    {p_from, 0,         "33From        暫時修改故鄉     $49  /次"},
-    {ordersong,0,       "44OSong       歐桑動態點歌機   $200 /次"},
-    {p_exmail, 0,       "55Exmail      購買信箱         $1000/封"},
+    {p_from, 0,         "33From        暫時修改故鄉  "},
+    {ordersong,0,       "44OSong       歐桑動態點歌機"},
+    {p_exmail, 0,       "55Exmail      購買信箱       $1000/封"},
     {NULL, 0, NULL}
 };
 
@@ -852,7 +868,6 @@ static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
-    {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
     {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) 
 			     " " BBSMNAME2 "量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, 
@@ -886,10 +901,9 @@ static int chessroom() {
 static const commands_t plist[] = {
 
     {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
-    {vice_main, PERM_LOGINOK,    "22Vice        【 發票對獎 】"},
-    {g_card_jack, PERM_LOGINOK,  "33Jack        【  黑傑克  】"},
-    {g_ten_helf, PERM_LOGINOK,   "44Tenhalf     【  十點半  】"},
-    {card_99, PERM_LOGINOK,      "55Nine        【  九十九  】"},
+    {g_card_jack, PERM_LOGINOK,  "22Jack        【  黑傑克  】"},
+    {g_ten_helf, PERM_LOGINOK,   "33Tenhalf     【  十點半  】"},
+    {card_99, PERM_LOGINOK,      "44Nine        【  九十九  】"},
     {NULL, 0, NULL}
 };
 

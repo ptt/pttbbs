@@ -1335,7 +1335,7 @@ user_login(void)
 		// since only one special now, let's write directly...
 		if (strcmp(fn, "@calendar") == 0)
 		    calendar();
-	    } else {
+	    } else if (*fn) {
 		// use NA+pause or YEA?
 		more(fn, YEA);
 	    }
