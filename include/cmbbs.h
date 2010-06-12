@@ -18,6 +18,7 @@ extern void sethomepath(char *buf, const char *userid);
 extern void sethomedir (char *buf, const char *userid);
 extern void sethomeman (char *buf, const char *userid);
 extern void sethomefile(char *buf, const char *userid, const char *fname);
+extern void setuserhashedfile(char *buf, const char *filename);
 // setbdir
 // setuserfile
 

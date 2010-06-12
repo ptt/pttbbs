@@ -40,7 +40,6 @@ sethomeman(char *buf, const char *userid)
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, "man");
 }
 
-
 void
 sethomefile(char *buf, const char *userid, const char *fname)
 {
@@ -48,6 +47,23 @@ sethomefile(char *buf, const char *userid, const char *fname)
     assert(fname[0]);
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
+
+void 
+setuserhashedfile(char *buf, const char *filename)
+{
+#ifdef USERHASHSTORE_ROOTPATH
+    // hash designed by kcwu
+    unsigned hash = StringHash(cuser.userid) & 0xffff;
+    assert(is_validuserid(cuser.userid));
+    snprintf(buf, PATHLEN, 
+            USERHASHSTORE_ROOTPATH "/%02x/%02x/%s.%s.%x",
+            (hash >> 8) & 0xff, hash & 0xff, 
+            filename, cuser.userid, cuser.firstlogin);
+#else
+    assert(!"you must define and initialize USERHASHSTORE_ROOTPATH");
+#endif
+}
+
 
 void
 setapath(char *buf, const char *boardname)
