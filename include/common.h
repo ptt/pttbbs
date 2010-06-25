@@ -28,7 +28,6 @@
 #define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"       /* board list */
 #define FN_USEBOARD     "usboard"       /* ¬ÝªO²Î­p */
-#define FN_NOTE_ANS     "note.ans"
 #define FN_TOPSONG      "etc/topsong"
 #define FN_OVERRIDES    "overrides"
 #define FN_TICKET       "ticket"

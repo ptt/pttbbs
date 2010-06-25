@@ -788,7 +788,6 @@ static const commands_t xyzlist[] = {
     {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
     {x_history, 0,   "HHistory       《我們的成長》"},
-    {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
 #ifdef HAVE_SYSUPDATES
     {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
@@ -852,7 +851,6 @@ static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
-    {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
     {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) 
 			     " " BBSMNAME2 "量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, 

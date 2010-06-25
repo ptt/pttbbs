@@ -1328,16 +1328,25 @@ user_login(void)
 	if ((cuser.loginview >> i) & 1)
 	{
 	    const char *fn = loginview_file[(int)i][0];
+            // fn == '\0': ignore; NULL: break;
 	    if (!fn)
 		break;
-	    if (*fn == '@') // special
-	    {
-		// since only one special now, let's write directly...
-		if (strcmp(fn, "@calendar") == 0)
-		    calendar();
-	    } else {
-		// use NA+pause or YEA?
-		more(fn, YEA);
+
+            switch (*fn) {
+                case '\0':
+                    // simply ignore it.
+                    break;
+
+                case '@':
+                    // since only one special now, let's write directly...
+                    if (strcmp(fn, "@calendar") == 0)
+                        calendar();
+                    break;
+
+                default:
+                    // use NA+pause or YEA?
+                    more(fn, YEA);
+                    break;
 	    }
 	}
     }

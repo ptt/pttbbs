@@ -675,7 +675,6 @@ void do_voteboardreply(const fileheader_t *fhdr);
 /* xyz */
 int m_sysop(void);
 int x_boardman(void);
-int x_note(void);
 int x_login(void);
 int x_week(void);
 int x_issue(void);
@@ -687,7 +686,6 @@ int x_history(void);
 int x_weather(void);
 int x_stock(void);
 int x_mrtmap(void);
-int note(void);
 int Goodbye(void);
 
 /* BBS-LUA */

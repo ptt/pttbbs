@@ -374,7 +374,8 @@ cmputmpuid(const void * i, const void * j)
     return SHM->uinfo[*(int*)i].uid - SHM->uinfo[*(int*)j].uid;
 }
 
-inline void utmpsort(int sortall)
+static inline 
+void utmpsort(int sortall)
 {
     userinfo_t     *uentp;
     int             count, i, ns;

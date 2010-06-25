@@ -118,7 +118,6 @@ unsigned int    currstat;
 
 char * const fn_passwd = FN_PASSWD;
 char * const fn_board = FN_BOARD;
-char * const fn_note_ans = FN_NOTE_ANS;
 const char * const fn_plans = "plans";
 const char * const fn_writelog = "writelog";
 const char * const fn_talklog = "talklog";
@@ -134,7 +133,7 @@ const char * const fn_boardhelp = FN_BOARDHELP;
 /* are descript in userec.loginview */
 
 char           * const loginview_file[NUMVIEWFILE][2] = {
-    {FN_NOTE_ANS, "酸甜苦辣流言板"},
+    {"", "(保留)"},
     {FN_TOPSONG, "點歌排行榜"},
     {"etc/topusr", "十大排行榜"},
     {"etc/topusr100", "百大排行榜"},

@@ -60,26 +60,28 @@ u_loginview(void)
     int             i, in;
     unsigned int    pbits = cuser.loginview;
 
-    clear();
-    move(4, 0);
-    for (i = 0; i < NUMVIEWFILE && loginview_file[i][0]; i++)
-	prints("    %c. %-20s %-15s \n", 'A' + i,
-	       loginview_file[i][1], ((pbits >> i) & 1 ? "ˇ" : "Ｘ"));
-    in = i;
-
-    clrtobot();
-    while ((i = vmsgf("請按 [A-%c] 切換設定，按 [Return] 結束：", 
-		    'A'+in-1))!='\r')
-       {
-	i = i - 'a';
-	if (i >= in || i < 0)
-	    bell();
-	else {
-	    pbits ^= (1 << i);
-	    move(i + 4, 28);
-	    outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
-	}
-    }
+    do {
+        vs_hdr("設定進站畫面");
+        move(4, 0);
+        for (i = 0; i < NUMVIEWFILE && loginview_file[i][0]; i++) {
+            // ignore those without file name
+            if (!*loginview_file[i][0])
+                continue;
+            prints("    %c. %-20s %-15s \n", 'A' + i,
+                    loginview_file[i][1], ((pbits >> i) & 1 ? "ˇ" : "Ｘ"));
+        }
+        in = i; // max i
+        i = vmsgf("請按 [A-%c] 切換設定，按 [Return] 結束：", 'A'+in-1);
+        if (i == '\r')
+            break;
+        // process i
+        i = tolower(i) - 'a';
+        if (i >= in || i < 0 || !*loginview_file[i][0]) {
+            bell();
+            continue;
+        }
+        pbits ^= (1 << i);
+    } while (1);
 
     if (pbits != cuser.loginview) {
 	pwcuSetLoginView(pbits);
