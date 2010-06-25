@@ -9,7 +9,7 @@ money_level(int money)
 
     static const char *money_msg[] =
     {
-	"債台高築", "赤貧", "清寒", "普通", "小康",
+	"家徒四壁", "赤貧", "清寒", "普通", "小康",
 	"小富", "中富", "大富翁", "富可敵國", "比爾蓋\天", NULL
     };
     while (money_msg[i] && money > 10)
