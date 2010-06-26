@@ -131,7 +131,6 @@ int unlockutmpmode(void);
 int x_file(void);
 int give_money(void);
 int p_sysinfo(void);
-int do_give_money(char *id, int uid, int money);
 int give_money_ui(const char *userid);
 int p_give(void);
 int p_cloak(void);

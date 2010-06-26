@@ -147,8 +147,11 @@ int
 p_from(void)
 {
     char tmp_from[sizeof(currutmp->from)];
+
     if (vans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
+
+    strlcpy(tmp_from, currutmp->from, sizeof(tmp_from)); 
     if (getdata(b_lines - 1, 0, "請輸入新故鄉:",
 		tmp_from, sizeof(tmp_from), DOECHO) &&
 	strcmp(tmp_from, currutmp->from) != 0) 
@@ -194,7 +197,7 @@ p_exmail(void)
 	return 0;
 
     reload_money();
-    vice(n * 1000, "購買信箱");
+    pay(n * 1000, "購買信箱");
     inmailbox(n);
     log_filef("log/exmailbox.log", LOG_CREAT,
 	    "%-13s %d+%d->%d %s\n", cuser.userid, 
@@ -303,7 +306,8 @@ give_money_vget_peekcb(int key, VGET_RUNTIME *prt, void *instance)
     return VGETCB_NEXT;
 }
 
-int do_give_money(char *id, int uid, int money)
+static int
+do_give_money(char *id, int uid, int money, const char *myid)
 {
     int tax;
 
@@ -468,7 +472,7 @@ give_money_ui(const char *userid)
     outs("\n交易正在進行中，請稍候...\n"); 
     refresh();
 
-    if(do_give_money(id, uid, m) < 0)
+    if(do_give_money(id, uid, m, myid) < 0)
     {
 	outs(ANSI_COLOR(1;31) "交易失敗！" ANSI_RESET "\n");
 	vmsg("交易失敗。");

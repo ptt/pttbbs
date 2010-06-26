@@ -158,10 +158,7 @@ buy_ticket_ui(int money, const char *picture, int *item,
     }
 
     *item += num;
-
-    // TODO uncomment this when we enable detail logs someday
-    // vice(money * num, "%s賭盤[種類%d,張數%d]", title, type+1, num); 
-    demoney(-money * num);
+    pay(money * num, "%s賭盤[種類%d,張數%d]", title, type+1, num); 
 
     // XXX magic numbers 5, 14...
     show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
@@ -334,15 +331,12 @@ openticket(int bid)
 
 	forBM = money * 0.0005;
 	if(forBM > 500) forBM = 500;
-
-        // XXX  enable this for detail log
-        // vice(-forBM, "%s 賭場抽頭", bh->brdname);
-	demoney(forBM);
+        pay(-forBM, "%s 賭場抽頭", bh->brdname);
 
 	mail_redenvelop("[賭場抽頭]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
-	vice(price * 10, "賭盤退錢手續費");
+	pay(price * 10, "賭盤退錢手續費");
 	money = price;
     }
     setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);

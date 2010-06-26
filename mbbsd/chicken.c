@@ -227,7 +227,7 @@ new_chicken(void)
 	vmsg("錢不夠了。");
 	return 0;
     }
-    vice(price, "寵物蛋");
+    pay(price, "寵物蛋");
 
     // flush it
     setuserfile(fn, FN_CHICKEN);
@@ -468,7 +468,7 @@ ch_buyitem(int money, const char *picture, int *item)
     reload_money();
     if (cuser.money/money >= num) {
 	*item += num;
-        vice(money * num, "購買寵物");
+        pay(money * num, "購買寵物");
 	show_chicken_picture(picture);
         pressanykey();
     } else {
@@ -514,7 +514,7 @@ ch_kill(chicken_t *mychicken)
     ans = vans("棄養要被罰 100 元, 是否要棄養?(y/N)");
     if (ans == 'y') {
 
-	vice(100, "棄養寵物費");
+	pay(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
 	log_filef(CHICKENLOG, LOG_CREAT,
 		 ANSI_COLOR(31) "%s " ANSI_RESET "把 " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(32) " %s "
@@ -908,7 +908,7 @@ recover_chicken(chicken_t * thechicken)
 	    return 0;
 	}
 	revive_chicken(thechicken, 0);
-	vice(money, "靈界守衛");
+	pay(money, "靈界守衛");
 	snprintf(buf, sizeof(buf),
 	     ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 	     " OK了 記得餵他點東西 不然可能失效。"

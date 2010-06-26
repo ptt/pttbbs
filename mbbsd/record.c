@@ -438,6 +438,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     return 0;
 }
 
+// return 1 if rotated, otherwise 0 
 int 
 rotate_bin_logfile(const char *filename, off_t record_size,  
                    off_t max_size, float keep_ratio) 
@@ -454,6 +455,7 @@ rotate_bin_logfile(const char *filename, off_t record_size,
     return 1; 
 } 
  
+// return 1 if rotated, otherwise 0 
 int 
 rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio) 
 { 
