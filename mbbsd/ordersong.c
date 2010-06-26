@@ -11,7 +11,10 @@
 #define ORDERSONG_MIN_NUMPOST   (3) 
 #endif 
 #ifndef ORDERSONG_MAX_BADPOST 
-#define ORDERSONG_MAX_BADPOST   (2) 
+#define ORDERSONG_MAX_BADPOST   (1) 
+#endif 
+#ifndef ORDERSONG_MIN_NUMLOGINDAYS 
+#define ORDERSONG_MIN_NUMLOGINDAYS   (30) 
 #endif 
 
 #define MAX_SONGS (MAX_ADBANNER-100) // (400) XXX MAX_SONGS should be fewer than MAX_ADBANNER.
@@ -30,7 +33,7 @@ do_order_song(void)
     int             nsongs;
     char save_title[STRLEN];
 
-    // 由於變免費了，改成要文章數吧 
+    // 由於變免費了，改成要文章數跟登入天數
 #ifdef ORDERSONG_MIN_NUMPOST 
     if (cuser.numposts < ORDERSONG_MIN_NUMPOST) { 
         vmsgf("為避免濫用，點歌前請先獲得 %d 篇有效文章記錄", 
@@ -45,6 +48,13 @@ do_order_song(void)
         return 0; 
     } 
 #endif 
+#ifdef ORDERSONG_MIN_NUMLOGINDAYS
+    if (cuser.numlogindays < ORDERSONG_MIN_NUMLOGINDAYS) { 
+        vmsgf("為避免濫用，點歌前要先有%s %d %s",  
+                STR_LOGINDAYS, ORDERSONG_MIN_NUMLOGINDAYS, STR_LOGINDAYS_QTY);
+        return 0; 
+    } 
+#endif
 
     strlcpy(buf, Cdatedate(&now), sizeof(buf));
     lockreturn0(OSONG, LOCK_MULTI);
