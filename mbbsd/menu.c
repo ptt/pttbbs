@@ -806,7 +806,7 @@ static const commands_t xyzlist[] = {
 static const commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
-    {p_from, 0,         "33From        暫時修改故鄉     $49  /次"},
+    {p_from, 0,         "33From        暫時修改故鄉"},
     {ordersong,0,       "44OSong       歐桑動態點歌機   $200 /次"},
     {p_exmail, 0,       "55Exmail      購買信箱         $1000/封"},
     {NULL, 0, NULL}

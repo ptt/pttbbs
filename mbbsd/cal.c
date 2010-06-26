@@ -95,14 +95,10 @@ p_from(void)
     char tmp_from[sizeof(currutmp->from)];
     if (vans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
-    reload_money();
-    if (cuser.money < 49)
-	return 0;
     if (getdata(b_lines - 1, 0, "請輸入新故鄉:",
 		tmp_from, sizeof(tmp_from), DOECHO) &&
 	strcmp(tmp_from, currutmp->from) != 0) 
     {
-	vice(49, "更改故鄉");
 	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
     }
     return 0;
