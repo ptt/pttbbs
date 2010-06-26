@@ -138,7 +138,8 @@ append_ticket_record(const char *direct, int ch, int n, int count)
 }
 
 void
-buy_ticket_ui(int money, const char *picture, int *item, int haveticket)
+buy_ticket_ui(int money, const char *picture, int *item,
+              int type, const char *title)
 {
     int             num = 0;
     char            buf[5];
@@ -157,10 +158,11 @@ buy_ticket_ui(int money, const char *picture, int *item, int haveticket)
     }
 
     *item += num;
-    if( haveticket )
-	vice(money * num, "賭盤項目");
-    else
-	demoney(-money * num);
+
+    // TODO uncomment this when we enable detail logs someday
+    // vice(money * num, "%s賭盤[種類%d,張數%d]", title, type+1, num); 
+    demoney(-money * num);
+
     // XXX magic numbers 5, 14...
     show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
     pressanykey();
@@ -213,7 +215,8 @@ ticket(int bid)
 	    continue;
 	n = 0;
 
-	buy_ticket_ui(price, "etc/buyticket", &n, 0);
+	buy_ticket_ui(price, "etc/buyticket", &n, ch, 
+                      bh ? bh->brdname : BBSMNAME);
 
 	if (bid && !dashf(fn_ticket))
 	    goto doesnt_catch_up;
@@ -229,8 +232,12 @@ ticket(int bid)
 doesnt_catch_up:
 
     price = price * n;
-    if (price > 0)
+    // XXX 這是因為停止下注所以退錢？ 感覺好危險+race condition 
+    if (price > 0) {
+        // TODO enable this for detail log
+        // vice_to(currutmp->uid, -price, "下注失敗退費");
 	deumoney(currutmp->uid, price);
+    }
     vmsg("板主已經停止下注了 不能賭嚕");
     unlockutmpmode();
     return -1;
@@ -328,7 +335,10 @@ openticket(int bid)
 	forBM = money * 0.0005;
 	if(forBM > 500) forBM = 500;
 
+        // XXX  enable this for detail log
+        // vice(-forBM, "%s 賭場抽頭", bh->brdname);
 	demoney(forBM);
+
 	mail_redenvelop("[賭場抽頭]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
@@ -395,6 +405,8 @@ openticket(int bid)
 		continue;
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
+            // XXX enable this for detail log
+            // vice_to(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]", betname[mybet]); 
 	    deumoney(uid, money * i);
 	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "賭場");
 	}

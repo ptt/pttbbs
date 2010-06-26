@@ -674,7 +674,7 @@ static const commands_t userlist[] = {
     {u_customize,   PERM_BASIC,	    "UUCustomize    個人化設定"},
     {u_info,	    PERM_LOGINOK,   "IInfo          設定個人資料與密碼"},
     {calendar,	    PERM_LOGINOK,   "CCalendar      行事曆"},
-    {u_loginview,   PERM_BASIC,     "VVLogin View    選擇進站畫面"},
+    {u_loginview,   PERM_BASIC,     "VVLogin View   選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線...)"},
     {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},

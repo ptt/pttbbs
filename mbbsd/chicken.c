@@ -455,7 +455,7 @@ ch_hit(chicken_t *mychicken)
 
 //static 
 void
-ch_buyitem(int money, const char *picture, int *item, int haveticket)
+ch_buyitem(int money, const char *picture, int *item)
 {
     int             num = 0;
     char            buf[5];
@@ -468,10 +468,7 @@ ch_buyitem(int money, const char *picture, int *item, int haveticket)
     reload_money();
     if (cuser.money/money >= num) {
 	*item += num;
-	if( haveticket )
-	    vice(money * num, "購買寵物");
-	else
-	    demoney(-money * num);
+        vice(money * num, "購買寵物");
 	show_chicken_picture(picture);
         pressanykey();
     } else {
@@ -817,7 +814,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 	    break;
 	case '7':
 	    ch_buyitem(food_price[(int)mychicken->type], CHICKEN_PIC "/food",
-		       &mychicken->food, 1);
+		       &mychicken->food);
 	    break;
 	case '8':
 	    ch_eatoo(mychicken);
@@ -827,11 +824,11 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 	    break;
 	case 'O':
 	case 'o':
-	    ch_buyitem(100, CHICKEN_PIC "/buyoo", &mychicken->oo, 1);
+	    ch_buyitem(100, CHICKEN_PIC "/buyoo", &mychicken->oo);
 	    break;
 	case 'M':
 	case 'm':
-	    ch_buyitem(10, CHICKEN_PIC "/buymedicine", &mychicken->medicine, 1);
+	    ch_buyitem(10, CHICKEN_PIC "/buymedicine", &mychicken->medicine);
 	    break;
 	case 'N':
 	case 'n':

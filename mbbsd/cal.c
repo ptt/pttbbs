@@ -57,28 +57,82 @@ unlockutmpmode(void)
     return 0;
 }
 
-/* 使用錢的函數 */
-#define VICE_NEW   "vice.new"
+static int 
+do_pay(int uid, int money, const char *item, const char *reason)  
+{ 
+    int oldm, newm; 
+    const char *userid; 
+ 
+    assert(money != 0); 
+    userid = getuserid(uid); 
+    assert(userid); 
+    assert(reason); 
+ 
+    // if we cannot find user, abort 
+    if (!userid) 
+        return -1; 
+ 
+    oldm = moneyof(uid); 
+    newm = deumoney(uid, -money); 
+    if (uid == usernum) 
+        reload_money(); 
+ 
+#ifdef FN_RECENTVICE
 
-/* Heat:發票 */
-int
-vice(int money, const char *item)
-{
-    char            buf[128];
-    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + 
-	random() % 10000;
+    char buf[PATHLEN]; 
+    sethomefile(buf, userid, FN_RECENTVICE); 
+    rotate_text_logfile(buf, SZ_RECENTVICE, 0.2); 
+    syncnow(); 
+    log_filef(buf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s\n", 
+            Cdatelite(&now),  
+            money >= 0 ? "支出" : "收入", 
+            money >= 0 ? money : -money,  
+            oldm, newm, reason); 
+#endif
 
-    // new logic: do not send useless vice tickets
-    demoney(-money);
-    if (money < VICE_MIN)
-	return 0;
+    return newm; 
+} 
+ 
+int 
+pay_as(int uid, int money, const char *item, ...) 
+{ 
+    va_list ap; 
+    char reason[STRLEN*3] =""; 
+ 
+    if (!money) 
+        return 0; 
+ 
+    if (item) { 
+        va_start(ap, item); 
+        vsnprintf(reason, sizeof(reason)-1, item, ap); 
+        va_end(ap); 
+    } 
+ 
+    return do_pay(uid, money, item, reason); 
+} 
+ 
+int 
+pay(int money, const char *item, ...) 
+{ 
+    va_list ap; 
+    char reason[STRLEN*3] =""; 
+ 
+    if (!money) 
+        return 0; 
+ 
+    if (item) { 
+        va_start(ap, item); 
+        vsnprintf(reason, sizeof(reason)-1, item, ap); 
+        va_end(ap); 
+    } 
+ 
+    return do_pay(usernum, money, item, reason); 
+}
 
-    setuserfile(buf, VICE_NEW);
-    log_filef(buf, LOG_CREAT, "%8.8d\n", viceserial);
-    snprintf(buf, sizeof(buf),
-	    "%s 花了$%d 編號[%08d]", item, money, viceserial);
-    mail_id(cuser.userid, buf, "etc/vice.txt", BBSMNAME "經濟部");
-    return 0;
+// compatible mode: vice
+int 
+vice(int money, const char *item) {
+    return pay(money, item);
 }
 
 static int

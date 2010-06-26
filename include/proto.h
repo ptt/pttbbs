@@ -124,6 +124,8 @@ const char * postperm_msg(const char *bname);
 /* cal */
 const char* money_level(int money);
 int vice(int money, const char* item);
+int pay(int money, const char *item, ...);
+int pay_as(int uid, int money, const char *item, ...);
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
