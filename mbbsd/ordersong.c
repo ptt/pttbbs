@@ -6,7 +6,13 @@
 #define lockbreak(unmode, state)   if(lockutmpmode(unmode, state)) break
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
-#define ORDER_SONG_COST   (200)	// how much to order a song
+
+#ifndef ORDERSONG_MIN_NUMPOST 
+#define ORDERSONG_MIN_NUMPOST   (3) 
+#endif 
+#ifndef ORDERSONG_MAX_BADPOST 
+#define ORDERSONG_MAX_BADPOST   (2) 
+#endif 
 
 #define MAX_SONGS (MAX_ADBANNER-100) // (400) XXX MAX_SONGS should be fewer than MAX_ADBANNER.
 
@@ -24,8 +30,23 @@ do_order_song(void)
     int             nsongs;
     char save_title[STRLEN];
 
-    strlcpy(buf, Cdatedate(&now), sizeof(buf));
+    // 由於變免費了，改成要文章數吧 
+#ifdef ORDERSONG_MIN_NUMPOST 
+    if (cuser.numposts < ORDERSONG_MIN_NUMPOST) { 
+        vmsgf("為避免濫用，點歌前請先獲得 %d 篇有效文章記錄", 
+                ORDERSONG_MIN_NUMPOST); 
+        return 0; 
+    } 
+#endif 
+#ifdef ORDERSONG_MAX_BADPOST 
+    if (cuser.badpost > ORDERSONG_MAX_BADPOST) { 
+        vmsgf("為避免濫用，點歌前請先消除劣文記錄至 %d 篇以下",  
+                ORDERSONG_MAX_BADPOST); 
+        return 0; 
+    } 
+#endif 
 
+    strlcpy(buf, Cdatedate(&now), sizeof(buf));
     lockreturn0(OSONG, LOCK_MULTI);
     pwcuReload();
 
@@ -63,14 +84,6 @@ do_order_song(void)
 	    unlockutmpmode();
 	    return 0;
 	}
-    }
-
-    reload_money();
-    if (cuser.money < ORDER_SONG_COST) {
-	move(22, 0);
-	vmsgf("點歌要 %d 元唷!....", ORDER_SONG_COST);
-	unlockutmpmode();
-	return 0;
     }
 
     getdata_str(19, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
@@ -167,7 +180,6 @@ do_order_song(void)
 	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", 
 		sender, say, receiver);
 	log_usies("OSONG", genbuf);
-	vice(ORDER_SONG_COST, "點歌");
     }
     snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
     hold_mail(filename, receiver, save_title);
