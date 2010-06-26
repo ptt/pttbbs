@@ -124,8 +124,8 @@ const char * postperm_msg(const char *bname);
 /* cal */
 const char* money_level(int money);
 int vice(int money, const char* item);
-int pay(int money, const char *item, ...);
-int pay_as(int uid, int money, const char *item, ...);
+int pay(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3); 
+int pay_as(int uid, int money, const char *item, ...) GCC_CHECK_FORMAT(3, 4);
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
@@ -468,17 +468,22 @@ void set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle);
 #ifndef _BBS_UTIL_C_
 void safe_delete_range(const char *fpath, int id1, int id2);
 #endif
-int safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle);
+int safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, 
+                        const char *newtitle);
 int safe_article_delete_range(const char *direct, int from, int to);
 #endif
 int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
 int search_rec(const char* dirname, int (*filecheck)());
-int append_record_forward(char *fpath, fileheader_t *record, int size, const char *origid);
+int append_record_forward(char *fpath, fileheader_t *record, int size, 
+                          const char *origid);
 int get_sum_records(const char* fpath, int size);
 int substitute_ref_record(const char* direct, fileheader_t *fhdr, int ent);
-inline
 int getindex(const char *fpath, fileheader_t *fh, int start);
+int rotate_text_logfile(const char *filename, off_t max_size, 
+                        float keep_ratio);
+int rotate_bin_logfile(const char *filename, off_t record_size, 
+                       off_t max_size, float keep_ratio); 
 
 /* register */
 int u_register(void);

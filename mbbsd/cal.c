@@ -132,7 +132,7 @@ pay(int money, const char *item, ...)
 // compatible mode: vice
 int 
 vice(int money, const char *item) {
-    return pay(money, item);
+    return pay(money, "%s", item);
 }
 
 static int

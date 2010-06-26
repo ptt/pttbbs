@@ -438,6 +438,60 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     return 0;
 }
 
+int 
+rotate_bin_logfile(const char *filename, off_t record_size,  
+                   off_t max_size, float keep_ratio) 
+{ 
+    off_t sz = dashs(filename); 
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f); 
+ 
+    if (sz < max_size) 
+        return 0; 
+ 
+    // delete from head 
+    delete_records(filename, record_size, 1, 
+            (1 - keep_ratio) * max_size / record_size ); 
+    return 1; 
+} 
+ 
+int 
+rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio) 
+{ 
+    off_t sz = dashs(filename), newsz; 
+    char *buf, *newent; 
+    FILE *fp; 
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f); 
+ 
+    if (sz < max_size) 
+        return 0; 
+ 
+    // FIXME we sould lock the file here. 
+    // however since these log are just for reference... 
+    // let's pretend there's no race condition with it. 
+ 
+    // now, calculate a starting seek point 
+    fp = fopen(filename, "r+b"); 
+    fseek(fp, - keep_ratio * max_size, SEEK_END); 
+    newsz = sz - ftell(fp); 
+    buf = (char*)malloc(newsz); 
+    memset(buf, 0, newsz); 
+    assert(buf); 
+    fread(buf, newsz, 1, fp); 
+    fclose(fp); 
+ 
+    // find a newline or \0 
+    newent = buf; 
+    while (*newent && *newent++ != '\n') ; 
+ 
+    // replace file with new content 
+    fp = fopen(filename, "wb"); 
+    fwrite(newent, 1, newsz - (newent - buf), fp); 
+    fclose(fp); 
+ 
+    free(buf); 
+    return 1; 
+} 
+
 void 
 setaidfile(char *buf, const char *bn, aidu_t aidu)
 {
