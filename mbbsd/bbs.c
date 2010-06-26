@@ -236,7 +236,7 @@ save_violatelaw(void)
 	return 0; 
     }
 
-    demoney(-1000 * cuser.vl_count);
+    pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
     log_filef("log/violation", LOG_CREAT,
 	    "%s %s pay-violation: $%d complete.\n", 
@@ -1222,7 +1222,7 @@ do_general(int garbage)
 	{
             if (money > 0)
 	    {
-		demoney(money);    
+                pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title); 
 		pwcuIncNumPost();
 		addPost = 1;
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元\n",
@@ -3204,7 +3204,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    {
 		// owner case
 		pwcuDecNumPost();
-		demoney(-fhdr->multi.money);
+                pay(fhdr->multi.money, "%s 看板 文章自刪清潔費: %s",  
+                    currboard, fhdr->title); 
 		sendalert(cuser.userid, ALERT_PWD_PERM);
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
 			cuser.numposts, fhdr->multi.money);

@@ -94,7 +94,7 @@ do_pay(int uid, int money, const char *item, const char *reason)
 } 
  
 int 
-pay_as(int uid, int money, const char *item, ...) 
+pay_as_uid(int uid, int money, const char *item, ...) 
 { 
     va_list ap; 
     char reason[STRLEN*3] =""; 
@@ -310,6 +310,7 @@ static int
 do_give_money(char *id, int uid, int money, const char *myid)
 {
     int tax;
+    char prompt[STRLEN*2] = "";
 
     reload_money();
     if (money < 1 || cuser.money < money)
@@ -319,9 +320,19 @@ do_give_money(char *id, int uid, int money, const char *myid)
     if (money - tax <= 0)
 	return -1;		/* 繳完稅就沒錢給了 */
 
-    // 實際給予金錢。
-    deumoney(uid, money - tax);
-    demoney(-money);
+    if (strcasecmp(myid, cuser.userid) != 0)  {
+        snprintf(prompt, sizeof(prompt)-1,
+                "以 %s 的名義轉帳給 %s (稅後 $%d)",
+                myid, id, money - tax); 
+    } else {
+        snprintf(prompt, sizeof(prompt)-1, 
+                "轉帳給 %s (稅後 $%d)", id, money - tax); 
+    }
+
+    // 實際給予金錢。 為避免程式故障/惡意斷線，一律先扣再發。
+    pay(money, "%s", prompt);
+    pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)", 
+               myid, money); 
     log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
 	    cuser.userid, id, money, money - tax, Cdate(&now));
 

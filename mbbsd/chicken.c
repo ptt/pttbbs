@@ -468,7 +468,7 @@ ch_buyitem(int money, const char *picture, int *item)
     reload_money();
     if (cuser.money/money >= num) {
 	*item += num;
-        pay(money * num, "購買寵物");
+        pay(money * num, "寵物商店");
 	show_chicken_picture(picture);
         pressanykey();
     } else {
