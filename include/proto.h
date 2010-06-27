@@ -123,7 +123,6 @@ const char * postperm_msg(const char *bname);
 
 /* cal */
 const char* money_level(int money);
-int vice(int money, const char* item);
 int pay(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3); 
 int pay_as_uid(int uid, int money, const char *item,...)GCC_CHECK_FORMAT(3,4);
 int lockutmpmode(int unmode, int state);

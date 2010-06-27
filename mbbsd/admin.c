@@ -1100,9 +1100,10 @@ int make_symbolic_link_interactively(int gid)
 static void
 give_id_money(const char *user_id, int money, const char *mail_title)
 {
-    char            tt[TTLEN + 1] = {0};
+    char tt[TTLEN + 1] = {0}; 
+    int  unum = searchuser(user_id, NULL); 
 
-    if (deumoney(searchuser(user_id, NULL), money) < 0) { // TODO if searchuser() return 0
+    if (unum <= 0 || pay_as_uid(unum, -money, "站長發紅包") < 1) { 
 	move(12, 0);
 	clrtoeol();
 	prints("id:%s money:%d 不對吧!!", user_id, money);

@@ -77,11 +77,11 @@ do_pay(int uid, int money, const char *item, const char *reason)
     if (uid == usernum) 
         reload_money(); 
  
-#ifdef FN_RECENTVICE
+#ifdef FN_RECENTPAY
 
     char buf[PATHLEN]; 
-    sethomefile(buf, userid, FN_RECENTVICE); 
-    rotate_text_logfile(buf, SZ_RECENTVICE, 0.2); 
+    sethomefile(buf, userid, FN_RECENTPAY); 
+    rotate_text_logfile(buf, SZ_RECENTPAY, 0.2); 
     syncnow(); 
     log_filef(buf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s\n", 
             Cdatelite(&now),  
@@ -127,12 +127,6 @@ pay(int money, const char *item, ...)
     } 
  
     return do_pay(usernum, money, item, reason); 
-}
-
-// compatible mode: vice
-int 
-vice(int money, const char *item) {
-    return pay(money, "%s", item);
 }
 
 static int
@@ -334,7 +328,7 @@ do_give_money(char *id, int uid, int money, const char *myid)
     pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)", 
                myid, money); 
     log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
-	    cuser.userid, id, money, money - tax, Cdate(&now));
+              cuser.userid, id, money, money - tax, Cdate(&now));
 
     // penalty
     if (money < 50) {
@@ -497,6 +491,11 @@ give_money_ui(const char *userid)
 	char fpath[PATHLEN];
 	if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
 	{
+#ifdef FN_RECENTPAY
+            outs("您可以於下列位置找到最近的交易記錄:\n" 
+                    "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => " 
+                    "(V)RecentVice 最近交易記錄\n"); 
+#endif
 	    vmsg("交易完成。");
 	    return 0;
 	}

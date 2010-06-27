@@ -231,9 +231,7 @@ doesnt_catch_up:
     price = price * n;
     // XXX 這是因為停止下注所以退錢？ 感覺好危險+race condition 
     if (price > 0) {
-        // TODO enable this for detail log
-        // vice_to(currutmp->uid, -price, "下注失敗退費");
-	deumoney(currutmp->uid, price);
+        pay_as_uid(currutmp->uid, -price, "下注失敗退費");
     }
     vmsg("板主已經停止下注了 不能賭嚕");
     unlockutmpmode();
@@ -399,9 +397,7 @@ openticket(int bid)
 		continue;
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
-            // XXX enable this for detail log
-            // vice_to(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]", betname[mybet]); 
-	    deumoney(uid, money * i);
+            pay_as_uid(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]", betname[mybet]); 
 	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "賭場");
 	}
 	fclose(fp1);

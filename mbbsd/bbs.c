@@ -3017,11 +3017,9 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-#ifdef SAFE_ARTICLE_DELETE
-    char	    reason[PROPER_TITLE_LEN];
-#endif
+    char	    reason[PROPER_TITLE_LEN] = "";
     char            genbuf[100], newpath[PATHLEN];
-    int             not_owned, is_anon, tusernum, del_ok = 0;
+    int             not_owned, is_anon, tusernum, del_ok = 0, as_badpost = 0;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -3067,7 +3065,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
 #ifdef SAFE_ARTICLE_DELETE
-    reason[0] = 0;
     // query if user really wants to delete it
     if (not_owned && !is_anon && fhdr->owner[0])
     {
@@ -3156,6 +3153,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 vgets(genbuf, 3, VGET_LOWERCASE);
 
 		if (genbuf[0]=='y') {
+                    as_badpost = 1;
 		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
                 }
 	    }
@@ -3192,8 +3190,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			    xuser.numposts--;
 			passwd_sync_update(tusernum, &xuser);
 		    }
-		    deumoney(tusernum, -fhdr->multi.money);
-		    sendalert_uid(tusernum, ALERT_PWD_PERM);
+
+                    pay_as_uid(tusernum, fhdr->multi.money,  
+                            "%s 看板 文章「%s」被%s，扣除稿酬%s %s",  
+                            currboard,  fhdr->title,  
+                            as_badpost ? "劣退" : "刪除", 
+                            reason[0] ? "。原因:" : "", reason); 
+                    sendalert_uid(tusernum, ALERT_PWD_PERM);
 #ifdef USE_COOLDOWN
 		    if (bp->brdattr & BRD_COOLDOWN)
 			add_cooldowntime(tusernum, 15);
@@ -3664,7 +3667,10 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
-	    deumoney(searchuser(fhdr->owner, NULL), -1000); // TODO if searchuser() return 0
+            int unum = searchuser(fhdr->owner, NULL); 
+            if (unum > 0) { 
+                pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard); 
+            } 
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
 	    else
@@ -3710,7 +3716,10 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
-	    deumoney(searchuser(fhdr->owner, NULL), 1000); // TODO if searchuser() return 0
+            int unum = searchuser(fhdr->owner, NULL); 
+            if (unum > 0) { 
+                pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard); 
+            } 
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
 	    else
