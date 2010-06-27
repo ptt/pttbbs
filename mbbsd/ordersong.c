@@ -41,7 +41,7 @@ do_order_song(void)
         return 0; 
     } 
 #endif 
-#ifdef ORDERSONG_MAX_BADPOST 
+#if defined(ORDERSONG_MAX_BADPOST) && defined(ASSESS)
     if (cuser.badpost > ORDERSONG_MAX_BADPOST) { 
         vmsgf("為避免濫用，點歌前請先消除劣文記錄至 %d 篇以下",  
                 ORDERSONG_MAX_BADPOST); 
