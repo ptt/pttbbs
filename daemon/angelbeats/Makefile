@@ -23,7 +23,7 @@ angelbeats: angelbeats.o
 	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 abc: abc.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

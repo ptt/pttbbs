@@ -53,6 +53,40 @@ typedef struct login_data
 }   login_data;
 
 ///////////////////////////////////////////////////////////////////////
+// Angel Beats! Daemon
+
+#ifndef ANGELBEATS_ADDR
+#define ANGELBEATS_ADDR   ":5132"
+#endif
+
+enum ANGELBEATS_OPERATIONS {
+    ANGELBEATS_REQ_INVALID = 0,
+    ANGELBEATS_REQ_REPORT,
+    ANGELBEATS_REQ_RELOAD,
+    ANGELBEATS_REQ_SUGGEST,
+    ANGELBEATS_REQ_SUGGEST_AND_LINK,
+    ANGELBEATS_REQ_REMOVE_LINK,
+};
+
+typedef struct {
+    short cb;           // size of current structure
+    short operation;
+
+    int angel_uid;
+    int master_uid;
+}   angel_beats_data ;
+
+typedef struct {
+    short cb;
+    short total_angels;
+    short total_online_angels;
+    short total_active_angels;
+    short low_average_masters;
+    short high_average_masters;
+    short my_active_masters;
+}   angel_beats_report ;
+
+///////////////////////////////////////////////////////////////////////
 // online friend relation daemon
 //
 typedef struct {
