@@ -11,14 +11,20 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
+#include <limits.h>
 #include <event.h>
 #include "bbs.h"
 #include "daemons.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // configuration
+#ifdef DEBUG
 static int debug = 1;
 static int verbose = 1;
+#else
+static int debug = 0;
+static int verbose = 0;
+#endif
 
 // same as expire length
 #ifndef ANGELBEATS_INACTIVE_TIME
@@ -29,7 +35,10 @@ static int verbose = 1;
 // AngelInfo list operation
 
 #define ANGEL_LIST_INIT_SIZE    (250)   // usually angels are 200~250
-#define ANGEL_SUGGEST_RANGE     (20)    // 10% of all the angels
+#define ANGEL_SUGGEST_RANGE     (10)
+// By the numbers around 2010/06/30, usually online active angels are fewer
+// than 50 in the evening and around 25 in day time.
+// (total online angels are twice than active angels)
 
 typedef struct {
     int uid;
@@ -122,7 +131,7 @@ angel_list_add(const char *userid, int uid) {
 // Main Operations
 
 int 
-suggest_online_angel() {
+suggest_online_angel(int master_uid) {
     userinfo_t *astat = NULL;
     int candidates[ANGEL_SUGGEST_RANGE] = {0}, num_candidates = 0;
     int i;
@@ -135,14 +144,15 @@ suggest_online_angel() {
         AngelInfo *kanade = g_angel_list+i;
         int is_good_uid = 0;
 
-        // XXX or search_ulist_pid ?
-        astat = search_ulist_userid(kanade->userid);
-        // XXX TODO search back-forward?
-        
+        // skip the master himself
+        if (kanade->uid == master_uid)
+            continue;
+
         // we have to take care of multi-login sessions,
         // so it's better to reject if any of the sessions wants to reject.
-        for (; astat && 
-               strcasecmp(astat->userid, kanade->userid) == 0; astat++) {
+        for (astat = search_ulistn(kanade->uid, 1); 
+             astat && strcasecmp(astat->userid, kanade->userid) == 0; 
+             astat++) {
             // ignore all dead processes
             if (astat->mode == DEBUGSLEEPING)
                 continue;
@@ -264,30 +274,75 @@ init_angel_list() {
 }
 
 int
-create_angel_report(angel_beats_report *prpt) {
+create_angel_report(int myuid, angel_beats_report *prpt) {
     int i;
     AngelInfo *kanade = g_angel_list;
     userinfo_t *astat = NULL;
 
+    prpt->min_masters_of_active_angels = SHRT_MAX;
+    prpt->min_masters_of_online_angels = SHRT_MAX;
     prpt->total_angels = g_angel_list_size;
+
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         // online?
-        int is_pause = 0, is_online = 0;
+        int is_pause = 0, is_online = 0, logins = 0;
+        if (debug) printf(" - %03d. %s: ", i+1, kanade->userid);
         for (astat = search_ulistn(kanade->uid, 1);
              astat && astat->uid == kanade->uid;
              astat++) {
             if (astat->mode == DEBUGSLEEPING)
                 continue;
-            if (!(astat->userlevel & PERM_ANGEL))  // what now?
+            logins++;
+            if (!(astat->userlevel & PERM_ANGEL)) {  // what now?
+                if (debug) printf("[NOT ANGEL!? skip] ");
+                is_online = is_pause = 0;
                 break;
-            if (astat->angelpause)
+            }
+            if (astat->angelpause) {
+                if (debug) printf("[set pause (%d)] ", astat->angelpause);
                 is_pause = 1;
+            }
             is_online = 1;
         }
+        if (debug) {
+            switch(logins) {
+                case 0:
+                    printf("(not online)");
+                    break;
+                case 1:
+                    printf("(online)");
+                    break;
+                default:
+                    printf("(multi login: %d)", logins);
+                    break;
+            }
+            printf("\n");
+        }
+        // update report numbers
         prpt->total_online_angels += is_online;
-        if (is_online && !is_pause)
-            prpt->total_active_angels++;
+        if (is_online) {
+            if (!is_pause) {
+                prpt->total_active_angels++;
+                if (prpt->max_masters_of_active_angels < kanade->masters)
+                    prpt->max_masters_of_active_angels = kanade->masters;
+                if (prpt->min_masters_of_active_angels > kanade->masters)
+                    prpt->min_masters_of_active_angels = kanade->masters;
+            }
+            if (prpt->max_masters_of_online_angels < kanade->masters)
+                prpt->max_masters_of_online_angels = kanade->masters;
+            if (prpt->min_masters_of_online_angels > kanade->masters)
+                prpt->min_masters_of_online_angels = kanade->masters;
+        }
     }
+    if (prpt->min_masters_of_active_angels == SHRT_MAX)
+        prpt->min_masters_of_active_angels = 0;
+    if (prpt->min_masters_of_online_angels == SHRT_MAX)
+        prpt->min_masters_of_online_angels = 0;
+    // report my information
+    if (myuid > 0 && (kanade = angel_list_find_by_uid(myuid))) {
+        prpt->my_active_masters = kanade->masters;
+    }
+    if(debug) fflush(stdout);
     return 0;
 }
 
@@ -325,20 +380,21 @@ client_cb(int fd, short event, void *arg) {
             init_angel_list();
             break;
         case ANGELBEATS_REQ_SUGGEST_AND_LINK:
-            data.angel_uid = suggest_online_angel();
+            data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
                 inc_angel_master(data.angel_uid);
             }
+            if(debug) printf("suggestion result: %d\n", data.angel_uid);
             break;
         case ANGELBEATS_REQ_REMOVE_LINK:
             dec_angel_master(data.angel_uid);
             break;
         case ANGELBEATS_REQ_REPORT:
             {
-                printf("ANGELBEATS_REQ_REPORT\n");
+                if (debug) printf("ANGELBEATS_REQ_REPORT\n");
                 angel_beats_report rpt = {0};
                 rpt.cb = sizeof(rpt);
-                create_angel_report(&rpt);
+                create_angel_report(data.angel_uid, &rpt);
                 // write different kind of data!
                 write(fd, &rpt, sizeof(rpt));
                 goto end;
@@ -413,10 +469,11 @@ main(int argc, char *argv[]) {
                 kanade->uid,
                 kanade->masters);
     }
-    printf("suggested angel=%d\n", suggest_online_angel());
+    printf("suggested angel=%d\n", suggest_online_angel(0));
+    fflush(stdout);
 
     if (go_daemon)
-        daemonize(BBSHOME "/run/angelbeats.pid", NULL);
+        daemonize(BBSHOME "/run/angelbeats.pid", BBSHOME "/log/angelbeats.log");
 
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;

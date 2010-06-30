@@ -22,12 +22,12 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Usage: %s operation [uid]\n", argv[0]);
 	return 0;
     }
-
     if ( (fd = toconnect(ANGELBEATS_ADDR)) < 0 ) {
 	perror("toconnect");
 	return 1;
     }
 
+    // start commands
     if (strcmp(argv[1], "reload") == 0)
     {
         req.operation = ANGELBEATS_REQ_RELOAD;
@@ -35,8 +35,10 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[1], "suggest") == 0)
     {
         req.operation = ANGELBEATS_REQ_SUGGEST;
-        if (argc > 2)
+        if (argc > 2) {
+            req.operation = ANGELBEATS_REQ_SUGGEST_AND_LINK;
             req.master_uid = searchuser(argv[2], NULL);
+        }
     }
     else if (strcmp(argv[1], "unlink") == 0)
     {
@@ -52,9 +54,13 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
-    if (strcmp(argv[1], "report") == 0)
+    else if (strcmp(argv[1], "report") == 0)
     {
         req.operation = ANGELBEATS_REQ_REPORT;
+        if (argc > 2 && !(req.angel_uid = searchuser(argv[2], NULL))) {
+            printf("invalid user id: %s\n", argv[2]);
+            return -1;
+        }
     }
     else
 	return 0;
@@ -73,14 +79,18 @@ int main(int argc, char *argv[])
         printf("total_angels=%d\n"
                "total_online_angels=%d\n"
                "total_active_angels=%d\n"
-               "low_average_masters=%d\n"
-               "high_average_masters=%d\n"
+               "min_masters_of_online_angels=%d\n"
+               "max_masters_of_online_angels=%d\n"
+               "min_masters_of_active_angels=%d\n"
+               "max_masters_of_active_angels=%d\n"
                "my_active_masters=%d\n",
                rpt.total_angels,
                rpt.total_online_angels,
                rpt.total_active_angels,
-               rpt.low_average_masters,
-               rpt.high_average_masters,
+               rpt.min_masters_of_online_angels,
+               rpt.max_masters_of_online_angels,
+               rpt.min_masters_of_active_angels,
+               rpt.max_masters_of_active_angels,
                rpt.my_active_masters);
     } else {
         if (toread(fd, &req, sizeof(req)) != sizeof(req)) {
