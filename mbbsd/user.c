@@ -125,7 +125,7 @@ int u_cancelbadpost(void)
        vmsg("我願意尊重與不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
        vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
    {
-       vmsg("請您思考清楚後再來申請刪除."); 
+       vmsg("回答有誤，刪除失敗。請仔細看站規與系統訊息並思考清楚後再來申請刪除.");
        return 0;
    }
 
@@ -194,11 +194,8 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t認證資料: %s\n", u->justify);
     }
 
-    // XXX enable STR_LOGINDAYS_QTY after removed old_numlogins.
-    prints("\t使用記錄: " STR_LOGINDAYS " %d " // STR_LOGINDAYS_QTY
+    prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
 	    ,u->numlogindays);
-    if (u->old_numlogins)
-	prints("(轉換新制前結算:%d)", u->old_numlogins);
     prints(" / 文章 %d 篇\n", u->numposts);
 
     sethomedir(genbuf, u->userid);
