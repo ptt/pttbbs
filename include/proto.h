@@ -30,8 +30,10 @@ int make_symbolic_link_interactively(int gid);
 void merge_dir(const char *dir1, const char *dir2, int isoutter);
 
 /* angel */
-int t_changeangel(void);
-int t_angelmsg(void);
+int a_changeangel(void);
+int a_angelmsg(void);
+int a_angelreport(void);
+int a_angelreload(void);
 int angel_reject_me(userinfo_t * uin);
 void CallAngel(void);
 void angel_toggle_pause();

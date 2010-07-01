@@ -585,6 +585,20 @@ static const commands_t maillist[] = {
     {NULL, 0, NULL}
 };
 
+#ifdef PLAY_ANGEL
+static const commands_t angelmenu[] = {
+    {a_angelmsg, PERM_ANGEL,"LLeave message 留言給小主人"},
+    {a_angelreport, 0,      "RReport        線上天使狀態報告"},
+    {a_angelreload, PERM_SYSOP,"OOReload    重整天使資訊"},
+    {NULL, 0, NULL}
+};
+
+static int menu_angelbeats() {
+    domenu(M_TMENU, "Angel Beats! 天使公會", 'L', angelmenu);
+    return 0;
+}
+#endif
+
 /* Talk menu */
 static const commands_t talklist[] = {
     {t_users, 0,            "UUsers         線上使用者列表"},
@@ -599,9 +613,10 @@ static const commands_t talklist[] = {
     {t_idle, 0,             "IIdle          發呆"},
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
-    {t_changeangel, 
-	PERM_LOGINOK,	    "UAChange Angel 更換小天使"},
-    {t_angelmsg, PERM_ANGEL,"LLeave message 留言給小主人"},
+    {a_changeangel, 
+	PERM_LOGINOK,	    "AAChange Angel 更換小天使"},
+    {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
+                            "BBAngel Beats! 天使公會"},
 #endif
     {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}

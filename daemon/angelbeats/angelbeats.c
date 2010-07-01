@@ -356,13 +356,18 @@ static struct event ev_listen, ev_sighup;
 
 static void
 sighup_cb(int signal, short event, void *arg) {
+    time4_t clk = time(0);
+    fprintf(stderr, "%s reload (HUP)\n", Cdatelite(&clk));
     init_angel_list();
 }
 
 static void
 client_cb(int fd, short event, void *arg) {
     int len;
+    char master_uid[IDLEN+1] = "", angel_uid[IDLEN+1] = "";
+    char *uid;
     angel_beats_data data ={0};
+    time4_t clk = time4(NULL);
 
     // ignore clients that timeout or sending invalid request
     if (event & EV_TIMEOUT)
@@ -372,24 +377,45 @@ client_cb(int fd, short event, void *arg) {
     if (data.cb != sizeof(data))
         goto end;
 
+    if (debug) {
+        fprintf(stderr, "%s request: op=%d, mid=%d, aid=%d\n", Cdatelite(&clk),
+                data.operation, data.master_uid, data.angel_uid);
+    }
+    // solve user ids
+    if (data.angel_uid && (uid = getuserid(data.angel_uid)))
+        strlcpy(angel_uid, uid, sizeof(angel_uid));
+    if (data.master_uid && (uid = getuserid(data.master_uid)))
+        strlcpy(master_uid, uid, sizeof(master_uid));
+
     if (debug) printf("got request: %d\n", data.operation);
     switch(data.operation) {
         case ANGELBEATS_REQ_INVALID:
+            fprintf(stderr, "%s got invalid request [%s/%s]\n", 
+                    Cdatelite(&clk), master_uid, angel_uid);
             break;
         case ANGELBEATS_REQ_RELOAD:
+            fprintf(stderr, "%s reload\n", Cdatelite(&clk));
             init_angel_list();
             break;
         case ANGELBEATS_REQ_SUGGEST_AND_LINK:
+            fprintf(stderr, "%s request suggest&link from [%s], ", 
+                    Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
                 inc_angel_master(data.angel_uid);
+                uid = getuserid(data.angel_uid);
+                strlcpy(angel_uid, uid, sizeof(angel_uid));
             }
-            if(debug) printf("suggestion result: %d\n", data.angel_uid);
+            fprintf(stderr, "result: [%s]\n", data.angel_uid > 0 ?
+                    angel_uid : "<none>");
             break;
         case ANGELBEATS_REQ_REMOVE_LINK:
+            fprintf(stderr, "%s request remove link by master [%s] to angel [%s]\n", 
+                    Cdatelite(&clk), master_uid, angel_uid);
             dec_angel_master(data.angel_uid);
             break;
         case ANGELBEATS_REQ_REPORT:
+            fprintf(stderr, "%s report by [%s]\n", Cdatelite(&clk), master_uid);
             {
                 if (debug) printf("ANGELBEATS_REQ_REPORT\n");
                 angel_beats_report rpt = {0};
@@ -427,7 +453,7 @@ int
 main(int argc, char *argv[]) {
     int i;
     AngelInfo *kanade;
-    int     ch, sfd, go_daemon = 0;
+    int     ch, sfd, go_daemon = 1;
     const char *iface_ip = ANGELBEATS_ADDR;
 
     // things to do:
@@ -458,6 +484,7 @@ main(int argc, char *argv[]) {
     chdir(BBSHOME);
     attach_SHM();
 
+    printf("initializing angel list...\n");
     init_angel_list();
     printf("found %zd angels. (cap=%zd)\n", 
             g_angel_list_size, g_angel_list_capacity);

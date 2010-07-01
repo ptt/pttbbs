@@ -81,8 +81,10 @@ typedef struct {
     short total_angels;
     short total_online_angels;
     short total_active_angels;
-    short low_average_masters;
-    short high_average_masters;
+    short min_masters_of_online_angels;
+    short max_masters_of_online_angels;
+    short min_masters_of_active_angels;
+    short max_masters_of_active_angels;
     short my_active_masters;
 }   angel_beats_report ;
 

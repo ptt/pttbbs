@@ -1,11 +1,47 @@
 /* $Id$ */
 #include "bbs.h"
+#ifdef PLAY_ANGEL
 
 // PTT-BBS Angel System
 
-#ifdef PLAY_ANGEL
-
+#include "daemons.h"
 #define FN_ANGELMSG "angelmsg"
+
+/////////////////////////////////////////////////////////////////////////////
+// Angel Beats! Client
+
+// this works for simple requests: (return 1/angel_uid for success, 0 for fail
+static int 
+angel_beats_do_request(int op, int master_uid, int angel_uid) {
+    int fd;
+    int ret = 1;
+    angel_beats_data req = {0};
+
+    req.cb = sizeof(req);
+    req.operation = op;
+    req.master_uid = master_uid;
+    req.angel_uid = angel_uid;
+    assert(op != ANGELBEATS_REQ_INVALID);
+
+    if ((fd = toconnect(ANGELBEATS_ADDR)) < 0)
+        return -1;
+
+    assert(req.operation != ANGELBEATS_REQ_INVALID);
+
+    if (towrite(fd, &req, sizeof(req)) < 1 ||
+        toread (fd, &req, sizeof(req)) < 1 ||
+        req.cb != sizeof(req)) {
+        ret = -2;
+    } else {
+        ret = (req.angel_uid > 0) ? req.angel_uid : 1;
+    }
+
+    close(fd);
+    return ret;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Local Angel Service
 
 void 
 angel_toggle_pause()
@@ -122,7 +158,7 @@ angel_get_nick()
 }
 
 int
-t_changeangel(){
+a_changeangel(){
     char buf[4];
 
     /* cuser.myangel == "-" means banned for calling angel */
@@ -136,15 +172,17 @@ t_changeangel(){
 	snprintf(buf, sizeof(buf), "%s 小主人 %s 換掉 %s 小天使\n",
 		Cdatelite(&now), cuser.userid, cuser.myangel);
 	log_file(BBSHOME "/log/changeangel.log", LOG_CREAT, buf);
-
+        if (cuser.myangel[0])
+            angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
+                    usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
-	outs("小天使更新完成，下次呼叫時會選出新的小天使");
+        vmsg("小天使更新完成，下次呼叫時會選出新的小天使");
     }
-    return XEASY;
+    return 0;
 }
 
 int 
-t_angelmsg(){
+a_angelmsg(){
     char msg[3][74] = { "", "", "" };
     char nick[10] = "";
     char buf[512];
@@ -213,6 +251,84 @@ t_angelmsg(){
     return 0;
 }
 
+int a_angelreport() {
+    angel_beats_report rpt = {0};
+    angel_beats_data   req = {0};
+    int fd;
+
+    vs_hdr2(" Angel Beats! 天使公會 ", " 天使狀態報告 ");
+    outs("\n");
+
+    if ((fd = toconnect(ANGELBEATS_ADDR)) < 0) {
+        outs("抱歉，無法連線至天使公會。\n"
+             "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
+        pressanykey();
+        return 0;
+    }
+
+    req.cb = sizeof(req);
+    req.operation = ANGELBEATS_REQ_REPORT;
+    req.master_uid = usernum;
+
+    if (HasUserPerm(PERM_ANGEL))
+        req.angel_uid = usernum;
+
+    if (towrite(fd, &req, sizeof(req)) < 1 ||
+        toread(fd, &rpt, sizeof(rpt)) < 1 ||
+        rpt.cb != sizeof(rpt)) {
+        outs("抱歉，天使公會連線異常。\n"
+                "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
+    } else {
+        prints(
+            "\t 現在時間: %s\n\n"
+            "\n\t 系統內已登記的天使為 %d 位。\n"
+            "\n\t 目前有 %d 位天使在線上，其中 %d 位神諭呼叫器為設定開放；\n"
+            "\n\t 上線的天使中，擁有小主人數目最少為 %d 位，最多為 %d 位；\n"
+            "\n\t 上線且開放收小主人的天使中，小主人最少 %d 位，最多 %d 位。\n",
+            Cdatelite(&now),
+            rpt.total_angels,
+            rpt.total_online_angels,
+            rpt.total_active_angels,
+            rpt.min_masters_of_online_angels,
+            rpt.max_masters_of_online_angels,
+            rpt.min_masters_of_active_angels,
+            rpt.max_masters_of_active_angels);
+        if (HasUserPerm(PERM_ANGEL))
+            prints("\n\t 您目前大約有 %d 位小主人。\n", rpt.my_active_masters);
+    }
+    close(fd);
+    pressanykey();
+    return 0;
+}
+
+int a_angelreload() {
+    vs_hdr2(" Angel Beats! 天使公會 ", " 重整天使資訊 ");
+    outs("\n"
+         "\t 由於重新統計天使小主人數目非常花時間，所以目前系統\n"
+         "\t 一般只會更新已知的天使。  若站方有新增或刪除天使時\n"
+         "\t 請在改完所有天使權限後利用此功\能來重整天使資訊。\n"
+         "\n"
+         "\t 另外由於重整時所有跟天使有關的功\能都會暫停 30 秒 ~ 一兩分鐘，\n"
+         "\t 請不要沒事就重整，而是真的有調整天使名單後才使用。\n");
+    if (vans("請問確定要重整天使資訊了嗎? [y/N]: ") != 'y') {
+        vmsg("放棄。");
+        return 0;
+    }
+
+    move(1, 0); clrtobot();
+    outs("\n連線中...\n"); refresh();
+
+    if (angel_beats_do_request(ANGELBEATS_REQ_RELOAD, usernum, 0) < 0) {
+        outs("抱歉，無法連線至天使公會。\n"
+             "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
+    } else {
+        outs("\n完成!\n");
+    }
+
+    pressanykey();
+    return 0;
+}
+
 inline int
 angel_reject_me(userinfo_t * uin){
     // TODO 超級好友怎麼辦？
@@ -226,9 +342,8 @@ angel_reject_me(userinfo_t * uin){
     return 0;
 }
 
-
 static int
-FindAngel(void){
+FindAngel_Old(void){
     int nAngel;
     int i, j;
     int choose;
@@ -271,6 +386,32 @@ FindAngel(void){
 	}
     }while(++trial < 5);
     return 0;
+}
+
+static int
+FindAngel(void){
+
+    int angel_uid = 0;
+    userinfo_t *angel = NULL;
+    int retries = 2;
+   
+    do {
+        angel_uid = angel_beats_do_request(ANGELBEATS_REQ_SUGGEST_AND_LINK,
+                                           usernum, 0);
+        if (angel_uid < 0)  // connection failure
+            break;
+        if (angel_uid > 0)
+            angel = search_ulist(angel_uid);
+    } while ((retries-- < 1) && !(angel && (angel->userlevel & PERM_ANGEL)));
+
+    if (angel) {
+        // got new angel
+        pwcuSetMyAngel(angel->userid);
+        return 1;
+    }
+
+    // not able to find angel beats? try traditional way.
+    return FindAngel_Old();
 }
 
 static inline void
@@ -456,13 +597,9 @@ CallAngel(){
     if (!HasUserPerm(PERM_LOGINOK) || entered)
 	return;
     entered = 1;
-
     scr_dump(&old_screen);
-
     TalkToAngel();
-
     scr_restore(&old_screen);
-
     entered = 0;
 }
 
