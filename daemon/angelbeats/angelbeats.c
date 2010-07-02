@@ -127,6 +127,13 @@ angel_list_add(const char *userid, int uid) {
     return kanade;
 }
 
+int
+angel_list_get_index(AngelInfo *kanade) {
+    int idx = (kanade - g_angel_list);
+    assert(idx >= 0 && idx < g_angel_list_size);
+    return idx;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Main Operations
 
@@ -191,17 +198,27 @@ suggest_online_angel(int master_uid) {
 int
 inc_angel_master(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
+    int idx;
     if (!kanade)
         return 0;
     kanade->masters++;
+    idx = angel_list_get_index(kanade);
     // TODO only sort when kanade->masters > (kanade+1)->masters
-    angel_list_sort_by_masters();
+    if (idx + 1 < g_angel_list_size &&
+        kanade->masters > (kanade+1)->masters) {
+        angel_list_sort_by_masters();
+        kanade = angel_list_find_by_uid(uid);
+        assert(kanade);
+        fprintf(stderr, " * angel (%s) position changed: %d -> %d\n",
+                kanade->userid, idx, angel_list_get_index(kanade));
+    }
     return 1;
 }
 
 int
 dec_angel_master(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
+    int idx;
     if (!kanade)
         return 0;
     if (kanade->masters == 0) {
@@ -209,9 +226,17 @@ dec_angel_master(int uid) {
                 "which was already zero: %d\n", uid);
         return 0;
     }
+    idx = angel_list_get_index(kanade);
     kanade->masters--;
-    // TODO only sort when kanade->masters < (kanade+-)->masters
-    angel_list_sort_by_masters();
+    // TODO only sort when kanade->masters < (kanade-1)->masters
+    if (idx > 0 &&
+        kanade->masters < (kanade-1)->masters) {
+        angel_list_sort_by_masters();
+        kanade = angel_list_find_by_uid(uid);
+        assert(kanade);
+        fprintf(stderr, " * angel (%s) position changed: %d -> %d\n",
+                kanade->userid, idx, angel_list_get_index(kanade));
+    }
     return 1;
 }
 
@@ -402,6 +427,9 @@ client_cb(int fd, short event, void *arg) {
                     Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
+                fprintf(stderr, "<pos: %d> ", 
+                        angel_list_get_index(
+                            angel_list_find_by_uid(data.angel_uid)));
                 inc_angel_master(data.angel_uid);
                 uid = getuserid(data.angel_uid);
                 strlcpy(angel_uid, uid, sizeof(angel_uid));
@@ -410,7 +438,8 @@ client_cb(int fd, short event, void *arg) {
                     angel_uid : "<none>");
             break;
         case ANGELBEATS_REQ_REMOVE_LINK:
-            fprintf(stderr, "%s request remove link by master [%s] to angel [%s]\n", 
+            fprintf(stderr, "%s request remove link by "
+                    "master [%s] to angel [%s]\n",
                     Cdatelite(&clk), master_uid, angel_uid);
             dec_angel_master(data.angel_uid);
             break;
@@ -471,6 +500,7 @@ main(int argc, char *argv[]) {
 
         case 'D':
             go_daemon = !go_daemon;
+            break;
 
 	case 'h':
 	default:
@@ -486,24 +516,25 @@ main(int argc, char *argv[]) {
 
     printf("initializing angel list...\n");
     init_angel_list();
-    printf("found %zd angels. (cap=%zd)\n", 
-            g_angel_list_size, g_angel_list_capacity);
-    kanade = g_angel_list;
-    for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        printf("%d [%s] uid=%d, masters=%d\n", 
-                i+1, 
-                kanade->userid,
-                kanade->uid,
-                kanade->masters);
-    }
-    printf("suggested angel=%d\n", suggest_online_angel(0));
-    fflush(stdout);
-
     if (go_daemon)
         daemonize(BBSHOME "/run/angelbeats.pid", BBSHOME "/log/angelbeats.log");
 
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
+
+    fprintf(stderr, "found %zd angels. (cap=%zd)\n", 
+            g_angel_list_size, g_angel_list_capacity);
+    kanade = g_angel_list;
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
+        fprintf(stderr,
+                "%d [%s] uid=%d, masters=%d\n", 
+                i+1, 
+                kanade->userid,
+                kanade->uid,
+                kanade->masters);
+    }
+    if (debug)
+        fprintf(stderr, "suggested angel=%d\n", suggest_online_angel(0));
 
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
