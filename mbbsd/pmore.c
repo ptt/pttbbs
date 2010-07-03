@@ -82,11 +82,11 @@
  *  - (2009) Better help system [done]
  *  - (2009) Customizable key and help handler [done]
  *  - (2009) Customizable footer bar floating prompts [done]
+ *  - (2010) Auto Decompression [done]
  *  - Reject waterball (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Deal or disable Ctrl-U (invokes userlist then waiting one more key)
  *  - Virtual Contatenate [pending]
- *  - Virtual Decompression [pending]
  *  - Drop ANSI between DBCS words if outputing UTF8 [drop, done by term]
  */
 
@@ -747,6 +747,67 @@ MFPROTO void mf_parseHeaders();
 MFPROTO void mf_freeHeaders();
 MFPROTO void mf_determinemaxdisps(int, int);
 
+#ifdef PMORE_GUNZIP_CMD
+
+#include <sys/wait.h>
+
+MFPROTO int
+mf_gunzip(const char *fn, int fd)
+{
+    char magic[2] = {0};
+    const char gzip_magic[2] = {0x1f, 0x8b};
+    FILE *tmp;
+    int tmp_fd, sts = 0;
+
+    // quick abort if fd is invalid
+    if (fd < 0)
+        return fd;
+
+    // TODO since most files were not gzipped, maybe we can
+    // move type checking to "after mmap attached"
+    if (read(fd, magic, sizeof(magic)) != sizeof(magic) ||
+        memcmp(gzip_magic, magic, sizeof(magic) != 0)) {
+        // XXX since we only use 'mmap' in pmore, no need to rewind fd
+        return fd;
+    }
+
+    // create temp file
+    tmp = tmpfile();
+    assert(tmp);
+    tmp_fd = dup(fileno(tmp));
+    assert(tmp_fd > 0);
+    fclose(tmp);
+
+    // rewind for decompression
+    lseek(fd, 0, SEEK_SET);
+
+    switch(fork())
+    {
+        case 0:
+            // child
+            dup2(fd, 0);        // input
+            dup2(tmp_fd, 1);    // output
+            dup2(tmp_fd, 2);    // err
+            // sample: gunzip -d -c
+            exit(system(PMORE_GUNZIP_CMD));
+            break;
+
+        case -1:
+            // error
+            close(tmp_fd);
+            return fd;
+
+        default:
+            // parent
+            wait(&sts);  // since file is gzipped, tmp gives error if failed.
+            break;
+    }
+
+    close(fd);
+    return tmp_fd;
+}
+#endif
+
 /* 
  * mmap basic operations 
  */
@@ -755,6 +816,10 @@ mf_attach(const char *fn)
 {
     struct stat st;
     int fd = open(fn, O_RDONLY, 0600);
+
+#ifdef PMORE_GUNZIP_CMD
+    fd = mf_gunzip(fn, fd);
+#endif
 
     if(fd < 0)
         return 0;
