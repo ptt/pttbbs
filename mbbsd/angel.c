@@ -282,17 +282,36 @@ int a_angelreport() {
         prints(
             "\t 瞷丁: %s\n\n"
             "\n\t ╰参ず祅癘ぱㄏ %d \n"
-            "\n\t ヘ玡Τ %d ぱㄏ絬ㄤい %d 抠㊣竟砞﹚秨\n"
-            "\n\t 絬ぱㄏい局Τ计ヘ程ぶ %d 程 %d \n"
-            "\n\t 絬秨Μぱㄏい程ぶ %d 程 %d \n",
+            "\n\t ヘ玡Τ %d ぱㄏ絬ㄤい %d 抠㊣竟砞﹚秨\n",
             Cdatelite(&now),
             rpt.total_angels,
             rpt.total_online_angels,
-            rpt.total_active_angels,
-            rpt.min_masters_of_online_angels,
-            rpt.max_masters_of_online_angels,
-            rpt.min_masters_of_active_angels,
-            rpt.max_masters_of_active_angels);
+            rpt.total_active_angels);
+
+        if (HasUserPerm(PERM_SYSOP)) {
+            prints(
+                "\n\t 絬ぱㄏい局Τ计ヘ程ぶ %d 程 %d \n"
+                "\n\t 絬秨Μぱㄏい程ぶ %d 程 %d \n",
+                rpt.min_masters_of_online_angels,
+                rpt.max_masters_of_online_angels,
+                rpt.min_masters_of_active_angels,
+                rpt.max_masters_of_active_angels);
+        } else {
+            // some people with known min/max signature may leak their own 
+            // identify and then complain about privacy. well, I believe this
+            // is their own fault but anyway let's make them happy
+            // TODO avg+std is better?
+            double base1 = rpt.min_masters_of_online_angels,
+                   base2 = rpt.min_masters_of_active_angels;
+            if (!base1) base1 = 1;
+            if (!base2) base2 = 0;
+            prints(
+                    "\n\t 絬ぱㄏい局Τ程计ヘ琌程ぶ %.1f \n"
+                    "\n\t 絬秨Μぱㄏい计ヘ畉钵 %.1f \n",
+                    rpt.max_masters_of_online_angels/base1,
+                    rpt.max_masters_of_active_angels/base2);
+        }
+
         if (HasUserPerm(PERM_ANGEL))
             prints("\n\t 眤ヘ玡Τ %d \n", rpt.my_active_masters);
     }
