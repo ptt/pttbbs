@@ -182,11 +182,8 @@ output_chart(const boardinfo_t * board, const int nbrds)
 	if (strcmp(board[i].bname, bptr->brdname) != 0)
 	    continue;
 
-	if (bptr->brdattr & (BRD_BAD | BRD_NOCOUNT))
-	    continue;
-
-	/* 板主設定不列入記錄 */
-	if (bptr->brdattr & BRD_HIDE && !(bptr->brdattr & BRD_BMCOUNT))
+        // 隱板了別人看不到還有什麼好說的？
+	if (bptr->brdattr & (BRD_BAD | BRD_NOCOUNT | BRD_HIDE))
 	    continue;
 
 	if (board[i].ndir + board[i].nfile < 5)
