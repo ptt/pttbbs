@@ -261,7 +261,6 @@ main(int argc, char **argv)
 	}
     }
     if (ptime->tm_hour == 0) {
-	keeplog(".note", "Record", "¤ß±¡¯d¨¥ª©", NULL);
 	system("/bin/cp etc/today etc/yesterday");
 	/* system("rm -f note.dat"); */
 	/* Ptt */
