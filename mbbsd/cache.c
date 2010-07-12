@@ -141,7 +141,7 @@ apply_boards(int (*func) (boardheader_t *))
 }
 
 int
-is_BM_expired(time4_t user_firstlogin, time4_t BMexpire)
+is_BM_expired(time4_t BMexpire, time4_t user_firstlogin)
 {
     // XXX 為了解決有人挑過期的帳號註冊以取得 BM 權
     // 這是很笨很笨而且相關 bug 可能一堆的 workaround, 
@@ -170,7 +170,7 @@ is_BM_cache(int bid) /* bid starts from 1 */
     // reject user who haven't complete registration.
     if (!HasUserPerm(PERM_LOGINOK))
 	return 0;
-    if (is_BM_expired(cuser.firstlogin, bp->BMexpire))
+    if (is_BM_expired(bp->BMexpire, cuser.firstlogin))
         return 0;
     // XXX hard coded MAX_BMs=4
     if( currutmp->uid == pbm[0] ||
