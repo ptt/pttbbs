@@ -140,10 +140,25 @@ apply_boards(int (*func) (boardheader_t *))
     return 0;
 }
 
-int is_BM_cache(int bid) /* bid starts from 1 */
+int
+is_BM_expired(time4_t user_firstlogin, time4_t BMexpire)
+{
+    // XXX 為了解決有人挑過期的帳號註冊以取得 BM 權
+    // 這是很笨很笨而且相關 bug 可能一堆的 workaround, 
+    // 不過在全面改寫前看來也只有這樣改最快 (有比沒有好)
+    if (BMexpire)
+        return user_firstlogin > BMexpire;
+    // for legacy boards, allow BMexpire = 0 as 'skip'.
+    return 1;
+}
+
+int
+is_BM_cache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     int *pbm = SHM->BMcache[bid-1];
+    boardheader_t *bp = getbcache(bid);
+
     // XXX potential issue: (thanks for mtdas@ptt)
     //  buildBMcache use -1 as "none".
     //  some function may call is_BM_cache early 
@@ -155,6 +170,8 @@ int is_BM_cache(int bid) /* bid starts from 1 */
     // reject user who haven't complete registration.
     if (!HasUserPerm(PERM_LOGINOK))
 	return 0;
+    if (is_BM_expired(cuser.firstlogin, bp->BMexpire))
+        return 0;
     // XXX hard coded MAX_BMs=4
     if( currutmp->uid == pbm[0] ||
 	currutmp->uid == pbm[1] ||

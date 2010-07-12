@@ -66,31 +66,6 @@ is_uBM(const char *list, const char *id)
     return 0;
 }
 
-int
-userid_is_BM(const char *userid, const char *list)
-{
-    register int    ch, len;
-
-    // TODO merge with is_uBM
-    ch = list[0];
-    if ((ch > ' ') && (ch < 128)) {
-	len = strlen(userid);
-	do {
-	    if (!strncasecmp(list, userid, len)) {
-		ch = list[len];
-		if ((ch == 0) || (ch == '/') || (ch == ']'))
-		    return 1;
-	    }
-	    while ((ch = *list++)) {
-		if (ch == '/')
-		    break;
-	    }
-	} while (ch);
-    }
-    return 0;
-}
-
-
 time4_t
 gettime(int line, time4_t dt, const char*head)
 {

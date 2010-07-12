@@ -200,7 +200,8 @@ typedef struct boardheader_t { /* 256 bytes */
     uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
     time4_t SRexpire;		    /* SR Records expire time */
-    char    pad4[40];
+    time4_t BMexpire;               /* 最後設定板主的時間 */
+    char    pad4[36];
 } PACKSTRUCT boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...

@@ -118,6 +118,7 @@ char*getuserid(int num);
 int  getuser(const char *userid, userec_t *xuser);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
+int is_BM_expired(time4_t user_firstlogin, time4_t BMexpire);
 int is_BM_cache(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);

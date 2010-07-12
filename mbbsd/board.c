@@ -1382,15 +1382,25 @@ show_brdlist(int head, int clsflag, int newflag)
 }
 
 static void
-set_menu_BM(char *BM)
+set_menu_BM(char *BM, time4_t expire)
 {
-    if (!HasUserPerm(PERM_NOCITIZEN) && (HasUserPerm(PERM_ALLBOARD) || is_uBM(BM, cuser.userid))) {
-	currmode |= MODE_GROUPOP;
-
-	// XXX 不是很確定是否該在這邊 save level?
-	if (!HasUserPerm(PERM_SYSSUBOP) || !HasUserPerm(PERM_BM))
-	    pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
+    int is_bm = 0;
+    if (HasUserPerm(PERM_NOCITIZEN))
+        return;
+    if (HasUserPerm(PERM_ALLBOARD)) {
+        is_bm = 1;
+    } else if (!is_BM_expired(expire, cuser.firstlogin) && is_uBM(BM, cuser.userid)) {
+        // XXX 小組長是否也該使用 is_BM_expired 呢
+        is_bm = 1;
     }
+
+    if (!is_bm)
+        return;
+
+    currmode |= MODE_GROUPOP;
+    // XXX 不是很確定是否該在這邊 save level?
+    if (!HasUserPerm(PERM_SYSSUBOP) || !HasUserPerm(PERM_BM))
+        pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
 
 }
 
@@ -1763,7 +1773,7 @@ choose_board(int newflag)
 			class_bid = -1;	/* 熱門群組用 */
 
 		    if (!GROUPOP())	/* 如果還沒有小組長權限 */
-			set_menu_BM(B_BH(ptr)->BM);
+			set_menu_BM(B_BH(ptr)->BM, B_BH(ptr)->BMexpire);
 
 		    if (now < B_BH(ptr)->bupdate) {
 			int mr = 0;

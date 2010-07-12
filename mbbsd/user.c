@@ -217,7 +217,8 @@ user_display(const userec_t * u, int adminmode)
 	outs("\t¾á¥ôªO¥D: ");
 
 	for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
-	    if (is_uBM(bhdr->BM, u->userid)) {
+	    if ( is_uBM(bhdr->BM, u->userid) && 
+                !is_BM_expired(bhdr->BMexpire, u->firstlogin)) {
 		outs(bhdr->brdname);
 		outc(' ');
 	    }

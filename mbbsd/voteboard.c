@@ -322,7 +322,7 @@ do_voteboard(int type)
 	do {
 	    if (!getdata(7, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
-        }while (!userid_is_BM(topic, bcache[temp - 1].BM));
+        }while (!is_uBM(bcache[temp - 1].BM, topic));
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
 	break;
