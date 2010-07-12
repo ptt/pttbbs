@@ -1103,11 +1103,11 @@ adm_give_id_money(const char *user_id, int money, const char *mail_title)
     char tt[TTLEN + 1] = {0}; 
     int  unum = searchuser(user_id, NULL); 
 
-    // XXX 站長們似乎利用這個功能來同時發錢或扣錢，所以唯一 failure 的 case
-    // 是 return == -1 (若 0 代表對方錢被扣光)
+    // XXX 站長們似乎利用這個功能來同時發錢或扣錢，return value 可能是 0
+    // (若代表對方錢被扣光)
     if (unum <= 0 || pay_as_uid(unum, -money, "站長%s: %s",
                                 money >= 0 ? "發紅包" : "扣錢",
-                                mail_title) == -1) {
+                                mail_title) < 0) {
 	move(12, 0);
 	clrtoeol();
 	prints("id:%s money:%d 不對吧!!", user_id, money);
