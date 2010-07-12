@@ -1098,12 +1098,16 @@ int make_symbolic_link_interactively(int gid)
 }
 
 static void
-give_id_money(const char *user_id, int money, const char *mail_title)
+adm_give_id_money(const char *user_id, int money, const char *mail_title)
 {
     char tt[TTLEN + 1] = {0}; 
     int  unum = searchuser(user_id, NULL); 
 
-    if (unum <= 0 || pay_as_uid(unum, -money, "站長發紅包") < 1) { 
+    // XXX 站長們似乎利用這個功能來同時發錢或扣錢，所以唯一 failure 的 case
+    // 是 return == -1 (若 0 代表對方錢被扣光)
+    if (unum <= 0 || pay_as_uid(unum, -money, "站長%s: %s",
+                                money >= 0 ? "發紅包" : "扣錢",
+                                mail_title) == -1) {
 	move(12, 0);
 	clrtoeol();
 	prints("id:%s money:%d 不對吧!!", user_id, money);
@@ -1173,7 +1177,7 @@ give_money(void)
 	    if (bad_user_id(SHM->userid[i]))
 		continue;
 	    id = SHM->userid[i];
-	    give_id_money(id, money, tt);
+	    adm_give_id_money(id, money, tt);
             fprintf(fp2,"給 %s : %d\n", id, money);
             count++;
 	}
@@ -1192,7 +1196,7 @@ give_money(void)
 	    id = buf;
 	    mn = ptr + 1;
             money = atoi(mn);
-	    give_id_money(id, money, tt);
+	    adm_give_id_money(id, money, tt);
             fprintf(fp2,"給 %s : %d\n", id, money);
             total_money += money;
             count++;
