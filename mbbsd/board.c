@@ -1382,15 +1382,14 @@ show_brdlist(int head, int clsflag, int newflag)
 }
 
 static void
-set_menu_BM(char *BM, time4_t expire)
+set_menu_BM(char *BM)
 {
     int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
         return;
     if (HasUserPerm(PERM_ALLBOARD)) {
         is_bm = 1;
-    } else if (!is_BM_expired(expire, cuser.firstlogin) && is_uBM(BM, cuser.userid)) {
-        // XXX 小組長是否也該使用 is_BM_expired 呢
+    } else if (is_uBM(BM, cuser.userid)) {
         is_bm = 1;
     }
 
@@ -1773,7 +1772,7 @@ choose_board(int newflag)
 			class_bid = -1;	/* 熱門群組用 */
 
 		    if (!GROUPOP())	/* 如果還沒有小組長權限 */
-			set_menu_BM(B_BH(ptr)->BM, B_BH(ptr)->BMexpire);
+			set_menu_BM(B_BH(ptr)->BM);
 
 		    if (now < B_BH(ptr)->bupdate) {
 			int mr = 0;
