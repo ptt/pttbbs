@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 		    xuser.userlevel &= ~PERM_BM;
 		    bms[index].flag = 1;
 		    flag = 1;
+                    // NOTE: 好像不改也無所謂，目前拔 BM 是自動的。
 		    passwd_update(bmid, &xuser);
 		}
 		j++;
@@ -120,6 +121,18 @@ int main(int argc, char *argv[])
 	}
 
 	if (flag == 1) {
+            boardheader_t *bp = getbcache(i+1);
+
+            // 確認我們沒搞錯 cache. 如果 cache 炸了就別用了
+            if (strcmp(bp->brdname, allbrd[i].brdname) != 0) {
+                printf("ERROR: unmatched cache!!! (%s - %s)\n",
+                        bp->brdname, allbrd[i].brdname);
+                bp = NULL;
+                exit(1);
+                // sync to latest
+                memcpy(&allbrd[i], bp, sizeof(boardheader_t));
+            }
+
 	    bmbuf[0] = '\0';
 	    for (k = 0, n = 0; k < index; k++) {
 		if (!bms[k].flag) {
@@ -128,9 +141,12 @@ int main(int argc, char *argv[])
 		}
 	    }
 	    strcpy(allbrd[i].BM, bmbuf);
+            printf("board %s: %s -> %s\n",
+                    allbrd[i].brdname, bp->BM, allbrd[i].BM);
+            strcpy(bp->BM, allbrd[i].BM);
 	    if (substitute_record(BBSHOME"/"FN_BOARD, &allbrd[i], 
 			sizeof(boardheader_t), i+1) == -1) {
-		printf("Update Board Faile : %s\n", allbrd[i].brdname);
+		printf("Update Board Failed: %s\n", allbrd[i].brdname);
 	    }
 	    reset_board(i+1);
 	}
