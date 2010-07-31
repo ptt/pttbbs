@@ -795,14 +795,6 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	new_top = 10; // default 10 
 	switch (ch) {
 	case Ctrl('Z'):
-	    // notify new usage
-	    // only BM will need this information.
-	    if ((currstat != RMAIL) && (currmode & MODE_BOARD))
-	    {
-		move(b_lines-2, 0); clrtobot();
-		outs(ANSI_COLOR(1;33) "置底的功\能鍵已改為 _ (shift-) 或 Ctrl-X。\n"
-			"原 Ctrl-Z 現在是快速切換鍵，可在下列區域中切換 (按下對應按鍵即可):" ANSI_RESET);
-	    }
 	    mode = FULLUPDATE;
 	    if (ZA_Select())
 		mode = DOQUIT;
@@ -1326,7 +1318,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    " (R)回信 (x)站內轉寄 (y)回群組信 (d/D)刪信 (^P)寄發新信 \t(←/q)離開");
 	    else
 		vs_footer(" 文章選讀 ",
-		    " (y)回應(X)推文(x)轉錄 (=[]<>)相關主題(/?a)搜尋標題/作者 (b)進板畫面");
+		    " (y)回應(X)推文(^X)轉錄 (=[]<>)相關主題(/?a)找標題/作者 (b)進板畫面");
 	    break;
 
 	case TITLE_REDRAW:

@@ -1720,6 +1720,13 @@ cp_IsHiddenBoard(const boardheader_t *bp)
 }
 
 static int
+old_cross_post(int ent, fileheader_t * fhdr, const char *direct)
+{
+    vmsg("為了避免您誤按，轉錄按鍵已改為 Ctrl-X");
+    return  PARTUPDATE;
+}
+
+static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[PATHLEN], xfpath[PATHLEN], xtitle[80];
@@ -1746,6 +1753,26 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
+    // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
+    if (HasUserPerm(PERM_VIOLATELAW))
+    {
+	static int violatecp = 0;
+	if (violatecp++ >= MAX_CROSSNUM)
+	    return DONOTHING;
+    }
+
+    // prompt user what he's going to do now.
+    move(2, 0);
+    if (is_BM_cache(currbid)) {
+        SOLVE_ANSI_CACHE();
+        clrtoeol();
+        outs("準備進行文章轉錄。板主要置底文章請改按 "
+                ANSI_COLOR(1;31) "_" ANSI_RESET " (壓住 "
+                ANSI_COLOR(1;36) "Shift" ANSI_RESET " 再按 " 
+                ANSI_COLOR(1;36) "-" ANSI_RESET
+                " )\n");
+    }
+
 #ifdef USE_AUTOCPLOG
     // anti-crosspost spammers
     //
@@ -1763,22 +1790,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif // USE_AUTOCPLOG
 
-    // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
-    if (HasUserPerm(PERM_VIOLATELAW))
-    {
-	static int violatecp = 0;
-	if (violatecp++ >= MAX_CROSSNUM)
-	    return DONOTHING;
-    }
-
-    move(2, 0);
-    clrtoeol();
-    if (postrecord.times > 1)
-    {
+    if (postrecord.times > 1) {
 	outs(ANSI_COLOR(1;31) 
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
 	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
     }
+
     move(1, 0);
 
     CompleteBoard("轉錄本文章於看板：", xboard);
@@ -3849,7 +3866,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('U')
     { 0, do_post_vote }, // Ctrl('V')
     { 0, whereami }, // Ctrl('W')
-    { 1, push_bottom }, // Ctrl('X')
+    { 1, cross_post }, // Ctrl('X')
     { 0, NULL }, // Ctrl('Y')
     { 0, NULL }, // Ctrl('Z') 26 // 現在給 ZA 用。
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
@@ -3925,7 +3942,7 @@ const onekey_t read_comms[] = {
 #endif
     { 0, NULL }, // 'v'
     { 1, b_call_in }, // 'w'
-    { 1, cross_post }, // 'x'
+    { 1, old_cross_post }, // 'x'
     { 1, reply_post }, // 'y'
     { 0, b_man }, // 'z' 122
 };
