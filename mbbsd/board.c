@@ -1306,11 +1306,24 @@ show_brdlist(int head, int clsflag, int newflag)
 		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-			if (newflag) prints("%7s", "");
-			else prints("%7d", head);
-			prints("X%c %-13sÁôªO ¡H%-34.34s",
+                        const char *reason = "ÁôªO";
+
+			if (newflag)
+                            prints("%7s", "");
+			else
+                            prints("%7d", head);
+
+                        if ((B_BH(ptr)->brdattr & BRD_OVER18) && !over18)
+                            reason = "[18¸T]";
+                        else if (B_BH(ptr)->brdattr & BRD_HIDE)
+                            reason = "[ÁôªO]";
+                        else
+                            reason = "Åv­­¤£¨¬ ";
+ 
+			prints("X%c %-13s%-7s%-34.34s",
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
                                 B_BH(ptr)->brdname,
+                                reason,
                                 B_BH(ptr)->title + 7);
 			continue;
 		    }
