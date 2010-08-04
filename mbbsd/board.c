@@ -1308,8 +1308,10 @@ show_brdlist(int head, int clsflag, int newflag)
 		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
 			if (newflag) prints("%7s", "");
 			else prints("%7d", head);
-			prints(" %c Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO",
-				ptr->myattr & NBRD_TAG ? 'D' : ' ');
+			prints("X%c %-13sÁôªO ¡H%-34.34s",
+				ptr->myattr & NBRD_TAG ? 'D' : ' ',
+                                B_BH(ptr)->brdname,
+                                B_BH(ptr)->title + 7);
 			continue;
 		    }
 		}
