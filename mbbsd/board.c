@@ -1324,7 +1324,12 @@ show_brdlist(int head, int clsflag, int newflag)
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
                                 B_BH(ptr)->brdname,
                                 reason,
-                                B_BH(ptr)->title + 7);
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+                                B_BH(ptr)->title + 7
+#else
+                                "<目前無法進入此看板>"
+#endif
+                                );
 			continue;
 		    }
 		}
