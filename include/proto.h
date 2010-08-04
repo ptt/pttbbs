@@ -672,9 +672,6 @@ int b_vote(void);
 int b_vote_maintain(void);
 void auto_close_polls(void);
 
-/* vice */
-int vice_main(void);
-
 /* voteboard */
 int do_voteboard(int);
 void do_voteboardreply(const fileheader_t *fhdr);

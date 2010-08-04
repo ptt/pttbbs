@@ -821,9 +821,9 @@ static const commands_t xyzlist[] = {
 static const commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
-    {p_from, 0,         "33From        暫時修改故鄉"},
-    {ordersong,0,       "44OSong       動態點歌機"},
-    {p_exmail, 0,       "55Exmail      購買信箱         $1000/封"},
+    {p_from, 0,         "22From        暫時修改故鄉"},
+    {ordersong,0,       "33OSong       動態點歌機"},
+    {p_exmail, 0,       "44Exmail      購買信箱         $1000/封"},
     {NULL, 0, NULL}
 };
 
@@ -899,10 +899,9 @@ static int chessroom() {
 static const commands_t plist[] = {
 
     {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
-    {vice_main, PERM_LOGINOK,    "22Vice        【 發票對獎 】"},
-    {g_card_jack, PERM_LOGINOK,  "33Jack        【  黑傑克  】"},
-    {g_ten_helf, PERM_LOGINOK,   "44Tenhalf     【  十點半  】"},
-    {card_99, PERM_LOGINOK,      "55Nine        【  九十九  】"},
+    {g_card_jack, PERM_LOGINOK,  "22Jack        【  黑傑克  】"},
+    {g_ten_helf, PERM_LOGINOK,   "33Tenhalf     【  十點半  】"},
+    {card_99, PERM_LOGINOK,      "44Nine        【  九十九  】"},
     {NULL, 0, NULL}
 };
 
