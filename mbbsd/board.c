@@ -1313,9 +1313,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			else
                             prints("%7d", head);
 
-                        if ((B_BH(ptr)->brdattr & BRD_OVER18) && !over18)
-                            reason = "[18¸T]";
-                        else if (B_BH(ptr)->brdattr & BRD_HIDE)
+                        if (B_BH(ptr)->brdattr & BRD_HIDE)
                             reason = "[ÁôªO]";
  
                         // we don't print BM and popularity, so subject can be
