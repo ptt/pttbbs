@@ -1306,7 +1306,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-                        const char *reason = "ÁôªO";
+                        const char *reason = "[¸T¤J]";
 
 			if (newflag)
                             prints("%7s", "");
@@ -1317,10 +1317,10 @@ show_brdlist(int head, int clsflag, int newflag)
                             reason = "[18¸T]";
                         else if (B_BH(ptr)->brdattr & BRD_HIDE)
                             reason = "[ÁôªO]";
-                        else
-                            reason = "Åv­­¤£¨¬ ";
  
-			prints("X%c %-13s%-7s%-34.34s",
+                        // we don't print BM and popularity, so subject can be
+                        // longer
+			prints("X%c %-13.13s%-7.7s %-48.48s",
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
                                 B_BH(ptr)->brdname,
                                 reason,
