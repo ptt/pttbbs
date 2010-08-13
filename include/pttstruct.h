@@ -204,7 +204,7 @@ typedef struct boardheader_t { /* 256 bytes */
 } PACKSTRUCT boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
-#define BRD_NOZAP		0x00000001	/* 不可zap */
+// #define BRD_NOZAP		0x00000001	/* (沒用到) 不可zap */
 #define BRD_NOCOUNT		0x00000002	/* 不列入統計 */
 #define BRD_NOTRAN		0x00000004	/* 不轉信 */
 #define BRD_GROUPBOARD		0x00000008	/* 群組板 */

@@ -107,7 +107,7 @@ static void initBoards() {
 	
 	strcpy(b.brdname, "SYSOP");
 	strcpy(b.title, "¼T­ù ¡·¯¸ªø¦n!");
-	b.brdattr = BRD_POSTMASK | BRD_NOTRAN | BRD_NOZAP;
+	b.brdattr = BRD_POSTMASK | BRD_NOTRAN;
 	b.level = 0;
 	b.gid = 2;
 	newboard(fp, &b);
