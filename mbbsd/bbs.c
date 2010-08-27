@@ -308,7 +308,8 @@ set_board(void)
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
     if (!HasUserPerm(PERM_NOCITIZEN) && 
-         (HasUserPerm(PERM_ALLBOARD) || is_BM_cache(currbid))) {
+         (HasUserPerm(PERM_ALLBOARD) || is_BM_cache(currbid) ||
+	  (bp->BM[0] <= ' ' && GROUPOP()))) {
 	currmode = currmode | MODE_BOARD | MODE_POST | MODE_POSTCHECKED;
     }
 }
