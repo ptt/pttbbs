@@ -1490,8 +1490,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
-#ifndef USE_OLD_HELP
-
 static const char 
 *hlp_talkbasic[] = {
     "【移動游標】", NULL,
@@ -1559,13 +1557,9 @@ static const char
     NULL,
 };
 
-#endif // USE_OLD_HELP
-
 static void
 t_showhelp(void)
 {
-#ifndef USE_OLD_HELP
-
     const char ** p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
 	       ** p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
     const int  cols[3] = { 31, 25, 22 },    // column witdh
@@ -1578,39 +1572,6 @@ t_showhelp(void)
     if (HasUserPerm(PERM_PAGE))
     vs_multi_T_table_simple(p2, HasUserPerm(PERM_SYSOP)?3:2, cols, desc,
 	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-
-#else // USE_OLD_HELP
-
-    clear();
-    outs(ANSI_COLOR(36) "【 休閒聊天使用說明 】" ANSI_RESET "\n\n"
-	 "(←)(e)         結束離開             (h)             看使用說明\n"
-	 "(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
-	 "(PgUp)(^B)      上頁選單             ( )(PgDn)(^F)   下頁選單\n"
-	 "(Hm)/($)(Ed)    首/尾                (S)             來源/好友描述/戰績 切換\n"
-	 "(m)             寄信                 (q/Q/c)         查詢 指定/全部網友/寵物\n"
-	 "(r)             閱\讀信件             (l/C)           看上次熱訊/切換隱身\n"
-	 "(f)             全部/好友列表        (數字)          跳至該使用者\n"
-	 "(p)             切換呼叫器           (g/i)           給錢/切換心情\n"
-	 "(a/d/o)         好友 增加/刪除/修改  (s)             網友 ID 搜尋\n"
-	 "(N)             修改暱稱             (y)             我想找人聊天、下棋…\n");
-
-    if (HasUserPerm(PERM_PAGE)) {
-	outs("\n" ANSI_COLOR(36) "【 交談專用鍵 】" ANSI_RESET "\n"
-	     "(→)(t)(Enter)  跟他／她交談聊天\n"
-	     "(w)             熱線 Call in\n"
-	     "(^W)切換水球方式 一般 / 進階\n"
-	     "(b)             對好友廣播 (一定要在好友列表中)\n"
-	     "(^R)            即時回應 (有人 Call in 你時)\n");
-    }
-    if (HasUserPerm(PERM_SYSOP)) {
-	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n\n");
-	outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
-	outs("(K)             把壞蛋踢出去\n");
-#if defined(SHOWBOARD) && defined(DEBUG)
-	outs("(Y)             顯示正在看什麼板\n");
-#endif
-    }
-#endif // USE_OLD_HELP
     PRESSANYKEY();
 }
 

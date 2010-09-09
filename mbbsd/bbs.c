@@ -1720,7 +1720,7 @@ cp_IsHiddenBoard(const boardheader_t *bp)
     return 0;
 }
 
-static int
+int
 old_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     vmsg("為了避免您誤按，轉錄按鍵已改為 Ctrl-X");

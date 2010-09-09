@@ -17,6 +17,7 @@ enum SHOWMAIL_MODES {
     SHOWMAIL_RANGE,
 };
 static int	showmail_mode = SHOWMAIL_NORM;
+int old_cross_post(int, fileheader_t* , const char *);
 
 // #ifdef USE_MAIL_AUTO_FORWARD
 int
@@ -1075,8 +1076,7 @@ mailtitle(void)
     }
 
     showtitle("郵件選單", BBSName);
-    outs("[←]離開[↑↓]選擇[→]閱\讀信件 [X]轉錄看板[F]轉寄站外 ");
-    prints(" [O]站外信:%s [h]求助\n" , 
+    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助\n" , 
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
     vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
@@ -1420,34 +1420,6 @@ mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 /* help for mail reading */
-#ifdef USE_OLD_HELP
-
-static const char    * const mail_help[] = {
-    "\0電子信箱操作說明",
-    "\01基本命令",
-    "(p/↑)(n/↓) 前一篇/下一篇文章",
-    "(P)(PgUp)    前一頁",
-    "(N)(PgDn)    下一頁",
-    "(數字鍵)     跳到第 ## 筆",
-    "($)          跳到最後一筆",
-    "(r)(→)      讀信",
-    "(R)/(y)      回信 / 群組回信",
-    "\01進階命令",
-    "(TAB)        切換顯示模式(目前有一般及顯示大小)",
-    "(O)          關閉/開啟 站外信件轉入",
-    "(c)/(z)      此信件收入私人信件夾/進入私人信件夾",
-    "(x)/(X)      轉信給其它使用者/轉錄文章到其他看板",
-    "(F)/(u)      將信傳送回您的電子信箱/水球整理寄回信箱",
-    "(d)          殺掉此信",
-    "(D)          殺掉指定範圍的信",
-    "(m)          將信標記，以防被清除",
-    "(^G)         立即重建信箱 (信箱毀損時用)",
-    "(t)          標記欲刪除信件",
-    "(^D)         刪除已標記信件",
-    NULL
-};
-
-#else
 
 static const char *hlp_mailmove[] = {
     "【移動游標】", NULL,
@@ -1472,7 +1444,7 @@ static const char *hlp_mailmove[] = {
     "【轉信與轉錄】", NULL,
     "  站內轉信", "x",
     "  站外轉寄", "F",
-    "  轉錄看板", "X",
+    "  轉錄看板", "^X",
     NULL,
 }, *hlp_mailadv[] = {
     "【進階指令】", NULL,
@@ -1498,14 +1470,9 @@ static const char *hlp_mailmove[] = {
      NULL,
 };
 
-#endif
-
 static int
 m_help(void)
 {
-#ifdef USE_OLD_HELP
-    show_help(mail_help);
-#else
     const char ** p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
 	       ** p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
     const int  cols[3] = { 31, 22, 24 },    // column width
@@ -1520,7 +1487,6 @@ m_help(void)
     vs_multi_T_table_simple(p2, HasUserPerm(PERM_MAILLIMIT)?3:2, cols2, desc2,
 	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
     PRESSANYKEY();
-#endif
     return FULLUPDATE;
 }
 
@@ -1868,7 +1834,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('U')
     { 0, NULL }, // Ctrl('V')
     { 0, NULL }, // Ctrl('W')
-    { 0, NULL }, // Ctrl('X')
+    { 1, mail_cross_post }, // // Ctrl('X')
     { 0, NULL }, // Ctrl('Y')
     { 0, NULL }, // Ctrl('Z') 26
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
@@ -1902,7 +1868,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'U'
     { 1, mail_unread }, // 'V'
     { 0, NULL }, // 'W'
-    { 1, mail_cross_post }, // 'X'
+    { 1, old_cross_post }, // 'X'
     { 0, NULL }, // 'Y'
     { 0, NULL }, // 'Z' 90
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
