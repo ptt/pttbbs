@@ -266,6 +266,7 @@ abort_bbs_debug(int sig)
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGTERM, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
+    Signal(SIGSEGV, SIG_DFL);
 
     /* unblock */
     sigemptyset(&sigset);
