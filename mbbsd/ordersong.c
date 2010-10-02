@@ -76,6 +76,7 @@ do_order_song(void)
 	outs(ANSI_COLOR(1) "注意點歌內容請勿涉及謾罵 人身攻擊 猥褻"
 	     "公然侮辱 誹謗\n"
 	     "若有上述違規情形，站方將保留決定是否公開播放的權利\n"
+             "且違規者將不受暱名保護(其 ID 可被公佈於公開看板)\n"
 	     "如不同意請按 (3) 離開。" ANSI_RESET "\n");
 	getdata(18, 0, 
 		"請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
