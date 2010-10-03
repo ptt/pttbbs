@@ -28,22 +28,21 @@ reset_garbage(void)
      */
 }
 
-void
-keeplog(char *fpath, char *board, char *title, char *sym)
+static void
+keeplog(const char *fpath, const char *board, const char *title, const char *sym)
 {
     fileheader_t    fhdr;
     int             bid;
-    char            genbuf[256], buf[256];
+    char            genbuf[PATHLEN], buf[256];
 
     if (!board)
-	board = "Record";
+	board = BN_RECORD;
 
-    sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
+    setbpath(genbuf, board);
     stampfile(genbuf, &fhdr);
-    sprintf(buf, "mv %s %s", fpath, genbuf);
-    system(buf);                                                              
+    Rename(fpath, genbuf);
 
-    if( sym ){
+    if (sym) {
         sprintf(buf, "log/%s", sym);
         unlink(buf);
         symlink(genbuf, buf);
@@ -51,9 +50,9 @@ keeplog(char *fpath, char *board, char *title, char *sym)
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
      */
-    strcpy(fhdr.title, title);
-    strcpy(fhdr.owner, "[¾ú¥v¦Ñ®v]");
-    sprintf(genbuf, "boards/%c/%s/.DIR", board[0], board);
+    strlcpy(fhdr.title, title, sizeof(fhdr.title));
+    strlcpy(fhdr.owner, "[¾ú¥v¦Ñ®v]", sizeof(fhdr.owner));
+    setbfile(genbuf, board, FN_DIR);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if ((bid = getbnum(board)) > 0)
@@ -74,43 +73,22 @@ my_outs(FILE *fp, char *buf, char mode)
     }
 }
 
-/* XXX: ©Ç©Çªº, ¬Ý¤£À´¦b gzip() ¤°»ò, ¦Ó¥B¨ä¤¤ªº stamp ¦n¹³³£¶Ã¶Ç¶i¨Ó */
+// moves "source" to "target""suffix", then gzips it
 static void 
-gzip(char *source, char *target, char *stamp)
+gzip(const char *source, const char *target, const char *suffix)
 {
-    char            buf[128];
-    sprintf(buf, "gzip -f9n adm/%s%s", target, stamp);
-    rename(source, &buf[14]);
+    char buf[PATHLEN];
+    snprintf(buf, sizeof(buf), "gzip -f9n adm/%s%s", target, suffix);
+    Rename(source, &buf[14]);
     system(buf);
 }
 
-int 
-main(int argc, char **argv)
+static int
+parse_usies(const char *fn, struct tm *ptime, int act[27])
 {
-    int             i, j;
-    int             item, mo, da, peak_hour_login = 0,
-                    max_reg = 0, peak_hour = 0;
-    int             day_login, max_day_login;
-    int             max_hour_login;
-    int             max_online;
-    char           *act_file = ".act";
-    char           *log_file = "usies";
-    char           *wday_str = "UMTWRFS";
-    char            buf[256], buf1[256], *p;
-    FILE           *fp, *fp1;
-    int             act[27];	/* ¦¸¼Æ/²Ö­p®É¶¡/pointer */
-    time4_t         now;
-    struct tm      *ptime;
-    int             per_hour_unit = 100;
-
-    attach_SHM();
-    nice(10);
-    chdir(BBSHOME);
-    now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
-    ptime = localtime4(&now);
-
-    memset(act, 0, sizeof(act));
-    printf("¦¸¼Æ/²Ö­p®É¶¡\n");
+    const char const act_file[] = ".act";
+    char buf[256], *p;
+    FILE *fp;
 
     // load parsed result
     if ((ptime->tm_hour != 0) && (fp = fopen(act_file, "r"))) {
@@ -119,13 +97,15 @@ main(int argc, char **argv)
     }
 
     // parse "usies"
-    if ((fp = fopen(log_file, "r")) == NULL) {
+    if ((fp = fopen(fn, "r")) == NULL) {
 	printf("cann't open usies\n");
 	return 1;
     }
+
     if (act[26])
 	fseek(fp, act[26], 0);
-    while (fgets(buf, 256, fp)) {
+
+    while (fgets(buf, sizeof(buf), fp)) {
 	int hour;
 	buf[11 + 2] = 0;
 	hour = atoi(buf + 11);
@@ -138,7 +118,7 @@ main(int argc, char **argv)
 	    act[hour]++;
 	    continue;
 	}
-	if ((p = (char *)strstr(buf + 40, "Stay:"))) {
+	if ((p = strstr(buf + 40, "Stay:"))) {
 	    if ((hour = atoi(p + 5))) {
 		act[24] += hour;
 		act[25]++;
@@ -155,6 +135,38 @@ main(int argc, char **argv)
 	fclose(fp);
     }
 
+    return 0;
+}
+
+int 
+main(int argc, char **argv)
+{
+    int             i, j;
+    int             item, mo, da, peak_hour_login = 0,
+                    max_reg = 0, peak_hour = 0;
+    int             day_login, max_day_login;
+    int             max_hour_login;
+    int             max_online;
+    const char const log_file[] = "usies";
+    const char const wday_str[] = "UMTWRFS";
+    char            buf[256], buf1[256];
+    FILE           *fp, *fp1;
+    int             act[27];	/* ¦¸¼Æ/²Ö­p®É¶¡/pointer */
+    time4_t         now;
+    struct tm      *ptime;
+    int             per_hour_unit = 100;
+
+    attach_SHM();
+    nice(10);
+    chdir(BBSHOME);
+    now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
+    ptime = localtime4(&now);
+
+    memset(act, 0, sizeof(act));
+
+    printf("¦¸¼Æ/²Ö­p®É¶¡\n");
+    parse_usies(log_file, ptime, act);
+
     peak_hour_login = 0;
     day_login = 0;
     for (i = 0; i < 24; i++) {
@@ -167,11 +179,11 @@ main(int argc, char **argv)
     item = peak_hour_login / ACCOUNT_MAX_LINE + 1;
 
     if (!ptime->tm_hour) {
-	keeplog("etc/today", "Record", "¤W¯¸¤H¦¸²Î­p", NULL);
-	keeplog(FN_MONEY, "Security", "¥»¤éª÷¿ú©¹¨Ó°O¿ý", NULL);
-	keeplog("etc/illegal_money", "Security", "¥»¤é¹HªkÁÈ¿ú°O¿ý", NULL);
-	keeplog("etc/osong.log", "Security", "¥»¤éÂIºq°O¿ý", NULL);
-	keeplog("etc/chicken", "Record", "Âû³õ³ø§i", NULL);
+	keeplog("etc/today", BN_RECORD, "¤W¯¸¤H¦¸²Î­p", NULL);
+	keeplog(FN_MONEY, BN_SECURITY, "¥»¤éª÷¿ú©¹¨Ó°O¿ý", NULL);
+	keeplog("etc/illegal_money", BN_SECURITY, "¥»¤é¹HªkÁÈ¿ú°O¿ý", NULL);
+	keeplog("etc/osong.log", BN_SECURITY, "¥»¤éÂIºq°O¿ý", NULL);
+	keeplog("etc/chicken", BN_RECORD, "Âû³õ³ø§i", NULL);
     }
 
     /* -------------------------------------------------------------- */
@@ -204,12 +216,6 @@ main(int argc, char **argv)
     fprintf(fp, "  Á`¦@¤W¯¸¤H¦¸¡G[37m%-7d[34m¥­§¡¨Ï¥Î¤H¼Æ¡G[37m%d\n", day_login, day_login / 24);
     fclose(fp);
     /* -------------------------------------------------------------- */
-
-
-    sprintf(buf, "-%02d%02d%02d",
-	    ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
-
-
 
     printf("¾ú¥v¨Æ¥ó³B²z\n");
     /* Ptt ¾ú¥v¨Æ¥ó³B²z */
@@ -260,23 +266,27 @@ main(int argc, char **argv)
 	    fclose(fp1);
 	}
     }
+
     if (ptime->tm_hour == 0) {
 	system("/bin/cp etc/today etc/yesterday");
 	/* system("rm -f note.dat"); */
+
 	/* Ptt */
-	sprintf(buf1, "[¤½¦w³ø§i] ¨Ï¥ÎªÌ¤W½uºÊ±± [%02d/%02d:%02d]",
+	snprintf(buf, sizeof(buf), "[¤½¦w³ø§i] ¨Ï¥ÎªÌ¤W½uºÊ±± [%02d/%02d:%02d]",
 		ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour);
-	keeplog("usies", "Security", buf1, "usies");
+	keeplog("usies", "Security", buf, "usies");
 	printf("[¤½¦w³ø§i] ¨Ï¥ÎªÌ¤W½uºÊ±±\n");
-	gzip(log_file, "usies", buf);
-	printf("À£ÁY¨Ï¥ÎªÌ¤W½uºÊ±±\n");
+
 	/* Ptt ¾ú¥v¨Æ¥ó³B²z */
-	now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
+	now -= ADJUST_M * 60;	/* back to ancent */
 	ptime = localtime4(&now);
 
-	attach_SHM();
-	if ((fp = fopen("etc/history.data", "r"))) {	/* ³æ¤é³Ì¦h¦¸¤H¦¸,¦P®É¤W½u
-							 * ,µù¥U */
+	sprintf(buf, "-%02d%02d%02d",
+		ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
+	gzip(log_file, "usies", buf);
+	printf("À£ÁY¨Ï¥ÎªÌ¤W½uºÊ±±\n");
+
+	if ((fp = fopen("etc/history.data", "r"))) {	/* ³æ¤é³Ì¦h¦¸¤H¦¸,¦P®É¤W½u,µù¥U */
 	    if (fscanf(fp, "%d %d %d %d", &max_day_login, &max_hour_login, &max_reg, &max_online) == 4) {
 		fp1 = fopen("etc/history", "a");
 		if (peak_hour_login > max_hour_login) {
@@ -352,6 +362,7 @@ main(int argc, char **argv)
 	    }
 	    fclose(fp1);
 	}
+
 	/* Ptt Åwªïµe­±³B²z */
 	printf("Åwªïµe­±³B²z\n");
 
@@ -369,17 +380,17 @@ main(int argc, char **argv)
 	}
 	printf("Åwªïµe­±³B²z\n");
 	if (ptime->tm_wday == 0) {
-	    keeplog("etc/week", "Record", "¥»¶g¼öªù¸ÜÃD", NULL);
+	    keeplog("etc/week", BN_RECORD, "¥»¶g¼öªù¸ÜÃD", NULL);
 
 	    gzip("bbslog", "bntplink", buf);
 	    gzip("innd/bbslog", "innbbsd", buf);
 	    gzip("etc/mailog", "mailog", buf);
 	}
 	if (ptime->tm_mday == 1)
-	    keeplog("etc/month", "Record", "¥»¤ë¼öªù¸ÜÃD", NULL);
+	    keeplog("etc/month", BN_RECORD, "¥»¤ë¼öªù¸ÜÃD", NULL);
 
 	if (ptime->tm_yday == 1)
-	    keeplog("etc/year", "Record", "¦~«×¼öªù¸ÜÃD", NULL);
+	    keeplog("etc/year", BN_RECORD, "¦~«×¼öªù¸ÜÃD", NULL);
     } else if (ptime->tm_hour == 3 && ptime->tm_wday == 6) {
 	char           *fn1 = "tmp";
 	char           *fn2 = "suicide";
