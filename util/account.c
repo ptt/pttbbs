@@ -262,6 +262,64 @@ out:
     return 0;
 }
 
+static int
+update_holiday_list(struct tm *ptime)
+{
+    const char const wday_str[] = "UMTWRFS";
+    char buf[256];
+    int i = 0;
+    FILE *fp, *fp1;
+
+    if ((fp1 = fopen("etc/today_is", "w")) == NULL)
+	return 1;
+
+    if ((fp = fopen("etc/feast", "r")) == NULL)
+	goto none;
+
+    while (fgets(buf, sizeof(buf), fp)) {
+	int mo;
+	char a, b;
+
+	if (buf[0] != '#' && sscanf(buf, "%d %c%c", &mo, &a, &b) == 3 && isdigit(a)) {
+	    if (isdigit(b)) {
+		int da = 10 * (a - '0') + (b - '0');
+		if (ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
+		    i = 1;
+		    fprintf(fp1, "%-14.14s", &buf[6]);
+		}
+	    } else if (a - '0' <= 4) {
+		int wday = 0;
+		b = toupper(b);
+		while (wday < 7 && b != *(wday_str + wday))
+		    wday++;
+		if (ptime->tm_mon + 1 == mo && ptime->tm_wday == wday &&
+			(ptime->tm_mday - 1) / 7 + 1 == (a - '0')) {
+		    i = 1;
+		    fprintf(fp1, "%-14.14s", &buf[6]);
+		}
+	    }
+	}
+    }
+    fclose(fp);
+
+none:
+    if (i > 0)
+	goto out;
+
+    if ((fp = fopen("etc/today_boring", "r"))) {
+	while (fgets(buf, sizeof(buf), fp))
+	    if (strlen(buf) > 3)
+		fprintf(fp1, "%s", buf);
+	fclose(fp);
+    } else
+	fprintf(fp1, "本日節日徵求中");
+
+out:
+    fclose(fp1);
+
+    return 0;
+}
+
 int 
 main(int argc, char **argv)
 {
@@ -269,7 +327,6 @@ main(int argc, char **argv)
     int             mo, da;
     int             peak_hour_login, peak_hour, day_login;
     const char const log_file[] = "usies";
-    const char const wday_str[] = "UMTWRFS";
     char            buf[256], buf1[256];
     FILE           *fp, *fp1;
     int             act[27];	/* 次數/累計時間/pointer */
@@ -356,49 +413,7 @@ main(int argc, char **argv)
 
 	/* Ptt 節日處理 */
 	printf("節日處理\n");
-	if ((fp1 = fopen("etc/today_is", "w"))) {
-	    i = 0;
-	    if ((fp = fopen("etc/feast", "r"))) {
-		while (fgets(buf1, sizeof(buf1), fp)) {
-		    if (buf1[0] != '#' &&
-			sscanf(buf1, "%d %c%c", &mo, buf, buf + 1) == 3) {
-			if (isdigit(buf[0])) {
-			    if (isdigit(buf[1])) {
-				da = 10 * (buf[0] - '0') + (buf[1] - '0');
-				if (tm_now.tm_mday == da && tm_now.tm_mon + 1 == mo) {
-				    i = 1;
-				    fprintf(fp1, "%-14.14s", &buf1[6]);
-				}
-			    } else {
-				if (buf[0] - '0' <= 4) {
-				    int wday = 0;
-				    buf[1] = toupper(buf[1]);
-				    while (wday < 7 && buf[1] != *(wday_str + wday))
-					wday++;
-				    if (tm_now.tm_mon + 1 == mo && tm_now.tm_wday == wday &&
-					(tm_now.tm_mday - 1) / 7 + 1 == (buf[0] - '0')) {
-					i = 1;
-					fprintf(fp1, "%-14.14s", &buf1[6]);
-				    }
-				}
-			    }
-			}
-		    }
-		}
-		fclose(fp);
-	    }
-	    printf("節日處理1\n");
-	    if (i == 0) {
-		if ((fp = fopen("etc/today_boring", "r"))) {
-		    while (fgets(buf1, sizeof(buf1), fp))
-			if (strlen(buf1) > 3)
-			    fprintf(fp1, "%s", buf1);
-		    fclose(fp);
-		} else
-		    fprintf(fp1, "本日節日徵求中");
-	    }
-	    fclose(fp1);
-	}
+	update_holiday_list(&tm_now);
 
 	/* Ptt 歡迎畫面處理 */
 	printf("歡迎畫面處理\n");
