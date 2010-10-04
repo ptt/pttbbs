@@ -1,5 +1,18 @@
 /* $Id$ */
-#include "bbs.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/stat.h>
+
+#include <cmsys.h>
+#include <cmbbs.h>
+#include <common.h>
+#include <ansi.h>
+#include <var.h>
 
 // test
 #define ACCOUNT_MAX_LINE        16
