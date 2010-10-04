@@ -273,19 +273,22 @@ main(int argc, char **argv)
     char            buf[256], buf1[256];
     FILE           *fp, *fp1;
     int             act[27];	/* 次數/累計時間/pointer */
-    time4_t         now;
-    struct tm      *ptime;
+    time_t          now;
+    struct tm       tm_now, tm_adjusted;
 
     attach_SHM();
     nice(10);
     chdir(BBSHOME);
-    now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
-    ptime = localtime4(&now);
+
+    now = time(NULL);
+    localtime_r(&now, &tm_now);
+    now -= ADJUST_M * 60;
+    localtime_r(&now, &tm_adjusted);
 
     memset(act, 0, sizeof(act));
 
     printf("次數/累計時間\n");
-    parse_usies(log_file, ptime, act);
+    parse_usies(log_file, &tm_adjusted, act);
 
     peak_hour_login = peak_hour = 0;
     day_login = 0;
@@ -297,27 +300,16 @@ main(int argc, char **argv)
 	}
     }
 
-    if (!ptime->tm_hour) {
-	keeplog("etc/today", BN_RECORD, "上站人次統計", NULL);
-	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄", NULL);
-	keeplog("etc/illegal_money", BN_SECURITY, "本日違法賺錢記錄", NULL);
-	keeplog("etc/osong.log", BN_SECURITY, "本日點歌記錄", NULL);
-	keeplog("etc/chicken", BN_RECORD, "雞場報告", NULL);
-    }
-
     /* -------------------------------------------------------------- */
     printf("上站人次統計\n");
-    output_today(ptime, act, peak_hour_login, day_login);
+    output_today(&tm_adjusted, act, peak_hour_login, day_login);
     /* -------------------------------------------------------------- */
 
     printf("歷史事件處理\n");
     /* Ptt 歷史事件處理 */
-    update_history(ptime, peak_hour, peak_hour_login, day_login);
+    update_history(&tm_adjusted, peak_hour, peak_hour_login, day_login);
 
-    now += ADJUST_M * 60;	/* back to future */
-    ptime = localtime4(&now);
-
-    if (ptime->tm_hour) {
+    if (tm_now.tm_hour) {
 	/* rotate one line in today_is */
 	/* XXX totally meaningless, it is only relative sequence since rotate, not mapping to real time */
 	puts("多個節日處理");
@@ -336,27 +328,31 @@ main(int argc, char **argv)
 	}
     }
 
-    if (ptime->tm_hour == 0) {
+    if (tm_now.tm_hour == 0) {
 	system("/bin/cp etc/today etc/yesterday");
 	/* system("rm -f note.dat"); */
 
-	/* Ptt */
+	keeplog("etc/today", BN_RECORD, "上站人次統計", NULL);
+	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄", NULL);
+	keeplog("etc/illegal_money", BN_SECURITY, "本日違法賺錢記錄", NULL);
+	keeplog("etc/osong.log", BN_SECURITY, "本日點歌記錄", NULL);
+	keeplog("etc/chicken", BN_RECORD, "雞場報告", NULL);
+
+	// Re-output today's user stats, because keeplog removes it
+	output_today(&tm_adjusted, act, peak_hour_login, day_login);
+
 	snprintf(buf, sizeof(buf), "[公安報告] 使用者上線監控 [%02d/%02d:%02d]",
-		ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour);
+		tm_now.tm_mon + 1, tm_now.tm_mday, tm_now.tm_hour);
 	keeplog("usies", "Security", buf, "usies");
 	printf("[公安報告] 使用者上線監控\n");
 
-	/* Ptt 歷史事件處理 */
-	now -= ADJUST_M * 60;	/* back to ancent */
-	ptime = localtime4(&now);
-
 	sprintf(buf, "-%02d%02d%02d",
-		ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
-	gzip(log_file, "usies", buf);
-	printf("壓縮使用者上線監控\n");
+		tm_adjusted.tm_year % 100, tm_adjusted.tm_mon + 1, tm_adjusted.tm_mday);
 
-	now += ADJUST_M * 60;	/* back to future */
-	ptime = localtime4(&now);
+	printf("壓縮使用者上線監控\n");
+	gzip(log_file, "usies", buf);
+	gzip("innd/bbslog", "innbbsd", buf);
+	gzip("etc/mailog", "mailog", buf);
 
 	/* Ptt 節日處理 */
 	printf("節日處理\n");
@@ -369,7 +365,7 @@ main(int argc, char **argv)
 			if (isdigit(buf[0])) {
 			    if (isdigit(buf[1])) {
 				da = 10 * (buf[0] - '0') + (buf[1] - '0');
-				if (ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
+				if (tm_now.tm_mday == da && tm_now.tm_mon + 1 == mo) {
 				    i = 1;
 				    fprintf(fp1, "%-14.14s", &buf1[6]);
 				}
@@ -379,8 +375,8 @@ main(int argc, char **argv)
 				    buf[1] = toupper(buf[1]);
 				    while (wday < 7 && buf[1] != *(wday_str + wday))
 					wday++;
-				    if (ptime->tm_mon + 1 == mo && ptime->tm_wday == wday &&
-					(ptime->tm_mday - 1) / 7 + 1 == (buf[0] - '0')) {
+				    if (tm_now.tm_mon + 1 == mo && tm_now.tm_wday == wday &&
+					(tm_now.tm_mday - 1) / 7 + 1 == (buf[0] - '0')) {
 					i = 1;
 					fprintf(fp1, "%-14.14s", &buf1[6]);
 				    }
@@ -410,7 +406,7 @@ main(int argc, char **argv)
 	if ((fp = fopen("etc/Welcome.date", "r"))) {
 	    char            temp[50];
 	    while (fscanf(fp, "%d %d %s\n", &mo, &da, buf1) == 3) {
-		if (ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
+		if (tm_now.tm_mday == da && tm_now.tm_mon + 1 == mo) {
 		    strcpy(temp, buf1);
 		    sprintf(buf1, "cp -f etc/Welcomes/%s etc/Welcome", temp);
 		    system(buf1);
@@ -419,30 +415,28 @@ main(int argc, char **argv)
 	    }
 	    fclose(fp);
 	}
-	printf("歡迎畫面處理\n");
-	if (ptime->tm_wday == 0) {
+
+	if (tm_now.tm_wday == 0)
 	    keeplog("etc/week", BN_RECORD, "本週熱門話題", NULL);
 
-	    gzip("bbslog", "bntplink", buf);
-	    gzip("innd/bbslog", "innbbsd", buf);
-	    gzip("etc/mailog", "mailog", buf);
-	}
-	if (ptime->tm_mday == 1)
+	if (tm_now.tm_mday == 1)
 	    keeplog("etc/month", BN_RECORD, "本月熱門話題", NULL);
 
-	if (ptime->tm_yday == 1)
+	if (tm_now.tm_yday == 1)
 	    keeplog("etc/year", BN_RECORD, "年度熱門話題", NULL);
-    } else if (ptime->tm_hour == 3 && ptime->tm_wday == 6) {
-	char           *fn1 = "tmp";
-	char           *fn2 = "suicide";
+    } else if (tm_now.tm_hour == 3 && tm_now.tm_wday == 6) {
+	const char const fn1[] = "tmp";
+	const char const fn2[] = "suicide";
+
 	rename(fn1, fn2);
 	mkdir(fn1, 0755);
 	sprintf(buf, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
-	 fn2, ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday, fn2);
+		fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
 	system(buf);
 	sprintf(buf, "/bin/rm -fr %s", fn2);
 	system(buf);
     }
+
     /* Ptt reset Ptt's share memory */
     printf("重設cache 與fcache\n");
 
