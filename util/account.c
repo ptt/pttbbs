@@ -320,15 +320,44 @@ out:
     return 0;
 }
 
+static int
+update_holiday(struct tm *ptime)
+{
+    int i = 0, cnt = 0;
+    char buf[128], *p;
+    FILE *fp;
+
+    if ((fp = fopen("etc/today_is", "r")) == NULL)
+	return 1;
+
+    for (i = 0; i < ptime->tm_hour; i++) {
+	if (!fgets(buf, sizeof(buf), fp)) {
+	    cnt = i;
+	    i = i - 1 + (ptime->tm_hour - i) / cnt * cnt;
+	    rewind(fp);
+	}
+    }
+
+    fclose(fp);
+
+    if ((p = strchr(buf, '\n')))
+	*p = 0;
+
+    memset(SHM->today_is, 0, sizeof(SHM->today_is));
+    strlcpy(SHM->today_is, buf, sizeof(SHM->today_is));
+
+    return 0;
+}
+
 int 
 main(int argc, char **argv)
 {
-    int             i, j;
+    int             i;
     int             mo, da;
     int             peak_hour_login, peak_hour, day_login;
     const char const log_file[] = "usies";
     char            buf[256], buf1[256];
-    FILE           *fp, *fp1;
+    FILE           *fp;
     int             act[27];	/* 次數/累計時間/pointer */
     time_t          now;
     struct tm       tm_now, tm_adjusted;
@@ -365,25 +394,6 @@ main(int argc, char **argv)
     printf("歷史事件處理\n");
     /* Ptt 歷史事件處理 */
     update_history(&tm_adjusted, peak_hour, peak_hour_login, day_login);
-
-    if (tm_now.tm_hour) {
-	/* rotate one line in today_is */
-	/* XXX totally meaningless, it is only relative sequence since rotate, not mapping to real time */
-	puts("多個節日處理");
-	if ((fp1 = fopen("etc/today_is", "r"))) {
-	    char            tod[100][20];
-
-	    i = 0;
-	    while (i < 100 && fgets(tod[i], sizeof(tod[0]), fp1))
-		i++;
-	    fclose(fp1);
-
-	    fp1 = fopen("etc/today_is", "w");
-	    for (j = 0; j < i; j++)
-		fputs(tod[j + 1 < i ? j + 1 : 0], fp1);
-	    fclose(fp1);
-	}
-    }
 
     if (tm_now.tm_hour == 0) {
 	system("/bin/cp etc/today etc/yesterday");
@@ -454,6 +464,8 @@ main(int argc, char **argv)
 
     /* Ptt reset Ptt's share memory */
     printf("重設cache 與fcache\n");
+
+    update_holiday(&tm_now);
 
     SHM->Puptime = 0;
     resolve_fcache();

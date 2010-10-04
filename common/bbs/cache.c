@@ -811,14 +811,6 @@ reload_pttcache(void)
 	}
 	SHM->last_film = id - 1;
 
-	fp = fopen("etc/today_is", "r");
-	if (fp) {
-	    fgets(SHM->today_is, 15, fp);
-	    if ((chr = strchr(SHM->today_is, '\n')))
-		*chr = 0;
-	    SHM->today_is[15] = 0;
-	    fclose(fp);
-	}
 	/* 等所有資料更新後再設定 uptime */
 
 	SHM->Puptime = SHM->Ptouchtime;

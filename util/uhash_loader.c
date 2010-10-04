@@ -59,6 +59,7 @@ void load_uhash(void) {
     if( SHM->number == 0 && SHM->loaded == 0 ){
 	SHM->loaded = 0;
 	fill_uhash(0);
+	SHM->today_is[0] = '\0';
 	SHM->loaded = 1;
     }
     else{
