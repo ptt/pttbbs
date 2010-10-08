@@ -770,14 +770,13 @@ a_delete(menu_t * pm)
 {
     char            fpath[PATHLEN], buf[PATHLEN], cmd[PATHLEN];
     char            ans[4];
-    fileheader_t    backup;
+    fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
 
     snprintf(fpath, sizeof(fpath),
-	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+	     "%s/%s", pm->path, fhdr->filename);
     setadir(buf, pm->path);
 
-    if (pm->header[pm->now - pm->page].filename[0] == 'H' &&
-	pm->header[pm->now - pm->page].filename[1] == '.') {
+    if (fhdr->filename[0] == 'H' && fhdr->filename[1] == '.') {
 	getdata(b_lines - 1, 1, "您確定要刪除此精華區連線嗎(Y/N)？[N] ",
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -810,9 +809,7 @@ a_delete(menu_t * pm)
 	setbpath(buf, save_bn);
 	stampfile(buf, &backup);
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
-	strlcpy(backup.title,
-		pm->header[pm->now - pm->page].title + 2,
-		sizeof(backup.title));
+	strlcpy(backup.title, fhdr->title + 2, sizeof(backup.title));
 
 	snprintf(cmd, sizeof(cmd),
 		"mv -f %s %s", fpath, buf);
@@ -850,9 +847,11 @@ a_delete(menu_t * pm)
 
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strcpy(backup.title, "◆");
-	strlcpy(backup.title + 2,
-		pm->header[pm->now - pm->page].title + 2,
-		sizeof(backup.title) - 3);
+	strlcpy(backup.title + 2, fhdr->title + 2, sizeof(backup.title) - 3);
+
+        // restrict access if source is hidden
+        if ((fhdr->filemode & FILE_BM) || (fhdr->filemode & FILE_HIDE))
+            backup.filemode |= FILE_BM;
 
 	/* merge setapath(buf, save_bn); setadir(buf, buf); */
 	snprintf(buf, sizeof(buf), "man/boards/%c/%s/" FN_DIR,
