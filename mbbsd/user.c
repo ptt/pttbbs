@@ -1185,6 +1185,15 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	sethomepath(dst, x.userid);
 	Rename(src, dst);
 	setuserid(unum, x.userid);
+
+        // alert if this is not a simple (lower/upper case) change
+        // note: actually we don't support simple change now, so always log.
+        if (strcasecmp(orig_uid, x.userid) != 0) {
+            char title[STRLEN];
+           snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
+                     orig_uid, x.userid, cuser.userid);
+            post_msg(BN_SECURITY, title, title, "[系統安全局]");
+        }
     }
     if (mail_changed && !adminmode) {
 	// wait registration.
