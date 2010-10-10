@@ -433,11 +433,12 @@ my_query(const char *uident)
     int             tuid, fri_stat = 0;
     int		    is_self = 0;
     userinfo_t     *uentp;
-    const char *sex[8] =
-    {MSG_BIG_BOY, MSG_BIG_GIRL,
-	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
-    MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
     static time_t last_query;
+#ifdef USE_USER_SEX
+    const char *sex[8] = {
+        MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
+        MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
+#endif
 
     STATINC(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
@@ -512,8 +513,10 @@ my_query(const char *uident)
 	       muser.five_win, muser.five_lose, muser.five_tie,
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
 
+#ifdef USE_USER_SEX
 	if ((uentp && ((fri_stat & HFM) || is_self) && !uentp->invisible))
 	    prints("¡m ©Ê  §O ¡n%-28.28s\n", sex[muser.sex % 8]);
+#endif
 
 	showplans_userec(&muser);
 	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) ) 

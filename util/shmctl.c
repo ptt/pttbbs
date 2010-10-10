@@ -394,12 +394,8 @@ void utmpsort(int sortall)
     for (uentp = &SHM->uinfo[0], count = i = 0;
 	 i < USHM_SIZE;
 	 ++i, uentp = &SHM->uinfo[i]) {
-	if (uentp->pid) {
-	    if (uentp->sex < 0 || uentp->sex > 7)
-		purge_utmp(uentp);
-	    else
-		SHM->sorted[ns][0][count++] = i;
-	}
+	if (uentp->pid)
+            SHM->sorted[ns][0][count++] = i;
     }
     SHM->UTMPnumber = count;
     qsort(SHM->sorted[ns][0], count, sizeof(int), cmputmpuserid);

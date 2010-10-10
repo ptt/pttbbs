@@ -737,7 +737,9 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *phone,
 			 const char *email,
 			 int         mobile,
+#ifdef USE_USER_SEX
 			 uint8_t     sex,
+#endif
 			 uint8_t     year,
 			 uint8_t     month,
 			 uint8_t     day,
