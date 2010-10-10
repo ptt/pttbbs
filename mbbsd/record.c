@@ -427,6 +427,12 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 		snprintf(fwd_title, sizeof(fwd_title)-1,
 			"[¦Û°ÊÂà±H] %s", record->title);
 		bsmtp(buf, fwd_title, address, origid);
+#ifdef USE_LOG_INTERNETMAIL
+                log_filef("log/internet_mail.log", LOG_CREAT, 
+                        "%s [%s] %s -> (%s) %s: %s\n",
+                        Cdatelite(&now), "auto_forward",
+                        cuser.userid, origid, address, fwd_title);
+#endif
 		return 0;
 	    }
 	}

@@ -1284,6 +1284,12 @@ do_general(int garbage)
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
+#ifdef USE_LOG_INTERNETMAIL
+                log_filef("log/internet_mail.log", LOG_CREAT, 
+                        "%s [%s (%s)] %s -> %s: %s\n",
+                        Cdatelite(&now), "do_general_reply_to_author",
+                        currboard, cuser.userid, str + 1, save_title);
+#endif
 		if ( bsmtp(fpath, save_title, str + 1, NULL) < 0)
 		    msg = "作者無法收信";
 	    } else {

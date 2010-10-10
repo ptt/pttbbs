@@ -353,7 +353,7 @@ int mail_mbox(void);
 int built_mail_index(void);
 int mail_all(void);
 int invalidaddr(const char *addr);
-int do_send(const char *userid, const char *title);
+int do_send(const char *userid, const char *title, const char *log_source);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);

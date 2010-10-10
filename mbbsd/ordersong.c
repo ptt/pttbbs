@@ -197,6 +197,13 @@ do_order_song(void)
 
     if (address[0]) {
 	bsmtp(filename, save_title, address, NULL);
+#ifdef USE_LOG_INTERNETMAIL
+        if (strchr(address, '@'))
+            log_filef("log/internet_mail.log", LOG_CREAT, 
+                    "%s [%s] %s -> %s: %s\n",
+                    Cdatelite(&now), "do_order_song",
+                    cuser.userid, address, save_title);
+#endif
     }
     clear();
     outs(

@@ -256,7 +256,7 @@ m_internet(void)
     trim(receiver);
     if (strchr(receiver, '@') && !invalidaddr(receiver) &&
 	getdata(21, 0, "主  題：", title, sizeof(title), DOECHO))
-	do_send(receiver, title);
+	do_send(receiver, title, "m_internet");
     else {
 	vmsg("收信人或主題不正確,請重新選取指令");
     }
@@ -443,7 +443,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
 }
 
 int
-do_send(const char *userid, const char *title)
+do_send(const char *userid, const char *title, const char *log_source)
 {
     fileheader_t    mhdr;
     char            fpath[STRLEN];
@@ -497,6 +497,12 @@ do_send(const char *userid, const char *title)
 	default:
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    ret = bsmtp(fpath, save_title, userid, NULL);
+#ifdef USE_LOG_INTERNETMAIL
+            log_filef("log/internet_mail.log", LOG_CREAT, 
+                    "%s [%s] %s -> %s: %s\n",
+                    Cdatelite(&now), log_source,
+                    cuser.userid, userid, save_title);
+#endif
 	    hold_mail(fpath, userid, save_title);
 	    break;
 	}
@@ -517,7 +523,7 @@ do_send(const char *userid, const char *title)
 void
 my_send(const char *uident)
 {
-    switch (do_send(uident, NULL)) {
+    switch (do_send(uident, NULL, "my_send")) {
 	case -1:
 	outs(err_uid);
 	break;
@@ -906,7 +912,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
     showplans(uid);
 
-    switch (do_send(uid, save_title)) {
+    switch (do_send(uid, save_title, "m_forward")) {
     case -1:
 	outs(err_uid);
 	break;
@@ -1358,7 +1364,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     /* edit, then send the mail */
     ent = curredit;
-    switch (do_send(uid, save_title)) {
+    switch (do_send(uid, save_title, "mail_reply")) {
     case -1:
 	outs(err_uid);
 	break;
@@ -2218,6 +2224,13 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     } else
 	return -1;
 
+#ifdef USE_LOG_INTERNETMAIL
+    if (strchr(address, '@'))
+        log_filef("log/internet_mail.log", LOG_CREAT, 
+                "%s [%s] %s -> %s: %s %s\n",
+                Cdatelite(&now), "mail_doforward",
+                cuser.userid, address, fh->title, fname);
+#endif
     return_no = bsmtp(fname, fh->title, address, NULL);
     unlink(fname);
     return (return_no);
