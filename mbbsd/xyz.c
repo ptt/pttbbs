@@ -117,7 +117,7 @@ mail_sysop(void)
 	    char *suser = sysoplist[i].userid;
 	    clear();
 	    showplans(suser);
-	    do_send(suser, NULL, "mail_sysop");
+	    do_send(suser, NULL, __FUNCTION__);
 	}
     }
 }

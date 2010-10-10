@@ -430,7 +430,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 #ifdef USE_LOG_INTERNETMAIL
                 log_filef("log/internet_mail.log", LOG_CREAT, 
                         "%s [%s] %s -> (%s) %s: %s\n",
-                        Cdatelite(&now), "auto_forward",
+                        Cdatelite(&now), __FUNCTION__,
                         cuser.userid, origid, address, fwd_title);
 #endif
 		return 0;

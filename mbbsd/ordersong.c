@@ -201,7 +201,7 @@ do_order_song(void)
         if (strchr(address, '@'))
             log_filef("log/internet_mail.log", LOG_CREAT, 
                     "%s [%s] %s -> %s: %s\n",
-                    Cdatelite(&now), "do_order_song",
+                    Cdatelite(&now), __FUNCTION__,
                     cuser.userid, address, save_title);
 #endif
     }

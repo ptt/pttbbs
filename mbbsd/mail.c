@@ -256,7 +256,7 @@ m_internet(void)
     trim(receiver);
     if (strchr(receiver, '@') && !invalidaddr(receiver) &&
 	getdata(21, 0, "主  題：", title, sizeof(title), DOECHO))
-	do_send(receiver, title, "m_internet");
+	do_send(receiver, title, __FUNCTION__);
     else {
 	vmsg("收信人或主題不正確,請重新選取指令");
     }
@@ -499,8 +499,8 @@ do_send(const char *userid, const char *title, const char *log_source)
 	    ret = bsmtp(fpath, save_title, userid, NULL);
 #ifdef USE_LOG_INTERNETMAIL
             log_filef("log/internet_mail.log", LOG_CREAT, 
-                    "%s [%s] %s -> %s: %s\n",
-                    Cdatelite(&now), log_source,
+                    "%s [%s - %s] %s -> %s: %s\n",
+                    Cdatelite(&now), __FUNCTION__, log_source,
                     cuser.userid, userid, save_title);
 #endif
 	    hold_mail(fpath, userid, save_title);
@@ -523,7 +523,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 void
 my_send(const char *uident)
 {
-    switch (do_send(uident, NULL, "my_send")) {
+    switch (do_send(uident, NULL, __FUNCTION__)) {
 	case -1:
 	outs(err_uid);
 	break;
@@ -912,7 +912,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
     showplans(uid);
 
-    switch (do_send(uid, save_title, "m_forward")) {
+    switch (do_send(uid, save_title, __FUNCTION__)) {
     case -1:
 	outs(err_uid);
 	break;
@@ -1364,7 +1364,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     /* edit, then send the mail */
     ent = curredit;
-    switch (do_send(uid, save_title, "mail_reply")) {
+    switch (do_send(uid, save_title, __FUNCTION__)) {
     case -1:
 	outs(err_uid);
 	break;
@@ -2099,6 +2099,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     char            fname[PATHLEN];
     char            genbuf[PATHLEN];
     int             return_no;
+    const char      *hostaddr;
 
     if (!address[0] && strcasecmp(cuser.email, "x") != 0)
      	strlcpy(address, cuser.email, sizeof(address));
@@ -2140,6 +2141,11 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     trim(address);
     if (invalidaddr(address))
 	return -2;
+
+    // decide if address is internet mail
+    hostaddr = strchr(address, '@');
+    if (hostaddr && strcasecmp(hostaddr + 1, MYHOSTNAME) == 0)
+        hostaddr = NULL;
 
     outmsg("轉寄中請稍候...");
     refresh();
@@ -2225,11 +2231,11 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	return -1;
 
 #ifdef USE_LOG_INTERNETMAIL
-    if (strchr(address, '@'))
+    if (hostaddr)
         log_filef("log/internet_mail.log", LOG_CREAT, 
-                "%s [%s] %s -> %s: %s %s\n",
-                Cdatelite(&now), "mail_doforward",
-                cuser.userid, address, fh->title, fname);
+                "%s [%s] %s -> %s: %s - %s\n",
+                Cdatelite(&now), __FUNCTION__,
+                cuser.userid, address, direct, fh->title);
 #endif
     return_no = bsmtp(fname, fh->title, address, NULL);
     unlink(fname);
