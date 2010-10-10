@@ -308,9 +308,10 @@ set_board(void)
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
     if (!HasUserPerm(PERM_NOCITIZEN) && 
-         (HasUserPerm(PERM_ALLBOARD) || is_BM_cache(currbid) ||
-	  (bp->BM[0] <= ' ' && GROUPOP()))) {
-	currmode = currmode | MODE_BOARD | MODE_POST | MODE_POSTCHECKED;
+        (HasUserPerm(PERM_ALLBOARD) ||
+         is_BM_cache(currbid) ||
+         (bp->BM[0] <= ' ' && GROUPOP()))) {
+	currmode |= MODE_BOARD;
     }
 }
 
@@ -363,7 +364,18 @@ CheckModifyPerm(void)
 
     if (currmode & MODE_POSTCHECKED)
     {
-	/* checked? let's check if perm reloaded */
+        // if board is different, rebuild cache
+        if (currbid != last_board_index) {
+#ifdef DEBUG
+            log_filef("log/reload_board_perm.log", LOG_CREAT,
+                      "%-13s: reload board perm (curr=%d, last=%d)\n",
+                      cuser.userid, currbid, last_board_index);
+#endif
+            currmode &= ~MODE_POSTCHECKED;
+            last_board_index = 0;
+        }
+
+	/* checked? let's check if perm reloaded or board changed*/
 	if (last_board_index < 1 || last_board_index > SHM->Bnumber)
 	{
 	    /* invalid board index, refetch. */
@@ -544,7 +556,7 @@ readdoent(int num, fileheader_t * ent)
     {
 	type = (type == ' ') ? '*' : '#';
     }
-    else if (ent->filemode & FILE_MARKED) // marks should be visible to everyone. 
+    else if (ent->filemode & FILE_MARKED) // marks should be visible to everyone.
     {
 	if(ent->filemode & FILE_SOLVED)
 	    type = '!';
