@@ -510,7 +510,7 @@ email_justify(const userec_t *muser)
 	bsmtp("etc/registermail", buf, muser->email, "non-exist");
         move(20,0);
         clrtobot();
-	outs("我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
+	outs("我們即將寄出認證信 (您應該會在數分鐘到數小時內收到)\n"
 	     "收到後您可以根據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
 	pressanykey();
@@ -1165,10 +1165,10 @@ toregister(char *email)
 	 "  會有站長親自人工審核註冊資料，" ANSI_COLOR(1;33)
 	   "但注意這可能會花上數天或更多時間。" ANSI_RESET "\n"
 	 "**********************************************************\n"
-	 "* 注意!                                                  *\n"
-	 "* 通常應該會在輸入完成後十分鐘內收到認證信, 若過久未收到 *\n"
-	 "* 請到郵件垃圾桶檢查是否被當作垃圾信(SPAM)了，另外若是   *\n"
-	 "* 輸入後發生認證碼錯誤請重填一次 E-Mail                  *\n"
+	 "* 注意! 通常應該會在輸入完成後數分至數小時內收到認證信,  *\n"
+	 "* 若過久未收到請到郵件垃圾桶檢查是否被當作垃圾信(SPAM)了,*\n"
+	 "* 另外若輸入後發生認證碼錯誤請先確認輸入是否為最後一封   *\n"
+	 "* 收到的認證信，若真的仍然不行請再重填一次 E-Mail.       *\n"
 	 "**********************************************************\n");
 
     while (1) {
@@ -1208,7 +1208,7 @@ toregister(char *email)
 	    outs(ANSI_COLOR(1;31) 
 	    "\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
 	    "原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
-	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
+	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嗎? [y/N]",
 		    yn, sizeof(yn), LCECHO);
 	    clrtobot();
 	    if (yn[0] == 'y')
@@ -1326,13 +1326,17 @@ u_register(void)
 	move(2, 0);
 
 	prints("請輸入您的認證碼。(由 %s 開頭無空白的十三碼)\n"
-	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n", REGCODE_INITIAL);
+               "若尚未收到信件或不想現在輸入可直接按 ENTER 離開，\n"
+	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n", 
+               REGCODE_INITIAL);
 	inregcode[0] = 0;
 
 	do{
 	    getdata(10, 0, "您的認證碼：",
 		    inregcode, sizeof(inregcode), DOECHO);
-	    if( strcmp(inregcode, "x") == 0 || strcmp(inregcode, "X") == 0 )
+	    if( ! *inregcode ||
+                strcmp(inregcode, "x") == 0 ||
+                strcmp(inregcode, "X") == 0 )
 		break;
 	    if( strlen(inregcode) != 13 || inregcode[0] == ' ')
 		vmsg("認證碼輸入不完整，總共應有十三碼，沒有空白字元。");
@@ -1370,6 +1374,9 @@ u_register(void)
 	    // XXX shall never reach here.
 	    return QUIT;
 
+        } else if (!*inregcode) {
+            // simply enter.
+            return FULLUPDATE;
 	} else if (strcasecmp(inregcode, "x") != 0) {
 	    if (regcode[0])
 	    {
@@ -1383,6 +1390,24 @@ u_register(void)
 		return FULLUPDATE;
 	    }
 	} else {
+            char fpath[PATHLEN];
+            time4_t  last_request_time;
+            int hours = 0;
+
+            getregfile(fpath);
+            last_request_time = dasht(fpath);
+            if (last_request_time < now &&
+                last_request_time + DAY_SECONDS / 2 > now)
+                hours = (last_request_time + DAY_SECONDS / 2 - now) / 3600 + 1;
+            if (hours > 0) {
+                outs("由於某些使用者的信箱收信間隔較長、"
+                     "且每次寄出新認證信時前封認證碼會自動失效，\n"
+                     // 為了避免有人搞不清狀況跑去 SYSOP 哭哭說認證碼無效，
+                     "每次重寄認證信或變更 EMail 要間隔 12 小時。\n");
+                prints("距離您下次可以重新認證尚有 %d 小時。", hours);
+                pressanykey();
+                return FULLUPDATE;
+            }
 	    toregister(email);
 	    return FULLUPDATE;
 	}
