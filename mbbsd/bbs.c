@@ -1006,7 +1006,7 @@ do_general(int garbage)
 
     if ( !CheckPostRestriction(currbid) )
     {
-	vmsg("你不夠資深喔！ (可按 i 查看限制)");
+	vmsg("未達看板發文條件限制 (可按 i 查看限制)");
 	return FULLUPDATE;
     }
 #ifdef USE_COOLDOWN
@@ -1845,7 +1845,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // check target postperm
     if (!CheckPostRestriction(xbid))
     {
-	vmsg("你不夠資深喔！ (可在目的看板內按 i 查看限制)");
+	vmsg("未達看板發文條件限制 (可在目的看板內按 i 查看限制)");
 	return FULLUPDATE;
     }
 
@@ -2666,7 +2666,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
     {
-	vmsg("你不夠資深喔！ (可按 i 查看限制)");
+	vmsg("未達看板發文條件限制 (可按 i 查看限制)");
 	return FULLUPDATE;
     }
 #endif

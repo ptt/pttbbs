@@ -1559,7 +1559,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 
     if (!CheckPostRestriction(xbid))
     {
-	vmsg("你不夠資深喔！ (可在看板內按 i 查看限制)");
+	vmsg("未達該看板發文條件限制 (可在該看板內按 i 查看限制)");
 	return FULLUPDATE;
     }
 

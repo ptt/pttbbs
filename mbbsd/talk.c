@@ -3039,7 +3039,7 @@ t_chat(void)
     if ((now - cuser.firstlogin)/DAY_SECONDS < CHAT_REGDAYS)
     {
 	int i = CHAT_REGDAYS - (now-cuser.firstlogin)/DAY_SECONDS +1;
-	vmsgf("您還不夠資深喔 (再等 %d 天吧)", i);
+	vmsgf("您尚未達到進入條件限制 (請再等 %d 天)", i);
 	return 0;
     }
 #endif

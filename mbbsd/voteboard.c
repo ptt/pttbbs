@@ -65,7 +65,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 
     if (!CheckVoteRestrictionFile(fhdr))
     {
-	vmsg("你不夠資深喔！ (可按 i 查看限制)");
+	vmsg("未達投票資格限制 (可按 i 查看限制)");
 	return;
     }
     setbpath(fpath, currboard);
@@ -205,7 +205,7 @@ do_voteboard(int type)
     }
     if (!CheckVoteRestriction(currbid))
     {
-	vmsg("你不夠資深喔！ (可按 i 查看限制)");
+	vmsg("未達投票資格限制 (可按 i 查看限制)");
 	return FULLUPDATE;
     }
     vs_hdr(BBSNAME "連署系統");
