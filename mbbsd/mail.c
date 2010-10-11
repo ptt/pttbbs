@@ -500,7 +500,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 #ifdef USE_LOG_INTERNETMAIL
             log_filef("log/internet_mail.log", LOG_CREAT, 
                     "%s [%s - %s] %s -> %s: %s\n",
-                    Cdatelite(&now), __FUNCTION__, log_source,
+                    Cdatelite(&now), log_source, __FUNCTION__,
                     cuser.userid, userid, save_title);
 #endif
 	    hold_mail(fpath, userid, save_title);
