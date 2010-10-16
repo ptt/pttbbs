@@ -732,10 +732,6 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
-#ifdef MIN_ALLOWED_ID_LEN
-        else if (strlen(passbuf) < MIN_ALLOWED_ID_LEN)
-	    prints("代號過短，請使用 %d 個字元以上的代號\n", MIN_ALLOWED_ID_LEN);
-#endif
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
@@ -754,6 +750,10 @@ new_register(void)
 	else if (/*id == 0 && */ 
 		 regcheck_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
 	    outs("此代號過於近似它人帳號，請改用別的代號。\n");
+#endif
+#ifdef MIN_ALLOWED_ID_LEN
+        else if (strlen(passbuf) < MIN_ALLOWED_ID_LEN)
+	    prints("代號過短，請使用 %d 個字元以上的代號\n", MIN_ALLOWED_ID_LEN);
 #endif
 	else // success
 	    break;
