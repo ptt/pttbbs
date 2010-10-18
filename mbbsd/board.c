@@ -776,7 +776,7 @@ b_config(void)
 		break;
 
 	    case 'd':
-		if (0) { //!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
+		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
 		    vmsg("此項設定需要群組長或站長權限");
 		    break;
 		}
