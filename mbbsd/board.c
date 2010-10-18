@@ -288,7 +288,7 @@ b_config(void)
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
-#define LNBOARDINFO (18)
+#define LNBOARDINFO (19)
 #define LNPOSTRES   (12)
 #define COLPOSTRES  (50)
 
@@ -357,7 +357,7 @@ b_config(void)
 		" - %s" ANSI_RESET
 		" 自刪文章\n",
 		(bp->brdattr & BRD_NOSELFDELPOST) ? 
-		ANSI_COLOR(1)"開放" : "不開放"
+		ANSI_COLOR(1;31)"不開放" : "開放"
 		);
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
