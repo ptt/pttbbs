@@ -776,10 +776,12 @@ b_config(void)
 		break;
 
 	    case 'd':
+#ifndef ALLOW_BM_SET_NOSELFDELPOST
 		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
 		    vmsg("此項設定需要群組長或站長權限");
 		    break;
 		}
+#endif
 		bp->brdattr ^= BRD_NOSELFDELPOST;
 		touched = 1;		
 		break;
