@@ -353,6 +353,13 @@ b_config(void)
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
+	prints( " " ANSI_COLOR(1;36) "d" ANSI_RESET 
+		" - %s" ANSI_RESET
+		" 自刪文章\n",
+		(bp->brdattr & BRD_NOSELFDELPOST) ? 
+		ANSI_COLOR(1)"開放" : "不開放"
+		);
+
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
@@ -765,6 +772,15 @@ b_config(void)
 		    break;
 		}
 		bp->brdattr ^= BRD_NOREPLY;
+		touched = 1;		
+		break;
+
+	    case 'd':
+		if (0) { //!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
+		    vmsg("此項設定需要群組長或站長權限");
+		    break;
+		}
+		bp->brdattr ^= BRD_NOSELFDELPOST;
 		touched = 1;		
 		break;
 

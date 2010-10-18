@@ -225,6 +225,7 @@
 #define EDITFLAG_KIND_NEWPOST	(0x00000010)
 #define EDITFLAG_KIND_REPLYPOST	(0x00000020)
 #define EDITFLAG_KIND_SENDMAIL	(0x00000040)
+#define EDITFLAG_WARN_NOSELFDEL	(0x00000100)
 #define EDIT_ABORTED	-1
 
 /* ----------------------------------------------------- */

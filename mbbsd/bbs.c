@@ -1098,6 +1098,8 @@ do_general(int garbage)
 
     edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(currboard, edflags);
+    if (bp->brdattr & BRD_NOSELFDELPOST)
+        edflags |= EDITFLAG_WARN_NOSELFDEL;
 
 #if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
     // XXX 惡搞的 code。
@@ -3097,6 +3099,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	!CheckPostRestriction(currbid)
 	)   
 	return DONOTHING;
+
+    if ((bp->brdattr & BRD_NOSELFDELPOST) && !(currmode & MODE_BOARD)) {
+        vmsg("抱歉，本看板目前禁止自刪文章。");
+	return DONOTHING;
+    }
 
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 

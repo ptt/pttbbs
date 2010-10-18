@@ -481,6 +481,18 @@ get_edit_kind_prompt(int flags)
     return NULL;
 }
 
+static const char *
+get_edit_warn_prompt(int flags) {
+    int no_self_sel    = (flags & EDITFLAG_WARN_NOSELFDEL);
+
+    // FIXME not always on boards, maybe
+    if (no_self_sel)
+        return ANSI_COLOR(0;1;31) 
+            "注意: 此看板禁止自刪文章，發出後將只有板主以上才能刪文!!!" ANSI_RESET;
+
+    return NULL;
+}
+
 //#define SLOW_CHECK_DETAIL
 static void
 edit_buffer_check_healthy(textline_t *line)
@@ -1834,7 +1846,8 @@ static void upload_file(void);
 // 		0		if write ok & exit
 static int
 write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], 
-	int upload, int chtitle, const char *kind_prompt, int *pentropy)
+	int upload, int chtitle, const char *kind_prompt, const char *warn_prompt,
+        int *pentropy)
 {
     FILE           *fp = NULL;
     textline_t     *p;
@@ -1869,8 +1882,11 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 
     outs(" (A)放棄 (E)繼續 (R/W/D)讀寫刪暫存檔");
 
+    // TODO FIXME what if prompt is multiline?
     if (kind_prompt)
 	mvouts(4, 0, kind_prompt);
+    if (warn_prompt)
+	mvouts(6, 0, warn_prompt);
     getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
     // avoid lots pots
@@ -3669,6 +3685,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
 			get_edit_kind_prompt(flags),
+			get_edit_warn_prompt(flags),
 			&entropy);
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
