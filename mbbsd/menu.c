@@ -649,6 +649,19 @@ static int u_view_recentlogin()
     return more(fn, YEA);
 }
 
+#ifdef USE_RECENTPAY
+static int u_view_recentpay()
+{
+    char fn[PATHLEN];
+    clear();
+    mvouts(10, 5, "注意: 本記錄尚於測試中，可能會有未記錄到的交易記錄。");
+    mvouts(11, 5, "      此處內容僅供參考，實際金錢異動以站方內部資料為準");
+    pressanykey();
+    setuserfile(fn, FN_RECENTPAY);
+    return more(fn, YEA);
+}
+#endif
+
 static const commands_t myfilelist[] = {
     {u_editplan,    PERM_LOGINOK,   "QQueryEdit     編輯名片檔"},
     {u_editsig,	    PERM_LOGINOK,   "SSignature     編輯簽名檔"},
@@ -657,6 +670,9 @@ static const commands_t myfilelist[] = {
 
 static const commands_t myuserlog[] = {
     {u_view_recentlogin, 0,   "LLRecent Login  最近上站記錄"},
+#ifdef USE_RECENTPAY
+    {u_view_recentpay,   0,   "PPRecent Pay    最近交易記錄"},
+#endif
     {NULL, 0, NULL}
 };
 

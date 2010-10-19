@@ -38,6 +38,10 @@ extern int stampdir(char *fpath, fileheader_t * fh);
 extern int stamplink(char *fpath, fileheader_t * fh);
 extern int stampfile_u(char *fpath, fileheader_t *fh);	// does not zero existing data in fh
 
+/* log.c */
+extern int log_payment(const char *filename, int money, int oldm, int newm,
+                       const char *reason);
+
 /* cache.c */
 #define search_ulist(uid) search_ulistn(uid, 1)
 #define getbcache(bid) (bcache + bid - 1)

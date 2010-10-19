@@ -46,6 +46,10 @@
 #ifndef SZ_RECENTLOGIN
 #define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation
 #endif
+#define FN_RECENTPAY    "money.recent"
+#ifndef SZ_RECENTPAY
+#define SZ_RECENTPAY    (16000)
+#endif
 
 
 // 自訂刪除文章時出現的標題與檔案

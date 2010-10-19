@@ -77,18 +77,13 @@ do_pay(int uid, int money, const char *item, const char *reason)
     if (uid == usernum) 
         reload_money(); 
  
-#ifdef FN_RECENTPAY
-
-    char buf[PATHLEN]; 
-    sethomefile(buf, userid, FN_RECENTPAY); 
-    rotate_text_logfile(buf, SZ_RECENTPAY, 0.2); 
-    syncnow(); 
-    log_filef(buf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s\n", 
-            Cdatelite(&now),  
-            money >= 0 ? "支出" : "收入", 
-            money >= 0 ? money : -money,  
-            oldm, newm, reason); 
-#endif
+    {
+        char buf[PATHLEN]; 
+        sethomefile(buf, userid, FN_RECENTPAY); 
+        rotate_text_logfile(buf, SZ_RECENTPAY, 0.2); 
+        syncnow(); 
+        log_payment(buf, money, oldm, newm, reason);
+    }
 
     return newm; 
 } 
@@ -491,10 +486,10 @@ give_money_ui(const char *userid)
 	char fpath[PATHLEN];
 	if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
 	{
-#ifdef FN_RECENTPAY
-            outs("您可以於下列位置找到最近的交易記錄:\n" 
+#ifdef USE_RECENTPAY
+            outs("您可於下列位置找到最近的交易記錄:\n" 
                     "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => " 
-                    "(V)RecentVice 最近交易記錄\n"); 
+                    "(P)Recent Pay 最近交易記錄\n"); 
 #endif
 	    vmsg("交易完成。");
 	    return 0;
