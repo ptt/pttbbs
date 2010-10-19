@@ -105,14 +105,12 @@ int main(int argc, char **argv)
                 oldm = moneyof(uid);
 		deumoney(uid, money * num);
                 newm = moneyof(uid);
-
-#ifdef FN_RECENTVICE
-                // check the format in mbbsd/cal.c:do_vice
-                sethomefile(genbuf, userid, FN_RECENTVICE);
-                log_filef(genbuf, LOG_CREAT, "%s %s $%d ($%d => $%d) %s (%s x %d)\n",
-                        Cdatelite(&now), "收入",
-                        money * num, oldm, newm, "賭盤中獎", betname[mybet], num);
-#endif
+                {
+                    char reason[256];
+                    sprintf(reason, "賭盤中獎 (%s x %d)", betname[mybet], num);
+                    sethomefile(genbuf, userid, FN_RECENTPAY);
+                    log_payment(genbuf, money * num, oldm, newm, reason);
+                }
                 sethomepath(genbuf, userid);
 		stampfile(genbuf, &mymail);
 		strcpy(mymail.owner, BBSNAME);
