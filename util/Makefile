@@ -86,16 +86,6 @@ installfiltermail:
 	mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
 	ln -s $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
 
-# for diskstat(FreeBSD 4.x only) .
-# diskstat should be compiled with bbs and installed with root
-diskstat: diskstat.c
-	$(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
-
-installdiskstat: diskstat
-	cp -f diskstat /usr/local/bin/
-	chgrp kmem /usr/local/bin/diskstat
-	chmod 2755 /usr/local/bin/diskstat
-
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c
 	$(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS) 
