@@ -3145,7 +3145,37 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     {
 	getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     }
+
     if (genbuf[0] == 'y') {
+
+        // Must have enough money.
+        // 算錢前先把文章種類搞清楚
+        int del_fee = fhdr->multi.money;
+        // freebn/brd_bad: should be done before, but let's make it safer.
+        // new rule: only articles with money need updating
+        // numpost (to solve deleting cross-posts).
+        // DIGEST mode 不用管
+        // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
+        // also check MAX_POST_MONEY in case any error made bad money...
+        if (del_fee < 0 || 
+            IsFreeBoardName(currboard) || 
+            (currbrdattr & BRD_BAD) ||
+            (currmode & MODE_DIGEST) ||
+            (fhdr->filemode & INVALIDMONEY_MODES) ||
+            del_fee > MAX_POST_MONEY ||
+            0)
+            del_fee = 0;
+
+        if (!not_owned) {
+            reload_money();
+            if (cuser.money < del_fee) {
+                vmsgf("您身上的金錢不夠，刪除此文要 %d 元", del_fee);
+                return FULLUPDATE;
+            }
+            // after this, we cannot delay in !not_owned mode otherwise we'll get
+            // a exploit by race condition.
+        }
+
 	if(
 #ifdef SAFE_ARTICLE_DELETE
 	   ((reason[0] || bp->nuser > 30) && !(currmode & MODE_DIGEST) &&
@@ -3202,25 +3232,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #endif // ASSESS
 
-	    // 扣錢前先把文章種類搞清楚
-	    // freebn/brd_bad: should be done before, but let's make it safer.
-	    // new rule: only articles with money need updating
-	    // numpost (to solve deleting cross-posts).
-	    // DIGEST mode 不用管
-	    // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
-	    if (fhdr->multi.money < 0 || 
-		IsFreeBoardName(currboard) || (currbrdattr & BRD_BAD) ||
-		(currmode & MODE_DIGEST) ||
-		(fhdr->filemode & INVALIDMONEY_MODES) ||
-		0)
-		fhdr->multi.money = 0;
-
-	    // XXX also check MAX_POST_MONEY in case any error results in bad money...
-	    if (fhdr->multi.money <= 0 || fhdr->multi.money > MAX_POST_MONEY)
-	    {
-		// no need to change user record
-	    } 
-	    else if (not_owned)
+	    if (not_owned)
 	    {
 		// not owner case
 		if (tusernum)
@@ -3234,7 +3246,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			passwd_sync_update(tusernum, &xuser);
 		    }
 
-                    pay_as_uid(tusernum, fhdr->multi.money,  
+                    pay_as_uid(tusernum, del_fee,  
                             "%s 看板 文章「%s」被%s，扣除稿酬%s %s",  
                             currboard,  fhdr->title,  
                             as_badpost ? "劣退" : "刪除", 
@@ -3250,11 +3262,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    {
 		// owner case
 		pwcuDecNumPost();
-                pay(fhdr->multi.money, "%s 看板 文章自刪清潔費: %s",  
-                    currboard, fhdr->title); 
+                pay(del_fee, "%s 看板 文章自刪清潔費: %s",  
+                        currboard, fhdr->title); 
 		sendalert(cuser.userid, ALERT_PWD_PERM);
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
-			cuser.numposts, fhdr->multi.money);
+			cuser.numposts, del_fee);
 	    }
 
 	    return DIRCHANGED;
