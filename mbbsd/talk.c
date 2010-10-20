@@ -380,7 +380,7 @@ friend_stat(const userinfo_t * me, const userinfo_t * ui)
 {
     int             i, j;
     unsigned int    hit = 0;
-    /* 看板好友 */
+    /* 看板好友 (在同看板的其它使用者) */
     if (me->brc_id && ui->brc_id == me->brc_id) {
 	hit = IBH;
     }

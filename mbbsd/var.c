@@ -60,7 +60,7 @@ const char * const str_permboard[] = {
     "連結看板",                 /* BRD_SYMBOLIC */
     "不可噓",                   /* BRD_NOBOO */
     "預設 Local Save",          /* BRD_LOCALSAVE */
-    "限板友發文",               /* BRD_RESTRICTEDPOST */
+    "限看板會員發文",           /* BRD_RESTRICTEDPOST */
     "Guest可以發表",            /* BRD_GUESTPOST */
 #ifdef USE_COOLDOWN
     "冷靜",			/* BRD_COOLDOWN */

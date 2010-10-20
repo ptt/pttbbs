@@ -341,7 +341,7 @@ b_config(void)
 		ANSI_COLOR(1)"可以" ANSI_RESET: "不可");
 
 	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
-		" - %s "ANSI_RESET "非板友發文\n", 
+		" - %s "ANSI_RESET "非看板會員發文\n", 
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
@@ -540,7 +540,7 @@ b_config(void)
 	    if (!isBM) outs(" (需板主權限)");
 	    outs(aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    prints("%sv%s)可見名單 %sw%s)水桶名單 ", 
+	    prints("%sw%s)水桶名單 %sv%s)可見會員名單 ", 
 		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
 	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",

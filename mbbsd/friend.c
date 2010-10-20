@@ -32,7 +32,7 @@ static char    * const friend_desc[8] = {
     "描述一下：",
     "投票者描述：",
     "惡形惡狀：",
-    "看板好友描述"
+    "看板會員描述"
 };
 
 /* Ptt 各種特別名單的中文敘述 */
@@ -44,7 +44,7 @@ static char    * const friend_list[8] = {
     "其它特別名單",
     "私人投票名單",
     "看板禁聲名單",
-    "看板好友名單"
+    "看板會員名單"
 };
 
 /* sized in screen width */

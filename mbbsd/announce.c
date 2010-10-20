@@ -332,7 +332,7 @@ a_showhelp(int level)
 	 "將文章 uuencode 後寄回郵箱\n");
     if (level >= MANAGER) {
 	outs("\n" ANSI_COLOR(36) "【 板主專用鍵 】" ANSI_RESET "\n"
-	     "[H]             切換為 公開/板友/板主 才能閱\讀\n"
+	     "[H]             切換為 公開/可見會員名單/板主 才能閱\讀\n"
 	     "[n/g]           收錄精華文章/開闢目錄\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
 	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"
