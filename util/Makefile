@@ -16,7 +16,7 @@ CPROG_WITH_UTIL= \
 	boardlist	post		poststat	\
 	account		birth		deluserfile	\
 	expire		mandex		horoscope	broadcast	\
-	openvice	openticket	topusr		\
+	openticket	topusr		\
 	yearsold	toplazyBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
 	outmail		chkhbf		merge_dir	\
@@ -30,15 +30,15 @@ CPP_WITH_UTIL= \
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
-	showboard	countalldice	bbsrf		\
+	showboard	bbsrf		\
 	initbbs		userlist	merge_board	bbsmail
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	shmctl	\
-	backpasswd.sh	mailog.sh	opendice.sh	\
-	openticket.sh	stock.sh	topsong.sh	weather.sh	\
-	stock.perl	weather.perl	toplazyBM.sh	\
+	backpasswd.sh	mailog.sh	\
+	openticket.sh	topsong.sh	weather.sh	\
+	weather.perl	toplazyBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	rebuildaloha.pl
 
