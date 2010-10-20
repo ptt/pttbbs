@@ -137,6 +137,31 @@ check_locked(fileheader_t *fhdr)
 	return;
     syncnow();
     bp->SRexpire = now;
+
+#ifdef ALERT_M_PLUS_L
+    {
+        VREFSCR scr;
+        static char did_prompt = 0;
+
+        if (did_prompt)
+            return;
+
+        scr = vscr_save();
+        vs_hdr("結案並停止回應");
+        move(5, 0);
+        outs("  請注意，本功\能 (m+L) 是「結案並終止回應」(禁回文推文)，\n"
+             "  一直都不是「鎖定文章(變唯讀)」。"
+             "正牌「鎖定文章」是只有站長可用的 ^E。\n\n"
+             "  所以終止回應後使用者仍可修改此檔。\n\n"
+             "  未來我們會考慮是否該修改讓 m+L 有鎖定的能力，"
+             "但短期內此行為不會改變。\n\n"
+             "  請勿再提報此項為「鎖定有 bug」, 謝謝"
+             );
+        did_prompt = 1;
+        pressanykey();
+        vscr_restore(scr);
+    }
+#endif
 }
 
 /* hack for listing modes */
