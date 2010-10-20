@@ -40,14 +40,12 @@
 # 每天精華區index一次 index前砍掉deleted的精華區
 15 6 * * * rm -rf man/boards/deleted
 20 6 * * * bin/mandex > /dev/null
-30 6 * * * bin/openvice > /dev/null
 
 # 每天砍掉點歌超過5天檔案
 40 6 * * * ( find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';' )
 
 #天氣股票
 0 5,11,17,23 * * * bin/weather.sh > /dev/null
-20 12 * * * bin/stock.sh > /dev/null
 
 # 每個月一號早上 3:50 , 將 BBS 系統中長度為零的檔案砍掉
 50 3 1 * * ( /usr/bin/find /home1/bbs -size 0 -exec rm -f {} ';' )

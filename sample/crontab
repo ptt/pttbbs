@@ -51,15 +51,11 @@
 30	6	1	*	*	bin/mandex
 30	6	2-31	*	2,4,6	bin/mandex -x
 
-# 每天發票開獎
-40	6	*	*	*	bin/openvice
-
 # 每天砍掉點歌超過 5天檔案
 0	7	*	*	*	/usr/bin/find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';'
 
 # 天氣, 股票
 0 5,11,17,23	*	*	*	bin/weather.sh
-20	12	*	*	*	bin/stock.sh
 
 # 每個月十號早上 3:50 , 將 BBS 系統中長度為零的檔案砍掉
 50	3	10	*	*	/usr/bin/find /home/bbs/boards/*/ -size 0 -exec rm -f {} ';' ; /usr/bin/find /home/bbs/home/*/ -size 0 -exec rm -f {} ';'
