@@ -851,17 +851,20 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         case 'G':
 	    // special types
 	    switch(vans( currmode & MODE_SELECT ? 
-			"增加條件 標記(m/s)[m]: ":
-			"搜尋標記(m/s)[m]: "))
+			"增加條件 標記(m/s)(未輸入則取消): ":
+			"搜尋標記(m/s)(未輸入則取消): "))
 	    {
 		case 's':
 		    mode = select_read(locmem, RS_SOLVED);
 		    break;
 
-		default:
 		case 'm':
 		    mode = select_read(locmem, RS_MARK);
 		    break;
+
+		default:
+                    mode = READ_REDRAW;
+                    break;
 	    }
 	    break;
 
