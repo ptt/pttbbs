@@ -346,7 +346,7 @@ p_give(void)
 int 
 give_money_ui(const char *userid)
 {
-    int             uid;
+    int             uid, can_send_mail = 1;
     char            id[IDLEN + 1], money_buf[20];
     char	    passbuf[PASSLEN];
     int		    m = 0, mtax = 0, tries = 3, skipauth = 0;
@@ -430,6 +430,23 @@ give_money_ui(const char *userid)
     }
 #endif // PLAY_ANGEL
 
+    {
+        char fpath[PATHLEN];
+        int in_list;
+
+        // check reject
+        sethomefile(fpath, id, FN_REJECT);
+        in_list = file_exist_record(fpath, cuser.userid);
+        sethomefile(fpath, id, FN_OVERRIDES);
+        if (in_list && !file_exist_record(fpath, cuser.userid)) {
+            move(13, 0);
+            outs(ANSI_COLOR(1;35)
+                 "對方拒絕收信，完成交易後將不寄送紅包袋。" ANSI_RESET);
+            can_send_mail = 0;
+        } 
+    }
+
+
     // safe context starts at (7, 0)
     move(7, 0);
     if (now - lastauth >= 15*60) // valid through 15 minutes
@@ -443,6 +460,7 @@ give_money_ui(const char *userid)
 	    skipauth = 1;
 	else
 	    tries = -1;
+        move(7, 0);
     }
 
     // safe context starts at (7, 0)
@@ -482,26 +500,26 @@ give_money_ui(const char *userid)
     outs(ANSI_COLOR(1;33) "交易完成！" ANSI_RESET "\n");
 
     // transaction complete.
-    {
+    if (can_send_mail) {
 	char fpath[PATHLEN];
-	if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
-	{
-#ifdef USE_RECENTPAY
-            outs("您可於下列位置找到最近的交易記錄:\n" 
-                    "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => " 
-                    "(P)Recent Pay 最近交易記錄\n"); 
-#endif
-	    vmsg("交易完成。");
-	    return 0;
-	}
 
-	// TODO 若是壞人，禁止編輯內文？
-	if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
+        if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
 	{
-	    veditfile(fpath);
-	}
-	sendalert(id, ALERT_NEW_MAIL);
+            outs(ANSI_COLOR(1;31) "已轉入對方帳戶但紅包袋寄送失敗()。" 
+                 ANSI_RESET);
+	} else {
+            if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
+                veditfile(fpath);
+            sendalert(id, ALERT_NEW_MAIL);
+        }
     }
+#ifdef USE_RECENTPAY
+    move(b_lines-5, 0); clrtobot();
+    outs("\n您可於下列位置找到最近的交易記錄:\n" 
+            "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => " 
+            "(P)Recent Pay 最近交易記錄\n"); 
+#endif
+    vmsg("交易完成。");
     return 0;
 }
 

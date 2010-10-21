@@ -404,6 +404,16 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     int		    oldstat = currstat;
     char save_title[STRLEN];
 
+    // check friend
+    sethomefile(fpath, userid, FN_REJECT);
+    i = file_exist_record(fpath, cuser.userid);
+    sethomefile(fpath, userid, FN_OVERRIDES);
+    if (i && !file_exist_record(fpath, cuser.userid)) {
+        // in reject list
+        vmsg("對方拒收。");
+        return -2;
+    }
+
     if (!mfpath)
 	mfpath = _mfpath;
 
@@ -424,20 +434,14 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
 
     strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
     if (newtitle) strlcpy(newtitle, save_title, STRLEN);
-    sethomefile(fpath, userid, FN_OVERRIDES);
-    i = file_exist_record(fpath, cuser.userid);
-    sethomefile(fpath, userid, FN_REJECT);
-
-    if (i || !file_exist_record(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
-	sethomedir(fpath, userid);
-	if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
-	{
-	    unlink(mfpath);
-	    setutmpmode(oldstat);
-	    return -1;
-	}
-	sendalert(userid, ALERT_NEW_MAIL);
+    sethomedir(fpath, userid);
+    if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
+    {
+        unlink(mfpath);
+        setutmpmode(oldstat);
+        return -1;
     }
+    sendalert(userid, ALERT_NEW_MAIL);
     setutmpmode(oldstat);
     return 0;
 }
@@ -563,6 +567,7 @@ multi_list(struct Vector *namelist, int *recipient)
 {
     char            uid[16];
     char            genbuf[200];
+    int             i, cRemoved;
 
     while (1) {
 	vs_hdr("群組寄信名單");
@@ -627,9 +632,39 @@ multi_list(struct Vector *namelist, int *recipient)
 	    *recipient = 0;
 	    return;
 	default:
-	    return;
-	}
-    }
+            vs_hdr("群組寄信名單");
+            outs("\n正在檢查名單... \n"); doupdate();
+            cRemoved = 0;
+            for (i = 0; i < Vector_length(namelist); i++) {
+                const char *p = Vector_get(namelist, i);
+                if (searchuser(p, uid) && strcmp(STR_GUEST, uid)) {
+                    // check rejected list
+                    sethomefile(genbuf, uid, FN_REJECT);
+                    if (!file_exist_record(genbuf, cuser.userid))
+                        continue;
+                    // check if that's friend+reject
+                    sethomefile(genbuf, uid, FN_OVERRIDES);
+                    if (file_exist_record(genbuf, cuser.userid))
+                        continue;
+                }
+                // ok, bad guys exist.
+                if (!cRemoved)
+                    outs("下列 ID 無法收到信件，已自名單移除；"
+                         "請重新確認名單。\n\n");
+                cRemoved ++;
+                prints("%-.*s ", IDLEN, uid);
+                Vector_remove(namelist, p);
+                i--; // this is a hack. currently vector index is stable after remove.
+                if ((cRemoved + 1) * (IDLEN + 1) >= t_columns)
+                    outs("\n");
+            }
+            if (cRemoved) {
+                pressanykey();
+                continue;
+            }
+            return;
+        }
+    } 
 }
 
 static void
@@ -733,17 +768,8 @@ multi_send(const char *title)
 		listing += recipient;
 		outc(' ');
 	    }
-	    outs(p);
-	    if (searchuser(p, buf) && strcmp(STR_GUEST, buf)) {
-		sethomefile(genbuf, buf, FN_OVERRIDES);
-		if (!file_exist_record(genbuf, cuser.userid)) { // not friend, check if rejected
-		    sethomefile(genbuf, buf, FN_REJECT);
-		    if (file_exist_record(genbuf, cuser.userid))
-			continue;
-		}
-		sethomepath(genbuf, buf);
-	    } else
-		continue;
+            searchuser(p, buf);
+            sethomepath(genbuf, buf);
 	    stampfile(genbuf, &mymail);
 	    unlink(genbuf);
 	    Copy(fpath, genbuf);
@@ -2186,12 +2212,18 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	if (strcasecmp(xid, cuser.userid) == 0)
 	    break;
 
-	sethomefile(fpath, xid, FN_OVERRIDES);
-	i = file_exist_record(fpath, cuser.userid);
 	sethomefile(fpath, xid, FN_REJECT);
-	// XXX check do_send - they simply ignore it.
-	if (!i && file_exist_record(fpath, cuser.userid))
-	    return 0;
+	i = file_exist_record(fpath, cuser.userid);
+	sethomefile(fpath, xid, FN_OVERRIDES);
+
+	if (i && !file_exist_record(fpath, cuser.userid)) {
+            // We used to simply ignore here, and then people (especially those
+            // in BuyTogether and similiars) say "my mail is lost".
+            // After notifying SYSOPs, we believe it will be better to let all
+            // users know what's going on.
+            vmsg("無法寄信給此使用者");
+	    return 1;
+        }
     } while (0);
 
     if (mode == 'Z') {

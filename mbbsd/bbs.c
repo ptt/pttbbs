@@ -1281,6 +1281,7 @@ do_general(int garbage)
 
 	/* 回應到原作者信箱 */
 
+        // TODO should we take care of the reject list here?
 	if (curredit & EDIT_BOTH) {
 	    char *str, *msg = "回應至作者信箱";
 
