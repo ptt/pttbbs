@@ -119,7 +119,9 @@ int main(int argc, char **argv)
 		Link(BBSHOME "/etc/ticket", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
 		append_record(genbuf, &mymail, sizeof(mymail));
-	    }
+	    } else {
+		printf("     %-15s¶R¤F%9d ±i %s\n" ,userid, num, betname[mybet]);
+            }
 	}
     }
     unlink(BBSHOME "/etc/" FN_TICKET_RECORD ".tmp");

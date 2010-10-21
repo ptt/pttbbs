@@ -393,8 +393,12 @@ openticket(int bid)
 			    MONEYNAME "幣\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
-	    } else
+	    } else {
+		if (fp)
+		    fprintf(fp, "     %-*s 買了 %3d 張 %s\n" ,
+			    IDLEN, userid, i, betname[mybet]);
 		continue;
+            }
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
             pay_as_uid(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]", betname[mybet]); 
