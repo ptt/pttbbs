@@ -119,6 +119,46 @@ modify_dir_lite(
     return 0;
 }
 
+static int 
+add_to_post_history(
+        const char *direct, const char *basename,
+        const char *old_path, const char *new_path)
+{
+    char hist_file[PATHLEN];
+    char hist_num[STRLEN];
+    int fd = 0, last_index = 0;
+
+    setdirpath(hist_file, direct, FN_EDITHISTORY "/");
+    mkdir(hist_file, 0755);
+    strlcat(hist_file, basename, sizeof(hist_file));
+
+    if ((fd = open(hist_file, O_RDWR|O_CREAT, 0644)) >= 0) {
+        // XXX if somebody just die inside... locks everyone!
+        flock(fd, LOCK_EX);
+        read(fd, &last_index, sizeof(last_index));
+        last_index++;
+        lseek(fd, 0, SEEK_SET);
+        write(fd, &last_index, sizeof(last_index));
+        flock(fd, LOCK_UN);
+        close(fd);
+
+        if (last_index == 1) {
+            char * const p = hist_file + strlen(hist_file);
+            // rev 0->1, let's make a copy of original version
+            strlcat(hist_file, ".000", sizeof(hist_file));
+            HardLink(old_path, hist_file);
+            *p = 0;
+        }
+
+        // now build the history file
+        sprintf(hist_num, ".%03d", last_index);
+        strlcat(hist_file, hist_num, sizeof(hist_file));
+        HardLink(new_path, hist_file);
+        return 0;
+    }
+    return -1;
+}
+
 static void 
 check_locked(fileheader_t *fhdr)
 {
@@ -1573,10 +1613,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     setutmpmode(REEDIT);
 
 
-    // XXX 不知何時起， edit_post 已經不會有 + 號了...
-    // 全部都是 Sysop Edit 的原地形式。
-    // 哪天有空找個人寫個 mode 是改名 edit 吧
-    //
     // TODO 由於現在檔案都是直接蓋回原檔，
     // 在原看板目錄開已沒有很大意義。 (效率稍高一點)
     // 可以考慮改開在 user home dir
@@ -1721,6 +1757,10 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	// OK to save file.
+
+#ifdef USE_EDIT_HISTORY
+        add_to_post_history(direct, fhdr->filename, genbuf, fpath);
+#endif
 
 	// piaip Wed Jan  9 11:11:33 CST 2008
 	// in order to prevent calling system 'mv' all the
