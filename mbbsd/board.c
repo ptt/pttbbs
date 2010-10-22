@@ -109,6 +109,7 @@ int enter_board(const char *boardname)
 	return -3;
 
     setbpath(bpath, bname);
+    // mkdir(bpath, 755);
     if (stat(bpath, &st) == -1) {
 	return -3;
     }
@@ -290,7 +291,7 @@ b_config(void)
 
 #define LNBOARDINFO (19)
 #define LNPOSTRES   (12)
-#define COLPOSTRES  (50)
+#define COLPOSTRES  (48)
 
     int ytitle = b_lines - LNBOARDINFO;
 
@@ -470,7 +471,7 @@ b_config(void)
 	    i = (int)lpost * 10;
 	    attr = (cuser.numposts < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    prints("各看板有效文章共 %d 篇以上", i);
+	    prints("各看板有效文章合計 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}
