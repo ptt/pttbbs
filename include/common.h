@@ -59,6 +59,7 @@
 #ifndef STR_SAFEDEL_TITLE
 #define STR_SAFEDEL_TITLE   "(本文已被刪除)"
 #endif 
+#define FN_EDITHISTORY  ".history"
 
 #define MSG_DEL_CANCEL  "取消刪除"
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"
