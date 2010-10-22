@@ -54,8 +54,13 @@
 
 // 自訂刪除文章時出現的標題與檔案
 #ifndef FN_SAFEDEL
+#ifdef USE_EDIT_HISTORY
+// For edit_history, the new file name must be as short as possible so that so we can restore it later.
+#define FN_SAFEDEL	".d"
+#else
 #define FN_SAFEDEL	".deleted"
-#endif
+#endif // USE_EDIT_HISTORY
+#endif // FN_SAFEDEL
 #ifndef STR_SAFEDEL_TITLE
 #define STR_SAFEDEL_TITLE   "(本文已被刪除)"
 #endif 
