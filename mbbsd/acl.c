@@ -138,8 +138,8 @@ edit_banned_list_for_board(const char *board) {
 
     while (1) {
         clear();
-        vs_hdr2f(" 設定看板水桶 \t 看板: %s", board);
-        getdata(1, 0, "要 (A)增加 (D)提前清除 (L)列出水桶歷史 (Q)結束? [Q] ",
+        vs_hdr2f(" 設定看板水桶 \t 看板: %s ，名單上限: ∞", board);
+        getdata(1, 0, "要 (A)增加 (D)提前清除 (L)列出水桶歷史 (O)檢視舊水桶 (Q)結束? [Q] ",
                 ans, sizeof(ans), LCECHO);
         if (*ans == 'q' || !*ans)
             break;
@@ -160,7 +160,7 @@ edit_banned_list_for_board(const char *board) {
                 move(4, 0);
                 outs("目前接受的格式是 [數字][單位]。 單位有: 年(y), 月(m), 天(d)\n");
                 outs("範例: 3m (三個月), 180d (180天), 10y (10年)\n");
-                outs("注意不可混合輸入(ex: 沒有三個半月這種東西,要換算成天數\n");
+                outs("注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n");
                 getdata(2, 0, "請以數字跟單位(預設為天)輸入期限: ", datebuf, 8, DOECHO);
                 trim(datebuf);
                 if (!*datebuf) {
@@ -183,15 +183,19 @@ edit_banned_list_for_board(const char *board) {
                         vmsg("日期格式輸入錯誤或是小於一天無法處理。");
                         continue;
                     }
+                    if (now + val * DAY_SECONDS < now) {
+                        vmsg("日期過大或無法處理，請重新輸入。");
+                        continue;
+                    }
                     expire = now + val * DAY_SECONDS;
                     move(4, 0); clrtobot();
                     prints("水桶期限將設定為 %d 天後: %s",
                             val, Cdatelite(&expire));
                 }
 
-                assert(sizeof(reason) >= TTLEN);
+                assert(sizeof(reason) >= BTLEN);
                 // maybe race condition here, but fine.
-                getdata(5, 0, "請輸入理由(空白可取消): ", reason, TTLEN,DOECHO);
+                getdata(5, 0, "請輸入理由(空白可取消): ", reason, BTLEN,DOECHO);
                 if (!*reason) {
                     vmsg("未輸入理由，無法受理。");
                     continue;
@@ -231,8 +235,8 @@ edit_banned_list_for_board(const char *board) {
                 }
                 move(1, 0); clrtobot();
                 prints("提前解除使用者 %s 於看板 %s 的水桶。", uid, board);
-                assert(sizeof(reason) >= TTLEN);
-                getdata(2, 0, "請輸入理由(空白可取消解除): ",reason,TTLEN,DOECHO);
+                assert(sizeof(reason) >= BTLEN);
+                getdata(2, 0, "請輸入理由(空白可取消解除): ",reason,BTLEN,DOECHO);
                 if (!*reason) {
                     vmsg("未輸入理由，無法受理。");
                     continue;
@@ -249,6 +253,16 @@ edit_banned_list_for_board(const char *board) {
                 if (more(history_log, YEA) == -1)
                     vmsg("目前尚無水桶記錄。");
                 break;
+
+            case 'o':
+                {
+                    char old_log[PATHLEN];
+                    setbfile(old_log, board, fn_water);
+                    if (more(old_log, YEA) == -1)
+                        vmsg("無舊水桶資料。");
+                }
+                break;
+
 
             default:
                 break;
