@@ -281,11 +281,7 @@ chc_log_machine_step(FILE* fp, board_t board, const drc_t *step)
 }
 
 static int
-#if defined(__linux__)
 chc_filter(const struct dirent *dir)
-#else
-chc_filter(struct dirent *dir)
-#endif
 {
     if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0 )
 	return 0;
@@ -299,7 +295,8 @@ chc_log_poem(FILE* outfp)
     int n;
 
     // TODO use readdir(), don't use lots of memory
-    n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter, alphasort);
+    n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter, 
+            (int (*)(const struct dirent **, const struct dirent **))alphasort);
     if (n < 0)
 	perror("scandir");
     else {

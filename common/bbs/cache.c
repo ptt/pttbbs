@@ -114,7 +114,7 @@ attach_check_SHM(int version, int SHM_t_size)
 	shm_check_error();
     }
     if (SHM_t_size   != sizeof(SHM_t)) {
-	fprintf(stderr, "Error: SHM_t_size(%d) != sizeof(SHM_t)(%lu)\n",
+	fprintf(stderr, "Error: SHM_t_size(%d) != sizeof(SHM_t)(%zd)\n",
 		SHM_t_size, sizeof(SHM_t));
 	shm_check_error();
     }
@@ -125,7 +125,7 @@ attach_check_SHM(int version, int SHM_t_size)
 	shm_check_error();
     }
     if (SHM->size    != sizeof(SHM_t)) {
-	fprintf(stderr, "Error: SHM->size(%d) != sizeof(SHM_t)(%lu)\n", 
+	fprintf(stderr, "Error: SHM->size(%d) != sizeof(SHM_t)(%zd)\n", 
 		SHM->size, sizeof(SHM_t));
 	shm_check_error();
     }
@@ -709,7 +709,7 @@ reload_pttcache(void)
 	safe_sleep(1);
     else {			/* jochang: temporary workaround */
 	fileheader_t    item, subitem;
-	char            pbuf[256], buf[256], *chr;
+	char            pbuf[256], buf[256];
 	FILE           *fp, *fp1, *fp2;
 	int             id, aggid, rawid;
 

@@ -1,18 +1,14 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifdef __linux__
 int dirselect(const struct dirent *dir)
-#else
-int dirselect(struct dirent *dir)
-#endif
 {
     return strchr("MDSGH", dir->d_name[0]) && dir->d_name[1] == '.';
 }
 
-int mysort(const void *a, const void *b)
+int mysort(const struct dirent **a, const struct dirent **b)
 {
-    return atoi(((*((struct dirent **)a))->d_name+2))-atoi(((*((struct dirent **)b))->d_name+2));
+    return atoi(((*a)->d_name+2))-atoi(((*b)->d_name+2));
 }
 
 int main(int argc, char **argv)

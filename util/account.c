@@ -201,7 +201,7 @@ static int
 update_history(struct tm *ptime, int peak_hour, int peak_hour_login, int day_login)
 {
     int max_hour_login = 0, max_day_login = 0, max_reg = 0, max_online = 0;
-    int peak_online;
+    int peak_online = 0;
     FILE *fp, *fp1;
     time_t t;
     struct tm tm;
