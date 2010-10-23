@@ -3541,6 +3541,53 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     return FULLUPDATE;
 }
 
+static int
+view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
+{
+    const char *err_no_history = "抱歉，此篇文章暫無編輯歷史記錄可供檢視";
+    char hist_file[PATHLEN];
+    int fd, maxhist = 0;
+
+    // TODO allow author?
+    if (!(currmode & MODE_BOARD))
+        return DONOTHING;
+
+    if ((!fhdr) ||
+        ((fhdr->filename[0] == '.' || !fhdr->filename[0]) &&
+         (strcmp(fhdr->filename, FN_SAFEDEL) != 0))) {
+        vmsg(err_no_history);
+        return FULLUPDATE;
+    }
+
+    // build history index file name
+    setdirpath(hist_file, direct, FN_EDITHISTORY "/");
+    if (strcmp(FN_SAFEDEL, fhdr->filename) == 0) {
+        assert(strlen(FN_SAFEDEL) == strlen("M."));
+        // M.1 is a dirty hack, anyway..
+        strlcat(hist_file, "M.1", sizeof(hist_file));
+        strlcat(hist_file, fhdr->filename + strlen(FN_SAFEDEL) + 1, sizeof(hist_file));
+    } else {
+        strlcat(hist_file, fhdr->filename, sizeof(hist_file));
+    }
+
+    // TODO check if hist_file is a valid file (directoy gives fake result)
+
+    fd = open(hist_file, O_RDONLY);
+    if (fd < 0) {
+        vmsg(err_no_history);
+        return FULLUPDATE;
+    }
+    read(fd, &maxhist, sizeof(maxhist));
+    close(fd);
+    if (maxhist < 1) {
+        vmsg(err_no_history);
+        return FULLUPDATE;
+    }
+
+    psb_view_edit_history(hist_file, fhdr->title, maxhist+1);
+    return FULLUPDATE;
+}
+
 #ifdef OUTJOBSPOOL
 /* 看板備份 */
 static int
@@ -4049,6 +4096,10 @@ const onekey_t read_comms[] = {
     { 1, old_cross_post }, // 'x'
     { 1, reply_post }, // 'y'
     { 0, b_man }, // 'z' 122
+    { 0, NULL }, // '{' 123
+    { 0, NULL }, // '|' 124
+    { 0, NULL }, // '}' 125
+    { 1, view_post_history }, // '~' 126
 };
 
 int

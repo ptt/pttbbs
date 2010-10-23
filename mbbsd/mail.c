@@ -1934,6 +1934,10 @@ static const onekey_t mail_comms[] = {
     { 1, m_forward }, // 'x'
     { 1, multi_reply }, // 'y'
     { 0, mail_man }, // 'z' 122
+    { 0, NULL }, // '{' 123
+    { 0, NULL }, // '|' 124
+    { 0, NULL }, // '}' 125
+    { 0, NULL }, // '~' 126
 };
 
 int

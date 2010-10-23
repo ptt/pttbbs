@@ -150,6 +150,10 @@ int card_99(void);
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
+/* psb (panty and stocking browser) */
+int psb_view_edit_history(const char *base, const char *subject, int max_hist);
+int psb_admin_edit();
+
 /* chc */
 void chc(int s, ChessGameMode mode);
 int chc_main(void);
