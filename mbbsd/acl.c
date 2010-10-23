@@ -7,14 +7,14 @@
 // Author: Hung-Te Lin (piaip)
 
 ///////////////////////////////////////////////////////////////////////////
-// New ban system (store in user home)
+// Bakuman: New banning system (store in user home)
 
-#define BANNED_OBJECT_TYPE_USER     'u'
-#define BANNED_OBJECT_TYPE_BORAD    'b'
+#define BAKUMAN_OBJECT_TYPE_USER     'u'
+#define BAKUMAN_OBJECT_TYPE_BORAD    'b'
 
 static void
-banned_make_tag_filename(const char *who, const char *object, char object_type,
-                         size_t szbuf, char *buf, int create_folder) {
+bakuman_make_tag_filename(const char *who, const char *object, char object_type,
+                          size_t szbuf, char *buf, int create_folder) {
     char prefix[3] = { object_type, '_', 0 };
 
     if (!who)
@@ -29,8 +29,8 @@ banned_make_tag_filename(const char *who, const char *object, char object_type,
 }
 
 static int
-banned_get_info(const char *filename,
-                time4_t *pexpire, size_t szreason, char *reason) {
+bakuman_get_info(const char *filename,
+                 time4_t *pexpire, size_t szreason, char *reason) {
     FILE *fp = fopen(filename, "rt");
     int ts = 0;
     char buf[STRLEN];
@@ -56,7 +56,7 @@ banned_get_info(const char *filename,
 }
 
 static int
-banned_set_info(const char *filename, time4_t expire, const char *reason) {
+bakuman_set_info(const char *filename, time4_t expire, const char *reason) {
     FILE *fp = fopen(filename, "wt");
     if (!fp)
         return 0;
@@ -74,12 +74,13 @@ is_banned_by(const char *who, const char *object, char object_type) {
     char tag_fn[PATHLEN];
     time4_t expire = 0;
 
-    banned_make_tag_filename(who, object, object_type, sizeof(tag_fn),tag_fn,0);
+    bakuman_make_tag_filename(who, object, object_type,
+                              sizeof(tag_fn), tag_fn, 0);
     if (!dashf(tag_fn))
         return 0;
 
     // check expire
-    if (banned_get_info(tag_fn, &expire, 0, NULL) && now > expire) {
+    if (bakuman_get_info(tag_fn, &expire, 0, NULL) && now > expire) {
         unlink(tag_fn);
         return 0;
     }
@@ -92,13 +93,14 @@ ban_user_as(const char *who, const char *object, char object_type,
             time_t expire, const char *reason) {
     char tag_fn[PATHLEN];
 
-    banned_make_tag_filename(who, object, object_type, sizeof(tag_fn),tag_fn,1);
-    return banned_set_info(tag_fn, expire, reason);
+    bakuman_make_tag_filename(who, object, object_type,
+                              sizeof(tag_fn), tag_fn, 1);
+    return bakuman_set_info(tag_fn, expire, reason);
 }
 
 time4_t
 is_user_banned_by_board(const char *user, const char *board) {
-    return is_banned_by(user, board, BANNED_OBJECT_TYPE_BORAD);
+    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BORAD);
 }
 
 time4_t
@@ -109,14 +111,14 @@ is_banned_by_board(const char *board) {
 int
 ban_user_for_board(const char *user, const char *board,
                    time4_t expire, const char *reason) {
-    return ban_user_as(user, board, BANNED_OBJECT_TYPE_BORAD, expire, reason);
+    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BORAD, expire, reason);
 }
 
 int
 unban_user_for_board(const char *user, const char *board) {
     char tag_fn[PATHLEN];
 
-    banned_make_tag_filename(user, board, BANNED_OBJECT_TYPE_BORAD,
+    bakuman_make_tag_filename(user, board, BAKUMAN_OBJECT_TYPE_BORAD,
                              sizeof(tag_fn), tag_fn, 0);
     return unlink(tag_fn) == 0;
 }
@@ -138,30 +140,67 @@ edit_banned_list_for_board(const char *board) {
 
     while (1) {
         clear();
-        vs_hdr2f(" 設定看板水桶 \t 看板: %s ，名單上限: ∞", board);
-        getdata(1, 0, "要 (A)增加 (D)提前清除 (L)列出水桶歷史 (O)檢視舊水桶 (Q)結束? [Q] ",
-                ans, sizeof(ans), LCECHO);
+        vs_hdr2f(" Bakuman 權限設定系統 \t"
+                 " 看板: %s ，類型: 禁止發言(水桶)，名單上限: ∞", board);
+        move(5, 0);
+        outs(ANSI_COLOR(1)
+        "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
+        "                        本系統提供下列功\能:\n"
+        ANSI_COLOR(1;33)
+        "                          - 無上限的名單設定\n"
+        "                          - 自動生效的時效限制\n"
+        "                          - 名單內舊帳號過期重新註冊時自動取消\n\n"
+        ANSI_RESET
+        "                   請利用 (A)/(D) 來調整你的名單，\n"
+        "                          (S)查詢特定使用者目前是否仍在名單內，\n"
+        "                          (L)檢視所有設定歷史記錄。\n"
+        "");
+
+        getdata(1, 0, "(A)增加 (D)提前清除 (S)取得目前狀態 "
+                      "(L)列出設定歷史 (O)檢視舊水桶 [Q]結束? ",
+                ans, 2, LCECHO);
+        move(2, 0); clrtobot();
         if (*ans == 'q' || !*ans)
             break;
 
         switch (*ans) {
+            case 's':
+                move(1, 0);
+                usercomplete(msg_uid, uid);
+                if (!*uid || !searchuser(uid, uid))
+                    continue;
+                move(1, 0); clrtobot();
+                expire = is_user_banned_by_board(uid, board);
+                if (expire > now) {
+                    prints("使用者 %s 禁言中，解除時間: %s\n",
+                           uid, Cdatelite(&expire));
+                } else {
+                    prints("使用者 %s 目前不在禁言名單中。\n",
+                           uid);
+                }
+                pressanykey();
+                break;
+
             case 'a':
                 move(1, 0);
                 usercomplete(msg_uid, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 if (is_user_banned_by_board(uid, board)) {
-                    vmsg("使用者已在水桶中。");
+                    vmsg("使用者之前已被禁言。");
                     continue;
                 }
                 move(1, 0); clrtobot();
-                prints("將使用者 %s 加入看板 %s 的水桶。", uid, board);
+                prints("將使用者 %s 加入看板 %s 的禁言名單。", uid, board);
                 syncnow();
                 move(4, 0);
-                outs("目前接受的格式是 [數字][單位]。 單位有: 年(y), 月(m), 天(d)\n");
-                outs("範例: 3m (三個月), 180d (180天), 10y (10年)\n");
-                outs("注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n");
-                getdata(2, 0, "請以數字跟單位(預設為天)輸入期限: ", datebuf, 8, DOECHO);
+                outs("目前接受的格式是 [數字][單位]。 "
+                     "單位有: 年(y), 月(m), 天(d)\n"
+                     "範例: 3m (三個月), 180d (180天), 10y (10年)\n"
+                     "注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n"
+                     );
+                getdata(2, 0, "請以數字跟單位(預設為天)輸入期限: ",
+                        datebuf, 8, DOECHO);
                 trim(datebuf);
                 if (!*datebuf) {
                     vmsg("未輸入期限，放棄。");
@@ -189,21 +228,22 @@ edit_banned_list_for_board(const char *board) {
                     }
                     expire = now + val * DAY_SECONDS;
                     move(4, 0); clrtobot();
-                    prints("水桶期限將設定為 %d 天後: %s",
+                    prints("期限將設定為 %d 天後: %s",
                             val, Cdatelite(&expire));
                 }
 
                 assert(sizeof(reason) >= BTLEN);
                 // maybe race condition here, but fine.
-                getdata(5, 0, "請輸入理由(空白可取消): ", reason, BTLEN,DOECHO);
+                getdata(5, 0, "請輸入理由(空白可取消新增): ",
+                        reason, BTLEN,DOECHO);
                 if (!*reason) {
-                    vmsg("未輸入理由，無法受理。");
+                    vmsg("未輸入理由，取消此次設定");
                     continue;
                 }
 
                 sprintf(datebuf, "%s", Cdatelite(&expire));
                 move(1, 0); clrtobot();
-                prints("\n使用者 %s 即將加入水桶 (解除時間: %s)\n"
+                prints("\n使用者 %s 即將加入禁言名單 (解除時間: %s)\n"
                        "理由: %s\n", uid, datebuf, reason);
 
                 // last chance
@@ -216,11 +256,12 @@ edit_banned_list_for_board(const char *board) {
 
                 result = ban_user_for_board(uid, board, expire, reason);
                 log_filef(history_log, LOG_CREAT,
-                          "%s %s%s 將 %s 加入水桶 (解除時間: %s)，理由: %s\n",
+                          "%s %s%s 將 %s 加入禁言名單\n"
+                          "  理由: %s (解除時間: %s)\n",
                           Cdatelite(&now),
                           result ? "" : "(未成功\)",
-                          cuser.userid, uid, datebuf, reason);
-                vmsg(result ? "已將使用者加入水桶" : "失敗，請向站長報告");
+                          cuser.userid, uid, reason, datebuf);
+                vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
                 invalid_board_permission_cache(board);
                 break;
 
@@ -230,28 +271,39 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 if (!is_user_banned_by_board(uid, board)) {
-                    vmsg("使用者未被水桶。");
+                    vmsg("使用者未在禁言名單。");
                     continue;
                 }
                 move(1, 0); clrtobot();
-                prints("提前解除使用者 %s 於看板 %s 的水桶。", uid, board);
+                prints("提前解除使用者 %s 於看板 %s 的禁言限制。", uid, board);
                 assert(sizeof(reason) >= BTLEN);
-                getdata(2, 0, "請輸入理由(空白可取消解除): ",reason,BTLEN,DOECHO);
+                getdata(2, 0, "請輸入理由(空白可取消解除): ",
+                        reason, BTLEN, DOECHO);
                 if (!*reason) {
-                    vmsg("未輸入理由，無法受理。");
+                    vmsg("未輸入理由，取消此次設定");
                     continue;
                 }
+
+                // last chance
+                getdata(5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
+                        ans, sizeof(ans), LCECHO);
+                if (ans[0] != 'y') {
+                    vmsg("請重新輸入");
+                    continue;
+                }
+
                 unban_user_for_board(uid, board);
                 log_filef(history_log, LOG_CREAT,
-                          "%s %s 解除 %s 的水桶，理由: %s\n",
+                          "%s %s 解除 %s 的禁言限制\n"
+                          "  理由: %s\n",
                           Cdatelite(&now), cuser.userid, uid, reason);
-                vmsg("使用者水桶已解除。");
+                vmsg("使用者的禁言限制已解除。");
                 invalid_board_permission_cache(board);
                 break;
 
             case 'l':
                 if (more(history_log, YEA) == -1)
-                    vmsg("目前尚無水桶記錄。");
+                    vmsg("目前尚無設定記錄。");
                 break;
 
             case 'o':
@@ -262,7 +314,6 @@ edit_banned_list_for_board(const char *board) {
                         vmsg("無舊水桶資料。");
                 }
                 break;
-
 
             default:
                 break;
