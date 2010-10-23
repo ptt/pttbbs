@@ -376,7 +376,7 @@ pae_input_processor(int key, int curr, int total, int rows, void *ctx) {
         case 'E':
             result = veditfile(cx->files[curr]);
             // log file change
-            if (result == EDIT_ABORTED)
+            if (result != EDIT_ABORTED)
             {
                 log_filef("log/etc_edit.log",
                           LOG_CREAT,
