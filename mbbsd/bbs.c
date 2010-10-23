@@ -119,6 +119,7 @@ modify_dir_lite(
     return 0;
 }
 
+#ifdef USE_EDIT_HISTORY
 static int 
 add_to_post_history(
         const char *direct, const char *basename,
@@ -158,6 +159,7 @@ add_to_post_history(
     }
     return -1;
 }
+#endif
 
 static void 
 check_locked(fileheader_t *fhdr)
@@ -3541,6 +3543,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     return FULLUPDATE;
 }
 
+#ifdef USE_EDIT_HISTORY
 static int
 view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
 {
@@ -3587,6 +3590,15 @@ view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
     psb_view_edit_history(hist_file, fhdr->title, maxhist+1);
     return FULLUPDATE;
 }
+
+#else // USE_EDIT_HISTORY
+
+static int
+view_post_history(int ent, const fileheader_t * fhdr, const char *direct) {
+    return DONOTHING;
+}
+
+#endif // USE_EDIT_HISTORY
 
 #ifdef OUTJOBSPOOL
 /* ¬ÝªO³Æ¥÷ */
