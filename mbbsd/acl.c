@@ -10,7 +10,7 @@
 // Bakuman: New banning system (store in user home)
 
 #define BAKUMAN_OBJECT_TYPE_USER     'u'
-#define BAKUMAN_OBJECT_TYPE_BORAD    'b'
+#define BAKUMAN_OBJECT_TYPE_BOARD    'b'
 
 static void
 bakuman_make_tag_filename(const char *who, const char *object, char object_type,
@@ -102,7 +102,7 @@ ban_user_as(const char *who, const char *object, char object_type,
 
 time4_t
 is_user_banned_by_board(const char *user, const char *board) {
-    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BORAD);
+    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD);
 }
 
 time4_t
@@ -113,14 +113,14 @@ is_banned_by_board(const char *board) {
 int
 ban_user_for_board(const char *user, const char *board,
                    time4_t expire, const char *reason) {
-    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BORAD, expire, reason);
+    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BOARD, expire, reason);
 }
 
 int
 unban_user_for_board(const char *user, const char *board) {
     char tag_fn[PATHLEN];
 
-    bakuman_make_tag_filename(user, board, BAKUMAN_OBJECT_TYPE_BORAD,
+    bakuman_make_tag_filename(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
                              sizeof(tag_fn), tag_fn, 0);
     return unlink(tag_fn) == 0;
 }
@@ -144,7 +144,7 @@ edit_banned_list_for_board(const char *board) {
         clear();
         vs_hdr2f(" Bakuman 權限設定系統 \t"
                  " 看板: %s ，類型: 禁止發言(水桶)，名單上限: ∞", board);
-        move(5, 0);
+        move(4, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
         "                        本系統提供下列功\能:\n"
@@ -153,9 +153,20 @@ edit_banned_list_for_board(const char *board) {
         "                          - 自動生效的時效限制\n"
         "                          - 名單內舊帳號過期重新註冊時自動取消\n\n"
         ANSI_RESET
-        "                   請利用 (A)/(D) 來調整你的名單，\n"
-        "                          (S)查詢特定使用者目前是否仍在名單內，\n"
-        "                          (L)檢視所有設定歷史記錄。\n"
+        "      小提示: 跟舊系統稍有不同，新系統不會(也無法)列出 [現在名單內有哪些人]\n"
+        "              它採取的是設後不理+記錄式的概念：\n"
+        "            - 平時用(A)新增並設好期限後就不用再去管設了哪些人。\n"
+        "            - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
+        "            - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查。\n"
+        "              另外也可用(L)看設定記錄。\n\n"
+#ifdef WATERBAN_UPGRADE_TIME_STR
+        // enable and change this if you've just made an upgrade
+        ANSI_COLOR(1;32)
+        "      註: 系統更新時已把所有您放在舊水桶名單的帳號全部設上了" 
+                   WATERBAN_UPGRADE_TIME_STR "的水桶，\n"
+        "          但沒有記錄在(L)的列表裡面。 您可以利用(O)的舊名單參考有沒有想\n"
+        "          修改的部份，然後利用(D)跟(A)來調整。\n" ANSI_RESET
+#endif
         "");
 
         getdata(1, 0, "(A)增加 (D)提前清除 (S)取得目前狀態 "
