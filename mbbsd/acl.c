@@ -41,11 +41,13 @@ bakuman_get_info(const char *filename,
     // banned file format:
     //  EXPIRE_TIME
     //  REASON
+    buf[0] = 0;
     fgets(buf, sizeof(buf), fp);
     if (pexpire) {
         sscanf(buf, "%u", &ts);
         *pexpire = (time4_t) ts;
     }
+    buf[0] = 0;
     fgets(buf, sizeof(buf), fp);
     if (szreason && reason) {
         chomp(buf);
