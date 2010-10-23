@@ -51,6 +51,12 @@ int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, 
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
 
+/* acl */
+time4_t is_user_banned_by_board(const char *user, const char *board);
+time4_t is_banned_by_board(const char *board);
+int ban_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
+int edit_banned_list_for_board(const char *board);
+
 /* assess */
 int inc_badpost(const char *, int num);
 int bad_comment(const char *fn);
@@ -118,6 +124,7 @@ char*getuserid(int num);
 int  getuser(const char *userid, userec_t *xuser);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
+void invalid_board_permission_cache(const char *board);
 int is_BM_cache(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);

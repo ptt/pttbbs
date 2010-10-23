@@ -541,7 +541,7 @@ b_config(void)
 	    if (!isBM) outs(" (惠狾舦)");
 	    outs(aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    prints("%sw%s)表虫 %sv%s)ǎ穦虫 ", 
+	    prints("%sw%s)砞﹚表 %sv%s)ǎ穦虫 ", 
 		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
 	    prints("%sm%s)羭快щ布 %so%s)щ布虫 ",
@@ -740,7 +740,11 @@ b_config(void)
 
 	    case 'w':
 		clear();
+#ifdef USE_NEW_BAN_SYSTEM
+                edit_banned_list_for_board(currboard);
+#else
 		friend_edit(BOARD_WATER);
+#endif
 		clear();
 		break;
 

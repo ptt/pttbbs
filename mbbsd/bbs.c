@@ -130,7 +130,8 @@ add_to_post_history(
     int fd = 0, last_index = 0;
 
     setdirpath(hist_file, direct, FN_EDITHISTORY "/");
-    mkdir(hist_file, 0755);
+    if (!dashd(hist_file))
+        mkdir(hist_file, 0755);
     strlcat(hist_file, basename, sizeof(hist_file));
 
     if ((fd = open(hist_file, O_RDWR|O_CREAT, 0644)) >= 0) {
@@ -3573,10 +3574,8 @@ view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
         strlcat(hist_file, fhdr->filename, sizeof(hist_file));
     }
 
-    // TODO check if hist_file is a valid file (directoy gives fake result)
-
-    fd = open(hist_file, O_RDONLY);
-    if (fd < 0) {
+    if (!dashf(hist_file) ||
+        (fd = open(hist_file, O_RDONLY)) < 0) {
         vmsg(err_no_history);
         return FULLUPDATE;
     }

@@ -125,6 +125,18 @@ getutmpmode(void)
  * section - board
  */
 
+void
+invalid_board_permission_cache(const char *board) {
+    boardheader_t *bp = NULL;
+    int bid = getbnum(board);
+
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bp = getbcache(bid);
+    bp->perm_reload = now;
+    substitute_record(fn_board, bp, sizeof(boardheader_t), bid);
+}
+
+
 /* HasBoardPerm() in board.c... */
 int
 apply_boards(int (*func) (boardheader_t *))
@@ -176,7 +188,6 @@ const char *
 postperm_msg(const char *bname)
 {
     register int    i;
-    char            buf[PATHLEN];
     boardheader_t   *bp = NULL;
 
     if (!(i = getbnum(bname)))
@@ -189,9 +200,25 @@ postperm_msg(const char *bname)
     if (HasUserPerm(PERM_SYSOP))
 	return NULL;
 
-    setbfile(buf, bname, fn_water);
-    if (file_exist_record(buf, cuser.userid))
-	return "使用者水桶中";
+#ifdef USE_NEW_BAN_SYSTEM
+    {
+        // static is bad, but this is faster...
+        static char ban_msg[STRLEN];
+        time4_t expire = is_banned_by_board(bname);
+        if (expire > now) {
+            sprintf(ban_msg, "使用者水桶中(尚有%d天)",
+                    ((expire - now) / DAY_SECONDS) +1);
+            return ban_msg;
+        }
+    }
+#else
+    {
+        char buf[PATHLEN];
+        setbfile(buf, bname, fn_water);
+        if (file_exist_record(buf, cuser.userid))
+            return "使用者水桶中";
+    }
+#endif
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
 	return NULL;

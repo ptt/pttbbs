@@ -9,7 +9,7 @@ SRCROOT=	..
 
 PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
-ACCOBJS  = user.o register.o passwd.o emaildb.o
+ACCOBJS  = user.o acl.o register.o passwd.o emaildb.o
 NETOBJS  = mbbsd.o io.o term.o telnet.o
 TALKOBJS = friend.o talk.o ccw.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o
