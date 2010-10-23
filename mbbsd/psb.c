@@ -399,7 +399,7 @@ psb_admin_edit() {
     int i;
     char buf[PATHLEN*2];
     FILE *fp;
-    pae_ctx paectx = { };
+    pae_ctx paectx = { {0}, };
     PSB_CTX ctx = {
         .curr = 0,
         .total = 0,
