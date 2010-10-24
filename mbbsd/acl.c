@@ -73,7 +73,8 @@ bakuman_set_info(const char *filename, time4_t expire, const char *reason) {
 
 // return if 'who (NULL=self)' is banned by 'object'
 static time4_t
-is_banned_by(const char *who, const char *object, char object_type) {
+is_banned_by(const char *who, const char *object, char object_type,
+             size_t szreason, char *reason) {
     char tag_fn[PATHLEN];
     time4_t expire = 0;
 
@@ -83,7 +84,7 @@ is_banned_by(const char *who, const char *object, char object_type) {
         return 0;
 
     // check expire
-    if (bakuman_get_info(tag_fn, &expire, 0, NULL) && now > expire) {
+    if (bakuman_get_info(tag_fn, &expire, szreason, reason) && now > expire) {
         unlink(tag_fn);
         return 0;
     }
@@ -101,9 +102,16 @@ ban_user_as(const char *who, const char *object, char object_type,
     return bakuman_set_info(tag_fn, expire, reason);
 }
 
+int
+get_user_banned_status_by_board(const char *user, const char *board,
+                                size_t szreason, char *reason) {
+    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
+                        szreason, reason);
+}
+
 time4_t
 is_user_banned_by_board(const char *user, const char *board) {
-    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD);
+    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD, 0, NULL);
 }
 
 time4_t
@@ -148,28 +156,28 @@ edit_banned_list_for_board(const char *board) {
         move(3, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
-        "                        本系統提供下列功\能:\n"
-        ANSI_COLOR(1;33)
-        "                          - 無人數上限的名單設定\n"
+        "      本系統提供下列功\能:" ANSI_COLOR(1;33)
+                                 " - 無人數上限的名單設定\n"
         "                          - 自動生效的時效限制\n"
         "                          - 名單內舊帳號過期重新註冊時自動失效\n\n"
         ANSI_RESET
-        "      小提示: 跟舊系統稍有不同，新系統不會(也無法)列出 [現在名單內有哪些人]，\n"
-        "              它採取的是設後不理+記錄式的概念：\n"
-        "            - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
-        "            - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
-        "            - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查\n"
-        "              另外也可用(L)看設定記錄\n"
-        "        註: - 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
-        "            - 目前新增/解除不會寄信通知使用者\n"
-        "            - 水桶自動解除不會出現在記錄裡，只有提前解除的才會\n"
-        "\n"
+        "   小提示: 跟舊系統稍有不同，新系統不會(也無法)列出 [現在名單內有哪些人]，\n"
+        "           它採取的是設後不理+記錄式的概念: (可由歷史記錄自行推算)\n"
+        "         - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
+        "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
+        "         - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查\n"
+        "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
+        "     註: = 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
+        "         = 目前新增/解除不會寄信通知使用者\n"
+        "         = 水桶自動解除不會出現在記錄裡，只有提前解除的才會\n"
+ANSI_COLOR(1) "         = 想查看某使用者為何被水桶可用(S)或是(L)+搜尋\n"
+        ANSI_RESET "\n"
 #ifdef WATERBAN_UPGRADE_TIME_STR
         // enable and change this if you've just made an upgrade
         ANSI_COLOR(0;32)
-        "系統更新資訊: 本系統啟用時已把所有您放在舊水桶名單的帳號全部設上了\n"
-        "              " WATERBAN_UPGRADE_TIME_STR "的水桶，但沒有記錄在(L)的列表裡面。您可以參考(O)的舊名單\n"
-        "              看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n" ANSI_RESET
+        " 系統更新資訊: 本系統啟用時已把所有您放在舊水桶名單的帳號全部設上了\n"
+        "               " WATERBAN_UPGRADE_TIME_STR "的水桶，但沒有記錄在(L)的列表裡面。您可以參考(O)的舊名單\n"
+        "               看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n" ANSI_RESET
 #endif
         "");
 
@@ -187,10 +195,12 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
-                expire = is_user_banned_by_board(uid, board);
+                expire = get_user_banned_status_by_board(
+                        uid, board, sizeof(reason), reason);
                 if (expire > now) {
-                    prints("使用者 %s 禁言中，解除時間: %s\n",
-                           uid, Cdatelite(&expire));
+                    prints("使用者 %s 禁言中，解除時間尚有 %d 天: %s\n理由:%s",
+                           uid, (expire-now)/DAY_SECONDS+1,
+                           Cdatelite(&expire), reason);
                 } else {
                     prints("使用者 %s 目前不在禁言名單中。\n",
                            uid);
@@ -204,7 +214,7 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 if ((expire = is_user_banned_by_board(uid, board))) {
-                    vmsgf("使用者之前已被禁言，尚有 %d 天。",
+                    vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
                           (expire - now) / DAY_SECONDS+1);
                     continue;
                 }
