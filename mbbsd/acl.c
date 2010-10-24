@@ -318,7 +318,7 @@ edit_banned_list_for_board(const char *board) {
                           " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
                           Cdatelite(&now), cuser.userid, uid, 
                           (expire - now) / DAY_SECONDS+1, reason);
-                vmsg("使用者的禁言限制已解除。");
+                vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
                 invalid_board_permission_cache(board);
                 break;
 

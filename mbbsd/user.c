@@ -623,9 +623,9 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     ans = vans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
-    "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
+    "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 ==> [0]結束 ");
 
-    if (ans > '2' && ans != 'm' && ans != 'c' && !adminmode)
+    if (ans > '2' && ans != 'c' && !adminmode)
 	ans = '0';
 
     if (ans == '1' || ans == '3' || ans == 'm') {
@@ -695,7 +695,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	    // TODO 這裡也要 emaildb_check
 #ifdef USE_EMAILDB
-	    if (emaildb_update_email(cuser.userid, strlen(cuser.userid),
+	    if (emaildb_update_email(x.userid, strlen(x.userid),
 			buf, strlen(buf)) < 0) {
 		vmsg("暫時不允許\ email 認證, 請稍後再試");
 		break;
@@ -703,7 +703,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #endif
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1;
-	    delregcodefile();
+
+            //  XXX delregcodefile 會看 cuser.userid...
+            if (!adminmode)
+                delregcodefile();
 	}
 	break;
 
