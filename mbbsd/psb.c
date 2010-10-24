@@ -33,6 +33,7 @@
 typedef struct {
     int curr, total, header_lines, footer_lines;
     int key;
+    int allow_pbs_version_message;
     void *ctx;
     int (*header)(void *ctx); 
     int (*footer)(void *ctx); 
@@ -132,8 +133,6 @@ psb_init_defaults(PSB_CTX *psbctx) {
         psbctx->renderer = psb_default_renderer;
     if (!psbctx->cursor)
         psbctx->cursor = psb_default_cursor;
-    if (!psbctx->footer)
-        psbctx->footer = psb_default_footer;
 
     assert(psbctx->curr >= 0 &&
            psbctx->total >= 0 &&
@@ -167,6 +166,11 @@ psb_main(PSB_CTX *psbctx)
         move(t_lines - psbctx->footer_lines, 0);
         SOLVE_ANSI_CACHE();
         psbctx->footer(psbctx->ctx);
+        if (psbctx->allow_pbs_version_message) {
+            SOLVE_ANSI_CACHE();
+            prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
+                   "-- Powered by Panty & Stocking Browser System");
+        }
         i = psbctx->header_lines + psbctx->curr - base;
         move(i, 0);
         psbctx->cursor(i, psbctx->curr, psbctx->ctx);
@@ -212,6 +216,7 @@ static int
 pveh_footer(void *ctx) {
     vs_footer(" 編輯歷史 ",
               " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/r/→)選擇 \t(q/←)跳出");
+    move(b_lines-1, 0);
     return 0;
 }
 
@@ -275,6 +280,7 @@ psb_view_edit_history(const char *base, const char *subject, int max_hist) {
         .total = max_hist,
         .header_lines = 3,
         .footer_lines = 2,
+        .allow_pbs_version_message = 1,
         .ctx = (void*)&pvehctx,
         .header = pveh_header,
         .footer = pveh_footer,
@@ -335,6 +341,7 @@ static int
 pae_footer(void *ctx) {
     vs_footer(" 編輯系統檔案 ",
               " (↑↓/0-9)移動 (Enter/e/r/→)編輯 (DEL/d)刪除 \t(q/←)跳出");
+    move(b_lines-1, 0);
     return 0;
 }
 
@@ -405,6 +412,7 @@ psb_admin_edit() {
         .total = 0,
         .header_lines = 4,
         .footer_lines = 2,
+        .allow_pbs_version_message = 1,
         .ctx = (void*)&paectx,
         .header = pae_header,
         .footer = pae_footer,
