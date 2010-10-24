@@ -276,7 +276,11 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 		"%s <%s>", STR_SAFEDEL_TITLE, fhdr->owner);
     }
     // snprintf(fhdr->title, sizeof(fhdr->title), "%s", STR_SAFEDEL_TITLE);
+#ifdef FN_SAFEDEL_PREFIX_LEN
+    strncpy(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
+#else
     strcpy(fhdr->filename, FN_SAFEDEL);
+#endif
     strcpy(fhdr->owner, "-");
 }
 

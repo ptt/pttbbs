@@ -59,6 +59,7 @@
 #ifdef USE_EDIT_HISTORY
 // For edit_history, the new file name must be as short as possible so that so we can restore it later.
 #define FN_SAFEDEL	".d"
+#define FN_SAFEDEL_PREFIX_LEN (2) // must match FN_SAFEDEL
 #else
 #define FN_SAFEDEL	".deleted"
 #endif // USE_EDIT_HISTORY

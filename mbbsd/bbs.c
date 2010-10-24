@@ -950,7 +950,11 @@ delete_allpost(const char *userid)
 
 	   // usually delete_allpost are initiated by system,
 	   // so don't set normal safedel.
+#ifdef FN_SAFEDEL_PREFIX_LEN
+	   strncpy(fhdr.filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
+#else
 	   strcpy(fhdr.filename, FN_SAFEDEL);
+#endif
 	   strcpy(fhdr.owner, "-");
 	   snprintf(fhdr.title, sizeof(fhdr.title),
 		   "%s", STR_SAFEDEL_TITLE);
@@ -3562,18 +3566,33 @@ view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
 
     if ((!fhdr) ||
         ((fhdr->filename[0] == '.' || !fhdr->filename[0]) &&
-         (strcmp(fhdr->filename, FN_SAFEDEL) != 0))) {
+#ifdef FN_SAFEDEL_PREFIX_LEN
+         (strncmp(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) != 0)
+#else
+         (strcmp(fhdr->filename, FN_SAFEDEL) != 0)
+#endif
+        )) {
         vmsg(err_no_history);
         return FULLUPDATE;
     }
 
     // build history index file name
     setdirpath(hist_file, direct, FN_EDITHISTORY "/");
+    // XXX there are, well, unfortunately two kinds of deleted filename here:
+    //  M.12345678.AAA ->
+    //  - (old) .d<NUL>2345678.AAA # planned to be removed in the future
+    //  - (new) .d12345678.AAA
     if (strcmp(FN_SAFEDEL, fhdr->filename) == 0) {
         assert(strlen(FN_SAFEDEL) == strlen("M."));
         // M.1 is a dirty hack, anyway..
         strlcat(hist_file, "M.1", sizeof(hist_file));
         strlcat(hist_file, fhdr->filename + strlen(FN_SAFEDEL) + 1, sizeof(hist_file));
+#ifdef FN_SAFEDEL_PREFIX_LEN
+    } else if (strncmp(FN_SAFEDEL, fhdr->filename, FN_SAFEDEL_PREFIX_LEN) == 0) {
+        assert(FN_SAFEDEL_PREFIX_LEN == 2); // current pattern: 2 = M.
+        strlcat(hist_file, "M.", sizeof(hist_file));
+        strlcat(hist_file, fhdr->filename + FN_SAFEDEL_PREFIX_LEN, sizeof(hist_file));
+#endif
     } else {
         strlcat(hist_file, fhdr->filename, sizeof(hist_file));
     }
