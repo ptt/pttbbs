@@ -11,6 +11,7 @@
 
 #define BAKUMAN_OBJECT_TYPE_USER     'u'
 #define BAKUMAN_OBJECT_TYPE_BOARD    'b'
+#define BAKUMAN_REASON_LEN          (BTLEN)
 
 static void
 bakuman_make_tag_filename(const char *who, const char *object, char object_type,
@@ -199,8 +200,9 @@ edit_banned_list_for_board(const char *board) {
                 usercomplete(msg_uid, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
-                if (is_user_banned_by_board(uid, board)) {
-                    vmsg("使用者之前已被禁言。");
+                if ((expire = is_user_banned_by_board(uid, board))) {
+                    vmsgf("使用者之前已被禁言，尚有 %d 天。",
+                          (expire - now) / DAY_SECONDS+1);
                     continue;
                 }
                 move(1, 0); clrtobot();
@@ -241,22 +243,23 @@ edit_banned_list_for_board(const char *board) {
                     }
                     expire = now + val * DAY_SECONDS;
                     move(4, 0); clrtobot();
-                    prints("期限將設定為 %d 天後: %s",
-                            val, Cdatelite(&expire));
+                    // sprintf(datebuf, "%s", Cdatelite(&expire));
+                    sprintf(datebuf, "%d 天", val);
+                    prints("期限將設定為 %s之後: %s",
+                            datebuf, Cdatelite(&expire));
                 }
 
-                assert(sizeof(reason) >= BTLEN);
+                assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
                 // maybe race condition here, but fine.
                 getdata(5, 0, "請輸入理由(空白可取消新增): ",
-                        reason, BTLEN,DOECHO);
+                        reason, BAKUMAN_REASON_LEN, DOECHO);
                 if (!*reason) {
                     vmsg("未輸入理由，取消此次設定");
                     continue;
                 }
 
-                sprintf(datebuf, "%s", Cdatelite(&expire));
                 move(1, 0); clrtobot();
-                prints("\n使用者 %s 即將加入禁言名單 (解除時間: %s)\n"
+                prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
                        "理由: %s\n", uid, datebuf, reason);
 
                 // last chance
@@ -269,11 +272,13 @@ edit_banned_list_for_board(const char *board) {
 
                 result = ban_user_for_board(uid, board, expire, reason);
                 log_filef(history_log, LOG_CREAT,
-                          "%s %s%s 將 %s 加入禁言名單\n"
-                          "  理由: %s (解除時間: %s)\n",
+                          ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET 
+                          " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET 
+                          " 發言，期限為 %s\n  理由: %s\n",
                           Cdatelite(&now),
-                          result ? "" : "(未成功\)",
-                          cuser.userid, uid, reason, datebuf);
+                          result ? "" : 
+                            ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
+                          cuser.userid, uid,  datebuf, reason);
                 vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
                 invalid_board_permission_cache(board);
                 break;
@@ -283,15 +288,16 @@ edit_banned_list_for_board(const char *board) {
                 usercomplete(msg_uid, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
-                if (!is_user_banned_by_board(uid, board)) {
+                if (!(expire = is_user_banned_by_board(uid, board))) {
                     vmsg("使用者未在禁言名單。");
                     continue;
                 }
                 move(1, 0); clrtobot();
-                prints("提前解除使用者 %s 於看板 %s 的禁言限制。", uid, board);
-                assert(sizeof(reason) >= BTLEN);
+                prints("提前解除使用者 %s 於看板 %s 的禁言限制 (尚有 %d 天)。",
+                       uid, board, (expire-now)/DAY_SECONDS+1);
+                assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
                 getdata(2, 0, "請輸入理由(空白可取消解除): ",
-                        reason, BTLEN, DOECHO);
+                        reason, BAKUMAN_REASON_LEN, DOECHO);
                 if (!*reason) {
                     vmsg("未輸入理由，取消此次設定");
                     continue;
@@ -307,9 +313,11 @@ edit_banned_list_for_board(const char *board) {
 
                 unban_user_for_board(uid, board);
                 log_filef(history_log, LOG_CREAT,
-                          "%s %s 解除 %s 的禁言限制\n"
-                          "  理由: %s\n",
-                          Cdatelite(&now), cuser.userid, uid, reason);
+                          ANSI_COLOR(1) "%s " ANSI_COLOR(33) "%s" ANSI_RESET
+                          " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET 
+                          " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
+                          Cdatelite(&now), cuser.userid, uid, 
+                          (expire - now) / DAY_SECONDS+1, reason);
                 vmsg("使用者的禁言限制已解除。");
                 invalid_board_permission_cache(board);
                 break;
