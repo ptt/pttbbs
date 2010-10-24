@@ -3301,7 +3301,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #endif // ASSESS
 
-	    if (not_owned)
+            if (del_fee <= 0)
+            {
+                // no need to change user record
+            }
+	    else if (not_owned)
 	    {
 		// not owner case
 		if (tusernum)
