@@ -73,7 +73,7 @@
  * * The complete list to support:
  *   - Up/Down/Right/Left:          <Esc> [ <A-D>       | <Esc> O <A-D> (app)
  *   - Home/Ins/Del/End/PgUp/PgDn:  <Esc> [ <1~6> ~
- *   - Shift-TAB:                   <Esc> [ Z           | <Esc> [ 0 Z
+ *   - Shift-TAB:                   <Esc> [ Z
  *   - F1~F4:                       <Esc> [ 1 <1234> ~  | <Esc> O <PQRS>  
  *   - F5:                          <Esc> [ 1 <5> ~ 
  *   - F6-F8:                       <Esc> [ 1 <789> ~
@@ -86,6 +86,7 @@
  *   - (putty-rxvt) HOME            <Esc> [ H
  *   - (putty-rxvt) END             <Esc> O w
  *   - (Old Term?) Home/Ins/Del/End/PgUp/PgDn:  <Esc> [ <214536> ~  // not supported
+ *   - (vt220) <Esc> [ 0 Z or <Esc> 0 Z ? // not supported to prevent conflicting Esc-?
  *
  *   Note: we don't support some rare terms like <Esc> O <TUVWXYZA> described 
  *   in Dell 2650 in order to prevent confusion. 
@@ -102,7 +103,6 @@ typedef enum {
     VKSTATE_ESC,        // <Esc>
     VKSTATE_ESC_APP,    // <Esc> O
     VKSTATE_ESC_QUOTE,  // <Esc> [
-    VKSTATE_ZERO,       // <Esc> [ 0    (wait Z)
     VKSTATE_ONE,        // <Esc> [ <1> 
     VKSTATE_TWO,        // <Esc> [ <2> 
     VKSTATE_TLIDE,      // <Esc> [ *    (wait ~, return esc_arg)
@@ -142,23 +142,12 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 case 'O':
                     ctx->state = VKSTATE_ESC_APP;
                     return KEY_INCOMPLETE;
-
-                case '0':
-                    ctx->state = VKSTATE_ZERO;
-                    return KEY_INCOMPLETE;
             }
 
             // XXX should we map this into another section of KEY_ESC_* ?
             ctx->esc_arg = c;
             ctx->state = VKSTATE_NORMAL;
             return KEY_ESC;
-
-        case VKSTATE_ZERO:  // <Esc> 0
-            if (c != 'Z')
-                break;
-
-            ctx->state = VKSTATE_NORMAL;
-            return KEY_STAB;
 
         case VKSTATE_ESC_APP:   // <Esc> O
 
