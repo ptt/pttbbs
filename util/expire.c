@@ -120,7 +120,7 @@ void expire(life_t *brd)
 		ftime = atoi(head.filename + 2);
 		if (head.owner[0] == '-'
 #ifdef SAFE_ARTICLE_DELETE
-		    || strncmp(head.filename, ".delete", 7) == 0
+		    || strncmp(head.filename, FN_SAFEDEL, sizeof(FN_SAFEDEL) - 1) == 0
 #endif
 		    )
 		    keep = 0;
