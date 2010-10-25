@@ -169,7 +169,7 @@ mvprints(int y, int x, const char *fmt, ...)
     vsnprintf(buff, sizeof(buff), fmt, args);
     va_end(args);
 
-    mvouts(x, y, buff);
+    mvouts(y, x, buff);
 }
 
 /**

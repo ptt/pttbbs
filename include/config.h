@@ -164,6 +164,14 @@
 #define MAX_LIFE           (120 * 24 * 60 * 60)
 #endif
 
+#ifndef KEEP_DAYS_REGGED                    /* 已註冊使用者保留多久 */
+#define KEEP_DAYS_REGGED    (120)
+#endif
+
+#ifndef KEEP_DAYS_UNREGGED                    /* 未註冊使用者保留多久 */
+#define KEEP_DAYS_UNREGGED    (15)
+#endif
+
 #ifndef MAX_FROM
 #define MAX_FROM           (300)            /* 最多故鄉數 */
 #endif

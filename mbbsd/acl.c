@@ -225,7 +225,7 @@ ANSI_COLOR(1) "         = 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 move(4, 0);
                 outs("目前接受的格式是 [數字][單位]。 "
                      "單位有: 年(y), 月(m), 天(d)\n"
-                     "範例: 3m (三個月), 180d (180天), 10y (10年)\n"
+                     "範例: 3m (三個月), 120d (120天), 10y (10年)\n"
                      "注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n"
                      );
                 getdata(2, 0, "請以數字跟單位(預設為天)輸入期限: ",
@@ -259,8 +259,16 @@ ANSI_COLOR(1) "         = 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                     move(4, 0); clrtobot();
                     // sprintf(datebuf, "%s", Cdatelite(&expire));
                     sprintf(datebuf, "%d 天", val);
-                    prints("期限將設定為 %s之後: %s",
+                    prints("期限將設定為 %s之後: %s\n",
                             datebuf, Cdatelite(&expire));
+                    if (val > KEEP_DAYS_REGGED) {
+                        mvprints(7, 0, ANSI_COLOR(1;31)
+                               "注意: 超過 %d 天的設定有可能因為對方一直"
+                               "未上站而導致帳號過期被重新註冊，\n"
+                               "      此時同名的新帳號由於不一定是同一人所以"
+                               "不會被禁言(水桶)。\n" ANSI_RESET,
+                               KEEP_DAYS_REGGED);
+                    }
                 }
 
                 assert(sizeof(reason) >= BAKUMAN_REASON_LEN);

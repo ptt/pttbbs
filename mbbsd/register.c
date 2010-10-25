@@ -246,9 +246,8 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 30 - value;
 #endif
 
-    /* 未完成註冊者，保留 15 天 */
-    /* 一般情況，保留 120 天 */
-    return (urec->userlevel & PERM_LOGINOK ? 120 : 15) * 24 * 60 - value;
+    return (urec->userlevel & PERM_LOGINOK ? 
+            KEEP_DAYS_REGGED : KEEP_DAYS_UNREGGED) * 24 * 60 - value;
 }
 
 int
