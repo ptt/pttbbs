@@ -63,6 +63,7 @@ int bad_comment(const char *fn);
 int assign_badpost(const char *userid, fileheader_t *fhdr, const char *newpath, const char *comment);
 
 /* bbs */
+int is_file_owner(const fileheader_t *, const userec_t*);
 void delete_allpost(const char *userid);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct);
 int cmpfowner(fileheader_t *fhdr);

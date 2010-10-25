@@ -38,6 +38,23 @@ enum {
 /* modes to invalid multi.money */
 #define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | FILE_BID)
 
+/**
+ * Test if the fhdr looks like really belong to user
+ */
+int
+is_file_owner(const fileheader_t *fhdr, const userec_t *usr) {
+    if (strcmp(fhdr->owner, usr->userid) != EQUSTR)
+        return 0;
+
+    // deal with the format M.TIMESTAMP, return as 0 if unknown
+    if (strlen(fhdr->filename) > 3) {
+        time4_t ts = atoi(fhdr->filename + 2);
+        if (ts && ts >= usr->firstlogin)
+            return 1;
+    }
+    return 0;
+}
+
 /* query money by fileheader pointer.
  * return <0 if money is not valid.
  */
@@ -1603,7 +1620,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	)   
 	return DONOTHING;
 
-    if (strcmp(fhdr->owner, cuser.userid) != EQUSTR)
+    if (!is_file_owner(fhdr, &cuser))
     {
 	if (!HasUserPerm(PERM_SYSOP))
 	    return DONOTHING;
@@ -1949,7 +1966,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     ent = 1;
     author = 0;
-    if (HasUserPerm(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
+    if (HasUserPerm(PERM_SYSOP) || is_file_owner(fhdr, &cuser)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2') {
@@ -2518,8 +2535,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	allow = 0;
     else if (HasUserPerm(PERM_SYSOP))
 	allow = 2;
-    else if (currmode & MODE_BOARD ||
-	     strcmp(cuser.userid, fhdr->owner) == 0)
+    else if (currmode & MODE_BOARD || is_file_owner(fhdr, &cuser))
 	allow = 1;
 
     if (!allow)
@@ -2812,10 +2828,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     // so, make them happy here.
 #ifndef OLDRECOMMEND
     // no matter it is first time or not.
-    if (strcmp(cuser.userid, fhdr->owner) == 0)
+    if (is_file_owner(fhdr, &cuser))
 #else
     // old format is one way counter, so let's relax.
-    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0)
+    if (fhdr->recommend == 0 && is_file_owner(fhdr, &cuser))
 #endif
     {
 	// owner recommend
@@ -3159,8 +3175,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         tusernum = searchuser(fhdr->owner, NULL);
 
     not_owned = (tusernum == usernum ? 0: 1);
-    if ((!(currmode & MODE_BOARD) && not_owned) ||
-	((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
+    if (!(currmode & MODE_BOARD) &&
+        (not_owned || !is_file_owner(fhdr, &cuser)))
+            return DONOTHING;
+
+    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
