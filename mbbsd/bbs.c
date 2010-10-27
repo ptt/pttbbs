@@ -613,7 +613,7 @@ readdoent(int num, fileheader_t * ent)
 
     if (iscorpse) {
 #ifdef COLORIZED_SAFEDEL
-	// quick display
+	// quick display, but lack of recommend counter...
 	prints("%7d    ", num);
 	outs(ANSI_COLOR(1;30));
 	prints("%-6.5s", ent->date);
