@@ -589,6 +589,11 @@ setbtotal(int bid)
     if (num > 0) {
 	lseek(fd, (off_t) (num - 1) * sizeof(fileheader_t), SEEK_SET);
 	if (read(fd, genbuf, FNLEN) >= 0) {
+#ifdef FN_SAFEDEL_PREFIX_LEN
+            if (strncmp(genbuf, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0)
+                SHM->lastposttime[bid - 1] = 0;
+            else
+#endif
 	    SHM->lastposttime[bid - 1] = (time4_t) atoi(&genbuf[2]);
 	}
     } else
