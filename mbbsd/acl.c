@@ -172,13 +172,15 @@ edit_banned_list_for_board(const char *board) {
                    "帳號被砍後水桶會自動解除\n" ANSI_RESET
         "         = 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
 ANSI_COLOR(1) "         = 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
-        ANSI_RESET "\n"
+        ANSI_RESET ""
 #ifdef WATERBAN_UPGRADE_TIME_STR
         // enable and change this if you've just made an upgrade
         ANSI_COLOR(0;32)
         " 系統更新資訊: 本系統啟用時已把所有您放在舊水桶名單的帳號全部設上了\n"
         "               " WATERBAN_UPGRADE_TIME_STR "的水桶，但沒有記錄在(L)的列表裡面。您可以參考(O)的舊名單\n"
-        "               看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n" ANSI_RESET
+        "               看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n"
+        ANSI_COLOR(1;31) "               注意舊水桶內 ID 有改變過大小寫的無法轉換，請手動重設\n"
+        ANSI_RESET
 #endif
         "");
 
