@@ -685,7 +685,9 @@ readdoent(int num, fileheader_t * ent)
     }
 
     title = ent->filename[0]!='L' ? subject(ent->title) : "<¥»¤åÂê©w>";
-    if (ent->filemode & FILE_VOTE)
+    if (iscorpse)
+        color = '0', mark = "¢®";
+    else if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "£¾";
     else if (title == ent->title)
 	color = '1', mark = "¡¼";
