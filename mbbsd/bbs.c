@@ -607,13 +607,25 @@ readdoent(int num, fileheader_t * ent)
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
 
-#ifdef DETECT_SAFEDEL
+#ifdef SAFE_ARTICLE_DELETE
+    // TODO maybe we should also check .filename because admin can't change that
     char iscorpse = (ent->owner[0] == '-') && (ent->owner[1] == 0);
 
-    if (!iscorpse)
-    {
-#endif
-
+    if (iscorpse) {
+#ifdef COLORIZED_SAFEDEL
+	// quick display
+	prints("%7d    ", num);
+	outs(ANSI_COLOR(1;30));
+	prints("%-6.5s", ent->date);
+	prints("%-13.12s", ent->owner);
+	prints("¢® %-.*s" ANSI_RESET "\n",
+		t_columns-34, ent->title);
+	return;
+#else // COLORIZED_SAFEDEL
+        oisunread = isunread = 0;
+#endif // COLORIZED_SAFEDEL
+    } else 
+#endif // SAFE_ARTICLE_DELETE
     oisunread = isunread = 
 	brc_unread(currbid, ent->filename, ent->modified);
 
@@ -671,20 +683,6 @@ readdoent(int num, fileheader_t * ent)
 	typeattr = ANSI_COLOR(1;30);
 	type = '+';
     }
-#ifdef DETECT_SAFEDEL
-    } // if(!iscorpse)
-    else {
-	// quick display
-	SOLVE_ANSI_CACHE();
-	outs(ANSI_COLOR(1;30));
-	prints("%7d    ", num);
-	prints("%-6.5s", ent->date);
-	prints("%-13.12s", ent->owner);
-	prints("¢® %-.*s" ANSI_RESET "\n",
-		t_columns-34, ent->title);
-	return;
-    }
-#endif
 
     title = ent->filename[0]!='L' ? subject(ent->title) : "<¥»¤åÂê©w>";
     if (ent->filemode & FILE_VOTE)
