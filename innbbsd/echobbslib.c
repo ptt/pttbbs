@@ -244,7 +244,7 @@ initial_bbs(char *outgoing)
     while (fscanf(FN, "%s", MYBBSID) != EOF);
     fclose(FN);
     if (!dashd(fileglue("%s/out.going", BBSHOME))) {
-	mkdir((char *)fileglue("%s/out.going", BBSHOME), 0750);
+	mkdir((char *)fileglue("%s/out.going", BBSHOME), 0755);
     }
     if (NONENEWSFEEDS == 0)
 	readnffile(INNDHOME);

@@ -13,7 +13,7 @@ int tune(int num) {
 	printf("Lock failed!\n");
 	return 1;
     }
-    if((fout = open(FN_PASSWD ".tune" , O_WRONLY | O_CREAT, 0600)) == -1) {
+    if((fout = open(FN_PASSWD ".tune" , O_WRONLY | O_CREAT, 0644)) == -1) {
 	perror(FN_PASSWD ".tune");
 	flock(fin, LOCK_UN);
 	close(fin);

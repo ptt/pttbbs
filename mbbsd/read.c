@@ -698,7 +698,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	       reference = 0;
 	   }
 
-	   if( (fd = open(newdirect, filemode, 0600)) == -1 ) {
+	   if( (fd = open(newdirect, filemode, 0644)) == -1 ) {
 	       close(fr);
 	       return READ_REDRAW;
 	   }

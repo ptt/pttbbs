@@ -302,7 +302,7 @@ makeregcode(char *buf)
 	buf[i] = alphabet[random() % strlen(alphabet)];
 
     getregfile(fpath);
-    if( (fd = open(fpath, O_WRONLY | O_CREAT, 0600)) == -1 ){
+    if( (fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1 ){
 	perror("open");
 	exit(1);
     }
@@ -565,7 +565,7 @@ setupnewuser(const userec_t *user)
     if ((uid = dosearchuser("", NULL)) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
 	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < clock - 3600)) {
-	    if ((fd = open(fn_fresh, O_RDWR | O_CREAT, 0600)) == -1)
+	    if ((fd = open(fn_fresh, O_RDWR | O_CREAT, 0644)) == -1)
 		return -1;
 	    write(fd, ctime(&clock), 25);
 	    close(fd);
@@ -573,7 +573,7 @@ setupnewuser(const userec_t *user)
 
 	    fprintf(stdout, "尋找新帳號中, 請稍待片刻...\n\r");
 
-	    if ((fd = open(fn_passwd, O_RDWR | O_CREAT, 0600)) == -1)
+	    if ((fd = open(fn_passwd, O_RDWR | O_CREAT, 0644)) == -1)
 		return -1;
 
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */

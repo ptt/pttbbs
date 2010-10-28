@@ -130,7 +130,7 @@ int main(void)
     }
 
     if ((fd = open(FN_PASSWD, O_RDONLY)) < 0 ||
-	 (fdw = open(FN_PASSWD".trans.tmp", O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0 ) {
+	 (fdw = open(FN_PASSWD".trans.tmp", O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 ) {
 	perror("open");
 	exit(-1);
     }

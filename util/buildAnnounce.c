@@ -49,7 +49,7 @@ void buildchilds(int level,char *path,int gid)
 
         if(ptr->brdattr & BRD_GROUPBOARD){
 	    snprintf(newpath,sizeof(newpath),"%s/%s",path,ptr->brdname);
-	    mkdir(newpath,0766);
+	    mkdir(newpath,0755);
 	    buildchilds(level+1,newpath,ptr-bcache+1); 
 	}
 	else{
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     setsid();
     strcpy(path,GROUPROOT);
     system("rm -rf "GROUPROOT);
-    mkdir(GROUPROOT,0766);
+    mkdir(GROUPROOT,0755);
     attach_SHM();
     resolve_boards();
     buildchilds(0,path,1);

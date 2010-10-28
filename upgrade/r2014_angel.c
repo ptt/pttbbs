@@ -5,7 +5,7 @@ int main(){
     userec_t u;
     int count = 0;
 
-    orig_fd = open(BBSHOME "/.AngelTrans", O_WRONLY | O_CREAT | O_EXCL, 0600);
+    orig_fd = open(BBSHOME "/.AngelTrans", O_WRONLY | O_CREAT | O_EXCL, 0644);
     if (orig_fd == -1) {
 	if (errno == EEXIST) {
 	    char c;
@@ -32,7 +32,7 @@ int main(){
     }
     printf("Reading from " BBSHOME "/.PASSWDS\n");
 
-    new_fd = open(BBSHOME "/.PASSWDS.NEW", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    new_fd = open(BBSHOME "/.PASSWDS.NEW", O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if( new_fd < 0 ){
 	perror("opening " BBSHOME "/.PASSWDS.NEW for writing");
 	return 1;

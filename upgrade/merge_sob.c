@@ -142,7 +142,7 @@ m_sob(void)
      passwd_update(usernum, &cuser);
    }
    sethomeman(genbuf, cuser.userid);
-   mkdir(genbuf, 0600);
+   mkdir(genbuf, 0755);
    sprintf(buf, "tar zxvf %c/%s.tar.gz>/dev/null",
 	   userid[0], userid);
    chdir("sob/home");

@@ -1070,7 +1070,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 		break;
 	}
 	oumask = umask(0);
-	fh = open(msgfile, O_CREAT | O_EXCL | O_WRONLY, 0664);
+	fh = open(msgfile, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	umask(oumask);
 	if (writebody) {
 	    if ((*writebody) (fh, board, pathname) < 0)

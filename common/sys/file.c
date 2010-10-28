@@ -112,7 +112,7 @@ int copy_file_to_file(const char *src, const char *dst)
     if ((fdr = open(src, O_RDONLY)) < 0)
 	return -1;
 
-    if ((fdw = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0) {
+    if ((fdw = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
 	close(fdr);
 	return -1;
     }
@@ -151,7 +151,7 @@ int copy_dir_to_dir(const char *src, const char *dst)
     char buf[PATH_MAX], buf2[PATH_MAX];
 
     if (stat(dst, &st) < 0)
-	if (mkdir(dst, 0700) < 0)
+	if (mkdir(dst, 0755) < 0)
 	    return -1;
 
     if ((dir = opendir(src)) == NULL)
@@ -166,7 +166,7 @@ int copy_dir_to_dir(const char *src, const char *dst)
 	if (stat(buf, &st) < 0)
 	    continue;
 	if (S_ISDIR(st.st_mode))
-	    mkdir(buf2, 0700);
+	    mkdir(buf2, 0755);
 	copy_file(buf, buf2);
     }
 
@@ -236,7 +236,7 @@ Copy(const char *src, const char *dst)
     char buf[8192];
     fi=open(src, O_RDONLY);
     if(fi<0) return -1;
-    fo=open(dst, O_WRONLY | O_TRUNC | O_CREAT, 0600);
+    fo=open(dst, O_WRONLY | O_TRUNC | O_CREAT, 0644);
     if(fo<0) {close(fi); return -1;}
     while((bytes=read(fi, buf, sizeof(buf)))>0)
          write(fo, buf, bytes);
@@ -254,7 +254,7 @@ CopyN(const char *src, const char *dst, int n)
     fi=open(src, O_RDONLY);
     if(fi<0) return -1;
 
-    fo=open(dst, O_WRONLY | O_TRUNC | O_CREAT, 0600);
+    fo=open(dst, O_WRONLY | O_TRUNC | O_CREAT, 0644);
     if(fo<0) {close(fi); return -1;}
 
     while(n > 0 && (bytes=read(fi, buf, sizeof(buf)))>0)
@@ -279,7 +279,7 @@ AppendTail(const char *src, const char *dst, int off)
     fi=open(src, O_RDONLY);
     if(fi<0) return -1;
 
-    fo=open(dst, O_WRONLY | O_APPEND | O_CREAT, 0600);
+    fo=open(dst, O_WRONLY | O_APPEND | O_CREAT, 0644);
     if(fo<0) {close(fi); return -1;}
     // flock(dst, LOCK_SH);
     

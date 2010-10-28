@@ -815,7 +815,7 @@ MFPROTO int
 mf_attach(const char *fn)
 {
     struct stat st;
-    int fd = open(fn, O_RDONLY, 0600);
+    int fd = open(fn, O_RDONLY);
 
 #ifdef PMORE_GUNZIP_CMD
     fd = mf_gunzip(fn, fd);

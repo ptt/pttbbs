@@ -1141,7 +1141,7 @@ int updatenewfav(int mode)
 
     setuserfile(fname, FAVNB);
 
-    if( (fd = open(fname, O_RDWR | O_CREAT, 0600)) != -1 ){
+    if( (fd = open(fname, O_RDWR | O_CREAT, 0644)) != -1 ){
 
 	assert(numboards>=0);
 	brdnum = numboards; /* avoid race */

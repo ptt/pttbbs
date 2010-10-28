@@ -2667,7 +2667,7 @@ start_daemon()
 #endif
 
 
-    fd = open(CHAT_PIDFILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    fd = open(CHAT_PIDFILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd >= 0)
     {
 	/* sprintf(buf, "%5d\n", value); */

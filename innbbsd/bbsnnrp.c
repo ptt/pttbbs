@@ -592,10 +592,10 @@ flushrc(bbsnnrp)
 	myrename(bak1, (char *)fileglue("%s.BAK.OLD", bbsnnrp->activefile));
     }
 #ifdef USE_MMAP
-    if ((backfd = open((char *)fileglue("%s.BAK", bbsnnrp->activefile), O_WRONLY | O_TRUNC | O_CREAT, 0664)) < 0 || write(backfd, bbsnnrp->actpointer, bbsnnrp->actsize) < bbsnnrp->actsize)
+    if ((backfd = open((char *)fileglue("%s.BAK", bbsnnrp->activefile), O_WRONLY | O_TRUNC | O_CREAT, 0644)) < 0 || write(backfd, bbsnnrp->actpointer, bbsnnrp->actsize) < bbsnnrp->actsize)
 #else
     myrename(bbsnnrp->activefile, bak1);
-    if ((backfd = open(bbsnnrp->activefile, O_WRONLY | O_TRUNC | O_CREAT, 0664)) < 0 || write(backfd, bbsnnrp->actpointer, bbsnnrp->actsize) < bbsnnrp->actsize)
+    if ((backfd = open(bbsnnrp->activefile, O_WRONLY | O_TRUNC | O_CREAT, 0644)) < 0 || write(backfd, bbsnnrp->actpointer, bbsnnrp->actsize) < bbsnnrp->actsize)
 #endif
     {
 	char            emergent[128];

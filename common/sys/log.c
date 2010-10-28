@@ -24,7 +24,7 @@ log_file(const char *fn, int log_flag, const char *msg)
 {
     int        fd;
     int flag = O_APPEND | O_WRONLY;
-    int mode = 0664;
+    int mode = 0644;
 
     if (log_flag & LOG_CREAT)
 	flag |= O_CREAT;

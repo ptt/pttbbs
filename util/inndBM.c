@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     if(fpscript)
      {
 	fclose(fpscript);
-	chmod(INND_SCRIPT,0700);
+	chmod(INND_SCRIPT,0744);
      }
 
     // 重設轉信與不轉信板標記

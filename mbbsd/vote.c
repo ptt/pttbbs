@@ -732,7 +732,7 @@ vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
 
     num = usernum - 1;
     setbfile(buf, bname, vbuf->flags);
-    if ((fd = open(buf, O_RDWR | O_CREAT, 0600)) == -1)
+    if ((fd = open(buf, O_RDWR | O_CREAT, 0644)) == -1)
 	return -1;
     size = lseek(fd, 0, SEEK_END);
     memset(buf, 0, sizeof(buf));
@@ -913,7 +913,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	    outs("重複投票! 不予計票。");
 	else {
 	    setbfile(buf, bname, vbuf->ballots);
-	    if ((fd = open(buf, O_WRONLY | O_CREAT | O_APPEND, 0600)) == 0)
+	    if ((fd = open(buf, O_WRONLY | O_CREAT | O_APPEND, 0644)) == 0)
 		outs("無法投入票匭\n");
 	    else {
 		struct stat     statb;

@@ -2344,7 +2344,7 @@ b_man(void)
 	char            genbuf[128];
 	int             fd;
 	snprintf(genbuf, sizeof(genbuf), "%s/.rebuild", buf);
-	if ((fd = open(genbuf, O_CREAT, 0640)) > 0)
+	if ((fd = open(genbuf, O_CREAT, 0644)) > 0)
 	    close(fd);
     }
     return a_menu(currboard, buf, HasUserPerm(PERM_ALLBOARD) ? 2 :

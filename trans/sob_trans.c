@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
     if (trans_man) {
 	strlcat(buf, "/.rebuild", sizeof(buf));
-	if ((opt = open(buf, O_CREAT, 0640)) > 0)
+	if ((opt = open(buf, O_CREAT, 0644)) > 0)
 	    close(opt);
     }
     else
