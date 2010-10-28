@@ -330,7 +330,7 @@ update_holiday(struct tm *ptime)
     if ((fp = fopen("etc/today_is", "r")) == NULL)
 	return 1;
 
-    for (i = 0; i < ptime->tm_hour; i++) {
+    for (i = 0; i <= ptime->tm_hour; i++) {
 	if (!fgets(buf, sizeof(buf), fp)) {
 	    cnt = i;
 	    i = i - 1 + (ptime->tm_hour - i) / cnt * cnt;
