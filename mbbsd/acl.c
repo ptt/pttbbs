@@ -23,7 +23,7 @@ bakuman_make_tag_filename(const char *who, const char *object, char object_type,
     else
         sethomefile(buf, who, FN_BANNED "/");
     if (create_folder && !dashd(buf)) {
-        mkdir(buf, 0755);
+        Mkdir(buf);
     }
     strlcat(buf, prefix, szbuf);
     strlcat(buf, object, szbuf);

@@ -344,4 +344,11 @@
 #define FROMHOST    fromhost
 #endif
 
+#ifndef DEFAULT_FOLDER_CREATE_PERM
+#define DEFAULT_FOLDER_CREATE_PERM (0755)
+#endif
+#ifndef DEFAULT_FILE_CREATE_PERM
+#define DEFAULT_FILE_CREATE_PERM   (0644)
+#endif
+
 #endif

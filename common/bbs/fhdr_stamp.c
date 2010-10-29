@@ -39,7 +39,7 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
     int         res = 0;
 
     if (access(fpath, X_OK | R_OK | W_OK))
-	mkdir(fpath, 0755);
+	Mkdir(fpath);
 
     while (*(++ip));
     *ip++ = '/';
@@ -47,13 +47,15 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
     switch (type) {
 	case STAMP_FILE:
 	    do {
-		sprintf(ip, "M.%d.A.%3.3X", (int)(++dtime), (unsigned int)(random() & 0xFFF));
-	    } while ((res = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1 && errno == EEXIST);
+		sprintf(ip, "M.%d.A.%3.3X", (int)(++dtime),
+                        (unsigned int)(random() & 0xFFF));
+	    } while ((res = OpenCreate(fpath, O_EXCL | O_WRONLY)) == -1 && 
+                     errno == EEXIST);
 	    break;
 	case STAMP_DIR:
 	    do {
 		sprintf(ip, "D%X", (int)++dtime & 07777);
-	    } while ((res = mkdir(fpath, 0755)) == -1 && errno == EEXIST);
+	    } while ((res = Mkdir(fpath)) == -1 && errno == EEXIST);
 	    break;
 	case STAMP_LINK:
 	    do {

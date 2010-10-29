@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 	struct dirent **dirlist;
 	
 	sprintf(path, "%s/.DIR", argv[k]);
-	if((fdir = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1) {
+	if((fdir = OpenCreate(path, O_WRONLY | O_TRUNC)) == -1) {
 	    perror(path);
 	    continue;
 	}

@@ -231,7 +231,7 @@ new_chicken(void)
 
     // flush it
     setuserfile(fn, FN_CHICKEN);
-    fd = open(fn, O_WRONLY|O_CREAT, 0644);
+    fd = OpenCreate(fn, O_WRONLY);
     if (fd < 0)
     {
 	vmsg("系統錯誤: 無法建立資料，請至 " BN_BUGREPORT " 報告。");

@@ -454,7 +454,7 @@ main(int argc, char **argv)
 	const char const fn2[] = "suicide";
 
 	rename(fn1, fn2);
-	mkdir(fn1, 0755);
+	Mkdir(fn1);
 	sprintf(buf, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
 		fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
 	system(buf);

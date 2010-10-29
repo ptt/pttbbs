@@ -64,6 +64,8 @@ extern int CopyN(const char *src, const char *dst, int n);
 extern int AppendTail(const char *src, const char *dst, int off);
 extern int Link(const char *src, const char *dst);
 extern int HardLink(const char *src, const char *dst);
+extern int Mkdir(const char *path);
+extern int OpenCreate(const char *path, int flags);
 extern int file_count_line(const char *file);
 extern int file_append_line(const char *file, const char *string); // does not append "\n"
 extern int file_append_record(const char *file, const char *key);  // will append "\n"

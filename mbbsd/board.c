@@ -109,7 +109,7 @@ int enter_board(const char *boardname)
 	return -3;
 
     setbpath(bpath, bname);
-    // mkdir(bpath, 755);
+    // Mkdir(bpath);
     if (stat(bpath, &st) == -1) {
 	return -3;
     }
@@ -2121,7 +2121,7 @@ choose_board(int newflag)
 	    if (IN_SUBCLASS() &&
 		(HasUserPerm(PERM_SYSOP) || GROUPOP())) {
 		setbpath(buf, getbcache(class_bid)->brdname);
-		mkdir(buf, 0755);	/* Ptt:開群組目錄 */
+		Mkdir(buf);	/* Ptt:開群組目錄 */
 		b_note_edit_bname(class_bid);
 		brdnum = -1;
 	    }

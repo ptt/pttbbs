@@ -86,7 +86,7 @@ void sendResult(){
 
     sprintf(filename, BBSHOME "/home/%c/%s", mailto[0], mailto);
     if (stat(filename, &st) == -1) {
-	if (mkdir(filename, 0755) == -1) {
+	if (Mkdir(filename) == -1) {
 	    fprintf(stderr, "mail box create error %s \n", filename);
 	    return;
 	}

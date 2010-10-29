@@ -2,28 +2,28 @@
 #include "bbs.h"
 
 static void initDir() {
-    mkdir("adm", 0755);
-    mkdir("boards", 0755);
-    mkdir("etc", 0755);
-    mkdir("man", 0755);
-    mkdir("man/boards", 0755);
-    mkdir("out", 0755);
-    mkdir("tmp", 0755);
-    mkdir("run", 0755);
-    mkdir("jobspool", 0755);
+    Mkdir("adm");
+    Mkdir("boards");
+    Mkdir("etc");
+    Mkdir("man");
+    Mkdir("man/boards");
+    Mkdir("out");
+    Mkdir("tmp");
+    Mkdir("run");
+    Mkdir("jobspool");
 }
 
 static void initHome() {
     int i;
     char buf[256];
     
-    mkdir("home", 0755);
+    Mkdir("home");
     strcpy(buf, "home/?");
     for(i = 0; i < 26; i++) {
 	buf[5] = 'A' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 	buf[5] = 'a' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 #if 0
 	/* in current implementation we don't allow 
 	 * id as digits so we don't create now. */
@@ -31,7 +31,7 @@ static void initHome() {
 	    continue;
 	/* 0~9 */
 	buf[5] = '0' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 #endif
     }
 }
@@ -40,18 +40,18 @@ static void initBoardsDIR() {
     int i;
     char buf[256];
     
-    mkdir("boards", 0755);
+    Mkdir("boards");
     strcpy(buf, "boards/?");
     for(i = 0; i < 26; i++) {
 	buf[7] = 'A' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 	buf[7] = 'a' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 	if(i >= 10)
 	    continue;
 	/* 0~9 */
 	buf[7] = '0' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
     }
 }
 
@@ -59,19 +59,19 @@ static void initManDIR() {
     int i;
     char buf[256];
     
-    mkdir("man", 0755);
-    mkdir("man/boards", 0755);
+    Mkdir("man");
+    Mkdir("man/boards");
     strcpy(buf, "man/boards/?");
     for(i = 0; i < 26; i++) {
 	buf[11] = 'A' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 	buf[11] = 'a' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
 	if(i >= 10)
 	    continue;
 	/* 0~9 */
 	buf[11] = '0' + i;
-	mkdir(buf, 0755);
+	Mkdir(buf);
     }
 }
 
@@ -93,9 +93,9 @@ static void newboard(FILE *fp, boardheader_t *b) {
     
     fwrite(b, sizeof(boardheader_t), 1, fp);
     sprintf(buf, "boards/%c/%s", b->brdname[0], b->brdname);
-    mkdir(buf, 0755);
+    Mkdir(buf);
     sprintf(buf, "man/boards/%c/%s", b->brdname[0], b->brdname);
-    mkdir(buf, 0755);
+    Mkdir(buf);
 }
 
 static void initBoards() {
@@ -228,27 +228,27 @@ static void initMan() {
 	strcpy(f.filename, "SONGBOOK");
 	strcpy(f.title, "◆ 【點 歌 歌 本】");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/N/Note/SONGBOOK", 0755);
+	Mkdir("man/boards/N/Note/SONGBOOK");
 	
 	strcpy(f.filename, "SONGO");
 	strcpy(f.title, "◆ <點歌> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/N/Note/SONGO", 0755);
+	Mkdir("man/boards/N/Note/SONGO");
 	
 	strcpy(f.filename, "SYS");
 	strcpy(f.title, "◆ <系統> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/N/Note/SYS", 0755);
+	Mkdir("man/boards/N/Note/SYS");
 	
 	strcpy(f.filename, "AD");
 	strcpy(f.title, "◆ <廣告> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/N/Note/AD", 0755);
+	Mkdir("man/boards/N/Note/AD");
 	
 	strcpy(f.filename, "NEWS");
 	strcpy(f.title, "◆ <新聞> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/N/Note/NEWS", 0755);
+	Mkdir("man/boards/N/Note/NEWS");
 	
 	fclose(fp);
     }

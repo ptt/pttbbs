@@ -75,7 +75,7 @@ substitute_record(const char *fpath, const void *rptr, size_t size, int id)
     int fd;
     off_t offset = size * (id - 1);
 
-    if (id < 1 || (fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1)
+    if (id < 1 || (fd = OpenCreate(fpath, O_WRONLY)) == -1)
 	return -1;
 
     lseek(fd, offset, SEEK_SET);
@@ -92,7 +92,7 @@ append_record(const char *fpath, const void *record, size_t size)
 {
     int fd, index = -2, fsize = 0;
 
-    if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1)
+    if ((fd = OpenCreate(fpath, O_WRONLY)) == -1)
 	return -1;
 
     flock(fd, LOCK_EX);

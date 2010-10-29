@@ -94,7 +94,7 @@ void expire(life_t *brd)
 
     setbfile(index, brd->bname, ".DIR");
     sprintf(lockfile, "%s.lock", index);
-    if ((fdlock = open(lockfile, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1){
+    if ((fdlock = OpenCreate(lockfile, O_RDWR | O_APPEND)) == -1){
 	perror("open lock file error");
 	return;
     }
@@ -114,7 +114,7 @@ void expire(life_t *brd)
 	}
 	// TODO use fread/fwrite to reduce system calls
 	if( checkmode ||
-	    (fdw = open(tmpfile, O_WRONLY | O_CREAT | O_EXCL, 0644)) > 0 ){
+	    (fdw = OpenCreate(tmpfile, O_WRONLY | O_EXCL)) > 0 ){
 	    while( read(fdr, &head, sizeof(head)) == sizeof(head) ){
 		done = 1;
 		ftime = atoi(head.filename + 2);

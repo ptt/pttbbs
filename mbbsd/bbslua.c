@@ -748,7 +748,10 @@ bls_setfn(char *fn, size_t sz, const char *p)
 
         case BLS_USER:
             setuserfile(fn, BLSCONF_UPATH);
-            mkdir(fn, 0755);
+#ifndef DEFAULT_FOLDER_CREATE_PERM
+#define DEFAULT_FOLDER_CREATE_PERM (0755)
+#endif
+            mkdir(fn, DEFAULT_FOLDER_CREATE_PERM);
             assert(strlen(fn) +8 <= sz);
             snprintf(fn + strlen(fn),
                     sz - strlen(fn),
@@ -858,7 +861,7 @@ bls_save(lua_State *L)
     // write file!
     if (bls_setfn(fn, sizeof(fn), cat))
     {
-        fd = open(fn, O_WRONLY|O_CREAT, 0644);
+        fd = OpenCreate(fn, O_WRONLY);
         if (fd >= 0)
         {
             write(fd, s, slen);

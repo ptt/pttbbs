@@ -246,13 +246,13 @@ logit(char *key, char *msg)
 static void
 log_init()
 {
-    flog = open(CHAT_LOGFILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    flog = OpenCreate(CHAT_LOGFILE, O_WRONLY | O_APPEND);
     logit("START", "chat daemon");
 #ifdef CHAT_MSG_LOGFILE
     {
 	const char *dtstr = Cdate(&boot_time);
 	const char *prefix = "\n- xchatd restart: ";
-	mlog = open(CHAT_MSG_LOGFILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	mlog = OpenCreate(CHAT_MSG_LOGFILE, O_WRONLY | O_APPEND);
 	write(mlog, prefix, strlen(prefix));
 	write(mlog, dtstr, strlen(dtstr));
 	write(mlog, "\n", 1);
@@ -2667,7 +2667,7 @@ start_daemon()
 #endif
 
 
-    fd = open(CHAT_PIDFILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    fd = OpenCreate(CHAT_PIDFILE, O_WRONLY | O_TRUNC);
     if (fd >= 0)
     {
 	/* sprintf(buf, "%5d\n", value); */

@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	exit(-1);
     }	    
 
-    if ((fdw = open(BBSHOME"/.PASSWDS.new", O_WRONLY | O_TRUNC | O_CREAT, 0644)) < 0){
+    if ((fdw = OpenCreate(BBSHOME"/.PASSWDS.new", O_WRONLY | O_TRUNC)) < 0){
 	perror("open .PASSWDS.new error");
 	exit(-1);
     }

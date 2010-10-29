@@ -532,7 +532,7 @@ a_pasteitem(menu_t * pm, int mode)
 		else
 		    return;
 		if (access(pm->path, X_OK | R_OK | W_OK))
-		    mkdir(pm->path, 0755);
+		    Mkdir(pm->path);
 		memset(&item, 0, sizeof(fileheader_t));
 		strlcpy(item.filename, fname + 1, sizeof(item.filename));
 		memcpy(cq->copytitle, "¡·", 2);

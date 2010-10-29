@@ -128,7 +128,7 @@ force_open(const char *fname)
     if (dasht(fname) > expire)
 	return -1;
     unlink(fname);
-    fd = open(fname, O_WRONLY | O_TRUNC, 0644);
+    fd = OpenCreate(fname, O_WRONLY | O_TRUNC);
 
     return fd;
 }
@@ -185,18 +185,18 @@ delete_range(const char *fpath, int id1, int id2)
 
     nolfilename(&my, fpath);
 
-    if ((fd = open(my.lockfn, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1)
+    if ((fd = OpenCreate(my.lockfn, O_RDWR | O_APPEND)) == -1)
 	return -1;
 
     flock(fd, LOCK_EX);
 
-    if ((fdr = open(fpath, O_RDONLY, 0)) == -1) {
+    if ((fdr = open(fpath, O_RDONLY)) == -1) {
 	flock(fd, LOCK_UN);
 	close(fd);
 	return -1;
     }
     if (
-	((fdw = open(my.newfn, O_WRONLY | O_CREAT | O_EXCL, 0644)) == -1) &&
+	((fdw = OpenCreate(my.newfn, O_WRONLY | O_EXCL)) == -1) &&
 	((fdw = force_open(my.newfn)) == -1)) {
 	close(fdr);
 	flock(fd, LOCK_UN);
@@ -347,7 +347,7 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 
     // try to create root path
     if (access(fpath, X_OK | R_OK | W_OK) != 0)
-	mkdir(fpath, 0755);
+	Mkdir(fpath);
 
     // find tail
     while (*(++ip));
@@ -368,7 +368,7 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 	// create minimal length file name.
 	sprintf(ip, "D%X", (int)++dtime & mask);
 
-    } while (mkdir(fpath, 0755) == -1);
+    } while (Mkdir(fpath) == -1);
 
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     localtime4_r(&dtime, &ptime);

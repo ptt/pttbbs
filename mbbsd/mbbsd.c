@@ -79,7 +79,7 @@ void UpdateClientCode(unsigned char c)
 
 void LogClientCode()
 {
-    int fd = open("log/client_code",O_WRONLY | O_CREAT | O_APPEND, 0644);
+    int fd = OpenCreate("log/client_code",O_WRONLY | O_APPEND);
     if(fd>=0) {
 	write(fd, &client_code, sizeof(client_code));
 	close(fd);
@@ -134,7 +134,7 @@ start_daemon(struct ProgramOption *option)
     while (n)
 	close(--n);
 
-    if( ((fd = open("log/stderr", O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) && fd != 2 ){
+    if( ((fd = OpenCreate("log/stderr", O_WRONLY | O_APPEND)) >= 0) && fd != 2 ){
 	dup2(fd, 2);
 	close(fd);
     }
@@ -683,7 +683,7 @@ mkuserdir(const char *userid)
     sethomepath(genbuf, userid);
     // assume it is a dir, so just check if it is exist
     if (access(genbuf, F_OK) != 0)
-	mkdir(genbuf, 0755);
+	Mkdir(genbuf);
 }
 
 static int
@@ -1862,7 +1862,8 @@ shell_login(char *argv0, struct ProgramOption *option)
     snprintf(margs, sizeof(margs), "%s ssh ", argv0);
     close(2);
     /* don't close fd 1, at least init_tty need it */
-    if( ((fd = open("log/stderr", O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) && fd != 2 ){
+    if(((fd = OpenCreate("log/stderr", O_WRONLY | O_APPEND)) >= 0) && 
+       fd != 2 ){
 	dup2(fd, 2);
 	close(fd);
     }

@@ -1580,7 +1580,7 @@ read_file(const char *fpath, int splitSig)
 
     if ((fp = fopen(fpath, "r")) == NULL) {
 	int fd;
-	if ((fd = creat(fpath, 0644)) >= 0) {
+	if ((fd = creat(fpath, DEFAULT_FILE_CREATE_PERM)) >= 0) {
 	    close(fd);
 	    return 0;
 	}

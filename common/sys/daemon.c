@@ -42,7 +42,7 @@ daemonize(const char * pidfile, const char * logfile)
 	exit(0);
 
     if (pidfile) {
-	if ((fd = creat(pidfile, 0644)) >= 0) {
+	if ((fd = creat(pidfile, DEFAULT_FILE_CREATE_PERM)) >= 0) {
 	    snprintf(buf, sizeof(buf), "%d", (int)getpid());
 	    write(fd, buf, strlen(buf));
 	    close(fd);
@@ -51,7 +51,7 @@ daemonize(const char * pidfile, const char * logfile)
     }
 
     if (logfile) {
-	if ((fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0) {
+	if ((fd = OpenCreate(logfile, O_WRONLY | O_APPEND)) < 0) {
 	    perror("Can't open logfile");
 	    exit(1);
 	}

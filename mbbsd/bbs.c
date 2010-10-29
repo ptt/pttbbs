@@ -148,10 +148,10 @@ add_to_post_history(
 
     setdirpath(hist_file, direct, FN_EDITHISTORY "/");
     if (!dashd(hist_file))
-        mkdir(hist_file, 0755);
+        Mkdir(hist_file);
     strlcat(hist_file, basename, sizeof(hist_file));
 
-    if ((fd = open(hist_file, O_RDWR|O_CREAT, 0644)) >= 0) {
+    if ((fd = OpenCreate(hist_file, O_RDWR)) >= 0) {
         // XXX if somebody just die inside... locks everyone!
         flock(fd, LOCK_EX);
         read(fd, &last_index, sizeof(last_index));
@@ -2344,7 +2344,7 @@ b_man(void)
 	char            genbuf[128];
 	int             fd;
 	snprintf(genbuf, sizeof(genbuf), "%s/.rebuild", buf);
-	if ((fd = open(genbuf, O_CREAT, 0644)) > 0)
+	if ((fd = OpenCreate(genbuf, O_RDWR)) > 0)
 	    close(fd);
     }
     return a_menu(currboard, buf, HasUserPerm(PERM_ALLBOARD) ? 2 :

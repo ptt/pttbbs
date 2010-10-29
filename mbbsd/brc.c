@@ -380,7 +380,7 @@ brc_finalize(){
     setuserfile(brcfile, fn_brc);
     snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
     if (brc_buf != NULL) {
-	int fd = open(tmpfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	int fd = OpenCreate(tmpfile, O_WRONLY | O_TRUNC);
 	if (fd != -1) {
 	    int ok=0;
 	    if(write(fd, brc_buf, brc_size)==brc_size)

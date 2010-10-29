@@ -360,7 +360,7 @@ AddingChessCountryFiles(const char* apath)
 
     /* creating chess country regalia */
     snprintf(filename, sizeof(filename), "%s/chess_ensign", apath);
-    close(open(filename, O_CREAT | O_WRONLY, 0644));
+    close(OpenCreate(filename, O_WRONLY));
 
     strlcpy(symbolicname, apath, sizeof(symbolicname));
     stampfile(symbolicname, &fh);
@@ -392,7 +392,7 @@ AddingChessCountryFiles(const char* apath)
 
     /* creating profession photos' dir */
     snprintf(filename, sizeof(filename), "%s/chess_photo", apath);
-    mkdir(filename, 0755);
+    Mkdir(filename);
 
     strlcpy(symbolicname, apath, sizeof(symbolicname));
     stampfile(symbolicname, &fh);
@@ -411,7 +411,7 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard)
     char            genbuf[200];
 
     setapath(genbuf, board->brdname);
-    mkdir(genbuf, 0755);
+    Mkdir(genbuf);
 
 #ifdef CHESSCOUNTRY
     if (oldboard == NULL || oldboard->chesscountry != board->chesscountry)
@@ -814,7 +814,7 @@ m_newbrd(int whatclass, int recover)
     setbpath(genbuf, newboard.brdname);
 
     if (!recover && 
-        (getbnum(newboard.brdname) > 0 || mkdir(genbuf, 0755) == -1)) {
+        (getbnum(newboard.brdname) > 0 || Mkdir(genbuf) == -1)) {
 	vmsg("此看板已經存在! 請取不同英文板名");
 	return -1;
     }

@@ -95,7 +95,7 @@ int mail2bbs(char *userid)
     sprintf(filename, BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);
 
     if( stat(filename, &st) == -1 ){
-	if( mkdir(filename, 0755) == -1 ){
+	if( Mkdir(filename) == -1 ){
 	    printf("mail box create error %s \n", filename);
 	    return -1;
 	}

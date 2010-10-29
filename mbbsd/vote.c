@@ -146,7 +146,7 @@ vote_report(const char *bname, const char *fname, char *fpath)
     for (;;) {
         /* TODO: extract record.c:stampfile_u() to common lib */
 	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, (unsigned int)(random() & 0xFFF));
-	fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
+	fd = OpenCreate(fpath, O_EXCL | O_WRONLY);
 	if (fd >= 0)
 	    break;
 	dtime++;
@@ -172,7 +172,7 @@ vote_report(const char *bname, const char *fname, char *fpath)
     strlcpy(header.filename, ip, sizeof(header.filename));
 
     strcpy(ip, FN_DIR);
-    if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) >= 0) {
+    if ((fd = OpenCreate(fpath, O_WRONLY)) >= 0) {
 	flock(fd, LOCK_EX);
 	lseek(fd, 0, SEEK_END);
 	write(fd, &header, sizeof(fileheader_t));
@@ -732,7 +732,7 @@ vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
 
     num = usernum - 1;
     setbfile(buf, bname, vbuf->flags);
-    if ((fd = open(buf, O_RDWR | O_CREAT, 0644)) == -1)
+    if ((fd = OpenCreate(buf, O_RDWR)) == -1)
 	return -1;
     size = lseek(fd, 0, SEEK_END);
     memset(buf, 0, sizeof(buf));
@@ -913,7 +913,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	    outs("重複投票! 不予計票。");
 	else {
 	    setbfile(buf, bname, vbuf->ballots);
-	    if ((fd = open(buf, O_WRONLY | O_CREAT | O_APPEND, 0644)) == 0)
+	    if ((fd = OpenCreate(buf, O_WRONLY | O_APPEND)) == 0)
 		outs("無法投入票匭\n");
 	    else {
 		struct stat     statb;
