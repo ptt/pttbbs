@@ -377,6 +377,7 @@ psb_view_edit_history(const char *base, const char *subject,
 typedef struct {
     const char *dirbase;
     const char *subject;
+    int modify_mailbox;
     int viewbase;
     fileheader_t *records;
 } pvrb_ctx;
@@ -395,7 +396,8 @@ pvrb_header(void *ctx) {
 static int
 pvrb_footer(void *ctx) {
     vs_footer(" 已刪檔案 ",
-              " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/r/→)選擇 \t(q/←)跳出");
+              " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/r/→)選擇 (x)存入信箱"
+              "\t(q/←)跳出");
     move(b_lines-1, 0);
     return 0;
 }
@@ -418,8 +420,35 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
     fileheader_t *fh = &cx->records[total - curr - 1];
+    const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
     switch (key) {
+        // TODO add 'x' to pull this mail back to mailbox
+        case 'x':
+            setdirpath(fname, cx->dirbase, fh->filename);
+            maxrev = timecapsule_get_max_revision_number(fname);
+            if (maxrev < 1) {
+                vmsg(err_no_rev);
+            } else {
+                char revfname[PATHLEN];
+                char ans[3];
+                timecapsule_get_by_revision(
+                        fname, maxrev, revfname, sizeof(revfname));
+                getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
+                        ans, sizeof(ans), LCECHO);
+                if (*ans == 'y') {
+                    if (mail_log2id(cuser.userid, fh->title,
+                                    revfname, "[" RECYCLE_BIN_NAME "]",
+                                    1, 0) == 0) {
+                        cx->modify_mailbox = 1;
+                        vmsg("儲存完成，請至信箱檢查備忘錄信件");
+                    } else
+                        vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
+                    return PSB_EOF;
+                }
+            }
+            return PSB_NOP;
+
         case KEY_ENTER:
         case KEY_RIGHT:
         case 'r':
@@ -433,7 +462,7 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
             } else if (maxrev > 1) {
                 psb_view_edit_history(fname, fh->title, maxrev, 0);
             } else {
-                vmsg("抱歉，本文歷史資料已被系統清除。");
+                vmsg(err_no_rev);
             }
             return PSB_NOP;
     }
@@ -490,7 +519,7 @@ psb_recycle_bin(const char *base, const char *title) {
     nrecords = timecapsule_get_max_archive_number(base, sizeof(fileheader_t));
     if (!nrecords) {
         vmsg("目前" RECYCLE_BIN_NAME "內無任何內容。");
-        return 0;
+        return FULLUPDATE;
     }
 
     pvrb_welcome();
@@ -505,13 +534,13 @@ psb_recycle_bin(const char *base, const char *title) {
     pvrbctx.records = (fileheader_t*) malloc (sizeof(fileheader_t) * nrecords);
     if (!pvrbctx.records) {
         vmsgf("內部錯誤，請至" BN_BUGREPORT "看板報告，謝謝");
-        return 0;
+        return FULLUPDATE;
     }
     timecapsule_get_archive_blobs(base, viewbase, nrecords, pvrbctx.records,
                                   sizeof(fileheader_t));
     psb_main(&ctx);
     free(pvrbctx.records);
-    return 0;
+    return pvrbctx.modify_mailbox ? DIRCHANGED : FULLUPDATE;
 }
 
 ///////////////////////////////////////////////////////////////////////////

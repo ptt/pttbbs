@@ -1232,8 +1232,10 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
 #ifdef USE_TIME_CAPSULE
-            timecapsule_archive_new_revision(
-                    genbuf, fhdr, sizeof(*fhdr), NULL, 0);
+            // bypass those recovered files
+            if (strcmp(fhdr->owner, "[" RECYCLE_BIN_NAME "]") != 0)
+                timecapsule_archive_new_revision(
+                        genbuf, fhdr, sizeof(*fhdr), NULL, 0);
 #endif // USE_TIME_CAPSULE
 	    unlink(genbuf);
 	    loadmailusage();
@@ -1853,8 +1855,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
 #ifdef USE_TIME_CAPSULE
 static int
 mail_recycle_bin(int ent, fileheader_t * fhdr, const char *direct) {
-    psb_recycle_bin(direct, "個人信箱");
-    return FULLUPDATE;
+    return psb_recycle_bin(direct, "個人信箱");
 }
 #else // USE_TIME_CAPSULE
 static int
