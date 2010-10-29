@@ -535,10 +535,7 @@ outc(unsigned char c)
 	    cur_ln++;
 	return;
     }
-    /*
-     * else if(c != ESC_CHR && !isprint2(c)) { c = '*'; //substitute a '*' for
-     * non-printable }
-     */
+
     if (cur_col >= slp->len) {
 	for (i = slp->len; i < cur_col; i++)
 	    slp->data[i] = ' ';
@@ -546,7 +543,8 @@ outc(unsigned char c)
 	slp->len = cur_col + 1;
     }
 
-    if (slp->data[cur_col] != c) {
+    // always invalid escapes
+    if (c == ESC_CHR || slp->data[cur_col] != c) {
 	slp->data[cur_col] = c;
 	if (!(slp->mode & MODIFIED))
 	    slp->smod = slp->emod = cur_col;
@@ -556,23 +554,9 @@ outc(unsigned char c)
 	if (cur_col < slp->smod)
 	    slp->smod = cur_col;
     }
-#if 1
+
     if(cur_col < scr_cols)
-	    cur_col++;
-#else
-    /* vvv commented by piaip: but SCR_COLS is 511 > unsigned char! */
-    /* this comparison is always false (cur_col is unsigned char and scr_cols
-     * is 511). */
-    if (++cur_col >= scr_cols) {
-	if (standing && (slp->mode & STANDOUT)) {
-	    standing = 0;
-	    slp->eso = MAX(slp->eso, cur_col);
-	}
-	cur_col = 0;
-	if (cur_ln < scr_lns)
-	    cur_ln++;
-    }
-#endif
+        cur_col++;
 }
 
 void
