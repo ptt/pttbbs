@@ -82,7 +82,7 @@ do_pay(int uid, int money, const char *item, const char *reason)
         sethomefile(buf, userid, FN_RECENTPAY); 
         rotate_text_logfile(buf, SZ_RECENTPAY, 0.2); 
         syncnow(); 
-        log_payment(buf, money, oldm, newm, reason);
+        log_payment(buf, money, oldm, newm, reason, now);
     }
 
     return newm; 

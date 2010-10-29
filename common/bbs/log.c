@@ -5,7 +5,7 @@
 
 int
 log_payment(const char *filename, int money, int oldm, int newm,
-            const char *reason)
+            const char *reason, time4_t now)
 {
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
     return log_filef(filename,

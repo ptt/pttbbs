@@ -40,7 +40,7 @@ extern int stampfile_u(char *fpath, fileheader_t *fh);	// does not zero existing
 
 /* log.c */
 extern int log_payment(const char *filename, int money, int oldm, int newm,
-                       const char *reason);
+                       const char *reason, time4_t now);
 
 /* cache.c */
 #define search_ulist(uid) search_ulistn(uid, 1)

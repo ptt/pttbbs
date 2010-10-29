@@ -109,7 +109,7 @@ int main(int argc, char **argv)
                     char reason[256];
                     sprintf(reason, "½ä½L¤¤¼ú (%s x %d)", betname[mybet], num);
                     sethomefile(genbuf, userid, FN_RECENTPAY);
-                    log_payment(genbuf, money * num, oldm, newm, reason);
+                    log_payment(genbuf, -money * num, oldm, newm, reason, now);
                 }
                 sethomepath(genbuf, userid);
 		stampfile(genbuf, &mymail);
