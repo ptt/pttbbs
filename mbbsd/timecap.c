@@ -53,6 +53,11 @@ enum TIME_CAPSULE_ACTION_TYPE {
 #define TIME_CAPSULE_ARCHIVE_INDEX_NAME "archive.idx"
 #define TIME_CAPSULE_REVISION_INDEX_NAME ".rev"
 
+// some system does not support O_EXLOCK... well, not important at least for now
+#ifndef O_EXLOCK
+#define O_EXLOCK (0)
+#endif
+
 ///////////////////////////////////////////////////////////////////////////
 // Core Function
 
