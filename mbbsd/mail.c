@@ -1110,7 +1110,12 @@ mailtitle(void)
     showtitle("郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" , 
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
-            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME "(新)" ANSI_RESET);
+#ifdef USE_TIME_CAPSULE
+            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME "(新)" ANSI_RESET
+#else
+            ""
+#endif
+            );
     vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
 	     buf);
