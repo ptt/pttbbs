@@ -1108,8 +1108,9 @@ mailtitle(void)
     }
 
     showtitle("郵件選單", BBSName);
-    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助\n" , 
-	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
+    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" , 
+	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
+            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME "(新)" ANSI_RESET);
     vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
 	     buf);
@@ -1225,9 +1226,10 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
-#ifdef USE_RECYCLE
-	    RcyAddFile(fhdr, 0, genbuf);
-#endif // USE_RECYCLE
+#ifdef USE_TIME_CAPSULE
+            timecapsule_archive_new_revision(
+                    genbuf, fhdr, sizeof(*fhdr), NULL, 0);
+#endif // USE_TIME_CAPSULE
 	    unlink(genbuf);
 	    loadmailusage();
 	    return DIRCHANGED;
@@ -1842,6 +1844,22 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
     return FULLUPDATE;
 }
 #endif
+
+#ifdef USE_TIME_CAPSULE
+static int
+mail_recycle_bin(int ent, fileheader_t * fhdr, const char *direct) {
+    psb_recycle_bin(direct, "個人信箱");
+    return FULLUPDATE;
+}
+#else // USE_TIME_CAPSULE
+static int
+mail_recycle_bin(int ent GCC_UNUSED,
+                 fileheader_t * fhdr GCC_UNUSED,
+                 const char *direct GCC_UNUSED) {
+    return DONOTHING;
+}
+#endif // USE_TIME_CAPSULE
+
 static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('A')
     { 0, NULL }, // Ctrl('B')
@@ -1937,7 +1955,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // '{' 123
     { 0, NULL }, // '|' 124
     { 0, NULL }, // '}' 125
-    { 0, NULL }, // '~' 126
+    { 1, mail_recycle_bin }, // '~' 126
 };
 
 int

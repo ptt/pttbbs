@@ -53,7 +53,6 @@
 #define SZ_RECENTPAY    (16000)
 #endif
 
-
 // 自訂刪除文章時出現的標題與檔案
 #ifndef FN_SAFEDEL
 #ifdef USE_EDIT_HISTORY
@@ -68,6 +67,10 @@
 #define STR_SAFEDEL_TITLE   "(本文已被刪除)"
 #endif 
 #define FN_EDITHISTORY  ".history"
+
+#ifndef SAFE_ARTICLE_DELETE_NUSER
+#define SAFE_ARTICLE_DELETE_NUSER (2)
+#endif
 
 #define MSG_DEL_CANCEL  "取消刪除"
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"

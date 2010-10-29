@@ -159,7 +159,9 @@ int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
 /* psb (panty and stocking browser) */
-int psb_view_edit_history(const char *base, const char *subject, int max_hist);
+int psb_view_edit_history(const char *base, const char *subject,
+                          int maxrev, int current_as_base);
+int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
 
 /* chc */
@@ -649,6 +651,21 @@ void init_tty(void);
 int  term_init(void);
 void term_resize(int w, int h);
 void bell(void);
+
+/* timecap (time capsule) */
+int timecapsule_add_revision(const char *filename);
+int timecapsule_get_max_revision_number(const char *filename);
+int timecapsule_get_max_archive_number(const char *filename, size_t szrefblob);
+int timecapsule_archive(const char *filename, const void *ref, size_t szref);
+int timecapsule_get_by_revision(const char *filename, int rev, char *rev_path,
+                                size_t sz_rev_path);
+int timecapsule_archive_new_revision(const char *filename,
+                                     const void *ref, size_t szref,
+                                     char *archived_path, size_t sz_archived_path);
+int timecapsule_get_archive_by_index(const char *filename, int idx,
+                                     void *refblob, size_t szrefblob);
+int timecapsule_get_archive_blobs(const char *filename, int idx, int nblobs,
+                                  void *blobsptr, size_t szblob);
 
 /* ordersong */
 int  ordersong(void);

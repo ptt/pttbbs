@@ -111,6 +111,14 @@
 #define BN_UNANONYMOUS "UnAnonymous"
 #endif
 
+#ifndef RECYCLE_BIN_NAME
+#define RECYCLE_BIN_NAME "資源回收筒" // "垃圾桶"
+#endif
+
+#ifndef TIME_CAPSULE_NAME
+#define TIME_CAPSULE_NAME "Magical Index" // "Time Capsule"
+#endif
+
 /* Environment */
 #ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
 #define RELAY_SERVER_IP    "127.0.0.1"

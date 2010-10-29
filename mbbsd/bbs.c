@@ -136,49 +136,6 @@ modify_dir_lite(
     return 0;
 }
 
-#ifdef USE_EDIT_HISTORY
-static int 
-add_to_post_history(
-        const char *direct, const char *basename,
-        const char *old_path, const char *new_path)
-{
-    char hist_file[PATHLEN];
-    char hist_num[STRLEN];
-    int fd = 0, last_index = 0;
-
-    setdirpath(hist_file, direct, FN_EDITHISTORY "/");
-    if (!dashd(hist_file))
-        Mkdir(hist_file);
-    strlcat(hist_file, basename, sizeof(hist_file));
-
-    if ((fd = OpenCreate(hist_file, O_RDWR)) >= 0) {
-        // XXX if somebody just die inside... locks everyone!
-        flock(fd, LOCK_EX);
-        read(fd, &last_index, sizeof(last_index));
-        last_index++;
-        lseek(fd, 0, SEEK_SET);
-        write(fd, &last_index, sizeof(last_index));
-        flock(fd, LOCK_UN);
-        close(fd);
-
-        if (last_index == 1) {
-            char * const p = hist_file + strlen(hist_file);
-            // rev 0->1, let's make a copy of original version
-            strlcat(hist_file, ".000", sizeof(hist_file));
-            HardLink(old_path, hist_file);
-            *p = 0;
-        }
-
-        // now build the history file
-        sprintf(hist_num, ".%03d", last_index);
-        strlcat(hist_file, hist_num, sizeof(hist_file));
-        HardLink(new_path, hist_file);
-        return 0;
-    }
-    return -1;
-}
-#endif
-
 static void 
 check_locked(fileheader_t *fhdr)
 {
@@ -840,6 +797,67 @@ outgo_post(const fileheader_t *fh, const char *board, const char *userid, const 
     }
 }
 
+#ifdef USE_TIME_CAPSULE
+
+static void
+innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
+{
+    // deal with innd
+    FILE *fp = fopen(fpath, "r");
+    char buf[STRLEN*2];
+    char *s, *e, *nick = "";
+
+    // searching one line is enough.
+    if (fp &&
+            fgets(buf, sizeof(buf), fp) &&
+            (strncmp(buf, str_author1, LEN_AUTHOR1) == 0 ||
+             strncmp(buf, str_author2, LEN_AUTHOR2) == 0) &&
+            (s = strchr(buf, '(')) &&
+            (e = strrchr(buf, ')'))) {
+        *s ++ = 0;
+        *e = 0;
+        nick = s;
+    }
+    if (fp) {
+        fclose(fp);
+        // record to NNTP
+        log_filef("innd/cancel.bntp", LOG_CREAT,
+                "%s\t%s\t%s\t%s\t%s\n",
+                currboard, fh->filename, userid, nick, fh->title);
+    }
+}
+
+static int
+cancelpost2(const fileheader_t *fh, char *newpath, size_t sznewpath) {
+    char fpath[PATHLEN];
+    int ret = 0;
+
+    if(!fh->filename[0])
+        return -1;
+
+    setbfile(fpath, currboard, fh->filename);
+    // if (!dashf(fpath)) return -1;
+    log_filef(fpath,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
+              cuser.userid, fromhost, Cdatelite(&now));
+
+    if (!timecapsule_archive_new_revision(
+                fpath, fh, sizeof(*fh), newpath, sznewpath))
+        ret = -1;
+
+    // the file should be already in time capsule
+    if (unlink(fpath) != 0)
+        ret = -1;
+    
+    // should we use cuser.userid, or userid in post?
+    // I don't know, simply following the old way in cancelpost...
+    if (!(currbrdattr & BRD_NOTRAN))
+        innd_cancel_post(fh, fpath, cuser.userid);
+
+    return ret;
+}
+
+#else
+
 static int
 cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 {
@@ -891,6 +909,8 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     return ret;
 }
 
+#endif
+
 static void
 do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
@@ -916,7 +936,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
 #ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
+        if(bp && !(currmode & MODE_DIGEST) && 
+           bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
 	        safe_article_delete(i, &newfh, bdir, NULL);
         else
 #endif
@@ -1785,11 +1806,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	// OK to save file.
-
-#ifdef USE_EDIT_HISTORY
-        add_to_post_history(direct, fhdr->filename, genbuf, fpath);
+#ifdef USE_TIME_CAPSULE
+        timecapsule_add_revision(genbuf);
 #endif
-
 	// piaip Wed Jan  9 11:11:33 CST 2008
 	// in order to prevent calling system 'mv' all the
 	// time, it is better to unlink() first, which
@@ -3116,7 +3135,8 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	    outmsg("處理中,請稍後...");
 	    refresh();
 #ifdef SAFE_ARTICLE_DELETE
-	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30)
+	    if(bp && !(currmode & MODE_DIGEST) &&
+               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
 		ret = safe_article_delete_range(direct, inum1, inum2);
 	    else
 #endif
@@ -3149,7 +3169,7 @@ static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char	    reason[PROPER_TITLE_LEN] = "";
-    char            genbuf[100], newpath[PATHLEN];
+    char            genbuf[100], newpath[PATHLEN] = "";
     int             not_owned, is_anon, tusernum, del_ok = 0, as_badpost = 0;
     boardheader_t  *bp;
 
@@ -3274,7 +3294,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   ((reason[0] || bp->nuser > 30) && !(currmode & MODE_DIGEST) &&
+	   ((reason[0] || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
+            !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
 #endif
 	   // XXX TODO delete_record is really really dangerous - 
@@ -3286,7 +3307,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // was closed.
 	    setbtotal(currbid);
 
+#ifdef USE_TIME_CAPSULE
+	    del_ok = (cancelpost2(fhdr, newpath, sizeof(newpath)) == 0) ? 1 : 0;
+#else
 	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
+#endif
             deleteCrossPost(fhdr, bp->brdname);
 
 #ifdef ASSESS
@@ -3298,10 +3323,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		// do nothing
 	    } 
 	    // case 2, got error in file deletion (already deleted, also skip badpost)
-	    else if (!del_ok)
+	    else if (!del_ok || !*newpath)
 	    {
 		move_ansi(1, 40); clrtoeol();
-		outs("此檔已被別人刪除(跳過劣文設定)");
+		outs("已刪或刪除錯誤(跳過劣文設定)");
 		pressanykey();
 	    }
 	    // case 3, post older than one week (TODO use macro for the duration)
@@ -3368,6 +3393,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
 			cuser.numposts, del_fee);
 	    }
+
+            if (!del_ok)
+                vmsg("刪除過程發生錯誤，請向" BN_BUGREPORT "報告");
 
 	    return DIRCHANGED;
 	} // delete_record
@@ -3575,75 +3603,71 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     return FULLUPDATE;
 }
 
-#ifdef USE_EDIT_HISTORY
+#ifdef USE_TIME_CAPSULE
 static int
-view_post_history(int ent, const fileheader_t * fhdr, const char *direct)
+view_posthistory(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    const char *err_no_history = "抱歉，此篇文章暫無編輯歷史記錄可供檢視";
-    char hist_file[PATHLEN];
-    int fd, maxhist = 0;
+    char fpath[PATHLEN];
+    const char *err_no_history = "此篇文章暫無編輯歷史記錄。"
+                                 "要進資源回收筒請再按一次 ~";
+    int maxrev = 0;
+    int current_as_base = 1;
 
     // TODO allow author?
     if (!(currmode & MODE_BOARD))
         return DONOTHING;
 
-    if ((!fhdr) ||
-        ((fhdr->filename[0] == '.' || !fhdr->filename[0]) &&
+    if (!fhdr || !fhdr->filename[0]) {
+        if (vmsg(err_no_history) == '~')
+            psb_recycle_bin(direct, currboard);
+        return FULLUPDATE;
+    }
+
+    // assert(FN_SAFEDEL[0] == '.')
+    if ((fhdr->filename[0] == '.')) {
+        if (
 #ifdef FN_SAFEDEL_PREFIX_LEN
-         (strncmp(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) != 0)
+            (strncmp(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) != 0)
 #else
-         (strcmp(fhdr->filename, FN_SAFEDEL) != 0)
+            (strcmp(fhdr->filename, FN_SAFEDEL) != 0)
 #endif
-        )) {
-        vmsg(err_no_history);
+           ) {
+            if (vmsg(err_no_history) == '~')
+                psb_recycle_bin(direct, currboard);
+            return FULLUPDATE;
+        }
+        current_as_base = 0;
+    }
+
+    setbfile(fpath, currboard, fhdr->filename);
+    if (!current_as_base) {
+        char *prefix = strrchr(fpath, '/');
+        assert(prefix);
+        // hard-coded file name conversion
+        *++prefix = 'M';
+        *++prefix = '.';
+    }
+    maxrev = timecapsule_get_max_revision_number(fpath);
+    if (maxrev < 1) {
+        if (vmsg(err_no_history) == '~')
+            psb_recycle_bin(direct, currboard);
         return FULLUPDATE;
     }
 
-    // build history index file name
-    setdirpath(hist_file, direct, FN_EDITHISTORY "/");
-    // XXX there are, well, unfortunately two kinds of deleted filename here:
-    //  M.12345678.AAA ->
-    //  - (old) .d<NUL>2345678.AAA # planned to be removed in the future
-    //  - (new) .d12345678.AAA
-    if (strcmp(FN_SAFEDEL, fhdr->filename) == 0) {
-        assert(strlen(FN_SAFEDEL) == strlen("M."));
-        // M.1 is a dirty hack, anyway..
-        strlcat(hist_file, "M.1", sizeof(hist_file));
-        strlcat(hist_file, fhdr->filename + strlen(FN_SAFEDEL) + 1, sizeof(hist_file));
-#ifdef FN_SAFEDEL_PREFIX_LEN
-    } else if (strncmp(FN_SAFEDEL, fhdr->filename, FN_SAFEDEL_PREFIX_LEN) == 0) {
-        assert(FN_SAFEDEL_PREFIX_LEN == 2); // current pattern: 2 = M.
-        strlcat(hist_file, "M.", sizeof(hist_file));
-        strlcat(hist_file, fhdr->filename + FN_SAFEDEL_PREFIX_LEN, sizeof(hist_file));
-#endif
-    } else {
-        strlcat(hist_file, fhdr->filename, sizeof(hist_file));
-    }
-
-    if (!dashf(hist_file) ||
-        (fd = open(hist_file, O_RDONLY)) < 0) {
-        vmsg(err_no_history);
-        return FULLUPDATE;
-    }
-    read(fd, &maxhist, sizeof(maxhist));
-    close(fd);
-    if (maxhist < 1) {
-        vmsg(err_no_history);
-        return FULLUPDATE;
-    }
-
-    psb_view_edit_history(hist_file, fhdr->title, maxhist+1);
+    if (RET_RECYCLEBIN == 
+        psb_view_edit_history(fpath, fhdr->title, maxrev, current_as_base))
+            psb_recycle_bin(direct, currboard);
     return FULLUPDATE;
 }
 
-#else // USE_EDIT_HISTORY
+#else // USE_TIME_CAPSULE
 
 static int
-view_post_history(int ent, const fileheader_t * fhdr, const char *direct) {
+view_posthistory(int ent, const fileheader_t * fhdr, const char *direct) {
     return DONOTHING;
 }
 
-#endif // USE_EDIT_HISTORY
+#endif // USE_TIME_CAPSULE
 
 #ifdef OUTJOBSPOOL
 /* 看板備份 */
@@ -4156,7 +4180,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // '{' 123
     { 0, NULL }, // '|' 124
     { 0, NULL }, // '}' 125
-    { 1, view_post_history }, // '~' 126
+    { 1, view_posthistory }, // '~' 126
 };
 
 int

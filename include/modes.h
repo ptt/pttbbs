@@ -28,6 +28,7 @@
 #define RET_SELECTBRD	    (992)
 #define RET_DOREPLYALL	    (991)
 #define RET_SELECTAID	    (990)
+#define RET_RECYCLEBIN	    (989)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0
