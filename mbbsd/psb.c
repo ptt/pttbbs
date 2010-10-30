@@ -389,7 +389,7 @@ pvrb_header(void *ctx) {
                 cx->subject);
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
-    vbarf(ANSI_REVERSE "     編號  日 期    作  者      標      題\t");
+    vbarf(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題\t");
     return 0;
 }
 
@@ -412,8 +412,8 @@ pvrb_renderer(int i, int curr, int total, int rows, void *ctx) {
     if (i == curr)
         // prints(ANSI_COLOR(1;40;3%d), i%8);
         outs(ANSI_COLOR(1;40;31));
-    prints(" %06d %-5.5s %-12.12s %-*.*s" ANSI_RESET "\n",
-           i+1, fh->date, fh->owner, t_columns-31, t_columns-31, fh->title);
+    prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET "\n",
+           i+1, fh->date, fh->owner, fh->title);
     return 0;
 }
 
