@@ -1591,6 +1591,53 @@ hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
     memcpy(output, (void*) &fnvseed, sizeof(fnvseed));
     return HASHPF_RET_OK;
 }
+
+int
+append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
+    // assumption:
+    //  1. ref_fn was sized in sz_orig, and no one has edited it.
+    //  2. ref_fn only get appened.
+    //  3. ref_fn must be replaced by content from mod_fn
+    int fd_src, fd_dest;
+    ssize_t sz;
+    char buf[1024];
+    int ret = 1;
+
+    fd_dest = open(mod_fn, O_APPEND | O_WRONLY);
+    if (fd_dest < 0)
+        return 0;
+
+    fd_src = open(ref_fn, O_RDONLY);
+    if (fd_src < 0 || dashs(ref_fn) < sz_orig) {
+        close(fd_dest);
+        return 0;
+    }
+
+    // during lock, only record error and never break.
+    flock(fd_src, LOCK_EX);
+    if (lseek(fd_src, (off_t)sz_orig, SEEK_SET) != (off_t)sz_orig)
+        ret = 0;
+    while ((sz = read(fd_src, buf, sizeof(buf))) > 0) {
+        if (write(fd_dest, buf, sz) != sz)
+            ret = 0;
+    }
+    if (sz != 0)
+        ret = 0;
+    // close and flush the merged file
+    close(fd_dest);
+
+    // XXX DELETE ME
+    outs(" sleeping ..."); refresh();
+    sleep(10);
+
+    if (unlink(ref_fn) != 0 ||
+        Rename(mod_fn, ref_fn) != 0)
+        ret = 0;
+
+    flock(fd_src, LOCK_UN);
+    close(fd_src);
+    return ret;
+}
 #endif // EDITPOST_SMARTMERGE
 
 int
@@ -1600,20 +1647,18 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
-    // int		    recordTouched = 0;
-    time4_t	    oldmt, newmt;
     off_t	    oldsz;
-    int		    edflags = 0;
+    int		    edflags = 0, is_race_condition = 0;
     char save_title[STRLEN];
     save_title[0] = '\0';
 
 #ifdef EDITPOST_SMARTMERGE
-    char	    canDoSmartMerge = 1;
+    unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
 #endif // EDITPOST_SMARTMERGE
 
 #ifdef EXP_EDITPOST_TEXTONLY
-	// experimental: "text only" editing
-	edflags |= EXP_EDITPOST_TEXTONLY;
+    // experimental: "text only" editing
+    edflags |= EXP_EDITPOST_TEXTONLY;
 #endif
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD && bp);
@@ -1681,161 +1726,76 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     outs("正在載入檔案...");
     refresh();
 
-    Copy(genbuf, fpath);
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
-    // so far this is what we copied now...
-    oldmt = dasht(genbuf);
-    oldsz = dashs(fpath); // should be equal to genbuf(src).
-			  // use fpath (dest) in case some 
-			  // modification was made.
-    do {
-#ifdef EDITPOST_SMARTMERGE
-
-	unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
-
-	//  make checksum of file genbuf
-	if (canDoSmartMerge &&
-	    hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK)
-	    canDoSmartMerge = 0;
-
-#endif // EDITPOST_SMARTMERGE
-
-
-	if (vedit2(fpath, 0, NULL, save_title, edflags) == EDIT_ABORTED)
-	    break;
-
-	newmt = dasht(genbuf);
+    Copy(genbuf, fpath);
+    // to prevent genbuf being modified after copy, use dashs(fpath) instead.
+    oldsz = dashs(fpath);
 
 #ifdef EDITPOST_SMARTMERGE
-
-	// only merge if file is enlarged and modified
-	if (newmt == oldmt || dashs(genbuf) < oldsz)
-	    canDoSmartMerge = 0;
-	
-	// make checksum of new file [by oldsz]
-	if (canDoSmartMerge &&
-	    hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK)
-	    canDoSmartMerge = 0;
-
-	// verify checksum
-	if (canDoSmartMerge &&
-	    memcmp(oldsum, newsum, sizeof(newsum)) != 0)
-	    canDoSmartMerge = 0;
-
-	if (canDoSmartMerge)
-	{
-	    canDoSmartMerge = 0; // only try merge once
-
-	    move(b_lines-7, 0);
-	    clrtobot();
-	    outs(ANSI_COLOR(1;33) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
-	    outs("進行自動合併 [Smart Merge]...\n");
-
-	    // smart merge
-	    if (AppendTail(genbuf, fpath, oldsz) == 0)
-	    {
-		// merge ok
-		oldmt = newmt;
-		outs(ANSI_COLOR(1) 
-		    "合併成功\，新修改(或推文)已加入您的文章中。\n" 
-		    ANSI_RESET "\n");
-	    } else {
-		outs(ANSI_COLOR(31) 
-		    "自動合併失敗。 請改用人工手動編輯合併。" ANSI_RESET);
-		vmsg("合併失敗");
-	    }
-	}
-
-#endif // EDITPOST_SMARTMERGE
-
-	if (oldmt != newmt)
-	{
-	    int c = 0;
-
-	    move(b_lines-7, 0);
-	    clrtobot();
-	    outs(ANSI_COLOR(1;31) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
-
-	    outs("可能是您在編輯的過程中有人進行推文或修文。\n"
-	 	 "您可以選擇直接覆蓋\檔案(y)、放棄(n)，\n"
-		 " 或是" ANSI_COLOR(1)"重新編輯" ANSI_RESET
-		 "(新文會被貼到剛編的檔案後面)(e)。\n");
-	    c = tolower(vans("要直接覆蓋\檔案/取消/重編嗎 [Y/n/e]？"));
-
-	    if (c == 'n')
-		break;
-
-	    if (c == 'e')
-	    {
-		FILE *fp, *src;
-
-		/* merge new and old stuff */
-		fp = fopen(fpath, "at"); 
-		src = fopen(genbuf, "rt");
-
-		if(!fp)
-		{
-		    vmsg("抱歉，檔案已損毀。");
-		    if(src) fclose(src);
-		    unlink(fpath); // fpath is a temp file
-		    return FULLUPDATE;
-		}
-
-		if(src)
-		{
-		    int c = 0;
-
-		    fprintf(fp, MSG_SEPARATOR "\n");
-		    fprintf(fp, "以下為被修改過的最新內容: ");
-		    fprintf(fp,
-			    " (%s)\n",
-			    Cdate_mdHM(&newmt));
-		    fprintf(fp, MSG_SEPARATOR "\n");
-		    while ((c = fgetc(src)) >= 0)
-			fputc(c, fp);
-		    fclose(src);
-
-		    // update oldsz, old mt records
-		    oldmt = dasht(genbuf);
-		    oldsz = dashs(genbuf);
-		}
-		fclose(fp);
-		continue;
-	    }
-	}
-
-	// OK to save file.
-#ifdef USE_TIME_CAPSULE
-        timecapsule_add_revision(genbuf);
+    if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
+        vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
+        unlink(fpath);
+        return FULLUPDATE;
+    }
 #endif
-	// piaip Wed Jan  9 11:11:33 CST 2008
-	// in order to prevent calling system 'mv' all the
-	// time, it is better to unlink() first, which
-	// increased the chance of succesfully using rename().
-	// WARNING: if genbuf and fpath are in different directory,
-	// you should disable pre-unlinking
-	unlink(genbuf);
+
+    if (vedit2(fpath, 0, NULL, save_title, edflags) == EDIT_ABORTED) {
+        unlink(fpath);
+        return FULLUPDATE;
+    }
+
+#ifdef EDITPOST_SMARTMERGE
+    outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
+    refresh();
+
+    if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK || 
+        memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
+        is_race_condition = 1;
+    }
+#else
+    // without smart merge, simply alert by size and mtime.
+    if (dashs(genbuf) != oldsz || dasht(genbuf) > dashc(fpath))
+        is_race_condition = 1;
+#endif
+    if (is_race_condition) {
+        // save to ~/buf.0
+        setuserfile(genbuf, "buf.0");
         Rename(fpath, genbuf);
+        // alert uesr
+        outs("\n\n" ANSI_COLOR(1;31) "檔案已被其它人修改過，無法寫入。\n"
+             "剛才的內容已存入您的暫存檔[0]。 請重新編輯。");
+        pressanykey();
+        return FULLUPDATE;
+    }
 
-	fhdr->modified = dasht(genbuf);
-	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
+    // OK to save file.
+#ifdef USE_TIME_CAPSULE
+    timecapsule_add_revision(genbuf);
+#endif
 
-	if (fhdr->modified > 0)
-	{
-	    // substitute_ref_record(direct, fhdr, ent);
-	    modify_dir_lite(direct, ent, fhdr->filename,
-		    fhdr->modified, save_title, 0);
+#ifdef EDITPOST_SMARTMERGE
+    // atomic lock-merge-replace
+    append_merge_replace(genbuf, fpath, oldsz);
+#else
+    // piaip Wed Jan  9 11:11:33 CST 2008
+    // in order to prevent calling system 'mv' all the
+    // time, it is better to unlink() first, which
+    // increased the chance of succesfully using rename().
+    // WARNING: if genbuf and fpath are in different directory,
+    // you should disable pre-unlinking
+    unlink(genbuf);
+    Rename(fpath, genbuf);
+#endif
 
-	    // mark my self as "read this file".
-	    brc_addlist(fhdr->filename, fhdr->modified);
-	}
-	break;
+    fhdr->modified = dasht(genbuf);
+    strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 
-    } while (1);
+    // substitute_ref_record(direct, fhdr, ent);
+    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title, 0);
 
-    /* should we do this when editing was aborted? */
-    unlink(fpath);
+    // mark my self as "read this file".
+    brc_addlist(fhdr->filename, fhdr->modified);
 
     return FULLUPDATE;
 }
@@ -2662,6 +2622,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 {
     char    path[PATHLEN];
     int     update = 0;
+    int fd;
     /*
       race here:
       為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
@@ -2671,9 +2632,42 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
       3.若推的時候前文被刪, 將加到後文的推文數
 
      */
+
+    // Lock and append, (lock may be caused other add_recommend or edit_post)
     setdirpath(path, direct, fhdr->filename);
-    if( log_file(path, 0, buf) == -1 ){ // 不 CREATE
-	vmsg("推薦失敗");
+    fd = open(path, O_APPEND | O_WRONLY);
+    if (fd >= 0) {
+#ifdef EDITPOST_SMARTMERGE
+        int lock_retry = 5, lock_wait = 1, lock_success = 0;
+        while (lock_retry-- > 0) {
+            // try several times
+            if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
+                move(b_lines, 0);
+                SOLVE_ANSI_CACHE();
+                prints("==> 檔案正被它人編輯中，等待完成: %d\n", lock_retry+1);
+                doupdate();
+                sleep(lock_wait);
+                // reopen the file because edit_post creates a new file.
+                close(fd);
+                fd = open(path, O_APPEND | O_WRONLY);
+                continue;
+            }
+            lock_success = 1;
+            write(fd, buf, strlen(buf));
+            flock(fd, LOCK_UN);
+            break;
+        }
+        close(fd);
+        if (!lock_success) {
+            vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
+            return -1;
+        }
+#else
+        write(fd, buf, strlen(buf));
+        close(fd);
+#endif
+    } else {
+	vmsg("錯誤: 原檔案已被刪除。 無法寫入。");
 	return -1;
     }
 
@@ -3065,7 +3059,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif // OLDRECOMMEND
     }
 
-    do_add_recommend(direct, fhdr,  ent, buf, type);
+    if (do_add_recommend(direct, fhdr,  ent, buf, type) < 0)
+        return DIRCHANGED;
+
     lastrecommend = now;
     lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
