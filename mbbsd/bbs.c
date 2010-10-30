@@ -840,9 +840,11 @@ cancelpost2(const fileheader_t *fh, char *newpath, size_t sznewpath) {
     log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s",
               cuser.userid, fromhost, Cdatelite(&now));
 
-    if (!timecapsule_archive_new_revision(
-                fpath, fh, sizeof(*fh), newpath, sznewpath))
-        ret = -1;
+    if (strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
+        if (!timecapsule_archive_new_revision(
+                    fpath, fh, sizeof(*fh), newpath, sznewpath))
+            ret = -1;
+    }
 
     // the file should be already in time capsule
     if (unlink(fpath) != 0)

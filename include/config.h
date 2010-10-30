@@ -115,6 +115,10 @@
 #define RECYCLE_BIN_NAME "¸ê·½¦^¦¬µ©" // "©U§£±í"
 #endif
 
+#ifndef RECYCLE_BIN_OWNER
+#define RECYCLE_BIN_OWNER "[" RECYCLE_BIN_NAME "]"
+#endif
+
 #ifndef TIME_CAPSULE_NAME
 #define TIME_CAPSULE_NAME "Magical Index" // "Time Capsule"
 #endif

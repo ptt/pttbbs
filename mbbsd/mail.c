@@ -1233,7 +1233,8 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	    setdirpath(genbuf, direct, fhdr->filename);
 #ifdef USE_TIME_CAPSULE
             // bypass those recovered files
-            if (strcmp(fhdr->owner, "[" RECYCLE_BIN_NAME "]") != 0)
+            if (strncmp(fhdr->owner, RECYCLE_BIN_OWNER,
+                        strlen(RECYCLE_BIN_OWNER)) != 0)
                 timecapsule_archive_new_revision(
                         genbuf, fhdr, sizeof(*fhdr), NULL, 0);
 #endif // USE_TIME_CAPSULE

@@ -441,7 +441,7 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
                         ans, sizeof(ans), LCECHO);
                 if (*ans == 'y') {
                     if (mail_log2id(cuser.userid, fh->title,
-                                    revfname, "[" RECYCLE_BIN_NAME "]",
+                                    revfname, RECYCLE_BIN_OWNER,
                                     1, 0) == 0) {
                         cx->modify_mailbox = 1;
                         vmsg("儲存完成，請至信箱檢查備忘錄信件");
