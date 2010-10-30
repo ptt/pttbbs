@@ -1626,10 +1626,6 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
     // close and flush the merged file
     close(fd_dest);
 
-    // XXX DELETE ME
-    outs(" sleeping ..."); refresh();
-    sleep(10);
-
     if (unlink(ref_fn) != 0 ||
         Rename(mod_fn, ref_fn) != 0)
         ret = 0;
