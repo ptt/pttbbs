@@ -8,6 +8,19 @@ static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 
 #define MAX_DES 7		/* 最大保留獎數 */
 
+int
+sendalert_uid(int uid, int alert){
+    userinfo_t     *uentp = NULL;
+    int             n, i;
+
+    n = count_logins(uid, 0);
+    for (i = 1; i <= n; i++)
+	if ((uentp = (userinfo_t *) search_ulistn(uid, i)))
+	    uentp->alerts |= alert;
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int money, bet, n, total = 0, ticket[8] =
@@ -119,6 +132,7 @@ int main(int argc, char **argv)
 		Link(BBSHOME "/etc/ticket", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
 		append_record(genbuf, &mymail, sizeof(mymail));
+                sendalert_uid(uid, ALERT_NEW_MAIL);
 	    } else {
 		printf("     %-15s買了%9d 張 %s\n" ,userid, num, betname[mybet]);
             }
