@@ -216,8 +216,13 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 	    "時間: %s\n"
 	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
 	    ANSI_COLOR(1;31) "    我包給你一個 %d 元的大紅包喔 ^_^\n\n"
-	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n",
-	    from, ctime4(&now), to, money);
+	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n"
+#if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
+            "\n  您可於下列位置找到最近的交易記錄:\n"
+            "  主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 =>"
+            " (P)RecentPay最近交易記錄\n"
+#endif
+            , from, ctime4(&now), to, money);
     fclose(fp);
 
     // colorize topic to make sure this is issued by system.
@@ -516,8 +521,8 @@ give_money_ui(const char *userid)
 #ifdef USE_RECENTPAY
     move(b_lines-5, 0); clrtobot();
     outs("\n您可於下列位置找到最近的交易記錄:\n" 
-            "主選單 => (U)ser個人設定 => (L)MyLogs 個人記錄 => " 
-            "(P)Recent Pay 最近交易記錄\n"); 
+            "主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 => " 
+            "(P)RecentPay最近交易記錄\n"); 
 #endif
     vmsg("交易完成。");
     return 0;
