@@ -323,25 +323,25 @@ out:
 static int
 update_holiday(struct tm *ptime)
 {
-    int i = 0, cnt = 0;
-    char buf[128], *p;
+    int i = 0;
+    char buf[128];
     FILE *fp;
 
     if ((fp = fopen("etc/today_is", "r")) == NULL)
 	return 1;
 
+    // I'm not sure what this is supposed to (check w/wens),
+    // but since this is buggy now, let's make it as "rotate through".
+    buf[0] = 0;
     for (i = 0; i <= ptime->tm_hour; i++) {
 	if (!fgets(buf, sizeof(buf), fp)) {
-	    cnt = i;
-	    i = i - 1 + (ptime->tm_hour - i) / cnt * cnt;
-	    rewind(fp);
+            rewind(fp);
+            fgets(buf, sizeof(buf), fp);
 	}
     }
 
     fclose(fp);
-
-    if ((p = strchr(buf, '\n')))
-	*p = 0;
+    chomp(buf);
 
     memset(SHM->today_is, 0, sizeof(SHM->today_is));
     strlcpy(SHM->today_is, buf, sizeof(SHM->today_is));
