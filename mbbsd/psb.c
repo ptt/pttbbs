@@ -372,7 +372,8 @@ psb_view_edit_history(const char *base, const char *subject,
 
 ///////////////////////////////////////////////////////////////////////////
 // Time Capsule: Recycle Bin
-#define PVRB_LIMIT_NUMBER   (1000)
+#define PVRB_LIMIT_NUMBER   (10000)
+// #define PVRB_LIMIT_NUMBER   (103000)
 
 typedef struct {
     const char *dirbase;
@@ -407,13 +408,14 @@ pvrb_renderer(int i, int curr, int total, int rows, void *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
     fileheader_t *fh = &cx->records[total - i - 1];
 
+    // TODO make this load-on-demand
     // quick display, but lack of recommend counter...
     outs("   ");
     if (i == curr)
         // prints(ANSI_COLOR(1;40;3%d), i%8);
         outs(ANSI_COLOR(1;40;31));
     prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET "\n",
-           i+1, fh->date, fh->owner, fh->title);
+           total - i, fh->date, fh->owner, fh->title);
     return 0;
 }
 
@@ -426,7 +428,7 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
     switch (key) {
-        // TODO add 'x' to pull this mail back to mailbox
+        // TODO add '/' for search
         case 'x':
             setdirpath(fname, cx->dirbase, fh->filename);
             maxrev = timecapsule_get_max_revision_number(fname);

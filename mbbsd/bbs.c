@@ -835,12 +835,14 @@ cancelpost2(const fileheader_t *fh, char *newpath, size_t sznewpath) {
     if(!fh->filename[0])
         return -1;
 
-    setbfile(fpath, currboard, fh->filename);
-    // if (!dashf(fpath)) return -1;
-    log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s",
-              cuser.userid, fromhost, Cdatelite(&now));
-
+    // TODO touch modify time to now? save the name who deleted it?
     if (strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
+
+        setbfile(fpath, currboard, fh->filename);
+        // if (!dashf(fpath)) return -1;
+        log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s",
+                cuser.userid, fromhost, Cdatelite(&now));
+
         if (!timecapsule_archive_new_revision(
                     fpath, fh, sizeof(*fh), newpath, sznewpath))
             ret = -1;
