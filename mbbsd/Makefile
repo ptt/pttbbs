@@ -9,6 +9,7 @@ SRCROOT=	..
 
 PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
+ABUSEOBJS = captcha.o
 ACCOBJS  = user.o acl.o register.o passwd.o emaildb.o
 NETOBJS  = mbbsd.o io.o term.o telnet.o
 TALKOBJS = friend.o talk.o ccw.o
@@ -19,7 +20,7 @@ PLUGOBJS = calendar.o ordersong.o gamble.o angel.o timecap.o
 CHESSOBJS= chess.o chc.o chc_tab.o ch_go.o ch_gomo.o ch_dark.o ch_reversi.o
 GAMEOBJS = card.o chicken.o
 OBJS:=	admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o \
-	$(COREOBJS)  $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
+	$(COREOBJS) $(ABUSEOBJS) $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
 	$(UIOBJS) $(PAGEROBJS) $(PLUGOBJS) \
 	$(CHESSOBJS) $(GAMEOBJS)
 
