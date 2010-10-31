@@ -2194,7 +2194,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
 	unsigned char *pposts, unsigned char *pbadpost)
 {
     char genbuf[STRLEN];
-    int  temp;
+    int  temp, y;
 
     // load var
     unsigned char 
@@ -2204,34 +2204,65 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
 	badpost = *pbadpost;
 
     // query UI
+    y = b_lines - 12;
+    move(y, 0); clrtobot();
+
+    y++;
     sprintf(genbuf, "%u", regtime);
     do {
-	getdata_buf(b_lines - 1, 0, 
+	getdata_buf(y, 0, 
 		"註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
 
+    y++;
     sprintf(genbuf, "%u", logins*10);
+    move(y+2, 0); clrtobot();
+    outs(ANSI_COLOR(1;33) "請注意這是一天一次來計算，不是舊的上站次數。"
+        "(舊上站次數限制已全部變0)\n"
+        "有的板主可能拿舊的上站次數來申請，"
+        "造成使用者忽然無法發文但板主又以為沒改過。\n"
+        "設定前請跟板主確認過這不是舊的設定數值。\n"
+        ANSI_RESET);
+    if (regtime) {
+        outs("\n為避免上面說的錯誤設定狀況，"
+             "現在系統會自動拒絕大於註冊時間限制的設定。\n"
+             "(因為那代表該註冊時間限制無意義，很大可能是舊數值;\n"
+             " 另外,200以上的" STR_LOGINDAYS "通常都是舊設定;"
+             "且很多註冊時間限制可以取消改用" STR_LOGINDAYS ")\n"
+             );
+        prints(ANSI_COLOR(1;32) " => 目前註冊時間限制(%d個月) = "
+               STR_LOGINDAYS "下限應小於或等於 %d 天" ANSI_RESET "\n",
+               regtime, regtime * 30);
+    }
     do {
-	move(b_lines-1, 0); clrtoeol();	// because previous prompt has same BIG5 prefix here
-	getdata_buf(b_lines - 1, 0, 
-		STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
+	getdata_buf(y, 0, 
+                STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：",
+                genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
+        if (regtime && temp > regtime * 30) {
+            strcpy(genbuf, "0");
+            bell();
+            continue;
+        }
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
+    move(y+1, 0); clrtobot();
 
+    y++; 
     sprintf(genbuf, "%u", posts*10);
     do {
-	getdata_buf(b_lines - 1, 0, 
+	getdata_buf(y, 0, 
 		"文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     posts = (unsigned char)(temp / 10);
 
+    y++; 
     sprintf(genbuf, "%u", 255 - badpost);
     do {
-	getdata_buf(b_lines - 1, 0, 
+	getdata_buf(y, 0, 
 		"劣文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
