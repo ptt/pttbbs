@@ -11,13 +11,9 @@ static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 int
 sendalert_uid(int uid, int alert){
     userinfo_t     *uentp = NULL;
-    int             n, i;
 
-    n = count_logins(uid, 0);
-    for (i = 1; i <= n; i++)
-	if ((uentp = (userinfo_t *) search_ulistn(uid, i)))
-	    uentp->alerts |= alert;
-
+    if ((uentp = (userinfo_t *) search_ulistn(uid, 1)))
+        uentp->alerts |= alert;
     return 0;
 }
 
