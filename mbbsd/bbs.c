@@ -1771,7 +1771,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // OK to save file.
 #ifdef USE_TIME_CAPSULE
-    timecapsule_add_revision(genbuf);
+    {
+        char revfn[PATHLEN];
+        time4_t oldmt = dasht(genbuf);
+        int rev = timecapsule_add_revision(genbuf);
+        if (oldmt > 0) {
+            timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
+            log_filef(revfn, LOG_CREAT, "\n¡° Last modified: %s",
+                      Cdatelite(&oldmt));
+        }
+    }
 #endif
 
 #ifdef EDITPOST_SMARTMERGE
