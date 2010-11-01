@@ -1643,14 +1643,18 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
 int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            fpath[80];
-    char            genbuf[200];
+    char            fpath[PATHLEN];
+    char            genbuf[PATHLEN];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
     off_t	    oldsz;
     int		    edflags = 0, is_race_condition = 0;
     char save_title[STRLEN];
-    save_title[0] = '\0';
+
+#ifdef USE_TIME_CAPSULE
+    int rev = 0;
+    time4_t oldmt = 0;
+#endif
 
 #ifdef EDITPOST_SMARTMERGE
     unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
@@ -1661,6 +1665,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     edflags |= EXP_EDITPOST_TEXTONLY;
 #endif
 
+    save_title[0] = '\0';
     assert(0<=currbid-1 && currbid-1<MAX_BOARD && bp);
 
     // special modes (plus MODE_DIGEST?)
@@ -1771,16 +1776,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // OK to save file.
 #ifdef USE_TIME_CAPSULE
-    {
-        char revfn[PATHLEN];
-        time4_t oldmt = dasht(genbuf);
-        int rev = timecapsule_add_revision(genbuf);
-        if (oldmt > 0) {
-            timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
-            log_filef(revfn, LOG_CREAT, "\n¡° Last modified: %s",
-                      Cdatelite(&oldmt));
-        }
-    }
+    oldmt = dasht(genbuf);
+    rev = timecapsule_add_revision(genbuf);
 #endif
 
 #ifdef EDITPOST_SMARTMERGE
@@ -1805,6 +1802,15 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
+
+    // tag revision history file to solve expire issue
+#ifdef USE_TIME_CAPSULE
+    if (rev > 0) {
+        char revfn[PATHLEN];
+        timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
+        log_filef(revfn, 0, "\n¡° Last modified: %s", Cdatelite(&oldmt));
+    }
+#endif
 
     return FULLUPDATE;
 }
