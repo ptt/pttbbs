@@ -31,8 +31,9 @@ int main(int argc, char **argv)
 
     snprintf(archive_path, sizeof(archive_path), "%s/%s",
              dirpath, TIME_CAPSULE_ARCHIVE_INDEX_NAME);
-    if (!dashs(archive_path)) {
-        fprintf(stderr, "missing time capsule archive: %s\n", archive_path);
+    if (dashs(archive_path) <= 0) {
+        // no archive. abort.
+        // fprintf(stderr, "missing time capsule archive: %s\n", archive_path);
         return 1;
     }
 
