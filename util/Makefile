@@ -22,7 +22,7 @@ CPROG_WITH_UTIL= \
 	outmail		chkhbf		merge_dir	\
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
-	uhash_loader
+	uhash_loader	timecap_buildref
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
@@ -40,7 +40,7 @@ PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	openticket.sh	topsong.sh	weather.sh	\
 	weather.perl	toplazyBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
-	getbackup.pl	rebuildaloha.pl
+	getbackup.pl	rebuildaloha.pl timecap_expire.sh
 
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
