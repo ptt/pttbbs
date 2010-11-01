@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # expire rules
-EXPIRE_TIME=103000m
+EXPIRE_MINUTES=+103000
 
 # extract boards
 BBSHOME=$HOME
@@ -27,7 +27,7 @@ do
     fi
 
     # first stage, expire files
-    find "$timecap_base" -mtime "$EXPIRE_TIME" -ls -delete
+    find "$timecap_base" -mmin "$EXPIRE_MINUTES" -ls -delete
 
     # second stage, modify .DIR files
     # dir_file="$timecap_base/archive.idx"
