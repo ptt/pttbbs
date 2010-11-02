@@ -6,6 +6,10 @@
 extern boardheader_t *bcache;
 extern int numboards;
 
+#ifndef LAZY_BM_LIMIT_DAYS  
+#define LAZY_BM_LIMIT_DAYS  (90)
+#endif
+
 boardheader_t allbrd[MAX_BOARD];
 typedef struct lostbm {
     char  bmname[IDLEN + 1];
@@ -56,19 +60,20 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 
-    fprintf(inf, "警告: 板主若於兩個月未上站,將予於免職\n");
+    fprintf(inf, "警告: 板主若超過(不包含) %d天未上站,將予於免職\n",
+            LAZY_BM_LIMIT_DAYS);
     fprintf(inf,
-	    "看板名稱                                      "
+	    "看板名稱                                           "
 	    "    板主        幾天沒來啦\n"
 	    "---------------------------------------------------"
-	    "-------------------\n");
+	    "--------------------------\n");
 
     fprintf(firef, "免職板主\n");
     fprintf(firef,
-	    "看板名稱                                      "
+	    "看板名稱                                           "
 	    "    板主        幾天沒來啦\n"
 	    "---------------------------------------------------"
-	    "-------------------\n"); 
+	    "--------------------------\n"); 
 
 
     j = 0;
@@ -107,8 +112,8 @@ int main(int argc, char *argv[])
 		lostbms[j].ctitle = allbrd[i].title;
 		lostbms[j].lostdays = diff / 86400;
 
-		//超過90天 免職
-		if (lostbms[j].lostdays > 90) {
+		//超過 LAZY_BM_LIMIT_DAYS 天 免職
+		if (lostbms[j].lostdays > LAZY_BM_LIMIT_DAYS) {
 		    xuser.userlevel &= ~PERM_BM;
 		    bms[index].flag = 1;
 		    flag = 1;
@@ -155,7 +160,7 @@ int main(int argc, char *argv[])
 
     //write to the etc/toplazyBM
     for (i = 0; i < j; i++) {
-	if (lostbms[i].lostdays > 90) {
+	if (lostbms[i].lostdays > LAZY_BM_LIMIT_DAYS) {
 	    fprintf(firef, "%-*.*s%-*.*s%-*.*s%3d天沒上站\n",
 		    IDLEN, IDLEN, lostbms[i].title, BTLEN-10,
 		    BTLEN-10, lostbms[i].ctitle, IDLEN,IDLEN,
@@ -180,7 +185,10 @@ int main(int argc, char *argv[])
 
 	lostdays = lostbms[i].lostdays;
 
-	if (lostdays != 45 && lostdays != 60 && lostdays!=75 &&(lostdays <= 90))
+	if (lostdays != LAZY_BM_LIMIT_DAYS/2 &&
+            lostdays != LAZY_BM_LIMIT_DAYS*2/3 &&
+            lostdays != LAZY_BM_LIMIT_DAYS*5/6 &&
+            lostdays <= LAZY_BM_LIMIT_DAYS)
 	    continue;
 
 	sprintf(genbuf, BBSHOME "/home/%c/%s", 
@@ -188,17 +196,17 @@ int main(int argc, char *argv[])
 	stampfile(genbuf, &mymail);
 
 	strcpy(mymail.owner, "[" BBSMNAME "警察局]");
-	if (lostdays <= 90)
+	if (lostdays <= LAZY_BM_LIMIT_DAYS)
 	    sprintf(mymail.title,
-		    "\033[32m版主通知\033[m %s版版主%s",
+		    ANSI_COLOR(32) "版主通知" ANSI_RESET " %s版版主%s",
 		    lostbms[i].title, lostbms[i].bmname);
 	else
 	    sprintf(mymail.title,
-		    "\033[32m版主自動免職通知\033[m %s 版主 %s",
+		    ANSI_COLOR(32) "版主自動免職通知" ANSI_RESET " %s 版主 %s",
 		    lostbms[i].title, lostbms[i].bmname);
 
 	unlink(genbuf);
-	if (lostdays <= 90)
+	if (lostdays <= LAZY_BM_LIMIT_DAYS)
 	    Link(OUTFILE, genbuf);
 	else
 	    Link(FIREFILE, genbuf);
