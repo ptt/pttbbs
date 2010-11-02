@@ -24,27 +24,20 @@ $Id$
 ====================
 
  7. 您可以透過下列方式下載到本站的原始程式碼:
-    a.置於 https://OpenSVN.csie.org/pttbbs/trunk/
-      這是目前主要開發的版本, 也是批踢踢實業坊和批踢踢兔兩個站台
-      所使用的版本. 在這個版本中含有最新的程式, 但是可能會不穩定,
-      有 bug, 甚至和之前的版本不相容. 建議您有基礎的程式能力, 並
-      隨時注意 PttCurrent 看板 (在 telnet://ptt.cc中, 或可以使用
-      網頁版本 http://www.ptt.cc/bbs/PttCurrent/index.html) , 尤
-      其當您在更新程式的時候.
-      a)至 http://fs.ptt.cc 抓得每日自動製作的 snapshot ,
-        通常檔名長的會像是 pttbbs-DATE.tar.gz
-        再解開該檔即可: tar zxvf pttbbs-DATE.tar.gz
+    https://OpenSVN.csie.org/pttbbs/trunk/
+    這是目前主要開發的版本, 也是批踢踢實業坊和批踢踢兔兩個站台
+    所使用的版本. 在這個版本中含有最新的程式, 但是可能會不穩定,
+    有 bug, 甚至和之前的版本不相容. 建議您有基礎的程式能力, 並
+    隨時注意 PttCurrent 看板 (在 telnet://ptt.cc中, 或可以使用
+    網頁版本 http://www.ptt.cc/bbs/PttCurrent/index.html) , 尤
+    其當您在更新程式的時候.
 
-      b)直接抓取 http://OpenSVN.csie.org/pttbbs/trunk/pttbbs下的所有資料.
-        如 wget -r -np http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
+    透過 subversion 聯繫 pttbbs version control repository(註4)
+    執行 svn checkout http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
 
-      c)透過 subversion 聯繫 pttbbs version control repository(註4)
-        再執行 svn checkout http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
-
-    其中不論您以方式 a, b 取得源碼, 您都可以在該目錄下直接透過 svn update
-    更新至 pttbbs 最新的源碼. 如:
-	cd /home/bbs/pttbbs; svn update
-     (須先安裝 subversion, 見註4)
+    您可以在該目錄下直接透過 svn update 更新至 pttbbs 最新的源碼. 如:
+    cd /home/bbs/pttbbs; svn update
+    (須先安裝 subversion, 見註4)
 
  8. 切換到 pttbbs 的目錄下 ( cd ~bbs/pttbbs )
  9. 如果您的 pttbbs.conf並不存在, 可以拷一份預設的來用:
