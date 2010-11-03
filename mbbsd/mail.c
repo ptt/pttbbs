@@ -252,6 +252,12 @@ m_internet(void)
     char receiver[TTLEN];
     char title[TTLEN];
 
+    clear();
+    mvouts(5, 0,
+           "\t為避免成為濫發站外廣告信的來源，本功\能將於12月開始停止服務\n");
+    outs("\n\t屆時將只能回覆 Internet 郵件而無法主動發信，謝謝");
+    pressanykey();
+
     getdata(20, 0, "收信人：", receiver, sizeof(receiver), DOECHO);
     trim(receiver);
     if (strchr(receiver, '@') && !invalidaddr(receiver) &&
