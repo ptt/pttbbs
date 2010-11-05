@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <stdlib.h>
 #include "cmsys.h"
 
 #define BUFSIZE 512
@@ -76,7 +77,7 @@ substitute_record(const char *fpath, const void *rptr, size_t size, int id)
     off_t offset = size * (id - 1);
 
     if (id < 1 || (fd = OpenCreate(fpath, O_WRONLY)) == -1)
-	return -1;
+       return -1;
 
     lseek(fd, offset, SEEK_SET);
     PttLock(fd, offset, size, F_WRLCK);
@@ -110,6 +111,119 @@ out:
     close(fd);
 
     return index + 1;
+}
+
+int
+substitute_record2(const char *fpath, const void *srcptr, const void *destptr,
+                   size_t size, int id, record_callback_t cb_can_substitue)
+{
+    int fd;
+    int err = 0;
+    off_t offset = size * (id - 1);
+    void *p = NULL;
+
+    if (id < 1 || (fd = OpenCreate(fpath, O_RDWR)) == -1)
+	return -1;
+    if (lseek(fd, offset, SEEK_SET) != offset ||
+        (cb_can_substitue && !(p = malloc(size)))) {
+        close(fd);
+        return -1;
+    }
+    PttLock(fd, offset, size, F_WRLCK);
+    while(cb_can_substitue) {
+        err = -1;
+        if (read(fd, p, size) != size)
+            break;
+        if (!cb_can_substitue(p, srcptr))
+            break;
+        if (lseek(fd, offset, SEEK_SET) != offset)
+            break;
+        err = 0;
+        break;
+    }
+    if (err == 0) {
+        if (write(fd, destptr, size) != size)
+            err = -1;
+    }
+    PttLock(fd, offset, size, F_UNLCK);
+    close(fd);
+    if (p) free(p);
+
+    return err;
+}
+
+int
+delete_record2(const char *fpath, const void *rptr, size_t size,
+               int id, record_callback_t cb_can_delete)
+{
+    char buf[BUFSIZE];
+    int fi = -1, fo = -1;
+    int locksize, readsize, c, d=0;
+    struct stat st;
+    off_t offset = size * (id - 1);
+    int err = 0;
+    void *p = NULL;
+    const int num = 1;
+
+    do {
+        err = -1;
+        fi = open(fpath, O_RDONLY, 0);
+        if (fi < 0)
+            break;
+        if (fstat(fi, &st) != 0)
+            break;
+        locksize = st.st_size - offset;
+        if (locksize < 0)
+            break;
+        fo = open(fpath, O_WRONLY, 0);
+        if (fo < 0)
+            break;
+        if (cb_can_delete && (p = malloc(size)) == NULL)
+            break;
+        err = 0;
+    } while (0);
+
+    if (err != 0) {
+        // clean up on error exit
+        if (fi >= 0) close(fi);
+        if (fo >= 0) close(fo);
+        return err;
+    }
+
+    readsize = locksize - size*num;
+    PttLock(fo, offset, locksize, F_WRLCK);
+
+    while (cb_can_delete) {
+        err = -1;
+        if (lseek(fi, offset, SEEK_SET) != offset)
+            break;
+        if (read(fi, p, size) != size)
+            break;
+        if (!cb_can_delete(p, rptr))
+            break;
+        err = 0;
+        break;
+    }
+    if (!cb_can_delete) {
+        if (lseek(fi, offset+size*num, SEEK_SET) != offset)
+            err = -1;
+    }
+
+    if (lseek(fo, offset, SEEK_SET) != offset)
+        err = -1;
+    while (err == 0 && d < readsize && (c = read(fi, buf, BUFSIZE)) > 0) {
+        // when entering loop, never stop even if error
+        write(fo, buf, c);
+        d += c;
+    }
+    close(fi);
+    if (err == 0)
+        ftruncate(fo, st.st_size - size*num);
+    PttLock(fo, offset, locksize, F_UNLCK);
+    close(fo);
+    if (p) free(p);
+
+    return err;
 }
 
 int
@@ -172,7 +286,8 @@ int delete_record(const char *fpath, size_t size, int id)
 #endif
 
 int
-apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), size_t size, void *arg)
+apply_record(const char *fpath, int (*fptr) (void *item, void *optarg),
+             size_t size, void *arg)
 {
     char buf[BUFSIZE];
     int fd;

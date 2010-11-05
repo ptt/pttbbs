@@ -99,4 +99,9 @@ extern int  checkpasswd  (const char *passwd, char *test);  // test will be dest
 extern void logattempt   (const char *uid, char type, time4_t now, const char *fromhost);
 extern char*genpasswd    (char *pw);
 
+/* record */
+extern int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);
+extern int delete_fileheader(const char *dir_path, const void *rptr, int id);
+
+
 #endif

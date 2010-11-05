@@ -11,9 +11,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include "cmbbs.h"
 #include "common.h"
 #include "var.h"
-#include "cmbbs.h"
 
 //////////////////////////////////////////////////////////////////////////
 // This is shared by utility library and core BBS,
