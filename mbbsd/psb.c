@@ -372,7 +372,7 @@ psb_view_edit_history(const char *base, const char *subject,
 
 ///////////////////////////////////////////////////////////////////////////
 // Time Capsule: Recycle Bin
-#define PVRB_LIMIT_NUMBER   (10000)
+#define PVRB_LIMIT_NUMBER   (10300)
 // #define PVRB_LIMIT_NUMBER   (103000)
 
 typedef struct {
@@ -488,12 +488,13 @@ pvrb_welcome() {
 "  提醒您: (1) 此系統尚在實驗性開放中，站方未來會決定是否繼續提供此功\能。\n\n"
 "          (2) 所有的資料僅供參考，站方不保證此處為完整的電磁記錄。\n\n"
 "          (3) 所有的資料都可能不定期由系統清除掉。\n"
-"              大D 與 ^D 刪除的內容不會保留。\n\n"
+"              ^D 刪除的內容目前不會保留。\n\n"
 "   Mini FAQ:\n\n"
 "   Q: 通常檔案會保留多久?\n"
-"   A: 仍在評估中，或許\會是兩週到一個月，另外篇數也會有上限。\n\n"
+"   A: 仍在評估中，或許\會是一個到兩個月，另外篇數也會有上限。\n\n"
 "   Q: 哪些地方有回收筒可用?\n"
-"   A: 目前開放個人信箱(所有用戶)跟看板(板主限定)。 精華區暫不支援。\n\n"
+"   A: 目前開放個人信箱(所有用戶)跟看板/精華區文章(板主限定)。\n"
+"      精華區子目錄暫不支援。\n\n"
             );
         doupdate();
         pressanykey();
