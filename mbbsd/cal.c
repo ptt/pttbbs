@@ -359,9 +359,16 @@ give_money_ui(const char *userid)
     const char	    *myid = cuser.userid;
     const char	    *uid_prompt = "這位幸運兒的id: ";
 
+    const char *alert_trade = "\n" ANSI_COLOR(0;1;31) 
+        "提醒您本站的虛擬 " MONEYNAME " 幣不應與其它虛擬或現實生活"
+        "通用之貨幣進行交易\n"
+        "若查獲有使用者經由不法途徑取得再與其它使用者進行貨幣間之交易時\n"
+        "站方將直接扣回。為避免造成您個人損失，請三思而後行。"
+         ANSI_RESET "\n";
+
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
-    vs_hdr("給予金錢");
+    vs_hdr("給予" MONEYNAME "幣");
 
     if (!userid || !*userid || strcmp(userid, cuser.userid) == 0)
 	userid = NULL;
@@ -370,8 +377,7 @@ give_money_ui(const char *userid)
     usercomplete2(uid_prompt, id, userid);
     // redraw highlighted prompt
     move(1, 0); clrtobot();
-    outs(uid_prompt); outs(ANSI_COLOR(1)); outs(id);
-    outs(ANSI_RESET "\n");
+    prints("%s" ANSI_COLOR(1) "%s\n", uid_prompt, id);
 
     if (!id[0] || strcasecmp(cuser.userid, id) == 0)
     {
@@ -384,9 +390,12 @@ give_money_ui(const char *userid)
 	return -1;
     }
 
+    mvouts(15, 0, alert_trade);
+
     m = 0;
     money_buf[0] = 0;
-    outs("要給他多少錢呢? (可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
+    mvouts(2, 0, "要給他多少錢呢? "
+           "(可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
     outs(" 請輸入金額: ");  // (3, 0)
     {
 	int is_before_tax = 1;
@@ -451,7 +460,6 @@ give_money_ui(const char *userid)
         } 
     }
 
-
     // safe context starts at (7, 0)
     move(7, 0);
     if (now - lastauth >= 15*60) // valid through 15 minutes
@@ -515,6 +523,7 @@ give_money_ui(const char *userid)
 	} else {
             if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
                 veditfile(fpath);
+            log_filef(fpath, 0, alert_trade);
             sendalert(id, ALERT_NEW_MAIL);
         }
     }
