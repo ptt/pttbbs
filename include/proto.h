@@ -47,7 +47,8 @@ void pressanykey_or_callangel(void);
 #endif
 
 /* announce */
-int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);
+int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid,
+           char *trans_buffer, const char *backup_dir);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
 
@@ -65,7 +66,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr, const char *newpath, 
 /* bbs */
 int is_file_owner(const fileheader_t *, const userec_t*);
 void delete_allpost(const char *userid);
-int del_range(int ent, const fileheader_t *fhdr, const char *direct);
+int del_range(int ent, const fileheader_t *fhdr, const char *direct, const char *backup_direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
 int Read(void);
@@ -498,6 +499,13 @@ int rotate_text_logfile(const char *filename, off_t max_size,
                         float keep_ratio);
 int rotate_bin_logfile(const char *filename, off_t record_size, 
                        off_t max_size, float keep_ratio); 
+int delete_file_content(const char *direct, const fileheader_t *fh,
+                        const char *backup_direct,
+                        char *newpath, size_t sznewpath);
+#define DELETE_FILE_CONTENT_SUCCESS (0)
+#define DELETE_FILE_CONTENT_FAILED  (-1)
+#define DELETE_FILE_CONTENT_BACKUP_FAILED  (1)
+#define IS_DELETE_FILE_CONTENT_OK(x) ((x) != DELETE_FILE_CONTENT_FAILED)
 
 /* register */
 int u_register(void);

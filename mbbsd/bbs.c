@@ -242,8 +242,8 @@ save_violatelaw(void)
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000) {
 	snprintf(buf, sizeof(buf),
-		 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
-		 "必須繳出 %d " MONEYNAME "幣；但你目前只有 %d ，數量不足!!"
+                 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
+                 "必須繳出 %d " MONEYNAME "幣；但你目前只有 %d ，數量不足!!"
                  ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
                  cuser.money);
 	mvouts(22, 0, buf);
@@ -798,8 +798,6 @@ outgo_post(const fileheader_t *fh, const char *board, const char *userid, const 
     }
 }
 
-#ifdef USE_TIME_CAPSULE
-
 static void
 innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
 {
@@ -829,92 +827,36 @@ innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
 }
 
 static int
-cancelpost2(const fileheader_t *fh, char *newpath, size_t sznewpath) {
-    char fpath[PATHLEN];
+cancelpost(const char *direct, const fileheader_t *fh,
+           int not_owned, char *newpath, size_t sznewpath) {
     int ret = 0;
+    char bakdir[PATHLEN];
 
-    if(!fh->filename[0])
-        return -1;
+#ifdef USE_TIME_CAPSULE
+    setbdir(bakdir, currboard);
+#else
+    const char *brd = not_owned ? BN_DELETED : BN_JUNK;
+    setbdir(bakdir, brd);
+#endif
 
-    setbfile(fpath, currboard, fh->filename);
-    // if (!dashf(fpath)) return -1;
+    ret = delete_file_content(direct, fh, bakdir, newpath, sznewpath);
+    if (!IS_DELETE_FILE_CONTENT_OK(ret))
+        return ret;
 
-    // TODO touch modify time to now? save the name who deleted it?
-    if (strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
-        log_filef(fpath,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
-                cuser.userid, fromhost, Cdatelite(&now));
+#ifdef USE_TIME_CAPSULE
+    // do nothing for capsule
+#else
+    setbtotal(getbnum(brd));
+#endif
 
-        if (!timecapsule_archive_new_revision(
-                    fpath, fh, sizeof(*fh), newpath, sznewpath))
-            ret = -1;
-    }
-
-    // the file should be already in time capsule
-    if (unlink(fpath) != 0)
-        ret = -1;
-    
     // should we use cuser.userid, or userid in post?
     // I don't know, simply following the old way in cancelpost...
-    if (!(currbrdattr & BRD_NOTRAN))
-        innd_cancel_post(fh, fpath, cuser.userid);
-
-    return ret;
-}
-
-#else
-
-static int
-cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
-{
-    FILE           *fin, *fout;
-    char           *ptr, *brd;
-    fileheader_t    postfile;
-    char            genbuf[200];
-    char            nick[STRLEN], fn1[PATHLEN];
-    int             len = 42-strlen(currboard);
-    int		    ret = -1;
-
-    if(!fh->filename[0]) return ret;
-    setbfile(fn1, currboard, fh->filename);
-    if ((fin = fopen(fn1, "r"))) {
-	brd = by_BM ? BN_DELETED : BN_JUNK;
-
-        memcpy(&postfile, fh, sizeof(fileheader_t));
-	setbpath(newpath, brd);
-	stampfile_u(newpath, &postfile);
-	
-	nick[0] = '\0';
-	while (fgets(genbuf, sizeof(genbuf), fin)) {
-	    if (!strncmp(genbuf, str_author1, LEN_AUTHOR1) ||
-		!strncmp(genbuf, str_author2, LEN_AUTHOR2)) {
-		if ((ptr = strrchr(genbuf, ')')))
-		    *ptr = '\0';
-		if ((ptr = (char *)strchr(genbuf, '(')))
-		    strlcpy(nick, ptr + 1, sizeof(nick));
-		break;
-	    }
-	}
-	if(!strncasecmp(postfile.title, str_reply, 3))
-	    len=len+4;
-	sprintf(postfile.title, "%-*.*s.%s板", len, len, fh->title, currboard);
-
-	if ((fout = fopen("innd/cancel.bntp", "a"))) {
-	    fprintf(fout, "%s\t%s\t%s\t%s\t%s\n", currboard, fh->filename,
-		    cuser.userid, nick, fh->title);
-	    fclose(fout);
-	}
-	fclose(fin);
-        log_filef(fn1,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
-                 cuser.userid, fromhost, Cdatelite(&now));
-	ret = Rename(fn1, newpath);
-	setbdir(genbuf, brd);
-	append_record(genbuf, &postfile, sizeof(postfile));
-	setbtotal(getbnum(brd));
+    if (!(currbrdattr & BRD_NOTRAN)) {
+        innd_cancel_post(fh, newpath, cuser.userid);
     }
+
     return ret;
 }
-
-#endif
 
 static void
 do_deleteCrossPost(const fileheader_t *fh, char bname[])
@@ -943,10 +885,10 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 #ifdef SAFE_ARTICLE_DELETE
         if(bp && !(currmode & MODE_DIGEST) && 
            bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-	        safe_article_delete(i, &newfh, bdir, NULL);
+            safe_article_delete(i, &newfh, bdir, NULL);
         else
 #endif
-                delete_record(bdir, sizeof(fileheader_t), i);
+            delete_fileheader(bdir, &newfh, i);
 	setbtotal(bid);
 	unlink(file);
     }
@@ -2363,20 +2305,29 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 static int
 b_man(void)
 {
-    char            buf[PATHLEN];
+    char apath[PATHLEN], backup_path[PATHLEN];
 
-    setapath(buf, currboard);
+#ifdef USE_TIME_CAPSULE
+    setbdir(backup_path, currboard);
+#else
+    boardheader_t *bp = getbcache(currbid);
+    setbdir(backup_path, (bp->brdattr & BRD_HIDE) ? BN_JUNK : BN_DELETED);
+#endif
+    setapath(apath, currboard);
+
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) {
-	char            genbuf[128];
-	int             fd;
-	snprintf(genbuf, sizeof(genbuf), "%s/.rebuild", buf);
-	if ((fd = OpenCreate(genbuf, O_RDWR)) > 0)
+	char rebuild_path[PATHLEN];
+	int  fd;
+
+	snprintf(rebuild_path, sizeof(rebuild_path), "%s/.rebuild", apath);
+	if ((fd = OpenCreate(rebuild_path, O_RDWR)) > 0)
 	    close(fd);
     }
-    return a_menu(currboard, buf, HasUserPerm(PERM_ALLBOARD) ? 2 :
+
+    return a_menu(currboard, apath,HasUserPerm(PERM_ALLBOARD) ? 2 :
 		  (currmode & MODE_BOARD ? 1 : 0), 
 		  currbid, // getbnum(currboard)?
-		  NULL);
+		  NULL, backup_path);
 }
 
 #ifndef NO_GAMBLE
@@ -3137,75 +3088,145 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 int
-del_range(int ent, const fileheader_t *fhdr, const char *direct)
+del_range(int ent, const fileheader_t *fhdr, const char *direct,
+          const char *backup_direct)
 {
-    char            num1[8], num2[8];
-    int             inum1, inum2;
-    boardheader_t  *bp = NULL;
+    char            numstr[8];
+    int             num1, num2, num, cdeleted = 0;
+    fileheader_t *recs = NULL;
+    int ret = 0;
+    int use_safe_delete = 0;
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
-
-    if( direct[0] != 'h' && currbid) /* 信件不用 check */
-    { 
-	// 很不幸的是有一種是信件->mail_cite->精華區
-        bp = getbcache(currbid);
-	if (is_readonly_board(bp->brdname))
-	    return DONOTHING;
-    }
-
+    
     /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if (currmode & MODE_SELECT) {
 	vmsg("請先回到正常模式後再進行刪除...");
 	return FULLUPDATE;
     }
 
-    if ((currstat != READING) || (currmode & MODE_BOARD)) {
-	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 6, DOECHO);
-	inum1 = atoi(num1);
-	if (inum1 <= 0) {
-	    vmsg("起點有誤");
-	    return FULLUPDATE;
-	}
-	getdata(1, 28, "終點：", num2, 6, DOECHO);
-	inum2 = atoi(num2);
-	if (inum2 < inum1) {
-	    vmsg("終點有誤");
-	    return FULLUPDATE;
-	}
-	getdata(1, 48, msg_sure_ny, num1, 3, LCECHO);
-	if (*num1 == 'y') {
-	    int ret = 0;
-	    outmsg("處理中,請稍後...");
-	    refresh();
-#ifdef SAFE_ARTICLE_DELETE
-	    if(bp && !(currmode & MODE_DIGEST) &&
-               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-		ret = safe_article_delete_range(direct, inum1, inum2);
-	    else
-#endif
-	    ret = delete_range(direct, inum1, inum2);
-	    if (ret < 0)
-	    {
-		clear();
-		vs_hdr("刪除失敗");
-		outs("\n\n無法刪除檔案。可能是同時有其它人也在進行刪除。\n\n"
-		     "若此錯誤持續發生，請等約一小時後再重試。\n\n"
-		     "若到時仍無法刪除，請到 " BN_SYSOP " 看板報告。\n");
-		vmsg("無法刪除。可能有其它人正在同時刪除。");
-		return FULLUPDATE;
-	    } else 
-		fixkeep(direct, inum1);
+    // let's do a full screen delete.
+    clear();
+    vs_hdr("刪除範圍");
 
-	    if ((curredit & EDIT_MAIL)==0 && (currmode & MODE_BOARD)) // Ptt:update cache
-		setbtotal(currbid);
-            else if(currstat == RMAIL)
-                setupmailusage();
-
-	    return DIRCHANGED;
-	}
-	return FULLUPDATE;
+    getdata(2, 0, "起點: ", numstr, 6, DOECHO);
+    num1 = atoi(numstr);
+    if (num1 <= 0) {
+        vmsg("起點有誤");
+        return FULLUPDATE;
     }
-    return DONOTHING;
+    getdata(3, 0, "終點: ",numstr, 6, DOECHO);
+    num2 = atoi(numstr);
+    if (num2 < num1) {
+        vmsg("終點有誤");
+        return FULLUPDATE;
+    }
+    num = num2 - num1 + 1;
+    if (num > 1000) {
+        vmsg("請勿一次刪除超過 1000 篇。");
+        return FULLUPDATE;
+    }
+
+    // verify the results
+    // TODO kcwu suggested to check only first/end and compare
+    // timestamp. that's a good idea and more efficient.
+    recs = (fileheader_t*) malloc ( num * sizeof(fileheader_t));
+    if (!recs ||
+        get_records(direct, recs, sizeof(fileheader_t), num1, num) != num) {
+        free(recs);
+        vmsg("無法取得指定範圍的資訊，請退出後稍候再試");
+        return FULLUPDATE;
+    }
+    mvprints(5, 0, "#%06d %-*s %s\n"
+                   " . . .\n"
+                   "#%06d %-*s %s\n",
+                   num1, IDLEN, recs[0].owner, recs[0].title,
+                   num2, IDLEN, recs[num-1].owner, recs[num-1].title);
+
+    getdata(10, 0, msg_sure_yn, numstr, 3, LCECHO);
+    if (*numstr != 'y') {
+        free(recs);
+        return FULLUPDATE;
+    }
+
+    // ready to start.
+    outmsg("處理中,請稍後...");
+    refresh();
+    ret = 0;
+
+#ifdef SAFE_ARTICLE_DELETE
+    if (*direct == 'b') {
+        boardheader_t  *bp = getbcache(currbid);
+        if(!(currmode & MODE_DIGEST) &&
+                bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
+            use_safe_delete = 1;
+    }
+#endif
+
+    do {
+        int id = num1, i;
+        for (i = 0; ret == 0 && i < num; i++) {
+            // TODO now we can read file header and check MARK.
+#ifdef SAFE_ARTICLE_DELETE
+            if (use_safe_delete &&
+                safe_article_delete(id, recs+i, direct, NULL) == 0) {
+                id++;
+            }
+            else
+#endif
+            if (delete_fileheader(direct, recs+i, id) == 0) {
+                // no need to add id
+            } else {
+                ret = -1;
+                break;
+            }
+            // delete file
+            if (!IS_DELETE_FILE_CONTENT_OK(
+                        delete_file_content(direct, recs+i,
+                                            backup_direct, NULL, 0))) {
+                ret = -1;
+                break;
+            }
+            cdeleted++;
+        }
+    } while (0);
+
+    // clean up
+    free(recs);
+    fixkeep(direct, num1);
+
+    if (ret < 0) {
+        clear();
+        vs_hdr("部份刪除失敗");
+        prints("\n\n已刪除了 %d 個檔案，但無法刪除其它檔案。\n", cdeleted);
+        outs( "可能是同時有其它人也在進行刪除。請退出此目錄後再重試。\n\n"
+              "若此錯誤持續發生，請等約一小時後再重試。\n\n"
+              "若到時仍無法刪除，請到 " BN_BUGREPORT " 看板報告。\n");
+        vmsg("無法刪除。可能有其它人正在同時刪除。");
+    }
+
+    return (ret < 0 || cdeleted > 0) ? DIRCHANGED : FULLUPDATE;
+}
+
+static int
+del_range_post(int ent, fileheader_t * fhdr, char *direct)
+{
+    int ret = 0;
+   if (!(currmode & MODE_BOARD))
+        return DONOTHING;
+
+    if (currbid) {
+        boardheader_t *bp = getbcache(currbid);
+        assert(bp);
+        if (is_readonly_board(bp->brdname))
+            return DONOTHING;
+    }
+
+    ret = del_range(ent, fhdr, direct, direct);
+    if (ret == DIRCHANGED) {
+        setbtotal(currbid);
+    }
+    return ret;
 }
 
 static int
@@ -3213,7 +3234,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char	    reason[PROPER_TITLE_LEN] = "";
     char            genbuf[100], newpath[PATHLEN] = "";
-    int             not_owned, is_anon, tusernum, del_ok = 0, as_badpost = 0;
+    int             not_owned, is_anon, tusernum, del_ret = 0, as_badpost = 0;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -3341,49 +3362,41 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
 #endif
-	   // XXX TODO delete_record is really really dangerous - 
-	   // we should verify the header (maybe by filename) is the same.
-	   // currently race condition is easily cause by 2 BMs
-	   !delete_record(direct, sizeof(fileheader_t), ent)
-	   ) {
+            !delete_fileheader(direct, fhdr, ent)) {
             // do this immediately after .DIR change in case connection
             // was closed.
 	    setbtotal(currbid);
 
-#ifdef USE_TIME_CAPSULE
-	    del_ok = (cancelpost2(fhdr, newpath, sizeof(newpath)) == 0) ? 1 : 0;
-#else
-	    del_ok = (cancelpost(fhdr, not_owned, newpath) == 0) ? 1 : 0;
-#endif
+            del_ret = cancelpost(direct, fhdr, not_owned, newpath, sizeof(newpath));
             deleteCrossPost(fhdr, bp->brdname);
 
+            move(b_lines - 10, 0); clrtobot();
+            prints("\n正在刪除文章: %s\n", fhdr->title);
+
+            // check delete_file_content for del_ret
+            if (!IS_DELETE_FILE_CONTENT_OK(del_ret)) {
+                outs("檔案可能已被它人刪除或發生錯誤，"
+                     "若持續發生請向" BN_BUGREPORT "報告\n");
+            }
+            if (del_ret == DELETE_FILE_CONTENT_BACKUP_FAILED) {
+                outs(" " ANSI_COLOR(1;31) "* 檔案備份失敗，請至 " 
+                     BN_BUGREPORT "報告" ANSI_RESET "\n");
+            }
 #ifdef ASSESS
 	    // badpost assignment
 
-	    // case one, self-owned, invalid author, or digest mode - should not give bad posts
-	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) )
-	    {
-		// do nothing
-	    } 
-	    // case 2, got error in file deletion (already deleted, also skip badpost)
-	    else if (!del_ok || !*newpath)
-	    {
+	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) ) {
+                // case one, self-owned, invalid author, or digest mode - should not give bad posts
+	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
+                // case 2, got error in file deletion (already deleted, also skip badpost)
+                outs("劣文設定: 已刪或刪除錯誤 (跳過)\n");
+	    } else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60) {
+                // case 3, post older than one week (TODO use macro for the duration)
+		outs("劣文設定: 文章超過一週 (跳過)\n");
+	    } else {
+                // case 4, can assign badpost
 		move_ansi(1, 40); clrtoeol();
-		outs("已刪或刪除錯誤(跳過劣文設定)");
-		pressanykey();
-	    }
-	    // case 3, post older than one week (TODO use macro for the duration)
-	    else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
-	    {
-		move_ansi(1, 40); clrtoeol();
-		outs("文章超過一週(跳過劣文設定)");
-		pressanykey();
-	    }
-	    // case 4, can assign badpost
-	    else 
-	    {
 		// TODO not_owned 時也要改變 numpost?
-		move_ansi(1, 40); clrtoeol();
                 outs("惡劣文章?(y/N) ");
                 // FIXME 有板主會在這裡不小心斷掉連線所以要小心...
                 // 重要的事最好在前面作完。
@@ -3433,15 +3446,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 pay(del_fee, "%s 看板 文章自刪清潔費: %s",  
                         currboard, fhdr->title); 
 		sendalert(cuser.userid, ALERT_PWD_PERM);
-		vmsgf("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "幣", 
-			cuser.numposts, del_fee);
+		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "幣\n", 
+                        cuser.numposts, del_fee);
 	    }
-
-            if (!del_ok)
-                vmsg("刪除過程發生錯誤，請向" BN_BUGREPORT "報告");
-
+            pressanykey();
 	    return DIRCHANGED;
-	} // delete_record
+	} else { // delete_fileheader
+            vmsg("無法刪除檔案記錄。請稍候再試。");
+            return DIRCHANGED;
+        }
     } // genbuf[0] == 'y'
     return FULLUPDATE;
 }
@@ -3928,7 +3941,7 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
     }
     else{
 	fhdr->filemode ^= FILE_BOTTOM;
-	num = delete_record(direct, sizeof(fileheader_t), ent);
+	num = delete_fileheader(direct, fhdr, ent);
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     setbottomtotal(currbid);
@@ -4156,7 +4169,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // 'A' 65
     { 0, b_config }, // 'B'
     { 1, do_limitedit }, // 'C'
-    { 1, del_range }, // 'D'
+    { 1, del_range_post }, // 'D'
     { 1, edit_post }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'

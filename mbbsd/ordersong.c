@@ -87,7 +87,7 @@ do_order_song(void)
 	if (ans[0] == '1')
 	    break;
 	else if (ans[0] == '2') {
-	    a_menu("點歌歌本", SONGBOOK, 0, 0, NULL);
+	    a_menu("點歌歌本", SONGBOOK, 0, 0, NULL, NULL);
 	    clear();
 	}
 	else if (ans[0] == '3') {
@@ -114,7 +114,7 @@ do_order_song(void)
     getdata_str(22, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
 		address, sizeof(address), LCECHO, receiver);
     vmsg("接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
-    a_menu("點歌歌本", SONGBOOK, 0, 0, trans_buffer);
+    a_menu("點歌歌本", SONGBOOK, 0, 0, trans_buffer, NULL);
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
 	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {
 	unlockutmpmode();

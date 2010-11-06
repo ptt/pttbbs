@@ -756,21 +756,25 @@ a_moveitem(menu_t * pm)
 }
 
 static void
-a_delrange(menu_t * pm)
+a_delrange(menu_t * pm, const char *backup_dir)
 {
     char            fname[PATHLEN];
 
     snprintf(fname, sizeof(fname), "%s/" FN_DIR, pm->path);
-    del_range(0, NULL, fname);
+    del_range(0, NULL, fname, backup_dir);
     pm->num = get_num_records(fname, FHSZ);
 }
 
 static void
-a_delete(menu_t * pm)
+a_delete(menu_t * pm, const char *backup_dir)
 {
     char            fpath[PATHLEN], buf[PATHLEN], cmd[PATHLEN];
     char            ans[4];
     fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
+    const char *msg_errsync = "刪除檔案失敗，請退回上層目錄後再重試一次",
+               *msg_errsync2 = "檔案可能已被它人刪除，請退回上層目錄再重進確認",
+               *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT 
+                                "報告您試圖刪除檔案的位置。";
 
     snprintf(fpath, sizeof(fpath),
 	     "%s/%s", pm->path, fhdr->filename);
@@ -781,42 +785,42 @@ a_delete(menu_t * pm)
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
+	if (delete_fileheader(buf, fhdr, pm->now + 1) == -1) {
+            vmsg(msg_errsync);
 	    return;
+        }
     } else if (dashl(fpath)) {
 	getdata(b_lines - 1, 1, "您確定要刪除此 symbolic link 嗎(Y/N)？[N] ",
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
+	if (delete_fileheader(buf, fhdr, pm->now + 1) == -1) {
+            vmsg(msg_errsync);
 	    return;
+        }
 	unlink(fpath);
     } else if (dashf(fpath)) {
-
-	// XXX we also check PERM_MAILLIMIT here because RMAIL
-	// may be not trusted...
-	const char *save_bn = ( HasUserPerm(PERM_MAILLIMIT) && (currstat & RMAIL) ) ?
-		BN_JUNK : BN_DELETED;
 
 	getdata(b_lines - 1, 1, "您確定要刪除此檔案嗎(Y/N)？[N] ", ans,
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
-	    return;
 
+        if (delete_fileheader(buf, fhdr, pm->now + 1) == -1) {
+            vmsg(msg_errsync);
+            return;
+        }
 
-	setbpath(buf, save_bn);
-	stampfile(buf, &backup);
-	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
-	strlcpy(backup.title, fhdr->title + 2, sizeof(backup.title));
-
-	snprintf(cmd, sizeof(cmd),
-		"mv -f %s %s", fpath, buf);
-	system(cmd);
-	setbdir(buf, save_bn);
-	append_record(buf, &backup, sizeof(backup));
-	setbtotal(getbnum(save_bn));
+        switch(delete_file_content(buf, fhdr, backup_dir, NULL, 0)) {
+            case DELETE_FILE_CONTENT_BACKUP_FAILED:
+                vmsg(msg_errbackup);
+                break;
+            case DELETE_FILE_CONTENT_FAILED:
+                vmsg(msg_errsync2);
+                break;
+            default:
+                break;
+        }
 
     } else if (dashd(fpath)) {
 
@@ -829,8 +833,10 @@ a_delete(menu_t * pm)
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
+	if (delete_fileheader(buf, fhdr, pm->now + 1) == -1) {
+            vmsg(msg_errsync);
 	    return;
+        }
 
 	setapath(buf, save_bn);
 	// XXX because this directory will hold folders from entire site,
@@ -863,7 +869,7 @@ a_delete(menu_t * pm)
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
+	if (delete_fileheader(buf, fhdr, pm->now + 1) == -1)
 	    return;
     }
     pm->num--;
@@ -873,14 +879,16 @@ static void
 a_newtitle(const menu_t * pm)
 {
     char            buf[PATHLEN];
-    fileheader_t    item;
+    fileheader_t    item, *fhdr;
 
-    memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
+    fhdr = &pm->header[pm->now - pm->page];
+    memcpy(&item, fhdr, FHSZ);
     strlcpy(buf, item.title + 3, sizeof(buf));
     if (getdata_buf(b_lines - 1, 0, "   新標題: ", buf, 60, DOECHO)) {
 	strlcpy(item.title + 3, buf, sizeof(item.title) - 3);
 	setadir(buf, pm->path);
-	substitute_record(buf, &item, FHSZ, pm->now + 1);
+        if (substitute_fileheader(buf, fhdr, &item, pm->now + 1) != 0)
+            vmsg("無法變更名稱，可能目錄有其它板主正在修改。請退出本層目錄後再重試。");
     }
 }
 static void
@@ -896,7 +904,9 @@ a_hideitem(const menu_t * pm)
     else
 	item->filemode |= FILE_HIDE;
     setadir(buf, pm->path);
-    substitute_record(buf, item, FHSZ, pm->now + 1);
+    if (substitute_fileheader(buf, item, item, pm->now + 1) != 0) {
+        vmsg("無法變更，可能目錄有其它板主正在修改。請退出本層目錄後再重試。");
+    }
 }
 static void
 a_editsign(const menu_t * pm)
@@ -911,7 +921,9 @@ a_editsign(const menu_t * pm)
 	item.title[1] = buf[1] ? buf[1] : ' ';
 	item.title[2] = ' ';
 	setadir(buf, pm->path);
-	substitute_record(buf, &item, FHSZ, pm->now + 1);
+        if (substitute_fileheader(buf, &item, &item, pm->now + 1) != 0) {
+            vmsg("無法變更，可能目錄有其它板主正在修改。請退出本層目錄後再重試。");
+        }
     }
 }
 
@@ -1046,6 +1058,7 @@ isvisible_man(const menu_t * me)
 typedef struct {
     char bReturnToRoot;		// 用來跳出 recursion
     int  z_indexes [STRLEN/2];	// each index code takes minimal 2 characters
+    const char *backup_dir;    // 砍文章時要存到哪
 }   a_menu_session_t;
 
 // look up current location
@@ -1624,11 +1637,11 @@ a_menu_rec(const char *maintitle, const char *path,
 
 		case 'D':
 		    /* Ptt me.page = -1; */
-		    a_delrange(&me);
+		    a_delrange(&me, sess->backup_dir);
 		    me.page = A_INVALID_PAGE;
 		    break;
 		case 'd':
-		    a_delete(&me);
+		    a_delete(&me, sess->backup_dir);
 		    me.page = A_INVALID_PAGE;
 		    break;
 		case 'H':
@@ -1662,9 +1675,10 @@ a_menu_rec(const char *maintitle, const char *path,
 int
 a_menu(const char *maintitle, const char *path, 
 	int lastlevel, int lastbid,
-	char *trans_buffer)
+	char *trans_buffer, const char *backup_dir)
 {
     a_menu_session_t sess = {0};
+    sess.backup_dir = backup_dir;
     return a_menu_rec(maintitle, path, 
 	    lastlevel, lastbid, trans_buffer, 
 	    &sess, NULL, NULL, NULL);
@@ -1677,7 +1691,7 @@ Announce(void)
     a_menu(BBSNAME "佈告欄", "man",
 	   ((HasUserPerm(PERM_SYSOP) ) ? SYSOP : NOBODY), 
 	   0,
-	   NULL);
+	   NULL, NULL);
     return 0;
 }
 

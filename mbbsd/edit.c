@@ -3860,7 +3860,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		    a_menu("½s¿è»²§U¾¹", "etc/editexp",
 			   (HasUserPerm(PERM_SYSOP) ? SYSOP : NOBODY),
 			   0,
-			   trans_buffer);
+			   trans_buffer, NULL);
 		    currstat = currstat0;
 		    currutmp->mode = mode0;
 		}

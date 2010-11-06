@@ -994,7 +994,7 @@ read_new_mail(void * voidfptr, void *optarg)
 
     setuserfile(fname, fptr->filename);
     fptr->filemode |= FILE_READ;
-    if (substitute_record(currmaildir, fptr, sizeof(*fptr), arg->idc))
+    if (substitute_fileheader(currmaildir, fptr, fptr, arg->idc))
 	return -1;
 
     arg->mrd = 1;
@@ -1234,10 +1234,13 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
     }
 
     if (vans(msg_del_ny) == 'y') {
-	if (!delete_record(direct, sizeof(*fhdr), ent)) {
+	if (!delete_fileheader(direct, fhdr, ent)) {
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
 #ifdef USE_TIME_CAPSULE
+            // TODO we should collect all logf(delete) together
+            log_filef(genbuf,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
+                      cuser.userid, fromhost, Cdatelite(&now));
             // bypass those recovered files
             if (strncmp(fhdr->owner, RECYCLE_BIN_OWNER,
                         strlen(RECYCLE_BIN_OWNER)) != 0)
@@ -1247,7 +1250,10 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	    unlink(genbuf);
 	    loadmailusage();
 	    return DIRCHANGED;
-	}
+	} else {
+            vmsg("刪除失敗，請確定未多重登入後再重試。");
+            return DIRCHANGED;
+        }
     }
     return READ_REDRAW;
 }
@@ -1336,7 +1342,7 @@ mail_unread(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr && fhdr->filemode & FILE_READ)
     {
 	fhdr->filemode &= ~FILE_READ;
-	substitute_record(direct, fhdr, ent);
+	substitute_fileheader(direct, fhdr, fhdr, ent);
 	return FULLUPDATE;
     }
 #endif // USE_USER_MAIL_UNREAD
@@ -1424,7 +1430,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 		!(fhdr->filemode & FILE_REPLIED))
 	{
 	    fhdr->filemode |= FILE_REPLIED;
-	    substitute_ref_record(direct, fhdr, oent);
+	    substitute_fileheader(direct, fhdr, fhdr, oent);
 	}
 	break;
     }
@@ -1689,12 +1695,13 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 int
 mail_man(void)
 {
-    char            buf[PATHLEN], buf1[64];
+    char            buf[PATHLEN], title[64], backup_path[PATHLEN];
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
     // TODO if someday we put things in user man...?
     sethomeman(buf, cuser.userid);
+    sethomedir(backup_path, cuser.userid);
 
     // if user already has man directory or permission,
     // allow entering mail-man folder.
@@ -1702,8 +1709,8 @@ mail_man(void)
     if (!dashd(buf) && !HasUserPerm(PERM_MAILLIMIT))
 	return DONOTHING;
 
-    snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
-    a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT) ? 1 : 0, 0, NULL);
+    snprintf(title, sizeof(title), "%s 的信件夾", cuser.userid);
+    a_menu(title, buf, HasUserPerm(PERM_MAILLIMIT) ? 1 : 0, 0, NULL, backup_path);
     currutmp->mode = mode0;
     currstat = stat0;
     return FULLUPDATE;
@@ -1740,12 +1747,14 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 	if (*buf)
 	    strlcpy(xboard, buf, sizeof(xboard));
 	if (*xboard && ((bid = getbnum(xboard)) > 0)){ /* XXXbid */
+            char backup_path[PATHLEN];
 	    setapath(fpath, xboard);
+            setbdir(backup_path, xboard);
 	    setutmpmode(ANNOUNCE);
+            // TODO what's the backup_path here?
 	    a_menu(xboard, fpath, 
-		    HasUserPerm(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
-		    bid,
-		   NULL);
+		   HasUserPerm(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		   bid, NULL, backup_path);
 	} else {
 	    mail_man();
 	}
@@ -1759,20 +1768,30 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 static int
 mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
-    char            fpath[PATHLEN];
+    char            fpath[PATHLEN], backup_path[PATHLEN];
     char            title[TTLEN + 1];
 
-    if (HasUserPerm(PERM_MAILLIMIT)) {
-	setuserfile(fpath, fhdr->filename);
-	strlcpy(title, "◇ ", sizeof(title));
-	strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
-	a_copyitem(fpath, title, fhdr->owner, 1);
-	sethomeman(fpath, cuser.userid);
-	a_menu(cuser.userid, fpath, 1, 0, NULL);
-	return FULLUPDATE;
-    }
-    return DONOTHING;
+    if (!HasUserPerm(PERM_MAILLIMIT))
+        return DONOTHING;
+    setuserfile(fpath, fhdr->filename);
+    strlcpy(title, "◇ ", sizeof(title));
+    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    a_copyitem(fpath, title, fhdr->owner, 1);
+    sethomeman(fpath, cuser.userid);
+    sethomedir(backup_path, cuser.userid);
+    a_menu(cuser.userid, fpath, 1, 0, NULL, backup_path);
+    return FULLUPDATE;
 }
+
+static int
+del_range_mail(int ent, fileheader_t * fhdr, char *direct)
+{
+    int ret = del_range(ent, fhdr, direct, direct);
+    if (ret == DIRCHANGED)
+        setupmailusage();
+    return ret;
+}
+
 
 #ifdef OUTJOBSPOOL
 static int
@@ -1911,7 +1930,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'A' 65
     { 0, NULL }, // 'B'
     { 0, NULL }, // 'C'
-    { 1, del_range }, // 'D'
+    { 1, del_range_mail }, // 'D'
     { 1, mail_edit }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'

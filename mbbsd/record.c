@@ -291,8 +291,7 @@ safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const
     fileheader_t newfhdr;
     memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
     set_safedel_fhdr(&newfhdr, newtitle);
-    substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
-    return 0;
+    return substitute_fileheader(direct, fhdr, &newfhdr, ent);
 }
 
 int
@@ -330,7 +329,105 @@ safe_article_delete_range(const char *direct, int from, int to)
     }
     return -1;
 }
-#endif		
+#endif
+
+// Delete and archive the physical (except header) of file
+//
+// if backup_direct is provided, backup according to that directory.
+// if backup_path points to buffer, return back the backuped file
+// Return -1 if cannot delete file, 0 for success,
+// 1 if delete success but backup failed.
+int
+delete_file_content(const char *direct, const fileheader_t *fh,
+                    const char *backup_direct,
+                    char *backup_path, size_t sz_backup_path) {
+    char fpath[PATHLEN];
+    fileheader_t backup = { {0} };
+    int backup_failed = DELETE_FILE_CONTENT_SUCCESS;
+
+    if(!fh->filename[0] || !direct)
+        return DELETE_FILE_CONTENT_FAILED;
+
+#ifdef FN_SAFEDEL
+    if (
+#ifdef FN_SAFEDEL_PREFIX_LEN
+            strncmp(fh->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0 ||
+#endif
+            strcmp(fh->filename, FN_SAFEDEL) == 0 ||
+#endif
+        0)
+        return DELETE_FILE_CONTENT_SUCCESS;
+
+    if (backup_path) {
+        assert(backup_direct);
+        assert(sz_backup_path > 0);
+        *backup_path = 0;
+    }
+
+    // solve source file name
+    setdirpath(fpath, direct, fh->filename);
+    if (!dashf(fpath))
+        return DELETE_FILE_CONTENT_FAILED;
+
+    if (backup_direct &&
+        strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
+
+        log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
+                  cuser.userid, fromhost, Cdatelite(&now));
+
+        // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
+        strlcpy(backup.owner, fh->owner, sizeof(backup.owner));
+        strlcpy(backup.date, fh->date, sizeof(backup.date));
+        strlcpy(backup.title, fh->title, sizeof(backup.title));
+        strlcpy(backup.filename, fh->filename, sizeof(backup.filename));
+
+        if (backup_direct != direct &&
+            strcmp(backup_direct, direct) != 0) {
+            // need to create a new file entry.
+            char *slash = NULL;
+            char bakpath[PATHLEN];
+
+            strlcpy(bakpath, backup_direct, sizeof(bakpath));
+            slash = strrchr(bakpath, '/');
+            if (slash)
+                *slash = 0;
+            if (stampfile_u(bakpath, &backup) == 0 &&
+                Rename(fpath, bakpath) == 0) {
+                strlcpy(fpath, bakpath, sizeof(fpath));
+            } else {
+                backup_direct = NULL;
+                backup_failed = 1;
+            }
+        }
+
+        // now, always backup according to fpath
+        if (backup_direct) {
+#ifdef USE_TIME_CAPSULE
+            if (!timecapsule_archive_new_revision(
+                        fpath, &backup, sizeof(backup),
+                        backup_path, sz_backup_path))
+                backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
+#else
+            // we can't backup to same folder.
+            if (strcmp(direct, backup_direct) == 0) {
+                backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
+            } else {
+                if (append_record(backup_direct, &backup, sizeof(backup)) < 0)
+                    backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
+                if (backup_path)
+                    strlcpy(backup_path, fpath, sz_backup_path);
+            }
+            // the fpath is used as-is.
+            *fpath = 0;
+#endif
+        }
+    }
+
+    // the file should be already in time capsule
+    if (*fpath && unlink(fpath) != 0)
+        return DELETE_FILE_CONTENT_FAILED;
+    return backup_failed;
+}
 
 // XXX announce(man) directory uses a smaller range of file names.
 // TODO merge with common/bbs/fhdr_stamp.c
