@@ -46,4 +46,6 @@ extern void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 #endif
 
 extern int cpuload(char *str);
+
+extern void get_memusage(int buflen, char *buf);
 #endif

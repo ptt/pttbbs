@@ -623,34 +623,10 @@ p_sysinfo(void)
 
     if (HasUserPerm(PERM_SYSOP)) {
 	struct rusage ru;
-#ifdef __linux__
-	int vmdata=0, vmstk=0;
-	FILE * fp;
-	char buf[128];
-	if ((fp = fopen("/proc/self/status", "r"))) {
-	    while (fgets(buf, 128, fp)) {
-		sscanf(buf, "VmData: %d", &vmdata);
-		sscanf(buf, "VmStk: %d", &vmstk);
-	    }
-	    fclose(fp);
-	}
-#endif
+	char usage[80];
+	get_memusage(sizeof(usage), usage);
 	getrusage(RUSAGE_SELF, &ru);
-	prints("記憶體用量: "
-#ifdef IA32
-	       "sbrk: %u KB, "
-#endif
-#ifdef __linux__
-	       "VmData: %d KB, VmStk: %d KB, "
-#endif
-	       "idrss: %d KB, isrss: %d KB\n",
-#ifdef IA32
-	       ((unsigned int)sbrk(0) - 0x8048000) / 1024,
-#endif
-#ifdef __linux__
-	       vmdata, vmstk,
-#endif
-	       (int)ru.ru_idrss, (int)ru.ru_isrss);
+	prints("記憶體用量: %s\n", usage);
 	prints("CPU 用量:   %ld.%06ldu %ld.%06lds",
 	       (long int)ru.ru_utime.tv_sec, 
 	       (long int)ru.ru_utime.tv_usec,

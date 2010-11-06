@@ -801,4 +801,6 @@ int ParseDate(const char *date, int *year, int *month, int *day);
 int ParseDateTime(const char *date, int *year, int *month, int *day,
 		  int *hour, int *min, int *sec);
 
+int verify_captcha(const char *reason);
+
 #endif

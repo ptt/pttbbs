@@ -3,7 +3,7 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-SRCS:=	cpuload.c proctitle.c strlcat.c strlcpy.c
+SRCS:=	cpuload.c proctitle.c strlcat.c strlcpy.c memusage.c
 LIB:=	osdep
 
 all: .depend

@@ -568,11 +568,9 @@ igetch(void)
 #ifdef DEBUG
 	    case Ctrl('Q'):
 		{
-		    struct rusage ru;
-		    getrusage(RUSAGE_SELF, &ru);
-		    vmsgf("sbrk: %d KB, idrss: %d KB, isrss: %d KB",
-			    ((int)sbrk(0) - 0x8048000) / 1024,
-			    (int)ru.ru_idrss, (int)ru.ru_isrss);
+		    char usage[80];
+		    get_memusage(sizeof(usage), usage);
+		    vmsg(usage);
 		}
 		continue;
 #endif
