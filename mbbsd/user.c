@@ -2,13 +2,6 @@
 #define PWCU_IMPL
 #include "bbs.h"
 
-#ifdef USE_USER_SEX
-static char    * const sex[8] = {
-    MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
-    MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
-};
-#endif
-
 #ifdef CHESSCOUNTRY
 static const char * const chess_photo_name[3] = {
     "photo_fivechess", "photo_cchess", "photo_go",
@@ -177,9 +170,6 @@ user_display(const userec_t * u, int adminmode)
 
     prints("\t電子信箱: %s\n", u->email);
     prints("\t銀行帳戶: %d " MONEYNAME "幣\n", u->money);
-#ifdef USE_USER_SEX
-    prints("\t性    別: %s\n", sex[u->sex%8]);
-#endif
     prints("\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");
@@ -734,17 +724,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    snprintf(buf, sizeof(buf), "%010d", x.mobile);
 	getdata_buf(y++, 0, "手機號碼：", buf, 11, NUMECHO);
 	x.mobile = atoi(buf);
-
-#ifdef USE_USER_SEX
-	snprintf(genbuf, sizeof(genbuf), "%d", (x.sex + 1) % 8);
-	getdata_str(y++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
-		    "(6)阿姨 (7)植物 (8)礦物：",
-		    buf, 3, NUMECHO, genbuf);
-	if (buf[0] >= '1' && buf[0] <= '8')
-	    x.sex = (buf[0] - '1') % 8;
-	else
-	    x.sex = x.sex % 8;
-#endif
 
 	while (1) {
 	    snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i",

@@ -255,9 +255,6 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *phone,
 			 const char *email,
 			 int         mobile,
-#ifdef USE_USER_SEX
-			 uint8_t     sex,
-#endif
 			 uint8_t     year,
 			 uint8_t     month,
 			 uint8_t     day,
@@ -270,9 +267,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(u.phone,    phone,  sizeof(u.phone));
     strlcpy(u.email,    email,  sizeof(u.email));
     u.mobile = mobile;
-#ifdef USE_USER_SEX
-    u.sex    = sex;
-#endif
     u.year   = year;
     u.month  = month;
     u.day    = day;
@@ -286,9 +280,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
     strlcpy(cuser.email,    email,  sizeof(cuser.email));
     cuser.mobile = mobile;
-#ifdef USE_USER_SEX
-    cuser.sex    = sex;
-#endif
     cuser.year   = year;
     cuser.month  = month;
     cuser.day    = day;
@@ -636,7 +627,4 @@ void pwcuInitGuestInfo	()
 	    sizeof(currutmp->nickname));
     strlcpy(cuser.realname, "guest", sizeof(cuser.realname));
     memset (cuser.mind, 0, sizeof(cuser.mind));
-#ifdef USE_USER_SEX
-    cuser.sex = i % 8;
-#endif
 }

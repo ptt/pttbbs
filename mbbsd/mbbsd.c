@@ -1010,10 +1010,6 @@ setup_utmp(int mode)
     uinfo.userlevel = cuser.userlevel;
     uinfo.lastact   = time(NULL);
 
-#ifdef USE_USER_SEX
-    uinfo.sex	    = cuser.sex % 8;
-#endif
-
     // only enable this after you've really changed talk.c to NOT use from_alias.
     uinfo.from_ip   = inet_addr(fromhost);
 

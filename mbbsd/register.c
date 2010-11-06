@@ -1116,9 +1116,6 @@ u_register(void)
     char            ans[3], *errcode;
     int		    i = 0;
     int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
-#ifdef USE_USER_SEX
-    char            sex_is[2];
-#endif
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
@@ -1161,11 +1158,6 @@ u_register(void)
     else
 	snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
 		 1900 + cuser.year, cuser.month, cuser.day);
-
-#ifdef USE_USER_SEX
-    sex_is[0] = (cuser.sex % 8) + '1';
-    sex_is[1] = 0;
-#endif
 
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
@@ -1393,9 +1385,6 @@ u_register(void)
 	    }
 	    break;
 	}
-#ifdef USE_USER_SEX
-	getfield(10, "1.♂男 2.♀女 ", REGNOTES_ROOT "sex", "性別", sex_is, 2);
-#endif
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1410,9 +1399,6 @@ u_register(void)
     // copy values to cuser
     pwcuRegisterSetInfo(rname, addr, career, phone, email,
 	    atoi(mobile),
-#ifdef USE_USER_SEX
-            (sex_is[0] - '1') % 8,
-#endif
 	    year, mon, day, isForeign);
 
     // if reach here, email is apparently 'x'.
