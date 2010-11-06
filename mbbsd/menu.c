@@ -545,8 +545,30 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 }
 /* INDENT OFF */
 
+static int
+view_user_money_log() {
+    char userid[IDLEN+1];
+    char fpath[PATHLEN];
+
+    vs_hdr("檢視使用者交易記錄");
+    usercomplete("請輸入要檢視的ID: ", userid);
+    sethomefile(fpath, userid, FN_RECENTPAY);
+    if (more(fpath, YEA) < 0)
+        vmsgf("使用者 %s 無最近交易記錄", userid);
+    return 0;
+}
+
+static int x_admin_money(void);
+
 // ----------------------------------------------------------- MENU DEFINITION
 // 注意每個 menu 最多不能同時顯示超過 11 項 (80x24 標準大小的限制)
+
+static const commands_t m_admin_money[] = {
+    {view_user_money_log, PERM_SYSOP|PERM_VIEWSYSOP,
+                                                "VView Log      檢視交易記錄"},
+    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"GGivemoney     紅包雞"}, 
+    {NULL, 0, NULL}
+};
 
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
@@ -560,10 +582,10 @@ static const commands_t adminlist[] = {
 	PERM_ACCOUNTS|PERM_ACCTREG,	"RRegister      審核註冊表單"},
     {x_file, 
 	PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
-    {give_money, 
-	PERM_SYSOP|PERM_VIEWSYSOP,	"GGivemoney     紅包雞"},
+    {x_admin_money, PERM_SYSOP|PERM_VIEWSYSOP,
+                                        "MMoney         " MONEYNAME "幣相關"},
     {u_list, PERM_SYSOP,		"UUsers         列出註冊名單"},
-    {m_loginmsg, PERM_SYSOP,		"MMessage Login 進站水球"},
+    {m_loginmsg, PERM_SYSOP,		"LLMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
 
@@ -725,6 +747,13 @@ x_agreement(void)
     return 0;
 }
 #endif
+
+static int
+x_admin_money(void)
+{
+    domenu(M_XMENU, "金錢相關管理", 'V', m_admin_money);
+    return 0;
+}
 
 #ifdef HAVE_INFO
 static int
