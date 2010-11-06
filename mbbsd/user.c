@@ -176,7 +176,7 @@ user_display(const userec_t * u, int adminmode)
 	outs("\n");
 
     prints("\t電子信箱: %s\n", u->email);
-    prints("\t銀行帳戶: %d 元\n", u->money);
+    prints("\t銀行帳戶: %d " MONEYNAME "幣\n", u->money);
 #ifdef USE_USER_SEX
     prints("\t性    別: %s\n", sex[u->sex%8]);
 #endif

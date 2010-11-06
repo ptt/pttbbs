@@ -177,11 +177,11 @@ p_exmail(void)
     reload_money();
     if (cuser.money < n * 1000)
     {
-	vmsg("你的錢不夠。");
+	vmsg("你的" MONEYNAME "幣不夠。");
 	return 0;
     }
 
-    if (vmsgf("你想購買 %d 封信箱 (要花 %d 元), 確定嗎？[y/N] ", 
+    if (vmsgf("你想購買 %d 封信箱 (要花 %d " MONEYNAME "幣), 確定嗎？[y/N] ", 
 		n, n*1000) != 'y')
 	return 0;
 
@@ -215,7 +215,7 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 	    "標題: 招財進寶\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
-	    ANSI_COLOR(1;31) "    我包給你一個 %d 元的大紅包喔 ^_^\n\n"
+	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME "幣的大紅包喔 ^_^\n\n"
 	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n"
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
             "\n  您可於下列位置找到最近的交易記錄:\n"
@@ -394,7 +394,7 @@ give_money_ui(const char *userid)
 
     m = 0;
     money_buf[0] = 0;
-    mvouts(2, 0, "要給他多少錢呢? "
+    mvouts(2, 0, "要給他多少" MONEYNAME "幣呢? "
            "(可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
     outs(" 請輸入金額: ");  // (3, 0)
     {
@@ -416,7 +416,7 @@ give_money_ui(const char *userid)
 
     reload_money();
     if (cuser.money < m) {
-	vmsg("你沒有那麼多錢喔!");
+	vmsg("你沒有那麼多" MONEYNAME "幣喔!");
 	return -1;
     }
 

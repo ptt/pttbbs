@@ -260,7 +260,7 @@ openticket(int bid)
     do {
 	do {
 	    getdata(20, 0,
-		ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退錢)" 
+		ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退費)" 
 		ANSI_RESET ":"
 		    , buf, 3, LCECHO);
 	    bet = atoi(buf);
@@ -334,7 +334,7 @@ openticket(int bid)
 	mail_redenvelop("[賭場抽頭]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
-	pay(price * 10, "賭盤退錢手續費");
+	pay(price * 10, "賭盤退費手續費");
 	money = price;
     }
     setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);
@@ -367,7 +367,7 @@ openticket(int bid)
 		    Cdatelite(&now), betname[bet], total * price, money,
 		    total ? (float)ticket[bet] / total : 0);
 	} else
-	    fprintf(fp, "\n\n賭盤取消退錢： %s \n\n", Cdatelite(&now));
+	    fprintf(fp, "\n\n賭盤取消退費： %s \n\n", Cdatelite(&now));
 
     } // XXX somebody may use fp even fp==NULL
     fclose(fp1);
@@ -386,7 +386,7 @@ openticket(int bid)
 			    MONEYNAME "幣\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
-			 "%s 賭場退錢! $ %d", bh->brdname, money * i);
+			 "%s 賭場退費! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
 		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5d 枚" 

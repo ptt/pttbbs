@@ -1540,7 +1540,7 @@ static const char
     "  好友廣播",    " b (要在好友列表)",
     "  回顧訊息",    "l",
     "  寄信給他",    "m",
-    "  給錢",	     "g",
+    "  給予" MONEYNAME "幣","g",
     NULL,
 },
 *hlp_talkmisc[] = {

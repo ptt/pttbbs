@@ -243,14 +243,15 @@ save_violatelaw(void)
     if (cuser.money < (int)cuser.vl_count * 1000) {
 	snprintf(buf, sizeof(buf),
 		 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
-		 "必須繳出 %d 元；但你目前只有 %d 元, 錢不夠啦!!" ANSI_RESET,
-           (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
+		 "必須繳出 %d " MONEYNAME "幣；但你目前只有 %d ，數量不足!!"
+                 ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
+                 cuser.money);
 	mvouts(22, 0, buf);
 	pressanykey();
 	return 0;
     }
     move(5, 0);
-    prints("這是你第 %d 次違法 必須繳出 %d 元\n\n", 
+    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "幣\n\n", 
 	    cuser.vl_count, cuser.vl_count * 1000);
     outs(ANSI_COLOR(1;37) "你知道嗎? 因為你的違法 "
 	   "已經造成很多人的不便" ANSI_RESET "\n");
@@ -260,7 +261,7 @@ save_violatelaw(void)
 	ok[0] != 'y') 
     {
 	move(15, 0);
-	outs( ANSI_COLOR(1;31) "不想付錢嗎？ 還是不知道要按 y ？\n"
+	outs( ANSI_COLOR(1;31) "不想付嗎？ 還是不知道要按 y ？\n"
 	    "請養成看清楚系統訊息的好習慣。\n"
 	    "等你想通了再來吧!! 我相信你不會知錯不改的~~~" ANSI_RESET);
 	pressanykey();
@@ -274,7 +275,7 @@ save_violatelaw(void)
 	log_filef("log/violation", LOG_CREAT,
 		"%s %s pay-violation error: race-conditionn hack?\n", 
 		Cdate(&now), cuser.userid);
-	vmsg("錢怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
+	vmsg(MONEYNAME "幣怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
 	return 0; 
     }
 
@@ -1358,7 +1359,7 @@ do_general(int garbage)
                 pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title); 
 		pwcuIncNumPost();
 		addPost = 1;
-		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d 元\n",
+		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d " MONEYNAME "幣\n",
 			cuser.numposts, money);
 		prints("\n (若之後自行或被板主刪文則此次獲得的有效文章數及稿酬可能會被回收)\n\n");
 	    } else {
@@ -3327,7 +3328,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         if (!not_owned) {
             reload_money();
             if (cuser.money < del_fee) {
-                vmsgf("您身上的金錢不夠，刪除此文要 %d 元", del_fee);
+                vmsgf("您身上的" MONEYNAME "幣不夠，刪除此文要 %d " MONEYNAME "幣", del_fee);
                 return FULLUPDATE;
             }
             // after this, we cannot delay in !not_owned mode otherwise we'll get
@@ -3432,7 +3433,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 pay(del_fee, "%s 看板 文章自刪清潔費: %s",  
                         currboard, fhdr->title); 
 		sendalert(cuser.userid, ALERT_PWD_PERM);
-		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 元", 
+		vmsgf("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "幣", 
 			cuser.numposts, del_fee);
 	    }
 
@@ -3613,7 +3614,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 	if(m < 0)
 	    prints("│ 特殊文章，無價格記錄");
 	else
-	    prints("│ 這一篇文章值 %d 元", m);
+	    prints("│ 這一篇文章值 %d " MONEYNAME "幣", m);
 
     }
     prints("\n");

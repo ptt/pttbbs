@@ -655,7 +655,8 @@ static int u_view_recentpay()
     char fn[PATHLEN];
     clear();
     mvouts(10, 5, "注意: 本記錄尚於測試中，可能會有未記錄到的交易記錄。");
-    mvouts(11, 5, "      此處內容僅供參考，實際金錢異動以站方內部資料為準");
+    mvouts(11, 5, "      此處內容僅供參考，實際" MONEYNAME 
+                        "幣異動以站方內部資料為準");
     pressanykey();
     setuserfile(fn, FN_RECENTPAY);
     return more(fn, YEA);
@@ -835,7 +836,7 @@ static const commands_t xyzlist[] = {
 
 /* Ptt money menu */
 static const commands_t moneylist[] = {
-    {p_give, 0,         "00Give        給其他人錢"},
+    {p_give, 0,         "00Give        給其他人" MONEYNAME "幣"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
     {p_from, 0,         "22From        暫時修改故鄉"},
     {ordersong,0,       "33OSong       動態點歌機"},
