@@ -2669,7 +2669,11 @@ pmore2(
                         else if (*ans == 'q')
                             sbuf[0] = 0;
                         else
+#ifdef HAVE_DBCS_STRNCASECMP
+                            sr.cmpfunc = DBCS_strncasecmp;
+#else
                             sr.cmpfunc = strncasecmp;
+#endif
                     }
                     sr.len = strlen(sbuf);
                     if(sr.len) sr.search_str = (unsigned char*)strdup(sbuf);

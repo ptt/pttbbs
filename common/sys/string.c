@@ -323,24 +323,31 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 }
 
 /**
+ * DBCS_NextStatus(c, prev_status): 取得 c 的 DBCS 狀態
+ */
+int
+DBCS_NextStatus(char c, int prev_status) {
+    if(prev_status == DBCS_LEADING)
+        return DBCS_TRAILING;
+    if ((unsigned char)c >= 0x80)
+        return DBCS_LEADING;
+    return prev_status = DBCS_ASCII;
+}
+
+/**
  * DBCS_Status(dbcstr, pos): 取得字串中指定位置的 DBCS 狀態。
+ * 若 pos 超過結尾則傳回最後一個字元的 DBCS status
  */
 int DBCS_Status(const char *dbcstr, int pos)
 {
     int sts = DBCS_ASCII;
-    const unsigned char *s = (const unsigned char*)dbcstr;
+    char c;
 
-    while(pos >= 0)
-    {
-	if(sts == DBCS_LEADING)
-	    sts = DBCS_TRAILING;
-	else if (*s >= 0x80)
-	{
-	    sts = DBCS_LEADING;
-	} else {
-	    sts = DBCS_ASCII;
-	}
-	s++, pos--;
+    while (pos-- >= 0) {
+        c = *dbcstr++;
+        sts = DBCS_NextStatus(c, sts);
+        if (c == 0)
+            break;
     }
     return sts;
 }
@@ -359,6 +366,7 @@ void DBCS_safe_trim(char *dbcstr)
 char *
 DBCS_strcasestr(const char* pool, const char *ptr)
 {
+    // TODO rewrite this with DBCS_Status
     int i = 0, i2 = 0, found = 0,
         szpool = strlen(pool),
         szptr  = strlen(ptr);
@@ -401,6 +409,27 @@ DBCS_strcasestr(const char* pool, const char *ptr)
             i++;
     }
     return NULL;
+}
+
+/*
+ * DBCS_strncasecmp(s1, s2, len): 比較 s1/s2 (只忽略英文大小寫)
+ */
+int
+DBCS_strncasecmp(const char *s1, const char *s2, size_t len) {
+    // quick return by strncasecmp
+    int r = strncasecmp(s1, s2, len);
+    int sts1 = DBCS_ASCII, sts2 = DBCS_ASCII;
+    if (r != 0)
+        return r;
+
+    while (len-- > 0) {
+        char c1 = *s1++, c2 = *s2++;
+        sts1 = DBCS_NextStatus(c1, sts1);
+        sts2 = DBCS_NextStatus(c2, sts2);
+        if (sts1 != DBCS_ASCII && c1 != c2)
+            return (unsigned char)c1 - (unsigned char)c2;
+    }
+    return 0;
 }
 
 /* ----------------------------------------------------- */

@@ -110,9 +110,13 @@ extern char * qp_encode (char *s, size_t slen, const char *d, const char *tocode
 extern unsigned StringHash(const char *s);
 /* DBCS utilities */
 extern int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
+extern int    DBCS_NextStatus(char c, int prev_status);
 extern int    DBCS_Status(const char *dbcstr, int pos);
 extern void   DBCS_safe_trim(char *dbcstr);
 extern char * DBCS_strcasestr(const char* pool, const char *ptr);
+extern int    DBCS_strncasecmp(const char *s1, const char *s2, size_t len);
+#define HAVE_DBCS_STRCASESTR
+#define HAVE_DBCS_STRNCASECMP
 extern size_t str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */
