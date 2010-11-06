@@ -9,11 +9,11 @@ void get_memusage(int buflen, char *buf)
 #ifdef __linux__
     int vmdata=0, vmstk=0;
     FILE * fp;
-    char buf[128];
+    char file_buf[128];
     if ((fp = fopen("/proc/self/status", "r"))) {
-	while (fgets(buf, 128, fp)) {
-	    sscanf(buf, "VmData: %d", &vmdata);
-	    sscanf(buf, "VmStk: %d", &vmstk);
+	while (fgets(file_buf, sizeof(file_buf), fp)) {
+	    sscanf(file_buf, "VmData: %d", &vmdata);
+	    sscanf(file_buf, "VmStk: %d", &vmstk);
 	}
 	fclose(fp);
     }
