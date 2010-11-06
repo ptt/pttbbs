@@ -79,11 +79,7 @@ typedef struct userec_t {
     uint8_t	month;		/* 生日 月 */
     uint8_t	day;		/* 生日 日 */
     uint8_t	year;		/* 生日 年 */
-#ifdef USE_USER_SEX
-    uint8_t	sex;		/* 性別 */
-#else
-    uint8_t     nonuse_sex;     /* 性別 (已停用) */
-#endif
+    uint8_t     nonuse_sex;     /* 性別 (已停用), 未清空過 */
 
     uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
@@ -344,11 +340,7 @@ typedef struct userinfo_t {
     char    nickname[24];
     char    from[27];               /* machine name the user called in from */
     in_addr_t	from_ip;	    // was: int     from_alias;
-#ifdef USE_USER_SEX
-    char    sex;
-#else
     char    nonuse_sex;             // deprecated: sex info
-#endif
     char    nonuse[4];
     /*
     unsigned char goodpost;
