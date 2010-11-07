@@ -6,7 +6,8 @@
 #define CheckMenuPerm(x) \
     ( (x == MENU_UNREGONLY)? \
       ((!HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_LOGINOK))?0:1) :\
-	((x) ? HasUserPerm(x) : 1))
+	((!x) ? 1 :  \
+         ((x & PERM_LOGINOK) ? HasBasicUserPerm(x) : HasUserPerm(x))))
 
 /* help & menu processring */
 static int      refscreen = NA;

@@ -1307,7 +1307,7 @@ showplans_userec(userec_t *user)
 
     sethomefile(genbuf, user->userid, fn_plans);
     if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
-	prints("《個人名片》%s 目前沒有名片", user->userid);
+	prints("《個人名片》%s 目前沒有名片\n", user->userid);
 }
 
 void

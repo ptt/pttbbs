@@ -370,6 +370,9 @@ give_money_ui(const char *userid)
     // like user pw/id/...
     vs_hdr("µ¹¤©" MONEYNAME "¹ô");
 
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+        return -1;
+
     if (!userid || !*userid || strcmp(userid, cuser.userid) == 0)
 	userid = NULL;
 
