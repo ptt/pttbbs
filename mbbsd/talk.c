@@ -1401,6 +1401,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	if (read(msgsock, &c, sizeof(c)) != sizeof(c))
 	    c = 'n';
 	vkey_detach();
+        // alert that we dot a response
+        bell();
 
 	if (c == 'y') {
 	    switch (uin->sig) {
