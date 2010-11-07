@@ -3095,6 +3095,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     int             num1, num2, num, cdeleted = 0;
     fileheader_t *recs = NULL;
     int ret = 0;
+    int check_mark = 1;
 
 #ifdef SAFE_ARTICLE_DELETE
     int use_safe_delete = 0;
@@ -3153,7 +3154,14 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
                    num1, IDLEN, recs[0].owner, recs[0].title,
                    num2, IDLEN, recs[num-1].owner, recs[num-1].title);
 
-    getdata(10, 0, msg_sure_yn, numstr, 3, LCECHO);
+    // HACK: warn if target is man.
+    if (*direct == 'm') {
+        outs("(範圍內的子目錄會被自動跳過，請另行用小 d 刪除)\n");
+        // do not check mark in man
+        check_mark = 0;
+    }
+
+    getdata(10, 0, msg_sure_ny, numstr, 3, LCECHO);
     if (*numstr != 'y') {
         free(recs);
         return FULLUPDATE;
@@ -3167,23 +3175,42 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     do {
         int id = num1, i;
         for (i = 0; ret == 0 && i < num; i++) {
-            // TODO now we can read file header and check MARK.
+            // first, check if the record is ready for being deleted.
+            fileheader_t *fh = recs + i;
+            const char *bypass = NULL;
+
+            if (check_mark && fh->filemode & FILE_MARKED) {
+                bypass = "標記為 m 的項目";
+            } else {
+                char xfpath[PATHLEN];
+                setdirpath(xfpath, direct, fh->filename);
+                if (dashd(xfpath)) {
+                    bypass = "子目錄";
+                }
+            }
+            
+            if (bypass) {
+                id++;
+                mvprints(b_lines-1, 0, "跳過%s: %s\n", bypass, fh->title);
+                doupdate();
+                continue;
+            }
+
 #ifdef SAFE_ARTICLE_DELETE
             if (use_safe_delete &&
-                safe_article_delete(id, recs+i, direct, NULL) == 0) {
+                safe_article_delete(id, fh, direct, NULL) == 0) {
                 id++;
             }
             else
 #endif
-            if (delete_fileheader(direct, recs+i, id) == 0) {
+            if (delete_fileheader(direct, fh, id) == 0) {
                 // no need to add id
             } else {
                 ret = -1;
                 break;
             }
-            // delete file
             if (!IS_DELETE_FILE_CONTENT_OK(
-                        delete_file_content(direct, recs+i,
+                        delete_file_content(direct, fh,
                                             backup_direct, NULL, 0))) {
                 ret = -1;
                 break;
