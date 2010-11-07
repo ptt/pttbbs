@@ -28,6 +28,9 @@ setforward(void)
     int flIdiotSent2Self = 0;
     int oidlen = strlen(cuser.userid);
 
+    if (!HasUserPerm(PERM_LOGINOK))
+	return DONOTHING;
+
     vs_hdr("設定自動轉寄");
 
     outs(ANSI_COLOR(1;31) "\n\n"
@@ -251,6 +254,9 @@ m_internet(void)
     // if using STRLEN, the getdata would be too long on 80x24 screen.
     char receiver[TTLEN];
     char title[TTLEN];
+
+    if (!HasUserPerm(PERM_INTERNET))
+	return DONOTHING;
 
     clear();
     mvouts(5, 0,
@@ -827,6 +833,9 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_list(void)
 {
+    if (!HasUserPerm(PERM_LOGINOK))
+        return DONOTHING;
+
     vs_hdr("群組作業");
     multi_send(NULL);
     return 0;
@@ -1073,10 +1082,15 @@ void setmailalert()
     else
            currutmp->alerts &= ~ALERT_NEW_MAIL;
 }
+
 int
 m_new(void)
 {
     struct ReadNewMailArg arg;
+
+    if (!HasUserPerm(PERM_READMAIL))
+        return DONOTHING;
+
     clear();
     setutmpmode(RMAIL);
     memset(&arg, 0, sizeof(arg));
@@ -1989,10 +2003,8 @@ m_read(void)
 {
     int back_bid;
 
-    /* // deprecated because now we kicks online people.
-    if (HasUserPerm(PERM_BASIC) && !HasUserPerm(PERM_LOGINOK))
-	check_register_notify();
-	*/
+    if (!HasUserPerm(PERM_READMAIL))
+        return DONOTHING;
 
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	curredit = EDIT_MAIL;
