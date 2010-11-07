@@ -372,8 +372,11 @@ delete_file_content(const char *direct, const fileheader_t *fh,
     if (backup_direct &&
         strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
 
-        log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
-                  cuser.userid, fromhost, Cdatelite(&now));
+        // FIXME some announcements were made by hard-links, especial for those
+        // in mail. let's temporary make this tag appear only in board.
+        if (*direct == 'b')
+            log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
+                      cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
         strlcpy(backup.owner, fh->owner, sizeof(backup.owner));
