@@ -552,6 +552,8 @@ view_user_money_log() {
 
     vs_hdr("檢視使用者交易記錄");
     usercomplete("請輸入要檢視的ID: ", userid);
+    if (!is_validuserid(userid))
+        return 0;
     sethomefile(fpath, userid, FN_RECENTPAY);
     if (more(fpath, YEA) < 0)
         vmsgf("使用者 %s 無最近交易記錄", userid);
@@ -584,8 +586,8 @@ static const commands_t adminlist[] = {
 	PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
     {x_admin_money, PERM_SYSOP|PERM_VIEWSYSOP,
                                         "MMoney         " MONEYNAME "幣相關"},
-    {u_list, PERM_SYSOP,		"UUsers         列出註冊名單"},
-    {m_loginmsg, PERM_SYSOP,		"LLMessage Login 進站水球"},
+    {u_list, PERM_SYSOP,		"LLUsers List     列出註冊名單"},
+    {m_loginmsg, PERM_SYSOP,		"GGMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
 

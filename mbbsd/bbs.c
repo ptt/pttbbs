@@ -3095,7 +3095,17 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     int             num1, num2, num, cdeleted = 0;
     fileheader_t *recs = NULL;
     int ret = 0;
+
+#ifdef SAFE_ARTICLE_DELETE
     int use_safe_delete = 0;
+
+    if (*direct == 'b') {
+        boardheader_t  *bp = getbcache(currbid);
+        if(!(currmode & MODE_DIGEST) &&
+                bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
+            use_safe_delete = 1;
+    }
+#endif
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
     
@@ -3153,15 +3163,6 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     outmsg("處理中,請稍後...");
     refresh();
     ret = 0;
-
-#ifdef SAFE_ARTICLE_DELETE
-    if (*direct == 'b') {
-        boardheader_t  *bp = getbcache(currbid);
-        if(!(currmode & MODE_DIGEST) &&
-                bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-            use_safe_delete = 1;
-    }
-#endif
 
     do {
         int id = num1, i;
