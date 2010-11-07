@@ -369,14 +369,16 @@ delete_file_content(const char *direct, const fileheader_t *fh,
     if (!dashf(fpath))
         return DELETE_FILE_CONTENT_FAILED;
 
+    // FIXME some announcements were made by sym-links, especial for those
+    // in mail. we should ignore them.
     if (backup_direct &&
+        !dashl(fpath) &&
         strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
 
-        // FIXME some announcements were made by hard-links, especial for those
-        // in mail. let's temporary make this tag appear only in board.
-        if (*direct == 'b')
-            log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
-                      cuser.userid, fromhost, Cdatelite(&now));
+        // FIXME maybe for non-board files we should do this by simply touching
+        // file instead of full log.
+        log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
+                cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
         strlcpy(backup.owner, fh->owner, sizeof(backup.owner));
