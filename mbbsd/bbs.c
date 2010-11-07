@@ -628,7 +628,7 @@ readdoent(int num, fileheader_t * ent)
     }
 
     // tag should override everything
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_LOGINOK)) 
+    if ((currmode & MODE_BOARD) || HasBasicUserPerm(PERM_LOGINOK)) 
     {
 	if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
@@ -1144,7 +1144,7 @@ do_general(int garbage)
     setutmpmode(POSTING);
     /* 未具備 Internet 權限者，只能在站內發表文章 */
     /* 板主預設站內存檔 */
-    if (HasUserPerm(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
+    if (HasBasicUserPerm(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
 	local_article = 0;
     else
 	local_article = 1;
@@ -1215,7 +1215,7 @@ do_general(int garbage)
     // drop money & numposts for free boards, or user without login information
     // (they may post on free boards like SYSOP)
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
-    if (!HasUserPerm(PERM_LOGINOK) || 
+    if (!HasBasicUserPerm(PERM_LOGINOK) || 
 	IsFreeBoardName(currboard) || 
 	(currbrdattr&BRD_BAD) || 
 	bp->BM[0] < ' ') // XXX note: BM may contain some (chinese) text that is not userid
@@ -2354,7 +2354,7 @@ stop_gamble(void)
 static int
 join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
     if (stop_gamble()) {
 	vmsg("目前未舉辦賭盤或賭盤已開獎");

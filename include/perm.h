@@ -56,6 +56,7 @@
 #define PERM_INTERNET   (PERM_LOGINOK)  /* 身份認證過關的才能寄信到 Internet */
 
 #define HasUserPerm(x)  ((cuser.userlevel & (x)) != 0)
+#define HasBasicUserPerm(x)  (HasUserPerm(PERM_BASIC) && HasUserPerm(x))
 #define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 
 #define IS_BOARD(bptr)   ((bptr)->brdname[0] && \

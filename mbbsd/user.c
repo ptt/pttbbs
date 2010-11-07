@@ -536,7 +536,7 @@ void Customize(void)
 		}
 		continue;
 	    case 1:
-		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK) && u_set_mind())
+		if (HasBasicUserPerm(PERM_LOGINOK) && u_set_mind())
 		    dirty = 1;
 		continue;
 	}

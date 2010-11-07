@@ -1925,7 +1925,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	    strlcpy(mytitle, ans, STRLEN);
 	return KEEP_EDITING;
     case 's':
-	if (!HasUserPerm(PERM_LOGINOK)) {
+	if (!HasBasicUserPerm(PERM_LOGINOK)) {
 	    local_article = 1;
 	    // only report if local can be set.
 	    if (islocal)

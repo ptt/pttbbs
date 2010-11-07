@@ -1000,7 +1000,7 @@ user_vote(const char *bname)
 	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
     }
-    if (!HasUserPerm(PERM_LOGINOK)) {
+    if (!HasBasicUserPerm(PERM_LOGINOK)) {
 	vmsg("對不起! 您未完成註冊程序, 還沒有投票權喔!");
 	return FULLUPDATE;
     }

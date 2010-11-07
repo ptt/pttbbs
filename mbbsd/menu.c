@@ -414,6 +414,8 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	i = -1;
 	switch (cmd) {
 	case Ctrl('Z'):
+            if (!HasUserPerm(PERM_BASIC))
+                break;
 	    ZA_Select(); // we'll have za loop later.
 	    refscreen = YEA;
 	    i = lastcmdptr;

@@ -47,7 +47,7 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
-    if (!HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
+    if (!HasBasicUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
 	return 0;
 
     return (uentp->pager != PAGER_ANTIWB && 
@@ -2482,7 +2482,7 @@ userlist(void)
 		break;
 
 	    case 'i':
-		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK))
+		if (HasBasicUserPerm(PERM_LOGINOK))
 		    u_set_mind();
 		redrawall = redraw = 1;
 		break;
@@ -2493,7 +2493,7 @@ userlist(void)
 	    case KEY_RIGHT:
 	    case KEY_ENTER:
 	    case 't':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    if (uentp->pid != currpid &&
 			    strcmp(uentp->userid, cuser.userid) != 0) {
 			move(1, 0);
@@ -2515,7 +2515,7 @@ userlist(void)
 		    redrawall = redraw = 1;
 		break;
 	    case 'a':
-		if (HasUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
+		if (HasBasicUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
 		    if (vans("確定要加入好友嗎 [N/y]") == 'y') {
 			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->nickname);
 			friend_load(FRIEND_OVERRIDE, 0);
@@ -2525,7 +2525,7 @@ userlist(void)
 		break;
 
 	    case 'd':
-		if (HasUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
+		if (HasBasicUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
 		    if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
 			friend_delete(uentp->userid, FRIEND_OVERRIDE);
 			friend_load(FRIEND_OVERRIDE, 0);
@@ -2535,14 +2535,14 @@ userlist(void)
 		break;
 
 	    case 'o':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    t_override();
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'f':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    pwcuToggleFriendList();
 		    redrawall = redraw = 1;
 		}
@@ -2550,7 +2550,7 @@ userlist(void)
 
 		/*
 	    case 'G':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    p_give();
 		    // give_money_ui(NULL);
 		    redrawall = redraw = 1;
@@ -2559,14 +2559,14 @@ userlist(void)
 		*/
 
 	    case 'g':
-		if (HasUserPerm(PERM_LOGINOK) && cuser.money) {
+		if (HasBasicUserPerm(PERM_LOGINOK) && cuser.money) {
 		    give_money_ui(uentp->userid);
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'm':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    char   userid[IDLEN + 1];
 		    strlcpy(userid, uentp->userid, sizeof(userid));
 		    vs_hdr("寄  信");
@@ -2591,14 +2591,14 @@ userlist(void)
 		break;
 
 	    case 'c':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    chicken_query(uentp->userid);
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'l':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    t_display();
 		    redrawall = redraw = 1;
 		}
@@ -2618,7 +2618,7 @@ userlist(void)
 
 #ifdef PLAY_ANGEL
 	    case Ctrl('P'):
-		if (HasUserPerm(PERM_ANGEL) && currutmp) {
+		if (HasBasicUserPerm(PERM_ANGEL) && currutmp) {
 		    /*
 		    static const char *msgs[ANGELPAUSE_MODES] = {
 			" 接受所有小主人發問 [●] ",
@@ -2634,7 +2634,7 @@ userlist(void)
 #endif // PLAY_ANGLE
 
 	    case Ctrl('W'):
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    static const char *wm[PAGER_UI_TYPES] = {"一般", "進階", "未來"};
 
 		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
@@ -2650,7 +2650,7 @@ userlist(void)
 		break;
 
 	    case 'r':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    if (curredit & EDIT_MAIL) {
 			/* deny reentrance, which may cause many problems */
 			vmsg("你進入使用者列表前就已經在閱\讀信件了");
@@ -2665,7 +2665,7 @@ userlist(void)
 		break;
 
 	    case 'N':
-		if (HasUserPerm(PERM_LOGINOK)) {
+		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    char tmp_nick[sizeof(cuser.nickname)];
 		    if (getdata_str(1, 0, "新的暱稱: ",
 				tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0)
@@ -3008,7 +3008,7 @@ t_chat(void)
     static time4_t lastEnter = 0;
     int    fd;
 
-    if (!HasUserPerm(PERM_CHAT)) {
+    if (!HasBasicUserPerm(PERM_CHAT)) {
 	vmsg("權限不足，無法進入聊天室。");
 	return -1;
     }

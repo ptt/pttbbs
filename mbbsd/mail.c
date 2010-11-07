@@ -28,7 +28,7 @@ setforward(void)
     int flIdiotSent2Self = 0;
     int oidlen = strlen(cuser.userid);
 
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
 
     vs_hdr("設定自動轉寄");
@@ -308,7 +308,7 @@ setupmailusage(void)
 	} else if (HasUserPerm(PERM_BM)) {
 	    mailsumlimit = 500;
 	    max_keepmail = 300;
-	} else if (HasUserPerm(PERM_LOGINOK))
+	} else if (HasBasicUserPerm(PERM_LOGINOK))
 	    mailsumlimit = 200;
 	else
 	    mailsumlimit = 50;
@@ -559,7 +559,7 @@ m_send(void)
     // in-site mail
     char uident[IDLEN+1];
 
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
 
     vs_hdr("站內寄信");
@@ -833,7 +833,7 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_list(void)
 {
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
         return DONOTHING;
 
     vs_hdr("群組作業");
@@ -937,7 +937,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     char            uid[STRLEN];
     char save_title[STRLEN];
 
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
 
     vs_hdr("轉達信件");

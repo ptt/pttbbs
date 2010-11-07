@@ -1582,7 +1582,7 @@ a_menu_rec(const char *maintitle, const char *path,
                     break;
 		snprintf(fname, sizeof(fname),
 			 "%s/%s", path, fhdr->filename);
-		if (HasUserPerm(PERM_LOGINOK) && dashf(fname)) {
+		if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
 		    a_forward(path, fhdr, ch /* == 'U' */ );
 		    /* By CharlieL */
 		} else
