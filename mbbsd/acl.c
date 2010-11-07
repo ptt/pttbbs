@@ -167,11 +167,11 @@ edit_banned_list_for_board(const char *board) {
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
         "         - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查\n"
         "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
-        "     註: = 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
-        "         = 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
+        "         - 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
+        "         - 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
                    "帳號被砍後水桶會自動解除\n" ANSI_RESET
-        "         = 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
-ANSI_COLOR(1) "         = 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
+        "         - 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
+ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
         ANSI_RESET ""
 #ifdef WATERBAN_UPGRADE_TIME_STR
         // enable and change this if you've just made an upgrade

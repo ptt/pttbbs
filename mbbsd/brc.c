@@ -483,6 +483,13 @@ brc_toggle_all_read(int bid, int is_all_read)
 }
 
 void
+brc_toggle_read(int bid, time4_t newtime)
+{
+    brc_initialize();
+    brc_trunc(bid, newtime);
+}
+
+void
 brc_addlist(const char *fname, time4_t modified)
 {
     int             n, i;

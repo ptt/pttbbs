@@ -4082,6 +4082,38 @@ b_help(void)
     return FULLUPDATE;
 }
 
+static int
+b_mark_read_unread(int ent, const fileheader_t * fhdr, const char *direct) {
+    char ans[3];
+    time4_t curr;
+    move(b_lines-4, 0); clrtobot();
+    outs("\n設定已讀未讀記錄 (注意: 文章設為已讀後不會再出現修改記號 '~')\n");
+    getdata(b_lines-1, 0,
+            "設定所有文章 (U)未讀 (V)已讀 (W)前已讀後未讀 (Q)取消？[Q] ",
+            ans, sizeof(ans), LCECHO);
+
+    switch(*ans) {
+        case 'u':
+            brc_toggle_all_read(currbid, 0);
+            break;
+        case 'v':
+            brc_toggle_all_read(currbid, 1);
+            break;
+        case 'w':
+            // XXX dirty hack: file name timestamp in [2]
+            curr = atoi(fhdr->filename + 2);
+            if (curr > 1 && curr <= now) {
+                brc_toggle_read(currbid, curr);
+            } else {
+                vmsg("請改用其它文章設定當參考點");
+            }
+            break;
+        default:
+            break;
+    }
+    return FULLUPDATE;
+}
+
 #ifdef USE_COOLDOWN
 
 int check_cooldown(boardheader_t *bp)
@@ -4268,7 +4300,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, NULL }, // 'v'
+    { 1, b_mark_read_unread }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, old_cross_post }, // 'x'
     { 1, reply_post }, // 'y'
