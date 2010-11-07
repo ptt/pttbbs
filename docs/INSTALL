@@ -47,6 +47,7 @@ $Id$
     通常您須要進行修改以符合您的須求.
 
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
+    * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake, 然後將 make alias 成 pmake *
  11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, libhz, pgp
     如果您使用的是 FreeBSD, 可以直接透過 ports安裝:
         cd /usr/ports/converters/libiconv; make install

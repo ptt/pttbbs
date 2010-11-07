@@ -10,6 +10,8 @@ OSTYPE!=	uname
 CC:=		gcc
 CXX:=		g++
 CCACHE!=	which ccache|sed -e 's/^.*\///'
+WANTS_CONVERT!= sh -c 'grep "^\#define CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
+
 .if $(CCACHE)
 CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
@@ -18,10 +20,19 @@ CXX:=		ccache $(CXX)
 PTT_CFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=
-PTT_LDLIBS:=	-lhz
+.if $(WANTS_CONVERT) != "NO"
+PTT_LDLIBS+=	-lhz
+.endif
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
+
+.if ${OSTYPE} == "Darwin"
+PTT_CFLAGS+=	-I/opt/local/include -DNEED_SETPROCTITLE
+PTT_CXXFLAGS+=	-I/opt/local/include
+PTT_LDFLAGS+=	-L/opt/local/lib
+PTT_LDLIBS+=	-liconv
+.endif
 
 .if ${OSTYPE} == "FreeBSD"
 # FreeBSD特有的環境

@@ -3,7 +3,7 @@
 #include <string.h>
 #include "osdep.h"
 
-#if defined( __FreeBSD__) || defined(_BSD_SOURCE)
+#if defined( __FreeBSD__) || defined(_BSD_SOURCE) || __DARWIN_UNIX03
 #include <stdlib.h>
 int
 cpuload(char *str)

@@ -40,7 +40,7 @@ static int      semid = -1;
 #define SEM_A 0200
 #endif
 
-#ifndef __FreeBSD__
+#if !defined( __FreeBSD__ ) &&  !__DARWIN_UNIX03
 #include <sys/sem.h>
 union semun {
     int             val;	/* value for SETVAL */

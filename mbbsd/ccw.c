@@ -531,6 +531,10 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
 #define CCW_TALK_CMD_CLS    "cls"
 #define CCW_TALK_CMD_HELP   "help"
 
+#ifndef MSG_NOSIGNAL // the use of NOSIGPIPE setsockopt should be enough
+#define MSG_NOSIGNAL 0x00
+#endif
+
 CCW_PROTO ssize_t
 ccw_talk_send(CCW_CTX *ctx, const char *msg)
 {
@@ -655,6 +659,9 @@ ccw_talk(int fd, int destuid)
 {
     char fpath[PATHLEN];
     char remote_id[IDLEN+1], local_id[IDLEN+1];
+
+    int on = 1;
+    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&on, sizeof(on));
 
     CCW_CTX ctx = {
         .fd             = fd,

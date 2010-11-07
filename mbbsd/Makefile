@@ -69,7 +69,7 @@ DIETCC:=	diet -Os
 .endif
 
 # reduce .bss align overhead
-.if !defined(DEBUG)
+.if !defined(DEBUG) && $(OSTYPE)!="Darwin"
 LDFLAGS+=-Wl,--sort-common
 .endif
 

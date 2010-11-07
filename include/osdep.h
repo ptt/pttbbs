@@ -23,8 +23,8 @@
 #define NEED_STRLCAT
 #define NEED_SETPROCTITLE
 
-#elif ! defined(__FreeBSD__)
-#error "Unknown OSTYPE"
+#elif ! defined(__FreeBSD__) || ! defined( DARWIN )
+//#error "Unknown OSTYPE"
 #endif
 
 #define Signal (signal)
