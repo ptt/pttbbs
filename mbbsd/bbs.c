@@ -3095,12 +3095,21 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     int             num1, num2, num, cdeleted = 0;
     fileheader_t *recs = NULL;
     int ret = 0;
-    int check_mark = 1;
+    int check_mark = 1, check_digest = 0;
 
+    /* 有三種情況會進這裡, 信件, 看板, 精華區 */
+    // 檢查的方法是看 *direct:
+    //  'b' = 看板 boards/%c/%s/*
+    //  'm' = 精華區 man/.../* or man/boards/%c/%s/.../*
+    //  'h' = 信箱 home/%c/%s/* 或信箱精華區 home/%c/%s/man/.../*
+    int is_board = (*direct == 'b'),
+        is_home = (*direct == 'h'),
+        is_man = (*direct == 'm');
+    
 #ifdef SAFE_ARTICLE_DELETE
     int use_safe_delete = 0;
 
-    if (*direct == 'b') {
+    if (is_board) {
         boardheader_t  *bp = getbcache(currbid);
         if(!(currmode & MODE_DIGEST) &&
                 bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
@@ -3108,8 +3117,6 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     }
 #endif
 
-    /* 有三種情況會進這裡, 信件, 看板, 精華區 */
-    
     /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if (currmode & MODE_SELECT) {
 	vmsg("請先回到正常模式後再進行刪除...");
@@ -3155,10 +3162,12 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
                    num2, IDLEN, recs[num-1].owner, recs[num-1].title);
 
     // HACK: warn if target is man.
-    if (*direct == 'm') {
+    if (is_man) {
         outs("(範圍內的子目錄會被自動跳過，請另行用小 d 刪除)\n");
         // do not check mark in man
         check_mark = 0;
+    } else if (is_board) {
+        check_digest = 1;
     }
 
     getdata(10, 0, msg_sure_ny, numstr, 3, LCECHO);
@@ -3181,6 +3190,9 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
 
             if (check_mark && fh->filemode & FILE_MARKED) {
                 bypass = "標記為 m 的項目";
+            } else if (check_digest && fh->filemode & FILE_DIGEST) {
+                /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
+                bypass = "文摘";
             } else {
                 char xfpath[PATHLEN];
                 setdirpath(xfpath, direct, fh->filename);
