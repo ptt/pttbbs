@@ -1223,8 +1223,6 @@ maildoent(int num, fileheader_t * ent)
 static int
 mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200];
-
     if (fhdr->filemode & FILE_MARKED)
 	return DONOTHING;
 
@@ -1235,20 +1233,16 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 
     if (vans(msg_del_ny) == 'y') {
 	if (!delete_fileheader(direct, fhdr, ent)) {
+            int del_ret = 0;
             setupmailusage();
-	    setdirpath(genbuf, direct, fhdr->filename);
-#ifdef USE_TIME_CAPSULE
-            // TODO we should collect all logf(delete) together
-            log_filef(genbuf,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
-                      cuser.userid, fromhost, Cdatelite(&now));
-            // bypass those recovered files
-            if (strncmp(fhdr->owner, RECYCLE_BIN_OWNER,
-                        strlen(RECYCLE_BIN_OWNER)) != 0)
-                timecapsule_archive_new_revision(
-                        genbuf, fhdr, sizeof(*fhdr), NULL, 0);
-#endif // USE_TIME_CAPSULE
-	    unlink(genbuf);
+            del_ret = delete_file_content(direct, fhdr, direct, NULL, 0);
 	    loadmailusage();
+            if (del_ret == DELETE_FILE_CONTENT_BACKUP_FAILED)
+                vmsg("信件已刪除但不會進入資源回收筒");
+#ifdef DEBUG
+            else if (!IS_DELETE_FILE_CONTENT_OK(del_ret))
+                vmsg("檔案已不存在，請至" BN_BUGREPORT "報告，謝謝");
+#endif
 	    return DIRCHANGED;
 	} else {
             vmsg("刪除失敗，請確定未多重登入後再重試。");

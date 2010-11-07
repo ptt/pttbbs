@@ -3103,7 +3103,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct,
     //  'm' = 精華區 man/.../* or man/boards/%c/%s/.../*
     //  'h' = 信箱 home/%c/%s/* 或信箱精華區 home/%c/%s/man/.../*
     int is_board = (*direct == 'b'),
-        is_home = (*direct == 'h'),
+        // is_home = (*direct == 'h'),
         is_man = (*direct == 'm');
     
 #ifdef SAFE_ARTICLE_DELETE
