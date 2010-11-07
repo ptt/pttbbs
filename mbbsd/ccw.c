@@ -660,8 +660,10 @@ ccw_talk(int fd, int destuid)
     char fpath[PATHLEN];
     char remote_id[IDLEN+1], local_id[IDLEN+1];
 
+#ifdef SO_NOSIGPIPE
     int on = 1;
     setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&on, sizeof(on));
+#endif
 
     CCW_CTX ctx = {
         .fd             = fd,
