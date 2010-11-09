@@ -2286,6 +2286,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
         }
     } while (0);
 
+    // PATHLEN will be used as command line, so we need it longer.
+    assert(PATHLEN >= 256);
     if (mode == 'Z') {
 	assert(is_validuserid(cuser.userid));
 	assert(!invalidaddr(address));
@@ -2306,7 +2308,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	strlcpy(fname, direct, sizeof(fname));
 #endif
     } else if (mode == 'U') {
-	char            tmp_buf[128];
+	char            tmp_buf[PATHLEN];
 
 	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", (int)currpid);
 	snprintf(tmp_buf, sizeof(tmp_buf),
@@ -2314,10 +2316,14 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 		 direct, fh->filename, (int)currpid, fname);
 	system(tmp_buf);
     } else if (mode == 'F') {
-	char            tmp_buf[128];
+	char            tmp_buf[PATHLEN];
 
 	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
 	snprintf(tmp_buf, sizeof(tmp_buf), "%s/%s", direct, fh->filename);
+        if (!dashf(tmp_buf)) {
+            unlink(fname);
+            return -1;
+        }
 	Copy(tmp_buf, fname);
     } else
 	return -1;
