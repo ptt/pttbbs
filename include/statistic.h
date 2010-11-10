@@ -18,8 +18,8 @@
 #define ENDSTAT(name) do { \
     struct rusage *_start = &( name ## _start), _end; \
     getrusage(RUSAGE_SELF, &_end); \
-    STAT(name ## _S, += TVALDIFF_TO_MS(_end.ru_stime, _start->ru_stime)); \
-    STAT(name ## _U, += TVALDIFF_TO_MS(_end.ru_utime, _start->ru_utime)); \
+    STAT(name ## _SCPU, += TVALDIFF_TO_MS(_end.ru_stime, _start->ru_stime)); \
+    STAT(name ## _UCPU, += TVALDIFF_TO_MS(_end.ru_utime, _start->ru_utime)); \
     STATINC(name); \
 } while(0);
 
