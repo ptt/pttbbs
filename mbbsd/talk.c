@@ -774,14 +774,16 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	/* 一般水球 */
 	watermode = 0;
 
-	/* should we alert if we're in disabled mode? */
-	// TODO 改成會 temporary enable, 或是問 user 要不要開
 	switch(currutmp->pager)
 	{
 	    case PAGER_DISABLE:
 	    case PAGER_ANTIWB:
-		move(1, 0);  clrtoeol();
-		outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人丟水球，對方可能無法回話。" ANSI_RESET);
+                // users should not bother people
+                if (!HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARD) &&
+                    vans("您的呼叫器目前設定為關閉。要打開它嗎[Y/n]? ") == 'n')
+                    return 0;
+                // enable pager
+                currutmp->pager = PAGER_ON;
 		break;
 
 	    case PAGER_FRIENDONLY:
