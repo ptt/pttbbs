@@ -1159,11 +1159,13 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     if( last_line < 1)	// 完全沒東西
 	return 0;
 
+    BEGINSTAT(STAT_BOARDREC);
     // 不顯示置底的情形
     if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
     {
 	rv = get_records(direct, headers, sizeof(fileheader_t), 
 		recbase, headers_size);
+	ENDSTAT(STAT_BOARDREC);
 	return rv > 0 ? rv : 0;
     }
 
@@ -1195,6 +1197,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
 	rv += n;
     }
 
+    ENDSTAT(STAT_BOARDREC);
     return rv;
 }
 

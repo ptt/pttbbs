@@ -6,6 +6,29 @@
 } while(0)
 #define STATINC(X) STAT(X, ++)
 
+#ifdef CPU_STATS
+
+#include <sys/time.h>
+#include <sys/resource.h>
+
+#define BEGINSTAT(name) struct rusage name ## _start; getrusage(RUSAGE_SELF, &(name ## _start));
+
+#define TVALDIFF_TO_MS(start, end) ((end.tv_sec - start.tv_sec)*1000 + (end.tv_usec - start.tv_usec)/1000)
+
+#define ENDSTAT(name) do { \
+    struct rusage *_start = &( name ## _start), _end; \
+    getrusage(RUSAGE_SELF, &_end); \
+    STAT(name ## _S, += TVALDIFF_TO_MS(_end.ru_stime, _start->ru_stime)); \
+    STAT(name ## _U, += TVALDIFF_TO_MS(_end.ru_utime, _start->ru_utime)); \
+    STATINC(name); \
+} while(0);
+
+#else
+#define BEGINSTAT(name)
+#define ENDSTAT(name)  STATINC(name)
+#endif
+
+
 enum { // XXX description in shmctl.c
     STAT_LOGIN,
     STAT_SHELLLOGIN,
@@ -45,6 +68,9 @@ enum { // XXX description in shmctl.c
     STAT_READPOST_7DAY,
     STAT_READPOST_OLD,
     STAT_SIGXCPU,
+    STAT_BOARDREC,
+    STAT_BOARDREC_S,
+    STAT_BOARDREC_U,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
