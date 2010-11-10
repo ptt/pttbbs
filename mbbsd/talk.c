@@ -435,7 +435,7 @@ my_query(const char *uident)
     userinfo_t     *uentp;
     static time_t last_query;
 
-    STATINC(STAT_QUERY);
+    BEGINSTAT(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
 	move(1, 0);
 	clrtobot();
@@ -509,6 +509,9 @@ my_query(const char *uident)
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
 
 	showplans_userec(&muser);
+
+	ENDSTAT(STAT_QUERY);
+
 	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) ) 
 	{
           if(vmsg("T: ¶}¥ß»@³æ")=='T')
@@ -523,6 +526,10 @@ my_query(const char *uident)
 	last_query=now;
 	return FULLUPDATE;
     }
+    else {
+	ENDSTAT(STAT_QUERY);
+    }
+
     return DONOTHING;
 }
 

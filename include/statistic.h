@@ -24,8 +24,8 @@
 } while(0);
 
 #else
-#define BEGINSTAT(name)
-#define ENDSTAT(name)  STATINC(name)
+#define BEGINSTAT(name) STATINC(name)
+#define ENDSTAT(name)
 #endif
 
 
@@ -74,6 +74,8 @@ enum { // XXX description in shmctl.c
     STAT_DORECOMMEND,
     STAT_DORECOMMEND_SCPU,
     STAT_DORECOMMEND_UCPU,
+    STAT_QUERY_SCPU,
+    STAT_QUERY_UCPU,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512

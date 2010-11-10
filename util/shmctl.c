@@ -1140,6 +1140,8 @@ int showstat(int argc, char *argv[])
 	"STAT_DORECOMMEND",
 	"STAT_DORECOMMEND_SCPU",
 	"STAT_DORECOMMEND_UCPU",
+	"STAT_QUERY_SCPU",
+	"STAT_QUERY_UCPU",
     };
 
     if(argv[1] && strcmp(argv[1],"-c")==0)
