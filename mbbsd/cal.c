@@ -177,11 +177,11 @@ p_exmail(void)
     reload_money();
     if (cuser.money < n * 1000)
     {
-	vmsg("你的" MONEYNAME "幣不夠。");
+	vmsg("你的" MONEYNAME "不夠。");
 	return 0;
     }
 
-    if (vmsgf("你想購買 %d 封信箱 (要花 %d " MONEYNAME "幣), 確定嗎？[y/N] ", 
+    if (vmsgf("你想購買 %d 封信箱 (要花 %d " MONEYNAME "), 確定嗎？[y/N] ", 
 		n, n*1000) != 'y')
 	return 0;
 
@@ -215,7 +215,8 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 	    "標題: 招財進寶\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
-	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME "幣的大紅包喔 ^_^\n\n"
+	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME 
+                                 "的大紅包喔 ^_^\n\n"
 	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n"
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
             "\n  您可於下列位置找到最近的交易記錄:\n"
@@ -360,7 +361,7 @@ give_money_ui(const char *userid)
     const char	    *uid_prompt = "這位幸運兒的id: ";
 
     const char *alert_trade = "\n" ANSI_COLOR(0;1;31) 
-        "提醒您本站的虛擬 " MONEYNAME " 幣不應與其它虛擬或現實生活"
+        "提醒您本站的虛擬 " MONEYNAME " 不應與其它虛擬或現實生活"
         "通用之貨幣進行交易\n"
         "若查獲有使用者經由不法途徑取得再與其它使用者進行貨幣間之交易時\n"
         "站方將直接扣回。為避免造成您個人損失，請三思而後行。"
@@ -368,7 +369,7 @@ give_money_ui(const char *userid)
 
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
-    vs_hdr("給予" MONEYNAME "幣");
+    vs_hdr("給予" MONEYNAME);
 
     if (!HasBasicUserPerm(PERM_LOGINOK))
         return -1;
@@ -397,7 +398,7 @@ give_money_ui(const char *userid)
 
     m = 0;
     money_buf[0] = 0;
-    mvouts(2, 0, "要給他多少" MONEYNAME "幣呢? "
+    mvouts(2, 0, "要給他多少" MONEYNAME "呢? "
            "(可按 TAB 切換輸入稅前/稅後金額, 稅率固定 10%)\n");
     outs(" 請輸入金額: ");  // (3, 0)
     {
@@ -419,7 +420,7 @@ give_money_ui(const char *userid)
 
     reload_money();
     if (cuser.money < m) {
-	vmsg("你沒有那麼多" MONEYNAME "幣喔!");
+	vmsg("你沒有那麼多" MONEYNAME "喔!");
 	return -1;
     }
 

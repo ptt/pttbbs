@@ -120,7 +120,7 @@ int u_cancelbadpost(void)
        vmsg("我願意尊重與不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
        vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
    {
-       vmsg("回答有誤，刪除失敗。請仔細看站規與系統訊息並思考清楚後再來申請刪除.");
+       vmsg("回答有誤，刪除失敗。請仔細看清站規與系統訊息後再來申請刪除.");
        return 0;
    }
 
@@ -146,9 +146,10 @@ user_display(const userec_t * u, int adminmode)
 
     clrtobot();
     prints(
-	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "  " ANSI_COLOR(1;30;45) "    使 用 者"
-	   " 資 料        "
-	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "\n");
+	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET
+           "  " ANSI_COLOR(1;30;45) "    使 用 者" " 資 料        "
+	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET 
+           "\n");
     prints("\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
     prints("\t真實姓名: %s", u->realname);
 #if FOREIGN_REG_DAY > 0
@@ -169,7 +170,7 @@ user_display(const userec_t * u, int adminmode)
 	outs("\n");
 
     prints("\t電子信箱: %s\n", u->email);
-    prints("\t銀行帳戶: %d " MONEYNAME "幣\n", u->money);
+    prints("\t銀行帳戶: %d " MONEYNAME "\n", u->money);
     prints("\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");

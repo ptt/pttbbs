@@ -588,7 +588,7 @@ static const commands_t adminlist[] = {
     {x_file, 
 	PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
     {x_admin_money, PERM_SYSOP|PERM_VIEWSYSOP,
-                                        "MMoney         " MONEYNAME "幣相關"},
+                                        "MMoney         " MONEYNAME "相關"},
     {u_list, PERM_SYSOP,		"LLUsers List     列出註冊名單"},
     {m_loginmsg, PERM_SYSOP,		"GGMessage Login 進站水球"},
     {NULL, 0, NULL}
@@ -683,7 +683,7 @@ static int u_view_recentpay()
     clear();
     mvouts(10, 5, "注意: 本記錄尚於測試中，可能會有未記錄到的交易記錄。");
     mvouts(11, 5, "      此處內容僅供參考，實際" MONEYNAME 
-                        "幣異動以站方內部資料為準");
+                        "異動以站方內部資料為準");
     pressanykey();
     setuserfile(fn, FN_RECENTPAY);
     return more(fn, YEA);
@@ -870,7 +870,7 @@ static const commands_t xyzlist[] = {
 
 /* Ptt money menu */
 static const commands_t moneylist[] = {
-    {p_give, 0,         "00Give        給其他人" MONEYNAME "幣"},
+    {p_give, 0,         "00Give        給其他人" MONEYNAME},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
     {p_from, 0,         "22From        暫時修改故鄉"},
     {ordersong,0,       "33OSong       動態點歌機"},

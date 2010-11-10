@@ -243,7 +243,7 @@ save_violatelaw(void)
     if (cuser.money < (int)cuser.vl_count * 1000) {
 	snprintf(buf, sizeof(buf),
                  ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
-                 "必須繳出 %d " MONEYNAME "幣；但你目前只有 %d ，數量不足!!"
+                 "必須繳出 %d " MONEYNAME "；但你目前只有 %d ，數量不足!!"
                  ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
                  cuser.money);
 	mvouts(22, 0, buf);
@@ -251,7 +251,7 @@ save_violatelaw(void)
 	return 0;
     }
     move(5, 0);
-    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "幣\n\n", 
+    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "\n\n", 
 	    cuser.vl_count, cuser.vl_count * 1000);
     outs(ANSI_COLOR(1;37) "你知道嗎? 因為你的違法 "
 	   "已經造成很多人的不便" ANSI_RESET "\n");
@@ -275,7 +275,7 @@ save_violatelaw(void)
 	log_filef("log/violation", LOG_CREAT,
 		"%s %s pay-violation error: race-conditionn hack?\n", 
 		Cdate(&now), cuser.userid);
-	vmsg(MONEYNAME "幣怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
+	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
 	return 0; 
     }
 
@@ -1301,9 +1301,10 @@ do_general(int garbage)
                 pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title); 
 		pwcuIncNumPost();
 		addPost = 1;
-		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d " MONEYNAME "幣\n",
-			cuser.numposts, money);
-		prints("\n (若之後自行或被板主刪文則此次獲得的有效文章數及稿酬可能會被回收)\n\n");
+		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d "
+                        MONEYNAME "\n", cuser.numposts, money);
+		prints("\n (若之後自行或被板主刪文"
+                       "則此次獲得的有效文章數及稿酬可能會被回收)\n\n");
 	    } else {
 		// no money, no record.
 		outs("本篇不列入記錄，敬請包涵。");
@@ -2447,7 +2448,7 @@ hold_gamble(void)
     move(6, 0);
     snprintf(genbuf, sizeof(genbuf),
 	     "\n請到 %s 板 按'f'參與賭博!\n\n"
-	     "一張 %d " MONEYNAME "幣, 這是%s的賭博\n%s%s\n",
+	     "一張 %d " MONEYNAME ", 這是%s的賭博\n%s%s\n",
 	     currboard,
 	     i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
 	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
@@ -3389,7 +3390,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         if (!not_owned) {
             reload_money();
             if (cuser.money < del_fee) {
-                vmsgf("您身上的" MONEYNAME "幣不夠，刪除此文要 %d " MONEYNAME "幣", del_fee);
+                vmsgf("您身上的" MONEYNAME "不夠，刪除此文要 %d "
+                      MONEYNAME, del_fee);
                 return FULLUPDATE;
             }
             // after this, we cannot delay in !not_owned mode otherwise we'll get
@@ -3486,7 +3488,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 pay(del_fee, "%s 看板 文章自刪清潔費: %s",  
                         currboard, fhdr->title); 
 		sendalert(cuser.userid, ALERT_PWD_PERM);
-		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "幣\n", 
+		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "\n", 
                         cuser.numposts, del_fee);
 	    }
             pressanykey();
@@ -3667,7 +3669,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 	if(m < 0)
 	    prints("│ 特殊文章，無價格記錄");
 	else
-	    prints("│ 這一篇文章值 %d " MONEYNAME "幣", m);
+	    prints("│ 這一篇文章值 %d " MONEYNAME, m);
 
     }
     prints("\n");

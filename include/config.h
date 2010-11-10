@@ -21,7 +21,7 @@
 
 /* 錢幣名，建議剛好 3 個字元。 詳見 sample/pttbbs.conf */
 #ifndef MONEYNAME
-#define MONEYNAME	"Ptt"
+#define MONEYNAME BBSMNAME "幣"
 #endif
 
 /* AID 顯示的站台名稱。 若 IP 太長請另行定義。 */
