@@ -69,8 +69,8 @@ enum { // XXX description in shmctl.c
     STAT_READPOST_OLD,
     STAT_SIGXCPU,
     STAT_BOARDREC,
-    STAT_BOARDREC_S,
-    STAT_BOARDREC_U,
+    STAT_BOARDREC_SCPU,
+    STAT_BOARDREC_UCPU,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
