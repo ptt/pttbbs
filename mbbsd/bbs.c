@@ -2622,6 +2622,8 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     char    path[PATHLEN];
     int     update = 0;
     int fd;
+    BEGINSTAT(STAT_DORECOMMEND);
+
     /*
       race here:
       為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
@@ -2659,7 +2661,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
         close(fd);
         if (!lock_success) {
             vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
-            return -1;
+            goto error;
         }
 #else
         write(fd, buf, strlen(buf));
@@ -2667,7 +2669,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 #endif
     } else {
 	vmsg("錯誤: 原檔案已被刪除。 無法寫入。");
-	return -1;
+	goto error;
     }
 
     // XXX do lock some day!
@@ -2688,12 +2690,17 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
 		fhdr->modified, NULL, update) < 0)
-	    return -1;
+	    goto error;
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
     }
-    
+
+    ENDSTAT(STAT_DORECOMMEND);
     return 0;
+
+ error:
+    ENDSTAT(STAT_DORECOMMEND);
+    return -1;
 }
 
 int

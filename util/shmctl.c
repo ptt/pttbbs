@@ -1137,6 +1137,9 @@ int showstat(int argc, char *argv[])
 	"STAT_BOARDREC",
 	"STAT_BOARDREC_SCPU",
 	"STAT_BOARDREC_UCPU",
+	"STAT_DORECOMMEND",
+	"STAT_DORECOMMEND_SCPU",
+	"STAT_DORECOMMEND_UCPU",
     };
 
     if(argv[1] && strcmp(argv[1],"-c")==0)
