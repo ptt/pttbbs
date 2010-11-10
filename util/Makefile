@@ -22,7 +22,7 @@ CPROG_WITH_UTIL= \
 	outmail		chkhbf		merge_dir	\
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
-	uhash_loader	timecap_buildref
+	uhash_loader	timecap_buildref showuser
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
