@@ -200,7 +200,9 @@ psb_main(PSB_CTX *psbctx)
 ///////////////////////////////////////////////////////////////////////////
 // Time Capsule: Edit History
 
+#ifndef PVEH_LIMIT_NUMBER
 #define PVEH_LIMIT_NUMBER   (199)
+#endif
 
 typedef struct {
     const char *subject;
@@ -372,8 +374,9 @@ psb_view_edit_history(const char *base, const char *subject,
 
 ///////////////////////////////////////////////////////////////////////////
 // Time Capsule: Recycle Bin
-#define PVRB_LIMIT_NUMBER   (10300)
-// #define PVRB_LIMIT_NUMBER   (103000)
+#ifndef PVRB_LIMIT_NUMBER
+#define PVRB_LIMIT_NUMBER   (103000/10)
+#endif
 
 typedef struct {
     const char *dirbase;
@@ -552,8 +555,11 @@ psb_recycle_bin(const char *base, const char *title) {
 ///////////////////////////////////////////////////////////////////////////
 // Admin Edit
 
-// still 偷懶...
+// Since admin edit is usually rarely used, no need to write dynamic allocation
+// for it.
+#ifndef MAX_PAE_ENTRIES
 #define MAX_PAE_ENTRIES (256)
+#endif
 
 typedef struct {
     char *descs[MAX_PAE_ENTRIES];
@@ -688,6 +694,8 @@ psb_admin_edit() {
         paectx.descs[ctx.total] = strdup(v);
         ctx.total++;
     }
+    if (ctx.total >= MAX_PAE_ENTRIES) 
+        vmsg("注意: 您的系統設定已超過或接近預設上限，請洽系統站長加大設定");
 
     psb_main(&ctx);
 
