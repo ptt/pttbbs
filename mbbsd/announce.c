@@ -1263,9 +1263,12 @@ a_menu_rec(const char *maintitle, const char *path,
 	// such extra behavior will result in any sub-op to have PERM_BM
 	// ability, which leads to entering BM board without authority.
 	// Thanks to mtdas@ptt for reporting this exploit.
-	if (HasUserPerm(PERM_BASIC) && (ptr = strrchr(me.mtitle, '[')))
+	if (HasBasicUserPerm(PERM_LOGINOK) &&
+            !HasUserPerm(PERM_NOCITIZEN) &&
+            (ptr = strrchr(me.mtitle, '[')))
 	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
+    vmsgf("me level: %d\n", me.level);
     me.page = A_INVALID_PAGE;
 
     if (preselect && !*preselect)
@@ -1460,7 +1463,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
-		if( !lastlevel && !HasUserPerm(PERM_SYSOP) &&
+		if( !me.level && !HasUserPerm(PERM_SYSOP) &&
 		    (me.bid==0 || !is_BM_cache(me.bid)) && dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
