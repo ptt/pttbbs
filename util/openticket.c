@@ -81,13 +81,13 @@ int main(int argc, char **argv)
 
 	printf("\n\n開獎時間： %s \n\n"
 	       "開獎結果： %s \n\n"
-	       "下注總金額： %d00 元 \n"
+	       "下注總金額： %d00 " MONEYNAME "\n"
 	       "中獎比例： %d張/%d張  (%f)\n"
-	       "每張中獎彩票可得 %d 枚" MONEYNAME "幣 \n\n",
+	       "每張中獎彩票可得 %d 枚" MONEYNAME "\n\n",
 	       Cdatelite(&now), betname[bet], total, ticket[bet], total,
 	       (float) ticket[bet] / total, money);
 
-	fprintf(fp, "%s 賭盤開出:%s 總金額:%d00 元 獎金/張:%d 元 機率:%1.2f\n",
+	fprintf(fp, "%s 賭盤開出:%s 總金額:%d00 獎金/張:%d 機率:%1.2f\n",
 		Cdatelite(&now), betname[bet], total, money,
 		(float) ticket[bet] / total);
 	fclose(fp);
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 	    if (mybet == bet)
 	    {
                 int oldm, newm;
-		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "幣\n"
+		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "\n"
 		       ,userid, num, betname[mybet], money * num);
                 if((uid=searchuser(userid, userid))==0 ||
                     !is_validuserid(userid)) 
