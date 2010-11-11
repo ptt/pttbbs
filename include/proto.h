@@ -178,7 +178,7 @@ int chicken_main(void);
 int chickenpk(int fd);
 int load_chicken(const char *uid, chicken_t *mychicken);
 void chicken_query(const char *userid);
-void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
+void show_chicken_data(chicken_t *thechicken);
 void chicken_toggle_death(const char *uid);
 
 /* dark */

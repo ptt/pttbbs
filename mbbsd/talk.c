@@ -1323,9 +1323,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    }
 	    move(4, 0);
 	    outs("要和他(她) (T)談天(F)下五子棋"
-#ifdef USE_CHICKEN_PK
-		    "(P)鬥寵物"
-#endif // USE_CHICKEN_PK
 		    "(C)下象棋(D)下暗棋(G)下圍棋(R)下黑白棋");
 	    getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	}
@@ -1352,29 +1349,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	case 'r':
 	    uin->sig = SIG_REVERSI;
 	    break;
-#ifdef USE_CHICKEN_PK
-	case 'p':
-	    {
-		userec_t xuser;
-		chicken_t xchk;
-		int error = 0;
-
-		getuser(uin->userid, &xuser);
-		if (uin->lockmode == CHICKEN || currutmp->lockmode == CHICKEN)
-		    error = 1;
-		else if (!load_chicken(cuser.userid, &xchk) ||
-			 !load_chicken(xuser.userid, &xchk))
-		    error = 2;
-
-		if (error) {
-		    vmsg(error == 2 ? "並非兩人都養寵物" :
-			    "有一方的寵物正在使用中");
-		    return;
-		}
-		uin->sig = SIG_PK;
-	    }
-	    break;
-#endif // USE_CHICKEN_PK
 	default:
 	    return;
 	}
@@ -1426,11 +1400,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    case SIG_DARK:
 		main_dark(msgsock, uin);
 		break;
-#ifdef USE_CHICKEN_PK
-	    case SIG_PK:
-		chickenpk(msgsock);
-		break;
-#endif
 	    case SIG_GOMO:
 		gomoku(msgsock, CHESS_MODE_VERSUS);
 		break;
@@ -2990,11 +2959,6 @@ talkreply(void)
 	case SIG_DARK:
 	    main_dark(a, uip);
 	    break;
-#ifdef USE_CHICKEN_PK
-	case SIG_PK:
-	    chickenpk(a);
-	    break;
-#endif // USE_CHICKEN_PK
 	case SIG_GOMO:
 	    gomoku(a, CHESS_MODE_VERSUS);
 	    break;

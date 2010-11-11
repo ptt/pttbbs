@@ -1004,6 +1004,10 @@ give_money(void)
 
     clear();
 
+    // check money:
+    // 1. exceed limit
+    // 2. id unique
+
     unlink("etc/givemoney.log");
     if (!(fp2 = fopen("etc/givemoney.log", "w")))
 	return 1;
@@ -1012,11 +1016,10 @@ give_money(void)
     fprintf(fp2,"\n使用理由: %s\n", reason);
 
     getdata(1, 0, "要發錢了嗎(Y/N)[N]", buf, 3, LCECHO);
-    if (buf[0] != 'y')
-       {
+    if (buf[0] != 'y') {
         fclose(fp2);
 	return 1;
-       }
+    }
 
     getdata(1, 0, "紅包袋標題 ：", tt, TTLEN, DOECHO);
     fprintf(fp2,"\n紅包袋標題: %s\n", tt);

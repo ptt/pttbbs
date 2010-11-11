@@ -1,9 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-// TODO pull chicken out of userec.
-// remove chickenpk.
-
 #define NUM_KINDS   15		/* 有多少種動物 */
 #define CHICKENLOG  "etc/chicken"
 
@@ -142,7 +139,7 @@ chicken_query(const char *userid)
 	time_diff(&xchicken);
 	if (!isdeadth(&xchicken, NULL))
 	{
-	    show_chicken_data(&xchicken, NULL);
+	    show_chicken_data(&xchicken);
 	    prints("\n\n以上是 %s 的寵物資料..", userid);
 	} else {
 	    move(1, 0);
@@ -194,7 +191,7 @@ new_chicken(void)
     price = egg_price[(int)mychicken.type];
     reload_money();
     if (cuser.money < price) {
-	vmsgf(MONEYNAME "不夠買蛋蛋(要 %d)", price);
+	vmsgf(MONEYNAME "不夠買蛋(要 %d)", price);
 	return 0;
     }
 
@@ -289,7 +286,7 @@ show_chicken_picture(const char *fpath)
 }
 
 void
-show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
+show_chicken_data(chicken_t * thechicken)
 {
     char            buf[1024];
     int age = ((now - thechicken->cbirth) / (60 * 60 * 24));
@@ -300,7 +297,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
     /* Ptt:debug */
     thechicken->type %= NUM_KINDS;
     clear();
-    showtitle(pkchicken ? BBSMNAME2 "鬥雞場" : BBSMNAME2 "養雞場", BBSName);
+    showtitle(BBSMNAME2 "養雞場", BBSName);
     move(1, 0);
 
     show_chicken_stat(thechicken, age);
@@ -350,12 +347,6 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 	outs(ANSI_COLOR(32) "很滿足.." ANSI_RESET);
     else if (thechicken->satis < 50)
 	outs("不滿足..");
-
-    if (pkchicken) {
-	outc('\n');
-	show_chicken_stat(pkchicken, age);
-	outs("[任意鍵] 攻擊對方 [q] 落跑 [o] 吃大補丸");
-    }
 }
 
 static void
@@ -945,7 +936,6 @@ chicken_toggle_death(const char *uid)
     {
 	revive_chicken(mychicken, 1);
 	strlcpy(mychicken->name, "[死]", sizeof(mychicken->name));
-	// mychicken->lastvisit = now; // prevent suddent death (now done in revive_chicken)
 	vmsgf("%s 的寵物復活了", uid);
     }
     free_live_chicken(mychicken);
@@ -988,154 +978,9 @@ chicken_main(void)
 	time_diff(mychicken);
 	if (isdeadth(mychicken, mychicken))
 	    break;
-	show_chicken_data(mychicken, NULL);
+	show_chicken_data(mychicken);
     } while (select_menu(age, mychicken));
     unlockutmpmode();
     free_live_chicken(mychicken);
     return 0;
 }
-
-#ifdef USE_CHICKEN_PK
-int
-chickenpk(int fd)
-{
-    chicken_t *mychicken = load_live_chicken(cuser.userid);
-    chicken_t *ochicken  = load_live_chicken(currutmp->mateid);
-
-    char            mateid[IDLEN + 1], data[200], buf[200];
-    int             ch = 0;
-
-    userinfo_t     *uin = &SHM->uinfo[currutmp->destuip];
-    int             r, attmax, i, datac, catched = 0,
-                    count = 0;
-
-    lockreturn0(CHICKEN, LOCK_MULTI);
-    /* 把對手的id用local buffer記住 */
-    strlcpy(mateid, currutmp->mateid, sizeof(mateid));
-
-    if (!mychicken || !ochicken ||
-	!ochicken->name[0] || !mychicken->name[0]) {
-	free_live_chicken(mychicken);
-	free_live_chicken(ochicken);
-	bell();
-	vmsg("有一方沒有寵物");	/* Ptt:妨止page時把寵物賣掉 */
-	vkey_detach();
-	close(fd);
-	unlockutmpmode();
-	return 0;
-    }
-
-    show_chicken_data(ochicken, mychicken);
-    vkey_attach(fd); // 把fd加到vkey監視  // add_io(fd, 3);		
-
-    while (1) {
-	r = random();
-	ch = vkey_poll(3 * MILLISECONDS) ? vkey() : I_TIMEOUT;
-	show_chicken_data(ochicken, mychicken);
-	time_diff(mychicken);
-
-	i = mychicken->attack * mychicken->hp / mychicken->hp_max;
-	for (attmax = 2; (i = i * 9 / 10); attmax++);
-
-	if (ch == I_OTHERDATA) {
-	    count = 0;
-	    datac = recv(fd, data, sizeof(data), 0);
-	    if (datac <= 1)
-		break;
-	    move(17, 0);
-	    outs(data + 1);
-	    switch (data[0]) {
-	    case 'c':
-		catched = 1;
-		move(16, 0);
-		outs("要放他走嗎?(y/N)");
-		break;
-	    case 'd':
-		move(16, 0);
-		outs("阿~倒下了!!");
-		break;
-	    }
-	    if (data[0] == 'd' || data[0] == 'q' || data[0] == 'l')
-		break;
-	    continue;
-	} else if (currutmp->turn) {
-	    count = 0;
-	    currutmp->turn = 0;
-	    uin->turn = 1;
-	    mychicken->tiredstrong++;
-	    switch (ch) {
-	    case 'y':
-		if (catched == 1) {
-		    snprintf(data, sizeof(data),
-			     "l讓 %s 落跑了\n", ochicken->name);
-		}
-		break;
-	    case 'n':
-		catched = 0;
-	    default:
-	    case 'k':
-		r = r % (attmax + 2);
-		if (r) {
-		    snprintf(data, sizeof(data),
-			     "M%s %s%s %s 傷了 %d 點\n", mychicken->name,
-			     damage_degree[r / 3 > 15 ? 15 : r / 3],
-			     attack_type[(int)mychicken->type],
-			     ochicken->name, r);
-		    ochicken->hp -= r;
-		} else
-		    snprintf(data, sizeof(data),
-			     "M%s 覺得手軟出擊無效\n", mychicken->name);
-		break;
-	    case 'o':
-		if (mychicken->oo > 0) {
-		    mychicken->oo--;
-		    mychicken->hp += 300;
-		    if (mychicken->hp > mychicken->hp_max)
-			mychicken->hp = mychicken->hp_max;
-		    mychicken->tiredstrong = 0;
-		    snprintf(data, sizeof(data), "M%s 吃了顆大補丸補充體力\n",
-			     mychicken->name);
-		} else
-		    snprintf(data, sizeof(data),
-			    "M%s 想吃大補丸, 可是沒有大補丸可吃\n",
-			    mychicken->name);
-		break;
-	    case 'q':
-		if (r % (mychicken->run + 1) > r % (ochicken->run + 1))
-		    snprintf(data, sizeof(data), "q%s 落跑了\n",
-			     mychicken->name);
-		else
-		    snprintf(data, sizeof(data),
-			     "c%s 想落跑, 但被 %s 抓到了\n",
-			     mychicken->name, ochicken->name);
-		break;
-	    }
-	    if (deadtype(ochicken, mychicken)) {
-		char *p = strchr(data, '\n');
-		if(p) *p = '\0';
-		strlcpy(buf, data, sizeof(buf));
-		snprintf(data, sizeof(data), "d%s , %s 被 %s 打死了\n",
-			 buf + 1, ochicken->name, mychicken->name);
-	    }
-	    move(17, 0);
-	    outs(data + 1);
-	    i = strlen(data) + 1;
-	    send(fd, data, i, 0);
-	    if (data[0] == 'q' || data[0] == 'd')
-		break;
-	} else {
-	    move(17, 0);
-	    if (count++ > 30)
-		break;
-	}
-    }
-    vkey_detach();		/* 把vkey恢復回 */
-    pressanykey();
-    close(fd);
-    showdeadth(deadtype(mychicken, mychicken));
-    unlockutmpmode();
-    free_live_chicken(mychicken);
-    free_live_chicken(ochicken);
-    return 0;
-}
-#endif // USE_CHICKEN_PK
