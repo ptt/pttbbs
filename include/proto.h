@@ -151,11 +151,6 @@ int mail_redenvelop(const char* from, const char* to, int money, char *fpath);
 void resolve_over18(void);
 int resolve_over18_user(const userec_t *u);
 
-/* card */
-int g_card_jack(void);
-int g_ten_helf(void);
-int card_99(void);
-
 /* ccw (common chat window) */
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom

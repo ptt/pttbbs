@@ -929,20 +929,16 @@ static int p_money() {
     return 0;
 };
 
-static int playground();
 static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
-    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) 
-			     " " BBSMNAME2 "量販店 " ANSI_RESET "】"},
-    {chicken_main,PERM_LOGINOK, 
-			     "CChicken     【" ANSI_COLOR(1;34) 
-			     " " BBSMNAME2 "養雞場 " ANSI_RESET "】"},
-    {playground,PERM_LOGINOK,"AAmusement   【" ANSI_COLOR(1;33) 
-			     " " BBSMNAME2 "遊樂場 " ANSI_RESET "】"},
-    {chessroom, PERM_LOGINOK,"BBChess      【" ANSI_COLOR(1;34) 
-			     " " BBSMNAME2 "棋院   " ANSI_RESET "】"},
+    {p_money, PERM_LOGINOK,  "PPay         【 " BBSMNAME2 "量販店 】"},
+    {chicken_main, PERM_LOGINOK, 
+			     "CChicken     【 " BBSMNAME2 "養雞場 】"},
+    {ticket_main, PERM_LOGINOK,
+                             "GGamble      【 " BBSMNAME2 "賭場   】"},
+    {chessroom, PERM_LOGINOK,"BBChess      【 " BBSMNAME2 "棋院   】"},
     {NULL, 0, NULL}
 };
 
@@ -964,22 +960,7 @@ static int chessroom() {
     return 0;
 }
 
-static const commands_t plist[] = {
-
-    {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
-    {g_card_jack, PERM_LOGINOK,  "22Jack        【  黑傑克  】"},
-    {g_ten_helf, PERM_LOGINOK,   "33Tenhalf     【  十點半  】"},
-    {card_99, PERM_LOGINOK,      "44Nine        【  九十九  】"},
-    {NULL, 0, NULL}
-};
-
 // ---------------------------------------------------------------- SUB MENUS
-
-static int 
-playground() {
-    domenu(M_AMUSE, BBSMNAME2 "遊樂場",'1',plist);
-    return 0;
-}
 
 /* main menu */
 
