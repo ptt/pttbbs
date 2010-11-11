@@ -383,6 +383,23 @@ show_menu(int menu_index, const commands_t * p)
     menu_row = 12 + (t_lines-24)/2;
 #endif 
 
+#ifdef EXP_ALERT_ADBANNER_USONG
+    if ((p[0].level & PERM_SYSOP) &&
+        !HasUserPerm(PERM_SYSOP) &&
+        HasUserFlag(UF_ADBANNER_USONG) &&
+        HasUserFlag(UF_ADBANNER)) {
+        // we have one more extra line to display ADBANNER_USONG!
+        int alert_column = menu_column;
+        move(menu_row, 0);
+        vpad(t_columns-2, "─");
+        if (alert_column > 2)
+            alert_column -= 2;
+        alert_column -= alert_column % 2;
+        move(menu_row++, alert_column);
+        outs(" 上方為使用者心情點歌區，不代表本站立場 ");
+    }
+#endif
+
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
