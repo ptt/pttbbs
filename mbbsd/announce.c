@@ -1268,7 +1268,6 @@ a_menu_rec(const char *maintitle, const char *path,
             (ptr = strrchr(me.mtitle, '[')))
 	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
-    vmsgf("me level: %d\n", me.level);
     me.page = A_INVALID_PAGE;
 
     if (preselect && !*preselect)
