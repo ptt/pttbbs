@@ -384,8 +384,7 @@ show_menu(int menu_index, const commands_t * p)
 #endif 
 
 #ifdef EXP_ALERT_ADBANNER_USONG
-    if ((p[0].level & PERM_SYSOP) &&
-        !HasUserPerm(PERM_SYSOP) &&
+    if ((p[0].level & !HasUserPerm(p[0].level)) &&
         HasUserFlag(UF_ADBANNER_USONG) &&
         HasUserFlag(UF_ADBANNER)) {
         // we have one more extra line to display ADBANNER_USONG!
@@ -580,33 +579,58 @@ view_user_money_log() {
     return 0;
 }
 
+static int
+view_user_login_log() {
+    char userid[IDLEN+1];
+    char fpath[PATHLEN];
+
+    vs_hdr("檢視使用者最近上線記錄");
+    usercomplete("請輸入要檢視的ID: ", userid);
+    if (!is_validuserid(userid))
+        return 0;
+    sethomefile(fpath, userid, FN_RECENTLOGIN);
+    if (more(fpath, YEA) < 0)
+        vmsgf("使用者 %s 無最近上線記錄", userid);
+    return 0;
+}
+
 static int x_admin_money(void);
+static int x_admin_user(void);
 
 // ----------------------------------------------------------- MENU DEFINITION
 // 注意每個 menu 最多不能同時顯示超過 11 項 (80x24 標準大小的限制)
 
 static const commands_t m_admin_money[] = {
-    {view_user_money_log, PERM_SYSOP|PERM_VIEWSYSOP,
+    {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
                                                 "VView Log      檢視交易記錄"},
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"GGivemoney     紅包雞"}, 
+    {NULL, 0, NULL}
+};
+
+static const commands_t m_admin_user[] = {
+    {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
+                                        "MMoney Log      最近交易記錄"},
+    {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD,
+                                        "OOLogin Log     最近上線記錄"},
+    {u_list, PERM_SYSOP,		"UUsers List     列出註冊名單"},
+    {search_user_bybakpwd, PERM_SYSOP|PERM_ACCOUNTS,
+                                        "DDOld User data 查閱\備份使用者資料"},
     {NULL, 0, NULL}
 };
 
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
     {m_user, PERM_SYSOP,		"UUser          使用者資料"},
-    {search_user_bypwd, 
-	PERM_ACCOUNTS|PERM_POLICE_MAN,	"SSearch User   特殊搜尋使用者"},
-    {search_user_bybakpwd,
-	PERM_ACCOUNTS,			"OOld User data 查閱\備份使用者資料"},
     {m_board, PERM_SYSOP|PERM_BOARD,	"BBoard         設定看板"},
     {m_register, 
 	PERM_ACCOUNTS|PERM_ACCTREG,	"RRegister      審核註冊表單"},
-    {x_file, 
-	PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
-    {x_admin_money, PERM_SYSOP|PERM_VIEWSYSOP,
-                                        "MMoney         " MONEYNAME "相關"},
-    {u_list, PERM_SYSOP,		"LLUsers List     列出註冊名單"},
+    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
+    {x_admin_money, PERM_SYSOP|PERM_ACCOUNTS|PERM_VIEWSYSOP,
+                                        "MMoney         【" MONEYNAME "相關】"},
+    {x_admin_user, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
+                                        "LLUser Log     【使用者資料記錄】"},
+    {search_user_bypwd, 
+	PERM_ACCOUNTS|PERM_POLICE_MAN,	"SSearch User    特殊搜尋使用者"},
     {m_loginmsg, PERM_SYSOP,		"GGMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
@@ -774,6 +798,13 @@ static int
 x_admin_money(void)
 {
     domenu(M_XMENU, "金錢相關管理", 'V', m_admin_money);
+    return 0;
+}
+
+static int
+x_admin_user(void)
+{
+    domenu(M_XMENU, "使用者記錄管理", 'O', m_admin_user);
     return 0;
 }
 
