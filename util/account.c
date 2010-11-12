@@ -283,6 +283,10 @@ update_holiday_list(struct tm *ptime)
 	int mo;
 	char a, b;
 
+        // buf has new line.
+        chomp(buf);
+        trim(buf);
+
 	if (buf[0] != '#' && sscanf(buf, "%d %c%c", &mo, &a, &b) == 3 && isdigit(a)) {
 	    if (isdigit(b)) {
 		int da = 10 * (a - '0') + (b - '0');
