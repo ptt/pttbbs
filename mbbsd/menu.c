@@ -384,7 +384,7 @@ show_menu(int menu_index, const commands_t * p)
 #endif 
 
 #ifdef EXP_ALERT_ADBANNER_USONG
-    if ((p[0].level & !HasUserPerm(p[0].level)) &&
+    if ((p[0].level && !HasUserPerm(p[0].level)) &&
         HasUserFlag(UF_ADBANNER_USONG) &&
         HasUserFlag(UF_ADBANNER)) {
         // we have one more extra line to display ADBANNER_USONG!
