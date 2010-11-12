@@ -81,6 +81,12 @@ static const int menu_mode_map[M_MENU_MAX] = {
     PSALE,	AMUSE,	CHC,	NMENU
 };
 
+typedef struct {
+    int     (*cmdfunc)();
+    int     level;
+    char    *desc;                   /* next/key/description */
+} commands_t;
+
 ///////////////////////////////////////////////////////////////////////
 
 void
@@ -264,6 +270,21 @@ ZA_Enter(void)
 static unsigned short menu_row = 12;
 static unsigned short menu_column = 20;
 
+#ifdef EXP_ALERT_ADBANNER_USONG
+static int
+decide_menu_row(const commands_t *p) {
+    if ((p[0].level && !HasUserPerm(p[0].level)) &&
+        HasUserFlag(UF_ADBANNER_USONG) &&
+        HasUserFlag(UF_ADBANNER)) {
+        return menu_row + 1;
+    }
+
+    return menu_row;
+}
+#else
+# define decide_menu_row(x) (menu_row)
+#endif
+
 static void
 show_status(void)
 {
@@ -362,12 +383,6 @@ adbanner(int menu_index)
 #endif
 }
 
-typedef struct {
-    int     (*cmdfunc)();
-    int     level;
-    char    *desc;                   /* next/key/description */
-} commands_t;
-
 static int
 show_menu(int menu_index, const commands_t * p)
 {
@@ -398,6 +413,7 @@ show_menu(int menu_index, const commands_t * p)
         move(row++, alert_column);
         outs(" 上方為使用者心情點歌區，不代表本站立場 ");
     }
+    assert(row == decide_menu_row(p));
 #endif
 
     move(row, 0);
@@ -552,13 +568,13 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    show_status();
 	    refscreen = NA;
 	}
-	cursor_clear(menu_row + pos, menu_column);
+	cursor_clear(decide_menu_row(cmdtable) + pos, menu_column);
 	n = pos = -1;
 	while (++n <= (lastcmdptr = i))
 	    if (CheckMenuPerm(cmdtable[n].level))
 		pos++;
 
-	cursor_show(menu_row + pos, menu_column);
+	cursor_show(decide_menu_row(cmdtable) + pos, menu_column);
     } while (((cmd = vkey()) != EOF) || refscreen);
 
     abort_bbs(0);
