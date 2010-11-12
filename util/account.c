@@ -56,9 +56,12 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     Rename(fpath, genbuf);
 
     if (sym) {
+	char genbuf2[PATHLEN];
+	strcpy(genbuf2, "../");
+	strlcat(genbuf2, genbuf, sizeof(genbuf2));
         sprintf(buf, "log/%s", sym);
         unlink(buf);
-        symlink(genbuf, buf);
+        symlink(genbuf2, buf);
     }
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
