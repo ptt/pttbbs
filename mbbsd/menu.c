@@ -814,7 +814,10 @@ x_agreement(void)
 static int
 x_admin_money(void)
 {
-    domenu(M_XMENU, "金錢相關管理", 'V', m_admin_money);
+    char init = 'V';
+    if (HasUserPerm(PERM_VIEWSYSOP))
+        init = 'G';
+    domenu(M_XMENU, "金錢相關管理", init, m_admin_money);
     return 0;
 }
 
@@ -1015,7 +1018,16 @@ static int chessroom() {
 int
 admin(void)
 {
-    domenu(M_ADMIN, "系統維護", 'X', adminlist);
+    char init = 'L';
+
+    if (HasUserPerm(PERM_VIEWSYSOP))
+        init = 'X';
+    else if (HasUserPerm(PERM_ACCTREG))
+        init = 'R';
+    else if (HasUserPerm(PERM_POLICE_MAN))
+        init = 'S';
+
+    domenu(M_ADMIN, "系統維護", init, adminlist);
     return 0;
 }
 
@@ -1050,7 +1062,7 @@ Xyz(void)
 int
 Play_Play(void)
 {
-    domenu(M_PMENU, "網路遊樂場", 'A', playlist);
+    domenu(M_PMENU, "網路遊樂場", 'G', playlist);
     return 0;
 }
 
