@@ -373,14 +373,15 @@ show_menu(int menu_index, const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
+    int row = menu_row;
 
     adbanner(menu_index);
 
     // seems not everyone likes the menu in center.
 #ifdef LARGETERM_CENTER_MENU
-    // update menu column [fixed const because most items are designed in this way)
+    // update menu column [fixed const because most items are designed as fixed)
     menu_column = (t_columns-40)/2;
-    menu_row = 12 + (t_lines-24)/2;
+    row = 12 + (t_lines-24)/2;
 #endif 
 
 #ifdef EXP_ALERT_ADBANNER_USONG
@@ -389,21 +390,21 @@ show_menu(int menu_index, const commands_t * p)
         HasUserFlag(UF_ADBANNER)) {
         // we have one more extra line to display ADBANNER_USONG!
         int alert_column = menu_column;
-        move(menu_row, 0);
+        move(row, 0);
         vpad(t_columns-2, "─");
         if (alert_column > 2)
             alert_column -= 2;
         alert_column -= alert_column % 2;
-        move(menu_row++, alert_column);
+        move(row++, alert_column);
         outs(" 上方為使用者心情點歌區，不代表本站立場 ");
     }
 #endif
 
-    move(menu_row, 0);
+    move(row, 0);
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
-	    prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_COLOR(0) ")%s\n", menu_column, "", s[1],
-		   s+2);
+            prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_COLOR(0) ")%s\n",
+                   menu_column, "", s[1], s+2);
 	}
 	n++;
     }
