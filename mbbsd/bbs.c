@@ -878,13 +878,19 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     setbdir(bdir, bname);
     setbfile(file, bname, fh->filename);
     memcpy(&newfh, fh, sizeof(fileheader_t)); 
+
+    // XXX TODO FIXME This (finding file by getindex) sucks. getindex checks
+    // only timestamp by binary search, and we know that BN_ALLPOST has plenty
+    // of files sharing same timestamp, so deleting cross post has a very big
+    // chance to delete wrong file, or failed to find the target.
+    // (there's no promise that entries in BN_ALLPOST are sequential)
+
     // Ptt: protect original fh 
     // because getindex safe_article_delete will change fh in some case
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
 #ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST) && 
-           bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
+        if(bp && bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
             safe_article_delete(i, &newfh, bdir, NULL);
         else
 #endif
