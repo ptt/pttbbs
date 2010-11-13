@@ -1552,7 +1552,8 @@ check_quote(void)
     if ((included_line >> 2) > post_line) {
 	move(4, 0);
 	outs("本篇文章的引言比例超過 80%，請您做些微的修正：\n\n"
-	     ANSI_COLOR(1;33) "1) 增加一些文章 或  2) 刪除不必要之引言" ANSI_RESET);
+	     ANSI_COLOR(1;33) "1) 增加一些文章 或  2) 刪除不必要之引言" 
+             ANSI_RESET "\n");
 	{
 	    char            ans[4];
 
