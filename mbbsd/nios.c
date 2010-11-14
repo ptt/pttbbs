@@ -52,6 +52,11 @@
 #define VKEY_PROTO
 #endif
 
+// Linux does not define INFTIM
+#ifndef INFTIM
+#define INFTIM (-1)
+#endif
+
 // XXX use this temporary...
 int process_pager_keys(int ch);
 
@@ -284,10 +289,21 @@ cin_fetch_fd(int fd)
     assert(fd == cin_fd);
 #if 1
     // XXX we don't know how to deal with telnetctx/convert yet...
-    char buf[sizeof(cin_buf)];
+    // let's just keep using the old functions for now
+    char _buf[sizeof(cin_buf) + 2], *buf = _buf;
     ssize_t sz;
     do {
-        sz = tty_read((unsigned char*)buf, vbuf_space(cin));
+        if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
+            continue;
+
+#ifdef DBCSAWARE
+        if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
+            sz = vtkbd_ignore_dbcs_evil_repeats(buf, sz);
+#endif
+#ifdef CONVERT
+        sz = input_wrapper(buf, sz);
+#endif
+
         // for tty_read: sz<0 = EAGAIN
         if (sz > 0)
         {
