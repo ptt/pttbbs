@@ -3,9 +3,20 @@
 //
 // Create: Hung-Te Lin <piaip@csie.org> 
 // Mon Jun 28 22:29:43 CST 2010
-//
+// --------------------------------------------------------------------------
 // Copyright (C) 2010, Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // All rights reserved
+// Distributed under BSD license (GPL compatible).
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright notice,
+//    this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+// --------------------------------------------------------------------------
+// TODO change to sort by activity
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +54,7 @@ static int verbose = 0;
 typedef struct {
     int uid;
     int masters;            // counter of who have this one as angel
+    time_t last_activity;   // last known activity from master
     char userid[IDLEN+1];
 } AngelInfo;
 

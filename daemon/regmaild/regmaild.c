@@ -4,9 +4,19 @@
 // sqlite portion from wens
 // Create:       Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // Initial Date: 2009/06/19
-//
+// --------------------------------------------------------------------------
 // Copyright (C) 2009, Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // All rights reserved
+// Distributed under BSD license (GPL compatible).
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright notice,
+//    this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+// --------------------------------------------------------------------------
 
 // TODO:
 
@@ -22,8 +32,8 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 
-#include "common.h"
 #include "pttstruct.h"
+#include "common.h"
 
 ///////////////////////////////////////////////////////////////////////
 // EmailDB Common Section
