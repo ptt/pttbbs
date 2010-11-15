@@ -819,6 +819,21 @@ a_delete(menu_t * pm, const char *backup_dir)
                 vmsg(msg_errsync2);
                 break;
             default:
+#ifndef USE_TIME_CAPSULE
+                // When not using time capsule, .DIR content may be changed in
+                // board (BN_DELETE/BN_JUNK) and need to be changed. However
+                // since that's going to be deprecated in future, let's have a
+                // simple workaround here.
+                if (backup_dir) {
+                    const char *bn = NULL;
+                    if (strstr(backup_dir, "/" BN_JUNK "/")) 
+                        bn = BN_JUNK;
+                    else if (strstr(backup, "/" BN_DELETED "/"))
+                        bn = BN_DELETED;
+                    if (bn)
+                        setbtotal(getbnum(bn));
+                }
+#endif
                 break;
         }
 
