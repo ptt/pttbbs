@@ -828,7 +828,7 @@ a_delete(menu_t * pm, const char *backup_dir)
                     const char *bn = NULL;
                     if (strstr(backup_dir, "/" BN_JUNK "/")) 
                         bn = BN_JUNK;
-                    else if (strstr(backup, "/" BN_DELETED "/"))
+                    else if (strstr(backup_dir, "/" BN_DELETED "/"))
                         bn = BN_DELETED;
                     if (bn)
                         setbtotal(getbnum(bn));
