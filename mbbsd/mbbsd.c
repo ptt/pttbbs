@@ -176,9 +176,9 @@ log_usies(const char *mode, const char *mesg)
     now = time(NULL);
     if (!mesg)
         log_filef(FN_USIES, LOG_CREAT, 
-                 "%s %s %-12s Stay:%d (%s)\n",
+                 "%s %s %-12s Stay:%d\n",
                  Cdate(&now), mode, cuser.userid ,
-                 (int)(now - login_start_time) / 60, cuser.nickname);
+                 (int)(now - login_start_time) / 60);
     else
         log_filef(FN_USIES, LOG_CREAT,
                  "%s %s %-12s %s\n",

@@ -301,7 +301,9 @@ cin_fetch_fd(int fd)
             sz = vtkbd_ignore_dbcs_evil_repeats(buf, sz);
 #endif
 #ifdef CONVERT
-        sz = input_wrapper(buf, sz);
+        // TODO(piaip) this is not going to work - convert needs static buffer
+        // sz = input_wrapper(buf, sz);
+#error CONVERT is not well-supported in nios.
 #endif
 
         // for tty_read: sz<0 = EAGAIN
