@@ -59,9 +59,18 @@ int need_alert(int days) {
 int bmlostdays_cmp(const void *va, const void *vb)
 {
     lostbm *a=(lostbm *)va, *b=(lostbm *)vb;
-    if (a->lostdays > b->lostdays) return -1;
-    else if (a->lostdays == b->lostdays) return 0;
-    else return 1;
+    int r;
+
+    if (a->lostdays != b->lostdays)
+       return (a->lostdays > b->lostdays) ? -1 : 1;
+    // same lost days, let's sort by category -> board -> userid
+    r = strncmp(a->ctitle, b->ctitle, 4);
+    if (r != 0)
+        return r;
+    r = strcmp(a->title, b->title);
+    if (r != 0)
+        return r;
+    return strcmp(a->bmname, b->bmname);
 }
 
 int main(int argc, char *argv[])
