@@ -10,6 +10,17 @@ extern int numboards;
 #define LAZY_BM_LIMIT_DAYS  (90)
 #endif
 
+#ifndef LAZY_BM_MIN_ALERT_DAYS
+#define LAZY_BM_MIN_ALERT_DAYS  (8)
+#endif
+
+enum {
+    ALERT_MIN = 1,
+    ALERT_INFO,
+    ALERT_WARN,
+    ALERT_CRITICAL,
+};
+
 boardheader_t allbrd[MAX_BOARD];
 typedef struct lostbm {
     char  bmname[IDLEN + 1];
@@ -25,6 +36,25 @@ typedef struct BMarray{
 }  BMArray;
 BMArray bms[5];
 
+int need_alert(int days) {
+    // alerts will be sent at:
+    // LAZY_BM_MIN_ALERT_DAYS(8),
+    // LAZY_BM_LIMIT_DAYS/2 (45),
+    // LAZY_BM_LIMIT_DAYS*2/3 (60),
+    // LAZY_BM_LIMIT_DAYS*5/6 (75),
+    // LAZY_BM_LIMIT_DAYS
+    if (days == LAZY_BM_MIN_ALERT_DAYS)
+        return ALERT_MIN;
+    if (days == LAZY_BM_LIMIT_DAYS/2 ||
+        days == LAZY_BM_LIMIT_DAYS*2/3 ||
+        days == LAZY_BM_LIMIT_DAYS*5/6)
+        return ALERT_INFO;
+    if (days >= LAZY_BM_LIMIT_DAYS)
+        return ALERT_CRITICAL;
+    if (days >= LAZY_BM_LIMIT_DAYS - 2)
+        return ALERT_WARN;
+    return 0;
+}
 
 int bmlostdays_cmp(const void *va, const void *vb)
 {
@@ -104,9 +134,10 @@ int main(int argc, char *argv[])
 	    if (diff < 0)
 		diff = 0;
 
-	    if (diff >= 45 * 86400
-		    && !(xuser.userlevel & PERM_SYSOPHIDE)
-		    && !(xuser.userlevel & PERM_SYSOP)) {
+	    if (need_alert(diff / 86400) && 
+                !(xuser.userlevel & PERM_SYSOPHIDE) &&
+                !(xuser.userlevel & PERM_SYSOP))
+            {
 		strlcpy(lostbms[j].bmname, p, sizeof(bms[index].bmname));
 		lostbms[j].title = allbrd[i].brdname;
 		lostbms[j].ctitle = allbrd[i].title;
@@ -185,11 +216,8 @@ int main(int argc, char *argv[])
 
 	lostdays = lostbms[i].lostdays;
 
-	if (lostdays != LAZY_BM_LIMIT_DAYS/2 &&
-            lostdays != LAZY_BM_LIMIT_DAYS*2/3 &&
-            lostdays != LAZY_BM_LIMIT_DAYS*5/6 &&
-            lostdays <= LAZY_BM_LIMIT_DAYS)
-	    continue;
+        if (need_alert(lostdays) < ALERT_WARN)
+            continue;
 
 	sprintf(genbuf, BBSHOME "/home/%c/%s", 
 		lostbms[i].bmname[0], lostbms[i].bmname);
