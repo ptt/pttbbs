@@ -450,7 +450,7 @@ edit_msg(void)
 	show_phone_mode_panel();
 
     snprintf(buf, sizeof(buf),
-	    " (^Z/F1)說明 (^P/^G)插入符號/圖片 (^X/^Q)離開\t"
+	    " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
 	    "║%s│%c%c%c%c║%3d:%3d",
 	    curr_buf->insert_mode ? "插入" : "取代",
 	    curr_buf->ansimode ? 'A' : 'a',
