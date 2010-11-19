@@ -271,6 +271,13 @@ openticket(int bid)
 	    unlockutmpmode();
 	    return 0;
 	}
+        if (bet == 99) {
+            move(22, 0);
+            SOLVE_ANSI_CACHE();
+            clrtoeol();
+            prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d" ANSI_RESET,
+                    price * 10);
+        }
 	getdata(21, 0, 
 		ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":"
 		, buf, 3, LCECHO);
