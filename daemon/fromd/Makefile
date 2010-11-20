@@ -16,7 +16,7 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 fromd: fromd.o ip_desc_db.o
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS) -levent
 
 fromc: fromc.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)

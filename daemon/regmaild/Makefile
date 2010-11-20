@@ -10,6 +10,7 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
+	-levent \
 	-lsqlite3
 
 all:	${PROGRAMS}
@@ -21,10 +22,10 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 regmaild: regmaild.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(UTILOBJ) $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 regmailc: regmailc.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

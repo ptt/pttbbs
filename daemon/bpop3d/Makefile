@@ -8,7 +8,8 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a
+	$(SRCROOT)/common/osdep/libosdep.a \
+	-lcrypt -levent
 
 all:	${PROGRAMS}
 
@@ -19,7 +20,7 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 bpop3d: bpop3d.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -lcrypt -levent -o $* $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $* $> $(LDLIBS)
 
 clean:
 	rm -f *~ ${PROGRAMS} bpop3d.o

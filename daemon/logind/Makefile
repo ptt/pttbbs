@@ -9,7 +9,8 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a
+	$(SRCROOT)/common/osdep/libosdep.a \
+	-levent
 
 all:	${PROGRAMS}
 
@@ -20,10 +21,10 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 logind: logind.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(UTILOBJ) $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 loginc: loginc.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

@@ -23,12 +23,12 @@ utmpserver: utmpserver.o
 utmpserver2: utmpserver2.o friend.o
 	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o friend.o $(LDLIBS)
 utmpserver3: utmpserver3.o friend.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -levent -o $* $*.o friend.o $(LDLIBS)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $* $*.o friend.o $(LDLIBS) -levent
 utmpsync: utmpsync.o $(UTILOBJ)
 	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 
 authserver: authserver.o
-	${CC} ${CFLAGS} ${LDFLAGS} -lcrypt -levent -o $* $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $* $> $(LDLIBS) -lcrypt -levent
 
 clean:
 	rm -f *~ ${PROGRAMS} friend.o utmpserver.o utmpserver2.o utmpserver3.o utmpsync.o authserver.o

@@ -17,9 +17,9 @@ CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
 .endif
 
-PTT_CFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
-PTT_CXXFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
-PTT_LDFLAGS:=
+PTT_CFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_CXXFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_LDFLAGS:=	-Wl,--as-needed
 .if $(WANTS_CONVERT) != "NO"
 PTT_LDLIBS+=	-lhz
 .endif
