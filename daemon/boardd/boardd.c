@@ -118,7 +118,7 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 		p += snprintf(p, sizeof(databuf) - (databuf - p), "%d,", bid);
 	    }
 
-	    *p = '\0';
+	    *--p = '\0';
 	} else
 	    return;
     } else if (strncmp(key, "tobid.", 6) == 0) {
@@ -140,7 +140,7 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 	    p += snprintf(p, sizeof(databuf) - (databuf - p), "%d,", SHM->HBcache[bid] + 1);
 	}
 
-	*p = '\0';
+	*--p = '\0';
 #endif
     } else
 	return;
