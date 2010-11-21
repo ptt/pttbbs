@@ -130,6 +130,18 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 
 	snprintf(databuf, sizeof(databuf), "%d", bid);
 	data = databuf;
+#if HOTBOARDCACHE
+    } else if (strncmp(key, "hotboards", 9) == 0) {
+	data = p = databuf;
+	for (bid = 0; bid < SHM->nHOTs; bid++) {
+	    bptr = getbcache(SHM->HBcache[bid] + 1);
+	    if (BOARD_HIDDEN(bptr))
+		continue;
+	    p += snprintf(p, sizeof(databuf) - (databuf - p), "%d,", SHM->HBcache[bid] + 1);
+	}
+
+	*p = '\0';
+#endif
     } else
 	return;
 
