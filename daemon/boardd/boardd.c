@@ -71,6 +71,9 @@ void cb_endconn(struct bufferevent *bufev, short what, void *arg);
 
 // helper function
 
+#define BOARD_HIDDEN(bptr) (bptr->brdattr & (BRD_HIDE | BRD_TOP) || \
+    (bptr->level & ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK) && \
+     !(bptr->brdattr & BRD_POSTMASK)))
 void answer_key(const char *key, int keylen, struct evbuffer *buf)
 {
     char *data, *p;
@@ -87,17 +90,13 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 	p++;
 	bptr = getbcache(bid);
 
-	if (!bptr->brdname[0] || bptr->brdattr & (BRD_HIDE | BRD_TOP) ||
-		(bptr->level & ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK) &&
-		 !(bptr->brdattr & BRD_POSTMASK)))
+	if (!bptr->brdname[0] || BOARD_HIDDEN(bptr))
 	    return;
 
 	if (strncmp(p, "isboard", 7) == 0)
 	    data = (bptr->brdattr & BRD_GROUPBOARD) ? "0" : "1";
 	else if (strncmp(p, "hidden", 6) == 0)
-	    data = (bptr->brdattr & (BRD_HIDE | BRD_TOP)  ||
-		    (bptr->level & ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK) &&
-		     !(bptr->brdattr & BRD_POSTMASK))) ? "1" : "0";
+	    data = BOARD_HIDDEN(bptr) ? "1" : "0";
 	else if (strncmp(p, "brdname", 7) == 0)
 	    data = bptr->brdname;
 	else if (strncmp(p, "over18", 6) == 0)
@@ -126,9 +125,7 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 	bid = getbnum(key + 6);
 	bptr = getbcache(bid);
 
-	if (!bptr->brdname[0] || bptr->brdattr & (BRD_HIDE | BRD_TOP) ||
-		(bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
-		(bptr->level & ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))))
+	if (!bptr->brdname[0] || BOARD_HIDDEN(bptr))
 	    return;
 
 	snprintf(databuf, sizeof(databuf), "%d", bid);
