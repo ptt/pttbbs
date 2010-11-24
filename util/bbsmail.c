@@ -46,8 +46,7 @@ bbsmail_pretty_subject(const char *subject)
 
     static const char *table[] = {
 	"Undelivered Mail Returned to Sender",
-	"退信通知",
-
+	"<對方退信通知>",
 	NULL,
 	NULL,
     };
