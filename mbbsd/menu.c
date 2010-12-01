@@ -662,7 +662,6 @@ static const commands_t maillist[] = {
     {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
 // #endif
     {m_sysop, 0,                "YYes, sir!     寫信給站長"},
-    {m_internet, PERM_INTERNET, "RInternet      寄信到站外"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
     {built_mail_index, 
 	PERM_LOGINOK,		"SSavemail      重建信箱索引"},

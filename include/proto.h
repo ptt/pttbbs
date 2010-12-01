@@ -359,7 +359,6 @@ int m_new(void);
 int m_send(void);
 int mail_list(void);
 int setforward(void);
-int m_internet(void);
 int mail_mbox(void);
 int built_mail_index(void);
 int mail_all(void);
