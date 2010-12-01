@@ -896,8 +896,11 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 #endif
             delete_fileheader(bdir, &newfh, i);
 	setbtotal(bid);
-	unlink(file);
     }
+
+    // the getindex is not stable. in order to prevent leaving files,
+    // no matter what, delete the file.
+    unlink(file);
 }
 
 static void
