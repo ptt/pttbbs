@@ -14,8 +14,6 @@
 #include <ansi.h>
 #include <var.h>
 
-// test
-#define ACCOUNT_MAX_LINE        16
 #define ADJUST_M        6	/* adjust back 5 minutes */
 
 void
@@ -75,19 +73,6 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 	touchbtotal(bid);
 }
 
-
-static void
-my_outs(FILE *fp, char *buf, char mode)
-{
-    static char     state = '0';
-
-    if (state != mode)
-	fprintf(fp, "[3%cm", state = mode);
-    if (buf[0]) {
-	fputs(buf, fp);
-	buf[0] = 0;
-    }
-}
 
 // moves "source" to "target""suffix", then gzips it
 static void 
@@ -158,42 +143,47 @@ static int
 output_today(struct tm *ptime, int act[27], int peak_hour_login, int day_login)
 {
     char buf[256];
-    int item = peak_hour_login / ACCOUNT_MAX_LINE + 1;
-    int per_hour_unit = 100;
-    int i, j;
+    int i;
     FILE *fp;
+
+    // each bar: 01 [BAR] ... number\n
+    int number_len = sprintf(buf, " %d\n", peak_hour_login);
+    int bar_max_width = 79 - 3 - number_len;
+
+    // assume we want to make avg in middle,
+    int avg_len = ((day_login - peak_hour_login) / 23) + 1;
+    int bar_unit = avg_len / (bar_max_width / 2 / 2);
+
+    printf("peak: %d, day_login: %d\n", peak_hour_login, day_login);
+    printf("avg_len=%d, bar_unit=%d\n", avg_len, bar_unit);
 
     if ((fp = fopen("etc/today", "w")) == NULL) {
 	printf("can't open etc/today\n");
 	return 1;
     }
 
-    fprintf(fp, "\t\t\t" ANSI_COLOR(1;33;46) "¨C¤p®É¤W¯¸¤H¦¸²Î­p [%02d/%02d/%02d] " ANSI_COLOR(40) "\n\n", 
-	    ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
+    fprintf(fp, "\t\t\t" ANSI_COLOR(1;33;46)
+            "¨C¤p®É¤W¯¸¤H¦¸²Î­p [%04d/%02d/%02d]" ANSI_RESET "\n\n", 
+	    ptime->tm_year, ptime->tm_mon + 1, ptime->tm_mday);
 
-    for (i = ACCOUNT_MAX_LINE + 1; i > 0; i--) {
-	strcpy(buf, "   ");
+    for (i = 0; i < 24; i++) {
+        int hour_count = act[i];
+        int bars = hour_count / bar_unit + 1;
+        fprintf(fp, ANSI_COLOR(1;32) "%02d " ANSI_COLOR(34), i);
 
-	for (j = 0; j < 24; j++) {
-	    int hour_count = act[j];
-	    int max = item * i;
-	    if (hour_count && (hour_count < max) && (max <= hour_count + item)) {
-		my_outs(fp, buf, '3');
-		fprintf(fp, "%-3d", hour_count / per_hour_unit);
-	    } else if (max <= hour_count) {
-		my_outs(fp, buf, '4');
-		fprintf(fp, "¢i ");
-	    } else
-		strcat(buf, "   ");
-	}
+        // render the bar
+        if (bars*2 > bar_max_width)
+            bars = bar_max_width/2;
+        while (bars-- > 0)
+            fputs("¢i", fp);
 
-	fprintf(fp, "\n");
+        // print number and newline
+        fputs(ANSI_COLOR(33), fp);
+        fprintf(fp, " %d" ANSI_RESET "\n", hour_count);
     }
 
-    fprintf(fp, "   " ANSI_COLOR(32)
-	    "0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23\n\n"
-	    "\t      " ANSI_COLOR(34) "³æ¦ì: " ANSI_COLOR(37) "%d" ANSI_COLOR(34) " ¤H", per_hour_unit);
-    fprintf(fp, "  Á`¦@¤W¯¸¤H¦¸¡G" ANSI_COLOR(37) "%-7d" ANSI_COLOR(34) "¥­§¡¨Ï¥Î¤H¼Æ¡G" ANSI_COLOR(37) "%d\n",
+    fprintf(fp, ANSI_COLOR(1;36) "\n  Á`¦@¤W¯¸¤H¦¸¡G" ANSI_COLOR(37) "%-7d"
+            ANSI_COLOR(36) " ¥­§¡¨Ï¥Î¤H¼Æ¡G" ANSI_COLOR(37) "%d\n",
 	    day_login, day_login / 24);
     fclose(fp);
 
@@ -357,7 +347,7 @@ update_holiday(struct tm *ptime)
 }
 
 int 
-main(int argc, char **argv)
+main(/*int argc, char **argv*/)
 {
     int             i;
     int             mo, da;
