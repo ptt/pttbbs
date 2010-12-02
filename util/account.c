@@ -164,7 +164,7 @@ output_today(struct tm *ptime, int act[27], int peak_hour_login, int day_login)
 
     fprintf(fp, "\t\t\t" ANSI_COLOR(1;33;46)
             "每小時上站人次統計 [%04d/%02d/%02d]" ANSI_RESET "\n\n", 
-	    ptime->tm_year, ptime->tm_mon + 1, ptime->tm_mday);
+	    ptime->tm_year + 1900, ptime->tm_mon + 1, ptime->tm_mday);
 
     for (i = 0; i < 24; i++) {
         int hour_count = act[i];
