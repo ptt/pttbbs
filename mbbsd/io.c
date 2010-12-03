@@ -201,6 +201,8 @@ process_pager_keys(int ch)
     switch (ch) 
     {
 	case Ctrl('U') :
+            if (!is_login_ready)
+                return ch;
 	    if ( currutmp->mode == EDITING ||
 		 currutmp->mode == LUSERS  || 
 		!currutmp->mode) {

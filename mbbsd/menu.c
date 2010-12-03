@@ -214,6 +214,9 @@ ZA_Select(void)
 {
     int k;
 
+    if (!is_login_ready)
+        return 0;
+
     // TODO refresh status bar?
     vs_footer(VCLR_ZA_CAPTION " ★快速切換: ",
 	    " (b)文章列表 (c)分類 (t)熱門 (f)我的最愛 (m)信箱 (u)使用者名單");
