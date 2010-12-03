@@ -2,6 +2,7 @@
 
 # expire rules
 EXPIRE_MINUTES=+103000
+HOME_EXPIRE_MINUTES="+$((103000 / 6))"
 
 # configuration
 BBSHOME=$HOME
@@ -55,7 +56,7 @@ expire_home() {
         fi
 
         # first stage, expire files
-        find "$timecap_base" -mmin "$EXPIRE_MINUTES" -ls -delete
+        find "$timecap_base" -mmin "$HOME_EXPIRE_MINUTES" -ls -delete
 
         # second stage, modify .DIR files
         # dir_file="$timecap_base/archive.idx"
