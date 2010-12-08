@@ -2303,6 +2303,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);
 
+        // TODO fix race condition here.
 	substitute_ref_record(direct, fhdr, ent);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -2571,6 +2572,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 		return FULLUPDATE;
 	    }
 	    *fhdr = tmpfhdr;
+            // TODO fix race condition here.
 	    substitute_ref_record(direct, fhdr, ent);
 	}
     }
@@ -2582,6 +2584,7 @@ solve_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     if ((currmode & MODE_BOARD)) {
 	fhdr->filemode ^= FILE_SOLVED;
+        // TODO fix race condition here.
         substitute_ref_record(direct, fhdr, ent);
 	check_locked(fhdr);
 	return PART_REDRAW;
@@ -2593,6 +2596,9 @@ solve_post(int ent, fileheader_t * fhdr, const char *direct)
 static int
 recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
+    char yn[5];
+    char fn[PATHLEN];
+
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
 
@@ -2607,18 +2613,27 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     } else 
 #endif
     {
-        char yn[5], fn[PATHLEN];
-
-	getdata(b_lines - 1, 0, "確定要劣推文 [y/N]? ", yn, 3, LCECHO);
-	if (*yn != 'y')
-            return FULLUPDATE;
-
-        setbfile(fn, currboard, fhdr->filename);
-        bad_comment(fn);
-        return FULLUPDATE;
+	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 劣推文 [1/2]? ", yn, 3, LCECHO);
+	if (yn[0] == '2')
+	{
+	    setbfile(fn, currboard, fhdr->filename);
+	    bad_comment(fn);
+	    return FULLUPDATE;
+	} else if (yn[0] != '1')
+	    return FULLUPDATE;
     }
 #endif
-    return DONOTHING;
+    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
+    if (yn[0] != 'y')
+	return FULLUPDATE;
+    fhdr->recommend = 0;
+    // TODO fix race condition here.
+    substitute_ref_record(direct, fhdr, ent);
+    setdirpath(fn, direct, fhdr->filename);
+    if (dashf(fn))
+        log_filef(fn, LOG_CREAT, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
+                  Cdatelite(&now));
+    return FULLUPDATE;
 }
 
 static int
@@ -3096,6 +3111,7 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     fhdr->filemode ^= FILE_MARKED;
+    // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     check_locked(fhdr);
     return PART_REDRAW;
@@ -3563,6 +3579,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	syncnow();
 	bp->SRexpire = now;
     }
+    // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     post_policelog(currboard, fhdr->title, "鎖文", genbuf, fhdr->filename[0] == 'L' ? 1 : 0);
     if (fhdr->filename[0] == 'L') {
@@ -4089,6 +4106,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 		delta = 1000;
 	}
     }
+    // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }
