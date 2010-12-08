@@ -3533,6 +3533,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     if (currstat == RMAIL)
 	return DONOTHING;
 
+    // SYSOP/POLICE can lock, BM can unlock
     if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
 	return DONOTHING;
 
@@ -3540,8 +3541,10 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(bp);
 
     if (fhdr->filename[0]=='M') {
-	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE))
-	    return DONOTHING;
+	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE)) {
+            vmsg("站長或特殊管理人員才可進行鎖定。板主只能解除鎖定。");
+	    return FULLUPDATE;
+        }
 
 	getdata(b_lines - 1, 0, "請輸入鎖定理由：", genbuf, 50, DOECHO);
 
