@@ -12,8 +12,9 @@
 
 static int recommend(int ent, fileheader_t * fhdr, const char *direct);
 static int do_add_recommend(const char *direct, fileheader_t *fhdr,
-		 int ent, const char *buf, int type);
-static int view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln);
+                            int ent, const char *buf, int type);
+static int view_postinfo(int ent, const fileheader_t * fhdr,
+                         const char *direct, int crs_ln);
 
 static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
@@ -2033,7 +2034,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    cuser.userid, bname, maxlength, "",
 		    tail);
 
-	    do_add_recommend(direct, fhdr,  ent, buf, 2);
+            // use do_add_recommend to also modify the file record
+	    do_add_recommend(direct, fhdr,  ent, buf, RECTYPE_ARROW);
 	} else
 #endif
 	{
@@ -2591,9 +2593,9 @@ solve_post(int ent, fileheader_t * fhdr, const char *direct)
 static int
 recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            yn[5];
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
+
 #if defined(ASSESS) && defined(EXP_BAD_COMMENT)
     // supporting bad_comment
 #if 0
@@ -2605,23 +2607,18 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     } else 
 #endif
     {
-	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 劣推文 [1/2]? ", yn, 3, LCECHO);
-	if (yn[0] == '2')
-	{
-	    char fn[PATHLEN];
-	    setbfile(fn, currboard, fhdr->filename);
-	    bad_comment(fn);
-	    return FULLUPDATE;
-	} else if (yn[0] != '1')
-	    return FULLUPDATE;
+        char yn[5], fn[PATHLEN];
+
+	getdata(b_lines - 1, 0, "確定要劣推文 [y/N]? ", yn, 3, LCECHO);
+	if (*yn != 'y')
+            return FULLUPDATE;
+
+        setbfile(fn, currboard, fhdr->filename);
+        bad_comment(fn);
+        return FULLUPDATE;
     }
 #endif
-    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
-    if (yn[0] != 'y')
-	return FULLUPDATE;
-    fhdr->recommend = 0;
-    substitute_ref_record(direct, fhdr, ent);
-    return FULLUPDATE;
+    return DONOTHING;
 }
 
 static int
