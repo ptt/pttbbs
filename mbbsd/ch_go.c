@@ -659,7 +659,7 @@ go_select(ChessInfo* info, rc_t location, ChessGameResult* result GCC_UNUSED)
 	    ChessHistoryAppend(info, &step);
 
 	    go_getstep(&step, info->last_movestr);
-	    if (go_examboard(board, !info->myturn, info))
+	    if (go_examboard(board, info->turn ^ 1, info))
 		ChessRedraw(info);
 	    else
 		ChessDrawLine(info, BOARD_LINE_ON_SCREEN(location.r));
