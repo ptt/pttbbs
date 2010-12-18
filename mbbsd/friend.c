@@ -9,40 +9,41 @@
 static char     special_list[7] = "list.0";
 static char     special_des[7] = "ldes.0";
 
-#define FRIENDLIST_TYPES    (7)
-
 /* 特別名單的上限 */
-static const unsigned int friend_max[FRIENDLIST_TYPES] = {
+static const unsigned int friend_max[8] = {
     MAX_FRIEND,     /* FRIEND_OVERRIDE */
     MAX_REJECT,     /* FRIEND_REJECT   */
     MAX_LOGIN_INFO, /* FRIEND_ALOHA    */
     MAX_POST_INFO,  /* FRIEND_POST     */
     MAX_NAMELIST,   /* FRIEND_SPECIAL  */
     MAX_FRIEND,     /* FRIEND_CANVOTE  */
+    MAX_FRIEND,     /* BOARD_WATER     */
     MAX_FRIEND,     /* BOARD_VISABLE   */
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
 
 /* Ptt 各種特別名單的補述 */
-static char    * const friend_desc[FRIENDLIST_TYPES] = {
+static char    * const friend_desc[8] = {
     "友誼描述：",
     "惡形惡狀：",
     "",
     "",
     "描述一下：",
     "投票者描述：",
+    "惡形惡狀：",
     "看板會員描述"
 };
 
 /* Ptt 各種特別名單的中文敘述 */
-static char    * const friend_list[FRIENDLIST_TYPES] = {
+static char    * const friend_list[8] = {
     "好友名單",
     "壞人名單",
     "上線通知",
     "新文章通知",
     "其它特別名單",
     "私人投票名單",
+    "看板舊水桶名單",
     "看板會員名單"
 };
 
@@ -70,7 +71,7 @@ friend_add(const char *uident, int type, const char* des)
     char            fpath[PATHLEN];
 
     setfriendfile(fpath, type);
-    if ((unsigned int)friend_count(fpath) > friend_max[type])
+    if (friend_count(fpath) > friend_max[type])
 	return;
 
     if ((uident[0] > ' ') && !file_exist_record(fpath, uident)) {
@@ -144,7 +145,7 @@ friend_append(int type, int count)
 		prints("  (%d) %-s\n", j, friend_list[(int)i]);
 	    }
 	if (HasUserPerm(PERM_SYSOP) || currmode & MODE_BOARD)
-	    for (; i < FRIENDLIST_TYPES; ++i)
+	    for (; i < 8; ++i)
 		if (i != type) {
 		    ++j;
 		    prints("  (%d) %s 板的 %s\n", j, currboard,
