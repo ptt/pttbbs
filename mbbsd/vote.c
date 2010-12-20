@@ -402,8 +402,8 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
     fscanf(fp, "%hd,%hd\n%d\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
 
-    prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
-	   "セΩщ布盢挡 %s\n", atoi(inbuf), (int)(num / sizeof(short)),
+    prints("\n』 箇щ布ㄆ: ヘ玡Τ %d 布,\n"
+	   "セΩщ布盢挡 %s\n", (int)(num / sizeof(short)),
 	   Cdate(&closetime));
 
     /* Thor: 秨 布计 箇 */
