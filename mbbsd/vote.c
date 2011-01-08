@@ -137,7 +137,6 @@ vote_report(const char *bname, const char *post_bname, const char *fname)
 
     setbpath(buf, post_bname);
     stampfile(buf, &header);
-    memset(&header, 0, sizeof(fileheader_t));
     strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
     snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
 
