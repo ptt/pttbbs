@@ -129,59 +129,25 @@ b_nonzeroNum(const char *buf)
 }
 
 static void
-vote_report(const char *bname, const char *fname, char *fpath)
+vote_report(const char *bname, const char *post_bname, const char *fname)
 {
-    register char  *ip;
-    time4_t         dtime;
-    int             fd, bid;
-    fileheader_t    header;
+    int bid;
+    char buf[PATHLEN];
+    fileheader_t header;
 
-    ip = fpath;
-    while (*(++ip));
-    *ip++ = '/';
-
-    /* get a filename by timestamp */
-
-    dtime = now;
-    for (;;) {
-        /* TODO: extract record.c:stampfile_u() to common lib */
-	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, (unsigned int)(random() & 0xFFF));
-	fd = OpenCreate(fpath, O_EXCL | O_WRONLY);
-	if (fd >= 0)
-	    break;
-	dtime++;
-    }
-    close(fd);
-
-    /* XXX: FIXME: Possible race condition */
-    unlink(fpath);
-    link(fname, fpath);
-
-    /* append record to .DIR */
-
+    setbpath(buf, post_bname);
+    stampfile(buf, &header);
     memset(&header, 0, sizeof(fileheader_t));
     strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
     snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
-    {
-	struct tm ptime;
 
-	localtime4_r(&dtime, &ptime);
-	snprintf(header.date, sizeof(header.date),
-		 "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
-    }
-    strlcpy(header.filename, ip, sizeof(header.filename));
+    Copy(fname, buf);
 
-    strcpy(ip, FN_DIR);
-    if ((fd = OpenCreate(fpath, O_WRONLY)) >= 0) {
-	flock(fd, LOCK_EX);
-	lseek(fd, 0, SEEK_END);
-	write(fd, &header, sizeof(fileheader_t));
-	flock(fd, LOCK_UN);
-	close(fd);
-	if ((bid = getbnum(bname)) > 0)
-	    setbtotal(bid);
-
-    }
+    /* append record to .DIR */
+    setbfile(buf, post_bname, FN_DIR);
+    if (append_record(buf, &header, sizeof(header)) >= 0)
+	if ((bid = getbnum(post_bname)) > 0)
+	    touchbtotal(bid);
 }
 
 static void
@@ -280,10 +246,9 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 	fclose(frp);
     }
     setbpath(inbuf, bname);
-    vote_report(bname, b_report, inbuf);
+    vote_report(bname, bname, b_report);
     if (!(fh->brdattr & (BRD_NOCOUNT|BRD_HIDE))) { // from ptt2 local modification
-	setbpath(inbuf, "Record");
-	vote_report(bname, b_report, inbuf);
+	vote_report(bname, BN_RECORD, b_report);
     }
     unlink(b_report);
 
