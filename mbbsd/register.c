@@ -2255,10 +2255,18 @@ regform2_validate_page(int dryrun)
 		    forms[i].u.realname, forms[i].u.career);
 
 	    move(i*2+1, 0); 
-	    prints("    %s %-50s%20s\n", 
-		    (forms[i].u.userlevel & PERM_NOREGCODE) ? 
-		    ANSI_COLOR(1;31) "T" ANSI_RESET : " ",
-		    forms[i].u.address, forms[i].u.phone);
+	    prints("    %s ", (forms[i].u.userlevel & PERM_NOREGCODE) ? 
+                              ANSI_COLOR(1;31) "T" ANSI_RESET : " ");
+            // try to print lasthost if possible
+            int delta = 70 - 2 - strlen(forms[i].u.address) -
+                        strlen(forms[i].u.phone) - strlen(forms[i].u.lasthost);
+            if (delta < 0)
+                prints("%-50s%20s\n", forms[i].u.address, forms[i].u.phone);
+            else
+                prints("%s" ANSI_COLOR(0;33) " %*s%s " ANSI_RESET "%s\n",
+                        forms[i].u.address, delta, "",
+                        forms[i].u.lasthost, forms[i].u.phone);
+
 
 	    cforms++, tid ++;
 	}
