@@ -290,7 +290,7 @@ apply_record(const char *fpath, int (*fptr) (void *item, void *optarg),
              size_t size, void *arg)
 {
     char buf[BUFSIZE];
-    int fd;
+    int fd, ret;
 
     assert(size <= sizeof(buf));
 
@@ -298,9 +298,9 @@ apply_record(const char *fpath, int (*fptr) (void *item, void *optarg),
 	return -1;
 
     while (read(fd, buf, size) == size)
-	if ((*fptr) (buf, arg) == 1) {
+	if ((ret = (*fptr) (buf, arg)) != 0) {
 	    close(fd);
-	    return 1;
+	    return ret;
 	}
 
     close(fd);
