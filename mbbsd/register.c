@@ -2178,16 +2178,16 @@ regform2_validate_single(const char *xuid)
     pressanykey();
 }
 
-#define FORMS_IN_PAGE (10)
+// According to the (soft) max terminal size definition.
+#define MAX_FORMS_IN_PAGE (100)
 
 int
 regform2_validate_page(int dryrun)
 {
-    int yMsg = FORMS_IN_PAGE*2+1;
-    RegformEntry forms [FORMS_IN_PAGE];
-    char ans	[FORMS_IN_PAGE];
-    int  lfds	[FORMS_IN_PAGE];
-    char rejects[FORMS_IN_PAGE][REASON_LEN];	// reject reason length
+    RegformEntry forms [MAX_FORMS_IN_PAGE];
+    char ans	[MAX_FORMS_IN_PAGE];
+    int  lfds	[MAX_FORMS_IN_PAGE];
+    char rejects[MAX_FORMS_IN_PAGE][REASON_LEN];	// reject reason length
     char rsn	[REASON_LEN];
     int cforms = 0,	// current loaded forms
 	ci = 0, // cursor index
@@ -2196,10 +2196,16 @@ regform2_validate_page(int dryrun)
     int tid = 0;
     char uid[IDLEN+1];
     FILE *fpregq = regq_init_pull();
+    int yMsg = 0;
+    int forms_in_page = (t_lines - 3) / 2;
 
     if (!fpregq)
 	return 0;
 
+    if (forms_in_page >= MAX_FORMS_IN_PAGE)
+        forms_in_page = MAX_FORMS_IN_PAGE -1;
+
+    yMsg = forms_in_page * 2 + 1;
     while (ch != 'q')
     {
 	// initialize and prepare
@@ -2211,7 +2217,7 @@ regform2_validate_page(int dryrun)
 	clear();
 
 	// load forms
-	while (cforms < FORMS_IN_PAGE)
+	while (cforms < forms_in_page)
 	{
 	    if (!regq_pull(fpregq, uid))
 		break;
@@ -2225,9 +2231,9 @@ regform2_validate_page(int dryrun)
 	    }
 
 	    // try to lock
-	    lfds[i] = regfrm_trylock(uid);
-	    if (lfds[i] <= 0)
-		continue;
+            lfds[i] = regfrm_trylock(uid);
+            if (lfds[i] <= 0)
+                continue;
 
 	    // assign default answers
 	    if (forms[i].u.userlevel & PERM_LOGINOK)
