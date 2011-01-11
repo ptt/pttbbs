@@ -400,7 +400,7 @@ pvrb_header(void *ctx) {
 static int
 pvrb_footer(void *ctx) {
     vs_footer(" 已刪檔案 ",
-              " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/r/→)選擇 (x)存入信箱"
+              " (↑/↓/PgUp/PgDn)移動 (Enter/r/→)選擇 (/a#n)搜尋 (x)存入信箱"
               "\t(q/←)跳出");
     move(b_lines-1, 0);
     return 0;
@@ -423,6 +423,69 @@ pvrb_renderer(int i, int curr, int total, int rows, void *ctx) {
 }
 
 static int
+pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
+    fileheader_t *fh;
+    static char search_str[FNLEN] = "";
+    static char search_cmd = 0;
+    const char *prompt = "";
+    const char *aid_str = NULL;
+    aidu_t aidu = 0;
+    int need_input = 1;
+
+    if (key == 'n') {
+        key = search_cmd;
+        if (key) {
+            need_input = 0;
+            if (curr + 1 < total)
+                curr ++;
+        } else
+            key = 'n';
+    }
+
+    if (key == '#')
+        prompt = "請輸入文章代碼: #";
+    else if (key == '/')
+        prompt = "請輸入標題關鍵字: ";
+    else if (key == 'a')
+        prompt = "請輸入作者關鍵字: ";
+    else {
+        assert(!"unknown search command");
+        return PSB_NA;
+    }
+
+    assert(sizeof(search_str) >= FNLEN);
+    if (need_input && 
+        getdata(b_lines-1, 0, prompt, search_str, FNLEN, DOECHO) < 1)
+        return PSB_NA;
+
+    // cache for next cache.
+    search_cmd = key;
+
+    if (key == '#') {
+        // AID search is very special, we have to search from begin to end.
+        curr = 0;
+        aid_str = search_str;
+        while (*aid_str == ' ' || *aid_str == '#')
+            aid_str++;
+        aidu = aidc2aidu(aid_str);
+        if (!aidu)
+            return PSB_NOP;
+    }
+
+    // the records was in reversed ordering
+    for (; curr < total; curr++) {
+        fh = &cx->records[total - curr - 1];
+        if ((key == '/' && DBCS_strcasestr(fh->title, search_str)) ||
+            (key == 'a' && DBCS_strcasestr(fh->owner, search_str)) ||
+            (key == '#' && fn2aidu(fh->filename) == aidu)) {
+            // found something. return as current index.
+            return curr;
+        }
+    }
+    return PSB_NOP;
+}
+
+static int
 pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
     char fname[PATHLEN];
     int maxrev;
@@ -431,7 +494,6 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
     switch (key) {
-        // TODO add '/' for search
         case 'x':
             setdirpath(fname, cx->dirbase, fh->filename);
             maxrev = timecapsule_get_max_revision_number(fname);
@@ -454,6 +516,19 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
                         vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
                     return PSB_EOF;
                 }
+            }
+            return PSB_NOP;
+
+        case '#':
+        case '/':
+        case 'a':
+        case 'n':
+            {
+                int newloc = pvrb_search(key, curr, total, cx);
+                if (newloc >= 0)
+                    return newloc;
+                if (newloc == PSB_NOP)
+                    vmsg("找不到符合的資料。");
             }
             return PSB_NOP;
 
@@ -488,10 +563,12 @@ pvrb_welcome() {
         move(2, 0);
         outs(ANSI_COLOR(1;36)
 "  歡迎使用 " TIME_CAPSULE_NAME " " RECYCLE_BIN_NAME "!\n\n" ANSI_RESET
-"  提醒您: (1) 此系統尚在實驗性開放中，站方未來會決定是否繼續提供此功\能。\n\n"
-"          (2) 所有的資料僅供參考，站方不保證此處為完整的電磁記錄。\n\n"
-"          (3) 所有的資料都可能不定期由系統清除掉。\n"
+"  提醒您: (1) 所有的資料僅供參考，站方不保證此處為完整的電磁記錄。\n\n"
+"          (2) 所有的資料都可能不定期由系統清除掉。\n"
 "              ^D 刪除的內容目前不會保留。\n\n"
+"          " ANSI_COLOR(1;33) "(3) 目前提供簡易的單向搜尋: / a # 分別"
+           "可搜尋標題/作者/AID文章代碼\n"
+"              n 可以找下一個符合搜尋的項目 (暫無向前搜尋)\n\n" ANSI_RESET
 "   Mini FAQ:\n\n"
 "   Q: 通常檔案會保留多久?\n"
 "   A: 仍在評估中，或許\會是一個到兩個月，另外篇數也會有上限。\n\n"
