@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
-static int      mailkeep = 0,		mailsum = 0;
-static int      mailsumlimit = 0,	mailmaxkeep = 0;
+static int      mailkeep = 0;
+static int      mailmaxkeep = 0;
 static char     currmaildir[PATHLEN];
 static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
@@ -13,7 +13,6 @@ static char     listfile[] = "list.0";
 
 enum SHOWMAIL_MODES {
     SHOWMAIL_NORM = 0,
-    SHOWMAIL_SUM,
     SHOWMAIL_RANGE,
 };
 static int	showmail_mode = SHOWMAIL_NORM;
@@ -257,42 +256,44 @@ m_init(void)
 static void
 loadmailusage(void)
 {
-    mailkeep=get_num_records(currmaildir,sizeof(fileheader_t));
-    mailsum =get_sum_records(currmaildir, sizeof(fileheader_t));
+    mailkeep = get_num_records(currmaildir,sizeof(fileheader_t));
+}
+
+int
+get_max_keepmail(const userec_t *u) {
+    int lvl = u->userlevel;
+    int keep = MAX_KEEPMAIL;  // default: 200
+
+    if (lvl & (PERM_SYSOP | PERM_MAILLIMIT)) {
+        return 0;
+    }
+
+    if (lvl & (PERM_SYSSUPERSUBOP)) {
+        keep = MAX_KEEPMAIL * 10.0;  // 700 -> 2000
+    } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_SYSSUBOP)) {
+        keep = MAX_KEEPMAIL * 5.0;  // 500 -> 1000
+#ifdef PLAY_ANGEL
+    } if (lvl & (PERM_ANGEL)) {
+        keep = MAX_KEEPMAIL * 3.5;  // 700 -> 700
+#endif
+    } else if (lvl & (PERM_BM)) {
+        keep = MAX_KEEPMAIL * 2.5;  // 300 -> 500
+    } else if (!(lvl & (PERM_LOGINOK))) {
+        // less than normal user
+        keep = MAX_KEEPMAIL * 0.5;  // 100
+    }
+    return keep + u->exmailbox;
 }
 
 void
 setupmailusage(void)
-{  // Ptt: get_sum_records is a bad function
-	int             max_keepmail = MAX_KEEPMAIL;
-#ifdef PLAY_ANGEL
-	if (HasUserPerm(PERM_SYSSUPERSUBOP | PERM_ANGEL))
-#else
-	if (HasUserPerm(PERM_SYSSUPERSUBOP))
-#endif
-	{
-	    mailsumlimit = 900;
-	    max_keepmail = 700;
-	}
-	else if (HasUserPerm(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
-		     PERM_ACTION | PERM_PAINT)) {
-	    mailsumlimit = 700;
-	    max_keepmail = 500;
-	} else if (HasUserPerm(PERM_BM)) {
-	    mailsumlimit = 500;
-	    max_keepmail = 300;
-	} else if (HasBasicUserPerm(PERM_LOGINOK))
-	    mailsumlimit = 200;
-	else
-	    mailsumlimit = 50;
-	mailsumlimit += (cuser.exmailbox + ADD_EXMAILBOX) * 10;
-	mailmaxkeep = max_keepmail + cuser.exmailbox;
-	loadmailusage();
+{
+    mailmaxkeep = get_max_keepmail(&cuser);
+    loadmailusage();
 }
 
 #define MAILBOX_LIM_OK   0
 #define MAILBOX_LIM_KEEP 1
-#define MAILBOX_LIM_SUM  2
 static int
 chk_mailbox_limit(void)
 {
@@ -304,8 +305,6 @@ chk_mailbox_limit(void)
 
     if (mailkeep > mailmaxkeep)
 	return MAILBOX_LIM_KEEP;
-    if (mailsum > mailsumlimit)
-	return MAILBOX_LIM_SUM;
     return MAILBOX_LIM_OK;
 }
 
@@ -320,18 +319,6 @@ chkmailbox(void)
 	    bell();
 	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
-
-	case MAILBOX_LIM_SUM:
-	    bell();
-	    bell();
-	    vmsgf("信箱容量(大小,非件數) %d 超出上限 %d, "
-		"請砍過長的水球記錄或信件", mailsum, mailsumlimit);
-	    if(showmail_mode != SHOWMAIL_SUM)
-	    {
-		showmail_mode = SHOWMAIL_SUM;
-		vmsg("信箱顯示模式已自動改為顯示大小，請盡速整理");
-	    }
-	    return mailsum;
 
 	default:
 	    return 0;
@@ -1090,28 +1077,23 @@ mailtitle(void)
 {
     char buf[STRLEN];
 
-    if (mailsumlimit)
+    if (mailmaxkeep)
     {
-	snprintf(buf, sizeof(buf), ANSI_COLOR(32) "(容量:%d/%dk %d/%d篇)",
-		mailsum, mailsumlimit,
-		mailkeep, mailmaxkeep);
+	snprintf(buf, sizeof(buf), ANSI_COLOR(32) "(容量:%d/%d篇)", mailkeep, mailmaxkeep);
     } else {
-	snprintf(buf, sizeof(buf), ANSI_COLOR(32) "(大小:%dk %d篇)",
-		mailsum, mailkeep);
+	snprintf(buf, sizeof(buf), ANSI_COLOR(32) "(大小:%d篇)", mailkeep);
     }
 
     showtitle("郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" , 
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
 #ifdef USE_TIME_CAPSULE
-            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME "(新)" ANSI_RESET
+            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME ANSI_RESET
 #else
             ""
 #endif
             );
-    vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
-	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
-	     buf);
+    vbarf(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題\t%s ", buf);
 }
 
 static void
@@ -1150,43 +1132,7 @@ maildoent(int num, fileheader_t * ent)
     }
     
     strlcpy(datepart, ent->date, sizeof(datepart));
-
     isonline = query_online(ent->owner);
-
-    switch(showmail_mode)
-    {
-	case SHOWMAIL_SUM:
-	    {
-		/* evaluate size */
-		size_t filesz = 0;
-		char ut = 'k';
-		char buf[PATHLEN];
-		struct stat st;
-
-		if( !ent->filename[0] ){
-		    filesz = 0;
-		} else {
-		    setuserfile(buf, ent->filename);
-		    if (stat(buf, &st) >= 0) {
-			filesz = st.st_size;
-			/* find printing unit */
-			filesz = (filesz + 1023) / 1024;
-			if(filesz > 9999){
-			    filesz = (filesz+512) / 1024; 
-			    ut = 'M';
-			}
-			if(filesz > 9999) {
-			    filesz = (filesz+512) / 1024;
-			    ut = 'G';
-			}
-		    }
-		}
-		sprintf(datepart, "%4lu%c", (unsigned long)filesz, ut);
-	    }
-	    break;
-	default:
-	    break;
-    }
 
     /* print out */
     if (strncmp(currtitle, title, TTLEN) != 0)

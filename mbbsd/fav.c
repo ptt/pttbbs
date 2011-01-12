@@ -1269,6 +1269,7 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
     int i;
     fav_type_t *ft;
 
+    // TODO verify if the fields are valid, for example an invalid nAllocs.
     fread(&fp->nBoards, sizeof(fp->nBoards), 1, frp);
     fread(&fp->nLines, sizeof(fp->nLines), 1, frp);
     fread(&fp->nFolders, sizeof(fp->nFolders), 1, frp);
