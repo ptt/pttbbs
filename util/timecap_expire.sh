@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # expire rules
-EXPIRE_MINUTES=+103000
+EXPIRE_MINUTES="+$((103000 / 3))"
 HOME_EXPIRE_MINUTES="+$((103000 / 6))"
 
 # configuration
