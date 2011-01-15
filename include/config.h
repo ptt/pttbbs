@@ -267,6 +267,9 @@
 #ifndef BADPOST_CLEAR_DURATION
 #define BADPOST_CLEAR_DURATION	(180)	// ゅ丁
 #endif
+#ifndef BADPOST_MIN_CLEAR_DURATION
+#define BADPOST_MIN_CLEAR_DURATION (3) // ゅ丁
+#endif
 
 /* (deprecated) more.c いゅ彻计(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
@@ -285,7 +288,6 @@
 #define MAX_LOGIN_INFO    (128)          /* 程絬硄计 */
 #define MAX_POST_INFO     (32)           /* 程穝ゅ彻硄计 */
 #define MAX_NAMELIST      (128)          /* 程ㄤ疭虫计 */
-#define MAX_KEEPMAIL      (200)          /* 程玂痙碭 MAIL */
 #define MAX_NOTE          (20)           /* 程玂痙碭絞痙ē */
 #define MAX_SIGLINES      (6)            /* 帽郎ま程︽计 */
 #define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */
@@ -296,6 +298,9 @@
 #define WHERE                            /* 琌Τ珿秏 */
 #undef  LOG_BOARD  			 /* 狾琌log */
 
+#define MAX_KEEPMAIL            (200)    /*  user 程玂痙碭 MAIL */
+#define MAX_KEEPMAIL_SOFTLIMIT  (2500)   /* 埃 admin 礚猭盚倒 */
+#define MAX_KEEPMAIL_HARDLIMIT  (20000)  /* 獺絚计秖禬筁碞ぃ倒盚獺 */
 
 #define LOGINASNEW              /* 蹦ノビ叫眀腹 */
 #define NO_WATER_POST           /* ňゎBlahBlahΑ拈 */

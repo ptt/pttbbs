@@ -23,6 +23,10 @@ inc_badpost(const char *userid, int num) {
         return 0;
 
     xuser.badpost += num;
+    if (xuser.timeremovebadpost == 0) {
+        xuser.timeremovebadpost = now - 
+            (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) * DAY_SECONDS;
+    }
     passwd_sync_update(uid, &xuser); 
     return xuser.badpost;
 }
