@@ -14,19 +14,18 @@ inline static void inc(unsigned char *num, int n)
 	(*num) += n;
 }
 
-#define modify_column(_attr) \
-int inc_##_attr(const char *userid, int num) \
-{ \
-    userec_t xuser; \
-    int uid = getuser(userid, &xuser);\
-    if( uid > 0 ){ \
-	inc(&xuser._attr, num); \
-	passwd_sync_update(uid, &xuser); \
-	return xuser._attr; }\
-    return 0;\
-}
+int
+inc_badpost(const char *userid, int num) { 
+    userec_t xuser; 
+    int uid = getuser(userid, &xuser);
 
-modify_column(badpost);  /* inc_badpost */
+    if (uid <= 0)
+        return 0;
+
+    xuser.badpost += num;
+    passwd_sync_update(uid, &xuser); 
+    return xuser.badpost;
+}
 
 static char * const badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
