@@ -273,7 +273,7 @@ get_max_keepmail(const userec_t *u) {
     } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_SYSSUBOP)) {
         keep = MAX_KEEPMAIL * 5.0;  // 500 -> 1000
 #ifdef PLAY_ANGEL
-    } if (lvl & (PERM_ANGEL)) {
+    } else if (lvl & (PERM_ANGEL)) {
         keep = MAX_KEEPMAIL * 3.5;  // 700 -> 700
 #endif
     } else if (lvl & (PERM_BM)) {
