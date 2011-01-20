@@ -439,7 +439,7 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
             if (curr + 1 < total)
                 curr ++;
         } else
-            key = 'n';
+            key = '/';
     }
 
     if (key == '#')
