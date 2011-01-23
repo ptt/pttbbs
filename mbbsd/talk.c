@@ -465,7 +465,7 @@ my_query(const char *uident)
 
 	// ------------------------------------------------------------
 
-	prints("《" STR_LOGINDAYS "》%d " STR_LOGINDAYS_QTY, muser.numlogindays);
+	prints("《" STR_LOGINDAYS "》%d " STR_LOGINDAYS_QTY " (一天一次)", muser.numlogindays);
 #ifdef SHOW_LOGINOK
 	if (!(muser.userlevel & PERM_LOGINOK))
 	    outs(" (尚未通過認證)");
