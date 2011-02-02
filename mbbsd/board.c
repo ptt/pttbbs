@@ -1122,9 +1122,13 @@ search_board(const char *bname)
     int num = 0;
     assert(brdnum<=nbrdsize);
 
-    for (num = 0; num < brdnum; num++)
-	if (!strcasecmp(B_BH(&nbrd[num])->brdname, bname))
+    for (num = 0; num < brdnum; num++) {
+	boardstat_t *bptr = &nbrd[num];
+	if (!(bptr->myattr & NBRD_BOARD))
+	    continue;
+	if (!strcasecmp(B_BH(bptr)->brdname, bname))
 	    return num;
+    }
     return -1;
 }
 
