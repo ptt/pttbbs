@@ -465,11 +465,13 @@ my_query(const char *uident)
 
 	// ------------------------------------------------------------
 
-	prints("《" STR_LOGINDAYS "》%d " STR_LOGINDAYS_QTY " (同天內只計一次)", muser.numlogindays);
+	prints("《" STR_LOGINDAYS "》%d " STR_LOGINDAYS_QTY, muser.numlogindays);
 #ifdef SHOW_LOGINOK
 	if (!(muser.userlevel & PERM_LOGINOK))
 	    outs(" (尚未通過認證)");
+        else
 #endif
+            outs(" (同天內只計一次)");
 
 	move(vgety(), 40);
 	prints("《有效文章》%d 篇", muser.numposts);
