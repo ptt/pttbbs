@@ -1364,7 +1364,8 @@ do_aloha(const char *hello)
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
-		    isvisible(uentp, currutmp)) {
+                isvisible(uentp, currutmp) &&
+                strcasecmp(uentp->userid, cuser.userid) != 0) {
 		my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA, uentp);
 	    }
 	}
