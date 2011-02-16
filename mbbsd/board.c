@@ -1723,6 +1723,7 @@ choose_board(int newflag)
 	case 's':
 	    {
 		char bname[IDLEN+1];
+                int tmpbid = currutmp->brc_id;
 		move(0, 0);
 		clrtoeol();
 		// since now user can use Ctrl-S to get access
@@ -1746,6 +1747,7 @@ choose_board(int newflag)
 		if(enter_board(bname) >= 0)
 		    Read();
 		// restore my mode
+                setutmpbid(tmpbid);
 		setutmpmode(newflag ? READNEW : READBRD);
 	    }
 	    break;
