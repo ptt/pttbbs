@@ -1678,10 +1678,15 @@ choose_board(int newflag)
 	    break;
 
 	case '/':
-	    getdata_buf(b_lines - 1, 0, "請輸入看板中文關鍵字:",
-			keyword, sizeof(keyword), DOECHO);
-	    brdnum = -1;
+            if (IN_HOTBOARD()) {
+                vmsg("熱門看板模式下不支援中文關鍵字搜尋");
+            } else {
+                getdata_buf(b_lines - 1, 0, "請輸入看板中文關鍵字:",
+                        keyword, sizeof(keyword), DOECHO);
+            }
+            brdnum = -1;
 	    break;
+
 	case 'S':
 	    if(IS_LISTING_FAV()){
 		move(b_lines - 2, 0); clrtobot();
