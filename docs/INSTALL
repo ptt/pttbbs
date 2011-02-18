@@ -62,7 +62,7 @@ $Id$
 假如一切都很順利的話, 這樣子大概就安裝完了, 接下來是啟動 bbs 的部份.
 
  15.執行 bin/shmctl init (*註1, *註2)
- 16.用 root 執行 bin/mbbsd 23 (註2)
+ 16.用 root 執行 bin/mbbsd -p 23 (註2)
 
  17.測試整個系統是否完成:
     telnet localhost 23 看看
@@ -109,7 +109,7 @@ $Id$
    可能是您作業系統 shared-memory 上限不足,
    請參考 FAQ中加大 shared-memory 部份的說明.
 
-3. bin/mbbsd 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
+3. bin/mbbsd -p 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,
    3000 port 則不需要.
    請參考 docs/ADVANCE , 安裝好 bbsctl ,
