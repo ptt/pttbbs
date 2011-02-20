@@ -149,6 +149,27 @@ mail_muser(userec_t muser, const char *title, const char *filename)
     return mail_id(muser.userid, title, filename, cuser.userid);
 }
 
+int
+mail_log2id_text(const char *id, const char *title, const char *message, const char *owner, char newmail)
+{
+    fileheader_t    mhdr;
+    char            dst[PATHLEN], dirf[PATHLEN];
+
+    sethomepath(dst, id);
+    if (stampfile(dst, &mhdr) < 0)
+	return -1;
+
+    strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
+    strlcpy(mhdr.title, title, sizeof(mhdr.title));
+    mhdr.filemode = newmail ? 0 :  FILE_READ;
+    log_filef(dst, LOG_CREAT, message);
+
+    sethomedir(dirf, id);
+    append_record(dirf, &mhdr, sizeof(mhdr));
+    return 0;
+}
+
+
 // TODO add header option?
 int
 mail_log2id(const char *id, const char *title, const char *src, const char *owner, char newmail, char trymove)

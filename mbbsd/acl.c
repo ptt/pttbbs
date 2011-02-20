@@ -138,6 +138,7 @@ int
 edit_banned_list_for_board(const char *board) {
     // TODO generalize this.
     int result;
+    int do_notify = 0;
     char uid[IDLEN+1], ans[3];
     char history_log[PATHLEN];
     char reason[STRLEN];
@@ -294,12 +295,22 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                     continue;
                 }
 
+                getdata(7, 0, "要寄信通知使用者嗎? (會附上前面輸入的理由) [Y/n]: ", 
+                        ans, sizeof(ans), LCECHO);
+                if (ans[0] == 'n')
+                    do_notify = 0;
+                else
+                    do_notify = 1;
+
                 move(1, 0); clrtobot();
                 prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
-                       "理由: %s\n", uid, datebuf, reason);
+                       "理由: %s\n"
+                       "%s" ANSI_RESET "寄信通知使用者\n",
+                       uid, datebuf, reason,
+                       do_notify ? ANSI_COLOR(1;32) "會" : ANSI_COLOR(1;31) "不會");
 
                 // last chance
-                getdata(5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
+                getdata(6, 0, "確認以上資料全部正確嗎？ [y/N]: ",
                         ans, sizeof(ans), LCECHO);
                 if (ans[0] != 'y') {
                     vmsg("請重新輸入");
@@ -316,6 +327,18 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                             ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
                           cuser.userid, uid,  datebuf, reason);
                 vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
+                if (result && do_notify) {
+                    char xtitle[STRLEN];
+                    char xmsg[STRLEN*5];
+
+                    snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
+                    snprintf(xmsg, sizeof(xmsg),
+                             "%s 看板已將您放入禁言(水桶)名單\n"
+                             "原因: %s\n"
+                             "其它資訊請洽該看板板規與公告。\n", board, reason);
+                    mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
+                    sendalert(uid, ALERT_NEW_MAIL);
+                }
                 invalid_board_permission_cache(board);
                 break;
 
@@ -368,8 +391,12 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 {
                     char old_log[PATHLEN];
                     setbfile(old_log, board, fn_water);
-                    if (more(old_log, YEA) == -1)
+                    if (dashf(old_log)) {
+                        vmsg("請注意: 此份資料僅供參考，與現在實際水桶名單完全沒有關係。");
+                        more(old_log, YEA);
+                    } else {
                         vmsg("無舊水桶資料。");
+                    }
                 }
                 break;
 #endif
