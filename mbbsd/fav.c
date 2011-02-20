@@ -1083,6 +1083,9 @@ void fav_remove_all_tagged_item(void)
 
 void fav_add_all_tagged_item(void)
 {
+    // TODO we must check current (and the selected) tag length.
+    // Copying a tree (current+target) with length larger than FAV_MAXDEPTH 
+    // would make future entering to crash.
     fav_set_tmp_folder(get_current_fav());
     fav_dosomething_all_tagged_item(fav_add_tagged_item);
 }
