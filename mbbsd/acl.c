@@ -305,7 +305,7 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 move(1, 0); clrtobot();
                 prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
                        "理由: %s\n"
-                       "%s" ANSI_RESET "寄信通知使用者\n",
+                       "%s寄信通知使用者" ANSI_RESET "\n",
                        uid, datebuf, reason,
                        do_notify ? ANSI_COLOR(1;32) "會" : ANSI_COLOR(1;31) "不會");
 
