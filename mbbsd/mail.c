@@ -1456,6 +1456,9 @@ static const char *hlp_mailmove[] = {
     "  砍掉待刪信件", "^D",
     "  整理水球後寄回", "u",
     "  重建信箱",     "^G (毀損時才用)",
+#ifdef USE_TIME_CAPSULE
+    "  資源回收筒",   "~",
+#endif
     NULL,
 }, *hlp_mailconf[] = {
     "【設定】", NULL,

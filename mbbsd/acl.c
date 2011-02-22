@@ -333,7 +333,7 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
 
                     snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
                     snprintf(xmsg, sizeof(xmsg),
-                             "%s 看板已將您放入禁言(水桶)名單\n"
+                             "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
                              "原因: %s\n"
                              "其它資訊請洽該看板板規與公告。\n", board, reason);
                     mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
