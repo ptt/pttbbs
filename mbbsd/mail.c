@@ -1109,7 +1109,7 @@ mailtitle(void)
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" , 
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
 #ifdef USE_TIME_CAPSULE
-            ANSI_COLOR(1;33) "[~]" RECYCLE_BIN_NAME ANSI_RESET
+            "[~]" RECYCLE_BIN_NAME
 #else
             ""
 #endif
@@ -1192,7 +1192,7 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
             del_ret = delete_file_content(direct, fhdr, direct, NULL, 0);
 	    loadmailusage();
             if (del_ret == DELETE_FILE_CONTENT_BACKUP_FAILED)
-                vmsg("信件已刪除但不會進入資源回收筒");
+                vmsg("信件已刪除但不會進入" RECYCLE_BIN_NAME);
 #ifdef DEBUG
             else if (!IS_DELETE_FILE_CONTENT_OK(del_ret))
                 vmsg("檔案已不存在，請至" BN_BUGREPORT "報告，謝謝");
@@ -1457,7 +1457,7 @@ static const char *hlp_mailmove[] = {
     "  整理水球後寄回", "u",
     "  重建信箱",     "^G (毀損時才用)",
 #ifdef USE_TIME_CAPSULE
-    "  資源回收筒",   "~",
+    "  " RECYCLE_BIN_NAME,   "~",
 #endif
     NULL,
 }, *hlp_mailconf[] = {
