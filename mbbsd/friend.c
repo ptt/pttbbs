@@ -343,6 +343,8 @@ friend_delete_all(const char *uident, int type)
 
     while (fgets(line, sizeof(line), fp)) {
 	sscanf(line, "%s", buf);
+        if (!is_validuserid(buf))
+            continue;
 	delete_user_friend(buf, uident, type);
     }
 
