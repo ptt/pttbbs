@@ -1124,7 +1124,7 @@ search_board(const char *bname)
 
     for (num = 0; num < brdnum; num++) {
 	boardstat_t *bptr = &nbrd[num];
-	if (!(bptr->myattr & NBRD_BOARD))
+	if (IS_LISTING_FAV() && !(bptr->myattr & NBRD_BOARD))
 	    continue;
 	if (!strcasecmp(B_BH(bptr)->brdname, bname))
 	    return num;
