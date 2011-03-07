@@ -18,15 +18,19 @@ int
 inc_badpost(const char *userid, int num) { 
     userec_t xuser; 
     int uid = getuser(userid, &xuser);
+    time4_t min_timer;
 
     if (uid <= 0)
         return 0;
 
+    // reset timer to at least some days to prevent user directly
+    // canceling his badpost.
+    min_timer = now - (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) *
+                DAY_SECONDS;
+    if (xuser.timeremovebadpost < min_timer)
+        xuser.timeremovebadpost = min_timer;
+
     xuser.badpost += num;
-    if (xuser.timeremovebadpost == 0) {
-        xuser.timeremovebadpost = now - 
-            (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) * DAY_SECONDS;
-    }
     passwd_sync_update(uid, &xuser); 
     return xuser.badpost;
 }
