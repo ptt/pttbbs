@@ -1462,7 +1462,6 @@ static const char *hlp_mailmove[] = {
     NULL,
 }, *hlp_mailconf[] = {
     "【設定】", NULL,
-    "  顯示一般/大小",    "TAB",
     "  是否接受站外信", "O",
     NULL,
 }, *hlp_mailempty[] = {
