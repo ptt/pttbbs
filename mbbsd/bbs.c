@@ -1328,9 +1328,8 @@ do_general(int garbage)
 
 	/* 回應到原作者信箱 */
 
-        // TODO should we take care of the reject list here?
 	if (curredit & EDIT_BOTH) {
-	    char *str, *msg = "回應至作者信箱";
+	    char *str, *msg = NULL;
 
 	    genbuf[0] = 0;
 	    // XXX quote_user may contain invalid user, like '-' (deleted).
@@ -1341,7 +1340,18 @@ do_general(int garbage)
 		{
 		    genbuf[0] = 0;
 		    msg = err_uid;
-		}
+		} else {
+                    // check friend / reject list
+                    char name_fpath[PATHLEN];
+                    int i = 0;
+                    sethomefile(name_fpath, quote_user, FN_REJECT);
+                    i = file_exist_record(name_fpath, cuser.userid);
+                    sethomefile(name_fpath, quote_user, FN_OVERRIDES);
+                    if (i && !file_exist_record(name_fpath, cuser.userid)) {
+                        genbuf[0] = 0;
+                        msg = "作者拒收";
+                    }
+                }
 	    }
 
 	    // now, genbuf[0] = "if user exists".
@@ -1354,6 +1364,7 @@ do_general(int garbage)
 		strlcpy(postfile.owner, cuser.userid, sizeof(postfile.owner));
 		strlcpy(postfile.title, save_title, sizeof(postfile.title));
 		sethomedir(genbuf, quote_user);
+                msg = "回應至作者信箱";
 		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
 		    msg = err_uid;
 		else
@@ -1365,11 +1376,13 @@ do_general(int garbage)
                         Cdatelite(&now), __FUNCTION__,
                         currboard, cuser.userid, str + 1, save_title);
 #endif
+                msg = "回應至作者外部信箱";
 		if ( bsmtp(fpath, save_title, str + 1, NULL) < 0)
 		    msg = "作者無法收信";
 	    } else {
 		// unknown user id
-		msg = "作者無法收信";
+                if (!msg)
+                    msg = "作者無法收信";
 	    }
 	    outs(msg);
 	    curredit ^= EDIT_BOTH;
