@@ -226,7 +226,8 @@ pveh_header(void *ctx) {
 static int
 pveh_footer(void *ctx) {
     vs_footer(" 編輯歷史 ",
-              " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/r/→)選擇 (~)" RECYCLE_BIN_NAME
+              " (↑↓)移動 (Enter/r/→)選擇 (x)存入信箱 "
+              "(~)" RECYCLE_BIN_NAME
               "\t(q/←)跳出");
     move(b_lines-1, 0);
     return 0;
@@ -293,6 +294,22 @@ pveh_input_processor(int key, int curr, int total, int rows, void *ctx) {
         case '~':
             cx->leave_for_recycle_bin = 1;
             return PSB_EOF;
+
+        case 'x':
+            pveh_solve_rev_filename(rev, curr, fname, sizeof(fname), cx);
+            {
+                char ans[3];
+                getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
+                        ans, sizeof(ans), LCECHO);
+                if (*ans == 'y') {
+                    if (mail_log2id(cuser.userid, cx->subject,
+                                    fname, RECYCLE_BIN_OWNER, 1, 0) == 0) {
+                        vmsg("儲存完成，請至信箱檢查備忘錄信件");
+                    } else
+                        vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
+                }
+            }
+            return PSB_NOP;
     }
     return PSB_NA;
 }
@@ -381,7 +398,6 @@ psb_view_edit_history(const char *base, const char *subject,
 typedef struct {
     const char *dirbase;
     const char *subject;
-    int modify_mailbox;
     int viewbase;
     fileheader_t *records;
 } pvrb_ctx;
@@ -510,7 +526,6 @@ pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
                     if (mail_log2id(cuser.userid, fh->title,
                                     revfname, RECYCLE_BIN_OWNER,
                                     1, 0) == 0) {
-                        cx->modify_mailbox = 1;
                         vmsg("儲存完成，請至信箱檢查備忘錄信件");
                     } else
                         vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
@@ -626,7 +641,7 @@ psb_recycle_bin(const char *base, const char *title) {
                                   sizeof(fileheader_t));
     psb_main(&ctx);
     free(pvrbctx.records);
-    return pvrbctx.modify_mailbox ? DIRCHANGED : FULLUPDATE;
+    return DIRCHANGED;
 }
 
 ///////////////////////////////////////////////////////////////////////////
