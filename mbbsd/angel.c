@@ -304,7 +304,7 @@ int a_angelreport() {
             double base1 = rpt.min_masters_of_online_angels,
                    base2 = rpt.min_masters_of_active_angels;
             if (!base1) base1 = 1;
-            if (!base2) base2 = 0;
+            if (!base2) base2 = 1;
             prints(
                     "\n\t 絬ぱㄏい局Τ程计ヘ琌程ぶ %.1f \n"
                     "\n\t 絬秨Μぱㄏい计ヘ畉钵 %.1f \n",
