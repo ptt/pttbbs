@@ -62,8 +62,9 @@ $Id$
 假如一切都很順利的話, 這樣子大概就安裝完了, 接下來是啟動 bbs 的部份.
 
  15.執行 bin/shmctl init (*註1, *註2)
- 16.用 root 執行 bin/mbbsd -p 23 (註2)
-
+ 16.用 root 執行 bin/mbbsd -p 23 -d (註2)
+    其中 -d 是指定 daemon mode. 若連線有問題需要方便測試時可以先不加 -d，
+    用別窗直接進行連線以方便找出問題。
  17.測試整個系統是否完成:
     telnet localhost 23 看看
     new 一個帳號叫SYSOP, 然後 logout再 login, 這樣子就會擁有站長權限囉~
@@ -74,7 +75,7 @@ $Id$
     若您使用 FreeBSD, 您可以將 sample/pttbbs.sh 拷貝到 /usr/local/etc/rc.d/
     之後您可以重新開機試試看是不是在重開後可以正常運作 :)
  20. pttbbs 須要定時執行一些小 tool 來維持系統正常運作,
-    reload cache, 備份, 特殊外部程式等等.
+    reload cache, 備份, 節日點歌等系統資訊，或其它特殊外部程式等等.
     請用 bbs的權限, 執行 crontab -e , 內容請參照 sample/crontab
      (在大部份的情況下, 直接將 sample/crontab 內容拷備進去即可)
  21.在某些情況下, pttbbs會須要一些其他的程式來輔助.
