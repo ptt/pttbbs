@@ -1673,11 +1673,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		(int)now, Cdate(&now), getpid(), cuser.userid, fpath);
     }
 
+    setdirpath(genbuf, direct, fhdr->filename);
+    if (!dashf(genbuf)) {
+        vmsg("此檔已損毀，無法編輯。您可以試著刪除它。");
+        return FULLUPDATE;
+    }
+
     edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(bp->brdname, edflags);
 
     setutmpmode(REEDIT);
-
 
     // TODO 由於現在檔案都是直接蓋回原檔，
     // 在原看板目錄開已沒有很大意義。 (效率稍高一點)
@@ -1689,7 +1694,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // XXX 以現在的模式，這是個 temp file
     stampfile(fpath, &postfile);
-    setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
 
     // copying takes long time, add some visual effect
