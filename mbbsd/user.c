@@ -109,8 +109,7 @@ int u_cancelbadpost(void)
    // early check for time (must do again later)
    day = (now - cuser.timeremovebadpost ) / DAY_SECONDS;
    if (day < BADPOST_CLEAR_DURATION) {
-       vmsgf("每 %d 天才能申請一次, 還剩 %d 天.", 
-	       BADPOST_CLEAR_DURATION, BADPOST_CLEAR_DURATION-day);
+       vmsgf("離下次可以申請解除尚有 %d 天。", BADPOST_CLEAR_DURATION - day);
        return 0;
    }
 
