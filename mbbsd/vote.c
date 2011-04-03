@@ -751,13 +751,21 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     if (dashf(buf)) {
 	int limits_logins, limits_posts;
 	FILE * lfp = fopen(buf, "r");
+        const char *reason = NULL;
 	assert(lfp);
 	fscanf(lfp, "%d%d%d", &closetime, &limits_logins, &limits_posts);
 	fclose(lfp);
 	// XXX if this is a private vote (limited), I think we don't need to check limits?
-	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
-		cuser.numlogindays < limits_logins) {
-	    vmsg("未達投票資格限制");
+	if (cuser.firstlogin > closetime)
+            reason = "註冊時間";
+        else if (cuser.numposts < limits_posts)
+            reason = "文章總數";
+        else if (cuser.numlogindays < limits_logins)
+            reason = STR_LOGINDAYS;
+
+        if (reason)
+        {
+	    vmsgf("%s未達投票資格限制", reason);
 	    return FULLUPDATE;
 	}
     }
