@@ -620,22 +620,23 @@ m_mod_board(char *bname)
 	while (getdata(9, 0, "新看板名稱：", genbuf, IDLEN + 1, DOECHO)) {
 	    if (getbnum(genbuf)) {
                 mvouts(10, 0, "錯誤: 此新看板名已存在\n");
-            } else if (genbuf[0] != bh.brdname[0]) {
-                // change to 0 if you want to force permission when renaming
-                // with different initial character.
-                const int free_rename = 1;
-                if (free_rename || HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
-                    mvouts(10, 0, ANSI_COLOR(1;31)
-                            "警告: 看板首字母不同,大看板改名會非常久,"
-                            "千萬不可中途斷線否則看板會壞掉"
-                            ANSI_RESET "\n");
-                    break;
-                } else {
-                    mvouts(10, 0,
-                            "錯誤: 新舊名稱第一個字母若不同(大小寫有別)"
-                            "要看板總管以上等級才可設定\n");
+            } else if ( is_valid_brdname(genbuf) ){
+                if (genbuf[0] != bh.brdname[0]) {
+                    // change to 0 if you want to force permission when renaming
+                    // with different initial character.
+                    const int free_rename = 1;
+                    if (free_rename || HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
+                        mvouts(10, 0, ANSI_COLOR(1;31)
+                                "警告: 看板首字母不同,大看板改名會非常久,"
+                                "千萬不可中途斷線否則看板會壞掉"
+                                ANSI_RESET "\n");
+                    } else {
+                        mvouts(10, 0,
+                                "錯誤: 新舊名稱第一個字母若不同(大小寫有別)"
+                                "要看板總管以上等級才可設定\n");
+                        continue;
+                    }
                 }
-	    } else if ( is_valid_brdname(genbuf) ){
 		strlcpy(newbh.brdname, genbuf, sizeof(newbh.brdname));
 		break;
 	    }
