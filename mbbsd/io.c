@@ -6,28 +6,19 @@
 #define OBUFSIZE  3072
 #define IBUFSIZE  128
 
-/* realXbuf is Xbuf+3 because hz convert library requires buf[-2]. */
-#define CVTGAP	  (3)
+// Size of space to be preserved, usually for char convertion.
+#define BUF_PRESERVE_SPACE_SIZE   (4)
 
 #ifdef DEBUG
 #define register
+#define inline
 // #define DBG_OUTRPT
 #endif
 
-static unsigned char real_outbuf[OBUFSIZE + CVTGAP*2] = "   ";
-static unsigned char real_inbuf [IBUFSIZE + CVTGAP*2] = "   ";
+static VBUF vout, *pvout = &vout, vin, *pvin = &vin;
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
-
-// use defines instead - it is discovered that sometimes the input/output buffer was overflow,
-// without knowing why.
-// static unsigned char *outbuf = real_outbuf + 3, *inbuf = real_inbuf + 3;
-#define inbuf  (real_inbuf +CVTGAP)
-#define outbuf (real_outbuf+CVTGAP)
-
-static int obufsize = 0;
-static int ibufsize = 0, icurrchar = 0;
 
 #ifdef DBG_OUTRPT
 // output counter
@@ -46,35 +37,6 @@ static unsigned char fakeEscFilter(unsigned char c)
     return c;
 }
 #endif // DBG_OUTRPT
-
-/* ----------------------------------------------------- */
-/* convert routines                                      */
-/* ----------------------------------------------------- */
-#ifdef CONVERT
-
-static inline ssize_t input_wrapper(void *buf, ssize_t count) {
-    /* input_wrapper is a special case.
-     * because we may do nothing,
-     * a if-branch is better than a function-pointer call.
-     */
-    if(input_type)
-	return (*input_type)(buf, count);
-    else
-	return count;
-}
-
-static inline int read_wrapper(int fd, void *buf, size_t count) {
-    return (*read_type)(fd, buf, count);
-}
-
-static inline int write_wrapper(int fd, void *buf, size_t count) {
-    return (*write_type)(fd, buf, count);
-}
-#else
-#define write_wrapper		    write
-#define read_wrapper		    read
-// #define input_wrapper(buf,count) count
-#endif
 
 /* ----------------------------------------------------- */
 /* debug reporting                                       */
@@ -115,6 +77,15 @@ debug_print_input_buffer(char *s, size_t len)
     move_ansi(y, x);
 }
 #endif
+/* ----------------------------------------------------- */
+/* Input Output System                                   */
+/* ----------------------------------------------------- */
+int
+init_io() {
+    vbuf_new(pvout, OBUFSIZE + BUF_PRESERVE_SPACE_SIZE);
+    vbuf_new(pvin, IBUFSIZE + BUF_PRESERVE_SPACE_SIZE);
+    return 0;
+}
 
 /* ----------------------------------------------------- */
 /* output routines                                       */
@@ -122,14 +93,12 @@ debug_print_input_buffer(char *s, size_t len)
 void
 oflush(void)
 {
-    if (obufsize) {
-	STATINC(STAT_SYSWRITESOCKET);
-	write_wrapper(1, outbuf, obufsize);
-	obufsize = 0;
+    if (!vbuf_is_empty(pvout)) {
+        STATINC(STAT_SYSWRITESOCKET);
+        vbuf_write(pvout, 1, VBUF_RWSZ_ALL);
     }
 
 #ifdef DBG_OUTRPT
-    // if (0)
     {
 	static char xbuf[128];
 	sprintf(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
@@ -144,48 +113,32 @@ oflush(void)
     // fsync(1);
 }
 
-void
+inline void
 output(const char *s, int len)
 {
-#ifdef DBG_OUTRPT
-    int i = 0;
-    if (fakeEscape)
-	for (i = 0; i < obufsize; i++)
-	    outbuf[i] = fakeEscFilter(outbuf[i]);
-
-    szTotalOutput += len; 
-    szLastOutput  += len;
-#endif // DBG_OUTRPT
-
-    /* Invalid if len >= OBUFSIZE */
-    assert(len<OBUFSIZE);
-
-    if (obufsize + len > OBUFSIZE) {
-	STATINC(STAT_SYSWRITESOCKET);
-	write_wrapper(1, outbuf, obufsize);
-	obufsize = 0;
-    }
-    memcpy(outbuf + obufsize, s, len);
-    obufsize += len;
+    while (len-- > 0)
+        ochar(*s++);
 }
 
 int
 ochar(int c)
 {
-
 #ifdef DBG_OUTRPT
+    // TODO we can support converted output in future.
     c = fakeEscFilter(c);
     szTotalOutput ++; 
     szLastOutput ++;
 #endif // DBG_OUTRPT
 
-    if (obufsize > OBUFSIZE - 1) {
-	STATINC(STAT_SYSWRITESOCKET);
-	/* suppose one byte data doesn't need to be converted. */
-	write(1, outbuf, obufsize);
-	obufsize = 0;
-    }
-    outbuf[obufsize++] = c;
+    if (vbuf_is_full(pvout) || vbuf_size(pvout) >= OBUFSIZE)
+        oflush();
+
+#ifdef CONVERT
+    convert_write(pvout, c);
+#else
+    vbuf_add(pvout, c);
+#endif
+
     return 0;
 }
 
@@ -388,45 +341,47 @@ add_io(int fd, int timeout)
 inline int
 num_in_buf(void)
 {
-    if (ibufsize <= icurrchar)
-	return 0;
-    return ibufsize - icurrchar;
+    return vbuf_size(pvin);
 }
 
 static inline int
 input_isfull(void)
 {
-    return ibufsize >= IBUFSIZE;
+    return vbuf_size(pvin) >= IBUFSIZE;
 }
 
 static inline void
 drop_input(void)
 {
-    icurrchar = ibufsize = 0;
+    vbuf_clear(pvin);
 }
 
+/* returns:
+ * >0 if read something
+ * =0 if nothing read
+ * <0 if need to read again
+ */
 static inline ssize_t 
-wrapped_tty_read(unsigned char *buf, size_t max)
-{
+read_vin() {
+    unsigned char buf[IBUFSIZE];
     /* tty_read will handle abort_bbs.
      * len <= 0: read more */
-    ssize_t len = tty_read(buf, max);
+    ssize_t len = tty_read(buf, vbuf_space(pvin));
     if (len <= 0)
-	return len;
+        return len;
 
     // apply additional converts
 #ifdef DBCSAWARE
     if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
 	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
+    if (len <= 0)
+        return len;
 #endif
-#ifdef CONVERT
-    len = input_wrapper(inbuf, len);
-#endif
-#ifdef DBG_OUTRPT
 
+#ifdef DBG_OUTRPT
 #if 1
     if (len > 0)
-	debug_print_input_buffer((char*)inbuf, len);
+	debug_print_input_buffer(buf, len);
 #else
     {
 	static char xbuf[128];
@@ -435,15 +390,21 @@ wrapped_tty_read(unsigned char *buf, size_t max)
 	write(1, xbuf, strlen(xbuf));
     }
 #endif
-
 #endif // DBG_OUTRPT
+
+    // len = 1 if success
+#ifdef CONVERT
+    len = convert_read(pvin, buf, len);
+#else
+    len = vbuf_putblk(pvin, buf, len);
+#endif
     return len;
 }
 
 /*
  * dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time, and
- * dogetch() might be called again, and then ibufsize/icurrchar/inbuf might
- * be inconsistent. We try to not segfault here...
+ * dogetch() might be called again, and then input buffer state may be
+ * inconsistent. We try to not segfault here...
  */
 
 static int
@@ -451,8 +412,8 @@ dogetch(void)
 {
     ssize_t         len;
     static time4_t  lastact;
-    if (ibufsize <= icurrchar) {
 
+    while (vbuf_is_empty(pvin)) {
 	refresh();
 
 	if (i_newfd) {
@@ -498,11 +459,9 @@ dogetch(void)
 	STATINC(STAT_SYSREADSOCKET);
 
 	do {
-	    len = wrapped_tty_read(inbuf, IBUFSIZE);
+            len = read_vin();
+            // warning: len is 1/0/-1 now, not real length.
 	} while (len <= 0);
-
-	ibufsize = len;
-	icurrchar = 0;
     }
 
     if (currutmp) {
@@ -515,15 +474,15 @@ dogetch(void)
     }
 
     // see vtkbd.c for CR/LF Rules
+    assert(!vbuf_is_empty(pvin));
     {
-	unsigned char c = (unsigned char) inbuf[icurrchar++];
-
+        unsigned char c = vbuf_pop(pvin);
 	// CR LF are treated as one.
 	if (c == KEY_CR)
 	{
-	    // peak next character.
-	    if (icurrchar < ibufsize && inbuf[icurrchar] == KEY_LF)
-		icurrchar ++;
+	    // peak next character. (peek return EOF for empty)
+            if (vbuf_peek(pvin) == KEY_LF)
+                vbuf_pop(pvin);
 	    return KEY_ENTER;
 	} 
 	else if (c == KEY_LF)
@@ -662,22 +621,16 @@ wait_input(float f, int bIgnoreBuf)
 inline int 
 peek_input(float f, int c)
 {
-    int i = 0;
     assert (c == EOF || (c > 0 && c < ' ')); // only ^x keys are safe to be detected.
     // other keys may fall into escape sequence.
 
-    if (wait_input(f, 1) && (IBUFSIZE > ibufsize))
-    {
-	int len = wrapped_tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
-	if (len > 0)
-	    ibufsize += len;
-    }
+    if (wait_input(f, 1) && vbuf_size(pvin) < IBUFSIZE)
+        read_vin();
+
     if (c == EOF)
 	return 0;
 
-    // scan inbuf
-    for (i = icurrchar; i < ibufsize && inbuf[i] != c; i++) ;
-    return i < ibufsize ? 1 : 0;
+    return vbuf_strchr(pvin, c) >= 0 ? 1 : 0;
 }
 
 
@@ -705,12 +658,12 @@ inline void
 vkey_purge(void)
 {
     int max_try = 64;
-    unsigned char garbage[4096];
     drop_input();
 
     STATINC(STAT_SYSREADSOCKET);
     while (wait_input(0.01, 1) && max_try-- > 0) {
-	wrapped_tty_read(garbage, sizeof(garbage));
+        read_vin();
+        drop_input();
     }
 }
 

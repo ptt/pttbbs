@@ -3,12 +3,14 @@
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 
+WITH_PFTERM=1
+
 SRCROOT?=	.
 
 OSTYPE!=	uname
 
-CC:=		gcc
-CXX:=		g++
+#CC:=		clang -Qunused-arguments
+#CXX:=		clang -Qunused-arguments
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 WANTS_CONVERT!= sh -c 'grep "^\#define CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
 
@@ -20,9 +22,6 @@ CXX:=		ccache $(CXX)
 PTT_CFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
-.if $(WANTS_CONVERT) != "NO"
-PTT_LDLIBS+=	-lhz
-.endif
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 

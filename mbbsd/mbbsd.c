@@ -795,15 +795,14 @@ login_query(char *ruid)
 #ifdef CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
-	if (uid[0] && uid[len - 1] == '.') {
-	    set_converting_type(CONV_GB);
-	    uid[len - 1] = 0;
-	    redrawwin();
-	}
-	else if (uid[0] && uid[len - 1] == ',') {
+	if (uid[0] && uid[len - 1] == ',') {
 	    set_converting_type(CONV_UTF8);
 	    uid[len - 1] = 0;
 	    redrawwin();
+	}
+        else if (uid[0] && uid[len - 1] == '.') {
+            outs("Sorry, GB encoding is not supported anymore. Please use UTF-8 (id,)");
+            continue;
 	}
 	else if (len >= IDLEN + 1)
 	    uid[IDLEN] = 0;
@@ -1532,6 +1531,10 @@ static int      check_banip  (char *host);
 static void init(void)
 {
     start_time = time(NULL);
+    init_io();
+#ifdef CONVERT
+    init_convert();
+#endif
 
     /* avoid SIGPIPE */
     Signal(SIGPIPE, SIG_IGN);
@@ -1552,9 +1555,6 @@ static void init(void)
     mallopt (M_TOP_PAD, MY__TOP_PAD);
 #endif
 
-#ifdef CONVERT
-    init_convert();
-#endif
     
 }
 
@@ -1578,7 +1578,7 @@ static void usage(char *argv0)
 	    "\n"
 	    "flags\n"
 	    "\t-t type            terminal mode, telnet | tty\n"
-	    "\t-e encoding        encoding (default big5), big5 | gb | utf8\n"
+	    "\t-e encoding        encoding (default big5), big5 | utf8\n"
 	    "\n"
 	    "testing flags\n"
 	    "\t-F                 don't fork\n"
@@ -1709,8 +1709,6 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 #ifdef CONVERT
 		if (strcmp(optarg, "big5") == 0) {
 		    set_converting_type(CONV_NORMAL);
-		} else if (strcmp(optarg, "gb") == 0) {
-		    set_converting_type(CONV_GB);
 		} else if (strcmp(optarg, "utf8") == 0) {
 		    set_converting_type(CONV_UTF8);
 		} else {

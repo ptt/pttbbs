@@ -281,10 +281,8 @@ ChessInfo* gomoku_replay(FILE* fp);
 /* guess */
 int guess_main(void);
 
-/* convert */
-void set_converting_type(int which);
-
 /* io */
+int init_io();
 
 // output 
 int  ochar(int c);

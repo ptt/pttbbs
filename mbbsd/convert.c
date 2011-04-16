@@ -2,105 +2,71 @@
 #include "bbs.h"
 
 #ifdef CONVERT
+int (*convert_write)(VBUF *v, char c) = vbuf_add;
+int (*convert_read)(VBUF *v, const void *buf, size_t len) = vbuf_putblk;
 
-#ifdef CONVERT
-extern void big2gb_init(void*);
-extern void gb2big_init(void*);
-extern void big2uni_init(void*);
-extern void uni2big_init(void*);
-#endif
+int
+convert_write_utf8(VBUF *v, char c) {
+    static char trail[2] = {0};
+    static uint8_t utf8[4];
 
-extern unsigned char *gb2big(unsigned char *, int *, int);
-extern unsigned char *big2gb(unsigned char *, int *, int);
-extern unsigned char *utf8_uni(unsigned char *, int *, int);
-extern unsigned char *uni_utf8(unsigned char *, int *, int);
-extern unsigned char *uni2big(unsigned char *, int *, int);
-extern unsigned char *big2uni(unsigned char *, int *, int);
+    // trail must be little endian.
+    if (trail[1]) {
+        trail[0] = c;
+        int len, i;
+        uint16_t ucs = b2u_table[*(uint16_t*)trail];
 
-static ssize_t 
-gb_input(void *buf, ssize_t icount)
-{
-    /* is sizeof(ssize_t) == sizeof(int)? not sure */
-    int ic = (int) icount;
-    gb2big((unsigned char *)buf, &ic, 0);
-    return (ssize_t)ic;
-}
+        len = ucs2utf(ucs, utf8);
+        utf8[len] = 0;
 
-static ssize_t 
-gb_read(int fd, void *buf, size_t count)
-{
-    ssize_t icount = read(fd, buf, count);
-    if (icount > 0)
-	    icount = gb_input(buf, icount);
-    return icount;
-}
+        // assert(len > 0 && len < 4);
+        for (i = 0; i < len; i++)
+            vbuf_add(v, utf8[i]);
 
-static ssize_t 
-gb_write(int fd, void *buf, size_t count)
-{
-    int     icount = (int)count;
-    big2gb((unsigned char *)buf, &icount, 0);
-    if(icount > 0)
-	return write(fd, buf, (size_t)icount);
-    else
-	return count; /* fake */
-}
-
-static ssize_t 
-utf8_input  (void *buf, ssize_t icount) 
-{
-    /* is sizeof(ssize_t) == sizeof(int)? not sure */
-    int ic = (int) icount;
-    utf8_uni(buf, &ic, 0);
-    uni2big(buf, &ic, 0);
-    return (ssize_t)ic;
-}
-
-static ssize_t 
-utf8_read(int fd, void *buf, size_t count)
-{
-    ssize_t icount = read(fd, buf, count);
-    if (icount > 0)
-	    icount = utf8_input(buf, icount);
-    return icount;
-}
-
-static ssize_t 
-utf8_write(int fd, void *buf, size_t count)
-{
-    int     icount = (int)count;
-    static unsigned char *mybuf = NULL;
-    static int   cmybuf = 0;
-
-    /* utf8 output is a special case because 
-     * we need larger buffer which can be 
-     * tripple or more in size.
-     * Current implementation uses 128 for each block.
-     */
-
-    if(cmybuf < count * 4) {
-	cmybuf = (count*4+0x80) & (~0x7f) ;
-	mybuf = (unsigned char*) realloc (mybuf, cmybuf);
+        trail[1] = 0;
+        return 1;
     }
-    memcpy(mybuf, buf, count);
-    big2uni(mybuf, &icount, 0);
-    uni_utf8(mybuf, &icount, 0);
-    if(icount > 0)
-	return write(fd, mybuf, (size_t)icount);
-    else
-	return count; /* fake */
+
+    if (isascii(c)) {
+        vbuf_add(v, c);
+        return 1;
+    }
+    trail[1] = c;
+    return 0;
 }
 
-static ssize_t 
-norm_input(void *buf, ssize_t icount)
-{
-    return icount;
-}
+int convert_read_utf8(VBUF *v, const void *buf, size_t len) {
+    static uint8_t trail[6];
+    static int ctrail = 0;
+    uint16_t ucs;
+    uint8_t c;
+    int written = 0;
 
-/* global function pointers */
-read_write_type write_type = (read_write_type)write;
-read_write_type read_type = read;
-convert_type    input_type = norm_input;
+    while (len-- > 0) {
+        c = *(uint8_t*)buf ++;
+        if (ctrail) {
+            trail[ctrail++] = c;
+            // TODO this may create invalid chars.
+            if (utf2ucs(trail, &ucs) > ctrail)
+                continue;
+            ucs = u2b_table[ucs];
+            vbuf_add(v, ucs >> 8);
+            vbuf_add(v, ucs & 0xFF);
+            written += 2;
+            ctrail = 0;
+            continue;
+        }
+
+        if (isascii(c)) {
+            vbuf_add(v, c);
+            written++;
+        } else {
+            trail[0] = c;
+            ctrail = 1;
+        }
+    }
+    return written;
+}
 
 // enable this in case some day we want to detect
 // current type. but right now disable for less memory cost
@@ -109,30 +75,17 @@ convert_type    input_type = norm_input;
 void set_converting_type(int which)
 {
     if (which == CONV_NORMAL) {
-	read_type = read;
-	write_type = (read_write_type)write;
-	/* for speed up, NULL is better.. */
-	input_type = NULL; /* norm_input; */
-    }
-    else if (which == CONV_GB) {
-	read_type = gb_read;
-	write_type = gb_write;
-	input_type = gb_input;
+        convert_read = vbuf_putblk;
+        convert_write = vbuf_add;
     }
     else if (which == CONV_UTF8) {
-	read_type = utf8_read;
-	write_type = utf8_write;
-	input_type = utf8_input;
+        convert_read = convert_read_utf8;
+        convert_write = convert_write_utf8;
     }
-    // bbs_convert_type = which;
 }
 
 void init_convert()
 {
-    big2gb_init(NULL);
-    gb2big_init(NULL);
-    big2uni_init(NULL);
-    uni2big_init(NULL);
 }
 
 #endif

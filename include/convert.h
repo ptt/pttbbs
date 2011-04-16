@@ -7,18 +7,14 @@
 
 enum ConvertMode {
     CONV_NORMAL,
-    CONV_GB,
-    CONV_UTF8
+    CONV_UTF8,
 };
 
-typedef ssize_t (*read_write_type)(int, void *, size_t);
-typedef ssize_t (*convert_type)(void *, ssize_t);
-
-extern read_write_type write_type;
-extern read_write_type read_type;
-extern convert_type    input_type;
+extern int (*convert_write)(VBUF *v, char c);
+extern int (*convert_read)(VBUF *v, const void* buf, size_t len);
 
 extern void init_convert(void);
+extern void set_converting_type(int which);
 
 #endif // CONVERT
 #endif // _BBS_CONVERT_H
