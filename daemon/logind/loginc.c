@@ -51,9 +51,6 @@ int main(int argc, char *argv[])
 #ifdef CONVERT
 	switch (dat.encoding)
 	{
-	    case CONV_GB:
-		encoding = "[GB] ";
-		break;
 	    case CONV_UTF8:
 		encoding = "[UTF-8] ";
 		break;
