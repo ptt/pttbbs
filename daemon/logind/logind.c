@@ -692,6 +692,9 @@ _set_bind_opt(int sock)
 #define OVERLOAD_USER_MSG   ANSI_RESET " 由於人數過多，請您稍後再來... "
 #define OVERLOAD_USER_YX    BOTTOM_YX
 
+#define NO_SUCH_ENCODING_MSG ANSI_RESET " Sorry, GB encoding is NOT supported anymore. Please use UTF-8."
+#define NO_SUCH_ENCODING_YX PASSWD_PROMPT_YX
+
 #define REJECT_FREE_UID_MSG ANSI_RESET " 抱歉，此帳號或服務已達上限。 "
 #define REJECT_FREE_UID_YX  BOTTOM_YX
 
@@ -965,6 +968,13 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
     _mt_move_yx(conn, REJECT_FREE_UID_YX); _mt_clrtoeol(conn);
     _buff_write(conn, REJECT_FREE_UID_MSG, sizeof(REJECT_FREE_UID_MSG)-1);
 
+}
+
+static void
+draw_no_such_encoding(login_conn_ctx *conn)
+{
+    _mt_move_yx(conn, NO_SUCH_ENCODING_YX); _mt_clrtoeol(conn);
+    _buff_write(conn, NO_SUCH_ENCODING_MSG, sizeof(NO_SUCH_ENCODING_MSG)-1);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1677,9 +1687,9 @@ client_cb(int fd, short event, void *arg)
                     switch(*uid_lastc)
                     {
                         case '.':   // GB mode
-                            conn->ctx.encoding = CONV_GB;
-                            *uid_lastc = 0;
-                            break;
+                            draw_no_such_encoding(conn);
+                            login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
+                            return;
                         case ',':   // UTF-8 mode
                             conn->ctx.encoding = CONV_UTF8;
                             *uid_lastc = 0;
