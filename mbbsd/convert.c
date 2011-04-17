@@ -4,6 +4,7 @@
 #ifdef CONVERT
 int (*convert_write)(VBUF *v, char c) = vbuf_add;
 int (*convert_read)(VBUF *v, const void *buf, size_t len) = vbuf_putblk;
+ConvertMode convert_mode = CONV_NORMAL;
 
 int
 convert_write_utf8(VBUF *v, char c) {
@@ -68,24 +69,25 @@ int convert_read_utf8(VBUF *v, const void *buf, size_t len) {
     return written;
 }
 
-// enable this in case some day we want to detect
-// current type. but right now disable for less memory cost
-// int		bbs_convert_type = CONV_NORMAL;
-
-void set_converting_type(int which)
+void set_converting_type(ConvertMode mode)
 {
-    if (which == CONV_NORMAL) {
-        convert_read = vbuf_putblk;
-        convert_write = vbuf_add;
+    switch(mode) {
+        case CONV_NORMAL:
+            convert_read = vbuf_putblk;
+            convert_write = vbuf_add;
+            break;
+
+        case CONV_UTF8:
+            convert_read = convert_read_utf8;
+            convert_write = convert_write_utf8;
+            break;
     }
-    else if (which == CONV_UTF8) {
-        convert_read = convert_read_utf8;
-        convert_write = convert_write_utf8;
-    }
+    convert_mode = mode;
 }
 
 void init_convert()
 {
+    // nothing now.
 }
 
 #endif

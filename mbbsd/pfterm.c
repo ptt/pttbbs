@@ -20,17 +20,12 @@
 #define HAVE_GRAYOUT
 #include "bbs.h"
 
-#ifdef  UF_DBCS_NOINTRESC
-// # ifdef  CONVERT
-// extern int bbs_convert_type;
-// #  define FT_DBCS_NOINTRESC (
-//      (cuser.uflag & UF_DBCS_NOINTRESC) || 
-//      (bbs_convert_type == CONV_UTF8))
-// # else
+#ifndef FT_DBCS_NOINTRESC
+# ifdef  UF_DBCS_NOINTRESC
 #  define FT_DBCS_NOINTRESC (cuser.uflag & UF_DBCS_NOINTRESC)
-// # endif
-#else
-# define FT_DBCS_NOINTRESC 0
+# else
+#  define FT_DBCS_NOINTRESC (0)
+# endif
 #endif
 
 #endif
@@ -168,6 +163,9 @@
 // Prevent invalid DBCS characters
 #define FTCONF_PREVENT_INVALID_DBCS
 
+// Force to clear brefore drawing unsafe DBCS characters
+#define FTCONF_CLEAR_UNSAFE_DBCS
+
 // Some terminals use current attribute to erase background
 #define FTCONF_CLEAR_SETATTR
 
@@ -210,6 +208,7 @@
 #define FTDIRTY_DBCS    (0x04)
 #define FTDIRTY_INVALID_DBCS (0x08)
 #define FTDIRTY_RAWMOVE (0x10)
+#define FTDIRTY_CLEAR_DBCS (0x20)
 
 #define FTDBCS_SAFE     (0)     // standard DBCS
 #define FTDBCS_UNSAFE   (1)     // not on all systems (better do rawmove)
@@ -871,6 +870,9 @@ doupdate(void)
                         FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
                         FTDC[x-1] = FTCMAP[y][x-1];
                         FTD[x-1] |= FTDIRTY_CHAR;
+#ifdef FTCONF_CLEAR_UNSAFE_DBCS
+                        FTD[x-1] |= FTDIRTY_CLEAR_DBCS;
+#endif
                         FTD[x]   |= FTDIRTY_RAWMOVE;
                         break;
 
@@ -1003,6 +1005,9 @@ doupdate(void)
                 fterm_rawmove_opt(y, x);
 
 #ifdef DBCSAWARE
+            if (FTD[x] & FTDIRTY_CLEAR_DBCS) {
+                fterm_raws("  \b\b");
+            }
             if ((FTD[x] & FTDIRTY_DBCS) && (FT_DBCS_NOINTRESC))
             {
                 // prevent changing attributes inside DBCS
@@ -1465,6 +1470,9 @@ fterm_DBCS_Big5(unsigned char c1, unsigned char c2)
     // High byte: 0xA1-0xFE, 0x8E-0xA0, 0x81-0x8D
     // Low  byte: 0x40-0x7E, 0xA1-0xFE
     // C1:  0x80-0x9F
+#ifdef FT_DBCS_BIG5
+    FT_DBCS_BIG5(c1, c2);
+#endif
     if (FTDBCS_ISBADLEAD(c1))
         return  FTDBCS_INVALID;
     if (!FTDBCS_ISTAIL(c2))

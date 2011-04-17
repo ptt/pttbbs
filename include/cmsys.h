@@ -301,6 +301,6 @@ extern int utf2ucs(uint8_t *utf8, uint16_t *pucs);
 /* big5.c */
 extern const uint16_t const b2u_table[];
 extern const uint16_t const u2b_table[];
-
+extern const uint8_t const b2u_ambiguous_width[];
 
 #endif
