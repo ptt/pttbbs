@@ -635,6 +635,7 @@ peek_input(float f, int c)
 
 
 /* vkey system emulation */
+#ifndef USE_NIOS_VKEY
 
 inline int
 vkey_is_ready(void)
@@ -696,6 +697,7 @@ vkey_poll(int ms)
     // XXX handle I_OTHERDATA?
     return wait_input(ms / (double)MILLISECONDS, 0);
 }
+#endif
 
 /* vim:sw=4
  */

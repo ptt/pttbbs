@@ -290,9 +290,11 @@ cin_fetch_fd(int fd)
 #if 1
     // XXX we don't know how to deal with telnetctx/convert yet...
     // let's just keep using the old functions for now
-    char _buf[sizeof(cin_buf) + 2], *buf = _buf;
-    ssize_t sz;
+    char buf[sizeof(cin_buf)];
+    ssize_t sz = 0;
     do {
+        if (vbuf_is_full(cin))
+            break;
         if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
             continue;
 
@@ -300,16 +302,18 @@ cin_fetch_fd(int fd)
         if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
             sz = vtkbd_ignore_dbcs_evil_repeats(buf, sz);
 #endif
-#ifdef CONVERT
-        // TODO(piaip) this is not going to work - convert needs static buffer
-        // sz = input_wrapper(buf, sz);
-#error CONVERT is not well-supported in nios.
-#endif
 
         // for tty_read: sz<0 = EAGAIN
         if (sz > 0)
         {
-            vbuf_putblk(cin, buf, sz);
+#ifdef CONVERT
+            sz = convert_read(cin, buf, sz);
+#else
+            sz = vbuf_putblk(cin, buf, sz);
+#endif
+            // sz becomes -1/0/1 after putblk calls
+            if (sz < 1)
+                sz = -1;
         }
     } while (sz < 0);
 #else
@@ -525,7 +529,7 @@ vkey_process(int timeout, int peek)
         }
         else if (timeout == 0)
         {
-            r = cin_is_fd_empty(CIN_DEFAULT_FD);
+            r = !cin_is_fd_empty(CIN_DEFAULT_FD);
         }
         else {
             assert(timeout == INFTIM);  // let's simply read it.
@@ -539,7 +543,7 @@ vkey_process(int timeout, int peek)
             else
                 return KEY_INCOMPLETE; // must directly return here.
         }
-        if (r <  0) // error
+        if (r < 0) // error
             r = KEY_UNKNOWN;        // or EOF?
         else if (r & CIN_POLL_FD2)  // the second fd
             r = I_OTHERDATA;
@@ -640,6 +644,9 @@ vkey()
     refresh();
 
     while ((c = vkey_process(INFTIM, 1)) == KEY_INCOMPLETE);
+    // we can either read again without peek, or simly reset peek.
+    // return vkey_process(INFTIM, 0);
+    VKEY_RESET_PEEK();
     return c;
 }
 
