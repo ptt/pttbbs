@@ -4,16 +4,20 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 SRCS:=	daemon.c file.c lock.c log.c net.c sort.c string.c time.c \
-    crypt.c record.c vector.c telnet.c vbuf.c vtkbd.c utf8.c big5.c
+    crypt.c record.c vector.c telnet.c vbuf.c vtkbd.c
+
+.if $(WANTS_CONVERT) != "NO"
+SRCS+=  utf8.c big5.c
+.endif
 
 LIB:=	cmsys
 
 all: .depend
 
-big5.c: big5data.zip big5_gen.py
-	unzip big5data.zip
+big5.c: big5data.tar.bz2 big5_gen.py
+	tar zxf big5data.tar.bz2
 	./big5_gen.py > big5.c
-	rm -f *.big5.txt
+	tar ztf big5data.tar.bz2 | xargs rm
 
 install:
 

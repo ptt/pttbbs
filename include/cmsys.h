@@ -294,6 +294,7 @@ extern void telnet_ctx_set_ttype_arg (TelnetCtx *ctx, void *arg);
 
 extern ssize_t telnet_process        (TelnetCtx *ctx, unsigned char *buf, ssize_t size);
 
+#ifdef CONVERT
 /* utf8.c */
 extern int ucs2utf(uint16_t ucs2, uint8_t *utf8);
 extern int utf2ucs(uint8_t *utf8, uint16_t *pucs);
@@ -302,5 +303,6 @@ extern int utf2ucs(uint8_t *utf8, uint16_t *pucs);
 extern const uint16_t const b2u_table[];
 extern const uint16_t const u2b_table[];
 extern const uint8_t const b2u_ambiguous_width[];
+#endif
 
 #endif

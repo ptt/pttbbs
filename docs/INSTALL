@@ -48,10 +48,10 @@ $Id$
 
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
     * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake, 然後將 make alias 成 pmake *
- 11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, libhz, pgp
+ 11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, zip, pgp
     如果您使用的是 FreeBSD, 可以直接透過 ports安裝:
         cd /usr/ports/converters/libiconv; make install
-        cd /usr/ports/chinese/autoconvert; make install
+        cd /usr/ports/archivers/autoconvert; make install
         cd /usr/ports/security/pgp; make install
  12. (在 ~bbs/pttbbs 下)  執行 make BBSHOME=/home/bbs all install
  13.如果是新架起來的站, 請執行 cd sample; make install

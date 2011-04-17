@@ -9,8 +9,7 @@ $Id$
  6. sendmail.cf要改的地方(參考用) (by DavidYu)
  7. /usr/libexec/elf/ld: cannot find -liconv
    或 iconv.h: No such file or directory
- 8. /usr/libexec/elf/ld: cannot find -lhz
- 9. 如何讓用 ssh方式進 bbs不用密碼
+ 8. 如何讓用 ssh方式進 bbs不用密碼
 ------------------------------------------------------------------------------
 1.PttBBS的討論區，以及如何寄送修改給官方
 
@@ -147,20 +146,7 @@ Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
 刪除
 
 ------------------------------------------------------------------------------
-8./usr/libexec/elf/ld: cannot find -lhz
-Ptt 支援繁體中文轉簡體中文與 UTF-8 的功能
-若您開啟了這個選項 (#define CONVERT)
-請安裝 autoconvert
-    (/usr/ports/chinese/autoconvert in FreeBSD
-     package libhz0 in Debian/Linux )
-
-若不想開啟此選項 請修改 pttbbs.mk (line 10)
-	PTT_LIBS= -lcrypt -lhz
-改成:
-	PTT_LIBS= -lcrypt
-
-------------------------------------------------------------------------------
- 9. 如何讓用 ssh方式進 bbs不用密碼
+ 8. 如何讓用 ssh方式進 bbs不用密碼
 先在 /etc/ssh/sshd_config 中把
 	#PermitEmptyPasswords no
 改成
