@@ -28,7 +28,8 @@ extern void set_converting_type(ConvertMode which);
 // TODO make DBCS_BIG5 containing all "unsafe" properties
 #ifndef FT_DBCS_BIG5
 #define FT_DBCS_BIG5(c1, c2) { \
-    if (b2u_ambiguous_width[((unsigned int)c1 << 8) | c2]) \
+    if (convert_mode == CONV_UTF8 && \
+        b2u_ambiguous_width[((unsigned int)c1 << 8) | c2]) \
         return FTDBCS_UNSAFE; \
     }
 #endif 
