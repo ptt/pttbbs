@@ -10,10 +10,10 @@ LIB:=	cmsys
 
 all: .depend
 
-big5.c: uao250.zip big5_gen.py
-	unzip uao250.zip
+big5.c: big5data.zip big5_gen.py
+	unzip big5data.zip
 	./big5_gen.py > big5.c
-	rm -f uao*.txt
+	rm -f *.big5.txt
 
 install:
 
