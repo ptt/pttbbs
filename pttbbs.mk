@@ -3,14 +3,12 @@
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 
-WITH_PFTERM=1
-
 SRCROOT?=	.
 
 OSTYPE!=	uname
 
-#CC:=		clang -Qunused-arguments
-#CXX:=		clang -Qunused-arguments
+CC:=		gcc
+CXX:=		g++
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 WANTS_CONVERT!= sh -c 'grep "^\#define CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
 
