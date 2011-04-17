@@ -6,7 +6,7 @@ SRCROOT=	../..
 SRCS:=	daemon.c file.c lock.c log.c net.c sort.c string.c time.c \
     crypt.c record.c vector.c telnet.c vbuf.c vtkbd.c
 
-.if $(WANTS_CONVERT) != "NO"
+.if $(WITH_CONVERT) != "NO"
 SRCS+=  utf8.c big5.c
 .endif
 

@@ -10,7 +10,7 @@ OSTYPE!=	uname
 CC:=		gcc
 CXX:=		g++
 CCACHE!=	which ccache|sed -e 's/^.*\///'
-WANTS_CONVERT!= sh -c 'grep "^\#define CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
+WITH_CONVERT!=  sh -c 'grep -w "^[\t ]*\#define[ \t]*CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
 
 .if $(CCACHE)
 CC:=		ccache $(CC)
