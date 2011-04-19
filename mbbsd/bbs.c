@@ -3039,15 +3039,21 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     // make sure to do modification
     {
-	char ans[2];
+        // to hold ':wq', ':q!' 'ZZ'
+	char ans[5];
 	sprintf(buf+strlen(buf), 
 		ANSI_REVERSE "%-*s" ANSI_RESET " ½T©w[y/N]:", 
 		maxlength, msg);
 	move(b_lines, 0);
 	clrtoeol();
-	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO) ||
-		ans[0] != 'y')
-	    return FULLUPDATE;
+	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO))
+            return FULLUPDATE;
+        if (ans[0] == 'y' ||
+            strncmp(ans, ":w", 2) == 0 ||
+            strcmp(ans, "zz") == 0) {
+            // success!
+        } else
+            return FULLUPDATE;
     }
 
     // log if you want
