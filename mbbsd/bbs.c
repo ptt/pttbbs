@@ -3040,7 +3040,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     // make sure to do modification
     {
         // to hold ':wq', ':q!' 'ZZ'
-	char ans[5];
+	char ans[2];
 	sprintf(buf+strlen(buf), 
 		ANSI_REVERSE "%-*s" ANSI_RESET " ½T©w[y/N]:", 
 		maxlength, msg);
