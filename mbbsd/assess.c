@@ -54,15 +54,20 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     clrtobot();
     for (i = 0; i < DIM(badpost_reason); i++)
 	prints("%d.%s ", i + 1, badpost_reason[i]);
-
-    prints("%d.%s", i + 1, "其他");
-    getdata(b_lines - 1, 0, "請選擇[0:取消劣文]:", genbuf, 3, LCECHO);
-    i = genbuf[0] - '1';
-    if (i < 0 || i > DIM(badpost_reason))
-    {
-	vmsg("取消設定劣文。");
-	return -1;
-    }
+    prints("%d.%s ", i + 1, "其他");
+    prints("0.取消劣文 ");
+    do {
+        getdata(b_lines - 1, 0, "請選擇: ", genbuf, 2, NUMECHO);
+        i = genbuf[0] - '1';
+        if (i == -1) {
+            vmsg("取消設定劣文。");
+            return -1;
+        }
+        if (i < 0 || i > DIM(badpost_reason))
+            bell();
+        else
+            break;
+    } while (1);
 
     if (i < DIM(badpost_reason))
 	sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", badpost_reason[i]);
@@ -71,13 +76,15 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	char *s = genbuf;
 	strcpy(genbuf, comment ? "劣推文退回(" : "劣文退回(");
 	s += strlen(genbuf);
-	getdata_buf(b_lines, 0, "請輸入原因", s, 50, DOECHO);
-	// 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
-	if (!*s && comment)
-	{
-	    vmsg("取消設定劣文。");
-	    return -1;
-	}
+        while (!getdata_buf(b_lines, 0, "請輸入原因", s, 50, DOECHO)) {
+            // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
+            if (comment) {
+                vmsg("取消設定劣文。");
+                return -1;
+            }
+            bell();
+            continue;
+        }
 	strcat(genbuf,")");
     }
 
