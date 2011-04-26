@@ -646,8 +646,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     case 'm':
 	while (1) {
-	    getdata_str(y, 0, "電子信箱 [變動要重新認證]：", buf, 
-		    sizeof(x.email), DOECHO, x.email);
+	    getdata_str(y, 0, 
+                    adminmode ? "E-Mail (站長變更不需認證): " :
+                                "電子信箱 [變動要重新認證]：",
+                    buf, sizeof(x.email), DOECHO, x.email);
 
 	    strip_blank(buf, buf);
 
