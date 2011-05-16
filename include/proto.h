@@ -496,6 +496,10 @@ int rotate_bin_logfile(const char *filename, off_t record_size,
 int delete_file_content(const char *direct, const fileheader_t *fh,
                         const char *backup_direct,
                         char *newpath, size_t sznewpath);
+int delete_file_content2(const char *direct, const fileheader_t *fh,
+                         const char *backup_direct,
+                         char *newpath, size_t sznewpath,
+                         const char *reason);
 #define DELETE_FILE_CONTENT_SUCCESS (0)
 #define DELETE_FILE_CONTENT_FAILED  (-1)
 #define DELETE_FILE_CONTENT_BACKUP_FAILED  (1)

@@ -829,7 +829,8 @@ innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
 
 static int
 cancelpost(const char *direct, const fileheader_t *fh,
-           int not_owned, char *newpath, size_t sznewpath) {
+           int not_owned, char *newpath, size_t sznewpath,
+           const char *reason) {
     int ret = 0;
     char bakdir[PATHLEN];
 
@@ -840,7 +841,7 @@ cancelpost(const char *direct, const fileheader_t *fh,
     setbdir(bakdir, brd);
 #endif
 
-    ret = delete_file_content(direct, fh, bakdir, newpath, sznewpath);
+    ret = delete_file_content2(direct, fh, bakdir, newpath, sznewpath, reason);
     if (!IS_DELETE_FILE_CONTENT_OK(ret))
         return ret;
 
@@ -3461,7 +3462,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // was closed.
 	    setbtotal(currbid);
 
-            del_ret = cancelpost(direct, fhdr, not_owned, newpath, sizeof(newpath));
+            del_ret = cancelpost(direct, fhdr, not_owned,
+                                 newpath, sizeof(newpath), reason);
             deleteCrossPost(fhdr, bp->brdname);
 
             move(b_lines - 10, 0); clrtobot();

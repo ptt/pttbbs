@@ -338,9 +338,10 @@ safe_article_delete_range(const char *direct, int from, int to)
 // Return -1 if cannot delete file, 0 for success,
 // 1 if delete success but backup failed.
 int
-delete_file_content(const char *direct, const fileheader_t *fh,
-                    const char *backup_direct,
-                    char *backup_path, size_t sz_backup_path) {
+delete_file_content2(const char *direct, const fileheader_t *fh,
+                     const char *backup_direct,
+                     char *backup_path, size_t sz_backup_path,
+                     const char *reason) {
     char fpath[PATHLEN];
     fileheader_t backup = { {0} };
     int backup_failed = DELETE_FILE_CONTENT_SUCCESS;
@@ -377,8 +378,10 @@ delete_file_content(const char *direct, const fileheader_t *fh,
 
         // FIXME maybe for non-board files we should do this by simply touching
         // file instead of full log.
+        if (reason && *reason)
+            log_filef(fpath,  LOG_CREAT, "\n¡° §R°£­ì¦]: %s", reason);
         log_filef(fpath,  LOG_CREAT, "\n¡° Deleted by: %s (%s) %s\n",
-                cuser.userid, fromhost, Cdatelite(&now));
+                  cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
         strlcpy(backup.owner, fh->owner, sizeof(backup.owner));
@@ -432,6 +435,14 @@ delete_file_content(const char *direct, const fileheader_t *fh,
     if (*fpath && unlink(fpath) != 0)
         return DELETE_FILE_CONTENT_FAILED;
     return backup_failed;
+}
+
+int
+delete_file_content(const char *direct, const fileheader_t *fh,
+                    const char *backup_direct,
+                    char *backup_path, size_t sz_backup_path) {
+    return delete_file_content2(direct, fh, backup_direct,
+            backup_path, sz_backup_path, NULL);
 }
 
 // XXX announce(man) directory uses a smaller range of file names.
