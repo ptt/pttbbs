@@ -169,7 +169,7 @@ user_display(const userec_t * u, int adminmode)
 	outs("\n");
 
     prints("\t電子信箱: %s\n", u->email);
-    prints("\t銀行帳戶: %d " MONEYNAME "\n", u->money);
+    prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
     prints("\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");
@@ -820,7 +820,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    int tmp;
 	    if (HasUserPerm(PERM_BBSADM)) {
 		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
-		if (getdata_str(y++, 0, "銀行帳戶：", buf, 10, DOECHO, genbuf))
+		if (getdata_str(y++, 0, BBSMNAME "幣：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atol(buf)) != 0) {
 			if (tmp != x.money) {
 			    money_changed = 1;
