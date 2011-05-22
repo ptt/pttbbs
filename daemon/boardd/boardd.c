@@ -121,9 +121,9 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 	} else
 	    return;
     } else if (strncmp(key, "tobid.", 6) == 0) {
-	char *_key = strndup(key, keylen);
-	bid = getbnum(_key);
-	free(_key);
+	char *bname = strndup(key + 6, keylen - 6);
+	bid = getbnum(bname);
+	free(bname);
 	bptr = getbcache(bid);
 
 	if (!bptr->brdname[0] || BOARD_HIDDEN(bptr))
