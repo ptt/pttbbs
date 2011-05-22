@@ -47,7 +47,6 @@
 #include "var.h"
 
 static struct event ev_listen;
-static int clients = 0;
 
 static const char whitespace[] = " \t\r\n";
 
@@ -123,7 +122,7 @@ void answer_key(const char *key, int keylen, struct evbuffer *buf)
 	    return;
     } else if (strncmp(key, "tobid.", 6) == 0) {
 	char *_key = strndup(key, keylen);
-	bid = getbnum(key);
+	bid = getbnum(_key);
 	free(_key);
 	bptr = getbcache(bid);
 
@@ -226,6 +225,8 @@ cb_client(struct bufferevent *bufev, void *arg)
     if ((line = evbuffer_readline(EVBUFFER_INPUT(bufev))) == NULL)
 	return;
 
+    fprintf(stderr, "Client cmd [%d] %s\n", ctx->fd, line);
+
     cmd = line + strspn(line, whitespace);
     p = cmd + strcspn(cmd, whitespace);
     *p++ = '\0';
@@ -248,9 +249,7 @@ cb_endconn(struct bufferevent *bufev, short what, void *arg)
     bufferevent_free(bufev);
     free(ctx);
 
-    if (clients == MAX_CLIENTS)
-	event_add(&ev_listen, NULL);
-    clients--;
+    fprintf(stderr, "Client disconnect: %d\n", ctx->fd);
 }
 
 void
@@ -288,16 +287,14 @@ cb_listen(int fd, short event, void *arg)
 
     setup_client(cfd);
 
-    clients++;
-
-    if (clients > MAX_CLIENTS)
-	event_del(&ev_listen);
+    fprintf(stderr, "Client connect: %d\n", cfd);
 }
 
 int main(int argc, char *argv[])
 {
     int ch, sfd = 0, inetd = 0, daemon = 1;
     char *iface_ip = "127.0.0.1:5150";
+    struct event_base *evb;
 
     Signal(SIGPIPE, SIG_IGN);
     while ((ch = getopt(argc, argv, "Dil:h")) != -1)
@@ -318,7 +315,7 @@ int main(int argc, char *argv[])
 	}
 
     if (!inetd)
-	if ((sfd = tobind(iface_ip)) < 0)
+	if ((sfd = tobindex(iface_ip, 100, NULL, 1)) < 0)
 	    return 1;
 
     setuid(BBSUID);
@@ -330,10 +327,13 @@ int main(int argc, char *argv[])
     if (daemon)
 	daemonize(BBSHOME "/run/boardd.pid", NULL);
 
-    event_init();
+    evb = event_init();
+    event_base_priority_init(evb, 4);
+
     if (!inetd) {
 	fcntl(sfd, F_SETFL, fcntl(sfd, F_GETFL, 0) | O_NONBLOCK);
 	event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, cb_listen, &ev_listen);
+	event_priority_set(&ev_listen, 3);
 	event_add(&ev_listen, NULL);
     } else
 	setup_client(0);
