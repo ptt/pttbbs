@@ -10,158 +10,95 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 /* ----------------------------------------------------- */
 /* Tag List 標籤                                         */
 /* ----------------------------------------------------- */
-typedef struct
-{ 
-    time4_t chrono;
-    int     recno;
-} TagItem;
-
 static TagItem         *TagList = NULL;	/* ascending list */
 
-/**
- * @param locus
- * @return void
- */
-void
-UnTagger(int locus)
-{
-    if (locus > TagNum || TagNum <= 0)
-	return;
+int compare_tagitem(const void *pa, const void *pb) {
+    TagItem *taga = (TagItem*) pa,
+            *tagb = (TagItem*) pb;
+    return strcmp(taga->filename, tagb->filename);
+}
+
+int IsEmptyTagList() {
+    return !TagList || TagNum <= 0;
+}
+
+TagItem *FindTaggedItem(const fileheader_t *fh) {
+    if (IsEmptyTagList())
+        return NULL;
+
+    return (TagItem*)bsearch(
+            fh->filename, TagList, TagNum, sizeof(TagItem), compare_tagitem);
+}
+
+TagItem *RemoveTagItem(const fileheader_t *fh) {
+    TagItem *tag = IsEmptyTagList() ? NULL : FindTaggedItem(fh);
+    if (!tag)
+        return tag;
 
     TagNum--;
-
-    if (TagNum > locus)
-	memmove(&TagList[locus], &TagList[locus + 1],
-	       (TagNum - locus) * sizeof(TagItem));
+    memmove(tag, tag + 1, (TagNum - (tag - TagList)) * sizeof(TagItem));
+    return tag;
 }
 
-int
-Tagger(time4_t chrono, int recno, int mode)
-{
-    int             head, tail, posi = 0, comp;
-
+TagItem *AddTagItem(const fileheader_t *fh) {
+    if (TagNum == MAXTAGS)
+        return NULL;
     if(TagList == NULL) {
-	TagList = malloc(sizeof(TagItem)*(MAXTAGS+1));
-    }
-
-    for (head = 0, tail = TagNum - 1, comp = 1; head <= tail;) {
-	posi = (head + tail) >> 1;
-	if (!(comp = TagList[posi].chrono - chrono)) {
-	    if (!recno)
-		break;
-	    else if (!(comp = TagList[posi].recno - recno))
-		break;
-	}
-	if (comp < 0) {
-	    head = posi + 1;
-	} else {
-	    tail = posi - 1;
-	}
-    }
-
-    if (mode == TAG_NIN) {
-	if (!comp && recno)	/* 絕對嚴謹：連 recno 一起比對 */
-	    comp = recno - TagList[posi].recno;
-	return comp;
-
-    }
-    if (!comp) {
-	if (mode != TAG_TOGGLE || TagNum <= 0)
-	    return NA;
-
-	TagNum--;
-	memmove(&TagList[posi], &TagList[posi + 1],
-	       (TagNum - posi) * sizeof(TagItem));
-    } else if (TagNum < MAXTAGS) {
-	TagItem        *tagp;
-
-	memmove(&TagList[head+1], &TagList[head], sizeof(TagItem)*(TagNum-head));
-	tagp = &TagList[head];
-	tagp->chrono = chrono;
-	tagp->recno = recno;
-	TagNum++;
+        const size_t sz = sizeof(TagItem) * (MAXTAGS + 1);
+        TagList = (TagItem*) malloc(sz);
+        memset(TagList, 0, sz);
     } else {
-	bell();
-	return 0;		/* full */
+        memset(TagList+TagNum, 0, sizeof(TagItem));
     }
-    return YEA;
+    // assert(!FindTaggedItem(fh));
+    strlcpy(TagList[TagNum++].filename, fh->filename, sizeof(fh->filename));
+    qsort(TagList, TagNum, sizeof(TagItem), compare_tagitem);
+    return FindTaggedItem(fh);
 }
 
-void
-EnumTagFhdr(fileheader_t * fhdr, char *direct, int locus)
-{
-    get_record(direct, fhdr, sizeof(fileheader_t), TagList[locus].recno);
+TagItem *ToggleTagItem(const fileheader_t *fh) {
+    TagItem *tag = RemoveTagItem(fh);
+    if (tag)
+        return tag;
+    return AddTagItem(fh);
 }
 
-/* -1 : 取消 */
-/* 0 : single article */
-/* ow: whole tag list */
+static int
+_iter_tag_match_title(void *ptr, void *opt) {
+    fileheader_t *fh = (fileheader_t*) ptr;
+    char *pattern = (char*) opt;
+    char *title = subject(fh->title);
 
-int
-AskTag(const char *msg)
-{
-    int             num;
-
-    num = TagNum;
-    switch (vansf("◆ %s A)文章 T)標記 Q)uit?", msg)) {
-    case 'q':
-	num = -1;
-	break;
-    case 'a':
-	num = 0;
-    }
-    return num;
+    if (strncmp(pattern, title, TTLEN) != 0)
+        return 0;
+    if (FindTaggedItem(fh))
+        return 0;
+    if (!AddTagItem(fh))
+        return -1;
+    return 0;
 }
-
-
-#include <sys/mman.h>
-
-static char           *
-f_map(const char *fpath, int *fsize)
-{
-    int             fd, size;
-    struct stat     st;
-    char *map;
-
-    if ((fd = open(fpath, O_RDONLY)) < 0)
-	return (char *)-1;
-
-    if (fstat(fd, &st) || !S_ISREG(st.st_mode) || (size = st.st_size) <= 0) {
-	close(fd);
-	return (char *)-1;
-    }
-    map = (char *)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-    close(fd);
-    *fsize = size;
-    return map;
-}
-
 
 static int
 TagThread(const char *direct)
 {
-    int             fsize, count;
-    char           *title, *fimage;
-    fileheader_t   *head, *tail;
-
-    fimage = f_map(direct, &fsize);
-    if (fimage == (char *)-1)
-	return DONOTHING;
-
-    head = (fileheader_t *) fimage;
-    tail = (fileheader_t *) (fimage + fsize);
-    count = 0;
-    do {
-	count++;
-	title = subject(head->title);
-	if (!strncmp(currtitle, title, TTLEN)) {
-	    if (!Tagger(atoi(head->filename + 2), count, TAG_INSERT))
-		break;
-	}
-    } while (++head < tail);
-
-    munmap(fimage, fsize);
+    apply_record(direct, _iter_tag_match_title, sizeof(fileheader_t), currtitle);
     return FULLUPDATE;
+}
+
+static int
+_iter_delete_tagged(void *ptr, void *opt) {
+    fileheader_t *fh = (fileheader_t*) ptr;
+    const char *direct = (const char*)opt;
+
+    if ((fh->filemode & FILE_MARKED) ||
+        (fh->filemode & FILE_DIGEST))
+        return 0;
+    if (!FindTaggedItem(fh))
+        return 0;
+    // only called by home or board, no need for man.
+    // so backup_direct can be same as direct.
+    delete_file_content(direct, fh, direct, NULL, 0);
+    return IsEmptyTagList();
 }
 
 
@@ -169,31 +106,49 @@ int
 TagPruner(int bid)
 {
     boardheader_t  *bp=NULL;
+    char direct[PATHLEN];
+
     assert(bid >= 0);   /* bid == 0 means in mailbox */
-    if (bid){
+    if (bid && currstat != RMAIL){
 	bp = getbcache(bid);
 	if (is_readonly_board(bp->brdname))
 	    return DONOTHING;
+        setbdir(direct, bp->brdname);
+    } else if(currstat == RMAIL) {
+        sethomedir(direct, cuser.userid);
+    } else {
+        vmsg("抱歉，程式異常 - 請至 " BN_BUGREPORT " 報告您剛的詳細步驟。");
+        return FULLUPDATE;
     }
-    if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
-	if (vans("刪除所有標記[N]?") != 'y')
-	    return READ_REDRAW;
-#ifdef SAFE_ARTICLE_DELETE
-        if(bp && !(currmode & MODE_DIGEST) &&
-           bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-            safe_delete_range(currdirect, 0, 0);
-        else
-#endif
-	    delete_range(currdirect, 0, 0);
-	TagNum = 0;
-	if (bid)
-	    setbtotal(bid);
-        else if(currstat == RMAIL)
-            setupmailusage();
 
-	return NEWDIRECT;
-    }
-    return DONOTHING;
+    if (IsEmptyTagList() || (currstat == READING && !(currmode & MODE_BOARD)))
+        return DONOTHING;
+    if (vans("刪除所有標記[N]?") != 'y')
+        return READ_REDRAW;
+
+    // ready to start.
+    outmsg("處理中,請稍後...");
+    refresh();
+
+    // first, delete and backup all files
+    apply_record(direct, _iter_delete_tagged, sizeof(fileheader_t), direct);
+
+    // now, delete the header
+#ifdef SAFE_ARTICLE_DELETE
+    if(bp && !(currmode & MODE_DIGEST) &&
+       bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
+        safe_delete_range(currdirect, 0, 0);
+    else
+#endif
+        delete_range(currdirect, 0, 0);
+
+    TagNum = 0;
+    if (bid)
+        setbtotal(bid);
+    else if(currstat == RMAIL)
+        setupmailusage();
+
+    return NEWDIRECT;
 }
 
 
@@ -1011,17 +966,9 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		TagNum = 0;
 	    }
 	    /* rocker.011112: 解決再select mode標記文章的問題 */
-	    if (Tagger(atoi(headers[locmem->crs_ln - locmem->top_ln].filename + 2),
-		       (currmode & MODE_SELECT) ?
-		       (headers[locmem->crs_ln - locmem->top_ln].multi.refer.ref) :
-		       locmem->crs_ln, TAG_TOGGLE))
+            if (ToggleTagItem(&headers[locmem->crs_ln - locmem->top_ln]))
 	    {
-//		(*doentry) (locmem->crs_ln, &headers[locmem->crs_ln-locmem->top_ln]);
 		locmem->crs_ln ++;
-		// new_ln = locmem->crs_ln + 1; 
-		// new_top = 1;
-		// mode = FULLUPDATE;
-		// mode = PART_REDRAW;
 		mode = PARTUPDATE;
 	    }
 	    break;

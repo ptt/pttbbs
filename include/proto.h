@@ -465,9 +465,19 @@ int main_railway(void);
 void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(), const onekey_t *rcmdlist, int bidcache);
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
-int Tagger(time4_t chrono, int recno, int mode);
-void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
-void UnTagger (int locus);
+
+typedef struct
+{ 
+    // TODO use aid_t
+    char filename[FNLEN];
+} TagItem;
+
+TagItem *FindTaggedItem(const fileheader_t *fh);
+TagItem *RemoveTagItem(const fileheader_t *fh);
+TagItem *AddTagItem(const fileheader_t *fh);
+TagItem *ToggleTagItem(const fileheader_t *fh);
+int IsEmptyTagList();
+
 /* record */
 int stampfile_u(char *fpath, fileheader_t *fh);
 int stampadir(char *fpath, fileheader_t * fh, int large_set);

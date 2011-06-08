@@ -167,7 +167,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
 	if (!((fhdr.filemode & FILE_MARKED) ||	/* 標記 */
 	      (fhdr.filemode & FILE_DIGEST) ||	/* 文摘 */
 	      (id1 && (i < id1 || i > id2)) ||	/* range */
-	      (!id1 && Tagger(atoi(t + 2), i, TAG_NIN)))) 	/* TagList */
+	      (!id1 && !FindTaggedItem(&fhdr)))) /* TagList */
 	    safe_article_delete(i, &fhdr, fpath, NULL);
     }
     close(fd);
@@ -218,7 +218,7 @@ delete_range(const char *fpath, int id1, int id2)
 	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||	
 	    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
 	    (id1 && (count < id1 || count > id2)) ||	/* range */
-	    (!id1 && Tagger(atoi(t + 2), count, TAG_NIN))) {	/* TagList */
+	    (!id1 && !FindTaggedItem(&fhdr))) {	/* TagList */
 	    if ((safewrite(fdw, &fhdr, sizeof(fileheader_t)) == -1)) {
 		close(fdr);
 		close(fdw);
@@ -226,11 +226,11 @@ delete_range(const char *fpath, int id1, int id2)
 		flock(fd, LOCK_UN);
 		close(fd);
 		return -1;
-	    }
+	    } 
 	} else {
-	    //if (dashd(fullpath))
-		unlink(fullpath);
-                dcount++;
+            unlink(fullpath);
+            dcount++;
+            RemoveTagItem(&fhdr);
 	}
 	++count;
     }

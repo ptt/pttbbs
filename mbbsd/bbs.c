@@ -631,7 +631,7 @@ readdoent(int num, fileheader_t * ent)
     // tag should override everything
     if ((currmode & MODE_BOARD) || HasBasicUserPerm(PERM_LOGINOK)) 
     {
-	if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
+	if (FindTaggedItem(ent))
 	    type = 'D';
     }
 

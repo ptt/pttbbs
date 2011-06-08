@@ -1140,7 +1140,7 @@ maildoent(int num, fileheader_t * ent)
 	    ' ' : '+';
     }
 
-    if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
+    if (FindTaggedItem(ent))
 	type = 'D';
 
     title = subject(mark = ent->title);

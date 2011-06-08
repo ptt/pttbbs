@@ -640,14 +640,67 @@ a_appenditem(const menu_t * pm, int isask)
     }
 }
 
+typedef struct _iter_paste_tag_param {
+    menu_t *pm;
+    boardheader_t *bh;
+    int mode;
+    int copied;
+    int item;
+} _iter_paste_tag_param;
+
+static int
+_iter_paste_tag(void *item, void *optarg) {
+    char buf[PATHLEN];
+    char title[TTLEN + 1] = "◇  ";
+    fileheader_t *fhdr = (fileheader_t*) item;
+    _iter_paste_tag_param *param = (_iter_paste_tag_param*) optarg;
+
+    param->item ++;
+    // XXX many process crashed here as fhdr.filename[0] == 0
+    // let's workaround it? or trace?
+    if (!fhdr->filename[0])
+    {
+        grayout(0, b_lines-2, GRAYOUT_DARK);
+        move(b_lines-1, 0); clrtobot();
+        prints("處理 #%d 項發生錯誤。 請把你剛剛進行的完整步驟貼到 "
+                BN_BUGREPORT " 板。\n", param->item);
+        vmsg("忽略錯誤並繼續進行。");
+        return 0;
+    }
+
+    if (!FindTaggedItem(fhdr))
+        return 0;
+
+    if (TagBoard == 0) 
+        sethomefile(buf, cuser.userid, fhdr->filename);
+    else {
+        setbfile(buf, param->bh->brdname, fhdr->filename);
+    }
+
+    if (!dashf(buf))
+        return 0;
+
+    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    a_copyitem(buf, title, 0, 0);
+    if (param->mode) {
+        param->mode--;
+        a_pasteitem(param->pm, 0);
+    } else
+        a_appenditem(param->pm, 0);
+
+    param->copied++;
+    RemoveTagItem(fhdr);
+    return IsEmptyTagList();
+}
+
 static int
 a_pastetagpost(menu_t * pm, int mode)
 {
-    fileheader_t    fhdr;
     boardheader_t  *bh = NULL;
-    int             ans = 0, ent = 0, tagnum;
-    char            title[TTLEN + 1] = "◇  ";
-    char            dirname[PATHLEN], buf[PATHLEN];
+    char            dirname[PATHLEN];
+    _iter_paste_tag_param param = {0};
+    param.pm = pm;
+    param.mode = mode;
 
     if (TagBoard == 0){
 	sethomedir(dirname, cuser.userid);
@@ -655,62 +708,27 @@ a_pastetagpost(menu_t * pm, int mode)
     else{
 	bh = getbcache(TagBoard);
 	setbdir(dirname, bh->brdname);
+        param.bh = bh;
     }
-    tagnum = TagNum;
 
     // prevent if anything wrong
-    if (tagnum > MAXTAGS || tagnum < 0)
+    if (TagNum > MAXTAGS || TagNum < 0)
     {
 	vmsg("內部錯誤。請把你剛剛進行的完整步驟貼到 "
 		BN_BUGREPORT " 板。");
-	return ans;
+	return 0;
     }
 
-    if (tagnum < 1)
-	return ans;
+    if (IsEmptyTagList())
+	return 0;
 
     /* since we use different tag features,
      * copyqueue is not required/used. */
     copyqueue_reset();
+    apply_record(dirname, _iter_paste_tag, sizeof(fileheader_t),  &param);
 
-    while (tagnum-- > 0) {
-	memset(&fhdr, 0, sizeof(fhdr));
-	EnumTagFhdr(&fhdr, dirname, ent++);
-
-	// XXX many process crashed here as fhdr.filename[0] == 0
-	// let's workaround it? or trace?
-	// if (!fhdr->filename[0])
-        //   continue;
-	
-	if (!fhdr.filename[0])
-	{
-	    grayout(0, b_lines-2, GRAYOUT_DARK);
-	    move(b_lines-1, 0); clrtobot();
-	    prints("第 %d 項處理發生錯誤。 請把你剛剛進行的完整步驟貼到 "
-		    BN_BUGREPORT " 板。\n", ent);
-	    vmsg("忽略錯誤並繼續進行。");
-	    continue;
-	}
-
-	if (TagBoard == 0) 
-	    sethomefile(buf, cuser.userid, fhdr.filename);
-	else
-	    setbfile(buf, bh->brdname, fhdr.filename);
-
-	if (dashf(buf)) {
-	    strlcpy(title + 3, fhdr.title, sizeof(title) - 3);
-	    a_copyitem(buf, title, 0, 0);
-	    if (mode) {
-		mode--;
-		a_pasteitem(pm, 0);
-	    } else
-		a_appenditem(pm, 0);
-	    ++ans;
-	    UnTagger(tagnum);
-	}
-    }
-
-    return ans;
+    TagNum = 0;
+    return param.copied;
 }
 
 static void
