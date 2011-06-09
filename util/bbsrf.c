@@ -50,10 +50,14 @@ static int showbanfile(const char *filename)
     return fp ? 0 : -1;
 }
 
-int main(void)
+int main(int argc, const char **argv)
 {
     int uid;
+    int is_utf8 = 0;
     char remote_ip[MAX_REMOTE_IP_LEN + 1];
+
+    if (strstr(argv[0], "utf8")) 
+        is_utf8 = 1;
 
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);
     chdir(BBSHOME);
@@ -75,7 +79,11 @@ int main(void)
 
     get_remote_ip(sizeof(remote_ip), remote_ip);
 
-    execl(BBSPROG, "mbbsd", "-D", "-h", remote_ip, NULL);
+    if (is_utf8)
+        execl(BBSPROG, "mbbsd", "-D", "-h", remote_ip, NULL);
+    else
+        execl(BBSPROG, "mbbsd", "-D", "-e", "utf8", "-h", remote_ip, NULL);
+
     syslog(LOG_ERR, "execl(): %m");
     sleep(3); // prevent flooding
 
