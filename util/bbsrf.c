@@ -80,9 +80,9 @@ int main(int argc, const char **argv)
     get_remote_ip(sizeof(remote_ip), remote_ip);
 
     if (is_utf8)
-        execl(BBSPROG, "mbbsd", "-D", "-h", remote_ip, NULL);
-    else
         execl(BBSPROG, "mbbsd", "-D", "-e", "utf8", "-h", remote_ip, NULL);
+    else
+        execl(BBSPROG, "mbbsd", "-D", "-h", remote_ip, NULL);
 
     syslog(LOG_ERR, "execl(): %m");
     sleep(3); // prevent flooding
