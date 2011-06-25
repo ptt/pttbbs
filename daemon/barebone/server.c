@@ -32,7 +32,7 @@
 
 #include "server.h"
 
-static const struct timeval timeout = {600, 0};
+static const struct timeval *common_timeout;
 
 int
 split_args(char *line, char ***argp)
@@ -79,7 +79,7 @@ setup_client(struct event_base *base, evutil_socket_t fd,
     struct bufferevent *bev = bufferevent_socket_new(base, fd,
 	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
     bufferevent_setcb(bev, client_read_cb, NULL, client_event_cb, NULL);
-    bufferevent_set_timeouts(bev, &timeout, &timeout);
+    bufferevent_set_timeouts(bev, common_timeout, common_timeout);
     bufferevent_enable(bev, EV_READ|EV_WRITE);
 }
 
@@ -126,6 +126,9 @@ int main(int argc, char *argv[])
 
     base = event_base_new();
     assert(base);
+
+    const struct timeval timeout = {600, 0};
+    common_timeout = event_base_init_common_timeout(base, &timeout);
 
     if (!inetd) {
 	struct sockaddr sa;
