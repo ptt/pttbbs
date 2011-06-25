@@ -6,13 +6,8 @@ SRCROOT=	../..
 PROG=	boardd
 SRCS=	boardd.c server.c
 
-CLEANFILES+=	*~
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
-
-LIBEVENT_CFLAGS!=	pkg-config --cflags libevent
-LIBEVENT_LIBS_L!=	pkg-config --libs-only-L libevent
-LIBEVENT_LIBS_l!=	pkg-config --libs-only-l libevent
 
 CFLAGS+=	$(LIBEVENT_CFLAGS)
 LDFLAGS+=	$(LIBEVENT_LIBS_L)

@@ -73,6 +73,7 @@ CXXFLAGS+=	-fomit-frame-pointer
 .endif
 .endif
 
+LDADD=		$(LDLIBS)
 
 # 若有定義 NO_FORK, 則在 CFLAGS內定義 NO_FORK
 .if defined(NO_FORK)
@@ -82,6 +83,14 @@ CXXFLAGS+=	-DNO_FORK
 
 ######################################
 # Settings for common libraries
+
+#libevent
+LIBEVENT_CFLAGS!=	pkg-config --cflags libevent
+LIBEVENT_LIBS_L!=	pkg-config --libs-only-L libevent
+LIBEVENT_LIBS_l!=	pkg-config --libs-only-l libevent
+
+# pmake common
+CLEANFILES+=	*~
 
 # NetBSD pmake
 MKLINT:=no
