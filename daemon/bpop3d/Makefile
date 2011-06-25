@@ -1,26 +1,22 @@
 # $Id$
+
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-PROGRAMS=	bpop3d
+PROG=	bpop3d
+SRCS=	bpop3d.c server.c
+MAN=
+
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
+CFLAGS+=	$(LIBEVENT_CFLAGS)
+LDFLAGS+=	$(LIBEVENT_LIBS_L)
+
+LDADD+= $(UTILOBJ) \
+	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	-lcrypt -levent
+	$(LIBEVENT_LIBS_l) -lcrypt
 
-all:	${PROGRAMS}
-
-.SUFFIXES: .c .cpp .o
-.c.o:
-	$(CC) $(CFLAGS) -c $*.c
-.cpp.o:
-	$(CXX) $(CXXFLAGS) -c $*.cpp
-
-bpop3d: bpop3d.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $> $(LDLIBS)
-
-clean:
-	rm -f *~ ${PROGRAMS} bpop3d.o
+.include <bsd.prog.mk>
