@@ -32,7 +32,8 @@
 
 #include "server.h"
 
-static const struct timeval *common_timeout;
+static const struct timeval timeout = {600, 0};
+const struct timeval *common_timeout = &timeout;
 
 int
 split_args(char *line, char ***argp)
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
 		break;
 	    case 'h':
 	    default:
-		fprintf(stderr, "usage: "  " [-D] [-i] [-l interface_ip:port]\n");
+		fprintf(stderr, "Usage: %s [-D] [-i] [-l interface_ip:port]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
@@ -127,7 +128,6 @@ int main(int argc, char *argv[])
     base = event_base_new();
     assert(base);
 
-    const struct timeval timeout = {600, 0};
     common_timeout = event_base_init_common_timeout(base, &timeout);
 
     if (!inetd) {

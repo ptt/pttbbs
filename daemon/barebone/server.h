@@ -10,6 +10,8 @@
 #define MAX_ARGS 100
 #endif
 
+extern const struct timeval *common_timeout;
+
 extern void client_read_cb(struct bufferevent *bev, void *ctx);
 extern void client_event_cb(struct bufferevent *bev, short events, void *ctx);
 extern void setup_client(struct event_base *base, evutil_socket_t fd,
