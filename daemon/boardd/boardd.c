@@ -158,7 +158,7 @@ cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
     struct evbuffer *output = bufferevent_get_output(bev),
 		    *buf = evbuffer_new();
 
-    if (*argv++ == NULL) {
+    if (*argv == NULL) {
 	evbuffer_add_reference(output, "ERROR\r\n", 7, NULL, NULL);
 	return;
     }
@@ -178,14 +178,14 @@ cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
 void
 cmd_version(struct bufferevent *bev, void *ctx, int argc, char **argv)
 {
-    const char msg[] = "VERSION 0.0.1\r\n";
+    static const char msg[] = "VERSION 0.0.1\r\n";
     evbuffer_add_reference(bufferevent_get_output(bev), msg, strlen(msg), NULL, NULL);
 }
 
 void
 cmd_unknown(struct bufferevent *bev, void *ctx, int argc, char **argv)
 {
-    const char msg[] = "SERVER_ERROR Not implemented\r\n";
+    static const char msg[] = "SERVER_ERROR Not implemented\r\n";
     evbuffer_add_reference(bufferevent_get_output(bev), msg, strlen(msg), NULL, NULL);
 }
 
@@ -223,7 +223,7 @@ client_read_cb(struct bufferevent *bev, void *ctx)
 	if (evutil_ascii_strcasecmp(line, cmdlist[i].cmd) == 0)
 	    break;
 
-    (cmdlist[i].func)(bev, ctx, argc, argv);
+    (cmdlist[i].func)(bev, ctx, argc - 1, argv + 1);
 
     free(argv);
     free(line);
