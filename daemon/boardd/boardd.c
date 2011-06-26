@@ -130,7 +130,7 @@ answer_key(struct evbuffer *buf, const char *key)
 
 	    return article_list(buf, bptr, offset, length);
 	} else if (strncmp(key, "article.", 8) == 0) {
-	    if (strncmp(key + 9, "M.", 2) != 0)
+	    if (strncmp(key + 8, "M.", 2) != 0)
 		return;
 
 	    char path[PATH_MAX];
