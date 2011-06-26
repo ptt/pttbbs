@@ -5,6 +5,7 @@ SRCROOT=	../..
 
 PROG=	boardd
 SRCS=	boardd.c server.c
+MAN=
 
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
