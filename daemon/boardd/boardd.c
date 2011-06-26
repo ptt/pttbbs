@@ -9,13 +9,14 @@
 //  2. [done] rewrite with libevent 2.0
 //  3. [done] split out independent server code
 //  4. [done] add article list support
-//  5. add article content support
+//  5. [done] add article content support
 //  6. encode output in UTF-8 (with UAO support)
 //  7. encode article list in JSON for better structure
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/stat.h>
 
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
@@ -128,6 +129,19 @@ answer_key(struct evbuffer *buf, const char *key)
 		length = DEFAULT_ARTICLE_LIST;
 
 	    return article_list(buf, bptr, offset, length);
+	} else if (strncmp(key, "article.", 8) == 0) {
+	    if (strncmp(key + 9, "M.", 2) != 0)
+		return;
+
+	    char path[PATH_MAX];
+	    struct stat st;
+	    int fd;
+
+	    setbfile(path, bptr->brdname, key + 8);
+	    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, &st) < 0)
+		return;
+
+	    evbuffer_add_file(buf, fd, 0, st.st_size);
 	} else
 	    return;
     } else if (strncmp(key, "tobid.", 6) == 0) {
