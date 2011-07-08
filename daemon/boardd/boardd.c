@@ -89,9 +89,9 @@ answer_key(struct evbuffer *buf, const char *key)
 	if (strcmp(key, "isboard") == 0)
 	    evbuffer_add_printf(buf, "%d", (bptr->brdattr & BRD_GROUPBOARD) ? 0 : 1);
 	else if (strcmp(key, "over18") == 0)
-	    evbuffer_add_printf(buf, "%d", (bptr->brdattr & BRD_OVER18) ? 0 : 1);
+	    evbuffer_add_printf(buf, "%d", (bptr->brdattr & BRD_OVER18) ? 1 : 0);
 	else if (strcmp(key, "hidden") == 0)
-	    evbuffer_add_printf(buf, "%d", BOARD_HIDDEN(bptr) ? 0 : 1);
+	    evbuffer_add_printf(buf, "%d", BOARD_HIDDEN(bptr) ? 1 : 0);
 	else if (strcmp(key, "brdname") == 0)
 	    evbuffer_add(buf, bptr->brdname, strlen(bptr->brdname));
 	else if (strcmp(key, "title") == 0)
