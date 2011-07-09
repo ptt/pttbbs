@@ -56,8 +56,9 @@ article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
 	if (get_records_keep(path, &fhdr, sizeof(fhdr), ++offset, 1, &fd) <= 0)
 	    break;
 
-	evbuffer_add_printf(buf, "%d,%s,%s,%s,%s\n",
-		offset, fhdr.filename, fhdr.date, fhdr.owner, fhdr.title);
+	evbuffer_add_printf(buf, "%d,%s,%s,%d,%d,%s,%s\n",
+		offset, fhdr.filename, fhdr.date, fhdr.recommend,
+		fhdr.filemode, fhdr.owner, fhdr.title);
     }
 
     if (fd >= 0)
