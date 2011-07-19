@@ -1232,7 +1232,13 @@ do_general(int garbage)
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
     if (!HasBasicUserPerm(PERM_LOGINOK) || 
 	IsFreeBoardName(currboard) || 
-	(currbrdattr&BRD_BAD) || 
+	(currbrdattr & BRD_BAD) || 
+#ifdef BRD_NOCREDIT
+	(currbrdattr & BRD_NOCREDIT) || 
+#endif
+#ifdef USE_HIDDEN_BOARD_NOCREDIT
+        (currbrdattr & BRD_HIDE) ||
+#endif
 	bp->BM[0] < ' ') // XXX note: BM may contain some (chinese) text that is not userid
     {
 	money = 0;
