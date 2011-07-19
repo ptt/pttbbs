@@ -87,6 +87,8 @@ u_loginview(void)
 int u_cancelbadpost(void)
 {
    int day, prev = cuser.badpost;
+   char ans[3];
+   int pass_verify = 1;
 
    // early check.
    if(cuser.badpost == 0) {
@@ -113,11 +115,25 @@ int u_cancelbadpost(void)
        return 0;
    }
 
+   // 某些 user 會一直失敗，原因不明；由 vmsg 改為 getdata.
+   clear();
    // 無聊的 disclaimer...
-   if( vmsgf("預計劣文將由 %d 篇變為 %d 篇，確定嗎[y/N]?", prev, prev-1) != 'y' ||
-       vmsg("我願意遵守站方規定,組規,以及板規[y/N]?")!='y' ||
-       vmsg("我願意尊重與不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
-       vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
+   mvprints(1, 0, "預計劣文將由 %d 篇變為 %d 篇，確定嗎[y/N]? ", prev, prev-1);
+   do {
+       if (vgets(ans, sizeof(ans), VGET_LOWERCASE | VGET_ASCII_ONLY) < 1 ||
+           ans[0] != 'y') { pass_verify = 0; break; }
+       mvprints(3, 0, "我願意遵守站方規定,組規,以及板規[y/N]? ");
+       if (vgets(ans, sizeof(ans), VGET_LOWERCASE | VGET_ASCII_ONLY) < 1 ||
+           ans[0] != 'y') { pass_verify = 0; break; }
+       mvprints(5, 0, "我願意尊重與不歧視族群,不鬧板,尊重各板主權力[y/N]?");
+       if (vgets(ans, sizeof(ans), VGET_LOWERCASE | VGET_ASCII_ONLY) < 1 ||
+           ans[0] != 'y') { pass_verify = 0; break; }
+       mvprints(7, 0, "我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?");
+       if (vgets(ans, sizeof(ans), VGET_LOWERCASE | VGET_ASCII_ONLY) < 1 ||
+           ans[0] != 'y') { pass_verify = 0; break; }
+   } while (0);
+
+   if(!pass_verify)
    {
        vmsg("回答有誤，刪除失敗。請仔細看清站規與系統訊息後再來申請刪除.");
        return 0;
