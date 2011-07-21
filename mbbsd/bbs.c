@@ -2208,16 +2208,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     move(y, 0); clrtobot();
 
     y++;
-    sprintf(genbuf, "%u", regtime);
-    do {
-	getdata_buf(y, 0, 
-		"註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, NUMECHO);
-	temp = atoi(genbuf);
-    } while (temp < 0 || temp > 255);
-    regtime = (unsigned char)temp;
-
-    y++;
-    sprintf(genbuf, "%u", logins*10);
     move(y+2, 0); clrtobot();
     outs(ANSI_COLOR(1;33) "請注意這是一天一次來計算，不是舊的上站次數。"
         "(舊上站次數限制已全部變0)\n"
@@ -2225,17 +2215,21 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
         "造成使用者忽然無法發文但板主又以為沒改過。\n"
         "設定前請跟板主確認過這不是舊的設定數值。\n"
         ANSI_RESET);
+
+    // migrate old data
     if (regtime) {
-        outs("\n為避免上面說的錯誤設定狀況，"
-             "現在系統會自動拒絕大於註冊時間限制的設定。\n"
-             "(因為那代表該註冊時間限制無意義，很大可能是舊數值;\n"
-             " 另外,200以上的" STR_LOGINDAYS "通常都是舊設定;"
-             "且很多註冊時間限制可以取消改用" STR_LOGINDAYS ")\n"
-             );
-        prints(ANSI_COLOR(1;32) " => 目前註冊時間限制(%d個月) = "
-               STR_LOGINDAYS "下限應小於或等於 %d 天" ANSI_RESET "\n",
-               regtime, regtime * 30);
+        prints(ANSI_COLOR(1;31) "\n請注意原註冊時間限制(%d個月)已", regtime);
+        if (logins == 0) {
+            logins = (unsigned char)regtime * 30 / 10;
+            prints("轉換為" STR_LOGINDAYS "(%d次)", logins * 10);
+        } else {
+            prints("被" STR_LOGINDAYS "(%d次)取代。", logins * 10);
+        }
+        outs(ANSI_RESET "\n");
+        regtime = 0;
     }
+
+    sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(y, 0, 
                 STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：",

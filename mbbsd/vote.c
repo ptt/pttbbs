@@ -605,11 +605,8 @@ vote_maintain(const char *bname)
     if (inbuf[0] == 'y') {
 	fp = fopen(buf, "w");
 	assert(fp);
-	do {
-	    getdata(6, 0, "註冊時間限制 (以'月'為單位，0~120)：", inbuf, 4, DOECHO);
-	    closetime = atoi(inbuf);	// borrow variable
-	} while (closetime < 0 || closetime > 120);
-	fprintf(fp, "%d\n", now - (MONTH_SECONDS * closetime));
+        // 註冊時間 (以月為單位，deprecated)
+	fprintf(fp, "%d\n", now - (MONTH_SECONDS * 0));
 	closetime = 0;
 	do {
 	    getdata(6, 0, STR_LOGINDAYS "下限", inbuf, 6, DOECHO);
