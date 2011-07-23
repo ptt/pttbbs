@@ -183,7 +183,7 @@ output_chart(const boardinfo_t * board, const int nbrds)
 	    continue;
 
         // 隱板了別人看不到還有什麼好說的？
-	if (bptr->brdattr & (BRD_BAD | BRD_NOCOUNT | BRD_HIDE))
+	if (bptr->brdattr & (BRD_NOCREDIT | BRD_NOCOUNT | BRD_HIDE))
 	    continue;
 
 	if (board[i].ndir + board[i].nfile < 5)

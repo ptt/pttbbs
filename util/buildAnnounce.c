@@ -28,7 +28,7 @@ void buildchilds(int level,char *path,int gid)
         ptr =&SHM->bcache[i];
 	if(ptr->gid != gid)
 	    continue;
-	if((ptr->brdattr&(BRD_BAD | BRD_HIDE))!=0)
+	if((ptr->brdattr&(BRD_NOCREDIT | BRD_HIDE))!=0)
 	    continue;
 	if((ptr->level && !(ptr->brdattr & BRD_POSTMASK)))
 	    continue;
