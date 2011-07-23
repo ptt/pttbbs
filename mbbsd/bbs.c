@@ -1324,8 +1324,13 @@ do_general(int garbage)
 		prints("\n (若之後自行或被板主刪文"
                        "則此次獲得的有效文章數及稿酬可能會被回收)\n\n");
 	    } else {
+#ifdef USE_HIDDEN_BOARD_NOCREDIT
+                if (currbrdattr & BRD_HIDE)
+                    outs("由於本看板為隱板，為避免遭濫用，發文無任何獎勵。");
+                else
+#endif
 		// no money, no record.
-		outs("本篇不列入記錄，敬請包涵。");
+		outs("本篇文章不列入記錄，敬請包涵。");
 	    }
 	} 
 	else 
