@@ -481,6 +481,12 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 #endif
 
 static int
+trim_blank(char *buf) {
+    trim(buf);
+    return *buf == 0;
+}
+
+static int
 select_read(const keeploc_t * locmem, int sr_mode)
 {
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
@@ -507,14 +513,14 @@ select_read(const keeploc_t * locmem, int sr_mode)
            {
 	     if(!getdata(b_lines, 0,
                  currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
-                  keyword, IDLEN+1, DOECHO))
+                  keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
                 return READ_REDRAW; 
            }
    else if(sr_mode  & RS_KEYWORD)
           {
              if(!getdata(b_lines, 0, 
                  currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
-                 keyword, TTLEN, DOECHO))
+                 keyword, TTLEN, DOECHO) || trim_blank(keyword))
                 return READ_REDRAW;
 #ifdef KEYWORD_LOG
              log_filef("keyword_search_log", LOG_CREAT,
@@ -527,7 +533,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	      // let's use TTLEN-4 here.
              if(!(currmode & MODE_SELECT) ||
                 !getdata(b_lines, 0, "增加條件 排除標題: ", 
-                 keyword, TTLEN-4, DOECHO))
+                 keyword, TTLEN-4, DOECHO) ||
+                trim_blank(keyword))
                 return READ_REDRAW;
           }
    else if (sr_mode  & RS_RECOMMEND)

@@ -1680,6 +1680,7 @@ choose_board(int newflag)
             } else {
                 getdata_buf(b_lines - 1, 0, "請輸入看板中文關鍵字:",
                         keyword, sizeof(keyword), DOECHO);
+                trim(keyword);
             }
             brdnum = -1;
 	    break;
