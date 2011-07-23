@@ -503,13 +503,15 @@ m_mod_board(char *bname)
 	return -1;
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    prints("看板名稱：%s\n看板說明：%s\n看板bid：%d\n看板GID：%d\n"
-	   "板主名單：%s", bh.brdname, bh.title, bid, bh.gid, bh.BM);
+    prints("看板名稱：%s %s\n看板說明：%s\n看板bid：%d\n看板GID：%d\n"
+	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
+           ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
+           bh.title, bid, bh.gid, bh.BM);
     bperm_msg(&bh);
 
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
-    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除%s%s [Q]取消？",
+    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
 	    HasUserPerm(PERM_SYSOP |
 		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
 	    HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
@@ -564,14 +566,15 @@ m_mod_board(char *bname)
 	    break;
     case 'v':
 	memcpy(&newbh, &bh, sizeof(bh));
-	outs("看板目前為");
-	outs((bh.brdattr & BRD_BAD) ? "違法" : "正常");
+	outs("看板發文的文章金錢獎勵方法目前為");
+	outs((bh.brdattr & BRD_NOCREDIT) ?
+             ANSI_COLOR(1;31) "禁止" ANSI_RESET : "正常");
 	getdata(21, 0, "確定更改？", genbuf, 5, LCECHO);
 	if (genbuf[0] == 'y') {
-	    if (newbh.brdattr & BRD_BAD)
-		newbh.brdattr = newbh.brdattr & (!BRD_BAD);
+	    if (newbh.brdattr & BRD_NOCREDIT)
+		newbh.brdattr = newbh.brdattr & (!BRD_NOCREDIT);
 	    else
-		newbh.brdattr = newbh.brdattr | BRD_BAD;
+		newbh.brdattr = newbh.brdattr | BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
@@ -613,7 +616,7 @@ m_mod_board(char *bname)
 	    vmsg("禁止更動連結看板，請直接修正原看板");
 	    break;
 	}
-	move(8, 0);
+	move(8, 0); clrtobot();
 	outs("直接按 [Return] 不修改該項設定");
 	memcpy(&newbh, &bh, sizeof(bh));
 

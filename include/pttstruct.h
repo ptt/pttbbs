@@ -212,12 +212,12 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_POSTMASK		0x00000020	/* 限制發表或閱讀 */
 #define BRD_ANONYMOUS		0x00000040	/* 匿名板 */
 #define BRD_DEFAULTANONYMOUS	0x00000080	/* 預設匿名板 */
-#define BRD_BAD			0x00000100	/* 違法改進中看板 */
+#define BRD_NOCREDIT		0x00000100	/* 發文無獎勵看板 */
 #define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
 #define BRD_WARNEL		0x00000400	/* 連署機看板 */
 #define BRD_TOP			0x00000800	/* 熱門看板群組 */
 #define BRD_NORECOMMEND		0x00001000	/* 不可推薦 */
-#define BRD_NOCREDIT		0x00002000	/* 發文無金錢與有效文章 */
+#define BRD_BLOG		0x00002000	/* (已停用) 部落格 */
 #define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
 #define BRD_NOBOO		0x00010000	/* 不可噓 */

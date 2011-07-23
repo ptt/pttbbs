@@ -1232,10 +1232,7 @@ do_general(int garbage)
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
     if (!HasBasicUserPerm(PERM_LOGINOK) || 
 	IsFreeBoardName(currboard) || 
-	(currbrdattr & BRD_BAD) || 
-#ifdef BRD_NOCREDIT
 	(currbrdattr & BRD_NOCREDIT) || 
-#endif
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         (currbrdattr & BRD_HIDE) ||
 #endif
@@ -1314,7 +1311,7 @@ do_general(int garbage)
 	}
 	outs("順利貼出佈告，");
 
-	// Freeboard/BRD_BAD check was already done.
+	// Freeboard/BRD_NOCREDIT check was already done.
 	if (!ifuseanony) 
 	{
             if (money > 0)
@@ -2412,11 +2409,10 @@ hold_gamble(void)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (!(currmode & MODE_BOARD))
 	return 0;
-    if (bp->brdattr & BRD_BAD )
-	{
-      	  vmsg("違法看板禁止使用賭盤");
-	  return 0;
-	}
+    if (bp->brdattr & BRD_NOCREDIT ) {
+        vmsg("本看板目前被設定為發文無獎勵，無法使用賭盤");
+        return 0;
+    }
 
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
@@ -3437,7 +3433,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         // also check MAX_POST_MONEY in case any error made bad money...
         if (del_fee < 0 || 
             IsFreeBoardName(currboard) || 
-            (currbrdattr & BRD_BAD) ||
+            (currbrdattr & BRD_NOCREDIT) ||
             (currmode & MODE_DIGEST) ||
             (fhdr->filemode & INVALIDMONEY_MODES) ||
             del_fee > MAX_POST_MONEY ||

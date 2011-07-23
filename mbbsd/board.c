@@ -1375,13 +1375,10 @@ show_brdlist(int head, int clsflag, int newflag)
 
 #ifdef USE_COOLDOWN
 		    if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-			outs("ÀR ");
-		    else if (B_BH(ptr)->brdattr & BRD_BAD)
 #else
-		    if (B_BH(ptr)->brdattr & BRD_BAD)
+                    if (0)
 #endif
-			outs(" X ");
-
+			outs("ÀR ");
 		    else if (B_BH(ptr)->nuser <= 0)
 			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
 		    else if (B_BH(ptr)->nuser <= 10)

@@ -50,12 +50,12 @@ const char * const str_permboard[] = {
     "限制(不需設定)",		/* BRD_POSTMASK */
     "匿名板",			/* BRD_ANONYMOUS */
     "預設匿名板",		/* BRD_DEFAULTANONYMOUS */
-    "違法改進中看板",		/* BRD_BAD */
+    "發文無獎勵",		/* BRD_NOCREDIT, was: BRD_BAD */
     "連署專用看板",		/* BRD_VOTEBOARD */
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
     "不可推薦",                 /* BRD_NORECOMMEND */
-    "發文無獎賞",		/* BRD_NOCREDIT */
+    "保留",		        /* was: BRD_BLOG */
     "板主設定列入記錄",		/* BRD_BMCOUNT */
     "連結看板",                 /* BRD_SYMBOLIC */
     "不可噓",                   /* BRD_NOBOO */
