@@ -929,7 +929,11 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
     }
     else
     {
-	do_deleteCrossPost(fh, BN_ALLPOST);
+        // Always delete file content in ALLPOST and keep the header
+        // because that will be reset by cron jobs
+        char file[PATHLEN];
+        setbfile(file, BN_ALLPOST, fh->filename);
+        unlink(file);
     }
 }
 
