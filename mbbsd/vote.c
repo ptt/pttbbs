@@ -16,6 +16,7 @@ static const char * const STR_bv_comments= "comments";	/* щ布某 */
 static const char * const STR_bv_limited = "limited";	/* ╬щ布 */
 static const char * const STR_bv_limits  = "limits";	/* щ布戈 */
 static const char * const STR_bv_title   = "vtitle";
+static const char * const STR_bv_lock    = "vlock";
 
 static const char * const STR_bv_results = "results";
 
@@ -29,6 +30,7 @@ typedef struct {
     char limited [sizeof("limitedXX\0") ];
     char limits  [sizeof("limitsXX\0")  ];
     char title   [sizeof("vtitleXX\0")  ];
+    char lock    [sizeof("vlockXX\0")   ];
 } vote_buffer_t;
 
 static void
@@ -43,6 +45,20 @@ votebuf_init(vote_buffer_t *vbuf, int n)
     snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, n);
     snprintf(vbuf->limits,  sizeof(vbuf->limits),  "%s%d", STR_bv_limits,  n);
     snprintf(vbuf->title,   sizeof(vbuf->title),   "%s%d", STR_bv_title,   n);
+    snprintf(vbuf->lock,    sizeof(vbuf->lock),    "%s%d", STR_bv_lock,    n);
+}
+
+static int
+vote_stampfile(char *filepath, const char *boardname)
+{
+    fileheader_t    fh;
+    char	    buf[PATHLEN];
+
+    setbpath(buf, boardname);
+    if(stampfile(buf, &fh) < 0)
+        return -1;
+    setbfile(filepath, boardname, fh.filename);
+    return 0;
 }
 
 void
@@ -152,53 +168,65 @@ vote_report(const char *bname, const char *post_bname, const char *fname)
 static void
 b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 {
-    FILE           *cfp, *tfp, *frp, *xfp;
+    FILE           *cfp, *tfp, *xfp;
+    int             lockfd;
     char           *bname;
     char            inbuf[ANSILINELEN];
     int            *counts;
     int             people_num;
     short	    item_num, junk;
     char            b_control   [PATHLEN];
-    char            b_newresults[PATHLEN];
     char            b_report    [PATHLEN];
     char            buf		[PATHLEN];
     time4_t         closetime;
 
+    bname = fh->brdname;
+
+    setbfile(buf, bname, vbuf->lock);
+    if((lockfd = OpenCreate(buf, O_EXCL)) < 0)
+	return;
+    close(lockfd);
+
+    // XXX TODO backup vote files?
+
     if (fh->bvote > 0)
 	fh->bvote--;
 
-    bname = fh->brdname;
-
-    setbfile(buf, bname, vbuf->control);
-    cfp = fopen(buf, "r");
+    // Read in the control file
+    setbfile(b_control, bname, vbuf->control);
+    cfp = fopen(b_control, "r");
     assert(cfp);
-    fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &junk, &closetime);
-    fclose(cfp);
+    unlink(b_control);
+    fgets(inbuf, sizeof(inbuf), cfp);
+    sscanf(inbuf, "%hd,%hd", &item_num, &junk);
+    fgets(inbuf, sizeof(inbuf), cfp);
+    sscanf(inbuf, "%d", &closetime);
 
     // prevent death caused by a bug, it should be remove later.
     if (item_num <= 0)
 	return;
 
-    // XXX TODO backup vote files?
-
     counts = (int *)malloc(item_num * sizeof(int));
 
-    setbfile(b_control, bname, "tmp");
-    if (rename(buf, b_control) == -1)
-	return;
+    // Flags file is used to track who had voted
     setbfile(buf, bname, vbuf->flags);
     people_num = b_nonzeroNum(buf);
     unlink(buf);
+
+    // Ballots file is used to collect all votes
     setbfile(buf, bname, vbuf->ballots);
     b_count(buf, counts, item_num, total);
     unlink(buf);
 
-    setbfile(b_newresults, bname, "newresults");
-    if ((tfp = fopen(b_newresults, "w")) == NULL)
+    // Start of the report
+    // Create a temp file to hold the vote report
+    if (vote_stampfile(b_report, bname) < 0)
+	return;
+    if ((tfp = fopen(b_report, "w")) == NULL)
 	return;
 
+    // Report: title part
     setbfile(buf, bname, vbuf->title);
-
     if ((xfp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), xfp);
 	fprintf(tfp, "%s\n』 щ布嘿: %s\n\n", msg_separator, inbuf);
@@ -208,54 +236,53 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 	    msg_separator, Cdate(&closetime));
     fh->vtime = now;
 
+    // Report: description part
     setbfile(buf, bname, vbuf->desc);
-
     b_suckinfile(tfp, buf);
     unlink(buf);
 
-    if ((cfp = fopen(b_control, "r"))) {
+    // Report: result part
+    fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %hd 布)\n",
+	    people_num, junk);
+    fprintf(tfp, "    匡    兜                                   羆布计  眔布瞯  眔布だガ\n");
+    for (junk = 0; junk < item_num; junk++) {
 	fgets(inbuf, sizeof(inbuf), cfp);
-	fgets(inbuf, sizeof(inbuf), cfp);
-	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %hd 布)\n",
-		people_num, junk);
-	fprintf(tfp, "    匡    兜                                   羆布计  眔布瞯  眔布だガ\n");
-	for (junk = 0; junk < item_num; junk++) {
-	    fgets(inbuf, sizeof(inbuf), cfp);
-	    chomp(inbuf);
-	    fprintf(tfp, "    %-42s %3d 布 %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],                
-		    (float)(counts[junk] * 100) / (float)(people_num),
-		    (float)(counts[junk] * 100) / (float)(*total));
-	}
-	fclose(cfp);
+	chomp(inbuf);
+	fprintf(tfp, "    %-42s %3d 布 %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],                
+		(float)(counts[junk] * 100) / (float)(people_num),
+		(float)(counts[junk] * 100) / (float)(*total));
     }
-    unlink(b_control);
+    fclose(cfp);
+
     free(counts);
 
+    // Report: comments part
     fprintf(tfp, "%s\n』 ㄏノ某\n\n", msg_separator);
     setbfile(buf, bname, vbuf->comments);
     b_suckinfile(tfp, buf);
     unlink(buf);
 
     fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_separator, *total);
+
+    // End of the report
     fclose(tfp);
 
-    setbfile(b_report, bname, "report");
-    if ((frp = fopen(b_report, "w"))) {
-	b_suckinfile(frp, b_newresults);
-	fclose(frp);
-    }
-    setbpath(inbuf, bname);
+    // Post to boards
     vote_report(bname, bname, b_report);
     if (!(fh->brdattr & (BRD_NOCOUNT|BRD_HIDE))) { // from ptt2 local modification
 	vote_report(bname, BN_RECORD, b_report);
     }
-    unlink(b_report);
 
-    tfp = fopen(b_newresults, "a");
+    // Reuse the report file, and append old results after it.
+    tfp = fopen(b_report, "a");
     setbfile(buf, bname, STR_bv_results);
     b_suckinfile(tfp, buf);
     fclose(tfp);
-    Rename(b_newresults, buf);
+    Rename(b_report, buf);
+
+    // Remove the lock file
+    setbfile(buf, bname, vbuf->lock);
+    unlink(buf);
 }
 
 static void
@@ -405,7 +432,7 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
     if (genbuf[0] == 'a') {
 	getdata(b_lines - 1, 0, "叫Ω絋粄щ布 (Y/N) [N] ", genbuf,
 		4, LCECHO);
-	if (genbuf[0] == 'n')
+	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
 
 	setbfile(buf, bname, vbuf->control);
@@ -514,6 +541,11 @@ vote_maintain(const char *bname)
 	if (genbuf[0] == 'v')
 	    return vote_view_all(bname);
 	else if (genbuf[0] == 'a') {
+            getdata(b_lines - 1, 0, "叫Ω絋粄┮Τщ布 (Y/N) [N] ", genbuf,
+                    4, LCECHO);
+            if (genbuf[0] != 'y')
+                return FULLUPDATE;
+
 	    fhp->bvote = 0;
 
 	    for (i = 0; i < MAX_VOTE_NR; i++) {
@@ -560,6 +592,8 @@ vote_maintain(const char *bname)
 
     vs_hdr("羭快щ布");
     votebuf_init(&vbuf, x);
+    setbfile(buf, bname, vbuf.lock);
+    unlink(buf);
 
     clear();
     move(0, 0);
