@@ -2546,7 +2546,7 @@ cite_post(int ent, const fileheader_t * fhdr, const char *direct)
 int
 edit_title(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200] = "";
+    char            genbuf[PATHLEN] = "";
     fileheader_t    tmpfhdr = *fhdr;
     int             dirty = 0;
     int allow = 0;
@@ -2556,6 +2556,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	allow = 0;
     else if (HasUserPerm(PERM_SYSOP))
 	allow = 2;
+    else if (strcmp(BN_ALLPOST, currboard) == 0)
+        allow = 0;
     else if (currmode & MODE_BOARD || is_file_owner(fhdr, &cuser))
 	allow = 1;
 
