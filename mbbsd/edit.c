@@ -1986,7 +1986,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 		continue;
 
 	    trim(msg);
-
+            process_ansi_movecmd(msg, YEA);
 	    line++;
 
 	    /* check crosspost */
