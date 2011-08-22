@@ -705,9 +705,10 @@ _set_bind_opt(int sock)
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
 #define FN_GOODBYE          BBSHOME "/etc/goodbye"
+#define FN_BANIP            BBSHOME "/etc/banip.scr"
 #define FN_BAN              BBSHOME "/" BAN_FILE
 
-static char *welcome_screen, *goodbye_screen, *ban_screen;
+static char *welcome_screen, *goodbye_screen, *ban_screen, *banip_screen;
 
 static void
 load_text_screen_file(const char *filename, char **pptr)
@@ -786,6 +787,7 @@ reload_data()
     g_welcome_mtime = dasht(FN_WELCOME);
     load_text_screen_file(FN_WELCOME, &welcome_screen);
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
+    load_text_screen_file(FN_BANIP,   &banip_screen);
     load_text_screen_file(FN_BAN,     &ban_screen);
 }
 
@@ -1788,11 +1790,16 @@ listen_cb(int lfd, short event, void *arg)
         event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
         event_add(&conn->ev, &idle_tv);
 
-        // check ban here?  XXX can we directly use xsin.sin_addr instead of ASCII form?
-        if (g_banned || check_banip(conn->ctx.hostip) )
-        {
-            // draw ban screen, if available. (for banip, this is empty).
+        if (g_banned) {
             draw_text_screen (conn, ban_screen);
+            login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+            return;
+        }
+
+        // TODO can we directly use xsin.sin_addr instead of ASCII form?
+        if (check_banip(conn->ctx.hostip))
+        {
+            draw_text_screen (conn, banip_screen);
             login_conn_remove(conn, fd, BAN_SLEEP_SEC);
             return;
         }
