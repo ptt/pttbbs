@@ -42,6 +42,24 @@ expand_esc_star(char *buf, const char *src, int szbuf)
     return 0;
 }
 
+void
+strip_ansi_movecmd(char *s) {
+    const char *pattern_movecmd = "ABCDfjHJRu";
+    const char *pattern_ansi_code = "0123456789;,[";
+
+    while (*s) {
+        char *esc = strchr(s, ESC_CHR);
+        if (!esc)
+            return;
+        s = ++esc;
+        while (*esc && strchr(pattern_ansi_code, *esc))
+            esc++;
+        if (strchr(pattern_movecmd, *esc)) {
+            *esc = 's';
+        }
+    }
+}
+
 char *
 Ptt_prints(char *str, size_t size, int mode)
 {

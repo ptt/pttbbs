@@ -1440,28 +1440,6 @@ quote_strip_ansi_inline(unsigned char *is)
     *os = 0;
 }
 
-static int
-process_ansi_movecmd(char *s, int replace) {
-    const char *pattern_movecmd = "ABCDfjHJRu";
-    const char *pattern_ansi_code = "0123456789;,[";
-
-    while (*s) {
-        char *esc = strchr(s, ESC_CHR);
-        if (!esc)
-            return 0;
-        s = ++esc;
-        while (*esc && strchr(pattern_ansi_code, *esc))
-            esc++;
-        if (strchr(pattern_movecmd, *esc)) {
-            if (replace == YEA)
-                *esc = 's';
-            else
-                return 1;
-        }
-    }
-    return 0;
-}
-
 static void
 do_quote(void)
 {
@@ -1818,7 +1796,7 @@ browse_sigs:
 			fputs("\n--\n", fp);
 			for (i = 0; i < MAX_SIGLINES &&
                                     fgets(buf, sizeof(buf), fs); i++) {
-                            process_ansi_movecmd(buf, YEA);
+                            strip_ansi_movecmd(buf);
 			    fputs(buf, fp);
                         }
 			fclose(fs);
@@ -1986,7 +1964,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 		continue;
 
 	    trim(msg);
-            process_ansi_movecmd(msg, YEA);
+            strip_ansi_movecmd(msg);
 	    line++;
 
 	    /* check crosspost */
