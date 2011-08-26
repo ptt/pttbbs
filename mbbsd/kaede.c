@@ -29,12 +29,6 @@ expand_esc_star(char *buf, const char *src, int szbuf)
         case 'n':   // current user nickname
             strlcpy(buf, cuser.nickname, szbuf);
             return 2;
-        case 'l':   // current user logins
-            snprintf(buf, szbuf, "%d", cuser.numlogindays);
-            return 2;
-        case 'p':   // current user posts
-            snprintf(buf, szbuf, "%d", cuser.numposts);
-            return 2;
     }
 
     // unknown characters, return from star.
