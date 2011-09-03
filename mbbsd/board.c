@@ -358,13 +358,13 @@ b_config(void)
 		" - %s" ANSI_RESET
 		" 自刪文章\n",
 		(bp->brdattr & BRD_NOSELFDELPOST) ? 
-		ANSI_COLOR(1;31)"不開放" : "開放"
+		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
-		ANSI_COLOR(31)"不開放":"開放"
+		ANSI_COLOR(1)"不開放":"開放"
 		);
 
 #ifndef OLDRECOMMEND
