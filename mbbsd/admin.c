@@ -571,10 +571,7 @@ m_mod_board(char *bname)
              ANSI_COLOR(1;31) "禁止" ANSI_RESET : "正常");
 	getdata(21, 0, "確定更改？", genbuf, 5, LCECHO);
 	if (genbuf[0] == 'y') {
-	    if (newbh.brdattr & BRD_NOCREDIT)
-		newbh.brdattr = newbh.brdattr & (~BRD_NOCREDIT);
-	    else
-		newbh.brdattr = newbh.brdattr | BRD_NOCREDIT;
+            newbh.brdattr ^= BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
