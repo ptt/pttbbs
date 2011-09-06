@@ -572,7 +572,7 @@ m_mod_board(char *bname)
 	getdata(21, 0, "½T©w§ó§ï¡H", genbuf, 5, LCECHO);
 	if (genbuf[0] == 'y') {
 	    if (newbh.brdattr & BRD_NOCREDIT)
-		newbh.brdattr = newbh.brdattr & (!BRD_NOCREDIT);
+		newbh.brdattr = newbh.brdattr & (~BRD_NOCREDIT);
 	    else
 		newbh.brdattr = newbh.brdattr | BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
