@@ -54,6 +54,28 @@ strip_ansi_movecmd(char *s) {
     }
 }
 
+void
+strip_esc_star(char *s) {
+    int len;
+    while (*s) {
+        char *esc = strstr(s, ESC_STR "*");
+        if (!esc)
+            return;
+        len = strlen(esc);
+        // 3: ESC * [a-z]
+        if (len < 3) {
+            *esc = 0;
+            return;
+        }
+        if (isalpha(esc[2])) {
+            memmove(esc, esc + 3, len - 3 + 1);
+        } else {
+            // Invalid esc_star. Remove esc instead.
+            memmove(esc, esc + 1, len - 1 + 1);
+        }
+    }
+}
+
 char *
 Ptt_prints(char *str, size_t size, int mode)
 {

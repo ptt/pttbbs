@@ -1797,6 +1797,7 @@ browse_sigs:
 			for (i = 0; i < MAX_SIGLINES &&
                                     fgets(buf, sizeof(buf), fs); i++) {
                             strip_ansi_movecmd(buf);
+                            strip_esc_star(buf);
 			    fputs(buf, fp);
                         }
 			fclose(fs);
