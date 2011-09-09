@@ -410,8 +410,13 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	fgets(inbuf, sizeof(inbuf), fp);
 	chomp(inbuf);
 	inbuf[30] = '\0';	/* truncate */
-	move(num % 15 + 6, num / 15 * 40);
-	prints("  %-32s%3d ²¼", inbuf, counts[i]);
+#ifdef RESTRICT_PREVIEW_VOTE_RESULTS
+        if (HasUserPerm(PERM_ALLBOARD | PERM_SYSSUPERSUBOP))
+#endif
+        {
+            move(num % 15 + 6, num / 15 * 40);
+            prints("  %-32s%3d ²¼", inbuf, counts[i]);
+        }
 	total += counts[i];
 	if (num == 29) {
 	    num = -1;
