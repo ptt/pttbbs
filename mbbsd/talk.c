@@ -489,7 +489,7 @@ my_query(const char *uident)
 	if ((uentp && ISNEWMAIL(uentp)) || load_mailalert(muser.userid))
 	    outs("《私人信箱》有新進信件還沒看\n");
 	else
-	    outs("《私人信箱》所有信件都看過了\n");
+	    outs("《私人信箱》最近無新信件\n");
 
 	// ------------------------------------------------------------
 
