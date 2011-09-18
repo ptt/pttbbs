@@ -14,8 +14,7 @@ char *get_restriction_reason(
     syncnow();
     if (firstlogin > (now - limits_regtime * MONTH_SECONDS)) {
         snprintf(msg, sz_msg, "註冊時間未滿 %d 天(目前%d天)",
-                 limits_regtime * 30,
-                 (now - firstlogin) / MONTH_SECONDS * 30);
+                 limits_regtime * 30, (now - firstlogin) / DAY_SECONDS);
         return msg;
     }
     if (numlogindays / 10 < limits_logins) {
