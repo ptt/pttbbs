@@ -1,6 +1,44 @@
 /* $Id$ */
 #include "bbs.h"
 
+// XXX numposts itself is an integer, but some records (by del post!?) may
+// create invalid records as -1... so we'd better make it signed for real
+// comparison.
+char *get_restriction_reason(
+        time4_t firstlogin, unsigned int numlogindays,
+        unsigned int numposts, unsigned int badpost,
+        time4_t limits_regtime, unsigned int limits_logins,
+        int limits_posts, unsigned int limits_badpost,
+        size_t sz_msg, char *msg) {
+
+    syncnow();
+    if (firstlogin > (now - limits_regtime * MONTH_SECONDS)) {
+        snprintf(msg, sz_msg, "註冊時間(%d天) 未滿 %d 天",
+                 (now - firstlogin) / MONTH_SECONDS * 30,
+                 limits_regtime * 30);
+        return msg;
+    }
+    if (numlogindays / 10 < limits_logins) {
+        snprintf(msg, sz_msg, STR_LOGINDAYS "(%d" STR_LOGINDAYS_QTY
+                              ") 未滿 %d " STR_LOGINDAYS,
+                 numlogindays, limits_logins * 10);
+        return msg;
+    }
+    if (numposts  / 10 < limits_posts) {
+        snprintf(msg, sz_msg, "各看板有效文章(%d篇) 未滿 %d 篇",
+                 numposts, limits_posts * 10);
+        return msg;
+    }
+#ifdef ASSESS
+    if  (badpost > (255 - limits_badpost)) {
+        snprintf(msg, sz_msg, "劣文(%d篇)超過 %d 篇",
+                 badpost, 255 - limits_badpost);
+        return msg;
+    }
+#endif
+    return NULL;
+}
+
 /* 防堵 Multi play */
 static int
 is_playing(int unmode)

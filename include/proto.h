@@ -150,6 +150,12 @@ int p_exmail(void);
 int mail_redenvelop(const char* from, const char* to, int money, char *fpath);
 void resolve_over18(void);
 int resolve_over18_user(const userec_t *u);
+char *get_restriction_reason(
+        time4_t firstlogin, unsigned int numlogindays,
+        unsigned int numposts, unsigned int badpost,
+        time4_t limits_regtime, unsigned int limits_logins,
+        int limits_posts, unsigned int limits_badpost,
+        size_t sz_msg, char *msg);
 
 /* ccw (common chat window) */
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
