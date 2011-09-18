@@ -13,26 +13,27 @@ char *get_restriction_reason(
 
     syncnow();
     if (firstlogin > (now - limits_regtime * MONTH_SECONDS)) {
-        snprintf(msg, sz_msg, "註冊時間(%d天) 未滿 %d 天",
-                 (now - firstlogin) / MONTH_SECONDS * 30,
-                 limits_regtime * 30);
+        snprintf(msg, sz_msg, "註冊時間未滿 %d 天(目前%d天)",
+                 limits_regtime * 30,
+                 (now - firstlogin) / MONTH_SECONDS * 30);
         return msg;
     }
     if (numlogindays / 10 < limits_logins) {
-        snprintf(msg, sz_msg, STR_LOGINDAYS "(%d" STR_LOGINDAYS_QTY
-                              ") 未滿 %d " STR_LOGINDAYS,
-                 numlogindays, limits_logins * 10);
+        snprintf(msg, sz_msg,
+                 STR_LOGINDAYS "未滿 %d " STR_LOGINDAYS
+                 "(目前%d" STR_LOGINDAYS_QTY ") ",
+                 limits_logins * 10, numlogindays);
         return msg;
     }
     if (numposts  / 10 < limits_posts) {
-        snprintf(msg, sz_msg, "各看板有效文章(%d篇) 未滿 %d 篇",
-                 numposts, limits_posts * 10);
+        snprintf(msg, sz_msg, "各看板有效文章未滿 %d 篇(目前%d篇)",
+                 limits_posts * 10, numposts);
         return msg;
     }
 #ifdef ASSESS
     if  (badpost > (255 - limits_badpost)) {
-        snprintf(msg, sz_msg, "劣文(%d篇)超過 %d 篇",
-                 badpost, 255 - limits_badpost);
+        snprintf(msg, sz_msg, "劣文超過 %d 篇(目前%d篇)",
+                 255 - limits_badpost, badpost);
         return msg;
     }
 #endif
