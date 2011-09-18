@@ -3,42 +3,63 @@
 
 #define VOTEBOARD "NewBoard"
 
-// user
-int CheckVoteRestriction(int bid)
-{
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
-	return 1;
+char *CheckVoteRestriction(
+        time4_t firstlogin, unsigned int numlogindays,
+        unsigned int numposts, unsigned int badpost,
+        time4_t limits_regtime, unsigned int limits_logins,
+        unsigned int limits_posts, unsigned int limits_badpost,
+        size_t sz_msg, char *msg) {
 
-    // check first-login
-    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].vote_limit_regtime * MONTH_SECONDS))
-	return 0;
-    if (cuser.numlogindays / 10 < (unsigned int)bcache[bid - 1].vote_limit_logins)
-	return 0;
-    if (cuser.numposts  / 10 < (unsigned int)bcache[bid - 1].vote_limit_posts)
-	return 0;
-    if  (cuser.badpost > (255 - (unsigned int)bcache[bid - 1].vote_limit_badpost))
-	return 0;
-
-    return 1;
+    syncnow();
+    if (firstlogin > (now - limits_regtime * MONTH_SECONDS)) {
+        snprintf(msg, sz_msg, "註冊時間(%d天) 未滿 %d 天",
+                 (now - firstlogin) / MONTH_SECONDS * 30,
+                 limits_regtime * 30);
+        return msg;
+    }
+    if (numlogindays / 10 < limits_logins) {
+        snprintf(msg, sz_msg, STR_LOGINDAYS "(%d" STR_LOGINDAYS_QTY
+                              ") 未滿 %d " STR_LOGINDAYS,
+                 numlogindays, limits_logins * 10);
+        return msg;
+    }
+    if (numposts  / 10 < limits_posts) {
+        snprintf(msg, sz_msg, "各看板有效文章(%d篇) 未滿 %d 篇",
+                 numposts, limits_posts * 10);
+        return msg;
+    }
+    if  (badpost > (255 - limits_badpost)) {
+        snprintf(msg, sz_msg, "劣文(%d篇)超過 %d 篇",
+                 badpost, 255 - limits_badpost);
+        return msg;
+    }
+    return NULL;
 }
 
-// article
-int CheckVoteRestrictionFile(const fileheader_t * fhdr)
+char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
+{
+    boardheader_t *bh = getbcache(bid);
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+	return NULL;
+
+    return CheckVoteRestriction(
+            cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
+            bh->vote_limit_regtime, bh->vote_limit_logins,
+            bh->vote_limit_posts, bh->vote_limit_badpost,
+            sz_msg, msg);
+}
+
+char *CheckVoteRestrictionFile(
+        const fileheader_t * fhdr, size_t sz_msg, char *msg)
 {
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
-	return 1;
+        return NULL;
 
-    // check first-login
-    if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * MONTH_SECONDS))
-	return 0;
-    if (cuser.numlogindays / 10 < (unsigned int)fhdr->multi.vote_limits.logins)
-	return 0;
-    if (cuser.numposts  / 10 < (unsigned int)fhdr->multi.vote_limits.posts)
-	return 0;
-    if  (cuser.badpost > (255 - (unsigned int)fhdr->multi.vote_limits.badpost))
-	return 0;
-
-    return 1;
+    return CheckVoteRestriction(
+            cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
+            fhdr->multi.vote_limits.regtime, fhdr->multi.vote_limits.logins,
+            fhdr->multi.vote_limits.posts, fhdr->multi.vote_limits.badpost,
+            sz_msg, msg);
 }
 
 void
@@ -63,9 +84,9 @@ do_voteboardreply(const fileheader_t * fhdr)
 	return;
     }
 
-    if (!CheckVoteRestrictionFile(fhdr))
+    if (CheckVoteRestrictionFile(fhdr, sizeof(genbuf), genbuf))
     {
-	vmsg("未達投票資格限制 (可按 i 查看限制)");
+	vmsgf("未達投票資格限制: %s", genbuf);
 	return;
     }
     setbpath(fpath, currboard);
@@ -203,9 +224,9 @@ do_voteboard(int type)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
-    if (!CheckVoteRestriction(currbid))
+    if (CheckVoteRestrictionBoard(currbid, sizeof(genbuf), genbuf))
     {
-	vmsg("未達投票資格限制 (可按 i 查看限制)");
+	vmsgf("未達投票資格限制: %s", genbuf);
 	return FULLUPDATE;
     }
     vs_hdr(BBSNAME "連署系統");
