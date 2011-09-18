@@ -459,35 +459,30 @@ CheckModifyPerm(void)
     return (currmode & MODE_POST);
 }
 
-int CheckPostRestriction(int bid)
+char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
 {
     boardheader_t *bp;
     if (HasUserPerm(PERM_SYSOP))
-	return 1;
+	return NULL;
     assert(0<=bid-1 && bid-1<MAX_BOARD);
 
     // XXX currmode 是目前看板不是 bid...
     if (is_BM_cache(bid))
-	return 1;
+	return NULL;
     bp = getbcache(bid);
 
-    if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS))
-	return 0;
-    if (cuser.numlogindays / 10 < (unsigned int)bp->post_limit_logins)
-	return 0;
-    // XXX numposts itself is an integer, but some records (by del post!?) may
-    // create invalid records as -1... so we'd better make it signed for real
-    // comparison.
-    if ((int)(cuser.numposts  / 10) < (int)(unsigned int)bp->post_limit_posts)
-	return 0;
-
-#ifdef ASSESS
-    if  (cuser.badpost > (255 - (unsigned int)bp->post_limit_badpost))
-	return 0;
-#endif
-
-    return 1;
+    return get_restriction_reason(
+        cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
+        bp->post_limit_regtime, bp->post_limit_logins,
+        bp->post_limit_posts, bp->post_limit_badpost,
+        sz_msg, msg);
 }
+
+int CheckPostRestriction(int bid) {
+    char garbage[256];
+    return get_board_restriction_reason(bid, sizeof(garbage), garbage) == NULL;
+}
+
 
 static void
 readtitle(void)
@@ -1084,9 +1079,9 @@ do_general(int garbage)
 	return READ_REDRAW;
     }
 
-    if ( !CheckPostRestriction(currbid) )
+    if (get_board_restriction_reason(currbid, sizeof(genbuf), genbuf))
     {
-	vmsg("未達看板發文條件限制 (可按 i 查看限制)");
+	vmsgf("未達看板發文限制: %s", genbuf);
 	return FULLUPDATE;
     }
 #ifdef USE_COOLDOWN
@@ -1921,9 +1916,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // check target postperm
-    if (!CheckPostRestriction(xbid))
+    if (get_board_restriction_reason(xbid, sizeof(genbuf), genbuf))
     {
-	vmsg("未達看板發文條件限制 (可在目的看板內按 i 查看限制)");
+	vmsgf("未達看板發文限制: %s", genbuf);
 	return FULLUPDATE;
     }
 
@@ -2798,7 +2793,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
     }
-    if (   !CheckPostPerm() || isGuest)
+    if (!CheckPostPerm() || isGuest)
     {
 	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
@@ -2828,9 +2823,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifndef DEBUG
-    if (!CheckPostRestriction(currbid))
+    if (get_board_restriction_reason(currbid, sizeof(msg), msg))
     {
-	vmsg("未達看板發文條件限制 (可按 i 查看限制)");
+	vmsgf("未達看板發文限制: %s", msg);
 	return FULLUPDATE;
     }
 #endif
