@@ -1968,6 +1968,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
             strip_ansi_movecmd(msg);
 	    line++;
 
+#ifdef USE_POSTRECORD
 	    /* check crosspost */
 	    if (currstat == POSTING && po ) {
 		int msgsum = StringHash(msg);
@@ -1987,6 +1988,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 		    }
 		}
 	    }
+#endif
 #ifdef USE_POST_ENTROPY
 	    // calculate the real content of msg
 	    if (entropy < ENTROPY_MAX)
@@ -2000,6 +2002,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
     }
     curr_buf->currline = NULL;
 
+#ifdef USE_POSTRECORD
     // what if currbid == 0? add currstat checking.
     if (currstat == POSTING &&
 	postrecord.times > MAX_CROSSNUM-1 && 
@@ -2011,6 +2014,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
         if(postrecord.last_bid != currbid)
 	    postrecord.times = 0;
     }
+#endif
 
     *pentropy = entropy;
     if (aborted)

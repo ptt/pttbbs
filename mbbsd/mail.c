@@ -1515,12 +1515,14 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 
     move(2, 0);
     clrtoeol();
+#ifdef USE_POSTRECORD
     if (postrecord.times > 1)
     {
 	outs(ANSI_COLOR(1;31) 
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
 	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
     }
+#endif
     move(1, 0);
     CompleteBoard("轉錄本文章於看板：", xboard);
 
@@ -1533,6 +1535,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 
+#ifdef USE_POSTRECORD
     // XXX 板主常會把一系列文章轉回自己看板
     if (is_BM_cache(xbid)) {
 	// ignore cross-post for BM
@@ -1554,6 +1557,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 	    postrecord.checksum[0] = hash;
 	}
     }
+#endif
 
     if (!CheckPostRestriction(xbid))
     {

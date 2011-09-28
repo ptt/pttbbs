@@ -1882,11 +1882,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif // USE_AUTOCPLOG
 
+#ifdef USE_POSTRECORD
     if (postrecord.times > 1) {
 	outs(ANSI_COLOR(1;31) 
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
 	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
     }
+#endif
 
     move(1, 0);
 
@@ -1922,6 +1924,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
+#ifdef USE_POSTRECORD
     // quick check: if already cross-posted, reject.
     if (hashPost == postrecord.checksum[0])
     {
@@ -1936,6 +1939,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
     }
+#endif
 
 #ifdef USE_COOLDOWN
     if(check_cooldown(getbcache(xbid)))
@@ -2098,6 +2102,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    // ignore BM for cross-posting.
 	    outs(ANSI_COLOR(1;32) "此篇為板主轉錄，不自動檢查也不計入CP" 
 		 ANSI_RESET);
+#ifdef USE_POSTRECORD
 	} else if (hashPost == postrecord.checksum[0]) 
 	    // && xbid != postrecord.last_bid)
 	{
@@ -2113,6 +2118,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    postrecord.times = 0;
 	    postrecord.last_bid = xbid;
 	    postrecord.checksum[0] = hashPost;
+#endif
 	}
 
 	pressanykey();
