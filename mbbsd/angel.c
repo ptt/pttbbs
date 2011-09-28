@@ -625,30 +625,31 @@ CallAngel(){
 void
 pressanykey_or_callangel(){
     int ch;
+    int w = t_columns - 2; // see vtuikit.c, SAFE_MAX_COL
 
-    if (!HasUserPerm(PERM_LOGINOK))
-    {
+    if (!HasUserPerm(PERM_LOGINOK)) {
 	pressanykey();
 	return;
     }
 
     // TODO use visio API instead.
-    outmsg(
-	    VCLR_PAUSE_PAD " ▄▄▄▄ " 
-	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
-	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "空白鍵 " 
-	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
-	    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄ " ANSI_RESET);
-    do {
-	ch = vkey();
-	if (ch == 'h' || ch == 'H'){
-	    CallAngel();
-	    break;
-	}
-    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
+    move(b_lines, 0); clrtoeol();
+
+    // message string length = 38
+    outs(VCLR_PAUSE_PAD " ");
+    w -= 1 + 38;
+    vpad(w / 2, VMSG_PAUSE_PAD);
+    outs(VCLR_PAUSE     " 請按 " ANSI_COLOR(36) "空白鍵" 
+           VCLR_PAUSE     " 繼續，或 " ANSI_COLOR(36) "H"
+           VCLR_PAUSE     " 呼叫小天使協助 " VCLR_PAUSE_PAD);
+    vpad(w - w / 2, VMSG_PAUSE_PAD);
+    outs(" " ANSI_RESET);
+
+    if (tolower(vkey()) == 'h')
+        CallAngel();
+
     move(b_lines, 0);
     clrtoeol();
-    refresh();
 }
 
 #endif // PLAY_ANGEL
