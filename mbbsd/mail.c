@@ -2137,7 +2137,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
      	strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
-	vmsg("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
+	if ('y' != tolower(vmsg("請按 y 執行 uuencode。"
+                                "若您不清楚什麼是 uuencode 請改用 F 轉寄。")))
+            return 1;
     }
     trim(address);
 
