@@ -1588,6 +1588,36 @@ regform_log2board(const RegformEntry *pre, char accepted,
 #endif  // BN_ID_RECORD
 }
 
+void
+regform_log2file(const RegformEntry *pre, char accepted, 
+	const char *reason, int priority)
+{
+#ifdef FN_ID_RECORD
+    char msg[STRLEN * REJECT_REASONS];
+    FILE *fp;
+
+    snprintf(msg, sizeof(msg), 
+	    "%s\n%s: %s (%s: %s)\n", 
+            Cdate(&now),
+	    accepted ? "○通過":"╳退回", pre->u.userid, 
+	    priority ? "指定審核" : "審核者",
+	    cuser.userid);
+
+    // construct msg
+    if (!accepted) {
+	regform_concat_reasons(reason, msg, sizeof(msg));
+    }
+    strlcat(msg, "\n", sizeof(msg));
+    concat_regform_entry_localized(pre, msg, sizeof(msg));
+
+    fp = fopen(FN_ID_RECORD, "at");
+    if (!fp) return;
+    fputs(msg, fp);
+    fclose(fp);
+
+#endif  // FN_ID_RECORD
+}
+
 void 
 regform_accept(const char *userid, const char *justify)
 {
@@ -1949,7 +1979,8 @@ regfrm_accept(RegformEntry *pre, int priority)
 	    cuser.userid, pre->u.userid);
     append_regform(pre, FN_REGISTER_LOG, buf);
 
-    // log to board
+    // log to file / board
+    regform_log2file(pre, 1, NULL, priority);
     regform_log2board(pre, 1, NULL, priority);
 
     // remove from queue
