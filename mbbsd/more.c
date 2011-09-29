@@ -27,6 +27,17 @@ check_sysop_edit_perm(const char *fpath)
 	strcmp(fpath, "etc/ve.hlp") == 0)
 	return 0;
 
+    if (fpath) {
+        if (strstr(fpath, BBSHOME) == fpath)
+            fpath += (strlen(BBSHOME) + 1);
+
+        // allow only files in board, man or home.
+        if (!(strstr(fpath, "boards/") == fpath ||
+              strstr(fpath, "home/") == fpath ||
+              strstr(fpath, "man/") == fpath))
+            return 0;
+    }
+
 #ifdef BN_SECURITY
     if (strcmp(currboard, BN_SECURITY) == 0)
 	return 0;
