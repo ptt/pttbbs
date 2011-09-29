@@ -46,6 +46,7 @@ angel_beats_do_request(int op, int master_uid, int angel_uid) {
 void 
 angel_toggle_pause()
 {
+    // TODO record angels that don't do their job
     if (!HasUserPerm(PERM_ANGEL) || !currutmp)
 	return;
     currutmp->angelpause ++;
@@ -472,7 +473,7 @@ NoAngelFound(const char* msg){
     outs(msg);
     if (currutmp == NULL || currutmp->mode != EDITING)
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
-    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 'y'") == 'y')
+    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 p") == 'p')
 	GotoNewHand();
 }
 
@@ -524,14 +525,27 @@ AngelNotOnline(){
 
 
     move(b_lines - 4, 0);
-    outs("小主人使用上問題找不到小天使請到新手版(" BN_NEWBIE ")\n"
-	    "              想留言給小天使請到許\願版(AngelPray)\n"
-	    "                  想找看板在哪的話可到(AskBoard)\n"
-	    "請先在各板上尋找答案或按 Ctrl-P 發問");
+#ifdef BN_NEWBIE
+    outs("臨時找不到小天使可到新手版(" BN_NEWBIE ")\n"
+#endif
+#ifdef BN_ANGELPRAY
+	 "想留言給小天使請到許\願版(" BN_ANGELPRAY ")\n"
+#endif
+#ifdef BN_ASKBOARD
+	 "想找看板在哪的話可到(" BN_ASKBOARD ")\n"
+#endif
+	 "請先在各板上尋找答案或按 Ctrl-P 發問");
 
     // Query if user wants to go to newbie board
-    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 'y'") == 'y')
-	GotoNewHand();
+    switch(tolower(vmsg("想換小天使請按 h, 進新手板請按 p, 其它任意鍵離開"))) {
+        case 'h':
+            move(b_lines - 4, 0); clrtobot();
+            a_changeangel();
+            break;
+        case 'p':
+            GotoNewHand();
+            break;
+    }
 }
 
 static void
@@ -541,7 +555,7 @@ TalkToAngel(){
     userinfo_t *uent;
 
     if (strcmp(cuser.myangel, "-") == 0){
-	NoAngelFound(NULL);
+	NoAngelFound("你沒有小天使");
 	return;
     }
 
@@ -613,7 +627,7 @@ CallAngel(){
     static int      entered = 0;
     screen_backup_t old_screen;
 
-    if (!HasUserPerm(PERM_LOGINOK) || entered)
+    if (entered)
 	return;
     entered = 1;
     scr_dump(&old_screen);
@@ -624,15 +638,14 @@ CallAngel(){
 
 void
 pressanykey_or_callangel(){
-    int ch;
     int w = t_columns - 2; // see vtuikit.c, SAFE_MAX_COL
 
-    if (!HasUserPerm(PERM_LOGINOK)) {
+    if (!HasUserPerm(PERM_LOGINOK) ||
+        strcmp(cuser.myangel, "-") == 0) {
 	pressanykey();
 	return;
     }
 
-    // TODO use visio API instead.
     move(b_lines, 0); clrtoeol();
 
     // message string length = 38
