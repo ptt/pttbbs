@@ -177,7 +177,7 @@ a_changeangel(){
             angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
                     usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
-        vmsg("小天使更新完成，下次呼叫時會選出新的小天使");
+        vmsg("小天使登記完成，下次呼叫時會從目前上線的天使中選出新的小天使");
     }
     return 0;
 }
@@ -434,6 +434,7 @@ FindAngel(void){
     return FindAngel_Old();
 }
 
+#ifdef BN_NEWBIE
 static inline void
 GotoNewHand(){
     char old_board[IDLEN + 1] = "";
@@ -457,6 +458,7 @@ GotoNewHand(){
     if (canRead && old_board[0])
 	enter_board(old_board);
 }
+#endif
 
 
 static inline void
@@ -471,10 +473,14 @@ NoAngelFound(const char* msg){
     if (!msg)
 	msg = "你的小天使現在不在線上";
     outs(msg);
+#ifdef BN_NEWBIE
     if (currutmp == NULL || currutmp->mode != EDITING)
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
     if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 p") == 'p')
 	GotoNewHand();
+#else
+    pressanykey();
+#endif
 }
 
 static inline void
@@ -537,14 +543,20 @@ AngelNotOnline(){
 	 "請先在各板上尋找答案或按 Ctrl-P 發問");
 
     // Query if user wants to go to newbie board
-    switch(tolower(vmsg("想換小天使請按 h, 進新手板請按 p, 其它任意鍵離開"))) {
+    switch(tolower(vmsg("想換成目前在線上的小天使請按 h, "
+#ifdef BN_NEWBIE
+                    "進新手板請按 p, "
+#endif
+                    "其它任意鍵離開"))) {
         case 'h':
             move(b_lines - 4, 0); clrtobot();
             a_changeangel();
             break;
+#ifdef BN_NEWBIE
         case 'p':
             GotoNewHand();
             break;
+#endif
     }
 }
 
