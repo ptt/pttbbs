@@ -27,7 +27,7 @@ check_sysop_edit_perm(const char *fpath)
 	strcmp(fpath, "etc/ve.hlp") == 0)
 	return 0;
 
-    if (fpath) {
+    if (fpath && *fpath) {
         if (strstr(fpath, BBSHOME) == fpath)
             fpath += (strlen(BBSHOME) + 1);
 
