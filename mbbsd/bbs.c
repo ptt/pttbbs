@@ -1674,6 +1674,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	)   
 	return DONOTHING;
 
+    setdirpath(genbuf, direct, fhdr->filename);
     if (!is_file_owner(fhdr, &cuser))
     {
 	if (!HasUserPerm(PERM_SYSOP))
@@ -1682,10 +1683,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	// admin edit!
 	log_filef("log/security", LOG_CREAT,
 		"%d %s %d %s admin edit (board) file=%s\n", 
-		(int)now, Cdate(&now), getpid(), cuser.userid, fpath);
+		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
     }
 
-    setdirpath(genbuf, direct, fhdr->filename);
     if (!dashf(genbuf)) {
         vmsg("此檔已損毀，無法編輯。您可以試著刪除它。");
         return FULLUPDATE;
