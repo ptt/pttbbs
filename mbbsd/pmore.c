@@ -636,8 +636,7 @@ expand_esc_star(char *buf, const char *src, int szbuf)
 {
     assert(*src == KEY_ESC && *(src+1) == '*');
     src += 2;
-    switch(*src)
-    {
+    switch (*src) {
         // secure content (return 1)
         case 't':   // current time.
             strlcpy(buf, Now(), szbuf);
@@ -781,8 +780,7 @@ mf_gunzip(const char *fn, int fd)
     // rewind for decompression
     lseek(fd, 0, SEEK_SET);
 
-    switch(fork())
-    {
+    switch (fork()) {
         case 0:
             // child
             dup2(fd, 0);        // input
@@ -821,11 +819,10 @@ mf_attach(const char *fn)
     fd = mf_gunzip(fn, fd);
 #endif
 
-    if(fd < 0)
+    if (fd < 0)
         return 0;
 
-    if (fstat(fd, &st) || ((mf.len = st.st_size) <= 0) || S_ISDIR(st.st_mode))
-    {
+    if (fstat(fd, &st) || ((mf.len = st.st_size) <= 0) || S_ISDIR(st.st_mode)) {
         mf.len = 0;
         close(fd);
         return 0;
@@ -836,12 +833,10 @@ mf_attach(const char *fn)
     lseek(fd, 0, SEEK_SET);
     */
 
-    mf.start = mmap(NULL, mf.len, PROT_READ, 
-            MF_MMAP_OPTION, fd, 0);
+    mf.start = mmap(NULL, mf.len, PROT_READ, MF_MMAP_OPTION, fd, 0);
     close(fd);
 
-    if(mf.start == MAP_FAILED)
-    {
+    if (mf.start == MAP_FAILED) {
         RESETMF();
         return 0;
     }
@@ -864,10 +859,9 @@ mf_attach(const char *fn)
     mf_parseHeaders();
 
     /* a workaround for wrapped separators */
-    if(mf.maxlinenoS > 0 &&
+    if (mf.maxlinenoS > 0 &&
             fh.lines >= mf.maxlinenoS &&
-            bpref.separator & MFDISP_SEP_WRAP)
-    {
+            bpref.separator & MFDISP_SEP_WRAP) {
         mf_determinemaxdisps(+1, 1);
     }
 
@@ -878,7 +872,7 @@ MFPROTO void
 mf_detach()
 {
     mf_freeHeaders();
-    if(mf.start) {
+    if (mf.start) {
         munmap(mf.start, mf.len);
         RESETMF();
     }
@@ -892,16 +886,15 @@ mf_sync_lineno()
 {
     unsigned char *p;
 
-    if(mf.disps == mf.maxdisps && mf.maxlinenoS >= 0)
-    {
+    if (mf.disps == mf.maxdisps && mf.maxlinenoS >= 0) {
         mf.lineno = mf.maxlinenoS;
     } else {
         mf.lineno = 0;
         for (p = mf.start; p < mf.disps; p++)
-            if(*p == '\n')
+            if (*p == '\n')
                 mf.lineno ++;
 
-        if(mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
+        if (mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
             mf.maxlinenoS = mf.lineno;
     }
 }
@@ -915,10 +908,8 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
     unsigned char *pbak = mf.disps, *mbak = mf.maxdisps;
     long lbak = mf.lineno;
 
-    if(update_by_offset)
-    {
-        if(backlines > 0)
-        {
+    if (update_by_offset) {
+        if (backlines > 0) {
             /* tricky way because usually 
              * mf_forward checks maxdisps.
              */
@@ -934,17 +925,16 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
         backlines = mf_backward(backlines);
     }
 
-    if(mf.disps != mbak)
-    {
+    if (mf.disps != mbak) {
         mf.maxdisps = mf.disps;
-        if(update_by_offset)
+        if (update_by_offset)
             mf.lastpagelines -= backlines;
         else
             mf.lastpagelines = backlines;
 
         mf.maxlinenoS = -1;
 #ifdef PMORE_PRELOAD_SIZE
-        if(mf.len <= PMORE_PRELOAD_SIZE)
+        if (mf.len <= PMORE_PRELOAD_SIZE)
             mf_sync_lineno(); // maxlinenoS will be automatically updated
 #endif
     }
@@ -969,12 +959,10 @@ mf_backward(int lines)
    if (mf.disps < mf.end && *mf.disps == '\n')
        lines++, real_moved --;
 
-    while (1)
-    {
-        if (mf.disps < mf.start || *mf.disps == '\n')
-        {
+    while (1) {
+        if (mf.disps < mf.start || *mf.disps == '\n') {
             real_moved ++;
-            if(lines-- <= 0 || mf.disps < mf.start)
+            if (lines-- <= 0 || mf.disps < mf.start)
                 break;
         }
         mf.disps --;
@@ -993,24 +981,23 @@ mf_forward(int lines)
 {
     int real_moved = 0;
 
-    while(mf.disps <= mf.maxdisps && lines > 0)
-    {
+    while (mf.disps <= mf.maxdisps && lines > 0) {
         while (mf.disps <= mf.maxdisps && *mf.disps++ != '\n');
 
-        if(mf.disps <= mf.maxdisps)
+        if (mf.disps <= mf.maxdisps)
             mf.lineno++, lines--, real_moved++;
     }
 
-    if(mf.disps > mf.maxdisps)
+    if (mf.disps > mf.maxdisps)
         mf.disps = mf.maxdisps;
 
     /* please make sure you have lineno synced. */
-    if(mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
+    if (mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
         mf.maxlinenoS = mf.lineno;
 
     return real_moved;
     /*
-    if(lines > 0)
+    if (lines > 0)
         return MFNAV_OK;
     else
         return MFNAV_EXCEED;
@@ -1020,7 +1007,7 @@ mf_forward(int lines)
 MFFPROTO int 
 mf_goTop()
 {
-    if(mf.disps == mf.start && mf.xpos > 0)
+    if (mf.disps == mf.start && mf.xpos > 0)
         mf.xpos = 0;
     mf.disps = mf.start;
     mf.lineno = 0;
@@ -1065,56 +1052,47 @@ mf_search(int direction)
     int l = sr.len;
     int flFound = 0;
 
-    if(!s || !*s)
+    if (!s || !*s)
         return 0;
 
-    if(direction ==  MFSEARCH_FORWARD) 
-    {
+    if (direction ==  MFSEARCH_FORWARD) {
         mf_forward(1);
-        while(mf.disps < mf.end - l)
-        {
-            if(sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0)
-            {
+        while (mf.disps < mf.end - l) {
+            if (sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0) {
                 flFound = 1;
                 break;
             } else {
                 /* DBCS check here. */
-                if(PMORE_DBCS_LEADING(*mf.disps++))
+                if (PMORE_DBCS_LEADING(*mf.disps++))
                         mf.disps++;
             }
         }
         mf_backward(0);
-        if(mf.disps > mf.maxdisps)
+        if (mf.disps > mf.maxdisps)
             mf.disps = mf.maxdisps;
         mf_sync_lineno();
-    } 
-    else if(direction ==  MFSEARCH_BACKWARD) 
-    {
+    } else if (direction ==  MFSEARCH_BACKWARD) {
         mf_backward(1);
-        while (!flFound && mf.disps > mf.start)
-        {
-            while(!flFound && mf.disps < mf.end-l && *mf.disps != '\n')
-            {
-                if(sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0)
-                {
+        while (!flFound && mf.disps > mf.start) {
+            while (!flFound && mf.disps < mf.end-l && *mf.disps != '\n') {
+                if (sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0) {
                     flFound = 1;
                     break;
-                } else
-                {
+                } else {
                     /* DBCS check here. */
-                    if(PMORE_DBCS_LEADING(*mf.disps++))
+                    if (PMORE_DBCS_LEADING(*mf.disps++))
                         mf.disps++;
                 }
             }
-            if(!flFound)
+            if (!flFound)
                 mf_backward(1);
         }
         mf_backward(0);
-        if(mf.disps < mf.start)
+        if (mf.disps < mf.start)
             mf.disps = mf.start;
         mf_sync_lineno();
     }
-    if(flFound)
+    if (flFound)
         MFDISP_DIRTY();
     return flFound;
 }
@@ -1131,19 +1109,15 @@ MFPROTO void
 pmore_str_strip_ansi(unsigned char *p)  // warning: p is NULL terminated
 {
     unsigned char *pb = p;
-    while (*p != 0)
-    {
-        if (*p == ESC_CHR)
-        {
+    while (*p != 0) {
+        if (*p == ESC_CHR) {
             // ansi code sequence, ignore them.
             pb = p++;
             while (ANSI_IN_ESCAPE(*p))
                 p++;
             memmove(pb, p, ustrlen(p)+1);
             p = pb;
-        }
-        else if (*p < ' ' || *p == 0xff)
-        {
+        } else if (*p < ' ' || *p == 0xff) {
             // control codes, ignore them.
             // what is 0xff? old BBS does not handle telnet protocol
             // so IACs were inserted.
@@ -1163,7 +1137,7 @@ pmore_str_chomp(unsigned char *p)
     unsigned char *pb = p + ustrlen(p)-1;
 
     while (pb >= p)
-        if(ISSPACE(*pb))
+        if (ISSPACE(*pb))
             *pb-- = 0;
         else
             break;
@@ -1171,7 +1145,7 @@ pmore_str_chomp(unsigned char *p)
     while (*pb && ISSPACE(*pb))
         pb++;
 
-    if(pb != p)
+    if (pb != p)
         memmove(p, pb, ustrlen(pb)+1);
 }
 
@@ -1182,8 +1156,7 @@ pmore_str_chomp(unsigned char *p)
 MFPROTO void 
 mf_freeHeaders()
 {
-    if(fh.lines > 0)
-    {
+    if (fh.lines > 0) {
         int i;
 
         for (i = 0; i < FH_HEADERS; i++)
@@ -1211,34 +1184,29 @@ mf_parseHeaders()
 
     RESETFH();
 
-    if(mf.len < LEN_AUTHOR2)
+    if (mf.len < LEN_AUTHOR2)
         return;
 
-    if (strncmp((char*)mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
-    {
+    if (strncmp((char*)mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0) {
         fh.lines = 3;   // local
-    } 
-    else if (strncmp((char*)mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0)
-    {
+    } else if (strncmp((char*)mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0) {
         fh.lines = 4;
     }
     else 
         return;
 
-    for (i = 0; i < fh.lines; i++)
-    {
+    for (i = 0; i < fh.lines; i++) {
         unsigned char *p = pmf, *pb = pmf;
         int l;
 
         /* first, go to line-end */
-        while(pmf < mf.end && *pmf != '\n')
+        while (pmf < mf.end && *pmf != '\n')
             pmf++;
-        if(pmf >= mf.end)
+        if (pmf >= mf.end)
             break;
 
         // strip last line if it is empty.
-        if (p == pmf && i+1 == fh.lines)
-        {
+        if (p == pmf && i+1 == fh.lines) {
             fh.lines --;
             break;
         }
@@ -1272,9 +1240,9 @@ mf_parseHeaders()
 #endif // PMORE_OVERRIDE_TIME
 
         // strip to quotes[+1 space]
-        if((pb = ustrchr((char*)p, ':')) != NULL)
+        if ((pb = ustrchr(p, ':')) != NULL)
         {
-            if(*(pb+1) == ' ') pb++;
+            if (*(pb+1) == ' ') pb++;
             memmove(p, pb, ustrlen(pb)+1);
         }
 
@@ -1282,7 +1250,7 @@ mf_parseHeaders()
         pmore_str_chomp(p);
 
         // special case, floats are in line[0].
-        if(i == 0 && (pb = ustrrchr(p, ':')) != NULL && *(pb+1))
+        if (i == 0 && (pb = ustrrchr(p, ':')) != NULL && *(pb+1))
         {
             unsigned char *np = (unsigned char*)strdup((char*)(pb+1));
 
@@ -1323,14 +1291,12 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
     int off = 0;
     int inAnsi = 0;
 
-    while (p < mf.end && *p != '\n')
-    {
-        if(inAnsi)
-        {
-            if(!ANSI_IN_ESCAPE(*p))
+    while (p < mf.end && *p != '\n') {
+        if (inAnsi) {
+            if (!ANSI_IN_ESCAPE(*p))
                 inAnsi = 0;
         } else {
-            if(*p == ESC_CHR)
+            if (*p == ESC_CHR)
                 inAnsi = 1;
             else
                 off ++;
@@ -1350,7 +1316,7 @@ MFDISP_DBCS_HEADERWIDTH(int originalw)
 #define MFDISP_FORCEUPDATE2TOP() { startline = 0; }
 #define MFDISP_FORCEUPDATE2BOT() { endline   = MFDISP_PAGE - 1; }
 #define MFDISP_FORCEDIRTY2BOT() \
-    if(optimized == MFDISP_OPT_OPTIMIZED) { \
+    if (optimized == MFDISP_OPT_OPTIMIZED) { \
         optimized = MFDISP_OPT_FORCEDIRTY; \
         MFDISP_FORCEUPDATE2BOT(); \
     }
@@ -1384,7 +1350,7 @@ mf_display()
     const int maxcol = dispw - 1;
     int newline_default = MFDISP_NEWLINE_CLEAR;
 
-    if(mf.wraplines || mf.trunclines)
+    if (mf.wraplines || mf.trunclines)
         MFDISP_DIRTY(); // we can't scroll with wrapped lines.
 
     mf.wraplines = 0;
@@ -1411,7 +1377,7 @@ mf_display()
         int scrll = mf.lineno - mf.oldlineno, i;
         int reverse = (scrll > 0 ? 0 : 1);
 
-        if(reverse) 
+        if (reverse) 
             scrll = -scrll;
         else
         {
@@ -1421,7 +1387,7 @@ mf_display()
             pmore_clrtoeol(b_lines, 0);
         }
 
-        if(scrll > MFDISP_PAGE)
+        if (scrll > MFDISP_PAGE)
             scrll = MFDISP_PAGE;
 
         i = scrll;
@@ -1436,13 +1402,13 @@ mf_display()
         } else
 #endif // defined(USE_PFTERM)
 
-        while(i-- > 0)
+        while (i-- > 0)
             if (reverse)
                 rscroll();      // v
             else
                 scroll();       // ^
 
-        if(reverse)
+        if (reverse)
         {
             endline = scrll-1;          // v
             // clear the line which will be scrolled
@@ -1476,10 +1442,10 @@ mf_display()
         currline = mf.lineno + lines;
         col = 0;
 
-        if(!wrapping && mf.dispe < mf.end)
+        if (!wrapping && mf.dispe < mf.end)
             mf.dispedlines++;
 
-        if(optimized == MFDISP_OPT_FORCEDIRTY)
+        if (optimized == MFDISP_OPT_FORCEDIRTY)
         {
             /* btw, apparently this line should be visible. 
              * if not, maybe something wrong.
@@ -1488,10 +1454,10 @@ mf_display()
         }
 
 #ifdef PMORE_USE_ASCII_MOVIE
-        if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD &&
+        if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD &&
                 mfmovie.compat24)
         {
-            if(mf.dispedlines == 23)
+            if (mf.dispedlines == 23)
                 return;
         } 
         else if (mfmovie.mode == MFDISP_MOVIE_DETECTED)
@@ -1499,14 +1465,14 @@ mf_display()
             // detected only applies for first page.
             // since this is not very often, let's prevent
             // showing control codes.
-            if(mf_movieFrameHeader(mf.dispe, mf.end))
+            if (mf_movieFrameHeader(mf.dispe, mf.end))
                 MFDISP_SKIPCURLINE();
         }
-        else if(mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
+        else if (mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
                 mfmovie.mode == MFDISP_MOVIE_PLAYING)
         {
-            if(mf_movieFrameHeader(mf.dispe, mf.end))
-                switch(mfmovie.mode)
+            if (mf_movieFrameHeader(mf.dispe, mf.end))
+                switch (mfmovie.mode)
                 {
 
                     case MFDISP_MOVIE_UNKNOWN:
@@ -1560,7 +1526,7 @@ mf_display()
              * leads to slow display (we cannt speed it up with
              * optimized scrolling.
              */
-            if(bpref.separator & MFDISP_SEP_WRAP) 
+            if (bpref.separator & MFDISP_SEP_WRAP) 
             {
                 /* we have to do all wrapping stuff
                  * in normal text section.
@@ -1569,7 +1535,7 @@ mf_display()
                 wrapping = 1;
                 mf.wraplines ++;
                 MFDISP_FORCEDIRTY2BOT();
-                if(mf.dispe > mf.start && 
+                if (mf.dispe > mf.start && 
                         mf.dispe < mf.end &&
                         *mf.dispe == '\n')
                     mf.dispe --;
@@ -1609,7 +1575,7 @@ mf_display()
             outs(ANSI_RESET);
             MFDISP_SKIPCURLINE();
         } 
-        else if(mf.dispe < mf.end)
+        else if (mf.dispe < mf.end)
         {
             /* case 3, normal text */
             long dist = mf.end - mf.dispe;
@@ -1619,16 +1585,16 @@ mf_display()
 
             unsigned char c;
 
-            if(xprefix > 0 && !bpref.oldwrapmode && bpref.wrapindicator)
+            if (xprefix > 0 && !bpref.oldwrapmode && bpref.wrapindicator)
             {
                 outs(MFDISP_WNAV_INDICATOR);
                 col++;
             }
 
             // first check quote
-            if(bpref.rawmode == MFDISP_RAW_NA)
+            if (bpref.rawmode == MFDISP_RAW_NA)
             {
-                if(dist > 1 && 
+                if (dist > 1 && 
                         (*mf.dispe == ':' || *mf.dispe == '>') && 
                         *(mf.dispe+1) == ' ')
                 {
@@ -1643,23 +1609,23 @@ mf_display()
                 }
             }
 
-            while(!breaknow && mf.dispe < mf.end && (c = *mf.dispe) != '\n')
+            while (!breaknow && mf.dispe < mf.end && (c = *mf.dispe) != '\n')
             {
-                if(inAnsi)
+                if (inAnsi)
                 {
                     if (!ANSI_IN_ESCAPE(c))
                         inAnsi = 0;
                     /* whatever this is, output! */
                     mf.dispe ++;
-                    switch(bpref.rawmode)
+                    switch (bpref.rawmode)
                     {
                         case MFDISP_RAW_NOANSI:
                             /* TODO
                              * col++ here may be buggy. */
-                            if(col < t_columns)
+                            if (col < t_columns)
                             {
                                 /* we tried our best to determine */
-                                if(xprefix > 0)
+                                if (xprefix > 0)
                                     xprefix --;
                                 else
                                 {
@@ -1667,14 +1633,14 @@ mf_display()
                                     col++;
                                 }
                             }
-                            if(!inAnsi)
+                            if (!inAnsi)
                                 outs(ANSI_RESET);
                             break;
                         case MFDISP_RAW_PLAIN:
                             break;
 
                         default:
-                            if(ANSI_IN_MOVECMD(c))
+                            if (ANSI_IN_MOVECMD(c))
                             {
 #ifdef PMORE_RESTRICT_ANSI_MOVEMENT
                                 c = 's'; // "save cursor pos"
@@ -1700,14 +1666,14 @@ mf_display()
 
                 } else {
 
-                    if(c == ESC_CHR)
+                    if (c == ESC_CHR)
                     {
                         inAnsi = 1;
                         /* we can't output now because maybe
                          * ptt_prints wants to do something.
                          */
                     }
-                    else if(sr.search_str && srlen < 0 &&  // support search
+                    else if (sr.search_str && srlen < 0 &&  // support search
 #ifdef PMORE_USE_DBCS_WRAP
                             dbcs_incomplete == NULL &&
 #endif
@@ -1729,7 +1695,7 @@ mf_display()
                     //
                     // or use the sample version inside pmore source.
                     //
-                    if(inAnsi && 
+                    if (inAnsi && 
                             mf.end - mf.dispe > 2 &&
                             *(mf.dispe+1) == '*')
                     {
@@ -1745,7 +1711,7 @@ mf_display()
                         memcpy(buf, mf.dispe, 3);  // ^[*s
                         mf.dispe += 2;
 
-                        if(bpref.rawmode)
+                        if (bpref.rawmode)
                             buf[0] = '*';
                         else
                         {
@@ -1779,7 +1745,7 @@ mf_display()
 
                         if (col + i > maxcol)
                             i = maxcol - col;
-                        if(i > 0)
+                        if (i > 0)
                         {
                             pbuf[i] = 0;
                             col += i;
@@ -1788,17 +1754,17 @@ mf_display()
                         inAnsi = 0;
                     } else
 #endif // PMORE_EXPAND_ESC_STAR
-                    if(inAnsi)
+                    if (inAnsi)
                     {
-                        switch(bpref.rawmode)
+                        switch (bpref.rawmode)
                         {
                             case MFDISP_RAW_NOANSI:
                                 /* TODO
                                  * col++ here may be buggy. */
-                                if(col < t_columns)
+                                if (col < t_columns)
                                 {
                                     /* we tried our best to determine */
-                                    if(xprefix > 0)
+                                    if (xprefix > 0)
                                         xprefix --;
                                     else
                                     {
@@ -1820,7 +1786,7 @@ mf_display()
                          * "indicators" (one byte),
                          * so we can tolerate one more byte.
                          */
-                        if(col <= maxcol)       // normal case
+                        if (col <= maxcol)       // normal case
                             canOutput = 1;
                         else if (bpref.oldwrapmode && // oldwrapmode
                             col < t_columns)
@@ -1832,7 +1798,7 @@ mf_display()
                             // put more efforts to determine
                             // if we can use indicator space
                             // determine real offset between \n
-                            if(predicted_linewidth < 0)
+                            if (predicted_linewidth < 0)
                                 predicted_linewidth = col + 1 +
                                     MFDISP_PREDICT_LINEWIDTH(mf.dispe+1);
                             off = predicted_linewidth - (col + 1);
@@ -1850,26 +1816,26 @@ mf_display()
 #endif
                         }
 
-                        if(canOutput)
+                        if (canOutput)
                         {
                             /* the real place to output text
                              */
 #ifdef PMORE_USE_DBCS_WRAP
-                            if(mf.xpos > 0 && dbcs_incomplete && col < 2)
+                            if (mf.xpos > 0 && dbcs_incomplete && col < 2)
                             {
                                 /* col = 0 or 1 only */
-                                if(col == 0) /* no indicators */
+                                if (col == 0) /* no indicators */
                                     c = ' ';
-                                else if(!bpref.oldwrapmode && bpref.wrapindicator)
+                                else if (!bpref.oldwrapmode && bpref.wrapindicator)
                                     c = ' ';
                             }
 
                             if (dbcs_incomplete)
                                 dbcs_incomplete = NULL;
-                            else if(PMORE_DBCS_LEADING(c)) 
+                            else if (PMORE_DBCS_LEADING(c)) 
                                 dbcs_incomplete = mf.dispe;
 #endif
-                            if(xprefix > 0)
+                            if (xprefix > 0)
                                 xprefix --;
                             else
                             {
@@ -1879,12 +1845,12 @@ mf_display()
 
                             if (srlen == 0)
                                 outs(ANSI_RESET);
-                            if(srlen >= 0)
+                            if (srlen >= 0)
                                 srlen --;
                         }
                         else
                         /* wrap modes */
-                        if(mf.xpos > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
+                        if (mf.xpos > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
                         {
                             breaknow = 1;
                             mf.trunclines ++;
@@ -1897,7 +1863,7 @@ mf_display()
                             wrapping = 1;
                             mf.wraplines ++;
 #ifdef PMORE_USE_DBCS_WRAP
-                            if(dbcs_incomplete)
+                            if (dbcs_incomplete)
                             {
                                 mf.dispe = dbcs_incomplete;
                                 dbcs_incomplete = NULL;
@@ -1905,7 +1871,7 @@ mf_display()
                                  * use the followings to
                                  * erase printed character.
                                  */
-                                if(col > 0) {
+                                if (col > 0) {
                                     /* TODO BUG BUGGY
                                      * using move is maybe actually non-sense
                                      * because BBS terminal system cannot
@@ -1934,24 +1900,24 @@ mf_display()
                         }
                     }
                 }
-                if(!breaknow)
+                if (!breaknow)
                     mf.dispe ++;
             }
-            if(flResetColor)
+            if (flResetColor)
                 outs(ANSI_RESET);
 
             /* "wrapping" should be only in normal text section.
              * We don't support wrap within scrolling,
              * so if we have to wrap, invalidate all lines.
              */
-            if(breaknow)
+            if (breaknow)
             {
-                if(wrapping)
+                if (wrapping)
                     MFDISP_FORCEDIRTY2BOT();
 
-                if(!bpref.oldwrapmode && bpref.wrapindicator && col < t_columns)
+                if (!bpref.oldwrapmode && bpref.wrapindicator && col < t_columns)
                 {
-                    if(wrapping)
+                    if (wrapping)
                         outs(MFDISP_WRAP_INDICATOR);
                     else
                         outs(MFDISP_TRUNC_INDICATOR);
@@ -1963,11 +1929,11 @@ mf_display()
                 wrapping = 0;
         }
 
-        if(mf.dispe < mf.end && *mf.dispe == '\n') 
+        if (mf.dispe < mf.end && *mf.dispe == '\n') 
             mf.dispe ++;
         // else, we're in wrap mode.
 
-        switch(newline)
+        switch (newline)
         {
             case MFDISP_NEWLINE_SKIP:
                 break;
@@ -1986,7 +1952,7 @@ mf_display()
      * but if we got wrapped lines in last page,
      * mf.maxdisps may be required to be larger.
      */
-    if(mf.disps == mf.maxdisps && mf.dispe < mf.end)
+    if (mf.disps == mf.maxdisps && mf.dispe < mf.end)
     {
         /*
          * never mind if that's caused by separator
@@ -2043,7 +2009,7 @@ mf_display_footer(
         (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
 
 #ifdef DEBUG
-    if(debug)
+    if (debug)
     {
         /* in debug mode don't print ANSI codes
          * because themselves are buggy.
@@ -2085,7 +2051,7 @@ mf_display_footer(
 
     // determine summary colours
     outs(ANSI_RESET);
-    if(mf_viewedAll())
+    if (mf_viewedAll())
         outs(PMORE_COLOR_FOOTER1_VIEWALL);
     else if (mf_viewedNone())
         outs(PMORE_COLOR_FOOTER1_VIEWNONE);
@@ -2093,7 +2059,7 @@ mf_display_footer(
         outs(PMORE_COLOR_FOOTER1);
 
     // old status bar: quick draw
-    if(bpref.oldstatusbar)
+    if (bpref.oldstatusbar)
     {
         prints("  瀏覽 P.%d(%d%%)  ", nowpage, progress);
         outs(
@@ -2112,7 +2078,7 @@ mf_display_footer(
     // pmore style footer
 
     // part 1, brief report (SUMMAR)
-    if(allpages >= 0)
+    if (allpages >= 0)
         snprintf(buf, sizeof(buf),
                 "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
                 nowpage,
@@ -2130,16 +2096,16 @@ mf_display_footer(
 
     // part 2, status report (DETAIL)
     outs(PMORE_COLOR_FOOTER2);
-    if(override_msg)
+    if (override_msg)
     {
         buf[0] = 0;
-        if(override_attr) outs(override_attr);
+        if (override_attr) outs(override_attr);
         strlcpy(buf, override_msg, sizeof(buf));
         RESET_OVERRIDE_MSG();
     }
     else
     {
-        if(mf.xpos > 0)
+        if (mf.xpos > 0)
         {
             snprintf(buf, sizeof(buf),
                     " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
@@ -2238,10 +2204,10 @@ PMORE_UINAV_FORWARDPAGE()
      */
     int i = mf.dispedlines - 1;
 
-    if(mf_viewedAll())
+    if (mf_viewedAll())
         return;
 
-    if(i < 1)
+    if (i < 1)
         i = 1;
     mf_forward(i);
 }
@@ -2249,7 +2215,7 @@ PMORE_UINAV_FORWARDPAGE()
 MFFPROTO void
 PMORE_UINAV_FORWARDLINE()
 {
-    if(mf_viewedAll())
+    if (mf_viewedAll())
         return;
     mf_forward(1);
 }
@@ -2296,16 +2262,16 @@ pmore2(
     STATINC(STAT_MORE);
 #endif // STAT_MORE
 
-    if(!mf_attach(fpath))
+    if (!mf_attach(fpath))
     {
         REENTRANT_RESTORE();
         return -1;
     }
 
     clear();
-    while(!flExit)
+    while (!flExit)
     {
-        if(invalidate)
+        if (invalidate)
         {
             mf_display(); 
             invalidate = 0;
@@ -2316,10 +2282,10 @@ pmore2(
          */
         invalidate = 1;
 
-        if(promptend == PMORE_AUTO_EXIT)
+        if (promptend == PMORE_AUTO_EXIT)
         {
 #ifdef PMORE_USE_ASCII_MOVIE
-            if(mfmovie.mode == MFDISP_MOVIE_DETECTED)
+            if (mfmovie.mode == MFDISP_MOVIE_DETECTED)
             {
                 /* quick auto play */
                 mfmovie.mode = MFDISP_MOVIE_YES;
@@ -2346,7 +2312,7 @@ pmore2(
             } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
 #endif
 #ifndef PMORE_AUTOEXIT_FIRSTPAGE
-            if(mf_viewedAll())
+            if (mf_viewedAll())
 #endif // PMORE_AUTOEXIT_FIRSTPAGE
             break;
         }
@@ -2376,10 +2342,10 @@ pmore2(
                     outs(ANSI_RESET ANSI_COLOR(1;33;44));
                     w -= strlen(s); outs(s);
 
-                    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
+                    while (w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
                     w = tolower(vkey());
 
-                    if(     w != 'n' && 
+                    if (     w != 'n' && 
                             w != KEY_UP && w != KEY_LEFT &&
                             w != 'q')
                     {
@@ -2407,18 +2373,18 @@ pmore2(
                 // in SyncFrame.
                 refresh();
 
-                if(mf_movieSyncFrame())
+                if (mf_movieSyncFrame())
                 {
                     /* user did not hit anything.
                      * play next frame.
                      */
-                    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
+                    if (mfmovie.mode == MFDISP_MOVIE_PLAYING)
                     {
-                        if(!mf_movieNextFrame())
+                        if (!mf_movieNextFrame())
                         {
                             STOP_MOVIE();
 
-                            if(promptend == PMORE_AUTO_EXIT)
+                            if (promptend == PMORE_AUTO_EXIT)
                             {
                                 /* if we played to end,
                                  * no need to prevent pressanykey().
@@ -2427,9 +2393,9 @@ pmore2(
                             }
                         }
                     }
-                    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
+                    else if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
                     {
-                        if(mf_viewedAll())
+                        if (mf_viewedAll())
                         {
                             mfmovie.mode = MFDISP_MOVIE_NO;
                             mf_determinemaxdisps(MFNAV_PAGE, 0);
@@ -2437,7 +2403,7 @@ pmore2(
                         }
                         else
                         {
-                            if(!mfmovie.compat24)
+                            if (!mfmovie.compat24)
                                 PMORE_UINAV_FORWARDPAGE();
                             else
                                 mf_forward(22);
@@ -2447,15 +2413,15 @@ pmore2(
                     /* TODO simple navigation here? */
 
                     /* stop playing */
-                    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
+                    if (mfmovie.mode == MFDISP_MOVIE_PLAYING)
                     {
                         STOP_MOVIE();
-                        if(promptend == PMORE_AUTO_EXIT)
+                        if (promptend == PMORE_AUTO_EXIT)
                         {
                             flExit = 1, retval = READ_NEXT;
                         }
                     }
-                    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
+                    else if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
                     {
                         mfmovie.mode = MFDISP_MOVIE_NO;
                         mf_determinemaxdisps(MFNAV_PAGE, 0);
@@ -2478,7 +2444,7 @@ pmore2(
         if (key_handler)
         {
             int r = key_handler(ch, ctx);
-            switch(r)
+            switch (r)
             {
                 case -1:
                     // common return value of 'file not exist',
@@ -2521,7 +2487,7 @@ pmore2(
             case Ctrl('F'):
             case KEY_PGDN:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-                if(mf_viewedAll())
+                if (mf_viewedAll())
                     promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_NEXT;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
@@ -2530,7 +2496,7 @@ pmore2(
             case Ctrl('B'):
             case KEY_PGUP:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-                if(mf_viewedNone())
+                if (mf_viewedNone())
                     promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_PREV;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
@@ -2553,7 +2519,7 @@ pmore2(
                  */
                 mf_display();
                 invalidate = 0;
-                if(mf_viewedAll())
+                if (mf_viewedAll())
                     break;
 
                 /* one more try. */
@@ -2564,17 +2530,17 @@ pmore2(
 
             /* Compound Navigation */
             case '.':
-                if(mf.xpos == 0)
+                if (mf.xpos == 0)
                     mf.xpos ++;
                 mf.xpos ++;
                 break;
             case ',':
-                if(mf.xpos > 0)
+                if (mf.xpos > 0)
                     mf.xpos --;
                 break;
             case '\t':
             case '>':
-                //if(mf.xpos == 0 || mf.trunclines)
+                //if (mf.xpos == 0 || mf.trunclines)
                     mf.xpos = (mf.xpos/8+1)*8;
                 break;
                 /* acronym form shift-tab, ^[[Z */
@@ -2584,7 +2550,7 @@ pmore2(
 #endif // KEY_STAB
             case '<':
                 mf.xpos = (mf.xpos/8-1)*8;
-                if(mf.xpos < 0) mf.xpos = 0;
+                if (mf.xpos < 0) mf.xpos = 0;
                 break;
 
             case '\r':
@@ -2605,7 +2571,7 @@ pmore2(
                 break;
 
             case KEY_RIGHT:
-                if(mf_viewedAll())
+                if (mf_viewedAll())
                 {
                     // returning READ_NEXT maybe better for RIGHT key.
                     // but many people are already used to pmore style...
@@ -2627,13 +2593,13 @@ pmore2(
                 break;
 
             case KEY_UP:
-                if(mf_viewedNone())
+                if (mf_viewedNone())
                     flExit = 1, retval = READ_PREV;
                 else
                     mf_backward(1);
                 break;
             case Ctrl('H'):
-                if(mf_viewedNone())
+                if (mf_viewedNone())
                     flExit = 1, retval = READ_PREV;
                 else
                     mf_backward(MFNAV_PAGE);
@@ -2653,7 +2619,7 @@ pmore2(
                     char sbuf[81] = "";
                     char ans[4] = "n";
 
-                    if(sr.search_str) {
+                    if (sr.search_str) {
                         free(sr.search_str);
                         sr.search_str = NULL;
                     }
@@ -2676,7 +2642,7 @@ pmore2(
 #endif
                     }
                     sr.len = strlen(sbuf);
-                    if(sr.len) sr.search_str = (unsigned char*)strdup(sbuf);
+                    if (sr.len) sr.search_str = (unsigned char*)strdup(sbuf);
                     mf_search(MFSEARCH_FORWARD);
                     MFDISP_DIRTY();
                 }
@@ -2704,11 +2670,11 @@ pmore2(
                             (pageMode ? 
                              PMORE_MSG_GOTO_PAGE : PMORE_MSG_GOTO_LINE),
                             buf, 8, DOECHO);
-                    if(buf[0]) {
+                    if (buf[0]) {
                         i = atoi(buf);
-                        if(buf[strlen(buf)-1] == '.')
+                        if (buf[strlen(buf)-1] == '.')
                             pageMode = 0;
-                        if(i-- > 0)
+                        if (i-- > 0)
                             mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
                     }
                     MFDISP_DIRTY();
@@ -2749,7 +2715,7 @@ pmore2(
             case 'p':
                 /* play ascii movie again
                  */
-                if(mfmovie.mode == MFDISP_MOVIE_YES)
+                if (mfmovie.mode == MFDISP_MOVIE_YES)
                 {
                     RESET_MOVIE();
                     mfmovie.mode = MFDISP_MOVIE_PLAYING;
@@ -2772,7 +2738,7 @@ pmore2(
                             PMORE_MSG_MOVIE_PLAYOLD_GETTIME,
                             buf, 8, LCECHO);
 
-                    if(buf[0])
+                    if (buf[0])
                     {
                         float nf = 0;
                         nf = atof(buf); // sscanf(buf, "%f", &nf);
@@ -2789,7 +2755,7 @@ pmore2(
                             getdata(b_lines - 1, 0, 
                                     PMORE_MSG_MOVIE_PLAYOLD_AS24L,
                                     ans, 3, LCECHO);
-                            if(ans[0] == 'n')
+                            if (ans[0] == 'n')
                                 mfmovie.compat24 = 0;
                             else
                                 mfmovie.compat24 = 1;
@@ -2929,7 +2895,7 @@ pmore_QuickRawModePref()
     grayout(0, ystart-1, GRAYOUT_DARK);
 #endif // HAVE_GRAYOUT
 
-    while(1)
+    while (1)
     {
         move(ystart, 0);
         clrtobot();
@@ -2939,7 +2905,7 @@ pmore_QuickRawModePref()
         pmore_prefEntry(bpref.rawmode,
                 "\\", 1, PMORE_MSG_QPREF_SUBJECT, -1, PMORE_MSG_QPREF_OPTIONS);
 
-        switch(vmsg( PMORE_MSG_QPREF_PROMPT ))
+        switch (vmsg( PMORE_MSG_QPREF_PROMPT ))
         {
             case '\\':
                 bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
@@ -3018,7 +2984,7 @@ pmore_Preference()
                 "t", 1, "傳統狀態列與斷行方式: ", -1,
                 "停用\t啟用");
 
-        switch(vmsg("請調整設定或其它任意鍵結束。"))
+        switch (vmsg("請調整設定或其它任意鍵結束。"))
         {
             case '\\':
             case '|':
@@ -3159,7 +3125,7 @@ pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 void 
 mf_float2tv(float f, struct timeval *ptv)
 {
-    if(f < MOVIE_MIN_FRAMECLK)
+    if (f < MOVIE_MIN_FRAMECLK)
         f = MOVIE_MIN_FRAMECLK;
     if (f > MOVIE_MAX_FRAMECLK)
         f = MOVIE_MAX_FRAMECLK;
@@ -3266,7 +3232,7 @@ mf_moviePromptPlaying(int type)
         if (override_attr) outs(override_attr);
         w -= strlen(override_msg);
         outs(override_msg);
-        while(w-- > 0) outc(' '); 
+        while (w-- > 0) outc(' '); 
 
         outs(ANSI_RESET ANSI_CLRTOEND);
         RESET_OVERRIDE_MSG();
@@ -3275,13 +3241,10 @@ mf_moviePromptPlaying(int type)
 
     move(type ? b_lines-1 : b_lines, 0); // clrtoeol?
 
-    if (type) 
-    {
+    if (type) {
         outs(ANSI_RESET ANSI_COLOR(1;34;47));
         s = PMORE_MSG_MOVIE_INTERACTION_WAITSEL;
-    } 
-    else if (mfmovie.interactive)
-    {
+    } else if (mfmovie.interactive) {
         outs(ANSI_RESET ANSI_COLOR(1;34;47));
         s = PMORE_MSG_MOVIE_INTERACTION_PLAYING;
     } else {
@@ -3290,9 +3253,10 @@ mf_moviePromptPlaying(int type)
 
     w -= strlen(s); outs(s); 
 
-    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
-    if (type)
-    {
+    while (w-- > 0) outc(' ');
+    outs(ANSI_RESET ANSI_CLRTOEND);
+
+    if (type) {
         move(b_lines, 0);
         clrtoeol();
     }
@@ -3467,11 +3431,11 @@ mf_movieFrameHeader(unsigned char *p, unsigned char *end)
     size_t sz = end - p;
 
     if (sz < 1) return NULL;
-    if(*p == 12)        // ^L
+    if (*p == 12)        // ^L
         return p+1;
 
     if (sz < 2) return NULL;
-    if( *p == '^' &&
+    if ( *p == '^' &&
             *(p+1) == 'L')
         return p+2;
 
@@ -3635,7 +3599,7 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 
     int curr = 0, newno = 0;
     
-    switch(*s)
+    switch (*s)
     {
         case 'p':       
             // by page
@@ -4016,14 +3980,14 @@ mf_movieSyncFrame()
         struct timeval dv;
         gettimeofday(&dv, NULL);
         dv.tv_sec = mfmovie.synctime.tv_sec - dv.tv_sec;
-        if(dv.tv_sec < 0)
+        if (dv.tv_sec < 0)
             return 1;
         dv.tv_usec = mfmovie.synctime.tv_usec - dv.tv_usec;
-        if(dv.tv_usec < 0) {
+        if (dv.tv_usec < 0) {
             dv.tv_sec --;
             dv.tv_usec += MOVIE_SECOND_U;
         }
-        if(dv.tv_sec < 0)
+        if (dv.tv_sec < 0)
             return 1;
 
         return !mf_movieWaitKey(&dv, 0);
@@ -4243,7 +4207,7 @@ mf_movieNextFrame()
     {
         unsigned char *p = mf_movieFrameHeader(mf.disps, mf.end);
 
-        if(p) 
+        if (p) 
         {
             float nf = 0;
             unsigned char *odisps = mf.disps;
@@ -4286,7 +4250,7 @@ mf_movieNextFrame()
                 mf_float2tv(nf, &mfmovie.frameclk);
             }
 
-            if(mfmovie.synctime.tv_sec > 0)
+            if (mfmovie.synctime.tv_sec > 0)
             {
                 mfmovie.synctime.tv_usec += mfmovie.frameclk.tv_usec;
                 mfmovie.synctime.tv_sec  += mfmovie.frameclk.tv_sec;
