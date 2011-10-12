@@ -738,6 +738,15 @@ new_register(void)
 	exit(1);
     }
     log_usies("REGISTER", fromhost);
+#ifdef USE_REMOVEBM_ON_NEWREG
+    {
+        char buf[PATHLEN];
+        snprintf(buf, sizeof(buf),
+                 BBSHOME "bin/removebm '%s' >/dev/null 2>&1",
+                 newuser.userid);
+        system(buf);
+    }
+#endif
 }
 
 int

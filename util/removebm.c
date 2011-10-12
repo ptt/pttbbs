@@ -14,6 +14,9 @@ int check(void *data, int bid, boardheader_t *bh)
     if (!bh->brdname[0] || !bh->BM[0])
         return 0;
 
+    if (!strcasestr(bh->BM, userid))
+        return 0;
+
     strlcpy(bmsrc, bh->BM, sizeof(bmsrc));
     p = bmsrc;
 
@@ -43,7 +46,11 @@ int check(void *data, int bid, boardheader_t *bh)
     if (!changed)
         return 0;
 
-    printf("%s: %s -> %s\n", bh->brdname, bh->BM, bmout);
+    now = time(0);
+    log_filef(BBSHOME "/log/removebm.log", LOG_CREAT,
+              "%s [%s] %s: %s->%s\n",
+              Cdatelite(&now), userid,
+              bh->brdname, bh->BM, bmout);
 
     if (has_quote)
         snprintf(bh->BM, sizeof(bh->BM), "[%s]", bmout);
