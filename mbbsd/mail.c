@@ -1621,7 +1621,9 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 	    fprintf(xptr, "※ [本文轉錄自 %s 信箱]\n\n", cuser.userid);
 
 	    b_suckinfile(xptr, fname);
-	    addsignature(xptr, 0);
+            addsimplesignature(xptr, NULL);
+            fprintf(xptr, "◆ 由 %s 轉錄，時間: %s\n",
+                    cuser.userid, Cdatelite(&now));
 	    fclose(xptr);
 	}
 

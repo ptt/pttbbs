@@ -2026,7 +2026,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    b_suckinfile(xptr, fname);
 	}
 
-	addsignature(xptr, 0);
+        addsimplesignature(xptr, NULL);
+        fprintf(xptr, "◆ 由 %s 轉錄，時間: %s\n",
+                cuser.userid, Cdatelite(&now));
 	fclose(xptr);
 
 #ifdef USE_AUTOCPLOG

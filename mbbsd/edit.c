@@ -1736,6 +1736,17 @@ loadsitesig(const char *fname)
 }
 
 void
+addsimplesignature(FILE *fp, const char *host) {
+    char temp[33];
+    if (!host)
+        host = FROMHOST;
+    strlcpy(temp, host, sizeof(temp));
+    fprintf(fp,
+            "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME ") \n"
+            "◆ From: %s\n", host);
+}
+
+void
 addsignature(FILE * fp, int ifuseanony)
 {
     FILE           *fs;
@@ -1746,8 +1757,7 @@ addsignature(FILE * fp, int ifuseanony)
     char            ch;
 
     if (!strcmp(cuser.userid, STR_GUEST)) {
-	fprintf(fp, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", FROMHOST);
+        addsimplesignature(fp, NULL);
 	return;
     }
     if (!ifuseanony) {
@@ -1812,16 +1822,11 @@ browse_sigs:
 #ifdef HAVE_ORIGIN
 #ifdef HAVE_ANONYMOUS
     if (ifuseanony)
-	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", "匿名天使的家");
+        addsimplesignature(fp, "匿名天使的家");
     else
 #endif
     {
-	char            temp[33];
-
-	strlcpy(temp, FROMHOST, sizeof(temp));
-	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", temp);
+        addsimplesignature(fp, NULL);
     }
 #endif
 }
