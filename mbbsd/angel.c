@@ -190,6 +190,7 @@ a_angelmsg(){
     int i;
     FILE* fp;
 
+    move(1, 0); clrtobot();
     setuserfile(buf, "angelmsg");
     fp = fopen(buf, "r");
     if (fp) {
@@ -226,8 +227,9 @@ a_angelmsg(){
 	clrtobot();
 	outs("不在的時候要跟小主人說什麼呢？"
 	     "最多三行，按[Enter]結束");
+        // the -1 is for newline and we use to fgets() to read later
 	for (i = 0; i < 3 &&
-		getdata_buf(14 + i, 0, "：", msg[i], sizeof(msg[i]), DOECHO);
+		getdata_buf(14 + i, 0, "：", msg[i], sizeof(msg[i])-1, DOECHO);
 		++i);
 	getdata(b_lines - 2, 0, "(S)儲存 (E)重新來過 (Q)取消？[S]",
 		buf, 4, LCECHO);
