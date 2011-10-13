@@ -86,6 +86,7 @@ int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
+void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 #ifdef USE_COOLDOWN
 int check_cooldown(boardheader_t *bp);
 #endif

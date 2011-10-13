@@ -82,6 +82,17 @@ query_file_money(const fileheader_t *pfh)
     return pfh->multi.money;
 }
 
+static int
+cp_IsHiddenBoard(const boardheader_t *bp)
+{
+    // rules: see HasBoardPerm().
+    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	return 1;
+    if (bp->level && !(bp->brdattr & BRD_POSTMASK))
+	return 1;
+    return 0;
+}
+
 // lite weight version to update dir files
 static int 
 modify_dir_lite(
@@ -375,6 +386,11 @@ int IsFreeBoardName(const char *brdname)
     if (strcasecmp(brdname, DEFAULT_BOARD) == 0)
 	return 1;
     return 0;
+}
+
+int
+IsBoardForAllpost(boardheader_t *bp) {
+    return (!bp->level) || (bp->brdattr & BRD_POSTMASK);
 }
 
 /* check post perm on demand, no double checks in current board
@@ -1007,6 +1023,38 @@ do_reply_title(int row, const char *title, char result[STRLEN])
 	getdata(++row, 0, "標題：", result, TTLEN, DOECHO);
 }
 
+void
+log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
+#ifdef BN_ALLPOST
+    char genbuf[PATHLEN];
+    int  len = 42-4-strlen(brd);
+    fileheader_t fh;
+    int bid = getbnum(BN_ALLPOST), brd_id = getbnum(brd);
+    if(bid <= 0 || bid > MAX_BOARD)
+        return;
+    if(brd_id <= 0 || brd_id > MAX_BOARD)
+        return;
+
+    // don't log when brd is a hidden board.
+    if (cp_IsHiddenBoard(getbcache(brd_id)))
+        return;
+
+    if(!strncasecmp(postfile->title, str_reply, 3))
+        len=len+4;
+
+    memcpy(&fh, postfile, sizeof(fileheader_t));
+    strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
+    fh.filemode = FILE_LOCAL;
+
+    sprintf(fh.title, "%-*.*s[轉].%s板", len, len, postfile->title, brd);
+    setbdir(genbuf, BN_ALLPOST);
+    if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
+	SHM->lastposttime[bid - 1] = now;
+	touchbpostnum(bid, 1);
+    }
+#endif
+}
+
 void 
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
              int isstamp)
@@ -1036,6 +1084,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     sprintf(fh.title,"%-*.*s.%s板",  len, len, postfile->title, currboard);
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
+    // should be fh.filemode ?
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
@@ -1298,8 +1347,7 @@ do_general(int garbage)
 	}
 	brc_addlist(postfile.filename, postfile.modified);
 
-        if( !bp->level || (currbrdattr & BRD_POSTMASK))
-        {
+        if (IsBoardForAllpost(bp)) {
 	        if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
             		do_crosspost("NEWIDPOST", &postfile, fpath, 0);
 
@@ -1800,17 +1848,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
-static int
-cp_IsHiddenBoard(const boardheader_t *bp)
-{
-    // rules: see HasBoardPerm().
-    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
-	return 1;
-    if (bp->level && !(bp->brdattr & BRD_POSTMASK))
-	return 1;
-    return 0;
-}
-
 int
 old_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -1826,7 +1863,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    xfile;
     FILE           *xptr;
     int             author, xbid, hashPost;
-    boardheader_t  *bp;
+    boardheader_t  *bp, *xbp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -1910,6 +1947,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     hashPost = StringHash(fhdr->filename); // let's try filename
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
+    xbp = getbcache(xbid);
 
     if (xbid == currbid)
     {
@@ -2030,6 +2068,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         fprintf(xptr, "◆ 由 %s 轉錄，時間: %s\n",
                 cuser.userid, Cdatelite(&now));
 	fclose(xptr);
+
+        // try to record in ALLPOST
+        log_crosspost_in_allpost(xboard, &xfile);
 
 #ifdef USE_AUTOCPLOG
 	/* add cp log. bp is currboard now. */

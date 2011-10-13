@@ -1638,6 +1638,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 	    add_cooldowntime(usernum, 5);
 	add_posttimes(usernum, 1);
 #endif
+        log_crosspost_in_allpost(xboard, &xfile);
 
 	// cross-post does not add numpost.
 	outs("轉錄信件不增加文章數，敬請包涵。");
