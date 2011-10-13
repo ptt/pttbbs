@@ -184,7 +184,7 @@ a_changeangel(){
 
 int 
 a_angelmsg(){
-    char msg[3][74] = { "", "", "" };
+    char msg[3][75] = { "", "", "" };
     char nick[10] = "";
     char buf[512];
     int i;
