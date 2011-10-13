@@ -1084,8 +1084,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     sprintf(fh.title,"%-*.*s.%sªO",  len, len, postfile->title, currboard);
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
-    // should be fh.filemode ?
-    postfile->filemode = FILE_LOCAL;
+    fh.filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	SHM->lastposttime[bid - 1] = now;
