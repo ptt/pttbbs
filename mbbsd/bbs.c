@@ -670,7 +670,7 @@ readdoent(int num, fileheader_t * ent)
     else if (title == ent->title)
 	color = '1', mark = "□";
     else if (ent->title[0] == str_forward[0])
-	color = '3', mark = "F:";
+	color = '6', mark = "轉";
     else // if (ent->title[0] == str_reply[0])
 	color = '3', mark = "R:";
 
@@ -1042,9 +1042,14 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
     fh.filemode = FILE_LOCAL;
+    // TODO trust fh.owner?
     strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
-    strlcpy(genbuf, title, len);
-    DBCS_safe_trim(genbuf);
+    strlcpy(genbuf, title, len + 1);
+    if (strlen(title) > len) {
+        genbuf[len-2] = 0;
+        DBCS_safe_trim(genbuf);
+        strcat(genbuf, "…");
+    }
     snprintf(fh.title, sizeof(fh.title),
              "%s%-*.*s.%s板", str_forward, len, len, genbuf, brd);
 
@@ -1998,7 +2003,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         if (genbuf[0] == '2')
             break;
         ent = 0;
-        if (is_owner)
+        if (!HasUserPerm(PERM_SYSOP))
             break;
         getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
         if (inputbuf[0] != 'n' && inputbuf[0] != 'N')

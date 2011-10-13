@@ -1570,19 +1570,27 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
        return READ_REDRAW;
 #endif
 
+    // TODO reuse the code in bbs.c cross_post
     ans = 1;
-    if (HasUserPerm(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
-	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
-		genbuf, 3, DOECHO);
-	if (genbuf[0] != '2') {
-	    ans = 0;
-	    getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
-	    if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
-		author = 1;
-	}
-    }
+    author = 0;
+    do {
+        int is_owner = is_file_owner(fhdr, &cuser);
+        if (!HasUserPerm(PERM_SYSOP) && !is_owner)
+            break;
+        getdata(2, 0, "(1)原文轉載 (2)標為轉錄文章？[1] ", genbuf, 3, DOECHO);
+        if (genbuf[0] == '2')
+            break;
+        ans = 0;
+        if (!HasUserPerm(PERM_SYSOP))
+            break;
+        getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
+        if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
+            author = '1';
+    } while (0);
+
     if (ans)
-	snprintf(xtitle, sizeof(xtitle), "[轉錄]%.66s", fhdr->title);
+	snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+                 str_forward, fhdr->title);
     else
 	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
