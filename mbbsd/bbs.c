@@ -1045,7 +1045,8 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
     strlcpy(genbuf, title, len);
     DBCS_safe_trim(genbuf);
-    snprintf(fh.title, "%s%-*.*s.%sªO", str_forward, len, len, genbuf, brd);
+    snprintf(fh.title, sizeof(fh.title),
+             "%s%-*.*s.%sªO", str_forward, len, len, genbuf, brd);
 
     setbdir(genbuf, BN_ALLPOST);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
