@@ -196,6 +196,7 @@ int veditfile(const char *fpath);
 void write_header(FILE *fp, const char *mytitle);
 void addsignature(FILE *fp, int ifuseanony);
 void addsimplesignature(FILE *fp, const char *fromhost);
+void addforwardsignature(FILE *fp, const char *fromhost);
 void auto_backup(void);
 void restore_backup(void);
 const char *ask_tmpbuf(int y);

@@ -2076,9 +2076,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    b_suckinfile(xptr, fname);
 	}
 
-        addsimplesignature(xptr, NULL);
-        fprintf(xptr, "◆ 由 %s 轉錄，時間: %s\n",
-                cuser.userid, Cdatelite(&now));
+        addforwardsignature(xptr, NULL);
 	fclose(xptr);
 
         // try to record in ALLPOST
@@ -2176,6 +2174,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 	}
 
+        clrtobot();
 	pressanykey();
 	currmode = currmode0;
     }

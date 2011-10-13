@@ -1735,6 +1735,19 @@ loadsitesig(const char *fname)
 }
 
 void
+addforwardsignature(FILE *fp, const char *host) {
+    char temp[33];
+    if (!host)
+        host = FROMHOST;
+    strlcpy(temp, host, sizeof(temp));
+    syncnow();
+    fprintf(fp, "\n"
+                "※ 發信站 :" BBSNAME "(" MYHOSTNAME ")\n"
+                "※ 轉錄者: %s (%s), 時間: %s\n"
+                , cuser.userid, host, Cdatelite(&now));
+}
+
+void
 addsimplesignature(FILE *fp, const char *host) {
     char temp[33];
     if (!host)
