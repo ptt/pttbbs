@@ -1663,8 +1663,7 @@ write_header(FILE * fp,  const char *mytitle)
 	}
 #endif
 	strlcpy(postlog.board, currboard, sizeof(postlog.board));
-	if (!strncmp(ptr, str_reply, 4))
-	    ptr += 4;
+        ptr = subject(ptr);
 	strlcpy(postlog.title, ptr, sizeof(postlog.title));
 	postlog.date = now;
 	postlog.number = 1;

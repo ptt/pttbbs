@@ -33,7 +33,8 @@ setbdir(char *buf, const char *boardname)
 char           *
 subject(char *title)
 {
-    if (!strncasecmp(title, str_reply, 3)) {
+    if (strncasecmp(title, str_reply, 3) == 0 ||
+        strncasecmp(title, str_forward, 3) == 0) {
 	title += 3;
 	if (*title == ' ')
 	    title++;

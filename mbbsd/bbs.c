@@ -669,7 +669,9 @@ readdoent(int num, fileheader_t * ent)
 	color = '2', mark = "ˇ";
     else if (title == ent->title)
 	color = '1', mark = "□";
-    else
+    else if (ent->title[0] == str_forward[0])
+	color = '3', mark = "F:";
+    else // if (ent->title[0] == str_reply[0])
 	color = '3', mark = "R:";
 
     /* 把過長的 title 砍掉。 前面約有 33 個字元。 */
@@ -1012,10 +1014,7 @@ do_reply_title(int row, const char *title, char result[STRLEN])
     char            genbuf[200];
     char            genbuf2[4];
 
-    if (strncasecmp(title, str_reply, 4))
-	snprintf(result, STRLEN, "Re: %s", title);
-    else
-	strlcpy(result, title, STRLEN);
+    snprintf(result, STRLEN, "%s%s", str_reply, subject(title));
     result[TTLEN - 1] = '\0';
     snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", result);
     getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
@@ -1027,8 +1026,10 @@ void
 log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
 #ifdef BN_ALLPOST
     char genbuf[PATHLEN];
-    int  len = 42-4-strlen(brd);
     fileheader_t fh;
+    // '…' appears for t_columns-33.
+    int  len = 42-strlen(brd);
+    const char *title = subject(postfile->title);
     int bid = getbnum(BN_ALLPOST), brd_id = getbnum(brd);
     if(bid <= 0 || bid > MAX_BOARD)
         return;
@@ -1039,14 +1040,13 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     if (cp_IsHiddenBoard(getbcache(brd_id)))
         return;
 
-    if(!strncasecmp(postfile->title, str_reply, 3))
-        len=len+4;
-
     memcpy(&fh, postfile, sizeof(fileheader_t));
-    strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
     fh.filemode = FILE_LOCAL;
+    strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
+    strlcpy(genbuf, title, len);
+    DBCS_safe_trim(genbuf);
+    snprintf(fh.title, "%s%-*.*s.%s板", str_forward, len, len, genbuf, brd);
 
-    sprintf(fh.title, "%-*.*s[轉].%s板", len, len, postfile->title, brd);
     setbdir(genbuf, BN_ALLPOST);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	SHM->lastposttime[bid - 1] = now;
@@ -1068,10 +1068,11 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
 
     if(!strncasecmp(postfile->title, str_reply, 3))
         len=len+4;
+    else if(!strncasecmp(postfile->title, str_forward, 3))
+        len=len+4;
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
-    if(isstamp) 
-    {
+    if(isstamp) {
          setbpath(genbuf, brd);
          stampfile(genbuf, &fh); 
     }
@@ -1988,18 +1989,24 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     ent = 1;
     author = 0;
-    if (HasUserPerm(PERM_SYSOP) || is_file_owner(fhdr, &cuser)) {
-	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
-		genbuf, 3, DOECHO);
-	if (genbuf[0] != '2') {
-	    ent = 0;
-	    getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
-	    if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
-		author = '1';
-	}
-    }
+    do {
+        int is_owner = is_file_owner(fhdr, &cuser);
+        if (!HasUserPerm(PERM_SYSOP) && !is_owner)
+            break;
+        getdata(2, 0, "(1)原文轉載 (2)標為轉錄文章？[1] ", genbuf, 3, DOECHO);
+        if (genbuf[0] == '2')
+            break;
+        ent = 0;
+        if (is_owner)
+            break;
+        getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
+        if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
+            author = '1';
+    } while (0);
+
     if (ent)
-	snprintf(xtitle, sizeof(xtitle), "[轉錄]%.66s", fhdr->title);
+	snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+                 str_forward, subject(fhdr->title));
     else
 	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
