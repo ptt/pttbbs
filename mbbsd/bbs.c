@@ -1218,8 +1218,11 @@ do_general(int garbage)
 	} while (1);
 
 	do {
-	    getdata_buf(22, 0, "標題：", tmp_title,
-                        DISP_TTLEN + (t_columns - 80), DOECHO);
+            int w = DISP_TTLEN + (t_columns - 80);
+            // -4: for prefixes
+            if (w >= TTLEN - 4)
+                w = TTLEN - 4;
+	    getdata_buf(22, 0, "標題：", tmp_title, w, DOECHO);
 	    strip_ansi(tmp_title, tmp_title, STRIP_ALL);
 
 	    if (!is_tn_allowed(tmp_title))
