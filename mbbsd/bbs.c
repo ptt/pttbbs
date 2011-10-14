@@ -581,6 +581,7 @@ readdoent(int num, fileheader_t * ent)
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
     int w = 0;
+    int const_title = 0;
 
 #ifdef SAFE_ARTICLE_DELETE
     // TODO maybe we should also check .filename because admin can't change that
@@ -659,7 +660,14 @@ readdoent(int num, fileheader_t * ent)
 	type = '+';
     }
 
-    title = ent->filename[0]!='L' ? subject_ex(ent->title, &title_type) : "<本文鎖定>";
+    if (ent->filename[0]!='L') {
+        title = "<本文鎖定>";
+        const_title = 1;
+    } else {
+        title =  subject_ex(ent->title, &title_type);
+    }
+
+
 #ifdef SAFE_ARTICLE_DELETE
     if (iscorpse)
 	color = '0', mark = "□";
@@ -760,7 +768,8 @@ readdoent(int num, fileheader_t * ent)
     }
     
     // strip unsafe characters
-    strip_nonebig5((char*)title, INT_MAX);
+    if (!const_title)
+        strip_nonebig5((char*)title, INT_MAX);
 
     // print subject, bounded by w.
     if (strlen(title) > w) {
