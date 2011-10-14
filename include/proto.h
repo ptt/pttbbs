@@ -734,7 +734,6 @@ int do_voteboard(int);
 void do_voteboardreply(const fileheader_t *fhdr);
 
 /* xyz */
-int m_sysop(void);
 int x_boardman(void);
 int x_login(void);
 int x_week(void);
