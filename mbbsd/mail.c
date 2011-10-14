@@ -1146,11 +1146,11 @@ maildoent(int num, fileheader_t * ent)
 
     title = subject_ex(ent->title, &title_type);
     switch (title_type) {
-        case SUBJECT_REPLY:
+        case SUBJECT_FORWARD:
             mark = "Тр";
             color = ANSI_COLOR(1;36);
             break;
-        case SUBJECT_FORWARD:
+        case SUBJECT_REPLY:
             mark = "R:";
             color = ANSI_COLOR(1;33);
             break;
