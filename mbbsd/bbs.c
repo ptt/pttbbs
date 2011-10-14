@@ -3050,7 +3050,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	move(ymsg--, 0); clrtoeol();
 	outs(ANSI_COLOR(1;31) 
-	    "◆這篇文章來自暱名板或外站轉信板，原作者可能無法看到推文。" 
+	    "◆這篇文章來自匿名板或外站轉信板，原作者可能無法看到推文。" 
 	    ANSI_RESET "\n");
     }
 
@@ -3087,7 +3087,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY) && defined(ANGEL_ANONYMOUS_COMMENT)
     if (HasUserPerm(PERM_ANGEL) && currboard && strcmp(currboard, BN_ANGELPRAY) == 0 &&
-	vans("要使用小天使暱名推文嗎？ [Y/n]: ") != 'n')
+	vans("要使用小天使匿名推文嗎？ [Y/n]: ") != 'n')
     {
 	// angel push
 	mynick[0] = 0;

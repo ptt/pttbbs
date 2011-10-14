@@ -45,12 +45,10 @@ subject_ex(const char *title, int *ptype)
         if (str_starts_with(title, str_reply)) {
             title += strlen(str_reply);
             ptype = _set_ptype(ptype, SUBJECT_REPLY);
-        }
-        else if (str_starts_with(title, str_forward)) {
+        } else if (str_starts_with(title, str_forward)) {
             title += strlen(str_forward);
             ptype = _set_ptype(ptype, SUBJECT_FORWARD);
-        }
-        else if (str_starts_with(title, str_legacy_forward)) {
+        } else if (str_starts_with(title, str_legacy_forward)) {
             title += strlen(str_legacy_forward);
             ptype = _set_ptype(ptype, SUBJECT_FORWARD);
         } else {
