@@ -1497,7 +1497,7 @@ m_help(void)
 static int
 mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 {
-    char            xboard[20], fname[80], xfpath[80], xtitle[80], inputbuf[10];
+    char            xboard[20], fname[80], xfpath[80], xtitle[80];
     fileheader_t    xfile;
     FILE           *xptr;
     int             author = 0;
@@ -1571,28 +1571,15 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 #endif
 
     // TODO reuse the code in bbs.c cross_post
-    ans = 1;
     author = 0;
-    do {
-        int is_owner = is_file_owner(fhdr, &cuser);
-        if (!HasUserPerm(PERM_SYSOP) && !is_owner)
-            break;
-        getdata(2, 0, "(1)原文轉載 (2)標為轉錄文章？[1] ", genbuf, 3, DOECHO);
-        if (genbuf[0] == '2')
-            break;
-        ans = 0;
-        if (!HasUserPerm(PERM_SYSOP))
-            break;
-        getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
-        if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
+    if (HasUserPerm(PERM_SYSOP)) {
+        char ans[4];
+        getdata(2, 0, "保留原作者名稱嗎?[Y] ", ans, 3, LCECHO);
+        if (ans[0] != 'n')
             author = '1';
-    } while (0);
-
-    if (ans)
-	snprintf(xtitle, sizeof(xtitle), "%s%.66s",
-                 str_forward, fhdr->title);
-    else
-	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
+    }
+    snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+             str_forward, fhdr->title);
 
     snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, sizeof(genbuf2), LCECHO);
@@ -1630,8 +1617,6 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 
 	    b_suckinfile(xptr, fname);
             addforwardsignature(xptr, NULL);
-            fprintf(xptr, "◆ 由 %s 轉錄，時間: %s\n",
-                    cuser.userid, Cdatelite(&now));
 	    fclose(xptr);
 	}
 

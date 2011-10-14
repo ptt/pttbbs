@@ -1865,7 +1865,7 @@ static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[PATHLEN], xfpath[PATHLEN], xtitle[80];
-    char            inputbuf[10], genbuf[200], genbuf2[4];
+    char            genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
     int             author, xbid, hashPost;
@@ -1986,35 +1986,21 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
 #ifdef USE_COOLDOWN
-    if(check_cooldown(getbcache(xbid)))
-    {
+    if(check_cooldown(getbcache(xbid))) {
 	vmsg("該看板現在無法轉錄。");
 	return FULLUPDATE;
     }
 #endif
 
-    ent = 1;
     author = 0;
-    do {
-        int is_owner = is_file_owner(fhdr, &cuser);
-        if (!HasUserPerm(PERM_SYSOP) && !is_owner)
-            break;
-        getdata(2, 0, "(1)原文轉載 (2)標為轉錄文章？[1] ", genbuf, 3, DOECHO);
-        if (genbuf[0] == '2')
-            break;
-        ent = 0;
-        if (!HasUserPerm(PERM_SYSOP))
-            break;
-        getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
-        if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
+    if (HasUserPerm(PERM_SYSOP)) {
+        char ans[4];
+        getdata(2, 0, "保留原作者名稱嗎?[Y] ", ans, 3, DOECHO);
+        if (ans[0] != 'n')
             author = '1';
-    } while (0);
-
-    if (ent)
-	snprintf(xtitle, sizeof(xtitle), "%s%.66s",
-                 str_forward, subject(fhdr->title));
-    else
-	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
+    };
+    snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+             str_forward, subject(fhdr->title));
 
     snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
@@ -2119,9 +2105,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    "%s" ANSI_RESET "%*s%s\n" ,
 		    cuser.userid, bname, maxlength, "",
 		    tail);
-
-            // use do_add_recommend to also modify the file record
-	    do_add_recommend(direct, fhdr,  ent, buf, RECTYPE_ARROW);
 	} else
 #endif
 	{
