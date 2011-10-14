@@ -660,7 +660,7 @@ readdoent(int num, fileheader_t * ent)
 	type = '+';
     }
 
-    if (ent->filename[0]!='L') {
+    if (ent->filename[0] == 'L') {
         title = "<¥»¤åÂê©w>";
         const_title = 1;
     } else {
