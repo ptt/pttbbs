@@ -1033,17 +1033,20 @@ solveEdFlagByBoard(const char *bn, int flags)
 }
 
 void
-do_reply_title(int row, const char *title, char result[STRLEN])
-{
-    char            genbuf[200];
-    char            genbuf2[4];
+do_reply_title(int row, const char *title, const char *prefix,
+               char *result, int len) {
+    char ans[4];
 
-    snprintf(result, STRLEN, "%s %s", str_reply, subject(title));
+    snprintf(result, len, "%s %s", prefix, subject(title));
+    if (len > TTLEN)
+        len = TTLEN;
     result[TTLEN - 1] = '\0';
+    DBCS_safe_trim(result);
     mvouts(row++, 0, "原標題: "); outs(result);
-    getdata(row, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
-    if (genbuf2[0] == 'n')
-	getdata(row, 0, "新標題：", result, TTLEN, DOECHO);
+    getdata(row, 0, "採用原標題[Y/n]? ", ans, 3, LCECHO);
+    if (ans[0] == 'n')
+	getdata_str(row, 0, "新標題：", result, len, DOECHO, result);
+
 }
 
 void
@@ -1190,7 +1193,8 @@ do_general(int garbage)
 	   currboard, bp->title + 7);
 
     if (quote_file[0])
-	do_reply_title(20, currtitle, save_title);
+        do_reply_title(20, currtitle, str_reply, save_title,
+                       sizeof(save_title));
     else {
 	char tmp_title[STRLEN]="";
 	move(21,0);
@@ -2036,15 +2040,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         if (ans[0] != 'n')
             author = '1';
     };
-    snprintf(xtitle, sizeof(xtitle), "%s %.66s",
-             str_forward, subject(fhdr->title));
 
-    mvouts(2, 0, "原標題: "); outs(xtitle);
-    getdata(3, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
-    if (genbuf2[0] == 'n') {
-	if (getdata_str(3, 0, "新標題：", genbuf, TTLEN, DOECHO, xtitle))
-	    strlcpy(xtitle, genbuf, sizeof(xtitle));
-    }
+    do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     // FIXME 這裡可能會有人偷偷生出保留標題(如[公告])
     // 不過算了，直接劣退這種人比較方便
     // 反正本來就只是想解決「不小心」或是「假裝不小心」用到的情形。

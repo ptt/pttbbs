@@ -712,7 +712,7 @@ multi_send(const char *title)
 	char save_title[STRLEN];
 	setutmpmode(SMAIL);
 	if (title)
-	    do_reply_title(2, title, save_title);
+	    do_reply_title(2, title, str_reply, save_title, sizeof(save_title));
 	else {
 	    getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
 	    snprintf(save_title, sizeof(save_title), "[通告] %s", fpath);
@@ -1364,7 +1364,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	strlcpy(uid, quote_user, sizeof(uid));
 
     /* make the title */
-    do_reply_title(3, fhdr->title, save_title);
+    do_reply_title(3, fhdr->title, str_reply, save_title, sizeof(save_title));
     prints("\n收信人: %s\n標  題: %s\n", uid, save_title);
 
     /* edit, then send the mail */
@@ -1587,15 +1587,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
         if (ans[0] != 'n')
             author = '1';
     }
-    snprintf(xtitle, sizeof(xtitle), "%s %.66s",
-             str_forward, fhdr->title);
-
-    mvouts(2, 0, "原標題: "); outs(xtitle);
-    getdata(3, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
-    if (genbuf2[0] == 'n') {
-	if (getdata(3, 0, "新標題：", genbuf, TTLEN, DOECHO))
-	    strlcpy(xtitle, genbuf, sizeof(xtitle));
-    }
+    do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
 
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {

@@ -384,7 +384,8 @@ getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 }
 
 int
-getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
+getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
+            const char *defaultstr)
 {
     move(line, col);
     if(prompt && *prompt) outs(prompt);
