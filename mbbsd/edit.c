@@ -1742,7 +1742,7 @@ addforwardsignature(FILE *fp, const char *host) {
     strlcpy(temp, host, sizeof(temp));
     syncnow();
     fprintf(fp, "\n"
-                "※ 發信站 :" BBSNAME "(" MYHOSTNAME ")\n"
+                "※ 發信站: " BBSNAME "(" MYHOSTNAME ")\n"
                 "※ 轉錄者: %s (%s), 時間: %s\n"
                 , cuser.userid, host, Cdatelite(&now));
 }
@@ -1754,7 +1754,7 @@ addsimplesignature(FILE *fp, const char *host) {
         host = FROMHOST;
     strlcpy(temp, host, sizeof(temp));
     fprintf(fp,
-            "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME ") \n"
+            "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME ") \n"
             "◆ From: %s\n", host);
 }
 

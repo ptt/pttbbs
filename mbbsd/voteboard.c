@@ -165,7 +165,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
     fprintf(fo, "----------總計----------\n");
     fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
-    fprintf(fo, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
+    fprintf(fo, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
                 ") \n◆ From: 連署文章\n");
 
     flock(fd, LOCK_UN);
