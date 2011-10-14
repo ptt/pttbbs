@@ -326,6 +326,9 @@ static void
 delete_user_friend(const char *uident, const char *thefriend, int type)
 {
     char fn[PATHLEN];
+    // some stupid user simply set themselves and caused recursion here.
+    if (strcasecmp(uident, thefriend) == 0)
+        return;
     sethomefile(fn, uident, "aloha");
     delete_friend_from_file(fn, thefriend, 0);
 }
