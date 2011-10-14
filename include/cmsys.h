@@ -97,6 +97,8 @@ extern unsigned int *uintbsearch(const unsigned int key, const unsigned int *bas
 
 /* string.h */
 extern void str_lower(char *t, const char *s);
+extern int str_starts_with(const char *str, const char *prefix);
+extern int str_case_starts_with(const char *str, const char *prefix);
 extern void trim(char *buf);
 extern void chomp(char *src);
 extern int  strlen_noansi(const char *s);
@@ -300,9 +302,9 @@ extern int ucs2utf(uint16_t ucs2, uint8_t *utf8);
 extern int utf2ucs(uint8_t *utf8, uint16_t *pucs);
 
 /* big5.c */
-extern const uint16_t const b2u_table[];
-extern const uint16_t const u2b_table[];
-extern const uint8_t const b2u_ambiguous_width[];
+extern const uint16_t b2u_table[];
+extern const uint16_t u2b_table[];
+extern const uint8_t  b2u_ambiguous_width[];
 #endif
 
 #endif

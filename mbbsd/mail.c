@@ -1123,6 +1123,7 @@ maildoent(int num, fileheader_t * ent)
     char *title, *mark, *color = NULL, type = ' ';
     char datepart[6];
     char isonline = 0;
+    int title_type = SUBJECT_NORMAL;
 
     if (ent->filemode & FILE_MARKED)
     {
@@ -1143,13 +1144,21 @@ maildoent(int num, fileheader_t * ent)
     if (FindTaggedItem(ent))
 	type = 'D';
 
-    title = subject(mark = ent->title);
-    if (title == mark) {
-	color = ANSI_COLOR(1;31);
-	mark = "◇";
-    } else {
-	color = ANSI_COLOR(1;33);
-	mark = "R:";
+    title = subject_ex(ent->title, &title_type);
+    switch (title_type) {
+        case SUBJECT_REPLY:
+            mark = "轉";
+            color = ANSI_COLOR(1;36);
+            break;
+        case SUBJECT_FORWARD:
+            mark = "R:";
+            color = ANSI_COLOR(1;33);
+            break;
+        default:
+        case SUBJECT_NORMAL:
+            mark = "◇";
+            color = ANSI_COLOR(1;31);
+            break;
     }
     
     strlcpy(datepart, ent->date, sizeof(datepart));
@@ -1578,14 +1587,15 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
         if (ans[0] != 'n')
             author = '1';
     }
-    snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+    snprintf(xtitle, sizeof(xtitle), "%s %.66s",
              str_forward, fhdr->title);
 
-    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
-    getdata(2, 0, genbuf, genbuf2, sizeof(genbuf2), LCECHO);
-    if (*genbuf2 == 'n')
-	if (getdata(2, 0, "標題：", genbuf, TTLEN, DOECHO))
+    mvouts(2, 0, "原標題: "); outs(xtitle);
+    getdata(3, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
+    if (genbuf2[0] == 'n') {
+	if (getdata(3, 0, "新標題：", genbuf, TTLEN, DOECHO))
 	    strlcpy(xtitle, genbuf, sizeof(xtitle));
+    }
 
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {

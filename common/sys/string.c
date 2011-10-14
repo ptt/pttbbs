@@ -26,6 +26,24 @@ str_lower(char *t, const char *s)
     } while (ch);
 }
 
+int
+str_starts_with(const char *str, const char *prefix) {
+    while (*prefix) {
+        if (*prefix++ != *str++)
+            return 0;
+    }
+    return 1;
+}
+
+int
+str_case_starts_with(const char *str, const char *prefix) {
+    while (*prefix) {
+        if (tolower(*prefix++) != tolower(*str++))
+            return 0;
+    }
+    return 1;
+}
+
 /**
  * 移除字串 buf 後端多餘的空白。
  * @param buf

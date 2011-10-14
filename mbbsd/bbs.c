@@ -575,11 +575,12 @@ tn_safe_strip(char *title)
 static void
 readdoent(int num, fileheader_t * ent)
 {
-    int  type = ' ';
-    char *mark, *title,
-	 color, special = 0, isonline = 0, recom[8];
+    int  type = ' ', title_type = SUBJECT_NORMAL;
+    const char *title;
+    char *mark, color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
+    int w = 0;
 
 #ifdef SAFE_ARTICLE_DELETE
     // TODO maybe we should also check .filename because admin can't change that
@@ -658,7 +659,7 @@ readdoent(int num, fileheader_t * ent)
 	type = '+';
     }
 
-    title = ent->filename[0]!='L' ? subject(ent->title) : "<本文鎖定>";
+    title = ent->filename[0]!='L' ? subject_ex(ent->title, &title_type) : "<本文鎖定>";
 #ifdef SAFE_ARTICLE_DELETE
     if (iscorpse)
 	color = '0', mark = "□";
@@ -667,29 +668,17 @@ readdoent(int num, fileheader_t * ent)
 #endif
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
-    else if (title == ent->title)
-	color = '1', mark = "□";
-    else if (ent->title[0] == str_forward[0])
-	color = '6', mark = "轉";
-    else // if (ent->title[0] == str_reply[0])
-	color = '3', mark = "R:";
-
-    /* 把過長的 title 砍掉。 前面約有 33 個字元。 */
-    {
-	int l = t_columns - 34; /* 33+1, for trailing one more space */
-	unsigned char *p = (unsigned char*)title;
-
-	/* strlen 順便做 safe print checking */
-	while (*p && l > 0)
-	{
-	    /* 本來應該做 DBCS checking, 懶得寫了 */
-	    if(*p < ' ')
-		*p = ' ';
-	    p++, l--;
-	}
-
-	if (*p && l <= 0)
-	    strcpy((char*)p-3, " …");
+    else switch(title_type) {
+        case SUBJECT_REPLY:
+            color = '3', mark = "R:";
+            break;
+        case SUBJECT_FORWARD:
+            color = '6', mark = "轉";
+            break;
+        case SUBJECT_NORMAL:
+        default:
+            color = '1', mark = "□";
+            break;
     }
 
     // TN_ANNOUNCE: [公告]
@@ -745,13 +734,42 @@ readdoent(int num, fileheader_t * ent)
     if(isonline) outs(ANSI_COLOR(1));
     prints("%-13.12s", ent->owner);
     if(isonline) outs(ANSI_RESET);
-	   
-    if (strncmp(currtitle, title, TTLEN))
-	prints("%s " ANSI_COLOR(1) "%.*s" ANSI_RESET "%s\n",
-	       mark, special ? 6 : 0, title, special ? title + 6 : title);
-    else
-	prints(ANSI_COLOR(1;3%c) "%s %s" ANSI_RESET "\n",
-	       color, mark, title);
+
+    // TODO calculate correct width. 前面約有 33 個字元。 */
+    w = t_columns - 34; /* 33+1, for trailing one more space */
+
+    // print subject prefix
+    ent->title[sizeof(ent->title)-1] = 0;
+    if (strcmp(currtitle, title) == 0) {
+        prints(ANSI_COLOR(1;3%c), color);
+        outs(mark);
+        outc(' ');
+    } else {
+        outs(mark);
+        outc(' ');
+        if (special) {
+            int len_announce = strlen(TN_ANNOUNCE);
+            outs(ANSI_COLOR(1));
+            outs(TN_ANNOUNCE);
+            outs(ANSI_RESET);
+            title += len_announce;
+            w -= len_announce;
+        }
+    }
+    
+    // strip unsafe characters
+    strip_nonebig5((char*)title, INT_MAX);
+
+    // print subject, bounded by w.
+    if (strlen(title) > w) {
+        if (DBCS_Status(title, w-2) == DBCS_TRAILING)
+            w--;
+        outns(title, w-2);
+        outs("…");
+    } else {
+        outs(title);
+    }
+    outc('\n');
 }
 
 int
@@ -1014,12 +1032,12 @@ do_reply_title(int row, const char *title, char result[STRLEN])
     char            genbuf[200];
     char            genbuf2[4];
 
-    snprintf(result, STRLEN, "%s%s", str_reply, subject(title));
+    snprintf(result, STRLEN, "%s %s", str_reply, subject(title));
     result[TTLEN - 1] = '\0';
-    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", result);
-    getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
+    mvouts(row++, 0, "原標題: "); outs(result);
+    getdata(row, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
     if (genbuf2[0] == 'n')
-	getdata(++row, 0, "標題：", result, TTLEN, DOECHO);
+	getdata(row, 0, "新標題：", result, TTLEN, DOECHO);
 }
 
 void
@@ -1051,7 +1069,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
         strcat(genbuf, "…");
     }
     snprintf(fh.title, sizeof(fh.title),
-             "%s%-*.*s.%s板", str_forward, len, len, genbuf, brd);
+             "%s %-*.*s.%s板", str_forward, len, len, genbuf, brd);
 
     setbdir(genbuf, BN_ALLPOST);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
@@ -1069,13 +1087,20 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
     int bid = getbnum(brd);
+    char *title, *prefix = "";
+    int title_type = SUBJECT_NORMAL;
 
     if(bid <= 0 || bid > MAX_BOARD) return;
-
-    if(!strncasecmp(postfile->title, str_reply, 3))
-        len=len+4;
-    else if(!strncasecmp(postfile->title, str_forward, 3))
-        len=len+4;
+    title = subject_ex(postfile->title, &title_type);
+    switch (title_type) {
+        case SUBJECT_REPLY:
+            prefix = str_reply;
+            break;
+        case SUBJECT_FORWARD:
+            // is this a real case?
+            prefix = str_forward;
+            break;
+    }
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
     if(isstamp) {
@@ -1088,7 +1113,9 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     if(!strcasecmp(brd, BN_UNANONYMOUS))
        strcpy(fh.owner, cuser.userid);
 
-    sprintf(fh.title,"%-*.*s.%s板",  len, len, postfile->title, currboard);
+    // TODO improve this in future (see log_crosspost_in_allpost)
+    snprintf(fh.title, sizeof(fh.title), "%s%s%-*.*s.%s板",
+             prefix, *prefix ? " " : "", len, len, title, currboard);
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
     fh.filemode = FILE_LOCAL;
@@ -1999,13 +2026,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         if (ans[0] != 'n')
             author = '1';
     };
-    snprintf(xtitle, sizeof(xtitle), "%s%.66s",
+    snprintf(xtitle, sizeof(xtitle), "%s %.66s",
              str_forward, subject(fhdr->title));
 
-    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
-    getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
+    mvouts(2, 0, "原標題: "); outs(xtitle);
+    getdata(3, 0, "採用原標題[Y/n]? ", genbuf2, 3, LCECHO);
     if (genbuf2[0] == 'n') {
-	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
+	if (getdata_str(3, 0, "新標題：", genbuf, TTLEN, DOECHO, xtitle))
 	    strlcpy(xtitle, genbuf, sizeof(xtitle));
     }
     // FIXME 這裡可能會有人偷偷生出保留標題(如[公告])
