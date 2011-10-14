@@ -57,7 +57,7 @@ subject_ex(const char *title, int *ptype)
             ptype = _set_ptype(ptype, SUBJECT_NORMAL);
             break;
         }
-        while (*title == ' ')
+        if (*title == ' ')
             title ++;
     } while (1);
     return title;
