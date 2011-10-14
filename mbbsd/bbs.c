@@ -744,6 +744,7 @@ readdoent(int num, fileheader_t * ent)
         prints(ANSI_COLOR(1;3%c), color);
         outs(mark);
         outc(' ');
+        special = 1;
     } else {
         outs(mark);
         outc(' ');
@@ -754,6 +755,7 @@ readdoent(int num, fileheader_t * ent)
             outs(ANSI_RESET);
             title += len_announce;
             w -= len_announce;
+            special = 0;
         }
     }
     
@@ -769,7 +771,11 @@ readdoent(int num, fileheader_t * ent)
     } else {
         outs(title);
     }
-    outc('\n');
+
+    if (special)
+        outs(ANSI_RESET "\n");
+    else
+       outc('\n');
 }
 
 int
