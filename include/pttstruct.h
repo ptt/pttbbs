@@ -249,6 +249,10 @@ typedef struct boardheader_t { /* 256 bytes */
 #define TTLEN      64             /* Length of title */
 #define FNLEN      28             /* Length of filename */
 
+// Prefix of str_reply and str_forward usually needs longer.
+// In artitlcle list, the normal length is (80-34)=46.
+#define DISP_TTLEN  46
+
 typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
     time4_t modified;		     /* last modified time */

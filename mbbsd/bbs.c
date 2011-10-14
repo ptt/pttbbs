@@ -1218,7 +1218,8 @@ do_general(int garbage)
 	} while (1);
 
 	do {
-	    getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
+	    getdata_buf(22, 0, "標題：", tmp_title,
+                        DISP_TTLEN + (t_columns - 80), DOECHO);
 	    strip_ansi(tmp_title, tmp_title, STRIP_ALL);
 
 	    if (!is_tn_allowed(tmp_title))
