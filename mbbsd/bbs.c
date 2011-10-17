@@ -2045,8 +2045,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     author = 0;
     if (HasUserPerm(PERM_SYSOP)) {
         char ans[4];
-        getdata(2, 0, "保留原作者名稱嗎?[Y] ", ans, 3, DOECHO);
-        if (ans[0] != 'n')
+        getdata(2, 0, "保留原作者名稱嗎?[y/N] ", ans, 3, LCECHO);
+        if (ans[0] == 'y')
             author = '1';
     };
 
