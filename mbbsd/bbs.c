@@ -2148,6 +2148,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    "%s" ANSI_RESET "%*s%s\n" ,
 		    cuser.userid, bname, maxlength, "",
 		    tail);
+
+            // use do_add_recommend to log forward info and also modify the file
+            // record
+            do_add_recommend(direct, fhdr,  ent, buf, RECTYPE_ARROW);
 	} else
 #endif
 	{
