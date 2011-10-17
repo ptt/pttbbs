@@ -48,9 +48,11 @@ subject_ex(const char *title, int *ptype)
         } else if (str_starts_with(title, str_forward)) {
             title += strlen(str_forward);
             ptype = _set_ptype(ptype, SUBJECT_FORWARD);
+#ifdef USE_LEGACY_FORWARD
         } else if (str_starts_with(title, str_legacy_forward)) {
             title += strlen(str_legacy_forward);
             ptype = _set_ptype(ptype, SUBJECT_FORWARD);
+#endif
         } else {
             ptype = _set_ptype(ptype, SUBJECT_NORMAL);
             break;
