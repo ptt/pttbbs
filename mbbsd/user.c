@@ -226,7 +226,7 @@ user_display(const userec_t * u, int adminmode)
 
 	outs("\t¾á¥ôªO¥D: ");
 
-	for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
+	for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
 	    if ( is_uBM(bhdr->BM, u->userid)) {
 		outs(bhdr->brdname);
 		outc(' ');

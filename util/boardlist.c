@@ -21,8 +21,10 @@ load_uidofgid(const int gid, const int type)
 {
     boardheader_t  *bptr, *currbptr, *parent;
     int             bid, n, childcount = 0;
+    int             boardcount;
     currbptr = parent = &bcache[gid - 1];
-    for (n = 0; n < numboards; ++n) {
+    boardcount = num_boards();
+    for (n = 0; n < boardcount; ++n) {
 	bid = SHM->bsorted[type][n]+1;
 	if( bid<=0 || !(bptr = &bcache[bid-1])
 		|| bptr->brdname[0] == '\0' )

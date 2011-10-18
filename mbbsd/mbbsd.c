@@ -982,10 +982,10 @@ where(const char *from)
 static void
 check_BM(void)
 {
-    int i;
+    int i, total;
 
     assert(HasUserPerm(PERM_BM));
-    for( i = 0 ; i < numboards ; ++i )
+    for( i = 0, total = num_boards() ; i < total ; ++i )
 	if( is_BM_cache(i + 1) ) /* XXXbid */
 	    return;
 
@@ -1174,7 +1174,6 @@ user_login(void)
      * 否則可藉機 race condition 達到 multi-login */
 
     /* resolve_boards(); */
-    numboards = SHM->Bnumber;
 
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);

@@ -4,7 +4,6 @@
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
 extern boardheader_t *bcache;
-extern int numboards;
 
 #ifndef LAZY_BM_LIMIT_DAYS  
 #define LAZY_BM_LIMIT_DAYS  (90)
@@ -77,9 +76,12 @@ int main(int argc, char *argv[])
 {
     int bmid, i, j=0;
     FILE *inf, *firef;
+    int numboards;
+
     time4_t now=time(NULL); 
     attach_SHM();
     resolve_boards();
+    numboards = num_boards();
 
     if(passwd_init())
 	exit(1);      

@@ -136,7 +136,6 @@ attach_check_SHM(int version, int SHM_t_size)
     if (SHM->Btouchtime == 0)
 	SHM->Btouchtime = 1;
     bcache = SHM->bcache;
-    numboards = SHM->Bnumber;
 
     if (SHM->Ptouchtime == 0)
 	SHM->Ptouchtime = 1;
@@ -508,14 +507,17 @@ void resolve_boards(void)
     while (SHM->Buptime < SHM->Btouchtime) {
 	reload_bcache();
     }
-    numboards = SHM->Bnumber;
+}
+
+int num_boards(void)
+{
+    return SHM->Bnumber;
 }
 
 void addbrd_touchcache(void)
 {
     SHM->Bnumber++;
-    numboards = SHM->Bnumber;
-    reset_board(numboards);
+    reset_board(num_boards());
     sort_bcache();
 }
 

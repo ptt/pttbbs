@@ -66,6 +66,7 @@ extern void touchbtotal(int bid);
 extern void sort_bcache(void);
 extern void reload_bcache(void);
 extern void resolve_boards(void);
+extern int  num_boards(void);
 extern void addbrd_touchcache(void);
 extern void reset_board(int bid);
 extern void setbottomtotal(int bid);

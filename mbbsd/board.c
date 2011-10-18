@@ -838,11 +838,13 @@ load_uidofgid(const int gid, const int type)
 {
     boardheader_t  *bptr, *currbptr, *parent;
     int             bid, n, childcount = 0;
+    int             boardcount;
     assert(0<=type && type<2);
     assert(0<= gid-1 && gid-1<MAX_BOARD);
     currbptr = parent = &bcache[gid - 1];
-    assert(0<=numboards && numboards<=MAX_BOARD);
-    for (n = 0; n < numboards; ++n) {
+    boardcount = num_boards();
+    assert(0<=boardcount && boardcount<=MAX_BOARD);
+    for (n = 0; n < boardcount; ++n) {
 	bid = SHM->bsorted[type][n]+1;
 	if( bid<=0 || !(bptr = getbcache(bid)) 
 		|| bptr->brdname[0] == '\0' )
@@ -1016,7 +1018,7 @@ load_boards(char *key)
 	}
 #endif
 	else { // general case
-	    nbrdsize = numboards;
+	    nbrdsize = num_boards();
 	    assert(0<nbrdsize && nbrdsize<=MAX_BOARD);
 	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * nbrdsize);
 	    for (i = 0; i < nbrdsize; i++) {

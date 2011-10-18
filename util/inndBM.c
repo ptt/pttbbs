@@ -171,7 +171,8 @@ int main(int argc, char **argv)
      }
 
     // 重設轉信與不轉信板標記
-    for(i=0;i<numboards;i++)
+    int total = num_boards();
+    for(i=0;i<total;i++)
      {
        if(bcache[i].brdname[0]=='\0' ||
 	   (bcache[i].brdattr & BRD_GROUPBOARD) ) continue;

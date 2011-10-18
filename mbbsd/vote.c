@@ -321,6 +321,7 @@ b_closepolls(void)
 {
     boardheader_t  *fhp;
     int             pos;
+    int             total;
 
 #ifndef BARRIER_HAS_BEEN_IN_SHM
     char    *fn_vote_polling = ".polling";
@@ -341,7 +342,7 @@ b_closepolls(void)
     fclose(cfp);
 #endif
 
-    for (fhp = bcache, pos = 1; pos <= numboards; fhp++, pos++) {
+    for (fhp = bcache, pos = 1, total = num_boards(); pos <= total; fhp++, pos++) {
 	if (fhp->bvote && b_close(fhp)) {
 	    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 		outs(err_board_update);

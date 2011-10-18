@@ -1146,8 +1146,8 @@ int updatenewfav(int mode)
 
     if( (fd = OpenCreate(fname, O_RDWR)) != -1 ){
 
-	assert(numboards>=0);
-	brdnum = numboards; /* avoid race */
+	brdnum = num_boards(); /* avoid race */
+	assert(brdnum >= 0);
 
 	if ((brd = (char *)malloc((brdnum + 1) * sizeof(char))) == NULL)
 	    return -1;

@@ -793,6 +793,7 @@ whereami(void)
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
     int             i, j;
     int bid = currbid;
+    int total_boards;
 
     if (!bid)
 	return 0;
@@ -802,7 +803,9 @@ whereami(void)
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     bh = getbcache(bid);
     p[0] = bh;
-    for (i = 0; i+1 < WHEREAMI_LEVEL && p[i]->parent>1 && p[i]->parent < numboards; i++)
+    for (i = 0, total_boards = num_boards();
+         i+1 < WHEREAMI_LEVEL && p[i]->parent>1 && p[i]->parent < total_boards;
+         i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
     prints("§Ú¦b­þ?\n%-40.40s %.13s\n", p[j]->title + 7, p[j]->BM);

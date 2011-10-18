@@ -144,7 +144,7 @@ apply_boards(int (*func) (boardheader_t *))
     register int    i;
     register boardheader_t *bhdr;
 
-    for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
+    for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
 	if (!(bhdr->brdattr & BRD_GROUPBOARD) && HasBoardPerm(bhdr) &&
 	    (*func) (bhdr) == QUIT)
 	    return QUIT;

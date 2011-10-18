@@ -4,7 +4,6 @@
 #define GROUPROOT BBSHOME"/man/group"
 
 extern boardheader_t *bcache;
-extern int numboards;
 
 int cmpboardclass(const void *a, const void *b)
 {
@@ -23,8 +22,9 @@ void buildchilds(int level,char *path,int gid)
     int preserved=32;
     selected=malloc(preserved * sizeof(boardheader_t*));
     
-    /* XXX It will cost O(ngroup * numboards) totally. */
-    for(i=0; i<numboards;  i++) {
+    int boardcount = num_boards();
+    /* XXX It will cost O(ngroup * boardcount) totally. */
+    for(i=0; i<boardcount;  i++) {
         ptr =&SHM->bcache[i];
 	if(ptr->gid != gid)
 	    continue;
