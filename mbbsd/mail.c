@@ -1509,7 +1509,6 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
     char            xboard[20], fname[80], xfpath[80], xtitle[80];
     fileheader_t    xfile;
     FILE           *xptr;
-    int             author = 0;
     char            genbuf[200];
     char            genbuf2[4];
     int		    xbid, ans;
@@ -1579,14 +1578,6 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
        return READ_REDRAW;
 #endif
 
-    // TODO reuse the code in bbs.c cross_post
-    author = 0;
-    if (HasUserPerm(PERM_SYSOP)) {
-        char ans[4];
-        getdata(2, 0, "保留原作者名稱嗎?[y/N] ", ans, 3, LCECHO);
-        if (ans[0] == 'y')
-            author = '1';
-    }
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     strip_ansi(xtitle, xtitle, STRIP_ALL);
 
@@ -1597,10 +1588,7 @@ mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
 	currmode = 0;
 	setbpath(xfpath, xboard);
 	stampfile(xfpath, &xfile);
-	if (author)
-	    strlcpy(xfile.owner, fhdr->owner, sizeof(xfile.owner));
-	else
-	    strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
+        strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
 	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;

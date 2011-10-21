@@ -1921,7 +1921,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
-    int             author, xbid, hashPost;
+    int             xbid, hashPost;
     boardheader_t  *bp, *xbp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -2045,14 +2045,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-    author = 0;
-    if (HasUserPerm(PERM_SYSOP)) {
-        char ans[4];
-        getdata(2, 0, "保留原作者名稱嗎?[y/N] ", ans, 3, LCECHO);
-        if (ans[0] == 'y')
-            author = '1';
-    };
-
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     // FIXME 這裡可能會有人偷偷生出保留標題(如[公告])
     // 不過算了，直接劣退這種人比較方便
@@ -2068,10 +2060,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	currmode = 0;
 	setbpath(xfpath, xboard);
 	stampfile(xfpath, &xfile);
-	if (author)
-	    strlcpy(xfile.owner, fhdr->owner, sizeof(xfile.owner));
-	else
-	    strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
+        strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
 	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;
