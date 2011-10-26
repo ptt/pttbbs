@@ -393,24 +393,16 @@ IsBoardForAllpost(boardheader_t *bp) {
     return (!bp->level) || (bp->brdattr & BRD_POSTMASK);
 }
 
-/* check post perm on demand, no double checks in current board
- * currboard MUST be defined!
- * XXX can we replace currboard with currbid ? */
 int
-CheckPostPerm(void)
-{
-    if (currmode & MODE_DIGEST)
-	return 0;
-    return CheckModifyPerm();
-}
-
-int
-CheckModifyPerm(void)
+CheckModifyPerm(const char **preason)
 {
     static time4_t last_chk_time = 0x0BAD0BB5; /* any magic number */
     static int last_board_index = 0; /* for speed up */
+    static const char *last_reason = NULL;
     int valid_index = 0;
     boardheader_t *bp = NULL;
+
+    assert(preason);
     
     // check if my own permission is changed.
     if (ISNEWPERM(currutmp))
@@ -465,15 +457,42 @@ CheckModifyPerm(void)
 
 	// vmsg("reload board postperm");
 	
-	if (haspostperm(currboard)) {
+        last_reason = postperm_msg(currboard);
+        *preason = last_reason;
+
+	if (last_reason) {
+            currmode &= ~MODE_POST;
+            return 0;
+        } else {
 	    currmode |= MODE_POST;
 	    return 1;
 	}
-	currmode &= ~MODE_POST;
-	return 0;
     }
+    *preason = last_reason;
     return (currmode & MODE_POST);
 }
+
+/* check post perm on demand, no double checks in current board
+ * currboard MUST be defined!
+ * XXX can we replace currboard with currbid ? */
+int CheckPostPerm2(const char **preason) {
+    const char *garbage = NULL;
+    if (!preason)
+        preason = &garbage;
+
+    if (currmode & MODE_DIGEST) {
+        *preason = "文摘無法發文";
+	return 0;
+    }
+    return CheckModifyPerm(preason);
+}
+
+int
+CheckPostPerm(void)
+{
+    return CheckPostPerm2(NULL);
+}
+
 
 char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
 {
@@ -1164,6 +1183,7 @@ do_general(int garbage)
     boardheader_t  *bp;
     int             islocal, posttype=-1, edflags = 0;
     char save_title[STRLEN];
+    char *reason = "無法發文";
 
     save_title[0] = '\0';
 
@@ -1171,14 +1191,14 @@ do_general(int garbage)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if( !CheckPostPerm()
+    if( !CheckPostPerm2(&reason)
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
 	&& !(HasUserFlag(UF_FOREIGN) && 
 	    strcmp(bp->brdname, BN_FOREIGN) == 0)
 #endif
 	) {
-	vmsg("對不起，您目前無法在此發表文章！");
+	vmsgf("無法發文: %s", reason);
 	return READ_REDRAW;
     }
 
@@ -2053,7 +2073,18 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
 
-    if (genbuf[0] == 'l' || genbuf[0] == 's') {
+    if (genbuf[0] != 'l' && genbuf[0] != 's')
+        return FULLUPDATE;
+
+#ifdef CROSSPOST_VERIFY_CAPTCHA
+    if (!verify_captcha("為了避免不當大量轉錄\n")) {
+        vmsg("文章未轉錄，請重試。");
+        return FULLUPDATE;
+    }
+#endif
+
+    {
+    // if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 	const char     *save_currboard;
 
@@ -2863,6 +2894,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
+    const char *reason = "權限不足";
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
@@ -2875,9 +2907,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
     }
-    if (!CheckPostPerm() || isGuest)
+    if (!CheckPostPerm2(&reason) || isGuest)
     {
-	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
+	vmsgf("無法推文: %s", reason); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
     }
 

@@ -71,7 +71,6 @@ int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
 int Read(void);
 int CheckPostPerm(void);
-int CheckModifyPerm(void);
 int CheckPostRestriction(int);
 void anticrosspost(void);
 int Select(void);
