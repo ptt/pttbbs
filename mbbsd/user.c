@@ -1151,7 +1151,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
             if (*last_uid) {
                 if (strcmp(last_uid, genbuf) != 0 &&
                     strcasecmp(last_uid, genbuf) == 0) {
-                    outs("錯誤! 不是說好不改大小寫了嗎？\n");
+                    vs_hdr(" ... 明明是改大小寫啊 ...");
+                    prints("\n\n\t%s -> %s\n", last_uid, genbuf);
+                    outs("\t不是說好不改大小寫了嗎？\n"
+                         "\t...  如果你真的打定主意要改，請重新登入吧\n");
                     fail++;
                     break;
                 }
