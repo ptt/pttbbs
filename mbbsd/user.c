@@ -1151,16 +1151,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
             if (*last_uid) {
                 if (strcmp(last_uid, genbuf) != 0 &&
                     strcasecmp(last_uid, genbuf) == 0) {
-                    vs_hdr("搞啥？");
-                    // oh-no...
-                    outs("\n\n\n" ANSI_COLOR(1;31)
-                         "\t叫你別改大小寫你還改？" ANSI_RESET);
+                    outs("錯誤! 不是說好不改大小寫了嗎？\n");
                     fail++;
                     break;
                 }
             }
 	    if (searchuser(genbuf, NULL)) {
-		outs("錯誤! 已經有同樣 ID 的使用者");
+		outs("錯誤! 已經有同樣 ID 的使用者\n");
 		fail++;
 #if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
 	    } else if ( regcheck_ambiguous_userid_exist(genbuf) > 0 &&
