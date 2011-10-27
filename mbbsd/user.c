@@ -1138,19 +1138,41 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	break;
 
     case '5':
+        mvouts(b_lines - 3, 0,
+               "已知很多使用者搞不清狀況改完 ID 大小寫會哭哭無法修改以前文章\n"
+               "請停止改大小寫的服務。\n");
+        if (vans("你是要改大小寫嗎？ [Y/n]") != 'n') {
+            fail++;
+            break;
+        }
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
 			DOECHO, x.userid)) {
+            static char last_uid[IDLEN + 1];
+            if (*last_uid) {
+                if (strcmp(last_uid, genbuf) != 0 &&
+                    strcasecmp(last_uid, genbuf) == 0) {
+                    vs_hdr("搞啥？");
+                    // oh-no...
+                    outs("\n\n\n" ANSI_COLOR(1;31)
+                         "\t叫你別改大小寫你還改？" ANSI_RESET);
+                    fail++;
+                    break;
+                }
+            }
 	    if (searchuser(genbuf, NULL)) {
 		outs("錯誤! 已經有同樣 ID 的使用者");
 		fail++;
 #if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
 	    } else if ( regcheck_ambiguous_userid_exist(genbuf) > 0 &&
-			vans("此代號過於近似它人帳號，確定使用者沒有要幹壞事嗎? [y/N] ") != 'y')
+			vans("此代號過於近似它人帳號，"
+                             "確定使用者沒有要幹壞事嗎? [y/N] ") != 'y')
 	    {
 		    fail++;
 #endif
-	    } else
+	    } else {
+                strlcpy(last_uid, x.userid, sizeof(last_uid));
 		strlcpy(x.userid, genbuf, sizeof(x.userid));
+            }
 	}
 	break;
 
