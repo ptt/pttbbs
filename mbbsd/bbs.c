@@ -1293,7 +1293,10 @@ do_general(int garbage)
 
     /* build filename */
     setbpath(fpath, currboard);
-    stampfile(fpath, &postfile);
+    if (stampfile(fpath, &postfile) < 0) {
+        vmsg("系統錯誤: 無法寫入檔案。");
+        return FULLUPDATE;
+    }
     if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {
 	setbnfile(genbuf, bp->brdname, "postsample", posttype);
 	Copy(genbuf, fpath);
@@ -2090,7 +2093,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	currmode = 0;
 	setbpath(xfpath, xboard);
-	stampfile(xfpath, &xfile);
+        if (stampfile(xfpath, &xfile) < 0) {
+            vmsg("系統錯誤: 無法寫入檔案");
+            return FULLUPDATE;
+        }
         strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
 	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
 	if (genbuf[0] == 'l') {
@@ -2826,7 +2832,8 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
         close(fd);
 #endif
     } else {
-	vmsg("錯誤: 原檔案已被刪除。 無法寫入。");
+	vmsg((errno == EROFS) ? "錯誤: 系統目前唯讀中，無法修改。" :
+             "錯誤: 原檔案已被刪除。 無法寫入。");
 	goto error;
     }
 

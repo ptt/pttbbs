@@ -1140,11 +1140,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '5':
         mvouts(b_lines - 3, 0,
                "已知很多使用者搞不清狀況改完 ID 大小寫會哭哭無法修改以前文章\n"
-               "請停止改大小寫的服務。\n");
+               "且會有不少管理/維護上的問題，所以請停止改大小寫的服務。\n");
         if (vans("你是要改大小寫嗎？ [Y/n]") != 'n') {
             fail++;
             break;
         }
+        move(3, 0); clrtobot();
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
 			DOECHO, x.userid)) {
             static char last_uid[IDLEN + 1];
@@ -1154,7 +1155,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
                     vs_hdr(" ... 明明是改大小寫啊 ...");
                     prints("\n\n\t%s -> %s\n", last_uid, genbuf);
                     outs("\t不是說好不改大小寫了嗎？\n"
-                         "\t...  如果你真的打定主意要改，請重新登入吧\n");
+                         "\t...  如果你真的打定主意要改，請重新登入吧 ...\n");
                     fail++;
                     break;
                 }
