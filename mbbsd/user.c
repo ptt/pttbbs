@@ -1138,28 +1138,16 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	break;
 
     case '5':
-        mvouts(b_lines - 3, 0,
-               "已知很多使用者搞不清狀況改完 ID 大小寫會哭哭無法修改以前文章\n"
-               "且會有不少管理/維護上的問題，所以請停止改大小寫的服務。\n");
-        if (vans("你是要改大小寫嗎？ [Y/n]") != 'n') {
-            fail++;
-            break;
-        }
-        move(3, 0); clrtobot();
+        mvouts(b_lines - 8, 0, "\n" 
+           "已知很多使用者搞不清狀況改完 ID 大小寫會哭哭無法修改以前文章，\n"
+           "且有不少管理/維護的問題，"
+           ANSI_COLOR(1;31)
+           "所以請停止讓使用者自行申請改大小寫的服務。\n" ANSI_RESET
+           "除非是站務需求(如解決近似ID) 不然請勿使用此功\能改大小寫\n");
+        clrtobot();
+
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
 			DOECHO, x.userid)) {
-            static char last_uid[IDLEN + 1];
-            if (*last_uid) {
-                if (strcmp(last_uid, genbuf) != 0 &&
-                    strcasecmp(last_uid, genbuf) == 0) {
-                    vs_hdr(" ... 明明是改大小寫啊 ...");
-                    prints("\n\n\t%s -> %s\n", last_uid, genbuf);
-                    outs("\t不是說好不改大小寫了嗎？\n"
-                         "\t...  如果你真的打定主意要改，請重新登入吧 ...\n");
-                    fail++;
-                    break;
-                }
-            }
 	    if (searchuser(genbuf, NULL)) {
 		outs("錯誤! 已經有同樣 ID 的使用者\n");
 		fail++;
@@ -1170,9 +1158,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    {
 		    fail++;
 #endif
-	    } else {
-                strlcpy(last_uid, x.userid, sizeof(last_uid));
-		strlcpy(x.userid, genbuf, sizeof(x.userid));
             }
 	}
 	break;
