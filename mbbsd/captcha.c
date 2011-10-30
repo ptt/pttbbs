@@ -49,14 +49,15 @@ gen_captcha(char *buf, int szbuf, char *fpath)
 
     // create file
     snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);
-    snprintf(cmd, sizeof(cmd), FIGLET_PATH " %s %s > %s",
-	    opts, buf, fpath);
+    snprintf(cmd, sizeof(cmd), FIGLET_PATH 
+             " %s %s >%s 2>/dev/null || rm %s",
+             opts, buf, fpath, fpath);
 
+    // for mbbsd daemons, system() may return -1 with errno=ECHILD,
+    // so we can only trust the command itself.
     // vmsg(cmd);
-    if (system(cmd) != 0)
-	return 0;
-
-    return 1;
+    system(cmd);
+    return dashf(fpath) && dashs(fpath) > 1;
 }
 
 
@@ -98,8 +99,7 @@ int verify_captcha(const char *reason)
 	if (tries % 2 == 0 || !captcha[0])
 	{
 	    // if generation failed, skip captcha.
-	    if (!gen_captcha(captcha, sizeof(captcha), fpath) ||
-		    !dashf(fpath))
+	    if (!gen_captcha(captcha, sizeof(captcha), fpath))
 		return 1;
 
 	    // prompt user about captcha
