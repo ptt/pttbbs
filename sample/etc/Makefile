@@ -8,7 +8,7 @@ FILES=	@five		Welcome		Welcome_birth	Welcome_login	\
 	feast		sysop		\
 	ve.hlp		board.help	boardlist.help	\
 	editable	expire.conf	domain_name_query.cidr	\
-	banemail	whitemail	whitemail.notice
+	banemail	whitemail	whitemail.notice ziphome.exclude
 
 all:
 

@@ -2228,7 +2228,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	assert(!invalidaddr(address));
 #ifdef MUTT_PATH
 	snprintf(fname, sizeof(fname),
-		 TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
+		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-cfz /tmp/home.%s.tgz home/%c/%s; "
 		 MUTT_PATH " -s 'home.%s.tgz' -a /tmp/home.%s.tgz -- '%s' </dev/null;"
 		 "rm /tmp/home.%s.tgz",
 		 cuser.userid, cuser.userid[0], cuser.userid,
@@ -2236,7 +2237,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	system(fname);
 	return 0;
 #else
-	snprintf(fname, sizeof(fname), TAR_PATH " cfz - home/%c/%s | "
+	snprintf(fname, sizeof(fname),
+		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-cfz - home/%c/%s | "
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
 	system(fname);
