@@ -2158,6 +2158,14 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	    }
 	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
     }
+    if (mode == 'Z') {
+        if (strstr(address, MYHOSTNAME) ||
+            strstr(address, ".bbs@")) {
+            vmsg("不可使用 BBS 信箱。");
+            return 1;
+        }
+    }
+    // XXX bug: if user has already provided mail address...
     /* according to our experiment, many users leave blanks */
     trim(address);
     if (invalidaddr(address))
@@ -2229,8 +2237,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 #ifdef MUTT_PATH
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-cfz /tmp/home.%s.tgz home/%c/%s; "
-		 MUTT_PATH " -s 'home.%s.tgz' -a /tmp/home.%s.tgz -- '%s' </dev/null;"
+                 "-czf /tmp/home.%s.tgz home/%c/%s; "
+		 MUTT_PATH " -s 'home.%s.tgz' "
+                 "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
 		 "rm /tmp/home.%s.tgz",
 		 cuser.userid, cuser.userid[0], cuser.userid,
 		 cuser.userid, cuser.userid, address, cuser.userid);
@@ -2239,7 +2248,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 #else
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-cfz - home/%c/%s | "
+                 "-czf - home/%c/%s | "
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
 	system(fname);
