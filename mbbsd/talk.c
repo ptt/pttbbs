@@ -887,13 +887,15 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	if (!fp_writelog) {
 	    sethomefile(genbuf, cuser.userid, fn_writelog);
 	    fp_writelog = fopen(genbuf, "a");
-	    assert(fp_writelog);
 	}
 	if (fp_writelog) {
 	    fprintf(fp_writelog, "To %s: %s [%s]\n",
 		    destid, msg, Cdatelite(&now));
 	    snprintf(t_last_write, 66, "To %s: %s", destid, msg);
-	}
+	} else {
+            vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
+            return 0;
+        }
     }
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
 	/* 不懂 */
