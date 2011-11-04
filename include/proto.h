@@ -363,6 +363,7 @@ int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *fr
 void hold_mail(const char *fpath, const char *receiver, const char *title);
 void m_init(void);
 int chkmailbox(void);
+int chkmailbox_hard_limit(void);
 int mail_man(void);
 int m_new(void);
 int m_send(void);

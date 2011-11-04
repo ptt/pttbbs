@@ -315,6 +315,8 @@ setupmailusage(void)
 
 #define MAILBOX_LIM_OK   0
 #define MAILBOX_LIM_KEEP 1
+#define MAILBOX_LIM_HARD  2
+
 static int
 chk_mailbox_limit(void)
 {
@@ -324,9 +326,14 @@ chk_mailbox_limit(void)
     if (!mailkeep)
 	setupmailusage();
 
-    if (mailkeep > mailmaxkeep)
-	return MAILBOX_LIM_KEEP;
-    return MAILBOX_LIM_OK;
+    if (mailkeep < mailmaxkeep)
+        return MAILBOX_LIM_OK;
+
+    if ((mailkeep / 100 < mailmaxkeep)
+        || HasUserPerm(PERM_ADMIN))
+        return MAILBOX_LIM_KEEP;
+    else
+        return MAILBOX_LIM_HARD;
 }
 
 int
@@ -335,8 +342,9 @@ chkmailbox(void)
     m_init();
 
     switch (chk_mailbox_limit()) {
-	case MAILBOX_LIM_KEEP:
+	case MAILBOX_LIM_HARD:
 	    bell();
+	case MAILBOX_LIM_KEEP:
 	    bell();
 	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
@@ -344,6 +352,15 @@ chkmailbox(void)
 	default:
 	    return 0;
     }
+}
+
+int
+chkmailbox_hard_limit() {
+    if (chk_mailbox_limit() == MAILBOX_LIM_HARD) {
+        vmsgf("您保存信件數目 %d 遠超出上限 %d, 請整理", mailkeep, mailmaxkeep);
+        return 1;
+    }
+    return 0;
 }
 
 static void

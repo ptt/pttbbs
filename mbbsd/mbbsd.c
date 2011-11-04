@@ -1137,8 +1137,9 @@ inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm 
 
 inline static void check_mailbox_quota(void)
 {
-    if (chkmailbox())
-	m_read();
+    if (chkmailbox()) do {
+        m_read();
+    } while (chkmailbox_hard_limit());
 }
 
 static void init_guest_info(void)
@@ -1249,11 +1250,11 @@ user_login(void)
 
 	append_log_recent_login();
 	check_bad_login();
-	check_mailbox_quota();
 	check_register();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
 	restore_backup();
+	check_mailbox_quota();
 
 	// XXX 這個 check 花不少時間，有點間隔比較好
 	if (HasUserPerm(PERM_BM) && 
@@ -1281,7 +1282,6 @@ user_login(void)
 	outs("抱歉，您的帳號資料異常或已被停權。\n");
 	pressanykey();
 	exit(1);
-	// check_mailbox_quota();
     }
 
     if(ptime.tm_yday!=lasttime.tm_yday)
