@@ -620,7 +620,10 @@ m_mod_board(char *bname)
 	while (getdata(9, 0, "新看板名稱：", genbuf, IDLEN + 1, DOECHO)) {
 	    if (getbnum(genbuf)) {
                 mvouts(10, 0, "錯誤: 此新看板名已存在\n");
-            } else if ( is_valid_brdname(genbuf) ){
+            } else if ( !is_valid_brdname(genbuf) ) {
+                mvouts(10, 0, "錯誤: 無法使用此名稱。"
+                       "請使用英數字或 _-. 且開頭不得為數字。\n");
+            } else {
                 if (genbuf[0] != bh.brdname[0]) {
                     // change to 0 if you want to force permission when renaming
                     // with different initial character.
@@ -812,7 +815,11 @@ m_newbrd(int whatclass, int recover)
 	if (!getdata(3, 0, msg_bid, newboard.brdname,
 		     sizeof(newboard.brdname), DOECHO))
 	    return -1;
-    } while (!is_valid_brdname(newboard.brdname));
+        if (is_valid_brdname(newboard.brdname))
+            break;
+        // some i* need to be acknowledged
+        vmsg("無法使用此名稱，請使用英數字或 _-. 且開頭不得為數字。");
+    } while (true);
 
     do {
 	getdata(6, 0, "看板類別：", genbuf, 5, DOECHO);
@@ -821,7 +828,6 @@ m_newbrd(int whatclass, int recover)
     } while (1);
 
     strcpy(newboard.title, genbuf);
-
     newboard.title[4] = ' ';
 
     getdata(8, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO);
