@@ -1090,7 +1090,7 @@ void fav_add_all_tagged_item(void)
     fav_dosomething_all_tagged_item(fav_add_tagged_item);
 }
 
-inline static int remove_tag(fav_t *fp, fav_type_t  *ft)
+inline static int remove_tag(fav_t *fp GCC_UNUSED, fav_type_t  *ft)
 {
     set_attr(ft, FAVH_TAG, FALSE);
     return 0;

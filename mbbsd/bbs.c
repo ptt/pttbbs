@@ -1127,7 +1127,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
     int bid = getbnum(brd);
-    char *title, *prefix = "";
+    const char *title, *prefix = "";
     int title_type = SUBJECT_NORMAL;
 
     if(bid <= 0 || bid > MAX_BOARD) return;
@@ -1167,7 +1167,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
 }
 
 static int
-do_general(int garbage)
+do_general(int garbage GCC_UNUSED)
 {
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
@@ -1183,7 +1183,7 @@ do_general(int garbage)
     boardheader_t  *bp;
     int             islocal, posttype=-1, edflags = 0;
     char save_title[STRLEN];
-    char *reason = "無法發文";
+    const char *reason = "無法發文";
 
     save_title[0] = '\0';
 
@@ -1613,7 +1613,8 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 }
 
 int
-b_call_in(int ent, const fileheader_t * fhdr, const char *direct)
+b_call_in(int ent GCC_UNUSED, const fileheader_t * fhdr,
+          const char *direct GCC_UNUSED)
 {
     userinfo_t     *u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
@@ -1665,7 +1666,8 @@ do_reply(/*const*/ fileheader_t * fhdr)
 }
 
 static int
-reply_post(int ent, /*const*/ fileheader_t * fhdr, const char *direct)
+reply_post(int ent GCC_UNUSED, fileheader_t * fhdr,
+           const char *direct GCC_UNUSED)
 {
     return do_reply(fhdr);
 }
@@ -1931,7 +1933,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 int
-old_cross_post(int ent, fileheader_t * fhdr, const char *direct)
+old_cross_post(int e GCC_UNUSED, fileheader_t* g GCC_UNUSED,
+               const char *d GCC_UNUSED)
 {
     vmsg("為了避免您誤按，轉錄按鍵已改為 Ctrl-X");
     return  PARTUPDATE;
@@ -1941,7 +1944,7 @@ static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[PATHLEN], xfpath[PATHLEN], xtitle[80];
-    char            genbuf[200], genbuf2[4];
+    char            genbuf[200];
     fileheader_t    xfile;
     FILE           *xptr;
     int             xbid, hashPost;
@@ -2507,7 +2510,8 @@ stop_gamble(void)
     return 1;
 }
 static int
-join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
+join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
+            const char *direct GCC_UNUSED)
 {
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
@@ -2643,7 +2647,8 @@ hold_gamble(void)
 #endif
 
 static int
-cite_post(int ent, const fileheader_t * fhdr, const char *direct)
+cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
+          const char *direct GCC_UNUSED)
 {
     char            fpath[PATHLEN];
     char            title[TTLEN + 1];
@@ -3269,8 +3274,8 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 int
-del_range(int ent, const fileheader_t *fhdr, const char *direct,
-          const char *backup_direct)
+del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
+          const char *direct, const char *backup_direct)
 {
     char            numstr[8];
     int             num1, num2, num, cdeleted = 0;
@@ -3683,7 +3688,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int  // Ptt: 修石頭文   
-show_filename(int ent, const fileheader_t * fhdr, const char *direct)
+show_filename(int ent GCC_UNUSED, const fileheader_t * fhdr,
+              const char *direct GCC_UNUSED)
 {
     if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
     vmsgf("檔案名稱: %s ", fhdr->filename);
@@ -3746,7 +3752,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 } 
 
 static int
-view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln)
+view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
+              const char *direct GCC_UNUSED, int crs_ln)
 {
     aidu_t aidu = 0;
     int l = crs_ln + 3;  /* line of cursor */
@@ -3888,7 +3895,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 
 #ifdef USE_TIME_CAPSULE
 static int
-view_posthistory(int ent, const fileheader_t * fhdr, const char *direct)
+view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *direct)
 {
     char fpath[PATHLEN];
     const char *err_no_history = "此篇文章暫無編輯歷史記錄。"
@@ -4271,7 +4278,8 @@ b_help(void)
 }
 
 static int
-b_mark_read_unread(int ent, const fileheader_t * fhdr, const char *direct) {
+b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
+                   const char *direct GCC_UNUSED) {
     char ans[3];
     time4_t curr;
     move(b_lines-4, 0); clrtobot();

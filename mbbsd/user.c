@@ -295,7 +295,7 @@ user_display(const userec_t * u, int adminmode)
 	if (dashs(buf) > 0)
 	    outs("[自動轉寄]");
 
-	for (i = 0; i < sizeof(uflag_mask)/sizeof(uflag_mask[0]); i++)
+	for (i = 0; (size_t)i < sizeof(uflag_mask)/sizeof(uflag_mask[0]); i++)
 	{
 	    if (!(u->uflag & uflag_mask[i]))
 		continue;
@@ -888,7 +888,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atoi(buf)) >= 0)
 			x.numlogindays = tmp;
-		if (x.numlogindays > max_days)
+		if ((int)x.numlogindays > max_days)
 		{
 		    x.numlogindays = max_days;
 		    vmsgf("根據此使用者最後上線時間，最大值為 %d.", max_days);

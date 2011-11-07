@@ -38,7 +38,7 @@ init_tty(void)
 #define TERMCOMSIZE (40)
 
 static void
-sig_term_resize(int sig)
+sig_term_resize(int sig GCC_UNUSED)
 {
     struct winsize  newsize;
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */

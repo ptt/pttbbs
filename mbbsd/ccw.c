@@ -582,7 +582,7 @@ ccw_talk_header(CCW_CTX *ctx)
 }
 
 CCW_PROTO void
-ccw_talk_footer(CCW_CTX *ctx)
+ccw_talk_footer(CCW_CTX *ctx GCC_UNUSED)
 {
     vs_footer(" 【" CCW_CAP_TALK "】 ", 
             " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
@@ -1033,7 +1033,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
 #endif // EXP_ANTIFLOOD
 
 CCW_PROTO int
-ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
+ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local GCC_UNUSED)
 {
     ccw_chat_check_newmail(ctx);
 #ifdef EXP_ANTIFLOOD

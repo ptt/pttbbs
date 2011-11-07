@@ -515,9 +515,9 @@ char *aidu2fn(char *fn, aidu_t aidu)
   return fn;
 }
 
-aidu_t aidc2aidu(char *aidc)
+aidu_t aidc2aidu(const char *aidc)
 {
-  char *sp = aidc;
+  const char *sp = aidc;
   aidu_t aidu = 0;
 
   if(aidc == NULL)

@@ -43,26 +43,26 @@ typedef struct {
 } PSB_CTX;
 
 static int
-psb_default_header(void *ctx) {
+psb_default_header(void *ctx GCC_UNUSED) {
     vs_hdr2bar("Panty & Stocking Browser", BBSNAME);
     return 0;
 }
 
 static int
-psb_default_footer(void *ctx) {
+psb_default_footer(void *ctx GCC_UNUSED) {
     vs_footer(" PSB 1.0 ",
               " (↑/↓/PgUp/PgDn/0-9)Move (Enter/→)Select \t(q/←)Quit");
     return 0;
 }
 
 static int
-psb_default_renderer(int i, int curr, int total, int rows, void *ctx) {
+psb_default_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx GCC_UNUSED) {
     prints("   %s(Demo) %5d / %5d Item\n", (i == curr) ? "*" : " ", i, total);
     return 0;
 }
 
 static int
-psb_default_cursor(int y, int curr, void * ctx) {
+psb_default_cursor(int y, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
 #ifdef USE_PFTERM
     outs("●\b");
 #else
@@ -72,7 +72,7 @@ psb_default_cursor(int y, int curr, void * ctx) {
 }
 
 static int
-psb_default_input_processor(int key, int curr, int total, int rows, void *ctx) {
+psb_default_input_processor(int key, int curr, int total, int rows, void *ctx GCC_UNUSED) {
     switch(key) {
         case 'q':
         case KEY_LEFT:
@@ -224,7 +224,7 @@ pveh_header(void *ctx) {
 }
 
 static int
-pveh_footer(void *ctx) {
+pveh_footer(void *ctx GCC_UNUSED) {
     vs_footer(" 編輯歷史 ",
               " (↑↓)移動 (Enter/r/→)選擇 (x)存入信箱 "
               "(~)" RECYCLE_BIN_NAME
@@ -244,7 +244,7 @@ pveh_solve_rev_filename(int rev, int i, char *fname, size_t sz_fname,
 }
 
 static int
-pveh_renderer(int i, int curr, int total, int rows, void *ctx) {
+pveh_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     const char *subject = "";
     char fname[PATHLEN];
     time4_t ftime = 0;
@@ -278,7 +278,7 @@ pveh_renderer(int i, int curr, int total, int rows, void *ctx) {
 }
 
 static int
-pveh_input_processor(int key, int curr, int total, int rows, void *ctx) {
+pveh_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     char fname[PATHLEN];
     pveh_ctx *cx = (pveh_ctx*) ctx;
     int rev = total - curr; // see renderer
@@ -414,7 +414,7 @@ pvrb_header(void *ctx) {
 }
 
 static int
-pvrb_footer(void *ctx) {
+pvrb_footer(void *ctx GCC_UNUSED) {
     vs_footer(" 已刪檔案 ",
               " (↑/↓/PgUp/PgDn)移動 (Enter/r/→)選擇 (/a#n)搜尋 (x)存入信箱"
               "\t(q/←)跳出");
@@ -423,7 +423,7 @@ pvrb_footer(void *ctx) {
 }
 
 static int
-pvrb_renderer(int i, int curr, int total, int rows, void *ctx) {
+pvrb_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
     fileheader_t *fh = &cx->records[total - i - 1];
 
@@ -502,7 +502,7 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
 }
 
 static int
-pvrb_input_processor(int key, int curr, int total, int rows, void *ctx) {
+pvrb_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     char fname[PATHLEN];
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
@@ -660,7 +660,7 @@ typedef struct {
 } pae_ctx;
 
 static int
-pae_header(void *ctx) {
+pae_header(void *ctx GCC_UNUSED) {
     vs_hdr2bar(" 【系統檔案】 ", "  編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
     vbarf(ANSI_REVERSE
@@ -669,7 +669,7 @@ pae_header(void *ctx) {
 }
 
 static int
-pae_footer(void *ctx) {
+pae_footer(void *ctx GCC_UNUSED) {
     vs_footer(" 編輯系統檔案 ",
               " (↑↓/0-9)移動 (Enter/e/r/→)編輯 (DEL/d)刪除 \t(q/←)跳出");
     move(b_lines-1, 0);
@@ -677,7 +677,7 @@ pae_footer(void *ctx) {
 }
 
 static int
-pae_renderer(int i, int curr, int total, int rows, void *ctx) {
+pae_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx;
     prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET "\n", 
             i+1,
@@ -688,7 +688,7 @@ pae_renderer(int i, int curr, int total, int rows, void *ctx) {
 }
 
 static int
-pae_input_processor(int key, int curr, int total, int rows, void *ctx) {
+pae_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
     int result;
     pae_ctx *cx = (pae_ctx*) ctx;
 

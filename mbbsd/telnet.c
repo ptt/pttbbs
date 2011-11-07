@@ -7,19 +7,19 @@ static char		raw_connection = 0;
 extern void UpdateClientCode(unsigned char c);
 
 static void 
-telnet_cb_update_client_code(void *cc_arg, unsigned char c)
+telnet_cb_update_client_code(void *cc_arg GCC_UNUSED, unsigned char c)
 {
     UpdateClientCode(c);
 }
 #endif
 
 static void 
-telnet_cb_resize_term(void *resize_arg, int w, int h)
+telnet_cb_resize_term(void *resize_arg GCC_UNUSED, int w, int h)
 {
     term_resize(w, h);
 }
 
-const static struct TelnetCallback telnet_callback = {
+static const struct TelnetCallback telnet_callback = {
     NULL,
     telnet_cb_resize_term,
 #ifdef DETECT_CLIENT

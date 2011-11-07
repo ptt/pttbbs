@@ -70,7 +70,7 @@ static sigjmp_buf sigjmpEnv;
  */
 static ChessTimeLimit * _current_time_limit;
 
-static void SigjmpEnv(int sig) { siglongjmp(sigjmpEnv, 1); }
+static void SigjmpEnv(int sig GCC_UNUSED) { siglongjmp(sigjmpEnv, 1); }
 
 #define CHESS_HISTORY_ENTRY(INFO,N) \
     ((INFO)->history.body + (N) * (INFO)->constants->step_entry_size)
@@ -136,7 +136,7 @@ ChessBroadcastListInsert(ChessBroadcastList* list)
 static void
 ChessDrawHelpLine(const ChessInfo* info)
 {
-    const static char* const HelpStr[] =
+    static const char* const HelpStr[] =
     {
 	/* CHESS_MODE_VERSUS, ¹ï«³ */
 	ANSI_COLOR(1;33;42) " ¤U´Ñ "
@@ -427,12 +427,12 @@ ChessAnswerRequest(ChessInfo* info, const char* req_name)
 ChessGameResult
 ChessPlayFuncMy(ChessInfo* info)
 {
-    int last_time = now;
-    int endturn = 0;
+    volatile int last_time = now;
+    volatile int endturn = 0;
     ChessGameResult game_result = CHESS_RESULT_CONTINUE;
     int ch;
 #ifdef DBCSAWARE
-    int move_count = 0;
+    volatile int move_count = 0;
 #endif
 
     info->pass[(int) info->turn] = 0;
@@ -632,8 +632,8 @@ ChessPlayFuncMy(ChessInfo* info)
 static ChessGameResult
 ChessPlayFuncHis(ChessInfo* info)
 {
-    int last_time = now;
-    int endturn = 0;
+    volatile int last_time = now;
+    volatile int endturn = 0;
     ChessGameResult game_result = CHESS_RESULT_CONTINUE;
 
     while (!endturn) {
@@ -887,7 +887,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 }
 
 static void
-ChessWatchRequest(int sig)
+ChessWatchRequest(int sig GCC_UNUSED)
 {
     int sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
     ChessBroadcastListNode* node;

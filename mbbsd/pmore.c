@@ -751,7 +751,7 @@ MFPROTO void mf_determinemaxdisps(int, int);
 #include <sys/wait.h>
 
 MFPROTO int
-mf_gunzip(const char *fn, int fd)
+mf_gunzip(const char *fn GCC_UNUSED, int fd)
 {
     char magic[2] = {0};
     const char gzip_magic[2] = {0x1f, 0x8b};
@@ -3142,7 +3142,7 @@ mf_str2float(unsigned char *p, unsigned char *end, float *pf)
 
     /* process time */
     while ( p < end && 
-            cbuf < sizeof(buf)-1 &&
+            cbuf < (int)sizeof(buf)-1 &&
             (isdigit(*p) || *p == '.' || *p == '+' || *p == '-'))
         buf[cbuf++] = *p++;
 
@@ -3462,7 +3462,7 @@ MFPROTO int
 mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
 {
     const unsigned char *p = name;
-    size_t sz = 0;
+    ssize_t sz = 0;
 
     // resolve name first
     while (p < end && isalnum(*p))

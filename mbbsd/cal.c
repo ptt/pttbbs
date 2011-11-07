@@ -96,7 +96,7 @@ unlockutmpmode(void)
 }
 
 static int 
-do_pay(int uid, int money, const char *item, const char *reason)  
+do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)  
 { 
     int oldm, newm; 
     const char *userid; 
@@ -300,7 +300,7 @@ cal_after_givetax(int money)
 }
 
 static int 
-give_money_vget_changecb(int key, VGET_RUNTIME *prt, void *instance)
+give_money_vget_changecb(int key GCC_UNUSED, VGET_RUNTIME *prt, void *instance)
 {
     int  m1 = atoi(prt->buf), m2 = m1;
     char c1 = ' ', c2 = ' ';

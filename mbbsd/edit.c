@@ -2859,7 +2859,7 @@ edit_outs_attr(const char *text, int attr)
 }
 
 static void
-edit_ansi_outs_n(const char *str, int n, int attr)
+edit_ansi_outs_n(const char *str, int n, int attr GCC_UNUSED)
 {
     char c;
     while (n-- > 0 && (c = *str++)) {

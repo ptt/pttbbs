@@ -47,7 +47,7 @@ check_sysop_edit_perm(const char *fpath)
 }
 
 static int 
-common_pager_key_handler(int ch, void *ctx)
+common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 {
     switch(ch)
     {
@@ -368,7 +368,7 @@ static const char
 };
 
 static int 
-common_pmore_help_handler(int y, void *ctx)
+common_pmore_help_handler(int y, void *ctx GCC_UNUSED)
 {
     const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
     const int  cols[3] = { 29, 27, 20 },    // columns, to fit pmore built-ins
@@ -397,7 +397,8 @@ display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
 #define MACROSTRLEN(x) (sizeof(x)-1)
 
 static int
-common_pmore_footer_handler(int ratio, int width, void *ctx)
+common_pmore_footer_handler(int ratio GCC_UNUSED, int width,
+                            void *ctx GCC_UNUSED)
 {
 #define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 " 
 #define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "

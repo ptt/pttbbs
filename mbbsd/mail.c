@@ -1137,9 +1137,8 @@ mailtitle(void)
 static void
 maildoent(int num, fileheader_t * ent)
 {
-    char *title, *mark, *color = NULL, type = ' ';
-    char datepart[6];
-    char isonline = 0;
+    const char *title, *mark, *color = NULL;
+    char isonline = 0, datepart[6], type = ' ';
     int title_type = SUBJECT_NORMAL;
 
     if (ent->filemode & FILE_MARKED)
@@ -1305,22 +1304,6 @@ mail_read_all(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *di
 
     close(fd);
     return DIRCHANGED;
-}
-
-static int
-mail_unread(int ent, fileheader_t * fhdr, const char *direct)
-{
-    // this function may cause arguments, so please specify
-    // if you want this to be enabled.
-#ifdef USE_USER_MAIL_UNREAD
-    if (fhdr && fhdr->filemode & FILE_READ)
-    {
-	fhdr->filemode &= ~FILE_READ;
-	substitute_fileheader(direct, fhdr, fhdr, ent);
-	return FULLUPDATE;
-    }
-#endif // USE_USER_MAIL_UNREAD
-    return DONOTHING;
 }
 
 /* in boards/mail 回信給原作者，轉信站亦可 */
@@ -1521,14 +1504,14 @@ m_help(void)
 }
 
 static int
-mail_cross_post(int unused_arg, fileheader_t * fhdr, const char *direct)
+mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
+                const char *direct GCC_UNUSED)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80];
     fileheader_t    xfile;
     FILE           *xptr;
     char            genbuf[200];
-    char            genbuf2[4];
-    int		    xbid, ans;
+    int		    xbid;
 
     // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
     if (HasUserPerm(PERM_VIOLATELAW))
@@ -1838,7 +1821,8 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
 
 #ifdef USE_TIME_CAPSULE
 static int
-mail_recycle_bin(int ent, fileheader_t * fhdr, const char *direct) {
+mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
+                 const char *direct) {
     return psb_recycle_bin(direct, "個人信箱");
 }
 #else // USE_TIME_CAPSULE
@@ -1906,7 +1890,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'S'
     { 1, edit_title }, // 'T'
     { 0, NULL }, // 'U'
-    { 1, mail_unread }, // 'V'
+    { 0, NULL }, // 'V'
     { 0, NULL }, // 'W'
     { 1, old_cross_post }, // 'X'
     { 0, NULL }, // 'Y'
@@ -2091,7 +2075,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 	if (strchr(rcpt, '@')) {
 	    strlcpy(hacker, rcpt, sizeof(hacker));
 	    len = ptr - rcpt;
-	    if (0 <= len && len < sizeof(hacker))
+	    if (0 <= len && (size_t)len < sizeof(hacker))
 		hacker[len] = '\0';
 	} else
 	    strlcpy(hacker, rcpt, sizeof(hacker));

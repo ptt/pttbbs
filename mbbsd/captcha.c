@@ -62,7 +62,7 @@ gen_captcha(char *buf, int szbuf, char *fpath)
 
 
 static int
-_vgetcb_data_upper(int key, VGET_RUNTIME *prt, void *instance)
+_vgetcb_data_upper(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance GCC_UNUSED)
 {
     if (key >= 'a' && key <= 'z')
 	key = toupper(key);
@@ -75,7 +75,7 @@ _vgetcb_data_upper(int key, VGET_RUNTIME *prt, void *instance)
 }
 
 static int
-_vgetcb_data_change(int key, VGET_RUNTIME *prt, void *instance)
+_vgetcb_data_change(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance GCC_UNUSED)
 {
     char *s = prt->buf;
     while (*s)

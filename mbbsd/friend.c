@@ -323,7 +323,7 @@ friend_delete(const char *uident, int type)
 }
 
 static void
-delete_user_friend(const char *uident, const char *thefriend, int type)
+delete_user_friend(const char *uident, const char *thefriend, int type GCC_UNUSED)
 {
     char fn[PATHLEN];
     // some stupid user simply set themselves and caused recursion here.
