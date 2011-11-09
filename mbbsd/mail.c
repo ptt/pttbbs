@@ -920,12 +920,30 @@ mail_all(void)
 int
 mail_mbox(void)
 {
-    char            cmd[100];
-    fileheader_t    fhdr;
+    char tagname[PATHLEN];
+    char cmd[PATHLEN*2];
+    fileheader_t fhdr;
+    time4_t last_tag = 0;
+
+    setuserfile(tagname, ".zipped_home");
+    last_tag = dasht(tagname);
+
+    if (last_tag > 0 && (now - last_tag) < 7 * DAY_SECONDS &&
+        !HasUserPerm(PERM_SYSOP)) {
+        vmsgf("每週僅可備份一次，離下次還有 %d 天。",
+              7 - (now - last_tag) / DAY_SECONDS);
+        return 0;
+    }
 
     snprintf(cmd, sizeof(cmd), "/tmp/%s.uu", cuser.userid);
     snprintf(fhdr.title, sizeof(fhdr.title), "%s 私人資料", cuser.userid);
-    doforward(cmd, &fhdr, 'Z');
+    // TODO doforward does not return real execution code... we may need to
+    // fix it in future.
+    if (doforward(cmd, &fhdr, 'Z') == 0) {
+        log_filef(tagname, LOG_CREAT,
+                  "%s %s\n", Cdatelite(&now), cmd);
+        rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
+    }
     return 0;
 }
 
