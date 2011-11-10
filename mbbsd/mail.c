@@ -1005,23 +1005,32 @@ read_new_mail(void * voidfptr, void *optarg)
     char            genbuf[4];
 
     arg->idc++;
+
+    if (fptr->filemode & FILE_READ)
+        return 0;
+
     // XXX fptr->filename may be invalid.
-    if (fptr->filemode || !fptr->filename[0])
-	return 0;
-    clear();
-    move(10, 0);
-    prints("您要讀來自[%s]的訊息(%s)嗎？", fptr->owner, fptr->title);
-    getdata(11, 0, "請您確定(Y/N/Q)?[Y] ", genbuf, 3, DOECHO);
-    if (genbuf[0] == 'q')
-	return QUIT;
-    if (genbuf[0] == 'n')
-	return 0;
+    if (*fptr->filename) {
+        clear();
+        move(10, 0);
+        prints("您要讀來自[%s]的訊息(%s)嗎？", fptr->owner, fptr->title);
+        getdata(11, 0, "請您確定(Y/N/Q)?[Y] ", genbuf, 3, LCECHO);
+        if (genbuf[0] == 'q')
+            return QUIT;
+        if (genbuf[0] == 'n')
+            return 0;
+    }
+
+    // no matter what, mark as read.
+    fptr->filemode |= FILE_READ;
+    // Race condition here...
+    if (substitute_fileheader(currmaildir, fptr, fptr, arg->idc))
+        return -1;
+
+    if (!*fptr->filename)
+        return -1;
 
     setuserfile(fname, fptr->filename);
-    fptr->filemode |= FILE_READ;
-    if (substitute_fileheader(currmaildir, fptr, fptr, arg->idc))
-	return -1;
-
     arg->mrd = 1;
     delete_it = NA;
     while (!done) {
