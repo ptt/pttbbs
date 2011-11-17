@@ -1,128 +1,121 @@
 /* $Id$ */
 #include "bbs.h"
+
+////////////////////////////////////////////////////////////////////////
+// Build configuration
+#ifndef NEWMAIL_CHECK_RANGE
+// Scanning whole .DIR will be too slow - so we only check few mails.
+// checking only 1 mail works more like brc style.
+// 20 (one page) or 5 may be good choices.
+// #define NEWMAIL_CHECK_RANGE (1)
+#define NEWMAIL_CHECK_RANGE (5)
+#endif
+
+////////////////////////////////////////////////////////////////////////
+// Local definition
+enum SHOWMAIL_MODES {
+    SHOWMAIL_NORM = 0,
+    SHOWMAIL_RANGE,
+};
+
+struct ReadNewMailArg {
+    int idc;
+    int *delmsgs;
+    int delcnt;
+    int mrd;
+};
+
+////////////////////////////////////////////////////////////////////////
+// Local variables (to speed up)
 static int      mailkeep = 0;
 static int      mailmaxkeep = 0;
 static char     currmaildir[PATHLEN];
 static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
-
-// check only 20 mails (one page) is enough.
-// #define NEWMAIL_CHECK_RANGE (1)
-// checking only 1 mail works more like brc style.
-#define NEWMAIL_CHECK_RANGE (5)
-
-enum SHOWMAIL_MODES {
-    SHOWMAIL_NORM = 0,
-    SHOWMAIL_RANGE,
-};
 static int	showmail_mode = SHOWMAIL_NORM;
+static const    onekey_t mail_comms[];
+
+////////////////////////////////////////////////////////////////////////
+// Prototype of shared/local functions
 int old_cross_post(int, fileheader_t* , const char *);
 
-// #ifdef USE_MAIL_AUTO_FORWARD
+////////////////////////////////////////////////////////////////////////
+// Core utility functions
+
 int
-setforward(void)
+invalidaddr(const char *origaddr)
 {
-    char            buf[PATHLEN], ip[50] = "", yn[4];
-    FILE           *fp;
-    int flIdiotSent2Self = 0;
-    int oidlen = strlen(cuser.userid);
+    const char *addr = origaddr;
+    if (!*addr)
+	return 1;		/* blank */
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
-	return DONOTHING;
-
-    vs_hdr("設定自動轉寄");
-
-    outs(ANSI_COLOR(1;31) "\n\n"
-	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
-	"本站基於安全性及防止廣告信的考量，\n"
-	"即日起自動轉寄的寄件者一律改為轉寄者的 ID。\n\n" 
-	"不便之處請多見諒。\n"
-	ANSI_RESET "\n");
-
-    setuserfile(buf, ".forward");
-    if ((fp = fopen(buf, "r"))) {
-	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
-	fclose(fp);
+    while (*addr) {
+	if (not_alnum(*addr) && !strchr("[].@-_+", *addr)) {
+#ifdef DEBUG_FWDADDRERR
+	    int c = (*addr) & 0xff;
+	    clear();
+            mvouts(
+                2, 0,
+                "您輸入的位址錯誤 (address error)。 \n\n"
+                "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
+                "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
+                "如果你確實打錯了，請直接略過下面的說明。\n"
+                "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
+                "並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
+                ANSI_COLOR(1;33));
+            prints("原始輸入位址: [%s]\n"
+                   "錯誤位置: 第 %d 字元: 0x%02X [ %c ]" ANSI_RESET "\n", 
+                   origaddr, (int)(addr - origaddr + 1), c, c);
+	    vmsg("請按任意鍵繼續");
+	    clear();
+#endif
+            return 1;
+        }
+	addr++;
     }
-    getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
-		ip, sizeof(ip), DOECHO);
-
-    if (strchr(ip, '@') == NULL)
-    {
-	// check if this is a valid local user
-	if (searchuser(ip, ip) <= 0)
-	{
-	    unlink(buf);
-	    vmsg("轉寄對象不存在，已取消自動轉寄。");
-	    return 0;
-	}
-    }
-
-    /* anti idiots */
-    if (strncasecmp(ip, cuser.userid, oidlen) == 0)
-    {
-	int addrlen = strlen(ip);
-	if(	addrlen == oidlen ||
-		(addrlen > oidlen && 
-		 strcasecmp(ip + oidlen, str_mail_address) == 0))
-	    flIdiotSent2Self = 1;
-    }
-
-    if (ip[0] && ip[0] != ' ' && !flIdiotSent2Self) {
-	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
-		LCECHO);
-	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
-	    fputs(ip, fp);
-	    fclose(fp);
-	    vmsg("設定完成!");
-	    return 0;
-	}
-    }
-    unlink(buf);
-    if(flIdiotSent2Self)
-	vmsg("自動轉寄是不會設定給自己的，想取消用空白就可以了。");
-    else
-	vmsg("取消自動轉信!");
     return 0;
 }
-// #endif // USE_MAIL_AUTO_FORWARD
+
 
 int
-toggle_showmail_mode(void)
+load_mailalert(const char *userid)
 {
-    showmail_mode ++;
-    showmail_mode %= SHOWMAIL_RANGE;
-    return FULLUPDATE;
+    struct stat     st;
+    char            maildir[PATHLEN];
+    int             fd;
+    register int    num;
+    fileheader_t    my_mail;
+
+    sethomedir(maildir, userid);
+    if (!HasUserPerm(PERM_BASIC))
+	return 0;
+    if (stat(maildir, &st) < 0)
+	return 0;
+    num = st.st_size / sizeof(fileheader_t);
+    if (num <= 0)
+	return 0;
+    if (num > NEWMAIL_CHECK_RANGE) 
+	num = NEWMAIL_CHECK_RANGE;
+
+    /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
+    if ((fd = open(maildir, O_RDONLY)) > 0) {
+	lseek(fd, st.st_size - sizeof(fileheader_t), SEEK_SET);
+	while (num--) {
+	    read(fd, &my_mail, sizeof(fileheader_t));
+	    if (!(my_mail.filemode & FILE_READ)) {
+		close(fd);
+		return ALERT_NEW_MAIL;
+	    }
+	    lseek(fd, -(off_t) 2 * sizeof(fileheader_t), SEEK_CUR);
+	}
+	close(fd);
+    }
+    return 0;
 }
 
 int
-built_mail_index(void)
-{
-    char            genbuf[128];
-
-    move(b_lines - 4, 0);
-    outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
-	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
-	 "警告：任意的使用將導致" ANSI_COLOR(1;33) "不可預期的結果" ANSI_RESET "！\n");
-    getdata(b_lines - 1, 0,
-	    "確定重建信箱?(y/N)", genbuf, 3,
-	    LCECHO);
-    if (genbuf[0] != 'y')
-	return FULLUPDATE;
-
-    snprintf(genbuf, sizeof(genbuf),
-	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
-	     cuser.userid[0], cuser.userid);
-    mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
-    system(genbuf);
-    pressanykey();
-    return FULLUPDATE;
-}
-
-int
-sendalert(const char *userid, int alert)
-{
-    int             tuid;
+sendalert(const char *userid, int alert) {
+    int tuid;
 
     if ((tuid = searchuser(userid, NULL)) == 0)
 	return -1;
@@ -131,9 +124,9 @@ sendalert(const char *userid, int alert)
 }
 
 int
-sendalert_uid(int uid, int alert){
-    userinfo_t     *uentp = NULL;
-    int             n, i;
+sendalert_uid(int uid, int alert) {
+    userinfo_t *uentp = NULL;
+    int n, i;
 
     n = count_logins(uid, 0);
     for (i = 1; i <= n; i++)
@@ -143,15 +136,17 @@ sendalert_uid(int uid, int alert){
     return 0;
 }
 
-int
-mail_muser(userec_t muser, const char *title, const char *filename)
+void setmailalert()
 {
-    return mail_id(muser.userid, title, filename, cuser.userid);
+    if(load_mailalert(cuser.userid))
+           currutmp->alerts |= ALERT_NEW_MAIL;
+    else
+           currutmp->alerts &= ~ALERT_NEW_MAIL;
 }
 
 int
-mail_log2id_text(const char *id, const char *title, const char *message, const char *owner, char newmail)
-{
+mail_log2id_text(const char *id, const char *title, const char *message,
+                 const char *owner, char newmail) {
     fileheader_t    mhdr;
     char            dst[PATHLEN], dirf[PATHLEN];
 
@@ -172,8 +167,8 @@ mail_log2id_text(const char *id, const char *title, const char *message, const c
 
 // TODO add header option?
 int
-mail_log2id(const char *id, const char *title, const char *src, const char *owner, char newmail, char trymove)
-{
+mail_log2id(const char *id, const char *title, const char *src,
+            const char *owner, char newmail, char trymove) {
     fileheader_t    mhdr;
     char            dst[PATHLEN], dirf[PATHLEN];
 
@@ -221,50 +216,6 @@ mail_id(const char *id, const char *title, const char *src, const char *owner)
     sethomedir(dirf, id);
     append_record_forward(dirf, &mhdr, sizeof(mhdr), id);
     sendalert(id, ALERT_NEW_MAIL);
-    return 0;
-}
-
-int
-invalidaddr(const char *addr)
-{
-#ifdef DEBUG_FWDADDRERR
-    const char *origaddr = addr;
-    char errmsg[PATHLEN];
-#endif
-
-    if (*addr == '\0')
-	return 1;		/* blank */
-
-    while (*addr) {
-#ifdef DEBUG_FWDADDRERR
-	if (not_alnum(*addr) && !strchr("[].@-_+", *addr))
-	{
-	    int c = (*addr) & 0xff;
-	    clear();
-	    move(2,0);
-	    outs(
-		"您輸入的位址錯誤 (address error)。 \n\n"
-		"由於最近許\多人反應打入正確的位址(id或email)後系統會判斷錯誤\n"
-		"但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
-		"如果你確實打錯了，請直接略過下面的說明。\n"
-		"如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
-		"並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
-		ANSI_COLOR(1;33));
-	    sprintf(errmsg, "原始輸入位址: [%s]\n"
-		    "錯誤位置: 第 %d 字元: 0x%02X [ %c ]\n", 
-		    origaddr, (int)(addr - origaddr+1), c, c);
-	    outs(errmsg);
-	    outs(ANSI_RESET);
-	    vmsg("請按任意鍵繼續");
-	    clear();
-	    return 1;
-	}
-#else
-	if (not_alnum(*addr) && !strchr("[].@-_", *addr))
-	    return 1;
-#endif
-	addr++;
-    }
     return 0;
 }
 
@@ -336,35 +287,9 @@ chk_mailbox_limit(void)
         return MAILBOX_LIM_HARD;
 }
 
-int
-chkmailbox(void)
-{
-    m_init();
-
-    switch (chk_mailbox_limit()) {
-	case MAILBOX_LIM_HARD:
-	    bell();
-	case MAILBOX_LIM_KEEP:
-	    bell();
-	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
-	    return mailkeep;
-
-	default:
-	    return 0;
-    }
-}
-
-int
-chkmailbox_hard_limit() {
-    if (chk_mailbox_limit() == MAILBOX_LIM_HARD) {
-        vmsgf("您保存信件數目 %d 遠超出上限 %d, 請整理", mailkeep, mailmaxkeep);
-        return 1;
-    }
-    return 0;
-}
-
 static void
-do_hold_mail(const char *fpath, const char *receiver, const char *holder, const char *save_title)
+do_hold_mail(const char *fpath, const char *receiver, const char *holder,
+             const char *save_title)
 {
     char            buf[PATHLEN], title[128];
     char            holder_dir[PATHLEN];
@@ -387,21 +312,6 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder, const 
     unlink(buf);
     Copy(fpath, buf);
     append_record_forward(holder_dir, &mymail, sizeof(mymail), holder);
-}
-
-void
-hold_mail(const char *fpath, const char *receiver, const char *title)
-{
-    char            buf[4];
-
-    getdata(b_lines - 1, 0, 
-	    (HasUserFlag(UF_DEFBACKUP)) ? 
-	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
-	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
-	    buf, sizeof(buf), LCECHO);
-
-    if (TOBACKUP(buf[0]))
-	do_hold_mail(fpath, receiver, cuser.userid, title);
 }
 
 int
@@ -454,6 +364,188 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     sendalert(userid, ALERT_NEW_MAIL);
     setutmpmode(oldstat);
     return 0;
+}
+
+/* 寄站內信 */
+static int
+send_inner_mail(const char *fpath, const char *title, const char *receiver) {
+    char            fname[PATHLEN];
+    fileheader_t    mymail;
+    char            rightid[IDLEN+1];
+
+    if (!searchuser(receiver, rightid))
+	return -2;
+
+    /* to avoid DDOS of disk */
+    sethomedir(fname, rightid);
+    if (strcmp(rightid, cuser.userid) == 0) {
+	if (chk_mailbox_limit())
+	    return -4;
+    }
+
+    sethomepath(fname, rightid);
+    stampfile(fname, &mymail);
+    if (!strcmp(rightid, cuser.userid)) {
+	/* Using BBSNAME may be too loooooong. */
+	strlcpy(mymail.owner, "[站內]", sizeof(mymail.owner));
+	mymail.filemode = FILE_READ;
+    } else
+	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
+    strlcpy(mymail.title, title, sizeof(mymail.title));
+    unlink(fname);
+    Copy(fpath, fname);
+    sethomedir(fname, rightid);
+    append_record_forward(fname, &mymail, sizeof(mymail), rightid);
+    sendalert(receiver, ALERT_NEW_MAIL);
+    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////
+// User-interface procedures
+int
+setforward(void) {
+    char            buf[PATHLEN], ip[50] = "", yn[4];
+    FILE           *fp;
+    int flIdiotSent2Self = 0;
+    int oidlen = strlen(cuser.userid);
+
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+	return DONOTHING;
+
+    vs_hdr("設定自動轉寄");
+
+    outs(ANSI_COLOR(1;31) "\n\n"
+	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
+	"本站基於安全性及防止廣告信的考量，\n"
+	"即日起自動轉寄的寄件者一律改為轉寄者的 ID。\n\n" 
+	"不便之處請多見諒。\n"
+	ANSI_RESET "\n");
+
+    setuserfile(buf, ".forward");
+    if ((fp = fopen(buf, "r"))) {
+	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
+	fclose(fp);
+    }
+    getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
+		ip, sizeof(ip), DOECHO);
+
+    if (strchr(ip, '@') == NULL)
+    {
+	// check if this is a valid local user
+	if (searchuser(ip, ip) <= 0)
+	{
+	    unlink(buf);
+	    vmsg("轉寄對象不存在，已取消自動轉寄。");
+	    return 0;
+	}
+    }
+
+    /* anti idiots */
+    if (strncasecmp(ip, cuser.userid, oidlen) == 0)
+    {
+	int addrlen = strlen(ip);
+	if(	addrlen == oidlen ||
+		(addrlen > oidlen && 
+		 strcasecmp(ip + oidlen, str_mail_address) == 0))
+	    flIdiotSent2Self = 1;
+    }
+
+    if (ip[0] && ip[0] != ' ' && !flIdiotSent2Self) {
+	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
+		LCECHO);
+	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
+	    fputs(ip, fp);
+	    fclose(fp);
+	    vmsg("設定完成!");
+	    return 0;
+	}
+    }
+    unlink(buf);
+    if(flIdiotSent2Self)
+	vmsg("自動轉寄是不會設定給自己的，想取消用空白就可以了。");
+    else
+	vmsg("取消自動轉信!");
+    return 0;
+}
+
+int
+toggle_showmail_mode(void)
+{
+    showmail_mode ++;
+    showmail_mode %= SHOWMAIL_RANGE;
+    return FULLUPDATE;
+}
+
+int
+built_mail_index(void)
+{
+    char            genbuf[128];
+
+    move(b_lines - 4, 0);
+    outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
+	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
+	 "警告：任意的使用將導致" ANSI_COLOR(1;33) "不可預期的結果" ANSI_RESET "！\n");
+    getdata(b_lines - 1, 0,
+	    "確定重建信箱?(y/N)", genbuf, 3,
+	    LCECHO);
+    if (genbuf[0] != 'y')
+	return FULLUPDATE;
+
+    snprintf(genbuf, sizeof(genbuf),
+	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
+	     cuser.userid[0], cuser.userid);
+    mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
+    system(genbuf);
+    pressanykey();
+    return FULLUPDATE;
+}
+
+int
+mail_muser(userec_t muser, const char *title, const char *filename)
+{
+    return mail_id(muser.userid, title, filename, cuser.userid);
+}
+
+int
+chkmailbox(void)
+{
+    m_init();
+
+    switch (chk_mailbox_limit()) {
+	case MAILBOX_LIM_HARD:
+	    bell();
+	case MAILBOX_LIM_KEEP:
+	    bell();
+	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
+	    return mailkeep;
+
+	default:
+	    return 0;
+    }
+}
+
+int
+chkmailbox_hard_limit() {
+    if (chk_mailbox_limit() == MAILBOX_LIM_HARD) {
+        vmsgf("您保存信件數目 %d 遠超出上限 %d, 請整理", mailkeep, mailmaxkeep);
+        return 1;
+    }
+    return 0;
+}
+
+void
+hold_mail(const char *fpath, const char *receiver, const char *title)
+{
+    char            buf[4];
+
+    getdata(b_lines - 1, 0, 
+	    (HasUserFlag(UF_DEFBACKUP)) ? 
+	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
+	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
+	    buf, sizeof(buf), LCECHO);
+
+    if (TOBACKUP(buf[0]))
+	do_hold_mail(fpath, receiver, cuser.userid, title);
 }
 
 int
@@ -988,12 +1080,181 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     return FULLUPDATE;
 }
 
-struct ReadNewMailArg {
-    int idc;
-    int *delmsgs;
-    int delcnt;
-    int mrd;
-};
+int
+doforward(const char *direct, const fileheader_t * fh, int mode)
+{
+    static char     address[STRLEN] = "";
+    char            fname[PATHLEN];
+    char            genbuf[PATHLEN];
+    int             return_no;
+    const char      *hostaddr;
+
+    if (!address[0] && strcasecmp(cuser.email, "x") != 0)
+     	strlcpy(address, cuser.email, sizeof(address));
+
+    if( mode == 'U' ){
+	if ('y' != tolower(vmsg("請按 y 執行 uuencode。"
+                                "若您不清楚什麼是 uuencode 請改用 F 轉寄。")))
+            return 1;
+    }
+    trim(address);
+
+    // if user has address and not the default 'x' (no-email)...
+    if (address[0]) {
+	snprintf(genbuf, sizeof(genbuf),
+		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
+	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
+
+	if (fname[0] == 'q') {
+	    outmsg("取消轉寄");
+	    return 1;
+	}
+	if (fname[0] == 'n')
+	    address[0] = '\0';
+    }
+    if (!address[0]) {
+	do {
+	    getdata(b_lines - 1, 0, "請輸入轉寄地址：", fname, 60, DOECHO);
+	    if (fname[0]) {
+		if (strchr(fname, '.'))
+		    strlcpy(address, fname, sizeof(address));
+		else
+		    snprintf(address, sizeof(address),
+                    	"%s.bbs@%s", fname, MYHOSTNAME);
+	    } else {
+		vmsg("取消轉寄");
+		return 1;
+	    }
+	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
+    }
+    if (mode == 'Z') {
+        if (strstr(address, MYHOSTNAME) ||
+            strstr(address, ".bbs@")) {
+            vmsg("不可使用 BBS 信箱。");
+            return 1;
+        }
+    }
+    // XXX bug: if user has already provided mail address...
+    /* according to our experiment, many users leave blanks */
+    trim(address);
+    if (invalidaddr(address))
+	return -2;
+
+    // decide if address is internet mail
+    hostaddr = strchr(address, '@');
+    if (hostaddr && strcasecmp(hostaddr + 1, MYHOSTNAME) == 0)
+        hostaddr = NULL;
+
+    outmsg("轉寄中請稍候...");
+    refresh();
+
+    /* 追蹤使用者 */
+    if (HasUserPerm(PERM_LOGUSER)) 
+	log_user("mailforward to %s ",address);
+
+    // 處理站內黑名單
+    do {
+	char xid[IDLEN+1], *dot;
+	char fpath[PATHLEN];
+	int i = 0;
+
+	strlcpy(xid, address, sizeof(xid));
+	dot = strchr(xid, '.'); 
+	if (dot) *dot = 0;
+	dot = strcasestr(address, ".bbs@");
+
+	if (dot) {
+	    if (strcasecmp(strchr(dot, '@')+1, MYHOSTNAME) != 0)
+		break;
+	} else {
+	    // accept only local name
+	    if (strchr(address, '@'))
+		break;
+	}
+
+	// now the xid holds local name
+	if (!is_validuserid(xid) ||
+	    searchuser(xid, xid) <= 0)
+	{
+	    vmsg("找不到此使用者 ID。");
+	    return 1;
+	}
+
+	// some stupid users set self as rejects.
+	if (strcasecmp(xid, cuser.userid) == 0)
+	    break;
+
+	sethomefile(fpath, xid, FN_REJECT);
+	i = file_exist_record(fpath, cuser.userid);
+	sethomefile(fpath, xid, FN_OVERRIDES);
+
+	if (i && !file_exist_record(fpath, cuser.userid)) {
+            // We used to simply ignore here, and then people (especially those
+            // in BuyTogether and similiars) say "my mail is lost".
+            // After notifying SYSOPs, we believe it will be better to let all
+            // users know what's going on.
+            vmsg("無法寄信給此使用者");
+	    return 1;
+        }
+    } while (0);
+
+    // PATHLEN will be used as command line, so we need it longer.
+    assert(PATHLEN >= 256);
+    if (mode == 'Z') {
+	assert(is_validuserid(cuser.userid));
+	assert(!invalidaddr(address));
+#ifdef MUTT_PATH
+	snprintf(fname, sizeof(fname),
+		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-czf /tmp/home.%s.tgz home/%c/%s; "
+		 MUTT_PATH " -s 'home.%s.tgz' "
+                 "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
+		 "rm /tmp/home.%s.tgz",
+		 cuser.userid, cuser.userid[0], cuser.userid,
+		 cuser.userid, cuser.userid, address, cuser.userid);
+	system(fname);
+	return 0;
+#else
+	snprintf(fname, sizeof(fname),
+		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-czf - home/%c/%s | "
+		"/usr/bin/uuencode %s.tgz > %s",
+		cuser.userid[0], cuser.userid, cuser.userid, direct);
+	system(fname);
+	strlcpy(fname, direct, sizeof(fname));
+#endif
+    } else if (mode == 'U') {
+	char            tmp_buf[PATHLEN];
+
+	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", (int)currpid);
+	snprintf(tmp_buf, sizeof(tmp_buf),
+		 "/usr/bin/uuencode %s/%s uu.%05d > %s",
+		 direct, fh->filename, (int)currpid, fname);
+	system(tmp_buf);
+    } else if (mode == 'F') {
+	char            tmp_buf[PATHLEN];
+
+	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
+	snprintf(tmp_buf, sizeof(tmp_buf), "%s/%s", direct, fh->filename);
+        if (!dashf(tmp_buf)) {
+            unlink(fname);
+            return -1;
+        }
+	Copy(tmp_buf, fname);
+    } else
+	return -1;
+
+#ifdef USE_LOG_INTERNETMAIL
+    if (hostaddr)
+        log_filef("log/internet_mail.log", LOG_CREAT, 
+                "%s [%s] %s -> %s: %s - %s\n",
+                Cdatelite(&now), __FUNCTION__,
+                cuser.userid, address, direct, fh->title);
+#endif
+    return_no = bsmtp(fname, fh->title, address, NULL);
+    unlink(fname);
+    return (return_no);
+}
 
 static int
 read_new_mail(void * voidfptr, void *optarg)
@@ -1098,14 +1359,6 @@ read_new_mail(void * voidfptr, void *optarg)
     }
     clear();
     return 0;
-}
-
-void setmailalert()
-{
-    if(load_mailalert(cuser.userid))
-           currutmp->alerts |= ALERT_NEW_MAIL;
-    else
-           currutmp->alerts &= ~ALERT_NEW_MAIL;
 }
 
 int
@@ -1760,6 +2013,31 @@ del_range_mail(int ent, fileheader_t * fhdr, char *direct)
     return ret;
 }
 
+int
+m_read(void)
+{
+    int back_bid;
+
+    if (!HasUserPerm(PERM_READMAIL))
+        return DONOTHING;
+
+    if (get_num_records(currmaildir, sizeof(fileheader_t))) {
+	curredit = EDIT_MAIL;
+	back_bid = currbid;
+	currbid = 0;
+	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
+	currbid = back_bid;
+	curredit = 0;
+	setmailalert();
+	return 0;
+    } else {
+	outs("您沒有來信");
+	return XEASY;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+// Optional Features
 
 #ifdef OUTJOBSPOOL
 static int
@@ -1861,6 +2139,9 @@ mail_recycle_bin(int ent GCC_UNUSED,
 }
 #endif // USE_TIME_CAPSULE
 
+////////////////////////////////////////////////////////////////////////
+// Command List
+
 static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('A')
     { 0, NULL }, // Ctrl('B')
@@ -1959,63 +2240,8 @@ static const onekey_t mail_comms[] = {
     { 1, mail_recycle_bin }, // '~' 126
 };
 
-int
-m_read(void)
-{
-    int back_bid;
-
-    if (!HasUserPerm(PERM_READMAIL))
-        return DONOTHING;
-
-    if (get_num_records(currmaildir, sizeof(fileheader_t))) {
-	curredit = EDIT_MAIL;
-	back_bid = currbid;
-	currbid = 0;
-	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
-	currbid = back_bid;
-	curredit = 0;
-	setmailalert();
-	return 0;
-    } else {
-	outs("您沒有來信");
-	return XEASY;
-    }
-}
-
-/* 寄站內信 */
-static int
-send_inner_mail(const char *fpath, const char *title, const char *receiver)
-{
-    char            fname[PATHLEN];
-    fileheader_t    mymail;
-    char            rightid[IDLEN+1];
-
-    if (!searchuser(receiver, rightid))
-	return -2;
-
-    /* to avoid DDOS of disk */
-    sethomedir(fname, rightid);
-    if (strcmp(rightid, cuser.userid) == 0) {
-	if (chk_mailbox_limit())
-	    return -4;
-    }
-
-    sethomepath(fname, rightid);
-    stampfile(fname, &mymail);
-    if (!strcmp(rightid, cuser.userid)) {
-	/* Using BBSNAME may be too loooooong. */
-	strlcpy(mymail.owner, "[站內]", sizeof(mymail.owner));
-	mymail.filemode = FILE_READ;
-    } else
-	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
-    strlcpy(mymail.title, title, sizeof(mymail.title));
-    unlink(fname);
-    Copy(fpath, fname);
-    sethomedir(fname, rightid);
-    append_record_forward(fname, &mymail, sizeof(mymail), rightid);
-    sendalert(receiver, ALERT_NEW_MAIL);
-    return 0;
-}
+////////////////////////////////////////////////////////////////////////
+// Mailer backend
 
 #include <netdb.h>
 #include <pwd.h>
@@ -2138,215 +2364,3 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
     return chrono;
 }
 #endif				/* USE_BSMTP */
-
-int
-doforward(const char *direct, const fileheader_t * fh, int mode)
-{
-    static char     address[STRLEN] = "";
-    char            fname[PATHLEN];
-    char            genbuf[PATHLEN];
-    int             return_no;
-    const char      *hostaddr;
-
-    if (!address[0] && strcasecmp(cuser.email, "x") != 0)
-     	strlcpy(address, cuser.email, sizeof(address));
-
-    if( mode == 'U' ){
-	if ('y' != tolower(vmsg("請按 y 執行 uuencode。"
-                                "若您不清楚什麼是 uuencode 請改用 F 轉寄。")))
-            return 1;
-    }
-    trim(address);
-
-    // if user has address and not the default 'x' (no-email)...
-    if (address[0]) {
-	snprintf(genbuf, sizeof(genbuf),
-		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
-	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
-
-	if (fname[0] == 'q') {
-	    outmsg("取消轉寄");
-	    return 1;
-	}
-	if (fname[0] == 'n')
-	    address[0] = '\0';
-    }
-    if (!address[0]) {
-	do {
-	    getdata(b_lines - 1, 0, "請輸入轉寄地址：", fname, 60, DOECHO);
-	    if (fname[0]) {
-		if (strchr(fname, '.'))
-		    strlcpy(address, fname, sizeof(address));
-		else
-		    snprintf(address, sizeof(address),
-                    	"%s.bbs@%s", fname, MYHOSTNAME);
-	    } else {
-		vmsg("取消轉寄");
-		return 1;
-	    }
-	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
-    }
-    if (mode == 'Z') {
-        if (strstr(address, MYHOSTNAME) ||
-            strstr(address, ".bbs@")) {
-            vmsg("不可使用 BBS 信箱。");
-            return 1;
-        }
-    }
-    // XXX bug: if user has already provided mail address...
-    /* according to our experiment, many users leave blanks */
-    trim(address);
-    if (invalidaddr(address))
-	return -2;
-
-    // decide if address is internet mail
-    hostaddr = strchr(address, '@');
-    if (hostaddr && strcasecmp(hostaddr + 1, MYHOSTNAME) == 0)
-        hostaddr = NULL;
-
-    outmsg("轉寄中請稍候...");
-    refresh();
-
-    /* 追蹤使用者 */
-    if (HasUserPerm(PERM_LOGUSER)) 
-	log_user("mailforward to %s ",address);
-
-    // 處理站內黑名單
-    do {
-	char xid[IDLEN+1], *dot;
-	char fpath[PATHLEN];
-	int i = 0;
-
-	strlcpy(xid, address, sizeof(xid));
-	dot = strchr(xid, '.'); 
-	if (dot) *dot = 0;
-	dot = strcasestr(address, ".bbs@");
-
-	if (dot) {
-	    if (strcasecmp(strchr(dot, '@')+1, MYHOSTNAME) != 0)
-		break;
-	} else {
-	    // accept only local name
-	    if (strchr(address, '@'))
-		break;
-	}
-
-	// now the xid holds local name
-	if (!is_validuserid(xid) ||
-	    searchuser(xid, xid) <= 0)
-	{
-	    vmsg("找不到此使用者 ID。");
-	    return 1;
-	}
-
-	// some stupid users set self as rejects.
-	if (strcasecmp(xid, cuser.userid) == 0)
-	    break;
-
-	sethomefile(fpath, xid, FN_REJECT);
-	i = file_exist_record(fpath, cuser.userid);
-	sethomefile(fpath, xid, FN_OVERRIDES);
-
-	if (i && !file_exist_record(fpath, cuser.userid)) {
-            // We used to simply ignore here, and then people (especially those
-            // in BuyTogether and similiars) say "my mail is lost".
-            // After notifying SYSOPs, we believe it will be better to let all
-            // users know what's going on.
-            vmsg("無法寄信給此使用者");
-	    return 1;
-        }
-    } while (0);
-
-    // PATHLEN will be used as command line, so we need it longer.
-    assert(PATHLEN >= 256);
-    if (mode == 'Z') {
-	assert(is_validuserid(cuser.userid));
-	assert(!invalidaddr(address));
-#ifdef MUTT_PATH
-	snprintf(fname, sizeof(fname),
-		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf /tmp/home.%s.tgz home/%c/%s; "
-		 MUTT_PATH " -s 'home.%s.tgz' "
-                 "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
-		 "rm /tmp/home.%s.tgz",
-		 cuser.userid, cuser.userid[0], cuser.userid,
-		 cuser.userid, cuser.userid, address, cuser.userid);
-	system(fname);
-	return 0;
-#else
-	snprintf(fname, sizeof(fname),
-		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf - home/%c/%s | "
-		"/usr/bin/uuencode %s.tgz > %s",
-		cuser.userid[0], cuser.userid, cuser.userid, direct);
-	system(fname);
-	strlcpy(fname, direct, sizeof(fname));
-#endif
-    } else if (mode == 'U') {
-	char            tmp_buf[PATHLEN];
-
-	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", (int)currpid);
-	snprintf(tmp_buf, sizeof(tmp_buf),
-		 "/usr/bin/uuencode %s/%s uu.%05d > %s",
-		 direct, fh->filename, (int)currpid, fname);
-	system(tmp_buf);
-    } else if (mode == 'F') {
-	char            tmp_buf[PATHLEN];
-
-	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
-	snprintf(tmp_buf, sizeof(tmp_buf), "%s/%s", direct, fh->filename);
-        if (!dashf(tmp_buf)) {
-            unlink(fname);
-            return -1;
-        }
-	Copy(tmp_buf, fname);
-    } else
-	return -1;
-
-#ifdef USE_LOG_INTERNETMAIL
-    if (hostaddr)
-        log_filef("log/internet_mail.log", LOG_CREAT, 
-                "%s [%s] %s -> %s: %s - %s\n",
-                Cdatelite(&now), __FUNCTION__,
-                cuser.userid, address, direct, fh->title);
-#endif
-    return_no = bsmtp(fname, fh->title, address, NULL);
-    unlink(fname);
-    return (return_no);
-}
-
-int
-load_mailalert(const char *userid)
-{
-    struct stat     st;
-    char            maildir[PATHLEN];
-    int             fd;
-    register int    num;
-    fileheader_t    my_mail;
-
-    sethomedir(maildir, userid);
-    if (!HasUserPerm(PERM_BASIC))
-	return 0;
-    if (stat(maildir, &st) < 0)
-	return 0;
-    num = st.st_size / sizeof(fileheader_t);
-    if (num <= 0)
-	return 0;
-    if (num > NEWMAIL_CHECK_RANGE) 
-	num = NEWMAIL_CHECK_RANGE;
-
-    /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
-    if ((fd = open(maildir, O_RDONLY)) > 0) {
-	lseek(fd, st.st_size - sizeof(fileheader_t), SEEK_SET);
-	while (num--) {
-	    read(fd, &my_mail, sizeof(fileheader_t));
-	    if (!(my_mail.filemode & FILE_READ)) {
-		close(fd);
-		return ALERT_NEW_MAIL;
-	    }
-	    lseek(fd, -(off_t) 2 * sizeof(fileheader_t), SEEK_CUR);
-	}
-	close(fd);
-    }
-    return 0;
-}
