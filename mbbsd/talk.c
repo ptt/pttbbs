@@ -555,45 +555,41 @@ water_scr(const water_t * tw, int which, char type)
 	int             i;
 	const int colors[] = {33, 37, 33, 37, 33};
 	move(8 + which, 28);
-	outc(' ');
-	move(8 + which, 28);
-	prints(ANSI_COLOR(1;37;45) "  %c %-14s " ANSI_COLOR(0) "",
+	SOLVE_ANSI_CACHE();
+	prints(ANSI_COLOR(0;1;37;45) "  %c %-14s " ANSI_RESET,
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
 	for (i = 0; i < 5; ++i) {
 	    move(16 + i, 4);
-	    outc(' ');
-	    move(16 + i, 4);
+            SOLVE_ANSI_CACHE();
 	    if (tw->msg[(tw->top - i + 4) % 5].last_call_in[0] != 0)
-		prints(ANSI_COLOR(0) "   " ANSI_COLOR(1;%d;44) "★%-64s" ANSI_COLOR(0) "   \n",
+		prints("   " ANSI_COLOR(1;%d;44) "★%-64s" ANSI_RESET "   \n",
 		       colors[i],
 		       tw->msg[(tw->top - i + 4) % 5].last_call_in);
 	    else
-		outs(ANSI_COLOR(0) "　\n");
+		outs("　\n");
 	}
 
 	move(21, 4);
-	outc(' ');
-	move(21, 4);
-	prints(ANSI_COLOR(0) "   " ANSI_COLOR(1;37;46) "%-66s" ANSI_COLOR(0) "   \n",
+	SOLVE_ANSI_CACHE();
+	prints("   " ANSI_COLOR(1;37;46) "%-66s" ANSI_RESET "   \n",
 	       tw->msg[5].last_call_in);
 
 	move(0, 0);
-	outc(' ');
-	move(0, 0);
+	SOLVE_ANSI_CACHE();
 #ifdef PLAY_ANGEL
 	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
-	    outs(ANSI_COLOR(0) "回答小主人:");
+	    outs("回答小主人:");
 	else
 #endif
-	prints(ANSI_COLOR(0) "反擊 %s:", tw->userid);
+	prints("反擊 %s:", tw->userid);
 	clrtoeol();
 	move(0, strlen(tw->userid) + 6);
     } else {
 
 	move(8 + which, 28);
 	SOLVE_ANSI_CACHE();
-	prints(ANSI_COLOR(1;37;44) "  %c %-13s　" ANSI_COLOR(0) "",
+	prints(ANSI_COLOR(0;1;37;44) "  %c %-13s　" ANSI_RESET,
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
     }
@@ -619,8 +615,16 @@ my_write2(void)
     currstat = DBACK;
 
     //init screen
-    move(WB_OFO_USER_TOP, WB_OFO_USER_LEFT);
-    outs(ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_COLOR(0) "");
+    move(WB_OFO_USER_TOP-1, 0);
+    SOLVE_ANSI_CACHE();
+    clrtoln(WB_OFO_MSG_BOTTOM+1);
+    SOLVE_ANSI_CACHE();
+    // extra refresh to solve stupid screen.c escape caching issue
+#ifndef USE_PFTERM
+    refresh();
+#endif
+    mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
+           ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
     for (i = 0; i < WB_OFO_USER_HEIGHT;++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
@@ -632,11 +636,13 @@ my_write2(void)
 	    water_scr(swater[i], i, 0);
 	}
     move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
-    outs(ANSI_COLOR(0) " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36) "────────────────"
-	   "─────────────────" ANSI_COLOR(1;35) "◇" ANSI_COLOR(0) " ");
+    outs(ANSI_RESET " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
+         "─────────────────────────────────"
+         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
     move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
-    outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36) "────────────────"
-	   "─────────────────" ANSI_COLOR(1;35) "◇" ANSI_COLOR(0) " ");
+    outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
+         "─────────────────────────────────"
+         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
     water_scr(swater[0], 0, 1);
     refresh();
 
@@ -682,6 +688,7 @@ my_write2(void)
 	    } else
 		msg[0] = 0;
 	    move(0, 0);
+            SOLVE_ANSI_CACHE();
 	    outs(ANSI_RESET);
 	    clrtoeol();
 #ifndef PLAY_ANGEL

@@ -2455,7 +2455,7 @@ int main(int argc, char* argv[])
 
         outs(ANSI_COLOR(1;33) "test " ANSI_COLOR(34) "x" 
                 ANSI_RESET "te" ANSI_COLOR(43;0;1;35) " st" 
-                ANSI_COLOR(0) "testx\n");
+                ANSI_RESET "testx\n");
         refresh();
         getchar();
 

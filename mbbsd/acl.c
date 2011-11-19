@@ -181,7 +181,7 @@ edit_banned_list_for_board(const char *board) {
                    "帳號被砍後水桶會自動解除\n" ANSI_RESET
         "         - 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
 ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
-        ANSI_RESET ""
+        ANSI_RESET
 #ifdef WATERBAN_UPGRADE_TIME_STR
         // enable and change this if you've just made an upgrade
         ANSI_COLOR(0;32)

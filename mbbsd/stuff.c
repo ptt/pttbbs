@@ -338,7 +338,7 @@ show_help(const char * const helptext[])
     clear();
     for (i = 0; (str = helptext[i]); i++) {
 	if (*str == '\0')
-	    prints(ANSI_COLOR(1) "¡i %s ¡j" ANSI_COLOR(0) "\n", str + 1);
+	    prints(ANSI_COLOR(1) "¡i %s ¡j" ANSI_RESET "\n", str + 1);
 	else if (*str == '\01')
 	    prints("\n" ANSI_COLOR(36) "¡i %s ¡j" ANSI_RESET "\n", str + 1);
 	else

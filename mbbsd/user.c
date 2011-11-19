@@ -1491,7 +1491,7 @@ u_list_CB(void *data, int num, userec_t * uentp)
 	move(2, 0);
 	clrtoeol();
 	prints(ANSI_REVERSE "  使用者代號   %-25s   上站  文章  %s  "
-	       "最近光臨日期     " ANSI_COLOR(0) "\n",
+	       "最近光臨日期     " ANSI_RESET "\n",
 	       "綽號暱稱",
 	       HasUserPerm(PERM_SEEULEVELS) ? "等級" : "");
 	ctx->y = 3;

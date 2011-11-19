@@ -217,7 +217,7 @@ a_showmenu(menu_t * pm)
     time4_t         dtime;
 
     showtitle("精華文章", pm->mtitle);
-    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_COLOR(0),
+    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_RESET,
 	   "編    選      日    期");
 
     if (!pm->num)
