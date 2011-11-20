@@ -2541,6 +2541,8 @@ userlist(void)
 	    case 'f':
 		if (HasBasicUserPerm(PERM_LOGINOK)) {
 		    pwcuToggleFriendList();
+                    // reset cursor
+                    page = offset = 0;
 		    redrawall = redraw = 1;
 		}
 		break;
