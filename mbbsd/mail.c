@@ -277,7 +277,7 @@ chk_mailbox_limit(void)
     if (!mailkeep)
 	setupmailusage();
 
-    if (mailkeep < mailmaxkeep)
+    if (mailkeep <= mailmaxkeep)
         return MAILBOX_LIM_OK;
 
     if ((mailkeep / 100 < mailmaxkeep)
