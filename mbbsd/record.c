@@ -514,7 +514,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strcpy(buf + n + 1, ".forward");
     fp = fopen(buf, "r");
     if (!fp)
-        return -1;
+        return 0;
 
     // Load and setup address
     address[0] = 0;
