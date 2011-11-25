@@ -522,14 +522,14 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     fclose(fp);
     strip_blank(address, address);
 
-    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_SOFTLIMIT) {
+    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
 #ifdef USE_LOG_INTERNETMAIL
         log_filef("log/internet_mail.log", LOG_CREAT, 
                   "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
                   Cdatelite(&now), __FUNCTION__,
                   origid, address,
                   get_num_records(fpath, sizeof(fileheader_t)),
-                  MAX_KEEPMAIL_SOFTLIMIT);
+                  MAX_KEEPMAIL_HARDLIMIT);
 #endif
         return 0;
     }
