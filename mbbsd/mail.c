@@ -406,8 +406,6 @@ int
 setforward(void) {
     char            buf[PATHLEN], ip[50] = "", yn[4];
     FILE           *fp;
-    int flIdiotSent2Self = 0;
-    int oidlen = strlen(cuser.userid);
 
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
@@ -428,31 +426,18 @@ setforward(void) {
     }
     getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
 		ip, sizeof(ip), DOECHO);
+    strip_blank(ip, ip);
 
-    if (strchr(ip, '@') == NULL)
-    {
-	// check if this is a valid local user
-	if (searchuser(ip, ip) <= 0)
-	{
-	    unlink(buf);
-	    vmsg("轉寄對象不存在，已取消自動轉寄。");
-	    return 0;
-	}
-    }
+    if (*ip) {
+        if (strcasestr(ip, str_mail_address) ||
+            strchr(ip, '@') == NULL) {
+            unlink(buf);
+            vmsg("禁止自動轉寄給站內其它使用者。");
+            return 0;
+        }
 
-    /* anti idiots */
-    if (strncasecmp(ip, cuser.userid, oidlen) == 0)
-    {
-	int addrlen = strlen(ip);
-	if(	addrlen == oidlen ||
-		(addrlen > oidlen && 
-		 strcasecmp(ip + oidlen, str_mail_address) == 0))
-	    flIdiotSent2Self = 1;
-    }
-
-    if (ip[0] && ip[0] != ' ' && !flIdiotSent2Self) {
-	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
-		LCECHO);
+        getdata(b_lines, 0, "確定開啟自動轉信?(Y/n)", yn, sizeof(yn),
+                LCECHO);
 	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
 	    fputs(ip, fp);
 	    fclose(fp);
@@ -461,10 +446,7 @@ setforward(void) {
 	}
     }
     unlink(buf);
-    if(flIdiotSent2Self)
-	vmsg("自動轉寄是不會設定給自己的，想取消用空白就可以了。");
-    else
-	vmsg("取消自動轉信!");
+    vmsg("取消自動轉信!");
     return 0;
 }
 
