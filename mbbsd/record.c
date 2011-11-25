@@ -499,9 +499,12 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     int  n;
     char address[64] = "";
     char fwd_title[STRLEN] = "";
+    int r;
 
-    // No matter what, append it.
-    append_record(fpath, record, size);
+    // No matter what, append it, and return if that failed.
+    r = append_record(fpath, record, size);
+    if (r != 0)
+        return r;
 
 // #ifdef USE_MAIL_AUTO_FORWARD
 
@@ -523,6 +526,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strip_blank(address, address);
 
     if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
+        unlink(buf);
+        // TODO add a mail so that origid knows what happened.
 #ifdef USE_LOG_INTERNETMAIL
         log_filef("log/internet_mail.log", LOG_CREAT, 
                   "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
