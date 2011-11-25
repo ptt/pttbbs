@@ -494,70 +494,75 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
-// #ifdef USE_MAIL_AUTO_FORWARD
-    if (get_num_records(fpath, sizeof(fileheader_t)) <= MAX_KEEPMAIL * 2) {
-	FILE           *fp;
-	char            buf[512];
-	int             n;
+    FILE *fp;
+    char buf[512];
+    int  n;
+    char address[64];
+    char fwd_title[STRLEN] = "";
 
-	for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
-	if (n + sizeof(".forward") > sizeof(buf))
-	    return -1;
-
-	memcpy(buf, fpath, n+1);
-	strcpy(buf + n + 1, ".forward");
-	if ((fp = fopen(buf, "r"))) {
-
-	    char address[64];
-	    int flIdiotSent2Self = 0;
-	    int oidlen = origid ? strlen(origid) : 0;
-
-	    address[0] = 0;
-	    fscanf(fp, "%63s", address);
-	    fclose(fp);
-	    /* some idiots just set forwarding to themselves.
-	     * and even after we checked "sameid", some still
-	     * set STUPID_ID.bbs@host <- "自以為聰明"
-	     * damn it, we have a complex rule now.
-	     */
-	    if(oidlen > 0) {
-		if (strncasecmp(address, origid, oidlen) == 0)
-		{
-		    int addrlen = strlen(address);
-		    if(	addrlen == oidlen ||
-			(addrlen > oidlen && 
-			 strcasecmp(address + oidlen, str_mail_address) == 0))
-			flIdiotSent2Self = 1;
-		}
-	    }
-
-	    if (buf[0] && buf[0] != ' ' && !flIdiotSent2Self) {
-		char fwd_title[STRLEN] = "";
-		buf[n + 1] = 0;
-		strcat(buf, record->filename);
-		append_record(fpath, record, size);
-		// because too many user set wrong forward address,
-		// let's put their own address instead. 
-		// and again because some really stupid user
-		// does not understand they've set auto-forward,
-		// let's mark this in the title.
-		snprintf(fwd_title, sizeof(fwd_title)-1,
-			"[自動轉寄] %s", record->title);
-		bsmtp(buf, fwd_title, address, origid);
-#ifdef USE_LOG_INTERNETMAIL
-                log_filef("log/internet_mail.log", LOG_CREAT, 
-                        "%s [%s] %s -> (%s) %s: %s\n",
-                        Cdatelite(&now), __FUNCTION__,
-                        cuser.userid, origid, address, fwd_title);
-#endif
-		return 0;
-	    }
-	}
-    }
-// #endif // USE_MAIL_AUTO_FORWARD
-
+    // No matter what, append it.
     append_record(fpath, record, size);
 
+    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL * 2) {
+#ifdef USE_LOG_INTERNETMAIL
+        log_filef("log/internet_mail.log", LOG_CREAT, 
+                  "%s [%s] (%s -> %s) mailbox overflow (%d)\n",
+                  Cdatelite(&now), __FUNCTION__,
+                  origid, address, get_num_records(fpath, sizeof(fileheader_t)));
+#endif
+        return 0;
+    }
+
+// #ifdef USE_MAIL_AUTO_FORWARD
+
+    // Try to build .forward
+    for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
+    if (n + sizeof(".forward") > sizeof(buf))
+        return -1;
+
+    memcpy(buf, fpath, n+1);
+    strcpy(buf + n + 1, ".forward");
+    fp = fopen(buf, "r");
+    if (!fp)
+        return 0;
+
+    // Load and setup address
+    address[0] = 0;
+    fscanf(fp, "%63s", address);
+    fclose(fp);
+    strip_blank(address, address);
+
+    if (!*address ||
+        strchr(address, '@') == NULL ||
+        strcasestr(address, str_mail_address)) {
+        unlink(buf);
+#ifdef USE_LOG_INTERNETMAIL
+        log_filef("log/internet_mail.log", LOG_CREAT, 
+                  "%s [%s] Removed bad address: %s (%s)\n",
+                  Cdatelite(&now), __FUNCTION__,
+                  address, origid);
+#endif
+        return 0;
+    }
+
+    buf[n + 1] = 0;
+    strcat(buf, record->filename);
+    append_record(fpath, record, size);
+    // because too many user set wrong forward address,
+    // let's put their own address instead. 
+    // and again because some really stupid user
+    // does not understand they've set auto-forward,
+    // let's mark this in the title.
+    snprintf(fwd_title, sizeof(fwd_title)-1,
+             "[自動轉寄] %s", record->title);
+    bsmtp(buf, fwd_title, address, origid);
+#ifdef USE_LOG_INTERNETMAIL
+    log_filef("log/internet_mail.log", LOG_CREAT, 
+              "%s [%s] %s -> (%s) %s: %s\n",
+              Cdatelite(&now), __FUNCTION__,
+              cuser.userid, origid, address, fwd_title);
+#endif
+// #endif // USE_MAIL_AUTO_FORWARD
     return 0;
 }
 
