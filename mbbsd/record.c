@@ -497,21 +497,11 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     FILE *fp;
     char buf[512];
     int  n;
-    char address[64];
+    char address[64] = "";
     char fwd_title[STRLEN] = "";
 
     // No matter what, append it.
     append_record(fpath, record, size);
-
-    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL * 2) {
-#ifdef USE_LOG_INTERNETMAIL
-        log_filef("log/internet_mail.log", LOG_CREAT, 
-                  "%s [%s] (%s -> %s) mailbox overflow (%d)\n",
-                  Cdatelite(&now), __FUNCTION__,
-                  origid, address, get_num_records(fpath, sizeof(fileheader_t)));
-#endif
-        return 0;
-    }
 
 // #ifdef USE_MAIL_AUTO_FORWARD
 
@@ -524,13 +514,26 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strcpy(buf + n + 1, ".forward");
     fp = fopen(buf, "r");
     if (!fp)
-        return 0;
+        return -1;
 
     // Load and setup address
     address[0] = 0;
     fscanf(fp, "%63s", address);
     fclose(fp);
     strip_blank(address, address);
+
+    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_SOFTLIMIT) {
+#ifdef USE_LOG_INTERNETMAIL
+        log_filef("log/internet_mail.log", LOG_CREAT, 
+                  "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
+                  Cdatelite(&now), __FUNCTION__,
+                  origid, address,
+                  get_num_records(fpath, sizeof(fileheader_t)),
+                  MAX_KEEPMAIL_SOFTLIMIT);
+#endif
+        return 0;
+    }
+
 
     if (!*address ||
         strchr(address, '@') == NULL ||
