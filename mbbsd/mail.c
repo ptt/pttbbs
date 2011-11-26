@@ -445,18 +445,104 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver) {
     return 0;
 }
 
+static char *
+gen_auth_code(const char *prefix, char *buf, int length) {
+    // prevent ambigious characters: oOlI
+    const char *alphabets = "abcdefghjkmnpqrstuvwxyz";
+    int i;
+
+    if (!prefix)
+        prefix = "";
+
+    strlcpy(buf, prefix, length);
+    buf[length-1] = 0;
+    for (i = strlen(prefix); i < length - 1; i++)
+        buf[i] = alphabets[random() % strlen(alphabets)];
+    return buf;
+}
+
 ////////////////////////////////////////////////////////////////////////
 // User-interface procedures
 int
 setforward(void) {
     char            buf[PATHLEN], ip[50] = "", yn[4];
     FILE           *fp;
+    const char *fn_forward_auth = ".secure/forward_auth",
+               *fn_forward_auth_dir = ".secure",
+               *fn_forward = ".forward";
+    char auth_code[16] = "";
+    time4_t auth_time = 0;
+    const char *prefix = "va";
 
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
 
-    vs_hdr("設定自動轉寄");
+    // There may be race condition but that's probably ok.
+    setuserfile(buf, fn_forward_auth);
+    if (dashs(buf) > 0) {
+        // load forward auth
+        fp = fopen(buf, "rt");
+        auth_time = dasht(buf);
+        if (fp) {
+            fgets(ip, sizeof(ip), fp);
+            fgets(auth_code, sizeof(auth_code), fp);
+            fclose(fp);
+            chomp(ip);
+            chomp(auth_code);
+        } else {
+            unlink(buf);
+        }
+    }
 
+    // verify auth
+    if (*ip && *auth_code) {
+        char input[sizeof(auth_code)] = "";
+        int days = (now - auth_time) / DAY_SECONDS;
+
+        vs_hdr("驗證自動轉寄");
+        prints("\n轉寄信箱: %s\n", ip);
+
+        if (getdata(4, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
+                    sizeof(input), LCECHO) &&
+            strcmp(auth_code, input) == 0) {
+            outs(ANSI_COLOR(1;32) "確認驗證成功\!" ANSI_RESET "\n");
+            unlink(buf);
+            // write auth!
+            setuserfile(buf, fn_forward);
+            fp = fopen(buf, "wt");
+            if (fp) {
+                fputs(ip, fp);
+                fclose(fp);
+                vmsgf("轉寄信箱已設定為 %s", ip);
+            } else {
+                vmsg("系統異常 - 轉寄信箱設定失敗。");
+            }
+            return FULLUPDATE;
+        }
+
+        // incorrect code.
+        outs("驗證碼錯誤。\n");
+        if (!str_starts_with(input, prefix))
+            prints("驗證碼應為 %s 開頭的字串。\n", prefix);
+
+        // valid for at least one day.
+        if (days > 1) {
+            if (getdata(10, 0, "要重寄信箱或換信箱嗎? [y/N]", yn, sizeof(yn),
+                        LCECHO) && yn[0] == 'y') {
+                unlink(buf);
+            } else {
+                return FULLUPDATE;
+            }
+        } else {
+            outs("請確認收到信件後再輸入驗證碼。\n"
+                 "若一直無法收到，可於一天後換信箱或重發。\n");
+            pressanykey();
+            return FULLUPDATE;
+        }
+    }
+
+    // create new one.
+    vs_hdr("設定自動轉寄");
     outs(ANSI_COLOR(1;31) "\n\n"
 	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
 	"本站基於安全性及防止廣告信的考量，\n"
@@ -464,11 +550,14 @@ setforward(void) {
 	"不便之處請多見諒。\n"
 	ANSI_RESET "\n");
 
-    setuserfile(buf, ".forward");
+    setuserfile(buf, fn_forward);
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
     }
+    chomp(ip);
+    prints("目前設定自動轉寄為: %s", 
+           dashf(buf) ? ip : ANSI_COLOR(1;31)"(關閉)" ANSI_RESET);
     getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
 		ip, sizeof(ip), DOECHO);
     strip_blank(ip, ip);
@@ -478,26 +567,63 @@ setforward(void) {
             strchr(ip, '@') == NULL) {
             unlink(buf);
             vmsg("禁止自動轉寄給站內其它使用者");
-            return 0;
+            return FULLUPDATE;
         }
 
         if (invalidaddr(ip)) {
             vmsg("Email 輸入錯誤");
-            return 0;
+            return FULLUPDATE;
         }
 
         getdata(b_lines, 0, "確定開啟自動轉信?(Y/n)", yn, sizeof(yn),
                 LCECHO);
-	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
-	    fputs(ip, fp);
-	    fclose(fp);
-	    vmsg("設定完成!");
-	    return 0;
-	}
+        if (*yn != 'n') {
+            char authtemp[PATHLEN];
+            setuserfile(buf, fn_forward_auth_dir);
+            Mkdir(buf);
+            setuserfile(buf, fn_forward_auth);
+            fp = fopen(buf, "wt");
+            if (!fp) {
+                vmsg("系統錯誤 - 無法設定自動轉信。");
+                return FULLUPDATE;
+            }
+            gen_auth_code(prefix, auth_code, sizeof(auth_code));
+            strlcpy(authtemp, buf, sizeof(authtemp));
+            strlcat(authtemp, ".tmp", sizeof(authtemp));
+            fprintf(fp, "%s\n%s\n", ip, auth_code);
+            fclose(fp);
+            fp = fopen(authtemp, "wt");
+            if (!fp) {
+                unlink(buf);
+                vmsg("系統錯誤 - 無法送出確認信。");
+                return FULLUPDATE;
+            }
+            snprintf(buf, sizeof(buf), BBSNAME " 自動轉寄確認 (%s)",
+                     cuser.userid);
+            fprintf(fp,
+                    BBSNAME " 自動轉寄確認\n\n"
+                    "使用者 %s 要求自動轉寄至此信箱 %s\n"
+                    "若這不是您的帳號，請直接刪除此信件。\n"
+                    "若確定要開啟自動轉寄，"
+                    "請輸入下行 %s 開頭的驗證碼到自動轉寄設定:\n"
+                    " %s\n", cuser.userid, ip, prefix, auth_code);
+            fclose(fp);
+            bsmtp(authtemp, buf, ip, cuser.userid);
+            unlink(authtemp);
+            vs_hdr("確認信件已寄出");
+            prints("\n\n"
+                 ANSI_COLOR(1;33)
+                 "為確認 Email 的正確性，系統已寄出一份含驗證碼的確認信，\n"
+                 "標題為: %s\n"
+                 "自動轉寄在完成確認前不會啟用。\n" ANSI_RESET
+                 "請在收到該信件後再次進入設定轉寄信箱並輸入驗證碼。\n", buf);
+            pressanykey();
+            return FULLUPDATE;
+        }
     }
     unlink(buf);
     vmsg("取消自動轉信!");
-    return 0;
+    return FULLUPDATE;
 }
 
 int
