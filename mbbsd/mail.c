@@ -42,38 +42,83 @@ int old_cross_post(int, fileheader_t* , const char *);
 ////////////////////////////////////////////////////////////////////////
 // Core utility functions
 
-int
-invalidaddr(const char *origaddr)
-{
-    const char *addr = origaddr;
-    if (!*addr)
-	return 1;		/* blank */
+// Checks if given address is a full qualified mail address in user@host.domain
+static int bad_email_offset = 0;
 
-    while (*addr) {
-	if (not_alnum(*addr) && !strchr("[].@-_+", *addr)) {
-#ifdef DEBUG_FWDADDRERR
-	    int c = (*addr) & 0xff;
-	    clear();
-            mvouts(
-                2, 0,
-                "您輸入的位址錯誤 (address error)。 \n\n"
-                "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
-                "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
-                "如果你確實打錯了，請直接略過下面的說明。\n"
-                "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
-                "並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
-                ANSI_COLOR(1;33));
-            prints("原始輸入位址: [%s]\n"
-                   "錯誤位置: 第 %d 字元: 0x%02X [ %c ]" ANSI_RESET "\n", 
-                   origaddr, (int)(addr - origaddr + 1), c, c);
-	    vmsg("請按任意鍵繼續");
-	    clear();
-#endif
-            return 1;
+int
+is_valid_email(const char *full_address)
+{
+    const char *addr = full_address;
+    char c;
+    int cAt = 0, cDot = 0;
+
+    bad_email_offset = 0;
+    if (!*addr)
+	return 0;		/* blank */
+
+    for (; (c = *addr); addr++, bad_email_offset++) {
+        if (!isascii(c))
+            return 0;
+        if (isalnum(c))
+           continue;
+        switch(c) {
+            case '-':
+            case '_':
+            case '+':
+                continue;
+
+            case '.':
+                if (cAt)
+                    cDot++;
+                continue;
+
+            case '@':
+                cAt++;
+                continue;
         }
-	addr++;
+        return 0;
     }
+    if (cAt == 1 && cDot > 0)
+        return 1;
+
+    bad_email_offset = -1;
     return 0;
+}
+
+int 
+invalidaddr(const char *addr) {
+    int r = is_valid_email(addr);
+    char c;
+    if (r)
+        return 0;
+
+#ifdef DEBUG_FWDADDRERR
+    clear();
+    mvouts(2, 0,
+           "您輸入的 email 位址錯誤 (address error)。 \n\n"
+           "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
+           "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
+           "如果你確實打錯了，請直接略過下面的說明。\n"
+           "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
+           "並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
+           ANSI_COLOR(1;33));
+    prints("原始輸入位址: [%s]\n", addr);
+
+
+    if (bad_email_offset >= 0) {
+        c = addr[bad_email_offset];
+        prints("錯誤位置: 第 %d 字元: 0x%02X [ %c ]",
+               bad_email_offset,  (unsigned char)c, 
+               isascii(c) && isprint(c) ? c : ' ');
+    } else {
+        outs("錯誤原因: email 形式不正確 (非 user@host.domain)");
+    }
+    outs(ANSI_RESET "\n");
+
+    pressanykey();
+    clear();
+#endif
+    return 1;
 }
 
 
@@ -432,7 +477,12 @@ setforward(void) {
         if (strcasestr(ip, str_mail_address) ||
             strchr(ip, '@') == NULL) {
             unlink(buf);
-            vmsg("禁止自動轉寄給站內其它使用者。");
+            vmsg("禁止自動轉寄給站內其它使用者");
+            return 0;
+        }
+
+        if (invalidaddr(ip)) {
+            vmsg("Email 輸入錯誤");
             return 0;
         }
 
@@ -1184,7 +1234,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     assert(PATHLEN >= 256);
     if (mode == 'Z') {
 	assert(is_validuserid(cuser.userid));
-	assert(!invalidaddr(address));
+	assert(is_valid_email(address));
 #ifdef MUTT_PATH
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
