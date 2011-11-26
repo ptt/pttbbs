@@ -525,6 +525,13 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     fclose(fp);
     strip_blank(address, address);
 
+#ifdef UNTRUSTED_FORWARD_TIMEBOME
+    if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOME) {
+        unlink(buf);
+        return 0;
+    }
+#endif
+
     if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
         unlink(buf);
         // TODO add a mail so that origid knows what happened.

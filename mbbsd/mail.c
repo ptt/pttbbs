@@ -554,6 +554,11 @@ setforward(void) {
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
+#ifdef UNTRUSTED_FORWARD_TIMEBOME
+        if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOME)
+            unlink(buf);
+#endif
+
     }
     chomp(ip);
     prints("目前設定自動轉寄為: %s", 
