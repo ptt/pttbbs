@@ -1279,7 +1279,7 @@ u_register(void)
 	return FULLUPDATE;
 
     // show REGNOTES_ROOT front page
-    if (dashs(REGNOTES_ROOT "front"))
+    if (dashs(REGNOTES_ROOT "front") > 0)
     {
 	clear();
 	vs_hdr("µù¥U³æ¶ñ¼g»¡©ú");
