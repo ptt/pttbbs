@@ -4237,15 +4237,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
 
-#ifdef BN_DIGEST
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
-          getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
-          if(genbuf2[0] == 'y')
-	      do_crosspost(BN_DIGEST, &digest, genbuf, 1);
-        }
-#endif
-
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, BN_NOTE) || 
 #ifdef BN_ARTDSN	    
