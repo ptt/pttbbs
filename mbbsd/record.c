@@ -565,9 +565,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         return 0;
     }
 
-    buf[n + 1] = 0;
-    strcat(buf, record->filename);
-    append_record(fpath, record, size);
+    setdirpath(buf, fpath, record->filename);
     // because too many user set wrong forward address,
     // let's put their own address instead. 
     // and again because some really stupid user
