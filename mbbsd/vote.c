@@ -795,9 +795,9 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	// XXX if this is a private vote (limited), I think we don't need to check limits?
 	if (cuser.firstlogin > closetime)
             reason = "註冊時間";
-        else if (cuser.numposts < limits_posts)
+        else if (cuser.numposts < (uint32_t)limits_posts)
             reason = "文章總數";
-        else if (cuser.numlogindays < limits_logins)
+        else if (cuser.numlogindays < (uint32_t)limits_logins)
             reason = STR_LOGINDAYS;
 
         if (reason)

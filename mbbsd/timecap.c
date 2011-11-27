@@ -166,7 +166,7 @@ timecap_add_archive(const char *capsule_index,
         return 0;
 
     // the blob must provide enough information to get the object name.
-    if (write(fd, ref_blob, ref_blob_size) != ref_blob_size) {
+    if (write(fd, ref_blob, ref_blob_size) != (int)ref_blob_size) {
         close(fd);
         return 0;
     }

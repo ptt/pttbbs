@@ -758,7 +758,7 @@ grayout(int y, int end, int level)
 		// not exceed t_columns. buffer overflow is impossible.
 		// but to make it more robust, let's quick check here.
 		// of course, t_columns should always be far smaller.
-		if (strlen((char*)slp->data) > t_columns)
+		if (strlen((char*)slp->data) > (size_t)t_columns)
 		    slp->data[t_columns] = 0;
 		strcpy((char*)slp->data, 
 			level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40));

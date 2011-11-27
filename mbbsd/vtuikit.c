@@ -233,7 +233,7 @@ vfill(int n, int flags, const char *s)
 	if (flags & VFILL_RIGHT_ALIGN)
 	{
 	    // right-align
-	    int l = has_ansi ? strlen_noansi(s) : strlen(s);
+	    int l = has_ansi ? strlen_noansi(s) : (int)strlen(s);
 
 	    if (l >= n) // '=' prevents blanks
 		l = n;
@@ -727,7 +727,7 @@ vs_footer(const char *caption, const char *msg)
 	outs(caption); 
 	i += (*caption == ESC_CHR) ?
 	    strlen_noansi(caption) :
-	    strlen(caption);
+	    (int)strlen(caption);
     }
 
     if (!msg) msg = "";
@@ -1086,7 +1086,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     // than STRLEN. Although we support large screen,
     // inputting huge line will just make troubles...
     if (len > STRLEN) len = STRLEN;
-    assert(len <= sizeof(buf) && len >= 2);
+    assert(len <= (int)sizeof(buf) && len >= 2);
 
     // adjust flags
     if (flags & (VGET_NOECHO | VGET_DIGITS))

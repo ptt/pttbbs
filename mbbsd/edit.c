@@ -1223,7 +1223,7 @@ load_file(FILE * fp, off_t offSig)
     while (fgets(buf, sizeof(buf), fp))
     {
 	szread += strlen(buf);
-	if (offSig < 0 || szread <= offSig)
+	if (offSig < 0 || szread <= (size_t)offSig)
 	{
 	    insert_string(buf);
 	}
@@ -1873,8 +1873,11 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
     FILE           *fp = NULL;
     textline_t     *p;
     char            ans[TTLEN], *msg;
-    int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
+    int             aborted = 0, line = 0;
     int             entropy = 0;
+#ifdef USE_POSTRECORD
+    int checksum[3], sum = 0, po = 1;
+#endif
 
     assert(!chtitle || mytitle);
     vs_hdr("ÀÉ®×³B²z");
@@ -3371,7 +3374,8 @@ static const char*
 phone_char(char c)
 {
     if (curr_buf->last_phone_mode > 0 && curr_buf->last_phone_mode < 20) {
-	if (tolower(c)<'a'||(tolower(c)-'a') >= strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2)
+	if (tolower(c) < 'a' ||
+            (tolower(c)-'a') >= (int)strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2)
 	    return 0;
 	return BIG5[curr_buf->last_phone_mode - 1] + (tolower(c) - 'a') * 2;
     }

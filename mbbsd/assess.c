@@ -6,7 +6,7 @@
 /* do (*num) + n, n is integer. */
 inline static void inc(unsigned char *num, int n)
 {
-    if (n >= 0 && UCHAR_MAX - *num <= n)
+    if (n >= 0 && UCHAR_MAX - *num <= (unsigned)n)
 	(*num) = UCHAR_MAX;
     else if (n < 0 && *num < -n)
 	(*num) = 0;
@@ -52,7 +52,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     assert(tusernum > 0 && tusernum < MAX_USERS);
     move(b_lines - 2, 0);
     clrtobot();
-    for (i = 0; i < DIM(badpost_reason); i++)
+    for (i = 0; i < (int)DIM(badpost_reason); i++)
 	prints("%d.%s ", i + 1, badpost_reason[i]);
     prints("%d.%s ", i + 1, "其他");
     prints("0.取消劣文 ");
@@ -63,13 +63,13 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
             vmsg("取消設定劣文。");
             return -1;
         }
-        if (i < 0 || i > DIM(badpost_reason))
+        if (i < 0 || i > (int)DIM(badpost_reason))
             bell();
         else
             break;
     } while (1);
 
-    if (i < DIM(badpost_reason))
+    if (i < (int)DIM(badpost_reason))
 	sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", badpost_reason[i]);
     else if(i==DIM(badpost_reason))
     {
@@ -88,7 +88,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	strcat(genbuf,")");
     }
 
-    assert(i >= 0 && i <= DIM(badpost_reason));
+    assert(i >= 0 && i <= (int)DIM(badpost_reason));
     if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
 
 #ifdef USE_COOLDOWN
