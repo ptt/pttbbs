@@ -525,8 +525,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     fclose(fp);
     strip_blank(address, address);
 
-#ifdef UNTRUSTED_FORWARD_TIMEBOME
-    if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOME) {
+#ifdef UNTRUSTED_FORWARD_TIMEBOMB
+    if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOMB) {
         unlink(buf);
         return 0;
     }

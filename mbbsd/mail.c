@@ -554,8 +554,8 @@ setforward(void) {
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
-#ifdef UNTRUSTED_FORWARD_TIMEBOME
-        if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOME)
+#ifdef UNTRUSTED_FORWARD_TIMEBOMB
+        if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOMB)
             unlink(buf);
 #endif
 
