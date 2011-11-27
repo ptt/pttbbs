@@ -291,7 +291,7 @@ user_display(const userec_t * u, int adminmode)
 
 	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
 		"已註冊" : "未註冊");
-	sethomefile(buf, u->userid, ".forward");
+	sethomefile(buf, u->userid, FN_FORWARD);
 	if (dashs(buf) > 0)
 	    outs("[自動轉寄]");
 

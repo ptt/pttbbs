@@ -468,8 +468,7 @@ setforward(void) {
     char            buf[PATHLEN], ip[50] = "", yn[4];
     FILE           *fp;
     const char *fn_forward_auth = ".secure/forward_auth",
-               *fn_forward_auth_dir = ".secure",
-               *fn_forward = ".forward";
+               *fn_forward_auth_dir = ".secure";
     char auth_code[16] = "";
     time4_t auth_time = 0;
     const char *prefix = "va";
@@ -505,10 +504,10 @@ setforward(void) {
         if (getdata(4, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
                     sizeof(input), LCECHO) &&
             strcmp(auth_code, input) == 0) {
-            outs(ANSI_COLOR(1;32) "確認驗證成功\" ANSI_RESET "\n");
+            outs(ANSI_COLOR(1;32) "確認驗證成功\ " ANSI_RESET "\n");
             unlink(buf);
             // write auth!
-            setuserfile(buf, fn_forward);
+            setuserfile(buf, FN_FORWARD);
             fp = fopen(buf, "wt");
             if (fp) {
                 fputs(ip, fp);
@@ -554,7 +553,7 @@ setforward(void) {
 	"不便之處請多見諒\n"
 	ANSI_RESET "\n");
 
-    setuserfile(buf, fn_forward);
+    setuserfile(buf, FN_FORWARD);
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
@@ -589,7 +588,7 @@ setforward(void) {
                 yn, sizeof(yn), LCECHO);
         if (*yn == 'y') {
             char authtemp[PATHLEN];
-            setuserfile(buf, fn_forward);
+            setuserfile(buf, FN_FORWARD);
             unlink(buf);
             setuserfile(buf, fn_forward_auth_dir);
             Mkdir(buf);

@@ -28,7 +28,7 @@
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_DIR		".DIR"
-#define FN_BOARD        ".BRD"       /* board list */
+#define FN_BOARD        ".BRD"          /* board list */
 #define FN_USEBOARD     "usboard"       /* 看板統計 */
 #define FN_TOPSONG      "etc/topsong"
 #define FN_OVERRIDES    "overrides"
@@ -45,6 +45,7 @@
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
+#define FN_FORWARD      ".forward"      /* auto forward */
 #ifndef SZ_RECENTLOGIN
 #define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation
 #endif

@@ -510,11 +510,11 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 
     // Try to build .forward
     for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
-    if (n + sizeof(".forward") > sizeof(buf))
+    if (n + strlen(FN_FORWARD) + 1 > sizeof(buf))
         return -1;
 
     memcpy(buf, fpath, n+1);
-    strcpy(buf + n + 1, ".forward");
+    strcpy(buf + n + 1, FN_FORWARD);
     fp = fopen(buf, "r");
     if (!fp)
         return 0;

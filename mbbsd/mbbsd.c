@@ -1272,12 +1272,12 @@ user_login(void)
 #endif
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
         {   char fwd_path[PATHLEN];
-            setuserfile(fwd_path, ".forward");
+            setuserfile(fwd_path, FN_FORWARD);
             if (dashf(fwd_path) && dasht(fwd_path) < UNTRUSTED_FORWARD_TIMEBOMB)
             {
                 vs_hdr("自動轉寄設定已變更");
                 unlink(fwd_path);
-                outs("\n由於系統調整，您的自動轉寄已被停用，\n"
+                outs("\n由於系統調整，您的自動轉寄已被重設，\n"
                      "如有需求請重新設定。");
                 pressanykey();
             }
