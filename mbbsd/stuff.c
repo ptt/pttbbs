@@ -378,7 +378,7 @@ getdata2vgetflag(int echo)
 int
 getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-    move(line, col);
+    move(line, col); SOLVE_ANSI_CACHE();
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), buf);
 }
@@ -387,7 +387,7 @@ int
 getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
             const char *defaultstr)
 {
-    move(line, col);
+    move(line, col); SOLVE_ANSI_CACHE();
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
 }
@@ -395,7 +395,7 @@ getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
 int
 getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-    move(line, col);
+    move(line, col); SOLVE_ANSI_CACHE();
     if(prompt && *prompt) outs(prompt);
     return vgets(buf, len, getdata2vgetflag(echo));
 }
