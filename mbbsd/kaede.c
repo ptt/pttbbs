@@ -81,7 +81,7 @@ Ptt_prints(char *str, size_t size, int mode)
 {
     char           *strbuf = alloca(size);
     int             r, w;
-    for( r = w = 0 ; str[r] != 0 && w < (size - 1) ; ++r )
+    for( r = w = 0 ; str[r] != 0 && w < ((int)size - 1) ; ++r )
     {
         if( str[r] != ESC_CHR )
         {
@@ -90,7 +90,7 @@ Ptt_prints(char *str, size_t size, int mode)
         }
 
         if( str[++r] != '*' ){
-            if(w+2>=size-1) break;
+            if (w+2 >= (int)size-1) break;
             strbuf[w++] = ESC_CHR;
             strbuf[w++] = str[r];
             continue;

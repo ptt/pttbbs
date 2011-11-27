@@ -539,8 +539,9 @@ CCW_PROTO ssize_t
 ccw_talk_send(CCW_CTX *ctx, const char *msg)
 {
     // protocol: [len][msg]
+    // DON'T CHANGE THE TYPE(char) of len unless you change whole protocol
     char len = strlen(msg);
-    assert(len >= 0 && (int)len == strlen(msg));
+    assert(len >= 0 && (size_t)(int)len == strlen(msg));
     if (len < 1) return 0;
 
     // XXX if remote is closed (without MSG_NOSIGNAL), 
@@ -562,7 +563,7 @@ ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
         return -1;
     if (toread(ctx->fd, buf, len)!= len)
         return -1;
-    assert(len >= 0 && len < szbuf);
+    assert(len >= 0 && len < (int)szbuf);
     buf[(size_t)len] = 0;
     return len;
 }

@@ -71,7 +71,7 @@ friend_add(const char *uident, int type, const char* des)
     char            fpath[PATHLEN];
 
     setfriendfile(fpath, type);
-    if (friend_count(fpath) > friend_max[type])
+    if (friend_count(fpath) > (int)friend_max[type])
 	return;
 
     if ((uident[0] > ' ') && !file_exist_record(fpath, uident)) {
@@ -247,7 +247,7 @@ friend_validate(int type, int expire, int badpost)
 	expire *= DAY_SECONDS *30;
     else
 	expire = 0;
-    if (badpost < 0 || badpost > UCHAR_MAX)
+    if (badpost < 0 || (unsigned)badpost > (unsigned)UCHAR_MAX)
 	badpost = 0;
     syncnow();
 

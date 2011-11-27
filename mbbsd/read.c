@@ -67,7 +67,7 @@ static int
 _iter_tag_match_title(void *ptr, void *opt) {
     fileheader_t *fh = (fileheader_t*) ptr;
     char *pattern = (char*) opt;
-    char *title = subject(fh->title);
+    const char *title = subject(fh->title);
 
     if (strncmp(pattern, title, TTLEN) != 0)
         return 0;
@@ -272,7 +272,7 @@ thread(const keeploc_t * locmem, int stypen)
     int     pos = locmem->crs_ln, jump = THREAD_SEARCH_RANGE, new_ln;
     int     fd = -1, amatch = -1;
     int     step = (stypen & RS_FORWARD) ? 1 : -1;
-    char    *key;
+    const char *key;
 
     if(locmem->crs_ln==0)
 	return locmem->crs_ln;
