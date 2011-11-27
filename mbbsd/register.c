@@ -605,7 +605,6 @@ new_register(void)
 #ifdef MIN_ALLOWED_ID_LEN
         else if (strlen(passbuf) < MIN_ALLOWED_ID_LEN)
 	    prints("代號過短，請使用 %d 個字元以上的代號\n", MIN_ALLOWED_ID_LEN);
-	    // prints("此代號已由系統保留，請使用別的代號\n");
 #endif
 	else // success
 	    break;

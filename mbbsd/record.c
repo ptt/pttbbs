@@ -495,7 +495,7 @@ int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
     FILE *fp;
-    char buf[512];
+    char buf[PATHLEN];
     int  n;
     char address[64] = "";
     char fwd_title[STRLEN] = "";
@@ -503,18 +503,17 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 
     // No matter what, append it, and return if that failed.
     r = append_record(fpath, record, size);
-    if (r != 0)
+    if (r < 0)
         return r;
 
 // #ifdef USE_MAIL_AUTO_FORWARD
 
-    // Try to build .forward
-    for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
-    if (n + strlen(FN_FORWARD) + 1 > sizeof(buf))
+    if (strlen(fpath) + strlen(FN_FORWARD) >= PATHLEN) {
+        log_filef("log/invalid_append_record_forward", LOG_CREAT,
+                  "%s %s %s\n", Cdatelite(&now), cuser.userid, fpath);
         return -1;
-
-    memcpy(buf, fpath, n+1);
-    strcpy(buf + n + 1, FN_FORWARD);
+    }
+    setdirpath(buf, fpath, FN_FORWARD);
     fp = fopen(buf, "r");
     if (!fp)
         return 0;
@@ -523,6 +522,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     address[0] = 0;
     fscanf(fp, "%63s", address);
     fclose(fp);
+    chomp(address);
     strip_blank(address, address);
 
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
