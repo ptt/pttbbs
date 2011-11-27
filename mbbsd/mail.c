@@ -505,7 +505,7 @@ setforward(void) {
         if (getdata(4, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
                     sizeof(input), LCECHO) &&
             strcmp(auth_code, input) == 0) {
-            outs(ANSI_COLOR(1;32) "確認驗證成功\!" ANSI_RESET "\n");
+            outs(ANSI_COLOR(1;32) "確認驗證成功\" ANSI_RESET "\n");
             unlink(buf);
             // write auth!
             setuserfile(buf, fn_forward);
@@ -513,10 +513,11 @@ setforward(void) {
             if (fp) {
                 fputs(ip, fp);
                 fclose(fp);
-                vmsgf("轉寄信箱已設定為 %s", ip);
+                prints("轉寄信箱已設定為 %s", ip);
             } else {
-                vmsg("系統異常 - 轉寄信箱設定失敗。");
+                outs(ANSI_COLOR(1;31) "系統異常 - 轉寄信箱設定失敗。" ANSI_RESET);
             }
+            pressanykey();
             return FULLUPDATE;
         }
 
@@ -543,11 +544,14 @@ setforward(void) {
 
     // create new one.
     vs_hdr("設定自動轉寄");
-    outs(ANSI_COLOR(1;31) "\n\n"
+    outs(ANSI_COLOR(1;36) "\n\n"
 	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
-	"本站基於安全性及防止廣告信的考量，\n"
-	"即日起自動轉寄的寄件者一律改為轉寄者的 ID。\n\n" 
-	"不便之處請多見諒。\n"
+	"本站基於安全性及防止廣告信的考量，自動轉寄有以下設定:\n"
+        " - 寄件者一律改為設定自動轉寄者的 ID\n"
+        " - 要先經過 Email 認證\n"
+        " - 不能設定為同站的其它使用者\n"
+        "\n" 
+	"不便之處請多見諒\n"
 	ANSI_RESET "\n");
 
     setuserfile(buf, fn_forward);
@@ -570,7 +574,6 @@ setforward(void) {
     if (*ip) {
         if (strcasestr(ip, str_mail_address) ||
             strchr(ip, '@') == NULL) {
-            unlink(buf);
             vmsg("禁止自動轉寄給站內其它使用者");
             return FULLUPDATE;
         }
@@ -580,10 +583,14 @@ setforward(void) {
             return FULLUPDATE;
         }
 
-        getdata(b_lines, 0, "確定開啟自動轉信?(Y/n)", yn, sizeof(yn),
-                LCECHO);
-        if (*yn != 'n') {
+        getdata(b_lines, 0,
+                "確定要使用自動轉信? "
+                "(y)開始驗證 (n)停用 [Q]不修改設定 [y/n/Q]: ",
+                yn, sizeof(yn), LCECHO);
+        if (*yn == 'y') {
             char authtemp[PATHLEN];
+            setuserfile(buf, fn_forward);
+            unlink(buf);
             setuserfile(buf, fn_forward_auth_dir);
             Mkdir(buf);
             setuserfile(buf, fn_forward_auth);
@@ -623,6 +630,9 @@ setforward(void) {
                  "自動轉寄在完成確認前不會啟用。\n" ANSI_RESET
                  "請在收到該信件後再次進入設定轉寄信箱並輸入驗證碼。\n", buf);
             pressanykey();
+            return FULLUPDATE;
+        } else if (*yn != 'n') {
+            vmsg("設定未變更!");
             return FULLUPDATE;
         }
     }

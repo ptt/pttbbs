@@ -527,7 +527,9 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
     if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOMB) {
-        unlink(buf);
+        // We may unlink here, but for systems with timebomb,
+        // just leave it alone and let user see it in login screen.
+        // unlink(buf);
         return 0;
     }
 #endif
@@ -550,12 +552,15 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     if (!*address ||
         strchr(address, '@') == NULL ||
         strcasestr(address, str_mail_address)) {
+#ifndef UNTRUSTED_FORWARD_TIMEBOMB
+        // delete the setting if we don't have timebombs.
         unlink(buf);
 #ifdef USE_LOG_INTERNETMAIL
         log_filef("log/internet_mail.log", LOG_CREAT, 
                   "%s [%s] Removed bad address: %s (%s)\n",
                   Cdatelite(&now), __FUNCTION__,
                   address, origid);
+#endif
 #endif
         return 0;
     }
