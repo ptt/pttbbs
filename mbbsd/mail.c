@@ -496,12 +496,23 @@ setforward(void) {
     // verify auth
     if (*ip && *auth_code) {
         char input[sizeof(auth_code)] = "";
-        int days = (now - auth_time) / DAY_SECONDS;
+        int hours = (now - auth_time) / 3600;
+        int min_hours = 24;
+
+        if (hours < 0)
+            hours = min_hours;
 
         vs_hdr("驗證自動轉寄");
         prints("\n轉寄信箱: %s\n", ip);
 
-        if (getdata(4, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
+
+        if (hours < min_hours) {
+            prints("離下次可重寄/更換信箱尚有 %d 小時\n", min_hours - hours);
+        } else {
+            outs("若想重寄/更換信箱請直接按 Enter\n");
+        }
+
+        if (getdata(5, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
                     sizeof(input), LCECHO) &&
             strcmp(auth_code, input) == 0) {
             outs(ANSI_COLOR(1;32) "確認驗證成功\ " ANSI_RESET "\n");
@@ -522,11 +533,11 @@ setforward(void) {
 
         // incorrect code.
         outs("驗證碼錯誤。\n");
-        if (!str_starts_with(input, prefix))
+        if (*input && !str_starts_with(input, prefix))
             prints("驗證碼應為 %s 開頭的字串。\n", prefix);
 
         // valid for at least one day.
-        if (days > 1) {
+        if (hours >= min_hours) {
             if (getdata(10, 0, "要重寄信箱或換信箱嗎? [y/N]", yn, sizeof(yn),
                         LCECHO) && yn[0] == 'y') {
                 unlink(buf);
@@ -534,8 +545,9 @@ setforward(void) {
                 return FULLUPDATE;
             }
         } else {
-            outs("請確認收到信件後再輸入驗證碼。\n"
-                 "若一直無法收到，可於一天後換信箱或重發。\n");
+            prints("請確認收到信件後再輸入驗證碼。\n"
+                   "若超過 %d 小時仍未收到，"
+                   "可於再次輸入錯誤驗證碼後選擇換信箱或重發。\n", min_hours);
             pressanykey();
             return FULLUPDATE;
         }
