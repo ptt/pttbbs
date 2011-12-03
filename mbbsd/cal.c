@@ -475,13 +475,21 @@ give_money_ui(const char *userid)
 	userec_t xuser = {0};
 	getuser(id, &xuser);
 
-	if (strcmp(xuser.myangel, cuser.userid) == 0)
+	while (strcmp(xuser.myangel, cuser.userid) == 0)
 	{
 	    char yn[3];
-	    outs("他是你的小主人，是否匿名？[Y/n]: ");
+	    mvouts(6, 0, "他是你的小主人，是否匿名？[y/n]: ");
 	    vgets(yn, sizeof(yn), VGET_LOWERCASE);
-	    if (yn[0] != 'n')
-		myid = "小天使";
+            switch(yn[0]) {
+                case 'y':
+                    myid = "小天使";
+                    break;
+                case 'n':
+                    break;
+                default:
+                    continue;
+            }
+            break;
 	}
     }
 #endif // PLAY_ANGEL
