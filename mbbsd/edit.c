@@ -1618,48 +1618,62 @@ write_header(FILE * fp,  const char *mytitle)
 	    curr_buf->ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
-	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
+	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
+            char default_name[IDLEN + 1] = "";
+            char ans[3];
+            int use_userid = 1;
 
 #if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
-	    // dirty hack here... sorry
-	    if (HasUserPerm(PERM_ANGEL) && currboard 
-		&& strcmp(currboard, BN_ANGELPRAY) == 0)
-	    {
-		char mynick[IDLEN+1];
-		angel_load_my_fullnick(mynick, sizeof(mynick));
-		getdata_str(3, 0, "請輸入想用的名字(輸入[r]為真名): ", 
-			real_name, sizeof(real_name), DOECHO, mynick);
-	    } else
+            // dirty hack here... sorry
+            if (HasUserPerm(PERM_ANGEL) && currboard &&
+                strcmp(currboard, BN_ANGELPRAY) == 0) {
+                angel_load_my_fullnick(default_name, sizeof(default_name));
+            }
 #endif // PLAY_ANGEL && BN_ANGELPRAY
-	    do {
-		getdata(3, 0, defanony ? 
-			"請輸入你想用的ID，也可直接按[Enter]，或是按[r]用真名：" :
-			"請輸入你想用的ID，也可直接按[Enter]使用原ID：",
-			real_name, sizeof(real_name), DOECHO);
-		// names with '-' prefix are considered as 'deleted'.
-		if (real_name[0] == '-') 
-		{
-		    mvouts(4, 0, "抱歉，請勿使用以 - 開頭的名稱。");
-		    continue;
-		}
-		break;
-	    } while(1);
 
-	    if (!real_name[0] && defanony) {
-		strlcpy(real_name, "Anonymous", sizeof(real_name));
-		strlcpy(postlog.author, real_name, sizeof(postlog.author));
-		if (curr_buf)
-		    curr_buf->ifuseanony = 1;
-	    } else {
-		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
-		    strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
-		else {
-		    snprintf(postlog.author, sizeof(postlog.author),
-			     "%s.", real_name);
-		    if (curr_buf)
-			curr_buf->ifuseanony = 1;
-		}
-	    }
+            do {
+                getdata_str(3, 0, defanony ? 
+                    "請輸入你想用的ID，或直接按[Enter]暱名，或按[r][R]用真名：" :
+                    "請輸入你想用的ID，也可直接按[Enter]或[r]或[R]使用原ID：",
+                    real_name, sizeof(real_name), DOECHO, default_name);
+
+                // sanity checks
+                if (real_name[0] == '-') {
+                    // names with '-' prefix are considered as 'deleted'.
+                    mvouts(4, 0, "抱歉，請勿使用以 - 開頭的名稱。");
+                    continue;
+                }
+                trim(real_name);
+                if (strcmp(real_name, "R") == 0)
+                    strcpy(real_name, "r");
+                if (strcmp(real_name, "r") == 0 && !defanony)
+                    strcpy(real_name, "");
+                if (!real_name[0] && defanony)
+                    strlcpy(real_name, "Anonymous", sizeof(real_name));
+
+                if (strcmp("r", real_name) || !*real_name)
+                    use_userid = 0;
+                else
+                    use_userid = 1;
+
+                mvprints(3, 0, "使用名稱: %s",
+                         use_userid ? cuser.userid : real_name);
+                if (getdata(4, 0, "確定[y/N]? ", ans, sizeof(ans), LCECHO) < 1 ||
+                    ans[0] != 'y') {
+                    move(4, 0); clrtobot();
+                    continue;
+                }
+                break;
+            } while (1);
+
+            if (use_userid) {
+                strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
+            } else {
+                snprintf(postlog.author, sizeof(postlog.author),
+                         "%s.", real_name);
+                if (curr_buf)
+                    curr_buf->ifuseanony = 1;
+            }
 	}
 #endif
 	strlcpy(postlog.board, currboard, sizeof(postlog.board));
