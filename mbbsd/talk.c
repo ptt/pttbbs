@@ -2630,7 +2630,7 @@ userlist(void)
 		    redrawall = redraw = 1;
 		}
 		break;
-#endif // PLAY_ANGLE
+#endif // PLAY_ANGEL
 
 	    case Ctrl('W'):
 		if (HasBasicUserPerm(PERM_LOGINOK)) {

@@ -353,11 +353,13 @@ int a_angelreload() {
 
 inline int
 angel_reject_me(userinfo_t * uin){
-    // TODO 超級好友怎麼辦？
     int* iter = uin->reject;
     int unum;
     while ((unum = *iter++)) {
 	if (unum == currutmp->uid) {
+            // 超級好友?
+            if (intbsearch(unum, uin->myfriend, uin->nFriends))
+                return 0;
 	    return 1;
 	}
     }
