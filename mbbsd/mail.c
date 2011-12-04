@@ -1107,7 +1107,8 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_list(void)
 {
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK) ||
+        HasUserPerm(PERM_VIOLATELAW))
         return DONOTHING;
 
     vs_hdr("¸s²Õ§@·~");
