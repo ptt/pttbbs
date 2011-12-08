@@ -1123,14 +1123,16 @@ check_bad_clients(void) {
     vs_hdr2("安全系統", "異常發文確認");
     outs(ANSI_COLOR(1;33)
 	 "親愛的使用者您好，我們發現您曾在 SYSOP 看板有如下的回文，\n"
-	 "看起來像是使用了某些不正常的程式導致發文結果異常。\n" ANSI_RESET);
+	 "看起來像是使用了某些不正常的程式導致發文結果異常: \n" ANSI_RESET);
     fp = fopen(src, "rt");
-    for (i = 0; i < (t_lines - 6) && fgets(buf, sizeof(buf), fp); i++) {
+    for (i = 0; i < (t_lines - 7) && fgets(buf, sizeof(buf), fp); i++) {
 	outs(buf);
     }
     fclose(fp);
-    outs(ANSI_RESET ANSI_COLOR(1;31)
-	 "為了避免類似的問題再度發生，我們必須請您回答下列問題:\n" ANSI_RESET);
+    SOLVE_ANSI_CACHE();
+    outs(ANSI_RESET ANSI_COLOR(1;31) "\n"
+	 "為了避免類似的問題再度發生，我們必須請您回答下列問題:" ANSI_RESET
+         "\n");
     y = vgety();
 
     do {
@@ -1139,7 +1141,7 @@ check_bad_clients(void) {
 	getdata(y+1, 0, "發文程式: ", buf, DISP_TTLEN, DOECHO);
 	trim(buf);
     } while (strlen(buf) < 2);
-    mvprints(y++, 0, "發文程式: %s\n", buf);
+    mvprints(y-1, 0, "發文程式: %s\n", buf); clrtobot();
     log_filef(dest, LOG_CREAT, "%s program: %s\n", Cdatelite(&now), buf);
 
     do {
