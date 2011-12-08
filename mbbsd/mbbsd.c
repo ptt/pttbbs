@@ -1136,8 +1136,8 @@ check_bad_clients(void) {
     y = vgety();
 
     do {
-	mvouts(y, 0, "請問您發文時使用的是什麼程式？"
-		     "(例: telnet, PCMan, BBSReader, 手機App, ...)\n");
+	mvouts(y, 0, "請問您發文時使用的程式是？(例: PCMan, BBSReader,... "
+               ANSI_COLOR(1;33) "若是手機請告知App名稱" ANSI_RESET ")\n");
 	getdata(y+1, 0, "發文程式: ", buf, DISP_TTLEN, DOECHO);
 	trim(buf);
     } while (strlen(buf) < 2);
