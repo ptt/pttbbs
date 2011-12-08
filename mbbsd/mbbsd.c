@@ -1105,6 +1105,61 @@ inline static void check_bad_login(void)
     }
 }
 
+void
+check_bad_clients(void) {
+    // check bad clients
+    int i, y;
+    char src[PATHLEN], dest[PATHLEN], buf[STRLEN];
+    FILE *fp;
+    snprintf(src, sizeof(src), "bad_clients/%s", cuser.userid);
+    if (!dashf(src))
+	return;
+
+    strlcpy(dest, src, sizeof(dest));
+    strlcat(dest, ".reply", sizeof(dest));
+    if (dashf(dest))
+	return;
+
+    vs_hdr2("安全系統", "異常發文確認");
+    outs(ANSI_COLOR(1;33)
+	 "親愛的使用者您好，我們發現您曾在 SYSOP 看板有如下的回文，\n"
+	 "看起來像是使用了某些不正常的程式導致發文結果異常。\n" ANSI_RESET);
+    fp = fopen(src, "rt");
+    for (i = 0; i < (t_lines - 6) && fgets(buf, sizeof(buf), fp); i++) {
+	outs(buf);
+    }
+    fclose(fp);
+    outs(ANSI_RESET ANSI_COLOR(1;31)
+	 "為了避免類似的問題再度發生，我們必須請您回答下列問題:\n" ANSI_RESET);
+    y = vgety();
+
+    do {
+	mvouts(y, 0, "請問您發文時使用的是什麼程式？"
+		     "(例: telnet, PCMan, BBSReader, 手機App, ...)\n");
+	getdata(y+1, 0, "發文程式: ", buf, DISP_TTLEN, DOECHO);
+	trim(buf);
+    } while (strlen(buf) < 2);
+    mvprints(y++, 0, "發文程式: %s\n", buf);
+    log_filef(dest, LOG_CREAT, "%s program: %s\n", Cdatelite(&now), buf);
+
+    do {
+	getdata(y, 0, "發文時你是在信箱(m)回文還是在看板(b)上回文？ [m/b]: ",
+		buf, 3, LCECHO);
+    } while (*buf != 'm' && *buf != 'b');
+    mvprints(y++, 0, "發文位置: %s", *buf == 'm' ? "信箱" : "看板");
+    log_filef(dest, LOG_CREAT, "%s location: %c %s\n", Cdatelite(&now), 
+	      *buf, *buf == 'm' ? "mailbox" : "board");
+
+    do {
+	mvouts(y, 0, "當時有任何異常的資訊可以提供給我們參考嗎？");
+	getdata(y+1, 0, "其它: ", buf, DISP_TTLEN, DOECHO);
+	trim(buf);
+    } while (0);
+    log_filef(dest, LOG_CREAT, "%s info: %s\n", Cdatelite(&now),  buf);
+
+    vmsg("謝謝您的合作。如果您想提供更多資訊歡迎至" BN_BUGREPORT "報告");
+}
+
 inline static void append_log_recent_login()
 {
     char buf[STRLEN], logfn[PATHLEN];
@@ -1250,6 +1305,9 @@ user_login(void)
 
 	append_log_recent_login();
 	check_bad_login();
+#ifdef USE_CHECK_BAD_CLIENTS
+        check_bad_clients();
+#endif
 	check_register();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
