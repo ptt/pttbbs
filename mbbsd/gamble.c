@@ -26,6 +26,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     int             i, count, total = 0, end = 0, ticket[MAX_ITEM] = {0, 0, 0, 0, 0, 0, 0, 0};
     FILE           *fp;
     char            genbuf[256], t[25];
+    int wide = 0;
 
     clear();
     if (bh) {
@@ -49,8 +50,11 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     }
     fgets(genbuf, MAX_ITEM_LEN, fp);
     *price = atoi(genbuf);
-    for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) && count < MAX_ITEM; count++) {
+    for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) &&
+                    count < MAX_ITEM; count++) {
 	chomp(betname[count]);
+        if (strlen(betname[count]) > 8)
+            wide = 1;
     }
     fclose(fp);
 
@@ -81,13 +85,18 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 
     outs(ANSI_COLOR(33));
     for (i = 0; i < count; i++) {
-	prints("%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
-	if (i == 3)
-	    outc('\n');
+        if (wide) {
+            prints("%d.%-*s: %-7d ", i + 1, IDLEN, betname[i], ticket[i]);
+            if (i % 3 == 2) outc('\n');
+        } else {
+            prints("%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
+            if (i == 3) outc('\n');
+        }
     }
-    prints(ANSI_RESET "\n" ANSI_COLOR(42) " 下注總金額:" ANSI_COLOR(31) " %d 元 " ANSI_RESET, total * (*price));
+    prints(ANSI_RESET "\n" ANSI_COLOR(42) " 下注總金額:"
+           ANSI_COLOR(31) " %d 元 " ANSI_RESET, total * (*price));
     if (end) {
-	outs("\n賭盤已經停止下注\n");
+	outs("，賭盤已經停止下注\n");
 	return -count;
     }
     return count;

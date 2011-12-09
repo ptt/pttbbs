@@ -3,10 +3,21 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
-			   "DUNK", "Jungo", "waiting", "wofe"};
-
+#define MAX_ITEM	8	//最大 賭項(item) 個數
+#define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
+#define MAX_DISP_LEN    8       //每項顯示最大長度
+#define PRICE           100     //Default price
 #define MAX_DES 7		/* 最大保留獎數 */
+#define VALID_UNUM(u) ((u) > 0 && (u) < MAX_USERS)
+
+#if (MAX_ITEM_LEN < IDLEN)
+# error MAX_ITEM_LEN must be greater than IDLEN.
+#endif
+
+const char unique_betnames[MAX_ITEM][MAX_ITEM_LEN] = {
+    "Ptt", "Jaky",  "Action",  "Heat",
+    "DUNK", "Jungo", "waiting", "wofe",
+};
 
 int
 sendalert_uid(int uid, int alert){
@@ -17,29 +28,119 @@ sendalert_uid(int uid, int alert){
     return 0;
 }
 
-int main(int argc, char **argv)
+int load_ticket_items(const char *filename, int n_items,
+                      int *pPrice, char items[MAX_ITEM][MAX_ITEM_LEN]) {
+    FILE *fp = fopen(filename, "rt");
+    char genbuf[MAX_ITEM_LEN] = "";
+    int i;
+
+    if (!fp)
+        return 0;
+
+    if (fgets(genbuf, sizeof(genbuf), fp) && *genbuf) {
+        if (pPrice)
+            *pPrice = atoi(genbuf);
+    }
+
+    for (i = 0; fgets(items[i], MAX_ITEM_LEN, fp) && i < n_items; i++) {
+        chomp(items[i]);
+    }
+    fclose(fp);
+    return 1;
+}
+
+int save_ticket_items(const char *filename, int n_items,
+                      int price, char items[MAX_ITEM][MAX_ITEM_LEN]) {
+    FILE *fp = fopen(filename, "wt");
+    int i;
+    if (!fp)
+        return 0;
+    fprintf(fp, "%d\n", price);
+    for (i = 0; i < n_items; i++) {
+        fprintf(fp, "%s\n", items[i]);
+    }
+    fclose(fp);
+    return 1;
+}
+
+void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
+                      char ref_items[MAX_ITEM][MAX_ITEM_LEN],
+                      int n_items) {
+    int i;
+    int unum = 0;
+    time4_t now = (time4_t)time(NULL);
+
+    // initialize names by duplicating
+    for (i = 0; i < n_items; i++) {
+        strlcpy(items[i], ref_items[i], MAX_ITEM_LEN);
+    }
+
+    // find last user index 
+    for (i = n_items - 1; i >= 0; i--) {
+        unum = searchuser(items[i], NULL);
+        if (VALID_UNUM(unum)) {
+            unum++;
+            break;
+        }
+    }
+    log_filef("log/openticket_items.log", LOG_CREAT,
+             "%s last user index: %d (%s)\n",
+             Cdatelite(&now), unum,
+             VALID_UNUM(unum) ? SHM->userid[unum - 2] : "-unkonwn-");
+
+    // pickup new names
+    for (i = 0; i < n_items; i++) {
+        // find next valid unum
+        for (; VALID_UNUM(unum) && !*SHM->userid[unum - 1]; unum++) {
+            // find next one
+        }
+        if (!VALID_UNUM(unum)) {
+            strlcpy(items[i], unique_betnames[i], MAX_ITEM_LEN);
+            // rewind
+            unum = 1;
+            log_filef("log/openticket_items.log", LOG_CREAT,
+                      "%s rewind user index.\n",
+                      Cdatelite(&now));
+            continue;
+        }
+
+        strlcpy(items[i], SHM->userid[unum - 1], MAX_ITEM_LEN);
+        unum ++;
+    }
+}
+    
+
+int main()
 {
-    int money, bet, n, total = 0, ticket[8] =
-    {0, 0, 0, 0, 0, 0, 0, 0};
+    int  money, bet, n, total = 0;
+    int  ticket[MAX_ITEM] = {0};
     FILE *fp;
     time4_t now = (time4_t)time(NULL);
-    char des[MAX_DES][200] =
-    {"", "", "", ""};
+    char des[MAX_DES][200] = {"", "", "", ""};
+
+    char newbetname[MAX_ITEM][MAX_ITEM_LEN] = {0};
+    char betname[MAX_ITEM][MAX_ITEM_LEN] = {
+        "Ptt", "Jaky",  "Action",  "Heat",
+        "DUNK", "Jungo", "waiting", "wofe",
+    };
 
     nice(10);
-    attach_SHM();
-    if(passwd_init())
-	exit(1);
 
     chdir(BBSHOME);  // for sethomedir
-    
-    rename(BBSHOME "/etc/" FN_TICKET_RECORD,
-           BBSHOME "/etc/" FN_TICKET_RECORD ".tmp");
-    rename(BBSHOME "/etc/" FN_TICKET_USER,
-           BBSHOME "/etc/" FN_TICKET_USER ".tmp");
+    attach_SHM();
+    srand(now);
 
-    if (!(fp = fopen(BBSHOME "/etc/"FN_TICKET_RECORD ".tmp", "r")))
+    load_ticket_items("etc/" FN_TICKET_ITEMS, MAX_ITEM, NULL, betname);
+    create_new_items(newbetname, betname, MAX_ITEM);
+
+    rename("etc/" FN_TICKET_RECORD, "etc/" FN_TICKET_RECORD ".tmp");
+    rename("etc/" FN_TICKET_USER,   "etc/" FN_TICKET_USER   ".tmp");
+
+    save_ticket_items("etc/" FN_TICKET_ITEMS, MAX_ITEM, PRICE, newbetname);
+
+    if (!(fp = fopen("etc/"FN_TICKET_RECORD ".tmp", "r")))
 	return 0;
+
     fscanf(fp, "%9d %9d %9d %9d %9d %9d %9d %9d\n",
 	   &ticket[0], &ticket[1], &ticket[2], &ticket[3],
 	   &ticket[4], &ticket[5], &ticket[6], &ticket[7]);
@@ -50,24 +151,25 @@ int main(int argc, char **argv)
     if (!total)
 	return 0;
 
-    if((fp = fopen(BBSHOME "/etc/" FN_TICKET , "r")))
+    if((fp = fopen("etc/" FN_TICKET , "r")))
     {
 	for (n = 0; n < MAX_DES && fgets(des[n], 200, fp); n++) ;
 	fclose(fp);
     }
 
-    /* 現在開獎號碼並沒用到 random function.
-     * 小站的 UTMPnumber 可視為定值, 且 UTMPnumber 預設一秒才更新一次
-     * 開站一段時間的開獎 pid 應該無法預測.
-     * 若是小站當站開獎前開站, 則有被猜中的可能 */
-    attach_SHM();
-    bet = (SHM->UTMPnumber+getpid()) % 8;
-
-
+    if ((fp = fopen("/dev/random", "rb")) != NULL) {
+        bet = fgetc(fp) % MAX_ITEM;
+        fclose(fp);
+    } else {
+        /* 現在開獎號碼並沒用到 random function.
+         * 小站的 UTMPnumber 可視為定值, 且 UTMPnumber 預設一秒才更新一次
+         * 開站一段時間的開獎 pid 應該無法預測.
+         * 若是小站當站開獎前開站, 則有被猜中的可能 */
+        bet = (SHM->UTMPnumber+getpid()) % MAX_ITEM;
+    }
 
     money = ticket[bet] ? total * 95 / ticket[bet] : 9999999;
-
-    if((fp = fopen(BBSHOME "/etc/" FN_TICKET, "w")))
+    if((fp = fopen("etc/" FN_TICKET, "w")))
     {
 	if (des[MAX_DES - 1][0])
 	    n = 1;
@@ -79,22 +181,22 @@ int main(int argc, char **argv)
 	    fputs(des[n], fp);
 	}
 
-	printf("\n\n開獎時間： %s \n\n"
-	       "開獎結果： %s \n\n"
+	printf("\n\n開獎時間： %s\n\n"
+	       "開獎結果： %s\n\n"
 	       "下注總金額： %d00 " MONEYNAME "\n"
 	       "中獎比例： %d張/%d張  (%f)\n"
 	       "每張中獎彩票可得 %d 枚" MONEYNAME "\n\n",
 	       Cdatelite(&now), betname[bet], total, ticket[bet], total,
 	       (float) ticket[bet] / total, money);
 
-	fprintf(fp, "%s 賭盤開出:%s 總金額:%d00 獎金/張:%d 機率:%1.2f\n",
+	fprintf(fp, "%s 開出:%s 總金額:%d00 獎金/張:%d 機率:%1.2f\n",
 		Cdatelite(&now), betname[bet], total, money,
 		(float) ticket[bet] / total);
 	fclose(fp);
 
     }
 
-    if (ticket[bet] && (fp = fopen(BBSHOME "/etc/" FN_TICKET_USER ".tmp", "r")))
+    if (ticket[bet] && (fp = fopen("etc/" FN_TICKET_USER ".tmp", "r")))
     {
 	int mybet, num, uid;
 	char userid[20], genbuf[200];
@@ -105,8 +207,8 @@ int main(int argc, char **argv)
 	    if (mybet == bet)
 	    {
                 int oldm, newm;
-		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "\n"
-		       ,userid, num, betname[mybet], money * num);
+		printf("恭喜 %-*s 買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "\n",
+                       IDLEN, userid, num, betname[mybet], money * num);
                 if((uid=searchuser(userid, userid))==0 ||
                     !is_validuserid(userid)) 
                     continue;
@@ -125,8 +227,8 @@ int main(int argc, char **argv)
 		strcpy(mymail.owner, BBSNAME);
 		sprintf(mymail.title, "[%s] 中獎囉! $ %d", Cdatelite(&now), money * num);
 		unlink(genbuf);
-		Link(BBSHOME "/etc/ticket", genbuf);
-		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
+		Link("etc/ticket", genbuf);
+		sprintf(genbuf, "home/%c/%s/.DIR", userid[0], userid);
 		append_record(genbuf, &mymail, sizeof(mymail));
                 sendalert_uid(uid, ALERT_NEW_MAIL);
 	    } else {
@@ -134,7 +236,7 @@ int main(int argc, char **argv)
             }
 	}
     }
-    unlink(BBSHOME "/etc/" FN_TICKET_RECORD ".tmp");
-    unlink(BBSHOME "/etc/" FN_TICKET_USER ".tmp");
+    unlink("etc/" FN_TICKET_RECORD ".tmp");
+    unlink("etc/" FN_TICKET_USER ".tmp");
     return 0;
 }
