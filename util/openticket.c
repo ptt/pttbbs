@@ -14,10 +14,16 @@
 # error MAX_ITEM_LEN must be greater than IDLEN.
 #endif
 
+const char *FN_LOGFILE = "log/openticket.log";
+
 const char unique_betnames[MAX_ITEM][MAX_ITEM_LEN] = {
     "Ptt", "Jaky",  "Action",  "Heat",
     "DUNK", "Jungo", "waiting", "wofe",
 };
+
+#if (MAX_USERS > 10000)
+#define USE_SERIOUS_ID_CHECK_FOR_TICKETS
+#endif
 
 int
 sendalert_uid(int uid, int alert){
@@ -83,7 +89,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
             break;
         }
     }
-    log_filef("log/openticket_items.log", LOG_CREAT,
+    log_filef(FN_LOGFILE, LOG_CREAT,
              "%s last user index: %d (%s)\n",
              Cdatelite(&now), unum,
              VALID_UNUM(unum) ? SHM->userid[unum - 2] : "-unkonwn-");
@@ -98,14 +104,30 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
             strlcpy(items[i], unique_betnames[i], MAX_ITEM_LEN);
             // rewind
             unum = 1;
-            log_filef("log/openticket_items.log", LOG_CREAT,
-                      "%s rewind user index.\n",
-                      Cdatelite(&now));
+            log_filef(FN_LOGFILE, LOG_CREAT,
+                      "%s rewind user index.\n", Cdatelite(&now));
             continue;
         }
+#ifdef USE_SERIOUS_ID_CHECK_FOR_TICKETS
+        {
+            userec_t u = {0};
+            passwd_query(unum, &u);
+            if (!(u.uflag & PERM_LOGINOK) ||
+                !(u.uflag & PERM_POST) ||
+                u.numlogindays < 365) {
+                i--;
+                unum++;
+                continue;
+            }
+            log_filef(FN_LOGFILE, LOG_CREAT,
+                      "%d: [usernum:%d] %s -> shm=%s (%d days)\n",
+                      i + 1, unum, SHM->userid[unum - 1], u.userid,
+                      u.numlogindays);
+        }
+#endif
 
         strlcpy(items[i], SHM->userid[unum - 1], MAX_ITEM_LEN);
-        unum ++;
+        unum++;
     }
 }
     
@@ -115,7 +137,6 @@ int main()
     int  money, bet, n, total = 0;
     int  ticket[MAX_ITEM] = {0};
     FILE *fp;
-    time4_t now = (time4_t)time(NULL);
     char des[MAX_DES][200] = {"", "", "", ""};
 
     char newbetname[MAX_ITEM][MAX_ITEM_LEN] = {0};
@@ -124,11 +145,12 @@ int main()
         "DUNK", "Jungo", "waiting", "wofe",
     };
 
+    time4_t now = (time4_t)time(NULL);
+
     nice(10);
 
     chdir(BBSHOME);  // for sethomedir
     attach_SHM();
-    srand(now);
 
     load_ticket_items("etc/" FN_TICKET_ITEMS, MAX_ITEM, NULL, betname);
     create_new_items(newbetname, betname, MAX_ITEM);
@@ -167,6 +189,8 @@ int main()
          * 若是小站當站開獎前開站, 則有被猜中的可能 */
         bet = (SHM->UTMPnumber+getpid()) % MAX_ITEM;
     }
+
+    log_filef(FN_LOGFILE, LOG_CREAT, "%s bet=%d\n", Cdatelite(&now), bet);
 
     money = ticket[bet] ? total * 95 / ticket[bet] : 9999999;
     if((fp = fopen("etc/" FN_TICKET, "w")))
@@ -232,7 +256,8 @@ int main()
 		append_record(genbuf, &mymail, sizeof(mymail));
                 sendalert_uid(uid, ALERT_NEW_MAIL);
 	    } else {
-		printf("     %-15s買了%9d 張 %s\n" ,userid, num, betname[mybet]);
+                printf("     %-*s 買了%9d 張 %s\n", IDLEN, userid, num,
+                       betname[mybet]);
             }
 	}
     }
