@@ -119,10 +119,10 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
                 unum++;
                 continue;
             }
-            log_filef(FN_LOGFILE, LOG_CREAT,
-                      "%d: [usernum:%d] %s -> shm=%s (level=0x%08X, %d days)\n",
-                      i + 1, unum, SHM->userid[unum - 1],
-                      u.userid, u.userlevel, u.numlogindays);
+            log_filef(FN_LOGFILE, LOG_CREAT, "%d: [unum:%d] "
+                      "%-*s (lvl=0x%08X, %d days, %d posts, shm=%s)\n",
+                      i + 1, unum, IDLEN, u.userid, u.userlevel,
+                      u.numlogindays, u.numposts, SHM->userid[unum - 1]);
         }
 #endif
 
