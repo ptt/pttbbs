@@ -208,9 +208,9 @@ ticket(int bid)
 	}
 	move(20, 0);
 	reload_money();
-	prints("仍有 " MONEYNAME ": " ANSI_COLOR(1;31) "%d" ANSI_RESET "\n"
-               ANSI_COLOR(1) "請選擇要購買的種類(1~%d)"
-	       "[Q:離開]" ANSI_RESET ":", cuser.money, count);
+	prints("現有 " MONEYNAME ": " ANSI_COLOR(1;31) "%d" ANSI_RESET "\n"
+               "請選擇要購買的種類(1~%d)[Q:離開]" ANSI_RESET ":",
+               cuser.money, count);
 	ch = vkey();
 	/*--
 	  Tim011127
