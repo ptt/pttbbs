@@ -3967,45 +3967,48 @@ tar_addqueue(void)
     char            email[60], qfn[80], ans[2];
     FILE           *fp;
     char            bakboard, bakman;
-    clear();
-    showtitle("看板備份", BBSNAME);
-    move(2, 0);
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))) {
-	move(5, 10);
-	outs("妳要是板主或是站長才能醬醬啊 -.-\"\"");
-	pressanykey();
-	return FULLUPDATE;
-    }
+
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+        return DONOTHING;
+
     snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
-	outs("已經排定行程, 稍後會進行備份");
-	pressanykey();
+        vmsg("已經排定行程, 稍後會進行備份");
 	return FULLUPDATE;
     }
+    if (vansf("確定要對看板 %s 進行備份嗎？[y/N] ", currboard) != 'y')
+        return FULLUPDATE;
+
+    vs_hdr2(" 看板備份 ", currboard);
+
 #ifdef TARQUEUE_SENDURL
-    move (3,0); outs("請輸入通知信箱 (預設為此 BBS 帳號信箱): ");
-    if (!getdata_str(4, 2, "",
-		email, sizeof(email), DOECHO, cuser.userid))
+    if (!getdata_str(4, 0, "請輸入通知信箱: ", email, sizeof(email), DOECHO,
+                     cuser.userid))
 	return FULLUPDATE;
     if (strstr(email, "@") == NULL)
     {
-	strcat(email, ".bbs@");
-	strcat(email, MYHOSTNAME);
+	strlcat(email, ".bbs@", sizeof(email));
+	strlcat(email, MYHOSTNAME, sizeof(email));
     }
     move(4,0); clrtoeol();
     outs(email);
 #else
-    if (!getdata(4, 0, "請輸入目的信箱：", email, sizeof(email), DOECHO))
+    if (!getdata(4, 0, "請輸入目的信箱: ", email, sizeof(email), DOECHO))
 	return FULLUPDATE;
 
+    if (strstr(email, ".bbs@") || strchr(email, '@') == NULL) {
+        vmsg("不可使用 BBS 信箱。");
+        return FULLUPDATE;
+    }
+
+#endif
+
     /* check email -.-"" */
-    if (strstr(email, "@") == NULL || strstr(email, ".bbs@") != NULL) {
-	move(6, 0);
-	outs("您指定的信箱不正確! ");
-	pressanykey();
+    if (!is_valid_email(email)) {
+	vmsg("您指定的信箱不正確! ");
 	return FULLUPDATE;
     }
-#endif
+
     getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     bakboard = (ans[0] == 'n') ? 0 : 1;
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
