@@ -110,19 +110,19 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
         }
 #ifdef USE_SERIOUS_ID_CHECK_FOR_TICKETS
         {
+            const int need_exactly_perm = PERM_LOGINOK | PERM_POST;
             userec_t u = {0};
             passwd_query(unum, &u);
-            if (!(u.uflag & PERM_LOGINOK) ||
-                !(u.uflag & PERM_POST) ||
-                u.numlogindays < 365) {
+            if ((u.userlevel & need_exactly_perm) != need_exactly_perm ||
+                u.numposts < 100 || u.numlogindays < 365) {
                 i--;
                 unum++;
                 continue;
             }
             log_filef(FN_LOGFILE, LOG_CREAT,
-                      "%d: [usernum:%d] %s -> shm=%s (%d days)\n",
-                      i + 1, unum, SHM->userid[unum - 1], u.userid,
-                      u.numlogindays);
+                      "%d: [usernum:%d] %s -> shm=%s (level=0x%08X, %d days)\n",
+                      i + 1, unum, SHM->userid[unum - 1],
+                      u.userid, u.userlevel, u.numlogindays);
         }
 #endif
 
@@ -205,15 +205,15 @@ int main()
 	    fputs(des[n], fp);
 	}
 
-	printf("\n\n開獎時間： %s\n\n"
-	       "開獎結果： %s\n\n"
-	       "下注總金額： %d00 " MONEYNAME "\n"
-	       "中獎比例： %d張/%d張  (%f)\n"
-	       "每張中獎彩票可得 %d 枚" MONEYNAME "\n\n",
+	printf("\n\n開獎時間: %s\n\n"
+	       "開獎結果: %s\n\n"
+	       "下注總額: %d00\n"
+	       "中獎比例: %d張/%d張  (%f)\n"
+	       "每張中獎彩票可得 %d " MONEYNAME "\n\n",
 	       Cdatelite(&now), betname[bet], total, ticket[bet], total,
 	       (float) ticket[bet] / total, money);
 
-	fprintf(fp, "%s 開出:%s 總金額:%d00 獎金/張:%d 機率:%1.2f\n",
+	fprintf(fp, "%s 開出:%s 總額:%d00 彩金/張:%d 機率:%1.2f\n",
 		Cdatelite(&now), betname[bet], total, money,
 		(float) ticket[bet] / total);
 	fclose(fp);
@@ -231,7 +231,7 @@ int main()
 	    if (mybet == bet)
 	    {
                 int oldm, newm;
-		printf("恭喜 %-*s 買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "\n",
+		printf("恭喜 %-*s 買了%9d 張 %s, 獲得 %d " MONEYNAME "\n",
                        IDLEN, userid, num, betname[mybet], money * num);
                 if((uid=searchuser(userid, userid))==0 ||
                     !is_validuserid(userid)) 
@@ -252,12 +252,11 @@ int main()
 		sprintf(mymail.title, "[%s] 中獎囉! $ %d", Cdatelite(&now), money * num);
 		unlink(genbuf);
 		Link("etc/ticket", genbuf);
-		sprintf(genbuf, "home/%c/%s/.DIR", userid[0], userid);
+                sethomedir(genbuf, userid);
 		append_record(genbuf, &mymail, sizeof(mymail));
                 sendalert_uid(uid, ALERT_NEW_MAIL);
 	    } else {
-                printf("     %-*s 買了%9d 張 %s\n", IDLEN, userid, num,
-                       betname[mybet]);
+                printf("     %-*s 買了%9d 張 %s\n", IDLEN, userid, num, betname[mybet]);
             }
 	}
     }

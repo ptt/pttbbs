@@ -4,6 +4,7 @@
 #define MAX_ITEM	8	//最大 賭項(item) 個數
 #define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
+#define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
 static int
 load_ticket_record(const char *direct, int ticket[])
@@ -53,14 +54,14 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) &&
                     count < MAX_ITEM; count++) {
 	chomp(betname[count]);
-        if (strlen(betname[count]) > 8)
+        if (strlen(betname[count]) > NARROW_ITEM_WIDTH)
             wide = 1;
     }
     fclose(fp);
 
     prints(ANSI_COLOR(32) "站規:" ANSI_RESET 
      " 1.可購買以下不同類型的彩票。每張要花 " ANSI_COLOR(32) "%d" 
-	 ANSI_RESET " 元。\n"
+	 ANSI_RESET " " MONEYNAME "。\n"
 "      2.%s\n"
 "      3.開獎時只有一種彩票中獎, 有購買該彩票者, 則可依購買的張數均分總賭金。\n"
 "      4.每筆獎金由系統抽取 5%% 之稅金%s。\n"
@@ -69,7 +70,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 	    ANSI_COLOR(32) "%s:" ANSI_RESET, *price,
 	   bh ? "此賭盤由板主負責舉辦並決定開獎時間結果, 站方不管, 願賭服輸。" :
 	        "系統每天 2:00 11:00 16:00 21:00 開獎。",
-	   bh ? ", 其中 0.05%% 分給開獎板主, 最多 500 元" : "",
+	   bh ? ", 其中 0.05%% 分給開獎板主, 最多 500" : "",
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
 
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
@@ -83,18 +84,22 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 
     total = load_ticket_record(direct, ticket);
 
-    outs(ANSI_COLOR(33));
     for (i = 0; i < count; i++) {
+        prints(ANSI_COLOR(0;1) "%d."
+               ANSI_COLOR(0;33)"%-*s: "
+               ANSI_COLOR(36)"%-7d%s",
+               i + 1, (wide ? IDLEN : 8), betname[i],
+               ticket[i], wide ? " " : "");
         if (wide) {
-            prints("%d.%-*s: %-7d ", i + 1, IDLEN, betname[i], ticket[i]);
-            if (i % 3 == 2) outc('\n');
+            if (i % 3 == 2)
+                outc('\n');
         } else {
-            prints("%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
-            if (i == 3) outc('\n');
+            if (i % 4 == 3)
+                outc('\n');
         }
     }
-    prints(ANSI_RESET "\n" ANSI_COLOR(42) " 下注總金額:"
-           ANSI_COLOR(31) " %d 元 " ANSI_RESET, total * (*price));
+    prints(ANSI_RESET "\n已下注總額: "
+           ANSI_COLOR(1;36) "%d" ANSI_RESET, total * (*price));
     if (end) {
 	outs("，賭盤已經停止下注\n");
 	return -count;
@@ -203,7 +208,8 @@ ticket(int bid)
 	}
 	move(20, 0);
 	reload_money();
-	prints(ANSI_COLOR(44) "錢: %-10d  " ANSI_RESET "\n" ANSI_COLOR(1) "請選擇要購買的種類(1~%d)"
+	prints("仍有 " MONEYNAME ": " ANSI_COLOR(1;31) "%d" ANSI_RESET "\n"
+               ANSI_COLOR(1) "請選擇要購買的種類(1~%d)"
 	       "[Q:離開]" ANSI_RESET ":", cuser.money, count);
 	ch = vkey();
 	/*--
@@ -268,28 +274,21 @@ openticket(int bid)
     lockreturn0(TICKET, LOCK_MULTI);
     do {
 	do {
-	    getdata(20, 0,
-		ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退費)" 
-		ANSI_RESET ":"
-		    , buf, 3, LCECHO);
+	    getdata(20, 0, "選擇中獎的號碼(0:不開獎 99:取消退費):",
+                    buf, 3, LCECHO);
 	    bet = atoi(buf);
-	    move(0, 0);
-	    clrtoeol();
 	} while ((bet < 0 || bet > count) && bet != 99);
 	if (bet == 0) {
 	    unlockutmpmode();
 	    return 0;
 	}
         if (bet == 99) {
-            move(22, 0);
-            SOLVE_ANSI_CACHE();
-            clrtoeol();
+            move(22, 0); SOLVE_ANSI_CACHE(); clrtoeol();
             prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d" ANSI_RESET,
                     price * 10);
         }
-	getdata(21, 0, 
-		ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":"
-		, buf, 3, LCECHO);
+	getdata(21, 0, "再次輸入號碼以確認:", buf, 3, LCECHO);
+        move(21, 0); SOLVE_ANSI_CACHE(); clrtoeol();
     } while (bet != atoi(buf));
 
     // before we fork to process, 
@@ -355,35 +354,50 @@ openticket(int bid)
     }
     setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);
     if ((fp = fopen(outcome, "w"))) {
+        int wide = 0;
 	fprintf(fp, "賭盤說明\n");
 	while (fgets(buf, sizeof(buf), fp1)) {
 	    buf[sizeof(buf)-1] = 0;
 	    fputs(buf, fp);
 	}
-	fprintf(fp, "下注情況\n");
 
-	fprintf(fp, ANSI_COLOR(33));
+	fprintf(fp, "\n下注情況\n");
+        for (i = 0; i < count && !wide; i++) {
+            if (strlen(betname[i]) > NARROW_ITEM_WIDTH)
+                wide = 1;
+        }
 	for (i = 0; i < count; i++) {
-	    fprintf(fp, "%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
-	    if (i == 3)
-		fprintf(fp, "\n");
+            fprintf(fp,
+                    ANSI_COLOR(0;1) "%d."
+                    ANSI_COLOR(0;33)"%-*s: "
+                    ANSI_COLOR(36)"%-7d%s",
+                    i + 1, (wide ? IDLEN : 8), betname[i],
+                    ticket[i], wide ? " " : "");
+            if (wide) {
+                if (i % 3 == 2)
+                    fputc('\n', fp);
+            } else {
+                if (i % 4 == 3)
+                    fputc('\n', fp);
+            }
 	}
-	fprintf(fp, ANSI_RESET "\n");
+        fprintf(fp, ANSI_RESET "\n");
+
 
 	if (bet != 98) {
-	    fprintf(fp, "\n\n開獎時間： %s \n\n"
-		    "開獎結果： %s \n\n"
-		    "所有金額： %d 元 \n"
-		    "中獎比例： %d張/%d張  (%f)\n"
+	    fprintf(fp, "開獎時間: %s\n"
+		    "開獎結果: %s\n"
+		    "下注總額: %d\n"
+		    "中獎比例: %d張/%d張  (%f)\n"
 		    "每張中獎彩票可得 %d " MONEYNAME "\n\n",
 	    Cdatelite(&now), betname[bet], total * price, ticket[bet], total,
 		    (float)ticket[bet] / total, money);
 
-	    fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n\n",
+	    fprintf(fp, "%s 開出:%s 總額:%d 彩金/張:%d 機率:%1.2f\n\n",
 		    Cdatelite(&now), betname[bet], total * price, money,
 		    total ? (float)ticket[bet] / total : 0);
 	} else
-	    fprintf(fp, "\n\n賭盤取消退費： %s \n\n", Cdatelite(&now));
+	    fprintf(fp, "賭盤取消退回: %s\n\n", Cdatelite(&now));
 
     } // XXX somebody may use fp even fp==NULL
     fclose(fp1);
@@ -398,14 +412,14 @@ openticket(int bid)
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
 		if (fp)
-		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5d 枚" 
-			    MONEYNAME "\n",
+		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5d "
+                            MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
 			 "%s 賭場退費! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
-		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5d 枚" 
+		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5d " 
 			    MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
