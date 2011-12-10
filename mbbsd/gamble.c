@@ -87,7 +87,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     for (i = 0; i < count; i++) {
         prints(ANSI_COLOR(0;1) "%d."
                ANSI_COLOR(0;33)"%-*s: "
-               ANSI_COLOR(36)"%-7d%s",
+               ANSI_COLOR(1;33)"%-7d%s",
                i + 1, (wide ? IDLEN : 8), betname[i],
                ticket[i], wide ? " " : "");
         if (wide) {
@@ -99,7 +99,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
         }
     }
     prints(ANSI_RESET "\n已下注總額: "
-           ANSI_COLOR(1;36) "%d" ANSI_RESET, total * (*price));
+           ANSI_COLOR(1;33) "%d" ANSI_RESET, total * (*price));
     if (end) {
 	outs("，賭盤已經停止下注\n");
 	return -count;
@@ -367,10 +367,7 @@ openticket(int bid)
                 wide = 1;
         }
 	for (i = 0; i < count; i++) {
-            fprintf(fp,
-                    ANSI_COLOR(0;1) "%d."
-                    ANSI_COLOR(0;33)"%-*s: "
-                    ANSI_COLOR(36)"%-7d%s",
+            fprintf(fp, "%d.%-*s: %-7d%s",
                     i + 1, (wide ? IDLEN : 8), betname[i],
                     ticket[i], wide ? " " : "");
             if (wide) {
@@ -381,7 +378,7 @@ openticket(int bid)
                     fputc('\n', fp);
             }
 	}
-        fprintf(fp, ANSI_RESET "\n");
+        fputc('\n', fp);
 
 
 	if (bet != 98) {
@@ -391,7 +388,7 @@ openticket(int bid)
 		    "中獎比例: %d張/%d張  (%f)\n"
 		    "每張中獎彩票可得 %d " MONEYNAME "\n\n",
 	    Cdatelite(&now), betname[bet], total * price, ticket[bet], total,
-		    (float)ticket[bet] / total, money);
+                    total ?  (float)ticket[bet] / total : 0, money);
 
 	    fprintf(fp, "%s 開出:%s 總額:%d 彩金/張:%d 機率:%1.2f\n\n",
 		    Cdatelite(&now), betname[bet], total * price, money,

@@ -78,8 +78,8 @@ lockutmpmode(int unmode, int state)
 		   ModeTypeTable[currutmp->lockmode],
 		   ModeTypeTable[unmode]);
 	else
-	    prints("抱歉! 您已有其他線相同的ID正在%s",
-		   ModeTypeTable[unmode]);
+	    prints("抱歉! 因為您目前多重登入所以無法使用 %s",
+                   ModeTypeTable[unmode]);
 	pressanykey();
 	return errorno;
     }
