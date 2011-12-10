@@ -206,15 +206,15 @@ int main()
 	}
 
 	printf("\n\n開獎時間: %s\n\n"
-	       "開獎結果: %s\n\n"
+	       "開獎結果: %d. %s\n\n"
 	       "下注總額: %d00\n"
 	       "中獎比例: %d張/%d張  (%f)\n"
 	       "每張中獎彩票可得 %d " MONEYNAME "\n\n",
-	       Cdatelite(&now), betname[bet], total, ticket[bet], total,
+	       Cdatelite(&now), bet + 1, betname[bet], total, ticket[bet], total,
 	       (float) ticket[bet] / total, money);
 
-	fprintf(fp, "%s 開出:%s 總額:%d00 彩金/張:%d 機率:%1.2f\n",
-		Cdatelite(&now), betname[bet], total, money,
+	fprintf(fp, "%s 開出:%d.%s 總額:%d00 彩金/張:%d 機率:%1.2f\n",
+		Cdatelite(&now), bet + 1, betname[bet], total, money,
 		(float) ticket[bet] / total);
 	fclose(fp);
 
