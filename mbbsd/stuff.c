@@ -94,39 +94,47 @@ is_uBM(const char *list, const char *id)
 }
 
 time4_t
-gettime(int line, time4_t dt, const char*head)
+gettime(int line, time4_t dt, const char* head)
 {
     char            yn[7];
-    int i;
     struct tm      ptime, endtime;
     time_t          t;
+    char prompt[STRLEN*2];
 
     localtime4_r(&dt, &ptime);
     endtime = ptime;
     snprintf(yn, sizeof(yn), "%4d", ptime.tm_year + 1900);
-    move(line, 0); outs(head);
-    i=strlen(head);
+    move(line, 0); SOLVE_ANSI_CACHE(); clrtoeol(); 
+    snprintf(prompt, sizeof(prompt), "%s 西元年:", head);
     do {
-	getdata_buf(line, i, " 西元年:", yn, 5, NUMECHO);
+	getdata_buf(line, 0, prompt, yn, 5, NUMECHO);
 	// signed:   limited on (2037, ...)
 	// unsigned: limited on (..., 1970)
 	// let's restrict inside the boundary.
     } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
+    strlcat(prompt, yn, sizeof(prompt));
+    strlcat(prompt, " 月:", sizeof(prompt));
     snprintf(yn, sizeof(yn), "%d", ptime.tm_mon + 1);
     do {
-	getdata_buf(line, i+15, "月:", yn, 3, NUMECHO);
+	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_mon = atoi(yn) - 1) < 0 || endtime.tm_mon > 11);
+    strlcat(prompt, yn, sizeof(prompt));
+    strlcat(prompt, " 日:", sizeof(prompt));
     snprintf(yn, sizeof(yn), "%d", ptime.tm_mday);
     do {
-	getdata_buf(line, i+24, "日:", yn, 3, NUMECHO);
+	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_mday = atoi(yn)) < 1 || endtime.tm_mday > 31);
     snprintf(yn, sizeof(yn), "%d", ptime.tm_hour);
+    strlcat(prompt, yn, sizeof(prompt));
+    strlcat(prompt, " 時(0-23):", sizeof(prompt));
     do {
-	getdata_buf(line, i+33, "時(0-23):", yn, 3, NUMECHO);
+	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
+    strlcat(prompt, yn, sizeof(prompt));
+    strlcat(prompt, " 分(0-59):", sizeof(prompt));
     snprintf(yn, sizeof(yn), "%d", ptime.tm_min);
     do {
-	getdata_buf(line, i+42, "分(0-59):", yn, 3, NUMECHO);
+	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 59);
     t = mktime(&endtime);
     /* saturation check */
