@@ -179,16 +179,11 @@ int main()
 	fclose(fp);
     }
 
-    if ((fp = fopen("/dev/random", "rb")) != NULL) {
-        bet = fgetc(fp) % MAX_ITEM;
-        fclose(fp);
-    } else {
-        /* 現在開獎號碼並沒用到 random function.
-         * 小站的 UTMPnumber 可視為定值, 且 UTMPnumber 預設一秒才更新一次
-         * 開站一段時間的開獎 pid 應該無法預測.
-         * 若是小站當站開獎前開站, 則有被猜中的可能 */
-        bet = (SHM->UTMPnumber+getpid()) % MAX_ITEM;
-    }
+    /* 現在開獎號碼並沒用到 random function.
+     * 小站的 UTMPnumber 可視為定值, 且 UTMPnumber 預設一秒才更新一次
+     * 開站一段時間的開獎 pid 應該無法預測.
+     * 若是小站當站開獎前開站, 則有被猜中的可能 */
+    bet = (SHM->UTMPnumber + getpid()) % MAX_ITEM;
 
     log_filef(FN_LOGFILE, LOG_CREAT, "%s bet=%d\n", Cdatelite(&now), bet);
 
