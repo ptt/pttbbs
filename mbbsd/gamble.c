@@ -6,16 +6,16 @@
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
-// Use "%lld" format string whenever you access variables in ticket_t.
-typedef long long ticket_t;
+// Use "%lld" format string whenever you access variables in bignum_t.
+typedef long long bignum_t;
 
-static ticket_t
-load_ticket_record(const char *direct, ticket_t ticket[])
+static bignum_t
+load_ticket_record(const char *direct, bignum_t ticket[])
 {
     char buf[256];
     FILE *fp;
     int i;
-    ticket_t total = 0;
+    bignum_t total = 0;
 
     snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
@@ -27,7 +27,7 @@ load_ticket_record(const char *direct, ticket_t ticket[])
     return total;
 }
 
-static ticket_t
+static int
 show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
                  const char *direct, int *price,
                  const boardheader_t * bh)
@@ -35,7 +35,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     int i, count, wide = 0, end = 0;
     FILE *fp;
     char            genbuf[256], t[25];
-    ticket_t total = 0, ticket[MAX_ITEM] = {0};
+    bignum_t total = 0, ticket[MAX_ITEM] = {0};
 
     clear();
     if (bh) {
@@ -123,7 +123,7 @@ static int
 append_ticket_record(const char *direct, int ch, int n, int count)
 {
     FILE *fp;
-    ticket_t ticket[8] = {0};
+    bignum_t ticket[8] = {0};
     int i;
     char genbuf[256];
 
@@ -274,7 +274,7 @@ openticket(int bid)
     FILE           *fp, *fp1;
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     int             bet, price, i;
-    ticket_t money = 0, count, total = 0, ticket[MAX_ITEM] = {0};
+    bignum_t money = 0, count, total = 0, ticket[MAX_ITEM] = {0};
 
     setbpath(path, bh->brdname);
     count = -show_ticket_data(betname, path, &price, bh);
