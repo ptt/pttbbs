@@ -6,28 +6,36 @@
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
-static int
-load_ticket_record(const char *direct, int ticket[])
+// Use "%lld" format string whenever you access variables in ticket_t.
+typedef long long ticket_t;
+
+static ticket_t
+load_ticket_record(const char *direct, ticket_t ticket[])
 {
-    char            buf[256];
-    int             i, total = 0;
-    FILE           *fp;
+    char buf[256];
+    FILE *fp;
+    int i;
+    ticket_t total = 0;
+
     snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
 	return 0;
-    for (i = 0; i < MAX_ITEM && fscanf(fp, "%9d ", &ticket[i])==1; i++)
-	total = total + ticket[i];
+    for (i = 0; i < MAX_ITEM && fscanf(fp, "%lld ", &ticket[i]) == 1; i++)
+	total += ticket[i];
+
     fclose(fp);
     return total;
 }
 
-static int
-show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *price, const boardheader_t * bh)
+static ticket_t
+show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
+                 const char *direct, int *price,
+                 const boardheader_t * bh)
 {
-    int             i, count, total = 0, end = 0, ticket[MAX_ITEM] = {0, 0, 0, 0, 0, 0, 0, 0};
-    FILE           *fp;
+    int i, count, wide = 0, end = 0;
+    FILE *fp;
     char            genbuf[256], t[25];
-    int wide = 0;
+    ticket_t total = 0, ticket[MAX_ITEM] = {0};
 
     clear();
     if (bh) {
@@ -54,8 +62,6 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) &&
                     count < MAX_ITEM; count++) {
 	chomp(betname[count]);
-        if (strlen(betname[count]) > NARROW_ITEM_WIDTH)
-            wide = 1;
     }
     fclose(fp);
 
@@ -84,10 +90,16 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 
     total = load_ticket_record(direct, ticket);
 
+    for (i = 0; i < count && !wide; i++) {
+        if (strlen(betname[i]) > NARROW_ITEM_WIDTH ||
+            ticket[i] > 999999)
+            wide = 1;
+    }
+
     for (i = 0; i < count; i++) {
         prints(ANSI_COLOR(0;1) "%d."
                ANSI_COLOR(0;33)"%-*s: "
-               ANSI_COLOR(1;33)"%-7d%s",
+               ANSI_COLOR(1;33)"%-7lld%s",
                i + 1, (wide ? IDLEN : 8), betname[i],
                ticket[i], wide ? " " : "");
         if (wide) {
@@ -99,7 +111,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
         }
     }
     prints(ANSI_RESET "\n已下注總額: "
-           ANSI_COLOR(1;33) "%d" ANSI_RESET, total * (*price));
+           ANSI_COLOR(1;33) "%lld" ANSI_RESET, total * (*price));
     if (end) {
 	outs("，賭盤已經停止下注\n");
 	return -count;
@@ -110,9 +122,10 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 static int 
 append_ticket_record(const char *direct, int ch, int n, int count)
 {
-    FILE           *fp;
-    int             ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0}, i;
-    char            genbuf[256];
+    FILE *fp;
+    ticket_t ticket[8] = {0};
+    int i;
+    char genbuf[256];
 
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
     if (!dashf(genbuf))
@@ -135,14 +148,14 @@ append_ticket_record(const char *direct, int ch, int n, int count)
 	flock(fileno(fp), LOCK_EX);
 
 	for (i = 0; i < MAX_ITEM; i++)
-	    if (fscanf(fp, "%9d ", &ticket[i]) != 1)
+	    if (fscanf(fp, "%lld ", &ticket[i]) != 1)
 		break;
 	ticket[ch] += n;
 
 	ftruncate(fileno(fp), 0);
 	rewind(fp);
 	for (i = 0; i < count; i++)
-	    fprintf(fp, "%d ", ticket[i]);
+	    fprintf(fp, "%lld ", ticket[i]);
 	fflush(fp);
 
 	flock(fileno(fp), LOCK_UN);
@@ -257,21 +270,23 @@ int
 openticket(int bid)
 {
     char            path[PATHLEN], buf[PATHLEN], outcome[PATHLEN];
-    int             i, money = 0, count, bet, price, total = 0, 
-		    ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     boardheader_t  *bh = getbcache(bid);
     FILE           *fp, *fp1;
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
+    int             bet, price, i;
+    ticket_t money = 0, count, total = 0, ticket[MAX_ITEM] = {0};
 
     setbpath(path, bh->brdname);
     count = -show_ticket_data(betname, path, &price, bh);
+
     if (count == 0) {
 	setbfile(buf, bh->brdname, FN_TICKET_END);
 	unlink(buf);
-//Ptt:	有bug
-	    return 0;
+        //Ptt:	有bug
+        return 0;
     }
     lockreturn0(TICKET, LOCK_MULTI);
+
     do {
 	do {
 	    getdata(20, 0, "選擇中獎的號碼(0:不開獎 99:取消退費):",
@@ -363,36 +378,36 @@ openticket(int bid)
 
 	fprintf(fp, "\n下注情況\n");
         for (i = 0; i < count && !wide; i++) {
-            if (strlen(betname[i]) > NARROW_ITEM_WIDTH)
+            if (strlen(betname[i]) > NARROW_ITEM_WIDTH ||
+                ticket[i] > 999999)
                 wide = 1;
         }
 	for (i = 0; i < count; i++) {
-            fprintf(fp, "%d.%-*s: %-7d%s",
+            if (i % (wide ? 3 : 4) == 0)
+                    fputc('\n', fp);
+            fprintf(fp, "%d.%-*s: %-7lld%s",
                     i + 1, (wide ? IDLEN : 8), betname[i],
                     ticket[i], wide ? " " : "");
-            if (wide) {
-                if (i % 3 == 2)
-                    fputc('\n', fp);
-            } else {
-                if (i % 4 == 3)
-                    fputc('\n', fp);
-            }
 	}
-        fputc('\n', fp);
+        fputs("\n\n", fp);
 
 
 	if (bet != 98) {
-	    fprintf(fp, "開獎時間: %s\n"
+	    fprintf(fp,
+                    "開獎時間: %s\n"
 		    "開獎結果: %s\n"
-		    "下注總額: %d\n"
-		    "中獎比例: %d張/%d張  (%f)\n"
-		    "每張中獎彩票可得 %d " MONEYNAME "\n\n",
-	    Cdatelite(&now), betname[bet], total * price, ticket[bet], total,
-                    total ?  (float)ticket[bet] / total : 0, money);
+		    "下注總額: %lld\n"
+		    "中獎比例: %lld張/%lld張  (%f)\n"
+		    "每張中獎彩票可得 %lld " MONEYNAME "\n\n",
+                    Cdatelite(&now), betname[bet],
+                    total * price,
+                    ticket[bet], total,
+                    total ? (double)ticket[bet] / total : (double)0,
+                    money);
 
-	    fprintf(fp, "%s 開出:%s 總額:%d 彩金/張:%d 機率:%1.2f\n\n",
+	    fprintf(fp, "%s 開出:%s 總額:%lld 彩金/張:%lld 機率:%1.2f\n\n",
 		    Cdatelite(&now), betname[bet], total * price, money,
-		    total ? (float)ticket[bet] / total : 0);
+		    total ? (double)ticket[bet] / total : (double)0);
 	} else
 	    fprintf(fp, "賭盤取消退回: %s\n\n", Cdatelite(&now));
 
@@ -409,17 +424,18 @@ openticket(int bid)
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
 		if (fp)
-		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5d "
+		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5lld "
                             MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
-			 "%s 賭場退費! $ %d", bh->brdname, money * i);
+			 "%s 賭場退費! $ %lld", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
-		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5d " 
+		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld " 
 			    MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
-		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
+		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %lld",
+                         bh->brdname, money * i);
 	    } else {
 		if (fp)
 		    fprintf(fp, "     %-*s 買了 %3d 張 %s\n" ,
@@ -428,7 +444,8 @@ openticket(int bid)
             }
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
-            pay_as_uid(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]", betname[mybet]); 
+            pay_as_uid(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]",
+                       betname[mybet]); 
 	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "賭場");
 	}
 	fclose(fp1);
