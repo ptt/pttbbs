@@ -269,17 +269,14 @@ save_violatelaw(void)
     move(5, 0);
     prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "\n\n", 
 	    cuser.vl_count, cuser.vl_count * 1000);
-    outs(ANSI_COLOR(1;37) "你知道嗎? 因為你的違法 "
-	   "已經造成很多人的不便" ANSI_RESET "\n");
     outs(ANSI_COLOR(1;37) "你是否確定以後不會再犯了？" ANSI_RESET "\n");
 
     if (!getdata(10, 0, "確定嗎？[y/N]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] != 'y') 
     {
 	move(15, 0);
-	outs( ANSI_COLOR(1;31) "不想付嗎？ 還是不知道要按 y ？\n"
-	    "請養成看清楚系統訊息的好習慣。\n"
-	    "等你想通了再來吧!! 我相信你不會知錯不改的~~~" ANSI_RESET);
+	outs(ANSI_COLOR(1;31) "不想付嗎？ 還是不知道要按 y ？\n"
+	     "請養成看清楚系統訊息的好習慣。\n" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
