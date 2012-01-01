@@ -1116,6 +1116,19 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
 #endif
 }
 
+void
+dbcs_safe_trim_title(char *output, const char *title, int len) {
+    if (strlen(title) > len) {
+        snprintf(output, len + 1, "%-*.*s", len - 2, len - 2, title);
+        DBCS_safe_trim(output);
+        strlcat(output, "¡K", len + 1);
+        while (strlen(output) < len)
+            strlcat(output, " ", len + 1);
+    } else {
+        snprintf(output, len + 1, "%-*.*s", len, len, title);
+    }
+}
+
 void 
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
              int isstamp)
@@ -1150,9 +1163,11 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     if(!strcasecmp(brd, BN_UNANONYMOUS))
        strcpy(fh.owner, cuser.userid);
 
-    // TODO improve this in future (see log_crosspost_in_allpost)
-    snprintf(fh.title, sizeof(fh.title), "%s%s%-*.*s.%sªO",
-             prefix, *prefix ? " " : "", len, len, title, currboard);
+    snprintf(fh.title, sizeof(fh.title), "%s%s", prefix, *prefix ? " " : "");
+    dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
+    snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
+             ".%sªO", currboard);
+
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
     fh.filemode = FILE_LOCAL;
