@@ -457,11 +457,6 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    refscreen = YEA;
 	    i = lastcmdptr;
 	    break;
-	case Ctrl('I'):
-	    t_idle();
-	    refscreen = YEA;
-	    i = lastcmdptr;
-	    break;
 	case Ctrl('N'):
 	    New();
 	    refscreen = YEA;
@@ -695,8 +690,6 @@ static const commands_t talklist[] = {
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "CChat          【" BBSMNAME2 "多人聊天室】"},
     {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
-    // XXX 發呆有太多其它方法可以進去了... drop?
-    {t_idle, 0,             "IIdle          發呆"},
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {a_changeangel, 

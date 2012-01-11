@@ -1431,11 +1431,6 @@ a_menu_rec(const char *maintitle, const char *path,
 	    me.page = A_INVALID_PAGE;
 	    break;
 
-	case Ctrl('I'):
-	    t_idle();
-	    me.page = A_INVALID_PAGE;
-	    break;
-
 	case Ctrl('W'):
 	    a_where_am_i(root, me.now, me.header[me.now - me.page].title);
 	    vmsg(NULL);

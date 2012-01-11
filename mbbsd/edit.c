@@ -3781,10 +3781,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		    t_users();
 		    curr_buf->redraw_everything = YEA;
 		    break;
-		case 'i':
-		    t_idle();
-		    curr_buf->redraw_everything = YEA;
-		    break;
 		case 'n':
 		    search_str(1);
 		    break;

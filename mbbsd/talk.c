@@ -4,9 +4,6 @@
 
 #define QCAST   int (*)(const void *, const void *)
 
-static char    * const IdleTypeTable[] = {
-    "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
-};
 static char    * const sig_des[] = {
     "鬥雞", "交談", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
 };
@@ -150,9 +147,8 @@ modestring(const userinfo_t * uentp, int simple)
 	} else
 	    snprintf(modestr, sizeof(modestr), "不行了 @_@");
     else if (!mode)
-	return (uentp->destuid == 6) ? uentp->chatid :
-	    IdleTypeTable[(0 <= uentp->destuid && uentp->destuid < 6) ?
-			  uentp->destuid : 0];
+	return (uentp->destuid == 6) ? uentp->chatid : "發呆中";
+
     else if (simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
@@ -2722,57 +2718,6 @@ int
 t_pager(void)
 {
     currutmp->pager = (currutmp->pager + 1) % PAGER_MODES;
-    return 0;
-}
-
-int
-t_idle(void)
-{
-    int             destuid0 = currutmp->destuid;
-    int             mode0 = currutmp->mode;
-    int             stat0 = currstat;
-    char            genbuf[20];
-    char            passbuf[PASSLEN];
-    int             idle_type;
-    char            idle_reason[sizeof(currutmp->chatid)];
-
-
-    setutmpmode(IDLE);
-    getdata(b_lines - 1, 0, "理由：[0]發呆 (1)接電話 (2)覓食 (3)打瞌睡 "
-	    "(4)裝死 (5)羅丹 (6)其他 (Q)沒事？", genbuf, 3, DOECHO);
-    if (genbuf[0] == 'q' || genbuf[0] == 'Q') {
-	currutmp->mode = mode0;
-	currstat = stat0;
-	return 0;
-    } else if (genbuf[0] >= '1' && genbuf[0] <= '6')
-	idle_type = genbuf[0] - '0';
-    else
-	idle_type = 0;
-
-    if (idle_type == 6) {
-	if (cuser.userlevel && getdata(b_lines - 1, 0, "發呆的理由：", idle_reason, sizeof(idle_reason), DOECHO)) {
-	    strlcpy(currutmp->chatid, idle_reason, sizeof(currutmp->chatid));
-	} else {
-	    idle_type = 0;
-	}
-    }
-    currutmp->destuid = idle_type;
-    do {
-	move(b_lines - 2, 0);
-	clrtobot();
-	prints("(鎖定螢幕)發呆原因: %s", (idle_type != 6) ?
-		 IdleTypeTable[idle_type] : idle_reason);
-	refresh();
-	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
-	passbuf[8] = '\0';
-    }
-    while (!checkpasswd(cuser.passwd, passbuf) &&
-	   strcmp(STR_GUEST, cuser.userid));
-
-    currutmp->mode = mode0;
-    currutmp->destuid = destuid0;
-    currstat = stat0;
-
     return 0;
 }
 

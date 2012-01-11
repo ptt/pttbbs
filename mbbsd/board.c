@@ -1564,10 +1564,6 @@ choose_board(int newflag)
 	case 'c':
 	    show_brdlist(head, 1, newflag ^= 1);
 	    break;
-	case Ctrl('I'):
-	    t_idle();
-	    show_brdlist(head, 1, newflag);
-	    break;
 
 	// ZA
 	case Ctrl('Z'):
