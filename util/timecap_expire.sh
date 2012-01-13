@@ -51,7 +51,7 @@ expire_home() {
     local i=0
     local timecap_base
 
-    $BBSHOME/bin/showuser $BBSHOME/.PASSWD |
+    $BBSHOME/bin/showuser |
     while read userid
     do
         i=$((i + 1))
