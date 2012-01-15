@@ -98,7 +98,7 @@ post_violatelaw(const char *crime, const char *police, const char *reason, const
     char msg[ANSILINELEN];
 
     snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
-	    (int)(37 - strlen(reason) - strlen(crime)), reason);
+	    (int)(30 - strlen(crime)), reason);
 
     snprintf(msg, sizeof(msg), 
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
