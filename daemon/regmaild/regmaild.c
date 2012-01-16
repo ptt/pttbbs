@@ -295,6 +295,7 @@ end:
 #define AMBLIST1    "0Oo"
 #define AMBLIST2    "1IliL"
 #define AMBLIST3    "5Ss"
+#define AMBLIST4    "2Zz"
 
 void
 build_unambiguous_userid(char *uid)
@@ -304,6 +305,7 @@ build_unambiguous_userid(char *uid)
         AMBLIST1,
         AMBLIST2,
         AMBLIST3,
+        AMBLIST4,
 	NULL
     };
 
@@ -320,7 +322,7 @@ build_unambiguous_userid(char *uid)
     }
 }
 
-const char *ambchars = AMBLIST1 AMBLIST2 AMBLIST3;    // super set of ambtbl
+const char *ambchars = AMBLIST1 AMBLIST2 AMBLIST3 AMBLIST4; // super set
 
 typedef struct {
     char *list;
