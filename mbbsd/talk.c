@@ -2967,10 +2967,9 @@ t_chat(void)
 #endif
 
 #ifdef CHAT_REGDAYS
-    if ((now - cuser.firstlogin)/DAY_SECONDS < CHAT_REGDAYS)
-    {
-	int i = CHAT_REGDAYS - (now-cuser.firstlogin)/DAY_SECONDS +1;
-	vmsgf("您尚未達到進入條件限制 (請再等 %d 天)", i);
+    if (cuser.numlogindays < CHAT_REGDAYS) {
+	vmsgf("您尚未達到進入條件限制 (" STR_LOGINDAYS ": %d, 需要: %d)",
+              cuser.numlogindays, CHAT_REGDAYS);
 	return 0;
     }
 #endif

@@ -111,6 +111,10 @@
 #define BN_UNANONYMOUS "UnAnonymous"
 #endif
 
+#ifndef BN_NEWIDPOST
+#define BN_NEWIDPOST "NEWIDPOST"
+#endif
+
 #ifndef RECYCLE_BIN_NAME
 #define RECYCLE_BIN_NAME "戈方Μ旦" // "︰В表"
 #endif
@@ -271,6 +275,10 @@
 #define BADPOST_MIN_CLEAR_DURATION (3) // ゅ丁
 #endif
 
+#ifndef MAX_CROSSNUM
+#define MAX_CROSSNUM      (9)           /* 程crosspostΩ计 */
+#endif
+
 /* (deprecated) more.c いゅ彻计(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
 
@@ -283,14 +291,12 @@
 #define MAX_ADBANNER_HEIGHT  (11)	 /* 程笆篈狾ず甧蔼 */
 #define MAX_ITEMS         (1000)         /* ヘ魁程Τ碭兜 */
 #define MAX_HISTORY       (12)           /* 笆篈狾玂 12 掸菌癘魁 */
-#define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */
 #define MAX_QUERYLINES    (16)           /* 陪ボ Query/Plan 癟程︽计 */
 #define MAX_LOGIN_INFO    (128)          /* 程絬硄计 */
 #define MAX_POST_INFO     (32)           /* 程穝ゅ彻硄计 */
 #define MAX_NAMELIST      (128)          /* 程ㄤ疭虫计 */
 #define MAX_NOTE          (20)           /* 程玂痙碭絞痙ē */
 #define MAX_SIGLINES      (6)            /* 帽郎ま程︽计 */
-#define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */
 #define MAX_REVIEW        (7)		 /* 程瞴臮 */
 #define NUMVIEWFILE       (15)           /* 秈礶程计 */
 #define MAX_SWAPUSED      (0.7)          /* SWAP程蔼ㄏノ瞯 */

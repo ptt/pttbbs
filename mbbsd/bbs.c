@@ -10,6 +10,8 @@
 
 #define WHEREAMI_LEVEL	16
 
+#define NEWIDPOST_LIMIT_DAYS (14)
+
 static int recommend(int ent, fileheader_t * fhdr, const char *direct);
 static int do_add_recommend(const char *direct, fileheader_t *fhdr,
                             int ent, const char *buf, int type);
@@ -225,7 +227,7 @@ anticrosspost(void)
     pwcuViolateLaw();
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", BBSMNAME "警察部隊");
-    if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
+    if (cuser.numlogindays < 50 || cuser.numposts < 50)
 	delete_allpost(cuser.userid);
     kick_all(cuser.userid); // XXX: in2: wait for testing
     u_exit("Cross Post");
@@ -932,6 +934,9 @@ cancelpost(const char *direct, const fileheader_t *fh,
 static void
 do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
+    // TODO FIXME this function is used when some user violates policy (ex,
+    // crosspost) and system is trying to delete all the posts in every boards.
+
     char bdir[PATHLEN], file[PATHLEN];
     fileheader_t newfh;
     boardheader_t  *bp;
@@ -951,10 +956,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     memcpy(&newfh, fh, sizeof(fileheader_t)); 
 
     // XXX TODO FIXME This (finding file by getindex) sucks. getindex checks
-    // only timestamp by binary search, and we know that BN_ALLPOST has plenty
-    // of files sharing same timestamp, so deleting cross post has a very big
-    // chance to delete wrong file, or failed to find the target.
-    // (there's no promise that entries in BN_ALLPOST are sequential)
+    // only timestamp by binary search, but that is not always true in current
+    // system.
 
     // Ptt: protect original fh 
     // because getindex safe_article_delete will change fh in some case
@@ -971,6 +974,7 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 
     // the getindex is not stable. in order to prevent leaving files,
     // no matter what, delete the file.
+    delete_file_content2(bdir, fh, bdir, NULL, 0, "Cross-Post(系統警察刪除)");
     unlink(file);
 }
 
@@ -979,9 +983,9 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
 {
     if(!fh || !fh->filename[0]) return;
 
-    if(!strcmp(bname, BN_ALLPOST) || !strcmp(bname, "NEWIDPOST") ||
-       !strcmp(bname, BN_ALLHIDPOST) || !strcmp(bname, BN_UNANONYMOUS))
-    {
+    if(strcmp(bname, BN_ALLPOST) == 0 || strcmp(bname, BN_NEWIDPOST == 0) ||
+       strcmp(bname, BN_ALLHIDPOST) == 0 || strcmp(bname, BN_UNANONYMOUS) == 0) {
+        // These files (in BN_ALLPOST etc) has a '.BOARD' refrence in title
         int len=0;
 	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
 	if(!po) return;
@@ -991,9 +995,7 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
 	if(len > TTLEN) return;
 	sprintf(xbname, "%.*s", len, po);
 	do_deleteCrossPost(fh, xbname);
-    }
-    else
-    {
+    } else {
         // Always delete file content in ALLPOST and keep the header
         // because that will be reset by cron jobs
         char file[PATHLEN];
@@ -1018,22 +1020,10 @@ delete_allpost(const char *userid)
            if(strcmp(fhdr.owner, userid))
              continue;
            deleteCrossPost(&fhdr, BN_ALLPOST);
+           // No need to touch the file since ALLPOST is cleared weekly.
 	   setbfile(file, BN_ALLPOST, fhdr.filename);
 	   unlink(file);
-
-	   // usually delete_allpost are initiated by system,
-	   // so don't set normal safedel.
-#ifdef FN_SAFEDEL_PREFIX_LEN
-	   strncpy(fhdr.filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
-#else
-	   strcpy(fhdr.filename, FN_SAFEDEL);
-#endif
-	   strcpy(fhdr.owner, "-");
-	   snprintf(fhdr.title, sizeof(fhdr.title),
-		   "%s", STR_SAFEDEL_TITLE);
-
-           lseek(fd, sizeof(fileheader_t) * i, SEEK_SET);
-           write(fd, &fhdr, sizeof(fileheader_t));
+           // No need to touch header in ALLPOST.
        }
        close(fd);
     }
@@ -1442,8 +1432,8 @@ do_general(int garbage GCC_UNUSED)
 	brc_addlist(postfile.filename, postfile.modified);
 
         if (IsBoardForAllpost(bp)) {
-	        if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
-            		do_crosspost("NEWIDPOST", &postfile, fpath, 0);
+	        if (cuser.numlogindays < NEWIDPOST_LIMIT_DAYS)
+            		do_crosspost(BN_NEWIDPOST, &postfile, fpath, 0);
 
 		if (!(currbrdattr & BRD_HIDE) )
             		do_crosspost(BN_ALLPOST, &postfile, fpath, 0);
@@ -3206,9 +3196,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	static  int tolog = 0;
 	if( tolog == 0 )
-	    tolog =
-		(cuser.numlogindays < 50 || (now - cuser.firstlogin) < DAY_SECONDS * 7)
-		? 1 : 2;
+	    tolog = (cuser.numlogindays < 50) ? 1 : 2;
 	if( tolog == 1 ){
 	    FILE   *fp;
 	    if( (fp = fopen("log/push", "a")) != NULL ){
@@ -3608,6 +3596,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
             del_ret = cancelpost(direct, fhdr, not_owned,
                                  newpath, sizeof(newpath), reason);
+            // delete the file reference in BN_ALLPOST, or delete all related
+            // posts if we (SYSOP) are working in a special board like
+            // BN_NEWIDPOST.
             deleteCrossPost(fhdr, bp->brdname);
 
             move(b_lines - 10, 0); clrtobot();
