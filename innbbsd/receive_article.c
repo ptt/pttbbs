@@ -377,6 +377,8 @@ receive_article()
 	 */
 	if (strptime(DATE, "%d %b %Y %X ", &tmbuf) != NULL)
 	    datevalue = timegm(&tmbuf);
+	else if (strptime(DATE, "%a, %d %b %Y %X %z", &tmbuf) != NULL)
+	    datevalue = timegm(&tmbuf);
 	else if (strptime(DATE, "%a, %d %b %Y %X ", &tmbuf) != NULL)
 	    datevalue = timegm(&tmbuf);
 	else
