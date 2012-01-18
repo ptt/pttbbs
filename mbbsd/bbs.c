@@ -1437,6 +1437,8 @@ do_general(int garbage GCC_UNUSED)
 	        if (cuser.numlogindays < NEWIDPOST_LIMIT_DAYS)
             		do_crosspost(BN_NEWIDPOST, &postfile, fpath, 0);
 
+                // TODO when USE_LIVE_ALLPOST is enabled, we probably don't need
+                // to post into BN_ALLPOST.
 		if (!(currbrdattr & BRD_HIDE) )
             		do_crosspost(BN_ALLPOST, &postfile, fpath, 0);
 	        else	
@@ -2251,7 +2253,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 static int
 read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[100];
+    char            genbuf[PATHLEN];
     int             more_result;
 
     if (fhdr->owner[0] == '-' || fhdr->filename[0] == 'L' || !fhdr->filename[0])
@@ -2259,6 +2261,25 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
+
+#if defined(BN_ALLPOST) && defined(USE_LIVE_ALLPOST)
+    if (strstr(genbuf, "/" BN_ALLPOST  "/")) {
+        char bnbuf[IDLEN + 1] = "";
+        const char *bn = strrchr(fhdr->title, '.');
+
+        while (bn) {
+            int bnlen = strlen(++bn) - 2;
+            if (bnlen < 1 || bnlen > IDLEN)
+                break;
+            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+            setbfile(genbuf, bnbuf, fhdr->filename);
+#ifdef DEBUG
+            vmsgf("redirect: %s", genbuf);
+#endif
+            break;
+        }
+    }
+#endif
 
     more_result = more(genbuf, YEA);
 
