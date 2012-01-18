@@ -983,8 +983,10 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
 {
     if(!fh || !fh->filename[0]) return;
 
-    if(strcmp(bname, BN_ALLPOST) == 0 || strcmp(bname, BN_NEWIDPOST == 0) ||
-       strcmp(bname, BN_ALLHIDPOST) == 0 || strcmp(bname, BN_UNANONYMOUS) == 0) {
+    if(strcmp(bname, BN_ALLPOST) == 0 ||
+       strcmp(bname, BN_ALLHIDPOST) == 0 ||
+       strcmp(bname, BN_NEWIDPOST) == 0 ||
+       strcmp(bname, BN_UNANONYMOUS) == 0 ) {
         // These files (in BN_ALLPOST etc) has a '.BOARD' refrence in title
         int len=0;
 	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
