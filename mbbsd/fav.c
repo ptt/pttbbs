@@ -521,6 +521,7 @@ int fav_load(void)
     fav_t *fp;
     if (fav_stack_num > 0)
 	return -1;
+
     setuserfile(buf, FAV);
 
     if (!dashf(buf)) {

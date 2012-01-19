@@ -939,10 +939,19 @@ load_boards(char *key)
     }
     if (!IN_CLASS()) {
 	if(IS_LISTING_FAV()){
-	    fav_t   *fav = get_current_fav();
-	    int     nfav = get_data_number(fav);
+            fav_t   *fav = get_current_fav();
+            int     nfav;
+
 	    // XXX TODO 很多人死在這裡，但我不確定他們是 fav 臨時壞掉還是該永久修正
 	    // workaround 應該是 nfav = fav ? get_data_number(fav) : 0;
+            if (!get_current_fav()) {
+                vmsgf("我的最愛系統錯誤，請到" BN_BUGREPORT "報告您之前進行了哪些動作，謝謝");
+                refresh();
+                assert(get_current_fav());
+                exit(-1);
+            }
+
+            nfav = get_data_number(fav);
 	    if( nfav == 0 ) {
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
@@ -1486,8 +1495,16 @@ choose_board(int newflag)
     char            keyword[13] = "", buf[PATHLEN];
 
     setutmpmode(newflag ? READNEW : READBRD);
-    if( get_fav_root() == NULL )
+    if( get_fav_root() == NULL ) {
 	fav_load();
+        if (!get_current_fav()) {
+            vmsgf("我的最愛載入失敗，請到" BN_BUGREPORT "報告您之前進行了哪些動作，謝謝");
+            refresh();
+            assert(get_current_fav());
+            exit(-1);
+        }
+    }
+
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
