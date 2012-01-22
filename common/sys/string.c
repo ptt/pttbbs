@@ -90,6 +90,27 @@ strip_blank(char *cbuf, const char *buf)
     return 0;
 }
 
+int
+reduce_blank(char *cbuf, const char *buf) {
+    char *obuf = cbuf;
+    int need_remove;
+    for (need_remove = 1; *buf; buf++) {
+        if (isascii(*buf) && isblank(*buf)) {
+            if (need_remove)
+                continue;
+            need_remove = 1;
+        } else {
+            need_remove = 0;
+        }
+        *cbuf++ = *buf;
+    }
+    // in the end, remove trailing spaces.
+    if (cbuf > obuf && *(cbuf-1) == ' ')
+        cbuf --;
+    *cbuf = 0;
+    return 0;
+}
+
 static const char EscapeFlag[] = {
     /*  0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* 10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0,

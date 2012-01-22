@@ -102,7 +102,7 @@ do_order_song(void)
 
     do {
 	getdata(21, 0, "想要要對他(她)說..:", say, sizeof(say), DOECHO);
-	strip_blank(say, say);
+	reduce_blank(say, say);
 	if (!say[0]) {
 	    bell();
 	    mvouts(22, 0, "請重新輸入想說的內容");
