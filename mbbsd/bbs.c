@@ -2263,22 +2263,32 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
 
 #if defined(BN_ALLPOST) && defined(USE_LIVE_ALLPOST)
-    if (strstr(genbuf, "/" BN_ALLPOST  "/")) {
+    do {
+        static char allpost_base[PATHLEN] = "";
+        static int allpost_base_len = 0;
         char bnbuf[IDLEN + 1] = "";
-        const char *bn = strrchr(fhdr->title, '.');
+        const char *bn;
+        int bnlen;
 
-        while (bn) {
-            int bnlen = strlen(++bn) - 2;
-            if (bnlen < 1 || bnlen > IDLEN)
-                break;
-            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
-            setbfile(genbuf, bnbuf, fhdr->filename);
-#ifdef DEBUG
-            vmsgf("redirect: %s", genbuf);
-#endif
-            break;
+        if (!*allpost_base) {
+            setbpath(allpost_base, BN_ALLPOST);
+            strlcat(allpost_base, "/", sizeof(allpost_base));
+            allpost_base_len = strlen(allpost_base);
         }
-    }
+
+        if (!allpost_base_len)
+            break;
+        if (strncmp(allpost_base, genbuf, allpost_base_len) != 0)
+            break;
+
+        bn = strrchr(fhdr->title, '.');
+        bnlen = strlen(++bn) - 2;
+        snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        setbfile(genbuf, bnbuf, fhdr->filename);
+#ifdef DEBUG
+        vmsgf("redirect: %s", genbuf);
+#endif
+    } while (0);
 #endif
 
     more_result = more(genbuf, YEA);
