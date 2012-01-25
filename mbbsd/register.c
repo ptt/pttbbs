@@ -1442,31 +1442,33 @@ print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
     return 1;
 }
 
+// The size to hold concat_regform_entry_localized
+#define REGFORM_LOCALIZED_ENTRIES_BUFSIZE   (10 * STRLEN)
+
 static int
 concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen)
 {
     int len = strlen(result);
-    len += snprintf(result + len, maxlen - len, "使用者ID: %s\n", pre->u.userid);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "真實姓名: %s\n", pre->u.realname);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "職業學校: %s\n", pre->u.career);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "目前住址: %s\n", pre->u.address);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "電話號碼: %s\n", pre->u.phone);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
-    assert(len <= maxlen);
-    len += snprintf(result + len, maxlen - len, "----\n");
+    snprintf(result + len, maxlen - len, "使用者ID: %s\n", pre->u.userid);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "真實姓名: %s\n", pre->u.realname);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "職業學校: %s\n", pre->u.career);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "目前住址: %s\n", pre->u.address);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "電話號碼: %s\n", pre->u.phone);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
+    len = strlen(result);
+    snprintf(result + len, maxlen - len, "----\n");
     return 1;
 }
 
 static int
 print_regform_entry_localized(const RegformEntry *pre, FILE *fp)
 {
-    // This buf must be large enough for concat_regform_entry_localized
-    char buf[STRLEN * 10];
+    char buf[REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
     buf[0] = '\0';
     concat_regform_entry_localized(pre, buf, sizeof(buf));
     fputs(buf, fp);
@@ -1532,7 +1534,7 @@ regform_log2board(const RegformEntry *pre, char accepted,
     char *title2 = NULL;
 
     // The message may contain ANSI escape sequences (regform_concat_reasons)
-    char msg[ANSILINELEN * REJECT_REASONS];
+    char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
     snprintf(title, sizeof(title), 
 	    "[審核] %s: %s (%s: %s)", 
@@ -1564,7 +1566,7 @@ regform_log2file(const RegformEntry *pre, char accepted,
 {
 #ifdef FN_ID_RECORD
     // The message may contain ANSI escape sequences (regform_concat_reasons)
-    char msg[ANSILINELEN * REJECT_REASONS];
+    char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
     FILE *fp;
 
     snprintf(msg, sizeof(msg), 
@@ -1712,15 +1714,15 @@ regform_concat_reasons(const char *reason, char *result, int maxlen)
     {
 	int i = 0;
 	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
-            assert(len <= maxlen);
-	    len += snprintf(result + len, maxlen - len, 
-		    ANSI_COLOR(1;33)
-		    "[退回原因] %s" ANSI_RESET "\n", 
-		    REASON_EXPANDABBREV(reason[i]));
+            snprintf(result + len, maxlen - len, 
+                     ANSI_COLOR(1;33)
+                     "[退回原因] %s" ANSI_RESET "\n", 
+                     REASON_EXPANDABBREV(reason[i]));
+            len = strlen(result);
 	}
     } else {
-	len += snprintf(result + len, maxlen - len, 
-		ANSI_COLOR(1;33) "[退回原因] %s" ANSI_RESET "\n", reason);
+        snprintf(result + len, maxlen - len, 
+                 ANSI_COLOR(1;33) "[退回原因] %s" ANSI_RESET "\n", reason);
     }
 }
 
