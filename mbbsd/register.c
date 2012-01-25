@@ -1447,11 +1447,17 @@ concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen
 {
     int len = strlen(result);
     len += snprintf(result + len, maxlen - len, "使用者ID: %s\n", pre->u.userid);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "真實姓名: %s\n", pre->u.realname);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "職業學校: %s\n", pre->u.career);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "目前住址: %s\n", pre->u.address);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "電話號碼: %s\n", pre->u.phone);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
+    assert(len <= maxlen);
     len += snprintf(result + len, maxlen - len, "----\n");
     return 1;
 }
@@ -1459,7 +1465,8 @@ concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen
 static int
 print_regform_entry_localized(const RegformEntry *pre, FILE *fp)
 {
-    char buf[STRLEN * 6];
+    // This buf must be large enough for concat_regform_entry_localized
+    char buf[STRLEN * 10];
     buf[0] = '\0';
     concat_regform_entry_localized(pre, buf, sizeof(buf));
     fputs(buf, fp);
@@ -1523,7 +1530,9 @@ regform_log2board(const RegformEntry *pre, char accepted,
 #ifdef BN_ID_RECORD
     char title[STRLEN];
     char *title2 = NULL;
-    char msg[STRLEN * REJECT_REASONS];
+
+    // The message may contain ANSI escape sequences (regform_concat_reasons)
+    char msg[ANSILINELEN * REJECT_REASONS];
 
     snprintf(title, sizeof(title), 
 	    "[審核] %s: %s (%s: %s)", 
@@ -1554,7 +1563,8 @@ regform_log2file(const RegformEntry *pre, char accepted,
 	const char *reason, int priority)
 {
 #ifdef FN_ID_RECORD
-    char msg[STRLEN * REJECT_REASONS];
+    // The message may contain ANSI escape sequences (regform_concat_reasons)
+    char msg[ANSILINELEN * REJECT_REASONS];
     FILE *fp;
 
     snprintf(msg, sizeof(msg), 
@@ -1702,6 +1712,7 @@ regform_concat_reasons(const char *reason, char *result, int maxlen)
     {
 	int i = 0;
 	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
+            assert(len <= maxlen);
 	    len += snprintf(result + len, maxlen - len, 
 		    ANSI_COLOR(1;33)
 		    "[退回原因] %s" ANSI_RESET "\n", 
