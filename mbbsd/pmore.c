@@ -3174,7 +3174,11 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
         // if already something in queue,
         // detemine if ok to break.
 #ifdef PMORE_HAVE_NUMINBUF
-        while ( num_in_buf() > 0)
+#ifdef EXP_NIOS
+        while (vkey_is_typeahead())
+#else
+        while (num_in_buf() > 0)
+#endif
         {
             if (!mf_movieMaskedInput((c = vkey())))
                 return c;
