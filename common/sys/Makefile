@@ -4,11 +4,8 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 SRCS:=	daemon.c file.c lock.c log.c net.c sort.c string.c time.c \
-    crypt.c record.c vector.c telnet.c vbuf.c vtkbd.c
-
-.if $(WITH_CONVERT) != "NO"
-SRCS+=  utf8.c big5.c
-.endif
+	crypt.c record.c vector.c telnet.c vbuf.c vtkbd.c \
+	utf8.c big5.c
 
 LIB:=	cmsys
 
