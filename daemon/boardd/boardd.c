@@ -10,7 +10,7 @@
 //  3. [done] split out independent server code
 //  4. [done] add article list support
 //  5. [done] add article content support
-//  6. encode output in UTF-8 (with UAO support)
+//  6. [done] encode output in UTF-8 (with UAO support)
 //  7. encode article list in JSON for better structure
 
 #include <stdlib.h>
@@ -27,6 +27,8 @@
 #include <perm.h>
 
 #include "server.h"
+
+#define CONVERT_TO_UTF8
 
 #define DEFAULT_ARTICLE_LIST 20
 
@@ -254,3 +256,78 @@ setup_program()
     attach_SHM();
 }
 
+#ifdef CONVERT_TO_UTF8
+
+enum bufferevent_filter_result
+filter_pass(struct evbuffer *source, struct evbuffer *destination,
+	ev_ssize_t dst_limit, enum bufferevent_flush_mode mode, void *ctx)
+{
+    int len = evbuffer_get_length(source);
+
+    if (len == 0)
+	return BEV_NEED_MORE;
+
+    len = evbuffer_remove_buffer(source, destination, dst_limit >= 0 ? dst_limit : len);
+
+    return len > 0 ? BEV_OK : (len == 0 ? BEV_NEED_MORE : BEV_ERROR);
+}
+
+enum bufferevent_filter_result
+filter_b2u(struct evbuffer *source, struct evbuffer *destination,
+	ev_ssize_t dst_limit, enum bufferevent_flush_mode mode, void *ctx)
+{
+    char c[2];
+    int out = 0;
+
+    while (evbuffer_copyout(source, c, 1) > 0) {
+	if (isascii(c[0])) {
+	    if (dst_limit > 0 && out >= dst_limit)
+		break;
+
+	    if (evbuffer_add(destination, c, 1) < 0)
+		return BEV_ERROR;
+	    evbuffer_drain(source, 1);
+	    out++;
+	} else {
+	    // Big5
+	    if (dst_limit > 0 && (out + 1) >= dst_limit)
+		break;
+
+	    // c must be little endian.
+	    c[1] = c[0];
+
+	    // Get second byte
+	    if (evbuffer_copyout(source, c, 1) <= 0)
+		break;
+
+	    uint16_t ucs = b2u_table[*(uint16_t*)c];
+	    uint8_t utf8[4];
+
+	    int len = ucs2utf(ucs, utf8);
+	    utf8[len] = 0;
+
+	    if (evbuffer_add(destination, utf8, len) < 0)
+		return BEV_ERROR;
+	    evbuffer_drain(source, 2);
+	    out += len;
+	}
+    }
+
+    return out ? BEV_OK : BEV_NEED_MORE;
+}
+
+void
+setup_client(struct event_base *base, evutil_socket_t fd,
+	struct sockaddr *address, int socklen)
+{
+    struct bufferevent *bev = bufferevent_socket_new(base, fd,
+	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+    struct bufferevent *bev2 = bufferevent_filter_new(bev, filter_b2u,
+	    filter_pass, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS,
+	    NULL, NULL);
+    bufferevent_setcb(bev2, client_read_cb, NULL, client_event_cb, NULL);
+    bufferevent_set_timeouts(bev2, common_timeout, common_timeout);
+    bufferevent_enable(bev2, EV_READ|EV_WRITE);
+}
+
+#endif // CONVERT_TO_UTF8
