@@ -190,12 +190,14 @@ cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
     } while (*++argv);
 
     evbuffer_add_reference(output, "END\r\n", 5, NULL, NULL);
+
+    evbuffer_free(buf);
 }
 
 void
 cmd_version(struct bufferevent *bev, void *ctx, int argc, char **argv)
 {
-    static const char msg[] = "VERSION 0.0.1\r\n";
+    static const char msg[] = "VERSION 0.0.2\r\n";
     evbuffer_add_reference(bufferevent_get_output(bev), msg, strlen(msg), NULL, NULL);
 }
 
@@ -276,38 +278,41 @@ enum bufferevent_filter_result
 filter_b2u(struct evbuffer *source, struct evbuffer *destination,
 	ev_ssize_t dst_limit, enum bufferevent_flush_mode mode, void *ctx)
 {
-    char c[2];
+    unsigned char c[2];
     int out = 0;
 
+    // Peek at first byte
     while (evbuffer_copyout(source, c, 1) > 0) {
 	if (isascii(c[0])) {
+	    // Check for rate limit
 	    if (dst_limit > 0 && out >= dst_limit)
 		break;
 
 	    if (evbuffer_add(destination, c, 1) < 0)
 		return BEV_ERROR;
+
+	    // Remove byte from source buffer
 	    evbuffer_drain(source, 1);
 	    out++;
 	} else {
 	    // Big5
+
+	    // Check for rate limit
 	    if (dst_limit > 0 && (out + 1) >= dst_limit)
 		break;
 
-	    // c must be little endian.
-	    c[1] = c[0];
-
-	    // Get second byte
-	    if (evbuffer_copyout(source, c, 1) <= 0)
+	    // Copy both bytes from source buffer
+	    if (evbuffer_copyout(source, c, 2) != 2)
 		break;
 
-	    uint16_t ucs = b2u_table[*(uint16_t*)c];
 	    uint8_t utf8[4];
-
-	    int len = ucs2utf(ucs, utf8);
+	    int len = ucs2utf(b2u_table[c[0] << 8 | c[1]], utf8);
 	    utf8[len] = 0;
 
 	    if (evbuffer_add(destination, utf8, len) < 0)
 		return BEV_ERROR;
+
+	    // Remove DBCS character from source buffer
 	    evbuffer_drain(source, 2);
 	    out += len;
 	}
@@ -322,8 +327,8 @@ setup_client(struct event_base *base, evutil_socket_t fd,
 {
     struct bufferevent *bev = bufferevent_socket_new(base, fd,
 	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-    struct bufferevent *bev2 = bufferevent_filter_new(bev, filter_b2u,
-	    filter_pass, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS,
+    struct bufferevent *bev2 = bufferevent_filter_new(bev, filter_pass,
+	    filter_b2u, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS,
 	    NULL, NULL);
     bufferevent_setcb(bev2, client_read_cb, NULL, client_event_cb, NULL);
     bufferevent_set_timeouts(bev2, common_timeout, common_timeout);
