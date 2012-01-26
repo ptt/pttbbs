@@ -13,9 +13,11 @@ convert_write_utf8(VBUF *v, char c) {
 
     // trail must be little endian.
     if (trail[1]) {
-        trail[0] = c;
         int len, i;
-        uint16_t ucs = b2u_table[*(uint16_t*)trail];
+        uint16_t ucs;
+
+        trail[0] = c;
+        ucs = b2u_table[*(uint16_t*)trail];
 
         len = ucs2utf(ucs, utf8);
         utf8[len] = 0;
@@ -32,6 +34,7 @@ convert_write_utf8(VBUF *v, char c) {
         vbuf_add(v, c);
         return 1;
     }
+
     trail[1] = c;
     return 0;
 }
