@@ -271,6 +271,8 @@ void setfriendfile(char *fpath, int type);
 int ticket_main(void);
 int openticket(int bid);
 int ticket(int bid);
+int hold_gamble(void);
+int join_gamble(int, const fileheader_t *, const char *);
 
 /* go */
 void gochess(int s, ChessGameMode mode);
@@ -427,19 +429,19 @@ int pmore2(const char *fpath, int promptend, void *ctx,
 	int (*footer_handler)(int ratio, int width, void *ctx),
 	int (*help_handler)  (int y,   void *ctx));
 /* piaip's new telnet, telnet.c */
-extern void telnet_init(int do_init_cmd);
-extern ssize_t tty_read(unsigned char *buf, size_t max);
-extern void telnet_turnoff_client_detect(void);
+void telnet_init(int do_init_cmd);
+ssize_t tty_read(unsigned char *buf, size_t max);
+void telnet_turnoff_client_detect(void);
 
 /* name */
 typedef int (*gnc_comp_func)(int, const char*, int);
 typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
-extern void namecomplete2(const struct Vector *namelist, const char *prompt, char *data);
-extern void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval);
-extern int ShowVector(struct Vector *self, int row, int column, const char *prompt, int idx);
-extern void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
+void namecomplete2(const struct Vector *namelist, const char *prompt, char *data);
+void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval);
+int ShowVector(struct Vector *self, int row, int column, const char *prompt, int idx);
+void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
 
 void usercomplete(const char *prompt, char *data);
 void usercomplete2(const char *prompt, char *data, const char *defval);
@@ -653,7 +655,6 @@ int isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat
 int cmpwatermtime(const void *a, const void *b);
 void getmessage(msgque_t msg);
 void my_write2(void);
-int t_idle(void);
 void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
