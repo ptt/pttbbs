@@ -84,7 +84,7 @@ static const int menu_mode_map[M_MENU_MAX] = {
 typedef struct {
     int     (*cmdfunc)();
     int     level;
-    char    *desc;                   /* next/key/description */
+    char    *desc;                   /* hotkey/description */
 } commands_t;
 
 ///////////////////////////////////////////////////////////////////////
@@ -423,7 +423,7 @@ show_menu(int menu_index, const commands_t * p)
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
             prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_RESET ")%s\n",
-                   menu_column, "", s[1], s+2);
+                   menu_column, "", s[0], s+1);
 	}
 	n++;
     }
@@ -526,22 +526,22 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		} else if (err != XEASY + 1 || err == FULLUPDATE)
 		    refscreen = YEA;
 
-		if (err != -1)
-		    cmd = cmdtable[lastcmdptr].desc[0];
-		else
-		    cmd = cmdtable[lastcmdptr].desc[1];
+                // keep current position
+		i = lastcmdptr;
+                break;
 	    }
+
 	    if (cmd >= 'a' && cmd <= 'z')
 		cmd = toupper(cmd);
-	    while (++i <= total)
-		if (cmdtable[i].desc[1] == cmd)
+	    while (++i <= total && cmdtable[i].desc)
+		if (cmdtable[i].desc[0] == cmd)
 		    break;
 
 	    if (!CheckMenuPerm(cmdtable[i].level)) {
-		for (i = 0; cmdtable[i].desc; i++)
+		for (i = 0; cmdtable[i].cmdfunc; i++)
 		    if (CheckMenuPerm(cmdtable[i].level))
 			break;
-		if (!cmdtable[i].desc)
+		if (!cmdtable[i].cmdfunc)
 		    return;
 	    }
 
@@ -619,57 +619,57 @@ static int x_admin_user(void);
 
 static const commands_t m_admin_money[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
-                                                "VView Log      檢視交易記錄"},
-    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"GGivemoney     紅包雞"}, 
+                                                "View Log      檢視交易記錄"},
+    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"Givemoney     紅包雞"}, 
     {NULL, 0, NULL}
 };
 
 static const commands_t m_admin_user[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
-                                        "MMoney Log      最近交易記錄"},
+                                        "Money Log      最近交易記錄"},
     {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD,
-                                        "OOLogin Log     最近上線記錄"},
-    {u_list, PERM_SYSOP,		"UUsers List     列出註冊名單"},
+                                        "OLogin Log     最近上線記錄"},
+    {u_list, PERM_SYSOP,		"Users List     列出註冊名單"},
     {search_user_bybakpwd, PERM_SYSOP|PERM_ACCOUNTS,
-                                        "DDOld User data 查閱\備份使用者資料"},
+                                        "DOld User data 查閱\備份使用者資料"},
     {NULL, 0, NULL}
 };
 
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
-    {m_user, PERM_SYSOP,		"UUser          使用者資料"},
-    {m_board, PERM_SYSOP|PERM_BOARD,	"BBoard         設定看板"},
+    {m_user, PERM_SYSOP,		"User          使用者資料"},
+    {m_board, PERM_SYSOP|PERM_BOARD,	"Board         設定看板"},
     {m_register, 
-	PERM_ACCOUNTS|PERM_ACCTREG,	"RRegister      審核註冊表單"},
-    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
+	PERM_ACCOUNTS|PERM_ACCTREG,	"Register      審核註冊表單"},
+    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"Xfile         編輯系統檔案"},
     {x_admin_money, PERM_SYSOP|PERM_ACCOUNTS|PERM_VIEWSYSOP,
-                                        "MMoney         【" MONEYNAME "相關】"},
+                                        "Money         【" MONEYNAME "相關】"},
     {x_admin_user, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
-                                        "LLUser Log     【使用者資料記錄】"},
+                                        "LUser Log     【使用者資料記錄】"},
     {search_user_bypwd, 
-	PERM_ACCOUNTS|PERM_POLICE_MAN,	"SSearch User    特殊搜尋使用者"},
-    {m_loginmsg, PERM_SYSOP,		"GGMessage Login 進站水球"},
+	PERM_ACCOUNTS|PERM_POLICE_MAN,	"Search User    特殊搜尋使用者"},
+    {m_loginmsg, PERM_SYSOP,		"GMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
 
 /* mail menu */
 static const commands_t maillist[] = {
-    {m_read, PERM_READMAIL,     "RRead          我的信箱"},
-    {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
-    {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
-    {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
-    {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
+    {m_read, PERM_READMAIL,     "Read          我的信箱"},
+    {m_send, PERM_LOGINOK,      "Send          站內寄信"},
+    {mail_list, PERM_LOGINOK,   "Mail List     群組寄信"},
+    {setforward, PERM_LOGINOK,  "Forward       設定信箱自動轉寄" },
+    {mail_mbox, PERM_INTERNET,  "Zip UserHome  把所有私人資料打包回去"},
     {built_mail_index, 
-	PERM_LOGINOK,		"SSavemail      重建信箱索引"},
-    {mail_all, PERM_SYSOP,      "RAll           寄信給所有使用者"},
+	PERM_LOGINOK,		"Savemail      重建信箱索引"},
+    {mail_all, PERM_SYSOP,      "All           寄信給所有使用者"},
     {NULL, 0, NULL}
 };
 
 #ifdef PLAY_ANGEL
 static const commands_t angelmenu[] = {
-    {a_angelmsg, PERM_ANGEL,"LLeave message 留言給小主人"},
-    {a_angelreport, 0,      "RReport        線上天使狀態報告"},
-    {a_angelreload, PERM_SYSOP,"OOReload    重整天使資訊"},
+    {a_angelmsg, PERM_ANGEL,"Leave message 留言給小主人"},
+    {a_angelreport, 0,      "Report        線上天使狀態報告"},
+    {a_angelreload, PERM_SYSOP,"OReload    重整天使資訊"},
     {NULL, 0, NULL}
 };
 
@@ -681,22 +681,22 @@ static int menu_angelbeats() {
 
 /* Talk menu */
 static const commands_t talklist[] = {
-    {t_users, 0,            "UUsers         線上使用者列表"},
-    {t_query, 0,            "QQuery         查詢網友"},
+    {t_users, 0,            "Users         線上使用者列表"},
+    {t_query, 0,            "Query         查詢網友"},
     // PERM_PAGE - 水球都要 PERM_LOGIN 了
     // 沒道理可以 talk 不能水球。
-    {t_talk, PERM_LOGINOK,  "TTalk          找人聊聊"},
+    {t_talk, PERM_LOGINOK,  "Talk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
-    {t_chat, PERM_LOGINOK,  "CChat          【" BBSMNAME2 "多人聊天室】"},
-    {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
-    {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
+    {t_chat, PERM_LOGINOK,  "Chat          【" BBSMNAME2 "多人聊天室】"},
+    {t_pager, PERM_BASIC,   "Pager         切換呼叫器"},
+    {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {a_changeangel, 
-	PERM_LOGINOK,	    "AAChange Angel 更換小天使"},
+	PERM_LOGINOK,	    "AChange Angel 更換小天使"},
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
-                            "BBAngel Beats! 天使公會"},
+                            "BAngel Beats! 天使公會"},
 #endif
-    {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
+    {t_display, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 
@@ -712,11 +712,11 @@ static int t_special() {
 }
 
 static const commands_t namelist[] = {
-    {t_override, PERM_LOGINOK,"OOverRide      好友名單"},
-    {t_reject, PERM_LOGINOK,  "BBlack         壞人名單"},
-    {t_aloha,PERM_LOGINOK,    "AALOHA         上站通知名單"},
-    {t_fix_aloha,PERM_LOGINOK,"XXFixALOHA     修正上站通知"},
-    {t_special,PERM_LOGINOK,  "SSpecial       其他特別名單"},
+    {t_override, PERM_LOGINOK,"OverRide      好友名單"},
+    {t_reject, PERM_LOGINOK,  "Black         壞人名單"},
+    {t_aloha,PERM_LOGINOK,    "ALOHA         上站通知名單"},
+    {t_fix_aloha,PERM_LOGINOK,"XFixALOHA     修正上站通知"},
+    {t_special,PERM_LOGINOK,  "Special       其他特別名單"},
     {NULL, 0, NULL}
 };
 
@@ -742,15 +742,15 @@ static int u_view_recentpay()
 #endif
 
 static const commands_t myfilelist[] = {
-    {u_editplan,    PERM_LOGINOK,   "QQueryEdit     編輯名片檔"},
-    {u_editsig,	    PERM_LOGINOK,   "SSignature     編輯簽名檔"},
+    {u_editplan,    PERM_LOGINOK,   "QueryEdit     編輯名片檔"},
+    {u_editsig,	    PERM_LOGINOK,   "Signature     編輯簽名檔"},
     {NULL, 0, NULL}
 };
 
 static const commands_t myuserlog[] = {
-    {u_view_recentlogin, 0,   "LLRecent Login  最近上站記錄"},
+    {u_view_recentlogin, 0,   "LRecent Login  最近上站記錄"},
 #ifdef USE_RECENTPAY
-    {u_view_recentpay,   0,   "PPRecent Pay    最近交易記錄"},
+    {u_view_recentpay,   0,   "PRecent Pay    最近交易記錄"},
 #endif
     {NULL, 0, NULL}
 };
@@ -781,16 +781,16 @@ u_customize()
 
 /* User menu */
 static const commands_t userlist[] = {
-    {u_customize,   PERM_BASIC,	    "UUCustomize    個人化設定"},
-    {u_info,	    PERM_BASIC,     "IInfo          設定個人資料與密碼"},
-    {calendar,	    PERM_LOGINOK,   "CCalendar      行事曆"},
-    {u_loginview,   PERM_BASIC,     "VVLogin View   選擇進站畫面"},
-    {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
-    {u_mylogs,	    PERM_LOGINOK,   "LLMy Logs      【個人記錄】 (最近上線...)"},
-    {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},
-    {u_register,    MENU_UNREGONLY, "RRegister      填寫《註冊申請單》"},
+    {u_customize,   PERM_BASIC,	    "UCustomize    個人化設定"},
+    {u_info,	    PERM_BASIC,     "Info          設定個人資料與密碼"},
+    {calendar,	    PERM_LOGINOK,   "Calendar      行事曆"},
+    {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
+    {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
+    {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
+    {u_cloak,	    PERM_LOGINOK,   "KCloak        隱身術"},
+    {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
 #ifdef ASSESS
-    {u_cancelbadpost,PERM_LOGINOK,  "BBye BadPost   申請刪除劣文"},
+    {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},
 #endif // ASSESS
     {NULL, 0, NULL}
 };
@@ -866,22 +866,22 @@ int _debug_reportstruct()
 
 /* XYZ tool sub menu */
 static const commands_t m_xyz_hot[] = {
-    {x_week, 0,      "WWeek          《本週五十大熱門話題》"},
-    {x_issue, 0,     "IIssue         《今日十大熱門話題》"},
+    {x_week, 0,      "Week          《本週五十大熱門話題》"},
+    {x_issue, 0,     "Issue         《今日十大熱門話題》"},
 #ifdef HAVE_X_BOARDS
-    {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
+    {x_boards,0,     "Hot Boards    《看板人氣排行榜》"},
 #endif
-    {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
+    {x_boardman,0,   "Man Boards    《看板精華區排行榜》"},
     {NULL, 0, NULL}
 };
 
 /* XYZ tool sub menu */
 static const commands_t m_xyz_user[] = {
-    {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+    {x_user100 ,0,   "Users         《使用者百大排行榜》"},
     {topsong,PERM_LOGINOK,   
-	             "GGTop Songs    《使用者點歌排行榜》"},
-    {x_today, 0,     "TToday         《今日上線人次統計》"},
-    {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
+	             "GTop Songs    《使用者點歌排行榜》"},
+    {x_today, 0,     "Today         《今日上線人次統計》"},
+    {x_yesterday, 0, "Yesterday     《昨日上線人次統計》"},
     {NULL, 0, NULL}
 };
 
@@ -901,66 +901,66 @@ x_users(void)
 
 /* XYZ tool menu */
 static const commands_t xyzlist[] = {
-    {x_hot,  0,      "TTHot Topics   《熱門話題與看板》"},
-    {x_users,0,      "UUsers         《使用者相關統計》"},
+    {x_hot,  0,      "THot Topics   《熱門話題與看板》"},
+    {x_users,0,      "Users         《使用者相關統計》"},
 #ifndef DEBUG
     /* All these are useless in debug mode. */
 #ifdef HAVE_USERAGREEMENT
-    {x_agreement,0,  "AAgreement     《本站使用者條款》"},
+    {x_agreement,0,  "Agreement     《本站使用者條款》"},
 #endif
 #ifdef  HAVE_LICENSE
-    {x_gpl, 0,       "IILicense       GNU 使用執照"},
+    {x_gpl, 0,       "ILicense       GNU 使用執照"},
 #endif
 #ifdef HAVE_INFO
-    {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
+    {x_program, 0,   "Program       本程式之版本與版權宣告"},
 #endif
-    {x_history, 0,   "HHistory       《我們的成長》"},
-    {x_login,0,      "SSystem        《系統重要公告》"},
+    {x_history, 0,   "History       《我們的成長》"},
+    {x_login,0,      "System        《系統重要公告》"},
 #ifdef HAVE_SYSUPDATES
-    {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
+    {x_sys_updates,0,"LUpdates      《本站系統程式更新紀錄》"},
 #endif
 
 #else // !DEBUG
     {_debug_reportstruct, 0, 
-	    	     "RReportStruct  報告各種結構的大小"},
+	    	     "ReportStruct  報告各種結構的大小"},
 #endif // !DEBUG
 
-    {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},
+    {p_sysinfo, 0,   "Xinfo         《查看系統資訊》"},
     {NULL, 0, NULL}
 };
 
 /* Ptt money menu */
 static const commands_t moneylist[] = {
-    {p_give, 0,         "00Give        給其他人" MONEYNAME},
-    {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
-    {p_from, 0,         "22From        暫時修改故鄉"},
-    {ordersong,0,       "33OSong       動態點歌機"},
+    {p_give, 0,         "0Give        給其他人" MONEYNAME},
+    {save_violatelaw, 0,"1ViolateLaw  繳罰單"},
+    {p_from, 0,         "2From        暫時修改故鄉"},
+    {ordersong,0,       "3OSong       動態點歌機"},
     {NULL, 0, NULL}
 };
 
 static const commands_t      cmdlist[] = {
     {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN, 
-				"00Admin       【 系統維護區 】"},
-    {Announce,	0,		"AAnnounce     【 精華公佈欄 】"},
+				"0Admin       【 系統維護區 】"},
+    {Announce,	0,		"Announce     【 精華公佈欄 】"},
 #ifdef DEBUG
-    {Favorite,	0,		"FFavorite     【 我的最不愛 】"},
+    {Favorite,	0,		"Favorite     【 我的最不愛 】"},
 #else
-    {Favorite,	0,		"FFavorite     【 我 的 最愛 】"},
+    {Favorite,	0,		"Favorite     【 我 的 最愛 】"},
 #endif
-    {Class,	0,		"CClass        【 分組討論區 】"},
+    {Class,	0,		"Class        【 分組討論區 】"},
     // TODO 目前很多人被停權時會變成 -R-1-3 (PERM_LOGINOK, PERM_VIOLATELAW,
     // PERM_NOREGCODE) 沒有 PERM_READMAIL，但這樣麻煩的是他們就搞不懂發生什麼事
-    {Mail, 	PERM_BASIC,     "MMail         【 私人信件區 】"},
+    {Mail, 	PERM_BASIC,     "Mail         【 私人信件區 】"},
     // 有些 bot 喜歡整天 query online accounts, 所以聊天改為 LOGINOK
-    {Talk, 	PERM_LOGINOK,	"TTalk         【 休閒聊天區 】"},
-    {User, 	PERM_BASIC,	"UUser         【 個人設定區 】"},
-    {Xyz, 	0,		"XXyz          【 系統資訊區 】"},
-    {Play_Play, PERM_LOGINOK, 	"PPlay         【 娛樂與休閒 】"},
-    {Name_Menu, PERM_LOGINOK,	"NNamelist     【 編特別名單 】"},
+    {Talk, 	PERM_LOGINOK,	"Talk         【 休閒聊天區 】"},
+    {User, 	PERM_BASIC,	"User         【 個人設定區 】"},
+    {Xyz, 	0,		"Xyz          【 系統資訊區 】"},
+    {Play_Play, PERM_LOGINOK, 	"Play         【 娛樂與休閒 】"},
+    {Name_Menu, PERM_LOGINOK,	"Namelist     【 編特別名單 】"},
 #ifdef DEBUG
-    {Goodbye, 	0, 		"GGoodbye      再見再見再見再見"},
+    {Goodbye, 	0, 		"Goodbye      再見再見再見再見"},
 #else
-    {Goodbye, 	0, 		"GGoodbye         離開，再見… "},
+    {Goodbye, 	0, 		"Goodbye         離開，再見… "},
 #endif
     {NULL, 	0, 		NULL}
 };
@@ -979,25 +979,25 @@ static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
-    {p_money, PERM_LOGINOK,  "PPay         【 " BBSMNAME2 "量販店 】"},
+    {p_money, PERM_LOGINOK,  "Pay         【 " BBSMNAME2 "量販店 】"},
     {chicken_main, PERM_LOGINOK, 
-			     "CChicken     【 " BBSMNAME2 "養雞場 】"},
+			     "Chicken     【 " BBSMNAME2 "養雞場 】"},
     {ticket_main, PERM_LOGINOK,
-                             "GGamble      【 " BBSMNAME2 "賭場   】"},
-    {chessroom, PERM_LOGINOK,"BBChess      【 " BBSMNAME2 "棋院   】"},
+                             "Gamble      【 " BBSMNAME2 "賭場   】"},
+    {chessroom, PERM_LOGINOK,"BChess      【 " BBSMNAME2 "棋院   】"},
     {NULL, 0, NULL}
 };
 
 static const commands_t chesslist[] = {
-    {chc_main,         PERM_LOGINOK, "11CChessFight   【" ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET "】"},
-    {chc_personal,     PERM_LOGINOK, "22CChessSelf    【" ANSI_COLOR(1;34) " 象棋打譜 " ANSI_RESET "】"},
-    {chc_watch,        PERM_LOGINOK, "33CChessWatch   【" ANSI_COLOR(1;35) " 象棋觀棋 " ANSI_RESET "】"},
-    {gomoku_main,      PERM_LOGINOK, "44GomokuFight   【" ANSI_COLOR(1;33) "五子棋邀局" ANSI_RESET "】"},
-    {gomoku_personal,  PERM_LOGINOK, "55GomokuSelf    【" ANSI_COLOR(1;34) "五子棋打譜" ANSI_RESET "】"},
-    {gomoku_watch,     PERM_LOGINOK, "66GomokuWatch   【" ANSI_COLOR(1;35) "五子棋觀棋" ANSI_RESET "】"},
-    {gochess_main,     PERM_LOGINOK, "77GoChessFight  【" ANSI_COLOR(1;33) " 圍棋邀局 " ANSI_RESET "】"},
-    {gochess_personal, PERM_LOGINOK, "88GoChessSelf   【" ANSI_COLOR(1;34) " 圍棋打譜 " ANSI_RESET "】"},
-    {gochess_watch,    PERM_LOGINOK, "99GoChessWatch  【" ANSI_COLOR(1;35) " 圍棋觀棋 " ANSI_RESET "】"},
+    {chc_main,         PERM_LOGINOK, "1CChessFight   【" ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET "】"},
+    {chc_personal,     PERM_LOGINOK, "2CChessSelf    【" ANSI_COLOR(1;34) " 象棋打譜 " ANSI_RESET "】"},
+    {chc_watch,        PERM_LOGINOK, "3CChessWatch   【" ANSI_COLOR(1;35) " 象棋觀棋 " ANSI_RESET "】"},
+    {gomoku_main,      PERM_LOGINOK, "4GomokuFight   【" ANSI_COLOR(1;33) "五子棋邀局" ANSI_RESET "】"},
+    {gomoku_personal,  PERM_LOGINOK, "5GomokuSelf    【" ANSI_COLOR(1;34) "五子棋打譜" ANSI_RESET "】"},
+    {gomoku_watch,     PERM_LOGINOK, "6GomokuWatch   【" ANSI_COLOR(1;35) "五子棋觀棋" ANSI_RESET "】"},
+    {gochess_main,     PERM_LOGINOK, "7GoChessFight  【" ANSI_COLOR(1;33) " 圍棋邀局 " ANSI_RESET "】"},
+    {gochess_personal, PERM_LOGINOK, "8GoChessSelf   【" ANSI_COLOR(1;34) " 圍棋打譜 " ANSI_RESET "】"},
+    {gochess_watch,    PERM_LOGINOK, "9GoChessWatch  【" ANSI_COLOR(1;35) " 圍棋觀棋 " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
