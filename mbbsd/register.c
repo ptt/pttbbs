@@ -974,12 +974,6 @@ check_register(void)
 	 "  代表您的認證由於資料不完整已被取消 (常見於申請開新看板的板主)。\n");
 
     u_register();
-
-#ifdef NEWUSER_LIMIT
-    if (cuser.lastlogin - cuser->firstlogin < 3 * DAY_SECONDS)
-	cuser.userlevel &= ~PERM_POST;
-    more("etc/newuser", YEA);
-#endif
 }
 
 static int

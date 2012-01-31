@@ -303,11 +303,6 @@ user_display(const userec_t * u, int adminmode)
 	}
 	prints("\n");
     }
-
-#ifdef NEWUSER_LIMIT
-    if ((u->lastlogin - u->firstlogin < 3 * DAY_SECONDS) && !HasUserPerm(PERM_POST))
-	outs("\n新手上路，三天後開放權限");
-#endif
 }
 
 void
@@ -391,16 +386,9 @@ violate_law(userec_t * u, int unum)
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
-	// 20080417, according to the request of admins, the numpost>100
-	// if very easy to achive for such bad users (of course, because
-	// usually they violate law by massive posting).
-	// Also if he wants to prevent system auto cp check, he will
-	// post -> logout -> login -> post. So both numlogin and numpost
-	// are not good.
-	// We changed the rule to registration date [2 month].
-	if (HasUserPerm(PERM_POLICE) && ((now - u->firstlogin) >= 2*30*DAY_SECONDS))
+	if (HasUserPerm(PERM_POLICE) && u->numlogindays > 60)
 	{
-	    vmsg("使用者註冊已超過 60 天，無法砍除。");
+	    vmsg("使用者" STR_LOGINDAYS "超過 60，無法砍除。");
 	    return;
 	}
 
@@ -1060,8 +1048,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		} else {
 		    userec_t        atuser;
 		    passwd_sync_query(uid, &atuser);
-		    if (now - atuser.firstlogin < 6 * 30 * 24 * 60 * 60) {
-			outs("\n註冊未超過半年，請重新輸入\n");
+		    if (atuser.numlogindays < 6*30) {
+			outs("\n" STR_LOGINDAYS "未超過 180，請重新輸入\n");
 			i--;
 		    }
 		    // Adjust upper or lower case

@@ -5,11 +5,14 @@
 // create invalid records as -1... so we'd better make it signed for real
 // comparison.
 char *get_restriction_reason(
-        time4_t firstlogin, unsigned int numlogindays,
-        unsigned int numposts, unsigned int badpost,
+        unsigned int numlogindays,
+        unsigned int numposts,
+        unsigned int badpost,
+
         unsigned int limits_logins,
         unsigned int limits_posts,
         unsigned int limits_badpost,
+
         size_t sz_msg, char *msg) {
 
     syncnow();

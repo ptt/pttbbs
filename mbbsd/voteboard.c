@@ -10,11 +10,11 @@ char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 	return NULL;
 
     return get_restriction_reason(
-            cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
-            bh->vote_limit_logins,
-            bh->vote_limit_posts,
-            bh->vote_limit_badpost,
-            sz_msg, msg);
+        cuser.numlogindays, cuser.numposts, cuser.badpost,
+        bh->vote_limit_logins,
+        bh->vote_limit_posts,
+        bh->vote_limit_badpost,
+        sz_msg, msg);
 }
 
 char *CheckVoteRestrictionFile(
@@ -24,11 +24,11 @@ char *CheckVoteRestrictionFile(
         return NULL;
 
     return get_restriction_reason(
-            cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
-            fhdr->multi.vote_limits.logins,
-            fhdr->multi.vote_limits.posts,
-            fhdr->multi.vote_limits.badpost,
-            sz_msg, msg);
+        cuser.numlogindays, cuser.numposts, cuser.badpost,
+        fhdr->multi.vote_limits.logins,
+        fhdr->multi.vote_limits.posts,
+        fhdr->multi.vote_limits.badpost,
+        sz_msg, msg);
 }
 
 void

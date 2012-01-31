@@ -506,7 +506,7 @@ char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
     bp = getbcache(bid);
 
     return get_restriction_reason(
-        cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
+        cuser.numlogindays, cuser.numposts, cuser.badpost,
         bp->post_limit_logins, bp->post_limit_posts, bp->post_limit_badpost,
         sz_msg, msg);
 }
