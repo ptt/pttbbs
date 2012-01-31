@@ -162,14 +162,6 @@ pay(int money, const char *item, ...)
     return do_pay(usernum, money, item, reason); 
 }
 
-static int
-inmailbox(int m)
-{
-    pwcuAddExMailBox(m);
-    return cuser.exmailbox;
-}
-
-
 int
 p_from(void)
 {
@@ -185,52 +177,6 @@ p_from(void)
     {
 	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
     }
-    return 0;
-}
-
-int
-p_exmail(void)
-{
-    char            ans[4], buf[200];
-    int             n, oldm;
-
-    if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
-	vmsgf("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
-	return 0;
-    }
-    snprintf(buf, sizeof(buf),
-	     "您曾增購 %d 封容量，還要再買多少? ", cuser.exmailbox);
-
-    // no need to create default prompt.
-    // and people usually come this this by accident...
-    getdata(b_lines - 2, 0, buf, ans, sizeof(ans), NUMECHO);
-
-    oldm = cuser.exmailbox;
-    n = atoi(ans);
-    if (!ans[0] || n<=0)
-	return 0;
-
-    if (n + cuser.exmailbox > MAX_EXKEEPMAIL)
-	n = MAX_EXKEEPMAIL - cuser.exmailbox;
-    reload_money();
-    if (cuser.money < n * 1000)
-    {
-	vmsg("你的" MONEYNAME "不夠。");
-	return 0;
-    }
-
-    if (vmsgf("你想購買 %d 封信箱 (要花 %d " MONEYNAME "), 確定嗎？[y/N] ", 
-		n, n*1000) != 'y')
-	return 0;
-
-    reload_money();
-    pay(n * 1000, "購買信箱");
-    inmailbox(n);
-    log_filef("log/exmailbox.log", LOG_CREAT,
-	    "%-13s %d+%d->%d %s\n", cuser.userid, 
-	    oldm, n, cuser.exmailbox, Cdatelite(&now));
-
-    vmsgf("已購買信箱。新容量上限: %d", cuser.exmailbox);
     return 0;
 }
 

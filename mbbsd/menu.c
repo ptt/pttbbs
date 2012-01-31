@@ -936,7 +936,6 @@ static const commands_t moneylist[] = {
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
     {p_from, 0,         "22From        暫時修改故鄉"},
     {ordersong,0,       "33OSong       動態點歌機"},
-    {p_exmail, 0,       "44Exmail      購買信箱         $1000/封"},
     {NULL, 0, NULL}
 };
 
