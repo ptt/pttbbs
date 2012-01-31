@@ -27,7 +27,7 @@ do_order_song(void)
     char            sender[IDLEN + 1], receiver[IDLEN + 1], buf[200],
 		    genbuf[200], filename[256], say[51];
     char            trans_buffer[PATHLEN];
-    char            address[45];
+    char            address[IDLEN+1];
     FILE           *fp, *fp1;
     fileheader_t    mail;
     int             nsongs;
@@ -111,8 +111,15 @@ do_order_song(void)
 
     snprintf(save_title, sizeof(save_title),
 	     "%s:%s", sender, say);
-    getdata_str(22, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
-		address, sizeof(address), LCECHO, receiver);
+    do {
+        move(22, 0); clrtobot();
+        getdata_str(22, 0, "寄到誰的信箱(站內真實ID)?",
+                    address, sizeof(address), LCECHO, receiver);
+        if (!*address || searchuser(address, address))
+            break;
+        vmsg("請輸入站內 ID 或直接 ENTER");
+    } while (1);
+
     vmsg("接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
     a_menu("點歌歌本", SONGBOOK, 0, 0, trans_buffer, NULL);
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
@@ -124,9 +131,7 @@ do_order_song(void)
     vmsg(trans_buffer);
 #endif
     strlcpy(filename, OSONGPATH, sizeof(filename));
-
     stampfile(filename, &mail);
-
     unlink(filename);
 
     if (!(fp1 = fopen(filename, "w"))) {
@@ -172,7 +177,9 @@ do_order_song(void)
     fclose(fp1);
     fclose(fp);
 
-    log_filef("etc/osong.log",  LOG_CREAT, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address);
+    log_filef("etc/osong.log",  LOG_CREAT,
+              "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n",
+              cuser.userid, sender, receiver, say, address);
 
     if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
 	pwcuSetLastSongTime(now);
@@ -194,17 +201,10 @@ do_order_song(void)
     }
     snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
     hold_mail(filename, receiver, save_title);
-
-    if (address[0]) {
+    if (*address) {
 	bsmtp(filename, save_title, address, NULL);
-#ifdef USE_LOG_INTERNETMAIL
-        if (strchr(address, '@'))
-            log_filef("log/internet_mail.log", LOG_CREAT, 
-                    "%s [%s] %s -> %s: %s\n",
-                    Cdatelite(&now), __FUNCTION__,
-                    cuser.userid, address, save_title);
-#endif
     }
+
     clear();
     outs(
 	 "\n\n  恭喜您點歌完成囉...\n"
