@@ -665,7 +665,6 @@ int listbrd(int argc, char **argv)
 
         printf("post_limit_posts:\t%d\n", b.post_limit_posts);
         printf("post_limit_logins:\t%d\n", b.post_limit_logins);
-        printf("post_limit_regtime:\t%d\n", b.post_limit_regtime);
         printf("level:\t%d\n", b.level);
         printf("gid:\t%d\n", b.gid);
         printf("parent:\t%d\n", b.parent);

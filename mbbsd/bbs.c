@@ -507,8 +507,7 @@ char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
 
     return get_restriction_reason(
         cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
-        bp->post_limit_regtime, bp->post_limit_logins,
-        bp->post_limit_posts, bp->post_limit_badpost,
+        bp->post_limit_logins, bp->post_limit_posts, bp->post_limit_badpost,
         sz_msg, msg);
 }
 
@@ -2348,15 +2347,15 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 void
-editLimits(unsigned char *pregtime, unsigned char *plogins,
-	unsigned char *pposts, unsigned char *pbadpost)
+editLimits(unsigned char *plogins,
+           unsigned char *pposts,
+           unsigned char *pbadpost)
 {
     char genbuf[STRLEN];
     int  temp, y;
 
     // load var
     unsigned char 
-	regtime = *pregtime, 
 	logins  = *plogins, 
 	posts   = *pposts, 
 	badpost = *pbadpost;
@@ -2374,30 +2373,12 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
          "但板主又以為沒改過。 設定前請跟板主確認過這不是舊的設定數值。\n"
         ANSI_RESET);
 
-    // migrate old data
-    if (regtime) {
-        prints(ANSI_COLOR(1;31) "\n請注意原註冊時間限制(%d個月)已", regtime);
-        if (logins == 0) {
-            logins = (unsigned char)regtime * 30 / 10;
-            prints("轉換為" STR_LOGINDAYS "(%d次)", logins * 10);
-        } else {
-            prints("被" STR_LOGINDAYS "(%d次)取代。", logins * 10);
-        }
-        outs(ANSI_RESET "\n");
-        regtime = 0;
-    }
-
     sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(y, 0, 
                 STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：",
                 genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
-        if (regtime && temp > regtime * 30) {
-            strcpy(genbuf, "0");
-            bell();
-            continue;
-        }
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
     move(y+1, 0); clrtobot();
@@ -2421,7 +2402,6 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     badpost = (unsigned char)(255 - temp);
 
     // save var
-    *pregtime = regtime;
     *plogins  = logins;
     *pposts   = posts;
     *pbadpost = badpost;
@@ -2450,7 +2430,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
 	editLimits(
-		&bp->post_limit_regtime,
 		&bp->post_limit_logins,
 		&bp->post_limit_posts,
 		&bp->post_limit_badpost);
@@ -2464,7 +2443,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     else if (buf[0] == 'b') {
 
 	editLimits(
-		&bp->vote_limit_regtime,
 		&bp->vote_limit_logins,
 		&bp->vote_limit_posts,
 		&bp->vote_limit_badpost);
@@ -2478,7 +2456,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
 
 	editLimits(
-		&fhdr->multi.vote_limits.regtime,
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);

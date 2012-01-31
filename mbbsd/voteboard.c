@@ -11,8 +11,9 @@ char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 
     return get_restriction_reason(
             cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
-            bh->vote_limit_regtime, bh->vote_limit_logins,
-            bh->vote_limit_posts, bh->vote_limit_badpost,
+            bh->vote_limit_logins,
+            bh->vote_limit_posts,
+            bh->vote_limit_badpost,
             sz_msg, msg);
 }
 
@@ -24,8 +25,9 @@ char *CheckVoteRestrictionFile(
 
     return get_restriction_reason(
             cuser.firstlogin, cuser.numlogindays, cuser.numposts, cuser.badpost,
-            fhdr->multi.vote_limits.regtime, fhdr->multi.vote_limits.logins,
-            fhdr->multi.vote_limits.posts, fhdr->multi.vote_limits.badpost,
+            fhdr->multi.vote_limits.logins,
+            fhdr->multi.vote_limits.posts,
+            fhdr->multi.vote_limits.badpost,
             sz_msg, msg);
 }
 
@@ -383,7 +385,6 @@ do_voteboard(int type)
     votefile.filemode |= FILE_VOTE;
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
-    votefile.multi.vote_limits.regtime = bcache[currbid - 1].vote_limit_regtime;
     votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
     votefile.multi.vote_limits.posts   = bcache[currbid - 1].vote_limit_posts;
     votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;

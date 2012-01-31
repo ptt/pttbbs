@@ -7,16 +7,12 @@
 char *get_restriction_reason(
         time4_t firstlogin, unsigned int numlogindays,
         unsigned int numposts, unsigned int badpost,
-        time4_t limits_regtime, unsigned int limits_logins,
-        unsigned int limits_posts, unsigned int limits_badpost,
+        unsigned int limits_logins,
+        unsigned int limits_posts,
+        unsigned int limits_badpost,
         size_t sz_msg, char *msg) {
 
     syncnow();
-    if (firstlogin > (now - limits_regtime * MONTH_SECONDS)) {
-        snprintf(msg, sz_msg, "註冊時間未滿 %d 天(目前%d天)",
-                 limits_regtime * 30, (now - firstlogin) / DAY_SECONDS);
-        return msg;
-    }
     if (numlogindays / 10 < limits_logins) {
         snprintf(msg, sz_msg,
                  STR_LOGINDAYS "未滿 %d " STR_LOGINDAYS

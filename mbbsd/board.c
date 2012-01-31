@@ -314,7 +314,6 @@ b_config(void)
 	// limits
 	uint8_t llogin = bp->post_limit_logins,
 		lpost  = bp->post_limit_posts,
-		lreg   = bp->post_limit_regtime,
 		lbp    = bp->post_limit_badpost;
 
 	move(ytitle-1, 0); 
@@ -450,7 +449,6 @@ b_config(void)
 	{
 	    llogin = bp->vote_limit_logins;
 	    lpost  = bp->vote_limit_posts;
-	    lreg   = bp->vote_limit_regtime;
 	    lbp    = bp->vote_limit_badpost;
 	}
 
@@ -472,22 +470,6 @@ b_config(void)
 	    attr = (cuser.numposts < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints("各看板有效文章合計 %d 篇以上", i);
-	    if (attr) outs(ANSI_RESET);
-	    hasres = 1;
-	}
-
-	if (lreg)
-	{
-	    move_ansi(ipostres++, COLPOSTRES);
-	    i = lreg;
-	    attr = (cuser.firstlogin > 
-		    (now - (time4_t)lreg * MONTH_SECONDS)) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    outs("註冊時間 ");
-	    if (i < 5)
-		prints("%d 天以上", i*30);
-	    else
-		prints("%d 個月以上",i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}

@@ -176,11 +176,11 @@ typedef struct boardheader_t { /* 256 bytes */
     char    chesscountry;	    /* 棋國 */
     uint8_t vote_limit_posts;	    /* 連署 : 文章篇數下限 */
     uint8_t vote_limit_logins;	    /* 連署 : 登入次數下限 */
-    uint8_t vote_limit_regtime;	    /* 連署 : 註冊時間限制 */
+    uint8_t pad2_1[1];	            /* (已停用) 連署 : 註冊時間限制 */
     time4_t bupdate;		    /* note update time */
     uint8_t post_limit_posts;	    /* 發表文章 : 文章篇數下限 */
     uint8_t post_limit_logins;	    /* 發表文章 : 登入次數下限 */
-    uint8_t post_limit_regtime;	    /* 發表文章 : 註冊時間限制 */
+    uint8_t pad2_2[1];	            /* (已停用) 發表文章 : 註冊時間限制 */
     uint8_t bvote;		    /* 正舉辦 Vote 數 */
     time4_t vtime;		    /* Vote close time */
     uint32_t level;		    /* 可以看此板的權限 */

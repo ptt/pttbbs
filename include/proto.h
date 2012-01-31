@@ -153,8 +153,9 @@ int resolve_over18_user(const userec_t *u);
 char *get_restriction_reason(
         time4_t firstlogin, unsigned int numlogindays,
         unsigned int numposts, unsigned int badpost,
-        time4_t limits_regtime, unsigned int limits_logins,
-        unsigned int limits_posts, unsigned int limits_badpost,
+        unsigned int limits_logins,
+        unsigned int limits_posts,
+        unsigned int limits_badpost,
         size_t sz_msg, char *msg);
 
 /* ccw (common chat window) */
