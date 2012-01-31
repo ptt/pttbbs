@@ -654,8 +654,7 @@ static const commands_t adminlist[] = {
 
 /* mail menu */
 static const commands_t maillist[] = {
-    {m_new,  PERM_READMAIL,     "RNew           閱\讀新進郵件"},
-    {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
+    {m_read, PERM_READMAIL,     "RRead          我的信箱"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
     {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
