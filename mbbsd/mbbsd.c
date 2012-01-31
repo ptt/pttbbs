@@ -1194,6 +1194,9 @@ inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm 
 
 inline static void check_mailbox_quota(void)
 {
+    if (!HasUserPerm(PERM_READMAIL))
+        return;
+
     if (chkmailbox()) do {
         m_read();
     } while (chkmailbox_hard_limit());
@@ -1315,6 +1318,14 @@ user_login(void)
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
 	restore_backup();
 	check_mailbox_quota();
+
+        if (HasUserPerm(PERM_VIOLATELAW) && !HasUserPerm(PERM_BASIC)) {
+            vs_hdr2(" 停權通知 ", " 部份功\能已被暫停使用");
+            outs(ANSI_COLOR(1;31) "\n\n\t抱歉，你的帳號已被停權。\n"
+                 "\t詳情請至 ViolateLaw 看板搜尋你的 ID。\n" ANSI_RESET);
+            pressanykey();
+        }
+
 
 	// XXX 這個 check 花不少時間，有點間隔比較好
 	if (HasUserPerm(PERM_BM) && 

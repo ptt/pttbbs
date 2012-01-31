@@ -451,8 +451,10 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	i = -1;
 	switch (cmd) {
 	case Ctrl('Z'):
-            if (!HasUserPerm(PERM_BASIC))
+            if (!HasUserPerm(PERM_BASIC)) {
+                i = lastcmdptr;
                 break;
+            }
 	    ZA_Select(); // we'll have za loop later.
 	    refscreen = YEA;
 	    i = lastcmdptr;
@@ -656,9 +658,7 @@ static const commands_t maillist[] = {
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
-// #ifdef USE_MAIL_AUTO_FORWARD
     {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
-// #endif
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
     {built_mail_index, 
 	PERM_LOGINOK,		"SSavemail      重建信箱索引"},
@@ -949,8 +949,11 @@ static const commands_t      cmdlist[] = {
     {Favorite,	0,		"FFavorite     【 我 的 最愛 】"},
 #endif
     {Class,	0,		"CClass        【 分組討論區 】"},
-    {Mail, 	PERM_BASIC,	"MMail         【 私人信件區 】"},
-    {Talk, 	0,		"TTalk         【 休閒聊天區 】"},
+    // TODO 目前很多人被停權時會變成 -R-1-3 (PERM_LOGINOK, PERM_VIOLATELAW,
+    // PERM_NOREGCODE) 沒有 PERM_READMAIL，但這樣麻煩的是他們就搞不懂發生什麼事
+    {Mail, 	PERM_BASIC,     "MMail         【 私人信件區 】"},
+    // 有些 bot 喜歡整天 query online accounts, 所以聊天改為 LOGINOK
+    {Talk, 	PERM_LOGINOK,	"TTalk         【 休閒聊天區 】"},
     {User, 	PERM_BASIC,	"UUser         【 個人設定區 】"},
     {Xyz, 	0,		"XXyz          【 系統資訊區 】"},
     {Play_Play, PERM_LOGINOK, 	"PPlay         【 娛樂與休閒 】"},
