@@ -9,43 +9,51 @@
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
 #define LOAD_FILE       "/proc/loadavg"              /* for Linux */
 
+/////////////////////////////////////////////////////////////////////////////
+// System Name Configuration 系統名稱設定
+
 /* 系統名(郵件用)，建議別超過 3 個字元。 詳見 sample/pttbbs.conf */
 #ifndef BBSMNAME
-#define BBSMNAME	"Ptt"
+#define BBSMNAME        "Ptt"
 #endif
 
 /* 系統名(選單用)，建議剛好 4 個字元。 詳見 sample/pttbbs.conf */
 #ifndef BBSMNAME2
-#define BBSMNAME2	"Ｐtt"
+#define BBSMNAME2       "Ｐtt"
 #endif
 
 /* 錢幣名，建議剛好 3 個字元。 詳見 sample/pttbbs.conf */
 #ifndef MONEYNAME
-#define MONEYNAME BBSMNAME "幣"
+#define MONEYNAME       BBSMNAME "幣"
 #endif
 
 /* AID 顯示的站台名稱。 若 IP 太長請另行定義。 */
 #ifndef AID_HOSTNAME
-#define AID_HOSTNAME	MYHOSTNAME
+#define AID_HOSTNAME    MYHOSTNAME
 #endif
 
-/* 主題配色 */
+/////////////////////////////////////////////////////////////////////////////
+// Themes 主題配色
 
 #ifndef TITLE_COLOR 
-#define TITLE_COLOR       ANSI_COLOR(0;1;37;46)	/* 主畫面上方標題列 */
+#define TITLE_COLOR             ANSI_COLOR(0;1;37;46)	/* 主畫面上方標題列 */
 #endif
 
 #ifndef HLP_CATEGORY_COLOR
 #define HLP_CATEGORY_COLOR	ANSI_COLOR(0;1;32)  /* 說明表格內分類項 */
 #endif
+
 #ifndef HLP_DESCRIPTION_COLOR
 #define HLP_DESCRIPTION_COLOR	ANSI_COLOR(0)	    /* 說明表格內說明項 */
 #endif
+
 #ifndef HLP_KEYLIST_COLOR
 #define HLP_KEYLIST_COLOR	ANSI_COLOR(0;1;36)  /* 說明表格內按鍵項 */
 #endif
 
-/* 系統帳號相關設定 */ 
+/////////////////////////////////////////////////////////////////////////////
+// OS Settings 作業系統相關設定
+
 #ifndef BBSUSER
 #define BBSUSER "bbs"
 #endif
@@ -58,7 +66,57 @@
 #define BBSGID (99)
 #endif
 
-/* Default Board Names */
+#ifndef TAR_PATH
+#define TAR_PATH "tar"
+#endif
+
+#ifndef MUTT_PATH
+#define MUTT_PATH "mutt"
+#endif
+
+#ifndef MAXPATHLEN
+#define MAXPATHLEN        (256)
+#endif
+
+#ifndef PATHLEN
+#define PATHLEN           (256)
+#endif
+
+#ifndef DEFAULT_FOLDER_CREATE_PERM
+#define DEFAULT_FOLDER_CREATE_PERM (0755)
+#endif
+
+#ifndef DEFAULT_FILE_CREATE_PERM
+#define DEFAULT_FILE_CREATE_PERM   (0644)
+#endif
+
+#ifndef SHM_KEY
+#define SHM_KEY         1228
+#endif
+
+#ifndef PASSWDSEM_KEY
+#define PASSWDSEM_KEY   2010	/* semaphore key */
+#endif
+
+#ifndef SYSLOG_FACILITY
+#define SYSLOG_FACILITY   LOG_LOCAL0
+#endif
+
+#ifndef MEM_CHECK
+#define MEM_CHECK 0x98761234
+#endif
+
+#ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
+#define RELAY_SERVER_IP    "127.0.0.1"
+#endif
+
+#ifndef XCHATD_ADDR
+#define	XCHATD_ADDR	":3838"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+// Default Board Names 預設看板名稱
+
 #ifndef BN_BUGREPORT
 #define BN_BUGREPORT "SYSOP"
 #endif
@@ -115,25 +173,19 @@
 #define BN_NEWIDPOST "NEWIDPOST"
 #endif
 
-#ifndef RECYCLE_BIN_NAME
-#define RECYCLE_BIN_NAME "資源回收筒" // "垃圾桶"
+#ifndef BN_ALLPOST
+#define BN_ALLPOST "ALLPOST"
 #endif
 
-#ifndef RECYCLE_BIN_OWNER
-#define RECYCLE_BIN_OWNER "[" RECYCLE_BIN_NAME "]"
+#ifndef BN_ALLHIDPOST
+#define BN_ALLHIDPOST "ALLHIDPOST"
 #endif
 
-#ifndef TIME_CAPSULE_NAME
-#define TIME_CAPSULE_NAME "Magical Index" // "Time Capsule"
-#endif
+/////////////////////////////////////////////////////////////////////////////
+// Performance Parameters 效能參數
 
-/* Environment */
-#ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
-#define RELAY_SERVER_IP    "127.0.0.1"
-#endif
-
-#ifndef MAX_USERS                           /* 最高註冊人數 */
-#define MAX_USERS          (150000)
+#ifndef MAX_USERS                        /* 最高註冊人數 */
+#define MAX_USERS         (150000)
 #endif
 
 #ifndef MAX_ACTIVE
@@ -148,13 +200,63 @@
 #define MAX_CPULOAD       (70)           /* CPU 最高load */
 #endif
 
-#ifndef MAX_LANG
-#define MAX_LANG          (1)			 /* 最多使用語言 */
+#ifndef DEBUGSLEEP_SECONDS
+#define DEBUGSLEEP_SECONDS (3600)	 /* debug 等待時間 */
 #endif
 
-#ifndef MAX_STRING
-#define MAX_STRING        (8000)         /* 系統最多使用字串 */
+#ifndef MAX_BOARD
+#define MAX_BOARD         (8192)         /* 最大開板個數 */
 #endif
+
+#ifndef HASH_BITS
+#define HASH_BITS         16             /* userid->uid hashing bits */
+#endif
+
+#ifndef OVERLOADBLOCKFDS
+#define OVERLOADBLOCKFDS  (0)            /* 超載後會保留這麼多個 fd */
+#endif
+
+#ifndef MAX_FRIEND
+#define MAX_FRIEND        (256)          /* 載入 cache 之最多朋友數目 */
+#endif
+
+#ifndef MAX_REJECT
+#define MAX_REJECT        (32)           /* 載入 cache 之最多壞人數目 */
+#endif
+
+#ifndef MAX_MSGS
+#define MAX_MSGS          (10)           /* 水球(熱訊)忍耐上限 */
+#endif
+
+#ifndef MAX_ADBANNER
+#define MAX_ADBANNER      (500)          /* 最多動態看板數 */
+#endif
+
+#ifndef MAX_SWAPUSED
+#define MAX_SWAPUSED    (0.7)           /* SWAP最高使用率 */
+#endif
+
+#ifndef HOTBOARDCACHE
+#define HOTBOARDCACHE     (0)            /* 熱門看板快取 */
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+// More system messages 系統訊息
+
+#ifndef RECYCLE_BIN_NAME
+#define RECYCLE_BIN_NAME "資源回收筒" // "垃圾桶"
+#endif
+
+#ifndef RECYCLE_BIN_OWNER
+#define RECYCLE_BIN_OWNER "[" RECYCLE_BIN_NAME "]"
+#endif
+
+#ifndef TIME_CAPSULE_NAME
+#define TIME_CAPSULE_NAME "Magical Index" // "Time Capsule"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+// Site settings 站台功能設定
 
 #ifndef MAX_POST_MONEY                      /* 發表文章稿費的上限 */
 #define MAX_POST_MONEY     (100)
@@ -192,16 +294,8 @@
 #define MAX_FROM           (300)            /* 最多故鄉數 */
 #endif
 
-#ifndef DEBUGSLEEP_SECONDS
-#define DEBUGSLEEP_SECONDS (3600)	    /* debug 等待時間 */
-#endif
-
 #ifndef THREAD_SEARCH_RANGE
 #define THREAD_SEARCH_RANGE (500)
-#endif
-
-#ifndef MEM_CHECK
-#define MEM_CHECK 0x98761234
 #endif
 
 #ifndef FOREIGN_REG_DAY                     /* 外籍使用者試用日期上限 */
@@ -212,44 +306,12 @@
 #define FORCE_PROCESS_REGISTER_FORM 0
 #endif
 
-#ifndef SYSLOG_FACILITY
-#define SYSLOG_FACILITY   LOG_LOCAL0
-#endif
-
-#ifndef TAR_PATH
-#define TAR_PATH "tar"
-#endif
-
-#ifndef MUTT_PATH
-#define MUTT_PATH "mutt"
-#endif
-
 #ifndef HBFLexpire
 #define HBFLexpire        (432000)       /* 5 days */
 #endif
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN        (256)
-#endif
-
-#ifndef PATHLEN
-#define PATHLEN           (256)
-#endif
-
-#ifndef MAX_BOARD
-#define MAX_BOARD         (8192)         /* 最大開板個數 */
-#endif
-
 #ifndef MAX_EXKEEPMAIL
 #define MAX_EXKEEPMAIL    (1000)         /* 最多信箱加大多少封 */
-#endif
-
-#ifndef OVERLOADBLOCKFDS
-#define OVERLOADBLOCKFDS  (0)            /* 超載後會保留這麼多個 fd */
-#endif
-
-#ifndef HOTBOARDCACHE
-#define HOTBOARDCACHE     (0)            /* 熱門看板快取 */
 #endif
 
 #ifndef INNTIMEZONE
@@ -260,17 +322,11 @@
 #define ADD_EXMAILBOX     0              /* 贈送信箱 */
 #endif
 
-#ifndef HASH_BITS
-#define HASH_BITS         16             /* userid->uid hashing bits */
-#endif
-
-#ifndef VICE_MIN
-#define VICE_MIN	(1)	    /* 最小發票面額 */
-#endif // VICE_MIN
 
 #ifndef BADPOST_CLEAR_DURATION
 #define BADPOST_CLEAR_DURATION	(180)	// 消劣文時間限制
 #endif
+
 #ifndef BADPOST_MIN_CLEAR_DURATION
 #define BADPOST_MIN_CLEAR_DURATION (3) // 劣文首消時間限制
 #endif
@@ -280,86 +336,81 @@
 #endif
 
 /* (deprecated) more.c 中文章頁數上限(lines/22), +4 for safe */
+#ifndef MAX_PAGES
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
-
-/* 以下還未整理 */
-#define MAX_FRIEND        (256)          /* 載入 cache 之最多朋友數目 */
-#define MAX_REJECT        (32)           /* 載入 cache 之最多壞人數目 */
-#define MAX_MSGS          (10)           /* 水球(熱訊)忍耐上限 */
-#define MAX_ADBANNER      (500)          /* 最多動態看板數 */
-#define MAX_ADBANNER_SECTION (10)	 /* 最多動態看板類別 */
-#define MAX_ADBANNER_HEIGHT  (11)	 /* 最大動態看板內容高度 */
-#define MAX_ITEMS         (1000)         /* 一個目錄最多有幾項 */
-#define MAX_HISTORY       (12)           /* 動態看板保持 12 筆歷史記錄 */
-#define MAX_QUERYLINES    (16)           /* 顯示 Query/Plan 訊息最大行數 */
-#define MAX_LOGIN_INFO    (128)          /* 最多上線通知人數 */
-#define MAX_POST_INFO     (32)           /* 最多新文章通知人數 */
-#define MAX_NAMELIST      (128)          /* 最多其他特別名單人數 */
-#define MAX_NOTE          (20)           /* 最多保留幾篇留言？ */
-#define MAX_SIGLINES      (6)            /* 簽名檔引入最大行數 */
-#define MAX_REVIEW        (7)		 /* 最多水球回顧 */
-#define NUMVIEWFILE       (15)           /* 進站畫面最多數 */
-#define MAX_SWAPUSED      (0.7)          /* SWAP最高使用率 */
-#define LOGINATTEMPTS     (3)            /* 最大進站失誤次數 */
-#define WHERE                            /* 是否有故鄉功能 */
-#undef  LOG_BOARD  			 /* 看板是否log */
-
-#define MAX_KEEPMAIL            (200)    /* 一般 user 最多保留幾封 MAIL？ */
-#define MAX_KEEPMAIL_SOFTLIMIT  (2500)   /* 除 admin 外，無法寄給此人 */
-#define MAX_KEEPMAIL_HARDLIMIT  (20000)  /* 信箱數量的上限，超過就不給寄信 */
-
-#define LOGINASNEW              /* 採用上站申請帳號制度 */
-#define NO_WATER_POST           /* 防止BlahBlah式灌水 */
-#define USE_BSMTP               /* 使用opus的BSMTP 寄收信? */
-#define HAVE_ANONYMOUS          /* 提供 Anonymous 板 */
-#define INTERNET_EMAIL          /* 支援 InterNet Email 功能(含 Forward) */
-#define HAVE_ORIGIN             /* 顯示 author 來自何處 */
-#undef  HAVE_INFO               /* 顯示程式版本說明 */
-#undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
-#undef  HAVE_REPORT             /* 系統追蹤報告 */
-#undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
-#undef  HAVE_X_BOARDS
-
-#define SHOWUID                 /* 看見使用者 UID */
-#define SHOWBOARD               /* 看見使用者看板 */
-#define SHOWPID                 /* 看見使用者 PID */
-
-#define DOTIMEOUT
-#ifdef  DOTIMEOUT
-#define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
-#define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
 
-#define SEM_ENTER      -1      /* enter semaphore */
-#define SEM_LEAVE      1       /* leave semaphore */
-#define SEM_RESET      0       /* reset semaphore */
+#ifndef MAX_ADBANNER_SECTION
+#define MAX_ADBANNER_SECTION (10)	 /* 最多動態看板類別 */
+#endif
 
-#define SHM_KEY         1228
+#ifndef MAX_ADBANNER_HEIGHT
+#define MAX_ADBANNER_HEIGHT  (11)	 /* 最大動態看板內容高度 */
+#endif
 
-#define PASSWDSEM_KEY   2010	/* semaphore key */
+#ifndef MAX_QUERYLINES
+#define MAX_QUERYLINES    (16)           /* 顯示 Query/Plan 訊息最大行數 */
+#endif
 
-// #define NEW_CHATPORT    3838
-#define	XCHATD_ADDR	":3838"
+#ifndef MAX_LOGIN_INFO
+#define MAX_LOGIN_INFO    (128)          /* 最多上線通知人數 */
+#endif
 
-#define MAX_ROOM         16              /* 最多有幾間包廂？ */
+#ifndef MAX_POST_INFO
+#define MAX_POST_INFO     (32)           /* 最多新文章通知人數 */
+#endif
 
-#define EXIT_LOGOUT     0
-#define EXIT_LOSTCONN   -1
-#define EXIT_CLIERROR   -2
-#define EXIT_TIMEDOUT   -3
-#define EXIT_KICK       -4
+#ifndef MAX_NAMELIST
+#define MAX_NAMELIST      (128)          /* 最多其他特別名單人數 */
+#endif
 
-#define CHAT_LOGIN_OK       "OK"
-#define CHAT_LOGIN_EXISTS   "EX"
-#define CHAT_LOGIN_INVALID  "IN"
-#define CHAT_LOGIN_BOGUS    "BG"
+#ifndef MAX_NOTE
+#define MAX_NOTE          (20)           /* 最多保留幾篇留言？ */
+#endif
+
+#ifndef MAX_SIGLINES
+#define MAX_SIGLINES      (6)            /* 簽名檔引入最大行數 */
+#endif
+
+#ifndef MAX_REVIEW
+#define MAX_REVIEW        (7)		 /* 最多水球回顧 */
+#endif
+
+#ifndef NUMVIEWFILE
+#define NUMVIEWFILE       (15)           /* 進站畫面最多數 */
+#endif
+
+#ifndef LOGINATTEMPTS
+#define LOGINATTEMPTS     (3)            /* 最大進站失誤次數 */
+#endif
+
+#ifndef MAX_KEEPMAIL
+#define MAX_KEEPMAIL            (200)    /* 一般 user 最多保留幾封 MAIL？ */
+#endif
+
+#ifndef MAX_KEEPMAIL_SOFTLIMIT
+#define MAX_KEEPMAIL_SOFTLIMIT  (2500)   /* 除 admin 外，無法寄給此人 */
+#endif
+
+#ifndef MAX_KEEPMAIL_HARDLIMIT
+#define MAX_KEEPMAIL_HARDLIMIT  (20000)  /* 信箱數量的上限，超過就不給寄信 */
+#endif
+
+#ifndef BADCIDCHARS
 #define BADCIDCHARS " *"        /* Chat Room 中禁用於 nick 的字元 */
+#endif
 
-#define BN_ALLPOST "ALLPOST"
-#define BN_ALLHIDPOST "ALLHIDPOST"
+#ifndef MAX_ROOM
+#define MAX_ROOM        (16)            /* 聊天室最多有幾間包廂？ */
+#endif
 
-#define MAXTAGS	255
-#define WRAPMARGIN (511)
+#ifndef MAXTAGS
+#define MAXTAGS	        (255)           /* t(tag) 的最大數量 */
+#endif
+
+#ifndef WRAPMARGIN
+#define WRAPMARGIN      (511)           /* 編輯器 wrap 長度 */
+#endif
 
 #ifdef USE_MASKED_FROMHOST
 #define FROMHOST    fromhost_masked
@@ -367,11 +418,30 @@
 #define FROMHOST    fromhost
 #endif
 
-#ifndef DEFAULT_FOLDER_CREATE_PERM
-#define DEFAULT_FOLDER_CREATE_PERM (0755)
-#endif
-#ifndef DEFAULT_FILE_CREATE_PERM
-#define DEFAULT_FILE_CREATE_PERM   (0644)
+/////////////////////////////////////////////////////////////////////////////
+// Default Configurations 預設參數
+
+#define LOGINASNEW              /* 採用上站申請帳號制度 */
+#define NO_WATER_POST           /* 防止BlahBlah式灌水 */
+#define USE_BSMTP               /* 使用opus的BSMTP 寄收信? */
+#define HAVE_ANONYMOUS          /* 提供 Anonymous 板 */
+#define INTERNET_EMAIL          /* 支援 InterNet Email 功能(含 Forward) */
+#define HAVE_ORIGIN             /* 顯示 author 來自何處 */
+#define WHERE                   /* 是否有故鄉功能 */
+#define SHOWUID                 /* 看見使用者 UID */
+#define SHOWBOARD               /* 看見使用者看板 */
+#define SHOWPID                 /* 看見使用者 PID */
+#define DOTIMEOUT
+
+#undef  HAVE_INFO               /* 顯示程式版本說明 */
+#undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
+#undef  HAVE_REPORT             /* 系統追蹤報告 */
+#undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
+#undef  LOG_BOARD  		/* 看板是否log */
+
+#ifdef  DOTIMEOUT
+# define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
+# define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
 
 #endif

@@ -83,8 +83,8 @@
 #define MSG_PLANT       "植物也有性別喔.."
 #define MSG_MIME        "礦物總沒性別了吧"
 
-#define MSG_CLOAKED     "哈哈！我隱形了！看不到勒... :P"
-#define MSG_UNCLOAK     "我要重現江湖了...."
+#define MSG_CLOAKED     "已進入隱形模式(不列於使用者名單上)"
+#define MSG_UNCLOAK     "已離開隱形模式(公開於使用者名單上)"
 
 #define MSG_WORKING     "處理中，請稍候..."
 
@@ -148,8 +148,8 @@
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋): "
 
-#define MSG_SEPARATOR   "\
-───────────────────────────────────────"
+#define MSG_SEPARATOR \
+"───────────────────────────────────────"
 
 /* Flags to getdata input function */
 #define NOECHO       0
@@ -218,18 +218,6 @@
 #define MAX_MODES	(127)
 #define MAX_RECOMMENDS  (100)
 
-#ifndef MIN
-#define	MIN(a,b)	(((a)<(b))?(a):(b))
-#endif
-#ifndef MAX
-#define	MAX(a,b)	(((a)>(b))?(a):(b))
-#endif
-
-#define toSTR(x)	__toSTR(x)
-#define __toSTR(x)	#x
-
-#define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
-
 #define STR_CURSOR      "●"
 #define STR_UNCUR       "  "
 
@@ -252,6 +240,20 @@
 #define EDIT_ABORTED	-1
 
 /* ----------------------------------------------------- */
+/* 聊天室常數 (xchatd)                                   */
+/* ----------------------------------------------------- */
+#define EXIT_LOGOUT     0
+#define EXIT_LOSTCONN   -1
+#define EXIT_CLIERROR   -2
+#define EXIT_TIMEDOUT   -3
+#define EXIT_KICK       -4
+
+#define CHAT_LOGIN_OK       "OK"
+#define CHAT_LOGIN_EXISTS   "EX"
+#define CHAT_LOGIN_INVALID  "IN"
+#define CHAT_LOGIN_BOGUS    "BG"
+
+/* ----------------------------------------------------- */
 /* Grayout Levels                                        */
 /* ----------------------------------------------------- */
 #define GRAYOUT_COLORBOLD (-2)
@@ -271,20 +273,33 @@
 #define MONTH_SECONDS	    (DAY_SECONDS*30)
 #define MILLISECONDS	    (1000)  // milliseconds of one second
 
+#ifndef SHM_HUGETLB
+#define SHM_HUGETLB	04000	/* segment is mapped via hugetlb */
+#endif
+
 /* ----------------------------------------------------- */
 /* Macros                                                */
 /* ----------------------------------------------------- */
 
 #if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 96)
     #define __builtin_expect(exp,c) (exp)
-
 #endif
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
-#ifndef SHM_HUGETLB
-#define SHM_HUGETLB	04000	/* segment is mapped via hugetlb */
+#ifndef MIN
+#define	MIN(a,b)	(((a)<(b))?(a):(b))
 #endif
+#ifndef MAX
+#define	MAX(a,b)	(((a)>(b))?(a):(b))
+#endif
+
+#define toSTR(x)	__toSTR(x)
+#define __toSTR(x)	#x
+#define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
+
+#define LOG_IF(x, y)    { if (x) { y; } else {} }
+
 
 #endif
