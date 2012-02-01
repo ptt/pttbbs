@@ -1415,9 +1415,9 @@ do_general(int garbage GCC_UNUSED)
 
         LOG_IF(LOG_CONF_POST,
                log_filef("log/post", LOG_CREAT,
-                         "%d %s boards/%c/%s/%s\n",
-                         now, cuser.userid, currboard[0], currboard,
-                         postfile.filename));
+                         "%d %s boards/%c/%s/%s %d\n",
+                         (int)now, cuser.userid, currboard[0], currboard,
+                         postfile.filename, money));
 
 	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));
@@ -2212,6 +2212,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 	setbtotal(getbnum(xboard));
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
+
+        LOG_IF(LOG_CONF_CROSSPOST,
+               log_filef("log/cross_post.log", LOG_CREAT,
+                         "%s %s %s #%u %s -> %s %s | %s\n",
+                         Cdatelite(&now), cuser.userid, cuser.lasthost,
+                         (unsigned) getpid(),
+                         currboard, xboard, fhdr->filename, fhdr->title));
 
 	// update crosspost record
 	if (is_BM_cache(xbid)) {

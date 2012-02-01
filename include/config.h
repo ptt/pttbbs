@@ -439,6 +439,15 @@
 #ifndef LOG_CONF_CRAWLER        // 記錄 crawlers
 #define LOG_CONF_CRAWLER        (0)
 #endif
+#ifndef LOG_CONF_CROSSPOST      // 記錄轉錄
+#define LOG_CONF_CROSSPOST      (0)
+#endif
+#ifndef LOG_CONF_BAD_REG_CODE   // 記錄打錯的註冊碼
+#define LOG_CONF_BAD_REG_CODE   (0)
+#endif
+#ifndef LOG_CONF_VALIDATE_REG   // 記錄審核註冊單
+#define LOG_CONF_VALIDATE_REG   (0)
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Default Configurations 預設參數

@@ -1233,6 +1233,11 @@ u_register(void)
 	    if (regcode[0])
 	    {
 		vmsg("認證碼錯誤！");
+                LOG_IF(LOG_CONF_BAD_REG_CODE,
+                       log_filef("log/reg_badcode.log", LOG_CREAT,
+                                 "%s %s INCORRECT [%s] (should be: %s)\n",
+                                 Cdate(&now), cuser.userid, inregcode,
+                                 regcode));
 		return FULLUPDATE;
 	    }
 	    else 
@@ -2166,7 +2171,10 @@ regform2_validate_single(const char *xuid)
 	    break;
     }
     regq_end_pull(fpregq);
-
+    LOG_IF(LOG_CONF_VALIDATE_REG,
+           log_filef("log/validate_reg.log", LOG_CREAT,
+                     "%s %s SINGLE finished: %d forms\n",
+                     Cdatelite(&now), cuser.userid, tid));
     // finishing
     clear(); move(5, 0);
     if (xuid && tid == 0)
@@ -2521,7 +2529,10 @@ regform2_validate_page(int dryrun)
     } // while (ch != 'q')
 
     regq_end_pull(fpregq);
-
+    LOG_IF(LOG_CONF_VALIDATE_REG,
+           log_filef("log/validate_reg.log", LOG_CREAT,
+                     "%s %s PAGE finished: %d forms\n",
+                     Cdatelite(&now), cuser.userid, tid));
     // finishing
     clear(); move(5, 0);
     prints("您檢視了 %d 份註冊單。", tid);
