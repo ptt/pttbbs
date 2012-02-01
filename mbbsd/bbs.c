@@ -3200,7 +3200,11 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     outmsg("處理中,請稍後...");
     refresh();
     ret = 0;
-
+    LOG_IF((LOG_CONF_MASS_DELETE && (num >= 50)),
+           log_filef("log/del_range.log", LOG_CREAT,
+                     "%s range %d->%d %s [%s]\n",
+                     cuser.userid, num1, num2,
+                     Cdate(&now), direct));
     do {
         int id = num1, i;
         for (i = 0; ret == 0 && i < num; i++) {

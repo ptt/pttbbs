@@ -1190,10 +1190,19 @@ u_register(void)
                 strcmp(inregcode, "x") == 0 ||
                 strcmp(inregcode, "X") == 0 )
 		break;
-	    if( strlen(inregcode) != 13 || inregcode[0] == ' ')
+	    if( strlen(inregcode) != 13 || inregcode[0] == ' ') {
+                LOG_IF((LOG_CONF_BAD_REG_CODE && inregcode[0]),
+                       log_filef("log/reg_badcode.log", LOG_CREAT,
+                                 "%s %s INCOMPLETE [%s]\n",
+                                 Cdate(&now), cuser.userid, inregcode));
 		vmsg("認證碼輸入不完整，總共應有十三碼，沒有空白字元。");
-	    else if( inregcode[0] != REGCODE_INITIAL[0] || inregcode[1] != REGCODE_INITIAL[1] ) {
+            } else if(inregcode[0] != REGCODE_INITIAL[0] ||
+                      inregcode[1] != REGCODE_INITIAL[1] ) {
 		/* old regcode */
+                LOG_IF(LOG_CONF_BAD_REG_CODE,
+                       log_filef("log/reg_badcode.log", LOG_CREAT,
+                                 "%s %s INVALID [%s]\n",
+                                 Cdate(&now), cuser.userid, inregcode));
 		vmsg("輸入的認證碼錯誤，" // "或因系統昇級已失效，"
 		     "請輸入 x 重填一次 E-Mail");
 	    }

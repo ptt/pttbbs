@@ -448,6 +448,9 @@
 #ifndef LOG_CONF_VALIDATE_REG   // 記錄審核註冊單
 #define LOG_CONF_VALIDATE_REG   (0)
 #endif
+#ifndef LOG_CONF_MASS_DELETE    // 記錄大量刪除檔案
+#define LOG_CONF_MASS_DELETE    (0)
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Default Configurations 預設參數

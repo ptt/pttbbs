@@ -17,5 +17,6 @@ int main()
     printf("sizeof(userinfo_t) = %lu\n", sizeof(userinfo_t));
     printf("sizeof(msgque_t)   = %lu\n", sizeof(msgque_t));
     printf("sizeof(SHM_t)      = %lu\n", sizeof(SHM_t));
+    printf("SHMSIZE            = %lu\n", SHMSIZE);
     return 0;
 }
