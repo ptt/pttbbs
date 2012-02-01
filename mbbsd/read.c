@@ -522,10 +522,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
                  currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
                  keyword, TTLEN, DOECHO) || trim_blank(keyword))
                 return READ_REDRAW;
-#ifdef KEYWORD_LOG
-             log_filef("keyword_search_log", LOG_CREAT,
-		      "%s:%s\n", currboard, keyword);
-#endif
+
+             LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
+                                                "%s:%s\n", currboard, keyword));
           }
    else if(sr_mode  & RS_KEYWORD_EXCLUDE)
           {

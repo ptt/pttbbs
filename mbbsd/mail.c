@@ -787,12 +787,11 @@ do_send(const char *userid, const char *title, const char *log_source)
 	default:
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    ret = bsmtp(fpath, save_title, userid, NULL);
-#ifdef USE_LOG_INTERNETMAIL
-            log_filef("log/internet_mail.log", LOG_CREAT, 
-                    "%s [%s - %s] %s -> %s: %s\n",
-                    Cdatelite(&now), log_source, __FUNCTION__,
-                    cuser.userid, userid, save_title);
-#endif
+            LOG_IF(LOG_CONF_INTERNETMAIL,
+                   log_filef("log/internet_mail.log", LOG_CREAT, 
+                             "%s [%s - %s] %s -> %s: %s\n",
+                             Cdatelite(&now), log_source, __FUNCTION__,
+                             cuser.userid, userid, save_title));
 	    hold_mail(fpath, userid, save_title);
 	    break;
 	}
@@ -1429,13 +1428,14 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     } else
 	return -1;
 
-#ifdef USE_LOG_INTERNETMAIL
-    if (hostaddr)
-        log_filef("log/internet_mail.log", LOG_CREAT, 
-                "%s [%s] %s -> %s: %s - %s\n",
-                Cdatelite(&now), __FUNCTION__,
-                cuser.userid, address, direct, fh->title);
-#endif
+    if (hostaddr) {
+        LOG_IF(LOG_CONF_INTERNETMAIL,
+               log_filef("log/internet_mail.log", LOG_CREAT, 
+                         "%s [%s] %s -> %s: %s - %s\n",
+                         Cdatelite(&now), __FUNCTION__,
+                         cuser.userid, address, direct, fh->title));
+    }
+
     return_no = bsmtp(fname, fh->title, address, NULL);
     unlink(fname);
     return (return_no);

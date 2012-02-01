@@ -1411,16 +1411,13 @@ do_general(int garbage GCC_UNUSED)
     {
 	char addPost = 0;
         rename(genbuf, fpath);
-#ifdef LOGPOST
-	{
-            FILE    *fp = fopen("log/post", "a");
-            fprintf(fp, "%d %s boards/%c/%s/%s\n",
-                    now, cuser.userid, currboard[0], currboard,
-                    postfile.filename);
-            fclose(fp);
-        }
-#endif
 	setbtotal(currbid);
+
+        LOG_IF(LOG_CONF_POST,
+               log_filef("log/post", LOG_CREAT,
+                         "%d %s boards/%c/%s/%s\n",
+                         now, cuser.userid, currboard[0], currboard,
+                         postfile.filename));
 
 	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));
@@ -1517,12 +1514,11 @@ do_general(int garbage GCC_UNUSED)
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
-#ifdef USE_LOG_INTERNETMAIL
-                log_filef("log/internet_mail.log", LOG_CREAT, 
-                        "%s [%s (%s)] %s -> %s: %s\n",
-                        Cdatelite(&now), __FUNCTION__,
-                        currboard, cuser.userid, str + 1, save_title);
-#endif
+                LOG_IF(LOG_CONF_INTERNETMAIL,
+                       log_filef("log/internet_mail.log", LOG_CREAT, 
+                                 "%s [%s (%s)] %s -> %s: %s\n",
+                                 Cdatelite(&now), __FUNCTION__,
+                                 currboard, cuser.userid, str + 1, save_title));
                 msg = "回應至作者外部信箱";
 		if ( bsmtp(fpath, save_title, str + 1, NULL) < 0)
 		    msg = "作者無法收信";
@@ -2292,21 +2288,17 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     more_result = more(genbuf, YEA);
 
-#ifdef LOG_CRAWLER
-    {
-        // kcwu: log crawler
-	static int read_count = 0;
-        extern Fnv32_t client_code;
-
-        ++read_count;
-        if (read_count % 1000 == 0) {
-            time4_t t = time4(NULL);
-            log_filef("log/read_alot", LOG_CREAT,
-		    "%d %s %d %s %08x %d\n", t, Cdate(&t), getpid(),
-		    cuser.userid, client_code, read_count);
-        }
-    }
-#endif // LOG_CRAWLER
+    LOG_IF(LOG_CONF_CRAWLER, {
+           // kcwu: log crawler
+           static int read_count = 0;
+           extern Fnv32_t client_code;
+           ++read_count;
+           syncnow();
+           if (read_count % 1000 == 0)
+               log_filef("log/read_alot", LOG_CREAT,
+                        "%d %s %d %s %08x %d\n", (int)now, Cdate(&now), getpid(),
+                        cuser.userid, client_code, read_count);
+           });
 
     {
 	int posttime=atoi(fhdr->filename+2);
@@ -3042,27 +3034,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
         } else
             return FULLUPDATE;
     }
-
-    // log if you want
-#ifdef LOG_PUSH
-    {
-	static  int tolog = 0;
-	if( tolog == 0 )
-	    tolog = (cuser.numlogindays < 50) ? 1 : 2;
-	if( tolog == 1 ){
-	    FILE   *fp;
-	    if( (fp = fopen("log/push", "a")) != NULL ){
-		fprintf(fp, "%s %d %s %s %s\n", cuser.userid, 
-			(int)now, currboard, fhdr->filename, msg);
-		fclose(fp);
-	    }
-	    sleep(1);
-	}
-    }
-#endif // LOG_PUSH
-
+    LOG_IF(LOG_CONF_PUSH, log_filef("log/push", LOG_CREAT,
+                                    "%s %d %s %s %s\n", cuser.userid, 
+                                    (int)now, currboard, fhdr->filename, msg));
     STATINC(STAT_RECOMMEND);
-
     {
 	/* build tail first. */
 	char tail[STRLEN];

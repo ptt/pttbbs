@@ -537,14 +537,13 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
         unlink(buf);
         // TODO add a mail so that origid knows what happened.
-#ifdef USE_LOG_INTERNETMAIL
-        log_filef("log/internet_mail.log", LOG_CREAT, 
-                  "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
-                  Cdatelite(&now), __FUNCTION__,
-                  origid, address,
-                  get_num_records(fpath, sizeof(fileheader_t)),
-                  MAX_KEEPMAIL_HARDLIMIT);
-#endif
+        LOG_IF(LOG_CONF_INTERNETMAIL,
+               log_filef("log/internet_mail.log", LOG_CREAT, 
+                         "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
+                         Cdatelite(&now), __FUNCTION__,
+                         origid, address,
+                         get_num_records(fpath, sizeof(fileheader_t)),
+                         MAX_KEEPMAIL_HARDLIMIT));
         return 0;
     }
 
@@ -555,12 +554,11 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 #ifndef UNTRUSTED_FORWARD_TIMEBOMB
         // delete the setting if we don't have timebombs.
         unlink(buf);
-#ifdef USE_LOG_INTERNETMAIL
-        log_filef("log/internet_mail.log", LOG_CREAT, 
-                  "%s [%s] Removed bad address: %s (%s)\n",
-                  Cdatelite(&now), __FUNCTION__,
-                  address, origid);
-#endif
+        LOG_IF(LOG_CONF_INTERNETMAIL,
+               log_filef("log/internet_mail.log", LOG_CREAT, 
+                         "%s [%s] Removed bad address: %s (%s)\n",
+                         Cdatelite(&now), __FUNCTION__,
+                         address, origid));
 #endif
         return 0;
     }
@@ -574,12 +572,11 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     snprintf(fwd_title, sizeof(fwd_title)-1,
              "[¦Û°ÊÂà±H] %s", record->title);
     bsmtp(buf, fwd_title, address, origid);
-#ifdef USE_LOG_INTERNETMAIL
-    log_filef("log/internet_mail.log", LOG_CREAT, 
-              "%s [%s] %s -> (%s) %s: %s\n",
-              Cdatelite(&now), __FUNCTION__,
-              cuser.userid, origid, address, fwd_title);
-#endif
+    LOG_IF(LOG_CONF_INTERNETMAIL,
+           log_filef("log/internet_mail.log", LOG_CREAT, 
+                     "%s [%s] %s -> (%s) %s: %s\n",
+                     Cdatelite(&now), __FUNCTION__,
+                     cuser.userid, origid, address, fwd_title));
 // #endif // USE_MAIL_AUTO_FORWARD
     return 0;
 }

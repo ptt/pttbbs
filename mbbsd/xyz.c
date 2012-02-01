@@ -22,15 +22,6 @@ x_history(void)
     return 0;
 }
 
-#ifdef HAVE_X_BOARDS
-static int
-x_boards(void)
-{
-    more("etc/topboard.tmp", YEA);
-    return 0;
-}
-#endif
-
 int
 x_issue(void)
 {

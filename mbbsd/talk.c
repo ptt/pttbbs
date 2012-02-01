@@ -2693,6 +2693,9 @@ t_users(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
+    if (!HasUserPerm(PERM_LOGINOK))
+        return 0;
+
     assert(strncmp(cuser.userid, currutmp->userid, IDLEN)==0);
     if( strncmp(cuser.userid , currutmp->userid, IDLEN) != 0 ){
 	abort_bbs(0);

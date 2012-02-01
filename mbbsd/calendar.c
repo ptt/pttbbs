@@ -295,8 +295,12 @@ u_editcalendar(void)
 	setutmpmode(EDITPLAN);
 	sethomefile(genbuf, cuser.userid, "calendar");
 	aborted = veditfile(genbuf);
-	if (aborted != EDIT_ABORTED)
+	if (aborted != EDIT_ABORTED) {
+            LOG_IF(LOG_CONF_EDIT_CALENDAR,
+                   log_filef("log/calendar.log", LOG_CREAT,
+                             "%s %s\n", Cdatelite(&now), cuser.userid));
 	    vmsg("行事曆更新完畢");
+        }
 	return 0;
     } else if (genbuf[0] == 'd') {
 	sethomefile(genbuf, cuser.userid, "calendar");

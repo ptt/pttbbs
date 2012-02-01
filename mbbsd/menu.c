@@ -868,9 +868,6 @@ int _debug_reportstruct()
 static const commands_t m_xyz_hot[] = {
     {x_week, 0,      "Week          《本週五十大熱門話題》"},
     {x_issue, 0,     "Issue         《今日十大熱門話題》"},
-#ifdef HAVE_X_BOARDS
-    {x_boards,0,     "Hot Boards    《看板人氣排行榜》"},
-#endif
     {x_boardman,0,   "Man Boards    《看板精華區排行榜》"},
     {NULL, 0, NULL}
 };

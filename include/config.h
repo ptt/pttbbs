@@ -419,6 +419,28 @@
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
+// Logging 記錄設定
+
+#ifndef LOG_CONF_KEYWORD        // 記錄搜尋的關鍵字
+#define LOG_CONF_KEYWORD        (0)
+#endif
+#ifndef LOG_CONF_INTERNETMAIL   // 記錄 internet outgoing mail
+#define LOG_CONF_INTERNETMAIL   (0)
+#endif
+#ifndef LOG_CONF_PUSH           // 記錄推文
+#define LOG_CONF_PUSH           (0)
+#endif
+#ifndef LOG_CONF_EDIT_CALENDAR  // 記錄編輯行事曆
+#define LOG_CONF_EDIT_CALENDAR  (0)
+#endif
+#ifndef LOG_CONF_POST           // 記錄發文
+#define LOG_CONF_POST           (0)
+#endif
+#ifndef LOG_CONF_CRAWLER        // 記錄 crawlers
+#define LOG_CONF_CRAWLER        (0)
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
 // Default Configurations 預設參數
 
 #define LOGINASNEW              /* 採用上站申請帳號制度 */
