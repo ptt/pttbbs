@@ -23,6 +23,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5540: [configs]
+注意不少 include/config.h 的選項改名了，同時也提供了較完善的開關設定方法。
+大部份的 LOG 現已集中到 LOG_CONF_*。
+
 r5453: [ziphome]
 ZipHome 增加了 exclude list (範例在 sample/etc/ziphome.exclude)。
 

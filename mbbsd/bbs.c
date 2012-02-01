@@ -4162,7 +4162,7 @@ int check_cooldown(boardheader_t *bp)
 	 vmsgf("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
       }
-#ifdef NO_WATER_POST
+#ifdef REJECT_FLOOD_POST
       else
       {
         for(i=0; i<4; i++)
@@ -4173,7 +4173,7 @@ int check_cooldown(boardheader_t *bp)
 	    return 1;
           }
       }
-#endif // NO_WATER_POST
+#endif // REJECT_FLOOD_POST
    }
    return 0;
 }
