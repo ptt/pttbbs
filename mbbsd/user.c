@@ -1000,6 +1000,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		}
 #endif
 	}
+
+        if (!adminmode) {
+            mvouts(b_lines-1, 0,
+                   "其它資料若需修改請洽 " BN_ID_PROBLEM " 看板\n");
+        }
 	break;
 
     case '2':
