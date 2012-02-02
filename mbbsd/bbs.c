@@ -227,8 +227,8 @@ anticrosspost(void)
     pwcuViolateLaw();
     mail_id(cuser.userid, "Cross-Post»@³æ",
 	    "etc/crosspost.txt", BBSMNAME "Äµ¹î³¡¶¤");
-    if (cuser.numlogindays < 50 || cuser.numposts < 50)
-	delete_allpost(cuser.userid);
+    // Delete all references from BN_ALLPOST, if available.
+    delete_allpost(cuser.userid);
     kick_all(cuser.userid); // XXX: in2: wait for testing
     u_exit("Cross Post");
     exit(0);

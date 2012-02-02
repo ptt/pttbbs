@@ -402,6 +402,8 @@ violate_law(userec_t * u, int unum)
 	u->timeviolatelaw = now;
 	u->vl_count++;
 	passwd_sync_update(unum, u);
+        if (*ans == '1' || *ans == '2')
+            delete_allpost(u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
 	mail_violatelaw(u->userid, "站務警察", reason, "罰單處份");
     }
