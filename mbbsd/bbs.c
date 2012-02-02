@@ -1617,7 +1617,11 @@ int
 b_call_in(int ent GCC_UNUSED, const fileheader_t * fhdr,
           const char *direct GCC_UNUSED)
 {
-    userinfo_t     *u = search_ulist(searchuser(fhdr->owner, NULL));
+    userinfo_t *u;
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+        return DONOTHING;
+
+    u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
 	int             fri_stat;
 	fri_stat = friend_stat(currutmp, u);

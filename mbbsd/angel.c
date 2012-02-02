@@ -656,7 +656,7 @@ void
 pressanykey_or_callangel(){
     int w = t_columns - 2; // see vtuikit.c, SAFE_MAX_COL
 
-    if (!HasUserPerm(PERM_LOGINOK) ||
+    if (!HasBasicUserPerm(PERM_LOGINOK) ||
         strcmp(cuser.myangel, "-") == 0) {
 	pressanykey();
 	return;

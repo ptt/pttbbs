@@ -665,6 +665,9 @@ built_mail_index(void)
 {
     char            genbuf[128];
 
+    if (!HasUserPerm(PERM_BASIC))
+        return DONOTHING;
+
     move(b_lines - 4, 0);
     outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
 	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
@@ -1601,7 +1604,8 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_read_all(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
+mail_read_all(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
+              const char *direct GCC_UNUSED)
 {
     off_t   i = 0, num = 0;
     int	    fd = 0;
@@ -1745,17 +1749,24 @@ mail_edit(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_nooutmail(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
+mail_nooutmail(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
+               const char *direct GCC_UNUSED)
 {
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+        return DONOTHING;
+
     pwcuToggleOutMail();
     return FULLUPDATE;
-
 }
 
 static int
 mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 {
-    fhdr->filemode ^= FILE_MARKED;
+    // If user does not have proper permission, he can only unmark iems.
+    if (HasBasicUserPerm(PERM_LOGINOK))
+        fhdr->filemode ^= FILE_MARKED;
+    else
+        fhdr->filemode &= (~FILE_MARKED);
 
     substitute_ref_record(direct, fhdr, ent);
     return PART_REDRAW;
@@ -1843,6 +1854,9 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     FILE           *xptr;
     char            genbuf[200];
     int		    xbid;
+
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+        return DONOTHING;
 
     // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
     if (HasUserPerm(PERM_VIOLATELAW))
@@ -1999,6 +2013,9 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     char            buf[20];
     int             bid;
 
+    if (!HasUserPerm(PERM_BASIC))
+        return DONOTHING;
+
     setuserfile(fpath, fhdr->filename);
     strlcpy(title, "◇ ", sizeof(title));
     strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
@@ -2092,7 +2109,8 @@ m_read(void)
 
 #ifdef OUTJOBSPOOL
 static int
-mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
+mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
+               const char *direct GCC_UNUSED)
 {
     static char     address[60] = "", cmode = 1;
     char            fname[500], genbuf[200];
@@ -2179,6 +2197,8 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
 static int
 mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
                  const char *direct) {
+    if (!HasUserPerm(PERM_BASIC))
+        return DONOTHING;
     return psb_recycle_bin(direct, "個人信箱");
 }
 #else // USE_TIME_CAPSULE
@@ -2192,6 +2212,8 @@ mail_recycle_bin(int ent GCC_UNUSED,
 
 ////////////////////////////////////////////////////////////////////////
 // Command List
+
+// CAUTION: Every commands here should check permission.
 
 static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('A')
@@ -2247,7 +2269,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'Q'
     { 1, mail_reply }, // 'R'
     { 0, NULL }, // 'S'
-    { 1, edit_title }, // 'T'
+    { 1, NULL }, // 'T'
     { 0, NULL }, // 'U'
     { 0, NULL }, // 'V'
     { 0, NULL }, // 'W'

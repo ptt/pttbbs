@@ -167,7 +167,7 @@ is_BM_cache(int bid) /* bid starts from 1 */
     if (!HasUserPerm(PERM_BASIC) || !currutmp->uid || currutmp->uid == -1)
 	return 0;
     // reject user who haven't complete registration.
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK))
 	return 0;
     // XXX hard coded MAX_BMs=4
     if( currutmp->uid == pbm[0] ||
