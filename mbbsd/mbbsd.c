@@ -406,12 +406,15 @@ show_call_in(int save, int which)
     char            buf[200];
 #ifdef PLAY_ANGEL
     if (currutmp->msgs[which].msgmode == MSGMODE_TOANGEL)
-	snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "々%s" ANSI_COLOR(37;45) " %s " ANSI_RESET,
-		currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
+        snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "々%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET,
+                 currutmp->msgs[which].userid,
+                 currutmp->msgs[which].last_call_in);
     else
 #endif
-    snprintf(buf, sizeof(buf), ANSI_COLOR(1;33;46) "々%s" ANSI_COLOR(37;45) " %s " ANSI_RESET,
-	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
+    snprintf(buf, sizeof(buf), ANSI_COLOR(1;33;46) "々%s" ANSI_COLOR(37;45)
+             " %s " ANSI_RESET, currutmp->msgs[which].userid,
+             currutmp->msgs[which].last_call_in);
     outmsg(buf);
 
     if (save) {

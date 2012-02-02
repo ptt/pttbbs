@@ -240,6 +240,10 @@
 #define HOTBOARDCACHE     (0)            /* 熱門看板快取 */
 #endif
 
+#ifndef TARQUEUE_TIME_STR
+#define TARQUEUE_TIME_STR   "深夜"       // 看板備份時間訊息 (應與 contab 一致)
+#endif
+
 /////////////////////////////////////////////////////////////////////////////
 // More system messages 系統訊息
 

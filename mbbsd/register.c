@@ -1575,7 +1575,6 @@ regform_log2file(const RegformEntry *pre, char accepted,
 #ifdef FN_ID_RECORD
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
-    FILE *fp;
 
     snprintf(msg, sizeof(msg), 
 	    "%s\n%s: %s (%s: %s)\n", 
@@ -1590,11 +1589,7 @@ regform_log2file(const RegformEntry *pre, char accepted,
     }
     strlcat(msg, "\n", sizeof(msg));
     concat_regform_entry_localized(pre, msg, sizeof(msg));
-
-    fp = fopen(FN_ID_RECORD, "at");
-    if (!fp) return;
-    fputs(msg, fp);
-    fclose(fp);
+    log_file(FN_ID_RECORD, LOG_CREAT, msg);
 #endif  // FN_ID_RECORD
 }
 

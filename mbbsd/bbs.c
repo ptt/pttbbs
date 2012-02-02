@@ -858,15 +858,11 @@ do_select(void)
 /* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
 /* ----------------------------------------------------- */
 void
-outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *nickname)
+outgo_post(const fileheader_t *fh, const char *board, const char *userid,
+           const char *nickname)
 {
-    FILE           *foo;
-
-    if ((foo = fopen("innd/out.bntp", "a"))) {
-	fprintf(foo, "%s\t%s\t%s\t%s\t%s\n",
-		board, fh->filename, userid, nickname, fh->title);
-	fclose(foo);
-    }
+    log_filef("innd/out.bntp", LOG_CREAT, "%s\t%s\t%s\t%s\t%s\n",
+              board, fh->filename, userid, nickname, fh->title);
 }
 
 static void
@@ -3818,9 +3814,10 @@ tar_addqueue(void)
 
     snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
-        vmsg("已經排定行程, 稍後會進行備份");
+        vmsg("已經排定行程, 會於每日" TARQUEUE_TIME_STR "依序進行備份");
 	return FULLUPDATE;
     }
+
     if (vansf("確定要對看板 %s 進行備份嗎？[y/N] ", currboard) != 'y')
         return FULLUPDATE;
 
@@ -3838,6 +3835,7 @@ tar_addqueue(void)
     move(4,0); clrtoeol();
     outs(email);
 #else
+    outs("\n注意看板備份可能超過數百 MB，若您的信箱無法接受巨大附檔可能會直接退信\n");
     if (!getdata(4, 0, "請輸入目的信箱: ", email, sizeof(email), DOECHO))
 	return FULLUPDATE;
 
