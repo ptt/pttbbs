@@ -57,6 +57,7 @@ time4_t is_user_banned_by_board(const char *user, const char *board);
 time4_t is_banned_by_board(const char *board);
 int ban_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
 int edit_banned_list_for_board(const char *board);
+int edit_user_acl_for_board(const char *uid, const char *board);
 
 /* assess */
 int inc_badpost(const char *, int num);
@@ -98,6 +99,7 @@ int HasBoardPerm(boardheader_t *bptr);
 void save_brdbuf(void);
 void init_brdbuf(void);
 int b_config();
+int b_quick_acl(int ent, fileheader_t * fhdr, const char *direct);
 // Board Selections
 int New(void);
 int Favorite(void);
