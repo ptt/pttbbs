@@ -133,7 +133,8 @@ void invalid_board_permission_cache(const char *board);
 int is_BM_cache(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);
-const char * postperm_msg(const char *bname);
+const char *postperm_msg(const char *bname);
+const char *banned_msg(const char *bname);
 
 /* cal */
 const char* money_level(int money);

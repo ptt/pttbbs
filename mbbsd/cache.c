@@ -185,6 +185,28 @@ is_BM_cache(int bid) /* bid starts from 1 */
 
 // TODO move this to board.c
 const char *
+banned_msg(const char *bname)
+{
+#ifdef USE_NEW_BAN_SYSTEM
+    // static is bad, but this is faster...
+    static char ban_msg[STRLEN];
+    time4_t expire = is_banned_by_board(bname);
+    if (expire > now) {
+        sprintf(ban_msg, "ㄏノ表い(﹟Τ%dぱ)",
+                ((expire - now) / DAY_SECONDS) +1);
+        return ban_msg;
+    }
+#else
+    char buf[PATHLEN];
+    setbfile(buf, bname, fn_water);
+    if (file_exist_record(buf, cuser.userid))
+        return "ㄏノ表い";
+#endif
+    return NULL;
+}
+
+// TODO move this to board.c
+const char *
 postperm_msg(const char *bname)
 {
     register int    i;
@@ -200,25 +222,11 @@ postperm_msg(const char *bname)
     if (HasUserPerm(PERM_SYSOP))
 	return NULL;
 
-#ifdef USE_NEW_BAN_SYSTEM
-    {
-        // static is bad, but this is faster...
-        static char ban_msg[STRLEN];
-        time4_t expire = is_banned_by_board(bname);
-        if (expire > now) {
-            sprintf(ban_msg, "ㄏノ表い(﹟Τ%dぱ)",
-                    ((expire - now) / DAY_SECONDS) +1);
-            return ban_msg;
-        }
-    }
-#else
-    {
-        char buf[PATHLEN];
-        setbfile(buf, bname, fn_water);
-        if (file_exist_record(buf, cuser.userid))
-            return "ㄏノ表い";
-    }
-#endif
+    do {
+        const char *msg;
+        if ((msg = banned_msg(bname)) != NULL)
+            return msg;
+    } while (0);
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
 	return NULL;
