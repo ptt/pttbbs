@@ -222,8 +222,9 @@ anticrosspost(void)
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
              cuser.userid, Cdatelite(&now));
+
     post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
-	    "Cross-post", "罰單處份");
+                    "Cross-post", "罰單處份");
     pwcuViolateLaw();
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", BBSMNAME "警察部隊");
