@@ -785,6 +785,43 @@ b_config(void)
     return FULLUPDATE;
 }
 
+int
+b_quick_acl(int ent, fileheader_t *fhdr, const char *direct)
+{
+    const boardheader_t *bp = getbcache(currbid);
+    if (!bp)
+        return FULLUPDATE;
+
+    if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP))
+        return FULLUPDATE;
+
+    char uid[IDLEN+2];
+    strncpy(uid, fhdr->owner, sizeof(uid));
+#ifdef STR_SAFEDEL_TITLE
+    if (fhdr->filename[0] == '.' &&
+        strncmp(fhdr->title, STR_SAFEDEL_TITLE,
+                strlen(STR_SAFEDEL_TITLE)) == 0) {
+        char *ps = &fhdr->title[strlen(STR_SAFEDEL_TITLE)];
+        if (ps[0] == ' ' && ps[1] == '[') {
+            ps += 2;
+            char *pe = strchr(ps, ']');
+            if (pe) {
+                strncpy(uid, ps, pe - ps);
+                uid[pe - ps] = '\0';
+            }
+        }
+    }
+#endif
+    if (!uid[0] || !is_validuserid(uid) || !searchuser(uid, uid)) {
+        vmsg("該使用者帳號不存在");
+        return FULLUPDATE;
+    }
+
+    edit_user_acl_for_board(uid, bp->brdname);
+
+    return FULLUPDATE;
+}
+
 static int
 check_newpost(boardstat_t * ptr)
 {				/* Ptt 改 */

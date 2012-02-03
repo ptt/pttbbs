@@ -4324,7 +4324,7 @@ const onekey_t read_comms[] = {
 #endif
     { 1, b_mark_read_unread }, // 'v'
     { 1, b_call_in }, // 'w'
-    { 1, old_cross_post }, // 'x'
+    { 1, b_quick_acl }, // 'x'
     { 1, reply_post }, // 'y'
     { 0, b_man }, // 'z' 122
     { 0, NULL }, // '{' 123

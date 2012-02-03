@@ -134,21 +134,206 @@ unban_user_for_board(const char *user, const char *board) {
     return unlink(tag_fn) == 0;
 }
 
-int
-edit_banned_list_for_board(const char *board) {
-    // TODO generalize this.
+static time4_t
+ui_print_user_banned_status_for_board(const char *uid, const char *board) {
+    char reason[STRLEN];
+    time4_t expire = expire = get_user_banned_status_by_board(
+        uid, board, sizeof(reason), reason);
+
+    if (expire > now) {
+        prints("使用者 %s 禁言中，解除時間尚有 %d 天: %s\n理由:%s",
+               uid, (expire-now)/DAY_SECONDS+1,
+               Cdatelite(&expire), reason);
+    } else {
+        prints("使用者 %s 目前不在禁言名單中。\n",
+               uid);
+        expire = 0;
+    }
+    return expire;
+}
+
+static int
+ui_ban_user_for_board(const char *uid, const char *board) {
+    time4_t expire = now;
+    int y, x;
     int result;
     int do_notify = 0;
-    char uid[IDLEN+1], ans[3];
+    char ans[3];
     char history_log[PATHLEN];
     char reason[STRLEN];
     char datebuf[STRLEN];
+
+    setbfile(history_log, board, FN_BANNED_HISTORY);
+
+    getyx(&y, &x);
+    if ((expire = is_user_banned_by_board(uid, board))) {
+        vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
+              (expire - now) / DAY_SECONDS+1);
+        return -1;
+    }
+    prints("將使用者 %s 加入看板 %s 的禁言名單。", uid, board);
+    move(y+3, 0);
+    syncnow();
+    outs("目前接受的格式是 [數字][單位]。 "
+         "單位有: 年(y), 月(m), 天(d)\n"
+         "範例: 3m (三個月), 120d (120天), 10y (10年)\n"
+         "注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n"
+        );
+    getdata(y+1, 0, "請以數字跟單位(預設為天)輸入期限: ",
+            datebuf, 8, DOECHO);
+    trim(datebuf);
+    if (!*datebuf) {
+        vmsg("未輸入期限，放棄。");
+        return -1;
+    } else {
+        int val = atoi(datebuf);
+        switch(tolower(datebuf[strlen(datebuf)-1])) {
+            case 'y':
+                val *= 365;
+                break;
+            case 'm':
+                val *= 30;
+                break;
+            case 'd':
+            default:
+                break;
+        }
+        if (val < 1) {
+            vmsg("日期格式輸入錯誤或是小於一天無法處理。");
+            return -1;
+        }
+        if (now + val * DAY_SECONDS < now) {
+            vmsg("日期過大或無法處理，請重新輸入。");
+            return -1;
+        }
+        expire = now + val * DAY_SECONDS;
+        move(y+3, 0); clrtobot();
+        // sprintf(datebuf, "%s", Cdatelite(&expire));
+        sprintf(datebuf, "%d 天", val);
+        prints("期限將設定為 %s之後: %s\n",
+               datebuf, Cdatelite(&expire));
+        if (val > KEEP_DAYS_REGGED) {
+            mvprints(y+6, 0, ANSI_COLOR(1;31)
+                     "注意: 超過 %d 天的設定有可能因為對方一直"
+                     "未上站而導致帳號過期被重新註冊，\n"
+                     "      此時同名的新帳號由於不一定是同一人所以"
+                     "不會被禁言(水桶)。\n" ANSI_RESET,
+                     KEEP_DAYS_REGGED);
+        }
+    }
+
+    assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
+    // maybe race condition here, but fine.
+    getdata(y+4, 0, "請輸入理由(空白可取消新增): ",
+            reason, BAKUMAN_REASON_LEN, DOECHO);
+    if (!*reason) {
+        vmsg("未輸入理由，取消此次設定");
+        return -1;
+    }
+
+    clrtobot();
+    getdata(y+6, 0, "要寄信通知使用者嗎? (會附上前面輸入的理由) [Y/n]: ", 
+            ans, sizeof(ans), LCECHO);
+    if (ans[0] == 'n')
+        do_notify = 0;
+    else
+        do_notify = 1;
+
+    move(y, 0); clrtobot();
+    prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
+           "理由: %s\n"
+           "%s寄信通知使用者" ANSI_RESET "\n",
+           uid, datebuf, reason,
+           do_notify ? ANSI_COLOR(1;32) "會" : ANSI_COLOR(1;31) "不會");
+
+    // last chance
+    getdata(y+5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
+            ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y') {
+        vmsg("請重新輸入");
+        return -1;
+    }
+
+    result = ban_user_for_board(uid, board, expire, reason);
+    log_filef(history_log, LOG_CREAT,
+              ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET 
+              " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET 
+              " 發言，期限為 %s\n  理由: %s\n",
+              Cdatelite(&now),
+              result ? "" : 
+              ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
+              cuser.userid, uid,  datebuf, reason);
+    vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
+    if (result && do_notify) {
+        char xtitle[STRLEN];
+        char xmsg[STRLEN*5];
+
+        snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
+        snprintf(xmsg, sizeof(xmsg),
+                 "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
+                 "原因: %s\n"
+                 "其它資訊請洽該看板板規與公告。\n", board, reason);
+        mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
+        sendalert(uid, ALERT_NEW_MAIL);
+    }
+    invalid_board_permission_cache(board);
+    return 0;
+}
+
+static int
+ui_unban_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
+    int y, x;
+    char ans[3];
+    char history_log[PATHLEN];
+    char reason[STRLEN];
+
+    setbfile(history_log, board, FN_BANNED_HISTORY);
+
+    getyx(&y, &x);
+    if (!(expire = is_user_banned_by_board(uid, board))) {
+        vmsg("使用者未在禁言名單。");
+        return -1;
+    }
+    move(y, 0); clrtobot();
+    prints("提前解除使用者 %s 於看板 %s 的禁言限制 (尚有 %d 天)。",
+           uid, board, (expire-now)/DAY_SECONDS+1);
+    assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
+    getdata(y+1, 0, "請輸入理由(空白可取消解除): ",
+            reason, BAKUMAN_REASON_LEN, DOECHO);
+    if (!*reason) {
+        vmsg("未輸入理由，取消此次設定");
+        return -1;
+    }
+
+    // last chance
+    getdata(y+4, 0, "確認以上資料全部正確嗎？ [y/N]: ",
+            ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y') {
+        vmsg("請重新輸入");
+        return -1;
+    }
+
+    unban_user_for_board(uid, board);
+    log_filef(history_log, LOG_CREAT,
+              ANSI_COLOR(1) "%s " ANSI_COLOR(33) "%s" ANSI_RESET
+              " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET 
+              " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
+              Cdatelite(&now), cuser.userid, uid, 
+              (expire - now) / DAY_SECONDS+1, reason);
+    vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
+    invalid_board_permission_cache(board);
+    return 0;
+}
+
+int
+edit_banned_list_for_board(const char *board) {
+    // TODO generalize this.
+    time4_t expire = now;
+    char uid[IDLEN+1], ans[3];
 
     if (!board || !*board || getbnum(board) < 1)
         return 0;
-
-    setbfile(history_log, board, FN_BANNED_HISTORY);
 
     while (1) {
         clear();
@@ -211,16 +396,7 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
-                expire = get_user_banned_status_by_board(
-                        uid, board, sizeof(reason), reason);
-                if (expire > now) {
-                    prints("使用者 %s 禁言中，解除時間尚有 %d 天: %s\n理由:%s",
-                           uid, (expire-now)/DAY_SECONDS+1,
-                           Cdatelite(&expire), reason);
-                } else {
-                    prints("使用者 %s 目前不在禁言名單中。\n",
-                           uid);
-                }
+                ui_print_user_banned_status_for_board(uid, board);
                 pressanykey();
                 break;
 
@@ -229,117 +405,9 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 usercomplete(msg_uid, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
-                if ((expire = is_user_banned_by_board(uid, board))) {
-                    vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
-                          (expire - now) / DAY_SECONDS+1);
-                    continue;
-                }
                 move(1, 0); clrtobot();
-                prints("將使用者 %s 加入看板 %s 的禁言名單。", uid, board);
-                syncnow();
-                move(4, 0);
-                outs("目前接受的格式是 [數字][單位]。 "
-                     "單位有: 年(y), 月(m), 天(d)\n"
-                     "範例: 3m (三個月), 120d (120天), 10y (10年)\n"
-                     "注意不可混合輸入(例:沒有三個半月這種東西,請換算成天數)\n"
-                     );
-                getdata(2, 0, "請以數字跟單位(預設為天)輸入期限: ",
-                        datebuf, 8, DOECHO);
-                trim(datebuf);
-                if (!*datebuf) {
-                    vmsg("未輸入期限，放棄。");
+                if (ui_ban_user_for_board(uid, board) < 0)
                     continue;
-                } else {
-                    int val = atoi(datebuf);
-                    switch(tolower(datebuf[strlen(datebuf)-1])) {
-                        case 'y':
-                            val *= 365;
-                            break;
-                        case 'm':
-                            val *= 30;
-                            break;
-                        case 'd':
-                        default:
-                            break;
-                    }
-                    if (val < 1) {
-                        vmsg("日期格式輸入錯誤或是小於一天無法處理。");
-                        continue;
-                    }
-                    if (now + val * DAY_SECONDS < now) {
-                        vmsg("日期過大或無法處理，請重新輸入。");
-                        continue;
-                    }
-                    expire = now + val * DAY_SECONDS;
-                    move(4, 0); clrtobot();
-                    // sprintf(datebuf, "%s", Cdatelite(&expire));
-                    sprintf(datebuf, "%d 天", val);
-                    prints("期限將設定為 %s之後: %s\n",
-                            datebuf, Cdatelite(&expire));
-                    if (val > KEEP_DAYS_REGGED) {
-                        mvprints(7, 0, ANSI_COLOR(1;31)
-                               "注意: 超過 %d 天的設定有可能因為對方一直"
-                               "未上站而導致帳號過期被重新註冊，\n"
-                               "      此時同名的新帳號由於不一定是同一人所以"
-                               "不會被禁言(水桶)。\n" ANSI_RESET,
-                               KEEP_DAYS_REGGED);
-                    }
-                }
-
-                assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
-                // maybe race condition here, but fine.
-                getdata(5, 0, "請輸入理由(空白可取消新增): ",
-                        reason, BAKUMAN_REASON_LEN, DOECHO);
-                if (!*reason) {
-                    vmsg("未輸入理由，取消此次設定");
-                    continue;
-                }
-
-                getdata(7, 0, "要寄信通知使用者嗎? (會附上前面輸入的理由) [Y/n]: ", 
-                        ans, sizeof(ans), LCECHO);
-                if (ans[0] == 'n')
-                    do_notify = 0;
-                else
-                    do_notify = 1;
-
-                move(1, 0); clrtobot();
-                prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
-                       "理由: %s\n"
-                       "%s寄信通知使用者" ANSI_RESET "\n",
-                       uid, datebuf, reason,
-                       do_notify ? ANSI_COLOR(1;32) "會" : ANSI_COLOR(1;31) "不會");
-
-                // last chance
-                getdata(6, 0, "確認以上資料全部正確嗎？ [y/N]: ",
-                        ans, sizeof(ans), LCECHO);
-                if (ans[0] != 'y') {
-                    vmsg("請重新輸入");
-                    continue;
-                }
-
-                result = ban_user_for_board(uid, board, expire, reason);
-                log_filef(history_log, LOG_CREAT,
-                          ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET 
-                          " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET 
-                          " 發言，期限為 %s\n  理由: %s\n",
-                          Cdatelite(&now),
-                          result ? "" : 
-                            ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
-                          cuser.userid, uid,  datebuf, reason);
-                vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
-                if (result && do_notify) {
-                    char xtitle[STRLEN];
-                    char xmsg[STRLEN*5];
-
-                    snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
-                    snprintf(xmsg, sizeof(xmsg),
-                             "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
-                             "原因: %s\n"
-                             "其它資訊請洽該看板板規與公告。\n", board, reason);
-                    mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
-                    sendalert(uid, ALERT_NEW_MAIL);
-                }
-                invalid_board_permission_cache(board);
                 break;
 
             case 'd':
@@ -347,43 +415,18 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 usercomplete(msg_uid, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
-                if (!(expire = is_user_banned_by_board(uid, board))) {
-                    vmsg("使用者未在禁言名單。");
+                move(1, 0);
+                if (ui_unban_user_for_board(uid, board) < 0)
                     continue;
-                }
-                move(1, 0); clrtobot();
-                prints("提前解除使用者 %s 於看板 %s 的禁言限制 (尚有 %d 天)。",
-                       uid, board, (expire-now)/DAY_SECONDS+1);
-                assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
-                getdata(2, 0, "請輸入理由(空白可取消解除): ",
-                        reason, BAKUMAN_REASON_LEN, DOECHO);
-                if (!*reason) {
-                    vmsg("未輸入理由，取消此次設定");
-                    continue;
-                }
-
-                // last chance
-                getdata(5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
-                        ans, sizeof(ans), LCECHO);
-                if (ans[0] != 'y') {
-                    vmsg("請重新輸入");
-                    continue;
-                }
-
-                unban_user_for_board(uid, board);
-                log_filef(history_log, LOG_CREAT,
-                          ANSI_COLOR(1) "%s " ANSI_COLOR(33) "%s" ANSI_RESET
-                          " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET 
-                          " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
-                          Cdatelite(&now), cuser.userid, uid, 
-                          (expire - now) / DAY_SECONDS+1, reason);
-                vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
-                invalid_board_permission_cache(board);
                 break;
 
             case 'l':
-                if (more(history_log, YEA) == -1)
-                    vmsg("目前尚無設定記錄。");
+                do {
+                    char history_log[PATHLEN];
+                    setbfile(history_log, board, FN_BANNED_HISTORY);
+                    if (more(history_log, YEA) == -1)
+                        vmsg("目前尚無設定記錄。");
+                } while (0);
                 break;
 
 #ifdef SHOW_OLD_BAN
@@ -402,6 +445,64 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
 #endif
 
             default:
+                break;
+        }
+    }
+    return 0;
+}
+
+int
+edit_user_acl_for_board(const char *uid, const char *board) {
+    time4_t expire;
+    int finished = 0;
+
+#define LNACLEDIT (10)
+
+    int ytitle = b_lines - LNACLEDIT;
+    grayout(0, ytitle-2, GRAYOUT_DARK);
+
+    while (!finished) {
+        move(ytitle-1, 0); clrtobot();
+        outs("\n" ANSI_REVERSE);
+        vbarf(" 設定使用者 %s 於看板《%s》之權限", uid, board);
+
+        move(ytitle+2, 0);
+        expire = ui_print_user_banned_status_for_board(uid, board);
+
+        move(ytitle+5, 0);
+        prints(" " ANSI_COLOR(1;36) "%s" ANSI_RESET " - %s\n",
+               expire ? "u" : "w",
+               expire ? "提前解除" : "加入禁言名單");
+
+        switch (vans("請選擇欲進行之操作, 其它鍵結束: ")) {
+            case 'w':
+                if (expire) {
+                    finished = 1;
+                    break;
+                }
+                move(ytitle-1, 0); clrtobot();
+                outs("\n" ANSI_REVERSE);
+                vbarf(" 禁言使用者");
+                move(ytitle+2, 0);
+                if (ui_ban_user_for_board(uid, board) < 0)
+                    continue;
+                break;
+
+            case 'u':
+                if (!expire) {
+                    finished = 1;
+                    break;
+                }
+                move(ytitle-1, 0); clrtobot();
+                outs("\n" ANSI_REVERSE);
+                vbarf(" 提前解除禁言");
+                move(ytitle+2, 0);
+                if (ui_unban_user_for_board(uid, board) < 0)
+                    continue;
+                break;
+
+            default:
+                finished = 1;
                 break;
         }
     }
