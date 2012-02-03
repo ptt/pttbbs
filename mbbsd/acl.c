@@ -329,7 +329,6 @@ ui_unban_user_for_board(const char *uid, const char *board) {
 int
 edit_banned_list_for_board(const char *board) {
     // TODO generalize this.
-    time4_t expire = now;
     char uid[IDLEN+1], ans[3];
 
     if (!board || !*board || getbnum(board) < 1)
