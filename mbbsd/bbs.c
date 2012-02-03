@@ -3801,7 +3801,7 @@ view_posthistory(int ent, const fileheader_t * fhdr, const char *direct) {
 
 #endif // USE_TIME_CAPSULE
 
-#ifdef OUTJOBSPOOL
+#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
 /* 看板備份 */
 static int
 tar_addqueue(void)
@@ -3824,7 +3824,6 @@ tar_addqueue(void)
 
     vs_hdr2(" 看板備份 ", currboard);
 
-#ifdef TARQUEUE_SENDURL
     if (!getdata_str(4, 0, "請輸入通知信箱: ", email, sizeof(email), DOECHO,
                      cuser.userid))
 	return FULLUPDATE;
@@ -3835,17 +3834,6 @@ tar_addqueue(void)
     }
     move(4,0); clrtoeol();
     outs(email);
-#else
-    outs("\n注意看板備份可能超過數百 MB，若您的信箱無法接受巨大附檔可能會直接退信\n");
-    if (!getdata(4, 0, "請輸入目的信箱: ", email, sizeof(email), DOECHO))
-	return FULLUPDATE;
-
-    if (strstr(email, ".bbs@") || strchr(email, '@') == NULL) {
-        vmsg("不可使用 BBS 信箱。");
-        return FULLUPDATE;
-    }
-
-#endif
 
     /* check email -.-"" */
     if (!is_valid_email(email)) {
@@ -4329,7 +4317,7 @@ const onekey_t read_comms[] = {
     { 1, read_post }, // 'r'
     { 0, do_select }, // 's'
     { 0, NULL }, // 't'
-#ifdef OUTJOBSPOOL
+#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
     { 0, tar_addqueue }, // 'u'
 #else
     { 0, NULL }, // 'u'
