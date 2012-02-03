@@ -788,6 +788,7 @@ b_config(void)
 int
 b_quick_acl(int ent, fileheader_t *fhdr, const char *direct)
 {
+#ifdef USE_NEW_BAN_SYSTEM
     const boardheader_t *bp = getbcache(currbid);
     if (!bp)
         return FULLUPDATE;
@@ -811,7 +812,7 @@ b_quick_acl(int ent, fileheader_t *fhdr, const char *direct)
             }
         }
     }
-#endif
+#endif // STR_SAFEDEL_TITLE
     if (!uid[0] || !is_validuserid(uid) || !searchuser(uid, uid)) {
         vmsg("該使用者帳號不存在");
         return FULLUPDATE;
@@ -820,6 +821,9 @@ b_quick_acl(int ent, fileheader_t *fhdr, const char *direct)
     edit_user_acl_for_board(uid, bp->brdname);
 
     return FULLUPDATE;
+#else // !USE_NEW_BAN_SYSTEM
+    return DONOTHING;
+#endif // USE_NEW_BAN_SYSTEM
 }
 
 static int
