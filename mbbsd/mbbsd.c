@@ -689,12 +689,18 @@ static int
 load_current_user(const char *uid)
 {
     // userid should be already normalized.
+    int is_admin_only = 0;
+
+#ifdef ADMIN_PORT
+    // ----------------------------------------------------- PORT TESTING
+    // XXX currently this does not work if we're using tunnel.
+    is_admin_only = (listen_port == ADMIN_PORT);
+#endif
 
     // ----------------------------------------------------- NEW ACCOUNT 
 
 #ifdef STR_REGNEW
-    if (strcasecmp(uid, STR_REGNEW) == 0) 
-    {
+    if (!is_admin_only && strcasecmp(uid, STR_REGNEW) == 0) {
 
 # ifndef LOGINASNEW
 	assert(false);
@@ -710,8 +716,7 @@ load_current_user(const char *uid)
     // --------------------------------------------------- GUEST ACCOUNT 
     
 #ifdef STR_GUEST
-    if (strcasecmp(uid, STR_GUEST) == 0)
-    {
+    if (!is_admin_only && strcasecmp(uid, STR_GUEST) == 0) {
 	if (initcuser(STR_GUEST)< 1) exit (0) ;
 	pwcuInitGuestPerm();
 	// can we prevent mkuserdir() here?
@@ -721,7 +726,17 @@ load_current_user(const char *uid)
 
     // ---------------------------------------------------- USER ACCOUNT 
     {
-	if (!cuser.userid[0] && initcuser(uid) < 1) exit(0);
+	if (!cuser.userid[0] && initcuser(uid) < 1)
+            exit(0);
+
+        if (is_admin_only) {
+            if (!HasUserPerm(PERM_SYSOP | PERM_BBSADM | PERM_BOARD | 
+                             PERM_ACCOUNTS | PERM_CHATROOM | 
+                             PERM_VIEWSYSOP | PERM_PRG)) {
+                puts("\r\n權限不足，請換其它 port 連線。\r\n");
+                exit(0);
+            }
+        }
 
 #ifdef LOCAL_LOGIN_MOD
 	LOCAL_LOGIN_MOD();
