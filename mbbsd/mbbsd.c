@@ -1154,10 +1154,15 @@ check_bad_clients(void) {
     y = vgety();
 
     do {
-	mvouts(y, 0, "請問您發文時使用的程式是？(例: PCMan, BBSReader,... "
-               ANSI_COLOR(1;33) "若是手機請告知App名稱" ANSI_RESET ")\n");
+	mvouts(y, 0, "請問您發文時使用的程式是？(例: MiuPTT, BBSReader,... "
+               ANSI_COLOR(1;33) "若是手機請告知完整App名稱" ANSI_RESET ")\n");
 	getdata(y+1, 0, "發文程式: ", buf, DISP_TTLEN, DOECHO);
 	trim(buf);
+        if (strcasecmp(buf, "手機App") == 0 || strcasecmp(buf, "手機 App") ==0 ||
+            strcasecmp(buf, "App") == 0) {
+            vmsgf("要完整名稱，不能寫 %s", buf);
+            *buf = 0;
+        }
     } while (strlen(buf) < 2);
     mvprints(y-1, 0, "發文程式: %s\n", buf); clrtobot();
     log_filef(dest, LOG_CREAT, "%s program: %s\n", Cdatelite(&now), buf);
@@ -1366,7 +1371,7 @@ user_login(void)
                 vs_hdr("自動轉寄設定已變更");
                 unlink(fwd_path);
                 outs("\n由於系統調整，您的自動轉寄已被重設，\n"
-                     "如有需求請重新設定。");
+                     "如有需求請重新設定。\n");
                 pressanykey();
             }
         }
@@ -2260,6 +2265,11 @@ check_ban_and_load(int fd, struct ProgramOption *option)
 
     if (!option->flag_checkload)
 	overload = 0;
+
+#ifdef ADMIN_PORT
+    if (listen_port == ADMIN_PORT)
+        overload = 0;
+#endif
 
     if(overload == 1)
 	write(fd, "系統過載, 請稍後再來\r\n", 22);
