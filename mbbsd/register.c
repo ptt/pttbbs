@@ -2510,7 +2510,7 @@ regform2_validate_page(int dryrun)
 			break;
 
 		    case 'd': // delete
-			regfrm_delete(uid);
+			regfrm_delete(forms[i].u.userid);
 			break;
 
 		    case 'n': // reject
