@@ -4208,8 +4208,7 @@ change_cooldown(void)
 static int
 b_moved_to_config()
 {
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
-    {
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) {
 	vmsg("這個功\能已移入看板設定 (i) 去了！");
 	return FULLUPDATE;
     }
@@ -4261,13 +4260,13 @@ const onekey_t read_comms[] = {
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, // 'A' 65
-    { 0, b_config }, // 'B'
+    { 0, b_moved_to_config }, // 'B'
     { 1, do_limitedit }, // 'C'
     { 1, del_range_post }, // 'D'
     { 1, edit_post }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'
-    { 0, b_moved_to_config }, // 'H'
+    { 0, NULL }, // 'H'
     { 0, b_config }, // 'I'
 #ifdef USE_COOLDOWN
     { 0, change_cooldown }, // 'J'
