@@ -4284,7 +4284,7 @@ const onekey_t read_comms[] = {
     { 0, b_results }, // 'R'
     { 0, NULL }, // 'S'
     { 1, edit_title }, // 'T'
-    { 0, NULL }, // 'U'
+    { 1, b_quick_acl }, // 'U'
     { 0, b_vote }, // 'V'
     { 0, b_notes_edit }, // 'W'
     { 1, recommend }, // 'X'
@@ -4324,7 +4324,7 @@ const onekey_t read_comms[] = {
 #endif
     { 1, b_mark_read_unread }, // 'v'
     { 1, b_call_in }, // 'w'
-    { 1, b_quick_acl }, // 'x'
+    { 0, NULL }, // 'x'
     { 1, reply_post }, // 'y'
     { 0, b_man }, // 'z' 122
     { 0, NULL }, // '{' 123

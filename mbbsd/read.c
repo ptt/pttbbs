@@ -925,10 +925,9 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
 	case 'F':
-	case 'U':
 	    if (HasUserPerm(PERM_FORWARD) && locmem->crs_ln>0) {
 		mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
-			     currdirect, ch /* == 'U' */ );
+			     currdirect, ch);
 		/* by CharlieL */
 		// mode = READ_REDRAW;
 		return FULLUPDATE;
