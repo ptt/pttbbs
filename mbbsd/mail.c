@@ -325,7 +325,7 @@ chk_mailbox_limit(void)
     if (mailkeep <= mailmaxkeep)
         return MAILBOX_LIM_OK;
 
-    if ((mailkeep / 100 < mailmaxkeep)
+    if ((mailkeep / 50 < mailmaxkeep)
         || HasUserPerm(PERM_ADMIN))
         return MAILBOX_LIM_KEEP;
     else
