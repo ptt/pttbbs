@@ -39,9 +39,6 @@
 30	4	*	*	2	/usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
 30	4	*	*	2	/bin/rm -f ~/tmp/*
 
-# 每天執行一次生日程式
-1	2	*	*	*	bin/birth
-
 # 每星期二五砍掉 boards/d/deleted
 20	6	*	*	2,5	/bin/rm -rf boards/d/deleted; mkdir boards/d/deleted
 
