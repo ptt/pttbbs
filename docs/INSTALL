@@ -69,6 +69,8 @@ $Id$
     telnet localhost 23 看看
     new 一個帳號叫SYSOP, 然後 logout再 login, 這樣子就會擁有站長權限囉~
     再 new一個帳號叫 guest , 這樣子別人就可以用 guest 參觀你的站了
+    (若系統回應「無法接受這個代號」，請先隨便建一個 guest0 的帳號，
+     再換 SYSOP 登入並把 guest0 改名為 guest, 順便把權限設一定)
     開板, 開群組, 以及搬動群組的方法請看 PttSrc 板的文摘
  18.新功能請參考 ADVANCE
  19.為了讓開機的時候會自己把 bbs (以及所須要的程式) 跑起來,
