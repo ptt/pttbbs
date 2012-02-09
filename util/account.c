@@ -154,6 +154,9 @@ output_today(struct tm *ptime, int act[27], int peak_hour_login, int day_login)
     int avg_len = ((day_login - peak_hour_login) / 23) + 1;
     int bar_unit = avg_len / (bar_max_width / 2 / 2);
 
+    if (bar_unit < 1)
+        bar_unit = 1;
+
     printf("peak: %d, day_login: %d\n", peak_hour_login, day_login);
     printf("avg_len=%d, bar_unit=%d\n", avg_len, bar_unit);
 
