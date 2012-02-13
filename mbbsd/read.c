@@ -509,66 +509,58 @@ select_read(const keeploc_t * locmem, int sr_mode)
    first_select = p==NULL;
 
    STATINC(STAT_SELECTREAD);
-   if(sr_mode & RS_AUTHOR)
-           {
-	     if(!getdata(b_lines, 0,
-                 currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
-                  keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
-                return READ_REDRAW; 
-           }
-   else if(sr_mode  & RS_KEYWORD)
-          {
-             if(!getdata(b_lines, 0, 
-                 currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
-                 keyword, TTLEN, DOECHO) || trim_blank(keyword))
-                return READ_REDRAW;
+   if(sr_mode & RS_AUTHOR) {
+       if(!getdata(b_lines, 0,
+                   currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
+                   keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
+           return READ_REDRAW; 
+   } else if(sr_mode & RS_KEYWORD) {
+       if(!getdata(b_lines, 0, 
+                   currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
+                   keyword, TTLEN, DOECHO) || trim_blank(keyword))
+           return READ_REDRAW;
 
-             LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
-                                                "%s:%s\n", currboard, keyword));
-          }
-   else if(sr_mode  & RS_KEYWORD_EXCLUDE)
-          {
-	      // TTLEN width exceed default screen
-	      // let's use TTLEN-4 here.
-             if(!(currmode & MODE_SELECT) ||
-                !getdata(b_lines, 0, "增加條件 排除標題: ", 
-                 keyword, TTLEN-4, DOECHO) ||
-                trim_blank(keyword))
-                return READ_REDRAW;
-          }
-   else if (sr_mode  & RS_RECOMMEND)
-          {
-             if(currstat == RMAIL || (
-	        !getdata(b_lines, 0, 
-                 (currmode & MODE_SELECT) ? 
-		 "增加條件 推文數: ":
-		 "搜尋推文數高於多少"
+       LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
+                                          "%s:%s\n", currboard, keyword));
+   } else if(sr_mode & RS_KEYWORD_EXCLUDE) {
+       if (currmode & MODE_SELECT) {
+           // TTLEN width exceed default screen
+           // let's use TTLEN-4 here.
+           if (!getdata(b_lines, 0, "增加條件 排除標題: ", 
+                        keyword, TTLEN-4, DOECHO) ||
+               trim_blank(keyword))
+               return READ_REDRAW;
+       }else {
+           vmsg("反向搜尋(!)只能在已進入搜尋時使用(例: 先用 / 搜尋)");
+           return READ_REDRAW;
+       }
+   } else if (sr_mode & RS_RECOMMEND) {
+       if(currstat == RMAIL ||
+          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ? 
+                    "增加條件 推文數: ": "搜尋推文數高於多少"
 #ifndef OLDRECOMMEND
-		     " (<0則搜噓文數) "
+                    " (<0則搜噓文數) "
 #endif // OLDRECOMMEND
-		 "的文章: ",
-		 // 因為有負數所以暫時不能用 NUMECHO
-                 keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
-                return READ_REDRAW;
-	  }
-   else if (sr_mode  & RS_MONEY)
-          {
-             if(currstat == RMAIL || (
-	        !getdata(b_lines, 0, 
-                 (currmode & MODE_SELECT) ?
-		 "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
-                 keyword, 7, NUMECHO) || (n_money = atoi(keyword)) <= 0 ))
-                return READ_REDRAW;
-             strcat(keyword, "M");
-	  }
-   else {
+                    "的文章: ",
+                    // 因為有負數所以暫時不能用 NUMECHO
+                    keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
+           return READ_REDRAW;
+   } else if (sr_mode  & RS_MONEY) {
+       if(currstat == RMAIL ||
+          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ?
+                    "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
+                    keyword, 7, NUMECHO) || (n_money = atoi(keyword)) <= 0 ))
+           return READ_REDRAW;
+       strcat(keyword, "M");
+   } else {
        // Ptt: only once for these modes.
-       if(!first_select && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK | RS_SOLVED))
-	   return DONOTHING;
+       if(!first_select && _mode & sr_mode &
+          (RS_TITLE | RS_NEWPOST | RS_MARK | RS_SOLVED))
+           return DONOTHING;
 
        if(sr_mode & RS_TITLE) {
-	   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
-	   strcpy(keyword, subject(fh->title));           
+           fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
+           strcpy(keyword, subject(fh->title));           
        }
    }
 
