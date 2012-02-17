@@ -246,7 +246,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 30 - value;
 #endif
 
-    return (urec->userlevel & PERM_LOGINOK ? 
+    return ((urec->userlevel & (PERM_LOGINOK|PERM_VIOLATELAW)) ? 
             KEEP_DAYS_REGGED : KEEP_DAYS_UNREGGED) * 24 * 60 - value;
 }
 
