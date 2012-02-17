@@ -59,6 +59,9 @@ int check(void *data, int n, userec_t *u) {
 	    // ignore regged accounts now.
 	    if (u->userlevel & PERM_LOGINOK)
 		return 0;
+            // ignore violate-law accounts
+	    if (u->userlevel & PERM_VIOLATELAW)
+		return 0;
 	    if (u->userlevel & PERM_SYSOP)
 		return 0;
 	    if (u->userlevel & PERM_XEMPT)
