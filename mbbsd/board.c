@@ -1413,6 +1413,10 @@ show_brdlist(int head, int clsflag, int newflag)
                     if (0)
 #endif
 			outs("ÀR ");
+#ifdef DISABLE_HIDDEN_BOARD_POPULARITY
+                    else if (B_BH(ptr)->brdattr & BRD_HIDE)
+                        outs("   ");
+#endif
 		    else if (B_BH(ptr)->nuser <= 0)
 			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
 		    else if (B_BH(ptr)->nuser <= 10)
