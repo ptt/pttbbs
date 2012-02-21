@@ -427,7 +427,7 @@ void utmpsort(int sortall)
 	memset(nusers, 0, sizeof(nusers));
 	for (i = 0; i < count; ++i) {
 	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];
-	    if (uentp && uentp->pid &&
+	    if (uentp && uentp->pid && uentp->mode != DEBUGSLEEPING &&
 		0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
 		++nusers[uentp->brc_id - 1];
 	}
