@@ -98,9 +98,9 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
     if (!(inc_badpost(userid, 1) % 5)){
 	userec_t xuser;
-	post_violatelaw(userid, BBSMNAME " 系統警察", 
+	post_violatelaw(userid, BBSMNAME "系統警察", 
 		"劣文累計 5 篇", "罰單一張");
-	mail_violatelaw(userid, BBSMNAME " 系統警察", 
+	mail_violatelaw(userid, BBSMNAME "系統警察", 
 		"劣文累計 5 篇", "罰單一張");
 	kick_all(userid);
 	passwd_sync_query(tusernum, &xuser);

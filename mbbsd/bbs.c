@@ -537,17 +537,19 @@ readtitle(void)
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
     buf[0] = 0;
 
-#ifdef DISABLE_HIDDEN_BOARD_POPULARITY
-    if (bp->brdattr & BRD_HIDE)
-        snprintf(buf, sizeof(buf), "[隱板]");
-    else
-#endif
 #ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN)
         snprintf(buf, sizeof(buf), "[靜]");
     else
 #endif
-        snprintf(buf, sizeof(buf), "人氣:%d ", SHM->bcache[currbid - 1].nuser);
+    {
+        // nuser is not real-time updated (maintained by utmpsort), so let's
+        // make some calibration here. It's minimal value is one because the
+        // user IS reading it.
+        int nuser = SHM->bcache[currbid - 1].nuser;
+        if (nuser < 1) nuser = 1;
+        snprintf(buf, sizeof(buf), "人氣:%d ", nuser);
+    }
 
     vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ", 
 	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode],

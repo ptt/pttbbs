@@ -1409,15 +1409,11 @@ show_brdlist(int head, int clsflag, int newflag)
 
 #ifdef USE_COOLDOWN
 		    if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-#else
-                    if (0)
 #endif
-			outs("ÀR ");
-#ifdef DISABLE_HIDDEN_BOARD_POPULARITY
-                    else if (B_BH(ptr)->brdattr & BRD_HIDE)
-                        outs("   ");
-#endif
-		    else if (B_BH(ptr)->nuser <= 0)
+                        outs("ÀR ");
+                    // since nuser is not updated in-time, '1' may be caused by
+                    // user who just left board.
+		    else if (B_BH(ptr)->nuser <= 1)
 			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
 		    else if (B_BH(ptr)->nuser <= 10)
 			prints("%2d ", B_BH(ptr)->nuser);
