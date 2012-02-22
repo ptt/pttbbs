@@ -1409,6 +1409,8 @@ show_brdlist(int head, int clsflag, int newflag)
 
 #ifdef USE_COOLDOWN
 		    if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+#else
+                    if (0)      // don't move this line -- preserved for next "else".
 #endif
                         outs("ÀR ");
                     // since nuser is not updated in-time, '1' may be caused by
