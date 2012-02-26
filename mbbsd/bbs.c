@@ -3684,6 +3684,9 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	    prints("¢x\n");
 	} 
 	else if ((bp->brdattr & (BRD_HIDE | BRD_OVER18)) ||
+#ifdef BN_ALLPOST
+                 strcmp(bp->brdname, BN_ALLPOST) == 0  ||
+#endif
 		 (bp->level && !(bp->brdattr & BRD_POSTMASK)) // !POSTMASK = restricted read
 		)
 	{
