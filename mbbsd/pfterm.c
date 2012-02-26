@@ -1310,13 +1310,18 @@ outc(unsigned char c)
     else // normal characters
     {
         assert (ft.x >= 0 && ft.x < ft.cols);
-
-        // normal characters
-        FTC = c;
+#ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
+        if (FTATTR_GETFG(ft.attr) == FTATTR_GETBG(ft.attr) &&
+            (ft.attr & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0)
+            c = ' ';
+#endif
 #ifdef FTATTR_TRANSPARENT
         if (ft.attr != FTATTR_TRANSPARENT)
 #endif // FTATTR_TRANSPARENT
         FTA = ft.attr;
+
+        // normal characters
+        FTC = c;
 
         ft.x++;
         // XXX allow x == ft.cols?
