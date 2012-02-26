@@ -1021,6 +1021,16 @@ doupdate(void)
             fterm_rawattr(FTAMAP[y][x]);
 #endif // !DBG_SHOW_DIRTY
 
+#ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
+            // Disable hidden message, only if current and previous chars are
+            // not DBCS chars.  Current dirty format: [CHAR][DBCS]
+            if (FTATTR_GETFG(FTAMAP[y][x]) == FTATTR_GETBG(FTAMAP[y][x]) &&
+                (FTAMAP[y][x] & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0 &&
+                !(FTD[x] & FTDIRTY_DBCS) &&
+                !(x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS)))
+                fterm_rawc(' ');
+            else
+#endif
             fterm_rawc(FTDC[x]);
             ft.rx++;
             touched = 1;
@@ -1310,11 +1320,7 @@ outc(unsigned char c)
     else // normal characters
     {
         assert (ft.x >= 0 && ft.x < ft.cols);
-#ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
-        if (FTATTR_GETFG(ft.attr) == FTATTR_GETBG(ft.attr) &&
-            (ft.attr & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0)
-            c = ' ';
-#endif
+
 #ifdef FTATTR_TRANSPARENT
         if (ft.attr != FTATTR_TRANSPARENT)
 #endif // FTATTR_TRANSPARENT
