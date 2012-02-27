@@ -849,7 +849,7 @@ m_send(void)
     return DIRCHANGED;
 }
 
-/* 群組寄信、回信 : multi_send, multi_reply */
+/* 群組寄信、回信 : multi_send, (multi_)reply */
 static void
 multi_list(struct Vector *namelist, int *recipient)
 {
@@ -1081,8 +1081,10 @@ multi_send(const char *title)
 }
 
 static int
-multi_reply(int ent, fileheader_t * fhdr, const char *direct)
+reply(int ent, fileheader_t * fhdr, const char *direct)
 {
+    int use_multi = 0;
+
     // do not allow guest to use this
     if (!HasUserPerm(PERM_BASIC))
 	return DONOTHING;
@@ -1090,19 +1092,39 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
 
-    if (!(fhdr->filemode & FILE_MULTI))
+    // Use group-reply or single-reply?
+    if (fhdr->filemode & FILE_MULTI) {
+        char ans[3] = "";
+        vs_hdr("群組信件");
+        do {
+            getdata(2, 0, "請問要回信給原發信者(r)"
+                    "還是全部的人(a)，或離開(q) [r/a/q]? ",
+                    ans, sizeof(ans), LCECHO);
+        } while (ans[0] != 'r' && ans[0] != 'a' && ans[0] != 'q');
+
+        switch(ans[0]) {
+            case 'r':
+                use_multi = 0;
+                break;
+            case 'a':
+                use_multi = 1;
+                break;
+            default:
+                return FULLUPDATE;
+        }
+    }
+
+    if (!use_multi)
 	return mail_reply(ent, fhdr, direct);
 
-    vs_hdr("群組回信");
-    strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
     if (!dashf(quote_file)) {
-	vmsg("原檔案已消失。");
-	return FULLUPDATE;
+	vmsg("原信件已消失。");
+    } else {
+        strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
+        multi_send(fhdr->title);
     }
-    multi_send(fhdr->title);
-    quote_user[0]='\0';
-    quote_file[0]='\0';
+    *quote_user = *quote_file = 0;
     return FULLUPDATE;
 }
 
@@ -1594,10 +1616,8 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    vmsg("此封信無內容。");
 	    return FULLUPDATE;
 	case RET_DOREPLY:
-	    mail_reply(ent, fhdr, direct);
-	    return FULLUPDATE;
 	case RET_DOREPLYALL:
-	    multi_reply(ent, fhdr, direct);
+	    reply(ent, fhdr, direct);
 	    return FULLUPDATE;
     }
     return done;
@@ -1789,8 +1809,7 @@ static const char *hlp_mailmove[] = {
 }, *hlp_mailbasic[] = {
     "【基本操作】", NULL,
     "  讀信",	  "→ r",
-    "  回信",	  "R",
-    "  群組回信", "y",
+    "  回信",	  "R y",
     "  刪除此信", "d",
     "  寄發新信", "^P",
     "", "",
@@ -2267,7 +2286,7 @@ static const onekey_t mail_comms[] = {
     { 1, mail_nooutmail }, // 'O'
     { 0, NULL }, // 'P'
     { 0, NULL }, // 'Q'
-    { 1, mail_reply }, // 'R'
+    { 1, reply }, // 'R'
     { 0, NULL }, // 'S'
     { 1, NULL }, // 'T'
     { 0, NULL }, // 'U'
@@ -2305,7 +2324,7 @@ static const onekey_t mail_comms[] = {
     { 0, mail_read_all }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, m_forward }, // 'x'
-    { 1, multi_reply }, // 'y'
+    { 1, reply }, // 'y'
     { 0, mail_man }, // 'z' 122
     { 0, NULL }, // '{' 123
     { 0, NULL }, // '|' 124
