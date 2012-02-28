@@ -588,9 +588,9 @@ new_register(void)
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
 	{
 	    if (minute == 999999) // XXX magic number.  It should be greater than MAX_USERS at least.
-		outs("此代號已經有人使用 是不死之身");
+		outs("此代號已經有人使用 是不死之身\n");
 	    else {
-		prints("此代號已經有人使用 還有 %d 天才過期 \n", 
+		prints("此代號已經有人使用 還有 %d 天才過期\n", 
 			minute / (60 * 24) + 1);
 	    }
 	} 

@@ -214,7 +214,9 @@ ZA_Select(void)
 {
     int k;
 
-    if (!is_login_ready)
+    if (!is_login_ready ||
+        !HasUserPerm(PERM_BASIC) ||
+        HasUserPerm(PERM_VIOLATELAW))
         return 0;
 
     // TODO refresh status bar?
@@ -451,10 +453,6 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	i = -1;
 	switch (cmd) {
 	case Ctrl('Z'):
-            if (!HasUserPerm(PERM_BASIC)) {
-                i = lastcmdptr;
-                break;
-            }
 	    ZA_Select(); // we'll have za loop later.
 	    refscreen = YEA;
 	    i = lastcmdptr;

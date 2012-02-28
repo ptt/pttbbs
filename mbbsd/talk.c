@@ -2693,7 +2693,8 @@ t_users(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasBasicUserPerm(PERM_LOGINOK) ||
+        HasUserPerm(PERM_VIOLATELAW))
         return 0;
 
     assert(strncmp(cuser.userid, currutmp->userid, IDLEN)==0);

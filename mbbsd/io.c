@@ -154,7 +154,8 @@ process_pager_keys(int ch)
     switch (ch) 
     {
 	case Ctrl('U') :
-            if (!is_login_ready || !HasUserPerm(PERM_BASIC))
+            if (!is_login_ready || !HasUserPerm(PERM_BASIC) ||
+                HasUserPerm(PERM_VIOLATELAW))
                 return ch;
 	    if ( currutmp->mode == EDITING ||
 		 currutmp->mode == LUSERS  || 
