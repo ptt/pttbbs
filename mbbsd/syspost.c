@@ -92,28 +92,39 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 }
 
 void
-post_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
+post_violatelaw(const char *crime, const char *police, const char *reason, const
+                char *result) {
+    return post_violatelaw2(crime, police, reason, result, "");
+}
+
+void
+post_violatelaw2(const char *crime, const char *police, const char *reason, const
+                char *result, const char *memo)
 {
     char title[TTLEN+1];
-    char msg[ANSILINELEN];
+    char msg[ANSILINELEN * 10];
 
     snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
 	    (int)(30 - strlen(crime)), reason);
 
     snprintf(msg, sizeof(msg), 
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
-	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
-	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
-	    police, crime, reason, result);
+	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
+            ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
+	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
+            "，特此公告\n\n\n%s\n",
+	    police, crime, reason, result, memo ? memo : "");
 
     if (!strstr(police, "警察")) {
 	post_msg("PoliceLog", title, msg, "[" BBSMNAME "法院]");
 
 	snprintf(msg, sizeof(msg), 
 		ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
-		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
-		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
-		"站務警察", crime, reason, result);
+		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
+                ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
+		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
+                "，特此公告\n\n\n%s\n",
+		"站務警察", crime, reason, result, memo ? memo : "");
     }
 
     post_msg("ViolateLaw", title, msg, "[" BBSMNAME "法院]");
