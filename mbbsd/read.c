@@ -991,7 +991,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         break;
 
     case Ctrl('D'):
-	mode = TagPruner(bid);
+        if (currmode & MODE_SELECT) {
+            vmsg("請先離開搜尋模式(T標記會保留)再刪除檔案。");
+            mode = FULLUPDATE;
+        } else {
+            mode = TagPruner(bid);
+        }
         break;
 
     case KEY_ENTER:
