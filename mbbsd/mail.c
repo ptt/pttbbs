@@ -998,6 +998,13 @@ multi_send(const char *title)
 	}
 	fclose(fp);
 	ShowVector(&namelist, 3, 0, msg_cc, 0);
+        if (!listing) {
+            vs_hdr2(" 群組回信 ", " 信件格式錯誤");
+            outs("\n注意，由於發信人的不當編輯，"
+                 "此封信件格式有誤，已遺失原通告名單資訊。\n"
+                 "你只能手動建立回信名單。");
+            pressanykey();
+        }
     }
     multi_list(&namelist, &recipient);
     move(1, 0);
@@ -1015,6 +1022,7 @@ multi_send(const char *title)
 
 	setuserfile(fpath, fn_notes);
 
+        // TODO we should not let user edit this stupid list.
 	if ((fp = fopen(fpath, "w"))) {
 	    fprintf(fp, "※ [通告] 共 %d 人收件", recipient);
 	    listing = 80;
@@ -1081,7 +1089,7 @@ multi_send(const char *title)
 }
 
 static int
-reply(int ent, fileheader_t * fhdr, const char *direct)
+mailbox_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
     int use_multi = 0;
 
@@ -1617,7 +1625,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	case RET_DOREPLY:
 	case RET_DOREPLYALL:
-	    reply(ent, fhdr, direct);
+	    mailbox_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
     }
     return done;
@@ -2286,7 +2294,7 @@ static const onekey_t mail_comms[] = {
     { 1, mail_nooutmail }, // 'O'
     { 0, NULL }, // 'P'
     { 0, NULL }, // 'Q'
-    { 1, reply }, // 'R'
+    { 1, mailbox_reply }, // 'R'
     { 0, NULL }, // 'S'
     { 1, NULL }, // 'T'
     { 0, NULL }, // 'U'
@@ -2324,7 +2332,7 @@ static const onekey_t mail_comms[] = {
     { 0, mail_read_all }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, m_forward }, // 'x'
-    { 1, reply }, // 'y'
+    { 1, mailbox_reply }, // 'y'
     { 0, mail_man }, // 'z' 122
     { 0, NULL }, // '{' 123
     { 0, NULL }, // '|' 124
