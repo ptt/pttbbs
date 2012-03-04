@@ -1125,8 +1125,7 @@ dbcs_safe_trim_title(char *output, const char *title, int len) {
 }
 
 void 
-do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
-             int isstamp)
+do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
     int             len = 42-strlen(currboard);
@@ -1148,12 +1147,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     }
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
-    if(isstamp) {
-         setbpath(genbuf, brd);
-         stampfile(genbuf, &fh); 
-    }
-    else
-         setbfile(genbuf, brd, postfile->filename);
+    setbfile(genbuf, brd, postfile->filename);
 
     if(!strcasecmp(brd, BN_UNANONYMOUS))
        strcpy(fh.owner, cuser.userid);
@@ -1162,9 +1156,16 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
              ".%s板", currboard);
+    if (dashs(genbuf)) {
+        log_filef("log/conflict.log", LOG_CREAT,
+                  "%s %s->%s %s: %s\n", Cdatelite(&now),
+                  currboard, brd, fh.filename, fh.title);
+    }
 
-    unlink(genbuf);
-    Copy((char *)fpath, genbuf);
+#ifndef USE_LIVE_ALLPOST
+    if (strcmp(brd, BN_ALLPOST) != 0)
+#endif
+    Copy(fpath, genbuf);
     fh.filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
@@ -1435,14 +1436,13 @@ do_general(int garbage GCC_UNUSED)
 
         if (IsBoardForAllpost(bp)) {
 	        if (cuser.numlogindays < NEWIDPOST_LIMIT_DAYS)
-            		do_crosspost(BN_NEWIDPOST, &postfile, fpath, 0);
+            		do_crosspost(BN_NEWIDPOST, &postfile, fpath);
 
-                // TODO when USE_LIVE_ALLPOST is enabled, we probably don't need
-                // to post into BN_ALLPOST.
-		if (!(currbrdattr & BRD_HIDE) )
-            		do_crosspost(BN_ALLPOST, &postfile, fpath, 0);
-	        else	
-            		do_crosspost(BN_ALLHIDPOST, &postfile, fpath, 0);
+		if (currbrdattr & BRD_HIDE)
+                    do_crosspost(BN_ALLHIDPOST, &postfile, fpath);
+                else {
+                    do_crosspost(BN_ALLPOST, &postfile, fpath);
+                }
 	}
 	outs("順利貼出佈告，");
 
@@ -1535,7 +1535,7 @@ do_general(int garbage GCC_UNUSED)
 	    curredit ^= EDIT_BOTH;
 	} // if (curredit & EDIT_BOTH)
 	if (currbrdattr & BRD_ANONYMOUS)
-            do_crosspost(BN_UNANONYMOUS, &postfile, fpath, 0);
+            do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
@@ -2119,6 +2119,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	save_currboard = currboard;
 	currboard = xboard;
+        // TODO(piaip) write_header allows anonymous "if current board is
+        // anonymous" - so we probably need to fix that here.
 	write_header(xptr, xfile.title);
 	currboard = save_currboard;
 
@@ -3591,7 +3593,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     post_policelog(currboard, fhdr->title, "鎖文", genbuf, fhdr->filename[0] == 'L' ? 1 : 0);
     if (fhdr->filename[0] == 'L') {
 	fhdr->filename[0] = 'M';
-	do_crosspost("PoliceLog", fhdr, fn1, 0);
+	do_crosspost("PoliceLog", fhdr, fn1);
 	fhdr->filename[0] = 'L';
 	snprintf(genbuf, sizeof(genbuf), "%s 板遭鎖定文章 - %s", currboard, fhdr->title);
 	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] != -1; i++)
