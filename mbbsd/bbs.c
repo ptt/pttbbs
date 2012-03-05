@@ -1162,7 +1162,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
                   currboard, brd, fh.filename, fh.title);
     }
 
-#ifndef USE_LIVE_ALLPOST
+#ifdef USE_LIVE_ALLPOST
     if (strcmp(brd, BN_ALLPOST) != 0)
 #endif
     Copy(fpath, genbuf);
