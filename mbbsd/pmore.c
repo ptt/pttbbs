@@ -3030,8 +3030,8 @@ pmore_Preference()
 static const char 
 *hlp_basic[] = {
     "【基本移動】", NULL,
-    "  下翻一頁", "^F → PgUp Space",
-    "  上翻一頁", "^B ^H PgDn BS",
+    "  下翻一頁", "^F → PgDn Space",
+    "  上翻一頁", "^B ^H PgUp BS",
     "  下捲一行", " j ↓",
     "  上捲一行", " k ↑",
     "  檔案結尾", " $ G  End",
