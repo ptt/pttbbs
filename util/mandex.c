@@ -80,6 +80,7 @@ man_index(const char * brdname)
     struct stat st;
     fileheader_t fhdr;
     const boardheader_t *bptr;
+    char filemode = 0;
 
     if ((i = getbnum(brdname)) == 0)
 	return;
@@ -134,6 +135,8 @@ man_index(const char * brdname)
 	}
 	i++;
     }
+    if (index_pos >= 0)
+        filemode = fhdr.filemode;
 
     p = strrchr(buf, '/');
     *p = '\0';
@@ -142,6 +145,7 @@ man_index(const char * brdname)
     symlink(fn_index, buf);
     strlcpy(fhdr.owner, "每天自動更新", sizeof(fhdr.owner));
     snprintf(fhdr.title, sizeof(fhdr.title), "%s (%.1fk)", index_title, st.st_size / 1024.);
+    fhdr.filemode = filemode;
 
     sprintf(buf, "%s.new", fpath);
 
