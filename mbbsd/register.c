@@ -737,6 +737,23 @@ new_register(void)
 	exit(1);
     }
     log_usies("REGISTER", fromhost);
+
+    // 確實的把舊資料清掉
+    {
+        char home[PATHLEN], tmp[PATHLEN];
+        syncnow();
+        sethomepath(home, newuser.userid);
+        sprintf(tmp, "tmp/%s.%d", newuser.userid, now);
+        if (dashd(home) && Rename(home, tmp) != 0) {
+            // failed to active account.
+            pwcuBitDisableLevel(PERM_BASIC);
+            log_filef("log/home_fail.log", LOG_CREAT,
+                      "%s: failed to remove.\n", newuser.userid);
+            vmsg("抱歉，系統出錯，此帳號已鎖定。");
+            exit(0);
+        }
+    }
+
 #ifdef USE_REMOVEBM_ON_NEWREG
     {
         char buf[PATHLEN];
