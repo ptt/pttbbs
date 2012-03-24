@@ -217,6 +217,12 @@ static int currlistmode = LISTMODE_DATE;
 void
 anticrosspost(void)
 {
+    // probably failure here.
+    if (HasUserPerm(PERM_ADMIN | PERM_MANAGER)) {
+        vmsg("系統可能誤判您 CP, 為避免出錯先行斷線");
+        exit(0);
+    }
+
     log_filef("etc/illegal_money",  LOG_CREAT,
              ANSI_COLOR(1;33;46) "%s "
              ANSI_COLOR(37;45) "cross post 文章 "
@@ -2233,18 +2239,20 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	// update crosspost record
 	if (is_BM_cache(xbid)) {
 	    // ignore BM for cross-posting.
-	    outs(ANSI_COLOR(1;32) "此篇為板主轉錄，不自動檢查也不計入CP" 
+	    outs(ANSI_COLOR(1;32)
+                 "此篇為板主轉錄，不自動檢查CP(但請小心誤觸人工檢舉)\n" 
 		 ANSI_RESET);
 #ifdef USE_POSTRECORD
-	} else if (hashPost == postrecord.checksum[0]) 
+	} else if (!HasUserPerm(PERM_ADMIN | PERM_MANAGER) &&
+                   hashPost == postrecord.checksum[0]) 
 	    // && xbid != postrecord.last_bid)
 	{
 	    ++postrecord.times; // check will be done next time.
 
-	    if (postrecord.times == MAX_CROSSNUM) 
+	    if (postrecord.times +1 >= MAX_CROSSNUM) 
 	    {
 		outs(ANSI_COLOR(1;31) " 警告: 即將達到轉錄次數上限，"
-			"下次將開罰單!" ANSI_RESET);
+                     "之後可能開罰單!\n" ANSI_RESET);
 	    }
 	} else {
 	    // reset cross-post record
