@@ -174,6 +174,8 @@ usercomplete2(const char *prompt, char *data, const char *defval)
 {
     struct Vector namelist;
 
+    // TODO namecomplete3 會把 namelist 東西全部 dupe 一份，在大站上作個幾百次
+    // 就 over cpu computation limit 了； we need a better implementation.
     Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
     namecomplete3(&namelist, prompt, data, defval);
 }

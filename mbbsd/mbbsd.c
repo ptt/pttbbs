@@ -1009,6 +1009,10 @@ check_BM(void)
 
     // disable BM permission
     pwcuBitDisableLevel(PERM_BM);
+    clear();
+    outs("\n由於您已有一段時間未再擔任任何看板板主，\n"
+         "\n板主權(包含進入BM板及加大信箱等)已被收回。\n");
+    pressanykey();
 }
 
 static void
