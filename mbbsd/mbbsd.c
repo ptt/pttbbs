@@ -212,12 +212,6 @@ u_exit(const char *mode)
     pwcuExitSave();
     setutmpbid(0);
 
-    if (!SHM->GV2.e.shutdown) {
-	if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
-		!currutmp->invisible)
-	    do_aloha("<<下站通知>> -- 我走囉！");
-    }
-
     purge_utmp(currutmp);
     log_usies(mode, NULL);
 }
