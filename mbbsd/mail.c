@@ -913,7 +913,7 @@ multi_list(struct Vector *namelist, int *recipient)
 	    ToggleVector(namelist, recipient, genbuf, msg_cc);
 	    break;
 	case 'o':
-	    setuserfile(genbuf, "alohaed");
+	    setuserfile(genbuf, FN_ALOHAED);
 	    ToggleVector(namelist, recipient, genbuf, msg_cc);
 	    break;
 	case 'q':

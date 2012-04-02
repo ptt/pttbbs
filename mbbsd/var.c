@@ -417,8 +417,8 @@ const char     * const bw_chess[] = {"¡³", "¡´", "¡C", "¡E"};
 char           *friend_file[8] = {
     FN_OVERRIDES,
     FN_REJECT,
-    "alohaed",
-    "postlist",
+    FN_ALOHAED
+    "", /* deprecated: post list */
     "", /* may point to other filename */
     FN_CANVOTE,
     FN_WATER,

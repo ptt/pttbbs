@@ -26,6 +26,8 @@
 #define FN_BANNED_HISTORY "banned.history"  // 新水桶之歷史記錄
 #define FN_CANVOTE      "can_vote"
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
+#define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
+#define FN_ALOHA        "aloha"         // 我上站要通知的名單 (自動產生)
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"          /* board list */
@@ -299,7 +301,7 @@
 #define __toSTR(x)	#x
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
 
-#define LOG_IF(x, y)    { if (x) { y; } else {} }
+#define LOG_IF(x, y)    { if ((x)) { y; } else {} }
 
 
 #endif

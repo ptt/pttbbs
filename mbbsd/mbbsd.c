@@ -1457,7 +1457,7 @@ do_aloha(const char *hello)
     char            userid[80];
     char            genbuf[200];
 
-    setuserfile(genbuf, "aloha");
+    setuserfile(genbuf, FN_ALOHA);
     if ((fp = fopen(genbuf, "r"))) {
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;

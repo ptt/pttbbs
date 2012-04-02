@@ -40,7 +40,7 @@ static char    * const friend_list[8] = {
     "好友名單",
     "壞人名單",
     "上線通知",
-    "新文章通知",
+    "",
     "其它特別名單",
     "私人投票名單",
     "看板舊水桶名單",
@@ -139,7 +139,7 @@ friend_append(int type, int count)
 	move(2, 0);
 	clrtobot();
 	outs("要引入哪一個名單?\n");
-	for (j = i = 0; i <= 4; i++)
+	for (j = i = 0; i < 4; i++)
 	    if (i != type) {
 		++j;
 		prints("  (%d) %-s\n", j, friend_list[(int)i]);
@@ -329,7 +329,7 @@ delete_user_friend(const char *uident, const char *thefriend, int type GCC_UNUSE
     // some stupid user simply set themselves and caused recursion here.
     if (strcasecmp(uident, thefriend) == 0)
         return;
-    sethomefile(fn, uident, "aloha");
+    sethomefile(fn, uident, FN_ALOHA);
     delete_friend_from_file(fn, thefriend, 0);
 }
 
@@ -595,7 +595,7 @@ friend_edit(int type)
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, sizeof(line), fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident, "aloha");
+		    sethomefile(genbuf, uident, FN_ALOHA);
 		    del_distinct(genbuf, cuser.userid, 0);
 		}
 		fclose(fp);
@@ -604,7 +604,7 @@ friend_edit(int type)
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident, "aloha");
+		    sethomefile(genbuf, uident, FN_ALOHA);
 		    add_distinct(genbuf, cuser.userid);
 		}
 		fclose(fp);
@@ -678,7 +678,7 @@ t_fix_aloha()
     outs("檢查中...\n");
 
     // xid in my override list?
-    setuserfile(fn, "alohaed");
+    setuserfile(fn, FN_ALOHAED);
     if (file_exist_record(fn, xid))
     {
 	prints(ANSI_COLOR(1;32) "[%s] 確實在你的上站通知名單內。"
@@ -687,7 +687,7 @@ t_fix_aloha()
 	return 0;
     }
 
-    sethomefile(fn, xid, "aloha");
+    sethomefile(fn, xid, FN_ALOHA);
     if (delete_friend_from_file(fn, cuser.userid, 0))
     {
 	outs(ANSI_COLOR(1;33) "已找到錯誤並修復完成。" ANSI_RESET "\n");
