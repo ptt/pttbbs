@@ -489,6 +489,10 @@ file_delete_record(const char *file, const char *string, int case_sensitive)
 	    }
 	    // other wise, keep the line.
 	    fputs(buf, nfp);
+            // Fix broken records (ex, deprecated "distinct" files in format
+            // "%s\0#%s\n".
+            if (*buf && buf[strlen(buf) - 1] != '\n')
+                fputc('\n', nfp);
 	}
 	fclose(nfp); nfp = NULL;
 	if (i > 0)

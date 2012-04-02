@@ -596,7 +596,7 @@ friend_edit(int type)
 		while (fgets(line, sizeof(line), fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident, FN_ALOHA);
-		    del_distinct(genbuf, cuser.userid, 0);
+                    file_delete_record(genbuf, cuser.userid, 0);
 		}
 		fclose(fp);
 	    }
@@ -605,7 +605,7 @@ friend_edit(int type)
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident, FN_ALOHA);
-		    add_distinct(genbuf, cuser.userid);
+                    file_append_record(genbuf, cuser.userid);
 		}
 		fclose(fp);
 	    }
