@@ -5,6 +5,12 @@ $Id$
 以 root 的權限
 ==============
 
+ 在主機上加入兩個 UID 為 9999 的帳號，分別取名為 bbs 與 bbsadm。
+ 家目錄設為 /home/bbs，Group 則取名叫 bbs，GID=99。
+ bbs 的 shell 設成 /home/bbs/bin/bbsrf，不設密碼。
+ bbsadm 的 shell 設成 /bin/sh (或 csh/bash, 選喜歡的即可)並設定密碼。
+
+ 以 FreeBSD 為例:
  1. 打 vipw, 加入底下兩行
 
     bbs::9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
@@ -18,6 +24,9 @@ $Id$
  4. 執行 mkdir /home/bbs
  5. 執行 chown bbs:bbs /home/bbs
  6. 執行 chmod 700 /home/bbs
+
+ 當然，你也可以用 adduesr 或 useradd 等等程式幫忙建立與設定。
+ 其它環境 (如 Debian 等 Linux) 請自行參照相關作業系統使用說明。
 
 ====================
 以下用 bbsadm 的身份
