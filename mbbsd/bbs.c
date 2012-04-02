@@ -644,12 +644,6 @@ readdoent(int num, fileheader_t * ent)
 	{
 	    oisunread = isunread = 0;
 	}
-	// if user wants colored marks, use 'read' marks
-	else if (HasUserFlag(UF_COLORED_MODMARK))
-	{
-	    isunread = 0;
-	    typeattr = ANSI_COLOR(36);
-	}
     }
 
     // handle 'type'
