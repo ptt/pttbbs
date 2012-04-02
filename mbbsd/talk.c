@@ -1894,15 +1894,16 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
     char xmind[5+10] = ANSI_COLOR(33);
     char *mind = xmind+strlen(xmind);
-    char     description[30];
-
-#ifdef SHOW_IDLE_TIME
-    char            idlestr[32];
-    int             idletime;
-#endif
+    char description[30];
+    char idlestr[32];
+    int idletime = 0;
 
     static int scrw = 0, scrh = 0;
     static VCOLW cols[ULISTCOLS];
+
+#ifdef SHOW_IDLE_TIME
+    idletime = 1;
+#endif
 
     // re-layout if required.
     if (scrw != t_columns || scrh != t_lines)
@@ -1918,17 +1919,15 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	move(2, 0);
 	outs(ANSI_REVERSE);
 	vs_cols(ulist_coldef, cols, ULISTCOLS,
+                // Columns Header (9 args)
 		show_uid ? "UID" : "編號",
-		"P", "代號", "暱稱",
+		"P",
+                "代號",
+                "暱稱",
 		MODE_STRING[show_mode],
 		show_board ? "看板" : "動態",
-		// because this field has ANSI...
 		show_pid ? "PID" : "心情",
-#ifdef SHOW_IDLE_TIME
-		"發呆",
-#else
-		"    ",
-#endif
+                idletime ? "發呆": "",
 		"");
 	outs(ANSI_RESET);
 
@@ -1994,6 +1993,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	else
 	    state = (friend & ST_FRIEND) >> 2;
 
+        idlestr[0] = 0;
 #ifdef SHOW_IDLE_TIME
 	idletime = (now - uentp->lastact);
 	if (idletime > DAY_SECONDS)
@@ -2004,8 +2004,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	else if (idletime > 0)
 	    snprintf(idlestr, sizeof(idlestr), "%d'%02d",
 		     idletime / 60, idletime % 60);
-	else
-	    idlestr[0] = 0;
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
@@ -2032,23 +2030,21 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		    fcolor[state], uentp->userid);
 
 	vs_cols(ulist_coldef, cols, ULISTCOLS,
-		num, pager, 
+                // Columns data (9 params)
+		num,
+                pager, 
 		fcolor[state] ? xuid : uentp->userid, 
 		uentp->nickname,
-		descript(show_mode, uentp,
-		    uentp->pager & !(friend & HRM), description, sizeof(description)),
+                descript(show_mode, uentp, uentp->pager & !(friend & HRM),
+                         description, sizeof(description)),
 #if defined(SHOWBOARD) && defined(DEBUG)
 		show_board ? (uentp->brc_id == 0 ? "" :
 		    getbcache(uentp->brc_id)->brdname) :
 #endif
-		modestring(uentp, 0),
+                    modestring(uentp, 0),
 		*mind ? xmind : "",
-#ifdef SHOW_IDLE_TIME
-		idlestr
-#else
-		""
-#endif
-	       );
+		idlestr,
+	        "");
     }
 }
 
