@@ -56,11 +56,12 @@ $Id$
     通常您須要進行修改以符合您的須求.
 
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
-    * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake, 然後將 make alias 成 pmake *
+    * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake,
+      然後將 make alias 成 pmake *
  11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, zip, pgp
     如果您使用的是 FreeBSD, 可以直接透過 ports安裝:
         cd /usr/ports/converters/libiconv; make install
-        cd /usr/ports/archivers/autoconvert; make install
+        cd /usr/ports/archivers/zip; make install
         cd /usr/ports/security/pgp; make install
  12. (在 ~bbs/pttbbs 下)  執行 make BBSHOME=/home/bbs all install
  13.如果是新架起來的站, 請執行 cd sample; make install
@@ -71,7 +72,7 @@ $Id$
 假如一切都很順利的話, 這樣子大概就安裝完了, 接下來是啟動 bbs 的部份.
 
  15.執行 bin/shmctl init (*註1, *註2)
- 16.用 root 執行 bin/mbbsd -p 23 -d (註2)
+ 16.用 root 執行 bin/mbbsd -p 23 -d (*註3)
     其中 -d 是指定 daemon mode. 若連線有問題需要方便測試時可以先不加 -d，
     用別窗直接進行連線以方便找出問題。
  17.測試整個系統是否完成:
@@ -105,10 +106,6 @@ $Id$
     另外列出我們 perl script會用到的 perl module, 以 FreeBSD ports相對目錄.
 	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
 	IO::All		/usr/ports/devel/p5-IO-All/
- 22.若您有安裝 Blog 相關功能, 您需要先產生一個預設的 Blog 目錄
-    您可以參考批踢踢兔(telnet://ptt2.cc), Blog看板下的 Blog.Default 目錄,
-    並且拷貝一份或透過 symbolic link的方式放到 etc/Blog.Default.
-    同時將 sample/README.BLOG 拷貝到 etc/ 下.
 
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
@@ -124,9 +121,11 @@ $Id$
 3. bin/mbbsd -p 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,
    3000 port 則不需要.
-   請參考 docs/ADVANCE , 安裝好 bbsctl ,
+   請參考 docs/ADVANCE 安裝好 bbsctl ,
    之後您就可以透過 bbsctl 直接在其他權限下 (如 bbsadm )
    來啟動可以 bind port 23 的 mbbsd.
+   對於 ptt/ptt2 規模的超級大站，還有另一個選擇是使用 daemon/logind 。
+
 4. 您必須先安裝 subversion (請參考官方網站 http://subversion.tigris.org/ )
    在 FreeBSD底下, 直接使用 ports 安裝即可:
        cd /usr/ports/devel/subversion/; make all install
