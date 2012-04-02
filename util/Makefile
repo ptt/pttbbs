@@ -42,12 +42,13 @@ PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	rebuildaloha.pl timecap_expire.sh
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
+LDLIBS:=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a
+	$(SRCROOT)/common/osdep/libosdep.a \
+	$(LDLIBS)
 
-
-all: ${SRCROOT}/include/var.h ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
+all: ${SRCROOT}/include/var.h \
+     ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}

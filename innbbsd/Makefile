@@ -38,9 +38,10 @@ ${UTIL_DIR}/${fn}:	# FIXME: dependency
 	cd ${UTIL_DIR}; make ${fn}
 .endfor
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
+LDLIBS:=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a	
+	$(SRCROOT)/common/osdep/libosdep.a \
+	$(LDLIBS)
 
 echobbslib.o:	echobbslib.c
 	${CC} ${CFLAGS} -DWITH_ECHOMAIL -c echobbslib.c
