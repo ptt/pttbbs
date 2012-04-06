@@ -17,7 +17,7 @@
 
 #define SOCKET_QLEN 4
 
-static void do_aloha(const char *hello);
+void do_aloha(const char *hello);
 static void getremotename(const struct in_addr from, char *rhost);
 
 //////////////////////////////////////////////////////////////////
@@ -397,9 +397,11 @@ talk_request(int sig GCC_UNUSED)
 void
 show_call_in(int save, int which)
 {
-    char            buf[200];
+    char buf[200];
+    int mode = currutmp->msgs[which].msgmode;
+
 #ifdef PLAY_ANGEL
-    if (currutmp->msgs[which].msgmode == MSGMODE_TOANGEL)
+    if (mode == MSGMODE_TOANGEL)
         snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "¡¹%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET,
                  currutmp->msgs[which].userid,
@@ -411,7 +413,7 @@ show_call_in(int save, int which)
              currutmp->msgs[which].last_call_in);
     outmsg(buf);
 
-    if (save) {
+    if (save && mode != MSGMODE_ALOHA) {
 	char            genbuf[200];
 	if (!fp_writelog) {
 	    sethomefile(genbuf, cuser.userid, fn_writelog);
@@ -1359,7 +1361,7 @@ user_login(void)
     }
 }
 
-static void
+void
 do_aloha(const char *hello)
 {
     FILE           *fp;
@@ -1370,10 +1372,12 @@ do_aloha(const char *hello)
     if ((fp = fopen(genbuf, "r"))) {
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
+            chomp(userid);
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
                 isvisible(uentp, currutmp) &&
                 strcasecmp(uentp->userid, cuser.userid) != 0) {
-		my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA, uentp);
+                my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA,
+                         uentp);
 	    }
 	}
 	fclose(fp);

@@ -310,6 +310,7 @@ typedef struct fileheader_t { /* 128 bytes */
 #define MSGMODE_WRITE     1
 #define MSGMODE_FROMANGEL 2
 #define MSGMODE_TOANGEL   3
+#define MSGMODE_ALOHA     4
 
 typedef struct msgque_t {
     pid_t   pid;

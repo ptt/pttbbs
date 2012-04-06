@@ -236,6 +236,7 @@ process_pager_keys(int ch)
 		switch (currutmp->msgs[0].msgmode) {
 		    case MSGMODE_TALK:
 		    case MSGMODE_WRITE:
+		    case MSGMODE_ALOHA:
 			my_write(currutmp->msgs[0].pid, "水球丟過去： ",
 				 currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
 			break;

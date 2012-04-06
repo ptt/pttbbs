@@ -687,10 +687,7 @@ my_write2(void)
             SOLVE_ANSI_CACHE();
 	    outs(ANSI_RESET);
 	    clrtoeol();
-#ifndef PLAY_ANGEL
-	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
-	    i = WATERBALL_CONFIRM;
-#else
+#ifdef PLAY_ANGEL
 	    if (tw->msg[0].msgmode == MSGMODE_WRITE) {
 		snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
 		i = WATERBALL_CONFIRM;
@@ -701,6 +698,9 @@ my_write2(void)
 		strlcpy(genbuf, "再問他一次：", sizeof(genbuf));
 		i = WATERBALL_CONFIRM_ANGEL;
 	    }
+#else
+	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+	    i = WATERBALL_CONFIRM;
 #endif
 	    if (!getdata_buf(0, 0, genbuf, msg,
 			80 - strlen(tw->userid) - 6, DOECHO))
@@ -871,7 +871,8 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    // check if user is changed of angelpause.
 	    // XXX if flag == WATERBALL_ANGEL, shuold be (uin->angelpause) only.
 	    ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-	     && (strcasecmp(cuser.myangel, uin->userid) || uin->angelpause >= ANGELPAUSE_REJALL)
+             && (strcasecmp(cuser.myangel, uin->userid) ||
+                 uin->angelpause >= ANGELPAUSE_REJALL)
 #endif
 	    )) {
 	bell();
@@ -940,26 +941,30 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 		    sizeof(uin->msgs[write_pos].userid));
 	    else
 #endif
-		strlcpy(uin->msgs[write_pos].userid, cuser.userid,
-			sizeof(uin->msgs[write_pos].userid));
+            strlcpy(uin->msgs[write_pos].userid, cuser.userid,
+                    sizeof(uin->msgs[write_pos].userid));
 	    strlcpy(uin->msgs[write_pos].last_call_in, msg,
 		    sizeof(uin->msgs[write_pos].last_call_in));
-#ifndef PLAY_ANGEL
-	    uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
-#else
 	    switch (flag) {
+#ifdef PLAY_ANGEL
 		case WATERBALL_ANGEL:
 		case WATERBALL_CONFIRM_ANGEL:
 		    uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
 		    break;
+
 		case WATERBALL_ANSWER:
 		case WATERBALL_CONFIRM_ANSWER:
 		    uin->msgs[write_pos].msgmode = MSGMODE_FROMANGEL;
 		    break;
-		default:
-		    uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
-	    }
 #endif
+                case WATERBALL_ALOHA:
+                    uin->msgs[write_pos].msgmode = MSGMODE_ALOHA;
+                    break;
+
+                default:
+                    uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
+                    break;
+            }
 	    uin->pager = pager0;
 	} else if (flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
