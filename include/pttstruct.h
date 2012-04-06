@@ -42,7 +42,8 @@ typedef struct chicken_t { /* 128 bytes */
     int32_t mm;               /* 法力 */
     int32_t mm_max;           /* 滿法力 */
     time4_t cbirth;           /* 實際計算用的生日 */
-    int32_t pad[2];           /* 留著以後用 */
+    int32_t commonsense;      /* 常識點數 */
+    int32_t pad[1];           /* 留著以後用 */
 } PACKSTRUCT chicken_t;
 
 #define PASSLEN    14             /* Length of encrypted passwd field */
