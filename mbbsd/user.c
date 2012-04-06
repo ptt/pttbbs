@@ -444,7 +444,7 @@ void Customize(void)
 	"MYFAV      新板自動進我的最愛",
 	"MYFAV      單色顯示我的最愛",
 	"MODMARK    隱藏文章修改符號(推文/修文) (~)",
-	"MODMARK    停止使用色彩代替修改符號 (+)",
+	"MODMARK    使用色彩代替修改符號 (+)",
 #ifdef DBCSAWARE
 	"DBCS       自動偵測雙位元字集(如全型中文)",
 	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
@@ -470,8 +470,6 @@ void Customize(void)
 	for (i = 0; masks1[i]; i++, ia++)
 	{
 	    clrtoeol();
-            if (masks1[i] == UF_COLORED_MODMARK)
-                continue;
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-*s%s\n",
 		    'a' + ia, 
@@ -523,9 +521,6 @@ void Customize(void)
 	    /* normal pref */
 	    key -= 'a';
 	    dirty = 1;
-            if (masks1[key] == UF_COLORED_MODMARK &&
-                !HasUserFlag(UF_COLORED_MODMARK))
-                continue;
 	    pwcuToggleUserFlag(masks1[key]);
 	    continue;
 	}
