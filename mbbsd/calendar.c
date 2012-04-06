@@ -1,6 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
+// TODO deprecate this file.
+
 typedef struct event_t {
     int             year, month, day, days;
     int             color;
