@@ -139,6 +139,8 @@ friend_append(int type, int count)
 	move(2, 0);
 	clrtobot();
 	outs("要引入哪一個名單?\n");
+
+        // TODO make the selection algorithm better here.
 	for (j = i = 0; i < 4; i++)
 	    if (i != type) {
 		++j;
@@ -178,6 +180,8 @@ friend_append(int type, int count)
     if (j == FRIEND_SPECIAL)
 	friend_special();
 
+    if (!friend_file[j])
+        return;
     setfriendfile(sfile, j);
 
     if ((fp = fopen(sfile, "r")) != NULL) {
