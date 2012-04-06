@@ -686,7 +686,6 @@ static const commands_t talklist[] = {
     {t_talk, PERM_LOGINOK,  "Talk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "Chat          【" BBSMNAME2 "多人聊天室】"},
-    {t_pager, PERM_BASIC,   "Pager         切換呼叫器"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {a_changeangel, 
@@ -694,7 +693,6 @@ static const commands_t talklist[] = {
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
                             "BAngel Beats! 天使公會"},
 #endif
-    {t_display, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 
@@ -784,7 +782,6 @@ static const commands_t userlist[] = {
     {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
-    {u_cloak,	    PERM_LOGINOK,   "KCloak        隱身術"},
     {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},
