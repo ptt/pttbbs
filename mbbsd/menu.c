@@ -612,6 +612,19 @@ view_user_login_log() {
 static int x_admin_money(void);
 static int x_admin_user(void);
 
+static int deprecate_userlist() {
+    vs_hdr2(" " BBSNAME " ", " 已移至使用者名單");
+    outs("\n"
+         "此功\能已移至使用者名單區。\n"
+         "請至使用者名單 (Ctrl-U) 並按下對應的鍵。\n"
+         "(在使用者名單按 h 會有完整說明)\n\n"
+         "切換呼叫器:     Ctrl-U p\n"
+         "隱身術:         Ctrl-U C\n"
+         "顯示上幾次熱訊: Ctrl-U l\n");
+    pressanykey();
+    return FULLUPDATE;
+}
+
 // ----------------------------------------------------------- MENU DEFINITION
 // 注意每個 menu 最多不能同時顯示超過 11 項 (80x24 標準大小的限制)
 
@@ -686,6 +699,7 @@ static const commands_t talklist[] = {
     {t_talk, PERM_LOGINOK,  "Talk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "Chat          【" BBSMNAME2 "多人聊天室】"},
+    {deprecate_userlist, 0, "Pager         切換呼叫器"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {a_changeangel, 
@@ -693,6 +707,7 @@ static const commands_t talklist[] = {
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
                             "BAngel Beats! 天使公會"},
 #endif
+    {deprecate_userlist, 0, "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 
@@ -782,6 +797,7 @@ static const commands_t userlist[] = {
     {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
+    {deprecate_userlist,       0,   "KCloak        隱身術"}, 
     {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},

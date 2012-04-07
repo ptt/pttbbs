@@ -758,7 +758,8 @@ new_register(void)
     {
         char buf[PATHLEN];
         snprintf(buf, sizeof(buf),
-                 BBSHOME "/bin/removebm '%s' >/dev/null 2>&1",
+                 BBSHOME "/bin/removebm '%s' >>"
+                 BBSHOME "/log/removebm.log 2>&1",
                  newuser.userid);
         system(buf);
     }
