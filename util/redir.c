@@ -12,7 +12,7 @@ int in_spam(const fileheader_t *fh) {
 	    strcmp(fh->title, "Undelivered Mail Returned to Sender") == 0) ||
 
 	   // let's also remove dangerous birthday links
-	   (strcmp(fh->owner, "批踢踢實業坊") == 0 &&
+	   (strcmp(fh->owner, BBSNAME) == 0 &&
 	    strcmp(fh->title, "!! 生日快樂 !!") == 0) ||
 	   0;
 }
@@ -38,7 +38,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
         if (!should_remove && remove_days > 0 && strlen(fh.filename) > 2 &&
             fh.filename[1] == '.') {
             int ts = atoi(fh.filename + 2);
-            if (ts < now - 86400 * remove_days)
+            if (ts < now - DAY_SECONDS * remove_days)
                 should_remove = 1;
         }
 
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     int remove_spam = 0, remove_days = 0, remove_deleted = 0;
     int verbose = 0;
 
-    while ((opt = getopt(argc, argv, "sedv:")) != -1) {
+    while ((opt = getopt(argc, argv, "vsed:")) != -1) {
         switch (opt) {
             case 's':
                 remove_spam = 1;
