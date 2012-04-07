@@ -622,7 +622,7 @@ static int deprecate_userlist() {
          "隱身術:         Ctrl-U C\n"
          "顯示上幾次熱訊: Ctrl-U l\n");
     pressanykey();
-    return FULLUPDATE;
+    return 0;
 }
 
 // ----------------------------------------------------------- MENU DEFINITION
@@ -699,7 +699,6 @@ static const commands_t talklist[] = {
     {t_talk, PERM_LOGINOK,  "Talk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "Chat          【" BBSMNAME2 "多人聊天室】"},
-    {deprecate_userlist, 0, "Pager         切換呼叫器"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {a_changeangel, 
@@ -707,6 +706,7 @@ static const commands_t talklist[] = {
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
                             "BAngel Beats! 天使公會"},
 #endif
+    {deprecate_userlist, 0, "Pager         切換呼叫器"},
     {deprecate_userlist, 0, "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
@@ -743,8 +743,7 @@ static int u_view_recentpay()
 {
     char fn[PATHLEN];
     clear();
-    mvouts(10, 5, "注意: 本記錄尚於測試中，可能會有未記錄到的交易記錄。");
-    mvouts(11, 5, "      此處內容僅供參考，實際" MONEYNAME 
+    mvouts(10, 5, "注意: 此處內容僅供參考，實際" MONEYNAME 
                         "異動以站方內部資料為準");
     pressanykey();
     setuserfile(fn, FN_RECENTPAY);
@@ -797,11 +796,11 @@ static const commands_t userlist[] = {
     {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
-    {deprecate_userlist,       0,   "KCloak        隱身術"}, 
     {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},
 #endif // ASSESS
+    {deprecate_userlist,       0,   "KCloak        隱身術"}, 
     {NULL, 0, NULL}
 };
 

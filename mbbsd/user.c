@@ -1262,13 +1262,6 @@ u_info(void)
     return 0;
 }
 
-int
-u_cloak(void)
-{
-    outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
-    return XEASY;
-}
-
 void
 showplans_userec(userec_t *user)
 {
