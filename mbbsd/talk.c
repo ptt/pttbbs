@@ -1102,14 +1102,16 @@ t_display_new(void)
 }
 
 int
-t_display(void)
-{
-    char            genbuf[200], ans[4];
+t_display(void) {
+    char genbuf[PATHLEN], ans[4];
     if (fp_writelog) {
-	fclose(fp_writelog);
-	fp_writelog = NULL;
+        fflush(fp_writelog);
     }
     setuserfile(genbuf, fn_writelog);
+    if (dashs(genbuf) < 1) {
+        vmsg("暫無訊息記錄");
+        return FULLUPDATE;
+    }
     if (more(genbuf, YEA) != -1) {
 	grayout(0, b_lines-5, GRAYOUT_DARK);
 	move(b_lines - 4, 0);
@@ -1126,8 +1128,7 @@ t_display(void)
 		unlink(genbuf);
 	    else
 		vmsg("信箱儲存失敗。");
-	} else if (*ans == 'c')
-	{
+	} else if (*ans == 'c') {
 	    getdata(b_lines - 1, 0, "確定清除？(y/N) [N] ",
 	            ans, sizeof(ans), LCECHO);
 	    if(*ans == 'Y' || *ans == 'y')
