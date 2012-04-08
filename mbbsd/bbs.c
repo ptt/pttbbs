@@ -2239,10 +2239,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	// update crosspost record
 	if (is_BM_cache(xbid)) {
+#ifdef NOTIFY_BM_CP_IGNORE
 	    // ignore BM for cross-posting.
 	    outs(ANSI_COLOR(1;32)
                  "此篇為板主轉錄，不自動檢查CP(但請小心誤觸人工檢舉)\n" 
 		 ANSI_RESET);
+#endif
 #ifdef USE_POSTRECORD
 	} else if (!HasUserPerm(PERM_ADMIN | PERM_MANAGER) &&
                    hashPost == postrecord.checksum[0]) 

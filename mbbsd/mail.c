@@ -1918,9 +1918,11 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 #ifdef USE_POSTRECORD
     // XXX 板主常會把一系列文章轉回自己看板
     if (is_BM_cache(xbid)) {
+#ifdef NOTIFY_BM_CP_IGNORE
 	// ignore cross-post for BM
 	move(1, 0); SOLVE_ANSI_CACHE();
 	prints("板主轉錄(不自動檢查CP)至看板: %s\n", xboard);
+#endif
     } else {
 	// process and determine 'cross-post'
 	

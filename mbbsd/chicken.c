@@ -898,7 +898,6 @@ recover_chicken(chicken_t * thechicken)
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
 
-    // 把靈界守衛搞成偽水球實在是很腦殘的主意
     vs_hdr2(" 養雞場 ", " 復活寵物");
     prints("\n你有一個剛死亡不久的 %s 要招喚回來嗎? 只要 %d 元唷...\n",
            chicken_type[(int)thechicken->type], price);
