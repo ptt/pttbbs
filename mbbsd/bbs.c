@@ -88,7 +88,7 @@ static int
 cp_IsHiddenBoard(const boardheader_t *bp)
 {
     // rules: see HasBoardPerm().
-    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))
 	return 1;
     if (bp->level && !(bp->brdattr & BRD_POSTMASK))
 	return 1;
@@ -1096,9 +1096,10 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     if (cp_IsHiddenBoard(getbcache(brd_id)))
         return;
 
+    syncnow();
     memcpy(&fh, postfile, sizeof(fileheader_t));
     fh.filemode = FILE_LOCAL;
-    // TODO trust fh.owner?
+    fh.modified = now;
     strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
     strlcpy(genbuf, title, len + 1);
     if (strlen(title) > len) {

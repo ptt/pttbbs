@@ -19,7 +19,7 @@ int in_spam(const fileheader_t *fh) {
 
 int process(FILE *fin, FILE *fout, const char *index_path,
             int *pkeep, int remove_spam, int remove_days,
-            int remove_deleted) {
+            int remove_deleted, int remove_modified_days) {
 
     char file_path[PATHLEN];
     fileheader_t fh;
@@ -34,6 +34,11 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 
 	if (!should_remove && remove_spam && in_spam(&fh))
             should_remove = 1;
+
+        if (!should_remove && remove_modified_days > 0 && fh.modified) {
+            if (fh.modified < now - DAY_SECONDS * remove_modified_days)
+                should_remove = 1;
+        }
 
         if (!should_remove && remove_days > 0 && strlen(fh.filename) > 2 &&
             fh.filename[1] == '.') {
@@ -50,7 +55,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 	    if (!fout)
 		return 1;
 
-	    printf("%s: %s %s\n", file_path, fh.filename, fh.title);
+	    printf("%s: %s %d %s\n", file_path, fh.filename, fh.modified, fh.title);
 	    unlink(file_path);
 	    num_remove++;
 	    if (!fout)
@@ -81,10 +86,11 @@ int main(int argc, char **argv)
     int opt;
     int num_keep = 0, num_remove = 0;
     FILE *fin;
-    int remove_spam = 0, remove_days = 0, remove_deleted = 0;
+    int remove_spam = 0, remove_days = 0, remove_deleted = 0,
+        remove_modified_days = 0;
     int verbose = 0;
 
-    while ((opt = getopt(argc, argv, "vsed:")) != -1) {
+    while ((opt = getopt(argc, argv, "vsed:m:")) != -1) {
         switch (opt) {
             case 's':
                 remove_spam = 1;
@@ -92,6 +98,10 @@ int main(int argc, char **argv)
 
             case 'd':
                 remove_days = atoi(optarg);
+                break;
+
+            case 'm':
+                remove_modified_days = atoi(optarg);
                 break;
 
             case 'e':
@@ -108,7 +118,8 @@ int main(int argc, char **argv)
         }
     }
 
-    if (optind != argc - 1 || remove_days < 0 || optind < 2) {
+    if (optind != argc - 1 || optind < 2 ||
+        remove_days < 0 || remove_modified_days < 0) {
         die_usage(myname);
     }
 
@@ -132,7 +143,8 @@ int main(int argc, char **argv)
     }
 
     if ((num_remove = process(fin, NULL, index_path, &num_keep,
-                              remove_spam, remove_days, remove_deleted))) {
+                              remove_spam, remove_days, remove_deleted,
+                              remove_modified_days))) {
 	char tmp_index_path[PATHLEN];
 	FILE *fout;
 
@@ -145,7 +157,8 @@ int main(int argc, char **argv)
 	}
 	rewind(fin);
 	num_remove = process(fin, fout, index_path, &num_keep,
-                             remove_spam, remove_days, remove_deleted);
+                             remove_spam, remove_days, remove_deleted,
+                             remove_modified_days);
 	fclose(fout);
 	fclose(fin);
 	Rename(tmp_index_path, index_path);
