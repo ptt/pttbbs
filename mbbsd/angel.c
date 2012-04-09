@@ -163,7 +163,7 @@ a_changeangel(){
     char buf[4];
 
     /* cuser.myangel == "-" means banned for calling angel */
-    if (cuser.myangel[0] == '-' || cuser.myangel[1] == 0) return 0;
+    if (cuser.myangel[0] == '-') return 0;
 
     getdata(b_lines - 1, 0,
 	    "传ぱㄏ碞礚猭传翅 琌璶传ぱㄏ [y/N]",
@@ -367,52 +367,6 @@ angel_reject_me(userinfo_t * uin){
 }
 
 static int
-FindAngel_Old(void){
-    int nAngel;
-    int i, j;
-    int choose;
-    int trial = 0;
-    userinfo_t *u;
-
-    do{
-	nAngel = 0;
-	// since we have many, many angels now, let's ignore angels in angelpause state.
-	j = SHM->currsorted;
-	u = NULL;
-	for (i = 0; i < SHM->UTMPnumber; ++i)
-	{
-	    u = &SHM->uinfo[SHM->sorted[j][0][i]];
-	    if ((u->userlevel & PERM_ANGEL) && (!u->angelpause) && (u->mode != DEBUGSLEEPING))
-		++nAngel;
-	}
-
-	if (nAngel == 0)
-	    return 0;
-
-	choose = random() % nAngel + 1;
-	j = SHM->currsorted;
-	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
-	{
-	    u = &SHM->uinfo[SHM->sorted[j][0][i]];
-	    if ((u->userlevel & PERM_ANGEL) && (!u->angelpause) && (u->mode != DEBUGSLEEPING))
-		--choose;
-	}
-
-	// u should be correct now! No need to check angelpause in this time.
-	// u = &(SHM->uinfo[SHM->sorted[j][0][i-1]]);
-	if (choose == 0 && u &&
-		(u->uid != currutmp->uid) &&
-		(u->userlevel & PERM_ANGEL) &&
-		!angel_reject_me(u) &&
-		u->userid[0]){
-	    pwcuSetMyAngel(u->userid);
-	    return 1;
-	}
-    }while(++trial < 5);
-    return 0;
-}
-
-static int
 FindAngel(void){
 
     int angel_uid = 0;
@@ -423,7 +377,7 @@ FindAngel(void){
         angel_uid = angel_beats_do_request(ANGELBEATS_REQ_SUGGEST_AND_LINK,
                                            usernum, 0);
         if (angel_uid < 0)  // connection failure
-            break;
+            return -1;
         if (angel_uid > 0)
             angel = search_ulist(angel_uid);
     } while ((retries-- < 1) && !(angel && (angel->userlevel & PERM_ANGEL)));
@@ -434,8 +388,7 @@ FindAngel(void){
         return 1;
     }
 
-    // not able to find angel beats? try traditional way.
-    return FindAngel_Old();
+    return 0;
 }
 
 #ifdef BN_NEWBIE
@@ -584,10 +537,15 @@ TalkToAngel(){
     }
     AngelPermChecked = 1;
 
-    if (cuser.myangel[0] == 0 && !FindAngel()){
-	lastuent = NULL;
-	NoAngelFound("瞷⊿Τぱㄏ絬");
-	return;
+    if (cuser.myangel[0] == 0) {
+        int ret = FindAngel();
+        if (ret <= 0) {
+            lastuent = NULL;
+            NoAngelFound(
+                (ret < 0) ? "╆簆ぱㄏ╰参珿毁叫" BN_BUGREPORT "厨" :
+                            "瞷⊿Τぱㄏ絬");
+            return;
+        }
     }
 
     // now try to load angel data.
