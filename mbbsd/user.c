@@ -12,6 +12,20 @@ static const char * const chess_type[3] = {
 };
 #endif
 
+void
+ban_usermail(const userec_t *u, const char *reason) {
+    assert(u);
+    if (!(u->userlevel & PERM_LOGINOK))
+        return;
+    if (!strchr(u->email, '@'))
+        return;
+    if (!reason || !*reason)
+        reason = "(站長忘了打)";
+    log_filef("etc/banemail", LOG_CREAT,
+              "# %s: %s (by %s)\nA%s\n",
+              u->userid, reason, cuser.userid, u->email);
+}
+
 int
 kill_user(int num, const char *userid)
 {
@@ -394,6 +408,7 @@ violate_law(userec_t * u, int unum)
 
         kick_all(u->userid);
 	delete_allpost(u->userid);
+        ban_usermail(u, reason);
         kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
     } else {
