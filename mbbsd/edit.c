@@ -1623,13 +1623,12 @@ write_header(FILE * fp,  const char *mytitle)
             char ans[3];
             int use_userid = 1;
 
-#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
+#if defined(PLAY_ANGEL)
             // dirty hack here... sorry
-            if (HasUserPerm(PERM_ANGEL) && currboard &&
-                strcmp(currboard, BN_ANGELPRAY) == 0) {
+            if (HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS)) {
                 angel_load_my_fullnick(default_name, sizeof(default_name));
             }
-#endif // PLAY_ANGEL && BN_ANGELPRAY
+#endif // PLAY_ANGEL
 
             do {
                 getdata_str(3, 0, defanony ? 
