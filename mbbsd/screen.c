@@ -545,10 +545,11 @@ outc(unsigned char c)
 
     // Escape processing is a mess here.  If we don't always invalid ESC,
     // attributes will be not updated if some ouptut generates ESC on same
-    // position; if we do that, cross-line outputs also corrupted, or more:
-    // #1FX6qLcO (PttCurrent).  This has been turned on/off several times - and
-    // I still don't know how to make a perfect workaround.
-    // Well, we probably still need to call SOLVE_ANSI_CACHE everywhere...
+    // position (with extra '[m' on screen); if we do that, cross-line outputs
+    // also corrupted, or more: #1FX6qLcO (PttCurrent).  This has been turned
+    // on/off several times - and I still don't know how to make a perfect
+    // workaround.  Well, we probably still need to call SOLVE_ANSI_CACHE
+    // everywhere...
     if (slp->data[cur_col] != c) {
 	slp->data[cur_col] = c;
 	if (!(slp->mode & MODIFIED))
@@ -558,6 +559,15 @@ outc(unsigned char c)
 	    slp->emod = cur_col;
 	if (cur_col < slp->smod)
 	    slp->smod = cur_col;
+#ifdef USE_ESC_HACK
+        // TODO If anything before cur_col has ESCAPE or if c is the second byte
+        // of a DBCS, re-invalidate whole line.
+        for (i = 0; i < cur_col; i++) {
+            if (slp->data[i] != ESC_CHR)
+                continue;
+            slp->smod = 0;
+        }
+#endif
     }
 
     if(cur_col < scr_cols)
