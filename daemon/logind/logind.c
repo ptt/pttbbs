@@ -40,6 +40,11 @@
 #include <signal.h>
 #include <event.h>
 
+#ifndef FIONWRITE
+#include <linux/sockios.h>
+#define FIONWRITE SIOCOUTQ
+#endif
+
 // XXX should we need to keep this definition?
 #define _BBS_UTIL_C_
 
@@ -104,6 +109,9 @@
 // local definiions
 #define MY_SVC_NAME  "logind"
 #define LOG_PREFIX  "[logind] "
+
+// #define ENABLE_DEBUG_IO
+#define DEBUG_IO_LIMIT (8192)
 
 ///////////////////////////////////////////////////////////////////////
 // global variables
@@ -625,17 +633,24 @@ _set_connection_opt(int sock)
 static int
 _set_tunnel_opt(int sock)
 {
-    // XXX RCVBUF/SNDBUF seems not really required...
-#if 0
-    const int szrecv = 131072, szsend = 131072;
+    int szrecv = 131072, szsend = 131072;
+    int len = 0;
 
-    // adjust transmission window
+    // adjust tunnel transmission window
     if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv)) < 0 ||
         setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend)) < 0)
     {
         fprintf(stderr, LOG_PREFIX "WARNING: "
                 "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n", szsend, szrecv);
     }
+
+#ifdef ENABLE_DEBUG_IO
+    len = sizeof(szsend);
+    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, &len);
+    len = sizeof(szrecv);
+    getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, &len);
+
+    fprintf(stderr, LOG_PREFIX "tunnel option: send/recv = %d / %d\n", szsend, szrecv);
 #endif
     return 0;
 }
@@ -654,10 +669,14 @@ _set_bind_opt(int sock)
 #ifdef ENABLE_DEBUG_IO
 void
 DEBUG_IO(int fd, const char *msg) {
-    int nread = 0, nwrite = 0;
+    int nread = 0, nwrite = 0, sndbuf = 0, rcvbuf = 0, len;
 
     ioctl(fd, FIONREAD, &nread);
     ioctl(fd, FIONWRITE, &nwrite);
+    len = sizeof(sndbuf);
+    getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &len);
+    len = sizeof(rcvbuf);
+    getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, &len);
 
 #ifdef DEBUG_IO_LIMIT
     if (nread < DEBUG_IO_LIMIT && nwrite < DEBUG_IO_LIMIT)
@@ -667,8 +686,8 @@ DEBUG_IO(int fd, const char *msg) {
         return;
 #endif
 
-    fprintf(stderr, LOG_PREFIX "%s fd(%d): FIONREAD=%d, FIONWRITE=%d.\r\n",
-            msg, fd, nread, nwrite);
+    fprintf(stderr, LOG_PREFIX "%s fd(%d): FION READ:%d/%d, WRITE:%d/%d.\r\n",
+            msg, fd, nread, rcvbuf, nwrite, sndbuf);
 }
 #else
 #define DEBUG_IO(fd, msg) {}
