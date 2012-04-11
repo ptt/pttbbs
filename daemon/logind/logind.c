@@ -64,6 +64,10 @@
 #define LOGIND_ACKQUEUE_BOUND   (255)
 #endif 
 
+#ifndef LOGIND_TUNNEL_BUFFER_BOUND
+#define LOGIND_TUNNEL_BUFFER_BOUND  (65530)
+#endif
+
 #define MY_EVENT_PRIORITY_NUMBERS   (4)
 #define EVTPRIORITY_NORM    (MY_EVENT_PRIORITY_NUMBERS/2)
 #define EVTPRIORITY_ACK     (EVTPRIORITY_NORM-1)
@@ -1089,19 +1093,26 @@ is_tunnel_available() {
     int nwrite = 0, sndbuf = 0;
     socklen_t len = 0;
 
+    // for each client we need to send two kinds of data:
+    //  send_remote_fd: struct msghdr + char[CMSG_SPACE(sizeof(int))];
+    //  towrite: sizeof(login_data)
+    // However, it's hard to estimate how much sendmsg() needs.
+
     if (ackq_size() > LOGIND_ACKQUEUE_BOUND)
         return 0;
 
+#ifdef LOGIND_TUNNEL_BUFFER_BOUND
     ioctl(g_tunnel, FIONWRITE, &nwrite);
     len = sizeof(sndbuf);
     getsockopt(g_tunnel, SOL_SOCKET, SO_SNDBUF, &sndbuf, &len);
 
-    if (sndbuf >= nwrite && (sndbuf - nwrite) < (int)sizeof(login_data) * 5) {
+    if (sndbuf >= nwrite && (sndbuf - nwrite) < LOGIND_TUNNEL_BUFFER_BOUND) {
         time4_t now = time(NULL);
         fprintf(stderr, LOG_PREFIX "%s tunnel buffer is full (%d/%d)\n",
                 Cdate(&now), nwrite, sndbuf);
         return 0;
     }
+#endif
 
     return 1;
 }
