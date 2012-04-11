@@ -317,8 +317,7 @@ login_ctx_handle(login_ctx *ctx, int c)
 
             // default: insert characters
             if (!isascii(c) || !isprint(c) || 
-                c == ' ' ||
-                l+1 >= sizeof(ctx->userid))
+                c == ' ' || (size_t)l + 1 >= sizeof(ctx->userid))
                 return LOGIN_HANDLE_BEEP;
 
             memmove(ctx->userid + ctx->icurr + 1,
@@ -350,7 +349,7 @@ login_ctx_handle(login_ctx *ctx, int c)
 
             // XXX check VGET_PASSWD = VGET_NOECHO|VGET_ASCIIONLY
             if ( (!isascii(c) || !isprint(c)) || 
-                l+1 >= sizeof(ctx->passwd))
+                (size_t)l + 1 >= sizeof(ctx->passwd))
                 return LOGIN_HANDLE_BEEP;
 
             ctx->passwd[l] = c;
@@ -545,7 +544,8 @@ _telnet_update_cc_cb(void *cc_arg, unsigned char c)
 }
 
 static void 
-_telnet_write_data_cb(void *write_arg, int fd, const void *buf, size_t nbytes)
+_telnet_write_data_cb(void *write_arg, int fd GCC_UNUSED,
+                      const void *buf, size_t nbytes)
 {
     login_conn_ctx *conn = (login_conn_ctx *)write_arg;
     _buff_write(conn, buf, nbytes);
@@ -575,7 +575,7 @@ _telnet_send_ayt_cb(void *ayt_arg, int fd)
 }
 #endif
 
-const static struct TelnetCallback 
+static const struct TelnetCallback 
 telnet_callback = {
     _telnet_write_data_cb,
     _telnet_resize_term_cb,
@@ -633,24 +633,30 @@ _set_connection_opt(int sock)
 static int
 _set_tunnel_opt(int sock)
 {
+    // Some systems like linux, buffer of domain sockets are fixed values; for
+    // systems like FreeBSD, you can really set the value.
     int szrecv = 131072, szsend = 131072;
-    int len = 0;
 
     // adjust tunnel transmission window
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv)) < 0 ||
-        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend)) < 0)
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, sizeof(szrecv)) < 0 ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, sizeof(szsend)) < 0)
     {
         fprintf(stderr, LOG_PREFIX "WARNING: "
-                "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n", szsend, szrecv);
+                "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n",
+                szsend, szrecv);
     }
 
 #ifdef ENABLE_DEBUG_IO
-    len = sizeof(szsend);
-    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, &len);
-    len = sizeof(szrecv);
-    getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, &len);
+    {
+        int len = 0;
+        len = sizeof(szsend);
+        getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, &len);
+        len = sizeof(szrecv);
+        getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, &len);
 
-    fprintf(stderr, LOG_PREFIX "tunnel option: send/recv = %d / %d\n", szsend, szrecv);
+        fprintf(stderr, LOG_PREFIX "tunnel option: send/recv = %d / %d\n",
+                szsend, szrecv);
+    }
 #endif
     return 0;
 }
@@ -670,6 +676,7 @@ _set_bind_opt(int sock)
 void
 DEBUG_IO(int fd, const char *msg) {
     int nread = 0, nwrite = 0, sndbuf = 0, rcvbuf = 0, len;
+    time4_t now;
 
     ioctl(fd, FIONREAD, &nread);
     ioctl(fd, FIONWRITE, &nwrite);
@@ -685,9 +692,9 @@ DEBUG_IO(int fd, const char *msg) {
     if (g_verbose < VERBOSE_DEBUG) 
         return;
 #endif
-
-    fprintf(stderr, LOG_PREFIX "%s fd(%d): FION READ:%d/%d, WRITE:%d/%d.\r\n",
-            msg, fd, nread, rcvbuf, nwrite, sndbuf);
+    now = time(NULL);
+    fprintf(stderr, LOG_PREFIX "%s %s fd(%d): FION READ:%d/%d WRITE:%d/%d\r\n",
+            Cdate(&now), msg, fd, nread, rcvbuf, nwrite, sndbuf);
 }
 #else
 #define DEBUG_IO(fd, msg) {}
@@ -1077,6 +1084,28 @@ regular_check()
     }
 }
 
+static int
+is_tunnel_available() {
+    int nwrite = 0, sndbuf = 0;
+    socklen_t len = 0;
+
+    if (ackq_size() > LOGIND_ACKQUEUE_BOUND)
+        return 0;
+
+    ioctl(g_tunnel, FIONWRITE, &nwrite);
+    len = sizeof(sndbuf);
+    getsockopt(g_tunnel, SOL_SOCKET, SO_SNDBUF, &sndbuf, &len);
+
+    if (sndbuf >= nwrite && (sndbuf - nwrite) < (int)sizeof(login_data) * 5) {
+        time4_t now = time(NULL);
+        fprintf(stderr, LOG_PREFIX "%s tunnel buffer is full (%d/%d)\n",
+                Cdate(&now), nwrite, sndbuf);
+        return 0;
+    }
+
+    return 1;
+}
+
 static int 
 check_banip(char *host)
 {
@@ -1266,13 +1295,13 @@ start_service(int fd, login_conn_ctx *conn)
    
     // deliver the login data to hosting servier
     DEBUG_IO(g_tunnel, "before start_service:towrite(g_tunnel)");
-    if (towrite(g_tunnel, &ld, sizeof(ld)) < sizeof(ld))
+    if (towrite(g_tunnel, &ld, sizeof(ld)) < (int)sizeof(ld))
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "failed in towrite(login_data)\r\n");
         return ack;
     }
-    DEBUG_IO(g_tunnel, "after start_service:towrite(g_tunnel)");
+    DEBUG_IO(g_tunnel, "after  start_service:towrite(g_tunnel)");
 
     // to prevent buffer full, we set priority here to force all ackes processed
     // (otherwise tunnel daemon may try to send act and 
@@ -1305,7 +1334,7 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
         DEBUG_IO(g_logattempt_pipe, "before logattempt2::towrite()");
         if (towrite(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
             return;
-        DEBUG_IO(g_logattempt_pipe, "after logattempt2::towrite()");
+        DEBUG_IO(g_logattempt_pipe, "after  logattempt2::towrite()");
 
         // failed ... back to internal.
         fprintf(stderr, LOG_PREFIX 
@@ -1352,10 +1381,11 @@ auth_start(int fd, login_conn_ctx *conn)
                     return AUTH_RESULT_STOP;
                 }
 
-                // consider system as overloaded if ack queue indicates service unavailable
-                if (g_overload || ackq_size() > LOGIND_ACKQUEUE_BOUND)
+                // consider system as overloaded if tunnel is not available.
+                if (g_overload || !is_tunnel_available())
                 {
-                    g_overload = 1; // set overload again to reject all incoming connections
+                    // set overload again to reject all incoming connections
+                    g_overload = 1;
                     draw_overload(conn, 1);
                     return AUTH_RESULT_STOP;
                 }
@@ -1409,7 +1439,7 @@ auth_start(int fd, login_conn_ctx *conn)
 static struct event ev_sighup, ev_tunnel, ev_ack;
 
 static void 
-sighup_cb(int signal, short event, void *arg)
+sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     fprintf(stderr, LOG_PREFIX 
             "caught sighup (request to reload) with %u opening fd...\r\n",
@@ -1440,7 +1470,7 @@ stop_tunnel(int tunnel_fd)
 }
 
 static void 
-endconn_cb(int fd, short event, void *arg)
+endconn_cb(int fd, short event GCC_UNUSED, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
     if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
@@ -1463,7 +1493,8 @@ endconn_cb(int fd, short event, void *arg)
 }
 
 static void
-endconn_cb_buffer(struct bufferevent * evb, short event, void *arg)
+endconn_cb_buffer(struct bufferevent * evb GCC_UNUSED, short event GCC_UNUSED,
+                  void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
 
@@ -1507,7 +1538,7 @@ get_tunnel_ack(int tunnel)
 #endif
 
     DEBUG_IO(tunnel, "before get_tunnel_ack:toread(tunnel)");
-    if (toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
+    if (toread(tunnel, &arg, sizeof(arg)) < (int)sizeof(arg) ||
         !arg)
     {
         // sorry... broken, let's shutdown the tunnel.
@@ -1519,7 +1550,7 @@ get_tunnel_ack(int tunnel)
         stop_tunnel(tunnel);
         return NULL;
     }
-    DEBUG_IO(tunnel, "after get_tunnel_ack:toread(tunnel)");
+    DEBUG_IO(tunnel, "after  get_tunnel_ack:toread(tunnel)");
 
     return arg;
 
@@ -1774,7 +1805,7 @@ client_cb(int fd, short event, void *arg)
 }
 
 static void 
-listen_cb(int lfd, short event, void *arg)
+listen_cb(int lfd, short event GCC_UNUSED, void *arg)
 {
     int fd;
     struct sockaddr_in xsin = {0};
@@ -1872,7 +1903,7 @@ listen_cb(int lfd, short event, void *arg)
 }
 
 static void 
-tunnel_cb(int fd, short event, void *arg)
+tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     int cfd;
     if ((cfd = accept(fd, NULL, NULL)) < 0 )
@@ -1935,7 +1966,7 @@ logattempt_daemon()
     while (toread(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
     {
         DEBUG_IO(g_logattempt_pipe,
-                 "after logattempt_daemon:toread(g_logattempt_pipe)");
+                 "after  logattempt_daemon:toread(g_logattempt_pipe)");
         if (ctx.cb != sizeof(ctx))
         {
             fprintf(stderr, LOG_PREFIX "broken pipe. abort.\r\n");
