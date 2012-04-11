@@ -53,7 +53,7 @@
 #include "daemons.h"
 
 #ifndef LOGIND_REGULAR_CHECK_DURATION
-#define LOGIND_REGULAR_CHECK_DURATION   (15)
+#define LOGIND_REGULAR_CHECK_DURATION   (30)
 #endif 
 
 #ifndef LOGIND_MAX_FDS
@@ -65,7 +65,7 @@
 #endif 
 
 #ifndef LOGIND_TUNNEL_BUFFER_BOUND
-#define LOGIND_TUNNEL_BUFFER_BOUND  (65530)
+#define LOGIND_TUNNEL_BUFFER_BOUND  (32768)
 #endif
 
 #define MY_EVENT_PRIORITY_NUMBERS   (4)
@@ -101,6 +101,10 @@
 #define MAX_TEXT_SCREEN_LINES   (24)
 #endif
 
+#ifndef TUNNEL_BUFFER_SIZE
+#define TUNNEL_BUFFER_SIZE  (131072)
+#endif
+
 #ifndef OPTIMIZE_SOCKET
 #define OPTIMIZE_SOCKET(sock) do {} while(0)
 #endif
@@ -121,6 +125,7 @@
 // global variables
 int g_tunnel;           // tunnel for service daemon
 int g_logattempt_pipe;  // pipe to log attempts
+int g_tunnel_send_buffer_size;  // buffer window size of tunnel.
 
 // server status
 int g_overload = 0;
@@ -617,7 +622,7 @@ _disable_nonblock(int sock)
 static int 
 _set_connection_opt(int sock)
 {
-    const int szrecv = 1024, szsend=4096;
+    const int szrecv = 1024, szsend = 4096;
     const struct linger lin = {0};
 
     // keep alive: server will check target connection. (around 2hr)
@@ -639,7 +644,8 @@ _set_tunnel_opt(int sock)
 {
     // Some systems like linux, buffer of domain sockets are fixed values; for
     // systems like FreeBSD, you can really set the value.
-    int szrecv = 131072, szsend = 131072;
+    socklen_t len = 0;
+    int szrecv = TUNNEL_BUFFER_SIZE, szsend = TUNNEL_BUFFER_SIZE;
 
     // adjust tunnel transmission window
     if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, sizeof(szrecv)) < 0 ||
@@ -650,18 +656,15 @@ _set_tunnel_opt(int sock)
                 szsend, szrecv);
     }
 
-#ifdef ENABLE_DEBUG_IO
-    {
-        int len = 0;
-        len = sizeof(szsend);
-        getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, &len);
-        len = sizeof(szrecv);
-        getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, &len);
+    len = sizeof(szsend);
+    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, &len);
+    len = sizeof(szrecv);
+    getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &szrecv, &len);
 
-        fprintf(stderr, LOG_PREFIX "tunnel option: send/recv = %d / %d\n",
-                szsend, szrecv);
-    }
-#endif
+    g_tunnel_send_buffer_size = szsend;
+    fprintf(stderr, LOG_PREFIX "tunnel buffer window: send/recv = %d / %d\n",
+            szsend, szrecv);
+
     return 0;
 }
 
@@ -697,7 +700,7 @@ DEBUG_IO(int fd, const char *msg) {
         return;
 #endif
     now = time(NULL);
-    fprintf(stderr, LOG_PREFIX "%s %s fd(%d): FION READ:%d/%d WRITE:%d/%d\r\n",
+    fprintf(stderr, LOG_PREFIX "%s: %s fd(%d): FION READ:%d/%d WRITE:%d/%d\r\n",
             Cdate(&now), msg, fd, nread, rcvbuf, nwrite, sndbuf);
 }
 #else
@@ -1090,9 +1093,6 @@ regular_check()
 
 static int
 is_tunnel_available() {
-    int nwrite = 0, sndbuf = 0;
-    socklen_t len = 0;
-
     // for each client we need to send two kinds of data:
     //  send_remote_fd: struct msghdr + char[CMSG_SPACE(sizeof(int))];
     //  towrite: sizeof(login_data)
@@ -1102,15 +1102,17 @@ is_tunnel_available() {
         return 0;
 
 #ifdef LOGIND_TUNNEL_BUFFER_BOUND
-    ioctl(g_tunnel, FIONWRITE, &nwrite);
-    len = sizeof(sndbuf);
-    getsockopt(g_tunnel, SOL_SOCKET, SO_SNDBUF, &sndbuf, &len);
+    {
+        int nwrite = 0, sndbuf = g_tunnel_send_buffer_size;
 
-    if (sndbuf >= nwrite && (sndbuf - nwrite) < LOGIND_TUNNEL_BUFFER_BOUND) {
-        time4_t now = time(NULL);
-        fprintf(stderr, LOG_PREFIX "%s tunnel buffer is full (%d/%d)\n",
-                Cdate(&now), nwrite, sndbuf);
-        return 0;
+        ioctl(g_tunnel, FIONWRITE, &nwrite);
+        if (sndbuf >= nwrite && (sndbuf - nwrite) < LOGIND_TUNNEL_BUFFER_BOUND)
+        {
+            time4_t now = time(NULL);
+            fprintf(stderr, LOG_PREFIX "%s: tunnel buffer is full (%d/%d)\n",
+                    Cdate(&now), nwrite, sndbuf);
+            return 0;
+        }
     }
 #endif
 
