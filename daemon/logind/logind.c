@@ -36,6 +36,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>
+#include <sys/ioctl.h>
 #include <signal.h>
 #include <event.h>
 
@@ -650,6 +651,29 @@ _set_bind_opt(int sock)
     return 0;
 }
 
+#ifdef ENABLE_DEBUG_IO
+void
+DEBUG_IO(int fd, const char *msg) {
+    int nread = 0, nwrite = 0;
+
+    ioctl(fd, FIONREAD, &nread);
+    ioctl(fd, FIONWRITE, &nwrite);
+
+#ifdef DEBUG_IO_LIMIT
+    if (nread < DEBUG_IO_LIMIT && nwrite < DEBUG_IO_LIMIT)
+        return;
+#else
+    if (g_verbose < VERBOSE_DEBUG) 
+        return;
+#endif
+
+    fprintf(stderr, LOG_PREFIX "%s fd(%d): FIONREAD=%d, FIONWRITE=%d.\r\n",
+            msg, fd, nread, nwrite);
+}
+#else
+#define DEBUG_IO(fd, msg) {}
+#endif
+
 ///////////////////////////////////////////////////////////////////////
 // Draw Screen
 
@@ -1222,12 +1246,14 @@ start_service(int fd, login_conn_ctx *conn)
     }
    
     // deliver the login data to hosting servier
+    DEBUG_IO(g_tunnel, "before start_service:towrite(g_tunnel)");
     if (towrite(g_tunnel, &ld, sizeof(ld)) < sizeof(ld))
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "failed in towrite(login_data)\r\n");
         return ack;
     }
+    DEBUG_IO(g_tunnel, "after start_service:towrite(g_tunnel)");
 
     // to prevent buffer full, we set priority here to force all ackes processed
     // (otherwise tunnel daemon may try to send act and 
@@ -1257,8 +1283,10 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
         strlcpy(ctx.userid, userid, sizeof(ctx.userid));
         strlcpy(ctx.hostip, hostip, sizeof(ctx.hostip));
 
+        DEBUG_IO(g_logattempt_pipe, "before logattempt2::towrite()");
         if (towrite(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
             return;
+        DEBUG_IO(g_logattempt_pipe, "after logattempt2::towrite()");
 
         // failed ... back to internal.
         fprintf(stderr, LOG_PREFIX 
@@ -1459,6 +1487,7 @@ get_tunnel_ack(int tunnel)
     }
 #endif
 
+    DEBUG_IO(tunnel, "before get_tunnel_ack:toread(tunnel)");
     if (toread(tunnel, &arg, sizeof(arg)) < sizeof(arg) ||
         !arg)
     {
@@ -1471,6 +1500,7 @@ get_tunnel_ack(int tunnel)
         stop_tunnel(tunnel);
         return NULL;
     }
+    DEBUG_IO(tunnel, "after get_tunnel_ack:toread(tunnel)");
 
     return arg;
 
@@ -1881,8 +1911,12 @@ logattempt_daemon()
     setproctitle(MY_SVC_NAME " [logattempts]");
 
     // TODO change to batched processing
+    DEBUG_IO(g_logattempt_pipe,
+             "before logattempt_daemon:toread(g_logattempt_pipe)");
     while (toread(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
     {
+        DEBUG_IO(g_logattempt_pipe,
+                 "after logattempt_daemon:toread(g_logattempt_pipe)");
         if (ctx.cb != sizeof(ctx))
         {
             fprintf(stderr, LOG_PREFIX "broken pipe. abort.\r\n");
