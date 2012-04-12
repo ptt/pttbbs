@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "daemons.h"
 
 /**
  * 關於本檔案的細節，請見 docs/brc.txt。
@@ -53,7 +54,6 @@ static int             brc_currbid;
 static int             brc_num;
 static brc_rec         brc_list[BRC_MAXNUM];
 
-static char * const fn_brc2= ".brc2";
 static char * const fn_brc = ".brc3";
 
 /**
@@ -246,113 +246,6 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
     brc_changed = 0;
 }
 
-/**
- * write \a brc_num and \a brc_list back to \a brc_buf.
- */
-void
-brc_update(){
-    if (brc_currbid && brc_changed && cuser.userlevel && brc_num > 0) {
-	brc_initialize();
-	brc_insert_record(brc_currbid, brc_num, brc_list);
-    }
-}
-
-void 
-read_brc2(void)
-{
-    char            brcfile[STRLEN];
-    int             fd;
-    size_t sz2 = 0, sz3 = 0;
-    char	    *cvt = NULL, *cvthead = NULL;
-
-    // brc v2 is using 16 bit for brcbid_t and brcnbrd_t.
-    uint16_t bid2, num2;
-
-    brcbid_t  bid;
-    brcnbrd_t num;
-    time4_t   create;
-    brc_rec   rec;
-
-    setuserfile(brcfile, fn_brc2);
-
-    if ((fd = open(brcfile, O_RDONLY)) == -1)
-	return;
-
-    sz2 = dashs(brcfile);
-    sz3 = sz2 * 2; // max double size
-
-    cvthead = cvt = malloc (sz3);
-    memset(cvthead, 0, sz3);
-    // now calculate real sz3
-
-    while (read(fd, &bid2, sizeof(bid2)) > 0)
-    {
-	if (read(fd, &num2, sizeof(num2)) < 1)
-	    break;
-
-	bid = bid2;
-	num = num2;
-
-	// some brc v2 contains bad structure.
-	// check pointer here.
-	if (cvt + sizeof(brcbid_t) + sizeof(brcnbrd_t) - cvthead >= sz3)
-	    break;
-
-	*(brcbid_t*) cvt = bid; cvt += sizeof(brcbid_t);
-	*(brcnbrd_t*)cvt = num; cvt += sizeof(brcnbrd_t);
-
-	// some brc v2 contains bad structure.
-	// check pointer here.
-	for (; num > 0 && (cvt + sizeof(brc_rec) - cvthead) <= sz3 ; num--)
-	{
-	    if (read(fd, &create, sizeof(create)) < 1)
-		break;
-
-	    rec.create = create;
-	    rec.modified = create;
-
-	    *(brc_rec*)cvt = rec; cvt += sizeof(brc_rec);
-	}
-    }
-    close(fd);
-
-    // now cvthead is ready for v3.
-    sz3 = cvt - cvthead;
-    brc_get_buf(sz3);
-    // new size maybe smaller, check brc_alloc instead
-    if (sz3 > brc_alloc)
-	sz3 = brc_alloc;
-    brc_size = sz3;
-    memcpy(brc_buf, cvthead, sz3);
-
-    free(cvthead);
-}
-
-inline static void
-read_brc_buf(void)
-{
-    char            brcfile[STRLEN];
-    int             fd;
-    struct stat     brcstat;
-
-    if (brc_buf != NULL)
-	return;
-
-    brc_size = 0;
-    setuserfile(brcfile, fn_brc);
-
-    if ((fd = open(brcfile, O_RDONLY)) == -1)
-    {
-	read_brc2();
-	return;
-    }
-
-    fstat(fd, &brcstat);
-    brc_get_buf(brcstat.st_size);
-    brc_size = read(fd, brc_buf, brc_alloc);
-    close(fd);
-}
-
 /* release allocated memory
  *
  * Do not destory brc_currbid, brc_num, brc_list.
@@ -368,15 +261,119 @@ brc_release()
     brc_size = brc_alloc = 0;
 }
 
+/**
+ * write \a brc_num and \a brc_list back to \a brc_buf.
+ */
 void
-brc_finalize(){
+brc_update(){
+    if (brc_currbid && brc_changed && cuser.userlevel && brc_num > 0) {
+	brc_initialize();
+	brc_insert_record(brc_currbid, brc_num, brc_list);
+    }
+}
+
+/**
+ * Use BRC data on remote daemon.
+ */
+int
+load_remote_brc() {
+    int fd;
+    int8_t command = BRCSTORED_REQ_READ;
+    int32_t len;
+    char uid[PATHLEN];
+    int err = 1;
+
+    brc_size = 0;
+    snprintf(uid, sizeof(uid), "%s#%d\n", cuser.userid, cuser.firstlogin);
+
+    do {
+        if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
+            break;
+        if (towrite(fd, &command, 1) != 1)
+            break;
+        if (towrite(fd, uid, strlen(uid)) < 0)
+            break;
+        if (toread(fd, &len, sizeof(len)) != sizeof(len))
+            break;
+        if (len < 0) // not found
+            break;
+        brc_get_buf(len);
+        if (len && toread(fd, brc_buf, len) != len)
+            break;
+        brc_size = len;
+        err = 0;
+    } while (0);
+
+    if (fd >= 0)
+        close(fd);
+    
+    if (err) {
+        brc_release();
+        return 0;
+    }
+
+    return 1;
+}
+
+int
+save_remote_brc() {
+    int fd;
+    int8_t command = BRCSTORED_REQ_WRITE;
+    int32_t len;
+    char uid[PATHLEN];
+    int err = 1;
+
+    snprintf(uid, sizeof(uid), "%s#%d\n", cuser.userid, cuser.firstlogin);
+    len = brc_size;
+
+    do {
+        if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
+            break;
+        if (towrite(fd, &command, 1) != 1)
+            break;
+        if (towrite(fd, uid, strlen(uid)) < 0)
+            break;
+        if (towrite(fd, &len, sizeof(len)) != sizeof(len))
+            break;
+        if (len && towrite(fd, brc_buf ? brc_buf : "", len) != len)
+            break;
+        err = 0;
+    } while (0);
+
+    if (fd >= 0)
+        close(fd);
+    
+    if (err)
+        return 0;
+
+    return 1;
+}
+
+int
+load_local_brc() {
+    char            brcfile[STRLEN];
+    int             fd;
+    struct stat     brcstat;
+
+    brc_size = 0;
+    setuserfile(brcfile, fn_brc);
+
+    if ((fd = open(brcfile, O_RDONLY)) == -1)
+	return 0;
+
+    fstat(fd, &brcstat);
+    brc_get_buf(brcstat.st_size);
+    brc_size = read(fd, brc_buf, brc_alloc);
+    close(fd);
+    return 1;
+}
+
+int
+save_local_brc() {
+    int ok = 1;
     char brcfile[STRLEN];
     char tmpfile[STRLEN];
 
-    if(!brc_initialized)
-	return;
-
-    brc_update();
     setuserfile(brcfile, fn_brc);
     snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
     if (brc_buf != NULL) {
@@ -392,6 +389,32 @@ brc_finalize(){
 		unlink(tmpfile);
 	}
     }
+    return ok;
+}
+
+void
+read_brc_buf(void)
+{
+    if (brc_buf != NULL)
+	return;
+
+#ifdef USE_REMOTE_BRC
+    if (!load_remote_brc())
+#endif
+    load_local_brc();
+}
+
+void
+brc_finalize(){
+    if(!brc_initialized)
+	return;
+
+    brc_update();
+
+#ifdef USE_REMOTE_BRC
+    if (!save_remote_brc())
+#endif
+    save_local_brc();
 
     brc_release();
     brc_initialized = 0;

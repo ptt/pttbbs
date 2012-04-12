@@ -192,7 +192,7 @@ int toconnectex(const char *addr, int timeout)
 	serv_name.sin_port = htons(atoi(port));
 	serv_name.sin_family = AF_INET;
 
-	while ( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 )
+	while (connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0)
 	{
 	    if (errno == EINPROGRESS) 
 	    {
@@ -206,8 +206,12 @@ int toconnectex(const char *addr, int timeout)
 
 		if (select(sock+1, NULL, &myset, NULL, &tv) > 0)
 		{
-		    // success
-		    break;
+                    int result = 1;
+                    socklen_t szresult = sizeof(result);
+                    // szresult = 0: success, otherwise: failure.
+                    getsockopt(sock, SOL_SOCKET, SO_ERROR, &result, &szresult);
+                    if (result == 0)
+                        break;
 		}
 	    }
 
