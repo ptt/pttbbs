@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+# Copyright (c) 2012 Hung-Te Lin <piaip@csie.ntu.edu.tw>. All rights reserved.
+# Use of this source code is governed by a BSD license.
+
+"""
+brcstored: Board RC (brc) storage daemon.
+
+Provides a way to manage per-user BRC object into isolated database.
+"""
 
 import StringIO
 import logging
@@ -11,7 +19,7 @@ import struct
 
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5133
-_DB_PATH = '/home/bbs/brcstore/db'
+_DB_PATH = '/home/bbs/brcstore/database'
 
 
 def get_data(uid):
@@ -54,7 +62,7 @@ def handle_request(sock, fd):
             logging.info('Write: %s: size=%d', uid, len(msg))
             put_data(uid, msg)
         else:
-            raise ValueError('Unknown request: 0x%02X' % command)
+            raise ValueError('Unknown request: 0x%02X' % ord(command))
     except:
         logging.exception("handle_request")
     finally:
