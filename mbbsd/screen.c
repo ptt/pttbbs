@@ -18,6 +18,16 @@ static unsigned char _typeahead = 1;
 #define MODIFIED (1)		/* if line has been modifed, screen output */
 #define STANDOUT (2)		/* if this line has a standout region */
 
+inline
+screenline_t* GetLine(int i) {
+    return &big_picture[(i + roll) % scr_lns];
+}
+
+inline
+screenline_t* GetCurrentLine() {
+    return GetLine(cur_ln);
+}
+
 void
 change_scroll_range(int top, int bottom)
 {
@@ -122,7 +132,7 @@ move_ansi(int y, int x)
     if (y >= scr_lns || x < 1)
 	return;
 
-    slp = &big_picture[y];
+    slp = GetLine(y);
     if (slp->len < 1)
 	return;
 
@@ -156,21 +166,13 @@ getyx_ansi(int *py, int *px)
     if (y >= scr_lns || x < 1)
 	return;
 
-    slp = &big_picture[y];
+    slp = GetLine(y);
     if (slp->len < 1)
 	return;
     c = slp->data[x];
     slp->data[x] = 0;
     *px -= (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
     slp->data[x] = c;
-}
-
-static inline
-screenline_t* GetCurrentLine(){
-    register int i = cur_ln + roll;
-    if(i >= scr_lns)
-	i %= scr_lns;
-    return &big_picture[i];
 }
 
 static void
