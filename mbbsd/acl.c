@@ -157,7 +157,6 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
     int y, x;
     int result;
-    int do_notify = 0;
     char ans[3];
     char history_log[PATHLEN];
     char reason[STRLEN];
@@ -223,6 +222,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     }
 
     assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
+    mvouts(y+5, 0, ANSI_COLOR(1;31) "請注意此理由會經由信件通知使用者，未來也可能會公開於看板上。");
     // maybe race condition here, but fine.
     getdata(y+4, 0, "請輸入理由(空白可取消新增): ",
             reason, BAKUMAN_REASON_LEN, DOECHO);
@@ -231,20 +231,11 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     }
 
-    clrtobot();
-    getdata(y+6, 0, "要寄信通知使用者嗎? (會附上前面輸入的理由) [Y/n]: ", 
-            ans, sizeof(ans), LCECHO);
-    if (ans[0] == 'n')
-        do_notify = 0;
-    else
-        do_notify = 1;
-
     move(y, 0); clrtobot();
     prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
            "理由: %s\n"
-           "%s寄信通知使用者" ANSI_RESET "\n",
-           uid, datebuf, reason,
-           do_notify ? ANSI_COLOR(1;32) "會" : ANSI_COLOR(1;31) "不會");
+           ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET "\n",
+           uid, datebuf, reason);
 
     // last chance
     getdata(y+5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
@@ -264,7 +255,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
               ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
               cuser.userid, uid,  datebuf, reason);
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
-    if (result && do_notify) {
+    if (result) {
         char xtitle[STRLEN];
         char xmsg[STRLEN*5];
 
