@@ -272,6 +272,14 @@ brc_update(){
     }
 }
 
+#ifdef LOG_REMOTE_BRC_FAILURE
+# define BRC_FAILURE(msg) { log_filef("log/brc_remote_failure.log", \
+                                      LOG_CREAT, "%s %s ERR: %s", \
+                                      Cdate(&now), msg, command); break; }
+#else
+# define BRC_FAILURE(msg) { break; }
+#endif
+
 /**
  * Use BRC data on remote daemon.
  */
@@ -288,16 +296,16 @@ load_remote_brc() {
 
     do {
         if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
-            break;
+            BRC_FAILURE("(load) connect");
         if (towrite(fd, command, strlen(command)) < 0)
-            break;
+            BRC_FAILURE("(load) send_command");
         if (toread(fd, &len, sizeof(len)) < 0)
-            break;
+            BRC_FAILURE("(load) read_len");
         if (len < 0) // not found
             break;
         brc_get_buf(len);
         if (len && toread(fd, brc_buf, len) < 0)
-            break;
+            BRC_FAILURE("(load) read_data");
         brc_size = len;
         err = 0;
     } while (0);
@@ -326,13 +334,13 @@ save_remote_brc() {
 
     do {
         if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
-            break;
+            BRC_FAILURE("(save) connect");
         if (towrite(fd, command, strlen(command)) < 0)
-            break;
+            BRC_FAILURE("(save) send_command");
         if (towrite(fd, &len, sizeof(len)) < 0)
-            break;
+            BRC_FAILURE("(save) write_len");
         if (len && towrite(fd, brc_buf ? brc_buf : "", len) < 0)
-            break;
+            BRC_FAILURE("(save) write_data");
         err = 0;
     } while (0);
 
@@ -408,7 +416,12 @@ brc_finalize(){
     brc_update();
 
 #ifdef USE_REMOTE_BRC
-    if (!save_remote_brc())
+    if (!save_remote_brc() ||
+#ifdef REMOTE_BRC_BACKUP_DAYS
+        (is_first_login_of_today &&
+         cuser.numlogindays % REMOTE_BRC_BACKUP_DAYS == 0) ||
+#endif
+        0)
 #endif
     save_local_brc();
 
