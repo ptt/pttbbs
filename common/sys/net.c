@@ -259,18 +259,20 @@ int is_to_readwrite_again(int s)
  */
 int toread(int fd, void *buf, int len)
 {
-    int     s;
-    for( s = 0 ; len > 0 ; )
-	if( (s = read(fd, buf, len)) <= 0 ) {
+    int s = 0, t = 0;
+    for(; len > 0 ;) {
+	if ((s = read(fd, buf, len)) <= 0) {
 	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
-	}else{
+	} else {
 	    buf += s;
 	    len -= s;
+            t += s;
 	}
-    return s;
+    }
+    return t;
 }
 
 /**
@@ -278,18 +280,20 @@ int toread(int fd, void *buf, int len)
  */
 int towrite(int fd, const void *buf, int len)
 {
-    int     s;
-    for( s = 0 ; len > 0 ; )
-	if( (s = write(fd, buf, len)) <= 0){
+    int s = 0, t = 0;
+    for(; len > 0 ;) {
+	if ((s = write(fd, buf, len)) <= 0) {
 	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
-	}else{
+	} else {
 	    buf += s;
 	    len -= s;
+            t += s;
 	}
-    return s;
+    }
+    return t;
 }
 
 /**
@@ -297,18 +301,20 @@ int towrite(int fd, const void *buf, int len)
  */
 int torecv(int fd, void *buf, int len, int flag)
 {
-    int     s;
-    for( s = 0 ; len > 0 ; )
-	if( (s = recv(fd, buf, len, flag)) <= 0 ) {
+    int s = 0, t = 0;
+    for(; len > 0 ;) {
+	if((s = recv(fd, buf, len, flag)) <= 0) {
 	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
-	}else{
+	} else {
 	    buf += s;
 	    len -= s;
+            t += s;
 	}
-    return s;
+    }
+    return t;
 }
 
 /**
@@ -316,18 +322,20 @@ int torecv(int fd, void *buf, int len, int flag)
  */
 int tosend(int fd, const void *buf, int len, int flag)
 {
-    int     s;
-    for( s = 0 ; len > 0 ; )
-	if( (s = send(fd, buf, len, flag)) <= 0){
+    int s = 0, t = 0;
+    for(; len > 0 ;) {
+	if((s = send(fd, buf, len, flag)) <= 0){
 	    if (is_to_readwrite_again(s))
 		continue;
 	    // XXX we define toread/towrite as '-1 for EOF and error'.
 	    return -1; // s;
-	}else{
+	} else {
 	    buf += s;
 	    len -= s;
+            t += s;
 	}
-    return s;
+    }
+    return t;
 }
 
 /**
