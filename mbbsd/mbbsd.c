@@ -1952,8 +1952,8 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 	{
 	    return 0;
 	}
-	if (toread(tunnel, &dat, sizeof(dat)) < (int)sizeof(dat) ||
-	    towrite(tunnel, &dat.ack, sizeof(dat.ack)) < (int)sizeof(dat.ack))
+	if (toread(tunnel, &dat, sizeof(dat)) < 0 ||
+	    towrite(tunnel, &dat.ack, sizeof(dat.ack)) < 0)
 	    return 0;
 
 	assert(dat.cb == sizeof(dat));

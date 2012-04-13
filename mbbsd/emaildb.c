@@ -23,13 +23,13 @@ int emaildb_check_email(const char * email, int email_len)
         return -1;
     }
 
-    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+    if (towrite(fd, &req, sizeof(req)) < 0) {
         // perror("towrite");
         close(fd);
         return -1;
     }
 
-    if (toread(fd, &count, sizeof(count)) != sizeof(count)) {
+    if (toread(fd, &count, sizeof(count)) < 0) {
         // perror("toread");
         close(fd);
         return -1;
@@ -38,7 +38,8 @@ int emaildb_check_email(const char * email, int email_len)
     return count;
 }
 
-int emaildb_update_email(const char * userid, int userid_len, const char * email, int email_len)
+int emaildb_update_email(const char * userid, int userid_len,
+                         const char * email, int email_len)
 {
     int result = -1;
     int fd = -1;
@@ -56,13 +57,13 @@ int emaildb_update_email(const char * userid, int userid_len, const char * email
         return -1;
     }
 
-    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+    if (towrite(fd, &req, sizeof(req)) < 0) {
         // perror("towrite");
         close(fd);
         return -1;
     }
 
-    if (toread(fd, &result, sizeof(result)) != sizeof(result)) {
+    if (toread(fd, &result, sizeof(result)) < 0) {
         // perror("toread");
         close(fd);
         return -1;
@@ -94,13 +95,13 @@ int regcheck_ambiguous_userid_exist(const char *userid)
         return -1;
     }
 
-    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+    if (towrite(fd, &req, sizeof(req)) < 0) {
         // perror("towrite");
         close(fd);
         return -1;
     }
 
-    if (toread(fd, &result, sizeof(result)) != sizeof(result)) {
+    if (toread(fd, &result, sizeof(result)) < 0) {
         // perror("toread");
         close(fd);
         return -1;

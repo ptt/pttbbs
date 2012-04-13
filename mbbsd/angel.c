@@ -28,8 +28,8 @@ angel_beats_do_request(int op, int master_uid, int angel_uid) {
 
     assert(req.operation != ANGELBEATS_REQ_INVALID);
 
-    if (towrite(fd, &req, sizeof(req)) < 1 ||
-        toread (fd, &req, sizeof(req)) < 1 ||
+    if (towrite(fd, &req, sizeof(req)) < 0 ||
+        toread (fd, &req, sizeof(req)) < 0 ||
         req.cb != sizeof(req)) {
         ret = -2;
     } else {
@@ -276,8 +276,8 @@ int a_angelreport() {
     if (HasUserPerm(PERM_ANGEL))
         req.angel_uid = usernum;
 
-    if (towrite(fd, &req, sizeof(req)) < 1 ||
-        toread(fd, &rpt, sizeof(rpt)) < 1 ||
+    if (towrite(fd, &req, sizeof(req)) < 0 ||
+        toread(fd, &rpt, sizeof(rpt)) < 0 ||
         rpt.cb != sizeof(rpt)) {
         outs("抱歉，天使公會連線異常。\n"
                 "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");

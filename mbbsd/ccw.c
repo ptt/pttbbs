@@ -559,9 +559,9 @@ ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
     char len = 0;
     buf[0] = 0;
     // XXX blocking call here... (change to recv?)
-    if (toread(ctx->fd, &len, sizeof(len)) != sizeof(len))
+    if (toread(ctx->fd, &len, sizeof(len)) < 0)
         return -1;
-    if (toread(ctx->fd, buf, len)!= len)
+    if (toread(ctx->fd, buf, len) < 0)
         return -1;
     assert(len >= 0 && len < (int)szbuf);
     buf[(size_t)len] = 0;

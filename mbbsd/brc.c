@@ -278,27 +278,25 @@ brc_update(){
 int
 load_remote_brc() {
     int fd;
-    int8_t command = BRCSTORED_REQ_READ;
     int32_t len;
-    char uid[PATHLEN];
+    char command[PATHLEN];
     int err = 1;
 
     brc_size = 0;
-    snprintf(uid, sizeof(uid), "%s#%d\n", cuser.userid, cuser.firstlogin);
+    snprintf(command, sizeof(command), "%c%s#%d\n",
+             BRCSTORED_REQ_READ, cuser.userid, cuser.firstlogin);
 
     do {
         if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
             break;
-        if (towrite(fd, &command, 1) != 1)
+        if (towrite(fd, command, strlen(command)) < 0)
             break;
-        if (towrite(fd, uid, strlen(uid)) < 0)
-            break;
-        if (toread(fd, &len, sizeof(len)) != sizeof(len))
+        if (toread(fd, &len, sizeof(len)) < 0)
             break;
         if (len < 0) // not found
             break;
         brc_get_buf(len);
-        if (len && toread(fd, brc_buf, len) != len)
+        if (len && toread(fd, brc_buf, len) < 0)
             break;
         brc_size = len;
         err = 0;
@@ -318,24 +316,22 @@ load_remote_brc() {
 int
 save_remote_brc() {
     int fd;
-    int8_t command = BRCSTORED_REQ_WRITE;
     int32_t len;
-    char uid[PATHLEN];
+    char command[PATHLEN];
     int err = 1;
 
-    snprintf(uid, sizeof(uid), "%s#%d\n", cuser.userid, cuser.firstlogin);
+    snprintf(command, sizeof(command), "%c%s#%d\n",
+             BRCSTORED_REQ_WRITE, cuser.userid, cuser.firstlogin);
     len = brc_size;
 
     do {
         if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
             break;
-        if (towrite(fd, &command, 1) != 1)
+        if (towrite(fd, command, strlen(command)) < 0)
             break;
-        if (towrite(fd, uid, strlen(uid)) < 0)
+        if (towrite(fd, &len, sizeof(len)) < 0)
             break;
-        if (towrite(fd, &len, sizeof(len)) != sizeof(len))
-            break;
-        if (len && towrite(fd, brc_buf ? brc_buf : "", len) != len)
+        if (len && towrite(fd, brc_buf ? brc_buf : "", len) < 0)
             break;
         err = 0;
     } while (0);
