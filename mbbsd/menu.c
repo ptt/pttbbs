@@ -476,12 +476,10 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		    i = 0;
 	    } while (!CheckMenuPerm(cmdtable[i].level));
 	    break;
-	case KEY_END:
-	case KEY_PGDN:
-	    i = total;
-	    break;
 	case KEY_UP:
 	    i = lastcmdptr;
+	case KEY_END:
+	case KEY_PGDN:
 	    do {
 		if (--i < 0)
 		    i = total;
