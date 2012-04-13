@@ -1052,18 +1052,9 @@ multi_send(const char *title)
 	    vmsg(msg_cancel);
 	    return;
 	}
-	listing = 80;
 
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
-	    recipient = strlen(p) + 1;
-	    if (listing + recipient > 75) {
-		listing = recipient;
-		outc('\n');
-	    } else {
-		listing += recipient;
-		outc(' ');
-	    }
             searchuser(p, buf);
             sethomepath(genbuf, buf);
 	    stampfile(genbuf, &mymail);
