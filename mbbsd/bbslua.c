@@ -178,8 +178,9 @@ bl_peekbreak(float f)
 {
     if (vkey_is_full())
         vkey_purge();
-    if (peek_input(f, BLCONF_BREAK_KEY))
-    {
+
+    if (vkey_prefetch(f * MILLISECONDS) &&
+        vkey_is_prefetched(BLCONF_BREAK_KEY)) {
         vkey_purge();
         blrt.abort = 1;
         return 1;
@@ -461,8 +462,7 @@ bl_kbhit(lua_State *L)
     if (f < BLCONF_KBHIT_TMIN) f = BLCONF_KBHIT_TMIN;
     if (f > BLCONF_KBHIT_TMAX) f = BLCONF_KBHIT_TMAX;
 
-    refresh();
-    if (vkey_is_ready() || wait_input(f, 0))
+    if (vkey_is_ready() || vkey_poll(f * MILLISECONDS))
         lua_pushboolean(L, 1);
     else
         lua_pushboolean(L, 0);
@@ -532,7 +532,7 @@ BLAPI_PROTO
 bl_kball(lua_State *L)
 {
     // first, sleep by given seconds
-    int r = 0, oldr = 0, i = 0;
+    int r = 0, i = 0;
 
     r = bl_sleep(L);
     if (blrt.abort)
@@ -543,23 +543,13 @@ bl_kball(lua_State *L)
 
 
 #ifdef _WIN32
-    while (peekch(0))
+    while (i < LUA_MINSTACK && peekch(0))
     {
         bl_k2s(L, vkey());
         i++;
     }
 #else
-    // next, collect all input and return.
-    if (!vkey_is_ready())
-        return 0;
-
-    oldr = num_in_buf() +1;
-    i = 0;
-
-    while (  i < LUA_MINSTACK &&
-            (r = num_in_buf()) > 0 && oldr > r)
-    {
-        oldr = r;
+    while (i < LUA_MINSTACK && vkey_is_ready()) {
         bl_k2s(L, vkey());
         i++;
     }

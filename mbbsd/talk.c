@@ -1190,7 +1190,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	return -1;
     }
 
-    vkey_attach(sock); // add_io(sock, timeout);
+    vkey_attach(sock);
 
     while (1) {
 	if (vkey_poll(timeout * MILLISECONDS)) {
@@ -1215,7 +1215,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		return -1;
 	    } else {
 		// change to longer timeout
-		timeout = 20; // add_io(sock, 20);
+		timeout = 20;
 		move(0, 0);
 		outs("¦A");
 		bell();

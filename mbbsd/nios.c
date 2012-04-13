@@ -260,7 +260,8 @@ CIN_PROTO void
 cin_clear_fd(int fd)
 {
     CINDBGLOG("cin_clear_fd(%d)", fd);
-    // method 1, use setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)(&optval), sizeof(optval));
+    // method 1, use setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)(&optval),
+    //                          sizeof(optval));
     // method 2, fetch and discard
     VBUF vgarbage, *v = &vgarbage;
     char garbage[4096]; // any magic number works here
@@ -283,43 +284,47 @@ cin_clear_fd(int fd)
 CIN_PROTO void  
 cin_fetch_fd(int fd)
 {
+    CINDBGLOG("cin_fetch_fd(%d)", fd);
+
 #ifdef STAT_SYSREADSOCKET
 	STATINC(STAT_SYSREADSOCKET);
 #endif
     assert(fd == cin_fd);
-#if 1
-    // XXX we don't know how to deal with telnetctx/convert yet...
-    // let's just keep using the old functions for now
+
+#ifdef NIOS_RAW_FETCH
+    // Try to read data from stdin (without any conversion).
+    vbuf_read(cin, fd, VBUF_RWSZ_MIN);
+#else // !NIOS_RAW_FETCH
+    // Legacy way to read data (with telnet context & converts).
     char buf[sizeof(cin_buf)];
     ssize_t sz = 0;
+
     do {
         if (vbuf_is_full(cin))
             break;
         if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
             continue;
 
-#ifdef DBCSAWARE
+# ifdef DBCSAWARE
         if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
-            sz = vtkbd_ignore_dbcs_evil_repeats(buf, sz);
-#endif
+            sz = vtkbd_ignore_dbcs_evil_repeats((unsigned char*)buf, sz);
+# endif  // DBCSAWARE
 
         // for tty_read: sz<0 = EAGAIN
         if (sz > 0)
         {
-#ifdef CONVERT
+# ifdef CONVERT
             sz = convert_read(cin, buf, sz);
-#else
+# else  // !CONVERT
             sz = vbuf_putblk(cin, buf, sz);
-#endif
             // sz becomes -1/0/1 after putblk calls
+# endif  // !CONVERT
             if (sz < 1)
                 sz = -1;
         }
     } while (sz < 0);
-#else
-    // try to read data from stdin
-    vbuf_read(cin, fd, VBUF_RWSZ_MIN);
-#endif
+#endif // !NIOS_RAW_FETCH
+
 #ifdef CIN_DEBUG
     cin_debug_print_content();
 #endif

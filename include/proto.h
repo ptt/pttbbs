@@ -307,15 +307,6 @@ void oflush(void);
 // pager hotkeys processor
 int process_pager_keys(int ch);
 
-// input api (old flavor)
-int  num_in_buf(void);			// vkey_is_ready() / vkey_is_typeahead()
-int  wait_input(float f, int bIgnoreBuf);// vkey_poll
-int  peek_input(float f, int c);	// vkey_prefetch() / vkey_is_prefeteched
-// int  igetch(void);			// -> vkey()
-// int  input_isfull();			// -> vkey_is_full()
-// void drop_input(void);		// -> vkey_purge()
-// void add_io(int fd, int timeout);	// -> vkey_attach / vkey_detach
-
 // new input api
 /* nios.c / io.c */
 ///////// virtual key: convert from cin(fd) -> buffer -> virtual key //////////

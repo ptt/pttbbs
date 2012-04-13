@@ -102,7 +102,7 @@
 #define PMORE_USE_INTERNAL_HELP         // display pmore internal help
 #define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
-#define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
+#define PMORE_HAVE_VKEY                 // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
 //#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
 //#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
@@ -254,7 +254,7 @@
  #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_USE_REPLYKEY_HINTS
  #undef PMORE_HAVE_SYNCNOW
- #undef PMORE_HAVE_NUMINBUF
+ #undef PMORE_HAVE_VKEY
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
  #undef PMORE_AUTOEXIT_FIRSTPAGE
  #define PMORE_AUTONEXT_ON_PAGEFLIP
@@ -3171,19 +3171,15 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
         refresh();
 
     do {
-        // if already something in queue,
+        // Check if something already in input queue,
         // detemine if ok to break.
-#ifdef PMORE_HAVE_NUMINBUF
-#ifdef EXP_NIOS
+#ifdef PMORE_HAVE_VKEY
         while (vkey_is_typeahead())
-#else
-        while (num_in_buf() > 0)
-#endif
         {
             if (!mf_movieMaskedInput((c = vkey())))
                 return c;
         }
-#endif // PMORE_HAVE_NUMINBUF
+#endif // PMORE_HAVE_VKEY
 
         // wait for real user interaction
         FD_ZERO(&readfds);

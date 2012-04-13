@@ -1016,7 +1016,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
             doupdate();
             // flush all input!
             vkey_purge();
-            while (wait_input(1, 1))
+            while (vkey_poll(1 * MILLISECONDS))
                 vkey_purge();
             vmsg(alert_msg);
 

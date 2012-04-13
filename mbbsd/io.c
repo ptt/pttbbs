@@ -15,7 +15,8 @@
 // #define DBG_OUTRPT
 #endif
 
-static VBUF vout, *pvout = &vout, vin, *pvin = &vin;
+static VBUF vout, *pvout = &vout;
+static VBUF vin, *pvin = &vin;
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
@@ -23,7 +24,6 @@ static VBUF vout, *pvout = &vout, vin, *pvin = &vin;
 #ifdef DBG_OUTRPT
 // output counter
 static unsigned long szTotalOutput = 0, szLastOutput = 0;
-extern unsigned char fakeEscape;
 unsigned char fakeEscape = 0;
 
 static unsigned char fakeEscFilter(unsigned char c)
@@ -77,6 +77,7 @@ debug_print_input_buffer(char *s, size_t len)
     move_ansi(y, x);
 }
 #endif
+
 /* ----------------------------------------------------- */
 /* Input Output System                                   */
 /* ----------------------------------------------------- */
@@ -154,8 +155,8 @@ process_pager_keys(int ch)
     switch (ch) 
     {
 	case Ctrl('U') :
-            if (!is_login_ready || !HasUserPerm(PERM_BASIC) ||
-                HasUserPerm(PERM_VIOLATELAW))
+            if (!is_login_ready || !currutmp ||
+                !HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_VIOLATELAW))
                 return ch;
 	    if ( currutmp->mode == EDITING ||
 		 currutmp->mode == LUSERS  || 
@@ -305,7 +306,8 @@ process_pager_keys(int ch)
 		break;
 
 	    check_water_init();
-	    water_which_flag = (water_which_flag + water_usies) % (water_usies + 1);
+	    water_which_flag = (water_which_flag + water_usies) %
+                (water_usies + 1);
 	    if (water_which_flag == 0)
 		water_which = &water[0];
 	    else
@@ -318,6 +320,8 @@ process_pager_keys(int ch)
     return ch;
 }
 
+#ifndef EXP_NIOS
+
 /* ----------------------------------------------------- */
 /* input routines                                        */
 /* ----------------------------------------------------- */
@@ -327,7 +331,7 @@ process_pager_keys(int ch)
 static int    i_newfd = 0;
 static struct timeval i_to, *i_top = NULL;
 
-inline void
+static inline void
 add_io(int fd, int timeout)
 {
     i_newfd = fd;
@@ -340,7 +344,7 @@ add_io(int fd, int timeout)
 	i_top = NULL;
 }
 
-inline int
+static inline int
 num_in_buf(void)
 {
     return vbuf_size(pvin);
@@ -559,7 +563,7 @@ igetch(void)
  * if f < 0,  wait forever.
  * Return 1 if anything available.
  */
-inline int 
+static inline int 
 wait_input(float f, int bIgnoreBuf)
 {
     int sel = 0;
@@ -615,29 +619,7 @@ wait_input(float f, int bIgnoreBuf)
     return 1;
 }
 
-/*
- * wait user input for f seconds.
- * return 1 if control key c is available.
- * (if c == EOF, simply read into buffer and return 0)
- */
-inline int 
-peek_input(float f, int c)
-{
-    assert (c == EOF || (c > 0 && c < ' ')); // only ^x keys are safe to be detected.
-    // other keys may fall into escape sequence.
-
-    if (wait_input(f, 1) && vbuf_size(pvin) < IBUFSIZE)
-        read_vin();
-
-    if (c == EOF)
-	return 0;
-
-    return vbuf_strchr(pvin, c) >= 0 ? 1 : 0;
-}
-
-
-/* vkey system emulation */
-#ifndef USE_NIOS_VKEY
+/* nios vkey system emulation */
 
 inline int
 vkey_is_ready(void)
@@ -699,6 +681,27 @@ vkey_poll(int ms)
     // XXX handle I_OTHERDATA?
     return wait_input(ms / (double)MILLISECONDS, 0);
 }
+
+int  
+vkey_prefetch(int timeout) {
+    if (wait_input(timeout / (double)MILLISECONDS, 1) &&
+        vbuf_size(pvin) < IBUFSIZE)
+        read_vin();
+    return num_in_buf() > 0;
+}
+
+int
+vkey_is_prefetched(char c) {
+    // only ^x keys are safe to be detected.
+    // other keys may fall into escape sequence.
+    assert (c == EOF || (c > 0 && c < ' ')); 
+
+    if (c == EOF)
+	return 0;
+
+    return vbuf_strchr(pvin, c) >= 0 ? 1 : 0;
+}
+
 #endif
 
 /* vim:sw=4
