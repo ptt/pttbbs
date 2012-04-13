@@ -1114,16 +1114,6 @@ inline static void append_log_recent_login()
     log_file(logfn, LOG_CREAT, buf);
 }
 
-inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm *tmp)
-{
-    if (tmp->tm_mday != ptime->tm_mday) {
-	more("etc/birth.post", YEA);
-	if (enter_board("WhoAmI")==0) {
-	    do_post();
-	}
-    }
-}
-
 inline static void check_mailbox_quota(void)
 {
     if (!HasUserPerm(PERM_READMAIL))
@@ -1161,7 +1151,7 @@ static void
 user_login(void)
 {
     struct tm       ptime, lasttime;
-    int             nowusers, ifbirth = 0, i;
+    int             nowusers, i;
 
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
@@ -1187,25 +1177,17 @@ user_login(void)
     strlcpy(fromhost_masked, fromhost, sizeof(fromhost_masked));
     obfuscate_ipstr(fromhost_masked);
 
-    /* show welcome_login */
-    if( (ifbirth = (ptime.tm_mday == cuser.day &&
-		    ptime.tm_mon + 1 == cuser.month)) ){
-	char buf[PATHLEN];
-	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d", getHoroscope(cuser.month, cuser.day));
-	more(buf, NA);
-    }
-    else {
 #ifndef MULTI_WELCOME_LOGIN
-	more("etc/Welcome_login", NA);
+    more("etc/Welcome_login", NA);
 #else
-	if( SHM->GV2.e.nWelcomes ){
-	    char            buf[80];
-	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
-		     (int)login_start_time % SHM->GV2.e.nWelcomes);
-	    more(buf, NA);
-	}
-#endif
+    if( SHM->GV2.e.nWelcomes ){
+        char            buf[80];
+        snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
+                 (int)login_start_time % SHM->GV2.e.nWelcomes);
+        more(buf, NA);
     }
+#endif
+
     refresh();
     currutmp->alerts |= load_mailalert(cuser.userid);
 
@@ -1233,12 +1215,6 @@ user_login(void)
 	clrtobot();
 	welcome_msg();
 	resolve_over18();
-
-	if( ifbirth ){
-	    birthday_make_a_wish(&ptime, &lasttime);
-	    if( vans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
-		currutmp->birth = 1;
-	}
 
 	append_log_recent_login();
 	check_bad_login();

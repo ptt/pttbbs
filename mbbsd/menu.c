@@ -306,8 +306,7 @@ show_status(void)
 	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
 	  ANSI_COLOR(30) "\t[呼叫器]" ANSI_COLOR(31) "%s ",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
-	  ptime.tm_hour, ptime.tm_min, currutmp->birth ?
-	  "生日要請客唷" : SHM->today_is,
+	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
 	  str_pager_modes[currutmp->pager % PAGER_MODES]);
 }
