@@ -2,10 +2,10 @@ SUBDIR=	chess chickens
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/
 INSTALLTAG=$(TARGET).installed
-FILES=	@five		Welcome		Welcome_birth	Welcome_login	\
+FILES=	Welcome		Welcome_login	\
 	Logout		goodbye		bad_host 	today_boring	\
 	register	registered	registermail	registeredmail 	\
-	feast		sysop		\
+	feast		sysop		banip.conf	\
 	ve.hlp		board.help	boardlist.help	\
 	editable	expire.conf	domain_name_query.cidr	\
 	banemail	whitemail	whitemail.notice ziphome.exclude

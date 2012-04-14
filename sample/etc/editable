@@ -11,6 +11,7 @@ etc/Welcome	歡迎畫面
 etc/Logout	出站畫面
 etc/goodbye	錯誤登入訊息
 etc/sysop	站長名單
+etc/banip.conf  拒絕連線IP列表 (BANIP)
 # ----------------------------------------
 # 進站畫面
 # ----------------------------------------
@@ -67,18 +68,3 @@ etc/angel_usage	    小天使功能說明
 # ----------------------------------------
 etc/foreign_welcome	    外籍使用者認證通知
 etc/foreign_expired_warn    外籍使用者過期警告通知
-# ----------------------------------------
-# 生日卡
-# ----------------------------------------
-etc/Welcome_birth.1 生日卡[摩羯]
-etc/Welcome_birth.2 生日卡[水瓶]
-etc/Welcome_birth.3 生日卡[雙魚]
-etc/Welcome_birth.4 生日卡[牡羊]
-etc/Welcome_birth.5 生日卡[金牛]
-etc/Welcome_birth.6 生日卡[雙子]
-etc/Welcome_birth.7 生日卡[巨蟹]
-etc/Welcome_birth.8 生日卡[獅子]
-etc/Welcome_birth.9 生日卡[處女]
-etc/Welcome_birth.10 生日卡[天秤]
-etc/Welcome_birth.11 生日卡[天蠍]
-etc/Welcome_birth.12 生日卡[射手]
