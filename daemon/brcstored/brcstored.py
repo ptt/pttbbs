@@ -35,7 +35,10 @@ def put_data(uid, blob):
 
 def open_database(db_path):
     global g_db
-    g_db = leveldb.LevelDB(db_path)
+    # BRCv3 max size = 49152 (8192*3*2), so let's increase block size.
+    # LevelDB default I/O buffer size: R=8M, W=2M.
+    g_db = leveldb.LevelDB(db_path, block_size=49152,
+            write_buffer_size=(8 * (2<< 20)))
 
 
 def handle_request(sock, fd):
@@ -61,6 +64,8 @@ def handle_request(sock, fd):
             msg = fd.read(msglen)
             logging.info('Write: %s: size=%d', uid, len(msg))
             put_data(uid, msg)
+        elif not command:
+            raise ValueError('Incomplete request (no command).')
         else:
             raise ValueError('Unknown request: 0x%02X' % ord(command))
     except:
@@ -74,8 +79,9 @@ def handle_request(sock, fd):
 
 
 def main(myname, argv):
-    level = logging.DEBUG
+    level = logging.WARNING
     # level = logging.INFO
+    # level = logging.DEBUG
     logging.basicConfig(level=level, format='%(asctime)-15s %(message)s')
     if len(argv) not in [0, 1]:
         print "Usage: %s [db_path]" % myname
