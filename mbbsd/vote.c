@@ -756,7 +756,6 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 {
     FILE           *cfp;
     char            buf[STRLEN], redo;
-    boardheader_t  *fhp;
     short	    count, tickets;
     short	    curr_page, item_num, max_page;
     char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
@@ -771,7 +770,6 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     if ((bid = getbnum(bname)) <= 0)
 	return 0;
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    fhp = getbcache(bid);
 
     setbfile(buf, bname, vbuf->limited);	/* Ptt */
     if (dashf(buf)) {

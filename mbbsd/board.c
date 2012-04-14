@@ -786,7 +786,8 @@ b_config(void)
 }
 
 int
-b_quick_acl(int ent, fileheader_t *fhdr, const char *direct)
+b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr,
+            const char *direct GCC_UNUSED)
 {
 #ifdef USE_NEW_BAN_SYSTEM
     const boardheader_t *bp = getbcache(currbid);

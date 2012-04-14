@@ -2780,7 +2780,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastrecommend = 0;
-    static int lastrecommend_bid = -1;
     static char lastrecommend_fname[FNLEN] = "";
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
@@ -3106,7 +3105,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
         return DIRCHANGED;
 
     lastrecommend = now;
-    lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
     return FULLUPDATE;
 }
@@ -4050,7 +4048,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
     char            genbuf2[200];
-    int             delta = 0;
 
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
@@ -4075,8 +4072,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
             } 
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
-	    else
-		delta = -1000;
 	}
     } else {
 	fileheader_t    digest;
@@ -4115,8 +4110,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
             } 
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
-	    else
-		delta = 1000;
 	}
     }
     // TODO fix race condition here.

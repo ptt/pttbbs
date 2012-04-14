@@ -2520,7 +2520,6 @@ void syn_pmore_render(char *os, int len, char *buf)
     // XXX buf should be same length as s.
     char *s = (char *)mf_movieFrameHeader((unsigned char*)os, (unsigned char*)os + len);
     char attr = 1;
-    char iname = 0;
     char prefix = 0;
 
     memset(buf, 0, len);
@@ -2580,7 +2579,6 @@ void syn_pmore_render(char *os, int len, char *buf)
 
 	    case 'I':
 	    case 'G':
-		iname = 0;
 		*buf++ = attr++;
 		prefix = 1;
 		while (len > 0 && 
@@ -2929,7 +2927,6 @@ display_textline_internal(textline_t *p, int i)
 {
     short tmp;
     void (*output)(const char *, int)	    = edit_outs_attr;
-    void (*output_n)(const char *, int, int)= edit_outs_attr_n;
 
     int attr = EOATTR_NORMAL;
 
@@ -2944,7 +2941,6 @@ display_textline_internal(textline_t *p, int i)
 
     if (curr_buf->ansimode) {
 	output = edit_ansi_outs;
-	output_n = edit_ansi_outs_n;
     }
 
     tmp = curr_buf->currln - curr_buf->curr_window_line + i;

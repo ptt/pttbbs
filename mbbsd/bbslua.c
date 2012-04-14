@@ -1124,10 +1124,10 @@ static int
 bbslua_detect_range(char **pbs, char **pbe, int *lineshift)
 {
     int szsig = strlen(BBSLUA_SIGNATURE);
-    char *bs, *be, *ps, *pe;
+    char *be, *ps, *pe;
     int line = 0;
 
-    bs = ps = *pbs;
+    ps = *pbs;
     be = pe = *pbe;
 
     // find start
