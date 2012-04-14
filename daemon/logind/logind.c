@@ -150,7 +150,7 @@ int g_guest_usernum  = 0;  // numeric uid of guest account
 int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 
 // banned ip
-BanIpList g_banip;
+BanIpList *g_banip;
 time4_t g_banip_mtime = -1;
 
 enum {

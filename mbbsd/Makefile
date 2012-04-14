@@ -100,10 +100,7 @@ $(PROG): $(OBJS)
 	@printf "\033[m"
 	$(CC) vers.c -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
-$(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
-	perl $(SRCROOT)/util/banip.pl > $@
-
-mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
+mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h
 	$(DIETCC) $(CC) $(CFLAGS) -c $<
 
 ctags:

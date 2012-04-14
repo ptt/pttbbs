@@ -1,6 +1,5 @@
 /* $Id$ */
 #include "bbs.h"
-#include "banip.h"
 #include "daemons.h"
 #include <sys/wait.h>
 #include <netinet/tcp.h>
@@ -1509,12 +1508,13 @@ bind_port(int port)
 /*******************************************************/
 
 
+static int	start_client (             struct ProgramOption *option);
 static int      shell_login  (char *argv0, struct ProgramOption *option);
 static int      daemon_login (char *argv0, struct ProgramOption *option);
 static int      tunnel_login (char *argv0, struct ProgramOption *option);
-static int      check_ban_and_load(int fd, struct ProgramOption *option);
-static int	start_client (             struct ProgramOption *option);
-static int      check_banip  (char *host);
+static int      check_ban_and_load(int fd, struct ProgramOption *option,
+                                   BanIpList *list, IPv4 addr,
+                                   const char *override_ip);
 
 static void init(void)
 {
@@ -1832,6 +1832,7 @@ static int
 shell_login(char *argv0, struct ProgramOption *option)
 {
     int fd;
+    BanIpList *banip = NULL;
 
     STATINC(STAT_SHELLLOGIN);
     /* Give up root privileges: no way back from here */
@@ -1861,10 +1862,14 @@ shell_login(char *argv0, struct ProgramOption *option)
 	strlcpy(fromhost, frombuf, sizeof(fromhost));
     }
 
-    if (check_ban_and_load(0, option)) {
+    // XXX shell_login 時 load banip table 比較慢, 所以用 cache.
+    banip = cached_banip_list(FN_CONF_BANIP, "tmp/banip.cache");
+    if (check_ban_and_load(0, option, banip, INADDR_ANY, fromhost)) {
 	sleep(10);
 	return 0;
     }
+    banip = free_banip_list(banip);
+
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);
 #endif
@@ -1991,6 +1996,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     int             blockfd[OVERLOADBLOCKFDS];
     int             nblocked = 0;
 #endif
+    BanIpList      *banip = NULL;
     struct sockaddr_in xsin;
     xsin.sin_family = AF_INET;
 
@@ -2028,6 +2034,9 @@ daemon_login(char *argv0, struct ProgramOption *option)
     snprintf(margs, sizeof(margs), "%s %d ", argv0, listen_port);
     setproctitle("%s: listening ", margs);
 #endif
+    
+    // Load ban ip table.
+    banip = load_banip_list(FN_CONF_BANIP, NULL);
 
 #ifdef PRE_FORK
     if (option->flag_fork) {
@@ -2057,7 +2066,9 @@ daemon_login(char *argv0, struct ProgramOption *option)
 	    continue;
 	}
 
-	overloading = check_ban_and_load(csock, option);
+        overloading = check_ban_and_load(csock, option, banip,
+                                         xsin.sin_addr.s_addr,
+                                         NULL);
 #if OVERLOADBLOCKFDS
 	if( (!overloading && nblocked) ||
 	    (overloading && nblocked == OVERLOADBLOCKFDS) ){
@@ -2098,12 +2109,10 @@ daemon_login(char *argv0, struct ProgramOption *option)
     close(csock);
     dup2(0, 1);
 
-    XAUTH_GETREMOTENAME(getremotename(xsin.sin_addr, fromhost));
+    // Free the ban ip resource list.
+    banip = free_banip_list(banip);
 
-    if( check_banip(fromhost) ){
-	sleep(10);
-	exit(0);
-    }
+    XAUTH_GETREMOTENAME(getremotename(xsin.sin_addr, fromhost));
     telnet_init(1);
     return 1;
 }
@@ -2113,13 +2122,22 @@ daemon_login(char *argv0, struct ProgramOption *option)
  * permitted, return 0; else return -1; approriate message is output to fd.
  */
 static int
-check_ban_and_load(int fd, struct ProgramOption *option)
+check_ban_and_load(int fd, struct ProgramOption *option,
+                   BanIpList *banip, IPv4 addr, const char *override_ip)
 {
     FILE           *fp;
     static time4_t   chkload_time = 0;
     static int      overload = 0;	/* overload or banned, update every 1
 					 * sec  */
     static int      banned = 0;
+
+    if (banip && (override_ip ? in_banip_list(banip, override_ip) :
+                                in_banip_list_addr(banip, addr))) {
+        const char *msg = "THIS IP IS BANNED.\r\n"
+                          "此 IP 已被拒絕連線。\r\n";
+	write(fd, msg, strlen(msg));
+        return -1;
+    }
 
     // if you have your own banner, define as INSCREEN in pttbbs.conf
     // if you don't want anny benner, define NO_INSCREEN
@@ -2173,13 +2191,6 @@ check_ban_and_load(int fd, struct ProgramOption *option)
 	return -1;
 
     return 0;
-}
-
-static int check_banip(char *host)
-{
-    uint32_t thisip = ipstr2int(host);
-
-    return uintbsearch(thisip, &banip[1], banip[0]) ? 1 : 0;
 }
 
 /* vim: sw=4 

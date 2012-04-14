@@ -44,11 +44,12 @@ int log_payment(const char *filename, int money, int oldm, int newm,
 
 /* banip.c */
 typedef unsigned long IPv4;     // derived from in_addr.s_addr
-typedef void *BanIpList;
+typedef void BanIpList;
 int in_banip_list(const BanIpList *list, const char *ip);
 int in_banip_list_addr(const BanIpList *list, IPv4 addr);
 BanIpList *load_banip_list(const char *filename, FILE *err);
 BanIpList *free_banip_list(BanIpList *list);
+BanIpList *cached_banip_list(const char *basefile, const char *cachefile);
 
 /* cache.c */
 #define search_ulist(uid) search_ulistn(uid, 1)

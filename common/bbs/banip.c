@@ -69,7 +69,7 @@ in_banip_list(const BanIpList *blist, const char *ip) {
     return 0;
 }
 
-BanIpList *
+BanIpList*
 free_banip_list(BanIpList *blist) {
     IPv4List *list = (IPv4List*) blist;
     if (!list)
@@ -79,7 +79,7 @@ free_banip_list(BanIpList *blist) {
     return NULL;
 }
 
-BanIpList *
+BanIpList*
 load_banip_list(const char *filename, FILE* err) {
     // Loads banip.conf (shared by daemon/banipd).
     IPv4List *list = NULL;
@@ -116,7 +116,7 @@ load_banip_list(const char *filename, FILE* err) {
             }
 #ifdef DEBUG
             if (err)
-                fprintf(err, "(banip) Added IP: %s %lu\n", p, addr.s_addr);
+                fprintf(err, "(banip) Added IP: %s %u\n", p, addr.s_addr);
 #endif
             add_banip_list(list, addr.s_addr);
         }
@@ -126,4 +126,53 @@ load_banip_list(const char *filename, FILE* err) {
     if (err)
         fprintf(err, "(banip) Loaded %lu IPs\n", list->sz);
     return (BanIpList*)list;
+}
+
+BanIpList*
+cached_banip_list(const char *basefile, const char *cachefile) {
+    BanIpList *blist = NULL;
+    IPv4List *list = NULL;
+    char tmpfn[PATHLEN];
+    FILE *fp;
+    time4_t m_base = dasht(basefile), m_cache = dasht(cachefile);
+    size_t sz = dashs(cachefile);
+
+    if (m_base < 0)
+        return NULL;
+
+    if (m_cache >= m_base && sz > 0 && sz % sizeof(IPv4) == 0) {
+        // valid cache, load it.
+        fp = fopen(cachefile, "rb");
+        if (fp) {
+#ifdef DEBUG
+            fprintf(stderr, "Loaded cached banip config from: %s\n",
+                    cachefile);
+#endif
+            list = (IPv4List*) malloc (sizeof(IPv4List));
+            assert(list);
+            memset(list, 0, sizeof(*list));
+            reset_banip_list(list);
+            list->ar = (IPv4*)malloc(sz);
+            list->sz = sz / sizeof(IPv4);
+            list->alloc = list->sz;
+            fread(list->ar, sizeof(IPv4), list->sz, fp);
+            fclose(fp);
+            return list;
+        }
+    }
+
+    // invalid cache, rebuild it.
+    blist = load_banip_list(basefile, NULL);
+    list = (IPv4List*)blist;
+    snprintf(tmpfn, sizeof(tmpfn), "%s.%d", cachefile, getpid());
+    fp = fopen(tmpfn, "wb");
+    if (fp) {
+        fwrite(list->ar, sizeof(IPv4), list->sz, fp);
+        fclose(fp);
+        Rename(tmpfn, cachefile);
+#ifdef DEBUG
+        fprintf(stderr, "Updated cached banip config to: %s\n", cachefile);
+#endif
+    }
+    return list;
 }
