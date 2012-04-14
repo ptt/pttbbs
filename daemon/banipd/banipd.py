@@ -51,10 +51,12 @@ def LoadConfigTable(filename):
             for ip in ips:
                 if ip in table:
                     raise ValueError('duplicated IP: %s' % ip)
-                table[ip] = self.text
+                table[ip] = self.text.rstrip() + "\n"
             self.clear()
 
         def add_ip(self, s):
+            if '#' in s:
+                s = s.partition('#')[0]
             self.ip += ' ' + s
 
         def add_text(self, s):
