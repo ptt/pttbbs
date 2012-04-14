@@ -14,7 +14,9 @@ CXX:=		g++
 CLANG!=		sh -c 'type clang 2>/dev/null || echo ""'
 CCACHE!=	sh -c 'type ccache 2>/dev/null || echo ""'
 
-.if $(CLANG)
+.if defined(WITHOUT_CLANG)
+CLANG:=
+.elif $(CLANG)
 CC:=		clang
 .endif
 
