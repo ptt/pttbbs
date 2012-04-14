@@ -1,28 +1,42 @@
 # $Id$
-# 定義基本初值
+
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 
 SRCROOT?=	.
-
 OSTYPE!=	uname
 
+# Detect best compiler
+#
 CC:=		gcc
 CXX:=		g++
-CCACHE!=	which ccache|sed -e 's/^.*\///'
-WITH_CONVERT!=  sh -c 'grep -w "^[\t ]*\#define[ \t]*CONVERT" $(SRCROOT)/pttbbs.conf || echo NO'
+
+CLANG!=		sh -c 'type clang'
+CCACHE!=	sh -c 'type ccache'
+
+.if $(CLANG)
+CC:=		clang
+.endif
 
 .if $(CCACHE)
 CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
 .endif
 
-PTT_CFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
-PTT_CXXFLAGS:=	-W -Wall -Wunused -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+# Common build flags
+
+PTT_WARN:=	-W -Wall -Wunused -Wno-missing-field-initializers
+PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
+.if $(CLANG)
+PTT_CFLAGS+=	-Qunused-arguments
+.endif
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
+
+# Platform specific build flags
 
 .if ${OSTYPE} == "Darwin"
 PTT_CFLAGS+=	-I/opt/local/include -DNEED_SETPROCTITLE
@@ -51,7 +65,6 @@ NO_FORK=	yes
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
 .if defined(DEBUG)
 GDB=		1
-#CFLAGS+=	-DDEBUG
 PTT_CFLAGS+=	-DDEBUG 
 PTT_CXXFLAGS+=	-DDEBUG 
 .endif

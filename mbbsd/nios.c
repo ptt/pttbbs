@@ -7,7 +7,7 @@
 #include "vtkbd.h"
 #include "bbs.h"
 
-#ifdef EXP_NIOS
+#ifdef USE_NIOS
 
 // nios: piaip's Network I/O Stream
 //       piaip's New implementation for Input and Output System
@@ -689,6 +689,6 @@ vkey_purge()
     // TODO reset telnet/vtkbd/conver?
 }
 
-#endif // EXP_NIOS
+#endif // USE_NIOS
 
 // vim:ts=4:sw=4:et

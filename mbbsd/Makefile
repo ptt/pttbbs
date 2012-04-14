@@ -11,7 +11,7 @@ PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
 ABUSEOBJS = captcha.o
 ACCOBJS  = user.o acl.o register.o passwd.o emaildb.o
-NETOBJS  = mbbsd.o io.o term.o telnet.o
+NETOBJS  = mbbsd.o io.o term.o telnet.o nios.o
 TALKOBJS = friend.o talk.o ccw.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o
 UIOBJS   = menu.o vtuikit.o psb.o
@@ -25,46 +25,12 @@ OBJS:=	admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o \
 	$(CHESSOBJS) $(GAMEOBJS)
 
 #######################################################################
-# conditional configurations and optional modules
-#######################################################################
-
-.if !defined(WITHOUT_LOG_CRAWLER) && defined(WITH_LOG_CRAWLER)
-CFLAGS+= -DLOG_CRAWLER 
-.endif
-
-.if !defined(WITHOUT_BBSLUA_USAGE) && defined(WITH_BBSLUA_USAGE)
-CFLAGS+= -DBBSLUA_USAGE
-.endif
-
-.if !defined(WITHOUT_BBSLUA)	&& defined(WITH_BBSLUA)
-OBJS+=	 bbslua.o bbsluaext.o
-CFLAGS+= -DUSE_BBSLUA
-# MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
-.if $(OSTYPE)=="FreeBSD"
-CFLAGS:= ${CFLAGS} -I/usr/local/include/lua51  
-#${:!pkg-config --cflags lua-5.1!}
-LDLIBS:= ${LDLIBS} -L/usr/local/lib/lua51 -llua -lm  
-#${:!pkg-config --libs lua-5.1!}
-.else
-CFLAGS:= ${CFLAGS} ${:!pkg-config --cflags lua5.1!}
-LDLIBS:= ${LDLIBS} ${:!pkg-config --libs lua5.1!}
-.endif
-.endif
-
-.if !defined(WITHOUT_PFTERM)	&& defined(WITH_PFTERM)
-OBJS+=	pfterm.o
-CFLAGS+=  -DUSE_PFTERM
-#CFLAGS+= -DDBG_OUTRPT
-.else
-OBJS+=	screen.o
-.endif
-
-#######################################################################
 # special library (DIET) configuration
 #######################################################################
 
 .if defined(DIET)
-LDLIBS+= $(SRCROOT)/common/diet/libdiet.a
+LDFLAGS+=	-L$(SRCROOT)/common/diet
+LDLIBS+=	-ldiet
 DIETCC:=	diet -Os
 .endif
 
@@ -73,14 +39,44 @@ DIETCC:=	diet -Os
 LDFLAGS+=-Wl,--sort-common
 .endif
 
-#.if defined(MERGEBBS)
-#CFLAGS+= -DMERGEBBS
-#OBJS+= ../upgrade/merge_sob.o
-#.endif
+#######################################################################
+# common libraries
+#######################################################################
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
-	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a
+LDFLAGS+= -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
+	  -L$(SRCROOT)/common/osdep 
+LDLIBS+= -lcmbbs -lcmsys -losdep
+
+#######################################################################
+# conditional configurations and optional modules
+#######################################################################
+
+BBSCONF:=	$(SRCROOT)/pttbbs.conf
+DEF_PATTERN:=	^[ \t]*\#[ \t]*define[ \t]*
+USE_BBSLUA!=  	sh -c 'grep -Ew "${DEF_PATTERN}USE_BBSLUA" ${BBSCONF} || true'
+USE_PFTERM!=	sh -c 'grep -Ew "${DEF_PATTERN}USE_PFTERM" ${BBSCONF} || true'
+USE_NIOS!=	sh -c 'grep -Ew "${DEF_PATTERN}USE_NIOS"   ${BBSCONF} || true'
+USE_CONVERT!=	sh -c 'grep -Ew "${DEF_PATTERN}CONVERT"    ${BBSCONF} || true'
+
+.if $(USE_BBSLUA)
+.if $(OSTYPE)=="FreeBSD"
+LUA_PKG_NAME?=	lua-5.1
+LDLIBS+=	-Wl,--no-as-needed
+.else
+LUA_PKG_NAME?=	lua5.1
+.endif
+LUA_CFLAGS!=	pkg-config --cflags ${LUA_PKG_NAME}
+LUA_LIBS!=	pkg-config --libs ${LUA_PKG_NAME}
+CFLAGS+=	${LUA_CFLAGS}
+LDLIBS+=	${LUA_LIBS}
+OBJS+=		bbslua.o bbsluaext.o
+.endif
+
+.if $(USE_PFTERM)
+OBJS+=		pfterm.o
+.else
+OBJS+=		screen.o
+.endif
 
 #######################################################################
 # Make Rules
@@ -94,7 +90,13 @@ all: $(PROG)
 
 $(PROG): $(OBJS)
 	sh $(SRCROOT)/util/newvers.sh
-	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LDLIBS) vers.c
+	@printf "\033[0;1;32m"
+	@[ -z "$(USE_BBSLUA)" ] || echo -n "+BBSLUA "
+	@[ -z "$(USE_PFTERM)" ] || echo -n "+PFTERM "
+	@[ -z "$(USE_CONVERT)" ] || echo -n "+CONVERT "
+	@[ -z "$(USE_NIOS)" ] || echo -n "+NIOS "
+	@printf "\033[m"
+	$(CC) vers.c -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
 	perl $(SRCROOT)/util/banip.pl > $@

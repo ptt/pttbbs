@@ -320,7 +320,7 @@ process_pager_keys(int ch)
     return ch;
 }
 
-#ifndef EXP_NIOS
+#ifndef USE_NIOS
 
 /* ----------------------------------------------------- */
 /* input routines                                        */
