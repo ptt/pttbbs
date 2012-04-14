@@ -46,6 +46,11 @@ enum {
  */
 int
 is_file_owner(const fileheader_t *fhdr, const userec_t *usr) {
+    // XXX there are two known issues here:
+    //  1. Anonymous post don't work anymore.
+    //  2. People cross-posting (^X) very old post can't own it.
+    // Since ptt.cc does not have anonymous boards anymore, these issues are in
+    // low priority.  Sites using anonymous boards can fix on your own.
     if (strcmp(fhdr->owner, usr->userid) != EQUSTR)
         return 0;
 

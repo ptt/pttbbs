@@ -452,9 +452,6 @@ vkey_process_cin()
     if (ch  == EOF) // quick abort
         return EOF;
 
-    // TODO process telnet protocol?
-    // (it's now temporary done in cin_read -> tty_read... )
-
     // convert virtual terminal keys
     ch = vtkbd_process(ch, &vkctx.vtkbd);
 
