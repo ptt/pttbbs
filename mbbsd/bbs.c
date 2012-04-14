@@ -1969,7 +1969,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    xfile;
     FILE           *xptr;
     int             xbid, hashPost;
-    boardheader_t  *bp, *xbp;
+    boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -2053,7 +2053,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     hashPost = StringHash(fhdr->filename); // let's try filename
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
-    xbp = getbcache(xbid);
 
     if (xbid == currbid)
     {

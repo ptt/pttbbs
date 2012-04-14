@@ -264,17 +264,17 @@ int mchar_len(unsigned char *str)
 }
 
 #define FC_RIGHT (0)
-#define FC_LEFT (~FC_RIGHT)
+#define FC_LEFT  (1)
 
 int fix_cursor(char *str, int pos, int dir)
 { 
   int newpos, w;
-  assert(dir >= 0);
+  assert(dir == FC_RIGHT || dir == FC_LEFT);
   
   for(newpos = 0;
       *str != '\0' &&
         (w = mchar_len((unsigned char*)str),                               
-         newpos + 1 + (dir & (w - 1))) <= pos;
+         newpos + 1 + (dir == FC_RIGHT ? 0 : w - 1) <= pos);
       str += w, newpos += w)
     ;
 

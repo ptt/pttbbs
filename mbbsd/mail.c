@@ -88,7 +88,6 @@ is_valid_email(const char *full_address)
 int 
 invalidaddr(const char *addr) {
     int r = is_valid_email(addr);
-    char c;
     if (r)
         return 0;
 
@@ -106,7 +105,7 @@ invalidaddr(const char *addr) {
 
 
     if (bad_email_offset >= 0) {
-        c = addr[bad_email_offset];
+        char c = addr[bad_email_offset];
         prints("¿ù»~¦ì¸m: ²Ä %d ¦r¤¸: 0x%02X [ %c ]",
                bad_email_offset,  (unsigned char)c, 
                isascii(c) && isprint(c) ? c : ' ');
