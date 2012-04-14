@@ -53,10 +53,12 @@ LDLIBS+= -lcmbbs -lcmsys -losdep
 
 BBSCONF:=	$(SRCROOT)/pttbbs.conf
 DEF_PATTERN:=	^[ \t]*\#[ \t]*define[ \t]*
-USE_BBSLUA!=  	sh -c 'grep -Ew "${DEF_PATTERN}USE_BBSLUA" ${BBSCONF} || true'
-USE_PFTERM!=	sh -c 'grep -Ew "${DEF_PATTERN}USE_PFTERM" ${BBSCONF} || true'
-USE_NIOS!=	sh -c 'grep -Ew "${DEF_PATTERN}USE_NIOS"   ${BBSCONF} || true'
-USE_CONVERT!=	sh -c 'grep -Ew "${DEF_PATTERN}CONVERT"    ${BBSCONF} || true'
+DEF_CMD:=	grep -Ewq "${DEF_PATTERN}"
+DEF_YES:=	&& echo "YES" || echo ""
+USE_BBSLUA!=  	sh -c '${DEF_CMD}"USE_BBSLUA" ${BBSCONF} ${DEF_YES}'
+USE_PFTERM!=	sh -c '${DEF_CMD}"USE_PFTERM" ${BBSCONF} ${DEF_YES}'
+USE_NIOS!=	sh -c '${DEF_CMD}"USE_NIOS"   ${BBSCONF} ${DEF_YES}'
+USE_CONVERT!=	sh -c '${DEF_CMD}"CONVERT"    ${BBSCONF} ${DEF_YES}'
 
 .if $(USE_BBSLUA)
 .if $(OSTYPE)=="FreeBSD"
