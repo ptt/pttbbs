@@ -295,8 +295,18 @@ load_remote_brc() {
              BRCSTORED_REQ_READ, cuser.userid, cuser.firstlogin);
 
     do {
-        if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
+        int conn_retries = 10;
+        while (conn_retries-- > 0 &&
+               (fd = toconnectex(BRCSTORED_ADDR, 10)) < 0) {
+            mvprints(b_lines, 0, (conn_retries == 0) ?
+                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)" :
+                     "正在同步看板已讀未讀資料,請稍候... (#%d)", conn_retries + 1);
+            refresh();
+            sleep(1);
+        }
+        if (fd < 0) {
             BRC_FAILURE("(load) connect");
+        }
         if (towrite(fd, command, strlen(command)) < 0)
             BRC_FAILURE("(load) send_command");
         if (toread(fd, &len, sizeof(len)) < 0)
