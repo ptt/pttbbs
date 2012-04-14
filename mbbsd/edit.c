@@ -266,19 +266,27 @@ int mchar_len(unsigned char *str)
 #define FC_RIGHT (0)
 #define FC_LEFT  (1)
 
-int fix_cursor(char *str, int pos, int dir)
+/* Return the cursor position aligned to the beginning of a character.
+ * If `pos' is in the middle of a character, the alignment determines on `dir':
+ *     FC_LEFT: aligned to the current character.
+ *     FC_RIGHT: aligned to the next character.
+ */
+static int
+fix_cursor(char *str, int pos, int dir)
 { 
-  int newpos, w;
-  assert(dir == FC_RIGHT || dir == FC_LEFT);
-  
-  for(newpos = 0;
-      *str != '\0' &&
-        (w = mchar_len((unsigned char*)str),                               
-         newpos + 1 + (dir == FC_RIGHT ? 0 : w - 1) <= pos);
-      str += w, newpos += w)
-    ;
+    int newpos = 0, w = 0;
+    assert(dir == FC_RIGHT || dir == FC_LEFT);
+    assert(pos >= 0);
 
-  return newpos;
+    while (*str != '\0' && newpos < pos) {
+	w = mchar_len((unsigned char *) str);
+	str += w;
+	newpos += w;
+    }
+    if (dir == FC_LEFT && newpos > pos)
+	newpos -= w;
+
+    return newpos;
 }
 
 #endif
