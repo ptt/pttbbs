@@ -20,7 +20,7 @@ static unsigned char _typeahead = 1;
 
 inline
 screenline_t* GetLine(int i) {
-    return &big_picture[(i + roll) % scr_lns];
+    return &big_picture[(i + roll) % t_lines];
 }
 
 inline
@@ -74,7 +74,7 @@ void
 initscr(void)
 {
     if (!big_picture) {
-	big_picture = (screenline_t *) calloc(scr_lns, sizeof(screenline_t));
+	big_picture = (screenline_t *) calloc(t_lines, sizeof(screenline_t));
 	docls = YEA;
     }
 }
@@ -129,7 +129,7 @@ move_ansi(int y, int x)
     cur_ln = y;
     cur_col = x;
 
-    if (y >= scr_lns || x < 1)
+    if (y >= t_lines || x < 1)
 	return;
 
     slp = GetLine(y);
@@ -163,7 +163,7 @@ getyx_ansi(int *py, int *px)
 
     *py = y; *px = x;
 
-    if (y >= scr_lns || x < 1)
+    if (y >= t_lines || x < 1)
 	return;
 
     slp = GetLine(y);
@@ -235,8 +235,8 @@ redrawwin(void)
     int len;
 
     o_clear();
-    for (tc_col = tc_line = i = 0, j = roll; i < scr_lns; i++, j++) {
-	if (j >= scr_lns)
+    for (tc_col = tc_line = i = 0, j = roll; i < t_lines; i++, j++) {
+	if (j >= t_lines)
 	    j = 0;
 	bp = &big_picture[j];
 	if ((len = bp->len)) {
@@ -310,7 +310,7 @@ doupdate(void)
     register screenline_t *bp = big_picture;
     register int    i, j;
     int len;
-    if ((docls) || (abs(scrollcnt) >= (scr_lns - 3))) {
+    if ((docls) || (abs(scrollcnt) >= (t_lines - 3))) {
 	redrawwin();
 	return;
     }
@@ -329,8 +329,8 @@ doupdate(void)
 	    ochar('\n');
 	} while (--scrollcnt);
     }
-    for (i = 0, j = roll; i < scr_lns; i++, j++) {
-	if (j >= scr_lns)
+    for (i = 0, j = roll; i < t_lines; i++, j++) {
+	if (j >= t_lines)
 	    j = 0;
 	bp = &big_picture[j];
 	len = bp->len;
@@ -415,7 +415,7 @@ clear(void)
 
     docls = YEA;
     cur_col = cur_ln = roll = 0;
-    for(i=0; i<scr_lns; i++) {
+    for(i=0; i<t_lines; i++) {
 	slp = &big_picture[i];
 	slp->mode = slp->len = slp->oldlen = 0;
     }
@@ -480,12 +480,12 @@ clrtoln(int line)
     register int    i, j;
 
     for (i = cur_ln, j = i + roll; i < line; i++, j++) {
-	if (j >= scr_lns)
-	    j -= scr_lns;
+	if (j >= t_lines)
+	    j -= t_lines;
 	slp = &big_picture[j];
 	slp->mode = slp->len = 0;
 	if (slp->oldlen)
-	    slp->oldlen = scr_cols;
+	    slp->oldlen = SCR_COLS;
     }
 }
 
@@ -495,7 +495,7 @@ clrtoln(int line)
 inline void
 clrtobot(void)
 {
-    clrtoln(scr_lns);
+    clrtoln(t_lines);
 }
 
 void
@@ -533,7 +533,7 @@ outc(unsigned char c)
 	    memset(&slp->data[slp->len], ' ', i + 1);
 	slp->len = cur_col;
 	cur_col = 0;
-	if (cur_ln < scr_lns)
+	if (cur_ln < t_lines)
 	    cur_ln++;
 	return;
     }
@@ -572,7 +572,7 @@ outc(unsigned char c)
 #endif
     }
 
-    if(cur_col < scr_cols)
+    if(cur_col < SCR_COLS)
         cur_col++;
 }
 
@@ -633,7 +633,7 @@ void
 scroll(void)
 {
     scrollcnt++;
-    if (++roll >= scr_lns)
+    if (++roll >= t_lines)
 	roll = 0;
     move(b_lines, 0);
     clrtoeol();
@@ -659,18 +659,18 @@ region_scroll_up(int top, int bottom)
 	top = bottom;
 	bottom = i;
     }
-    if (top < 0 || bottom >= scr_lns)
+    if (top < 0 || bottom >= t_lines)
 	return;
 
     for (i = top; i < bottom; i++)
 	big_picture[i] = big_picture[i + 1];
     memset(big_picture + i, 0, sizeof(*big_picture));
-    memset(big_picture[i].data, ' ', scr_cols);
+    memset(big_picture[i].data, ' ', SCR_COLS);
     do_save_cursor();
     change_scroll_range(top, bottom);
     do_move(0, bottom);
     scroll_forward();
-    change_scroll_range(0, scr_lns - 1);
+    change_scroll_range(0, t_lines - 1);
     do_restore_cursor();
     refresh();
 }
@@ -737,9 +737,9 @@ grayout(int y, int end, int level)
 	// modify by scroll
 	i = y + roll;
 	if (i < 0)
-	    i += scr_lns;
-	else if (i >= scr_lns)
-	    i %= scr_lns;
+	    i += t_lines;
+	else if (i >= t_lines)
+	    i %= t_lines;
 
 	slp = &big_picture[i];
 

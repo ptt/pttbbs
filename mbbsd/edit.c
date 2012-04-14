@@ -266,9 +266,10 @@ int mchar_len(unsigned char *str)
 #define FC_RIGHT (0)
 #define FC_LEFT (~FC_RIGHT)
 
-int fix_cursor(char *str, int pos, unsigned int dir)
+int fix_cursor(char *str, int pos, int dir)
 { 
   int newpos, w;
+  assert(dir >= 0);
   
   for(newpos = 0;
       *str != '\0' &&
@@ -2871,7 +2872,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 static void
 edit_outs_attr(const char *text, int attr)
 {
-    edit_outs_attr_n(text, scr_cols, attr);
+    edit_outs_attr_n(text, SCR_COLS, attr);
 }
 
 static void

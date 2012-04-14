@@ -403,8 +403,7 @@ int user_query_mode;
 #endif /* defined(CHESSCOUNTRY) */
 
 /* screen.c */
-#define scr_lns         t_lines
-#define scr_cols        ANSILINELEN
+#define SCR_COLS        ANSILINELEN
 screenline_t   *big_picture = NULL;
 char            roll = 0;
 char		msg_occupied = 0;

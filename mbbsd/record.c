@@ -496,7 +496,6 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 {
     FILE *fp;
     char buf[PATHLEN];
-    int  n;
     char address[64] = "";
     char fwd_title[STRLEN] = "";
     int r;

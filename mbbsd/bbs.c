@@ -117,7 +117,7 @@ modify_dir_lite(
     // PttLock(fd, offset, size, F_UNLCK);
     
     // prevent black holes
-    if (sz < sizeof(fileheader_t) * (ent) ||
+    if (sz < (int)sizeof(fileheader_t) * (ent) ||
 	    (fd = open(direct, O_RDWR)) < 0 )
 	return -1;
 
@@ -805,10 +805,10 @@ readdoent(int num, fileheader_t * ent)
     
     // strip unsafe characters
     if (!const_title)
-        strip_nonebig5((char*)title, INT_MAX);
+        strip_nonebig5((unsigned char*)title, INT_MAX);
 
     // print subject, bounded by w.
-    if (strlen(title) > w) {
+    if ((int)strlen(title) > w) {
         if (DBCS_Status(title, w-2) == DBCS_TRAILING)
             w--;
         outns(title, w-2);
@@ -1107,7 +1107,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     fh.modified = now;
     strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
     strlcpy(genbuf, title, len + 1);
-    if (strlen(title) > len) {
+    if ((int)strlen(title) > len) {
         genbuf[len-2] = 0;
         DBCS_safe_trim(genbuf);
         strcat(genbuf, "¡K");
@@ -1125,11 +1125,11 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
 
 void
 dbcs_safe_trim_title(char *output, const char *title, int len) {
-    if (strlen(title) > len) {
+    if ((int)strlen(title) > len) {
         snprintf(output, len + 1, "%-*.*s", len - 2, len - 2, title);
         DBCS_safe_trim(output);
         strlcat(output, "¡K", len + 1);
-        while (strlen(output) < len)
+        while ((int)strlen(output) < len)
             strlcat(output, " ", len + 1);
     } else {
         snprintf(output, len + 1, "%-*.*s", len, len, title);

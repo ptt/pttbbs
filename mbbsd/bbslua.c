@@ -414,8 +414,8 @@ bl_getstr(lua_State* L)
 
     if (len < 2)
         len = 2;
-    if (len >= sizeof(buf))
-        len = sizeof(buf)-1;
+    if (len >= (int)sizeof(buf))
+        len = sizeof(buf) - 1;
     /*
      * this part now done in getdata_str
     if (pmsg && *pmsg)

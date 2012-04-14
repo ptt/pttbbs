@@ -180,7 +180,7 @@ friend_append(int type, int count)
     if (j == FRIEND_SPECIAL)
 	friend_special();
 
-    if (!*friend_file[j])
+    if (!*friend_file[(int)j])
         return;
     setfriendfile(sfile, j);
 

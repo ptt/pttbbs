@@ -1353,7 +1353,7 @@ showsignature(char *fname, int *j, SigInfo *si)
 {
     FILE           *fp;
     char            buf[ANSILINELEN];
-    int             i, lines = scr_lns;
+    int             i, lines = t_lines;
     char            ch;
 
     clear();

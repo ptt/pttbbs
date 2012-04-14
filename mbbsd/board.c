@@ -456,7 +456,7 @@ b_config(void)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)llogin * 10;
-	    attr = (cuser.numlogindays < i) ? 1 : 0;
+	    attr = ((int)cuser.numlogindays < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "以上", i);
 	    if (attr) outs(ANSI_RESET);
@@ -467,7 +467,7 @@ b_config(void)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)lpost * 10;
-	    attr = (cuser.numposts < i) ? 1 : 0;
+	    attr = ((int)cuser.numposts < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints("各看板有效文章合計 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);

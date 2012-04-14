@@ -1039,9 +1039,9 @@ gochess_replay(FILE* fp)
 	    0, CHESS_MODE_REPLAY);
 
     /* filling header information to info */
-    if (userid[BBLANK][0]) {
+    if (userid[BBLACK][0]) {
 	userec_t rec;
-	if (getuser(userid[BBLANK], &rec))
+	if (getuser(userid[BBLACK], &rec))
 	    go_init_user_userec(&rec, &info->user1);
     }
 

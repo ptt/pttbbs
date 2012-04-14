@@ -1424,7 +1424,7 @@ inansistr   (char *str, int n)
             else 
                 szTrail = 0;
 
-            if (strlen(cmd) >= n-szTrail)
+            if ((int)strlen(cmd) >= n - szTrail)
                 break;
 
             strcpy(str, cmd);
