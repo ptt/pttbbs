@@ -49,7 +49,6 @@
 #define _BBS_UTIL_C_
 
 #include "bbs.h"
-#include "banip.h"
 #include "daemons.h"
 
 #ifndef LOGIND_REGULAR_CHECK_DURATION
@@ -149,6 +148,10 @@ int g_reload_data = 1;  // request to reload data
 time4_t g_welcome_mtime;
 int g_guest_usernum  = 0;  // numeric uid of guest account
 int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
+
+// banned ip
+BanIpList g_banip;
+time4_t g_banip_mtime = -1;
 
 enum {
     VERBOSE_ERROR,
@@ -432,7 +435,7 @@ ackq_add(login_conn_ctx *ctx)
         if (g_ack_queue.capacity < ACK_QUEUE_DEFAULT_CAPACITY)
             g_ack_queue.capacity = ACK_QUEUE_DEFAULT_CAPACITY;
 
-        fprintf(stderr, LOG_PREFIX "%s: resize ack queue to: %u (%u in use)\r\n", 
+        fprintf(stderr, LOG_PREFIX "%s: resize ack queue to: %u (%u in use)\n", 
                 Cdate(&tnow),
                 (unsigned int)g_ack_queue.capacity, (unsigned int)g_ack_queue.size);
 
@@ -652,7 +655,7 @@ _set_tunnel_opt(int sock)
         setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &szsend, sizeof(szsend)) < 0)
     {
         fprintf(stderr, LOG_PREFIX "WARNING: "
-                "set_tunnel_opt: failed to increase buffer to (%u,%u)\r\n",
+                "set_tunnel_opt: failed to increase buffer to (%u,%u)\n",
                 szsend, szrecv);
     }
 
@@ -700,7 +703,7 @@ DEBUG_IO(int fd, const char *msg) {
         return;
 #endif
     now = time(NULL);
-    fprintf(stderr, LOG_PREFIX "%s: %s fd(%d): FION READ:%d/%d WRITE:%d/%d\r\n",
+    fprintf(stderr, LOG_PREFIX "%s: %s fd(%d): FION READ:%d/%d WRITE:%d/%d\n",
             Cdate(&now), msg, fd, nread, rcvbuf, nwrite, sndbuf);
 }
 #else
@@ -839,13 +842,21 @@ reload_data()
     if (!g_reload_data)
         return;
 
-    fprintf(stderr, LOG_PREFIX "start reloading data.\r\n");
+    fprintf(stderr, LOG_PREFIX "start reloading data.\n");
     g_reload_data = 0;
     g_welcome_mtime = dasht(FN_WELCOME);
     load_text_screen_file(FN_WELCOME, &welcome_screen);
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
     load_text_screen_file(FN_BANIP,   &banip_screen);
     load_text_screen_file(FN_BAN,     &ban_screen);
+
+    // Loading banip table is slow - only reload if the file is really modified.
+    if (dasht(FN_CONF_BANIP) != g_banip_mtime) {
+        fprintf(stderr, LOG_PREFIX "reload banip table: %s.\n", FN_CONF_BANIP);
+        g_banip_mtime = dasht(FN_CONF_BANIP);
+        g_banip = free_banip_list(g_banip);
+        g_banip = load_banip_list(FN_CONF_BANIP, stderr);
+    }
 }
 
 static void
@@ -1081,13 +1092,13 @@ regular_check()
 
     // check welcome screen
     if (g_verbose > VERBOSE_INFO) 
-        fprintf(stderr, LOG_PREFIX "check welcome screen.\r\n");
+        fprintf(stderr, LOG_PREFIX "check welcome screen.\n");
     if (dasht(FN_WELCOME) != g_welcome_mtime)
     {
         g_reload_data = 1;
         if (g_verbose > VERBOSE_INFO)
             fprintf(stderr, LOG_PREFIX 
-                    "modified. must update welcome screen ...\r\n");
+                    "modified. must update welcome screen ...\n");
     }
 }
 
@@ -1117,13 +1128,6 @@ is_tunnel_available() {
 #endif
 
     return 1;
-}
-
-static int 
-check_banip(char *host)
-{
-    uint32_t thisip = ipstr2int(host);
-    return uintbsearch(thisip, &banip[1], banip[0]) ? 1 : 0;
 }
 
 static const char *
@@ -1170,7 +1174,7 @@ auth_check_free_userid_allowance(const char *userid)
         if (!g_guest_usernum)
         {
             if (g_verbose > VERBOSE_INFO) 
-                fprintf(stderr, LOG_PREFIX " reload guest information\r\n");
+                fprintf(stderr, LOG_PREFIX " reload guest information\n");
 
             // reload guest information
             g_guest_usernum = searchuser(STR_GUEST, NULL);
@@ -1187,7 +1191,7 @@ auth_check_free_userid_allowance(const char *userid)
             (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX 
-                " guests are %s\r\n", g_guest_too_many ? "TOO MANY" : "ok.");
+                " guests are %s\n", g_guest_too_many ? "TOO MANY" : "ok.");
 
 #  endif // MAX_GUEST
         return g_guest_too_many ? 0 : 1;
@@ -1246,13 +1250,13 @@ retry_service()
     if (g_retry_times >= LOGIND_MAX_RETRY_SERVICE)
     {
         fprintf(stderr, LOG_PREFIX 
-                "retry too many times (>%d), stop and wait manually maintainance.\r\n",
+                "retry too many times (>%d), stop and wait manually maintainance.\n",
                 LOGIND_MAX_RETRY_SERVICE);
         return;
     }
 
     g_retry_times++;
-    fprintf(stderr, LOG_PREFIX "#%d retry to start service: %s\r\n", 
+    fprintf(stderr, LOG_PREFIX "#%d retry to start service: %s\n", 
             g_retry_times, g_retry_cmd);
     system(g_retry_cmd);
 }
@@ -1289,7 +1293,7 @@ start_service(int fd, login_conn_ctx *conn)
         ld.t_cols = ctx->t_cols;
 
     if (g_verbose > VERBOSE_INFO) 
-        fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\r\n",
+        fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\n",
                 ld.userid, ld.hostip, ld.port, fd);
 
     // XXX simulate the cache re-construction in mbbsd/login_query.
@@ -1302,7 +1306,7 @@ start_service(int fd, login_conn_ctx *conn)
     if (send_remote_fd(g_tunnel, fd) < 0)
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
-                "failed in send_remote_fd\r\n");
+                "failed in send_remote_fd\n");
         return ack;
     }
    
@@ -1311,7 +1315,7 @@ start_service(int fd, login_conn_ctx *conn)
     if (towrite(g_tunnel, &ld, sizeof(ld)) < (int)sizeof(ld))
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
-                "failed in towrite(login_data)\r\n");
+                "failed in towrite(login_data)\n");
         return ack;
     }
     DEBUG_IO(g_tunnel, "after  start_service:towrite(g_tunnel)");
@@ -1325,7 +1329,7 @@ start_service(int fd, login_conn_ctx *conn)
     if (!login_conn_end_ack(conn, ld.ack, fd))
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
-                "failed in logind_conn_end_ack\r\n");
+                "failed in logind_conn_end_ack\n");
         return ack;
     }
     return 1;
@@ -1351,7 +1355,7 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
 
         // failed ... back to internal.
         fprintf(stderr, LOG_PREFIX 
-                "error: cannot use logattempt daemon, change to internal.\r\n");
+                "error: cannot use logattempt daemon, change to internal.\n");
         close(g_logattempt_pipe);
         g_async_logattempt= 0;
         g_logattempt_pipe = 0;
@@ -1455,7 +1459,7 @@ static void
 sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     fprintf(stderr, LOG_PREFIX 
-            "caught sighup (request to reload) with %u opening fd...\r\n",
+            "caught sighup (request to reload) with %u opening fd...\n",
             g_opened_fd);
     g_reload_data = 1;
 }
@@ -1502,7 +1506,7 @@ endconn_cb(int fd, short event GCC_UNUSED, void *arg)
     close(fd);
     g_opened_fd--;
     free(conn);
-    if (g_verbose > VERBOSE_INFO) fprintf(stderr, " done.\r\n");
+    if (g_verbose > VERBOSE_INFO) fprintf(stderr, " done.\n");
 }
 
 static void
@@ -1527,9 +1531,10 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
         event_del(&conn->ev);
         event_set(&conn->ev, fd, 0, endconn_cb, conn);
         event_add(&conn->ev, &tv);
-        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
-                "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
-                fd, sleep_sec);
+        if (g_verbose > VERBOSE_INFO)
+            fprintf(stderr, LOG_PREFIX
+                    "login_conn_remove: stop conn #%d in %d seconds later.\n", 
+                    fd, sleep_sec);
     }
 }
 
@@ -1539,12 +1544,12 @@ get_tunnel_ack(int tunnel)
     void *arg = NULL;
 
 #ifdef VERIFY_BLOCKING_TUNNEL
-    // fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel %s .\r\n", 
+    // fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel %s .\n", 
     // ( fcntl(tunnel, F_GETFL) & O_NONBLOCK ) ? "nonblock" : "blocking");
     if (fcntl(tunnel, F_GETFL) & (O_NONBLOCK))
     {
         fprintf(stderr, LOG_PREFIX
-                "get_tunnel_ack: warning: tunnel is nonblocking.\r\n");
+                "get_tunnel_ack: warning: tunnel is nonblocking.\n");
         stop_tunnel(tunnel);
         return NULL;
     }
@@ -1557,7 +1562,7 @@ get_tunnel_ack(int tunnel)
         // sorry... broken, let's shutdown the tunnel.
         if (g_verbose > VERBOSE_ERROR)
             fprintf(stderr, LOG_PREFIX
-                    "get_tunnel_ack: tunnel (%d) is broken with arg %p.\r\n", 
+                    "get_tunnel_ack: tunnel (%d) is broken with arg %p.\n", 
                     tunnel, arg);
 
         stop_tunnel(tunnel);
@@ -1579,7 +1584,7 @@ ack_cb(int tunnel, short event, void *arg)
     {
         // not read event (closed? timeout?)
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
-                "warning: invalid ack event at tunnel %d.\r\n", tunnel);
+                "warning: invalid ack event at tunnel %d.\n", tunnel);
         stop_tunnel(tunnel);
         return;
     }
@@ -1589,7 +1594,7 @@ ack_cb(int tunnel, short event, void *arg)
     if (!conn)
     {
         if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
-                "warning: invalid ack at tunnel %d.\r\n", tunnel);
+                "warning: invalid ack at tunnel %d.\n", tunnel);
         return;
     }
 
@@ -1599,7 +1604,7 @@ ack_cb(int tunnel, short event, void *arg)
     if (!ackq_del(conn))
     {
         if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
-                "drop abandoned ack connection: %p.\r\n", conn);
+                "drop abandoned ack connection: %p.\n", conn);
         return;
     }
 
@@ -1607,7 +1612,7 @@ ack_cb(int tunnel, short event, void *arg)
     if (conn->cb != sizeof(login_conn_ctx))
     {
         fprintf(stderr, LOG_PREFIX 
-                "warning: received invalid ack from tunnel. abort/reset tunnel?\r\n");
+                "warning: received invalid ack from tunnel. abort/reset tunnel?\n");
         // assert(conn && conn->cb == sizeof(login_conn_ctx));
         return;
     }
@@ -1622,12 +1627,12 @@ ack_cb(int tunnel, short event, void *arg)
 static int
 login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
 {
-    // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: enter.\r\n");
+    // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: enter.\n");
 
     if (g_async_ack)
     {
         // simply wait for ack_cb to complete
-        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: async mode.\r\n");
+        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: async mode.\n");
 
         // mark as queued for waiting ack
         conn->ctx.state = LOGIN_STATE_WAITACK;
@@ -1640,7 +1645,7 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
         // wait service to complete
         void *rack = NULL;
 
-        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: sync mode.\r\n");
+        // fprintf(stderr, LOG_PREFIX "login_conn_end_ack: sync mode.\n");
         if (!g_tunnel)
             return 0;
 
@@ -1652,7 +1657,7 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
         {
             // critical error!
             fprintf(stderr, LOG_PREFIX 
-                    "login_conn_end_ack: failed in ack value (%p != %p).\r\n",
+                    "login_conn_end_ack: failed in ack value (%p != %p).\n",
                     rack, ack);
 
             stop_g_tunnel();
@@ -1683,7 +1688,7 @@ client_cb(int fd, short event, void *arg)
             strlcpy((char*)buf, Cdate(&tnow), sizeof(buf));
 
             fprintf(stderr, LOG_PREFIX
-                    "timeout: %-16s [%s -> %s : %-4ds] %08X %s%s\r\n",
+                    "timeout: %-16s [%s -> %s : %-4ds] %08X %s%s\n",
                      conn->ctx.hostip,
                      Cdate(&conn->enter),
                      buf,
@@ -1753,7 +1758,7 @@ client_cb(int fd, short event, void *arg)
 
             case LOGIN_HANDLE_REDRAW_USERID:
                 if (g_verbose > VERBOSE_DEBUG) fprintf(stderr, LOG_PREFIX
-                        "redraw userid: id=[%s], icurr=%d\r\n",
+                        "redraw userid: id=[%s], icurr=%d\n",
                         conn->ctx.userid, conn->ctx.icurr);
                 draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
                 break;
@@ -1876,7 +1881,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
-                "new connection: fd=#%d %s:%s (opened fd: %d)\r\n", 
+                "new connection: fd=#%d %s:%s (opened fd: %d)\n", 
                 fd, conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
         // set events
@@ -1889,8 +1894,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
             return;
         }
 
-        // TODO can we directly use xsin.sin_addr instead of ASCII form?
-        if (check_banip(conn->ctx.hostip))
+        if (in_banip_list_addr(g_banip, xsin.sin_addr.s_addr))
         {
             draw_text_screen (conn, banip_screen);
             login_conn_remove(conn, fd, BAN_SLEEP_SEC);
@@ -1923,7 +1927,7 @@ tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
         return;
 
     // got new tunnel
-    fprintf(stderr, LOG_PREFIX "new tunnel established.\r\n");
+    fprintf(stderr, LOG_PREFIX "new tunnel established.\n");
     _set_connection_opt(cfd);
     _set_tunnel_opt(cfd);
 
@@ -1947,7 +1951,7 @@ logattempt_daemon()
     int pid;
     logattempt_ctx ctx = {0};
 
-    fprintf(stderr, LOG_PREFIX "forking logattempt daemon...\r\n");
+    fprintf(stderr, LOG_PREFIX "forking logattempt daemon...\n");
     if (pipe(pipe_fds) < 0)
     {
         perror("pipe");
@@ -1982,7 +1986,7 @@ logattempt_daemon()
                  "after  logattempt_daemon:toread(g_logattempt_pipe)");
         if (ctx.cb != sizeof(ctx))
         {
-            fprintf(stderr, LOG_PREFIX "broken pipe. abort.\r\n");
+            fprintf(stderr, LOG_PREFIX "broken pipe. abort.\n");
             break;
         }
 
@@ -2003,7 +2007,7 @@ bind_port(int port)
     fprintf(stderr, LOG_PREFIX "binding to port: %d...", port);
     if ( (sfd = tobindex(buf, LOGIND_SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
     {
-        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
+        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\n", port);
         return -1;
     }
 
@@ -2018,7 +2022,7 @@ bind_port(int port)
     pev->port = port;
     event_set(&pev->ev, sfd, EV_READ | EV_PERSIST, listen_cb, pev);
     event_add(&pev->ev, NULL);
-    fprintf(stderr,"ok. \r\n");
+    fprintf(stderr,"ok. \n");
     return 0;
 }
 
@@ -2046,16 +2050,16 @@ parse_bindports_conf(FILE *fp,
             if (*tclient_cmd)
             {
                 fprintf(stderr, LOG_PREFIX
-                        "warning: ignored configuration file due to specified client command: %s\r\n",
+                        "warning: ignored configuration file due to specified client command: %s\n",
                         tclient_cmd);
                 continue;
             }
             if (sscanf(buf, "%*s%*s%[^\n]", vtunnel) != 1 || !*vtunnel)
             {
-                fprintf(stderr, LOG_PREFIX "incorrect tunnel client configuration. abort.\r\n");
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel client configuration. abort.\n");
                 exit(1);
             }
-            if (g_verbose) fprintf(stderr, "client: %s\r\n", vtunnel);
+            if (g_verbose) fprintf(stderr, "client: %s\n", vtunnel);
             strlcpy(tclient_cmd, vtunnel, sz_tclient_cmd);
             continue;
         }
@@ -2065,16 +2069,16 @@ parse_bindports_conf(FILE *fp,
             if (*g_retry_cmd)
             {
                 fprintf(stderr, LOG_PREFIX
-                        "warning: ignored configuration file due to specified retry command: %s\r\n",
+                        "warning: ignored configuration file due to specified retry command: %s\n",
                         g_retry_cmd);
                 continue;
             }
             if (sscanf(buf, "%*s%*s%[^\n]", vtunnel) != 1 || !*vtunnel)
             {
-                fprintf(stderr, LOG_PREFIX "incorrect retry client configuration. abort.\r\n");
+                fprintf(stderr, LOG_PREFIX "incorrect retry client configuration. abort.\n");
                 exit(1);
             }
-            if (g_verbose) fprintf(stderr, "client_retry: %s\r\n", vtunnel);
+            if (g_verbose) fprintf(stderr, "client_retry: %s\n", vtunnel);
             strlcpy(g_retry_cmd, vtunnel, sizeof(g_retry_cmd));
             continue;
         }
@@ -2084,16 +2088,16 @@ parse_bindports_conf(FILE *fp,
             if (*g_logfile_path)
             {
                 fprintf(stderr, LOG_PREFIX
-                        "warning: ignored configuration file due to specified log: %s\r\n",
+                        "warning: ignored configuration file due to specified log: %s\n",
                         g_logfile_path);
                 continue;
             }
             if (sscanf(buf, "%*s%*s%s", vtunnel) != 1 || !*vtunnel)
             {
-                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\r\n");
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\n");
                 exit(1);
             }
-            if (g_verbose) fprintf(stderr, "log_file: %s\r\n", vtunnel);
+            if (g_verbose) fprintf(stderr, "log_file: %s\n", vtunnel);
             strlcpy(g_logfile_path, vtunnel, sizeof(g_logfile_path));
             continue;
         }
@@ -2102,16 +2106,16 @@ parse_bindports_conf(FILE *fp,
             if (*tunnel_path)
             {
                 fprintf(stderr, LOG_PREFIX
-                        "warning: ignored configuration file due to specified tunnel: %s\r\n",
+                        "warning: ignored configuration file due to specified tunnel: %s\n",
                         tunnel_path);
                 continue;
             }
             if (sscanf(buf, "%*s%*s%s", vtunnel) != 1 || !*vtunnel)
             {
-                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\r\n");
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\n");
                 exit(1);
             }
-            if (g_verbose) fprintf(stderr, "tunnel: %s\r\n", vtunnel);
+            if (g_verbose) fprintf(stderr, "tunnel: %s\n", vtunnel);
             strlcpy(tunnel_path, vtunnel, sz_tunnel_path);
             continue;
         }
@@ -2119,13 +2123,13 @@ parse_bindports_conf(FILE *fp,
         iport = atoi(vport);
         if (!iport)
         {
-            fprintf(stderr, LOG_PREFIX "warning: unknown settings: %s\r\n", buf);
+            fprintf(stderr, LOG_PREFIX "warning: unknown settings: %s\n", buf);
             continue;
         }
 
         if (bind_port(iport) < 0)
         {
-            fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", iport);
+            fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\n", iport);
             exit(3);
         }
         bound_ports++;
@@ -2212,26 +2216,26 @@ main(int argc, char *argv[], char *envp[])
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\n", argv[0]);
             fprintf(stderr, 
-                    "\t-v:    provide verbose messages\r\n"
-                    "\t-T:    provide timeout connection info\r\n"
-                    "\t-d/-D: do/not enter daemon mode (default: %s)\r\n"
-                    "\t-a/-A: do/not use asynchronous service ack (deafult: %s)\r\n"
-                    "\t-b/-B: do/not use non-blocking socket mode (default: %s)\r\n"
-                    "\t-m/-M: do/not use asynchronous logattempts (default: %s)\r\n"
-                    "\t-f: read configuration from file (default: %s)\r\n", 
+                    "\t-v:    provide verbose messages\n"
+                    "\t-T:    provide timeout connection info\n"
+                    "\t-d/-D: do/not enter daemon mode (default: %s)\n"
+                    "\t-a/-A: do/not use asynchronous service ack (deafult: %s)\n"
+                    "\t-b/-B: do/not use non-blocking socket mode (default: %s)\n"
+                    "\t-m/-M: do/not use asynchronous logattempts (default: %s)\n"
+                    "\t-f: read configuration from file (default: %s)\n", 
                     as_daemon   ? "true" : "false",
                     g_async_ack ? "true" : "false",
                     g_nonblock  ? "true" : "false",
                     g_async_logattempt  ? "true" : "false",
                     BBSHOME "/" FN_CONF_BINDPORTS);
             fprintf(stderr, 
-                    "\t-l: log meesages into log_file\r\n"
-                    "\t-p: bind (listen) to specific port\r\n"
-                    "\t-t: create tunnel in given path\r\n"
-                    "\t-c: spawn a (tunnel) client after initialization\r\n"
-                    "\t-r: the command to retry spawning clients\r\n"
+                    "\t-l: log meesages into log_file\n"
+                    "\t-p: bind (listen) to specific port\n"
+                    "\t-t: create tunnel in given path\n"
+                    "\t-c: spawn a (tunnel) client after initialization\n"
+                    "\t-r: the command to retry spawning clients\n"
                    );
             return 1;
         }
@@ -2239,7 +2243,7 @@ main(int argc, char *argv[], char *envp[])
 
     if (setrlimit(RLIMIT_NOFILE, &r) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\r\n", LOGIND_MAX_FDS);
+        fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\n", LOGIND_MAX_FDS);
     }
 
     chdir(BBSHOME);
@@ -2247,7 +2251,7 @@ main(int argc, char *argv[], char *envp[])
 
     if (g_async_logattempt && logattempt_daemon() < 0)
     {
-        fprintf(stderr, LOG_PREFIX "error: cannot fork to handle logattempts.\r\n");
+        fprintf(stderr, LOG_PREFIX "error: cannot fork to handle logattempts.\n");
         return 5;
     }
 
@@ -2258,7 +2262,7 @@ main(int argc, char *argv[], char *envp[])
     // bind ports
     if (port && bind_port(port) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
+        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\n", port);
         return 3;
     }
     if (port)
@@ -2275,12 +2279,12 @@ main(int argc, char *argv[], char *envp[])
 
     if (!bound_ports)
     {
-        fprintf(stderr, LOG_PREFIX "error: no ports to bind. abort.\r\n");
+        fprintf(stderr, LOG_PREFIX "error: no ports to bind. abort.\n");
         return 4;
     }
     if (!*tunnel_path)
     {
-        fprintf(stderr, LOG_PREFIX "error: must assign one tunnel path. abort.\r\n");
+        fprintf(stderr, LOG_PREFIX "error: must assign one tunnel path. abort.\n");
         return 4;
     }
 
@@ -2292,10 +2296,10 @@ main(int argc, char *argv[], char *envp[])
     fprintf(stderr, LOG_PREFIX "creating tunnel: %s...", tunnel_path);
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "cannot create tunnel. abort.\r\n");
+        fprintf(stderr, LOG_PREFIX "cannot create tunnel. abort.\n");
         return 2;
     }
-    fprintf(stderr, "ok.\r\n");
+    fprintf(stderr, "ok.\n");
     event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
     event_add(&ev_tunnel, NULL);
 
@@ -2304,7 +2308,7 @@ main(int argc, char *argv[], char *envp[])
     {
         char *logfile_path = NULL;
         if (g_logfile_path[0]) logfile_path = g_logfile_path;
-        fprintf(stderr, LOG_PREFIX "start daemonize\r\n");
+        fprintf(stderr, LOG_PREFIX "start daemonize\n");
         daemonize(BBSHOME "/run/logind.pid", logfile_path);
 
         // because many of the libraries used in this daemon (for example,
@@ -2324,17 +2328,17 @@ main(int argc, char *argv[], char *envp[])
     if (*tclient_cmd)
     {
         int r;
-        fprintf(stderr, LOG_PREFIX "invoking client...\r\n");
+        fprintf(stderr, LOG_PREFIX "invoking client...\n");
         // XXX this should NOT be a blocking call.
         r = system(tclient_cmd);
         if (g_verbose)
-            fprintf(stderr, LOG_PREFIX "client return value = %d\r\n", r);
+            fprintf(stderr, LOG_PREFIX "client return value = %d\n", r);
     }
 
     // warning: after daemonize, the directory was changed to root (/)...
     {
         time4_t tnow = time(0);
-        fprintf(stderr, LOG_PREFIX "%s: start event dispatch.\r\n",
+        fprintf(stderr, LOG_PREFIX "%s: start event dispatch.\n",
                 Cdate(&tnow));
     }
     event_dispatch();

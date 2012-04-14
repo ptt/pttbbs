@@ -11,6 +11,7 @@
 #define FN_CONF_EDITABLE	"etc/editable"	    // 站務可編輯的系統檔案列表
 #define FN_CONF_RESERVED_ID	"etc/reserved.id"   // 保留系統用無法註冊的 ID
 #define FN_CONF_BINDPORTS	"etc/bindports.conf"   // 預設要提供連線服務的 port 列表
+#define FN_CONF_BANIP           BBSHOME "/etc/banip.conf"    // 禁止連線的 IP 列表
 
 // BBS Data File Names
 #define FN_PASSWD       BBSHOME "/.PASSWDS"      /* User records */
