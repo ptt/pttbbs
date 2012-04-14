@@ -523,12 +523,12 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
     char hex[] = "0123456789ABCDEF";
     char *s0 = s;
 
-    memcpy (s, "=?", 2), s += 2;
-    memcpy (s, tocode, strlen (tocode)), s += strlen (tocode);
-    memcpy (s, "?Q?", 3), s += 3;
-    assert(s-s0+3<slen);
+    memcpy(s, "=?", 2), s += 2;
+    memcpy(s, tocode, strlen (tocode)), s += strlen (tocode);
+    memcpy(s, "?Q?", 3), s += 3;
+    assert(s - s0 + 3 < (int)slen);
 
-    while (*d != '\0' && s-s0+6<slen)
+    while (*d != '\0' && (s - s0 + 6 < (int)slen))
     {
 	unsigned char c = *d++;
 	if (c == ' ')
@@ -755,7 +755,7 @@ str_decode_M3(char *str)
     dst = buf;
     adj = 0;
 
-    while (*src && (dst - buf) < sizeof(buf) - 1) {
+    while (*src && (dst - buf) < (int)sizeof(buf) - 1) {
 	if (*src != '=') {	/* Thor: not coded */
 	    unsigned char  *tmp = src;
 	    while (adj && *tmp && isspace(*tmp))
@@ -773,7 +773,7 @@ str_decode_M3(char *str)
 		tmp++;
 		i = 0;
 		while (*tmp && *tmp != '?') {
-		    if (i + 1 < sizeof(charset)) {
+		    if (i + 1 < (int)sizeof(charset)) {
 			charset[i] = *tmp;
 			charset[i + 1] = '\0';
 			i++;

@@ -121,7 +121,7 @@ VBUFPROTO int
 vbuf_peekat(VBUF *v, int i)
 {
     const char *s = v->head + i;
-    if (vbuf_is_empty(v) || i >= vbuf_capacity(v))
+    if (vbuf_is_empty(v) || i >= (int)vbuf_capacity(v))
         return EOF;
     if (s < v->tail)
         return (unsigned char)*s;

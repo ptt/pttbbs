@@ -132,7 +132,7 @@ substitute_record2(const char *fpath, const void *srcptr, const void *destptr,
     PttLock(fd, offset, size, F_WRLCK);
     while(cb_can_substitue) {
         err = -1;
-        if (read(fd, p, size) != size)
+        if (read(fd, p, size) != (ssize_t)size)
             break;
         if (!cb_can_substitue(p, srcptr))
             break;
@@ -142,7 +142,7 @@ substitute_record2(const char *fpath, const void *srcptr, const void *destptr,
         break;
     }
     if (err == 0) {
-        if (write(fd, destptr, size) != size)
+        if (write(fd, destptr, size) != (ssize_t)size)
             err = -1;
     }
     PttLock(fd, offset, size, F_UNLCK);
@@ -197,7 +197,7 @@ delete_record2(const char *fpath, const void *rptr, size_t size,
         err = -1;
         if (lseek(fi, offset, SEEK_SET) != offset)
             break;
-        if (read(fi, p, size) != size)
+        if (read(fi, p, size) != (ssize_t)size)
             break;
         if (!cb_can_delete(p, rptr))
             break;
@@ -297,7 +297,7 @@ apply_record(const char *fpath, int (*fptr) (void *item, void *optarg),
     if ((fd = open(fpath, O_RDONLY, 0)) == -1)
 	return -1;
 
-    while (read(fd, buf, size) == size)
+    while (read(fd, buf, size) == (ssize_t)size)
 	if ((ret = (*fptr) (buf, arg)) != 0) {
 	    close(fd);
 	    return ret;
