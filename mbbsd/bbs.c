@@ -1168,7 +1168,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
              ".%sªO", currboard);
-    if (dashs(genbuf)) {
+    if (dashs(genbuf) > 0) {
         log_filef("log/conflict.log", LOG_CREAT,
                   "%s %s->%s %s: %s\n", Cdatelite(&now),
                   currboard, brd, fh.filename, fh.title);
