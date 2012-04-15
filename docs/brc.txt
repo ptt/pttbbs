@@ -27,11 +27,14 @@ BRC 是什麼？如何運作？
  BRC_DATA := BRC_NUM BRC_LIST ;
  BRC_LIST := NUM NUM ... NUM ;  (共 BRC_NUM 個 NUM)
  BRC_BID 是 board bid, sizeof(brcbid_t)=2 bytes.
- BRC_NUM    是對這個板的儲存量，sizeof(brcnbrd_t)=2 bytes 以 binary 方式儲存，其值 <= MAX_NUM (80)
- BRC_LIST   是對這個板的紀錄，剛好有 BRC_NUM 個 sizeof(time4_t)=4 bytes integers。
+ BRC_NUM    是對這個板的儲存量，sizeof(brcnbrd_t)=2 bytes 以 binary 方式儲存，
+            其值 <= MAX_NUM (80)
+ BRC_LIST   是對這個板的紀錄，剛好有 BRC_NUM 個 sizeof(time4_t)=4 bytes integers
  另外在 24576 bytes (#define BRC_MAXSIZE 24576) 之外的資料不會被用到。
  
-     在下面會看到，BRC_BID 跟 BRC_NUM 跟 BRC_LIST 都會放在相應的變數中, brc_currbid & brc_num & brc_list 。
+     在下面會看到，BRC_BID 跟 BRC_NUM 跟 BRC_LIST 都會放在相應的變數中,
+ brc_currbid & brc_num & brc_list 。
+
      判定一個檔案是否已經讀過的方法是在 brc_list 中搜尋檔案建立的時間，也就是
  檔名 M.xxxxxxxxxx.A.yyy 中 xxxxxxxxx 的那個數字。如果這個數字有在 brc_list 中
  出現就是已讀，要不如果 brc_list 中所有的數字都比這個檔案的建立時間大（也就是
@@ -130,12 +133,13 @@ BRC v2 實作
       從 .brc2 中讀取最多 BRC_MAXSIZE bytes 並存入 brc_buf 中，將存入的字元
       數存在 brc_size 中。
 
-  static char * brc_putrecord(char *ptr, char *endp, brcbid_t bid, brcnbrd_t num, const time4_t *list);
+  static char * brc_putrecord(char *ptr, char *endp, brcbid_t bid,
+                              brcnbrd_t num, const time4_t *list);
       與 brc_getrecord() 的作用正好相反，將資料寫入 puffer 中。
       傳入值：ptr 指向要寫入的 buffer，bid, num, list 分別是要寫入的資料。
       傳回值：指向寫入的 record 下一個字元的指標。
-      額外效果：若資料是合法的 (num > 0 && list[0] > brc_expire_time) 且空間足夠,
-      資料會被寫入 ptr, endp 之間。
+      額外效果：若資料是合法的 (num > 0 && list[0] > brc_expire_time) 且空間
+      足夠, 資料會被寫入 ptr, endp 之間。
 
   static int brc_unread_time(time_t ftime, int bnum, int *blist);
       跟 brc_unread() 類似，只是傳入的是檔案建立的時間。
