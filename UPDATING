@@ -23,6 +23,16 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5653: [banip]
+util/banip.pl 跟 include/banip.h 改由 etc/banip.conf 取代，以後加 banip 不用
+再重新編譯程式，只要修改 banip.conf 並重啟 bbs (bbsctl restart) 即可。
+另可將 etc/banip.conf 加入 etc/editable 方便編輯。
+
+r5640: [build]
+Makeflie 調整，現在會自動偵測系統內有無 ccache 與 clang; 有的話就自動啟用 (
+clang 的優先權高於 gcc)。建議使用 clang 3.0 以上的版本。
+若不想使用 clang 請加上參數: make -DWITHOUT_CLANG
+
 r5540: [configs]
 注意不少 include/config.h 的選項改名了，同時也提供了較完善的開關設定方法。
 大部份的 LOG 現已集中到 LOG_CONF_*。
