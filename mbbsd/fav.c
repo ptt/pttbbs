@@ -35,6 +35,9 @@
  * (FAVH_ADM_TAG == 1, FAVH_FAV == 0)¡C
  */
 
+#ifdef DEBUG
+#define inline
+#endif
 
 /* the total number of items, every level. */
 static int 	fav_number;

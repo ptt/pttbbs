@@ -47,6 +47,10 @@
 // otherwise you need to use real strlen.
 #define MACROSTRLEN(x) (sizeof(x)-1)
 
+#ifdef DEBUG
+#define inline
+#endif
+
 // ---- UTILITIES ----------------------------------------------------
 inline void
 outnc(int n, unsigned char c)

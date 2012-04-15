@@ -93,6 +93,7 @@ all: $(PROG)
 $(PROG): $(OBJS)
 	sh $(SRCROOT)/util/newvers.sh
 	@printf "\033[0;1;32m"
+	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"
 	@[ -z "$(USE_BBSLUA)" ] || echo -n "+BBSLUA "
 	@[ -z "$(USE_PFTERM)" ] || echo -n "+PFTERM "
 	@[ -z "$(USE_CONVERT)" ] || echo -n "+CONVERT "
