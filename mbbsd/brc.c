@@ -273,9 +273,9 @@ brc_update(){
 }
 
 #ifdef LOG_REMOTE_BRC_FAILURE
-# define BRC_FAILURE(msg) { log_filef("log/brc_remote_failure.log", \
-                                      LOG_CREAT, "%s %s ERR: %s", \
-                                      Cdate(&now), msg, command); break; }
+# define BRC_FAILURE(msg) { syncnow(); \
+    log_filef("log/brc_remote_failure.log", LOG_CREAT, "%s %s ERR: %s", \
+              Cdate(&now), msg, command); break; }
 #else
 # define BRC_FAILURE(msg) { break; }
 #endif
@@ -297,7 +297,7 @@ load_remote_brc() {
     do {
         int conn_retries = 10;
         while (conn_retries-- > 0 &&
-               (fd = toconnectex(BRCSTORED_ADDR, 10)) < 0) {
+               (fd = toconnectex(BRCSTORED_ADDR, 5)) < 0) {
             mvprints(b_lines, 0, (conn_retries == 0) ?
                      "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)" :
                      "正在同步看板已讀未讀資料,請稍候... (#%d)", conn_retries + 1);
