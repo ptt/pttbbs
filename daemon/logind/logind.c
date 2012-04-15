@@ -1826,6 +1826,7 @@ static void
 listen_cb(int lfd, short event GCC_UNUSED, void *arg)
 {
     int fd;
+    const char *banmsg;
     struct sockaddr_in xsin = {0};
     struct timeval idle_tv = { IDLE_TIMEOUT_SEC, 0};
     socklen_t szxsin = sizeof(xsin);
@@ -1894,9 +1895,9 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
             return;
         }
 
-        if (in_banip_list_addr(g_banip, xsin.sin_addr.s_addr))
+        if ((banmsg = in_banip_list_addr(g_banip, xsin.sin_addr.s_addr)))
         {
-            draw_text_screen (conn, banip_screen);
+            draw_text_screen (conn, *banmsg ? banmsg : banip_screen);
             login_conn_remove(conn, fd, BAN_SLEEP_SEC);
             return;
         }

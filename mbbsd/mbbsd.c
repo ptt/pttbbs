@@ -2131,12 +2131,13 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 					 * sec  */
     static int      banned = 0;
 
-    if (banip && (override_ip ? in_banip_list(banip, override_ip) :
-                                in_banip_list_addr(banip, addr))) {
-        const char *msg = "THIS IP IS BANNED.\r\n"
-                          "此 IP 已被拒絕連線。\r\n";
-	write(fd, msg, strlen(msg));
-        return -1;
+    if (banip) {
+        const char *msg = override_ip ? in_banip_list(banip, override_ip) :
+                                        in_banip_list_addr(banip, addr);
+        if (msg) {
+            write(fd, msg, strlen(msg));
+            return -1;
+        }
     }
 
     // if you have your own banner, define as INSCREEN in pttbbs.conf

@@ -14,59 +14,108 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "cmbbs.h"
-#define BANIP_ALLOC (128)
+
+#define BANIP_ALLOC (512)
+#define BANIP_ALLOCMSG (1024)
+
+static const char *str_banned = "YOUR ARE USING A BANNED IP.\n\r";
+
+typedef struct {
+    IPv4 addr;
+    size_t msg_offset;
+} BanRecord;
 
 typedef struct {
     // table allocation
     size_t sz, alloc;
-    IPv4 *ar;
+    size_t szmsg, allocmsg;
+    char  *msg;
+    BanRecord *ar;
 } IPv4List;
 
 static int
 compare_ipv4(const void *pa, const void *pb) {
-    const IPv4 *a = (const IPv4*)pa, *b = (const IPv4*)pb;
+    const BanRecord *a = (const BanRecord*)pa, *b = (const BanRecord*)pb;
     // Since IPv4 are all random number, we can't do simple a-b due to
     // underflow.
-    return (*a > *b) ? 1 : (*a == *b) ? 0 : -1;
+    return (a->addr > b->addr) ? 1 : (a->addr == b->addr) ? 0 : -1;
 }
 
 static void
 add_banip_list(IPv4List *list, IPv4 addr) {
     if (list->sz >= list->alloc) {
         list->alloc += BANIP_ALLOC;
-        list->ar = (IPv4*)realloc(list->ar, sizeof(IPv4) * list->alloc);
+        list->ar = (BanRecord*)realloc(
+            list->ar, sizeof(BanRecord) * list->alloc);
         assert(list->ar);
     }
-    list->ar[list->sz++] = addr;
+    list->ar[list->sz].msg_offset = list->szmsg;
+    list->ar[list->sz++].addr = addr;
+}
+
+static void
+add_banip_list_message(IPv4List *list, const char *msg) {
+    int len = strlen(msg);
+    char *p;
+    // Add more space for '\n\r\0'
+    while (list->szmsg + len + 3 >= list->allocmsg) {
+#ifdef DEBUG
+        fprintf(stderr, "(banip) Allocate more msg buffer: %lu->%lu\n",
+                list->allocmsg, list->allocmsg + BANIP_ALLOCMSG);
+#endif
+        list->allocmsg += BANIP_ALLOCMSG;
+        list->msg = (char*)realloc(list->msg, list->allocmsg);
+        assert(list->msg);
+    }
+    p = list->msg + list->szmsg;
+    strcpy(p, msg);
+
+    // Remove trailing blank lines.
+    while (len > 0 && isascii(p[len - 1]) && isspace(p[len - 1])) {
+        p[--len] = 0;
+    }
+    assert(len > 0);
+    p[len++] = '\n';
+    p[len++] = '\r';
+    p[len++] = 0;
+#ifdef DEBUG
+    fprintf(stderr, "(banip) Add new message: %s", p);
+#endif
+    list->szmsg += len;
 }
 
 static void
 reset_banip_list(IPv4List *list) {
     list->sz = 0;
+    list->szmsg = 0;
 }
 
 static void
 sort_banip_list(IPv4List *list) {
     if (!list->ar)
         return;
-    qsort(list->ar, list->sz, sizeof(IPv4), compare_ipv4);
+    qsort(list->ar, list->sz, sizeof(BanRecord), compare_ipv4);
 }
 
-int
+const char *
 in_banip_list_addr(const BanIpList *blist, IPv4 addr) {
     const IPv4List *list = (const IPv4List*)blist;
+    BanRecord r = { .addr=addr }, *p;
     if (!list || !list->ar)
-        return 0;
-    return bsearch(&addr, list->ar, list->sz,
-                   sizeof(IPv4), compare_ipv4) != NULL;
+        return NULL;
+    p = bsearch(&r, list->ar, list->sz, sizeof(BanRecord), compare_ipv4);
+    if (!p)
+        return NULL;
+    return (p->msg_offset < list->szmsg) ?
+        list->msg + p->msg_offset : str_banned;
 }
 
-int
+const char *
 in_banip_list(const BanIpList *blist, const char *ip) {
     struct in_addr addr;
     if (blist && inet_pton(AF_INET, ip, &addr) == 1)
         return in_banip_list_addr(blist, addr.s_addr);
-    return 0;
+    return NULL;
 }
 
 BanIpList*
@@ -75,6 +124,7 @@ free_banip_list(BanIpList *blist) {
     if (!list)
         return NULL;
     free(list->ar);
+    free(list->msg);
     free(list);
     return NULL;
 }
@@ -86,7 +136,9 @@ load_banip_list(const char *filename, FILE* err) {
     FILE *fp;
     char *p;
     char buf[PATHLEN];
+    char msg[25 * ANSILINELEN];
     struct in_addr addr;
+    int was_ip = 1;
     
     fp = fopen(filename, "rt");
     if (!fp)
@@ -97,15 +149,44 @@ load_banip_list(const char *filename, FILE* err) {
 
     reset_banip_list(list);
     while (fgets(buf, sizeof(buf), fp)) {
-        // only process lines starting with digits,
-        // and ignore all comments.
-        p = strchr(buf, '#');
-        if (p) *p = 0;
+        // To allow client printing message to screen directly,
+        // always append \r.
+        strlcat(buf, "\r", sizeof(buf));
         p = buf;
         while (*p && isascii(*p) && isspace(*p))
             p++;
-        if (!(*p && isascii(*p) && isdigit(*p)))
+        // first, remove lines with only comments.
+        if (*p == '#')
             continue;
+
+        // process IP entries, otherwise append text.
+        if (*p && isascii(*p) && isdigit(*p)) {
+            char *sharp = strchr(p, '#');
+            if (sharp) *sharp = 0;
+            if (!was_ip) {
+                add_banip_list_message(list, msg);
+                was_ip = 1;
+            }
+        } else {
+            // For text entries, use raw input and ignore comments.
+            // Also ignore all blank lines before first data.
+            if (was_ip) {
+                if (!*p)
+                    continue;
+                if (list->sz < 1) {
+                    if (err)
+                        fprintf(err, "(banip) WARN: Text before IP: %s", buf);
+                    continue;
+                }
+                strlcpy(msg, buf, sizeof(msg));
+            }
+            else
+                strlcat(msg, buf, sizeof(msg));
+            was_ip = 0;
+            continue;
+        }
+
+        // Parse and add IP records.
         for (p = strtok(p, " \t\r\n"); p; p = strtok(NULL, " \t\r\n")) {
             if (!(*p && isascii(*p) && isdigit(*p)))
                 continue;
@@ -120,6 +201,12 @@ load_banip_list(const char *filename, FILE* err) {
 #endif
             add_banip_list(list, addr.s_addr);
         }
+    }
+    if (was_ip) {
+        if (err)
+            fprintf(err, "(banip) WARN: Trailing IP records without text.\n");
+    } else {
+        add_banip_list_message(list, msg);
     }
     fclose(fp);
     sort_banip_list(list);
@@ -140,7 +227,11 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     if (m_base < 0)
         return NULL;
 
-    if (m_cache >= m_base && sz > 0 && sz % sizeof(IPv4) == 0) {
+    // TODO currently we only save the ipv4 address & index (BanRecord) without
+    // message body; in future we should also cache that, or throw everything
+    // into SHM, or set BanRecods.msg_offset to 0.
+
+    if (m_cache >= m_base && sz > 0 && sz % sizeof(BanRecord) == 0) {
         // valid cache, load it.
         fp = fopen(cachefile, "rb");
         if (fp) {
@@ -152,10 +243,10 @@ cached_banip_list(const char *basefile, const char *cachefile) {
             assert(list);
             memset(list, 0, sizeof(*list));
             reset_banip_list(list);
-            list->ar = (IPv4*)malloc(sz);
-            list->sz = sz / sizeof(IPv4);
+            list->ar = (BanRecord*)malloc(sz);
+            list->sz = sz / sizeof(BanRecord);
             list->alloc = list->sz;
-            fread(list->ar, sizeof(IPv4), list->sz, fp);
+            fread(list->ar, sizeof(BanRecord), list->sz, fp);
             fclose(fp);
             return list;
         }
@@ -167,7 +258,7 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     snprintf(tmpfn, sizeof(tmpfn), "%s.%d", cachefile, getpid());
     fp = fopen(tmpfn, "wb");
     if (fp) {
-        fwrite(list->ar, sizeof(IPv4), list->sz, fp);
+        fwrite(list->ar, sizeof(BanRecord), list->sz, fp);
         fclose(fp);
         Rename(tmpfn, cachefile);
 #ifdef DEBUG

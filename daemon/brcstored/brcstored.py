@@ -38,7 +38,8 @@ def open_database(db_path):
     # BRCv3 max size = 49152 (8192*3*2), so let's increase block size.
     # LevelDB default I/O buffer size: R=8M, W=2M.
     g_db = leveldb.LevelDB(db_path, block_size=49152,
-            write_buffer_size=(8 * (2<< 20)))
+            block_cache_size=(16 * (2 << 20)),
+            write_buffer_size=(16 * (2 << 20)))
 
 
 def handle_request(sock, fd):
@@ -98,6 +99,7 @@ def main(myname, argv):
             pool.spawn_n(handle_request, new_sock, new_sock.makefile('rw'))
         except (SystemExit, KeyboardInterrupt):
             break
+
 
 if __name__ == '__main__':
     main(sys.argv[0], sys.argv[1:])
