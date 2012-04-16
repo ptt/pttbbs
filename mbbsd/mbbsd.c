@@ -883,24 +883,6 @@ login_query(char *ruid)
 #endif
 }
 
-#if defined(WHERE) && !defined(FROMD)
-static int
-where(const char *from)
-{
-    int i;
-    uint32_t ipaddr = ipstr2int(from);
-
-    resolve_fcache();
-
-    for (i = 0; i < SHM->home_num; i++) {
-	if ((SHM->home_ip[i] & SHM->home_mask[i]) == (ipaddr & SHM->home_mask[i])) {
-	    return i;
-	}
-    }
-    return 0;
-}
-#endif
-
 static void
 check_BM(void)
 {
@@ -970,13 +952,11 @@ setup_utmp(int mode)
     strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
     strip_nonebig5((unsigned char *)currutmp->mind, sizeof(currutmp->mind));
 
+#ifdef FROMD
     // resolve fromhost
-#if defined(WHERE)
-
-# ifdef FROMD
     {
 	int fd;
-	if ( (fd = toconnect(FROMD_ADDR)) >= 0 ) {
+	if ((fd = toconnect(FROMD_ADDR)) >= 0) {
 	    write(fd, fromhost, strlen(fromhost));
 	    // zero and reuse uinfo.from to check real data
 	    memset(uinfo.from, 0, sizeof(uinfo.from));
@@ -987,14 +967,6 @@ setup_utmp(int mode)
 		strlcpy(currutmp->from, uinfo.from, sizeof(currutmp->from));
 	}
     }
-# else  // !FROMD
-    {
-	int desc = where(fromhost);
-	if (desc > 0)
-	    strlcpy(currutmp->from, SHM->home_desc[desc], sizeof(currutmp->from));
-    }
-# endif // !FROMD
-
 #endif // WHERE
 
     /* Very, very slow friend_load. */

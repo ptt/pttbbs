@@ -468,10 +468,6 @@
 #define    DOTIMEOUT            /* 處理閒置時間 */
 #endif
 
-#ifndef NO_WHERE
-#define    WHERE                /* 是否有故鄉功能 */
-#endif
-
 #ifndef NO_INTERNET_EMAIL
 #define    INTERNET_EMAIL       /* 支援 InterNet Email 功能(含 Forward) */
 #endif

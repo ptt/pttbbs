@@ -592,12 +592,11 @@ typedef struct {
     /* statistic */
     int     statistic[STAT_MAX];
 
-    // TODO XXX 有 fromd 後可以拔掉了。
-    /* 故鄉 fromcache */
-    unsigned int    home_ip[MAX_FROM];
-    unsigned int    home_mask[MAX_FROM];
-    char            home_desc[MAX_FROM][32];
-    int        	    home_num;
+    // 從前作為故鄉使用 (fromcache). 現已被 daemon/fromd 取代。
+    unsigned int    _deprecated_home_ip[MAX_FROM];
+    unsigned int    _deprecated_home_mask[MAX_FROM];
+    char            _deprecated_home_desc[MAX_FROM][32];
+    int        	    _deprecated_home_num;
 
     int     max_user;
     time4_t max_time;

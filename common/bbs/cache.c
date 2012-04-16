@@ -861,48 +861,6 @@ reload_fcache(void)
 	FILE           *fp;
 
 	SHM->Fbusystate = 1;
-	bzero(SHM->home_ip, sizeof(SHM->home_ip));
-	if ((fp = fopen("etc/domain_name_query.cidr", "r"))) {
-	    char            buf[256], *ip, *mask;
-	    char *strtok_pos;
-
-	    SHM->home_num = 0;
-	    while (fgets(buf, sizeof(buf), fp)) {
-		if (!buf[0] || buf[0] == '#' || buf[0] == ' ' || buf[0] == '\n')
-		    continue;
-
-		if (buf[0] == '@') {
-		    SHM->home_ip[0] = 0;
-		    SHM->home_mask[0] = 0xFFFFFFFF;
-		    SHM->home_num++;
-		    continue;
-		}
-
-		ip = strtok_r(buf, " \t", &strtok_pos);
-		if ((mask = strchr(ip, '/')) != NULL) {
-		    int shift = 32 - atoi(mask + 1);
-		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
-		    SHM->home_mask[SHM->home_num] = (0xFFFFFFFF >> shift ) << shift;
-		}
-		else {
-		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
-		    SHM->home_mask[SHM->home_num] = 0xFFFFFFFF;
-		}
-		ip = strtok_r(NULL, " \t", &strtok_pos);
-		if (ip == NULL) {
-		    strcpy(SHM->home_desc[SHM->home_num], "雲深不知處");
-		}
-		else {
-		    strlcpy(SHM->home_desc[SHM->home_num], ip,
-			    sizeof(SHM->home_desc[SHM->home_num]));
-		    chomp(SHM->home_desc[SHM->home_num]);
-		}
-		(SHM->home_num)++;
-		if (SHM->home_num == MAX_FROM)
-		    break;
-	    }
-	    fclose(fp);
-	}
 	SHM->max_user = 0;
 
 	/* 等所有資料更新後再設定 uptime */

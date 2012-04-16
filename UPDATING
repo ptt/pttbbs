@@ -23,6 +23,18 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5663: [fromd/where]
+中文故鄉 (pttbbs.conf:WHERE) 改由 FROMD 來提供，移除原 cache + mbbsd 的機制.
+好處是: (1) 減少 reload cache 所花時間 (2) 避免 duplicated code.
+
+若想使用故鄉功能，請:
+ (1) 編輯 pttbs.conf, 加上 #define FROMD
+ (2) cd ~/pttbbs; make clean; make   # mbbsd 跟 common 都要重編
+ (3) 在開機的 script 加上 ~bbs/daemon/fromd/fromd
+     若不想重開機，請順手執行一次上面的命令。
+ (4) bbsctl restart ，連線進去測試看看。
+故鄉的定義檔一樣是 etc/domain_name_query.cidr ，格式也一樣。
+
 r5662: [banip]
 banip 的 record size 由 unsigned long 改為 in_addr_t.
 在 64-bit 環境上使用的人請全部 (common, util, mbbsd) make clean 再 make all.
