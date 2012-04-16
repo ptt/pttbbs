@@ -3,11 +3,9 @@
 
 //kcwu: 80x24 一般使用者名單 1.9k, 含 header 2.4k
 // 一般文章推文頁約 2590 bytes
+// 注意實際可用的空間為 N-1。
 #define OBUFSIZE  3072
 #define IBUFSIZE  128
-
-// Size of space to be preserved, usually for char convertion.
-#define BUF_PRESERVE_SPACE_SIZE   (4)
 
 #ifdef DEBUG
 #define register
@@ -83,8 +81,8 @@ debug_print_input_buffer(char *s, size_t len)
 /* ----------------------------------------------------- */
 int
 init_io() {
-    vbuf_new(pvout, OBUFSIZE + BUF_PRESERVE_SPACE_SIZE);
-    vbuf_new(pvin, IBUFSIZE + BUF_PRESERVE_SPACE_SIZE);
+    vbuf_new(pvout, OBUFSIZE);
+    vbuf_new(pvin, IBUFSIZE);
     return 0;
 }
 
@@ -131,7 +129,7 @@ ochar(int c)
     szLastOutput ++;
 #endif // DBG_OUTRPT
 
-    if (vbuf_is_full(pvout) || vbuf_size(pvout) >= OBUFSIZE)
+    if (vbuf_is_full(pvout))
         oflush();
 
 #ifdef CONVERT
@@ -350,12 +348,6 @@ num_in_buf(void)
     return vbuf_size(pvin);
 }
 
-static inline int
-input_isfull(void)
-{
-    return vbuf_size(pvin) >= IBUFSIZE;
-}
-
 static inline void
 drop_input(void)
 {
@@ -369,10 +361,13 @@ drop_input(void)
  */
 static inline ssize_t 
 read_vin() {
+    // Note: buf should be larger than pvin buffer size.
     unsigned char buf[IBUFSIZE];
     /* tty_read will handle abort_bbs.
      * len <= 0: read more */
-    ssize_t len = tty_read(buf, vbuf_space(pvin));
+    ssize_t len;
+    assert(sizeof(buf) >= vbuf_space(pvin));
+    len = tty_read(buf, vbuf_space(pvin));
     if (len <= 0)
         return len;
 
@@ -636,7 +631,7 @@ vkey_is_typeahead()
 inline int
 vkey_is_full(void)
 {
-    return input_isfull();
+    return vbuf_is_full(pvin);
 }
 
 inline void 
@@ -684,8 +679,7 @@ vkey_poll(int ms)
 
 int  
 vkey_prefetch(int timeout) {
-    if (wait_input(timeout / (double)MILLISECONDS, 1) &&
-        vbuf_size(pvin) < IBUFSIZE)
+    if (wait_input(timeout / (double)MILLISECONDS, 1) && !vbuf_is_full(pvin))
         read_vin();
     return num_in_buf() > 0;
 }
