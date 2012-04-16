@@ -837,21 +837,21 @@ check_newpost(boardstat_t * ptr)
 	    ptr->myattr & (NBRD_LINE | NBRD_FOLDER))
 	return 0;
 
-    if (B_TOTAL(ptr) == 0)
-       {
-	setbtotal(ptr->bid);
-	setbottomtotal(ptr->bid);
-       }
+    if (B_TOTAL(ptr) == 0) {
+        setbtotal(ptr->bid);
+        setbottomtotal(ptr->bid);
+    }
     if (B_TOTAL(ptr) == 0)
 	return 0;
+
+    // Note: 以前這裡有 if(ftime > now [+10]) 就重設 ftime 的 code;
+    // 但實際的狀況是那樣產生的 lastposttime 會與看板內的文章不同，
+    // 造成未讀符號永遠不會消失。 又，在這邊的 now 其實是非同步的，
+    // 所以若有人在進入這裡面卡很久(ex, system overload)那就會非常容易
+    // 變成 ftime > now.
     ftime = B_LASTPOSTTIME(ptr);
 
-    /* 有些 util, 尤其是 innbbsd, 會用到比較新的 time stamp,
-     * 只要不太誇張就 ok */
-    if (ftime > now + 10) 
-	ftime = B_LASTPOSTTIME(ptr) = now - 1;
-
-    if ( brc_unread_time(ptr->bid, ftime, 0) )
+    if (brc_unread_time(ptr->bid, ftime, 0))
 	ptr->myattr |= NBRD_UNREAD;
     
     return 1;
