@@ -299,8 +299,10 @@ load_remote_brc() {
         while (conn_retries-- > 0 &&
                (fd = toconnectex(BRCSTORED_ADDR, 5)) < 0) {
             mvprints(b_lines, 0, (conn_retries == 0) ?
-                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)" :
-                     "正在同步看板已讀未讀資料,請稍候... (#%d)", conn_retries + 1);
+                     ANSI_COLOR(1;31)
+                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)" 
+                     ANSI_RESET: "正在同步看板已讀未讀資料,請稍候... (#%d)",
+                     conn_retries + 1);
             refresh();
             sleep(1);
         }

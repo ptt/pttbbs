@@ -1101,7 +1101,6 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     if (cp_IsHiddenBoard(getbcache(brd_id)))
         return;
 
-    syncnow();
     memcpy(&fh, postfile, sizeof(fileheader_t));
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
