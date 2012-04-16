@@ -43,7 +43,7 @@ int log_payment(const char *filename, int money, int oldm, int newm,
                        const char *reason, time4_t now);
 
 /* banip.c */
-typedef unsigned long IPv4;     // derived from in_addr.s_addr
+typedef in_addr_t IPv4;     // derived from in_addr.s_addr
 typedef void BanIpList;
 const char *in_banip_list(const BanIpList *list, const char *ip);
 const char *in_banip_list_addr(const BanIpList *list, IPv4 addr);

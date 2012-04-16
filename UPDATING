@@ -23,6 +23,11 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5662: [banip]
+banip 的 record size 由 unsigned long 改為 in_addr_t.
+在 64-bit 環境上使用的人請全部 (common, util, mbbsd) make clean 再 make all.
+~bbs/tmp/banip.cache 也要記得砍掉重建。
+
 r5653: [banip]
 util/banip.pl 跟 include/banip.h 改由 etc/banip.conf 取代，以後加 banip 不用
 再重新編譯程式，只要修改 banip.conf 並重啟 bbs (bbsctl restart) 即可。

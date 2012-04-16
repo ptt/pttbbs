@@ -22,7 +22,7 @@ static const char *str_banned = "YOUR ARE USING A BANNED IP.\n\r";
 
 typedef struct {
     IPv4 addr;
-    size_t msg_offset;
+    uint32_t msg_offset;
 } BanRecord;
 
 typedef struct {
