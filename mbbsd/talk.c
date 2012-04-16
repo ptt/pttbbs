@@ -1105,14 +1105,16 @@ int
 t_display(void) {
     char genbuf[PATHLEN], ans[4];
     if (fp_writelog) {
-        fflush(fp_writelog);
+        // Why not simply fflush here? Because later when user enter (M) or (C),
+        // fp_writelog must be re-opened -- and there will be a race condition.
+	fclose(fp_writelog);
+	fp_writelog = NULL;
     }
     setuserfile(genbuf, fn_writelog);
-    if (dashs(genbuf) < 1) {
+    if (more(genbuf, YEA) == -1) {
         vmsg("¼ÈµL°T®§°O¿ý");
         return FULLUPDATE;
-    }
-    if (more(genbuf, YEA) != -1) {
+    } else {
 	grayout(0, b_lines-5, GRAYOUT_DARK);
 	move(b_lines - 4, 0);
 	clrtobot();
