@@ -55,7 +55,8 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 	    if (!fout)
 		return 1;
 
-	    printf("%s: %s %d %s\n", file_path, fh.filename, fh.modified, fh.title);
+            printf("%s: %d[%s] %s\n", file_path, fh.modified,
+                   Cdate_mdHMS(&fh.modified), fh.title);
 	    unlink(file_path);
 	    num_remove++;
 	    if (!fout)
