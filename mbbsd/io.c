@@ -7,6 +7,14 @@
 #define OBUFSIZE  3072
 #define IBUFSIZE  128
 
+// When CONVERT is applied, we may need to write extra N bytes into buffer for
+// one character input. Currently the number is 3 (UTF8).
+#ifdef CONVERT
+# define OBUFMINSPACE (3)
+#else
+# define OBUFMINSPACE (1)
+#endif
+
 #ifdef DEBUG
 #define register
 #define inline
@@ -129,7 +137,7 @@ ochar(int c)
     szLastOutput ++;
 #endif // DBG_OUTRPT
 
-    if (vbuf_is_full(pvout))
+    if (vbuf_space(pvout) < OBUFMINSPACE)
         oflush();
 
 #ifdef CONVERT
