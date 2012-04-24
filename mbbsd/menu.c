@@ -986,7 +986,7 @@ static const commands_t playlist[] = {
     {chicken_main, PERM_LOGINOK, 
 			     "Chicken     ¡i " BBSMNAME2 "¾iÂû³õ ¡j"},
     {ticket_main, PERM_LOGINOK,
-                             "Gamble      ¡i " BBSMNAME2 "½ä³õ   ¡j"},
+                             "Gamble      ¡i " BBSMNAME2 "±m¨é   ¡j"},
     {chessroom, PERM_LOGINOK,"BChess      ¡i " BBSMNAME2 "´Ñ°|   ¡j"},
     {NULL, 0, NULL}
 };

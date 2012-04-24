@@ -244,7 +244,7 @@ int main()
                 newm = moneyof(uid);
                 {
                     char reason[256];
-                    sprintf(reason, "½ä½L¤¤¼ú (%s x %d)", betname[mybet], num);
+                    sprintf(reason, "±m¨é¤¤¼ú (%s x %d)", betname[mybet], num);
                     sethomefile(genbuf, userid, FN_RECENTPAY);
                     log_payment(genbuf, -money * num, oldm, newm, reason, now);
                 }

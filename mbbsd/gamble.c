@@ -48,7 +48,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
-	showtitle(BBSMNAME "賭盤", BBSNAME);
+	showtitle(BBSMNAME "彩券", BBSNAME);
     move(2, 0);
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
@@ -69,7 +69,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
      " 1.可購買以下不同類型的彩票。每張要花 " ANSI_COLOR(32) "%d" 
 	 ANSI_RESET " " MONEYNAME "。\n"
 "      2.%s\n"
-"      3.開獎時只有一種彩票中獎, 有購買該彩票者, 則可依購買的張數均分總賭金。\n"
+"      3.開獎時只有一種彩票中獎, 有購買該彩票者, 則可依購買的張數均分總彩金。\n"
 "      4.每筆獎金由系統抽取 5%% 之稅金%s。\n"
 "      5." ANSI_COLOR(1;31) "如遇系統故障造成帳號回溯等各種問題，"
 	 "原則上不予以賠償，風險自擔。" ANSI_RESET "\n"
@@ -113,7 +113,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     prints(ANSI_RESET "\n已下注總額: "
            ANSI_COLOR(1;33) "%lld" ANSI_RESET, total * (*price));
     if (end) {
-	outs("，賭盤已經停止下注\n");
+	outs("，已經停止下注\n");
 	return -count;
     }
     return count;
@@ -258,7 +258,7 @@ doesnt_catch_up:
     if (price > 0) {
         pay_as_uid(currutmp->uid, -price, "下注失敗退費");
     }
-    vmsg("板主已經停止下注了 不能賭嚕");
+    vmsg("板主已經停止下注了");
     unlockutmpmode();
     return -1;
 }
@@ -357,9 +357,9 @@ openticket(int bid)
 
 	forBM = money * 0.0005;
 	if(forBM > 500) forBM = 500;
-        pay(-forBM, "%s 賭場抽頭", bh->brdname);
+        pay(-forBM, "%s 彩金抽成", bh->brdname);
 
-	mail_redenvelop("[賭場抽頭]", cuser.userid, forBM, NULL);
+	mail_redenvelop("[彩金抽成]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	pay(price * 10, "賭盤退費手續費");
@@ -442,9 +442,9 @@ openticket(int bid)
             }
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
-            pay_as_uid(uid, -(money * i), BBSMNAME "賭場 - 彩票[%s]",
+            pay_as_uid(uid, -(money * i), BBSMNAME "彩券 - [%s]",
                        betname[mybet]); 
-	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "賭場");
+	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "彩券");
 	}
 	fclose(fp1);
     }
@@ -458,7 +458,7 @@ openticket(int bid)
 	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤開獎", bh->brdname);
     else
 	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤取消", bh->brdname);
-    post_file(bh->brdname, buf, outcome, "[賭神]");
+    post_file(bh->brdname, buf, outcome, "[彩券]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
     post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
 
@@ -503,7 +503,7 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
     if (stop_gamble()) {
-	vmsg("目前未舉辦賭盤或賭盤已開獎");
+	vmsg("目前未舉辦或賭盤已開獎");
 	return DONOTHING;
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);

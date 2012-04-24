@@ -266,7 +266,8 @@ save_violatelaw(void)
 
     day =  cuser.vl_count*3 - (now - cuser.timeviolatelaw)/DAY_SECONDS;
     if (day > 0) {
-        vmsgf("依照違規次數, 你還需要反省 %d 天才能繳罰單", day);
+        vmsgf("依照違規次數(%d), 你還需要反省 %d 天才能繳罰單",
+              cuser.vl_count, day);
 	return 0;
     }
     reload_money();
