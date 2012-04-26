@@ -1179,6 +1179,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 #endif
     Copy(fpath, genbuf);
     fh.filemode = FILE_LOCAL;
+    fh.modified = now;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	SHM->lastposttime[bid - 1] = now;
@@ -2026,10 +2027,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif // USE_AUTOCPLOG
 
 #ifdef USE_POSTRECORD
-    if (postrecord.times > 1) {
+    if (postrecord.times > 0) {
 	outs(ANSI_COLOR(1;31) 
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
-	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
+	"若有特別需求請洽各板主，請板主幫你轉文(不是寫信問板主後自己轉)\n\n");
     }
 #endif
 
