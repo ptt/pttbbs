@@ -1284,7 +1284,11 @@ showplans_userec(userec_t *user)
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
-	outs(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單" ANSI_RESET);
+        if (user->vl_count)
+            prints(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單(已累計 %d 次)"
+                   ANSI_RESET, user->vl_count);
+        else
+            outs(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單" ANSI_RESET);
 	return;
     }
 
