@@ -2029,7 +2029,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef USE_POSTRECORD
     if (postrecord.times > 0) {
 	outs(ANSI_COLOR(1;31) 
-	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
+	"請注意: 若同ID或同IP過量重複轉錄將視為洗板，導致被開罰單停權。\n"
+        "一旦被檢舉為CP屬實，系統會刪除該週所有文章(包括非轉錄文)。\n" ANSI_RESET
 	"若有特別需求請洽各板主，請板主幫你轉文(不是寫信問板主後自己轉)\n\n");
     }
 #endif
