@@ -835,10 +835,24 @@ m_newbrd(int whatclass, int recover)
 	strlcpy(newboard.title + 7, genbuf, sizeof(newboard.title) - 7);
     setbpath(genbuf, newboard.brdname);
 
-    if (!recover && 
-        (getbnum(newboard.brdname) > 0 || Mkdir(genbuf) == -1)) {
+    // Recover 應只拿來處理目錄已存在(但.BRD沒有)的情況，不然就會在
+    // 有人誤用時造成同個目錄有多個 board entry 的情形。
+    // getbnum(newboard.brdname) > 0 時由於目前設計是會 new board,
+    // 所以真的開板後只會造成 bcache 錯亂，不可不慎。
+    if (getbnum(newboard.brdname) > 0) {
 	vmsg("此看板已經存在! 請取不同英文板名");
 	return -1;
+    }
+    if (Mkdir(genbuf) != 0) {
+        if (errno == EEXIST) {
+            if (!recover) {
+                vmsg("看板目錄已存在，若是要修復看板請用 R 指令。");
+                return -1;
+            }
+        } else {
+            vmsgf("系統錯誤 #%d, 無法建立看板目錄。", errno);
+            return -1;
+        }
     }
     newboard.brdattr = BRD_NOTRAN;
 #ifdef DEFAULT_AUTOCPLOG
