@@ -421,7 +421,7 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard)
 #endif
 }
 
-void delete_symbolic_link(boardheader_t *bh, int bid)
+void delete_board_link(boardheader_t *bh, int bid)
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(bh, 0, sizeof(boardheader_t));
@@ -586,7 +586,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else if (bh.brdattr & BRD_SYMBOLIC) {
-	    delete_symbolic_link(&bh, bid);
+	    delete_board_link(&bh, bid);
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
@@ -936,7 +936,7 @@ m_newbrd(int whatclass, int recover)
     return 0;
 }
 
-int make_symbolic_link(const char *bname, int gid)
+int make_board_link(const char *bname, int gid)
 {
     boardheader_t   newboard;
     int bid;
@@ -955,7 +955,7 @@ int make_symbolic_link(const char *bname, int gid)
      *
      *   Duplicate entry with same brdname may cause wrong result, if
      *   searching by key brdname.  But people don't need to know a board
-     *   is symbolic, so just let SYSOP know it. You may want to read
+     *   is a link, so just let SYSOP know it. You may want to read
      *   board.c:load_boards().
      */
 
@@ -973,7 +973,7 @@ int make_symbolic_link(const char *bname, int gid)
     return bid;
 }
 
-int make_symbolic_link_interactively(int gid)
+int make_board_link_interactively(int gid)
 {
     char buf[32];
 
@@ -983,7 +983,7 @@ int make_symbolic_link_interactively(int gid)
 
     vs_hdr("建立看板連結");
 
-    if (make_symbolic_link(buf, gid) < 0) {
+    if (make_board_link(buf, gid) < 0) {
 	vmsg("看板連結建立失敗");
 	return -1;
     }

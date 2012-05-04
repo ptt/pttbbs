@@ -24,9 +24,9 @@ int m_register(void);
 int cat_register(void);
 unsigned int setperms(unsigned int pbits, const char * const pstring[]);
 void setup_man(const boardheader_t * board, const boardheader_t * oldboard);
-void delete_symbolic_link(boardheader_t *bh, int bid);
-int make_symbolic_link(const char *bname, int gid);
-int make_symbolic_link_interactively(int gid);
+void delete_board_link(boardheader_t *bh, int bid);
+int make_board_link(const char *bname, int gid);
+int make_board_link_interactively(int gid);
 void merge_dir(const char *dir1, const char *dir2, int isoutter);
 
 /* angel */

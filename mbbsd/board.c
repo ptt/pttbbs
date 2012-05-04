@@ -1101,7 +1101,7 @@ load_boards(char *key)
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
-		/* Only SYSOP knows a board is symbolic */
+		/* Only SYSOP knows a board is a link or not. */
 		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
 		    state |= NBRD_SYMBOLIC;
 		else {
@@ -1925,8 +1925,7 @@ choose_board(int newflag)
 	case 'L':
 	    if ((HasUserPerm(PERM_SYSOP) ||
 			(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && IN_CLASS()) {
-		// TODO XXX why need symlink here? Can we remove it?
-		if (make_symbolic_link_interactively(class_bid) < 0)
+		if (make_board_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
 		head = 9999;
@@ -2133,7 +2132,7 @@ choose_board(int newflag)
 		ptr = &nbrd[num];
 		if (ptr->myattr & NBRD_SYMBOLIC) {
 		    if (vans("確定刪除連結？[N/y]") == 'y')
-			delete_symbolic_link(getbcache(ptr->bid), ptr->bid);
+			delete_board_link(getbcache(ptr->bid), ptr->bid);
 		}
 		brdnum = -1;
 	    }
