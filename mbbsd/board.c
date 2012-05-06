@@ -1923,8 +1923,9 @@ choose_board(int newflag)
             break;
 
 	case 'L':
-	    if ((HasUserPerm(PERM_SYSOP) ||
-			(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && IN_CLASS()) {
+	    if (IN_CLASS() &&
+                (HasUserPerm(PERM_SYSOP) ||
+                 (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
 		if (make_board_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
@@ -2148,20 +2149,20 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'R':
-	    if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
+	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
 		m_newbrd(class_bid, 1);
 		brdnum = -1;
 	    }
 	    break;
 	case 'B':
-	    if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
+	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
 		m_newbrd(class_bid, 0);
 		brdnum = -1;
 	    }
 	    break;
 	case 'W':
 	    if (IN_SUBCLASS() &&
-		(HasUserPerm(PERM_SYSOP) || GROUPOP())) {
+		(HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP())) {
 		setbpath(buf, getbcache(class_bid)->brdname);
 		Mkdir(buf);	/* Ptt:¶}¸s²Õ¥Ø¿ý */
 		b_note_edit_bname(class_bid);
