@@ -2374,6 +2374,12 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	case RET_DOQUERYINFO:
 	    view_postinfo(ent, fhdr, direct, b_lines-3);
 	    return FULLUPDATE;
+        case RET_EDITPOST:
+            edit_post(ent, fhdr, direct);
+            return FULLUPDATE;
+        case RET_EDITTITLE:
+            edit_title(ent, fhdr, direct);
+            return FULLUPDATE;
     }
     if(more_result)
 	return more_result;

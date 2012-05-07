@@ -76,9 +76,13 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 
 	case 'E':
 	    // for early check, skip file name (must check again later)
-	    if (!check_sysop_edit_perm("")) 
-		break;
-	    return RET_DOSYSOPEDIT;
+            if (check_sysop_edit_perm(""))
+                return RET_DOSYSOPEDIT;
+            else
+                return RET_EDITPOST;
+
+	case 'T':
+            return RET_EDITTITLE;
 
 	// Making Response
 	case '%':
