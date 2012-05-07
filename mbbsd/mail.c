@@ -1336,6 +1336,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     }
     if (mode == 'Z') {
         if (strstr(address, MYHOSTNAME) ||
+            strstr(address, ".brd@")  ||
+            strstr(address, "@bs2.to")  ||
             strstr(address, ".bbs@")) {
             vmsg("不可使用 BBS 信箱。");
             return 1;
