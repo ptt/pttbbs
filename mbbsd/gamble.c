@@ -1,8 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define MAX_ITEM	8	//最大 賭項(item) 個數
-#define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
+#define MAX_ITEM	8	//最大 彩券項目(item) 個數
+#define MAX_ITEM_LEN	30	//最大 每一項目名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
@@ -39,7 +39,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 
     clear();
     if (bh) {
-	snprintf(genbuf, sizeof(genbuf), "%s 賭盤", bh->brdname);
+	snprintf(genbuf, sizeof(genbuf), "%s 樂透", bh->brdname);
 	if (bh->endgamble && now < bh->endgamble &&
 	    bh->endgamble - now < 3600) {
 	    snprintf(t, sizeof(t),
@@ -52,7 +52,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     move(2, 0);
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
-	outs("\n目前並沒有舉辦賭盤\n");
+	outs("\n目前並沒有舉辦樂透\n");
 	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_OUTCOME, direct);
 	more(genbuf, NA);
 	return 0;
@@ -66,15 +66,15 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     fclose(fp);
 
     prints(ANSI_COLOR(32) "站規:" ANSI_RESET 
-     " 1.可購買以下不同類型的彩票。每張要花 " ANSI_COLOR(32) "%d" 
+     " 1.可購買以下不同類型的彩券。每張要花 " ANSI_COLOR(32) "%d" 
 	 ANSI_RESET " " MONEYNAME "。\n"
 "      2.%s\n"
-"      3.開獎時只有一種彩票中獎, 有購買該彩票者, 則可依購買的張數均分總彩金。\n"
+"      3.開獎時只有一種彩券中獎, 有購買該彩券者, 則可依購買的張數均分總彩金。\n"
 "      4.每筆獎金由系統抽取 5%% 之稅金%s。\n"
 "      5." ANSI_COLOR(1;31) "如遇系統故障造成帳號回溯等各種問題，"
 	 "原則上不予以賠償，風險自擔。" ANSI_RESET "\n"
 	    ANSI_COLOR(32) "%s:" ANSI_RESET, *price,
-	   bh ? "此賭盤由板主負責舉辦並決定開獎時間結果, 站方不管, 願賭服輸。" :
+	   bh ? "此樂透由板主負責舉辦並決定開獎時間結果, 站方不管, 願賭服輸。" :
 	        "系統每天 2:00 11:00 16:00 21:00 開獎。",
 	   bh ? ", 其中 0.05% 分給開獎板主, 最多 500" : "",
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
@@ -182,7 +182,7 @@ buy_ticket_ui(int money, const char *picture, int *item,
     }
 
     *item += num;
-    pay(money * num, "%s賭盤[種類%d,張數%d]", title, type+1, num); 
+    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num); 
 
     // XXX magic numbers 5, 14...
     show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
@@ -226,7 +226,7 @@ ticket(int bid)
 	  Tim011127
 	  為了控制CS問題 但是這邊還不能完全解決這問題,
 	  若user通過檢查下去, 剛好板主開獎, 還是會造成user的這次紀錄
-	  很有可能跑到下次賭盤的紀錄去, 也很有可能被板主新開賭盤時洗掉
+	  很有可能跑到下次樂透的紀錄去, 也很有可能被板主新開樂透時洗掉
 	  不過這邊至少可以做到的是, 頂多只會有一筆資料是錯的
 	--*/
 	if (ch == 'q' || ch == 'Q')
@@ -343,14 +343,14 @@ openticket(int bid)
 
 
     bet--;			/* 轉成矩陣的index */
-    /* 取消賭盤由 bet == 99 變成 bet == 98 */
+    /* 取消樂透由 bet == 99 變成 bet == 98 */
 
     total = load_ticket_record(path, ticket);
     setbfile(buf, bh->brdname, FN_TICKET_LOCK);
     if (!(fp1 = fopen(buf, "r")))
 	exit(1);
 
-    /* 還沒開完獎不能賭博 只要mv一項就好 */
+    /* 還沒開完獎不能下注 只要mv一項就好 */
     if (bet != 98) {
 	int forBM;
 	money = total * price;
@@ -362,13 +362,13 @@ openticket(int bid)
 	mail_redenvelop("[彩金抽成]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
-	pay(price * 10, "賭盤退費手續費");
+	pay(price * 10, "樂透退費手續費");
 	money = price;
     }
     setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);
     if ((fp = fopen(outcome, "w"))) {
         int wide = 0;
-	fprintf(fp, "賭盤說明\n");
+	fprintf(fp, "樂透說明\n");
 	while (fgets(buf, sizeof(buf), fp1)) {
 	    buf[sizeof(buf)-1] = 0;
 	    fputs(buf, fp);
@@ -396,7 +396,7 @@ openticket(int bid)
 		    "開獎結果: %s\n"
 		    "下注總額: %lld\n"
 		    "中獎比例: %lld張/%lld張  (%f)\n"
-		    "每張中獎彩票可得 %lld " MONEYNAME "\n\n",
+		    "每張中獎彩券可得 %lld " MONEYNAME "\n\n",
                     Cdatelite(&now), betname[bet],
                     total * price,
                     ticket[bet], total,
@@ -407,7 +407,7 @@ openticket(int bid)
 		    Cdatelite(&now), betname[bet], total * price, money,
 		    total ? (double)ticket[bet] / total : (double)0);
 	} else
-	    fprintf(fp, "賭盤取消退回: %s\n\n", Cdatelite(&now));
+	    fprintf(fp, "樂透取消退回: %s\n\n", Cdatelite(&now));
 
     } // XXX somebody may use fp even fp==NULL
     fclose(fp1);
@@ -426,7 +426,7 @@ openticket(int bid)
                             MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
-			 "%s 賭場退費! $ %lld", bh->brdname, money * i);
+			 "%s 樂透退費! $ %lld", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
 		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld " 
@@ -455,9 +455,9 @@ openticket(int bid)
     }
 
     if (bet != 98)
-	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤開獎", bh->brdname);
+	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透開獎", bh->brdname);
     else
-	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 賭盤取消", bh->brdname);
+	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[彩券]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
     post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
@@ -503,7 +503,7 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
     if (stop_gamble()) {
-	vmsg("目前未舉辦或賭盤已開獎");
+	vmsg("目前未舉辦或樂透已開獎");
 	return DONOTHING;
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -525,7 +525,7 @@ hold_gamble(void)
     if (!(currmode & MODE_BOARD))
 	return 0;
     if (bp->brdattr & BRD_NOCREDIT ) {
-        vmsg("本看板目前被設定為發文無獎勵，無法使用賭盤");
+        vmsg("本看板目前被設定為發文無獎勵，無法使用樂透");
         return 0;
     }
 
@@ -534,7 +534,7 @@ hold_gamble(void)
     setbfile(genbuf, currboard, FN_TICKET_LOCK);
 
     if (dashf(fn_ticket)) {
-	getdata(b_lines - 1, 0, "已經有舉辦賭盤, "
+	getdata(b_lines - 1, 0, "已經有舉辦樂透, "
 		"是否要 [停止下注]?(N/y)：", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
@@ -548,7 +548,7 @@ hold_gamble(void)
 	return FULLUPDATE;
     }
     if (dashf(fn_ticket_end)) {
-	getdata(b_lines - 1, 0, "已經有舉辦賭盤, "
+	getdata(b_lines - 1, 0, "已經有舉辦樂透, "
 		"是否要開獎 [否/是]?(N/y)：", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
@@ -563,17 +563,17 @@ hold_gamble(void)
 	vmsg(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦.......");
 	return FULLUPDATE;
     }
-    getdata(b_lines - 2, 0, "要舉辦賭盤 (N/y):", yn, 3, LCECHO);
+    getdata(b_lines - 2, 0, "要舉辦樂透 (N/y):", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-    getdata(b_lines - 1, 0, "賭什麼? 請輸入主題 (輸入後編輯內容):",
+    getdata(b_lines - 1, 0, "請輸入主題 (輸入後編輯內容):",
 	    msg, 20, DOECHO);
     if (msg[0] == 0 ||
 	veditfile(fn_ticket_end) < 0)
 	return FULLUPDATE;
 
     clear();
-    showtitle("舉辦賭盤", BBSNAME);
+    showtitle("舉辦樂透", BBSNAME);
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
 
     //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
@@ -581,7 +581,7 @@ hold_gamble(void)
     if (!(fp = fopen(tmp, "w")))
 	return FULLUPDATE;
     do {
-	getdata(2, 0, "輸入彩票價格 (價格:10-10000):", yn, 6, NUMECHO);
+	getdata(2, 0, "輸入彩券價格 (價格:10-10000):", yn, 6, NUMECHO);
 	i = atoi(yn);
     } while (i < 10 || i > 10000);
     fprintf(fp, "%d\n", i);
@@ -592,16 +592,16 @@ hold_gamble(void)
     }
     move(6, 0);
     snprintf(genbuf, sizeof(genbuf),
-	     "\n請到 %s 板 按'f'參與賭博!\n\n"
-	     "一張 %d " MONEYNAME ", 這是%s的賭博\n%s%s\n",
+	     "\n請到 %s 板 按'f'參與樂透!\n\n"
+	     "一張 %d " MONEYNAME " (%s)\n%s%s\n",
 	     currboard,
-	     i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
+	     i, i < 100 ? "迷你級" : i < 500 ? "平民級" :
 	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
-	     bp->endgamble ? "賭盤結束時間: " : "",
+	     bp->endgamble ? "樂透結束時間: " : "",
 	     bp->endgamble ? Cdate(&bp->endgamble) : ""
 	     );
     strcat(msg, genbuf);
-    outs("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");
+    outs("請依次輸入彩券名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");
     //outs(ANSI_COLOR(1;33) "注意輸入後無法修改！\n");
     for( i = 0 ; i < 8 ; ++i ){
 	snprintf(yn, sizeof(yn), " %d)", i + 1);
@@ -613,23 +613,23 @@ hold_gamble(void)
     fclose(fp);
 
     setbfile(genbuf, currboard, FN_TICKET_RECORD);
-    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
+    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
     setbfile(genbuf, currboard, FN_TICKET_USER);
-    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
+    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
 
     setbfile(genbuf, currboard, FN_TICKET_ITEMS);
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
     if(!dashf(fn_ticket))
 	Rename(tmp, genbuf);
 
-    snprintf(genbuf, sizeof(genbuf), TN_ANNOUNCE " %s 板 開始賭博!", currboard);
+    snprintf(genbuf, sizeof(genbuf), TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
     /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
     rename(fn_ticket_end, fn_ticket);
     /* 設定完才把檔名改過來 */
 
-    vmsg("賭盤設定完成");
+    vmsg("樂透彩券設定完成");
     return FULLUPDATE;
 }
 #endif
