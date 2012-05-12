@@ -45,7 +45,7 @@ LDFLAGS+=-Wl,--sort-common
 
 LDFLAGS+= -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 	  -L$(SRCROOT)/common/osdep 
-LDLIBS+= -lcmbbs -lcmsys -losdep
+LDLIBS:= -lcmbbs -lcmsys -losdep $(LDLIBS)
 
 #######################################################################
 # conditional configurations and optional modules

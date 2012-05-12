@@ -27,9 +27,10 @@ CPROG_WITHOUT_UTIL= \
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
-	$(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/osdep/libosdep.a
+LDLIBS:= -L$(SRCROOT)/common/bbs -lcmbbs \
+	 -L$(SRCROOT)/common/sys -lcmsys \
+	 -L$(SRCROOT)/common/osdep -losdep \
+	 $(LDLIBS)
 
 
 all: $(SRCROOT)/include/var.h ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
