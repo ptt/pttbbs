@@ -1535,7 +1535,7 @@ a_menu_rec(const char *maintitle, const char *path,
 			    getdata(22, 1,
 				    currstat == EDITEXP ?
 				    "要把範例加入到文章內嗎?[y/N]" :
-				    "確定要點這首歌嗎?[y/N]",
+				    "確定要選這篇嗎?[y/N]",
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
 				strlcpy(trans_buffer, fname, PATHLEN);

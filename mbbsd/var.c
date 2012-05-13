@@ -136,7 +136,7 @@ const char * const fn_boardhelp = FN_BOARDHELP;
 
 char           * const loginview_file[NUMVIEWFILE][2] = {
     {"", "(保留)"},
-    {FN_TOPSONG, "點歌排行榜"},
+    {FN_TOPSONG, "心情點播排行榜"},
     {"etc/topusr", "十大排行榜"},
     {"etc/topusr100", "百大排行榜"},
     {"", "(保留)"},
@@ -250,7 +250,7 @@ char           * const ModeTypeTable[] = {
     "刻流言板",			/* EDNOTE */
     "英漢翻譯機",		/* CDICT */
     "檢視自己物品",		/* LOBJ */
-    "點歌",			/* OSONG */
+    "心情點播",			/* OSONG */
     "與寵物同樂",		/* CHICKEN */
     "玩彩券",			/* TICKET */
     "猜數字",			/* GUESSNUM */

@@ -513,7 +513,7 @@ m_mod_board(char *bname)
     move(9, 0);
     snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
 	    HasUserPerm(PERM_SYSOP |
-		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
+		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
 	    HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
     getdata(10, 0, genbuf, ans, 3, LCECHO);
 

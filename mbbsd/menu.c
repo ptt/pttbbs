@@ -415,7 +415,7 @@ show_menu(int menu_index, const commands_t * p)
             alert_column -= 2;
         alert_column -= alert_column % 2;
         move(row++, alert_column);
-        outs(" 上方為使用者心情點歌區，不代表本站立場 ");
+        outs(" 上方為使用者心情點播留言區，不代表本站立場 ");
     }
     assert(row == decide_menu_row(p));
 #endif
@@ -882,7 +882,7 @@ static const commands_t m_xyz_hot[] = {
 static const commands_t m_xyz_user[] = {
     {x_user100 ,0,   "Users         《使用者百大排行榜》"},
     {topsong,PERM_LOGINOK,   
-	             "GTop Songs    《使用者點歌排行榜》"},
+	             "GTop Songs    《使用者心情點播排行》"},
     {x_today, 0,     "Today         《今日上線人次統計》"},
     {x_yesterday, 0, "Yesterday     《昨日上線人次統計》"},
     {NULL, 0, NULL}
@@ -937,7 +937,7 @@ static const commands_t moneylist[] = {
     {p_give, 0,         "0Give        給其他人" MONEYNAME},
     {save_violatelaw, 0,"1ViolateLaw  繳罰單"},
     {p_from, 0,         "2From        暫時修改故鄉"},
-    {ordersong,0,       "3OSong       動態點歌機"},
+    {ordersong,0,       "3OSong       心情點播機"},
     {NULL, 0, NULL}
 };
 

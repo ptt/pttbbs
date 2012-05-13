@@ -36,21 +36,21 @@ do_order_song(void)
     // 由於變免費了，改成要文章數跟登入天數
 #ifdef ORDERSONG_MIN_NUMPOST 
     if (cuser.numposts < ORDERSONG_MIN_NUMPOST) { 
-        vmsgf("為避免濫用，點歌前請先獲得 %d 篇有效文章記錄", 
+        vmsgf("為避免濫用，留言前請先獲得 %d 篇有效文章記錄", 
                 ORDERSONG_MIN_NUMPOST); 
         return 0; 
     } 
 #endif 
 #if defined(ORDERSONG_MAX_BADPOST) && defined(ASSESS)
     if (cuser.badpost > ORDERSONG_MAX_BADPOST) { 
-        vmsgf("為避免濫用，點歌前請先消除劣文記錄至 %d 篇以下",  
+        vmsgf("為避免濫用，留言前請先消除劣文記錄至 %d 篇以下",  
                 ORDERSONG_MAX_BADPOST); 
         return 0; 
     } 
 #endif 
 #ifdef ORDERSONG_MIN_NUMLOGINDAYS
     if (cuser.numlogindays < ORDERSONG_MIN_NUMLOGINDAYS) { 
-        vmsgf("為避免濫用，點歌前要先有%s %d %s",  
+        vmsgf("為避免濫用，留言前要先有%s %d %s",  
                 STR_LOGINDAYS, ORDERSONG_MIN_NUMLOGINDAYS, STR_LOGINDAYS_QTY);
         return 0; 
     } 
@@ -63,7 +63,7 @@ do_order_song(void)
     /* Jaky 一人一天點一首 */
     if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HasUserPerm(PERM_SYSOP)) {
 	move(22, 0);
-	vmsg("你今天已經點過囉，明天再點吧....");
+	vmsg("你今天已經留過言囉，明天再來吧....");
 	unlockutmpmode();
 	return 0;
     }
@@ -72,22 +72,22 @@ do_order_song(void)
 	char ans[4];
 	move(12, 0);
 	clrtobot();
-	prints("親愛的 %s 歡迎來到自動點歌系統\n\n", cuser.userid);
-	outs(ANSI_COLOR(1) "注意點歌內容請勿涉及謾罵 人身攻擊 猥褻"
+	prints("親愛的 %s 歡迎來到心情點播留言系統\n\n", cuser.userid);
+	outs(ANSI_COLOR(1) "注意心情點播內容請勿涉及謾罵 人身攻擊 猥褻"
 	     "公然侮辱 誹謗\n"
-	     "若有上述違規情形，站方將保留決定是否公開播放的權利\n"
+	     "若有上述違規情形，站方將保留決定是否公開內容的權利\n"
              "且違規者將不受匿名保護(其 ID 可被公佈於公開看板)\n"
 	     "如不同意請按 (3) 離開。" ANSI_RESET "\n");
 	getdata(18, 0, 
-		"請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
-		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
+		"請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始留言、"
+		ANSI_COLOR(1) "2)" ANSI_RESET " 看範本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
 		ans, sizeof(ans), DOECHO);
 
 	if (ans[0] == '1')
 	    break;
 	else if (ans[0] == '2') {
-	    a_menu("點歌歌本", SONGBOOK, 0, 0, NULL, NULL);
+	    a_menu("留言範本", SONGBOOK, 0, 0, NULL, NULL);
 	    clear();
 	}
 	else if (ans[0] == '3') {
@@ -97,11 +97,12 @@ do_order_song(void)
 	}
     }
 
-    getdata_str(19, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
-    getdata(20, 0, "點給(可匿名): ", receiver, sizeof(receiver), DOECHO);
+    getdata_str(19, 0, "留言者(可匿名): ", sender, sizeof(sender), DOECHO,
+                cuser.userid);
+    getdata(20, 0, "留言給(可匿名): ", receiver, sizeof(receiver), DOECHO);
 
     do {
-	getdata(21, 0, "想要要對他(她)說..:", say, sizeof(say), DOECHO);
+	getdata(21, 0, "想要要對他/她說..:", say, sizeof(say), DOECHO);
 	reduce_blank(say, say);
 	if (!say[0]) {
 	    bell();
@@ -120,8 +121,8 @@ do_order_song(void)
         vmsg("請輸入站內 ID 或直接 ENTER");
     } while (1);
 
-    vmsg("接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
-    a_menu("點歌歌本", SONGBOOK, 0, 0, trans_buffer, NULL);
+    vmsg("接著要選範本囉...");
+    a_menu("留言範本", SONGBOOK, 0, 0, trans_buffer, NULL);
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
 	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {
 	unlockutmpmode();
@@ -139,8 +140,8 @@ do_order_song(void)
 	unlockutmpmode();
 	return 0;
     }
-    strlcpy(mail.owner, "點歌機", sizeof(mail.owner));
-    snprintf(mail.title, sizeof(mail.title), "◇ %s 點給 %s ", sender, receiver);
+    strlcpy(mail.owner, "[心情點播]", sizeof(mail.owner));
+    snprintf(mail.title, sizeof(mail.title), "◇ %s 留言給 %s ", sender, receiver);
 
     while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
@@ -178,7 +179,7 @@ do_order_song(void)
     fclose(fp);
 
     log_filef("etc/osong.log",  LOG_CREAT,
-              "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n",
+              "id: %-12s ◇ %s 留言給 %s : \"%s\", 轉寄至 %s\n",
               cuser.userid, sender, receiver, say, address);
 
     if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
@@ -207,12 +208,12 @@ do_order_song(void)
 
     clear();
     outs(
-	 "\n\n  恭喜您點歌完成囉...\n"
+	 "\n\n  恭喜您完成囉...\n"
 	 "  一小時內動態看板會自動重新更新，\n"
-	 "  大家就可以看到您點的歌囉！\n\n"
-	 "  點歌有任何問題可以到 " BN_NOTE " 板的精華區找答案，\n"
-	 "  也可在 " BN_NOTE " 板精華區看到自己的點歌記錄。\n"
-	 "  有任何寶貴的意見也歡迎到 " BN_NOTE " 看板留話，\n"
+	 "  大家就可以看到您的心情點播留言囉！\n\n"
+	 "  有任何問題可以到 " BN_NOTE " 板的精華區找答案，\n"
+	 "  也可在 " BN_NOTE " 板精華區看到自己的留言記錄。\n"
+	 "  有任何寶貴的意見也歡迎到 " BN_NOTE " 看板提出，\n"
 	 "  讓親切的板主為您服務。\n");
     pressanykey();
     sortsong();
@@ -289,7 +290,7 @@ sortsong(void)
     qsort(songs, MAX_SONGS, sizeof(songcmp_t), (QCAST) count_cmp);
     fprintf(fo,
 	    "    " ANSI_COLOR(36) "──" ANSI_COLOR(37) "名次" ANSI_COLOR(36) "──────" ANSI_COLOR(37) 
-	    "歌名" ANSI_COLOR(36) "───────────" ANSI_COLOR(37) "次數" ANSI_COLOR(36)
+	    "範本" ANSI_COLOR(36) "───────────" ANSI_COLOR(37) "次數" ANSI_COLOR(36)
 	    "──" ANSI_COLOR(32) "共%d次" ANSI_COLOR(36) "──" ANSI_RESET "\n", totalcount);
     for (n = 0; n < 100 && songs[n].name[0]; n++) {
 	fprintf(fo, "      %5d. %-38.38s %4d " ANSI_COLOR(32) "[%.2f]" ANSI_RESET "\n", n + 1,
