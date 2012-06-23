@@ -153,6 +153,69 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     return 0;
 }
 
+int
+reassign_badpost(const char *userid) {
+    // 劣退復鞭屍，補劣何其多。補劣無通知，用戶搞不懂。
+    // 用戶若被補劣累，東牽西扯罵系統。
+    //
+    // 所以，如果真的要補劣，一定要告知使用者。
+    userec_t u;
+    char title[TTLEN+1];
+    char msg[512];
+    char buf[10];
+    char reason[50];
+    int orig_badpost = 0;
+    int uid;
+
+    vs_hdr2(" 劣文修正 ", userid);
+    if ((uid = getuser(userid, &u)) == 0) {
+        vmsgf("找不到使用者 %s。", userid);
+        return -1;
+    }
+    orig_badpost = u.badpost;
+    prints("\n使用者 %s 的劣文數目前為: %d\n", userid, u.badpost);
+    snprintf(buf, sizeof(buf), "%d", u.badpost);
+    if (!getdata_str(5, 0, "調整劣文數目為: ", buf, sizeof(buf), DOECHO, buf) ||
+        atoi(buf) == u.badpost) {
+        vmsg("劣文數目不變，未變動。");
+        return 0;
+    }
+
+    // something changed.
+    u.badpost = atoi(buf);
+    prints("\n使用者 %s 的劣文即將由 %d 改為 %d。請輸入理由(會寄給使用者)\n",
+           userid, orig_badpost, u.badpost);
+    if (!getdata(7, 0, "理由: ", reason, sizeof(reason), DOECHO)) {
+        vmsg("錯誤: 不能無理由。");
+        return -1;
+    }
+
+    move(6, 0); clrtobot();
+    prints("使用者 %s 的劣文由 %d 改為 %d。\n理由: %s\n",
+           userid, orig_badpost, u.badpost, reason);
+    if (!getdata(9, 0, "確定？ [y/N]", buf, 3, LCECHO) || buf[0] != 'y') {
+        vmsg("錯誤: 未確定，放棄。");
+        return -1;
+    }
+
+    // GOGOGO
+    snprintf(msg, sizeof(msg),
+             "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
+             "%s" ANSI_RESET "的劣文從" ANSI_COLOR(1;35) "%d" ANSI_RESET
+             "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
+             "   " ANSI_COLOR(1;37) "修改理由是：%s" ANSI_RESET,
+             cuser.userid, u.userid, orig_badpost, u.badpost, reason);
+    snprintf(title, sizeof(title),
+             "[公安報告] 站長%s修改%s劣文報告", cuser.userid, u.userid);
+    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+    mail_log2id_text(u.userid, "[系統通知] 劣文變更", msg,
+                     "[系統安全局]", NA);
+    passwd_sync_update(uid, &u);
+    kick_all(u.userid);
+
+    return 0;
+}
+
 // XXX 推文目前的設計一整個就是無法管理，
 // 不過在重寫整套短文回應系統前也是沒辦法的事，
 // 先寫個應應急

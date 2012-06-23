@@ -633,8 +633,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     ans = vans(adminmode ?
-    "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
-    "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 ==> [0]結束 ");
+    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)劣文(M)信箱 [0]結束 " :
+    "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 [0]結束 ");
 
     if (ans > '2' && ans != 'c' && !adminmode)
 	ans = '0';
@@ -647,7 +647,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	outs(x.userid);
     }
 
-    if (adminmode && ((ans >= '1' && ans <= '7') || ans == 'm') &&
+    if (adminmode && ((ans >= '1' && ans <= '8') || ans == 'm') &&
 	search_ulist(unum))
     {
 	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ") 
@@ -723,9 +723,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	}
 	break;
 
-    case '7':
-	violate_law(&x, unum);
-	return;
     case '1':
 	move(0, 0);
 	outs("請逐項修改。");
@@ -907,14 +904,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    if (getdata_str(y++, 0, "文章數目：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.numposts = tmp;
-#ifdef ASSESS
-	    snprintf(genbuf, sizeof(genbuf), "%d", x.badpost);
-	    if (getdata_str(y, 0, "惡劣文章數：", buf, 10, DOECHO, genbuf))
-		if ((tmp = atoi(buf)) >= 0)
-		    x.badpost = tmp;
-#endif // ASSESS
 	    move(y-1, 0); clrtobot();
-	    prints("文章數目： %d (劣: %d)\n",
+	    prints("文章數目： %d (劣: %d, 修改劣文請改用選項8)\n",
 		    x.numposts, x.badpost);
 
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.vl_count);
@@ -1175,6 +1166,14 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '6':
 	chicken_toggle_death(x.userid);
 	break;
+
+    case '7':
+	violate_law(&x, unum);
+	return;
+
+    case '8':
+        reassign_badpost(x.userid);
+        return;
 
     default:
 	return;

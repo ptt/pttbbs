@@ -63,6 +63,7 @@ int edit_user_acl_for_board(const char *uid, const char *board);
 int inc_badpost(const char *, int num);
 int bad_comment(const char *fn);
 int assign_badpost(const char *userid, fileheader_t *fhdr, const char *newpath, const char *comment);
+int reassign_badpost(const char *userid);
 
 /* bbs */
 int is_file_owner(const fileheader_t *, const userec_t*);
