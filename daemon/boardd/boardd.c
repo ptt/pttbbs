@@ -167,6 +167,65 @@ answer_key(struct evbuffer *buf, const char *key)
     }
 }
 
+#ifdef CONVERT_TO_UTF8
+
+// Converts given evbuffer contents to UTF-8 and returns the new buffer.
+// The original buffer is freed. Returns NULL on error
+
+struct evbuffer *
+evbuffer_b2u(struct evbuffer *source)
+{
+    unsigned char c[2];
+    int out = 0;
+
+    if (evbuffer_get_length(source) == 0)
+	return source;
+
+    struct evbuffer *destination = evbuffer_new();
+
+    // Peek at first byte
+    while (evbuffer_copyout(source, c, 1) > 0) {
+	if (isascii(c[0])) {
+	    if (evbuffer_add(destination, c, 1) < 0)
+		break;
+
+	    // Remove byte from source buffer
+	    evbuffer_drain(source, 1);
+	    out++;
+	} else {
+	    // Big5
+
+	    // Copy both bytes from source buffer
+	    if (evbuffer_copyout(source, c, 2) != 2)
+		break;
+
+	    uint8_t utf8[4];
+	    int len = ucs2utf(b2u_table[c[0] << 8 | c[1]], utf8);
+	    utf8[len] = 0;
+
+	    if (evbuffer_add(destination, utf8, len) < 0)
+		break;
+
+	    // Remove DBCS character from source buffer
+	    evbuffer_drain(source, 2);
+	    out += len;
+	}
+    }
+
+    if (evbuffer_get_length(source) == 0 && out) {
+	// Success
+	evbuffer_free(source);
+	return destination;
+    }
+
+    // Fail
+    evbuffer_free(source);
+    evbuffer_free(destination);
+    return NULL;
+}
+
+#endif // CONVERT_TO_UTF8
+
 // Command functions
 
 void
@@ -184,6 +243,14 @@ cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
 	answer_key(buf, *argv);
 	if (evbuffer_get_length(buf) == 0)
 	    continue;
+#ifdef CONVERT_TO_UTF8
+	buf = evbuffer_b2u(buf);
+	if (buf == NULL) {
+	    // Failed to convert
+	    buf = evbuffer_new();
+	    continue;
+	}
+#endif
 	evbuffer_add_printf(output, "VALUE %s 0 %ld\r\n", *argv, evbuffer_get_length(buf));
 	evbuffer_add_buffer(output, buf);
 	evbuffer_add_printf(output, "\r\n");
@@ -258,81 +325,3 @@ setup_program()
     attach_SHM();
 }
 
-#ifdef CONVERT_TO_UTF8
-
-enum bufferevent_filter_result
-filter_pass(struct evbuffer *source, struct evbuffer *destination,
-	ev_ssize_t dst_limit, enum bufferevent_flush_mode mode, void *ctx)
-{
-    int len = evbuffer_get_length(source);
-
-    if (len == 0)
-	return BEV_NEED_MORE;
-
-    len = evbuffer_remove_buffer(source, destination, dst_limit >= 0 ? dst_limit : len);
-
-    return len > 0 ? BEV_OK : (len == 0 ? BEV_NEED_MORE : BEV_ERROR);
-}
-
-enum bufferevent_filter_result
-filter_b2u(struct evbuffer *source, struct evbuffer *destination,
-	ev_ssize_t dst_limit, enum bufferevent_flush_mode mode, void *ctx)
-{
-    unsigned char c[2];
-    int out = 0;
-
-    // Peek at first byte
-    while (evbuffer_copyout(source, c, 1) > 0) {
-	if (isascii(c[0])) {
-	    // Check for rate limit
-	    if (dst_limit > 0 && out >= dst_limit)
-		break;
-
-	    if (evbuffer_add(destination, c, 1) < 0)
-		return BEV_ERROR;
-
-	    // Remove byte from source buffer
-	    evbuffer_drain(source, 1);
-	    out++;
-	} else {
-	    // Big5
-
-	    // Check for rate limit
-	    if (dst_limit > 0 && (out + 1) >= dst_limit)
-		break;
-
-	    // Copy both bytes from source buffer
-	    if (evbuffer_copyout(source, c, 2) != 2)
-		break;
-
-	    uint8_t utf8[4];
-	    int len = ucs2utf(b2u_table[c[0] << 8 | c[1]], utf8);
-	    utf8[len] = 0;
-
-	    if (evbuffer_add(destination, utf8, len) < 0)
-		return BEV_ERROR;
-
-	    // Remove DBCS character from source buffer
-	    evbuffer_drain(source, 2);
-	    out += len;
-	}
-    }
-
-    return out ? BEV_OK : BEV_NEED_MORE;
-}
-
-void
-setup_client(struct event_base *base, evutil_socket_t fd,
-	struct sockaddr *address, int socklen)
-{
-    struct bufferevent *bev = bufferevent_socket_new(base, fd,
-	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-    struct bufferevent *bev2 = bufferevent_filter_new(bev, filter_pass,
-	    filter_b2u, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS,
-	    NULL, NULL);
-    bufferevent_setcb(bev2, client_read_cb, NULL, client_event_cb, NULL);
-    bufferevent_set_timeouts(bev2, common_timeout, common_timeout);
-    bufferevent_enable(bev2, EV_READ|EV_WRITE);
-}
-
-#endif // CONVERT_TO_UTF8
