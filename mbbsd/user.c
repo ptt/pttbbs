@@ -1248,7 +1248,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		cuser.userid, x.userid, changefrom, x.money,
 		cuser.userid, reason);
 	snprintf(title, sizeof(title),
-		"[公安報告] 站長%s修改%s錢報告", cuser.userid,
+		"[安全報告] 站長%s修改%s金錢", cuser.userid,
 		x.userid);
 	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
 	setumoney(unum, x.money);

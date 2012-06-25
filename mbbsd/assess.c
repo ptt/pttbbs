@@ -206,7 +206,7 @@ reassign_badpost(const char *userid) {
              "   " ANSI_COLOR(1;37) "修改理由是：%s" ANSI_RESET,
              cuser.userid, u.userid, orig_badpost, u.badpost, reason);
     snprintf(title, sizeof(title),
-             "[公安報告] 站長%s修改%s劣文報告", cuser.userid, u.userid);
+             "[安全報告] 站長%s修改%s劣文報告", cuser.userid, u.userid);
     post_msg(BN_SECURITY, title, msg, "[系統安全局]");
     mail_log2id_text(u.userid, "[系統通知] 劣文變更", msg,
                      "[系統安全局]", NA);

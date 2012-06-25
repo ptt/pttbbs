@@ -85,7 +85,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     sprintf(s, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s\n" ANSI_RESET,
 	    cuser.userid, reason);
 
-    snprintf(title, sizeof(title), "[公安報告] 站長%s修改%s權限報告",
+    snprintf(title, sizeof(title), "[安全報告] 站長%s修改%s權限報告",
 	    cuser.userid, userid);
 
     post_msg(BN_SECURITY, title, genbuf, "[系統安全局]");
