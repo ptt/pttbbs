@@ -115,6 +115,7 @@ int brc_initial_board(const char *boardname);
 // v3 api: add 'modified' tag
 int brc_unread(int bid, const char *fname, time4_t modified);
 int brc_unread_time(int bid, time4_t ftime,time4_t modified);
+int brc_search_read(int bid, time4_t ftime, int forward, time4_t *result);
 void brc_addlist(const char* fname, time4_t modified);
 void brc_update(void);
 void brc_toggle_all_read(int bid, int is_all_read);

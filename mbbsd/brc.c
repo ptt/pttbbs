@@ -646,3 +646,72 @@ brc_unread(int bid, const char *fname, time4_t modified)
 
     return brc_unread_time(bid, ftime, modified);
 }
+
+/*
+ *  從 ftime 該篇文章開始, 往上或往下尋找第一篇已讀過的文章
+ *    forward == 1: 往更新的文章找 (往下找)
+ *
+ *  假設: blist[] 是按照 .create 由大而小往後排序好的.
+ *
+ *  Return: 0 -- 沒有任何已讀的文章
+ *          1 -- 找到已讀文章, 並將該文章放在 result 中傳回.
+ */
+int
+brc_search_read(int bid, time4_t ftime, int forward, time4_t *result)
+{
+    int i;
+    int	bnum;
+    const brc_rec *blist;
+
+    brc_initialize();
+
+    if (brc_currbid && bid == brc_currbid) {
+	blist = brc_list;
+	bnum = brc_num;
+    } else {
+	blist = brc_find_record(bid, &bnum);
+    }
+
+    // [0].create is the biggest.
+    // 首先要找到 ftime 所在的區間, 然後再視 forward 的值來取前後的已讀文章.
+    for( i = 0; i < bnum; i++ ) { /* using linear search */
+	if( ftime > blist[i].create ) {
+	    if( forward ) {
+                if( i ) {
+                    goto return_older;
+                } else {
+                    return 0;
+                }
+            } else {
+                // 回傳此篇已讀文章
+                if( result ) *result = blist[i].create;
+                return 1;
+            }
+        }
+        // 游標所在的檔案本身就是已讀過
+        else if( ftime == blist[i].create ) {
+            if( forward && i ) {
+                goto return_older;
+            } else if( !forward && (i + 1) < bnum ) {
+                goto return_newer;
+            }
+            return 0;
+        }
+    }
+    // 區間落在最後一個的後面 (更早之前的文章)
+    if ( forward && i ) {
+        goto return_older;
+    }
+    return 0;
+
+return_older:
+    // 回傳後一篇已讀文章
+    if( result ) *result = blist[i - 1].create;
+    return 1;
+
+return_newer:
+    // 回傳前一篇已讀文章
+    if( result ) *result = blist[i + 1].create;
+    return 1;
+}
+

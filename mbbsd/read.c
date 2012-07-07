@@ -330,6 +330,54 @@ thread(const keeploc_t * locmem, int stypen)
     return new_ln;
 }
 
+/*
+ * 根據 stypen 選擇上/下一篇已讀過的文章
+ *
+ * @param locmem  用來存在某看板游標位置的 structure。
+ * @param stypen  游標移動的方法
+ *           CURSOR_NEXT, CURSOR_PREV:
+ *             與游標目前位置的文章同標題 的 下一篇/前一篇 文章。
+ *
+ * @return 新的游標位置
+ */
+static int
+search_read(const int bid, const keeploc_t * locmem, int stypen)
+{
+    fileheader_t fh;
+    int     pos = locmem->crs_ln;
+    int     rk;
+    int     fd = -1;
+    int     forward = (stypen & RS_FORWARD) ? 1 : 0;
+    time4_t ftime, result;
+
+    if( last_line <= 1 ) return pos;
+
+    /* First load the timestamp of article where cursor pointing to */
+    rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), pos, &fd);
+    if( fd < 0 || rk < 0) return pos;
+    ftime = atoi( &fh.filename[2] );
+
+    /* given the ftime to resolve the read article */
+    if( brc_search_read(bid, ftime, forward, &result ) ) {
+        int i;
+        int step = forward ? 1 : -1;
+
+        /* find out the position for the article result */
+        for( i = pos; i >= 0 && i <= last_line; i += step ) {
+            rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), i, &fd);
+            if( fd < 0 || rk < 0) goto out;
+            if (atoi( &fh.filename[2] ) == result ) {
+                pos = i;
+                goto out;
+            }
+        }
+    }
+
+out:
+    if( fd != -1 ) close(fd);
+    return pos;
+}
+
 static int 
 select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
 	char *pdefault_ch)
@@ -997,6 +1045,14 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         } else {
             mode = TagPruner(bid);
         }
+        break;
+
+    case '{':
+        new_ln = search_read(bid, locmem, READ_PREV);
+        break;
+
+    case '}':
+        new_ln = search_read(bid, locmem, READ_NEXT);
         break;
 
     case KEY_ENTER:
