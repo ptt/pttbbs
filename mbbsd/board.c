@@ -213,7 +213,7 @@ b_post_note(void)
     if (more(buf, NA) == -1)
 	more("etc/" FN_POST_NOTE, NA);
 
-    getdata(b_lines - 2, 0, "自訂發文注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
+    getdata(b_lines - 2, 0, "自訂發文注意事項: (y)編輯/(d)刪除/(n)不變? [y/d/N]:",
 	    yn, sizeof(yn), LCECHO);
     if (yn[0] == 'y')
 	veditfile(buf);
