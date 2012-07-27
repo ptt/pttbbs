@@ -322,6 +322,9 @@ static int valid_chatid(register char *id) {
 	if(++len > 8)
 	    return 0;
     }
+    if (DBCS_strcasestr(id, "¡»") ||
+        DBCS_strcasestr(id, "¡°"))
+        return 0;
     return len;
 }
 
