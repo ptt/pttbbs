@@ -315,6 +315,9 @@ debug_room()
 static int valid_chatid(register char *id) {
     register int ch, len;
     
+    if (DBCS_strcasestr(id, "¡»") ||
+        DBCS_strcasestr(id, "¡°"))
+        return 0;
     for(len = 0; (ch = *id); id++) {
 	/* Thor: check for endless */
 	if(ch == '/' || ch == '*' || ch == ':')
@@ -322,9 +325,6 @@ static int valid_chatid(register char *id) {
 	if(++len > 8)
 	    return 0;
     }
-    if (DBCS_strcasestr(id, "¡»") ||
-        DBCS_strcasestr(id, "¡°"))
-        return 0;
     return len;
 }
 
