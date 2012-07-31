@@ -776,17 +776,19 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	        userec_t xuser;
 		getdata_str(y, 0, prompt, buf, IDLEN + 1, DOECHO,
 			x.myangel);
+
 		if(buf[0] == 0 || strcmp(buf, "-") == 0 ||
-			(getuser(buf, &xuser) &&
-			    (xuser.userlevel & PERM_ANGEL)) ||
-			strcmp(x.myangel, buf) == 0){
+			strcmp(x.myangel, buf) == 0)
+                    break;
+
+                if (getuser(buf, &xuser) && (xuser.userlevel & PERM_ANGEL)) {
 		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
-		    ++y;
 		    break;
 		}
 
 		prompt = "¤p ¤Ñ ¨Ï¡G";
 	    }
+            ++y;
 	}
 #endif
 
