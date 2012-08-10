@@ -1178,7 +1178,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	return;
 
     case '8':
+#ifdef ASSESS
         reassign_badpost(x.userid);
+#else
+        vmsg("本站目前不支援劣文設定。");
+#endif
         return;
 
     default:
