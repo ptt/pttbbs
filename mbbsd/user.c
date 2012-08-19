@@ -1293,7 +1293,8 @@ showplans_userec(userec_t *user)
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
-        const int can_save = (user->userlevel & PERM_LOGINOK) ? 1 : 0;
+        int can_save = ((user->userlevel & PERM_LOGINOK) &&
+                        (user->userlevel & PERM_BASIC)) ? 1 : 0;
 
         prints(" " ANSI_COLOR(1;31) "此人違規 %s" ANSI_RESET,
                can_save ? "尚未繳交罰單" : "");
