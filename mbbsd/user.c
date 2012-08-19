@@ -1289,15 +1289,17 @@ u_info(void)
 void
 showplans_userec(userec_t *user)
 {
-    char            genbuf[ANSILINELEN];
+    char genbuf[ANSILINELEN];
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
+        const int can_save = (user->userlevel & PERM_LOGINOK) ? 1 : 0;
+
+        prints(" " ANSI_COLOR(1;31) "此人違規 %s" ANSI_RESET,
+               can_save ? "尚未繳交罰單" : "");
+
         if (user->vl_count)
-            prints(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單(已累計 %d 次)"
-                   ANSI_RESET, user->vl_count);
-        else
-            outs(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單" ANSI_RESET);
+            prints(" (已累計 %d 次)", user->vl_count);
 	return;
     }
 
@@ -1349,7 +1351,7 @@ showplans_userec(userec_t *user)
 
     sethomefile(genbuf, user->userid, fn_plans);
     if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
-	prints("《個人名片》%s 目前沒有名片\n", user->userid);
+        prints("《個人名片》%s 目前沒有名片\n", user->userid);
 }
 
 void
