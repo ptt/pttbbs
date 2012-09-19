@@ -6,6 +6,10 @@
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
+#ifndef GAMBLE_ACTION_DELAY_US
+#define GAMBLE_ACTION_DELAY_US  (0) // 每個動作之前的 delay
+#endif 
+
 // Use "%lld" format string whenever you access variables in bignum_t.
 typedef long long bignum_t;
 
@@ -200,6 +204,10 @@ ticket(int bid)
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
 
+    // No scripting.
+    vkey_purge();
+    usleep(2.5 * GAMBLE_ACTION_DELAY_US);   // delay longer
+
     STATINC(STAT_GAMBLE);
     if (bid) {
 	bh = getbcache(bid);
@@ -217,6 +225,7 @@ ticket(int bid)
 	    break;
 	}
 	move(20, 0);
+        vkey_purge();
 	reload_money();
 	prints("現有 " MONEYNAME ": " ANSI_COLOR(1;31) "%d" ANSI_RESET "\n"
                "請選擇要購買的種類(1~%d)[Q:離開]" ANSI_RESET ":",
@@ -247,6 +256,7 @@ ticket(int bid)
 	    if (append_ticket_record(path, ch, n, count) < 0)
 		goto doesnt_catch_up;
 	}
+        usleep(GAMBLE_ACTION_DELAY_US);
     }
     unlockutmpmode();
     return 0;
