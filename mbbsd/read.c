@@ -349,24 +349,63 @@ search_read(const int bid, const keeploc_t * locmem, int stypen)
     int     fd = -1;
     int     forward = (stypen & RS_FORWARD) ? 1 : 0;
     time4_t ftime, result;
+    int     ret;
+    int     step = forward ? 1 : -1;
 
     if( last_line <= 1 ) return pos;
 
-    /* First load the timestamp of article where cursor pointing to */
+    /* First load the timestamp of article where cursor points to */
+reload_fh:
     rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), pos, &fd);
-    if( fd < 0 || rk < 0) return pos;
-    ftime = atoi( &fh.filename[2] );
+    if( fd < 0 || rk < 0 ) return pos;
+    if( rk == 0 /* EOF */ ) {
+        /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
+        ftime = 2147483647;
+    } else {
+#ifdef SAFE_ARTICLE_DELETE
+        if (fh.filename[0] == '.' || fh.owner[0] == '-') {
+            /* 游標所在文章已被刪除, 跳過, 往下找下一篇文章 */
+            close(fd);
+            pos += step;
+            goto reload_fh;
+        }
+#endif
+        ftime = atoi( &fh.filename[2] );
+    }
 
     /* given the ftime to resolve the read article */
-    if( brc_search_read(bid, ftime, forward, &result ) ) {
+    ret = brc_search_read(bid, ftime, forward, &result );
+    if( ret < 0 ) {
+        /* No read record is found. Try to traverse from last article to
+         * the first until a read article is found (via brc_unread()).
+         * Note that this is O(n) since the brc_unread() returns at
+         * either (ftime <= brc_expire_time) or (bnum <= 0).
+         */
         int i;
-        int step = forward ? 1 : -1;
+
+        for( i = last_line; i >= 0; --i ) {
+            rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), i, &fd);
+            if( fd < 0 || rk < 0) goto out;
+            if( 0 == brc_unread( bid, fh.filename, 0 ) ) {
+                pos = i;
+                goto out;
+            }
+        }
+    } else if( ret ) {
+        /* yes we found the read article and stored in result. */
+        int i;
 
         /* find out the position for the article result */
         for( i = pos; i >= 0 && i <= last_line; i += step ) {
             rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), i, &fd);
             if( fd < 0 || rk < 0) goto out;
-            if (atoi( &fh.filename[2] ) == result ) {
+#ifdef SAFE_ARTICLE_DELETE
+            if (fh.filename[0] == '.' || fh.owner[0] == '-') {
+                /* 這篇文章已被刪除, 跳過, 試試下一篇 */
+                continue;
+            }
+#endif
+            if( atoi( &fh.filename[2] ) == result ) {
                 pos = i;
                 goto out;
             }
