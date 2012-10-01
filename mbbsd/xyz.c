@@ -76,7 +76,7 @@ Goodbye(void)
 		diff / 60, diff % 60);
     }
     if(!HasUserPerm(PERM_LOGINOK))
-	vmsg("尚未完成註冊。如要提昇權限請參考本站公佈欄辦理註冊");
+	vmsg("尚未完成註冊程序。");
     else
 	vmsg(genbuf);
 
