@@ -482,11 +482,13 @@ typedef struct
                         //  Just trying to notify you that it's 
                         //  NOT REAL MAX LINENO NOR FILELENGTH!!!
                         //  You may consider "S" of "Start" (disps).
+    void (*detachHandler)();
 } MmappedFile;
 
 MmappedFile mf = { 
     0, 0, 0, 0, 0, 0L,
-    0, -1L, 0, 0, -1L, -1L, -1L,-1L
+    0, -1L, 0, 0, -1L, -1L, -1L, -1L,
+    NULL // detachHandler
 };      // current file
 
 /* mf_* navigation commands return value meanings */
@@ -555,6 +557,12 @@ typedef struct
 MF_BrowsingPreference bpref =
 { MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1, 
     0, 0, 0, };
+
+/* structure generalized for the one-arg mf_attach_handler */
+struct SimpleBuffer {
+    void *data;
+    int len;
+};
 
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
@@ -809,9 +817,16 @@ mf_gunzip(const char *fn GCC_UNUSED, int fd)
 /* 
  * mmap basic operations 
  */
+
+MFPROTO void mf_detach();
+MFPROTO void mf_detach_nounmap();
+MFPROTO int mf_postattach();
+
 MFPROTO int 
-mf_attach(const char *fn)
+mf_attach_file(void *fnptr)
 {
+    // We are passing pointer
+    const char *fn = *(const char **)fnptr;
     struct stat st;
     int fd = open(fn, O_RDONLY);
 
@@ -846,6 +861,26 @@ mf_attach(const char *fn)
     madvise(mf.start, mf.len, MADV_SEQUENTIAL);
 #endif
 
+    mf.detachHandler = mf_detach;
+
+    return mf_postattach();
+}
+
+MFPROTO int
+mf_attach_buffer(void *buf)
+{
+    struct SimpleBuffer *buffer = (struct SimpleBuffer *)buf;
+    if (!buffer || !buffer->data || !buffer->len)
+        return 0;
+    mf.start = buffer->data;
+    mf.len = buffer->len;
+    mf.detachHandler = mf_detach_nounmap;
+    return mf_postattach();
+}
+
+MFPROTO int 
+mf_postattach()
+{
     mf.end = mf.start + mf.len;
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
@@ -876,6 +911,14 @@ mf_detach()
         munmap(mf.start, mf.len);
         RESETMF();
     }
+}
+
+MFPROTO void
+mf_detach_nounmap()
+{
+    mf_freeHeaders();
+    if (mf.start)
+        RESETMF();
 }
 
 /*
@@ -2225,9 +2268,54 @@ PMORE_UINAV_FORWARDLINE()
 /*
  * piaip's more, a replacement for old more
  */
+static int
+_pmore2( 
+        int promptend, void *ctx,
+        int (*mf_attach_handler)(void *), void *ahctx, 
+        int (*key_handler)   (int key, void *ctx),
+        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*help_handler)  (int y,   void *ctx));
+
 int
 pmore2( 
         const char *fpath, int promptend, void *ctx,
+        int (*key_handler)   (int key, void *ctx),
+        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*help_handler)  (int y,   void *ctx)
+      )
+{
+    return _pmore2(promptend, ctx,
+                   mf_attach_file, &fpath,
+                   key_handler,
+                   footer_handler,
+                   help_handler);
+}
+
+int
+pmore2_inmemory( 
+        void *content, int size,
+        int promptend, void *ctx,
+        int (*key_handler)   (int key, void *ctx),
+        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*help_handler)  (int y,   void *ctx)
+      )
+{
+    struct SimpleBuffer buf = {
+        .data = content,
+        .len = size
+    };
+
+    return _pmore2(promptend, ctx,
+                   mf_attach_buffer, &buf,
+                   key_handler,
+                   footer_handler,
+                   help_handler);
+}
+
+static int
+_pmore2( 
+        int promptend, void *ctx,
+        int (*mf_attach_handler)(void *), void *ahctx, 
         int (*key_handler)   (int key, void *ctx),
         int (*footer_handler)(int ratio, int width, void *ctx),
         int (*help_handler)  (int y,   void *ctx)
@@ -2262,7 +2350,7 @@ pmore2(
     STATINC(STAT_MORE);
 #endif // STAT_MORE
 
-    if (!mf_attach(fpath))
+    if (!mf_attach_handler(ahctx))
     {
         REENTRANT_RESTORE();
         return -1;
@@ -2775,7 +2863,8 @@ pmore2(
         /* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }
 
-    mf_detach();
+    if (mf.detachHandler)
+        mf.detachHandler();
     outs(ANSI_RESET);
 
     REENTRANT_RESTORE();

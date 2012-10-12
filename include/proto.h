@@ -418,9 +418,16 @@ void m_sob_brd(char *bname,char *fromdir);
 
 /* pager */
 int more(const char *fpath, int promptend);
+int more_inmemory(void *content, int size, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
 int pmore2(const char *fpath, int promptend, void *ctx, 
+	int (*key_handler)   (int key, void *ctx),
+	int (*footer_handler)(int ratio, int width, void *ctx),
+	int (*help_handler)  (int y,   void *ctx));
+int pmore2_inmemory( 
+	void *content, int size,
+	int promptend, void *ctx,
 	int (*key_handler)   (int key, void *ctx),
 	int (*footer_handler)(int ratio, int width, void *ctx),
 	int (*help_handler)  (int y,   void *ctx));

@@ -190,6 +190,13 @@ common_pager_exit_handler(int r, const char *fpath)
     return r;
 }
 
+static int
+memory_pager_exit_handler(int r, const void *ctx GCC_UNUSED)
+{
+    // TODO: port some functionality from `common_pager_exit_handler'.
+    return r;
+}
+
 
 #ifndef USE_PMORE ///////////////////////////////////////////////////////////
 
@@ -461,6 +468,18 @@ more(const char *fpath, int promptend)
 	    common_pmore_help_handler);
 
     return common_pager_exit_handler(r, fpath);
+}
+
+int
+more_inmemory(void *content, int size, int promptend)
+{
+    int r = pmore2_inmemory(content, size, promptend,
+            NULL,
+	    common_pager_key_handler, 
+	    common_pmore_footer_handler,
+	    common_pmore_help_handler);
+
+    return memory_pager_exit_handler(r, NULL);
 }
 
 #endif // USE_PMORE /////////////////////////////////////////////////////////
