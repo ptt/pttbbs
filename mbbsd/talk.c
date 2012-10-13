@@ -679,7 +679,9 @@ my_write2(void)
 	    if (!tw->uin)
 		break;
 
-	    if (ch != '\r' && ch != '\n') {
+            // TODO(piaip) 這裡很危險。使用者可能趁機亂塞東西進 buf.
+            // 另外 KEY_UP 之類的是 >0xFF 所以或許我們該徹查一下 isascii 的判斷。
+            if ((ch < 0x100 && !isascii(ch)) || isprint(ch)) {
 		msg[0] = ch, msg[1] = 0;
 	    } else
 		msg[0] = 0;
