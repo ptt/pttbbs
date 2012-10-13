@@ -1,5 +1,6 @@
 #ifndef THTTP_H
 #   define THTTP_H
+#include "buffer.h"
 
 typedef struct THTTP {
     int fd;
