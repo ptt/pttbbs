@@ -140,6 +140,11 @@ int toconnect(const char *addr)
 
 int toconnectex(const char *addr, int timeout)
 {
+    return toconnect3(addr, timeout, 0);
+}
+
+int toconnect3(const char *addr, int timeout, int microseconds)
+{
     int sock;
     
     assert(addr && *addr);
@@ -164,13 +169,14 @@ int toconnectex(const char *addr, int timeout)
 	char buf[64], *port;
 	struct sockaddr_in serv_name;
 	int was_block = 1;
+	int timed = timeout > 0 || (timeout == 0 && microseconds > 0);
 
 	if( (sock = socket(PF_INET, SOCK_STREAM, 0)) < 0 ){
 	    perror("socket");
 	    return -1;
 	}
 
-	if (timeout > 0)
+	if (timed)
 	{
 	    // set to non-block to allow timeout
 	    int oflags = fcntl(sock, F_GETFL, NULL);
@@ -199,8 +205,10 @@ int toconnectex(const char *addr, int timeout)
 		struct timeval tv = {0}; 
 		fd_set myset; 
 
-		assert(timeout > 0);
-		tv.tv_sec = timeout;	    // set timeout here
+		assert(timed);
+		// set timeout here
+		tv.tv_sec = timeout;
+		tv.tv_usec = microseconds;
 		FD_ZERO(&myset); 
 		FD_SET(sock, &myset); 
 
@@ -220,7 +228,7 @@ int toconnectex(const char *addr, int timeout)
 	    return -1;
 	}
 
-	if (timeout > 0)
+	if (timed)
 	{
 	    // restore flags
 	    int oflags = fcntl(sock, F_GETFL, NULL);

@@ -82,6 +82,7 @@ int tobind   (const char *addr);
 int tobindex (const char *addr, int qlen, int (*setsock)(int), int do_listen);
 int toconnect(const char *addr);
 int toconnectex(const char *addr, int timeout);
+int toconnect3(const char *addr, int timeout, int microseconds);
 int toread   (int fd, void *buf, int len);
 int towrite  (int fd, const void *buf, int len);
 int torecv   (int fd, void *buf, int len, int flag);
