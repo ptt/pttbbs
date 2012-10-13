@@ -307,4 +307,10 @@ extern const uint16_t b2u_table[];
 extern const uint16_t u2b_table[];
 extern const uint8_t  b2u_ambiguous_width[];
 
+/* buffer.c */
+#include "buffer.h"
+
+/* thttp.c */
+#include "thttp.h"
+
 #endif
