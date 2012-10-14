@@ -87,6 +87,7 @@ int buffer_read_from_func(
 
 static int buffer__aligned_size(int desired_size) {
     int aligned_size = desired_size / BUFFER_MIN_INCREMENT;
+    aligned_size *= BUFFER_MIN_INCREMENT;
     if (aligned_size < desired_size)
         aligned_size += BUFFER_MIN_INCREMENT;
     return aligned_size;
