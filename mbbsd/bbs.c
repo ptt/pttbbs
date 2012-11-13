@@ -1501,17 +1501,9 @@ do_general(int garbage GCC_UNUSED)
 		{
 		    genbuf[0] = 0;
 		    msg = err_uid;
-		} else {
-                    // check friend / reject list
-                    char name_fpath[PATHLEN];
-                    int i = 0;
-                    sethomefile(name_fpath, quote_user, FN_REJECT);
-                    i = file_exist_record(name_fpath, cuser.userid);
-                    sethomefile(name_fpath, quote_user, FN_OVERRIDES);
-                    if (i && !file_exist_record(name_fpath, cuser.userid)) {
-                        genbuf[0] = 0;
-                        msg = "作者拒收";
-                    }
+		} else if(is_rejected(quote_user)) {
+                    genbuf[0] = 0;
+                    msg = "作者拒收";
                 }
 	    }
 

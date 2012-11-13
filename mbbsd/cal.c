@@ -439,20 +439,11 @@ give_money_ui(const char *userid)
     }
 #endif // PLAY_ANGEL
 
-    {
-        char fpath[PATHLEN];
-        int in_list;
-
-        // check reject
-        sethomefile(fpath, id, FN_REJECT);
-        in_list = file_exist_record(fpath, cuser.userid);
-        sethomefile(fpath, id, FN_OVERRIDES);
-        if (in_list && !file_exist_record(fpath, cuser.userid)) {
-            move(13, 0);
-            outs(ANSI_COLOR(1;35)
-                 "對方拒絕收信，完成交易後將不寄送紅包袋。" ANSI_RESET);
-            can_send_mail = 0;
-        } 
+    if (is_rejected(id)) {
+        move(13, 0);
+        outs(ANSI_COLOR(1;35)
+             "對方拒絕收信，完成交易後將不寄送紅包袋。" ANSI_RESET);
+        can_send_mail = 0;
     }
 
     // safe context starts at (7, 0)

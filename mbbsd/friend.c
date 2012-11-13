@@ -93,6 +93,17 @@ friend_add(const char *uident, int type, const char* des)
     }
 }
 
+
+int
+is_rejected(const char *userid) {
+    char fpath[PATHLEN];
+    sethomefile(fpath, userid, FN_REJECT);
+    if (!file_exist_record(fpath, cuser.userid))
+        return 0;
+    sethomefile(fpath, userid, FN_OVERRIDES);
+    return !file_exist_record(fpath, cuser.userid);
+}
+
 void
 friend_special(void)
 {

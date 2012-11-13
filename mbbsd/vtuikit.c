@@ -1008,6 +1008,7 @@ InputHistoryDelta(char *s, int sz, int d)
 
 	    // copy buffer
 	    strlcpy(s, ih.buf[ih.icurr], sz);
+            // TODO(piaip) serious check here, in case s contains invalid data.
 
 	    // DBCS safe
 	    i = strlen(s);

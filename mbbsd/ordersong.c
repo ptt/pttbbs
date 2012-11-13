@@ -116,8 +116,16 @@ do_order_song(void)
         move(22, 0); clrtobot();
         getdata_str(22, 0, "寄到誰的信箱(站內真實ID)?",
                     address, sizeof(address), LCECHO, receiver);
-        if (!*address || searchuser(address, address))
+        if (!*address)
             break;
+        if (searchuser(address, address)) {
+            if (is_rejected(address)) {
+                vmsg("對方拒收");
+                continue;
+            } else {
+                break;
+            }
+        }
         vmsg("請輸入站內 ID 或直接 ENTER");
     } while (1);
 

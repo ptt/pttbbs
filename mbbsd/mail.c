@@ -120,7 +120,6 @@ invalidaddr(const char *addr) {
     return 1;
 }
 
-
 int
 load_mailalert(const char *userid)
 {
@@ -364,16 +363,10 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     fileheader_t    mhdr;
     char            fpath[PATHLEN];
     char	    _mfpath[PATHLEN];
-    int		    i = 0;
     int		    oldstat = currstat;
     char save_title[STRLEN];
 
-    // check friend
-    sethomefile(fpath, userid, FN_REJECT);
-    i = file_exist_record(fpath, cuser.userid);
-    sethomefile(fpath, userid, FN_OVERRIDES);
-    if (i && !file_exist_record(fpath, cuser.userid)) {
-        // in reject list
+    if (is_rejected(userid)) {
         vmsg("對方拒收。");
         return -2;
     }
@@ -924,16 +917,10 @@ multi_list(struct Vector *namelist, int *recipient)
             cRemoved = 0;
             for (i = 0; i < Vector_length(namelist); i++) {
                 const char *p = Vector_get(namelist, i);
-                if (searchuser(p, uid) && strcmp(STR_GUEST, uid)) {
-                    // check rejected list
-                    sethomefile(genbuf, uid, FN_REJECT);
-                    if (!file_exist_record(genbuf, cuser.userid))
-                        continue;
-                    // check if that's friend+reject
-                    sethomefile(genbuf, uid, FN_OVERRIDES);
-                    if (file_exist_record(genbuf, cuser.userid))
-                        continue;
-                }
+                if (searchuser(p, uid) &&
+                    strcmp(STR_GUEST, uid) &&
+                    !is_rejected(uid))
+                    continue;
                 // ok, bad guys exist.
                 if (!cRemoved)
                     outs("下列 ID 無法收到信件，已自名單移除；"
@@ -1364,8 +1351,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     // 處理站內黑名單
     do {
 	char xid[IDLEN+1], *dot;
-	char fpath[PATHLEN];
-	int i = 0;
 
 	strlcpy(xid, address, sizeof(xid));
 	dot = strchr(xid, '.'); 
@@ -1393,11 +1378,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	if (strcasecmp(xid, cuser.userid) == 0)
 	    break;
 
-	sethomefile(fpath, xid, FN_REJECT);
-	i = file_exist_record(fpath, cuser.userid);
-	sethomefile(fpath, xid, FN_OVERRIDES);
-
-	if (i && !file_exist_record(fpath, cuser.userid)) {
+        if (is_rejected(xid)) {
             // We used to simply ignore here, and then people (especially those
             // in BuyTogether and similiars) say "my mail is lost".
             // After notifying SYSOPs, we believe it will be better to let all

@@ -273,6 +273,7 @@ void friend_delete(const char *uident, int type);
 void friend_delete_all(const char *uident, int type);
 void friend_special(void);
 void setfriendfile(char *fpath, int type);
+int is_rejected(const char *userid);
 
 /* gamble */
 int ticket_main(void);
