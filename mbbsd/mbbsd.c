@@ -53,7 +53,6 @@ struct ProgramOption {
     int		flag_listenfd;
     char*	flag_tunnel_path;
 
-    bool	flag_bypass;
     bool	flag_fork;
     bool	flag_checkload;
     char	flag_user[IDLEN+1];
@@ -400,12 +399,15 @@ show_call_in(int save, int which)
     int mode = currutmp->msgs[which].msgmode;
 
 #ifdef PLAY_ANGEL
-    if (mode == MSGMODE_TOANGEL)
+    if (mode == MSGMODE_TOANGEL) {
         snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "¡¹%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET,
                  currutmp->msgs[which].userid,
                  currutmp->msgs[which].last_call_in);
-    else
+        // I must be an Angel. Let's try to update angel beats info.
+        // TODO maybe it's better to move this to "sender".
+        angel_notify_activity();
+    } else
 #endif
     snprintf(buf, sizeof(buf), ANSI_COLOR(1;33;46) "¡¹%s" ANSI_COLOR(37;45)
              " %s " ANSI_RESET, currutmp->msgs[which].userid,
@@ -1533,8 +1535,7 @@ static void usage(char *argv0)
 	    "non-daemon mode\n"
 	    "\t-D                 use non-daemon mode, imply -t tty\n"
 	    "\t-h hostip          hostip (default 127.0.0.1)\n"
-	    "\t-b                 bypass opening and ask password directly\n"
-	    "\t-u user            for -b: user (default guest)\n"
+	    "\t-u user            login as user directly without pw\n"
 	    "\n"
 	    "flags\n"
 	    "\t-t type            terminal mode, telnet | tty\n"
@@ -1676,12 +1677,6 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		    exit(1);
 		}
 #endif
-		break;
-	    case 'b':
-		option->flag_bypass = true;
-		// TODO
-		fprintf(stderr, "not yet implemented\n");
-		exit(1);
 		break;
 	    case 'u':
 		strlcpy(option->flag_user, optarg, sizeof(option->flag_user));

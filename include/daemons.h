@@ -66,6 +66,7 @@ enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_SUGGEST,
     ANGELBEATS_REQ_SUGGEST_AND_LINK,
     ANGELBEATS_REQ_REMOVE_LINK,
+    ANGELBEATS_REQ_HEARTBEAT,
 };
 
 typedef struct {
@@ -85,6 +86,8 @@ typedef struct {
     short max_masters_of_online_angels;
     short min_masters_of_active_angels;
     short max_masters_of_active_angels;
+    short my_index;
+    short my_active_index;
     short my_active_masters;
 }   angel_beats_report ;
 

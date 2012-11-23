@@ -44,6 +44,21 @@ angel_beats_do_request(int op, int master_uid, int angel_uid) {
 // Local Angel Service
 
 void 
+angel_notify_activity() {
+    static time4_t t = 0;
+    time4_t tick = now;
+
+    // tick: every 15 minutes.
+    tick -= tick % (15 * 60 * 60);
+
+    // ping daemon only in different ticks.
+    if (tick == t)
+        return;
+    t = tick;
+    angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, 0, usernum);
+}
+
+void 
 angel_toggle_pause()
 {
     // TODO record angels that don't do their job
@@ -158,28 +173,56 @@ angel_get_nick()
     return _myangel_nick;
 }
 
-int
-a_changeangel(){
+static int
+do_changeangel(int force) {
     char buf[4];
+    static time_t last_time = 0;
+    const char *prompt = "登記完成，下次呼叫時會從上線的天使中選出新的小天使";
 
     /* cuser.myangel == "-" means banned for calling angel */
-    if (cuser.myangel[0] == '-') return 0;
+    if (cuser.myangel[0] == '-')
+        return 0;
 
+    if (!cuser.myangel[0]) {
+        vmsg(prompt);
+        return 0;
+    }
+
+    // TODO Allow changing only if user really tried to contact angel.
+#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
+    if (force)
+        last_time = 0;
+
+    if (last_time &&
+        (now - last_time < ANGEL_CHANGE_TIMELIMIT_MINS * 60)) {
+        vmsgf("每次更換小天使最少間隔 %d 分鐘。",
+              ANGEL_CHANGE_TIMELIMIT_MINS);
+        return 0;
+    }
+
+#endif
+
+    mvouts(b_lines - 3, 0, "\n"
+           "請注意若未呼叫過目前的小天使就申請更換，很可能會再換到同個天使\n");
     getdata(b_lines - 1, 0,
 	    "更換小天使後就無法換回了喔！ 是否要更換小天使？ [y/N]",
 	    buf, 3, LCECHO);
     if (buf[0] == 'y') {
-	char buf[100];
-	snprintf(buf, sizeof(buf), "%s 小主人 %s 換掉 %s 小天使\n",
-		Cdatelite(&now), cuser.userid, cuser.myangel);
-	log_file(BBSHOME "/log/changeangel.log", LOG_CREAT, buf);
+	log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
+                  "%s 小主人 %s 換掉 %s 小天使\n",
+                  Cdatelite(&now), cuser.userid, cuser.myangel);
         if (cuser.myangel[0])
             angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
                     usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
-        vmsg("小天使登記完成，下次呼叫時會從目前上線的天使中選出新的小天使");
+        last_time = now;
+        vmsg(prompt);
     }
     return 0;
+}
+
+int a_changeangel(void) {
+    return do_changeangel(0);
 }
 
 int 
@@ -315,8 +358,12 @@ int a_angelreport() {
                     rpt.max_masters_of_active_angels/base2);
         }
 
-        if (HasUserPerm(PERM_ANGEL))
+        if (HasUserPerm(PERM_ANGEL)) {
+            if (currutmp->angelpause == ANGELPAUSE_NONE)
+                prints("\n\t 您的線上小天使順位為 %d, 全部小天使順位為 %d\n",
+                       rpt.my_active_index, rpt.my_index);
             prints("\n\t 您目前大約有 %d 位小主人。\n", rpt.my_active_masters);
+        }
     }
     close(fd);
     pressanykey();
@@ -507,7 +554,7 @@ AngelNotOnline(){
                     "其它任意鍵離開"))) {
         case 'h':
             move(b_lines - 4, 0); clrtobot();
-            a_changeangel();
+            do_changeangel(1);
             break;
 #ifdef BN_NEWBIE
         case 'p':
@@ -590,8 +637,9 @@ TalkToAngel(){
 	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
 	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
 	// if success, record uent.
-	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent))
+	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent)) {
 	    lastuent = uent;
+        }
     }
     return;
 }

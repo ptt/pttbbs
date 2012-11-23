@@ -16,7 +16,7 @@
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
 // --------------------------------------------------------------------------
-// TODO change to sort by activity
+// TODO cache report results.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,9 +52,9 @@ static int verbose = 0;
 // (total online angels are twice than active angels)
 
 typedef struct {
+    time_t last_activity;   // last known activity from master
     int uid;
     int masters;            // counter of who have this one as angel
-    time_t last_activity;   // last known activity from master
     char userid[IDLEN+1];
 } AngelInfo;
 
@@ -76,6 +76,13 @@ int angel_list_comp_userid(const void *pva, const void *pvb) {
 int angel_list_comp_masters(const void *pva, const void *pvb) {
     AngelInfo *pa = (AngelInfo*) pva, *pb = (AngelInfo*) pvb;
     return pa->masters - pb->masters;
+}
+
+int angel_list_comp_advanced(const void *pva, const void *pvb) {
+    AngelInfo *pa = (AngelInfo*) pva, *pb = (AngelInfo*) pvb;
+    if (pa->last_activity == pb->last_activity)
+        return pa->masters - pb->masters;
+    return pa->last_activity > pb->last_activity ? 1 : -1;
 }
 
 // search stubs
@@ -119,9 +126,9 @@ angel_list_preserve(int newsz) {
 }
 
 void 
-angel_list_sort_by_masters() {
+angel_list_sort() {
     qsort(g_angel_list, g_angel_list_size, sizeof(AngelInfo), 
-          angel_list_comp_masters);
+          angel_list_comp_advanced);
 }
 
 AngelInfo *
@@ -151,17 +158,11 @@ angel_list_get_index(AngelInfo *kanade) {
 
 int 
 suggest_online_angel(int master_uid) {
-    userinfo_t *astat = NULL;
-    int candidates[ANGEL_SUGGEST_RANGE] = {0}, num_candidates = 0;
+    userinfo_t *astat;
     int i;
 
-    // 1. find appropriate angels
-    // 2. select from one of them
-    // 3. return uid
-
     for (i = 0; i < g_angel_list_size; i++) {
-        AngelInfo *kanade = g_angel_list+i;
-        int is_good_uid = 0;
+        AngelInfo *kanade = g_angel_list + i;
 
         // skip the master himself
         if (kanade->uid == master_uid)
@@ -172,65 +173,33 @@ suggest_online_angel(int master_uid) {
         for (astat = search_ulistn(kanade->uid, 1); 
              astat && strcasecmp(astat->userid, kanade->userid) == 0; 
              astat++) {
+
             // ignore all dead processes
             if (astat->mode == DEBUGSLEEPING)
                 continue;
+
             // if any sessions is not safe, ignore it.
-            if (!(astat->userlevel & PERM_ANGEL) ||
-                astat->angelpause) {
-                is_good_uid = 0;
+            if (!(astat->userlevel & PERM_ANGEL) || astat->angelpause)
                 break;
-            }
-            if (!is_good_uid)
-                is_good_uid = astat->uid;
+
+            return astat->uid;
         }
-
-        // a good candidate?
-        if (is_good_uid)
-            candidates[num_candidates++] = is_good_uid;
-        // terminate when too many candidates
-        if (num_candidates >= ANGEL_SUGGEST_RANGE)
-            break;
     }
-    if (!num_candidates)
-        return 0;
-
-    // verbose report
-    if (debug || verbose) {
-        printf("suggest candidates: ");
-        for (i = 0; i < num_candidates; i++) {
-            printf("%d, ", candidates[i]);
-        }
-        printf("\n");
-    }
-
-    return candidates[rand() % num_candidates];
+    return 0;
 }
 
 int
 inc_angel_master(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
-    int idx;
     if (!kanade)
         return 0;
     kanade->masters++;
-    idx = angel_list_get_index(kanade);
-    // TODO only sort when kanade->masters > (kanade+1)->masters
-    if (idx + 1 < g_angel_list_size &&
-        kanade->masters > (kanade+1)->masters) {
-        angel_list_sort_by_masters();
-        kanade = angel_list_find_by_uid(uid);
-        assert(kanade);
-        fprintf(stderr, " * angel (%s) position changed: %d -> %d\n",
-                kanade->userid, idx, angel_list_get_index(kanade));
-    }
     return 1;
 }
 
 int
 dec_angel_master(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
-    int idx;
     if (!kanade)
         return 0;
     if (kanade->masters == 0) {
@@ -238,17 +207,20 @@ dec_angel_master(int uid) {
                 "which was already zero: %d\n", uid);
         return 0;
     }
-    idx = angel_list_get_index(kanade);
     kanade->masters--;
-    // TODO only sort when kanade->masters < (kanade-1)->masters
-    if (idx > 0 &&
-        kanade->masters < (kanade-1)->masters) {
-        angel_list_sort_by_masters();
-        kanade = angel_list_find_by_uid(uid);
-        assert(kanade);
-        fprintf(stderr, " * angel (%s) position changed: %d -> %d\n",
-                kanade->userid, idx, angel_list_get_index(kanade));
-    }
+    return 1;
+}
+
+int
+touch_angel_activity(int uid) {
+    AngelInfo *kanade = angel_list_find_by_uid(uid);
+    int now = (int)time(0);
+
+    now -= now % 60;
+    if (!kanade || kanade->last_activity == now)
+        return 0;
+
+    kanade->last_activity = now;
     return 1;
 }
 
@@ -306,7 +278,7 @@ int
 init_angel_list() {
     g_angel_list_size = 0;
     passwd_apply(NULL, init_angel_list_callback);
-    angel_list_sort_by_masters();
+    angel_list_sort();
     return 0;
 }
 
@@ -319,6 +291,9 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     prpt->min_masters_of_active_angels = SHRT_MAX;
     prpt->min_masters_of_online_angels = SHRT_MAX;
     prpt->total_angels = g_angel_list_size;
+    prpt->my_index = 0;
+    prpt->my_active_index = 0;
+    if(debug) printf("g_angel_list_size: %d\n", g_angel_list_size);
 
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         // online?
@@ -342,21 +317,30 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
             is_online = 1;
         }
         if (debug) {
+            printf("(masters=%d, activity=%d, ",
+                   kanade->masters, kanade->last_activity);
             switch(logins) {
                 case 0:
-                    printf("(not online)");
+                    printf("NOT online)");
                     break;
                 case 1:
-                    printf("(online)");
+                    printf("online)");
                     break;
                 default:
-                    printf("(multi login: %d)", logins);
+                    printf("multi login: %d)", logins);
                     break;
             }
             printf("\n");
         }
         // update report numbers
         prpt->total_online_angels += is_online;
+        if (myuid > 0) {
+            if (myuid == kanade->uid) {
+                prpt->my_index = i + 1;
+                if (!is_pause)
+                    prpt->my_active_index = prpt->total_active_angels + 1;
+            }
+        }
         if (is_online) {
             if (!is_pause) {
                 prpt->total_active_angels++;
@@ -439,12 +423,10 @@ client_cb(int fd, short event, void *arg) {
                     Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
-                fprintf(stderr, "<pos: %d> ", 
-                        angel_list_get_index(
-                            angel_list_find_by_uid(data.angel_uid)));
                 inc_angel_master(data.angel_uid);
                 uid = getuserid(data.angel_uid);
                 strlcpy(angel_uid, uid, sizeof(angel_uid));
+                angel_list_sort();
             }
             fprintf(stderr, "result: [%s]\n", data.angel_uid > 0 ?
                     angel_uid : "<none>");
@@ -453,7 +435,14 @@ client_cb(int fd, short event, void *arg) {
             fprintf(stderr, "%s request remove link by "
                     "master [%s] to angel [%s]\n",
                     Cdatelite(&clk), master_uid, angel_uid);
-            dec_angel_master(data.angel_uid);
+            if (dec_angel_master(data.angel_uid))
+                angel_list_sort();
+            break;
+        case ANGELBEATS_REQ_HEARTBEAT:
+            fprintf(stderr, "%s update activity (heartbeat) to angel [%s]\n",
+                    Cdatelite(&clk), angel_uid);
+            if (touch_angel_activity(data.angel_uid))
+                angel_list_sort();
             break;
         case ANGELBEATS_REQ_REPORT:
             fprintf(stderr, "%s report by [%s]\n", Cdatelite(&clk), master_uid);

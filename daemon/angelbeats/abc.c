@@ -83,6 +83,8 @@ int main(int argc, char *argv[])
                "max_masters_of_online_angels=%d\n"
                "min_masters_of_active_angels=%d\n"
                "max_masters_of_active_angels=%d\n"
+               "my_index=%d\n"
+               "my_active_index=%d\n"
                "my_active_masters=%d\n",
                rpt.total_angels,
                rpt.total_online_angels,
@@ -91,6 +93,8 @@ int main(int argc, char *argv[])
                rpt.max_masters_of_online_angels,
                rpt.min_masters_of_active_angels,
                rpt.max_masters_of_active_angels,
+               rpt.my_index,
+               rpt.my_active_index,
                rpt.my_active_masters);
     } else {
         if (toread(fd, &req, sizeof(req)) != sizeof(req)) {
