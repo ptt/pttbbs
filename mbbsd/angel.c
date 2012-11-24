@@ -48,8 +48,8 @@ angel_notify_activity() {
     static time4_t t = 0;
     time4_t tick = now;
 
-    // tick: every 15 minutes.
-    tick -= tick % (15 * 60 * 60);
+    // tick: every 1 minutes.
+    tick -= tick % (1 * 60);
 
     // ping daemon only in different ticks.
     if (tick == t)
