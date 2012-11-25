@@ -359,12 +359,14 @@ int a_angelreport() {
         }
 
         if (HasUserPerm(PERM_ANGEL)) {
-            if (currutmp->angelpause == ANGELPAUSE_NONE)
-                prints("\n\t 您的線上小天使順位為 %d, 全部小天使順位為 %d"
-                       "\n\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
-                       rpt.my_active_index, rpt.my_index);
-            else 
+            if (currutmp->angelpause != ANGELPAUSE_NONE)
                 prints("\n\t 由於您目前拒收小主人所以無順位資訊\n");
+            else if (rpt.my_active_index == 0)
+                prints("\n\t 您似乎有其它登入停收主人，所以目前無小天使順位。\n");
+            else
+                prints("\n\t 您的線上小天使順位為 %d。"
+                       "\n\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
+                       rpt.my_active_index);
             prints("\n\t 您目前大約有 %d 位小主人。\n", rpt.my_active_masters);
         }
     }
