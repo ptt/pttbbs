@@ -46,10 +46,6 @@ static int verbose = 0;
 // AngelInfo list operation
 
 #define ANGEL_LIST_INIT_SIZE    (250)   // usually angels are 200~250
-#define ANGEL_SUGGEST_RANGE     (10)
-// By the numbers around 2010/06/30, usually online active angels are fewer
-// than 50 in the evening and around 25 in day time.
-// (total online angels are twice than active angels)
 
 typedef struct {
     time_t last_activity;   // last known activity from master
