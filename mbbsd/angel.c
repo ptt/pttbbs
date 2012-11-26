@@ -369,6 +369,7 @@ int a_angelreport() {
                     rpt.max_masters_of_active_angels/base2);
         }
 
+#ifdef ANGEL_REPORT_INDEX
         if (HasUserPerm(PERM_ANGEL)) {
             if (currutmp->angelpause != ANGELPAUSE_NONE)
                 prints("\n\t 由於您目前拒收小主人所以無順位資訊\n");
@@ -380,6 +381,7 @@ int a_angelreport() {
                        rpt.my_active_index);
             prints("\n\t 您目前大約有 %d 位小主人。\n", rpt.my_active_masters);
         }
+#endif
     }
     close(fd);
     pressanykey();
@@ -603,7 +605,9 @@ TalkToAngel(){
 
     if (cuser.myangel[0] == 0) {
         int ret = FindAngel();
+#ifdef ANGEL_PREVENT_MALICIOUS_CHANGE
         is_new_angel = 1;
+#endif
         if (ret <= 0) {
             lastuent = NULL;
             NoAngelFound(
