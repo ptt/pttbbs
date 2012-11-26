@@ -42,6 +42,17 @@ static int verbose = 0;
 #define ANGELBEATS_INACTIVE_TIME   ( 120 * DAY_SECONDS )
 #endif
 
+// Lower priority for re-assigning masters in given period.
+#ifndef ANGELBEATS_REASSIGN_PERIOD
+#define ANGELBEATS_REASSIGN_PERIOD  (DAY_SECONDS)
+#endif
+
+// Merge activities in every X seconds.
+#ifndef ANGELBEATS_ACTIVITY_MERGE_PERIOD
+#define ANGELBEATS_ACTIVITY_MERGE_PERIOD    (15)
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////////
 // AngelInfo list operation
 
@@ -49,6 +60,7 @@ static int verbose = 0;
 
 typedef struct {
     time_t last_activity;   // last known activity from master
+    time_t last_assigned;   // last time being assigned with new master
     int uid;
     int masters;            // counter of who have this one as angel
     char userid[IDLEN+1];
@@ -76,9 +88,11 @@ int angel_list_comp_masters(const void *pva, const void *pvb) {
 
 int angel_list_comp_advanced(const void *pva, const void *pvb) {
     AngelInfo *pa = (AngelInfo*) pva, *pb = (AngelInfo*) pvb;
-    if (pa->last_activity == pb->last_activity)
-        return pa->masters - pb->masters;
-    return pa->last_activity > pb->last_activity ? 1 : -1;
+    if (pa->last_assigned != pb->last_assigned)
+        return pa->last_assigned > pb->last_assigned ? 1 : -1;
+    if (pa->last_activity != pb->last_activity)
+        return pa->last_activity > pb->last_activity ? 1 : -1;
+    return pa->masters - pb->masters;
 }
 
 // search stubs
@@ -187,9 +201,12 @@ suggest_online_angel(int master_uid) {
 int
 inc_angel_master(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
+    time_t now = time(0);
     if (!kanade)
         return 0;
+    now -= now % ANGELBEATS_REASSIGN_PERIOD;
     kanade->masters++;
+    kanade->last_assigned = now;
     return 1;
 }
 
@@ -212,7 +229,7 @@ touch_angel_activity(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
     int now = (int)time(0);
 
-    now -= now % 60;
+    now -= now % ANGELBEATS_ACTIVITY_MERGE_PERIOD;
     if (!kanade || kanade->last_activity == now)
         return 0;
 
@@ -283,18 +300,19 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     int i;
     AngelInfo *kanade = g_angel_list;
     userinfo_t *astat = NULL;
+    int from_cmd = (!myuid);
 
     prpt->min_masters_of_active_angels = SHRT_MAX;
     prpt->min_masters_of_online_angels = SHRT_MAX;
     prpt->total_angels = g_angel_list_size;
     prpt->my_index = 0;
     prpt->my_active_index = 0;
-    if(debug) printf("g_angel_list_size: %d\n", g_angel_list_size);
+    if (from_cmd) printf("g_angel_list_size: %d\n", g_angel_list_size);
 
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         // online?
         int is_pause = 0, is_online = 0, logins = 0;
-        if (debug) printf(" - %03d. %s: ", i+1, kanade->userid);
+        if (from_cmd) fprintf(stderr, " - %03d. %-14s: ", i+1, kanade->userid);
         for (astat = search_ulistn(kanade->uid, 1);
              astat && astat->uid == kanade->uid;
              astat++) {
@@ -302,31 +320,32 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
                 continue;
             logins++;
             if (!(astat->userlevel & PERM_ANGEL)) {  // what now?
-                if (debug) printf("[NOT ANGEL!? skip] ");
+                if (from_cmd) fprintf(stderr, "[NOT ANGEL!? skip] ");
                 is_online = is_pause = 0;
                 break;
             }
             if (astat->angelpause) {
-                if (debug) printf("[set pause (%d)] ", astat->angelpause);
+                if (from_cmd)
+                    fprintf(stderr, "[set PAUSE (%d)] ", astat->angelpause);
                 is_pause = 1;
             }
             is_online = 1;
         }
-        if (debug) {
-            printf("(masters=%d, activity=%d, ",
+        if (from_cmd) {
+            fprintf(stderr, "(masters=%d, activity=%d, assigned=%d, ",
                    kanade->masters, kanade->last_activity);
             switch(logins) {
                 case 0:
-                    printf("NOT online)");
+                    fprintf(stderr, "NOT online");
                     break;
                 case 1:
-                    printf("online)");
+                    fprintf(stderr, "online");
                     break;
                 default:
-                    printf("multi login: %d)", logins);
+                    fprintf(stderr, "multi login: %d", logins);
                     break;
             }
-            printf("\n");
+            fprintf(stderr, ")\n");
         }
         // update report numbers
         prpt->total_online_angels += is_online;
@@ -359,7 +378,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     if (myuid > 0 && (kanade = angel_list_find_by_uid(myuid))) {
         prpt->my_active_masters = kanade->masters;
     }
-    if(debug) fflush(stdout);
+    if(from_cmd) fflush(stderr);
     return 0;
 }
 

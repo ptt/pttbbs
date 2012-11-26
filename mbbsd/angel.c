@@ -48,6 +48,11 @@ angel_notify_activity() {
     static time4_t t = 0;
     time4_t tick = now;
 
+#ifdef ANGEL_CIA_ACCOUNT
+    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+        return;
+#endif
+
     // tick: every 1 minutes.
     tick -= tick % (1 * 60);
 
@@ -190,7 +195,13 @@ do_changeangel(int force) {
 
     // TODO Allow changing only if user really tried to contact angel.
 #ifdef ANGEL_CHANGE_TIMELIMIT_MINS
-    if (force)
+
+#ifdef ANGEL_CIA_ACCOUNT
+    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+        force = 1;
+#endif
+
+    if (force || HasUserPerm(PERM_ADMIN))
         last_time = 0;
 
     if (last_time &&
@@ -574,6 +585,7 @@ TalkToAngel(){
     static char AngelPermChecked = 0;
     static userinfo_t* lastuent = NULL;
     userinfo_t *uent;
+    static int is_new_angel = 0;
 
     if (strcmp(cuser.myangel, "-") == 0){
 	NoAngelFound("你沒有小天使");
@@ -591,6 +603,7 @@ TalkToAngel(){
 
     if (cuser.myangel[0] == 0) {
         int ret = FindAngel();
+        is_new_angel = 1;
         if (ret <= 0) {
             lastuent = NULL;
             NoAngelFound(
@@ -637,13 +650,17 @@ TalkToAngel(){
          "你可以選擇不向對方透露自己身份來保護自己                   ");
 	 */
 
+    // 為避免某些人找了小天使但又不送出訊息，在這個 stage 不顯示 nick.
     {
 	char xnick[IDLEN+1], prompt[IDLEN*2];
-	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
-	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
+	snprintf(xnick, sizeof(xnick), "%s小天使",
+                 is_new_angel ? "" : _myangel_nick);
+	snprintf(prompt, sizeof(prompt), "問%s小天使: ",
+                 is_new_angel ? "" : _myangel_nick);
 	// if success, record uent.
 	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent)) {
 	    lastuent = uent;
+            is_new_angel = 0;
         }
     }
     return;
