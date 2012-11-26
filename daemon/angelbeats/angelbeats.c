@@ -333,7 +333,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
         }
         if (from_cmd) {
             fprintf(stderr, "(masters=%d, activity=%d, assigned=%d, ",
-                   kanade->masters, kanade->last_activity);
+                   kanade->masters, kanade->last_activity, kanade->last_assigned);
             switch(logins) {
                 case 0:
                     fprintf(stderr, "NOT online");
