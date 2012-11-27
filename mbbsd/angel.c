@@ -96,14 +96,24 @@ angel_load_my_fullnick(char *buf, int szbuf)
 {
     char fn[PATHLEN];
     FILE *fp = NULL;
+    static char mynick[IDLEN + 1] = "";
+    static time4_t touched = 0;
+    time4_t modtime = 0;
 
     *buf = 0;
     setuserfile(fn, FN_ANGELMSG);
-    if ((fp = fopen(fn, "rt")))
-    {
-	angel_parse_nick_fp(fp, buf, szbuf);
-	fclose(fp);
+    modtime = dasht(fn);
+    if (modtime != touched) {
+        touched = modtime;
+        *mynick = 0;
+        // reload file
+        if ((fp = fopen(fn, "rt")))
+        {
+            angel_parse_nick_fp(fp, mynick, sizeof(mynick));
+            fclose(fp);
+        }
     }
+    strlcpy(buf, mynick, szbuf);
     strlcat(buf, "¤p¤Ñ¨Ï", szbuf);
 }
 

@@ -940,8 +940,8 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    uin->msgs[write_pos].pid = currpid;
 #ifdef PLAY_ANGEL
 	    if (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)
-		strlcpy(uin->msgs[write_pos].userid, "¤p¤Ñ¨Ï", 
-		    sizeof(uin->msgs[write_pos].userid));
+                angel_load_my_fullnick(uin->msgs[write_pos].userid,
+                                       sizeof(uin->msgs[write_pos].userid));
 	    else
 #endif
             strlcpy(uin->msgs[write_pos].userid, cuser.userid,

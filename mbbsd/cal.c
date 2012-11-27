@@ -427,6 +427,7 @@ give_money_ui(const char *userid)
 	    vgets(yn, sizeof(yn), VGET_LOWERCASE);
             switch(yn[0]) {
                 case 'y':
+                    // TODO replace with angel_load_my_fullnick.
                     myid = "¤p¤Ñ¨Ï";
                     break;
                 case 'n':
