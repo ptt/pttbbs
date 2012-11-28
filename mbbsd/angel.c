@@ -207,7 +207,7 @@ select_angel() {
     }
 
     req.cb = sizeof(req);
-    req.operation = ANGELBEATS_REQ_GET_UID_LIST;
+    req.operation = ANGELBEATS_REQ_GET_ONLINE_LIST;
     req.master_uid = usernum;
 
     if (towrite(fd, &req, sizeof(req)) < 0 ||

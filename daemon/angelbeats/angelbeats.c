@@ -371,7 +371,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
 }
 
 int
-fill_angel_uid_list(angel_beats_uid_list *list) {
+fill_online_angel_list(angel_beats_uid_list *list) {
     static size_t i = 0;
     size_t iter = 0;
     int is_pause, logins;
@@ -384,8 +384,7 @@ fill_angel_uid_list(angel_beats_uid_list *list) {
         i %= g_angel_list_size;
         kanade = g_angel_list + i;
         get_angel_state(kanade, &is_pause, &logins);
-        // TODO Let client handle case of "pause".
-        if (!logins || is_pause)
+        if (!logins)
             continue;
         list->uids[list->angels++] = kanade->uid;
     }
@@ -481,13 +480,13 @@ client_cb(int fd, short event, void *arg) {
                 goto end;
             }
             break;
-        case ANGELBEATS_REQ_GET_UID_LIST:
-            fprintf(stderr, "%s get_uid_list\n", Cdatelite(&clk));
+        case ANGELBEATS_REQ_GET_ONLINE_LIST:
+            fprintf(stderr, "%s get_online_uid_list\n", Cdatelite(&clk));
             {
                 angel_beats_uid_list list = {0};
                 list.cb = sizeof(list);
                 list.angels = 0;
-                fill_angel_uid_list(&list);
+                fill_online_angel_list(&list);
                 // write different kind of data!
                 write(fd, &list, sizeof(list));
                 goto end;

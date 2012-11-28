@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
             return -1;
         }
     } else if (strcmp(argv[1], "list") == 0) {
-        req.operation = ANGELBEATS_REQ_GET_UID_LIST;
+        req.operation = ANGELBEATS_REQ_GET_ONLINE_LIST;
     }
     else
 	return 0;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
                rpt.my_index,
                rpt.my_active_index,
                rpt.my_active_masters);
-    } else if (req.operation == ANGELBEATS_REQ_GET_UID_LIST) {
+    } else if (req.operation == ANGELBEATS_REQ_GET_ONLINE_LIST) {
         int i;
         if (toread(fd, &list, sizeof(list)) != sizeof(list)) {
             perror("toread");
