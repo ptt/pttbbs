@@ -229,21 +229,23 @@ select_angel() {
     for (i = 0; i < list.angels; i++) {
         char fn[PATHLEN];
         char nick[IDLEN + 1] = "";
-        const char *uid = getuserid(list.uids[i]);
+        int uid = list.uids[i];
+        const char *userid = getuserid(uid);
         FILE *fp = NULL;
         int has_nick = 0;
 
-        sethomefile(fn, uid, FN_ANGELMSG);
+        sethomefile(fn, userid, FN_ANGELMSG);
         if ((fp = fopen(fn, "rt")) != NULL) {
             angel_parse_nick_fp(fp, nick, sizeof(nick));
             strlcat(nick, "小天使", sizeof(nick));
             has_nick = 1;
             fclose(fp);
         } else {
-            strlcpy(nick, uid, sizeof(nick));
+            strlcpy(nick, userid, sizeof(nick));
         }
-        prints(" %3i. %s %s\n", i + 1, nick,
-               has_nick ? "" : ANSI_COLOR(1;31) "(未設定暱稱)" ANSI_RESET);
+        prints(" %3i. %s %s [UID: %d]\n", i + 1, nick,
+               has_nick ? "" : ANSI_COLOR(1;31) "(未設定暱稱)" ANSI_RESET,
+               uid);
     }
     while (list.angels) {
         char ans[5];
