@@ -233,6 +233,8 @@ select_angel() {
         const char *userid = getuserid(uid);
         FILE *fp = NULL;
         int has_nick = 0;
+        userinfo_t *uinfo = search_ulist_userid(userid);
+        const char *pause_msg = "";
 
         sethomefile(fn, userid, FN_ANGELMSG);
         if ((fp = fopen(fn, "rt")) != NULL) {
@@ -243,8 +245,13 @@ select_angel() {
         } else {
             strlcpy(nick, userid, sizeof(nick));
         }
-        prints(" %3i. %s %s [UID: %d]\n", i + 1, nick,
-               has_nick ? "" : ANSI_COLOR(1;31) "(未設定暱稱)" ANSI_RESET,
+        if (uinfo && uinfo->angelpause == 1)
+            pause_msg = ANSI_COLOR(1;32) "(停收新主人) " ANSI_RESET;
+        else if (uinfo && uinfo->angelpause == 2)
+            pause_msg = ANSI_COLOR(1;31) "(關閉呼叫器) " ANSI_RESET;
+        prints(" %3i. %s %s%s [UID: %d]\n", i + 1, nick,
+               has_nick ? "" : ANSI_COLOR(1;33) "(未設定暱稱) " ANSI_RESET,
+               pause_msg,
                uid);
     }
     while (list.angels) {
