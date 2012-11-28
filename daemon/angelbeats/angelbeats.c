@@ -31,10 +31,8 @@
 // configuration
 #ifdef DEBUG
 static int debug = 1;
-static int verbose = 1;
 #else
 static int debug = 0;
-static int verbose = 0;
 #endif
 
 // same as expire length
@@ -100,10 +98,10 @@ int angel_list_comp_advanced(const void *pva, const void *pvb) {
 AngelInfo *
 angel_list_find_by_uid(int uid) {
     // XXX TODO change this to binary search
-    int i;
+    size_t i;
     for (i = 0; i < g_angel_list_size; i++) {
         if (g_angel_list[i].uid == uid)
-            return g_angel_list+i;
+            return g_angel_list + i;
     }
     return NULL;
 }
@@ -111,10 +109,10 @@ angel_list_find_by_uid(int uid) {
 AngelInfo *
 angel_list_find_by_userid(const char *userid) {
     // XXX TODO change this to binary search
-    int i;
+    size_t i;
     for (i = 0; i < g_angel_list_size; i++) {
         if (strcasecmp(g_angel_list[i].userid, userid) == 0)
-            return g_angel_list+i;
+            return g_angel_list + i;
     }
     return NULL;
 }
@@ -122,7 +120,7 @@ angel_list_find_by_userid(const char *userid) {
 // list operators
 
 void 
-angel_list_preserve(int newsz) {
+angel_list_preserve(size_t newsz) {
     if (newsz < g_angel_list_capacity)
         return;
 
@@ -159,17 +157,45 @@ angel_list_add(const char *userid, int uid) {
 int
 angel_list_get_index(AngelInfo *kanade) {
     int idx = (kanade - g_angel_list);
-    assert(idx >= 0 && idx < g_angel_list_size);
+    assert(idx >= 0 && (size_t)idx < g_angel_list_size);
     return idx;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Main Operations
 
+int get_angel_state(const AngelInfo *kanade,
+                    int *p_pause,
+                    int *p_logins) {
+    userinfo_t *astat;
+    int is_pause = 0, logins = 0;
+
+    // we have to take care of multi-login sessions,
+    // so it's better to reject if any of the sessions wants to reject.
+    for (astat = search_ulistn(kanade->uid, 1); 
+         astat && strcasecmp(astat->userid, kanade->userid) == 0; 
+         astat++) {
+        // ignore all dead processes
+        if (astat->mode == DEBUGSLEEPING)
+            continue;
+        logins++;
+        // no longer an angel!?
+        if (!(astat->userlevel & PERM_ANGEL)) {
+            is_pause = logins = 0;
+            break;
+        }
+        if (astat->angelpause > is_pause)
+            is_pause = astat->angelpause;
+    }
+    *p_pause = is_pause;
+    *p_logins = logins;
+    return logins > 0;
+}
+
 int 
 suggest_online_angel(int master_uid) {
-    userinfo_t *astat;
-    int i;
+    size_t i;
+    int is_pause, logins;
 
     for (i = 0; i < g_angel_list_size; i++) {
         AngelInfo *kanade = g_angel_list + i;
@@ -178,22 +204,9 @@ suggest_online_angel(int master_uid) {
         if (kanade->uid == master_uid)
             continue;
 
-        // we have to take care of multi-login sessions,
-        // so it's better to reject if any of the sessions wants to reject.
-        for (astat = search_ulistn(kanade->uid, 1); 
-             astat && strcasecmp(astat->userid, kanade->userid) == 0; 
-             astat++) {
-
-            // ignore all dead processes
-            if (astat->mode == DEBUGSLEEPING)
-                continue;
-
-            // if any sessions is not safe, ignore it.
-            if (!(astat->userlevel & PERM_ANGEL) || astat->angelpause)
-                break;
-
-            return astat->uid;
-        }
+        // return if angel is online and not paused.
+        if (get_angel_state(kanade, &is_pause, &logins) && !is_pause)
+            return kanade->uid;
     }
     return 0;
 }
@@ -248,7 +261,7 @@ _getuser(const char *userid, userec_t *xuser) {
 }
 
 int 
-init_angel_list_callback(void *ctx, int uidx, userec_t *u) {
+init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     AngelInfo *kanade = NULL;
     int unum = uidx + 1;
 
@@ -297,9 +310,8 @@ init_angel_list() {
 
 int
 create_angel_report(int myuid, angel_beats_report *prpt) {
-    int i;
+    size_t i;
     AngelInfo *kanade = g_angel_list;
-    userinfo_t *astat = NULL;
     int from_cmd = (!myuid);
 
     prpt->min_masters_of_active_angels = SHRT_MAX;
@@ -307,48 +319,24 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     prpt->total_angels = g_angel_list_size;
     prpt->my_index = 0;
     prpt->my_active_index = 0;
-    if (from_cmd) printf("g_angel_list_size: %d\n", g_angel_list_size);
 
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        // online?
-        int is_pause = 0, is_online = 0, logins = 0;
-        if (from_cmd) fprintf(stderr, " - %03d. %-14s: ", i+1, kanade->userid);
-        for (astat = search_ulistn(kanade->uid, 1);
-             astat && astat->uid == kanade->uid;
-             astat++) {
-            if (astat->mode == DEBUGSLEEPING)
-                continue;
-            logins++;
-            if (!(astat->userlevel & PERM_ANGEL)) {  // what now?
-                if (from_cmd) fprintf(stderr, "[NOT ANGEL!? skip] ");
-                is_online = is_pause = 0;
-                break;
-            }
-            if (astat->angelpause) {
-                if (from_cmd)
-                    fprintf(stderr, "[set PAUSE (%d)] ", astat->angelpause);
-                is_pause = 1;
-            }
-            is_online = 1;
-        }
+        int is_pause, logins;
+        get_angel_state(kanade, &is_pause, &logins);
+
+        // Print state information.
         if (from_cmd) {
-            fprintf(stderr, "(masters=%d, activity=%d, assigned=%d, ",
-                   kanade->masters, kanade->last_activity, kanade->last_assigned);
-            switch(logins) {
-                case 0:
-                    fprintf(stderr, "NOT online");
-                    break;
-                case 1:
-                    fprintf(stderr, "online");
-                    break;
-                default:
-                    fprintf(stderr, "multi login: %d", logins);
-                    break;
-            }
-            fprintf(stderr, ")\n");
+            fprintf(stderr, " - %03zu. %-14s: ", i+1, kanade->userid);
+            if (is_pause)
+                fprintf(stderr, "[set PAUSE (%d)] ", is_pause);
+            fprintf(stderr,
+                    "(masters=%d, activity=%d, assigned=%d, logins=%d)\n",
+                    kanade->masters, (int)kanade->last_activity,
+                    (int)kanade->last_assigned, logins);
         }
+
         // update report numbers
-        prpt->total_online_angels += is_online;
+        prpt->total_online_angels += (logins > 0) ? 1 : 0;
         if (myuid > 0) {
             if (myuid == kanade->uid) {
                 prpt->my_index = i + 1;
@@ -356,7 +344,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
                     prpt->my_active_index = prpt->total_active_angels + 1;
             }
         }
-        if (is_online) {
+        if (logins > 0) {
             if (!is_pause) {
                 prpt->total_active_angels++;
                 if (prpt->max_masters_of_active_angels < kanade->masters)
@@ -382,6 +370,29 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     return 0;
 }
 
+int
+fill_angel_uid_list(angel_beats_uid_list *list) {
+    static size_t i = 0;
+    size_t iter = 0;
+    int is_pause, logins;
+    AngelInfo *kanade;
+
+    list->angels = 0;
+    for (iter = 0;
+         iter < g_angel_list_size && list->angels < ANGELBEATS_UID_LIST_SIZE;
+         iter++, i++) {
+        i %= g_angel_list_size;
+        kanade = g_angel_list + i;
+        get_angel_state(kanade, &is_pause, &logins);
+        // TODO Let client handle case of "pause".
+        if (!logins || is_pause)
+            continue;
+        list->uids[list->angels++] = kanade->uid;
+    }
+    return list->angels;
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 // network libevent
 struct timeval tv = {5, 0};
@@ -391,7 +402,7 @@ static struct event ev_listen, ev_sighup;
 // main
 
 static void
-sighup_cb(int signal, short event, void *arg) {
+sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED) {
     time4_t clk = time(0);
     fprintf(stderr, "%s reload (HUP)\n", Cdatelite(&clk));
     init_angel_list();
@@ -454,7 +465,7 @@ client_cb(int fd, short event, void *arg) {
                 angel_list_sort();
             break;
         case ANGELBEATS_REQ_HEARTBEAT:
-            fprintf(stderr, "%s update activity (heartbeat) to angel [%s]\n",
+            fprintf(stderr, "%s update angel activity to [%s]\n",
                     Cdatelite(&clk), angel_uid);
             if (touch_angel_activity(data.angel_uid))
                 angel_list_sort();
@@ -462,12 +473,23 @@ client_cb(int fd, short event, void *arg) {
         case ANGELBEATS_REQ_REPORT:
             fprintf(stderr, "%s report by [%s]\n", Cdatelite(&clk), master_uid);
             {
-                if (debug) printf("ANGELBEATS_REQ_REPORT\n");
                 angel_beats_report rpt = {0};
                 rpt.cb = sizeof(rpt);
                 create_angel_report(data.angel_uid, &rpt);
                 // write different kind of data!
                 write(fd, &rpt, sizeof(rpt));
+                goto end;
+            }
+            break;
+        case ANGELBEATS_REQ_GET_UID_LIST:
+            fprintf(stderr, "%s get_uid_list\n", Cdatelite(&clk));
+            {
+                angel_beats_uid_list list = {0};
+                list.cb = sizeof(list);
+                list.angels = 0;
+                fill_angel_uid_list(&list);
+                // write different kind of data!
+                write(fd, &list, sizeof(list));
                 goto end;
             }
             break;
@@ -481,7 +503,7 @@ end:
 }
 
 static void 
-listen_cb(int fd, short event, void *arg) {
+listen_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED) {
     int cfd;
 
     if ((cfd = accept(fd, NULL, NULL)) < 0 )
@@ -496,7 +518,7 @@ listen_cb(int fd, short event, void *arg) {
 
 int 
 main(int argc, char *argv[]) {
-    int i;
+    size_t i;
     AngelInfo *kanade;
     int     ch, sfd, go_daemon = 1;
     const char *iface_ip = ANGELBEATS_ADDR;
@@ -543,7 +565,7 @@ main(int argc, char *argv[]) {
     kanade = g_angel_list;
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         fprintf(stderr,
-                "%d [%s] uid=%d, masters=%d\n", 
+                "%zu [%s] uid=%d, masters=%d\n", 
                 i+1, 
                 kanade->userid,
                 kanade->uid,

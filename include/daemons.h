@@ -67,6 +67,7 @@ enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_SUGGEST_AND_LINK,
     ANGELBEATS_REQ_REMOVE_LINK,
     ANGELBEATS_REQ_HEARTBEAT,
+    ANGELBEATS_REQ_GET_UID_LIST,
 };
 
 typedef struct {
@@ -75,7 +76,7 @@ typedef struct {
 
     int angel_uid;
     int master_uid;
-}   angel_beats_data ;
+}   angel_beats_data;
 
 typedef struct {
     short cb;
@@ -90,6 +91,14 @@ typedef struct {
     short my_active_index;
     short my_active_masters;
 }   angel_beats_report ;
+
+#define ANGELBEATS_UID_LIST_SIZE    (20)
+
+typedef struct {
+    short cb;
+    short angels;
+    int uids[ANGELBEATS_UID_LIST_SIZE];
+}   angel_beats_uid_list;
 
 ///////////////////////////////////////////////////////////////////////
 // Brc Storage Daemon

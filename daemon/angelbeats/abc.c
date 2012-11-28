@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     int fd;
     angel_beats_data req = {0};
     angel_beats_report rpt = {0};
+    angel_beats_uid_list list = {0};
     attach_SHM();
 
     if (argc < 2) {
@@ -61,6 +62,8 @@ int main(int argc, char *argv[])
             printf("invalid user id: %s\n", argv[2]);
             return -1;
         }
+    } else if (strcmp(argv[1], "list") == 0) {
+        req.operation = ANGELBEATS_REQ_GET_UID_LIST;
     }
     else
 	return 0;
@@ -96,6 +99,17 @@ int main(int argc, char *argv[])
                rpt.my_index,
                rpt.my_active_index,
                rpt.my_active_masters);
+    } else if (req.operation == ANGELBEATS_REQ_GET_UID_LIST) {
+        int i;
+        if (toread(fd, &list, sizeof(list)) != sizeof(list)) {
+            perror("toread");
+            return 1;
+        }
+        assert(list.cb == sizeof(list));
+        printf("angels=%d\n", list.angels);
+        for (i = 0; i < list.angels; i++) {
+            printf("%3d. %s\n", i + 1, getuserid(list.uids[i]));
+        }
     } else {
         if (toread(fd, &req, sizeof(req)) != sizeof(req)) {
             perror("toread");
