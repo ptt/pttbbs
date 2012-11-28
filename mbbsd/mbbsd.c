@@ -406,6 +406,10 @@ show_call_in(int save, int which)
                  currutmp->msgs[which].last_call_in);
         // I must be an Angel. Let's try to update angel beats info.
         // TODO maybe it's better to move this to "sender".
+#ifdef ANGEL_CIA_ACCOUNT
+        // Don't notify AngelBeats for CIA account.
+        if (strcasecmp(currutmp->msgs[which].userid, ANGEL_CIA_ACCOUNT) != 0)
+#endif
         angel_notify_activity();
     } else
 #endif

@@ -7,6 +7,13 @@
 #include "daemons.h"
 #define FN_ANGELMSG "angelmsg"
 
+static const char
+*PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
+*ERR_CONNECTION = "抱歉，無法連線至天使公會。\n"
+                  "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n",
+*ERR_PROTOCOL = "抱歉，天使公會連線異常。\n"
+                "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n";
+
 /////////////////////////////////////////////////////////////////////////////
 // Angel Beats! Client
 
@@ -47,11 +54,6 @@ void
 angel_notify_activity() {
     static time4_t t = 0;
     time4_t tick = now;
-
-#ifdef ANGEL_CIA_ACCOUNT
-    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
-        return;
-#endif
 
     // tick: every 1 minutes.
     tick -= tick % (1 * 60);
@@ -188,6 +190,86 @@ angel_get_nick()
     return _myangel_nick;
 }
 
+int
+select_angel() {
+    angel_beats_uid_list list = {0};
+    angel_beats_data req = {0};
+    int i;
+    int fd;
+
+    vs_hdr2(PROMPT_ANGELBEATS, " 選取天使 ");
+    outs("\n");
+
+    if ((fd = toconnect(ANGELBEATS_ADDR)) < 0) {
+        outs(ERR_CONNECTION);
+        pressanykey();
+        return 0;
+    }
+
+    req.cb = sizeof(req);
+    req.operation = ANGELBEATS_REQ_GET_UID_LIST;
+    req.master_uid = usernum;
+
+    if (towrite(fd, &req, sizeof(req)) < 0 ||
+        toread(fd, &list, sizeof(list)) < 0 ||
+        list.cb != sizeof(list)) {
+        close(fd);
+        outs(ERR_PROTOCOL);
+        pressanykey();
+        return 0;
+    }
+    close(fd);
+
+    if (!list.angels) {
+        vmsg("抱歉，目前沒有可呼叫的天使在線上。");
+        return 0;
+    }
+
+    // list all angels
+    for (i = 0; i < list.angels; i++) {
+        char fn[PATHLEN];
+        char nick[IDLEN + 1] = "";
+        const char *uid = getuserid(list.uids[i]);
+        FILE *fp = NULL;
+        int has_nick = 0;
+
+        sethomefile(fn, uid, FN_ANGELMSG);
+        if ((fp = fopen(fn, "rt")) != NULL) {
+            angel_parse_nick_fp(fp, nick, sizeof(nick));
+            strlcat(nick, "小天使", sizeof(nick));
+            has_nick = 1;
+            fclose(fp);
+        } else {
+            strlcpy(nick, uid, sizeof(nick));
+        }
+        prints(" %3i. %s %s\n", i + 1, nick,
+               has_nick ? "" : ANSI_COLOR(1;31) "(未設定暱稱)" ANSI_RESET);
+    }
+    while (list.angels) {
+        char ans[5];
+        int idx;
+
+        if (!getdata(b_lines - 1, 0, "請問要選取哪位小天使 (輸入數字): ",
+                     ans, sizeof(ans), NUMECHO)) {
+            vmsg("未選取小天使。");
+            return 0;
+        }
+        idx = atoi(ans);
+        if (idx < 1 || idx > list.angels) {
+            vmsg("數字不正確。");
+            return 0;
+        }
+        // No need to tell AngelBeats since this is only for ANGEL_CIA_ACCOUNT.
+        pwcuSetMyAngel(getuserid(list.uids[idx - 1]));
+	log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
+                  "%s 品管 %s 抽測 %s 小天使\n",
+                  Cdatelite(&now), cuser.userid, cuser.myangel);
+        vmsg("小天使已更換完成。");
+        break;
+    }
+    return 0;
+}
+
 static int
 do_changeangel(int force) {
     char buf[4];
@@ -198,19 +280,17 @@ do_changeangel(int force) {
     if (cuser.myangel[0] == '-')
         return 0;
 
+#ifdef ANGEL_CIA_ACCOUNT
+    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+        return select_angel();
+#endif
+
     if (!cuser.myangel[0]) {
         vmsg(prompt);
         return 0;
     }
 
-    // TODO Allow changing only if user really tried to contact angel.
 #ifdef ANGEL_CHANGE_TIMELIMIT_MINS
-
-#ifdef ANGEL_CIA_ACCOUNT
-    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
-        force = 1;
-#endif
-
     if (force || HasUserPerm(PERM_ADMIN))
         last_time = 0;
 
@@ -220,7 +300,6 @@ do_changeangel(int force) {
               ANGEL_CHANGE_TIMELIMIT_MINS);
         return 0;
     }
-
 #endif
 
     mvouts(b_lines - 3, 0, "\n"
@@ -232,9 +311,8 @@ do_changeangel(int force) {
 	log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
                   "%s 小主人 %s 換掉 %s 小天使\n",
                   Cdatelite(&now), cuser.userid, cuser.myangel);
-        if (cuser.myangel[0])
-            angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
-                    usernum, searchuser(cuser.myangel, NULL));
+        angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
+                               usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
         last_time = now;
         vmsg(prompt);
@@ -323,12 +401,11 @@ int a_angelreport() {
     angel_beats_data   req = {0};
     int fd;
 
-    vs_hdr2(" Angel Beats! 天使公會 ", " 天使狀態報告 ");
+    vs_hdr2(PROMPT_ANGELBEATS, " 天使狀態報告 ");
     outs("\n");
 
     if ((fd = toconnect(ANGELBEATS_ADDR)) < 0) {
-        outs("抱歉，無法連線至天使公會。\n"
-             "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
+        outs(ERR_CONNECTION);
         pressanykey();
         return 0;
     }
@@ -343,8 +420,7 @@ int a_angelreport() {
     if (towrite(fd, &req, sizeof(req)) < 0 ||
         toread(fd, &rpt, sizeof(rpt)) < 0 ||
         rpt.cb != sizeof(rpt)) {
-        outs("抱歉，天使公會連線異常。\n"
-                "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
+        outs(ERR_PROTOCOL);
     } else {
         prints(
             "\t 現在時間: %s\n\n"
