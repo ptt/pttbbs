@@ -2,7 +2,6 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-PROGS=          angelbeats
 PROGRAMS=	angelbeats abc
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
@@ -20,15 +19,18 @@ all:	${PROGRAMS}
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
+ctags:
+	ctags *.[ch] $(SRCROOT)/include/*.h $(SRCROOT)/common/*/*.[ch]
+
 angelbeats: angelbeats.o 
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 abc: abc.o 
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
-install: $(PROGS)
+install: $(PROGRAMS)
 	install -d $(BBSHOME)/bin/
-	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
+	install -c -m 755 $(PROGRAMS) $(BBSHOME)/bin/
 	mv -f $(BBSHOME)/bin/angelbeats $(BBSHOME)/bin/angelbeats.`date '+%m%d%H%M'`
 	ln -sv $(BBSHOME)/bin/angelbeats.`date '+%m%d%H%M'` $(BBSHOME)/bin/angelbeats
 

@@ -50,13 +50,26 @@ static int debug = 0;
 #define ANGELBEATS_ACTIVITY_MERGE_PERIOD    (15)
 #endif
 
+#ifndef ANGELBEATS_PERF_OUTPUT_FILE
+#define ANGELBEATS_PERF_OUTPUT_FILE BBSHOME "/log/angel_perf.txt"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // AngelInfo list operation
 
+#ifndef ANGEL_LIST_INIT_SIZE
 #define ANGEL_LIST_INIT_SIZE    (250)   // usually angels are 200~250
+#endif
 
 typedef struct {
+    int samples;
+    int pause1;
+    int pause2;
+    // TODO add number of being asked, and providing replies.
+} PerfData;
+
+typedef struct {
+    PerfData perf;
     time_t last_activity;   // last known activity from master
     time_t last_assigned;   // last time being assigned with new master
     int uid;
@@ -196,6 +209,7 @@ int
 suggest_online_angel(int master_uid) {
     size_t i;
     int is_pause, logins;
+    int uid = 0;
 
     for (i = 0; i < g_angel_list_size; i++) {
         AngelInfo *kanade = g_angel_list + i;
@@ -204,11 +218,19 @@ suggest_online_angel(int master_uid) {
         if (kanade->uid == master_uid)
             continue;
 
-        // return if angel is online and not paused.
-        if (get_angel_state(kanade, &is_pause, &logins) && !is_pause)
-            return kanade->uid;
+        if (!get_angel_state(kanade, &is_pause, &logins))
+            continue;
+
+        // update perf data
+        kanade->perf.samples++;
+        kanade->perf.pause1 += (is_pause == 1);
+        kanade->perf.pause2 += (is_pause == 2);
+
+        // select if angel is online and not paused.
+        if (!uid && !is_pause)
+            uid = kanade->uid;
     }
-    return 0;
+    return uid;
 }
 
 int
@@ -330,7 +352,10 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
             if (is_pause)
                 fprintf(stderr, "[set PAUSE (%d)] ", is_pause);
             fprintf(stderr,
+                    "{samples=%d, pause1=%d, pause2=%d} "
                     "(masters=%d, activity=%d, assigned=%d, logins=%d)\n",
+                    kanade->perf.samples, kanade->perf.pause1,
+                    kanade->perf.pause2,
                     kanade->masters, (int)kanade->last_activity,
                     (int)kanade->last_assigned, logins);
         }
@@ -391,6 +416,29 @@ fill_online_angel_list(angel_beats_uid_list *list) {
     return list->angels;
 }
 
+void print_dash(FILE *fp, int len, const char *prefix) {
+    if (prefix)
+        fputs(prefix, fp);
+    while (len-- > 0)
+        fputc('-', fp);
+    fputc('\n', fp);
+}
+
+void export_perf_data(FILE *fp) {
+    size_t i = 0;
+    time4_t clk = time4(0);
+    AngelInfo *kanade = g_angel_list;
+    fprintf(fp, "# Angel Performance Data (%s)\n", Cdatelite(&clk));
+    fprintf(fp, "# No. %-*s Samples  Pause1  Pause2\n# ", IDLEN, "UserID");
+    print_dash(fp, 70, "# ");
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
+        fprintf(fp, "%4lu. %-*s %7d %7d %7d\n", i + 1, IDLEN, kanade->userid,
+                kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
+        // reset perf data
+        memset(&kanade->perf, 0, sizeof(kanade->perf));
+    }
+    print_dash(fp, 70, "# ");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // network libevent
@@ -469,6 +517,19 @@ client_cb(int fd, short event, void *arg) {
             if (touch_angel_activity(data.angel_uid))
                 angel_list_sort();
             break;
+        case ANGELBEATS_REQ_EXPORT_PERF:
+            fprintf(stderr, "%s export_perf_data\n", Cdatelite(&clk));
+            {
+                FILE *fp = fopen(ANGELBEATS_PERF_OUTPUT_FILE, "at");
+                if (fp) {
+                    export_perf_data(fp);
+                    fclose(fp);
+                } else {
+                    fprintf(stderr, "%s ERROR: cannot output perf: %s\n",
+                            Cdatelite(&clk), ANGELBEATS_PERF_OUTPUT_FILE);
+                }
+            }
+            break;
         case ANGELBEATS_REQ_REPORT:
             fprintf(stderr, "%s report by [%s]\n", Cdatelite(&clk), master_uid);
             {
@@ -491,6 +552,10 @@ client_cb(int fd, short event, void *arg) {
                 write(fd, &list, sizeof(list));
                 goto end;
             }
+            break;
+        default:
+            fprintf(stderr, "%s UNKNOWN REQUEST (%d)\n", Cdatelite(&clk),
+                    data.operation);
             break;
     }
     write(fd, &data, sizeof(data));

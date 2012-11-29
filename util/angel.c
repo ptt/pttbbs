@@ -7,7 +7,6 @@ int main(){ return 0; }
 
 int total[MAX_USERS + 1];
 int (*list)[2];
-int nReport = 50;
 int count;
 char* mailto = "SYSOP";
 
@@ -19,12 +18,23 @@ void slurp(FILE* to, FILE* from);
 int main(int argc, char* argv[]){
     if (argc > 1)
 	mailto = argv[1];
-    if (argc > 2)
-	nReport = atoi(argv[2]);
 
     readData();
     sendResult();
     return 0;
+}
+
+void appendLogFile(FILE *output,
+                   const char *filename,
+                   const char *prefix) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp)
+        return;
+    remove(filename);
+
+    fputs(prefix, output);
+    slurp(output, fp);
+    fclose(fp);
 }
 
 void readData(){
@@ -52,9 +62,6 @@ void readData(){
 	}
     }
     fclose(fp);
-
-    if(nReport > count)
-	nReport = count;
 
     list = (int(*)[2]) malloc(count * sizeof(int[2]));
     k = j = 0;
@@ -107,30 +114,30 @@ void sendResult(){
     fprintf(fp, "作者: " BBSMNAME " 站方統計\n"
 	    "標題: 小天使統計資料\n"
 	    "時間: %s\n"
-	    "\n現在全站小天使有 %d 位\n"
-	    "\n小主人人數最多的 %d 位小天使:\n",
-	    ctime4(&t), count, nReport);
-    for (i = 0; i < nReport; ++i)
+	    "\n現在全站小天使有 %d 位:\n",
+	    ctime4(&t), count);
+    for (i = 0; i < count; ++i)
 	fprintf(fp, "%15s %5d 人\n", SHM->userid[list[i][1] - 1], list[i][0]);
-    if (i % 4 != 0) fputc('\n', fp);
+    if (i % 4 != 0)
+        fputc('\n', fp);
 
-    {
-	FILE* changefp = fopen(BBSHOME "/log/changeangel.log", "r");
-	if (changefp) {
-	    remove(BBSHOME "/log/changeangel.log");
-
-	    fputs("\n== 本周更換小天使紀錄 ==\n", fp);
-	    slurp(fp, changefp);
-	    fclose(changefp);
-	}
-    }
+    appendLogFile(fp, BBSHOME "/log/angel_perf.txt",
+                  "\n== 本周小天使活動資料記錄 ==\n"
+                  " (說明: Samples 指的是新小主人找天使時有在線上的次數\n"
+                  "        Pause1  指的是 Samples 中有幾次神諭呼叫器設停收\n"
+                  "        Pause2  指的是 Samples 中有幾次神諭呼叫器設關閉\n"
+                  "  因此，Samples 與其它人差太多代表不常上線\n"
+                  "        Pause2  接近 Samples 代表此天使都在打混)\n"
+                  );
+    appendLogFile(fp, BBSHOME "/log/changeangel.log",
+                  "\n== 本周更換小天使記錄 ==\n");
 
     fputs("\n--\n\n  本資料由 angel 程式產生\n\n", fp);
     fclose(fp);
 
     strcpy(header.title, "小天使統計資料");
     strcpy(header.owner, "站方統計");
-    sprintf(filename, BBSHOME "/home/%c/%s/.DIR", mailto[0], mailto);
+    sethomedir(filename, mailto);
     append_record(filename, &header, sizeof(header));
     mailalertuser(mailto);
 }

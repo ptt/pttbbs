@@ -29,20 +29,15 @@ int main(int argc, char *argv[])
     }
 
     // start commands
-    if (strcmp(argv[1], "reload") == 0)
-    {
+    if (strcmp(argv[1], "reload") == 0) {
         req.operation = ANGELBEATS_REQ_RELOAD;
-    }
-    else if (strcmp(argv[1], "suggest") == 0)
-    {
+    } else if (strcmp(argv[1], "suggest") == 0) {
         req.operation = ANGELBEATS_REQ_SUGGEST;
         if (argc > 2) {
             req.operation = ANGELBEATS_REQ_SUGGEST_AND_LINK;
             req.master_uid = searchuser(argv[2], NULL);
         }
-    }
-    else if (strcmp(argv[1], "unlink") == 0)
-    {
+    } else if (strcmp(argv[1], "unlink") == 0) {
         if (argc != 3) {
             printf("need target id.\n");
             return -1;
@@ -54,9 +49,7 @@ int main(int argc, char *argv[])
             printf("invalid user id: %s\n", argv[2]);
             return -1;
         }
-    }
-    else if (strcmp(argv[1], "report") == 0)
-    {
+    } else if (strcmp(argv[1], "report") == 0) {
         req.operation = ANGELBEATS_REQ_REPORT;
         if (argc > 2 && !(req.angel_uid = searchuser(argv[2], NULL))) {
             printf("invalid user id: %s\n", argv[2]);
@@ -64,9 +57,12 @@ int main(int argc, char *argv[])
         }
     } else if (strcmp(argv[1], "list") == 0) {
         req.operation = ANGELBEATS_REQ_GET_ONLINE_LIST;
-    }
-    else
+    } else if (strcmp(argv[1], "perf") == 0) {
+        req.operation = ANGELBEATS_REQ_EXPORT_PERF;
+    } else {
+        fprintf(stderr, "Sorry, unknown command: %s\n", argv[1]);
 	return 0;
+    }
 
     req.cb = sizeof(req);
     if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
