@@ -1,5 +1,11 @@
 /* $Id$ */
 #include "bbs.h"
+#include "daemons.h"
+
+#define QUOTE(x) #x
+#define EXPAND_AND_QUOTE(x) QUOTE(x)
+#define STR_ANGELBEATS_PERF_MIN_PERIOD \
+        EXPAND_AND_QUOTE(ANGELBEATS_PERF_MIN_PERIOD)
 
 #ifndef PLAY_ANGEL
 int main(){ return 0; }
@@ -127,7 +133,9 @@ void sendResult(){
                   "        Pause1  指的是 Samples 中有幾次神諭呼叫器設停收\n"
                   "        Pause2  指的是 Samples 中有幾次神諭呼叫器設關閉\n"
                   "  因此，Samples 與其它人差太多代表不常上線\n"
-                  "        Pause2  接近 Samples 代表此天使都在打混)\n"
+                  "        Pause2  接近 Samples 代表此天使都在打混\n"
+                  "  另外, Samples 每"  STR_ANGELBEATS_PERF_MIN_PERIOD
+                  "秒最多更新一次)\n"
                   );
     appendLogFile(fp, BBSHOME "/log/changeangel.log",
                   "\n== 本周更換小天使記錄 ==\n");

@@ -17,6 +17,7 @@
 //    and/or other materials provided with the distribution.
 // --------------------------------------------------------------------------
 // TODO cache report results.
+// TODO able to persist perf data.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -209,7 +210,14 @@ int
 suggest_online_angel(int master_uid) {
     size_t i;
     int is_pause, logins;
-    int uid = 0;
+    int uid = 0, do_perf = 0;
+    static time_t perf_time = 0;
+    time_t clk = time(0);
+
+    if (clk - perf_time > ANGELBEATS_PERF_MIN_PERIOD) {
+        perf_time = clk;
+        do_perf = 1;
+    }
 
     for (i = 0; i < g_angel_list_size; i++) {
         AngelInfo *kanade = g_angel_list + i;
@@ -221,14 +229,18 @@ suggest_online_angel(int master_uid) {
         if (!get_angel_state(kanade, &is_pause, &logins))
             continue;
 
-        // update perf data
-        kanade->perf.samples++;
-        kanade->perf.pause1 += (is_pause == 1);
-        kanade->perf.pause2 += (is_pause == 2);
-
         // select if angel is online and not paused.
         if (!uid && !is_pause)
             uid = kanade->uid;
+
+        // update perf data; otherwise abort.
+        if (do_perf) {
+            kanade->perf.samples++;
+            kanade->perf.pause1 += (is_pause == 1);
+            kanade->perf.pause2 += (is_pause == 2);
+        } else if (uid) {
+            break;
+        }
     }
     return uid;
 }

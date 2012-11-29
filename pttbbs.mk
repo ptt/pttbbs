@@ -121,6 +121,11 @@ WITHOUT_PROFILE:=yes
 
 .MAIN: all
 
+.clang_complete:
+	make CC='~/.vim/bin/cc_args.py clang' clean all
+
 $(SRCROOT)/include/var.h:	$(SRCROOT)/mbbsd/var.c
 	perl $(SRCROOT)/util/parsevar.pl < $(SRCROOT)/mbbsd/var.c > $(SRCROOT)/include/var.h
 
+
+.PHONY: .clang_complete ctags

@@ -408,10 +408,10 @@ main(/*int argc, char **argv*/)
 	// Re-output today's user stats, because keeplog removes it
 	output_today(&tm_adjusted, act, peak_hour_login, day_login);
 
-	snprintf(buf, sizeof(buf), "[公安報告] 使用者上線監控 [%02d/%02d:%02d]",
+	snprintf(buf, sizeof(buf), "[安全報告] 使用者上線監控 [%02d/%02d:%02d]",
 		tm_now.tm_mon + 1, tm_now.tm_mday, tm_now.tm_hour);
 	keeplog("usies", "Security", buf, "usies");
-	printf("[公安報告] 使用者上線監控\n");
+	printf("[安全報告] 使用者上線監控\n");
 
 	sprintf(buf, "-%02d%02d%02d",
 		tm_adjusted.tm_year % 100, tm_adjusted.tm_mon + 1, tm_adjusted.tm_mday);

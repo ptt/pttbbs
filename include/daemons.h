@@ -59,6 +59,11 @@ typedef struct login_data
 #define ANGELBEATS_ADDR   ":5132"
 #endif
 
+// Merge perf in every X seconds.
+#ifndef ANGELBEATS_PERF_MIN_PERIOD
+#define ANGELBEATS_PERF_MIN_PERIOD  (600)
+#endif
+
 enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_INVALID = 0,
     ANGELBEATS_REQ_REPORT,
