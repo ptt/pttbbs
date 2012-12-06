@@ -1613,6 +1613,7 @@ write_header(FILE * fp,  const char *mytitle)
 	);
     } else {
 	const char *ptr = mytitle;
+        const char *nickname = cuser.nickname;
 	struct {
 	    char            author[IDLEN + 1];
 	    char            board[IDLEN + 1];
@@ -1640,10 +1641,11 @@ write_header(FILE * fp,  const char *mytitle)
 #endif // PLAY_ANGEL
 
             do {
+                // sizeof(real_name)-1 should be less than IDLEN.
                 getdata_str(3, 0, defanony ? 
                     "請輸入你想用的ID，或直接按[Enter]暱名，或按[r][R]用真名：" :
                     "請輸入你想用的ID，也可直接按[Enter]或[r]或[R]使用原ID：",
-                    real_name, sizeof(real_name), DOECHO, default_name);
+                    real_name, sizeof(real_name) - 1, DOECHO, default_name);
 
                 // sanity checks
                 if (real_name[0] == '-') {
@@ -1652,17 +1654,22 @@ write_header(FILE * fp,  const char *mytitle)
                     continue;
                 }
                 trim(real_name);
+                //  defanony:  "" = Anonymous, "r" = cuser.userid.
+                // !defanony:  "" "r" = cuser.userid.
                 if (strcmp(real_name, "R") == 0)
                     strcpy(real_name, "r");
-                if (strcmp(real_name, "r") == 0 && !defanony)
-                    strcpy(real_name, "");
-                if (!real_name[0] && defanony)
-                    strlcpy(real_name, "Anonymous", sizeof(real_name));
 
-                if (strcmp("r", real_name) || !*real_name)
-                    use_userid = 0;
-                else
+                if (!*real_name) {
+                    if (defanony)
+                        strlcpy(real_name, "Anonymous", sizeof(real_name));
+                    else
+                        strlcpy(real_name, "r", sizeof(real_name));
+                }
+
+                if (strcmp("r", real_name) == 0)
                     use_userid = 1;
+                else
+                    use_userid = 0;
 
                 mvprints(3, 0, "使用名稱: %s",
                          use_userid ? cuser.userid : real_name);
@@ -1679,6 +1686,7 @@ write_header(FILE * fp,  const char *mytitle)
             } else {
                 snprintf(postlog.author, sizeof(postlog.author),
                          "%s.", real_name);
+                nickname = "猜猜我是誰 ? ^o^";
                 if (curr_buf)
                     curr_buf->ifuseanony = 1;
             }
@@ -1689,26 +1697,9 @@ write_header(FILE * fp,  const char *mytitle)
 	strlcpy(postlog.title, ptr, sizeof(postlog.title));
 	postlog.date = now;
 	postlog.number = 1;
-	append_record(".post", (fileheader_t *) & postlog, sizeof(postlog));
-#ifdef HAVE_ANONYMOUS
-	if (currbrdattr & BRD_ANONYMOUS) {
-	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
-
-	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author,
-		    (((!strcmp(real_name, "r") && defanony) ||
-		      (!real_name[0] && (!defanony))) ? cuser.nickname :
-		     "猜猜我是誰 ? ^o^"),
-		    local_article ? str_post2 : str_post1, currboard);
-	} else {
-	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		    cuser.nickname,
-		    local_article ? str_post2 : str_post1, currboard);
-	}
-#else				/* HAVE_ANONYMOUS */
-	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		cuser.nickname,
+	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
+	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author, nickname,
 		local_article ? str_post2 : str_post1, currboard);
-#endif				/* HAVE_ANONYMOUS */
 
     }
     fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));

@@ -1193,7 +1193,7 @@ do_general(int garbage GCC_UNUSED)
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
     int i, j;
-    int             defanony, ifuseanony;
+    int             ifuseanony;
     int             money = 0;
     char            genbuf[PATHLEN];
     const char	    *owner;
@@ -1357,10 +1357,7 @@ do_general(int garbage GCC_UNUSED)
 
 #ifdef HAVE_ANONYMOUS
     /* Ptt and Jaky */
-    defanony = currbrdattr & BRD_DEFAULTANONYMOUS;
-    if ((currbrdattr & BRD_ANONYMOUS) &&
-	((strcmp(real_name, "r") && defanony) || (real_name[0] && !defanony))
-	) {
+    if ((currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
 	strcat(real_name, ".");
 	owner = real_name;
 	ifuseanony = 1;
