@@ -1641,11 +1641,10 @@ write_header(FILE * fp,  const char *mytitle)
 #endif // PLAY_ANGEL
 
             do {
-                // sizeof(real_name)-1 should be less than IDLEN.
                 getdata_str(3, 0, defanony ? 
                     "請輸入你想用的ID，或直接按[Enter]暱名，或按[r][R]用真名：" :
                     "請輸入你想用的ID，也可直接按[Enter]或[r]或[R]使用原ID：",
-                    real_name, sizeof(real_name) - 1, DOECHO, default_name);
+                    real_name, sizeof(real_name), DOECHO, default_name);
 
                 // sanity checks
                 if (real_name[0] == '-') {
