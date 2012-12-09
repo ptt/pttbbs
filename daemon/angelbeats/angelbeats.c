@@ -361,15 +361,16 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
         // Print state information.
         if (from_cmd) {
             fprintf(stderr, " - %03zu. %-14s: ", i+1, kanade->userid);
-            if (is_pause)
-                fprintf(stderr, "[set PAUSE (%d)] ", is_pause);
             fprintf(stderr,
                     "{samples=%d, pause1=%d, pause2=%d} "
-                    "(masters=%d, activity=%d, assigned=%d, logins=%d)\n",
+                    "(masters=%d, logins=%d, activity=%d, assigned=%d)",
                     kanade->perf.samples, kanade->perf.pause1,
-                    kanade->perf.pause2,
-                    kanade->masters, (int)kanade->last_activity,
-                    (int)kanade->last_assigned, logins);
+                    kanade->perf.pause2, kanade->masters, logins,
+                    (int)kanade->last_activity,
+                    (int)kanade->last_assigned);
+            if (is_pause)
+                fprintf(stderr, " [PAUSE %d]", is_pause);
+            fputc('\n', stderr);
         }
 
         // update report numbers
@@ -441,10 +442,10 @@ void export_perf_data(FILE *fp) {
     time4_t clk = time4(0);
     AngelInfo *kanade = g_angel_list;
     fprintf(fp, "# Angel Performance Data (%s)\n", Cdatelite(&clk));
-    fprintf(fp, "# No. %-*s Samples  Pause1  Pause2\n# ", IDLEN, "UserID");
+    fprintf(fp, "# No. %-*s Sample Pause1 Pause2\n# ", IDLEN, "UserID");
     print_dash(fp, 70, "# ");
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        fprintf(fp, "%4lu. %-*s %7d %7d %7d\n", i + 1, IDLEN, kanade->userid,
+        fprintf(fp, "%4lu. %-*s %6d %6d %6d\n", i + 1, IDLEN, kanade->userid,
                 kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
         // reset perf data
         memset(&kanade->perf, 0, sizeof(kanade->perf));
