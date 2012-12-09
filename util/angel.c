@@ -129,12 +129,12 @@ void sendResult(){
 
     appendLogFile(fp, BBSHOME "/log/angel_perf.txt",
                   "\n== 本周小天使活動資料記錄 ==\n"
-                  " (說明: Samples 指的是新小主人找天使時有在線上的次數\n"
-                  "        Pause1  指的是 Samples 中有幾次神諭呼叫器設停收\n"
-                  "        Pause2  指的是 Samples 中有幾次神諭呼叫器設關閉\n"
-                  "  因此，Samples 與其它人差太多代表不常上線\n"
-                  "        Pause2  接近 Samples 代表此天使都在打混\n"
-                  "  另外, Samples 每"  STR_ANGELBEATS_PERF_MIN_PERIOD
+                  " (說明: Sample 指的是新小主人找天使時有在線上的次數\n"
+                  "        Pause1 指的是 Sample 中有幾次神諭呼叫器設停收\n"
+                  "        Pause2 指的是 Sample 中有幾次神諭呼叫器設關閉\n"
+                  "  因此，Sample 與其它人差太多代表不常上線\n"
+                  "        Pause2 接近 Sample 代表此天使都在打混\n"
+                  "  另外, Sample 每"  STR_ANGELBEATS_PERF_MIN_PERIOD
                   "秒最多更新一次)\n"
                   );
     appendLogFile(fp, BBSHOME "/log/changeangel.log",
