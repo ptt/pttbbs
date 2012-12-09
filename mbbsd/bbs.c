@@ -4009,38 +4009,46 @@ board_digest(void)
 
 
 static int
-push_bottom(int ent, fileheader_t *fhdr, const char *direct)
+push_bottom(int ent, fileheader_t *old_fhdr, const char *direct)
 {
     int num;
+    fileheader_t fhdr;
     char buf[PATHLEN];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD)
-        || fhdr->filename[0]=='L')
+        || old_fhdr->filename[0]=='L')
         return DONOTHING;
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
-    if (!(fhdr->filemode & FILE_BOTTOM))
+    if (!(old_fhdr->filemode & FILE_BOTTOM))
     {
 	move(b_lines-1, 0); clrtoeol();
 	outs(ANSI_COLOR(1;33) "提醒您置底與原文目前互為連結，刪掉原文也會導致置底消失。" ANSI_RESET);
     }
-    if( vans(fhdr->filemode & FILE_BOTTOM ?
+    if( vans(old_fhdr->filemode & FILE_BOTTOM ?
 	       "取消置底公告?(y/N)":
 	       "加入置底公告?(y/N)") != 'y' )
 	return FULLUPDATE;
-    if(!(fhdr->filemode & FILE_BOTTOM) ){
+
+    // Don't change original fhdr.
+    memcpy(&fhdr, old_fhdr, sizeof(fhdr));
+
+    if(!(fhdr.filemode & FILE_BOTTOM) ){
           snprintf(buf, sizeof(buf), "%s.bottom", direct);
           if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return FULLUPDATE;
 	  }
-	  fhdr->filemode ^= FILE_BOTTOM;
-	  fhdr->multi.refer.flag = 1;
-          fhdr->multi.refer.ref = ent;
-          append_record(buf, fhdr, sizeof(fileheader_t)); 
+	  fhdr.filemode ^= FILE_BOTTOM;
+	  fhdr.multi.refer.flag = 1;
+          fhdr.multi.refer.ref = ent;
+          append_record(buf, &fhdr, sizeof(fileheader_t)); 
+          // make sure original one won't be deleted... add 'm'.
+          if (!(old_fhdr->filemode & FILE_MARKED))
+              mark_post(ent, old_fhdr, direct);
     }
     else{
-	fhdr->filemode ^= FILE_BOTTOM;
-	num = delete_fileheader(direct, fhdr, ent);
+        fhdr.filemode ^= FILE_BOTTOM;
+	num = delete_fileheader(direct, &fhdr, ent);
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     setbottomtotal(currbid);
