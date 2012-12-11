@@ -368,7 +368,7 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
     // solve source file name
     setdirpath(fpath, direct, fh->filename);
     if (!dashf(fpath))
-        return DELETE_FILE_CONTENT_FAILED;
+        return DELETE_FILE_CONTENT_BACKUP_FAILED;
 
     // FIXME some announcements were made by sym-links, especial for those
     // in mail. we should ignore them.
