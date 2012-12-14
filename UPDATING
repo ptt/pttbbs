@@ -23,6 +23,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5734: [cleanup]
+userec_t 裡很多東西以後可能要挪作它用，跑一下 upgrade/r5734 可以把資料清空。
+早作早好。
+
 r5663: [fromd/where]
 中文故鄉 (pttbbs.conf:WHERE) 改由 FROMD 來提供，移除原 cache + mbbsd 的機制.
 好處是: (1) 減少 reload cache 所花時間 (2) 避免 duplicated code.
