@@ -251,8 +251,7 @@ user_display(const userec_t * u, int adminmode)
 
     // conditional fields
 #ifdef ASSESS
-    prints("\t劣文數目: %u (舊優文結算: %u)\n", 
-	    (unsigned int)u->badpost, (unsigned int)u->goodpost);
+    prints("\t劣文數目: %u\n", (unsigned int)u->badpost);
 #endif // ASSESS
 
 #ifdef CHESSCOUNTRY

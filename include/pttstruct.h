@@ -59,11 +59,10 @@ typedef struct userec_t {
     char	realname[20];	/* 真實姓名 */
     char	nickname[24];	/* 暱稱 */
     char	passwd[PASSLEN];/* 密碼 */
-
     char	pad_1;
 
-    uint32_t    uflag;		/* 習慣1 , see uflags.h */
-    uint32_t    deprecated_uflag2;		/* deprecated: 習慣2 , see uflags.h */
+    uint32_t    uflag;		/* 習慣, see uflags.h */
+    uint32_t    _unused1;	/* 從前放習慣2, 使用前請先清0 */
     uint32_t    userlevel;	/* 權限 */
     uint32_t    numlogindays;	/* 上線資歷 (每日最多+1的登入次數) */
     uint32_t    numposts;	/* 文章篇數 */
@@ -71,41 +70,35 @@ typedef struct userec_t {
     time4_t	lastlogin;	/* 最近上站時間(包含隱身) */
     char	lasthost[IPV4LEN+1];/* 上次上站來源 */
     int32_t     money;		/* Ptt幣 */
-
-    char	unused_1[4];
+    char	_unused[4];
 
     char	email[50];	/* Email */
     char	address[50];	/* 住址 */
-    char	justify[REGLEN + 1];/* 審核資料 */
+    char	justify[REGLEN+1];/* 審核資料 */
     uint8_t	month;		/* 生日 月 */
     uint8_t	day;		/* 生日 日 */
     uint8_t	year;		/* 生日 年 */
-    uint8_t     nonuse_sex;     /* 性別 (已停用), 未清空過 */
-
+    uint8_t     _unused3;       /* 從前放性別, 使用前請先清0 */
     uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
-
-    char	unused_3[2];
-
-    uint32_t    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
+    char	_unused4[2];
+    uint32_t    exmailbox;	/* 購買信箱數 */
 
     // r3968 移出 sizeof(chicken_t)=128 bytes
-    char	chkpad0[4];
-
+    char	_unused5[4];
     char	career[40];	/* 學歷職業 */
     char	phone[20];	/* 電話 */
-
-    uint32_t	old_numlogins;	/* 轉換前的 numlogins, 備份檢視用 */
+    uint32_t	_unused6;	/* 從前放轉換前的 numlogins, 使用前請先清0 */
     char	chkpad1[48];
     time4_t	lastseen;	/* 最近上站時間(隱身不計) */
-    time4_t	chkpad2[2];	/* in case 有人忘了把 time4_t 調好... */
+    time4_t     timegetangel;   /* 上次得到天使時間 */
+    time4_t	_unused7;	/* in case 有人忘了把 time4_t 調好... */
     // 以上應為 sizeof(chicken_t) 同等大小
     
     time4_t	lastsong;	/* 上次點歌時間 */
     uint32_t	loginview;	/* 進站畫面 */
-
-    uint8_t	unused_4;	// was: channel
+    uint8_t	_unused8;	// was: channel
     uint8_t	pad_2;
 
     uint16_t	vl_count;	/* 違法記錄 ViolateLaw counter */
@@ -121,21 +114,19 @@ typedef struct userec_t {
     uint16_t	go_lose;	/* 圍棋戰績 敗 */
     uint16_t	go_tie;		/* 圍棋戰績 和 */
 
-    char	unused_5[5];	/* 從前放 ident 身份證字號，使用前請先清0 */
-
+    char	_unused9[5];	/* 從前放 ident 身份證字號，使用前請先清0 */
     uint8_t	signature;	/* 慣用簽名檔 */
-    uint8_t	goodpost;	/* 評價為好文章數 */
+    uint8_t	_unused10;	/* 從前放好文章數, 使用前請先清0 */
     uint8_t	badpost;	/* 評價為壞文章數 */
-    uint8_t	unused_6;	/* 從前放競標好評(goodsale), 使用前請先清0 */
-    uint8_t	unused_7;	/* 從前放競標壞評(badsale),  使用前請先清0 */
+    uint8_t	_unused11;	/* 從前放競標好評(goodsale), 使用前請先清0 */
+    uint8_t	_unused12;	/* 從前放競標壞評(badsale),  使用前請先清0 */
     char	myangel[IDLEN+1];/* 我的小天使 */
-
     char	pad_3;
 
     uint16_t	chess_elo_rating;/* 象棋等級分 */
-    uint32_t    withme;		/* 我想找人下棋，聊天.... */
+    uint32_t    withme;	 	 /* 我想找人下棋，聊天.... */
     time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
-    time4_t	timeviolatelaw; /* 被開罰單時間 */
+    time4_t	timeviolatelaw;  /* 被開罰單時間 */
 
     char	pad_tail[28];
 } PACKSTRUCT userec_t;
