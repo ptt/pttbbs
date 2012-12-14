@@ -1,10 +1,17 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-#define CLEAR(x) memset(&(u->x), 0, sizeof(u->x))
+#define CLEAR(x) { \
+    for (i = 0; i < sizeof(u->x); i++) \
+        if (((char*)&(u->x))[i] != 0) \
+            need_clear = 1; \
+    memset(&(u->x), 0, sizeof(u->x)); \
+}
 
 int check(void *data, int n, userec_t *u)
 {
+    int i = 0;
+    int need_clear = 0;
     if (!u->userid[0])
         return 0;
     fprintf(stderr, "%d\r", n);
@@ -22,8 +29,12 @@ int check(void *data, int n, userec_t *u)
     CLEAR(_unused10);
     CLEAR(_unused11);
     CLEAR(_unused12);
+
     // flush
-    passwd_update(n+1, u);
+    if (need_clear) {
+        printf("Clear: %s\n", u->userid);
+        passwd_update(n+1, u);
+    }
     return 0;
 }
 
