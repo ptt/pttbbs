@@ -246,7 +246,7 @@ select_angel() {
             strlcpy(nick, userid, sizeof(nick));
         }
         if (uinfo && uinfo->angelpause == 1)
-            pause_msg = ANSI_COLOR(1;32) "(停收新主人) " ANSI_RESET;
+            pause_msg = ANSI_COLOR(1;32) "(停收新問題/新主人) " ANSI_RESET;
         else if (uinfo && uinfo->angelpause == 2)
             pause_msg = ANSI_COLOR(1;31) "(關閉呼叫器) " ANSI_RESET;
         prints(" %3i. %s %s%s [UID: %d]\n", i + 1, nick,
@@ -469,7 +469,7 @@ int a_angelreport() {
             if (currutmp->angelpause != ANGELPAUSE_NONE)
                 prints("\n\t 由於您目前拒收小主人所以無順位資訊\n");
             else if (rpt.my_active_index == 0)
-                prints("\n\t 您似乎有其它登入停收主人，所以目前無小天使順位。\n");
+                prints("\n\t 您似乎有其它登入停收或拒收，所以目前無小天使順位。\n");
             else
                 prints("\n\t 您的線上小天使順位為 %d。"
                        "\n\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
@@ -683,6 +683,7 @@ TalkToAngel(){
     static userinfo_t* lastuent = NULL;
     userinfo_t *uent;
     static int is_new_angel = 0;
+    int supervisor = 0;
 
     if (strcmp(cuser.myangel, "-") == 0){
 	NoAngelFound("你沒有小天使");
@@ -717,15 +718,23 @@ TalkToAngel(){
     // because it relies on this data.
     angel_reload_nick();
 
+#ifdef ANGEL_CIA_ACCOUNT
+    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+        supervisor = 1;
+#endif
+
     uent = search_ulist_userid(cuser.myangel);
-    if (uent == NULL || angel_reject_me(uent) || uent->mode == DEBUGSLEEPING){
+    if (uent == NULL || (!supervisor && angel_reject_me(uent)) ||
+        uent->mode == DEBUGSLEEPING){
 	lastuent = NULL;
 	AngelNotOnline();
 	return;
     }
 
     // check angelpause: if talked then should accept.
-    if (uent == lastuent) {
+    if (supervisor && uent->angelpause == ANGELPAUSE_REJNEW) {
+        // The only case to override angelpause.
+    } else if (uent == lastuent) {
 	// we've talked to angel.
 	// XXX what if uentp reused by other? chance very, very low... 
 	if (uent->angelpause >= ANGELPAUSE_REJALL)
