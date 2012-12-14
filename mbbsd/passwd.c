@@ -195,7 +195,8 @@ int pwcuSetMyAngel	(const char *angel_uid)
     PWCU_START();
     strlcpy(    u.myangel, angel_uid, sizeof(    u.myangel));
     strlcpy(cuser.myangel, angel_uid, sizeof(cuser.myangel));
-    cuser.timesetangel = (time4_t)time(NULL);
+    syncnow();
+    cuser.timesetangel = u.timesetangel = now;
     PWCU_END();
 }
 
