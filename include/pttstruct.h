@@ -92,7 +92,7 @@ typedef struct userec_t {
     uint32_t	_unused6;	/* 從前放轉換前的 numlogins, 使用前請先清0 */
     char	chkpad1[48];
     time4_t	lastseen;	/* 最近上站時間(隱身不計) */
-    time4_t     timegetangel;   /* 上次得到天使時間 */
+    time4_t     timesetangel;   /* 上次得到天使時間 */
     time4_t	_unused7;	/* in case 有人忘了把 time4_t 調好... */
     // 以上應為 sizeof(chicken_t) 同等大小
     
