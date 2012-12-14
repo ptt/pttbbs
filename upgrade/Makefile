@@ -11,8 +11,10 @@ BBSBASE=	$(SRCROOT)/include/var.h
 UTIL_OBJS=	\
 	../util/util_var.o
 
-LDLIBS+=  $(UTIL_OBJS) $(SRCROOT)/common/bbs/libcmbbs.a \
-	  $(SRCROOT)/common/sys/libcmsys.a
+LDLIBS+=  $(UTIL_OBJS) \
+	  $(SRCROOT)/common/bbs/libcmbbs.a \
+	  $(SRCROOT)/common/sys/libcmsys.a \
+	  $(SRCROOT)/common/osdep/libosdep.a
 
 all:
 	echo "Usually you won't build everything for upgrading, so we let you decide what to run."
