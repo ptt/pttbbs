@@ -930,6 +930,89 @@ vs_multi_T_table_simple(
     while (incomplete);
 }
 
+// pmore_QuickRawModePref style pref setter, renders
+// - title                             -
+// - entry: options (separated by TAB) -
+// - prompt                            -
+int
+vs_quick_pref(int default_value, const char *title, const char *entry,
+              const char *options, const char *prompt) {
+    int ystart = b_lines -2;
+    int cOptions = 0;
+    int index = default_value, k;
+    const char *opt;
+
+#ifdef HAVE_GRAYOUT
+    grayout(0, ystart-1, GRAYOUT_DARK);
+#endif // HAVE_GRAYOUT
+
+    // adjust params
+    if (!title)
+        title = VMSG_QPREF_TITLE;
+    if (!entry)
+        entry = VMSG_QPREF_ENTRY;
+    if (!prompt)
+        prompt = VMSG_QPREF_PROMPT;
+    assert(options && *options);
+
+    while (1)
+    {
+        move(ystart, 0);
+        clrtobot();
+        outs(VCLR_QPREF_TITLE);
+        vbarf("%s", title); // in case title has TAB for LR display.
+        move(ystart + 1, 0);
+        outs(VCLR_QPREF_PROMPT);
+        outs(entry);
+        cOptions = 0;
+
+        // list options
+        opt = options;
+        while (*opt) {
+            const char *ptab = strchr(opt, '\t');
+            int slen = ptab ? (ptab - opt) : strlen(opt);
+            outs(VCLR_QPREF_ENTRY_KEY);
+            prints("%d", cOptions + 1);
+            if (cOptions == index) {
+                outs(VCLR_QPREF_ENTRY_ACTIVE);
+                outc('*');
+            } else {
+                outs(VCLR_QPREF_ENTRY_TEXT);
+                outc(' ');
+            }
+            outns(opt, slen);
+            outs(ANSI_RESET);
+            outc(' ');
+            opt += slen;
+            cOptions++;
+            if (*opt)
+                opt++;
+        }
+
+        k = vmsg(prompt);
+        if (isascii(k) && isdigit(k)) {
+            k = k - '1';
+            if (k >= 0 && k < cOptions) {
+                index = k;
+                break;
+            }
+        } else if (k == KEY_LEFT) {
+            if (index > 0) {
+                index--;
+                continue;
+            }
+        } else if (k == KEY_RIGHT) {
+            if (index + 1 < cOptions) {
+                index++;
+                continue;
+            }
+        } else {
+            break;
+        }
+    }
+    return index;
+}
+
 ////////////////////////////////////////////////////////////////////////
 // DBCS Aware Helpers
 ////////////////////////////////////////////////////////////////////////

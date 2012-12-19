@@ -29,6 +29,11 @@
 #define VCLR_MSG		ANSI_COLOR(1;36;44)
 #define VCLR_PAUSE_PAD		ANSI_COLOR(1;34;44)
 #define VCLR_PAUSE		ANSI_COLOR(1;37;44)
+#define VCLR_QPREF_TITLE        ANSI_COLOR(0;30;47)
+#define VCLR_QPREF_PROMPT       ANSI_COLOR(0)
+#define VCLR_QPREF_ENTRY_KEY    ANSI_COLOR(0;1;31)
+#define VCLR_QPREF_ENTRY_TEXT   ANSI_COLOR(0)
+#define VCLR_QPREF_ENTRY_ACTIVE ANSI_COLOR(0;1;36)
 
 #define VCLR_INPUT_FIELD	ANSI_COLOR(0;7)
 
@@ -38,6 +43,10 @@
 #define VMSG_MSG_PREFIX		" ◆ "
 #define VMSG_HDR_PREFIX		"【 "
 #define VMSG_HDR_POSTFIX	" 】"
+
+#define VMSG_QPREF_TITLE        "請設定下列選項"
+#define VMSG_QPREF_ENTRY        "可使用選項: "
+#define VMSG_QPREF_PROMPT       "請按數字或方向鍵調整，或其它任意鍵結束"
 
 // CONSTANT DEFINITION -------------------------------------------------
 #define VCOL_MAXW		(INT16_MAX)
@@ -153,6 +162,9 @@ void vs_hdr2f	(const char *fmt, ...);
 void vs_hdr2bar	(const char *left, const char *right);
 void vs_hdr2barf(const char *fmt, ...);
 void vs_footer	(const char *caption, const char *prompt);
+
+int vs_quick_pref(int default_value, const char *title, const char *entry,
+                  const char *options, const char *prompt);
 
 void vs_rectangle_simple(int l, int t, int r, int b);	// draw a single line rectangle, not filling inside interior
 void vs_multi_T_table_simple(
