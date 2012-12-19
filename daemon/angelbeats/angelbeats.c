@@ -36,6 +36,16 @@ static int debug = 1;
 static int debug = 0;
 #endif
 
+// Decide default algorithm
+#if !(defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY) || \
+      defined(ANGELBEATS_ASSIGN_BY_RANDOM))
+#define ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY
+#endif
+
+#ifndef ANGELBEATS_RANDOM_RANGE
+#define ANGELBEATS_RANDOM_RANGE (150)
+#endif
+
 // same as expire length
 #ifndef ANGELBEATS_INACTIVE_TIME
 #define ANGELBEATS_INACTIVE_TIME   ( 120 * DAY_SECONDS )
@@ -214,6 +224,11 @@ suggest_online_angel(int master_uid) {
     static time_t perf_time = 0;
     time_t clk = time(0);
 
+#ifdef ANGELBEATS_ASSIGN_BY_RANDOM
+    int random_uids[ANGELBEATS_RANDOM_RANGE];
+    int crandom_uids = 0;
+#endif
+
     if (clk - perf_time > ANGELBEATS_PERF_MIN_PERIOD) {
         perf_time = clk;
         do_perf = 1;
@@ -229,9 +244,14 @@ suggest_online_angel(int master_uid) {
         if (!get_angel_state(kanade, &is_pause, &logins))
             continue;
 
+#if   defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
         // select if angel is online and not paused.
         if (!uid && !is_pause)
             uid = kanade->uid;
+#elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
+        if (!uid && !is_pause)
+            random_uids[crandom_uids++] = kanade->uid;
+#endif
 
         // update perf data; otherwise abort.
         if (do_perf) {
@@ -242,6 +262,12 @@ suggest_online_angel(int master_uid) {
             break;
         }
     }
+#ifdef ANGELBEATS_ASSIGN_BY_RANDOM
+    if (crandom_uids > 0) {
+        // Yes I didn't do srand. That's good enough.
+        uid = random_uids[rand() % crandom_uids];
+    }
+#endif
     return uid;
 }
 
