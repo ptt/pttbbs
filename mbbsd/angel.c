@@ -68,11 +68,19 @@ angel_notify_activity() {
 void 
 angel_toggle_pause()
 {
-    // TODO record angels that don't do their job
     if (!HasUserPerm(PERM_ANGEL) || !currutmp)
 	return;
     currutmp->angelpause ++;
     currutmp->angelpause %= ANGELPAUSE_MODES;
+    if (cuser.uflag & UF_NEW_ANGEL_PAGER) {
+        // pmore_QuickRawModePref-like conf
+        currutmp->angelpause = vs_quick_pref(
+            currutmp->angelpause % ANGELPAUSE_MODES,
+            "設定小天使神諭呼叫器",
+            "請選取神諭呼叫器的新狀態: ",
+            "開放\t停收\t關閉",
+            NULL);
+    }
 }
 
 void
@@ -452,7 +460,6 @@ int a_angelreport() {
             // some people with known min/max signature may leak their own 
             // identify and then complain about privacy. well, I believe this
             // is their own fault but anyway let's make them happy
-            // TODO avg+std is better?
             double base1 = rpt.min_masters_of_online_angels,
                    base2 = rpt.min_masters_of_active_angels;
             if (!base1) base1 = 1;

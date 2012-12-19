@@ -447,6 +447,9 @@ void Customize(void)
 	UF_DBCS_DROP_REPEAT,
 	UF_DBCS_NOINTRESC,
 #endif
+#ifdef PLAY_ANGEL
+        UF_NEW_ANGEL_PAGER,
+#endif
 	0,
     };
 
@@ -463,6 +466,9 @@ void Customize(void)
 	"DBCS       自動偵測雙位元字集(如全型中文)",
 	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
+#endif
+#ifdef PLAY_ANGEL
+        "ANGEL      (小天使限定)使用新的神諭呼叫器設定界面",
 #endif
 	0,
     };

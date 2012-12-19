@@ -1430,6 +1430,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
             unlink(fname);
             return -1;
         }
+        // TODO append article reference, if available.
 	Copy(tmp_buf, fname);
     } else
 	return -1;

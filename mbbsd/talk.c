@@ -2625,15 +2625,7 @@ userlist(void)
 #ifdef PLAY_ANGEL
 	    case Ctrl('P'):
 		if (HasBasicUserPerm(PERM_ANGEL) && currutmp) {
-		    /*
-		    static const char *msgs[ANGELPAUSE_MODES] = {
-			" 接受所有小主人發問 [●] ",
-			" 只接受已發問的小主人的問題 [△] ",
-			" 停止接受所有小主人的問題 [Ｘ] ",
-		    };
-		    */
-		    angel_toggle_pause();
-		    // vmsg(msgs[currutmp->angelpause]);
+                    angel_toggle_pause();
 		    redrawall = redraw = 1;
 		}
 		break;
