@@ -1188,7 +1188,14 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 }
 
 static int
-do_general(int garbage GCC_UNUSED)
+does_board_have_any_bm(int bid) {
+    // in common/cache.c, BMcache uids were assigned in order, so we only need
+    // to check first UID.
+    return (SHM->BMcache[bid - 1][0] != -1);
+}
+
+static int
+do_post_article()
 {
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
@@ -1384,7 +1391,7 @@ do_general(int garbage GCC_UNUSED)
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         (currbrdattr & BRD_HIDE) ||
 #endif
-	bp->BM[0] < ' ') // XXX note: BM may contain some (chinese) text that is not userid
+        !does_board_have_any_bm(currbid))
     {
 	money = 0;
     }
@@ -1566,7 +1573,7 @@ do_post(void)
     if (bp->brdattr & BRD_VOTEBOARD)
 	return do_voteboard(0);
     else if (!(bp->brdattr & BRD_GROUPBOARD))
-	return do_general(0);
+	return do_post_article();
     return 0;
 }
 
@@ -3349,7 +3356,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     is_anon = (fhdr->filemode & FILE_ANONYMOUS);
     if(is_anon)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
-	 * see do_general() */
+	 * see do_post_article() */
         tusernum = fhdr->multi.anon_uid;
     else
         tusernum = searchuser(fhdr->owner, NULL);
@@ -3724,7 +3731,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
-	 * see do_general() */
+	 * see do_post_article() */
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
 	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
     else {
