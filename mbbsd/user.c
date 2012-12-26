@@ -468,7 +468,7 @@ void Customize(void)
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
 #endif
 #ifdef PLAY_ANGEL
-        "ANGEL      (小天使限定)使用新的神諭呼叫器設定界面",
+        "ANGEL      (小天使)啟用新的神諭呼叫器設定界面",
 #endif
 	0,
     };
@@ -489,6 +489,14 @@ void Customize(void)
 	/* print uflag options */
 	for (i = 0; masks1[i]; i++, ia++)
 	{
+#ifdef PLAY_ANGEL
+            // XXX dirty hack: ANGEL must be in end of list.
+            if (strstr(desc1[i], "ANGEL ") == desc1[i] &&
+                !HasUserPerm(PERM_ANGEL)) {
+                ia--;
+                continue;
+            }
+#endif
 	    clrtoeol();
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-*s%s\n",
@@ -517,6 +525,7 @@ void Customize(void)
 		    "MIND       目前的心情",
 		    mindbuf);
 #ifdef PLAY_ANGEL
+            // TODO move this to Ctrl-U Ctrl-P.
 	    if (HasUserPerm(PERM_ANGEL))
 	    {
 		static const char *msgs[ANGELPAUSE_MODES] = {
