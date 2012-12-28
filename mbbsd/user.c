@@ -1221,6 +1221,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
 	post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
 #ifdef PLAY_ANGEL
+        // TODO notify Angelbeats
 	if (x.userlevel & ~changefrom & PERM_ANGEL)
 	    mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[天使公會]");
 #endif

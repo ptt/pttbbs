@@ -248,7 +248,7 @@ process_pager_keys(int ch)
 				 currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
 			break;
 		    case MSGMODE_FROMANGEL:
-			my_write(currutmp->msgs[0].pid, "再問祂一次： ",
+			my_write(currutmp->msgs[0].pid, "再問一次： ",
 				 currutmp->msgs[0].userid, WATERBALL_ANGEL, NULL);
 			break;
 		    case MSGMODE_TOANGEL:

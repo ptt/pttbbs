@@ -36,6 +36,8 @@ int a_angelreport(void);
 int a_angelreload(void);
 int angel_reject_me(userinfo_t * uin);
 void angel_notify_activity(void);
+void angel_log_order_song(const char *angel_nick);
+const char *angel_order_song(char *receiver, size_t sz_receiver);
 void CallAngel(void);
 void angel_toggle_pause();
 void angel_load_my_fullnick(char *buf, int szbuf); // full nick!

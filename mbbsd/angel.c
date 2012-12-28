@@ -79,7 +79,7 @@ angel_toggle_pause()
             "設定小天使神諭呼叫器",
             "請選取神諭呼叫器的新狀態: ",
             "開放\t停收\t關閉",
-            NULL);
+            NULL) % ANGELPAUSE_MODES;
     }
 }
 
@@ -339,6 +339,46 @@ do_changeangel(int force) {
 
 int a_changeangel(void) {
     return do_changeangel(0);
+}
+
+const char *
+angel_order_song(char *receiver, size_t sz_receiver) {
+    userec_t udata;
+    char prompt[STRLEN], ans[3];
+    const char *angel_nick = NULL;
+
+    if (!*cuser.myangel)
+        return NULL;
+
+    // ensure if my angel is still valid.
+    if (passwd_load_user(cuser.myangel, &udata) <= 0 ||
+        !(udata.userlevel & PERM_ANGEL))
+        return NULL;
+
+    angel_nick = angel_get_nick();
+    snprintf(prompt, sizeof(prompt), "要留言給你的%s小天使嗎? [y/N]: ",
+             angel_nick);
+    if (getdata(20, 0, prompt, ans, sizeof(ans), LCECHO) && *ans == 'y') {
+        snprintf(receiver, sz_receiver, "%s小天使", angel_nick);
+    }
+    return angel_nick;
+}
+
+void
+angel_log_order_song(const char *angel_nick) {
+    char angel_exp[STRLEN];
+
+    syncnow();
+    if (cuser.timesetangel)
+        snprintf(angel_exp, sizeof(angel_exp),
+                 "%d天", (cuser.timesetangel - now) / DAY_SECONDS + 1);
+    else
+        strlcpy(angel_exp, "很久", sizeof(angel_exp));
+
+    log_filef("log/osong_angel.log", LOG_CREAT,
+              "%s %*s 點歌給 %*s小天使 (關係已維持: %s)\n",
+              Cdatelite(&now), IDLEN, cuser.userid,
+              IDLEN - 6, angel_nick, angel_exp);
 }
 
 int 

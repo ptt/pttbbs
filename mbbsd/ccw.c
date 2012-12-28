@@ -454,14 +454,10 @@ ccw_process(CCW_CTX *ctx)
 /////////////////////////////////////////////////////////////////////////////
 // Talk / Chat Adaptors
 
-#if 1
+#ifndef CCW_CAP_TALK
 #define CCW_CAP_TALK        "交談"
 #define CCW_CAP_CHAT        "聊天室"
 #define CCW_CAP_CHATROOM    "聊天室"
-#else
-#define CCW_CAP_TALK        "聊天"
-#define CCW_CAP_CHAT        "談天室"
-#define CCW_CAP_CHATROOM    "談天室"
 #endif
 
 CCW_PROTO int

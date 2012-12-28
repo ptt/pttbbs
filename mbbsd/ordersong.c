@@ -32,9 +32,7 @@ do_order_song(void)
     fileheader_t    mail;
     int             nsongs;
     char save_title[STRLEN];
-#ifdef PLAY_ANGEL
-    const char *angel_nick = NULL;
-#endif
+    const char *override_receiver = NULL;
 
     // 由於變免費了，改成要文章數跟登入天數
 #ifdef ORDERSONG_MIN_NUMPOST 
@@ -97,35 +95,14 @@ do_order_song(void)
 	    vmsg("謝謝光臨 :)");
 	    unlockutmpmode();
 	    return 0;
-	}
+        }
     }
 
     getdata_str(19, 0, "留言者(可匿名): ", sender, sizeof(sender), DOECHO,
                 cuser.userid);
-#ifdef ANGEL_RAIN_DAY
-    do {
-        struct tm t = {0};
-        char prompt[STRLEN], ans[3];
-        userec_t udata;
 
-        localtime4_r(&now, &t);
-        if (t.tm_mday != ANGEL_RAIN_DAY)
-            break;
-        if (!*cuser.myangel)
-            break;
-        // ensure if my angel is still valid.
-        if (passwd_load_user(cuser.myangel, &udata) <= 0 ||
-            !(udata.userlevel & PERM_ANGEL))
-            break;
-        // TODO check if the angel has been selected for one month.
-        angel_nick = angel_get_nick();
-        snprintf(prompt, sizeof(prompt),
-                 "要參加天使節活動，留言給你的%s小天使嗎? [y/N]: ",
-                 angel_nick);
-        if (getdata(20, 0, prompt, ans, sizeof(ans), LCECHO) && *ans == 'y') {
-            snprintf(receiver, sizeof(receiver), "%s小天使", angel_nick);
-        }
-    } while (0);
+#ifdef USE_ANGEL_SONG
+    override_receiver = angel_order_song(receiver, sizeof(receiver));
 #endif
 
     if (!*receiver)
@@ -142,14 +119,9 @@ do_order_song(void)
 
     snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
 
-#ifdef PLAY_ANGEL
-    if (angel_nick) {
-        // Send to Angel, or simply make it blank?
-        // strlcpy(address, sizeof(address), cuser.myangel);
+    if (override_receiver) {
         *address = 0;
-    } else
-#endif
-    do {
+    } else do {
         move(22, 0); clrtobot();
         getdata_str(22, 0, "寄到誰的信箱(站內真實ID)?",
                     address, sizeof(address), LCECHO, receiver);
@@ -186,7 +158,8 @@ do_order_song(void)
 	return 0;
     }
     strlcpy(mail.owner, "[心情點播]", sizeof(mail.owner));
-    snprintf(mail.title, sizeof(mail.title), "◇ %s 留言給 %s ", sender, receiver);
+    snprintf(mail.title, sizeof(mail.title), "◇ %s 留言給 %s ", sender,
+             receiver);
 
     while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
@@ -232,20 +205,10 @@ do_order_song(void)
                      "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                      Cdate(&now), cuser.userid, trans_buffer, address,
                      sender, receiver, say));
-#ifdef PLAY_ANGEL
-    if (angel_nick) {
-        // TODO post to AngelPray?
-        char angel_exp[STRLEN];
-        if (cuser.timesetangel)
-            snprintf(angel_exp, sizeof(angel_exp),
-                     "%d天", (cuser.timesetangel - now) / DAY_SECONDS + 1);
-        else
-            strlcpy(angel_exp, "很久", sizeof(angel_exp));
-        log_filef("log/osong_angel.log", LOG_CREAT,
-                  "%s %*s 點歌給 %*s小天使 (關係已維持: %s)\n",
-                  Cdatelite(&now), IDLEN, cuser.userid,
-                  IDLEN - 6, angel_nick, angel_exp);
-    }
+
+#ifdef USE_ANGEL_SONG
+    if (override_receiver)
+        angel_log_order_song(override_receiver);
 #endif
 
     if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
