@@ -565,7 +565,7 @@ _telnet_write_data_cb(void *write_arg, int fd GCC_UNUSED,
 
 #ifdef  LOGIND_OPENFD_IN_AYT
 static void 
-_telnet_send_ayt_cb(void *ayt_arg, int fd)
+_telnet_send_ayt_cb(void *ayt_arg, int fd GCC_UNUSED)
 {
     login_conn_ctx *conn = (login_conn_ctx *)ayt_arg;
     char buf[64];
@@ -1055,7 +1055,7 @@ regular_check()
 {
     // cache results
     static time_t last_check_time = 0;
-    time_t now = time(0);
+    time4_t now = time(0);
 
     if ( now - last_check_time < LOGIND_REGULAR_CHECK_DURATION)
         return;
