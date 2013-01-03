@@ -1548,7 +1548,7 @@ do_post_article()
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
-	    if (cooldowntimeof(usernum)<now)
+	    if ((time4_t)cooldowntimeof(usernum) < now)
 		add_cooldowntime(usernum, 5);
 	}
 	add_posttimes(usernum, 1);
@@ -1741,7 +1741,7 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
         return 0;
 
     fd_src = open(ref_fn, O_RDONLY);
-    if (fd_src < 0 || dashs(ref_fn) < sz_orig) {
+    if (fd_src < 0 || (size_t)dashs(ref_fn) < sz_orig) {
         close(fd_dest);
         return 0;
     }
@@ -2232,7 +2232,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
-	    if (cooldowntimeof(usernum)<now)
+	    if ((time4_t)cooldowntimeof(usernum) < now)
 		add_cooldowntime(usernum, 5);
 	}
 	add_posttimes(usernum, 1);
@@ -2393,7 +2393,7 @@ editLimits(unsigned char *plogins,
     // load var
     unsigned char 
 	logins  = *plogins, 
-	posts   = *pposts, 
+	posts   = (pposts) ? *pposts : 0, 
 	badpost = *pbadpost;
 
     // query UI
@@ -2419,14 +2419,17 @@ editLimits(unsigned char *plogins,
     logins = (unsigned char)(temp / 10);
     move(y+1, 0); clrtobot();
 
-    y++; 
-    sprintf(genbuf, "%u", posts*10);
-    do {
-	getdata_buf(y, 0, 
-		"文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
-	temp = atoi(genbuf);
-    } while (temp < 0 || temp > 2550);
-    posts = (unsigned char)(temp / 10);
+    if (pposts) {
+        y++; 
+        sprintf(genbuf, "%u", posts*10);
+        do {
+            getdata_buf(y, 0, 
+                        "文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：",
+                        genbuf, 5, NUMECHO);
+            temp = atoi(genbuf);
+        } while (temp < 0 || temp > 2550);
+        posts = (unsigned char)(temp / 10);
+    }
 
     y++; 
     sprintf(genbuf, "%u", 255 - badpost);
@@ -2439,8 +2442,10 @@ editLimits(unsigned char *plogins,
 
     // save var
     *plogins  = logins;
-    *pposts   = posts;
     *pbadpost = badpost;
+
+    if (pposts)
+        *pposts   = posts;
 }
 
 int
@@ -2465,10 +2470,18 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
     if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
+#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&bp->post_limit_logins,
-		&bp->post_limit_posts,
+                &bp->post_limit_posts,
 		&bp->post_limit_badpost);
+#else
+	editLimits(
+		&bp->post_limit_logins,
+		NULL,
+		&bp->post_limit_badpost);
+        bp->post_limit_posts = 0;
+#endif
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
