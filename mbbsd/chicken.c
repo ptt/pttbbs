@@ -213,14 +213,14 @@ show_chicken_stat(const chicken_t * thechicken, int age)
     localtime4_r(&thechicken->birthday, &ptime);
     prints("名字: " ANSI_COLOR(33) "%s" ANSI_RESET
            " (" ANSI_COLOR(32) "%s" ANSI_RESET ")%*s"
-           "生日:" ANSI_COLOR(33) "%02d" ANSI_RESET "年"
-           ANSI_COLOR(33) "%2d" ANSI_RESET "月"
-           ANSI_COLOR(33) "%2d" ANSI_RESET "日 "
+           "生日:" ANSI_COLOR(33) "%d" ANSI_RESET "年"
+           ANSI_COLOR(33) "%d" ANSI_RESET "月"
+           ANSI_COLOR(33) "%d" ANSI_RESET "日 "
 	   "(" ANSI_COLOR(32) "%s %d歲" ANSI_RESET ")\n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
            (int)(30 - strlen(thechicken->name) -
             strlen(chicken_type[(int)thechicken->type])),
-           "", ptime.tm_year, ptime.tm_mon + 1, ptime.tm_mday,
+           "", ptime.tm_year + 1900, ptime.tm_mon + 1, ptime.tm_mday,
 	   cage[age > 16 ? 16 : age], age);
 
     snprintf(hp_buf, sizeof(hp_buf), "%d / %d", thechicken->hp,
