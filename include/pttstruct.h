@@ -20,30 +20,30 @@
 typedef struct chicken_t { /* 128 bytes */
     char    name[20];
     uint8_t type;             /* 物種 */
-    uint8_t tech[16];         /* 技能 (unused) */
-    uint8_t pad0[3];
+    uint8_t _pad0[3];
+    int32_t _pad1[4];
     time4_t birthday;         /* 生日 */
     time4_t lastvisit;        /* 上次照顧時間 */
     int32_t oo;               /* 補品 */
     int32_t food;             /* 食物 */
     int32_t medicine;         /* 藥品 */
     int32_t weight;           /* 體重 */
-    int32_t clean;            /* 乾淨 */
-    int32_t run;              /* 敏捷度 */
-    int32_t attack;           /* 攻擊力 */
-    int32_t book;             /* 知識 */
+    int32_t dirty;            /* 髒亂 */
+    int32_t _run;             /* (已停用) 敏捷度 */
+    int32_t _attack;          /* (已停用) 攻擊力 */
+    int32_t book;             /* 學問 */
     int32_t happy;            /* 快樂 */
     int32_t satis;            /* 滿意度 */
-    int32_t temperament;      /* 氣質 */
-    int32_t tiredstrong;      /* 疲勞度 */
+    int32_t _temperament;     /* (已停用) 氣質 */
+    int32_t tired;            /* 疲勞度 */
     int32_t sick;             /* 病氣指數 */
     int32_t hp;               /* 血量 */
     int32_t hp_max;           /* 滿血量 */
-    int32_t mm;               /* 法力 */
-    int32_t mm_max;           /* 滿法力 */
+    int32_t _mm;              /* (已停用) 法力 */
+    int32_t _mm_max;          /* (已停用) 滿法力 */
     time4_t cbirth;           /* 實際計算用的生日 */
     int32_t commonsense;      /* 常識點數 */
-    int32_t pad[1];           /* 留著以後用 */
+    int32_t pad2[1];           /* 留著以後用 */
 } PACKSTRUCT chicken_t;
 
 #define PASSLEN    14             /* Length of encrypted passwd field */

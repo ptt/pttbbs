@@ -15,68 +15,50 @@ static const char * const chicken_type[NUM_KINDS] = {
     "狗狗", "惡魔", "忍者", "ㄚ扁",
     "馬英九", "就可人", "蘿莉"};
 static const char * const chicken_food[NUM_KINDS] = {
-    "雞飼料", "營養厚片", "雞排便當", "死蝴蝶",
-    "屍體", "小雞", "貓餅乾", "小熊餅乾",
-    "寶錄", "靈氣", "飯團", "便當",
+    "飼料", "營養厚片", "雞排便當", "昆蟲",
+    "肉", "肉", "貓餅乾", "小熊餅乾",
+    "狗食", "靈氣", "飯團", "便當",
     "雞腿", "笑話文章", "水果沙拉"};
-static          const int egg_price[NUM_KINDS] = {
+static const int egg_price[NUM_KINDS] = {
     5, 25, 30, 40,
     80, 50, 15, 35,
     17, 100, 85, 200,
     200, 100, 77};
-static          const int food_price[NUM_KINDS] = {
+static const int food_price[NUM_KINDS] = {
     4, 6, 8, 10,
     12, 12, 5, 6,
     5, 20, 15, 23,
     23, 10, 19};
 
 enum {
-    OO, FOOD, WEIGHT, CLEAN, RUN, ATTACK, BOOK, HAPPY, SATIS,
-    TEMPERAMENT, TIREDSTRONG, SICK, HP_MAX, MM_MAX
+    OO, FOOD, WEIGHT, DIRTY, BOOK, HAPPY, SATIS, TIREDSTRONG, SICK, HP_MAX,
+    MAX_CHANGE
 };
 
-static          const short time_change[NUM_KINDS][14] =
-/* 補品 食物 體重 乾淨 敏捷 攻擊力 知識 快樂 滿意 氣質 疲勞 病氣 滿血 滿法 */
+static const short time_change[NUM_KINDS][MAX_CHANGE] =
+     /* 補品 食物 體重 髒亂 學問 快樂 滿意 疲勞 病氣 滿血 */
 {
-    /* 雞 */
-    {1, 1, 30, 3, 8, 3, 3, 40, 9, 1, 7, 3, 30, 1},
-    /* 美少女 */
-    {1, 1, 110, 1, 4, 7, 41, 20, 9, 25, 25, 7, 110, 15},
-    /* 勇士 */
-    {1, 1, 200, 5, 4, 10, 33, 20, 15, 10, 27, 1, 200, 9},
-    /* 蜘蛛 */
-    {1, 1, 10, 5, 8, 1, 1, 5, 3, 1, 4, 1, 10, 30},
-    /* 恐龍 */
-    {1, 1, 1000, 9, 1, 13, 4, 12, 3, 1, 200, 1, 1000, 3},
-    /* 老鷹 */
-    {1, 1, 90, 7, 10, 7, 4, 12, 3, 30, 20, 5, 90, 20},
-    /* 貓 */
-    {1, 1, 30, 5, 5, 6, 4, 8, 3, 15, 7, 4, 30, 21},
-    /* 蠟筆小新 */
-    {1, 1, 100, 9, 7, 7, 20, 50, 10, 8, 24, 4, 100, 9},
-    /* 狗 */
-    {1, 1, 45, 8, 7, 9, 3, 40, 20, 3, 9, 5, 45, 1},
-    /* 惡魔 */
-    {1, 1, 45, 10, 11, 11, 5, 21, 11, 1, 9, 5, 45, 25},
-    /* 忍者 */
-    {1, 1, 45, 2, 12, 10, 25, 1, 1, 10, 9, 5, 45, 26},
-    /* 阿扁 */
-    {1, 1, 150, 4, 8, 13, 95, 25, 7, 10, 25, 5, 175, 85},
-    /* 馬英九 */
-    {1, 1, 147, 2, 10, 10, 85, 20, 4, 25, 25, 5, 145, 95},
-    /* 就可人 */
-    {1, 1, 200, 3, 15, 15, 50, 50, 10, 5, 10, 2, 300, 0},
-    /* 羅利 */
-    {1, 1, 80, 2, 9, 10, 2, 5, 7, 8, 12, 1, 135, 5},
+    /* 雞   */ {1, 1,   30,  3,  3, 40,  9,   7, 3,   30},
+    /* 少女 */ {1, 1,  110,  1, 41, 20,  9,  25, 7,  110},
+    /* 勇士 */ {1, 1,  200,  5, 33, 20, 15,  27, 1,  200},
+    /* 蜘蛛 */ {1, 1,   10,  5,  1,  5,  3,   4, 1,   10},
+    /* 恐龍 */ {1, 1, 1000,  9,  4, 12,  3, 200, 1, 1000},
+    /* 老鷹 */ {1, 1,   90,  7,  4, 12,  3,  20, 5,   90},
+    /* 貓   */ {1, 1,   30,  5,  4,  8,  3,   7, 4,   30},
+    /* 小新 */ {1, 1,  100,  9, 20, 50, 10,  24, 4,  100},
+    /* 狗   */ {1, 1,   45,  8,  3, 40, 20,   9, 5,   45},
+    /* 惡魔 */ {1, 1,   45, 10,  5, 21, 11,   9, 5,   45},
+    /* 忍者 */ {1, 1,   45,  2, 25,  1,  1,   9, 5,   45},
+    /* 阿扁 */ {1, 1,  150,  4, 95, 25,  7,  25, 5,  175},
+    /* 騜   */ {1, 1,  147,  2, 85, 20,  4,  25, 5,  145},
+    /* 就可 */ {1, 1,  200,  3, 50, 50, 10,  10, 2,  300},
+    /* 蘿莉 */ {1, 1,   80,  2,  2,  5,  7,  12, 1,  135},
 };
-
-static void time_diff(chicken_t * thechicken);
-static int isdeadth(const chicken_t * thechicken, chicken_t *mychicken);
-static int revive_chicken(chicken_t *thechicken, int admin);
 
 static void
 show_chicken_picture(const char *fpath)
 {
+    // TODO change 5 to 4?
     show_file(fpath, 5, 14, SHOWFILE_ALLOW_ALL);
 }
 
@@ -85,7 +67,8 @@ show_chicken_picture(const char *fpath)
 #include "chicken_cs.c"
 #endif
 
-chicken_t * load_live_chicken(const char *uid)
+static chicken_t*
+load_live_chicken(const char *uid)
 {
     char fn[PATHLEN];
     int fd = 0;
@@ -97,14 +80,15 @@ chicken_t * load_live_chicken(const char *uid)
     fd = open(fn, O_RDWR);
     if (fd < 0) return NULL;
 
-    // now fd is valie. open and mmap.
+    // now fd is valid. open and mmap.
     p = mmap(NULL, sizeof(chicken_t), PROT_READ|PROT_WRITE, MAP_SHARED,
 	    fd, 0);
     close(fd);
     return p;
 }
 
-int load_chicken(const char *uid, chicken_t *mychicken)
+static int
+load_chicken(const char *uid, chicken_t *mychicken)
 {
     char fn[PATHLEN];
     int fd = 0;
@@ -120,39 +104,11 @@ int load_chicken(const char *uid, chicken_t *mychicken)
     return 0;
 }
 
-void free_live_chicken(chicken_t *p)
+static void
+free_live_chicken(chicken_t *p)
 {
     if (!p) return;
     munmap(p, sizeof(chicken_t));
-}
-
-void
-chicken_query(const char *userid)
-{
-    chicken_t xchicken;
-
-    if (!load_chicken(userid, &xchicken))
-    {
-	move(1, 0);
-	clrtobot();
-	prints("\n\n%s 並沒有養寵物..", userid);
-    } else {
-	time_diff(&xchicken);
-	if (!isdeadth(&xchicken, NULL))
-	{
-	    show_chicken_data(&xchicken);
-#ifdef HAVE_CHICKEN_CS
-            prints("常識點數: %d", xchicken.commonsense);
-#endif
-	    prints("\n\n以上是 %s 的寵物資料..", userid);
-	} else {
-	    move(1, 0);
-	    clrtobot();
-	    prints("\n\n%s 的寵物死掉了...", userid);
-	}
-    }
-    
-    pressanykey();
 }
 
 static int
@@ -162,6 +118,7 @@ new_chicken(void)
     int  price, i;
     int fd;
     char fn[PATHLEN];
+    const short *delta = time_change[(int)mychicken.type];
 
     memset(&mychicken, 0, sizeof(chicken_t));
 
@@ -206,22 +163,12 @@ new_chicken(void)
     }
 
     mychicken.lastvisit = mychicken.birthday = mychicken.cbirth = now;
-    mychicken.food = 0;
-    mychicken.weight = time_change[(int)mychicken.type][WEIGHT] / 3;
-    mychicken.clean = 0;
-    mychicken.run = time_change[(int)mychicken.type][RUN];
-    mychicken.attack = time_change[(int)mychicken.type][ATTACK];
-    mychicken.book = time_change[(int)mychicken.type][BOOK];
-    mychicken.happy = time_change[(int)mychicken.type][HAPPY];
-    mychicken.satis = time_change[(int)mychicken.type][SATIS];
-    mychicken.temperament = time_change[(int)mychicken.type][TEMPERAMENT];
-    mychicken.tiredstrong = 0;
-    mychicken.sick = 0;
-    mychicken.hp = time_change[(int)mychicken.type][WEIGHT];
-    mychicken.hp_max = time_change[(int)mychicken.type][WEIGHT];
-    mychicken.mm = 0;
-    mychicken.mm_max = 0;
-    mychicken.commonsense = 0;
+    mychicken.weight = delta[WEIGHT] / 3;
+    mychicken.book = delta[BOOK];
+    mychicken.happy = delta[HAPPY];
+    mychicken.satis = delta[SATIS];
+    mychicken.hp = delta[WEIGHT];
+    mychicken.hp_max = delta[WEIGHT];
 
     reload_money();
     if (cuser.money < price)
@@ -256,48 +203,56 @@ static void
 show_chicken_stat(const chicken_t * thechicken, int age)
 {
     struct tm ptime;
+    char hp_buf[STRLEN];
+
+    // line 1: status
+    // line 2: buff
+    // line 3: debuff
 
     localtime4_r(&thechicken->birthday, &ptime);
-    prints(" Name :" ANSI_COLOR(33) "%s" ANSI_RESET
+    prints("名字: " ANSI_COLOR(33) "%s" ANSI_RESET
            " (" ANSI_COLOR(32) "%s" ANSI_RESET ")%*s"
-           "生日  :" ANSI_COLOR(31) "%02d" ANSI_RESET "年"
-           ANSI_COLOR(31) "%2d" ANSI_RESET "月"
-           ANSI_COLOR(31) "%2d" ANSI_RESET "日 "
+           "生日:" ANSI_COLOR(33) "%02d" ANSI_RESET "年"
+           ANSI_COLOR(33) "%2d" ANSI_RESET "月"
+           ANSI_COLOR(33) "%2d" ANSI_RESET "日 "
 	   "(" ANSI_COLOR(32) "%s %d歲" ANSI_RESET ")\n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
-           strlen(thechicken->name) >= 15 ? 0 :
-               (int)(15 - strlen(thechicken->name)),
-           "", ptime.tm_year % 100, ptime.tm_mon + 1, ptime.tm_mday,
+           (int)(30 - strlen(thechicken->name) -
+            strlen(chicken_type[(int)thechicken->type])),
+           "", ptime.tm_year, ptime.tm_mon + 1, ptime.tm_mday,
 	   cage[age > 16 ? 16 : age], age);
 
-    prints(" 體:" ANSI_COLOR(33) "%5d/%-5d" ANSI_RESET
-           " 法:" ANSI_COLOR(33) "%5d/%-5d" ANSI_RESET
-           " 攻擊力:" ANSI_COLOR(33) "%-7d" ANSI_RESET
-           " 敏捷  :" ANSI_COLOR(33) "%-7d" ANSI_RESET
-           " 知識 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " \n",
-           thechicken->hp, thechicken->hp_max,
-	   thechicken->mm, thechicken->mm_max,
-	   thechicken->attack, thechicken->run, thechicken->book);
+    snprintf(hp_buf, sizeof(hp_buf), "%d / %d", thechicken->hp,
+             thechicken->hp_max);
 
-    prints(" 快樂 :" ANSI_COLOR(33) "%-7d " ANSI_RESET
-           " 滿意 :" ANSI_COLOR(33) "%-7d " ANSI_RESET
-           " 疲勞  :" ANSI_COLOR(33) "%-7d" ANSI_RESET
-           " 氣質  :" ANSI_COLOR(33) "%-7d " ANSI_RESET
-           "體重 :" ANSI_COLOR(33) "%-5.2f" ANSI_RESET " \n",
-	   thechicken->happy, thechicken->satis, thechicken->tiredstrong,
-	   thechicken->temperament,
-	   ((float)(thechicken->hp_max + (thechicken->weight / 50))) / 100);
+    prints( "體力:" ANSI_COLOR(33) " %-19s" ANSI_RESET
+           " 體重:" ANSI_COLOR(33) "%-7.1f" ANSI_RESET
+           " 食物:" ANSI_COLOR(36) "%-7d" ANSI_RESET
+           " 藥品:" ANSI_COLOR(36) "%-7d" ANSI_RESET
+           " 補品:" ANSI_COLOR(36) "%-7d" ANSI_RESET
+           "\n",
+           hp_buf,
+	   ((float)(thechicken->hp_max + (thechicken->weight / 50))) / 100,
+           thechicken->food,
+           thechicken->medicine,
+	   thechicken->oo);
 
-    prints(" 病氣 :" ANSI_COLOR(33) "%-7d " ANSI_RESET
-           " 乾淨 :" ANSI_COLOR(33) "%-7d " ANSI_RESET
-           " 食物  :" ANSI_COLOR(33) "%-7d" ANSI_RESET
-           " 大補丸:" ANSI_COLOR(33) "%-7d" ANSI_RESET
-           " 藥品 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " \n",
-	   thechicken->sick, thechicken->clean, thechicken->food,
-	   thechicken->oo, thechicken->medicine);
+    prints( "快樂:" ANSI_COLOR(32) "%-7d" ANSI_RESET
+           " 滿意:" ANSI_COLOR(32) "%-7d" ANSI_RESET
+           " 學問:" ANSI_COLOR(32) "%-7d" ANSI_RESET
+           " 髒亂:" ANSI_COLOR(31) "%-7d" ANSI_RESET
+           " 生病:" ANSI_COLOR(31) "%-7d" ANSI_RESET
+           " 疲勞:" ANSI_COLOR(31) "%-7d" ANSI_RESET
+           "\n",
+	   thechicken->happy,
+           thechicken->satis,
+           thechicken->book,
+           thechicken->dirty,
+	   thechicken->sick, 
+           thechicken->tired);
 }
 
-void
+static void
 show_chicken_data(chicken_t * thechicken)
 {
     char            buf[1024];
@@ -306,6 +261,7 @@ show_chicken_data(chicken_t * thechicken)
 	thechicken->birthday = thechicken->cbirth = now - 10 * (60 * 60 * 24);
 	age = 10;
     }
+
     /* Ptt:debug */
     thechicken->type %= NUM_KINDS;
     clear();
@@ -313,12 +269,9 @@ show_chicken_data(chicken_t * thechicken)
     move(1, 0);
 
     show_chicken_stat(thechicken, age);
-
     snprintf(buf, sizeof(buf), CHICKEN_PIC "/%c%d", thechicken->type + 'a',
 	     age > 16 ? 16 : age);
-
     show_chicken_picture(buf);
-
     move(18, 0);
 
     if (thechicken->sick)
@@ -326,11 +279,11 @@ show_chicken_data(chicken_t * thechicken)
     if (thechicken->sick > thechicken->hp / 5)
 	outs(ANSI_COLOR(5;31) "擔心...病重!!" ANSI_RESET);
 
-    if (thechicken->clean > 150)
+    if (thechicken->dirty > 150)
 	outs(ANSI_COLOR(31) "又臭又髒的.." ANSI_RESET);
-    else if (thechicken->clean > 80)
+    else if (thechicken->dirty > 80)
 	outs("有點髒..");
-    else if (thechicken->clean < 20)
+    else if (thechicken->dirty < 20)
 	outs(ANSI_COLOR(32) "很乾淨.." ANSI_RESET);
 
     if (thechicken->weight > thechicken->hp_max * 4)
@@ -342,11 +295,11 @@ show_chicken_data(chicken_t * thechicken)
     else if (thechicken->weight < (thechicken->hp_max / 2))
 	outs("餓了..");
 
-    if (thechicken->tiredstrong > thechicken->hp * 1.7)
+    if (thechicken->tired > thechicken->hp * 1.7)
 	outs(ANSI_COLOR(31) "累得昏迷了..." ANSI_RESET);
-    else if (thechicken->tiredstrong > thechicken->hp)
+    else if (thechicken->tired > thechicken->hp)
 	outs("累了..");
-    else if (thechicken->tiredstrong < thechicken->hp / 4)
+    else if (thechicken->tired < thechicken->hp / 4)
 	outs(ANSI_COLOR(32) "精力旺盛..." ANSI_RESET);
 
     if (thechicken->hp < thechicken->hp_max / 4)
@@ -361,13 +314,15 @@ show_chicken_data(chicken_t * thechicken)
 	outs("不滿足..");
 }
 
+// Actions
+
 static void
 ch_eat(chicken_t *mychicken)
 {
     if (mychicken->food) {
 	mychicken->weight += time_change[(int)mychicken->type][WEIGHT] +
 	mychicken->hp_max / 5;
-	mychicken->tiredstrong +=
+	mychicken->tired +=
 	    time_change[(int)mychicken->type][TIREDSTRONG] / 2;
 	mychicken->hp_max++;
 	mychicken->happy += 5;
@@ -383,8 +338,8 @@ ch_eat(chicken_t *mychicken)
 static void
 ch_clean(chicken_t *mychicken)
 {
-    mychicken->clean = 0;
-    mychicken->tiredstrong +=
+    mychicken->dirty = 0;
+    mychicken->tired +=
 	time_change[(int)mychicken->type][TIREDSTRONG] / 3;
     show_chicken_picture(CHICKEN_PIC "/clean");
     pressanykey();
@@ -397,8 +352,7 @@ ch_guess(chicken_t *mychicken)
 
     mychicken->happy += time_change[(int)mychicken->type][HAPPY] * 1.5;
     mychicken->satis += time_change[(int)mychicken->type][SATIS];
-    mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
-    mychicken->attack += time_change[(int)mychicken->type][ATTACK] / 4;
+    mychicken->tired += time_change[(int)mychicken->type][TIREDSTRONG];
     move(20, 0);
     clrtobot();
     outs("你要出[" ANSI_COLOR(32) "1" ANSI_RESET "]" ANSI_COLOR(33) "剪刀"
@@ -421,7 +375,7 @@ static void
 ch_book(chicken_t *mychicken)
 {
     mychicken->book += time_change[(int)mychicken->type][BOOK];
-    mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
+    mychicken->tired += time_change[(int)mychicken->type][TIREDSTRONG];
     show_chicken_picture(CHICKEN_PIC "/read");
     pressanykey();
 }
@@ -431,7 +385,7 @@ ch_kiss(chicken_t *mychicken)
 {
     mychicken->happy += time_change[(int)mychicken->type][HAPPY];
     mychicken->satis += time_change[(int)mychicken->type][SATIS];
-    mychicken->tiredstrong +=
+    mychicken->tired +=
 	time_change[(int)mychicken->type][TIREDSTRONG] / 2;
     show_chicken_picture(CHICKEN_PIC "/kiss");
     pressanykey();
@@ -440,9 +394,6 @@ ch_kiss(chicken_t *mychicken)
 static void
 ch_hit(chicken_t *mychicken)
 {
-    mychicken->attack += time_change[(int)mychicken->type][ATTACK];
-    mychicken->run += time_change[(int)mychicken->type][RUN];
-    mychicken->mm_max += time_change[(int)mychicken->type][MM_MAX] / 15;
     mychicken->weight -= mychicken->hp_max / 15;
     mychicken->hp -= (int)((float)time_change[(int)mychicken->type][HP_MAX] *
 			   random() / (RAND_MAX + 1.0)) / 2 + 1;
@@ -453,24 +404,26 @@ ch_hit(chicken_t *mychicken)
 	mychicken->happy -= 2;
     if (mychicken->satis > 2)
 	mychicken->satis -= 2;
-    mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
+    mychicken->tired += time_change[(int)mychicken->type][TIREDSTRONG];
     show_chicken_picture(CHICKEN_PIC "/hit");
     pressanykey();
 }
 
-void
+static void
 ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken)
 {
-    int             num = 0;
-    char            buf[5];
+    int num = 0;
+    char buf[5];
+    char prompt[STRLEN];
 
 #ifdef HAVE_CHICKEN_CS
     if (ch_buyitem_cs(money, item, mychicken))
         return;
 #endif
+    snprintf(prompt, sizeof(prompt),
+             "單價 $%d " MONEYNAME "，要買多少份呢: ", money);
 
-    getdata_str(b_lines - 1, 0, "要買多少份呢:",
-		buf, sizeof(buf), NUMECHO, "1");
+    getdata_str(b_lines - 1, 0, prompt, buf, sizeof(buf), NUMECHO, "1");
     num = atoi(buf);
     if (num < 1)
 	return;
@@ -491,7 +444,7 @@ ch_eatoo(chicken_t *mychicken)
 {
     if (mychicken->oo > 0) {
 	mychicken->oo--;
-	mychicken->tiredstrong = 0;
+	mychicken->tired = 0;
 	if (mychicken->happy > 5)
 	    mychicken->happy -= 5;
 	show_chicken_picture(CHICKEN_PIC "/oo");
@@ -535,7 +488,7 @@ ch_kill(chicken_t *mychicken)
 }
 
 static void
-geting_old(int *hp, int *weight, int diff, int age)
+ch_getting_old(int *hp, int *weight, int diff, int age)
 {
     float           ex = 0.9;
 
@@ -559,6 +512,7 @@ time_diff(chicken_t * thechicken)
 {
     int             diff;
     int             theage = ((now - thechicken->cbirth) / (60 * 60 * 24));
+    const short *delta = time_change[(int)thechicken->type];
 
     thechicken->type %= NUM_KINDS;
     diff = (now - thechicken->lastvisit) / 60;
@@ -567,7 +521,7 @@ time_diff(chicken_t * thechicken)
 	return;
 
     if (theage > 13)		/* 老死 */
-	geting_old(&thechicken->hp_max, &thechicken->weight, diff, theage);
+	ch_getting_old(&thechicken->hp_max, &thechicken->weight, diff, theage);
 
     thechicken->lastvisit = now;
     thechicken->weight -= thechicken->hp_max * diff / 540;	/* 體重 */
@@ -575,77 +529,58 @@ time_diff(chicken_t * thechicken)
 	thechicken->sick -= thechicken->weight / 10;	/* 餓得病氣上升 */
 	thechicken->weight = 1;
     }
-    /* 清潔度 */
-    thechicken->clean += diff * time_change[(int)thechicken->type][CLEAN] / 30;
 
     /* 快樂度 */
     thechicken->happy -= diff / 60;
     if (thechicken->happy < 0)
 	thechicken->happy = 0;
-    thechicken->attack -=
-	time_change[(int)thechicken->type][ATTACK] * diff / (60 * 32);
-    if (thechicken->attack < 0)
-	thechicken->attack = 0;
-    /* 攻擊力 */
-    thechicken->run -= time_change[(int)thechicken->type][RUN] * diff / (60 * 32);
-    /* 敏捷 */
-    if (thechicken->run < 0)
-	thechicken->run = 0;
-    thechicken->book -= time_change[(int)thechicken->type][BOOK] * diff / (60 * 32);
-    /* 知識 */
+
+    /* 學問 */
+    thechicken->book -= delta[BOOK] * diff / (60 * 32);
     if (thechicken->book < 0)
 	thechicken->book = 0;
-    /* 氣質 */
-    thechicken->temperament++;
 
-    thechicken->satis -= diff / 60 / 3 * time_change[(int)thechicken->type][SATIS];
     /* 滿意度 */
+    thechicken->satis -= (diff / 180.0 * delta[SATIS]);
     if (thechicken->satis < 0)
 	thechicken->satis = 0;
 
-    /* 髒病的 */
-    if (thechicken->clean > 1000)
-	thechicken->sick += (thechicken->clean - 400) / 10;
+    /* 髒亂 */
+    thechicken->dirty += diff * delta[DIRTY] / 30;
 
+    /* 生病(髒亂/體重) */
+    if (thechicken->dirty > 1000)
+	thechicken->sick += (thechicken->dirty - 400) / 10;
     if (thechicken->weight > 1)
 	thechicken->sick -= diff / 60;
+
     /* 病氣恢護 */
     if (thechicken->sick < 0)
 	thechicken->sick = 0;
-    thechicken->tiredstrong -= diff *
-	time_change[(int)thechicken->type][TIREDSTRONG] / 4;
+    thechicken->tired -= (diff * delta[TIREDSTRONG] / 4);
+
     /* 疲勞 */
-    if (thechicken->tiredstrong < 0)
-	thechicken->tiredstrong = 0;
+    if (thechicken->tired < 0)
+	thechicken->tired = 0;
+
     /* hp_max */
     if (thechicken->hp >= thechicken->hp_max / 2)
-	thechicken->hp_max +=
-	    time_change[(int)thechicken->type][HP_MAX] * diff / (60 * 12);
+	thechicken->hp_max += delta[HP_MAX] * diff / (60 * 12);
     /* hp恢護 */
     if (!thechicken->sick)
-	thechicken->hp +=
-	    time_change[(int)thechicken->type][HP_MAX] * diff / (60 * 6);
+	thechicken->hp += delta[HP_MAX] * diff / (60 * 6);
     if (thechicken->hp > thechicken->hp_max)
 	thechicken->hp = thechicken->hp_max;
-    /* mm_max */
-    if (thechicken->mm >= thechicken->mm_max / 2)
-	thechicken->mm_max +=
-	    time_change[(int)thechicken->type][MM_MAX] * diff / (60 * 8);
-    /* mm恢護 */
-    if (!thechicken->sick)
-	thechicken->mm += diff;
-    if (thechicken->mm > thechicken->mm_max)
-	thechicken->mm = thechicken->mm_max;
 }
 
 static void
 check_sick(chicken_t *mychicken)
 {
     /* 髒病的 */
-    if (mychicken->tiredstrong > mychicken->hp * 0.3 && mychicken->clean > 150)
-	mychicken->sick += (mychicken->clean - 150) / 10;
+    if (mychicken->tired > mychicken->hp * 0.3 && mychicken->dirty > 150)
+	mychicken->sick += (mychicken->dirty - 150) / 10;
     /* 累病的 */
-    if (mychicken->tiredstrong > mychicken->hp * 1.3)
+    if (mychicken->tired > mychicken->hp * 1.3)
 	mychicken->sick += time_change[(int)mychicken->type][SICK];
     /* 病氣太重還做事減hp */
     if (mychicken->sick > mychicken->hp / 5) {
@@ -676,12 +611,12 @@ revive_chicken(chicken_t *thechicken, int admin)
 	thechicken->weight = 2;
 
     thechicken->satis = 2; // 滿意降低
-    thechicken->tiredstrong = thechicken->hp; // 若歸零則過太爽
+    thechicken->tired = thechicken->hp; // 若歸零則過太爽
 
     if (admin)
     {
 	thechicken->sick = 0;
-	thechicken->tiredstrong = 0;
+	thechicken->tired = 0;
     } 
 
     thechicken->lastvisit = now; // really need so?
@@ -691,24 +626,34 @@ revive_chicken(chicken_t *thechicken, int admin)
     return 0;
 }
 
+enum DEADTYPE {
+    DEADTYPE_NOTYET,
+    DEADTYPE_NOHP,
+    DEADTYPE_TOOTIRED,
+    DEADTYPE_TOOFAT,
+    DEADTYPE_NOFOOD,
+    DEADTYPE_NOSATIS,
+    DEADTYPE_UNKNOWN,
+};
+
 static int
 deadtype(const chicken_t * thechicken, chicken_t *mychicken)
 {
     int             i;
 
-    if (thechicken->hp <= 0)	/* hp用盡 */
-	i = 1;
-    else if (thechicken->tiredstrong > thechicken->hp * 3)	/* 操勞過度 */
-	i = 2;
-    else if (thechicken->weight > thechicken->hp_max * 5)	/* 肥胖過度 */
-	i = 3;
+    if (thechicken->hp <= 0) // hp用盡
+	i = DEADTYPE_NOHP;
+    else if (thechicken->tired > thechicken->hp * 3) // 操勞過度
+	i = DEADTYPE_TOOTIRED;
+    else if (thechicken->weight > thechicken->hp_max * 5) // 肥胖過度
+	i = DEADTYPE_TOOFAT;
     else if (thechicken->weight == 1 &&
-	     thechicken->sick > thechicken->hp_max / 4)
-	i = 4;			/* 餓死了 */
-    else if (thechicken->satis <= 0)	/* 很不滿意 */
-	i = 5;
+	     thechicken->sick > thechicken->hp_max / 4) // 餓死了
+	i = DEADTYPE_NOFOOD;
+    else if (thechicken->satis <= 0) // 很不滿意 
+	i = DEADTYPE_NOSATIS;
     else
-	return 0;
+	return DEADTYPE_NOTYET;
 
     if (thechicken == mychicken) {
 	log_filef(CHICKENLOG, LOG_CREAT,
@@ -721,40 +666,36 @@ deadtype(const chicken_t * thechicken, chicken_t *mychicken)
     return i;
 }
 
-int
-showdeadth(int type)
+static int
+showdeath(int type)
 {
-    switch (type) {
-	case 1:
-	more(CHICKEN_PIC "/nohp", YEA);
-	break;
-    case 2:
-	more(CHICKEN_PIC "/tootired", YEA);
-	break;
-    case 3:
-	more(CHICKEN_PIC "/toofat", YEA);
-	break;
-    case 4:
-	more(CHICKEN_PIC "/nofood", YEA);
-	break;
-    case 5:
-	more(CHICKEN_PIC "/nosatis", YEA);
-	break;
-    default:
-	return 0;
-    }
+    char fn[MAXPATHLEN];
+    const char *death_file_names[] = {
+        "nohp",
+        "tootired",
+        "toofat",
+        "nofood",
+        "nosatis",
+    };
+    if (type <= DEADTYPE_NOTYET || type >= DEADTYPE_UNKNOWN)
+        return 0;
+
+    snprintf(fn, sizeof(fn), CHICKEN_PIC "/%s", death_file_names[type - 1]);
+    more(fn, YEA);
+    // "deadth" here is a typo, but let's take it (otherwise we need to also
+    // change resource file name).
     more(CHICKEN_PIC "/deadth", YEA);
     return type;
 }
 
 static int
-isdeadth(const chicken_t * thechicken, chicken_t *mychicken)
+isdeath(const chicken_t * thechicken, chicken_t *mychicken)
 {
     int             i;
 
     if (!(i = deadtype(thechicken, mychicken)))
 	return 0;
-    return showdeadth(i);
+    return showdeath(i);
 }
 
 static void
@@ -762,8 +703,8 @@ ch_changename(chicken_t *mychicken)
 {
     char      newname[20] = "";
 
-    getdata_str(b_lines - 1, 0, "嗯..改個好名字吧:", newname, 18, DOECHO,
-		mychicken->name);
+    getdata_str(b_lines - 1, 0, "改個好名字吧: ", newname, sizeof(newname)-1,
+                DOECHO, mychicken->name);
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
@@ -796,23 +737,22 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 
     prints("\n" ANSI_COLOR(33) "(" ANSI_COLOR(37) "1" ANSI_COLOR(33) ")清理 "
            "(" ANSI_COLOR(37) "2" ANSI_COLOR(33) ")吃飯 "
-	   "(" ANSI_COLOR(37) "3" ANSI_COLOR(33) ")猜拳 "
+	   "(" ANSI_COLOR(37) "3" ANSI_COLOR(33) ")猜拳   "
            "(" ANSI_COLOR(37) "4" ANSI_COLOR(33) ")唸書 "
 	   "(" ANSI_COLOR(37) "5" ANSI_COLOR(33) ")親他 "
            "(" ANSI_COLOR(37) "6" ANSI_COLOR(33) ")打他 "
-	   "(" ANSI_COLOR(37) "7" ANSI_COLOR(33) ")買%s$%d "
-           "(" ANSI_COLOR(37) "8" ANSI_COLOR(33) ")吃補丸\n"
-	   "(" ANSI_COLOR(37) "9" ANSI_COLOR(33) ")吃病藥 "
-           "(" ANSI_COLOR(37) "o" ANSI_COLOR(33) ")買大補丸$100 "
-	   "(" ANSI_COLOR(37) "m" ANSI_COLOR(33) ")買藥$10 "
+	   "(" ANSI_COLOR(37) "7" ANSI_COLOR(33) ")買%s "
+           "(" ANSI_COLOR(37) "8" ANSI_COLOR(33) ")吃補品\n"
+	   "(" ANSI_COLOR(37) "9" ANSI_COLOR(33) ")吃藥 "
+	   "(" ANSI_COLOR(37) "m" ANSI_COLOR(33) ")買藥 "
+           "(" ANSI_COLOR(37) "o" ANSI_COLOR(33) ")買補品 "
            "(" ANSI_COLOR(37) "k" ANSI_COLOR(33) ")棄養 "
 	   "(" ANSI_COLOR(37) "n" ANSI_COLOR(33) ")改名 "
 #ifdef HAVE_CHICKEN_CS
 	   "(" ANSI_COLOR(37) "s" ANSI_COLOR(33) ")常識問答 "
 #endif
 	   "(" ANSI_COLOR(37) "q" ANSI_COLOR(33) ")離開:" ANSI_RESET,
-	   chicken_food[(int)mychicken->type],
-	   food_price[(int)mychicken->type]);
+	   chicken_food[(int)mychicken->type]);
     do {
 	switch (ch = vkey()) {
 	case '1':
@@ -951,6 +891,36 @@ chicken_toggle_death(const char *uid)
     free_live_chicken(mychicken);
 }
 
+void
+chicken_query(const char *userid)
+{
+    chicken_t xchicken;
+
+    if (!load_chicken(userid, &xchicken))
+    {
+	move(1, 0);
+	clrtobot();
+	prints("\n\n%s 並沒有養寵物..", userid);
+    } else {
+	time_diff(&xchicken);
+	if (!isdeath(&xchicken, NULL))
+	{
+	    show_chicken_data(&xchicken);
+#ifdef HAVE_CHICKEN_CS
+            prints("常識點數: %d", xchicken.commonsense);
+#endif
+	    prints("\n\n以上是 %s 的寵物資料..", userid);
+	} else {
+	    move(1, 0);
+	    clrtobot();
+	    prints("\n\n%s 的寵物死掉了...", userid);
+	}
+    }
+    
+    pressanykey();
+}
+
+
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
 int
@@ -986,7 +956,7 @@ chicken_main(void)
     age = ((now - mychicken->cbirth) / (60 * 60 * 24));
     do {
 	time_diff(mychicken);
-	if (isdeadth(mychicken, mychicken))
+	if (isdeath(mychicken, mychicken))
 	    break;
 	show_chicken_data(mychicken);
     } while (select_menu(age, mychicken));
