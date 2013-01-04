@@ -423,8 +423,10 @@ show_menu(int menu_index, const commands_t * p)
     move(row, 0);
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
-            prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_RESET ")%s\n",
-                   menu_column, "", s[0], s+1);
+            prints("%*s  (%s%c" ANSI_RESET ")%s\n",
+                   menu_column, "", 
+                   (HasUserFlag(UF_MENU_LIGHTBAR) ? ANSI_COLOR(36) :
+                    ANSI_COLOR(1;36)), s[0], s+1);
 	}
 	n++;
     }
