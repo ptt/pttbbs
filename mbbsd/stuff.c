@@ -264,9 +264,16 @@ search_num(int ch, int max)
 void
 cursor_show(int row, int column)
 {
-    move(row, column);
-    outs(STR_CURSOR);
-    move(row, column + 1);
+    if (HasUserFlag(UF_MENU_LIGHTBAR)) {
+        grayout(row, row + 1, GRAYOUT_COLORBOLD);
+        move(row, column);
+        outs(STR_CURSOR2);
+        move(row, column + 1);
+    } else {
+        move(row, column);
+        outs(STR_CURSOR);
+        move(row, column + 1);
+    }
 }
 
 // TODO
@@ -276,6 +283,9 @@ cursor_clear(int row, int column)
 {
     move(row, column);
     outs(STR_UNCUR);
+    if (HasUserFlag(UF_MENU_LIGHTBAR)) {
+        grayout(row, row + 1, GRAYOUT_COLORNORM);
+    }
 }
 
 // TODO
@@ -287,8 +297,7 @@ cursor_key(int row, int column)
 
     cursor_show(row, column);
     ch = vkey();
-    move(row, column);
-    outs(STR_UNCUR);
+    cursor_clear(row, column);
     return ch;
 }
 

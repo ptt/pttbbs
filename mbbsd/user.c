@@ -442,6 +442,7 @@ void Customize(void)
 	UF_FAV_NOHILIGHT,
 	UF_NO_MODMARK	,
 	UF_COLORED_MODMARK,
+        UF_MENU_LIGHTBAR,
 #ifdef DBCSAWARE
 	UF_DBCS_AWARE,
 	UF_DBCS_DROP_REPEAT,
@@ -466,6 +467,9 @@ void Customize(void)
 	"DBCS       自動偵測雙位元字集(如全型中文)",
 	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
+#endif
+#ifdef USE_PFTERM
+        "MENU       (實驗性)啟用光棒選單系統",
 #endif
 #ifdef PLAY_ANGEL
         "ANGEL      (小天使)啟用新的神諭呼叫器設定界面",

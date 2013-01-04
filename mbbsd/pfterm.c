@@ -2231,48 +2231,42 @@ void
 grayout(int y, int end, int level)
 {
     char grattr = FTATTR_DEFAULT;
+    int x;
 
     y   = ranged(y,   0, ft.rows-1);
     end = ranged(end, 0, ft.rows-1);
 
-    if (level == GRAYOUT_COLORBOLD)
-    {
-        int x = 0;
-        for (; y < end; y++)
-        {
-            for (x = 0; x < ft.cols-1; x++)
-                FTAMAP[y][x] |= FTATTR_BOLD;
-        }
-        return;
+    // modify attribute based on existing data.
+    switch (level) {
+        case GRAYOUT_COLORBOLD:
+            for (; y < end; y++) {
+                for (x = 0; x < ft.cols-1; x++)
+                    FTAMAP[y][x] |= FTATTR_BOLD;
+            }
+            return;
+
+        case GRAYOUT_COLORNORM:
+            for (; y < end; y++) {
+                for (x = 0; x < ft.cols-1; x++)
+                    FTAMAP[y][x] &= ~(FTATTR_BLINK | FTATTR_BOLD);
+            }
+            return;
     }
 
-    if (level == GRAYOUT_COLORNORM)
-    {
-        int x = 0;
-        for (; y < end; y++)
-        {
-            for (x = 0; x < ft.cols-1; x++)
-                FTAMAP[y][x] &= ~(FTATTR_BLINK | FTATTR_BOLD);
-        }
-        return;
-    }
+    // filling with current attributes.
+    switch (level) {
+        case GRAYOUT_BOLD:
+            grattr |= FTATTR_BOLD;
+            break;
 
-    if (level == GRAYOUT_BOLD)
-    {
-        grattr |= FTATTR_BOLD;
-    }
-    else if (level == GRAYOUT_DARK)
-    {
-        grattr = FTATTR_MAKE(0,0);
-        grattr |= FTATTR_BOLD;
-    } 
-    else if (level == GRAYOUT_NORM)
-    {
-        // normal text
-    } 
-    else 
-    {
-        // not supported yet
+        case GRAYOUT_DARK:
+            grattr = FTATTR_MAKE(0,0);
+            grattr |= FTATTR_BOLD;
+            break;
+
+        case GRAYOUT_NORM:
+            // normal text
+            break;
     }
 
     for (; y <= end; y++)
