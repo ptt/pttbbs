@@ -118,7 +118,7 @@ new_chicken(void)
     int  price, i;
     int fd;
     char fn[PATHLEN];
-    const short *delta = time_change[(int)mychicken.type];
+    const short *delta = NULL;
 
     memset(&mychicken, 0, sizeof(chicken_t));
 
@@ -162,6 +162,7 @@ new_chicken(void)
 		sizeof(mychicken.name), DOECHO);
     }
 
+    delta = time_change[(int)mychicken.type];
     mychicken.lastvisit = mychicken.birthday = mychicken.cbirth = now;
     mychicken.weight = delta[WEIGHT] / 3;
     mychicken.book = delta[BOOK];
