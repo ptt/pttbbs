@@ -780,7 +780,12 @@ readdoent(int num, fileheader_t * ent)
     }
 
     // print author
-    if(isonline) outs(ANSI_COLOR(1));
+    if(isonline) {
+        if (HasUserFlag(UF_MENU_LIGHTBAR))
+            outs(ANSI_COLOR(36));
+        else
+            outs(ANSI_COLOR(1));
+    }
     prints("%-13.12s", ent->owner);
     if(isonline) outs(ANSI_RESET);
 
@@ -790,7 +795,10 @@ readdoent(int num, fileheader_t * ent)
     // print subject prefix
     ent->title[sizeof(ent->title)-1] = 0;
     if (strcmp(currtitle, title) == 0) {
-        prints(ANSI_COLOR(1;3%c), color);
+        if (HasUserFlag(UF_MENU_LIGHTBAR))
+            prints(ANSI_COLOR(3%c), color);
+        else
+            prints(ANSI_COLOR(1;3%c), color);
         outs(mark);
         outc(' ');
         special = 1;
@@ -799,7 +807,8 @@ readdoent(int num, fileheader_t * ent)
         outc(' ');
         if (special) {
             int len_announce = strlen(TN_ANNOUNCE);
-            outs(ANSI_COLOR(1));
+            if (!HasUserFlag(UF_MENU_LIGHTBAR))
+                outs(ANSI_COLOR(1));
             outs(TN_ANNOUNCE);
             outs(ANSI_RESET);
             title += len_announce;
