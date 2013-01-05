@@ -745,8 +745,12 @@ readdoent(int num, fileheader_t * ent)
     else strcpy(recom,"0m  "); 
 
     /* start printing */
-    if (ent->filemode & FILE_BOTTOM)
-	outs("  " ANSI_COLOR(1;33) "  ¡¹ " ANSI_RESET);
+    if (ent->filemode & FILE_BOTTOM) {
+        if (HasUserFlag(UF_MENU_LIGHTBAR))
+            outs("  " ANSI_COLOR(33) "  ¡¹ " ANSI_RESET);
+        else
+            outs("  " ANSI_COLOR(1;33) "  ¡¹ " ANSI_RESET);
+    }
     else
 	/* recently we found that many boards have >10k articles,
 	 * so it's better to use 5+2 (2 for cursor marker) here.

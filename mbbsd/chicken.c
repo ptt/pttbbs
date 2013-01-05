@@ -726,7 +726,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
     reload_money();
     move(19, 0);
 
-    vbarf(ANSI_COLOR(44;37) " 錢 :" ANSI_COLOR(33) " %-10d" 
+    vbarf(ANSI_COLOR(44;37) " " MONEYNAME ":" ANSI_COLOR(33) " %-10d" 
 #ifdef HAVE_CHICKEN_CS
           ANSI_COLOR(37) "  常識點數 :" ANSI_COLOR(33) " %-10d"
 #endif
