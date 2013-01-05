@@ -2240,15 +2240,21 @@ grayout(int y, int end, int level)
     switch (level) {
         case GRAYOUT_COLORBOLD:
             for (; y < end; y++) {
-                for (x = 0; x < ft.cols-1; x++)
-                    FTAMAP[y][x] |= FTATTR_BOLD;
+                for (x = 0; x < ft.cols-1; x++) {
+                    grattr = ((FTAMAP[y][x] & FTATTR_BOLD) ? FTATTR_BLINK :
+                              FTATTR_BOLD);
+                    FTAMAP[y][x] |= grattr;
+                }
             }
             return;
 
         case GRAYOUT_COLORNORM:
             for (; y < end; y++) {
-                for (x = 0; x < ft.cols-1; x++)
-                    FTAMAP[y][x] &= ~(FTATTR_BLINK | FTATTR_BOLD);
+                for (x = 0; x < ft.cols-1; x++) {
+                    grattr = (FTAMAP[y][x] & FTATTR_BLINK) ? FTATTR_BOLD : 0;
+                    FTAMAP[y][x] = (FTAMAP[y][x] & ~(FTATTR_BLINK |
+                                                     FTATTR_BOLD)) | grattr;
+                }
             }
             return;
     }

@@ -268,7 +268,7 @@ cursor_show(int row, int column)
         grayout(row, row + 1, GRAYOUT_COLORBOLD);
         move(row, column);
         outs(STR_CURSOR2);
-        move(row, column + 1);
+        move(row, column);
     } else {
         move(row, column);
         outs(STR_CURSOR);

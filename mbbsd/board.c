@@ -1233,14 +1233,14 @@ brdlist_foot(void)
 static inline const char * 
 make_class_color(char *name)
 {
-    /* 34 is too dark */
+    /* 0;34 is too dark */
+    uint32_t index = (((uint32_t)name[0] + name[1] + name[2] + name[3]) & 0x07);
     const char *colorset[8] = {"", ANSI_COLOR(32),
 	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34), 
 	ANSI_COLOR(1), ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
     const char *colorset2[8] = {"", ANSI_COLOR(32),
-	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34), 
+	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(35), 
 	"", ANSI_COLOR(32), ANSI_COLOR(33)};
-    uint32_t index = (((uint32_t)name[0] + name[1] + name[2] + name[3]) & 0x07);
 
     return HasUserFlag(UF_MENU_LIGHTBAR) ? colorset2[index] : colorset[index];
 }
@@ -1289,7 +1289,9 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
- 	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "£¾" ANSI_RESET};
+ 	char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "£¾" ANSI_RESET};
+        if (HasUserFlag(UF_MENU_LIGHTBAR))
+            unread[1] = ANSI_COLOR(31) "£¾" ANSI_RESET;
  
 	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
 

@@ -754,8 +754,12 @@ readdoent(int num, fileheader_t * ent)
 	 */
 	prints("%7d", num);
 
-    prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET, 
-	    typeattr, type, recom);
+    if (HasUserFlag(UF_MENU_LIGHTBAR))
+        prints(" %s%c" ESC_STR "[0;3%4.4s" ANSI_RESET, 
+               typeattr, type, recom);
+    else
+        prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET, 
+               typeattr, type, recom);
 
     if(IS_LISTING_MONEY)
     {
