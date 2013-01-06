@@ -350,11 +350,6 @@ angel_order_song(char *receiver, size_t sz_receiver) {
     if (!*cuser.myangel)
         return NULL;
 
-    // ensure if my angel is still valid.
-    if (passwd_load_user(cuser.myangel, &udata) <= 0 ||
-        !(udata.userlevel & PERM_ANGEL))
-        return NULL;
-
 #ifdef ANGEL_ORDER_SONG_DAY
     // check day
     {
@@ -364,6 +359,11 @@ angel_order_song(char *receiver, size_t sz_receiver) {
             return NULL;
     }
 #endif
+
+    // ensure if my angel is still valid.
+    if (passwd_load_user(cuser.myangel, &udata) <= 0 ||
+        !(udata.userlevel & PERM_ANGEL))
+        return NULL;
 
     angel_nick = angel_get_nick();
     snprintf(prompt, sizeof(prompt), "要留言給你的%s小天使嗎? [y/N]: ",
