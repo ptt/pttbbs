@@ -275,44 +275,48 @@ show_chicken_data(chicken_t * thechicken)
     show_chicken_picture(buf);
     move(18, 0);
 
-    if (thechicken->sick)
-	outs("生病了...");
+    // status line - try harder to not exceed column 80.
+
     if (thechicken->sick > thechicken->hp / 5)
-	outs(ANSI_COLOR(5;31) "擔心...病重!!" ANSI_RESET);
+	outs(ANSI_COLOR(5;31) "病重!" ANSI_RESET);
+    else if (thechicken->sick)
+	outs("生病了.");
 
     if (thechicken->dirty > 150)
-	outs(ANSI_COLOR(31) "又臭又髒的.." ANSI_RESET);
+	outs(ANSI_COLOR(31) "又臭又髒." ANSI_RESET);
     else if (thechicken->dirty > 80)
-	outs("有點髒..");
+	outs("有點髒.");
     else if (thechicken->dirty < 20)
-	outs(ANSI_COLOR(32) "很乾淨.." ANSI_RESET);
+	outs(ANSI_COLOR(32) "很乾淨." ANSI_RESET);
 
     if (thechicken->weight > thechicken->hp_max * 4)
-	outs(ANSI_COLOR(31) "快飽死了!." ANSI_RESET);
+	outs(ANSI_COLOR(31) "飽死了." ANSI_RESET);
     else if (thechicken->weight > thechicken->hp_max * 3)
-	outs(ANSI_COLOR(32) "飽嘟嘟.." ANSI_RESET);
+	outs(ANSI_COLOR(32) "飽嘟嘟." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 4))
-	outs(ANSI_COLOR(31) "快餓死了!.." ANSI_RESET);
+	outs(ANSI_COLOR(31) "餓死了." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 2))
-	outs("餓了..");
+	outs("餓了.");
 
     if (thechicken->tired > thechicken->hp * 1.7)
-	outs(ANSI_COLOR(31) "累得昏迷了..." ANSI_RESET);
+	outs(ANSI_COLOR(31) "累到昏迷." ANSI_RESET);
     else if (thechicken->tired > thechicken->hp)
-	outs("累了..");
+	outs("累了.");
     else if (thechicken->tired < thechicken->hp / 4)
-	outs(ANSI_COLOR(32) "精力旺盛..." ANSI_RESET);
+	outs(ANSI_COLOR(32) "精力旺盛." ANSI_RESET);
 
     if (thechicken->hp < thechicken->hp_max / 4)
-	outs(ANSI_COLOR(31) "體力用盡..奄奄一息.." ANSI_RESET);
+	outs(ANSI_COLOR(31) "體力用盡." ANSI_RESET);
+
     if (thechicken->happy > 500)
-	outs(ANSI_COLOR(32) "很快樂.." ANSI_RESET);
+	outs(ANSI_COLOR(32) "很快樂." ANSI_RESET);
     else if (thechicken->happy < 100)
-	outs("不快樂..");
+	outs("不快樂.");
+
     if (thechicken->satis > 500)
-	outs(ANSI_COLOR(32) "很滿足.." ANSI_RESET);
+	outs(ANSI_COLOR(32) "很滿足." ANSI_RESET);
     else if (thechicken->satis < 50)
-	outs("不滿足..");
+	outs("不滿足.");
 }
 
 // Actions
