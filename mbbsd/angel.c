@@ -355,6 +355,16 @@ angel_order_song(char *receiver, size_t sz_receiver) {
         !(udata.userlevel & PERM_ANGEL))
         return NULL;
 
+#ifdef ANGEL_ORDER_SONG_DAY
+    // check day
+    {
+        struct tm tm;
+        localtime4_r(&now, &tm);
+        if (tm.tm_mday != ANGEL_ORDER_SONG_DAY)
+            return NULL;
+    }
+#endif
+
     angel_nick = angel_get_nick();
     snprintf(prompt, sizeof(prompt), "要留言給你的%s小天使嗎? [y/N]: ",
              angel_nick);
