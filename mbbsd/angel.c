@@ -661,6 +661,7 @@ static inline void
 AngelNotOnline(){
     char buf[PATHLEN];
     FILE *fp;
+    int y = 0;
 
     // use cached angel data (assume already called before.)
     // angel_reload_nick();
@@ -679,42 +680,25 @@ AngelNotOnline(){
 	NoAngelFound(NULL);
 	return;
     }
-    clear();
-    showtitle("小天使留言", BBSNAME);
-    move(4, 0);
-    buf[0] = 0;
-    prints("您的%s小天使現在不在線上", _myangel_nick);
 
-    outs("\n祂留言給你：\n");
-    outs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤" ANSI_COLOR(37) ""
-	    "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
-    outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
-	    "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
+    showtitle("小天使留言", BBSNAME);
+    move(2, 0);
+    buf[0] = 0;
+    prints("您的%s小天使現在不在線上，祂留言給你：\n", _myangel_nick);
+    show_file("etc/angel_usage2", vgety(), b_lines - vgety(),
+              SHOWFILE_ALLOW_ALL);
     fgets(buf, sizeof(buf), fp); // skip first line: entry for nick
+    y = 5;
+
     while (fgets(buf, sizeof(buf), fp))
     {
 	chomp(buf);
-	prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
+        move_ansi(y++, 4);
+        outs(buf);
     }
     fclose(fp);
-    outs(ANSI_COLOR(1;31) "╰┬──────────────────────"
-	    "─────────────┬╯" ANSI_RESET "\n");
-    outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
-	    "──────────────┴⊙" ANSI_RESET "\n");
-    prints("%55s%s", "留言日期: ", Cdatelite(&_myangel_touched));
-
-
-    move(b_lines - 4, 0);
-#ifdef BN_NEWBIE
-    outs("臨時找不到小天使可到新手版(" BN_NEWBIE ")\n"
-#endif
-#ifdef BN_ANGELPRAY
-	 "想留言給小天使請到許\願版(" BN_ANGELPRAY ")\n"
-#endif
-#ifdef BN_ASKBOARD
-	 "想找看板在哪的話可到(" BN_ASKBOARD ")\n"
-#endif
-	 "請先在各板上尋找答案或按 Ctrl-P 發問");
+    move_ansi(9, 43);
+    prints("留言日期: %s\n", Cdatelite(&_myangel_touched));
 
     // Query if user wants to go to newbie board
     switch(tolower(vmsg("想換成目前在線上的小天使請按 h, "
