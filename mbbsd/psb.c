@@ -66,7 +66,9 @@ psb_default_cursor(int y, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
 #ifdef USE_PFTERM
     outs("¡´\b");
 #else
-    cursor_show(y, 0);
+    // simulate but do not call cursor_show.
+    mvouts(y, 0, STR_CURSOR);
+    move(y, 1);
 #endif
     return 0;
 }
