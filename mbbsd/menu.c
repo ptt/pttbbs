@@ -565,14 +565,17 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    show_status();
 	    refscreen = NA;
 	}
-
+	cursor_clear(decide_menu_row(cmdtable) + pos, menu_column);
 	n = pos = -1;
 	while (++n <= (lastcmdptr = i))
 	    if (CheckMenuPerm(cmdtable[n].level))
 		pos++;
 
-        cmd = cursor_key(decide_menu_row(cmdtable) + pos, menu_column);
-    } while (cmd != EOF || refscreen);
+        // If we want to replace cursor_show by cursor_key, it must be inside
+        // while(expr) othrewise calling 'continue' inside for-loop won't wait
+        // for key.
+	cursor_show(decide_menu_row(cmdtable) + pos, menu_column);
+    } while (((cmd = vkey()) != EOF) || refscreen);
 
     abort_bbs(0);
 }
