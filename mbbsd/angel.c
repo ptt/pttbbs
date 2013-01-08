@@ -5,7 +5,8 @@
 // PTT-BBS Angel System
 
 #include "daemons.h"
-#define FN_ANGELMSG "angelmsg"
+#define FN_ANGELMSG     "angelmsg"
+#define FN_ANGELMSG2    "angelmsg2"
 
 static const char
 *PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
@@ -400,7 +401,7 @@ a_angelmsg(){
     FILE* fp;
 
     move(1, 0); clrtobot();
-    setuserfile(buf, "angelmsg");
+    setuserfile(buf, FN_ANGELMSG);
     fp = fopen(buf, "r");
     if (fp) {
 	i = 0;
@@ -445,7 +446,7 @@ a_angelmsg(){
     } while (buf[0] == 'e');
     if (buf[0] == 'q')
 	return 0;
-    setuserfile(buf, "angelmsg");
+    setuserfile(buf, FN_ANGELMSG);
     if (msg[0][0] == 0)
 	unlink(buf);
     else {
@@ -583,6 +584,32 @@ angel_reject_me(userinfo_t * uin){
     return 0;
 }
 
+static void
+angel_display_message(const char *template_fn,
+                      const char *message_fn,
+                      int skip_lines,
+                      int row, int col,
+                      int date_row, int date_col) {
+    char buf[ANSILINELEN];
+    FILE *fp = fopen(message_fn, "rt");
+    time4_t ts = dasht(message_fn);
+
+    show_file(template_fn, vgety(), b_lines - vgety(), SHOWFILE_ALLOW_ALL);
+    while (skip_lines-- > 0)
+        fgets(buf, sizeof(buf), fp);
+
+    while (fgets(buf, sizeof(buf), fp))
+    {
+	chomp(buf);
+        move_ansi(row++, col);
+        outs(buf);
+    }
+    fclose(fp);
+    move_ansi(date_row, date_col);
+    outs(ANSI_RESET);
+    outs(Cdatelite(&ts));
+}
+
 static int
 FindAngel(void){
 
@@ -659,9 +686,7 @@ NoAngelFound(const char* msg){
 
 static inline void
 AngelNotOnline(){
-    char buf[PATHLEN];
-    FILE *fp;
-    int y = 0;
+    char msg_fn[PATHLEN];
 
     // use cached angel data (assume already called before.)
     // angel_reload_nick();
@@ -672,33 +697,16 @@ AngelNotOnline(){
     }
 
     // valid angelmsg is ready for being loaded.
-    sethomefile(buf, cuser.myangel, FN_ANGELMSG);
-    fp = fopen(buf, "rt");
-    if (!fp)
-    {
-	// safer
+    sethomefile(msg_fn, cuser.myangel, FN_ANGELMSG);
+    if (dashs(msg_fn) < 1) {
 	NoAngelFound(NULL);
 	return;
     }
 
     showtitle("小天使留言", BBSNAME);
     move(2, 0);
-    buf[0] = 0;
     prints("您的%s小天使現在不在線上，祂留言給你：\n", _myangel_nick);
-    show_file("etc/angel_usage2", vgety(), b_lines - vgety(),
-              SHOWFILE_ALLOW_ALL);
-    fgets(buf, sizeof(buf), fp); // skip first line: entry for nick
-    y = 5;
-
-    while (fgets(buf, sizeof(buf), fp))
-    {
-	chomp(buf);
-        move_ansi(y++, 4);
-        outs(buf);
-    }
-    fclose(fp);
-    move_ansi(9, 43);
-    prints("留言日期: %s\n", Cdatelite(&_myangel_touched));
+    angel_display_message("etc/angel_usage2", msg_fn, 1, 5, 4, 9, 53);
 
     // Query if user wants to go to newbie board
     switch(tolower(vmsg("想換成目前在線上的小天使請按 h, "
@@ -723,8 +731,8 @@ TalkToAngel(){
     static char AngelPermChecked = 0;
     static userinfo_t* lastuent = NULL;
     userinfo_t *uent;
-    static int is_new_angel = 0;
     int supervisor = 0;
+    char msg_fn[PATHLEN];
 
     if (strcmp(cuser.myangel, "-") == 0){
 	NoAngelFound("你沒有小天使");
@@ -742,9 +750,6 @@ TalkToAngel(){
 
     if (cuser.myangel[0] == 0) {
         int ret = FindAngel();
-#ifdef ANGEL_PREVENT_MALICIOUS_CHANGE
-        is_new_angel = 1;
-#endif
         if (ret <= 0) {
             lastuent = NULL;
             NoAngelFound(
@@ -791,25 +796,23 @@ TalkToAngel(){
 	}
     }
 
-    more("etc/angel_usage", NA);
+    sethomefile(msg_fn, cuser.myangel, FN_ANGELMSG2);
+    if (dashs(msg_fn) > 0) {
+        // render per-user message 
+        move(1, 0);
+        angel_display_message("etc/angel_usage3", msg_fn, 0, 2, 4, 6, 24);
+    } else {
+        more("etc/angel_usage", NA);
+    }
 
-    /* 這段話或許可以在小天使回答問題時 show 出來
-    move(b_lines - 1, 0);
-    outs("現在你的id受到保密，回答你問題的小天使並不知道你是誰       \n"
-         "你可以選擇不向對方透露自己身份來保護自己                   ");
-	 */
-
-    // 為避免某些人找了小天使但又不送出訊息，在這個 stage 不顯示 nick.
+    // 為避免某些人找了小天使但又不送出訊息，在這個階段不顯示 nick.
     {
 	char xnick[IDLEN+1], prompt[IDLEN*2];
-	snprintf(xnick, sizeof(xnick), "%s小天使",
-                 is_new_angel ? "" : _myangel_nick);
-	snprintf(prompt, sizeof(prompt), "問%s小天使: ",
-                 is_new_angel ? "" : _myangel_nick);
+	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
+	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
 	// if success, record uent.
 	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent)) {
 	    lastuent = uent;
-            is_new_angel = 0;
         }
     }
     return;
