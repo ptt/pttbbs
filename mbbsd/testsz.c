@@ -2,21 +2,49 @@
 #include <sys/types.h>
 #include "bbs.h"
 
+void
+ensure(size_t sz1, size_t sz2, const char *name, const char *reason) {
+    if (sz1 == sz2) {
+        printf("sizeof(%s): %zu (OK)\n", name, sz1);
+        return;
+    }
+    printf("%s: size unmatch (expected: %zu, actual: %zu).\n",
+           name, sz1, sz2);
+    if (reason && *reason)
+        printf(" *** %s\n", reason);
+    exit(1);
+}
+
+void
+check(size_t sz, const char *name) {
+    printf("sizeof(%s): %zu\n", name, sz);
+}
+
+#define ENSURE(x, y) ensure(sizeof(x), y, #x, "")
+#define ENSURE3(x, y, reason) ensure(sizeof(x), y, #x, reason)
+#define CHECK(x) check(sizeof(x), #x)
+
 int main()
 {
-    printf("sizeof(size_t)     = %lu\n", sizeof(size_t));
-    printf("sizeof(off_t)      = %lu\n", sizeof(off_t));
-    printf("sizeof(int)        = %lu\n", sizeof(int));
-    printf("sizeof(long)       = %lu\n", sizeof(long));
-    printf("sizeof(time_t)     = %lu\n", sizeof(time_t));
-    printf("sizeof(time4_t)    = %lu %s\n", sizeof(time4_t), sizeof(time4_t) == 4 ? "" : "ERROR!!!!!");
-    printf("sizeof(userec_t)   = %lu\n", sizeof(userec_t));
-    printf("sizeof(fileheader_t)   = %lu\n", sizeof(fileheader_t));
-    printf("sizeof(boardheader_t)  = %lu\n", sizeof(boardheader_t));
-    printf("sizeof(chicken_t)  = %lu\n", sizeof(chicken_t));
-    printf("sizeof(userinfo_t) = %lu\n", sizeof(userinfo_t));
-    printf("sizeof(msgque_t)   = %lu\n", sizeof(msgque_t));
-    printf("sizeof(SHM_t)      = %lu\n", sizeof(SHM_t));
-    printf("SHMSIZE            = %lu\n", SHMSIZE);
+    // System type length.
+    CHECK(size_t);
+    CHECK(size_t);
+    CHECK(off_t);
+    CHECK(int);
+    CHECK(long);
+    CHECK(time_t);
+
+    // Per-site data length
+    CHECK(userinfo_t);
+    CHECK(msgque_t);
+    CHECK(SHM_t);
+    printf("SHMSIZE = %lu\n", SHMSIZE);
+
+    // Data types that need to be checked.
+    ENSURE3(time4_t, 4, "Please define TIMET64 in your pttbbs.conf.");
+    ENSURE(userec_t, 512);
+    ENSURE(fileheader_t, 128);
+    ENSURE(boardheader_t, 256);
+    ENSURE(chicken_t, 128);
     return 0;
 }

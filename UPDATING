@@ -23,6 +23,12 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5748: [typecheck]
+Makefile 現在會多執行 mbbsd/testsz，並在其中確保 userec_t 等結構大小正確
+（主要是確認 time4_t 與其它自行定義的變數沒有導致data size不合）
+如果你已開的站遇到 time4_t 不合(ex, 在 64bit 系統上忘了定義 TIMET64) 請考慮
+是要砍站重開(重建所有資料)或是自己手動寫轉換程式。
+
 r5734: [cleanup]
 userec_t 裡很多東西以後可能要挪作它用，跑一下 upgrade/r5734 可以把資料清空。
 早作早好。
@@ -91,7 +97,7 @@ r4826: [numlogindays, lastseen]
 numlogins 的算法有調整，並且改名為 numlogindays；
 lastlogin 也多了一個叫 lastseen (別人 talk->query 到的值)
 lastlogin 只要登入就一定會更新，lastseen 則否。
-另，這個 r4826 的 upgrade 是 optional 的，不跑也不 ok,
+另，這個 r4826 的 upgrade 是 optional 的，不跑也 ok,
 只是看你要不要一併調整 numlogin 的值。
 
 r4483: [mbbsd command option]

@@ -85,12 +85,14 @@ OBJS+=		screen.o
 #######################################################################
 
 .SUFFIXES: .c .o
+.PHONY: all ctags test install clean
+
 .c.o:	$(SRCROOT)/include/var.h
 	$(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
-$(PROG): $(OBJS)
+$(PROG): testsz $(OBJS)
 	sh $(SRCROOT)/util/newvers.sh
 	@printf "\033[0;1;32m"
 	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"
@@ -100,6 +102,12 @@ $(PROG): $(OBJS)
 	@[ -z "$(USE_NIOS)" ] || echo -n "+NIOS "
 	@printf "\033[m"
 	$(CC) vers.c -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
+
+testsz:	$(SRCROOT)/pttbbs.conf $(SRCROOT)/include/*.h testsz.c
+	$(CC) $(CFLAGS) testsz.c -o testsz
+	@printf "\033[0;1;33mChecking configuration data sizes...\033[m\n"
+	@./testsz
+	@printf "\033[0;1;32mData size configuration OK\033[m\n"
 
 mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h
 	$(DIETCC) $(CC) $(CFLAGS) -c $<
