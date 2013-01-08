@@ -8,6 +8,13 @@
 #define FN_ANGELMSG     "angelmsg"
 #define FN_ANGELMSG2    "angelmsg2"
 
+// 呼叫天使時顯示的說明
+#define FN_ANGEL_USAGE   "etc/angel_usage"
+// 呼叫天使時顯示的說明(附自訂訊息)
+#define FN_ANGEL_USAGE2     "etc/angel_usage2"
+// 天使不在線上時的說明(附自訂訊息)
+#define FN_ANGEL_OFFLINE2   "etc/angel_offline2"
+
 static const char
 *PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
 *ERR_CONNECTION = "抱歉，無法連線至天使公會。\n"
@@ -706,7 +713,7 @@ AngelNotOnline(){
     showtitle("小天使留言", BBSNAME);
     move(2, 0);
     prints("您的%s小天使現在不在線上，祂留言給你：\n", _myangel_nick);
-    angel_display_message("etc/angel_usage2", msg_fn, 1, 5, 4, 9, 53);
+    angel_display_message(FN_ANGEL_OFFLINE2, msg_fn, 1, 5, 4, 9, 53);
 
     // Query if user wants to go to newbie board
     switch(tolower(vmsg("想換成目前在線上的小天使請按 h, "
@@ -800,9 +807,9 @@ TalkToAngel(){
     if (dashs(msg_fn) > 0) {
         // render per-user message 
         move(1, 0);
-        angel_display_message("etc/angel_usage3", msg_fn, 0, 2, 4, 6, 24);
+        angel_display_message(FN_ANGEL_USAGE2, msg_fn, 0, 2, 4, 6, 24);
     } else {
-        more("etc/angel_usage", NA);
+        more(FN_ANGEL_USAGE, NA);
     }
 
     // 為避免某些人找了小天使但又不送出訊息，在這個階段不顯示 nick.
