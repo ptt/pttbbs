@@ -290,11 +290,11 @@ show_chicken_data(chicken_t * thechicken)
 	outs(ANSI_COLOR(32) "很乾淨." ANSI_RESET);
 
     if (thechicken->weight > thechicken->hp_max * 4)
-	outs(ANSI_COLOR(31) "飽死了." ANSI_RESET);
+	outs(ANSI_COLOR(31) "快撐死了." ANSI_RESET);
     else if (thechicken->weight > thechicken->hp_max * 3)
 	outs(ANSI_COLOR(32) "飽嘟嘟." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 4))
-	outs(ANSI_COLOR(31) "餓死了." ANSI_RESET);
+	outs(ANSI_COLOR(31) "快餓死了." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 2))
 	outs("餓了.");
 
