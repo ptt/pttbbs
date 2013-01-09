@@ -326,7 +326,7 @@ b_config(void)
 	move(ytitle +2, 0);
 
 	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
-	prints("     板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
+	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? bp->BM : "(無)");
 
 	outs(" \n"); // at least one character, for move_ansi.
 

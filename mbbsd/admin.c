@@ -663,6 +663,12 @@ m_mod_board(char *bname)
 	    strlcpy(newbh.title + 7, genbuf, sizeof(newbh.title) - 7);
 	if (getdata_str(15, 0, "新板主名單：", genbuf, IDLEN * 3 + 3, DOECHO,
 			bh.BM)) {
+            // TODO 照理來說在這裡 normalize 一次比較好；可惜目前似乎有奇怪的
+            // 代管制度，會有人把 BM list 設定 [ ...... / some_uid]，就會變成
+            // 一面徵求板主同時又有人(maybe小組長)有管理權限而且還不顯示出來。
+            // 這設計很糟糕，也無法判斷是不小心誤設(多了空白)或是故意的，再者
+            // 還有人以為這裡打句英文很帥氣結果造成該英文的ID意外獲得權限。
+            // 未來應該整個取消，完全 normalize。
 	    trim(genbuf);
 	    strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
 	}

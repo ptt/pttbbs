@@ -341,10 +341,9 @@ set_board(void)
 
     board_note_time = &bp->bupdate;
 
-    if(bp->BM[0] <= ' ')
+    if (!does_board_have_public_bm(bp)) {
 	strcpy(currBM, "徵求中");
-    else
-    {
+    } else {
 	/* calculate with other title information */
 	int l = 0;
 
@@ -1204,11 +1203,14 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     }
 }
 
-static int
-does_board_have_any_bm(int bid) {
-    // in common/cache.c, BMcache uids were assigned in order, so we only need
-    // to check first UID.
-    return (SHM->BMcache[bid - 1][0] != -1);
+int
+does_board_have_public_bm(const boardheader_t *bp) {
+    // Usually we can assume SHM->BMcache contains complete BM list; however
+    // sometimes boards may contains only private BMs (ex: [ <-space  some_uid])
+    // 為了避免誤判，改成限制第一個 ID 一定要是alnum, 不然不處理
+    // ex, ' something', '[something]', '中文' <= 都是不算 public BM list.
+    // 很糟但是還沒想到更好的作法。
+    return isascii(*bp->BM) && isalnum(*bp->BM);
 }
 
 static int
@@ -1408,7 +1410,7 @@ do_post_article()
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         (currbrdattr & BRD_HIDE) ||
 #endif
-        !does_board_have_any_bm(currbid))
+        !does_board_have_public_bm(bp))
     {
 	money = 0;
     }
