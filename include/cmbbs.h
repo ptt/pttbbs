@@ -83,6 +83,7 @@ void setbtotal(int bid);
 void touchbpostnum(int bid, int delta);
 int  getbnum(const char *bname);
 void buildBMcache(int);
+int parseBMlist(const char *input, int uids[MAX_BMs]);
 void reload_fcache(void);
 void reload_pttcache(void);
 void resolve_garbage(void);

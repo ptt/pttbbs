@@ -496,6 +496,7 @@ m_mod_board(char *bname)
     boardheader_t   bh, newbh;
     int             bid;
     char            genbuf[PATHLEN], ans[4];
+    int y;
 
     bid = getbnum(bname);
     if (!bid || !bname[0] || get_record(fn_board, &bh, sizeof(bh), bid) == -1) {
@@ -613,15 +614,16 @@ m_mod_board(char *bname)
 	    vmsg("禁止更動連結看板，請直接修正原看板");
 	    break;
 	}
-	move(8, 0); clrtobot();
+        y = 8;
+	move(y++, 0); clrtobot();
 	outs("直接按 [Return] 不修改該項設定");
 	memcpy(&newbh, &bh, sizeof(bh));
 
-	while (getdata(9, 0, "新看板名稱：", genbuf, IDLEN + 1, DOECHO)) {
+	while (getdata(y, 0, "新看板名稱：", genbuf, IDLEN + 1, DOECHO)) {
 	    if (getbnum(genbuf)) {
-                mvouts(10, 0, "錯誤: 此新看板名已存在\n");
+                mvouts(y + 1, 0, "錯誤: 此新看板名已存在\n");
             } else if ( !is_valid_brdname(genbuf) ) {
-                mvouts(10, 0, "錯誤: 無法使用此名稱。"
+                mvouts(y + 1, 0, "錯誤: 無法使用此名稱。"
                        "請使用英數字或 _-. 且開頭不得為數字。\n");
             } else {
                 if (genbuf[0] != bh.brdname[0]) {
@@ -629,12 +631,12 @@ m_mod_board(char *bname)
                     // with different initial character.
                     const int free_rename = 1;
                     if (free_rename || HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
-                        mvouts(10, 0, ANSI_COLOR(1;31)
+                        mvouts(y + 1, 0, ANSI_COLOR(1;31)
                                 "警告: 看板首字母不同,大看板改名會非常久,"
                                 "千萬不可中途斷線否則看板會壞掉"
                                 ANSI_RESET "\n");
                     } else {
-                        mvouts(10, 0,
+                        mvouts(y + 1, 0,
                                 "錯誤: 新舊名稱第一個字母若不同(大小寫有別)"
                                 "要看板總管以上等級才可設定\n");
                         continue;
@@ -644,25 +646,29 @@ m_mod_board(char *bname)
 		break;
 	    }
 	}
-        outs("\n");
+        y++;
 
 	do {
-	    getdata_str(12, 0, "看板類別：", genbuf, 5, DOECHO, bh.title);
+	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, bh.title);
 	    if (strlen(genbuf) == 4)
 		break;
 	} while (1);
+        y++;
 
 	strcpy(newbh.title, genbuf);
-
 	newbh.title[4] = ' ';
 
 	// 7 for category
-	getdata_str(14, 0, "看板主題：", genbuf, 
-		BTLEN + 1 -7, DOECHO, bh.title + 7);
+	getdata_str(y++, 0, "看板主題：", genbuf, BTLEN + 1 -7,
+                    DOECHO, bh.title + 7);
 	if (genbuf[0])
 	    strlcpy(newbh.title + 7, genbuf, sizeof(newbh.title) - 7);
-	if (getdata_str(15, 0, "新板主名單：", genbuf, IDLEN * 3 + 3, DOECHO,
-			bh.BM)) {
+
+        do {
+            int uids[MAX_BMs], i;
+            if (!getdata_str(y, 0, "新板主名單：", genbuf, IDLEN * 3 + 3,
+                             DOECHO, bh.BM) || strcmp(genbuf, bh.BM) == 0)
+                break;
             // TODO 照理來說在這裡 normalize 一次比較好；可惜目前似乎有奇怪的
             // 代管制度，會有人把 BM list 設定 [ ...... / some_uid]，就會變成
             // 一面徵求板主同時又有人(maybe小組長)有管理權限而且還不顯示出來。
@@ -670,12 +676,34 @@ m_mod_board(char *bname)
             // 還有人以為這裡打句英文很帥氣結果造成該英文的ID意外獲得權限。
             // 未來應該整個取消，完全 normalize。
 	    trim(genbuf);
-	    strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
-	}
+            parseBMlist(genbuf, uids);
+            mvouts(y + 2, 0, " 實際生效的板主ID: " ANSI_COLOR(1));
+            for (i = 0; i < MAX_BMs && uids[i] >= 0; i++) {
+                prints("%s ", getuserid(uids[i]));
+            }
+            outs(ANSI_RESET "\n");
+
+            // ref: does_board_have_public_bm
+            if (genbuf[0] <= ' ')
+                outs(ANSI_COLOR(1;31)
+                     " *** 因為開頭是空白或中文, 看板內左上角或按i的"
+                     "板主名單會顯示為徵求中或無 ***"
+                     ANSI_RESET "\n");
+            if (getdata(y + 4, 0, "確定此板主名單正確?[y/N] ", ans,
+                        sizeof(ans), LCECHO) &&
+                ans[0] == 'y') {
+                strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
+                move(y + 1, 0); clrtobot();
+                break;
+            }
+            move(y, 0); clrtobot();
+        } while (1);
+        y++;
+
 #ifdef CHESSCOUNTRY
 	if (HasUserPerm(PERM_SYSOP)) {
 	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
-	    if (getdata_str(16, 0,
+	    if (getdata_str(y++, 0,
 			"設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋 (4) 黑白棋",
 			ans, sizeof(ans), NUMECHO, genbuf)){
 		newbh.chesscountry = atoi(ans);
@@ -685,6 +713,7 @@ m_mod_board(char *bname)
 	    }
 	}
 #endif /* defined(CHESSCOUNTRY) */
+
 	if (HasUserPerm(PERM_SYSOP|PERM_BOARD)) {
 	    move(1, 0);
 	    clrtobot();
@@ -692,6 +721,7 @@ m_mod_board(char *bname)
 	    move(1, 0);
 	    clrtobot();
 	}
+
 	{
 	    const char* brd_symbol;
 	    if (newbh.brdattr & BRD_GROUPBOARD)
@@ -706,9 +736,9 @@ m_mod_board(char *bname)
 	}
 
 	if (HasUserPerm(PERM_SYSOP|PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
-	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
+            getdata(y++, 0, "設定讀寫權限(y/N)？", ans, sizeof(ans), LCECHO);
 	    if (*ans == 'y') {
-		getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,
+		getdata_str(y++, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,
 			    "R");
 		if (*ans == 'p')
 		    newbh.brdattr |= BRD_POSTMASK;

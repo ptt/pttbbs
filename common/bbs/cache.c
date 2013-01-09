@@ -635,25 +635,38 @@ getbnum(const char *bname)
     return 0;
 }
 
-void buildBMcache(int bid) /* bid starts from 1 */
+int
+parseBMlist(const char *input, int uids[MAX_BMs]) {
+    int i, uid;
+    char *ptr, *strtok_pos;
+    char s[(IDLEN + 1) * MAX_BMs];
+
+    strlcpy(s, input, sizeof(s));
+    // reset BM list
+    for (i = 0; i < MAX_BMs; i++)
+        uids[i] = -1;
+
+    for (i = 0 ; s[i] != 0 ; ++i)
+	if (!isalpha((int)s[i]) && !isdigit((int)s[i]))
+            s[i] = ' ';
+    for (ptr = strtok_r(s, " ", &strtok_pos), i = 0;
+	 i < MAX_BMs && ptr != NULL;
+         ptr = strtok_r(NULL, " ", &strtok_pos))
+        if((uid = searchuser(ptr, NULL)) != 0)
+            uids[i++] = uid;
+    return i;
+}
+
+
+void
+buildBMcache(int bid) /* bid starts from 1 */
 {
     char    s[IDLEN * 3 + 3], *ptr;
     int     i, uid;
     char   *strtok_pos;
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    strlcpy(s, getbcache(bid)->BM, sizeof(s));
-    for( i = 0 ; s[i] != 0 ; ++i )
-	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
-            s[i] = ' ';
-
-    for( ptr = strtok_r(s, " ", &strtok_pos), i = 0 ;
-	 i < MAX_BMs && ptr != NULL  ;
-	 ptr = strtok_r(NULL, " ", &strtok_pos), ++i  )
-	if( (uid = searchuser(ptr, NULL)) != 0 )
-	    SHM->BMcache[bid-1][i] = uid;
-    for( ; i < MAX_BMs ; ++i )
-	SHM->BMcache[bid-1][i] = -1;
+    parseBMlist(getbcache(bid)->BM, SHM->BMcache[bid - 1]);
 }
 
 /*
