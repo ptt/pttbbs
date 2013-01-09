@@ -1207,10 +1207,10 @@ int
 does_board_have_public_bm(const boardheader_t *bp) {
     // Usually we can assume SHM->BMcache contains complete BM list; however
     // sometimes boards may contains only private BMs (ex: [ <-space  some_uid])
-    // 為了避免誤判，改成限制第一個 ID 一定要是alnum, 不然不處理
-    // ex, ' something', '[something]', '中文' <= 都是不算 public BM list.
+    // 另外還有人不知為了自己加了 [] 上去
+    // 搞了半天還是revert回原始的 BM[0] < ' ' 好了，
     // 很糟但是還沒想到更好的作法。
-    return isascii(*bp->BM) && isalnum(*bp->BM);
+    return bp->BM[0] > ' ';
 }
 
 static int
