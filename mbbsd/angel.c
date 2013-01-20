@@ -329,9 +329,7 @@ do_changeangel(int force) {
 
     mvouts(b_lines - 3, 0, "\n"
            "叫猔種璝ゼ㊣筁ヘ玡ぱㄏ碞ビ叫传穦传ぱㄏ\n");
-    getdata(b_lines - 1, 0,
-	    "传ぱㄏ碞礚猭传翅 琌璶传ぱㄏ [y/N]",
-	    buf, 3, LCECHO);
+    getdata(b_lines - 1, 0, "絋﹚璶传ぱㄏ [y/N]", buf, 3, LCECHO);
     if (buf[0] == 'y') {
 	log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
                   "%s  %s 传奔 %s ぱㄏ\n",

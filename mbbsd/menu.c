@@ -682,7 +682,10 @@ static const commands_t maillist[] = {
 static const commands_t angelmenu[] = {
     {a_angelmsg, PERM_ANGEL,"Leave message 留言給小主人"},
     {a_angelreport, 0,      "Report        線上天使狀態報告"},
+#ifdef ANGEL_ALLOW_MENU_RELOAD
+    // This will corrupt perf data; let's do that weekly.
     {a_angelreload, PERM_SYSOP,"OReload    重整天使資訊"},
+#endif
     {NULL, 0, NULL}
 };
 
