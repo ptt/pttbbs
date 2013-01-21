@@ -2510,10 +2510,18 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if (buf[0] == 'b') {
 
+#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&bp->vote_limit_logins,
 		&bp->vote_limit_posts,
 		&bp->vote_limit_badpost);
+#else
+	editLimits(
+		&bp->vote_limit_logins,
+                NULL,
+		&bp->vote_limit_badpost);
+        bp->vote_limit_posts = 0;
+#endif
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -2523,10 +2531,18 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
 
+#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);
+#else
+	editLimits(
+		&fhdr->multi.vote_limits.logins,
+                NULL,
+		&fhdr->multi.vote_limits.badpost);
+        fhdr->multi.vote_limits.posts = 0;
+#endif
 
         // TODO fix race condition here.
 	substitute_ref_record(direct, fhdr, ent);

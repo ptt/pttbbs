@@ -186,6 +186,8 @@ usercomplete(const char *prompt, char *data)
     usercomplete2(prompt, data, NULL);
 }
 
+// General Complete: used for boards and online users.
+
 static int
 gnc_findbound(char *str, int *START, int *END,
 	      size_t nmemb, gnc_comp_func compar)
