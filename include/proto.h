@@ -32,6 +32,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter);
 /* angel */
 int a_changeangel(void);
 int a_angelmsg(void);
+int a_angelmsg2(void);
 int a_angelreport(void);
 int a_angelreload(void);
 int angel_reject_me(userinfo_t * uin);

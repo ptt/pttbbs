@@ -397,78 +397,6 @@ angel_log_order_song(const char *angel_nick) {
               IDLEN - 6, angel_nick, angel_exp);
 }
 
-int 
-a_angelmsg(){
-    char msg[3][75] = { "", "", "" };
-    char nick[10] = "";
-    char buf[512];
-    int i;
-    FILE* fp;
-
-    move(1, 0); clrtobot();
-    setuserfile(buf, FN_ANGELMSG);
-    fp = fopen(buf, "r");
-    if (fp) {
-	i = 0;
-	if (fgets(msg[0], sizeof(msg[0]), fp)) {
-	    chomp(msg[0]);
-	    if (strncmp(msg[0], "%%[", 3) == 0) {
-		strlcpy(nick, msg[0] + 3, 7);
-		move(4, 0);
-		prints("原有暱稱：%s小天使", nick);
-		msg[0][0] = 0;
-	    } else
-		i = 1;
-	} else
-	    msg[0][0] = 0;
-
-	move(5, 0);
-	outs("原有留言：\n");
-	if(msg[0][0])
-	    outs(msg[0]);
-	for (; i < 3; ++i) {
-	    if(fgets(msg[i], sizeof(msg[0]), fp)) {
-		outs(msg[i]);
-		chomp(msg[i]);
-	    } else
-		break;
-	}
-	fclose(fp);
-    }
-
-    getdata_buf(11, 0, "小天使暱稱：", nick, 7, 1);
-    do {
-	move(12, 0);
-	clrtobot();
-	outs("不在的時候要跟小主人說什麼呢？"
-	     "最多三行，按[Enter]結束");
-        // the -1 is for newline and we use to fgets() to read later
-	for (i = 0; i < 3 &&
-		getdata_buf(14 + i, 0, "：", msg[i], sizeof(msg[i])-1, DOECHO);
-		++i);
-	getdata(b_lines - 2, 0, "(S)儲存 (E)重新來過 (Q)取消？[S]",
-		buf, 4, LCECHO);
-    } while (buf[0] == 'e');
-    if (buf[0] == 'q')
-	return 0;
-    setuserfile(buf, FN_ANGELMSG);
-    if (msg[0][0] == 0)
-	unlink(buf);
-    else {
-	FILE* fp = fopen(buf, "w");
-	if (!fp)
-	    return 0;
-	if(nick[0])
-	    fprintf(fp, "%%%%[%s\n", nick);
-	for (i = 0; i < 3 && msg[i][0]; ++i) {
-	    fputs(msg[i], fp);
-	    fputc('\n', fp);
-	}
-	fclose(fp);
-    }
-    return 0;
-}
-
 int a_angelreport() {
     angel_beats_report rpt = {0};
     angel_beats_data   req = {0};
@@ -613,6 +541,113 @@ angel_display_message(const char *template_fn,
     move_ansi(date_row, date_col);
     outs(ANSI_RESET);
     outs(Cdatelite(&ts));
+}
+
+enum ANGEL_MSG_FORMAT {
+    FORMAT_NICK_MSG = 1,
+    FORMAT_PLAIN_MSG,
+};
+
+int
+angel_edit_msg(const char *prompt, const char *filename,
+               enum ANGEL_MSG_FORMAT format) {
+    char nick[IDLEN - 6 + 1] = ""; // 6=strlen("小天使")
+    char msg[3][STRLEN] = {"", "", ""};
+    char fpath[PATHLEN];
+    char buf[512];
+    FILE *fp;
+    int i, do_delete_file = 0;
+
+    vs_hdr2(PROMPT_ANGELBEATS, prompt);
+    setuserfile(fpath, filename);
+
+    outs("原設定: \n");
+    fp = fopen(fpath, "r");
+    if (fp) {
+        if (format == FORMAT_NICK_MSG) {
+            fgets(buf, sizeof(buf), fp);
+            if (strstr(buf, "%%[") == buf) {
+                chomp(buf);
+                strlcpy(nick, buf + 3, sizeof(nick));
+                prints(" 暱稱: %s小天使\n", nick);
+            }
+        }
+        for (i = 0; i < 3; i++) {
+            if (!fgets(msg[i], sizeof(msg[i]), fp))
+                break;
+            outs(" : ");
+            outs(msg[i]);
+            chomp(msg[i]);
+        }
+
+        fclose(fp);
+    } else {
+        outs("(目前無設定)\n");
+    }
+    mvouts(10, 0, "新設定:\n");
+    if (format == FORMAT_NICK_MSG) {
+        getdata_buf(11, 0, " 小天使暱稱：", nick, sizeof(nick), DOECHO);
+        if (!*nick) {
+            mvouts(12, 0, "空白將導致刪除小天使暱稱與訊息。\n");
+            do_delete_file = 1;
+        }
+    }
+    if (!do_delete_file) {
+        mvouts(12, 0, " 編輯訊息 (最多三行，按[ENTER]結束):\n");
+        for (i = 0; i < 3; i++) {
+            if (!getdata_buf(13 + i, 0, " : ", msg[i], 74, DOECHO)) {
+                for (i++; i < 3; i++)
+                    msg[i][0] = 0;
+                break;
+            }
+        }
+        if (format == FORMAT_PLAIN_MSG && !*msg[0]) {
+            mvouts(15, 0, "空白將導致刪除小天使訊息。\n");
+            do_delete_file = 1;
+        }
+    }
+
+    if (!getdata(20, 0, "確定儲存？ [y/N]: ", buf, 3, LCECHO) ||
+        buf[0] != 'y') {
+        return 0;
+    }
+
+    if (do_delete_file) {
+        if (dashf(fpath) && remove(fpath) != 0)
+            vmsg("系統錯誤 - 無法刪除。");
+        return 1;
+    }
+
+    // write file
+    fp = fopen(fpath, "w");
+    if (!fp) {
+        vmsg("系統錯誤 - 無法寫入。");
+        return 0;
+    }
+    if (format == FORMAT_NICK_MSG) {
+        fputs("%%[", fp);
+        fputs(nick, fp);
+        fputs("\n", fp);
+    }
+    for (i = 0; i < 3; i++) {
+        fputs(msg[i], fp);
+        fputc('\n', fp);
+    }
+
+    fclose(fp);
+    return 1;
+}
+
+int 
+a_angelmsg(){
+    return angel_edit_msg("編輯小天使暱稱與離線訊息", FN_ANGELMSG,
+                          FORMAT_NICK_MSG);
+}
+
+int 
+a_angelmsg2(){
+    return angel_edit_msg("編輯小天使呼叫畫面個性留言", FN_ANGELMSG2,
+                          FORMAT_PLAIN_MSG);
 }
 
 static int
@@ -810,7 +845,6 @@ TalkToAngel(){
         more(FN_ANGEL_USAGE, NA);
     }
 
-    // 為避免某些人找了小天使但又不送出訊息，在這個階段不顯示 nick.
     {
 	char xnick[IDLEN+1], prompt[IDLEN*2];
 	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
@@ -820,7 +854,6 @@ TalkToAngel(){
 	    lastuent = uent;
         }
     }
-    return;
 }
 
 void
