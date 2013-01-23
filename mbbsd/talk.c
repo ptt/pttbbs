@@ -550,7 +550,7 @@ void check_water_init(void)
 }
 		
 static void
-water_scr(const water_t * tw, int which, char type)
+ofo_water_scr(const water_t * tw, int which, char type)
 {
     if (type == 1) {
 	int             i;
@@ -578,14 +578,13 @@ water_scr(const water_t * tw, int which, char type)
 
 	move(0, 0);
 	SOLVE_ANSI_CACHE();
+	clrtoeol();
 #ifdef PLAY_ANGEL
 	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
-	    outs("回答小主人:");
+	    outs("回答小主人: ");
 	else
 #endif
-	prints("反擊 %s:", tw->userid);
-	clrtoeol();
-	move(0, strlen(tw->userid) + 6);
+	prints("反擊 %s: ", tw->userid);
     } else {
 
 	move(8 + which, 28);
@@ -597,7 +596,7 @@ water_scr(const water_t * tw, int which, char type)
 }
 
 void
-my_write2(void)
+ofo_my_write(void)
 {
     int             i, ch, currstat0;
     char            genbuf[256], msg[80], done = 0, c0, which;
@@ -634,7 +633,7 @@ my_write2(void)
 		(swater[i]->pid != swater[i]->uin->pid ||
 		 swater[i]->userid[0] != swater[i]->uin->userid[0]))
 		swater[i]->uin = search_ulist_pid(swater[i]->pid);
-	    water_scr(swater[i], i, 0);
+	    ofo_water_scr(swater[i], i, 0);
 	}
     move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
     outs(ANSI_RESET " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
@@ -644,7 +643,7 @@ my_write2(void)
     outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
          "─────────────────────────────────"
          ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
-    water_scr(swater[0], 0, 1);
+    ofo_water_scr(swater[0], 0, 1);
     refresh();
 
     which = 0;
@@ -653,9 +652,9 @@ my_write2(void)
 	case Ctrl('T'):
 	case KEY_UP:
 	    if (water_usies != 1) {
-		water_scr(swater[(int)which], which, 0);
+		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which - 1 + water_usies) % water_usies;
-		water_scr(swater[(int)which], which, 1);
+		ofo_water_scr(swater[(int)which], which, 1);
 		refresh();
 	    }
 	    break;
@@ -663,9 +662,9 @@ my_write2(void)
 	case KEY_DOWN:
 	case Ctrl('R'):
 	    if (water_usies != 1) {
-		water_scr(swater[(int)which], which, 0);
+		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which + 1 + water_usies) % water_usies;
-		water_scr(swater[(int)which], which, 1);
+		ofo_water_scr(swater[(int)which], which, 1);
 		refresh();
 	    }
 	    break;
@@ -695,22 +694,29 @@ my_write2(void)
 	    outs(ANSI_RESET);
 	    clrtoeol();
 #ifdef PLAY_ANGEL
-	    if (tw->msg[0].msgmode == MSGMODE_WRITE) {
-		snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
-		i = WATERBALL_CONFIRM;
-	    } else if (tw->msg[0].msgmode == MSGMODE_TOANGEL) {
-		strlcpy(genbuf, "回答小主人:", sizeof(genbuf));
-		i = WATERBALL_CONFIRM_ANSWER;
-	    } else { /* tw->msg[0].msgmode == MSGMODE_FROMANGEL */
-		strlcpy(genbuf, "再問他一次：", sizeof(genbuf));
-		i = WATERBALL_CONFIRM_ANGEL;
-	    }
+            switch(tw->msg[0].msgmode) {
+                case MSGMODE_WRITE:
+                case MSGMODE_ALOHA:
+                    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+                    i = WATERBALL_CONFIRM;
+                    break;
+
+                case MSGMODE_TOANGEL:
+                    strlcpy(genbuf, "回答小主人:", sizeof(genbuf));
+                    i = WATERBALL_CONFIRM_ANSWER;
+                    break;
+
+                case MSGMODE_FROMANGEL:
+                    strlcpy(genbuf, "再問他一次：", sizeof(genbuf));
+                    i = WATERBALL_CONFIRM_ANGEL;
+                    break;
+            }
 #else
 	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
 	    i = WATERBALL_CONFIRM;
 #endif
 	    if (!getdata_buf(0, 0, genbuf, msg,
-			80 - strlen(tw->userid) - 6, DOECHO))
+                             80 - strlen(tw->userid) - 6, DOECHO))
 		break;
 
 	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
@@ -738,7 +744,7 @@ my_write2(void)
  * 4. 廣播       flag = WATERBALL_SYSOP,   3 if SYSOP
  *               flag = WATERBALL_PREEDIT, 1 otherwise
  * 5. 丟水球     flag = WATERBALL_GENERAL, 0
- * 6. my_write2  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
+ * 6. ofo_my_write  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
  * 7. (when defined PLAY_ANGEL)
  *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = "小天使")
  * 8. (when defined PLAY_ANGEL)

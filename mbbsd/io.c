@@ -197,7 +197,7 @@ process_pager_keys(int ch)
 		scr_dump(&old_screen);
 
 		my_newfd = vkey_detach();
-		my_write2();
+		ofo_my_write();
 		scr_restore(&old_screen);
 		vkey_attach(my_newfd);
 		return KEY_INCOMPLETE;

@@ -661,7 +661,7 @@ int iswritable_stat(const userinfo_t *uentp, int fri_stat);
 int isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
 void getmessage(msgque_t msg);
-void my_write2(void);
+void ofo_my_write(void);
 void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
@@ -710,7 +710,6 @@ int  topsong(void);
 
 /* user */
 int kill_user(int num, const char *userid);
-int u_editcalendar(void);
 int u_set_mind();
 void user_display(const userec_t *u, int real);
 int isvalidemail(char *email);
