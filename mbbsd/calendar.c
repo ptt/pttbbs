@@ -284,63 +284,6 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 }
 
 int
-u_editcalendar(void)
-{
-    char            genbuf[PATHLEN];
-
-    getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 (H)說明 [Q]取消？[Q] ",
-	    genbuf, 3, LCECHO);
-
-    if (genbuf[0] == 'e') {
-	int             aborted;
-
-	setutmpmode(EDITPLAN);
-	sethomefile(genbuf, cuser.userid, "calendar");
-	aborted = veditfile(genbuf);
-	if (aborted != EDIT_ABORTED) {
-            LOG_IF(LOG_CONF_EDIT_CALENDAR,
-                   log_filef("log/calendar.log", LOG_CREAT,
-                             "%s %s\n", Cdatelite(&now), cuser.userid));
-	    vmsg("行事曆更新完畢");
-        }
-	return 0;
-    } else if (genbuf[0] == 'd') {
-	sethomefile(genbuf, cuser.userid, "calendar");
-	unlink(genbuf);
-	vmsg("行事曆刪除完畢");
-    } else if (genbuf[0] == 'h') {
-	move(1, 0);
-	clrtoln(b_lines);
-	move(3, 0);
-	prints("行事曆格式說明:\n編輯時以一行為單位，如:\n\n"
-	    "# 井號開頭的是註解\n2006/05/04 red 上批踢踢!\n\n"
-	    "其中的 red 是指表示的顏色。\n"
-	    "目前可用的顏色為:\n  "
-	    ANSI_COLOR(1;30) "black "
-	    ANSI_COLOR(31) "red "
-	    ANSI_COLOR(32) "green "
-	    ANSI_COLOR(33) "yellow "
-	    ANSI_COLOR(34) "blue "
-	    ANSI_COLOR(35) "magenta "
-	    ANSI_COLOR(36) "cyan "
-	    ANSI_COLOR(37) "white "
-	    ANSI_RESET "\n  "
-	    ANSI_COLOR(1;30;47) "black "
-	    ANSI_COLOR(31) "red "
-	    ANSI_COLOR(32) "green "
-	    ANSI_COLOR(33) "yellow "
-	    ANSI_COLOR(34) "blue "
-	    ANSI_COLOR(35) "magenta "
-	    ANSI_COLOR(36) "cyan "
-	    ANSI_COLOR(37) "white "
-	    ANSI_RESET
-	    );
-	pressanykey();
-    }
-    return 0;
-}
-
-int
 calendar(void)
 {
     char          **buf;
@@ -393,11 +336,13 @@ calendar(void)
     }
     FreeEvent(head);
     FreeCalBuffer(buf);
-    i = vmsg("請按 e 編輯行事曆，或其它任意鍵離開。");
+    i = vmsg("行事曆將於2013/06後擇期取消。要檢視現有行事曆請按 e。");
     i = tolower(((unsigned char)i) & 0xFF);
     if (i == 'e')
     {
-	u_editcalendar();
+        char fpath[PATHLEN];
+        setuserfile(fpath, "calendar");
+        more(fpath, YEA);
     }
     return 0;
 }
