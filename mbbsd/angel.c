@@ -595,7 +595,7 @@ angel_edit_msg(const char *prompt, const char *filename,
     if (!do_delete_file) {
         mvouts(12, 0, " 編輯訊息 (最多三行，按[ENTER]結束):\n");
         for (i = 0; i < 3; i++) {
-            if (!getdata_buf(13 + i, 0, " : ", msg[i], 74, DOECHO)) {
+            if (!getdata_buf(13 + i, 0, " : ", msg[i], 73, DOECHO)) {
                 for (i++; i < 3; i++)
                     msg[i][0] = 0;
                 break;
