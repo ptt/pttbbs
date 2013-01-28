@@ -162,10 +162,8 @@ void resolve_over18(void);
 int resolve_over18_user(const userec_t *u);
 char *get_restriction_reason(
         unsigned int numlogindays,
-        unsigned int numposts,
         unsigned int badpost,
         unsigned int limits_logins,
-        unsigned int limits_posts,
         unsigned int limits_badpost,
         size_t sz_msg, char *msg);
 

@@ -6,11 +6,9 @@
 // comparison.
 char *get_restriction_reason(
         unsigned int numlogindays,
-        unsigned int numposts,
         unsigned int badpost,
 
         unsigned int limits_logins,
-        unsigned int limits_posts,
         unsigned int limits_badpost,
 
         size_t sz_msg, char *msg) {
@@ -21,11 +19,6 @@ char *get_restriction_reason(
                  STR_LOGINDAYS "未滿 %d " STR_LOGINDAYS
                  "(目前%d" STR_LOGINDAYS_QTY ") ",
                  limits_logins * 10, numlogindays);
-        return msg;
-    }
-    if (numposts  / 10 < limits_posts) {
-        snprintf(msg, sz_msg, "各看板有效文章未滿 %d 篇(目前%d篇)",
-                 limits_posts * 10, numposts);
         return msg;
     }
 #ifdef ASSESS

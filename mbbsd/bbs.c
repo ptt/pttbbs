@@ -518,8 +518,8 @@ char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
     bp = getbcache(bid);
 
     return get_restriction_reason(
-        cuser.numlogindays, cuser.numposts, cuser.badpost,
-        bp->post_limit_logins, bp->post_limit_posts, bp->post_limit_badpost,
+        cuser.numlogindays, cuser.badpost,
+        bp->post_limit_logins, bp->post_limit_badpost,
         sz_msg, msg);
 }
 
@@ -2403,7 +2403,6 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
 void
 editLimits(unsigned char *plogins,
-           unsigned char *pposts,
            unsigned char *pbadpost)
 {
     char genbuf[STRLEN];
@@ -2412,7 +2411,6 @@ editLimits(unsigned char *plogins,
     // load var
     unsigned char 
 	logins  = *plogins, 
-	posts   = (pposts) ? *pposts : 0, 
 	badpost = *pbadpost;
 
     // query UI
@@ -2438,18 +2436,6 @@ editLimits(unsigned char *plogins,
     logins = (unsigned char)(temp / 10);
     move(y+1, 0); clrtobot();
 
-    if (pposts) {
-        y++; 
-        sprintf(genbuf, "%u", posts*10);
-        do {
-            getdata_buf(y, 0, 
-                        "文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：",
-                        genbuf, 5, NUMECHO);
-            temp = atoi(genbuf);
-        } while (temp < 0 || temp > 2550);
-        posts = (unsigned char)(temp / 10);
-    }
-
     y++; 
     sprintf(genbuf, "%u", 255 - badpost);
     do {
@@ -2462,9 +2448,6 @@ editLimits(unsigned char *plogins,
     // save var
     *plogins  = logins;
     *pbadpost = badpost;
-
-    if (pposts)
-        *pposts   = posts;
 }
 
 int
@@ -2489,18 +2472,9 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 
     if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
-#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&bp->post_limit_logins,
-                &bp->post_limit_posts,
 		&bp->post_limit_badpost);
-#else
-	editLimits(
-		&bp->post_limit_logins,
-		NULL,
-		&bp->post_limit_badpost);
-        bp->post_limit_posts = 0;
-#endif
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -2510,18 +2484,9 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if (buf[0] == 'b') {
 
-#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&bp->vote_limit_logins,
-		&bp->vote_limit_posts,
 		&bp->vote_limit_badpost);
-#else
-	editLimits(
-		&bp->vote_limit_logins,
-                NULL,
-		&bp->vote_limit_badpost);
-        bp->vote_limit_posts = 0;
-#endif
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -2531,18 +2496,9 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
 
-#ifdef USE_POSTLIMIT_NUMPOSTS
 	editLimits(
 		&fhdr->multi.vote_limits.logins,
-		&fhdr->multi.vote_limits.posts,
 		&fhdr->multi.vote_limits.badpost);
-#else
-	editLimits(
-		&fhdr->multi.vote_limits.logins,
-                NULL,
-		&fhdr->multi.vote_limits.badpost);
-        fhdr->multi.vote_limits.posts = 0;
-#endif
 
         // TODO fix race condition here.
 	substitute_ref_record(direct, fhdr, ent);

@@ -313,7 +313,6 @@ b_config(void)
     while(!finished) {
 	// limits
 	uint8_t llogin = bp->post_limit_logins,
-		lpost  = bp->post_limit_posts,
 		lbp    = bp->post_limit_badpost;
 
 	move(ytitle-1, 0); 
@@ -448,7 +447,6 @@ b_config(void)
 	if (bp->brdattr & BRD_VOTEBOARD)
 	{
 	    llogin = bp->vote_limit_logins;
-	    lpost  = bp->vote_limit_posts;
 	    lbp    = bp->vote_limit_badpost;
 	}
 
@@ -459,17 +457,6 @@ b_config(void)
 	    attr = ((int)cuser.numlogindays < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
 	    prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "以上", i);
-	    if (attr) outs(ANSI_RESET);
-	    hasres = 1;
-	}
-
-	if (lpost)
-	{
-	    move_ansi(ipostres++, COLPOSTRES);
-	    i = (int)lpost * 10;
-	    attr = ((int)cuser.numposts < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    prints("各看板有效文章合計 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}
