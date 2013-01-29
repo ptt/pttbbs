@@ -385,7 +385,7 @@ angel_log_order_song(const char *angel_nick) {
     char angel_exp[STRLEN];
 
     syncnow();
-    if (cuser.timesetangel)
+    if (cuser.timesetangel > now)
         snprintf(angel_exp, sizeof(angel_exp),
                  "%d¤Ñ", (cuser.timesetangel - now) / DAY_SECONDS + 1);
     else
