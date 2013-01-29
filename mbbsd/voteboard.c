@@ -10,9 +10,8 @@ char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 	return NULL;
 
     return get_restriction_reason(
-        cuser.numlogindays, cuser.numposts, cuser.badpost,
+        cuser.numlogindays, cuser.badpost,
         bh->vote_limit_logins,
-        bh->vote_limit_posts,
         bh->vote_limit_badpost,
         sz_msg, msg);
 }
@@ -24,9 +23,8 @@ char *CheckVoteRestrictionFile(
         return NULL;
 
     return get_restriction_reason(
-        cuser.numlogindays, cuser.numposts, cuser.badpost,
+        cuser.numlogindays, cuser.badpost,
         fhdr->multi.vote_limits.logins,
-        fhdr->multi.vote_limits.posts,
         fhdr->multi.vote_limits.badpost,
         sz_msg, msg);
 }
@@ -386,7 +384,6 @@ do_voteboard(int type)
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
     votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
-    votefile.multi.vote_limits.posts   = bcache[currbid - 1].vote_limit_posts;
     votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
