@@ -3580,6 +3580,7 @@ static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char fn1[PATHLEN];
+    char fnx[PATHLEN];
     char genbuf[PATHLEN] = "";
     int i;
     boardheader_t *bp = NULL;
@@ -3605,6 +3606,14 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (vans("要將文章鎖定嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         setbfile(fn1, currboard, fhdr->filename);
+
+        // Rename the file to be secure, introducing new X-dot file here.
+        // We can not use L-dot prefix since there may be some code that
+        // doesn't recognize locked files and end up in reading the file.
+        fhdr->filename[0] = 'X';
+        setbfile(fnx, currboard, fhdr->filename);
+        Rename(fn1, fnx);
+
         fhdr->filename[0] = 'L';
 	syncnow();
 	bp->SRexpire = now;
@@ -3612,8 +3621,13 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     else if (fhdr->filename[0]=='L') {
 	if (vans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
+        fhdr->filename[0] = 'X';
+        setbfile(fnx, currboard, fhdr->filename);
         fhdr->filename[0] = 'M';
         setbfile(fn1, currboard, fhdr->filename);
+        // Rename it back, no check for errors because old locked files
+        // are not renamed.
+        Rename(fnx, fn1);
 	syncnow();
 	bp->SRexpire = now;
     }
@@ -3724,6 +3738,10 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	    // over18 boards do not provide URL.
 	    prints("│ 本看板目前不提供" URL_DISPLAYNAME " \n");
 	}
+        else if (fhdr->filename[0] == 'L')
+        {
+	    prints("│ 本文章不提供" URL_DISPLAYNAME " \n");
+        }
 	else
 	{
 	    prints("│ " URL_DISPLAYNAME ": " 
