@@ -199,6 +199,7 @@ int copy_file(const char *src, const char *dst)
 }
 
 #include <signal.h>
+#include <errno.h>
 int
 Rename(const char *src, const char *dst)
 {
@@ -208,6 +209,9 @@ Rename(const char *src, const char *dst)
 
     if (rename(src, dst) == 0)
 	return 0;
+
+    if (errno != EXDEV)
+        return -1;
 
     // prevent malicious shell escapes
     if (strchr(src, ';') || strchr(dst, ';'))
