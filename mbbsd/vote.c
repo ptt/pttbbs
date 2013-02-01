@@ -644,6 +644,7 @@ vote_maintain(const char *bname)
     setbfile(buf, bname, vbuf.limits);
     if (inbuf[0] == 'y') {
 	fp = fopen(buf, "w");
+        // TODO regtime 跟 LOGINDAYS 其實可以合併
 	assert(fp);
         // 註冊時間 (以月為單位，deprecated)
 	fprintf(fp, "%d\n", now - (MONTH_SECONDS * 0));
@@ -653,11 +654,7 @@ vote_maintain(const char *bname)
 	    closetime = atoi(inbuf);	// borrow variable
 	} while (closetime < 0);
 	fprintf(fp, "%d\n", closetime);
-	do {
-	    getdata(6, 0, "文章篇數下限", inbuf, 6, DOECHO);
-	    closetime = atoi(inbuf);	// borrow variable
-	} while (closetime < 0);
-	fprintf(fp, "%d\n", closetime);
+	fprintf(fp, "%d\n", 0); // legacy record: numpost limit.
 	fclose(fp);
     } else {
 	if (dashf(buf))
@@ -793,8 +790,6 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	// XXX if this is a private vote (limited), I think we don't need to check limits?
 	if (cuser.firstlogin > closetime)
             reason = "註冊時間";
-        else if (cuser.numposts < (uint32_t)limits_posts)
-            reason = "文章總數";
         else if (cuser.numlogindays < (uint32_t)limits_logins)
             reason = STR_LOGINDAYS;
 

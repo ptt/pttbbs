@@ -34,14 +34,7 @@ do_order_song(void)
     char save_title[STRLEN];
     const char *override_receiver = NULL;
 
-    // 由於變免費了，改成要文章數跟登入天數
-#ifdef ORDERSONG_MIN_NUMPOST 
-    if (cuser.numposts < ORDERSONG_MIN_NUMPOST) { 
-        vmsgf("為避免濫用，留言前請先獲得 %d 篇有效文章記錄", 
-                ORDERSONG_MIN_NUMPOST); 
-        return 0; 
-    } 
-#endif 
+    // 由於變免費了，改成要看劣文跟登入天數
 #if defined(ORDERSONG_MAX_BADPOST) && defined(ASSESS)
     if (cuser.badpost > ORDERSONG_MAX_BADPOST) { 
         vmsgf("為避免濫用，留言前請先消除劣文記錄至 %d 篇以下",  
