@@ -182,8 +182,15 @@ do_order_song(void)
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
+            const char *r = receiver;
+#ifdef PLAY_ANGEL
+            if (strstr(po, "小天使") && strstr(receiver, "小天使") &&
+                override_receiver) {
+                r = override_receiver;
+            }
+#endif
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, receiver, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, r, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Say~>"))) {

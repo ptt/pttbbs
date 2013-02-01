@@ -840,6 +840,7 @@ TalkToAngel(){
     if (dashs(msg_fn) > 0) {
         // render per-user message 
         move(1, 0);
+        clrtobot();
         angel_display_message(FN_ANGEL_USAGE2, msg_fn, 0, 2, 4, 6, 24);
     } else {
         more(FN_ANGEL_USAGE, NA);
