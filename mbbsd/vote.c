@@ -981,10 +981,14 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 static const char *
 voteperm_msg(const char *bname)
 {
+    const char *msg;
+
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return "對不起! 您未完成註冊程序, 還沒有投票權喔!";
 
-    const char *msg;
+    if (HasUserPerm(PERM_VIOLATELAW))
+        return "罰單未繳清，無法投票。";
+
     if ((msg = banned_msg(bname)) != NULL)
         return msg;
 
@@ -1002,6 +1006,7 @@ user_vote(const char *bname)
     char            genbuf[STRLEN];
     char            inbuf[80];
     vote_buffer_t   vbuf;
+    const char *msg;
 
     if ((bid = getbnum(bname)) <= 0)
 	return 0;
@@ -1015,13 +1020,10 @@ user_vote(const char *bname)
 	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
     }
-    do {
-        const char *msg;
-        if ((msg = voteperm_msg(bname)) != NULL) {
-            vmsg(msg);
-            return FULLUPDATE;
-        }
-    } while (0);
+    if ((msg = voteperm_msg(bname)) != NULL) {
+        vmsg(msg);
+        return FULLUPDATE;
+    }
 
     // XXX I think such loop is ineffective...
     // According to the creation code, the vote is ranged as [1..MAX_VOTE_NR]
