@@ -2093,12 +2093,15 @@ m_read(void)
         return DONOTHING;
 
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
+	int was_in_digest = currmode & MODE_DIGEST;
+	currmode &= ~MODE_DIGEST;
 	curredit = EDIT_MAIL;
 	back_bid = currbid;
 	currbid = 0;
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
 	currbid = back_bid;
 	curredit = 0;
+	currmode |= was_in_digest;
 	setmailalert();
 	return 0;
     } else {
