@@ -961,6 +961,11 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    switch (flag) {
 #ifdef PLAY_ANGEL
 		case WATERBALL_ANGEL:
+                    if ((now - cuser.timeplayangel) >= DAY_SECONDS)
+                        pwcuPlayAngel();
+		    uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
+		    break;
+
 		case WATERBALL_CONFIRM_ANGEL:
 		    uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
 		    break;

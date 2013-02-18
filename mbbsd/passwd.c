@@ -200,6 +200,14 @@ int pwcuSetMyAngel	(const char *angel_uid)
     PWCU_END();
 }
 
+int pwcuPlayAngel       (void)
+{
+    syncnow();
+    PWCU_START();
+    u.timeplayangel = cuser.timeplayangel = now;
+    PWCU_END();
+}
+
 int pwcuSetNickname	(const char *nickname)
 {
     PWCU_START();

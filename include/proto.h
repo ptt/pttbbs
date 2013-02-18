@@ -787,6 +787,7 @@ int pwcuToggleOutMail	(void);
 int pwcuSetLoginView	(unsigned int bits);
 int pwcuSetLastSongTime (time4_t clk);
 int pwcuSetMyAngel	(const char *angel_uid);
+int pwcuPlayAngel	(void);
 int pwcuSetNickname	(const char *nickname);
 int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
