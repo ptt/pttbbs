@@ -165,6 +165,10 @@
 #define BN_JUNK "junk"
 #endif 
 
+#ifndef BN_POLICELOG
+#define BN_POLICELOG    "PoliceLog"
+#endif
+
 #ifndef BN_UNANONYMOUS
 #define BN_UNANONYMOUS "UnAnonymous"
 #endif

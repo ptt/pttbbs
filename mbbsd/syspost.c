@@ -123,7 +123,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
 	    police, crime, reason, result, memo ? memo : "");
 
     if (!strstr(police, "警察")) {
-	post_msg("PoliceLog", title, msg, "[" BBSMNAME "法院]");
+	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
 
 	snprintf(msg, sizeof(msg), 
 		ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
@@ -164,7 +164,7 @@ post_policelog2(const char *bname, const char *atitle, const char *action,
 	     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
 	     reason, atitle ? "文章標題 : " : "", atitle ? atitle : "");
 
-    if (post_msg2("PoliceLog", title, genbuf, "[系統]", msg_file) == 0) {
+    if (post_msg2(BN_POLICELOG, title, genbuf, "[系統]", msg_file) == 0) {
         if (attach_file)
             AppendTail(attach_file, msg_file, 0);
     }

@@ -3605,7 +3605,16 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	if (vans("要將文章鎖定嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
+
         setbfile(fn1, currboard, fhdr->filename);
+        snprintf(genbuf, sizeof(genbuf), "%s 板遭鎖定文章 - %s", currboard,
+                 fhdr->title);
+
+	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] > 0; i++)
+            mail_id(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
+                    "[系統通知]");
+
+        post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
 
         // Rename the file to be secure, introducing new X-dot file here.
         // We can not use L-dot prefix since there may be some code that
@@ -3613,12 +3622,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         fhdr->filename[0] = 'X';
         setbfile(fnx, currboard, fhdr->filename);
         Rename(fn1, fnx);
-
         fhdr->filename[0] = 'L';
-	syncnow();
-	bp->SRexpire = now;
-    }
-    else if (fhdr->filename[0]=='L') {
+    } else if (fhdr->filename[0]=='L') {
 	if (vans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'X';
@@ -3627,21 +3632,17 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         setbfile(fn1, currboard, fhdr->filename);
         // Rename it back, no check for errors because old locked files
         // are not renamed.
-        Rename(fnx, fn1);
-	syncnow();
-	bp->SRexpire = now;
+        if (access(fnx, 0) == 0)
+            Rename(fnx, fn1);
+        post_policelog(currboard, fhdr->title, "鎖文", genbuf, 0);
+    } else {
+        vmsg("無法進行鎖定或解除。");
+        return FULLUPDATE;
     }
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
-    post_policelog(currboard, fhdr->title, "鎖文", genbuf, fhdr->filename[0] == 'L' ? 1 : 0);
-    if (fhdr->filename[0] == 'L') {
-	fhdr->filename[0] = 'M';
-	do_crosspost("PoliceLog", fhdr, fn1);
-	fhdr->filename[0] = 'L';
-	snprintf(genbuf, sizeof(genbuf), "%s 板遭鎖定文章 - %s", currboard, fhdr->title);
-	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] != -1; i++)
-	    mail_id(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1, "[系統]");
-    }
+    syncnow();
+    bp->SRexpire = now;
     return FULLUPDATE;
 } 
 
