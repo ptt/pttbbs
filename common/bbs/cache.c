@@ -661,10 +661,6 @@ parseBMlist(const char *input, int uids[MAX_BMs]) {
 void
 buildBMcache(int bid) /* bid starts from 1 */
 {
-    char    s[IDLEN * 3 + 3], *ptr;
-    int     i, uid;
-    char   *strtok_pos;
-
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     parseBMlist(getbcache(bid)->BM, SHM->BMcache[bid - 1]);
 }
@@ -871,8 +867,6 @@ reload_fcache(void)
     if (SHM->Fbusystate)
 	safe_sleep(1);
     else {
-	FILE           *fp;
-
 	SHM->Fbusystate = 1;
 	SHM->max_user = 0;
 
