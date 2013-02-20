@@ -642,12 +642,17 @@ int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int 
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
+int post_msg2(const char* bname, const char* title, const char *msg,
+              const char* author, char *output_path);
 int post_file(const char *bname, const char *title, const char *filename, const char *author);
 void post_newboard(const char *bgroup, const char *bname, const char *bms);
 void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);
 void post_violatelaw2(const char *crime, const char *police, const char *reason, const char *result, const char *memo);
 void post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid);
-void post_policelog(const char *bname, const char *atitle, const char *action, const char *reason, const int toggle);
+void post_policelog(const char *bname, const char *atitle, const char *action,
+                    const char *reason, const int toggle);
+void post_policelog2(const char *bname, const char *atitle, const char *action,
+                     const char *reason, const int toggle, const char *attach_file);
 
 /* talk */
 #define iswritable(uentp)    \

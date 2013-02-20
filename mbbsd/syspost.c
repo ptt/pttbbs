@@ -1,8 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
-int 
-post_msg(const char* bname, const char* title, const char *msg, const char* author)
+int post_msg2(const char* bname, const char* title, const char *msg,
+              const char* author, char *output_path)
 {
     char fname[PATHLEN];
     FILE           *fp;
@@ -15,13 +15,15 @@ post_msg(const char* bname, const char* title, const char *msg, const char* auth
     stampfile(fname, &fhdr);
     fp = fopen(fname, "w");
 
+    if (output_path)
+        strlcpy(output_path, fname, PATHLEN);
+
     if (!fp)
 	return -1;
 
     fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", author, bname, title);
     fprintf(fp, "時間: %s\n", ctime4(&now));
 
-    /* 文章的內容 */
     fputs(msg, fp);
     fclose(fp);
 
@@ -33,6 +35,11 @@ post_msg(const char* bname, const char* title, const char *msg, const char* auth
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;
+}
+
+int post_msg(const char* bname, const char* title, const char *msg,
+             const char* author) {
+    return post_msg2(bname, title, msg, author, NULL);
 }
 
 int
@@ -144,15 +151,27 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 }
 
 void
-post_policelog(const char *bname, const char *atitle, const char *action, const char *reason, const int toggle)
+post_policelog2(const char *bname, const char *atitle, const char *action,
+                const char *reason, const int toggle, const char *attach_file)
 {
-    char            genbuf[ANSILINELEN], title[TTLEN+1];
+    char msg_file[PATHLEN];
+    char genbuf[ANSILINELEN], title[TTLEN+1];
 
-    snprintf(title, sizeof(title), "[%s][%s] %s by %s", action, toggle ? "開啟" : "關閉", bname, cuser.userid);
+    snprintf(title, sizeof(title), "[%s][%s] %s by %s", action,
+             toggle ? "開啟" : "關閉", bname, cuser.userid);
     snprintf(genbuf, sizeof(genbuf),
-	     "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n",
+	     "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n\n",
 	     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
 	     reason, atitle ? "文章標題 : " : "", atitle ? atitle : "");
 
-    post_msg("PoliceLog", title, genbuf, "[系統]");
+    if (post_msg2("PoliceLog", title, genbuf, "[系統]", msg_file) == 0) {
+        if (attach_file)
+            AppendTail(attach_file, msg_file, 0);
+    }
+}
+
+void
+post_policelog(const char *bname, const char *atitle, const char *action,
+               const char *reason, const int toggle) {
+    return post_policelog2(bname, atitle, action, reason, toggle, NULL);
 }
