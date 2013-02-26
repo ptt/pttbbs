@@ -3595,6 +3595,14 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid);
     assert(bp);
 
+#ifdef USE_LIVE_ALLPOST
+    // In case idiots do this in ALLPOST...
+    if (strcmp(bp->brdname, BN_ALLPOST) == 0) {
+        vmsgf("請至原看板鎖定。%s 會自動更新。", BN_ALLPOST);
+        return FULLUPDATE;
+    }
+#endif
+
     if (fhdr->filename[0]=='M') {
 	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE)) {
             vmsg("站長或特殊管理人員才可進行鎖定。板主只能解除鎖定。");
