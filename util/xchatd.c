@@ -12,6 +12,8 @@
 #define MONITOR
 #endif
 
+#define REJECT_NICK_BY_USERID
+
 /* self-test:
  * random test, 隨機產生各種 client input, 目的為找到讓 server
  * crash 的狀況, 因此 client 並未檢驗 server 傳過來的 data.
@@ -840,6 +842,16 @@ chat_nick(ChatUser *cu, char *msg)
 	return;
     }
 
+#ifdef REJECT_NICK_BY_USERID
+    // Having chatid same as other's real id may be confusing.
+    if (is_validuserid(chatid) && searchuser(chatid, NULL) > 0 &&
+        strcasecmp(chatid, cu->userid) != 0) {
+	send_to_user(cu, "※ 此代號與站內其它使用者 ID 重複，"
+                     "為避免爭議建議不要使用", 0, MSG_MESSAGE);
+	return;
+    }
+#endif
+
     snprintf(chatbuf, sizeof(chatbuf), "※ %s 將聊天代號改為 " ANSI_COLOR(1;33) "%s" ANSI_RESET, cu->chatid, chatid);
     if (!CLOAK(cu))               /* Thor: 聊天室隱身術 */
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
@@ -1506,6 +1518,18 @@ login_user(ChatUser *cu, char *msg)
 	return 0;
     }
 
+#ifdef REJECT_NICK_BY_USERID
+    // Currently some user may choose random names (that is probably not trying
+    // to fake accounts) like "apple" when entering xchatd. Let's relax about
+    // the "first login" case.
+#if 0
+    if (searchuser(chatid, NULL) && strcasecmp(chatid, userid) != 0) {
+	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
+	return 0;
+    }
+#endif
+#endif
+
     if (cuser_by_chatid(chatid) != NULL)
     {
 	/* chatid in use */
@@ -1528,21 +1552,6 @@ login_user(ChatUser *cu, char *msg)
     cu->numposts = acct.numposts;
     cu->numlogindays = acct.numlogindays;
     strlcpy(cu->lasthost, acct.lasthost, sizeof(cu->lasthost));
-
-    // deprecated: let's use BBS lasthost
-#if 0
-    /* Xshadow: 取得 client 的來源 */
-    fromlen = sizeof(from);
-    if (!getpeername(cu->sock, (struct sockaddr *) & from, &fromlen))
-    {
-	if ((hp = gethostbyaddr((char *) &from.sin_addr, sizeof(struct in_addr), from.sin_family)))
-	    strlcpy(cu->lasthost, hp->h_name, sizeof(cu->lasthost));
-	else
-	    strlcpy(cu->lasthost, (char *) inet_ntoa(from.sin_addr), sizeof(cu->lasthost));
-    }
-    else
-	strcpy(cu->lasthost, "[外太空]");
-#endif
 
     send_to_user(cu, CHAT_LOGIN_OK, 0, 0);
     arrive_room(cu, &mainroom);
