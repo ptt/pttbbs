@@ -227,51 +227,79 @@ static int
 b_posttype()
 {
    boardheader_t  *bp;
-   int i, aborted;
-   char filepath[PATHLEN], genbuf[60], title[5], posttype_f, posttype[33]="";
+   int i, modified = 0, types = 0;
+   char filepath[PATHLEN], genbuf[60];
+   char posttype_f, posttype[33]="", *p;
 
-   // if(!(currmode & MODE_BOARD)) return DONOTHING;
-   
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
+   posttype_f = bp->posttype_f;
+   memcpy(posttype, bp->posttype, sizeof(bp->posttype));
+
    vs_hdr("設定文章類別");
 
-   move(2,0);
-   clrtobot();
-   posttype_f = bp->posttype_f;
-   for( i = 0 ; i < 8 ; ++i ){
-       move(2+i,0);
-       outs("文章種類:       ");
-       strlcpy(genbuf, bp->posttype + i * 4, 5);
-       sprintf(title, "%d.", i + 1);
-       if( !getdata_buf(2+i, 11, title, genbuf, 5, DOECHO) )
-	   break;
-       sprintf(posttype + i * 4, "%-4.4s", genbuf); 
-       if( posttype_f & (1<<i) ){
-	   if( getdata(2+i, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
-	       genbuf[0]=='n' ){
-	       posttype_f &= ~(1<<i);
-	       continue;
-	   }
+   do {
+       move(2, 0);
+       clrtobot();
+       for (i = 0, p = posttype; *p && i < 8; i++, p += 4) {
+           strlcpy(genbuf, p, 5);
+           prints(" %d. %s %s\n", i + 1, genbuf,
+                  posttype_f & (1 << i) ? "(有範本)": "");
        }
-       else if ( !getdata(2+i, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
-		 genbuf[0] != 'y' )
-	   continue;
+       types = i;
+       if (!getdata(15, 0,
+                    "請輸入要設定的項目編號，或 c 設定總數,或 ENTER 離開:",
+                    genbuf, 3, LCECHO))
+           break;
 
-       setbnfile(filepath, bp->brdname, "postsample", i);
-       aborted = veditfile(filepath);
-       if (aborted == -1) {
-           clear();
-           posttype_f &= ~(1<<i);
+       if (genbuf[0] == 'c') {
+           getdata(15, 0, "要保留幾項類別呢？ [0-8或 ENTER 離開]: ", genbuf, 3,
+                   NUMECHO);
+           if (!isdigit(genbuf[0]))
+               continue;
+           i = atoi(genbuf);
+           if (i < 0 || i >= 8)
+               continue;
+           while (i > types++)
+               strlcat(posttype, "    ", sizeof(posttype));
+           posttype[i * 4] = 0;
            continue;
        }
-       posttype_f |= (1<<i);
-   }
-   bp->posttype_f = posttype_f; 
-   strlcpy(bp->posttype, posttype, sizeof(bp->posttype)); /* 這邊應該要防race condition */
 
+       i = atoi(genbuf) - 1;
+       if (i < 0 || i >= 8)
+           continue;
+       strlcpy(genbuf, posttype + i * 4, 5);
+       if(getdata_str(16, 0, "類別名稱: ", genbuf, 5, DOECHO, genbuf)) {
+           snprintf(posttype + i * 4, 4, "%-4.4s", genbuf); 
+       }
+       getdata(17, 0, "要使用範本嗎? [y/n/K(不改變)]: ", genbuf, 2, LCECHO);
+       if (genbuf[0] == 'y')
+           posttype_f |= 1 << i;
+       else if (genbuf[0] == 'n') {
+           posttype_f &= ~(1 << i);
+           continue;
+       }
+       getdata(18, 0, "要編輯範本檔案嗎? [y/N]: ", genbuf, 2, LCECHO);
+       if (genbuf[0] == 'y') {
+           setbnfile(filepath, bp->brdname, "postsample", i);
+           veditfile(filepath);
+       }
+   } while (1);
+
+   // TODO last chance to confirm.
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-   substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+   if (bp->posttype_f != posttype_f) {
+       bp->posttype_f = posttype_f; 
+       modified = 1;
+   }
+   if (strcmp(bp->posttype, posttype) != 0) {
+       /* 這邊應該要防race condition */
+       strlcpy(bp->posttype, posttype, sizeof(bp->posttype));
+       modified = 1;
+   }
+   if (modified)
+       substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
    return FULLUPDATE;
 }
 
