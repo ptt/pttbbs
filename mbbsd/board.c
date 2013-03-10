@@ -229,7 +229,7 @@ b_posttype()
    boardheader_t  *bp;
    int i, modified = 0, types = 0;
    char filepath[PATHLEN], genbuf[60];
-   char posttype_f, posttype[33]="", *p;
+   char posttype_f, posttype[sizeof(bp->posttype)]="", *p;
 
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
@@ -245,6 +245,10 @@ b_posttype()
            strlcpy(genbuf, p, 5);
            prints(" %d. %s %s\n", i + 1, genbuf,
                   posttype_f & (1 << i) ? "(有範本)": "");
+           // Workaround broken items
+           if (strlen(p) < 4) {
+               memset(p + strlen(p), ' ', 4 - strlen(p));
+           }
        }
        types = i;
        if (!getdata(15, 0,
@@ -271,7 +275,9 @@ b_posttype()
            continue;
        strlcpy(genbuf, posttype + i * 4, 5);
        if(getdata_str(16, 0, "類別名稱: ", genbuf, 5, DOECHO, genbuf)) {
-           snprintf(posttype + i * 4, 4, "%-4.4s", genbuf); 
+           char tmp[5];
+           snprintf(tmp, sizeof(tmp), "%-4.4s", genbuf);
+           memcpy(posttype + (i * 4), tmp, 4);
        }
        getdata(17, 0, "要使用範本嗎? [y/n/K(不改變)]: ", genbuf, 2, LCECHO);
        if (genbuf[0] == 'y')
@@ -298,8 +304,10 @@ b_posttype()
        strlcpy(bp->posttype, posttype, sizeof(bp->posttype));
        modified = 1;
    }
-   if (modified)
+   if (modified) {
        substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+       vmsg("資料已更新。");
+   }
    return FULLUPDATE;
 }
 
