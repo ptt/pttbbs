@@ -250,7 +250,7 @@ suggest_online_angel(int master_uid) {
         if (!uid && !is_pause) {
             uid = kanade->uid;
             if (found++ < 5) {
-                fprintf("%d.%s(assigned=%d/act=%d) ", found,
+                fprintf(stderr, "%d.%s(assigned=%d/act=%d) ", found,
                         kanade->userid, kanade->masters,
                         kanade->last_activity - clk,
                         kanade->last_assigned - clk);
