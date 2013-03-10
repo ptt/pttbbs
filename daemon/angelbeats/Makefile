@@ -19,9 +19,6 @@ all:	${PROGRAMS}
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
-ctags:
-	ctags *.[ch] $(SRCROOT)/include/*.h $(SRCROOT)/common/*/*.[ch]
-
 angelbeats: angelbeats.o 
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 

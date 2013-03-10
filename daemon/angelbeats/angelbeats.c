@@ -223,6 +223,7 @@ suggest_online_angel(int master_uid) {
     int uid = 0, do_perf = 0;
     static time_t perf_time = 0;
     time_t clk = time(0);
+    int found = 0;
 
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
     int random_uids[ANGELBEATS_RANDOM_RANGE];
@@ -246,12 +247,20 @@ suggest_online_angel(int master_uid) {
 
 #if   defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
         // select if angel is online and not paused.
-        if (!uid && !is_pause)
+        if (!uid && !is_pause) {
             uid = kanade->uid;
+            if (found++ < 5) {
+                fprintf("%d.%s(assigned=%d/act=%d) ", found,
+                        kanade->userid, kanade->masters,
+                        kanade->last_activity - clk,
+                        kanade->last_assigned - clk);
+            }
+        }
 #elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
         if (!uid && !is_pause)
             random_uids[crandom_uids++] = kanade->uid;
 #endif
+
 
         // update perf data; otherwise abort.
         if (do_perf) {
@@ -339,7 +348,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     // skip inactive users. however, this makes the counter
     // incorrect when those kind of use goes online.
     // anyway that should not be a big change...
-    if (time4(0) > u->lastlogin + ANGELBEATS_INACTIVE_TIME )
+    if (time4(0) > u->timeplayangel + ANGELBEATS_INACTIVE_TIME )
         return 0;
 
     kanade = angel_list_find_by_userid(u->myangel);
