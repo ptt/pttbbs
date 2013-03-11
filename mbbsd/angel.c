@@ -432,42 +432,28 @@ int a_angelreport() {
             rpt.total_online_angels,
             rpt.total_active_angels);
 
-        if (HasUserPerm(PERM_SYSOP)) {
-            prints(
-                "\n\t 絬ぱㄏい局Τ计ヘ程ぶ %d 程 %d \n"
-                "\n\t 絬秨Μぱㄏい程ぶ %d 程 %d \n",
-                rpt.min_masters_of_online_angels,
-                rpt.max_masters_of_online_angels,
-                rpt.min_masters_of_active_angels,
-                rpt.max_masters_of_active_angels);
-        } else {
-            // some people with known min/max signature may leak their own 
-            // identify and then complain about privacy. well, I believe this
-            // is their own fault but anyway let's make them happy
-            double base1 = rpt.min_masters_of_online_angels,
-                   base2 = rpt.min_masters_of_active_angels;
-            if (!base1) base1 = 1;
-            if (!base2) base2 = 1;
-            prints(
-                    "\n\t 絬ぱㄏい局Τ程计ヘ琌程ぶ %.1f \n"
-                    "\n\t 絬秨Μぱㄏい计ヘ畉钵 %.1f \n",
-                    rpt.max_masters_of_online_angels/base1,
-                    rpt.max_masters_of_active_angels/base2);
-        }
+        prints(
+            "\n\t 絬ぱㄏい局Τ臘计ヘ程ぶ %d 程 %d \n"
+            "\n\t 絬秨Μぱㄏい臘程ぶ %d 程 %d \n"
+            "\n\t 臘﹚竡 120 ぱずΤ癸ヴ(玡ヴ)ぱㄏ肚筁癟\n",
+            rpt.min_masters_of_online_angels,
+            rpt.max_masters_of_online_angels,
+            rpt.min_masters_of_active_angels,
+            rpt.max_masters_of_active_angels);
 
 #ifdef ANGEL_REPORT_INDEX
         if (HasUserPerm(PERM_ANGEL)) {
             if (currutmp->angelpause != ANGELPAUSE_NONE)
                 prints("\n\t パ眤ヘ玡┶Μ┮礚抖戈癟\n");
             else if (rpt.my_active_index == 0)
-                prints("\n\t 眤Τㄤウ祅氨Μ┪┶Μ┮ヘ玡礚ぱㄏ抖\n");
+                prints("\n\t 眤Τㄤウ祅氨Μ┪┶Μ┮ヘ玡礚ぱㄏ抖\n");
             else
                 prints("\n\t 眤絬ぱㄏ抖 %d"
                        "\n\t 抖穦ㄤウぱㄏ絬┪э跑㊣竟τ跑\n",
                        rpt.my_active_index);
-            prints("\n\t 眤ヘ玡Τ %d \n", rpt.my_active_masters);
         }
 #endif
+        prints("\n\t 眤ヘ玡Τ %d 臘\n", rpt.my_active_masters);
     }
     close(fd);
     pressanykey();
