@@ -136,11 +136,11 @@ int generateReport(FILE *fp, AngelRecord *rec, int num_recs, int delete_file) {
 
     appendLogFile(fp, "log/angel_perf.txt",
                   "\n== 本周小天使活動資料記錄 ==\n"
-                  " (說明: Sample 指的是新小主人新找天使時有在線上的次數\n"
+                  " (說明: Start 是開始統計的時間\n"
+                  "        Duration 是幾秒統計一次\n"
+                  "        Sample 指的是每次統計時天使在線上的次數\n"
                   "        Pause1 指的是 Sample 中有幾次神諭呼叫器設停收\n"
-                  "        Pause2 指的是 Sample 中有幾次神諭呼叫器設關閉\n"
-                  "  另外, Sample 每"  STR_ANGELBEATS_PERF_MIN_PERIOD
-                  "秒最多更新一次)\n",
+                  "        Pause2 指的是 Sample 中有幾次神諭呼叫器設關閉)\n",
                   delete_file);
 
     appendLogFile(fp, "log/changeangel.log",

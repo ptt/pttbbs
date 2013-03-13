@@ -17,7 +17,6 @@
 //    and/or other materials provided with the distribution.
 // --------------------------------------------------------------------------
 // TODO cache report results.
-// TODO able to persist perf data.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +26,10 @@
 #include <event.h>
 #include "bbs.h"
 #include "daemons.h"
+
+#define error(x...) fprintf(stderr, "ERROR: " x)
+#define log(x...) fprintf(stderr, x)
+#define debug(x...) { if(debug) fprintf(stderr, "DEBUG: " x); }
 
 //////////////////////////////////////////////////////////////////////////////
 // configuration
@@ -65,6 +68,11 @@ static int debug = 0;
 #define ANGELBEATS_PERF_OUTPUT_FILE BBSHOME "/log/angel_perf.txt"
 #endif
 
+#ifndef ANGEL_STATE_FILE
+#define ANGEL_STATE_FILE  BBSHOME "/log/angel_state.txt"
+#endif
+#define ANGEL_STATE_VERSION   (1)
+
 //////////////////////////////////////////////////////////////////////////////
 // AngelInfo list operation
 
@@ -80,6 +88,11 @@ typedef struct {
 } PerfData;
 
 typedef struct {
+    time4_t start;
+    int samples;
+} GlobalPerfData;
+
+typedef struct {
     PerfData perf;
     time_t last_activity;   // last known activity from master
     time_t last_assigned;   // last time being assigned with new master
@@ -90,6 +103,10 @@ typedef struct {
 
 AngelInfo *g_angel_list;
 size_t g_angel_list_capacity, g_angel_list_size;   // capacity and current size
+
+struct timeval g_perf_timer_duration = { .tv_sec = ANGELBEATS_PERF_MIN_PERIOD };
+struct event g_perf_timer_event;
+GlobalPerfData g_perf;
 
 // quick sort stubs
 
@@ -166,7 +183,7 @@ angel_list_sort() {
 AngelInfo *
 angel_list_add(const char *userid, int uid) {
     AngelInfo *kanade = angel_list_find_by_userid(userid);
-    // printf("adding angel: %s (%s)\n", userid, kanade ? "exist" : "new");
+    debug("adding angel: %s (%s)\n", userid, kanade ? "exist" : "new");
     if (kanade)
         return kanade;
 
@@ -216,27 +233,44 @@ int get_angel_state(const AngelInfo *kanade,
     return logins > 0;
 }
 
+void
+perf_angels() {
+    size_t i;
+    int is_pause, logins;
+    time4_t clk = time4(0);
+    AngelInfo *kanade = g_angel_list;
+
+    debug("%s %s\n", Cdatelite(&clk), __func__);
+    if (!g_perf.start)
+        g_perf.start = clk;
+    g_perf.samples++;
+
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
+
+        if (!get_angel_state(kanade, &is_pause, &logins))
+            continue;
+
+        kanade->perf.samples++;
+        kanade->perf.pause1 += (is_pause == 1);
+        kanade->perf.pause2 += (is_pause == 2);
+    }
+}
+
 int 
 suggest_online_angel(int master_uid) {
     size_t i;
     int is_pause, logins;
-    int uid = 0, do_perf = 0;
-    static time_t perf_time = 0;
+    int uid = 0;
     time_t clk = time(0);
     int found = 0;
+    AngelInfo *kanade = g_angel_list;
 
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
     int random_uids[ANGELBEATS_RANDOM_RANGE];
     int crandom_uids = 0;
 #endif
 
-    if (clk - perf_time > ANGELBEATS_PERF_MIN_PERIOD) {
-        perf_time = clk;
-        do_perf = 1;
-    }
-
-    for (i = 0; i < g_angel_list_size; i++) {
-        AngelInfo *kanade = g_angel_list + i;
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
 
         // skip the master himself
         if (kanade->uid == master_uid)
@@ -245,32 +279,24 @@ suggest_online_angel(int master_uid) {
         if (!get_angel_state(kanade, &is_pause, &logins))
             continue;
 
-#if   defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
-        // select if angel is online and not paused.
-        if (!uid && !is_pause) {
+        if (is_pause)
+            continue;
+
+#if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
+        if (!uid)
             uid = kanade->uid;
-            if (found++ < 5) {
-                fprintf(stderr, "%d.%s(masters=%d,assigned=%d,act=%d) ",
-                        found,
-                        kanade->userid, kanade->masters,
-                        (int)(kanade->last_activity - clk),
-                        (int)(kanade->last_assigned - clk));
-            }
-        }
-#elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
-        if (!uid && !is_pause)
-            random_uids[crandom_uids++] = kanade->uid;
-#endif
 
-
-        // update perf data; otherwise abort.
-        if (do_perf) {
-            kanade->perf.samples++;
-            kanade->perf.pause1 += (is_pause == 1);
-            kanade->perf.pause2 += (is_pause == 2);
-        } else if (uid) {
+        if (found++ > 5)
             break;
-        }
+        log("%d.%s(masters=%d,act=%d,assigned=%d) ", found,
+            kanade->userid, kanade->masters,
+            (int)(clk - kanade->last_activity),
+            (int)(clk - kanade->last_assigned));
+#elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
+        random_uids[crandom_uids++] = kanade->uid;
+        if (crandom_uids >= ANGELBEATS_RANDOM_RANGE)
+            break;
+#endif
     }
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
     if (crandom_uids > 0) {
@@ -299,8 +325,8 @@ dec_angel_master(int uid) {
     if (!kanade)
         return 0;
     if (kanade->masters == 0) {
-        fprintf(stderr, "warning: trying to decrease angel master "
-                "which was already zero: %d\n", uid);
+        error("trying to decrease angel master "
+              "which was already zero: %d\n", uid);
         return 0;
     }
     kanade->masters--;
@@ -364,7 +390,6 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
 
     // found an angel?
     if (kanade) {
-        // printf(" * %s -> angel = %s\n", u->userid, xuser.userid);
         kanade->masters++;
     }
     return 1;
@@ -396,17 +421,16 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
 
         // Print state information.
         if (from_cmd) {
-            fprintf(stderr, " - %03zu. %-14s: ", i+1, kanade->userid);
-            fprintf(stderr,
-                    "{samples=%d, pause1=%d, pause2=%d} "
-                    "(masters=%d, logins=%d, activity=%d, assigned=%d)",
-                    kanade->perf.samples, kanade->perf.pause1,
-                    kanade->perf.pause2, kanade->masters, logins,
-                    (int)kanade->last_activity,
-                    (int)kanade->last_assigned);
+            log(" - %03zu. %-14s: ", i+1, kanade->userid);
+            log("{samples=%d, pause1=%d, pause2=%d} "
+                "(masters=%d, logins=%d, activity=%d, assigned=%d)",
+                kanade->perf.samples, kanade->perf.pause1,
+                kanade->perf.pause2, kanade->masters, logins,
+                (int)kanade->last_activity,
+                (int)kanade->last_assigned);
             if (is_pause)
-                fprintf(stderr, " [PAUSE %d]", is_pause);
-            fputc('\n', stderr);
+                log(" [PAUSE %d]", is_pause);
+            log("\n");
         }
 
         // update report numbers
@@ -440,7 +464,6 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     if (myuid > 0 && (kanade = angel_list_find_by_uid(myuid))) {
         prpt->my_active_masters = kanade->masters;
     }
-    if(from_cmd) fflush(stderr);
     return 0;
 }
 
@@ -473,21 +496,83 @@ void print_dash(FILE *fp, int len, const char *prefix) {
     fputc('\n', fp);
 }
 
+void load_state_data() {
+    int version = -1, i = 0;
+    int activity, assigned;
+    char uid[256];
+    PerfData d;
+    AngelInfo *kanade;
+    FILE *fp = fopen(ANGEL_STATE_FILE, "rt");
+    if (!fp)
+        return;
+
+    if (fscanf(fp, "%d\n", &version) != 1 ||
+        version != ANGEL_STATE_VERSION) {
+        error("Invalid state file (version=%d)\n", version);
+        fclose(fp);
+        return;
+    }
+    fscanf(fp, "%d %d\n", &g_perf.start, &g_perf.samples);
+    while (fscanf(fp, "%s %d %d %d %d %d\n",
+                  uid, &activity, &assigned,
+                  &d.samples, &d.pause1, &d.pause2) == 6) {
+        i++;
+        kanade = angel_list_find_by_userid(uid);
+        if (!kanade)
+            continue;
+        kanade->last_activity = activity;
+        kanade->last_assigned = assigned;
+        memcpy(&kanade->perf, &d, sizeof(d));
+    }
+    log("%s: got %d records.\n", __func__, i);
+    fclose(fp);
+}
+
+void save_state_data() {
+    FILE *fp = fopen(ANGEL_STATE_FILE, "wt");
+    size_t i;
+    AngelInfo *kanade = g_angel_list;
+    if (!fp)
+        return;
+    fprintf(fp, "%d\n%d %d\n", ANGEL_STATE_VERSION, g_perf.start,
+            g_perf.samples);
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
+        fprintf(fp, "%s %d %d %d %d %d\n",
+                kanade->userid, 
+                (int)kanade->last_activity, (int)kanade->last_assigned,
+                kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
+    }
+    fclose(fp);
+}
+
 void export_perf_data(FILE *fp) {
     size_t i = 0;
     time4_t clk = time4(0);
     AngelInfo *kanade = g_angel_list;
     fprintf(fp, "# Angel Performance Data (%s)\n", Cdatelite(&clk));
+    fprintf(fp, "# Start: %s, Duration: %ld, Count: %d\n",
+            Cdatelite(&g_perf.start), g_perf_timer_duration.tv_sec,
+            g_perf.samples);
     fprintf(fp, "# No. %-*s Sample Pause1 Pause2\n# ", IDLEN, "UserID");
     print_dash(fp, 70, "# ");
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         fprintf(fp, "%4lu. %-*s %6d %6d %6d\n", i + 1, IDLEN, kanade->userid,
                 kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
-        // reset perf data
-        memset(&kanade->perf, 0, sizeof(kanade->perf));
     }
     print_dash(fp, 70, "# ");
 }
+
+void reset_perf_data() {
+    size_t i;
+    AngelInfo *kanade = g_angel_list;
+    g_perf.start = 0;
+    g_perf.samples = 0;
+
+    for (i = 0; i < g_angel_list_size; i++, kanade++) {
+        memset(&kanade->perf, 0, sizeof(kanade->perf));
+    }
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 // network libevent
@@ -500,7 +585,7 @@ static struct event ev_listen, ev_sighup;
 static void
 sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED) {
     time4_t clk = time(0);
-    fprintf(stderr, "%s reload (HUP)\n", Cdatelite(&clk));
+    log("%s %s: reload (HUP)\n", Cdatelite(&clk), __func__);
     init_angel_list();
 }
 
@@ -520,29 +605,28 @@ client_cb(int fd, short event, void *arg) {
     if (data.cb != sizeof(data))
         goto end;
 
-    if (debug) {
-        fprintf(stderr, "%s request: op=%d, mid=%d, aid=%d\n", Cdatelite(&clk),
-                data.operation, data.master_uid, data.angel_uid);
-    }
+    debug("%s request: op=%d, mid=%d, aid=%d\n", Cdatelite(&clk),
+          data.operation, data.master_uid, data.angel_uid);
+
     // solve user ids
     if (data.angel_uid && (uid = getuserid(data.angel_uid)))
         strlcpy(angel_uid, uid, sizeof(angel_uid));
     if (data.master_uid && (uid = getuserid(data.master_uid)))
         strlcpy(master_uid, uid, sizeof(master_uid));
 
-    if (debug) printf("got request: %d\n", data.operation);
+    debug("got request: %d\n", data.operation);
     switch(data.operation) {
         case ANGELBEATS_REQ_INVALID:
-            fprintf(stderr, "%s got invalid request [%s/%s]\n", 
-                    Cdatelite(&clk), master_uid, angel_uid);
+            error("%s got invalid request [%s/%s]\n", 
+                  Cdatelite(&clk), master_uid, angel_uid);
             break;
         case ANGELBEATS_REQ_RELOAD:
-            fprintf(stderr, "%s reload\n", Cdatelite(&clk));
+            log("%s reload\n", Cdatelite(&clk));
             init_angel_list();
             break;
         case ANGELBEATS_REQ_SUGGEST_AND_LINK:
-            fprintf(stderr, "%s request suggest&link from [%s], ", 
-                    Cdatelite(&clk), master_uid);
+            log("%s request suggest&link from [%s], ", 
+                Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
                 inc_angel_master(data.angel_uid);
@@ -550,37 +634,38 @@ client_cb(int fd, short event, void *arg) {
                 strlcpy(angel_uid, uid, sizeof(angel_uid));
                 angel_list_sort();
             }
-            fprintf(stderr, "result: [%s]\n", data.angel_uid > 0 ?
-                    angel_uid : "<none>");
+            log("result: [%s]\n", data.angel_uid > 0 ?  angel_uid : "<none>");
             break;
         case ANGELBEATS_REQ_REMOVE_LINK:
-            fprintf(stderr, "%s request remove link by "
-                    "master [%s] to angel [%s]\n",
-                    Cdatelite(&clk), master_uid, angel_uid);
+            log("%s request remove link by "
+                "master [%s] to angel [%s]\n",
+                Cdatelite(&clk), master_uid, angel_uid);
             if (dec_angel_master(data.angel_uid))
                 angel_list_sort();
             break;
         case ANGELBEATS_REQ_HEARTBEAT:
-            fprintf(stderr, "%s update angel activity to [%s]\n",
-                    Cdatelite(&clk), angel_uid);
+            log("%s update angel activity to [%s]\n",
+                Cdatelite(&clk), angel_uid);
             if (touch_angel_activity(data.angel_uid))
                 angel_list_sort();
             break;
         case ANGELBEATS_REQ_EXPORT_PERF:
-            fprintf(stderr, "%s export_perf_data\n", Cdatelite(&clk));
+            log("%s export_perf_data\n", Cdatelite(&clk));
             {
                 FILE *fp = fopen(ANGELBEATS_PERF_OUTPUT_FILE, "at");
                 if (fp) {
                     export_perf_data(fp);
                     fclose(fp);
+                    reset_perf_data();
+                    save_state_data();
                 } else {
-                    fprintf(stderr, "%s ERROR: cannot output perf: %s\n",
-                            Cdatelite(&clk), ANGELBEATS_PERF_OUTPUT_FILE);
+                    error("%s cannot output perf: %s\n",
+                          Cdatelite(&clk), ANGELBEATS_PERF_OUTPUT_FILE);
                 }
             }
             break;
         case ANGELBEATS_REQ_REPORT:
-            fprintf(stderr, "%s report by [%s]\n", Cdatelite(&clk), master_uid);
+            log("%s report by [%s]\n", Cdatelite(&clk), master_uid);
             {
                 angel_beats_report rpt = {0};
                 rpt.cb = sizeof(rpt);
@@ -591,7 +676,7 @@ client_cb(int fd, short event, void *arg) {
             }
             break;
         case ANGELBEATS_REQ_GET_ONLINE_LIST:
-            fprintf(stderr, "%s get_online_uid_list\n", Cdatelite(&clk));
+            log("%s get_online_uid_list\n", Cdatelite(&clk));
             {
                 angel_beats_uid_list list = {0};
                 list.cb = sizeof(list);
@@ -603,8 +688,8 @@ client_cb(int fd, short event, void *arg) {
             }
             break;
         default:
-            fprintf(stderr, "%s UNKNOWN REQUEST (%d)\n", Cdatelite(&clk),
-                    data.operation);
+            error("%s UNKNOWN REQUEST (%d)\n", Cdatelite(&clk),
+                  data.operation);
             break;
     }
     write(fd, &data, sizeof(data));
@@ -622,11 +707,24 @@ listen_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED) {
     if ((cfd = accept(fd, NULL, NULL)) < 0 )
 	return;
 
-    if (debug) printf("accept new connection!\n");
+    debug("accept new connection!\n");
     struct event *ev = malloc(sizeof(struct event));
 
     event_set(ev, cfd, EV_READ, client_cb, ev);
     event_add(ev, &tv);
+}
+
+static void
+perf_timer_cb(int fd GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED) {
+    // libevent needs us to do so...
+    evtimer_del(&g_perf_timer_event);
+    evtimer_add(&g_perf_timer_event, &g_perf_timer_duration);
+
+    // Do perf now!
+    perf_angels();
+
+    // Save last state!
+    save_state_data();
 }
 
 int 
@@ -655,7 +753,7 @@ main(int argc, char *argv[]) {
 
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: %s [-D] [-i [interface_ip]:port]\n", argv[0]);
+	    log("usage: %s [-D] [-i [interface_ip]:port]\n", argv[0]);
 	    return 1;
 	}
     }
@@ -665,33 +763,34 @@ main(int argc, char *argv[]) {
     chdir(BBSHOME);
     attach_SHM();
 
-    printf("initializing angel list...\n");
+    log("initializing angel list...\n");
     init_angel_list();
+    load_state_data();
     if (go_daemon)
         daemonize(BBSHOME "/run/angelbeats.pid", BBSHOME "/log/angelbeats.log");
 
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    fprintf(stderr, "found %zd angels. (cap=%zd)\n", 
-            g_angel_list_size, g_angel_list_capacity);
+    log("found %zd angels. (cap=%zd)\n", 
+        g_angel_list_size, g_angel_list_capacity);
     kanade = g_angel_list;
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        fprintf(stderr,
-                "%zu [%s] uid=%d, masters=%d\n", 
-                i+1, 
-                kanade->userid,
-                kanade->uid,
-                kanade->masters);
+        log("%zu [%s] uid=%d, masters=%d\n", 
+            i+1, 
+            kanade->userid,
+            kanade->uid,
+            kanade->masters);
     }
-    if (debug)
-        fprintf(stderr, "suggested angel=%d\n", suggest_online_angel(0));
+    debug("suggested angel=%d\n", suggest_online_angel(0));
 
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
     event_add(&ev_listen, NULL);
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
+    evtimer_set(&g_perf_timer_event, perf_timer_cb, 0);
+    evtimer_add(&g_perf_timer_event, &g_perf_timer_duration);
     event_dispatch();
     
     return 0;
