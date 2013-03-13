@@ -15,6 +15,10 @@
 // 天使不在線上時的說明(附自訂訊息)
 #define FN_ANGEL_OFFLINE2   "etc/angel_offline2"
 
+#ifndef ANGEL_INACTIVE_DAYS
+#define ANGEL_INACTIVE_DAYS (30*3)
+#endif
+
 static const char
 *PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
 *ERR_CONNECTION = "抱歉，無法連線至天使公會。\n"
@@ -59,18 +63,29 @@ angel_beats_do_request(int op, int master_uid, int angel_uid) {
 // Local Angel Service
 
 void 
-angel_notify_activity() {
+angel_notify_activity(const char *userid) {
+    int master;
     static time4_t t = 0;
-    time4_t tick = now;
+    time4_t tick;
+
+#ifdef ANGEL_CIA_ACCOUNT
+    // Don't notify AngelBeats for CIA account.
+    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) != 0)
+        return;
+#endif
 
     // tick: every 1 minutes.
-    tick -= tick % (1 * 60);
+    syncnow();
+    tick = now - now % (1 * 60);
 
     // ping daemon only in different ticks.
     if (tick == t)
         return;
+
+    master = searchuser(userid, NULL);
     t = tick;
-    angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, 0, usernum);
+
+    angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, master, usernum);
 }
 
 void 
@@ -765,12 +780,38 @@ TalkToAngel(){
 	return;
     }
 
+#ifdef ANGEL_CIA_ACCOUNT
+    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+        supervisor = 1;
+#endif
+
     if (cuser.myangel[0] && !AngelPermChecked) {
-	userec_t xuser;
-	memset(&xuser, 0, sizeof(xuser));
-	getuser(cuser.myangel, &xuser); // XXX if user doesn't exist
-	if (!(xuser.userlevel & PERM_ANGEL))
+	userec_t xuser = {0};
+	if (getuser(cuser.myangel, &xuser) < 1 ||
+            !(xuser.userlevel & PERM_ANGEL)) {
 	    pwcuSetMyAngel("");
+#ifdef USE_FREE_ANGEL_FOR_INACTIVE_MASTER
+        } else if (!supervisor &&
+                   (now - cuser.timeplayangel >
+                    ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
+            // Inactive master.
+            uent = search_ulist_userid(cuser.myangel);
+            if (uent == NULL || angel_reject_me(uent) ||
+                uent->angelpause || uent->mode == DEBUGSLEEPING) {
+                log_filef("log/auto_change_angel.log", LOG_CREAT,
+                          "%s master %s (%d days), angel %s, state (%s)\n",
+                          Cdatelite(&now), cuser.userid,
+                          (now - cuser.timeplayangel) / DAY_SECONDS,
+                          cuser.myangel,
+                          !uent ? "not online" : angel_reject_me(uent) ?
+                          "reject" : uent->angelpause ? "pause" : "debugsleep");
+                pwcuSetMyAngel("");
+                angel_beats_do_request(
+                    ANGELBEATS_REQ_REMOVE_LINK, usernum,
+                    searchuser(cuser.myangel, NULL));
+            }
+#endif
+        }
     }
     AngelPermChecked = 1;
 
@@ -789,11 +830,6 @@ TalkToAngel(){
     // This MUST be done before calling AngelNotOnline,
     // because it relies on this data.
     angel_reload_nick();
-
-#ifdef ANGEL_CIA_ACCOUNT
-    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
-        supervisor = 1;
-#endif
 
     uent = search_ulist_userid(cuser.myangel);
     if (uent == NULL || (!supervisor && angel_reject_me(uent)) ||
