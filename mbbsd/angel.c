@@ -76,7 +76,7 @@ angel_notify_activity(const char *userid) {
 
 #ifdef ANGEL_CIA_ACCOUNT
     // Don't notify AngelBeats for CIA account.
-    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) != 0)
+    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) == 0)
         return;
 #endif
 
