@@ -1240,8 +1240,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
 #ifdef PLAY_ANGEL
         // TODO notify Angelbeats
-	if (x.userlevel & ~changefrom & PERM_ANGEL)
-	    mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[天使公會]");
+	if (x.userlevel & ~changefrom & PERM_ANGEL) {
+            angel_register_new(x.userid);
+            mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify",
+                    "[天使公會]");
+        }
 #endif
     }
 

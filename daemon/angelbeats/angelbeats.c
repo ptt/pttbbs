@@ -17,6 +17,7 @@
 //    and/or other materials provided with the distribution.
 // --------------------------------------------------------------------------
 // TODO cache report results.
+// TODO add blame records
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,7 +85,18 @@ typedef struct {
     int samples;
     int pause1;
     int pause2;
-    // TODO add number of being asked, and providing replies.
+    // Records for that master can't find angel.
+    int blamed_pause1;
+    int blamed_pause2;
+    int blamed_not_online;
+    int blamed_other;
+    time4_t last_blame;
+    // Records for that angel was pinged by master.
+    int ping;
+    time4_t last_pinged;
+    // Records for that angel has replied master's ping.
+    int reply;
+    time4_t last_replied;
 } PerfData;
 
 typedef struct {
@@ -261,8 +273,10 @@ suggest_online_angel(int master_uid) {
     size_t i;
     int is_pause, logins;
     int uid = 0;
+#ifdef TRACE_ANGEL_SELECTION
     time_t clk = time(0);
     int found = 0;
+#endif
     AngelInfo *kanade = g_angel_list;
 
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
@@ -282,16 +296,21 @@ suggest_online_angel(int master_uid) {
         if (is_pause)
             continue;
 
-#if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
-        if (!uid)
-            uid = kanade->uid;
-
-        if (found++ > 5)
-            break;
-        log("%d.%s(masters=%d,act=%d,assigned=%d) ", found,
+#ifdef TRACE_ANGEL_SELECTION
+        log("\n %d.%*s(masters=%d,act=%d,assigned=%d) ", ++found, IDLEN,
             kanade->userid, kanade->masters,
             (int)(clk - kanade->last_activity),
             (int)(clk - kanade->last_assigned));
+#endif
+
+#if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
+        if (!uid)
+            uid = kanade->uid;
+#ifndef TRACE_ANGEL_SELECTION
+        if (uid)
+            break;
+#endif
+
 #elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
         random_uids[crandom_uids++] = kanade->uid;
         if (crandom_uids >= ANGELBEATS_RANDOM_RANGE)
@@ -529,7 +548,9 @@ void load_state_data() {
 }
 
 void save_state_data() {
-    FILE *fp = fopen(ANGEL_STATE_FILE, "wt");
+    const char *fname_new = ANGEL_STATE_FILE ".new",
+               *fname_old = ANGEL_STATE_FILE ".old";
+    FILE *fp = fopen(fname_new, "wt");
     size_t i;
     AngelInfo *kanade = g_angel_list;
     if (!fp)
@@ -543,6 +564,8 @@ void save_state_data() {
                 kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
     }
     fclose(fp);
+    Rename(ANGEL_STATE_FILE, fname_old);
+    Rename(fname_new, ANGEL_STATE_FILE);
 }
 
 void export_perf_data(FILE *fp) {
@@ -617,7 +640,7 @@ client_cb(int fd, short event, void *arg) {
     debug("got request: %d\n", data.operation);
     switch(data.operation) {
         case ANGELBEATS_REQ_INVALID:
-            error("%s got invalid request [%s/%s]\n", 
+            error("%s invalid request [%s/%s]\n", 
                   Cdatelite(&clk), master_uid, angel_uid);
             break;
         case ANGELBEATS_REQ_RELOAD:
@@ -625,7 +648,7 @@ client_cb(int fd, short event, void *arg) {
             init_angel_list();
             break;
         case ANGELBEATS_REQ_SUGGEST_AND_LINK:
-            log("%s request suggest&link from [%s], ", 
+            log("%s master [%s] request suggest&link, ", 
                 Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
@@ -637,17 +660,25 @@ client_cb(int fd, short event, void *arg) {
             log("result: [%s]\n", data.angel_uid > 0 ?  angel_uid : "<none>");
             break;
         case ANGELBEATS_REQ_REMOVE_LINK:
-            log("%s request remove link by "
-                "master [%s] to angel [%s]\n",
+            log("%s master [%s] request remove link with angel [%s]\n",
                 Cdatelite(&clk), master_uid, angel_uid);
             if (dec_angel_master(data.angel_uid))
                 angel_list_sort();
             break;
         case ANGELBEATS_REQ_HEARTBEAT:
-            log("%s update angel activity to [%s]\n",
-                Cdatelite(&clk), angel_uid);
+            log("%s master [%s] update angel activity with angel [%s]\n",
+                Cdatelite(&clk), master_uid, angel_uid);
             if (touch_angel_activity(data.angel_uid))
                 angel_list_sort();
+            break;
+        case ANGELBEATS_REQ_REG_NEW:
+            log("%s admin [%s] register new angel [%s]\n",
+                Cdatelite(&clk), master_uid, angel_uid);
+            // Note: Angel permission may be not set yet.
+            if (*angel_uid) {
+                angel_list_add(angel_uid, data.angel_uid);
+                angel_list_sort();
+            }
             break;
         case ANGELBEATS_REQ_EXPORT_PERF:
             log("%s export_perf_data\n", Cdatelite(&clk));
@@ -665,7 +696,8 @@ client_cb(int fd, short event, void *arg) {
             }
             break;
         case ANGELBEATS_REQ_REPORT:
-            log("%s report by [%s]\n", Cdatelite(&clk), master_uid);
+            log("%s angel [%s] request for report\n",
+                Cdatelite(&clk), master_uid);
             {
                 angel_beats_report rpt = {0};
                 rpt.cb = sizeof(rpt);

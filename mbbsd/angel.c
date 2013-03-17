@@ -62,6 +62,12 @@ angel_beats_do_request(int op, int master_uid, int angel_uid) {
 /////////////////////////////////////////////////////////////////////////////
 // Local Angel Service
 
+void
+angel_register_new(const char *userid) {
+    angel_beats_do_request(ANGELBEATS_REQ_REG_NEW, usernum,
+                           searchuser(userid, NULL));
+}
+
 void 
 angel_notify_activity(const char *userid) {
     int master;
@@ -99,7 +105,7 @@ angel_toggle_pause()
         // pmore_QuickRawModePref-like conf
         currutmp->angelpause = vs_quick_pref(
             currutmp->angelpause % ANGELPAUSE_MODES,
-            "設定小天使神諭呼叫器",
+            "設定小天使神諭呼叫器(可直接按數字選取,方便設定熱鍵也避免誤按)",
             "請選取神諭呼叫器的新狀態: ",
             "開放\t停收\t關閉",
             NULL) % ANGELPAUSE_MODES;
