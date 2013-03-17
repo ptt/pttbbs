@@ -462,6 +462,9 @@
 #ifndef LOG_CONF_OSONG_VERBOSE  // 詳細點播記錄
 #define LOG_CONF_OSONG_VERBOSE  (0)
 #endif
+#ifndef LOG_CONF_EDIT_TITLE     // 編輯標題記錄
+#define LOG_CONF_EDIT_TITLE     (0)
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Default Configurations 預設參數

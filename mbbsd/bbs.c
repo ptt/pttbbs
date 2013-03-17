@@ -1947,7 +1947,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     fhdr->modified = dasht(genbuf);
-    strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
+    if (strcmp(save_title, fhdr->title) != 0) {
+        LOG_IF(LOG_CONF_EDIT_TITLE,
+               log_filef("log/edit_title.log", LOG_CREAT,
+                         "%s %s(E) %s(%s) %s => %s\n", Cdatelite(&now),
+                         cuser.userid, currboard, fhdr->title, fhdr->owner,
+                         save_title));
+        strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
+    }
 
     // substitute_ref_record(direct, fhdr, ent);
     modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title, 0);
@@ -2584,7 +2591,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	// check TN_ANNOUNCE again for non-BMs...
 	tn_safe_strip(genbuf);
 	strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
-	dirty++;
+        if (strcmp(tmpfhdr.title, fhdr->title) != 0)
+            dirty++;
     }
 
     if (allow >= 2) 
@@ -2616,6 +2624,11 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	    *fhdr = tmpfhdr;
             // TODO fix race condition here.
 	    substitute_ref_record(direct, fhdr, ent);
+            LOG_IF(LOG_CONF_EDIT_TITLE,
+                   log_filef("log/edit_title.log", LOG_CREAT,
+                             "%s %s(T) %s(%s) %s => %s\n", Cdatelite(&now),
+                             cuser.userid, currboard, curr.title, curr.owner,
+                             fhdr->title));
 	}
     }
     return FULLUPDATE;
