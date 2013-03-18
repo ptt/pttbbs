@@ -1951,7 +1951,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         LOG_IF(LOG_CONF_EDIT_TITLE,
                log_filef("log/edit_title.log", LOG_CREAT,
                          "%s %s(E) %s(%s) %s => %s\n", Cdatelite(&now),
-                         cuser.userid, currboard, fhdr->title, fhdr->owner,
+                         cuser.userid, currboard, fhdr->owner, fhdr->title,
                          save_title));
         strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
     }
