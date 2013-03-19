@@ -143,6 +143,10 @@ int generateReport(FILE *fp, AngelRecord *rec, int num_recs, int delete_file) {
                   "        Pause2 指的是 Sample 中有幾次神諭呼叫器設關閉)\n",
                   delete_file);
 
+    appendLogFile(fp, "log/change_angel_nick.log",
+                  "\n== 本周小天使暱稱變更記錄 ==\n",
+                  delete_file);
+
     appendLogFile(fp, "log/changeangel.log",
                   "\n== 本周更換小天使記錄 ==\n",
                   delete_file);

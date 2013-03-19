@@ -559,6 +559,7 @@ int
 angel_edit_msg(const char *prompt, const char *filename,
                enum ANGEL_MSG_FORMAT format) {
     char nick[IDLEN - 6 + 1] = ""; // 6=strlen("小天使")
+    char old_nick[IDLEN] = "";
     char msg[3][STRLEN] = {"", "", ""};
     char fpath[PATHLEN];
     char buf[512];
@@ -576,6 +577,7 @@ angel_edit_msg(const char *prompt, const char *filename,
             if (strstr(buf, "%%[") == buf) {
                 chomp(buf);
                 strlcpy(nick, buf + 3, sizeof(nick));
+                strlcpy(old_nick, nick, sizeof(old_nick));
                 prints(" 暱稱: %s小天使\n", nick);
             }
         }
@@ -617,6 +619,12 @@ angel_edit_msg(const char *prompt, const char *filename,
     if (!getdata(20, 0, "確定儲存？ [y/N]: ", buf, 3, LCECHO) ||
         buf[0] != 'y') {
         return 0;
+    }
+
+    if (strcmp(nick, old_nick) != 0) {
+        log_filef("log/change_angel_nick.log", LOG_CREAT,
+                  "%s %s (%s小天使)更換暱稱為「%s小天使」\n",
+                  Cdatelite(&now), cuser.userid, old_nick, nick);
     }
 
     if (do_delete_file) {
