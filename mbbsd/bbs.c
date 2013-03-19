@@ -845,6 +845,7 @@ int
 whereami(void)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
+    char category[sizeof(bh->title)] = "", *pcat;
     int             i, j;
     int bid = currbid;
     int total_boards;
@@ -867,6 +868,16 @@ whereami(void)
 	prints("%*s %-13.13s %-37.37s %.13s\n", (i - j) * 2, "",
 	       p[j]->brdname, p[j]->title,
 	       p[j]->BM);
+
+    move(b_lines - 2, 0);
+    strlcpy(category, p[i]->title + 7, sizeof(category));
+    if ((pcat = strchr(category, ' ')) != NULL)
+        *pcat = 0;
+    prints("¦ì¸m: ");
+    for (j = i; j >= 0; j--)
+        prints("%s%s ",
+               (j == i) ? category: p[j]->brdname,
+               j ? " >": "");
 
     pressanykey();
     return FULLUPDATE;
