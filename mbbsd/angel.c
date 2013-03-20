@@ -347,6 +347,16 @@ do_changeangel(int force) {
         return 0;
     }
 #endif
+    {
+        static int is_bad_master = -1;
+        if (is_bad_master < 0) {
+            char bad_master_file[PATHLEN];
+            setuserfile(bad_master_file, ".bad_master");
+            is_bad_master = dashf(bad_master_file);
+        }
+        if (is_bad_master && !verify_captcha("為避免大量非正常更換小天使，\n"))
+            return 0;
+    }
 
     mvouts(b_lines - 3, 0, "\n"
            "請注意若未呼叫過目前的小天使就申請更換，很可能會再換到同個天使\n");
