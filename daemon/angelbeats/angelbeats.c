@@ -60,6 +60,12 @@ static int debug = 0;
 #define ANGELBEATS_REASSIGN_PERIOD  (DAY_SECONDS)
 #endif
 
+// A period for master to send message, otherwies consider master as "dummy"
+// and move angel back to schedule list.
+#ifndef ANGELBEATS_ASSIGN_PROBATION_PERIOD
+#define ANGELBEATS_ASSIGN_PROBATION_PERIOD (10*60)
+#endif
+
 // Merge activities in every X seconds.
 #ifndef ANGELBEATS_ACTIVITY_MERGE_PERIOD
 #define ANGELBEATS_ACTIVITY_MERGE_PERIOD    (15)
@@ -139,8 +145,16 @@ int angel_list_comp_masters(const void *pva, const void *pvb) {
 
 int angel_list_comp_advanced(const void *pva, const void *pvb) {
     AngelInfo *pa = (AngelInfo*) pva, *pb = (AngelInfo*) pvb;
-    if (pa->last_assigned != pb->last_assigned)
-        return pa->last_assigned > pb->last_assigned ? 1 : -1;
+    time_t now = time(0),
+           assign_a = pa->last_assigned, assign_b = pb->last_assigned;
+
+    if (now - assign_a >= ANGELBEATS_ASSIGN_PROBATION_PERIOD)
+        assign_a -= assign_a % ANGELBEATS_REASSIGN_PERIOD;
+    if (now - assign_b >= ANGELBEATS_ASSIGN_PROBATION_PERIOD)
+        assign_b -= assign_b % ANGELBEATS_REASSIGN_PERIOD;
+
+    if (assign_a != assign_b)
+        return assign_a > assign_b ? 1 : -1;
     if (pa->last_activity != pb->last_activity)
         return pa->last_activity > pb->last_activity ? 1 : -1;
     return pa->masters - pb->masters;
@@ -332,7 +346,6 @@ inc_angel_master(int uid) {
     time_t now = time(0);
     if (!kanade)
         return 0;
-    now -= now % ANGELBEATS_REASSIGN_PERIOD;
     kanade->masters++;
     kanade->last_assigned = now;
     return 1;
