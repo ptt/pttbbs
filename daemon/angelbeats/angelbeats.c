@@ -148,9 +148,11 @@ int angel_list_comp_advanced(const void *pva, const void *pvb) {
     time_t now = time(0),
            assign_a = pa->last_assigned, assign_b = pb->last_assigned;
 
-    if (now - assign_a >= ANGELBEATS_ASSIGN_PROBATION_PERIOD)
+    if (now - assign_a >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
+        pa->last_activity >= assign_a)
         assign_a -= assign_a % ANGELBEATS_REASSIGN_PERIOD;
-    if (now - assign_b >= ANGELBEATS_ASSIGN_PROBATION_PERIOD)
+    if (now - assign_b >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
+        pb->last_activity >= assign_b)
         assign_b -= assign_b % ANGELBEATS_REASSIGN_PERIOD;
 
     if (assign_a != assign_b)
@@ -316,7 +318,9 @@ suggest_online_angel(int master_uid) {
             (int)(clk - kanade->last_activity),
             (int)(clk - kanade->last_assigned),
             ((int)(clk - kanade->last_assigned) <
-             ANGELBEATS_ASSIGN_PROBATION_PERIOD) ? "[probation]" : "");
+             ANGELBEATS_ASSIGN_PROBATION_PERIOD &&
+             kanade->last_activity < kanade->last_assigned) ?
+            "[probation]" : "");
 #endif
 
 #if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)

@@ -319,8 +319,8 @@ select_angel() {
 static int
 do_changeangel(int force) {
     char buf[4];
-    static time_t last_time = 0;
     const char *prompt = "祅癘ЧΘΩ㊣穦眖絬ぱㄏい匡穝ぱㄏ";
+    static int is_bad_master = -1;
 
     /* cuser.myangel == "-" means banned for calling angel */
     if (cuser.myangel[0] == '-')
@@ -336,27 +336,29 @@ do_changeangel(int force) {
         return 0;
     }
 
-#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
-    if (force || HasUserPerm(PERM_ADMIN))
-        last_time = 0;
+    // get/cache "bad_master" info
+    if (is_bad_master < 0) {
+        char bad_master_file[PATHLEN];
+        setuserfile(bad_master_file, ".bad_master");
+        is_bad_master = dashf(bad_master_file);
+    }
 
-    if (last_time &&
-        (now - last_time < ANGEL_CHANGE_TIMELIMIT_MINS * 60)) {
-        vmsgf("–Ω传ぱㄏ程ぶ丁筳 %d だ牧",
-              ANGEL_CHANGE_TIMELIMIT_MINS);
-        return 0;
+#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
+    if (!(force || HasUserPerm(PERM_ADMIN)))
+    {
+        int duration = ANGEL_CHANGE_TIMELIMIT_MINS;
+        if (is_bad_master)
+            duration *= 3;
+        if (cuser.timesetangel &&
+            (now - cuser.timesetangel < duration * 60)) {
+            vmsgf("–Ω传ぱㄏ程ぶ丁筳 %d だ牧", duration);
+            return 0;
+        }
     }
 #endif
-    {
-        static int is_bad_master = -1;
-        if (is_bad_master < 0) {
-            char bad_master_file[PATHLEN];
-            setuserfile(bad_master_file, ".bad_master");
-            is_bad_master = dashf(bad_master_file);
-        }
-        if (is_bad_master && !verify_captcha("磷秖獶タ盽传ぱㄏ\n"))
-            return 0;
-    }
+
+    if (is_bad_master && !verify_captcha("磷秖獶タ盽传ぱㄏ\n"))
+        return 0;
 
     getdata(b_lines - 1, 0, "絋﹚璶传ぱㄏ [y/N]", buf, 3, LCECHO);
     if (buf[0] == 'y') {
@@ -366,7 +368,6 @@ do_changeangel(int force) {
         angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
                                usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
-        last_time = now;
         vmsg(prompt);
     }
     return 0;
