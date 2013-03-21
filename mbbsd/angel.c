@@ -358,8 +358,6 @@ do_changeangel(int force) {
             return 0;
     }
 
-    mvouts(b_lines - 3, 0, "\n"
-           "請注意若未呼叫過目前的小天使就申請更換，很可能會再換到同個天使\n");
     getdata(b_lines - 1, 0, "確定要更換小天使？ [y/N]", buf, 3, LCECHO);
     if (buf[0] == 'y') {
 	log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,

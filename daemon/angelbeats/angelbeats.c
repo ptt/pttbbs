@@ -311,10 +311,12 @@ suggest_online_angel(int master_uid) {
             continue;
 
 #ifdef TRACE_ANGEL_SELECTION
-        log("\n %d.%*s(masters=%d,act=%d,assigned=%d) ", ++found, IDLEN,
+        log("\n %d.%*s(masters=%d,act=%d,assigned=%d%s) ", ++found, IDLEN,
             kanade->userid, kanade->masters,
             (int)(clk - kanade->last_activity),
-            (int)(clk - kanade->last_assigned));
+            (int)(clk - kanade->last_assigned),
+            ((int)(clk - kanade->last_assigned) <
+             ANGELBEATS_ASSIGN_PROBATION_PERIOD) ? "[probation]" : "");
 #endif
 
 #if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
