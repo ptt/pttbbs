@@ -420,7 +420,7 @@ int angel_check_master(void) {
     vs_hdr2(PROMPT_ANGELBEATS, " 查詢主人狀態 ");
     usercomplete("想查詢的主人 ID: ", uid);
     move(2, 0); clrtobot();
-    if (!uid)
+    if (!*uid)
         return 0;
     if (getuser(uid, &xuser) < 1) {
         vmsg("此 ID 不存在。");
@@ -437,6 +437,8 @@ int angel_check_master(void) {
         if (xuser.timeplayangel)
             prints("小主人最後一次成功\呼叫你(hh)的時間是 %s\n",
                    Cdatelite(&xuser.timeplayangel));
+        else
+            prints("但是小主人從來沒有過成功\呼叫你(常見於洗天使或誤按的主人)。\n");
     } else {
         prints(ANSI_COLOR(1;31) "%s 不是你的小主人。" ANSI_RESET "\n",
                xuser.userid);
