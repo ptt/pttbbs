@@ -750,6 +750,21 @@ client_cb(int fd, short event, void *arg) {
                 goto end;
             }
             break;
+        case ANGELBEATS_REQ_REPORT1:
+            log("%s angel [%s] request for report v1\n",
+                Cdatelite(&clk), master_uid);
+            {
+                angel_beats_report rpt = {0};
+                angel_beats_report_v1 v1 = {0};
+                rpt.cb = sizeof(rpt);
+                create_angel_report(data.angel_uid, &rpt);
+                memcpy(&v1, &rpt, sizeof(v1));
+                v1.cb = sizeof(v1);
+                // write different kind of data!
+                write(fd, &v1, sizeof(v1));
+                goto end;
+            }
+            break;
         case ANGELBEATS_REQ_GET_ONLINE_LIST:
             log("%s get_online_uid_list\n", Cdatelite(&clk));
             {
