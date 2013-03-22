@@ -76,6 +76,7 @@ enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_EXPORT_PERF,
     ANGELBEATS_REQ_REG_NEW,
     ANGELBEATS_REQ_BLAME,
+    ANGELBEATS_REQ_SAVE_STATE,
 };
 
 typedef struct {
@@ -91,13 +92,21 @@ typedef struct {
     short total_angels;
     short total_online_angels;
     short total_active_angels;
+
     short min_masters_of_online_angels;
     short max_masters_of_online_angels;
     short min_masters_of_active_angels;
     short max_masters_of_active_angels;
+
     short my_index;
     short my_active_index;
     short my_active_masters;
+    short reserved;
+
+    time4_t last_assigned;
+    time4_t reserved2;
+    int     last_assigned_master;
+
 }   angel_beats_report ;
 
 #define ANGELBEATS_UID_LIST_SIZE    (20)

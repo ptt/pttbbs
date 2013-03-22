@@ -21,10 +21,12 @@
 
 static const char
 *PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
-*ERR_CONNECTION = "抱歉，無法連線至天使公會。\n"
-                  "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n",
-*ERR_PROTOCOL = "抱歉，天使公會連線異常。\n"
-                "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n";
+*ERR_CONNECTION = "抱歉，無法連線至天使公會，請稍後再試。\n"
+                  "若持續發生請至 " BN_BUGREPORT " 看板通知站方管理人員。\n",
+*ERR_PROTOCOL = "抱歉，天使公會連線異常，請稍後再試。\n"
+                "若持續發生請至 " BN_BUGREPORT " 看板通知站方管理人員。\n",
+*ERR_PROTOCOL2 = "抱歉，天使公會似乎已更新，請重新登入。\n"
+                 "若登入後仍錯誤請至 " BN_BUGREPORT " 看板通知站方管理人員。\n";
 
 /////////////////////////////////////////////////////////////////////////////
 // Angel Beats! Client
@@ -449,9 +451,10 @@ int a_angelreport() {
         req.angel_uid = usernum;
 
     if (towrite(fd, &req, sizeof(req)) < 0 ||
-        toread(fd, &rpt, sizeof(rpt)) < 0 ||
-        rpt.cb != sizeof(rpt)) {
+        toread(fd, &rpt, sizeof(rpt)) < 0) {
         outs(ERR_PROTOCOL);
+    } else if (rpt.cb != sizeof(rpt)) {
+        outs(ERR_PROTOCOL2);
     } else {
         prints(
             "\t 現在時間: %s\n\n"
@@ -484,36 +487,13 @@ int a_angelreport() {
         }
 #endif
         prints("\n\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
+        if (rpt.last_assigned_master > 0) {
+            prints("\n\t 最後收到的新小主人是 %s (%s)\n",
+                   getuserid(rpt.last_assigned_master),
+                   Cdatelite(&rpt.last_assigned));
+        }
     }
     close(fd);
-    pressanykey();
-    return 0;
-}
-
-int a_angelreload() {
-    vs_hdr2(" Angel Beats! 天使公會 ", " 重整天使資訊 ");
-    outs("\n"
-         "\t 由於重新統計天使小主人數目非常花時間，所以目前系統\n"
-         "\t 一般只會更新已知的天使。  若站方有新增或刪除天使時\n"
-         "\t 請在改完所有天使權限後利用此功\能來重整天使資訊。\n"
-         "\n"
-         "\t 另外由於重整時所有跟天使有關的功\能都會暫停 30 秒 ~ 一兩分鐘，\n"
-         "\t 請不要沒事就重整，而是真的有調整天使名單後才使用。\n");
-    if (vans("請問確定要重整天使資訊了嗎? [y/N]: ") != 'y') {
-        vmsg("放棄。");
-        return 0;
-    }
-
-    move(1, 0); clrtobot();
-    outs("\n連線中...\n"); refresh();
-
-    if (angel_beats_do_request(ANGELBEATS_REQ_RELOAD, usernum, 0) < 0) {
-        outs("抱歉，無法連線至天使公會。\n"
-             "請至 " BN_BUGREPORT " 看板通知站方管理人員。\n");
-    } else {
-        outs("\n完成!\n");
-    }
-
     pressanykey();
     return 0;
 }

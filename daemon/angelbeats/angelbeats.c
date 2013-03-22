@@ -78,7 +78,7 @@ static int debug = 0;
 #ifndef ANGEL_STATE_FILE
 #define ANGEL_STATE_FILE  BBSHOME "/log/angel_state.txt"
 #endif
-#define ANGEL_STATE_VERSION   (1)
+#define ANGEL_STATE_VERSION   (2)
 
 //////////////////////////////////////////////////////////////////////////////
 // AngelInfo list operation
@@ -114,6 +114,7 @@ typedef struct {
     PerfData perf;
     time_t last_activity;   // last known activity from master
     time_t last_assigned;   // last time being assigned with new master
+    int last_assigned_master; // uid of last new master
     int uid;
     int masters;            // counter of who have this one as angel
     char userid[IDLEN+1];
@@ -347,13 +348,14 @@ suggest_online_angel(int master_uid) {
 }
 
 int
-inc_angel_master(int uid) {
+inc_angel_master(int uid, int master_uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
     time_t now = time(0);
     if (!kanade)
         return 0;
     kanade->masters++;
     kanade->last_assigned = now;
+    kanade->last_assigned_master = master_uid;
     return 1;
 }
 
@@ -501,6 +503,8 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     // report my information
     if (myuid > 0 && (kanade = angel_list_find_by_uid(myuid))) {
         prpt->my_active_masters = kanade->masters;
+        prpt->last_assigned = kanade->last_assigned;
+        prpt->last_assigned_master = kanade->last_assigned_master;
     }
     return 0;
 }
@@ -536,7 +540,7 @@ void print_dash(FILE *fp, int len, const char *prefix) {
 
 void load_state_data() {
     int version = -1, i = 0;
-    int activity, assigned;
+    int activity, assigned, assigned_master;
     char uid[256];
     PerfData d;
     AngelInfo *kanade;
@@ -545,21 +549,35 @@ void load_state_data() {
         return;
 
     if (fscanf(fp, "%d\n", &version) != 1 ||
-        version != ANGEL_STATE_VERSION) {
+        (version != 1 && version != ANGEL_STATE_VERSION)) {
         error("Invalid state file (version=%d)\n", version);
         fclose(fp);
         return;
     }
     fscanf(fp, "%d %d\n", &g_perf.start, &g_perf.samples);
-    while (fscanf(fp, "%s %d %d %d %d %d\n",
-                  uid, &activity, &assigned,
-                  &d.samples, &d.pause1, &d.pause2) == 6) {
+    if (version == 1) {
+        while (fscanf(fp, "%s %d %d %d %d %d\n",
+                      uid, &activity, &assigned,
+                      &d.samples, &d.pause1, &d.pause2) == 6) {
+            i++;
+            kanade = angel_list_find_by_userid(uid);
+            if (!kanade)
+                continue;
+            kanade->last_activity = activity;
+            kanade->last_assigned = assigned;
+            kanade->last_assigned_master = 0;
+            memcpy(&kanade->perf, &d, sizeof(d));
+        }
+    } else while (fscanf(fp, "%s %d %d %d %d %d %d\n",
+                  uid, &activity, &assigned, &assigned_master,
+                  &d.samples, &d.pause1, &d.pause2) == 7) {
         i++;
         kanade = angel_list_find_by_userid(uid);
         if (!kanade)
             continue;
         kanade->last_activity = activity;
         kanade->last_assigned = assigned;
+        kanade->last_assigned_master = assigned_master;
         memcpy(&kanade->perf, &d, sizeof(d));
     }
     log("%s: got %d records.\n", __func__, i);
@@ -577,9 +595,10 @@ void save_state_data() {
     fprintf(fp, "%d\n%d %d\n", ANGEL_STATE_VERSION, g_perf.start,
             g_perf.samples);
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        fprintf(fp, "%s %d %d %d %d %d\n",
+        fprintf(fp, "%s %d %d %d %d %d %d\n",
                 kanade->userid, 
                 (int)kanade->last_activity, (int)kanade->last_assigned,
+                kanade->last_assigned_master,
                 kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
     }
     fclose(fp);
@@ -666,12 +685,17 @@ client_cb(int fd, short event, void *arg) {
             log("%s reload\n", Cdatelite(&clk));
             init_angel_list();
             break;
+        case ANGELBEATS_REQ_SAVE_STATE:
+            log("%s save\n", Cdatelite(&clk));
+            save_state_data();
+            break;
+
         case ANGELBEATS_REQ_SUGGEST_AND_LINK:
             log("%s master [%s] request suggest&link, ", 
                 Cdatelite(&clk), master_uid);
             data.angel_uid = suggest_online_angel(data.master_uid);
             if (data.angel_uid > 0) {
-                inc_angel_master(data.angel_uid);
+                inc_angel_master(data.angel_uid, data.master_uid);
                 uid = getuserid(data.angel_uid);
                 strlcpy(angel_uid, uid, sizeof(angel_uid));
                 angel_list_sort();

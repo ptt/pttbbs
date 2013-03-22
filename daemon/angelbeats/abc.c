@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
         }
     } else if (strcmp(argv[1], "list") == 0) {
         req.operation = ANGELBEATS_REQ_GET_ONLINE_LIST;
+    } else if (strcmp(argv[1], "save") == 0) {
+        req.operation = ANGELBEATS_REQ_SAVE_STATE;
     } else if (strcmp(argv[1], "perf") == 0) {
         req.operation = ANGELBEATS_REQ_EXPORT_PERF;
     } else {
