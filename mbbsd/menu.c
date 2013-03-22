@@ -682,7 +682,10 @@ static const commands_t maillist[] = {
 static const commands_t angelmenu[] = {
     {a_angelmsg, PERM_ANGEL,"Leave message 留言給小主人"},
     {a_angelmsg2,PERM_ANGEL,"Call screen   呼叫畫面個性留言"},
-    {a_angelreport, 0,      "Report        線上天使狀態報告"},
+    {angel_check_master,PERM_ANGEL,
+                            "Master check  查詢小主人狀態"},
+    // Cannot use R because r is reserved for Read/Mail due to TMENU.
+    {a_angelreport, 0,      "PReport       線上天使狀態報告"},
     {NULL, 0, NULL}
 };
 

@@ -431,6 +431,10 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     // found an angel?
     if (kanade) {
         kanade->masters++;
+        if (u->timesetangel > kanade->last_assigned) {
+            kanade->last_assigned = u->timesetangel;
+            kanade->last_assigned_master = unum;
+        }
     }
     return 1;
 }
@@ -448,12 +452,16 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     size_t i;
     AngelInfo *kanade = g_angel_list;
     int from_cmd = (!myuid);
+#if 0
+    time4_t now = time4(0);
+#endif
 
     prpt->min_masters_of_active_angels = SHRT_MAX;
     prpt->min_masters_of_online_angels = SHRT_MAX;
     prpt->total_angels = g_angel_list_size;
     prpt->my_index = 0;
     prpt->my_active_index = 0;
+    prpt->inactive_days = ANGELBEATS_INACTIVE_TIME / DAY_SECONDS;
 
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
         int is_pause, logins;
@@ -463,11 +471,14 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
         if (from_cmd) {
             log(" - %03zu. %-14s: ", i+1, kanade->userid);
             log("{samples=%d, pause1=%d, pause2=%d} "
-                "(masters=%d, logins=%d, activity=%d, assigned=%d)",
+                "(masters=%d, logins=%d, activity=%d, assigned=%d/%s)",
                 kanade->perf.samples, kanade->perf.pause1,
                 kanade->perf.pause2, kanade->masters, logins,
                 (int)kanade->last_activity,
-                (int)kanade->last_assigned);
+                (int)kanade->last_assigned,
+                kanade->last_assigned_master > 0 ?
+                getuserid(kanade->last_assigned_master) :
+                "(unknown)");
             if (is_pause)
                 log(" [PAUSE %d]", is_pause);
             log("\n");
@@ -489,6 +500,12 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
                     prpt->max_masters_of_active_angels = kanade->masters;
                 if (prpt->min_masters_of_active_angels > kanade->masters)
                     prpt->min_masters_of_active_angels = kanade->masters;
+#if 0
+                if (prpt->max_inactive_time > (now - kanade->last_activity))
+                    prpt->max_inactive_time = (now - kanade->last_activity);
+                if (prpt->max_unassigned_time > (now - kanade->last_assigned))
+                    prpt->max_unassigned_time = (now - kanade->last_assigned);
+#endif
             }
             if (prpt->max_masters_of_online_angels < kanade->masters)
                 prpt->max_masters_of_online_angels = kanade->masters;
@@ -549,26 +566,13 @@ void load_state_data() {
         return;
 
     if (fscanf(fp, "%d\n", &version) != 1 ||
-        (version != 1 && version != ANGEL_STATE_VERSION)) {
+        (version != ANGEL_STATE_VERSION)) {
         error("Invalid state file (version=%d)\n", version);
         fclose(fp);
         return;
     }
     fscanf(fp, "%d %d\n", &g_perf.start, &g_perf.samples);
-    if (version == 1) {
-        while (fscanf(fp, "%s %d %d %d %d %d\n",
-                      uid, &activity, &assigned,
-                      &d.samples, &d.pause1, &d.pause2) == 6) {
-            i++;
-            kanade = angel_list_find_by_userid(uid);
-            if (!kanade)
-                continue;
-            kanade->last_activity = activity;
-            kanade->last_assigned = assigned;
-            kanade->last_assigned_master = 0;
-            memcpy(&kanade->perf, &d, sizeof(d));
-        }
-    } else while (fscanf(fp, "%s %d %d %d %d %d %d\n",
+    while (fscanf(fp, "%s %d %d %d %d %d %d\n",
                   uid, &activity, &assigned, &assigned_master,
                   &d.samples, &d.pause1, &d.pause2) == 7) {
         i++;
@@ -576,8 +580,12 @@ void load_state_data() {
         if (!kanade)
             continue;
         kanade->last_activity = activity;
-        kanade->last_assigned = assigned;
-        kanade->last_assigned_master = assigned_master;
+        if (assigned > kanade->last_assigned) {
+            log("warn: angel state data inconsistent with passwd: %s\n",
+                kanade->userid);
+            kanade->last_assigned = assigned;
+            kanade->last_assigned_master = assigned_master;
+        }
         memcpy(&kanade->perf, &d, sizeof(d));
     }
     log("%s: got %d records.\n", __func__, i);
@@ -750,18 +758,19 @@ client_cb(int fd, short event, void *arg) {
                 goto end;
             }
             break;
+        // TODO remove report1.
         case ANGELBEATS_REQ_REPORT1:
             log("%s angel [%s] request for report v1\n",
                 Cdatelite(&clk), master_uid);
             {
                 angel_beats_report rpt = {0};
-                angel_beats_report_v1 v1 = {0};
+                assert(sizeof(angel_beats_report_v1) <
+                       sizeof(angel_beats_report));
                 rpt.cb = sizeof(rpt);
                 create_angel_report(data.angel_uid, &rpt);
-                memcpy(&v1, &rpt, sizeof(v1));
-                v1.cb = sizeof(v1);
+                rpt.cb = sizeof(angel_beats_report_v1);
                 // write different kind of data!
-                write(fd, &v1, sizeof(v1));
+                write(fd, &rpt, rpt.cb);
                 goto end;
             }
             break;

@@ -116,11 +116,15 @@ typedef struct {
     short my_index;
     short my_active_index;
     short my_active_masters;
-    short reserved;
+    short inactive_days;
 
     time4_t last_assigned;
-    time4_t reserved2;
+    time4_t reserved;
     int     last_assigned_master;
+#if 0
+    time4_t max_inactive_time;
+    time4_t max_unassigned_time;
+#endif
 
 }   angel_beats_report ;
 

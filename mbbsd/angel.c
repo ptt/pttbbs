@@ -345,9 +345,9 @@ do_changeangel(int force) {
         is_bad_master = dashf(bad_master_file);
     }
 
-#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
     if (!(force || HasUserPerm(PERM_ADMIN)))
     {
+#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
         int duration = ANGEL_CHANGE_TIMELIMIT_MINS;
         if (is_bad_master)
             duration *= 3;
@@ -356,11 +356,11 @@ do_changeangel(int force) {
             vmsgf("–Ω传ぱㄏ程ぶ丁筳 %d だ牧", duration);
             return 0;
         }
-    }
 #endif
-
-    if (is_bad_master && !verify_captcha("磷秖獶タ盽传ぱㄏ\n"))
-        return 0;
+        if (is_bad_master &&
+            !verify_captcha("磷秖獶タ盽传ぱㄏ\n"))
+            return 0;
+    }
 
     getdata(b_lines - 1, 0, "絋﹚璶传ぱㄏ [y/N]", buf, 3, LCECHO);
     if (buf[0] == 'y') {
@@ -410,6 +410,39 @@ angel_order_song(char *receiver, size_t sz_receiver) {
         snprintf(receiver, sz_receiver, "%sぱㄏ", angel_nick);
     }
     return angel_nick;
+}
+
+int angel_check_master(void) {
+    char uid[IDLEN + 1];
+    userec_t xuser;
+    int is_my_master;
+
+    vs_hdr2(PROMPT_ANGELBEATS, " 琩高篈 ");
+    usercomplete("稱琩高 ID: ", uid);
+    move(2, 0); clrtobot();
+    if (!uid)
+        return 0;
+    if (getuser(uid, &xuser) < 1) {
+        vmsg(" ID ぃ");
+        return 0;
+    }
+    is_my_master = (strcasecmp(xuser.myangel, cuser.userid) == 0);
+    move(10, 0);
+    if (is_my_master) {
+        prints(ANSI_COLOR(1;32) "%s 琌" ANSI_RESET "\n",
+               xuser.userid);
+        if (xuser.timesetangel) 
+            prints("ぱㄏ籔闽玒蝴 %d ぱ\n",
+                   (now - xuser.timesetangel) / 86400 + 1);
+        if (xuser.timeplayangel)
+            prints("程ΩΘ\㊣(hh)丁琌 %s\n",
+                   Cdatelite(&xuser.timeplayangel));
+    } else {
+        prints(ANSI_COLOR(1;31) "%s ぃ琌" ANSI_RESET "\n",
+               xuser.userid);
+    }
+    pressanykey();
+    return 0;
 }
 
 void
@@ -468,11 +501,12 @@ int a_angelreport() {
         prints(
             "\n\t 絬ぱㄏい局Τ臘计ヘ程ぶ %d 程 %d \n"
             "\n\t 絬秨Μぱㄏい臘程ぶ %d 程 %d \n"
-            "\n\t 臘﹚竡 120 ぱずΤ癸ヴ(玡ヴ)ぱㄏ肚筁癟\n",
+            "\n\t 臘﹚竡 %d ぱずΤ癸ヴ(玡ヴ)ぱㄏ肚筁癟\n",
             rpt.min_masters_of_online_angels,
             rpt.max_masters_of_online_angels,
             rpt.min_masters_of_active_angels,
-            rpt.max_masters_of_active_angels);
+            rpt.max_masters_of_active_angels,
+            rpt.inactive_days ? rpt.inactive_days : 120);
 
 #ifdef ANGEL_REPORT_INDEX
         if (HasUserPerm(PERM_ANGEL)) {
