@@ -66,7 +66,7 @@ typedef struct login_data
 
 enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_INVALID = 0,
-    ANGELBEATS_REQ_REPORT1,
+    ANGELBEATS_REQ_REPORT,
     ANGELBEATS_REQ_RELOAD,
     ANGELBEATS_REQ_SUGGEST,
     ANGELBEATS_REQ_SUGGEST_AND_LINK,
@@ -77,7 +77,7 @@ enum ANGELBEATS_OPERATIONS {
     ANGELBEATS_REQ_REG_NEW,
     ANGELBEATS_REQ_BLAME,
     ANGELBEATS_REQ_SAVE_STATE,
-    ANGELBEATS_REQ_REPORT,
+    ANGELBEATS_REQ_MAX,
 };
 
 typedef struct {
@@ -87,20 +87,6 @@ typedef struct {
     int angel_uid;
     int master_uid;
 }   angel_beats_data;
-
-typedef struct {
-    short cb;
-    short total_angels;
-    short total_online_angels;
-    short total_active_angels;
-    short min_masters_of_online_angels;
-    short max_masters_of_online_angels;
-    short min_masters_of_active_angels;
-    short max_masters_of_active_angels;
-    short my_index;
-    short my_active_index;
-    short my_active_masters;
-}   angel_beats_report_v1 ;
 
 typedef struct {
     short cb;
@@ -121,10 +107,6 @@ typedef struct {
     time4_t last_assigned;
     time4_t reserved;
     int     last_assigned_master;
-#if 0
-    time4_t max_inactive_time;
-    time4_t max_unassigned_time;
-#endif
 
 }   angel_beats_report ;
 

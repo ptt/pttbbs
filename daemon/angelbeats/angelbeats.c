@@ -16,8 +16,9 @@
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
 // --------------------------------------------------------------------------
-// TODO cache report results.
+// TODO cache global report results.
 // TODO add blame records
+// TODO calculate suggest rate per hour
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -580,9 +581,19 @@ void load_state_data() {
         if (!kanade)
             continue;
         kanade->last_activity = activity;
-        if (assigned > kanade->last_assigned) {
-            log("warn: angel state data inconsistent with passwd: %s\n",
-                kanade->userid);
+        // Update last_assigned* if the master has changed angel.
+        if (!kanade->last_assigned_master) {
+            kanade->last_assigned = assigned;
+            kanade->last_assigned_master = assigned_master;
+        } else if (assigned > kanade->last_assigned &&
+                   kanade->last_assigned_master != assigned_master) {
+            const char *uid1 = getuserid(kanade->last_assigned_master),
+                       *uid2 = getuserid(assigned_master);
+            if (!uid1) uid1 = "(unknown)";
+            if (!uid2) uid2 = "(unknown)";
+            log("warn: angel state data inconsistent with passwd: %s "
+                "(master: [pw]%s vs [state]%s)\n",
+                kanade->userid, uid1, uid2);
             kanade->last_assigned = assigned;
             kanade->last_assigned_master = assigned_master;
         }
@@ -755,22 +766,6 @@ client_cb(int fd, short event, void *arg) {
                 create_angel_report(data.angel_uid, &rpt);
                 // write different kind of data!
                 write(fd, &rpt, sizeof(rpt));
-                goto end;
-            }
-            break;
-        // TODO remove report1.
-        case ANGELBEATS_REQ_REPORT1:
-            log("%s angel [%s] request for report v1\n",
-                Cdatelite(&clk), master_uid);
-            {
-                angel_beats_report rpt = {0};
-                assert(sizeof(angel_beats_report_v1) <
-                       sizeof(angel_beats_report));
-                rpt.cb = sizeof(rpt);
-                create_angel_report(data.angel_uid, &rpt);
-                rpt.cb = sizeof(angel_beats_report_v1);
-                // write different kind of data!
-                write(fd, &rpt, rpt.cb);
                 goto end;
             }
             break;
