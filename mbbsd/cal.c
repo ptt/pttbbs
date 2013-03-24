@@ -503,7 +503,7 @@ give_money_ui(const char *userid)
 	} else {
             if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
                 veditfile(fpath);
-            log_filef(fpath, 0, alert_trade);
+            log_file(fpath, 0,  alert_trade);
             sendalert(id, ALERT_NEW_MAIL);
         }
     }
@@ -549,7 +549,7 @@ resolve_over18(void)
 int
 p_sysinfo(void)
 {
-    char            *cpuloadstr;
+    const char *cpuloadstr;
     int             load;
     extern char    *compile_time;
 #ifdef DETECT_CLIENT

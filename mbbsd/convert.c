@@ -8,16 +8,19 @@ ConvertMode convert_mode = CONV_NORMAL;
 
 int
 convert_write_utf8(VBUF *v, char c) {
-    static char trail[2] = {0};
     static uint8_t utf8[4];
+    static union {
+        char c[2];
+        uint16_t u;
+    } trail = { .u = 0, };
 
     // trail must be little endian.
-    if (trail[1]) {
+    if (trail.c[1]) {
         int len, i;
         uint16_t ucs;
 
-        trail[0] = c;
-        ucs = b2u_table[*(uint16_t*)trail];
+        trail.c[0] = c;
+        ucs = b2u_table[trail.u];
 
         len = ucs2utf(ucs, utf8);
         utf8[len] = 0;
@@ -26,7 +29,7 @@ convert_write_utf8(VBUF *v, char c) {
         for (i = 0; i < len; i++)
             vbuf_add(v, utf8[i]);
 
-        trail[1] = 0;
+        trail.c[1] = 0;
         return 1;
     }
 
@@ -35,7 +38,7 @@ convert_write_utf8(VBUF *v, char c) {
         return 1;
     }
 
-    trail[1] = c;
+    trail.c[1] = c;
     return 0;
 }
 

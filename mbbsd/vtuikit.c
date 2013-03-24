@@ -970,7 +970,7 @@ vs_quick_pref(int default_value, const char *title, const char *entry,
         opt = options;
         while (*opt) {
             const char *ptab = strchr(opt, '\t');
-            int slen = ptab ? (ptab - opt) : strlen(opt);
+            int slen = ptab ? (ptab - opt) : (int)strlen(opt);
             outs(VCLR_QPREF_ENTRY_KEY);
             prints("%d", cOptions + 1);
             if (cOptions == index) {

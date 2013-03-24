@@ -343,6 +343,13 @@ do_changeangel(int force) {
         char bad_master_file[PATHLEN];
         setuserfile(bad_master_file, ".bad_master");
         is_bad_master = dashf(bad_master_file);
+        if (is_bad_master &&
+            dasht(bad_master_file) < (now - ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
+            log_filef("log/bad_master.log", LOG_CREAT,
+                      "%s %s removed from bad master list (%d)\n",
+                      Cdatelite(&now), cuser.userid, dasht(bad_master_file));
+            remove(bad_master_file);
+        }
     }
 
     if (!(force || HasUserPerm(PERM_ADMIN)))
@@ -437,8 +444,9 @@ int angel_check_master(void) {
         if (xuser.timeplayangel)
             prints("小主人最後一次成功\呼叫你(hh)的時間是 %s\n",
                    Cdatelite(&xuser.timeplayangel));
-        else
-            prints("但是小主人從來沒有過成功\呼叫你(常見於洗天使或誤按的主人)。\n");
+        else if (xuser.timesetangel)
+            prints("但小主人似乎從來沒成功\呼叫過你"
+                   "(常見於洗天使或誤按的主人)。\n");
     } else {
         prints(ANSI_COLOR(1;31) "%s 不是你的小主人。" ANSI_RESET "\n",
                xuser.userid);
@@ -524,7 +532,7 @@ int a_angelreport() {
 #endif
         prints("\n\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
         if (rpt.last_assigned_master > 0) {
-            prints("\n\t 最後收到的新小主人是 %s (%s)\n",
+            prints("\n\t 你最後收到的新小主人是 %s (%s)\n",
                    getuserid(rpt.last_assigned_master),
                    Cdatelite(&rpt.last_assigned));
         }
