@@ -514,6 +514,9 @@ int a_angelreport() {
             rpt.total_online_angels,
             rpt.total_active_angels);
 
+       if (!rpt.inactive_days)
+           rpt.inactive_days = 120;
+
         prints(
             "\t 絬ぱㄏい局Τ臘计ヘ程ぶ %d 程 %d \n"
             "\t 絬秨Μぱㄏい臘程ぶ %d 程 %d \n"
@@ -522,13 +525,14 @@ int a_angelreport() {
             rpt.max_masters_of_online_angels,
             rpt.min_masters_of_active_angels,
             rpt.max_masters_of_active_angels,
-            rpt.inactive_days ? rpt.inactive_days : 120);
-       if (!rpt.inactive_days)
-           rpt.inactive_days = 120;
-       int days = (now - 1361168062) / 86400 + 1;
+            rpt.inactive_days);
+#ifdef ANGELBEATS_ACTIVE_MASTER_RECORD_START
+       int days = (now - ANGELBEATS_ACTIVE_MASTER_RECORD_START) / DAY_SECONDS;
+       days += 1;
        if (days < rpt.inactive_days)
            prints("\t (パ臘琌穝糤参璸兜ヘ"
                    "ヘ玡龟悔Τ %d ぱず计沮)\n", days);
+#endif
 
        prints("\n\t " ANSI_COLOR(1;33) "矗眶眤计沮Τ眤╬癘魁"
                "ヴ種そ穦臩ō\n" ANSI_RESET);
