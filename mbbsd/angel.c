@@ -282,16 +282,13 @@ select_angel() {
             has_nick = 1;
             fclose(fp);
         } else {
-            strlcpy(nick, userid, sizeof(nick));
+            strlcpy(nick, "(未設定暱稱)", sizeof(nick));
         }
         if (uinfo && uinfo->angelpause == 1)
             pause_msg = ANSI_COLOR(1;32) "(停收新問題/新主人) " ANSI_RESET;
         else if (uinfo && uinfo->angelpause == 2)
             pause_msg = ANSI_COLOR(1;31) "(關閉呼叫器) " ANSI_RESET;
-        prints(" %3i. %s %s%s [UID: %d]\n", i + 1, nick,
-               has_nick ? "" : ANSI_COLOR(1;33) "(未設定暱稱) " ANSI_RESET,
-               pause_msg,
-               uid);
+        prints(" %3i. %s %s [UID: %d]\n", i + 1, nick, pause_msg, uid);
     }
     while (list.angels) {
         char ans[5];
