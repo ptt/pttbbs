@@ -413,12 +413,6 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     if (!u->myangel[0])
         return 0;
 
-    // skip inactive users. however, this makes the counter
-    // incorrect when those kind of use goes online.
-    // anyway that should not be a big change...
-    if (time4(0) > u->timeplayangel + ANGELBEATS_INACTIVE_TIME )
-        return 0;
-
     kanade = angel_list_find_by_userid(u->myangel);
     if (!kanade) {
         // valid angel?
@@ -429,14 +423,22 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
             kanade = angel_list_add(xuser.userid, anum);
     }
 
-    // found an angel?
-    if (kanade) {
-        kanade->masters++;
-        if (u->timesetangel > kanade->last_assigned) {
-            kanade->last_assigned = u->timesetangel;
-            kanade->last_assigned_master = unum;
-        }
+    if (!kanade)
+        return 0;
+
+    // Update now (before skipping user) in case the master never called angel.
+    if (u->timesetangel > kanade->last_assigned) {
+        kanade->last_assigned = u->timesetangel;
+        kanade->last_assigned_master = unum;
     }
+
+    // skip inactive users. however, this makes the counter
+    // incorrect when those kind of use goes online.
+    // anyway that should not be a big change...
+    if (time4(0) > u->timeplayangel + ANGELBEATS_INACTIVE_TIME )
+        return 0;
+
+    kanade->masters++;
     return 1;
 }
 
