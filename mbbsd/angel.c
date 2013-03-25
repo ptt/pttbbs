@@ -364,6 +364,9 @@ do_changeangel(int force) {
             return 0;
         }
 #endif
+       if (is_bad_master)
+           log_filef("log/bad_master.log", LOG_CREAT,
+                     "%s %s change angel.\n", Cdatelite(&now), cuser.userid);
         if (is_bad_master &&
             !verify_captcha("為避免大量非正常更換小天使，\n"))
             return 0;
@@ -433,8 +436,9 @@ int angel_check_master(void) {
         vmsg("此 ID 不存在。");
         return 0;
     }
+    wait_penalty(1);
     is_my_master = (strcasecmp(xuser.myangel, cuser.userid) == 0);
-    move(10, 0);
+    move(7, 0);
     if (is_my_master) {
         prints(ANSI_COLOR(1;32) "%s 是你的主人。" ANSI_RESET "\n",
                xuser.userid);
@@ -451,6 +455,8 @@ int angel_check_master(void) {
         prints(ANSI_COLOR(1;31) "%s 不是你的小主人。" ANSI_RESET "\n",
                xuser.userid);
     }
+    log_filef("log/angel_query_master.log", LOG_CREAT,
+             "%s [%s] query [%s]\n", Cdatelite(&now), cuser.userid, uid);
     pressanykey();
     return 0;
 }
@@ -500,45 +506,69 @@ int a_angelreport() {
         outs(ERR_PROTOCOL2);
     } else {
         prints(
-            "\t 現在時間: %s\n\n"
-            "\n\t 系統內已登記的天使為 %d 位。\n"
-            "\n\t 目前有 %d 位天使在線上，其中 %d 位神諭呼叫器為設定開放；\n",
+            "\t 現在時間: %s\n"
+            "\t 系統內已登記的天使為 %d 位。\n"
+            "\t 目前有 %d 位天使在線上，其中 %d 位神諭呼叫器為設定開放；\n",
             Cdatelite(&now),
             rpt.total_angels,
             rpt.total_online_angels,
             rpt.total_active_angels);
 
         prints(
-            "\n\t 上線天使中，擁有活躍小主人數目最少為 %d 位，最多為 %d 位\n"
-            "\n\t 上線且開放收主人的天使中，活躍主人最少 %d 位，最多 %d 位\n"
-            "\n\t 活躍小主人定義為 %d 天內有對任一(包含前任)小天使傳過訊息\n",
+            "\t 上線天使中，擁有活躍小主人數目最少為 %d 位，最多為 %d 位\n"
+            "\t 上線且開放收主人的天使中，活躍主人最少 %d 位，最多 %d 位\n"
+            "\t 活躍小主人定義為 %d 天內有對任一(包含前任)小天使傳過訊息\n",
             rpt.min_masters_of_online_angels,
             rpt.max_masters_of_online_angels,
             rpt.min_masters_of_active_angels,
             rpt.max_masters_of_active_angels,
             rpt.inactive_days ? rpt.inactive_days : 120);
+       if (!rpt.inactive_days)
+           rpt.inactive_days = 120;
+       int days = (now - 1361168062) / 86400 + 1;
+       if (days < rpt.inactive_days)
+           prints("\t (由於活躍小主人是新增的統計項目，"
+                   "目前實際只有 %d 天內的數據)\n", days);
+
+       prints("\n\t " ANSI_COLOR(1;33) "提醒您以下數據有包含您私人的記錄，"
+               "任意公佈可能會洩露身份。\n" ANSI_RESET);
 
 #ifdef ANGEL_REPORT_INDEX
         if (HasUserPerm(PERM_ANGEL)) {
             if (currutmp->angelpause != ANGELPAUSE_NONE)
-                prints("\n\t 由於您目前拒收小主人所以無順位資訊\n");
+                prints("\t 由於您目前拒收小主人所以無順位資訊\n");
             else if (rpt.my_active_index == 0)
-                prints("\n\t 您似乎有其它登入停收或拒收所以目前無天使順位\n");
+                prints("\t 您似乎有其它登入停收或拒收所以目前無天使順位\n");
             else
-                prints("\n\t 您的線上小天使順位為 %d。"
-                       "\n\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
+                prints("\t 您的線上小天使順位為 %d。\n"
+                       "\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
                        rpt.my_active_index);
         }
 #endif
-        prints("\n\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
+        prints("\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
+
         if (rpt.last_assigned_master > 0) {
-            prints("\n\t 你最後收到的新小主人是 %s (%s)\n",
+            prints("\t 你最後收到的新小主人是 %s (%s)\n",
                    getuserid(rpt.last_assigned_master),
                    Cdatelite(&rpt.last_assigned));
+           prints("\n"
+                  "\t (很多新的小主人可能是誤按或洗天使總之都不會送訊息，\n"
+                  "\t  如果你等很久都沒看到新主人的訊息，就可以明白為何之前\n"
+                  "\t  會以為都沒有新主人，其實是有收到但對方不講話)\n");
         }
+#ifdef ANGEL_ASSIGN_DOCUMENT
+       prints("\n\t 若覺得很久都沒收到新主人可按 [a] 鍵查看分配機制說明。\n");
+#endif
     }
     close(fd);
+#ifdef ANGEL_ASSIGN_DOCUMENT
+    if (tolower(pressanykey()) == 'a') {
+       more(ANGEL_ASSIGN_DOCUMENT, YEA);
+    }
+#else
     pressanykey();
+#endif
+    wait_penalty(1);
     return 0;
 }
 
