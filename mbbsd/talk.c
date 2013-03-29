@@ -488,20 +488,19 @@ my_query(const char *uident)
 	    outs("《私人信箱》最近無新信件\n");
 
 	// ------------------------------------------------------------
-#ifdef ANGEL_CIA_ACCOUNT
-        if (strcasecmp(muser.userid, ANGEL_CIA_ACCOUNT) != 0)
-#endif
-        {
-	prints("《上次上站》%-28.28s《上次故鄉》",
-               PERM_HIDE(&muser) ? "秘密" :
-               Cdate(muser.lastseen ? &muser.lastseen : &muser.lastlogin));
-	// print out muser.lasthost
+        if (muser.role & ROLE_HIDE_FROM) {
+            // do nothing
+        } else {
+            prints("《上次上站》%-28.28s《上次故鄉》",
+                   PERM_HIDE(&muser) ? "秘密" :
+                   Cdate(muser.lastseen ? &muser.lastseen : &muser.lastlogin));
+            // print out muser.lasthost
 #ifdef USE_MASKED_FROMHOST
-	if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS)) 
-	    obfuscate_ipstr(muser.lasthost);
+            if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS)) 
+                obfuscate_ipstr(muser.lasthost);
 #endif // !USE_MASKED_FROMHOST
-	outs(muser.lasthost[0] ? muser.lasthost : "(不詳)");
-	outs("\n");
+            outs(muser.lasthost[0] ? muser.lasthost : "(不詳)");
+            outs("\n");
         }
 
 	// ------------------------------------------------------------

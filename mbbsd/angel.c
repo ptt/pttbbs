@@ -76,6 +76,7 @@ angel_notify_activity(const char *userid) {
     static time4_t t = 0;
     time4_t tick;
 
+    // TODO last piece to replace by ROLE_ANGEL_CIA.
 #ifdef ANGEL_CIA_ACCOUNT
     // Don't notify AngelBeats for CIA account.
     if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) == 0)
@@ -271,7 +272,6 @@ select_angel() {
         int uid = list.uids[i];
         const char *userid = getuserid(uid);
         FILE *fp = NULL;
-        int has_nick = 0;
         userinfo_t *uinfo = search_ulist_userid(userid);
         const char *pause_msg = "";
 
@@ -279,7 +279,6 @@ select_angel() {
         if ((fp = fopen(fn, "rt")) != NULL) {
             angel_parse_nick_fp(fp, nick, sizeof(nick));
             strlcat(nick, "小天使", sizeof(nick));
-            has_nick = 1;
             fclose(fp);
         } else {
             strlcpy(nick, "(未設定暱稱)", sizeof(nick));
@@ -325,10 +324,8 @@ do_changeangel(int force) {
     if (cuser.myangel[0] == '-')
         return 0;
 
-#ifdef ANGEL_CIA_ACCOUNT
-    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+    if (HasUserRole(ROLE_ANGEL_CIA))
         return select_angel();
-#endif
 
     if (!cuser.myangel[0]) {
         vmsg(prompt);
@@ -858,10 +855,8 @@ TalkToAngel(){
 	return;
     }
 
-#ifdef ANGEL_CIA_ACCOUNT
-    if (strcasecmp(cuser.userid, ANGEL_CIA_ACCOUNT) == 0)
+    if (HasUserRole(ROLE_ANGEL_CIA))
         supervisor = 1;
-#endif
 
     if (cuser.myangel[0] && !AngelPermChecked) {
 	userec_t xuser = {0};
