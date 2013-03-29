@@ -1170,9 +1170,9 @@ user_login(void)
     }
 
     if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
-	!currutmp->invisible)
-    {
-	/* do_aloha is costly. do it later? */
+        !HasUserRole(ROLE_HIDE_FROM) && !currutmp->invisible) {
+	/* do_aloha is costly. do it later? And don't alert if previous
+         * login was just minutes ago... */
 	do_aloha("<<上站通知>> -- 我來啦！");
     }
 
