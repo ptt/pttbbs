@@ -185,6 +185,24 @@ passwd_apply(void *ctx, int (*fptr) (void *ctx, int, userec_t *))
     return 0;
 }
 
+int
+passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *))
+{
+    int i, fd;
+    userec_t user;
+    if ((fd = open(fn_passwd, O_RDONLY)) < 0)
+        exit(1);
+    for (i = 0; i < MAX_USERS; i++) {
+        memset(&user, 0, sizeof(user));
+        if (read(fd, &user, sizeof(user)) != sizeof(user))
+            return -1;
+	if ((*fptr) (ctx, i, &user) < 0)
+	    return -1;
+    }
+    close(fd);
+    return 0;
+}
+
 // XXX NOTE: string in plain will be destroyed.
 int
 checkpasswd(const char *passwd, char *plain)
