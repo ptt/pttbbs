@@ -405,6 +405,11 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     if (!u->userid[0])
         return 0;
 
+    if (u->role & ROLE_ANGEL_ACTIVITY) {
+        debug("skip: ROLE_ANGEL_ACTIVITY: %s\n", u->userid);
+        return 0;
+    }
+
     // add entry if I'm an angel.
     if (u->userlevel & PERM_ANGEL)
         angel_list_add(u->userid, unum);
@@ -445,7 +450,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
 int 
 init_angel_list() {
     g_angel_list_size = 0;
-    passwd_apply(NULL, init_angel_list_callback);
+    passwd_fast_apply(NULL, init_angel_list_callback);
     angel_list_sort();
     return 0;
 }

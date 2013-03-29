@@ -23,7 +23,7 @@ CPROG_WITH_UTIL= \
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
-	redir
+	redir		permreport
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
@@ -90,7 +90,7 @@ installfiltermail:
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c
-	$(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS) 
+	$(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS)
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl

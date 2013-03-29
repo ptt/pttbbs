@@ -58,6 +58,15 @@
 #define HasBasicUserPerm(x)  (HasUserPerm(PERM_BASIC) && HasUserPerm(x))
 #define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 
+#define ROLE_ANGEL_CIA          0x00000001  /* Angel: CIA. */
+#define ROLE_ANGEL_ACTIVITY     0x00000002  /* Angel: For activities, no assign. */
+#define ROLE_ANGEL_ARCHANGEL    0x00000080  /* Angel: Arch-Angel */
+#define ROLE_POLICE_ANONYMOUS   0x00000100  /* Police: Anonymous account. */
+
+#define ROLE_HIDE_FROM          (ROLE_ANGEL_CIA | ROLE_POLICE_ANONYMOUS)
+
+#define HasUserRole(x)  ((cuser.role & (x)) != 0)
+
 #define IS_BOARD(bptr)   ((bptr)->brdname[0] && \
                           !((bptr)->brdattr & BRD_GROUPBOARD))
 #define IS_GROUP(bptr)   ((bptr)->brdname[0] && \

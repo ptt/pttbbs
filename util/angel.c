@@ -82,6 +82,8 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
             fprintf(stderr, ".");
         if (!*user.userid)
             continue;
+        if (user.role & ROLE_ANGEL_ACTIVITY)
+            continue;
         if (user.userlevel & PERM_ANGEL) {
             r->is_angel = 1;
             count++;
@@ -214,6 +216,7 @@ int main(int argc, char *argv[]){
     rec = (AngelRecord *)malloc(sizeof(AngelRecord) * MAX_USERS);
     assert(rec);
     count = buildMasterInfo(rec, MAX_USERS);
+    // TODO remove expired angels.
 
     angels = (AngelRecord *)malloc(sizeof(AngelRecord) * count);
     assert(angels);

@@ -42,7 +42,7 @@ int HaveBBSADM(void)
     }
 
     for( i = 0 ; i < ngids ; ++i )
-	if( gr->gr_gid == (int)gids[i] )
+	if( gr->gr_gid == gids[i] )
     	    return 1;
 
     return 0;
@@ -91,7 +91,7 @@ int parse_bindports_mode(const char *fn)
     return mode;
 }
 
-int startbbs(int argc, char **argv)
+int startbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     const char *bindports_fn = BBSHOME "/" FN_CONF_BINDPORTS;
     if( setuid(0) < 0 ){
@@ -134,7 +134,7 @@ int startbbs(int argc, char **argv)
     return 1;
 }
 
-int stopbbs(int argc, char **argv)
+int stopbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     DIR     *dirp;
     struct  dirent *de;    
@@ -176,7 +176,7 @@ int stopbbs(int argc, char **argv)
     return 0;
 }
 
-int nonstopSTOP(int argc, char **argv)
+int nonstopSTOP(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     DIR     *dirp;
     struct  dirent *de;    
@@ -207,7 +207,7 @@ int nonstopSTOP(int argc, char **argv)
     return 0;
 }
 
-int fakekill(pid_t pid, int sig)
+int fakekill(pid_t pid, int sig GCC_UNUSED)
 {
   kill(pid, 0 /* dummy */);
   return 0;
@@ -369,7 +369,7 @@ int restartbbs(int argc, char **argv)
     return 0;
 }
 
-int bbsadm(int argc, char **argv)
+int bbsadm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
@@ -380,7 +380,7 @@ int bbsadm(int argc, char **argv)
     return 0;
 }
 
-int bbstest(int argc, char **argv)
+int bbstest(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     if( access("mbbsd", 0) < 0 ){
 	perror("./mbbsd");
@@ -401,7 +401,7 @@ int bbstest(int argc, char **argv)
     return 0;
 }
 
-int Xipcrm(int argc, char **argv)
+int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
 #ifdef __FreeBSD__
     char    buf[256], cmd[256];
@@ -449,56 +449,6 @@ int Xipcrm(int argc, char **argv)
 #endif
 }
 
-int permreport(int argc, char **argv)
-{
-    int     fd, i, count;
-    userec_t usr;
-    struct {
-	int     perm;
-	char    *desc;
-    } check[] = {
-	{PERM_BBSADM,   "PERM_BBSADM"},
-	{PERM_SYSOP,    "PERM_SYSOP"},
-	{PERM_ACCOUNTS, "PERM_ACCOUNTS  帳號總管"},
-	{PERM_CHATROOM,	"PERM_CHATROOM  聊天室總管"},
-	{PERM_BOARD,	"PERM_BOARD     看板總管"},
-	{PERM_PRG,	"PERM_PRG       程式組"},
-	{PERM_VIEWSYSOP,"PERM_VIEWSYSOP 視覺站長"},
-	{PERM_POLICE_MAN,"PERM_POLICE_MAN 警察總管"},
-	{PERM_SYSSUPERSUBOP,"PERM_SYSSUPERSUBOP	群組長"},
-	//{PERM_SYSSUBOP, "PERM_SYSSUBOP    小組長"},
-	{PERM_ACCTREG,  "PERM_ACCTREG   帳號審核組"},
-#if 0
-		 {PERM_RELATION, "PERM_RELATION"},
-                 {PERM_PRG,      "PERM_PRG"},
-                 {PERM_ACTION,   "PERM_ACTION"},
-                 {PERM_PAINT,    "PERM_PAINT"},
-                 {PERM_POLICE_MAN, "PERM_POLICE_MAN"},
-                 {PERM_MSYSOP,   "PERM_MSYSOP"},
-                 {PERM_PTT,      "PERM_PTT"},
-#endif
-		 {0, NULL}};
-
-    if( (fd = open(".PASSWDS", O_RDONLY)) < 0 ){
-	perror(".PASSWDS");
-	return 1;
-    }
-    for( count = i = 0 ; check[i].perm != 0 ; ++i ){
-	count = 0;
-	lseek(fd, 0, SEEK_SET);
-	printf("%s\n", check[i].desc);
-	while( read(fd, &usr, sizeof(usr)) > 0 ){
-	    if( usr.userid[0] != 0 && isalpha(usr.userid[0]) &&
-		usr.userlevel & check[i].perm ){
-		++count;
-		printf("%-20s%-10s\n", usr.userid, usr.realname);
-	    }
-	}
-	printf("total %d users\n\n", count);
-    }
-    return 0;
-}
-
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -512,7 +462,6 @@ struct {
       {nonstopSTOP,"nonstopSTOP","killall ALL mbbsd (nonstop)"},
       {STOP,       "STOP",       "killall ALL mbbsd"},
       {fakeSTOP,   "fakeSTOP",   "fake killall ALL mbbsd"},
-      {permreport, "permreport", "permission report"},
       {NULL,       NULL,       NULL} };
 
 int main(int argc, char **argv)
