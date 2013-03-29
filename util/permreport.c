@@ -1,4 +1,4 @@
-/* $Id: bbsctl.c 4594 2009-06-13 13:13:27Z piaip $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define PERMCHECK(s) {s, #s}
@@ -64,14 +64,12 @@ int main(void) {
             uint32_t *pvalue = NULL;
             const char *desc = checks[i].desc;
             char *list = checks[i].list;
-            int is_perm = 0;
             size_t need_len = sizeof(usr.userid) + sizeof(usr.realname) + 4;
 
             if (strncmp(desc, "PERM_", 4) == 0) {
                 if (!checks[i].caption)
                     checks[i].caption = str_permid[get_offset(mask)];
                 pvalue = &usr.userlevel;
-                is_perm = 1;
             } else if (strncmp(desc, "ROLE_", 5) == 0) {
                 if (!checks[i].caption)
                     checks[i].caption = str_roleid[get_offset(mask)];

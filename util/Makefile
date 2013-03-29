@@ -23,7 +23,7 @@ CPROG_WITH_UTIL= \
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
-	redir		permreport
+	redir		permreport	setrole
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
