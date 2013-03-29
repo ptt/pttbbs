@@ -441,7 +441,7 @@ int angel_check_master(void) {
                xuser.userid);
         if (xuser.timesetangel) 
             prints("小天使與主人的關係已維持了 %d 天。\n",
-                   (now - xuser.timesetangel) / 86400 + 1);
+                   (now - xuser.timesetangel) / DAY_SECONDS + 1);
         if (xuser.timeplayangel)
             prints("小主人最後一次成功\呼叫你(hh)的時間是 %s\n",
                    Cdatelite(&xuser.timeplayangel));
@@ -463,7 +463,7 @@ angel_log_order_song(const char *angel_nick) {
     char angel_exp[STRLEN];
 
     syncnow();
-    if (cuser.timesetangel <= now)
+    if (cuser.timesetangel && now >= cuser.timesetangel)
         snprintf(angel_exp, sizeof(angel_exp),
                  "%d天", (now - cuser.timesetangel) / DAY_SECONDS + 1);
     else
