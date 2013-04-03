@@ -160,7 +160,7 @@ load_banip_list(const char *filename, FILE* err) {
             continue;
 
         // process IP entries, otherwise append text.
-        if (*p && isascii(*p) && isdigit(*p)) {
+        if (*p && isascii(*p) && isdigit(*p) && inet_addr(p) != INADDR_NONE) {
             char *sharp = strchr(p, '#');
             if (sharp) *sharp = 0;
             if (!was_ip) {
