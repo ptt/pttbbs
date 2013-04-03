@@ -38,9 +38,11 @@ int main(void) {
         PERMCHECK(PERM_ACTION),
         PERMCHECK(PERM_PAINT),
 #endif
+#ifdef PLAY_ANGEL
         PERMCHECK(ROLE_ANGEL_CIA),
         PERMCHECK(ROLE_ANGEL_ACTIVITY),
         PERMCHECK(ROLE_ANGEL_ARCHANGEL),
+#endif
         PERMCHECK(ROLE_POLICE_ANONYMOUS),
         {0, NULL},
     };

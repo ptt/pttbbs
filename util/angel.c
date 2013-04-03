@@ -15,13 +15,6 @@
 int main(){ return 0; }
 #else
 
-const char *blacklist[] = {
-    // List angels that you DON'T want to be listed here.
-    "PttAngels",
-    "AngelParty",
-    NULL,
-};
-
 void slurp(FILE* to, FILE* from) {
     char buf[4096]; // 4K block
     int count;
