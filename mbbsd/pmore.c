@@ -1621,7 +1621,6 @@ mf_display()
         else if (mf.dispe < mf.end)
         {
             /* case 3, normal text */
-            long dist = mf.end - mf.dispe;
             long flResetColor = 0;
             int  srlen = -1;
             int breaknow = 0;
@@ -1634,18 +1633,26 @@ mf_display()
                 col++;
             }
 
+            // TODO check line start instead of dispe.
             // first check quote
             if (bpref.rawmode == MFDISP_RAW_NA)
             {
+                unsigned char *line_head = mf.dispe;
+                long dist;
+
+                while (line_head > mf.start && *(line_head - 1) != '\n')
+                    line_head--;
+                dist = mf.end - line_head;
+
                 if (dist > 1 && 
-                        (*mf.dispe == ':' || *mf.dispe == '>') && 
-                        *(mf.dispe+1) == ' ')
+                        (*line_head == ':' || *line_head == '>') && 
+                        *(line_head + 1) == ' ')
                 {
                     outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
                 } else if (dist > 2 && 
-                        (!strncmp((char*)mf.dispe, "¡°", 2) || 
-                         !strncmp((char*)mf.dispe, "==>", 3)))
+                        (!strncmp((char*)line_head, "¡°", 2) || 
+                         !strncmp((char*)line_head, "==>", 3)))
                 {
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
