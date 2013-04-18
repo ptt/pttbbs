@@ -619,6 +619,26 @@ void Customize(void)
     vmsg("設定完成");
 }
 
+static void set_chess(const char *name, int y,
+                      uint16_t *p_win, uint16_t *p_lose, uint16_t *p_tie) {
+    char buf[STRLEN];
+    char prompt[STRLEN];
+    char *p;
+    char *strtok_pos;
+    snprintf(buf, sizeof(buf), "%d/%d/%d", *p_win, *p_lose, *p_tie);
+    snprintf(prompt, sizeof(prompt), "%s 戰績 勝/敗/和:", name);
+    if (!getdata_str(y, 0, prompt, buf, 5 * 3 + 3, DOECHO, buf))
+        return;
+    p = strtok_r(buf, "/\r\n", &strtok_pos);
+    if (!p) return;
+    *p_win = atoi(p);
+    p = strtok_r(NULL, "/\r\n", &strtok_pos);
+    if (!p) return;
+    *p_lose = atoi(p);
+    p = strtok_r(NULL, "/\r\n", &strtok_pos);
+    if (!p) return;
+    *p_tie = atoi(p);
+}
 
 void
 uinfo_query(const char *orig_uid, int adminmode, int unum)
@@ -951,75 +971,17 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		if ((tmp = atoi(buf)) >= 0)
 		    x.vl_count = tmp;
 
-	    snprintf(genbuf, sizeof(genbuf),
-		     "%d/%d/%d", x.five_win, x.five_lose, x.five_tie);
-	    if (getdata_str(y++, 0, "五子棋戰績 勝/敗/和：", buf, 16, DOECHO,
-			    genbuf))
-		while (1) {
-		    char *p;
-		    char *strtok_pos;
-		    p = strtok_r(buf, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.five_win = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.five_lose = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.five_tie = atoi(p);
-		    break;
-		}
-	    snprintf(genbuf, sizeof(genbuf),
-		     "%d/%d/%d", x.chc_win, x.chc_lose, x.chc_tie);
-	    if (getdata_str(y++, 0, " 象棋 戰績 勝/敗/和：", buf, 16, DOECHO,
-			    genbuf))
-		while (1) {
-		    char *p;
-		    char *strtok_pos;
-		    p = strtok_r(buf, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.chc_win = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.chc_lose = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.chc_tie = atoi(p);
-		    break;
-		}
-	    snprintf(genbuf, sizeof(genbuf),
-		     "%d/%d/%d", x.go_win, x.go_lose, x.go_tie);
-	    if (getdata_str(y++, 0, " 圍棋 戰績 勝/敗/和：", buf, 16, DOECHO,
-			    genbuf))
-		while (1) {
-		    char *p;
-		    char *strtok_pos;
-		    p = strtok_r(buf, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.go_win = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.go_lose = atoi(p);
-		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
-		    if (!p)
-			break;
-		    x.go_tie = atoi(p);
-		    break;
-		}
-	    y -= 3; // rollback games set to get more space
+            set_chess("五子棋", y++, &x.five_win, &x.five_lose, &x.five_tie);
+            set_chess("象棋", y++, &x.chc_win, &x.chc_lose, &x.chc_tie);
+            set_chess("圍棋", y++, &x.go_win, &x.go_lose, &x.go_tie);
+            set_chess("暗棋", y++, &x.dark_win, &x.dark_lose, &x.dark_tie);
+	    y -= 4; // rollback games set to get more space
 	    move(y++, 0); clrtobot();
-	    prints("棋類: (五子棋)%d/%d/%d (象棋)%d/%d/%d (圍棋)%d/%d/%d\n",
+	    prints("棋類: 五子:%d/%d/%d 象:%d/%d/%d 圍:%d/%d/%d 暗:%d/%d/%d\n",
 		    x.five_win, x.five_lose, x.five_tie,
 		    x.chc_win, x.chc_lose, x.chc_tie,
-		    x.go_win, x.go_lose, x.go_tie);
+		    x.go_win, x.go_lose, x.go_tie,
+		    x.dark_win, x.dark_lose, x.dark_tie);
 #ifdef FOREIGN_REG
 	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag & UF_FOREIGN ? "2" : "1"))
 		if ((tmp = atoi(buf)) > 0){

@@ -935,6 +935,9 @@ setup_utmp(int mode)
     uinfo.go_win    = cuser.go_win;
     uinfo.go_lose   = cuser.go_lose;
     uinfo.go_tie    = cuser.go_tie;
+    uinfo.dark_win    = cuser.dark_win;
+    uinfo.dark_lose   = cuser.dark_lose;
+    uinfo.dark_tie    = cuser.dark_tie;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager	    = cuser.pager % PAGER_MODES;
     uinfo.withme    = cuser.withme & ~WITHME_ALLFLAG;

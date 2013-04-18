@@ -11,7 +11,7 @@ static char    * const withme_str[] = {
   "談天", "下五子棋", "鬥寵物", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
 };
 
-#define MAX_SHOW_MODE 6
+#define MAX_SHOW_MODE 7
 /* M_INT: monitor mode update interval */
 #define M_INT 15		
 /* P_INT: interval to check for page req. in talk/chat */
@@ -23,8 +23,7 @@ typedef struct pickup_t {
     int             friend, uoffset;
 }               pickup_t;
 
-/* 記錄 friend 的 user number */
-//
+// If you want to change this, you have to change shm structure and shmctl.c
 #define PICKUP_WAYS     8
 
 static char    * const fcolor[11] = {
@@ -1639,28 +1638,36 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
 	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
 		 HasUserPerm(PERM_SYSOP)) ?  uentp->from : "*");
     case 2:
-	snprintf(description, len,
-		 "%4d/%4d/%2d %c", uentp->five_win,
-		 uentp->five_lose, uentp->five_tie,
-		 (uentp->withme&WITHME_FIVE)?'o':(uentp->withme&WITHME_NOFIVE)?'x':' ');
+	snprintf(description, len, "%4d/%4d/%2d %c",
+                 uentp->five_win, uentp->five_lose, uentp->five_tie,
+		 (uentp->withme&WITHME_FIVE)?'o':
+                 (uentp->withme&WITHME_NOFIVE)?'x':' ');
 	return description;
     case 3:
-	snprintf(description, len,
-		 "%4d/%4d/%2d %c", uentp->chc_win,
-		 uentp->chc_lose, uentp->chc_tie,
-		 (uentp->withme&WITHME_CHESS)?'o':(uentp->withme&WITHME_NOCHESS)?'x':' ');
+	snprintf(description, len, "%4d/%4d/%2d %c",
+                 uentp->chc_win, uentp->chc_lose, uentp->chc_tie,
+		 (uentp->withme&WITHME_CHESS)?'o':
+                 (uentp->withme&WITHME_NOCHESS)?'x':' ');
 	return description;
     case 4:
 	snprintf(description, len,
 		 "%4d %s", uentp->chess_elo_rating, 
-		 (uentp->withme&WITHME_CHESS)?"找我下棋":(uentp->withme&WITHME_NOCHESS)?"別找我":"");
+		 (uentp->withme&WITHME_CHESS)?"找我下棋":
+                 (uentp->withme&WITHME_NOCHESS)?"別找我":"");
 	return description;
     case 5:
-	snprintf(description, len,
-		 "%4d/%4d/%2d %c", uentp->go_win,
-		 uentp->go_lose, uentp->go_tie,
-		 (uentp->withme&WITHME_GO)?'o':(uentp->withme&WITHME_NOGO)?'x':' ');
+	snprintf(description, len, "%4d/%4d/%2d %c",
+                 uentp->go_win, uentp->go_lose, uentp->go_tie,
+		 (uentp->withme&WITHME_GO)?'o':
+                 (uentp->withme&WITHME_NOGO)?'x':' ');
 	return description;
+    case 6:
+	snprintf(description, len, "%4d/%4d/%2d %c",
+                 uentp->dark_win, uentp->dark_lose, uentp->dark_tie,
+		 (uentp->withme&WITHME_DARK)?'o':
+                 (uentp->withme&WITHME_NODARK)?'x':' ');
+	return description;
+
     default:
 	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
 	       show_mode);
@@ -1903,10 +1910,12 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
 {
     char           *msg_pickup_way[PICKUP_WAYS] = {
-	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", " 五子棋 ", "  象棋  ", "  圍棋  ",
+        "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
+        " 五子棋 ", "  象棋  ", "  圍棋  ",
     };
     char           *MODE_STRING[MAX_SHOW_MODE] = {
 	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分", "圍棋戰績",
+        "暗棋戰績",
     };
     char            pagerchar[6] = "* -Wf";
 
@@ -2464,7 +2473,11 @@ userlist(void)
 		break;
 
 	    case 'S':		/* 顯示好友描述 */
+#ifdef HAVE_DARK_CHESS_LOG
 		show_mode = (show_mode+1) % MAX_SHOW_MODE;
+#else
+		show_mode = (show_mode+1) % (MAX_SHOW_MODE - 1);
+#endif
 #ifdef CHESSCOUNTRY
 		if (show_mode == 2)
 		    user_query_mode = 1;
@@ -2472,6 +2485,8 @@ userlist(void)
 		    user_query_mode = 2;
 		else if (show_mode == 5)
 		    user_query_mode = 3;
+		else if (show_mode == 6)
+		    user_query_mode = 4;
 		else
 		    user_query_mode = 0;
 #endif /* defined(CHESSCOUNTRY) */

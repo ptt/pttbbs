@@ -312,6 +312,7 @@ pwcuChessResult(int sigType, ChessGameResult r)
     assert(sizeof(* utmp_win) == sizeof(currutmp->chc_win));
     assert(sizeof(*cuser_lose)== sizeof(   cuser.five_lose));
     assert(sizeof(*    u_tie) == sizeof(       u.go_tie));
+    assert(sizeof(*    u_tie) == sizeof(       u.dark_tie));
 
     // determine variables
     switch(sigType)
@@ -351,6 +352,18 @@ pwcuChessResult(int sigType, ChessGameResult r)
 	    u_lose    = &(        u.five_lose);
 	    u_tie     = &(        u.five_tie);
 	    break;
+
+        case SIG_DARK:
+	    utmp_win  = &(currutmp->dark_win);
+	    utmp_lose = &(currutmp->dark_lose);
+	    utmp_tie  = &(currutmp->dark_tie);
+	    cuser_win = &(    cuser.dark_win);
+	    cuser_lose= &(    cuser.dark_lose);
+	    cuser_tie = &(    cuser.dark_tie);
+	    u_win     = &(        u.dark_win);
+	    u_lose    = &(        u.dark_lose);
+	    u_tie     = &(        u.dark_tie);
+            break;
 
 	default:
 	    assert(!"unknown sigtype");
