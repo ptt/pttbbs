@@ -76,13 +76,6 @@ angel_notify_activity(const char *userid) {
     static time4_t t = 0;
     time4_t tick;
 
-    // TODO last piece to replace by ROLE_ANGEL_CIA.
-#ifdef ANGEL_CIA_ACCOUNT
-    // Don't notify AngelBeats for CIA account.
-    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) == 0)
-        return;
-#endif
-
     // tick: every 1 minutes.
     syncnow();
     tick = now - now % (1 * 60);
