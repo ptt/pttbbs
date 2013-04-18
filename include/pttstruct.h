@@ -114,13 +114,14 @@ typedef struct userec_t {
     uint16_t	go_win;		/* 圍棋戰績 勝 */
     uint16_t	go_lose;	/* 圍棋戰績 敗 */
     uint16_t	go_tie;		/* 圍棋戰績 和 */
+    uint16_t    dark_win;       /* 暗棋戰績 勝 */
+    uint16_t    dark_lose;      /* 暗棋戰績 敗 */
+    uint8_t     _unused9;       /* 從前放 ident 身份證字號，應該是個0 */
 
-    char	_unused9[5];	/* 從前放 ident 身份證字號，使用前請先清0 */
     uint8_t	signature;	/* 慣用簽名檔 */
     uint8_t	_unused10;	/* 從前放好文章數, 使用前請先清0 */
     uint8_t	badpost;	/* 評價為壞文章數 */
-    uint8_t	_unused11;	/* 從前放競標好評(goodsale), 使用前請先清0 */
-    uint8_t	_unused12;	/* 從前放競標壞評(badsale),  使用前請先清0 */
+    uint16_t    dark_tie;       /* 暗棋戰績 和 */
     char	myangel[IDLEN+1];/* 我的小天使 */
     char	pad_3;
 
@@ -338,20 +339,17 @@ typedef struct userinfo_t {
     char    nickname[24];
     char    from[27];               /* machine name the user called in from */
     in_addr_t	from_ip;	    // was: int     from_alias;
-    char    nonuse_sex;             // deprecated: sex info
-    char    nonuse[4];
-    /*
-    unsigned char goodpost;
-    unsigned char badpost;
-    unsigned char goodsale;
-    unsigned char badsale;
-    */
-    unsigned char angelpause;
+    uint16_t dark_win;
+    uint16_t dark_lose;
+    char    gap_0;
+    unsigned char angelpause;       // TODO move to somewhere else in future.
+    uint16_t dark_tie;
 
     /* friends */
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     short   nFriends;                /* 下面 friend[] 只用到前幾個,
                                         用來 bsearch */
+    short   _unused3;
     int     myfriend[MAX_FRIEND];
     char    gap_1[4];
     unsigned int friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
@@ -362,6 +360,7 @@ typedef struct userinfo_t {
 
     /* messages */
     char    msgcount;
+    char    _unused4[3];
     msgque_t        msgs[MAX_MSGS];
     char    gap_4[sizeof(msgque_t)];   /* avoid msgs racing and overflow */
 
@@ -371,12 +370,14 @@ typedef struct userinfo_t {
     unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
+    char    _unused5[3];
     time4_t lastact;               /* 上次使用者動的時間 */
     char    alerts;             /* mail alert, passwd update... */
     char    mind[4];
 
     /* chatroom/talk/games calling */
     unsigned char   sig;            /* signal type */
+    char    _unused6[2];
     int     destuid;              /* talk uses this to identify who called */
     int     destuip;              /* dest index in utmpshm->uinfo[] */
     unsigned char   sockactive;     /* Used to coordinate talk requests */
@@ -392,16 +393,16 @@ typedef struct userinfo_t {
     char    color;                   /* 暗棋 顏色 */
 
     /* game record */
-    unsigned short  int     five_win;
-    unsigned short  int     five_lose;
-    unsigned short  int     five_tie;
-    unsigned short  int     chc_win;
-    unsigned short  int     chc_lose;
-    unsigned short  int     chc_tie;
-    unsigned short  int     chess_elo_rating;
-    unsigned short  int     go_win;
-    unsigned short  int     go_lose;
-    unsigned short  int     go_tie;
+    uint16_t five_win;
+    uint16_t five_lose;
+    uint16_t five_tie;
+    uint16_t chc_win;
+    uint16_t chc_lose;
+    uint16_t chc_tie;
+    uint16_t chess_elo_rating;
+    uint16_t go_win;
+    uint16_t go_lose;
+    uint16_t go_tie;
 
     /* misc */
     unsigned int    withme;
