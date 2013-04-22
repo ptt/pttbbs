@@ -262,7 +262,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
         snprintf(xmsg, sizeof(xmsg),
                  "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
-                 "時間: %s (期限 %s)\n"
+                 "開始時間: %s (期限 %s)(此為處罰執行時間，非原始犯規時間)\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n",
                  board, Cdatelite(&now), datebuf, reason);
