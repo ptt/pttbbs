@@ -661,7 +661,7 @@ vote_maintain(const char *bname)
 	    unlink(buf);
     }
     clear();
-    getdata(0, 0, "此次投票進行幾天 (一到三十天)？", inbuf, 4, DOECHO);
+    getdata(0, 0, "此次投票進行幾天 (1~30天)？", inbuf, 4, DOECHO);
 
     closetime = atoi(inbuf);
     if (closetime <= 0)
