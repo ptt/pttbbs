@@ -405,8 +405,9 @@ angel_order_song(char *receiver, size_t sz_receiver) {
              angel_nick);
     if (getdata(20, 0, prompt, ans, sizeof(ans), LCECHO) && *ans == 'y') {
         snprintf(receiver, sz_receiver, "%s¤p¤Ñ¨Ï", angel_nick);
+        return angel_nick;
     }
-    return angel_nick;
+    return NULL;
 }
 
 int angel_check_master(void) {
