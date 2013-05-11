@@ -286,6 +286,7 @@ update_holiday_list(struct tm *ptime)
 		if (ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
 		    i = 1;
 		    fprintf(fp1, "%-14.14s", &buf[6]);
+                    break;
 		}
 	    } else if (a - '0' <= 4) {
 		int wday = 0;
@@ -296,6 +297,7 @@ update_holiday_list(struct tm *ptime)
 			(ptime->tm_mday - 1) / 7 + 1 == (a - '0')) {
 		    i = 1;
 		    fprintf(fp1, "%-14.14s", &buf[6]);
+                    break;
 		}
 	    }
 	}
