@@ -3,6 +3,7 @@
 
 #define MAX_ITEM	8	//最大 彩券項目(item) 個數
 #define MAX_ITEM_LEN	30	//最大 每一項目名字長度
+#define MAX_ITEM_INPUT_LEN  9   //最大 每一項目(手動輸入時)名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
 
@@ -296,6 +297,7 @@ openticket(int bid)
     lockreturn0(TICKET, LOCK_MULTI);
 
     do {
+        const char *betname_sel = "取消退費";
 	do {
 	    getdata(20, 0, "選擇中獎的號碼(0:不開獎 99:取消退費):",
                     buf, 3, LCECHO);
@@ -309,8 +311,25 @@ openticket(int bid)
             move(22, 0); SOLVE_ANSI_CACHE(); clrtoeol();
             prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d" ANSI_RESET,
                     price * 10);
+        } else {
+            betname_sel = betname[bet - 1];
         }
-	getdata(21, 0, "再次輸入號碼以確認:", buf, 3, LCECHO);
+        move(20, 0); SOLVE_ANSI_CACHE(); clrtoeol();
+        prints("預計開獎項目: 編號:%d，名稱:%s\n", bet, betname_sel);
+        getdata(21, 0, "輸入項目名稱以確認你的意識清醒(開錯無法回溯): ",
+                buf, MAX_ITEM_INPUT_LEN, DOECHO);
+        if (strcasecmp(buf, betname_sel) == 0) {
+            snprintf(buf, sizeof(buf), "%d", bet);
+        } else {
+            getdata(21, 0, "項目名稱不合。要改輸入項目編號嗎[y/N]? ",
+                    buf, 3, LCECHO);
+            if (buf[0] != 'y') {
+                move(20, 0); clrtobot();
+                continue;
+            }
+            getdata(21, 0, "輸入號碼以確認(無回溯機制，開錯責任自負):",
+                    buf, 3, LCECHO);
+        }
         move(21, 0); SOLVE_ANSI_CACHE(); clrtoeol();
     } while (bet != atoi(buf));
 
@@ -615,7 +634,7 @@ hold_gamble(void)
     //outs(ANSI_COLOR(1;33) "注意輸入後無法修改！\n");
     for( i = 0 ; i < 8 ; ++i ){
 	snprintf(yn, sizeof(yn), " %d)", i + 1);
-	getdata(7 + i, 0, yn, genbuf, 9, DOECHO);
+	getdata(7 + i, 0, yn, genbuf, MAX_ITEM_INPUT_LEN, DOECHO);
 	if (!genbuf[0] && i > 1)
 	    break;
 	fprintf(fp, "%s\n", genbuf);
