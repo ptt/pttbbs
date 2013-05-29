@@ -433,12 +433,12 @@ int angel_check_master(void) {
         if (xuser.timesetangel) 
             prints("小天使與主人的關係已維持了 %d 天。\n",
                    (now - xuser.timesetangel) / DAY_SECONDS + 1);
-        if (xuser.timeplayangel)
-            prints("小主人最後一次成功\呼叫你(hh)的時間是 %s\n",
+        if (xuser.timeplayangel && xuser.timeplayangel > xuser.timesetangel)
+            prints("小主人最後與天使互動(hh成功\呼叫或點歌)的時間: %s\n",
                    Cdatelite(&xuser.timeplayangel));
         else if (xuser.timesetangel)
-            prints("但小主人似乎從來沒成功\呼叫過你"
-                   "(常見於洗天使或誤按的主人)。\n");
+            prints("但小主人似乎從來沒與你互動(成功\呼叫或點歌)過\n"
+                   " (常見於洗天使或誤按的主人)。\n");
     } else {
         prints(ANSI_COLOR(1;31) "%s 不是你的小主人。" ANSI_RESET "\n",
                xuser.userid);
@@ -461,9 +461,10 @@ angel_log_order_song(const char *angel_nick) {
         strlcpy(angel_exp, "很久", sizeof(angel_exp));
 
     log_filef("log/osong_angel.log", LOG_CREAT,
-              "%s %*s 點歌給 %*s小天使 (關係已維持: %s)\n",
+              "%s %*s 點歌給 %*s小天使 (%s - %s)\n",
               Cdatelite(&now), IDLEN, cuser.userid,
-              IDLEN - 6, angel_nick, angel_exp);
+              IDLEN - 6, angel_nick, fromhost, angel_exp);
+    pwcuPlayAngel();
 }
 
 int a_angelreport() {
@@ -540,6 +541,7 @@ int a_angelreport() {
         prints("\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
 
         if (rpt.last_assigned_master > 0) {
+            // TODO check if last_assigned is already invalid.
             prints("\t 你最後收到的新小主人是 %s (%s)\n",
                    getuserid(rpt.last_assigned_master),
                    Cdatelite(&rpt.last_assigned));
