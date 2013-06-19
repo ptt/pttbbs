@@ -3640,12 +3640,10 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 
         setbfile(fn1, currboard, fhdr->filename);
-        snprintf(genbuf, sizeof(genbuf), "%s 板遭鎖定文章 - %s", currboard,
-                 fhdr->title);
 
 	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] > 0; i++)
             mail_id(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
-                    "[系統通知]");
+                    "[鎖文通知]");
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
 
