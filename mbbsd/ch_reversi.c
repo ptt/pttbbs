@@ -227,11 +227,18 @@ reversi_prepare_play(ChessInfo* info)
     if (result) {
 	reversi_step_t step = { .type = CHESS_STEP_SPECIAL, .color = TURN_TO_COLOR(info->turn) };
 	if (info->turn == info->myturn) {
-	    ChessStepSend(info, &step);
-	    ChessHistoryAppend(info, &step);
+	    if (info->mode == CHESS_MODE_VERSUS ||
+		info->mode == CHESS_MODE_PERSONAL) {
+		ChessStepSend(info, &step);
+		ChessHistoryAppend(info, &step);
+	    }
 	    strcpy(info->last_movestr, "你必須放棄這一步!!");
 	} else {
-	    ChessStepReceive(info, &step);
+	    if (info->mode == CHESS_MODE_VERSUS ||
+		info->mode == CHESS_MODE_PERSONAL) {
+		ChessStepReceive(info, &step);
+		ChessHistoryAppend(info, &step);
+	    }
 	    strcpy(info->last_movestr, "對方必須放棄這一步!!");
 	}
     }
@@ -405,14 +412,26 @@ reversi_loadlog(FILE *fp, ChessInfo *info)
 		reversi_init_user_userec(&rec, user);
 	} else if (buf[0] == '[') {
 	    /* "[ 1]● ==> C4    [ 2]○ ==> C5"  */
-	    reversi_step_t step = { .type = CHESS_STEP_NORMAL };
 	    int         c, r;
 	    const char *p = buf;
 	    int i;
 	    
 	    for(i=0; i<2; i++) {
-		p = strchr(p, '>');
+                reversi_step_t step = { .type = CHESS_STEP_NORMAL };
 
+                p = strchr(p, ']');
+		if (p == NULL) break;
+
+		++p; /* skip ']' */
+		while (*p && isspace(*p)) ++p;
+		if (!*p) break;
+
+                if (strncmp(WHITE_CHESS, p, strlen(WHITE_CHESS)) == 0)
+                    step.color = WHITE;
+                else  /* strncmp(BLACK_CHESS, p, 2) == 0 */
+                    step.color = BLACK;
+
+		p = strchr(p, '>');
 		if (p == NULL) break;
 
 		++p; /* skip '>' */
@@ -436,7 +455,6 @@ reversi_loadlog(FILE *fp, ChessInfo *info)
 		    step.loc.c = c;
 		}
 
-		step.color = i==0 ? BLACK : WHITE;
 		ChessHistoryAppend(info, &step);
 	    }
 	}
