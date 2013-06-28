@@ -467,6 +467,16 @@ angel_log_order_song(const char *angel_nick) {
     pwcuPlayAngel();
 }
 
+void
+angel_log_msg_to_angel(void) {
+    if (cuser.timeplayangel > cuser.timesetangel) {
+        // Try to avoid mass logs
+        if ((now - cuser.timeplayangel) >= ANGEL_CHANGE_TIMELIMIT_MINS * 60)
+            return;
+    }
+    pwcuPlayAngel();
+}
+
 int a_angelreport() {
     angel_beats_report rpt = {0};
     angel_beats_data   req = {0};
