@@ -74,6 +74,7 @@ int reassign_badpost(const char *userid);
 
 /* bbs */
 int is_file_owner(const fileheader_t *, const userec_t*);
+int is_file_owner_id(const fileheader_t *fhdr, const char *userid);
 void delete_allpost(const char *userid);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct, const char *backup_direct);
 int cmpfowner(fileheader_t *fhdr);

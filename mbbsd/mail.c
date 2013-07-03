@@ -1668,7 +1668,6 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-
     vs_hdr("回  信");
 
     /* 判斷是 boards 或 mail */
@@ -1697,8 +1696,37 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	    quote_file[0]='\0';
 	    return FULLUPDATE;
 	}
-    } else
+    } else {
+        int abort = 0;
 	strlcpy(uid, quote_user, sizeof(uid));
+        if (searchuser(uid, NULL) <= 0) {
+            mvouts(2, 0, "已找不到此使用者。\n");
+            abort = 1;
+        } else if (!is_file_owner_id(fhdr, uid)) {
+            char ans[3];
+            mvouts(2, 0, ANSI_COLOR(1;31)
+                   "警告: 此篇文章的原作者帳號已被重新註冊，"
+                   "您的信可能被無關的新使用者收到\n" ANSI_RESET);
+            outs(  "      由於 BBS 的帳號過期後可被重新註冊，"
+                   "所以有時收信人可能早已換人了，\n"
+                   "      但也有可能是同一人忘了密碼後重註。\n");
+            outs(  "      為避免您不小心寄出個資或是私人訊息，"
+                   "建議您先再次確定對方身份後再寄信。\n");
+            getdata(7, 0, "確定仍然要寄信給對方嗎[y/N]? ", ans, sizeof(ans),
+                    LCECHO);
+            if (ans[0] != 'y') {
+                abort = 1;
+            } else {
+                move(3, 0); clrtobot();
+            }
+        }
+        if (abort) {
+            quote_user[0]='\0';
+            quote_file[0]='\0';
+            vmsg("放棄寄信。");
+            return FULLUPDATE;
+        }
+    }
 
     /* make the title */
     do_reply_title(3, fhdr->title, str_reply, save_title, sizeof(save_title));

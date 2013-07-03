@@ -64,6 +64,14 @@ is_file_owner(const fileheader_t *fhdr, const userec_t *usr) {
     return 0;
 }
 
+int
+is_file_owner_id(const fileheader_t *fhdr, const char *userid) {
+    userec_t xuser;
+    if (getuser(userid, &xuser) <= 0)
+        return 0;
+    return is_file_owner(fhdr, &xuser);
+}
+
 /* query money by fileheader pointer.
  * return <0 if money is not valid.
  */
@@ -1646,6 +1654,7 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 		break;
 
 	    case 'b':
+                // TODO(piaip) Check if fhdr has valid author.
 		curredit = EDIT_BOTH;
 	    default:
 		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
