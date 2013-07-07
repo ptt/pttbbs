@@ -230,12 +230,12 @@ int main(int argc, char* argv[])
 		       "     mandex - 精華區索引程式 (man index)\n"
 		       "\n"
 		       "SYNOPSIS\n"
-		       "     mandex [-x] [-v] [board] ...\n"
+		       "     mandex [-x] [board] ...\n"
 		       "\n"
 		       "DESCRIPTION\n"
 		       "精華區索引 (man index)\n\n"
 		       "-x    只有含有 .rebuild的目錄才重製\n"
-		       "-v    顯示全部路徑\n"
+		       /* "-v    顯示全部路徑\n" */
 		       "board 全部的板 (default to all)\n\n");
 		return 0;
 	}
@@ -264,8 +264,9 @@ int main(int argc, char* argv[])
 	close(fd);
 	qsort(board, MAX_BOARD, sizeof(boardinfo_t), sortbyname);
 	for (nb = 0; board[nb].bname[0] != 0; ++nb) {
-	    /* delete non-exist boards */
-	    if (getbnum(board[nb].bname) == 0) {
+	    /* delete non-existing and duplicated boards */
+	    if (getbnum(board[nb].bname) == 0 ||
+                (nb > 0 && strcasecmp(board[nb].bname, board[nb - 1].bname) == 0)) {
 		memset(&(board[nb]), 0, sizeof(boardinfo_t));
 		dirty = 1;
 	    }
