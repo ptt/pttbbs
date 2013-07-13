@@ -101,6 +101,9 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 starttime,
 		 (msgid += (int)(random() >> 24)),
 		 disclaimer);
+    assert(n < sizeof(buf));
+    if (n > sizeof(buf))
+	n = sizeof(buf);
     write(sock, buf, n);
 
     while(fgets(buf, sizeof(buf), fp)) {
