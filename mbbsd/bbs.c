@@ -2073,15 +2073,17 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (postrecord.times > 0) {
 	outs(ANSI_COLOR(1;31) 
 "請注意: 1.在不同看板多次重覆發表或轉錄相似內容之文章，屬 Cross-post(CP)違規\n"
+"          一般而言(詳見各站規板規)連原文共超過四篇就可能會被檢舉。\n"
 "        2.被檢舉 Cross-post 時，分身帳號或不同ID但上線位址(IP)相同者\n"
 "          會被一併計算、處分，開罰單後停權\n"
 "        3.一旦判定CP屬實，七天內所有文章(包含其它無關的文章)都會被系統刪除\n"
 "\n" ANSI_RESET ANSI_COLOR(1;33)
-"若有網宣的需求，請改用下列方式:\n"
+"若有緊急狀況或是特別需求，請寫信給各看板板主請他「幫你轉文」。注意:板主有權\n"
+"        拒絕，且是要「板主動手轉文」不是問完後自己轉，不然一樣視為CP\n"
+"\n" ANSI_RESET ANSI_COLOR(1;32)
+"另外若是網宣的需求，除了尋求板主協助外，還可用下列方式:\n"
 "        1. 至 Note 看板投稿動態看板或申請進站活動廣告\n"
-"        2. 寫信給各看板板主請他幫你轉文(是他轉不是問完後自己轉，不然一樣CP)\n"
-"           (注意板主有權拒絕)\n"
-"        3. 系所或社團活動可至 ZACTION / ZCLUB 發文\n"
+"        2. 系所或社團活動可至 ZACTION / ZCLUB 發文\n"
         "\n" ANSI_RESET);
     }
 #endif
