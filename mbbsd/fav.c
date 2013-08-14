@@ -1218,30 +1218,26 @@ void subscribe_newfav(void)
 // create defaults for new user
 void reginit_fav(void)
 {
+    const char *default_favs = "etc/myfav_defaults";
+    char bn[STRLEN];
+    FILE *fp;
     int bid = 0;
 
     fav_load(); // for creating root
 
-#ifdef BN_NEWBIE
-    bid = getbnum(BN_NEWBIE);
-    if (bid > 0) fav_add_board(bid);
-#endif
-
-#ifdef BN_TEST
-    bid = getbnum(BN_TEST);
-    if (bid > 0) fav_add_board(bid);
-#endif
-
-#ifdef BN_ASKBOARD
-    bid = getbnum(BN_ASKBOARD);
-    if (bid > 0) fav_add_board(bid);
-#endif
-
-#ifdef BN_SYSOP
-    bid = getbnum(BN_SYSOP);
-    if (bid > 0) fav_add_board(bid);
-#endif
-
+    fp = fopen(default_favs, "r");
+    if (fp) {
+        while (fgets(bn, sizeof(bn), fp)) {
+            chomp(bn);
+            strip_blank(bn, bn);
+            if (!*bn || *bn == '#')
+                continue;
+            bid = getbnum(bn);
+            if (bid > 0)
+                fav_add_board(bid);
+        }
+        fclose(fp);
+    }
     fav_save();
 }
 
