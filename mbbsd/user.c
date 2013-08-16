@@ -1016,14 +1016,14 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '2':
 	y = 19;
 	if (!adminmode) {
-	    if (!getdata(y++, 0, "請輸入原密碼：", buf, PASSLEN, NOECHO) ||
+	    if (!getdata(y++, 0, "請輸入原密碼：", buf, PASSLEN, PASSECHO) ||
 		!checkpasswd(x.passwd, buf)) {
 		outs("\n\n您輸入的密碼不正確\n");
 		fail++;
 		break;
 	    }
 	} 
-	if (!getdata(y++, 0, "請設定新密碼：", buf, PASSLEN, NOECHO)) {
+	if (!getdata(y++, 0, "請設定新密碼：", buf, PASSLEN, PASSECHO)) {
 	    outs("\n\n密碼設定取消, 繼續使用舊密碼\n");
 	    fail++;
 	    break;
@@ -1033,7 +1033,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	move(y+1, 0);
 	outs("請注意設定密碼只有前八個字元有效，超過的將自動忽略。");
 
-	getdata(y++, 0, "請檢查新密碼：", buf, PASSLEN, NOECHO);
+	getdata(y++, 0, "請檢查新密碼：", buf, PASSLEN, PASSECHO);
 	if (strncmp(buf, genbuf, PASSLEN)) {
 	    outs("\n\n新密碼確認失敗, 無法設定新密碼\n");
 	    fail++;

@@ -25,6 +25,7 @@
 #define FN_WATER        "water"         // 舊水桶
 #define FN_BANNED       "banned"        // 新水桶
 #define FN_BANNED_HISTORY "banned.history"  // 新水桶之歷史記錄
+#define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
 #define FN_CANVOTE      "can_vote"
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
@@ -160,6 +161,7 @@
 #define LCECHO       2
 #define NUMECHO	     4
 #define GCARRY	     8	// (from M3) do not empty input buffer. 
+#define PASSECHO    0x10 
 
 #define YEA  1		       /* Booleans  (Yep, for true and false) */
 #define NA   0

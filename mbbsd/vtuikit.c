@@ -1228,7 +1228,17 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    if (!(flags & VGET_TRANSPARENT))
 		outs(VCLR_INPUT_FIELD); // change color to prompt fields
 
-	    vfill(len, 0, buf);
+            if (flags & VGET_PASSWORD) {
+                int i;
+                for (i = 0; i < rt.iend; i++)  {
+                    outc('*');
+                }
+                for (; i < len; i++) {
+                    outc(' ');
+                }
+            } else {
+                vfill(len, 0, buf);
+            }
 
 	    if (!(flags & VGET_TRANSPARENT))
 		outs(ANSI_RESET);

@@ -385,6 +385,8 @@ getdata2vgetflag(int echo)
     else if (echo == NUMECHO)
 	echo = VGET_DIGITS;
     else if (echo == NOECHO)
+	echo = VGETSET_NOECHO;
+    else if (echo == PASSECHO)
 	echo = VGETSET_PASSWORD;
     else
 	echo = VGET_DEFAULT;
