@@ -797,10 +797,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
         do {
             snprintf(buf, sizeof(buf), x.over_18 ? "y" : "n");
-            getdata_buf(y, 0, "是否成年(滿十八歲)[y/n]: ", buf, 3, LCECHO);
+            mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
+            getdata_buf(y+1, 0,"您是否年滿十八歲並同意觀看此類看板"
+                        "(若否請輸入n)[y/n]: ", buf, 3, LCECHO);
         } while (buf[0] != 'y' && buf[0] != 'n');
-        y++;
         x.over_18 = buf[0] == 'y' ? 1 : 0;
+        mvprints(y, 0, "是否年滿十八歲: %s\n\n", x.over_18 ? "是" : "否");
+        y++;
 
 #ifdef PLAY_ANGEL
 	if (adminmode) {

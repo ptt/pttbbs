@@ -692,7 +692,7 @@ new_register(void)
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-        mvouts(22, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。\n");
+        mvouts(22, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
         getdata(23, 0,"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:",
                 ans, 3, LCECHO);
         if (ans[0] == 'y') {
