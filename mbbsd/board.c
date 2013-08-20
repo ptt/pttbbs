@@ -186,8 +186,9 @@ HasBoardPerm(boardheader_t *bptr)
 	    return 1;
     }
 
+    // TODO Change this to a query on demand.
     /* 十八禁看板 */
-    if( (brdattr & BRD_OVER18) && !over18 )
+    if( (brdattr & BRD_OVER18) && !cuser.over_18 )
 	return 0;
 
     /* 限制閱讀權限 */
@@ -720,7 +721,7 @@ b_config(void)
 		break;
 #endif
 	    case '8':
-		if (!over18)
+		if (!cuser.over_18)
 		{
 		    vmsg("板主本身未滿 18 歲。");
 		} else {

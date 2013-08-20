@@ -212,9 +212,7 @@ user_display(const userec_t * u, int adminmode)
 
     prints("\t電子信箱: %s\n", u->email);
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
-    prints("\t生    日: %04i/%02i/%02i (%s滿18歲)\n",
-	   u->year + 1900, u->month, u->day, 
-	   resolve_over18_user(u) ? "已" : "未");
+    prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
 
     prints("\t註冊日期: %s (已滿 %d 天)\n", 
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
@@ -797,22 +795,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	getdata_buf(y++, 0, "手機號碼：", buf, 11, NUMECHO);
 	x.mobile = atoi(buf);
 
-	while (1) {
-	    snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i",
-		     x.year + 1900, x.month, x.day);
-	    if (getdata_str(y, 0, "生日 西元/月月/日日：", buf, 11, DOECHO, genbuf) != 0) {
-		int y, m, d;
-		if (ParseDate(buf, &y, &m, &d))
-		    continue;
-		x.month = (unsigned char)m;
-		x.day = (unsigned char)d;
-		x.year = (unsigned char)(y - 1900);
-	    }
-	    if (!adminmode && x.year < 40)
-		continue;
-	    y++;
-	    break;
-	}
+        do {
+            snprintf(buf, sizeof(buf), x.over_18 ? "y" : "n");
+            getdata_buf(y, 0, "是否成年(滿十八歲)[y/n]: ", buf, 3, LCECHO);
+        } while (buf[0] != 'y' && buf[0] != 'n');
+        y++;
+        x.over_18 = buf[0] == 'y' ? 1 : 0;
 
 #ifdef PLAY_ANGEL
 	if (adminmode) {
@@ -1016,14 +1004,16 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '2':
 	y = 19;
 	if (!adminmode) {
-	    if (!getdata(y++, 0, "請輸入原密碼：", buf, PASSLEN, PASSECHO) ||
+            if (!getdata(y++, 0, "請輸入原密碼：", buf, PASS_INPUT_LEN + 1,
+                         PASSECHO) ||
 		!checkpasswd(x.passwd, buf)) {
 		outs("\n\n您輸入的密碼不正確\n");
 		fail++;
 		break;
 	    }
 	} 
-	if (!getdata(y++, 0, "請設定新密碼：", buf, PASSLEN, PASSECHO)) {
+        if (!getdata(y++, 0, "請設定新密碼：", buf, PASS_INPUT_LEN + 1,
+                     PASSECHO)) {
 	    outs("\n\n密碼設定取消, 繼續使用舊密碼\n");
 	    fail++;
 	    break;
@@ -1266,10 +1256,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     if (adminmode)
 	kick_all(x.userid);
-
-    // resolve_over18 only works for cuser
-    if (!adminmode)
-	resolve_over18();
 }
 
 int

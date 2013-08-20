@@ -809,9 +809,7 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *phone,
 			 const char *email,
 			 int         mobile,
-			 uint8_t     year,
-			 uint8_t     month,
-			 uint8_t     day,
+                         int         over_18,
 			 uint8_t     is_foreign);
 
 // non-important based variables (only save on exit)

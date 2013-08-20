@@ -23,9 +23,6 @@
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
 
 #define MSG_ERR_MAXTRIES "您嘗試錯誤的輸入次數太多，請下次再來吧"
-#define MSG_ERR_TOO_OLD  "年份可能有誤。 若這是您的真實生日請另行通知站務處理"
-#define MSG_ERR_TOO_YOUNG "年份有誤。 嬰兒/未出生應該無法使用 BBS..."
-#define DATE_SAMPLE	 "1911/2/29"
 
 ////////////////////////////////////////////////////////////////////////////
 // Value Validation
@@ -625,14 +622,14 @@ new_register(void)
     "為避免被偷看，您的密碼會顯示為 * ，直接輸入完後按 Enter 鍵即可。\n"
     "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
 	ANSI_RESET);
-	if ((getdata(18, 0, "請設定密碼：", passbuf,
-		     sizeof(passbuf), PASSECHO) < 3) ||
+        if ((getdata(18, 0, "請設定密碼：", passbuf, PASS_INPUT_LEN + 1,
+                     PASSECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {
 	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
 	    continue;
 	}
 	strlcpy(newuser.passwd, passbuf, PASSLEN);
-	getdata(19, 0, "請確認密碼：", passbuf, sizeof(passbuf), PASSECHO);
+	getdata(19, 0, "請確認密碼：", passbuf, PASS_INPUT_LEN + 1, PASSECHO);
 	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
 	    move(19, 0);
 	    outs("設定與確認時輸入的密碼不一致, 請重新輸入密碼.\n");
@@ -689,40 +686,24 @@ new_register(void)
     }
 
     try = 0;
-    while (newuser.year < 40) // magic number 40: see user.c
-    {
-	char birthday[sizeof("mmmm/yy/dd ")];
-	int y, m, d;
-	struct tm tm;
-
-	localtime4_r(&now, &tm);
-
-	if (++try > 20) {
+    do {
+        char ans[3];
+	if (++try > 10) {
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(22, 0, "生日 (西元年/月/日, 如 " DATE_SAMPLE ")：", birthday,
-		sizeof(birthday), DOECHO);
-
-	if (strcmp(birthday, DATE_SAMPLE) == 0) {
-	    vmsg("不要複製範例！ 請輸入你真實生日");
-	    continue;
-	}
-
-	if (ParseDate(birthday, &y, &m, &d)) {
-	    vmsg("日期格式不正確");
-	    continue;
-	} else if (y < 1930) {
-	    vmsg(MSG_ERR_TOO_OLD);
-	    continue;
-	} else if (y+3 > tm.tm_year+1900) {
-	    vmsg(MSG_ERR_TOO_YOUNG);
-	    continue;
-	}
-	newuser.year  = (unsigned char)(y-1900);
-	newuser.month = (unsigned char)m;
-	newuser.day   = (unsigned char)d;
-    }
+        mvouts(22, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。\n");
+        getdata(23, 0,"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:",
+                ans, 3, LCECHO);
+        if (ans[0] == 'y') {
+            newuser.over_18  = 1;
+            break;
+        } else if (ans[0] == 'n') {
+            newuser.over_18  = 0;
+            break;
+        }
+        bell();
+    } while (1);
 
 #ifdef REGISTER_VERIFY_CAPTCHA
     if (!verify_captcha("為了繼續您的註冊程序\n"))
@@ -1134,8 +1115,8 @@ int
 u_register(void)
 {
     char            rname[20], addr[50], mobile[16];
-    char            phone[20], career[40], email[50], birthday[11];
-    unsigned char   year, mon, day;
+    char            phone[20], career[40], email[50];
+    int             over18;
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
@@ -1177,12 +1158,6 @@ u_register(void)
     else
 	mobile[0] = 0;
 
-    if (cuser.month == 0 && cuser.day == 0 && cuser.year == 0)
-	birthday[0] = 0;
-    else
-	snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
-		 1900 + cuser.year, cuser.month, cuser.day);
-
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
 	goto REGFORM;
@@ -1190,9 +1165,7 @@ u_register(void)
 
     // getregcode(regcode);
 
-    // XXX why check by year? 
-    // birthday is moved to earlier, so let's check email instead.
-    if (cuser.email[0] && // cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
+    if (cuser.email[0] && /* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) 
     {
@@ -1394,35 +1367,7 @@ u_register(void)
 	}
 	getfield(8, "只輸入數字 如:0912345678 (可不填)",
 		REGNOTES_ROOT "mobile", "手機號碼", mobile, 20);
-	while (1) {
-	    getfield(9, "西元/月月/日日 如: " DATE_SAMPLE , 
-		    REGNOTES_ROOT "birthday", "生日", birthday, sizeof(birthday));
-	    if (birthday[0] == 0) {
-		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
-			 1900 + cuser.year, cuser.month, cuser.day);
-		mon = cuser.month;
-		day = cuser.day;
-		year = cuser.year;
-	    } else {
-		int y, m, d;
-		if (strcmp(birthday, DATE_SAMPLE) == 0) {
-		    vmsg("不要複製範例！ 請輸入你真實生日");
-		    continue;
-		}
-		if (ParseDate(birthday, &y, &m, &d)) {
-		    vmsg("您的輸入不正確");
-		    continue;
-		}
-		mon = (unsigned char)m;
-		day = (unsigned char)d;
-		year = (unsigned char)(y - 1900);
-	    }
-	    if (year < 40) {
-		vmsg("您的輸入不正確");
-		continue;
-	    }
-	    break;
-	}
+
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1436,8 +1381,7 @@ u_register(void)
 
     // copy values to cuser
     pwcuRegisterSetInfo(rname, addr, career, phone, email,
-	    atoi(mobile),
-	    year, mon, day, isForeign);
+                        atoi(mobile), over18, isForeign);
 
     // if reach here, email is apparently 'x'.
     toregister(email);

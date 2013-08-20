@@ -46,6 +46,8 @@ typedef struct chicken_t { /* 128 bytes */
     int32_t pad2[1];           /* 留著以後用 */
 } PACKSTRUCT chicken_t;
 
+#define PASS_INPUT_LEN  8         /* Length of valid input password length.
+                                     For DES, set to 8. */
 #define PASSLEN    14             /* Length of encrypted passwd field */
 #define REGLEN     38             /* Length of registration data */
 
@@ -75,10 +77,8 @@ typedef struct userec_t {
     char	email[50];	/* Email */
     char	address[50];	/* 住址 */
     char	justify[REGLEN+1];/* 審核資料 */
-    uint8_t	month;		/* 生日 月 */
-    uint8_t	day;		/* 生日 日 */
-    uint8_t	year;		/* 生日 年 */
-    uint8_t     _unused3;       /* 從前放性別, 使用前請先清0 */
+    uint8_t     _unused_birth[3]; /* 生日 月日年 */
+    uint8_t     over_18;        /* 是否已滿18歲 */
     uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */

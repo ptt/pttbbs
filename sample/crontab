@@ -17,8 +17,6 @@
 # 每天 5:30 執行使用者排行榜更新
 30	5	*	*	*	bin/topusr 10 etc/topusr
 30	5	*	*	*	bin/topusr 100 etc/topusr100
-30	5	*	*	*	bin/yearsold
-30	5	*	*	*	bin/horoscope
 
 # 每個月初一, 十五點歌排行榜
 20	6	1,15	*	*	bin/topsong.sh

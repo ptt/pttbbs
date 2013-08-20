@@ -418,7 +418,6 @@ char            local_article;
 char            fromhost[STRLEN] = "\0";
 char		fromhost_masked[32] = "\0"; // masked 'fromhost'
 char            water_usies = 0;
-char            over18 = 0;
 char            is_first_login_of_today = 0;
 char            is_login_ready = 0;
 FILE           *fp_writelog = NULL;

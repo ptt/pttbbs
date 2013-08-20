@@ -265,9 +265,7 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *phone,
 			 const char *email,
 			 int         mobile,
-			 uint8_t     year,
-			 uint8_t     month,
-			 uint8_t     day,
+                         int         over_18,
 			 uint8_t     is_foreign)
 {
     PWCU_START();
@@ -277,9 +275,7 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(u.phone,    phone,  sizeof(u.phone));
     strlcpy(u.email,    email,  sizeof(u.email));
     u.mobile = mobile;
-    u.year   = year;
-    u.month  = month;
-    u.day    = day;
+    u.over_18 = over_18;
     _SETBY_BIT(u.uflag, UF_FOREIGN, is_foreign);
 
     // duplicate to cuser
@@ -290,9 +286,7 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
     strlcpy(cuser.email,    email,  sizeof(cuser.email));
     cuser.mobile = mobile;
-    cuser.year   = year;
-    cuser.month  = month;
-    cuser.day    = day;
+    cuser.over_18 = over_18;
     _SETBY_BIT(cuser.uflag, UF_FOREIGN, is_foreign);
 
     PWCU_END();

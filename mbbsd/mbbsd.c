@@ -1190,7 +1190,6 @@ user_login(void)
 	move(t_lines - 4, 0);
 	clrtobot();
 	welcome_msg();
-	resolve_over18();
 
 	append_log_recent_login();
 	check_bad_login();

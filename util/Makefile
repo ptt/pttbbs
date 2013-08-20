@@ -15,9 +15,9 @@ MBBSD_OBJS= 	var
 CPROG_WITH_UTIL= \
 	boardlist	post		poststat	\
 	account		deluserfile	\
-	expire		mandex		horoscope	broadcast	\
+	expire		mandex		broadcast	\
 	openticket	topusr		\
-	yearsold	toplazyBM	writemoney	\
+	toplazyBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
 	outmail		chkhbf		merge_dir	\
 	angel		gamblegive	\
