@@ -23,6 +23,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5858: [birthday]
+不再要求輸入生日，直接要求輸入是否已滿十八歲，減少儲存的使用者個資。
+請跑一下 upgrade/r5858_birth 用已知生日重建是否滿十八歲的資料。
+
 r5748: [typecheck]
 Makefile 現在會多執行 mbbsd/testsz，並在其中確保 userec_t 等結構大小正確
 （主要是確認 time4_t 與其它自行定義的變數沒有導致data size不合）
