@@ -3552,6 +3552,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 }
 	    }
 #endif // ASSESS
+            if (*newpath && *reason) {
+                log_filef(newpath, LOG_CREAT, "¡° Delete Reason: %s\n", reason);
+            }
 
             if (del_fee <= 0)
             {

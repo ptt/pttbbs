@@ -45,6 +45,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	const char *newpath, const char *comment)
 {
     char genbuf[STRLEN];
+    char reason[STRLEN];
     char rptpath[PATHLEN];
     int i, tusernum = searchuser(userid, NULL);
 
@@ -69,14 +70,10 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
             break;
     } while (1);
 
-    if (i < (int)DIM(badpost_reason))
-	sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", badpost_reason[i]);
-    else if(i==DIM(badpost_reason))
-    {
-	char *s = genbuf;
-	strcpy(genbuf, comment ? "劣推文退回(" : "劣文退回(");
-	s += strlen(genbuf);
-        while (!getdata_buf(b_lines, 0, "請輸入原因", s, 50, DOECHO)) {
+    if (i < (int)DIM(badpost_reason)) {
+        snprintf(reason, sizeof(reason), "%s", badpost_reason[i]);
+    } else if (i == DIM(badpost_reason)) {
+        while (!getdata(b_lines, 0, "請輸入原因", reason, 50, DOECHO)) {
             // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
             if (comment) {
                 vmsg("取消設定劣文。");
@@ -85,10 +82,11 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
             bell();
             continue;
         }
-	strcat(genbuf,")");
     }
-
     assert(i >= 0 && i <= (int)DIM(badpost_reason));
+
+    sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", reason);
+
     if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
 
 #ifdef USE_COOLDOWN
@@ -109,6 +107,10 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	xuser.userlevel |= PERM_VIOLATELAW;
 	xuser.timeviolatelaw = now;  
 	passwd_sync_update(tusernum, &xuser);
+    }
+
+    if (!comment) {
+        log_filef(newpath, LOG_CREAT, "※ BadPost Reason: %s\n", reason);
     }
 
 #ifdef BAD_POST_RECORD
