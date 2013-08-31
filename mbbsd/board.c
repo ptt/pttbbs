@@ -1249,10 +1249,10 @@ brdlist_foot(void)
 {
     vs_footer("  選擇看板  ",
 	    IS_LISTING_FAV() ?
-	    "  (a)增加看板 (y)列出全部 (v/V)標為已讀/未讀 (c)新文章數" :
+	    "  (a)增加看板 (s)進入已知板名 (y)列出全部 (v/V)已讀/未讀" :
             IN_CLASS() ?
-	    "  (m)加入/移出最愛 (v/V)設已讀/未讀 (c)新文章數" :
-	    "  (m)加入/移出最愛 (v/V)設已讀/未讀 (y)只列最愛");
+	    "  (m)加入/移出最愛 (s)進入已知板名 (v/V)已讀/未讀 " :
+	    "  (m)加入/移出最愛 (y)只列最愛 (v/V)已讀/未讀 ");
 }
 
 
@@ -1299,8 +1299,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
 	showtitle("看板列表", BBSName);
-	// [m]加入或移出我的最愛 
-	outs("[←][q]主選單 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [S]排序 [/]搜尋  [h]求助\n");
+	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
 
 	// boards in Ptt series are very, very large.
 	// let's create more space for board numbers,
