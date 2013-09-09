@@ -1610,7 +1610,10 @@ void
 write_header(FILE * fp,  const char *mytitle)
 {
     assert(mytitle);
-    if (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) {
+    // cross_post may call this without setting curr_buf.
+    // TODO Isolate curr_buf so we don't need to hack around.
+    if (curr_buf &&
+        curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
 		cuser.nickname
 	);
