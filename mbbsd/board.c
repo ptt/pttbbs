@@ -121,7 +121,6 @@ int enter_board(const char *boardname)
 
     set_board();
     setbdir(currdirect, currboard);
-    curredit &= ~EDIT_MAIL;
 
     return 0;
 }

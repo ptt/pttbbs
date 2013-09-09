@@ -2601,7 +2601,6 @@ userlist(void)
 		    prints("[寄信] 收信人：%s", userid);
 		    my_send(userid);
 		    setutmpmode(LUSERS);
-		    curredit = 0;
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2671,15 +2670,10 @@ userlist(void)
 
 	    case 'r':
 		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    if (curredit & EDIT_MAIL) {
-			/* deny reentrance, which may cause many problems */
-			vmsg("你進入使用者列表前就已經在閱\讀信件了");
-		    } else {
-			// XXX in fact we should check size here...
-			// chkmailbox();
-			m_read();
-			setutmpmode(LUSERS);
-		    }
+                    // XXX in fact we should check size here...
+                    // chkmailbox();
+                    m_read();
+                    setutmpmode(LUSERS);
 		    redrawall = redraw = 1;
 		}
 		break;

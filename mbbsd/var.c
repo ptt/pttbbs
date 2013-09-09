@@ -132,7 +132,6 @@ const char * const str_pager_modes[PAGER_MODES] =
 int             usernum;
 int             currmode = 0;
 int             currsrmode = 0;
-int             curredit = 0;
 int             currbid;
 char            quote_file[80] = "\0";
 char            quote_user[80] = "\0";

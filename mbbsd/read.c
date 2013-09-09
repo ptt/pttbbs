@@ -1365,7 +1365,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    }
 	    /* no break */
 	case READ_REDRAW:
-	    if (curredit & EDIT_MAIL)
+	    if (currstat == RMAIL)
 		vs_footer(" 鴻雁往返 ",
 		    " (R/y)回信 (x)站內轉寄 (d/D)刪信 (^P)寄發新信 \t(←/q)離開");
 	    else

@@ -153,17 +153,20 @@ typedef struct editor_internal_t {
     textline_t *deleted_line;	/* deleted line. Just keep one deleted line. */
     textline_t *oldcurrline;
 
+    struct editor_internal_t *prev;
+
+    int   flags;                /* editor flags. */
     int   currln;		/* current line of the article. */
-    short currpnt;		/* current column of the article. */
     int   totaln;		/* last line of the article. */
     int   curr_window_line;	/* current line to the window. */
+    int   blockln;		/* the row you started to select block. */
+    short currpnt;		/* current column of the article. */
     short last_margin;
     short edit_margin;		/* when the cursor moves out of range (say,
 				   t_columns), shift this length of the string
 				   so you won't see the first edit_margin-th
 				   character. */
     short lastindent;
-    int  blockln;		/* the row you started to select block. */
     char last_phone_mode;
 
     char ifuseanony		:1;
@@ -174,14 +177,11 @@ typedef struct editor_internal_t {
     char indent_mode		:1;
     char phone_mode		:1;
     char raw_mode		:1;
+    char synparser;		// syntax parser
 
     char *searched_string;
     char *sitesig_string;
     char *(*substr_fp) ();
-
-    char synparser;		// syntax parser
-
-    struct editor_internal_t *prev;
 
 } editor_internal_t;
 // } __attribute__ ((packed))
@@ -1478,7 +1478,9 @@ do_quote(void)
 		while (*(++ptr) == ' ');
 
 		/* 順手牽羊，取得 author's address */
-		if ((curredit & EDIT_BOTH) && (str = strchr(quote_user, '.'))) {
+		if ((curr_buf->flags & EDITFLAG_KIND_SENDMAIL) &&
+                    (curr_buf->flags & EDITFLAG_KIND_REPLYPOST) &&
+                    (str = strchr(quote_user, '.'))) {
 		    strcpy(++str, ptr);
 		    str = strchr(str, ' ');
 		    assert(str);
@@ -1513,7 +1515,8 @@ do_quote(void)
 		    insert_string(buf);
 		}
 	    else {
-		if (curredit & EDIT_LIST)	/* 去掉 mail list 之 header */
+                /* 去掉 mail list 之 header */
+		if (curr_buf->flags & EDITFLAG_KIND_MAILLIST)
 		    while (fgets(buf, sizeof(buf), inf) && (!strncmp(buf, "※ ", 3)));
 		while (fgets(buf, sizeof(buf), inf)) {
 		    if (!strcmp(buf, "--\n"))
@@ -1607,7 +1610,7 @@ void
 write_header(FILE * fp,  const char *mytitle)
 {
     assert(mytitle);
-    if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
+    if (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
 		cuser.nickname
 	);
@@ -1978,7 +1981,8 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 
     if (!aborted) {
 
-	if (saveheader && !(curredit & EDIT_MAIL) && check_quote())
+	if (saveheader && !(curr_buf->flags & EDITFLAG_KIND_SENDMAIL) &&
+            check_quote())
 	    return KEEP_EDITING;
 
 	assert(*fpath);
@@ -3578,6 +3582,8 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 #endif
 
     enter_edit_buffer();
+    curr_buf->flags = flags;
+
 
     if (*fpath) {
 	int tmp = read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);

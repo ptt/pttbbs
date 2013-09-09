@@ -137,11 +137,6 @@
 #define MODE_SELECT      0x0080    /* 搜尋使用者標題 */
 #define MODE_DIRTY       0x0100    /* 是否更動過 userflag */
 
-/* for curredit */
-#define EDIT_MAIL       1       /* 目前是 mail/board ? */
-#define EDIT_LIST       2       /* 是否為 mail list ? */
-#define EDIT_BOTH       4       /* both reply to author/board ? */
-
 /* read.c 中的模式 */
 #define TAG_NIN         0       /* 不屬於 TagList */
 #define TAG_TOGGLE      1       /* 切換 Taglist */

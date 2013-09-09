@@ -89,7 +89,7 @@ void outgo_post(const fileheader_t *fh, const char *board, const char *userid, c
 int edit_title(int ent, fileheader_t *fhdr, const char *direct);
 int whereami(void);
 void set_board(void);
-int do_post(void);
+int do_post(int edflags);
 int ReadSelect(void);
 int save_violatelaw(void);
 int board_select(void);

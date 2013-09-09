@@ -1234,7 +1234,7 @@ does_board_have_public_bm(const boardheader_t *bp) {
 }
 
 static int
-do_post_article()
+do_post_article(int edflags)
 {
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
@@ -1248,7 +1248,7 @@ do_post_article()
 				   "公告" // TN_ANNOUNCE
 				  };
     boardheader_t  *bp;
-    int             islocal, posttype=-1, edflags = 0;
+    int             islocal, posttype=-1;
     char save_title[STRLEN];
     const char *reason = "無法發文";
 
@@ -1349,7 +1349,6 @@ do_post_article()
     if (save_title[0] == '\0')
 	return FULLUPDATE;
 
-    curredit &= ~EDIT_MAIL;
     setutmpmode(POSTING);
     /* 未具備 Internet 權限者，只能在站內發表文章 */
     /* 板主預設站內存檔 */
@@ -1369,8 +1368,8 @@ do_post_article()
 	Copy(genbuf, fpath);
     }
 
-    edflags = EDITFLAG_ALLOWTITLE;
-    edflags = solveEdFlagByBoard(currboard, edflags);
+    edflags |= EDITFLAG_ALLOWTITLE;
+    edflags |= solveEdFlagByBoard(currboard, edflags);
     if (bp->brdattr & BRD_NOSELFDELPOST)
         edflags |= EDITFLAG_WARN_NOSELFDEL;
 
@@ -1383,13 +1382,6 @@ do_post_article()
     };
 #endif
     
-    // XXX I think the 'kind' determination looks really weird here.
-    // However legacy BBS code here was a mass... so let's workaround it.
-    edflags |= (quote_file[0] ?
-	    EDITFLAG_KIND_REPLYPOST : EDITFLAG_KIND_NEWPOST);
-    if (curredit & EDIT_BOTH)
-	edflags |= EDITFLAG_KIND_SENDMAIL;
-
     money = vedit2(fpath, YEA, &islocal, save_title, edflags);
     if (money == EDIT_ABORTED) {
 	unlink(fpath);
@@ -1531,8 +1523,7 @@ do_post_article()
 	clrtobot();
 
 	/* 回應到原作者信箱 */
-
-	if (curredit & EDIT_BOTH) {
+        if (edflags & EDITFLAG_KIND_SENDMAIL) {
 	    char *str, *msg = NULL;
 
 	    genbuf[0] = 0;
@@ -1580,8 +1571,8 @@ do_post_article()
                     msg = "作者無法收信";
 	    }
 	    outs(msg);
-	    curredit ^= EDIT_BOTH;
-	} // if (curredit & EDIT_BOTH)
+	}
+
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
 #ifdef USE_COOLDOWN
@@ -1602,8 +1593,12 @@ do_post_article()
     return FULLUPDATE;
 }
 
+int new_post() {
+    return do_post(EDITFLAG_KIND_NEWPOST);
+}
+
 int
-do_post(void)
+do_post(int edflags)
 {
     boardheader_t  *bp;
     STATINC(STAT_DOPOST);
@@ -1612,7 +1607,7 @@ do_post(void)
     if (bp->brdattr & BRD_VOTEBOARD)
 	return do_voteboard(0);
     else if (!(bp->brdattr & BRD_GROUPBOARD))
-	return do_post_article();
+	return do_post_article(edflags);
     return 0;
 }
 
@@ -1626,6 +1621,7 @@ static void
 do_generalboardreply(/*const*/ fileheader_t * fhdr)
 {
     char            genbuf[3];
+    int edflags = EDITFLAG_KIND_REPLYPOST;
     
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 
@@ -1655,12 +1651,11 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 
 	    case 'b':
                 // TODO(piaip) Check if fhdr has valid author.
-		curredit = EDIT_BOTH;
+                edflags |= EDITFLAG_KIND_SENDMAIL;
 	    default:
 		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
 		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
-		do_post();
-		curredit &= ~EDIT_BOTH;
+		do_post(edflags);
 	}
     }
     *quote_file = 0;
@@ -4347,7 +4342,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('M')
     { 0, NULL }, // Ctrl('N')
     { 0, NULL }, // Ctrl('O') // BETTER NOT USE ^O - UNIX not work
-    { 0, do_post }, // Ctrl('P')
+    { 0, new_post }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
     { 0, NULL }, // Ctrl('R')
     { 0, NULL }, // Ctrl('S')

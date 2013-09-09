@@ -746,8 +746,6 @@ do_send(const char *userid, const char *title, const char *log_source)
 	    return -1;
 	if (!(xuser.userlevel & PERM_READMAIL))
 	    return -3;
-
-	curredit |= EDIT_MAIL;
     }
     /* process title */
     if (title)
@@ -950,6 +948,7 @@ multi_send(const char *title)
     int             recipient, listing;
     char            genbuf[PATHLEN];
     char	    buf[IDLEN+1];
+    int             edflags = EDITFLAG_ALLOWTITLE;
     struct Vector   namelist;
     int             i;
     const char     *p;
@@ -1029,11 +1028,10 @@ multi_send(const char *title)
 	    fprintf(fp, "\n%s\n\n", genbuf);
 	    fclose(fp);
 	}
-	curredit |= EDIT_LIST;
+        edflags |= EDITFLAG_KIND_MAILLIST;
 
 	if (vedit(fpath, YEA, NULL, save_title) == EDIT_ABORTED) {
 	    unlink(fpath);
-	    curredit = 0;
 	    Vector_delete(&namelist);
 	    vmsg(msg_cancel);
 	    return;
@@ -1057,7 +1055,6 @@ multi_send(const char *title)
 	}
 	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
-	curredit = 0;
 	Vector_delete(&namelist);
     } else {
 	Vector_delete(&namelist);
@@ -1134,6 +1131,7 @@ mail_all(void)
     char            genbuf[200];
     int             i, unum;
     char           *userid;
+    int             edflags;
     char save_title[STRLEN];
 
     vs_hdr("給所有使用者的系統通告");
@@ -1152,15 +1150,13 @@ mail_all(void)
     }
     *quote_file = 0;
 
-    curredit |= EDIT_MAIL;
-    if (vedit(fpath, YEA, NULL, save_title) == EDIT_ABORTED) {
-	curredit = 0;
+    edflags = EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL;
+    if (vedit2(fpath, YEA, NULL, save_title, edflags) == EDIT_ABORTED) {
 	unlink(fpath);
 	outs(msg_cancel);
 	pressanykey();
 	return 0;
     }
-    curredit = 0;
 
     setutmpmode(MAILALL);
     vs_hdr("寄信中...");
@@ -1670,8 +1666,8 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     vs_hdr("回  信");
 
-    /* 判斷是 boards 或 mail */
-    if (curredit & EDIT_MAIL)
+    /* Trick: mail 回信時 ent/direct=0, currstat = RMAIL. */
+    if (currstat == RMAIL)
 	setuserfile(quote_file, fhdr->filename);
     else
 	setbfile(quote_file, currboard, fhdr->filename);
@@ -1733,7 +1729,6 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     prints("\n收信人: %s\n標  題: %s\n", uid, save_title);
 
     /* edit, then send the mail */
-    ent = curredit;
     switch (do_send(uid, save_title, __FUNCTION__)) {
     case -1:
 	outs(err_uid);
@@ -1747,34 +1742,19 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     case 0:
 	/* success */
-	if (	direct &&	/* for board, no direct */
-		(curredit & EDIT_MAIL) &&
-		!(fhdr->filemode & FILE_REPLIED))
+	if (direct &&	/* for board, no direct */
+            !(fhdr->filemode & FILE_REPLIED))
 	{
 	    fhdr->filemode |= FILE_REPLIED;
 	    substitute_fileheader(direct, fhdr, fhdr, oent);
 	}
 	break;
     }
-    curredit = ent;
     pressanykey();
     quote_user[0]='\0';
     quote_file[0]='\0';
     if (strcasecmp(uid, cuser.userid) == 0)
 	return DIRCHANGED;
-    return FULLUPDATE;
-}
-
-static int
-mail_edit(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
-{
-    char            genbuf[PATHLEN];
-
-    if (!HasUserPerm(PERM_SYSOP))
-	return DONOTHING;
-
-    setdirpath(genbuf, direct, fhdr->filename);
-    veditfile(genbuf);
     return FULLUPDATE;
 }
 
@@ -2116,21 +2096,28 @@ int
 m_read(void)
 {
     int back_bid;
+    static int cReEntrance = 0;
+
 
     if (!HasUserPerm(PERM_READMAIL))
         return DONOTHING;
 
+    if (cReEntrance > 0) {
+        vmsg("抱歉，您之前已在信箱中。");
+        return FULLUPDATE;
+    }
+
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	int was_in_digest = currmode & MODE_DIGEST;
 	currmode &= ~MODE_DIGEST;
-	curredit = EDIT_MAIL;
 	back_bid = currbid;
 	currbid = 0;
+        cReEntrance++;
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
 	currbid = back_bid;
-	curredit = 0;
 	currmode |= was_in_digest;
 	setmailalert();
+        cReEntrance--;
 	return 0;
     } else {
 	outs("您沒有來信");
@@ -2288,7 +2275,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'B'
     { 0, NULL }, // 'C'
     { 1, del_range_mail }, // 'D'
-    { 1, mail_edit }, // 'E'
+    { 0, NULL }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'
     { 0, NULL }, // 'H'
