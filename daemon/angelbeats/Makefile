@@ -6,10 +6,10 @@ PROGRAMS=	angelbeats abc
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
-LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
+LDLIBS:=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	-levent
+	-levent $(LDLIBS)
 
 all:	${PROGRAMS}
 
