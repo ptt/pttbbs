@@ -65,8 +65,8 @@
 #define VOTING          29
 #define XINFO           30
 #define MSYSOP          31
-#define WWW             32
-#define BIG2            33
+// #define WWW             32
+// #define BIG2            33
 #define REPLY           34
 #define HIT             35
 #define DBACK           36
@@ -77,7 +77,7 @@
 #define P_FRIEND        41
 #define LOGIN           42      /* main menu */
 #define DICT            43
-#define BRIDGE          44
+// #define BRIDGE          44
 #define ARCHIE          45
 #define GOPHER          46
 #define NEWS            47
@@ -87,7 +87,7 @@
 #define NADM            51
 #define DRINK           52
 #define CAL             53
-#define PROVERB         54
+// #define PROVERB         54
 #define ANNOUNCE        55      /* announce */
 #define EDNOTE          56 
 #define CDICT           57
@@ -95,23 +95,23 @@
 #define OSONG           59
 #define CHICKEN         60
 #define TICKET 	    	61
-#define GUESSNUM        62
+// #define GUESSNUM        62
 #define AMUSE           63
 #define OTHELLO		64
 #define DICE            65
-#define VICE            66
-#define BBCALL          67
+// #define VICE            66
+// #define BBCALL          67
 #define VIOLATELAW      68
 #define M_FIVE          69
-#define JACK_CARD       70
-#define TENHALF         71
-#define CARD_99         72
-#define RAIL_WAY        73
+// #define JACK_CARD       70
+// #define TENHALF         71
+// #define CARD_99         72
+// #define RAIL_WAY        73
 #define SREG            74
 #define CHC             75      /* Chinese chess */
 #define DARK            76      /* 中國暗棋 */
-#define TMPJACK         77
-#define JCEE		78
+// #define TMPJACK         77
+// #define JCEE		78
 #define REEDIT		79
 // #define BLOGGING        80	/* 已停用 */
 #define CHESSWATCHING	81
