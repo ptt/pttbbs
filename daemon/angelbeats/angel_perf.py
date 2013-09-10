@@ -52,8 +52,8 @@ def is_lazy(e):
 
 def is_all_reject2(e):
     # 'ALL_REJECT2'
-    '\033[1;31m以下是關呼叫統計比例過高([線上]減[關閉]與[停收]小於2)的小天使\033[m'
-    return (e.pause2 + e.pause1 >= e.sample - 1)
+    '\033[1;31m以下是關呼叫統計比例過高([線上]減[關閉]與[停收]小於5)的小天使\033[m'
+    return (e.pause2 + e.pause1 >= e.sample - 4)
 
 def parse_perf_file(filename):
     data = {}
