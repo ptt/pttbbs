@@ -425,7 +425,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
         int anum = _getuser(u->myangel, &xuser);
 
         if (anum > 0 && (xuser.userlevel & PERM_ANGEL) &&
-            (!xuser.role & ROLE_ANGEL_ACTIVITY))
+            !(xuser.role & ROLE_ANGEL_ACTIVITY))
             kanade = angel_list_add(xuser.userid, anum);
     }
 
