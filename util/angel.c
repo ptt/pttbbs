@@ -54,6 +54,7 @@ typedef struct {
     int masters_week;
     int masters_month;
     int masters_quater;
+    int masters_period;
 } AngelRecord;
 
 int buildMasterInfo(AngelRecord *rec, int num_recs) {
@@ -71,8 +72,6 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
         uid++;
         r->uid = uid;
         assert(uid <= num_recs);
-        if (uid % 1000 == 0)
-            fprintf(stderr, ".");
         if (!*user.userid)
             continue;
         if (user.role & ROLE_ANGEL_ACTIVITY)
@@ -94,6 +93,8 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
             angel->masters_month++;
         if (now - user.timeplayangel < DAY_SECONDS * 90)
             angel->masters_quater++;
+        if (now - user.timeplayangel < DAY_SECONDS * 120)
+            angel->masters_period++;
     }
     fclose(fp);
     return count;
@@ -117,16 +118,19 @@ int generateReport(FILE *fp, AngelRecord *rec, int num_recs, int delete_file) {
 
     fprintf(fp, "瞷ぱㄏΤ %d :\n", num_recs);
     fprintf(fp,
-            " (计场计 | 秅ず | るず | ﹗ず"
-            " 臘计,\n"
-            "  臘琌赣琿丁ずΤ肚癳癟倒ヴぱㄏ)\n");
+            " (计场计 |  7ぱず | 30ぱず | 90ぱず |  120ぱ\n"
+            "  臘计(赣琿丁ずΤ肚癳癟倒ヴぱㄏ)\n"
+	    "  猔種ヘ玡臘度参璸Τ癳癟礚猭眔ぱㄏ\n"
+	    "  琌本 - ┮叫皌┾琩挡狦蝶︳)\n");
     for (i = 0; i < num_recs; i++)
-        fprintf(fp, "%15s | %6d | %6d | %6d | %6d\n",
+        fprintf(fp, "%15s | %6d | %6d | %6d | %6d | %6d\n",
                 getuserid(rec[i].uid),
                 rec[i].masters,
                 rec[i].masters_week,
                 rec[i].masters_month,
-                rec[i].masters_quater);
+                rec[i].masters_quater,
+		rec[i].masters_period
+		);
     fputs("\n", fp);
 
     appendLogFile(fp, "log/angel_perf.txt",
