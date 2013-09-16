@@ -93,7 +93,7 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
             angel->masters_month++;
         if (now - user.timeplayangel < DAY_SECONDS * 90)
             angel->masters_quater++;
-        if (now - user.timeplayangel < DAY_SECONDS * 120)
+        if (now - user.timeplayangel < DAY_SECONDS * 180)
             angel->masters_period++;
     }
     fclose(fp);
@@ -118,7 +118,7 @@ int generateReport(FILE *fp, AngelRecord *rec, int num_recs, int delete_file) {
 
     fprintf(fp, "瞷ぱㄏΤ %d :\n", num_recs);
     fprintf(fp,
-            " (计场计 |  7ぱず | 30ぱず | 90ぱず |  120ぱ\n"
+            " (计场计 |  7ぱず | 30ぱず | 90ぱず |  180ぱ\n"
             "  臘计(赣琿丁ずΤ肚癳癟倒ヴぱㄏ)\n"
 	    "  猔種ヘ玡臘度参璸Τ癳癟礚猭眔ぱㄏ\n"
 	    "  琌本 - ┮叫皌┾琩挡狦蝶︳)\n");

@@ -53,7 +53,7 @@ static int debug = 0;
 
 // same as expire length
 #ifndef ANGELBEATS_INACTIVE_TIME
-#define ANGELBEATS_INACTIVE_TIME   ( 120 * DAY_SECONDS )
+#define ANGELBEATS_INACTIVE_TIME   ( 180 * DAY_SECONDS )
 #endif
 
 // Lower priority for re-assigning masters in given period.
