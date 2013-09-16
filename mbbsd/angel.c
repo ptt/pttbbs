@@ -16,7 +16,7 @@
 #define FN_ANGEL_OFFLINE2   "etc/angel_offline2"
 
 #ifndef ANGEL_INACTIVE_DAYS
-#define ANGEL_INACTIVE_DAYS (30*3)
+#define ANGEL_INACTIVE_DAYS (180)
 #endif
 
 static const char
@@ -514,7 +514,7 @@ int a_angelreport() {
             rpt.total_active_angels);
 
        if (!rpt.inactive_days)
-           rpt.inactive_days = 120;
+           rpt.inactive_days = ANGEL_INACTIVE_DAYS;
 
         prints(
             "\t 絬ぱㄏい局Τ臘计ヘ程ぶ %d 程 %d \n"
