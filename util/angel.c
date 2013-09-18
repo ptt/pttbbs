@@ -53,7 +53,8 @@ typedef struct {
     int masters;
     int masters_week;
     int masters_month;
-    int masters_quater;
+    int masters_quarter;
+    int masters_season;
     int masters_period;
 } AngelRecord;
 
@@ -92,7 +93,9 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
         if (now - user.timeplayangel < DAY_SECONDS * 30)
             angel->masters_month++;
         if (now - user.timeplayangel < DAY_SECONDS * 90)
-            angel->masters_quater++;
+            angel->masters_quarter++;
+        if (now - user.timeplayangel < DAY_SECONDS * 120)
+            angel->masters_season++;
         if (now - user.timeplayangel < DAY_SECONDS * 180)
             angel->masters_period++;
     }
@@ -118,17 +121,18 @@ int generateReport(FILE *fp, AngelRecord *rec, int num_recs, int delete_file) {
 
     fprintf(fp, "瞷ぱㄏΤ %d :\n", num_recs);
     fprintf(fp,
-            " (计场计 |  7ぱず | 30ぱず | 90ぱず |  180ぱ\n"
+            " (计场计 |  7ぱず | 30ぱず | 90ぱず |  120ぱ |  180ぱ\n"
             "  臘计(赣琿丁ずΤ肚癳癟倒ヴぱㄏ)\n"
 	    "  猔種ヘ玡臘度参璸Τ癳癟礚猭眔ぱㄏ\n"
 	    "  琌本 - ┮叫皌┾琩挡狦蝶︳)\n");
     for (i = 0; i < num_recs; i++)
-        fprintf(fp, "%15s | %6d | %6d | %6d | %6d | %6d\n",
+        fprintf(fp, "%15s | %6d | %6d | %6d | %6d | %6d | %6d\n",
                 getuserid(rec[i].uid),
                 rec[i].masters,
                 rec[i].masters_week,
                 rec[i].masters_month,
-                rec[i].masters_quater,
+                rec[i].masters_quarter,
+                rec[i].masters_season,
 		rec[i].masters_period
 		);
     fputs("\n", fp);
