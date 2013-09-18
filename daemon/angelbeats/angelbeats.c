@@ -116,6 +116,7 @@ typedef struct {
     time_t last_activity;   // last known activity from master
     time_t last_assigned;   // last time being assigned with new master
     int last_assigned_master; // uid of last new master
+    int missed_assign;      // how many times this angel was not assigned.
     int uid;
     int masters;            // counter of who have this one as angel
     char userid[IDLEN+1];
@@ -314,9 +315,12 @@ suggest_online_angel(int master_uid) {
         if (is_pause)
             continue;
 
+        if (master_uid)
+            kanade->missed_assign++;
 #ifdef TRACE_ANGEL_SELECTION
-        log("\n %d.%*s(masters=%d,act=%d,assigned=%d%s) ", ++found, IDLEN,
-            kanade->userid, kanade->masters,
+        log("\n %d.%*s(missed=%d,masters=%d,act=%d,assigned=%d%s) ",
+            ++found, IDLEN,
+            kanade->userid, kanade->missed_assign, kanade->masters,
             (int)(clk - kanade->last_activity),
             (int)(clk - kanade->last_assigned),
             ((int)(clk - kanade->last_assigned) <
@@ -357,6 +361,7 @@ inc_angel_master(int uid, int master_uid) {
     kanade->masters++;
     kanade->last_assigned = now;
     kanade->last_assigned_master = master_uid;
+    kanade->missed_assign = 0;
     return 1;
 }
 
@@ -470,6 +475,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     prpt->total_angels = g_angel_list_size;
     prpt->my_index = 0;
     prpt->my_active_index = 0;
+    prpt->missed_assign = 0;
     prpt->inactive_days = ANGELBEATS_INACTIVE_TIME / DAY_SECONDS;
 
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
@@ -531,6 +537,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
         prpt->my_active_masters = kanade->masters;
         prpt->last_assigned = kanade->last_assigned;
         prpt->last_assigned_master = kanade->last_assigned_master;
+        prpt->missed_assign = kanade->missed_assign;
     }
     return 0;
 }
@@ -765,6 +772,7 @@ client_cb(int fd, short event, void *arg) {
                 }
             }
             break;
+
         case ANGELBEATS_REQ_REPORT:
             log("%s angel [%s] request for report\n",
                 Cdatelite(&clk), master_uid);
@@ -773,7 +781,7 @@ client_cb(int fd, short event, void *arg) {
                 rpt.cb = sizeof(rpt);
                 create_angel_report(data.angel_uid, &rpt);
                 // write different kind of data!
-                write(fd, &rpt, sizeof(rpt));
+                write(fd, &rpt, rpt.cb);
                 goto end;
             }
             break;
