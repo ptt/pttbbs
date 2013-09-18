@@ -105,7 +105,7 @@ typedef struct {
     short inactive_days;
 
     time4_t last_assigned;
-    time4_t reserved;
+    int     missed_assign;
     int     last_assigned_master;
 
 }   angel_beats_report ;
