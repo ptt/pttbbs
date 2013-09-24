@@ -2450,19 +2450,29 @@ userlist(void)
 			for (i = 0; currutmp->friend_online[i] &&
 			     i < MAX_FRIEND; ++i) {
 			    where = currutmp->friend_online[i] & 0xFFFFFF;
-			    if (VALID_USHM_ENTRY(where) &&
-				(uentp = &SHM->uinfo[where]) &&
-				uentp->pid &&
-				isvisible_stat(currutmp, uentp,
-					       frstate =
-					   currutmp->friend_online[i] >> 24)
-				&& kill(uentp->pid, 0) != -1 &&
-				uentp->pager != PAGER_ANTIWB &&
-				(uentp->pager != PAGER_FRIENDONLY || frstate & HFM) &&
-				!(frstate & IRH)) {
-				my_write(uentp->pid, genbuf, uentp->userid,
-					WATERBALL_PREEDIT, NULL);
-			    }
+                            if (!VALID_USHM_ENTRY(where))
+                                continue;
+                            uentp = &SHM->uinfo[where];
+                            if (!uentp || !uentp->pid)
+                                continue;
+                            frstate = currutmp->friend_online[i] >> 24;
+                            // Only to people who I've friended him.
+                            if (!(frstate & IFH))
+                                continue;
+                            if (!isvisible_stat(currutmp, uentp, frstate))
+                                continue;
+                            if (uentp->pager == PAGER_ANTIWB)
+                                continue;
+                            if (uentp->pager == PAGER_FRIENDONLY &&
+                                !(frstate & HFM))
+                                continue;
+                            // HRM + HFM = super friend.
+                            if ((frstate & HRM) && !(frstate & HFM))
+                                continue;
+                            if (kill(uentp->pid, 0) == -1)
+                                continue;
+                            my_write(uentp->pid, genbuf, uentp->userid,
+                                     WATERBALL_PREEDIT, NULL);
 			}
 		    }
 		    redrawall = redraw = 1;
