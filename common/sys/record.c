@@ -1,6 +1,8 @@
 /* $Id$ */
 
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -306,4 +308,28 @@ apply_record(const char *fpath, int (*fptr) (void *item, void *optarg),
     close(fd);
 
     return 0;
+}
+
+int bsearch_record(const char *fpath, const void *key,
+                   int (*compar)(const void *item1, const void *item2),
+                   size_t size, void *buffer)
+{
+  int fd;
+  size_t sz = dashs(fpath);
+  void *addr = NULL, *found;
+
+  if((fd = open(fpath, O_RDONLY, 0)) < 0)
+    return -1;
+  addr = mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
+  if (!addr) {
+      close(fd);
+      return -1;
+  }
+  found = bsearch(key, addr, sz / size, size, compar);
+  if (buffer && found)
+      memcpy(buffer, found, size);
+
+  munmap(addr, sz);
+  close(fd);
+  return found ? (found - addr) / size : -1;
 }

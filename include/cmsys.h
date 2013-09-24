@@ -175,6 +175,9 @@ int substitute_record2(const char *fpath,
                               record_callback_t cb_can_substitue);
 int delete_record2(const char *fpath, const void *rptr, size_t size,
                           int id, record_callback_t cb_can_substitue);
+int bsearch_record(const char *fpath, const void *key,
+                   int (*compar)(const void *item1, const void *item2),
+                   size_t size, void *buffer);
 
 /* vector.c */
 struct Vector {
