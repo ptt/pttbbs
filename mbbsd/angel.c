@@ -32,7 +32,7 @@ static const char
 // Angel Beats! Client
 
 // this works for simple requests: (return 1/angel_uid for success, 0 for fail
-static int 
+static int
 angel_beats_do_request(int op, int master_uid, int angel_uid) {
     int fd;
     int ret = 1;
@@ -70,7 +70,7 @@ angel_register_new(const char *userid) {
                            searchuser(userid, NULL));
 }
 
-void 
+void
 angel_notify_activity(const char *userid) {
     int master;
     static time4_t t = 0;
@@ -90,7 +90,7 @@ angel_notify_activity(const char *userid) {
     angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, master, usernum);
 }
 
-void 
+void
 angel_toggle_pause()
 {
     if (!HasUserPerm(PERM_ANGEL) || !currutmp)
@@ -158,7 +158,7 @@ static char _myangel[IDLEN+1] = "",
 static time4_t _myangel_touched = 0;
 static char _valid_angelmsg = 0;
 
-void 
+void
 angel_reload_nick()
 {
     char reload = 0;
@@ -216,7 +216,7 @@ angel_reload_nick()
     }
 }
 
-const char * 
+const char *
 angel_get_nick()
 {
     angel_reload_nick();
@@ -430,7 +430,7 @@ int angel_check_master(void) {
     if (is_my_master) {
         prints(ANSI_COLOR(1;32) "%s 是你的主人。" ANSI_RESET "\n",
                xuser.userid);
-        if (xuser.timesetangel) 
+        if (xuser.timesetangel)
             prints("小天使與主人的關係已維持了 %d 天。\n",
                    (now - xuser.timesetangel) / DAY_SECONDS + 1);
         if (xuser.timeplayangel && xuser.timeplayangel > xuser.timesetangel)
@@ -720,13 +720,13 @@ angel_edit_msg(const char *prompt, const char *filename,
     return 1;
 }
 
-int 
+int
 a_angelmsg(){
     return angel_edit_msg("編輯小天使暱稱與離線訊息", FN_ANGELMSG,
                           FORMAT_NICK_MSG);
 }
 
-int 
+int
 a_angelmsg2(){
     return angel_edit_msg("編輯小天使呼叫畫面個性留言", FN_ANGELMSG2,
                           FORMAT_PLAIN_MSG);
@@ -738,7 +738,7 @@ FindAngel(void){
     int angel_uid = 0;
     userinfo_t *angel = NULL;
     int retries = 2;
-   
+
     do {
         angel_uid = angel_beats_do_request(ANGELBEATS_REQ_SUGGEST_AND_LINK,
                                            usernum, 0);
@@ -786,9 +786,9 @@ GotoNewHand(){
 
 static inline void
 NoAngelFound(const char* msg){
-    // don't worry about the screen - 
+    // don't worry about the screen -
     // it should have been backuped before entering here.
-    
+
     grayout(0, b_lines-3, GRAYOUT_DARK);
     move(b_lines-4, 0); clrtobot();
     outs(msg_separator);
@@ -864,6 +864,12 @@ TalkToAngel(){
     if (HasUserRole(ROLE_ANGEL_CIA))
         supervisor = 1;
 
+    // 若使用者多重登入並分開呼叫則可能會連續換多個小天使。
+    // 所以 !AngelPermChecked 時 reload user data.
+    // 聽來很腦殘但是似乎真的有使用者會這樣。
+    if (!AngelPermChecked) {
+        pwcuReload();
+    }
     if (cuser.myangel[0] && !AngelPermChecked) {
 	userec_t xuser = {0};
 	if (getuser(cuser.myangel, &xuser) < 1 ||
@@ -923,7 +929,7 @@ TalkToAngel(){
         // The only case to override angelpause.
     } else if (uent == lastuent) {
 	// we've talked to angel.
-	// XXX what if uentp reused by other? chance very, very low... 
+	// XXX what if uentp reused by other? chance very, very low...
 	if (uent->angelpause >= ANGELPAUSE_REJALL)
 	{
 	    AngelNotOnline();
@@ -939,7 +945,7 @@ TalkToAngel(){
 
     sethomefile(msg_fn, cuser.myangel, FN_ANGELMSG2);
     if (dashs(msg_fn) > 0) {
-        // render per-user message 
+        // render per-user message
         move(1, 0);
         clrtobot();
         angel_display_message(FN_ANGEL_USAGE2, msg_fn, 0, 2, 4, 6, 24);
@@ -988,7 +994,7 @@ pressanykey_or_callangel(){
     outs(VCLR_PAUSE_PAD " ");
     w -= 1 + 38;
     vpad(w / 2, VMSG_PAUSE_PAD);
-    outs(VCLR_PAUSE     " 請按 " ANSI_COLOR(36) "空白鍵" 
+    outs(VCLR_PAUSE     " 請按 " ANSI_COLOR(36) "空白鍵"
            VCLR_PAUSE     " 繼續，或 " ANSI_COLOR(36) "H"
            VCLR_PAUSE     " 呼叫小天使協助 " VCLR_PAUSE_PAD);
     vpad(w - w / 2, VMSG_PAUSE_PAD);
