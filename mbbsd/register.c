@@ -1116,7 +1116,6 @@ u_register(void)
 {
     char            rname[20], addr[50], mobile[16];
     char            phone[20], career[40], email[50];
-    int             over18;
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
@@ -1381,7 +1380,7 @@ u_register(void)
 
     // copy values to cuser
     pwcuRegisterSetInfo(rname, addr, career, phone, email,
-                        atoi(mobile), over18, isForeign);
+                        atoi(mobile), isForeign);
 
     // if reach here, email is apparently 'x'.
     toregister(email);

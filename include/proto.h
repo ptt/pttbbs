@@ -162,8 +162,6 @@ int p_cloak(void);
 int p_from(void);
 int p_exmail(void);
 int mail_redenvelop(const char* from, const char* to, int money, char *fpath);
-void resolve_over18(void);
-int resolve_over18_user(const userec_t *u);
 char *get_restriction_reason(
         unsigned int numlogindays,
         unsigned int badpost,
@@ -809,7 +807,6 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *phone,
 			 const char *email,
 			 int         mobile,
-                         int         over_18,
 			 uint8_t     is_foreign);
 
 // non-important based variables (only save on exit)
