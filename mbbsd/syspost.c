@@ -114,7 +114,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
 	    (int)(30 - strlen(crime)), reason);
 
-    snprintf(msg, sizeof(msg), 
+    snprintf(msg, sizeof(msg),
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
             ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
@@ -125,7 +125,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     if (!strstr(police, "警察")) {
 	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
 
-	snprintf(msg, sizeof(msg), 
+	snprintf(msg, sizeof(msg),
 		ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
                 ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"

@@ -9,7 +9,7 @@
 
 #ifndef GAMBLE_ACTION_DELAY_US
 #define GAMBLE_ACTION_DELAY_US  (0) // 每個動作之前的 delay
-#endif 
+#endif
 
 // Use "%lld" format string whenever you access variables in bignum_t.
 typedef long long bignum_t;
@@ -70,8 +70,8 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     }
     fclose(fp);
 
-    prints(ANSI_COLOR(32) "站規:" ANSI_RESET 
-     " 1.可購買以下不同類型的彩券。每張要花 " ANSI_COLOR(32) "%d" 
+    prints(ANSI_COLOR(32) "站規:" ANSI_RESET
+     " 1.可購買以下不同類型的彩券。每張要花 " ANSI_COLOR(32) "%d"
 	 ANSI_RESET " " MONEYNAME "。\n"
 "      2.%s\n"
 "      3.開獎時只有一種彩券中獎, 有購買該彩券者, 則可依購買的張數均分總彩金。\n"
@@ -124,7 +124,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     return count;
 }
 
-static int 
+static int
 append_ticket_record(const char *direct, int ch, int n, int count)
 {
     FILE *fp;
@@ -187,7 +187,7 @@ buy_ticket_ui(int money, const char *picture, int *item,
     }
 
     *item += num;
-    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num); 
+    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num);
 
     // XXX magic numbers 5, 14...
     show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
@@ -247,7 +247,7 @@ ticket(int bid)
 	    continue;
 	n = 0;
 
-	buy_ticket_ui(price, "etc/buyticket", &n, ch, 
+	buy_ticket_ui(price, "etc/buyticket", &n, ch,
                       bh ? bh->brdname : BBSMNAME);
 
 	if (bid && !dashf(fn_ticket))
@@ -265,7 +265,7 @@ ticket(int bid)
 doesnt_catch_up:
 
     price = price * n;
-    // XXX 這是因為停止下注所以退錢？ 感覺好危險+race condition 
+    // XXX 這是因為停止下注所以退錢？ 感覺好危險+race condition
     if (price > 0) {
         pay_as_uid(currutmp->uid, -price, "下注失敗退費");
     }
@@ -333,7 +333,7 @@ openticket(int bid)
         move(21, 0); SOLVE_ANSI_CACHE(); clrtoeol();
     } while (bet != atoi(buf));
 
-    // before we fork to process, 
+    // before we fork to process,
     // confirm lock status is correct.
     setbfile(buf, bh->brdname, FN_TICKET_END);
     setbfile(outcome, bh->brdname, FN_TICKET_LOCK);
@@ -458,7 +458,7 @@ openticket(int bid)
 			 "%s 樂透退費! $ %lld", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
-		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld " 
+		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld "
 			    MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %lld",
@@ -472,7 +472,7 @@ openticket(int bid)
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
             pay_as_uid(uid, -(money * i), BBSMNAME "彩券 - [%s]",
-                       betname[mybet]); 
+                       betname[mybet]);
 	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "彩券");
 	}
 	fclose(fp1);

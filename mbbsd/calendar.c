@@ -47,19 +47,19 @@ int ParseDateTime(const char *date, int *year, int *month, int *day,
     m = strtok_r(NULL, "/", &strtok_pos);if (!m) return 1;
     d = strtok_r(NULL, " ", &strtok_pos); if (!d) return 1;
 
-    if (hour) { 
-	hh = strtok_r(NULL, ":", &strtok_pos); 
-	if (!hh) return 1; 
+    if (hour) {
+	hh = strtok_r(NULL, ":", &strtok_pos);
+	if (!hh) return 1;
 	*hour = atoi(hh);
     }
-    if (min ) { 
-	mm = strtok_r(NULL, ":", &strtok_pos); 
-	if (!mm) return 1; 
+    if (min ) {
+	mm = strtok_r(NULL, ":", &strtok_pos);
+	if (!mm) return 1;
 	*min  = atoi(mm);
     }
-    if (sec ) { 
-	ss = strtok_r(NULL, "",  &strtok_pos); 
-	if (!ss) return 1; 
+    if (sec ) {
+	ss = strtok_r(NULL, "",  &strtok_pos);
+	if (!ss) return 1;
 	*sec  = atoi(ss);
     }
 
@@ -318,13 +318,13 @@ calendar(void)
 	outs(buf[i]);
 	if (i == 0) {
 	    prints("\t" ANSI_COLOR(1;37)
-		    "現在是 %d.%02d.%02d %2d:%02d:%02d%cm" ANSI_RESET, 
+		    "現在是 %d.%02d.%02d %2d:%02d:%02d%cm" ANSI_RESET,
 		   snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday,
 		   (snow.tm_hour == 0 || snow.tm_hour == 12) ?
 		   12 : snow.tm_hour % 12, snow.tm_min, snow.tm_sec,
 		   snow.tm_hour >= 12 ? 'p' : 'a');
 	} else if (i >= 2 && e) {
-	    prints("\t" ANSI_COLOR(1;37) 
+	    prints("\t" ANSI_COLOR(1;37)
 		    "(尚有 " ANSI_COLOR(%d) "%3d"
 		    ANSI_COLOR(37) " 天)"
 		    ANSI_RESET " %02d/%02d %s",

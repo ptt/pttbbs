@@ -87,71 +87,71 @@ unlockutmpmode(void)
     return 0;
 }
 
-static int 
-do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)  
-{ 
-    int oldm, newm; 
-    const char *userid; 
- 
-    assert(money != 0); 
-    userid = getuserid(uid); 
-    assert(userid); 
-    assert(reason); 
- 
-    // if we cannot find user, abort 
-    if (!userid) 
-        return -1; 
- 
-    oldm = moneyof(uid); 
-    newm = deumoney(uid, -money); 
-    if (uid == usernum) 
-        reload_money(); 
- 
+static int
+do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)
+{
+    int oldm, newm;
+    const char *userid;
+
+    assert(money != 0);
+    userid = getuserid(uid);
+    assert(userid);
+    assert(reason);
+
+    // if we cannot find user, abort
+    if (!userid)
+        return -1;
+
+    oldm = moneyof(uid);
+    newm = deumoney(uid, -money);
+    if (uid == usernum)
+        reload_money();
+
     {
-        char buf[PATHLEN]; 
-        sethomefile(buf, userid, FN_RECENTPAY); 
-        rotate_text_logfile(buf, SZ_RECENTPAY, 0.2); 
-        syncnow(); 
+        char buf[PATHLEN];
+        sethomefile(buf, userid, FN_RECENTPAY);
+        rotate_text_logfile(buf, SZ_RECENTPAY, 0.2);
+        syncnow();
         log_payment(buf, money, oldm, newm, reason, now);
     }
 
-    return newm; 
-} 
- 
-int 
-pay_as_uid(int uid, int money, const char *item, ...) 
-{ 
-    va_list ap; 
-    char reason[STRLEN*3] =""; 
- 
-    if (!money) 
-        return 0; 
- 
-    if (item) { 
-        va_start(ap, item); 
-        vsnprintf(reason, sizeof(reason)-1, item, ap); 
-        va_end(ap); 
-    } 
- 
-    return do_pay(uid, money, item, reason); 
-} 
- 
-int 
-pay(int money, const char *item, ...) 
-{ 
-    va_list ap; 
-    char reason[STRLEN*3] =""; 
- 
-    if (!money) 
-        return 0; 
- 
-    if (item) { 
-        va_start(ap, item); 
-        vsnprintf(reason, sizeof(reason)-1, item, ap); 
-        va_end(ap); 
-    } 
- 
-    return do_pay(usernum, money, item, reason); 
+    return newm;
+}
+
+int
+pay_as_uid(int uid, int money, const char *item, ...)
+{
+    va_list ap;
+    char reason[STRLEN*3] ="";
+
+    if (!money)
+        return 0;
+
+    if (item) {
+        va_start(ap, item);
+        vsnprintf(reason, sizeof(reason)-1, item, ap);
+        va_end(ap);
+    }
+
+    return do_pay(uid, money, item, reason);
+}
+
+int
+pay(int money, const char *item, ...)
+{
+    va_list ap;
+    char reason[STRLEN*3] ="";
+
+    if (!money)
+        return 0;
+
+    if (item) {
+        va_start(ap, item);
+        vsnprintf(reason, sizeof(reason)-1, item, ap);
+        va_end(ap);
+    }
+
+    return do_pay(usernum, money, item, reason);
 }
 
 int
@@ -162,10 +162,10 @@ p_from(void)
     if (vans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
 
-    strlcpy(tmp_from, currutmp->from, sizeof(tmp_from)); 
+    strlcpy(tmp_from, currutmp->from, sizeof(tmp_from));
     if (getdata(b_lines - 1, 0, "請輸入新故鄉:",
 		tmp_from, sizeof(tmp_from), DOECHO) &&
-	strcmp(tmp_from, currutmp->from) != 0) 
+	strcmp(tmp_from, currutmp->from) != 0)
     {
 	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
     }
@@ -191,7 +191,7 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 	    "標題: 招財進寶\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
-	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME 
+	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME
                                  "的大紅包喔 ^_^\n\n"
 	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n"
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
@@ -203,7 +203,7 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
     fclose(fp);
 
     // colorize topic to make sure this is issued by system.
-    snprintf(fhdr.title, sizeof(fhdr.title), 
+    snprintf(fhdr.title, sizeof(fhdr.title),
 	    ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
     strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
     sethomedir(dirent, to);
@@ -237,7 +237,7 @@ cal_after_givetax(int money)
     return money - give_tax(money);
 }
 
-static int 
+static int
 give_money_vget_changecb(int key GCC_UNUSED, VGET_RUNTIME *prt, void *instance)
 {
     int  m1 = atoi(prt->buf), m2 = m1;
@@ -259,11 +259,11 @@ give_money_vget_changecb(int key GCC_UNUSED, VGET_RUNTIME *prt, void *instance)
     return VGETCB_NONE;
 }
 
-static int 
+static int
 give_money_vget_peekcb(int key, VGET_RUNTIME *prt, void *instance)
 {
     int *p_is_before_tax = (int*) instance;
-    
+
     // digits will be refreshed later.
     if (key >= '0' && key <= '9')
 	return VGETCB_NONE;
@@ -294,16 +294,16 @@ do_give_money(char *id, int uid, int money, const char *myid)
     if (strcasecmp(myid, cuser.userid) != 0)  {
         snprintf(prompt, sizeof(prompt)-1,
                 "以 %s 的名義轉帳給 %s (稅後 $%d)",
-                myid, id, money - tax); 
+                myid, id, money - tax);
     } else {
-        snprintf(prompt, sizeof(prompt)-1, 
-                "轉帳給 %s (稅後 $%d)", id, money - tax); 
+        snprintf(prompt, sizeof(prompt)-1,
+                "轉帳給 %s (稅後 $%d)", id, money - tax);
     }
 
     // 實際給予金錢。 為避免程式故障/惡意斷線，一律先扣再發。
     pay(money, "%s", prompt);
-    pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)", 
-               myid, money); 
+    pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)",
+               myid, money);
     log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
               cuser.userid, id, money, money - tax, Cdate(&now));
 
@@ -325,7 +325,7 @@ p_give(void)
     return -1;
 }
 
-int 
+int
 give_money_ui(const char *userid)
 {
     int             uid, can_send_mail = 1;
@@ -336,7 +336,7 @@ give_money_ui(const char *userid)
     const char	    *myid = cuser.userid;
     const char	    *uid_prompt = "這位幸運兒的id: ";
 
-    const char *alert_trade = "\n" ANSI_COLOR(0;1;31) 
+    const char *alert_trade = "\n" ANSI_COLOR(0;1;31)
         "提醒您本站的虛擬 " MONEYNAME " 不應與其它虛擬或現實生活"
         "通用之貨幣進行交易\n"
         "若查獲有使用者經由不法途徑取得再與其它使用者進行貨幣間之交易時\n"
@@ -379,9 +379,9 @@ give_money_ui(const char *userid)
     outs(" 請輸入金額: ");  // (3, 0)
     {
 	int is_before_tax = 1;
-	const VGET_CALLBACKS cb = { 
-	    give_money_vget_peekcb, 
-	    NULL, 
+	const VGET_CALLBACKS cb = {
+	    give_money_vget_peekcb,
+	    NULL,
 	    give_money_vget_changecb,
 	};
 	if (vgetstring(money_buf, 7, VGET_DIGITS, "", &cb, &is_before_tax))
@@ -480,7 +480,7 @@ give_money_ui(const char *userid)
 	return -1;
     }
 
-    outs("\n交易正在進行中，請稍候...\n"); 
+    outs("\n交易正在進行中，請稍候...\n");
     refresh();
 
     if(do_give_money(id, uid, m, myid) < 0)
@@ -498,7 +498,7 @@ give_money_ui(const char *userid)
 
         if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
 	{
-            outs(ANSI_COLOR(1;31) "已轉入對方帳戶但紅包袋寄送失敗()。" 
+            outs(ANSI_COLOR(1;31) "已轉入對方帳戶但紅包袋寄送失敗()。"
                  ANSI_RESET);
 	} else {
             if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
@@ -509,9 +509,9 @@ give_money_ui(const char *userid)
     }
 #ifdef USE_RECENTPAY
     move(b_lines-5, 0); clrtobot();
-    outs("\n您可於下列位置找到最近的交易記錄:\n" 
-            "主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 => " 
-            "(P)RecentPay最近交易記錄\n"); 
+    outs("\n您可於下列位置找到最近的交易記錄:\n"
+            "主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 => "
+            "(P)RecentPay最近交易記錄\n");
 #endif
     vmsg("交易完成。");
     return 0;
@@ -549,7 +549,7 @@ p_sysinfo(void)
 	   cpuloadstr, SHM->UTMPnumber,
 #ifdef DYMAX_ACTIVE
 	   // XXX check the related logic in mbbsd.c
-	   (SHM->GV2.e.dymaxactive > 2000 && SHM->GV2.e.dymaxactive < MAX_ACTIVE) ? 
+	   (SHM->GV2.e.dymaxactive > 2000 && SHM->GV2.e.dymaxactive < MAX_ACTIVE) ?
 	    SHM->GV2.e.dymaxactive : MAX_ACTIVE,
 #else
 	   MAX_ACTIVE,
@@ -569,7 +569,7 @@ p_sysinfo(void)
 #endif
 #ifdef HAVE_GRAYOUT
 	    "\tGrayout Advanced Control 淡入淡出特效系統\n"
-#endif 
+#endif
 #ifdef EDITPOST_SMARTMERGE
 	    "\tSmart Merge 修文自動合併\n"
 #endif
@@ -593,9 +593,9 @@ p_sysinfo(void)
 	getrusage(RUSAGE_SELF, &ru);
 	prints("記憶體用量: %s\n", usage);
 	prints("CPU 用量:   %ld.%06ldu %ld.%06lds",
-	       (long int)ru.ru_utime.tv_sec, 
+	       (long int)ru.ru_utime.tv_sec,
 	       (long int)ru.ru_utime.tv_usec,
-	       (long int)ru.ru_stime.tv_sec, 
+	       (long int)ru.ru_stime.tv_sec,
 	       (long int)ru.ru_stime.tv_usec);
 #ifdef CPULIMIT_PER_DAY
 	prints(" (limit %d secs per day)", CPULIMIT_PER_DAY);

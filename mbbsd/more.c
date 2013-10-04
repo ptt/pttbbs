@@ -20,7 +20,7 @@
  *     documentation and/or other materials provided with the distribution.
  */
 
-static int 
+static int
 check_sysop_edit_perm(const char *fpath)
 {
     if (!HasUserPerm(PERM_SYSOP) ||
@@ -46,7 +46,7 @@ check_sysop_edit_perm(const char *fpath)
     return 1;
 }
 
-static int 
+static int
 common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 {
     switch(ch)
@@ -64,7 +64,7 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 		break;
 	    return RET_DOBBSLUA;
 #endif
-	
+
 	// Query information and file touch
 	case 'Q':
 	    return RET_DOQUERYINFO;
@@ -107,11 +107,11 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 		currstat != READING)
 		break;
 	    return RET_SELECTAID;
-	
+
 	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
 	// I'm not sure if these keys are all invented by SOB,
 	// but let's honor their names.
-	// Kaede, Raw, Izero, woju - you are all TWBBS heroes  
+	// Kaede, Raw, Izero, woju - you are all TWBBS heroes
 	//                                  -- by piaip, 2008.
 	case 'A':
 	    return AUTHOR_PREV;
@@ -147,7 +147,7 @@ common_pager_exit_handler(int r, const char *fpath)
 	    if (!check_sysop_edit_perm(fpath))
 		break;
 	    log_filef("log/security", LOG_CREAT,
-		    "%u %s %d %s admin edit file=%s\n", 
+		    "%u %s %d %s admin edit file=%s\n",
 		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
 	    veditfile(fpath);
 	    break;
@@ -182,7 +182,7 @@ common_pager_exit_handler(int r, const char *fpath)
 	case RET_DOBBSLUA:
 	    r = FULLUPDATE;
 	    // check permission again
-	    if (HasUserPerm(PERM_BASIC)) 
+	    if (HasUserPerm(PERM_BASIC))
 		bbslua(fpath);
 	    break;
 #endif
@@ -210,67 +210,67 @@ int more(const char *fpath, int promptend)
     int  lpos[PAGER_MAXLINES] = {0}; // line position
     char buf [ANSILINELEN];
 
-    if (!fp) return -1; 
+    if (!fp) return -1;
     clear();
 
     if (promptend == NA) {	    // quick print one page
 	for (i = 0; i < t_lines-1; i++)
-	    if (!fgets(buf, sizeof(buf), fp)) 
-		break; 
-	    else 
+	    if (!fgets(buf, sizeof(buf), fp))
+		break;
+	    else
 		outs(buf);
-	fclose(fp); 
+	fclose(fp);
 	return 0;
     }
     // YEA mode: pre-read
-    while (lines < PAGER_MAXLINES-1 && 
+    while (lines < PAGER_MAXLINES-1 &&
 	   fgets(buf, sizeof(buf), fp) != NULL)
 	lpos[++lines] = ftell(fp);
     rewind(fp);
 
-    while (!abort) 
+    while (!abort)
     {
 	if (oldlineno != lineno)    // seek and print
-	{ 
-	    clear(); 
-	    showall = 0; 
+	{
+	    clear();
+	    showall = 0;
 	    oldlineno = lineno;
 	    fseek(fp, lpos[lineno], SEEK_SET);
 
-	    for (i = 0, buf[0] = 0; i < t_lines-1; i++, buf[0] = 0) 
+	    for (i = 0, buf[0] = 0; i < t_lines-1; i++, buf[0] = 0)
 	    {
-		if (!showall) 
+		if (!showall)
 		{
 		    fgets(buf, sizeof(buf), fp);
-		    if (lineno + i == 0 && 
+		    if (lineno + i == 0 &&
 			(strncmp(buf, STR_AUTHOR1, strlen(STR_AUTHOR1))==0 ||
 			 strncmp(buf, STR_AUTHOR2, strlen(STR_AUTHOR2))==0))
 			colorize = 1;
 		}
 
-		if (!buf[0]) 
+		if (!buf[0])
 		{
 		    outs("\n");
 		    showall = 1;
 		} else {
 		    // dirty code to render heeader
-		    if (colorize && lineno+i < 4 && *buf && 
+		    if (colorize && lineno+i < 4 && *buf &&
 			    *buf != '\n' && strchr(buf, ':'))
 		    {
 			char *q1 = strchr(buf, ':');
 			int    l = t_columns - 2 - strlen(buf);
 			char *q2 = strstr(buf, STR_POST1);
 
-			chomp(buf); 
+			chomp(buf);
 			if (q2 == NULL) q2 = strstr(buf, STR_POST2);
 			if (q2)	    { *(q2-1) = 0; q2 = strchr(q2, ':'); }
 			else q2 = q1;
 
-			*q1++ = 0;	*q2++ = 0; 
+			*q1++ = 0;	*q2++ = 0;
 			if (q1 == q2)	 q2 = NULL;
 
 			outs(ANSI_COLOR(34;47) " ");
-			outs(buf); outs(" " ANSI_REVERSE); 
+			outs(buf); outs(" " ANSI_REVERSE);
 			outs(q1);  prints("%*s", l, ""); q1 += strlen(q1);
 
 			if (q2) {
@@ -278,49 +278,49 @@ int more(const char *fpath, int promptend)
 			    outs(" " ANSI_REVERSE);	    outs(q2);
 			}
 			outs(ANSI_RESET"\n");
-		    } else 
+		    } else
 			outs(buf);
 		}
 	    }
-	    if (lineno + i >= lines) 
+	    if (lineno + i >= lines)
 		showall = 1;
 
 	    // print prompt bar
 	    snprintf(buf, sizeof(buf),
 		    "  瀏覽 P.%d  ", 1 + (lineno / (t_lines-2)));
-	    vs_footer(buf, 
+	    vs_footer(buf,
 	    " (→↓[PgUp][PgDn][Home][End])游標移動\t(←/q)結束");
 	}
 	// process key
 	switch((vk = vkey())) {
 	    case KEY_UP: case 'k': case Ctrl('P'):
 		if (lineno == 0) abort = READ_PREV;
-		lineno--;		    
+		lineno--;
 		break;
 
 	    case KEY_PGUP: case Ctrl('B'):
 		if (lineno == 0) abort = READ_PREV;
-		lineno -= t_lines-2;	    
+		lineno -= t_lines-2;
 		break;
 
 	    case KEY_PGDN: case Ctrl('F'): case ' ':
 	    case KEY_RIGHT:
 		if (showall) abort = READ_NEXT;
-		lineno += t_lines-2;	    
+		lineno += t_lines-2;
 		break;
 
 	    case KEY_DOWN: case 'j': case Ctrl('N'):
 		if (showall) abort = READ_NEXT;
-		lineno++;		    
+		lineno++;
 		break;
 	    case KEY_HOME: case Ctrl('A'):
-		lineno = 0;		    
+		lineno = 0;
 		break;
 	    case KEY_END: case Ctrl('E'):
-		lineno = lines - (t_lines-1); 
+		lineno = lines - (t_lines-1);
 		break;
 	    case KEY_LEFT: case 'q':
-		abort = FULLUPDATE;		    
+		abort = FULLUPDATE;
 		break;
 
 	    case 'b':
@@ -345,8 +345,8 @@ int more(const char *fpath, int promptend)
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
 
-static const char 
-*hlp_nav [] = 
+static const char
+*hlp_nav [] =
 { "【瀏覽指令】", NULL,
     "  下篇文章  ", "f",
     "  前篇文章  ", "b",
@@ -358,14 +358,14 @@ static const char
     "  同作者下篇", "a",
     NULL,
 },
-*hlp_reply [] = 
+*hlp_reply [] =
 { "【回應指令】", NULL,
     "  推薦文章", "% X",
     "  回信回文", "r",
     "  全部回覆", "y",
     NULL,
 },
-*hlp_spc [] = 
+*hlp_spc [] =
 { "【特殊指令】", NULL,
     "  查詢資訊  ", "Q",
     "  文章代碼搜尋", "#",
@@ -378,7 +378,7 @@ static const char
     NULL,
 };
 
-static int 
+static int
 common_pmore_help_handler(int y, void *ctx GCC_UNUSED)
 {
     const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
@@ -411,7 +411,7 @@ static int
 common_pmore_footer_handler(int ratio GCC_UNUSED, int width,
                             void *ctx GCC_UNUSED)
 {
-#define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 " 
+#define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 "
 #define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
 #define FOOTERMSG_READ_MID   "(y)回應(X/%)推文 (←)離開 "
 #define FOOTERMSG_SHORT	     "(h)說明 (←/q)離開 "
@@ -458,12 +458,12 @@ common_pmore_footer_handler(int ratio GCC_UNUSED, int width,
 }
 
 /* use new pager: piaip's more. */
-int 
+int
 more(const char *fpath, int promptend)
 {
     int r = pmore2(fpath, promptend,
 	    (void*) fpath,
-	    common_pager_key_handler, 
+	    common_pager_key_handler,
 	    common_pmore_footer_handler,
 	    common_pmore_help_handler);
 
@@ -475,7 +475,7 @@ more_inmemory(void *content, int size, int promptend)
 {
     int r = pmore2_inmemory(content, size, promptend,
             NULL,
-	    common_pager_key_handler, 
+	    common_pager_key_handler,
 	    common_pmore_footer_handler,
 	    common_pmore_help_handler);
 

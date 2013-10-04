@@ -79,7 +79,7 @@ initscr(void)
     }
 }
 
-int 
+int
 resizeterm(int w, int h)
 {
     screenline_t   *new_picture;
@@ -89,7 +89,7 @@ resizeterm(int w, int h)
     w = MAX(80, MIN(200, w));
 
     if (h > t_lines && big_picture) {
-	new_picture = (screenline_t *) 
+	new_picture = (screenline_t *)
 		calloc(h, sizeof(screenline_t));
 	if (new_picture == NULL) {
 	    syslog(LOG_ERR, "calloc(): %m");
@@ -277,7 +277,7 @@ redrawwin(void)
     oflush();
 }
 
-int	
+int
 typeahead(int fd)
 {
     switch(fd)
@@ -335,7 +335,7 @@ doupdate(void)
 	bp = &big_picture[j];
 	len = bp->len;
 
-	if (bp->mode & MODIFIED && bp->smod < len) 
+	if (bp->mode & MODIFIED && bp->smod < len)
 	{
 	    bp->mode &= ~(MODIFIED);
 
@@ -370,7 +370,7 @@ doupdate(void)
 		}
 	    }
 #endif
-	    
+
 	    if (bp->emod >= len)
 		bp->emod = len - 1;
 	    rel_move(tc_col, tc_line, bp->smod, i);
@@ -504,7 +504,7 @@ outc(unsigned char c)
     register screenline_t *slp = GetCurrentLine();
     register int    i;
 
-    // 0xFF is invalid for most cases (even DBCS), 
+    // 0xFF is invalid for most cases (even DBCS),
     if (c == 0xFF || c == 0x00)
 	return;
 
@@ -600,7 +600,7 @@ void
 outstr(const char *str)
 {
     // XXX TODO cannot prepare DBCS-ready environment?
-    
+
     outs(str);
 }
 
@@ -676,7 +676,7 @@ region_scroll_up(int top, int bottom)
 }
 
 // readback
-int		
+int
 instr(char *str)
 {
     register screenline_t *slp = GetCurrentLine();
@@ -688,7 +688,7 @@ instr(char *str)
     return strlen(str);
 }
 
-int		
+int
 innstr(char *str, int n)
 {
     register screenline_t *slp = GetCurrentLine();
@@ -703,7 +703,7 @@ innstr(char *str, int n)
     return strlen(str);
 }
 
-int	
+int
 inansistr(char *str, int n)
 {
     register screenline_t *slp = GetCurrentLine();
@@ -715,7 +715,7 @@ inansistr(char *str, int n)
     return strlen(str);
 }
 
-// level: 
+// level:
 // -1 - bold out
 //  0 - dark text
 //  1 - text
@@ -777,7 +777,7 @@ grayout(int y, int end, int level)
 		// of course, t_columns should always be far smaller.
 		if (strlen((char*)slp->data) > (size_t)t_columns)
 		    slp->data[t_columns] = 0;
-		strcpy((char*)slp->data, 
+		strcpy((char*)slp->data,
 			level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40));
 		strcat((char*)slp->data, buf);
 		strcat((char*)slp->data, ANSI_RESET ANSI_CLRTOEND);

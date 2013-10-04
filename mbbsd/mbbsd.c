@@ -21,7 +21,7 @@ static void getremotename(const struct in_addr from, char *rhost);
 
 //////////////////////////////////////////////////////////////////
 // Site Optimization
-// override these macro if you need more optimization, 
+// override these macro if you need more optimization,
 // based on OS/lib/package...
 #ifndef OPTIMIZE_SOCKET
 #define OPTIMIZE_SOCKET(sock) do {} while (0)
@@ -58,7 +58,7 @@ struct ProgramOption {
     char	flag_user[IDLEN+1];
 };
 
-static void 
+static void
 free_program_option(struct ProgramOption *opt)
 {
     if (!opt)
@@ -173,7 +173,7 @@ log_usies(const char *mode, const char *mesg)
 {
     now = time(NULL);
     if (!mesg)
-        log_filef(FN_USIES, LOG_CREAT, 
+        log_filef(FN_USIES, LOG_CREAT,
                  "%s %s %-12s Stay:%d\n",
                  Cdate(&now), mode, cuser.userid ,
                  (int)(now - login_start_time) / 60);
@@ -295,7 +295,7 @@ abort_bbs_debug(int sig)
 
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
-    log_filef("log/crash.log", LOG_CREAT, 
+    log_filef("log/crash.log", LOG_CREAT,
 	    "%d %d %d %.12s\n", (int)time4(NULL), getpid(), sig, cuser.userid);
 
     /* try logout... not a good idea, maybe crash again. now disabled */
@@ -672,7 +672,7 @@ multi_user_check(void)
     }
 }
 
-void 
+void
 mkuserdir(const char *userid)
 {
     char genbuf[PATHLEN];
@@ -694,7 +694,7 @@ load_current_user(const char *uid)
     is_admin_only = (listen_port == ADMIN_PORT);
 #endif
 
-    // ----------------------------------------------------- NEW ACCOUNT 
+    // ----------------------------------------------------- NEW ACCOUNT
 
 #ifdef STR_REGNEW
     if (!is_admin_only && strcasecmp(uid, STR_REGNEW) == 0) {
@@ -707,28 +707,28 @@ load_current_user(const char *uid)
 	new_register();
 	mkuserdir(cuser.userid);
 	reginit_fav();
-    } else 
+    } else
 #endif
 
-    // --------------------------------------------------- GUEST ACCOUNT 
-    
+    // --------------------------------------------------- GUEST ACCOUNT
+
 #ifdef STR_GUEST
     if (!is_admin_only && strcasecmp(uid, STR_GUEST) == 0) {
 	if (initcuser(STR_GUEST)< 1) exit (0) ;
 	pwcuInitGuestPerm();
 	// can we prevent mkuserdir() here?
 	mkuserdir(cuser.userid);
-    } else 
+    } else
 #endif
 
-    // ---------------------------------------------------- USER ACCOUNT 
+    // ---------------------------------------------------- USER ACCOUNT
     {
 	if (!cuser.userid[0] && initcuser(uid) < 1)
             exit(0);
 
         if (is_admin_only) {
-            if (!HasUserPerm(PERM_SYSOP | PERM_BBSADM | PERM_BOARD | 
-                             PERM_ACCOUNTS | PERM_CHATROOM | 
+            if (!HasUserPerm(PERM_SYSOP | PERM_BBSADM | PERM_BOARD |
+                             PERM_ACCOUNTS | PERM_CHATROOM |
                              PERM_VIEWSYSOP | PERM_PRG)) {
                 puts("\r\n權限不足，請換其它 port 連線。\r\n");
                 exit(0);
@@ -797,7 +797,7 @@ login_query(char *ruid)
 	if (getdata(20, 0, "請輸入代號，或以 guest 參觀，或以 new 註冊: ",
 		uid, sizeof(uid), DOECHO) < 1)
 	{
-	    // got nothing 
+	    // got nothing
 	    outs("請重新輸入。\n");
 	    continue;
 	}
@@ -855,7 +855,7 @@ login_query(char *ruid)
 
 	    move (22, 0); clrtoeol();
 	    outs("正在檢查密碼...");
-	    move(22, 0); refresh(); 
+	    move(22, 0); refresh();
 
 	    /* prepare for later */
 	    clrtoeol();
@@ -871,7 +871,7 @@ login_query(char *ruid)
 	    } else {
 
 		strlcpy(ruid, cuser.userid, IDLEN+1);
-		outs("密碼正確！ 開始登入系統..."); 
+		outs("密碼正確！ 開始登入系統...");
 		move(22, 0); refresh();
 		clrtoeol();
 		break;
@@ -983,8 +983,8 @@ setup_utmp(int mode)
 
 inline static void welcome_msg(void)
 {
-    prints(ANSI_RESET "      歡迎您再度拜訪本站，上次您是從 " 
-	    ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，" 
+    prints(ANSI_RESET "      歡迎您再度拜訪本站，上次您是從 "
+	    ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，"
 	    ANSI_CLRTOEND "\n"
 	    "     我記得那天是 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) "。"
 	    ANSI_CLRTOEND "\n"
@@ -1057,7 +1057,7 @@ check_bad_clients(void) {
 		buf, 3, LCECHO);
     } while (*buf != 'm' && *buf != 'b');
     mvprints(y++, 0, "發文位置: %s", *buf == 'm' ? "信箱" : "看板");
-    log_filef(dest, LOG_CREAT, "%s location: %c %s\n", Cdatelite(&now), 
+    log_filef(dest, LOG_CREAT, "%s location: %c %s\n", Cdatelite(&now),
 	      *buf, *buf == 'm' ? "mailbox" : "board");
 
     do {
@@ -1076,15 +1076,15 @@ inline static void append_log_recent_login()
     int szlogfn = 0, szlogentry = 0;
 
     // prepare log format
-    snprintf(buf, sizeof(buf), "%s %-15s\n", 
+    snprintf(buf, sizeof(buf), "%s %-15s\n",
 	    Cdatelite(&login_start_time), fromhost);
     szlogentry = strlen(buf);	// should be the same for all entries
-    
+
     setuserfile(logfn, FN_RECENTLOGIN);
     szlogfn = dashs(logfn);
     if (szlogfn > SZ_RECENTLOGIN) {
 	// rotate to 1/4 of SZ_RECENTLOGIN
-	delete_records(logfn, szlogentry, 1, 
+	delete_records(logfn, szlogentry, 1,
 		(szlogfn-(SZ_RECENTLOGIN/4)) / szlogentry);
     }
     log_file(logfn, LOG_CREAT, buf);
@@ -1210,7 +1210,7 @@ user_login(void)
         }
 
 	// XXX 這個 check 花不少時間，有點間隔比較好
-	if (HasUserPerm(PERM_BM) && 
+	if (HasUserPerm(PERM_BM) &&
 	    (cuser.numlogindays % 10 == 0) &&	// when using numlogindays, check with is_first_login_of_today
 	    is_first_login_of_today )
 	    check_BM();		/* 自動取下離職板主權力 */
@@ -1324,7 +1324,7 @@ do_aloha(const char *hello)
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
             chomp(userid);
-	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
+	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) &&
                 isvisible(uentp, currutmp) &&
                 strcasecmp(uentp->userid, cuser.userid) != 0) {
                 my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA,
@@ -1342,7 +1342,7 @@ do_term_init(enum TermMode term_mode, int w, int h)
     initscr();
 
     // if the terminal was already determined, resize for it.
-    if ((w && (w != t_columns)) || 
+    if ((w && (w != t_columns)) ||
 	(h && (h != t_lines  )) )
     {
 	term_resize(w, h);
@@ -1417,14 +1417,14 @@ getremotename(const struct in_addr fromaddr, char *rhost)
     XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(fromaddr)));
 }
 
-static int 
+static int
 set_connection_opt(int sock)
 {
     const int szrecv = 1024, szsend=4096;
     const struct linger lin = {0};
 
     // keep alive: server will check target connection (default 2 hours)
-    const int on = 1; 
+    const int on = 1;
     setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*)&on, sizeof(on));
 
 #if defined(SOL_TCP) && defined(TCP_KEEPIDLE)
@@ -1433,7 +1433,7 @@ set_connection_opt(int sock)
 	setsockopt(sock, SOL_TCP,    TCP_KEEPIDLE, (void*)&idle, sizeof(idle));
     }
 #endif
-   
+
     // fast close
     setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
 
@@ -1519,7 +1519,7 @@ static void init(void)
     mallopt (M_TOP_PAD, MY__TOP_PAD);
 #endif
 
-    
+
 }
 
 static void usage(char *argv0)
@@ -1776,7 +1776,7 @@ main(int argc, char *argv[], char *envp[])
 	return 0;
     }
 
-    do_term_init(option->term_mode, 
+    do_term_init(option->term_mode,
 	    option->term_width, option->term_height);
 
     if (option->tunnel_mode)
@@ -1816,7 +1816,7 @@ shell_login(char *argv0, struct ProgramOption *option)
     snprintf(margs, sizeof(margs), "%s ssh ", argv0);
     close(2);
     /* don't close fd 1, at least init_tty need it */
-    if(((fd = OpenCreate("log/stderr", O_WRONLY | O_APPEND)) >= 0) && 
+    if(((fd = OpenCreate("log/stderr", O_WRONLY | O_APPEND)) >= 0) &&
        fd != 2 ){
 	dup2(fd, 2);
 	close(fd);
@@ -1865,7 +1865,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     tunnel = toconnect(option->flag_tunnel_path);
     if (tunnel < 0)
     {
-	syslog(LOG_ERR, "mbbsd tunnel connection failed: %s\n", 
+	syslog(LOG_ERR, "mbbsd tunnel connection failed: %s\n",
 		option->flag_tunnel_path);
 	exit(1);
     }
@@ -2003,7 +2003,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     snprintf(margs, sizeof(margs), "%s %d ", argv0, listen_port);
     setproctitle("%s: listening ", margs);
 #endif
-    
+
     // Load ban ip table.
     banip = load_banip_list(FN_CONF_BANIP, NULL);
 
@@ -2163,5 +2163,5 @@ check_ban_and_load(int fd, struct ProgramOption *option,
     return 0;
 }
 
-/* vim: sw=4 
+/* vim: sw=4
  */

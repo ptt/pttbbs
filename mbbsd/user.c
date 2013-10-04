@@ -55,11 +55,11 @@ u_set_mind()
 
     // XXX 以往有 check 通緝/壽星，但我實在看不出這有什麼意義
     memcpy(mindbuf, currutmp->mind, sizeof(mindbuf));
-    getdata_buf(b_lines - 1, 0, "現在的心情? ",  mindbuf, sizeof(mindbuf), DOECHO);  
+    getdata_buf(b_lines - 1, 0, "現在的心情? ",  mindbuf, sizeof(mindbuf), DOECHO);
     if (memcmp(mindbuf, currutmp->mind, sizeof(currutmp->mind)) == 0)
 	return 0;
 
-    memcpy(currutmp->mind, mindbuf, sizeof(currutmp->mind));  
+    memcpy(currutmp->mind, mindbuf, sizeof(currutmp->mind));
     return 1;
 }
 
@@ -118,14 +118,14 @@ int u_cancelbadpost(void)
 
    // early check.
    if(cuser.badpost == 0) {
-       vmsg("你並沒有劣文."); 
+       vmsg("你並沒有劣文.");
        return 0;
    }
-        
+
    // early check for race condition
    // XXX 由於帳號API已同步化 (pwcuAPI*) 所以這個 check 可有可無
    if(search_ulistn(usernum,2)) {
-       vmsg("請登出其他視窗, 否則不受理."); 
+       vmsg("請登出其他視窗, 否則不受理.");
        return 0;
    }
 
@@ -166,12 +166,12 @@ int u_cancelbadpost(void)
    }
 
    if (pwcuCancelBadpost() != 0) {
-       vmsg("刪除失敗，請洽站務人員。"); 
+       vmsg("刪除失敗，請洽站務人員。");
        return 0;
    }
 
    log_filef("log/cancelbadpost.log", LOG_CREAT,
-	   "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
+	   "%s %s 刪除一篇劣文 (%d -> %d 篇)\n",
 	   Cdate(&now), cuser.userid, prev, cuser.badpost);
 
    vmsgf("恭喜您已成功\刪除一篇劣文 (由 %d 變為 %d 篇)",
@@ -189,7 +189,7 @@ user_display(const userec_t * u, int adminmode)
     prints(
 	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET
            "  " ANSI_COLOR(1;30;45) "    使 用 者" " 資 料        "
-	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET 
+	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET
            "\n");
     prints("\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
     prints("\t真實姓名: %s", u->realname);
@@ -206,7 +206,7 @@ user_display(const userec_t * u, int adminmode)
     prints("\t職業學歷: %s\n", u->career);
     prints("\t居住地址: %s\n", u->address);
     prints("\t電話手機: %s", u->phone);
-	if (u->mobile) 
+	if (u->mobile)
 	    prints(" / %010d", u->mobile);
 	outs("\n");
 
@@ -214,9 +214,9 @@ user_display(const userec_t * u, int adminmode)
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
     prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
 
-    prints("\t註冊日期: %s (已滿 %d 天)\n", 
+    prints("\t註冊日期: %s (已滿 %d 天)\n",
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
-    prints("\t上次上站: %s (來自 %s)\n", 
+    prints("\t上次上站: %s (來自 %s)\n",
 	    Cdate(&u->lastlogin), u->lasthost);
 
     if (adminmode) {
@@ -516,16 +516,16 @@ void Customize(void)
 	    clrtoeol();
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-*s%s\n",
-		    'a' + ia, 
+		    'a' + ia,
 		    col_opt,
 		    desc1[i],
-		    HasUserFlag(masks1[i]) ? 
+		    HasUserFlag(masks1[i]) ?
 		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
 	/* extended stuff */
 	{
 	    char mindbuf[5];
-	    static const char *wm[PAGER_UI_TYPES+1] = 
+	    static const char *wm[PAGER_UI_TYPES+1] =
 		{"一般", "進階", "未來", ""};
 
 	    prints("%c. %-*s%s\n",
@@ -549,8 +549,8 @@ void Customize(void)
 		    "停收 (只接受已回應過的小主人的問題)",
 		    "關閉 (停止接受所有小主人的問題)",
 		};
-		prints("%c. %s%s\n", 
-			'1' + iax++, 
+		prints("%c. %s%s\n",
+			'1' + iax++,
 			"ANGEL      小天使神諭呼叫器: ",
 			msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
 	    }
@@ -558,7 +558,7 @@ void Customize(void)
 	}
 
 	/* input */
-	key = vmsgf("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ", 
+	key = vmsgf("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ",
 		'a' + ia-1, '1' + iax -1);
 
 	if (key >= 'a' && key < 'a' + ia)
@@ -579,10 +579,10 @@ void Customize(void)
 
 	switch(key)
 	{
-	    case 0: 
+	    case 0:
 		{
 		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
-		    vmsg("修改水球模式後請正常離線再重新上線");  
+		    vmsg("修改水球模式後請正常離線再重新上線");
 		    dirty = 1;
 		}
 		continue;
@@ -592,12 +592,12 @@ void Customize(void)
 		continue;
 	}
 #ifdef PLAY_ANGEL
-	if( HasUserPerm(PERM_ANGEL) ){ 
-	    if (key == iax-1) 
-	    { 
+	if( HasUserPerm(PERM_ANGEL) ){
+	    if (key == iax-1)
+	    {
 		angel_toggle_pause();
 		// dirty = 1; // pure utmp change does not need pw dirty
-		continue; 
+		continue;
 	    }
 	}
 #endif //PLAY_ANGEL
@@ -700,10 +700,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     if (adminmode && ((ans >= '1' && ans <= '8') || ans == 'm') &&
 	search_ulist(unum))
     {
-	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ") 
+	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ")
 		!= 'y')
 		return;
-	if (unum == usernum && 
+	if (unum == usernum &&
 	    vans("您正試圖修改自己的帳號；這可能會造成帳號損毀，確定要繼續嗎？ (y/N): ")
 	    != 'y')
 		return;
@@ -717,7 +717,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     case 'm':
 	while (1) {
-	    getdata_str(y, 0, 
+	    getdata_str(y, 0,
                     adminmode ? "E-Mail (站長變更不需認證): " :
                                 "電子信箱 [變動要重新認證]：",
                     buf, sizeof(x.email), DOECHO, x.email);
@@ -738,7 +738,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 		if (email_count < 0)
 		    vmsg("暫時不允許\ email 認證, 請稍後再試");
-		else if (email_count >= EMAILDB_LIMIT) 
+		else if (email_count >= EMAILDB_LIMIT)
 		    vmsg("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail");
 		else
 		    break; // valid mail
@@ -753,7 +753,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	// admins may want to use special names
 	if (buf[0] &&
-		strcmp(buf, x.email) && 
+		strcmp(buf, x.email) &&
 		(strchr(buf, '@') || adminmode)) {
 
 	    // TODO 這裡也要 emaildb_check
@@ -874,7 +874,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 			sethomefile(genbuf, x.userid, chess_photo_name[j]);
 			sethomefile(mybuf, x.userid, chess_photo_name[j]);
 			strcat(mybuf, ".new");
-			
+
 			Rename(mybuf, genbuf);
 		    }
 		    fclose(fp);
@@ -1014,7 +1014,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		fail++;
 		break;
 	    }
-	} 
+	}
         if (!getdata(y++, 0, "請設定新密碼：", buf, PASS_INPUT_LEN + 1,
                      PASSECHO)) {
 	    outs("\n\n密碼設定取消, 繼續使用舊密碼\n");
@@ -1120,9 +1120,9 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    }
 	    pre_confirmed = 1;
-	    snprintf(title, sizeof(title), 
+	    snprintf(title, sizeof(title),
 		    "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
-	    snprintf(msg, sizeof(msg), 
+	    snprintf(msg, sizeof(msg),
 		    "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
 		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
 		    x.userid, cuser.userid, reason,
@@ -1132,7 +1132,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	break;
 
     case '5':
-        mvouts(b_lines - 8, 0, "\n" 
+        mvouts(b_lines - 8, 0, "\n"
            "已知很多使用者搞不清狀況改完 ID 大小寫會哭哭無法修改以前文章，\n"
            "且有不少管理/維護的問題，"
            ANSI_COLOR(1;31)
@@ -1380,7 +1380,7 @@ showsignature(char *fname, int *j, SigInfo *si)
 		lines--;
 		if(lines > MAX_SIGLINES/2)
 		    si->show_max = si->max;
-		for (i = 0; lines > 0 && i < MAX_SIGLINES && 
+		for (i = 0; lines > 0 && i < MAX_SIGLINES &&
 			fgets(buf, sizeof(buf), fp) != NULL; i++)
 		{
 		    chomp(buf);

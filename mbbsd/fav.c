@@ -7,27 +7,27 @@
  * fav 檔的前兩個 byte 是版號，接下來才是真正的 data。
  *
  * fav 的主要架構如下：
- * 
+ *
  *   fav_t - 用來裝各種 entry(fav_type_t) 的 directory
  *     進入我的最愛時，看到的東西就是根據 fav_t 生出來的。
  *     裡面紀錄者，這一個 level 中有多少個看板、目錄、分隔線。(favh)
  *     是一個 array (with pre-allocated buffer)
- * 
+ *
  *   fav_type_t - fav entry 的 base class
  *     存取時透過 type 變數來得知正確的型態。
- * 
+ *
  *   fav_board_t / fav_line_t / fav_folder_t - derived class
  *     詳細情形請參考 fav.h 中的定義。
  *     以 cast_(board|line|folder)_t 來將一個 fav_type_t 作動態轉型。
- * 
+ *
  * Policy
  * ======
  * 為了避免過度的資料搬移，當將一個 item 從我的最愛中移除時，只將他的
  * FAVH_FAV flag 移除。而沒有這個 flag 的 item 也不被視為我的最愛。
- * 
+ *
  * 我的最愛中，沒設 FAVH_FAV 的資料，將在某些時候，如寫入檔案時，呼叫
  * rebuild_fav 清除乾淨。
- * 
+ *
  * Others
  * ======
  * 站長搬移看板所用的 t ，因為不能只存在 nbrd 裡面，又不然再弄出額外的空間，
@@ -356,7 +356,7 @@ static int favcmp_by_name(const void *a, const void *b)
 void fav_sort_by_name(void)
 {
     fav_t *fp = get_current_fav();
-    
+
     if (fp == NULL)
 	return;
 
@@ -390,7 +390,7 @@ static int favcmp_by_class(const void *a, const void *b)
 void fav_sort_by_class(void)
 {
     fav_t *fp = get_current_fav();
-    
+
     if (fp == NULL)
 	return;
 
@@ -590,7 +590,7 @@ static void write_favrec(FILE *fwp, fav_t *fp)
     fwrite(&fp->nLines, sizeof(fp->nLines), 1, fwp);
     fwrite(&fp->nFolders, sizeof(fp->nFolders), 1, fwp);
     fp->DataTail = get_data_number(fp);
-    
+
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
 	fwrite(&ft->type, sizeof(ft->type), 1, fwp);
@@ -607,7 +607,7 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 		break;
 	}
     }
-    
+
     for(i = 0; i < fp->DataTail; i++){
 	if (fp->favh[i].type == FAVT_FOLDER)
 	    write_favrec(fwp, get_fav_folder(&fp->favh[i]));
@@ -939,7 +939,7 @@ fav_type_t *fav_add_folder(void)
 fav_type_t *fav_add_board(int bid)
 {
     fav_t *fp = get_current_fav();
-    fav_type_t *ft = getboard(bid); 
+    fav_type_t *ft = getboard(bid);
 
     if (fp == NULL)
 	return NULL;
@@ -959,7 +959,7 @@ fav_type_t *fav_add_board(int bid)
  * for administrator to move/administrate board
  */
 fav_type_t *fav_add_admtag(int bid)
-{   
+{
     fav_t *fp = get_fav_root();
     fav_type_t *ft;
     if (is_maxsize())
@@ -969,8 +969,8 @@ fav_type_t *fav_add_admtag(int bid)
     cast_board(ft)->bid = bid;
     // turn on  FAVH_ADM_TAG
     set_attr(ft, FAVH_ADM_TAG, TRUE);
-    return ft; 
-}   
+    return ft;
+}
 
 
 /* everything about the tag in fav mode.
@@ -1088,7 +1088,7 @@ void fav_remove_all_tagged_item(void)
 void fav_add_all_tagged_item(void)
 {
     // TODO we must check current (and the selected) tag length.
-    // Copying a tree (current+target) with length larger than FAV_MAXDEPTH 
+    // Copying a tree (current+target) with length larger than FAV_MAXDEPTH
     // would make future entering to crash.
     fav_set_tmp_folder(get_current_fav());
     fav_dosomething_all_tagged_item(fav_add_tagged_item);
@@ -1166,7 +1166,7 @@ int updatenewfav(int mode)
 	}
 
 	brd[i] = BRD_END;
-	
+
 	for(i = 0; i < brdnum && brd[i] != BRD_END; i++){
 	    if(brd[i] == BRD_NEW){
 		/* check the permission if the board exsits */
@@ -1289,7 +1289,7 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 	ft->fp = (void *)fav_malloc(fav4_get_type_size(ft->type));
 
 	/* TODO A pointer has different size between 32 and 64-bit arch.
-	 * But the pointer in fav_folder_t is irrelevant here. 
+	 * But the pointer in fav_folder_t is irrelevant here.
 	 * In order not to touch the current .fav4, fav_folder4_t is used
 	 * here.  It should be FIXED in the next version. */
 	switch (ft->type) {

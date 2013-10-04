@@ -111,7 +111,7 @@ CCW_PROTO int  ccw_partial_match(const char *buf, const char *cmd);
 CCW_PROTO void
 ccw_header(CCW_CTX *ctx)
 {
-    move(0, 0); 
+    move(0, 0);
     SOLVE_ANSI_CACHE();
     clrtoeol();
 
@@ -217,7 +217,7 @@ ccw_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     return 0;
 }
 
-CCW_PROTO void 
+CCW_PROTO void
 ccw_print_line(CCW_CTX *ctx, const char *buf, int local)
 {
     // FIXME if printed message is too long, the 2nd line will be overwritten
@@ -247,7 +247,7 @@ ccw_print_line(CCW_CTX *ctx, const char *buf, int local)
 CCW_PROTO void
 ccw_log_line(CCW_CTX *ctx, const char *buf, int local)
 {
-    if (!ctx->log) 
+    if (!ctx->log)
         return;
 
     if (ctx->log_line)
@@ -290,7 +290,7 @@ ccw_prepare_line(CCW_CTX *ctx)
         // simply append
         ctx->line ++;
     }
-    else 
+    else
     {
         // scroll screen buffer
         region_scroll_up(CCW_INIT_LINE, CCW_STOP_LINE - CCW_INIT_LINE);
@@ -314,7 +314,7 @@ ccw_partial_match(const char *buf, const char *cmd)
 }
 
 // print and log one line of text.
-CCW_PROTO void 
+CCW_PROTO void
 ccw_add_line(CCW_CTX *ctx, const char *buf, int local)
 {
     // only print/log local when local_echo is enabled.
@@ -402,7 +402,7 @@ ccw_process(CCW_CTX *ctx)
 
 #ifdef DEBUG
     ccw_print_line(ctx, ANSI_COLOR(1;30)
-            "◆ Powered by piaip's Common Chat Window" ANSI_RESET, 
+            "◆ Powered by piaip's Common Chat Window" ANSI_RESET,
             CCW_LOCAL_MSG);
 #endif
 #ifdef EXP_CCW_MOTD
@@ -424,7 +424,7 @@ ccw_process(CCW_CTX *ctx)
 
         // get input
         ctx->abort_vget = 0;
-        vgetstring(inbuf, ctx->MAX_INPUT_LEN, VGET_TRANSPARENT, "", 
+        vgetstring(inbuf, ctx->MAX_INPUT_LEN, VGET_TRANSPARENT, "",
                 &vgetcb, ctx);
 
         // quick check for end flag or exit command.
@@ -479,7 +479,7 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
     // prompt user to decide how to deal with the log
     while (1) {
         char c;
-        getdata(b_lines - 1, 0, 
+        getdata(b_lines - 1, 0,
                 force_decide ? "清除(C) 移至備忘錄(M)? [c/m]: " :
                                "清除(C) 移至備忘錄(M)? [C/m]",
                 ans, sizeof(ans), LCECHO);
@@ -540,7 +540,7 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
     assert(len >= 0 && (size_t)(int)len == strlen(msg));
     if (len < 1) return 0;
 
-    // XXX if remote is closed (without MSG_NOSIGNAL), 
+    // XXX if remote is closed (without MSG_NOSIGNAL),
     // this may raise a SIGPIPE and cause BBS to abort...
     if (tosend(ctx->fd, &len, sizeof(len), MSG_NOSIGNAL) != sizeof(len))
         return -1;
@@ -549,7 +549,7 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
     return len;
 }
 
-CCW_PROTO ssize_t 
+CCW_PROTO ssize_t
 ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
 {
     char len = 0;
@@ -581,7 +581,7 @@ ccw_talk_header(CCW_CTX *ctx)
 CCW_PROTO void
 ccw_talk_footer(CCW_CTX *ctx GCC_UNUSED)
 {
-    vs_footer(" 【" CCW_CAP_TALK "】 ", 
+    vs_footer(" 【" CCW_CAP_TALK "】 ",
             " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
 }
 
@@ -605,7 +605,7 @@ ccw_talk_peek_cmd(CCW_CTX *ctx, const char *buf, int local)
     {
         ccw_print_line(ctx, "[說明] 可輸入 "
                 CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_CLEAR " 清除畫面或 "
-                CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE " 離開。", 
+                CCW_TALK_CMD_PREFIX_STR CCW_TALK_CMD_BYE " 離開。",
                 CCW_LOCAL_MSG);
         return 1;
     }
@@ -651,7 +651,7 @@ ccw_talk_peek_key(CCW_CTX *ctx, int key)
     return 0;
 }
 
-int 
+int
 ccw_talk(int fd, int destuid)
 {
     char fpath[PATHLEN];
@@ -781,7 +781,7 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     assert(len < sizeof(genbuf));
     if (len > sizeof(genbuf))
         len = sizeof(genbuf);
-    // XXX if remote is closed (without MSG_NOSIGNAL), 
+    // XXX if remote is closed (without MSG_NOSIGNAL),
     // this may raise a SIGPIPE and cause BBS to abort...
     return (tosend(ctx->fd, genbuf, len, MSG_NOSIGNAL) == len);
 }
@@ -841,7 +841,7 @@ word_match_index(const char *buf, const char *pattern, size_t szpat)
     {
         if (p > buf && isascii(*(p-1)) && isalnum(*(p-1)))
         {
-            p++; 
+            p++;
             continue;
         }
         // FIXME this may skip to much, but highlights are not that important...
@@ -861,7 +861,7 @@ ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
 {
     int m = -1, n;
     n = strlen(cuser.userid);
-    if (n > 2) 
+    if (n > 2)
         m = word_match_index(s, cuser.userid, n);
     if (m < 0)
     {
@@ -890,7 +890,7 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
     size_t szid;
 
     // let's try harder to recognize the content
-    if (local != CCW_REMOTE  ||  buf[0] == ' '|| 
+    if (local != CCW_REMOTE  ||  buf[0] == ' '||
         strchr(buf, ESC_CHR) || !strchr(buf, ':') )
     {
         // pre-formatted or messages
@@ -903,8 +903,8 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
         // message from myself
         outs(ANSI_COLOR(1)); outs(ctx->local_id); outs(ANSI_RESET);
         outs(buf+szid);
-    } 
-    else 
+    }
+    else
     {
         // message from others
         ccw_chat_print_highlights(ctx, buf);
@@ -945,7 +945,7 @@ ccw_chat_recv(CCW_CTX *ctx)
         if (len > c && (size_t)len < (sizeof(ext->buf)/ 2) )
             break;
 
-        if (*bptr != '/') 
+        if (*bptr != '/')
         {
             // received some data, let's print it.
             if (*bptr != '>' || PERM_HIDE(currutmp))
@@ -1010,7 +1010,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
         if( ++ext->flood > 10 )
         {
             const char *alert_msg = "請勿大量剪貼或造成洗板面的效果。";
-            move(b_lines, 0); clrtoeol(); bell(); 
+            move(b_lines, 0); clrtoeol(); bell();
             outs(alert_msg);
             doupdate();
             // flush all input!
@@ -1166,13 +1166,13 @@ ccw_chat_peek_key(CCW_CTX *ctx, int key)
     return 0;
 }
 
-int 
+int
 ccw_chat(int fd)
 {
     char chatid[CHAT_ID_LEN+1]   = "myid",
          roomid[CHAT_ROOM_LEN+1] = "room";
     char fpath[PATHLEN];
-    ccw_chat_ext ext = { 
+    ccw_chat_ext ext = {
         .old_rows = t_lines,
         .old_cols = t_columns,
     };
@@ -1203,7 +1203,7 @@ ccw_chat(int fd)
         const char *err = "無法使用此代號";
         char cmd[200];
 
-        getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT "使用的暱稱: ", 
+        getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT "使用的暱稱: ",
                 chatid, sizeof(chatid), DOECHO);
         if(!chatid[0])
             strlcpy(chatid, cuser.userid, sizeof(chatid));
@@ -1212,7 +1212,7 @@ ccw_chat(int fd)
         DBCS_safe_trim(chatid);
 
         // login format: /! UserID ChatID password
-        snprintf(cmd, sizeof(cmd), 
+        snprintf(cmd, sizeof(cmd),
                 "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
         ccw_chat_send(&ctx, cmd);
         if (recv(ctx.fd, cmd, 3, 0) != 3) {

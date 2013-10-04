@@ -1,7 +1,7 @@
 /* $Id$ */
 
 #include "bbs.h"
-#include <sys/socket.h> 
+#include <sys/socket.h>
 
 #define BBLANK 	(-1)  	/* 空白 */
 #define BWHITE 	(0)  	/* 白子, 後手 */
@@ -168,7 +168,7 @@ go_countlib(board_t board, int x, int y, char color)
 }
 
 /* 計算盤面上每個子的氣數 */
-static void 
+static void
 go_eval(board_t board, int lib[][BRDSIZ], char color)
 {
     int i, j;
@@ -180,7 +180,7 @@ go_eval(board_t board, int lib[][BRDSIZ], char color)
 }
 
 /* 檢查一步是否合法 */
-static int 
+static int
 go_check(ChessInfo* info, const go_step_t* step)
 {
     board_p board = (board_p) info->board;
@@ -319,7 +319,7 @@ go_findcolor(board_p board, int x, int y)
 	while ((board[k][y] == BBLANK) && (k > 0));
 	color[0] = board[k][y];
     }
-    else 
+    else
 	color[0] = board[x][y];
 
     if (x < 18)
@@ -614,7 +614,7 @@ go_process_key(ChessInfo* info, int key, ChessGameResult* result)
 
 	if (n >= 2 && n <= 9) {
 	    go_step_t step = { CHESS_STEP_NORMAL, SETHAND, {n, 0} };
-	    
+
 	    ChessStepSend(info, &step);
 	    ChessHistoryAppend(info, &step);
 

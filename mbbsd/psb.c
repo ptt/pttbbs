@@ -35,8 +35,8 @@ typedef struct {
     int key;
     int allow_pbs_version_message;
     void *ctx;
-    int (*header)(void *ctx); 
-    int (*footer)(void *ctx); 
+    int (*header)(void *ctx);
+    int (*footer)(void *ctx);
     int (*renderer)(int i, int curr, int total, int rows, void *ctx);
     int (*cursor)(int y, int curr, void *ctx);
     int (*input_processor)(int key, int curr, int total, int rows, void *ctx);
@@ -84,7 +84,7 @@ psb_default_input_processor(int key, int curr, int total, int rows, void *ctx GC
         case '0':
             return 0;
 
-        case KEY_END:  
+        case KEY_END:
         case '$':
             return total-1;
 
@@ -102,7 +102,7 @@ psb_default_input_processor(int key, int curr, int total, int rows, void *ctx GC
                 return curr + rows;
             return total - 1;
 
-        case KEY_UP: 
+        case KEY_UP:
         case Ctrl('P'):
         case 'p':
         case 'k':
@@ -165,7 +165,7 @@ psb_main(PSB_CTX *psbctx)
             move(psbctx->header_lines + i, 0);
             SOLVE_ANSI_CACHE();
             if (base + i < psbctx->total)
-                psbctx->renderer(base + i, psbctx->curr, psbctx->total, 
+                psbctx->renderer(base + i, psbctx->curr, psbctx->total,
                                  rows, psbctx->ctx);
         }
         move(t_lines - psbctx->footer_lines, 0);
@@ -336,7 +336,7 @@ pveh_welcome() {
 "   Q: 通常歷史會保留多久?\n"
 "   A: 看板約3~4週，信箱約2~3週\n\n"
 "   Q: 檔案被刪了也可以看歷史嗎?\n"
-"   A: 屍體還在看板上可以直接對<本文已被刪除>按，不然就先進" 
+"   A: 屍體還在看板上可以直接對<本文已被刪除>按，不然就先進"
        RECYCLE_BIN_NAME "(~)再找\n"
             );
         doupdate();
@@ -471,7 +471,7 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
     }
 
     assert(sizeof(search_str) >= FNLEN);
-    if (need_input && 
+    if (need_input &&
         getdata(b_lines-1, 0, prompt, search_str, FNLEN, DOECHO) < 1)
         return PSB_NA;
 
@@ -680,7 +680,7 @@ pae_footer(void *ctx GCC_UNUSED) {
 static int
 pae_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx;
-    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET "\n", 
+    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET "\n",
             i+1,
             (i == curr) ? ANSI_COLOR(41) : "",
             dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30),
@@ -788,7 +788,7 @@ psb_admin_edit() {
         paectx.descs[ctx.total] = strdup(v);
         ctx.total++;
     }
-    if (ctx.total >= MAX_PAE_ENTRIES) 
+    if (ctx.total >= MAX_PAE_ENTRIES)
         vmsg("注意: 您的系統設定已超過或接近預設上限，請洽系統站長加大設定");
 
     psb_main(&ctx);

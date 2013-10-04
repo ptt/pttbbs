@@ -13,7 +13,7 @@ m_loginmsg(void)
       outs("目前已經有以下的 進站水球設定請先協調好再設定..");
       getmessage(SHM->loginmsg);
     }
-  getdata(22, 0, 
+  getdata(22, 0,
      "進站水球:本站活動,不干擾使用者為限,設定者離站自動取消,確定要設?(y/N)",
           msg, 3, LCECHO);
 
@@ -89,7 +89,7 @@ static int retrieve_backup(userec_t *user)
     return -1;
 }
 
-int 
+int
 upgrade_passwd(userec_t *puser)
 {
     if (puser->version == PASSWD_VERSION)
@@ -175,7 +175,7 @@ search_key_user(const char *passwdfile, int mode)
 	{
 	    // only verify id
 	    if (!strcasecmp(user.userid, key))
-		keymatch = user.userid; 
+		keymatch = user.userid;
 	} else {
 	    // search by keytype
 	    if ((!keytype || keytype == 1) &&
@@ -226,7 +226,7 @@ search_key_user(const char *passwdfile, int mode)
 	    outs(ANSI_COLOR(44) "               空白鍵" \
 		 ANSI_COLOR(37) ":搜尋下一個          " \
 		 ANSI_COLOR(33)" Q" ANSI_COLOR(37)": 離開");
-	    outs(mode ? 
+	    outs(mode ?
                  "      A: add to namelist " ANSI_RESET " " :
 		 "      S: 取用備份資料    " ANSI_RESET " ");
 	    while (1) {
@@ -284,7 +284,7 @@ search_user_bybakpwd(void)
     move(1, 1);
     outs("請輸入你要用來尋找備份的檔案 或按 'q' 離開\n");
     outs(" [" ANSI_COLOR(1;31) "1" ANSI_RESET "]一天前,"
-	 " [" ANSI_COLOR(1;31) "2" ANSI_RESET "]兩天前," 
+	 " [" ANSI_COLOR(1;31) "2" ANSI_RESET "]兩天前,"
 	 " [" ANSI_COLOR(1;31) "3" ANSI_RESET "]三天前\n");
     outs(" [" ANSI_COLOR(1;31) "4" ANSI_RESET "]四天前,"
 	 " [" ANSI_COLOR(1;31) "5" ANSI_RESET "]五天前,"
@@ -427,7 +427,7 @@ void delete_board_link(boardheader_t *bh, int bid)
     memset(bh, 0, sizeof(boardheader_t));
     substitute_record(fn_board, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
-    sort_bcache(); 
+    sort_bcache();
     log_usies("DelLink", bh->brdname);
 }
 
@@ -463,7 +463,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
          {
              for(i=0; i<sn; i++)
                if(fh[pn+i].owner[0])
-                   strcat(fh[pn+i].owner, "."); 
+                   strcat(fh[pn+i].owner, ".");
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
      snprintf(bakdir, sizeof(bakdir), "%s.bak", dir1);
@@ -481,12 +481,12 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
 		      {
 			  strcpy(p2, fh[i-1].filename);
 			  Copy(file2, file1);
-		      } 
+		      }
 	 }
          else
                 fh[i].filemode |= fh[i-1].filemode;
         }
-     
+
      free(fh);
 }
 
@@ -604,7 +604,7 @@ m_mod_board(char *bname)
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
-            sort_bcache(); 
+            sort_bcache();
 	    log_usies("DelBoard", bh.title);
 	    outs("刪板完畢");
 	}
@@ -773,7 +773,7 @@ m_mod_board(char *bname)
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
-            sort_bcache(); 
+            sort_bcache();
 	    log_usies("SetBoard", newbh.brdname);
 
 	    snprintf(buf, sizeof(buf), "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
@@ -815,7 +815,7 @@ static int add_board_record(const boardheader_t *board)
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
-        sort_bcache(); 
+        sort_bcache();
     } else if (SHM->Bnumber >= MAX_BOARD) {
 	return -1;
     } else if (append_record(fn_board, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
@@ -976,7 +976,7 @@ int make_board_link(const char *bname, int gid)
 {
     boardheader_t   newboard;
     int bid;
-    
+
     bid = getbnum(bname);
     if(bid==0) return -1;
     assert(0<=bid-1 && bid-1<MAX_BOARD);
@@ -985,7 +985,7 @@ int make_board_link(const char *bname, int gid)
     /*
      * known issue:
      *   These two stuff will be used for sorting.  But duplicated brdnames
-     *   may cause wrong binary-search result.  So I replace the last 
+     *   may cause wrong binary-search result.  So I replace the last
      *   letters of brdname to '~'(ascii code 126) in order to correct the
      *   resuilt, thought I think it's a dirty solution.
      *
@@ -1030,8 +1030,8 @@ int make_board_link_interactively(int gid)
 static void
 adm_give_id_money(const char *user_id, int money, const char *mail_title)
 {
-    char tt[TTLEN + 1] = {0}; 
-    int  unum = searchuser(user_id, NULL); 
+    char tt[TTLEN + 1] = {0};
+    int  unum = searchuser(user_id, NULL);
 
     // XXX 站長們似乎利用這個功能來同時發錢或扣錢，return value 可能是 0
     // (若代表對方錢被扣光)
@@ -1137,7 +1137,7 @@ give_money(void)
 	fclose(fp);
         sprintf(buf, "(%d人:%d" MONEYNAME ")", count, total_money);
         strcat(reason, buf);
-    
+
     }
 
     fclose(fp2);

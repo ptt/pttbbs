@@ -18,11 +18,11 @@ get_sum_records(const char *fpath, int size)
     FILE           *fp;
     fileheader_t    fhdr;
     char            buf[PATHLEN], *p;
-   
+
     // Ptt : should avoid big loop
     if ((fp = fopen(fpath, "r"))==NULL)
 	return -1;
-    
+
     strlcpy(buf, fpath, sizeof(buf));
     p = strrchr(buf, '/');
     assert(p);
@@ -37,7 +37,7 @@ get_sum_records(const char *fpath, int size)
     return ans / 1024;
 }
 
-/* return index>0 if thisstamp==stamp[index], 
+/* return index>0 if thisstamp==stamp[index],
  * return -index<0 if stamp[index-1]<thisstamp<stamp[index+1], XXX thisstamp ?<>? stamp[index]
  * 			or XXX filename[index]=""
  * return 0 if error
@@ -64,11 +64,11 @@ getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney)
 	else if( s == stamp ){
 	    close(fd);
 	    if(isloadmoney)
- 	       fhdr->multi.money = fh.multi.money; 
+ 	       fhdr->multi.money = fh.multi.money;
 	    return i;
 	}
         else
-	    begin = i + 1; 
+	    begin = i + 1;
     }
 
     if( times < 20)     // Not forever loop. It any because of deletion.
@@ -215,7 +215,7 @@ delete_range(const char *fpath, int id1, int id2)
 	/* rocker.011018: add new tag delete */
 	if (
 	    (fhdr.filemode & FILE_MARKED) ||	/* 標記 */
-	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||	
+	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||
 	    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
 	    (id1 && (count < id1 || count > id2)) ||	/* range */
 	    (!id1 && !FindTaggedItem(&fhdr))) {	/* TagList */
@@ -226,7 +226,7 @@ delete_range(const char *fpath, int id1, int id2)
 		flock(fd, LOCK_UN);
 		close(fd);
 		return -1;
-	    } 
+	    }
 	} else {
             unlink(fullpath);
             dcount++;
@@ -246,7 +246,7 @@ delete_range(const char *fpath, int id1, int id2)
     return dcount;
 }
 
-void 
+void
 set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 {
     if (newtitle && *newtitle)
@@ -268,7 +268,7 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 	// i'm the one to delete it
 	snprintf(fhdr->title, sizeof(fhdr->title),
 		"%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
-    } 
+    }
     else // deleted by BM, system, SYSOP, or other services...
 	// maybe not revealing the names would be better.
     {
@@ -474,7 +474,7 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 	    if (!large_set)
 		return -1;
 	    mask = mask_large;
-	} 
+	}
 	if (retries > mask_large)
 	    return -1;
 
@@ -537,7 +537,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         unlink(buf);
         // TODO add a mail so that origid knows what happened.
         LOG_IF(LOG_CONF_INTERNETMAIL,
-               log_filef("log/internet_mail.log", LOG_CREAT, 
+               log_filef("log/internet_mail.log", LOG_CREAT,
                          "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
                          Cdatelite(&now), __FUNCTION__,
                          origid, address,
@@ -554,7 +554,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         // delete the setting if we don't have timebombs.
         unlink(buf);
         LOG_IF(LOG_CONF_INTERNETMAIL,
-               log_filef("log/internet_mail.log", LOG_CREAT, 
+               log_filef("log/internet_mail.log", LOG_CREAT,
                          "%s [%s] Removed bad address: %s (%s)\n",
                          Cdatelite(&now), __FUNCTION__,
                          address, origid));
@@ -564,7 +564,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 
     setdirpath(buf, fpath, record->filename);
     // because too many user set wrong forward address,
-    // let's put their own address instead. 
+    // let's put their own address instead.
     // and again because some really stupid user
     // does not understand they've set auto-forward,
     // let's mark this in the title.
@@ -572,7 +572,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
              "[自動轉寄] %s", record->title);
     bsmtp(buf, fwd_title, address, origid);
     LOG_IF(LOG_CONF_INTERNETMAIL,
-           log_filef("log/internet_mail.log", LOG_CREAT, 
+           log_filef("log/internet_mail.log", LOG_CREAT,
                      "%s [%s] %s -> (%s) %s: %s\n",
                      Cdatelite(&now), __FUNCTION__,
                      cuser.userid, origid, address, fwd_title));
@@ -580,63 +580,63 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     return 0;
 }
 
-// return 1 if rotated, otherwise 0 
-int 
-rotate_bin_logfile(const char *filename, off_t record_size,  
-                   off_t max_size, float keep_ratio) 
-{ 
-    off_t sz = dashs(filename); 
-    assert(keep_ratio >= 0 && keep_ratio <= 1.0f); 
- 
-    if (sz < max_size) 
-        return 0; 
- 
-    // delete from head 
-    delete_records(filename, record_size, 1, 
-            (1 - keep_ratio) * max_size / record_size ); 
-    return 1; 
-} 
- 
-// return 1 if rotated, otherwise 0 
-int 
-rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio) 
-{ 
-    off_t sz = dashs(filename), newsz; 
-    char *buf, *newent; 
-    FILE *fp; 
-    assert(keep_ratio >= 0 && keep_ratio <= 1.0f); 
- 
-    if (sz < max_size) 
-        return 0; 
- 
-    // FIXME we sould lock the file here. 
-    // however since these log are just for reference... 
-    // let's pretend there's no race condition with it. 
- 
-    // now, calculate a starting seek point 
-    fp = fopen(filename, "r+b"); 
-    fseek(fp, - keep_ratio * max_size, SEEK_END); 
-    newsz = sz - ftell(fp); 
-    buf = (char*)malloc(newsz); 
-    memset(buf, 0, newsz); 
-    assert(buf); 
-    fread(buf, newsz, 1, fp); 
-    fclose(fp); 
- 
-    // find a newline or \0 
-    newent = buf; 
-    while (*newent && *newent++ != '\n') ; 
- 
-    // replace file with new content 
-    fp = fopen(filename, "wb"); 
-    fwrite(newent, 1, newsz - (newent - buf), fp); 
-    fclose(fp); 
- 
-    free(buf); 
-    return 1; 
-} 
+// return 1 if rotated, otherwise 0
+int
+rotate_bin_logfile(const char *filename, off_t record_size,
+                   off_t max_size, float keep_ratio)
+{
+    off_t sz = dashs(filename);
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f);
 
-void 
+    if (sz < max_size)
+        return 0;
+
+    // delete from head
+    delete_records(filename, record_size, 1,
+            (1 - keep_ratio) * max_size / record_size );
+    return 1;
+}
+
+// return 1 if rotated, otherwise 0
+int
+rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio)
+{
+    off_t sz = dashs(filename), newsz;
+    char *buf, *newent;
+    FILE *fp;
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f);
+
+    if (sz < max_size)
+        return 0;
+
+    // FIXME we sould lock the file here.
+    // however since these log are just for reference...
+    // let's pretend there's no race condition with it.
+
+    // now, calculate a starting seek point
+    fp = fopen(filename, "r+b");
+    fseek(fp, - keep_ratio * max_size, SEEK_END);
+    newsz = sz - ftell(fp);
+    buf = (char*)malloc(newsz);
+    memset(buf, 0, newsz);
+    assert(buf);
+    fread(buf, newsz, 1, fp);
+    fclose(fp);
+
+    // find a newline or \0
+    newent = buf;
+    while (*newent && *newent++ != '\n') ;
+
+    // replace file with new content
+    fp = fopen(filename, "wb");
+    fwrite(newent, 1, newsz - (newent - buf), fp);
+    fclose(fp);
+
+    free(buf);
+    return 1;
+}
+
+void
 setaidfile(char *buf, const char *bn, aidu_t aidu)
 {
     // try to load by AID

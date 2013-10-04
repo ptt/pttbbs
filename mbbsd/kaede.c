@@ -22,7 +22,7 @@ expand_esc_star(char *buf, const char *src, int szbuf)
             return 1;
         //
         // insecure content
-        // 
+        //
         case 's':   // current user id
             strlcpy(buf, cuser.userid, szbuf);
             return 2;
@@ -117,7 +117,7 @@ out_lines(const char *str, int line, int col)
         {
             move(++y, col);
             line--;
-        } else 
+        } else
         {
             outc(*str);
         }

@@ -449,7 +449,7 @@ static int gomo_loadlog(FILE *fp, ChessInfo *info)
     while (fgets(buf, sizeof(buf), fp)) {
 	if (strcmp("</gomokulog>\n", buf) == 0)
 	    return 1;
-	else if (strncmp("black:", buf, 6) == 0 || 
+	else if (strncmp("black:", buf, 6) == 0 ||
 		strncmp("white:", buf, 6) == 0) {
 	    /* /(black|white):([a-zA-Z0-9]+)/; $2 */
 	    userec_t   rec;
@@ -464,7 +464,7 @@ static int gomo_loadlog(FILE *fp, ChessInfo *info)
 	    int         c, r;
 	    const char *p = buf;
 	    int i;
-	    
+
 	    for(i=0; i<2; i++) {
 		p = strchr(p, '>');
 

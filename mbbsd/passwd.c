@@ -12,7 +12,7 @@
  #define cuser pwcuser
 #endif
 
-int 
+int
 initcuser(const char *userid)
 {
     usernum = passwd_load_user(userid, &cuser);
@@ -59,7 +59,7 @@ pwcuInitCUser(userec_t *u)
     if (passwd_sync_query(usernum, u) != 0)
 	return -1;
 #ifdef DEBUG
-    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s InitCUser  invoked at %s\n", 
+    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s InitCUser  invoked at %s\n",
 	    cuser.userid, Cdatelite(&now));
 #endif
     assert(strncmp(u->userid, cuser.userid, IDLEN) == 0);
@@ -74,7 +74,7 @@ pwcuFinalCUser(userec_t *u)
     assert(usernum > 0 && usernum <= MAX_USERS);
     assert(strcmp(u->userid, cuser.userid) == 0);
 #ifdef DEBUG
-    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s FinalCUser invoked at %s\n", 
+    log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s FinalCUser invoked at %s\n",
 	    cuser.userid, Cdatelite(&now));
 #endif
     if (passwd_sync_update(usernum, u) != 0)
@@ -110,7 +110,7 @@ int pwcuBitDisableLevel	(unsigned int mask)
     PWCU_END();
 }
 
-int 
+int
 pwcuIncNumPost()
 {
     PWCU_START();
@@ -118,7 +118,7 @@ pwcuIncNumPost()
     PWCU_END();
 }
 
-int 
+int
 pwcuDecNumPost()
 {
     PWCU_START();
@@ -128,7 +128,7 @@ pwcuDecNumPost()
     PWCU_END();
 }
 
-int 
+int
 pwcuViolateLaw	()
 {
     PWCU_START();
@@ -173,7 +173,7 @@ pwcuCancelBadpost()
     PWCU_END();
 }
 
-int 
+int
 pwcuAddExMailBox(int m)
 {
     PWCU_START();
@@ -216,7 +216,7 @@ int pwcuSetNickname	(const char *nickname)
     PWCU_END();
 }
 
-int 
+int
 pwcuToggleOutMail()
 {
     PWCU_START();
@@ -226,7 +226,7 @@ pwcuToggleOutMail()
     PWCU_END();
 }
 
-int 
+int
 pwcuSetLoginView(unsigned int bits)
 {
     PWCU_START();
@@ -235,7 +235,7 @@ pwcuSetLoginView(unsigned int bits)
     PWCU_END();
 }
 
-int 
+int
 pwcuRegCompleteJustify(const char *justify)
 {
     PWCU_START();
@@ -289,7 +289,7 @@ int pwcuRegisterSetInfo (const char *rname,
 }
 
 #include "chess.h"
-int 
+int
 pwcuChessResult(int sigType, ChessGameResult r)
 {
     uint16_t *utmp_win = NULL, *cuser_win = NULL, *u_win = NULL,
@@ -364,25 +364,25 @@ pwcuChessResult(int sigType, ChessGameResult r)
     switch(r)
     {
 	case CHESS_RESULT_WIN:
-	    *utmp_win = *cuser_win = 
+	    *utmp_win = *cuser_win =
 		++(*u_win);
 	    // recover init lose
 	    if (*u_lose > 0)
-		*utmp_lose = *cuser_lose = 
+		*utmp_lose = *cuser_lose =
 		    --(*u_lose);
 	    break;
 
 	case CHESS_RESULT_TIE:
-	    *utmp_tie = *cuser_tie = 
+	    *utmp_tie = *cuser_tie =
 		++*u_tie;
 	    // recover init lose
 	    if (*u_lose > 0)
-		*utmp_lose = *cuser_lose = 
+		*utmp_lose = *cuser_lose =
 		    --(*u_lose);
 	    break;
 
 	case CHESS_RESULT_LOST:
-	    *utmp_lose = *cuser_lose = 
+	    *utmp_lose = *cuser_lose =
 		++(*u_lose);
 	    break;
 
@@ -394,7 +394,7 @@ pwcuChessResult(int sigType, ChessGameResult r)
     PWCU_END();
 }
 
-int 
+int
 pwcuSetChessEloRating(uint16_t elo_rating)
 {
     PWCU_START();
@@ -402,7 +402,7 @@ pwcuSetChessEloRating(uint16_t elo_rating)
     PWCU_END();
 }
 
-int 
+int
 pwcuToggleUserFlag	(unsigned int mask)
 {
     PWCU_START();
@@ -412,7 +412,7 @@ pwcuToggleUserFlag	(unsigned int mask)
     PWCU_END();
 }
 
-int 
+int
 pwcuToggleSortBoard ()
 {
     // XXX if this is executed too often,
@@ -420,7 +420,7 @@ pwcuToggleSortBoard ()
     return pwcuToggleUserFlag(UF_BRDSORT);
 }
 
-int 
+int
 pwcuToggleFriendList()
 {
     // XXX if this is executed too often,
@@ -430,10 +430,10 @@ pwcuToggleFriendList()
 
 // non-important variables (only save on exit)
 
-static char 
+static char
 pwcu_dirty;
 
-int 
+int
 pwcuSetPagerUIType  (unsigned int  uitype)
 {
     // XXX you MUST save this variable in pwcuExitSave();
@@ -466,7 +466,7 @@ int pwcuLoginSave	()
 {
     // XXX because LoginSave was called very long after
     // login_start_time, so we must reload passwd again
-    // here to prevent race condition. 
+    // here to prevent race condition.
     // If you want to remove this reload, make sure
     // pwcuLoginSave is called AFTER login_start_time
     // was decided.
@@ -524,7 +524,7 @@ int pwcuLoginSave	()
 
 // XXX this is a little different - only invoked at exist,
 // so no need to sync back to cuser.
-int 
+int
 pwcuExitSave	()
 {
     // determine dirty
@@ -553,20 +553,20 @@ pwcuExitSave	()
 	// u.money		= moneyof(usernum); // should be already updated by deumoney
 
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n", 
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n",
 		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
 #endif
 	PWCU_END();
 	// XXX return 0 here (PWCU_END), following code is not executed.
     }
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n", 
+	log_filef("log/pwcu_exitsave.log", LOG_CREAT, "%s exit %s at %s\n",
 		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
 #endif
     return 0;
 }
 
-int 
+int
 pwcuReload	()
 {
     // XXX TODO verify cuser structure?

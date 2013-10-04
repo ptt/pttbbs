@@ -6,14 +6,14 @@ static char		raw_connection = 0;
 #ifdef DETECT_CLIENT
 extern void UpdateClientCode(unsigned char c);
 
-static void 
+static void
 telnet_cb_update_client_code(void *cc_arg GCC_UNUSED, unsigned char c)
 {
     UpdateClientCode(c);
 }
 #endif
 
-static void 
+static void
 telnet_cb_resize_term(void *resize_arg GCC_UNUSED, int w, int h)
 {
     term_resize(w, h);
@@ -70,4 +70,4 @@ telnet_turnoff_client_detect(void)
     telnet_ctx_set_cc_arg(ctx, NULL);
 }
 
-// vim: sw=4 
+// vim: sw=4

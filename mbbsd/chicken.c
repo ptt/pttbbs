@@ -249,7 +249,7 @@ show_chicken_stat(const chicken_t * thechicken, int age)
            thechicken->satis,
            thechicken->book,
            thechicken->dirty,
-	   thechicken->sick, 
+	   thechicken->sick,
            thechicken->tired);
 }
 
@@ -601,9 +601,9 @@ revive_chicken(chicken_t *thechicken, int admin)
     int c = 0;
     assert(thechicken);
     // check deadtype for what to do
-    
+
     strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
-    
+
     c = thechicken->hp_max / 5 +1;
     if (c < 2)	    c = 2;
     if (c > thechicken->hp_max) c = thechicken->hp_max;
@@ -622,7 +622,7 @@ revive_chicken(chicken_t *thechicken, int admin)
     {
 	thechicken->sick = 0;
 	thechicken->tired = 0;
-    } 
+    }
 
     thechicken->lastvisit = now; // really need so?
 #ifdef HAVE_CHICKEN_CS
@@ -655,7 +655,7 @@ deadtype(const chicken_t * thechicken, chicken_t *mychicken)
     else if (thechicken->weight == 1 &&
 	     thechicken->sick > thechicken->hp_max / 4) // 餓死了
 	i = DEADTYPE_NOFOOD;
-    else if (thechicken->satis <= 0) // 很不滿意 
+    else if (thechicken->satis <= 0) // 很不滿意
 	i = DEADTYPE_NOSATIS;
     else
 	return DEADTYPE_NOTYET;
@@ -713,7 +713,7 @@ ch_changename(chicken_t *mychicken)
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
-	log_filef(CHICKENLOG, LOG_CREAT, 
+	log_filef(CHICKENLOG, LOG_CREAT,
                 ANSI_COLOR(31) "%s" ANSI_RESET " 把疼愛的" ANSI_COLOR(33)
                 " %s" ANSI_COLOR(32) " %s "
                 ANSI_RESET "改名為" ANSI_COLOR(33) " %s" ANSI_RESET " 於 %s\n",
@@ -730,7 +730,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
     reload_money();
     move(19, 0);
 
-    vbarf(ANSI_COLOR(44;37) " " MONEYNAME ":" ANSI_COLOR(33) " %-10d" 
+    vbarf(ANSI_COLOR(44;37) " " MONEYNAME ":" ANSI_COLOR(33) " %-10d"
 #ifdef HAVE_CHICKEN_CS
           ANSI_COLOR(37) "  常識點數 :" ANSI_COLOR(33) " %-10d"
 #endif
@@ -847,7 +847,7 @@ recover_chicken(chicken_t * thechicken)
     prints("\n你有一個剛死亡不久的 %s 要招喚回來嗎? 只要 %d 元唷...\n",
            chicken_type[(int)thechicken->type], price);
     do {
-	getdata(10, 0, " 要花錢復活寵物嗎？ [y/n]: ", 
+	getdata(10, 0, " 要花錢復活寵物嗎？ [y/n]: ",
 		buf, 2, LCECHO);
     }
     while (buf[0] != 'y' && buf[0] != 'n');
@@ -887,7 +887,7 @@ chicken_toggle_death(const char *uid)
 	mychicken->name[0] = 0;
 	vmsgf("%s 的寵物被殺死了", uid);
     }
-    else 
+    else
     {
 	revive_chicken(mychicken, 1);
 	strlcpy(mychicken->name, "[死]", sizeof(mychicken->name));
@@ -921,7 +921,7 @@ chicken_query(const char *userid)
 	    prints("\n\n%s 的寵物死掉了...", userid);
 	}
     }
-    
+
     pressanykey();
 }
 

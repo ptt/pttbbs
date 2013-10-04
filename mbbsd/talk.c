@@ -13,9 +13,9 @@ static char    * const withme_str[] = {
 
 #define MAX_SHOW_MODE 7
 /* M_INT: monitor mode update interval */
-#define M_INT 15		
+#define M_INT 15
 /* P_INT: interval to check for page req. in talk/chat */
-#define P_INT 20		
+#define P_INT 20
 #define BOARDFRI  1
 
 typedef struct pickup_t {
@@ -46,7 +46,7 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (!HasBasicUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
 	return 0;
 
-    return (uentp->pager != PAGER_ANTIWB && 
+    return (uentp->pager != PAGER_ANTIWB &&
 	    (fri_stat & HFM || uentp->pager != PAGER_FRIENDONLY));
 }
 
@@ -127,7 +127,7 @@ modestring(const userinfo_t * uentp, int simple)
 		    getuserid(uentp->destuid) : "空氣");
 	else
 	    snprintf(modestr, sizeof(modestr), "回應呼叫");
-    } 
+    }
     else if (!mode && *uentp->chatid == 3)
 	snprintf(modestr, sizeof(modestr), "水球準備中");
     else if (
@@ -139,7 +139,7 @@ modestring(const userinfo_t * uentp, int simple)
 	     )
 	if (uentp->msgcount < 10) {
 	    const char *cnum[10] =
-	    {"", "一", "兩", "三", "四", "五", 
+	    {"", "一", "兩", "三", "四", "五",
 		 "六", "七", "八", "九"};
 	    snprintf(modestr, sizeof(modestr),
 		     "中%s顆水球", cnum[(int)(uentp->msgcount)]);
@@ -353,7 +353,7 @@ logout_friend_online(userinfo_t * utmp)
 	if( !(0 <= thefriend && thefriend < USHM_SIZE) )
 	    continue;
 
-	ui = &SHM->uinfo[thefriend]; 
+	ui = &SHM->uinfo[thefriend];
 	if(ui->pid==0 || ui==utmp)
 	    continue;
 	if(ui->friendtotal > MAX_FRIEND || ui->friendtotal<0)
@@ -495,7 +495,7 @@ my_query(const char *uident)
                    Cdate(muser.lastseen ? &muser.lastseen : &muser.lastlogin));
             // print out muser.lasthost
 #ifdef USE_MASKED_FROMHOST
-            if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS)) 
+            if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS))
                 obfuscate_ipstr(muser.lasthost);
 #endif // !USE_MASKED_FROMHOST
             outs(muser.lasthost[0] ? muser.lasthost : "(不詳)");
@@ -503,7 +503,7 @@ my_query(const char *uident)
         }
 
 	// ------------------------------------------------------------
-	
+
 	prints("《 五子棋 》%5d 勝 %5d 敗 %5d 和  "
 	       "《象棋戰績》%5d 勝 %5d 敗 %5d 和\n",
 	       muser.five_win, muser.five_lose, muser.five_tie,
@@ -513,7 +513,7 @@ my_query(const char *uident)
 
 	ENDSTAT(STAT_QUERY);
 
-	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) ) 
+	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) )
 	{
           if(vmsg("T: 開立罰單")=='T')
 		  violate_law(&muser, tuid);
@@ -546,7 +546,7 @@ void check_water_init(void)
 	strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
     }
 }
-		
+
 static void
 ofo_water_scr(const water_t * tw, int which, char type)
 {
@@ -770,7 +770,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
      */
     if ((!uin || !uin->userid[0]) && !((flag == WATERBALL_GENERAL
 #ifdef PLAY_ANGEL
-		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER 
+		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER
 #endif
             )
 	    && water_which->count > 0)) {
@@ -862,7 +862,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	     || flag == WATERBALL_CONFIRM_ANGEL
 	     || flag == WATERBALL_CONFIRM_ANSWER
 #endif
-	     )) 
+	     ))
     {
 	snprintf(buf, sizeof(buf), "丟 %s: %s [Y/n]?", destid, msg);
 
@@ -988,7 +988,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 #ifdef NOKILLWATERBALL
 	    !(uin->wbtime = now) /* race */
 #else
-	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) 
+	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1)
 #endif
 	    && flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
@@ -1018,8 +1018,8 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 void
 getmessage(msgque_t msg)
 {
-    int     write_pos = currutmp->msgcount; 
-    if ( write_pos < (MAX_MSGS - 1) ) { 
+    int     write_pos = currutmp->msgcount;
+    if ( write_pos < (MAX_MSGS - 1) ) {
             unsigned char pager0 = currutmp->pager;
  	    currutmp->msgcount = write_pos+1;
             memcpy(&currutmp->msgs[write_pos], &msg, sizeof(msgque_t));
@@ -1190,7 +1190,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     currutmp->sockaddr = server.sin_port;
     currutmp->destuid = uin->uid;
     // WORKAROUND setutmpmode() checks currstat as cache of currutmp->mode.
-    // however if you invoke page -> rejected -> do something -> page again, 
+    // however if you invoke page -> rejected -> do something -> page again,
     // the currstat=PAGE but currutmp->mode!=PAGE, and then the paging will fail.
     // so, let's temporary break currstat here.
     currstat = IDLE;
@@ -1501,7 +1501,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
-static const char 
+static const char
 *hlp_talkbasic[] = {
     "【移動游標】", NULL,
     "  往上一行", "↑ k",
@@ -1650,7 +1650,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
 	return description;
     case 4:
 	snprintf(description, len,
-		 "%4d %s", uentp->chess_elo_rating, 
+		 "%4d %s", uentp->chess_elo_rating,
 		 (uentp->withme&WITHME_CHESS)?"找我下棋":
                  (uentp->withme&WITHME_NOCHESS)?"別找我":"");
 	return description;
@@ -1676,7 +1676,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
 
 /*
  * userlist
- * 
+ *
  * 有別於其他大部份 bbs在實作使用者名單時, 都是將所有 online users 取一份到
  * local space 中, 按照所須要的方式 sort 好 (如按照 userid , 五子棋, 來源等
  * 等) . 這將造成大量的浪費: 為什麼每個人都要為了產生這一頁僅 20 個人的資料
@@ -1699,7 +1699,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
  *   式 sort 好, 放置在 SHM->sorted中.
  *
  * 接下來, 我們每次只從確定的起始位置拿, 特別是除非有須要, 不然不會去產生好
- * 友區. 
+ * 友區.
  *
  * 各個 function 摘要
  * sort_cmpfriend()   sort function, key: friend type
@@ -1828,7 +1828,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
 	  (currutmp->brc_id && which < (friendtotal + 1 +
 					getbcache(currutmp->brc_id)->nuser)) ||
-	  
+
 	  /* 不含板友, 最多只會有 friendtotal個 */
 	  (!currutmp->brc_id && which < friendtotal + 1)
 	  ))) {
@@ -1851,8 +1851,8 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
 	    /* TODO 好友跟板友可以分開 sort, 可能只需要其一 */
-	    /* TODO 好友上下站才需要 sort 一次, 不需要每次 sort. 
-	     * 可維護一個 dirty bit 表示是否 sort 過. 
+	    /* TODO 好友上下站才需要 sort 一次, 不需要每次 sort.
+	     * 可維護一個 dirty bit 表示是否 sort 過.
 	     * suggested by WYchuang@ptt */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
 	    size = *nfriend - which;
@@ -1970,30 +1970,30 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    // modes should match ANGELPAUSE*
 	    static const char *modestr[ANGELPAUSE_MODES] = {
 		ANSI_COLOR(0;30;47) "開放",
-		ANSI_COLOR(0;32;47) "停收", 
-		ANSI_COLOR(0;31;47) "關閉", 
+		ANSI_COLOR(0;32;47) "停收",
+		ANSI_COLOR(0;31;47) "關閉",
 	    };
 	    // reduced version
 	    // TODO use vs_footer to replace.
 	    move(b_lines, 0);
 	    vbarf( ANSI_COLOR(34;46) " 休閒聊天 "
-		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
-		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 " 
+		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 "
+		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 "
 		   ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器\t"
 		   ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
 		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
-	} else 
+	} else
 #endif
 	vs_footer(" 休閒聊天 ",
 		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
 
     move(1, 0);
-    prints("  排序:[%s] 上站人數:%-4d " 
+    prints("  排序:[%s] 上站人數:%-4d "
 	    ANSI_COLOR(1;32) "我的朋友:%-3d "
-	   ANSI_COLOR(33) "與我為友:%-3d " 
-	   ANSI_COLOR(36) "板友:%-4d " 
-	   ANSI_COLOR(31) "壞人:%-2d" 
+	   ANSI_COLOR(33) "與我為友:%-3d "
+	   ANSI_COLOR(36) "板友:%-4d "
+	   ANSI_COLOR(31) "壞人:%-2d"
 	   ANSI_RESET "\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
@@ -2016,7 +2016,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	}
 
 	// prepare user data
-	
+
 	if (PERM_HIDE(uentp))
 	    state = 9;
 	else if (currutmp == uentp)
@@ -2063,8 +2063,8 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	vs_cols(ulist_coldef, cols, ULISTCOLS,
                 // Columns data (9 params)
 		num,
-                pager, 
-		fcolor[state] ? xuid : uentp->userid, 
+                pager,
+		fcolor[state] ? xuid : uentp->userid,
 		uentp->nickname,
                 descript(show_mode, uentp, uentp->pager & !(friend & HRM),
                          description, sizeof(description)),
@@ -2084,7 +2084,7 @@ void set_withme_flag(void)
     int i;
     char genbuf[20];
     int line;
-    
+
     move(1, 0);
     clrtobot();
 
@@ -2299,7 +2299,7 @@ userlist(void)
 
 		    // XXX si 已經寫死了 pickup_way = 0
 		    // 若使用者在 pickup_way != 0 時按 's'...
-		    
+
 		    si = CompleteOnlineUser(msg_uid, swid);
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];
@@ -2307,7 +2307,7 @@ userlist(void)
 			int *ulist =
 			    SHM->sorted[SHM->currsorted]
 			    [((pickup_way == 0) ? 0 : (pickup_way - 1))];
-			
+
 			fi = ulist[si];
 			nGots = pickup_myfriend(friends, &myfriend,
 						&friendme, &badfriend);
@@ -2407,7 +2407,7 @@ userlist(void)
 
 		    if (!getdata(0, 0, "廣播訊息:", genbuf+6, 54, DOECHO))
 			break;
-                    
+
 		    if (!getdata(0, 0, "確定廣播? [N]",
 				ans, sizeof(ans), LCECHO) ||
 			ans[0] != 'y')

@@ -74,7 +74,7 @@ do_voteboardreply(const fileheader_t * fhdr)
            {
             if (!strncmp(genbuf, "----------",10))
                {yes=-1; continue;}
-            else 
+            else
                 yes++;
            }
         if (yes>3) outs(genbuf);
@@ -89,7 +89,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 		return;
 	    }
 	}
-        if(yes>=0) continue; 
+        if(yes>=0) continue;
 
 	space = strpbrk(genbuf+4, " \n");
 	if(space) *space='\0';
@@ -122,7 +122,7 @@ do_voteboardreply(const fileheader_t * fhdr)
        {close(fd); return;}
     if(!(fi = fopen(oldfpath, "r")))
        {flock(fd, LOCK_UN); close(fd); return;}
-     
+
     if(!(fo = fopen(fpath, "w")))
        {
         flock(fd, LOCK_UN);
@@ -142,7 +142,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 	now -= 14 * 24 * 60 * 60;
     }
     fputs(genbuf, fo);
-    len = strlen(cuser.userid); 
+    len = strlen(cuser.userid);
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;

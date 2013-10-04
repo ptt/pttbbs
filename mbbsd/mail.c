@@ -85,7 +85,7 @@ is_valid_email(const char *full_address)
     return 0;
 }
 
-int 
+int
 invalidaddr(const char *addr) {
     int r = is_valid_email(addr);
     if (r)
@@ -107,7 +107,7 @@ invalidaddr(const char *addr) {
     if (bad_email_offset >= 0) {
         char c = addr[bad_email_offset];
         prints("錯誤位置: 第 %d 字元: 0x%02X [ %c ]",
-               bad_email_offset,  (unsigned char)c, 
+               bad_email_offset,  (unsigned char)c,
                isascii(c) && isprint(c) ? c : ' ');
     } else {
         outs("錯誤原因: email 形式不正確 (非 user@host.domain)");
@@ -137,7 +137,7 @@ load_mailalert(const char *userid)
     num = st.st_size / sizeof(fileheader_t);
     if (num <= 0)
 	return 0;
-    if (num > NEWMAIL_CHECK_RANGE) 
+    if (num > NEWMAIL_CHECK_RANGE)
 	num = NEWMAIL_CHECK_RANGE;
 
     /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
@@ -381,8 +381,8 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
     strlcpy(save_title, title, sizeof(save_title));
 
-    if (vedit2(mfpath, YEA, NULL, save_title, 
-		EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) 
+    if (vedit2(mfpath, YEA, NULL, save_title,
+		EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED)
     {
 	unlink(mfpath);
 	setutmpmode(oldstat);
@@ -553,7 +553,7 @@ setforward(void) {
         " - 寄件者一律改為設定自動轉寄者的 ID\n"
         " - 要先經過 Email 認證\n"
         " - 不能設定為同站的其它使用者\n"
-        "\n" 
+        "\n"
 	"不便之處請多見諒\n"
 	ANSI_RESET "\n");
 
@@ -568,7 +568,7 @@ setforward(void) {
 
     }
     chomp(ip);
-    prints("目前設定自動轉寄為: %s", 
+    prints("目前設定自動轉寄為: %s",
            dashf(buf) ? ip : ANSI_COLOR(1;31)"(關閉)" ANSI_RESET);
     getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
 		ip, sizeof(ip), DOECHO);
@@ -717,8 +717,8 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 {
     char            buf[4];
 
-    getdata(b_lines - 1, 0, 
-	    (HasUserFlag(UF_DEFBACKUP)) ? 
+    getdata(b_lines - 1, 0,
+	    (HasUserFlag(UF_DEFBACKUP)) ?
 	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
 	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
 	    buf, sizeof(buf), LCECHO);
@@ -762,7 +762,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 	sethomepath(fpath, cuser.userid);
 	stampfile(fpath, &mhdr);
 
-	if (vedit2(fpath, NA, NULL, save_title, 
+	if (vedit2(fpath, NA, NULL, save_title,
 		    EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    clear();
@@ -781,7 +781,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    ret = bsmtp(fpath, save_title, userid, NULL);
             LOG_IF(LOG_CONF_INTERNETMAIL,
-                   log_filef("log/internet_mail.log", LOG_CREAT, 
+                   log_filef("log/internet_mail.log", LOG_CREAT,
                              "%s [%s - %s] %s -> %s: %s\n",
                              Cdatelite(&now), log_source, __FUNCTION__,
                              cuser.userid, userid, save_title));
@@ -936,7 +936,7 @@ multi_list(struct Vector *namelist, int *recipient)
             }
             return;
         }
-    } 
+    }
 }
 
 static void
@@ -1341,7 +1341,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     refresh();
 
     /* 追蹤使用者 */
-    if (HasUserPerm(PERM_LOGUSER)) 
+    if (HasUserPerm(PERM_LOGUSER))
 	log_user("mailforward to %s ",address);
 
     // 處理站內黑名單
@@ -1349,7 +1349,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	char xid[IDLEN+1], *dot;
 
 	strlcpy(xid, address, sizeof(xid));
-	dot = strchr(xid, '.'); 
+	dot = strchr(xid, '.');
 	if (dot) *dot = 0;
 	dot = strcasestr(address, ".bbs@");
 
@@ -1433,7 +1433,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     if (hostaddr) {
         LOG_IF(LOG_CONF_INTERNETMAIL,
-               log_filef("log/internet_mail.log", LOG_CREAT, 
+               log_filef("log/internet_mail.log", LOG_CREAT,
                          "%s [%s] %s -> %s: %s - %s\n",
                          Cdatelite(&now), __FUNCTION__,
                          cuser.userid, address, direct, fh->title));
@@ -1457,7 +1457,7 @@ mailtitle(void)
     }
 
     showtitle("郵件選單", BBSName);
-    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" , 
+    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
 #ifdef USE_TIME_CAPSULE
             "[~]" RECYCLE_BIN_NAME
@@ -1479,13 +1479,13 @@ maildoent(int num, fileheader_t * ent)
     {
 	type = (ent->filemode & FILE_READ) ?
 	    'm' : 'M';
-    } 
+    }
     else if (ent->filemode & FILE_REPLIED)
     {
 	type = (ent->filemode & FILE_READ) ?
 	    'r' : 'R';
-    } 
-    else 
+    }
+    else
     {
 	type = (ent->filemode & FILE_READ) ?
 	    ' ' : '+';
@@ -1510,7 +1510,7 @@ maildoent(int num, fileheader_t * ent)
             color = ANSI_COLOR(1;31);
             break;
     }
-    
+
     strlcpy(datepart, ent->date, sizeof(datepart));
     isonline = query_online(ent->owner);
 
@@ -1521,10 +1521,10 @@ maildoent(int num, fileheader_t * ent)
 	color = "";
     }
 
-    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s\n", 
-	    num, type, datepart, 
+    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s\n",
+	    num, type, datepart,
 	    isonline ? ANSI_COLOR(1) : "",
-	    ent->owner, 
+	    ent->owner,
 	    isonline ? ANSI_RESET : "",
 	    mark, color,
 	    t_columns - 34, t_columns - 34,
@@ -1880,7 +1880,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 #ifdef USE_POSTRECORD
     if (postrecord.times > 1)
     {
-	outs(ANSI_COLOR(1;31) 
+	outs(ANSI_COLOR(1;31)
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
 	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
     }
@@ -1907,7 +1907,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 #endif
     } else {
 	// process and determine 'cross-post'
-	
+
 	int hash = StringHash(fhdr->title);
 
 	/* 同樣 title 不管對哪個板都算 cross post , 所以不用檢查 author */
@@ -2052,7 +2052,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
             setbdir(backup_path, xboard);
 	    setutmpmode(ANNOUNCE);
             // TODO what's the backup_path here?
-	    a_menu(xboard, fpath, 
+	    a_menu(xboard, fpath,
 		   HasUserPerm(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
 		   bid, NULL, backup_path);
 	} else {
@@ -2245,7 +2245,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('F')
     { 0, built_mail_index }, // Ctrl('G')
     { 0, NULL }, // Ctrl('H')
-    { 0, toggle_showmail_mode }, // Ctrl('I') 
+    { 0, toggle_showmail_mode }, // Ctrl('I')
     { 0, NULL }, // Ctrl('J')
     { 0, NULL }, // Ctrl('K')
     { 0, NULL }, // Ctrl('L')

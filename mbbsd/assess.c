@@ -15,8 +15,8 @@ inline static void inc(unsigned char *num, int n)
 }
 
 int
-inc_badpost(const char *userid, int num) { 
-    userec_t xuser; 
+inc_badpost(const char *userid, int num) {
+    userec_t xuser;
     int uid = getuser(userid, &xuser);
     time4_t min_timer;
 
@@ -31,7 +31,7 @@ inc_badpost(const char *userid, int num) {
         xuser.timeremovebadpost = min_timer;
 
     xuser.badpost += num;
-    passwd_sync_update(uid, &xuser); 
+    passwd_sync_update(uid, &xuser);
     return xuser.badpost;
 }
 
@@ -41,7 +41,7 @@ static char * const badpost_reason[] = {
 
 #define DIM(x)	(sizeof(x)/sizeof(x[0]))
 
-int assign_badpost(const char *userid, fileheader_t *fhdr, 
+int assign_badpost(const char *userid, fileheader_t *fhdr,
 	const char *newpath, const char *comment)
 {
     char genbuf[STRLEN];
@@ -87,7 +87,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
     sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", reason);
 
-    if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
+    if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf));
 
 #ifdef USE_COOLDOWN
     add_cooldowntime(tusernum, 60);
@@ -96,16 +96,16 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
     if (!(inc_badpost(userid, 1) % 5)){
 	userec_t xuser;
-	post_violatelaw(userid, BBSMNAME "系統警察", 
+	post_violatelaw(userid, BBSMNAME "系統警察",
 		"劣文累計 5 篇", "罰單一張");
-	mail_violatelaw(userid, BBSMNAME "系統警察", 
+	mail_violatelaw(userid, BBSMNAME "系統警察",
 		"劣文累計 5 篇", "罰單一張");
 	kick_all(userid);
 	passwd_sync_query(tusernum, &xuser);
 	xuser.money = moneyof(tusernum);
 	xuser.vl_count++;
 	xuser.userlevel |= PERM_VIOLATELAW;
-	xuser.timeviolatelaw = now;  
+	xuser.timeviolatelaw = now;
 	passwd_sync_update(tusernum, &xuser);
     }
 

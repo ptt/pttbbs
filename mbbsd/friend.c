@@ -143,7 +143,7 @@ friend_append(int type, int count)
 
     setfriendfile(fpath, type);
 
-    if (currboard && *currboard) 
+    if (currboard && *currboard)
 	strcpy(myboard, currboard);
 
     do {
@@ -538,12 +538,12 @@ friend_edit(int type)
             // we have seen some BM hit this accidentally.. so ask again.
             outs("整理名單可清除已消失、過期、或已有劣文的帳號。\n\n");
 
-	    getdata(2, 0, 
+	    getdata(2, 0,
 		    "要從名單中清除幾個月沒上站的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
 	    expire = atoi(uident);
 #ifdef ASSESS
-	    getdata(3, 0, 
+	    getdata(3, 0,
 		    "要從名單中清除有幾篇以上劣文的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
 	    badpost = atoi(uident);
@@ -678,7 +678,7 @@ t_fix_aloha()
 	 ANSI_COLOR(1) "如果你沒遇到此類問題可直接離開。" ANSI_RESET "\n\n"
 	 "▼如果你遇到有人沒在你的上站通知名單內但又會丟上站通知水球給你，\n"
 	 "  請輸入他的 ID。\n");
-    
+
     move(7, 0);
     usercomplete("有誰不在你的通知名單內但又會送上站通知水球給您呢？ ", xid);
 

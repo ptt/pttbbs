@@ -17,7 +17,7 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     char cmd[PATHLEN], opts[PATHLEN];
     int i, coptSpace, coptFont;
     static const char *optSpace[] = {
-	"-S", "-s", "-k", "-W", 
+	"-S", "-s", "-k", "-W",
 	// "-o",
 	NULL
     };
@@ -29,7 +29,7 @@ gen_captcha(char *buf, int szbuf, char *fpath)
 	// shadow family
 	// "shadow", "smshadow",
 	// mini (better with large spacing)
-	// "mini", 
+	// "mini",
 	NULL
     };
 
@@ -43,13 +43,13 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     while (optSpace[coptSpace]) coptSpace++;
     while (optFont[coptFont]) coptFont++;
     snprintf(opts, sizeof(opts),
-	    "%s -f %s", 
+	    "%s -f %s",
 	    optSpace[random() % coptSpace],
 	    optFont [random() % coptFont ]);
 
     // create file
     snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);
-    snprintf(cmd, sizeof(cmd), FIGLET_PATH 
+    snprintf(cmd, sizeof(cmd), FIGLET_PATH
              " %s %s >%s 2>/dev/null || rm %s",
              opts, buf, fpath, fpath);
 
@@ -117,7 +117,7 @@ int verify_captcha(const char *reason)
 	    move(b_lines-1, 0); clrtobot();
 	    prints("請仔細檢查上面的圖形， %d 秒後即可輸入...", i);
 	    // flush out current input
-	    doupdate(); 
+	    doupdate();
 	    sleep(1);
 	    vkey_purge();
 	}
@@ -144,7 +144,7 @@ int verify_captcha(const char *reason)
 }
 #else // !USE_FIGLET_CAPTCHA
 
-int 
+int
 verify_captcha(const char *reason)
 {
     return 1;

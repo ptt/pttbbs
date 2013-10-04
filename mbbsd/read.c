@@ -161,7 +161,7 @@ getkeep(const char *s, int def_topline, int def_cursline)
     /* 為省記憶體, 且避免 malloc/free 不成對, getkeep 最好不要 malloc,
      * 只記 s 的 hash 值,
      * fvn1a-32bit collision 機率約小於十萬分之一 */
-    /* 原本使用 link list, 可是一方面會造成 malloc/free 不成對, 
+    /* 原本使用 link list, 可是一方面會造成 malloc/free 不成對,
      * 一方面 size 小, malloc space overhead 就高, 因此改成 link block,
      * 以 KEEPSLOT 為一個 block 的 link list.
      * 只有第一個 block 可能沒滿. */
@@ -276,7 +276,7 @@ thread(const keeploc_t * locmem, int stypen)
 
     if(locmem->crs_ln==0)
 	return locmem->crs_ln;
-    
+
     STATINC(STAT_THREAD);
     if (stypen & RS_AUTHOR)
 	key = headers[pos - locmem->top_ln].owner;
@@ -289,7 +289,7 @@ thread(const keeploc_t * locmem, int stypen)
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 
-	int rk = 
+	int rk =
 	    get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
 
 	if(fd < 0 || rk < 0)
@@ -304,7 +304,7 @@ thread(const keeploc_t * locmem, int stypen)
 		    break;
 		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) ) {
 		    amatch = new_ln;
-		    jump = THREAD_SEARCH_RANGE; 
+		    jump = THREAD_SEARCH_RANGE;
 		    /* 當搜尋同主題第一篇, 連續找不到多少篇才停 */
 		}
 	    }
@@ -417,7 +417,7 @@ out:
     return pos;
 }
 
-static int 
+static int
 select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
 	char *pdefault_ch)
 {
@@ -600,9 +600,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
        if(!getdata(b_lines, 0,
                    currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
                    keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
-           return READ_REDRAW; 
+           return READ_REDRAW;
    } else if(sr_mode & RS_KEYWORD) {
-       if(!getdata(b_lines, 0, 
+       if(!getdata(b_lines, 0,
                    currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
                    keyword, TTLEN, DOECHO) || trim_blank(keyword))
            return READ_REDRAW;
@@ -613,7 +613,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
        if (currmode & MODE_SELECT) {
            // TTLEN width exceed default screen
            // let's use TTLEN-4 here.
-           if (!getdata(b_lines, 0, "增加條件 排除標題: ", 
+           if (!getdata(b_lines, 0, "增加條件 排除標題: ",
                         keyword, TTLEN-4, DOECHO) ||
                trim_blank(keyword))
                return READ_REDRAW;
@@ -623,7 +623,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
        }
    } else if (sr_mode & RS_RECOMMEND) {
        if(currstat == RMAIL ||
-          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ? 
+          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ?
                     "增加條件 推文數: ": "搜尋推文數高於多少"
 #ifndef OLDRECOMMEND
                     " (<0則搜噓文數) "
@@ -646,8 +646,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
            return DONOTHING;
 
        if(sr_mode & RS_TITLE) {
-           fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
-           strcpy(keyword, subject(fh->title));           
+           fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln];
+           strcpy(keyword, subject(fh->title));
        }
    }
 
@@ -655,7 +655,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
       _mode = sr_mode;
    else
       _mode |= sr_mode;
-   
+
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
             first_select ? "SR.":p,
             sr_mode, (int)strlen(keyword), DBCS_StringHash(keyword));
@@ -721,7 +721,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	   if(inc) {
 	       /* find incremental selection start point */
 	       int idx;
-	       sprintf(fhs[0].filename, "X.%d", (int)filetime); 
+	       sprintf(fhs[0].filename, "X.%d", (int)filetime);
 	       idx = getindex(currdirect, &fhs[0], 0);
 	       if(idx<0) {
 		   reference = -idx;
@@ -773,7 +773,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
                    else if(sr_mode  & RS_KEYWORD_EXCLUDE &&
                        DBCS_strcasestr(fhs[i].title, keyword))
 		       continue;
-		   else if((sr_mode & RS_TITLE)  &&          
+		   else if((sr_mode & RS_TITLE)  &&
 		      strcasecmp(subject(fhs[i].title), keyword))
 		       continue;
 		   else if ((sr_mode & RS_RECOMMEND)  &&
@@ -812,18 +812,18 @@ select_read(const keeploc_t * locmem, int sr_mode)
 static int newdirect_new_ln = -1;
 
 static int
-i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem, 
+i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
            int bid, int bottom_line)
 {
     int     mode = DONOTHING, num, new_top=10;
     int     ch, new_ln = locmem->crs_ln, lastmode = DONOTHING;
     static  char default_ch = 0;
-    
+
     do {
 	if( (mode = cursor_pos(locmem, new_ln, new_top, default_ch ? 0 : 1))
 	    != DONOTHING )
 	    return mode;
-	
+
 	if( !default_ch )
 	    ch = vkey();
 	else{
@@ -834,7 +834,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    ch = default_ch;
 	}
 
-	new_top = 10; // default 10 
+	new_top = 10; // default 10
 	switch (ch) {
 	case Ctrl('Z'):
 	    mode = FULLUPDATE;
@@ -844,7 +844,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         case '0':    case '1':    case '2':    case '3':    case '4':
 	case '5':    case '6':    case '7':    case '8':    case '9':
 	    if( (num = search_num(ch, last_line)) != -1 )
-		new_ln = num + 1; 
+		new_ln = num + 1;
 	    break;
     	case 'q':
     	case 'e':
@@ -861,7 +861,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		mode =  NEWDIRECT;
 	    }
 	    else
-		mode =  
+		mode =
 		    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
 	    break;
 
@@ -877,11 +877,11 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         case Ctrl('H'):
 	    mode = select_read(locmem, RS_NEWPOST);
 	    break;
-	    
+
 	case 'Z':
 	    mode = select_read(locmem, RS_RECOMMEND);
 	    break;
-		
+
         case 'a':
 	    mode = select_read(locmem, RS_AUTHOR);
 	    break;
@@ -892,7 +892,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
         case 'G':
 	    // special types
-	    switch(vans( currmode & MODE_SELECT ? 
+	    switch(vans( currmode & MODE_SELECT ?
 			"增加條件 標記(m/s)(未輸入則取消): ":
 			"搜尋標記(m/s)(未輸入則取消): "))
 	    {
@@ -964,7 +964,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		new_ln = last_line;
 		new_top = p_lines-1;
 	    } else {
-		new_ln = locmem->crs_ln - 1; 
+		new_ln = locmem->crs_ln - 1;
 		new_top = p_lines - 2;
 	    }
 	    break;
@@ -972,7 +972,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	case 'n':
 	case 'j':
 	case KEY_DOWN:
-	    new_ln = locmem->crs_ln + 1; 
+	    new_ln = locmem->crs_ln + 1;
 	    new_top = 1;
 	    break;
 
@@ -980,14 +980,14 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	case KEY_PGDN:
 	case 'N':
 	case Ctrl('F'):
-	    new_ln = locmem->top_ln + p_lines; 
+	    new_ln = locmem->top_ln + p_lines;
 	    new_top = 0;
 	    break;
 
 	case KEY_PGUP:
 	case Ctrl('B'):
 	case 'P':
-	    new_ln = locmem->top_ln - p_lines; 
+	    new_ln = locmem->top_ln - p_lines;
 	    new_top = 0;
 	    break;
 
@@ -1107,7 +1107,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		break;
 	    if (func != NULL){
 		num  = locmem->crs_ln - bottom_line;
-                   
+
 		if(!rcmdlist[ch - 1].needitem)
 		    mode = (*func)();
 		else if( num > 0 ){
@@ -1117,7 +1117,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 				  direct, locmem->crs_ln - locmem->top_ln);
 		}
 		else
-                    mode = (*func)(locmem->crs_ln, 
+                    mode = (*func)(locmem->crs_ln,
 				   &headers[locmem->crs_ln - locmem->top_ln],
 				   currdirect, locmem->crs_ln - locmem->top_ln);
 		if(mode == READ_SKIP)
@@ -1133,8 +1133,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		}
 
 		// 以下這幾種 mode 要再處理游標
-                if(mode == READ_PREV || mode == READ_NEXT || 
-                   mode == RELATE_PREV || mode == RELATE_FIRST || 
+                if(mode == READ_PREV || mode == READ_NEXT ||
+                   mode == RELATE_PREV || mode == RELATE_FIRST ||
                    mode == AUTHOR_NEXT || mode ==  AUTHOR_PREV ||
                    mode == RELATE_NEXT){
 		    lastmode = mode;
@@ -1174,7 +1174,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		    lastmode = DONOTHING;
 		}
 	    } //end if (func != NULL)
-	} // ch > 0 && ch <= onekey_size 
+	} // ch > 0 && ch <= onekey_size
     	break;
 	} // end switch
 
@@ -1207,7 +1207,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     // 不顯示置底的情形
     if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
     {
-	rv = get_records(direct, headers, sizeof(fileheader_t), 
+	rv = get_records(direct, headers, sizeof(fileheader_t),
 		recbase, headers_size);
 	ENDSTAT(STAT_BOARDREC);
 	return rv > 0 ? rv : 0;
@@ -1293,7 +1293,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    last_line = getbtotal(currbid);
 		}
                 bottom_line = last_line;
-                last_line += getbottomtotal(currbid); 
+                last_line += getbottomtotal(currbid);
 	    }
 	    else
 		bottom_line = last_line = get_num_records(currdirect, FHSZ);
@@ -1301,7 +1301,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    if (mode == NEWDIRECT) {
 		int num;
 		num = last_line - p_lines + 1;
-		locmem = getkeep(currdirect, num < 1 ? 1 : num, 
+		locmem = getkeep(currdirect, num < 1 ? 1 : num,
 			bottom_line ? bottom_line : last_line);
 		if(newdirect_new_ln >= 0)
 		{
@@ -1376,7 +1376,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	case TITLE_REDRAW:
 	    (*dotitle) ();
             break;
-        
+
         case HEADERS_RELOAD:
 	    if (recbase != locmem->top_ln) {
 		recbase = locmem->top_ln;
@@ -1392,7 +1392,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    assert(headers);
 		}
 		/* XXX if entries return -1 */
-                entries = 
+                entries =
 		    get_records_and_bottom(currdirect, headers, recbase,
 					   headers_size, last_line, bottom_line);
 	    }

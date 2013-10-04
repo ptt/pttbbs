@@ -30,31 +30,31 @@ enum {
     TITLE_TAIL_DIGEST,
 };
 
-// 由於歷史因素，這裡會出現三種編號: 
+// 由於歷史因素，這裡會出現三種編號:
 // MODE (定義於 modes.h)    是 BBS 對各種功能在 utmp 的編號 (var.c 要加字串)
 // Menu Index (M_*)	    是 menu.c 內部分辨選單要對應哪個 mode 的 index
 // AdBanner Index	    是動態看版要顯示什麼的值
 // 從前這是用兩個 mode map 來轉換的 (令人看得滿頭霧水)
 // 重整後 Menu Index 跟 AdBanner Index 合一，請見下面的說明
 ///////////////////////////////////////////////////////////////////////
-// AdBanner (SHM->notes) 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 
+// AdBanner (SHM->notes) 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS)
 // 目錄下的文章，所以編排 Menu (M_*) 時要照其順序：
 // 精華區編號     => Menu Index => MODE
 // (AdBannerIndex)
 // ====================================
 // 00離站畫面     =>  M_GOODBYE
-// 01主選單       =>  M_MMENU   => MMENU 
-// 02系統維護區   =>  M_ADMIN   => ADMIN 
-// 03私人信件區   =>  M_MAIL    => MAIL  
-// 04休閒聊天區   =>  M_TMENU   => TMENU 
-// 05個人設定區   =>  M_UMENU   => UMENU 
-// 06系統工具區   =>  M_XMENU   => XMENU 
-// 07娛樂與休閒   =>  M_PMENU   => PMENU 
-// 08Ｐtt搜尋器   =>  M_SREG    => SREG  
-// 09Ｐtt量販店   =>  M_PSALE   => PSALE 
-// 10Ｐtt遊樂場   =>  M_AMUSE   => AMUSE 
-// 11Ｐtt棋院     =>  M_CHC     => CHC   
-// 12特別名單     =>  M_NMENU   => NMENU 
+// 01主選單       =>  M_MMENU   => MMENU
+// 02系統維護區   =>  M_ADMIN   => ADMIN
+// 03私人信件區   =>  M_MAIL    => MAIL
+// 04休閒聊天區   =>  M_TMENU   => TMENU
+// 05個人設定區   =>  M_UMENU   => UMENU
+// 06系統工具區   =>  M_XMENU   => XMENU
+// 07娛樂與休閒   =>  M_PMENU   => PMENU
+// 08Ｐtt搜尋器   =>  M_SREG    => SREG
+// 09Ｐtt量販店   =>  M_PSALE   => PSALE
+// 10Ｐtt遊樂場   =>  M_AMUSE   => AMUSE
+// 11Ｐtt棋院     =>  M_CHC     => CHC
+// 12特別名單     =>  M_NMENU   => NMENU
 ///////////////////////////////////////////////////////////////////////
 // 由於 MODE 與 menu 的順序現在已不一致 (最早可能是一致的)，所以中間的
 // 轉換是靠 menu_mode_map 來處理。
@@ -69,7 +69,7 @@ enum {
     M_UMENU,     M_XMENU, M_PMENU,M_SREG,
     M_PSALE,	 M_AMUSE, M_CHC,  M_NMENU,
 
-    M_MENU_MAX,			// 這是 menu (M_*) 的最大值 
+    M_MENU_MAX,			// 這是 menu (M_*) 的最大值
     N_SYSADBANNER = M_MENU_MAX, // 定義 M_* 到多少有對應的 ADBANNER
     M_MENU_REFRESH= -1,		// 系統用不到的 index 值 (可顯示其它活動與點歌)
 };
@@ -109,7 +109,7 @@ showtitle(const char *title, const char *mid)
 #ifdef DEBUG
     {
 	sprintf(buf, "  current pid: %6d  ", getpid());
-	mid = buf; 
+	mid = buf;
 	mid_attr = ANSI_COLOR(41;5);
     }
 #else
@@ -196,7 +196,7 @@ int TopBoards(void);
 static char zacmd = 0;
 
 // ZA is waiting, hurry to the meeting stone!
-int 
+int
 ZA_Waiting(void)
 {
     return (zacmd != 0);
@@ -235,7 +235,7 @@ ZA_Select(void)
 }
 
 // The ZA processor, only invoked in menu.
-void 
+void
 ZA_Enter(void)
 {
     char cmd = zacmd;
@@ -300,9 +300,9 @@ show_status(void)
     localtime4_r(&now, &ptime);
     i = ptime.tm_wday << 1;
     move(b_lines, 0);
-    vbarf(ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" 
+    vbarf(ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]"
 	  ANSI_COLOR(1;33;45) "%-14s"
-	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31) 
+	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
 	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
 	  ANSI_COLOR(30) "\t[呼叫器]" ANSI_COLOR(31) "%s ",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
@@ -338,32 +338,32 @@ adbanner(int menu_index)
 	return;
 
     if (    i != M_MENU_REFRESH &&
-	    i >= 0		&& 
+	    i >= 0		&&
 	    i <  N_SYSADBANNER  &&
-	    i <= SHM->last_film) 
+	    i <= SHM->last_film)
     {
 	// use system menu - i
     } else {
-	// To display ADBANNERs in slide show mode. 
-	// Since menu is updated per hour, the total presentation time 
+	// To display ADBANNERs in slide show mode.
+	// Since menu is updated per hour, the total presentation time
 	// should be less than one hour. 60*60/MAX_ADBANNER[500]=7 (seconds).
-	// @ Note: 60 * 60 / MAX_ADBANNER =3600/MAX_ADBANNER = "how many seconds 
+	// @ Note: 60 * 60 / MAX_ADBANNER =3600/MAX_ADBANNER = "how many seconds
 	// can one ADBANNER to display" to slide through every banners in one hour.
 	// @ now / (3600 / MAx_ADBANNER) means "get the index of which to show".
 	// syncnow();
-	
+
 	const int slideshow_duration = 3600 / MAX_ADBANNER,
 		  slideshow_index    = now  / slideshow_duration;
 
-	// index range: 0 =>[system] => N_SYSADBANNER    => [user esong] => 
+	// index range: 0 =>[system] => N_SYSADBANNER    => [user esong] =>
 	//              last_usong   => [advertisements] => last_film
 	int valid_usong_range = (SHM->last_usong > N_SYSADBANNER &&
 				 SHM->last_usong < SHM->last_film);
-	
+
 	if (SHM->last_film > N_SYSADBANNER) {
 	    if (HasUserFlag(UF_ADBANNER_USONG) || !valid_usong_range)
 		i = N_SYSADBANNER +       slideshow_index % (SHM->last_film+1-N_SYSADBANNER);
-	    else 
+	    else
 		i = SHM->last_usong + 1 + slideshow_index % (SHM->last_film - SHM->last_usong);
 	}
 	else
@@ -401,7 +401,7 @@ show_menu(int menu_index, const commands_t * p)
     // update menu column [fixed const because most items are designed as fixed)
     menu_column = (t_columns-40)/2;
     row = 12 + (t_lines-24)/2;
-#endif 
+#endif
 
 #ifdef EXP_ALERT_ADBANNER_USONG
     if ((p[0].level && !HasUserPerm(p[0].level)) &&
@@ -424,7 +424,7 @@ show_menu(int menu_index, const commands_t * p)
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
             prints("%*s  (%s%c" ANSI_RESET ")%s\n",
-                   menu_column, "", 
+                   menu_column, "",
                    (HasUserFlag(UF_MENU_LIGHTBAR) ? ANSI_COLOR(36) :
                     ANSI_COLOR(1;36)), s[0], s+1);
 	}
@@ -633,7 +633,7 @@ static int deprecate_userlist() {
 static const commands_t m_admin_money[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
                                                 "View Log      檢視交易記錄"},
-    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"Givemoney     紅包雞"}, 
+    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"Givemoney     紅包雞"},
     {NULL, 0, NULL}
 };
 
@@ -652,14 +652,14 @@ static const commands_t m_admin_user[] = {
 static const commands_t adminlist[] = {
     {m_user, PERM_SYSOP,		"User          使用者資料"},
     {m_board, PERM_SYSOP|PERM_BOARD,	"Board         設定看板"},
-    {m_register, 
+    {m_register,
 	PERM_ACCOUNTS|PERM_ACCTREG,	"Register      審核註冊表單"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"Xfile         編輯系統檔案"},
     {x_admin_money, PERM_SYSOP|PERM_ACCOUNTS|PERM_VIEWSYSOP,
                                         "Money         【" MONEYNAME "相關】"},
     {x_admin_user, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
                                         "LUser Log     【使用者資料記錄】"},
-    {search_user_bypwd, 
+    {search_user_bypwd,
 	PERM_ACCOUNTS|PERM_POLICE_MAN,	"Search User    特殊搜尋使用者"},
     {m_loginmsg, PERM_SYSOP,		"GMessage Login 進站水球"},
     {NULL, 0, NULL}
@@ -672,7 +672,7 @@ static const commands_t maillist[] = {
     {mail_list, PERM_LOGINOK,   "Mail List     群組寄信"},
     {setforward, PERM_LOGINOK,  "Forward       設定信箱自動轉寄" },
     {mail_mbox, PERM_INTERNET,  "Zip UserHome  把所有私人資料打包回去"},
-    {built_mail_index, 
+    {built_mail_index,
 	PERM_LOGINOK,		"Savemail      重建信箱索引"},
     {mail_all, PERM_SYSOP,      "All           寄信給所有使用者"},
     {NULL, 0, NULL}
@@ -707,7 +707,7 @@ static const commands_t talklist[] = {
     {deprecate_userlist, 0, "Pager         切換呼叫器"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
-    {a_changeangel, 
+    {a_changeangel,
 	PERM_LOGINOK,	    "AChange Angel 更換小天使"},
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
                             "BAngel Beats! 天使公會"},
@@ -748,7 +748,7 @@ static int u_view_recentpay()
 {
     char fn[PATHLEN];
     clear();
-    mvouts(10, 5, "注意: 此處內容僅供參考，實際" MONEYNAME 
+    mvouts(10, 5, "注意: 此處內容僅供參考，實際" MONEYNAME
                         "異動以站方內部資料為準");
     pressanykey();
     setuserfile(fn, FN_RECENTPAY);
@@ -786,7 +786,7 @@ u_mylogs()
 
 void Customize(); // user.c
 
-static int 
+static int
 u_customize()
 {
     Customize();
@@ -805,7 +805,7 @@ static const commands_t userlist[] = {
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},
 #endif // ASSESS
-    {deprecate_userlist,       0,   "KCloak        隱身術"}, 
+    {deprecate_userlist,       0,   "KCloak        隱身術"},
     {NULL, 0, NULL}
 };
 
@@ -889,7 +889,7 @@ static const commands_t m_xyz_hot[] = {
 /* XYZ tool sub menu */
 static const commands_t m_xyz_user[] = {
     {x_user100 ,0,   "Users         《使用者百大排行榜》"},
-    {topsong,PERM_LOGINOK,   
+    {topsong,PERM_LOGINOK,
 	             "GTop Songs    《使用者心情點播排行》"},
     {x_today, 0,     "Today         《今日上線人次統計》"},
     {x_yesterday, 0, "Yesterday     《昨日上線人次統計》"},
@@ -932,7 +932,7 @@ static const commands_t xyzlist[] = {
 #endif
 
 #else // !DEBUG
-    {_debug_reportstruct, 0, 
+    {_debug_reportstruct, 0,
 	    	     "ReportStruct  報告各種結構的大小"},
 #endif // !DEBUG
 
@@ -950,7 +950,7 @@ static const commands_t moneylist[] = {
 };
 
 static const commands_t      cmdlist[] = {
-    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN, 
+    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
 				"0Admin       【 系統維護區 】"},
     {Announce,	0,		"Announce     【 精華公佈欄 】"},
 #ifdef DEBUG
@@ -991,7 +991,7 @@ static int chessroom();
 /* Ptt Play menu */
 static const commands_t playlist[] = {
     {p_money, PERM_LOGINOK,  "Pay         【 " BBSMNAME2 "量販店 】"},
-    {chicken_main, PERM_LOGINOK, 
+    {chicken_main, PERM_LOGINOK,
 			     "Chicken     【 " BBSMNAME2 "養雞場 】"},
     {ticket_main, PERM_LOGINOK,
                              "Gamble      【 " BBSMNAME2 "彩券   】"},
@@ -1078,4 +1078,4 @@ Name_Menu(void)
     domenu(M_NMENU, "名單編輯", 'O', namelist);
     return 0;
 }
- 
+

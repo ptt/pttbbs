@@ -27,13 +27,13 @@
 ////////////////////////////////////////////////////////////////////////////
 // Value Validation
 ////////////////////////////////////////////////////////////////////////////
-static int 
+static int
 HaveRejectStr(const char *s, const char **rej)
 {
     int     i;
     char    *rejectstr[] =
 	{"幹", "不", "你媽", "某", "笨", "呆", "..", "xx",
-	 "你管", "管我", "猜", "天才", "超人", 
+	 "你管", "管我", "猜", "天才", "超人",
 	 /* "阿",  (某些住址有) */
 	 "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
 	 "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
@@ -109,7 +109,7 @@ isvalidname(char *rname)
 #else
     const char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
-	 "先生", "帥哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
+	 "先生", "帥哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭",
 	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
 	 "妹妹", "嘿", "嗯", "爺爺", "大哥", "無",
 	 NULL};
@@ -144,10 +144,10 @@ isvalidcareer(char *career)
     if( strlen(career) < 6 )
 	return "您的輸入不正確";
 #endif
-    if (DBCS_strcasestr(career, "學") && 
+    if (DBCS_strcasestr(career, "學") &&
 	DBCS_strcasestr(career, "系") &&
-	DBCS_strcasestr(career, "級") == 0 && 
-	(DBCS_strcasestr(career, "畢") == 0 && 
+	DBCS_strcasestr(career, "級") == 0 &&
+	(DBCS_strcasestr(career, "畢") == 0 &&
 	 DBCS_strcasestr(career, "肄") == 0))
 	return "請加上年級";
     return NULL;
@@ -173,12 +173,12 @@ isvalidaddr(char *addr)
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (DBCS_strcasestr(addr, "信箱") != 0 || DBCS_strcasestr(addr, "郵政") != 0) 
+    if (DBCS_strcasestr(addr, "信箱") != 0 || DBCS_strcasestr(addr, "郵政") != 0)
 	return "抱歉我們不接受郵政信箱";
     if (strlen_without_space(addr) < 15 ||
-	(DBCS_strcasestr(addr, "市") == 0 && 
+	(DBCS_strcasestr(addr, "市") == 0 &&
 	 DBCS_strcasestr(addr, "巿") == 0 &&
-	 DBCS_strcasestr(addr, "縣") == 0 && 
+	 DBCS_strcasestr(addr, "縣") == 0 &&
 	 DBCS_strcasestr(addr, "室") == 0) ||
 	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
@@ -205,8 +205,8 @@ isvalidphone(char *phone)
     for( i = 0 ; phone[i] != 0 ; ++i )
 	if( !isdigit((int)phone[i]) )
 	    return "請不要加分隔符號";
-    if (!removespace(phone) || 
-	strlen(phone) < 9 || 
+    if (!removespace(phone) ||
+	strlen(phone) < 9 ||
 	strstr(phone, "00000000") != NULL ||
 	strstr(phone, "22222222") != NULL    ) {
 	return "這個電話號碼並不正確(請含區碼)" ;
@@ -243,7 +243,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 30 - value;
 #endif
 
-    return ((urec->userlevel & (PERM_LOGINOK|PERM_VIOLATELAW)) ? 
+    return ((urec->userlevel & (PERM_LOGINOK|PERM_VIOLATELAW)) ?
             KEEP_DAYS_REGGED : KEEP_DAYS_UNREGGED) * 24 * 60 - value;
 }
 
@@ -339,15 +339,15 @@ delregcodefile(void)
 // Justify Utilities
 ////////////////////////////////////////////////////////////////////////////
 
-static void 
+static void
 email_justify(const userec_t *muser)
 {
 	char buf[256], genbuf[256];
-	/* 
+	/*
 	 * It is intended to use BBSENAME instead of BBSNAME here.
 	 * Because recently many poor users with poor mail clients
-	 * (or evil mail servers) cannot handle/decode Chinese 
-	 * subjects (BBSNAME) correctly, so we'd like to use 
+	 * (or evil mail servers) cannot handle/decode Chinese
+	 * subjects (BBSNAME) correctly, so we'd like to use
 	 * BBSENAME here to prevent subject being messed up.
 	 * And please keep BBSENAME short or it may be truncated
 	 * by evil mail servers.
@@ -381,8 +381,8 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
 	show_file(notes_fn, line+3, t_lines - (line+3), SHOWFILE_ALLOW_ALL);
     }
     move(line, 0); prints("  原先設定：%-30.30s (%s)", buf, info);
-    snprintf(prompt, sizeof(prompt), 
-	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：", 
+    snprintf(prompt, sizeof(prompt),
+	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：",
 	    desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);
@@ -484,10 +484,10 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
     outs(
 	"\n\n\t在使用 BBS 的過程中，您可能會在畫面上方此區看到一些動態的訊息告示，"
 	"\n\n\t其內容開放給各使用者與公益團體申請，所以會包含非商業的活動資訊/網宣，"
-	"\n\n\t還有來自各使用者的心情點播 (可能包含該使用者的政治性言論或各種留言)。" 
+	"\n\n\t還有來自各使用者的心情點播 (可能包含該使用者的政治性言論或各種留言)。"
 	"\n\n\n\n"
-	"\n\n\t" ANSI_COLOR(1) 
-	"此類由使用者自行發表的文字與圖像並不代表站方立場。" ANSI_RESET 
+	"\n\n\t" ANSI_COLOR(1)
+	"此類由使用者自行發表的文字與圖像並不代表站方立場。" ANSI_RESET
 	"\n\n\t由於心情點播部份較難定義出完整的審核標準，為了避免造成閱\讀者的不快或"
 	"\n\n\t誤會，在此要確認您是否希望顯示心情點播內容。"
 	"\n\n\t(若之後想改變此類設定，可至 (U)個人設定區->(U)個人化設定 調整)\n");
@@ -496,7 +496,7 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
     do {
 	// alert if not first rounod
 	if (ans != 1) { move(b_lines-2, 0); outs("請確實輸入 y 或 n。"); bell(); }
-	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? %s: ", 
+	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? %s: ",
 		force_yn ? "[y/n]" : defyes ? "[Y/n]" : "[y/N]");
 
 	// adjust answers
@@ -582,22 +582,22 @@ new_register(void)
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
-		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
+		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0)
 	{
             // XXX Magic number >= MAX_USERS: never expires.
             // Probably because of sysadmin perms, or due to violation.
 	    if (minute == 999999)
 		outs("此代號已經有人使用，請使用別的代號\n");
 	    else {
-		prints("此代號已經有人使用 還有 %d 天才過期\n", 
+		prints("此代號已經有人使用 還有 %d 天才過期\n",
 			minute / (60 * 24) + 1);
 	    }
-	} 
+	}
 	else if (reserved_user_id(passbuf))
 	    outs("此代號已由系統保留，請使用別的代號\n");
 #if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
 	// XXX if we check id == 0 here, replacing an expired id will be delayed.
-	else if (/*id == 0 && */ 
+	else if (/*id == 0 && */
 		 regcheck_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
 	    outs("此代號過於近似它人帳號，請改用別的代號。\n");
 #endif
@@ -618,7 +618,7 @@ new_register(void)
 	    exit(1);
 	}
 	move(20, 0); clrtoeol();
-	outs(ANSI_COLOR(1;33) 
+	outs(ANSI_COLOR(1;33)
     "為避免被偷看，您的密碼會顯示為 * ，直接輸入完後按 Enter 鍵即可。\n"
     "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
 	ANSI_RESET);
@@ -668,7 +668,7 @@ new_register(void)
 	if ((errmsg = isvalidname(newuser.realname)))
 	{
 	    memset(newuser.realname, 0, sizeof(newuser.realname));
-	    vmsg(errmsg); 
+	    vmsg(errmsg);
 	}
     }
 
@@ -760,7 +760,7 @@ check_regmail(char *email)
     if (c == NULL) return 0;
 
     // reject multiple '@'
-    if (c != strrchr(email, '@')) 
+    if (c != strrchr(email, '@'))
     {
 	vmsg("E-Mail 的格式不正確。");
 	return 0;
@@ -801,7 +801,7 @@ check_regmail(char *email)
 	    if (allow) break;
 	}
 	fclose(fp);
-	if (!allow) 
+	if (!allow)
 	{
 	    // show whitemail notice if it exists.
 	    if (dashf(FN_NOTIN_WHITELIST_NOTICE))
@@ -882,10 +882,10 @@ check_register(void)
     if (!HasUserPerm(PERM_BASIC))
 	return;
 
-    /* 
+    /*
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
      * 又送出一次註冊單。
-     */ 
+     */
     setuserfile(fn, FN_REJECT_NOTIFY);
     if (dashf(fn))
     {
@@ -912,7 +912,7 @@ check_register(void)
 	// show message.
 	more(fn, YEA);
 	move(b_lines-4, 0); clrtobot();
-	outs("\n" ANSI_COLOR(1;31) 
+	outs("\n" ANSI_COLOR(1;31)
 	     "前次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
 	     "請重新申請並照上面指示正確填寫註冊單。\n");
 
@@ -926,7 +926,7 @@ check_register(void)
 	while (!abort)
 	{
 	    switch(vans(u.userid[0] ?
-		    "請輸入 y 繼續或輸入 r 回信給站務: " : 
+		    "請輸入 y 繼續或輸入 r 回信給站務: " :
 		    "請輸入 y 繼續: "))
 	    {
 		case 'y':
@@ -955,7 +955,7 @@ check_register(void)
 	}
 
 	unlink(fn);
-    } 
+    }
 
     // 只有以下情形需要自動叫出註冊選單:
     // 1. 首次註冊 (numlogindays < 2)
@@ -970,7 +970,7 @@ check_register(void)
         clear();
         vs_hdr2(" 未完成註冊認證 ", " 您的帳號尚未完成認證");
         move(9, 0);
-        outs("  您目前尚未通過註冊認證程序，請細詳填寫" 
+        outs("  您目前尚未通過註冊認證程序，請細詳填寫"
              ANSI_COLOR(32) "註冊申請單" ANSI_RESET "，\n"
              "  通告站長以獲得進階使用權力。\n\n");
         outs("  如果您之前曾使用 email 等認證方式通過註冊認證但又看到此訊息，\n"
@@ -1050,7 +1050,7 @@ toregister(char *email)
 	    move(18, 0); clrtobot();
 	    outs("正在確認 email, 請稍候...\n");
 	    doupdate();
-	    
+
 	    email_count = emaildb_check_email(email, strlen(email));
 
 	    if (email_count < 0) {
@@ -1059,7 +1059,7 @@ toregister(char *email)
 		outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
 		pressanykey();
 		return;
-	    } else if (email_count >= EMAILDB_LIMIT) { 
+	    } else if (email_count >= EMAILDB_LIMIT) {
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
@@ -1068,7 +1068,7 @@ toregister(char *email)
 	    } else {
 #endif
 	    move(17, 0);
-	    outs(ANSI_COLOR(1;31) 
+	    outs(ANSI_COLOR(1;31)
 	    "\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
 	    "原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
 	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嗎? [y/N]",
@@ -1138,7 +1138,7 @@ u_register(void)
 	     "     代表您的認證由於資料不完整已被取消 (由於建立新看板的流程中\n"
 	    "      有驗證板主註冊資料的程序，若您最近有申請開新看板中則屬此項)\n\n"
 	     "   * 如果您已收到註冊碼卻看到這個畫面，代表您在使用 Email 註冊後\n"
-	     "     " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
+	     "     " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。"
 		ANSI_RESET "\n"
 	     "     進入人工審核程序後 Email 註冊碼自動失效，要等到審核完成\n"
 	     "      (會多花很多時間，數天到數週是正常的) ，所以請耐心等候。\n\n");
@@ -1166,14 +1166,14 @@ u_register(void)
 
     if (cuser.email[0] && /* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
-	strcmp(cuser.email, "X") != 0) 
+	strcmp(cuser.email, "X") != 0)
     {
 	vs_hdr("EMail認證");
 	move(2, 0);
 
 	prints("請輸入您的認證碼。(由 %s 開頭無空白的十三碼)\n"
                "若尚未收到信件或不想現在輸入可直接按 ENTER 離開，\n"
-	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n", 
+	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n",
                REGCODE_INITIAL);
 	inregcode[0] = 0;
 
@@ -1243,7 +1243,7 @@ u_register(void)
                                  regcode));
 		return FULLUPDATE;
 	    }
-	    else 
+	    else
 	    {
 		vmsg("認證碼已過期，請重新註冊。");
 		toregister(email);
@@ -1315,7 +1315,7 @@ u_register(void)
 	move(2, 0); prints("  是否現在住在台灣: %s\n", isForeign ? "N (否)" : "Y (是)");
 #endif
 	while (1) {
-	    getfield(4, 
+	    getfield(4,
 #ifdef FOREIGN_REG
                      "請用本名",
 #else
@@ -1353,7 +1353,7 @@ u_register(void)
 	}
 
 	while (1) {
-	    getfield(7, "不加-(), 包括長途區號", 
+	    getfield(7, "不加-(), 包括長途區號",
 		    REGNOTES_ROOT "phone", "連絡電話", phone, 11);
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
@@ -1499,7 +1499,7 @@ static const char *reasonstr[REJECT_REASONS] = {
 #define REASON_EXPANDABBREV(x)	 reasonstr[(x) - REASON_FIRSTABBREV]
 
 void
-regform_log2board(const RegformEntry *pre, char accepted, 
+regform_log2board(const RegformEntry *pre, char accepted,
 	const char *reason, int priority)
 {
 #ifdef BN_ID_RECORD
@@ -1509,9 +1509,9 @@ regform_log2board(const RegformEntry *pre, char accepted,
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
-    snprintf(title, sizeof(title), 
-	    "[審核] %s: %s (%s: %s)", 
-	    accepted ? "○通過":"╳退回", pre->u.userid, 
+    snprintf(title, sizeof(title),
+	    "[審核] %s: %s (%s: %s)",
+	    accepted ? "○通過":"╳退回", pre->u.userid,
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);
 
@@ -1534,17 +1534,17 @@ regform_log2board(const RegformEntry *pre, char accepted,
 }
 
 void
-regform_log2file(const RegformEntry *pre, char accepted, 
+regform_log2file(const RegformEntry *pre, char accepted,
 	const char *reason, int priority)
 {
 #ifdef FN_ID_RECORD
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
-    snprintf(msg, sizeof(msg), 
-	    "%s\n%s: %s (%s: %s)\n", 
+    snprintf(msg, sizeof(msg),
+	    "%s\n%s: %s (%s: %s)\n",
             Cdate(&now),
-	    accepted ? "○通過":"╳退回", pre->u.userid, 
+	    accepted ? "○通過":"╳退回", pre->u.userid,
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);
 
@@ -1558,7 +1558,7 @@ regform_log2file(const RegformEntry *pre, char accepted,
 #endif  // FN_ID_RECORD
 }
 
-void 
+void
 regform_accept(const char *userid, const char *justify)
 {
     char buf[PATHLEN];
@@ -1572,7 +1572,7 @@ regform_accept(const char *userid, const char *justify)
     muser.userlevel |= (PERM_LOGINOK | PERM_POST);
     strlcpy(muser.justify, justify, sizeof(muser.justify));
     // manual accept sets email to 'x'
-    strlcpy(muser.email, "x", sizeof(muser.email)); 
+    strlcpy(muser.email, "x", sizeof(muser.email));
 
     // handle files
     sethomefile(buf, muser.userid, FN_REJECT_NOTIFY);
@@ -1600,7 +1600,7 @@ regform_accept(const char *userid, const char *justify)
 	    "[系統通知]", 1, 0);
 }
 
-void 
+void
 regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 {
     char buf[PATHLEN];
@@ -1643,7 +1643,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // prompt user for how to contact if they have problem
     // (deprecated because we allow direct reply now)
     // fprintf(fp, ANSI_COLOR(1;31) "如有任何問題或需要與站務人員聯絡請至"
-    // 	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n"); 
+    // 	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n");
 
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
@@ -1660,7 +1660,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // XXX how to handle the notification file better?
     // mail_log2id: do not use move.
     // mail_muser(muser, "[註冊失敗]", buf);
-    
+
     // use regform2! no need to set 'newmail'.
     mail_log2id(muser.userid, "[註冊失敗記錄]", buf, "[註冊系統]", 0, 0);
 }
@@ -1682,14 +1682,14 @@ regform_concat_reasons(const char *reason, char *result, int maxlen)
     {
 	int i = 0;
 	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
-            snprintf(result + len, maxlen - len, 
+            snprintf(result + len, maxlen - len,
                      ANSI_COLOR(1;33)
-                     "[退回原因] %s" ANSI_RESET "\n", 
+                     "[退回原因] %s" ANSI_RESET "\n",
                      REASON_EXPANDABBREV(reason[i]));
             len = strlen(result);
 	}
     } else {
-        snprintf(result + len, maxlen - len, 
+        snprintf(result + len, maxlen - len,
                  ANSI_COLOR(1;33) "[退回原因] %s" ANSI_RESET "\n", reason);
     }
 }
@@ -1708,7 +1708,7 @@ static void
 resolve_reason(char *s, int y, int force)
 {
     // should start with REASON_FIRSTABBREV
-    const char *reason_prompt = 
+    const char *reason_prompt =
 	" (0)真實姓名 (1)詳填系級 (2)完整住址"
 	" (3)詳填電話 (4)確實填寫 (5)中文填寫";
 
@@ -1738,7 +1738,7 @@ resolve_reason(char *s, int y, int force)
 		strip_blank(s, s);
 		strlcat(s, " [多重原因]", REASON_LEN);
 	    }
-	} 
+	}
 
 	if (!force && !*s)
 	    return;
@@ -1767,7 +1767,7 @@ regq_append(const char *userid)
     return 1;
 }
 
-int 
+int
 regq_find(const char *userid)
 {
     return file_find_record(FN_REQLIST, userid);
@@ -1780,7 +1780,7 @@ regq_delete(const char *userid)
 }
 
 // user home regform operation
-int 
+int
 regfrm_exist(const char *userid)
 {
     char fn[PATHLEN];
@@ -1847,7 +1847,7 @@ regfrm_load(const char *userid, RegformEntry *pre)
     return 1;
 }
 
-int 
+int
 regfrm_save(const char *userid, const RegformEntry *pre)
 {
     FILE *fp = NULL;
@@ -1863,7 +1863,7 @@ regfrm_save(const char *userid, const RegformEntry *pre)
     return ret;
 }
 
-int 
+int
 regfrm_trylock(const char *userid)
 {
     int fd = 0;
@@ -1878,7 +1878,7 @@ regfrm_trylock(const char *userid)
     return 0;
 }
 
-int 
+int
 regfrm_unlock(int lockfd)
 {
     int fd = lockfd;
@@ -1916,7 +1916,7 @@ regfrm_accept(RegformEntry *pre, int priority)
     append_regform(pre, fnlog, "");
 
     // log to global history
-    snprintf(buf, sizeof(buf), "Approved: %s -> %s\n", 
+    snprintf(buf, sizeof(buf), "Approved: %s -> %s\n",
 	    cuser.userid, pre->u.userid);
     append_regform(pre, FN_REGISTER_LOG, buf);
 
@@ -1948,7 +1948,7 @@ regfrm_reject(RegformEntry *pre, const char *reason, int priority)
     regform_reject(pre->u.userid, reason, pre);
 
     // log to global history
-    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\n", 
+    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\n",
 	    cuser.userid, pre->u.userid, reason);
     append_regform(pre, FN_REGISTER_LOG, buf);
 
@@ -1977,7 +1977,7 @@ regq_init_pull()
     return fp;
 }
 
-int 
+int
 regq_pull(FILE *fp, char *uid)
 {
     char buf[STRLEN];
@@ -2004,7 +2004,7 @@ regq_end_pull(FILE *fp)
 // UI part
 int
 ui_display_regform_single(
-	const RegformEntry *pre, 
+	const RegformEntry *pre,
 	int tid, char *reason)
 {
     int c;
@@ -2015,15 +2015,15 @@ ui_display_regform_single(
 	move(1, 0);
 	user_display(xuser, 1);
 	move(14, 0);
-	prints(ANSI_COLOR(1;32) 
-		"--------------- 這是第 %2d 份註冊單 -----------------------" 
+	prints(ANSI_COLOR(1;32)
+		"--------------- 這是第 %2d 份註冊單 -----------------------"
 		ANSI_RESET "\n", tid);
 	prints("  %-12s: %s %s\n",	"帳號", pre->u.userid,
-		(xuser->userlevel & PERM_NOREGCODE) ? 
-		ANSI_COLOR(1;31) "  [T:禁止使用認證碼註冊]" ANSI_RESET: 
+		(xuser->userlevel & PERM_NOREGCODE) ?
+		ANSI_COLOR(1;31) "  [T:禁止使用認證碼註冊]" ANSI_RESET:
 		"");
 	prints("0.%-12s: %s%s\n",	"真實姓名", pre->u.realname,
-		xuser->uflag & UF_FOREIGN ? " (外籍)" : 
+		xuser->uflag & UF_FOREIGN ? " (外籍)" :
 		"");
 	prints("1.%-12s: %s\n",	"服務單位", pre->u.career);
 	prints("2.%-12s: %s\n",	"目前住址", pre->u.address);
@@ -2042,7 +2042,7 @@ ui_display_regform_single(
 	{
 	    int n = 0;
 	    move(3, 0);
-	    outs("\n" ANSI_COLOR(1;31) 
+	    outs("\n" ANSI_COLOR(1;31)
 		    "請提出退回申請表原因，按 <Enter> 取消:\n" ANSI_RESET);
 	    for (n = 0; n < REJECT_REASONS; n++)
 		prints("%d) %s\n", n, reasonstr[n]);
@@ -2054,7 +2054,7 @@ ui_display_regform_single(
 		continue;
 	    // interprete reason
 	    return 'n';
-	} 
+	}
 	else if (REASON_IN_ABBREV(c))
 	{
 	    // quick set
@@ -2132,7 +2132,7 @@ regform2_validate_single(const char *xuid)
 		assert(0);
 		break;
 	}
-	
+
 	// final processing
 	regfrm_unlock(lfd);
 
@@ -2220,23 +2220,23 @@ regform2_validate_page(int dryrun)
 
 	    // display regform
 	    move(i*2, 0);
-	    prints("  %2d%s %s%-12s " ANSI_RESET, 
-		    i+1, 
-		    ( (forms[i].u.userlevel & PERM_LOGINOK) ? 
-		      ANSI_COLOR(1;33) "Y" : 
+	    prints("  %2d%s %s%-12s " ANSI_RESET,
+		    i+1,
+		    ( (forms[i].u.userlevel & PERM_LOGINOK) ?
+		      ANSI_COLOR(1;33) "Y" :
 #ifdef REGFORM_DISABLE_ONLINE_USER
-			  forms[i].online ? "s" : 
+			  forms[i].online ? "s" :
 #endif
 			  "."),
 		    forms[i].online ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
 		    forms[i].u.userid);
 
-	    prints( ANSI_COLOR(1;31) "%19s " 
-		    ANSI_COLOR(1;32) "%-40s" ANSI_RESET"\n", 
+	    prints( ANSI_COLOR(1;31) "%19s "
+		    ANSI_COLOR(1;32) "%-40s" ANSI_RESET"\n",
 		    forms[i].u.realname, forms[i].u.career);
 
-	    move(i*2+1, 0); 
-	    prints("    %s ", (forms[i].u.userlevel & PERM_NOREGCODE) ? 
+	    move(i*2+1, 0);
+	    prints("    %s ", (forms[i].u.userlevel & PERM_NOREGCODE) ?
                               ANSI_COLOR(1;31) "T" ANSI_RESET : " ");
             // try to print lasthost if possible
             int delta = 70 - 2 - strlen(forms[i].u.address) -
@@ -2326,7 +2326,7 @@ regform2_validate_page(int dryrun)
 			    break;
 
 			// have more blanks
-			ch = vansf("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", 
+			ch = vansf("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ",
 				blanks);
 		    }
 
@@ -2411,7 +2411,7 @@ regform2_validate_page(int dryrun)
 			break;
 
 		    move(yMsg, 0);
-		    prints("退回 %s 註冊單原因:\n %s\n", 
+		    prints("退回 %s 註冊單原因:\n %s\n",
 			    forms[ci].u.userid, rejects[ci]);
 
 		    // do reject
@@ -2439,7 +2439,7 @@ regform2_validate_page(int dryrun)
 	assert(ch == ' ' || ch == 'q');
 
 	// save/commit if required.
-	if (dryrun) 
+	if (dryrun)
 	{
 	    // prmopt for debug
 	    clear();
@@ -2455,13 +2455,13 @@ regform2_validate_page(int dryrun)
 			    "%s %s", cuser.userid, Cdate(&now));
 
 		prints("%2d. %-12s - %c %s\n", i+1, forms[i].u.userid, ans[i],
-			ans[i] == 'n' ? rejects[i] : 
+			ans[i] == 'n' ? rejects[i] :
 			ans[i] == 'y' ? justify : "");
 	    }
 	    if (ch != 'q')
 		pressanykey();
-	} 
-	else 
+	}
+	else
 	{
 	    // real functionality
 	    for (i = 0; i < cforms; i++)
@@ -2510,7 +2510,7 @@ regform2_validate_page(int dryrun)
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// Regform UI 
+// Regform UI
 // 處理 Register Form
 /////////////////////////////////////////////////////////////////////////////
 
@@ -2547,8 +2547,8 @@ m_register(void)
 
     fclose(fn);
 
-    getdata(b_lines - 1, 0, 
-	    "開始審核嗎 (Y:單筆模式/N:不審/E:整頁模式/U:指定ID)？[N] ", 
+    getdata(b_lines - 1, 0,
+	    "開始審核嗎 (Y:單筆模式/N:不審/E:整頁模式/U:指定ID)？[N] ",
 	    ans, sizeof(ans), LCECHO);
 
     if (ans[0] == 'y')

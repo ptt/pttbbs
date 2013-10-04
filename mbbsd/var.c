@@ -120,7 +120,7 @@ const char * const str_permboard[] = {
 };
 
 /* modes.h */
-const char * const str_pager_modes[PAGER_MODES] = 
+const char * const str_pager_modes[PAGER_MODES] =
 {
     "關閉",	// PAGER_OFF
     "打開",	// PAGER_ON
@@ -387,7 +387,7 @@ int             wmofo = NOTREPLYING;
  * watermode = -1 沒在回水球
  *           = 0   在回上一顆水球  (Ctrl-R)
  *           > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
- * 
+ *
  * PAGER_UI_IS(PAGER_UI_OFO)  by in2
  * wmofo     = NOTREPLYING     沒在回水球
  *           = REPLYING        正在回水球

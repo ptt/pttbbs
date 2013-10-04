@@ -63,7 +63,7 @@ enum TIME_CAPSULE_ACTION_TYPE {
 
 static int
 timecap_get_max_revision(const char *capsule_index) {
-    off_t sz = dashs(capsule_index);  
+    off_t sz = dashs(capsule_index);
     // TODO we can change implementation to read int instead of dashs
     return sz > 0 ? (int)sz : 0;
 }
@@ -287,7 +287,7 @@ timecapsule_add_revision(const char *filename) {
     return timecap_add_object(filename, TIME_CAPSULE_ACTION_REVISION, NULL, 0);
 }
 
-int 
+int
 timecapsule_get_max_revision_number(const char *filename) {
     return timecap_query_object_max_number(
             filename, TIME_CAPSULE_ACTION_REVISION, 0);
@@ -299,7 +299,7 @@ timecapsule_get_max_archive_number(const char *filename, size_t szrefblob) {
             filename, TIME_CAPSULE_ACTION_ARCHIVE, szrefblob);
 }
 
-int 
+int
 timecapsule_archive(const char *filename, const void *ref, size_t szref) {
     return timecap_add_object(
             filename, TIME_CAPSULE_ACTION_ARCHIVE, ref, szref);

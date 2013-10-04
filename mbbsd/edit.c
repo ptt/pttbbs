@@ -13,11 +13,11 @@
  * 的時候, 將原本的那行記憶體縮小, 再將新移到的那行重新加大, 以達成最小的
  * 記憶體用量.
  * 以上說的這個動作在 adjustline() 中完成, adjustline()另外包括修正數個
- * global pointer, 以避免 dangling pointer . 
+ * global pointer, 以避免 dangling pointer .
  * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
  * 記憶體大小. 以方便測試結果.
  *
- * XXX 由於各種操作都不會 maintain 區塊標記模式的 pointer/state, 
+ * XXX 由於各種操作都不會 maintain 區塊標記模式的 pointer/state,
  * 因此對於會造成增刪 line 的功能, 都得自動取消標記模式(call block_cancel()).
  *
  * 20071230 piaip
@@ -29,7 +29,7 @@
  * 另外互動迷宮的大小為
  * [第 1408/1408 頁 (100%)  目前顯示: 第 30940~30962 行]
  * 是以定義:
- * 32M 為 size limit 
+ * 32M 為 size limit
  * 1M 為 line limit
  * 又，忽然發現之前 totaln 之類都是 short... 所以 65536 就夠了?
  * 後註: 似乎是用 announce 的 append 作出來的，有看到 > --- <- mark。
@@ -54,9 +54,9 @@
 #define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
 
 #if 0
-#define register 
+#define register
 #define DEBUG
-#define inline 
+#define inline
 #endif
 
 /**
@@ -87,7 +87,7 @@ enum {
  *
  * 文章的內容 (以下稱 content) 以「行」為單位，主要以 firstline, lastline,
  * totaln 來記錄。
- * 
+ *
  * User 在畫面中看到的畫面，置於一個「 window 」中，這個 window 會在
  * content 上移動，window 裡面的範圍即為要 show 出來的範圍。它用了不少
  * 欄位來記錄，包括 currline, top_of_win, currln, currpnt, curr_window_line,
@@ -255,7 +255,7 @@ static char mbcs_mode		=1;
 #define IS_BIG5_LOE(x) (0x80 <= (x) && (x) <= 0xfe)
 #define IS_BIG5_LO(x) (IS_BIG5_LOS(x) || IS_BIG5_LOE(x))
 #define IS_BIG5(hi,lo) (IS_BIG5_HI(hi) && IS_BIG5_LO(lo))
- 
+
 int mchar_len(unsigned char *str)
 {
   return ((str[0] != '\0' && str[1] != '\0' && IS_BIG5(str[0], str[1])) ?
@@ -273,7 +273,7 @@ int mchar_len(unsigned char *str)
  */
 static int
 fix_cursor(char *str, int pos, int dir)
-{ 
+{
     int newpos = 0, w = 0;
     assert(dir == FC_RIGHT || dir == FC_LEFT);
     assert(pos >= 0);
@@ -426,7 +426,7 @@ show_phone_mode_panel(void)
 	prints(ANSI_COLOR(1;46) "【%s輸入】 ", BIG_mode[curr_buf->last_phone_mode - 1]);
 	len = strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2;
 	for (i = 0; i < len; i++)
-	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", 
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s",
 		    i + 'A', BIG5[curr_buf->last_phone_mode - 1] + i * 2);
 	for (i = 0; i < 16 - len; i++)
 	    outs("   ");
@@ -434,10 +434,10 @@ show_phone_mode_panel(void)
     }
     else {
 	prints(ANSI_COLOR(1;46) "【表格繪製】 /=%s *=%s形   ",
-		table_mode[(curr_buf->last_phone_mode - 20) / 4], 
+		table_mode[(curr_buf->last_phone_mode - 20) / 4],
 		table_mode[(curr_buf->last_phone_mode - 20) % 4 + 2]);
 	for (i = 0;i < 11;i++)
-	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", i ? i + '/' : '.', 
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", i ? i + '/' : '.',
 		    table[curr_buf->last_phone_mode - 20] + i * 2);
 	outs(ANSI_COLOR(37) "          Z內碼 " ANSI_RESET);
     }
@@ -454,7 +454,7 @@ edit_msg(void)
 
     if (curr_buf->ansimode)		/* Thor: 作 ansi 編輯 */
 	n = n2ansi(n, curr_buf->currline);
- 
+
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
 
@@ -479,7 +479,7 @@ get_edit_kind_prompt(int flags)
 	has_new_post   = (flags & EDITFLAG_KIND_NEWPOST);
 
     if (has_reply_post && has_reply_mail)
-	return ANSI_COLOR(0;1;37;45) 
+	return ANSI_COLOR(0;1;37;45)
 	    "注意：您即將 回信給原作者 並同時 回覆文章至看板上" ANSI_RESET;
     if (has_reply_mail)
 	return ANSI_COLOR(0;1;31) "注意：您即將 寄出 私人信件" ANSI_RESET;
@@ -496,7 +496,7 @@ get_edit_warn_prompt(int flags) {
 
     // FIXME not always on boards, maybe
     if (no_self_sel)
-        return ANSI_COLOR(0;1;31) 
+        return ANSI_COLOR(0;1;31)
             "注意: 此看板禁止自刪文章，發出後將只有板主以上才能刪文!!!" ANSI_RESET;
 
     return NULL;
@@ -719,7 +719,7 @@ edit_window_adjust(void)
 	curr_buf->curr_window_line = 0;
 	curr_buf->top_of_win = curr_buf->currline;
     }
-    
+
     if (curr_buf->curr_window_line >= visible_window_height()) {
 	offset = curr_buf->curr_window_line - visible_window_height() + 1;
 	curr_buf->curr_window_line = visible_window_height() - 1;
@@ -1059,7 +1059,7 @@ insert_char(int ch)
  * insert_char twice.
  */
 static void
-insert_dchar(const char *dchar) 
+insert_dchar(const char *dchar)
 {
     insert_char(*dchar);
     insert_char(*(dchar+1));
@@ -1129,7 +1129,7 @@ undelete_line(void)
     if (curr_buf->firstline == curr_buf->currline)
 	curr_buf->firstline = p;
 
-    // change currline 
+    // change currline
     curr_buf->currline = p;
     curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
     curr_buf->currpnt = 0;
@@ -1434,8 +1434,8 @@ quote_strip_ansi_inline(unsigned char *is)
 		/* ptt prints, keep it as normal */
 		*os++ = '*';
 		*os++ = '*';
-	    } 
-	    else 
+	    }
+	    else
 	    {
 		/* normal ansi, strip them out. */
 		while (*is && ANSI_IN_ESCAPE(*is))
@@ -1564,7 +1564,7 @@ check_quote(void)
     if ((included_line >> 2) > post_line) {
 	move(4, 0);
 	outs("本篇文章的引言比例超過 80%，請您做些微的修正：\n\n"
-	     ANSI_COLOR(1;33) "1) 增加一些文章 或  2) 刪除不必要之引言" 
+	     ANSI_COLOR(1;33) "1) 增加一些文章 或  2) 刪除不必要之引言"
              ANSI_RESET "\n");
 	{
 	    char            ans[4];
@@ -1597,7 +1597,7 @@ read_file(const char *fpath, int splitSig)
 	    close(fd);
 	    return 0;
 	}
-	
+
 	return -1;
     }
     load_file(fp, offSig);
@@ -1647,7 +1647,7 @@ write_header(FILE * fp,  const char *mytitle)
 #endif // PLAY_ANGEL
 
             do {
-                getdata_str(3, 0, defanony ? 
+                getdata_str(3, 0, defanony ?
                     "請輸入你想用的ID，或直接按[Enter]暱名，或按[r][R]用真名：" :
                     "請輸入你想用的ID，也可直接按[Enter]或[r]或[R]使用原ID：",
                     real_name, sizeof(real_name), DOECHO, default_name);
@@ -1747,7 +1747,7 @@ loadsitesig(const char *fname)
 	}
 	munmap(start, sz);
     }
-    
+
     close(fd);
     return ret;
 }
@@ -1884,7 +1884,7 @@ static void upload_file(void);
 // 		KEEP_EDITING	if keep editing
 // 		0		if write ok & exit
 static int
-write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], 
+write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN],
 	int upload, int chtitle, const char *kind_prompt, const char *warn_prompt,
         int *pentropy)
 {
@@ -2044,7 +2044,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 #ifdef USE_POSTRECORD
     // what if currbid == 0? add currstat checking.
     if (currstat == POSTING &&
-	postrecord.times > MAX_CROSSNUM-1 && 
+	postrecord.times > MAX_CROSSNUM-1 &&
 	!is_hidden_board_friend(currbid, currutmp->uid))
 	anticrosspost();
 
@@ -2078,7 +2078,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	{
 	    fprintf(fp,
 		    "※ 編輯: %-15s 來自: %-20s (%s)\n",
-		    cuser.userid, 
+		    cuser.userid,
 		    FROMHOST,
 		    Cdate_mdHM(&now));
 	}
@@ -2254,7 +2254,7 @@ block_prompt(void)
 {
     char fp_tmpbuf[80];
     char tmpfname[] = "buf.0";
-    char mode[2] = "w";          
+    char mode[2] = "w";
     char choice[2];
 
     move(b_lines - 1, 0);
@@ -2326,7 +2326,7 @@ enum {
 
 static const char * const luaKeywords[] = {
     "and",   "break", "do",  "else", "elseif",
-    "end",   "for",   "if",  "in",   "not",  "or", 
+    "end",   "for",   "if",  "in",   "not",  "or",
     "repeat","return","then","until","while",
     NULL
 };
@@ -2344,7 +2344,7 @@ static const char * const luaFunctions[] = {
 static const char * const luaMath[] = {
     "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh", "deg",
     "exp", "floor", "fmod", "frexp", "ldexp", "log", "log10", "max", "min",
-    "modf", "pi", "pow", "rad", "random", "randomseed", "sin", "sinh", 
+    "modf", "pi", "pow", "rad", "random", "randomseed", "sin", "sinh",
     "sqrt", "tan", "tanh",
     NULL
 };
@@ -2355,22 +2355,22 @@ static const char * const luaTable[] = {
 };
 
 static const char * const luaString[] = {
-    "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", 
+    "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len",
     "lower", "match", "rep", "reverse", "sub", "upper", NULL
 };
 
 static const char * const luaBbs[] = {
     "ANSI_COLOR", "ANSI_RESET", "ESC", "addstr", "clear", "clock",
     "clrtobot", "clrtoeol", "color", "ctime", "getch","getdata",
-    "getmaxyx", "getstr", "getyx", "interface", "kball", "kbhit", "kbreset", 
+    "getmaxyx", "getstr", "getyx", "interface", "kball", "kbhit", "kbreset",
     "move", "moverel", "now", "outs", "pause", "print", "rect", "refresh",
-    "setattr", "sitename", "sleep", "strip_ansi", "time", "title", 
+    "setattr", "sitename", "sleep", "strip_ansi", "time", "title",
     "userid", "usernick",
     NULL
 };
 
 static const char * const luaToc[] = {
-    "author", "date", "interface", "latestref", 
+    "author", "date", "interface", "latestref",
     "notes", "title", "version",
     NULL
 };
@@ -2403,7 +2403,7 @@ int synLuaKeyword(const char *text, int n, char *wlen)
 	// normal identifier
 	while (n-- > 0 && (isalnum(*text) || *text == '_'))
 	{
-	    text++; 
+	    text++;
 	    (*wlen) ++;
 	}
 	return 0;
@@ -2413,7 +2413,7 @@ int synLuaKeyword(const char *text, int n, char *wlen)
 	// digits
 	while (n-- > 0 && (isdigit(*text) || *text == '.' || *text == 'x'))
 	{
-	    text++; 
+	    text++;
 	    (*wlen) ++;
 	}
 	return 5;
@@ -2425,7 +2425,7 @@ int synLuaKeyword(const char *text, int n, char *wlen)
 	// length of identifier
 	while (n-- > 0 && (isalnum(*text) || *text == '_'))
 	{
-	    text++; 
+	    text++;
 	    (*wlen) ++;
 	}
 	return -2;
@@ -2497,7 +2497,7 @@ int synLuaKeyword(const char *text, int n, char *wlen)
 	// calcualte wlen
 	while (n-- > 0 && (isalnum(*text) || *text == '_'))
 	{
-	    text++; 
+	    text++;
 	    (*wlen) ++;
 	}
 	return 0;
@@ -2550,9 +2550,9 @@ void syn_pmore_render(char *os, int len, char *buf)
 
 	    case '0': case '1': case '2': case '3':
 	    case '4': case '5': case '6': case '7':
-	    case '8': case '9': case '.': 
+	    case '8': case '9': case '.':
 		*buf++ = attr;
-		while (len > 0 && isascii(*s) && 
+		while (len > 0 && isascii(*s) &&
 			(isalnum(*s) || *s == '.') )
 		{
 		    *buf++ = attr;
@@ -2572,7 +2572,7 @@ void syn_pmore_render(char *os, int len, char *buf)
 
 	    case ':':
 		*buf++ = attr;
-		while (len > 0 && isascii(*s) && 
+		while (len > 0 && isascii(*s) &&
 			(isalnum(*s) || *s == ':') )
 		{
 		    *buf++ = attr;
@@ -2586,8 +2586,8 @@ void syn_pmore_render(char *os, int len, char *buf)
 	    case 'G':
 		*buf++ = attr++;
 		prefix = 1;
-		while (len > 0 && 
-			( (isascii(*s) && isalnum(*s)) || 
+		while (len > 0 &&
+			( (isascii(*s) && isalnum(*s)) ||
 			  strchr("+-,:lpf", *s)) )
 		{
 		    if (prefix)
@@ -2597,7 +2597,7 @@ void syn_pmore_render(char *os, int len, char *buf)
 			prefix = 0;
 		    }
 		    *buf++ = attr;
-		    if (*s == ',') 
+		    if (*s == ',')
 		    {
 			attr++;
 			prefix = 1;
@@ -2605,7 +2605,7 @@ void syn_pmore_render(char *os, int len, char *buf)
 		    s++; len--;
 		}
 		attr++;
-		return; 
+		return;
 
 	    case 'K':
 		*buf++ = attr;
@@ -2657,14 +2657,14 @@ edit_outs_attr_n(const char *text, int n, int attr)
 #endif
 
 #ifdef COLORED_SELECTION
-    if ((attr & EOATTR_SELECTED) && 
+    if ((attr & EOATTR_SELECTED) &&
 	(attr & ~EOATTR_SELECTED))
     {
 	reset = ANSI_COLOR(0;7;36);
 	doReset = 1;
 	outs(reset);
     }
-    else 
+    else
 #endif // if not defined, color by  priority - selection first
     if (attr & EOATTR_SELECTED)
     {
@@ -2720,7 +2720,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		}
 	    }
 
-	} 
+	}
 	else if(ch == ESC_CHR)
 	{
 	    inAnsi = 1;
@@ -2795,7 +2795,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		} else if (ch == '-' && n > 0 && *(text) == '-') {
 		    fComment = 1;
 		    doReset = 1;
-		    outs(ANSI_COLOR(0;1;34)); 
+		    outs(ANSI_COLOR(0;1;34));
 		} else if (ch == '[' && n > 0 && *(text) == '[') {
 		    fSquareQuote = 1;
 		    doReset = 1;
@@ -2865,7 +2865,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	    }
 #endif // ENABLE_PMORE_ASCII_MOVIE_SYNTAX
 	}
-    } 
+    }
 
     // this must be ANSI_RESET, not "reset".
     if(inAnsi || doReset)
@@ -2902,7 +2902,7 @@ edit_ansi_outs(const char *str, int attr)
     return edit_ansi_outs_n(str, strlen(str), attr);
 }
 
-static int 
+static int
 detect_attr(const char *ps, size_t len)
 {
     int attr = 0;
@@ -2950,13 +2950,13 @@ display_textline_internal(textline_t *p, int i)
 
     tmp = curr_buf->currln - curr_buf->curr_window_line + i;
 
-    // parse attribute of line 
-    
+    // parse attribute of line
+
     // selected attribute?
-    if (has_block_selection() && 
+    if (has_block_selection() &&
 	    ( (curr_buf->blockln <= curr_buf->currln &&
 	       curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
-	      (curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) 
+	      (curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) )
     {
 	// outs(ANSI_REVERSE); // remove me when EOATTR is ready...
 	attr |= EOATTR_SELECTED;
@@ -2991,7 +2991,7 @@ display_textline_internal(textline_t *p, int i)
 
     } else
 #endif
-    (*output)((curr_buf->edit_margin < p->len) ? 
+    (*output)((curr_buf->edit_margin < p->len) ?
 	    &p->data[curr_buf->edit_margin] : "", attr);
 
     if (attr)
@@ -3163,7 +3163,7 @@ match_paren(void)
 	    if (p)
 		i = p->len - 1;
 	    lino--;
-	} 
+	}
 	while (p && i >= p->len) {
 	    p = p->next;
 	    i = 0;
@@ -3344,7 +3344,7 @@ insert_ansi_code(void)
 
 	    strcpy(color, ESC_STR "[");
 	    if (isdigit((int)*apos)) {
-		sprintf(color,"%s%c", color, *(apos++)); 
+		sprintf(color,"%s%c", color, *(apos++));
 		if (*apos)
 		    strcat(color, ";");
 	    }
@@ -3385,7 +3385,7 @@ phone_mode_switch(void)
 /**
  * return coresponding phone char of given key c
  */
-static const char* 
+static const char*
 phone_char(char c)
 {
     if (curr_buf->last_phone_mode > 0 && curr_buf->last_phone_mode < 20) {
@@ -3509,7 +3509,7 @@ upload_file(void)
 	{
 	    move(10, 0); clrtobot();
 	    prints("\n\n資料接收中... %u 位元組。\n", (unsigned int)szdata);
-	    outs(ANSI_COLOR(1) 
+	    outs(ANSI_COLOR(1)
 		    "◆全部完成後按下 End 或 ^X/^Q/^C 即可回到編輯畫面。"
 		    ANSI_RESET "\n");
 	    promptmsg = 0;
@@ -3543,7 +3543,7 @@ upload_file(void)
 	    promptmsg = (szdata && szdata % 1024 == 0);
 
 	// all other keys are ignored.
-    } while (c != KEY_END && c != Ctrl('X') && 
+    } while (c != KEY_END && c != Ctrl('X') &&
 	     c != Ctrl('C') && c != Ctrl('Q') &&
 	     curr_buf->totaln <= EDIT_LINE_LIMIT &&
 	     szdata <= EDIT_SIZE_LIMIT);
@@ -3601,7 +3601,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	quoted = 1;
     }
 
-    if(	curr_buf->oldcurrline != curr_buf->firstline || 
+    if(	curr_buf->oldcurrline != curr_buf->firstline ||
 	curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
 	curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
@@ -3609,7 +3609,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
     }
 
     /* No matter you quote or not, just start the cursor from (0,0) */
-    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 
+    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line =
     curr_buf->edit_margin = curr_buf->last_margin = 0;
 
     /* if quote, move to end of file. */
@@ -3648,7 +3648,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	if (interval && interval == tin)
           {  // Ptt : +- 1 秒也算
 	    count++;
-            if(count>60) 
+            if(count>60)
             {
              money = 0;
              count = 0;
@@ -3656,7 +3656,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
              log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              ANSI_COLOR(1;33;46) "%s " ANSI_COLOR(37;45) " 用機器人發表文章 " ANSI_COLOR(37) " %s" ANSI_RESET "\n",
              cuser.userid, Cdate(&now));
-             post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
+             post_violatelaw(cuser.userid, BBSMNAME "系統警察",
                  "用機器人發表文章", "強制離站");
              abort_bbs(0);
 */
@@ -3684,7 +3684,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	if (ch < 0x100 && isprint2(ch)) {
 	    const char *pstr;
             if(curr_buf->phone_mode && (pstr=phone_char(ch)))
-	   	insert_dchar(pstr); 
+	   	insert_dchar(pstr);
 	    else
 		insert_char(ch);
 	    curr_buf->lastindent = -1;
@@ -3727,7 +3727,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
 		block_cancel();
-		tmp = write_file(fpath, saveheader, islocal, title, 
+		tmp = write_file(fpath, saveheader, islocal, title,
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
 			get_edit_kind_prompt(flags),
@@ -3883,8 +3883,8 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		}
 
 #ifdef MAX_EDIT_LINE
-		if(curr_buf->totaln == 
-			((flags & EDITFLAG_ALLOWLARGE) ? 
+		if(curr_buf->totaln ==
+			((flags & EDITFLAG_ALLOWLARGE) ?
 			 MAX_EDIT_LINE_LARGE : MAX_EDIT_LINE))
 		{
 		    vmsg("已到達最大行數限制。");
@@ -3930,7 +3930,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 
 		// XXX This breaks emacs compatibility. Really bad,
 		// especially when some terminals just cannot send
-		// vt100 arrow keys. However since this key binding 
+		// vt100 arrow keys. However since this key binding
 		// has been changed for a long long time...
 		// We may need to change this back in the future, but
 		// not sure when.
@@ -4153,7 +4153,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		curr_buf->currln = 0;
 
 	    edit_window_adjust();
-#ifdef DBCSAWARE	    
+#ifdef DBCSAWARE
 	    if(mbcs_mode)
 	      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
 #endif

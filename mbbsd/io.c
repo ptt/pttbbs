@@ -111,7 +111,7 @@ oflush(void)
 	sprintf(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
 		szLastOutput, szTotalOutput);
 	write(1, xbuf, strlen(xbuf));
-	szLastOutput = 0; 
+	szLastOutput = 0;
     }
 #endif // DBG_OUTRPT
 
@@ -133,7 +133,7 @@ ochar(int c)
 #ifdef DBG_OUTRPT
     // TODO we can support converted output in future.
     c = fakeEscFilter(c);
-    szTotalOutput ++; 
+    szTotalOutput ++;
     szLastOutput ++;
 #endif // DBG_OUTRPT
 
@@ -153,19 +153,19 @@ ochar(int c)
 /* pager processor                                       */
 /* ----------------------------------------------------- */
 
-int 
+int
 process_pager_keys(int ch)
 {
     static int water_which_flag = 0;
     assert(currutmp);
-    switch (ch) 
+    switch (ch)
     {
 	case Ctrl('U') :
             if (!is_login_ready || !currutmp ||
                 !HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_VIOLATELAW))
                 return ch;
 	    if ( currutmp->mode == EDITING ||
-		 currutmp->mode == LUSERS  || 
+		 currutmp->mode == LUSERS  ||
 		!currutmp->mode) {
 		return ch;
 	    } else {
@@ -207,25 +207,25 @@ process_pager_keys(int ch)
 	    // non-UFO
 	    check_water_init();
 
-	    if (watermode > 0) 
+	    if (watermode > 0)
 	    {
 		watermode = (watermode + water_which->count)
 		    % water_which->count + 1;
 		t_display_new();
 		return KEY_INCOMPLETE;
-	    } 
+	    }
 	    else if (watermode == 0 &&
 		    currutmp->mode == 0 &&
 		    (currutmp->chatid[0] == 2 || currutmp->chatid[0] == 3) &&
-		    water_which->count != 0) 
+		    water_which->count != 0)
 	    {
 		/* 第二次按 Ctrl-R */
 		watermode = 1;
 		t_display_new();
 		return KEY_INCOMPLETE;
-	    } 
-	    else if (watermode == -1 && 
-		    currutmp->msgs[0].pid) 
+	    }
+	    else if (watermode == -1 &&
+		    currutmp->msgs[0].pid)
 	    {
 		/* 第一次按 Ctrl-R (必須先被丟過水球) */
 		screen_backup_t old_screen;
@@ -266,7 +266,7 @@ process_pager_keys(int ch)
 	    break;
 
 	case KEY_TAB:
-	    if (watermode <= 0 || 
+	    if (watermode <= 0 ||
 		(!PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)))
 		break;
 
@@ -367,7 +367,7 @@ drop_input(void)
  * =0 if nothing read
  * <0 if need to read again
  */
-static inline ssize_t 
+static inline ssize_t
 read_vin() {
     // Note: buf should be larger than pvin buffer size.
     unsigned char buf[IBUFSIZE];
@@ -394,7 +394,7 @@ read_vin() {
 #else
     {
 	static char xbuf[128];
-	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
+	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] "
 		ESC_STR "[u", len);
 	write(1, xbuf, strlen(xbuf));
     }
@@ -493,7 +493,7 @@ dogetch(void)
             if (vbuf_peek(pvin) == KEY_LF)
                 vbuf_pop(pvin);
 	    return KEY_ENTER;
-	} 
+	}
 	else if (c == KEY_LF)
 	{
 	    return KEY_UNKNOWN;
@@ -511,7 +511,7 @@ igetch(void)
 {
     register int ch;
 
-    while (1) 
+    while (1)
     {
 	ch = dogetch();
 
@@ -566,7 +566,7 @@ igetch(void)
  * if f < 0,  wait forever.
  * Return 1 if anything available.
  */
-static inline int 
+static inline int
 wait_input(float f, int bIgnoreBuf)
 {
     int sel = 0;
@@ -585,7 +585,7 @@ wait_input(float f, int bIgnoreBuf)
     {
 	tv.tv_sec = (long) f;
 	tv.tv_usec = (f - (long)f) * 1000000L;
-    } 
+    }
     else if (f == 0)
     {
 	tv.tv_sec  = 0;
@@ -642,7 +642,7 @@ vkey_is_full(void)
     return vbuf_is_full(pvin);
 }
 
-inline void 
+inline void
 vkey_purge(void)
 {
     int max_try = 64;
@@ -685,7 +685,7 @@ vkey_poll(int ms)
     return wait_input(ms / (double)MILLISECONDS, 0);
 }
 
-int  
+int
 vkey_prefetch(int timeout) {
     if (wait_input(timeout / (double)MILLISECONDS, 1) && !vbuf_is_full(pvin))
         read_vin();
@@ -696,7 +696,7 @@ int
 vkey_is_prefetched(char c) {
     // only ^x keys are safe to be detected.
     // other keys may fall into escape sequence.
-    assert (c == EOF || (c > 0 && c < ' ')); 
+    assert (c == EOF || (c > 0 && c < ' '));
 
     if (c == EOF)
 	return 0;

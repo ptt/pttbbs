@@ -61,7 +61,7 @@ count_logins(int uid, int show)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
     int *ulist;
-    userinfo_t *u; 
+    userinfo_t *u;
     if (end == -1)
 	return 0;
     ulist = SHM->sorted[SHM->currsorted][7];
@@ -113,7 +113,7 @@ setutmpmode(unsigned int mode)
     }
 }
 
-unsigned int 
+unsigned int
 getutmpmode(void)
 {
     if (currutmp)
@@ -160,7 +160,7 @@ is_BM_cache(int bid) /* bid starts from 1 */
 
     // XXX potential issue: (thanks for mtdas@ptt)
     //  buildBMcache use -1 as "none".
-    //  some function may call is_BM_cache early 
+    //  some function may call is_BM_cache early
     //  without having currutmp->uid (maybe?)
     //  and may get BM permission accidentally.
     // quick check
@@ -259,7 +259,7 @@ postperm_msg(const char *bname)
 	// 在罰單的討論相關板可以發文
 	if (bp->level & PERM_VIOLATELAW)
 	    return NULL;
-	else 
+	else
 	    return "罰單未繳";
     }
 

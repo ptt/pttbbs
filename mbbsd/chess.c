@@ -315,7 +315,7 @@ ChessStepBroadcast(ChessInfo* info, const void *step)
 {
     ChessBroadcastListNode *p = &(info->broadcast_list.head);
     void (*orig_handler)(int);
-    
+
     orig_handler = Signal(SIGPIPE, SIG_IGN);
 
     while(p->next){
@@ -559,7 +559,7 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case 'p':
 		if (info->constants->pass_is_step) {
 		    ChessStepType type = CHESS_STEP_PASS;
-		    ChessHistoryAppend(info, &type); 
+		    ChessHistoryAppend(info, &type);
 		    strcpy(info->last_movestr, "虛手");
 
 		    info->pass[(int) info->turn] = 1;
@@ -894,7 +894,7 @@ ChessWatchRequest(int sig GCC_UNUSED)
 
     if (sock < 0 || !CurrentPlayingGameInfo)
 	return;
-    
+
     node = ChessBroadcastListInsert(&CurrentPlayingGameInfo->broadcast_list);
     node->sock = sock;
 
@@ -923,7 +923,7 @@ ChessReceiveWatchInfo(ChessInfo* info)
 #define RECV(X) read(info->sock, &(X), sizeof(X))
     RECV(info->myturn);
     RECV(info->turn);
-    
+
     RECV(time_mode);
     if (time_mode == 'L') {
 	info->timelimit = (ChessTimeLimit*) malloc(sizeof(ChessTimeLimit));
@@ -1172,7 +1172,7 @@ ChessStartGame(char func_char, int sig, const char* title)
 {
     userinfo_t     *uin;
     char buf[4];
-    
+
     if ((uin = ChessSearchUser(sig, title)) == NULL)
 	return -1;
     uin->turn = 1;
@@ -1374,7 +1374,7 @@ ChessPhotoInitial(ChessInfo* info)
 	"│    白      │",
 	"│       照   │",
 	"│          片│",
-	"└──────┘" 
+	"└──────┘"
     };
     char country[5], level[11];
     userec_t xuser;

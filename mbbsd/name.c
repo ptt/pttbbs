@@ -137,7 +137,7 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		}
 	    }
     }
-	    
+
     return VGETCB_NONE;
 }
 
@@ -303,15 +303,15 @@ gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 	case ' ':	// render complete page
 	    assert(prt->icurr == prt->iend);
-	    if (gc_int->morelist == -1) 
+	    if (gc_int->morelist == -1)
 	    {
 		int i;
 		char *first;
-		if (gnc_findbound(data, &gc_int->start, &gc_int->end, 
+		if (gnc_findbound(data, &gc_int->start, &gc_int->end,
 				         gc_int->nmemb,  gc_int->compar) == -1)
 		    return VGETCB_NEXT;
 
-		i = gnc_complete (data, &gc_int->start, &gc_int->end, 
+		i = gnc_complete (data, &gc_int->start, &gc_int->end,
 					 gc_int->permission, gc_int->getname);
 		if (i == 1) {
 		    prt->iend = prt->icurr = strlen(data);
@@ -362,7 +362,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    gnc_comp_func compar, gnc_perm_func permission,
 		    gnc_getname_func getname)
 {
-    generalcomplete_int gc_int = { 
+    generalcomplete_int gc_int = {
 	.start = 0,
 	.end   = nmemb-1,
 	.nmemb = nmemb,
@@ -399,7 +399,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
     }
 
     gnc_findbound(data, &gc_int.start, &gc_int.end, nmemb, compar);
-    if (gnc_complete(data, &gc_int.start, &gc_int.end, permission, getname) == 1 || 
+    if (gnc_complete(data, &gc_int.start, &gc_int.end, permission, getname) == 1 ||
 	(*compar)(gc_int.start, data, len) == 0)
     {
 	strlcpy(data, (*getname)(gc_int.start), len);
@@ -429,7 +429,7 @@ completeboard_permission(int where)
 	    !(bptr->brdattr & BRD_GROUPBOARD));
 }
 
-int 
+int
 complete_board_and_group_permission(int where)
 {
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];

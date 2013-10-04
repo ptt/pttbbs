@@ -130,7 +130,7 @@ static void imovefav(int old)
 {
     char buf[5];
     int new;
-    
+
     getdata(b_lines - 1, 0, "請輸入新次序:", buf, sizeof(buf), DOECHO);
     new = atoi(buf) - 1;
     if (new < 0 || brdnum <= new){
@@ -166,7 +166,7 @@ HasBoardPerm(boardheader_t *bptr)
 	return 1;
 
     // allow POLICE to enter BM boards
-    if ((level & PERM_BM) && 
+    if ((level & PERM_BM) &&
 	(HasUserPerm(PERM_POLICE) || HasUserPerm(PERM_POLICE_MAN)))
 	return 1;
 
@@ -296,7 +296,7 @@ b_posttype()
    // TODO last chance to confirm.
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    if (bp->posttype_f != posttype_f) {
-       bp->posttype_f = posttype_f; 
+       bp->posttype_f = posttype_f;
        modified = 1;
    }
    if (strcmp(bp->posttype, posttype) != 0) {
@@ -320,8 +320,8 @@ b_config(void)
     int i = 0, attr = 0, ipostres;
     char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
     // perm cache
-    char hasres = 0, 
-	 cachePostPerm = CheckPostPerm(), 
+    char hasres = 0,
+	 cachePostPerm = CheckPostPerm(),
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
@@ -331,7 +331,7 @@ b_config(void)
 
     int ytitle = b_lines - LNBOARDINFO;
 
-    bp = getbcache(currbid); 
+    bp = getbcache(currbid);
 
 #ifdef OLDRECOMMEND
     ytitle ++;
@@ -351,7 +351,7 @@ b_config(void)
 	uint8_t llogin = bp->post_limit_logins,
 		lbp    = bp->post_limit_badpost;
 
-	move(ytitle-1, 0); 
+	move(ytitle-1, 0);
 	clrtobot();
 
 	// outs(MSG_SEPARATOR); // deprecated by grayout
@@ -365,45 +365,45 @@ b_config(void)
 
 	outs(" \n"); // at least one character, for move_ansi.
 
-	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
-		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
-		(bp->brdattr & BRD_HIDE) ? 
+	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
+		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
+		(bp->brdattr & BRD_HIDE) ?
 		ANSI_COLOR(1;31)"隱形":"公開");
 
-	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET 
-		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n", 
-		(bp->brdattr & BRD_BMCOUNT) ? 
+	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET
+		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n",
+		(bp->brdattr & BRD_BMCOUNT) ?
 		ANSI_COLOR(1)"可以" ANSI_RESET: "不可");
 
-	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
-		" - %s "ANSI_RESET "非看板會員發文\n", 
-		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
+	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET
+		" - %s "ANSI_RESET "非看板會員發文\n",
+		(bp->brdattr & BRD_RESTRICTEDPOST) ?
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
-	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
+	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET
 		" - %s" ANSI_RESET
 		" 回應文章\n",
-		(bp->brdattr & BRD_NOREPLY) ? 
+		(bp->brdattr & BRD_NOREPLY) ?
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
-	prints( " " ANSI_COLOR(1;36) "d" ANSI_RESET 
+	prints( " " ANSI_COLOR(1;36) "d" ANSI_RESET
 		" - %s" ANSI_RESET
 		" 自刪文章\n",
-		(bp->brdattr & BRD_NOSELFDELPOST) ? 
+		(bp->brdattr & BRD_NOSELFDELPOST) ?
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
-	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
-		" - %s " ANSI_RESET "推薦文章\n", 
-		(bp->brdattr & BRD_NORECOMMEND) ? 
+	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET
+		" - %s " ANSI_RESET "推薦文章\n",
+		(bp->brdattr & BRD_NORECOMMEND) ?
 		ANSI_COLOR(1)"不開放":"開放"
 		);
 
 #ifndef OLDRECOMMEND
 	prints( " " ANSI_COLOR(1;36) "s" ANSI_RESET
-	        " - %s " ANSI_RESET "噓文\n", 
+	        " - %s " ANSI_RESET "噓文\n",
 		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
 		? ANSI_COLOR(1)"不開放":"開放");
 #endif
@@ -419,8 +419,8 @@ b_config(void)
 		    d = bp->fastrecommend_pause;
 	    }
 
-	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
-		    " - %s " ANSI_RESET "快速連推文章", 
+	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET
+		    " - %s " ANSI_RESET "快速連推文章",
 		    d != 0 ?
 		     ANSI_COLOR(1)"限制": "開放");
 	    if(d > 0)
@@ -428,36 +428,36 @@ b_config(void)
 	    outs("\n");
 	}
 
-	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
-		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
-		(bp->brdattr & BRD_IPLOGRECMD) ? 
+	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET
+		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n",
+		(bp->brdattr & BRD_IPLOGRECMD) ?
 		ANSI_COLOR(1)"自動":"不會");
 
-	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET 
-		" - 推文時 %s" ANSI_RESET " 開頭\n", 
-		(bp->brdattr & BRD_ALIGNEDCMT) ? 
+	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET
+		" - 推文時 %s" ANSI_RESET " 開頭\n",
+		(bp->brdattr & BRD_ALIGNEDCMT) ?
 		ANSI_COLOR(1)"對齊":"不用對齊");
 
 #ifdef USE_AUTOCPLOG
-	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
-		" - 轉錄文章 %s " ANSI_RESET "自動記錄，且 %s " 
-		ANSI_RESET "發文權限\n", 
-		(bp->brdattr & BRD_CPLOG) ? 
+	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET
+		" - 轉錄文章 %s " ANSI_RESET "自動記錄，且 %s "
+		ANSI_RESET "發文權限\n",
+		(bp->brdattr & BRD_CPLOG) ?
 		ANSI_COLOR(1)"會" : "不會" ,
-		(bp->brdattr & BRD_CPLOG) ? 
+		(bp->brdattr & BRD_CPLOG) ?
 		ANSI_COLOR(1)"需要" : "不需"
 		);
 #endif
 
-	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET 
-		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n", 
-		(bp->brdattr & BRD_LOCALSAVE) ? 
+	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET
+		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n",
+		(bp->brdattr & BRD_LOCALSAVE) ?
 		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
 
 	// use '8' instead of '1', to prevent 'l'/'1' confusion
-	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET 
+	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
 		" - %s" ANSI_RESET "未滿十八歲進入\n",
-		(bp->brdattr & BRD_OVER18) ? 
+		(bp->brdattr & BRD_OVER18) ?
 		ANSI_COLOR(1) "禁止 " : "允許\ " );
 
 	if (!canpost)
@@ -518,9 +518,9 @@ b_config(void)
 		outs(msg);
 		outs(ANSI_RESET);
 	    }
-	} 
+	}
 
-	if (!hasres && cachePostPerm) 
+	if (!hasres && cachePostPerm)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
 	    outs("無特別限制");
@@ -546,7 +546,7 @@ b_config(void)
 	    if (!isBM) outs(" (需板主權限)");
 	    outs(aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    prints("%sw%s)設定水桶 %sv%s)可見會員名單 ", 
+	    prints("%sw%s)設定水桶 %sv%s)可見會員名單 ",
 		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
 	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",
@@ -575,7 +575,7 @@ b_config(void)
 		bp->brdattr ^= BRD_LOCALSAVE;
 		touched = 1;
 		break;
-		
+
 	    case 'a':
 		bp->brdattr ^= BRD_ALIGNEDCMT;
 		touched = 1;
@@ -620,9 +620,9 @@ b_config(void)
 		{
 		    char ans[2];
 		    move(b_lines-2, 0); clrtobot();
-		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_HIDE) ? 
+		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_HIDE) ?
 			    ANSI_COLOR(1;32) " +++ 確定要解除看板隱形嗎?" ANSI_RESET " [y/N]: ":
-			    ANSI_COLOR(1;31) " --- 確定要隱形看板嗎?" ANSI_RESET " [y/N]: ", 
+			    ANSI_COLOR(1;31) " --- 確定要隱形看板嗎?" ANSI_RESET " [y/N]: ",
 			    ans, sizeof(ans), LCECHO) < 1 ||
 			    ans[0] != 'y')
 			break;
@@ -649,7 +649,7 @@ b_config(void)
 		{
 		    char ans[2];
 		    move(b_lines-2, 0); clrtobot();
-		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_IPLOGRECMD) ? 
+		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_IPLOGRECMD) ?
 			    ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
 			    ANSI_COLOR(1;31) " +++ 確定要記錄推文 IP 嗎?" ANSI_RESET " [y/N]: ",
 			    ans, sizeof(ans), LCECHO) < 1 ||
@@ -691,13 +691,13 @@ b_config(void)
 
 		    if(bp->fastrecommend_pause > 0)
 			sprintf(buf, "%d", bp->fastrecommend_pause);
-		    getdata_str(b_lines-1, 0, 
+		    getdata_str(b_lines-1, 0,
 			    "請輸入連推時間限制(單位: 秒) [5~240]: ",
 			    buf, 4, NUMECHO, buf);
 		    if(buf[0] >= '0' && buf[0] <= '9')
 			bp->fastrecommend_pause = atoi(buf);
 
-		    if( bp->fastrecommend_pause < 5 || 
+		    if( bp->fastrecommend_pause < 5 ||
 			bp->fastrecommend_pause > 240)
 		    {
 			if(buf[0])
@@ -725,7 +725,7 @@ b_config(void)
 		    vmsg("板主本身未滿 18 歲。");
 		} else {
 		    bp->brdattr ^= BRD_OVER18;
-		    touched = 1;		
+		    touched = 1;
 		}
 		break;
 
@@ -776,7 +776,7 @@ b_config(void)
 		    break;
 		}
 		bp->brdattr ^= BRD_NOREPLY;
-		touched = 1;		
+		touched = 1;
 		break;
 
 	    case 'd':
@@ -787,7 +787,7 @@ b_config(void)
 		}
 #endif
 		bp->brdattr ^= BRD_NOSELFDELPOST;
-		touched = 1;		
+		touched = 1;
 		break;
 
 	    default:
@@ -876,7 +876,7 @@ check_newpost(boardstat_t * ptr)
 
     if (brc_unread_time(ptr->bid, ftime, 0))
 	ptr->myattr |= NBRD_UNREAD;
-    
+
     return 1;
 }
 
@@ -893,7 +893,7 @@ load_uidofgid(const int gid, const int type)
     assert(0<=boardcount && boardcount<=MAX_BOARD);
     for (n = 0; n < boardcount; ++n) {
 	bid = SHM->bsorted[type][n]+1;
-	if( bid<=0 || !(bptr = getbcache(bid)) 
+	if( bid<=0 || !(bptr = getbcache(bid))
 		|| bptr->brdname[0] == '\0' )
 	    continue;
 	if (bptr->gid == gid) {
@@ -919,7 +919,7 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr;
 
-    // ptt 2 local modification 
+    // ptt 2 local modification
     // XXX maybe some developer discovered signed short issue?
     assert(n != -32769);
 
@@ -929,7 +929,7 @@ addnewbrdstat(int n, int state)
     //boardheader_t  *bptr = &bcache[n];
     //ptr->total = &(SHM->total[n]);
     //ptr->lastposttime = &(SHM->lastposttime[n]);
-    
+
     ptr->bid = n + 1;
     ptr->myattr = state;
     if ((B_BH(ptr)->brdattr & BRD_HIDE) && state == NBRD_BOARD)
@@ -1103,7 +1103,7 @@ load_boards(char *key)
 #endif
     } else { /* load boards of a subclass */
 	boardheader_t  *bptr = getbcache(class_bid);
-	int childcount; 
+	int childcount;
 	int bid;
 
 	assert(0<=class_bid-1 && class_bid-1<MAX_BOARD);
@@ -1115,7 +1115,7 @@ load_boards(char *key)
 	nbrdsize = childcount + 5;
 	nbrd = (boardstat_t *) malloc((childcount+5) * sizeof(boardstat_t));
         // 預留兩個以免大量開板時掛調
-	for (bid = bptr->firstchild[type]; bid > 0 && 
+	for (bid = bptr->firstchild[type]; bid > 0 &&
 		brdnum < childcount+5; bid = bptr->next[type]) {
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
             bptr = getbcache(bid);
@@ -1139,11 +1139,11 @@ load_boards(char *key)
 	    addnewbrdstat(bid-1, state);
 	}
         if(childcount < brdnum) {
-	    //Ptt: dirty fix fix soon 
+	    //Ptt: dirty fix fix soon
 	    getbcache(class_bid)->childcount = 0;
 	}
-           
-                 
+
+
     }
 }
 
@@ -1166,7 +1166,7 @@ search_local_board()
     namecomplete2(&namelist, ANSI_REVERSE "【 搜尋所在位置看板 】"
 	    ANSI_RESET "\n請輸入看板名稱(按空白鍵自動搜尋): ", genbuf);
     Vector_delete(&namelist);
-			
+
 
     for (num = 0; num < brdnum; num++)
         if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
@@ -1255,16 +1255,16 @@ brdlist_foot(void)
 }
 
 
-static inline const char * 
+static inline const char *
 make_class_color(char *name)
 {
     /* 0;34 is too dark */
     uint32_t index = (((uint32_t)name[0] + name[1] + name[2] + name[3]) & 0x07);
     const char *colorset[8] = {"", ANSI_COLOR(32),
-	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34), 
+	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34),
 	ANSI_COLOR(1), ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
     const char *colorset2[8] = {"", ANSI_COLOR(32),
-	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(35), 
+	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(35),
 	"", ANSI_COLOR(32), ANSI_COLOR(33)};
 
     return HasUserFlag(UF_MENU_LIGHTBAR) ? colorset2[index] : colorset[index];
@@ -1316,7 +1316,7 @@ show_brdlist(int head, int clsflag, int newflag)
  	char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
         if (HasUserFlag(UF_MENU_LIGHTBAR))
             unread[1] = ANSI_COLOR(31) "ˇ" ANSI_RESET;
- 
+
 	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
 
 	    // (a) or (i) needs HasUserPerm(PERM_LOGINOK)).
@@ -1324,11 +1324,11 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (!HasFavEditPerm())
 	    {
 		// TODO actually we cannot use 's' (for PTT)...
-		mvouts(3, 10, 
+		mvouts(3, 10,
 		"--- 註冊的使用者才能新增看板喔 (可按 s 手動選取) ---");
 	    } else {
 		// normal user. tell him what to do.
-		mvouts(3, 10, 
+		mvouts(3, 10,
 		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
 	    }
 	    return;
@@ -1347,33 +1347,33 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 		    else
 			prints("%7s   ", "");
-				
+
 		    if (!(ptr->myattr & NBRD_FAV))
 			outs(ANSI_COLOR(1;30));
 
-		    outs("------------" 
+		    outs("------------"
 			    "      "
 			    // "------"
-			    "------------------------------------------" 
+			    "------------------------------------------"
 			    ANSI_RESET "\n");
 		    continue;
 		}
 		else if (ptr->myattr & NBRD_FOLDER){
 		    char *title = get_folder_title(ptr->bid);
-		    prints("%7d %c ", 
-			    newflag ? 
+		    prints("%7d %c ",
+			    newflag ?
 			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
 			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 
 		    // well, what to print with myfav folders?
-		    // this style is too long and we don't want to 
-		    // fight with users... 
+		    // this style is too long and we don't want to
+		    // fight with users...
 		    // think about new way some otherday.
-		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s", 
+		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
 			    !(HasUserFlag(UF_FAV_NOHILIGHT))?
                              (HasUserFlag(UF_MENU_LIGHTBAR) ?
                               HILIGHT_COLOR2 : HILIGHT_COLOR) : "",
-			    title); 
+			    title);
 		    /*
 		    if (!(HasUserFlag(UF_FAV_NOHILIGHT)))
 			outs(HILIGHT_COLOR);
@@ -1402,7 +1402,7 @@ show_brdlist(int head, int clsflag, int newflag)
 
                         if (B_BH(ptr)->brdattr & BRD_HIDE)
                             reason = "[隱板]";
- 
+
                         // we don't print BM and popularity, so subject can be
                         // longer
 			prints("X%c %-13.13s%-7.7s %-48.48s",
@@ -1422,7 +1422,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
 		    outs("          ");
 		else
-		    prints("%7d%c%s", 
+		    prints("%7d%c%s",
 			    newflag ? (int)(B_TOTAL(ptr)) : head,
 			    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
 			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
@@ -1431,7 +1431,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 
 		if (!IN_CLASSROOT()) {
-		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) 
+		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
 			    "%2.2s" ANSI_RESET "%-34.34s",
 			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
 			      getboard(ptr->bid) != NULL))?
@@ -1580,7 +1580,7 @@ choose_board(int newflag)
 		}
 		if (IS_LISTING_BRD()) {
 		    if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
-			if (paste_taged_brds(class_bid) || 
+			if (paste_taged_brds(class_bid) ||
     			    m_newbrd(class_bid, 0) == -1)
 			    break;
 			brdnum = -1;
@@ -1626,7 +1626,7 @@ choose_board(int newflag)
 		///////////////////////////////////////////////////////
 		// General Hotkeys
 		///////////////////////////////////////////////////////
-		
+
 	case 'h':
 	    show_helpfile(fn_boardlisthelp);
 	    show_brdlist(head, 1, newflag);
@@ -1804,7 +1804,7 @@ choose_board(int newflag)
 		clrtoeol();
 		// since now user can use Ctrl-S to get access
 		// to folders, let's fallback to boards only here.
-		CompleteBoard(ANSI_REVERSE 
+		CompleteBoard(ANSI_REVERSE
 			"【 搜尋全站看板 】" ANSI_RESET
 			"  (若要限定搜尋範圍為目前列表請改用 Ctrl-S)\n"
 			"請輸入看板名稱(按空白鍵自動搜尋): ",
@@ -1994,7 +1994,7 @@ choose_board(int newflag)
 			ptr->myattr &= ~NBRD_FAV;
 		    }
 		}
-		else 
+		else
 		{
 		    if (getboard(ptr->bid) != NULL) {
 			fav_remove_item(ptr->bid, FAVT_BOARD);
@@ -2144,7 +2144,7 @@ choose_board(int newflag)
 		last_save_fav_and_brc = now;
 		vmsg("已儲存看板閱\讀記錄");
 	    } else
-		vmsgf("間隔時間太近，未儲存看板閱\讀記錄 [請等 %d 秒後再試]", 
+		vmsgf("間隔時間太近，未儲存看板閱\讀記錄 [請等 %d 秒後再試]",
 			(int)(600 - (now-last_save_fav_and_brc)));
 	    break;
 

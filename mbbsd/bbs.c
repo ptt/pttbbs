@@ -21,7 +21,7 @@ static int view_postinfo(int ent, const fileheader_t * fhdr,
 static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
 // recommend/comment types
-//  most people use recommendation just for one-line reply. 
+//  most people use recommendation just for one-line reply.
 //  so we may change default to (RECTYPE_ARROW)= comment only.
 //  however, the traditional behavior (which does not have
 //  BRC info for 'new comments available') uses RECTYPE_GOOD.
@@ -75,12 +75,12 @@ is_file_owner_id(const fileheader_t *fhdr, const char *userid) {
 /* query money by fileheader pointer.
  * return <0 if money is not valid.
  */
-int 
+int
 query_file_money(const fileheader_t *pfh)
 {
     fileheader_t hdr;
 
-    if(	(currmode & MODE_SELECT) &&  
+    if(	(currmode & MODE_SELECT) &&
 	(pfh->multi.refer.flag) &&
 	(pfh->multi.refer.ref > 0)) // really? not sure, copied from other's code
     {
@@ -110,7 +110,7 @@ cp_IsHiddenBoard(const boardheader_t *bp)
 }
 
 // lite weight version to update dir files
-static int 
+static int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name,
 	time4_t modified, const char *title, char recommend)
@@ -124,7 +124,7 @@ modify_dir_lite(
     // PttLock(fd, offset, size, F_WRLCK);
     // write(fd, rptr, size);
     // PttLock(fd, offset, size, F_UNLCK);
-    
+
     // prevent black holes
     if (sz < (int)sizeof(fileheader_t) * (ent) ||
 	    (fd = open(direct, O_RDWR)) < 0 )
@@ -148,7 +148,7 @@ modify_dir_lite(
     if (title && *title)
 	strcpy(fhdr.title, title);
 
-    if (recommend) 
+    if (recommend)
     {
 	recommend += fhdr.recommend;
 	if (recommend > MAX_RECOMMENDS) recommend = MAX_RECOMMENDS;
@@ -164,7 +164,7 @@ modify_dir_lite(
     return 0;
 }
 
-static void 
+static void
 check_locked(fileheader_t *fhdr)
 {
     boardheader_t *bp = NULL;
@@ -240,10 +240,10 @@ anticrosspost(void)
     log_filef("etc/illegal_money",  LOG_CREAT,
              ANSI_COLOR(1;33;46) "%s "
              ANSI_COLOR(37;45) "cross post 文章 "
-             ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
+             ANSI_COLOR(37) " %s" ANSI_RESET "\n",
              cuser.userid, Cdatelite(&now));
 
-    post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
+    post_violatelaw(cuser.userid, BBSMNAME "系統警察",
                     "Cross-post", "罰單處份");
     pwcuViolateLaw();
     mail_id(cuser.userid, "Cross-Post罰單",
@@ -291,12 +291,12 @@ save_violatelaw(void)
 	return 0;
     }
     move(5, 0);
-    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "\n\n", 
+    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "\n\n",
 	    cuser.vl_count, cuser.vl_count * 1000);
     outs(ANSI_COLOR(1;37) "你是否確定以後不會再犯了？" ANSI_RESET "\n");
 
     if (!getdata(10, 0, "確定嗎？[y/N]:", ok, sizeof(ok), LCECHO) ||
-	ok[0] != 'y') 
+	ok[0] != 'y')
     {
 	move(15, 0);
 	outs(ANSI_COLOR(1;31) "不想付嗎？ 還是不知道要按 y ？\n"
@@ -307,19 +307,19 @@ save_violatelaw(void)
 
     //Ptt:check one more time
     reload_money();
-    if (cuser.money < (int)cuser.vl_count * 1000) 
+    if (cuser.money < (int)cuser.vl_count * 1000)
     {
 	log_filef("log/violation", LOG_CREAT,
-		"%s %s pay-violation error: race-conditionn hack?\n", 
+		"%s %s pay-violation error: race-conditionn hack?\n",
 		Cdate(&now), cuser.userid);
 	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
-	return 0; 
+	return 0;
     }
 
     pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
     log_filef("log/violation", LOG_CREAT,
-	    "%s %s pay-violation: $%d complete.\n", 
+	    "%s %s pay-violation: $%d complete.\n",
 	    Cdate(&now), cuser.userid, (int)cuser.vl_count*1000);
 
     vmsg("罰單已付，請重新登入。");
@@ -359,9 +359,9 @@ set_board(void)
 	snprintf(currBM, sizeof(currBM), "板主:%s", bp->BM);
 	/* title has +7 leading symbols */
 	l += strlen(bp->title);
-	if(l >= 7) 
+	if(l >= 7)
 	    l -= 7;
-	else 
+	else
 	    l = 0;
 	l += 8 + strlen(currboard); /* trailing stuff */
 	l += strlen(bp->brdname);
@@ -386,7 +386,7 @@ set_board(void)
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
-    if (!HasUserPerm(PERM_NOCITIZEN) && 
+    if (!HasUserPerm(PERM_NOCITIZEN) &&
         (HasUserPerm(PERM_ALLBOARD) ||
          is_BM_cache(currbid) ||
          (bp->BM[0] <= ' ' && GROUPOP()))) {
@@ -423,7 +423,7 @@ CheckModifyPerm(const char **preason)
     boardheader_t *bp = NULL;
 
     assert(preason);
-    
+
     // check if my own permission is changed.
     if (ISNEWPERM(currutmp))
     {
@@ -476,7 +476,7 @@ CheckModifyPerm(const char **preason)
 	currmode |= MODE_POSTCHECKED;
 
 	// vmsg("reload board postperm");
-	
+
         last_reason = postperm_msg(currboard);
         *preason = last_reason;
 
@@ -571,7 +571,7 @@ readtitle(void)
         snprintf(buf, sizeof(buf), "人氣:%d ", nuser);
     }
 
-    vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ", 
+    vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ",
 	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode],
 	    buf);
 }
@@ -590,7 +590,7 @@ is_tn_allowed(const char *title)
 #else
     // TN_ANNOUNCE is prohibited for non-BMs
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
-	HasUserPerm(PERM_ACCOUNTS | PERM_BOARD | PERM_BBSADM | 
+	HasUserPerm(PERM_ACCOUNTS | PERM_BOARD | PERM_BBSADM |
 		    PERM_VIEWSYSOP| PERM_POLICE_MAN))
 	return 1;
 
@@ -613,7 +613,7 @@ tn_safe_strip(char *title)
     if (is_tn_allowed(title))
 	return;
     assert(is_tn_announce(title));
-    memmove(title, title + strlen(TN_ANNOUNCE), 
+    memmove(title, title + strlen(TN_ANNOUNCE),
 	    strlen(title) - strlen(TN_ANNOUNCE)+1);
 }
 
@@ -645,9 +645,9 @@ readdoent(int num, fileheader_t * ent)
 #else // COLORIZED_SAFEDEL
         oisunread = isunread = 0;
 #endif // COLORIZED_SAFEDEL
-    } else 
+    } else
 #endif // SAFE_ARTICLE_DELETE
-    oisunread = isunread = 
+    oisunread = isunread =
 	brc_unread(currbid, ent->filename, ent->modified);
 
     // modified tag
@@ -691,7 +691,7 @@ readdoent(int num, fileheader_t * ent)
     }
 
     // tag should override everything
-    if ((currmode & MODE_BOARD) || HasBasicUserPerm(PERM_LOGINOK)) 
+    if ((currmode & MODE_BOARD) || HasBasicUserPerm(PERM_LOGINOK))
     {
 	if (FindTaggedItem(ent))
 	    type = 'D';
@@ -717,7 +717,7 @@ readdoent(int num, fileheader_t * ent)
     if (iscorpse)
 	color = '0', mark = "□";
         // color = '0', mark = "╳";
-    else 
+    else
 #endif
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
@@ -750,7 +750,7 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"0mXX");
     else if(ent->recommend<-10)
 	  sprintf(recom,"0mX%d",-ent->recommend);
-    else strcpy(recom,"0m  "); 
+    else strcpy(recom,"0m  ");
 
     /* start printing */
     if (ent->filemode & FILE_BOTTOM) {
@@ -767,10 +767,10 @@ readdoent(int num, fileheader_t * ent)
 	prints("%7d", num);
 
     if (HasUserFlag(UF_MENU_LIGHTBAR))
-        prints(" %s%c" ESC_STR "[0;3%4.4s" ANSI_RESET, 
+        prints(" %s%c" ESC_STR "[0;3%4.4s" ANSI_RESET,
                typeattr, type, recom);
     else
-        prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET, 
+        prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET,
                typeattr, type, recom);
 
     if(IS_LISTING_MONEY)
@@ -828,7 +828,7 @@ readdoent(int num, fileheader_t * ent)
             special = 0;
         }
     }
-    
+
     // strip unsafe characters
     if (!const_title)
         strip_nonebig5((unsigned char*)title, INT_MAX);
@@ -1004,13 +1004,13 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 
     setbdir(bdir, bname);
     setbfile(file, bname, fh->filename);
-    memcpy(&newfh, fh, sizeof(fileheader_t)); 
+    memcpy(&newfh, fh, sizeof(fileheader_t));
 
     // XXX TODO FIXME This (finding file by getindex) sucks. getindex checks
     // only timestamp by binary search, but that is not always true in current
     // system.
 
-    // Ptt: protect original fh 
+    // Ptt: protect original fh
     // because getindex safe_article_delete will change fh in some case
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
@@ -1067,7 +1067,7 @@ delete_allpost(const char *userid)
     if(!userid) return;
 
     setbdir(bdir, BN_ALLPOST);
-    if( (fd = open(bdir, O_RDWR)) != -1) 
+    if( (fd = open(bdir, O_RDWR)) != -1)
     {
        for(i=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; i++){
            if(strcmp(fhdr.owner, userid))
@@ -1085,7 +1085,7 @@ delete_allpost(const char *userid)
 /* ----------------------------------------------------- */
 /* 發表、回應、編輯、轉錄文章                            */
 /* ----------------------------------------------------- */
-static int 
+static int
 solveEdFlagByBoard(const char *bn, int flags)
 {
     if (
@@ -1172,7 +1172,7 @@ dbcs_safe_trim_title(char *output, const char *title, int len) {
     }
 }
 
-void 
+void
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
@@ -1244,7 +1244,7 @@ do_post_article(int edflags)
     char            genbuf[PATHLEN];
     const char	    *owner;
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
-				   "閒聊", "請益", "情報", 
+				   "閒聊", "請益", "情報",
 				   "公告" // TN_ANNOUNCE
 				  };
     boardheader_t  *bp;
@@ -1261,7 +1261,7 @@ do_post_article(int edflags)
     if( !CheckPostPerm2(&reason)
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
-	&& !(HasUserFlag(UF_FOREIGN) && 
+	&& !(HasUserFlag(UF_FOREIGN) &&
 	    strcmp(bp->brdname, BN_FOREIGN) == 0)
 #endif
 	) {
@@ -1306,7 +1306,7 @@ do_post_article(int edflags)
 	sprintf(buf,"(1-%d或不選)",i);
 
 	do {
-	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
+	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO);
 	    posttype = tmp_title[0] - '1';
 	    if (posttype >= 0 && posttype < i)
 	    {
@@ -1381,7 +1381,7 @@ do_post_article(int edflags)
 	currbrdattr |= BRD_DEFAULTANONYMOUS;
     };
 #endif
-    
+
     money = vedit2(fpath, YEA, &islocal, save_title, edflags);
     if (money == EDIT_ABORTED) {
 	unlink(fpath);
@@ -1416,9 +1416,9 @@ do_post_article(int edflags)
     // drop money & numposts for free boards, or user without login information
     // (they may post on free boards like SYSOP)
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
-    if (!HasBasicUserPerm(PERM_LOGINOK) || 
-	IsFreeBoardName(currboard) || 
-	(currbrdattr & BRD_NOCREDIT) || 
+    if (!HasBasicUserPerm(PERM_LOGINOK) ||
+	IsFreeBoardName(currboard) ||
+	(currbrdattr & BRD_NOCREDIT) ||
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         (currbrdattr & BRD_HIDE) ||
 #endif
@@ -1454,7 +1454,7 @@ do_post_article(int edflags)
     //      stampfile_u is used when you don't want to clear other fields
     strcpy(genbuf, fpath);
     setbpath(fpath, currboard);
-    stampfile_u(fpath, &postfile);   
+    stampfile_u(fpath, &postfile);
 
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
@@ -1495,11 +1495,11 @@ do_post_article(int edflags)
 	outs("順利貼出佈告，");
 
 	// Freeboard/BRD_NOCREDIT check was already done.
-	if (!ifuseanony) 
+	if (!ifuseanony)
 	{
             if (money > 0)
 	    {
-                pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title); 
+                pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title);
 		pwcuIncNumPost();
 		addPost = 1;
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d "
@@ -1515,8 +1515,8 @@ do_post_article(int edflags)
 		// no money, no record.
 		outs("本篇文章不列入記錄，敬請包涵。");
 	    }
-	} 
-	else 
+	}
+	else
 	{
 	    outs("不列入記錄，敬請包涵。");
 	}
@@ -1558,7 +1558,7 @@ do_post_article(int edflags)
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
                 LOG_IF(LOG_CONF_INTERNETMAIL,
-                       log_filef("log/internet_mail.log", LOG_CREAT, 
+                       log_filef("log/internet_mail.log", LOG_CREAT,
                                  "%s [%s (%s)] %s -> %s: %s\n",
                                  Cdatelite(&now), __FUNCTION__,
                                  currboard, cuser.userid, str + 1, save_title));
@@ -1622,12 +1622,12 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 {
     char            genbuf[3];
     int edflags = EDITFLAG_KIND_REPLYPOST;
-    
+
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 
     if (!CheckPostRestriction(currbid))
     {
-	getdata(b_lines - 1, 0,	
+	getdata(b_lines - 1, 0,
 		ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
 		"改回應至 (M)作者信箱 (Q)取消？[Q] ",
 		genbuf, sizeof(genbuf), LCECHO);
@@ -1856,7 +1856,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
 	!CheckPostPerm() ||		// edit needs post perm (cannot be changed in digest mode)
 	!CheckPostRestriction(currbid)
-	)   
+	)
 	return DONOTHING;
 
     setdirpath(genbuf, direct, fhdr->filename);
@@ -1867,7 +1867,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	// admin edit!
 	log_filef("log/security", LOG_CREAT,
-		"%d %s %d %s admin edit (board) file=%s\n", 
+		"%d %s %d %s admin edit (board) file=%s\n",
 		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
     }
 
@@ -1922,7 +1922,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
     refresh();
 
-    if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK || 
+    if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
         memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
         is_race_condition = 1;
     }
@@ -2042,7 +2042,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         clrtoeol();
         outs("準備進行文章轉錄。板主要置底文章請改按 "
                 ANSI_COLOR(1;31) "_" ANSI_RESET " (壓住 "
-                ANSI_COLOR(1;36) "Shift" ANSI_RESET " 再按 " 
+                ANSI_COLOR(1;36) "Shift" ANSI_RESET " 再按 "
                 ANSI_COLOR(1;36) "-" ANSI_RESET
                 " )\n");
     }
@@ -2052,11 +2052,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     //
     // some spammers try to cross-post to other boards without
     // restriction (see pakkei0712* events on 2007/12)
-    // for (1) increase numpost (2) flood target board 
+    // for (1) increase numpost (2) flood target board
     // (3) flood original post
     // You must have post permission on current board
     //
-    if( (bp->brdattr & BRD_CPLOG) && 
+    if( (bp->brdattr & BRD_CPLOG) &&
 	(!CheckPostPerm() || !CheckPostRestriction(currbid)))
     {
 	vmsg("由本板轉錄文章需有發文權限(可按 i 查看限制)");
@@ -2066,7 +2066,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef USE_POSTRECORD
     if (postrecord.times > 0) {
-	outs(ANSI_COLOR(1;31) 
+	outs(ANSI_COLOR(1;31)
 "請注意: 1.在不同看板多次重覆發表或轉錄相似內容之文章，屬 Cross-post(CP)違規\n"
 "          一般而言(詳見各站規板規)連原文共超過四篇就可能會被檢舉。\n"
 "        2.被檢舉 Cross-post 時，分身帳號或不同ID但上線位址(IP)相同者\n"
@@ -2121,11 +2121,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // quick check: if already cross-posted, reject.
     if (hashPost == postrecord.checksum[0])
     {
-	if (xbid == postrecord.last_bid) 
+	if (xbid == postrecord.last_bid)
 	{
 	    vmsg("這篇文章已經轉錄過了。");
 	    return FULLUPDATE;
-	} 
+	}
 	else if (postrecord.times >= MAX_CROSSNUM)
 	{
 	    anticrosspost();
@@ -2296,17 +2296,17 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef NOTIFY_BM_CP_IGNORE
 	    // ignore BM for cross-posting.
 	    outs(ANSI_COLOR(1;32)
-                 "此篇為板主轉錄，不自動檢查CP(但請小心誤觸人工檢舉)\n" 
+                 "此篇為板主轉錄，不自動檢查CP(但請小心誤觸人工檢舉)\n"
 		 ANSI_RESET);
 #endif
 #ifdef USE_POSTRECORD
 	} else if (!HasUserPerm(PERM_ADMIN | PERM_MANAGER) &&
-                   hashPost == postrecord.checksum[0]) 
+                   hashPost == postrecord.checksum[0])
 	    // && xbid != postrecord.last_bid)
 	{
 	    ++postrecord.times; // check will be done next time.
 
-	    if (postrecord.times +1 >= MAX_CROSSNUM) 
+	    if (postrecord.times +1 >= MAX_CROSSNUM)
 	    {
 		outs(ANSI_COLOR(1;31) " 警告: 即將達到轉錄次數上限，"
                      "之後可能開罰單!\n" ANSI_RESET);
@@ -2434,8 +2434,8 @@ editLimits(unsigned char *plogins,
     int  temp, y;
 
     // load var
-    unsigned char 
-	logins  = *plogins, 
+    unsigned char
+	logins  = *plogins,
 	badpost = *pbadpost;
 
     // query UI
@@ -2444,7 +2444,7 @@ editLimits(unsigned char *plogins,
 
     y++;
     move(y+2, 0); clrtobot();
-    outs(ANSI_COLOR(1;32) 
+    outs(ANSI_COLOR(1;32)
          "請注意「註冊時間」已被取消(由" STR_LOGINDAYS "取代)，若您收到的修改請求\n"
          "仍有該數值，請重新向提出申請者確認。 另外請注意這是一天一次計算，不是\n"
          "舊的上站次數。  有的板主可能拿舊的上站次數來申請，造成使用者忽然無法發文\n"
@@ -2453,7 +2453,7 @@ editLimits(unsigned char *plogins,
 
     sprintf(genbuf, "%u", logins*10);
     do {
-	getdata_buf(y, 0, 
+	getdata_buf(y, 0,
                 STR_LOGINDAYS "下限 (0~2550,以10為單位,個位數字將自動捨去)：",
                 genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
@@ -2461,10 +2461,10 @@ editLimits(unsigned char *plogins,
     logins = (unsigned char)(temp / 10);
     move(y+1, 0); clrtobot();
 
-    y++; 
+    y++;
     sprintf(genbuf, "%u", 255 - badpost);
     do {
-	getdata_buf(y, 0, 
+	getdata_buf(y, 0,
 		"劣文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
@@ -2485,7 +2485,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
 		(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
-    
+
     strcpy(buf, "更改 ");
     if (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))
 	strcat(buf, "(A)本板發表限制 ");
@@ -2560,7 +2560,7 @@ b_man(void)
     }
 
     return a_menu(currboard, apath,HasUserPerm(PERM_ALLBOARD) ? 2 :
-		  (currmode & MODE_BOARD ? 1 : 0), 
+		  (currmode & MODE_BOARD ? 1 : 0),
 		  currbid, // getbnum(currboard)?
 		  NULL, backup_path);
 }
@@ -2613,7 +2613,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
             dirty++;
     }
 
-    if (allow >= 2) 
+    if (allow >= 2)
     {
 	if (getdata(b_lines - 1, 0, "作者：", genbuf, IDLEN + 2, DOECHO)) {
 	    strlcpy(tmpfhdr.owner, genbuf, sizeof(tmpfhdr.owner));
@@ -2683,7 +2683,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     {
 	move(b_lines-2, 0); clrtoeol();
 	outs("超過兩週，禁止劣推文。");
-    } else 
+    } else
 #endif
     {
 	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 劣推文 [1/2]? ", yn, 3, LCECHO);
@@ -2807,7 +2807,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     char	    mynick[IDLEN+1];
 #ifndef OLDRECOMMEND
     static const char *ctype[RECTYPE_SIZE] = {
-		       "推", "噓", "→", 
+		       "推", "噓", "→",
 		   };
     static const char *ctype_attr[RECTYPE_SIZE] = {
 		       ANSI_COLOR(1;33),
@@ -2838,7 +2838,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' || 
+    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
@@ -2884,8 +2884,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
     {
 	/* I'm BM or SYSOP. */
-    } 
-    else if (bp->brdattr & BRD_NOFASTRECMD) 
+    }
+    else if (bp->brdattr & BRD_NOFASTRECMD)
     {
 	int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
 	if (d > 0)
@@ -2928,7 +2928,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    }
 	}
     }
-		    
+
 
 #ifdef USE_COOLDOWN
        if(check_cooldown(bp))
@@ -2963,11 +2963,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     }
 #ifndef DEBUG
-    else if (!(currmode & MODE_BOARD) && 
+    else if (!(currmode & MODE_BOARD) &&
 	    (now - lastrecommend) < (
 #if 0
 	    /* i'm not sure whether this is better or not */
-		(bp->brdattr & BRD_NOFASTRECMD) ? 
+		(bp->brdattr & BRD_NOFASTRECMD) ?
 		 bp->fastrecommend_pause :
 #endif
 		90))
@@ -3022,8 +3022,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if (strchr(fhdr->owner, '.')  != NULL)
     {
 	move(ymsg--, 0); clrtoeol();
-	outs(ANSI_COLOR(1;31) 
-	    "◆這篇文章來自匿名板或外站轉信板，原作者可能無法看到推文。" 
+	outs(ANSI_COLOR(1;31)
+	    "◆這篇文章來自匿名板或外站轉信板，原作者可能無法看到推文。"
 	    ANSI_RESET "\n");
     }
 
@@ -3035,9 +3035,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	{
 	    ymsg --;
 	    move(ymsg--, 0); clrtoeol();
-	    outs(ANSI_COLOR(1;33) 
+	    outs(ANSI_COLOR(1;33)
 	    "◆您正在搜尋(標題、作者...)或其它特殊列表模式，"
-	    "推文計數與修改記錄將會分開計算。" 
+	    "推文計數與修改記錄將會分開計算。"
 	    ANSI_RESET "\n"
 	    "  若想正常計數請先左鍵退回正常列表模式。\n");
 	}
@@ -3046,9 +3046,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if(type >  RECTYPE_MAX || type < 0)
 	type = RECTYPE_ARROW;
 
-    maxlength = 78 - 
-	3 /* lead */ - 
-	6 /* date */ - 
+    maxlength = 78 -
+	3 /* lead */ -
+	6 /* date */ -
 	1 /* space */ -
 	6 /* time */;
 
@@ -3067,7 +3067,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	angel_load_my_fullnick(mynick, sizeof(mynick));
 	myid = mynick;
     }
-#endif 
+#endif
 
     if (aligncmt)
     {
@@ -3084,7 +3084,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #else // !OLDRECOMMEND
     maxlength -= strlen(myid);
-    sprintf(buf, "%s%s%s %s:", 
+    sprintf(buf, "%s%s%s %s:",
 	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
 #endif // !OLDRECOMMEND
 
@@ -3098,8 +3098,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
         // to hold ':wq', ':q!' 'ZZ'
 	char ans[2];
-	sprintf(buf+strlen(buf), 
-		ANSI_REVERSE "%-*s" ANSI_RESET " 確定[y/N]:", 
+	sprintf(buf+strlen(buf),
+		ANSI_REVERSE "%-*s" ANSI_RESET " 確定[y/N]:",
 		maxlength, msg);
 	move(b_lines, 0);
 	clrtoeol();
@@ -3113,7 +3113,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
             return FULLUPDATE;
     }
     LOG_IF(LOG_CONF_PUSH, log_filef("log/push", LOG_CREAT,
-                                    "%s %d %s %s %s\n", cuser.userid, 
+                                    "%s %d %s %s %s\n", cuser.userid,
                                     (int)now, currboard, fhdr->filename, msg));
     STATINC(STAT_RECOMMEND);
     {
@@ -3124,7 +3124,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	{
 	    snprintf(tail, sizeof(tail),
 		    "%15s %s",
-		    FROMHOST, 
+		    FROMHOST,
 		    Cdate_mdHM(&now));
 	} else {
 	    snprintf(tail, sizeof(tail),
@@ -3134,15 +3134,15 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef OLDRECOMMEND
 	snprintf(buf, sizeof(buf),
-	    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" 
+	    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s"
 	    ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
 	    "推%s\n",
 	    myid, maxlength, msg, tail);
 #else
 	snprintf(buf, sizeof(buf),
-	    "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
+	    "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
 	    ":%-*s" ANSI_RESET "%s\n",
-             ctype_attr2[type], ctype[type], myid, 
+             ctype_attr2[type], ctype[type], myid,
 	     maxlength, msg, tail);
 #endif // OLDRECOMMEND
     }
@@ -3195,7 +3195,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     int is_board = (*direct == 'b'),
         // is_home = (*direct == 'h'),
         is_man = (*direct == 'm');
-    
+
 #ifdef SAFE_ARTICLE_DELETE
     int use_safe_delete = 0;
 
@@ -3294,7 +3294,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
                     bypass = "子目錄";
                 }
             }
-            
+
             if (bypass) {
                 id++;
                 mvprints(b_lines-1, 0, "跳過%s: %s\n", bypass, fh->title);
@@ -3378,12 +3378,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     /* TODO recursive lookup */
-    if (currmode & MODE_SELECT) { 
+    if (currmode & MODE_SELECT) {
         vmsg("請回到一般模式再刪除文章");
         return DONOTHING;
     }
 
-    if ((fhdr->filemode & FILE_BOTTOM) || 
+    if ((fhdr->filemode & FILE_BOTTOM) ||
        (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
@@ -3411,7 +3411,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
 	!( (currmode & MODE_DIGEST) ? (currmode & MODE_BOARD) : CheckPostPerm() ) || // allow BM to delete posts in digest mode
 	!CheckPostRestriction(currbid)
-	)   
+	)
 	return DONOTHING;
 
     if ((bp->brdattr & BRD_NOSELFDELPOST) && !(currmode & MODE_BOARD)) {
@@ -3434,10 +3434,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		break;
 
 	    // build reason string (based on STR_SAFEDEL_TITLE)
-	    snprintf(reason, sizeof(reason), "(已被%s刪除) <%s>", 
+	    snprintf(reason, sizeof(reason), "(已被%s刪除) <%s>",
 		    cuser.userid, fhdr->owner);
 	    move(3, 0); clrtoeol();
-	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: □ ", 
+	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: □ ",
 		    reason, sizeof(reason), DOECHO, reason);
 
 	    if (!reason[0])
@@ -3449,12 +3449,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    // confirm again!
 	    move(4, 0); clrtoeol();
-	    getdata(3, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]", 
+	    getdata(3, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]",
 		    genbuf, 3, LCECHO);
 
 	    // since the default y/n is same to msg_del_ny, we reuse the genbuf[0] here.
 	} while (0);
-    } else 
+    } else
 #endif
     {
 	getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
@@ -3471,8 +3471,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         // DIGEST mode 不用管
         // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
         // also check MAX_POST_MONEY in case any error made bad money...
-        if (del_fee < 0 || 
-            IsFreeBoardName(currboard) || 
+        if (del_fee < 0 ||
+            IsFreeBoardName(currboard) ||
             (currbrdattr & BRD_NOCREDIT) ||
             (currmode & MODE_DIGEST) ||
             (fhdr->filemode & INVALIDMONEY_MODES) ||
@@ -3518,7 +3518,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                      "若持續發生請向" BN_BUGREPORT "報告\n");
             }
             if (del_ret == DELETE_FILE_CONTENT_BACKUP_FAILED) {
-                outs(" " ANSI_COLOR(1;31) "* 檔案備份失敗，請至 " 
+                outs(" " ANSI_COLOR(1;31) "* 檔案備份失敗，請至 "
                      BN_BUGREPORT "報告" ANSI_RESET "\n");
             }
 #ifdef ASSESS
@@ -3569,26 +3569,26 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			passwd_sync_update(tusernum, &xuser);
 		    }
 
-                    pay_as_uid(tusernum, del_fee,  
-                            "%s 看板 文章「%s」被%s，扣除稿酬%s %s",  
-                            currboard,  fhdr->title,  
-                            as_badpost ? "劣退" : "刪除", 
-                            reason[0] ? "。原因:" : "", reason); 
+                    pay_as_uid(tusernum, del_fee,
+                            "%s 看板 文章「%s」被%s，扣除稿酬%s %s",
+                            currboard,  fhdr->title,
+                            as_badpost ? "劣退" : "刪除",
+                            reason[0] ? "。原因:" : "", reason);
                     sendalert_uid(tusernum, ALERT_PWD_PERM);
 #ifdef USE_COOLDOWN
 		    if (bp->brdattr & BRD_COOLDOWN)
 			add_cooldowntime(tusernum, 15);
 #endif
 		}
-	    } 
+	    }
 	    else
 	    {
 		// owner case
 		pwcuDecNumPost();
-                pay(del_fee, "%s 看板 文章自刪清潔費: %s",  
-                        currboard, fhdr->title); 
+                pay(del_fee, "%s 看板 文章自刪清潔費: %s",
+                        currboard, fhdr->title);
 		sendalert(cuser.userid, ALERT_PWD_PERM);
-		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "\n", 
+		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "\n",
                         cuser.numposts, del_fee);
 	    }
             pressanykey();
@@ -3601,7 +3601,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int  // Ptt: 修石頭文   
+static int  // Ptt: 修石頭文
 show_filename(int ent GCC_UNUSED, const fileheader_t * fhdr,
               const char *direct GCC_UNUSED)
 {
@@ -3618,7 +3618,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     char genbuf[PATHLEN] = "";
     int i;
     boardheader_t *bp = NULL;
-    
+
     if (currstat == RMAIL)
 	return DONOTHING;
 
@@ -3684,7 +3684,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     syncnow();
     bp->SRexpire = now;
     return FULLUPDATE;
-} 
+}
 
 static int
 view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
@@ -3720,7 +3720,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     move(area_l-(area_l < l), 0);
     clrtoln(area_l -(area_l < l) + area_lines+1);
     outc(' '); outs(ANSI_CLRTOEND);
-    move(area_l -(area_l < l) + area_lines, 0); 
+    move(area_l -(area_l < l) + area_lines, 0);
     outc(' '); outs(ANSI_CLRTOEND);
     move(area_l, 0);
 
@@ -3733,10 +3733,10 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     {
       char aidc[10];
       int y, x;
-      
+
       aidu2aidc(aidc, aidu);
-      prints("│ " AID_DISPLAYNAME ": " 
-	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ", 
+      prints("│ " AID_DISPLAYNAME ": "
+	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ",
 	  aidc, currboard && currboard[0] ? currboard : "未知",
 	  AID_HOSTNAME);
       getyx_ansi(&y, &x);
@@ -3768,7 +3768,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	if (!bp)
 	{
 	    prints("│\n");
-	} 
+	}
 	else if ((bp->brdattr & (BRD_HIDE | BRD_OVER18)) ||
 #ifdef BN_ALLPOST
                  strcmp(bp->brdname, BN_ALLPOST) == 0  ||
@@ -3785,7 +3785,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
         }
 	else
 	{
-	    prints("│ " URL_DISPLAYNAME ": " 
+	    prints("│ " URL_DISPLAYNAME ": "
 		    ANSI_COLOR(1) URL_PREFIX "/%s/%s.html" ANSI_RESET "\n",
 		    currboard, fhdr->filename);
 	}
@@ -3827,7 +3827,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	{
 	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
 		LISTMODE_DATE : LISTMODE_MONEY;
-	    vmsg((currlistmode == LISTMODE_MONEY) ? 
+	    vmsg((currlistmode == LISTMODE_MONEY) ?
 		    "開啟文章價格列表模式" : "停止列出文章價格");
 	}
      }
@@ -3886,7 +3886,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
         return FULLUPDATE;
     }
 
-    if (RET_RECYCLEBIN == 
+    if (RET_RECYCLEBIN ==
         psb_view_edit_history(fpath, fhdr->title, maxrev, current_as_base))
             psb_recycle_bin(direct, currboard);
     return FULLUPDATE;
@@ -3993,7 +3993,7 @@ b_note_edit_bname(int bid)
        "\t(使用者隨時可按 b 或經由進出不同看板來重新顯示進板畫面)\n");
 
        // 設定日期的效果其實很早就不會動了,所以拔掉
-       snprintf(msg, sizeof(msg), 
+       snprintf(msg, sizeof(msg),
 	       "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
 	       fh->bupdate ? 'Y' : 'N');
        getdata(10, 0, msg, buf, 3, LCECHO);
@@ -4111,7 +4111,7 @@ push_bottom(int ent, fileheader_t *old_fhdr, const char *direct)
 	  fhdr.filemode ^= FILE_BOTTOM;
 	  fhdr.multi.refer.flag = 1;
           fhdr.multi.refer.ref = ent;
-          append_record(buf, &fhdr, sizeof(fileheader_t)); 
+          append_record(buf, &fhdr, sizeof(fileheader_t));
           // make sure original one won't be deleted... add 'm'.
           if (!(old_fhdr->filemode & FILE_MARKED))
               mark_post(ent, old_fhdr, direct);
@@ -4134,24 +4134,24 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
 
-    if(vans(fhdr->filemode & FILE_DIGEST ? 
+    if(vans(fhdr->filemode & FILE_DIGEST ?
               "取消看板文摘?(Y/n)" : "收入看板文摘?(Y/n)") == 'n')
 	return READ_REDRAW;
 
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
-	if (!strcmp(currboard, BN_NOTE) || 
-#ifdef BN_ARTDSN	    
-	    !strcmp(currboard, BN_ARTDSN) || 
+	if (!strcmp(currboard, BN_NOTE) ||
+#ifdef BN_ARTDSN
+	    !strcmp(currboard, BN_ARTDSN) ||
 #endif
 	    !strcmp(currboard, BN_BUGREPORT) ||
 	    !strcmp(currboard, BN_LAW)
-	    ) 
+	    )
 	{
-            int unum = searchuser(fhdr->owner, NULL); 
-            if (unum > 0) { 
-                pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard); 
-            } 
+            int unum = searchuser(fhdr->owner, NULL);
+            if (unum > 0) {
+                pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard);
+            }
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
 	}
@@ -4178,18 +4178,18 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	append_record(buf, &digest, sizeof(digest));
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
-	if (!strcmp(currboard, BN_NOTE) || 
-#ifdef BN_ARTDSN	    
-	    !strcmp(currboard, BN_ARTDSN) || 
+	if (!strcmp(currboard, BN_NOTE) ||
+#ifdef BN_ARTDSN
+	    !strcmp(currboard, BN_ARTDSN) ||
 #endif
 	    !strcmp(currboard, BN_BUGREPORT) ||
 	    !strcmp(currboard, BN_LAW)
-	    ) 
+	    )
 	{
-            int unum = searchuser(fhdr->owner, NULL); 
-            if (unum > 0) { 
-                pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard); 
-            } 
+            int unum = searchuser(fhdr->owner, NULL);
+            if (unum > 0) {
+                pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard);
+            }
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
 	}
@@ -4243,7 +4243,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
 int check_cooldown(boardheader_t *bp)
 {
-    int diff = cooldowntimeof(usernum) - now; 
+    int diff = cooldowntimeof(usernum) - now;
     int i, limit[8] = {4000,1,2000,2,1000,3,-1,10};
 
     if(diff<0)
@@ -4266,7 +4266,7 @@ int check_cooldown(boardheader_t *bp)
         for(i=0; i<4; i++)
           if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
           {
-	    vmsgf("對不起，您的文章或推文間隔太近囉！ (限制 %d 分 %d 秒)", 
+	    vmsgf("對不起，您的文章或推文間隔太近囉！ (限制 %d 分 %d 秒)",
 		  diff/60, diff%60);
 	    return 1;
           }
@@ -4283,8 +4283,8 @@ change_cooldown(void)
 {
     char genbuf[256] = {'\0'};
     boardheader_t *bp = getbcache(currbid);
-    
-    if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) || 
+
+    if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) ||
         (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
 
@@ -4323,7 +4323,7 @@ b_moved_to_config()
 /* ----------------------------------------------------- */
 /* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
 const onekey_t read_comms[] = {
-    { 1, show_filename }, // Ctrl('A') 
+    { 1, show_filename }, // Ctrl('A')
     { 0, NULL }, // Ctrl('B')
     { 0, NULL }, // Ctrl('C')
     { 0, NULL }, // Ctrl('D')
@@ -4392,7 +4392,7 @@ const onekey_t read_comms[] = {
     { 1, recommend }, // 'X'
     { 1, recommend_cancel }, // 'Y'
     { 0, NULL }, // 'Z' 90
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, 
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 1, push_bottom }, // '_' 95
     { 0, NULL },
     { 0, NULL }, // 'a' 97

@@ -11,7 +11,7 @@
  * then re-implemented everything from scratch :)
  *
  * We will try to keep the API behavior similiar (to help porting)
- * but won't stick to it. 
+ * but won't stick to it.
  * Maybe at the end only 'vmsg' and 'vmsgf' will still be compatible....
  *
  * m3 visio = (ptt) vtuikit+vtkbd+screen/term.
@@ -260,13 +260,13 @@ vfill(int n, int flags, const char *s)
 	outc(' ');
 
     // close fill.
-    if (has_ansi) 
+    if (has_ansi)
 	outs(ANSI_RESET);
 }
 
 /**
  * vfill(n, flags, fmt, ...): 使用 vfill 輸出並格式化字串。
- * 
+ *
  * @param n	space to occupy
  * @param flags	VFILL_* parameters
  * @param fmt	string to display
@@ -298,7 +298,7 @@ vpad(int n, const char *pattern)
 
     while (n >= len)
     {
-	outs(pattern); 
+	outs(pattern);
 	n -= len;
     }
     if (n) nblank(n);
@@ -386,7 +386,7 @@ vshowmsg(const char *msg)
 	    nblank(w);
 
 	// able to print float?
-	if (szfloat) 
+	if (szfloat)
 	{
 	    outs(VCLR_MSG_FLOAT);
 	    outs(pfloat);
@@ -407,7 +407,7 @@ vans(const char *msg)
 {
     char buf[3];
 
-    move(b_lines, 0); 
+    move(b_lines, 0);
     clrtoeol(); SOLVE_ANSI_CACHE();
     outs(msg);
     vgets(buf, sizeof(buf), VGET_LOWERCASE);
@@ -419,7 +419,7 @@ vans(const char *msg)
  *
  * @param s 指定訊息，見 vshowmsg
  */
-int 
+int
 vansf(const char *fmt, ...)
 {
     char   msg[VBUFLEN];
@@ -570,7 +570,7 @@ vs_rectangle_simple(int l, int t, int r, int b)
  * @param mid: 置中說明，可被切齊。
  * @param right: 靠右的說明，空間夠才會顯示。
  */
-void 
+void
 vs_header(const char *title, const char *mid, const char *right)
 {
     int w = MAX_COL;
@@ -589,7 +589,7 @@ vs_header(const char *title, const char *mid, const char *right)
 	w -= strlen(title);
     }
 
-    // determine if we can display right message, and 
+    // determine if we can display right message, and
     // if if we need to truncate mid.
     if (szmid + szright > w)
 	szright = 0;
@@ -719,7 +719,7 @@ vs_hdr2f(const char *fmt, ...)
  * @param caption 左邊的分類字串
  * @param msg 訊息字串, \t 後文字靠右、最後面會自動留一個空白。
  */
-void 
+void
 vs_footer(const char *caption, const char *msg)
 {
     int i = 0;
@@ -728,7 +728,7 @@ vs_footer(const char *caption, const char *msg)
     if (caption)
     {
 	outs(VCLR_FOOTER_CAPTION);
-	outs(caption); 
+	outs(caption);
 	i += (*caption == ESC_CHR) ?
 	    strlen_noansi(caption) :
 	    (int)strlen(caption);
@@ -749,7 +749,7 @@ vs_footer(const char *caption, const char *msg)
 	    int l = strlen(++msg);
 	    if (i + l > SAFE_MAX_COL) break;
 	    l = SAFE_MAX_COL - l - i;
-	    nblank(l); 
+	    nblank(l);
 	    i += l;
 	    continue;
 	}
@@ -767,7 +767,7 @@ vs_footer(const char *caption, const char *msg)
  * vs_cols_layout(cols, ws, n): 依據 cols (大小 n) 的定義計算適合的行寬於 ws
  */
 
-void 
+void
 vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 {
     int i, tw;
@@ -808,7 +808,7 @@ vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 		continue;
 
 	    // lower priority, update pri2 and skip.
-	    if (cols[i].pri < pri1) 
+	    if (cols[i].pri < pri1)
 	    {
 		if (cols[i].pri > pri2)
 		    pri2 = cols[i].pri;
@@ -816,7 +816,7 @@ vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 	    }
 
 	    // now increase fields
-	    ws[i] ++; 
+	    ws[i] ++;
 	    if (++tw >= MAX_COL) break;
 	    run ++;
 	}
@@ -848,13 +848,13 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 	s = va_arg(ap, char*);
 
 	// quick check input.
-	if (!s) 
+	if (!s)
 	{
 	    s = "";
 	}
 	w = *ws;
 
-	if (cols->attr) 
+	if (cols->attr)
 	    outs(cols->attr);
 
 	// build vfill flag
@@ -886,14 +886,14 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
  */
 void
 vs_multi_T_table_simple(
-	const char ***t_tables,   int  n_t_tables, 
+	const char ***t_tables,   int  n_t_tables,
 	const int  *col_widths,   const int  *l_widths,
 	const char *attr_caption, const char *attr_l, const char *attr_r)
 {
     int i;
     int incomplete;
 
-    do 
+    do
     {
 	incomplete = n_t_tables;
 	for (i = 0; i < n_t_tables; i++)
@@ -911,7 +911,7 @@ vs_multi_T_table_simple(
 		if (attr_caption) outs(attr_caption);
 		vfill(col_widths[i], 0, lvar);
 		continue;
-	    } 
+	    }
 
 	    if (!lvar) {
 		// table is complete...
@@ -1102,13 +1102,13 @@ InputHistoryDelta(char *s, int sz, int d)
     }
 }
 
-void 
+void
 InputHistoryPrev(char *s, int sz)
 {
     InputHistoryDelta(s, sz, -1);
 }
 
-void 
+void
 InputHistoryNext(char *s, int sz)
 {
     InputHistoryDelta(s, sz, +1);
@@ -1151,7 +1151,7 @@ _vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, int c, VGET_RUNTIME *prt, void
     return 0;
 }
 
-int 
+int
 vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance)
 {
     // rt.iend points to NUL address, and
@@ -1161,7 +1161,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     int c = 0;
     char ismsgline = 0;
 
-    // callback 
+    // callback
     VGET_CALLBACKS cb = {NULL};
 
     // always use internal buffer to prevent temporary input issue.
@@ -1189,7 +1189,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     }
 
     // setup callbacks
-    if (pcbs) 
+    if (pcbs)
 	cb = *pcbs;
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
@@ -1341,7 +1341,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	}
 
 	// the basic keys
-	switch(c) 
+	switch(c)
 	{
 	    // exiting keys
 	    case KEY_ENTER:
@@ -1465,7 +1465,7 @@ vgets(char *buf, int len, int flags)
     return vgetstr(buf, len, flags, "");
 }
 
-int 
+int
 vgetstr(char *buf, int len, int flags, const char *defstr)
 {
     return vgetstring(buf, len, flags, defstr, NULL, NULL);

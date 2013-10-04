@@ -289,8 +289,8 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
     case 'u':
 	move(0, 0);
 	clrtoeol();
-	prints("%s色%s cont=%d", 
-		(dd->brd[dd->my][dd->mx].color == RED) ? "紅" : "黑", 
+	prints("%s色%s cont=%d",
+		(dd->brd[dd->my][dd->mx].color == RED) ? "紅" : "黑",
 		rname[dd->brd[dd->my][dd->mx].value], dd->cont);
 	*b = -1;
 	break;
@@ -300,7 +300,7 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
 	    &&
 	    dd->brd[dd->mly][dd->mlx].color != dd->brd[dd->my][dd->mx].color	/* 同色不能移動也不能吃 */
 	    &&
-	    (Is_move(dd, dd->my, dd->mx, dd->mly, dd->mlx) || 
+	    (Is_move(dd, dd->my, dd->mx, dd->mly, dd->mlx) ||
 	     Is_win(dd, dd->brd[dd->mly][dd->mlx], dd->brd[dd->my][dd->mx], dd->my, dd->mx, dd->mly, dd->mlx))
 	    ) {
 	    if (dd->fix && dd->brd[dd->my][dd->mx].value < 0) {

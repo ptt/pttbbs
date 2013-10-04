@@ -65,7 +65,7 @@ static char * const fn_brc = ".brc3";
  * @param[out]	num	number of records, which could be written for \a bid
  * 			= brc_num		if found
  * 			= 0 or dangling size	if not found
- * 					
+ *
  * @return	address of record. \a begin <= addr < \a endp.
  * 		0	if not found
  */
@@ -300,7 +300,7 @@ load_remote_brc() {
                (fd = toconnectex(BRCSTORED_ADDR, 5)) < 0) {
             mvprints(b_lines, 0, (conn_retries == 0) ?
                      ANSI_COLOR(1;31)
-                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)" 
+                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)"
                      ANSI_RESET: "正在同步看板已讀未讀資料,請稍候... (#%d)",
                      conn_retries + 1);
             refresh();
@@ -324,7 +324,7 @@ load_remote_brc() {
 
     if (fd >= 0)
         close(fd);
-    
+
     if (err) {
         brc_release();
         return 0;
@@ -358,7 +358,7 @@ save_remote_brc() {
 
     if (fd >= 0)
         close(fd);
-    
+
     if (err)
         return 0;
 
@@ -451,7 +451,7 @@ brc_initialize(){
     return 0;
 }
 
-/** 
+/**
  * get the read records for bid
  *
  * @param bid
@@ -562,7 +562,7 @@ brc_addlist(const char *fname, time4_t modified)
     for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (frec.create == brc_list[n].create) {
 	    // check if we got bad value.
-	    if (modified == (time4_t)-1) 
+	    if (modified == (time4_t)-1)
 		return;
 
 	    if (brc_list[n].modified == (time4_t)-1)
@@ -627,7 +627,7 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 	    if (modified == (time4_t)-1 || brcm == (time4_t)-1)
 		return 0;
 
-	    // one case is, some special file headers (ex, 
+	    // one case is, some special file headers (ex,
 	    // always bottom) may cause issue. They share create
 	    // time (filename) and apply different modify time.
 	    // so let's back to 'greater'.

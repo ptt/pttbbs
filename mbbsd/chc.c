@@ -8,7 +8,7 @@ extern const double elo_exp_tab[1000];
 
 enum Turn {
     BLK = 0,
-    RED 
+    RED
 };
 
 enum Kind {
@@ -295,7 +295,7 @@ chc_log_poem(FILE* outfp)
     int n;
 
     // TODO use readdir(), don't use lots of memory
-    n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter, 
+    n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter,
             (int (*)(const struct dirent **, const struct dirent **))alphasort);
     if (n < 0)
 	perror("scandir");
@@ -357,7 +357,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 	fprintf(fp, "=> %s ³Ó\n",
 		(info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
 		"¬õ" : "¶Â");
-    
+
     /* generate machine readable log.
      * http://www.elephantbase.net/protocol/cchess_pgn.htm */
     {
@@ -456,7 +456,7 @@ static void
 chc_prepare_step(ChessInfo* info, const void* step)
 {
     const drc_t* move = (const drc_t*) step;
-    getstep((board_p) info->board, 
+    getstep((board_p) info->board,
 	    &move->from, &move->to, info->last_movestr);
 }
 

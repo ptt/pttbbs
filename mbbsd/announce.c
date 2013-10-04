@@ -5,14 +5,14 @@
 // 最近發現很多 code 都死在 announce
 // 因為進來要看 lastlevel 而非 currbid
 // user 可能一進 BBS 直殺郵件->mail_cite->進精華區
-// 於是就爆炸 
+// 於是就爆炸
 // 同理 currboard 也不該用
 // 請改用 me.bid (注意 me.bid 可能為 0, 表示進來的非看板。)
 
 // for max file size limitation here, see edit.c
 #define MAX_FILE_SIZE (32768*1024)
 
-// used to force a page refresh. 
+// used to force a page refresh.
 // TODO change this to INT_MAX in future, when we understand what is the magic 10000 value.
 #define A_INVALID_PAGE (9999)
 
@@ -72,7 +72,7 @@ int copyqueue_fileinqueue(const char *fn)
 void copyqueue_reset()
 {
     allocated_copyqueue = 0;
-    used_copyqueue = 0; 
+    used_copyqueue = 0;
     head_copyqueue = 0;
 }
 
@@ -80,7 +80,7 @@ int copyqueue_append(CopyQueue *pcq)
 {
     if(copyqueue_testin(pcq))
 	return 0;
-    if(head_copyqueue == used_copyqueue) 
+    if(head_copyqueue == used_copyqueue)
     {
 	// empty queue, happy happy reset
 	if(allocated_copyqueue > COPYQUEUE_COMMON_SIZE)
@@ -96,7 +96,7 @@ int copyqueue_append(CopyQueue *pcq)
 
     if(used_copyqueue > allocated_copyqueue)
     {
-	allocated_copyqueue = 
+	allocated_copyqueue =
 	    used_copyqueue + COPYQUEUE_COMMON_SIZE; // half page
 	copyqueue = (CopyQueue*) realloc (copyqueue,
 		sizeof(CopyQueue) * allocated_copyqueue);
@@ -125,7 +125,7 @@ int copyqueue_toggle(CopyQueue *pcq)
 	    head_copyqueue =used_copyqueue;
 	if (i < used_copyqueue)
 	{
-	    memcpy(copyqueue + i, copyqueue+i+1, 
+	    memcpy(copyqueue + i, copyqueue+i+1,
 		    sizeof(CopyQueue) * (used_copyqueue - i));
 	}
 	return 0;
@@ -264,7 +264,7 @@ a_showmenu(menu_t * pm)
 	vs_footer(buf, pm->level == 0 ?
 		" (c)標記/複製 - 無管理權限，無法貼上 " :
 		" (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
-    } 
+    }
     else if(pm->level)
     {		// BM
 	vs_footer(" 【板  主】 ",
@@ -433,8 +433,8 @@ a_newitem(menu_t * pm, int mode)
 	{
 	    int edflags = 0;
 # ifdef BN_BBSMOVIE
-	    if (pm && pm->bid && 
-		strcmp(getbcache(pm->bid)->brdname, 
+	    if (pm && pm->bid &&
+		strcmp(getbcache(pm->bid)->brdname,
 			BN_BBSMOVIE) == 0)
 	    {
 		edflags |= EDITFLAG_UPLOAD;
@@ -480,7 +480,7 @@ a_pasteitem(menu_t * pm, int mode)
 	move(b_lines-2, 0); clrtobot();
 	outs("c: 對各項目個別確認是否要貼上, z: 全部不貼，同時重設並取消全部標記\n");
 	snprintf(buf, sizeof(buf),
-		"確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ", 
+		"確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ",
 		copyqueue_querysize());
 	getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
 	if(ans[0] == 'y')
@@ -573,7 +573,7 @@ a_appenditem(const menu_t * pm, int isask)
 	vmsg("請先執行 copy 命令後再 append");
 	copyqueue_reset();
 	return;
-    } 
+    }
     else
     {
 	CopyQueue *cq = copyqueue_gethead();
@@ -671,7 +671,7 @@ _iter_paste_tag(void *item, void *optarg) {
     if (!FindTaggedItem(fhdr))
         return 0;
 
-    if (TagBoard == 0) 
+    if (TagBoard == 0)
         sethomefile(buf, cuser.userid, fhdr->filename);
     else {
         setbfile(buf, param->bh->brdname, fhdr->filename);
@@ -791,7 +791,7 @@ a_delete(menu_t * pm, const char *backup_dir)
     fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
     const char *msg_errsync = "刪除檔案失敗，請退回上層目錄後再重試一次",
                *msg_errsync2 = "檔案可能已被它人刪除，請退回上層目錄再重進確認",
-               *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT 
+               *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT
                                 "報告您試圖刪除檔案的位置。";
 
     snprintf(fpath, sizeof(fpath),
@@ -844,7 +844,7 @@ a_delete(menu_t * pm, const char *backup_dir)
                 // simple workaround here.
                 if (backup_dir) {
                     const char *bn = NULL;
-                    if (strstr(backup_dir, "/" BN_JUNK "/")) 
+                    if (strstr(backup_dir, "/" BN_JUNK "/"))
                         bn = BN_JUNK;
                     else if (strstr(backup_dir, "/" BN_DELETED "/"))
                         bn = BN_DELETED;
@@ -1096,7 +1096,7 @@ typedef struct {
 
 // look up current location
 #define A_WHEREAMI_PREFIX_STR	"我在哪？ "
-static int 
+static int
 a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
 {
     const menu_t *p;
@@ -1115,7 +1115,7 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     snprintf(abuf, sizeof(abuf), "-%d", current_idx);
     last_idx_len = strlen(abuf)+1;
     // calculate remaining length
-    zidx_len = sizeof(zidx_buf) - strlen(zidx) - last_idx_len;	
+    zidx_len = sizeof(zidx_buf) - strlen(zidx) - last_idx_len;
 
     bskipping = 0;
     // first round, quick render zidx
@@ -1150,8 +1150,8 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     }
 
     outs(zidx_buf); outs(ANSI_RESET);
-    move(2, 0); 
-	
+    move(2, 0);
+
     bskipping = 0;
     // second round, render text output
     for (p = root, lvl = 0, num = 0; lvl < max_lvl; p = p->next)
@@ -1244,7 +1244,7 @@ a_multi_search_num(char init, a_menu_session_t *sess)
 }
 
 int
-a_menu_rec(const char *maintitle, const char *path, 
+a_menu_rec(const char *maintitle, const char *path,
 	int lastlevel, int lastbid,
 	char *trans_buffer,
 	a_menu_session_t *sess,
@@ -1345,7 +1345,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    {
 		// simple (single) selection
 		me.now = n-1;
-		me.page = 10000; // I don't know what's the magic value 10000... 
+		me.page = 10000; // I don't know what's the magic value 10000...
 	    }
 	    else if (n == 0 && sess->z_indexes[0] == 0)
 	    {
@@ -1446,7 +1446,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		*quote_file = 0;
 
 # ifdef BN_BBSMOVIE
-		if (me.bid && strcmp(getbcache(me.bid)->brdname, 
+		if (me.bid && strcmp(getbcache(me.bid)->brdname,
 			    BN_BBSMOVIE) == 0)
 		{
 		    edflags |= EDITFLAG_UPLOAD;
@@ -1508,7 +1508,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    {
 		preselect = NULL;
 		continue;
-	    } 
+	    }
 	    else
 	    {
 		fileheader_t   *fhdr = &me.header[me.now - me.page];
@@ -1526,7 +1526,7 @@ a_menu_rec(const char *maintitle, const char *path,
 
 		    while ((more_result = more(fname, YEA))) {
 			/* Ptt 範本精靈 plugin */
-			if (trans_buffer && 
+			if (trans_buffer &&
 				(currstat == EDITEXP || currstat == OSONG)) {
 			    char            ans[4];
 
@@ -1570,10 +1570,10 @@ a_menu_rec(const char *maintitle, const char *path,
 			    break;
 		    }
 		} else if (dashd(fname)) {
-		    returnvalue = a_menu_rec(me.header[me.now - me.page].title, fname, 
-			    me.level, me.bid, trans_buffer, 
+		    returnvalue = a_menu_rec(me.header[me.now - me.page].title, fname,
+			    me.level, me.bid, trans_buffer,
 			    sess, newselect, root, &me);
-		   
+
 		    if (returnvalue == DONOTHING)
 		    {
 			// DONOTHING will only be caused by previous a_multi_search_num + preselect.
@@ -1703,14 +1703,14 @@ a_menu_rec(const char *maintitle, const char *path,
 }
 
 int
-a_menu(const char *maintitle, const char *path, 
+a_menu(const char *maintitle, const char *path,
 	int lastlevel, int lastbid,
 	char *trans_buffer, const char *backup_dir)
 {
     a_menu_session_t sess = {0};
     sess.backup_dir = backup_dir;
-    return a_menu_rec(maintitle, path, 
-	    lastlevel, lastbid, trans_buffer, 
+    return a_menu_rec(maintitle, path,
+	    lastlevel, lastbid, trans_buffer,
 	    &sess, NULL, NULL, NULL);
 }
 
@@ -1719,7 +1719,7 @@ Announce(void)
 {
     setutmpmode(ANNOUNCE);
     a_menu(BBSNAME "佈告欄", "man",
-	   ((HasUserPerm(PERM_SYSOP) ) ? SYSOP : NOBODY), 
+	   ((HasUserPerm(PERM_SYSOP) ) ? SYSOP : NOBODY),
 	   0,
 	   NULL, NULL);
     return 0;

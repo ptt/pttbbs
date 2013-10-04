@@ -83,12 +83,12 @@ nios_dbgf(const char *fmt, ...)
 
 #ifdef CIN_DEBUG
 # define CINDBGLOG(...)   nios_dbgf( __VA_ARGS__)
-# else 
+# else
 # define CINDBGLOG(...)
 #endif
 #ifdef VKEY_DEBUG
 # define VKEYDBGLOG(...)  nios_dbgf( __VA_ARGS__)
-# else 
+# else
 # define VKEYDBGLOG(...)
 #endif
 
@@ -151,7 +151,7 @@ cin_is_buffer_empty()
 /**
  * cin_is_buffer_full(): check if input buffer is full
  */
-CIN_PROTO int 
+CIN_PROTO int
 cin_is_buffer_full()
 {
     return vbuf_is_full(cin);
@@ -160,7 +160,7 @@ cin_is_buffer_full()
 /**
  * cin_scan_buffer(c): return if buffer has given character
  */
-CIN_PROTO int 
+CIN_PROTO int
 cin_scan_buffer(char c)
 {
     return vbuf_strchr(cin, c) >= 0;
@@ -218,7 +218,7 @@ cin_is_fd_empty(int fd)
 
 #define CIN_IS_VALID_FD2(fd)    ((fd) > 0)
 
-CIN_PROTO int 
+CIN_PROTO int
 cin_poll_fds(int fd1, int fd2, int timeout)
 {
     CINDBGLOG("cin_poll_fds(fd1=%d, fd2=%d, timeout=%d)", fd1, fd2, timeout);
@@ -281,7 +281,7 @@ cin_clear_fd(int fd)
 /**
  * cin_fetch_fd(fd): read more data from fd to buffer
  */
-CIN_PROTO void  
+CIN_PROTO void
 cin_fetch_fd(int fd)
 {
     CINDBGLOG("cin_fetch_fd(%d)", fd);
@@ -368,7 +368,7 @@ cin_debug_print_content()
 // 1. PEEKed character in vkctx
 // 2. cin_buffer and cin_fd
 // 3. vkctx.attached_fd()
-// using the vkey_process() will handle all these cases. otherwise, you 
+// using the vkey_process() will handle all these cases. otherwise, you
 // have to take care of all thse input sources.
 
 // vkey context
@@ -430,7 +430,7 @@ vkey_detach()
 /**
  * vkey_is_full(): return if key buffer is full.
  */
-VKEY_PROTO int 
+VKEY_PROTO int
 vkey_is_full()
 {
     VKEYDBGLOG("vkey_is_full()");
@@ -593,7 +593,7 @@ vkey_poll(int timeout)
 VKEY_PROTO int
 vkey_is_typeahead()
 {
-    VKEYDBGLOG("vkey_is_typeahead(): %d|%d", 
+    VKEYDBGLOG("vkey_is_typeahead(): %d|%d",
             VKEY_HAS_PEEK() || !cin_is_buffer_empty());
 
     return  VKEY_HAS_PEEK() || !cin_is_buffer_empty();
@@ -602,7 +602,7 @@ vkey_is_typeahead()
 /**
  * vkey_prefetch(timeout): try to prefecth as more data as possible from fd to buffer for up to timeout milliseconds
  */
-VKEY_PROTO int  
+VKEY_PROTO int
 vkey_prefetch(int timeout)
 {
     VKEYDBGLOG("vkey_prefetch(%d)", timeout);
@@ -637,7 +637,7 @@ vkey_is_prefetched(char c)
  * vkey(): receive and block for next key
  * @return: virtual key code
  */
-VKEY_PROTO int 
+VKEY_PROTO int
 vkey()
 {
     VKEYDBGLOG("vkey()");
@@ -660,10 +660,10 @@ vkey_purge()
 {
     VKEYDBGLOG("vkey_purge()");
 
-    // a magic number to set how much data we're going to process 
+    // a magic number to set how much data we're going to process
     // before a real purge (may contain telnet protocol)
-    int bytes_before_purge = 32; 
-    
+    int bytes_before_purge = 32;
+
     // let's still try to process some remaining bytes
     vkey_prefetch(0);
     while (vkey_is_ready() && bytes_before_purge-- > 0)

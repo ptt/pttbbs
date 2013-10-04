@@ -247,11 +247,11 @@ ui_ban_user_for_board(const char *uid, const char *board) {
 
     result = ban_user_for_board(uid, board, expire, reason);
     log_filef(history_log, LOG_CREAT,
-              ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET 
-              " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET 
+              ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET
+              " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET
               " 發言，期限為 %s\n  理由: %s\n",
               Cdatelite(&now),
-              result ? "" : 
+              result ? "" :
               ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
               cuser.userid, uid,  datebuf, reason);
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
@@ -310,9 +310,9 @@ ui_unban_user_for_board(const char *uid, const char *board) {
     unban_user_for_board(uid, board);
     log_filef(history_log, LOG_CREAT,
               ANSI_COLOR(1) "%s " ANSI_COLOR(33) "%s" ANSI_RESET
-              " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET 
+              " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET
               " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
-              Cdatelite(&now), cuser.userid, uid, 
+              Cdatelite(&now), cuser.userid, uid,
               (expire - now) / DAY_SECONDS+1, reason);
     vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
     invalid_board_permission_cache(board);

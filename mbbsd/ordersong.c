@@ -7,15 +7,15 @@
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
 
-#ifndef ORDERSONG_MIN_NUMPOST 
-#define ORDERSONG_MIN_NUMPOST   (3) 
-#endif 
-#ifndef ORDERSONG_MAX_BADPOST 
-#define ORDERSONG_MAX_BADPOST   (1) 
-#endif 
-#ifndef ORDERSONG_MIN_NUMLOGINDAYS 
-#define ORDERSONG_MIN_NUMLOGINDAYS   (30) 
-#endif 
+#ifndef ORDERSONG_MIN_NUMPOST
+#define ORDERSONG_MIN_NUMPOST   (3)
+#endif
+#ifndef ORDERSONG_MAX_BADPOST
+#define ORDERSONG_MAX_BADPOST   (1)
+#endif
+#ifndef ORDERSONG_MIN_NUMLOGINDAYS
+#define ORDERSONG_MIN_NUMLOGINDAYS   (30)
+#endif
 
 #define MAX_SONGS (MAX_ADBANNER-100) // (400) XXX MAX_SONGS should be fewer than MAX_ADBANNER.
 
@@ -36,18 +36,18 @@ do_order_song(void)
 
     // 由於變免費了，改成要看劣文跟登入天數
 #if defined(ORDERSONG_MAX_BADPOST) && defined(ASSESS)
-    if (cuser.badpost > ORDERSONG_MAX_BADPOST) { 
-        vmsgf("為避免濫用，留言前請先消除劣文記錄至 %d 篇以下",  
-                ORDERSONG_MAX_BADPOST); 
-        return 0; 
-    } 
-#endif 
+    if (cuser.badpost > ORDERSONG_MAX_BADPOST) {
+        vmsgf("為避免濫用，留言前請先消除劣文記錄至 %d 篇以下",
+                ORDERSONG_MAX_BADPOST);
+        return 0;
+    }
+#endif
 #ifdef ORDERSONG_MIN_NUMLOGINDAYS
-    if (cuser.numlogindays < ORDERSONG_MIN_NUMLOGINDAYS) { 
-        vmsgf("為避免濫用，留言前要先有%s %d %s",  
+    if (cuser.numlogindays < ORDERSONG_MIN_NUMLOGINDAYS) {
+        vmsgf("為避免濫用，留言前要先有%s %d %s",
                 STR_LOGINDAYS, ORDERSONG_MIN_NUMLOGINDAYS, STR_LOGINDAYS_QTY);
-        return 0; 
-    } 
+        return 0;
+    }
 #endif
 
     strlcpy(buf, Cdatedate(&now), sizeof(buf));
@@ -72,7 +72,7 @@ do_order_song(void)
 	     "若有上述違規情形，站方將保留決定是否公開內容的權利\n"
              "且違規者將不受匿名保護(其 ID 可被公佈於公開看板)\n"
 	     "如不同意請按 (3) 離開。" ANSI_RESET "\n");
-	getdata(18, 0, 
+	getdata(18, 0,
 		"請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始留言、"
 		ANSI_COLOR(1) "2)" ANSI_RESET " 看範本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
@@ -225,7 +225,7 @@ do_order_song(void)
 	    // XXX race condition
 	    delete_range(OSONGPATH "/" FN_DIR, 1, nsongs - MAX_SONGS);
 	}
-	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", 
+	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.",
 		sender, say, receiver);
 	log_usies("OSONG", genbuf);
     }
@@ -318,7 +318,7 @@ sortsong(void)
     }
     qsort(songs, MAX_SONGS, sizeof(songcmp_t), (QCAST) count_cmp);
     fprintf(fo,
-	    "    " ANSI_COLOR(36) "──" ANSI_COLOR(37) "名次" ANSI_COLOR(36) "──────" ANSI_COLOR(37) 
+	    "    " ANSI_COLOR(36) "──" ANSI_COLOR(37) "名次" ANSI_COLOR(36) "──────" ANSI_COLOR(37)
 	    "範本" ANSI_COLOR(36) "───────────" ANSI_COLOR(37) "次數" ANSI_COLOR(36)
 	    "──" ANSI_COLOR(32) "共%d次" ANSI_COLOR(36) "──" ANSI_RESET "\n", totalcount);
     for (n = 0; n < 100 && songs[n].name[0]; n++) {

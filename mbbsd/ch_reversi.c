@@ -133,8 +133,8 @@ static void
 reversi_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
     strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
-    user->win  = 
-    user->lose = 
+    user->win  =
+    user->lose =
     user->tie  = 0;
 }
 
@@ -343,7 +343,7 @@ reversi_post_game(ChessInfo* info)
 static void
 reversi_gameend(ChessInfo* info GCC_UNUSED, ChessGameResult result GCC_UNUSED)
 {
-    /* nothing to do now 
+    /* nothing to do now
      * TODO game record */
 }
 
@@ -401,7 +401,7 @@ reversi_loadlog(FILE *fp, ChessInfo *info)
     while (fgets(buf, sizeof(buf), fp)) {
 	if (strcmp("</reversilog>\n", buf) == 0)
 	    return 1;
-	else if (strncmp("black:", buf, 6) == 0 || 
+	else if (strncmp("black:", buf, 6) == 0 ||
 		strncmp("white:", buf, 6) == 0) {
 	    /* /(black|white):([a-zA-Z0-9]+)/; $2 */
 	    userec_t   rec;
@@ -415,7 +415,7 @@ reversi_loadlog(FILE *fp, ChessInfo *info)
 	    int         c, r;
 	    const char *p = buf;
 	    int i;
-	    
+
 	    for(i=0; i<2; i++) {
                 reversi_step_t step = { .type = CHESS_STEP_NORMAL };
 

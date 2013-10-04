@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-// TODO remove this 
+// TODO remove this
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
@@ -104,7 +104,7 @@ gettime(int line, time4_t dt, const char* head)
     localtime4_r(&dt, &ptime);
     endtime = ptime;
     snprintf(yn, sizeof(yn), "%4d", ptime.tm_year + 1900);
-    move(line, 0); SOLVE_ANSI_CACHE(); clrtoeol(); 
+    move(line, 0); SOLVE_ANSI_CACHE(); clrtoeol();
     snprintf(prompt, sizeof(prompt), "%s 西元年:", head);
     do {
 	getdata_buf(line, 0, prompt, yn, 5, NUMECHO);
@@ -181,7 +181,7 @@ wait_penalty(int sec)
  * @param y:	    starting line on screen
  * @param lines:    max lines to be displayed
  * @param mode:	    SHOWFILE_*, see modes.h
- * @return 失敗傳回 0，否則為 1。 
+ * @return 失敗傳回 0，否則為 1。
  *         2 表示有 PttPrints 碼
  */
 int
@@ -190,7 +190,7 @@ show_file(const char *filename, int y, int lines, int mode)
     FILE *fp;
     char buf[ANSILINELEN];
     int  ret = 1;
-    int  strpmode = STRIP_ALL; 
+    int  strpmode = STRIP_ALL;
 
     if (mode & SHOWFILE_ALLOW_COLOR)
 	strpmode = ONLY_COLOR;
@@ -204,7 +204,7 @@ show_file(const char *filename, int y, int lines, int mode)
 	while (fgets(buf, sizeof(buf), fp) && lines--)
 	{
 	    move(y++, 0);
-	    if (mode == SHOWFILE_RAW) 
+	    if (mode == SHOWFILE_RAW)
 	    {
 		outs(buf);
 	    }
@@ -244,7 +244,7 @@ search_num(int ch, int max)
     char genbuf[10];
 
     genbuf[0] = ch; genbuf[1] = 0;
-    clen = getdata_buf(y, 0, 
+    clen = getdata_buf(y, 0,
 	    " 跳至第幾項: ", genbuf, sizeof(genbuf)-1, NUMECHO);
 
     move(y, 0); clrtoeol();
@@ -375,7 +375,7 @@ show_helpfile(const char *helpfile)
 }
 
 // vgets/getdata compatible helpers
-static int 
+static int
 getdata2vgetflag(int echo)
 {
     assert(echo != GCARRY);

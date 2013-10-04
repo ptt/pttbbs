@@ -87,7 +87,7 @@ b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname)
 	    /* first time, try if boardname revealed. */
 	    char *post = strstr(inbuf, str_post1);
 	    if(!post) post = strstr(inbuf, str_post2);
-	    if(post) 
+	    if(post)
 		post = strstr(post, boardname);
 	    if(post) {
 		/* found releaved stuff. */
@@ -248,7 +248,7 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     for (junk = 0; junk < item_num; junk++) {
 	fgets(inbuf, sizeof(inbuf), cfp);
 	chomp(inbuf);
-	fprintf(tfp, "    %-42s %3d ²¼ %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],                
+	fprintf(tfp, "    %-42s %3d ²¼ %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],
 		(float)(counts[junk] * 100) / (float)(people_num),
 		(float)(counts[junk] * 100) / (float)(*total));
     }
