@@ -28,6 +28,9 @@
  * >  300 DBZ Server ... <  query <mid> >  250 <recno> ... >  450 NOT FOUND!
  */
 
+// FIXME: some commands do not properly return a meaningful value.
+// And the caller is not checking return values either.
+
 static int CMDhelp ARG((ClientType *));
 static int CMDquit ARG((ClientType *));
 static int CMDihave ARG((ClientType *));
@@ -718,7 +721,7 @@ CMDihave(client)
 		client->fd = -1;
 		client->mode = 0;
 		client->ihavefail++;
-		return;
+		return 1;
 	    } else {
 		fprintf(argv->out, "235\r\n");
 		verboselog("Ihave Put: 235\n");
