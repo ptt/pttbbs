@@ -495,7 +495,7 @@ ch_kill(chicken_t *mychicken)
 static void
 ch_getting_old(int *hp, int *weight, int diff, int age)
 {
-    float ex = 0.9, care_hours = 6;
+    float ex = 0.9, care_hours = 12;
 
     if (age > 180) {
         ex = 0.1;
