@@ -29,7 +29,7 @@ etc/Welcome_login.4 進站畫面4
 etc/crosspost.txt   過度轉錄開的罰單通知信
 etc/myfav_defaults  我的最愛預設列表
 etc/post.note	發文注意事項
-etc/expire.conf	看板期限
+etc/expire2.conf	看板期限
 etc/feast	節日
 etc/domain_name_query.cidr  故鄉
 etc/whitemail   註冊 email 白名單

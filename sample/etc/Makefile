@@ -7,7 +7,7 @@ FILES=	Welcome		Welcome_login	\
 	register	registered	registermail	registeredmail 	\
 	feast		sysop		banip.conf	\
 	ve.hlp		board.help	boardlist.help	\
-	editable	expire.conf	domain_name_query.cidr	\
+	editable	expire2.conf	domain_name_query.cidr	\
 	banemail	whitemail	whitemail.notice ziphome.exclude
 
 all:

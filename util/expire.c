@@ -5,11 +5,9 @@
 
 #define QCAST int (*)(const void *, const void *)
 
-#define	DEF_DAYS	60
-#define	DEF_MAXP        10000
-#define	DEF_MINP	9000
+#define	DEF_MAXP        30000
 
-#define	EXPIRE_CONF	BBSHOME "/etc/expire.conf"
+#define	EXPIRE_CONF	BBSHOME "/etc/expire2.conf"
 #ifdef  SAFE_ARTICLE_DELETE
 char    safe_delete_only = 0;
 #endif
@@ -18,9 +16,7 @@ int     checkmode = 0;
 
 typedef struct {
     char    bname[IDLEN + 1];	/* board ID */
-    int     days;		/* expired days */
     int     maxp;		/* max post */
-    int     minp;		/* min post */
 } life_t;
 
 void callsystem(char *s)
@@ -68,11 +64,11 @@ void expire(life_t *brd)
     char fpath[128], index[128], *fname;
     int total, bid;
     int fdlock, fdr, fdw = 0, done, keep;
-    int duetime, ftime, nKeep = 0, nDelete = 0;
+    int ftime, nKeep = 0, nDelete = 0;
 
     printf("%s\n", brd->bname);
     /* XXX: bid of cache.c's getbnum starts from 1 */
-    if( (bid = getbnum(brd->bname)) == 0 || 
+    if( (bid = getbnum(brd->bname)) == 0 ||
 	strcmp(brd->bname, bcache[bid - 1].brdname) ){
 	printf("no such board?: %s\n", brd->bname);
 	sprintf(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
@@ -81,10 +77,6 @@ void expire(life_t *brd)
         return;
     }
 #ifdef	VERBOSE
-    if( brd->days < 1 ){
-	printf(":Err: expire time must more than 1 day.\n");
-	return;
-    }
     else if( brd->maxp < 100 ){
 	printf(":Err: maxmum posts number must more than 100.\n");
 	return;
@@ -103,7 +95,6 @@ void expire(life_t *brd)
     strcpy(fpath, index);
     fname = (char *) strrchr(fpath, '.');
 
-    duetime = (int)time(NULL) - brd->days * 24 * 60 * 60;
     done = 0;
     if( (fdr = open(index, O_RDONLY, 0)) > 0 ){
 	fstat(fdr, &state);
@@ -128,12 +119,12 @@ void expire(life_t *brd)
 		    )
 		    keep = 0;
 #ifdef SAFE_ARTICLE_DELETE
-		else if( safe_delete_only )
+		else if (safe_delete_only)
 		    keep = 1;
 #endif
-		else if( head.filemode & FILE_MARKED || total <= brd->minp )
+		else if (head.filemode & FILE_MARKED)
 		    keep = 1;
-		else if( ftime < duetime || total > brd->maxp )
+		else if (total > brd->maxp)
 		    keep = 0;
 		else
 		    keep = 1;
@@ -209,7 +200,7 @@ void visitdir(char c)
     while( (de = readdir(dirp)) != NULL )
 	if( de->d_name[0] != '.' )
 	    toexpire(de->d_name);
-    
+
     closedir(dirp);
 }
 
@@ -228,11 +219,9 @@ int main(int argc, char **argv)
 
     chdir(BBSHOME);
     /* default value */
-    db.days = DEF_DAYS;
     db.maxp = DEF_MAXP;
-    db.minp = DEF_MINP;
 
-    while( (ch = getopt(argc, argv, "d:M:m:hn"
+    while( (ch = getopt(argc, argv, "M:hn"
 #ifdef SAFE_ARTICLE_DELETE
 "D"
 #endif
@@ -243,14 +232,8 @@ int main(int argc, char **argv)
 	    safe_delete_only = 1;
 	    break;
 #endif
-	case 'd':
-	    db.days = atoi(optarg);
-	    break;
 	case 'M':
 	    db.maxp = atoi(optarg);
-	    break;
-	case 'm':
-	    db.minp = atoi(optarg);
 	    break;
 	case 'n':
 	    checkmode = 1;
@@ -258,12 +241,10 @@ int main(int argc, char **argv)
 	case 'h':
 	default:
 	    fprintf(stderr,
-		    "usage: expire [-m minp] [-M MAXP] [-d days] [board name...] [-n]\n"
+		    "usage: expire [-M MAXP] [board name...] [-n]\n"
 		    "deletion policy:\n"
-		    "       do nothing if #articles < minp (default:%d)\n"
-		    "       delete NOT MARKED articles which were post before days \n"
-		    "        (default:%d) or #articles > MAXP (default:%d)\n",
-		    DEF_MINP, DEF_DAYS, DEF_MAXP);
+		    "       delete NOT MARKED articles if #articles > MAXP (default:%d)\n",
+		    DEF_MAXP);
 	    return 0;
 	}
     argc -= optind;
@@ -285,23 +266,16 @@ int main(int argc, char **argv)
 		if( ptr && (number = atoi(ptr)) > 0 ){
 		    key = &(table[count++]);
 		    strcpy(key->bname, bname);
-		    key->days = number;
 		    key->maxp = db.maxp;
-		    key->minp = db.minp;
-
-		    ptr = (char *) strtok(NULL, " \t\r\n");
-		    if( ptr && (number = atoi(ptr)) > 0 ){
-			key->maxp = number;
-			
-			ptr = (char *) strtok(NULL, " \t\r\n");
-			if( ptr && (number = atoi(ptr)) > 0 ){
-			    key->minp = number;
-			}
-		    }
 		}
 	    }
 	}
 	fclose(fin);
+    } else {
+        printf("Sorry, failed to load configuration file %s.\n"
+               "The format has been changed, so please make sure you do\n"
+               "upgraded manually.\n", EXPIRE_CONF);
+        exit(1);
     }
 
     if( count > 1)

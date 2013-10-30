@@ -23,6 +23,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5885: [expire]
+util/expire 格式修改，不再看 days/minp.
+為避免誤砍，設定檔也同時改名為 expire2.conf。請自行調整。
+
 r5858: [birthday]
 不再要求輸入生日，直接要求輸入是否已滿十八歲，減少儲存的使用者個資。
 請跑一下 upgrade/r5858_birth 用已知生日重建是否滿十八歲的資料。
