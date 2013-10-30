@@ -495,16 +495,23 @@ ch_kill(chicken_t *mychicken)
 static void
 ch_getting_old(int *hp, int *weight, int diff, int age)
 {
-    float           ex = 0.9;
+    float ex = 0.9, care_hours = 6;
 
-    if (age > 70)
-	ex = 0.1;
-    else if (age > 30)
+    if (age > 180) {
+        ex = 0.1;
+        care_hours = 7 * 24;
+    } else if (age > 70) {
+	ex = 0.2;
+        care_hours = 96;
+    } else if (age > 45) {
 	ex = 0.5;
-    else if (age > 20)
-	ex = 0.7;
+        care_hours = 48;
+    } else if (age > 20) {
+	ex = 0.8;
+        care_hours = 24;
+    }
 
-    diff /= 60 * 6;
+    diff /= (care_hours * 60);
     while (diff--) {
 	*hp *= ex;
 	*weight *= ex;
@@ -516,7 +523,7 @@ static void
 time_diff(chicken_t * thechicken)
 {
     int             diff;
-    int             theage = ((now - thechicken->cbirth) / (60 * 60 * 24));
+    int             theage = ((now - thechicken->cbirth) / DAY_SECONDS);
     const short *delta = time_change[(int)thechicken->type];
 
     thechicken->type %= NUM_KINDS;
@@ -958,7 +965,7 @@ chicken_main(void)
 	}
     }
     assert(mychicken);
-    age = ((now - mychicken->cbirth) / (60 * 60 * 24));
+    age = ((now - mychicken->cbirth) / DAY_SECONDS);
     do {
 	time_diff(mychicken);
 	if (isdeath(mychicken, mychicken))
