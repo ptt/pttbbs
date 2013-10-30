@@ -420,7 +420,7 @@ vkey_attach(int fd)
 VKEY_PROTO int
 vkey_detach()
 {
-    CINDBGLOG("vkey_detach()");
+    VKEYDBGLOG("vkey_detach()");
 
     int r = vkctx.attached_fd;
     vkctx.attached_fd = 0;
@@ -581,8 +581,8 @@ vkey_is_ready()
 VKEY_PROTO int
 vkey_poll(int timeout)
 {
-    if (timeout) refresh();
     VKEYDBGLOG("vkey_poll(%d)", timeout);
+    if (timeout) refresh();
     return vkey_process(timeout, 1) != KEY_INCOMPLETE;
 }
 
