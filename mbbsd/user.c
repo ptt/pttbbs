@@ -833,7 +833,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
                     x.timesetangel = now;
                     log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
                               "%s 站長 %s 修改 %s 的小天使為 %s\n",
-                              Cdatelite(&now), x.userid, x.myangel);
+                              Cdatelite(&now), cuser.userid, x.userid, x.myangel);
 		    break;
 		}
 
