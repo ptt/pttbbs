@@ -830,6 +830,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
                 if (getuser(buf, &xuser) && (xuser.userlevel & PERM_ANGEL)) {
 		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
+                    x.timesetangel = now;
+                    log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
+                              "%s 站長 %s 修改 %s 的小天使為 %s\n",
+                              Cdatelite(&now), x.userid, x.myangel);
 		    break;
 		}
 
