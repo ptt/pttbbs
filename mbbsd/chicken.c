@@ -515,14 +515,14 @@ time_diff(chicken_t * thechicken)
     thechicken->type %= NUM_KINDS;
     diff = (now - thechicken->lastvisit) / 60;
 
-    if ((diff) < 1)
+    if (diff < 1)
 	return;
 
     if (theage > 13)		/* 老死 */
 	ch_getting_old(&thechicken->hp_max, &thechicken->weight, diff, theage);
 
     thechicken->lastvisit = now;
-    thechicken->weight -= thechicken->hp_max * diff / 540;	/* 體重 */
+    thechicken->weight -= thechicken->hp_max * (diff / 540.0);	/* 體重 */
     if (thechicken->weight < 1) {
 	thechicken->sick -= thechicken->weight / 10;	/* 餓得病氣上升 */
 	thechicken->weight = 1;
@@ -564,6 +564,7 @@ time_diff(chicken_t * thechicken)
     /* hp_max */
     if (thechicken->hp >= thechicken->hp_max / 2)
 	thechicken->hp_max += delta[HP_MAX] * diff / (60 * 12);
+
     /* hp恢護 */
     if (!thechicken->sick)
 	thechicken->hp += delta[HP_MAX] * diff / (60 * 6);
