@@ -415,7 +415,7 @@ ch_hit(chicken_t *mychicken)
 }
 
 static void
-ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken)
+ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken GCC_UNUSED)
 {
     int num = 0;
     char buf[5];
@@ -495,13 +495,31 @@ ch_kill(chicken_t *mychicken)
 static void
 ch_getting_old(int *hp, int *weight, int diff, int age)
 {
-    float ex = 0.9, care_hours = 24;
+    float           ex = 0.9;
 
-    diff /= (care_hours * 60);
+    if (age > 70)
+	ex = 0.1;
+    else if (age > 30)
+	ex = 0.5;
+    else if (age > 20)
+	ex = 0.7;
+
+    diff /= 60 * 6;
     while (diff--) {
 	*hp *= ex;
 	*weight *= ex;
     }
+}
+
+static void debug_rpt(const char *msg GCC_UNUSED, chicken_t *c GCC_UNUSED) {
+#ifdef DBG_CHICKEN
+    if (!msg) {
+        msg = "";
+        clear();
+    }
+    prints("%s hp:%d/%d weight:%d sick:%d dirty:%d\n",
+           msg, c->hp, c->hp_max, c->weight, c->sick, c->dirty);
+#endif
 }
 
 /* 依時間變動的資料 */
@@ -518,15 +536,22 @@ time_diff(chicken_t * thechicken)
     if (diff < 1)
 	return;
 
+    debug_rpt(NULL, thechicken);
+
     if (theage > 13)		/* 老死 */
 	ch_getting_old(&thechicken->hp_max, &thechicken->weight, diff, theage);
+    debug_rpt("AFTER getting_old", thechicken);
 
     thechicken->lastvisit = now;
-    thechicken->weight -= thechicken->hp_max * (diff / 540.0);	/* 體重 */
+    // 注意: 從前有個腦殘把顯示的 weight 改成 (max_hp + weight / 50) / 100
+    // 加上從前的老化公式導致一堆人的寵都是 weight=1 ，從此變出了所謂暗黑養法。
+    // 一堆爛掉失衡的公式無從修起，就亂搞吧。
+    thechicken->weight -= thechicken->hp_max * diff / 540;	/* 體重 */
     if (thechicken->weight < 1) {
 	thechicken->sick -= thechicken->weight / 10;	/* 餓得病氣上升 */
 	thechicken->weight = 1;
     }
+    debug_rpt("AFTER weight-hp_max", thechicken);
 
     /* 快樂度 */
     thechicken->happy -= diff / 60;
@@ -545,12 +570,14 @@ time_diff(chicken_t * thechicken)
 
     /* 髒亂 */
     thechicken->dirty += diff * delta[DIRTY] / 30;
+    debug_rpt("AFTER dirty+=diff*delta/30", thechicken);
 
     /* 生病(髒亂/體重) */
     if (thechicken->dirty > 1000)
 	thechicken->sick += (thechicken->dirty - 400) / 10;
     if (thechicken->weight > 1)
 	thechicken->sick -= diff / 60;
+    debug_rpt("AFTER weight>1?sick-=diff/60", thechicken);
 
     /* 病氣恢護 */
     if (thechicken->sick < 0)
@@ -564,12 +591,16 @@ time_diff(chicken_t * thechicken)
     /* hp_max */
     if (thechicken->hp >= thechicken->hp_max / 2)
 	thechicken->hp_max += delta[HP_MAX] * diff / (60 * 12);
-
     /* hp恢護 */
     if (!thechicken->sick)
 	thechicken->hp += delta[HP_MAX] * diff / (60 * 6);
     if (thechicken->hp > thechicken->hp_max)
 	thechicken->hp = thechicken->hp_max;
+    debug_rpt("AFTER hp-recovery", thechicken);
+
+#ifdef DBG_CHICKEN
+    pressanykey();
+#endif
 }
 
 static void
@@ -927,6 +958,18 @@ chicken_main(void)
 {
     int age;
     chicken_t *mychicken = load_live_chicken(cuser.userid);
+
+
+#ifdef DBG_CHICKEN
+    {
+        char buf[5];
+        vs_hdr2("寵物", "測試");
+        getdata(2, 0, "要模擬幾小時未進入的狀態？", buf, sizeof(buf), NUMECHO);
+        syncnow();
+        if (*buf)
+            mychicken->lastvisit = now - atoi(buf) * 60 * 60;
+    }
+#endif
 
     lockreturn0(CHICKEN, LOCK_MULTI);
     if (mychicken && !mychicken->name[0])
