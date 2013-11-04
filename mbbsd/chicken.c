@@ -517,8 +517,23 @@ static void debug_rpt(const char *msg GCC_UNUSED, chicken_t *c GCC_UNUSED) {
         msg = "";
         clear();
     }
-    prints("%s hp:%d/%d weight:%d sick:%d dirty:%d\n",
-           msg, c->hp, c->hp_max, c->weight, c->sick, c->dirty);
+    if (c) {
+        prints("%s hp:%d/%d weight:%d sick:%d dirty:%d\n",
+               msg, c->hp, c->hp_max, c->weight, c->sick, c->dirty);
+    } else {
+        vmsg(msg);
+    }
+#endif
+}
+
+static void debug_timediff(chicken_t *c GCC_UNUSED) {
+#ifdef DBG_CHICKEN
+    char buf[7];
+    vs_hdr2("胐", "代刚");
+    getdata(2, 0, "璶家览碭ゼ秈篈", buf, sizeof(buf), NUMECHO);
+    syncnow();
+    if (*buf)
+        c->lastvisit = now - atoi(buf) * 60 * 60;
 #endif
 }
 
@@ -597,10 +612,7 @@ time_diff(chicken_t * thechicken)
     if (thechicken->hp > thechicken->hp_max)
 	thechicken->hp = thechicken->hp_max;
     debug_rpt("AFTER hp-recovery", thechicken);
-
-#ifdef DBG_CHICKEN
-    pressanykey();
-#endif
+    debug_rpt("time_diff", NULL);
 }
 
 static void
@@ -932,6 +944,7 @@ chicken_query(const char *userid)
 	clrtobot();
 	prints("\n\n%s ⊿Τ緄胐..", userid);
     } else {
+        debug_timediff(&xchicken);
 	time_diff(&xchicken);
 	if (!isdeath(&xchicken, NULL))
 	{
@@ -959,18 +972,7 @@ chicken_main(void)
     int age;
     chicken_t *mychicken = load_live_chicken(cuser.userid);
 
-
-#ifdef DBG_CHICKEN
-    {
-        char buf[5];
-        vs_hdr2("胐", "代刚");
-        getdata(2, 0, "璶家览碭ゼ秈篈", buf, sizeof(buf), NUMECHO);
-        syncnow();
-        if (*buf)
-            mychicken->lastvisit = now - atoi(buf) * 60 * 60;
-    }
-#endif
-
+    debug_timediff(mychicken);
     lockreturn0(CHICKEN, LOCK_MULTI);
     if (mychicken && !mychicken->name[0])
     {
