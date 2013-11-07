@@ -282,6 +282,7 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
     strcpy(fhdr->filename, FN_SAFEDEL);
 #endif
     strcpy(fhdr->owner, "-");
+    fhdr->modified = now;
 }
 
 #ifdef SAFE_ARTICLE_DELETE
