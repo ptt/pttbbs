@@ -5,10 +5,10 @@
 #define QCAST   int (*)(const void *, const void *)
 
 static char    * const sig_des[] = {
-    "鬥雞", "交談", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
+    "", "交談", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
 };
 static char    * const withme_str[] = {
-  "談天", "下五子棋", "鬥寵物", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
+  "談天", "下五子棋", "", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
 };
 
 #define MAX_SHOW_MODE 7
@@ -2093,6 +2093,8 @@ void set_withme_flag(void)
 	line=1;
 	for(i=0; i<16 && withme_str[i]; i++) {
 	    clrtoeol();
+            if (!*withme_str[i])
+                continue;
 	    if(currutmp->withme&(1<<(i*2)))
 		prints("[%c] 我很想跟人%s, 歡迎任何人找我\n",'a'+i, withme_str[i]);
 	    else if(currutmp->withme&(1<<(i*2+1)))
