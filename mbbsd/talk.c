@@ -5,7 +5,7 @@
 #define QCAST   int (*)(const void *, const void *)
 
 static char    * const sig_des[] = {
-    "", "交談", "", "下棋", "象棋", "暗棋", "下圍棋", "下黑白棋",
+    "", "交談", "", "下五子棋", "下象棋", "下暗棋", "下圍棋", "下黑白棋",
 };
 static char    * const withme_str[] = {
   "談天", "下五子棋", "", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
