@@ -555,6 +555,14 @@ b_config(void)
 	    prints("%sc%s)文章類別 %sn%s)發文注意事項 ",
 		    aHot, aRst, aHot, aRst);
 	    outs(ANSI_RESET);
+
+            if (GROUPOP()) {
+                move_ansi(++ipostres, COLPOSTRES);
+                prints(ANSI_COLOR(1;32)
+                       "您目前有此看板的群組管理權"
+                       ANSI_RESET);
+            }
+
 	}
 
 	if (!isBM)
