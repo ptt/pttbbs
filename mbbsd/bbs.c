@@ -3846,8 +3846,8 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
     int current_as_base = 1;
 
     // TODO allow author?
-    if (!((currmode & MODE_BOARD) || GROUPOP() ||
-          HasUserPerm(PERM_SYSSUPERSUBOP)))
+    if (!((currmode & MODE_BOARD) ||
+          (HasUserPerm(PERM_SYSSUPERSUBOP | PERM_SYSSUBOP) && GROUPOP())))
         return DONOTHING;
 
     if (!fhdr || !fhdr->filename[0]) {
