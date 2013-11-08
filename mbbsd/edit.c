@@ -1885,8 +1885,7 @@ static void upload_file(void);
 // 		0		if write ok & exit
 static int
 write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN],
-	int upload, int chtitle, const char *kind_prompt, const char *warn_prompt,
-        int *pentropy)
+           int flags, int *pentropy)
 {
     FILE           *fp = NULL;
     textline_t     *p;
@@ -1896,6 +1895,11 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 #ifdef USE_POSTRECORD
     int checksum[3], sum = 0, po = 1;
 #endif
+
+    int upload = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
+    int chtitle = (flags & EDITFLAG_ALLOWTITLE) ? 1 : 0;
+    const char *kind_prompt = get_edit_kind_prompt(flags);
+    const char *warn_prompt = get_edit_warn_prompt(flags);
 
     assert(!chtitle || mytitle);
     vs_hdr("檔案處理");
@@ -1907,12 +1911,19 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 
     // common trail
 
-    if (currstat == SMAIL)
+    if (flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST)) {
+        // TODO 應該要 check 看是不是在連線看板發表，有再顯示這個腦殘 L.
+        // 可惜目前轉信資訊並無法簡單的在 mbbsd 裡得到，只好一律顯示。
+        // P.S: 雖然後面已經有又大又彩色又清楚的 warn_prompt 提示了，聽說有些
+        // 人還是會搞不清楚狀況不知道站內是三小。 話說回來如果 REPLYPOST
+        // 加上 mail 的話.... 那個限站內可能更讓人誤會。
+        if (local_article)
+            outs("[L]限站內 (S)儲存");
+        else
+            outs("[S]儲存 (L)限站內");
+    } else {
 	outs("[S]儲存");
-    else if (local_article)
-	outs("[L]站內信件 (S)儲存");
-    else
-	outs("[S]儲存 (L)站內信件");
+    }
 
 #ifdef EXP_EDIT_UPLOAD
     if (upload)
@@ -3727,12 +3738,8 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
 		block_cancel();
-		tmp = write_file(fpath, saveheader, islocal, title,
-			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
-			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0,
-			get_edit_kind_prompt(flags),
-			get_edit_warn_prompt(flags),
-			&entropy);
+                tmp = write_file(fpath, saveheader, islocal, title, flags,
+                                 &entropy);
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
