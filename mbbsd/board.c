@@ -262,7 +262,7 @@ b_posttype()
            if (!isdigit(genbuf[0]))
                continue;
            i = atoi(genbuf);
-           if (i < 0 || i >= 8)
+           if (i < 0 || i > 8)
                continue;
            while (i > types++)
                strlcat(posttype, "    ", sizeof(posttype));
