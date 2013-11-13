@@ -689,6 +689,8 @@ m_mod_board(char *bname)
                      " *** 因為開頭是空白或中文, 看板內左上角或按i的"
                      "板主名單會顯示為徵求中或無 ***"
                      ANSI_RESET "\n");
+            mvprints(y+5, 0, "注意: 資源回收筒與編輯歷史已不用先把自己設成板主。\n"
+                     "詳情請見(X)->(L)系統更新記錄。\n");
             if (getdata(y + 4, 0, "確定此板主名單正確?[y/N] ", ans,
                         sizeof(ans), LCECHO) &&
                 ans[0] == 'y') {
