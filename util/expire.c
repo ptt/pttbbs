@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 		if( ptr && (number = atoi(ptr)) > 0 ){
 		    key = &(table[count++]);
 		    strcpy(key->bname, bname);
-		    key->maxp = db.maxp;
+		    key->maxp = number;
 		}
 	    }
 	}
