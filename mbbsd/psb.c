@@ -528,9 +528,10 @@ pvrb_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ct
                                     revfname, RECYCLE_BIN_OWNER,
                                     1, 0) == 0) {
                         vmsg("儲存完成，請至信箱檢查備忘錄信件");
-                    } else
+                    } else {
                         vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
-                    return PSB_EOF;
+                        return PSB_EOF;
+                    }
                 }
             }
             return PSB_NOP;
