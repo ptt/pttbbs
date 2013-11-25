@@ -109,14 +109,15 @@ void expire(life_t *brd)
 	    while( read(fdr, &head, sizeof(head)) == sizeof(head) ){
 		done = 1;
 		ftime = atoi(head.filename + 2);
-		if (head.owner[0] == '-'
+                if (head.owner[0] == '-' ||
+                    (!*head.filename) ||
 #ifdef SAFE_ARTICLE_DELETE
-		    || strcmp(head.filename, FN_SAFEDEL) == 0
+		    strcmp(head.filename, FN_SAFEDEL) == 0 ||
 #ifdef FN_SAFEDEL_PREFIX_LEN
-		    || strncmp(head.filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0
+		    strncmp(head.filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0 ||
 #endif
 #endif
-		    )
+                    0)
 		    keep = 0;
 #ifdef SAFE_ARTICLE_DELETE
 		else if (safe_delete_only)
