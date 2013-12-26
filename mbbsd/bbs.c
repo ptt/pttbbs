@@ -3383,10 +3383,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         return DONOTHING;
     }
 
+    /* DIGEST is not visible to users... */
     if ((fhdr->filemode & FILE_BOTTOM) ||
-       (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
-	(fhdr->owner[0] == '-'))
-	return DONOTHING;
+        (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST)) {
+        vmsg("文章被標記或置底或收入文摘，無法刪除，請洽板主");
+        return DONOTHING;
+    }
+
+    if (fhdr->owner[0] == '-')
+        return DONOTHING;
 
     is_anon = (fhdr->filemode & FILE_ANONYMOUS);
     if(is_anon)
