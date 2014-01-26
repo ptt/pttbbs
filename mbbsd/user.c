@@ -1156,7 +1156,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    {
 		    fail++;
 #endif
-            }
+	    } else
+		strlcpy(x.userid, genbuf, sizeof(x.userid));
 	}
 	break;
 
