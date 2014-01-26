@@ -1146,7 +1146,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
 			DOECHO, x.userid)) {
-	    if (searchuser(genbuf, NULL)) {
+	    if (!is_validuserid(genbuf)) {
+		outs("錯誤! 輸入的 ID 不合規定\n");
+		fail++;
+	    } else if (searchuser(genbuf, NULL)) {
 		outs("錯誤! 已經有同樣 ID 的使用者\n");
 		fail++;
 #if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
@@ -1216,14 +1219,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	Rename(src, dst);
 	setuserid(unum, x.userid);
 
-        // alert if this is not a simple (lower/upper case) change
-        // note: actually we don't support simple change now, so always log.
-        if (strcasecmp(orig_uid, x.userid) != 0) {
-            char title[STRLEN];
-           snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
-                     orig_uid, x.userid, cuser.userid);
-            post_msg(BN_SECURITY, title, title, "[系統安全局]");
-        }
+	// log change for security reasons.
+	char title[STRLEN];
+	snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
+		 orig_uid, x.userid, cuser.userid);
+	post_msg(BN_SECURITY, title, title, "[系統安全局]");
     }
     if (mail_changed && !adminmode) {
 	// wait registration.
