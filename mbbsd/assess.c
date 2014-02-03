@@ -14,22 +14,30 @@ inline static void inc(unsigned char *num, int n)
 	(*num) += n;
 }
 
+static time4_t
+adjust_badpost_time(time4_t timeremovebadpost) {
+    time4_t min_timer;
+
+    // reset timer to at least some days to prevent user directly
+    // canceling his badpost.
+    syncnow();
+    min_timer = (now - (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) *
+                 DAY_SECONDS);
+    if (timeremovebadpost < min_timer)
+        timeremovebadpost = min_timer;
+
+    return timeremovebadpost;
+}
+
 int
 inc_badpost(const char *userid, int num) {
     userec_t xuser;
     int uid = getuser(userid, &xuser);
-    time4_t min_timer;
 
     if (uid <= 0)
         return 0;
 
-    // reset timer to at least some days to prevent user directly
-    // canceling his badpost.
-    min_timer = now - (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) *
-                DAY_SECONDS;
-    if (xuser.timeremovebadpost < min_timer)
-        xuser.timeremovebadpost = min_timer;
-
+    xuser.timeremovebadpost = adjust_badpost_time(xuser.timeremovebadpost);
     xuser.badpost += num;
     passwd_sync_update(uid, &xuser);
     return xuser.badpost;
@@ -185,6 +193,9 @@ reassign_badpost(const char *userid) {
 
     // something changed.
     u.badpost = atoi(buf);
+    if (u.badpost > orig_badpost) {
+        u.timeremovebadpost = adjust_badpost_time(u.timeremovebadpost);
+    }
     prints("\n使用者 %s 的劣文即將由 %d 改為 %d。請輸入理由(會寄給使用者)\n",
            userid, orig_badpost, u.badpost);
     if (!getdata(7, 0, "理由: ", reason, sizeof(reason), DOECHO)) {
