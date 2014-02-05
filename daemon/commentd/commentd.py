@@ -20,7 +20,7 @@ COMMENTLEN = 80
 # Ref: ../../include/daemons.h
 RequestFormatString = 'HH';
 Request = collections.namedtuple('Request', 'cb operation')
-CommentFormatString = "III%ds%ds" % (IDLEN + 1, COMMENTLEN + 1)
+CommentFormatString = "IIII%ds%ds" % (IDLEN + 1, COMMENTLEN + 1)
 Comment = collections.namedtuple('Comment',
 	'time ipv4 userref type userid msg')
 CommentKeyFormatString = '%ds%ds' % (IDLEN + 1, FNLEN + 1)
@@ -29,7 +29,9 @@ REQ_ADD = 1
 REQ_QUERY = 2
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5134
-_DB_PATH = './db_comments.db'
+_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+			'db_comments.db')
+
 
 def UnpackComment(blob):
     def strip_if_string(v):
