@@ -1495,7 +1495,7 @@ show_brdlist(int head, int clsflag, int newflag)
 }
 
 static void
-set_menu_BM(char *BM)
+set_menu_group_op(char *BM)
 {
     int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
@@ -1510,6 +1510,7 @@ set_menu_BM(char *BM)
         return;
 
     currmode |= MODE_GROUPOP;
+
     // XXX 不是很確定是否該在這邊 save level?
     if (!HasUserPerm(PERM_SYSSUBOP) || !HasUserPerm(PERM_BM))
         pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
@@ -1897,7 +1898,7 @@ choose_board(int newflag)
 			class_bid = -1;	/* 熱門群組用 */
 
 		    if (!GROUPOP())	/* 如果還沒有小組長權限 */
-			set_menu_BM(B_BH(ptr)->BM);
+			set_menu_group_op(B_BH(ptr)->BM);
 
 		    if (now < B_BH(ptr)->bupdate) {
 			int mr = 0;
