@@ -132,6 +132,44 @@ enum BRCSTORED_OPERATIONS {
 };
 
 ///////////////////////////////////////////////////////////////////////
+// Comments Daemon
+
+#ifndef COMMENTD_ADDR
+#define COMMENTD_ADDR   ":5134"
+#endif
+
+#ifndef COMMENTLEN
+#define COMMENTLEN (80)
+#endif
+
+enum {
+    COMMENTD_REQ_ADD = 1,
+    COMMENTD_REQ_QUERY,
+};
+
+typedef struct {
+    time4_t time;
+    time4_t ipv4;
+    uint32_t userref; /* user.ctime */
+    uint32_t type;
+    char userid[IDLEN + 1];
+    char msg[COMMENTLEN + 1];
+} PACKSTRUCT CommentBodyReq;
+
+typedef struct {
+    char board[IDLEN + 1];
+    char file[FNLEN + 1];
+} PACKSTRUCT CommentKeyReq;
+
+typedef struct {
+    short cb;
+    short operation;
+    CommentBodyReq comment;
+    CommentKeyReq key;
+} PACKSTRUCT CommentRequest;
+
+
+///////////////////////////////////////////////////////////////////////
 // online friend relation daemon
 //
 typedef struct {

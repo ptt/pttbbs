@@ -1,5 +1,7 @@
 
 #include "bbs.h"
+#include "daemons.h"
+#include <arpa/inet.h>
 
 #ifdef EDITPOST_SMARTMERGE
 
@@ -3112,10 +3114,42 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
         } else
             return FULLUPDATE;
     }
+    STATINC(STAT_RECOMMEND);
     LOG_IF(LOG_CONF_PUSH, log_filef("log/push", LOG_CREAT,
                                     "%s %d %s %s %s\n", cuser.userid,
                                     (int)now, currboard, fhdr->filename, msg));
-    STATINC(STAT_RECOMMEND);
+#ifdef USE_COMMENTD
+    {
+        int s;
+        const char *errmsg = "錯誤: 資料庫連線異常，無法寫入。請稍候再試。";
+        CommentRequest req = {0};
+        req.cb = sizeof(req);
+        req.operation = COMMENTD_REQ_ADD;
+
+        strlcpy(req.key.board, bp->brdname, sizeof(req.key.board));
+        strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
+
+        req.comment.time = now;
+        req.comment.ipv4 = inet_addr(fromhost);
+        req.comment.userref = cuser.firstlogin;
+        req.comment.type = type;
+        strlcpy(req.comment.userid, cuser.userid, sizeof(req.comment.userid));
+        strlcpy(req.comment.msg, msg, sizeof(req.comment.msg));
+
+        s = toconnectex(COMMENTD_ADDR, 10);
+        if (s < 0) {
+            vmsg(errmsg);
+            return FULLUPDATE;
+        }
+        if (towrite(s, &req, sizeof(req)) < 0) {
+            close(s);
+            vmsg(errmsg);
+            return FULLUPDATE;
+        }
+        close(s);
+    }
+#endif
+
     {
 	/* build tail first. */
 	char tail[STRLEN];
