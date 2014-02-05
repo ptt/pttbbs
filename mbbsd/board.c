@@ -316,7 +316,7 @@ int
 b_config(void)
 {
     boardheader_t   *bp=NULL;
-    int touched = 0, finished = 0;
+    int touched = 0, finished = 0, check_mod = 1;
     int i = 0, attr = 0, ipostres;
     char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
     // perm cache
@@ -346,7 +346,7 @@ b_config(void)
 
 #define CANTPOSTMSG ANSI_COLOR(1;31) "(您未達限制)" ANSI_RESET
 
-    while(!finished) {
+    while (!finished) {
 	// limits
 	uint8_t llogin = bp->post_limit_logins,
 		lbp    = bp->post_limit_badpost;
@@ -570,6 +570,12 @@ b_config(void)
 	    pressanykey();
 	    return FULLUPDATE;
 	}
+
+        if (check_mod) {
+            if (vmsg("若要進行修改請按 Ctrl-P，其它鍵直接離開。") != Ctrl('P'))
+                return FULLUPDATE;
+            check_mod = 0;
+        }
 
 	switch(vans("請輸入要改變的設定, 其它鍵結束: "))
 	{
