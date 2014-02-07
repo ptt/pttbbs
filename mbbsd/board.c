@@ -395,13 +395,6 @@ b_config(void)
 		ANSI_COLOR(1)"不開放" : "開放"
 		);
 
-	prints( " " ANSI_COLOR(1;36) "k" ANSI_RESET
-		" - 板主 %s" ANSI_RESET
-		" 刪除違規文字\n",
-		(bp->brdattr & BRD_BM_MASK_CONTENT) ?
-		ANSI_COLOR(1)"可" : "不可"
-		);
-
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET
 		" - %s " ANSI_RESET "推薦文章\n",
 		(bp->brdattr & BRD_NORECOMMEND) ?
@@ -444,6 +437,13 @@ b_config(void)
 		" - 推文時 %s" ANSI_RESET " 開頭\n",
 		(bp->brdattr & BRD_ALIGNEDCMT) ?
 		ANSI_COLOR(1)"對齊":"不用對齊");
+
+	prints( " " ANSI_COLOR(1;36) "k" ANSI_RESET
+		" - 板主 %s" ANSI_RESET
+		" 刪除部份違規文字\n",
+		(bp->brdattr & BRD_BM_MASK_CONTENT) ?
+		ANSI_COLOR(1)"可" : "無法"
+		);
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET
