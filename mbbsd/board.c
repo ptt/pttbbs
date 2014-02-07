@@ -1154,8 +1154,9 @@ load_boards(char *key)
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
-		/* Only SYSOP knows a board is a link or not. */
-		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
+                /* Let group ops know this is a symlink. */
+		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP)
+                    || GROUPOP())
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = BRD_LINK_TARGET(bptr);
@@ -1545,6 +1546,7 @@ static void replace_link_by_target(boardstat_t *board)
     board->bid = BRD_LINK_TARGET(getbcache(board->bid));
     board->myattr &= ~NBRD_SYMBOLIC;
 }
+
 static int
 paste_taged_brds(int gid)
 {
@@ -1888,6 +1890,10 @@ choose_board(int newflag)
 		    assert(0<=num && num<nbrdsize);
 		    ptr = &nbrd[num];
 		    if (ptr->myattr & NBRD_SYMBOLIC) {
+                        if (GROUPOP() && !HasUserPerm(PERM_SYSOP)) {
+                            vmsg("此為看板連結。為避免設定錯誤，您無法由此直接進入看板。");
+                            break;
+                        }
 			replace_link_by_target(ptr);
 		    }
 		}
