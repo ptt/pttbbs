@@ -325,7 +325,7 @@ b_config(void)
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
-#define LNBOARDINFO (19)
+#define LNBOARDINFO (20)
 #define LNPOSTRES   (12)
 #define COLPOSTRES  (48)
 
@@ -340,7 +340,7 @@ b_config(void)
     grayout(0, ytitle-2, GRAYOUT_DARK);
 
     // available hotkeys yet:
-    // a b d j k p q z
+    // a b d j p q z
     // 2 3 4 5 6 7 9
     // better not: l 0
 
@@ -393,6 +393,13 @@ b_config(void)
 		" 自刪文章\n",
 		(bp->brdattr & BRD_NOSELFDELPOST) ?
 		ANSI_COLOR(1)"不開放" : "開放"
+		);
+
+	prints( " " ANSI_COLOR(1;36) "k" ANSI_RESET
+		" - 板主 %s" ANSI_RESET
+		" 刪除違規文字\n",
+		(bp->brdattr & BRD_BM_MASK_CONTENT) ?
+		ANSI_COLOR(1)"可" : "不可"
 		);
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET
@@ -790,6 +797,15 @@ b_config(void)
 		    break;
 		}
 		bp->brdattr ^= BRD_NOREPLY;
+		touched = 1;
+		break;
+
+	    case 'k':
+		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
+		    vmsg("此項設定需要群組長或站長權限");
+		    break;
+		}
+		bp->brdattr ^= BRD_BM_MASK_CONTENT;
 		touched = 1;
 		break;
 

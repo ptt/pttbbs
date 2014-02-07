@@ -198,7 +198,7 @@ typedef struct boardheader_t { /* 256 bytes */
 } PACKSTRUCT boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
-// #define BRD_NOZAP		0x00000001	/* (沒用到) 不可zap */
+// #define BRD_NOZAP       	0x00000001	/* 不可 ZAP */
 #define BRD_NOCOUNT		0x00000002	/* 不列入統計 */
 #define BRD_NOTRAN		0x00000004	/* 不轉信 */
 #define BRD_GROUPBOARD		0x00000008	/* 群組板 */
@@ -226,6 +226,7 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_NOREPLY		0x02000000	/* 不可回文 */
 #define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
+#define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

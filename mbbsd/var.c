@@ -77,7 +77,7 @@ const char * const str_roleid[] = {
 };
 
 const char * const str_permboard[] = {
-    "不可 Zap",			/* BRD_NOZAP */
+    "(無作用)",			/* deprecated: BRD_NOZAP */
     "不列入統計",		/* BRD_NOCOUNT */
     "不轉信",			/* BRD_NOTRAN */
     "群組板",			/* BRD_GROUPBOARD */
@@ -111,8 +111,8 @@ const char * const str_permboard[] = {
     "推文記錄 IP",		/* BRD_IPLOGRECMD */
     "十八禁",			/* BRD_OVER18 */
     "對齊式推文",		/* BRD_ALIGNEDCMT */
-    "沒想到",
-    "沒想到",
+    "不可自刪",                 /* BRD_NOSELFDELPOST */
+    "板主可刪特定文字",         /* BRD_BM_MASK_CONTENT */
     "沒想到",
     "沒想到",
     "沒想到",

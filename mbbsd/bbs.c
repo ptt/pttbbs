@@ -2657,14 +2657,14 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 static int
 solve_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    if ((currmode & MODE_BOARD)) {
-	fhdr->filemode ^= FILE_SOLVED;
-        // TODO fix race condition here.
-        substitute_ref_record(direct, fhdr, ent);
-	check_locked(fhdr);
-	return PART_REDRAW;
-    }
-    return DONOTHING;
+    if (!(currmode & MODE_BOARD))
+        return DONOTHING;
+
+    fhdr->filemode ^= FILE_SOLVED;
+    // TODO fix race condition here.
+    substitute_ref_record(direct, fhdr, ent);
+    check_locked(fhdr);
+    return PART_REDRAW;
 }
 
 
@@ -4119,14 +4119,16 @@ board_digest(void)
 
 
 static int
-push_bottom(int ent, fileheader_t *old_fhdr, const char *direct)
+pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 {
     int num;
     fileheader_t fhdr;
     char buf[PATHLEN];
+
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD)
         || old_fhdr->filename[0]=='L')
         return DONOTHING;
+
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
     if (!(old_fhdr->filemode & FILE_BOTTOM))
@@ -4349,13 +4351,160 @@ change_cooldown(void)
 #endif
 
 static int
+mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
+#ifndef USE_TIME_CAPSULE
+    vmsg("此功\能未開啟，請洽站長。");
+    return FULLUPDATE;
+#else
+    char pattern[STRLEN];
+    char reason[DISP_TTLEN];
+    char buf[ANSILINELEN];
+    char fpath[PATHLEN], revpath[PATHLEN];
+    char ans[3];
+    FILE *fp, *fpw;
+    int i, rev, found = 0;
+    boardheader_t *bp;
+
+    if (currstat == RMAIL)
+	return DONOTHING;
+
+    bp = getbcache(currbid);
+    assert(bp);
+
+    if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
+        vmsg("要開啟此項功\能請洽群組長。");
+        return FULLUPDATE;
+    }
+
+    vs_hdr2(" 刪除特定文字 ", fhdr->title);
+    if (!getdata(1, 0, "刪除原因: ", reason, sizeof(reason), DOECHO))
+        return FULLUPDATE;
+    mvouts(3, 0, "請輸入要刪除的文字 (出現時會整行被[違規內容]取代, 最少兩個字元)\n");
+    if (!getdata(2, 0, "刪除文字: ", pattern, TTLEN, DOECHO) || strlen(pattern) < 2)
+        return FULLUPDATE;
+
+    // try to render and build.
+    setdirpath(fpath, direct, fhdr->filename);
+    fp = fopen(fpath, "rt");
+    if (!fp) {
+        vmsg("文章已被刪除或鎖定。");
+        return FULLUPDATE;
+    }
+    mvouts(3, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
+    i = 4;
+    while (fgets(buf, sizeof(buf), fp)) {
+        if (strstr(buf, pattern)) {
+            found++;
+            mvouts(i, 0, ANSI_RESET);
+            outs(buf);
+            outs(ANSI_RESET);
+            if (++i >= b_lines) {
+                if (tolower(vmsg("按 q 放棄，或是任意鍵繼續: ")) == 'q') {
+                    found = 0;
+                    break;
+                }
+                i = 4;
+                move(i, 0);
+                clrtobot();
+            }
+        }
+    }
+    fclose(fp);
+
+    if (!found) {
+        vmsg("未修改檔案。");
+        return FULLUPDATE;
+    }
+
+    /* XXX race condition here... */
+    getdata(b_lines, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
+    if (*ans != 'y') {
+        vmsg("未修改檔案。");
+        return FULLUPDATE;
+    }
+
+    rev = timecapsule_add_revision(fpath);
+    if (!timecapsule_get_by_revision(fpath, rev, revpath, sizeof(revpath))) {
+        vmsg("系統錯誤，無法修改。");
+        return FULLUPDATE;
+    }
+    // Enforce building a new file.
+    unlink(fpath);
+
+    fp = fopen(revpath, "rt");
+    fpw = fopen(fpath, "wt");
+    while (fgets(buf, sizeof(buf), fp)) {
+        if (strstr(buf, pattern)) {
+            fputs("※ [部份違規文字已刪除]\n", fpw);
+            continue;
+        }
+        fputs(buf, fpw);
+    }
+    fclose(fp);
+    fclose(fpw);
+    log_filef(fpath, LOG_CREAT, "※%s 於 %s 刪除部份違規文字，原因: \n", cuser.userid,
+              Cdatelite(&now), reason);
+    log_filef(revpath, LOG_CREAT,
+              "※%s 於 %s 刪除部份違規文字，原因: %s\n"
+              "※違規文字樣式: %s\n",
+              cuser.userid, Cdatelite(&now), reason, pattern);
+
+    // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
+    vmsg("違規文字已刪除。");
+    return FULLUPDATE;
+#endif
+}
+
+static int
 b_moved_to_config()
 {
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) {
+    if (currmode & MODE_BOARD) {
 	vmsg("這個功\能已移入看板設定 (i) 去了！");
 	return FULLUPDATE;
     }
     return DONOTHING;
+}
+
+static int
+moved_to_ctrl_e()
+{
+    if (currmode & MODE_BOARD) {
+	vmsg("這個功\能已移入文章管理 (Ctrl-E) 去了！");
+	return FULLUPDATE;
+    }
+    return DONOTHING;
+}
+
+static int
+manage_post(int ent, fileheader_t * fhdr, const char *direct) {
+    int ans;
+    const char *prompt = "[Y]推數歸零 [E]解除鎖定 [M]刪除特定文字:";
+
+    if (!(currmode & MODE_BOARD)) {
+        if (HasUserPerm(PERM_POLICE))
+            return lock_post(ent, fhdr, direct);
+        else
+            return DONOTHING;
+    }
+
+    ans = vmsg(prompt);
+    if (!isascii(ans))
+        return FULLUPDATE;
+
+    switch(tolower(ans)) {
+        case 'y':
+            recommend_cancel(ent, fhdr, direct);
+            break;
+
+        case 'e':
+            lock_post(ent, fhdr, direct);
+            break;
+
+        case 'm':
+            mask_post_content(ent, fhdr, direct);
+            break;
+    }
+    return FULLUPDATE;
 }
 
 /* ----------------------------------------------------- */
@@ -4367,7 +4516,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('B')
     { 0, NULL }, // Ctrl('C')
     { 0, NULL }, // Ctrl('D')
-    { 1, lock_post }, // Ctrl('E')
+    { 1, manage_post }, // Ctrl('E')
     { 0, NULL }, // Ctrl('F')
 #ifdef NO_GAMBLE
     { 0, NULL }, // Ctrl('G')
@@ -4430,10 +4579,10 @@ const onekey_t read_comms[] = {
     { 0, b_vote }, // 'V'
     { 0, b_notes_edit }, // 'W'
     { 1, recommend }, // 'X'
-    { 1, recommend_cancel }, // 'Y'
+    { 0, moved_to_ctrl_e }, // 'Y'
     { 0, NULL }, // 'Z' 90
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 1, push_bottom }, // '_' 95
+    { 1, pin_post }, // '_' 95
     { 0, NULL },
     { 0, NULL }, // 'a' 97
     { 0, b_notes }, // 'b'
