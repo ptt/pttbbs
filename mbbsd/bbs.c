@@ -4357,7 +4357,7 @@ mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
     return FULLUPDATE;
 #else
     char pattern[STRLEN];
-    char reason[DISP_TTLEN];
+    char reason[15];
     char buf[ANSILINELEN];
     char fpath[PATHLEN], revpath[PATHLEN];
     char ans[3];
@@ -4442,11 +4442,11 @@ mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
     }
     fclose(fp);
     fclose(fpw);
-    log_filef(fpath, LOG_CREAT, "※%s 於 %s 刪除部份違規文字，原因: \n", cuser.userid,
+    log_filef(fpath, LOG_CREAT, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
               Cdatelite(&now), reason);
     log_filef(revpath, LOG_CREAT,
-              "※%s 於 %s 刪除部份違規文字，原因: %s\n"
-              "※違規文字樣式: %s\n",
+              "※ %s 於 %s 刪除部份違規文字,原因: %s\n"
+              "※ 違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);
 
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
