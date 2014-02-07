@@ -4358,7 +4358,7 @@ mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
 #else
     char pattern[STRLEN];
     char reason[15];
-    char buf[ANSILINELEN];
+    char buf[ANSILINELEN], buf2[ANSILINELEN];
     char fpath[PATHLEN], revpath[PATHLEN];
     char ans[3];
     FILE *fp, *fpw;
@@ -4393,6 +4393,7 @@ mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
     mvouts(3, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
     i = 4;
     while (fgets(buf, sizeof(buf), fp)) {
+        strip_ansi(buf, buf, STRIP_ALL);
         if (strstr(buf, pattern)) {
             found++;
             mvouts(i, 0, ANSI_RESET);
@@ -4434,7 +4435,8 @@ mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
     fp = fopen(revpath, "rt");
     fpw = fopen(fpath, "wt");
     while (fgets(buf, sizeof(buf), fp)) {
-        if (strstr(buf, pattern)) {
+        strip_ansi(buf2, buf, STRIP_ALL);
+        if (strstr(buf2, pattern)) {
             fputs("※ [部份違規文字已刪除]\n", fpw);
             continue;
         }
