@@ -623,7 +623,7 @@ static void
 readdoent(int num, fileheader_t * ent)
 {
     int  type = ' ', title_type = SUBJECT_NORMAL;
-    const char *title;
+    const char *title, xtitle[STRLEN];
     char *mark, color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
@@ -708,8 +708,8 @@ readdoent(int num, fileheader_t * ent)
     }
 
     if (ent->filename[0] == 'L') {
-        title = "<本文鎖定>";
-        const_title = 1;
+        snprintf(xtitle, sizeof(xtitle), "<鎖定> %s", subject_ex(ent->title, &title_type));
+        title = xtitle;
     } else {
         title =  subject_ex(ent->title, &title_type);
     }
@@ -4351,7 +4351,7 @@ change_cooldown(void)
 #endif
 
 static int
-mask_post_content(int ent, fileheader_t * fhdr, const char *direct) {
+mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
 #ifndef USE_TIME_CAPSULE
     vmsg("此功\能未開啟，請洽站長。");
     return FULLUPDATE;
@@ -4480,7 +4480,10 @@ moved_to_ctrl_e()
 static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
-    const char *prompt = "[Y]推數歸零 [E]解除鎖定 [M]刪除特定文字:";
+    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪除特定文字:";
+
+    if (currstat == RMAIL)
+        return DONOTHING;
 
     if (!(currmode & MODE_BOARD)) {
         if (HasUserPerm(PERM_POLICE))
@@ -4690,4 +4693,3 @@ Select(void)
 {
     return do_select();
 }
-
