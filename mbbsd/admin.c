@@ -512,11 +512,28 @@ m_mod_board(char *bname)
 
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
-    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
-	    HasUserPerm(PERM_SYSOP |
-		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
-	    HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
+    if (bh.brdattr & BRD_SYMBOLIC) {
+        snprintf(genbuf, sizeof(genbuf), "[看板連結] (D)刪除 [Q]取消? ");
+    } else {
+        snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
+                 HasUserPerm(PERM_SYSOP |
+                             PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
+                 HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
+    }
     getdata(10, 0, genbuf, ans, 3, LCECHO);
+    if (isascii(*ans))
+        *ans = tolower(*ans);
+
+    if ((bh.brdattr & BRD_SYMBOLIC) && *ans) {
+        switch (*ans) {
+            case 'd':
+            case 'q':
+                break;
+            default:
+                vmsg("禁止更動連結看板，請直接修正原看板");
+                break;
+        }
+    }
 
     switch (*ans) {
     case 'g':
@@ -610,10 +627,6 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'e':
-	if( bh.brdattr & BRD_SYMBOLIC ){
-	    vmsg("禁止更動連結看板，請直接修正原看板");
-	    break;
-	}
         y = 8;
 	move(y++, 0); clrtobot();
 	outs("直接按 [Return] 不修改該項設定");
