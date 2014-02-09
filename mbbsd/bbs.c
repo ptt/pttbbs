@@ -623,7 +623,8 @@ static void
 readdoent(int num, fileheader_t * ent)
 {
     int  type = ' ', title_type = SUBJECT_NORMAL;
-    const char *title, xtitle[STRLEN];
+    const char *title;
+    char xtitle[STRLEN];
     char *mark, color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
