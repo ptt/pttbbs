@@ -204,6 +204,7 @@
 #define SUBJECT_NORMAL      0
 #define SUBJECT_REPLY       1
 #define SUBJECT_FORWARD     2
+#define SUBJECT_LOCKED      3
 
 /* ----------------------------------------------------- */
 /* 群組名單模式   Ptt                                    */
