@@ -624,7 +624,6 @@ readdoent(int num, fileheader_t * ent)
 {
     int  type = ' ', title_type = SUBJECT_NORMAL;
     const char *title;
-    char xtitle[STRLEN];
     char *mark, color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
@@ -708,13 +707,10 @@ readdoent(int num, fileheader_t * ent)
 	type = '+';
     }
 
-    if (ent->filename[0] == 'L') {
-        snprintf(xtitle, sizeof(xtitle), "<Âê©w> %s", subject_ex(ent->title, &title_type));
-        title = xtitle;
-    } else {
-        title =  subject_ex(ent->title, &title_type);
-    }
+    title =  subject_ex(ent->title, &title_type);
 
+    if (ent->filename[0] == 'L')
+        title_type = SUBJECT_LOCKED;
 
 #ifdef SAFE_ARTICLE_DELETE
     if (iscorpse)
@@ -731,6 +727,9 @@ readdoent(int num, fileheader_t * ent)
         case SUBJECT_FORWARD:
             color = '6', mark = "Âà";
             break;
+        case SUBJECT_LOCKED:
+            color = '5', mark = "Âê";
+            break;
         case SUBJECT_NORMAL:
         default:
             color = '1', mark = "¡¼";
@@ -743,7 +742,9 @@ readdoent(int num, fileheader_t * ent)
 
     isonline = query_online(ent->owner);
 
-    if(ent->recommend >= MAX_RECOMMENDS)
+    if (title_type == SUBJECT_LOCKED)
+        strcpy(recom,"0m--");
+    else if(ent->recommend >= MAX_RECOMMENDS)
 	  strcpy(recom,"1mÃz");
     else if(ent->recommend>9)
 	  sprintf(recom,"3m%2d",ent->recommend);
