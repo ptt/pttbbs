@@ -1154,9 +1154,8 @@ load_boards(char *key)
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
-                /* Let group ops know this is a symlink. */
-		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP)
-                    || GROUPOP())
+		/* Only SYSOP/SYSSUPERSUBOP knows a board is a link or not. */
+		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = BRD_LINK_TARGET(bptr);
@@ -1890,10 +1889,6 @@ choose_board(int newflag)
 		    assert(0<=num && num<nbrdsize);
 		    ptr = &nbrd[num];
 		    if (ptr->myattr & NBRD_SYMBOLIC) {
-                        if (GROUPOP() && !HasUserPerm(PERM_SYSOP)) {
-                            vmsg("此為看板連結。為避免設定錯誤，您無法由此直接進入看板。");
-                            break;
-                        }
 			replace_link_by_target(ptr);
 		    }
 		}
@@ -1996,10 +1991,10 @@ choose_board(int newflag)
 	    if (IN_CLASS() &&
                 (HasUserPerm(PERM_SYSOP) ||
                  (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
-		if (make_board_link_interactively(class_bid) < 0)
-		    break;
 		brdnum = -1;
 		head = 9999;
+		if (make_board_link_interactively(class_bid) < 0)
+		    break;
 	    }
 	    else if (HasFavEditPerm() && IS_LISTING_FAV()) {
 		if (fav_add_line() == NULL) {
