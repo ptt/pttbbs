@@ -12,7 +12,7 @@ def decode(s, strip_zero=True):
 	    b = ord(i)
 	    if b >= 0x80:
 		continue
-	if b == 0:
+	if (b == 0) and strip_zero:
 	    break
 	ret += unichr(big5_tbl.b2u_table[b])
 	b = 0
