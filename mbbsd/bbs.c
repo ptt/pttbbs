@@ -4063,17 +4063,6 @@ b_note_edit_bname(int bid)
 }
 
 static int
-b_notes_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	b_note_edit_bname(currbid);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
 b_notes(void)
 {
     char            buf[PATHLEN];
@@ -4319,37 +4308,6 @@ int check_cooldown(boardheader_t *bp)
    }
    return 0;
 }
-/**
- * 設定看板冷靜功能, 限制使用者發文時間
- */
-static int
-change_cooldown(void)
-{
-    char genbuf[256] = {'\0'};
-    boardheader_t *bp = getbcache(currbid);
-
-    if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) ||
-        (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
-	return DONOTHING;
-
-    if (bp->brdattr & BRD_COOLDOWN) {
-	if (vans("目前降溫中, 要開放嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr &= ~BRD_COOLDOWN;
-	outs("大家都可以 post 文章了。\n");
-    } else {
-	getdata(b_lines - 1, 0, "請輸入冷靜理由：", genbuf, 50, DOECHO);
-	if (vans("要限制 post 頻率, 降溫嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr |= BRD_COOLDOWN;
-	outs("開始冷靜。\n");
-    }
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    post_policelog(bp->brdname, NULL, "冷靜", genbuf, bp->brdattr & BRD_COOLDOWN);
-    pressanykey();
-    return FULLUPDATE;
-}
 #endif
 
 static int
@@ -4559,7 +4517,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, // 'A' 65
-    { 0, b_moved_to_config }, // 'B'
+    { 0, NULL }, // 'B'
     { 1, do_limitedit }, // 'C'
     { 1, del_range_post }, // 'D'
     { 1, edit_post }, // 'E'
@@ -4567,11 +4525,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // 'G'
     { 0, NULL }, // 'H'
     { 0, b_config }, // 'I'
-#ifdef USE_COOLDOWN
-    { 0, change_cooldown }, // 'J'
-#else
-    { 0, NULL }, // 'J'
-#endif
+    { 0, b_moved_to_config }, // 'J'
     { 0, NULL }, // 'K'
     { 1, solve_post }, // 'L'
     { 0, NULL }, // 'M'
@@ -4584,7 +4538,7 @@ const onekey_t read_comms[] = {
     { 1, edit_title }, // 'T'
     { 1, b_quick_acl }, // 'U'
     { 0, b_vote }, // 'V'
-    { 0, b_notes_edit }, // 'W'
+    { 0, b_moved_to_config }, // 'W'
     { 1, recommend }, // 'X'
     { 0, moved_to_ctrl_e }, // 'Y'
     { 0, NULL }, // 'Z' 90

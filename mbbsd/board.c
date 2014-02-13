@@ -311,6 +311,17 @@ b_posttype()
    return FULLUPDATE;
 }
 
+static int
+b_notes_edit(void)
+{
+    if (currmode & MODE_BOARD) {
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	b_note_edit_bname(currbid);
+	return FULLUPDATE;
+    }
+    return 0;
+}
+
 // integrated board config
 int
 b_config(void)
@@ -325,7 +336,7 @@ b_config(void)
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
-#define LNBOARDINFO (20)
+#define LNBOARDINFO (18)
 #define LNPOSTRES   (12)
 #define COLPOSTRES  (48)
 
@@ -336,13 +347,19 @@ b_config(void)
 #ifdef OLDRECOMMEND
     ytitle ++;
 #endif  // OLDRECOMMEND
+#ifdef USE_COOLDOWN
+    ytitle--;
+#endif // USE_COOLDOWN
+#ifdef USE_AUTOCPLOG
+    ytitle--;
+#endif
 
     grayout(0, ytitle-2, GRAYOUT_DARK);
 
     // available hotkeys yet:
-    // a b d j p q z
+    // a d p q z
     // 2 3 4 5 6 7 9
-    // better not: l 0
+    // better not: 0
 
 #define CANTPOSTMSG ANSI_COLOR(1;31) "(您未達限制)" ANSI_RESET
 
@@ -358,13 +375,10 @@ b_config(void)
 	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
 	vbarf(" 《%s》看板設定", bp->brdname);
 
-	move(ytitle +2, 0);
+	move(ytitle + 2, 0);
 
 	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
 	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? bp->BM : "(無)");
-
-	outs(" \n"); // at least one character, for move_ansi.
-
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
 		(bp->brdattr & BRD_HIDE) ?
@@ -454,6 +468,12 @@ b_config(void)
 		(bp->brdattr & BRD_CPLOG) ?
 		ANSI_COLOR(1)"需要" : "不需"
 		);
+#endif
+#ifdef USE_COOLDOWN
+	prints( " " ANSI_COLOR(1;36) "j" ANSI_RESET
+		" - %s 設為冷靜模式\n",
+		(bp->brdattr & BRD_COOLDOWN) ?
+		ANSI_COLOR(1)"已"ANSI_RESET : "未");
 #endif
 
 	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET
@@ -561,6 +581,9 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    prints("%sc%s)文章類別 %sn%s)發文注意事項 ",
 		    aHot, aRst, aHot, aRst);
+	    move_ansi(ipostres++, COLPOSTRES);
+	    prints("%sp%s)進板畫面",
+		    aHot, aRst);
 	    outs(ANSI_RESET);
 
             if (GROUPOP()) {
@@ -684,6 +707,27 @@ b_config(void)
 			" 注意: 已停止記錄推文IP");
 		break;
 
+#ifdef USE_COOLDOWN
+            case 'j':
+                if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) ||
+                      (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
+		    vmsg("此項設定需要站長或看板警察或群組長權限");
+                    break;
+                }
+                {
+                    char ans[50];
+                    getdata(b_lines - 1, 0, "請輸入理由：", ans, sizeof(ans), DOECHO);
+                    if (!*ans) {
+                        vmsg("未輸入理由，放棄設定。");
+                        break;
+                    }
+                    bp->brdattr ^= BRD_COOLDOWN;
+                    post_policelog(bp->brdname, NULL, "冷靜", ans, (bp->brdattr & BRD_COOLDOWN));
+                    touched = 1;
+                }
+                break;
+#endif
+
 	    case 'g':
 #ifndef BMCHS
 		if (!HasUserPerm(PERM_SYSOP))
@@ -784,6 +828,12 @@ b_config(void)
 		b_post_note();
 		clear();
 		break;
+
+            case 'p':
+                clear();
+                b_notes_edit();
+                clear();
+                break;
 
 	    case 'c':
 		clear();
