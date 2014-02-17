@@ -330,6 +330,8 @@ b_config(void)
     int touched = 0, finished = 0, check_mod = 1;
     int i = 0, attr = 0, ipostres;
     char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
+    char isPolice = HasUserPerm(PERM_POLICE);
+    char isSysGroupOP = (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP());
     // perm cache
     char hasres = 0,
 	 cachePostPerm = CheckPostPerm(),
@@ -367,6 +369,7 @@ b_config(void)
 	// limits
 	uint8_t llogin = bp->post_limit_logins,
 		lbp    = bp->post_limit_badpost;
+        char ansk;
 
 	move(ytitle-1, 0);
 	clrtobot();
@@ -595,7 +598,8 @@ b_config(void)
 
 	}
 
-	if (!isBM)
+        // 'J' need police perm, which is very stupid.
+	if (!isBM && !isPolice && !isSysGroupOP)
 	{
 	    pressanykey();
 	    return FULLUPDATE;
@@ -607,7 +611,21 @@ b_config(void)
             check_mod = 0;
         }
 
-	switch(vans("請輸入要改變的設定, 其它鍵結束: "))
+        ansk = vans("請輸入要改變的設定, 其它鍵結束: ");
+        if (isascii(ansk))
+            ansk = tolower(ansk);
+
+        // Now let's try to restrict the stupid perms.
+        if (!isBM) {
+            const char *sysgroupkeys = "ykd";
+            const char *policekeys = "j";
+
+            if (!(isSysGroupOP && strchr(sysgroupkeys, ansk)) &&
+                !(isPolice && strchr(policekeys, ansk)))
+                return FULLUPDATE;
+        }
+
+	switch(ansk)
 	{
 #ifdef USE_AUTOCPLOG
 	    case 'x':
@@ -716,7 +734,7 @@ b_config(void)
                 }
                 {
                     char ans[50];
-                    getdata(b_lines - 1, 0, "請輸入理由：", ans, sizeof(ans), DOECHO);
+                    getdata(b_lines - 1, 0, "請輸入理由(空白放棄設定):", ans, sizeof(ans), DOECHO);
                     if (!*ans) {
                         vmsg("未輸入理由，放棄設定。");
                         break;
