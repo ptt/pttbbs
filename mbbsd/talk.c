@@ -2038,7 +2038,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
-            mind = ANSI_COLOR(1;31) "¹Hªk";
+            mind = ANSI_COLOR(1;31) "¹H³W";
 
 	snprintf(num, sizeof(num), "%d",
 #ifdef SHOWUID
