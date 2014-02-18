@@ -109,7 +109,7 @@ typedef struct userec_t {
     uint16_t	chc_win;	/* 象棋戰績 勝 */
     uint16_t	chc_lose;	/* 象棋戰績 敗 */
     uint16_t	chc_tie;	/* 象棋戰績 和 */
-    int32_t     mobile;		/* 手機號碼 */
+    uint32_t    _unused11;	/* 舊手機號碼 */
     char	mind[4];	/* 心情 XXX not a null-terminate string */
     uint16_t	go_win;		/* 圍棋戰績 勝 */
     uint16_t	go_lose;	/* 圍棋戰績 敗 */
