@@ -2128,11 +2128,11 @@ m_read(void)
 ////////////////////////////////////////////////////////////////////////
 // Optional Features
 
-#ifdef OUTJOBSPOOL
 static int
 mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
                const char *direct GCC_UNUSED)
 {
+#ifdef OUTJOBSPOOL
     static char     address[60] = "", cmode = 1;
     char            fname[500], genbuf[200];
     FILE           *fp;
@@ -2211,8 +2211,10 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
     fclose(fp);
     vmsg("設定完成, 系統將在下一個整點(尖峰時段除外)將資料寄給您");
     return FULLUPDATE;
-}
+#else
+    return DONOTHING;
 #endif
+}
 
 #ifdef USE_TIME_CAPSULE
 static int
@@ -2318,11 +2320,7 @@ static const onekey_t mail_comms[] = {
     { 1, mail_read }, // 'r'
     { 1, mail_save }, // 's'
     { 0, NULL }, // 't'
-#ifdef OUTJOBSPOOL
     { 1, mail_waterball }, // 'u'
-#else
-    { 0, NULL }, // 'u'
-#endif
     { 0, mail_read_all }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, m_forward }, // 'x'
