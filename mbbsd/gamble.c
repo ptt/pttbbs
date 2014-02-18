@@ -524,11 +524,16 @@ stop_gamble(void)
     }
     return 1;
 }
+#endif
 
 int
 join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
             const char *direct GCC_UNUSED)
 {
+#ifdef NO_GAMBLE
+    return DONOTHING;
+#else
+
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
     if (stop_gamble()) {
@@ -538,11 +543,15 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     ticket(currbid);
     return FULLUPDATE;
+#endif
 }
 
 int
 hold_gamble(void)
 {
+#ifdef NO_GAMBLE
+    return DONOTHING;
+#else
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
     char tmp[128];
@@ -660,8 +669,8 @@ hold_gamble(void)
 
     vmsg("樂透彩券設定完成");
     return FULLUPDATE;
-}
 #endif
+}
 
 int
 ticket_main(void)

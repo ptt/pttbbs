@@ -3943,11 +3943,11 @@ view_posthistory(int ent, const fileheader_t * fhdr, const char *direct) {
 
 #endif // USE_TIME_CAPSULE
 
-#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
 /* 看板備份 */
 static int
 tar_addqueue(void)
 {
+#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
     char            email[60], qfn[80], ans[2];
     FILE           *fp;
     char            bakboard, bakman;
@@ -4004,8 +4004,10 @@ tar_addqueue(void)
     outs("稍後將會在系統負荷較低的時候將資料寄給您~ :) ");
     pressanykey();
     return FULLUPDATE;
-}
+#else
+    return DONOTHING;
 #endif
+}
 
 /* ----------------------------------------------------- */
 /* 看板進板畫面、文摘、精華區                              */
@@ -4483,11 +4485,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('D')
     { 1, manage_post }, // Ctrl('E')
     { 0, NULL }, // Ctrl('F')
-#ifdef NO_GAMBLE
-    { 0, NULL }, // Ctrl('G')
-#else
     { 0, hold_gamble }, // Ctrl('G')
-#endif
     { 0, NULL }, // Ctrl('H')
     { 0, board_digest }, // Ctrl('I') KEY_TAB 9
     { 0, NULL }, // Ctrl('J')
@@ -4550,11 +4548,7 @@ const onekey_t read_comms[] = {
     { 1, cite_post }, // 'c'
     { 1, del_post }, // 'd'
     { 0, NULL }, // 'e'
-#ifdef NO_GAMBLE
-    { 0, NULL }, // 'f'
-#else
     { 0, join_gamble }, // 'f'
-#endif
     { 1, good_post }, // 'g'
     { 0, b_help }, // 'h'
     { 0, b_config }, // 'i'
@@ -4569,11 +4563,7 @@ const onekey_t read_comms[] = {
     { 1, read_post }, // 'r'
     { 0, do_select }, // 's'
     { 0, NULL }, // 't'
-#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
     { 0, tar_addqueue }, // 'u'
-#else
-    { 0, NULL }, // 'u'
-#endif
     { 1, b_mark_read_unread }, // 'v'
     { 1, b_call_in }, // 'w'
     { 0, NULL }, // 'x'
