@@ -1924,7 +1924,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     char pager[3];
     char num[10];
     char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
-    char *mind = "";
     char description[30];
     char idlestr[32];
     int idletime = 0;
@@ -1997,6 +1996,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
 
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
+        char *mind = "";
 
 	move(i + 3, 0);
 	SOLVE_ANSI_CACHE();
