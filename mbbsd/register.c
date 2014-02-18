@@ -1114,7 +1114,7 @@ toregister(char *email)
 int
 u_register(void)
 {
-    char            rname[20], addr[50], mobile[16];
+    char            rname[20], addr[50];
     char            phone[20], career[40], email[50];
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
@@ -1151,11 +1151,6 @@ u_register(void)
     strlcpy(email, cuser.email,    sizeof(email));
     strlcpy(career,cuser.career,   sizeof(career));
     strlcpy(phone, cuser.phone,    sizeof(phone));
-
-    if (cuser.mobile)
-	snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
-    else
-	mobile[0] = 0;
 
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
@@ -1364,8 +1359,6 @@ u_register(void)
 	    else
 		vmsg(errcode);
 	}
-	getfield(8, "只輸入數字 如:0912345678 (可不填)",
-		REGNOTES_ROOT "mobile", "手機號碼", mobile, 20);
 
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
@@ -1379,8 +1372,7 @@ u_register(void)
 #endif
 
     // copy values to cuser
-    pwcuRegisterSetInfo(rname, addr, career, phone, email,
-                        atoi(mobile), isForeign);
+    pwcuRegisterSetInfo(rname, addr, career, phone, email, isForeign);
 
     // if reach here, email is apparently 'x'.
     toregister(email);

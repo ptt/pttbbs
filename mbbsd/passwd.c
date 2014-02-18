@@ -264,7 +264,6 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *career,
 			 const char *phone,
 			 const char *email,
-			 int         mobile,
 			 uint8_t     is_foreign)
 {
     PWCU_START();
@@ -273,7 +272,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(u.career,   career, sizeof(u.career));
     strlcpy(u.phone,    phone,  sizeof(u.phone));
     strlcpy(u.email,    email,  sizeof(u.email));
-    u.mobile = mobile;
     _SETBY_BIT(u.uflag, UF_FOREIGN, is_foreign);
 
     // duplicate to cuser
@@ -282,7 +280,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(cuser.career,   career, sizeof(cuser.career));
     strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
     strlcpy(cuser.email,    email,  sizeof(cuser.email));
-    cuser.mobile = mobile;
     _SETBY_BIT(cuser.uflag, UF_FOREIGN, is_foreign);
 
     PWCU_END();

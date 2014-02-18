@@ -205,10 +205,7 @@ user_display(const userec_t * u, int adminmode)
     outs("\n"); // end of realname
     prints("\t職業學歷: %s\n", u->career);
     prints("\t居住地址: %s\n", u->address);
-    prints("\t電話手機: %s", u->phone);
-	if (u->mobile)
-	    prints(" / %010d", u->mobile);
-	outs("\n");
+    prints("\t電    話: %s\n", u->phone);
 
     prints("\t電子信箱: %s\n", u->email);
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
@@ -789,11 +786,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    getdata_buf(y++, 0, "電話號碼：", x.phone,
 		    sizeof(x.phone), DOECHO);
 	}
-	buf[0] = 0;
-	if (x.mobile)
-	    snprintf(buf, sizeof(buf), "%010d", x.mobile);
-	getdata_buf(y++, 0, "手機號碼：", buf, 11, NUMECHO);
-	x.mobile = atoi(buf);
 
         do {
             snprintf(buf, sizeof(buf), x.over_18 ? "y" : "n");
