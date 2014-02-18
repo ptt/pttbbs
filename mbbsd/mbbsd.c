@@ -922,9 +922,6 @@ setup_utmp(int mode)
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
     strlcpy(uinfo.from,	    fromhost,	    sizeof(uinfo.from));
 
-    // 當初設計的人把 mind 設計成非 NULL terminated 的...
-    memcpy(uinfo.mind,	    cuser.mind,	    sizeof(cuser.mind));
-
     uinfo.five_win  = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
     uinfo.five_tie  = cuser.five_tie;
@@ -955,7 +952,6 @@ setup_utmp(int mode)
     SHM->UTMPneedsort = 1;
 
     strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
-    strip_nonebig5((unsigned char *)currutmp->mind, sizeof(currutmp->mind));
 
 #ifdef FROMD
     // resolve fromhost

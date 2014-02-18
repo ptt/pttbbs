@@ -96,7 +96,7 @@ typedef struct userec_t {
     time4_t     timesetangel;   /* 上次得到天使時間 */
     time4_t	timeplayangel;	/* 上次與天使互動時間 (by day) */
     // 以上應為 sizeof(chicken_t) 同等大小
-    
+
     time4_t	lastsong;	/* 上次點歌時間 */
     uint32_t	loginview;	/* 進站畫面 */
     uint8_t	_unused8;	// was: channel
@@ -110,7 +110,7 @@ typedef struct userec_t {
     uint16_t	chc_lose;	/* 象棋戰績 敗 */
     uint16_t	chc_tie;	/* 象棋戰績 和 */
     uint32_t    _unused11;	/* 舊手機號碼 */
-    char	mind[4];	/* 心情 XXX not a null-terminate string */
+    char	_unused_mind[4];/* 舊心情 */
     uint16_t	go_win;		/* 圍棋戰績 勝 */
     uint16_t	go_lose;	/* 圍棋戰績 敗 */
     uint16_t	go_tie;		/* 圍棋戰績 和 */
@@ -374,7 +374,7 @@ typedef struct userinfo_t {
     char    _unused5[3];
     time4_t lastact;               /* 上次使用者動的時間 */
     char    alerts;             /* mail alert, passwd update... */
-    char    mind[4];
+    char    _unused_mind[4];
 
     /* chatroom/talk/games calling */
     unsigned char   sig;            /* signal type */

@@ -528,8 +528,7 @@ pwcuExitSave	()
     if (pwcu_dirty	||
 	cuser.withme	!= currutmp->withme ||
 	cuser.pager	!= currutmp->pager  ||
-	cuser.invisible != currutmp->invisible ||
-	(memcmp(cuser.mind,currutmp->mind, sizeof(cuser.mind)) != 0) )
+	cuser.invisible != currutmp->invisible)
     {
 	// maybe dirty, let's work harder.
 	PWCU_START();
@@ -542,7 +541,6 @@ pwcuExitSave	()
 	u.withme    = currutmp->withme;
 	u.pager     = currutmp->pager;
 	u.invisible = currutmp->invisible;
-	memcpy(u.mind, currutmp->mind, sizeof(u.mind));	// XXX u.mind is NOT NULL-terminated.
 
 	// configure those changed by 'not important variables' API
 	u.signature	= cuser.signature;
@@ -636,5 +634,4 @@ void pwcuInitGuestInfo	()
     strlcpy(currutmp->nickname, cuser.nickname,
 	    sizeof(currutmp->nickname));
     strlcpy(cuser.realname, "guest", sizeof(cuser.realname));
-    memset (cuser.mind, 0, sizeof(cuser.mind));
 }

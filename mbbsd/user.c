@@ -49,21 +49,6 @@ kill_user(int num, const char *userid)
 }
 
 int
-u_set_mind()
-{
-    char mindbuf[sizeof(currutmp->mind)+1] = "";
-
-    // XXX 以往有 check 通緝/壽星，但我實在看不出這有什麼意義
-    memcpy(mindbuf, currutmp->mind, sizeof(mindbuf));
-    getdata_buf(b_lines - 1, 0, "現在的心情? ",  mindbuf, sizeof(mindbuf), DOECHO);
-    if (memcmp(mindbuf, currutmp->mind, sizeof(currutmp->mind)) == 0)
-	return 0;
-
-    memcpy(currutmp->mind, mindbuf, sizeof(currutmp->mind));
-    return 1;
-}
-
-int
 u_loginview(void)
 {
     int             i, in;
@@ -521,7 +506,6 @@ void Customize(void)
 	}
 	/* extended stuff */
 	{
-	    char mindbuf[5];
 	    static const char *wm[PAGER_UI_TYPES+1] =
 		{"一般", "進階", "未來", ""};
 
@@ -530,13 +514,6 @@ void Customize(void)
 		    col_opt,
 		    "PAGER      水球模式",
 		    wm[cuser.pager_ui_type % PAGER_UI_TYPES]);
-	    memcpy(mindbuf, &currutmp->mind, 4);
-	    mindbuf[4] = 0;
-	    prints("%c. %-*s%s\n",
-		    '1' + iax++,
-		    col_opt,
-		    "MIND       目前的心情",
-		    mindbuf);
 #ifdef PLAY_ANGEL
             // TODO move this to Ctrl-U Ctrl-P.
 	    if (HasUserPerm(PERM_ANGEL))
@@ -582,10 +559,6 @@ void Customize(void)
 		    vmsg("修改水球模式後請正常離線再重新上線");
 		    dirty = 1;
 		}
-		continue;
-	    case 1:
-		if (HasBasicUserPerm(PERM_LOGINOK) && u_set_mind())
-		    dirty = 1;
 		continue;
 	}
 #ifdef PLAY_ANGEL

@@ -1524,7 +1524,6 @@ static const char
     "  增加好友",    "a",
     "  刪除好友",    "d",
     "  修改好友",    "o",
-    "  設定心情",    "i",
     "  互動回應方式","y",
     NULL,
 },
@@ -1898,7 +1897,7 @@ static const VCOL ulist_coldef[ULISTCOLS] = {
     {NULL, 17,25, 2}, // "暱稱", sizeof(userec_t::nickname)
     {NULL, 17,27, 1}, // "故鄉/棋類戰績/等級分"
     {NULL, 12,23, 1}, // "動態" (最大多少才合理？) modestring size=40 但...
-    {NULL, 4, 4, 0, {0, 0, 1}}, // "心情"
+    {NULL, 4, 4, 0, {0, 0, 1}}, // "<通緝>" (原心情)
     {NULL, 6, 6, -1, {0, 1, 1}}, // "發呆" (optional?)
     {NULL, 0, VCOL_MAXW, -1}, // for middle alignment
 };
@@ -1959,7 +1958,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
                 "暱稱",
 		MODE_STRING[show_mode],
 		show_board ? "看板" : "動態",
-		show_pid ? "PID" : "心情",
+		show_pid ? "PID" : "",
                 idletime ? "發呆": "",
 		"");
 	outs(ANSI_RESET);
@@ -2041,9 +2040,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
 	    memcpy(mind, "通緝", 4);
-	else
-	    memcpy(mind, uentp->mind, 4);
-	mind[4] = 0;
 
 	snprintf(num, sizeof(num), "%d",
 #ifdef SHOWUID
@@ -2517,12 +2513,6 @@ userlist(void)
 		    }
 		    redrawall = redraw = 1;
 		}
-		break;
-
-	    case 'i':
-		if (HasBasicUserPerm(PERM_LOGINOK))
-		    u_set_mind();
-		redrawall = redraw = 1;
 		break;
 
 	    case Ctrl('S'):
