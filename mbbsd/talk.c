@@ -1924,8 +1924,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     char pager[3];
     char num[10];
     char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
-    char xmind[5+10] = ANSI_COLOR(33);
-    char *mind = xmind+strlen(xmind);
+    char *mind = "";
     char description[30];
     char idlestr[32];
     int idletime = 0;
@@ -2039,7 +2038,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
-	    memcpy(mind, "³q½r", 4);
+            mind = ANSI_COLOR(1;31) "¹Hªk";
 
 	snprintf(num, sizeof(num), "%d",
 #ifdef SHOWUID
@@ -2069,7 +2068,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		    getbcache(uentp->brc_id)->brdname) :
 #endif
                     modestring(uentp, 0),
-		*mind ? xmind : "",
+                mind,
 		idlestr,
 	        "");
     }
