@@ -1631,12 +1631,6 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     if(pre) print_regform_entry_localized(pre, fp);
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
 
-
-    // prompt user for how to contact if they have problem
-    // (deprecated because we allow direct reply now)
-    // fprintf(fp, ANSI_COLOR(1;31) "如有任何問題或需要與站務人員聯絡請至"
-    // 	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n");
-
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
     fprintf(fp, "--\n");

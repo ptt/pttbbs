@@ -143,9 +143,6 @@ pid_t           currpid;	/* current process ID */
 time4_t         login_start_time, last_login_time;
 time4_t         start_time;
 userec_t        pwcuser;	/* current user structure */
-#ifdef USE_POSTRECORD
-crosspost_t     postrecord;	/* anti cross post */
-#endif
 unsigned int    currbrdattr;
 unsigned int    currstat;
 

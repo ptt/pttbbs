@@ -1892,9 +1892,6 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
     char            ans[TTLEN], *msg;
     int             aborted = 0, line = 0;
     int             entropy = 0;
-#ifdef USE_POSTRECORD
-    int checksum[3], sum = 0, po = 1;
-#endif
 
     int upload = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
     int chtitle = (flags & EDITFLAG_ALLOWTITLE) ? 1 : 0;
@@ -2018,27 +2015,6 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
             strip_ansi_movecmd(msg);
 	    line++;
 
-#ifdef USE_POSTRECORD
-	    /* check crosspost */
-	    if (currstat == POSTING && po ) {
-		int msgsum = StringHash(msg);
-		if (msgsum) {
-		    if (postrecord.last_bid != currbid &&
-			postrecord.checksum[po] == msgsum) {
-			po++;
-			if (po > 3) {
-			    postrecord.times++;
-			    postrecord.last_bid = currbid;
-			    po = 0;
-			}
-		    } else
-			po = 1;
-		    if (line >= curr_buf->totaln / 2 && sum < 3) {
-			checksum[sum++] = msgsum;
-		    }
-		}
-	    }
-#endif
 #ifdef USE_POST_ENTROPY
 	    // calculate the real content of msg
 	    if (entropy < ENTROPY_MAX)
@@ -2051,20 +2027,6 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	}
     }
     curr_buf->currline = NULL;
-
-#ifdef USE_POSTRECORD
-    // what if currbid == 0? add currstat checking.
-    if (currstat == POSTING &&
-	postrecord.times > MAX_CROSSNUM-1 &&
-	!is_hidden_board_friend(currbid, currutmp->uid))
-	anticrosspost();
-
-    if (po && sum == 3) {
-	memcpy(&postrecord.checksum[1], checksum, sizeof(int) * 3);
-        if(postrecord.last_bid != currbid)
-	    postrecord.times = 0;
-    }
-#endif
 
     *pentropy = entropy;
     if (aborted)

@@ -1877,14 +1877,14 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 
     move(2, 0);
     clrtoeol();
-#ifdef USE_POSTRECORD
-    if (postrecord.times > 1)
+
+    if (1)
     {
 	outs(ANSI_COLOR(1;31)
 	"請注意: 若過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
-	"若有特別需求請洽各板主，請他們幫你轉文。\n\n");
+	"若有特別需求請洽各板主，請他們「幫你轉文」(不是自己轉)。\n\n");
     }
-#endif
+
     move(1, 0);
     CompleteBoard("轉錄本文章於看板：", xboard);
 
@@ -1896,32 +1896,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
-
-#ifdef USE_POSTRECORD
-    // XXX 板主常會把一系列文章轉回自己看板
-    if (is_BM_cache(xbid)) {
-#ifdef NOTIFY_BM_CP_IGNORE
-	// ignore cross-post for BM
-	move(1, 0); SOLVE_ANSI_CACHE();
-	prints("板主轉錄(不自動檢查CP)至看板: %s\n", xboard);
-#endif
-    } else {
-	// process and determine 'cross-post'
-
-	int hash = StringHash(fhdr->title);
-
-	/* 同樣 title 不管對哪個板都算 cross post , 所以不用檢查 author */
-	if ((hash != 0 && hash == postrecord.checksum[0])) {
-	    /* 檢查 cross post 次數 */
-	    if (postrecord.times++ > MAX_CROSSNUM)
-		anticrosspost();
-	} else {
-	    postrecord.times = 0;
-	    postrecord.last_bid = 0;
-	    postrecord.checksum[0] = hash;
-	}
-    }
-#endif
 
     if (!CheckPostRestriction(xbid))
     {
