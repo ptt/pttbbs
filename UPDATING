@@ -23,6 +23,11 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+r5939: [shm]
+為了減少昇級 BBS 時資料結構不相容的情形，SHM 裡的 "now" 現在變為一直都有
+（即使沒開 OUTTA_TIMER 選項）。如果您的 BBS 沒開 OUTTA_TIMER 請記得打開後
+重編 + 重跑，或是手動把 now 移掉。
+
 r5885: [expire]
 util/expire 格式修改，不再看 days/minp.
 為避免誤砍，設定檔也同時改名為 expire2.conf。請自行調整。
