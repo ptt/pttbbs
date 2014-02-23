@@ -104,7 +104,6 @@ upgrade_passwd(userec_t *puser)
     if (puser->version == 2275) // chicken change
     {
 	memset(puser->career,  0, sizeof(puser->career));
-	memset(puser->phone,   0, sizeof(puser->phone));
 	memset(puser->chkpad0, 0, sizeof(puser->chkpad0));
 	memset(puser->chkpad1, 0, sizeof(puser->chkpad1));
 	memset(puser->chkpad2, 0, sizeof(puser->chkpad2));
@@ -136,12 +135,12 @@ search_key_user(const char *passwdfile, int mode)
     } else {
 	// improved search
 	vs_hdr("關鍵字搜尋");
-	outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.電話 9.認證\n");
+	outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
 	getdata(2, 0, "要搜尋哪種資料？", key, 2, NUMECHO);
 
 	if (isascii(key[0]) && isdigit(key[0]))
 	    keytype = key[0] - '0';
-	if (keytype < 0 || keytype > 9)
+	if (keytype < 0 || keytype > 8)
 	    keytype = 0;
 	getdata(3, 0, "請輸入關鍵字: ", key, sizeof(key), DOECHO);
     }
@@ -200,9 +199,6 @@ search_key_user(const char *passwdfile, int mode)
 		DBCS_strcasestr(user.career, key))
 		keymatch = user.career;
 	    else if ((!keytype || keytype == 8) &&
-		DBCS_strcasestr(user.phone, key))
-		keymatch = user.phone;
-	    else if ((!keytype || keytype == 9) &&
 		DBCS_strcasestr(user.justify, key))
 		keymatch = user.justify;
 	}

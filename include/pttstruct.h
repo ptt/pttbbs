@@ -88,7 +88,7 @@ typedef struct userec_t {
     // r3968 移出 sizeof(chicken_t)=128 bytes
     char	_unused5[4];
     char	career[40];	/* 學歷職業 */
-    char	phone[20];	/* 電話 */
+    char	_unused_phone[20];	/* 電話 */
     uint32_t	_unused6;	/* 從前放轉換前的 numlogins, 使用前請先清0 */
     char	chkpad1[44];
     uint32_t    role;           /* Role-specific permissions */
@@ -409,7 +409,6 @@ typedef struct userinfo_t {
     unsigned int    withme;
     unsigned int    brc_id;
 
-
 #ifdef NOKILLWATERBALL
     time4_t wbtime;
 #endif
@@ -452,13 +451,6 @@ typedef struct {
 
 #define ANSILINELEN (511)                /* Maximum Screen width in chars */
 
-/* anti_crosspost */
-typedef struct crosspost_t {
-    int     checksum[4]; /* 0 -> 'X' cross post  1-3 -> 檢查文章行 */
-    short   times;       /* 第幾次 */
-    short   last_bid;    /* crossport to which board */
-} crosspost_t;
-
 #define SORT_BY_ID    0
 #define SORT_BY_CLASS 1
 #define SORT_BY_STAT  1
@@ -490,7 +482,7 @@ typedef struct keeploc_t {
 typedef struct {
     int   version;  // SHM_VERSION   for verification
     int   size;	    // sizeof(SHM_t) for verification
-   
+
     /* uhash */
     /* uhash is a userid->uid hash table -- jochang */
     char    userid[MAX_USERS][IDLEN + 1];
@@ -499,6 +491,7 @@ typedef struct {
     char    gap_2[sizeof(int)];
     int     money[MAX_USERS];
     char    gap_3[sizeof(int)];
+    // TODO(piaip) Always have this var - no more #ifdefs in structure.
 #ifdef USE_COOLDOWN
     time4_t cooldowntime[MAX_USERS];
 #endif
@@ -529,6 +522,7 @@ typedef struct {
     char    gap_10[sizeof(int)];
     int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
     char    gap_11[sizeof(int)];
+    // TODO(piaip) Always have this var - no more #ifdefs in structure.
 #if HOTBOARDCACHE
     unsigned char    nHOTs;
     int              HBcache[HOTBOARDCACHE];

@@ -193,28 +193,6 @@ isvalidaddr(char *addr)
     return NULL;
 }
 
-static char *
-isvalidphone(char *phone)
-{
-    int     i;
-
-#ifdef DBG_DISABLE_CHECK
-    return NULL;
-#endif // DBG_DISABLE_CHECK
-
-    for( i = 0 ; phone[i] != 0 ; ++i )
-	if( !isdigit((int)phone[i]) )
-	    return "請不要加分隔符號";
-    if (!removespace(phone) ||
-	strlen(phone) < 9 ||
-	strstr(phone, "00000000") != NULL ||
-	strstr(phone, "22222222") != NULL    ) {
-	return "這個電話號碼並不正確(請含區碼)" ;
-    }
-    return NULL;
-}
-
-
 ////////////////////////////////////////////////////////////////////////////
 // Account Expiring
 ////////////////////////////////////////////////////////////////////////////
@@ -996,7 +974,6 @@ create_regform_request()
     fprintf(fn, "name: %s\n",   cuser.realname);
     fprintf(fn, "career: %s\n", cuser.career);
     fprintf(fn, "addr: %s\n",   cuser.address);
-    fprintf(fn, "phone: %s\n",  cuser.phone);
     fprintf(fn, "email: %s\n",  "x"); // email is apparently 'x' here.
     fprintf(fn, "----\n");
     fclose(fn);
@@ -1115,7 +1092,7 @@ int
 u_register(void)
 {
     char            rname[20], addr[50];
-    char            phone[20], career[40], email[50];
+    char            career[40], email[50];
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
@@ -1150,7 +1127,6 @@ u_register(void)
     strlcpy(addr,  cuser.address,  sizeof(addr));
     strlcpy(email, cuser.email,    sizeof(email));
     strlcpy(career,cuser.career,   sizeof(career));
-    strlcpy(phone, cuser.phone,    sizeof(phone));
 
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
@@ -1347,19 +1323,6 @@ u_register(void)
 		vmsg(errcode);
 	}
 
-	while (1) {
-	    getfield(7, "不加-(), 包括長途區號",
-		    REGNOTES_ROOT "phone", "連絡電話", phone, 11);
-	    if( (errcode = isvalidphone(phone)) == NULL )
-		break;
-#ifdef FOREIGN_REG
-	    else if(isForeign && !strstr(errcode, "分隔符號"))
-		break;
-#endif
-	    else
-		vmsg(errcode);
-	}
-
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1372,7 +1335,7 @@ u_register(void)
 #endif
 
     // copy values to cuser
-    pwcuRegisterSetInfo(rname, addr, career, phone, email, isForeign);
+    pwcuRegisterSetInfo(rname, addr, career, email, isForeign);
 
     // if reach here, email is apparently 'x'.
     toregister(email);
@@ -1400,7 +1363,6 @@ print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
     fprintf(fp, "name: %s\n",	pre->u.realname);
     fprintf(fp, "career: %s\n", pre->u.career);
     fprintf(fp, "addr: %s\n",	pre->u.address);
-    fprintf(fp, "phone: %s\n",	pre->u.phone);
     fprintf(fp, "lasthost: %s\n", pre->u.lasthost);
     if (close)
 	fprintf(fp, "----\n");
@@ -1421,8 +1383,6 @@ concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen
     snprintf(result + len, maxlen - len, "職業學校: %s\n", pre->u.career);
     len = strlen(result);
     snprintf(result + len, maxlen - len, "目前住址: %s\n", pre->u.address);
-    len = strlen(result);
-    snprintf(result + len, maxlen - len, "電話號碼: %s\n", pre->u.phone);
     len = strlen(result);
     snprintf(result + len, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
     len = strlen(result);
@@ -2013,7 +1973,6 @@ ui_display_regform_single(
 		"");
 	prints("1.%-12s: %s\n",	"服務單位", pre->u.career);
 	prints("2.%-12s: %s\n",	"目前住址", pre->u.address);
-	prints("3.%-12s: %s\n",	"連絡電話", pre->u.phone);
 
 	move(b_lines, 0);
 	outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
@@ -2224,16 +2183,8 @@ regform2_validate_page(int dryrun)
 	    move(i*2+1, 0);
 	    prints("    %s ", (forms[i].u.userlevel & PERM_NOREGCODE) ?
                               ANSI_COLOR(1;31) "T" ANSI_RESET : " ");
-            // try to print lasthost if possible
-            int delta = 70 - 2 - strlen(forms[i].u.address) -
-                        strlen(forms[i].u.phone) - strlen(forms[i].u.lasthost);
-            if (delta < 0)
-                prints("%-50s%20s\n", forms[i].u.address, forms[i].u.phone);
-            else
-                prints("%s" ANSI_COLOR(0;33) " %*s%s " ANSI_RESET "%s\n",
-                        forms[i].u.address, delta, "",
-                        forms[i].u.lasthost, forms[i].u.phone);
-
+            prints("%-50s" ANSI_COLOR(0;33) "%s" ANSI_RESET "\n",
+                   forms[i].u.address, forms[i].u.lasthost);
 
 	    cforms++, tid ++;
 	}

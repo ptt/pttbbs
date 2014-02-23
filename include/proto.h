@@ -804,7 +804,6 @@ int pwcuRegSetTemporaryJustify(const char *justify, const char *email);
 int pwcuRegisterSetInfo (const char *rname,
 			 const char *addr,
 			 const char *career,
-			 const char *phone,
 			 const char *email,
 			 uint8_t     is_foreign);
 

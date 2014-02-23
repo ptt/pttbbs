@@ -262,7 +262,6 @@ pwcuRegSetTemporaryJustify(const char *justify, const char *email)
 int pwcuRegisterSetInfo (const char *rname,
 			 const char *addr,
 			 const char *career,
-			 const char *phone,
 			 const char *email,
 			 uint8_t     is_foreign)
 {
@@ -270,7 +269,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(u.realname, rname,  sizeof(u.realname));
     strlcpy(u.address,  addr,   sizeof(u.address));
     strlcpy(u.career,   career, sizeof(u.career));
-    strlcpy(u.phone,    phone,  sizeof(u.phone));
     strlcpy(u.email,    email,  sizeof(u.email));
     _SETBY_BIT(u.uflag, UF_FOREIGN, is_foreign);
 
@@ -278,7 +276,6 @@ int pwcuRegisterSetInfo (const char *rname,
     strlcpy(cuser.realname, rname,  sizeof(cuser.realname));
     strlcpy(cuser.address,  addr,   sizeof(cuser.address));
     strlcpy(cuser.career,   career, sizeof(cuser.career));
-    strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
     strlcpy(cuser.email,    email,  sizeof(cuser.email));
     _SETBY_BIT(cuser.uflag, UF_FOREIGN, is_foreign);
 
