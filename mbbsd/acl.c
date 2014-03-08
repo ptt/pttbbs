@@ -141,7 +141,7 @@ ui_print_user_banned_status_for_board(const char *uid, const char *board) {
         uid, board, sizeof(reason), reason);
 
     if (expire > now) {
-        prints("使用者 %s 禁言中，解除時間尚有 %d 天: %s\n理由:%s",
+        prints("使用者 %s 已被禁止發言，解除時間尚有 %d 天: %s\n理由:%s",
                uid, (expire-now)/DAY_SECONDS+1,
                Cdatelite(&expire), reason);
     } else {
@@ -166,11 +166,11 @@ ui_ban_user_for_board(const char *uid, const char *board) {
 
     getyx(&y, &x);
     if ((expire = is_user_banned_by_board(uid, board))) {
-        vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
+        vmsgf("使用者之前已被禁止發言，尚有 %d 天；詳情可用(S)或(L)查看",
               (expire - now) / DAY_SECONDS+1);
         return -1;
     }
-    prints("將使用者 %s 加入看板 %s 的禁言名單。", uid, board);
+    prints("將使用者 %s 加入看板 %s 的禁止發言名單。", uid, board);
     move(y+3, 0);
     syncnow();
     outs("目前接受的格式是 [數字][單位]。 "
@@ -216,7 +216,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
                      "注意: 超過 %d 天的設定有可能因為對方一直"
                      "未上站而導致帳號過期被重新註冊，\n"
                      "      此時同名的新帳號由於不一定是同一人所以"
-                     "不會被禁言(水桶)。\n" ANSI_RESET,
+                     "不會被禁止發言。\n" ANSI_RESET,
                      KEEP_DAYS_REGGED);
         }
     }
@@ -232,7 +232,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     }
 
     move(y, 0); clrtobot();
-    prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
+    prints("\n使用者 %s 即將加入禁止發言名單 (期限: %s)\n"
            "理由: %s\n"
            ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET "\n",
            uid, datebuf, reason);
@@ -254,15 +254,15 @@ ui_ban_user_for_board(const char *uid, const char *board) {
               result ? "" :
               ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
               cuser.userid, uid,  datebuf, reason);
-    vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
+    vmsg(result ? "已禁止使用者發言" : "失敗，請向站長報告");
     if (result) {
         char xtitle[STRLEN];
         char xmsg[STRLEN*5];
 
-        snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
+        snprintf(xtitle, sizeof(xtitle), "%s 看板禁止發言通知", board);
         snprintf(xmsg, sizeof(xmsg),
-                 "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
-                 "開始時間: %s (期限 %s)(此為處罰執行時間，非原始犯規時間)\n"
+                 "%s 已基於使用者條款停止提供服務(看板停權)。\n"
+                 "開始時間: %s (期限 %s)(此為執行時間，非原始犯規時間)\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n",
                  board, Cdatelite(&now), datebuf, reason);
@@ -330,7 +330,7 @@ edit_banned_list_for_board(const char *board) {
     while (1) {
         clear();
         vs_hdr2f(" Bakuman 權限設定系統 \t"
-                 " 看板: %s ，類型: 禁止發言(水桶)，名單上限: ∞", board);
+                 " 看板: %s ，類型: 禁止發言，名單上限: ∞", board);
         move(3, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
@@ -351,31 +351,18 @@ edit_banned_list_for_board(const char *board) {
         "           它採取的是設後免理+記錄式的概念: (可由歷史記錄自行推算)\n"
         "         - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
-        "         - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查\n"
+        "         - 想確認是否設錯或查某個使用者是不是仍在禁言中，可用(S)來檢查\n"
         "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
-        "         - 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
+        "         - 目前沒有[永久禁言]的設定，若有需要請設個 10年或 20年\n"
         "         - 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
-                   "帳號被砍後水桶會自動解除\n" ANSI_RESET
-        "         - 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
-ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
+                   "帳號被砍後禁言會自動解除\n" ANSI_RESET
+        "         - 禁言自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
+ANSI_COLOR(1) "         - 想查看某使用者為何被禁止發言可用(S)或是(L)再用 / 搜尋\n"
         ANSI_RESET
-#ifdef WATERBAN_UPGRADE_TIME_STR
-        // enable and change this if you've just made an upgrade
-        ANSI_COLOR(0;32)
-        " 系統更新資訊: 本系統啟用時已把所有您放在舊水桶名單的帳號全部設上了\n"
-        "               " WATERBAN_UPGRADE_TIME_STR "的水桶，但沒有記錄在(L)的列表裡面。您可以參考(O)的舊名單\n"
-        "               看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n"
-        ANSI_COLOR(1;31) "               注意舊水桶內 ID 有改變過大小寫的無法轉換，請手動重設\n"
-        ANSI_RESET
-#endif
         "");
 
         getdata(1, 0, "(A)增加 (D)提前清除 (S)取得目前狀態 "
-                      "(L)列出設定歷史 "
-#ifdef SHOW_OLD_BAN
-                      "(O)檢視舊水桶 "
-#endif
-                      "[Q]結束? ",
+                      "(L)列出設定歷史 [Q]結束? ",
                 ans, 2, LCECHO);
         move(2, 0); clrtobot();
         if (*ans == 'q' || !*ans)
@@ -421,21 +408,6 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                 } while (0);
                 break;
 
-#ifdef SHOW_OLD_BAN
-            case 'o':
-                {
-                    char old_log[PATHLEN];
-                    setbfile(old_log, board, fn_water);
-                    if (dashf(old_log)) {
-                        vmsg("請注意: 此份資料僅供參考，與現在實際水桶名單完全沒有關係。");
-                        more(old_log, YEA);
-                    } else {
-                        vmsg("無舊水桶資料。");
-                    }
-                }
-                break;
-#endif
-
             default:
                 break;
         }
@@ -464,7 +436,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
         move(ytitle+5, 0);
         prints(" " ANSI_COLOR(1;36) "%s" ANSI_RESET " - %s\n",
                expire ? "u" : "w",
-               expire ? "提前解除" : "加入禁言名單");
+               expire ? "提前解除" : "加入禁止發言名單");
 
         switch (vans("請選擇欲進行之操作, 其它鍵結束: ")) {
             case 'w':
@@ -474,7 +446,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 }
                 move(ytitle-1, 0); clrtobot();
                 outs("\n" ANSI_REVERSE);
-                vbarf(" 禁言使用者");
+                vbarf(" 禁止使用者發言");
                 move(ytitle+2, 0);
                 if (ui_ban_user_for_board(uid, board) < 0)
                     continue;
@@ -487,7 +459,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 }
                 move(ytitle-1, 0); clrtobot();
                 outs("\n" ANSI_REVERSE);
-                vbarf(" 提前解除禁言");
+                vbarf(" 提前解除禁止發言");
                 move(ytitle+2, 0);
                 if (ui_unban_user_for_board(uid, board) < 0)
                     continue;
