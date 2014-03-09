@@ -534,7 +534,7 @@ b_config(void)
 	    i = 255 - lbp;
 	    attr = (cuser.badpost > i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    prints("退文篇數 %d 篇以下", i);
+	    prints("劣文篇數 %d 篇以下", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}

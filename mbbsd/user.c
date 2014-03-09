@@ -103,7 +103,7 @@ int u_cancelbadpost(void)
 
    // early check.
    if(cuser.badpost == 0) {
-       vmsg("你並沒有退文.");
+       vmsg("你並沒有劣文.");
        return 0;
    }
 
@@ -129,7 +129,7 @@ int u_cancelbadpost(void)
    // 某些 user 會一直失敗，原因不明；由 vmsg 改為 getdata.
    clear();
    // 無聊的 disclaimer...
-   mvprints(1, 0, "預計退文將由 %d 篇變為 %d 篇，確定嗎[y/N]? ", prev, prev-1);
+   mvprints(1, 0, "預計劣文將由 %d 篇變為 %d 篇，確定嗎[y/N]? ", prev, prev-1);
    do {
        if (vgets(ans, sizeof(ans), VGET_LOWERCASE | VGET_ASCII_ONLY) < 1 ||
            ans[0] != 'y') { pass_verify = 0; break; }
@@ -156,10 +156,10 @@ int u_cancelbadpost(void)
    }
 
    log_filef("log/cancelbadpost.log", LOG_CREAT,
-	   "%s %s 刪除一篇退文 (%d -> %d 篇)\n",
+	   "%s %s 刪除一篇劣文 (%d -> %d 篇)\n",
 	   Cdate(&now), cuser.userid, prev, cuser.badpost);
 
-   vmsgf("恭喜您已成功\刪除一篇退文 (由 %d 變為 %d 篇)",
+   vmsgf("恭喜您已成功\刪除一篇劣文 (由 %d 變為 %d 篇)",
 	   prev, cuser.badpost);
    return 0;
 }
@@ -242,7 +242,7 @@ user_display(const userec_t * u, int adminmode)
 
     // conditional fields
 #ifdef ASSESS
-    prints("\t退文數目: %u\n", (unsigned int)u->badpost);
+    prints("\t劣文數目: %u\n", (unsigned int)u->badpost);
 #endif // ASSESS
 
 #ifdef CHESSCOUNTRY
@@ -652,7 +652,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     ans = vans(adminmode ?
-    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(M)信箱 [0]結束 " :
+    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)劣文(M)信箱 [0]結束 " :
     "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 [0]結束 ");
 
     if (ans > '2' && ans != 'c' && !adminmode)
@@ -920,7 +920,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		if ((tmp = atoi(buf)) >= 0)
 		    x.numposts = tmp;
 	    move(y-1, 0); clrtobot();
-	    prints("文章數目： %d (退: %d, 修改退文數請選項8)\n",
+	    prints("文章數目： %d (劣: %d, 修改劣文請改用選項8)\n",
 		    x.numposts, x.badpost);
 
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.vl_count);
@@ -1138,7 +1138,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef ASSESS
         reassign_badpost(x.userid);
 #else
-        vmsg("本站目前不支援退文設定。");
+        vmsg("本站目前不支援劣文設定。");
 #endif
         return;
 

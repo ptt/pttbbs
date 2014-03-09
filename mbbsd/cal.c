@@ -23,7 +23,7 @@ char *get_restriction_reason(
     }
 #ifdef ASSESS
     if  (badpost > (255 - limits_badpost)) {
-        snprintf(msg, sz_msg, "退文超過 %d 篇(目前%d篇)",
+        snprintf(msg, sz_msg, "劣文超過 %d 篇(目前%d篇)",
                  255 - limits_badpost, badpost);
         return msg;
     }

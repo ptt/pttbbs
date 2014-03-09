@@ -64,12 +64,12 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     for (i = 0; i < (int)DIM(badpost_reason); i++)
 	prints("%d.%s ", i + 1, badpost_reason[i]);
     prints("%d.%s ", i + 1, "其他");
-    prints("0.取消退文 ");
+    prints("0.取消劣文 ");
     do {
         getdata(b_lines - 1, 0, "請選擇: ", genbuf, 2, NUMECHO);
         i = genbuf[0] - '1';
         if (i == -1) {
-            vmsg("取消設定退文。");
+            vmsg("取消設定劣文。");
             return -1;
         }
         if (i < 0 || i > (int)DIM(badpost_reason))
@@ -84,7 +84,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
         while (!getdata(b_lines, 0, "請輸入原因", reason, 50, DOECHO)) {
             // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
             if (comment) {
-                vmsg("取消設定退文。");
+                vmsg("取消設定劣文。");
                 return -1;
             }
             bell();
@@ -93,7 +93,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     }
     assert(i >= 0 && i <= (int)DIM(badpost_reason));
 
-    sprintf(genbuf,"退回%s(%s)", comment ? "推文" : "文章", reason);
+    sprintf(genbuf,"劣%s文退回(%s)", comment ? "推" : "", reason);
 
     if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf));
 
@@ -105,9 +105,9 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     if (!(inc_badpost(userid, 1) % 5)){
 	userec_t xuser;
 	post_violatelaw(userid, BBSMNAME "系統警察",
-		"退文累計 5 篇", "罰單一張");
+		"劣文累計 5 篇", "罰單一張");
 	mail_violatelaw(userid, BBSMNAME "系統警察",
-		"退文累計 5 篇", "罰單一張");
+		"劣文累計 5 篇", "罰單一張");
 	kick_all(userid);
 	passwd_sync_query(tusernum, &xuser);
 	xuser.money = moneyof(tusernum);
@@ -135,16 +135,16 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
 	    strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
 	    snprintf(report_fh.title, sizeof(report_fh.title),
-		    "%s 板 %s 板主退回 %s %s",
-		    currboard, cuser.userid, userid, comment ? "推文" : "文章");
+		    "%s 板 %s 板主給予 %s 一篇劣%s文",
+		    currboard, cuser.userid, userid, comment ? "推" : "");
 	    Copy(newpath, rptpath);
 	    fp = fopen(rptpath, "at");
 
 	    if (fp)
 	    {
-		fprintf(fp, "\n退文原因: %s\n", genbuf);
+		fprintf(fp, "\n劣文原因: %s\n", genbuf);
 		if (comment)
-		    fprintf(fp, "\n退回推文項目:\n%s", comment);
+		    fprintf(fp, "\n被劣推文項目:\n%s", comment);
 		fprintf(fp, "\n");
 		fclose(fp);
 	    }
@@ -177,17 +177,17 @@ reassign_badpost(const char *userid) {
     int orig_badpost = 0;
     int uid;
 
-    vs_hdr2(" 退文修正 ", userid);
+    vs_hdr2(" 劣文修正 ", userid);
     if ((uid = getuser(userid, &u)) == 0) {
         vmsgf("找不到使用者 %s。", userid);
         return -1;
     }
     orig_badpost = u.badpost;
-    prints("\n使用者 %s 的退文數目前為: %d\n", userid, u.badpost);
+    prints("\n使用者 %s 的劣文數目前為: %d\n", userid, u.badpost);
     snprintf(buf, sizeof(buf), "%d", u.badpost);
-    if (!getdata_str(5, 0, "調整退文數目為: ", buf, sizeof(buf), DOECHO, buf) ||
+    if (!getdata_str(5, 0, "調整劣文數目為: ", buf, sizeof(buf), DOECHO, buf) ||
         atoi(buf) == u.badpost) {
-        vmsg("退文數目不變，未變動。");
+        vmsg("劣文數目不變，未變動。");
         return 0;
     }
 
@@ -196,7 +196,7 @@ reassign_badpost(const char *userid) {
     if (u.badpost > orig_badpost) {
         u.timeremovebadpost = adjust_badpost_time(u.timeremovebadpost);
     }
-    prints("\n使用者 %s 的退文即將由 %d 改為 %d。請輸入理由(會寄給使用者)\n",
+    prints("\n使用者 %s 的劣文即將由 %d 改為 %d。請輸入理由(會寄給使用者)\n",
            userid, orig_badpost, u.badpost);
     if (!getdata(7, 0, "理由: ", reason, sizeof(reason), DOECHO)) {
         vmsg("錯誤: 不能無理由。");
@@ -204,7 +204,7 @@ reassign_badpost(const char *userid) {
     }
 
     move(6, 0); clrtobot();
-    prints("使用者 %s 的退文由 %d 改為 %d。\n理由: %s\n",
+    prints("使用者 %s 的劣文由 %d 改為 %d。\n理由: %s\n",
            userid, orig_badpost, u.badpost, reason);
     if (!getdata(9, 0, "確定？ [y/N]", buf, 3, LCECHO) || buf[0] != 'y') {
         vmsg("錯誤: 未確定，放棄。");
@@ -214,14 +214,14 @@ reassign_badpost(const char *userid) {
     // GOGOGO
     snprintf(msg, sizeof(msg),
              "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
-             "%s" ANSI_RESET "的退文從" ANSI_COLOR(1;35) "%d" ANSI_RESET
+             "%s" ANSI_RESET "的劣文從" ANSI_COLOR(1;35) "%d" ANSI_RESET
              "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
              "   " ANSI_COLOR(1;37) "修改理由是：%s" ANSI_RESET,
              cuser.userid, u.userid, orig_badpost, u.badpost, reason);
     snprintf(title, sizeof(title),
-             "[安全報告] 站長%s修改%s退文報告", cuser.userid, u.userid);
+             "[安全報告] 站長%s修改%s劣文報告", cuser.userid, u.userid);
     post_msg(BN_SECURITY, title, msg, "[系統安全局]");
-    mail_log2id_text(u.userid, "[系統通知] 退文變更", msg,
+    mail_log2id_text(u.userid, "[系統通知] 劣文變更", msg,
                      "[系統安全局]", NA);
     passwd_sync_update(uid, &u);
     kick_all(u.userid);
@@ -244,8 +244,8 @@ bad_comment(const char *fn)
     int done = 0;
     int i = 0, c;
 
-    vs_hdr("退回推文");
-    usercomplete("請輸入要退回推文的 ID: ", uid);
+    vs_hdr("劣推文");
+    usercomplete("請輸入要劣推文的 ID: ", uid);
     if (!*uid)
 	return -1;
 
@@ -253,7 +253,7 @@ bad_comment(const char *fn)
     if (!fp)
 	return -1;
 
-    vs_hdr2(" 退回推文 ", uid);
+    vs_hdr2(" 劣推文 ", uid);
     // search file for it
     while (fgets(buf, sizeof(buf), fp) && *buf)
     {
@@ -268,7 +268,7 @@ bad_comment(const char *fn)
 	outs(buf);
 
 	move (5, 0);
-	outs("請問退回這個推文嗎？(Y:確定,N:找下個,Q:離開) [y/N/q]: ");
+	outs("請問是要劣這個推文嗎？(Y:確定,N:找下個,Q:離開) [y/N/q]: ");
 	c = vkey();
 	if (isascii(c)) c = tolower(c);
 	if (c == 'q')
@@ -280,7 +280,7 @@ bad_comment(const char *fn)
 	    continue;
 
 	done = 1;
-	vmsg("已退回推文。");
+	vmsg("已劣推文。");
 	break;
     }
     fclose(fp);

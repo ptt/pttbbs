@@ -536,7 +536,7 @@ friend_edit(int type)
 
             move(1, 0); clrtobot();
             // we have seen some BM hit this accidentally.. so ask again.
-            outs("整理名單可清除已消失、過期、或已有退文的帳號。\n\n");
+            outs("整理名單可清除已消失、過期、或已有劣文的帳號。\n\n");
 
 	    getdata(2, 0,
 		    "要從名單中清除幾個月沒上站的使用者？ (0=不清除)[0] ",
@@ -544,7 +544,7 @@ friend_edit(int type)
 	    expire = atoi(uident);
 #ifdef ASSESS
 	    getdata(3, 0,
-		    "要從名單中清除有幾篇以上退文的使用者？ (0=不清除)[0] ",
+		    "要從名單中清除有幾篇以上劣文的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
 	    badpost = atoi(uident);
 #endif
@@ -554,7 +554,7 @@ friend_edit(int type)
             if (expire)
                 prints(" * %d 個月沒上站的使用者\n", expire);
             if (badpost)
-                prints(" * 已有 %d 篇退文的使用者\n", badpost);
+                prints(" * 已有 %d 篇劣文的使用者\n", badpost);
 
             getdata(9, 0,
                     "確定要執行嗎? [y/N] ",
