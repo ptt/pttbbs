@@ -803,7 +803,7 @@ static const commands_t userlist[] = {
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
     {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
 #ifdef ASSESS
-    {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除劣文"},
+    {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除退文"},
 #endif // ASSESS
     {deprecate_userlist,       0,   "KCloak        隱身術"},
     {NULL, 0, NULL}

@@ -471,7 +471,7 @@ my_query(const char *uident)
 	move(vgety(), 40);
 	prints("¡m¦³®Ä¤å³¹¡n%d ½g", muser.numposts);
 #ifdef ASSESS
-	prints(" (¦H:%d)", muser.badpost);
+	prints(" (°h:%d)", muser.badpost);
 #endif
 	outc('\n');
 

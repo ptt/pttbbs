@@ -2419,7 +2419,7 @@ editLimits(unsigned char *plogins,
     sprintf(genbuf, "%u", 255 - badpost);
     do {
 	getdata_buf(y, 0,
-		"劣文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
+		"退文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     badpost = (unsigned char)(255 - temp);
@@ -2636,11 +2636,11 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (now - atoi(fhdr->filename + 2) > 2 * 7 * 24 * 60 * 60)
     {
 	move(b_lines-2, 0); clrtoeol();
-	outs("超過兩週，禁止劣推文。");
+	outs("超過兩週，禁止退回推文。");
     } else
 #endif
     {
-	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 劣推文 [1/2]? ", yn, 3, LCECHO);
+	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 退回推文 [1/2]? ", yn, 3, LCECHO);
 	if (yn[0] == '2')
 	{
 	    setbfile(fn, currboard, fhdr->filename);
@@ -3519,15 +3519,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 // case one, self-owned, invalid author, or digest mode - should not give bad posts
 	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
                 // case 2, got error in file deletion (already deleted, also skip badpost)
-                outs("劣文設定: 已刪或刪除錯誤 (跳過)\n");
+                outs("退文設定: 已刪或刪除錯誤 (跳過)\n");
 	    } else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60) {
                 // case 3, post older than one week (TODO use macro for the duration)
-		outs("劣文設定: 文章超過一週 (跳過)\n");
+		outs("退文設定: 文章超過一週 (跳過)\n");
 	    } else {
                 // case 4, can assign badpost
 		move_ansi(1, 40); clrtoeol();
 		// TODO not_owned 時也要改變 numpost?
-                outs("惡劣文章?(y/N) ");
+                outs("惡退文章?(y/N) ");
                 // FIXME 有板主會在這裡不小心斷掉連線所以要小心...
                 // 重要的事最好在前面作完。
                 vgets(genbuf, 3, VGET_LOWERCASE);
@@ -3563,7 +3563,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                     pay_as_uid(tusernum, del_fee,
                             "%s 看板 文章「%s」被%s，扣除稿酬%s %s",
                             currboard,  fhdr->title,
-                            as_badpost ? "劣退" : "刪除",
+                            as_badpost ? "退回" : "刪除",
                             reason[0] ? "。原因:" : "", reason);
                     sendalert_uid(tusernum, ALERT_PWD_PERM);
 #ifdef USE_COOLDOWN
@@ -4242,7 +4242,7 @@ int check_cooldown(boardheader_t *bp)
        }
       else if(posttimesof(usernum)==0xf)
       {
-	 vmsgf("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
+	 vmsgf("對不起，您被設退文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
       }
 #ifdef REJECT_FLOOD_POST
