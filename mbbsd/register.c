@@ -1434,13 +1434,12 @@ int regform_estimate_queuesize()
 // Administration (SYSOP Validation)
 /////////////////////////////////////////////////////////////////////////////
 
-#define REJECT_REASONS	(6)
+#define REJECT_REASONS	(5)
 #define REASON_LEN	(60)
 static const char *reasonstr[REJECT_REASONS] = {
     "請輸入真實姓名",
     "請詳填(畢業)學校『系』『級』或服務單位(含所屬縣市及職稱)",
     "請填寫完整住址 (含縣市/鄉鎮市區, 台北市請記得加行政區域)",
-    "請詳填連絡電話 (含區碼, 中間不加 '-', '(', ')' 等符號)",
     "請精確並完整填寫註冊申請表",
     "請用中文填寫申請單",
 };
