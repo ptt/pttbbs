@@ -192,7 +192,7 @@ banned_msg(const char *bname)
     static char ban_msg[STRLEN];
     time4_t expire = is_banned_by_board(bname);
     if (expire > now) {
-        sprintf(ban_msg, "使用者已被禁止發言(尚有%d天)",
+        sprintf(ban_msg, "使用者水桶中(尚有%d天)",
                 ((expire - now) / DAY_SECONDS) +1);
         return ban_msg;
     }
@@ -200,7 +200,7 @@ banned_msg(const char *bname)
     char buf[PATHLEN];
     setbfile(buf, bname, fn_water);
     if (file_exist_record(buf, cuser.userid))
-        return "使用者已被禁止發言";
+        return "使用者水桶中";
 #endif
     return NULL;
 }

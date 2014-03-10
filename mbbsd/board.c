@@ -101,12 +101,6 @@ int enter_board(const char *boardname)
     bh = getbcache(bid);
     if (!HasBoardPerm(bh))
 	return -2;
-
-    /* Only check 18x when we really want to enter it. */
-    if((bh->brdattr & BRD_OVER18) && !cuser.over_18) {
-	return -2;
-    }
-
     if (IS_GROUP(bh))
 	return -1;
 
@@ -190,6 +184,11 @@ HasBoardPerm(boardheader_t *bptr)
 	} else
 	    return 1;
     }
+
+    // TODO Change this to a query on demand.
+    /* 十八禁看板 */
+    if( (brdattr & BRD_OVER18) && !cuser.over_18 )
+	return 0;
 
     /* 限制閱讀權限 */
     if (level && !(brdattr & BRD_POSTMASK) && !HasUserPerm(level))
@@ -577,7 +576,7 @@ b_config(void)
 	    if (!isBM) outs(" (需板主權限)");
 	    outs(aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    prints("%sw%s)設定禁言 %sv%s)可見會員名單 ",
+	    prints("%sw%s)設定水桶 %sv%s)可見會員名單 ",
 		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
 	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",
@@ -1964,7 +1963,6 @@ choose_board(int newflag)
 
 		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
-                    // TODO(hungte) enter_board();
 		    if (HasBoardPerm(B_BH(ptr))) {
 			brc_initial_board(B_BH(ptr)->brdname);
 
