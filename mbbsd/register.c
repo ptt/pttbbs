@@ -1655,7 +1655,7 @@ resolve_reason(char *s, int y, int force)
     // should start with REASON_FIRSTABBREV
     const char *reason_prompt =
 	" (0)真實姓名 (1)詳填系級 (2)完整住址"
-	" (3)詳填電話 (4)確實填寫 (5)中文填寫";
+	" (3)確實填寫 (4)中文填寫";
 
     s[0] = 0;
     move(y, 0);
