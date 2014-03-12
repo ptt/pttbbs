@@ -257,15 +257,35 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     if (result) {
         char xtitle[STRLEN];
-        char xmsg[STRLEN*5];
+        char anti_pettifogger[] =
+            "請注意，\n"
+            ANSI_COLOR(1;31) "您目前使用的網站服務乃本站無償提供,\n"
+            "本站可隨時停止對您提供本站的免費服務.\n" ANSI_RESET
+            "\n"
+            "依照您過去已親自同意之使用者條款,"
+            "您已同意本站板主基於管理之考量,\n"
+            "得將您之帳號設定停止看板服務(水桶或禁止發言)、\n"
+            "刪除您發表之特定文章,\n"
+            "以及退回您發表之特定文章(劣文或退文設定)。\n"
+            "\n"
+            "此乃本站與您之民事關係,\n"
+            "水桶或禁止發文設定、刪文設定、劣文或退文設定等,\n"
+            ANSI_COLOR(1;31)
+            "乃本站依民事契約終止部分原先無償提供予您之服務,\n"
+            ANSI_RESET
+            "板主所為此類設定非為無權或無故,\n"
+            "應無由成立刑法妨礙電腦使用罪、公然侮辱罪、誹謗罪。\n"
+            "\n"
+            "請勿濫行提告。\n";
+        char xmsg[STRLEN*5 + sizeof(anti_pettifogger)];
 
         snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
         snprintf(xmsg, sizeof(xmsg),
                  "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
-                 "開始時間: %s (期限 %s)(此為處罰執行時間，非原始犯規時間)\n"
+                 "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)\n"
                  "原因: %s\n"
-                 "其它資訊請洽該看板板規與公告。\n",
-                 board, Cdatelite(&now), datebuf, reason);
+                 "其它資訊請洽該看板板規與公告。\n\n%s",
+                 board, Cdatelite(&now), datebuf, reason, anti_pettifogger);
         mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
         sendalert(uid, ALERT_NEW_MAIL);
     }
