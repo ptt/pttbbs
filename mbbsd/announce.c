@@ -289,8 +289,6 @@ a_searchtitle(menu_t * pm, int rev)
     if (!*search_str)
 	return pm->now;
 
-    str_lower(search_str, search_str);
-
     rev = rev ? -1 : 1;
     pos = pm->now;
     do {
