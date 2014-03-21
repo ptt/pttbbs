@@ -396,6 +396,46 @@ set_board(void)
     }
 }
 
+#ifdef QUERY_ARTICLE_URL
+
+static int
+IsBoardForWeb(const boardheader_t *bp) {
+    if (!bp || (bp->brdattr & BRD_HIDE) ||
+	(bp->level && !(bp->brdattr & BRD_POSTMASK))) // !POSTMASK = restricted
+	return 0;
+#ifdef BN_ALLPOST
+    if (strcmp(bp->brdname, BN_ALLPOST) == 0)
+	return 0;
+#endif
+    return 1;
+}
+
+static int
+GetWebUrl(const boardheader_t *bp, const fileheader_t *fhdr, char *buf,
+          size_t szbuf)
+{
+    const char *folder = bp->brdname, *fn = fhdr->filename, *ext = ".html";
+
+#ifdef USE_AID_URL
+    char aidc[32] = "";
+    aidu_t aidu = fn2aidu(fhdr->filename);
+    if (!aidu)
+	return 0;
+
+    aidu2aidc(aidc, aidu);
+    fn = aidc;
+    ext = "";
+#endif
+
+    if (!fhdr || !*fhdr->filename || *fhdr->filename == 'L' ||
+        *fhdr->filename == '.')
+	return 0;
+
+    return snprintf(buf, szbuf, URL_PREFIX "/%s/%s%s", folder, fn, ext);
+}
+
+#endif // QUERY_ARTICLE_URL
+
 // post 文章不算錢的板
 int IsFreeBoardName(const char *brdname)
 {
@@ -1991,6 +2031,27 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
+    return FULLUPDATE;
+}
+
+int
+forward_post(int ent, fileheader_t * fhdr, const char *direct) {
+    if (!HasUserPerm(PERM_FORWARD))
+        return DONOTHING;
+
+#ifdef QUERY_ARTICLE_URL
+    if (currbid) {
+        char buf[STRLEN];
+        const boardheader_t *bp = getbcache(currbid);
+        if (bp && IsBoardForWeb(bp) &&
+            GetWebUrl(bp, fhdr, buf, sizeof(buf))) {
+            move(b_lines - 4, 0); clrtobot();
+            prints("\n" URL_DISPLAYNAME ": " ANSI_COLOR(1)
+                   "%s" ANSI_RESET "\n", buf);
+        }
+    }
+#endif
+    forward_file(fhdr, direct);
     return FULLUPDATE;
 }
 
@@ -3742,43 +3803,19 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     }
 
 #ifdef QUERY_ARTICLE_URL
-    {
-	boardheader_t *bp = NULL;
+    if (currbid) {
+	boardheader_t *bp = getbcache(currbid);
+	char url[STRLEN];
 
-	// XXX currbid should match currboard, right? can we use it?
-	if (currboard && currboard[0])
-	{
-	    int bnum = getbnum(currboard);
-	    if (bnum > 0)
-	    {
-		assert(0<=bnum-1 && bnum-1<MAX_BOARD);
-		bp = getbcache(bnum);
-	    }
-	}
-
-	if (!bp)
-	{
+	if (!bp) {
 	    prints("│\n");
-	}
-	else if ((bp->brdattr & BRD_HIDE) ||
-#ifdef BN_ALLPOST
-                 strcmp(bp->brdname, BN_ALLPOST) == 0  ||
-#endif
-		 (bp->level && !(bp->brdattr & BRD_POSTMASK)) // !POSTMASK = restricted read
-		)
-	{
-	    // over18 boards do not provide URL.
+	} else if (!IsBoardForWeb(bp)) {
 	    prints("│ 本看板目前不提供" URL_DISPLAYNAME " \n");
-	}
-        else if (fhdr->filename[0] == 'L')
-        {
+	} else if (!GetWebUrl(bp, fhdr, url, sizeof(url))) {
 	    prints("│ 本文章不提供" URL_DISPLAYNAME " \n");
-        }
-	else
-	{
-	    prints("│ " URL_DISPLAYNAME ": "
-		    ANSI_COLOR(1) URL_PREFIX "/%s/%s.html" ANSI_RESET "\n",
-		    currboard, fhdr->filename);
+        } else {
+	    prints("│ " URL_DISPLAYNAME ": " ANSI_COLOR(1) "%s" ANSI_RESET
+		    "\n", url);
 	}
     }
 #endif
@@ -4469,7 +4506,7 @@ const onekey_t read_comms[] = {
     { 1, do_limitedit }, // 'C'
     { 1, del_range_post }, // 'D'
     { 1, edit_post }, // 'E'
-    { 0, NULL }, // 'F'
+    { 1, forward_post }, // 'F'
     { 0, NULL }, // 'G'
     { 0, NULL }, // 'H'
     { 0, b_config }, // 'I'

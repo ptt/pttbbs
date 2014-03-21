@@ -535,18 +535,17 @@ select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
     return DONOTHING;
 }
 
-#ifdef INTERNET_EMAIL
-static void
-mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
+void
+forward_file(const fileheader_t * fhdr, const char *direct)
 {
     int             i;
-    char            buf[STRLEN];
+    char            buf[PATHLEN];
     char           *p;
 
     strlcpy(buf, direct, sizeof(buf));
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
-    switch (i = doforward(buf, fhdr, mode)) {
+    switch (i = doforward(buf, fhdr, 'F')) {
     case 0:
 	vmsg(msg_fwd_ok);
 	break;
@@ -565,7 +564,6 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 	break;
     }
 }
-#endif
 
 static int
 trim_blank(char *buf) {
@@ -1001,16 +999,6 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	case '$':
 	    new_ln = last_line;
 	    new_top = p_lines-1;
-	    break;
-
-	case 'F':
-	    if (HasUserPerm(PERM_FORWARD) && locmem->crs_ln>0) {
-		mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
-			     currdirect, ch);
-		/* by CharlieL */
-		// mode = READ_REDRAW;
-		return FULLUPDATE;
-	    }
 	    break;
 
 	case Ctrl('Q'):

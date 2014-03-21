@@ -1230,6 +1230,15 @@ mail_mbox(void)
 }
 
 static int
+m_internet_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
+{
+    if (!HasUserPerm(PERM_FORWARD))
+        return DONOTHING;
+    forward_file(fhdr, direct);
+    return FULLUPDATE;
+}
+
+static int
 m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
 {
     char            uid[STRLEN];
@@ -2252,7 +2261,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'C'
     { 1, del_range_mail }, // 'D'
     { 0, NULL }, // 'E'
-    { 0, NULL }, // 'F'
+    { 1, m_internet_forward }, // 'F'
     { 0, NULL }, // 'G'
     { 0, NULL }, // 'H'
     { 0, NULL }, // 'I'

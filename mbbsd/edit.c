@@ -3694,6 +3694,9 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		case 's':
 		    ch = Ctrl('S');
 		    break;
+                case 'S':
+                    curr_buf->synparser = !curr_buf->synparser;
+                    break;
 		}
 
 	    switch (ch) {
