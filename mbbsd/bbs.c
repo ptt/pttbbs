@@ -2036,7 +2036,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 int
 forward_post(int ent, fileheader_t * fhdr, const char *direct) {
-    if (!HasUserPerm(PERM_FORWARD))
+    if (!HasUserPerm(PERM_FORWARD) || fhdr->filename[0] == '.' ||
+        fhdr->filename[0] == 'L')
         return DONOTHING;
 
 #ifdef QUERY_ARTICLE_URL
