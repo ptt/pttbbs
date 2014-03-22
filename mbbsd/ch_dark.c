@@ -262,8 +262,11 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
 		draw_line(dd, dd->mly, -1);
 		dd->mly = dd->my;
 		dd->mlx = dd->mx;
-		if (dd->brd[dd->mly][dd->mlx].value == 1)
-		    dd->fix = 1;
+		if (dd->brd[dd->mly][dd->mlx].value == 1) {
+                    // TODO 這似乎是暗吃規則用，但目前暗吃早已壞掉，
+                    // 反而會造成問題，所以我們先停用。
+		    // dd->fix = 1;
+                }
 		draw_line(dd, dd->my, dd->mx);
 	    }
 	    *b = -1;
