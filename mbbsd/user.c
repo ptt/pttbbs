@@ -197,8 +197,6 @@ user_display(const userec_t * u, int adminmode)
 
     prints("\t註冊日期: %s (已滿 %d 天)\n",
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
-    prints("\t上次上站: %s (來自 %s)\n",
-	    Cdate(&u->lastlogin), u->lasthost);
 
     if (adminmode) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
@@ -218,7 +216,10 @@ user_display(const userec_t * u, int adminmode)
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox);
 
-    if (!adminmode) {
+    if (adminmode) {
+        prints("\t最後上線: %s (掛站每24小時自動更新), 來自 %s)\n",
+               Cdate(&u->lastlogin), u->lasthost);
+    } else {
 	diff = (now - login_start_time) / 60;
 	prints("\t停留期間: %d 小時 %2d 分\n",
 	       diff / 60, diff % 60);
@@ -1020,7 +1021,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		} else {
 		    userec_t        atuser;
 		    passwd_sync_query(uid, &atuser);
-		    if (atuser.numlogindays < 6*30) {
+                    if (!(atuser.userlevel & PERM_LOGINOK)) {
+                        outs("\n使用者未通過認證，請重新輸入。\n");
+                        i--;
+                    } else if (atuser.numlogindays < 6*30) {
 			outs("\n" STR_LOGINDAYS "未超過 180，請重新輸入\n");
 			i--;
 		    }
