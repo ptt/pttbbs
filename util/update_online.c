@@ -38,11 +38,11 @@ void fastcheck()
             continue;
         }
         last_uid = u.uid;
-        if (verbose)
+        if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
         /* user still online, let's mock it. */
-        if (now < urec.lastlogin + DAY_SECONDS)
+        if (now < urec.lastlogin + DAY_SECONDS - 60 * 60)
             continue;
 
         if (verbose)
