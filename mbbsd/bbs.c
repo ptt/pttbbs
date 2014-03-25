@@ -1500,6 +1500,17 @@ do_post_article(int edflags)
     setbpath(fpath, currboard);
     stampfile_u(fpath, &postfile);
 
+#ifdef QUERY_ARTICLE_URL
+    if (IsBoardForWeb(bp)) {
+        char url[STRLEN];
+        if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
+            log_filef(genbuf, LOG_CREAT,
+                      "¡° " URL_DISPLAYNAME ": %s\n", url);
+        }
+    }
+    log_file(genbuf, LOG_CREAT, "\n");
+#endif
+
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
         unlink(genbuf);
@@ -1508,15 +1519,6 @@ do_post_article(int edflags)
     {
 	char addPost = 0;
 
-#ifdef QUERY_ARTICLE_URL
-        if (IsBoardForWeb(bp)) {
-            char url[STRLEN];
-            if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
-                log_filef(genbuf, LOG_CREAT,
-                          "¡° " URL_DISPLAYNAME ": %s\n", url);
-            }
-        }
-#endif
         rename(genbuf, fpath);
 	setbtotal(currbid);
 
