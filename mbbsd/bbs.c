@@ -1508,8 +1508,8 @@ do_post_article(int edflags)
                       "¡° " URL_DISPLAYNAME ": %s\n", url);
         }
     }
-    log_file(genbuf, LOG_CREAT, "\n");
 #endif
+    log_file(genbuf, LOG_CREAT, "\n");
 
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
