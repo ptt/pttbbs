@@ -1449,16 +1449,6 @@ do_post_article(int edflags)
     owner = cuser.userid;
 #endif
 
-#ifdef QUERY_ARTICLE_URL
-    if (IsBoardForWeb(bp)) {
-        char buf[STRLEN];
-        if (GetWebUrl(bp, &postfile, buf, sizeof(buf))) {
-            log_filef(fpath, LOG_CREAT,
-                      "¡° " URL_DISPLAYNAME ": %s\n", buf);
-        }
-    }
-#endif
-
     // ---- BEGIN OF MONEY VERIFICATION ----
 
     // money verification
@@ -1517,6 +1507,16 @@ do_post_article(int edflags)
     else
     {
 	char addPost = 0;
+
+#ifdef QUERY_ARTICLE_URL
+        if (IsBoardForWeb(bp)) {
+            char url[STRLEN];
+            if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
+                log_filef(genbuf, LOG_CREAT,
+                          "¡° " URL_DISPLAYNAME ": %s\n", url);
+            }
+        }
+#endif
         rename(genbuf, fpath);
 	setbtotal(currbid);
 
