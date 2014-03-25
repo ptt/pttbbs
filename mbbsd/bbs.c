@@ -1449,6 +1449,16 @@ do_post_article(int edflags)
     owner = cuser.userid;
 #endif
 
+#ifdef QUERY_ARTICLE_URL
+    if (IsBoardForWeb(bp)) {
+        char buf[STRLEN];
+        if (GetWebUrl(bp, &postfile, buf, sizeof(buf))) {
+            log_filef(fpath, LOG_CREAT,
+                      "¡° " URL_DISPLAYNAME ": %s\n", buf);
+        }
+    }
+#endif
+
     // ---- BEGIN OF MONEY VERIFICATION ----
 
     // money verification
