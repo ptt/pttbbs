@@ -1761,7 +1761,7 @@ addforwardsignature(FILE *fp, const char *host) {
     syncnow();
     fprintf(fp, "\n"
                 "※ 發信站: " BBSNAME "(" MYHOSTNAME ")\n"
-                "※ 轉錄者: %s (%s), 時間: %s\n"
+                "※ 轉錄者: %s (%s), %s\n"
                 , cuser.userid, host, Cdatelite(&now));
 }
 
@@ -2049,10 +2049,8 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 #endif
 	{
 	    fprintf(fp,
-		    "※ 編輯: %-15s 來自: %-20s (%s)\n",
-		    cuser.userid,
-		    FROMHOST,
-		    Cdate_mdHM(&now));
+		    "※ 編輯: %s (%s), %s\n",
+		    cuser.userid, FROMHOST, Cdatelite(&now));
 	}
     }
 
