@@ -155,7 +155,9 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    perror("socket");
 	    return -1;
 	}
+#ifdef SO_NOSIGPIPE
         setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
+#endif
 
 	serv_name.sun_family = AF_UNIX;
 	strlcpy(serv_name.sun_path, addr, sizeof(serv_name.sun_path));
@@ -175,7 +177,9 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    perror("socket");
 	    return -1;
 	}
+#ifdef SO_NOSIGPIPE
         setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
+#endif
 
 	if (timed)
 	{
