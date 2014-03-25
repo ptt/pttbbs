@@ -16,7 +16,7 @@
 
 #ifndef DEFAULT_TCP_QLEN
 #define DEFAULT_TCP_QLEN    (10)
-#endif 
+#endif
 #ifndef DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND
 #define DEFAULT_IOWRITE_EAGAIN_WAIT_MICROSECOND	(10)
 #endif
@@ -145,8 +145,7 @@ int toconnectex(const char *addr, int timeout)
 
 int toconnect3(const char *addr, int timeout, int microseconds)
 {
-    int sock;
-    
+    int sock, n = 1;
     assert(addr && *addr);
 
     if (!isdigit(addr[0]) && addr[0] != ':' && addr[0] != '*') {
@@ -156,6 +155,7 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    perror("socket");
 	    return -1;
 	}
+        setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
 
 	serv_name.sun_family = AF_UNIX;
 	strlcpy(serv_name.sun_path, addr, sizeof(serv_name.sun_path));
@@ -175,6 +175,7 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    perror("socket");
 	    return -1;
 	}
+        setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
 
 	if (timed)
 	{
@@ -200,26 +201,27 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 
 	while (connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0)
 	{
-	    if (errno == EINPROGRESS) 
+	    if (errno == EINPROGRESS)
 	    {
-		struct timeval tv = {0}; 
-		fd_set myset; 
+		struct timeval tv = {0};
+		fd_set myset;
 
 		assert(timed);
 		// set timeout here
 		tv.tv_sec = timeout;
 		tv.tv_usec = microseconds;
-		FD_ZERO(&myset); 
-		FD_SET(sock, &myset); 
+		FD_ZERO(&myset);
+		FD_SET(sock, &myset);
 
 		if (select(sock+1, NULL, &myset, NULL, &tv) > 0)
 		{
                     int result = 1;
                     socklen_t szresult = sizeof(result);
                     // szresult = 0: success, otherwise: failure.
-                    getsockopt(sock, SOL_SOCKET, SO_ERROR, &result, &szresult);
-                    if (result == 0)
+                    if (getsockopt(sock, SOL_SOCKET, SO_ERROR,
+                                   &result, &szresult) == 0 && result == 0)
                         break;
+                    // fprintf(stderr, "getsockopt SO_ERROR result = %d\n", result);
 		}
 	    }
 
@@ -263,7 +265,7 @@ int is_to_readwrite_again(int s)
 }
 
 /**
- * same as read(2), but read until exactly size len 
+ * same as read(2), but read until exactly size len
  */
 int toread(int fd, void *buf, int len)
 {
@@ -284,7 +286,7 @@ int toread(int fd, void *buf, int len)
 }
 
 /**
- * same as write(2), but write until exactly size len 
+ * same as write(2), but write until exactly size len
  */
 int towrite(int fd, const void *buf, int len)
 {
@@ -305,7 +307,7 @@ int towrite(int fd, const void *buf, int len)
 }
 
 /**
- * same as recv(2), but recv until exactly size len 
+ * same as recv(2), but recv until exactly size len
  */
 int torecv(int fd, void *buf, int len, int flag)
 {
@@ -326,7 +328,7 @@ int torecv(int fd, void *buf, int len, int flag)
 }
 
 /**
- * similiar to send(2), but send until exactly size len 
+ * similiar to send(2), but send until exactly size len
  */
 int tosend(int fd, const void *buf, int len, int flag)
 {
