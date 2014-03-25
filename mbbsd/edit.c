@@ -1772,7 +1772,7 @@ addsimplesignature(FILE *fp, const char *host) {
         host = FROMHOST;
     strlcpy(temp, host, sizeof(temp));
     fprintf(fp,
-            "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來源: %s\n", host);
+            "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s\n", host);
 }
 
 void
