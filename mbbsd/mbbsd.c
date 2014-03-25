@@ -1128,8 +1128,6 @@ user_login(void)
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
 
-    /* resolve_boards(); */
-
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
 
