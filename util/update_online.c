@@ -7,14 +7,15 @@ static int verbose = 0;
 
 void fastcheck()
 {
-    int i, sorted[USHM_SIZE], last_uid = -1;
+    int i, total = SHM->UTMPnumber - 1;
+    int sorted[USHM_SIZE], last_uid = -1;
     userec_t urec;
     userinfo_t u;
 
     assert(sizeof(sorted) == sizeof(**SHM->sorted));
     memcpy(sorted, SHM->sorted[SHM->currsorted][7],
            sizeof(sorted));
-    for (i = 0; i < USHM_SIZE; i++) {
+    for (i = 0; i < total; i++) {
         if (sorted[i] < 0 || sorted[i] >= USHM_SIZE)
             continue;
         memcpy(&u, SHM->uinfo + sorted[i], sizeof(u));
