@@ -170,6 +170,9 @@ user_display(const userec_t * u, int adminmode)
     int             diff = 0;
     char            genbuf[200];
 
+    // Many fields are available (and have sync issue) in user->query,
+    // so let's minimize fields here.
+
     clrtobot();
     prints(
 	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET
@@ -207,9 +210,6 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t認證資料: %s\n", u->justify);
     }
 
-    prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
-	    ,u->numlogindays);
-    prints(" / 文章 %d 篇\n", u->numposts);
 
     sethomedir(genbuf, u->userid);
     prints("\t私人信箱: %d 封  (購買信箱: %d 封)\n",
@@ -217,6 +217,9 @@ user_display(const userec_t * u, int adminmode)
 	   u->exmailbox);
 
     if (adminmode) {
+        prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
+               ,u->numlogindays);
+        prints(" / 文章 %d 篇\n", u->numposts);
         prints("\t最後上線: %s (掛站每24小時自動更新), 來自 %s)\n",
                Cdate(&u->lastlogin), u->lasthost);
     } else {
