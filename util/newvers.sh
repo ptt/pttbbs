@@ -25,5 +25,5 @@ if [ -d ".svn" ] ; then
 fi
 
 cat << EOF > vers.c
-char    * const compile_time = "${t}";
+const char * const compile_time = "${t}";
 EOF
