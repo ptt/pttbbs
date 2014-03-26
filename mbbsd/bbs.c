@@ -403,10 +403,8 @@ IsBoardForWeb(const boardheader_t *bp) {
     if (!bp || (bp->brdattr & BRD_HIDE) ||
 	(bp->level && !(bp->brdattr & BRD_POSTMASK))) // !POSTMASK = restricted
 	return 0;
-#ifdef BN_ALLPOST
     if (strcmp(bp->brdname, BN_ALLPOST) == 0)
 	return 0;
-#endif
     return 1;
 }
 
@@ -1074,30 +1072,44 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 }
 
 static void
-deleteCrossPost(const fileheader_t *fh, char *bname)
+deleteCrossPost(const fileheader_t *fhdr, char *bname)
 {
-    if(!fh || !fh->filename[0]) return;
+    if(!fhdr || !fhdr->filename[0]) return;
 
     if(strcmp(bname, BN_ALLPOST) == 0 ||
        strcmp(bname, BN_ALLHIDPOST) == 0 ||
        strcmp(bname, BN_NEWIDPOST) == 0 ||
        strcmp(bname, BN_UNANONYMOUS) == 0 ) {
-        // These files (in BN_ALLPOST etc) has a '.BOARD' refrence in title
-        int len=0;
-	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
-	if(!po) return;
-	po++;
-        len = (int) strlen(po)-2;
+        // These files (in BN_ALLPOST etc) have '.BOARDªO' or '(BOARD)' refrence
+        // in title
+        int bnlen;
+	char bnbuf[IDLEN + 1] = "", *bn;
 
-	if(len > TTLEN) return;
-	sprintf(xbname, "%.*s", len, po);
-	do_deleteCrossPost(fh, xbname);
+        if (*fhdr->title && fhdr->title[strlen(fhdr->title) - 1] == ')') {
+            // new format:  (BOARD)
+            bn = strrchr(fhdr->title, '(');
+            if (!bn)
+                return;
+            bnlen = strlen(++bn) - 1;
+            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        } else {
+            // old format:  .BOARDª©, which may conflict with board names.
+            bn = strrchr(fhdr->title, '.');
+            if (!bn)
+                return;
+            bnlen = strlen(++bn) - 2;
+            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        }
+	do_deleteCrossPost(fhdr, bnbuf);
     } else {
         // Always delete file content in ALLPOST and keep the header
         // because that will be reset by cron jobs
+        // Note in USE_LIVE_ALLPOST, there should be no files.
+#ifndef USE_LIVE_ALLPOST
         char file[PATHLEN];
-        setbfile(file, BN_ALLPOST, fh->filename);
+        setbfile(file, BN_ALLPOST, fhdr->filename);
         unlink(file);
+#endif
     }
 }
 
@@ -1166,7 +1178,6 @@ do_reply_title(int row, const char *title, const char *prefix,
 
 void
 log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
-#ifdef BN_ALLPOST
     char genbuf[PATHLEN];
     fileheader_t fh;
     // '¡K' appears for t_columns-33.
@@ -1193,14 +1204,13 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
         strcat(genbuf, "¡K");
     }
     snprintf(fh.title, sizeof(fh.title),
-             "%s %-*.*s.%sªO", str_forward, len, len, genbuf, brd);
+             "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
 
     setbdir(genbuf, BN_ALLPOST);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
-#endif
 }
 
 void
@@ -1247,7 +1257,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     snprintf(fh.title, sizeof(fh.title), "%s%s", prefix, *prefix ? " " : "");
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
-             ".%sªO", currboard);
+             "(%s)", currboard);
     if (dashs(genbuf) > 0) {
         log_filef("log/conflict.log", LOG_CREAT,
                   "%s %s->%s %s: %s\n", Cdatelite(&now),
@@ -1257,7 +1267,10 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 #ifdef USE_LIVE_ALLPOST
     if (strcmp(brd, BN_ALLPOST) != 0)
 #endif
-    Copy(fpath, genbuf);
+    {
+        Copy(fpath, genbuf);
+    }
+
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
     setbdir(genbuf, brd);
@@ -2367,7 +2380,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
 
-#if defined(BN_ALLPOST) && defined(USE_LIVE_ALLPOST)
+#ifdef USE_LIVE_ALLPOST
     do {
         static char allpost_base[PATHLEN] = "";
         static int allpost_base_len = 0;
@@ -2386,10 +2399,23 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
         if (strncmp(allpost_base, genbuf, allpost_base_len) != 0)
             break;
 
-        bn = strrchr(fhdr->title, '.');
-        bnlen = strlen(++bn) - 2;
-        snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        if (*fhdr->title && fhdr->title[strlen(fhdr->title) - 1] == ')') {
+            // new format:  (BOARD)
+            bn = strrchr(fhdr->title, '(');
+            if (!bn)
+                break;
+            bnlen = strlen(++bn) - 1;
+            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        } else {
+            // old format:  .BOARDª©, which may conflict with board names.
+            bn = strrchr(fhdr->title, '.');
+            if (!bn)
+                break;
+            bnlen = strlen(++bn) - 2;
+            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+        }
         setbfile(genbuf, bnbuf, fhdr->filename);
+
 #ifdef DEBUG
         vmsgf("redirect: %s", genbuf);
 #endif
