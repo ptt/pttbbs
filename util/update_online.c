@@ -7,10 +7,18 @@ static int verbose = 0;
 
 void fastcheck()
 {
-    int i, total = SHM->UTMPnumber - 1;
+    int i, total = SHM->UTMPnumber;
     int sorted[USHM_SIZE], last_uid = -1;
     userec_t urec;
     userinfo_t u;
+    struct tm base_tm = {0};
+    time4_t base;
+
+    base = time4(0);
+    localtime4_r(&base, &base_tm);
+    base_tm.tm_sec = base_tm.tm_min = base_tm.tm_hour = 0;
+    base_tm.tm_min = 40; base_tm.tm_hour = 9;
+    base = mktime(&base_tm);
 
     assert(sizeof(sorted) == sizeof(**SHM->sorted));
     memcpy(sorted, SHM->sorted[SHM->currsorted][7],
@@ -19,8 +27,11 @@ void fastcheck()
         if (sorted[i] < 0 || sorted[i] >= USHM_SIZE)
             continue;
         memcpy(&u, SHM->uinfo + sorted[i], sizeof(u));
+        if (!u.userid[0])
+            continue;
+        if (verbose > 2)
+            fprintf(stderr, "scanning: %s (UID:%d, PID:%d)\n", u.userid, u.uid, u.pid);
         if (u.mode == DEBUGSLEEPING ||
-            !u.userid[0] ||
             (u.userlevel & PERM_VIOLATELAW) ||
             !(u.userlevel & PERM_LOGINOK) ||
             u.pid <= 0 ||
@@ -41,13 +52,13 @@ void fastcheck()
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
-        /* user still online, let's mock it. */
-        if (now < urec.lastlogin + DAY_SECONDS - 60 * 60)
+        if (urec.lastlogin >= base)
             continue;
 
         if (verbose)
             fprintf(stderr, "update: %s (%s, %d) ->", urec.userid,
                     Cdatelite(&urec.lastlogin), urec.numlogindays);
+        /* user still online, let's mock it. */
         urec.lastlogin = now;
         urec.numlogindays++;
         if (verbose)
