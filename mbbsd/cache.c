@@ -245,7 +245,8 @@ postperm_msg(const char *bname)
 #endif
 
     if (!HasUserPerm(PERM_POST))
-	return "無發文權限";
+	return (PERM_POST == PERM_LOGINOK) ? "未完成認證" :
+            "無發文權限";
 
     /* 秘密看板特別處理 */
     if (bp->brdattr & BRD_HIDE)
