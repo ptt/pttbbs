@@ -5,11 +5,12 @@
 #include <string.h>
 
 #include "cmsys.h"
+#include "config.h" // for DEFAULT_FILE_CREATE_PERM
 
 int
 log_filef(const char *fn, int log_flag, const char *fmt,...)
 {
-    char       msg[512];
+    char       msg[1024];
 
     va_list ap;
     va_start(ap, fmt);
