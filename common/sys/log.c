@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "cmsys.h"
 #include "config.h" // for DEFAULT_FILE_CREATE_PERM
@@ -10,14 +11,26 @@
 int
 log_filef(const char *fn, int log_flag, const char *fmt,...)
 {
-    char       msg[1024];
+    char buf[1024], *msg = buf;
+    int len = sizeof(buf), ret;
 
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, ap);
+    ret = vsnprintf(msg, len, fmt, ap);
+    if (ret >= len) {
+        len = ret + 1;
+        msg = (char *)malloc(len);
+        if (!msg)
+            return -1;
+        vsnprintf(msg, len, fmt, ap);
+    }
     va_end(ap);
 
-    return log_file(fn, log_flag, msg);
+    ret = log_file(fn, log_flag, msg);
+    if (msg != buf)
+        free(msg);
+
+    return ret;
 }
 
 int
