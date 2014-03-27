@@ -1522,7 +1522,6 @@ do_post_article(int edflags)
         }
     }
 #endif
-    log_file(genbuf, LOG_CREAT, "\n");
 
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
