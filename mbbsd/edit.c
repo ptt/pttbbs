@@ -1379,18 +1379,30 @@ auto_backup(void)
 void
 restore_backup(void)
 {
-    char            bakfile[80], buf[80];
+    char            bakfile[80], buf[80], ans[3];
 
     setuserfile(bakfile, fp_bak);
-    if (dashf(bakfile)) {
+    while (dashf(bakfile)) {
 	vs_hdr("編輯器自動復原");
+        mvouts(3, 0, "== 以下為未完成的文章部份內容 ==\n");
+        show_file(bakfile, 4, 15, SHOWFILE_ALLOW_NONE);
 	getdata(1, 0, "您有一篇文章尚未完成，(S)寫入暫存檔 (Q)算了？[S] ",
 		buf, 4, LCECHO);
-	if (buf[0] != 'q') {
-	    setuserfile(buf, ask_tmpbuf(3));
-	    Rename(bakfile, buf);
-	} else
-	    unlink(bakfile);
+        if (*buf == 'q') {
+            unlink(bakfile);
+            break;
+        }
+        setuserfile(buf, ask_tmpbuf(2));
+        if (dashs(buf) > 0) {
+            vs_hdr("暫存檔已有內容");
+            mvouts(2, 0, "== 以下為暫存檔部份內容 ==\n");
+            show_file(bakfile, 3, 18, SHOWFILE_ALLOW_NONE);
+            getdata(1, 0, "選定暫存檔已有下列內容，確定要覆蓋\掉它？ [y/N] ",
+                    ans, sizeof(ans), LCECHO);
+            if (*ans != 'y')
+                continue;
+        }
+        Rename(bakfile, buf);
     }
 }
 
