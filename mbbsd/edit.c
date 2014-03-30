@@ -1396,7 +1396,7 @@ restore_backup(void)
         if (dashs(buf) > 0) {
             vs_hdr("暫存檔已有內容");
             mvouts(2, 0, "== 以下為暫存檔部份內容 ==\n");
-            show_file(bakfile, 3, 18, SHOWFILE_ALLOW_NONE);
+            show_file(buf, 3, 18, SHOWFILE_ALLOW_NONE);
             getdata(1, 0, "選定暫存檔已有下列內容，確定要覆蓋\掉它？ [y/N] ",
                     ans, sizeof(ans), LCECHO);
             if (*ans != 'y')
