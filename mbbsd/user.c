@@ -53,7 +53,6 @@ u_loginview(void)
 {
     int             i, in;
     unsigned int    pbits = cuser.loginview;
-    int ical = -1, has_cal = 0;
 
     do {
         vs_hdr("設定進站畫面");
@@ -62,18 +61,9 @@ u_loginview(void)
             // ignore those without file name
             if (!*loginview_file[i][0])
                 continue;
-            if (strcasecmp(loginview_file[i][0], "@calendar") == 0) {
-                ical = i;
-                has_cal = pbits & (1 << ical);
-                if (!has_cal)
-                    continue;
-            }
             prints("    %c. %-20s %-15s \n", 'A' + i,
                    loginview_file[i][1], ((pbits >> i) & 1 ? "ˇ" : "Ｘ"));
         }
-        // XXX calendar must be last item.
-        if (i == ical + 1 && !has_cal)
-            i--;
 
         in = i; // max i
         i = vmsgf("請按 [A-%c] 切換設定，按 [Return] 結束：", 'A'+in-1);

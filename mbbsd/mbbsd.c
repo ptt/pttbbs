@@ -1291,12 +1291,6 @@ user_login(void)
                     // simply ignore it.
                     break;
 
-                case '@':
-                    // since only one special now, let's write directly...
-                    if (strcmp(fn, "@calendar") == 0)
-                        calendar();
-                    break;
-
                 default:
                     // use NA+pause or YEA?
                     more(fn, YEA);

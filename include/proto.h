@@ -634,6 +634,9 @@ unsigned DBCS_StringHash(const char *s);
 int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
+int ParseDate(const char *date, int *year, int *month, int *day);
+int ParseDateTime(const char *date, int *year, int *month, int *day,
+		  int *hour, int *min, int *sec);
 
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
@@ -828,12 +831,6 @@ void pwcuInitZero	(void);
 void pwcuInitGuestPerm	(void);
 void pwcuInitGuestInfo	(void);
 int  pwcuInitAdminPerm	(void);
-
-/* calendar */
-int calendar(void);
-int ParseDate(const char *date, int *year, int *month, int *day);
-int ParseDateTime(const char *date, int *year, int *month, int *day,
-		  int *hour, int *min, int *sec);
 
 int verify_captcha(const char *reason);
 

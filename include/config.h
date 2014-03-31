@@ -385,7 +385,7 @@
 #endif
 
 #ifndef NUMVIEWFILE
-#define NUMVIEWFILE       (15)          /* 秈礶程计 */
+#define NUMVIEWFILE       (14)          /* 秈礶程计 */
 #endif
 
 #ifndef LOGINATTEMPTS

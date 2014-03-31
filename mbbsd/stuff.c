@@ -452,6 +452,68 @@ DBCS_StringHash(const char *s)
     return fnv1a_32_dbcs_strcase(s, FNV1_32_INIT);
 }
 
+static int
+MonthDay(int m, int leap)
+{
+    int      day[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    assert(1<=m && m<=12);
+    return leap && m == 2 ? 29 : day[m - 1];
+}
+
+/**
+ * return 1 if date and time is invalid
+ */
+int ParseDateTime(const char *date, int *year, int *month, int *day,
+		  int *hour, int *min, int *sec)
+{
+    char           *y, *m, *d, *hh, *mm, *ss;
+    char           buf[128];
+    char *strtok_pos;
+
+    strlcpy(buf, date, sizeof(buf));
+    y = strtok_r(buf, "/", &strtok_pos); if (!y) return 1;
+    m = strtok_r(NULL, "/", &strtok_pos);if (!m) return 1;
+    d = strtok_r(NULL, " ", &strtok_pos); if (!d) return 1;
+
+    if (hour) {
+	hh = strtok_r(NULL, ":", &strtok_pos);
+	if (!hh) return 1;
+	*hour = atoi(hh);
+    }
+    if (min ) {
+	mm = strtok_r(NULL, ":", &strtok_pos);
+	if (!mm) return 1;
+	*min  = atoi(mm);
+    }
+    if (sec ) {
+	ss = strtok_r(NULL, "",  &strtok_pos);
+	if (!ss) return 1;
+	*sec  = atoi(ss);
+    }
+
+    *year = atoi(y);
+    *month = atoi(m);
+    *day = atoi(d);
+
+    if (hour && (*hour < 0 || *hour > 23)) return 1;
+    if (min  && (*min  < 0 || *min  > 59)) return 1;
+    if (sec  && (*sec  < 0 || *sec  > 59)) return 1;
+
+    if (*year < 1 || *month < 1 || *month > 12 ||
+	*day < 1 || *day > MonthDay(*month, is_leap_year(*year)))
+	return 1;
+    return 0;
+}
+
+/**
+ * return 1 if date is invalid
+ */
+int ParseDate(const char *date, int *year, int *month, int *day)
+{
+    return ParseDateTime(date, year, month, day, NULL, NULL, NULL);
+}
+
 /* AIDS */
 aidu_t fn2aidu(char *fn)
 {
