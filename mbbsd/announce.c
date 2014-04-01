@@ -986,7 +986,7 @@ a_showname(const menu_t * pm)
 			sym = 1;
 		}
 		if (sym) {
-		    vmsgf("此 symbolic link 指向 %s\n", &buf[i + 1]);
+		    vmsgf("此 symbolic link 指向 %s", &buf[i + 1]);
 		}
 	    }
 	}

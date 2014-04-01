@@ -248,7 +248,9 @@ search_key_user(const char *passwdfile, int mode)
 			fclose(fp1);
                         vmsg("已成功\取用備份資料。");
 			return 0;
-		    }
+		    } else {
+                        vmsg("錯誤: 取用備份資料失敗。");
+                    }
 		}
 	    }
 	}
