@@ -100,17 +100,6 @@ query_file_money(const fileheader_t *pfh)
     return pfh->multi.money;
 }
 
-static int
-cp_IsHiddenBoard(const boardheader_t *bp)
-{
-    // rules: see HasBoardPerm().
-    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))
-	return 1;
-    if (bp->level && !(bp->brdattr & BRD_POSTMASK))
-	return 1;
-    return 0;
-}
-
 // lite weight version to update dir files
 static int
 modify_dir_lite(
@@ -398,11 +387,11 @@ set_board(void)
 
 #ifdef QUERY_ARTICLE_URL
 
+
 static int
 IsBoardForWeb(const boardheader_t *bp) {
-    if (!bp || (bp->brdattr & BRD_HIDE) ||
-	(bp->level && !(bp->brdattr & BRD_POSTMASK))) // !POSTMASK = restricted
-	return 0;
+    if (!bp || !IS_OPENBRD(bp))
+        return 0;
     if (strcmp(bp->brdname, BN_ALLPOST) == 0)
 	return 0;
     return 1;
@@ -446,11 +435,6 @@ int IsFreeBoardName(const char *brdname)
     if (strcasecmp(brdname, DEFAULT_BOARD) == 0)
 	return 1;
     return 0;
-}
-
-int
-IsBoardForAllpost(boardheader_t *bp) {
-    return (!bp->level) || (bp->brdattr & BRD_POSTMASK);
 }
 
 int
@@ -1190,7 +1174,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
         return;
 
     // don't log when brd is a hidden board.
-    if (cp_IsHiddenBoard(getbcache(brd_id)))
+    if (!IS_OPENBRD(getbcache(brd_id)))
         return;
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
@@ -1550,7 +1534,7 @@ do_post_article(int edflags)
 	}
 	brc_addlist(postfile.filename, postfile.modified);
 
-        if (IsBoardForAllpost(bp)) {
+        if (IS_OPENBRD(bp)) {
 	        if (cuser.numlogindays < NEWIDPOST_LIMIT_DAYS)
             		do_crosspost(BN_NEWIDPOST, &postfile, fpath);
 
@@ -2243,7 +2227,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	write_header(xptr, xfile.title);
 	currboard = save_currboard;
 
-	if (cp_IsHiddenBoard(bp))
+	if (!IS_OPENBRD(bp))
 	{
 	    /* invisible board */
 	    fprintf(xptr, "※ [本文轉錄自某隱形看板]\n\n");
@@ -2284,11 +2268,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    bp = getbcache(bid);
-	    if (cp_IsHiddenBoard(bp))
+	    if (IS_OPENBRD(bp))
 	    {
-		strcpy(bname, "某隱形看板");
-	    } else {
 		sprintf(bname, "看板 %s", xboard);
+	    } else {
+		strcpy(bname, "某隱形看板");
 	    }
 
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
