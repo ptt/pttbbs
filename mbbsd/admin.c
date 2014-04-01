@@ -246,7 +246,7 @@ search_key_user(const char *passwdfile, int mode)
 		if (ch == 's' && !mode) {
 		    if (retrieve_backup(&user) >= 0) {
 			fclose(fp1);
-                        vmsg("已成功\取用備份資料。\n");
+                        vmsg("已成功\取用備份資料。");
 			return 0;
 		    }
 		}

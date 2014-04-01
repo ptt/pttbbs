@@ -210,7 +210,7 @@ user_display(const userec_t * u, int adminmode)
         prints("\tㄏノ癘魁: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
                ,u->numlogindays);
         prints(" / ゅ彻 %d 絞\n", u->numposts);
-        prints("\t程絬: %s (本–ら笆糤), ㄓ %s)\n",
+        prints("\t程絬: %s (本–ら糤) / %s\n",
                Cdate(&u->lastlogin), u->lasthost);
     } else {
 	diff = (now - login_start_time) / 60;
