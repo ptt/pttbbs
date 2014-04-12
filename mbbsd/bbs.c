@@ -3842,12 +3842,13 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     }
 #endif
 
-    if(fhdr->filemode & FILE_ANONYMOUS)
+    if(fhdr->filemode & FILE_ANONYMOUS) {
+        /* Note in MODE_SELECT, the multi may be fucked by ref number. */
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_post_article() */
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
 	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
-    else {
+    } else {
 	int m = query_file_money(fhdr);
 
 	if(m < 0)

@@ -205,11 +205,11 @@ user_display(const userec_t * u, int adminmode)
     prints("\t私人信箱: %d 封  (購買信箱: %d 封)\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox);
+    prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
+           ,u->numlogindays);
+    prints(" / 文章 %d 篇\n", u->numposts);
 
     if (adminmode) {
-        prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
-               ,u->numlogindays);
-        prints(" / 文章 %d 篇\n", u->numposts);
         prints("\t最後上線: %s (掛站時每日增加) / %s\n",
                Cdate(&u->lastlogin), u->lasthost);
     } else {
