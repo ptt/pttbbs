@@ -36,10 +36,6 @@ static int	showmail_mode = SHOWMAIL_NORM;
 static const    onekey_t mail_comms[];
 
 ////////////////////////////////////////////////////////////////////////
-// Prototype of shared/local functions
-int old_cross_post(int, fileheader_t* , const char *);
-
-////////////////////////////////////////////////////////////////////////
 // Core utility functions
 
 // Checks if given address is a full qualified mail address in user@host.domain
@@ -2279,7 +2275,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'U'
     { 0, NULL }, // 'V'
     { 0, NULL }, // 'W'
-    { 1, old_cross_post }, // 'X'
+    { 0, NULL }, // 'X'
     { 0, NULL }, // 'Y'
     { 0, NULL }, // 'Z' 90
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },

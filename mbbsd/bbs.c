@@ -2066,14 +2066,6 @@ forward_post(int ent, fileheader_t * fhdr, const char *direct) {
 
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
-int
-old_cross_post(int e GCC_UNUSED, fileheader_t* g GCC_UNUSED,
-               const char *d GCC_UNUSED)
-{
-    vmsg("為了避免您誤按，轉錄按鍵已改為 Ctrl-X");
-    return  PARTUPDATE;
-}
-
 static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
