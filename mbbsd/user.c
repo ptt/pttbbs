@@ -432,6 +432,7 @@ void Customize(void)
 	UF_DBCS_DROP_REPEAT,
 	UF_DBCS_NOINTRESC,
 #endif
+        UF_CURSOR_ASCII,
 #ifdef USE_PFTERM
         UF_MENU_LIGHTBAR,
 #endif
@@ -455,8 +456,9 @@ void Customize(void)
 	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
 #endif
+        "CURSOR     使用新式簡化游標",
 #ifdef USE_PFTERM
-        "MENU       (實驗性)啟用光棒選單系統",
+        "CURSOR     (實驗性)啟用光棒選單系統",
 #endif
 #ifdef PLAY_ANGEL
         "ANGEL      (小天使)啟用新的神諭呼叫器設定界面",

@@ -32,7 +32,7 @@
 // #define UF_COUNTRY_???   0x00400000	// reserved
 // #define UF_COUNTRY_???   0x00800000	// reserved
 #define UF_MENU_LIGHTBAR    0x01000000	// true to use lightbar-based menu
-// #define UF_???	    0x02000000	// reserved
+#define UF_CURSOR_ASCII     0x02000000  // true to enable ASCII-safe cursor.
 // #define UF_???	    0x04000000	// reserved
 // #define UF_???	    0x08000000	// reserved
 // #define UF_???	    0x10000000	// reserved

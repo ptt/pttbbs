@@ -526,7 +526,7 @@ new_register(void)
     memset(&newuser, 0, sizeof(newuser));
     newuser.version = PASSWD_VERSION;
     newuser.userlevel = PERM_DEFAULT;
-    newuser.uflag = UF_BRDSORT | UF_ADBANNER;
+    newuser.uflag = UF_BRDSORT | UF_ADBANNER | UF_CURSOR_ASCII;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.pager = PAGER_ON;
     newuser.numlogindays = 1;
