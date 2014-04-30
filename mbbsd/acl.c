@@ -141,7 +141,7 @@ ui_print_user_banned_status_for_board(const char *uid, const char *board) {
         uid, board, sizeof(reason), reason);
 
     if (expire > now) {
-        prints("使用者 %s 禁言中，解除時間尚有 %d 天: %s\n理由:%s",
+        prints("暫停使用者 %s 發言，解除時間尚有 %d 天: %s\n理由:%s",
                uid, (expire-now)/DAY_SECONDS+1,
                Cdatelite(&expire), reason);
     } else {
@@ -216,7 +216,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
                      "注意: 超過 %d 天的設定有可能因為對方一直"
                      "未上站而導致帳號過期被重新註冊，\n"
                      "      此時同名的新帳號由於不一定是同一人所以"
-                     "不會被禁言(水桶)。\n" ANSI_RESET,
+                     "不會被禁言。\n" ANSI_RESET,
                      KEEP_DAYS_REGGED);
         }
     }
@@ -248,7 +248,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     result = ban_user_for_board(uid, board, expire, reason);
     log_filef(history_log, LOG_CREAT,
               ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET
-              " 限制 " ANSI_COLOR(1;31) "%s" ANSI_RESET
+              " 暫停 " ANSI_COLOR(1;31) "%s" ANSI_RESET
               " 發言，期限為 %s\n  理由: %s\n",
               Cdatelite(&now),
               result ? "" :
@@ -264,12 +264,12 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             "\n"
             "依照您過去已親自同意之使用者條款,"
             "您已同意本站板主基於管理之考量,\n"
-            "得將您之帳號設定停止看板服務(水桶或禁止發言)、\n"
+            "得將您之帳號設定停止看板服務(水桶或暫停發言)、\n"
             "刪除您發表之特定文章,\n"
             "以及退回您發表之特定文章(劣文或退文設定)。\n"
             "\n"
             "此乃本站與您之民事關係,\n"
-            "水桶或禁止發文設定、刪文設定、劣文或退文設定等,\n"
+            "水桶或暫停發言設定、刪文設定、劣文或退文設定等,\n"
             ANSI_COLOR(1;31)
             "乃本站依民事契約終止部分原先無償提供予您之服務,\n"
             ANSI_RESET
@@ -279,9 +279,9 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             "請勿濫行提告。\n";
         char xmsg[STRLEN*5 + sizeof(anti_pettifogger)];
 
-        snprintf(xtitle, sizeof(xtitle), "%s 看板禁言通知(水桶)", board);
+        snprintf(xtitle, sizeof(xtitle), "%s 看板暫停發言通知(水桶)", board);
         snprintf(xmsg, sizeof(xmsg),
-                 "%s 看板已暫時禁止您發表意見 (放入水桶名單)。\n"
+                 "%s 看板已暫時停止讓您發表意見。\n"
                  "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n\n%s",
@@ -350,7 +350,7 @@ edit_banned_list_for_board(const char *board) {
     while (1) {
         clear();
         vs_hdr2f(" Bakuman 權限設定系統 \t"
-                 " 看板: %s ，類型: 禁止發言(水桶)，名單上限: ∞", board);
+                 " 看板: %s ，類型: 停止發言(水桶)，名單上限: ∞", board);
         move(3, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
@@ -371,13 +371,13 @@ edit_banned_list_for_board(const char *board) {
         "           它採取的是設後免理+記錄式的概念: (可由歷史記錄自行推算)\n"
         "         - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
-        "         - 想確認是否設錯或查某個使用者是不是仍在水桶中，可用(S)來檢查\n"
+        "         - 想確認是否設錯或查某個使用者是不是仍在禁言中，可用(S)來檢查\n"
         "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
-        "         - 目前沒有[永久水桶]的設定，若有需要請設個 10年或 20年\n"
+        "         - 目前沒有[永久禁言]的設定，若有需要請設個 10年或 20年\n"
         "         - 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
-                   "帳號被砍後水桶會自動解除\n" ANSI_RESET
-        "         - 水桶自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
-ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
+                   "帳號被砍後禁言會自動解除\n" ANSI_RESET
+        "         - 禁言自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
+ANSI_COLOR(1) "         - 想查看某使用者為何被禁言可用(S)或是(L)再用 / 搜尋\n"
         ANSI_RESET
 #ifdef WATERBAN_UPGRADE_TIME_STR
         // enable and change this if you've just made an upgrade
@@ -447,7 +447,7 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被水桶可用(S)或是(L)再用 / 搜尋\n"
                     char old_log[PATHLEN];
                     setbfile(old_log, board, fn_water);
                     if (dashf(old_log)) {
-                        vmsg("請注意: 此份資料僅供參考，與現在實際水桶名單完全沒有關係。");
+                        vmsg("請注意: 此份資料僅供參考，與現在實際禁言名單完全沒有關係。");
                         more(old_log, YEA);
                     } else {
                         vmsg("無舊水桶資料。");
