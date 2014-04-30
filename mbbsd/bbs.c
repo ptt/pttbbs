@@ -105,7 +105,7 @@ static int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name,
 	time4_t modified, const char *title, char recommend,
-        uint8_t enable_modes, uint8_t disable_modes)
+        void *multi, uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -142,6 +142,8 @@ modify_dir_lite(
         fhdr.filemode &= ~disable_modes;
     if (title && *title)
 	strcpy(fhdr.title, title);
+    if (multi)
+        memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
     if (recommend) {
 	recommend += fhdr.recommend;
@@ -2027,8 +2029,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // substitute_ref_record(direct, fhdr, ent);
-    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title, 0,
-                    0, 0);
+    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
+                    0, NULL, 0, 0);
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2494,13 +2496,17 @@ editLimits(unsigned char *plogins,
     move(y+1, 0); clrtobot();
 
     y++;
-    sprintf(genbuf, "%u", 255 - badpost);
+    temp = 255 - (unsigned int)badpost;
+    sprintf(genbuf, "%u", temp);
     do {
 	getdata_buf(y, 0,
 		"退文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     badpost = (unsigned char)(255 - temp);
+    vmsgf("editLimits: logins=%u, badpost=%u",
+          (unsigned int)logins,
+          (unsigned int)badpost);
 
     // save var
     *plogins  = logins;
@@ -2538,8 +2544,8 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
-    }
-    else if (buf[0] == 'b') {
+
+    } else if (buf[0] == 'b') {
 
 	editLimits(
 		&bp->vote_limit_logins,
@@ -2550,18 +2556,26 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
-    }
-    else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
+
+    } else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
+        if (currmode & MODE_SELECT) {
+            vmsg("請退出搜尋模式後再設定。");
+            return FULLUPDATE;
+        }
 
 	editLimits(
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.badpost);
+        if (modify_dir_lite(direct, ent, fhdr->filename,
+                            0, NULL, 0, &fhdr->multi, 0, 0) != 0) {
+            vmsg("修改失敗，請重新進入看板再試試。");
+            return FULLUPDATE;
+        }
 
-        // TODO fix race condition here.
-	substitute_ref_record(direct, fhdr, ent);
 	vmsg("修改完成！");
 	return FULLUPDATE;
     }
+
     vmsg("取消修改");
     return FULLUPDATE;
 }
@@ -2758,7 +2772,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     if (fhdr->modified > 0)
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
-		fhdr->modified, NULL, update, 0, 0) < 0)
+		fhdr->modified, NULL, update, NULL, 0, 0) < 0)
 	    goto error;
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
@@ -3691,13 +3705,13 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
         if (fhdr->filemode & mode_mask) {
             // clear
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
-                                       0, NULL, 0, 0, mode_mask)) != 0)
+                                       0, NULL, 0, NULL, 0, mode_mask)) != 0)
                 break;
             fhdr->filemode &= ~mode_mask;
         } else {
             // set
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
-                                       0, NULL, 0, mode_mask, 0)) != 0)
+                                       0, NULL, 0, NULL, mode_mask, 0)) != 0)
                 break;
             fhdr->filemode |= mode_mask;
         }
@@ -3854,6 +3868,16 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	 * see do_post_article() */
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
 	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
+    } else if (fhdr->filemode & FILE_VOTE) {
+        uint32_t bp = fhdr->multi.vote_limits.badpost,
+                 lgn = fhdr->multi.vote_limits.logins;
+        prints("│ 投票限制(需先滿足發文限制): ");
+        if (bp)
+            prints("退文 %d 篇以下 ", 255 - bp);
+        if (lgn)
+            prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "以上 ", lgn * 10);
+        if (!bp && !lgn)
+            prints("無 ");
     } else {
 	int m = query_file_money(fhdr);
 

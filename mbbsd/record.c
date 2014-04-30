@@ -94,6 +94,8 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
     char            fname[PATHLEN];
     int             num = 0;
 
+    // Note: 這段腦殘 code 遇上 FILE_ANONYMOUS 或 FILE_VOTE 就會爆炸。
+
     /* rocker.011018: 串接模式用reference增進效率 */
     if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->multi.refer.flag) &&
 	    (num = fhdr->multi.refer.ref)){
