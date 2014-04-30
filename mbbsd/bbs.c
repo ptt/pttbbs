@@ -104,7 +104,8 @@ query_file_money(const fileheader_t *pfh)
 static int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name,
-	time4_t modified, const char *title, char recommend)
+	time4_t modified, const char *title, char recommend,
+        uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -135,12 +136,14 @@ modify_dir_lite(
     // update records
     if (modified > 0)
 	fhdr.modified = modified;
-
+    if (enable_modes)
+        fhdr.filemode |= enable_modes;
+    if (disable_modes)
+        fhdr.filemode &= ~disable_modes;
     if (title && *title)
 	strcpy(fhdr.title, title);
 
-    if (recommend)
-    {
+    if (recommend) {
 	recommend += fhdr.recommend;
 	if (recommend > MAX_RECOMMENDS) recommend = MAX_RECOMMENDS;
 	else if (recommend < -MAX_RECOMMENDS) recommend = -MAX_RECOMMENDS;
@@ -151,7 +154,6 @@ modify_dir_lite(
 	write(fd, &fhdr, sizeof(fhdr));
 
     close(fd);
-
     return 0;
 }
 
@@ -2025,7 +2027,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // substitute_ref_record(direct, fhdr, ent);
-    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title, 0);
+    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title, 0,
+                    0, 0);
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2653,88 +2656,30 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	    dirty++;
 	}
     }
+    if (!dirty)
+        return FULLUPDATE;
 
-    if (dirty)
+    getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
+    if (genbuf[0] != 'y')
+        return FULLUPDATE;
+    // TODO verify if record is still valid
+    fileheader_t curr;
+    memset(&curr, 0, sizeof(curr));
+    if (get_record(direct, &curr, sizeof(curr), ent) < 0 ||
+        strcmp(curr.filename, fhdr->filename) != 0)
     {
-	getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, DOECHO);
-	if ((genbuf[0] == 'y' || genbuf[0] == 'Y') && dirty) {
-	    // TODO verify if record is still valid
-	    fileheader_t curr;
-	    memset(&curr, 0, sizeof(curr));
-	    if (get_record(direct, &curr, sizeof(curr), ent) < 0 ||
-		strcmp(curr.filename, fhdr->filename) != 0)
-	    {
-		// modified...
-		vmsg("抱歉，系統忙碌中，請稍後再試。");
-		return FULLUPDATE;
-	    }
-	    *fhdr = tmpfhdr;
-            // TODO fix race condition here.
-	    substitute_ref_record(direct, fhdr, ent);
-            LOG_IF(LOG_CONF_EDIT_TITLE,
-                   log_filef("log/edit_title.log", LOG_CREAT,
-                             "%s %s(T) %s(%s) %s => %s\n", Cdatelite(&now),
-                             cuser.userid, currboard, curr.title, curr.owner,
-                             fhdr->title));
-	}
+        // modified...
+        vmsg("抱歉，系統忙碌中，請稍後再試。");
+        return FULLUPDATE;
     }
-    return FULLUPDATE;
-}
-
-static int
-solve_post(int ent, fileheader_t * fhdr, const char *direct)
-{
-    if (!(currmode & MODE_BOARD))
-        return DONOTHING;
-
-    fhdr->filemode ^= FILE_SOLVED;
+    *fhdr = tmpfhdr;
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
-    check_locked(fhdr);
-    return PART_REDRAW;
-}
-
-
-static int
-recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
-{
-    char yn[5];
-    char fn[PATHLEN];
-
-    if (!(currmode & MODE_BOARD))
-	return DONOTHING;
-
-#if defined(ASSESS) && defined(EXP_BAD_COMMENT)
-    // supporting bad_comment
-#if 0
-    // XXX 推文可能會一直跑出來，所以...
-    if (now - atoi(fhdr->filename + 2) > 2 * 7 * 24 * 60 * 60)
-    {
-	move(b_lines-2, 0); clrtoeol();
-	outs("超過兩週，禁止退回推文。");
-    } else
-#endif
-    {
-	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 退回推文 [1/2]? ", yn, 3, LCECHO);
-	if (yn[0] == '2')
-	{
-	    setbfile(fn, currboard, fhdr->filename);
-	    bad_comment(fn);
-	    return FULLUPDATE;
-	} else if (yn[0] != '1')
-	    return FULLUPDATE;
-    }
-#endif
-    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
-    if (yn[0] != 'y')
-	return FULLUPDATE;
-    fhdr->recommend = 0;
-    // TODO fix race condition here.
-    substitute_ref_record(direct, fhdr, ent);
-    setdirpath(fn, direct, fhdr->filename);
-    if (dashf(fn))
-        log_filef(fn, LOG_CREAT, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
-                  Cdatelite(&now));
+    LOG_IF(LOG_CONF_EDIT_TITLE,
+           log_filef("log/edit_title.log", LOG_CREAT,
+                     "%s %s(T) %s(%s) %s => %s\n", Cdatelite(&now),
+                     cuser.userid, currboard, curr.title, curr.owner,
+                     fhdr->title));
     return FULLUPDATE;
 }
 
@@ -2813,7 +2758,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     if (fhdr->modified > 0)
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
-		fhdr->modified, NULL, update) < 0)
+		fhdr->modified, NULL, update, 0, 0) < 0)
 	    goto error;
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
@@ -3214,28 +3159,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     lastrecommend = now;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
     return FULLUPDATE;
-}
-
-static int
-mark_post(int ent, fileheader_t * fhdr, const char *direct)
-{
-    char buf[STRLEN], fpath[STRLEN];
-
-    if (!(currmode & MODE_BOARD))
-	return DONOTHING;
-
-    setbpath(fpath, currboard);
-    sprintf(buf, "%s/%s", fpath, fhdr->filename);
-
-    if( !(fhdr->filemode & FILE_MARKED) && /* 若目前還沒有 mark 才要 check */
-	access(buf, F_OK) < 0 )
-	return DONOTHING;
-
-    fhdr->filemode ^= FILE_MARKED;
-    // TODO fix race condition here.
-    substitute_ref_record(direct, fhdr, ent);
-    check_locked(fhdr);
-    return PART_REDRAW;
 }
 
 int
@@ -3751,6 +3674,97 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     bp->SRexpire = now;
     return FULLUPDATE;
 }
+
+static int
+change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
+                 int mode_mask)
+{
+    int ret = 0;
+    if (!(currmode & MODE_BOARD))
+        return DONOTHING;
+    if (currmode & MODE_SELECT) {
+        // TODO get_record + substitute_ref_record may support MODE_SELECT.
+        vmsg("請退出搜尋模式再進行此項設定。");
+        return READ_REDRAW;
+    }
+    do {
+        if (fhdr->filemode & mode_mask) {
+            // clear
+            if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
+                                       0, NULL, 0, 0, mode_mask)) != 0)
+                break;
+            fhdr->filemode &= ~mode_mask;
+        } else {
+            // set
+            if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
+                                       0, NULL, 0, mode_mask, 0)) != 0)
+                break;
+            fhdr->filemode |= mode_mask;
+        }
+    } while (0);
+    if (ret < 0) {
+        vmsg("設定失敗，請重進看板後再試一次。");
+        return FULLUPDATE;
+    }
+    check_locked(fhdr);
+    return PART_REDRAW;
+}
+
+static int
+solve_post(int ent, fileheader_t * fhdr, const char *direct)
+{
+    return change_post_mode(ent, fhdr, direct, FILE_SOLVED);
+}
+
+static int
+mark_post(int ent, fileheader_t * fhdr, const char *direct)
+{
+    return change_post_mode(ent, fhdr, direct, FILE_MARKED);
+}
+
+static int
+recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
+{
+    char yn[5];
+    char fn[PATHLEN];
+
+    if (!(currmode & MODE_BOARD))
+	return DONOTHING;
+
+#if defined(ASSESS) && defined(EXP_BAD_COMMENT)
+    // supporting bad_comment
+#if 0
+    // XXX 推文可能會一直跑出來，所以...
+    if (now - atoi(fhdr->filename + 2) > 2 * 7 * 24 * 60 * 60)
+    {
+	move(b_lines-2, 0); clrtoeol();
+	outs("超過兩週，禁止退回推文。");
+    } else
+#endif
+    {
+	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 退回推文 [1/2]? ", yn, 3, LCECHO);
+	if (yn[0] == '2')
+	{
+	    setbfile(fn, currboard, fhdr->filename);
+	    bad_comment(fn);
+	    return FULLUPDATE;
+	} else if (yn[0] != '1')
+	    return FULLUPDATE;
+    }
+#endif
+    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
+    if (yn[0] != 'y')
+	return FULLUPDATE;
+    fhdr->recommend = 0;
+    // TODO fix race condition here.
+    substitute_ref_record(direct, fhdr, ent);
+    setdirpath(fn, direct, fhdr->filename);
+    if (dashf(fn))
+        log_filef(fn, LOG_CREAT, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
+                  Cdatelite(&now));
+    return FULLUPDATE;
+}
+
 
 static int
 view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
