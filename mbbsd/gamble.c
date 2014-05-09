@@ -606,13 +606,14 @@ hold_gamble(void)
 	return FULLUPDATE;
     getdata(b_lines - 1, 0, "請輸入主題 (輸入後編輯內容):",
 	    msg, 20, DOECHO);
-    if (msg[0] == 0 ||
-	veditfile(fn_ticket_end) < 0)
+    if (msg[0] == 0 || veditfile(fn_ticket_end) < 0) {
+        // 如果有人 race condition 就... 很該死。
+        unlink(fn_ticket_end);
 	return FULLUPDATE;
+    }
 
     clear();
     showtitle("舉辦樂透", BBSNAME);
-    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
 
     //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
 
