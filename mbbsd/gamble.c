@@ -614,6 +614,7 @@ hold_gamble(void)
 
     clear();
     showtitle("Á|¿ì¼Ö³z", BBSNAME);
+    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
 
     //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
 
