@@ -169,7 +169,9 @@ answer_key(struct evbuffer *buf, const char *key)
     }
 }
 
-#ifdef EXTENDED_INCHAR_ANSI
+
+#ifdef CONVERT_TO_UTF8
+
 static int
 move_string_end(char **buf)
 {
@@ -181,36 +183,63 @@ move_string_end(char **buf)
     return n;
 }
 
-// Make extended ANSI control code
+// Make ANSI control code
 //   fg, bg, bright are the original color code (eg. 30, 42, 1)
 //   provide -1 means no change
 //   all -1 means reset
 static void
-make_ext_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
+make_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
 {
     int sep = 0;
     strncpy(buf, "\033[", size);
     size -= move_string_end(&buf);
     if (bright >= 0) {
-	snprintf(buf, size, "%s11%d", sep ? ";" : "", bright);
+	snprintf(buf, size, "%s%d", sep ? ";" : "", bright);
 	size -= move_string_end(&buf);
 	sep = 1;
     }
     if (fg >= 0) {
-	snprintf(buf, size, "%s1%d", sep ? ";" : "", fg);
+	snprintf(buf, size, "%s%d", sep ? ";" : "", fg);
 	size -= move_string_end(&buf);
 	sep = 1;
     }
     if (bg >= 0) {
-	snprintf(buf, size, "%s1%d", sep ? ";" : "", bg);
+	snprintf(buf, size, "%s%d", sep ? ";" : "", bg);
 	size -= move_string_end(&buf);
 	sep = 1;
     }
     snprintf(buf, size, "m");
 }
-#endif
 
-#ifdef CONVERT_TO_UTF8
+// Make extended ANSI control code
+//   1 ==> 111, 0 ==> 110,
+//   3x ==> 13x, 4y ==> 14y.
+//   provide -1 means no change
+//   all -1 means reset
+static void
+make_ext_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
+{
+    make_ansi_ctrl(buf, size,
+                   fg >= 0 ? 100 + fg : fg,
+                   bg >= 0 ? 100 + bg : bg,
+                   bright >= 0 ? 110 + bright : bright);
+}
+
+static int
+evbuffer_add_ansi_escape_code(struct evbuffer *destination, int fg, int bg, int bright)
+{
+    char ansicode[16];
+    make_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
+    return evbuffer_add_printf(destination, ansicode, strlen(ansicode));
+}
+
+static int
+evbuffer_add_ext_ansi_escape_code(struct evbuffer *destination, int fg, int bg, int bright)
+{
+    char ansicode[24];
+    make_ext_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
+    return evbuffer_add_printf(destination, ansicode, strlen(ansicode));
+}
 
 // Converts given evbuffer contents to UTF-8 and returns the new buffer.
 // The original buffer is freed. Returns NULL on error
@@ -292,12 +321,10 @@ evbuffer_b2u(struct evbuffer *source)
 #ifdef EXTENDED_INCHAR_ANSI
 	    // Output control codes before the Big5 character
 	    if (fg >= 0 || bg >= 0 || bright >= 0) {
-		char ansicode[24];
-		make_ext_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
-		int dlen = evbuffer_add_printf(destination, ansicode, strlen(ansicode));
-		if (dlen < 0)
-		    break;
-		out += dlen;
+                int dlen = evbuffer_add_ext_ansi_escape_code(destination, fg, bg, bright);
+                if (dlen < 0)
+                    break;
+                out += dlen;
 	    }
 #endif
 
@@ -311,6 +338,16 @@ evbuffer_b2u(struct evbuffer *source)
 
 	    if (evbuffer_add(destination, utf8, len) < 0)
 		break;
+
+#ifndef EXTENDED_INCHAR_ANSI
+            // Output in-char control codes to make state consistent
+            if (fg >= 0 || bg >= 0 || bright >= 0) {
+                int dlen = evbuffer_add_ansi_escape_code(destination, fg, bg, bright);
+                if (dlen < 0)
+                    break;
+                out += dlen;
+            }
+#endif
 
 	    // Remove DBCS character from source buffer
 	    evbuffer_drain(source, todrain);
