@@ -13,10 +13,11 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 CFLAGS+=	$(LIBEVENT_CFLAGS)
 LDFLAGS+=	$(LIBEVENT_LIBS_L)
 
-LDADD+= $(UTILOBJ) \
+LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	$(LIBEVENT_LIBS_l)
+	$(LIBEVENT_LIBS_l) \
+	$(LDADD)
 
 .include <bsd.prog.mk>
