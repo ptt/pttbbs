@@ -25,8 +25,12 @@ Comment = collections.namedtuple('Comment',
 	'time ipv4 userref type userid msg')
 CommentKeyFormatString = '%ds%ds' % (IDLEN + 1, FNLEN + 1)
 CommentKey = collections.namedtuple('CommentKey', 'board file')
+QueryFormatString = 'I%ds%ds' % (IDLEN + 1, FNLEN + 1)
+Query = collections.namedtuple('Query', 'start board file')
 REQ_ADD = 1
-REQ_QUERY = 2
+REQ_QUERY_COUNT = 2
+REQ_QUERY_BODY = 3
+REQ_LIST = 0x204c # ' L' for console debug.
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5134
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -47,25 +51,50 @@ def UnpackCommentKey(blob):
     logging.debug("UnpackCommentKey: %r" % (data,))
     return CommentKey._make(map(strip_if_string, data))
 
+def UnpackQuery(blob):
+    def strip_if_string(v):
+	return v.strip(chr(0)) if type(v) == str else v
+    data = struct.unpack(QueryFormatString, blob)
+    logging.debug("Query: %r" % (data,))
+    return Query._make(map(strip_if_string, data))
+
 def PackComment(comment):
     return struct.pack(CommentFormatString, *comment)
 
-def LoadComment(key):
-    blob = g_db.get(key)
-    if blob is None:
-	return ''
-    else:
-	return UnpackComment(g_db.get(key))
+def LoadComment(query):
+    logging.debug("LoadComment: %r", query)
+    key = '%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or '0')
+    if query.start >= num:
+	return None
+    key += '#%08d' % (query.start + 1)
+    data = g_db.get(key)
+    logging.debug(" => %r", UnpackComment(data))
+    return UnpackComment(data)
+
+def LoadCommentCount(query):
+    key = '%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or '0')
+    logging.debug('LoadCommentCount: key: %s, value: %r', key, g_db.get(key))
+    return num
 
 def SaveComment(keypak, comment):
-    logging.debug("SaveComment: %r => %r" % (keypak, comment))
+    logging.debug("SaveComment: %r => %r", keypak, comment)
     key = '%s/%s' % (keypak.board, keypak.file)
     num = g_db.get(key)
     num = 1 if (num is None) else (int(num) + 1)
     g_db.set(key, '%d' % num)
     key += '#%08d' % (num)
     g_db.set(key, PackComment(comment))
-    logging.info('Saved comment: %s', key)
+    logging.debug(' Saved: %s', key)
+
+def ListComments():
+    logging.debug("ListComments")
+    for i in g_db.RangeIter():
+	key = i[0]
+	#if '#' in key:
+	#    continue
+	logging.info(' %s', key)
 
 def open_database(db_path):
     global g_db
@@ -83,6 +112,9 @@ def open_database(db_path):
 	def set(self, key, value):
 	    self.db.Put(key, value)
 
+	def RangeIter(self, **args):
+	    return self.db.RangeIter(*args)
+
     g_db = LevelDBWrapper(leveldb.LevelDB(db_path))
     return g_db
 
@@ -98,8 +130,23 @@ def handle_request(socket, _):
 	    blob = fd.read(struct.calcsize(CommentFormatString))
 	    keyblob = fd.read(struct.calcsize(CommentKeyFormatString))
 	    SaveComment(UnpackCommentKey(keyblob), UnpackComment(blob))
-	elif req.operation == REQ_QUERY:
-	    raise NotImplementedError('REQ_QUERY is not implemented')
+	elif req.operation == REQ_QUERY_COUNT:
+	    blob = fd.read(struct.calcsize(QueryFormatString))
+	    num = LoadCommentCount(UnpackQuery(blob))
+	    fd.write(struct.pack('I', num))
+	    logging.debug('response: %d', num)
+	elif req.operation == REQ_QUERY_BODY:
+	    blob = fd.read(struct.calcsize(QueryFormatString))
+	    comment = LoadComment(UnpackQuery(blob))
+	    logging.debug('Got comment %r', comment)
+	    if comment is None:
+		fd.write(struct.pack('H', 0))
+	    else:
+		data = PackComment(comment)
+		fd.write(struct.pack('H', len(data)))
+		fd.write(data)
+	elif req.operation == REQ_LIST:
+	    ListComments()
 	else:
 	    raise ValueError('Unkown operation %d' % req.operation)
     except:
