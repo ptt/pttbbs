@@ -85,6 +85,7 @@ u_loginview(void)
     return 0;
 }
 
+/* TODO(piaip) 把這自動化？ */
 int u_cancelbadpost(void)
 {
    int day, prev = cuser.badpost;

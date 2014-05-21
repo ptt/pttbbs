@@ -855,6 +855,9 @@ a_delete(menu_t * pm, const char *backup_dir)
 
     } else if (dashd(fpath)) {
 
+        // TODO(hungte) We should create a top level folder and move everything
+        // inside.
+
 	// XXX we also check PERM_MAILLIMIT here because RMAIL
 	// may be not trusted...
 	const char *save_bn = ( HasUserPerm(PERM_MAILLIMIT) && (currstat & RMAIL) ) ?
