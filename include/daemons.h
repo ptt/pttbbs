@@ -144,10 +144,11 @@ enum BRCSTORED_OPERATIONS {
 
 enum {
     COMMENTD_REQ_ADD = 1,
-    COMMENTD_REQ_QUERY,
+    COMMENTD_REQ_QUERY_COUNT,
+    COMMENTD_REQ_QUERY_BODY = 3,
 };
 
-typedef struct {
+typedef struct CommentBodyReq {
     time4_t time;
     time4_t ipv4;
     uint32_t userref; /* user.ctime */
@@ -166,8 +167,14 @@ typedef struct {
     short operation;
     CommentBodyReq comment;
     CommentKeyReq key;
-} PACKSTRUCT CommentRequest;
+} PACKSTRUCT CommentAddRequest;
 
+typedef struct {
+    short cb;
+    short operation;
+    uint32_t start;
+    CommentKeyReq key;
+} PACKSTRUCT CommentQueryRequest;
 
 ///////////////////////////////////////////////////////////////////////
 // online friend relation daemon

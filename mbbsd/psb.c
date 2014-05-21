@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "daemons.h"
 
 // Panty & Stocking Browser
 //
@@ -654,6 +655,71 @@ psb_recycle_bin(const char *base, const char *title) {
     free(pvrbctx.records);
     return DIRCHANGED;
 }
+
+///////////////////////////////////////////////////////////////////////////
+// Comment Management
+
+#ifdef USE_COMMENTD
+typedef struct {
+    void *cmctx;
+} pvcm_ctx;
+
+static int
+pvcm_header(void *ctx GCC_UNUSED) {
+    vs_hdr2barf(" 【推文管理】\t");
+    move(1, 0);
+    vbarf(ANSI_REVERSE "  %-6s|%-12.12s|%s\t", "編 號", " 作  者 ", " 內  容\t");
+    return 0;
+}
+
+static int
+pvcm_footer(void *ctx GCC_UNUSED) {
+    vs_footer(" 推文 ",
+              " (↑/↓/PgUp/PgDn)移動 \t(q/←)跳出");
+    move(b_lines-1, 0);
+    return 0;
+}
+
+static int
+pvcm_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx*) ctx;
+    CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
+    if (!resp)
+        return 0;
+
+    prints("%c %06d %-12.12s %s\n",
+           (i == curr) ? '>' : ' ',
+           i + 1, resp->userid, resp->msg);
+    return 0;
+}
+
+int
+pvcm_comment_manager(const char *board, const char *file) {
+    pvcm_ctx pvcmctx = {
+        NULL,
+    };
+    PSB_CTX ctx = {
+        .curr = 0,
+        .total = 0, // maxrev + pvrbctx.base_as_current,
+        .header_lines = 2,
+        .footer_lines = 2,
+        .allow_pbs_version_message = 0,
+        .ctx = (void*)&pvcmctx,
+        .header = pvcm_header,
+        .footer = pvcm_footer,
+        .renderer = pvcm_renderer,
+    };
+    pvcmctx.cmctx = CommentsOpen(board, file);
+    if (!pvcmctx.cmctx)
+        return FULLUPDATE;
+    ctx.total = CommentsGetCount(pvcmctx.cmctx);
+    if (ctx.total){
+        psb_main(&ctx);
+    }
+    CommentsClose(pvcmctx.cmctx);
+    return DIRCHANGED;
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // Admin Edit

@@ -173,11 +173,23 @@ char *get_restriction_reason(
 int ccw_talk(int fd, int destuid);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
+/* comments */
+#ifdef USE_COMMENTD
+struct CommentsBodyReq;
+int CommentsAddRecord(const char *board, const char *file,
+                      int type, const char *msg);
+void *CommentsOpen(const char *board, const char *file);
+int CommentsClose(void *ctx);
+int CommentsGetCount(void *ctx);
+const struct CommentBodyReq *CommentsRead(void *ctx, int i);
+#endif
+
 /* psb (panty and stocking browser) */
 int psb_view_edit_history(const char *base, const char *subject,
                           int maxrev, int current_as_base);
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
+int pvcm_comment_manager(const char *board, const char *file);
 
 /* chc */
 void chc(int s, ChessGameMode mode);

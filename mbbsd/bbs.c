@@ -2648,6 +2648,13 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     if (!allow)
 	return DONOTHING;
 
+    /* TODO(piaip) Also do this only in non-select mode?
+    if (currmode & MODE_SELECT) {
+        vmsg("請退出搜尋模式後再設定。");
+        return READ_REDRAW;
+    }
+    */
+
     if (fhdr && fhdr->title[0])
 	strlcpy(genbuf, fhdr->title, TTLEN+1);
 
@@ -3105,34 +3112,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
                                     "%s %d %s %s %s\n", cuser.userid,
                                     (int)now, currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
-    {
-        int s;
-        const char *errmsg = "錯誤: 資料庫連線異常，無法寫入。請稍候再試。";
-        CommentRequest req = {0};
-        req.cb = sizeof(req);
-        req.operation = COMMENTD_REQ_ADD;
-
-        strlcpy(req.key.board, bp->brdname, sizeof(req.key.board));
-        strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
-
-        req.comment.time = now;
-        req.comment.ipv4 = inet_addr(fromhost);
-        req.comment.userref = cuser.firstlogin;
-        req.comment.type = type;
-        strlcpy(req.comment.userid, cuser.userid, sizeof(req.comment.userid));
-        strlcpy(req.comment.msg, msg, sizeof(req.comment.msg));
-
-        s = toconnectex(COMMENTD_ADDR, 10);
-        if (s < 0) {
-            vmsg(errmsg);
-            return FULLUPDATE;
-        }
-        if (towrite(s, &req, sizeof(req)) < 0) {
-            close(s);
-            vmsg(errmsg);
-            return FULLUPDATE;
-        }
-        close(s);
+    if (CommentsAddRecord(bp->brdname, fhdr->filename, type, msg)) {
+        vmsg("錯誤: 資料庫連線異常，無法寫入。請稍候再試。");
+        return FULLUPDATE;
     }
 #endif
 
@@ -4482,7 +4464,11 @@ moved_to_ctrl_e()
 static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
-    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪除特定文字:";
+    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
+#ifdef USE_COMMENTD
+        " [V](實驗)推文管理"
+#endif
+        ":";
 
     if (currstat == RMAIL)
         return DONOTHING;
@@ -4510,6 +4496,12 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
         case 'm':
             mask_post_content(ent, fhdr, direct);
             break;
+
+#ifdef USE_COMMENTD
+        case 'v':
+            pvcm_comment_manager(currboard, fhdr->filename);
+            break;
+#endif
     }
     return FULLUPDATE;
 }
