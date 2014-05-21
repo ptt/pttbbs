@@ -30,6 +30,7 @@ Query = collections.namedtuple('Query', 'start board file')
 REQ_ADD = 1
 REQ_QUERY_COUNT = 2
 REQ_QUERY_BODY = 3
+REQ_MARK_DELETE = 4
 REQ_LIST = 0x204c # ' L' for console debug.
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5134
@@ -77,6 +78,23 @@ def LoadCommentCount(query):
     num = int(g_db.get(key) or '0')
     logging.debug('LoadCommentCount: key: %s, value: %r', key, g_db.get(key))
     return num
+
+def MarkCommentDeleted(query):
+    logging.debug("MarkCommentDeleted: %r", query)
+    key = '%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or '0')
+    if query.start >= num:
+	return -1
+    key += '#%08d' % (query.start + 1)
+    data = g_db.get(key)
+    comment = UnpackComment(data)
+    if comment.type & 0x80000000:
+	return -2
+    # Comment is a named tuple, sorry. We have to reconstruct one.
+    comment = comment._replace(type = (comment.type | 0x80000000))
+    g_db.set(key, PackComment(comment))
+    logging.debug(' Deleted: %s', key)
+    return 0
 
 def SaveComment(keypak, comment):
     logging.debug("SaveComment: %r => %r", keypak, comment)
@@ -145,6 +163,11 @@ def handle_request(socket, _):
 		data = PackComment(comment)
 		fd.write(struct.pack('H', len(data)))
 		fd.write(data)
+	elif req.operation == REQ_MARK_DELETE:
+	    blob = fd.read(struct.calcsize(QueryFormatString))
+	    ret = MarkCommentDeleted(UnpackQuery(blob))
+	    logging.debug('Marked comment as deleted: %d.', ret)
+	    fd.write(struct.pack('i', ret))
 	elif req.operation == REQ_LIST:
 	    ListComments()
 	else:
