@@ -675,7 +675,7 @@ pvcm_header(void *ctx GCC_UNUSED) {
 static int
 pvcm_footer(void *ctx GCC_UNUSED) {
     vs_footer(" 推文 ",
-              " (↑/↓/PgUp/PgDn)移動 \t(q/←)跳出");
+              " (↑/↓/PgUp/PgDn)移動 (d)刪除\t(q/←)跳出");
     move(b_lines-1, 0);
     return 0;
 }
@@ -686,21 +686,56 @@ pvcm_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
+    if (resp->type < 0) {
+        prints("%c %06d <已刪>\n", (i == curr)? '>' : ' ', i + 1);
+    } else {
+        prints("%c %06d %-12.12s %s\n",
+               (i == curr) ? '>' : ' ',
+               i + 1, resp->userid, resp->msg);
+    }
+    return 0;
+}
 
-    prints("%c %06d %-12.12s %s\n",
-           (i == curr) ? '>' : ' ',
-           i + 1, resp->userid, resp->msg);
+static int
+pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
+    int result;
+    pvcm_ctx *cx = (pvcm_ctx*) ctx;
+
+    switch(key) {
+        case KEY_DEL:
+        case 'd':
+            if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
+                CommentsDeleteFromTextFile(cx->cmctx, curr);
+            }
+            return PSB_NOP;
+    }
+    return PSB_NA;
+}
+
+static int
+pvcm_welcome() {
+    clear();
+    move(2, 0);
+    vs_hdr2("刪除推文", "實驗警告");
+    outs(ANSI_COLOR(1;31)
+"  這是實驗中的刪推文界面。\n\n" ANSI_RESET
+"  提醒您: (1) 刪推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
+"              目前沒辦法100%%確認找到正確的位置，但起碼內文是相同的。\n\n"
+"          (2) 被編輯過造成內容有變動的推文無法刪除。\n\n"
+        "");
+    doupdate();
+    pressanykey();
     return 0;
 }
 
 int
-pvcm_comment_manager(const char *board, const char *file) {
+psb_comment_manager(const char *board, const char *file) {
     pvcm_ctx pvcmctx = {
         NULL,
     };
     PSB_CTX ctx = {
         .curr = 0,
-        .total = 0, // maxrev + pvrbctx.base_as_current,
+        .total = 0,
         .header_lines = 2,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
@@ -708,6 +743,7 @@ pvcm_comment_manager(const char *board, const char *file) {
         .header = pvcm_header,
         .footer = pvcm_footer,
         .renderer = pvcm_renderer,
+        .input_processor = pvcm_input_processor,
     };
     pvcmctx.cmctx = CommentsOpen(board, file);
     if (!pvcmctx.cmctx)

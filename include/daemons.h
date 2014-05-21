@@ -145,14 +145,15 @@ enum BRCSTORED_OPERATIONS {
 enum {
     COMMENTD_REQ_ADD = 1,
     COMMENTD_REQ_QUERY_COUNT,
-    COMMENTD_REQ_QUERY_BODY = 3,
+    COMMENTD_REQ_QUERY_BODY,
+    COMMENTD_REQ_MARK_DELETED,
 };
 
 typedef struct CommentBodyReq {
     time4_t time;
     time4_t ipv4;
     uint32_t userref; /* user.ctime */
-    uint32_t type;
+    int32_t type;
     char userid[IDLEN + 1];
     char msg[COMMENTLEN + 1];
 } PACKSTRUCT CommentBodyReq;

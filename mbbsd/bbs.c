@@ -3134,19 +3134,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		    Cdate_mdHM(&now));
 	}
 
-#ifdef OLDRECOMMEND
-	snprintf(buf, sizeof(buf),
-	    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s"
-	    ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
-	    "推%s\n",
-	    myid, maxlength, msg, tail);
-#else
-	snprintf(buf, sizeof(buf),
-	    "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
-	    ":%-*s" ANSI_RESET "%s\n",
-             ctype_attr2[type], ctype[type], myid,
-	     maxlength, msg, tail);
-#endif // OLDRECOMMEND
+        FormatCommentString(buf, sizeof(buf), type,
+                            myid, maxlength, msg, tail);
     }
 
     if (do_add_recommend(direct, fhdr,  ent, buf, type) < 0)
@@ -4499,7 +4488,15 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 
 #ifdef USE_COMMENTD
         case 'v':
-            pvcm_comment_manager(currboard, fhdr->filename);
+            {
+                boardheader_t *bp = bp = getbcache(currbid);
+                assert(bp);
+                if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
+                    vmsg("要先開啟刪特定文字的權限。");
+                    return FULLUPDATE;
+                }
+                psb_comment_manager(currboard, fhdr->filename);
+            }
             break;
 #endif
     }

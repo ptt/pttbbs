@@ -182,14 +182,18 @@ void *CommentsOpen(const char *board, const char *file);
 int CommentsClose(void *ctx);
 int CommentsGetCount(void *ctx);
 const struct CommentBodyReq *CommentsRead(void *ctx, int i);
+int CommentsDeleteFromTextFile(void *ctx, int i);
 #endif
+void FormatCommentString(char *buf, size_t szbuf, int type,
+                         const char *myid, int maxlength,
+                         const char *msg, const char *tail);
 
 /* psb (panty and stocking browser) */
 int psb_view_edit_history(const char *base, const char *subject,
                           int maxrev, int current_as_base);
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
-int pvcm_comment_manager(const char *board, const char *file);
+int psb_comment_manager(const char *board, const char *file);
 
 /* chc */
 void chc(int s, ChessGameMode mode);
