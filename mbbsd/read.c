@@ -1246,9 +1246,9 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     fileheader_t   *headers0 = headers;
     int             headers_size0 = headers_size;
     time4_t	    enter_time = now;
+    const size_t FHSZ = sizeof(fileheader_t);
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
-#define FHSZ    sizeof(fileheader_t)
     /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
     headers_size = p_lines;
     headers = (fileheader_t *) calloc(headers_size, FHSZ);
@@ -1388,7 +1388,6 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	} //end switch
 	mode = i_read_key(rcmdlist, locmem, currbid, bottom_line);
     } while (mode != DOQUIT && !ZA_Waiting());
-#undef  FHSZ
 
     free(headers);
     last_line = last_line0;
