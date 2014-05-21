@@ -22,7 +22,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type,
 #else
     // TODO(piaip) Make bbs.c#recomment use same structure.
     // Now we just assume they are the same.
-    const int RECTYPE_SIZE = 3;
+    enum { RECTYPE_SIZE = 3 };
     static const char *ctype[RECTYPE_SIZE] = {
         "±À", "¼N", "¡÷",
     };
