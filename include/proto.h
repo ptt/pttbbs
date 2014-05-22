@@ -182,7 +182,7 @@ void *CommentsOpen(const char *board, const char *file);
 int CommentsClose(void *ctx);
 int CommentsGetCount(void *ctx);
 const struct CommentBodyReq *CommentsRead(void *ctx, int i);
-int CommentsDeleteFromTextFile(void *ctx, int i);
+int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason);
 #endif
 void FormatCommentString(char *buf, size_t szbuf, int type,
                          const char *myid, int maxlength,
