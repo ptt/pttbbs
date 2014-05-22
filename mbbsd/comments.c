@@ -26,6 +26,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type,
     static const char *ctype[RECTYPE_SIZE] = {
         "±À", "¼N", "¡÷",
     };
+    // Note attr2 is slightly different from ctype_attr in bbs.c#recommend
     static const char *ctype_attr2[RECTYPE_SIZE] = {
         ANSI_COLOR(1;37),
         ANSI_COLOR(1;31),

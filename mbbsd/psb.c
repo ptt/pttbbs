@@ -63,7 +63,7 @@ psb_default_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx 
 }
 
 static int
-psb_default_cursor(int y, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
+psb_default_cursor(int y GCC_UNUSED, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
 #ifdef USE_PFTERM
     if (HasUserFlag(UF_CURSOR_ASCII))
         outs(STR_CURSOR "\b");
@@ -681,9 +681,9 @@ pvcm_footer(void *ctx GCC_UNUSED) {
 }
 
 static int
-pvcm_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
+pvcm_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
     pvcm_ctx *cx = (pvcm_ctx*) ctx;
-    CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
     if (resp->type < 0) {
@@ -698,7 +698,6 @@ pvcm_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
 
 static int
 pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
-    int result;
     pvcm_ctx *cx = (pvcm_ctx*) ctx;
 
     switch(key) {

@@ -2808,10 +2808,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		       ANSI_COLOR(1;33),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
-		   }, *ctype_attr2[RECTYPE_SIZE] = {
-		       ANSI_COLOR(1;37),
-		       ANSI_COLOR(1;31),
-		       ANSI_COLOR(1;31),
 		   }, *ctype_long[RECTYPE_SIZE] = {
 		       "值得推薦",
 		       "給它噓聲",
