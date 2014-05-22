@@ -1,15 +1,6 @@
 #include "bbs.h"
 #include "daemons.h"
 
-#ifdef USE_COMMENTD
-/* Locally defined context. */
-typedef struct {
-    uint32_t allocated;
-    uint32_t loaded;
-    CommentKeyReq key;
-    CommentBodyReq *resp;
-} CommentsCtx;
-
 void FormatCommentString(char *buf, size_t szbuf, int type,
                          const char *myid, int maxlength,
                          const char *msg, const char *tail)
@@ -40,6 +31,15 @@ void FormatCommentString(char *buf, size_t szbuf, int type,
 #endif // OLDRECOMMEND
 
 }
+
+#ifdef USE_COMMENTD
+/* Locally defined context. */
+typedef struct {
+    uint32_t allocated;
+    uint32_t loaded;
+    CommentKeyReq key;
+    CommentBodyReq *resp;
+} CommentsCtx;
 
 int CommentsAddRecord(const char *board, const char *file,
                       int type, const char *msg)
