@@ -704,6 +704,14 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
     switch(key) {
         case KEY_DEL:
         case 'd':
+            {
+                boardheader_t *bp = bp = getbcache(currbid);
+                assert(bp);
+                if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
+                    vmsg("要先開啟刪特定文字的權限。");
+                    return FULLUPDATE;
+                }
+            }
             if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
                 CommentsDeleteFromTextFile(cx->cmctx, curr);
             }
@@ -723,7 +731,6 @@ pvcm_welcome() {
 "              目前沒辦法100%%確認找到正確的位置，但起碼內文是相同的。\n\n"
 "          (2) 被編輯過造成內容有變動的推文無法刪除。\n\n"
         "");
-    doupdate();
     pressanykey();
     return 0;
 }
@@ -750,6 +757,7 @@ psb_comment_manager(const char *board, const char *file) {
         return FULLUPDATE;
     ctx.total = CommentsGetCount(pvcmctx.cmctx);
     if (ctx.total){
+        pvcm_welcome();
         psb_main(&ctx);
     }
     CommentsClose(pvcmctx.cmctx);

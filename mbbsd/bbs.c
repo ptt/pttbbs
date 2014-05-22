@@ -4489,12 +4489,6 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 #ifdef USE_COMMENTD
         case 'v':
             {
-                boardheader_t *bp = bp = getbcache(currbid);
-                assert(bp);
-                if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
-                    vmsg("要先開啟刪特定文字的權限。");
-                    return FULLUPDATE;
-                }
                 psb_comment_manager(currboard, fhdr->filename);
             }
             break;
