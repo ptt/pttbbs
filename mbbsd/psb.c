@@ -703,17 +703,23 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
     switch(key) {
         case KEY_DEL:
         case 'd':
-            {
+            do {
                 boardheader_t *bp = bp = getbcache(currbid);
                 assert(bp);
                 if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
                     vmsg("要先開啟刪特定文字的權限。");
-                    return FULLUPDATE;
+                    break;
                 }
-            }
-            if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
-                CommentsDeleteFromTextFile(cx->cmctx, curr);
-            }
+                char reason[DISP_TTLEN];
+                if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
+                            reason, sizeof(reason), DOECHO))
+                    break;
+                if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
+                    CommentsDeleteFromTextFile(cx->cmctx, curr, reason);
+                }
+
+            } while(0);
+
             return PSB_NOP;
     }
     return PSB_NA;

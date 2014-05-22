@@ -195,7 +195,7 @@ int CommentsGetCount(void *ctx)
     return num;
 }
 
-int CommentsDeleteFromTextFile(void *ctx, int i)
+int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
 {
     size_t pattern_len;
     CommentsCtx *c = (CommentsCtx *)ctx;
@@ -225,7 +225,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i)
         if (strncmp(buf, pattern, pattern_len) == 0 &&
             (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR) &&
             !found) {
-            fprintf(out, "[本行文字已被 %s 刪除。]\n", cuser.userid);
+            fprintf(out, "[本行推文已被 %s 刪除，理由: %s]\n", cuser.userid, reason);
             found = 1;
         } else {
             fputs(buf, out);
@@ -244,8 +244,9 @@ int CommentsDeleteFromTextFile(void *ctx, int i)
         if (rev > 0) {
             char revfn[PATHLEN];
             timecapsule_get_by_revision(filename, rev, revfn, sizeof(revfn));
-            log_filef(revfn, 0, "\n※ 刪除推文: %s %s <%s:%s>", cuser.userid,
-                      Cdatelite(&now), req->userid, req->msg);
+            log_filef(revfn, 0, "\n※ 刪除推文: %s %s理由: %s\n"
+                      "推文內容: %s: %s\n", Cdatelite(&now), cuser.userid,
+                      reason, req->userid, req->msg);
         }
 #endif
         CommentsDelete(ctx, i);
