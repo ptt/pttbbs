@@ -3661,12 +3661,22 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
                  int mode_mask)
 {
     int ret = 0;
+    char dirpath[PATHLEN];
+
     if (!(currmode & MODE_BOARD))
         return DONOTHING;
+
     if (currmode & MODE_SELECT) {
-        // TODO get_record + substitute_ref_record may support MODE_SELECT.
-        vmsg("請退出搜尋模式再進行此項設定。");
-        return READ_REDRAW;
+        if (!fhdr->multi.refer.flag) {
+            vmsg("請退出搜尋模式再進行此項設定。");
+            return READ_REDRAW;
+        }
+        // Try to solve entx and direct. Note fhdr does not need to be changed.
+        // Instead of updating original "direct", we simply wait for SRexpire to
+        // change before return.
+        ent = fhdr->multi.refer.ref;
+        setdirpath(dirpath, direct, FN_DIR);
+        direct = dirpath;
     }
     do {
         if (fhdr->filemode & mode_mask) {
@@ -3683,10 +3693,16 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
             fhdr->filemode |= mode_mask;
         }
     } while (0);
+
     if (ret < 0) {
         vmsg("設定失敗，請重進看板後再試一次。");
         return FULLUPDATE;
+    } else {
+        boardheader_t *bp = getbcache(currbid);
+        if (bp)
+            bp->SRexpire = now;
     }
+
     check_locked(fhdr);
     return PART_REDRAW;
 }
