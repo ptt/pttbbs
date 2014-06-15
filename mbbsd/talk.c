@@ -261,7 +261,10 @@ int sync_outta_server(int sfd, int do_login)
 	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
 	refresh();
 	log_usies("REJECTLOGIN", NULL);
+        // We can't do u_exit because some resources like friends are not ready.
+        currmode = 0;
 	memset(currutmp, 0, sizeof(userinfo_t));
+        // user will try to disconnect here and cause abort_bbs.
 	sleep(30);
 	exit(0);
     }
