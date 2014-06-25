@@ -289,10 +289,7 @@ thread(const keeploc_t * locmem, int stypen)
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 
-	int rk =
-	    get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
-
-	if(fd < 0 || rk < 0)
+	if (get_records_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, 1, &fd) <= 0)
 	{
 	    new_ln = pos;
 	    break;
@@ -356,8 +353,8 @@ search_read(const int bid, const keeploc_t * locmem, int stypen)
 
     /* First load the timestamp of article where cursor points to */
 reload_fh:
-    rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), pos, &fd);
-    if( fd < 0 || rk < 0 ) return pos;
+    rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), pos, 1, &fd);
+    if( rk < 0 ) goto out;
     if( rk == 0 /* EOF */ ) {
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
         ftime = 2147483647;
@@ -384,8 +381,9 @@ reload_fh:
         int i;
 
         for( i = last_line; i >= 0; --i ) {
-            rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), i, &fd);
-            if( fd < 0 || rk < 0) goto out;
+            rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), i, 1, &fd);
+            if (rk < 0) goto out;
+            if (rk == 0) continue;
             if( 0 == brc_unread( bid, fh.filename, 0 ) ) {
                 pos = i;
                 goto out;
@@ -397,8 +395,9 @@ reload_fh:
 
         /* find out the position for the article result */
         for( i = pos; i >= 0 && i <= last_line; i += step ) {
-            rk = get_record_keep(currdirect, &fh, sizeof(fileheader_t), i, &fd);
-            if( fd < 0 || rk < 0) goto out;
+            rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), i, 1, &fd);
+            if (rk < 0) goto out;
+            if (rk == 0) continue;
 #ifdef SAFE_ARTICLE_DELETE
             if (fh.filename[0] == '.' || fh.owner[0] == '-') {
                 /* 這篇文章已被刪除, 跳過, 試試下一篇 */
