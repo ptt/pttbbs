@@ -2668,7 +2668,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         getdata_buf(b_lines - 1, 0, "作者：", tmpfhdr.owner, IDLEN + 2, DOECHO);
         getdata_str(b_lines - 1, 0, "日期：", datebuf, 6, DOECHO, tmpfhdr.date);
         // Normalize date to %.5s
-        snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%.5s", datebuf);
+        snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%5.5s", datebuf);
     }
     if (memcmp(&tmpfhdr, fhdr, sizeof(tmpfhdr)) == 0)
         return FULLUPDATE;
