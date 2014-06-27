@@ -103,19 +103,14 @@ query_file_money(const fileheader_t *pfh)
 // lite weight version to update dir files
 static int
 modify_dir_lite(
-	const char *direct, int ent, const char *fhdr_name,
-	time4_t modified, const char *title, char recommend,
-        void *multi, uint8_t enable_modes, uint8_t disable_modes)
+	const char *direct, int ent, const char *fhdr_name, time4_t modified,
+        const char *title, const char *owner, const char *date,
+        char recommend, void *multi, uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
     off_t sz = dashs(direct);
     fileheader_t fhdr;
-
-    // TODO lock?
-    // PttLock(fd, offset, size, F_WRLCK);
-    // write(fd, rptr, size);
-    // PttLock(fd, offset, size, F_UNLCK);
 
     // prevent black holes
     if (sz < (int)sizeof(fileheader_t) * (ent) ||
@@ -141,7 +136,11 @@ modify_dir_lite(
     if (disable_modes)
         fhdr.filemode &= ~disable_modes;
     if (title && *title)
-	strcpy(fhdr.title, title);
+	strlcpy(fhdr.title, title, sizeof(fhdr.title));
+    if (owner && *owner)
+	strlcpy(fhdr.owner, owner, sizeof(fhdr.owner));
+    if (date && *date)
+	strlcpy(fhdr.date, date, sizeof(fhdr.date));
     if (multi)
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
@@ -152,8 +151,11 @@ modify_dir_lite(
 	fhdr.recommend = recommend;
     }
 
+
+    // PttLock(fd, sz, sizeof(fhdr), F_WRLCK);
     if (lseek(fd, sz, SEEK_SET) >= 0)
 	write(fd, &fhdr, sizeof(fhdr));
+    // PttLock(fd, sz, sizeof(fhdr), F_UNLCK);
 
     close(fd);
     return 0;
@@ -981,7 +983,7 @@ innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
 
 static int
 cancelpost(const char *direct, const fileheader_t *fh,
-           int not_owned, char *newpath, size_t sznewpath,
+           int not_owned GCC_UNUSED, char *newpath, size_t sznewpath,
            const char *reason) {
     int ret = 0;
     char bakdir[PATHLEN];
@@ -2030,7 +2032,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // substitute_ref_record(direct, fhdr, ent);
     modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
-                    0, NULL, 0, 0);
+                    NULL, NULL, 0, NULL, 0, 0);
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2048,7 +2050,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 int
-forward_post(int ent, fileheader_t * fhdr, const char *direct) {
+forward_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
     if (!HasUserPerm(PERM_FORWARD) || fhdr->filename[0] == '.' ||
         fhdr->filename[0] == 'L')
         return DONOTHING;
@@ -2566,8 +2568,8 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	editLimits(
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.badpost);
-        if (modify_dir_lite(direct, ent, fhdr->filename,
-                            0, NULL, 0, &fhdr->multi, 0, 0) != 0) {
+        if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0,
+                            &fhdr->multi, 0, 0) != 0) {
             vmsg("修改失敗，請重新進入看板再試試。");
             return FULLUPDATE;
         }
@@ -2630,9 +2632,8 @@ cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
 int
 edit_title(int ent, fileheader_t * fhdr, const char *direct)
 {
+    fileheader_t    tmpfhdr;
     char            genbuf[PATHLEN] = "";
-    fileheader_t    tmpfhdr = *fhdr;
-    int             dirty = 0;
     int allow = 0;
 
     // should we allow edit-title here?
@@ -2645,62 +2646,56 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     else if (currmode & MODE_BOARD || is_file_owner(fhdr, &cuser))
 	allow = 1;
 
-    if (!allow)
+    if (!allow || !fhdr)
 	return DONOTHING;
 
-    /* TODO(piaip) Also do this only in non-select mode?
     if (currmode & MODE_SELECT) {
         vmsg("請退出搜尋模式後再設定。");
         return READ_REDRAW;
     }
-    */
+    memcpy(&tmpfhdr, fhdr, sizeof(tmpfhdr));
 
     if (fhdr && fhdr->title[0])
 	strlcpy(genbuf, fhdr->title, TTLEN+1);
 
-    if (getdata_buf(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
+    if (getdata_buf(b_lines - 1, 0, "標題：", tmpfhdr.title, TTLEN, DOECHO)) {
 	// check TN_ANNOUNCE again for non-BMs...
-	tn_safe_strip(genbuf);
-	strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
-        if (strcmp(tmpfhdr.title, fhdr->title) != 0)
-            dirty++;
+	tn_safe_strip(tmpfhdr.title);
     }
 
-    if (allow >= 2)
-    {
-	if (getdata(b_lines - 1, 0, "作者：", genbuf, IDLEN + 2, DOECHO)) {
-	    strlcpy(tmpfhdr.owner, genbuf, sizeof(tmpfhdr.owner));
-	    dirty++;
-	}
-	if (getdata(b_lines - 1, 0, "日期：", genbuf, 6, DOECHO)) {
-	    snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%.5s", genbuf);
-	    dirty++;
-	}
+    if (allow >= 2) {
+        char datebuf[6];
+        getdata_buf(b_lines - 1, 0, "作者：", tmpfhdr.owner, IDLEN + 2, DOECHO);
+        getdata_str(b_lines - 1, 0, "日期：", datebuf, 6, DOECHO, tmpfhdr.date);
+        // Normalize date to %.5s
+        snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%.5s", datebuf);
     }
-    if (!dirty)
+    if (memcmp(&tmpfhdr, fhdr, sizeof(tmpfhdr)) == 0)
         return FULLUPDATE;
+
+    if (allow >= 2) {
+        // Render in b_lines -2
+        move(b_lines - 4, 0); clrtobot();
+        prints("\n%11s%s %-*s %s", "", tmpfhdr.date, IDLEN, tmpfhdr.owner,
+               tmpfhdr.title);
+    }
 
     getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
     if (genbuf[0] != 'y')
         return FULLUPDATE;
-    // TODO verify if record is still valid
-    fileheader_t curr;
-    memset(&curr, 0, sizeof(curr));
-    if (get_record(direct, &curr, sizeof(curr), ent) < 0 ||
-        strcmp(curr.filename, fhdr->filename) != 0)
-    {
-        // modified...
+
+    if (modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
+                        tmpfhdr.owner, tmpfhdr.date, 0, NULL, 0, 0) != 0) {
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
     }
-    *fhdr = tmpfhdr;
-    // TODO fix race condition here.
-    substitute_ref_record(direct, fhdr, ent);
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log", LOG_CREAT,
-                     "%s %s(T) %s(%s) %s => %s\n", Cdatelite(&now),
-                     cuser.userid, currboard, curr.title, curr.owner,
-                     fhdr->title));
+                     "%s %s(%d) %s %s=>%s %s=>%s %s => %s\n", Cdatelite(&now),
+                     cuser.userid, allow, currboard, fhdr->owner, tmpfhdr.owner,
+                     fhdr->date, tmpfhdr.date, fhdr->title, tmpfhdr.title));
+    // Sync caller.
+    memcpy(fhdr, &tmpfhdr, sizeof(*fhdr));
     return FULLUPDATE;
 }
 
@@ -2779,7 +2774,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     if (fhdr->modified > 0)
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
-		fhdr->modified, NULL, update, NULL, 0, 0) < 0)
+		fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
 	    goto error;
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
@@ -3681,14 +3676,14 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
     do {
         if (fhdr->filemode & mode_mask) {
             // clear
-            if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
-                                       0, NULL, 0, NULL, 0, mode_mask)) != 0)
+            if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
+                                       NULL, NULL, 0, NULL, 0, mode_mask)) != 0)
                 break;
             fhdr->filemode &= ~mode_mask;
         } else {
             // set
-            if ((ret = modify_dir_lite(direct, ent, fhdr->filename,
-                                       0, NULL, 0, NULL, mode_mask, 0)) != 0)
+            if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
+                                       NULL, NULL, 0, NULL, mode_mask, 0)) != 0)
                 break;
             fhdr->filemode |= mode_mask;
         }

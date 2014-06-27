@@ -520,13 +520,13 @@ int ParseDate(const char *date, int *year, int *month, int *day)
 }
 
 /* AIDS */
-aidu_t fn2aidu(char *fn)
+aidu_t fn2aidu(const char *fn)
 {
   aidu_t aidu = 0;
   aidu_t type = 0;
   aidu_t v1 = 0;
   aidu_t v2 = 0;
-  char *sp = fn;
+  char *sp = (char*)fn;
 
   if(fn == NULL)
     return 0;

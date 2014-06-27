@@ -611,7 +611,7 @@ void grayout(int start, int end, int level);
 
 /* AIDS */
 typedef uint64_t aidu_t;
-aidu_t fn2aidu(char *fn);
+aidu_t fn2aidu(const char *fn);
 char *aidu2aidc(char *buf, aidu_t aidu);
 char *aidu2fn(char *buf, aidu_t aidu);
 aidu_t aidc2aidu(const char *aidc);
