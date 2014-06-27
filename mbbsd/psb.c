@@ -705,6 +705,9 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
         case 'd':
             do {
                 char reason[DISP_TTLEN];
+                const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
+                if (!resp || resp->type < 0)
+                    break;
                 if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
                             reason, sizeof(reason), DOECHO))
                     break;
@@ -724,10 +727,11 @@ pvcm_welcome() {
     clear();
     move(2, 0);
     vs_hdr2("刪除推文", "實驗警告");
+    // This must be a outs because we have '%' inside.
     outs(ANSI_COLOR(1;31)
 "  這是實驗中的刪推文界面。\n\n" ANSI_RESET
 "  提醒您: (1) 刪推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
-"              目前沒辦法100%%確認找到正確的位置，但起碼內文是相同的。\n\n"
+"              目前沒辦法100%確認找到正確的位置，但起碼內文是相同的。\n\n"
 "          (2) 被編輯過造成內容有變動的推文無法刪除。\n\n"
         "");
     pressanykey();
