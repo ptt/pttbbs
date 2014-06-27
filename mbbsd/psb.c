@@ -704,12 +704,6 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
         case KEY_DEL:
         case 'd':
             do {
-                boardheader_t *bp = bp = getbcache(currbid);
-                assert(bp);
-                if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
-                    vmsg("要先開啟刪特定文字的權限。");
-                    break;
-                }
                 char reason[DISP_TTLEN];
                 if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
                             reason, sizeof(reason), DOECHO))
