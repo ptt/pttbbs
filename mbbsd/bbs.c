@@ -4495,8 +4495,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 
 #ifdef USE_COMMENTD
         case 'v':
-            if ((currbrdattr & (BRD_ANGELANONYMOUS | BRD_ANONYMOUS)) &&
-                !HasUserPerm(PERM_ADMIN)) {
+            if (currbrdattr & (BRD_ANGELANONYMOUS | BRD_ANONYMOUS)) {
                 vmsg("抱歉，暫時不支援匿名板。");
             } else  {
                 psb_comment_manager(currboard, fhdr->filename);
