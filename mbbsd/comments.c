@@ -225,7 +225,10 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
         if (strncmp(buf, pattern, pattern_len) == 0 &&
             (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR) &&
             !found) {
-            fprintf(out, "[本行推文已被 %s 刪除，理由: %s]\n", cuser.userid, reason);
+            // Note reason is 40 chars in length.
+            fprintf(out, ANSI_COLOR(1;30)
+                    "(%s 刪除 %s 的推文: %s)" ANSI_RESET "\n",
+                    cuser.userid, req->userid, reason);
             found = 1;
         } else {
             fputs(buf, out);

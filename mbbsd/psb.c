@@ -704,7 +704,8 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
         case KEY_DEL:
         case 'd':
             do {
-                char reason[DISP_TTLEN];
+                // See comments.c for max length of reason.
+                char reason[40];
                 const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
                 if (!resp || resp->type < 0)
                     break;
