@@ -729,14 +729,16 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
 static int
 pvcm_welcome() {
     clear();
-    move(2, 0);
     vs_hdr2("刪除推文", "實驗警告");
+    move(2, 0);
     // This must be a outs because we have '%' inside.
     outs(ANSI_COLOR(1;31)
 "  這是實驗中的刪推文界面。\n\n" ANSI_RESET
-"  提醒您: (1) 刪推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
+"  提醒您: (1) 刪推文界面顯示的內容是來自於獨立的資料庫，所以不會有\n"
+"              原作者修文假造推文內容的問題。但也因此，若原推文被修改\n"
+"              使得內容不同時(或是假推文)則此界面就無法刪除。\n\n"
+"          (2) 刪推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
 "              目前沒辦法100%確認找到正確的位置，但起碼內文是相同的。\n\n"
-"          (2) 被編輯過造成內容有變動的推文無法刪除。\n\n"
         "");
     pressanykey();
     return 0;
