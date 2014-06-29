@@ -757,12 +757,16 @@ psb_comment_manager(const char *board, const char *file) {
         .input_processor = pvcm_input_processor,
     };
     pvcmctx.cmctx = CommentsOpen(board, file);
-    if (!pvcmctx.cmctx)
+    if (!pvcmctx.cmctx) {
+        vmsg("系統錯誤，請至 " BN_BUGREPORT " 報告。");
         return FULLUPDATE;
+    }
     ctx.total = CommentsGetCount(pvcmctx.cmctx);
     if (ctx.total){
         pvcm_welcome();
         psb_main(&ctx);
+    } else {
+        vmsg("此文章無推文資料。");
     }
     CommentsClose(pvcmctx.cmctx);
     return DIRCHANGED;
