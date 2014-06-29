@@ -713,7 +713,10 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
                             reason, sizeof(reason), DOECHO))
                     break;
                 if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
-                    CommentsDeleteFromTextFile(cx->cmctx, curr, reason);
+                    if (CommentsDeleteFromTextFile(cx->cmctx, curr, reason)
+                        != 0) {
+                        vmsg("刪除失敗。可能原文已被修改。");
+                    }
                 }
 
             } while(0);

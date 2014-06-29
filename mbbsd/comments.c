@@ -255,6 +255,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
         CommentsDelete(ctx, i);
     } else {
         remove(tmpfile);
+        return -2;
     }
     return 0;
 }
