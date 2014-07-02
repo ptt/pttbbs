@@ -197,10 +197,10 @@ int CommentsGetCount(void *ctx)
 
 int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
 {
-    size_t pattern_len;
+    size_t pattern_len, pattern2_len;
     CommentsCtx *c = (CommentsCtx *)ctx;
     const CommentBodyReq *req;
-    char buf[ANSILINELEN], pattern[ANSILINELEN];
+    char buf[ANSILINELEN], pattern[ANSILINELEN], pattern2[ANSILINELEN];
     char filename[PATHLEN], tmpfile[PATHLEN];
     FILE *in, *out;
     int found = 0;
@@ -213,18 +213,25 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     snprintf(tmpfile, sizeof(tmpfile), "%s.tmp", filename);
     FormatCommentString(pattern, sizeof(pattern), req->type,
                         req->userid, 0, req->msg, "");
+    sprintf(buf, "%-*s", IDLEN, req->userid);
+    FormatCommentString(pattern2, sizeof(pattern2), req->type,
+                        buf, 0, req->msg, "");
     // It's stupid but we have to remove the trailing ANSI_RESET
     // for comparison.
     *strrchr(pattern, ESC_CHR) = 0;
+    *strrchr(pattern2, ESC_CHR) = 0;
     /* Remove the trailing \n for strncmp. */
     pattern_len = strlen(pattern);
+    pattern2_len = strlen(pattern2);
     // Now, try to construct and filter the message from file.
     in = fopen(filename, "rt");
     out = fopen(tmpfile, "wt");
     while (fgets(buf, sizeof(buf), in)) {
-        if (strncmp(buf, pattern, pattern_len) == 0 &&
-            (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR) &&
-            !found) {
+        if (!found && (
+            (strncmp(buf, pattern, pattern_len) == 0 &&
+             (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR)) ||
+            (strncmp(buf, pattern2, pattern2_len) == 0 &&
+             (buf[pattern2_len] == ' ' || buf[pattern2_len] == ESC_CHR)))) {
             // Note reason is 40 chars in length.
             fprintf(out, ANSI_COLOR(1;30)
                     "(%s 刪除 %s 的推文: %s)" ANSI_RESET "\n",
