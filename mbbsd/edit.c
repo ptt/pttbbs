@@ -1918,17 +1918,11 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 #endif // EDIT_UPLOAD_ALLOWALL
 
     // common trail
-
-    if (flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST)) {
-        // TODO 應該要 check 看是不是在連線看板發表，有再顯示這個腦殘 L.
-        // 可惜目前轉信資訊並無法簡單的在 mbbsd 裡得到，只好一律顯示。
-        // P.S: 雖然後面已經有又大又彩色又清楚的 warn_prompt 提示了，聽說有些
-        // 人還是會搞不清楚狀況不知道站內是三小。 話說回來如果 REPLYPOST
-        // 加上 mail 的話.... 那個限站內可能更讓人誤會。
+    if (flags & EDITFLAG_ALLOW_LOCAL) {
         if (local_article)
-            outs("[L]限站內 (S)儲存");
+            outs("[L]儲存 (S)儲存+轉信");
         else
-            outs("[S]儲存 (L)限站內");
+            outs("[S]儲存+轉信 (L)儲存");
     } else {
 	outs("[S]儲存");
     }

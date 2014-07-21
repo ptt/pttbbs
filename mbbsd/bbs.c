@@ -1419,6 +1419,8 @@ do_post_article(int edflags)
     edflags |= solveEdFlagByBoard(currboard, edflags);
     if (bp->brdattr & BRD_NOSELFDELPOST)
         edflags |= EDITFLAG_WARN_NOSELFDEL;
+    if (!(bp->brdattr & BRD_NOTRAN))
+        edflags |= EDITFLAG_ALLOW_LOCAL;
 
 #if defined(PLAY_ANGEL)
     // XXX ´c·dªº code¡C

@@ -246,6 +246,7 @@
 #define EDITFLAG_KIND_SENDMAIL	(0x00000040)
 #define EDITFLAG_KIND_MAILLIST	(0x00000080)
 #define EDITFLAG_WARN_NOSELFDEL	(0x00000100)
+#define EDITFLAG_ALLOW_LOCAL    (0x00000200)
 #define EDIT_ABORTED	-1
 
 /* ----------------------------------------------------- */

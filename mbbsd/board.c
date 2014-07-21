@@ -482,7 +482,7 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET
 		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n",
 		(bp->brdattr & BRD_LOCALSAVE) ?
-		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
+		"不轉出" : ANSI_COLOR(1)"自動轉出" );
 
 	// use '8' instead of '1', to prevent 'l'/'1' confusion
 	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
