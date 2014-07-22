@@ -4175,10 +4175,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
 	if (!strcmp(currboard, BN_NOTE) ||
-#ifdef BN_ARTDSN
-	    !strcmp(currboard, BN_ARTDSN) ||
-#endif
-	    !strcmp(currboard, BN_BUGREPORT) ||
 	    !strcmp(currboard, BN_LAW)
 	    )
 	{
@@ -4213,10 +4209,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, BN_NOTE) ||
-#ifdef BN_ARTDSN
-	    !strcmp(currboard, BN_ARTDSN) ||
-#endif
-	    !strcmp(currboard, BN_BUGREPORT) ||
 	    !strcmp(currboard, BN_LAW)
 	    )
 	{
