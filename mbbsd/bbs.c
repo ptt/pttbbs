@@ -3725,27 +3725,6 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
 
-#if defined(ASSESS) && defined(EXP_BAD_COMMENT)
-    // supporting bad_comment
-#if 0
-    // XXX 推文可能會一直跑出來，所以...
-    if (now - atoi(fhdr->filename + 2) > 2 * 7 * 24 * 60 * 60)
-    {
-	move(b_lines-2, 0); clrtoeol();
-	outs("超過兩週，禁止退回推文。");
-    } else
-#endif
-    {
-	getdata(b_lines - 1, 0, "請問您要 (1) 推薦歸零 (2) 退回推文 [1/2]? ", yn, 3, LCECHO);
-	if (yn[0] == '2')
-	{
-	    setbfile(fn, currboard, fhdr->filename);
-	    bad_comment(fn);
-	    return FULLUPDATE;
-	} else if (yn[0] != '1')
-	    return FULLUPDATE;
-    }
-#endif
     getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
