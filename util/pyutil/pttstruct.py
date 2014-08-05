@@ -3,6 +3,7 @@
 
 import collections
 import struct
+import big5
 
 IDLEN = 12
 IPV4LEN = 15
@@ -123,33 +124,33 @@ BOARDHEADER_FMT = (
     ("pad4", "40s"),
     )
 
-BRD_NOCOUNT            = 0x00000002      # 不列入統計 
-BRD_NOTRAN             = 0x00000004      # 不轉信 
-BRD_GROUPBOARD         = 0x00000008      # 群組板 
-BRD_HIDE               = 0x00000010      # 隱藏板 (看板好友才可看) 
-BRD_POSTMASK           = 0x00000020      # 限制發表或閱讀 
-BRD_ANONYMOUS          = 0x00000040      # 匿名板 
-BRD_DEFAULTANONYMOUS   = 0x00000080      # 預設匿名板 
-BRD_NOCREDIT           = 0x00000100      # 發文無獎勵看板 
-BRD_VOTEBOARD          = 0x00000200      # 連署機看板 
-BRD_WARNEL             = 0x00000400      # 連署機看板 
-BRD_TOP                = 0x00000800      # 熱門看板群組 
-BRD_NORECOMMEND        = 0x00001000      # 不可推薦 
-BRD_BLOG               = 0x00002000      # (已停用) 部落格 
-BRD_BMCOUNT            = 0x00004000      # 板主設定列入記錄 
-BRD_SYMBOLIC           = 0x00008000      # symbolic link to board 
-BRD_NOBOO              = 0x00010000      # 不可噓 
-BRD_LOCALSAVE          = 0x00020000      # 預設 Local Save 
-BRD_RESTRICTEDPOST     = 0x00040000      # 板友才能發文 
-BRD_GUESTPOST          = 0x00080000      # guest能 post 
-BRD_COOLDOWN           = 0x00100000      # 冷靜 
-BRD_CPLOG              = 0x00200000      # 自動留轉錄記錄 
-BRD_NOFASTRECMD        = 0x00400000      # 禁止快速推文 
-BRD_IPLOGRECMD         = 0x00800000      # 推文記錄 IP 
-BRD_OVER18             = 0x01000000      # 十八禁 
-BRD_NOREPLY            = 0x02000000      # 不可回文 
-BRD_ALIGNEDCMT         = 0x04000000      # 對齊式的推文 
-BRD_NOSELFDELPOST      = 0x08000000      # 不可自刪 
+BRD_NOCOUNT            = 0x00000002      # 不列入統計
+BRD_NOTRAN             = 0x00000004      # 不轉信
+BRD_GROUPBOARD         = 0x00000008      # 群組板
+BRD_HIDE               = 0x00000010      # 隱藏板 (看板好友才可看)
+BRD_POSTMASK           = 0x00000020      # 限制發表或閱讀
+BRD_ANONYMOUS          = 0x00000040      # 匿名板
+BRD_DEFAULTANONYMOUS   = 0x00000080      # 預設匿名板
+BRD_NOCREDIT           = 0x00000100      # 發文無獎勵看板
+BRD_VOTEBOARD          = 0x00000200      # 連署機看板
+BRD_WARNEL             = 0x00000400      # 連署機看板
+BRD_TOP                = 0x00000800      # 熱門看板群組
+BRD_NORECOMMEND        = 0x00001000      # 不可推薦
+BRD_BLOG               = 0x00002000      # (已停用) 部落格
+BRD_BMCOUNT            = 0x00004000      # 板主設定列入記錄
+BRD_SYMBOLIC           = 0x00008000      # symbolic link to board
+BRD_NOBOO              = 0x00010000      # 不可噓
+BRD_LOCALSAVE          = 0x00020000      # 預設 Local Save
+BRD_RESTRICTEDPOST     = 0x00040000      # 板友才能發文
+BRD_GUESTPOST          = 0x00080000      # guest能 post
+BRD_COOLDOWN           = 0x00100000      # 冷靜
+BRD_CPLOG              = 0x00200000      # 自動留轉錄記錄
+BRD_NOFASTRECMD        = 0x00400000      # 禁止快速推文
+BRD_IPLOGRECMD         = 0x00800000      # 推文記錄 IP
+BRD_OVER18             = 0x01000000      # 十八禁
+BRD_NOREPLY            = 0x02000000      # 不可回文
+BRD_ALIGNEDCMT         = 0x04000000      # 對齊式的推文
+BRD_NOSELFDELPOST      = 0x08000000      # 不可自刪
 
 
 FNLEN = 28  # Length of filename
@@ -181,8 +182,14 @@ def unpack_data(blob, format_pattern):
     # Convert C-style strings.
     for name, pat in format_pattern:
 	if 's' in pat:
-	    data[name] = data[name].partition(chr(0))[0]
+	    data[name] = big5.decode(data[name].partition(chr(0))[0])
     return data
+
+def pack_data(data, format_pattern):
+    fmt = get_format(format_pattern)
+    values = (big5.encode(data[name]) if 's' in f else data[name]
+	      for name, f in format_pattern)
+    return struct.pack(fmt, *values)
 
 FILE_LOCAL     = 0x01    # local saved,  non-mail
 FILE_READ      = 0x01    # already read, mail only
@@ -210,6 +217,8 @@ if __name__ == '__main__':
 	entry = f.read(FILEHEADER_SIZE)
     header = unpack_data(entry, FILEHEADER_FMT)
     print header
+    xblob = pack_data(header, FILEHEADER_FMT)
+    assert xblob == entry
 
     with open('/home/bbs/.PASSWDS', 'rb') as f:
 	entry = f.read(USEREC_SIZE)
@@ -221,6 +230,6 @@ if __name__ == '__main__':
     board = unpack_data(entry, BOARDHEADER_FMT)
     print board
 
-    print 'file title: ', header['title'].decode('big5').encode('big5')
-    print 'user name: ', user['realname'].decode('big5').encode('big5')
-    print 'board title: ', board['title'].decode('big5').encode('big5')
+    print 'user name: ', big5.encode(user['realname'])
+    print 'file title: ', big5.encode(header['title'])
+    print 'board title: ', big5.encode(board['title'])
