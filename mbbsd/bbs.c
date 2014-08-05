@@ -1550,8 +1550,6 @@ do_post_article(int edflags)
     }
     else
     {
-	char addPost = 0;
-
         rename(genbuf, fpath);
 	setbtotal(currbid);
 
@@ -1590,7 +1588,6 @@ do_post_article(int edflags)
 	    {
                 pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title);
 		pwcuIncNumPost();
-		addPost = 1;
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d "
                         MONEYNAME "\n", cuser.numposts, money);
 		prints("\n (若之後自行或被板主刪文"
