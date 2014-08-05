@@ -1280,6 +1280,35 @@ does_board_have_public_bm(const boardheader_t *bp) {
     return bp->BM[0] > ' ';
 }
 
+#ifdef USE_POSTD
+static int PostAddRecord(const char *board, const fileheader_t *fhdr,
+                         time4_t ctime)
+{
+    int s;
+    PostAddRequest req = {0};
+
+    req.cb = sizeof(req);
+    req.operation = POSTD_REQ_ADD;
+    strlcpy(req.key.board, board, sizeof(req.key.board));
+    strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
+    memcpy(&req.header, fhdr, sizeof(req.header));
+    req.extra.userref = cuser.firstlogin;
+    req.extra.ctime = ctime;
+    req.extra.ipv4 = inet_addr(fromhost);
+    strlcpy(req.extra.userid, cuser.userid, sizeof(req.extra.userid));
+
+    s = toconnectex(POSTD_ADDR, 10);
+    if (s < 0)
+        return 1;
+    if (towrite(s, &req, sizeof(req)) < 0) {
+        close(s);
+        return 1;
+    }
+    close(s);
+    return 0;
+}
+#endif
+
 static int
 do_post_article(int edflags)
 {
@@ -1604,15 +1633,16 @@ do_post_article(int edflags)
 	    // now, genbuf[0] = "if user exists".
 	    if (genbuf[0])
 	    {
-		stampfile(genbuf, &postfile);
+                fileheader_t mailfile;
+                stampfile(genbuf, &mailfile);
 		unlink(genbuf);
 		Copy(fpath, genbuf);
 
-		strlcpy(postfile.owner, cuser.userid, sizeof(postfile.owner));
-		strlcpy(postfile.title, save_title, sizeof(postfile.title));
+		strlcpy(mailfile.owner, cuser.userid, sizeof(mailfile.owner));
+		strlcpy(mailfile.title, save_title, sizeof(mailfile.title));
 		sethomedir(genbuf, quote_user);
                 msg = "回應至作者信箱";
-		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
+		if (append_record(genbuf, &mailfile, sizeof(mailfile)) == -1)
 		    msg = err_uid;
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
@@ -1643,11 +1673,11 @@ do_post_article(int edflags)
 	}
 	add_posttimes(usernum, 1);
 #endif
-	// Notify all logins
-	if (addPost)
-	{
-
-	}
+#ifdef USE_POSTD
+        if (edflags & EDITFLAG_KIND_NEWPOST) {
+            PostAddRecord(currboard, &postfile, dashc(fpath));
+        }
+#endif
     }
     pressanykey();
     return FULLUPDATE;

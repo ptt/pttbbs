@@ -178,6 +178,37 @@ typedef struct {
 } PACKSTRUCT CommentQueryRequest;
 
 ///////////////////////////////////////////////////////////////////////
+// Posts Daemon
+//
+#ifndef POSTD_ADDR
+#define POSTD_ADDR   ":5135"
+#endif
+
+enum {
+    POSTD_REQ_ADD = 1,
+};
+
+typedef struct {
+    uint32_t userref; /* user.ctime */
+    uint32_t ctime;   /* post ctime */
+    uint32_t ipv4;    /* user.fromhost */
+    char userid[IDLEN + 1];
+} PACKSTRUCT PostAddExtraInfoReq;
+
+typedef struct {
+    char board[IDLEN + 1];
+    char file[FNLEN + 1];
+} PACKSTRUCT PostKeyReq;
+
+typedef struct {
+    short cb;
+    short operation;
+    fileheader_t header;
+    PostAddExtraInfoReq extra;
+    PostKeyReq key;
+} PACKSTRUCT PostAddRequest;
+
+///////////////////////////////////////////////////////////////////////
 // online friend relation daemon
 //
 typedef struct {
