@@ -1671,9 +1671,7 @@ do_post_article(int edflags)
 	add_posttimes(usernum, 1);
 #endif
 #ifdef USE_POSTD
-        if (edflags & EDITFLAG_KIND_NEWPOST) {
-            PostAddRecord(currboard, &postfile, dashc(fpath));
-        }
+        PostAddRecord(currboard, &postfile, dashc(fpath));
 #endif
     }
     pressanykey();

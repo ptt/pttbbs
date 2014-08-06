@@ -81,14 +81,16 @@ def SavePost(keypak, data, extra=None):
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
     logging.debug(' Saved: %s', key)
+    content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
+	                        keypak.board, keypak.file)
+    content_length = os.path.getsize(content_file)
     start = time.time()
-    g_db.set(key + ':content', open(os.path.join(BBSHOME,
-	'boards', keypak.board[0], keypak.board, keypak.file)).read())
+    g_db.set(key + ':content', open(content_file).read())
     exec_time = time.time() - start
-    logging.debug(' Content save time: %.3fs.', exec_time)
+    logging.debug(' Content (%d) save time: %.3fs.', content_length, exec_time)
     if exec_time > 0.1:
-	logging.error('%s/%s: save time: %.3fs.', keypak.board, keypak.file,
-		      exec_time)
+	logging.error('%s/%s: save time (%d bytes): %.3fs.',
+		      keypak.board, keypak.file, content_length, exec_time)
 
 def open_database(db_path):
     global g_db
