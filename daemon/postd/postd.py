@@ -6,6 +6,7 @@ import logging
 import os
 import struct
 import sys
+import time
 
 from gevent import monkey; monkey.patch_all()
 import gevent
@@ -28,6 +29,7 @@ _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5135
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 			'db_posts.db')
+BBSHOME = '/home/bbs'
 
 def serialize(data):
     return json.dumps(data)
@@ -79,6 +81,14 @@ def SavePost(keypak, data, extra=None):
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
     logging.debug(' Saved: %s', key)
+    start = time.time()
+    g_db.set(key + ':content', open(os.path.join(BBSHOME,
+	'boards', keypak.board[0], keypak.board, keypak.file)).read())
+    exec_time = time.time() - start
+    logging.debug(' Content save time: %.3fs.', exec_time)
+    if exec_time > 0.1:
+	logging.error('%s/%s: save time: %.3fs.', keypak.board, keypak.file,
+		      exec_time)
 
 def open_database(db_path):
     global g_db
