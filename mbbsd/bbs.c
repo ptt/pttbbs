@@ -1671,7 +1671,7 @@ do_post_article(int edflags)
 	add_posttimes(usernum, 1);
 #endif
 #ifdef USE_POSTD
-        PostAddRecord(currboard, &postfile, dashc(fpath));
+        PostAddRecord(bp->brdname, &postfile, dashc(fpath));
 #endif
     }
     pressanykey();
