@@ -91,7 +91,7 @@ def ParsePost(filename):
 	result = ParseComment(contents[-1])
 	if result[0] is None:
 	    break
-	comments.append(result)
+	comments.insert(0, result)
 	contents.pop(-1)
 
     # here's the content.

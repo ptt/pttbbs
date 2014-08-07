@@ -15,6 +15,7 @@ import leveldb
 
 from pyutil import pttstruct
 from pyutil import pttpost
+from pyutil import big5
 
 # Ref: ../../include/daemons.h
 RequestFormatString = 'HH'
@@ -62,9 +63,6 @@ def UnpackPostKey(blob):
     logging.debug("UnpackPostKey: %r" % (data,))
     return PostKey._make(map(strip_if_string, data))
 
-def PackPost(comment):
-    return struct.pack(PostFormatString, *comment)
-
 def LoadPost(query):
     logging.debug("LoadPost: %r", query)
     key = '%s/%s' % (query.board, query.file)
@@ -89,9 +87,11 @@ def SavePost(legacy, keypak, data, extra=None):
 	(content, comments) = pttpost.ParsePost(content_file)
 	content_length = len(content)
 	# TODO update comments
+	ResetPostComment(keypak)
     else:
 	content_length = os.path.getsize(content_file)
 	content = open(content_file).read()
+	comments = []
     start = time.time()
     g_db.set(key + ':content', content)
     exec_time = time.time() - start
@@ -99,11 +99,31 @@ def SavePost(legacy, keypak, data, extra=None):
     if exec_time > 0.1:
 	logging.error('%s/%s: save time (%d bytes): %.3fs.',
 		      keypak.board, keypak.file, content_length, exec_time)
+    for comment in comments:
+	SavePostComment(keypak, comment)
 
 def GetPostContent(keypak):
     logging.debug("GetPostContent: %r", keypak)
-    key = '%s/%s:content' % (keypak.board, keypak.file)
-    return g_db.get(key) or ''
+    key = '%s/%s' % (keypak.board, keypak.file)
+    content = g_db.get(key + ':content') or ''
+    comment_num = int(g_db.get(key + ':comment') or '0')
+    for i in range(comment_num):
+	comment = deserialize(g_db.get('%s:comment#%08d' % (key, i + 1)))
+	content += '<%s> %s: %s %s\n' % tuple(map(big5.encode, comment))
+    return content
+
+def SavePostComment(keypak, comment):
+    logging.debug("SavePostComment: %r => %r", keypak, comment)
+    key = '%s/%s:comment' % (keypak.board, keypak.file)
+    num = int(g_db.get(key) or '0')
+    num += 1
+    g_db.set(key, str(num))
+    key += '#%08d' % (num)
+    g_db.set(key, serialize(comment))
+
+def ResetPostComment(keypak):
+    key = '%s/%s:comment' % (keypak.board, keypak.file)
+    g_db.set(key, '0')
 
 def open_database(db_path):
     global g_db
