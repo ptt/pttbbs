@@ -14,6 +14,7 @@ import gevent.server
 import leveldb
 
 from pyutil import pttstruct
+from pyutil import pttpost
 
 # Ref: ../../include/daemons.h
 RequestFormatString = 'HH'
@@ -25,7 +26,7 @@ AddRecordFormatString = 'III%ds' % (pttstruct.IDLEN + 1)
 AddRecord = collections.namedtuple('AddRecord', 'userref ctime ipv4 userid')
 CONTENT_LEN_FORMAT = 'I'
 REQ_ADD = 1
-REQ_ADD2 = 2
+REQ_IMPORT = 2
 REQ_GET_CONTENT = 3
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5135
@@ -75,27 +76,22 @@ def LoadPost(query):
     logging.debug(" => %r", UnpackPost(data))
     return UnpackPost(data)
 
-
-def SavePost(keypak, data, extra=None):
-    return SavePost2(None, keypak, data, extra)
-
-def SavePost2(content, keypak, data, extra=None):
-    if extra:
-	data.update(extra._asdict())
+def SavePost(legacy, keypak, data, extra=None):
     logging.debug("SavePost: %r => %r", keypak, data)
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
     logging.debug(' Saved: %s', key)
-    if content is None:
-	content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
-				    keypak.board, keypak.file)
-	content_length = os.path.getsize(content_file)
-    else:
-	logging.debug('got transfered content')
+    content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
+				keypak.board, keypak.file)
+    if legacy:
+	(content, comments) = pttpost.ParsePost(content_file)
 	content_length = len(content)
+	# TODO update comments
+    else:
+	content_length = os.path.getsize(content_file)
+	content = open(content_file).read()
     start = time.time()
-    g_db.set(key + ':content',
-	    open(content_file).read() if content is None else content)
+    g_db.set(key + ':content', content)
     exec_time = time.time() - start
     logging.debug(' Content (%d) save time: %.3fs.', content_length, exec_time)
     if exec_time > 0.1:
@@ -139,18 +135,14 @@ def handle_request(socket, _):
 	    header_blob = fd.read(pttstruct.FILEHEADER_SIZE)
 	    addblob = fd.read(struct.calcsize(AddRecordFormatString))
 	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
-	    SavePost(UnpackPostKey(keyblob), DecodeFileHeader(header_blob),
-		     UnpackAddRecord(addblob))
-	elif req.operation == REQ_ADD2:
+	    SavePost(False, UnpackPostKey(keyblob),
+		     DecodeFileHeader(header_blob), UnpackAddRecord(addblob))
+	elif req.operation == REQ_IMPORT:
 	    header_blob = fd.read(pttstruct.FILEHEADER_SIZE)
 	    addblob = fd.read(struct.calcsize(AddRecordFormatString))
 	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
-	    content_len = struct.unpack(
-		    CONTENT_LEN_FORMAT,
-		    fd.read(struct.calcsize(CONTENT_LEN_FORMAT)))[0]
-	    content = fd.read(content_len)
-	    SavePost2(content, UnpackPostKey(keyblob),
-		      DecodeFileHeader(header_blob), UnpackAddRecord(addblob))
+	    SavePost(True, UnpackPostKey(keyblob),
+		     DecodeFileHeader(header_blob), UnpackAddRecord(addblob))
 	elif req.operation == REQ_GET_CONTENT:
 	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
 	    content = GetPostContent(UnpackPostKey(keyblob))
