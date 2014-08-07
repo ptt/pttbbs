@@ -24,7 +24,7 @@ PostKey = collections.namedtuple('PostKey', 'board file')
 AddRecordFormatString = 'III%ds' % (pttstruct.IDLEN + 1)
 AddRecord = collections.namedtuple('AddRecord', 'userref ctime ipv4 userid')
 REQ_ADD = 1
-_SERVER_ADDR = '0.0.0.0' #'127.0.0.1'
+_SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5135
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 			'db_posts.db')
