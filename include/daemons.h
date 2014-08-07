@@ -210,6 +210,12 @@ typedef struct {
     PostKeyReq key;
 } PACKSTRUCT PostAddRequest;
 
+typedef struct {
+    short cb;
+    short operation;
+    PostKeyReq key;
+} PACKSTRUCT PostGetContentRequest;
+
 ///////////////////////////////////////////////////////////////////////
 // online friend relation daemon
 //

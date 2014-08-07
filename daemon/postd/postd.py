@@ -102,6 +102,11 @@ def SavePost2(content, keypak, data, extra=None):
 	logging.error('%s/%s: save time (%d bytes): %.3fs.',
 		      keypak.board, keypak.file, content_length, exec_time)
 
+def GetPostContent(keypak):
+    logging.debug("GetPostContent: %r", keypak)
+    key = '%s/%s:content' % (keypak.board, keypak.file)
+    return g_db.get(key) or ''
+
 def open_database(db_path):
     global g_db
 

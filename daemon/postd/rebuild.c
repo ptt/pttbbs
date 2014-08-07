@@ -136,8 +136,8 @@ char *ProcessPost(const char *filename) {
     fseek(fp, offBegin, SEEK_SET);
     content = malloc(offEnd - offBegin + 1);
     assert(content);
+    fread(content, 1, offEnd - offBegin, fp);
     content[offEnd - offBegin] = 0;
-    fread(content, 1, offEnd - offBegin + 1, fp);
 
     // Try to parse comments
     fseek(fp, offEnd, SEEK_SET);
