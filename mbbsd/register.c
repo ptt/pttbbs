@@ -113,7 +113,7 @@ isvalidname(char *rname)
 	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
 	 "妹妹", "嘿", "嗯", "爺爺", "大哥", "無",
 	 NULL};
-    if( removespace(rname) && rname[0] < 0 &&
+    if( removespace(rname) && IS_DBCSLEAD(rname[0]) &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
 	strncmp(rname, "小", 2) != 0   && //起頭是「小」
@@ -131,7 +131,7 @@ isvalidcareer(char *career)
 {
 #ifndef FOREIGN_REG
     const char    *rejectstr[] = {NULL};
-    if (!(career[0] < 0 && strlen(career) >= 6) ||
+    if (!(IS_DBCSLEAD(career[0]) && strlen(career) >= 6) ||
 	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
 	return "您的輸入似乎不正確";
     if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
