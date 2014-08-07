@@ -35,7 +35,7 @@ CommentsFormatRe = (
 # format: "※ " ANSI_COLOR(1;32) "%s" ANSI_COLOR(0;32) ":轉錄至" %s
 def IsCrossPostLog(buf):
     return (buf.startswith("※ " + ANSI_COLOR(1,32)) and
-	    buf.index(ANSI_COLOR(0,32) + ':轉錄至' > 0))
+	    buf.index(ANSI_COLOR(0,32) + ':轉錄至') > 0)
 
 def ParseComment(buf):
     """Parses a buffer for known comment formats.
