@@ -180,7 +180,7 @@ strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
  * query the offset of nth non-ANSI element in s
  * if string is less then nth, return missing blanks in negative value.
  */
-int 
+int
 strat_ansi(int count, const char *s)
 {
     register int mode = 0;
@@ -194,7 +194,7 @@ strat_ansi(int count, const char *s)
 	    case 0:
 		if (*s == ESC_CHR)
 		    mode = 1;
-		else 
+		else
 		    count --;
 		break;
 
@@ -220,7 +220,7 @@ strat_ansi(int count, const char *s)
     return s - os;
 }
 
-int  
+int 
 strlen_noansi(const char *s)
 {
     // XXX this is almost identical to
@@ -238,7 +238,7 @@ strlen_noansi(const char *s)
 	    case 0:
 		if (*s == ESC_CHR)
 		    mode = 1;
-		else 
+		else
 		    count ++;
 		break;
 
@@ -316,7 +316,7 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 	    isInAnsi = 1;
 	    iansi = i;
 	    continue;
-	} 
+	}
 
 	// character
 	if (isInAnsi)
@@ -334,7 +334,7 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 	    case 2:
 		if (isEscapeParam(buf[i]))
 		    break;
-		else 
+		else
 		    isInAnsi = 0;
 		break;
 	    }
@@ -349,7 +349,7 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 	} else if (isInDBCS) {
 	    // not ANSI but in DBCS. finished one char.
 	    isInDBCS = 0;
-	} else if (buf[i] >= 0x80) {
+	} else if (IS_DBCSLEAD(buf[i])) {
 	    // DBCS lead.
 	    isInDBCS = 1;
 	} else {
@@ -420,7 +420,7 @@ DBCS_strcasestr(const char* pool, const char *ptr)
             if (pool[i + i2] > 0)
             {
                 // ascii
-                if (ptr[i2] < 0 || 
+                if (IS_DBCSLEAD(ptr[i2]) ||
 		    tolower(ptr[i2]) != tolower(pool[i+i2]))
                 {
 		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
@@ -440,11 +440,11 @@ DBCS_strcasestr(const char* pool, const char *ptr)
             }
         }
 
-        if (found) 
+        if (found)
 	    return (char *)pool+i;
 
         // next iteration: if target is DBCS, skip one more byte.
-        if (pool[i] < 0)
+        if (IS_DBCSLEAD(pool[i]))
             i++;
     }
     return NULL;
@@ -534,7 +534,7 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
 	if (c == ' ')
 	    *s++ = '_';
 	else if (c >= 0x7f || c < 0x20 || c == '_' ||  strchr (MimeSpecials, c))
-	{ 
+	{
 	    *s++ = '=';
 	    *s++ = hex[(c & 0xf0) >> 4];
 	    *s++ = hex[c & 0x0f];
@@ -563,7 +563,7 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
 /* QP code : "0123456789ABCDEF"                                 */
 /* ----------------------------------------------------- */
 
-static int 
+static int
 qp_code(int x)
 {
     if (x >= '0' && x <= '9')
@@ -581,7 +581,7 @@ qp_code(int x)
 /* "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" */
 /* ------------------------------------------------------------------ */
 
-static int 
+static int
 base64_code(int x)
 {
     if (x >= 'A' && x <= 'Z')
@@ -602,14 +602,14 @@ base64_code(int x)
 /* judge & decode QP / BASE64				 */
 /* ----------------------------------------------------- */
 
-static inline int 
+static inline int
 isreturn(unsigned char c)
 {
     return c == '\r' || c == '\n';
 }
 
 static inline
-int 
+int
 mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst)
 {
     /* Thor.980901: src和dst可相同, 但src 一定有?或\0結束 */
@@ -665,7 +665,7 @@ mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst)
     return -1;
 }
 
-size_t 
+size_t
 str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */
@@ -741,7 +741,7 @@ str_iconv(
  *
  * TODO rewrite, don't hardcode 512
  */
-void 
+void
 str_decode_M3(char *str)
 {
     int             adj;

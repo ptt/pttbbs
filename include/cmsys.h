@@ -19,7 +19,7 @@
 
 // flags used by strip_ansi
 enum STRIP_FLAG {
-    STRIP_ALL = 0, 
+    STRIP_ALL = 0,
     ONLY_COLOR,	    // allow only colors (ESC [ .. m)
     NO_RELOAD	    // allow all known (color+move)
 };
@@ -113,6 +113,7 @@ int  is_number(const char *p);
 char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);
 unsigned StringHash(const char *s);
 /* DBCS utilities */
+#define IS_DBCSLEAD(c)  (((unsigned char)(c)) >= 0x80)
 int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
 int    DBCS_NextStatus(char c, int prev_status);
 int    DBCS_Status(const char *dbcstr, int pos);
