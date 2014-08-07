@@ -77,6 +77,8 @@ def LoadPost(query):
     return UnpackPost(data)
 
 def SavePost(legacy, keypak, data, extra=None):
+    if extra:
+	data.update(extra._asdict())
     logging.debug("SavePost: %r => %r", keypak, data)
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
