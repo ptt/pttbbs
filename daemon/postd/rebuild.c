@@ -29,7 +29,7 @@ int CommentsExtract(const char *input,
         kind = i;
     }
     if (!p) {
-        printf("error - !p\n");
+        // printf("error - !p\n");
         return -1;
     }
     if (!str_starts_with(p, pat_Prefix2)) {
@@ -43,8 +43,10 @@ int CommentsExtract(const char *input,
         return -1;
     }
     // author = p..p2
-    *output_owner = 0;
-    strncat(output_owner, p, p2 - p);
+    if (output_owner) {
+        *output_owner = 0;
+        strncat(output_owner, p, p2 - p);
+    }
     p = p2 + strlen(pat_PostAuthor);
     p2 = strstr(p, pat_PostContent);
     if (!p2) {
@@ -55,17 +57,34 @@ int CommentsExtract(const char *input,
     p3 = p2 - 1;
     while (p3 > p && *p3 == ' ')
         p3--;
-    *output_content = 0;
-    strncat(output_content, p, p3 - p + 1);
+    if (output_content) {
+        *output_content = 0;
+        strncat(output_content, p, p3 - p + 1);
+    }
     p = p2 + strlen(pat_PostContent);
-    strcpy(output_trailings, p);
+    if (output_trailings) {
+        strcpy(output_trailings, p);
+    }
     return kind;
+}
+
+int IsCrossPostLog(const char *buf) {
+    // format: "※ " ANSI_COLOR(1;32) "%s" ANSI_COLOR(0;32) ":轉錄至" %s
+    if (!str_starts_with(buf, "※ " ANSI_COLOR(1;32)))
+        return 0;
+    if (strstr(buf, ANSI_COLOR(0;32) ":轉錄至"))
+        return 0;
+    return 1;
 }
 
 int ProcessPost(const char *filename) {
     FILE *fp = fopen(filename, "rt");
-    long offBegin, offEnd = -1;
+    long offBegin, offEnd, off;
     char buf[ANSILINELEN];
+    char bufOwner[ANSILINELEN],
+         bufContent[ANSILINELEN],
+         bufTrailing[ANSILINELEN];
+    int kind;
     assert(fp);
 
     // first line, expecting STR_AUTHOR1 or STR_AUTHOR2.
@@ -87,39 +106,43 @@ int ProcessPost(const char *filename) {
                 break;
         }
     }
+
+    // Here we want to determine end of edited contents.
+    // If a user has edited his file, there will be "edit" signatures.
+    // Otherwise it ends with site sig.
+    // So, an easy way is to parse all "valid" comments until we've reach end of
+    // file and find the starting of continuous valid comments. The only
+    // exceptions are system logs - ex crosspost.
+    // format: "※ " ANSI_COLOR(1;32) "%s" ANSI_COLOR(0;32) ":轉錄至" %s
+
     offBegin = ftell(fp);
-    // Seek for last '--'
+    offEnd = offBegin;
+    off = offEnd;
+
     while (fgets(buf, sizeof(buf), fp)) {
-        if (strcmp(buf, "--\n") == 0 || strcmp(buf, "--\r") == 0) {
-            if (offEnd >= 0) {
-                // Note this may be caused by signatures.
-                // printf(" Warning: multiple -- in %s\n", filename);
-            }
-            offEnd = ftell(fp) - strlen(buf);
+        off += strlen(buf);
+        if (IsCrossPostLog(buf) ||
+            (buf[0] == ESC_CHR &&
+             CommentsExtract(buf, NULL, NULL, NULL) >= 0)) {
+            // do something
+        } else {
+            offEnd = off;
         }
     }
-    if (offEnd < 0)
-        offEnd = ftell(fp);
 
-    fseek(fp, offBegin, SEEK_SET);
     // Content: offBegin to offEnd.
+    fseek(fp, offBegin, SEEK_SET);
 
-    // Try to solve comments
+    // Try to parse comments
     fseek(fp, offEnd, SEEK_SET);
     while (fgets(buf, sizeof(buf), fp)) {
-        char bufOwner[ANSILINELEN],
-             bufContent[ANSILINELEN],
-             bufTrailing[ANSILINELEN];
-        int kind;
+
         if (buf[0] != ESC_CHR)
             continue;
-        chomp(buf);
         // See comments.c:FormatCommentString:
         kind = CommentsExtract(buf, bufOwner, bufContent, bufTrailing);
-        if (kind < 0) {
-            printf("waring: bypassed - %s\n", buf);
-            continue;
-        }
+        assert(kind >= 0);
+        chomp(bufTrailing);
         printf("K[%d], A[%s], C[%s], T[%s]\n", kind,
                bufOwner, bufContent, bufTrailing);
     }
@@ -147,7 +170,7 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr)
 
     // Try harder to recognize user
     if (fhdr->filemode & FILE_ANONYMOUS) {
-        // Theoratically we can look up real id, but let's don't waste time.
+        // Theoretically we can look up real id, but let's don't waste time.
         userid = "-anonymous.";
     } else if (strchr(fhdr->owner, '.')) {
         // Post from some unknown user.
@@ -224,8 +247,8 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp)
         // TODO Add .DIR sequence number.
 
         printf(" - Adding %s", fhdr.filename);
-        // ProcessPost(fpath);
-        PostAddRecord(bp->brdname, &fhdr);
+        ProcessPost(fpath);
+        // PostAddRecord(bp->brdname, &fhdr);
         printf("\n");
     }
 
