@@ -23,7 +23,10 @@ PostKey = collections.namedtuple('PostKey', 'board file')
 # TODO in future we don't need userref, and ctime should be automatically set.
 AddRecordFormatString = 'III%ds' % (pttstruct.IDLEN + 1)
 AddRecord = collections.namedtuple('AddRecord', 'userref ctime ipv4 userid')
+CONTENT_LEN_FORMAT = 'I'
 REQ_ADD = 1
+REQ_ADD2 = 2
+REQ_GET_CONTENT = 3
 _SERVER_ADDR = '127.0.0.1'
 _SERVER_PORT = 5135
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -74,17 +77,25 @@ def LoadPost(query):
 
 
 def SavePost(keypak, data, extra=None):
+    return SavePost2(None, keypak, data, extra)
+
+def SavePost2(content, keypak, data, extra=None):
     if extra:
 	data.update(extra._asdict())
     logging.debug("SavePost: %r => %r", keypak, data)
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
     logging.debug(' Saved: %s', key)
-    content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
-	                        keypak.board, keypak.file)
-    content_length = os.path.getsize(content_file)
+    if content is None:
+	content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
+				    keypak.board, keypak.file)
+	content_length = os.path.getsize(content_file)
+    else:
+	logging.debug('got transfered content')
+	content_length = len(content)
     start = time.time()
-    g_db.set(key + ':content', open(content_file).read())
+    g_db.set(key + ':content',
+	    open(content_file).read() if content is None else content)
     exec_time = time.time() - start
     logging.debug(' Content (%d) save time: %.3fs.', content_length, exec_time)
     if exec_time > 0.1:
@@ -115,18 +126,31 @@ def open_database(db_path):
 
 def handle_request(socket, _):
     fd = socket.makefile('rw')
-    fmt_len = '@i'
     try:
         req = fd.read(struct.calcsize(RequestFormatString))
 	req = Request._make(struct.unpack(RequestFormatString, req))
 	logging.debug('Found request: %d' % req.operation)
-        # TODO check req.cb
 	if req.operation == REQ_ADD:
 	    header_blob = fd.read(pttstruct.FILEHEADER_SIZE)
 	    addblob = fd.read(struct.calcsize(AddRecordFormatString))
 	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
 	    SavePost(UnpackPostKey(keyblob), DecodeFileHeader(header_blob),
 		     UnpackAddRecord(addblob))
+	elif req.operation == REQ_ADD2:
+	    header_blob = fd.read(pttstruct.FILEHEADER_SIZE)
+	    addblob = fd.read(struct.calcsize(AddRecordFormatString))
+	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
+	    content_len = struct.unpack(
+		    CONTENT_LEN_FORMAT,
+		    fd.read(struct.calcsize(CONTENT_LEN_FORMAT)))[0]
+	    content = fd.read(content_len)
+	    SavePost2(content, UnpackPostKey(keyblob),
+		      DecodeFileHeader(header_blob), UnpackAddRecord(addblob))
+	elif req.operation == REQ_GET_CONTENT:
+	    keyblob = fd.read(struct.calcsize(PostKeyFormatString))
+	    content = GetPostContent(UnpackPostKey(keyblob))
+	    fd.write(struct.pack(CONTENT_LEN_FORMAT, len(content)))
+	    fd.write(content)
 	else:
 	    raise ValueError('Unkown operation %d' % req.operation)
     except:

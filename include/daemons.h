@@ -186,6 +186,8 @@ typedef struct {
 
 enum {
     POSTD_REQ_ADD = 1,
+    POSTD_REQ_ADD2,
+    POSTD_REQ_GET_CONTENT,
 };
 
 typedef struct {

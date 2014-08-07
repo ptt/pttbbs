@@ -72,13 +72,15 @@ int IsCrossPostLog(const char *buf) {
     // format: "※ " ANSI_COLOR(1;32) "%s" ANSI_COLOR(0;32) ":轉錄至" %s
     if (!str_starts_with(buf, "※ " ANSI_COLOR(1;32)))
         return 0;
-    if (strstr(buf, ANSI_COLOR(0;32) ":轉錄至"))
+    if (!strstr(buf, ANSI_COLOR(0;32) ":轉錄至"))
         return 0;
+    printf("Found XPOST!!!\n");
     return 1;
 }
 
-int ProcessPost(const char *filename) {
+char *ProcessPost(const char *filename) {
     FILE *fp = fopen(filename, "rt");
+    char *content;
     long offBegin, offEnd, off;
     char buf[ANSILINELEN];
     char bufOwner[ANSILINELEN],
@@ -132,34 +134,40 @@ int ProcessPost(const char *filename) {
 
     // Content: offBegin to offEnd.
     fseek(fp, offBegin, SEEK_SET);
+    content = malloc(offEnd - offBegin + 1);
+    assert(content);
+    content[offEnd - offBegin] = 0;
+    fread(content, 1, offEnd - offBegin + 1, fp);
 
     // Try to parse comments
     fseek(fp, offEnd, SEEK_SET);
     while (fgets(buf, sizeof(buf), fp)) {
-
-        if (buf[0] != ESC_CHR)
+        if (buf[0] != ESC_CHR)  // Includes IsCrossPostLog.
             continue;
         // See comments.c:FormatCommentString:
         kind = CommentsExtract(buf, bufOwner, bufContent, bufTrailing);
         assert(kind >= 0);
         chomp(bufTrailing);
-        printf("K[%d], A[%s], C[%s], T[%s]\n", kind,
-               bufOwner, bufContent, bufTrailing);
+        // TODO we should probably upload these comments.
+        printf("K[%d], A[%s], C[%s], T[%s]\n",
+               kind, bufOwner, bufContent, bufTrailing);
     }
 
     fclose(fp);
-    return 0;
+    return content;
 }
 
-int PostAddRecord(const char *board, const fileheader_t *fhdr)
+int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath)
 {
     int s;
     PostAddRequest req = {0};
     char *userid;
+    char *contents;
+    uint32_t content_length;
     char xuid[IDLEN + 1];
 
     req.cb = sizeof(req);
-    req.operation = POSTD_REQ_ADD;
+    req.operation = POSTD_REQ_ADD2;
     strlcpy(req.key.board, board, sizeof(req.key.board));
     strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
     memcpy(&req.header, fhdr, sizeof(req.header));
@@ -210,6 +218,16 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr)
         close(s);
         return 1;
     }
+
+    contents = ProcessPost(fpath);
+    content_length = strlen(contents);
+    if (towrite(s, &content_length, sizeof(content_length)) < 0 ||
+        towrite(s, contents, content_length) < 0) {
+        free(contents);
+        close(s);
+        return 1;
+    }
+    free(contents);
     close(s);
     return 0;
 }
@@ -247,8 +265,8 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp)
         // TODO Add .DIR sequence number.
 
         printf(" - Adding %s", fhdr.filename);
-        ProcessPost(fpath);
-        // PostAddRecord(bp->brdname, &fhdr);
+        if (PostAddRecord(bp->brdname, &fhdr, fpath) != 0)
+            printf(" (error)");
         printf("\n");
     }
 
