@@ -2107,7 +2107,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    xfile;
     FILE           *xptr;
-    int             xbid, hashPost;
+    int             xbid;
     boardheader_t  *bp;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -2181,11 +2181,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     /* 不要借用變數，記憶體沒那麼缺，人腦混亂的代價比較高 */
-
-    // XXX cross-posting a series of articles should not be cross-post?
-    // so let's use filename instead of title.
-    // hashPost = StringHash(fhdr->title); // why use title?
-    hashPost = StringHash(fhdr->filename); // let's try filename
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 
