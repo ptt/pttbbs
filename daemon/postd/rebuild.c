@@ -2,7 +2,7 @@
 #include "bbs.h"
 #include "daemons.h"
 
-const char *server_addr = "127.0.0.1" POSTD_ADDR;
+const char *server_addr = POSTD_ADDR;
 
 int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath)
 {
