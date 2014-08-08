@@ -53,18 +53,21 @@ def ParseComment(buf):
 			     author, content.rstrip(' '),
 			     trailing.rstrip('\n')))
 
-def ParsePost(filename):
+def ParsePost(contents):
     '''Returns a legacy post into two parts.
+
+    Args:
+	contents: A list of input string (file.readlines), or raw string.
 
     Returns:
 	(body, comments): body is the main content without header, and
 	                  comments is a list to hold parsed comments.
     '''
-    contents = []
     comments = []
     lineno = 0
-    with open(filename) as f:
-	contents = f.readlines()
+
+    if (type(contents) is str):
+	contents = contents.splitlines(True)
 
     # Now, try to skip header.
     if len(contents) < 1:
@@ -102,7 +105,7 @@ def main(argv):
 	filename = 'sample'
     else:
 	filename = argv[0]
-    print ParsePost(filename)
+    print ParsePost(open(filename).readlines())
 
 if __name__ == '__main__':
     main(sys.argv[1:])

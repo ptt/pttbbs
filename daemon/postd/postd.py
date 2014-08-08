@@ -50,7 +50,7 @@ def EncodeFileHeader(header):
     blob = pttstruct.pack_data(header, pttstruct.FILEHEADER_FMT)
     return blob
 
-def SavePost(legacy, keypak, data, extra=None):
+def SavePost(content, is_legacy, keypak, data, extra=None):
     if extra:
 	data.update(extra._asdict())
     logging.debug("SavePost: %r => %r", keypak, data)
@@ -59,15 +59,18 @@ def SavePost(legacy, keypak, data, extra=None):
     logging.debug(' Saved: %s', key)
     content_file = os.path.join(BBSHOME, 'boards', keypak.board[0],
 				keypak.board, keypak.file)
-    if legacy:
-	(content, comments) = pttpost.ParsePost(content_file)
-	content_len = len(content)
-	# TODO update comments
-	ResetPostComment(keypak)
-    else:
+    comments = []
+    if content is None:
 	content_len = os.path.getsize(content_file)
 	content = open(content_file).read()
-	comments = []
+    else:
+	content_len = len(content)
+
+    if is_legacy:
+	(content, comments) = pttpost.ParsePost(content)
+	content_len = len(content)
+	ResetPostComment(keypak)
+
     start = time.time()
     g_db.set(key + ':content', content)
     exec_time = time.time() - start
@@ -143,13 +146,13 @@ def handle_request(socket, _):
 	    header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
 	    extra = read_and_unpack(fd, AddRecordFormatString, AddRecord)
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
-	    content_len = SavePost(False, key, header, extra)
+	    content_len = SavePost(None, False, key, header, extra)
 	    fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
 	elif req.operation == REQ_IMPORT:
 	    header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
 	    extra = read_and_unpack(fd, AddRecordFormatString, AddRecord)
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
-	    content_len = SavePost(True, key, header, extra)
+	    content_len = SavePost(None, True, key, header, extra)
 	    fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
 	elif req.operation == REQ_IMPORT_REMOTE:
 	    header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
@@ -157,7 +160,7 @@ def handle_request(socket, _):
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
 	    content_len = read_and_unpack(fd, CONTENT_LEN_FORMAT)[0]
 	    content = fd.read(content_len)
-	    content_len = SavePost(True, key, header, extra)
+	    content_len = SavePost(content, True, key, header, extra)
 	    fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
 	elif req.operation == REQ_GET_CONTENT:
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
