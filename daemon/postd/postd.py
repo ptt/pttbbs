@@ -90,7 +90,9 @@ def GetPostContent(keypak):
     comment_num = int(g_db.get(key + ':comment') or '0')
     for i in range(comment_num):
 	comment = deserialize(g_db.get('%s:comment#%08d' % (key, i + 1)))
-	content += '<%s> %s: %s %s\n' % tuple(map(big5.encode, comment))
+	# Sorry, output is big5.
+	comment = {k: big5.encode(v) for k,v in comment.items()}
+	content += '<%(kind)s> %(author)s: %(content)s %(trailing)s\n' % comment
     return content
 
 def SavePostComment(keypak, comment):

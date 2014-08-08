@@ -2,7 +2,7 @@
 #include "bbs.h"
 #include "daemons.h"
 
-const char *server_addr = POSTD_ADDR;
+const char *server = POSTD_ADDR;
 
 int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath)
 {
@@ -54,7 +54,7 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath
     strlcpy(req.extra.userid, userid, sizeof(req.extra.userid));
     printf(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
 
-    s = toconnectex(server_addr, 10);
+    s = toconnectex(server, 10);
     if (s < 0)
         return 1;
     if (success && towrite(s, &req, sizeof(req)) < 0)
@@ -123,17 +123,21 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
     fclose(fp);
 }
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
     int bid = 0;
-    int is_remote = (server_addr[0] != ':');
+    const char *prog = argv[0];
+    int is_remote = 0;
 
-    if (is_remote) {
-        printf(" *** Serving content to remote host: %s\n", server_addr);
+    if (argc > 1 && strchr(argv[1], ':')) {
+        server = argv[1];
+        is_remote = (server[0] != ':');
+        printf("Changed server to%s: %s\n", is_remote ? " REMOTE": "", server);
+        argc--, argv++;
     }
 
     if (argc < 2) {
-        printf("usage: %s boardname ...\n", argv[0]);
+        printf("usage: %s [host:port<5135>] boardname ...\n", prog);
         return 1;
     }
 

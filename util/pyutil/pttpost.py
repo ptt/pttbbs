@@ -41,17 +41,17 @@ def ParseComment(buf):
     """Parses a buffer for known comment formats.
 
     Returns:
-	(kind, author, content, trailing)
+	Dict in (kind, author, content, trailing), or None on failure.
     """
-    invalid = (None, None, None, None)
     match = re.findall(CommentsFormatRe, buf)
     if len(match) < 1:
-	return invalid
+	return None
     match = match[0]
     (kind, author, content, trailing) = match
-    return map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
-			     author, content.rstrip(' '),
-			     trailing.rstrip('\n')))
+    return dict(zip(('kind', 'author', 'content', 'trailing'),
+	            map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
+				      author, content.rstrip(' '),
+				      trailing.rstrip('\n')))))
 
 def ParsePost(contents):
     '''Returns a legacy post into two parts.
@@ -92,7 +92,7 @@ def ParsePost(contents):
 	    contents.pop(-1)
 	    continue
 	result = ParseComment(contents[-1])
-	if result[0] is None:
+	if result is None:
 	    break
 	comments.insert(0, result)
 	contents.pop(-1)
