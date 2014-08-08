@@ -188,6 +188,7 @@ enum {
     POSTD_REQ_ADD = 1,
     POSTD_REQ_IMPORT,
     POSTD_REQ_GET_CONTENT,
+    POSTD_REQ_IMPORT_REMOTE,
 };
 
 typedef struct {

@@ -2,15 +2,18 @@
 #include "bbs.h"
 #include "daemons.h"
 
-int PostAddRecord(const char *board, const fileheader_t *fhdr)
+const char *server_addr = "127.0.0.1" POSTD_ADDR;
+
+int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath)
 {
-    int s;
+    int s, success = 1;
     PostAddRequest req = {0};
+    uint32_t len = 0;
     char *userid;
     char xuid[IDLEN + 1];
 
     req.cb = sizeof(req);
-    req.operation = POSTD_REQ_IMPORT;
+    req.operation = fpath ? POSTD_REQ_IMPORT_REMOTE : POSTD_REQ_IMPORT;
     strlcpy(req.key.board, board, sizeof(req.key.board));
     strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
     memcpy(&req.header, fhdr, sizeof(req.header));
@@ -51,18 +54,35 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr)
     strlcpy(req.extra.userid, userid, sizeof(req.extra.userid));
     printf(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
 
-    s = toconnectex(POSTD_ADDR, 10);
+    s = toconnectex(server_addr, 10);
     if (s < 0)
         return 1;
-    if (towrite(s, &req, sizeof(req)) < 0) {
-        close(s);
-        return 1;
+    if (success && towrite(s, &req, sizeof(req)) < 0)
+        success = 0;
+    if (success && fpath) {
+        uint32_t content_len = dashs(fpath);
+        char *content = malloc(content_len + 1);
+        FILE *fp = fopen(fpath, "r");
+        assert(content && fp);
+        fread(content, content_len, 1, fp);
+        content[content_len] = 0;
+        fclose(fp);
+
+        if (towrite(s, &content_len, sizeof(content_len)) < 0 ||
+            towrite(s, content, content_len) < 0) {
+            success = 0;
+        }
+        free(content);
     }
+    if (success && toread(s, &len, sizeof(len)) < 0)
+        success = 0;
+    if (success)
+        printf(" (content: %d)", len);
     close(s);
-    return 0;
+    return !success;
 }
 
-void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp)
+void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
 {
     char dot_dir[PATHLEN], fpath[PATHLEN];
     FILE *fp;
@@ -95,7 +115,7 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp)
         // TODO Add .DIR sequence number.
 
         printf(" - Adding %s", fhdr.filename);
-        if (PostAddRecord(bp->brdname, &fhdr) != 0)
+        if (PostAddRecord(bp->brdname, &fhdr, is_remote ? fpath : NULL) != 0)
             printf(" (error)");
         printf("\n");
     }
@@ -106,6 +126,12 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp)
 int main(int argc, char **argv)
 {
     int bid = 0;
+    int is_remote = (server_addr[0] != ':');
+
+    if (is_remote) {
+        printf(" *** Serving content to remote host: %s\n", server_addr);
+    }
+
     if (argc < 2) {
         printf("usage: %s boardname ...\n", argv[0]);
         return 1;
@@ -128,7 +154,7 @@ int main(int argc, char **argv)
         }
 
         if (i > 1)
-            rebuild_board(bid, bp);
+            rebuild_board(bid, bp, is_remote);
     }
     return 0;
 }
