@@ -17,6 +17,8 @@ from pyutil import pttstruct
 from pyutil import pttpost
 from pyutil import big5
 
+g_db = None
+
 # Ref: ../../include/daemons.h
 RequestFormatString = 'HH'
 Request = collections.namedtuple('Request', 'cb operation')
@@ -54,6 +56,7 @@ def SavePost(content, is_legacy, keypak, data, extra=None):
     if extra:
 	data.update(extra._asdict())
     logging.debug("SavePost: %r => %r", keypak, data)
+    g_db.batch(True)
     key = '%s/%s' % (keypak.board, keypak.file)
     g_db.set(key, serialize(data))
     logging.debug(' Saved: %s', key)
@@ -78,8 +81,9 @@ def SavePost(content, is_legacy, keypak, data, extra=None):
     if exec_time > 0.1:
 	logging.error('%s/%s: save time (%d bytes): %.3fs.',
 		      keypak.board, keypak.file, content_len, exec_time)
-    for comment in comments:
-	SavePostComment(keypak, comment)
+    if comments:
+	SavePostComments(keypak, comments, 0)
+    g_db.batch(False)
     return content_len
 
 def GetPostContent(keypak):
@@ -95,25 +99,26 @@ def GetPostContent(keypak):
 	content += '<%(kind)s> %(author)s: %(content)s %(trailing)s\n' % comment
     return content
 
-def SavePostComment(keypak, comment):
-    logging.debug("SavePostComment: %r => %r", keypak, comment)
+def SavePostComments(keypak, comments, index=None):
+    logging.debug("SavePostComments: %r => %r", keypak, len(comments))
     key = '%s/%s:comment' % (keypak.board, keypak.file)
-    num = int(g_db.get(key) or '0')
-    num += 1
-    g_db.set(key, str(num))
-    key += '#%08d' % (num)
-    g_db.set(key, serialize(comment))
+    if index is None:
+	index = int(g_db.get(key) or '0')
+    for c in comments:
+	index += 1
+	g_db.set(key + '#%08d' % index, serialize(c))
+    g_db.set(key, str(index))
 
 def ResetPostComment(keypak):
     key = '%s/%s:comment' % (keypak.board, keypak.file)
     g_db.set(key, '0')
 
 def open_database(db_path):
-    global g_db
 
     class LevelDBWrapper(object):
 	def __init__(self, db):
 	    self.db = db
+	    self.batch_ = None
 
 	def get(self, key):
 	    try:
@@ -122,13 +127,24 @@ def open_database(db_path):
 		return None
 
 	def set(self, key, value):
-	    self.db.Put(key, value)
+	    if self.batch_:
+		self.batch_.Put(key, value)
+	    else:
+		self.db.Put(key, value)
+
+	def batch(self, flag):
+	    if flag and not self.batch_:
+		logging.debug('batch start')
+		self.batch_ = leveldb.WriteBatch()
+	    if self.batch_ and not flag:
+		logging.debug('batch end')
+		self.db.Write(self.batch_, sync=False)
+		self.batch_ = None
 
 	def RangeIter(self, **args):
 	    return self.db.RangeIter(*args)
 
-    g_db = LevelDBWrapper(leveldb.LevelDB(db_path))
-    return g_db
+    return LevelDBWrapper(leveldb.LevelDB(db_path))
 
 def handle_request(socket, _):
 
@@ -181,6 +197,7 @@ def handle_request(socket, _):
             pass
 
 def main(myname, argv):
+    global g_db
     level = logging.INFO
     level = logging.WARNING
     level = logging.DEBUG
@@ -191,7 +208,7 @@ def main(myname, argv):
     db_path = argv[0] if len(argv) > 0 else _DB_PATH
     logging.warn("Serving at %s:%s [db:%s][pid:%d]...",
                  _SERVER_ADDR, _SERVER_PORT, db_path, os.getpid())
-    open_database(db_path)
+    g_db = open_database(db_path)
     server = gevent.server.StreamServer(
 	    (_SERVER_ADDR, _SERVER_PORT), handle_request)
     server.serve_forever()

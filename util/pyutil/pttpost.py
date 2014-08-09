@@ -20,6 +20,9 @@ ANSI_RESET = ANSI_COLOR()
 # Comments format: CommentsPrefix ANSI_COLOR(33) [AUTHOR]
 #                  ANSI_RESET ANSI_COLOR(33) ":" [CONTENT]
 #                  ANSI_RESET [trailings]
+# When AlignComment is set, AUTHOR will be padded with extra SPACE.
+# Since we don't store that as an attribute, the simple way (for now) is to keep
+# it as-is.
 CommentsPrefixes = (
 	ANSI_COLOR(1,37) + r'±À ',
 	ANSI_COLOR(1,31) + r'¼N ',
@@ -85,6 +88,9 @@ def ParsePost(contents):
 	max_lines -= 1
 	if contents.pop(0) == '\n':
 	    break
+
+    # TODO A possible enhancement is to start from last found site signature,
+    # and convert non-comment as re-edit contents.
 
     # Remove trailing comments.
     while len(contents) > 0:
