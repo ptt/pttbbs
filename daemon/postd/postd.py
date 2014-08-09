@@ -165,29 +165,31 @@ def handle_request(socket, _):
 	    content_len = SavePost(None, False, key, header, extra)
 	    fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
 	elif req.operation == REQ_IMPORT:
+	    num = 0
 	    g_db.batch(True)
 	    while req.operation == REQ_IMPORT:
+		num += 1
 		header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
 		extra = read_and_unpack(fd, AddRecordFormatString, AddRecord)
 		key = read_and_unpack(fd, PostKeyFormatString, PostKey)
 		content_len = SavePost(None, True, key, header, extra)
-		fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
-		fd.flush()
 		req = read_and_unpack(fd, RequestFormatString, Request)
 	    g_db.batch(False)
+	    fd.write(struct.pack(CONTENT_LEN_FORMAT, num))
 	elif req.operation == REQ_IMPORT_REMOTE:
+	    num = 0
 	    g_db.batch(True)
 	    while req.operation == REQ_IMPORT_REMOTE:
+		num += 1
 		header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
 		extra = read_and_unpack(fd, AddRecordFormatString, AddRecord)
 		key = read_and_unpack(fd, PostKeyFormatString, PostKey)
 		content_len = read_and_unpack(fd, CONTENT_LEN_FORMAT)[0]
 		content = fd.read(content_len)
 		content_len = SavePost(content, True, key, header, extra)
-		fd.write(struct.pack(CONTENT_LEN_FORMAT, content_len))
-		fd.flush()
 		req = read_and_unpack(fd, RequestFormatString, Request)
 	    g_db.batch(False)
+	    fd.write(struct.pack(CONTENT_LEN_FORMAT, num))
 	elif req.operation == REQ_GET_CONTENT:
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
 	    content = GetPostContent(key)

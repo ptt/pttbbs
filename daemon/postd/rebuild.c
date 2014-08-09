@@ -8,7 +8,6 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char
 {
     int success = 1;
     PostAddRequest req = {0};
-    uint32_t len = 0;
     char *userid;
     char xuid[IDLEN + 1];
 
@@ -70,11 +69,9 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char
             success = 0;
         }
         free(content);
+        if (success)
+            printf(" (content: %d)", content_len);
     }
-    if (success && toread(s, &len, sizeof(len)) < 0)
-        success = 0;
-    if (success)
-        printf(" (content: %d)", len);
     return !success;
 }
 
@@ -124,9 +121,12 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
 
     // shutdown request
     {
+        int32_t num = 0;
         PostAddRequest req = {0};
         req.cb = sizeof(req);
         towrite(s, &req, sizeof(req));
+        toread(s, &num, sizeof(num));
+        printf(" (total added %d entries)\n", num);
         close(s);
     }
 
