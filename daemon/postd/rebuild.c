@@ -4,9 +4,9 @@
 
 const char *server = POSTD_ADDR;
 
-int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath)
+int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char *fpath)
 {
-    int s, success = 1;
+    int success = 1;
     PostAddRequest req = {0};
     uint32_t len = 0;
     char *userid;
@@ -54,9 +54,6 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath
     strlcpy(req.extra.userid, userid, sizeof(req.extra.userid));
     printf(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
 
-    s = toconnectex(server, 10);
-    if (s < 0)
-        return 1;
     if (success && towrite(s, &req, sizeof(req)) < 0)
         success = 0;
     if (success && fpath) {
@@ -78,12 +75,12 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *fpath
         success = 0;
     if (success)
         printf(" (content: %d)", len);
-    close(s);
     return !success;
 }
 
 void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
 {
+    int s;
     char dot_dir[PATHLEN], fpath[PATHLEN];
     FILE *fp;
     fileheader_t fhdr;
@@ -96,6 +93,12 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         printf(" (empty directory)\n");
         return;
     }
+    s = toconnectex(server, 10);
+    if (s < 0) {
+        printf("failed to connect to server %s\n", server);
+        exit(1);
+    }
+
     while (fread(&fhdr, sizeof(fhdr), 1, fp)) {
         // Skip unknown files
         if (fhdr.filename[0] != 'M' && fhdr.filename[1] != '.') {
@@ -113,11 +116,18 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         }
 
         // TODO Add .DIR sequence number.
-
         printf(" - Adding %s", fhdr.filename);
-        if (PostAddRecord(bp->brdname, &fhdr, is_remote ? fpath : NULL) != 0)
+        if (PostAddRecord(s, bp->brdname, &fhdr, is_remote ? fpath : NULL) != 0)
             printf(" (error)");
         printf("\n");
+    }
+
+    // shutdown request
+    {
+        PostAddRequest req = {0};
+        req.cb = sizeof(req);
+        towrite(s, &req, sizeof(req));
+        close(s);
     }
 
     fclose(fp);
