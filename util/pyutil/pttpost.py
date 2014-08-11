@@ -52,7 +52,7 @@ def ParseComment(buf):
     match = match[0]
     (kind, author, content, trailing) = match
     return dict(zip(('kind', 'author', 'content', 'trailing'),
-	            map(big5.decode, (str(CommentsPrefixes.find(kind) + 1),
+	            map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
 				      author, content.rstrip(' '),
 				      trailing.rstrip('\n')))))
 
