@@ -28,6 +28,7 @@ PostKey = collections.namedtuple('PostKey', 'board file')
 AddRecordFormatString = 'III%ds' % (pttstruct.IDLEN + 1)
 AddRecord = collections.namedtuple('AddRecord', 'userref ctime ipv4 userid')
 CONTENT_LEN_FORMAT = 'I'
+REQ_TERMINATE = 0
 REQ_ADD = 1
 REQ_IMPORT = 2
 REQ_GET_CONTENT = 3
@@ -158,7 +159,9 @@ def handle_request(socket, _):
     try:
 	req = read_and_unpack(fd, RequestFormatString, Request)
 	logging.debug('Found request: %d' % req.operation)
-	if req.operation == REQ_ADD:
+	if req.operation == REQ_TERMINATE:
+	    fd.write(struct.pack(CONTENT_LEN_FORMAT, 0))
+	elif req.operation == REQ_ADD:
 	    header = DecodeFileHeader(fd.read(pttstruct.FILEHEADER_SIZE))
 	    extra = read_and_unpack(fd, AddRecordFormatString, AddRecord)
 	    key = read_and_unpack(fd, PostKeyFormatString, PostKey)
