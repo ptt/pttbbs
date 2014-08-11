@@ -38,7 +38,7 @@ CommentsFormatRe = (
 # format: "※ " ANSI_COLOR(1;32) "%s" ANSI_COLOR(0;32) ":轉錄至" %s
 def IsCrossPostLog(buf):
     return (buf.startswith("※ " + ANSI_COLOR(1,32)) and
-	    buf.index(ANSI_COLOR(0,32) + ':轉錄至') > 0)
+	    buf.find(ANSI_COLOR(0,32) + ':轉錄至') > 0)
 
 def ParseComment(buf):
     """Parses a buffer for known comment formats.
@@ -52,7 +52,7 @@ def ParseComment(buf):
     match = match[0]
     (kind, author, content, trailing) = match
     return dict(zip(('kind', 'author', 'content', 'trailing'),
-	            map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
+	            map(big5.decode, (str(CommentsPrefixes.find(kind) + 1),
 				      author, content.rstrip(' '),
 				      trailing.rstrip('\n')))))
 
