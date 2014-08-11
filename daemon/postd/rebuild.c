@@ -9,7 +9,7 @@ const char *server = POSTD_ADDR;
 int verbose_level = 0;
 
 int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
-                  const char *fpath, size_t *written_data)
+		  FILE *fp, size_t *written_data)
 {
     int success = 1;
     PostAddRequest req = {0};
@@ -21,7 +21,7 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
         written_data = &garbage;
 
     req.cb = sizeof(req);
-    req.operation = fpath ? POSTD_REQ_IMPORT_REMOTE : POSTD_REQ_IMPORT;
+    req.operation = fp ? POSTD_REQ_IMPORT_REMOTE : POSTD_REQ_IMPORT;
     strlcpy(req.key.board, board, sizeof(req.key.board));
     strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
     memcpy(&req.header, fhdr, sizeof(req.header));
@@ -65,14 +65,17 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
     *written_data += sizeof(req);
     if (success && towrite(s, &req, sizeof(req)) < 0)
         success = 0;
-    if (success && fpath) {
-        uint32_t content_len = dashs(fpath);
-        char *content = malloc(content_len + 1);
-        FILE *fp = fopen(fpath, "r");
+    if (success && fp) {
+        uint32_t content_len;
+        char *content;
+
+	fseek(fp, 0, SEEK_END);
+	content_len = ftell(fp);
+	content = malloc(content_len + 1);
         assert(content && fp);
+        // TODO replace by sendfile.
         fread(content, content_len, 1, fp);
         content[content_len] = 0;
-        fclose(fp);
 
         *written_data += sizeof(content_len) + content_len;
         if (towrite(s, &content_len, sizeof(content_len)) < 0 ||
@@ -99,7 +102,7 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
 {
     int s;
     char dot_dir[PATHLEN], fpath[PATHLEN];
-    FILE *fp;
+    FILE *fp, *fp2;
     size_t output_bytes = 0;
     fileheader_t fhdr;
     printf("Rebuilding board: %s ", bp->brdname);
@@ -130,20 +133,22 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
             *strchr(fhdr.filename, ' ') = 0;
         }
         setbfile(fpath, bp->brdname, fhdr.filename);
-        if (dashs(fpath) < 1) {
+	fp2 = fopen(fpath, "rt");
+        if (!fp2) {
             debug(" - Non-Exist (%s).\n", fhdr.filename);
             continue;
         }
 
         // TODO Add .DIR sequence number.
         debug(" - Adding %s", fhdr.filename);
-        if (PostAddRecord(s, bp->brdname, &fhdr, is_remote ? fpath : NULL,
+        if (PostAddRecord(s, bp->brdname, &fhdr, is_remote ? fp2 : NULL,
                           &output_bytes) != 0) {
             debug(" (error)\n");
             printf("Failed adding entry [%s/%s]. Abort.\n",
                    bp->brdname, fhdr.filename);
             exit(1);
         }
+	fclose(fp2);
         debug("\n");
     }
     ts_sync = timestamp_ms();
@@ -163,8 +168,8 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         if (ts_end == ts_sync) ts_end++;
         data_rate = output_bytes / ((double)ts_end - ts_start) / (double) 1024;
         data_rate *= 1000;
-        printf(" Total %d entries (%ld bytes, %.2fKB/s),"
-               " %s server exec: %.1fs, sync: %.1fs\n",
+        printf("Total %d entries (%ld bytes, %.2fKB/s),"
+               " %s server, exec: %.1fs, sync: %.1fs\n",
                num, output_bytes, data_rate,
                is_remote ? "remote" : "local",
                (ts_sync - ts_start) / (double)1000,
