@@ -4,12 +4,21 @@
 
 const char *server = POSTD_ADDR;
 
-int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char *fpath)
+#define debug(args...) do { if (verbose_level > 0) printf(args); } while (0);
+
+int verbose_level = 0;
+
+int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
+                  const char *fpath, size_t *written_data)
 {
     int success = 1;
     PostAddRequest req = {0};
     char *userid;
     char xuid[IDLEN + 1];
+    size_t garbage = 0;
+
+    if (!written_data)
+        written_data = &garbage;
 
     req.cb = sizeof(req);
     req.operation = fpath ? POSTD_REQ_IMPORT_REMOTE : POSTD_REQ_IMPORT;
@@ -51,8 +60,9 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char
         }
     }
     strlcpy(req.extra.userid, userid, sizeof(req.extra.userid));
-    printf(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
+    debug(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
 
+    *written_data += sizeof(req);
     if (success && towrite(s, &req, sizeof(req)) < 0)
         success = 0;
     if (success && fpath) {
@@ -64,13 +74,14 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr, const char
         content[content_len] = 0;
         fclose(fp);
 
+        written_data += sizeof(content_len) + content_len;
         if (towrite(s, &content_len, sizeof(content_len)) < 0 ||
             towrite(s, content, content_len) < 0) {
             success = 0;
         }
         free(content);
         if (success)
-            printf(" (content: %d)", content_len);
+            debug(" (content: %d)", content_len);
     }
     return !success;
 }
@@ -80,11 +91,12 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
     int s;
     char dot_dir[PATHLEN], fpath[PATHLEN];
     FILE *fp;
+    size_t output_bytes = 0;
     fileheader_t fhdr;
     printf("Rebuilding board: %s\n", bp->brdname);
+    time4_t start, syncpoint, end;
 
     setbfile(dot_dir, bp->brdname, ".DIR");
-
     fp = fopen(dot_dir, "rb");
     if (!fp) {
         printf(" (empty directory)\n");
@@ -96,10 +108,11 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         exit(1);
     }
 
+    start = time4(NULL);
     while (fread(&fhdr, sizeof(fhdr), 1, fp)) {
         // Skip unknown files
         if (fhdr.filename[0] != 'M' && fhdr.filename[1] != '.') {
-            printf(" - Skipped (%s).\n", fhdr.filename);
+            debug(" - Skipped (%s).\n", fhdr.filename);
             continue;
         }
         // Not sure why but some filename may contain ' '.
@@ -108,29 +121,46 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         }
         setbfile(fpath, bp->brdname, fhdr.filename);
         if (dashs(fpath) < 1) {
-            printf(" - Non-Exist (%s).\n", fhdr.filename);
+            debug(" - Non-Exist (%s).\n", fhdr.filename);
             continue;
         }
 
         // TODO Add .DIR sequence number.
-        printf(" - Adding %s", fhdr.filename);
-        if (PostAddRecord(s, bp->brdname, &fhdr, is_remote ? fpath : NULL) != 0)
-            printf(" (error)");
-        printf("\n");
+        debug(" - Adding %s", fhdr.filename);
+        if (PostAddRecord(s, bp->brdname, &fhdr, is_remote ? fpath : NULL,
+                          &output_bytes) != 0) {
+            debug(" (error)\n");
+            printf("Failed adding entry [%s/%s]. Abort.\n",
+                   bp->brdname, fhdr.filename);
+            exit(1);
+        }
+        debug("\n");
     }
+    syncpoint = time4(NULL);
 
     // shutdown request
     {
         int32_t num = 0;
         PostAddRequest req = {0};
         req.cb = sizeof(req);
-        towrite(s, &req, sizeof(req));
-        toread(s, &num, sizeof(num));
-        printf(" (total added %d entries)\n", num);
+        if (towrite(s, &req, sizeof(req)) < 0 ||
+            toread(s, &num, sizeof(num)) < 0) {
+            printf("Failed syncing requests. Abort.\n");
+            exit(1);
+        }
+        end = time4(NULL);
+        printf(" Total %d entries (%ld bytes, %ldKb/s), Exec: %ds, Sync: %ds\n",
+               num, output_bytes, output_bytes / (end - start) / 1024,
+               syncpoint - start, end - syncpoint);
         close(s);
     }
 
     fclose(fp);
+}
+
+void usage_die(const char *prog) {
+        printf("usage: %s [-v] [host:port<5135>] boardname ...\n", prog);
+        exit(1);
 }
 
 int main(int argc, const char **argv)
@@ -139,6 +169,18 @@ int main(int argc, const char **argv)
     const char *prog = argv[0];
     int is_remote = 0;
 
+    while (argc > 1 && argv[1][0] == '-') {
+        switch(argv[1][1]) {
+        case  'v':
+            verbose_level++;
+            argc--, argv++;
+            break;
+        default:
+            usage_die(prog);
+            // never returns
+        }
+    }
+
     if (argc > 1 && strchr(argv[1], ':')) {
         server = argv[1];
         is_remote = (server[0] != ':');
@@ -146,10 +188,8 @@ int main(int argc, const char **argv)
         argc--, argv++;
     }
 
-    if (argc < 2) {
-        printf("usage: %s [host:port<5135>] boardname ...\n", prog);
-        return 1;
-    }
+    if (argc < 2)
+        usage_die(prog);
 
     chdir(BBSHOME);
     attach_SHM();
