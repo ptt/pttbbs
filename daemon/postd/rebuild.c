@@ -86,6 +86,15 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
     return !success;
 }
 
+int64_t timestamp_ms() {
+    struct timeval tv;
+    uint64_t ms;
+    gettimeofday(&tv, NULL);
+    ms = tv.tv_sec * 1000;
+    ms += tv.tv_usec / 1000;
+    return ms;
+}
+
 void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
 {
     int s;
@@ -94,7 +103,7 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
     size_t output_bytes = 0;
     fileheader_t fhdr;
     printf("Rebuilding board: %s\n", bp->brdname);
-    time4_t start, syncpoint, end;
+    int64_t ts_start, ts_sync, ts_end;
 
     setbfile(dot_dir, bp->brdname, ".DIR");
     fp = fopen(dot_dir, "rb");
@@ -108,7 +117,7 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         exit(1);
     }
 
-    start = time4(NULL);
+    ts_start = timestamp_ms();
     while (fread(&fhdr, sizeof(fhdr), 1, fp)) {
         // Skip unknown files
         if (fhdr.filename[0] != 'M' && fhdr.filename[1] != '.') {
@@ -136,11 +145,12 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         }
         debug("\n");
     }
-    syncpoint = time4(NULL);
+    ts_sync = timestamp_ms();
 
     // shutdown request
     {
         int32_t num = 0;
+        double data_rate;
         PostAddRequest req = {0};
         req.cb = sizeof(req);
         if (towrite(s, &req, sizeof(req)) < 0 ||
@@ -148,12 +158,14 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
             printf("Failed syncing requests. Abort.\n");
             exit(1);
         }
-        end = time4(NULL);
-        printf(" Total %d entries (%ld bytes, %ldKb/s), Exec: %ds, Sync: %ds\n",
-               num, output_bytes,
-               (end > start) ? output_bytes / (end - start) / 1024 :
-               output_bytes / 1024,
-               syncpoint - start, end - syncpoint);
+        ts_end = timestamp_ms();
+        if (ts_end == ts_sync) ts_end++;
+        data_rate = output_bytes / ((double)ts_end - ts_start) / (double) 1024;
+        data_rate *= 1000;
+        printf(" Total %d entries (%ld bytes, %.2fKB/s), Exec: %.1fs, Sync: %.1fs\n",
+               num, output_bytes, data_rate,
+               (ts_sync - ts_start) / (double)1000,
+               (ts_end - ts_sync) / (double)1000);
         close(s);
     }
 
