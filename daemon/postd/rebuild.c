@@ -150,7 +150,9 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         }
         end = time4(NULL);
         printf(" Total %d entries (%ld bytes, %ldKb/s), Exec: %ds, Sync: %ds\n",
-               num, output_bytes, output_bytes / (end - start) / 1024,
+               num, output_bytes,
+               (end > start) ? output_bytes / (end - start) / 1024 :
+               output_bytes / 1024,
                syncpoint - start, end - syncpoint);
         close(s);
     }
