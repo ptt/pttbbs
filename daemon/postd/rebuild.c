@@ -74,7 +74,7 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
         content[content_len] = 0;
         fclose(fp);
 
-        written_data += sizeof(content_len) + content_len;
+        *written_data += sizeof(content_len) + content_len;
         if (towrite(s, &content_len, sizeof(content_len)) < 0 ||
             towrite(s, content, content_len) < 0) {
             success = 0;
@@ -102,7 +102,8 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
     FILE *fp;
     size_t output_bytes = 0;
     fileheader_t fhdr;
-    printf("Rebuilding board: %s\n", bp->brdname);
+    printf("Rebuilding board: %s ", bp->brdname);
+    debug("\n");
     int64_t ts_start, ts_sync, ts_end;
 
     setbfile(dot_dir, bp->brdname, ".DIR");
@@ -162,8 +163,10 @@ void rebuild_board(int bid GCC_UNUSED, boardheader_t *bp, int is_remote)
         if (ts_end == ts_sync) ts_end++;
         data_rate = output_bytes / ((double)ts_end - ts_start) / (double) 1024;
         data_rate *= 1000;
-        printf(" Total %d entries (%ld bytes, %.2fKB/s), Exec: %.1fs, Sync: %.1fs\n",
+        printf(" Total %d entries (%ld bytes, %.2fKB/s),"
+               " %s server exec: %.1fs, sync: %.1fs\n",
                num, output_bytes, data_rate,
+               is_remote ? "remote" : "local",
                (ts_sync - ts_start) / (double)1000,
                (ts_end - ts_sync) / (double)1000);
         close(s);
@@ -198,7 +201,7 @@ int main(int argc, const char **argv)
     if (argc > 1 && strchr(argv[1], ':')) {
         server = argv[1];
         is_remote = (server[0] != ':');
-        printf("Changed server to%s: %s\n", is_remote ? " REMOTE": "", server);
+        debug("Changed server to%s: %s\n", is_remote ? " REMOTE": "", server);
         argc--, argv++;
     }
 
