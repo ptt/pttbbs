@@ -158,7 +158,7 @@ typedef struct CommentBodyReq {
     char msg[COMMENTLEN + 1];
 } PACKSTRUCT CommentBodyReq;
 
-typedef struct {
+typedef struct CommentKeyReq {
     char board[IDLEN + 1];
     char file[FNLEN + 1];
 } PACKSTRUCT CommentKeyReq;

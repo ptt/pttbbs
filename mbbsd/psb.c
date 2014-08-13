@@ -675,7 +675,7 @@ pvcm_header(void *ctx GCC_UNUSED) {
 static int
 pvcm_footer(void *ctx GCC_UNUSED) {
     vs_footer(" 推文 ",
-              " (↑/↓/PgUp/PgDn)移動 (d)刪除\t(q/←)跳出");
+              " (↑/↓/PgUp/PgDn)移動 (d)刪除 (U)快速水桶\t(q/←)跳出");
     move(b_lines-1, 0);
     return 0;
 }
@@ -719,6 +719,17 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
                     }
                 }
 
+            } while(0);
+
+            return PSB_NOP;
+
+        case 'U':
+            do {
+                const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
+                const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
+                if (!resp)
+                    break;
+                edit_user_acl_for_board(resp->userid, key->board);
             } while(0);
 
             return PSB_NOP;

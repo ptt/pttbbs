@@ -267,3 +267,9 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     return 0;
 }
 #endif
+
+const struct CommentKeyReq *CommentsGetKeyReq(void *ctx)
+{
+    CommentsCtx *c = (CommentsCtx *)ctx;
+    return &c->key;
+}
