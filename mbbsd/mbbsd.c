@@ -2163,5 +2163,11 @@ check_ban_and_load(int fd, struct ProgramOption *option,
     return 0;
 }
 
+int
+mbbsd_is_secure_connection()
+{
+    return is_secure_connection;
+}
+
 /* vim: sw=4
  */

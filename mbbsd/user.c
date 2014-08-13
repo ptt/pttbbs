@@ -537,6 +537,12 @@ void Customize(void)
 	{
 	    /* normal pref */
 	    key -= 'a';
+
+            if (masks1[key] == UF_SECURE_LOGIN && !mbbsd_is_secure_connection()) {
+                vmsg("您必須使用安全連線才能修改此設定");
+                continue;
+            }
+
 	    dirty = 1;
 	    pwcuToggleUserFlag(masks1[key]);
 	    continue;
