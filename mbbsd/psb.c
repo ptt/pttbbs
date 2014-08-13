@@ -686,13 +686,11 @@ pvcm_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
-    if (resp->type < 0) {
-        prints("%c %06d <¤w§R>\n", (i == curr)? '>' : ' ', i + 1);
-    } else {
-        prints("%c %06d %-12.12s %s\n",
-               (i == curr) ? '>' : ' ',
-               i + 1, resp->userid, resp->msg);
-    }
+    prints("%c %06d %-12.12s %s\n",
+           (i == curr) ? '>' : ' ',
+           i + 1,
+           resp->userid,
+           (resp->type >= 0) ? resp->msg : (ANSI_COLOR(0;30;47) "<¤w§R>" ANSI_RESET));
     return 0;
 }
 
