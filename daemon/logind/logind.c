@@ -177,6 +177,7 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
+    AUTH_RESULT_FAIL_INSECURE = -4,
     AUTH_RESULT_STOP   = -3,
     AUTH_RESULT_FREEID_TOOMANY = -2,
     AUTH_RESULT_FREEID = -1,
@@ -199,6 +200,7 @@ typedef struct {
     int  t_cols;
     int  icurr;         // cursor (only available in userid input mode)
     Fnv32_t client_code;
+    int  is_secure_connection;
     char userid [IDBOXLEN];
     char pad0;   // for safety
     char passwd [PASSLEN+1];
@@ -743,6 +745,8 @@ DEBUG_IO(int fd, const char *msg) {
 #define FREEAUTH_SUCCESS_YX AUTH_SUCCESS_YX
 #define AUTH_FAIL_MSG       ANSI_RESET ERR_PASSWD
 #define AUTH_FAIL_YX        PASSWD_PROMPT_YX
+#define REJECT_INSECURE_MSG ANSI_RESET "抱歉，此帳號已設定為只能使用安全連線(如ssh)登入。"
+#define REJECT_INSECURE_YX  PASSWD_PROMPT_YX
 #define USERID_EMPTY_MSG    ANSI_RESET "請重新輸入。"
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
 #define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，部份系統正在維護中，請稍候再試。 " ANSI_RESET
@@ -955,6 +959,13 @@ draw_passwd_prompt(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, PASSWD_PROMPT_YX); _mt_clrtoeol(conn);
     _buff_write(conn, PASSWD_PROMPT_MSG, sizeof(PASSWD_PROMPT_MSG)-1);
+}
+
+static void
+draw_reject_insecure_connection_msg(login_conn_ctx *conn)
+{
+    _mt_move_yx(conn, REJECT_INSECURE_YX); _mt_clrtoeol(conn);
+    _buff_write(conn, REJECT_INSECURE_MSG, sizeof(REJECT_INSECURE_MSG)-1);
 }
 
 static void
@@ -1203,6 +1214,26 @@ auth_check_free_userid_allowance(const char *userid)
     return 0;
 }
 
+// Check if the userid specified in ctx can continue to login.
+static int
+auth_check_userid(login_ctx *ctx)
+{
+    // NOTE: for security reasons, only report error when a secure
+    // connection is required. Otherwise, silently let user continue.
+    if (is_validuserid(ctx->userid))
+    {
+        userec_t user = {0};
+
+        if (!ctx->is_secure_connection &&
+            passwd_load_user(ctx->userid, &user) >= 1 &&
+            user.userid[0] &&
+            passwd_require_secure_connection(&user))
+        {
+            return AUTH_RESULT_FAIL_INSECURE;
+        }
+    }
+    return AUTH_RESULT_OK;
+}
 
 // NOTE ctx->passwd will be destroyed (must > PASSLEN+1)
 // NOTE ctx->userid may be changed (must > IDLEN+1)
@@ -1221,8 +1252,7 @@ auth_user_challenge(login_ctx *ctx)
     }
 
     if (passwd_load_user(uid, &user) < 1 ||
-        !user.userid[0] ||
-        !checkpasswd(user.passwd, passbuf) )
+        !user.userid[0])
     {
         if (user.userid[0])
             strcpy(uid, user.userid);
@@ -1231,6 +1261,18 @@ auth_user_challenge(login_ctx *ctx)
 
     // normalize user id
     strcpy(uid, user.userid);
+
+    if (!ctx->is_secure_connection &&
+        passwd_require_secure_connection(&user))
+    {
+        return AUTH_RESULT_FAIL_INSECURE;
+    }
+
+    if (!checkpasswd(user.passwd, passbuf))
+    {
+        return AUTH_RESULT_FAIL;
+    }
+
     return AUTH_RESULT_OK;
 }
 
@@ -1364,22 +1406,77 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
     logattempt(userid, c, logtime, hostip);
 }
 
+typedef void (*draw_prompt_func)(login_conn_ctx *);
+
+// Shared part for auth_start and auth_precheck_userid
+static int
+auth_fail(int fd, login_conn_ctx *conn, draw_prompt_func draw_prompt)
+{
+    _mt_bell(conn);
+
+    // if fail, restart
+    if (login_ctx_retry(&conn->ctx) >= LOGINATTEMPTS)
+    {
+        // end retry.
+        draw_goodbye(conn);
+        if (g_verbose > VERBOSE_INFO) 
+            fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
+                    conn->ctx.userid, conn->ctx.hostip, fd);
+        return AUTH_RESULT_STOP;
+
+    }
+
+    // prompt for retry
+    if (draw_prompt)
+        draw_prompt(conn);
+
+    conn->ctx.state = LOGIN_STATE_USERID;
+    draw_userid_prompt(conn, NULL, 0);
+    return AUTH_RESULT_RETRY;
+}
+
+static int
+auth_precheck_userid(int fd, login_conn_ctx *conn)
+{
+    switch (auth_check_userid(&conn->ctx))
+    {
+        case AUTH_RESULT_OK:
+            return AUTH_RESULT_OK;
+
+        case AUTH_RESULT_FAIL_INSECURE:
+            return auth_fail(fd, conn, draw_reject_insecure_connection_msg);
+
+        default:
+            break;
+    }
+
+    return auth_fail(fd, conn, draw_empty_userid_warn);
+}
+
 static int 
 auth_start(int fd, login_conn_ctx *conn)
 {
     login_ctx *ctx = &conn->ctx;
-    int isfree = 0, was_valid_uid = 0;
+    int isfree = 0;
+    draw_prompt_func prompt;
+
     draw_check_passwd(conn);
 
     if (is_validuserid(ctx->userid))
     {
         // ctx content may be changed.
-        was_valid_uid = 1;
+        prompt = draw_auth_fail;
         switch (auth_user_challenge(ctx))
         {
             case AUTH_RESULT_FAIL:
                 // logattempt(ctx->userid , '-', time(0), ctx->hostip);
                 logattempt2(ctx->userid , '-', time(0), ctx->hostip);
+                break;
+
+            case AUTH_RESULT_FAIL_INSECURE:
+                // failure due to user setting for forcing secure connection
+                // will not be logged.
+                prompt = draw_reject_insecure_connection_msg;
                 break;
 
             case AUTH_RESULT_FREEID:
@@ -1421,33 +1518,11 @@ auth_start(int fd, login_conn_ctx *conn)
                 assert(!"unknown auth state.");
                 break;
         }
-
     }
-
-    // auth fail.
-    _mt_bell(conn);
-
-    // if fail, restart
-    if (login_ctx_retry(ctx) >= LOGINATTEMPTS)
-    {
-        // end retry.
-        draw_goodbye(conn);
-        if (g_verbose > VERBOSE_INFO) 
-            fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
-                    conn->ctx.userid, conn->ctx.hostip, fd);
-        return AUTH_RESULT_STOP;
-
-    }
-
-    // prompt for retry
-    if (was_valid_uid)
-        draw_auth_fail(conn);
     else
-        draw_empty_userid_warn(conn);
+        prompt = draw_empty_userid_warn;
 
-    ctx->state = LOGIN_STATE_USERID;
-    draw_userid_prompt(conn, NULL, 0);
-    return AUTH_RESULT_RETRY;
+    return auth_fail(fd, conn, prompt);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1802,7 +1877,18 @@ client_cb(int fd, short event, void *arg)
                     // accounts except free_auth [guest / new]
                     // require passwd.
                     if (!auth_is_free_userid(uid))
+                    {
+                        r = auth_precheck_userid(fd, conn);
+                        if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_OK)
+                        {
+                            login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
+                            return;
+                        }
+
+                        // leave the switch case, user will be prompt for
+                        // password.
                         break;
+                    }
                 }
 
                 // force changing state

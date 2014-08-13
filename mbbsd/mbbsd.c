@@ -36,6 +36,7 @@ static void getremotename(const struct in_addr from, char *rhost);
 #endif
 
 static int listen_port;
+static int is_secure_connection;
 
 #define MAX_BINDPORT 20
 enum TermMode {
@@ -847,8 +848,24 @@ login_query(char *ruid)
 #endif // STR_REGNEW
 
 	} else {
-
 	    /* normal user */
+
+            int valid_user = 1;
+
+            /* load the user record */
+            if (initcuser(uid) < 1 || !cuser.userid[0])
+                valid_user = 0;
+
+            /* check if the user is forced to login via secure connection. */
+            if (valid_user &&
+                (passwd_require_secure_connection(&cuser) && !is_secure_connection)) {
+                outs("抱歉，此帳號已設定為只能使用安全連線(如ssh)登入。\n");
+                doupdate();
+                sleep(5);
+                continue;
+            }
+
+            /* ask user for password, even the user does not exists. */
 	    getdata(21, 0, MSG_PASSWD,
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
@@ -860,8 +877,7 @@ login_query(char *ruid)
 	    /* prepare for later */
 	    clrtoeol();
 
-	    if( initcuser(uid) < 1 || !cuser.userid[0] ||
-		!checkpasswd(cuser.passwd, passbuf) ){
+            if (!valid_user || !checkpasswd(cuser.passwd, passbuf)) {
 
 		if(is_validuserid(cuser.userid))
 		    logattempt(cuser.userid , '-', login_start_time, fromhost);
@@ -1821,6 +1837,7 @@ shell_login(char *argv0, struct ProgramOption *option)
 	return 0;
     }
     banip = free_banip_list(banip);
+    is_secure_connection = 1;
 
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);

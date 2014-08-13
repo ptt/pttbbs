@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include "cmbbs.h"
 #include "common.h"
+#include "uflags.h"
 #include "var.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -201,6 +202,12 @@ passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *))
     }
     close(fd);
     return 0;
+}
+
+int
+passwd_require_secure_connection(const userec_t *u)
+{
+    return (u->uflag & UF_SECURE_LOGIN) ? 1 : 0;
 }
 
 // XXX NOTE: string in plain will be destroyed.
