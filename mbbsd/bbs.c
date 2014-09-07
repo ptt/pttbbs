@@ -3199,13 +3199,13 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     clear();
     vs_hdr("刪除範圍");
 
-    getdata(2, 0, "起點: ", numstr, 6, DOECHO);
+    getdata(2, 0, "起點: ", numstr, 7, DOECHO);
     num1 = atoi(numstr);
     if (num1 <= 0) {
         vmsg("起點有誤");
         return FULLUPDATE;
     }
-    getdata(3, 0, "終點: ",numstr, 6, DOECHO);
+    getdata(3, 0, "終點: ",numstr, 7, DOECHO);
     num2 = atoi(numstr);
     if (num2 < num1) {
         vmsg("終點有誤");
