@@ -1917,14 +1917,26 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
     upload = 1;
 #endif // EDIT_UPLOAD_ALLOWALL
 
-    // common trail
-    if (flags & EDITFLAG_ALLOW_LOCAL) {
-        if (local_article)
-            outs("[L]儲存 (S)儲存+轉信");
-        else
-            outs("[S]儲存+轉信 (L)儲存");
-    } else {
-	outs("[S]儲存");
+    {
+        const char *msgSave = "儲存";
+
+        if (flags & (EDITFLAG_KIND_NEWPOST |
+                     EDITFLAG_KIND_REPLYPOST)) {
+            msgSave = "發文";
+        } else if (flags & (EDITFLAG_KIND_SENDMAIL |
+                            EDITFLAG_KIND_MAILLIST)) {
+            msgSave = "發信";
+        }
+
+        // common trail
+        if (flags & EDITFLAG_ALLOW_LOCAL) {
+            if (local_article)
+                prints("[L]%s (S)%s+轉信", msgSave, msgSave);
+            else
+                prints("[S]%s+轉信 (L)%s", msgSave, msgSave);
+        } else {
+            prints("[S]%s", msgSave);
+        }
     }
 
 #ifdef EXP_EDIT_UPLOAD
