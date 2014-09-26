@@ -1001,7 +1001,9 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
 	case Ctrl('Q'):
-	    if(locmem->crs_ln>0)
+            // my_query (talk->query) needs PERM_LOGINOK, so no reason to allow
+            // here (seen bots doing this).
+	    if(HasBasicUserPerm(PERM_LOGINOK) && locmem->crs_ln>0)
 		mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
 	    break;
 
