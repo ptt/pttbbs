@@ -689,6 +689,7 @@ typedef struct {
                    compat24,
                    interactive,
                    pause;
+    unsigned char *lastframe;
 } MF_Movie;
 
 MF_Movie mfmovie;
@@ -715,6 +716,7 @@ MF_Movie mfmovie;
     mfmovie.interactive     = 0; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
     mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; \
+    mfmovie.lastframe = NULL; \
 }
 
 #define MOVIE_IS_PLAYING() \
@@ -730,6 +732,7 @@ MFPROTO int mf_movieWaitKey(struct timeval *ptv, int dorefresh);
 MFPROTO int mf_movieNextFrame();
 MFPROTO int mf_movieSyncFrame();
 MFPROTO int mf_moviePromptPlaying(int type);
+MFPROTO unsigned char *mf_movieNextLine();
 MFFPROTO int mf_movieMaskedInput(int c);
 
 #define MOVIE_MIN_FRAMECLK (0.1f)
@@ -1039,12 +1042,6 @@ mf_forward(int lines)
         mf.maxlinenoS = mf.lineno;
 
     return real_moved;
-    /*
-    if (lines > 0)
-        return MFNAV_OK;
-    else
-        return MFNAV_EXCEED;
-        */
 }
 
 MFFPROTO int
@@ -2397,6 +2394,9 @@ _pmore2(
                 {
                     // re-display the page again!
                     mfmovie.mode = MFDISP_MOVIE_PLAYING;
+                    if (mfmovie.lastframe) {
+                        mf.disps = mf_movieNextLine(mfmovie.lastframe);
+                    }
                     mf_display();
                     RESET_MOVIE();
                     break;
@@ -4308,6 +4308,11 @@ mf_movieNextFrame()
             float nf = 0;
             unsigned char *odisps = mf.disps;
 
+            // However, mf_forward (in STOP_MOVIE, or explicit calls) will
+            // modify mf.disps according to mf.maxdisps, which is not
+            // appropriate for movie mode; so "lastframe" is preserved.
+            mfmovie.lastframe = p;
+
             // check if we reached interrupt breakpoint
             if (odisps == mfmovie.intr_src)
             {
@@ -4357,7 +4362,8 @@ mf_movieNextFrame()
             if (mfmovie.mode != MFDISP_MOVIE_PLAYING_OLD)
             {
                 // when the movie frame header is the last line...
-                // we need to check forward() to prevent endless loop.
+                // we need to check if we've reached end of file to prevent
+                // endless loop.
                 if (mf_forward(1) <= 0)
                     break;
             }
@@ -4371,6 +4377,21 @@ mf_movieNextFrame()
 
     return 0;
 }
+
+MFPROTO unsigned char *
+mf_movieNextLine(unsigned char *frame)
+{
+    /* Similiar to mf_forward, without maintaining maxdisps. */
+    while (frame < mf.end && *frame++ != '\n');
+
+    if (frame == mf.end)
+        frame--;
+    if (frame < mf.start)
+        frame++;
+
+    return frame;
+}
+
 #endif
 
 /* vim:sw=4:ts=8:et:nofoldenable
