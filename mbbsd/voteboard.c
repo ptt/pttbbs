@@ -29,6 +29,19 @@ char *CheckVoteRestrictionFile(
         sz_msg, msg);
 }
 
+static char *
+find_vote_entry_userid(char *s) {
+    // format: [SPACE*]NUM.USERID REASON 來源:IP
+    while (*s == ' ')
+        s++;
+    while (isascii(*s) && isdigit(*s))
+        s++;
+    if (*s == '.')
+        return s + 1;
+    else
+        return NULL;
+}
+
 void
 do_voteboardreply(const fileheader_t * fhdr)
 {
@@ -37,7 +50,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     char            fpath[80];
     char            oldfpath[80];
     char            opnion[10];
-    char           *ptr;
+    char           *ptr, *uid;
     FILE           *fo,*fi;
     fileheader_t    votefile;
     int             yes=0, no=0, len;
@@ -91,18 +104,20 @@ do_voteboardreply(const fileheader_t * fhdr)
 	}
         if(yes>=0) continue;
 
-	space = strpbrk(genbuf+4, " \n");
+        uid = find_vote_entry_userid(genbuf);
+        if (!uid)
+            continue;
+
+	space = strpbrk(uid, " \n");
 	if(space) *space='\0';
-	if (!strncasecmp(genbuf + 4, cuser.userid, IDLEN)) {
+	if (!strncasecmp(uid, cuser.userid, IDLEN)) {
 	    move(5, 10);
 	    outs("您已經連署過本篇了");
 	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
-	    if (opnion[0] != 'y') {
-		fclose(fi);
-		return;
-	    }
-	    strlcpy(reason, genbuf + 19, 34);
-            break;
+            if (*opnion == 'y')
+                break;
+            fclose(fi);
+            return;
 	}
     }
     fclose(fi);
@@ -113,7 +128,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     } while (opnion[0] != 'y' && opnion[0] != 'n');
     sprintf(genbuf, "請問您與這個議題的關係或%s理由為何：",
 	    opnion[0] == 'y' ? "支持" : "反對");
-    if (!getdata_buf(20, 0, genbuf, reason, 35, DOECHO)) {
+    if (!getdata(20, 0, genbuf, reason, 35, DOECHO)) {
 	return;
     }
     if ((fd = open(oldfpath, O_RDONLY)) == -1)
@@ -146,9 +161,12 @@ do_voteboardreply(const fileheader_t * fhdr)
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncasecmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30)
             continue;
-	fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
+        uid = find_vote_entry_userid(genbuf);
+        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
+            continue;
+	fprintf(fo, "%3d.%s", ++yes, uid);
       }
     if (opnion[0] == 'y')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
@@ -157,9 +175,12 @@ do_voteboardreply(const fileheader_t * fhdr)
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncasecmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30)
             continue;
-	fprintf(fo, "%3d.%s", ++no, genbuf + 4);
+        uid = find_vote_entry_userid(genbuf);
+        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
+            continue;
+	fprintf(fo, "%3d.%s", ++no, uid);
     }
     if (opnion[0] == 'n')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
