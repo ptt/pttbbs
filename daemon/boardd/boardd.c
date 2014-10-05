@@ -90,7 +90,7 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
 
     if (ck && cklen) {
 	char ckbuf[128];
-	snprintf(ckbuf, sizeof(ckbuf), "%d-%d", st->st_dev, st->st_ino);
+	snprintf(ckbuf, sizeof(ckbuf), "%d-%d", (int) st->st_dev, (int) st->st_ino);
 	if (strncmp(ck, ckbuf, cklen) != 0)
 	    goto answer_file_errout;
     }
@@ -235,7 +235,7 @@ answer_articleselect(struct evbuffer *buf, const boardheader_t *bptr,
 {
     char path[PATH_MAX];
     const char *ck, *filename;
-    int cklen, offset, maxlen;
+    int cklen, offset, maxlen = 0;
     struct stat st;
 
     if (!parse_articlepart_key(rest_key, &ck, &cklen, &offset, &maxlen, &filename))
@@ -256,7 +256,7 @@ answer_articleselect(struct evbuffer *buf, const boardheader_t *bptr,
 
     struct evbuffer *meta = evbuffer_new();
     evbuffer_add_printf(meta, "%d-%d,%lu,%d,%d\n",
-			st.st_dev, st.st_ino, st.st_size, sel_offset, sel_size);
+			(int) st.st_dev, (int) st.st_ino, st.st_size, sel_offset, sel_size);
     evbuffer_prepend_buffer(buf, meta);
     evbuffer_free(meta);
     return 0;
@@ -353,7 +353,7 @@ answer_key(struct evbuffer *buf, const char *key)
 	    if (stat(path, &st) < 0)
 		return;
 
-	    evbuffer_add_printf(buf, "%d-%d,%ld", st.st_dev, st.st_ino, st.st_size);
+	    evbuffer_add_printf(buf, "%d-%d,%ld", (int) st.st_dev, (int) st.st_ino, st.st_size);
 	} else if (strncmp(key, "articlepart.", 12) == 0) {
 	    answer_articleselect(buf, bptr, key + 12, select_article_part, NULL);
 	} else if (strncmp(key, "articlehead.", 12) == 0) {
