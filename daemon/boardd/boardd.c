@@ -143,10 +143,12 @@ answer_key(struct evbuffer *buf, const char *key)
 	    int fd;
 
 	    setbfile(path, bptr->brdname, key + 8);
-	    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, &st) < 0)
+	    if ((fd = open(path, O_RDONLY)) < 0)
 		return;
-
-	    evbuffer_add_file(buf, fd, 0, st.st_size);
+            if (fstat(fd, &st) < 0 ||
+                st.st_size == 0 ||
+                evbuffer_add_file(buf, fd, 0, st.st_size) != 0)
+                close(fd);
 	} else
 	    return;
     } else if (strncmp(key, "tobid.", 6) == 0) {
