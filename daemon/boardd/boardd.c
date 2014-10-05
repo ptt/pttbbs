@@ -105,6 +105,11 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
     if (maxlen < 0 || offset + maxlen > st->st_size)
 	maxlen = st->st_size - offset;
 
+    if (maxlen == 0) {
+	close(fd);
+	return 0;
+    }
+
     if (evbuffer_add_file(buf, fd, offset, maxlen) == 0)
 	return 0;
 
