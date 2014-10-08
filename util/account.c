@@ -15,6 +15,9 @@
 #include <var.h>
 
 #define ADJUST_M        6	/* adjust back 5 minutes */
+#define ACT_ELEMENTS    27
+
+const char act_file[] = ".act";
 
 void
 reset_garbage(void)
@@ -85,15 +88,14 @@ gzip(const char *source, const char *target, const char *suffix)
 }
 
 static int
-parse_usies(const char *fn, struct tm *ptime, int act[27])
+parse_usies(const char *fn, int *act)
 {
-    const char const act_file[] = ".act";
     char buf[256], *p;
     FILE *fp;
 
     // load parsed result
-    if ((ptime->tm_hour != 0) && (fp = fopen(act_file, "r"))) {
-	fread(act, sizeof(act), 1, fp);
+    if ((fp = fopen(act_file, "r")) != NULL) {
+	fread(act, sizeof(act[0]), ACT_ELEMENTS, fp);
 	fclose(fp);
     }
 
@@ -103,8 +105,17 @@ parse_usies(const char *fn, struct tm *ptime, int act[27])
 	return 1;
     }
 
-    if (act[26])
-	fseek(fp, act[26], 0);
+    if (act[26]) {
+        if (dashs("usies") >= act[26]) {
+            fseek(fp, act[26], SEEK_SET);
+        } else {
+            // sorry, file is changed. let's re-parse.
+            printf("%s (%ld) corrupted (act: %d).\n", act_file, dashs(act_file),
+                   act[26]);
+            memset(act, 0, sizeof(act[0]) * ACT_ELEMENTS);
+            rewind(fp);
+        }
+    }
 
     while (fgets(buf, sizeof(buf), fp)) {
 	int hour;
@@ -132,7 +143,7 @@ parse_usies(const char *fn, struct tm *ptime, int act[27])
 
     // write parsed result
     if ((fp = fopen(act_file, "w"))) {
-	fwrite(act, sizeof(act), 1, fp);
+	fwrite(act, sizeof(act[0]), ACT_ELEMENTS, fp);
 	fclose(fp);
     }
 
@@ -140,7 +151,7 @@ parse_usies(const char *fn, struct tm *ptime, int act[27])
 }
 
 static int
-output_today(struct tm *ptime, int act[27], int peak_hour_login, int day_login)
+output_today(struct tm *ptime, int *act, int peak_hour_login, int day_login)
 {
     char buf[256];
     int i;
@@ -261,7 +272,7 @@ out:
 static int
 update_holiday_list(struct tm *ptime)
 {
-    const char const wday_str[] = "UMTWRFS";
+    const char wday_str[] = "UMTWRFS";
     char buf[256];
     int i = 0;
     FILE *fp, *fp1;
@@ -351,16 +362,16 @@ update_holiday(struct tm *ptime)
     return 0;
 }
 
-int 
+int
 main(/*int argc, char **argv*/)
 {
     int             i;
     int             mo, da;
     int             peak_hour_login, peak_hour, day_login;
-    const char const log_file[] = "usies";
+    const char log_file[] = "usies";
     char            buf[256], buf1[256];
     FILE           *fp;
-    int             act[27];	/* 次數/累計時間/pointer */
+    int             act[ACT_ELEMENTS];	/* 次數/累計時間/pointer */
     time_t          now;
     struct tm       tm_now, tm_adjusted;
 
@@ -376,7 +387,7 @@ main(/*int argc, char **argv*/)
     memset(act, 0, sizeof(act));
 
     printf("次數/累計時間\n");
-    parse_usies(log_file, &tm_adjusted, act);
+    parse_usies(log_file, act);
 
     peak_hour_login = peak_hour = 0;
     day_login = 0;
@@ -398,7 +409,7 @@ main(/*int argc, char **argv*/)
     update_history(&tm_adjusted, peak_hour, peak_hour_login, day_login);
 
     if (tm_now.tm_hour == 0) {
-	system("/bin/cp etc/today etc/yesterday");
+        Copy("etc/today", "etc/yesterday");
 	/* system("rm -f note.dat"); */
 
 	keeplog("etc/today", BN_RECORD, "上站人次統計", NULL);
@@ -407,12 +418,14 @@ main(/*int argc, char **argv*/)
 	keeplog("etc/osong.log", BN_SECURITY, "本日點歌記錄", NULL);
 	keeplog("etc/chicken", BN_RECORD, "雞場報告", NULL);
 
-	// Re-output today's user stats, because keeplog removes it
-	output_today(&tm_adjusted, act, peak_hour_login, day_login);
+        // Restore etc/yesterday because keeplog removes it.
+        Copy("etc/yesterday", "etc/today");
 
 	snprintf(buf, sizeof(buf), "[安全報告] 使用者上線監控 [%02d/%02d:%02d]",
 		tm_now.tm_mon + 1, tm_now.tm_mday, tm_now.tm_hour);
 	keeplog("usies", "Security", buf, "usies");
+        // usies is removed - so we have to also delete .act
+        remove(act_file);
 	printf("[安全報告] 使用者上線監控\n");
 
 	sprintf(buf, "-%02d%02d%02d",
@@ -452,8 +465,8 @@ main(/*int argc, char **argv*/)
 	if (tm_now.tm_yday == 1)
 	    keeplog("etc/year", BN_RECORD, "年度熱門話題", NULL);
     } else if (tm_now.tm_hour == 3 && tm_now.tm_wday == 6) {
-	const char const fn1[] = "tmp";
-	const char const fn2[] = "suicide";
+	const char fn1[] = "tmp";
+	const char fn2[] = "suicide";
 
 	rename(fn1, fn2);
 	Mkdir(fn1);
