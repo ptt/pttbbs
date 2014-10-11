@@ -27,10 +27,19 @@
 #include <perm.h>
 
 #include "server.h"
+#include "threadpool.h"
 
 #define CONVERT_TO_UTF8
+#define BOARDD_MT
 
 #define DEFAULT_ARTICLE_LIST 20
+#define NUM_THREADS 8
+
+// Globals
+
+#ifdef BOARDD_MT
+threadpool_t g_threadpool;
+#endif
 
 // helper function
 
@@ -652,19 +661,12 @@ static const struct {
     {NULL, cmd_unknown}
 };
 
-void
-client_read_cb(struct bufferevent *bev, void *ctx)
+static void
+process_line(struct bufferevent *bev, void *ctx, char *line)
 {
-    int argc, i;
     char **argv;
-    size_t len;
-    struct evbuffer *input = bufferevent_get_input(bev);
-    char *line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF);
-
-    if (!line)
-	return;
-
-    argc = split_args(line, &argv);
+    int argc = split_args(line, &argv);
+    int i;
 
     for (i = 0; cmdlist[i].cmd; i++)
 	if (evutil_ascii_strcasecmp(line, cmdlist[i].cmd) == 0)
@@ -676,12 +678,62 @@ client_read_cb(struct bufferevent *bev, void *ctx)
     free(line);
 }
 
+#ifdef BOARDD_MT
+
+typedef struct {
+    struct bufferevent *bev;
+    void *ctx;
+    char *line;
+} process_line_ctx;
+
+void
+process_line_job_func(void *ctx)
+{
+    process_line_ctx *cx = (process_line_ctx *) ctx;
+    process_line(cx->bev, cx->ctx, cx->line);
+    bufferevent_enable(cx->bev, EV_READ);
+    free(cx);
+}
+
+#endif
+
+void
+client_read_cb(struct bufferevent *bev, void *ctx)
+{
+    size_t len;
+    struct evbuffer *input = bufferevent_get_input(bev);
+    char *line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF);
+
+    if (!line)
+	return;
+
+#ifdef BOARDD_MT
+    process_line_ctx *plc = (process_line_ctx *) malloc(sizeof(process_line_ctx));
+    if (!plc)
+	return;
+
+    // One request at a time.
+    bufferevent_disable(bev, EV_READ);
+
+    plc->bev = bev;
+    plc->ctx = ctx;
+    plc->line = line;
+    threadpool_do(g_threadpool, threadpool_job_new(process_line_job_func, plc));
+#else
+    process_line(bev, ctx, line);
+#endif
+}
+
 void
 setup_program()
 {
     setuid(BBSUID);
     setgid(BBSGID);
     chdir(BBSHOME);
+
+#ifdef BOARDD_MT
+    g_threadpool = threadpool_new(NUM_THREADS);
+#endif
 
     attach_SHM();
 }
