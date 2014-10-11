@@ -29,6 +29,9 @@
 #include <event2/bufferevent.h>
 #include <event2/util.h>
 #include <event2/listener.h>
+#ifdef SERVER_USE_PTHREADS
+#include <event2/thread.h>
+#endif
 
 #include "server.h"
 
@@ -78,7 +81,7 @@ setup_client(struct event_base *base, evutil_socket_t fd,
        	struct sockaddr *address, int socklen)
 {
     struct bufferevent *bev = bufferevent_socket_new(base, fd,
-	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_THREADSAFE);
     bufferevent_setcb(bev, client_read_cb, NULL, client_event_cb, NULL);
     bufferevent_set_timeouts(bev, common_timeout, common_timeout);
     bufferevent_enable(bev, EV_READ|EV_WRITE);
@@ -125,8 +128,16 @@ int main(int argc, char *argv[])
 	    exit(EXIT_FAILURE);
 	}
 
+#ifdef SERVER_USE_PTHREADS
+    evthread_use_pthreads();
+#endif
+
     base = event_base_new();
     assert(base);
+
+#ifdef SERVER_USE_PTHREADS
+    evthread_make_base_notifiable(base);
+#endif
 
     common_timeout = event_base_init_common_timeout(base, &timeout);
 
