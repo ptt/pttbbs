@@ -183,7 +183,8 @@ output_today(struct tm *ptime, int *act, int peak_hour_login, int day_login)
     for (i = 0; i < 24; i++) {
         int hour_count = act[i];
         int bars = hour_count / bar_unit + 1;
-        fprintf(fp, ANSI_COLOR(1;32) "%02d " ANSI_COLOR(34), i);
+        fprintf(fp, ANSI_COLOR(1;32) "%02d %s" , i,
+                i % 2 ? ANSI_COLOR(36) : ANSI_COLOR(34));
 
         // render the bar
         if (bars*2 > bar_max_width)
