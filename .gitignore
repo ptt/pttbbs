@@ -1,0 +1,11 @@
+*.o
+*.a
+.depend
+.clang_complete
+var.h
+/pttbbs.conf
+/local.h
+common/sys/big5.c
+mbbsd/mbbsd
+mbbsd/testsz
+mbbsd/vers.c
