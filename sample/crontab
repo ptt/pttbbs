@@ -68,16 +68,6 @@
 #*/5	*	*	*	*	bin/shmsweep
 #*/10	*	*	*	*	bin/userlist
 
-# Âà«H
-*/30	*	*	*	*	(kill -0 `cat /tmp/innbbsd-7777.pid` || innd/innbbsd 7777)
-0,30	2-21	*	*	*	innd/bbslink /home/bbs
-0	3	*	*	*	bin/inndBM
-10	3	*	*	*	innd/ctlinnbbsd reload
-17,47	2,4-21	*	*	*	innd/bbsnnrpall.auto.sh
-40	3	*	*	*	/bin/mv innd/bbslog innd/bbslog.old
-40	2	*	*	*	/bin/mv innd/log/inndBM.log innd/log/inndBM.log.old
-40	2	*	*	*	/bin/mv innd/log/inndBM.log.err innd/log/inndBM.log.err.old
-
 # jobspool
 10	3-20	*	*	*	bin/waterball.pl
 30	3	*	*	*	bin/tarqueue.pl

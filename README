@@ -1,6 +1,3 @@
-文章的版號及最後編修時間是:
-$Id$
-
 快速安裝請參考 docs/INSTALL 以及 docs/FAQ
 詳細文件請見 docs/
 
@@ -11,8 +8,8 @@ $Id$
 目錄結構:
 	LICENSE			本軟體各檔案在未另外指定時的授權方式
 				請注意部份檔案使用不同的授權 (如 BSD License)
-				由於 GPL 的限制，授權不相容的程式碼都已預設為不使用
-				並有提供 GPL 相容版本的替代用程式碼以維持功能完整。
+				由於 GPL 的限制，授權不相容的程式碼已預設為不使用
+				並有提供 GPL 相容版本的替代用程式碼以維持功能完整
 				詳情與設定請參見各檔案內文。
 	
 	docs/			文件
@@ -32,10 +29,7 @@ $Id$
 		pttbbs.conf	範例設定檔 (完整)
 		pttbbs_minimal.conf 最小設定檔
 
-	innbbsd/		轉信
-
 	web/			Web 相關系統
-		blog/		PttBlog
 		static/		靜態網頁瀏覽界面 (唯讀)
 	daemon/			背景服務伺服程式
 		utmpd/		utmp cache server (experimental)

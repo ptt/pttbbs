@@ -1,7 +1,9 @@
-*.o
 *.a
+*.o
+*.pyc
 .depend
 .clang_complete
+tags
 var.h
 /pttbbs.conf
 /local.h

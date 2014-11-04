@@ -3,5 +3,4 @@
 
 /usr/bin/su bbsadm -c /home/bbs/bin/shmctl init
 /usr/bin/su bbsadm -c /home/bbs/bin/outmail&
-/usr/bin/su bbsadm -c /home/bbs/innd/innbbsd 7777
 /home/bbs/bin/bbsctl start

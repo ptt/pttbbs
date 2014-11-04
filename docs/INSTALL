@@ -1,5 +1,4 @@
 這篇文件說明快速安裝的方法, 文章的版號及最後編修時間是:
-$Id$
 
 ==============
 以 root 的權限
@@ -33,20 +32,18 @@ $Id$
 ====================
 
  7. 您可以透過下列方式下載到本站的原始程式碼:
-    https://OpenSVN.csie.org/pttbbs/trunk/
+    https://github.com/ptt/pttbbs
     這是目前主要開發的版本, 也是批踢踢實業坊和批踢踢兔兩個站台
     所使用的版本. 在這個版本中含有最新的程式, 但是可能會不穩定,
     有 bug, 甚至和之前的版本不相容. 建議您有基礎的程式能力, 並
-    隨時注意 PttCurrent 看板 (在 telnet://ptt.cc中, 或可以使用
+    隨時注意 PttCurrent 看板 (在 telnet://ptt.cc 中, 或可以使用
     網頁版本 http://www.ptt.cc/bbs/PttCurrent/index.html) , 尤
     其當您在更新程式的時候.
 
-    透過 subversion 聯繫 pttbbs version control repository(註4)
-    執行 svn checkout http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
+    git clone http://github.com/ptt/pttbbs
 
-    您可以在該目錄下直接透過 svn update 更新至 pttbbs 最新的源碼. 如:
-    cd /home/bbs/pttbbs; svn update
-    (須先安裝 subversion, 見註4)
+    您可以在該目錄下直接透過 git pull 更新至 pttbbs 最新的源碼. 如:
+    cd /home/bbs/pttbbs; git pull; git rebase
 
  8. 切換到 pttbbs 的目錄下 ( cd ~bbs/pttbbs )
  9. 如果您的 pttbbs.conf並不存在, 可以拷一份預設的來用:
@@ -58,14 +55,9 @@ $Id$
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
     * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake,
       然後將 make alias 成 pmake *
- 11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, zip, pgp
-    如果您使用的是 FreeBSD, 可以直接透過 ports安裝:
-        cd /usr/ports/converters/libiconv; make install
-        cd /usr/ports/archivers/zip; make install
-        cd /usr/ports/security/pgp; make install
- 12. (在 ~bbs/pttbbs 下)  執行 make BBSHOME=/home/bbs all install
- 13.如果是新架起來的站, 請執行 cd sample; make install
- 14.執行 cd /home/bbs; bin/initbbs -DoIt
+ 11. (在 ~bbs/pttbbs 下)  執行 make BBSHOME=/home/bbs all install
+ 12.如果是新架起來的站, 請執行 cd sample; make install
+ 13.執行 cd /home/bbs; bin/initbbs -DoIt
 
 其中第 13 以及 14 步是給第一次安裝的時候使用的,
 如果您的 BBS中已經有資料了, 請務必不要執行這兩個步驟.
@@ -126,8 +118,4 @@ $Id$
    來啟動可以 bind port 23 的 mbbsd.
    對於 ptt/ptt2 規模的超級大站，還有另一個選擇是使用 daemon/logind 。
 
-4. 您必須先安裝 subversion (請參考官方網站 http://subversion.tigris.org/ )
-   在 FreeBSD底下, 直接使用 ports 安裝即可:
-       cd /usr/ports/devel/subversion/; make all install
-   其他作業系統請參考 http://subversion.tigris.org/project_packages.html
-   或相關文件.
+4. 您必須先安裝 git (請參考官方網站 http://git-scm.com/ )
