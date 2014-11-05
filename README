@@ -32,8 +32,18 @@
 	web/			Web 相關系統
 		static/		靜態網頁瀏覽界面 (唯讀)
 	daemon/			背景服務伺服程式
+                angelbeats/     小天使相關服務
+                banipd/         判斷是否 IP 已被 ban 掉 (experimental)
+                barebone/       伺服程式骨架
+                boardd/         看板文章服務 (for web)
+                bpop3d/         POP3 mail (deprecated)
+                brcstored/      BRC 儲存服務 (failed experimental)
+                commentd/       推文記錄服務 (experimental)
+                fromd/          故鄉查詢
+                logind/         海量登入前導程式
+                postd/          文章記錄服務 (experimental)
+                regmaild/       註冊 email 相關服務
 		utmpd/		utmp cache server (experimental)
-
 	include/		include 檔
 	common/			共用程式庫
 	mbbsd/			bbs 文字模式 (terminal) 主程式
