@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 自動砍user目錄檔案程式 */
 
 #include "bbs.h"

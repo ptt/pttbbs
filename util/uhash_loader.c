@@ -1,4 +1,3 @@
-/* $Id$ */
 /* standalone uhash loader -- jochang */
 #include "bbs.h"
 #include "fnv_hash.h"

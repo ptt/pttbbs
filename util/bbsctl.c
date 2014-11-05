@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #ifdef __FreeBSD__

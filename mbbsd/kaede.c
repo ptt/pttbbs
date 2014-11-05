@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // TODO move stuff to libbbs(or util)/string.c, ...

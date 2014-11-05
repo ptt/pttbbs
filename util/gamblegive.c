@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 爭議賭盤 產生紅包機格式 */
 #define _UTIL_C_
 #include "bbs.h"

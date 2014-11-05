@@ -1,4 +1,3 @@
-/* $Id$ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 

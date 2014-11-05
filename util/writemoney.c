@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 把 SHM 中的 money 全部寫回 .PASSWDS */
 #define _UTIL_C_
 #include "bbs.h"

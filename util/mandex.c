@@ -1,4 +1,3 @@
-/* $Id$ */
 
 /* 'mandex -h' to help */
 

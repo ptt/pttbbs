@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // XXX numposts itself is an integer, but some records (by del post!?) may

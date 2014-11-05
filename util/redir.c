@@ -1,4 +1,3 @@
-/* $Id: timecap_buildref.c 5198 2010-11-01 09:32:43Z piaip $ */
 
 #include "bbs.h"
 #define SKIP_FILE_CHECK

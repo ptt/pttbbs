@@ -1,4 +1,3 @@
-/* $Id$ */
 
 #include "cmbbs.h"
 #include <assert.h>

@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #ifndef PLAY_ANGEL

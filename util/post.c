@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {

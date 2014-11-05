@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #ifndef NEW_AIDS

@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define SPOOL BBSHOME "/out"

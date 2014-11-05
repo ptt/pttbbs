@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // XXX piaip 2007/12/29

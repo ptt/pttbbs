@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 #include "chess.h"
 #include <setjmp.h>

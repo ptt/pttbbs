@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "vtkbd.h"
 #include "bbs.h"
 

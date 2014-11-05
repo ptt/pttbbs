@@ -1,4 +1,3 @@
-/* $Id$ */
 /* ¶}¼úªº utility */
 #define _UTIL_C_
 #include "bbs.h"

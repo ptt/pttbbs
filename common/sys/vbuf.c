@@ -1,4 +1,3 @@
-// $Id$
 //
 // vbuf.c
 // piaip's simple virtual (ring) buffer

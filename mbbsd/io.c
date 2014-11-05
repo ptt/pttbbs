@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 //kcwu: 80x24 一般使用者名單 1.9k, 含 header 2.4k

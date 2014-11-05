@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define COMPLETE_MORE_MSG   "按空白鍵可列出更多項目"

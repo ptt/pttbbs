@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define lockreturn(unmode, state)  if(lockutmpmode(unmode, state)) return

@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define PERMCHECK(s) {s, #s}

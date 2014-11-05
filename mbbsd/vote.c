@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // XXX TODO bvote 跟實際的 vote control file 有時會不同步...

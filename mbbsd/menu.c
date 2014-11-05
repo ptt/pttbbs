@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // UNREGONLY 改為由 BASIC 來判斷是否為 guest.

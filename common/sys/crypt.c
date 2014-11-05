@@ -1,4 +1,3 @@
-/* $Id */
 /* This file is crypt.c taken from ssh 1.2.33, only modified for compile */
 /**
  * FreeBSD 及 Linux glibc 附的 crypt() 都會用到大 table 加速多次 crypt().

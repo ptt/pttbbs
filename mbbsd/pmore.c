@@ -1,4 +1,3 @@
-/* $Id$ */
 
 /*
  * pmore: piaip's more, a new replacement for traditional pager

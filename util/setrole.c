@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define DEFINEROLE(s) {s, #s}

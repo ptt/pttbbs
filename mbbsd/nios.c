@@ -1,4 +1,3 @@
-/* $Id$ */
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <unistd.h>

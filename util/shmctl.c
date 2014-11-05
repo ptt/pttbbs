@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 #include <sys/wait.h>
 #include <string.h>

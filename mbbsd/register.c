@@ -1,4 +1,3 @@
-/* $Id$ */
 #define PWCU_IMPL
 #include "bbs.h"
 

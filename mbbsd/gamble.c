@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define MAX_ITEM	8	//最大 彩券項目(item) 個數

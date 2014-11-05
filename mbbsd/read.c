@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 static int headers_size = 0;

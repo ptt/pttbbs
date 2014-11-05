@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #ifdef _BBS_UTIL_C_

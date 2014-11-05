@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 SHM_t   *SHM;

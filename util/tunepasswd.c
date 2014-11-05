@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 int tune(int num) {

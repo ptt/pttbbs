@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 這是用來將樹狀分類輸出成 perl module (可以給像是 man/ 使用) */
 #include "bbs.h"
 /* 產生 hash 的內容如下:
@@ -167,7 +166,6 @@ int main(int argc, char **argv)
            "# this is auto-generated perl module from boardlist.c\n"
            "# please do NOT modify this directly!\n"
            "# usage: make boardlist; ./boardlist | perl\n"
-           "# Id of boardlist.c: $Id$\n"
            "use DB_File;\n"
 	   "use Data::Serializer;\n"
 	   "\n"

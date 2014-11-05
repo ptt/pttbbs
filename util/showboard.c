@@ -1,4 +1,3 @@
-/* $Id$ */
 /* ¬ÝªO¤@Äýªí(sorted) */
 #include "bbs.h"
 

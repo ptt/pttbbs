@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 int post_msg2(const char* bname, const char* title, const char *msg,

@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #if !defined(USE_PFTERM)

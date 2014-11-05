@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 // Common Chat Window (CCW)

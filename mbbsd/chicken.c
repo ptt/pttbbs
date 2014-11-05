@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "bbs.h"
 
 #define NUM_KINDS   15		/* 有多少種動物 */

@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id: newvers.sh,v 1.2 2003/06/22 14:45:17 in2 Exp $
 
 # prevent localized logs
 LC_ALL=C

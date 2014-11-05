@@ -1,4 +1,3 @@
-/* $Id: reaper.c 4826 2009-09-10 10:05:12Z piaip $ */
 #define _UTIL_C_
 #include "bbs.h"
 
