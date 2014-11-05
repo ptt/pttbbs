@@ -516,12 +516,17 @@ give_money_ui(const char *userid)
     return 0;
 }
 
+// in vers.c
+extern const char *build_remote;
+extern const char *build_origin;
+extern const char *build_hash;
+extern const char *build_time;
+
 int
 p_sysinfo(void)
 {
     const char *cpuloadstr;
     int             load;
-    extern char    *compile_time;
 #ifdef DETECT_CLIENT
     extern Fnv32_t  client_code;
 #endif
@@ -538,13 +543,13 @@ p_sysinfo(void)
     showtitle("系統資訊", BBSNAME);
     move(2, 0);
     prints("您現在位於 " TITLE_COLOR BBSNAME ANSI_RESET " (" MYIP ")\n"
-	   "系統負載情況: %s\n"
-	   "線上服務人數: %d/%d\n"
+	   "系統負載: %s\n"
+	   "線上人數: %d/%d\n"
 #ifdef DETECT_CLIENT
-	   "client code:  %8.8X\n"
+	   "ClientCode: %8.8X\n"
 #endif
-	   "編譯時間:     %s\n"
-	   "起始時間:     %s\n",
+	   "起始時間: %s\n"
+	   "編譯時間: %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
 #ifdef DYMAX_ACTIVE
 	   // XXX check the related logic in mbbsd.c
@@ -556,24 +561,22 @@ p_sysinfo(void)
 #ifdef DETECT_CLIENT
 	   client_code,
 #endif
-	   compile_time, Cdatelite(&start_time));
+           Cdatelite(&start_time),
+	   build_time);
+    if (*build_remote) {
+      prints("編譯版本: %s %s %s\n", build_remote, build_origin, build_hash);
+    }
 
 #ifdef REPORT_PIAIP_MODULES
     outs("\n" ANSI_COLOR(1;30)
 	    "Modules powered by piaip:\n"
-	    "\ttelnet/vkbd protocol, vtuikit, ALOHA fixer, BRC v3\n"
+	    "\ttelnet/vkbd protocol, vtuikit, BRC v3, ...\n"
 	    "\tpiaip's Common Chat Window (CCW)\n"
 #if defined(USE_PIAIP_MORE) || defined(USE_PMORE)
 	    "\tpmore (piaip's more) 2007 w/Movie\n"
 #endif
-#ifdef HAVE_GRAYOUT
-	    "\tGrayout Advanced Control 淡入淡出特效系統\n"
-#endif
 #ifdef EDITPOST_SMARTMERGE
 	    "\tSmart Merge 修文自動合併\n"
-#endif
-#ifdef EXP_EDIT_UPLOAD
-	    "\t(EXP) Editor Uploader 長文上傳\n"
 #endif
 #if defined(USE_PFTERM)
 	    "\t(EXP) pfterm (piaip's flat terminal, Perfect Term)\n"
