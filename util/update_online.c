@@ -16,9 +16,7 @@ void fastcheck()
 
     base = time4(0);
     localtime4_r(&base, &base_tm);
-    base_tm.tm_sec = base_tm.tm_min = base_tm.tm_hour = 0;
-    base_tm.tm_min = 40; base_tm.tm_hour = 9;
-    base = mktime(&base_tm);
+    base = mktime(&base_tm) - DAY_SECONDS;
 
     assert(sizeof(sorted) == sizeof(**SHM->sorted));
     memcpy(sorted, SHM->sorted[SHM->currsorted][7],
