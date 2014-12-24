@@ -11,12 +11,9 @@ void fastcheck()
     int sorted[USHM_SIZE], last_uid = -1;
     userec_t urec;
     userinfo_t u;
-    struct tm base_tm = {0};
     time4_t base;
 
-    base = time4(0);
-    localtime4_r(&base, &base_tm);
-    base = mktime(&base_tm) - DAY_SECONDS;
+    base = time4(0) - DAY_SECONDS;
 
     assert(sizeof(sorted) == sizeof(**SHM->sorted));
     memcpy(sorted, SHM->sorted[SHM->currsorted][7],
