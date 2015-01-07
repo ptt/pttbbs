@@ -48,13 +48,11 @@ threadpool_t g_threadpool;
      !(bptr->brdattr & BRD_POSTMASK)))
 
 static void
-article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
+dir_list(struct evbuffer *buf, const char *path, int offset, int length)
 {
     int total, fd = -1;
-    char path[PATH_MAX];
     fileheader_t fhdr;
 
-    setbfile(path, bptr->brdname, FN_DIR);
     total = get_num_records(path, sizeof(fileheader_t));
 
     if (total <= 0)
@@ -63,7 +61,7 @@ article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
     while (offset < 0)
 	offset += total;
 
-    while (length-- > 0) {
+    while (length < 0 || length-- > 0) {
 	if (get_records_keep(path, &fhdr, sizeof(fhdr), ++offset, 1, &fd) <= 0)
 	    break;
 
@@ -76,6 +74,22 @@ article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
 
     if (fd >= 0)
 	close(fd);
+}
+
+static void
+article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
+{
+    char path[PATH_MAX];
+    setbfile(path, bptr->brdname, FN_DIR);
+    return dir_list(buf, path, offset, length);
+}
+
+static void
+bottom_article_list(struct evbuffer *buf, boardheader_t *bptr)
+{
+    char path[PATH_MAX];
+    setbfile(path, bptr->brdname, FN_DIR ".bottom");
+    return dir_list(buf, path, 0, -1);
 }
 
 static int
@@ -326,6 +340,8 @@ answer_key(struct evbuffer *buf, const char *key)
 		bptr = getbcache(bid);
 		evbuffer_add_printf(buf, "%d,", bid);
 	    }
+        } else if (strcmp(key, "bottoms") == 0) {
+            bottom_article_list(buf, bptr);
 	} else if (strncmp(key, "articles.", 9) == 0) {
 	    int offset, length;
 
