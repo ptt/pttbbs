@@ -81,7 +81,7 @@ article_list(struct evbuffer *buf, boardheader_t *bptr, int offset, int length)
 {
     char path[PATH_MAX];
     setbfile(path, bptr->brdname, FN_DIR);
-    return dir_list(buf, path, offset, length);
+    dir_list(buf, path, offset, length);
 }
 
 static void
@@ -89,7 +89,7 @@ bottom_article_list(struct evbuffer *buf, boardheader_t *bptr)
 {
     char path[PATH_MAX];
     setbfile(path, bptr->brdname, FN_DIR ".bottom");
-    return dir_list(buf, path, 0, -1);
+    dir_list(buf, path, 0, -1);
 }
 
 static int
@@ -340,8 +340,8 @@ answer_key(struct evbuffer *buf, const char *key)
 		bptr = getbcache(bid);
 		evbuffer_add_printf(buf, "%d,", bid);
 	    }
-        } else if (strcmp(key, "bottoms") == 0) {
-            bottom_article_list(buf, bptr);
+	} else if (strcmp(key, "bottoms") == 0) {
+	    bottom_article_list(buf, bptr);
 	} else if (strncmp(key, "articles.", 9) == 0) {
 	    int offset, length;
 
