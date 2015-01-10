@@ -809,7 +809,7 @@ static int newdirect_new_ln = -1;
 
 static int
 i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
-           int bid, int bottom_line)
+           int bid, int bottom_line, int pending_draws)
 {
     int     mode = DONOTHING, num, new_top=10;
     int     ch, new_ln = locmem->crs_ln, lastmode = DONOTHING;
@@ -820,9 +820,16 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    != DONOTHING )
 	    return mode;
 
-	if( !default_ch )
+	if( !default_ch ) {
+	    // Waiting for a key.
+
+	    // We should have drawn the listing.
+	    // If we had not, do it now.
+	    if (pending_draws)
+		return FULLUPDATE;
+
 	    ch = vkey();
-	else{
+	} else {
 	    if(new_ln != locmem->crs_ln) {// move fault
 		default_ch=0;
 		return FULLUPDATE;
@@ -1170,6 +1177,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	if (ZA_Waiting())
 	    mode = DOQUIT;
 
+	// Nothing to do keeps listing untouch.
+	// If the listing is not ready (user seeable),
+	// we have to manually trigger the redraw.
+	if (mode == DONOTHING && pending_draws)
+	    return FULLUPDATE;
+
     } while (mode == DONOTHING);
     return mode;
 }
@@ -1247,6 +1260,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     int             headers_size0 = headers_size;
     time4_t	    enter_time = now;
     const size_t FHSZ = sizeof(fileheader_t);
+    int             needs_fullupdate = 0;
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
     /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
@@ -1302,6 +1316,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 
 	default: // for any unknown keys
 	case FULLUPDATE:
+	    needs_fullupdate = 0;
 	    (*dotitle) ();
 	    /* no break */
 
@@ -1383,10 +1398,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
                 entries =
 		    get_records_and_bottom(currdirect, headers, recbase,
 					   headers_size, last_line, bottom_line);
+		needs_fullupdate = 1;
 	    }
             break;
 	} //end switch
-	mode = i_read_key(rcmdlist, locmem, currbid, bottom_line);
+	mode = i_read_key(rcmdlist, locmem, currbid, bottom_line, needs_fullupdate);
     } while (mode != DOQUIT && !ZA_Waiting());
 
     free(headers);
