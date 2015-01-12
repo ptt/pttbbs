@@ -210,7 +210,7 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 case 'n': case 'o':
                     {
                         static const char *numx = "*+,-./";
-                        assert( c >= 'j' && (c-'j') < strlen(numx));
+                        assert( c >= 'j' && (c-'j') < (int)strlen(numx));
                         ctx->state = VKSTATE_NORMAL;
                         return numx[c-'j'];
                     }

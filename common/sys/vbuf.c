@@ -216,7 +216,7 @@ vbuf_getstr (VBUF *v, char *s, size_t sz)
 VBUFPROTO int 
 vbuf_putstr (VBUF *v, const char *s)
 {
-    int len = strlen(s) + 1;
+    size_t len = strlen(s) + 1;
     if (vbuf_space(v) < len)
         return 0;
     vbuf_putblk(v, s, len);
@@ -420,7 +420,7 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
         is_min = 1;
     }
 
-    if (sz < 1 || vbuf_size(v) < sz)
+    if (sz < 1 || (ssize_t)vbuf_size(v) < sz)
         return 0;
     
     do {
@@ -465,7 +465,7 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
         is_min = 1;
     }
 
-    if (sz < 1 || vbuf_space(v) < sz)
+    if (sz < 1 || (ssize_t)vbuf_space(v) < sz)
         return 0;
     
     do {

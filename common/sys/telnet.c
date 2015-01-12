@@ -116,7 +116,7 @@ ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size)
     /* process buffer */
     if (size > 0) {
 	unsigned char *buf2 = buf;
-	size_t i = 0, i2 = 0;
+	ssize_t i = 0, i2 = 0;
 
 	/* prescan. because IAC is rare, 
 	 * this cost is worthy. */
@@ -384,7 +384,7 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 			void (*cb)(void *, unsigned char) = 
 			    ctx->callback->update_client_code;
 			
-			int i;
+			unsigned int i;
 			for(i=0;i<ctx->iac_buflen;i++)
 			    cb(ctx->cc_arg, ctx->iac_buf[i]);
 			cb(ctx->cc_arg, IAC);

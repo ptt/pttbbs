@@ -59,6 +59,8 @@ setuserhashedfile(char *buf, const char *filename)
             (hash >> 8) & 0xff, hash & 0xff, 
             filename, cuser.userid, cuser.firstlogin);
 #else
+    (void)buf;
+    (void)filename;
     assert(!"you must define and initialize USERHASHSTORE_ROOTPATH");
 #endif
 }
