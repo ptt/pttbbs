@@ -1,6 +1,6 @@
 #include "bbs.h"
 
-void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
+void keeplog(FILE *fin, char *board, char *title, char *owner) {
     fileheader_t fhdr;
     char genbuf[256], buf[512];
     FILE *fout;
@@ -52,6 +52,6 @@ int main(int argc, char **argv)
 	    return 1;
 	}
     }
-    keeplog(fp, argv[4], argv[1], argv[2], argv[3]);
+    keeplog(fp, argv[1], argv[2], argv[3]);
     return 0;
 }

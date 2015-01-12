@@ -158,7 +158,7 @@ void dumpallbrdname(void)
     fclose(fp);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     attach_SHM();
 

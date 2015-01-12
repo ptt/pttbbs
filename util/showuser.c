@@ -2,6 +2,8 @@
 #include "bbs.h"
 
 int check(void *data, int n, userec_t *u) {
+    (void)data;
+    (void)n;
 
     if (!u->userid[0])
         return 0;
@@ -10,7 +12,7 @@ int check(void *data, int n, userec_t *u) {
     return 0;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     chdir(BBSHOME);
     attach_SHM();

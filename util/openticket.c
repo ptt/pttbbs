@@ -138,7 +138,7 @@ int main()
     FILE *fp;
     char des[MAX_DES][200] = {"", "", "", ""};
 
-    char newbetname[MAX_ITEM][MAX_ITEM_LEN] = {0};
+    char newbetname[MAX_ITEM][MAX_ITEM_LEN] = {{0}};
     char betname[MAX_ITEM][MAX_ITEM_LEN] = {
         "Ptt", "Jaky",  "Action",  "Heat",
         "DUNK", "Jungo", "waiting", "wofe",

@@ -54,6 +54,7 @@ int main(int argc, const char **argv)
     int uid;
     int is_utf8 = 0;
     char remote_ip[MAX_REMOTE_IP_LEN + 1];
+    (void)argc;
 
     if (strstr(argv[0], "utf8")) 
         is_utf8 = 1;

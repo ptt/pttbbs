@@ -527,6 +527,8 @@ int utmpstatus(int argc, char **argv)
 {
     time_t  now;
     char    upbuf[64], nowbuf[64];
+    (void)argc;
+    (void)argv;
 #ifdef OUTTA_TIMER
     now = SHM->GV2.e.now;
 #else
@@ -544,6 +546,8 @@ int utmpstatus(int argc, char **argv)
 
 int utmpreset(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     SHM->UTMPbusystate=0;
     utmpstatus(0, NULL);
     return 0;
@@ -553,6 +557,8 @@ int utmpreset(int argc, char **argv)
 int utmpwatch(int argc, char **argv)
 {
     int     i;
+    (void)argc;
+    (void)argv;
     while( 1 ){
 	for( i = 0 ; i < TIMES ; ++i ){
 	    usleep(300);
@@ -570,6 +576,8 @@ int utmpwatch(int argc, char **argv)
 
 int utmpnum(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     printf("%d.0\n", SHM->UTMPnumber);
     return 0;
 }
@@ -578,6 +586,8 @@ const char    *GV2str[] = {"dymaxactive", "toomanyusers",
 		     "noonlineuser","now", "nWelcomes", "shutdown", NULL};
 int showglobal(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     int     i;
     for( i = 0 ; GV2str[i] != NULL ; ++i )
 	printf("GV2.%s = %d\n", GV2str[i], SHM->GV2.v[i]);
@@ -607,6 +617,8 @@ int setglobal(int argc, char **argv)
 int listpid(int argc, char **argv)
 {
     int     i;
+    (void)argc;
+    (void)argv;
     for( i = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].pid > 0 )
 	    printf("%d\n", SHM->uinfo[i].pid);
@@ -703,6 +715,8 @@ static void update_brd(int i) {
 int fixbrd(int argc, char **argv)
 {
     int     i = 0;
+    (void)argc;
+    (void)argv;
 
     for( i = 0 ; i < MAX_BOARD ; ++i )
     {
@@ -745,6 +759,8 @@ int fixbrd(int argc, char **argv)
 int timed(int argc, char **argv)
 {
     pid_t   pid;
+    (void)argc;
+    (void)argv;
     if( (pid = fork()) < 0 )
 	perror("fork()");
     if( pid != 0 )
@@ -783,6 +799,8 @@ void buildclass(int bid, int level)
 int bBMC(int argc, char **argv)
 {
     int     i;
+    (void)argc;
+    (void)argv;
     for( i = 0 ; i < MAX_BOARD ; ++i )
 	if( bcache[i].brdname[0] )
 	    buildBMcache(i + 1); /* XXXbid */
@@ -968,6 +986,8 @@ int hotboard(int argc, char **argv)
 int usermode(int argc, char **argv)
 {
     int     i, modes[MAX_MODES];
+    (void)argc;
+    (void)argv;
     memset(modes, 0, sizeof(modes));
     for( i = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].userid[0] )
@@ -980,6 +1000,8 @@ int usermode(int argc, char **argv)
 
 int torb(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     reload_bcache();
     puts("bcache reloaded");
     return 0;
@@ -1005,6 +1027,8 @@ int fixbcache(int argc, char **argv)
 {
     int     n, fd, bid, changed = 0;
     boardheader_t bh;
+    (void)argc;
+    (void)argv;
 
     if( (fd = open(fn_board, O_RDONLY)) < 0 ){
 	perror("open .BRD");
@@ -1043,6 +1067,8 @@ int fixbcache(int argc, char **argv)
 
 int rlfcache(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     reload_fcache();
     puts("fcache reloaded");
     return 0;
@@ -1060,6 +1086,8 @@ int iszero(void *addr, int size)
 #define TESTZERO(x,i) do { if(!iszero((x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
 int testgap(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
     int i;
     TESTZERO(SHM->gap_1,0);
     TESTZERO(SHM->gap_2,0);
@@ -1141,6 +1169,7 @@ int showstat(int argc, char *argv[])
 	"STAT_QUERY_SCPU",
 	"STAT_QUERY_UCPU",
     };
+    (void)argc;
 
     if(argv[1] && strcmp(argv[1],"-c")==0)
 	flag_clear=1;
@@ -1155,6 +1184,8 @@ int showstat(int argc, char *argv[])
 
 int dummy(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
     return 0;
 }
 

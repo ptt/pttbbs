@@ -75,7 +75,7 @@ void buildchilds(int level,char *path,int gid)
 }
 
 
-int main(int argc, char **argv)
+int main(void)
 { 
     char path[512];
     setsid();

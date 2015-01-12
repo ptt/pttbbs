@@ -13,6 +13,8 @@ time4_t now;
 static int free_accs = 0;
 int check_free(void *data, int n, userec_t *u)
 {
+    (void)data;
+    (void)n;
     if (u->userid[0] == 0)
 	free_accs++;
     return 0;
@@ -124,6 +126,7 @@ int check(void *data, int n, userec_t *u) {
 
 int check_last_login(void *data, int n, userec_t *u) {
     char buf[256];
+    (void)data;
 
     if (u->userid[0] == 0)
         return 0;
@@ -164,7 +167,7 @@ int check_last_login(void *data, int n, userec_t *u) {
 }
 
 
-int main(int argc, char **argv)
+int main(void)
 {
     now = time(NULL);
     openlog("reaper", LOG_PID | LOG_PERROR, SYSLOG_FACILITY);

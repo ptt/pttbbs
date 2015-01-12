@@ -42,7 +42,7 @@ size_t strlcat(char *dst, const char *src, size_t size);
 extern void initsetproctitle(int argc, char **argv, char **envp);
 extern void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 #else
-#define initsetproctitle(...)
+#define initsetproctitle(argc, argv, envp) do { (void)argc; (void)argv; (void)envp; } while (0)
 #endif
 
 extern int cpuload(char *str);

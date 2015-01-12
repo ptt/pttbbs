@@ -71,7 +71,7 @@ int bmlostdays_cmp(const void *va, const void *vb)
     return strcmp(a->bmname, b->bmname);
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
     int bmid, i, j=0;
     FILE *inf, *firef;

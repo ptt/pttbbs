@@ -80,7 +80,8 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
 void chkhbf(boardheader_t *bptr)
 {
     char    fn[256], chkuser[256];
-    int     i, nEXP = 0;
+    size_t  i;
+    int     nEXP = 0;
     FILE    *fp;
     userec_t xuser;
 
@@ -113,8 +114,7 @@ void chkhbf(boardheader_t *bptr)
 	for( p = BM ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
 		*p = ' ';
-	for( i = 0, p = strtok(BM, " ") ; p != NULL ;
-	     ++i, p = strtok(NULL, " ") )
+	for(p = strtok(BM, " ") ; p != NULL ; p = strtok(NULL, " ") )
 	    informBM(p, bptr, nEXP);
     }
 }

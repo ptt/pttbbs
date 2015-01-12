@@ -5,6 +5,7 @@ extern SHM_t   *SHM;
 
 void print_help(int argc, char *argv[])
 {
+    (void)argc;
     fprintf(stderr, "Usage: %s [-t sleep_time] [-n users_per_round] [-o broadcast_name] broadcast content\n\n", argv[0]);
 }
 

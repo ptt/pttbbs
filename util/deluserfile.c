@@ -74,7 +74,7 @@ void mv_user_home(char *ptr)
     }
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     struct dirent *de;
     DIR *dirp;

@@ -76,7 +76,7 @@ int need_qp(const char *_s)
 }
 
 void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
-    int n;
+    size_t n;
     char buf[2048];
     char subject_qp[STRLEN*3+100];
     static  int     starttime = -1, msgid = 0;
@@ -195,6 +195,7 @@ void listQueue() {
 }
 
 void wakeup(int s) {
+    (void)s;
 }
 
 void parseserver(char *sx, char **name, int *port)
