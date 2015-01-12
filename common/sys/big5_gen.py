@@ -8,11 +8,11 @@ b2u = [line.strip().split(' ')
 b2u = dict((int(b, 0), int(u, 0)) for (b, u) in b2u)
 
 print """#include <stdint.h>
-extern const uint16_t const b2u_table[];
-extern const uint16_t const u2b_table[];
-extern const uint8_t const b2u_ambiguous_width[];
+extern const uint16_t b2u_table[];
+extern const uint16_t u2b_table[];
+extern const uint8_t b2u_ambiguous_width[];
 """
-print "const uint16_t const b2u_table[0x10000] = {"
+print "const uint16_t b2u_table[0x10000] = {"
 for i in range(0x10000):
     print '0x%04x,' % (i if i not in b2u else b2u[i]),
     if i % 10 == 9:
@@ -26,7 +26,7 @@ u2b = [line.strip().split(' ')
        if line.strip().startswith('0x')]
 u2b = dict((int(u, 0), int(b, 0)) for (b, u) in u2b)
 
-print "const uint16_t const u2b_table[0x10000] = {"
+print "const uint16_t u2b_table[0x10000] = {"
 for i in range(0x10000):
     print '0x%04x,' % (i if i not in u2b else u2b[i]),
     if i % 10 == 9:
@@ -41,7 +41,7 @@ for entry in ambcjk_data:
     a = int(a, 0)
     b = int(b, 0)
     ambcjk = ambcjk + range(a, b+1)
-print "const uint8_t const b2u_ambiguous_width[0x10000] = {"
+print "const uint8_t b2u_ambiguous_width[0x10000] = {"
 for i in range(0, 0x10000):
     if i in b2u and b2u[i] in ambcjk:
         print "1,",
