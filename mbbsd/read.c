@@ -1177,12 +1177,6 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	if (ZA_Waiting())
 	    mode = DOQUIT;
 
-	// Nothing to do keeps listing untouch.
-	// If the listing is not ready (user seeable),
-	// we have to manually trigger the redraw.
-	if (mode == DONOTHING && pending_draws)
-	    return FULLUPDATE;
-
     } while (mode == DONOTHING);
     return mode;
 }
