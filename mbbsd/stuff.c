@@ -4,7 +4,6 @@
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
-static const char * const str_home_file = "home/%c/%s/%s";
 static const char * const str_board_file = "boards/%c/%s/%s";
 
 static const char * const str_dotdir = FN_DIR;

@@ -2,17 +2,6 @@
 
 #ifdef ASSESS
 
-/* do (*num) + n, n is integer. */
-inline static void inc(unsigned char *num, int n)
-{
-    if (n >= 0 && UCHAR_MAX - *num <= (unsigned)n)
-	(*num) = UCHAR_MAX;
-    else if (n < 0 && *num < -n)
-	(*num) = 0;
-    else
-	(*num) += n;
-}
-
 static time4_t
 adjust_badpost_time(time4_t timeremovebadpost) {
     time4_t min_timer;

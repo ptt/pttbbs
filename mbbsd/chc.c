@@ -54,8 +54,6 @@ static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
 
 /* some constant variable definition */
 
-static const char * const turn_str[2] = {"黑的", "紅的"};
-
 static const char * const num_str[2][10] = {
     {"", "１", "２", "３", "４", "５", "６", "７", "８", "９"},
     {"", "一", "二", "三", "四", "五", "六", "七", "八", "九"},
@@ -88,13 +86,6 @@ static const char * const chess_brd[BRD_ROW * 2 - 1] = {
     "├─┼─┼─┼─┼─┼─┼─┼─┤",	/* 8 */
     "│  │  │  │／│＼│  │  │  │",
     "└─┴─┴─┴─┴─┴─┴─┴─┘"	/* 9 */
-};
-
-static char * const hint_str[] = {
-    "  q      認輸離開",
-    "  p      要求和棋",
-    "方向鍵   移動遊標",
-    "Enter    選擇/移動"
 };
 
 static const ChessActions chc_actions = {
@@ -197,14 +188,6 @@ getstep(board_t board, const rc_t *from, const rc_t *to, char buf[])
 		chess_str[turn^1][CHE_P(board[to->r][to->c])]);
     }
     return buf;
-}
-
-inline static const char*
-chc_timestr(int second)
-{
-    static char str[10];
-    snprintf(str, sizeof(str), "%d:%02d", second / 60, second % 60);
-    return str;
 }
 
 static void

@@ -60,8 +60,6 @@ typedef struct {
 } go_tag_t;
 #define GET_TAG(INFO) ((go_tag_t*)(INFO)->tag)
 
-static char	* const locE = "ABCDEFGHJKLMNOPQRST";
-
 static void go_init_user(const userinfo_t* uinfo, ChessUser* user);
 static void go_init_user_userec(const userec_t* urec, ChessUser* user);
 static void go_init_board(board_t board);

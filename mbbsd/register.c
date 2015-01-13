@@ -51,19 +51,6 @@ HaveRejectStr(const char *s, const char **rej)
     return 0;
 }
 
-static int
-removespace(char *s)
-{
-    int             i, index;
-
-    for (i = 0, index = 0; s[i]; i++) {
-	if (s[i] != ' ')
-	    s[index++] = s[i];
-    }
-    s[index] = '\0';
-    return index;
-}
-
 int
 reserved_user_id(const char *userid)
 {
@@ -104,6 +91,7 @@ static char *
 isvalidname(char *rname)
 {
 #ifdef FOREIGN_REG
+    (void)rname;
     return NULL;
 #else
     const char    *rejectstr[] =
@@ -112,7 +100,7 @@ isvalidname(char *rname)
 	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
 	 "妹妹", "嘿", "嗯", "爺爺", "大哥", "無",
 	 NULL};
-    if( removespace(rname) && IS_DBCSLEAD(rname[0]) &&
+    if( strip_blank(rname, rname) && IS_DBCSLEAD(rname[0]) &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
 	strncmp(rname, "小", 2) != 0   && //起頭是「小」
@@ -1505,6 +1493,11 @@ regform_log2file(const RegformEntry *pre, char accepted,
     strlcat(msg, "\n", sizeof(msg));
     concat_regform_entry_localized(pre, msg, sizeof(msg));
     log_file(FN_ID_RECORD, LOG_CREAT, msg);
+#else
+    (void)pre;
+    (void)accepted;
+    (void)reason;
+    (void)priority;
 #endif  // FN_ID_RECORD
 }
 

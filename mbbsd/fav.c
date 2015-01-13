@@ -74,13 +74,6 @@ inline static fav_folder_t *cast_folder(fav_type_t *p){
 }
 
 /**
- * 傳回指定的 fp(dir) 中的 fp->DataTail, 第一個沒用過的位置的 index
- */
-inline static int get_data_tail(fav_t *fp){
-    return fp->DataTail;
-}
-
-/**
  * 傳回指定 dir 中所用的 entry 的總數 (只算真的在裡面，而不算已被移除的)
  */
 inline int get_data_number(fav_t *fp){
@@ -165,17 +158,6 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
 
 inline static int get_folder_num(fav_t *fp) {
     return fp->nFolders;
-}
-
-/**
- * get_(folder|line)_id 傳回 fp 中一個新的 folder/line id
- */
-inline static int get_folder_id(fav_t *fp) {
-    return fp->folderID;
-}
-
-inline static int get_line_id(fav_t *fp) {
-    return fp->lineID;
 }
 
 inline static int get_line_num(fav_t *fp) {
