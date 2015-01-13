@@ -393,7 +393,7 @@ main_dark(int fd, userinfo_t * uin)
 	 "                                                " ANSI_COLOR(1;36) "╱" ANSI_COLOR(1;33) " ↑←↓→" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "移動" ANSI_RESET "\n"
 	 "                                                " ANSI_COLOR(1;36) "╳" ANSI_COLOR(1;33) " ｓ" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      選子,翻子" ANSI_RESET "\n"
 	 "                                                " ANSI_COLOR(1;36) "╱" ANSI_COLOR(1;33) " enter" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "   吃棋,放棋" ANSI_RESET "\n"
-	 "　" ANSI_COLOR(1;33) "已經解決的" ANSI_COLOR(1;37) ":" ANSI_COLOR(1;36) "　　                               ╳" ANSI_COLOR(1;33) " ｐ" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      合棋" ANSI_RESET "\n"
+	 "　" ANSI_COLOR(1;33) "已經解決的" ANSI_COLOR(1;37) ":" ANSI_COLOR(1;36) "　　                               ╳" ANSI_COLOR(1;33) " ｐ" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      和棋" ANSI_RESET "\n"
 	 "                                       　　     " ANSI_COLOR(1;36) "╱" ANSI_COLOR(1;33) " ｑ" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      認輸" ANSI_RESET "\n"
 	 "                                                " ANSI_COLOR(1;36) "╳" ANSI_COLOR(1;33) " ｃ" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      換邊" ANSI_RESET);
 
