@@ -1313,7 +1313,7 @@ static int
 do_post_article(int edflags)
 {
     fileheader_t    postfile;
-    char            fpath[PATHLEN], buf[STRLEN];
+    char            fpath[PATHLEN], buf[PATHLEN];
     int i, j;
     int             ifuseanony;
     int             money = 0;

@@ -680,7 +680,7 @@ vs_hdr2barf(const char *fmt, ...)
     va_end(args);
 
     tab = strchr(buff, '\t');
-    if (*tab) *tab++ = 0;
+    if (tab) *tab++ = 0;
 
     vs_hdr2bar(buff, tab ? tab : "");
 }
@@ -707,7 +707,7 @@ vs_hdr2f(const char *fmt, ...)
     va_end(args);
 
     tab = strchr(buff, '\t');
-    if (*tab) *tab++ = 0;
+    if (tab) *tab++ = 0;
 
     vs_hdr2(buff, tab ? tab : "");
 }

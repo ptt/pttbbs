@@ -458,7 +458,7 @@ initscr(void)
     SetConsoleCursorPosition(hStdout, coordBufCoord);
 #endif
 
-    memset(&ft, sizeof(ft), 0);
+    memset(&ft, 0, sizeof(ft));
     ft.attr = ft.rattr = FTATTR_DEFAULT;
     resizeterm(FTSZ_DEFAULT_ROW, FTSZ_DEFAULT_COL);
 
@@ -491,7 +491,7 @@ endwin(void)
     }
     free(ft.dmap);
     free(ft.dcmap);
-    memset(&ft, sizeof(ft), 0);
+    memset(&ft, 0, sizeof(ft));
     return 0;
 }
 
@@ -1808,6 +1808,9 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
         (bg == FTATTR_DEFAULT_BG && obg != bg) ||
         (fg == FTATTR_DEFAULT_FG && ofg != fg) )
     {
+        // lead must be 1 since this is the first check.
+        // We have dead code (else *s++) here but that's simply to ease moving
+        // code around.
         if (lead) lead = 0; else *s++ = ';';
         *s++ = '0';
 

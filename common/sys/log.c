@@ -20,8 +20,10 @@ log_filef(const char *fn, int log_flag, const char *fmt,...)
     if (ret >= len) {
         len = ret + 1;
         msg = (char *)malloc(len);
-        if (!msg)
+        if (!msg) {
+            va_end(ap);
             return -1;
+        }
         vsnprintf(msg, len, fmt, ap);
     }
     va_end(ap);
