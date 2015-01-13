@@ -225,7 +225,8 @@ search_key_user(const char *passwdfile, int mode)
                  "      A: add to namelist " ANSI_RESET " " :
 		 "      S: 取用備份資料    " ANSI_RESET " ");
 	    while (1) {
-		while ((ch = vkey()) == 0);
+		while ((ch = vkey()) == 0)
+		    ;
                 if (ch == 'a' || ch=='A' )
                   {
                    if(!friendfile[0])

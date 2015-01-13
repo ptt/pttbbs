@@ -228,8 +228,8 @@ const char *ask_tmpbuf(int y);
 
 /* emaildb */
 #ifdef USE_EMAILDB
-int emaildb_check_email (const char *email,  int email_len);
-int emaildb_update_email(const char *userid, int userid_len, const char *email, int email_len);
+int emaildb_check_email (const char *email);
+int emaildb_update_email(const char *userid, const char *email);
 #endif
 #ifdef USE_REGCHECKD
 int regcheck_ambiguous_userid_exist(const char *userid);

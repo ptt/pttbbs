@@ -21,8 +21,8 @@
 // however to make the prompt bar smaller, we'd reduce few more bytes.
 #define SAFE_ZINDEX_CODELEN (STRLEN-15)
 
-#ifndef _DIM
-#define _DIM(x) (sizeof(x)/sizeof(x[0]))
+#ifndef arraysize
+#define arraysize(x) (sizeof(x)/sizeof(x[0]))
 #endif
 
 /* copy temp queue operation -------------------------------------- */
@@ -1061,7 +1061,7 @@ a_setchesslist(const menu_t * me)
 	    if(strncmp(buf_photo, "man/boards/", 11) == 0 && // guarding
 		    buf_photo[11] && buf_photo[12] == '/' && // guarding
 		    snprintf(buf_list, sizeof(buf_list), "rm -rf %s", buf_photo)
-		    == strlen(buf_photo) + 7)
+		    == (int)strlen(buf_photo) + 7)
 		system(buf_list);
 	    Rename(buf_this, buf_photo);
 	    symlink("chess_photo", buf_this);
@@ -1131,7 +1131,7 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
 	    continue;
 	} else {
 	    // determine if there's still space to print it
-	    if (strlen(abuf) > zidx_len)
+	    if ((int)strlen(abuf) > zidx_len)
 	    {
 		// re-print from previous entry
 		char *s = strrchr(zidx_buf, '-');
@@ -1205,7 +1205,7 @@ int a_parse_zindexes(const char *s, a_menu_session_t *sess)
 	return (sess->z_indexes[i] == 0);
 
     while (NULL != (s = strpbrk(s, "0123456789")) &&
-	    i+1 < _DIM(sess->z_indexes) )
+	    i+1 < (int)arraysize(sess->z_indexes) )
     {
 	sess->z_indexes[i] = atoi(s);
 	// for overflow, ignore all remaining.

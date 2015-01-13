@@ -777,8 +777,8 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     char genbuf[200];
 
     len = snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
-    assert(len < sizeof(genbuf));
-    if (len > sizeof(genbuf))
+    assert(len < (int)sizeof(genbuf));
+    if (len > (int)sizeof(genbuf))
         len = sizeof(genbuf);
     // XXX if remote is closed (without MSG_NOSIGNAL),
     // this may raise a SIGPIPE and cause BBS to abort...
@@ -909,6 +909,7 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
         ccw_chat_print_highlights(ctx, buf);
     }
 #else  // !EXP_CHAT_HIGHLIGHTS
+    (void)ctx;
     outs(buf);
 #endif // !EXP_CHAT_HIGHLIGHTS
     assert(local != CCW_LOCAL);

@@ -1015,7 +1015,7 @@ toregister(char *email)
 	    outs("正在確認 email, 請稍候...\n");
 	    doupdate();
 
-	    email_count = emaildb_check_email(email, strlen(email));
+	    email_count = emaildb_check_email(email);
 
 	    if (email_count < 0) {
 		move(15, 0); clrtobot();
@@ -1056,7 +1056,7 @@ toregister(char *email)
 #ifdef USE_EMAILDB
     // XXX for 'x', the check will be made later... let's simply ignore it.
     if (strcmp(email, "x") != 0 &&
-	emaildb_update_email(cuser.userid, strlen(cuser.userid), email, strlen(email)) < 0) {
+	emaildb_update_email(cuser.userid, email) < 0) {
 	move(15, 0); clrtobot();
 	move(17, 0);
 	outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
