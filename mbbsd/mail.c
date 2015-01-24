@@ -136,7 +136,7 @@ load_mailalert(const char *userid)
 	num = NEWMAIL_CHECK_RANGE;
 
     /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
-    if ((fd = open(maildir, O_RDONLY)) > 0) {
+    if ((fd = open(maildir, O_RDONLY)) >= 0) {
 	lseek(fd, st.st_size - sizeof(fileheader_t), SEEK_SET);
 	while (num--) {
 	    read(fd, &my_mail, sizeof(fileheader_t));

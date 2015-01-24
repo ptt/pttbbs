@@ -1861,7 +1861,12 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
         return 0;
 
     fd_src = open(ref_fn, O_RDONLY);
-    if (fd_src < 0 || (size_t)dashs(ref_fn) < sz_orig) {
+    if (fd_src < 0) {
+	close(fd_dest);
+	return 0;
+    }
+    if ((size_t)dashs(ref_fn) < sz_orig) {
+        close(fd_src);
         close(fd_dest);
         return 0;
     }

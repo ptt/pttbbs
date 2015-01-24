@@ -97,11 +97,13 @@ void mailUser(char *userid)
     if (stat(filename, &st) == -1) {
 	if (Mkdir(filename) == -1) {
 	    fprintf(stderr, "mail box create error %s \n", filename);
+	    fclose(fp2);
 	    return;
 	}
     }
     else if (!(st.st_mode & S_IFDIR)) {
 	fprintf(stderr, "mail box error\n");
+	fclose(fp2);
 	return;
     }
 
@@ -109,6 +111,7 @@ void mailUser(char *userid)
     fp = fopen(filename, "w");
     if (fp == NULL) {
 	fprintf(stderr, "Cannot open file %s\n", filename);
+	fclose(fp2);
 	return;
     }
 

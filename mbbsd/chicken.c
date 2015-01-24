@@ -98,8 +98,11 @@ load_chicken(const char *uid, chicken_t *mychicken)
     if (!dashf(fn)) return 0;
     fd = open(fn, O_RDONLY);
     if (fd < 0) return 0;
-    if (read(fd, mychicken, sizeof(chicken_t)) > 0 && mychicken->name[0])
+    if (read(fd, mychicken, sizeof(chicken_t)) > 0 && mychicken->name[0]) {
+	close(fd);
 	return 1;
+    }
+    close(fd);
     return 0;
 }
 
@@ -969,10 +972,10 @@ int
 chicken_main(void)
 {
     int age;
-    chicken_t *mychicken = load_live_chicken(cuser.userid);
-
-    debug_timediff(mychicken);
+    chicken_t *mychicken;
     lockreturn0(CHICKEN, LOCK_MULTI);
+    mychicken = load_live_chicken(cuser.userid);
+    debug_timediff(mychicken);
     if (mychicken && !mychicken->name[0])
     {
 	// possible for recovery

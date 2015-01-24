@@ -536,7 +536,7 @@ reset_board(int bid) /* XXXbid: from 1 */
 
 	bhdr = bcache;
 	bhdr += bid;
-	if ((fd = open(fn_board, O_RDONLY)) > 0) {
+	if ((fd = open(fn_board, O_RDONLY)) >= 0) {
 	    lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
 	    read(fd, bhdr, sizeof(boardheader_t));
 	    close(fd);

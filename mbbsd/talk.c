@@ -2846,6 +2846,7 @@ establish_talk_connection(const userinfo_t *uip)
     }
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
 	//perror("connect err");
+	close(a);
 	return -1;
     }
     return a;

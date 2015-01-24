@@ -308,8 +308,11 @@ safe_article_delete_range(const char *direct, int from, int to)
 	return -1;
 
     ++ptr;
-    if( (fd = open(direct, O_RDWR)) != -1 &&
-	lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET) != -1 ){
+    if( (fd = open(direct, O_RDWR)) != -1) {
+	if (lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET) == -1 ){
+	    close(fd);
+	    return -1;
+	}
 
 	for( ; from <= to ; ++from ){
 	    // the (from, to) range may be invalid...

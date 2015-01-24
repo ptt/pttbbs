@@ -261,7 +261,7 @@ logattempt(const char *uid, char type, time4_t now, const char *loghost)
 	    Cdate(&now), loghost);
     len = strlen(genbuf);
     // log to public (BBSHOME)
-    if ((fd = OpenCreate(FN_BADLOGIN, O_WRONLY | O_APPEND)) > 0) {
+    if ((fd = OpenCreate(FN_BADLOGIN, O_WRONLY | O_APPEND)) >= 0) {
 	write(fd, genbuf, len);
 	close(fd);
     }
@@ -271,7 +271,7 @@ logattempt(const char *uid, char type, time4_t now, const char *loghost)
 		 "[%s] %s\n", Cdate(&now), loghost);
 	len = strlen(genbuf);
 	sethomefile(fname, uid, FN_BADLOGIN);
-	if ((fd = OpenCreate(fname, O_WRONLY | O_APPEND)) > 0) {
+	if ((fd = OpenCreate(fname, O_WRONLY | O_APPEND)) >= 0) {
 	    write(fd, genbuf, len);
 	    close(fd);
 	}
