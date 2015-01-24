@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	exit(0);
     }
     
-    if( (SHM = shmat(shm, NULL, 0)) < 0 ){
+    if( (SHM = shmat(shm, NULL, 0)) == (void*)-1 ){
 	perror("shmat");
 	exit(0);
     }

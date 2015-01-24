@@ -58,6 +58,7 @@ static int request(THTTP *t, const char *meth, const char *uri,
             }
             default:
                 /* WTF */
+                va_end(va);
                 return -1;
         }
 
