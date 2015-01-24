@@ -625,7 +625,7 @@ ofo_my_write(void)
 #endif
     mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
            ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
-    for (i = 0; i < WB_OFO_USER_HEIGHT;++i)
+    for (i = 0; i < WB_OFO_MSG_NUM;++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
 	else {
@@ -652,6 +652,7 @@ ofo_my_write(void)
 	case Ctrl('T'):
 	case KEY_UP:
 	    if (water_usies != 1) {
+		assert(0 < water_usies && water_usies <= WB_OFO_MSG_NUM);
 		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which - 1 + water_usies) % water_usies;
 		ofo_water_scr(swater[(int)which], which, 1);
@@ -662,6 +663,7 @@ ofo_my_write(void)
 	case KEY_DOWN:
 	case Ctrl('R'):
 	    if (water_usies != 1) {
+		assert(0 < water_usies && water_usies <= WB_OFO_MSG_NUM);
 		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which + 1 + water_usies) % water_usies;
 		ofo_water_scr(swater[(int)which], which, 1);

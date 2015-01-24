@@ -448,7 +448,9 @@ add_history(const msgque_t * msg)
     if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
 	add_history_water(&water[0], msg);
     if (PAGER_UI_IS(PAGER_UI_NEW) || PAGER_UI_IS(PAGER_UI_OFO)) {
-	for (i = 0; i < 5 && swater[i]; i++)
+	for (i = 0; i < WB_OFO_MSG_NUM; i++) {
+	    if (swater[i] == NULL)
+		break;
 	    if (swater[i]->pid == msg->pid
 #ifdef PLAY_ANGEL
 		    && swater[i]->msg[0].msgmode == msg->msgmode
@@ -456,10 +458,11 @@ add_history(const msgque_t * msg)
 #endif
 	       	)
 		break;
-	if (i == 5) {
+	}
+	if (i == WB_OFO_MSG_NUM) {
 	    waterinit = 1;
-	    i = 4;
-	    memset(swater[4], 0, sizeof(water_t));
+	    i = WB_OFO_MSG_NUM - 1;
+	    memset(swater[i], 0, sizeof(water_t));
 	} else if (!swater[i]) {
 	    water_usies = i + 1;
 	    swater[i] = &water[i + 1];

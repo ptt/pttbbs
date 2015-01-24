@@ -293,11 +293,8 @@ process_pager_keys(int ch)
 		break;
 
 	    check_water_init();
-	    if (water_which_flag == (int)water_usies)
-		water_which_flag = 0;
-	    else
-		water_which_flag =
-		    (water_which_flag + 1) % (int)(water_usies + 1);
+	    water_which_flag =
+		(water_which_flag + 1) % (int)(water_usies + 1);
 	    if (water_which_flag == 0)
 		water_which = &water[0];
 	    else
