@@ -2929,6 +2929,7 @@ talkreply(void)
     Signal(SIGPIPE, sig_pipe_handle);
 
     if (r == -1) {
+	close(a);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s ¤w°±¤î©I¥s¡A«öEnterÄ~Äò...", uip->userid);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
