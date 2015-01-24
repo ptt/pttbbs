@@ -1756,7 +1756,7 @@ pickup_myfriend(pickup_t * friends,
     STATINC(STAT_PICKMYFRIEND);
     *badfriend = 0;
     *myfriend = *friendme = 1;
-    for (i = 0; currutmp->friend_online[i] && i < MAX_FRIEND; ++i) {
+    for (i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
 	where = currutmp->friend_online[i] & 0xFFFFFF;
 	if (VALID_USHM_ENTRY(where) &&
 	    (uentp = &SHM->uinfo[where]) && uentp->pid &&
@@ -2446,8 +2446,7 @@ userlist(void)
 		    } else {
 			userinfo_t     *uentp;
 			int             where, frstate;
-			for (i = 0; currutmp->friend_online[i] &&
-			     i < MAX_FRIEND; ++i) {
+			for (i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
 			    where = currutmp->friend_online[i] & 0xFFFFFF;
                             if (!VALID_USHM_ENTRY(where))
                                 continue;

@@ -63,8 +63,9 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     }
     fgets(genbuf, MAX_ITEM_LEN, fp);
     *price = atoi(genbuf);
-    for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) &&
-                    count < MAX_ITEM; count++) {
+    for (count = 0; count < MAX_ITEM; count++) {
+	if (!fgets(betname[count], MAX_ITEM_LEN, fp))
+	    break;
 	chomp(betname[count]);
     }
     fclose(fp);
