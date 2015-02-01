@@ -560,6 +560,7 @@ int bad_user_id(const char *userid);
 int getnewuserid(void);
 int setupnewuser(const userec_t *user);
 int regform_estimate_queuesize();
+void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
 int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
@@ -828,6 +829,7 @@ int pwcuRegisterSetInfo (const char *rname,
 			 const char *career,
 			 const char *email,
 			 uint8_t     is_foreign);
+int pwcuSetUserAgreementVersion(uint8_t version);
 
 // non-important based variables (only save on exit)
 int pwcuSetSignature	(unsigned char newsig);

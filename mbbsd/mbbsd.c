@@ -752,6 +752,7 @@ load_current_user(const char *uid)
 	/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
 	mkuserdir(cuser.userid);
 	logattempt(cuser.userid, ' ', login_start_time, fromhost);
+	ensure_user_agreement_version();
     }
 
     // check multi user

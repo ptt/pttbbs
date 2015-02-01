@@ -483,6 +483,94 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// User Agreement Version
+/////////////////////////////////////////////////////////////////////////////
+
+static uint8_t
+get_system_user_agreement_version()
+{
+    unsigned int version = 0;
+#ifdef HAVE_USERAGREEMENT_VERSION
+    FILE *fp = fopen(HAVE_USERAGREEMENT_VERSION, "r");
+    if (fp != NULL) {
+	fscanf(fp, "%u", &version);
+	fclose(fp);
+    }
+    if (version > 255)
+	version = 0;
+#endif
+    return version;
+}
+
+#define UAVER_OK (0)
+#define UAVER_UNKNOWN (-1)
+#define UAVER_OUTDATED (-2)
+
+static int
+check_user_agreement_version(uint8_t version)
+{
+#ifdef HAVE_USERAGREEMENT_ACCEPTABLE
+    FILE *fp = fopen(HAVE_USERAGREEMENT_ACCEPTABLE, "r");
+    if (fp == NULL)
+	return UAVER_UNKNOWN;
+
+    int result = UAVER_OUTDATED;
+    unsigned int acceptable;
+    while (fscanf(fp, "%u", &acceptable) == 1) {
+	if (version == acceptable) {
+	    result = UAVER_OK;
+	    break;
+	}
+    }
+    fclose(fp);
+    return result;
+#else
+    return UAVER_OK;
+#endif
+}
+
+static int
+accept_user_aggrement()
+{
+#ifdef HAVE_USERAGREEMENT
+    int haveag = more(HAVE_USERAGREEMENT, YEA);
+    while (haveag != -1) {
+	int c = vans("請問您接受這份使用者條款嗎? (yes/no) ");
+	if (c == 'y')
+	    break;
+	else if (c == 'n')
+	    return 0;
+	vmsg("請輸入 y表示接受, n表示不接受");
+    }
+#endif
+    return 1;
+}
+
+void
+ensure_user_agreement_version()
+{
+    switch (check_user_agreement_version(cuser.ua_version)) {
+	case UAVER_OK:
+	    return;
+
+	case UAVER_UNKNOWN:
+	    vmsg("系統錯誤, 暫時無法登入");
+	    break;
+
+	case UAVER_OUTDATED:
+	    vmsg("使用者條款已經更新, 請重新檢視.");
+	    uint8_t version = get_system_user_agreement_version();
+	    if (!accept_user_aggrement()) {
+		vmsg("抱歉, 您須要接受使用者條款才能繼續使用我們的服務唷!");
+		break;
+	    }
+	    pwcuSetUserAgreementVersion(version);
+	    return;
+    }
+    exit(1);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
 
@@ -493,21 +581,12 @@ new_register(void)
     char            passbuf[STRLEN];
     int             try, id, uid;
     char 	   *errmsg = NULL;
+    uint8_t         ua_version = get_system_user_agreement_version();
 
-#ifdef HAVE_USERAGREEMENT
-    int haveag = more(HAVE_USERAGREEMENT, YEA);
-    while( haveag != -1 ){
-	int c = vans("請問您接受這份使用者條款嗎? (yes/no) ");
-	if (c == 'y')
-	    break;
-	else if (c == 'n')
-	{
-	    vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
-	    exit(1);
-	}
-	vmsg("請輸入 y表示接受, n表示不接受");
+    if (!accept_user_aggrement()) {
+	vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
+	exit(1);
     }
-#endif
 
     // setup newuser
     memset(&newuser, 0, sizeof(newuser));
@@ -517,6 +596,7 @@ new_register(void)
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.pager = PAGER_ON;
     newuser.numlogindays = 1;
+    newuser.ua_version = ua_version;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
 #ifdef DBCSAWARE

@@ -116,7 +116,7 @@ typedef struct userec_t {
     uint16_t	go_tie;		/* 圍棋戰績 和 */
     uint16_t    dark_win;       /* 暗棋戰績 勝 */
     uint16_t    dark_lose;      /* 暗棋戰績 敗 */
-    uint8_t     _unused9;       /* 從前放 ident 身份證字號，應該是個0 */
+    uint8_t     ua_version;     /* Applicable user agreement version */
 
     uint8_t	signature;	/* 慣用簽名檔 */
     uint8_t	_unused10;	/* 從前放好文章數, 使用前請先清0 */

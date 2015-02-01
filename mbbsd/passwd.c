@@ -281,6 +281,14 @@ int pwcuRegisterSetInfo (const char *rname,
     PWCU_END();
 }
 
+int pwcuSetUserAgreementVersion(uint8_t version)
+{
+    PWCU_START();
+    cuser.ua_version = version;
+    u.ua_version = version;
+    PWCU_END();
+}
+
 #include "chess.h"
 int
 pwcuChessResult(int sigType, ChessGameResult r)
