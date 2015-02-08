@@ -541,8 +541,8 @@ static char     t_last_write[80];
 void check_water_init(void)
 {
     if(water==NULL) {
-	water = (water_t*)malloc(sizeof(water_t)*6);
-	memset(water, 0, sizeof(water_t)*6);
+	water = (water_t*)malloc(sizeof(water_t) * (WB_OFO_USER_NUM + 1));
+	memset(water, 0, sizeof(water_t) * (WB_OFO_USER_NUM + 1));
 	water_which = &water[0];
 
 	strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
@@ -625,7 +625,7 @@ ofo_my_write(void)
 #endif
     mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
            ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
-    for (i = 0; i < WB_OFO_MSG_NUM;++i)
+    for (i = 0; i < WB_OFO_USER_NUM; ++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
 	else {
@@ -652,7 +652,7 @@ ofo_my_write(void)
 	case Ctrl('T'):
 	case KEY_UP:
 	    if (water_usies != 1) {
-		assert(0 < water_usies && water_usies <= WB_OFO_MSG_NUM);
+		assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
 		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which - 1 + water_usies) % water_usies;
 		ofo_water_scr(swater[(int)which], which, 1);
@@ -663,7 +663,7 @@ ofo_my_write(void)
 	case KEY_DOWN:
 	case Ctrl('R'):
 	    if (water_usies != 1) {
-		assert(0 < water_usies && water_usies <= WB_OFO_MSG_NUM);
+		assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
 		ofo_water_scr(swater[(int)which], which, 0);
 		which = (which + 1 + water_usies) % water_usies;
 		ofo_water_scr(swater[(int)which], which, 1);

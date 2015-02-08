@@ -448,7 +448,7 @@ add_history(const msgque_t * msg)
     if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
 	add_history_water(&water[0], msg);
     if (PAGER_UI_IS(PAGER_UI_NEW) || PAGER_UI_IS(PAGER_UI_OFO)) {
-	for (i = 0; i < WB_OFO_MSG_NUM; i++) {
+	for (i = 0; i < WB_OFO_USER_NUM; i++) {
 	    if (swater[i] == NULL)
 		break;
 	    if (swater[i]->pid == msg->pid
@@ -459,9 +459,9 @@ add_history(const msgque_t * msg)
 	       	)
 		break;
 	}
-	if (i == WB_OFO_MSG_NUM) {
+	if (i == WB_OFO_USER_NUM) {
 	    waterinit = 1;
-	    i = WB_OFO_MSG_NUM - 1;
+	    i = WB_OFO_USER_NUM - 1;
 	    memset(swater[i], 0, sizeof(water_t));
 	} else if (!swater[i]) {
 	    water_usies = i + 1;

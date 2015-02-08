@@ -415,7 +415,7 @@ char            water_usies = 0;
 char            is_first_login_of_today = 0;
 char            is_login_ready = 0;
 FILE           *fp_writelog = NULL;
-water_t         *water, *swater[WB_OFO_MSG_NUM], *water_which;
+water_t         *water, *swater[WB_OFO_USER_NUM], *water_which;
 
 /* chc_play.c */
 
