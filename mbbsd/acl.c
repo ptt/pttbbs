@@ -185,6 +185,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     } else {
         int val = atoi(datebuf);
+        uint64_t long_now;
         switch(tolower(datebuf[strlen(datebuf)-1])) {
             case 'y':
                 val *= 365;
@@ -200,11 +201,12 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             vmsg("日期格式輸入錯誤或是小於一天無法處理。");
             return -1;
         }
-        if (now + val * DAY_SECONDS < now) {
+        long_now = (uint64_t)now + val * (uint64_t)DAY_SECONDS;
+        expire = long_now;
+        if ((uint64_t)expire != long_now) {
             vmsg("日期過大或無法處理，請重新輸入。");
             return -1;
         }
-        expire = now + val * DAY_SECONDS;
         move(y+3, 0); clrtobot();
         // sprintf(datebuf, "%s", Cdatelite(&expire));
         sprintf(datebuf, "%d 天", val);
