@@ -4,6 +4,7 @@ SRCROOT=	..
 .include "$(SRCROOT)/pttbbs.mk"
 
 CFLAGS+= -DPTTBBS_UTIL
+CXXFLAGS+= -std=c++11
 
 BBSBASE=	$(SRCROOT)/include/var.h
 
@@ -19,7 +20,7 @@ CPROG_WITH_UTIL= \
 	openticket	topusr		\
 	toplazyBM	writemoney	\
 	reaper		buildAnnounce	mailangel	\
-	outmail		chkhbf		merge_dir	\
+	outmail		chkhbf		\
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
@@ -27,6 +28,7 @@ CPROG_WITH_UTIL= \
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
+	merge_dir
 
 
 # 下面這些程式, 會直接被 compile
