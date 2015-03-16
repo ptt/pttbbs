@@ -28,7 +28,7 @@ CPROG_WITH_UTIL= \
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
-	merge_dir
+	mergedir2
 
 
 # 下面這些程式, 會直接被 compile

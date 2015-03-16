@@ -6,10 +6,11 @@ extern "C" {
 #include "bbs.h"
 }
 
-void usage() {
+void usage(const char *progname) {
     fprintf(stderr, "Usage: "
-	    "merge_dir <output> <dir1> <dir2> ...\n\n"
-	    "\tMerges multiple DIR files, removing deleted posts.\n");
+	    "%s <output> <dir1> <dir2> ...\n\n"
+	    "\tMerges multiple DIR files, removing deleted posts.\n",
+	    progname);
 }
 
 struct AnnotatedHeader {
@@ -52,7 +53,7 @@ int read_dir(std::vector<AnnotatedHeader>& hdrs, const char *path, int offset)
 
 int main(int argc, char **argv) {
     if (argc < 3) {
-	usage();
+	usage(argv[0]);
 	return 1;
     }
 
