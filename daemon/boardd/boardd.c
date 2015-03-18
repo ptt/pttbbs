@@ -694,9 +694,9 @@ void session_create(struct event_base *base, evutil_socket_t fd,
 
 void
 setup_client(struct event_base *base, evutil_socket_t fd,
-       	struct sockaddr *address, int socklen)
+	     struct sockaddr *address, int socklen)
 {
-    session_create(base, fd, address, socklen);
+    session_start(base, fd, address, socklen);
 }
 
 void

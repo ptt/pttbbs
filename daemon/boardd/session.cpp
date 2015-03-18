@@ -42,22 +42,19 @@ private:
 
 static ThreadPool<LineProcessJob> *g_threadpool;
 
-static void
-read_cb(struct bufferevent *bev, void *ctx)
+static void read_cb(struct bufferevent *bev, void *ctx)
 {
     reinterpret_cast<Session *>(ctx)->on_read();
 }
 
-static void
-event_cb(struct bufferevent *bev, short events, void *ctx)
+static void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
     reinterpret_cast<Session *>(ctx)->on_error(events);
 }
 
 }  // namespace
 
-void
-session_init()
+void session_init()
 {
 #ifdef BOARDD_MT
     fprintf(stderr, "boardd: built with mulit-threading, %d threads.\n",
@@ -66,14 +63,13 @@ session_init()
 #endif
 }
 
-void
-session_shutdown()
+void session_shutdown()
 {
     delete g_threadpool;
 }
 
-void session_create(struct event_base *base, evutil_socket_t fd,
-		    struct sockaddr *address, int socklen)
+void session_start(struct event_base *base, evutil_socket_t fd,
+		   struct sockaddr *address, int socklen)
 {
     new Session(process_line, base, fd, address, socklen);
 }

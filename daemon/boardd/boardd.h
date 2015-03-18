@@ -3,8 +3,8 @@
 
 int process_line(struct evbuffer *output, void *ctx, char *line);
 
-void session_create(struct event_base *base, evutil_socket_t fd,
-		    struct sockaddr *address, int socklen);
+void session_start(struct event_base *base, evutil_socket_t fd,
+		   struct sockaddr *address, int socklen);
 
 void session_init();
 void session_shutdown();
