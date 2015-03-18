@@ -4,14 +4,15 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 PROG=	boardd
-SRCS=	boardd.c server.c threadpool.cpp
+SRCS=	boardd.c server.c session.cpp
 MAN=
 
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
-CXXFLAGS+=	-std=c++11
-CFLAGS+=	$(LIBEVENT_CFLAGS) -DSERVER_USE_PTHREADS
+COMMONFLAGS=	-DBOARDD_MT -DSERVER_USE_PTHREADS
+CXXFLAGS+=	-std=c++11 $(COMMONFLAGS)
+CFLAGS+=	$(LIBEVENT_CFLAGS) $(COMMONFLAGS)
 LDFLAGS+=	$(LIBEVENT_LIBS_L)
 
 LDADD:=  $(UTILOBJ) \

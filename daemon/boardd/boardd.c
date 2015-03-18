@@ -27,19 +27,11 @@
 #include <perm.h>
 
 #include "server.h"
-#include "threadpool.h"
+#include "boardd.h"
 
 #define CONVERT_TO_UTF8
-#define BOARDD_MT
 
 #define DEFAULT_ARTICLE_LIST 20
-#define NUM_THREADS 8
-
-// Globals
-
-#ifdef BOARDD_MT
-threadpool_t g_threadpool;
-#endif
 
 // helper function
 
@@ -614,15 +606,14 @@ evbuffer_b2u(struct evbuffer *source)
 
 // Command functions
 
-void
-cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
+int
+cmd_get(struct evbuffer *output, void *ctx, int argc, char **argv)
 {
-    struct evbuffer *output = bufferevent_get_output(bev),
-		    *buf = evbuffer_new();
+    struct evbuffer *buf = evbuffer_new();
 
     if (*argv == NULL) {
 	evbuffer_add_reference(output, "ERROR\r\n", 7, NULL, NULL);
-	return;
+	return 0;
     }
 
     do {
@@ -645,31 +636,34 @@ cmd_get(struct bufferevent *bev, void *ctx, int argc, char **argv)
     evbuffer_add_reference(output, "END\r\n", 5, NULL, NULL);
 
     evbuffer_free(buf);
+    return 0;
 }
 
-void
-cmd_version(struct bufferevent *bev, void *ctx, int argc, char **argv)
+int
+cmd_version(struct evbuffer *output, void *ctx, int argc, char **argv)
 {
     static const char msg[] = "VERSION 0.0.2\r\n";
-    evbuffer_add_reference(bufferevent_get_output(bev), msg, strlen(msg), NULL, NULL);
+    evbuffer_add_reference(output, msg, strlen(msg), NULL, NULL);
+    return 0;
 }
 
-void
-cmd_unknown(struct bufferevent *bev, void *ctx, int argc, char **argv)
+int
+cmd_unknown(struct evbuffer *output, void *ctx, int argc, char **argv)
 {
     static const char msg[] = "SERVER_ERROR Not implemented\r\n";
-    evbuffer_add_reference(bufferevent_get_output(bev), msg, strlen(msg), NULL, NULL);
+    evbuffer_add_reference(output, msg, strlen(msg), NULL, NULL);
+    return 0;
 }
 
-void
-cmd_quit(struct bufferevent *bev, void *ctx, int argc, char **argv)
+int
+cmd_quit(struct evbuffer *output, void *ctx, int argc, char **argv)
 {
-    bufferevent_free(bev);
+    return -1;
 }
 
 static const struct {
     const char *cmd;
-    void (*func)(struct bufferevent *bev, void *ctx, int argc, char **argv);
+    int (*func)(struct evbuffer *output, void *ctx, int argc, char **argv);
 } cmdlist[] = {
     {"get", cmd_get},
     {"quit", cmd_quit},
@@ -677,8 +671,8 @@ static const struct {
     {NULL, cmd_unknown}
 };
 
-static void
-process_line(struct bufferevent *bev, void *ctx, char *line)
+int
+process_line(struct evbuffer *output, void *ctx, char *line)
 {
     char **argv;
     int argc = split_args(line, &argv);
@@ -688,56 +682,21 @@ process_line(struct bufferevent *bev, void *ctx, char *line)
 	if (evutil_ascii_strcasecmp(line, cmdlist[i].cmd) == 0)
 	    break;
 
-    (cmdlist[i].func)(bev, ctx, argc - 1, argv + 1);
+    int result = (cmdlist[i].func)(output, ctx, argc - 1, argv + 1);
 
     free(argv);
     free(line);
+    return result;
 }
 
-#ifdef BOARDD_MT
-
-typedef struct {
-    struct bufferevent *bev;
-    void *ctx;
-    char *line;
-} process_line_ctx;
+void session_create(struct event_base *base, evutil_socket_t fd,
+		    struct sockaddr *address, int socklen);
 
 void
-process_line_job_func(void *ctx)
+setup_client(struct event_base *base, evutil_socket_t fd,
+       	struct sockaddr *address, int socklen)
 {
-    process_line_ctx *cx = (process_line_ctx *) ctx;
-    process_line(cx->bev, cx->ctx, cx->line);
-    bufferevent_enable(cx->bev, EV_READ);
-    free(cx);
-}
-
-#endif
-
-void
-client_read_cb(struct bufferevent *bev, void *ctx)
-{
-    size_t len;
-    struct evbuffer *input = bufferevent_get_input(bev);
-    char *line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF);
-
-    if (!line)
-	return;
-
-#ifdef BOARDD_MT
-    process_line_ctx *plc = (process_line_ctx *) malloc(sizeof(process_line_ctx));
-    if (!plc)
-	return;
-
-    // One request at a time.
-    bufferevent_disable(bev, EV_READ);
-
-    plc->bev = bev;
-    plc->ctx = ctx;
-    plc->line = line;
-    threadpool_do(g_threadpool, threadpool_job_new(process_line_job_func, plc));
-#else
-    process_line(bev, ctx, line);
-#endif
+    session_create(base, fd, address, socklen);
 }
 
 void
@@ -747,9 +706,7 @@ setup_program()
     setgid(BBSGID);
     chdir(BBSHOME);
 
-#ifdef BOARDD_MT
-    g_threadpool = threadpool_new(NUM_THREADS);
-#endif
+    session_init();
 
     attach_SHM();
 }
