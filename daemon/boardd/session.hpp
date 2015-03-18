@@ -1,3 +1,5 @@
+// Copyright (c) 2015, Robert Wang <robert@arctic.tw>
+// The MIT License.
 #ifndef _BOARDD_SESSION_HPP
 #   define _BOARDD_SESSION_HPP
 #include <mutex>

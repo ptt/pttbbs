@@ -1,3 +1,5 @@
+// Copyright (c) 2015, Robert Wang <robert@arctic.tw>
+// The MIT License.
 #include "session.hpp"
 #include "threadpool.hpp"
 extern "C" {
