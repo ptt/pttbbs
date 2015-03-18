@@ -689,9 +689,6 @@ process_line(struct evbuffer *output, void *ctx, char *line)
     return result;
 }
 
-void session_create(struct event_base *base, evutil_socket_t fd,
-		    struct sockaddr *address, int socklen);
-
 void
 setup_client(struct event_base *base, evutil_socket_t fd,
 	     struct sockaddr *address, int socklen)
@@ -710,4 +707,3 @@ setup_program()
 
     attach_SHM();
 }
-
