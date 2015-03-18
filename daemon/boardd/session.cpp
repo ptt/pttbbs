@@ -15,7 +15,14 @@ class LineProcessJob
 public:
     LineProcessJob(Session *session, void *ctx, char *line)
 	: session_(session), ctx_(ctx), line_(line)
-    {}
+    {
+	session_->add_ref();
+    }
+
+    ~LineProcessJob()
+    {
+	session_->dec_ref();
+    }
 
     void Run()
     {
@@ -23,8 +30,10 @@ public:
     }
 
 private:
-    // Not owned
+    // Ref-counted
     Session *session_;
+
+    // Not owned
     void *ctx_;
     char *line_;
 };
@@ -111,7 +120,6 @@ void Session::on_read()
 	    return;
 
 	job = new LineProcessJob(this, NULL, line);
-	add_ref();
 #ifdef BOARDD_MT
 	// One request at a time.
 	bufferevent_disable(bev_, EV_READ);
@@ -137,7 +145,6 @@ void Session::process_line(void *ctx, char *line)
 	shutdown();
     }
     evbuffer_free(output);
-    dec_ref();
 }
 
 void Session::shutdown()
