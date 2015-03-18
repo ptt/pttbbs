@@ -43,7 +43,7 @@ class Session : public RefCounted<Session> {
   bufferevent *bev_;
   std::mutex mutex_;
 
-  void send(evbuffer *buf);
+  void send_and_resume(evbuffer *buf);
 };
 
 #endif

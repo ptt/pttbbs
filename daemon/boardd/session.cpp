@@ -132,8 +132,7 @@ void Session::process_line(void *ctx, char *line)
 {
     evbuffer *output = evbuffer_new();
     if (process_line_(output, ctx, line) == 0) {
-	send(output);
-	bufferevent_enable(bev_, EV_READ);
+	send_and_resume(output);
     } else {
 	shutdown();
     }
@@ -151,9 +150,11 @@ void Session::shutdown()
     }
 }
 
-void Session::send(evbuffer *buf)
+void Session::send_and_resume(evbuffer *buf)
 {
     std::lock_guard<std::mutex> _(mutex_);
-    if (bev_)
+    if (bev_) {
 	evbuffer_add_buffer(bufferevent_get_output(bev_), buf);
+	bufferevent_enable(bev_, EV_READ);
+    }
 }
