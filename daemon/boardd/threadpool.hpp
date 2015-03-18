@@ -21,13 +21,6 @@ void WorkerThread(Queue<Job *> *q)
 
 }  // namespace
 
-class Job
-{
-public:
-  virtual ~Job() {}
-  virtual void Run() = 0;
-};
-
 template <class Job>
 class ThreadPool
 {
