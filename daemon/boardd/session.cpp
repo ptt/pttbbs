@@ -42,14 +42,20 @@ private:
 
 static ThreadPool<LineProcessJob> *g_threadpool;
 
-static void read_cb(struct bufferevent *bev, void *ctx)
+void read_cb(struct bufferevent *bev, void *ctx)
 {
     reinterpret_cast<Session *>(ctx)->on_read();
 }
 
-static void event_cb(struct bufferevent *bev, short events, void *ctx)
+void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
     reinterpret_cast<Session *>(ctx)->on_error(events);
+}
+
+void blackhole_read_cb(bufferevent *bev, void *ctx)
+{
+    evbuffer *buf = bufferevent_get_input(bev);
+    evbuffer_drain(buf, evbuffer_get_length(buf));
 }
 
 }  // namespace
@@ -82,7 +88,7 @@ Session::Session(LineFunc process_line,
     bev_ = bufferevent_socket_new(
 	base, fd,
 	BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_THREADSAFE);
-    bufferevent_setcb(bev_, read_cb, NULL, event_cb, this);
+    bufferevent_setcb(bev_, read_cb, nullptr, event_cb, this);
     bufferevent_set_timeouts(bev_, common_timeout, common_timeout);
     bufferevent_enable(bev_, EV_READ|EV_WRITE);
     add_ref();
@@ -117,7 +123,7 @@ void Session::on_read()
 	if (!line)
 	    return;
 
-	job = new LineProcessJob(this, NULL, line);
+	job = new LineProcessJob(this, nullptr, line);
 #ifdef BOARDD_MT
 	// One request at a time.
 	bufferevent_disable(bev_, EV_READ);
@@ -147,12 +153,18 @@ void Session::process_line(void *ctx, char *line)
 
 void Session::shutdown()
 {
-    std::lock_guard<std::mutex> _(mutex_);
-    if (bev_) {
-	bufferevent_free(bev_);
-	bev_ = nullptr;
-	dec_ref();
+    bool detached = false;
+    {
+	std::lock_guard<std::mutex> _(mutex_);
+	if (bev_) {
+	    bufferevent_setcb(bev_, blackhole_read_cb, nullptr, nullptr, nullptr);
+	    bufferevent_free(bev_);
+	    bev_ = nullptr;
+	    detached = true;
+	}
     }
+    if (detached)
+	dec_ref();
 }
 
 void Session::send_and_resume(evbuffer *buf)
