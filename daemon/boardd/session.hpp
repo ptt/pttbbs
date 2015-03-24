@@ -18,8 +18,12 @@ class RefCounted {
       ++count_;
   }
   void dec_ref() {
-      std::lock_guard<std::mutex> _(mutex_);
-      if (--count_ == 0)
+      int c;
+      {
+	  std::lock_guard<std::mutex> _(mutex_);
+	  c = --count_;
+      }
+      if (c == 0)
 	  delete this;
   }
  private:
