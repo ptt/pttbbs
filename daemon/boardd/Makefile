@@ -4,7 +4,7 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 PROG=	boardd
-SRCS=	boardd.c server.c session.cpp
+SRCS=	boardd.c server.cpp
 MAN=
 
 UTILDIR=	$(SRCROOT)/util
@@ -20,7 +20,7 @@ LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	$(LIBEVENT_LIBS_l) -levent_pthreads \
-	-lpthread -lstdc++ \
+	-pthread -lstdc++ -lboost_system \
 	$(LDADD)
 
 .include <bsd.prog.mk>
