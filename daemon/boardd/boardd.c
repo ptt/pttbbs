@@ -28,9 +28,9 @@
 
 #include "boardd.h"
 
-#define CONVERT_TO_UTF8
-
 #define DEFAULT_ARTICLE_LIST 20
+
+static int g_convert_to_utf8 = 1;
 
 // helper function
 
@@ -403,9 +403,6 @@ answer_key(struct evbuffer *buf, const char *key)
     }
 }
 
-
-#ifdef CONVERT_TO_UTF8
-
 static int
 move_string_end(char **buf)
 {
@@ -601,8 +598,6 @@ evbuffer_b2u(struct evbuffer *source)
     return NULL;
 }
 
-#endif // CONVERT_TO_UTF8
-
 // Command functions
 
 int
@@ -619,14 +614,14 @@ cmd_get(struct evbuffer *output, void *ctx, int argc, char **argv)
 	answer_key(buf, *argv);
 	if (evbuffer_get_length(buf) == 0)
 	    continue;
-#ifdef CONVERT_TO_UTF8
-	buf = evbuffer_b2u(buf);
-	if (buf == NULL) {
-	    // Failed to convert
-	    buf = evbuffer_new();
-	    continue;
+	if (g_convert_to_utf8) {
+	    buf = evbuffer_b2u(buf);
+	    if (buf == NULL) {
+		// Failed to convert
+		buf = evbuffer_new();
+		continue;
+	    }
 	}
-#endif
 	evbuffer_add_printf(output, "VALUE %s 0 %ld\r\n", *argv, evbuffer_get_length(buf));
 	evbuffer_add_buffer(output, buf);
 	evbuffer_add_printf(output, "\r\n");
@@ -725,8 +720,11 @@ int main(int argc, char *argv[])
     int ch, run_as_daemon = 1;
     const char *iface_ip = "127.0.0.1:5150";
 
-    while ((ch = getopt(argc, argv, "Dl:h")) != -1)
+    while ((ch = getopt(argc, argv, "5Dl:h")) != -1)
 	switch (ch) {
+	    case '5':
+		g_convert_to_utf8 = 0;
+		break;
 	    case 'D':
 		run_as_daemon = 0;
 		break;
@@ -735,7 +733,7 @@ int main(int argc, char *argv[])
 		break;
 	    case 'h':
 	    default:
-		fprintf(stderr, "Usage: %s [-D] [-l interface_ip:port]\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-5] [-D] [-l interface_ip:port]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
