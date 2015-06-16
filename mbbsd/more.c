@@ -19,6 +19,7 @@
  *     documentation and/or other materials provided with the distribution.
  */
 
+#ifdef USE_SYSOP_EDIT
 static int
 check_sysop_edit_perm(const char *fpath)
 {
@@ -44,6 +45,7 @@ check_sysop_edit_perm(const char *fpath)
 
     return 1;
 }
+#endif
 
 static int
 common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
@@ -74,10 +76,12 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 	    return RET_COPY2TMP;
 
 	case 'E':
+#ifdef USE_SYSOP_EDIT
 	    // for early check, skip file name (must check again later)
             if (check_sysop_edit_perm(""))
                 return RET_DOSYSOPEDIT;
             else
+#endif
                 return RET_EDITPOST;
 
 	case 'T':
@@ -141,6 +145,7 @@ common_pager_exit_handler(int r, const char *fpath)
     // post processing
     switch(r)
     {
+#ifdef USE_SYSOP_EDIT
 	case RET_DOSYSOPEDIT:
 	    r = FULLUPDATE;
 	    if (!check_sysop_edit_perm(fpath))
@@ -150,6 +155,7 @@ common_pager_exit_handler(int r, const char *fpath)
 		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
 	    veditfile(fpath);
 	    break;
+#endif
 
 	case RET_COPY2TMP:
 	    r = FULLUPDATE;
