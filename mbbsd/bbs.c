@@ -1952,6 +1952,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
     if (!is_file_owner(fhdr, &cuser))
     {
+#ifdef USE_SYSOP_EDIT
 	if (!HasUserPerm(PERM_SYSOP))
 	    return DONOTHING;
 
@@ -1959,6 +1960,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	log_filef("log/security", LOG_CREAT,
 		"%d %s %d %s admin edit (board) file=%s\n",
 		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
+#else
+        return DONOTHING;
+#endif
     }
 
     if (!dashf(genbuf)) {
