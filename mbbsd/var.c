@@ -78,7 +78,7 @@ const char * const str_roleid[] = {
 const char * const str_permboard[] = {
     "(無作用)",			/* deprecated: BRD_NOZAP */
     "不列入統計",		/* BRD_NOCOUNT */
-    "不轉信",			/* BRD_NOTRAN */
+    "(無作用)",			/* deprecated: BRD_NOTRAN */
     "群組板",			/* BRD_GROUPBOARD */
     "隱藏板",			/* BRD_HIDE */
     "限制(不需設定)",		/* BRD_POSTMASK */
@@ -93,7 +93,7 @@ const char * const str_permboard[] = {
     "板主設定列入記錄",		/* BRD_BMCOUNT */
     "連結看板",                 /* BRD_SYMBOLIC */
     "不可噓",                   /* BRD_NOBOO */
-    "預設 Local Save",          /* BRD_LOCALSAVE */
+    "(無作用)",                 /* deprecated: BRD_LOCALSAVE */
     "限看板會員發文",           /* BRD_RESTRICTEDPOST */
     "Guest可以發表",            /* BRD_GUESTPOST */
 #ifdef USE_COOLDOWN
@@ -406,7 +406,6 @@ char            currdirect[64];		/* XXX TODO change this to PATHLEN? */
 
 /* bbs.c */
 char            real_name[IDLEN + 1];
-char            local_article;
 
 /* mbbsd.c */
 char            fromhost[STRLEN] = "\0";

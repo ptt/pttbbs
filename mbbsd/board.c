@@ -478,11 +478,6 @@ b_config(void)
 		ANSI_COLOR(1)"已"ANSI_RESET : "未");
 #endif
 
-	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET
-		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n",
-		(bp->brdattr & BRD_LOCALSAVE) ?
-		"不轉出" : ANSI_COLOR(1)"自動轉出" );
-
 	// use '8' instead of '1', to prevent 'l'/'1' confusion
 	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
 		" - %s" ANSI_RESET "未滿十八歲進入\n",
@@ -632,11 +627,6 @@ b_config(void)
 		touched = 1;
 		break;
 #endif
-	    case 'l':
-		bp->brdattr ^= BRD_LOCALSAVE;
-		touched = 1;
-		break;
-
 	    case 'a':
 		bp->brdattr ^= BRD_ALIGNEDCMT;
 		touched = 1;

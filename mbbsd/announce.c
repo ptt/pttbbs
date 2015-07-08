@@ -438,7 +438,7 @@ a_newitem(menu_t * pm, int mode)
 		edflags |= EDITFLAG_ALLOWLARGE;
 	    }
 # endif // BN_BBSMOVIE
-	    if (vedit2(fpath, 0, NULL, NULL, edflags) == -1) {
+	    if (vedit2(fpath, 0, NULL, edflags) == -1) {
 		unlink(fpath);
 		pressanykey();
 		return;
@@ -1454,7 +1454,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		}
 # endif // BN_BBSMOVIE
 
-		if (vedit2(fname, NA, NULL, NULL, edflags) != -1) {
+		if (vedit2(fname, NA, NULL, edflags) != -1) {
 		    char            fpath[PATHLEN];
 		    fileheader_t    fhdr;
 		    strlcpy(fpath, path, sizeof(fpath));

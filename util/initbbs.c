@@ -106,7 +106,7 @@ static void initBoards() {
 	
 	strcpy(b.brdname, "SYSOP");
 	strcpy(b.title, "嘰哩 ◎站長好!");
-	b.brdattr = BRD_POSTMASK | BRD_NOTRAN;
+	b.brdattr = BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 2;
 	newboard(fp, &b);
@@ -120,14 +120,14 @@ static void initBoards() {
 	
 	strcpy(b.brdname, "junk");
 	strcpy(b.title, "發電 ◎雜七雜八的垃圾");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Security");
 	strcpy(b.title, "發電 ◎站內系統安全");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
@@ -141,28 +141,28 @@ static void initBoards() {
 	
 	strcpy(b.brdname, BN_ALLPOST);
 	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章");
-	b.brdattr = BRD_POSTMASK | BRD_NOTRAN;
+	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "deleted");
 	strcpy(b.title, "嘰哩 ◎資源回收筒");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = PERM_BM;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Note");
 	strcpy(b.title, "嘰哩 ◎動態看板及歌曲投稿");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Record");
 	strcpy(b.title, "嘰哩 ◎我們的成果");
-	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
+	b.brdattr = 0 | BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
@@ -170,14 +170,14 @@ static void initBoards() {
 	
 	strcpy(b.brdname, "WhoAmI");
 	strcpy(b.title, "嘰哩 ◎呵呵，猜猜我是誰！");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "EditExp");
 	strcpy(b.title, "嘰哩 ◎範本精靈投稿區");
-	b.brdattr = BRD_NOTRAN;
+	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
@@ -192,7 +192,7 @@ static void initBoards() {
 #ifdef BN_DIGEST
 	strcpy(b.brdname, BN_DIGEST);
 	strcpy(b.title, "文摘 ◎" BBSNAME "文摘 好文的收集地");
-	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
+	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
@@ -201,7 +201,7 @@ static void initBoards() {
 #ifdef BN_FIVECHESS_LOG
 	strcpy(b.brdname, BN_FIVECHESS_LOG);
 	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
-	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
+	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);

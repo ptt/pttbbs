@@ -215,8 +215,8 @@ int main_dark(int fd,userinfo_t *uin);
 int dice_main(void);
 
 /* edit */
-int vedit(const char *fpath, int saveheader, int *islocal, char save_title[STRLEN]);
-int vedit2(const char *fpath, int saveheader, int *islocal, char save_title[STRLEN], int flags);
+int vedit(const char *fpath, int saveheader, char save_title[STRLEN]);
+int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags);
 int veditfile(const char *fpath);
 void write_header(FILE *fp, const char *mytitle);
 void addsignature(FILE *fp, int ifuseanony);

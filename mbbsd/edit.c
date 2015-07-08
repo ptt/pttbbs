@@ -1715,7 +1715,7 @@ write_header(FILE * fp,  const char *mytitle)
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
 	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author, nickname,
-		local_article ? str_post2 : str_post1, currboard);
+		str_post1, currboard);
 
     }
     fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));
@@ -1894,7 +1894,7 @@ static void upload_file(void);
 // 		KEEP_EDITING	if keep editing
 // 		0		if write ok & exit
 static int
-write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN],
+write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
            int flags, int *pentropy)
 {
     FILE           *fp = NULL;
@@ -1928,14 +1928,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
         }
 
         // common trail
-        if (flags & EDITFLAG_ALLOW_LOCAL) {
-            if (local_article)
-                prints("[L]%s (S)%s+轉信", msgSave, msgSave);
-            else
-                prints("[S]%s+轉信 (L)%s", msgSave, msgSave);
-        } else {
-            prints("[S]%s", msgSave);
-        }
+        prints("[S]%s", msgSave);
     }
 
 #ifdef EXP_EDIT_UPLOAD
@@ -1991,19 +1984,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	    strlcpy(mytitle, ans, STRLEN);
 	return KEEP_EDITING;
     case 's':
-	if (!HasBasicUserPerm(PERM_LOGINOK)) {
-	    local_article = 1;
-	    // only report if local can be set.
-	    if (islocal)
-	    {
-		mvouts(2, 0, "您尚未通過身份確認，只能 Local Save。\n");
-		pressanykey();
-	    }
-	} else
-	    local_article = 0;
-	break;
-    case 'l':
-	local_article = 1;
+        break;
     }
 
     if (!aborted) {
@@ -2047,9 +2028,6 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
     *pentropy = entropy;
     if (aborted)
 	return aborted;
-
-    if (islocal)
-	*islocal = local_article;
 
     if (curr_buf->sitesig_string)
 	fputs(curr_buf->sitesig_string, fp);
@@ -3550,7 +3528,7 @@ upload_file(void)
  * 由於各處都以 == EDIT_ABORTED 判斷, 若想傳回其他負值要注意
  */
 int
-vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int flags)
+vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 {
     char            last = 0;	/* the last key you press */
     int             ch, tmp;
@@ -3717,7 +3695,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
 		block_cancel();
-                tmp = write_file(fpath, saveheader, islocal, title, flags,
+                tmp = write_file(fpath, saveheader, title, flags,
                                  &entropy);
 		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
@@ -4182,10 +4160,10 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 }
 
 int
-vedit(const char *fpath, int saveheader, int *islocal, char title[STRLEN])
+vedit(const char *fpath, int saveheader, char title[STRLEN])
 {
     assert(title);
-    return vedit2(fpath, saveheader, islocal, title, EDITFLAG_ALLOWTITLE);
+    return vedit2(fpath, saveheader, title, EDITFLAG_ALLOWTITLE);
 }
 
 /**
@@ -4196,7 +4174,7 @@ vedit(const char *fpath, int saveheader, int *islocal, char title[STRLEN])
 int
 veditfile(const char *fpath)
 {
-    return vedit2(fpath, NA, NULL, NULL, 0);
+    return vedit2(fpath, NA, NULL, 0);
 }
 
 /* vim:sw=4:nofoldenable

@@ -200,7 +200,7 @@ typedef struct boardheader_t { /* 256 bytes */
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
 // #define BRD_NOZAP       	0x00000001	/* 不可 ZAP */
 #define BRD_NOCOUNT		0x00000002	/* 不列入統計 */
-#define BRD_NOTRAN		0x00000004	/* 不轉信 */
+//#define BRD_NOTRAN		0x00000004	/* 不轉信 */
 #define BRD_GROUPBOARD		0x00000008	/* 群組板 */
 #define BRD_HIDE		0x00000010	/* 隱藏板 (看板好友才可看) */
 #define BRD_POSTMASK		0x00000020	/* 限制發表或閱讀 */
@@ -215,7 +215,7 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
 #define BRD_NOBOO		0x00010000	/* 不可噓 */
-#define BRD_LOCALSAVE		0x00020000	/* 預設 Local Save */
+//#define BRD_LOCALSAVE		0x00020000	/* 預設 Local Save */
 #define BRD_RESTRICTEDPOST	0x00040000	/* 板友才能發文 */
 #define BRD_GUESTPOST		0x00080000	/* guest能 post */
 #define BRD_COOLDOWN		0x00100000	/* 冷靜 */

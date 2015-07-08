@@ -942,45 +942,6 @@ do_select(void)
     return NEWDIRECT;
 }
 
-/* ----------------------------------------------------- */
-/* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
-/* ----------------------------------------------------- */
-void
-outgo_post(const fileheader_t *fh, const char *board, const char *userid,
-           const char *nickname)
-{
-    log_filef("innd/out.bntp", LOG_CREAT, "%s\t%s\t%s\t%s\t%s\n",
-              board, fh->filename, userid, nickname, fh->title);
-}
-
-static void
-innd_cancel_post(const fileheader_t *fh, const char *fpath, const char *userid)
-{
-    // deal with innd
-    FILE *fp = fopen(fpath, "r");
-    char buf[STRLEN*2];
-    char *s, *e, *nick = "";
-
-    // searching one line is enough.
-    if (fp &&
-            fgets(buf, sizeof(buf), fp) &&
-            (strncmp(buf, str_author1, LEN_AUTHOR1) == 0 ||
-             strncmp(buf, str_author2, LEN_AUTHOR2) == 0) &&
-            (s = strchr(buf, '(')) &&
-            (e = strrchr(buf, ')'))) {
-        *s ++ = 0;
-        *e = 0;
-        nick = s;
-    }
-    if (fp) {
-        fclose(fp);
-        // record to NNTP
-        log_filef("innd/cancel.bntp", LOG_CREAT,
-                "%s\t%s\t%s\t%s\t%s\n",
-                currboard, fh->filename, userid, nick, fh->title);
-    }
-}
-
 static int
 cancelpost(const char *direct, const fileheader_t *fh,
            int not_owned GCC_UNUSED, char *newpath, size_t sznewpath,
@@ -1004,12 +965,6 @@ cancelpost(const char *direct, const fileheader_t *fh,
 #else
     setbtotal(getbnum(brd));
 #endif
-
-    // should we use cuser.userid, or userid in post?
-    // I don't know, simply following the old way in cancelpost...
-    if (!(currbrdattr & BRD_NOTRAN)) {
-        innd_cancel_post(fh, newpath, cuser.userid);
-    }
 
     return ret;
 }
@@ -1324,7 +1279,7 @@ do_post_article(int edflags)
 				   "公告" // TN_ANNOUNCE
 				  };
     boardheader_t  *bp;
-    int             islocal, posttype=-1;
+    int             posttype=-1;
     char save_title[STRLEN];
     const char *reason = "無法發文";
 
@@ -1426,12 +1381,6 @@ do_post_article(int edflags)
 	return FULLUPDATE;
 
     setutmpmode(POSTING);
-    /* 未具備 Internet 權限者，只能在站內發表文章 */
-    /* 板主預設站內存檔 */
-    if (HasBasicUserPerm(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
-	local_article = 0;
-    else
-	local_article = 1;
 
     /* build filename */
     setbpath(fpath, currboard);
@@ -1448,8 +1397,6 @@ do_post_article(int edflags)
     edflags |= solveEdFlagByBoard(currboard, edflags);
     if (bp->brdattr & BRD_NOSELFDELPOST)
         edflags |= EDITFLAG_WARN_NOSELFDEL;
-    if (!(bp->brdattr & BRD_NOTRAN))
-        edflags |= EDITFLAG_ALLOW_LOCAL;
 
 #if defined(PLAY_ANGEL)
     // XXX 惡搞的 code。
@@ -1460,7 +1407,7 @@ do_post_article(int edflags)
     };
 #endif
 
-    money = vedit2(fpath, YEA, &islocal, save_title, edflags);
+    money = vedit2(fpath, YEA, save_title, edflags);
     if (money == EDIT_ABORTED) {
 	unlink(fpath);
 	pressanykey();
@@ -1522,8 +1469,6 @@ do_post_article(int edflags)
 
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
-    if (islocal)		/* local save */
-	postfile.filemode |= FILE_LOCAL;
 
     setbdir(buf, currboard);
 
@@ -1561,12 +1506,6 @@ do_post_article(int edflags)
 
 	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));
-	if( !islocal && !(bp->brdattr & BRD_NOTRAN) ){
-	    if( ifuseanony )
-		outgo_post(&postfile, currboard, owner, "Anonymous.");
-	    else
-		outgo_post(&postfile, currboard, cuser.userid, cuser.nickname);
-	}
 	brc_addlist(postfile.filename, postfile.modified);
 
         if (IS_OPENBRD(bp)) {
@@ -1985,7 +1924,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // XXX 以現在的模式，這是個 temp file
     stampfile(fpath, &postfile);
-    local_article = fhdr->filemode & FILE_LOCAL;
 
     // copying takes long time, add some visual effect
     grayout(0, b_lines-2, GRAYOUT_DARK);
@@ -2007,7 +1945,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-    if (vedit2(fpath, 0, NULL, save_title, edflags) == EDIT_ABORTED) {
+    if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
     }
@@ -2343,8 +2281,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 */
 	setbdir(fname, xboard);
 	append_record(fname, &xfile, sizeof(xfile));
-	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
-	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{

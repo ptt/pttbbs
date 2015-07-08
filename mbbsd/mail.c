@@ -376,7 +376,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
     strlcpy(save_title, title, sizeof(save_title));
 
-    if (vedit2(mfpath, YEA, NULL, save_title,
+    if (vedit2(mfpath, YEA, save_title,
 		EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED)
     {
 	unlink(mfpath);
@@ -757,7 +757,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 	sethomepath(fpath, cuser.userid);
 	stampfile(fpath, &mhdr);
 
-	if (vedit2(fpath, NA, NULL, save_title,
+	if (vedit2(fpath, NA, save_title,
 		    EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    clear();
@@ -1025,7 +1025,7 @@ multi_send(const char *title)
 	}
         edflags |= EDITFLAG_KIND_MAILLIST;
 
-	if (vedit(fpath, YEA, NULL, save_title) == EDIT_ABORTED) {
+	if (vedit(fpath, YEA, save_title) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    Vector_delete(&namelist);
 	    vmsg(msg_cancel);
@@ -1146,7 +1146,7 @@ mail_all(void)
     *quote_file = 0;
 
     edflags = EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL;
-    if (vedit2(fpath, YEA, NULL, save_title, edflags) == EDIT_ABORTED) {
+    if (vedit2(fpath, YEA, save_title, edflags) == EDIT_ABORTED) {
 	unlink(fpath);
 	outs(msg_cancel);
 	pressanykey();
@@ -1949,8 +1949,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	append_record(fname, &xfile, sizeof(xfile));
 	setbtotal(getbnum(xboard));
 
-	if (!xfile.filemode)
-	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
 	if (bcache[getbnum(xboard) - 1].brdattr & BRD_COOLDOWN)
 	    add_cooldowntime(usernum, 5);
