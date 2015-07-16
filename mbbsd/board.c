@@ -1393,8 +1393,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	//
 	// newflag is not so different now because we use all 5 digits.
 
-	vbarf(ANSI_REVERSE "   %s   看  板       類別 轉信  中   文   敘   述           人氣 板   主",
-		newflag ? "總數" : "編號");
+	vbarf(ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"    
+              "           人氣 板   主", newflag ? "總數" : "編號");
 	move(b_lines, 0);
 	brdlist_foot();
     }
