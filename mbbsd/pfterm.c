@@ -1090,6 +1090,7 @@ scrl(int rows)
 {
     if (!rows)
         return;
+    rows = ranged(rows, -ft.rows, ft.rows);
     if (rows > 0)
     {
         for (; rows > 0; rows--)
