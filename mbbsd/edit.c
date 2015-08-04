@@ -3111,6 +3111,8 @@ match_paren(void)
     int nested = 0;
 
     char cursorch = curr_buf->currline->data[curr_buf->currpnt];
+    if (cursorch == '\0')
+	return;
     if (!(ptype = strchr(parens, cursorch)))
 	return;
 
