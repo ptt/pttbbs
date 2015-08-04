@@ -18,6 +18,7 @@ CCACHE!=	sh -c 'type ccache 2>/dev/null || echo ""'
 CLANG:=
 .elif $(CLANG)
 CC:=		clang
+CXX:=		clang++
 .endif
 
 .if $(CCACHE)
