@@ -980,7 +980,7 @@ split(textline_t * line, int pos)
 	if (curr_buf->indent_mode)
 	    ptr = next_non_space_char(ptr);
 	strcat(p->data + spcs, ptr);
-	ptr[0] = '\0';
+	line->data[line->len] = '\0';
 
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
 	    line = adjustline(line, line->len);
