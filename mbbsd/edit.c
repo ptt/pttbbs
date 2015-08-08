@@ -1048,6 +1048,7 @@ insert_char(int ch)
     p = split(p, (s - p->data) + 1);
     p = p->next;
     if (wordwrap && p->len >= 1) {
+	p = adjustline(p, p->len + 1);
 	if (p->data[p->len - 1] != ' ') {
 	    p->data[p->len] = ' ';
 	    p->data[p->len + 1] = '\0';
