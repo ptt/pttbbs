@@ -2843,7 +2843,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 static void
 edit_outs_attr(const char *text, int attr)
 {
-    edit_outs_attr_n(text, SCR_COLS, attr);
+    edit_outs_attr_n(text, strlen(text), attr);
 }
 
 static void
