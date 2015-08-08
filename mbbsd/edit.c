@@ -977,8 +977,10 @@ split(textline_t * line, int pos)
 	p->data[spcs] = 0;
 
 	ptr = line->data + pos;
-	if (curr_buf->indent_mode)
+	if (curr_buf->indent_mode) {
 	    ptr = next_non_space_char(ptr);
+	    p->len = strlen(ptr) + spcs;
+	}
 	strcat(p->data + spcs, ptr);
 	line->data[line->len] = '\0';
 
