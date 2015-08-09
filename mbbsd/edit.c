@@ -960,12 +960,12 @@ adjustline(textline_t *oldp, short len)
  * @return the latter line after splitting
  */
 static textline_t *
-split(textline_t * line, int pos)
+split(textline_t * line, int pos, int indent)
 {
     if (pos <= line->len) {
 	textline_t *p = alloc_line(WRAPMARGIN);
 	char  *ptr;
-	int             spcs = indent_space();
+	int             spcs = indent;
 
 	curr_buf->totaln++;
 
@@ -1026,7 +1026,6 @@ insert_char(int ch)
     textline_t *p = curr_buf->currline;
     char  *s;
     int             wordwrap = YEA;
-    int indent_mode0;
 
     assert(curr_buf->currpnt <= p->len);
 #ifdef DEBUG
@@ -1060,11 +1059,7 @@ insert_char(int ch)
 	s = p->data + (p->len - 2);
     }
 
-    // disable indent_mode temporarily
-    indent_mode0 = curr_buf->indent_mode;
-    curr_buf->indent_mode = 0;
-    p = split(p, (s - p->data) + 1);
-    curr_buf->indent_mode = indent_mode0;
+    p = split(p, (s - p->data) + 1, 0);
 
     p = p->next;
     if (wordwrap && p->len >= 1) {
@@ -1123,7 +1118,7 @@ insert_string(const char *str)
 	else if (ch == '\t')
 	    insert_tab();
 	else if (ch == '\n')
-	    split(curr_buf->currline, curr_buf->currpnt);
+	    split(curr_buf->currline, curr_buf->currpnt, 0);
     }
 }
 
@@ -1222,7 +1217,7 @@ join(textline_t * line)
 	    // TODO don't give up
 	    return YEA;
 	}
-	split(n, (s - n->data) + 1);
+	split(n, (s - n->data) + 1, 0);
 	assert(line->len + line->next->len < WRAPMARGIN);
 	join(line);
 	return NA;
@@ -3523,7 +3518,7 @@ upload_file(void)
 	}
 	else if (c == KEY_ENTER)
 	{
-	    split(curr_buf->currline, curr_buf->currpnt);
+	    split(curr_buf->currline, curr_buf->currpnt, 0);
 	    szdata ++;
 	    promptmsg = 1;
 	}
@@ -3882,7 +3877,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    break;
 		}
 #endif
-		split(curr_buf->currline, curr_buf->currpnt);
+		split(curr_buf->currline, curr_buf->currpnt, indent_space());
 		break;
 	    case Ctrl('G'):
 		{
