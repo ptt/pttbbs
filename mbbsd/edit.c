@@ -993,8 +993,12 @@ split(textline_t * line, int pos)
 	    curr_buf->oldcurrline = curr_buf->currline = p;
 	    if (pos == curr_buf->currpnt)
 		curr_buf->currpnt = spcs;
-	    else
-		curr_buf->currpnt -= pos;
+	    else {
+		curr_buf->currpnt = curr_buf->currpnt - pos + spcs;
+		// In indent_mode, the length may be shorter.
+		if (curr_buf->currpnt > curr_buf->currline->len)
+		    curr_buf->currpnt = curr_buf->currline->len;
+	    }
 	    curr_buf->curr_window_line++;
 	    curr_buf->currln++;
 
