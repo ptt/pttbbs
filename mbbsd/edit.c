@@ -53,7 +53,6 @@
 #define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
 
 #if 0
-#define register
 #define DEBUG
 #define inline
 #endif
@@ -359,8 +358,8 @@ exit_edit_buffer(void)
 static int
 ansi2n(int ansix, textline_t * line)
 {
-    register char  *data, *tmp;
-    register char   ch;
+    char  *data, *tmp;
+    char   ch;
 
     data = tmp = line->data;
 
@@ -387,9 +386,9 @@ ansi2n(int ansix, textline_t * line)
 static short
 n2ansi(short nx, textline_t * line)
 {
-    register short  ansix = 0;
-    register char  *tmp, *nxp;
-    register char   ch;
+    short  ansix = 0;
+    char  *tmp, *nxp;
+    char   ch;
 
     tmp = nxp = line->data;
     nxp += nx;
@@ -616,7 +615,7 @@ static textline_t *
 back_line(textline_t * pos, int num, bool changeln)
 {
     while (num-- > 0) {
-	register textline_t *item;
+	textline_t *item;
 
 	if (pos && (item = pos->prev)) {
 	    pos = item;
@@ -646,7 +645,7 @@ static textline_t *
 forward_line(textline_t * pos, int num, bool changeln)
 {
     while (num-- > 0) {
-	register textline_t *item;
+	textline_t *item;
 
 	if (pos && (item = pos->next)) {
 	    pos = item;
@@ -860,8 +859,8 @@ insert_line(textline_t *line, textline_t *p)
 static void
 delete_line(textline_t * line, int saved)
 {
-    register textline_t *p = line->prev;
-    register textline_t *n = line->next;
+    textline_t *p = line->prev;
+    textline_t *n = line->next;
 
     if (!p && !n) {
 	line->data[0] = line->len = 0;
@@ -962,8 +961,8 @@ static textline_t *
 split(textline_t * line, int pos)
 {
     if (pos <= line->len) {
-	register textline_t *p = alloc_line(WRAPMARGIN);
-	register char  *ptr;
+	textline_t *p = alloc_line(WRAPMARGIN);
+	char  *ptr;
 	int             spcs = indent_space();
 
 	curr_buf->totaln++;
@@ -1013,42 +1012,40 @@ split(textline_t * line, int pos)
 static void
 insert_char(int ch)
 {
-    register textline_t *p = curr_buf->currline;
-    register int    i = p->len;
-    register char  *s;
+    textline_t *p = curr_buf->currline;
+    char  *s;
     int             wordwrap = YEA;
 
-    assert(curr_buf->currpnt <= i);
+    assert(curr_buf->currpnt <= p->len);
 
     block_cancel();
-    if (curr_buf->currpnt < i && !curr_buf->insert_mode) {
+    if (curr_buf->currpnt < p->len && !curr_buf->insert_mode) {
 	p->data[curr_buf->currpnt++] = ch;
 	/* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
 	if (curr_buf->ansimode)
 	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, p), p);
     } else {
-	raw_shift_right(p->data + curr_buf->currpnt, i - curr_buf->currpnt + 1);
+	raw_shift_right(p->data + curr_buf->currpnt, p->len - curr_buf->currpnt + 1);
 	p->data[curr_buf->currpnt++] = ch;
-	i = ++(p->len);
+	++(p->len);
     }
-    if (i < WRAPMARGIN)
+    if (p->len < WRAPMARGIN)
 	return;
-    s = p->data + (i - 1);
+    s = p->data + (p->len - 1);
     while (s != p->data && *s == ' ')
 	s--;
     while (s != p->data && *s != ' ')
 	s--;
     if (s == p->data) {
 	wordwrap = NA;
-	s = p->data + (i - 2);
+	s = p->data + (p->len - 2);
     }
     p = split(p, (s - p->data) + 1);
     p = p->next;
-    i = p->len;
-    if (wordwrap && i >= 1) {
-	if (p->data[i - 1] != ' ') {
-	    p->data[i] = ' ';
-	    p->data[i + 1] = '\0';
+    if (wordwrap && p->len >= 1) {
+	if (p->data[p->len - 1] != ' ') {
+	    p->data[p->len] = ' ';
+	    p->data[p->len + 1] = '\0';
 	    p->len++;
 	}
     }
@@ -1162,8 +1159,8 @@ undelete_line(void)
 static int
 join(textline_t * line)
 {
-    register textline_t *n;
-    register int    ovfl;
+    textline_t *n;
+    int    ovfl;
 
     if (!(n = line->next))
 	return YEA;
@@ -1178,7 +1175,7 @@ join(textline_t * line)
 	delete_line(n, 0);
 	return YEA;
     } else {
-	register char  *s; /* the split point */
+	char  *s; /* the split point */
 
 	s = n->data + n->len - ovfl - 1;
 	while (s != n->data && *s == ' ')
@@ -1209,7 +1206,7 @@ join(textline_t * line)
 static void
 delete_char(void)
 {
-    register int    len;
+    int    len;
 
     if ((len = curr_buf->currline->len)) {
 	assert(curr_buf->currpnt < len);
@@ -1552,8 +1549,8 @@ do_quote(void)
 static int
 check_quote(void)
 {
-    register textline_t *p = curr_buf->firstline;
-    register char  *str;
+    textline_t *p = curr_buf->firstline;
+    char  *str;
     int             post_line;
     int             included_line;
 
@@ -2604,8 +2601,8 @@ static void
 edit_outs_attr_n(const char *text, int n, int attr)
 {
     int    column = 0;
-    register unsigned char inAnsi = 0;
-    register unsigned char ch;
+    unsigned char inAnsi = 0;
+    unsigned char ch;
     int doReset = 0;
     const char *reset = ANSI_RESET;
 
@@ -2662,7 +2659,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
 #ifdef DBCSAWARE
     /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
-    register unsigned char isDBCS = 0;
+    unsigned char isDBCS = 0;
 #endif
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
@@ -2970,8 +2967,8 @@ display_textline_internal(textline_t *p, int i)
 static void
 refresh_window(void)
 {
-    register textline_t *p;
-    register int    i;
+    textline_t *p;
+    int    i;
 
     for (p = curr_buf->top_of_win, i = 0; i < visible_window_height(); i++) {
 	display_textline_internal(p, i);
