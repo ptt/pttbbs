@@ -1177,6 +1177,7 @@ undelete_line(void)
  * ....: C1 C2
  *
  * case B=empty:
+ *	delete_line B
  * 	return YEA
  *
  * case A+B < WRAPMARGIN:
@@ -1187,8 +1188,7 @@ undelete_line(void)
  *
  * case A+B1+B2 > WRAPMARGIN, A+B1<WRAPMARGIN
  * 	line: A1 A2 B1
- * 	next: B2 " "
- * 	call join($next)
+ * 	next: B2
  */
 static int
 join(textline_t * line)
@@ -1198,8 +1198,10 @@ join(textline_t * line)
 
     if (!(n = line->next))
 	return YEA;
-    if (!*next_non_space_char(n->data))
+    if (!*next_non_space_char(n->data)) {
+	delete_line(n, 0);
 	return YEA;
+    }
 
 
     ovfl = line->len + n->len - WRAPMARGIN;
@@ -1216,22 +1218,13 @@ join(textline_t * line)
 	    s--;
 	while (s != n->data && *s != ' ')
 	    s--;
-	if (s == n->data)
+	if (s == n->data) {
+	    // TODO don't give up
 	    return YEA;
+	}
 	split(n, (s - n->data) + 1);
 	assert(line->len + line->next->len < WRAPMARGIN);
 	join(line);
-	n = line->next;
-	ovfl = n->len - 1;
-	if (ovfl >= 0 && ovfl < WRAPMARGIN - 2) {
-	    s = &(n->data[ovfl]);
-	    if (*s != ' ') {
-		strcat(s, " ");
-		n->len++;
-	    }
-	}
-	join(line->next);
-	line->next=adjustline(line->next, line->next->len);
 	return NA;
     }
 }
@@ -4058,10 +4051,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 			if (curr_buf->currline->next == curr_buf->top_of_win) {
 			    curr_buf->top_of_win = curr_buf->currline;
 			    curr_buf->curr_window_line = 0;
-			}
-			if (*next_non_space_char(curr_buf->currline->next->data) == '\0') {
-			    delete_line(curr_buf->currline->next, 0);
-			    break;
 			}
 			join(curr_buf->currline);
 			break;
