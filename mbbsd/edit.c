@@ -1791,6 +1791,7 @@ addsignature(FILE * fp, int ifuseanony)
 {
     FILE           *fs;
     int             i;
+    int             idx_pos;
     char            buf[WRAPMARGIN + 1];
     char            fpath[STRLEN];
 
@@ -1807,7 +1808,7 @@ addsignature(FILE * fp, int ifuseanony)
 	memset(&si, 0, sizeof(si));
 
 browse_sigs:
-	showsignature(fpath, &i, &si);
+	showsignature(fpath, &idx_pos, &si);
 
 	if (si.total > 0){
 	    char msg[64];
@@ -1839,7 +1840,7 @@ browse_sigs:
 	    pwcuSetSignature(buf[0]);
 
 	    if (ch != '0') {
-		fpath[i] = ch;
+		fpath[idx_pos] = ch;
 		do
 		{
 		    if ((fs = fopen(fpath, "r"))) {
@@ -1851,11 +1852,11 @@ browse_sigs:
 			    fputs(buf, fp);
                         }
 			fclose(fs);
-			fpath[i] = ch;
+			fpath[idx_pos] = ch;
 		    }
 		    else
-			fpath[i] = '1' + (fpath[i] - '1' + 1) % (si.max+1);
-		} while (!isdigit((int)buf[0]) && si.max > 0 && ch != fpath[i]);
+			fpath[idx_pos] = '1' + (fpath[idx_pos] - '1' + 1) % (si.max+1);
+		} while (!isdigit((int)buf[0]) && si.max > 0 && ch != fpath[idx_pos]);
 	    }
 	}
     }
