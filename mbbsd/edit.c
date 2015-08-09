@@ -949,6 +949,7 @@ adjustline(textline_t *oldp, short len)
     if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
     if( oldp == curr_buf->blockline ) curr_buf->blockline = newp;
     if( oldp == curr_buf->top_of_win) curr_buf->top_of_win= newp;
+    if( oldp == curr_buf->oldcurrline ) curr_buf->oldcurrline = newp;
     if( newp->prev != NULL ) newp->prev->next = newp;
     if( newp->next != NULL ) newp->next->prev = newp;
     //    vmsg("adjust %x to %x, length: %d", (int)oldp, (int)newp, len);
