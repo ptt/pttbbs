@@ -129,13 +129,6 @@ enum {
  * editor_internal_t。enter_edit_buffer 跟 exit_edit_buffer 提供進出的介面，
  * 裡面分別會呼叫 constructor 跟 destructor。
  *
- * TODO
- * vedit 裡面有個 curr_buf->oldcurrline，用來記上一次的 currline。由於只有 currline 擁
- * 有 WRAPMARGIN 的空間，所以目前的作法是當 curr_buf->oldcurrline != currline 時，就
- * resize curr_buf->oldcurrline 跟 currline。但是糟糕的是目前必須人工追蹤 currline 的行
- * 為，而且若不幸遇到 curr_buf->oldcurrline 指到的那一行已經被 free 掉，就完了。最好是
- * 把這些東西包起來。不過我沒空做了，patch is welcome :P
- *
  * Victor Hsieh <victor@csie.org>
  * Thu, 03 Feb 2005 15:18:00 +0800
  */
@@ -317,6 +310,8 @@ enter_edit_buffer(void)
 static inline void
 free_line(textline_t *p)
 {
+    if (p == curr_buf->oldcurrline)
+	curr_buf->oldcurrline = NULL;
     p->next = (textline_t*)0x12345678;
     p->prev = (textline_t*)0x87654321;
     p->len = -12345;
@@ -536,7 +531,8 @@ edit_check_healthy()
     edit_buffer_check_healthy(curr_buf->lastline);
     assert(curr_buf->lastline->next == NULL);
 
-    edit_buffer_check_healthy(curr_buf->oldcurrline);
+    if (curr_buf->oldcurrline)
+	edit_buffer_check_healthy(curr_buf->oldcurrline);
 
     // currline
     edit_buffer_check_healthy(curr_buf->currline);
@@ -884,6 +880,8 @@ delete_line(textline_t * line, int saved)
 	curr_buf->deleted_line = line;
 	curr_buf->deleted_line->next = NULL;
 	curr_buf->deleted_line->prev = NULL;
+	if (line == curr_buf->oldcurrline)
+	    curr_buf->oldcurrline = NULL;
     }
     else {
 	free_line(line);
@@ -918,8 +916,6 @@ indent_space(void)
  * adjustline(oldp, len);
  * 用來將 oldp 指到的那一行, 重新修正成 len這麼長.
  *
- * 呼叫了 adjustline 後記得檢查有動到 currline, 如果是的話 oldcurrline 也要動
- *
  * In FreeBSD:
  * 在這邊一共做了兩次的 memcpy() , 第一次從 heap 拷到 stack ,
  * 把原來記憶體 free() 後, 又重新在 stack上 malloc() 一次,
@@ -935,6 +931,7 @@ adjustline(textline_t *oldp, short len)
     textline_t *newp;
 
     assert(0 <= oldp->len && oldp->len <= WRAPMARGIN);
+    assert(oldp != curr_buf->deleted_line);
 
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
     free_line(oldp);
@@ -949,7 +946,8 @@ adjustline(textline_t *oldp, short len)
     if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
     if( oldp == curr_buf->blockline ) curr_buf->blockline = newp;
     if( oldp == curr_buf->top_of_win) curr_buf->top_of_win= newp;
-    if( oldp == curr_buf->oldcurrline ) curr_buf->oldcurrline = newp;
+    if(curr_buf->oldcurrline == NULL && len == WRAPMARGIN)
+	curr_buf->oldcurrline = curr_buf->currline;
     if( newp->prev != NULL ) newp->prev->next = newp;
     if( newp->next != NULL ) newp->next->prev = newp;
     //    vmsg("adjust %x to %x, length: %d", (int)oldp, (int)newp, len);
@@ -988,9 +986,7 @@ split(textline_t * line, int pos)
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
 	    line = adjustline(line, line->len);
 	    insert_line(line, p);
-	    // because p is allocated with fullsize, we can skip adjust.
-	    // curr_buf->oldcurrline = line;
-	    curr_buf->oldcurrline = curr_buf->currline = p;
+	    curr_buf->currline = p;
 	    if (pos == curr_buf->currpnt)
 		curr_buf->currpnt = spcs;
 	    else {
@@ -1012,6 +1008,9 @@ split(textline_t * line, int pos)
 	edit_buffer_check_healthy(line);
 	edit_buffer_check_healthy(line->next);
     }
+#ifdef DEBUG
+    assert(curr_buf->currline->mlength == WRAPMARGIN);
+#endif
     return line;
 }
 
@@ -1027,8 +1026,12 @@ insert_char(int ch)
     textline_t *p = curr_buf->currline;
     char  *s;
     int             wordwrap = YEA;
+    int indent_mode0;
 
     assert(curr_buf->currpnt <= p->len);
+#ifdef DEBUG
+    assert(curr_buf->currline->mlength == WRAPMARGIN);
+#endif
 
     block_cancel();
     if (curr_buf->currpnt < p->len && !curr_buf->insert_mode) {
@@ -1037,12 +1040,16 @@ insert_char(int ch)
 	if (curr_buf->ansimode)
 	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, p), p);
     } else {
+#ifdef DEBUG
+	assert(p->len < p->mlength);
+#endif
 	raw_shift_right(p->data + curr_buf->currpnt, p->len - curr_buf->currpnt + 1);
 	p->data[curr_buf->currpnt++] = ch;
 	++(p->len);
     }
     if (p->len < WRAPMARGIN)
 	return;
+
     s = p->data + (p->len - 1);
     while (s != p->data && *s == ' ')
 	s--;
@@ -1052,16 +1059,29 @@ insert_char(int ch)
 	wordwrap = NA;
 	s = p->data + (p->len - 2);
     }
+
+    // disable indent_mode temporarily
+    indent_mode0 = curr_buf->indent_mode;
+    curr_buf->indent_mode = 0;
     p = split(p, (s - p->data) + 1);
+    curr_buf->indent_mode = indent_mode0;
+
     p = p->next;
     if (wordwrap && p->len >= 1) {
-	p = adjustline(p, p->len + 1);
+	if (p != curr_buf->currline)
+	    p = adjustline(p, p->len + 1);
+#ifdef DEBUG
+	assert(p->len < p->mlength);
+#endif
 	if (p->data[p->len - 1] != ' ') {
 	    p->data[p->len] = ' ';
 	    p->data[p->len + 1] = '\0';
 	    p->len++;
 	}
     }
+#ifdef DEBUG
+    assert(curr_buf->currline->mlength == WRAPMARGIN);
+#endif
 }
 
 /**
@@ -1079,6 +1099,7 @@ insert_tab(void)
 {
     do {
 	insert_char(' ');
+	edit_buffer_check_healthy(curr_buf->currline);
     } while (curr_buf->currpnt & 0x7);
 }
 
@@ -1209,7 +1230,6 @@ join(textline_t * line)
 		n->len++;
 	    }
 	}
-	line->next=adjustline(line->next, WRAPMARGIN);
 	join(line->next);
 	line->next=adjustline(line->next, line->next->len);
 	return NA;
@@ -2178,7 +2198,6 @@ block_delete(void)
     } else {
 	curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
     }
-    curr_buf->oldcurrline = curr_buf->currline;
 
     // maintain special line pointer
     if (curr_buf->firstline == begin)
@@ -3512,7 +3531,6 @@ upload_file(void)
 	else if (c == KEY_ENTER)
 	{
 	    split(curr_buf->currline, curr_buf->currpnt);
-	    curr_buf->oldcurrline = curr_buf->currline;
 	    szdata ++;
 	    promptmsg = 1;
 	}
@@ -3585,6 +3603,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
            curr_buf->firstline= adjustline(curr_buf->firstline, WRAPMARGIN);
     }
+#ifdef DEBUG
+    assert(curr_buf->currline->mlength == WRAPMARGIN);
+#endif
 
     /* No matter you quote or not, just start the cursor from (0,0) */
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line =
@@ -3604,9 +3625,13 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    curr_buf->redraw_everything = NA;
 	}
 	if( curr_buf->oldcurrline != curr_buf->currline ){
-	    curr_buf->oldcurrline = adjustline(curr_buf->oldcurrline, curr_buf->oldcurrline->len);
+	    if (curr_buf->oldcurrline != NULL)
+		curr_buf->oldcurrline = adjustline(curr_buf->oldcurrline, curr_buf->oldcurrline->len);
 	    curr_buf->oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 	}
+#ifdef DEBUG
+	assert(curr_buf->currline->mlength == WRAPMARGIN);
+#endif
 
 	if (curr_buf->ansimode)
 	    ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
@@ -3727,7 +3752,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    else
 			return tmp;
 		}
-		curr_buf->oldcurrline = curr_buf->currline;
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case KEY_F5:
@@ -3786,7 +3810,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		case '8':
 		case '9':
 		    read_tmpbuf(KEY_ESC_arg - '0');
-		    curr_buf->oldcurrline = curr_buf->currline;
 		    curr_buf->redraw_everything = YEA;
 		    break;
 		case 'l':	/* block delete */
@@ -3803,9 +3826,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    block_copy();
 		    break;
 		case 'y':
-		    curr_buf->oldcurrline = undelete_line();
-		    if (curr_buf->oldcurrline == NULL)
-			curr_buf->oldcurrline = curr_buf->currline;
+		    undelete_line();
 		    break;
 		case 'R':
 #ifdef DBCSAWARE
@@ -3869,7 +3890,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		}
 #endif
 		split(curr_buf->currline, curr_buf->currpnt);
-		curr_buf->oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('G'):
 		{
@@ -4113,7 +4133,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    delete_line(curr_buf->currline, 1);
 		    curr_buf->currline = p;
 		    curr_buf->redraw_everything = YEA;
-		    curr_buf->oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+		    adjustline(curr_buf->currline, WRAPMARGIN);
 		    break;
 		}
 		else if (curr_buf->currline->len == curr_buf->currpnt) {
