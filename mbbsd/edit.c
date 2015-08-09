@@ -941,6 +941,9 @@ adjustline(textline_t *oldp, short len)
 
     newp = alloc_line(len);
     memcpy(newp, tmpl, len + sizeof(textline_t));
+#ifdef DEBUG
+    newp->mlength = len;
+#endif
     if( oldp == curr_buf->firstline ) curr_buf->firstline = newp;
     if( oldp == curr_buf->lastline )  curr_buf->lastline  = newp;
     if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
@@ -999,6 +1002,8 @@ split(textline_t * line, int pos)
 	    insert_line(line, p);
 	}
 	curr_buf->redraw_everything = YEA;
+	edit_buffer_check_healthy(line);
+	edit_buffer_check_healthy(line->next);
     }
     return line;
 }
