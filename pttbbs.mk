@@ -33,7 +33,8 @@ PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
 .if $(CLANG)
-PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality -fcolor-diagnostics
+PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
+		-fcolor-diagnostics -Wno-invalid-source-encoding
 .endif
 
 # enable assert()
