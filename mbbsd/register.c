@@ -131,12 +131,6 @@ isvalidcareer(char *career)
     if( strlen(career) < 6 )
 	return "您的輸入不正確";
 #endif
-    if (DBCS_strcasestr(career, "學") &&
-	DBCS_strcasestr(career, "系") &&
-	DBCS_strcasestr(career, "級") == 0 &&
-	(DBCS_strcasestr(career, "畢") == 0 &&
-	 DBCS_strcasestr(career, "肄") == 0))
-	return "請加上年級";
     return NULL;
 }
 
