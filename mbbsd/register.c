@@ -18,6 +18,10 @@
 
 #define FN_JOBSPOOL_DIR	"jobspool/"
 
+#define FN_REJECT_STR_NAME "etc/reg_reject_str.name"
+#define FN_REJECT_STR_ADDR "etc/reg_reject_str.addr"
+#define FN_REJECT_STR_CAREER "etc/reg_reject_str.career"
+
 // #define DBG_DISABLE_CHECK	// disable all input checks
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
 
@@ -27,29 +31,36 @@
 // Value Validation
 ////////////////////////////////////////////////////////////////////////////
 static int
-HaveRejectStr(const char *s, const char **rej)
+HaveRejectStr(const char *s, const char *fn_db)
 {
-    int     i;
-    char    *rejectstr[] =
-	{"幹", "不", "你媽", "某", "笨", "呆", "..", "xx",
-	 "你管", "管我", "猜", "天才", "超人",
-	 /* "阿",  (某些住址有) */
-	 "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
-	 "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
-	 "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ",
-	 "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", NULL};
+    FILE *fp = fopen(fn_db, "r");
+    char buf[256];
+    int ret = 0;
 
-    if( rej != NULL )
-	for( i = 0 ; rej[i] != NULL ; ++i )
-	    if( DBCS_strcasestr(s, rej[i]) )
-		return 1;
+    if (!fp)
+        return 0;
 
-    for( i = 0 ; rejectstr[i] != NULL ; ++i )
-	if( DBCS_strcasestr(s, rejectstr[i]) )
-	    return 1;
-
-    return 0;
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        // strip \n
+        buf[strlen(buf) - 1] = 0;
+        if (*buf && DBCS_strcasestr(s, buf)) {
+            ret = 1;
+            break;
+        }
+    }
+    fclose(fp);
+    return ret;
 }
+
+static int
+strlen_without_space(const char *s)
+{
+    int i = 0;
+    while (*s)
+	if (*s++ != ' ') i++;
+    return i;
+}
+
 
 int
 reserved_user_id(const char *userid)
@@ -74,103 +85,71 @@ bad_user_id(const char *userid)
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
-
-    /* in2: 原本是用strcasestr,
-            不過有些人中間剛剛好出現這個字應該還算合理吧? */
-    if( strncasecmp(userid, "fuck", 4) == 0 ||
-        strncasecmp(userid, "shit", 4) == 0 )
-	return 1;
-
-    /*
-     * while((ch = *(++userid))) if(not_alnum(ch)) return 1;
-     */
     return 0;
 }
 
 static char *
 isvalidname(char *rname)
 {
-#ifdef FOREIGN_REG
-    (void)rname;
+#ifdef DBG_DISABLE_CHECK
     return NULL;
-#else
-    const char    *rejectstr[] =
-	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
-	 "先生", "帥哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭",
-	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
-	 "妹妹", "嘿", "嗯", "爺爺", "大哥", "無",
-	 NULL};
-    if( strip_blank(rname, rname) && IS_DBCSLEAD(rname[0]) &&
-	strlen(rname) >= 4 &&
-	!HaveRejectStr(rname, rejectstr) &&
-	strncmp(rname, "小", 2) != 0   && //起頭是「小」
-	strncmp(rname, "我是", 4) != 0 && //起頭是「我是」
-	!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
-	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
-	return NULL;
-    return "您的輸入似乎不正確";
-#endif
+#endif // DBG_DISABLE_CHECK
 
+    if (strlen_without_space(rname) < 4 ||
+        HaveRejectStr(rname, FN_REJECT_STR_NAME))
+	return "您的輸入似乎不正確";
+
+    return NULL;
 }
 
 static char *
 isvalidcareer(char *career)
 {
-#ifndef FOREIGN_REG
-    const char    *rejectstr[] = {NULL};
-    if (!(IS_DBCSLEAD(career[0]) && strlen(career) >= 6) ||
-	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
+#ifdef DBG_DISABLE_CHECK
+    return NULL;
+#endif // DBG_DISABLE_CHECK
+
+    if (strlen_without_space(career) < 6)
 	return "您的輸入似乎不正確";
-    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
-	strcmp(&career[strlen(career) - 4], "大學") == 0 ||
-	strcmp(career, "學生大學") == 0)
-	return "麻煩請加學校系所";
-    if (strcmp(career, "學生高中") == 0)
-	return "麻煩輸入學校名稱";
-#else
-    if( strlen(career) < 6 )
-	return "您的輸入不正確";
-#endif
+
+    if (HaveRejectStr(career, FN_REJECT_STR_CAREER))
+	return "您的輸入似乎有誤";
+
     return NULL;
 }
 
-static int
-strlen_without_space(const char *s)
-{
-    int i = 0;
-    while (*s)
-	if (*s++ != ' ') i++;
-    return i;
-}
-
 static char *
-isvalidaddr(char *addr)
+isvalidaddr(char *addr, int isForeign)
 {
-    const char    *rejectstr[] =
-	{"地球", "銀河", "火星", NULL};
-
 #ifdef DBG_DISABLE_CHECK
     return NULL;
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (DBCS_strcasestr(addr, "信箱") != 0 || DBCS_strcasestr(addr, "郵政") != 0)
+    if (DBCS_strcasestr(addr, "信箱") != 0 ||
+        DBCS_strcasestr(addr, "郵政") != 0)
 	return "抱歉我們不接受郵政信箱";
-    if (strlen_without_space(addr) < 15 ||
-	(DBCS_strcasestr(addr, "市") == 0 &&
-	 DBCS_strcasestr(addr, "巿") == 0 &&
-	 DBCS_strcasestr(addr, "縣") == 0 &&
-	 DBCS_strcasestr(addr, "室") == 0) ||
-	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "街") == 0 )
+
+    if (strlen_without_space(addr) < 15)
 	return "這個地址似乎並不完整";
-    if (HaveRejectStr(addr, rejectstr))
+
+    if (!isForeign &&
+	((DBCS_strcasestr(addr, "市") == 0 &&
+	  DBCS_strcasestr(addr, "巿") == 0 &&
+	  DBCS_strcasestr(addr, "縣") == 0 &&
+	  DBCS_strcasestr(addr, "室") == 0) ||
+	 strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
+	 strcmp(&addr[strlen(addr) - 2], "街") == 0))
+	return "這個地址似乎並不完整";
+
+    if (HaveRejectStr(addr, FN_REJECT_STR_ADDR))
 	return "這個地址似乎有誤";
+
     return NULL;
 }
 
@@ -704,8 +683,7 @@ new_register(void)
 	getdata(20, 0, "真實姓名：", newuser.realname,
 		sizeof(newuser.realname), DOECHO);
 
-	if ((errmsg = isvalidname(newuser.realname)))
-	{
+	if ((errmsg = isvalidname(newuser.realname))) {
 	    memset(newuser.realname, 0, sizeof(newuser.realname));
 	    vmsg(errmsg);
 	}
@@ -714,14 +692,18 @@ new_register(void)
     try = 0;
     while (strlen(newuser.address) < 8)
     {
-	// do not use isvalidaddr to check,
-	// because that requires foreign info.
 	if (++try > 10) {
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	getdata(21, 0, "聯絡地址：", newuser.address,
 		sizeof(newuser.address), DOECHO);
+
+        // We haven't ask isForeign yet, so assume that's one (for lesser check)
+	if ((errmsg = isvalidaddr(newuser.address, 1))) {
+	    memset(newuser.address, 0, sizeof(newuser.address));
+	    vmsg(errmsg);
+	}
     }
 
     try = 0;
@@ -1159,6 +1141,10 @@ u_register(void)
     int		    i = 0;
     int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
 
+#ifndef FOREIGN_REG
+    isForeign = 0;
+#endif
+
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
 	return XEASY;
@@ -1322,6 +1308,7 @@ u_register(void)
 
     move(2, 0);
     clrtobot();
+
     while (1) {
 	clear();
 	move(1, 0);
@@ -1333,8 +1320,8 @@ u_register(void)
 
 	    getfield(2, isForeign ? "y/N" : "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", not_fore, 2);
 
-	    // XXX NOTE: the question we ask was "Aren't you a foreigner" in Chinese, so the answer
-	    // must be opposite to isForeign.
+            // XXX NOTE: the question we ask was "Aren't you a foreigner" in
+            // Chinese, so the answer must be opposite to isForeign.
 	    if (isForeign)
 	    {
 		// default n
@@ -1364,7 +1351,7 @@ u_register(void)
 	while (1) {
 	    getfield(5, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
 		    REGNOTES_ROOT "career", "服務單位", career, 40);
-	    if( (errcode = isvalidcareer(career)) == NULL )
+	    if ((errcode = isvalidcareer(career)) == NULL)
 		break;
 	    else
 		vmsg(errcode);
@@ -1374,11 +1361,7 @@ u_register(void)
 	    getfield(6, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
 		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
 		     REGNOTES_ROOT "address", "目前住址", addr, sizeof(addr));
-	    if( (errcode = isvalidaddr(addr)) == NULL
-#ifdef FOREIGN_REG
-                || isForeign
-#endif
-		)
+	    if ((errcode = isvalidaddr(addr, isForeign)) == NULL)
 		break;
 	    else
 		vmsg(errcode);
@@ -1391,9 +1374,6 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-#ifndef FOREIGN_REG
-    isForeign = 0;
-#endif
 
     // copy values to cuser
     pwcuRegisterSetInfo(rname, addr, career, email, isForeign);
