@@ -417,17 +417,8 @@ DBCS_strcasestr(const char* pool, const char *ptr)
         // compare szpool[i..szptr] with ptr
         for (i2 = 0; i2 < szptr; i2++)
         {
-            if (pool[i + i2] > 0)
+            if (IS_DBCSLEAD(pool[i + i2]))
             {
-                // ascii
-                if (IS_DBCSLEAD(ptr[i2]) ||
-		    tolower(ptr[i2]) != tolower(pool[i+i2]))
-                {
-		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
-                    found = 0;
-                    break;
-                }
-            } else {
                 // non-ascii
                 if (ptr[i2]   != pool[i+i2] ||
                     ptr[i2+1] != pool[i+i2+1])
@@ -437,6 +428,15 @@ DBCS_strcasestr(const char* pool, const char *ptr)
                     break;
                 }
 		i2 ++;
+            } else {
+                // ascii
+                if (IS_DBCSLEAD(ptr[i2]) ||
+		    tolower(ptr[i2]) != tolower(pool[i+i2]))
+                {
+		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
+                    found = 0;
+                    break;
+                }
             }
         }
 
