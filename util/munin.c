@@ -17,29 +17,73 @@ typedef struct {
 #define DEFINE_VAR(type, name) {#name, STAT_ ## name, #type}
 #define DEFINE_VAR_END {NULL, 0, NULL}
 
-static var_t useraction_vars[] = {
+static var_t login_vars[] = {
+    DEFINE_VAR(COUNTER, LOGIN),
+    DEFINE_VAR(COUNTER, SHELLLOGIN),
+    DEFINE_VAR_END,
+};
+
+static var_t syscall_vars[] = {
+    DEFINE_VAR(COUNTER, SYSWRITESOCKET),
+    DEFINE_VAR(COUNTER, SYSSELECT),
+    DEFINE_VAR(COUNTER, SYSREADSOCKET),
+    DEFINE_VAR_END,
+};
+
+static var_t signal_vars[] = {
+    DEFINE_VAR(COUNTER, SIGINT),
+    DEFINE_VAR(COUNTER, SIGQUIT),
+    DEFINE_VAR(COUNTER, SIGILL),
+    DEFINE_VAR(COUNTER, SIGABRT),
+    DEFINE_VAR(COUNTER, SIGFPE),
+    DEFINE_VAR(COUNTER, SIGBUS),
+    DEFINE_VAR(COUNTER, SIGSEGV),
+    DEFINE_VAR_END,
+};
+
+static var_t user_vars[] = {
+    DEFINE_VAR(COUNTER, SEARCHUSER),
+    DEFINE_VAR(COUNTER, QUERY),
+    DEFINE_VAR(COUNTER, FRIENDDESC),
+    DEFINE_VAR(COUNTER, FRIENDDESC_FILE),
+    DEFINE_VAR(COUNTER, PICKMYFRIEND),
+    DEFINE_VAR(COUNTER, PICKBFRIEND),
+    DEFINE_VAR_END,
+};
+
+static var_t more_vars[] = {
+    DEFINE_VAR(COUNTER, MORE),
+    DEFINE_VAR(COUNTER, READPOST),
+    DEFINE_VAR_END,
+};
+
+static var_t thread_vars[] = {
+    DEFINE_VAR(COUNTER, THREAD),
+    DEFINE_VAR(COUNTER, SELECTREAD),
+    DEFINE_VAR_END,
+};
+
+static var_t misc_vars[] = {
     DEFINE_VAR(COUNTER, VEDIT),
     DEFINE_VAR(COUNTER, TALKREQUEST),
     DEFINE_VAR(COUNTER, WRITEREQUEST),
-    DEFINE_VAR(COUNTER, MORE),
     DEFINE_VAR(COUNTER, DOSEND),
-    DEFINE_VAR(COUNTER, SEARCHUSER),
-    DEFINE_VAR(COUNTER, THREAD),
-    DEFINE_VAR(COUNTER, SELECTREAD),
-    DEFINE_VAR(COUNTER, QUERY),
     DEFINE_VAR(COUNTER, DOTALK),
-    DEFINE_VAR(COUNTER, PICKMYFRIEND),
-    DEFINE_VAR(COUNTER, PICKBFRIEND),
     DEFINE_VAR(COUNTER, GAMBLE),
     DEFINE_VAR(COUNTER, DOPOST),
-    DEFINE_VAR(COUNTER, READPOST),
     DEFINE_VAR(COUNTER, RECOMMEND),
     DEFINE_VAR(COUNTER, DORECOMMEND),
     DEFINE_VAR_END,
 };
 
 static module_t modules[] = {
-    {"useraction", useraction_vars, "bbs user actions"},
+    {"login",   login_vars,   "bbs login"},
+    {"syscall", syscall_vars, "bbs syscall"},
+    {"signal",  signal_vars,  "bbs signal"},
+    {"user",    user_vars,    "bbs user"},
+    {"more",    more_vars,    "bbs more"},
+    {"thread",  thread_vars,  "bbs thread"},
+    {"misc",    misc_vars,    "bbs misc"},
     {NULL, NULL, NULL},
 };
 
