@@ -105,12 +105,13 @@ int main(int argc, char *argv[]) {
     else
 	prog++;
 
-    if (strncmp(prog, "munin_", 6)) {
-	fprintf(stderr, "Program/symlink must be prefixed with 'munin_'.\n");
+    const char *prefix = "bbs_";
+    if (strncmp(prog, prefix, strlen(prefix))) {
+	fprintf(stderr, "Program/symlink must be prefixed with '%s'.\n", prefix);
 	return 1;
     }
 
-    const char *module = prog + 6;
+    const char *module = prog + strlen(prefix);
     const char *action;
     switch (argc) {
 	case 1:
