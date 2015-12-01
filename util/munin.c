@@ -58,6 +58,7 @@ static int config(const char *mname) {
     if (!m)
 	return -1;
     printf("graph_title %s\n", m->title);
+    printf("graph_category bbs\n");
     printf("graph_order");
     for (int i = 0; m->vars[i].name; i++) {
 	printf(" %s", m->vars[i].name);
