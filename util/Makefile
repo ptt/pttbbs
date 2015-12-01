@@ -25,6 +25,7 @@ CPROG_WITH_UTIL= \
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
+	munin	\
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
