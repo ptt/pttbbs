@@ -105,8 +105,14 @@ void expire(life_t *brd)
 	// TODO use fread/fwrite to reduce system calls
 	if( checkmode ||
 	    (fdw = OpenCreate(tmpfile, O_WRONLY | O_EXCL)) > 0 ){
-	    while( read(fdr, &head, sizeof(head)) == sizeof(head) ){
-		done = 1;
+	    done = 1;
+	    while (1) {
+		int ret = read(fdr, &head, sizeof(head));
+		if (ret != sizeof(head)) {
+		    if (ret != 0)
+			done = 0;
+		    break;
+		}
 		ftime = atoi(head.filename + 2);
                 if (head.owner[0] == '-' ||
                     (!*head.filename) ||
@@ -132,7 +138,7 @@ void expire(life_t *brd)
 		if( keep ){
 		    ++nKeep;
 		    if( !checkmode &&
-			write(fdw, (char *)&head, sizeof(head)) == -1 ){
+			write(fdw, (char *)&head, sizeof(head)) != sizeof(head) ){
 			done = 0;
 			break;
 		    }
@@ -154,7 +160,7 @@ void expire(life_t *brd)
 
     if( !checkmode && done ){
 	sprintf(bakfile, "%s.old", index);
-	if( rename(index, bakfile) != -1 ){
+	if( rename(index, bakfile) == 0 ){
 	    rename(tmpfile, index);
 	    touchbtotal(bid);
 	}
