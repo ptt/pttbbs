@@ -152,8 +152,13 @@ void expire(life_t *brd)
 		    total--;
 		}
 	    }
-	    if( !checkmode )
+	    if (!checkmode) {
+		if (fsync(fdw) != 0) {
+		    perror("fsync");
+		    done = 0;
+		}
 		close(fdw);
+	    }
 	}
 	close(fdr);
     }
