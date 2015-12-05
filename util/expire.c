@@ -95,7 +95,7 @@ void expire(life_t *brd)
     fname = (char *) strrchr(fpath, '.');
 
     done = 0;
-    if( (fdr = open(index, O_RDONLY, 0)) > 0 ){
+    if( (fdr = open(index, O_RDONLY, 0)) >= 0 ){
 	fstat(fdr, &state);
 	total = state.st_size / sizeof(head);
 	if( !checkmode ){
@@ -104,7 +104,7 @@ void expire(life_t *brd)
 	}
 	// TODO use fread/fwrite to reduce system calls
 	if( checkmode ||
-	    (fdw = OpenCreate(tmpfile, O_WRONLY | O_EXCL)) > 0 ){
+	    (fdw = OpenCreate(tmpfile, O_WRONLY | O_EXCL)) >= 0 ){
 	    done = 1;
 	    while (1) {
 		int ret = read(fdr, &head, sizeof(head));
