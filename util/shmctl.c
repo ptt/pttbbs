@@ -1175,7 +1175,7 @@ int showstat(int argc, char *argv[])
 	flag_clear=1;
     for(i=0; i<STAT_NUM; i++) {
 	const char *desc= i*sizeof(char*)<sizeof(stat_desc)?stat_desc[i]:"?";
-	printf("%s:\t%d\n", desc, SHM->statistic[i]);
+	printf("%s:\t%u\n", desc, SHM->statistic[i]);
     }
     if(flag_clear)
 	memset(SHM->statistic, 0, sizeof(SHM->statistic));

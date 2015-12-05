@@ -576,7 +576,7 @@ typedef struct {
 	} e;
     } GV2;
     /* statistic */
-    int     statistic[STAT_MAX];
+    unsigned int    statistic[STAT_MAX];
 
     // 從前作為故鄉使用 (fromcache). 現已被 daemon/fromd 取代。
     unsigned int    _deprecated_home_ip[MAX_FROM];

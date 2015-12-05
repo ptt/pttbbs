@@ -129,7 +129,7 @@ static int run(const char *mname) {
 	    fprintf(stderr, "Var '%s' wants statistic[%d], which is greater than STAT_MAX %d.\n", v->name, v->shm_index, STAT_MAX);
 	    return 1;
 	}
-	printf("%s.value %d\n", v->name, SHM->statistic[v->shm_index]);
+	printf("%s.value %u\n", v->name, SHM->statistic[v->shm_index]);
     }
     return 0;
 }
