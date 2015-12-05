@@ -23,6 +23,16 @@ static var_t login_vars[] = {
     DEFINE_VAR_END,
 };
 
+static var_t logind_vars[] = {
+    DEFINE_VAR(COUNTER, LOGIND_NEWCONN),
+    DEFINE_VAR(COUNTER, LOGIND_OVERLOAD),
+    DEFINE_VAR(COUNTER, LOGIND_BANNED),
+    DEFINE_VAR(COUNTER, LOGIND_AUTHFAIL),
+    DEFINE_VAR(COUNTER, LOGIND_SERVSTART),
+    DEFINE_VAR(COUNTER, LOGIND_SERVFAIL),
+    DEFINE_VAR_END,
+};
+
 static var_t syscall_vars[] = {
     DEFINE_VAR(COUNTER, SYSWRITESOCKET),
     DEFINE_VAR(COUNTER, SYSSELECT),
@@ -78,6 +88,7 @@ static var_t misc_vars[] = {
 
 static module_t modules[] = {
     {"login",   login_vars,   "bbs login"},
+    {"logind",  logind_vars,  "bbs logind"},
     {"syscall", syscall_vars, "bbs syscall"},
     {"signal",  signal_vars,  "bbs signal"},
     {"user",    user_vars,    "bbs user"},

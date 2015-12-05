@@ -998,6 +998,7 @@ draw_auth_success(login_conn_ctx *conn, int free)
 static void
 draw_auth_fail(login_conn_ctx *conn)
 {
+    STATINC(STAT_LOGIND_AUTHFAIL);
     _mt_move_yx(conn, AUTH_FAIL_YX); _mt_clrtoeol(conn);
     _buff_write(conn, AUTH_FAIL_MSG, sizeof(AUTH_FAIL_MSG)-1);
 }
@@ -1005,6 +1006,7 @@ draw_auth_fail(login_conn_ctx *conn)
 static void
 draw_service_failure(login_conn_ctx *conn)
 {
+    STATINC(STAT_LOGIND_SERVFAIL);
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
     _mt_move_yx(conn, SERVICE_FAIL_YX); _mt_clrtoeol(conn);
     _buff_write(conn, SERVICE_FAIL_MSG, sizeof(SERVICE_FAIL_MSG)-1);
@@ -1013,6 +1015,7 @@ draw_service_failure(login_conn_ctx *conn)
 static void
 draw_overload(login_conn_ctx *conn, int type)
 {
+    STATINC(STAT_LOGIND_OVERLOAD);
     // XXX currently overload is displayed immediately after
     // banner/INSCREEN, so an enter is enough.
     _buff_write(conn, "\r\n", 2);
@@ -1521,6 +1524,7 @@ auth_start(int fd, login_conn_ctx *conn)
                     draw_service_failure(conn);
                     return AUTH_RESULT_STOP;
                 }
+                STATINC(STAT_LOGIND_SERVSTART);
                 return AUTH_RESULT_OK;
 
             default:
@@ -1929,6 +1933,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
     bind_event *pbindev = (bind_event*) arg;
 
     while ( (fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) >= 0 ) {
+        STATINC(STAT_LOGIND_NEWCONN);
 
         // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
         // So we have to set blocking mode for client again here.
@@ -1985,6 +1990,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         event_add(&conn->ev, &idle_tv);
 
         if (g_banned) {
+            STATINC(STAT_LOGIND_BANNED);
             draw_text_screen (conn, ban_screen);
             login_conn_remove(conn, fd, BAN_SLEEP_SEC);
             return;
@@ -1992,6 +1998,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
 
         if ((banmsg = in_banip_list_addr(g_banip, xsin.sin_addr.s_addr)))
         {
+            STATINC(STAT_LOGIND_BANNED);
             draw_text_screen (conn, *banmsg ? banmsg : banip_screen);
             login_conn_remove(conn, fd, BAN_SLEEP_SEC);
             return;

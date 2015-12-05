@@ -76,6 +76,12 @@ enum { // XXX description in shmctl.c
     STAT_DORECOMMEND_UCPU,
     STAT_QUERY_SCPU,
     STAT_QUERY_UCPU,
+    STAT_LOGIND_NEWCONN,
+    STAT_LOGIND_OVERLOAD,
+    STAT_LOGIND_BANNED,
+    STAT_LOGIND_AUTHFAIL,
+    STAT_LOGIND_SERVSTART,
+    STAT_LOGIND_SERVFAIL,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
