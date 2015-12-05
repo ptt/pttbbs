@@ -1071,6 +1071,7 @@ regular_check()
     if ( now - last_check_time < LOGIND_REGULAR_CHECK_DURATION)
         return;
 
+    int was_overload = g_overload;
     last_check_time = now;
     g_overload = 0;
     g_banned   = 0;
@@ -1083,6 +1084,7 @@ regular_check()
     if (cpuload(NULL) > MAX_CPULOAD)
     {
         g_overload = 1;
+        fprintf(stderr, LOG_PREFIX "%s: system overload (cpu)\n", Cdate(&now));
     }
     else if (SHM->UTMPnumber >= MAX_ACTIVE
 #ifdef DYMAX_ACTIVE
@@ -1093,6 +1095,13 @@ regular_check()
     {
         ++SHM->GV2.e.toomanyusers;
         g_overload = 2;
+        fprintf(stderr, LOG_PREFIX "%s: system overload (too many users)\n",
+                Cdate(&now));
+    }
+    else if (was_overload)
+    {
+        fprintf(stderr, LOG_PREFIX "%s: system leaves overload state.\n",
+                Cdate(&now));
     }
 
     if (dashf(FN_BAN))
