@@ -48,6 +48,7 @@ static var_t signal_vars[] = {
     DEFINE_VAR(COUNTER, SIGFPE),
     DEFINE_VAR(COUNTER, SIGBUS),
     DEFINE_VAR(COUNTER, SIGSEGV),
+    DEFINE_VAR(COUNTER, SIGXCPU),
     DEFINE_VAR_END,
 };
 
@@ -70,6 +71,7 @@ static var_t more_vars[] = {
 static var_t thread_vars[] = {
     DEFINE_VAR(COUNTER, THREAD),
     DEFINE_VAR(COUNTER, SELECTREAD),
+    DEFINE_VAR(COUNTER, BOARDREC),
     DEFINE_VAR_END,
 };
 
@@ -86,6 +88,16 @@ static var_t misc_vars[] = {
     DEFINE_VAR_END,
 };
 
+static var_t cpu_vars[] = {
+    DEFINE_VAR(COUNTER, BOARDREC_SCPU),
+    DEFINE_VAR(COUNTER, BOARDREC_UCPU),
+    DEFINE_VAR(COUNTER, DORECOMMEND_SCPU),
+    DEFINE_VAR(COUNTER, DORECOMMEND_UCPU),
+    DEFINE_VAR(COUNTER, QUERY_SCPU),
+    DEFINE_VAR(COUNTER, QUERY_UCPU),
+    DEFINE_VAR_END,
+};
+
 static module_t modules[] = {
     {"login",   login_vars,   "bbs login"},
     {"logind",  logind_vars,  "bbs logind"},
@@ -95,6 +107,7 @@ static module_t modules[] = {
     {"more",    more_vars,    "bbs more"},
     {"thread",  thread_vars,  "bbs thread"},
     {"misc",    misc_vars,    "bbs misc"},
+    {"cpu",     cpu_vars,     "bbs cpu"},
     {NULL, NULL, NULL},
 };
 
