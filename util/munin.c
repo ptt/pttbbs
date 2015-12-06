@@ -71,6 +71,10 @@ static var_t more_vars[] = {
 static var_t thread_vars[] = {
     DEFINE_VAR(COUNTER, THREAD),
     DEFINE_VAR(COUNTER, SELECTREAD),
+    DEFINE_VAR_END,
+};
+
+static var_t record_vars[] = {
     DEFINE_VAR(COUNTER, BOARDREC),
     DEFINE_VAR_END,
 };
@@ -106,6 +110,7 @@ static module_t modules[] = {
     {"user",    user_vars,    "bbs user"},
     {"more",    more_vars,    "bbs more"},
     {"thread",  thread_vars,  "bbs thread"},
+    {"record",  record_vars,  "bbs record"},
     {"misc",    misc_vars,    "bbs misc"},
     {"cpu",     cpu_vars,     "bbs cpu"},
     {NULL, NULL, NULL},
