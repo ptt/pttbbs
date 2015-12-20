@@ -962,6 +962,7 @@ draw_userid_prompt_end(login_conn_ctx *conn)
 static void
 draw_passwd_prompt(login_conn_ctx *conn)
 {
+    STATINC(STAT_LOGIND_PASSWDPROMPT);
     _mt_move_yx(conn, PASSWD_PROMPT_YX); _mt_clrtoeol(conn);
     _buff_write(conn, PASSWD_PROMPT_MSG, sizeof(PASSWD_PROMPT_MSG)-1);
 }

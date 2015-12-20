@@ -82,6 +82,7 @@ enum { // XXX description in shmctl.c
     STAT_LOGIND_AUTHFAIL,
     STAT_LOGIND_SERVSTART,
     STAT_LOGIND_SERVFAIL,
+    STAT_LOGIND_PASSWDPROMPT,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512

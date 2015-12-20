@@ -1174,6 +1174,7 @@ int showstat(int argc, char *argv[])
 	"STAT_LOGIND_AUTHFAIL",
 	"STAT_LOGIND_SERVSTART",
 	"STAT_LOGIND_SERVFAIL",
+	"STAT_LOGIND_PASSWDPROMPT",
     };
     (void)argc;
 
