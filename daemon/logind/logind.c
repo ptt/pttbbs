@@ -2346,7 +2346,7 @@ main(int argc, char *argv[], char *envp[])
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\n", argv[0]);
+                    "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-P pidfile] [-c client_command]\n", argv[0]);
             fprintf(stderr, 
                     "\t-v:    provide verbose messages\n"
                     "\t-T:    provide timeout connection info\n"
