@@ -51,6 +51,8 @@ enum {
     BINDPORTS_MODE_NONE  = 0,
     BINDPORTS_MODE_MBBSD,
     BINDPORTS_MODE_LOGIND,
+    BINDPORTS_MODE_MULTI,
+    BINDPORTS_MODE_ERROR,
 };
 
 int parse_bindports_mode(const char *fn)
@@ -58,21 +60,17 @@ int parse_bindports_mode(const char *fn)
     int mode = BINDPORTS_MODE_NONE;
     char buf[PATHLEN], vprogram[STRLEN], vservice[STRLEN], vopt[STRLEN];
     FILE *fp = fopen(fn, "rt");
-    if (!fp)
-	return mode;
+    if (!fp) {
+	printf("unable to open file: %s\n", fn);
+	return BINDPORTS_MODE_ERROR;
+    }
 
     while(fgets(buf, sizeof(buf), fp))
     {
 	if (sscanf(buf, "%s%s%s", vprogram, vservice, vopt) != 3 ||
-	    strcmp(vprogram, "bbsctl") != 0)
+	    strcmp(vprogram, "bbsctl") != 0 ||
+	    strcmp(vservice, "mode") != 0)
 	    continue;
-
-	// the only service we understand now is 'mode'
-	if (strcmp(vservice, "mode") != 0)
-	{
-	    printf("sorry, unknown service: %s", buf);
-	    break;
-	}
 
 	if (strcmp(vopt, "mbbsd") == 0)
 	{
@@ -84,10 +82,98 @@ int parse_bindports_mode(const char *fn)
 	    mode = BINDPORTS_MODE_LOGIND;
 	    break;
 	}
+	else if (strcmp(vopt, "multi") == 0)
+	{
+	    mode = BINDPORTS_MODE_MULTI;
+	    break;
+	}
     }
 
     fclose(fp);
     return mode;
+}
+
+static int startbbs_defaults()
+{
+    // default: start listening ports with mbbsd.
+    printf("starting mbbsd by at 23, 443, 3000-3010\n");
+    execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-p23", "-p443",
+	    "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
+	    "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
+
+    printf("starting daemons failed\n");
+    return 1;
+}
+
+static int startbbs_with_multi(const char *bindports_fn);
+
+static int startbbs_with_bindports(const char *bindports_fn, int already_in_multi)
+{
+    printf("starting bbs by %s\n", bindports_fn);
+
+    // load the conf and determine how should we start the services.
+    switch(parse_bindports_mode(bindports_fn))
+    {
+	case BINDPORTS_MODE_NONE:
+	    printf("mode is not assigned. fallback to default ports.\n");
+	    return startbbs_defaults();
+
+	case BINDPORTS_MODE_MBBSD:
+	    execl(BBSHOME "/bin/mbbsd", "mbbsd",   "-d", "-f", bindports_fn, NULL);
+	    printf("mbbsd startup failed...\n");
+	    break;
+
+	case BINDPORTS_MODE_LOGIND:
+	    execl(BBSHOME "/bin/logind", "logind", "-d", "-f", bindports_fn, NULL);
+	    printf("logind startup failed...\n");
+	    break;
+
+	case BINDPORTS_MODE_MULTI:
+	    if (already_in_multi) {
+		printf("Only one level of multi is supported. This prevents fork bomb.\n");
+		return 1;
+	    }
+	    return startbbs_with_multi(bindports_fn);
+
+	case BINDPORTS_MODE_ERROR:
+	    printf("failed to parse config: %s\n", bindports_fn);
+	    break;
+    }
+
+    // error
+    return 1;
+}
+
+static int startbbs_with_multi(const char *bindports_fn)
+{
+    char buf[PATHLEN];
+    char vprogram[STRLEN], vservice[STRLEN], vpath[PATHLEN];
+    FILE *fp = fopen(bindports_fn, "r");
+    if (!fp)
+	return 1;
+
+    while(fgets(buf, sizeof(buf), fp))
+    {
+	if (sscanf(buf, "%s%s%s", vprogram, vservice, vpath) != 3 ||
+	    strcmp(vprogram, "bbsctl") != 0 ||
+	    strcmp(vservice, "multi") != 0)
+	    continue;
+
+	pid_t pid = fork();
+	if (pid < 0) {
+	    perror("fork");
+	    fclose(fp);
+	    return 1;
+	} else if (pid == 0) {
+	    // child
+	    fclose(fp);
+	    startbbs_with_bindports(vpath, 1);
+	    exit(1);
+	}
+    }
+
+    fclose(fp);
+    return 0;
 }
 
 int startbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)
@@ -102,35 +188,12 @@ int startbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     if (dashs(bindports_fn) > 0)
     {
 	// rule 2, if bindports.conf exists, load it.
-	printf("starting bbs by %s\n", bindports_fn);
-
-	// load the conf and determine how should we start the services.
-	switch(parse_bindports_mode(bindports_fn))
-	{
-	    case BINDPORTS_MODE_NONE:
-		printf("mode is not assigned. fallback to default ports.\n");
-		break;
-
-	    case BINDPORTS_MODE_MBBSD:
-		execl(BBSHOME "/bin/mbbsd", "mbbsd",   "-d", "-f", bindports_fn, NULL);
-		printf("mbbsd startup failed...\n");
-		break;
-
-	    case BINDPORTS_MODE_LOGIND:
-		execl(BBSHOME "/bin/logind", "logind", "-d", "-f", bindports_fn, NULL);
-		printf("logind startup failed...\n");
-		break;
-	}
+	return startbbs_with_bindports(bindports_fn, 0);
     }
-
-    // default: start listening ports with mbbsd.
-    printf("starting mbbsd by at 23, 443, 3000-3010\n");
-    execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-p23", "-p443",
-	    "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
-	    "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
-
-    printf("starting daemons failed\n");
-    return 1;
+    else
+    {
+	return startbbs_defaults();
+    }
 }
 
 int stopbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)

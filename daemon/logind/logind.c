@@ -120,6 +120,10 @@
 // #define ENABLE_DEBUG_IO
 #define DEBUG_IO_LIMIT (8192)
 
+#ifndef LOGIND_DEFAULT_PID_PATH
+#define LOGIND_DEFAULT_PID_PATH (BBSHOME "/run/logind.pid")
+#endif
+
 ///////////////////////////////////////////////////////////////////////
 // global variables
 int g_tunnel;           // tunnel for service daemon
@@ -138,6 +142,7 @@ int g_async_logattempt = 1;
 int g_verbose  = 0;
 int g_report_timeout = 0;
 char g_logfile_path[PATHLEN];
+char g_pidfile_path[PATHLEN];
 
 // retry service
 char g_retry_cmd[PATHLEN];
@@ -2204,6 +2209,24 @@ parse_bindports_conf(FILE *fp,
             strlcpy(g_logfile_path, vtunnel, sizeof(g_logfile_path));
             continue;
         }
+        else if (strcmp(vport, "pidfile") == 0)
+        {
+            if (*g_pidfile_path)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "warning: ignored configuration file due to specified pidfile: %s\n",
+                        g_pidfile_path);
+                continue;
+            }
+            if (sscanf(buf, "%*s%*s%s", vtunnel) != 1 || !*vtunnel)
+            {
+                fprintf(stderr, LOG_PREFIX "incorrect pidfile configuration. abort.\n");
+                exit(1);
+            }
+            if (g_verbose) fprintf(stderr, "pidfile: %s\n", vtunnel);
+            strlcpy(g_pidfile_path, vtunnel, sizeof(g_pidfile_path));
+            continue;
+        }
         else if (strcmp(vport, "tunnel") == 0)
         {
             if (*tunnel_path)
@@ -2253,7 +2276,7 @@ main(int argc, char *argv[], char *envp[])
     Signal(SIGPIPE, SIG_IGN);
     initsetproctitle(argc, argv, envp);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hvTDdBbAaMm")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:P:hvTDdBbAaMm")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -2274,6 +2297,10 @@ main(int argc, char *argv[], char *envp[])
 
         case 'r':
             strlcpy(g_retry_cmd, optarg, sizeof(g_retry_cmd));
+            break;
+
+        case 'P':
+            strlcpy(g_pidfile_path, optarg, sizeof(g_pidfile_path));
             break;
 
         case 'd':
@@ -2327,12 +2354,14 @@ main(int argc, char *argv[], char *envp[])
                     "\t-a/-A: do/not use asynchronous service ack (deafult: %s)\n"
                     "\t-b/-B: do/not use non-blocking socket mode (default: %s)\n"
                     "\t-m/-M: do/not use asynchronous logattempts (default: %s)\n"
-                    "\t-f: read configuration from file (default: %s)\n", 
+                    "\t-f: read configuration from file (default: %s)\n"
+                    "\t-P: pid file (default: %s)\n",
                     as_daemon   ? "true" : "false",
                     g_async_ack ? "true" : "false",
                     g_nonblock  ? "true" : "false",
                     g_async_logattempt  ? "true" : "false",
-                    BBSHOME "/" FN_CONF_BINDPORTS);
+                    BBSHOME "/" FN_CONF_BINDPORTS,
+                    LOGIND_DEFAULT_PID_PATH);
             fprintf(stderr, 
                     "\t-l: log meesages into log_file\n"
                     "\t-p: bind (listen) to specific port\n"
@@ -2391,6 +2420,11 @@ main(int argc, char *argv[], char *envp[])
         return 4;
     }
 
+    if (!*g_pidfile_path)
+    {
+        strlcpy(g_pidfile_path, LOGIND_DEFAULT_PID_PATH, sizeof(g_pidfile_path));
+    }
+
     /* Give up root privileges: no way back from here */
     setgid(BBSGID);
     setuid(BBSUID);
@@ -2412,7 +2446,7 @@ main(int argc, char *argv[], char *envp[])
         char *logfile_path = NULL;
         if (g_logfile_path[0]) logfile_path = g_logfile_path;
         fprintf(stderr, LOG_PREFIX "start daemonize\n");
-        daemonize(BBSHOME "/run/logind.pid", logfile_path);
+        daemonize(g_pidfile_path, logfile_path);
 
         // because many of the libraries used in this daemon (for example,
         // passwd / logging / ...) all assume cwd=BBSHOME,
