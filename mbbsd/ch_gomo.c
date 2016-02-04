@@ -106,7 +106,7 @@ gomo_getindex(board_t ku, int x, int y, int color, int dx, int dy)
     return n;
 }
 
-ChessGameResult
+static ChessGameResult
 chkwin(int style, int limit)
 {
     if (style == 0x0c)

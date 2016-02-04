@@ -356,6 +356,19 @@ pwcuChessResult(int sigType, ChessGameResult r)
 	    u_tie     = &(        u.dark_tie);
             break;
 
+
+	case SIG_CONN6:
+	    utmp_win  = &(currutmp->conn6_win);
+	    utmp_lose = &(currutmp->conn6_lose);
+	    utmp_tie  = &(currutmp->conn6_tie);
+	    cuser_win = &(    cuser.conn6_win);
+	    cuser_lose= &(    cuser.conn6_lose);
+	    cuser_tie = &(    cuser.conn6_tie);
+	    u_win     = &(        u.conn6_win);
+	    u_lose    = &(        u.conn6_lose);
+	    u_tie     = &(        u.conn6_tie);
+	    break;
+
 	default:
 	    assert(!"unknown sigtype");
 	    break;

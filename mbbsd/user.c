@@ -2,12 +2,18 @@
 #include "bbs.h"
 
 #ifdef CHESSCOUNTRY
-static const char * const chess_photo_name[3] = {
-    "photo_fivechess", "photo_cchess", "photo_go",
+static const char * const chess_photo_name[4] = {
+    "photo_fivechess",
+    "photo_cchess",
+    "photo_connect6",
+    "photo_go",
 };
 
-static const char * const chess_type[3] = {
-    "五子棋", "象棋", "圍棋",
+static const char * const chess_type[4] = {
+    "五子棋",
+    "象棋",
+    "六子旗",
+    "圍棋",
 };
 #endif
 

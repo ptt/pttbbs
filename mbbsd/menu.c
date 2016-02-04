@@ -1008,6 +1008,9 @@ static const commands_t chesslist[] = {
     {gochess_main,     PERM_LOGINOK, "7GoChessFight  【" ANSI_COLOR(1;33) " 圍棋邀局 " ANSI_RESET "】"},
     {gochess_personal, PERM_LOGINOK, "8GoChessSelf   【" ANSI_COLOR(1;34) " 圍棋打譜 " ANSI_RESET "】"},
     {gochess_watch,    PERM_LOGINOK, "9GoChessWatch  【" ANSI_COLOR(1;35) " 圍棋觀棋 " ANSI_RESET "】"},
+    // {conn6_main,       PERM_LOGINOK, "0Conn6Fight    【" ANSI_COLOR(1;33) "六子棋邀局" ANSI_RESET "】"},
+    {conn6_personal,   PERM_LOGINOK, "AConn6Self     【" ANSI_COLOR(1;34) "六子棋打譜" ANSI_RESET "】"},
+    {conn6_watch,      PERM_LOGINOK, "BConn6Watch    【" ANSI_COLOR(1;35) "六子棋觀棋" ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 

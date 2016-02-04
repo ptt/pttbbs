@@ -109,8 +109,10 @@ typedef struct userec_t {
     uint16_t	chc_win;	/* 象棋戰績 勝 */
     uint16_t	chc_lose;	/* 象棋戰績 敗 */
     uint16_t	chc_tie;	/* 象棋戰績 和 */
-    uint32_t    _unused11;	/* 舊手機號碼 */
-    char	_unused_mind[4];/* 舊心情 */
+    uint16_t    conn6_win;      /* 六子棋戰績 勝 */
+    uint16_t    conn6_lose;     /* 六子棋戰績 敗 */
+    uint16_t    conn6_tie;      /* 六子棋戰績 和 */
+    char	_unused_mind[2];/* 舊心情 */
     uint16_t	go_win;		/* 圍棋戰績 勝 */
     uint16_t	go_lose;	/* 圍棋戰績 敗 */
     uint16_t	go_tie;		/* 圍棋戰績 和 */
@@ -156,6 +158,8 @@ typedef struct userec_t {
 #define WITHME_NODARK	0x00000200
 #define WITHME_GO	0x00000400
 #define WITHME_NOGO	0x00000800
+#define WITHME_CONN6	0x00001000
+#define WITHME_NOCONN6	0x00002000
 
 #define BTLEN      48             /* Length of board title */
 
@@ -371,14 +375,17 @@ typedef struct userinfo_t {
     unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
-    char    _unused5[3];
+    char    _unused5;
+    uint16_t conn6_win;
     time4_t lastact;               /* 上次使用者動的時間 */
     char    alerts;             /* mail alert, passwd update... */
-    char    _unused_mind[4];
+    char    _unused_mind;
+    uint16_t conn6_lose;
+    char    _unused_mind2;
 
     /* chatroom/talk/games calling */
     unsigned char   sig;            /* signal type */
-    char    _unused6[2];
+    uint16_t conn6_tie;
     int     destuid;              /* talk uses this to identify who called */
     int     destuip;              /* dest index in utmpshm->uinfo[] */
     unsigned char   sockactive;     /* Used to coordinate talk requests */

@@ -89,7 +89,7 @@
 #define CAL             53
 // #define PROVERB         54
 #define ANNOUNCE        55      /* announce */
-#define EDNOTE          56 
+#define EDNOTE          56
 #define CDICT           57
 #define LOBJ            58
 #define OSONG           59
@@ -103,7 +103,7 @@
 // #define BBCALL          67
 #define VIOLATELAW      68
 #define M_FIVE          69
-// #define JACK_CARD       70
+#define M_CONN6	        70
 // #define TENHALF         71
 // #define CARD_99         72
 // #define RAIL_WAY        73

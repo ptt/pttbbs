@@ -315,6 +315,13 @@ int gomoku_personal(void);
 int gomoku_watch(void);
 ChessInfo* gomoku_replay(FILE* fp);
 
+/* connect6 */
+void connect6(int s, ChessGameMode mode);
+int conn6_main(void);
+int conn6_personal(void);
+int conn6_watch(void);
+ChessInfo* conn6_replay(FILE* fp);
+
 /* guess */
 int guess_main(void);
 

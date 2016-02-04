@@ -4,10 +4,10 @@
 #define QCAST   int (*)(const void *, const void *)
 
 static char    * const sig_des[] = {
-    "", "交談", "", "下五子棋", "下象棋", "下暗棋", "下圍棋", "下黑白棋",
+    "", "交談", "", "五子棋", "象棋", "暗棋", "圍棋", "黑白棋", "六子旗",
 };
 static char    * const withme_str[] = {
-  "談天", "下五子棋", "", "下象棋", "下暗棋", "下圍棋", "下黑白棋", NULL
+  "談天", "五子棋", "", "象棋", "暗棋", "圍棋", "黑白棋", "六子旗", NULL
 };
 
 #define MAX_SHOW_MODE 7
@@ -152,7 +152,7 @@ modestring(const userinfo_t * uentp, int simple)
     else if (uentp->in_chat && mode == CHATING)
 	snprintf(modestr, sizeof(modestr), "%s (%s)", word, uentp->chatid);
     else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == UMODE_GO
-	    || mode == DARK) {
+	    || mode == DARK || mode == M_CONN6) {
 	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
 	    snprintf(modestr, sizeof(modestr), "%s 空氣", word);
 	/* Leeym * 大家自己發揮吧！ */
@@ -1225,7 +1225,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		refresh();
 	    } else if (ch == EDITING || ch == TALK || ch == CHATING ||
 		    ch == PAGE || ch == MAILALL || ch == MONITOR ||
-		    ch == M_FIVE || ch == CHC ||
+		    ch == M_FIVE || ch == CHC || ch == M_CONN6 ||
 		    (!ch && (uin->chatid[0] == 1 ||
 			     uin->chatid[0] == 3))) {
 		vkey_detach();
@@ -1283,10 +1283,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
 	ch == DARK || ch == UMODE_GO || ch == CHESSWATCHING || ch == REVERSI ||
+	ch == M_CONN6 ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
-	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
+	uin->lockmode == M_FIVE || uin->lockmode == M_CONN6 || uin->lockmode == CHC) {
 	if (ch == CHC || ch == M_FIVE || ch == UMODE_GO ||
-		ch == CHESSWATCHING || ch == REVERSI) {
+	    ch == M_CONN6 || ch == CHESSWATCHING || ch == REVERSI) {
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
@@ -1315,6 +1316,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 		    case SIG_REVERSI:
 			reversi(msgsock, CHESS_MODE_WATCH);
+			break;
+
+		    case SIG_CONN6:
+			connect6(msgsock, CHESS_MODE_WATCH);
 			break;
 		}
 	    }
@@ -1356,8 +1361,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		}
 	    }
 	    move(4, 0);
-	    outs("要和他(她) (T)談天(F)下五子棋"
-		    "(C)下象棋(D)下暗棋(G)下圍棋(R)下黑白棋");
+	    outs("要和他(她) (T)談天(F)五子棋"
+		    "(C)象棋(D)暗棋(G)圍棋(R)黑白棋(6)六子旗");
 	    getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	}
 
@@ -1373,6 +1378,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	case 'c':
 	    lockreturn(CHC, LOCK_THIS);
 	    uin->sig = SIG_CHC;
+	    break;
+	case '6':
+	    lockreturn(M_CONN6, LOCK_THIS);
+	    uin->sig = SIG_CONN6;
 	    break;
 	case 'd':
 	    uin->sig = SIG_DARK;
@@ -1410,7 +1419,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	currutmp->sockactive = NA;
 
 	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO ||
-		uin->sig == SIG_GO || uin->sig == SIG_REVERSI)
+	    uin->sig == SIG_GO || uin->sig == SIG_REVERSI ||
+	    uin->sig == SIG_CONN6)
 	    ChessEstablishRequest(msgsock);
 
 	vkey_attach(msgsock);
@@ -1445,6 +1455,9 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		break;
 	    case SIG_REVERSI:
 		reversi(msgsock, CHESS_MODE_VERSUS);
+		break;
+	    case SIG_CONN6:
+		connect6(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_TALK:
 	    default:
@@ -1668,6 +1681,11 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
                  uentp->dark_win, uentp->dark_lose, uentp->dark_tie,
 		 (uentp->withme&WITHME_DARK)?'o':
                  (uentp->withme&WITHME_NODARK)?'x':' ');
+	return description;
+    case 7:
+	snprintf(description, len, "%s",
+		 (uentp->withme&WITHME_CONN6)?"找我下棋":
+                 (uentp->withme&WITHME_NOCONN6)?"別找我":"");
 	return description;
 
     default:
@@ -2869,7 +2887,8 @@ talkreply(void)
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
-    is_chess = (sig == SIG_CHC || sig == SIG_GOMO || sig == SIG_GO || sig == SIG_REVERSI);
+    is_chess = (sig == SIG_CHC || sig == SIG_GOMO || sig == SIG_CONN6 ||
+		sig == SIG_GO || sig == SIG_REVERSI);
 
     a = reply_connection_request(uip);
     if (a < 0) {
@@ -2957,6 +2976,9 @@ talkreply(void)
 	    break;
 	case SIG_REVERSI:
 	    reversi(a, CHESS_MODE_VERSUS);
+	    break;
+	case SIG_CONN6:
+	    connect6(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_TALK:
 	default:
