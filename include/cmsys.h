@@ -265,7 +265,9 @@ struct TelnetCallback {
     void (*ttype)		(void *ttype_arg, char *ttype, int ttype_len);
 };
 
-#define TELNET_IAC_MAXLEN (16)
+/* Some environments are now promoting complicated TERM info like
+ * screen.xterm-256color */
+#define TELNET_IAC_MAXLEN (32)
 
 struct TelnetCtx {
     int fd;		// should be blocking fd
