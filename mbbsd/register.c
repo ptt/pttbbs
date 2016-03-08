@@ -247,7 +247,10 @@ makeregcode(char *buf)
     return buf;
 }
 
-static char *
+// getregcode reads the register code from jobspool directory. If found,
+// regcode is copied to buf and 0 is returned. Otherwise, an empty string is
+// copied to buf and non-zero is returned.
+static int
 getregcode(char *buf)
 {
     int     fd;
@@ -256,12 +259,12 @@ getregcode(char *buf)
     getregfile(fpath);
     if( (fd = open(fpath, O_RDONLY)) == -1 ){
 	buf[0] = 0;
-	return buf;
+	return -1;
     }
-    read(fd, buf, 13);
+    int r = read(fd, buf, 13);
     close(fd);
     buf[13] = 0;
-    return buf;
+    return r == 13 ? 0 : -1;
 }
 
 void
@@ -1222,8 +1225,12 @@ u_register(void)
 		break;
 	} while( 1 );
 
-	// make it case insensitive.
-	if (strcasecmp(inregcode, getregcode(regcode)) == 0) {
+	if (!*inregcode) {
+            // simply enter.
+            return FULLUPDATE;
+	} else if (getregcode(regcode) == 0 &&
+		   /* make it case insensitive. */
+		   strcasecmp(inregcode, regcode) == 0) {
 	    int  unum;
 	    char justify[sizeof(cuser.justify)] = "";
 	    delregcodefile();
@@ -1247,9 +1254,6 @@ u_register(void)
 	    // XXX shall never reach here.
 	    return QUIT;
 
-        } else if (!*inregcode) {
-            // simply enter.
-            return FULLUPDATE;
 	} else if (strcasecmp(inregcode, "x") != 0) {
 	    if (regcode[0])
 	    {
