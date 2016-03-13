@@ -1195,6 +1195,103 @@ mail_all(void)
 }
 
 int
+get_account_sysop(struct Vector *namelist)
+{
+    FILE *fp;
+    if ( (fp = fopen(FN_MAIL_ACCOUNT_SYSOP, "r")) != NULL) {
+        char line[STRLEN+1];
+        while(fgets(line, sizeof(line), fp)) {
+            char userid[IDLEN+1];
+
+            chomp(line);
+            if (is_validuserid(line) && searchuser(line, userid))
+                Vector_add(namelist, line);
+        }
+        fclose(fp);
+        return 0;
+    } else
+        return -1;
+}
+
+
+int
+mail_account_sysop(void)
+{
+    // send mail to account sysop
+    int             i;
+    fileheader_t    mymail;
+    char            fpath[TTLEN];
+    char            genbuf[PATHLEN];
+    char            idbuf[IDLEN+1];
+    int             oldstat = currstat;
+    char            save_title[STRLEN];
+    char            tmp_title[STRLEN-20];
+    struct          Vector namelist;
+
+    Vector_init(&namelist, IDLEN+1);
+
+    if (get_account_sysop(&namelist) == -1)
+    {
+        vmsg("讀取收件人名單失敗，請向 " BN_BUGREPORT " 回報");
+        Vector_delete(&namelist);
+        return DIRCHANGED;
+    }
+
+    if (Vector_length(&namelist) == 0)
+    {
+        vmsg("無有效收件人名單，請向 " BN_BUGREPORT " 回報");
+        Vector_delete(&namelist);
+        return DIRCHANGED;
+    }
+
+    getdata(2, 0, "主題:", tmp_title, sizeof(tmp_title), DOECHO);
+    strlcpy(save_title, tmp_title, sizeof(save_title));
+
+    setutmpmode(SMAIL);
+
+    setuserfile(fpath, fn_notes);
+
+    if (vedit2(fpath, YEA, save_title,
+                EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED)
+    {
+        unlink(fpath);
+        setutmpmode(oldstat);
+        vmsg(msg_cancel);
+        Vector_delete(&namelist);
+        return DIRCHANGED;
+    }
+
+    for (i = 0; i < Vector_length(&namelist); i++) {
+        const char *userid = Vector_get(&namelist, i);
+        if(!searchuser(userid, idbuf))
+            continue;
+        sethomepath(genbuf, idbuf);
+        stampfile(genbuf, &mymail);
+        unlink(genbuf);
+        Copy(fpath, genbuf);
+
+        strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
+        strlcpy(mymail.title, save_title, sizeof(mymail.title));
+        mymail.filemode |= FILE_MULTI;
+        sethomedir(genbuf, idbuf);
+
+        if (append_record_forward(genbuf, &mymail, sizeof(mymail), idbuf) == -1)
+            vmsg(err_uid);
+        sendalert(idbuf, ALERT_NEW_MAIL);
+    }
+    Vector_delete(&namelist);
+
+    hold_mail(fpath, NULL, save_title);
+    unlink(fpath);
+
+    setutmpmode(oldstat);
+
+    pressanykey();
+    return FULLUPDATE;
+}
+
+
+int
 mail_mbox(void)
 {
     char tagname[PATHLEN];

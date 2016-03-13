@@ -46,6 +46,7 @@
 #define FN_TICKET_BRDLIST "boardlist"
 #define FN_BRDLISTHELP	"etc/boardlist.help"
 #define FN_BOARDHELP	"etc/board.help"
+#define FN_MAIL_ACCOUNT_SYSOP "etc/mail_account_sysop"	// 帳號站長信箱列表
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
