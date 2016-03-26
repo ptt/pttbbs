@@ -399,6 +399,7 @@ int setforward(void);
 int mail_mbox(void);
 int built_mail_index(void);
 int mail_all(void);
+int mail_account_sysop(void);
 int invalidaddr(const char *addr);
 int is_valid_email(const char *full_address);
 int do_send(const char *userid, const char *title, const char *log_source);
