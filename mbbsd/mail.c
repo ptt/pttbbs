@@ -1213,41 +1213,91 @@ get_account_sysop(struct Vector *namelist)
         return -1;
 }
 
+void
+show_mail_account_sysop_desc(void)
+{
+    more(FN_MAIL_ACCOUNT_SYSOP_DESC, 1);
+}
+
+const char *
+select_account_sysop(struct Vector *namelist)
+{
+    int i, sysop_index;
+    char linebuf[STRLEN+1];
+
+    vs_hdr("請選擇要寄給哪一位帳號站長");
+    for (i = 0; i < Vector_length(namelist) && i + 2 < t_lines; i++) {
+        const char *userid = Vector_get(namelist, i);
+        snprintf(linebuf, sizeof(linebuf), "%2d. %s", i + 1, userid);
+        move(i + 2, 0);
+        outs(linebuf);
+    }
+    getdata(1, 0, "請輸入帳號站長編號: ", linebuf, 4, LCECHO);
+
+    // This implementation allows users to select the account sysop
+    // who is not showed on the screen due to the limitation of screen size
+    if (sscanf(linebuf, "%d", &sysop_index) != 1 || sysop_index < 1 || sysop_index > Vector_length(namelist))
+        return NULL;
+
+    return Vector_get(namelist, sysop_index - 1);
+}
 
 int
 mail_account_sysop(void)
 {
     // send mail to account sysop
-    int             i;
     fileheader_t    mymail;
     char            fpath[TTLEN];
     char            genbuf[PATHLEN];
     char            idbuf[IDLEN+1];
     int             oldstat = currstat;
     char            save_title[STRLEN];
-    char            tmp_title[STRLEN-20];
     struct          Vector namelist;
+    char            linebuf[STRLEN+1];
+    const char     *userid;
 
+    setutmpmode(SMAIL);
     Vector_init(&namelist, IDLEN+1);
 
     if (get_account_sysop(&namelist) == -1)
     {
-        vmsg("讀取收件人名單失敗，請向 " BN_BUGREPORT " 回報");
         Vector_delete(&namelist);
+        vmsg("讀取收件人名單失敗，請向 " BN_SYSOP " 回報");
         return DIRCHANGED;
     }
 
     if (Vector_length(&namelist) == 0)
     {
-        vmsg("無有效收件人名單，請向 " BN_BUGREPORT " 回報");
         Vector_delete(&namelist);
+        vmsg("無有效收件人名單，請向 " BN_SYSOP " 回報");
         return DIRCHANGED;
     }
 
-    getdata(2, 0, "主題:", tmp_title, sizeof(tmp_title), DOECHO);
-    strlcpy(save_title, tmp_title, sizeof(save_title));
+    clear();
+    show_mail_account_sysop_desc();
 
-    setutmpmode(SMAIL);
+    userid = select_account_sysop(&namelist);
+    Vector_delete(&namelist);
+    if (userid == NULL)
+    {
+        setutmpmode(oldstat);
+        vmsg("輸入編號不正確");
+        return DIRCHANGED;
+    }
+
+    if(!searchuser(userid, idbuf))
+    {
+        setutmpmode(oldstat);
+        vmsg("選取的收件人無效，請向 " BN_SYSOP " 回報");
+        return DIRCHANGED;
+    }
+ 
+    clear();
+    vs_hdr("寄信給帳號站長");
+    snprintf(linebuf, sizeof(linebuf), "寄給 %s 站長", idbuf);
+    move(1, 0);
+    outs(linebuf);
+    getdata(2, 0, "主題:", save_title, STRLEN - strlen("主題:"), DOECHO);
 
     setuserfile(fpath, fn_notes);
 
@@ -1257,31 +1307,29 @@ mail_account_sysop(void)
         unlink(fpath);
         setutmpmode(oldstat);
         vmsg(msg_cancel);
-        Vector_delete(&namelist);
         return DIRCHANGED;
     }
 
-    for (i = 0; i < Vector_length(&namelist); i++) {
-        const char *userid = Vector_get(&namelist, i);
-        if(!searchuser(userid, idbuf))
-            continue;
-        sethomepath(genbuf, idbuf);
-        stampfile(genbuf, &mymail);
-        unlink(genbuf);
-        Copy(fpath, genbuf);
+    sethomepath(genbuf, idbuf);
+    stampfile(genbuf, &mymail);
+    unlink(genbuf);
+    Copy(fpath, genbuf);
 
-        strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
-        strlcpy(mymail.title, save_title, sizeof(mymail.title));
-        mymail.filemode |= FILE_MULTI;
-        sethomedir(genbuf, idbuf);
+    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
+    strlcpy(mymail.title, save_title, sizeof(mymail.title));
+    mymail.filemode |= FILE_MULTI;
+    sethomedir(genbuf, idbuf);
 
-        if (append_record_forward(genbuf, &mymail, sizeof(mymail), idbuf) == -1)
-            vmsg(err_uid);
-        sendalert(idbuf, ALERT_NEW_MAIL);
+    if (append_record_forward(genbuf, &mymail, sizeof(mymail), idbuf) == -1)
+    {
+        vmsg(err_uid);
     }
-    Vector_delete(&namelist);
+    else
+    {
+        sendalert(idbuf, ALERT_NEW_MAIL);
+        hold_mail(fpath, NULL, save_title);
+    }
 
-    hold_mail(fpath, NULL, save_title);
     unlink(fpath);
 
     setutmpmode(oldstat);
