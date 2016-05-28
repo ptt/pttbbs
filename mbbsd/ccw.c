@@ -60,6 +60,7 @@ typedef struct CCW_CTX {
     int  line;      // position of next line to append data
     int  reset_scr; // need to redraw everything
     char *sep_msg;  // quick help message on separators
+    int  sep_msg_width; // overrides sep_msg length.
 
     // input (vget)
     int         abort_vget;     // temporary abort from input
@@ -154,9 +155,10 @@ ccw_separators(CCW_CTX *ctx)
     vpad(t_columns-2, "─");
     outc('\n');
 
-    i = ctx->sep_msg ? strlen(ctx->sep_msg) : 0;
+    i = ctx->sep_msg_width ? ctx->sep_msg_width :
+        ctx->sep_msg ? strlen(ctx->sep_msg) : 0;
     move(CCW_STOP_LINE, 0);
-    vpad(t_columns-2-i, "─");
+    vpad(t_columns - 2 - i, "─");
     if (i) outs(ctx->sep_msg);
     outc('\n');
 }
@@ -1184,7 +1186,10 @@ ccw_chat(int fd)
         .remote_id      = roomid,
         .local_id       = chatid,
         .arg            = &ext,
-        .sep_msg        = " /h 查詢指令 /b 離開 ",
+        .sep_msg        = " " ANSI_COLOR(1;33) "/h" ANSI_RESET
+                          " 查詢指令 " ANSI_COLOR(1;33) "/b"
+                          ANSI_RESET " 離開 ",
+        .sep_msg_width  = 21,
 
         .header     = ccw_chat_header,
         .footer     = ccw_chat_footer,
@@ -1203,8 +1208,13 @@ ccw_chat(int fd)
         const char *err = "無法使用此代號";
         char cmd[200];
 
-        getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT "使用的暱稱: ",
+        getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT
+                "使用的暱稱 (輸入 * 可直接離開): ",
                 chatid, sizeof(chatid), DOECHO);
+
+        if (strcmp(chatid, "*") == 0)
+            return 0;
+
         if(!chatid[0])
             strlcpy(chatid, cuser.userid, sizeof(chatid));
 
