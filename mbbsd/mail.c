@@ -2272,9 +2272,9 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 
     snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.src.%s-%d",
 	     cuser.userid, (int)now);
-    snprintf(genbuf, sizeof(genbuf), "cp " BBSHOME "/home/%c/%s/%s %s",
-	     cuser.userid[0], cuser.userid, fhdr->filename, fname);
-    system(genbuf);
+    snprintf(genbuf, sizeof(genbuf), BBSHOME "/home/%c/%s/%s",
+	     cuser.userid[0], cuser.userid, fhdr->filename);
+    Copy(genbuf, fname);
     /* dirty code ;x */
     snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.des.%s-%d",
 	     cuser.userid, (int)now);
