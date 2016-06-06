@@ -17,6 +17,10 @@ static const char * const str_board_file = "boards/%c/%s/%s";
 static const char * const str_board_n_file = "boards/%c/%s/%s.%d";
 static const char * const str_dotdir = FN_DIR;
 
+static int is_validfilename(const char *fname) {
+  return strstr(fname, "..") == NULL;
+}
+
 /* XXX set*() all assume buffer size = PATHLEN */
 void
 sethomepath(char *buf, const char *userid)
@@ -43,7 +47,7 @@ void
 sethomefile(char *buf, const char *userid, const char *fname)
 {
     assert(is_validuserid(userid));
-    assert(fname[0]);
+    assert(fname[0] && is_validfilename(fname));
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
 
@@ -101,7 +105,7 @@ void
 setbfile(char *buf, const char *boardname, const char *fname)
 {
     //assert(boardname[0]);
-    assert(fname[0]);
+    assert(fname[0] && is_validfilename(fname));
     snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname, fname);
 }
 
@@ -109,7 +113,7 @@ void
 setbnfile(char *buf, const char *boardname, const char *fname, int n)
 {
     //assert(boardname[0]);
-    assert(fname[0]);
+    assert(fname[0] && is_validfilename(fname));
     snprintf(buf, PATHLEN, str_board_n_file, boardname[0], boardname, fname, n);
 }
 
@@ -125,6 +129,7 @@ setdirpath(char *buf, const char *direct, const char *fname)
     strcpy(buf, direct);
     p = strrchr(buf, '/');
     assert(p);
+    assert(fname[0] && is_validfilename(fname));
     strlcpy(p + 1, fname, PATHLEN-(p+1-buf));
 }
 
