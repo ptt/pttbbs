@@ -651,6 +651,8 @@ int
 built_mail_index(void)
 {
     char            genbuf[128];
+    char command[1024];
+    char homepath[PATHLEN];
 
     if (!HasUserPerm(PERM_BASIC))
         return DONOTHING;
@@ -665,11 +667,10 @@ built_mail_index(void)
     if (genbuf[0] != 'y')
 	return FULLUPDATE;
 
-    snprintf(genbuf, sizeof(genbuf),
-	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
-	     cuser.userid[0], cuser.userid);
+    sethomepath(homepath, cuser.userid);
+    snprintf(command, sizeof(command), "bin/buildir '%s' > /dev/null", homepath);
     mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
-    system(genbuf);
+    system(command);
     pressanykey();
     return FULLUPDATE;
 }
