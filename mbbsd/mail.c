@@ -2207,7 +2207,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 {
 #ifdef OUTJOBSPOOL
     static char     address[60] = "", cmode = 1;
-    char            fname[500], genbuf[200];
+    char            fname[500], genbuf[PATHLEN];
     FILE           *fp;
 
     if (!(strstr(fhdr->title, "¼ö½u") && strstr(fhdr->title, "°O¿ý"))) {
@@ -2272,8 +2272,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 
     snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.src.%s-%d",
 	     cuser.userid, (int)now);
-    snprintf(genbuf, sizeof(genbuf), BBSHOME "/home/%c/%s/%s",
-	     cuser.userid[0], cuser.userid, fhdr->filename);
+    setuserfile(genbuf, fhdr->filename);
     Copy(genbuf, fname);
     /* dirty code ;x */
     snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.des.%s-%d",
