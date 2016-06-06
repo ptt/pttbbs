@@ -83,7 +83,7 @@ int mail2bbs(char *userid)
 
     /* check if the userid is in our bbs now */
     if( (uid = passwd_load_user(userid, &xuser)) < 1 ){
-	sprintf(genbuf, "BBS user <%s> not existed", userid);
+	snprintf(genbuf, sizeof(genbuf), "BBS user <%s> not existed", userid);
 	puts(genbuf);
 	mailog(genbuf);
 	return -1;//EX_NOUSER;
@@ -92,7 +92,7 @@ int mail2bbs(char *userid)
     if (REJECT_OUTTAMAIL(xuser))
 	return -1; //不接受站外信
 
-    sprintf(filename, BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);
+    snprintf(filename, sizeof(filename), BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);
 
     if( stat(filename, &st) == -1 ){
 	if( Mkdir(filename) == -1 ){
@@ -129,7 +129,7 @@ int mail2bbs(char *userid)
 			ptr++;
 		else
 		    ptr = "unknown";
-		sprintf(sender, "%s (%s)", ip + 1, ptr);
+		snprintf(sender, sizeof(sender), "%s (%s)", ip + 1, ptr);
 	    }
 	    else{
 		strtok(genbuf, " \t\n\r");
@@ -148,28 +148,28 @@ int mail2bbs(char *userid)
 	*ptr = '\0';
 
     if( strchr(sender, '@') == NULL )	/* 由 local host 寄信 */
-	strcat(sender, "@" MYHOSTNAME);
+	strlcat(sender, "@" MYHOSTNAME, sizeof(sender));
 
 /* allocate a file for the new mail */
     stampfile(filename, &mymail);
 
 #ifdef HMM_USE_ANTI_SPAM
-    for (n = 0; notitle[n]; n++)
-	if (strstr(title, notitle[n]))
-	{
-	    sprintf(genbuf, "Title <%s> not accepted", title);
+    for (n = 0; notitle[n]; n++) {
+	if (strstr(title, notitle[n])) {
+	    snprintf(genbuf, sizeof(genbuf), "Title <%s> not accepted", title);
 	    puts(genbuf);
 	    mailog(genbuf);
 	    return -1;
-	}	
-    for (n = 0; nofrom[n]; n++)
-	if (strstr(sender, nofrom[n]))
-	{
-	    sprintf(genbuf, "From <%s> not accepted", sender);
+	}
+    }
+    for (n = 0; nofrom[n]; n++) {
+	if (strstr(sender, nofrom[n])) {
+	    snprintf(genbuf, sizeof(genbuf) "From <%s> not accepted", sender);
 	    puts(genbuf);
 	    mailog(genbuf);
 	    return -1;
-	}	
+	}
+    }
 #endif
 
     if ((fout = fopen(filename, "w")) == NULL)
@@ -179,14 +179,14 @@ int mail2bbs(char *userid)
     }
 
     if (!title[0])
-	sprintf(title, "來自 %.64s", sender);
+	snprintf(title, sizeof(title), "來自 %.64s", sender);
     title[TTLEN] = 0;
     time(&tmp_time);
     fprintf(fout, "作者: %s\n標題: %s\n時間: %s\n",
 	    sender, title, ctime(&tmp_time));
 
 /* copy the stdin to the specified file */
-    while (fgets(genbuf, 255, stdin))
+    while (fgets(genbuf, sizeof(genbuf), stdin))
     {
 #ifdef HMM_USE_ANTI_SPAM
 	for (n = 0; nocont[n]; n++)
@@ -194,7 +194,7 @@ int mail2bbs(char *userid)
 	    {
 		fclose(fout);
 		unlink(filename);
-		sprintf(genbuf, "Content <%s> not accepted", nocont[n]);
+		snprintf(genbuf, sizeof(genbuf), "Content <%s> not accepted", nocont[n]);
 		puts(genbuf);
 		mailog(genbuf);
 		return -1;
@@ -204,19 +204,21 @@ int mail2bbs(char *userid)
     }
     fclose(fout);
 
-    sprintf(genbuf, "%s => %s", sender, xuser.userid);
+    snprintf(genbuf, sizeof(genbuf), "%s => %s", sender, xuser.userid);
     mailog(genbuf);
 
     /* append the record to the MAIL control file */
     strip_ansi(title, title, 0);
     strlcpy(mymail.title, bbsmail_pretty_subject(title), sizeof(mymail.title));
 
-    if (strtok(sender, " .@\t\n\r"))
-	strcat(sender, ".");
+    if (strtok(sender, " .@\t\n\r")) {
+      strlcat(sender, ".", sizeof(sender));
+      sender[IDLEN] = '.';
+    }
     sender[IDLEN + 1] = '\0';
     strlcpy(mymail.owner, sender, sizeof(mymail.owner));
 
-    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", xuser.userid[0], xuser.userid);
+    snprintf(genbuf, sizeof(genbuf), BBSHOME "/home/%c/%s/.DIR", xuser.userid[0], xuser.userid);
     mailalertuid(uid);
     return append_record(genbuf, &mymail, sizeof(mymail));
 }
