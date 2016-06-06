@@ -75,7 +75,7 @@ int mail2bbs(char *userid)
 {
     int     uid;
     fileheader_t mymail;
-    char genbuf[512], title[512], sender[512], filename[512], *ip, *ptr;
+    char genbuf[512], title[512], sender[512], filename[PATHLEN], *ip, *ptr;
     time_t tmp_time;
     struct stat st;
     FILE *fout;
@@ -92,7 +92,7 @@ int mail2bbs(char *userid)
     if (REJECT_OUTTAMAIL(xuser))
 	return -1; //不接受站外信
 
-    snprintf(filename, sizeof(filename), BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);
+    sethomepath(filename, xuser.userid);
 
     if( stat(filename, &st) == -1 ){
 	if( Mkdir(filename) == -1 ){
@@ -218,9 +218,9 @@ int mail2bbs(char *userid)
     sender[IDLEN + 1] = '\0';
     strlcpy(mymail.owner, sender, sizeof(mymail.owner));
 
-    snprintf(genbuf, sizeof(genbuf), BBSHOME "/home/%c/%s/.DIR", xuser.userid[0], xuser.userid);
+    sethomedir(filename, xuser.userid);
     mailalertuid(uid);
-    return append_record(genbuf, &mymail, sizeof(mymail));
+    return append_record(filename, &mymail, sizeof(mymail));
 }
 
 
@@ -240,7 +240,10 @@ main(int argc, char* argv[])
     attach_SHM();
     if( passwd_init() )
 	return 0;
-    chdir(BBSHOME);
+    if (chdir(BBSHOME) != 0) {
+	perror("chdir");
+	return 1;
+    }
 
     strlcpy(receiver, argv[1], sizeof(receiver));
 

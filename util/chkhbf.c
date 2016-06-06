@@ -30,12 +30,12 @@ char *CTIMEx(char *buf, time_t t)
 void informBM(char *userid, boardheader_t *bptr, int nEXP)
 {
     int     uid, i;
-    char    filename[256], buf[64];
+    char    filename[PATHLEN], buf[64];
     fileheader_t mymail;
     FILE    *fp;
     if( !(uid = searchuser(userid, userid)) )
 	return;
-    sprintf(filename, BBSHOME "/home/%c/%s", userid[0], userid);
+    sethomepath(filename, userid);
     stampfile(filename, &mymail);
     if( (fp = fopen(filename, "w")) == NULL )
 	return;
@@ -72,7 +72,7 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
 
     strcpy(mymail.title, "警告: 貴板板友即將過期/已經過期");
     strcpy(mymail.owner, "系統通知.");
-    sprintf(filename, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
+    sethomedir(filename, userid);
     mailalertuid(uid);
     append_record(filename, &mymail, sizeof(mymail));
 }
