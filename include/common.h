@@ -32,6 +32,7 @@
 #define FN_ALOHA        "aloha"         // 我上站要通知的名單 (自動產生)
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_DIR		".DIR"
+#define FN_DIR_BOTTOM   ".DIR.bottom"
 #define FN_BOARD        ".BRD"          /* board list */
 #define FN_USEBOARD     "usboard"       /* 看板統計 */
 #define FN_TOPSONG      "etc/topsong"

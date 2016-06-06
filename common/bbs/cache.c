@@ -485,11 +485,9 @@ reload_bcache(void)
     setproctitle("loading bottom");
     for( i = 0 ; i < MAX_BOARD ; ++i )
 	if( SHM->bcache[i].brdname[0] ){
-	    char    fn[128];
+	    char    fn[PATHLEN];
 	    int n;
-	    sprintf(fn, "boards/%c/%s/" FN_DIR ".bottom", 
-		    SHM->bcache[i].brdname[0],
-		    SHM->bcache[i].brdname);
+	    setbfile(fn, SHM->bcache[i].brdname, FN_DIR_BOTTOM);
 	    n = get_num_records(fn, sizeof(fileheader_t));
 	    if( n > 5 )
 		n = 5;
