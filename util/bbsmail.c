@@ -75,7 +75,7 @@ int mail2bbs(char *userid)
 {
     int     uid;
     fileheader_t mymail;
-    char genbuf[512], title[512], sender[512], filename[PATHLEN], *ip, *ptr;
+    char genbuf[512], title[512], sender[512], filename[PATHLEN], *ptr;
     time_t tmp_time;
     struct stat st;
     FILE *fout;
@@ -119,23 +119,27 @@ int mail2bbs(char *userid)
 		return -1;
 	}
 	if( strncmp(genbuf, "From", 4) == 0 ){
-	    if( (ip = strchr(genbuf, '<')) && (ptr = strrchr(ip, '>')) ){
+	    // "From: name <addr>"
+	    char *name, *addr;
+	    if( (addr = strchr(genbuf, '<')) && (ptr = strrchr(addr, '>')) ){
 		*ptr = '\0';
-		if (ip[-1] == ' ')
-		    ip[-1] = '\0';
-		ptr = (char *) strchr(genbuf, ' ');
-		if( ptr )
-		    while (*ptr == ' ')
-			ptr++;
+		if (addr[-1] == ' ')
+		    addr[-1] = '\0';
+		*addr++ = '\0';
+		name = (char *) strchr(genbuf, ' ');
+		if( name )
+		    while (*name == ' ')
+			name++;
 		else
-		    ptr = "unknown";
-		snprintf(sender, sizeof(sender), "%s (%s)", ip + 1, ptr);
+		    name = "unknown";
+		snprintf(sender, sizeof(sender), "%s (%s)", addr, name);
 	    }
-	    else{
-		strtok(genbuf, " \t\n\r");
-		ptr = strtok(NULL, " \t\n\r");
-		if(ptr)
-	   	 strlcpy(sender, ptr, sizeof(sender));
+	    else {
+		if (strtok(genbuf, " \t\n\r")) {
+		    name = strtok(NULL, " \t\n\r");
+		    if (name)
+			strlcpy(sender, name, sizeof(sender));
+		}
 	    }
 	    continue;
 	}
