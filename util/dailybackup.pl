@@ -38,7 +38,7 @@ foreach( @{$baktable[$week]} ){
 }
 
 if( $week == 0 ){
-    docmd("$TAR zcf $BACKHOME/general.new.tgz .BRD .PASSWDS .act .note .polling .post .post.old adm bin cron etc innd log note.ans note.dat pttbbs register.log ussong");
+    docmd("$TAR zcf $BACKHOME/general.new.tgz .BRD .PASSWDS .act .note .polling .post .post.old adm bin cron etc log note.ans note.dat pttbbs register.log ussong");
 }
 
 sub docmd
