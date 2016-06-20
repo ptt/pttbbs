@@ -977,7 +977,9 @@ bbsluaRegConst(lua_State *L)
 
     // unbind unsafe API
     lua_pushnil(L); lua_setglobal(L, "dofile");
+    lua_pushnil(L); lua_setglobal(L, "load");
     lua_pushnil(L); lua_setglobal(L, "loadfile");
+    lua_pushnil(L); lua_setglobal(L, "loadstring");
 
     // global
     lua_pushcfunction(L, bl_print);
