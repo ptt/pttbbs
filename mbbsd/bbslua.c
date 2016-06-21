@@ -977,8 +977,12 @@ bbsluaRegConst(lua_State *L)
 
     // unbind unsafe API
     lua_pushnil(L); lua_setglobal(L, "dofile");
-    lua_pushnil(L); lua_setglobal(L, "load");
     lua_pushnil(L); lua_setglobal(L, "loadfile");
+
+    // Loading bytecode is dangerous.
+    // Lua 5.1 has a vulnerable bytecode verifier.
+    // Lua 5.2 even removed the verifier.
+    lua_pushnil(L); lua_setglobal(L, "load");
     lua_pushnil(L); lua_setglobal(L, "loadstring");
 
     // global
