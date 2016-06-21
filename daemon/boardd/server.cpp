@@ -4,9 +4,8 @@
 #include <memory>
 #include <functional>
 #include <future>
-#include <list>
-#include <thread>
 #include <mutex>
+#include <vector>
 #include <boost/asio.hpp>
 extern "C" {
 #include <event2/buffer.h>
@@ -166,14 +165,15 @@ void start_server(const char *host, unsigned short port) {
     std::cerr << "boardd: built with mulit-threading, "
 	<< NUM_THREADS << " threads." << std::endl;
 
-    std::list<std::future<void>> threads;
     asio::io_service io_service;
     Server server(io_service, host, port);
+    std::vector<std::future<void>> threads;
+    threads.reserve(NUM_THREADS);
     for (int i = 0; i < NUM_THREADS; ++i) {
 	threads.emplace_back(
 		std::async(std::launch::async,ServiceThread,std::ref(io_service)));
     }
-    for (auto &thr : threads) {
+    for (auto &thr : threads) {	//after C++14, there is no need to call get by yourself
 	thr.get();
     }
 }
