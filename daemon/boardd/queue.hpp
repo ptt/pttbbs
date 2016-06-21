@@ -5,17 +5,22 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <stdexcept>  //runtime_error
+#include <utility>  //forward, move
 
 template <class T>
 class Queue
 {
 public:
-  Queue(size_t max = 0)
+  Queue() noexcept
+    :Queue{0}{}
+  Queue(size_t max) noexcept
     : eof_(false)
     , max_(max)
   {}
-
-  void Push(T elem)
+  
+  template<class T2>
+  void Push(T2 &&elem)
   {
     std::unique_lock<std::mutex> lk(mu_);
     while (true) {
@@ -25,7 +30,7 @@ public:
         cv_poped_.wait(lk);
         continue;
       }
-      qu_.push(elem);
+      qu_.emplace(std::forward<T2>(elem));
       cv_pushed_.notify_one();
       return;
     }
@@ -39,7 +44,7 @@ public:
         return false;
       cv_pushed_.wait(lk);
     }
-    elem = qu_.front();
+    elem = std::move(qu_.front());
     qu_.pop();
     cv_poped_.notify_one();
     return true;
