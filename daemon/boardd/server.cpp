@@ -171,7 +171,8 @@ void start_server(const char *host, unsigned short port) {
     futures.reserve(NUM_THREADS);
     for (std::size_t i = 0; i < NUM_THREADS; ++i) {
 	futures.emplace_back(
-		std::async(std::launch::async, ServiceThread, std::ref(io_service)));
+		std::async(std::launch::async,
+		           ServiceThread,std::ref(io_service)));
     }
     for (auto &fut : futures) {	//TODO remove the for loop after C++14 (it is redundant)
 	fut.get();
