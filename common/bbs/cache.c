@@ -439,14 +439,17 @@ sort_bcache(void)
     }
     SHM->Bbusystate = 1;
     for (i = 0; i < SHM->Bnumber; i++) {
-	SHM->bsorted[0][i] = SHM->bsorted[1][i] = i;
+	SHM->bsorted[BRD_GROUP_LL_TYPE_NAME][i] = i;
+	SHM->bsorted[BRD_GROUP_LL_TYPE_CLASS][i] = i;
     }
-    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(int), cmpboardname);
-    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(int), cmpboardclass);
+    qsort(SHM->bsorted[BRD_GROUP_LL_TYPE_NAME],
+	  SHM->Bnumber, sizeof(int), cmpboardname);
+    qsort(SHM->bsorted[BRD_GROUP_LL_TYPE_CLASS],
+	  SHM->Bnumber, sizeof(int), cmpboardclass);
 
     for (i = 0; i < SHM->Bnumber; i++) {
-	bcache[i].firstchild[0] = 0;
-	bcache[i].firstchild[1] = 0;
+	bcache[i].firstchild[BRD_GROUP_LL_TYPE_NAME] = 0;
+	bcache[i].firstchild[BRD_GROUP_LL_TYPE_CLASS] = 0;
     }
     SHM->Bbusystate = 0;
 }
@@ -543,6 +546,40 @@ reset_board(int bid) /* XXXbid: from 1 */
 
 	buildBMcache(bid + 1); /* XXXbid */
     }
+}
+
+void
+resolve_board_group(const int gid, const int type)
+{
+    boardheader_t  *bptr, *currbptr, *parent;
+    int             bid, n, childcount = 0;
+    int             boardcount;
+    assert(0<=type && type<2);
+    assert(0<= gid-1 && gid-1<MAX_BOARD);
+    currbptr = parent = &bcache[gid - 1];
+    boardcount = num_boards();
+    assert(0<=boardcount && boardcount<=MAX_BOARD);
+    for (n = 0; n < boardcount; ++n) {
+	bid = SHM->bsorted[type][n]+1;
+	if( bid<=0 || !(bptr = getbcache(bid))
+		|| bptr->brdname[0] == '\0' )
+	    continue;
+	if (bptr->gid == gid) {
+	    if (currbptr == parent)
+		currbptr->firstchild[type] = bid;
+	    else {
+		currbptr->next[type] = bid;
+		currbptr->parent = gid;
+	    }
+	    childcount++;
+	    currbptr = bptr;
+	}
+    }
+    parent->childcount = childcount;
+    if (currbptr == parent) // no child
+	currbptr->firstchild[type] = -1;
+    else // the last child
+	currbptr->next[type] = -1;
 }
 
 void

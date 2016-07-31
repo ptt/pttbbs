@@ -232,6 +232,10 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
 #define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
 
+// Board group linked-list type. Used for array index of firstchild and next.
+#define BRD_GROUP_LL_TYPE_NAME  (0)
+#define BRD_GROUP_LL_TYPE_CLASS (1)
+
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
 

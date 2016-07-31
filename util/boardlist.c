@@ -15,37 +15,6 @@
  */
 int parent[MAX_BOARD];
 
-static void
-load_uidofgid(const int gid, const int type)
-{
-    boardheader_t  *bptr, *currbptr, *parent;
-    int             bid, n, childcount = 0;
-    int             boardcount;
-    currbptr = parent = &bcache[gid - 1];
-    boardcount = num_boards();
-    for (n = 0; n < boardcount; ++n) {
-	bid = SHM->bsorted[type][n]+1;
-	if( bid<=0 || !(bptr = &bcache[bid-1])
-		|| bptr->brdname[0] == '\0' )
-	    continue;
-	if (bptr->gid == gid) {
-	    if (currbptr == parent)
-		currbptr->firstchild[type] = bid;
-	    else {
-		currbptr->next[type] = bid;
-		currbptr->parent = gid;
-	    }
-	    childcount++;
-	    currbptr = bptr;
-	}
-    }
-    parent->childcount = childcount;
-    if (currbptr == parent) // no child
-	currbptr->firstchild[type] = -1;
-    else // the last child
-	currbptr->next[type] = -1;
-}
-
 char *skipEscape(char *s)
 {
     static  char    buf[TTLEN * 2 + 1];
@@ -105,11 +74,12 @@ void dumpclass(int gid)
 {
     boardheader_t  *bptr;
     int bid;
+    const int type = BRD_GROUP_LL_TYPE_NAME;
     bptr = getbcache(gid);
-    if (bptr->firstchild[0] == 0 || bptr->childcount <= 0)
-	load_uidofgid(gid, 0);
+    if (bptr->firstchild[type] == 0 || bptr->childcount <= 0)
+	resolve_board_group(gid, type);
     printf("$db{'class.%d'} = $serializer->serialize([", gid);
-    for( bid = bptr->firstchild[0] ; bid > 0 ; bid = bptr->next[0] ) {
+    for( bid = bptr->firstchild[type] ; bid > 0 ; bid = bptr->next[type] ) {
 	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
@@ -123,7 +93,7 @@ void dumpclass(int gid)
     printf("]);\n");
 
     bptr = getbcache(gid);
-    for( bid = bptr->firstchild[0] ; bid > 0 ; bid = bptr->next[0] ) {
+    for( bid = bptr->firstchild[type] ; bid > 0 ; bid = bptr->next[type] ) {
 	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&

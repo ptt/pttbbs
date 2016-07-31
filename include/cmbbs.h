@@ -78,6 +78,7 @@ void resolve_boards(void);
 int  num_boards(void);
 void addbrd_touchcache(void);
 void reset_board(int bid);
+void resolve_board_group(int gid, int type);
 void setbottomtotal(int bid);
 void setbtotal(int bid);
 void touchbpostnum(int bid, int delta);

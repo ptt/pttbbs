@@ -967,40 +967,6 @@ check_newpost(boardstat_t * ptr)
     return 1;
 }
 
-static void
-load_uidofgid(const int gid, const int type)
-{
-    boardheader_t  *bptr, *currbptr, *parent;
-    int             bid, n, childcount = 0;
-    int             boardcount;
-    assert(0<=type && type<2);
-    assert(0<= gid-1 && gid-1<MAX_BOARD);
-    currbptr = parent = &bcache[gid - 1];
-    boardcount = num_boards();
-    assert(0<=boardcount && boardcount<=MAX_BOARD);
-    for (n = 0; n < boardcount; ++n) {
-	bid = SHM->bsorted[type][n]+1;
-	if( bid<=0 || !(bptr = getbcache(bid))
-		|| bptr->brdname[0] == '\0' )
-	    continue;
-	if (bptr->gid == gid) {
-	    if (currbptr == parent)
-		currbptr->firstchild[type] = bid;
-	    else {
-		currbptr->next[type] = bid;
-		currbptr->parent = gid;
-	    }
-	    childcount++;
-	    currbptr = bptr;
-	}
-    }
-    parent->childcount = childcount;
-    if (currbptr == parent) // no child
-	currbptr->firstchild[type] = -1;
-    else // the last child
-	currbptr->next[type] = -1;
-}
-
 static boardstat_t *
 addnewbrdstat(int n, int state)
 {
@@ -1195,9 +1161,9 @@ load_boards(char *key)
 
 	assert(0<=class_bid-1 && class_bid-1<MAX_BOARD);
 	if (bptr->firstchild[type] == 0 || bptr->childcount==0)
-	    load_uidofgid(class_bid, type);
+	    resolve_board_group(class_bid, type);
 
-        childcount = bptr->childcount;  // Ptt: child count after load_uidofgid
+        childcount = bptr->childcount;  // Ptt: child count after resolve_board_group
 
 	nbrdsize = childcount + 5;
 	nbrd = (boardstat_t *) malloc((childcount+5) * sizeof(boardstat_t));
@@ -2244,7 +2210,8 @@ choose_board(int newflag)
 	case 'F':
 	case 'f':
 	    if (HasUserPerm(PERM_SYSOP)) {
-		getbcache(class_bid)->firstchild[HasUserFlag(UF_BRDSORT) ? 1 : 0] = 0;
+		getbcache(class_bid)->firstchild[HasUserFlag(UF_BRDSORT)
+		    ? BRD_GROUP_LL_TYPE_CLASS : BRD_GROUP_LL_TYPE_NAME] = 0;
 		brdnum = -1;
 	    }
 	    break;
