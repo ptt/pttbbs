@@ -290,10 +290,11 @@ answer_key(struct evbuffer *buf, const char *key)
     if (isdigit(*key)) {
 	char *p;
 
-	if ((bid = atoi(key)) == 0 || bid > MAX_BOARD)
+	bid = strtol(key, &p, 10);
+	if (bid < 1 || bid > MAX_BOARD)
 	    return;
 
-	if ((p = strchr(key, '.')) == NULL)
+	if (*p != '.')
 	    return;
 
 	bptr = getbcache(bid);
