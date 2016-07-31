@@ -328,7 +328,12 @@ answer_key(struct evbuffer *buf, const char *key)
 	    if (!(bptr->brdattr & BRD_GROUPBOARD))
 		return;
 
-	    for (bid = bptr->firstchild[1]; bid > 0; bid = bptr->next[1]) {
+	    const type = BRD_GROUP_LL_TYPE_CLASS;
+	    if (bptr->firstchild[type] == 0)
+		resolve_board_group(bid, type);
+
+	    for (bid = bptr->firstchild[type];
+		 bid > 0; bid = bptr->next[type]) {
 		bptr = getbcache(bid);
 		evbuffer_add_printf(buf, "%d,", bid);
 	    }
