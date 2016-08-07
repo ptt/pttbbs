@@ -4,7 +4,7 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 PROG=	boardd
-SRCS=	boardd.c server.cpp
+SRCS=	boardd.c convert.c article.c server.cpp
 MAN=
 
 UTILDIR=	$(SRCROOT)/util
