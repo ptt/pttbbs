@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+// Copyright (c) 2016, Robert Wang <robertabcd@gmail.com>
+// All rights reserved.
+//
+// The MIT License.
+
+package pttbbs.man;
+
+service ManService {
+    rpc List (ListRequest) returns (ListReply) {}
+    rpc Article (ArticleRequest) returns (ArticleReply) {}
+}
+
+message ListRequest {
+    string board_name = 1;
+    string path = 2;
+}
+
+message ListReply {
+    bool is_success = 1;
+    repeated Entry entries = 2;
+}
+
+message Entry {
+    string board_name = 1;
+    string path = 2;
+    string title = 3;
+    bool is_dir = 4;
+}
+
+message ArticleRequest {
+    string board_name = 1;
+    string path = 2;
+
+    enum SelectType {
+        SELECT_FULL = 0;
+        SELECT_HEAD = 1;
+        SELECT_TAIL = 2;
+    }
+    SelectType select_type = 3;
+
+    string cache_key = 4;
+    int64 offset = 5;
+    int64 max_length = 6;
+}
+
+message ArticleReply {
+    bytes content = 1;
+    string cache_key = 2;
+    int64 file_size = 3;
+    int64 selected_offset = 4;
+    int64 selected_size = 5;
+}
