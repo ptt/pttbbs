@@ -1209,10 +1209,10 @@ ccw_chat(int fd)
         char cmd[200];
 
         getdata(b_lines - 1, 0, "請輸入想在" CCW_CAP_CHAT
-                "使用的暱稱 (輸入 * 可直接離開): ",
+                "使用的暱稱 (輸入 /b 可離開): ",
                 chatid, sizeof(chatid), DOECHO);
 
-        if (strcmp(chatid, "*") == 0)
+        if (strcmp(chatid, "*") == 0 || strcasecmp(chatid, "/b") == 0)
             return 0;
 
         if(!chatid[0])
