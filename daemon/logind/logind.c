@@ -2303,7 +2303,12 @@ bind_port(int port)
 static int
 bind_unix(const char *path)
 {
-    return bind_generic("0", path, BIND_EVENT_WILL_PASS_CONNDATA);
+    if (bind_generic("0", path, BIND_EVENT_WILL_PASS_CONNDATA) < 0)
+        return -1;
+    if (chown(path, BBSUID, BBSGID) < 0)
+        fprintf(stderr, LOG_PREFIX "warning: chown: %s: %s\n",
+                path, strerror(errno));
+    return 0;
 }
 
 static int 
