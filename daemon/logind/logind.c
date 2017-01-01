@@ -31,6 +31,7 @@
 // 10.prioritized logattempt (and let connection to wait logattempt to end)
 
 #include <stdio.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -113,6 +114,10 @@
 #define LOGIND_MAX_RETRY_SERVICE   (15)
 #endif
 
+#ifndef LOGIND_INITIAL_ENCODING
+#define LOGIND_INITIAL_ENCODING (0)
+#endif
+
 // local definiions
 #define MY_SVC_NAME  "logind"
 #define LOG_PREFIX  "[logind] "
@@ -168,6 +173,9 @@ enum {
 // login context, constants and states
 
 enum {
+    LOGIN_CONN_STATE_CONNDATA = 1,
+    LOGIN_CONN_STATE_TERMINAL,
+
     LOGIN_STATE_INIT  = 1,
     LOGIN_STATE_USERID,
     LOGIN_STATE_PASSWD,
@@ -214,6 +222,12 @@ typedef struct {
     char pad2;   // for safety
     char port   [IDLEN+1];
     char pad3;   // for safety
+    // buffer for extra connection data
+    conn_data cdata;
+    int       cdata_len;
+    // remote address
+    struct sockaddr_in addr;
+    socklen_t addr_len;
 } login_ctx;
 
 typedef struct {
@@ -224,6 +238,7 @@ typedef struct {
     TelnetCtx    telnet;
     VtkbdCtx     vtkbd;
     login_ctx    ctx;
+    int          state;
 } login_conn_ctx;
 
 typedef struct {
@@ -233,9 +248,14 @@ typedef struct {
     char    hostip[IPV4LEN+1];
 } logattempt_ctx;
 
+enum {
+    BIND_EVENT_WILL_PASS_CONNDATA = 1 << 0,
+};
+
 typedef struct {
     struct event ev;
-    int    port;
+    char   bind_name[PATHLEN];
+    int    flags;
 } bind_event;
 
 void 
@@ -245,6 +265,13 @@ login_ctx_init(login_ctx *ctx)
     memset(ctx, 0, sizeof(login_ctx));
     ctx->state = LOGIN_STATE_INIT;
     ctx->client_code = FNV1_32_INIT;
+    ctx->encoding = LOGIND_INITIAL_ENCODING;
+}
+
+static int
+login_ctx_has_conn_data(login_ctx *ctx)
+{
+    return ctx->cdata_len == sizeof(ctx->cdata) ? 1 : 0;
 }
 
 int 
@@ -252,7 +279,8 @@ login_ctx_retry(login_ctx *ctx)
 {
     assert(ctx);
     ctx->state = LOGIN_STATE_USERID;
-    ctx->encoding = 0;
+    ctx->encoding = login_ctx_has_conn_data(ctx) ? ctx->cdata.encoding
+                                                 : LOGIND_INITIAL_ENCODING;
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
     ctx->icurr    = 0;
@@ -1764,13 +1792,17 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
     return 1;
 }
 
+static int
+login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int len);
+static int
+login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int len);
+
 static void 
 client_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    int len, r;
-    unsigned char buf[64], ch;
-    char *s = (char*)buf;
+    int len;
+    unsigned char buf[64];
 
     // for time-out, simply close connection.
     if (event & EV_TIMEOUT)
@@ -1818,6 +1850,113 @@ client_cb(int fd, short event, void *arg)
         login_conn_remove(conn, fd, 0);
         return;
     }
+
+    while (len > 0)
+    {
+        int consumed;
+        switch (conn->state)
+        {
+            case LOGIN_CONN_STATE_CONNDATA:
+                consumed = login_conn_handle_conndata(conn, fd, buf, len);
+                break;
+
+            case LOGIN_CONN_STATE_TERMINAL:
+                consumed = login_conn_handle_terminal(conn, fd, buf, len);
+                break;
+
+            default:
+                consumed = -1;
+                login_conn_remove(conn, fd, 0);
+                assert(!"login conn is in bad state");
+                break;
+        }
+        if (consumed < 0 || consumed == len)
+            return;
+        memmove(buf, buf + consumed, len - consumed);
+        len -= consumed;
+    }
+}
+
+static int
+login_ctx_activate(login_conn_ctx *conn, int fd);
+
+static int
+login_conn_activate(login_conn_ctx *conn, int fd)
+{
+    switch (conn->state)
+    {
+        case LOGIN_CONN_STATE_CONNDATA:
+            return 0;
+
+        case LOGIN_CONN_STATE_TERMINAL:
+            return login_ctx_activate(conn, fd);
+
+        default:
+            login_conn_remove(conn, fd, 0);
+            assert(!"login conn is in bad state");
+            return -1;
+    }
+}
+
+static int
+login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int len)
+{
+    assert(conn->state == LOGIN_CONN_STATE_CONNDATA);
+
+    login_ctx *ctx = &conn->ctx;
+    uint8_t *p = (uint8_t *) &ctx->cdata;
+    int to_copy = sizeof(ctx->cdata) - ctx->cdata_len;
+    if (to_copy > len)
+        to_copy = len;
+    memcpy(p + ctx->cdata_len, buf, to_copy);
+    conn->ctx.cdata_len += to_copy;
+
+    if (g_verbose >= VERBOSE_DEBUG)
+    {
+        fprintf(stderr, LOG_PREFIX "conn_data recv %d/%d\n",
+                ctx->cdata_len, (int) sizeof(ctx->cdata));
+    }
+
+    assert((unsigned long) ctx->cdata_len <= sizeof(ctx->cdata));
+
+    if (ctx->cdata_len == sizeof(ctx->cdata))
+    {
+        login_ctx *ctx = &conn->ctx;
+
+        if (ctx->cdata.cb != sizeof(ctx->cdata) || ctx->cdata.raddr_len != 4)
+        {
+            login_conn_remove(conn, fd, 0);
+            return -1;
+        }
+
+        ctx->encoding = ctx->cdata.encoding;
+        inet_ntop(AF_INET, ctx->cdata.raddr, ctx->hostip, sizeof(ctx->hostip));
+        snprintf(ctx->port, sizeof(ctx->port), "%u", ctx->cdata.lport);
+
+        if (g_verbose >= VERBOSE_DEBUG)
+        {
+            fprintf(stderr, LOG_PREFIX "conn activate: "
+                    "encoding=%d hostip=%s rport=%u lport=%u\n",
+                    ctx->cdata.encoding, ctx->hostip, ctx->cdata.rport,
+                    ctx->cdata.lport);
+        }
+
+        conn->state = LOGIN_CONN_STATE_TERMINAL;
+        if (login_ctx_activate(conn, fd) < 0)
+            return -1;
+    }
+
+    return to_copy;
+}
+
+static int
+login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int len)
+{
+    assert(conn->state == LOGIN_CONN_STATE_TERMINAL);
+
+    int consumed = len;
+    unsigned char ch;
+    char *s = (char*)buf;
 
     len = telnet_process(&conn->telnet, buf, len);
 
@@ -1883,7 +2022,7 @@ client_cb(int fd, short event, void *arg)
                         case '.':   // GB mode
                             draw_no_such_encoding(conn);
                             login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
-                            return;
+                            return -1;
                         case ',':   // UTF-8 mode
                             conn->ctx.encoding = CONV_UTF8;
                             *uid_lastc = 0;
@@ -1897,11 +2036,11 @@ client_cb(int fd, short event, void *arg)
                     // require passwd.
                     if (!auth_is_free_userid(uid))
                     {
-                        r = auth_precheck_userid(fd, conn);
+                        int r = auth_precheck_userid(fd, conn);
                         if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_OK)
                         {
                             login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
-                            return;
+                            return -1;
                         }
 
                         // leave the switch case, user will be prompt for
@@ -1914,24 +2053,27 @@ client_cb(int fd, short event, void *arg)
                 conn->ctx.state = LOGIN_STATE_AUTH;
                 // XXX share start auth, no break here.
             case LOGIN_HANDLE_START_AUTH:
-                if ((r = auth_start(fd, conn)) != AUTH_RESULT_RETRY)
+            {
+                int r = auth_start(fd, conn);
+                if (r != AUTH_RESULT_RETRY)
                 {
                     // for AUTH_RESULT_OK, the connection is handled in
                     // login_conn_end_ack.
                     if (r != AUTH_RESULT_OK)
                         login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
-                    return;
+                    return -1;
                 }
                 break;
+            }
         }
     }
+    return consumed;
 }
 
 static void 
 listen_cb(int lfd, short event GCC_UNUSED, void *arg)
 {
     int fd;
-    const char *banmsg;
     struct sockaddr_in xsin = {0};
     struct timeval idle_tv = { IDLE_TIMEOUT_SEC, 0};
     socklen_t szxsin = sizeof(xsin);
@@ -1959,6 +2101,8 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         memset(conn, 0, sizeof(login_conn_ctx));
         conn->cb = sizeof(login_conn_ctx);
         conn->enter = (time4_t) time(NULL);
+        conn->state = (pbindev->flags & BIND_EVENT_WILL_PASS_CONNDATA) ?
+            LOGIN_CONN_STATE_CONNDATA : LOGIN_CONN_STATE_TERMINAL;
 
         if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
             free(conn);
@@ -1984,8 +2128,10 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         telnet_ctx_send_init_cmds(&conn->telnet);
 
         // get remote ip & local port info
+        conn->ctx.addr_len = szxsin;
+        memcpy(&conn->ctx.addr, &xsin, szxsin);
         inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
-        snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
+        strlcpy(conn->ctx.port, pbindev->bind_name, sizeof(conn->ctx.port));
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
                 "new connection: fd=#%d %s:%s (opened fd: %d)\n", 
@@ -1995,37 +2141,48 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
         event_add(&conn->ev, &idle_tv);
 
-        if (g_banned) {
-            STATINC(STAT_LOGIND_BANNED);
-            draw_text_screen (conn, ban_screen);
-            login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+        if (login_conn_activate(conn, fd) < 0)
             return;
-        }
-
-        if ((banmsg = in_banip_list_addr(g_banip, xsin.sin_addr.s_addr)))
-        {
-            STATINC(STAT_LOGIND_BANNED);
-            draw_text_screen (conn, *banmsg ? banmsg : banip_screen);
-            login_conn_remove(conn, fd, BAN_SLEEP_SEC);
-            return;
-        }
-
-        // XXX check system load here.
-        if (g_overload)
-        {
-            draw_overload    (conn, g_overload);
-            login_conn_remove(conn, fd, OVERLOAD_SLEEP_SEC);
-            return;
-
-        } else {
-            draw_text_screen  (conn, welcome_screen);
-            draw_userid_prompt(conn, NULL, 0);
-        }
 
         // in blocking mode, we cannot wait accept to return error.
         if (!g_nonblock)
             break;
     }
+}
+
+static int
+login_ctx_activate(login_conn_ctx *conn, int fd)
+{
+    const char *banmsg;
+
+    if (g_banned) {
+        STATINC(STAT_LOGIND_BANNED);
+        draw_text_screen (conn, ban_screen);
+        login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+        return -1;
+    }
+
+    if ((banmsg = in_banip_list_addr(g_banip, conn->ctx.addr.sin_addr.s_addr)))
+    {
+        STATINC(STAT_LOGIND_BANNED);
+        draw_text_screen (conn, *banmsg ? banmsg : banip_screen);
+        login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+        return -1;
+    }
+
+    // XXX check system load here.
+    if (g_overload)
+    {
+        draw_overload    (conn, g_overload);
+        login_conn_remove(conn, fd, OVERLOAD_SLEEP_SEC);
+        return -1;
+
+    } else {
+        draw_text_screen  (conn, welcome_screen);
+        draw_userid_prompt(conn, NULL, 0);
+    }
+
+    return 0;
 }
 
 static void 
@@ -2104,19 +2261,17 @@ logattempt_daemon()
 
     exit(0);
 }
-static int 
-bind_port(int port)
+
+static int
+bind_generic(const char *name, const char *addr, int flags)
 {
-    char buf[STRLEN];
     int sfd;
     bind_event *pev = NULL;
 
-    snprintf(buf, sizeof(buf), "*:%d", port);
-
-    fprintf(stderr, LOG_PREFIX "binding to port: %d...", port);
-    if ( (sfd = tobindex(buf, LOGIND_SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
+    fprintf(stderr, LOG_PREFIX "binding to: %s...", addr);
+    if ( (sfd = tobindex(addr, LOGIND_SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
     {
-        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\n", port);
+        fprintf(stderr, LOG_PREFIX "cannot bind to: %s. abort.\n", addr);
         return -1;
     }
 
@@ -2128,11 +2283,27 @@ bind_port(int port)
     memset(pev, 0, sizeof(bind_event));
     assert(pev);
 
-    pev->port = port;
+    strlcpy(pev->bind_name, name, sizeof(pev->bind_name));
+    pev->flags = flags;
     event_set(&pev->ev, sfd, EV_READ | EV_PERSIST, listen_cb, pev);
     event_add(&pev->ev, NULL);
     fprintf(stderr,"ok. \n");
     return 0;
+}
+
+static int 
+bind_port(int port)
+{
+    char name[STRLEN], addr[STRLEN];
+    snprintf(name, sizeof(name), "%d", port);
+    snprintf(addr, sizeof(addr), "*:%d", port);
+    return bind_generic(name, addr, 0);
+}
+
+static int
+bind_unix(const char *path)
+{
+    return bind_generic("0", path, BIND_EVENT_WILL_PASS_CONNDATA);
 }
 
 static int 
@@ -2246,6 +2417,24 @@ parse_bindports_conf(FILE *fp,
             strlcpy(tunnel_path, vtunnel, sz_tunnel_path);
             continue;
         }
+        else if (strcmp(vport, "unix") == 0)
+        {
+            char vpath[PATHLEN] = {};
+            if (sscanf(buf, "%*s%*s%s", vpath) != 1 || !*vpath)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "cannot parse unix path to bind, line: %s", buf);
+                exit(1);
+            }
+            if (bind_unix(vpath) < 0)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "cannot bind to unix socket: %s. abort.\n", vpath);
+                exit(1);
+            }
+            bound_ports++;
+            continue;
+        }
 
         iport = atoi(vport);
         if (!iport)
@@ -2270,6 +2459,7 @@ main(int argc, char *argv[], char *envp[])
     int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
     FILE   *fp;
     char tunnel_path[PATHLEN] = "", tclient_cmd[PATHLEN] = "";
+    char unix_path[PATHLEN] = "";
     const char *config_file = FN_CONF_BINDPORTS;
     struct event_base *evb;
     struct rlimit r = {.rlim_cur = LOGIND_MAX_FDS, .rlim_max = LOGIND_MAX_FDS};
@@ -2277,7 +2467,7 @@ main(int argc, char *argv[], char *envp[])
     Signal(SIGPIPE, SIG_IGN);
     initsetproctitle(argc, argv, envp);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:r:P:hvTDdBbAaMm")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:P:u:c:hvTDdBbAaMm")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -2302,6 +2492,14 @@ main(int argc, char *argv[], char *envp[])
 
         case 'P':
             strlcpy(g_pidfile_path, optarg, sizeof(g_pidfile_path));
+            break;
+
+        case 'u':
+            strlcpy(unix_path, optarg, sizeof(unix_path));
+            break;
+
+        case 'c':
+            strlcpy(tclient_cmd, optarg, sizeof(tclient_cmd));
             break;
 
         case 'd':
@@ -2366,6 +2564,7 @@ main(int argc, char *argv[], char *envp[])
             fprintf(stderr, 
                     "\t-l: log meesages into log_file\n"
                     "\t-p: bind (listen) to specific port\n"
+                    "\t-u: bind unix socket for incoming connections (with conn data passing enabled)\n"
                     "\t-t: create tunnel in given path\n"
                     "\t-c: spawn a (tunnel) client after initialization\n"
                     "\t-r: the command to retry spawning clients\n"
@@ -2408,6 +2607,18 @@ main(int argc, char *argv[], char *envp[])
                 tunnel_path, sizeof(tunnel_path),
                 tclient_cmd, sizeof(tclient_cmd));
         fclose(fp);
+    }
+
+    // bind unix socket
+    if (*unix_path)
+    {
+        if (bind_unix(unix_path) < 0)
+        {
+            fprintf(stderr, LOG_PREFIX
+                    "cannot bind to unix socket: %s. abort.\n", unix_path);
+            return 3;
+        }
+        bound_ports++;
     }
 
     if (!bound_ports)

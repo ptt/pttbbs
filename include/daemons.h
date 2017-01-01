@@ -52,6 +52,17 @@ typedef struct login_data
 
 }   login_data;
 
+typedef struct conn_data
+{
+    // size of current structure
+    uint32_t cb;
+    uint32_t encoding;
+    uint32_t raddr_len;
+    uint8_t  raddr[16];
+    uint16_t rport;
+    uint16_t lport;
+} PACKSTRUCT conn_data;
+
 ///////////////////////////////////////////////////////////////////////
 // Angel Beats! Daemon
 
