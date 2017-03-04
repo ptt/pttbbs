@@ -123,6 +123,8 @@ answer_key(struct evbuffer *buf, const char *key)
 	    evbuffer_add(buf, bptr->BM, strlen(bptr->BM));
 	else if (strcmp(key, "parent") == 0)
 	    evbuffer_add_printf(buf, "%d", bptr->parent);
+	else if (strcmp(key, "nuser") == 0)
+	    evbuffer_add_printf(buf, "%d", bptr->nuser);
 	else if (strcmp(key, "count") == 0) {
 	    char path[PATH_MAX];
 	    setbfile(path, bptr->brdname, FN_DIR);
