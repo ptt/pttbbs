@@ -45,6 +45,9 @@ size_t Get(const std::string &fn, ssize_t offset, ssize_t length,
       break;
     }
   }
+  if (fd >= 0) {
+    close(fd);
+  }
   return start_offset;
 }
 
