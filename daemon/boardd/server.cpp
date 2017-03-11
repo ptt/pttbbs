@@ -169,8 +169,8 @@ void start_server(const char *host, unsigned short port) {
     asio::io_service io_service;
     Server server(io_service, host, port);
     for (int i = 0; i < NUM_THREADS; ++i) {
-	threads.push_back(std::move(
-		std::thread(std::bind(&ServiceThread, std::ref(io_service)))));
+        threads.push_back(
+            std::thread(std::bind(&ServiceThread, std::ref(io_service))));
     }
     for (auto &thr : threads) {
 	thr.join();
