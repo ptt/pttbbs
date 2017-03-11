@@ -6,6 +6,7 @@
 #include "var.h"
 #include "cmbbs.h"
 #include "proto.h"
+#include "boardd.h"
 
 int
 is_valid_article_filename(const char *filename)
@@ -19,26 +20,33 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
 {
     struct stat local_st;
     int fd;
+    int ret = 0;
 
     if (st == NULL)
 	st = &local_st;
 
-    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, st) < 0)
+    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, st) < 0) {
+	ret = SELECT_ENOTFOUND;
 	goto answer_file_errout;
+    }
 
     if (ck && cklen) {
 	char ckbuf[128];
 	snprintf(ckbuf, sizeof(ckbuf), "%d-%d", (int) st->st_dev, (int) st->st_ino);
-	if (strncmp(ck, ckbuf, cklen) != 0)
+	if (cklen != strlen(ckbuf) || strncmp(ck, ckbuf, cklen) != 0) {
+	    ret = SELECT_ECHANGED;
 	    goto answer_file_errout;
+	}
     }
 
     if (offset < 0)
 	offset += st->st_size;
     if (offset < 0)
 	offset = 0;
-    if (offset > st->st_size)
+    if (offset > st->st_size) {
+	ret = SELECT_ERANGE;
 	goto answer_file_errout;
+    }
 
     if (maxlen < 0 || offset + maxlen > st->st_size)
 	maxlen = st->st_size - offset;
@@ -54,7 +62,9 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
 answer_file_errout:
     if (fd >= 0)
 	close(fd);
-    return -1;
+    if (ret < 0)
+	return ret;
+    return SELECT_EUNKNOWN;
 }
 
 static int
@@ -212,20 +222,21 @@ select_article(struct evbuffer *buf, select_result_t *result, const select_spec_
 	case SELECT_TYPE_HEAD: sfunc = select_article_head; break;
 	case SELECT_TYPE_TAIL: sfunc = select_article_tail; break;
 	case SELECT_TYPE_PART: sfunc = select_article_part; break;
-	default: return -1;
+	default: return SELECT_EARG;
     }
 
     struct stat st;
-    if (answer_file(buf, spec->filename, &st, spec->cachekey,
-		    spec->cachekey_len, spec->offset, spec->maxlen) < 0)
-	return -1;
+    int ret;
+    if ((ret = answer_file(buf, spec->filename, &st, spec->cachekey,
+		           spec->cachekey_len, spec->offset, spec->maxlen)) < 0)
+	return ret;
 
     int sel_offset, sel_size;
     int len = evbuffer_get_length(buf);
     const char *data = (const char *) evbuffer_pullup(buf, -1);
     if (sfunc(data, len, &sel_offset, &sel_size, NULL) != 0 ||
 	evbuffer_slice(buf, sel_offset, sel_size) != 0)
-	return -1;
+	return SELECT_EUNKNOWN;
 
     if (result != NULL) {
 	snprintf(result->cachekey, sizeof(result->cachekey), "%d-%d",
@@ -234,5 +245,5 @@ select_article(struct evbuffer *buf, select_result_t *result, const select_spec_
 	result->sel_offset = sel_offset;
 	result->sel_size = sel_size;
     }
-    return 0;
+    return SELECT_OK;
 }

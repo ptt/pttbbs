@@ -173,6 +173,19 @@ int SelectType(PartialOptions::SelectType t) {
   }
 }
 
+Status SelectStatus(int code) {
+  switch (code) {
+    case SELECT_OK:
+      return Status::OK;
+    case SELECT_ENOTFOUND:
+      return Status(StatusCode::NOT_FOUND, "file not found");
+    case SELECT_ECHANGED:
+      return Status(StatusCode::NOT_FOUND, "file changed");
+    default:
+      return Status(StatusCode::INTERNAL, "select_article failed");
+  }
+}
+
 Status DoSelect(const std::string &fn, const std::string &consistency_token,
                 const PartialOptions &popt, Content *content) {
   select_spec_t spec;
@@ -190,8 +203,7 @@ Status DoSelect(const std::string &fn, const std::string &consistency_token,
 
   select_result_t result;
   Evbuffer buf;
-  if (select_article(buf.Get(), &result, &spec) < 0)
-    return Status(StatusCode::INTERNAL, "select_article failed");
+  RETURN_ON_FAIL(SelectStatus(select_article(buf.Get(), &result, &spec)));
   if (!buf.ConvertUTF8())
     return Status(StatusCode::INTERNAL, "convert utf8 failed");
 

@@ -13,4 +13,11 @@ void start_grpc_server(const char *host, unsigned short port);
 #define MAX_ARGS 100
 #endif
 
+#define SELECT_OK (0)
+#define SELECT_EUNKNOWN  (-1)
+#define SELECT_ENOTFOUND (-2)
+#define SELECT_ECHANGED  (-3)
+#define SELECT_ERANGE    (-4)
+#define SELECT_EARG      (-5)
+
 #endif
