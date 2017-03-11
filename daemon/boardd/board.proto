@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+// Copyright (c) 2017, Robert Wang <robertabcd@gmail.com>
+// All rights reserved.
+//
+// The MIT License.
+
+package pttbbs.api;
+
+service BoardService {
+    rpc Board (BoardRequest) returns (BoardReply) {}
+    rpc List (ListRequest) returns (ListReply) {}
+    rpc Hotboard (HotboardRequest) returns (HotboardReply) {}
+}
+
+message BoardRequest {
+    repeated BoardRef ref = 1;
+}
+
+message BoardReply {
+    repeated Board boards = 1;
+}
+
+message HotboardRequest {
+}
+
+message HotboardReply {
+    repeated Board boards = 1;
+}
+
+message BoardRef {
+    oneof ref {
+        int32 bid = 1;
+        string name = 2;
+    }
+}
+
+message Board {
+    uint32 bid = 1;
+    string name = 2;
+    string title = 3;
+    string bclass = 4;
+    string raw_moderators = 5;
+    uint32 parent = 6;
+    uint32 num_users = 7;
+    uint32 num_posts = 8;
+    uint32 attributes = 9;
+    repeated uint32 children = 10;
+}
+
+message ListRequest {
+    BoardRef ref = 1;
+    bool include_posts = 2;
+    int32 offset = 3;
+    int32 length = 4;
+    bool include_bottoms = 5;
+}
+
+message ListReply {
+    repeated Post posts = 1;
+    repeated Post bottoms = 2;
+}
+
+message Post {
+    uint32 index = 1;
+    string filename = 2;
+    string raw_date = 3;
+    int32 num_recommends = 4;
+    int32 filemode = 5;
+    string owner = 6;
+    string title = 7;
+    int64 modified_nsec = 8;
+}

@@ -333,13 +333,16 @@ setup_program()
 
 int main(int argc, char *argv[])
 {
-    int ch, run_as_daemon = 1;
+    int ch, use_grpc_server = 0, run_as_daemon = 1;
     const char *iface_ip = "127.0.0.1:5150";
 
-    while ((ch = getopt(argc, argv, "5Dl:h")) != -1)
+    while ((ch = getopt(argc, argv, "5sDl:h")) != -1)
 	switch (ch) {
 	    case '5':
 		g_convert_to_utf8 = 0;
+		break;
+	    case 's':
+		use_grpc_server = 1;
 		break;
 	    case 'D':
 		run_as_daemon = 0;
@@ -366,7 +369,10 @@ int main(int argc, char *argv[])
     char *ipport = strdup(iface_ip);
     char *ip = strtok(ipport, ":");
     char *port = strtok(NULL, ":");
-    start_server(ip, atoi(port));
+    if (use_grpc_server)
+	start_grpc_server(ip, atoi(port));
+    else
+	start_server(ip, atoi(port));
     free(ipport);
 
     return 0;
