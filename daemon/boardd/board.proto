@@ -11,6 +11,7 @@ service BoardService {
     rpc Board (BoardRequest) returns (BoardReply) {}
     rpc List (ListRequest) returns (ListReply) {}
     rpc Hotboard (HotboardRequest) returns (HotboardReply) {}
+    rpc Content (ContentRequest) returns (ContentReply) {}
 }
 
 message BoardRequest {
@@ -70,4 +71,35 @@ message Post {
     string owner = 6;
     string title = 7;
     int64 modified_nsec = 8;
+}
+
+message ContentRequest {
+    BoardRef board_ref = 1;
+    string filename = 2;
+    string consistency_token = 3;
+    PartialOptions partial_options = 4;
+}
+
+message PartialOptions {
+    enum SelectType {
+        SELECT_FULL = 0;
+        SELECT_HEAD = 1;
+        SELECT_TAIL = 2;
+        SELECT_PART = 3;
+    }
+    SelectType select_type = 1;
+    int64 offset = 2;
+    int64 max_length = 3;
+}
+
+message ContentReply {
+    Content content = 1;
+}
+
+message Content {
+    bytes content = 1;
+    string consistency_token = 2;
+    int64 offset = 3;
+    int64 length = 4;
+    int64 total_length = 5;
 }

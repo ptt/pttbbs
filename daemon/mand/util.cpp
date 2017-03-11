@@ -4,7 +4,6 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <event2/buffer.h>
 #include "cmbbs.h"
 #include "proto.h"
 }
@@ -26,18 +25,6 @@ void File::Close() {
     close(fd_);
     fd_ = -1;
   }
-}
-
-Evbuffer::Evbuffer() : buf_(evbuffer_new()) {}
-
-Evbuffer::~Evbuffer() { evbuffer_free(buf_); }
-
-bool Evbuffer::ConvertUTF8() {
-  buf_ = evbuffer_b2u(buf_);
-  if (buf_ != nullptr)
-    return true;
-  buf_ = evbuffer_new();
-  return false;
 }
 
 std::string Big5ToUTF8(const char *big5) {

@@ -9,6 +9,7 @@
 #include "man_path.hpp"
 #include "man_service_impl.hpp"
 #include "util.hpp"
+#include "daemon/boardd/evbuffer.hpp"
 extern "C" {
 #include "cmbbs.h"
 #include "proto.h"

@@ -10,7 +10,7 @@ extern "C" {
 namespace paths {
 
 // Get board file.
-std::string bfile(const char *brdname, const char *filename);
+std::string bfile(const std::string &brdname, const std::string &filename);
 
 }  // namespace paths
 

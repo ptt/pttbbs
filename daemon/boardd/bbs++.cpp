@@ -9,9 +9,9 @@ extern "C" {
 
 namespace paths {
 
-std::string bfile(const char *brdname, const char *filename) {
+std::string bfile(const std::string &brdname, const std::string &filename) {
   char buf[PATH_MAX];
-  setbfile(buf, brdname, filename);
+  setbfile(buf, brdname.c_str(), filename.c_str());
   return buf;
 }
 

@@ -6,7 +6,7 @@ SRCROOT=	../..
 .SUFFIXES: .proto .pb.cc .pb.h .grpc.pb.cc .grpc.pb.h
 
 PROG=	boardd
-SRCS=	boardd.c convert.c article.c server.cpp board.pb.cc board.grpc.pb.cc strings.cpp board_service_impl.cpp bbs++.cpp
+SRCS=	boardd.c convert.c article.c server.cpp board.pb.cc board.grpc.pb.cc strings.cpp board_service_impl.cpp bbs++.cpp evbuffer.cpp
 MAN=
 
 UTILDIR=	$(SRCROOT)/util

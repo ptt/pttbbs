@@ -18,6 +18,7 @@ manc: $(MANC_OBJS)
 MAND_OBJS=\
   article.o \
   convert.o \
+  evbuffer.o \
   file_header.o \
   man.grpc.pb.o \
   man.pb.o \
@@ -30,21 +31,20 @@ MAND_OBJS=\
 mand: $(MAND_OBJS)
 	$(CXX) -o $@ $(MAND_OBJS) $(LDFLAGS) $(LDADD)
 
-CXX=g++
-
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
-COMMONFLAGS=
+COMMONFLAGS= -I$(SRCROOT)
 CXXFLAGS+=	-std=c++11 -D_GLIBCXX_USE_CXX11_ABI=1 $(COMMONFLAGS) -g
 CFLAGS+=	$(LIBEVENT_CFLAGS) $(COMMONFLAGS)
-LDFLAGS+=	-pthread
+LDFLAGS+=
 
 LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	-l:libevent.a -l:libevent_pthreads.a \
+	$(LIBEVENT_LIBS_l) -levent_pthreads \
+	-pthread \
 	-l:libgrpc++.a -l:libgrpc.a -l:libprotobuf.a -l:libgflags.a \
 	$(LDADD)
 

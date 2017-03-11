@@ -5,8 +5,9 @@
 #include "daemon/boardd/bbs++.hpp"
 #include "daemon/boardd/board.grpc.pb.h"
 #include "daemon/boardd/board.pb.h"
+#include "daemon/boardd/evbuffer.hpp"
+#include "daemon/boardd/macros.hpp"
 #include "daemon/boardd/strings.hpp"
-#include "daemon/mand/util.hpp"
 extern "C" {
 #include "cmbbs.h"
 #include "daemon/boardd/boardd.h"
@@ -23,10 +24,14 @@ using pttbbs::api::BoardRef;
 using pttbbs::api::BoardReply;
 using pttbbs::api::BoardRequest;
 using pttbbs::api::BoardService;
+using pttbbs::api::Content;
+using pttbbs::api::ContentReply;
+using pttbbs::api::ContentRequest;
 using pttbbs::api::HotboardReply;
 using pttbbs::api::HotboardRequest;
 using pttbbs::api::ListReply;
 using pttbbs::api::ListRequest;
+using pttbbs::api::PartialOptions;
 using pttbbs::api::Post;
 
 namespace {
@@ -43,6 +48,9 @@ class BoardServiceImpl final : public pttbbs::api::BoardService::Service {
 
   Status Hotboard(ServerContext *context, const HotboardRequest *req,
                   HotboardReply *rep) override;
+
+  Status Content(ServerContext *context, const ContentRequest *req,
+                 ContentReply *rep) override;
 
  private:
   DISABLE_COPY_AND_ASSIGN(BoardServiceImpl);
@@ -152,6 +160,59 @@ Status BoardServiceImpl::Hotboard(ServerContext *context,
 #else
   return Status(StatusCode::UNIMPLEMENTED, "Hotboard cache is not built in");
 #endif
+}
+
+int SelectType(PartialOptions::SelectType t) {
+  switch (t) {
+    case PartialOptions::SELECT_FULL: return SELECT_TYPE_PART;
+    case PartialOptions::SELECT_HEAD: return SELECT_TYPE_HEAD;
+    case PartialOptions::SELECT_TAIL: return SELECT_TYPE_TAIL;
+    case PartialOptions::SELECT_PART: return SELECT_TYPE_PART;
+    default: return SELECT_TYPE_PART;
+  }
+}
+
+Status DoSelect(const std::string &fn, const std::string &consistency_token,
+                const PartialOptions &popt, Content *content) {
+  select_spec_t spec;
+  spec.type = SelectType(popt.select_type());
+  spec.cachekey_len = consistency_token.size();
+  spec.cachekey = spec.cachekey_len ? consistency_token.c_str() : nullptr;
+  if (popt.select_type() == PartialOptions::SELECT_FULL) {
+    spec.offset = 0;
+    spec.maxlen = -1;
+  } else {
+    spec.offset = popt.offset();
+    spec.maxlen = popt.max_length();
+  }
+  spec.filename = fn.c_str();
+
+  select_result_t result;
+  Evbuffer buf;
+  if (select_article(buf.Get(), &result, &spec) < 0)
+    return Status(StatusCode::INTERNAL, "select_article failed");
+  if (!buf.ConvertUTF8())
+    return Status(StatusCode::INTERNAL, "convert utf8 failed");
+
+  content->mutable_content()->assign(
+      reinterpret_cast<const char *>(evbuffer_pullup(buf.Get(), -1)),
+      evbuffer_get_length(buf.Get()));
+  content->set_consistency_token(result.cachekey);
+  content->set_offset(result.sel_offset);
+  content->set_length(result.sel_size);
+  content->set_total_length(result.size);
+  return Status::OK;
+}
+
+Status BoardServiceImpl::Content(ServerContext *context,
+                                 const ContentRequest *req, ContentReply *rep) {
+  int bid;
+  const boardheader_t *bp;
+  RETURN_ON_FAIL(ResolveRef(req->board_ref(), &bid, &bp));
+  RETURN_ON_FAIL(DoSelect(paths::bfile(bp->brdname, req->filename()),
+                          req->consistency_token(), req->partial_options(),
+                          rep->mutable_content()));
+  return Status::OK;
 }
 
 }  // namespace

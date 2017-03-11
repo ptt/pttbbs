@@ -17,6 +17,8 @@ using grpc::Status;
 using pttbbs::api::BoardReply;
 using pttbbs::api::BoardRequest;
 using pttbbs::api::BoardService;
+using pttbbs::api::ContentReply;
+using pttbbs::api::ContentRequest;
 using pttbbs::api::HotboardReply;
 using pttbbs::api::HotboardRequest;
 using pttbbs::api::ListReply;
@@ -63,6 +65,9 @@ int main(int argc, char *argv[]) {
       {"Hotboard",
        MakeRPC<BoardService, HotboardRequest, HotboardReply>::BindMethod(
            &BoardService::Stub::Hotboard)},
+      {"Content",
+       MakeRPC<BoardService, ContentRequest, ContentReply>::BindMethod(
+           &BoardService::Stub::Content)},
   };
   for (const auto &m : methods) {
     if (m.first == FLAGS_method) {
