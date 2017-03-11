@@ -86,6 +86,7 @@ Board AsBoard(int bid, const boardheader_t *bp) {
   b.set_num_users(bp->nuser);
   b.set_num_posts(
       records::Count<fileheader_t>(paths::bfile(bp->brdname, FN_DIR)));
+  b.set_attributes(bp->brdattr);
   for (const auto &child : boards::Children(bid, bp)) {
     b.add_children(child);
   }
