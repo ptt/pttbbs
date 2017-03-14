@@ -5,10 +5,6 @@ SRCROOT=	../..
 
 .SUFFIXES: .proto .pb.cc .pb.h .grpc.pb.cc .grpc.pb.h
 
-PROG=	boardd
-SRCS=	boardd.c convert.c article.c server.cpp board.pb.cc board.grpc.pb.cc strings.cpp board_service_impl.cpp bbs++.cpp evbuffer.cpp
-MAN=
-
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
@@ -26,19 +22,23 @@ LDADD:=  $(UTILOBJ) \
 	-l:libgrpc++.a -l:libgrpc.a -l:libprotobuf.a -l:libgflags.a \
 	$(LDADD)
 
-GENERATED_SRCS=board.pb.cc board.pb.h board.grpc.pb.cc board.grpc.pb.h
+GEN_SRCS=board.pb.cc board.grpc.pb.cc
+GEN_HDRS=board.pb.h board.grpc.pb.h
+GEN_OBJS=board.pb.o board.grpc.pb.o
 
-$(GENERATED_SRCS): board.proto
+BOARDC_OBJS=	boardc.o
+BOARDD_OBJS=	boardd.o convert.o article.o server.o strings.o board_service_impl.o bbs++.o evbuffer.o
+
+$(GEN_SRCS) $(GEN_HDRS): board.proto
 	protoc -I. --cpp_out=. --grpc_out=. --plugin=protoc-gen-grpc=/usr/bin/grpc_cpp_plugin board.proto
 
-BOARDC_OBJS=boardc.o board.grpc.pb.o board.pb.o
+boardc: $(GEN_OBJS) $(BOARDC_OBJS)
+	$(CXX) -o $@ $(GEN_OBJS) $(BOARDC_OBJS) $(LDFLAGS) $(LDADD)
 
-boardc: $(GENERATED_SRCS) $(BOARDC_OBJS)
-	$(CXX) -o $@ $(BOARDC_OBJS) $(LDFLAGS) $(LDADD)
+boardd: $(GEN_OBJS) $(BOARDD_OBJS)
+	$(CXX) -o $@ $(GEN_OBJS) $(BOARDD_OBJS) $(LDFLAGS) $(LDADD)
 
 clean:
-	rm -f $(BOARDC_OBJS) $(GENERATED_SRCS) boardc boardd
+	rm -f $(BOARDC_OBJS) $(BOARDD_OBJS) $(GEN_SRCS) $(GEN_HDRS) $(GEN_OBJS) boardc boardd
 
 all: boardc boardd
-
-.include <bsd.prog.mk>
