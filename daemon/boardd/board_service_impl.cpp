@@ -152,7 +152,7 @@ Status BoardServiceImpl::Hotboard(ServerContext *context,
 #ifdef HOTBOARDCACHE
   for (int i = 0; i < SHM->nHOTs; i++) {
     int bid = SHM->HBcache[i] + 1;
-    auto bp = getbcache(bid);
+    auto *bp = boards::Get(bid);
     if (boards::IsPublic(bp)) {
       AsBoard(bid, bp).Swap(rep->add_boards());
     }
