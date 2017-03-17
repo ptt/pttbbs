@@ -219,6 +219,9 @@ Status DoSelect(const std::string &fn, const std::string &consistency_token,
 
 Status BoardServiceImpl::Content(ServerContext *context,
                                  const ContentRequest *req, ContentReply *rep) {
+  if (!paths::IsValidFilename(req->filename())) {
+    return Status(StatusCode::NOT_FOUND, "invalid filename");
+  }
   int bid;
   const boardheader_t *bp;
   RETURN_ON_FAIL(ResolveRef(req->board_ref(), &bid, &bp));

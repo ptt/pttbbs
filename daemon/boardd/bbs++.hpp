@@ -9,6 +9,9 @@ extern "C" {
 
 namespace paths {
 
+// Return whether the filename is valid.
+bool IsValidFilename(const std::string &filename);
+
 // Get board file.
 std::string bfile(const std::string &brdname, const std::string &filename);
 

@@ -1,3 +1,4 @@
+#include <regex>
 #include <string>
 #include <vector>
 #include "daemon/boardd/bbs++.hpp"
@@ -8,6 +9,12 @@ extern "C" {
 }
 
 namespace paths {
+
+const std::regex filename_regex{"[MG]\\.\\d+\\.A(?:\\.[0-9A-F]+)?"};
+
+bool IsValidFilename(const std::string &filename) {
+  return std::regex_match(filename, filename_regex);
+}
 
 std::string bfile(const std::string &brdname, const std::string &filename) {
   char buf[PATH_MAX];
