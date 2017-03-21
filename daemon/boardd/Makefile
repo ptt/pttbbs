@@ -17,8 +17,8 @@ LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	$(LIBEVENT_LIBS_l) -levent_pthreads \
-	-pthread -lstdc++ -lboost_system \
+	$(LIBEVENT_LIBS_l) \
+	-pthread -lstdc++ \
 	-l:libgrpc++.a -l:libgrpc.a -l:libprotobuf.a -l:libgflags.a \
 	$(LDADD)
 
@@ -27,7 +27,7 @@ GEN_HDRS=board.pb.h board.grpc.pb.h
 GEN_OBJS=board.pb.o board.grpc.pb.o
 
 BOARDC_OBJS=	boardc.o
-BOARDD_OBJS=	boardd.o convert.o article.o server.o strings.o board_service_impl.o bbs++.o evbuffer.o
+BOARDD_OBJS=	boardd.o convert.o article.o strings.o board_service_impl.o bbs++.o evbuffer.o
 
 $(GEN_SRCS) $(GEN_HDRS): board.proto
 	protoc -I. --cpp_out=. --grpc_out=. --plugin=protoc-gen-grpc=/usr/bin/grpc_cpp_plugin board.proto

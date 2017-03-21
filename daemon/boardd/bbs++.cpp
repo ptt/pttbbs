@@ -5,7 +5,7 @@
 extern "C" {
 #include "var.h"
 #include "cmbbs.h"
-#include "proto.h"
+#include "daemon/boardd/boardd.h"
 }
 
 namespace paths {

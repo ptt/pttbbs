@@ -5,7 +5,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 #include "cmbbs.h"
-#include "proto.h"
+#include "daemon/boardd/boardd.h"
 }
 
 File::File(const std::string &path) {

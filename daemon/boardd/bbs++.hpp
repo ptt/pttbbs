@@ -4,8 +4,8 @@
 #include <vector>
 #include <boost/optional.hpp>
 extern "C" {
+#include "daemon/boardd/boardd.h"
 #include "pttstruct.h"
-#include "proto.h"
 }
 
 namespace paths {

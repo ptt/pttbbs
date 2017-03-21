@@ -3,9 +3,7 @@
 #include "daemon/boardd/macros.hpp"
 extern "C" {
 #include <event2/buffer.h>
-
-// Forward declaration.
-struct evbuffer * evbuffer_b2u(struct evbuffer *source);
+#include "daemon/boardd/boardd.h"
 }
 
 class Evbuffer final {

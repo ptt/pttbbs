@@ -12,7 +12,7 @@
 #include "daemon/boardd/evbuffer.hpp"
 extern "C" {
 #include "cmbbs.h"
-#include "proto.h"
+#include "daemon/boardd/boardd.h"
 }
 
 using grpc::ServerContext;

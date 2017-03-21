@@ -7,7 +7,7 @@
 extern "C" {
 #include "bbs.h"
 #include "cmbbs.h"
-#include "proto.h"
+#include "daemon/boardd/boardd.h"
 }
 
 #define BOARD_HIDDEN(bptr) (bptr->brdattr & (BRD_HIDE | BRD_TOP) || \

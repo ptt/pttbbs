@@ -5,7 +5,6 @@
 
 #include "var.h"
 #include "cmbbs.h"
-#include "proto.h"
 #include "boardd.h"
 
 int
@@ -68,37 +67,6 @@ answer_file_errout:
 }
 
 static int
-parse_articlepart_key(const char *key, const char **ck, int *cklen,
-		      int *offset, int *maxlen, const char **filename)
-{
-    // <key> = <cache_key>.<offset>.<maxlen>.<filename>
-    *ck = key;
-    int i;
-    for (i = 0; key[i]; i++) {
-	if (key[i] == '.') {
-	    *cklen = i;
-	    break;
-	}
-    }
-    if (key[i] != '.')
-	return 0;
-    key += i + 1;
-
-    char *p;
-    *offset = strtol(key, &p, 10);
-    if (*p != '.')
-	return 0;
-    key = p + 1;
-
-    *maxlen = strtol(key, &p, 10);
-    if (*p != '.')
-	return 0;
-
-    *filename = p + 1;
-    return 1;
-}
-
-static int
 find_good_truncate_point_from_begin(const char *content, int size)
 {
     int last_startline = 0;
@@ -132,7 +100,7 @@ find_good_truncate_point_from_end(const char *content, int size)
     return 0;
 }
 
-int
+static int
 select_article_head(const char *data, int len, int *offset, int *size, void *ctx)
 {
     *offset = 0;
@@ -140,7 +108,7 @@ select_article_head(const char *data, int len, int *offset, int *size, void *ctx
     return 0;
 }
 
-int
+static int
 select_article_tail(const char *data, int len, int *offset, int *size, void *ctx)
 {
     *offset = find_good_truncate_point_from_end(data, len);
@@ -148,7 +116,7 @@ select_article_tail(const char *data, int len, int *offset, int *size, void *ctx
     return 0;
 }
 
-int
+static int
 select_article_part(const char *data, int len, int *offset, int *size, void *ctx)
 {
     *offset = 0;
@@ -180,39 +148,8 @@ evbuffer_slice(struct evbuffer *buf, int offset, int size)
     return -1;
 }
 
-int
-answer_articleselect(struct evbuffer *buf, const boardheader_t *bptr,
-		     const char *rest_key, select_part_func sfunc, void *ctx)
-{
-    char path[PATH_MAX];
-    const char *ck, *filename;
-    int cklen, offset, maxlen = 0;
-    struct stat st;
-
-    if (!parse_articlepart_key(rest_key, &ck, &cklen, &offset, &maxlen, &filename))
-	return -1;
-
-    if (!is_valid_article_filename(filename))
-	return -1;
-
-    setbfile(path, bptr->brdname, filename);
-    if (answer_file(buf, path, &st, ck, cklen, offset, maxlen) < 0)
-	return -1;
-
-    int sel_offset, sel_size;
-    int len = evbuffer_get_length(buf);
-    const char *data = (const char *) evbuffer_pullup(buf, -1);
-    if (sfunc(data, len, &sel_offset, &sel_size, ctx) != 0 ||
-	evbuffer_slice(buf, sel_offset, sel_size) != 0)
-	return -1;
-
-    struct evbuffer *meta = evbuffer_new();
-    evbuffer_add_printf(meta, "%d-%d,%lu,%d,%d\n",
-			(int) st.st_dev, (int) st.st_ino, st.st_size, sel_offset, sel_size);
-    evbuffer_prepend_buffer(buf, meta);
-    evbuffer_free(meta);
-    return 0;
-}
+typedef int (*select_part_func)(const char *data, int len, int *offset,
+				int *size, void *ctx);
 
 int
 select_article(struct evbuffer *buf, select_result_t *result, const select_spec_t *spec)

@@ -11,7 +11,6 @@
 extern "C" {
 #include "cmbbs.h"
 #include "daemon/boardd/boardd.h"
-#include "proto.h"
 #include "var.h"
 }
 
