@@ -31,7 +31,7 @@ message HotboardReply {
 
 message BoardRef {
     oneof ref {
-        int32 bid = 1;
+        uint32 bid = 1;
         string name = 2;
     }
 }
