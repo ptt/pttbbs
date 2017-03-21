@@ -62,16 +62,16 @@ Status ResolveRef(const BoardRef &ref, int *bid, const boardheader_t **bp) {
       *bid = ref.bid();
       break;
     case BoardRef::kName:
-      *bid = boards::Resolve(ref.name());
+      *bid = boards::Resolve(ref.name()).value_or(0);
       break;
     default:
       return Status(StatusCode::INVALID_ARGUMENT, "Unknown ref");
   }
-  auto *bptr = boards::Get(*bid);
-  if (!boards::IsPublic(bptr)) {
+  auto bptr = boards::Get(*bid);
+  if (!bptr || !boards::IsPublic(bptr.value())) {
     return Status(StatusCode::NOT_FOUND, "No such board");
   }
-  *bp = bptr;
+  *bp = bptr.value();
   return Status::OK;
 }
 
@@ -87,7 +87,7 @@ Board AsBoard(int bid, const boardheader_t *bp) {
   b.set_num_posts(
       records::Count<fileheader_t>(paths::bfile(bp->brdname, FN_DIR)));
   b.set_attributes(bp->brdattr);
-  for (const auto &child : boards::Children(bid, bp)) {
+  for (const auto &child : boards::Children(bid)) {
     b.add_children(child);
   }
   return b;
@@ -152,9 +152,9 @@ Status BoardServiceImpl::Hotboard(ServerContext *context,
 #ifdef HOTBOARDCACHE
   for (int i = 0; i < SHM->nHOTs; i++) {
     int bid = SHM->HBcache[i] + 1;
-    auto *bp = boards::Get(bid);
-    if (boards::IsPublic(bp)) {
-      AsBoard(bid, bp).Swap(rep->add_boards());
+    auto bp = boards::Get(bid);
+    if (bp && boards::IsPublic(bp.value())) {
+      AsBoard(bid, bp.value()).Swap(rep->add_boards());
     }
   }
   return Status::OK;

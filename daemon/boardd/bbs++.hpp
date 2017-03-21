@@ -2,6 +2,7 @@
 #define _PTTBBS_DAEMON_BOARDD_BBSPP_HPP_
 #include <string>
 #include <vector>
+#include <boost/optional.hpp>
 extern "C" {
 #include "pttstruct.h"
 #include "proto.h"
@@ -64,13 +65,13 @@ using bid_t = int32_t;
 bool IsPublic(const boardheader_t *bp);
 
 // Get the board header entry in bcache.
-boardheader_t *Get(bid_t bid);
+boost::optional<boardheader_t *> Get(bid_t bid);
 
 // Resolve the bid by board name.
-bid_t Resolve(const std::string &name);
+boost::optional<bid_t> Resolve(const std::string &name);
 
 // Resolve the children of the board. It may modify SHM.
-std::vector<bid_t> Children(bid_t bid, const boardheader_t *bp);
+std::vector<bid_t> Children(bid_t bid);
 
 }  // namespace boards
 
