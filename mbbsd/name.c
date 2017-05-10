@@ -64,6 +64,7 @@ struct namecomplete_int {
     const struct Vector * base;
     struct Vector sublist;
     int idx, dirty;
+    int allow_nonexistent_prefix;
 };
 
 static int
@@ -124,7 +125,8 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		Vector_init(&tmplist, IDLEN + 1);
 		Vector_sublist(&nc_int->sublist, &tmplist, prt->buf);
 
-		if (Vector_length(&tmplist) == 0) {
+		if (!nc_int->allow_nonexistent_prefix &&
+		    Vector_length(&tmplist) == 0) {
 		    Vector_delete(&tmplist);
 		    prt->buf[prt->iend] = 0;
 		    return VGETCB_NEXT;
@@ -146,13 +148,9 @@ namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
     return namecomplete3(namelist, prompt, data, NULL);
 }
 
-void
-namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval)
+static void
+namecomplete_internal(struct namecomplete_int *nc_int, const char *prompt, char *data, const char *defval)
 {
-    struct namecomplete_int nc_int = {
-	.base = namelist,
-	.dirty = 0,
-    };
     VGET_CALLBACKS vcb = {
 	.peek = nc_cb_peek,
 	.data = NULL,
@@ -162,21 +160,36 @@ namecomplete3(const struct Vector *namelist, const char *prompt, char *data, con
 
     outs(prompt);
     clrtoeol();
-    Vector_init(&nc_int.sublist, IDLEN+1);
-    Vector_sublist(namelist, &nc_int.sublist, defval ? defval : "");
-    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, defval, &vcb, &nc_int);
-    Vector_delete(&nc_int.sublist);
+    Vector_init(&nc_int->sublist, IDLEN+1);
+    Vector_sublist(nc_int->base, &nc_int->sublist, defval ? defval : "");
+    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, defval, &vcb, nc_int);
+    Vector_delete(&nc_int->sublist);
+}
+
+void
+namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval)
+{
+    struct namecomplete_int nc_int = {
+	.base = namelist,
+	.dirty = 0,
+    };
+    namecomplete_internal(&nc_int, prompt, data, defval);
 }
 
 void
 usercomplete2(const char *prompt, char *data, const char *defval)
 {
     struct Vector namelist;
+    struct namecomplete_int nc_int = {
+	.base = &namelist,
+	.dirty = 0,
+	.allow_nonexistent_prefix = 1,
+    };
 
     // TODO namecomplete3 會把 namelist 東西全部 dupe 一份，在大站上作個幾百次
     // 就 over cpu computation limit 了； we need a better implementation.
     Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
-    namecomplete3(&namelist, prompt, data, defval);
+    namecomplete_internal(&nc_int, prompt, data, defval);
 }
 
 void
