@@ -94,9 +94,18 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 	case ' ':
 	    if (Vector_length(&nc_int->sublist) == 1) {
-		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
-		prt->icurr = prt->iend = strlen(prt->buf);
-		return VGETCB_NEXT;
+		const char *target = Vector_get(&nc_int->sublist, 0);
+		// Update the buffer if the current input does not match the
+		// completion target, using exact matching.
+		if (strcmp(prt->buf, target)) {
+		    strlcpy(prt->buf, target, prt->len);
+		    prt->icurr = prt->iend = strlen(prt->buf);
+		    return VGETCB_NEXT;
+		}
+		// When the current input perfectly matches, show the list to
+		// indicate user that the completion has exactly one match.
+		// Otherwise, there no indication to the user, and might confuse
+		// them when allow_nonexistent_prefix is on.
 	    }
 
 	    move(2, 0);
