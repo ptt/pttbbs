@@ -569,92 +569,247 @@ trim_blank(char *buf) {
     return *buf == 0;
 }
 
+typedef struct filter_predicate_t {
+    int mode;
+    char keyword[TTLEN + 1];
+    int recommend;
+    int money;
+} filter_predicate_t;
+
+static int
+ask_filter_predicate(filter_predicate_t *pred, int prev_modes, int sr_mode,
+		     const fileheader_t *fh, int *success)
+{
+    memset(pred, 0, sizeof(*pred));
+    char * const keyword = pred->keyword;
+    pred->mode = sr_mode;
+    *success = 0;
+
+    if(sr_mode & RS_AUTHOR) {
+	if(!getdata(b_lines, 0,
+		    currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
+		    keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
+	    return READ_REDRAW;
+    } else if(sr_mode & RS_KEYWORD) {
+	if(!getdata(b_lines, 0,
+		    currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
+		    keyword, TTLEN, DOECHO) || trim_blank(keyword))
+	    return READ_REDRAW;
+
+	LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
+					   "%s:%s\n", currboard, keyword));
+    } else if(sr_mode & RS_KEYWORD_EXCLUDE) {
+	if (currmode & MODE_SELECT) {
+	    // TTLEN width exceed default screen
+	    // let's use TTLEN-4 here.
+	    if (!getdata(b_lines, 0, "增加條件 排除標題: ",
+			 keyword, TTLEN-4, DOECHO) ||
+		trim_blank(keyword))
+		return READ_REDRAW;
+	} else {
+	    vmsg("反向搜尋(!)只能在已進入搜尋時使用(例: 先用 / 搜尋)");
+	    return READ_REDRAW;
+	}
+    } else if (sr_mode & RS_RECOMMEND) {
+	if (currstat == RMAIL ||
+	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
+		     "增加條件 推文數: ": "搜尋推文數高於多少"
+#ifndef OLDRECOMMEND
+		     " (<0則搜噓文數) "
+#endif // OLDRECOMMEND
+		     "的文章: ",
+		     // 因為有負數所以暫時不能用 NUMECHO
+		     keyword, 7, LCECHO) ||
+	    (pred->recommend = atoi(keyword)) == 0)
+	    return READ_REDRAW;
+    } else if (sr_mode & RS_MONEY) {
+	if (currstat == RMAIL ||
+	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
+		      "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
+		      keyword, 7, NUMECHO) ||
+	    (pred->money = atoi(keyword)) <= 0)
+	    return READ_REDRAW;
+	strcat(keyword, "M");
+    } else {
+	// Ptt: only once for these modes.
+	if (prev_modes & sr_mode &
+	    (RS_TITLE | RS_NEWPOST | RS_MARK | RS_SOLVED))
+	    return DONOTHING;
+
+	if (sr_mode & RS_TITLE) {
+	    strcpy(keyword, subject(fh->title));
+	}
+    }
+    *success = 1;
+    return 0;  // Return value does not matter.
+}
+
+static int
+match_filter_predicate(const fileheader_t *fh, void *arg)
+{
+    filter_predicate_t *pred = (filter_predicate_t *) arg;
+    const char * const keyword = pred->keyword;
+    int sr_mode = pred->mode;
+
+    // The order does not matter. Only single sr_mode at a time.
+    if (sr_mode & RS_MARK)
+	return fh->filemode & FILE_MARKED;
+    else if (sr_mode & RS_SOLVED)
+	return fh->filemode & FILE_SOLVED;
+    else if (sr_mode & RS_NEWPOST)
+	return strncmp(fh->title, "Re:", 3) != 0;
+    else if (sr_mode & RS_AUTHOR)
+	return DBCS_strcasestr(fh->owner, keyword) != NULL;
+    else if (sr_mode & RS_KEYWORD)
+	return DBCS_strcasestr(fh->title, keyword) != NULL;
+    else if (sr_mode & RS_KEYWORD_EXCLUDE)
+	return DBCS_strcasestr(fh->title, keyword) == NULL;
+    else if (sr_mode & RS_TITLE)
+	return strcasecmp(subject(fh->title), keyword) == 0;
+    else if (sr_mode & RS_RECOMMEND)
+	return pred->recommend > 0 ?
+	    (fh->recommend >= pred->recommend) :
+	    (fh->recommend <= pred->recommend);
+    else if (sr_mode & RS_MONEY)
+	return query_file_money(fh) >= pred->money;
+    return 0;
+}
+
+static int
+find_resume_point(const char *direct, time4_t timestamp)
+{
+    fileheader_t fh = {};
+    sprintf(fh.filename, "X.%d", (int) timestamp);
+    /* getindex returns 0 when error. */
+    int idx = getindex(direct, &fh, 0);
+    if (idx < 0)
+	return -idx;
+    /* return 0 when error, same as starting from the beginning. */
+    return idx;
+}
+
+static int
+select_read_build(const char *src_direct, const char *dst_direct,
+		  int src_direct_has_reference, time4_t resume_from,
+		  int (*match)(const fileheader_t *fh, void *arg), void *arg)
+{
+    int fr, fd;
+
+    if ((fr = open(src_direct, O_RDONLY, 0)) < 0)
+	return -1;
+
+    int count = dashs(dst_direct) / sizeof(fileheader_t);
+
+    /* find incremental selection start point */
+    int reference = resume_from ?
+	find_resume_point(src_direct, resume_from) : 0;
+
+    int filemode;
+    if (reference) {
+	filemode = O_APPEND | O_RDWR;
+    } else {
+	filemode = O_CREAT | O_RDWR;
+	count = 0;
+	reference = 0;
+    }
+
+    if ((fd = open(dst_direct, filemode, DEFAULT_FILE_CREATE_PERM)) == -1) {
+	close(fr);
+	return -1;
+    }
+
+    if (reference > 0)
+	lseek(fr, reference * sizeof(fileheader_t), SEEK_SET);
+
+#ifdef DEBUG
+    vmsgf("search: %s", src_direct);
+#endif
+    fileheader_t fhs[8192 / sizeof(fileheader_t)];
+    int i, len;
+    while ((len = read(fr, fhs, sizeof(fhs))) > 0) {
+	len /= sizeof(fileheader_t);
+	for (i = 0; i < len; ++i) {
+	    reference++;
+	    if (!match(&fhs[i], arg))
+		continue;
+
+	    if (!src_direct_has_reference) {
+		fhs[i].multi.refer.flag = 1;
+		fhs[i].multi.refer.ref = reference;
+	    }
+	    ++count;
+	    write(fd, &fhs[i], sizeof(fileheader_t));
+	}
+    }
+    close(fr);
+    ftruncate(fd, count * sizeof(fileheader_t));
+    close(fd);
+    return count;
+}
+
+static int
+select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from)
+{
+   time4_t filetime = dasht(dst_direct);
+
+   if (bid > 0)
+   {
+       time4_t filecreate = dashc(dst_direct);
+       boardheader_t *bp = getbcache(bid);
+       assert(bp);
+
+       if (bp->SRexpire)
+       {
+	   if (bp->SRexpire > now) // invalid expire time.
+	       bp->SRexpire = now;
+
+	   if (bp->SRexpire > filecreate)
+	       filetime = -1;
+       }
+   }
+
+   if (filetime < 0 || now-filetime > 60*60) {
+       *resume_from = 0;
+       return 1;
+   } else if (now-filetime > 3*60) {
+       *resume_from = filetime;
+       return 1;
+   } else {
+       /* use cached data */
+       *resume_from = 0;
+       return 0;
+   }
+}
+
 static int
 select_read(const keeploc_t * locmem, int sr_mode)
 {
-#define READSIZE 64  // 8192 / sizeof(fileheader_t)
-   time4_t filetime;
-   fileheader_t    fhs[READSIZE];
    char newdirect[PATHLEN];
    int first_select;
    char genbuf[PATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
-   int reload, inc;
-   int len, fd, fr, i, count = 0, reference = 0;
-   int filemode;
-   /* selection condition */
-   char keyword[TTLEN + 1] = "";
-   int n_recommend = 0, n_money = 0;
 
    if(locmem->crs_ln == 0)
        return locmem->crs_ln;
+   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln];
 
    first_select = p==NULL;
+   if (first_select)
+       _mode = 0;
 
    STATINC(STAT_SELECTREAD);
-   if(sr_mode & RS_AUTHOR) {
-       if(!getdata(b_lines, 0,
-                   currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
-                   keyword, IDLEN+1, DOECHO) || trim_blank(keyword))
-           return READ_REDRAW;
-   } else if(sr_mode & RS_KEYWORD) {
-       if(!getdata(b_lines, 0,
-                   currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
-                   keyword, TTLEN, DOECHO) || trim_blank(keyword))
-           return READ_REDRAW;
 
-       LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
-                                          "%s:%s\n", currboard, keyword));
-   } else if(sr_mode & RS_KEYWORD_EXCLUDE) {
-       if (currmode & MODE_SELECT) {
-           // TTLEN width exceed default screen
-           // let's use TTLEN-4 here.
-           if (!getdata(b_lines, 0, "增加條件 排除標題: ",
-                        keyword, TTLEN-4, DOECHO) ||
-               trim_blank(keyword))
-               return READ_REDRAW;
-       }else {
-           vmsg("反向搜尋(!)只能在已進入搜尋時使用(例: 先用 / 搜尋)");
-           return READ_REDRAW;
-       }
-   } else if (sr_mode & RS_RECOMMEND) {
-       if(currstat == RMAIL ||
-          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ?
-                    "增加條件 推文數: ": "搜尋推文數高於多少"
-#ifndef OLDRECOMMEND
-                    " (<0則搜噓文數) "
-#endif // OLDRECOMMEND
-                    "的文章: ",
-                    // 因為有負數所以暫時不能用 NUMECHO
-                    keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
-           return READ_REDRAW;
-   } else if (sr_mode  & RS_MONEY) {
-       if(currstat == RMAIL ||
-          (!getdata(b_lines, 0, (currmode & MODE_SELECT) ?
-                    "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
-                    keyword, 7, NUMECHO) || (n_money = atoi(keyword)) <= 0 ))
-           return READ_REDRAW;
-       strcat(keyword, "M");
-   } else {
-       // Ptt: only once for these modes.
-       if(!first_select && _mode & sr_mode &
-          (RS_TITLE | RS_NEWPOST | RS_MARK | RS_SOLVED))
-           return DONOTHING;
-
-       if(sr_mode & RS_TITLE) {
-           fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln];
-           strcpy(keyword, subject(fh->title));
-       }
-   }
-
-   if(first_select)
-      _mode = sr_mode;
-   else
-      _mode |= sr_mode;
+   filter_predicate_t predicate;
+   int success;
+   int ui_ret = ask_filter_predicate(&predicate, _mode, sr_mode, fh, &success);
+   if (!success)
+       return ui_ret;
+   _mode |= sr_mode;
 
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
-            first_select ? "SR.":p,
-            sr_mode, (int)strlen(keyword), DBCS_StringHash(keyword));
+	    first_select ? "SR.":p,
+	    sr_mode, (int)strlen(predicate.keyword),
+	    DBCS_StringHash(predicate.keyword));
 
    // pre-calculate board prefix
    if (currstat == RMAIL)
@@ -677,126 +832,20 @@ select_read(const keeploc_t * locmem, int sr_mode)
    else
        setbfile(newdirect, currboard, genbuf);
 
-   filetime = dasht(newdirect);
-   count = dashs(newdirect) / sizeof(fileheader_t);
-
-   if (currstat != RMAIL && currboard[0] && currbid > 0)
-   {
-       time4_t filecreate = dashc(newdirect);
-       boardheader_t *bp  = getbcache(currbid);
-       assert(bp);
-
-       if (bp->SRexpire)
-       {
-	   if (bp->SRexpire > now) // invalid expire time.
-	       bp->SRexpire = now;
-
-	   if (bp->SRexpire > filecreate)
-	       filetime = -1;
-       }
-   }
-
-   if(filetime<0 || now-filetime>60*60) {
-       reload = 1;
-       inc = 0;
-   } else if(now-filetime > 3*60) {
-       reload = 1;
-       inc = 1;
-   } else {
-       /* use cached data */
-       reload = 0;
-       inc = 0;
-   }
-
    /* mark and recommend shouldn't incremental select */
-   if(sr_mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED))
-       inc = 0;
+   int force_full_build = sr_mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED);
 
-   if(reload) {
-       if( (fr = open(currdirect, O_RDONLY, 0)) != -1 ) {
-	   if(inc) {
-	       /* find incremental selection start point */
-	       int idx;
-	       sprintf(fhs[0].filename, "X.%d", (int)filetime);
-	       idx = getindex(currdirect, &fhs[0], 0);
-	       if(idx<0) {
-		   reference = -idx;
-	       } else if(idx==0) {
-		   inc = 0;
-	       } else {
-		   reference = idx;
-	       }
-	   }
-	   if(inc) {
-	       filemode = O_APPEND | O_RDWR;
-	   } else {
-	       filemode = O_CREAT | O_RDWR;
-	       count = 0;
-	       reference = 0;
-	   }
-
-	   if((fd = open(newdirect, filemode, DEFAULT_FILE_CREATE_PERM)) == -1)
-           {
-	       close(fr);
-	       return READ_REDRAW;
-	   }
-
-	   if(reference>0)
-	       lseek(fr, reference*sizeof(fileheader_t), SEEK_SET);
-
-#ifdef DEBUG
-	   vmsgf("search: %s", currdirect);
-#endif
-	   while( (len = read(fr, fhs, sizeof(fhs))) > 0 ){
-	       len /= sizeof(fileheader_t);
-	       for( i = 0 ; i < len ; ++i ){
-		   reference++;
-		   if( (sr_mode & RS_MARK)  &&
-		       !(fhs[i].filemode & FILE_MARKED) )
-		       continue;
-		   if( (sr_mode & RS_SOLVED) &&
-		       !(fhs[i].filemode & FILE_SOLVED) )
-		       continue;
-		   else if((sr_mode & RS_NEWPOST)  &&
-		      !strncmp(fhs[i].title,  "Re:", 3))
-		       continue;
-		   else if((sr_mode & RS_AUTHOR)  &&
-		      !DBCS_strcasestr(fhs[i].owner, keyword))
-		       continue;
-		   else if((sr_mode & RS_KEYWORD)  &&
-		      !DBCS_strcasestr(fhs[i].title, keyword))
-		       continue;
-                   else if(sr_mode  & RS_KEYWORD_EXCLUDE &&
-                       DBCS_strcasestr(fhs[i].title, keyword))
-		       continue;
-		   else if((sr_mode & RS_TITLE)  &&
-		      strcasecmp(subject(fhs[i].title), keyword))
-		       continue;
-		   else if ((sr_mode & RS_RECOMMEND)  &&
-		       (n_recommend > 0 ?
-		       (fhs[i].recommend < n_recommend) :
-		       (fhs[i].recommend > n_recommend) ))
-		       continue;
-		   /* please put money test in last */
-		   else if ((sr_mode & RS_MONEY) &&
-			   query_file_money(fhs+i) < n_money)
-		       continue;
-
-                   if(first_select) {
-		       fhs[i].multi.refer.flag = 1;
-		       fhs[i].multi.refer.ref = reference;
-		   }
-		   ++count;
-		   write(fd, &fhs[i], sizeof(fileheader_t));
-	       }
-	   } // end while
-           close(fr);
-	   ftruncate(fd, count*sizeof(fileheader_t));
-	   close(fd);
-       }
+   int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+   int count = dashs(newdirect) / sizeof(fileheader_t);
+   int resume_from;
+   if (select_read_should_build(newdirect, bid, &resume_from) &&
+       (count = select_read_build(currdirect, newdirect, !first_select,
+				  force_full_build ? 0 : resume_from,
+				  match_filter_predicate, &predicate)) < 0) {
+      return READ_REDRAW;
    }
 
-   if(count) {
+   if (count) {
        strlcpy(currdirect, newdirect, sizeof(currdirect));
        currmode |= MODE_SELECT;
        currsrmode |= sr_mode;
