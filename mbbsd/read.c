@@ -750,35 +750,35 @@ select_read_build(const char *src_direct, const char *dst_direct,
 static int
 select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from)
 {
-   time4_t filetime = dasht(dst_direct);
+    time4_t filetime = dasht(dst_direct);
 
-   if (bid > 0)
-   {
-       time4_t filecreate = dashc(dst_direct);
-       boardheader_t *bp = getbcache(bid);
-       assert(bp);
+    if (bid > 0)
+    {
+	time4_t filecreate = dashc(dst_direct);
+	boardheader_t *bp = getbcache(bid);
+	assert(bp);
 
-       if (bp->SRexpire)
-       {
-	   if (bp->SRexpire > now) // invalid expire time.
-	       bp->SRexpire = now;
+	if (bp->SRexpire)
+	{
+	    if (bp->SRexpire > now) // invalid expire time.
+		bp->SRexpire = now;
 
-	   if (bp->SRexpire > filecreate)
-	       filetime = -1;
-       }
-   }
+	    if (bp->SRexpire > filecreate)
+		filetime = -1;
+	}
+    }
 
-   if (filetime < 0 || now-filetime > 60*60) {
-       *resume_from = 0;
-       return 1;
-   } else if (now-filetime > 3*60) {
-       *resume_from = filetime;
-       return 1;
-   } else {
-       /* use cached data */
-       *resume_from = 0;
-       return 0;
-   }
+    if (filetime < 0 || now-filetime > 60*60) {
+	*resume_from = 0;
+	return 1;
+    } else if (now-filetime > 3*60) {
+	*resume_from = filetime;
+	return 1;
+    } else {
+	/* use cached data */
+	*resume_from = 0;
+	return 0;
+    }
 }
 
 static int
