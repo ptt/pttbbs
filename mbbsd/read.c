@@ -690,15 +690,13 @@ find_resume_point(const char *direct, time4_t timestamp)
 
 static int
 select_read_build(const char *src_direct, const char *dst_direct,
-		  int src_direct_has_reference, time4_t resume_from,
+		  int src_direct_has_reference, time4_t resume_from, int count,
 		  int (*match)(const fileheader_t *fh, void *arg), void *arg)
 {
     int fr, fd;
 
     if ((fr = open(src_direct, O_RDONLY, 0)) < 0)
 	return -1;
-
-    int count = dashs(dst_direct) / sizeof(fileheader_t);
 
     /* find incremental selection start point */
     int reference = resume_from ?
@@ -748,13 +746,24 @@ select_read_build(const char *src_direct, const char *dst_direct,
 }
 
 static int
-select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from)
+select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from,
+			 int *count)
 {
-    time4_t filetime = dasht(dst_direct);
+    struct stat st;
+    if (stat(dst_direct, &st) < 0)
+    {
+	*resume_from = 0;
+	*count = 0;
+	return 1;
+    }
+
+    *count = st.st_size / sizeof(fileheader_t);
+
+    time4_t filetime = st.st_mtime;
 
     if (bid > 0)
     {
-	time4_t filecreate = dashc(dst_direct);
+	time4_t filecreate = st.st_ctime;
 	boardheader_t *bp = getbcache(bid);
 	assert(bp);
 
@@ -836,11 +845,11 @@ select_read(const keeploc_t * locmem, int sr_mode)
    int force_full_build = sr_mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED);
 
    int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
-   int count = dashs(newdirect) / sizeof(fileheader_t);
-   int resume_from;
-   if (select_read_should_build(newdirect, bid, &resume_from) &&
+   time4_t resume_from;
+   int count;
+   if (select_read_should_build(newdirect, bid, &resume_from, &count) &&
        (count = select_read_build(currdirect, newdirect, !first_select,
-				  force_full_build ? 0 : resume_from,
+				  force_full_build ? 0 : resume_from, count,
 				  match_filter_predicate, &predicate)) < 0) {
       return READ_REDRAW;
    }
