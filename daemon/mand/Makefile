@@ -45,7 +45,7 @@ LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	$(LIBEVENT_LIBS_l) -levent_pthreads \
 	-pthread \
-	-l:libgrpc++.a -l:libgrpc.a -l:libprotobuf.a -l:libgflags.a \
+	-lgrpc++ -lprotobuf -lgflags \
 	$(LDADD)
 
 clean:
