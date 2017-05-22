@@ -740,8 +740,13 @@ select_read_build(const char *src_direct, const char *dst_direct,
 	}
     }
     close(fr);
-    ftruncate(fd, count * sizeof(fileheader_t));
+
+    // Do not create black hole.
+    off_t current_size = lseek(fd, 0, SEEK_CUR);
+    if (current_size >= 0 && count * sizeof(fileheader_t) <= current_size)
+	ftruncate(fd, count * sizeof(fileheader_t));
     close(fd);
+
     return count;
 }
 
