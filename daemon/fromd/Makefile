@@ -22,4 +22,4 @@ fromc: fromc.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
 
 clean:
-	rm -f *~ ${PROGRAMS} fromd.o ip_desc_db.o
+	rm -f *~ ${PROGRAMS} fromd.o fromc.o ip_desc_db.o
