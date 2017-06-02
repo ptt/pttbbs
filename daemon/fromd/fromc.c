@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
     memset(buf, 0, sizeof(buf));
 
-    if (argc < 4) {
+    if (argc != 3) {
 	fprintf(stderr, "Usage: %s ip:port lookup_ip\n", argv[0]);
 	return 0;
     }
