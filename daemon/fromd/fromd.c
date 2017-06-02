@@ -7,6 +7,7 @@
 #include <event.h>
 
 #include "bbs.h"
+#include "daemons.h"
 #include "ip_desc_db.h"
 
 const char * cfgfile = BBSHOME "/etc/domain_name_query.cidr";
