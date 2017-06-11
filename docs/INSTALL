@@ -95,6 +95,7 @@
 
  17.測試整個系統是否完成:
     telnet localhost 23 看看
+
     new 一個帳號叫SYSOP, 然後 logout再 login, 這樣子就會擁有站長權限囉~
     再 new一個帳號叫 guest , 這樣子別人就可以用 guest 參觀你的站了
 
@@ -119,14 +120,15 @@
 
  21.在某些情況下, pttbbs會須要一些其他的程式來輔助.
 
-    下面列出所須要的程式, 預設的路徑
+    下面列出所須要的程式, 程式所屬的路徑可以使用: type <程式名稱>
+    來查詢
 
-        tar     /usr/bin/tar
-        gzip    /usr/bin/gzip
-        rm      /bin/rm
-        perl    /usr/bin/perl
-        mutt    /usr/local/bin/mutt
-        lynx    /usr/local/bin/lynx
+        tar
+        gzip
+        rm
+        perl
+        mutt
+        lynx
 
     我們大部份的 perl script會用到 LocalVars.pm , 該檔案內負責定義
     各別機器的設定 (如外部程式的路徑) .
