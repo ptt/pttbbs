@@ -120,8 +120,7 @@
 
  21.在某些情況下, pttbbs會須要一些其他的程式來輔助.
 
-    下面列出所須要的程式, 程式所屬的路徑可以使用: type <程式名稱>
-    來查詢
+    下面列出所須要的程式, 程式所屬的路徑可以使用指令查詢: type <程式名稱>
 
         tar
         gzip
@@ -132,7 +131,7 @@
 
     我們大部份的 perl script會用到 LocalVars.pm , 該檔案內負責定義
     各別機器的設定 (如外部程式的路徑) .
-    請將 /home/bbs/pttbbs/sample/LocalVars.pm 拷份一份至 /home/bbs/bin/
+    請將 /home/bbs/pttbbs/sample/LocalVars.pm 複製一份至 /home/bbs/bin/
     下, 並修正該檔以符合貴環境的設定.
 
     另外列出我們 perl script會用到的 perl module
@@ -148,7 +147,7 @@
    而是看到其他的錯誤訊息
     (例如 [shmget error] key = 4cc, errno = 22: Invalid argument)
    可能是您作業系統 shared-memory 上限不足,
-   請參考 FAQ中加大 shared-memory 部份的說明.
+   請參考 docs/FAQ 中加大 shared-memory 部份的說明.
 
 3. bin/mbbsd -p 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,
