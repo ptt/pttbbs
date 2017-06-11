@@ -8,14 +8,14 @@
  在主機上加入兩個 UID 為 9999 的帳號，分別取名為 bbs 與 bbsadm。
  家目錄設為 /home/bbs，Group 則取名叫 bbs，GID=99。
  bbs 的 shell 設成 /home/bbs/bin/bbsrf，不設密碼。
- bbsadm 的 shell 設成 /bin/sh (或 csh、bash, 選喜歡的即可)並設定密碼。
+ bbsadm 的 shell 設成 /bin/sh (或 csh, bash, 選喜歡的即可)並設定密碼。
 
- 以 Linux 為例:
+ 以 Debian 等 Linux 為例:
 
  1. 打 vipw, 加入底下兩行
 
-    bbs::9999:99:Ptt BBS,,,:/home/bbs/:/home/bbs/bin/bbsrf
-    bbsadm::9999:99:Ptt BBS,,,:/home/bbs:/bin/bash
+    bbs::9999:99:PttBBS,,,:/home/bbs:/home/bbs/bin/bbsrf
+    bbsadm::9999:99:PttBBS,,,:/home/bbs:/bin/bash
 
  2. 執行 passwd bbsadm 設 bbsadm的密碼
 
@@ -65,7 +65,7 @@
     #define SHMALIGNEDSIZE (1048576*4)
     #define TIMET64
 
-    * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
+    * 如果您是用 Linux 系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
     * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake,
       然後將 make alias 成 pmake *
 
