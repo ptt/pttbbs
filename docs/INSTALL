@@ -72,11 +72,11 @@
     ¥H¤U¬O½sÄ¶«e«ØÄ³¥ý¦w¸Ëªº®M¥ó²M³æ¡A
     ¥i¥H¥Î apt-get / yum µ¥³nÅéºÞ²z­û«ü¥OÀË¬d¦Û¤v¦³¨S¦³¦w¸Ë¨ì¡G
 
-    clang
+    clang
     ccache
     libevent-dev
 
- 11. (¦b /home/bbs/pttbbs ¤U)  °õ¦æ make BBSHOME=/home/bbs all install
+ 11.(¦b /home/bbs/pttbbs ¤U)  °õ¦æ make BBSHOME=/home/bbs all install
 
  12.¦pªG¬O·s¬[°_¨Óªº¯¸, ½Ð°õ¦æ cd sample; make install
 
@@ -112,11 +112,11 @@
 
     ¤§«á±z¥i¥H­«·s¶}¾÷¸Õ¸Õ¬Ý¬O¤£¬O¦b­«¶}«á¥i¥H¥¿±`¹B§@ :)
 
- 20. pttbbs ¶·­n©w®É°õ¦æ¤@¨Ç¤p tool ¨Óºû«ù¨t²Î¥¿±`¹B§@,
-     reload cache, ³Æ¥÷, ¸`¤éÂIºqµ¥¨t²Î¸ê°T¡A©Î¨ä¥¦¯S®í¥~³¡µ{¦¡µ¥µ¥.
-     ½Ð¥Î bbsªºÅv­­, °õ¦æ crontab -e , ¤º®e½Ð°Ñ·Ó sample/crontab
-     (¦b¤j³¡¥÷ªº±¡ªp¤U, ª½±µ±N sample/crontab ¤º®e«þ³Æ¶i¥h
-      ©Î¬Oª½±µ crontab /home/bbs/pttbbs/sample/crontab §Y¥i
+ 20.pttbbs ¶·­n©w®É°õ¦æ¤@¨Ç¤p tool ¨Óºû«ù¨t²Î¥¿±`¹B§@,
+    reload cache, ³Æ¥÷, ¸`¤éÂIºqµ¥¨t²Î¸ê°T¡A©Î¨ä¥¦¯S®í¥~³¡µ{¦¡µ¥µ¥.
+    ½Ð¥Î bbsªºÅv­­, °õ¦æ crontab -e , ¤º®e½Ð°Ñ·Ó sample/crontab
+    (¦b¤j³¡¥÷ªº±¡ªp¤U, ª½±µ±N sample/crontab ¤º®e«þ³Æ¶i¥h
+    ©Î¬Oª½±µ crontab /home/bbs/pttbbs/sample/crontab §Y¥i
 
  21.¦b¬Y¨Ç±¡ªp¤U, pttbbs·|¶·­n¤@¨Ç¨ä¥Lªºµ{¦¡¨Ó»²§U.
 
