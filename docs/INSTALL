@@ -1,4 +1,5 @@
-³o½g¤å¥ó»¡©ú§Ö³t¦w¸Ëªº¤èªk, ¤å³¹ªºª©¸¹¤Î³Ì«á½s­×®É¶¡¬O:
+³o½g¤å¥ó»¡©ú§Ö³t¦w¸Ëªº¤èªk,
+¨ä¥L³Ì·s¦w¸Ë¬ÛÃö»¡©ú¥ç¥i°Ñ¦Ò: https://github.com/ptt/pttbbs/wiki ¤º®e
 
 ==============
 ¥H root ªºÅv­­
@@ -7,25 +8,29 @@
  ¦b¥D¾÷¤W¥[¤J¨â­Ó UID ¬° 9999 ªº±b¸¹¡A¤À§O¨ú¦W¬° bbs »P bbsadm¡C
  ®a¥Ø¿ý³]¬° /home/bbs¡AGroup «h¨ú¦W¥s bbs¡AGID=99¡C
  bbs ªº shell ³]¦¨ /home/bbs/bin/bbsrf¡A¤£³]±K½X¡C
- bbsadm ªº shell ³]¦¨ /bin/sh (©Î csh/bash, ¿ï³ßÅwªº§Y¥i)¨Ã³]©w±K½X¡C
+ bbsadm ªº shell ³]¦¨ /bin/sh (©Î csh, bash, ¿ï³ßÅwªº§Y¥i)¨Ã³]©w±K½X¡C
 
- ¥H FreeBSD ¬°¨Ò:
+ ¥H Debian µ¥ Linux ¬°¨Ò:
+
  1. ¥´ vipw, ¥[¤J©³¤U¨â¦æ
 
-    bbs::9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
-    bbsadm::9999:99::0:0:Ptt BBS:/home/bbs:/bin/csh
+    bbs::9999:99:PttBBS,,,:/home/bbs:/home/bbs/bin/bbsrf
+    bbsadm::9999:99:PttBBS,,,:/home/bbs:/bin/bash
 
  2. °õ¦æ passwd bbsadm ³] bbsadmªº±K½X
+
  3. ¦b /etc/group ¤¤¥[¤J¤@¦æ
 
-    bbs:*:99:
+    bbs:x:99:
 
  4. °õ¦æ mkdir /home/bbs
- 5. °õ¦æ chown bbs:bbs /home/bbs
+
+ 5. °õ¦æ chown -R bbs:bbs /home/bbs
+
  6. °õ¦æ chmod 700 /home/bbs
 
  ·íµM¡A§A¤]¥i¥H¥Î adduesr ©Î useradd µ¥µ¥µ{¦¡À°¦£«Ø¥ß»P³]©w¡C
- ¨ä¥¦Àô¹Ò (¦p Debian µ¥ Linux) ½Ð¦Û¦æ°Ñ·Ó¬ÛÃö§@·~¨t²Î¨Ï¥Î»¡©ú¡C
+ ¨ä¥¦Àô¹Ò (¦p FreeBSD) ½Ð¦Û¦æ°Ñ·Ó¬ÛÃö§@·~¨t²Î¨Ï¥Î»¡©ú¡C
 
 ====================
 ¥H¤U¥Î bbsadm ªº¨­¥÷
@@ -45,59 +50,93 @@
     ±z¥i¥H¦b¸Ó¥Ø¿ý¤Uª½±µ³z¹L git pull §ó·s¦Ü pttbbs ³Ì·sªº·½½X. ¦p:
     cd /home/bbs/pttbbs; git pull; git rebase
 
- 8. ¤Á´«¨ì pttbbs ªº¥Ø¿ý¤U ( cd ~bbs/pttbbs )
+ 8. ¤Á´«¨ì pttbbs ªº¥Ø¿ý¤U ( cd /home/bbs/pttbbs )
+
  9. ¦pªG±zªº pttbbs.conf¨Ã¤£¦s¦b, ¥i¥H«þ¤@¥÷¹w³]ªº¨Ó¥Î:
      cp sample/pttbbs.conf pttbbs.conf
+
  10.¨Ì¾Ú±zªº¶·¨D, ­×§ï pttbbs.conf
     ½Ðª`·N, ¹w³]ªº pttbbs.conf¬Oµ¹¬Û·í¤j³W¼Òªº bbs¥Îªº.
     ³q±`±z¶·­n¶i¦æ­×§ï¥H²Å¦X±zªº¶·¨D.
 
-    * ¦pªG±z¬O¥Î Linux¨t²Î, ½Ð¥ý¦w¸Ë pmake, µM«á±N make alias ¦¨ pmake *
+    ¦pªG¬O¦b 64bit ªº§@·~¨t²Î½sÄ¶¦w¸Ë PttBBS
+    ½Ð°O±o¦b pttbbs.conf ¨ú®ø¥H¤U¨â­Ó©w¸qªºµù¸Ñ¡G
+
+    #define SHMALIGNEDSIZE (1048576*4)
+    #define TIMET64
+
+    * ¦pªG±z¬O¥Î Linux ¨t²Î, ½Ð¥ý¦w¸Ë pmake, µM«á±N make alias ¦¨ pmake *
     * ¦pªG±z¬O¥Î MacOSX ¨t²Î, ½Ð¥ý¥Ñ ports ¦w¸Ë bmake,
       µM«á±N make alias ¦¨ pmake *
- 11. (¦b ~bbs/pttbbs ¤U)  °õ¦æ make BBSHOME=/home/bbs all install
+
+    ¥H¤U¬O½sÄ¶«e«ØÄ³¥ý¦w¸Ëªº®M¥ó²M³æ¡A
+    ¥i¥H¥Î apt-get / yum µ¥³nÅéºÞ²z­û«ü¥OÀË¬d¦Û¤v¦³¨S¦³¦w¸Ë¨ì¡G
+
+    clang
+    ccache
+    libevent-dev
+
+ 11.(¦b /home/bbs/pttbbs ¤U)  °õ¦æ make BBSHOME=/home/bbs all install
+
  12.¦pªG¬O·s¬[°_¨Óªº¯¸, ½Ð°õ¦æ cd sample; make install
+
  13.°õ¦æ cd /home/bbs; bin/initbbs -DoIt
 
 ¨ä¤¤²Ä 13 ¥H¤Î 14 ¨B¬Oµ¹²Ä¤@¦¸¦w¸Ëªº®É­Ô¨Ï¥Îªº,
 ¦pªG±zªº BBS¤¤¤w¸g¦³¸ê®Æ¤F, ½Ð°È¥²¤£­n°õ¦æ³o¨â­Ó¨BÆJ.
+
 °²¦p¤@¤Á³£«Ü¶¶§Qªº¸Ü, ³o¼Ë¤l¤j·§´N¦w¸Ë§¹¤F, ±µ¤U¨Ó¬O±Ò°Ê bbs ªº³¡¥÷.
 
- 15.°õ¦æ bin/shmctl init (*µù1, *µù2)
- 16.¥Î root °õ¦æ bin/mbbsd -p 23 -d (*µù3)
+ 15.°õ¦æ /home/bbs/bin/shmctl init (*µù1, *µù2)
+
+ 16.¥Î root °õ¦æ /home/bbs/bin/mbbsd -p 23 -d (*µù3)
     ¨ä¤¤ -d ¬O«ü©w daemon mode. ­Y³s½u¦³°ÝÃD»Ý­n¤è«K´ú¸Õ®É¥i¥H¥ý¤£¥[ -d¡A
     ¥Î§Oµ¡ª½±µ¶i¦æ³s½u¥H¤è«K§ä¥X°ÝÃD¡C
+
  17.´ú¸Õ¾ã­Ó¨t²Î¬O§_§¹¦¨:
     telnet localhost 23 ¬Ý¬Ý
+
     new ¤@­Ó±b¸¹¥sSYSOP, µM«á logout¦A login, ³o¼Ë¤l´N·|¾Ö¦³¯¸ªøÅv­­Åo~
     ¦A new¤@­Ó±b¸¹¥s guest , ³o¼Ë¤l§O¤H´N¥i¥H¥Î guest °ÑÆ[§Aªº¯¸¤F
+
     (­Y¨t²Î¦^À³¡uµLªk±µ¨ü³o­Ó¥N¸¹¡v¡A½Ð¥ýÀH«K«Ø¤@­Ó guest0 ªº±b¸¹¡A
      ¦A´« SYSOP µn¤J¨Ã§â guest0 §ï¦W¬° guest, ¶¶«K§âÅv­­³]¤@©w)
-    ¶}ªO, ¶}¸s²Õ, ¥H¤Î·h°Ê¸s²Õªº¤èªk½Ð¬Ý PttSrc ªOªº¤åºK
- 18.·s¥\¯à½Ð°Ñ¦Ò ADVANCE
+
+    ¶}ªO, ¶}¸s²Õ, ¥H¤Î·h°Ê¸s²Õªº¤èªk½Ð¬Ý ptt2.cc PttSrc ªOªº¤åºK
+
+ 18.¬ÛÃö¶i¶¥¥\¯à½Ð°Ñ¦Ò ADVANCE
+
  19.¬°¤FÅý¶}¾÷ªº®É­Ô·|¦Û¤v§â bbs (¥H¤Î©Ò¶·­nªºµ{¦¡) ¶]°_¨Ó,
-    ­Y±z¨Ï¥Î FreeBSD, ±z¥i¥H±N sample/pttbbs.sh «þ¨©¨ì /usr/local/etc/rc.d/
+    ­Y±z¨Ï¥Î Linux, ±z¥i¥H°Ñ¦Ò /home/bbs/sample/rc.local ªº¤º®e
+    ¥H root Åv­­«Ø¥ß /etc/rc.local ÀÉ®×±N¸Ó¤º®e½Æ»s¶i¥h, ¨Ã±NÅv­­³]©w¥i°õ¦æ
+
     ¤§«á±z¥i¥H­«·s¶}¾÷¸Õ¸Õ¬Ý¬O¤£¬O¦b­«¶}«á¥i¥H¥¿±`¹B§@ :)
- 20. pttbbs ¶·­n©w®É°õ¦æ¤@¨Ç¤p tool ¨Óºû«ù¨t²Î¥¿±`¹B§@,
+
+ 20.pttbbs ¶·­n©w®É°õ¦æ¤@¨Ç¤p tool ¨Óºû«ù¨t²Î¥¿±`¹B§@,
     reload cache, ³Æ¥÷, ¸`¤éÂIºqµ¥¨t²Î¸ê°T¡A©Î¨ä¥¦¯S®í¥~³¡µ{¦¡µ¥µ¥.
     ½Ð¥Î bbsªºÅv­­, °õ¦æ crontab -e , ¤º®e½Ð°Ñ·Ó sample/crontab
-     (¦b¤j³¡¥÷ªº±¡ªp¤U, ª½±µ±N sample/crontab ¤º®e«þ³Æ¶i¥h§Y¥i)
+    (¦b¤j³¡¥÷ªº±¡ªp¤U, ª½±µ±N sample/crontab ¤º®e«þ³Æ¶i¥h
+    ©Î¬Oª½±µ crontab /home/bbs/pttbbs/sample/crontab §Y¥i
+
  21.¦b¬Y¨Ç±¡ªp¤U, pttbbs·|¶·­n¤@¨Ç¨ä¥Lªºµ{¦¡¨Ó»²§U.
-    ¤U­±¦C¥X©Ò¶·­nªºµ{¦¡, ¹w³]ªº¸ô®|, ¥H¤Î¦b FreeBSD ports¤º¹ï¬Mªº¸ô®|
-	tar	/usr/bin/tar		FreeBSD default install
-	gzip	/usr/bin/gzip		FreeBSD default install
-	rm	/bin/rm			FreeBSD default install
-	perl	/usr/bin/perl		/usr/ports/lang/perl5.8/
-	mutt	/usr/local/bin/mutt	/usr/ports/mail/mutt/
-	lynx	/usr/local/bin/lynx	/usr/ports/www/lynx/
+
+    ¤U­±¦C¥X©Ò¶·­nªºµ{¦¡, µ{¦¡©ÒÄÝªº¸ô®|¥i¥H¨Ï¥Î«ü¥O¬d¸ß: type <µ{¦¡¦WºÙ>
+
+        tar
+        gzip
+        rm
+        perl
+        mutt
+        lynx
 
     §Ú­Ì¤j³¡¥÷ªº perl script·|¥Î¨ì LocalVars.pm , ¸ÓÀÉ®×¤º­t³d©w¸q
-    ¦U§O¾÷¾¹ªº³]©w (¦p¥~³¡µ{¦¡ªº¸ô®|) . ½Ð±N¸ÓÀÉ«þ¥÷¤@¥÷¦Ü ~/bin/
+    ¦U§O¾÷¾¹ªº³]©w (¦p¥~³¡µ{¦¡ªº¸ô®|) .
+    ½Ð±N /home/bbs/pttbbs/sample/LocalVars.pm ½Æ»s¤@¥÷¦Ü /home/bbs/bin/
     ¤U, ¨Ã­×¥¿¸ÓÀÉ¥H²Å¦X¶QÀô¹Òªº³]©w.
 
-    ¥t¥~¦C¥X§Ú­Ì perl script·|¥Î¨ìªº perl module, ¥H FreeBSD ports¬Û¹ï¥Ø¿ý.
-	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
-	IO::All		/usr/ports/devel/p5-IO-All/
+    ¥t¥~¦C¥X§Ú­Ì perl script·|¥Î¨ìªº perl module
+        Mail::Sender
+        IO::All
 
 µù:
 1. ³o­Óµ{¦¡¬O¦b initial shared memory ¥Îªº, ¥u¦³¶}¾÷«á²Ä¤@¦¸°õ¦æ, ©Î¬O
@@ -108,7 +147,7 @@
    ¦Ó¬O¬Ý¨ì¨ä¥Lªº¿ù»~°T®§
     (¨Ò¦p [shmget error] key = 4cc, errno = 22: Invalid argument)
    ¥i¯à¬O±z§@·~¨t²Î shared-memory ¤W­­¤£¨¬,
-   ½Ð°Ñ¦Ò FAQ¤¤¥[¤j shared-memory ³¡¥÷ªº»¡©ú.
+   ½Ð°Ñ¦Ò docs/FAQ ¤¤¥[¤j shared-memory ³¡¥÷ªº»¡©ú.
 
 3. bin/mbbsd -p 23 ¬O«ü©w­n bind 23 port, ¨Ì·Ó UNIX ³W©w, 1024 ¥H¤Uªº port
    ¶·­n¦³ root Åv­­, ©Ò¥H¦pªG­n bind 23 port ªº¸Ü´N­n¥Î root ¥h°õ¦æ,
