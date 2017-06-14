@@ -1379,6 +1379,8 @@ start_service(int fd, login_conn_ctx *conn)
         ld.t_lines = ctx->t_lines;
     if (ctx->t_cols > ld.t_cols)
         ld.t_cols = ctx->t_cols;
+    if (login_ctx_has_conn_data(ctx))
+        ld.flags = ctx->cdata.flags;
 
     if (g_verbose > VERBOSE_INFO) 
         fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\n",
@@ -1936,9 +1938,9 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
         if (g_verbose >= VERBOSE_DEBUG)
         {
             fprintf(stderr, LOG_PREFIX "conn activate: "
-                    "encoding=%d hostip=%s rport=%u lport=%u\n",
+                    "encoding=%d hostip=%s rport=%u lport=%u flags=%08x\n",
                     ctx->cdata.encoding, ctx->hostip, ctx->cdata.rport,
-                    ctx->cdata.lport);
+                    ctx->cdata.lport, ctx->cdata.flags);
         }
 
         conn->state = LOGIN_CONN_STATE_TERMINAL;

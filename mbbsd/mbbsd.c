@@ -1940,6 +1940,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     listen_port = atoi(dat.port);
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
+    is_secure_connection = (dat.flags & CONN_FLAG_SECURE);
 
 #ifdef CONVERT
     if (dat.encoding)

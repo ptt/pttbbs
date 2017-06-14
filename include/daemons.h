@@ -50,6 +50,9 @@ typedef struct login_data
     char hostip[IPV4LEN+1];
     char port  [IDLEN+1];
 
+    // connection information
+    uint32_t flags;
+
 }   login_data;
 
 typedef struct conn_data
@@ -61,7 +64,10 @@ typedef struct conn_data
     uint8_t  raddr[16];
     uint16_t rport;
     uint16_t lport;
+    uint32_t flags;
 } PACKSTRUCT conn_data;
+
+#define CONN_FLAG_SECURE (1 << 0)
 
 ///////////////////////////////////////////////////////////////////////
 // Angel Beats! Daemon
