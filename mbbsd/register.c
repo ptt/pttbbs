@@ -546,6 +546,85 @@ ensure_user_agreement_version()
     exit(1);
 }
 
+#ifdef USE_REG_CAPTCHA
+static void captcha_random(char *buf, size_t len)
+{
+    // prevent ambigious characters: oOlI
+    const char * const chars = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
+
+    for (int i = 0; i < len; i++)
+	buf[i] = chars[random() % strlen(chars)];
+    buf[len] = '\0';
+}
+
+static const char *
+captcha_insert_remote(const char *handle, const char *verify)
+{
+    int ret, code = 0;
+    char uri[320];
+    snprintf(uri, sizeof(uri), "%s?secret=%s&handle=%s&verify=%s",
+	     CAPTCHA_INSERT_URI, CAPTCHA_INSERT_SECRET, handle, verify);
+    THTTP t;
+    thttp_init(&t);
+    ret = thttp_get(&t, CAPTCHA_INSERT_SERVER_ADDR, uri, CAPTCHA_INSERT_HOST);
+    if (!ret)
+	code = thttp_code(&t);
+    thttp_cleanup(&t);
+
+    if (ret)
+	return "伺服器連線失敗, 請稍後再試.";
+    if (code != 200)
+	return "內部伺服器錯誤, 請稍後再試.";
+    return NULL;
+}
+
+static const char *
+do_register_captcha()
+{
+    const char *msg = NULL;
+    char handle[CAPTCHA_CODE_LENGTH + 1];
+    char verify[CAPTCHA_CODE_LENGTH + 1];
+    char verify_input[CAPTCHA_CODE_LENGTH + 1];
+
+    vs_hdr("取得驗證碼");
+
+    captcha_random(handle, CAPTCHA_CODE_LENGTH);
+    captcha_random(verify, CAPTCHA_CODE_LENGTH);
+
+    msg = captcha_insert_remote(handle, verify);
+    if (msg)
+	return msg;
+
+    move(2, 0);
+    outs("請先至以下連結取得認證碼:\n");
+    outs(CAPTCHA_URL_PREFIX "?handle=");
+    outs(handle);
+    outs("\n");
+
+    for (int i = 3; i > 0; i--) {
+	if (i < 3) {
+	    char buf[80];
+	    snprintf(buf, sizeof(buf), ANSI_COLOR(1;31)
+		     "驗證碼錯誤, 您還有 %d 次機會." ANSI_RESET, i);
+	    move(6, 0);
+	    outs(buf);
+	}
+	verify_input[0] = '\0';
+	getdata(5, 0, "請輸入驗證碼: ", verify_input,
+		sizeof(verify_input), DOECHO);
+	if (!strcmp(verify, verify_input))
+	    return NULL;
+    }
+    return "驗證碼輸入錯誤次數太多, 請重新操作!";
+}
+#else
+static const char *
+do_register_captcha()
+{
+    return NULL;
+}
+#endif
+
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
@@ -556,11 +635,17 @@ new_register(void)
     userec_t        newuser;
     char            passbuf[STRLEN];
     int             try, id, uid;
-    char 	   *errmsg = NULL;
+    const char 	   *errmsg = NULL;
     uint8_t         ua_version = get_system_user_agreement_version();
 
     if (!accept_user_aggrement()) {
 	vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
+	exit(1);
+    }
+
+    errmsg = do_register_captcha();
+    if (errmsg) {
+	vmsg(errmsg);
 	exit(1);
     }
 
