@@ -12,6 +12,7 @@ etc/Logout	出站畫面
 etc/goodbye	錯誤登入訊息
 etc/sysop	站長名單
 etc/mail_account_sysop  帳號站長信箱收信列表
+etc/mail_account_sysop_desc  帳號站長信箱收信說明
 etc/banip.conf  拒絕連線IP列表 (BANIP)
 # ----------------------------------------
 # 進站畫面

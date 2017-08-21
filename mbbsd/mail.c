@@ -1245,8 +1245,16 @@ mail_account_sysop(void)
         return DIRCHANGED;
     }
 
+    more(FN_MAIL_ACCOUNT_SYSOP_DESC, YEA);
+    clear();
+    vs_hdr("寄信給帳號站長");
     getdata(2, 0, "主題:", tmp_title, sizeof(tmp_title), DOECHO);
     strlcpy(save_title, tmp_title, sizeof(save_title));
+    if (!save_title[0])
+    {
+	vmsg("取消。");
+	return DIRCHANGED;
+    }
 
     setutmpmode(SMAIL);
 
