@@ -113,6 +113,132 @@ upgrade_passwd(userec_t *puser)
 #endif
 }
 
+struct userec_filter_t;
+typedef struct userec_filter_t userec_filter_t;
+typedef const char *(*userec_filter_func)(userec_filter_t *, const userec_t *);
+
+typedef struct {
+    int field;
+    char key[22];
+} userec_keyword_t;
+
+typedef struct {
+    uint32_t userlevel_mask;
+    uint32_t userlevel_wants;
+    uint32_t role_mask;
+    uint32_t role_wants;
+} userec_perm_t;
+
+#define USEREC_FILTER_KEYWORD (1)
+#define USEREC_FILTER_PERM (2)
+
+struct userec_filter_t {
+    int type;
+    const char *(*filter)(struct userec_filter_t *, const userec_t *);
+    const char *(*desc)(struct userec_filter_t *);
+    union {
+	userec_keyword_t keyword;
+	userec_perm_t perm;
+    };
+};
+
+static const char *
+userec_filter_keyword_filter(userec_filter_t *uf, const userec_t *user)
+{
+    assert(uf->type == USEREC_FILTER_KEYWORD);
+    const char * const key = uf->keyword.key;
+    const int keytype = uf->keyword.field;
+    if ((!keytype || keytype == 1) &&
+	DBCS_strcasestr(user->userid, key))
+	return user->userid;
+    else if ((!keytype || keytype == 2) &&
+	     DBCS_strcasestr(user->realname, key))
+	return user->realname;
+    else if ((!keytype || keytype == 3) &&
+	     DBCS_strcasestr(user->nickname, key))
+	return user->nickname;
+    else if ((!keytype || keytype == 4) &&
+	     DBCS_strcasestr(user->address, key))
+	return user->address;
+    else if ((!keytype || keytype == 5) &&
+	     strcasestr(user->email, key)) // not DBCS.
+	return user->email;
+    else if ((!keytype || keytype == 6) &&
+	     strcasestr(user->lasthost, key)) // not DBCS.
+	return user->lasthost;
+    else if ((!keytype || keytype == 7) &&
+	     DBCS_strcasestr(user->career, key))
+	return user->career;
+    else if ((!keytype || keytype == 8) &&
+	     DBCS_strcasestr(user->justify, key))
+	return user->justify;
+    return NULL;
+}
+
+static const char *
+userec_filter_keyword_desc(userec_filter_t *uf)
+{
+    return uf->keyword.key;
+}
+
+static const char *
+userec_filter_perm_filter(userec_filter_t *uf, const userec_t *user)
+{
+    assert(uf->type == USEREC_FILTER_PERM);
+    if ((user->userlevel & uf->perm.userlevel_mask) ==
+	uf->perm.userlevel_wants &&
+	(user->role & uf->perm.role_mask) == uf->perm.role_wants)
+	return "權限符合";
+    return NULL;
+}
+
+static const char *
+userec_filter_perm_desc(userec_filter_t *uf GCC_UNUSED)
+{
+    return "查詢帳號權限";
+}
+
+static int
+get_userec_filter(int row, userec_filter_t *uf)
+{
+    char tbuf[4];
+
+    move(row, 0);
+    outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
+    outs("          [a]不允許\認證碼註冊\n");
+    row += 2;
+    do {
+	memset(uf, 0, sizeof(*uf));
+	getdata(row++, 0, "要搜尋哪種資料？", tbuf, 2, DOECHO);
+
+	if (strlen(tbuf) > 1)
+	    continue;
+
+	char sel = tbuf[0];
+	if (!sel)
+	    sel = '0';
+	if (sel >= '0' && sel <= '8') {
+	    uf->type = USEREC_FILTER_KEYWORD;
+	    uf->filter = userec_filter_keyword_filter;
+	    uf->desc = userec_filter_keyword_desc;
+	    uf->keyword.field = sel - '0';
+	    getdata(row++, 0, "請輸入關鍵字: ", uf->keyword.key,
+		    sizeof(uf->keyword.key), DOECHO);
+	    if (!uf->keyword.key[0])
+		return -1;
+	} else if (sel == 'a' || sel == 'A') {
+	    uf->type = USEREC_FILTER_PERM;
+	    uf->filter = userec_filter_perm_filter;
+	    uf->desc = userec_filter_perm_desc;
+	    uf->perm.userlevel_mask = uf->perm.userlevel_wants =
+		PERM_NOREGCODE;
+	}
+    } while (!uf->type);
+    return 0;
+}
+
+#define MAX_USEREC_FILTERS (5)
+
 static int
 search_key_user(const char *passwdfile, int mode)
 {
@@ -120,35 +246,37 @@ search_key_user(const char *passwdfile, int mode)
     int             ch;
     int             unum = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
-    char            friendfile[PATHLEN]="", key[22], *keymatch;
-    int		    keytype = 0;
+    char            friendfile[PATHLEN]="";
+    const char	    *keymatch;
     int	            isCurrentPwd;
+    userec_filter_t ufs[MAX_USEREC_FILTERS];
+    size_t	    num_ufs = 0;
 
     assert(fp1);
 
     isCurrentPwd = (strcmp(passwdfile, FN_PASSWD) == 0);
     clear();
-    if (!mode)
-    {
-	getdata(0, 0, "請輸入id :", key, sizeof(key), DOECHO);
+    if (!mode) {
+	userec_filter_t *uf = &ufs[0];
+	uf->type = 1;
+	uf->filter = userec_filter_keyword_filter;
+	uf->desc = userec_filter_keyword_desc;
+	getdata(0, 0, "請輸入id :", uf->keyword.key, sizeof(uf->keyword.key),
+		DOECHO);
+	num_ufs++;
     } else {
 	// improved search
 	vs_hdr("關鍵字搜尋");
-	outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
-	getdata(2, 0, "要搜尋哪種資料？", key, 2, NUMECHO);
-
-	if (isascii(key[0]) && isdigit(key[0]))
-	    keytype = key[0] - '0';
-	if (keytype < 0 || keytype > 8)
-	    keytype = 0;
-	getdata(3, 0, "請輸入關鍵字: ", key, sizeof(key), DOECHO);
+	if (!get_userec_filter(1, &ufs[0]))
+	    num_ufs++;
     }
 
-    if(!key[0]) {
+    if (!num_ufs) {
 	fclose(fp1);
 	return 0;
     }
-    vs_hdr(key);
+    const char *desc = ufs[0].desc(&ufs[0]);
+    vs_hdr(desc);
 
     // <= or < ? I'm not sure...
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ < MAX_USERS) {
@@ -158,7 +286,7 @@ search_key_user(const char *passwdfile, int mode)
 	    continue;
 
 	if (!(unum & 0xFF)) {
-	    vs_hdr(key);
+	    vs_hdr(desc);
 	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 	}
@@ -167,43 +295,13 @@ search_key_user(const char *passwdfile, int mode)
 	if (!upgrade_passwd(&user))
 	    continue;
 
-        keymatch = NULL;
-
-	if (!mode)
-	{
-	    // only verify id
-	    if (!strcasecmp(user.userid, key))
-		keymatch = user.userid;
-	} else {
-	    // search by keytype
-	    if ((!keytype || keytype == 1) &&
-		DBCS_strcasestr(user.userid, key))
-		keymatch = user.userid;
-	    else if ((!keytype || keytype == 2) &&
-		DBCS_strcasestr(user.realname, key))
-		keymatch = user.realname;
-	    else if ((!keytype || keytype == 3) &&
-		DBCS_strcasestr(user.nickname, key))
-		keymatch = user.nickname;
-	    else if ((!keytype || keytype == 4) &&
-		DBCS_strcasestr(user.address, key))
-		keymatch = user.address;
-	    else if ((!keytype || keytype == 5) &&
-		strcasestr(user.email, key)) // not DBCS.
-		keymatch = user.email;
-	    else if ((!keytype || keytype == 6) &&
-		strcasestr(user.lasthost, key)) // not DBCS.
-		keymatch = user.lasthost;
-	    else if ((!keytype || keytype == 7) &&
-		DBCS_strcasestr(user.career, key))
-		keymatch = user.career;
-	    else if ((!keytype || keytype == 8) &&
-		DBCS_strcasestr(user.justify, key))
-		keymatch = user.justify;
+	for (size_t i = 0; i < num_ufs; i++) {
+	    keymatch = ufs[i].filter(&ufs[i], &user);
+	    if (!keymatch)
+		break;
 	}
-
-        if(keymatch) {
-	    vs_hdr(key);
+        while (keymatch) {
+	    vs_hdr(desc);
 	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 
@@ -218,39 +316,50 @@ search_key_user(const char *passwdfile, int mode)
 	    // XXX don't trust 'user' variable after here
 	    // because uinfo_query may have changed it.
 
-	    outs(ANSI_COLOR(44) "               空白鍵" \
-		 ANSI_COLOR(37) ":搜尋下一個          " \
-		 ANSI_COLOR(33)" Q" ANSI_COLOR(37)": 離開");
-	    outs(mode ?
-                 "      A: add to namelist " ANSI_RESET " " :
-		 "      S: 取用備份資料    " ANSI_RESET " ");
-	    while (1) {
-		while ((ch = vkey()) == 0)
-		    ;
-                if (ch == 'a' || ch=='A' )
-                  {
-                   if(!friendfile[0])
-                    {
-                     friend_special();
-                     setfriendfile(friendfile, FRIEND_SPECIAL);
-                    }
-                   friend_add(user.userid, FRIEND_SPECIAL, keymatch);
-                   break;
-                  }
-		if (ch == ' ')
-		    break;
-		if (ch == 'q' || ch == 'Q') {
-		    fclose(fp1);
-		    return 0;
+	    vs_footer("  搜尋帳號  ", mode ?
+		      "  (空白鍵)搜尋下一個 (A)加入名單 (F)新增條件 (Q)離開" :
+		      "  (空白鍵)搜尋下一個 (A)加入名單 (S)取用備份資料 "
+		      "(Q)離開");
+
+	    while ((ch = vkey()) == 0)
+		;
+	    if (ch == 'a' || ch == 'A') {
+		if(!friendfile[0])
+		{
+		    friend_special();
+		    setfriendfile(friendfile, FRIEND_SPECIAL);
 		}
-		if (ch == 's' && !mode) {
-		    if (retrieve_backup(&user) >= 0) {
-			fclose(fp1);
-                        vmsg("已成功\取用備份資料。");
-			return 0;
-		    } else {
-                        vmsg("錯誤: 取用備份資料失敗。");
-                    }
+		friend_add(user.userid, FRIEND_SPECIAL, keymatch);
+		break;
+	    }
+	    if (mode && (ch == 'f' || ch == 'F')) {
+		if (num_ufs >= MAX_USEREC_FILTERS) {
+		    vmsg("搜尋條件數量已達上限。");
+		    continue;
+		}
+		clear();
+		vs_hdr("新增條件");
+		if (get_userec_filter(1, &ufs[num_ufs])) {
+		    vmsg("新增條件失敗");
+		    continue;
+		}
+		num_ufs++;
+		desc = "多重條件";
+		break;
+	    }
+	    if (ch == ' ')
+		break;
+	    if (ch == 'q' || ch == 'Q') {
+		fclose(fp1);
+		return 0;
+	    }
+	    if (ch == 's' && !mode) {
+		if (retrieve_backup(&user) >= 0) {
+		    fclose(fp1);
+		    vmsg("已成功\取用備份資料。");
+		    return 0;
+		} else {
+		    vmsg("錯誤: 取用備份資料失敗。");
 		}
 	    }
 	}
