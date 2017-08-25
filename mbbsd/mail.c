@@ -1214,6 +1214,19 @@ get_account_sysop(struct Vector *namelist)
         return -1;
 }
 
+static int
+show_mail_account_sysop_desc(void)
+{
+    if (more(FN_MAIL_ACCOUNT_SYSOP_DESC, YEA) < 0)
+	return 0;
+
+    char yn[2];
+    getdata(b_lines, 0, "請問您是否閱\讀以上說明? [y/N]: ", yn, sizeof(yn),
+	    LCECHO);
+    if (yn[0] == 'y')
+	return 0;
+    return -1;
+}
 
 int
 mail_account_sysop(void)
@@ -1245,7 +1258,8 @@ mail_account_sysop(void)
         return DIRCHANGED;
     }
 
-    more(FN_MAIL_ACCOUNT_SYSOP_DESC, YEA);
+    if (show_mail_account_sysop_desc() < 0)
+	return DIRCHANGED;
     clear();
     vs_hdr("寄信給帳號站長");
     getdata(2, 0, "主題:", tmp_title, sizeof(tmp_title), DOECHO);
