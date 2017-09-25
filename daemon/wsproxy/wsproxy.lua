@@ -7,7 +7,8 @@ local origin_whitelist = {
     ["http://www.ptt.cc"] = true,
     ["https://www.ptt.cc"] = true,
     ["https://robertabcd.github.io"] = true,
-    ["app://pcman"] = true,
+    ["app://pcman"] = true,    
+    ["app://welly"] = true,
 }
 
 function check_origin()
