@@ -252,7 +252,7 @@ int main()
 		strcpy(mymail.owner, BBSNAME);
 		sprintf(mymail.title, "[%s] ¤¤¼úÅo! $ %d", Cdatelite(&now), money * num);
 		unlink(genbuf);
-		Link("etc/ticket", genbuf);
+		Link( BBSHOME "/etc/ticket", genbuf);
                 sethomedir(genbuf, userid);
 		append_record(genbuf, &mymail, sizeof(mymail));
                 sendalert_uid(uid, ALERT_NEW_MAIL);
