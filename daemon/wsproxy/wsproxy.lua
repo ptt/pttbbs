@@ -70,11 +70,16 @@ function start_websocket_server()
 end
 
 function ws2sock(ws, sock)
+    last_typ = ""
     while true do
         local data, typ, err = ws:recv_frame()
         if not data then
             ngx.log(ngx.ERR, "failed to receive a frame: ", err)
             return ngx.exit(444)
+        end
+
+        if typ == "continuation" then
+            typ = last_typ
         end
 
         if typ == "binary" then
@@ -105,6 +110,8 @@ function ws2sock(ws, sock)
         else
             ngx.log(ngx.INFO, "received a frame of type ", typ, " and payload ", data)
         end
+
+        last_typ = typ
     end
 end
 
