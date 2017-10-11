@@ -105,7 +105,7 @@ static int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name, time4_t modified,
         const char *title, const char *owner, const char *date,
-        char recommend, void *multi, uint8_t enable_modes, uint8_t disable_modes)
+        char recommend, int reply, void *multi, uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -150,6 +150,9 @@ modify_dir_lite(
 	else if (recommend < -MAX_RECOMMENDS) recommend = -MAX_RECOMMENDS;
 	fhdr.recommend = recommend;
     }
+
+    if (reply)
+        fhdr.reply_counter += 1;
 
 
     // PttLock(fd, sz, sizeof(fhdr), F_WRLCK);
@@ -2006,7 +2009,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // substitute_ref_record(direct, fhdr, ent);
     modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
-                    NULL, NULL, 0, NULL, 0, 0);
+                    NULL, NULL, 0, 0, NULL, 0, 0);
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2536,7 +2539,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.badpost);
         if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0,
-                            &fhdr->multi, 0, 0) != 0) {
+                            0, &fhdr->multi, 0, 0) != 0) {
             vmsg("修改失敗，請重新進入看板再試試。");
             return FULLUPDATE;
         }
@@ -2652,7 +2655,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
 
     if (modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
-                        tmpfhdr.owner, tmpfhdr.date, 0, NULL, 0, 0) != 0) {
+                        tmpfhdr.owner, tmpfhdr.date, 0, 0, NULL, 0, 0) != 0) {
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
     }
@@ -2741,7 +2744,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     if (fhdr->modified > 0)
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
-		fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
+		fhdr->modified, NULL, NULL, NULL, update, 1, NULL, 0, 0) < 0)
 	    goto error;
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
@@ -3644,13 +3647,13 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
         if (fhdr->filemode & mode_mask) {
             // clear
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, 0, mode_mask)) != 0)
+                                       NULL, NULL, 0, 0, NULL, 0, mode_mask)) != 0)
                 break;
             fhdr->filemode &= ~mode_mask;
         } else {
             // set
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, mode_mask, 0)) != 0)
+                                       NULL, NULL, 0, 0, NULL, mode_mask, 0)) != 0)
                 break;
             fhdr->filemode |= mode_mask;
         }

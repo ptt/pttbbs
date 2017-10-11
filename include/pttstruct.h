@@ -285,7 +285,8 @@ typedef struct fileheader_t { /* 128 bytes */
     }	    multi;		    /* rocker: if bit32 on ==> reference */
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     unsigned char   filemode;        /* must be last field @ boards.c */
-    char    pad3[3];
+    unsigned short int reply_counter;
+    char    pad3;
 } PACKSTRUCT fileheader_t;
 
 #define FILE_LOCAL      0x01    /* local saved,  non-mail */

@@ -574,6 +574,7 @@ typedef struct filter_predicate_t {
     char keyword[TTLEN + 1];
     int recommend;
     int money;
+    int reply_counter;
 } filter_predicate_t;
 
 static int
@@ -630,6 +631,13 @@ ask_filter_predicate(filter_predicate_t *pred, int prev_modes, int sr_mode,
 	    (pred->money = atoi(keyword)) <= 0)
 	    return READ_REDRAW;
 	strcat(keyword, "M");
+    } else if (sr_mode & RS_REPLY_COUNTER) {
+        if (currstat == RMAIL ||
+            !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
+                     "Add Rule Reply: " : "Reply higher then: ",
+                     keyword, 7, LCECHO) ||
+                (pred->reply_coutner = atoi(keyword)) == 0)
+            return READ_REDRAW;
     } else {
 	// Ptt: only once for these modes.
 	if (prev_modes & sr_mode &
@@ -672,6 +680,8 @@ match_filter_predicate(const fileheader_t *fh, void *arg)
 	    (fh->recommend <= pred->recommend);
     else if (sr_mode & RS_MONEY)
 	return query_file_money(fh) >= pred->money;
+    else if (sr_mode & RS_REPLY_COUNTER)
+        return atoi(fh->reply_counter) >= pred->reply_counter;
     return 0;
 }
 
@@ -947,6 +957,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	case 'Z':
 	    mode = select_read(locmem, RS_RECOMMEND);
 	    break;
+
+        case 'J':
+            mode = select_read(locmem, RS_REPLY_COUNTER);
+            break;
 
         case 'a':
 	    mode = select_read(locmem, RS_AUTHOR);
