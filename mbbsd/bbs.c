@@ -151,7 +151,7 @@ modify_dir_lite(
 	fhdr.recommend = recommend;
     }
 
-    if (reply)
+    if (reply && fhdr.reply_counter < MAX_RECOMMENDS)
         fhdr.reply_counter += 1;
 
 
