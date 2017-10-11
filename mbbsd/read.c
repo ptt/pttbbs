@@ -574,7 +574,7 @@ typedef struct filter_predicate_t {
     char keyword[TTLEN + 1];
     int recommend;
     int money;
-    int reply_counter;
+    unsigned short int reply_counter;
 } filter_predicate_t;
 
 static int
@@ -636,7 +636,7 @@ ask_filter_predicate(filter_predicate_t *pred, int prev_modes, int sr_mode,
             !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
                      "Add Rule Reply: " : "Reply higher then: ",
                      keyword, 7, LCECHO) ||
-                (pred->reply_coutner = atoi(keyword)) == 0)
+                (pred->reply_counter = atoi(keyword)) == 0)
             return READ_REDRAW;
     } else {
 	// Ptt: only once for these modes.
