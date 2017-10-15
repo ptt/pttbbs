@@ -73,7 +73,7 @@ function ws2sock(ws, sock)
     last_typ = ""
     while true do
         local data, typ, err = ws:recv_frame()
-        if not data then
+        if err or not data then
             ngx.log(ngx.ERR, "failed to receive a frame: ", err)
             return ngx.exit(444)
         end
