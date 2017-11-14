@@ -1,7 +1,17 @@
 #!/usr/bin/env python
+# Usage: ./big5_gen.py > big5.c
+
+import sys
+import tarfile
+
+BIG5_DATA = tarfile.open('big5data.tar.bz2')
+B2U_FILE = BIG5_DATA.extractfile('uao250-b2u.big5.txt')
+U2B_FILE = BIG5_DATA.extractfile('uao250-u2b.big5.txt')
+AMBCJK_FILE = BIG5_DATA.extractfile('ambcjk.big5.txt')
 
 # b2u
-b2u = open('uao250-b2u.big5.txt', 'r').readlines()
+sys.stderr.write('Generating B2U data...\n')
+b2u = B2U_FILE.readlines()
 b2u = [line.strip().split(' ')
        for line in b2u
        if line.strip().startswith('0x')]
@@ -20,7 +30,8 @@ for i in range(0x10000):
 print "};\n"
 
 # u2b
-u2b = open('uao250-u2b.big5.txt', 'r').readlines()
+sys.stderr.write('Generating U2B data...\n')
+u2b = U2B_FILE.readlines()
 u2b = [line.strip().split(' ')
        for line in u2b
        if line.strip().startswith('0x')]
@@ -34,7 +45,8 @@ for i in range(0x10000):
 print "};\n"
 
 # ambiguous cjk width
-ambcjk_data = open("ambcjk.big5.txt").readlines()
+sys.stderr.write('Generating AMBCJK data...\n')
+ambcjk_data = AMBCJK_FILE.readlines()
 ambcjk = []
 for entry in ambcjk_data:
     (a, b) = entry.strip().split()

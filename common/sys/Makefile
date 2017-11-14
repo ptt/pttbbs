@@ -12,9 +12,7 @@ LIB:=	cmsys
 all: .depend
 
 big5.c: big5data.tar.bz2 big5_gen.py
-	LC_ALL=C tar jxf big5data.tar.bz2
 	./big5_gen.py > big5.c
-	LC_ALL=C tar jtf big5data.tar.bz2 | xargs rm
 
 install:
 

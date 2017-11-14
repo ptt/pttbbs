@@ -2,13 +2,16 @@
 # Usage: ./big5_gen.py > big5_tbl.py
 
 import os
+import tarfile
 
 COMMON_SYS = '../../common/sys'
-B2U_FILE = os.path.join(COMMON_SYS, 'uao250-b2u.big5.txt')
-U2B_FILE = os.path.join(COMMON_SYS, 'uao250-u2b.big5.txt')
+BIG5_DATA = tarfile.open(os.path.join(COMMON_SYS, 'big5data.tar.bz2'))
+
+B2U_FILE = BIG5_DATA.extractfile('uao250-b2u.big5.txt')
+U2B_FILE = BIG5_DATA.extractfile('uao250-u2b.big5.txt')
 
 # b2u
-b2u = open(B2U_FILE, 'r').readlines()
+b2u = B2U_FILE.readlines()
 b2u = [line.strip().split(' ')
        for line in b2u
        if line.strip().startswith('0x')]
@@ -25,7 +28,7 @@ for i in range(0x10000):
 print ")\n"
 
 # u2b
-u2b = open(U2B_FILE, 'r').readlines()
+u2b = U2B_FILE.readlines()
 u2b = [line.strip().split(' ')
        for line in u2b
        if line.strip().startswith('0x')]
