@@ -148,7 +148,7 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
 Status BoardServiceImpl::Hotboard(ServerContext *context,
                                   const HotboardRequest *req,
                                   HotboardReply *rep) {
-#ifdef HOTBOARDCACHE
+#if HOTBOARDCACHE
   for (int i = 0; i < SHM->nHOTs; i++) {
     int bid = SHM->HBcache[i] + 1;
     auto bp = boards::Get(bid);
