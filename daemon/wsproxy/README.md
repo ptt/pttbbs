@@ -53,7 +53,3 @@ local origin_whitelist = {
 ```
 logind unix run/logind.connfwd.sock
 ```
-
-## Known Bugs
-
-- You may get permission denied at nginx about connecting to logind unix socket. You need to chmod the logind socket manually or patch logind code to let it do that.
