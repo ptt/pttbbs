@@ -163,6 +163,9 @@ int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 BanIpList *g_banip;
 time4_t g_banip_mtime = -1;
 
+// options
+int g_reuseport = 0;
+
 enum {
     VERBOSE_ERROR,
     VERBOSE_INFO,
@@ -713,6 +716,21 @@ _set_bind_opt(int sock)
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
     _set_connection_opt(sock);
+
+    return 0;
+}
+
+static int
+_set_bind_ip_port_opt(int sock)
+{
+#ifdef SO_REUSEPORT
+    const int on = 1;
+
+    if (g_reuseport)
+        setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (void*)&on, sizeof(on));
+#endif
+
+    _set_bind_opt(sock);
 
     return 0;
 }
@@ -2266,13 +2284,13 @@ logattempt_daemon()
 }
 
 static int
-bind_generic(const char *name, const char *addr, int flags)
+bind_generic(const char *name, const char *addr, int flags, int (*_setsock)(int sock))
 {
     int sfd;
     bind_event *pev = NULL;
 
     fprintf(stderr, LOG_PREFIX "binding to: %s...", addr);
-    if ( (sfd = tobindex(addr, LOGIND_SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
+    if ( (sfd = tobindex(addr, LOGIND_SOCKET_QLEN, _setsock, 1)) < 0 )
     {
         fprintf(stderr, LOG_PREFIX "cannot bind to: %s. abort.\n", addr);
         return -1;
@@ -2295,22 +2313,31 @@ bind_generic(const char *name, const char *addr, int flags)
 }
 
 static int 
-bind_port(int port)
+bind_ip_port(const char *ip, int port)
 {
     char name[STRLEN], addr[STRLEN];
     snprintf(name, sizeof(name), "%d", port);
-    snprintf(addr, sizeof(addr), "*:%d", port);
-    return bind_generic(name, addr, 0);
+    snprintf(addr, sizeof(addr), "%s:%d", ip, port);
+    return bind_generic(name, addr, 0, _set_bind_ip_port_opt);
 }
 
 static int
-bind_unix(const char *path)
+bind_port(int port)
 {
-    if (bind_generic("0", path, BIND_EVENT_WILL_PASS_CONNDATA) < 0)
+    return bind_ip_port("*", port);
+}
+
+static int
+bind_unix(const char *path, unsigned int mode)
+{
+    if (bind_generic("0", path, BIND_EVENT_WILL_PASS_CONNDATA, _set_bind_opt) < 0)
         return -1;
     if (chown(path, BBSUID, BBSGID) < 0)
         fprintf(stderr, LOG_PREFIX "warning: chown: %s: %s\n",
                 path, strerror(errno));
+    if (chmod(path, mode) < 0)
+        fprintf(stderr, LOG_PREFIX "warning: chmod %o %s: %s\n",
+                mode, path, strerror(errno));
     return 0;
 }
 
@@ -2427,20 +2454,76 @@ parse_bindports_conf(FILE *fp,
         }
         else if (strcmp(vport, "unix") == 0)
         {
-            char vpath[PATHLEN] = {};
-            if (sscanf(buf, "%*s%*s%s", vpath) != 1 || !*vpath)
+            // syntax: unix mode path
+            unsigned int mode;
+            char vpath[PATHLEN];
+            if (sscanf(buf, "%*s%*s%o%s", &mode, vpath) != 2 || !*vpath)
             {
                 fprintf(stderr, LOG_PREFIX
-                        "cannot parse unix path to bind, line: %s", buf);
+                        "cannot parse unix socket to bind, line: %s", buf);
                 exit(1);
             }
-            if (bind_unix(vpath) < 0)
+            if (bind_unix(vpath, mode) < 0)
             {
                 fprintf(stderr, LOG_PREFIX
                         "cannot bind to unix socket: %s. abort.\n", vpath);
                 exit(1);
             }
             bound_ports++;
+            continue;
+        }
+        else if (strcmp(vport, "tcp") == 0)
+        {
+            // syntax: tcp address port
+            char vip[STRLEN];
+            if (sscanf(buf, "%*s%*s%s%s", vip, vport) != 2)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "cannot parse address and port to bind, line: %s",
+                        buf);
+                exit(1);
+            }
+            iport = atoi(vport);
+            if (!iport)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "cannot parse port to bind: %s\n", buf);
+                exit(1);
+            }
+            if (bind_ip_port(vip, iport) < 0)
+            {
+                fprintf(stderr, LOG_PREFIX "cannot bind to: %s:%d. abort.\n",
+                        vip, iport);
+                exit(1);
+            }
+            bound_ports++;
+            continue;
+        }
+        else if (strcmp(vport, "option") == 0)
+        {
+            // syntax: option flagname
+            char flagname[STRLEN];
+            if (sscanf(buf, "%*s%*s%s", flagname) != 1)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "cannot parse option flag name, line: %s", buf);
+                exit(1);
+            }
+            if (strcmp(flagname, "reuseport") == 0)
+            {
+                g_reuseport = 1;
+#ifndef SO_REUSEPORT
+                fprintf(stderr, LOG_PREFIX
+                        "warning: system doesn't support SO_REUSEPORT; "
+                        "it will have no effect; line: %s", buf);
+#endif
+            }
+            else
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "unknown flag name: \"%s\", line: %s", flagname, buf);
+                exit(1);
+            }
             continue;
         }
 
@@ -2620,7 +2703,7 @@ main(int argc, char *argv[], char *envp[])
     // bind unix socket
     if (*unix_path)
     {
-        if (bind_unix(unix_path) < 0)
+        if (bind_unix(unix_path, 0600) < 0)
         {
             fprintf(stderr, LOG_PREFIX
                     "cannot bind to unix socket: %s. abort.\n", unix_path);
