@@ -1175,6 +1175,9 @@ int showstat(int argc, char *argv[])
 	"STAT_LOGIND_SERVSTART",
 	"STAT_LOGIND_SERVFAIL",
 	"STAT_LOGIND_PASSWDPROMPT",
+	"STAT_MBBSD_ENTER",
+	"STAT_MBBSD_EXIT",
+	"STAT_MBBSD_ABORTED",
     };
     (void)argc;
 

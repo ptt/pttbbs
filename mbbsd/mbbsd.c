@@ -224,8 +224,10 @@ abort_bbs(int sig GCC_UNUSED)
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGTERM, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
-    if (currmode)
+    if (currmode) {
+	STATINC(STAT_MBBSD_ABORTED);
 	u_exit("ABORTED");
+    }
     exit(0);
 }
 
@@ -1146,6 +1148,7 @@ user_login(void)
     setup_utmp(LOGIN);
 
     /* log usies */
+    STATINC(STAT_MBBSD_ENTER);
     log_usies("ENTER", fromhost);
 #ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
