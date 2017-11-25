@@ -103,6 +103,13 @@ static var_t cpu_vars[] = {
     DEFINE_VAR_END,
 };
 
+static var_t mbbsd_vars[] = {
+    DEFINE_VAR(COUNTER, MBBSD_ENTER),
+    DEFINE_VAR(COUNTER, MBBSD_EXIT),
+    DEFINE_VAR(COUNTER, MBBSD_ABORTED),
+    DEFINE_VAR_END,
+};
+
 static module_t modules[] = {
     {"login",   login_vars,   "bbs login"},
     {"logind",  logind_vars,  "bbs logind"},
@@ -114,6 +121,7 @@ static module_t modules[] = {
     {"record",  record_vars,  "bbs record"},
     {"misc",    misc_vars,    "bbs misc"},
     {"cpu",     cpu_vars,     "bbs cpu"},
+    {"mbbsd",   mbbsd_vars,   "bbs mbbsd"},
     {NULL, NULL, NULL},
 };
 

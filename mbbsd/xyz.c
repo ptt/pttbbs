@@ -79,6 +79,7 @@ Goodbye(void)
     else
 	vmsg(genbuf);
 
+    STATINC(STAT_MBBSD_EXIT);
     u_exit("EXIT ");
     return QUIT;
 }
