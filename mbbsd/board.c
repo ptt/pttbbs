@@ -153,16 +153,13 @@ save_brdbuf(void)
     fav_free();
 }
 
-int
-HasBoardPerm(boardheader_t *bptr)
+static inline int
+HasBoardPermNormally(boardheader_t *bptr)
 {
     register int    level, brdattr;
 
     level = bptr->level;
     brdattr = bptr->brdattr;
-
-    if (HasUserPerm(PERM_SYSOP))
-	return 1;
 
     // allow POLICE to enter BM boards
     if ((level & PERM_BM) &&
@@ -179,7 +176,7 @@ HasBoardPerm(boardheader_t *bptr)
 	    if (brdattr & BRD_POSTMASK)
 		return 0;
 	    else
-		return 2;
+		return 2;  // What's this?
 	} else
 	    return 1;
     }
@@ -194,6 +191,21 @@ HasBoardPerm(boardheader_t *bptr)
 	return 0;
 
     return 1;
+}
+
+int
+HasBoardPerm(boardheader_t *bptr)
+{
+    if (HasUserPerm(PERM_SYSOP))
+	return 1;
+
+    return HasBoardPermNormally(bptr);
+}
+
+int
+BoardPermNeedsSysopOverride(boardheader_t *bptr)
+{
+    return HasUserPerm(PERM_SYSOP) && !HasBoardPermNormally(bptr);
 }
 
 // board configuration utilities
@@ -1472,6 +1484,17 @@ show_brdlist(int head, int clsflag, int newflag)
 		    }
 		}
 
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+		const int should_show_sensitive_info = true;
+#else
+		// Show sensitive info if permission is *not* given by solely
+		// PERM_SYSOP, GROUPOP, or both.
+		const int should_show_sensitive_info =
+		    !BoardPermNeedsSysopOverride(B_BH(ptr)) &&
+		    !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
+#endif
+
+
 		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
 		    outs("          ");
 		else
@@ -1481,7 +1504,9 @@ show_brdlist(int head, int clsflag, int newflag)
 			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
 			    (ptr->myattr & NBRD_TAG) ? "D " :
 			    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+			    should_show_sensitive_info ?
+				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0] :
+				unread[0]);
 
 		if (!IN_CLASSROOT()) {
 		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
@@ -1492,12 +1517,18 @@ show_brdlist(int head, int clsflag, int newflag)
                               HILIGHT_COLOR) : "",
 			    B_BH(ptr)->brdname,
 			    make_class_color(B_BH(ptr)->title),
-			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+			    B_BH(ptr)->title,
+			    should_show_sensitive_info ?
+				B_BH(ptr)->title + 5 : "  ",
+			    should_show_sensitive_info ?
+				B_BH(ptr)->title + 7 : "<ÁôªO¤£Åã¥Ü>");
 
+		    if (!should_show_sensitive_info)
+			outs("   ");
 #ifdef USE_COOLDOWN
-		    if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+		    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
 #else
-                    if (0)      // don't move this line -- preserved for next "else".
+		    else if (0)
 #endif
                         outs("ÀR ");
                     // Note the nuser is not updated realtime, or have some bug.

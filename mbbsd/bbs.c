@@ -333,17 +333,14 @@ set_board(void)
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
-    if( !HasBoardPerm(bp) ){
+    if (!HasBoardPerm(bp)) {
 	vmsg("access control violation, exit");
 	u_exit("access control violation!");
 	exit(-1);
     }
 
-    if( HasUserPerm(PERM_SYSOP) &&
-	(bp->brdattr & BRD_HIDE) &&
-	!is_BM_cache(bp - bcache + 1) &&
-	!is_hidden_board_friend((int)(bp - bcache) + 1, currutmp->uid) )
-	vmsg("進入未經授權看板");
+    if (BoardPermNeedsSysopOverride(bp))
+ 	vmsg("進入未經授權看板");
 
     board_note_time = &bp->bupdate;
 
