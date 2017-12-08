@@ -106,6 +106,7 @@ int check_cooldown(boardheader_t *bp);
 int is_readonly_board(const char *bname);
 int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
+int BoardPermNeedsSysopOverride(boardheader_t *bptr);
 void save_brdbuf(void);
 void init_brdbuf(void);
 int b_config();
