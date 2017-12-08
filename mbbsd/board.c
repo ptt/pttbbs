@@ -1497,16 +1497,21 @@ show_brdlist(int head, int clsflag, int newflag)
 
 		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
 		    outs("          ");
-		else
+		else if (should_show_sensitive_info)
 		    prints("%7d%c%s",
 			    newflag ? (int)(B_TOTAL(ptr)) : head,
 			    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
 			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
 			    (ptr->myattr & NBRD_TAG) ? "D " :
 			    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			    should_show_sensitive_info ?
-				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0] :
-				unread[0]);
+			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+		else {
+		    if (newflag)
+			prints("%7s", "");
+		    else
+			prints("%7d", head);
+		    prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+		}
 
 		if (!IN_CLASSROOT()) {
 		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
@@ -1519,9 +1524,9 @@ show_brdlist(int head, int clsflag, int newflag)
 			    make_class_color(B_BH(ptr)->title),
 			    B_BH(ptr)->title,
 			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 5 : "  ",
+				B_BH(ptr)->title + 5 : "",
 			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 7 : "<ÁôªO¤£Åã¥Ü>");
+				B_BH(ptr)->title + 7 : "");
 
 		    if (!should_show_sensitive_info)
 			outs("   ");
