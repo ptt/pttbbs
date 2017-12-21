@@ -2154,7 +2154,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // 反正本來就只是想解決「不小心」或是「假裝不小心」用到的情形。
     // tn_safe_strip_board(xtitle, xboard);
 
-    getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
+    getdata(2, 0, "(S/L)發文 (Q)取消？[Q] ", genbuf, 3, LCECHO);
 
     if (genbuf[0] != 'l' && genbuf[0] != 's')
         return FULLUPDATE;

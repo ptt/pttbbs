@@ -2035,7 +2035,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     strip_ansi(xtitle, xtitle, STRIP_ALL);
 
-    getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
+    getdata(2, 0, "(S/L)發文 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 
