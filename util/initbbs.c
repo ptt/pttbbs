@@ -4,6 +4,7 @@ static void initDir() {
     Mkdir("adm");
     Mkdir("boards");
     Mkdir("etc");
+    Mkdir("log");
     Mkdir("man");
     Mkdir("man/boards");
     Mkdir("out");
@@ -229,16 +230,16 @@ static void initMan() {
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SONGBOOK");
 	
-	strcpy(f.filename, "SONGO");
-	strcpy(f.title, "◆ <點歌> 動態看板");
-	fwrite(&f, sizeof(f), 1, fp);
-	Mkdir("man/boards/N/Note/SONGO");
-	
 	strcpy(f.filename, "SYS");
 	strcpy(f.title, "◆ <系統> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SYS");
-	
+		
+	strcpy(f.filename, "SONGO");
+	strcpy(f.title, "◆ <點歌> 動態看板");
+	fwrite(&f, sizeof(f), 1, fp);
+	Mkdir("man/boards/N/Note/SONGO");
+
 	strcpy(f.filename, "AD");
 	strcpy(f.title, "◆ <廣告> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
