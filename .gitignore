@@ -6,6 +6,7 @@
 tags
 var.h
 /pttbbs.conf
+/pttbbs.cmake.conf
 /local.h
 common/sys/big5.c
 mbbsd/mbbsd
