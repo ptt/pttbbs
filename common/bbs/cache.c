@@ -615,7 +615,7 @@ setbtotal(int bid)
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(genbuf, bh->brdname, FN_DIR);
-    if ((fd = open(genbuf, O_RDWR)) < 0)
+    if ((fd = open(genbuf, O_RDONLY)) < 0)
 	return;			/* .DIR±¾¤F */
     fstat(fd, &st);
     num = st.st_size / sizeof(fileheader_t);
