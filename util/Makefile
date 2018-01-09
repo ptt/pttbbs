@@ -84,7 +84,7 @@ install: $(PROGS)
 .endif
 
 clean:
-	rm -f *.o $(CPROGS) $(CPROG_WITH_UTIL) $(CPROG_WITHOUT_UTIL) $(CPP_WITH_UTIL)
+	rm -f *.o shmctl $(CPROGS) $(CPROG_WITH_UTIL) $(CPROG_WITHOUT_UTIL) $(CPP_WITH_UTIL)
 
 
 installfiltermail:
