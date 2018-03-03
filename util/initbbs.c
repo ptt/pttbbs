@@ -4,6 +4,7 @@ static void initDir() {
     Mkdir("adm");
     Mkdir("boards");
     Mkdir("etc");
+    Mkdir("log");
     Mkdir("man");
     Mkdir("man/boards");
     Mkdir("out");
@@ -189,15 +190,6 @@ static void initBoards() {
 	b.gid = 5;
 	newboard(fp, &b);
 	
-#ifdef BN_DIGEST
-	strcpy(b.brdname, BN_DIGEST);
-	strcpy(b.title, "文摘 ◎" BBSNAME "文摘 好文的收集地");
-	b.brdattr = BRD_POSTMASK;
-	b.level = PERM_SYSOP;
-	b.gid = 5;
-	newboard(fp, &b);
-#endif
-
 #ifdef BN_FIVECHESS_LOG
 	strcpy(b.brdname, BN_FIVECHESS_LOG);
 	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
@@ -229,16 +221,16 @@ static void initMan() {
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SONGBOOK");
 	
-	strcpy(f.filename, "SONGO");
-	strcpy(f.title, "◆ <點歌> 動態看板");
-	fwrite(&f, sizeof(f), 1, fp);
-	Mkdir("man/boards/N/Note/SONGO");
-	
 	strcpy(f.filename, "SYS");
 	strcpy(f.title, "◆ <系統> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SYS");
-	
+		
+	strcpy(f.filename, "SONGO");
+	strcpy(f.title, "◆ <點歌> 動態看板");
+	fwrite(&f, sizeof(f), 1, fp);
+	Mkdir("man/boards/N/Note/SONGO");
+
 	strcpy(f.filename, "AD");
 	strcpy(f.title, "◆ <廣告> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
