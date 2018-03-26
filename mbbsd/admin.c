@@ -261,6 +261,7 @@ search_key_user(const char *passwdfile, int mode)
 	uf->type = 1;
 	uf->filter = userec_filter_keyword_filter;
 	uf->desc = userec_filter_keyword_desc;
+	uf->keyword.field = 1;
 	getdata(0, 0, "½Ð¿é¤Jid :", uf->keyword.key, sizeof(uf->keyword.key),
 		DOECHO);
 	num_ufs++;
