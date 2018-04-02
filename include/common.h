@@ -226,6 +226,7 @@
 
 #define MAX_MODES	(127)
 #define MAX_RECOMMENDS  (100)
+#define MAX_REPLY_COUNTS  (65500)
 
 #define STR_CURSOR      ">"
 #define STR_CURSOR2     "¡´"

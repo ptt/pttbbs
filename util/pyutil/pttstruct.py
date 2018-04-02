@@ -168,7 +168,8 @@ FILEHEADER_FMT = (
         ("pad2", "B"),
         ("multi", "i"),
         ("filemode", "B"),
-        ("pad3", "3s"))
+        ("reply_counter", "H"),
+        ("pad3", "s"))
 
 FILEHEADER_SIZE = 128
 
