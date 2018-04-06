@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # Copyright (c) 2012 Hung-Te Lin <piaip@csie.ntu.edu.tw>. All rights reserved.
 # Use of this source code is governed by a BSD license.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # Usage: ./big5_gen.py > big5_tbl.py
 
 import os
@@ -17,7 +17,7 @@ b2u = [line.strip().split(' ')
        if line.strip().startswith('0x')]
 b2u = dict((int(b, 0), int(u, 0)) for (b, u) in b2u)
 
-print """#!/usr/bin/env python
+print """#!/usr/bin/env python2
 
 """
 print "b2u_table = ("

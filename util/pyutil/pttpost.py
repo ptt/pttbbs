@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # encoding=latin1
 
 # This file is using latin1 with some Big5 literals, to prevent parsing files
