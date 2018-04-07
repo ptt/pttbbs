@@ -3,7 +3,9 @@
 #define UTIL_DB_H
 
 #include <mongoc.h>
+
 #include "ptterr.h"
+#include "pttdb_const.h"
 #include "pttdb_util.h"
 
 #ifdef __cplusplus

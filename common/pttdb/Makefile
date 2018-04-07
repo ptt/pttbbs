@@ -15,7 +15,7 @@ CFLAGS+=	${MONGO_CFLAGS}
 LDFLAGS+=	${MONGO_LDFLAGS}
 LDLIBS+=	${MONGO_LIBS}
 
-SRCS+=	pttdb_util.c util_db_mongo.c
+SRCS+=	pttdb_util.c util_timestamp.c util_db_mongo.c pttdb_uuid.c
 
 .endif
 
