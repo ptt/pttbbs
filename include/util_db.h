@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <resolv.h>
+
 #include "config.h"
 
 // Mongo Post

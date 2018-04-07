@@ -6,6 +6,7 @@
 
 #include "ptterr.h"
 #include "pttdb_const.h"
+#include "util_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,4 +19,4 @@ extern mongoc_collection_t **MONGO_COLLECTIONS;
 }
 #endif
 
-#endif /* UTIL_DB_H */
+#endif /* UTIL_DB_PRIVATE_H */
