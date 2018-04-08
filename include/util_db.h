@@ -16,15 +16,6 @@ extern "C" {
 
 #include "config.h"
 
-// Mongo Post
-#define MONGO_MAIN_NAME "main"
-#define MONGO_MAIN_CONTENT_NAME "main_content"
-#define MONGO_COMMENT_NAME "comment"
-#define MONGO_COMMENT_REPLY_NAME "comment_reply"
-
-// Mongo Test
-#define MONGO_TEST_NAME "test"
-
 // Mongo the id
 #define MONGO_THE_ID "the_id"
 #define MONGO_BLOCK_ID "block_id"
@@ -40,6 +31,7 @@ enum MongoDBId {
     MONGO_MAIN_CONTENT,
     MONGO_COMMENT,
     MONGO_COMMENT_REPLY,
+    MONGO_COMMENT_REPLY_BLOCK,
 
     MONGO_TEST,
 

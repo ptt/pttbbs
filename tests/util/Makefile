@@ -12,7 +12,7 @@ MONGO_CFLAGS:=	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1
 CXXFLAGS+=	${MONGO_CFLAGS}
 CFLAGS+=	${MONGO_CFLAGS}
 
-SRCS+=	test_util_db.c
+SRCS+=	test_util.c
 .endif
 
 CFLAGS+=	-I$(TESTROOT)/include

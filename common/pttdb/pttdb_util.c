@@ -62,3 +62,26 @@ get_line_from_buf(char *buf, int offset_buf, int buf_size, char *p_line, int off
 
     return S_ERR;
 }
+
+/**
+ * @brief Count lines in the content (based on '\n')
+ * @details Count lines in the content (based on '\n')
+ * 
+ * @param content [description]
+ * @param len [description]
+ * @param n_line n_line
+ */
+Err
+pttdb_count_lines(char *content, int len, int *n_line)
+{
+    int tmp_n_line = 0;
+    char *p_content = content;
+    for(int i = 0; i < len; i++, p_content++) {
+        if(*p_content == '\n') {
+            tmp_n_line++;
+        }
+    }
+    *n_line = tmp_n_line;
+
+    return S_OK;
+}

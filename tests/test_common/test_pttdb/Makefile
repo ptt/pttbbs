@@ -51,7 +51,7 @@ LDLIBS+=	${MONGO_LIBS}
 # test
 ##########
 
-TEST_PROGS=	test_dummy test_util_db test_util_timestamp test_pttdb_util test_pttdb_uuid test_pttdb_dict_bson_by_uu test_pttdb_main test_pttdb_content_block
+TEST_PROGS=	test_dummy test_util_db test_util_timestamp test_pttdb_util test_pttdb_uuid test_pttdb_dict_bson_by_uu test_pttdb_main test_pttdb_content_block test_pttdb_comment test_pttdb_comment_reply
 
 ##########
 # TARGETS

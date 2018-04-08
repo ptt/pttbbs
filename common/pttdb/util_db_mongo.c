@@ -5,6 +5,26 @@ const char *DEFAULT_MONGO_DB[] = {
     "test",      //MONGO_TEST_DBNAME
 };
 
+const char *MONGO_NAME[] = {
+    "main",
+    "main_content",
+    "comment",
+    "comment_reply",
+    "comment_reply_block",
+
+    "test"
+};
+
+const int MONGO_DBNAME[] = {
+    MONGO_POST_DBNAME,
+    MONGO_POST_DBNAME,
+    MONGO_POST_DBNAME,
+    MONGO_POST_DBNAME,
+    MONGO_POST_DBNAME,
+
+    MONGO_TEST_DBNAME
+};
+
 /**********
  * Globally Available
  **********/
@@ -46,12 +66,12 @@ init_mongo_global()
 Err
 free_mongo_global()
 {
-    if(MONGO_CLIENT_POOL) {
+    if (MONGO_CLIENT_POOL) {
         mongoc_client_pool_destroy(MONGO_CLIENT_POOL);
         MONGO_CLIENT_POOL = NULL;
     }
 
-    if(MONGO_URI) {
+    if (MONGO_URI) {
         mongoc_uri_destroy(MONGO_URI);
         MONGO_URI = NULL;
     }
@@ -78,12 +98,9 @@ init_mongo_collections(const char *db_name[])
     }
 
     MONGO_COLLECTIONS = malloc(sizeof(mongoc_collection_t *) * N_MONGO_COLLECTIONS);
-    MONGO_COLLECTIONS[MONGO_MAIN] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_POST_DBNAME], MONGO_MAIN_NAME);
-    MONGO_COLLECTIONS[MONGO_MAIN_CONTENT] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_POST_DBNAME], MONGO_MAIN_CONTENT_NAME);
-    MONGO_COLLECTIONS[MONGO_COMMENT] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_POST_DBNAME], MONGO_COMMENT_NAME);
-    MONGO_COLLECTIONS[MONGO_COMMENT_REPLY] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_POST_DBNAME], MONGO_COMMENT_REPLY_NAME);
-
-    MONGO_COLLECTIONS[MONGO_TEST] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_TEST_DBNAME], MONGO_TEST_NAME);
+    for (int i = 0; i < N_MONGO_COLLECTIONS; i++) {
+        MONGO_COLLECTIONS[i] = mongoc_client_get_collection(MONGO_CLIENT, db_name[MONGO_DBNAME[i]], MONGO_NAME[i]);
+    }
 
     return S_OK;
 }
@@ -97,7 +114,7 @@ Err
 free_mongo_collections()
 {
     // mongo-collections
-    if(!MONGO_COLLECTIONS) return S_OK;
+    if (!MONGO_COLLECTIONS) return S_OK;
 
     for (int i = 0; i < N_MONGO_COLLECTIONS; i++) {
         mongoc_collection_destroy(MONGO_COLLECTIONS[i]);
@@ -106,7 +123,7 @@ free_mongo_collections()
     MONGO_COLLECTIONS = NULL;
 
     // mongo-client
-    if(!MONGO_CLIENT) return S_OK;
+    if (!MONGO_CLIENT) return S_OK;
 
     mongoc_client_pool_push(MONGO_CLIENT_POOL, MONGO_CLIENT);
     MONGO_CLIENT = NULL;
@@ -135,7 +152,7 @@ db_set_if_not_exists(int collection, bson_t *key)
 
 
     // reply
-    if(!error_code) {
+    if (!error_code) {
         bson_t reply;
         bson_error_t error;
 
@@ -147,7 +164,7 @@ db_set_if_not_exists(int collection, bson_t *key)
         bson_destroy(&reply);
     }
 
-    if(!error_code) {
+    if (!error_code) {
         if (!is_upserted_id_exist) error_code = S_ERR_ALREADY_EXISTS;
     }
 
@@ -195,7 +212,7 @@ db_update_one(int collection, bson_t *key, bson_t *val, bool is_upsert)
  *                bson_t *key = BCON_NEW("a", BCON_BINARY("test", 4));
  *                bson_t *result = NULL;
  *                db_find_one(collection, key, NULL, &result);
- *                
+ *
  *                if(result) {
  *                    bson_destroy(result);
  *                }
@@ -221,17 +238,17 @@ db_find(int collection, bson_t *key, bson_t *fields, bson_t *sort, int max_n_res
     bool status;
 
     bson_t *opts = BCON_NEW("limit", BCON_INT64(max_n_result));
-    if(fields) {
+    if (fields) {
         status = bson_append_document(opts, "projection", -1, fields);
-        if(!status) error_code = S_ERR;
+        if (!status) error_code = S_ERR;
     }
-    if(sort) {
+    if (sort) {
         status = bson_append_document(opts, "sort", -1, sort);
-        if(!status) error_code = S_ERR;        
+        if (!status) error_code = S_ERR;
     }
 
     int len = 0;
-    if(!error_code) {
+    if (!error_code) {
         mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(MONGO_COLLECTIONS[collection], key, opts, NULL);
         bson_error_t error;
 
@@ -246,11 +263,11 @@ db_find(int collection, bson_t *key, bson_t *fields, bson_t *sort, int max_n_res
             error_code = S_ERR;
         }
 
-        mongoc_cursor_destroy(cursor);        
-    }    
+        mongoc_cursor_destroy(cursor);
+    }
     *n_result = len;
 
-    if(!error_code) {
+    if (!error_code) {
         if (*n_result == 0) error_code = S_ERR_NOT_EXISTS;
     }
 
@@ -267,7 +284,7 @@ db_remove(int collection, bson_t *key)
     bool status;
 
     status = mongoc_collection_delete_many(MONGO_COLLECTIONS[collection], key, NULL, NULL, &error);
-    if(!status) error_code = S_ERR;
+    if (!status) error_code = S_ERR;
 
     return error_code;
 }
@@ -282,8 +299,8 @@ db_aggregate(int collection, bson_t *pipeline, int max_n_results, bson_t **resul
 
     int tmp_n_results = 0;
     bson_t **p_results = results;
-    while(tmp_n_results < max_n_results) {
-        if(!mongoc_cursor_next(cursor, &doc)) break;
+    while (tmp_n_results < max_n_results) {
+        if (!mongoc_cursor_next(cursor, &doc)) break;
 
         *p_results = bson_copy(doc);
         p_results++;
@@ -310,7 +327,7 @@ db_count(int collection, bson_t *key, int *count)
 
     int64_t tmp_count = mongoc_collection_count_with_opts(MONGO_COLLECTIONS[collection], MONGOC_QUERY_NONE, key, 0, 0, NULL, NULL, &error);
 
-    if(tmp_count == -1) {
+    if (tmp_count == -1) {
         error_code = S_ERR;
         tmp_count = 0;
     }
@@ -385,7 +402,7 @@ bson_get_descendant_value_int32(bson_t *b, char *name, int *value)
     bson_iter_t iter_value;
 
     status = bson_iter_init(&iter, b);
-    if(!status) return S_ERR;
+    if (!status) return S_ERR;
 
     status = bson_iter_find_descendant(&iter, name, &iter_value);
     if (!status) return S_ERR;
@@ -450,7 +467,7 @@ bson_get_value_bin_not_initialized(bson_t *b, char *name, char **value, int *p_l
     bson_iter_binary(&iter, &subtype, (unsigned int *)&tmp_len, (const unsigned char **)&p_value);
 
     *value = malloc(tmp_len + 1);
-    if(!value) return S_ERR;
+    if (!value) return S_ERR;
 
     memcpy(*value, p_value, tmp_len);
     (*value)[tmp_len] = 0;
@@ -471,7 +488,7 @@ bson_get_value_bin_not_initialized(bson_t *b, char *name, char **value, int *p_l
  */
 Err
 bson_get_value_bin(bson_t *b, char *name, int max_len, char *value, int *p_len)
-{    
+{
     Err error = S_OK;
 
     bool status;
@@ -513,7 +530,7 @@ bson_get_value_bin(bson_t *b, char *name, int max_len, char *value, int *p_len)
  */
 Err
 bson_get_descendant_value_bin(bson_t *b, char *name, int max_len, char *value, int *p_len)
-{    
+{
     Err error = S_OK;
 
     bool status;
@@ -549,7 +566,7 @@ bson_get_descendant_value_bin(bson_t *b, char *name, int max_len, char *value, i
 Err
 bson_safe_destroy(bson_t **b)
 {
-    if(*b == NULL) return S_OK;
+    if (*b == NULL) return S_OK;
 
     bson_destroy(*b);
     *b = NULL;
@@ -561,7 +578,7 @@ Err
 safe_free_b_list(bson_t ***b, int n)
 {
     bson_t **p_b = *b;
-    for(int i = 0; i < n; i++, p_b++) {
+    for (int i = 0; i < n; i++, p_b++) {
         bson_safe_destroy(p_b);
     }
     safe_free((void **)b);
