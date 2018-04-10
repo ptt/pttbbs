@@ -1,14 +1,13 @@
-#include "pttdb_comment.h"
-#include "pttdb_comment_private.h"
+#include "cmpttdb/pttdb_comment.h"
+#include "cmpttdb/pttdb_comment_private.h"
 
 const enum Karma KARMA_BY_COMMENT_TYPE[] = {
     KARMA_GOOD,
     KARMA_BAD,
     KARMA_ARROW,
     0,
-    0,                   // cross
-    0,                   // reset
-    0,                   // remove
+    0,                   // cross-post
+    0                    // reset-karma
 };
 
 const char *COMMENT_TYPE_ATTR[] = {
@@ -16,9 +15,9 @@ const char *COMMENT_TYPE_ATTR[] = {
     "¼N",
     "¡÷",
     "",
-    "¡°",                 // cross
-    "¡°",                 // reset
-    "",                  // remove
+    "¡°",                 // cross-post
+    "¡°"                  // reset-karma
+
 };
 
 const char *COMMENT_TYPE_ATTR2[] = {
@@ -26,7 +25,6 @@ const char *COMMENT_TYPE_ATTR2[] = {
     ANSI_COLOR(1;31),
     ANSI_COLOR(1;31),
     "",
-    "",                  // cross
-    "",                  // reset
-    "",                  // remove
+    "",                  // cross-post
+    ""                   // reset-karma
 };

@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "test.h"
-#include "pttdb_main.h"
-#include "pttdb_main_private.h"
+#include "cmpttdb/pttdb_main.h"
+#include "cmpttdb/pttdb_main_private.h"
 
 TEST(pttdb_main, create_main_from_fd_test1_read_main_content) {
     _DB_FORCE_DROP_COLLECTION(MONGO_MAIN);

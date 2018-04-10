@@ -1,12 +1,10 @@
-#include "pttdb_comment_reply.h"
-#include "pttdb_comment_reply_private.h"
+#include "cmpttdb/pttdb_comment_reply.h"
+#include "cmpttdb/pttdb_comment_reply_private.h"
 
 Err
 create_comment_reply_from_fd(UUID main_id, UUID comment_id, char *poster, char *ip, int len, int fd_content, UUID comment_reply_id, time64_t create_milli_timestamp)
 {
     Err error_code = S_OK;
-
-    CommentReply comment_reply = {};
 
     if (!create_milli_timestamp) {
         error_code = get_milli_timestamp(&create_milli_timestamp);
@@ -135,8 +133,8 @@ Err
 _construct_comment_reply_blocks(CommentReply *comment_reply, char *content, int len, ContentBlock **content_blocks, int *n_content_block)
 {
     Err error_code = S_OK;
-    int tmp_n_content_block = len / MAX_BUF_BLOCK;
-    if(tmp_n_content_block * MAX_BUF_BLOCK != len) tmp_n_content_block++;
+    int tmp_n_content_block = len / MAX_BUF_SIZE;
+    if(tmp_n_content_block * MAX_BUF_SIZE != len) tmp_n_content_block++;
 
     *n_content_block = tmp_n_content_block;
     *content_blocks = malloc(sizeof(ContentBlock) * tmp_n_content_block);
@@ -146,7 +144,7 @@ _construct_comment_reply_blocks(CommentReply *comment_reply, char *content, int 
     char *p_content = content;
     int len_block = 0;    
     for(int i = 0; i < tmp_n_content_block; i++, p_content_block++, p_content += len_block, len -= len_block) {
-        len_block = len < MAX_BUF_BLOCK ? len : MAX_BUF_BLOCK;
+        len_block = len < MAX_BUF_SIZE ? len : MAX_BUF_SIZE;
 
         error_code = pttdb_count_lines(p_content, len_block, &p_content_block->n_line);
         if(error_code) break;

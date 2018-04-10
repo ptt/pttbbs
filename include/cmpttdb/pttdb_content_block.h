@@ -3,15 +3,15 @@
 #define PTTDB_CONTENT_BLOCK_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_uuid.h"
-#include "pttdb_util.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_uuid.h"
+#include "cmpttdb/pttdb_util.h"
+#include "cmpttdb/util_db.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define MAX_BUF_BLOCK 8192
 #define MAX_BUF_LINES 256
 
 typedef struct ContentBlock {

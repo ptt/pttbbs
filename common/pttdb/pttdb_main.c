@@ -1,5 +1,5 @@
-#include "pttdb_main.h"
-#include "pttdb_main_private.h"
+#include "cmpttdb/pttdb_main.h"
+#include "cmpttdb/pttdb_main_private.h"
 
 /**
  * @brief Create main from fd

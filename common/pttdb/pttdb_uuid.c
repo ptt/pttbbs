@@ -1,4 +1,5 @@
-#include "pttdb_uuid.h"
+#include "cmpttdb/pttdb_uuid.h"
+#include "cmpttdb/pttdb_uuid_private.h"
 
 const UUID EMPTY_ID = {};
 

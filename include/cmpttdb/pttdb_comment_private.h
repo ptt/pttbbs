@@ -3,10 +3,10 @@
 #define PTTDB_COMMENT_PRIVATE_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_uuid.h"
-#include "pttdb_dict_bson_by_uu.h"
-#include "pttdb_comment_reply.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_uuid.h"
+#include "cmpttdb/pttdb_dict_bson_by_uu.h"
+#include "cmpttdb/pttdb_comment_reply.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +28,12 @@ int _cmp_b_comments_by_comment_id(const void *a, const void *b);
 
 // 
 Err _dynamic_read_b_comment_comment_reply_by_ids_to_buf_core(bson_t **b_comments, int n_comment, DictBsonByUU *dict_comment_content, DictBsonByUU *dict_comment_reply, char *buf, int max_buf_size, int *n_read_comment, int *n_read_comment_reply, int *len_buf);
+
+Err _dynamic_read_b_comment_comment_reply_by_ids_to_file_core(bson_t **b_comments, int n_comment, DictBsonByUU *dict_comment_content, DictBsonByUU *dict_comment_reply, FILE *f, int *n_read_comment, int *n_read_comment_reply);
+
+Err _dynamic_read_b_comment_comment_reply_by_ids_to_file_comment_reply(bson_t *b_comment_reply, FILE *f);
+
+Err _dynamic_read_b_comment_comment_reply_by_ids_to_file_comment_reply_core(UUID comment_reply_id, FILE *f, int idx, char *buf);
 
 #ifdef __cplusplus
 }

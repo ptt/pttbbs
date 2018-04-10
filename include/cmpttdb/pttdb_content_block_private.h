@@ -3,8 +3,8 @@
 #define PTTDB_CONTENT_BLOCK_PRIVATE_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_uuid.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_uuid.h"
 
 #ifdef __cplusplus
 extern "C" {

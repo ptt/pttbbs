@@ -5,14 +5,12 @@
 #include <mongoc.h>
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_util.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <resolv.h>
 
 #include "config.h"
 

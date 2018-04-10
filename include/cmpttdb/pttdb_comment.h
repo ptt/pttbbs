@@ -2,9 +2,12 @@
 #ifndef PTTDB_COMMENT_H
 #define PTTDB_COMMENT_H
 
+#include <mongoc.h>
+
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_uuid.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_uuid.h"
+#include "cmpttdb/util_db.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +25,6 @@ enum CommentType {
 
     COMMENT_TYPE_CROSS_POST,                        // hack for cross-post
     COMMENT_TYPE_RESET_KARMA,                       // hack for reset-karma
-    COMMENT_TYPE_REMOVE_COMMENT,                    // hack for remove-comment
 
     COMMENT_TYPE_N_TYPE,
     COMMENT_TYPE_MAX     = COMMENT_TYPE_SIZE - 1,
@@ -104,7 +106,9 @@ Err sort_b_comments_by_comment_id(bson_t **b_comments, int n_comment);
 
 Err read_comments_by_query_to_bsons(bson_t *query, bson_t *fields, int max_n_comment, bson_t **b_comments, int *n_comment);
 
-Err dynamic_read_b_comment_comment_reply_by_ids_to_buf(bson_t **b_comments, int n_comment, char *buf, int max_buf_size, int *n_read_comment, int *n_comment_reply, int *len);
+Err dynamic_read_b_comment_comment_reply_by_ids_to_buf(bson_t **b_comments, int n_comment, char *buf, int max_buf_size, int *n_read_comment, int *n_comment_reply, int *len_buf);
+
+Err dynamic_read_b_comment_comment_reply_by_ids_to_file(bson_t **b_comments, int n_comment, FILE *f, int *n_read_comment, int *n_read_comment_reply);
 
 Err serialize_comment_bson(Comment *comment, bson_t **comment_bson);
 Err deserialize_comment_bson(bson_t *comment_bson, Comment *comment);

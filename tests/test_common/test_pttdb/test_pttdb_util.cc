@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "test.h"
-#include "pttdb_util.h"
+#include "cmpttdb/pttdb_util.h"
 
 TEST(pttdb_util, get_line_from_buf) {
     int len_buf = 24;

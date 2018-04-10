@@ -4,10 +4,11 @@
 
 #include <mongoc.h>
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_util.h"
-#include "pttdb_comment_reply.h"
-#include "pttdb_comment.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_util.h"
+#include "cmpttdb/pttdb_comment_reply.h"
+#include "cmpttdb/pttdb_comment.h"
+#include "cmpttdb/util_db.h"
 
 #ifdef __cplusplus
 extern "C" {

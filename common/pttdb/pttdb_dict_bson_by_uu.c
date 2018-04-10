@@ -1,5 +1,5 @@
-#include "pttdb_dict_bson_by_uu.h"
-#include "pttdb_dict_bson_by_uu_private.h"
+#include "cmpttdb/pttdb_dict_bson_by_uu.h"
+#include "cmpttdb/pttdb_dict_bson_by_uu_private.h"
 
 Err
 init_dict_bson_by_uu(DictBsonByUU *dict_bson_by_uu, int n_dict)

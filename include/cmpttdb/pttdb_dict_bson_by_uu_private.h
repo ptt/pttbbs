@@ -3,8 +3,8 @@
 #define PTTDB_DICT_BSON_BY_UU_PRIVATE_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_dict_bson_by_uu.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_dict_bson_by_uu.h"
 
 #ifdef __cplusplus
 extern "C" {

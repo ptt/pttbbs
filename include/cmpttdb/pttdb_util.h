@@ -3,7 +3,7 @@
 #define PTTDB_UTIL_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
+#include "cmpttdb/pttdb_const.h"
 
 #ifdef __cplusplus
 extern "C" {

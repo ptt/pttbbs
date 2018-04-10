@@ -3,9 +3,9 @@
 #define PTTDB_DICT_BSON_BY_UU_H
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "util_db.h"
-#include "pttdb_uuid.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/util_db.h"
+#include "cmpttdb/pttdb_uuid.h"
 
 
 #ifdef __cplusplus

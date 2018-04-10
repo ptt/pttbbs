@@ -4,9 +4,9 @@
 
 #include <mongoc.h>
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_uuid.h"
-#include "pttdb_content_block.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/pttdb_uuid.h"
+#include "cmpttdb/pttdb_content_block.h"
 
 #ifdef __cplusplus
 extern "C" {

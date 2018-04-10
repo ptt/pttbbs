@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "test.h"
-#include "pttdb_comment_reply.h"
-#include "pttdb_comment_reply_private.h"
+#include "cmpttdb/pttdb_comment_reply.h"
+#include "cmpttdb/pttdb_comment_reply_private.h"
 
 TEST(pttdb_comment_reply, create_comment_reply) {
     _DB_FORCE_DROP_COLLECTION(MONGO_COMMENT);

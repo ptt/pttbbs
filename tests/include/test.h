@@ -3,8 +3,8 @@
 #define TEST_H
 
 #include <mongoc.h>
-#include "pttdb_util.h"
-#include "util_db_private.h"
+#include "cmpttdb/pttdb_util.h"
+#include "cmpttdb/util_db_private.h"
 
 #ifdef __cplusplus
 extern "C" {

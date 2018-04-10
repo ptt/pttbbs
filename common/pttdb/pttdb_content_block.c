@@ -1,5 +1,5 @@
-#include "pttdb_content_block.h"
-#include "pttdb_content_block_private.h"
+#include "cmpttdb/pttdb_content_block.h"
+#include "cmpttdb/pttdb_content_block_private.h"
 
 /**
  * @brief [brief description]
@@ -17,7 +17,7 @@ Err
 split_contents(char *buf, int bytes, UUID ref_id, UUID content_id, enum MongoDBId mongo_db_id, int *n_line, int *n_block) {
     Err error_code = S_OK;
     int bytes_in_line = 0;
-    char line[MAX_BUF_BLOCK] = {};
+    char line[MAX_BUF_SIZE] = {};
 
     ContentBlock content_block = {};
 
@@ -27,7 +27,7 @@ split_contents(char *buf, int bytes, UUID ref_id, UUID content_id, enum MongoDBI
     (*n_block)++;
 
     if (!error_code) {
-        error_code = _split_contents_core(buf, bytes, ref_id, content_id, mongo_db_id, n_line, n_block, line, MAX_BUF_BLOCK, &bytes_in_line, &content_block);
+        error_code = _split_contents_core(buf, bytes, ref_id, content_id, mongo_db_id, n_line, n_block, line, MAX_BUF_SIZE, &bytes_in_line, &content_block);
     }
 
     if (!error_code) {
@@ -43,7 +43,7 @@ Err
 split_contents_from_fd(int fd_content, int len, UUID ref_id, UUID content_id, enum MongoDBId mongo_db_id, int *n_line, int *n_block) {
     Err error_code = S_OK;
     char buf[MAX_BUF_SIZE] = {};
-    char line[MAX_BUF_BLOCK] = {};
+    char line[MAX_BUF_SIZE] = {};
     int bytes = 0;
     int buf_size = 0;
     int bytes_in_line = 0;
@@ -56,7 +56,7 @@ split_contents_from_fd(int fd_content, int len, UUID ref_id, UUID content_id, en
 
     if (!error_code) {
         while ((buf_size = len < MAX_BUF_SIZE ? len : MAX_BUF_SIZE) && (bytes = read(fd_content, buf, buf_size)) > 0) {
-            error_code = _split_contents_core(buf, bytes, ref_id, content_id, mongo_db_id, n_line, n_block, line, MAX_BUF_BLOCK, &bytes_in_line, &content_block);
+            error_code = _split_contents_core(buf, bytes, ref_id, content_id, mongo_db_id, n_line, n_block, line, MAX_BUF_SIZE, &bytes_in_line, &content_block);
             if (error_code) break;
 
             len -= bytes;
@@ -236,18 +236,20 @@ read_content_block(UUID content_id, int block_id, enum MongoDBId mongo_db_id, Co
         error_code = db_find_one(mongo_db_id, key, NULL, &db_result);
     }
 
-    fprintf(stderr, "pttdb_content_block.read_content_block: after db_find_one: e: %d\n", error_code);
+    //fprintf(stderr, "pttdb_content_block.read_content_block: after db_find_one: e: %d\n", error_code);
 
+    /*
     if(!error_code) {
         char *str = bson_as_canonical_extended_json(db_result, NULL);
         fprintf(stderr, "ptt_content_block.read_content_block: to deserialize: db_result: %s\n", str);
         bson_free(str);
     }
+    */
 
     if (!error_code) {
         error_code = deserialize_content_block_bson(db_result, content_block);
     }
-    fprintf(stderr, "ptt_content_block.read_content_block: after deserialize: e: %d\n", error_code);
+    //fprintf(stderr, "ptt_content_block.read_content_block: after deserialize: e: %d\n", error_code);
 
     bson_safe_destroy(&db_result);
     bson_safe_destroy(&key);
@@ -611,7 +613,7 @@ _split_contents_core_one_line(char *line, int bytes_in_line, UUID ref_id, UUID c
     // check for max-lines in block-buf
     // check for max-buf in block-buf
     if (content_block->n_line >= MAX_BUF_LINES ||
-            content_block->len_block + bytes_in_line > MAX_BUF_BLOCK) {
+            content_block->len_block + bytes_in_line > MAX_BUF_SIZE) {
 
         error_code = save_content_block(content_block, mongo_db_id);
         if (error_code) return error_code;

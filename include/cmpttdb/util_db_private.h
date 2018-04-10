@@ -5,8 +5,8 @@
 #include <mongoc.h>
 
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "util_db.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/util_db.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "test.h"
-#include "util_db.h"
+#include "cmpttdb/util_db.h"
 
 TEST(util_db, db_set_if_not_exists) {
     Err error;

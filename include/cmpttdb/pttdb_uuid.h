@@ -2,18 +2,14 @@
 #ifndef PTTDB_UUID_H
 #define PTTDB_UUID_H
 
+#include <mongoc.h>
 #include "ptterr.h"
-#include "pttdb_const.h"
-#include "pttdb_util.h"
-#include "util_db.h"
-#include "util_timestamp.h"
+#include "cmpttdb/pttdb_const.h"
+#include "cmpttdb/util_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <sys/time.h>
-#include <resolv.h>
 
 #define UUIDLEN 16
 #define DISPLAY_UUIDLEN 24
