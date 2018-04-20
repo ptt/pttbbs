@@ -1308,6 +1308,20 @@ do_post_article(int edflags)
 #endif
     clear();
 
+#ifdef USE_POST_CAPTCHA_FOR_NOREG
+#ifndef USE_REMOTE_CAPTCHA
+#error "To use USE_POST_CAPTCHA_FOR_NOREG, you must also set USE_REMOTE_CAPTCHA"
+#endif
+    if (!HasUserPerm(PERM_LOGINOK)) {
+	const char *errmsg = remote_captcha();
+	if (errmsg) {
+	    vmsg(errmsg);
+	    return FULLUPDATE;
+	}
+	clear();
+    }
+#endif
+
     setbfile(genbuf, currboard, FN_POST_NOTE);
 
     if (more(genbuf, NA) == -1) {
