@@ -862,5 +862,6 @@ void pwcuInitGuestInfo	(void);
 int  pwcuInitAdminPerm	(void);
 
 int verify_captcha(const char *reason);
+const char *remote_captcha();
 
 #endif
