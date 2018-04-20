@@ -2079,6 +2079,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return DONOTHING;
     }
 
+    if (!HasUserPerm(PERM_LOGINOK)) {
+	vmsg("您無轉錄權限。");
+	return FULLUPDATE;
+    }
+
     // prompt user what he's going to do now.
     move(2, 0);
     if (is_BM_cache(currbid)) {
