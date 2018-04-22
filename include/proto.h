@@ -657,7 +657,6 @@ int  str_checksum(const char *str);
 int  userid_is_BM(const char *userid, const char *list);
 int  is_uBM(const char *list, const char *id);
 time4_t  gettime(int line, time4_t dt, const char* head);
-unsigned DBCS_StringHash(const char *s);
 // vgets/getdata utilities
 int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);

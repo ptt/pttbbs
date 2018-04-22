@@ -471,6 +471,12 @@ DBCS_strncasecmp(const char *s1, const char *s2, size_t len) {
     return 0;
 }
 
+unsigned
+DBCS_StringHash(const char *s)
+{
+    return fnv1a_32_dbcs_strcase(s, FNV1_32_INIT);
+}
+
 /* ----------------------------------------------------- */
 /* 字串檢查函數：英文、數字、檔名、E-mail address        */
 /* ----------------------------------------------------- */

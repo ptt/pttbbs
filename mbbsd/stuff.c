@@ -407,12 +407,6 @@ void FREE(void *ptr)
 #endif
 
 
-unsigned
-DBCS_StringHash(const char *s)
-{
-    return fnv1a_32_dbcs_strcase(s, FNV1_32_INIT);
-}
-
 static int
 MonthDay(int m, int leap)
 {

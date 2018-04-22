@@ -122,6 +122,7 @@ char * DBCS_strcasestr(const char* pool, const char *ptr);
 int    DBCS_strncasecmp(const char *s1, const char *s2, size_t len);
 #define HAVE_DBCS_STRCASESTR
 #define HAVE_DBCS_STRNCASECMP
+unsigned DBCS_StringHash(const char *s);
 size_t str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */
