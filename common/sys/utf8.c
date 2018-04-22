@@ -26,7 +26,7 @@ int ucs2utf(uint16_t ucs2, uint8_t *utf8) {
     }
 }
 
-int utf2ucs(uint8_t *utf8, uint16_t *pucs) {
+int utf2ucs(const uint8_t *utf8, uint16_t *pucs) {
     uint16_t c;
     c = *utf8++;
     if ((c & 0x80) == 0) {

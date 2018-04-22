@@ -34,4 +34,26 @@ void b2u(std::string *utf8, const char *big5) {
   }
 }
 
+std::string u2b(const std::string &utf8) {
+  return u2b(utf8.c_str());
+}
+
+std::string u2b(const char *utf8) {
+  std::string big5;
+  u2b(&big5, utf8);
+  return big5;
+}
+
+void u2b(std::string *big5, const char *utf8) {
+  const uint8_t *p = reinterpret_cast<const uint8_t *>(utf8);
+  while (*p) {
+    uint16_t ucs;
+    p += utf2ucs(p, &ucs);
+    ucs = u2b_table[ucs];
+    if (ucs >> 8)
+      big5->push_back(ucs >> 8);
+    big5->push_back(ucs & 0xFF);
+  }
+}
+
 }  // namespace strings
