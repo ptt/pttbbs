@@ -32,6 +32,9 @@ using pttbbs::api::ListReply;
 using pttbbs::api::ListRequest;
 using pttbbs::api::PartialOptions;
 using pttbbs::api::Post;
+using pttbbs::api::SearchFilter;
+using pttbbs::api::SearchReply;
+using pttbbs::api::SearchRequest;
 
 namespace {
 
@@ -50,6 +53,9 @@ class BoardServiceImpl final : public pttbbs::api::BoardService::Service {
 
   Status Content(ServerContext *context, const ContentRequest *req,
                  ContentReply *rep) override;
+
+  Status Search(ServerContext *context, const SearchRequest *req,
+                SearchReply *rep) override;
 
  private:
   DISABLE_COPY_AND_ASSIGN(BoardServiceImpl);
@@ -227,6 +233,87 @@ Status BoardServiceImpl::Content(ServerContext *context,
   RETURN_ON_FAIL(DoSelect(paths::bfile(bp->brdname, req->filename()),
                           req->consistency_token(), req->partial_options(),
                           rep->mutable_content()));
+  return Status::OK;
+}
+
+void SetPredicateKeyword(fileheader_predicate_t *pred,
+                         const std::string &utf8_str) {
+  strlcpy(pred->keyword, strings::u2b(utf8_str).c_str(), sizeof(pred->keyword));
+}
+
+Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
+  memset(pred, 0, sizeof(*pred));
+  switch (filter.type()) {
+    case SearchFilter::TYPE_EXACT_TITLE:
+      pred->mode = RS_TITLE;
+      SetPredicateKeyword(pred, filter.string_data());
+      break;
+
+    case SearchFilter::TYPE_TITLE:
+      pred->mode = RS_KEYWORD;
+      SetPredicateKeyword(pred, filter.string_data());
+      break;
+
+    case SearchFilter::TYPE_AUTHOR:
+      pred->mode = RS_AUTHOR;
+      SetPredicateKeyword(pred, filter.string_data());
+      break;
+
+    case SearchFilter::TYPE_RECOMMEND:
+      pred->mode = RS_RECOMMEND;
+      pred->recommend = filter.number_data();
+      SetPredicateKeyword(pred, std::to_string(pred->recommend));
+      break;
+
+    case SearchFilter::TYPE_MONEY:
+      pred->mode = RS_MONEY;
+      pred->money = filter.number_data();
+      SetPredicateKeyword(pred, std::to_string(pred->money) + "M");
+      break;
+
+    case SearchFilter::TYPE_MARK:
+      pred->mode = RS_MARK;
+      break;
+
+    case SearchFilter::TYPE_SOLVED:
+      pred->mode = RS_SOLVED;
+      break;
+
+    default:
+      return Status(StatusCode::UNIMPLEMENTED, "Unimplemented");
+  }
+  return Status::OK;
+}
+
+Status BoardServiceImpl::Search(ServerContext *context,
+                                const SearchRequest *req, SearchReply *rep) {
+  int bid;
+  const boardheader_t *bp;
+  RETURN_ON_FAIL(ResolveRef(req->ref(), &bid, &bp));
+
+  if (req->filter().empty()) {
+    return Status(StatusCode::INVALID_ARGUMENT, "No search filters specified.");
+  }
+  std::string base_name = FN_DIR;
+  for (const auto &filter : req->filter()) {
+    fileheader_predicate_t pred;
+    RETURN_ON_FAIL(SetPredicate(filter, &pred));
+    auto dst_name = boards::Search(bid, base_name, pred);
+    if (!dst_name) {
+      return Status(StatusCode::UNKNOWN, "Search failed");
+    }
+    base_name = dst_name.value();
+  }
+
+  std::vector<fileheader_t> fhs;
+  size_t offset = records::Get<fileheader_t>(
+      paths::bfile(bp->brdname, base_name), req->offset(), req->length(), &fhs);
+  for (auto &fh : fhs) {
+    DBCS_safe_trim(fh.title);
+    AsPost(offset++, fh).Swap(rep->add_posts());
+  }
+  rep->set_total_posts(
+      records::Count<fileheader_t>(paths::bfile(bp->brdname, base_name)));
   return Status::OK;
 }
 

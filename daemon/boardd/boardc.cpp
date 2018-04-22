@@ -23,6 +23,8 @@ using pttbbs::api::HotboardReply;
 using pttbbs::api::HotboardRequest;
 using pttbbs::api::ListReply;
 using pttbbs::api::ListRequest;
+using pttbbs::api::SearchReply;
+using pttbbs::api::SearchRequest;
 
 template <class Service, class Request, class Reply>
 struct MakeRPC {
@@ -68,6 +70,8 @@ int main(int argc, char *argv[]) {
       {"Content",
        MakeRPC<BoardService, ContentRequest, ContentReply>::BindMethod(
            &BoardService::Stub::Content)},
+      {"Search", MakeRPC<BoardService, SearchRequest, SearchReply>::BindMethod(
+                     &BoardService::Stub::Search)},
   };
   for (const auto &m : methods) {
     if (m.first == FLAGS_method) {

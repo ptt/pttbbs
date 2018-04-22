@@ -12,6 +12,7 @@ service BoardService {
     rpc List (ListRequest) returns (ListReply) {}
     rpc Hotboard (HotboardRequest) returns (HotboardReply) {}
     rpc Content (ContentRequest) returns (ContentReply) {}
+    rpc Search (SearchRequest) returns (SearchReply) {}
 }
 
 message BoardRequest {
@@ -102,4 +103,32 @@ message Content {
     int64 offset = 3;
     int64 length = 4;
     int64 total_length = 5;
+}
+
+message SearchFilter {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_EXACT_TITLE = 1;
+        TYPE_TITLE = 2;
+        TYPE_AUTHOR = 3;
+        TYPE_RECOMMEND = 4;
+        TYPE_MONEY = 5;
+        TYPE_MARK = 6;
+        TYPE_SOLVED = 7;
+    }
+    Type type = 1;
+    int64 number_data = 2;
+    string string_data = 3;
+}
+
+message SearchRequest {
+    BoardRef ref = 1;
+    repeated SearchFilter filter = 2;
+    int32 offset = 3;
+    int32 length = 4;
+}
+
+message SearchReply {
+    repeated Post posts = 1;
+    int32 total_posts = 2;
 }
