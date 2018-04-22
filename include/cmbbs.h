@@ -127,6 +127,9 @@ typedef struct fileheader_predicate_t {
     int money;
 } fileheader_predicate_t;
 
+void select_read_name(char *buf, size_t size, const char *base,
+                      const fileheader_predicate_t *pred);
+
 int match_fileheader_predicate(const fileheader_t *fh,
                                fileheader_predicate_t *pred);
 

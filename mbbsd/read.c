@@ -673,10 +673,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
        return ui_ret;
    _mode |= sr_mode;
 
-   snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
-	    first_select ? "SR.":p,
-	    sr_mode, (int)strlen(predicate.keyword),
-	    DBCS_StringHash(predicate.keyword));
+   select_read_name(genbuf, sizeof(genbuf),
+		    first_select ? NULL : p, &predicate);
 
    // pre-calculate board prefix
    if (currstat == RMAIL)

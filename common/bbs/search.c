@@ -6,6 +6,16 @@
 #include "pttstruct.h"
 #include "var.h"
 
+void
+select_read_name(char *buf, size_t size, const char *base,
+		 const fileheader_predicate_t *pred)
+{
+    snprintf(buf, size, "%s%X.%X.%X",
+	     base ? base : "SR.",
+	     pred->mode, (int) strlen(pred->keyword),
+	     DBCS_StringHash(pred->keyword));
+}
+
 int
 match_fileheader_predicate(const fileheader_t *fh, fileheader_predicate_t *pred)
 {
