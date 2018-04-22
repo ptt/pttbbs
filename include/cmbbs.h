@@ -130,4 +130,13 @@ typedef struct fileheader_predicate_t {
 int match_fileheader_predicate(const fileheader_t *fh,
                                fileheader_predicate_t *pred);
 
+int select_read_build(const char *src_direct, const char *dst_direct,
+                      int src_direct_has_reference, time4_t resume_from,
+                      int dst_count,
+                      int (*match)(const fileheader_t *fh, void *arg),
+                      void *arg);
+
+int select_read_should_build(const char *dst_direct, int bid,
+                             time4_t *resume_from, int *count);
+
 #endif
