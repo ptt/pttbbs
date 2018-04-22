@@ -332,3 +332,44 @@ int bsearch_record(const char *fpath, const void *key,
   close(fd);
   return found ? (found - addr) / size : -1;
 }
+
+// Find the first record that is greater than key.
+//
+// Number of records is returned in *num. The found record is copied to buffer
+// if 0 <= retval < *num. Returns -1 on error.
+ssize_t upper_bound_record(const char *fpath, const void *key,
+			   int (*compar)(const void *item1, const void *item2),
+			   size_t size, void *buffer, size_t *num) {
+    int fd;
+    size_t sz = dashs(fpath);
+    void *addr = NULL;
+
+    if((fd = open(fpath, O_RDONLY, 0)) < 0)
+	return -1;
+    addr = mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
+    if (!addr) {
+	close(fd);
+	return -1;
+    }
+
+    const uint8_t *left = (const uint8_t *) addr;
+    size_t count = sz / size;
+    *num = count;
+    while (count > 0) {
+	size_t i = count >> 1;
+	const uint8_t *mid = left + i * size;
+	if (compar(key, mid) < 0)
+	    count = i;
+	else {
+	    left = mid + size;
+	    count -= i + 1;
+	}
+    }
+    size_t offset = left - (const uint8_t *)addr;
+    if (offset < sz)
+	memcpy(buffer, left, size);
+
+    munmap(addr, sz);
+    close(fd);
+    return offset / size;
+}

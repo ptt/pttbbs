@@ -44,16 +44,21 @@ match_fileheader_predicate(const fileheader_t *fh, fileheader_predicate_t *pred)
 }
 
 static int
+find_resume_point_compar(const void *key, const void *memb)
+{
+    const time4_t *ts = (const time4_t *) key;
+    const fileheader_t *fh = (const fileheader_t *) memb;
+    return *ts - atoi(fh->filename + 2);
+}
+
+static size_t
 find_resume_point(const char *direct, time4_t timestamp)
 {
-    fileheader_t fh = {};
-    sprintf(fh.filename, "X.%d", (int) timestamp);
-    /* getindex returns 0 when error. */
-    int idx = getindex(direct, &fh, 0);
-    if (idx < 0)
-	return -idx;
-    /* return 0 when error, same as starting from the beginning. */
-    return idx;
+    fileheader_t fh;
+    size_t num;
+    ssize_t index = upper_bound_record(
+        direct, &timestamp, find_resume_point_compar, sizeof(fh), &fh, &num);
+    return index < 0 ? 0 : index;
 }
 
 int
@@ -67,17 +72,16 @@ select_read_build(const char *src_direct, const char *dst_direct,
     if ((fr = open(src_direct, O_RDONLY, 0)) < 0)
 	return -1;
 
-    /* find incremental selection start point */
-    int reference = resume_from ?
+    // Find incremental selection start point.
+    const size_t resume_off = resume_from ?
 	find_resume_point(src_direct, resume_from) : 0;
 
     int filemode;
-    if (reference) {
+    if (resume_off) {
 	filemode = O_APPEND | O_RDWR;
     } else {
 	filemode = O_CREAT | O_RDWR;
 	dst_count = 0;
-	reference = 0;
     }
 
     if ((fd = open(dst_direct, filemode, DEFAULT_FILE_CREATE_PERM)) == -1) {
@@ -85,21 +89,20 @@ select_read_build(const char *src_direct, const char *dst_direct,
 	return -1;
     }
 
-    if (reference > 0)
-	lseek(fr, reference * sizeof(fileheader_t), SEEK_SET);
+    if (resume_off > 0)
+	lseek(fr, resume_off * sizeof(fileheader_t), SEEK_SET);
 
     fileheader_t fhs[8192 / sizeof(fileheader_t)];
     int i, len;
     while ((len = read(fr, fhs, sizeof(fhs))) > 0) {
 	len /= sizeof(fileheader_t);
 	for (i = 0; i < len; ++i) {
-	    reference++;
 	    if (!match(&fhs[i], arg))
 		continue;
 
 	    if (!src_direct_has_reference) {
 		fhs[i].multi.refer.flag = 1;
-		fhs[i].multi.refer.ref = reference;
+		fhs[i].multi.refer.ref = 1 + resume_off + i; // 1-based.
 	    }
 	    ++dst_count;
 	    write(fd, &fhs[i], sizeof(fileheader_t));
