@@ -302,6 +302,14 @@ typedef struct fileheader_t { /* 128 bytes */
 #define FILE_VOTE       0x40    /* for vote,	in non-announce */
 #define FILE_ANONYMOUS  0x80    /* anonymous file */
 
+/* TODO multi.money is a mess.
+ * please help verify and finish these.
+ */
+/* modes to invalid multi.money */
+#define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | \
+                            FILE_VOTE | FILE_BID)
+
+
 #define STRLEN     80             /* Length of most string data */
 
 #define FAVMAX   1024		  /* Max boards of Myfavorite */

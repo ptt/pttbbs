@@ -28,6 +28,8 @@ const char* money_level(int money);
 /* string.c */  
 void obfuscate_ipstr(char *s);
 bool is_valid_brdname(const char *brdname);
+const char *subject_ex(const char *title, int *ptype);
+const char *subject(const char *title);
 
 /* time.c */
 const char *Now(void);	// m3 flavor time string
@@ -117,5 +119,15 @@ char*genpasswd    (char *pw);
 int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);
 int delete_fileheader(const char *dir_path, const void *rptr, int id);
 
+/* search.c */
+typedef struct fileheader_predicate_t {
+    int mode;
+    char keyword[TTLEN + 1];
+    int recommend;
+    int money;
+} fileheader_predicate_t;
+
+int match_fileheader_predicate(const fileheader_t *fh,
+                               fileheader_predicate_t *pred);
 
 #endif

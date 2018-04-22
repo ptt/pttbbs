@@ -37,13 +37,6 @@ enum {
     RECTYPE_DEFAULT = RECTYPE_GOOD, // match traditional user behavior
 };
 
-/* TODO multi.money is a mess.
- * please help verify and finish these.
- */
-/* modes to invalid multi.money */
-#define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | \
-                            FILE_VOTE | FILE_BID)
-
 /**
  * Test if the fhdr looks like really belong to user
  */
