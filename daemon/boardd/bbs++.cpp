@@ -3,8 +3,10 @@
 #include <vector>
 #include "daemon/boardd/bbs++.hpp"
 extern "C" {
+#include <string.h>
 #include "var.h"
 #include "cmbbs.h"
+#include "pttstruct.h"
 #include "daemon/boardd/boardd.h"
 }
 
@@ -81,6 +83,38 @@ std::vector<bid_t> Children(bid_t bid) {
     }
   }
   return bids;
+}
+
+boost::optional<std::string> Search(bid_t bid, const std::string &base_name,
+                                    const fileheader_predicate_t &pred) {
+  auto bp = Get(bid);
+  if (!bp) {
+    return {};
+  }
+
+  char genbuf[PATHLEN];
+  bool first_select = strncmp(base_name.c_str(), "SR.", 3) != 0;
+  select_read_name(genbuf, sizeof(genbuf),
+                   first_select ? nullptr : base_name.c_str(), &pred);
+
+  const size_t kMaxLen = 64; // sizeof(currdirect)
+  std::string src_direct = paths::bfile(bp.value()->brdname, base_name);
+  std::string dst_direct = paths::bfile(bp.value()->brdname, genbuf);
+  if (dst_direct.size() >= kMaxLen) {
+    return {};
+  }
+
+  int force_full_build = pred.mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED);
+  time4_t resume_from;
+  int count;
+  if (select_read_should_build(dst_direct.c_str(), bid, &resume_from, &count) &&
+      (count = select_read_build(
+           src_direct.c_str(), dst_direct.c_str(), !first_select,
+           force_full_build ? 0 : resume_from, count,
+           match_fileheader_predicate, (void *)&pred)) < 0) {
+    return {};
+  }
+  return std::string(genbuf);
 }
 
 }  // namespace boards
