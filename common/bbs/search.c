@@ -17,8 +17,9 @@ select_read_name(char *buf, size_t size, const char *base,
 }
 
 int
-match_fileheader_predicate(const fileheader_t *fh, fileheader_predicate_t *pred)
+match_fileheader_predicate(const fileheader_t *fh, void *arg)
 {
+    const fileheader_predicate_t *pred = (const fileheader_predicate_t *) arg;
     const char * const keyword = pred->keyword;
     int sr_mode = pred->mode;
 
