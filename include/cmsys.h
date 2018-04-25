@@ -180,6 +180,9 @@ int delete_record2(const char *fpath, const void *rptr, size_t size,
 int bsearch_record(const char *fpath, const void *key,
                    int (*compar)(const void *item1, const void *item2),
                    size_t size, void *buffer);
+ssize_t upper_bound_record(const char *fpath, const void *key,
+			   int (*compar)(const void *item1, const void *item2),
+			   size_t size, void *buffer, size_t *num);
 
 /* vector.c */
 struct Vector {
