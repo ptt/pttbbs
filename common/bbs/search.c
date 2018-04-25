@@ -84,7 +84,7 @@ select_read_build(const char *src_direct, const char *dst_direct,
 	return -1;
 
     // Find incremental selection start point.
-    const size_t resume_off = resume_from ?
+    size_t resume_off = resume_from ?
 	find_resume_point(src_direct, resume_from) : 0;
 
     int filemode;
@@ -108,12 +108,13 @@ select_read_build(const char *src_direct, const char *dst_direct,
     while ((len = read(fr, fhs, sizeof(fhs))) > 0) {
 	len /= sizeof(fileheader_t);
 	for (i = 0; i < len; ++i) {
+	    resume_off++;
 	    if (!match(&fhs[i], arg))
 		continue;
 
 	    if (!src_direct_has_reference) {
 		fhs[i].multi.refer.flag = 1;
-		fhs[i].multi.refer.ref = 1 + resume_off + i; // 1-based.
+		fhs[i].multi.refer.ref = resume_off; // 1-based.
 	    }
 	    ++dst_count;
 	    write(fd, &fhs[i], sizeof(fileheader_t));
