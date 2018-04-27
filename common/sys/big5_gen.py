@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # Usage: ./big5_gen.py > big5.c
 
 import sys
