@@ -16,6 +16,8 @@ static const char * const STR_bv_limited = "limited";	/* 私人投票 */
 static const char * const STR_bv_limits  = "limits";	/* 投票資格限制 */
 static const char * const STR_bv_title   = "vtitle";
 static const char * const STR_bv_lock    = "vlock";
+static const char * const STR_bv_logs    = "vlogs";     /* 投票紀錄 */
+static const char * const STR_bv_logconf = "logconf";   /* 投票紀錄設定 */
 
 static const char * const STR_bv_results = "results";
 
@@ -30,7 +32,16 @@ typedef struct {
     char limits  [sizeof("limitsXX\0")  ];
     char title   [sizeof("vtitleXX\0")  ];
     char lock    [sizeof("vlockXX\0")   ];
+    char logs    [sizeof("vlogsXX\0")   ];
+    char logconf [sizeof("logconfXX\0") ];
 } vote_buffer_t;
+
+typedef struct {
+    int log_id;
+    int log_ip;
+    int log_date;
+    int log_choice;
+} vote_logconf_t;
 
 static void
 votebuf_init(vote_buffer_t *vbuf, int n)
@@ -45,6 +56,8 @@ votebuf_init(vote_buffer_t *vbuf, int n)
     snprintf(vbuf->limits,  sizeof(vbuf->limits),  "%s%d", STR_bv_limits,  n);
     snprintf(vbuf->title,   sizeof(vbuf->title),   "%s%d", STR_bv_title,   n);
     snprintf(vbuf->lock,    sizeof(vbuf->lock),    "%s%d", STR_bv_lock,    n);
+    snprintf(vbuf->logs,    sizeof(vbuf->logs),    "%s%d", STR_bv_logs,    n);
+    snprintf(vbuf->logconf, sizeof(vbuf->logconf), "%s%d", STR_bv_logconf, n);
 }
 
 static int
@@ -262,6 +275,17 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     unlink(buf);
 
     fprintf(tfp, "%s\n◆ 總票數 = %d 票\n\n", msg_separator, *total);
+
+    // Report: logs part
+    setbfile(buf, bname, vbuf->logs);
+    if (dashf(buf)) {
+	fprintf(tfp, "%s\n◆ 投票紀錄 (僅供參考) ：\n\n", msg_separator);
+	b_suckinfile(tfp, buf);
+	unlink(buf);
+    }
+
+    setbfile(buf, bname, vbuf->logconf);
+    unlink(buf);
 
     // End of the report
     fclose(tfp);
@@ -519,6 +543,96 @@ vote_view_all(const char *bname)
 	return FULLUPDATE;
 }
 
+static void
+vote_logconf_init(vote_logconf_t *logconf) {
+    memset(logconf, 0, sizeof(*logconf));
+}
+
+static void
+vote_logconf_ask(vote_logconf_t *logconf) {
+    char inbuf[STRLEN];
+    vote_logconf_init(logconf);
+
+    getdata(14, 0,
+	    "是否記錄投票帳號：(y)記錄投票帳號[n]不記錄:[N]",
+	    inbuf, 2, LCECHO);
+    if (inbuf[0] == 'y')
+	logconf->log_id = 1;
+
+    getdata(15, 0,
+	    "是否記錄投票IP：(y)記錄投票IP[n]不記錄:[N]",
+	    inbuf, 2, LCECHO);
+    if (inbuf[0] == 'y')
+	logconf->log_ip = 1;
+
+    getdata(16, 0,
+	    "是否記錄投票時間：(y)記錄投票時間[n]不記錄:[N]",
+	    inbuf, 2, LCECHO);
+    if (inbuf[0] == 'y')
+	logconf->log_date = 1;
+
+    getdata(17, 0,
+	    "是否記錄投票選項：(y)記錄投票選項[n]不記錄:[N]",
+	    inbuf, 2, LCECHO);
+    if (inbuf[0] == 'y')
+	logconf->log_choice = 1;
+}
+
+static int
+vote_logconf_save(const vote_logconf_t *logconf, const char *fpath) {
+    FILE *fp = fopen(fpath, "w");
+
+    if (!fp)
+	return 0;
+
+    fprintf(fp, "%d %d %d %d", logconf->log_id, logconf->log_ip,
+	    logconf->log_date, logconf->log_choice);
+    fclose(fp);
+    return 1;
+}
+
+static int
+vote_logconf_load(const char *fpath, vote_logconf_t *logconf) {
+    vote_logconf_init(logconf);
+
+    FILE *fp = fopen(fpath, "r");
+    if (!fp)
+	return 0;
+
+    if (fscanf(fp, "%d%d%d%d", &logconf->log_id, &logconf->log_ip,
+    		&logconf->log_date, &logconf->log_choice) != 4) {
+	vote_logconf_init(logconf);
+	fclose(fp);
+	return 0;
+    }
+    fclose(fp);
+    return 1;
+}
+
+static void
+print_vote_logconf_feature(int enabled, const char *feature) {
+    prints("     本次投票將 %s" ANSI_RESET "記錄並公開您的 %s%s" ANSI_RESET "\n",
+	   enabled ? ANSI_COLOR(1;31) "會   " : ANSI_COLOR(1;37) "不會 ",
+	   enabled ? ANSI_COLOR(1;31) : ANSI_COLOR(1;37), feature);
+}
+
+static void
+vote_logconf_print(const vote_logconf_t *logconf) {
+    if (logconf->log_id && logconf->log_choice) {
+        move(15, 5);
+        prints("請特別注意 " ANSI_COLOR(1;31) "本次投票為記名投票，"
+		"您的帳號與投票選項將同時被記錄並公開" ANSI_RESET);
+    }
+
+    move(18, 0);
+    print_vote_logconf_feature(logconf->log_id, "帳號 (ID)");
+    print_vote_logconf_feature(logconf->log_ip, "IP 位址");
+    print_vote_logconf_feature(logconf->log_date, "投票的時間");
+    print_vote_logconf_feature(logconf->log_choice, "投下的選項");
+
+    vmsg("詳閱\完畢後請按任意鍵繼續");
+}
+
 static int
 vote_maintain(const char *bname)
 {
@@ -559,7 +673,7 @@ vote_maintain(const char *bname)
 		const char *filename[] = {
 		    STR_bv_ballots, STR_bv_control, STR_bv_desc, STR_bv_desc,
 		    STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_limits,
-		    STR_bv_title, NULL
+		    STR_bv_title, STR_bv_logs, STR_bv_logconf, NULL
 		};
 		for (j = 0; filename[j] != NULL; j++) {
 		    snprintf(buf2, sizeof(buf2), "%s%d", filename[j], i);
@@ -659,6 +773,36 @@ vote_maintain(const char *bname)
 	if (dashf(buf))
 	    unlink(buf);
     }
+
+    move(8, 0);
+    prints("以下設定之相關規範請參閱\ BoardAnnouce 板置底公告：\n");
+    prints("《[公告] 看板投票功\能更新、相關規範公告》\n");
+    prints("\n");
+    prints("若板主欲於投票時記錄以下任何一項資訊，請事先與看板使用者溝通，\n");
+    prints("並於投票前至少七日，事先公告將記錄之項目，違者將受處分。\n");
+
+    setbfile(buf, bname, vbuf.logconf);
+
+    while (1) {
+	vote_logconf_t logconf;
+
+	move(14, 0);
+	clrtobot();
+
+	vote_logconf_ask(&logconf);
+
+	if (logconf.log_id && logconf.log_choice) {
+	    getdata(19, 0, "本次投票設定為記名投票，請再次確認是否記名："
+	    	    "(y)確認記名[n]重新設定:[N]",
+		    inbuf, 2, LCECHO);
+	    if (inbuf[0] != 'y')
+		continue;
+	}
+
+	vote_logconf_save(&logconf, buf);
+	break;
+    }
+
     clear();
     getdata(0, 0, "此次投票進行幾天 (1~30天)？", inbuf, 4, DOECHO);
 
@@ -748,6 +892,51 @@ vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
 }
 
 static int
+maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
+	       const char *logfile)
+{
+    if (!logconf->log_id && !logconf->log_ip && !logconf->log_date &&
+    	!logconf->log_choice)
+    	return 0;
+
+    int fd, i;
+    char genbuf[300], tmpbuf[64];
+
+    genbuf[0] = 0;
+
+    if (logconf->log_id) {
+	snprintf(tmpbuf, sizeof(tmpbuf), "投票人 %-12s ", cuser.userid);
+	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+    }
+    if (logconf->log_ip) {
+	snprintf(tmpbuf, sizeof(tmpbuf), "投票來源 %-15s ", cuser.lasthost);
+	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+    }
+    if (logconf->log_date) {
+	snprintf(tmpbuf, sizeof(tmpbuf), "投票時間 %-23s ", Cdate(&now));
+	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+    }
+    if (genbuf[0])
+	strlcat(genbuf, "\n", sizeof(genbuf));
+
+    if (logconf->log_choice) {
+	strlcat(genbuf, "投票選項 ", sizeof(genbuf));
+	for (i = 0; i < nitems; i++)
+	    if (chosen[i]) {
+		snprintf(tmpbuf, sizeof(tmpbuf), "%d ", i + 1);
+		strlcat(genbuf, tmpbuf, sizeof(genbuf));
+	    }
+	strlcat(genbuf, "\n", sizeof(genbuf));
+    }
+
+    if ((fd = OpenCreate(logfile, O_WRONLY | O_APPEND)) >= 0) {
+	write(fd, genbuf, strlen(genbuf));
+	close(fd);
+    }
+    return 0;
+}
+
+static int
 user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 {
     FILE           *cfp;
@@ -756,6 +945,9 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     short	    curr_page, item_num, max_page;
     char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
     time4_t         closetime;
+    vote_logconf_t  logconf;
+
+    vote_logconf_init(&logconf);
 
     // bid = boaord id, must be at least one int.
     // fd should be int.
@@ -802,6 +994,23 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	vmsg("此次投票，你已投過了！");
 	return FULLUPDATE;
     }
+
+    setbfile(buf, bname, vbuf->logconf);
+    if (dashf(buf) && !vote_logconf_load(buf, &logconf)) {
+	vmsg("投票設定損毀, 請至 " BN_SYSOP " 回報!");
+	return FULLUPDATE;
+    }
+
+    clear();
+    move(10, 0);
+    prints(" " ANSI_COLOR(1;31)
+	   "請詳細閱\讀本次投票將記錄並公開之資訊，若不同意請取消投票。 "
+	   ANSI_RESET "\n");
+    prints(" " ANSI_COLOR(1;31)
+	   "若您完成投票即代表您同意將您本次投票的以下資訊公開。 "
+	   ANSI_RESET "\n");
+    vote_logconf_print(&logconf);
+
     setutmpmode(VOTING);
     setbfile(buf, bname, vbuf->desc);
     more(buf, YEA);
@@ -974,6 +1183,12 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		    }
 		}
 		move(b_lines - 1, 0);
+
+		/* log this vote */
+		char b_logs[STRLEN];
+		setbfile(b_logs, bname, vbuf->logs);
+		maybe_log_vote(&logconf, chosen, item_num, b_logs);
+
 		outs("已完成投票！\n");
 	    }
 	}
