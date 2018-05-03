@@ -1,3 +1,3 @@
-SUBDIR:=	bbs osdep sys
+SUBDIR:=	bbs osdep sys pttdb migrate_pttdb
 
 .include <bsd.subdir.mk>
