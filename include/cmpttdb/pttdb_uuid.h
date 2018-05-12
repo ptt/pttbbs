@@ -4,8 +4,8 @@
 
 #include <mongoc.h>
 #include "ptterr.h"
+#include "cmutil_time.h"
 #include "cmpttdb/pttdb_const.h"
-#include "cmpttdb/util_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +35,7 @@ Err serialize_uuid_bson(UUID uuid, bson_t **uuid_bson);
 Err serialize_content_uuid_bson(UUID uuid, int block_id, bson_t **uuid_bson);
 
 char *display_uuid(UUID uuid);
+char *display_urlsafe_uuid(UUID uuid);
 
 
 #ifdef __cplusplus

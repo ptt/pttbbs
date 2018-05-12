@@ -181,6 +181,29 @@ uuid_to_milli_timestamp(UUID uuid, time64_t *milli_timestamp)
     return S_OK;
 }
 
+/**
+ * @brief [brief description]
+ * @details b64-urlsafe: ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
+ * 
+ * @param uuid [description]
+ * @return [description]
+ */
+char *
+display_urlsafe_uuid(UUID uuid)
+{
+    char *result = malloc(DISPLAY_UUIDLEN + 1);
+    result[DISPLAY_UUIDLEN] = 0;
+
+    b64_ntop(uuid, UUIDLEN, (char *)result, DISPLAY_UUIDLEN);
+    char *p_result = result;
+    for(int i = 0; i < DISPLAY_UUIDLEN; i++, p_result++) {
+        if(*p_result == '+') *p_result = '-';
+                if(*p_result == '/') *p_result = '_';
+    }
+
+    return result;
+}
+
 char *
 display_uuid(UUID uuid)
 {

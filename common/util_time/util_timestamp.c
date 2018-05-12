@@ -1,5 +1,5 @@
 #define _XOPEN_SOURCE
-#include "cmpttdb/util_timestamp.h"
+#include "cmutil_time/util_timestamp.h"
 
 /**
  * @brief Get current time in milli-timestamp
@@ -68,6 +68,18 @@ datetime_to_timestamp(int year, int mm, int dd, int HH, int MM, int SS, int tz, 
 
     time_t tmp_timestamp = mktime(&datetime) + MY_TZ * 3600 - tz * 3600;
     *timestamp = (time64_t) tmp_timestamp;
+
+    return S_OK;
+}
+
+Err
+add_timespec_with_nanosecs(struct timespec *a, int nanosecs)
+{
+    a->tv_nsec += nanosecs;
+    if(a->tv_nsec < BILLION) return S_OK;
+
+    a->tv_nsec -= BILLION;
+    a->tv_sec++;
 
     return S_OK;
 }

@@ -8,6 +8,7 @@
 #include "cmpttdb/pttdb_util.h"
 #include "cmpttdb/pttdb_comment_reply.h"
 #include "cmpttdb/pttdb_comment.h"
+#include "cmpttdb/pttdb_file_info.h"
 #include "cmpttdb/util_db.h"
 
 #ifdef __cplusplus

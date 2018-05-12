@@ -44,6 +44,11 @@ enum ReadCommentsOpType {
     READ_COMMENTS_OP_TYPE_GTE,
 };
 
+enum ReadCommentsOrderType {
+    READ_COMMENTS_ORDER_TYPE_ASC,
+    READ_COMMENTS_ORDER_TYPE_DESC,
+};
+
 extern const enum Karma KARMA_BY_COMMENT_TYPE[COMMENT_TYPE_N_TYPE];
 extern const char *COMMENT_TYPE_ATTR[COMMENT_TYPE_N_TYPE];
 extern const char *COMMENT_TYPE_ATTR_UTF8[COMMENT_TYPE_N_TYPE];
@@ -56,6 +61,7 @@ typedef struct Comment {
     UUID main_id;                                    // corresponding main-id
     UUID comment_reply_id;                           // comment-reply-id
     int n_comment_reply_line;                        // n-comment-reply-line
+    int n_comment_reply_block;                       // n-comment-reply-block
     int n_comment_reply_total_line;                  // n-comment-reply-total-line
 
     enum LiveStatus status;                          // status
@@ -93,15 +99,16 @@ Err associate_comment(Comment *comment, char *buf, int max_buf_len);
 Err dissociate_comment(Comment *comment);
 Err read_comments_by_main(UUID main_id, time64_t create_milli_timestamp, char *poster, enum ReadCommentsOpType op_type, int max_n_comments, enum MongoDBId mongo_db_id, Comment *comments, int *n_read_comment, int *len);
 
-Err update_comment_reply_to_comment(UUID comment_id, UUID comment_reply_id, int n_comment_reply_line, int n_comment_reply_total_line);
+Err update_comment_reply_to_comment(UUID comment_id, UUID comment_reply_id, int n_comment_reply_line, int n_comment_reply_block, int n_comment_reply_total_line);
 Err remove_comment_reply_from_comment(UUID comment_id, UUID comment_reply_id);
 Err extract_b_comments_comment_id_to_bsons(bson_t **b_comments, int n_comment, char *result_key, bson_t **b_comment_ids);
-Err extract_b_comments_comment_reply_id_to_bsons(bson_t **b_comments, int n_comment, char *result_key, bson_t **b_comment_reply_ids, int *n_comment_reply);
+Err extract_b_comments_comment_reply_id_to_bsons(bson_t **b_comments, int n_comment, char *result_key, bson_t **b_comment_reply_ids, int *n_comment_reply, int *n_comment_reply_block);
 
 Err get_newest_comment(UUID main_id, UUID comment_id, time64_t *create_milli_timestamp, char *poster, int *n_comment);
 Err read_comments_until_newest_to_bsons(UUID main_id, time64_t create_milli_timestamp, char *poster, bson_t *fields, int max_n_comment, bson_t **b_comments, int *n_comment);
-Err ensure_b_comments_order(bson_t **b_comments, int n_comment, enum ReadCommentsOpType op_type);
-Err sort_b_comments_order(bson_t **b_comments, int n_comment, enum ReadCommentsOpType op_type);
+Err ensure_b_comments_order(bson_t **b_comments, int n_comment, enum ReadCommentsOrderType order_type);
+Err is_b_comments_order(bson_t **b_comments, int n_comment, enum ReadCommentsOrderType order_type, bool *is_good_b_comments_order);
+Err sort_b_comments_order(bson_t **b_comments, int n_comment, enum ReadCommentsOrderType order_type);
 Err sort_b_comments_by_comment_id(bson_t **b_comments, int n_comment);
 
 Err read_comments_by_query_to_bsons(bson_t *query, bson_t *fields, int max_n_comment, bson_t **b_comments, int *n_comment);

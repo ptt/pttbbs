@@ -21,11 +21,11 @@ TEST(pttdb_content_block, save_content_block) {
     error = reset_content_block(&content_block, ref_id, content_id, 3);
     EXPECT_EQ(S_OK, error);
 
-    char buf[] = "test_buf\r\ntest2";
+    char buf[] = "test_buf\r\ntest2\n";
     int len_buf = strlen(buf);
     associate_content_block(&content_block, buf, len_buf);
     content_block.len_block = len_buf;
-    content_block.n_line = 1;
+    content_block.n_line = 2;
 
     // init content-block2
     error = init_content_block_buf_block(&content_block2);
@@ -41,7 +41,7 @@ TEST(pttdb_content_block, save_content_block) {
     EXPECT_EQ(0, strncmp(content_block2.buf_block, buf, len_buf));
     EXPECT_EQ(MAX_BUF_SIZE, content_block2.max_buf_len);
     EXPECT_EQ(len_buf, content_block2.len_block);
-    EXPECT_EQ(1, content_block2.n_line);
+    EXPECT_EQ(2, content_block2.n_line);
 
     dissociate_content_block(&content_block);
     destroy_content_block(&content_block2);
@@ -64,11 +64,11 @@ TEST(pttdb_content_block, save_content_block_n_only) {
     error = reset_content_block(&content_block, ref_id, content_id, 3);
     EXPECT_EQ(S_OK, error);
 
-    char buf[] = "test_buf\ntest2";
+    char buf[] = "test_buf\ntest2\n";
     int len_buf = strlen(buf);
     associate_content_block(&content_block, buf, len_buf);
     content_block.len_block = len_buf;
-    content_block.n_line = 1;
+    content_block.n_line = 2;
 
     // init content-block2
     error = init_content_block_buf_block(&content_block2);
@@ -84,7 +84,7 @@ TEST(pttdb_content_block, save_content_block_n_only) {
     EXPECT_EQ(0, strncmp(content_block2.buf_block, buf, len_buf));
     EXPECT_EQ(MAX_BUF_SIZE, content_block2.max_buf_len);
     EXPECT_EQ(len_buf, content_block2.len_block);
-    EXPECT_EQ(1, content_block2.n_line);
+    EXPECT_EQ(2, content_block2.n_line);
 
     dissociate_content_block(&content_block);
     destroy_content_block(&content_block2);
@@ -257,9 +257,9 @@ TEST(pttdb_content_block, dynamic_read_content_blocks)
                    "the_id", BCON_BINARY(content_id, UUIDLEN),
                    "block_id", BCON_INT32(i),
                    "ref_id", BCON_BINARY(ref_id, UUIDLEN),
-                   "len_block", BCON_INT32(5),
+                   "len_block", BCON_INT32(6),
                    "n_line", BCON_INT32(0),
-                   "buf_block", BCON_BINARY((unsigned char *)"test1", 5)
+                   "buf_block", BCON_BINARY((unsigned char *)"test1\n", 6)
                );
         db_update_one(MONGO_MAIN_CONTENT, b[i], b[i], true);
     }
@@ -269,21 +269,21 @@ TEST(pttdb_content_block, dynamic_read_content_blocks)
 
     int len;
     int n_block;
-    char buf[51] = {};
-    Err error = dynamic_read_content_blocks(content_id, 10, 0, MONGO_MAIN_CONTENT, buf, 50, content_blocks, &n_block, &len);
+    char buf[61] = {};
+    Err error = dynamic_read_content_blocks(content_id, 10, 0, MONGO_MAIN_CONTENT, buf, 60, content_blocks, &n_block, &len);
     EXPECT_EQ(S_OK, error);
     EXPECT_EQ(10, n_block);
-    EXPECT_EQ(50, len);
+    EXPECT_EQ(60, len);
     for (int i = 0; i < 10; i++) {
         EXPECT_EQ(0, strncmp((char *)content_id, (char *)content_blocks[i].the_id, UUIDLEN));
         EXPECT_EQ(0, strncmp((char *)ref_id, (char *)content_blocks[i].ref_id, UUIDLEN));
-        EXPECT_EQ(5, content_blocks[i].len_block);
+        EXPECT_EQ(6, content_blocks[i].len_block);
         EXPECT_EQ(0, content_blocks[i].n_line);
-        EXPECT_EQ(0, strncmp((char *)"test1", content_blocks[i].buf_block, 5));
+        EXPECT_EQ(0, strncmp((char *)"test1\n", content_blocks[i].buf_block, 6));
         EXPECT_EQ(i, content_blocks[i].block_id);
     }
 
-    EXPECT_STREQ("test1test1test1test1test1test1test1test1test1test1", buf);
+    EXPECT_STREQ("test1\ntest1\ntest1\ntest1\ntest1\ntest1\ntest1\ntest1\ntest1\ntest1\n", buf);
 
     for (int i = 0; i < 10; i++) {
         dissociate_content_block(&content_blocks[i]);
@@ -306,9 +306,9 @@ TEST(pttdb_content_block, dynamic_read_content_blocks2)
                    "the_id", BCON_BINARY(content_id, UUIDLEN),
                    "block_id", BCON_INT32(i),
                    "ref_id", BCON_BINARY(ref_id, UUIDLEN),
-                   "len_block", BCON_INT32(5),
-                   "n_line", BCON_INT32(0),
-                   "buf_block", BCON_BINARY((unsigned char *)"test1", 5)
+                   "len_block", BCON_INT32(6),
+                   "n_line", BCON_INT32(1),
+                   "buf_block", BCON_BINARY((unsigned char *)"test1\n", 6)
                );
         db_update_one(MONGO_MAIN_CONTENT, b[i], b[i], true);
     }
@@ -321,18 +321,18 @@ TEST(pttdb_content_block, dynamic_read_content_blocks2)
     char buf[41] = {};
     Err error = dynamic_read_content_blocks(content_id, 10, 0, MONGO_MAIN_CONTENT, buf, 40, content_blocks, &n_block, &len);
     EXPECT_EQ(S_ERR_BUFFER_LEN, error);
-    EXPECT_EQ(8, n_block);
-    EXPECT_EQ(40, len);
-    for (int i = 0; i < 8; i++) {
+    EXPECT_EQ(6, n_block);
+    EXPECT_EQ(36, len);
+    for (int i = 0; i < 6; i++) {
         EXPECT_EQ(0, strncmp((char *)content_id, (char *)content_blocks[i].the_id, UUIDLEN));
         EXPECT_EQ(0, strncmp((char *)ref_id, (char *)content_blocks[i].ref_id, UUIDLEN));
-        EXPECT_EQ(5, content_blocks[i].len_block);
-        EXPECT_EQ(0, content_blocks[i].n_line);
-        EXPECT_EQ(0, strncmp((char *)"test1", content_blocks[i].buf_block, 5));
+        EXPECT_EQ(6, content_blocks[i].len_block);
+        EXPECT_EQ(1, content_blocks[i].n_line);
+        EXPECT_EQ(0, strncmp((char *)"test1\n", content_blocks[i].buf_block, 6));
         EXPECT_EQ(i, content_blocks[i].block_id);
     }
 
-    EXPECT_STREQ("test1test1test1test1test1test1test1test1", buf);
+    EXPECT_STREQ("test1\ntest1\ntest1\ntest1\ntest1\ntest1\n", buf);
 
     for (int i = 0; i < 10; i++) {
         dissociate_content_block(&content_blocks[i]);
@@ -355,9 +355,9 @@ TEST(pttdb_content_block, read_content_blocks)
                    "the_id", BCON_BINARY(content_id, UUIDLEN),
                    "block_id", BCON_INT32(i),
                    "ref_id", BCON_BINARY(ref_id, UUIDLEN),
-                   "len_block", BCON_INT32(5),
+                   "len_block", BCON_INT32(6),
                    "n_line", BCON_INT32(0),
-                   "buf_block", BCON_BINARY((unsigned char *)"test1", 5)
+                   "buf_block", BCON_BINARY((unsigned char *)"test1\n", 6)
                );
         db_update_one(MONGO_MAIN_CONTENT, b[i], b[i], true);
     }
@@ -373,13 +373,13 @@ TEST(pttdb_content_block, read_content_blocks)
     Err error = read_content_blocks(content_id, 10, 0, MONGO_MAIN_CONTENT, content_blocks, &n_block, &len);
     EXPECT_EQ(S_OK, error);
     EXPECT_EQ(10, n_block);
-    EXPECT_EQ(50, len);
+    EXPECT_EQ(60, len);
     for (int i = 0; i < 10; i++) {
         EXPECT_EQ(0, strncmp((char *)content_id, (char *)content_blocks[i].the_id, UUIDLEN));
         EXPECT_EQ(0, strncmp((char *)ref_id, (char *)content_blocks[i].ref_id, UUIDLEN));
-        EXPECT_EQ(5, content_blocks[i].len_block);
+        EXPECT_EQ(6, content_blocks[i].len_block);
         EXPECT_EQ(0, content_blocks[i].n_line);
-        EXPECT_EQ(0, strncmp((char *)"test1", content_blocks[i].buf_block, 5));
+        EXPECT_EQ(0, strncmp((char *)"test1\n", content_blocks[i].buf_block, 6));
         EXPECT_EQ(i, content_blocks[i].block_id);
     }
 
@@ -404,9 +404,9 @@ TEST(pttdb_content_block, read_content_blocks_get_b_content_blocks)
                    "the_id", BCON_BINARY(content_id, UUIDLEN),
                    "block_id", BCON_INT32(i),
                    "ref_id", BCON_BINARY(ref_id, UUIDLEN),
-                   "len_block", BCON_INT32(5),
+                   "len_block", BCON_INT32(6),
                    "n_line", BCON_INT32(0),
-                   "buf_block", BCON_BINARY((unsigned char *)"test1", 5)
+                   "buf_block", BCON_BINARY((unsigned char *)"test1\n", 6)
                );
         db_update_one(MONGO_MAIN_CONTENT, b[i], b[i], true);
     }
@@ -521,7 +521,7 @@ TEST(pttdb_content_block, split_contents_core)
     n_block++;
 
     int n_line = 0;
-    char line[MAX_BUF_SIZE];
+    char line[MAX_BUF_SIZE] = {};
     int bytes_in_line = 0;
     Err error = _split_contents_core(buf, bytes, ref_id, content_id, MONGO_MAIN_CONTENT, &n_line, &n_block, line, MAX_BUF_SIZE, &bytes_in_line, &content_block);
     EXPECT_EQ(S_OK, error);
@@ -673,7 +673,7 @@ TEST(pttdb_content_block, split_contents_core3)
     n_block++;
 
     int n_line = 0;
-    char line[MAX_BUF_SIZE];
+    char line[MAX_BUF_SIZE] = {};
     int bytes_in_line = 0;
     Err error = _split_contents_core(buf, bytes, ref_id, content_id, MONGO_MAIN_CONTENT, &n_line, &n_block, line, MAX_BUF_SIZE, &bytes_in_line, &content_block);
     EXPECT_EQ(S_OK, error);
@@ -1126,8 +1126,8 @@ TEST(pttdb_content_block, split_contents_deal_with_last_line_block)
     _DB_FORCE_DROP_COLLECTION(MONGO_MAIN_CONTENT);
 
     ContentBlock content_block = {};
-    UUID the_id;
-    UUID ref_id;
+    UUID the_id = {};
+    UUID ref_id = {};
     gen_uuid(the_id, 0);
     gen_uuid(ref_id, 0);
     init_content_block_with_buf_block(&content_block, ref_id, the_id, 0);
@@ -1135,7 +1135,7 @@ TEST(pttdb_content_block, split_contents_deal_with_last_line_block)
 
     int bytes_in_line = 10;
     char line[] = "test1test1";
-    int n_line;
+    int n_line = 0;
     int n_block = 1;
 
     Err error = _split_contents_deal_with_last_line_block(bytes_in_line, line, ref_id, the_id, MONGO_MAIN_CONTENT, &content_block, &n_line, &n_block);

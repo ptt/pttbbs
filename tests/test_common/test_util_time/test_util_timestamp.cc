@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "test.h"
-#include "cmpttdb/util_timestamp.h"
+#include "cmutil_time/util_timestamp.h"
 
 // 2018-01-01
 time64_t START_MILLI_TIMESTAMP = 1514764800000;

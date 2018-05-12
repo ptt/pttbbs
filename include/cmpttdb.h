@@ -1,12 +1,14 @@
 /* $Id$ */
-#ifndef PTTDB_H
-#define PTTDB_H
+#ifndef CMPTTDB_H
+#define CMPTTDB_H
 
 #include "ptterr.h"
 #include "cmpttdb/pttdb_main.h"
 #include "cmpttdb/pttdb_comment.h"
 #include "cmpttdb/pttdb_comment_reply.h"
 #include "cmpttdb/pttdb_content_block.h"
+#include "cmpttdb/pttdb_file_info.h"
+#include "cmpttdb/pttdb_file.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,4 +18,4 @@ extern "C" {
 }
 #endif
 
-#endif /* PTTDB_H */
+#endif /* CMPTTDB_H */

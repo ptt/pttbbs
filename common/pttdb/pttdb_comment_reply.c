@@ -55,6 +55,43 @@ create_comment_reply(UUID main_id, UUID comment_id, char *poster, char *ip, int 
     return error_code;
 }
 
+Err
+create_comment_reply_from_content_block_infos(UUID main_id, UUID comment_id, char *poster, char *ip, UUID orig_comment_reply_id, int n_orig_comment_reply_block, ContentBlockInfo *content_blocks, UUID comment_reply_id, time64_t create_milli_timestamp)
+{
+    Err error_code = S_OK;
+
+    if (!create_milli_timestamp) {
+        error_code = get_milli_timestamp(&create_milli_timestamp);
+        if (error_code) return error_code;
+    }
+
+    error_code = gen_uuid_with_db(MONGO_COMMENT_REPLY, comment_reply_id, create_milli_timestamp);
+    if (error_code) return error_code;    
+
+    int len = 0;
+    int n_total_line = 0;
+    int n_block = 0;
+    error_code = construct_contents_from_content_block_infos(
+        main_id,
+        PTTDB_CONTENT_TYPE_COMMENT_REPLY,
+        comment_id,
+        orig_comment_reply_id,
+        MONGO_COMMENT_REPLY_BLOCK,
+        n_orig_comment_reply_block,
+        content_blocks,
+        create_milli_timestamp,
+        comment_reply_id,
+        &n_total_line,
+        &n_block,
+        &len);
+
+    if(!error_code) {
+        error_code = _create_comment_reply_core(main_id, comment_id, poster, ip, len, comment_reply_id, create_milli_timestamp, n_total_line, n_block);
+    };
+
+    return error_code;
+}
+
 
 Err
 _create_comment_reply_core(UUID main_id, UUID comment_id, char *poster, char *ip, int len, UUID comment_reply_id, time64_t create_milli_timestamp, int n_total_line, int n_block)
@@ -117,7 +154,7 @@ _create_comment_reply_core(UUID main_id, UUID comment_id, char *poster, char *ip
 
     // db-comment
     if (!error_code) {
-        error_code = update_comment_reply_to_comment(comment_id, comment_reply_id, comment_reply.n_line, comment_reply.n_total_line);
+        error_code = update_comment_reply_to_comment(comment_id, comment_reply_id, comment_reply.n_line, comment_reply.n_block, comment_reply.n_total_line);
     }
 
     // free

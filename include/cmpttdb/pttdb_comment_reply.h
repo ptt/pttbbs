@@ -47,6 +47,8 @@ Err create_comment_reply_from_fd(UUID main_id, UUID comment_id, char *poster, ch
 
 Err create_comment_reply(UUID main_id, UUID comment_id, char *poster, char *ip, int len, char *content, UUID comment_reply_id, time64_t create_milli_timestamp);
 
+Err create_comment_reply_from_content_block_infos(UUID main_id, UUID comment_id, char *poster, char *ip, UUID orig_comment_reply_id, int n_orig_comment_reply_block, ContentBlockInfo *content_blocks, UUID comment_reply_id, time64_t create_milli_timestamp);
+
 Err read_comment_reply(UUID comment_reply_id, CommentReply *comment_reply);
 
 Err delete_comment_reply(UUID comment_reply_id, char *updater, char *ip);

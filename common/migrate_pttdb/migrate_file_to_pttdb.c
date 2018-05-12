@@ -75,16 +75,13 @@ migrate_file_to_pttdb(const char *fpath, char *poster, char *board, char *title,
     UUID comment_id = {};
     UUID comment_reply_id = {};
 
-    lseek(fd, legacy_file_info.main_content_len, SEEK_SET);
+    //lseek(fd, legacy_file_info.main_content_len, SEEK_SET);
 
-    char buf[MAX_MIGRATE_COMMENT_COMMENT_REPLY_BUF_SIZE];
-
-    //fprintf(stderr, "migrate_file_to_pttdb.migrate_file_to_pttdb: to create comment: n_comment_comment_reply: %d\n", legacy_file_info.n_comment_comment_reply);
+    char buf[MAX_MIGRATE_COMMENT_COMMENT_REPLY_BUF_SIZE] = {};
 
     if(!error_code) {
         for(int i = 0; i < legacy_file_info.n_comment_comment_reply; i++) {
-            //fprintf(stderr, "migrate_file_to_pttdb.migrate_file_to_pttdb: (%d/%d) comment_type: %d comment_offset: %d len: (%d, %d) create_milli_timestamp: (%lu, %lu)\n", i, legacy_file_info.n_comment_comment_reply, legacy_file_info.comment_info[i].comment_type, legacy_file_info.comment_info[i].comment_offset, legacy_file_info.comment_info[i].comment_len, legacy_file_info.comment_info[i].comment_reply_len, legacy_file_info.comment_info[i].comment_create_milli_timestamp, legacy_file_info.comment_info[i].comment_reply_create_milli_timestamp);
-            
+            lseek(fd, legacy_file_info.comment_info[i].comment_offset, SEEK_SET);
             read(fd, buf, legacy_file_info.comment_info[i].comment_len);
             error_code = create_comment(
                 main_id,
@@ -101,6 +98,7 @@ migrate_file_to_pttdb(const char *fpath, char *poster, char *board, char *title,
             // comment-reply
             if(!legacy_file_info.comment_info[i].comment_reply_len) continue;
 
+            lseek(fd, legacy_file_info.comment_info[i].comment_reply_offset, SEEK_SET);
             error_code = create_comment_reply_from_fd(
                 main_id,
                 comment_id,
@@ -165,7 +163,6 @@ parse_legacy_file(const char *fpath, LegacyFileInfo *legacy_file_info)
 
     int file_size = 0;
     error_code = _parse_legacy_file_get_file_size(fpath, &file_size);
-    //fprintf(stderr, "migrate_file_to_pttdb.parse_legacy_file: fpath: %s file_size: %d\n", fpath, file_size);
 
     if(!error_code) {
         error_code = _parse_legacy_file_main_info(fpath, file_size, legacy_file_info);
@@ -215,7 +212,6 @@ _parse_legacy_file_main_info(const char *fpath, int file_size, LegacyFileInfo *l
 
         if(status == LEGACY_FILE_STATUS_COMMENT) break;
     }
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_main_info: after while: e: %d status: %d bytes_in_line: %d line: %s\n", error_code, status, bytes_in_line, line);
 
     if(!error_code && bytes_in_line && status != LEGACY_FILE_STATUS_COMMENT) {        
         error_code = _parse_legacy_file_main_info_last_line(bytes_in_line, line, legacy_file_info, &status);
@@ -236,12 +232,9 @@ _parse_legacy_file_trim_last_empty_line(const char *fpath, int *file_size) {
     int offset = *file_size < 3 ? *file_size : 3;
     int ret = lseek(fd, -offset, SEEK_END);
 
-    //fprintf(stderr, "migrate_file_to_pttdb._parse_legacy_file_trim_last_empty_line: fpath: %s fd: %d file_size: %d offset: %d ret: %d errno: %s\n", fpath, fd, *file_size, offset, ret, strerror(errno));
     if(ret < 0) return S_ERR;
 
     int bytes = read(fd, buf, offset);
-
-    //fprintf(stderr, "migrate_file_to_pttdb._parse_legacy_file_trim_last_empty_line: to trim: buf: %s bytes: %d file_size: %d\n", buf, bytes, *file_size);
 
     // check \n\n
     if(bytes >= 2 && buf[bytes - 2] == '\n' && buf[bytes - 1] == '\n') {
@@ -343,7 +336,6 @@ _parse_legacy_file_main_info_core_one_line_main_content(char *line, int bytes_in
 
     // set main-content-len
     legacy_file_info->main_content_len += bytes_in_line;
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_main_info_core_one_line_main_content: line: %s bytes_in_line: %d main_content_len: %d\n", line, bytes_in_line, legacy_file_info->main_content_len);
 
     return S_OK;
 }
@@ -402,15 +394,12 @@ _parse_legacy_file_n_comment_comment_reply(const char *fpath, int main_content_l
         tmp_n_comment_comment_reply += each_n_comment_comment_reply;        
     }
 
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_n_comment_comment_reply: after while: e: %d bytes_in_line: %d tmp_n_comment_reply: %d\n", error_code, bytes_in_line, tmp_n_comment_comment_reply);
-
     if(!error_code && bytes_in_line) {
         each_n_comment_comment_reply = 0;
         error_code = _parse_legacy_file_n_comment_comment_reply_last_line(bytes_in_line, line, &each_n_comment_comment_reply);
         if(!error_code) {
             tmp_n_comment_comment_reply += each_n_comment_comment_reply;
         }
-        //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_n_comment_comment_reply after last line: e: %d bytes_in_line: %d each_n_comment_comment_reply: %d\n", error_code, bytes_in_line, each_n_comment_comment_reply);
     }
 
     *n_comment_comment_reply = tmp_n_comment_comment_reply;
@@ -465,8 +454,6 @@ _parse_legacy_file_n_comment_comment_reply_core_one_line(char *line, int bytes_i
         (*n_comment_comment_reply)++;
     }
 
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_n_comment_comment_reply_core_one_line: bytes_in_line: %d line: %s e: %d is_comment_line: %d n_comment_comment_reply: %d\n", bytes_in_line, line, error_code, is_comment_line, *n_comment_comment_reply);
-
     return S_OK;
 }
 
@@ -491,8 +478,10 @@ _parse_legacy_file_comment_comment_reply_core(const char *fpath, int file_size, 
     char line[MAX_BUF_SIZE] = {};
 
     int fd = open(fpath, O_RDONLY);
+    int file_offset = 0;
     lseek(fd, legacy_file_info->main_content_len, SEEK_SET);
     file_size -= legacy_file_info->main_content_len;
+    file_offset += legacy_file_info->main_content_len;
 
     enum LegacyFileStatus status = LEGACY_FILE_STATUS_COMMENT;
     int comment_idx = 0;
@@ -501,20 +490,22 @@ _parse_legacy_file_comment_comment_reply_core(const char *fpath, int file_size, 
     while((bytes = read(fd, buf, MAX_BUF_SIZE)) > 0) {
         bytes = bytes < file_size ? bytes : file_size;
         file_size -= bytes;
-        error_code = _parse_legacy_file_comment_comment_reply_core_core(buf, bytes, line, MAX_BUF_SIZE, &bytes_in_line, legacy_file_info, &comment_idx, &current_create_milli_timestamp, &status);
+        error_code = _parse_legacy_file_comment_comment_reply_core_core(buf, bytes, line, MAX_BUF_SIZE, &bytes_in_line, legacy_file_info, &comment_idx, &current_create_milli_timestamp, &status, &file_offset);
         if(error_code) break;
     }
 
     if(!error_code && bytes_in_line) {
-        error_code = _parse_legacy_file_comment_comment_reply_core_last_line(bytes_in_line, line, legacy_file_info, &comment_idx, &current_create_milli_timestamp, &status);
+        error_code = _parse_legacy_file_comment_comment_reply_core_last_line(bytes_in_line, line, legacy_file_info, &comment_idx, &current_create_milli_timestamp, &status, &file_offset);
     }
 
     // free
     close(fd);
 
+    /*
     if(!error_code) {
         error_code = _parse_legacy_file_calc_comment_offset(legacy_file_info);
     }
+    */
 
     return error_code;    
 }
@@ -532,7 +523,7 @@ _parse_legacy_file_calc_comment_offset(LegacyFileInfo *legacy_file_info)
 }
 
 Err
-_parse_legacy_file_comment_comment_reply_core_core(char *buf, int bytes, char *line, int line_size, int *bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status)
+_parse_legacy_file_comment_comment_reply_core_core(char *buf, int bytes, char *line, int line_size, int *bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status, int *file_offset)
 {
     Err error_code = S_OK;
     int bytes_in_new_line = 0;
@@ -544,7 +535,7 @@ _parse_legacy_file_comment_comment_reply_core_core(char *buf, int bytes, char *l
             break;
         }
 
-        error_code = _parse_legacy_file_comment_comment_reply_core_one_line(line, *bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status);
+        error_code = _parse_legacy_file_comment_comment_reply_core_one_line(line, *bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status, file_offset);
 
         if(error_code) break;
 
@@ -557,34 +548,38 @@ _parse_legacy_file_comment_comment_reply_core_core(char *buf, int bytes, char *l
 }
 
 Err
-_parse_legacy_file_comment_comment_reply_core_one_line(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status)
+_parse_legacy_file_comment_comment_reply_core_one_line(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status, int *file_offset)
 {
     Err error_code = S_OK;
     // XXX special treat for edit
     bool is_line_edit;
     error_code = _parse_legacy_file_is_line_edit(line, bytes_in_line, &is_line_edit);
-    if(is_line_edit) return S_OK;
+    if(is_line_edit) {
+        *file_offset += bytes_in_line;
+        return S_OK;
+    }
 
     // hack for state-transition in comment-reply -> comment
     switch(*status) {
     case LEGACY_FILE_STATUS_COMMENT:
-        error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status);
+        error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status, *file_offset);
         break;
     case LEGACY_FILE_STATUS_COMMENT_REPLY:
-        error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment_reply(line, bytes_in_line, legacy_file_info, comment_idx, status);
+        error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment_reply(line, bytes_in_line, legacy_file_info, comment_idx, status, *file_offset);
         if(!error_code && *status == LEGACY_FILE_STATUS_COMMENT) {
-            error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status);
+            error_code = _parse_legacy_file_comment_comment_reply_core_one_line_comment(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status, *file_offset);
         }
         break;
     default:
         break;
     }
+    *file_offset += bytes_in_line;
 
     return error_code;
 }
 
 Err
-_parse_legacy_file_comment_comment_reply_core_one_line_comment(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status)
+_parse_legacy_file_comment_comment_reply_core_one_line_comment(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status, int file_offset)
 {
     Err error_code = S_OK;
 
@@ -609,6 +604,8 @@ _parse_legacy_file_comment_comment_reply_core_one_line_comment(char *line, int b
 
     // comment-reply-poster
     strcpy(legacy_file_info->comment_info[tmp_comment_idx].comment_reply_poster, legacy_file_info->poster);
+
+    legacy_file_info->comment_info[tmp_comment_idx].comment_offset = file_offset;
 
     // set status
     *status = LEGACY_FILE_STATUS_COMMENT_REPLY;
@@ -667,8 +664,6 @@ _parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post(char
     error_code = milli_timestamp_to_year(current_create_milli_timestamp, &year);
     if(error_code) return error_code;
 
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post: year: %d\n", year);
-
     error_code = milli_timestamp_to_timestamp(current_create_milli_timestamp, &current_create_timestamp);
     if(error_code) return error_code;
 
@@ -679,13 +674,9 @@ _parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post(char
     error_code = _parse_legacy_file_comment_create_milli_timestamp_get_datetime_from_line(line, bytes_in_line, &mm, &dd, &HH, &MM);
     if(error_code) return error_code;
 
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post: mm: %d dd: %d HH: %d MM: %d\n", mm, dd, HH, MM);
-
     time64_t tmp_timestamp = 0;
     error_code = datetime_to_timestamp(year, mm, dd, HH, MM, 0, TIMEZONE_TAIPEI, &tmp_timestamp);
     if(error_code) return error_code;
-
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post: tmp_timestamp: %ld\n", tmp_timestamp);
 
     if(tmp_timestamp > current_create_timestamp) {
         *create_milli_timestamp = tmp_timestamp * 1000;
@@ -718,8 +709,6 @@ _parse_legacy_file_comment_create_milli_timestamp_good_bad_arrow_cross_post(char
 Err
 _parse_legacy_file_comment_create_milli_timestamp_get_datetime_from_line(char *line, int bytes_in_line, int *mm, int *dd, int *HH, int *MM)
 {
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_comment_create_milli_timestamp_get_datetime_from_line: start: line: %s\n", line);
-
     if(bytes_in_line < LEN_COMMENT_DATETIME_IN_LINE) return S_ERR;
     char *p_line = line + bytes_in_line - 1;
     int p_line_pos = bytes_in_line - 1;
@@ -730,7 +719,6 @@ _parse_legacy_file_comment_create_milli_timestamp_get_datetime_from_line(char *l
 
     // mm
     int tmp_mm = atoi(p_line);
-    //fprintf(stderr, "migrate_file_to_db._parse_legacy_file_comment_create_milli_timestamp_get_datetime_from_line: after mm: line: %s p_line: %s tmp_mm: %d\n", line, p_line, tmp_mm);
     if(tmp_mm < 1 || tmp_mm > 12) return S_ERR;
 
     // /
@@ -897,7 +885,7 @@ _parse_legacy_file_comment_type(char *line, int bytes_in_line, enum CommentType 
 }
 
 Err
-_parse_legacy_file_comment_comment_reply_core_one_line_comment_reply(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, enum LegacyFileStatus *status)
+_parse_legacy_file_comment_comment_reply_core_one_line_comment_reply(char *line, int bytes_in_line, LegacyFileInfo *legacy_file_info, int *comment_idx, enum LegacyFileStatus *status, int file_offset)
 {
     Err error_code = S_OK;
     bool is_comment_line = false;
@@ -906,19 +894,20 @@ _parse_legacy_file_comment_comment_reply_core_one_line_comment_reply(char *line,
 
     if(is_comment_line) {
         (*comment_idx)++;
-        *status = LEGACY_FILE_STATUS_COMMENT;        
+        *status = LEGACY_FILE_STATUS_COMMENT;
         return S_OK;
     }
 
     legacy_file_info->comment_info[*comment_idx].comment_reply_len += bytes_in_line;
+    if(!legacy_file_info->comment_info[*comment_idx].comment_reply_offset) legacy_file_info->comment_info[*comment_idx].comment_reply_offset = file_offset;
 
     return S_OK;
 }
 
 Err
-_parse_legacy_file_comment_comment_reply_core_last_line(int bytes_in_line, char *line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status)
+_parse_legacy_file_comment_comment_reply_core_last_line(int bytes_in_line, char *line, LegacyFileInfo *legacy_file_info, int *comment_idx, time64_t *current_create_milli_timestamp, enum LegacyFileStatus *status, int *file_offset)
 {
-    return _parse_legacy_file_comment_comment_reply_core_one_line(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status);
+    return _parse_legacy_file_comment_comment_reply_core_one_line(line, bytes_in_line, legacy_file_info, comment_idx, current_create_milli_timestamp, status, file_offset);
 }
 
 /*****
@@ -982,7 +971,6 @@ _parse_legacy_file_is_comment_line_good_bad_arrow(char *line, int bytes_in_line,
     static char comment_header[MIGRATE_COMMENT_BUF_SIZE] = {};
     sprintf(comment_header, "%s%s " ANSI_COLOR(33), COMMENT_TYPE_ATTR2[comment_type], COMMENT_TYPE_ATTR[comment_type]);
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_good_bad_arrow: line: %s %u:%u:%u:%u:%u:%u:%u:%u:%u:%u comment_header: %s %d:%d:%d:%d:%d:%d:%d:%d:%d:%d COMMENT_TYPE_ATTR2: %d:%d:%d:%d:%d:%d:%d:%d:%d:%d\n", line, line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7], line[8], line[9], comment_header, comment_header[0], comment_header[1], comment_header[2], comment_header[3], comment_header[4], comment_header[5], comment_header[6], comment_header[7], comment_header[8], comment_header[9], COMMENT_TYPE_ATTR2[comment_type][0], COMMENT_TYPE_ATTR2[comment_type][1], COMMENT_TYPE_ATTR2[comment_type][2], COMMENT_TYPE_ATTR2[comment_type][3], COMMENT_TYPE_ATTR2[comment_type][4], COMMENT_TYPE_ATTR2[comment_type][5], COMMENT_TYPE_ATTR2[comment_type][6], COMMENT_TYPE_ATTR2[comment_type][7], COMMENT_TYPE_ATTR2[comment_type][8], COMMENT_TYPE_ATTR2[comment_type][9]);
     if(!strncmp(line, comment_header, LEN_COMMENT_HEADER)) {
         *is_valid = true;
     }
@@ -1015,7 +1003,6 @@ _parse_legacy_file_is_comment_line_cross_post(char *line, int bytes_in_line, boo
         return S_OK;
     }
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_cross_post: p_line: %s\n", p_line);
     if(strncmp(p_line, COMMENT_CROSS_POST_PREFIX, LEN_COMMENT_CROSS_POST_PREFIX)) {
         *is_valid = false;
         return S_OK;
@@ -1042,7 +1029,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
         return S_OK;
     }
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset: to infix: p_line: %s\n", p_line);
     // infix
     if(bytes_in_line < LEN_COMMENT_RESET_KARMA_INFIX) {
         *is_valid = false;
@@ -1056,7 +1042,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
 
     p_line += LEN_COMMENT_RESET_KARMA_INFIX;
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to mm: p_line: %s\n", p_line);
     // mm
     int mm = atoi(p_line);
     if(mm < 1 || mm > 12) {
@@ -1070,8 +1055,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
         return S_OK;
     }
     p_line++;
-
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to dd: p_line: %s\n", p_line);
 
     // dd
     int dd = atoi(p_line);
@@ -1087,8 +1070,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
     }
     p_line++;
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to yyyy: p_line: %s\n", p_line);
-
     // yyyy
     int yyyy = atoi(p_line);
     if(yyyy < 1990) {
@@ -1102,8 +1083,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
         return S_OK;
     }
     p_line++;
-
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to HH: p_line: %s\n", p_line);
 
     // HH
     int HH = atoi(p_line);
@@ -1133,8 +1112,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
     }
     p_line++;
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to SS: p_line: %s\n", p_line);
-
     // SS
     int SS = atoi(p_line);
     if(SS < 0 || SS > 59) {
@@ -1148,7 +1125,6 @@ _parse_legacy_file_is_comment_line_reset_karma(char *line, int bytes_in_line, bo
         return S_OK;
     }
 
-    //fprintf(stderr, "migrate_file_to_db._is_comment_line_reset_karma: to postfix: p_line: %s\n", p_line);
     // postfix
     if(strncmp(p_line, COMMENT_RESET_KARMA_POSTFIX, LEN_COMMENT_RESET_KARMA_POSTFIX)) {
         *is_valid = false;

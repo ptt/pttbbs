@@ -18,6 +18,8 @@ init_dict_bson_by_uu(DictBsonByUU *dict_bson_by_uu, int n_dict)
 Err 
 add_to_dict_bson_by_uu(UUID uuid, bson_t *b, DictBsonByUU *dict_bson_by_uu)
 {    
+    if(!dict_bson_by_uu->n_dict) return S_ERR;
+
     int n_dict = dict_bson_by_uu->n_dict;
     int idx = uuid[0] % n_dict;
     _DictBsonByUU *p_dict = dict_bson_by_uu->dicts[idx];
@@ -49,6 +51,8 @@ add_to_dict_bson_by_uu(UUID uuid, bson_t *b, DictBsonByUU *dict_bson_by_uu)
 Err
 get_bson_from_dict_bson_by_uu(DictBsonByUU *dict_bson_by_uu, UUID uuid, bson_t **b)
 {
+    if(!dict_bson_by_uu->n_dict) return S_ERR;
+
     int idx = uuid[0] % dict_bson_by_uu->n_dict;
     _DictBsonByUU *p_dict = dict_bson_by_uu->dicts[idx];
 
@@ -113,16 +117,9 @@ _safe_destroy_dict_bson_by_uu_core(_DictBsonByUU *dict_bson_by_uu)
 
     _DictBsonByUU *pre_p = NULL;
     _DictBsonByUU *current_p = NULL;
-    //char *disp_uu = NULL;
     for(current_p = dict_bson_by_uu->next, pre_p = dict_bson_by_uu; current_p != NULL; pre_p = current_p, current_p = current_p->next) {
-        //disp_uu = display_uuid(pre_p->uuid);
-        //fprintf(stderr, "pttdb_dict_bson_by_uu._safe_destroy_dict_bson_by_uu_core: to free (inside for): %s\n", disp_uu);
-        //free(disp_uu);
         free(pre_p);        
     }
-    //disp_uu = display_uuid(pre_p->uuid);
-    //fprintf(stderr, "pttdb_dict_bson_by_uu._safe_destroy_dict_bson_by_uu_core: to free (outside for): %s\n", disp_uu);
-    //free(disp_uu);
     free(pre_p);
     return S_OK;
 }

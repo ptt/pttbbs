@@ -31,6 +31,7 @@ typedef struct LegacyCommentInfo {
     time64_t comment_reply_create_milli_timestamp;
     char comment_reply_poster[IDLEN + 1];
     char comment_reply_ip[IPV4LEN + 1];
+    int comment_reply_offset;
     int comment_reply_len;
 } LegacyCommentInfo;
 

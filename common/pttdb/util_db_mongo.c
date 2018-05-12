@@ -260,6 +260,7 @@ db_find(int collection, bson_t *key, bson_t *fields, bson_t *sort, int max_n_res
         }
 
         if (mongoc_cursor_error(cursor, &error)) {
+            fprintf(stderr, "[ERROR] util_db_mongo.db_find: e: %s\n", error.message);
             error_code = S_ERR;
         }
 

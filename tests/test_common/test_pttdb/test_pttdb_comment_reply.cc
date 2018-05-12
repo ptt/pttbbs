@@ -300,11 +300,11 @@ TEST(pttdb_comment_reply, delete_comment_reply) {
     UUID main_id;
     char poster[IDLEN + 1] = {};
     char ip[IPV4LEN + 1] = {};
-    char content[] = "temp_content";
+    char content[] = "temp_content\n";
     int len = strlen(content);
 
-    UUID comment_reply_id;
-    UUID comment_id;    
+    UUID comment_reply_id = {};
+    UUID comment_id = {};    
 
     gen_uuid(main_id, 0);
     gen_uuid(comment_id, 0);
@@ -643,7 +643,7 @@ TEST(pttdb_comment_reply, read_comment_replys_by_query_to_bsons) {
     EXPECT_EQ(S_OK, error);
     EXPECT_EQ(100, n_comment);
 
-    error = sort_b_comments_order(b_comments, n_comment,     READ_COMMENTS_OP_TYPE_GT);
+    error = sort_b_comments_order(b_comments, n_comment, READ_COMMENTS_ORDER_TYPE_ASC);
 
     char *str = NULL;
     for(int i = 0; i < 100; i++) {
@@ -895,7 +895,7 @@ TEST(pttdb_comment_reply, read_comment_replys_by_query_to_bsons_n_only) {
     EXPECT_EQ(S_OK, error);
     EXPECT_EQ(100, n_comment);
 
-    error = sort_b_comments_order(b_comments, n_comment,     READ_COMMENTS_OP_TYPE_GT);
+    error = sort_b_comments_order(b_comments, n_comment, READ_COMMENTS_ORDER_TYPE_ASC);
 
     char *str = NULL;
     for(int i = 0; i < 100; i++) {
