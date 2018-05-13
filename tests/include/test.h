@@ -2,7 +2,10 @@
 #ifndef TEST_H
 #define TEST_H
 
+#ifdef MONGO_CLIENT_URL
 #include <mongoc.h>
+#endif
+
 #include "cmpttdb/pttdb_util.h"
 #include "cmpttdb/util_db_private.h"
 

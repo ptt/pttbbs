@@ -3,12 +3,14 @@
 Err
 _DB_FORCE_DROP_COLLECTION(int collection)
 {
-    bool status;
+#ifdef MONGO_CLIENT_URL
+        bool status;
     bson_error_t error;
     status = mongoc_collection_drop(MONGO_COLLECTIONS[collection], &error);
 
     if (!status) return S_ERR;
 
+#endif
     return S_OK;
 }
 

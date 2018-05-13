@@ -77,5 +77,7 @@ all:
 
 .endif # GTEST_DIR
 
+install:
+
 clean:
 	rm -f *.o gtest.a gtest_main.a $(TEST_PROGS)
