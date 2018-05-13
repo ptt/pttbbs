@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 Err init_pttdb_file();
+Err destroy_pttdb_file();
 Err pttdb_file_get_dir_prefix_name(char *dir_prefix);
 Err pttdb_file_get_main_dir_prefix_name(UUID main_id, char *dirname);
 Err pttdb_file_attach_main_dir(UUID main_id, char *dirname);

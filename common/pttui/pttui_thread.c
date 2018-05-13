@@ -66,7 +66,7 @@ pttui_thread_buffer(void *a GCC_UNUSED)
         }
 
         if (error_code) {
-            fprintf(stderr, "pttui_thread.pttui_thread_disp_buffer: pid: %d user: %s expected_state: %d e: %d\n", expected_state, error_code);
+            fprintf(stderr, "pttui_thread.pttui_thread_disp_buffer: expected_state: %d e: %d\n", expected_state, error_code);
             break;
         }
 

@@ -596,7 +596,6 @@ vedit3_action_move_right()
     Err error_code = S_OK;
     int ansi_current_col = 0;
     int mbcs_current_col = 0;
-    int orig_current_col = VEDIT3_EDITOR_STATUS.current_col;
     // within the same line
     if (VEDIT3_EDITOR_STATUS.current_col < VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl) {
         // TODO use function-map to replace if-else
@@ -633,7 +632,6 @@ vedit3_action_move_left()
     Err error_code = S_OK;
     int ansi_current_col = 0;
     int mbcs_current_col = 0;
-    int orig_current_col = VEDIT3_EDITOR_STATUS.current_col;
     // within the same line
     if (VEDIT3_EDITOR_STATUS.current_col) {
         // TODO use function-map to replace if-else

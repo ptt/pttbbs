@@ -460,8 +460,6 @@ pttui_resource_dict_save_to_tmp_file(PttUIResourceDict *resource_dict)
 {
     Err error_code = S_OK;
 
-    char dir_prefix[MAX_FILENAME_SIZE] = {};
-
     _PttUIResourceDictLinkList *p_dict_link_list = NULL;
     int j = 0;
 
@@ -480,8 +478,6 @@ pttui_resource_dict_save_to_tmp_file(PttUIResourceDict *resource_dict)
 Err
 _pttui_resource_dict_save_to_tmp_file(_PttUIResourceDictLinkList *dict_link_list, UUID main_id)
 {
-    char filename[MAX_FILENAME_SIZE] = {};
-
     Err error_code = pttdb_file_save_data(
         main_id,
         dict_link_list->content_type,
