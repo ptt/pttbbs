@@ -2,6 +2,8 @@
 #include "daemons.h"
 #include <sys/wait.h>
 #include <netinet/tcp.h>
+#include "cmpttdb.h"
+#include "cmpttui.h"
 
 #ifdef __linux__
 #    ifdef CRITICAL_MEMORY
@@ -193,6 +195,14 @@ u_exit(const char *mode)
 {
     currmode = 0;
 
+    /* mongo */
+#ifdef MONGO_CLIENT_URL
+    destroy_pttui_thread();
+
+    free_mongo_collections();
+    free_mongo_global();
+#endif
+
     /* close fd 0 & 1 to terminate network */
     close(0);
     close(1);
@@ -307,6 +317,14 @@ abort_bbs_debug(int sig)
 	u_exit("AXXED");
     }
     */
+
+    /* XXX mongo */
+#ifdef MONGO_CLIENT_URL
+    destroy_pttui_thread();
+
+    free_mongo_collections();
+    free_mongo_global();
+#endif
 
 #ifdef DEBUGSLEEP
 
@@ -1412,6 +1430,14 @@ start_client(struct ProgramOption *option)
     auto_close_polls();		/* 自動開票 */
 
     Signal(SIGALRM, SIG_IGN);
+
+#ifdef MONGO_CLIENT_URL
+    init_mongo_global();
+    init_mongo_collections(NULL);
+
+    // XXX pthread
+    init_pttui_thread();
+#endif    
     return 0;
 }
 

@@ -1,17 +1,14 @@
-# $Id$
-
-SRCROOT=	..
-.include "$(SRCROOT)/pttbbs.mk"
-
 #######################################################################
-# common modules
+#
+# FROM mbbsd/Makefile
+#
 #######################################################################
 
-PROG=	mbbsd
 COREOBJS = bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
 ABUSEOBJS = captcha.o
 ACCOBJS  = user.o acl.o register.o passwd.o emaildb.o
-NETOBJS  = mbbsd.o io.o term.o telnet.o nios.o
+#NETOBJS  = mbbsd.o io.o term.o telnet.o nios.o
+NETOBJS  = io.o term.o telnet.o nios.o
 TALKOBJS = friend.o talk.o ccw.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o
 UIOBJS   = menu.o vtuikit.o psb.o
@@ -51,16 +48,6 @@ LDLIBS:= -lcmbbs -lcmsys -losdep $(LDLIBS)
 # conditional configurations and optional modules
 #######################################################################
 
-BBSCONF:=	$(SRCROOT)/pttbbs.conf
-DEF_PATTERN:=	^[ \t]*\#[ \t]*define[ \t]*
-DEF_CMD:=	grep -Ewq "${DEF_PATTERN}"
-DEF_YES:=	&& echo "YES" || echo ""
-USE_BBSLUA!=  	sh -c '${DEF_CMD}"USE_BBSLUA" ${BBSCONF} ${DEF_YES}'
-USE_PFTERM!=	sh -c '${DEF_CMD}"USE_PFTERM" ${BBSCONF} ${DEF_YES}'
-USE_NIOS!=	sh -c '${DEF_CMD}"USE_NIOS"   ${BBSCONF} ${DEF_YES}'
-USE_CONVERT!=	sh -c '${DEF_CMD}"CONVERT"    ${BBSCONF} ${DEF_YES}'
-MONGO_CLIENT_URL!=	sh -c '${DEF_CMD}"MONGO_CLIENT_URL" ${BBSCONF} ${DEF_YES}'
-
 .if $(USE_BBSLUA)
 .if $(OSTYPE)=="FreeBSD"
 LUA_PKG_NAME?=	lua-5.1
@@ -87,64 +74,9 @@ LDLIBS+=	-lcmpttui -lcmmigrate_pttdb -lcmpttdb -lcmutil_time -lcmpttlib
 
 MONGO_CFLAGS:=	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
 MONGO_LDFLAGS:=	-L/usr/local/lib
-MONGO_LIBS:=	-L/usr/local/lib -lmongoc-1.0 -lbson-1.0
-CFLAGS+=	${MONGO_CFLAGS}
+MONGO_LIBS:=	-L/usr/local/lib -lmongoc-1.0 -lbson-1.0 -lresolv
 CXXFLAGS+=	${MONGO_CFLAGS}
+CFLAGS+=	${MONGO_CFLAGS}
 LDFLAGS+=	${MONGO_LDFLAGS}
 LDLIBS+=	${MONGO_LIBS}
-
-LDLIBS+=	-lresolv -pthread
-.endif
-
-#######################################################################
-# Make Rules
-#######################################################################
-
-.SUFFIXES: .c .o
-.PHONY: all ctags test install clean
-
-.c.o:	$(SRCROOT)/include/var.h
-	$(CC) $(CFLAGS) -c $*.c
-
-all: $(PROG)
-
-$(PROG): testsz $(OBJS)
-	sh $(SRCROOT)/util/newvers.sh
-	@printf "\033[0;1;32m"
-	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"
-	@[ -z "$(USE_BBSLUA)" ] || echo -n "+BBSLUA "
-	@[ -z "$(USE_PFTERM)" ] || echo -n "+PFTERM "
-	@[ -z "$(USE_CONVERT)" ] || echo -n "+CONVERT "
-	@[ -z "$(USE_NIOS)" ] || echo -n "+NIOS "
-	@[ -z "$(MONGO_CLIENT_URL)" ] || echo -n "+MONGO_CLIENT_URL "
-	@printf "\033[m"
-	$(CC) vers.c -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
-
-testsz:	$(SRCROOT)/pttbbs.conf $(SRCROOT)/include/*.h testsz.c
-	$(CC) $(CFLAGS) testsz.c -o testsz
-	@printf "\033[0;1;33mChecking configuration data sizes...\033[m\n"
-	@./testsz
-	@printf "\033[0;1;32mData size configuration OK\033[m\n"
-
-mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h
-	$(DIETCC) $(CC) $(CFLAGS) -c $<
-
-ctags:
-	ctags *.c $(SRCROOT)/include/*.h $(SRCROOT)/common/sys/*.c $(SRCROOT)/common/bbs/*.c
-
-test: $(PROG)
-	killall -TERM testmbbsd || true
-	sleep 1
-	killall -9 testmbbsd || true
-	cp mbbsd testmbbsd
-	./testmbbsd -d -p9000
-	rm -f testmbbsd
-
-install: $(PROG)
-	install -d $(BBSHOME)/bin/
-	install -c -m 755 $(PROG) $(BBSHOME)/bin/
-	mv -f $(BBSHOME)/bin/mbbsd $(BBSHOME)/bin/mbbsd.`date '+%m%d%H%M'`
-	ln -sv $(BBSHOME)/bin/mbbsd.`date '+%m%d%H%M'` $(BBSHOME)/bin/mbbsd
-
-clean:
-	rm -f $(OBJS) $(PROG)
+.endif # MONGO_CLIENT_URL

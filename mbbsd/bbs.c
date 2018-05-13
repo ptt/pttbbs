@@ -2,6 +2,7 @@
 #include "bbs.h"
 #include "daemons.h"
 #include <arpa/inet.h>
+#include "cmpttui.h"
 
 #ifdef EDITPOST_SMARTMERGE
 
@@ -1942,10 +1943,18 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
+
+#ifdef MONGO_CLIENT_URL
+    if (vedit3_wrapper(fpath, 0, save_title, edflags, fhdr, bp) == EDIT_ABORTED) {
+        unlink(fpath);
+        return FULLUPDATE;
+    }
+#else
     if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
     }
+#endif
 
 #ifdef EDITPOST_SMARTMERGE
     outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
