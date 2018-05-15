@@ -7,6 +7,7 @@
 #include "cmpttdb/pttdb_uuid.h"
 #include "cmpttdb/pttdb_dict_bson_by_uu.h"
 #include "cmpttdb/pttdb_comment_reply.h"
+#include "cmpttdb/pttdb_file.h"
 
 #ifdef __cplusplus
 extern "C" {

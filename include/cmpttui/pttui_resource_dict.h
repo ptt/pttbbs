@@ -53,7 +53,7 @@ Err pttui_resource_dict_get_comment_reply_from_file(PttQueue *queue, PttUIResour
 
 Err pttui_resource_dict_get_next_buf(char *p_buf, int buf_offset, int len, char **p_next_buf, int *buf_next_offset);
 
-Err pttui_resource_dict_integrate_with_modified_pttui_buffer_info(PttUIBuffer *head, PttUIBuffer *tail, PttUIResourceDict *resource_dict);
+Err pttui_resource_dict_integrate_with_modified_pttui_buffer_info(PttUIBuffer *head, PttUIBuffer *tail, PttUIResourceDict *resource_dict, FileInfo *file_info);
 
 Err pttui_resource_dict_save_to_tmp_file(PttUIResourceDict *resource_dict);
 

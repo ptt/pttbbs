@@ -15,6 +15,7 @@ safe_strcat(char **buf, int *max_buf_size, int alloc_size, int *len_buf, char *n
 
     char *p_buf = *buf + tmp_len_buf;
     memcpy(p_buf, new_buf, len_new_buf);
+    p_buf[len_new_buf] = 0;
     *len_buf += len_new_buf;
 
     return S_OK;

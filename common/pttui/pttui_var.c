@@ -7,3 +7,4 @@ FileInfo PTTUI_FILE_INFO = {};
 
 PttUIBufferInfo PTTUI_BUFFER_INFO = {};
 PttUIBuffer *PTTUI_BUFFER_TOP_LINE = NULL;
+

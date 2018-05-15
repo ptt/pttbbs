@@ -31,6 +31,9 @@ Err _pttui_resource_dict_get_content_block_from_file_core(PttUIBuffer *buffer, P
 
 Err _pttui_resource_dict_save_to_tmp_file(_PttUIResourceDictLinkList *dict_link_list, UUID main_id);
 
+Err _pttui_resource_dict_integrate_with_modified_pttui_buffer_info_dict_last_buf(_PttUIResourceDictLinkList *the_dict, char *p_dict_buf, int dict_buf_offset, int len_dict_buf, int line_offset_dict_buf, char *tmp_buf, int max_buf_size, int len_tmp_buf, int line_offset_tmp_buf, FileInfo *file_info);
+
+
 #ifdef __cplusplus
 }
 #endif

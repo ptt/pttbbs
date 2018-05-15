@@ -9,15 +9,17 @@ VEdit3EditorStatus DEFAULT_VEDIT3_EDITOR_STATUS = {
     false,               // is-raw
     true,                // is-mbcs
 
-    0,                   // current-line
+    0,                   // phone-mode
+    0,                   // current-buffer-line
     0,                   // current-col
     0,                   // edit_margin
     0,                   // last-margin
 
     false,               // is own lock buffer info
     false,               // is redraw everything
+    false,               // is-scroll-up
+    false,               // is-scroll-down
 
-    false,               // is save
     false,               // is end
 
     NULL,                // current-buffer
@@ -167,8 +169,6 @@ _vedit3_init_user()
 Err
 _vedit3_init_file_info(UUID main_id)
 {
-    char dir_prefix[MAX_FILENAME_SIZE] = {};
-
     // XXX disp-buffer and disp-screen may need old file-info?    
     Err error_code = pttui_thread_lock_wrlock(LOCK_PTTUI_FILE_INFO);
     if(error_code) return error_code;
@@ -316,7 +316,31 @@ _vedit3_store_to_render()
 
     if (VEDIT3_EDITOR_STATUS.is_redraw_everything) {
         VEDIT3_EDITOR_STATUS.is_redraw_everything = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_up = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_down = false;
         error_code = _vedit3_disp_screen(0, b_lines - 1);
+    }
+    else if(VEDIT3_EDITOR_STATUS.is_scroll_up) {
+        VEDIT3_EDITOR_STATUS.is_redraw_everything = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_up = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_down = false;
+
+        move(pttui_visible_window_height(VEDIT3_EDITOR_STATUS.is_phone), 0);
+        clrtoeol();
+        scroll();
+
+        error_code = _vedit3_disp_line(VEDIT3_EDITOR_STATUS.current_line, VEDIT3_EDITOR_STATUS.current_buffer->buf, VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl, VEDIT3_EDITOR_STATUS.current_buffer->content_type);
+        outs(ANSI_RESET ANSI_CLRTOEND);
+    }
+    else if(VEDIT3_EDITOR_STATUS.is_scroll_down) {
+        VEDIT3_EDITOR_STATUS.is_redraw_everything = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_up = false;
+        VEDIT3_EDITOR_STATUS.is_scroll_down = false;
+        
+        rscroll();
+
+        error_code = _vedit3_disp_line(VEDIT3_EDITOR_STATUS.current_line, VEDIT3_EDITOR_STATUS.current_buffer->buf, VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl, VEDIT3_EDITOR_STATUS.current_buffer->content_type);
+        outs(ANSI_RESET ANSI_CLRTOEND);
     }
     else {
         error_code = _vedit3_disp_line(VEDIT3_EDITOR_STATUS.current_line, VEDIT3_EDITOR_STATUS.current_buffer->buf, VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl, VEDIT3_EDITOR_STATUS.current_buffer->content_type);
@@ -522,6 +546,8 @@ vedit3_buffer()
     error_code = extend_pttui_buffer_info(&PTTUI_FILE_INFO, &PTTUI_BUFFER_INFO, PTTUI_BUFFER_TOP_LINE);
     if(error_code) return error_code;
 
+    error_code = check_and_shrink_pttui_buffer_info(&PTTUI_BUFFER_INFO, &PTTUI_FILE_INFO);
+
     return S_OK;
 }
 
@@ -580,6 +606,7 @@ _vedit3_edit_msg()
              VEDIT3_EDITOR_STATUS.is_phone ? 'P' : 'p',
              VEDIT3_EDITOR_STATUS.is_raw ? 'R' : 'r',
              VEDIT3_EDITOR_STATUS.current_buffer_line + 1,
+             PTTUI_FILE_INFO.n_total_line,
              n + 1);
 
     vs_footer(FOOTER_VEDIT3_PREFIX, buf);
@@ -752,6 +779,60 @@ vedit3_repl_wrunlock_file_info()
     Err error_code = pttui_thread_lock_unlock(LOCK_PTTUI_FILE_INFO);
 
     return error_code;
+}
+
+Err
+vedit3_repl_rdlock_file_info()
+{
+    Err error_code = pttui_thread_lock_rdlock(LOCK_PTTUI_FILE_INFO);
+
+    return error_code;
+}
+
+Err
+vedit3_repl_unlock_file_info()
+{
+    Err error_code = pttui_thread_lock_unlock(LOCK_PTTUI_FILE_INFO);
+
+    return error_code;
+}
+
+Err
+vedit3_repl_rdlock_file_info_buffer_info(bool *is_lock_file_info, bool *is_lock_buffer_info)
+{
+    *is_lock_file_info = false;
+    *is_lock_buffer_info = false;
+
+    Err error_code = vedit3_repl_rdlock_file_info();
+    if(error_code) return error_code;
+
+    *is_lock_file_info = true;
+
+    error_code = vedit3_repl_lock_buffer_info();
+    if(error_code) return error_code;
+
+    *is_lock_buffer_info = true;
+
+    return S_OK;
+}
+
+Err
+vedit3_repl_unlock_file_info_buffer_info(bool is_lock_file_info, bool is_lock_buffer_info)
+{
+    Err error_code = S_OK;
+
+    Err error_code_lock = S_OK;
+    if(is_lock_buffer_info) {
+        error_code_lock = vedit3_repl_unlock_buffer_info();
+        if(error_code_lock) error_code = error_code_lock;
+    }
+
+    if(is_lock_file_info) {
+        error_code_lock = vedit3_repl_unlock_file_info();
+        if(!error_code && error_code_lock) error_code = error_code_lock;
+    }
+
+    return error_code;    
 }
 
 /**********

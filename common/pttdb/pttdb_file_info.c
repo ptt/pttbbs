@@ -43,7 +43,24 @@ construct_file_info(UUID main_id, FileInfo *file_info)
         error_code = _get_file_info_set_comment_info(main_id, file_info);
     }
 
+    int n_comment_reply_lines = 0;
+    error_code = _get_file_info_total_comment_reply_lines(file_info, &n_comment_reply_lines);
+    file_info->n_total_line = file_info->n_main_line + file_info->n_comment + n_comment_reply_lines;
+
     return error_code;
+}
+
+Err
+_get_file_info_total_comment_reply_lines(FileInfo *file_info, int *n_comment_reply_lines)
+{
+    int tmp_n = 0;
+    int n_comment = file_info->n_comment;
+    CommentInfo *p_comment = file_info->comments;
+    for(int i = 0; i < n_comment; i++, p_comment++) tmp_n += p_comment->n_comment_reply_total_line;
+
+    *n_comment_reply_lines = tmp_n;
+
+    return S_OK;
 }
 
 Err
@@ -706,8 +723,16 @@ _save_file_info_to_db_main(FileInfo *file_info, char *user, char *ip)
 }
 
 Err
-_save_file_info_to_db_comment(FileInfo *file_info GCC_UNUSED, char *user GCC_UNUSED, char *ip GCC_UNUSED)
+_save_file_info_to_db_comment(FileInfo *file_info, char *user, char *ip)
 {
+    Err error_code = S_OK;
+
+    CommentInfo *p_comment = file_info->comments;
+    for(int i = 0; i < file_info->n_comment; i++, p_comment++) {
+        if(p_comment->storage_type != PTTDB_STORAGE_TYPE_FILE) continue;
+
+        error_code = update_comment_from_comment_info(file_info->main_id, p_comment, user, ip, 0);
+    }
     return S_OK;
 }
 
@@ -780,6 +805,145 @@ log_file_info(FileInfo *file_info, char *prompt)
             }
         }
 
+    }
+
+    return S_OK;
+}
+
+Err
+file_info_increase_main_content_line(FileInfo *file_info, int block_id, int file_id)
+{
+    if(block_id >= file_info->n_main_block) return S_ERR;
+
+    ContentBlockInfo *p_content = file_info->main_blocks + block_id;
+
+    Err error_code = _file_info_increase_content_line_core(p_content, file_id);
+    if(error_code) return error_code;
+
+    file_info->n_main_line++;
+    file_info->n_total_line++;
+
+    return S_OK;
+}
+
+Err
+file_info_increase_comment_reply_line(FileInfo *file_info, int comment_id, int block_id, int file_id)
+{
+    if(comment_id >= file_info->n_comment) return S_ERR;
+
+    CommentInfo *p_comment = file_info->comments + comment_id;
+    if(block_id >= p_comment->n_comment_reply_block) return S_ERR;
+
+    ContentBlockInfo *p_content = p_comment->comment_reply_blocks + block_id;
+
+    Err error_code = _file_info_increase_content_line_core(p_content, file_id);
+    if(error_code) return error_code;
+
+    p_comment->n_comment_reply_total_line++;
+    file_info->n_total_line++;
+
+    return S_OK;
+}
+
+Err
+file_info_update_main_content_storage_type(FileInfo *file_info, int block_id, enum PttDBStorageType storage_type)
+{
+    if(block_id >= file_info->n_main_block) return S_ERR;
+
+    ContentBlockInfo *p_content = file_info->main_blocks + block_id;
+
+    p_content->storage_type = storage_type;
+
+    return S_OK;
+
+}
+
+Err
+_file_info_increase_content_line_core(ContentBlockInfo *content_block, int file_id)
+{
+    if(content_block->storage_type == PTTDB_STORAGE_TYPE_FILE && file_id >= content_block->n_file) return S_ERR;
+
+    content_block->n_line++;
+    content_block->n_new_line++;
+
+    if(content_block->storage_type == PTTDB_STORAGE_TYPE_FILE) {
+        content_block->file_n_line[file_id]++;
+    }
+
+    return S_OK;
+}
+
+Err
+file_info_update_comment_storage_type(FileInfo *file_info, int comment_id, enum PttDBStorageType storage_type)
+{
+    if(comment_id == file_info->n_comment) return S_ERR;
+
+    CommentInfo *p_comment = file_info->comments + comment_id;
+    p_comment->storage_type = storage_type;
+
+    return S_OK;
+}
+
+Err
+file_info_update_comment_reply_storage_type(FileInfo *file_info, int comment_id, int block_id, enum PttDBStorageType storage_type)
+{
+    if(comment_id >= file_info->n_comment) return S_ERR;
+
+    CommentInfo *p_comment = file_info->comments + comment_id;
+    if(block_id >= p_comment->n_comment_reply_block) return S_ERR;
+
+    ContentBlockInfo *p_content = p_comment->comment_reply_blocks + block_id;
+    p_content->storage_type = storage_type;
+
+    return S_OK;
+}
+
+Err
+file_info_decrease_main_content_line(FileInfo *file_info, int block_id, int file_id)
+{
+
+   if(block_id >= file_info->n_main_block) return S_ERR;
+
+    ContentBlockInfo *p_content = file_info->main_blocks + block_id;
+
+    Err error_code = _file_info_decrease_content_line_core(p_content, file_id);
+    if(error_code) return error_code;
+
+    file_info->n_main_line--;
+    file_info->n_total_line--;
+
+    return S_OK;
+}
+
+Err
+file_info_decrease_comment_reply_line(FileInfo *file_info, int comment_id, int block_id, int file_id)
+{
+    if(comment_id >= file_info->n_comment) return S_ERR;
+
+    CommentInfo *p_comment = file_info->comments + comment_id;
+    if(block_id >= p_comment->n_comment_reply_block) return S_ERR;
+
+    ContentBlockInfo *p_content = p_comment->comment_reply_blocks + block_id;
+
+    Err error_code = _file_info_decrease_content_line_core(p_content, file_id);
+    if(error_code) return error_code;
+
+    p_comment->n_comment_reply_total_line--;
+    file_info->n_total_line--;
+
+    return S_OK;
+}
+
+Err
+_file_info_decrease_content_line_core(ContentBlockInfo *content_block, int file_id)
+{
+    if(content_block->storage_type == PTTDB_STORAGE_TYPE_FILE && file_id >= content_block->n_file) return S_ERR;
+
+    content_block->n_line--;
+    content_block->n_to_delete_line++;
+
+    if(content_block->storage_type == PTTDB_STORAGE_TYPE_FILE) {
+        content_block->file_n_line[file_id]--;
     }
 
     return S_OK;

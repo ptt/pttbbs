@@ -835,3 +835,9 @@ pttui_ctrl_key_ne(int ch)
     return ch;
 
 }
+
+Err
+pttui_visible_window_height(bool is_phone)
+{
+    return is_phone ? b_lines - 1 : b_lines;
+}

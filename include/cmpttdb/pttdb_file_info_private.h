@@ -25,6 +25,8 @@ Err _get_file_info_set_comment_to_comment_info(bson_t **b_comments, int n_commen
 
 Err _get_file_info_set_comment_replys_to_comment_info(bson_t **b_comments, int n_comment, CommentInfo *comments);
 
+Err _get_file_info_total_comment_reply_lines(FileInfo *file_info, int *n_comment_reply_lines);
+
 Err _file_info_get_pre_line_main(FileInfo *file_info, UUID orig_id, enum PttDBContentType orig_content_type, int orig_block_offset, int orig_line_offset, int orig_comment_offset, UUID new_id, enum PttDBContentType *new_content_type, int *new_block_offset, int *new_line_offset, int *new_comment_offset, enum PttDBStorageType *new_storage_type);
 
 Err _file_info_get_pre_line_comment(FileInfo *file_info, UUID orig_id, enum PttDBContentType orig_content_type, int orig_block_offset, int orig_line_offset, int orig_comment_offset, UUID new_id, enum PttDBContentType *new_content_type, int *new_block_offset, int *new_line_offset, int *new_comment_offset, enum PttDBStorageType *new_storage_type);
@@ -36,6 +38,10 @@ Err _file_info_get_next_line_main(FileInfo *file_info, UUID orig_id, enum PttDBC
 Err _file_info_get_next_line_comment(FileInfo *file_info, UUID orig_id, enum PttDBContentType orig_content_type, int orig_block_offset, int orig_line_offset, int orig_comment_offset, UUID new_id, enum PttDBContentType *new_content_type, int *new_block_offset, int *new_line_offset, int *new_comment_offset, enum PttDBStorageType *new_storage_type);
 
 Err _file_info_get_next_line_comment_reply(FileInfo *file_info, UUID orig_id, enum PttDBContentType orig_content_type, int orig_block_offset, int orig_line_offset, int orig_comment_offset, UUID new_id, enum PttDBContentType *new_content_type, int *new_block_offset, int *new_line_offset, int *new_comment_offset, enum PttDBStorageType *new_storage_type);
+
+Err _file_info_increase_content_line_core(ContentBlockInfo *content_block, int file_id);
+
+Err _file_info_decrease_content_line_core(ContentBlockInfo *content_block, int file_id);
 
 Err _save_file_info_to_db_main(FileInfo *file_info, char *user, char *ip);
 Err _save_file_info_to_db_comment(FileInfo *file_info, char *user, char *ip);

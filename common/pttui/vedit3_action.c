@@ -173,6 +173,7 @@ _vedit3_action_to_store_comment(int ch, bool *is_end) {
     case Ctrl('W'):
         break;
     case Ctrl('Q'): // quit
+        error_code = vedit3_action_exit(is_end);
         break;
     case Ctrl('C'): // ansi-code
         break;
@@ -692,13 +693,16 @@ vedit3_action_move_up()
     Err error_code_lock = vedit3_repl_unlock_buffer_info();
     if (!error_code && error_code_lock) error_code = S_ERR_EDIT_LOCK;
 
-    if (VEDIT3_EDITOR_STATUS.current_line > 0) VEDIT3_EDITOR_STATUS.current_line--;
+    if (VEDIT3_EDITOR_STATUS.current_line > 0) {
+        VEDIT3_EDITOR_STATUS.current_line--;
+    }
+    else {
+        VEDIT3_EDITOR_STATUS.is_scroll_down = true;
+    }
     VEDIT3_EDITOR_STATUS.current_buffer_line--;
 
     Err error_code2 = _vedit3_action_ensure_current_col(VEDIT3_EDITOR_STATUS.current_col);
     if(!error_code && error_code2) error_code = error_code2;
-
-    VEDIT3_EDITOR_STATUS.is_redraw_everything = true;
 
     return error_code;
 }
@@ -730,13 +734,16 @@ vedit3_action_move_down()
     Err error_code_lock = vedit3_repl_unlock_buffer_info();
     if (error_code_lock) error_code = S_ERR_EDIT_LOCK;
 
-    if (VEDIT3_EDITOR_STATUS.current_line < b_lines - 1) VEDIT3_EDITOR_STATUS.current_line++;
+    if (VEDIT3_EDITOR_STATUS.current_line < b_lines - 1) {
+        VEDIT3_EDITOR_STATUS.current_line++;
+    }
+    else {
+        VEDIT3_EDITOR_STATUS.is_scroll_up = true;
+    }
     VEDIT3_EDITOR_STATUS.current_buffer_line++;
 
     Err error_code2 = _vedit3_action_ensure_current_col(VEDIT3_EDITOR_STATUS.current_col);
     if(!error_code && error_code2) error_code = error_code2;
-
-    VEDIT3_EDITOR_STATUS.is_redraw_everything = true;
 
     return error_code;
 }
@@ -761,68 +768,204 @@ Err
 vedit3_action_move_pgup()
 {
     Err error_code = S_OK;
-    bool is_begin = false;
-    int current_line = VEDIT3_EDITOR_STATUS.current_line;
     int current_col = VEDIT3_EDITOR_STATUS.current_col;
-    for(int i = 0; i < b_lines - 1; i++) {
-        error_code = vedit3_action_move_up();
-        if(error_code) break;
-        error_code = pttui_buffer_is_begin_of_file(VEDIT3_EDITOR_STATUS.current_buffer, &PTTUI_FILE_INFO, &is_begin);
-        if(error_code) break;
-        if(is_begin) break;
-    }
+
+    PttUIState expected_state = {};
+    int n_pre_line = 0;
+    error_code = _vedit3_action_move_pgup_get_expected_top_line_buffer(&VEDIT3_EDITOR_STATUS, &PTTUI_FILE_INFO, &PTTUI_STATE, &expected_state, &n_pre_line);
     if(error_code) return error_code;
 
-    if(!is_begin) {
-        for(int i = 0; i < current_line; i++) {
-            error_code = vedit3_action_move_up();
-            if(error_code) break;
-        }
-        if(error_code) return error_code;
+    error_code = pttui_set_expected_state(expected_state.main_id, expected_state.top_line_content_type, expected_state.top_line_id, expected_state.top_line_block_offset, expected_state.top_line_line_offset, expected_state.top_line_comment_offset, expected_state.n_window_line);
+    if (error_code) return error_code;
 
-        for(int i = 0; i < current_line; i++) {
-            error_code = vedit3_action_move_down();
-            if(error_code) break;
-        }
-        if(error_code) return error_code;
+    error_code = vedit3_wait_buffer_state_sync(DEFAULT_ITER_VEDIT3_WAIT_BUFFER_STATE_SYNC);    
+    if(error_code) return error_code;
+
+    error_code = vedit3_repl_lock_buffer_info();
+    if(error_code) return error_code;
+
+    PttUIBuffer *p_buffer = NULL;
+    int i = 0;
+
+    if(n_pre_line) {
+        p_buffer = PTTUI_BUFFER_TOP_LINE;
+        for(i = 0; i < VEDIT3_EDITOR_STATUS.current_line && p_buffer != PTTUI_BUFFER_INFO.tail; i++, p_buffer = pttui_buffer_next_ne(p_buffer, PTTUI_BUFFER_INFO.tail));
     }
+    else {
+        p_buffer = PTTUI_BUFFER_TOP_LINE;
+        n_pre_line = VEDIT3_EDITOR_STATUS.current_line;
+    }
+
+    VEDIT3_EDITOR_STATUS.current_buffer = p_buffer;
+    VEDIT3_EDITOR_STATUS.current_line = i;
+    VEDIT3_EDITOR_STATUS.current_buffer_line -= n_pre_line;
+
+    Err error_code2 = vedit3_repl_unlock_buffer_info();
+    if(!error_code && error_code2) error_code = error_code2;
 
     error_code = _vedit3_action_ensure_current_col(current_col);
 
+    VEDIT3_EDITOR_STATUS.is_redraw_everything = true;
+
     return error_code;
+}
+
+Err
+_vedit3_action_move_pgup_get_expected_top_line_buffer(VEdit3EditorStatus *editor_status, FileInfo *file_info, PttUIState *current_state, PttUIState *expected_state, int *n_pre_line)
+{
+    Err error_code = S_OK;
+
+    int n_window_line = b_lines;
+
+    memcpy(expected_state, current_state, sizeof(PttUIState));
+
+    int current_buffer_top_line = editor_status->current_buffer_line - editor_status->current_line;
+    int tmp_n_pre_line = current_buffer_top_line < b_lines ? current_buffer_top_line : b_lines;
+
+    bool is_lock_file_info = false;
+    bool is_lock_buffer_info = false;
+    Err error_code_lock = vedit3_repl_rdlock_file_info_buffer_info(&is_lock_file_info, &is_lock_buffer_info);
+    if(!error_code && error_code_lock) error_code = error_code_lock;
+
+    PttUIBuffer *current_buffer = PTTUI_BUFFER_TOP_LINE;
+
+    bool is_pre_line = false;
+    PttUIBuffer tmp_buffer = {};
+    PttUIBuffer tmp_buffer2 = {};
+    memcpy(&tmp_buffer, current_buffer, sizeof(PttUIBuffer));
+    int i = 0;
+    if(!error_code) {
+        for(i = 0; i < tmp_n_pre_line; i++) {
+            error_code = file_info_is_pre_line(file_info, tmp_buffer.content_type, tmp_buffer.block_offset, tmp_buffer.line_offset, tmp_buffer.comment_offset, &is_pre_line);
+            if(error_code) break;
+            if(!is_pre_line) break;
+
+            error_code = file_info_get_pre_line(file_info, tmp_buffer.the_id, tmp_buffer.content_type, tmp_buffer.block_offset, tmp_buffer.line_offset, tmp_buffer.comment_offset, tmp_buffer2.the_id, &tmp_buffer2.content_type, &tmp_buffer2.block_offset, &tmp_buffer2.line_offset, &tmp_buffer2.comment_offset, &tmp_buffer2.storage_type);
+            if(error_code) break;
+
+            memcpy(&tmp_buffer, &tmp_buffer2, sizeof(PttUIBuffer));
+        }
+    }
+
+    if(!error_code) {
+        memcpy(expected_state->main_id, current_state->main_id, UUIDLEN);
+        expected_state->top_line_content_type = tmp_buffer.content_type;
+        expected_state->top_line_block_offset = tmp_buffer.block_offset;
+        expected_state->top_line_line_offset = tmp_buffer.line_offset;
+        expected_state->top_line_comment_offset = tmp_buffer.comment_offset;
+        expected_state->n_window_line = n_window_line;
+        *n_pre_line = i;
+    }
+
+    error_code_lock = vedit3_repl_unlock_file_info_buffer_info(is_lock_file_info, is_lock_buffer_info);
+    if(!error_code && error_code_lock) error_code = error_code_lock;
+
+    return S_OK;
 }
 
 Err
 vedit3_action_move_pgdn()
 {
     Err error_code = S_OK;
-    bool is_eof = false;
-    int current_line = VEDIT3_EDITOR_STATUS.current_line;
     int current_col = VEDIT3_EDITOR_STATUS.current_col;
-    for(int i = 0; i < b_lines - 1; i++) {
-        error_code = vedit3_action_move_down();
-        if(error_code) break;
-        error_code = pttui_buffer_is_eof(VEDIT3_EDITOR_STATUS.current_buffer, &PTTUI_FILE_INFO, &is_eof);
-        if(error_code) break;
-        if(is_eof) break;
-    }
+
+    PttUIState expected_state = {};
+    int n_next_line = 0;
+    error_code = _vedit3_action_move_pgdn_get_expected_top_line_buffer(&VEDIT3_EDITOR_STATUS, &PTTUI_FILE_INFO, &PTTUI_STATE, &expected_state, &n_next_line);
     if(error_code) return error_code;
 
-    if(!is_eof) {
-        for(int i = b_lines - 1; i > current_line; i--) {
-            error_code = vedit3_action_move_down();
-            if(error_code) break;
-        }
-        if(error_code) return error_code;
+    error_code = pttui_set_expected_state(expected_state.main_id, expected_state.top_line_content_type, expected_state.top_line_id, expected_state.top_line_block_offset, expected_state.top_line_line_offset, expected_state.top_line_comment_offset, expected_state.n_window_line);
+    if (error_code) return error_code;
 
-        for(int i = b_lines - 1; i > current_line; i--) {
-            error_code = vedit3_action_move_up();
-            if(error_code) break;
-        }
-        if(error_code) return error_code;
+    error_code = vedit3_wait_buffer_state_sync(DEFAULT_ITER_VEDIT3_WAIT_BUFFER_STATE_SYNC);    
+    if(error_code) return error_code;
+
+    error_code = vedit3_repl_lock_buffer_info();
+    if(error_code) return error_code;
+
+    PttUIBuffer *p_buffer = NULL;
+    int i = 0;
+    if(n_next_line) {
+        n_next_line -= VEDIT3_EDITOR_STATUS.current_line;
+        p_buffer = PTTUI_BUFFER_TOP_LINE;
+        for(i = 0;
+            i < VEDIT3_EDITOR_STATUS.current_line && p_buffer != PTTUI_BUFFER_INFO.tail;
+            i++, p_buffer = pttui_buffer_next_ne(p_buffer, PTTUI_BUFFER_INFO.tail), n_next_line++);
+
+    }
+    else {
+        VEDIT3_EDITOR_STATUS.current_buffer_line -= VEDIT3_EDITOR_STATUS.current_line;
+        VEDIT3_EDITOR_STATUS.current_line = 0;
+        p_buffer = PTTUI_BUFFER_TOP_LINE;
+        for(i = 0;
+            p_buffer != PTTUI_BUFFER_INFO.tail;
+            i++, p_buffer = pttui_buffer_next_ne(p_buffer, PTTUI_BUFFER_INFO.tail), n_next_line++);
     }
 
+    VEDIT3_EDITOR_STATUS.current_buffer = p_buffer;
+    VEDIT3_EDITOR_STATUS.current_line = i;
+    VEDIT3_EDITOR_STATUS.current_buffer_line += n_next_line;
+
+    Err error_code2 = vedit3_repl_unlock_buffer_info();
+    if(!error_code && error_code2) error_code = error_code2;
+
     error_code = _vedit3_action_ensure_current_col(current_col);
+
+    VEDIT3_EDITOR_STATUS.is_redraw_everything = true;
+
+    return error_code;
+}
+
+Err
+_vedit3_action_move_pgdn_get_expected_top_line_buffer(VEdit3EditorStatus *editor_status, FileInfo *file_info, PttUIState *current_state, PttUIState *expected_state, int *n_next_line)
+{
+    Err error_code = S_OK;
+
+    int n_window_line = b_lines;
+
+    memcpy(expected_state, current_state, sizeof(PttUIState));
+
+    int current_buffer_top_line = editor_status->current_buffer_line - editor_status->current_line;
+
+    int tmp_n_next_line = file_info->n_total_line - current_buffer_top_line < b_lines ? 0 : b_lines;
+
+    bool is_lock_file_info = false;
+    bool is_lock_buffer_info = false;
+    Err error_code_lock = vedit3_repl_rdlock_file_info_buffer_info(&is_lock_file_info, &is_lock_buffer_info);
+    if(!error_code && error_code_lock) error_code = error_code_lock;
+
+    PttUIBuffer *current_buffer = PTTUI_BUFFER_TOP_LINE;
+
+    bool is_next_line = false;
+    PttUIBuffer tmp_buffer = {};
+    PttUIBuffer tmp_buffer2 = {};
+    memcpy(&tmp_buffer, current_buffer, sizeof(PttUIBuffer));
+    int i = 0;
+    if(!error_code) {
+        for(i = 0; i < tmp_n_next_line; i++) {
+            error_code = file_info_is_next_line(file_info, tmp_buffer.content_type, tmp_buffer.block_offset, tmp_buffer.line_offset, tmp_buffer.comment_offset, &is_next_line);
+            if(error_code) break;
+            if(!is_next_line) break;
+
+            error_code = file_info_get_next_line(file_info, tmp_buffer.the_id, tmp_buffer.content_type, tmp_buffer.block_offset, tmp_buffer.line_offset, tmp_buffer.comment_offset, tmp_buffer2.the_id, &tmp_buffer2.content_type, &tmp_buffer2.block_offset, &tmp_buffer2.line_offset, &tmp_buffer2.comment_offset, &tmp_buffer2.storage_type);
+            if(error_code) break;
+
+            memcpy(&tmp_buffer, &tmp_buffer2, sizeof(PttUIBuffer));
+        }
+    }
+
+    if(!error_code) {
+        memcpy(expected_state->main_id, current_state->main_id, UUIDLEN);
+        expected_state->top_line_content_type = tmp_buffer.content_type;
+        expected_state->top_line_block_offset = tmp_buffer.block_offset;
+        expected_state->top_line_line_offset = tmp_buffer.line_offset;
+        expected_state->top_line_comment_offset = tmp_buffer.comment_offset;
+        expected_state->n_window_line = n_window_line;
+        *n_next_line = i;
+    }
+
+    error_code_lock = vedit3_repl_unlock_file_info_buffer_info(is_lock_file_info, is_lock_buffer_info);
+    if(!error_code && error_code_lock) error_code = error_code_lock;
 
     return error_code;
 }
@@ -972,9 +1115,26 @@ vedit3_action_delete_line()
 Err
 vedit3_action_delete_end_of_line()
 {
-    VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl = VEDIT3_EDITOR_STATUS.current_col;
-    VEDIT3_EDITOR_STATUS.current_buffer->buf[VEDIT3_EDITOR_STATUS.current_col] = 0;
-    return S_OK;
+    if(VEDIT3_EDITOR_STATUS.current_col != VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl) {
+        VEDIT3_EDITOR_STATUS.current_buffer->len_no_nl = VEDIT3_EDITOR_STATUS.current_col;
+        VEDIT3_EDITOR_STATUS.current_buffer->buf[VEDIT3_EDITOR_STATUS.current_col] = 0;
+        return S_OK;
+    }
+
+    bool is_lock_file_info = false;
+    bool is_lock_wr_buffer_info = false;
+    bool is_lock_buffer_info = false;
+    Err error_code_lock = S_OK;
+    Err error_code = vedit3_repl_wrlock_file_info_buffer_info(&is_lock_file_info, &is_lock_wr_buffer_info, &is_lock_buffer_info);
+
+    if(!error_code) {
+        error_code = _vedit3_action_concat_next_line();
+    }
+
+    error_code_lock = vedit3_repl_wrunlock_file_info_buffer_info(is_lock_file_info, is_lock_wr_buffer_info, is_lock_buffer_info);
+    if(!error_code && error_code_lock) error_code = error_code_lock;
+
+    return error_code;
 }
 
 
@@ -1166,28 +1326,21 @@ _vedit3_action_buffer_split_core(PttUIBuffer *current_buffer, int pos, int inden
     for(PttUIBuffer *p_buffer2 = pttui_buffer_next_ne(p_new_buffer, PTTUI_BUFFER_INFO.tail); p_buffer2 && p_buffer2->content_type == p_new_buffer->content_type && p_buffer2->block_offset == p_new_buffer->block_offset && p_buffer2->comment_offset == p_new_buffer->comment_offset; p_buffer2->line_offset++, p_buffer2 = pttui_buffer_next_ne(p_buffer2, PTTUI_BUFFER_INFO.tail));
 
     // file-info
-    ContentBlockInfo *p_content_block = NULL;
     switch(current_buffer->content_type) {
     case PTTDB_CONTENT_TYPE_MAIN:
-        PTTUI_FILE_INFO.n_main_line++;
-
-        p_content_block = PTTUI_FILE_INFO.main_blocks + current_buffer->block_offset;
-        p_content_block->n_new_line++;
-        p_content_block->n_line++;
+        error_code = file_info_increase_main_content_line(&PTTUI_FILE_INFO, current_buffer->block_offset, current_buffer->file_offset);
         break;
     case PTTDB_CONTENT_TYPE_COMMENT_REPLY:
-        p_content_block = PTTUI_FILE_INFO.comments[current_buffer->comment_offset].comment_reply_blocks + current_buffer->block_offset;
-
-        p_content_block->n_new_line++;
-        p_content_block->n_line++;
+        error_code = file_info_increase_comment_reply_line(&PTTUI_FILE_INFO, current_buffer->comment_offset, current_buffer->block_offset, current_buffer->file_offset);
         break;
     default:
         break;
     }
 
     // buffer-info
+    // BASIC_OP. directly use ->next
     if(PTTUI_BUFFER_INFO.tail == current_buffer) {
-        PTTUI_BUFFER_INFO.tail = pttui_buffer_next_ne(current_buffer, PTTUI_BUFFER_INFO.tail);
+        PTTUI_BUFFER_INFO.tail = current_buffer->next;
     }
     PTTUI_BUFFER_INFO.n_buffer++;
     PTTUI_BUFFER_INFO.n_new++;
@@ -1210,7 +1363,7 @@ _vedit3_action_move_up_ensure_top_of_window()
 
     UUID main_id = {};
     memcpy(main_id, PTTUI_STATE.main_id, UUIDLEN);
-    int n_window_line = PTTUI_STATE.n_window_line;
+    int n_window_line = b_lines;
 
     UUID new_id = {};
     enum PttDBContentType new_content_type = PTTDB_CONTENT_TYPE_MAIN;
@@ -1243,7 +1396,7 @@ _vedit3_action_move_down_ensure_end_of_window()
 
     UUID main_id = {};
     memcpy(main_id, PTTUI_STATE.main_id, UUIDLEN);
-    int n_window_line = PTTUI_STATE.n_window_line;
+    int n_window_line = b_lines;
 
     UUID new_id = {};
     enum PttDBContentType new_content_type = PTTDB_CONTENT_TYPE_MAIN;
@@ -1385,36 +1538,57 @@ _vedit3_action_delete_line_core(PttUIBuffer *buffer)
     for (PttUIBuffer *p_buffer2 = pttui_buffer_next_ne(buffer, PTTUI_BUFFER_INFO.tail); p_buffer2 && p_buffer2->content_type == buffer->content_type && p_buffer2->block_offset == buffer->block_offset && p_buffer2->comment_offset == buffer->comment_offset; p_buffer2->line_offset--, p_buffer2 = pttui_buffer_next_ne(p_buffer2, PTTUI_BUFFER_INFO.tail));
 
     // file-info
-    ContentBlockInfo *p_content_block = NULL;
+    Err error_code = S_OK;
+
     switch (buffer->content_type) {
     case PTTDB_CONTENT_TYPE_MAIN:
-        PTTUI_FILE_INFO.n_main_line--;
-
-        p_content_block = PTTUI_FILE_INFO.main_blocks + buffer->block_offset;
-
-        p_content_block->n_to_delete_line++;
-        p_content_block->n_line--;
+        error_code = file_info_decrease_main_content_line(&PTTUI_FILE_INFO, buffer->block_offset, buffer->file_offset);
         break;
     case PTTDB_CONTENT_TYPE_COMMENT_REPLY:
-        p_content_block = PTTUI_FILE_INFO.comments[buffer->comment_offset].comment_reply_blocks + buffer->block_offset;
-
-        p_content_block->n_to_delete_line++;
-        p_content_block->n_line--;
+        error_code = file_info_decrease_comment_reply_line(&PTTUI_FILE_INFO, buffer->comment_offset, buffer->block_offset, buffer->file_offset);
         break;
     default:
         break;
     }
 
     // buffer-info
+    PTTUI_BUFFER_INFO.n_to_delete++;
+
+
+    // buffer-info head / tail
+    PttUIBuffer *p_buffer = NULL;
+    PttUIBuffer *p_buffer2 = NULL;
     if (PTTUI_BUFFER_INFO.head == buffer) {
         PTTUI_BUFFER_INFO.head = pttui_buffer_next_ne(buffer, PTTUI_BUFFER_INFO.tail);
+        p_buffer = buffer;
+        while(p_buffer != PTTUI_BUFFER_INFO.head) {
+            p_buffer2 = p_buffer;
+            p_buffer = p_buffer->next;
+
+            p_buffer2->pre = NULL;
+            p_buffer2->next = NULL;
+            error_code = pttui_buffer_add_to_delete_buffer_list(p_buffer2, &PTTUI_BUFFER_INFO);
+            if(error_code) break;
+        }
+        PTTUI_BUFFER_INFO.head->pre = NULL;
     }
+    if(error_code) return error_code;
 
     if (PTTUI_BUFFER_INFO.tail == buffer) {
         PTTUI_BUFFER_INFO.tail = pttui_buffer_pre_ne(buffer, PTTUI_BUFFER_INFO.head);
-    }
+        p_buffer = buffer;
+        while(p_buffer != PTTUI_BUFFER_INFO.tail) {
+            p_buffer2 = p_buffer;
+            p_buffer = p_buffer->pre;
 
-    PTTUI_BUFFER_INFO.n_to_delete++;    
+            p_buffer2->pre = NULL;
+            p_buffer2->next = NULL;
+
+            error_code = pttui_buffer_add_to_delete_buffer_list(p_buffer2, &PTTUI_BUFFER_INFO);
+        }
+        PTTUI_BUFFER_INFO.tail->next = NULL;
+    }
+    if(error_code) return error_code;
 
     VEDIT3_EDITOR_STATUS.is_redraw_everything = true;
 

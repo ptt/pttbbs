@@ -150,7 +150,7 @@ pttdb_file_save_data(UUID main_id, enum PttDBContentType content_type, UUID cont
 
     sprintf(p_filename, "/F%d", file_id);
 
-    int fd = OpenCreate(filename, O_WRONLY);
+    int fd = OpenCreate(filename, O_WRONLY | O_TRUNC);
     write(fd, buf, len);
     close(fd);
 

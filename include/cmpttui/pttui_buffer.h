@@ -64,6 +64,10 @@ typedef struct PttUIBufferInfo {
     bool is_to_save;
     bool is_saved;
 
+    PttUIBuffer *to_delete_buffer_head;
+    PttUIBuffer *to_delete_buffer_tail;
+    int n_to_delete_buffer;
+
     UUID main_id;
 } PttUIBufferInfo;
 
@@ -92,6 +96,10 @@ Err check_and_save_pttui_buffer_info_to_tmp_file(PttUIBufferInfo *buffer_info, F
 Err save_pttui_buffer_info_to_tmp_file(PttUIBufferInfo *buffer_info, FileInfo *file_info);
 
 Err save_pttui_buffer_info_to_db(PttUIBufferInfo *buffer_info, FileInfo *file_info, char *user, char *ip);
+
+Err check_and_shrink_pttui_buffer_info(PttUIBufferInfo *buffer_info, FileInfo *file_info);
+
+Err pttui_buffer_add_to_delete_buffer_list(PttUIBuffer *buffer, PttUIBufferInfo *buffer_info);
 
 Err pttui_buffer_wrlock_file_info(bool *is_lock_file_info);
 Err pttui_buffer_wrunlock_file_info(bool is_lock_file_info);

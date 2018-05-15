@@ -47,7 +47,7 @@ extern "C" {
 
 #define FOOTER_VEDIT3_PREFIX " 編輯文章 "
 #define FOOTER_VEDIT3_INFIX " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
-#define FOOTER_VEDIT3_POSTFIX "||%s|%c%c%c%c||%3d:%3d" // XXX need to replace with original symbols
+#define FOOTER_VEDIT3_POSTFIX "||%s|%c%c%c%c||%3d:%d:%3d" // XXX need to replace with original symbols
 
 #define VEDIT3_PROMPT_INSERT "插入"
 #define VEDIT3_PROMPT_REPLACE "取代"

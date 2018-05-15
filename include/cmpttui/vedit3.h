@@ -45,6 +45,8 @@ typedef struct VEdit3EditorStatus {
     bool is_own_lock_buffer_info;
     bool is_own_wrlock_buffer_info;
     bool is_redraw_everything;
+    bool is_scroll_up;
+    bool is_scroll_down;
 
     bool is_end;
 
@@ -69,6 +71,10 @@ Err vedit3_repl_wrlock_file_info_buffer_info(bool *is_lock_file_info, bool *is_l
 
 Err vedit3_repl_wrunlock_file_info_buffer_info(bool is_lock_file_info, bool is_lock_wr_buffer_info, bool is_lock_buffer_info);
 
+Err vedit3_repl_rdlock_file_info_buffer_info(bool *is_lock_file_info, bool *is_lock_buffer_info);
+
+Err vedit3_repl_unlock_file_info_buffer_info(bool is_lock_file_info, bool is_lock_buffer_info);
+
 Err vedit3_repl_lock_wr_buffer_info();
 
 Err vedit3_repl_unlock_wr_buffer_info();
@@ -84,6 +90,10 @@ Err vedit3_repl_wrunlock_buffer_info();
 Err vedit3_repl_wrlock_file_info();
 
 Err vedit3_repl_wrunlock_file_info();
+
+Err vedit3_repl_rdlock_file_info();
+
+Err vedit3_repl_unlock_file_info();
 
 // wait-buffer
 Err vedit3_wait_buffer_init();

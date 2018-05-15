@@ -1455,3 +1455,43 @@ deserialize_comment_bson_with_buf(bson_t *comment_bson, Comment *comment)
 
     return deserialize_comment_bson(comment_bson, comment);
 }
+
+Err
+update_comment_from_comment_info(UUID main_id, CommentInfo *comment_info, char *updater, char *update_ip, time64_t update_milli_timestamp)
+{
+    Err error_code = S_OK;
+    if(!update_milli_timestamp) {
+        error_code = get_milli_timestamp(&update_milli_timestamp);
+    }
+    if(error_code) return error_code;
+
+    bson_t *comment_id_bson = NULL;
+    bson_t *comment_bson = NULL;
+
+    char *tmp_buf = NULL;
+    int n_tmp_buf = 0;;
+
+    error_code = pttdb_file_get_data(main_id, PTTDB_CONTENT_TYPE_COMMENT, comment_info->comment_id, 0, 0, &tmp_buf, &n_tmp_buf);
+
+    if(!error_code) {
+        error_code = serialize_uuid_bson(comment_info->comment_id, &comment_id_bson);
+    }
+
+    if(!error_code) {
+        comment_bson = BCON_NEW(
+                "updater", BCON_BINARY((unsigned char *)updater, IDLEN),
+                "update_ip", BCON_BINARY((unsigned char *)update_ip, IPV4LEN),
+                "len", BCON_INT32(n_tmp_buf),
+                "buf", BCON_BINARY((unsigned char *)tmp_buf, n_tmp_buf)
+            );
+    }
+
+    if (!error_code) {
+        error_code = db_update_one(MONGO_COMMENT, comment_id_bson, comment_bson, false);
+    }    
+
+    // free
+    safe_free((void **)&tmp_buf);
+    bson_safe_destroy(&comment_bson);
+    bson_safe_destroy(&comment_id_bson);
+}

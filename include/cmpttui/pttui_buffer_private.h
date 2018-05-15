@@ -21,6 +21,13 @@ extern "C" {
  ***/
 Err _sync_pttui_buffer_info_is_pre(PttUIState *state, PttUIBuffer *buffer, bool *is_pre);
 
+bool _pttui_buffer_is_pre_ne(PttUIBuffer *buffer_a, PttUIBuffer *buffer_b);
+
+bool _pttui_buffer_is_load_line_pre_ne(PttUIBuffer *buffer_a, PttUIBuffer *buffer_b);
+
+Err _pttui_buffer_is_pre_core(enum PttDBContentType content_type_a, int comment_id_a, int block_id_a, int line_id_a, enum PttDBContentType content_type_b, int comment_id_b, int block_id_b, int line_id_b, bool *is_pre);
+
+
 Err _sync_pttui_buffer_info_get_buffer(PttUIState *state, PttUIBuffer *current_buffer, bool is_pre, PttUIBuffer **new_buffer, PttUIBufferInfo *buffer_info);
 
 /***
@@ -83,12 +90,12 @@ Err _reset_pttui_buffer_info(PttUIBufferInfo *buffer_info, FileInfo *file_info);
 /***
  * shrink
  ***/
-Err _sync_pttui_buffer_info_count_shrink_range(PttUIBufferInfo *buffer_info, int *n_shrink_range);
+Err _sync_pttui_buffer_info_is_to_shrink(PttUIBufferInfo *buffer_info, bool *is_to_shrink);
 
-Err _sync_pttui_buffer_info_shrink_head(PttUIBufferInfo *buffer_info, int n_shrink_range);
+Err
+_sync_pttui_buffer_info_shrink_head(PttUIBufferInfo *buffer_info);
 
-Err _sync_pttui_buffer_info_shrink_tail(PttUIBufferInfo *buffer_info, int n_shrink_range);
-
+Err _sync_pttui_buffer_info_shrink_tail(PttUIBufferInfo *buffer_info);
 
 #ifdef __cplusplus
 }
