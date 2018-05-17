@@ -234,14 +234,19 @@ _vedit3_repl(int *money)
     while (true) {
         // action
         // check healthy
-        error_code = _vedit3_check_healthy();
-        if (error_code) break;
+        for(int i = 0; i < N_ITER_VEDIT3_REPL; i++) {
 
-        error_code = vedit3_action_to_store(&is_end);
-        if (error_code) break;
+            error_code = _vedit3_check_healthy();
+            if (error_code) break;
 
-        error_code = _vedit3_store_to_render();
-        if (error_code) break;
+            error_code = vedit3_action_to_store(&is_end);
+            if (error_code) break;
+
+            error_code = _vedit3_store_to_render();
+            if (error_code) break;
+
+        }
+        if (error_code == S_ERR_NO_KEY) error_code = S_OK;
 
         if (is_end) break;
 

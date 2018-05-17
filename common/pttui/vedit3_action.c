@@ -7,25 +7,22 @@ vedit3_action_to_store(bool *is_end)
     Err error_code = S_OK;
     int ch;
 
-    for(int i = 0; i < VEDIT3_ACTION_N_GET_KEY; i++) {
-        error_code = _vedit3_action_get_key(&ch);
-        if (error_code) break;
+    error_code = _vedit3_action_get_key(&ch);
+    if (error_code) return error_code;
 
-        switch(VEDIT3_EDITOR_STATUS.current_buffer->content_type) {
-        case PTTDB_CONTENT_TYPE_MAIN:
-            error_code = _vedit3_action_to_store_main(ch, is_end);
-            break;
-        case PTTDB_CONTENT_TYPE_COMMENT:
-            error_code = _vedit3_action_to_store_comment(ch, is_end);
-            break;
-        case PTTDB_CONTENT_TYPE_COMMENT_REPLY:
-            error_code = _vedit3_action_to_store_comment_reply(ch, is_end);
-            break;
-        default:
-            break;
-        }
+    switch(VEDIT3_EDITOR_STATUS.current_buffer->content_type) {
+    case PTTDB_CONTENT_TYPE_MAIN:
+        error_code = _vedit3_action_to_store_main(ch, is_end);
+        break;
+    case PTTDB_CONTENT_TYPE_COMMENT:
+        error_code = _vedit3_action_to_store_comment(ch, is_end);
+        break;
+    case PTTDB_CONTENT_TYPE_COMMENT_REPLY:
+        error_code = _vedit3_action_to_store_comment_reply(ch, is_end);
+        break;
+    default:
+        break;
     }
-    if (error_code == S_ERR_NO_KEY) error_code = S_OK;
 
     return error_code;
 }

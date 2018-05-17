@@ -16,7 +16,6 @@ extern "C" {
 #include "vtkbd.h"
 #include "proto.h"
 
-#define VEDIT3_ACTION_N_GET_KEY 1
 #define NS_SLEEP_WAIT_BUFFER_SAVE 50000000 // 50 ms
 #define N_ITER_WAIT_BUFFER_SAVE 100         // wait for 5 secs
 

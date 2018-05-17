@@ -21,6 +21,7 @@ extern "C" {
 #include <errno.h>
 #include "grayout.h"
 
+#define N_ITER_VEDIT3_REPL 20
 #define N_ITER_VEDIT3_WAIT_BUFFER_INIT 50
 #define NS_DEFAULT_SLEEP_VEDIT3_WAIT_BUFFER_INIT 100000000 // 100 ms
 
