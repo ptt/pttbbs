@@ -1,14 +1,15 @@
 #!/bin/bash
 
-if [ "$#" -gt 2 ]
+if [ "$#" -gt 3 ]
 then
-    echo "usage: docker_build.sh [[password]] [[tag]]"
+    echo "usage: docker_build.sh [[password]] [[tag]] [[tmpl]]"
     exit 255
 fi
 
 # variable setting
 password='[TO_BE_REPLACED]'
 tag=`git branch|grep '*'|awk '{print $2}'`
+tmpl=default
 
 if [ "$#" -ge 1 ]
 then
@@ -20,7 +21,12 @@ then
     tag=$2
 fi
 
-dockerfile="dockerfiles/Dockerfile.default"
+if [ "$#" -ge 3 ]
+then
+    tmpl=$3
+fi
+
+dockerfile="dockerfiles/Dockerfile.${tmpl}"
 
 # run-commands
 sed "s/\[TO_BE_REPLACED\]/${password}/g" "${dockerfile}" > "${dockerfile}.tmp"

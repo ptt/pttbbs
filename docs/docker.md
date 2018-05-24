@@ -11,8 +11,8 @@
 
 目前提供以下的使用方式:
 
-1. scripts/docker_build.sh [[password]] [[tag]]
-   (default: password: '[TO_BE_REPLACED]'  tag: 目前的 branch)
+1. scripts/docker_build.sh [[password]] [[tag]] [[tmpl]]
+   (default: password: '[TO_BE_REPLACED]'  tag: 目前的 branch  tmpl: default)
 
    build docker (需先設定 pttbbs.conf)
 

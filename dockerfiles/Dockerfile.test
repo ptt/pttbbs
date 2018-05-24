@@ -1,0 +1,47 @@
+FROM ubuntu:16.04
+
+RUN apt-get update && apt-get install -y wget curl git openssh-server vim sudo apt-transport-https
+
+RUN apt-get install -y bmake ccache clang libevent-dev pkg-config
+
+RUN apt-get install -y libgtest-dev valgrind
+
+RUN mkdir -p /home/bbs/pttbbs
+
+COPY common /home/bbs/pttbbs/common
+
+COPY daemon /home/bbs/pttbbs/daemon
+
+COPY include /home/bbs/pttbbs/include
+
+COPY mbbsd /home/bbs/pttbbs/mbbsd
+
+COPY pttbbs.conf /home/bbs/pttbbs/pttbbs.conf
+
+COPY pttbbs.mk /home/bbs/pttbbs/pttbbs.mk
+
+COPY pttbbs_cond.mk /home/bbs/pttbbs/pttbbs_cond.mk
+
+COPY pttbbs_mbbsd.mk /home/bbs/pttbbs/pttbbs_mbbsd.mk
+
+COPY pttbbs_test.mk /home/bbs/pttbbs/pttbbs_test.mk
+
+COPY trans /home/bbs/pttbbs/trans
+
+COPY upgrade /home/bbs/pttbbs/upgrade
+
+COPY util /home/bbs/pttbbs/util
+
+COPY scripts /home/bbs/pttbbs/scripts
+
+COPY tests /home/bbs/pttbbs/tests
+
+COPY data_test /home/bbs/pttbbs/data_test
+
+COPY Makefile.test /home/bbs/pttbbs/Makefile
+
+ENV LC_ALL C
+
+RUN cd /home/bbs/pttbbs; pmake clean; pmake all GTEST_DIR=/usr/src/gtest
+
+RUN cd home/bbs/pttbbs; /home/bbs/pttbbs/scripts/docker_test.sh
