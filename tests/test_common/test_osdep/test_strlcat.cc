@@ -34,7 +34,7 @@ public:
 };
 
 void MyEnvironment::SetUp() {
-    FD = open("log.cmosdep_test_strlcat.err", O_WRONLY | O_CREAT | O_TRUNC, 0660);
+    FD = open("log.osdep_test_strlcat.err", O_WRONLY | O_CREAT | O_TRUNC, 0660);
     dup2(FD, 2);
 }
 

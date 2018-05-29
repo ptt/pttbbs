@@ -44,8 +44,8 @@ LDFLAGS+=-Wl,--sort-common
 #######################################################################
 
 LDFLAGS+= -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
-	  -L$(SRCROOT)/common/osdep 
-LDLIBS:= -lcmbbs -lcmsys -losdep $(LDLIBS)
+	  -L$(SRCROOT)/common/osdep -L$(SRCROOT)/common/pttlib -L$(SRCROOT)/common/pttui
+LDLIBS:= -lcmbbs -lcmsys -losdep -lcmpttlib -lcmpttui $(LDLIBS)
 
 #######################################################################
 # conditional configurations and optional modules
@@ -59,6 +59,7 @@ USE_BBSLUA!=  	sh -c '${DEF_CMD}"USE_BBSLUA" ${BBSCONF} ${DEF_YES}'
 USE_PFTERM!=	sh -c '${DEF_CMD}"USE_PFTERM" ${BBSCONF} ${DEF_YES}'
 USE_NIOS!=	sh -c '${DEF_CMD}"USE_NIOS"   ${BBSCONF} ${DEF_YES}'
 USE_CONVERT!=	sh -c '${DEF_CMD}"CONVERT"    ${BBSCONF} ${DEF_YES}'
+USE_PTTUI_THREAD!=	sh -c '${DEF_CMD}"PTTUI_THREAD"    ${BBSCONF} ${DEF_YES}'
 
 .if $(USE_BBSLUA)
 .if $(OSTYPE)=="FreeBSD"
@@ -78,6 +79,10 @@ OBJS+=		bbslua.o bbsluaext.o
 OBJS+=		pfterm.o
 .else
 OBJS+=		screen.o
+.endif
+
+.if $(USE_PTTUI_THREAD)
+LDLIBS+=	-pthread
 .endif
 
 #######################################################################
