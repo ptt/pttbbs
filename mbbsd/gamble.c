@@ -186,12 +186,13 @@ buy_ticket_ui(int money, const char *picture, int *item,
 	return;
     }
 
-    *item += num;
-    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num);
-
     // XXX magic numbers 5, 14...
     show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
     pressanykey();
+
+    *item += num;
+    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num);
+
     usleep(100000); // sleep 0.1s
 }
 
