@@ -806,6 +806,14 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     setbfile(buf, bname, vbuf->desc);
     more(buf, YEA);
 
+#ifdef USE_VOTE_CAPTCHA
+    const char *captcha_msg = remote_captcha();
+    if (captcha_msg != NULL) {
+	vmsg(captcha_msg);
+	return FULLUPDATE;
+    }
+#endif
+
     vs_hdr("§ë²¼½c");
 
     setbfile(buf, bname, vbuf->control);
