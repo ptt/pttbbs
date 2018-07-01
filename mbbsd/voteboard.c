@@ -63,6 +63,11 @@ do_voteboardreply(const fileheader_t * fhdr)
 	return;
     }
 
+    if (currmode & MODE_SELECT) {
+	vmsg("請先退出搜尋模式後再進行連署。");
+	return;
+    }
+
     if (CheckVoteRestrictionFile(fhdr, sizeof(genbuf), genbuf))
     {
 	vmsgf("未達投票資格限制: %s", genbuf);
