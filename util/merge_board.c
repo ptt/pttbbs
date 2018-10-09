@@ -42,6 +42,7 @@ void add_hash(char *brdname) {
     i = string_hash((unsigned char*)brdname);
     
     n = malloc(sizeof(*n));
+    assert(n);
     n->brdname = strdup(brdname);
     n->next = hash_tbl[i];
     hash_tbl[i] = n;

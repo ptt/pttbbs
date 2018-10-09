@@ -21,6 +21,7 @@ void buildchilds(int level,char *path,int gid)
     char *p;
     int preserved=32;
     selected=malloc(preserved * sizeof(boardheader_t*));
+    assert(selected);
     
     int boardcount = num_boards();
     /* XXX It will cost O(ngroup * boardcount) totally. */
