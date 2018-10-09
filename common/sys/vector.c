@@ -32,7 +32,7 @@ Vector_delete(struct Vector *self)
 {
     self->length = 0;
     self->capacity = 0;
-    if (self->base && !self->constant)
+    if (!self->constant)
 	free(self->base);
     self->base = NULL;
     self->constant = false;
@@ -60,8 +60,7 @@ Vector_resize(struct Vector *self, const int length)
 
 #define MIN_CAPACITY 4096
     if (capacity == 0) {
-	if (self->base)
-	    free(self->base);
+        free(self->base);
 	self->base = NULL;
 	self->capacity = 0;
     } else {

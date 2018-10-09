@@ -104,7 +104,7 @@ int copyqueue_append(CopyQueue *pcq)
 	    vmsg("記憶體不足，拷貝失敗");
 	    // try to reset
 	    copyqueue_reset();
-	    if(copyqueue) free(copyqueue);
+	    free(copyqueue);
 	    copyqueue = NULL;
 	    return 0;
 	}

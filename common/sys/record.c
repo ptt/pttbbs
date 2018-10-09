@@ -148,7 +148,7 @@ substitute_record2(const char *fpath, const void *srcptr, const void *destptr,
     }
     PttLock(fd, offset, size, F_UNLCK);
     close(fd);
-    if (p) free(p);
+    free(p);
 
     return err;
 }
