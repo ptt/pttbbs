@@ -1,5 +1,5 @@
-#ifndef _LIBBBSUTIL_H_
-#define _LIBBBSUTIL_H_
+#ifndef LIBBBSUTIL_H_
+#define LIBBBSUTIL_H_
 
 #include <stdint.h>
 #include <sys/types.h>

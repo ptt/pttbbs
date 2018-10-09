@@ -1,6 +1,6 @@
 // $Id$
-#ifndef _VTUIKIT_H
-#define _VTUIKIT_H
+#ifndef VTUIKIT_H
+#define VTUIKIT_H
 
 /*
  * vtuikit.h

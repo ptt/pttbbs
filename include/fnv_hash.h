@@ -1,5 +1,5 @@
-#ifndef _FNV_HASH_H_
-#define _FNV_HASH_H_
+#ifndef FNV_HASH_H_
+#define FNV_HASH_H_
 /*
  * Fowler / Noll / Vo Hash (FNV Hash)
  * http://www.isthe.com/chongo/tech/comp/fnv/

@@ -1,6 +1,6 @@
 /* $Id */
-#ifndef __OSDEP_H__
-#define __OSDEP_H__
+#ifndef OSDEP_H__
+#define OSDEP_H__
 
 #ifdef __GNUC__
 #define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))

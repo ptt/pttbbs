@@ -1,5 +1,5 @@
-#ifndef _STATISTIC_H_
-#define _STATISTIC_H_
+#ifndef STATISTIC_H_
+#define STATISTIC_H_
 #define STAT(X, OP) do { \
     if(SHM && SHM->version==SHM_VERSION && 0<=(X) && (X)<STAT_MAX) \
       SHM->statistic[X] OP; \

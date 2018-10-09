@@ -1,7 +1,7 @@
 /* $Id: convert.h 1374 2003-11-27 14:11:40Z victor $ */
 
-#ifndef _BBS_CONVERT_H
-#define _BBS_CONVERT_H
+#ifndef BBS_CONVERT_H
+#define BBS_CONVERT_H
 
 #ifdef CONVERT
 
@@ -35,4 +35,4 @@ extern void set_converting_type(ConvertMode which);
 #endif 
 
 #endif // CONVERT
-#endif // _BBS_CONVERT_H
+#endif // BBS_CONVERT_H

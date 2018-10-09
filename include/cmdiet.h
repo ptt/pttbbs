@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _CMDIET_H
-#define _CMDIET_H
+#ifndef CMDIET_H
+#define CMDIET_H
 
 #ifdef __dietlibc__
 #define random     glibc_random

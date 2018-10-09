@@ -1,4 +1,5 @@
-#ifndef _BBS_DAEMONS_H
+#ifndef BBS_DAEMONS_H
+#define BBS_DAEMONS_H
 
 #include "pttstruct.h"
 
@@ -244,6 +245,6 @@ typedef struct {
     int     rfriendstat;
 } ocfs_t;
 
-#endif // _BBS_DAEMONS_H
+#endif // BBS_DAEMONS_H
 
 // vim:et

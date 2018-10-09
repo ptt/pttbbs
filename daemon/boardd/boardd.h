@@ -1,5 +1,5 @@
-#ifndef _DAEMON_BOARDD_BOARDD_H_
-#define _DAEMON_BOARDD_BOARDD_H_
+#ifndef DAEMON_BOARDD_BOARDD_H_
+#define DAEMON_BOARDD_BOARDD_H_
 #include <event2/buffer.h>
 #include "pttstruct.h"
 

@@ -22,8 +22,8 @@
  *     documentation and/or other materials provided with the distribution.
  */
 
-#ifndef _VTKBD_H
-#define _VTKBD_H
+#ifndef VTKBD_H
+#define VTKBD_H
 
 #include <sys/types.h>
 

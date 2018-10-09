@@ -1,5 +1,5 @@
-#ifndef _LIBBBS_H_
-#define _LIBBBS_H_
+#ifndef LIBBBS_H_
+#define LIBBBS_H_
 
 #include "pttstruct.h" /* for fileheader_t */
 

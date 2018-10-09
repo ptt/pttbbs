@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _XCHAT_H_
-#define _XCHAT_H_
+#ifndef XCHAT_H_
+#define XCHAT_H_
 
 #define XCHAT_VERSION_MAJOR 3
 #define XCHAT_VERSION_MINOR 0

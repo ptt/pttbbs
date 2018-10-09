@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _INCLUDE_GOMO_H
-#define _INCLUDE_GOMO_H
+#ifndef INCLUDE_GOMO_H
+#define INCLUDE_GOMO_H
 
 #define BBLANK (-1)  /* 空白 */
 #define BWHITE (0)  /* 白子, 後手 */
