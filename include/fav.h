@@ -1,3 +1,7 @@
+/* $Id$ */
+#ifndef PTT_FAV_H
+#define PTT_FAV_H
+
 
 #define FAV_VERSION 3363
 
@@ -62,3 +66,6 @@ typedef struct {
 typedef struct {
     char	    lid;
 } fav_line_t;
+
+
+#endif /* PTT_FAV_H */
