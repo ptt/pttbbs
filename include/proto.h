@@ -56,6 +56,7 @@ void pressanykey_or_callangel(void);
 /* announce */
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid,
            char *trans_buffer, const char *backup_dir);
+void out_lines(const char *str, int line, int col);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
 
@@ -364,10 +365,6 @@ int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in p
 #define USE_NIOS_VKEY
 #endif
 
-/* kaede */
-void outmsg(const char *msg);
-void out_lines(const char *str, int line, int col);
-
 /* mail */
 int load_mailalert(const char *userid);
 int sendalert(const char *userid, int alert);
@@ -415,6 +412,7 @@ int query_file_money(const fileheader_t *pfh);
 int mbbsd_is_secure_connection();
 
 /* menu */
+void out_lines(const char *str, int line, int col);
 void showtitle(const char *title, const char *mid);
 void adbanner(int i);
 void adbanner_goodbye();

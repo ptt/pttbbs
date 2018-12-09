@@ -1470,6 +1470,8 @@ vgetstr(char *buf, int len, int flags, const char *defstr)
     return vgetstring(buf, len, flags, defstr, NULL, NULL);
 }
 
+/////////////////////////////////////////////////////////////////
+
 /**
  * 從第 y 列開始 show 出 filename 檔案中的前 lines 行。
  * mode 為 output 的模式，參數同 strip_ansi。
@@ -1645,5 +1647,13 @@ show_helpfile(const char *helpfile)
     clear();
     show_file((char *)helpfile, 0, b_lines, SHOWFILE_ALLOW_ALL);
     PRESSANYKEY();
+}
+
+void
+outmsg(const char *msg)
+{
+    move(b_lines - msg_occupied, 0);
+    clrtoeol();
+    outs(msg);
 }
 

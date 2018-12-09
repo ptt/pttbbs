@@ -194,5 +194,6 @@ int  cursor_key(int row, int column);
 void printdash(const char *mesg, int msglen);
 void show_help(const char * const helptext[]);
 void show_helpfile(const char * helpfile);
+void outmsg(const char *msg);
 
 #endif // _VTUIKIT_H

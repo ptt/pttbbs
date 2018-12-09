@@ -88,6 +88,25 @@ typedef struct {
 
 ///////////////////////////////////////////////////////////////////////
 
+/* Jaky */
+void
+out_lines(const char *str, int line, int col)
+{
+    int y = vgety();
+    move(y, col);
+    while (*str && line) {
+        if (*str == '\n')
+        {
+            move(++y, col);
+            line--;
+        } else
+        {
+            outc(*str);
+        }
+        str++;
+    }
+}
+
 void
 showtitle(const char *title, const char *mid)
 {
