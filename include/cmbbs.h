@@ -14,13 +14,13 @@ void setbfile (char *buf, const char *boardname, const char *fname);
 void setbnfile(char *buf, const char *boardname, const char *fname, int n);
 void setapath(char *buf, const char *boardname);
 void setadir (char *buf, const char *path);
+void setbdir(char *buf, const char *boardname);
 void sethomepath(char *buf, const char *userid);
 void sethomedir (char *buf, const char *userid);
 void sethomeman (char *buf, const char *userid);
 void sethomefile(char *buf, const char *userid, const char *fname);
+void setuserfile(char *buf, const char *fname);
 void setuserhashedfile(char *buf, const char *filename);
-// setbdir
-// setuserfile
 
 /* money.c */
 const char* money_level(int money);

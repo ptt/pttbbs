@@ -8,7 +8,6 @@
 #include "common.h"
 #include "var.h"
 
-
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
@@ -51,6 +50,14 @@ sethomefile(char *buf, const char *userid, const char *fname)
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
 
+/* XXX set*() all assume buffer size = PATHLEN */
+
+void
+setuserfile(char *buf, const char *fname)
+{
+    sethomefile(buf, cuser.userid, fname);
+}
+
 void 
 setuserhashedfile(char *buf, const char *filename)
 {
@@ -91,15 +98,13 @@ setbpath(char *buf, const char *boardname)
     snprintf(buf, PATHLEN, "boards/%c/%s", boardname[0], boardname);
 }
 
-#if 0
 void
 setbdir(char *buf, const char *boardname)
 {
     //assert(boardname[0]);
-    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
-	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
+    snprintf(buf, PATHLEN, "boards/%c/%s/%s", boardname[0], boardname,
+	    (currmode & MODE_DIGEST ? fn_mandex : FN_DIR));
 }
-#endif
 
 void
 setbfile(char *buf, const char *boardname, const char *fname)

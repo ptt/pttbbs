@@ -1,21 +1,5 @@
 #include "bbs.h"
 
-/* XXX set*() all assume buffer size = PATHLEN */
-
-void
-setuserfile(char *buf, const char *fname)
-{
-    sethomefile(buf, cuser.userid, fname);
-}
-
-void
-setbdir(char *buf, const char *boardname)
-{
-    //assert(boardname[0]);
-    snprintf(buf, PATHLEN, "boards/%c/%s/%s", boardname[0], boardname,
-	    (currmode & MODE_DIGEST ? fn_mandex : FN_DIR));
-}
-
 int
 is_uBM(const char *list, const char *id)
 {

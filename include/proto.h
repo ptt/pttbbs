@@ -635,8 +635,6 @@ int search_aidu(char *bfile, aidu_t aidu);
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define pressanykey() vmsg(NULL)
-void setuserfile(char *buf, const char *fname);
-void setbdir(char *buf, const char *boardname);
 void setaidfile(char *buf, const char *bn, aidu_t aidu);
 void setcalfile(char *buf, char *userid);
 int  log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
