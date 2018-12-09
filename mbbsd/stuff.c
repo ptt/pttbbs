@@ -1,13 +1,5 @@
 #include "bbs.h"
 
-// TODO remove this
-/* ----------------------------------------------------- */
-/* set file path for boards/user home                    */
-/* ----------------------------------------------------- */
-static const char * const str_board_file = "boards/%c/%s/%s";
-
-static const char * const str_dotdir = FN_DIR;
-
 /* XXX set*() all assume buffer size = PATHLEN */
 
 void
@@ -20,8 +12,8 @@ void
 setbdir(char *buf, const char *boardname)
 {
     //assert(boardname[0]);
-    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
-	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
+    snprintf(buf, PATHLEN, "boards/%c/%s/%s", boardname[0], boardname,
+	    (currmode & MODE_DIGEST ? fn_mandex : FN_DIR));
 }
 
 int
