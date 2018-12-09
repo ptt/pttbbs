@@ -30,6 +30,11 @@ void obfuscate_ipstr(char *s);
 bool is_valid_brdname(const char *brdname);
 const char *subject_ex(const char *title, int *ptype);
 const char *subject(const char *title);
+char*Ptt_prints(char *str, size_t size, int mode);
+#define HAVE_EXPAND_ESC_STAR
+int  expand_esc_star(char *buf, const char *src, int szbuf);
+void strip_ansi_movecmd(char *s);
+void strip_esc_star(char *s);
 
 /* time.c */
 const char *Now(void);	// m3 flavor time string

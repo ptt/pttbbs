@@ -365,16 +365,8 @@ int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in p
 #endif
 
 /* kaede */
-char*Ptt_prints(char *str, size_t size, int mode);
 void outmsg(const char *msg);
 void out_lines(const char *str, int line, int col);
-#define HAVE_EXPAND_ESC_STAR
-int  expand_esc_star(char *buf, const char *src, int szbuf);
-void strip_ansi_movecmd(char *s);
-void strip_esc_star(char *s);
-
-/* lovepaper */
-int x_love(void);
 
 /* mail */
 int load_mailalert(const char *userid);
