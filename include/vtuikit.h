@@ -184,4 +184,15 @@ void	vscr_restore(VREFSCR);
 VREFCUR vcur_save   (void);
 void	vcur_restore(VREFCUR);
 
+// moved from stuff
+int  show_file(const char *filename, int y, int lines, int mode);
+int  show_80x24_screen(const char *filename);
+int  search_num(int ch, int max);
+void cursor_clear(int row, int column);
+void cursor_show(int row, int column);
+int  cursor_key(int row, int column);
+void printdash(const char *mesg, int msglen);
+void show_help(const char * const helptext[]);
+void show_helpfile(const char * helpfile);
+
 #endif // _VTUIKIT_H
