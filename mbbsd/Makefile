@@ -130,4 +130,4 @@ install: $(PROG)
 	ln -sv $(BBSHOME)/bin/mbbsd.`date '+%m%d%H%M'` $(BBSHOME)/bin/mbbsd
 
 clean:
-	rm -f $(OBJS) $(PROG)
+	rm -f testsz $(OBJS) $(PROG)
