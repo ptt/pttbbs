@@ -587,7 +587,7 @@ typedef struct {
 	    int     dymaxactive;  /* 笆篈砞﹚程计     */
 	    int     toomanyusers; /* 禬筁计ぃ倒秈计 */
 	    int     noonlineuser; /* ㄏノぃ蔼獹陪ボ   */
-	    time4_t now;
+	    time4_t now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
 

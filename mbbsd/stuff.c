@@ -104,11 +104,7 @@ gettime(int line, time4_t dt, const char* head)
 // synchronize 'now'
 void syncnow(void)
 {
-#ifdef OUTTA_TIMER
-        now = SHM->GV2.e.now;
-#else
 	now = time(0);
-#endif
 }
 
 void

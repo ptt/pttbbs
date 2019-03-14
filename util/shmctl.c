@@ -158,11 +158,7 @@ int utmpfix(int argc, char **argv)
 
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
     nownum = SHM->UTMPnumber;
-#ifdef OUTTA_TIMER
-    now = SHM->GV2.e.now;
-#else
     now = time(NULL);
-#endif
     for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].pid ){
 	    idle[nactive].index = i;
@@ -383,11 +379,7 @@ void utmpsort(int sortall)
 
 
     SHM->UTMPbusystate = 1;
-#ifdef OUTTA_TIMER
-    SHM->UTMPuptime = SHM->GV2.e.now;
-#else
     SHM->UTMPuptime = time(NULL);
-#endif
     ns = (SHM->currsorted ? 0 : 1);
 
     for (uentp = &SHM->uinfo[0], count = i = 0;
@@ -529,11 +521,7 @@ int utmpstatus(int argc, char **argv)
     char    upbuf[64], nowbuf[64];
     (void)argc;
     (void)argv;
-#ifdef OUTTA_TIMER
-    now = SHM->GV2.e.now;
-#else
     now = time(NULL);
-#endif
     CTIMEx(upbuf,  SHM->UTMPuptime);
     CTIMEx(nowbuf, now);
     printf("now:        %s\n", nowbuf);
@@ -755,26 +743,6 @@ int fixbrd(int argc, char **argv)
     return 0;
 }
 
-#ifdef OUTTA_TIMER
-int timed(int argc, char **argv)
-{
-    pid_t   pid;
-    (void)argc;
-    (void)argv;
-    if( (pid = fork()) < 0 )
-	perror("fork()");
-    if( pid != 0 )
-	return 0;
-#ifndef VALGRIND
-    setproctitle("shmctl timed");
-#endif
-    while( 1 ){
-	SHM->GV2.e.now = time(NULL);
-	sleep(1);
-    }
-}
-#endif
-
 #if 0
 void buildclass(int bid, int level)
 {
@@ -847,11 +815,7 @@ int nkwbd(int argc, char **argv)
 	    int     i;
 	    time_t  now, t;
 
-#ifdef OUTTA_TIMER
-	    now = SHM->GV2.e.now;
-#else
 	    now = time(NULL);
-#endif
 	    t = now - timeout;
 
 	    for( i = 0 ; i < USHM_SIZE ; ++i )
@@ -890,11 +854,6 @@ int SHMinit(int argc, char **argv)
     system("bin/uhash_loader");
 
     attach_SHM();
-
-#ifdef OUTTA_TIMER
-    puts("timed...");
-    timed(1, argv);
-#endif
 
     puts("loading bcache...");
     reload_bcache();
@@ -1205,9 +1164,6 @@ struct Cmd {
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
     {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
-#ifdef OUTTA_TIMER
-    {timed,      "timed",      "time daemon for OUTTA_TIMER"},
-#endif
 #ifdef NOKILLWATERBALL
     {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
 #endif

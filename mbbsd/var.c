@@ -456,11 +456,7 @@ char    reentrant_write_request = 0;
 #endif
 
 #ifdef PTTBBS_UTIL
-    #ifdef OUTTA_TIMER
-	#define COMMON_TIME (SHM->GV2.e.now)
-    #else
-	#define COMMON_TIME (time(0))
-    #endif
+    #define COMMON_TIME (time(0))
 #else
     #define COMMON_TIME (now)
 #endif

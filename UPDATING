@@ -22,6 +22,12 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4871_uflag
 
 -----------------------------------------------------------------------------
+2019-03-14: [shm]
+OUTTA_TIMER 已經被移除。現代作業系統 (至少 Linux 和 FreeBSD) 在各硬體平台上
+都有支援 vDSO 之類的機制，可以讓 gettimeofday 不用 syscall 進 kernel 就取得
+目前的時間。此機制就如同原先 OUTTA_TIMER 的設計，但免卻了我們自己跑 daemon
+做同步。
+
 r5939: [shm]
 為了減少昇級 BBS 時資料結構不相容的情形，SHM 裡的 "now" 現在變為一直都有
 （即使沒開 OUTTA_TIMER 選項）。如果您的 BBS 沒開 OUTTA_TIMER 請記得打開後
