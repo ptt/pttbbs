@@ -28,8 +28,8 @@ abc: abc.o
 install: $(PROGRAMS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGRAMS) $(BBSHOME)/bin/
-	mv -f $(BBSHOME)/bin/angelbeats $(BBSHOME)/bin/angelbeats.`date '+%m%d%H%M'`
-	ln -sv $(BBSHOME)/bin/angelbeats.`date '+%m%d%H%M'` $(BBSHOME)/bin/angelbeats
+	mv -f $(BBSHOME)/bin/angelbeats $(BBSHOME)/bin/angelbeats.`date '+%Y%m%d%H%M'`
+	ln -sv $(BBSHOME)/bin/angelbeats.`date '+%Y%m%d%H%M'` $(BBSHOME)/bin/angelbeats
 
 clean:
 	rm -f *~ ${PROGRAMS} angelbeats.o abc.o

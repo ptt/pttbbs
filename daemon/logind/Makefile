@@ -29,8 +29,8 @@ loginc: loginc.o
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
-	mv -f $(BBSHOME)/bin/logind $(BBSHOME)/bin/logind.`date '+%m%d%H%M'`
-	ln -sv $(BBSHOME)/bin/logind.`date '+%m%d%H%M'` $(BBSHOME)/bin/logind
+	mv -f $(BBSHOME)/bin/logind $(BBSHOME)/bin/logind.`date '+%Y%m%d%H%M'`
+	ln -sv $(BBSHOME)/bin/logind.`date '+%Y%m%d%H%M'` $(BBSHOME)/bin/logind
 
 clean:
 	rm -f *~ ${PROGRAMS} logind.o loginc.o
