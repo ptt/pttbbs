@@ -220,7 +220,7 @@ checkpasswd(const char *passwd, char *plain)
     pw = fcrypt(plain, passwd);
     if(pw && strcmp(pw, passwd)==0)
 	ok = 1;
-    memset(plain, 0, strlen(plain));
+    explicit_bzero(plain, strlen(plain));
 
     return ok;
 }
