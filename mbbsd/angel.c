@@ -468,11 +468,13 @@ angel_log_order_song(const char *angel_nick) {
 
 void
 angel_log_msg_to_angel(void) {
+#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
     if (cuser.timeplayangel > cuser.timesetangel) {
         // Try to avoid mass logs
         if ((now - cuser.timeplayangel) >= ANGEL_CHANGE_TIMELIMIT_MINS * 60)
             return;
     }
+#endif
     pwcuPlayAngel();
 }
 
