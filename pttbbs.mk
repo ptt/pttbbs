@@ -11,8 +11,8 @@ OSTYPE!=	uname
 CC:=		gcc
 CXX:=		g++
 
-CLANG!=		sh -c 'type clang 2>/dev/null || echo ""'
-CCACHE!=	sh -c 'type ccache 2>/dev/null || echo ""'
+CLANG!=		sh -c 'type clang >/dev/null 2>&1 || echo ""'
+CCACHE!=	sh -c 'type ccache >/dev/null 2>&1 || echo ""'
 
 .if defined(WITHOUT_CLANG)
 CLANG:=
