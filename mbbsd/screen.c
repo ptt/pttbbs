@@ -17,12 +17,12 @@ static unsigned char _typeahead = 1;
 #define MODIFIED (1)		/* if line has been modifed, screen output */
 #define STANDOUT (2)		/* if this line has a standout region */
 
-inline
+static
 screenline_t* GetLine(int i) {
     return &big_picture[(i + roll) % t_lines];
 }
 
-inline
+static
 screenline_t* GetCurrentLine() {
     return GetLine(cur_ln);
 }

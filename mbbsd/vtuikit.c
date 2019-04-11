@@ -51,14 +51,14 @@
 #endif
 
 // ---- UTILITIES ----------------------------------------------------
-inline void
+static void
 outnc(int n, unsigned char c)
 {
     while (n-- > 0)
 	outc(c);
 }
 
-inline void
+static void
 nblank(int n)
 {
     outnc(n, ' ');
