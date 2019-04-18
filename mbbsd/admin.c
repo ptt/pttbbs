@@ -129,8 +129,14 @@ typedef struct {
     uint32_t role_wants;
 } userec_perm_t;
 
+typedef struct {
+    struct tm regtime;
+    bool date_only;
+} userec_regtime_t;
+
 #define USEREC_FILTER_KEYWORD (1)
 #define USEREC_FILTER_PERM (2)
+#define USEREC_FILTER_REGTIME (3)
 
 struct userec_filter_t {
     int type;
@@ -139,6 +145,7 @@ struct userec_filter_t {
     union {
 	userec_keyword_t keyword;
 	userec_perm_t perm;
+	userec_regtime_t regtime;
     };
 };
 
@@ -198,6 +205,42 @@ userec_filter_perm_desc(userec_filter_t *uf GCC_UNUSED)
     return "查詢帳號權限";
 }
 
+static const char *
+userec_filter_regtime_filter(userec_filter_t *uf, const userec_t *user)
+{
+    assert(uf->type == USEREC_FILTER_REGTIME);
+    const struct tm *regtime = &uf->regtime.regtime;
+    struct tm _regtime;
+
+    localtime4_r(&user->firstlogin, &_regtime);
+
+    // Check if the dates match up
+    if (regtime->tm_year != _regtime.tm_year ||
+	regtime->tm_mon != _regtime.tm_mon ||
+	regtime->tm_mday != _regtime.tm_mday)
+	return NULL;
+
+    // Here we have successful match on date
+    if (uf->regtime.date_only)
+	return "註冊日期符合";
+
+    // Check the time of day
+    if (regtime->tm_hour != _regtime.tm_hour ||
+	regtime->tm_min != _regtime.tm_min ||
+	regtime->tm_sec != _regtime.tm_sec)
+	return NULL;
+
+    return "註冊時間符合";
+}
+
+static const char *
+userec_filter_regtime_desc(userec_filter_t *uf)
+{
+    if (uf->regtime.date_only)
+	return "查詢註冊日期";
+    return "查詢註冊時間";
+}
+
 static int
 get_userec_filter(int row, userec_filter_t *uf)
 {
@@ -205,7 +248,7 @@ get_userec_filter(int row, userec_filter_t *uf)
 
     move(row, 0);
     outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
-    outs("          [a]不允許\認證碼註冊\n");
+    outs("          [a]不允許\認證碼註冊 [b]註冊日期 [c]註冊時間\n");
     row += 2;
     do {
 	memset(uf, 0, sizeof(*uf));
@@ -232,6 +275,28 @@ get_userec_filter(int row, userec_filter_t *uf)
 	    uf->desc = userec_filter_perm_desc;
 	    uf->perm.userlevel_mask = uf->perm.userlevel_wants =
 		PERM_NOREGCODE;
+	} else if (sel == 'b' || sel == 'B' || sel == 'c' || sel == 'C') {
+	    uf->type = USEREC_FILTER_REGTIME;
+	    uf->filter = userec_filter_regtime_filter;
+	    uf->desc = userec_filter_regtime_desc;
+	    uf->regtime.date_only = (sel == 'b' || sel == 'B');
+	    if (uf->regtime.date_only) {
+		char buf[11];
+		getdata(row++, 0, "請輸入註冊日期 (如 2019/12/31): ",
+			buf, sizeof(buf), DOECHO);
+		if (!strptime(buf, "%Y/%m/%d", &uf->regtime.regtime)) {
+		    outs("日期格式錯誤\n");
+		    return -1;
+		}
+	    } else {
+		char buf[20];
+		getdata(row++, 0, "請輸入註冊日期 (如 2019/12/31 00:00:00): ",
+			buf, sizeof(buf), DOECHO);
+		if (!strptime(buf, "%Y/%m/%d %H:%M:%S", &uf->regtime.regtime)) {
+		    outs("時間格式錯誤\n");
+		    return -1;
+		}
+	    }
 	}
     } while (!uf->type);
     return 0;
