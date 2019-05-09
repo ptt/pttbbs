@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     ip_desc_db_reload(cfgfile);
 
 #ifdef FROMD_USE_GEOIP_DB
-    g_geoip = GeoIP_new(GEOIP_MEMORY_CACHE);
+    g_geoip = GeoIP_new(GEOIP_MEMORY_CACHE | GEOIP_CHECK_CACHE);
     if (!g_geoip)
 	fprintf(stderr, "Unable to load geo ip, continuing without it.\n");
 #endif
