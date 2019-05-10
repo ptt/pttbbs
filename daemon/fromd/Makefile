@@ -2,6 +2,7 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
+ENABLE_MAXMIND_DB=y
 ENABLE_GEOIP_DB=y
 
 PROGRAMS=	fromd fromc
@@ -11,7 +12,10 @@ LDLIBS+=$(SRCROOT)/common/sys/libcmsys.a \
 
 FROMD_LDFLAGS = -levent
 
-.if ${ENABLE_GEOIP_DB} == "y"
+.if ${ENABLE_MAXMIND_DB} == "y"
+CFLAGS += -DFROMD_USE_MAXMIND_DB
+FROMD_LDFLAGS += -lmaxminddb
+.elif ${ENABLE_GEOIP_DB} == "y"
 CFLAGS += -DFROMD_USE_GEOIP_DB
 FROMD_LDFLAGS += -lGeoIP
 .endif
