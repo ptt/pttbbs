@@ -410,6 +410,7 @@ char            real_name[IDLEN + 1];
 /* mbbsd.c */
 char            fromhost[STRLEN] = "\0";
 char		fromhost_masked[32] = "\0"; // masked 'fromhost'
+char            from_cc[STRLEN] = "\0";
 char            water_usies = 0;
 char            is_first_login_of_today = 0;
 char            is_login_ready = 0;

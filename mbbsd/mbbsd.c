@@ -979,14 +979,28 @@ setup_utmp(int mode)
     {
 	int fd;
 	if ((fd = toconnect(FROMD_ADDR)) >= 0) {
+	    char *p, *ptr;
+	    char buf[STRLEN] = {0};
+
 	    write(fd, fromhost, strlen(fromhost));
-	    // zero and reuse uinfo.from to check real data
-	    memset(uinfo.from, 0, sizeof(uinfo.from));
-	    read(fd, uinfo.from,  sizeof(uinfo.from) - 1); // keep trailing zero
+	    shutdown(fd, SHUT_WR);
+
+	    read(fd, buf, sizeof(buf) - 1); // keep trailing zero
 	    close(fd);
-	    // copy back to currutmp
-	    if (uinfo.from[0])
+
+	    // Check for newline separating source name and country
+	    p = strtok_r(buf, "\n", &ptr);
+
+	    // copy to uinfo and currutmp
+	    if (*p) {
+		strlcpy(uinfo.from, p, sizeof(uinfo.from));
 		strlcpy(currutmp->from, uinfo.from, sizeof(currutmp->from));
+	    }
+
+	    // Did fromd send country name separately?
+	    p = strtok_r(NULL, "\n", &ptr);
+	    if (p)
+		strlcpy(from_cc, p, sizeof(from_cc));
 	}
     }
 #endif // WHERE
