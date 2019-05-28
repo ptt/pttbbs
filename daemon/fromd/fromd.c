@@ -117,7 +117,7 @@ static void sighup_cb(int signal, short event, void *arg)
 static void client_cb(int fd, short event, void *arg)
 {
     char buf[32];
-    const char *result;
+    const char *result, *cc = NULL;
     int len;
 
     // ignore clients that timeout
@@ -132,24 +132,32 @@ static void client_cb(int fd, short event, void *arg)
     result = ip_desc_db_lookup(buf);
 
 #ifdef FROMD_USE_MAXMIND_DB
-    if (g_mmdb && !strcmp(result, buf)) {
-	const char *cc = my_MMDB_lookup(g_mmdb, buf);
-	if (cc)
-	    result = cc;
-    }
+    if (g_mmdb && !cc)
+	cc = my_MMDB_lookup(g_mmdb, buf);
 #endif
 
 #ifdef FROMD_USE_GEOIP_DB
-    if (g_geoip && !strcmp(result, buf)) {
-	const char *cc = GeoIP_country_code_by_addr(g_geoip, buf);
+    if (g_geoip && !cc) {
+	cc = GeoIP_country_code_by_addr(g_geoip, buf);
 	if (cc)
 	    cc = country_code_to_name(cc);
-	if (cc)
-	    result = cc;
     }
 #endif
 
-    write(fd, result, strlen(result));
+    if (cc && !strcmp(result, buf))
+	result = cc;
+
+    {
+	// This needs to be one single write syscall, otherwise the client
+	// might not pick up the second part.
+	struct iovec iov[] = {
+	    { .iov_base = (void *)result, .iov_len = strlen(result) },
+	    { .iov_base = "\n", .iov_len = 1 },
+	    { .iov_base = (void *)cc, .iov_len = strlen(cc) },
+	};
+
+	writev(fd, iov, cc ? 3 : 1);
+    }
 
 end:
     // cleanup
