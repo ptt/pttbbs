@@ -1783,10 +1783,14 @@ loadsitesig(const char *fname)
 
 void
 addforwardsignature(FILE *fp, const char *host) {
-    char temp[33];
-    if (!host)
+    char temp[STRLEN];
+
+    if (!host && from_cc[0]) {
+	snprintf(temp, sizeof(temp), "%s %s", FROMHOST, from_cc);
+        host = temp;
+    } else if (!host) {
         host = FROMHOST;
-    strlcpy(temp, host, sizeof(temp));
+    }
     syncnow();
     fprintf(fp, "\n"
                 "※ 發信站: " BBSNAME "(" MYHOSTNAME ")\n"
@@ -1796,10 +1800,14 @@ addforwardsignature(FILE *fp, const char *host) {
 
 void
 addsimplesignature(FILE *fp, const char *host) {
-    char temp[33];
-    if (!host)
+    char temp[STRLEN];
+
+    if (!host && from_cc[0]) {
+	snprintf(temp, sizeof(temp), "%s (%s)", FROMHOST, from_cc);
+        host = temp;
+    } else if (!host) {
         host = FROMHOST;
-    strlcpy(temp, host, sizeof(temp));
+    }
     fprintf(fp,
             "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s\n", host);
 }
@@ -2063,8 +2071,9 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 #endif
 	{
 	    fprintf(fp,
-		    "※ 編輯: %s (%s), %s\n",
-		    cuser.userid, FROMHOST, Cdatelite(&now));
+		    "※ 編輯: %s (%s%s%s), %s\n",
+		    cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
+		    Cdatelite(&now));
 	}
     }
 
