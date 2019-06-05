@@ -147,6 +147,9 @@ static void client_cb(int fd, short event, void *arg)
     if (cc && !strcmp(result, buf))
 	result = cc;
 
+    if (!cc)
+	result = "¤£©ú";
+
     {
 	// This needs to be one single write syscall, otherwise the client
 	// might not pick up the second part.
