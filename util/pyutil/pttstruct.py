@@ -167,8 +167,8 @@ FILEHEADER_FMT = (
         ("title", "%ds" % (TTLEN + 1)),
         ("pad2", "B"),
         ("multi", "i"),
-        ("filemode", "B"),
-        ("pad3", "3s"))
+        ("filemode", "H"),
+        ("pad3", "2s"))
 
 FILEHEADER_SIZE = 128
 

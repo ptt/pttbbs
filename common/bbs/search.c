@@ -38,10 +38,12 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	return DBCS_strcasestr(fh->title, keyword) == NULL;
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
-    else if (sr_mode & RS_RECOMMEND)
-	return pred->recommend > 0 ?
-	    (fh->recommend >= pred->recommend) :
-	    (fh->recommend <= pred->recommend);
+    else if (sr_mode & RS_RECOMMEND) {
+        char recommend = fh->filemode & FILE_SUSPICIOUS ? 0 : fh->recommend;
+        return pred->recommend > 0 ?
+	    (recommend >= pred->recommend) :
+	    (recommend <= pred->recommend);
+    }
     else if (sr_mode & RS_MONEY) {
 	// We don't know the money if a ref is instead stored.
 	// This can happen in DIR generated after select, bottom DIR, etc.

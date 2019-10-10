@@ -284,23 +284,24 @@ typedef struct fileheader_t { /* 128 bytes */
 	} refer;
     }	    multi;		    /* rocker: if bit32 on ==> reference */
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
-    unsigned char   filemode;        /* must be last field @ boards.c */
-    char    pad3[3];
+    uint16_t   filemode;        /* must be last field @ boards.c */
+    char    pad3[2];
 } PACKSTRUCT fileheader_t;
 
-#define FILE_LOCAL      0x01    /* local saved,  non-mail */
-#define FILE_READ       0x01    /* already read, mail only */
-#define FILE_MARKED     0x02    /* non-mail + mail */
-#define FILE_DIGEST     0x04    /* digest,       non-mail */
-#define FILE_REPLIED    0x04    /* replied,      mail only */
-#define FILE_BOTTOM     0x08    /* push_bottom,  non-mail */
-#define FILE_MULTI      0x08    /* multi send,   mail only */
-#define FILE_SOLVED     0x10    /* problem solved, sysop/BM non-mail only */
-#define FILE_HIDE       0x20    /* hide,	in announce */
-#define FILE_BID        0x20    /* bid,		in non-announce */
-#define FILE_BM         0x40    /* BM only,	in announce */
-#define FILE_VOTE       0x40    /* for vote,	in non-announce */
-#define FILE_ANONYMOUS  0x80    /* anonymous file */
+#define FILE_LOCAL      0x0001    /* local saved,  non-mail */
+#define FILE_READ       0x0001    /* already read, mail only */
+#define FILE_MARKED     0x0002    /* non-mail + mail */
+#define FILE_DIGEST     0x0004    /* digest,       non-mail */
+#define FILE_REPLIED    0x0004    /* replied,      mail only */
+#define FILE_BOTTOM     0x0008    /* push_bottom,  non-mail */
+#define FILE_MULTI      0x0008    /* multi send,   mail only */
+#define FILE_SOLVED     0x0010    /* problem solved, sysop/BM non-mail only */
+#define FILE_HIDE       0x0020    /* hide,	in announce */
+#define FILE_BID        0x0020    /* bid,		in non-announce */
+#define FILE_BM         0x0040    /* BM only,	in announce */
+#define FILE_VOTE       0x0040    /* for vote,	in non-announce */
+#define FILE_ANONYMOUS  0x0080    /* anonymous file */
+#define FILE_SUSPICIOUS 0x0100    /* marked as suspicious */
 
 /* TODO multi.money is a mess.
  * please help verify and finish these.

@@ -49,7 +49,7 @@ sub FETCH
     else{
 	($h{filename}, $h{recommend}, $h{owner}, $h{date}, $h{title},
 	 $h{money}, undef, $h{filemode}) =
-	    unpack('Z33cZ14Z6Z65iCC', $t);
+	    unpack('Z33cZ14Z6Z65iCS', $t);
 	$h{title} = substr($h{title}, 3);
 	$self->{cache}{$num}{$_} = $h{$_}
 	    foreach( 'filename', 'owner', 'date',

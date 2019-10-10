@@ -98,7 +98,7 @@ static int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name, time4_t modified,
         const char *title, const char *owner, const char *date,
-        char recommend, void *multi, uint8_t enable_modes, uint8_t disable_modes)
+        char recommend, void *multi, uint16_t enable_modes, uint16_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -129,7 +129,7 @@ modify_dir_lite(
     if (disable_modes)
         fhdr.filemode &= ~disable_modes;
     if (title && *title)
-	strlcpy(fhdr.title, title, sizeof(fhdr.title));
+        strlcpy(fhdr.title, title, sizeof(fhdr.title));
     if (owner && *owner)
 	strlcpy(fhdr.owner, owner, sizeof(fhdr.owner));
     if (date && *date)
@@ -762,6 +762,8 @@ readdoent(int num, fileheader_t * ent)
 
     if (title_type == SUBJECT_LOCKED)
         strcpy(recom,"0m--");
+    else if (ent->filemode & FILE_SUSPICIOUS)
+        strcpy(recom,"0m  ");
     else if(ent->recommend >= MAX_RECOMMENDS)
 	  strcpy(recom,"1m爆");
     else if(ent->recommend>9)
@@ -820,6 +822,10 @@ readdoent(int num, fileheader_t * ent)
         else
             outs(ANSI_COLOR(1));
     }
+
+    if (ent->filemode & FILE_SUSPICIOUS)
+        outs(ANSI_COLOR(1;30));
+
     prints("%-13.12s", ent->owner);
     if(isonline) outs(ANSI_RESET);
 
@@ -831,12 +837,16 @@ readdoent(int num, fileheader_t * ent)
     if (strcmp(currtitle, title) == 0) {
         if (HasUserFlag(UF_MENU_LIGHTBAR))
             prints(ANSI_COLOR(3%c), color);
+        else if (ent->filemode & FILE_SUSPICIOUS)
+            prints(ANSI_COLOR(1;30));
         else
             prints(ANSI_COLOR(1;3%c), color);
         outs(mark);
         outc(' ');
         special = 1;
     } else {
+        if (ent->filemode & FILE_SUSPICIOUS)
+            prints(ANSI_COLOR(1;30));
         outs(mark);
         outc(' ');
         if (special) {
@@ -2071,6 +2081,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->owner[0] == '-')
 	return DONOTHING;
 
+    if (fhdr->filemode & FILE_SUSPICIOUS)
+    {
+        vmsg("本文章目前被標記為待查證，不得轉錄。");
+        return FULLUPDATE;
+    }
+
     setbfile(fname, currboard, fhdr->filename);
     if (!dashf(fname))
     {
@@ -2380,6 +2396,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     } while (0);
 #endif
 
+    if (fhdr->filemode & FILE_SUSPICIOUS)
+    {
+        more(FN_FILE_SUSPICIOUS_DESC, YEA);
+        clear();
+    }
     more_result = more(genbuf, YEA);
 
     LOG_IF(LOG_CONF_CRAWLER, {
@@ -3691,6 +3712,32 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
+mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
+{
+    boardheader_t *bp = getbcache(currbid);
+
+    aidu_t aidu = 0;
+    aidu = fn2aidu((char *)fhdr->filename);
+    if (aidu > 0) {
+        char aidc[10];
+        char buf[256];
+        aidu2aidc(aidc, aidu);
+
+        if (fhdr->filemode & FILE_SUSPICIOUS)
+            snprintf(buf, sizeof(buf),
+                     "%s 將 #%s (%s) 解除待查證", cuser.userid, aidc, bp->brdname);
+        else
+            snprintf(buf, sizeof(buf),
+                     "%s 將 #%s (%s) 標記待查證", cuser.userid, aidc, bp->brdname);
+
+        post_msg(BN_SECURITY, buf, "請注意標記的合法性", "[待證標記]");
+   }
+
+
+   return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
+}
+
+static int
 recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
     char yn[5];
@@ -4407,7 +4454,7 @@ moved_to_ctrl_e()
 static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
-    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
+    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字 [S]標記待證"
 #ifdef USE_COMMENTD
         " [V](實驗)推文管理"
 #endif
@@ -4438,6 +4485,10 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 
         case 'm':
             mask_post_content(ent, fhdr, direct);
+            break;
+
+        case 's':
+            mark_suspicious(ent, fhdr, direct);
             break;
 
 #ifdef USE_COMMENTD
