@@ -230,7 +230,7 @@ update_history(struct tm *ptime, int peak_hour, int peak_hour_login, int day_log
     if (peak_online > max_online) {
 	localtime4_r(&SHM->max_time, &tm);
 	fprintf(fp1, "◎ 【%02d/%02d/%02d %02d:%02d】"
-		ANSI_COLOR(32) "同時在坊內人數" ANSI_RESET "首次達到 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人次\n",
+		ANSI_COLOR(32) "同時在坊內人數" ANSI_RESET "首次達到 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人\n",
 		tm.tm_mon + 1, tm.tm_mday, tm.tm_year % 100, tm.tm_hour, tm.tm_min, peak_online);
 	max_online = peak_online;
     }
