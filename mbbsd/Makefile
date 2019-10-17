@@ -81,6 +81,12 @@ OBJS+=		screen.o
 .endif
 
 #######################################################################
+# variables
+#######################################################################
+
+DATETIME!=	date '+%Y%m%d%H%M'
+
+#######################################################################
 # Make Rules
 #######################################################################
 
@@ -125,9 +131,10 @@ test: $(PROG)
 
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
-	install -c -m 755 $(PROG) $(BBSHOME)/bin/
-	mv -f $(BBSHOME)/bin/mbbsd $(BBSHOME)/bin/mbbsd.`date '+%Y%m%d%H%M'`
-	ln -sv $(BBSHOME)/bin/mbbsd.`date '+%Y%m%d%H%M'` $(BBSHOME)/bin/mbbsd
+	install -s $(PROG) $(BBSHOME)/bin/mbbsd.$(DATETIME)
+	objcopy --only-keep-debug --compress-debug-sections $(PROG) $(BBSHOME)/bin/mbbsd.$(DATETIME).debug
+	@cd $(BBSHOME)/bin && objcopy --add-gnu-debuglink=mbbsd.$(DATETIME).debug mbbsd.$(DATETIME)
+	@ln -sfv mbbsd.$(DATETIME) $(BBSHOME)/bin/mbbsd
 
 clean:
 	rm -f $(OBJS) $(PROG)

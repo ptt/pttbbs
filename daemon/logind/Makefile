@@ -12,6 +12,8 @@ LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	-levent
 
+DATETIME!=	date '+%Y%m%d%H%M'
+
 all:	${PROGRAMS}
 
 .SUFFIXES: .c .cpp .o
@@ -28,9 +30,10 @@ loginc: loginc.o
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
-	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
-	mv -f $(BBSHOME)/bin/logind $(BBSHOME)/bin/logind.`date '+%Y%m%d%H%M'`
-	ln -sv $(BBSHOME)/bin/logind.`date '+%Y%m%d%H%M'` $(BBSHOME)/bin/logind
+	install -s -p $(PROGS) $(BBSHOME)/bin/logind.$(DATETIME)
+	objcopy --only-keep-debug --compress-debug-sections $(PROGS) $(BBSHOME)/bin/logind.$(DATETIME).debug
+	cd $(BBSHOME)/bin && objcopy --add-gnu-debuglink=logind.$(DATETIME).debug logind.$(DATETIME)
+	@ln -sfv logind.$(DATETIME) $(BBSHOME)/bin/logind
 
 clean:
 	rm -f *~ ${PROGRAMS} logind.o loginc.o
