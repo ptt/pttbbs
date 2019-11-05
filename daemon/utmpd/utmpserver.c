@@ -27,7 +27,7 @@ struct {
 } waitqueue[MAXWAIT];
 #endif /* NOFLOODING */
 
-inline int countarray(int *s, int max)
+static int countarray(int *s, int max)
 {
     int     i;
     for( i = 0 ; i < max && s[i] ; ++i )
@@ -35,7 +35,7 @@ inline int countarray(int *s, int max)
     return i;
 }
 
-int
+static int
 reverse_friend_stat(int stat)
 {
     int             stat1 = 0;
@@ -52,7 +52,7 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
-int set_friend_bit(int me, int ui)
+static int set_friend_bit(int me, int ui)
 {
     int     hit = 0;
     /* 判斷對方是否為我的朋友 ? */
@@ -74,7 +74,7 @@ int set_friend_bit(int me, int ui)
     return hit;
 }
 
-void initdata(int index)
+static void initdata(int index)
 {
     utmp[index].nFriends = countarray(utmp[index].friend, MAX_FRIEND);
     utmp[index].nRejects = countarray(utmp[index].reject, MAX_REJECT);
@@ -86,7 +86,7 @@ void initdata(int index)
 	      sizeof(int), cmp_int);
 }
 
-inline void syncutmp(int cfd)
+static void syncutmp(int cfd)
 {
     int     nSynced = 0, i;
     for( i = 0 ; i < USHM_SIZE ; ++i, ++nSynced )
@@ -103,7 +103,7 @@ inline void syncutmp(int cfd)
     fprintf(stderr, "%d users synced\n", nSynced);
 }
 
-void processlogin(int cfd, int uid, int index)
+static void processlogin(int cfd, int uid, int index)
 {
     if( toread(cfd, utmp[index].friend, sizeof(utmp[index].friend)) > 0 &&
 	toread(cfd, utmp[index].reject, sizeof(utmp[index].reject)) > 0 ){
@@ -134,7 +134,7 @@ void processlogin(int cfd, int uid, int index)
 }
 
 #ifdef NOFLOODING
-void flushwaitqueue(void)
+static void flushwaitqueue(void)
 {
     int     i;
     for( i = 0 ; i < nWaits ; ++i )
