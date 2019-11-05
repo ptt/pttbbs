@@ -129,9 +129,28 @@ typedef struct {
     uint32_t role_wants;
 } userec_perm_t;
 
+enum {
+    USEREC_REGTIME_Y,
+    USEREC_REGTIME_YM,
+    USEREC_REGTIME_YMD,
+    USEREC_REGTIME_YMD_H,
+    USEREC_REGTIME_YMD_HM,
+    USEREC_REGTIME_YMD_HMS,
+};
+
+static const char * const userec_regtime_desc[] = {
+    "查詢註冊時間 (年份)",
+    "查詢註冊時間 (年月份)",
+    "查詢註冊時間 (年月日)",
+    "查詢註冊時間 (年月日 時)",
+    "查詢註冊時間 (年月日 時分)",
+    "查詢註冊時間 (年分日 時分秒)",
+};
+
 typedef struct {
     struct tm regtime;
-    bool date_only;
+    // See USEREC_REGTIME_* enum above.
+    uint8_t match_type;
 } userec_regtime_t;
 
 #define USEREC_FILTER_KEYWORD (1)
@@ -214,31 +233,42 @@ userec_filter_regtime_filter(userec_filter_t *uf, const userec_t *user)
 
     localtime4_r(&user->firstlogin, &_regtime);
 
-    // Check if the dates match up
-    if (regtime->tm_year != _regtime.tm_year ||
-	regtime->tm_mon != _regtime.tm_mon ||
-	regtime->tm_mday != _regtime.tm_mday)
-	return NULL;
-
-    // Here we have successful match on date
-    if (uf->regtime.date_only)
-	return "註冊日期符合";
-
-    // Check the time of day
-    if (regtime->tm_hour != _regtime.tm_hour ||
-	regtime->tm_min != _regtime.tm_min ||
-	regtime->tm_sec != _regtime.tm_sec)
-	return NULL;
-
-    return "註冊時間符合";
+    // Check date and time based on what the user specified
+    switch (uf->regtime.match_type) {
+	case USEREC_REGTIME_YMD_HMS:
+	    if (regtime->tm_sec != _regtime.tm_sec)
+		return NULL;
+	    // fall through
+	case USEREC_REGTIME_YMD_HM:
+	    if (regtime->tm_min != _regtime.tm_min)
+		return NULL;
+	    // fall through
+	case USEREC_REGTIME_YMD_H:
+	    if (regtime->tm_hour != _regtime.tm_hour)
+		return NULL;
+	    // fall through
+	case USEREC_REGTIME_YMD:
+	    if (regtime->tm_mday != _regtime.tm_mday)
+		return NULL;
+	    // fall through
+	case USEREC_REGTIME_YM:
+	    if (regtime->tm_mon != _regtime.tm_mon)
+		return NULL;
+	    // fall through
+	case USEREC_REGTIME_Y:
+	    if (regtime->tm_year != _regtime.tm_year)
+		return NULL;
+	    return "註冊時間符合";
+	default:
+	    // Not reached
+	    assert(0);
+    }
 }
 
 static const char *
 userec_filter_regtime_desc(userec_filter_t *uf)
 {
-    if (uf->regtime.date_only)
-	return "查詢註冊日期";
-    return "查詢註冊時間";
+    return userec_regtime_desc[uf->regtime.match_type];
 }
 
 static int
@@ -248,7 +278,7 @@ get_userec_filter(int row, userec_filter_t *uf)
 
     move(row, 0);
     outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
-    outs("          [a]不允許\認證碼註冊 [b]註冊日期 [c]註冊時間\n");
+    outs("          [a]不允許\認證碼註冊 [b]註冊時間\n");
     row += 2;
     do {
 	memset(uf, 0, sizeof(*uf));
@@ -275,27 +305,36 @@ get_userec_filter(int row, userec_filter_t *uf)
 	    uf->desc = userec_filter_perm_desc;
 	    uf->perm.userlevel_mask = uf->perm.userlevel_wants =
 		PERM_NOREGCODE;
-	} else if (sel == 'b' || sel == 'B' || sel == 'c' || sel == 'C') {
+	} else if (sel == 'b' || sel == 'B') {
+	    char buf[20], *p;
+
 	    uf->type = USEREC_FILTER_REGTIME;
 	    uf->filter = userec_filter_regtime_filter;
 	    uf->desc = userec_filter_regtime_desc;
-	    uf->regtime.date_only = (sel == 'b' || sel == 'B');
-	    if (uf->regtime.date_only) {
-		char buf[11];
-		getdata(row++, 0, "請輸入註冊日期 (如 2019/12/31): ",
-			buf, sizeof(buf), DOECHO);
-		if (!strptime(buf, "%Y/%m/%d", &uf->regtime.regtime)) {
-		    outs("日期格式錯誤\n");
-		    return -1;
-		}
-	    } else {
-		char buf[20];
-		getdata(row++, 0, "請輸入註冊日期 (如 2019/12/31 00:00:00): ",
-			buf, sizeof(buf), DOECHO);
-		if (!strptime(buf, "%Y/%m/%d %H:%M:%S", &uf->regtime.regtime)) {
-		    outs("時間格式錯誤\n");
-		    return -1;
-		}
+
+	    row += 3;
+	    outs("註冊時間搜尋最少包含年分，最細可到秒，請依需求填入。\n");
+	    outs("年月份請輸入 \"年/月\"；至分則輸入 \"年/月/日 時:分\"。\n");
+	    outs("為避免誤判，搜尋細至小時時請填 \"年/月/日 時:\"。\n");
+	    getdata(row++, 0, "請輸入註冊時間 (如 2019/12/31 23:59:59): ",
+		    buf, sizeof(buf), DOECHO);
+
+	    // check the returned pointer to make sure the match uses the whole string
+	    if ((p = strptime(buf, "%Y/%m/%d %H:%M:%S", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_YMD_HMS;
+	    else if ((p = strptime(buf, "%Y/%m/%d %H:%M", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_YMD_HM;
+	    else if ((p = strptime(buf, "%Y/%m/%d %H:", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_YMD_H;
+	    else if ((p = strptime(buf, "%Y/%m/%d", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_YMD;
+	    else if ((p = strptime(buf, "%Y/%m", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_YM;
+	    else if ((p = strptime(buf, "%Y", &uf->regtime.regtime)) && !*p)
+		uf->regtime.match_type = USEREC_REGTIME_Y;
+	    else {
+		outs("時間格式錯誤\n");
+		return -1;
 	    }
 	}
     } while (!uf->type);
