@@ -148,7 +148,7 @@ static void client_cb(int fd, short event, void *arg)
 	result = cc;
 
     if (!cc)
-	result = "不明";
+	result = cc = "不明";
 
     {
 	// This needs to be one single write syscall, otherwise the client
