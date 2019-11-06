@@ -37,7 +37,6 @@
                 banipd/             判斷是否 IP 已被 ban 掉 (experimental)
                 barebone/           伺服程式骨架
                 boardd/             看板文章服務 (for web)
-                bpop3d/             POP3 mail (deprecated)
                 brcstored/          BRC 儲存服務 (failed experimental)
                 commentd/           推文記錄服務 (experimental)
                 fromd/              故鄉查詢
