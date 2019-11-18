@@ -62,7 +62,7 @@
     如果是在 64bit 的作業系統編譯安裝 PttBBS
     請記得在 pttbbs.conf 取消以下兩個定義的註解：
 
-    #define SHMALIGNEDSIZE (1048576*4)
+    #define SHMALIGNEDSIZE (1048576*4) // FreeBSD, Ubuntu 使用者可以不加此定義
     #define TIMET64
 
     * 如果您是用 Linux 系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
