@@ -23,7 +23,7 @@ SOFTWARE.
 --]]
 
 local server = require "resty.websocket.server"
-local vstruct = require "vstruct"
+local ffi = require "ffi"
 
 local timeout_ms = 7*24*60*60*1000
 local bbs_receive_size = 1024
@@ -42,22 +42,34 @@ local function check_origin()
 end
 
 local function build_conn_data()
-    local fmt = vstruct.compile("< u4 u4 u4 s16 u2 u2 u4")
+    ffi.cdef[[
+    typedef struct
+    {
+        // size of current structure
+        uint32_t cb;
+        uint32_t encoding;
+        uint32_t raddr_len;
+        uint8_t  raddr[16];
+        uint16_t rport;
+        uint16_t lport;
+        uint32_t flags;
+    } __attribute__ ((packed)) conn_data;
+    ]]
     local flags = 0
     local bbs_lport = tonumber(ngx.var.bbs_lport)
     local bbs_secure = tonumber(ngx.var.bbs_secure)
     if bbs_secure == 1 then
         flags = flags + 1 -- CONN_FLAG_SECURE
     end
-    return fmt:write({
-        36, -- size
-        0,  -- encoding
-        ngx.var.binary_remote_addr:len(),   -- len_ip
-        ngx.var.binary_remote_addr,         -- ip16
-        tonumber(ngx.var.remote_port) or 0, -- rport
-        bbs_lport or tonumber(ngx.var.server_port) or 0, -- lport
-        flags,
-    })
+    return ffi.string(ffi.new("conn_data", {
+        cb = 36,
+        encoding = 0,
+        raddr_len = ngx.var.binary_remote_addr:len(),
+        raddr = ngx.var.binary_remote_addr,
+        rport = tonumber(ngx.var.remote_port) or 0,
+        lport = bbs_lport or tonumber(ngx.var.server_port) or 0,
+        flags = flags,
+    }), ffi.sizeof("conn_data"))
 end
 
 local function connect_mbbsd()
