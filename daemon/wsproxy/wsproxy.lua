@@ -44,8 +44,9 @@ end
 local build_conn_data = function ()
     local fmt = vstruct.compile("< u4 u4 u4 s16 u2 u2 u4")
     local flags = 0
-    local secure = tonumber(ngx.var.bbs_secure) or 0
-    if secure == 1 then
+    local bbs_lport = tonumber(ngx.var.bbs_lport)
+    local bbs_secure = tonumber(ngx.var.bbs_secure)
+    if bbs_secure == 1 then
         flags = flags + 1 -- CONN_FLAG_SECURE
     end
     return fmt:write({
@@ -54,7 +55,7 @@ local build_conn_data = function ()
         ngx.var.binary_remote_addr:len(),   -- len_ip
         ngx.var.binary_remote_addr,         -- ip16
         tonumber(ngx.var.remote_port) or 0, -- rport
-        tonumber(ngx.var.server_port) or 0, -- lport
+        bbs_lport or tonumber(ngx.var.server_port) or 0, -- lport
         flags,
     })
 end
