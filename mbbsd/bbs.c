@@ -2085,7 +2085,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (fhdr->filemode & FILE_SUSPICIOUS)
     {
-        vmsg("本文章目前被標記為待查證，不得轉錄。");
+        vmsg("本文目前受標記為待證實文章，依規定暫不開放轉錄。");
         return FULLUPDATE;
     }
 
