@@ -679,8 +679,14 @@ new_register(void)
 	strlcpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
 	break;
     }
+
     // set-up more information.
-    move(19, 0); clrtobot();
+    int y = 17;
+    move(y, 0); clrtobot();
+    outs("[ " ANSI_COLOR(1;33));
+    outs(newuser.userid);
+    outs(ANSI_RESET " ] 您好，請填寫您的個人資料。");
+    y++;
 
     // warning: because currutmp=NULL, we can simply pass newuser.* to getdata.
     // DON'T DO THIS IF YOUR currutmp != NULL.
@@ -691,18 +697,19 @@ new_register(void)
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(19, 0, "綽號暱稱：", newuser.nickname,
+	getdata(y, 0, "綽號暱稱：", newuser.nickname,
 		sizeof(newuser.nickname), DOECHO);
     }
 
     try = 0;
+    y++;
     while (strlen(newuser.realname) < 4)
     {
 	if (++try > 10) {
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(20, 0, "真實姓名：", newuser.realname,
+	getdata(y, 0, "真實姓名：", newuser.realname,
 		sizeof(newuser.realname), DOECHO);
 
 	if ((errmsg = isvalidname(newuser.realname))) {
@@ -712,13 +719,31 @@ new_register(void)
     }
 
     try = 0;
+    y++;
+    while (strlen(newuser.career) < 6)
+    {
+	if (++try > 10) {
+	    vmsg(MSG_ERR_MAXTRIES);
+	    exit(1);
+	}
+	getdata(y, 0, "服務單位：", newuser.career,
+		sizeof(newuser.career), DOECHO);
+
+	if ((errmsg = isvalidcareer(newuser.career))) {
+	    memset(newuser.career, 0, sizeof(newuser.career));
+	    vmsg(errmsg);
+	}
+    }
+
+    try = 0;
+    y++;
     while (strlen(newuser.address) < 8)
     {
 	if (++try > 10) {
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(21, 0, "聯絡地址：", newuser.address,
+	getdata(y, 0, "聯絡地址：", newuser.address,
 		sizeof(newuser.address), DOECHO);
 
         // We haven't ask isForeign yet, so assume that's one (for lesser check)
@@ -729,14 +754,16 @@ new_register(void)
     }
 
     try = 0;
+    y++;
     do {
         char ans[3];
 	if (++try > 10) {
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-        mvouts(22, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
-        getdata(23, 0,"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:",
+        mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
+        getdata(y + 1, 0,
+		"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:",
                 ans, 3, LCECHO);
         if (ans[0] == 'y') {
             newuser.over_18  = 1;

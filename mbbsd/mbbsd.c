@@ -710,6 +710,7 @@ load_current_user(const char *uid)
 # endif // !LOGINASNEW
 
 	new_register();
+	clear();
 	mkuserdir(cuser.userid);
 	reginit_fav();
     } else
