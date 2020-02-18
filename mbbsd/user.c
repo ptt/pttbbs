@@ -713,7 +713,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    // XXX 這裡也要 emaildb_check
 #ifdef USE_EMAILDB
 	    {
-		int email_count = emaildb_check_email(buf);
+		int email_count = emaildb_check_email(cuser.userid, buf);
 
 		if (email_count < 0)
 		    vmsg("暫時不允許\ email 認證, 請稍後再試");

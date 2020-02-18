@@ -1078,12 +1078,78 @@ create_regform_request()
     return 1;
 }
 
+#define REGISTER_OK (0)
+#define REGISTER_ERR_INVALID_EMAIL (-1)
+#define REGISTER_ERR_EMAILDB (-2)
+#define REGISTER_ERR_TOO_MANY_ACCOUNTS (-3)
+#define REGISTER_ERR_CANCEL (-4)
+
+static int
+register_email_input(const char *userid, char *email)
+{
+    while (1) {
+	email[0] = 0;
+	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, 50);
+	strip_blank(email, email);
+	if (strlen(email) == 0)
+	    return REGISTER_ERR_CANCEL;
+	if (strcmp(email, "X") == 0) email[0] = 'x';
+	if (strcmp(email, "x") == 0)
+	    return REGISTER_OK;
+
+	if (!check_regmail(email))
+	    return REGISTER_ERR_INVALID_EMAIL;
+
+#ifdef USE_EMAILDB
+	int email_count;
+
+	// before long waiting, alert user
+	move(18, 0); clrtobot();
+	outs("正在確認 email, 請稍候...\n");
+	doupdate();
+
+	email_count = emaildb_check_email(userid, email);
+	if (email_count < 0)
+	    return REGISTER_ERR_EMAILDB;
+	if (email_count >= EMAILDB_LIMIT)
+	    return REGISTER_ERR_TOO_MANY_ACCOUNTS;
+#endif
+
+	move(17, 0);
+	outs(ANSI_COLOR(1;31)
+		"\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
+		"原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
+	char yn[3];
+	getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嗎? [y/N]",
+		yn, sizeof(yn), LCECHO);
+	clrtobot();
+	if (yn[0] == 'y')
+	    return REGISTER_OK;
+    }
+}
+
+static int
+register_check_and_update_emaildb(const char *userid, const char *email)
+{
+#ifdef USE_EMAILDB
+    int email_count = emaildb_check_email(userid, email);
+    if (email_count < 0)
+	return REGISTER_ERR_EMAILDB;
+    if (email_count >= EMAILDB_LIMIT)
+	return REGISTER_ERR_TOO_MANY_ACCOUNTS;
+
+    if (emaildb_update_email(cuser.userid, email) < 0)
+	return REGISTER_ERR_EMAILDB;
+#endif
+    return REGISTER_OK;
+}
+
 static void
 toregister(char *email)
 {
     clear();
     vs_hdr("認證設定");
-    if (cuser.userlevel & PERM_NOREGCODE){
+    if (cuser.userlevel & PERM_NOREGCODE) {
 	strcpy(email, "x");
 	goto REGFORM2;
     }
@@ -1103,81 +1169,63 @@ toregister(char *email)
 	 "* 收到的認證信，若真的仍然不行請再重填一次 E-Mail.       *\n"
 	 "**********************************************************\n");
 
-    while (1) {
-	email[0] = 0;
-	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, 50);
-	strip_blank(email, email);
-	if (strcmp(email, "X") == 0) email[0] = 'x';
-	if (strcmp(email, "x") == 0)
-	    break;
-	else if (check_regmail(email)) {
-	    char            yn[3];
-#ifdef USE_EMAILDB
-	    int email_count;
+    int err;
+    do {
+	err = register_email_input(cuser.userid, email);
 
-	    // before long waiting, alert user
-	    move(18, 0); clrtobot();
-	    outs("正在確認 email, 請稍候...\n");
-	    doupdate();
+	if (err == REGISTER_OK && strcasecmp(email, "x") != 0)
+	    err = register_check_and_update_emaildb(cuser.userid, email);
 
-	    email_count = emaildb_check_email(email);
+	switch (err) {
+	    case REGISTER_OK:
+		break;
 
-	    if (email_count < 0) {
+	    case REGISTER_ERR_INVALID_EMAIL:
+		move(15, 0); clrtobot();
+		move(17, 0);
+		outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
+		outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
+		outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
+		outs("但注意手動認證通常會花上數天以上的時間。\n");
+		pressanykey();
+		continue;
+
+	    case REGISTER_ERR_EMAILDB:
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
 		pressanykey();
-		return;
-	    } else if (email_count >= EMAILDB_LIMIT) {
+		continue;
+
+	    case REGISTER_ERR_TOO_MANY_ACCOUNTS:
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
 		outs("但注意手動認證通常會花上數天以上的時間。\n");
 		pressanykey();
-	    } else {
-#endif
-	    move(17, 0);
-	    outs(ANSI_COLOR(1;31)
-	    "\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
-	    "原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
-	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嗎? [y/N]",
-		    yn, sizeof(yn), LCECHO);
-	    clrtobot();
-	    if (yn[0] == 'y')
-		break;
-#ifdef USE_EMAILDB
-	    }
-#endif
-	} else {
-	    move(15, 0); clrtobot();
-	    move(17, 0);
-	    outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
-	    outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
-	    outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
-	    outs("但注意手動認證通常會花上數天以上的時間。\n");
-	    pressanykey();
+		continue;
+
+	    case REGISTER_ERR_CANCEL:
+		vmsg("操作取消。");
+		return;
+
+	    default:
+		assert(!"unhandled");
+		exit(1);
+		return;
 	}
-    }
-#ifdef USE_EMAILDB
-    // XXX for 'x', the check will be made later... let's simply ignore it.
-    if (strcmp(email, "x") != 0 &&
-	emaildb_update_email(cuser.userid, email) < 0) {
-	move(15, 0); clrtobot();
-	move(17, 0);
-	outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
-	pressanykey();
-	return;
-    }
-#endif
- REGFORM2:
-    if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
-	if (!create_regform_request())
-	    vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
-    } else {
-	// register by mail or mobile
+    } while (err != REGISTER_OK);
+
+    if (strcasecmp(email, "x") != 0) {
 	pwcuRegSetTemporaryJustify("<Email>", email);
 	email_justify(cuser_ref);
+	return;
     }
+
+ REGFORM2:
+    // Manual verification.
+    if (!create_regform_request())
+	vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
 }
 
 int

@@ -229,7 +229,7 @@ const char *ask_tmpbuf(int y);
 
 /* emaildb */
 #ifdef USE_EMAILDB
-int emaildb_check_email (const char *email);
+int emaildb_check_email (const char *userid, const char *email);
 int emaildb_update_email(const char *userid, const char *email);
 #endif
 #ifdef USE_REGCHECKD

@@ -4,7 +4,7 @@
 
 #ifdef USE_EMAILDB
 
-int emaildb_check_email(const char * email)
+int emaildb_check_email(const char * userid, const char * email)
 {
     int count = -1;
     int fd = -1;
@@ -13,8 +13,8 @@ int emaildb_check_email(const char * email)
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_COUNT;
-    strlcpy(req.userid, cuser.userid, sizeof(req.userid));
-    strlcpy(req.email,  email,        sizeof(req.email));
+    strlcpy(req.userid, userid, sizeof(req.userid));
+    strlcpy(req.email,  email,  sizeof(req.email));
 
     if ( (fd = toconnect(REGMAILD_ADDR)) < 0 )
     {
