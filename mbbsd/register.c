@@ -1242,7 +1242,7 @@ register_email_input(const char *userid, char *email)
 {
     while (1) {
 	email[0] = 0;
-	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, 50);
+	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, EMAILSZ);
 	strip_blank(email, email);
 	if (strlen(email) == 0)
 	    return REGISTER_ERR_CANCEL;
@@ -1385,7 +1385,7 @@ int
 u_register(void)
 {
     char            rname[20], addr[50];
-    char            career[40], email[50];
+    char            career[40], email[EMAILSZ];
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
     int		    i = 0;
