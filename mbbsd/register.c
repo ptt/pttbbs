@@ -228,6 +228,8 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
 ////////////////////////////////////////////////////////////////////////////
 
 #define REGCODE_INITIAL "v6" // always 2 characters
+#define REGCODE_LEN     (13)
+#define REGCODE_SZ      (REGCODE_LEN + 1)
 
 static char *
 getregfile(char *buf)
@@ -264,10 +266,10 @@ makeregcode(char *buf)
     const char *alphabet = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
 
     /* generate a new regcode */
-    buf[13] = 0;
+    buf[REGCODE_LEN] = 0;
     buf[0] = REGCODE_INITIAL[0];
     buf[1] = REGCODE_INITIAL[1];
-    for( i = 2 ; i < 13 ; ++i )
+    for( i = 2 ; i < REGCODE_LEN ; ++i )
 	buf[i] = alphabet[random() % strlen(alphabet)];
 }
 
@@ -285,10 +287,10 @@ getregcode(char *buf)
 	buf[0] = 0;
 	return -1;
     }
-    int r = read(fd, buf, 13);
+    int r = read(fd, buf, REGCODE_LEN);
     close(fd);
-    buf[13] = 0;
-    return r == 13 ? 0 : -1;
+    buf[REGCODE_LEN] = 0;
+    return r == REGCODE_LEN ? 0 : -1;
 }
 
 void
@@ -325,7 +327,7 @@ static void email_regcode(const char *regcode, const char *email)
 static void
 email_justify(const userec_t *muser)
 {
-	char regcode[256];
+	char regcode[REGCODE_SZ];
 
 	makeregcode(regcode);
 	if (!saveregcode(regcode))
@@ -655,7 +657,7 @@ new_register_email_verify(char *email)
     } while (err != REGISTER_OK);
 
     // Send and check regcode.
-    char inregcode[14] = {0}, regcode[50];
+    char inregcode[REGCODE_SZ] = {0}, regcode[REGCODE_SZ];
     char buf[80];
     makeregcode(regcode);
 
@@ -1386,7 +1388,7 @@ u_register(void)
 {
     char            rname[20], addr[50];
     char            career[40], email[EMAILSZ];
-    char            inregcode[14], regcode[50];
+    char            inregcode[REGCODE_SZ], regcode[REGCODE_SZ];
     char            ans[3], *errcode;
     int		    i = 0;
     int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
@@ -1452,7 +1454,7 @@ u_register(void)
                 strcmp(inregcode, "x") == 0 ||
                 strcmp(inregcode, "X") == 0 )
 		break;
-	    if( strlen(inregcode) != 13 || inregcode[0] == ' ') {
+	    if( strlen(inregcode) != REGCODE_LEN || inregcode[0] == ' ') {
                 LOG_IF((LOG_CONF_BAD_REG_CODE && inregcode[0]),
                        log_filef("log/reg_badcode.log", LOG_CREAT,
                                  "%s %s INCOMPLETE [%s]\n",
