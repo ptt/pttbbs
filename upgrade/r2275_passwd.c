@@ -72,7 +72,7 @@ void transform(userec_t *new, old_userec_t *old)
     new->money = old->money;
     strlcpy(new->remoteuser, old->remoteuser, 3);
     new->proverb = old->proverb;
-    strlcpy(new->email, old->email, 50);
+    strlcpy(new->email, old->email, sizeof(new->email));
     strlcpy(new->address, old->address, 50);
     strlcpy(new->justify, old->justify, REGLEN + 1);
     new->month = old->month;

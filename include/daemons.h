@@ -28,7 +28,7 @@ typedef struct
     size_t cb;
     int  operation;
     char userid   [IDLEN+1];
-    char email    [50]; // TODO define const in pttstruct.h
+    char email    [EMAILSZ];
 }   regmaildb_req;
 
 

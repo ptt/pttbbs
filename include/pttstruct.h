@@ -50,6 +50,7 @@ typedef struct chicken_t { /* 128 bytes */
                                      For DES, set to 8. */
 #define PASSLEN    14             /* Length of encrypted passwd field */
 #define REGLEN     38             /* Length of registration data */
+#define EMAILSZ    50             /* Size of email field */
 
 #define PASSWD_VERSION	4194
 
@@ -74,7 +75,7 @@ typedef struct userec_t {
     int32_t     money;		/* Ptt幣 */
     char	_unused[4];
 
-    char	email[50];	/* Email */
+    char	email[EMAILSZ]; /* Email */
     char	address[50];	/* 住址 */
     char	justify[REGLEN+1];/* 審核資料 */
     uint8_t     _unused_birth[3]; /* 生日 月日年 */
