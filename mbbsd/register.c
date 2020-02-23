@@ -597,6 +597,25 @@ do_register_captcha()
 #endif
 }
 
+static bool
+query_yn(int y, const char *msg)
+{
+    int try = 0;
+    do {
+        char ans[3];
+	if (++try > 10) {
+	    vmsg(MSG_ERR_MAXTRIES);
+	    exit(1);
+	}
+        getdata(y, 0, msg, ans, 3, LCECHO);
+        if (ans[0] == 'y')
+	    return true;
+        if (ans[0] == 'n')
+	    return false;
+        bell();
+    } while (1);
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
@@ -910,27 +929,24 @@ new_register(void)
 	}
     }
 
-    try = 0;
+    // Over 18.
     y++;
-    do {
-        char ans[3];
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-        mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
-        getdata(y + 1, 0,
-		"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:",
-                ans, 3, LCECHO);
-        if (ans[0] == 'y') {
-            newuser.over_18  = 1;
-            break;
-        } else if (ans[0] == 'n') {
-            newuser.over_18  = 0;
-            break;
-        }
-        bell();
-    } while (1);
+    mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
+    if (query_yn(y + 1,
+		"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:"))
+	newuser.over_18 = 1;
+
+    // Whether to limit login to secure connection only.
+    if (mbbsd_is_secure_connection()) {
+	// Screen full.
+	y = 17;
+	move(y, 0); clrtobot();
+	outs("[ 連線設定 ]");
+
+	y++;
+	if (query_yn(y, "您是否要限制此帳號僅能使用安全連線登入? [y/n]:"))
+	    newuser.uflag |= UF_SECURE_LOGIN;
+    }
 
 #ifdef REGISTER_VERIFY_CAPTCHA
     if (!verify_captcha("為了繼續您的註冊程序\n"))
