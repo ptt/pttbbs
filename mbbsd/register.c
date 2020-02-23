@@ -713,6 +713,13 @@ new_register(void)
     uint8_t         ua_version = get_system_user_agreement_version();
     bool	    email_verified = false;
 
+#ifdef REQUIRE_SECURE_CONN_TO_REGISTER
+    if (!mbbsd_is_secure_connection()) {
+	vmsg("請使用安全連線註冊帳號!");
+	exit(1);
+    }
+#endif
+
     if (!accept_user_aggrement()) {
 	vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
 	exit(1);
