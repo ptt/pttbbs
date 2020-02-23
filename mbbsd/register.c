@@ -633,10 +633,11 @@ new_register_email_verify(char *email)
 	    case REGISTER_OK:
 		if (strcasecmp(email, "x") != 0)
 		    break;
-		// Use input is "x".
+		// User input is "x".
 		err = REGISTER_ERR_INVALID_EMAIL;
 		// fallthrough
 	    case REGISTER_ERR_INVALID_EMAIL:
+	    case REGISTER_ERR_CANCEL:
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
