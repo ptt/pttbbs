@@ -151,6 +151,7 @@ static int config(const char *mname) {
 	printf("%s.name %s\n", v->name, v->name);
 	printf("%s.label %s\n", v->name, v->name);
 	printf("%s.type %s\n", v->name, v->type);
+	printf("%s.max 500000\n", v->name);
     }
     return 0;
 }
