@@ -583,6 +583,7 @@ _telnet_resize_term_cb(void *resize_arg, int w, int h)
     ctx->t_cols  = w;
 }
 
+#ifdef DETECT_CLIENT
 static void 
 _telnet_update_cc_cb(void *cc_arg, unsigned char c)
 {
@@ -592,6 +593,7 @@ _telnet_update_cc_cb(void *cc_arg, unsigned char c)
     FNV1A_CHAR(c, ctx->client_code);
     // fprintf(stderr, "-> %08lX\r\n", (unsigned long)ctx->client_code);
 }
+#endif
 
 static void 
 _telnet_write_data_cb(void *write_arg, int fd GCC_UNUSED,
@@ -1548,6 +1550,7 @@ auth_start(int fd, login_conn_ctx *conn)
             case AUTH_RESULT_FREEID:
                 isfree = 1;
                 // share FREEID case, no break here!
+                // fall through
             case AUTH_RESULT_OK:
                 if (!isfree)
                 {
@@ -2073,6 +2076,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                 // force changing state
                 conn->ctx.state = LOGIN_STATE_AUTH;
                 // XXX share start auth, no break here.
+                // fall through
             case LOGIN_HANDLE_START_AUTH:
             {
                 int r = auth_start(fd, conn);
