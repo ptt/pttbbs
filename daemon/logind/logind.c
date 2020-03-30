@@ -1953,9 +1953,16 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
         }
 
         ctx->encoding = ctx->cdata.encoding;
-        inet_ntop(AF_INET, ctx->cdata.raddr, ctx->hostip, sizeof(ctx->hostip));
         snprintf(ctx->port, sizeof(ctx->port), "%u", ctx->cdata.lport);
         ctx->is_secure_connection = (ctx->cdata.flags & CONN_FLAG_SECURE);
+
+        // Update remote address in login context.
+        if (ctx->cdata.raddr_len == sizeof(ctx->addr.sin_addr))
+            memcpy(&ctx->addr.sin_addr, ctx->cdata.raddr,
+                   sizeof(ctx->addr.sin_addr));
+        if (inet_ntop(AF_INET, ctx->cdata.raddr, ctx->hostip,
+                      sizeof(ctx->hostip)) == NULL)
+            ctx->hostip[0] = '\0';
 
         if (g_verbose >= VERBOSE_DEBUG)
         {
