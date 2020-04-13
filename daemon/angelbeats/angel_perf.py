@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 #-*- coding: big5 -*-
 
+from __future__ import print_function, unicode_literals
+from builtins import bytes, chr, map
+
 import collections
 import math
 import os
@@ -67,7 +70,7 @@ def parse_perf_file(filename):
                 continue
             # format: no. uid sample pause1 pause2
             no, uid, sample, pause1, pause2 = ls.split()
-            data[uid] = map(int, (sample, pause1, pause2))
+            data[uid] = list(map(int, (sample, pause1, pause2)))
             sample = int(sample)
             sum_sample += sample
             sum_sample_square += sample * sample
@@ -86,12 +89,12 @@ def get_nick(uid):
         nick = open(fn).readline().strip().decode('big5').strip('%%[')
     else:
         nick = uid
-    return (nick + 'ぱㄏ'.decode('big5')).encode('big5')
+    return (nick + 'ぱㄏ').encode('big5').decode('big5')
 
 def build_badges(max_sample, avg_sample, std_sample, data):
     result = {}
     filters = [is_all_reject2]
-    for uid, e in data.items():
+    for uid, e in list(data.items()):
         nick = '%s (絬%d 氨Μ%d 闽超%d)' % (get_nick(uid), e[0], e[1], e[2])
         if DEBUG:
             nick += ' {%s/%d/%d/%d}' % (uid, e[0], e[1], e[2])
@@ -112,17 +115,17 @@ def main():
     if max_sample < SAMPLE_MINIMAL:
             exit()
 
-    print PREFIX_DOC
+    print(PREFIX_DOC)
     if DEBUG:
-        print 'max, avg, std: %d, %d, %d' % (max_sample, avg_sample, std_sample)
+        print('max, avg, std: %d, %d, %d' % (max_sample, avg_sample, std_sample))
     elif REPORT_SAMPLE_STAT:
-        print ' SAMPLE 计程 / キА / 夹非畉: %d / %d / %d\n' % (
-               max_sample, avg_sample, std_sample)
+        print(' SAMPLE 计程 / キА / 夹非畉: %d / %d / %d\n' % (
+               max_sample, avg_sample, std_sample))
     else:
         pass
     result = build_badges(max_sample, avg_sample, std_sample, data)
-    for k, v in result.items():
-        print '%s:\n  %s\n' % (k, '\n  '.join(v))
+    for k, v in list(result.items()):
+        print('%s:\n  %s\n' % (k, '\n  '.join(v)))
 
 if __name__ == '__main__':
     main()

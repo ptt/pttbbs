@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from builtins import map
 import collections
 import json
 import logging
@@ -94,7 +95,7 @@ def GetPostContent(keypak):
     for i in range(comment_num):
         comment = deserialize(g_db.get('%s:comment#%08d' % (key, i + 1)))
         # Sorry, output is big5.
-        comment = {k: big5.encode(v) for k,v in comment.items()}
+        comment = {k: big5.encode(v) for k,v in list(comment.items())}
         content += '<%(kind)s> %(author)s: %(content)s %(trailing)s\n' % comment
     return content
 
@@ -151,8 +152,8 @@ def handle_request(socket, _):
         return v.strip(chr(0)) if type(v) == str else v
 
     def read_and_unpack(fd, fmt, names=None):
-        data = map(strip_if_string,
-                   struct.unpack(fmt, fd.read(struct.calcsize(fmt))))
+        data = list(map(strip_if_string,
+                   struct.unpack(fmt, fd.read(struct.calcsize(fmt)))))
         return names._make(data) if names else data
 
     fd = socket.makefile('rw')
@@ -216,10 +217,10 @@ def main(myname, argv):
     level = logging.DEBUG
     logging.basicConfig(level=level, format='%(asctime)-15s %(message)s')
     if len(argv) not in [0, 1]:
-        print "Usage: %s [db_path]" % myname
+        print("Usage: %s [db_path]" % myname)
         exit(1)
     db_path = argv[0] if len(argv) > 0 else _DB_PATH
-    logging.warn("Serving at %s:%s [db:%s][pid:%d]...",
+    logging.warning("Serving at %s:%s [db:%s][pid:%d]...",
                  _SERVER_ADDR, _SERVER_PORT, db_path, os.getpid())
     g_db = open_database(db_path)
     server = gevent.server.StreamServer(

@@ -6,6 +6,7 @@
 banipd: Daemon to check if an IP is banned, and sending to reason.
 """
 
+from io import open
 import eventlet
 import getopt
 import logging
@@ -69,7 +70,7 @@ def LoadConfigTable(filename):
             return ips
 
     entry = Entry()
-    with open(filename, 'rt') as f:
+    with open(filename, 'rt', encoding='big5') as f:
         for line in f:
             t = line.strip()
             if t.startswith('#'):
@@ -115,25 +116,25 @@ def main(myname, argv):
     global g_tbl
 
     def handle_hup(signum, stack):
-        logging.warn("Reload configuration table: %s" % config_file)
+        logging.warning("Reload configuration table: %s" % config_file)
         try:
             newtbl = LoadConfigTable(config_file)
             g_tbl.clear()
             g_tbl.update()
-            logging.warn("Successfully updated table.")
+            logging.warning("Successfully updated table.")
         except:
             logging.exception("Failed loading new config: %s" % config_file)
             return
 
     def usage():
-        print ("Usage: %s [options] config_file\n"
+        print(("Usage: %s [options] config_file\n"
                "-c: check only.\n"
                "-d: enable debug output.\n"
-               "config_file: default to %s" % _CONFIG_FILE)
+               "config_file: default to %s" % _CONFIG_FILE))
     try:
         opts, args = getopt.getopt(argv, "cd")
-    except getopt.GetoptError, err:
-        print str(err)
+    except getopt.GetoptError as err:
+        print(str(err))
         usage()
         exit(2)
 
@@ -148,7 +149,7 @@ def main(myname, argv):
         else:
             assert False, "Unkown param: %s" % o
     if len(args) > 1:
-        print "Too many config files: %s" % args
+        print("Too many config files: %s" % args)
         usage()
         exit(2)
     config_file = args[0] if args else _CONFIG_FILE
@@ -158,9 +159,9 @@ def main(myname, argv):
     g_tbl.update(LoadConfigTable(config_file))
     if check_only:
         # pprint.pprint(g_tbl)
-        print "%s: PASSED." % config_file
+        print("%s: PASSED." % config_file)
         return
-    logging.warn("Serving at %s:%s [config:%s]...", _SERVER_ADDR, _SERVER_PORT,
+    logging.warning("Serving at %s:%s [config:%s]...", _SERVER_ADDR, _SERVER_PORT,
                  config_file)
     signal.signal(signal.SIGHUP, handle_hup)
     server = eventlet.listen((_SERVER_ADDR, _SERVER_PORT))
