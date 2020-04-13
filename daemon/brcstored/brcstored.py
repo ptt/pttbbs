@@ -162,9 +162,9 @@ def handle_request(socket, _):
             msglen = struct.unpack(fmt_len,
                                    fd.read(struct.calcsize(fmt_len)))[0]
             msg = fd.read(msglen)
-	    if len(msg) != msglen:
-		logging.warn('Write: incomplete: %d/%d, %s',
-			len(msg), msglen, uid)
+            if len(msg) != msglen:
+                logging.warn('Write: incomplete: %d/%d, %s',
+                        len(msg), msglen, uid)
             logging.info('Write: %s: size=%d', uid, len(msg))
             with OperationPerf('W'):
                 g_db.set(uid, msg)
