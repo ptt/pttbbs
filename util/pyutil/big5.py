@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import unicode_literals
+from builtins import bytes, chr
+
 import big5_tbl
 
 def decode(s, strip_zero=True):
-    ret = u''
+    ret = ''
     b = 0
     for i in s:
         if b:
@@ -14,7 +17,7 @@ def decode(s, strip_zero=True):
                 continue
         if (b == 0) and strip_zero:
             break
-        ret += unichr(big5_tbl.b2u_table[b])
+        ret += chr(big5_tbl.b2u_table[b])
         b = 0
     return ret
 

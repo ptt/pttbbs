@@ -54,10 +54,10 @@ def ParseComment(buf):
         return None
     match = match[0]
     (kind, author, content, trailing) = match
-    return dict(zip(('kind', 'author', 'content', 'trailing'),
-                    map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
-                                      author, content.rstrip(' '),
-                                      trailing.rstrip('\n')))))
+    return dict(list(zip(('kind', 'author', 'content', 'trailing'),
+                    list(map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
+                                           author, content.rstrip(' '),
+                                           trailing.rstrip('\n')))))))
 
 def ParsePost(contents):
     '''Returns a legacy post into two parts.
@@ -114,7 +114,7 @@ def main(argv):
         filename = 'sample'
     else:
         filename = argv[0]
-    print ParsePost(open(filename).readlines())
+    print(ParsePost(open(filename).readlines()))
 
 if __name__ == '__main__':
     main(sys.argv[1:])

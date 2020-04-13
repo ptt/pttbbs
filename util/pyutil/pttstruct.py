@@ -181,8 +181,8 @@ def get_format(format_pattern):
 
 def unpack_data(blob, format_pattern):
     fmt = get_format(format_pattern)
-    data = dict(zip((name for name, _ in format_pattern),
-                    struct.unpack_from(fmt, blob)))
+    data = dict(list(zip((name for name, _ in format_pattern),
+                    struct.unpack_from(fmt, blob))))
     # Convert C-style strings.
     for name, pat in format_pattern:
         if 's' in pat:
@@ -220,20 +220,20 @@ if __name__ == '__main__':
     with open('/home/bbs/boards/A/ALLPOST/.DIR', 'rb') as f:
         entry = f.read(FILEHEADER_SIZE)
     header = unpack_data(entry, FILEHEADER_FMT)
-    print header
+    print(header)
     xblob = pack_data(header, FILEHEADER_FMT)
     assert xblob == entry
 
     with open('/home/bbs/.PASSWDS', 'rb') as f:
         entry = f.read(USEREC_SIZE)
     user = unpack_data(entry, USEREC_FMT)
-    print user
+    print(user)
 
     with open('/home/bbs/.BRD', 'rb') as f:
         entry = f.read(BOARDHEADER_SIZE)
     board = unpack_data(entry, BOARDHEADER_FMT)
-    print board
+    print(board)
 
-    print 'user name: ', big5.encode(user['realname'])
-    print 'file title: ', big5.encode(header['title'])
-    print 'board title: ', big5.encode(board['title'])
+    print('user name: ', big5.encode(user['realname']))
+    print('file title: ', big5.encode(header['title']))
+    print('board title: ', big5.encode(board['title']))
