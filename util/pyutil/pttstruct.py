@@ -7,7 +7,7 @@ from builtins import zip, map
 import collections
 import struct
 
-import big5
+from . import big5
 
 IDLEN = 12
 IPV4LEN = 15

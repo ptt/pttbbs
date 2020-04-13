@@ -10,7 +10,7 @@ from builtins import zip, map
 import re
 import sys
 
-import big5
+from . import big5
 
 STR_AUTHOR1 = "作者:"
 STR_AUTHOR2 = "發信人:"

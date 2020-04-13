@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 from builtins import bytes, chr
 
-import big5_tbl
+from . import big5_tbl
 
 def decode(s, strip_zero=True):
     ret = ''
