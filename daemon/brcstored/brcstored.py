@@ -30,7 +30,7 @@ if USE_KYOTO:
 else:
     import leveldb
 
-import StringIO
+import io
 import logging
 import os
 import re
@@ -162,9 +162,9 @@ def handle_request(socket, _):
             msglen = struct.unpack(fmt_len,
                                    fd.read(struct.calcsize(fmt_len)))[0]
             msg = fd.read(msglen)
-	    if len(msg) != msglen:
-		logging.warn('Write: incomplete: %d/%d, %s',
-			len(msg), msglen, uid)
+            if len(msg) != msglen:
+                logging.warning('Write: incomplete: %d/%d, %s',
+                        len(msg), msglen, uid)
             logging.info('Write: %s: size=%d', uid, len(msg))
             with OperationPerf('W'):
                 g_db.set(uid, msg)
@@ -190,12 +190,12 @@ def main(myname, argv):
     # level = logging.DEBUG
     logging.basicConfig(level=level, format='%(asctime)-15s %(message)s')
     if len(argv) not in [0, 1]:
-        print "Usage: %s [db_path]" % myname
+        print("Usage: %s [db_path]" % myname)
         exit(1)
     db_path = argv[0] if len(argv) > 0 else _DB_PATH
     if USE_KYOTO:
         db_path += '.kch'
-    logging.warn("Serving via %s at %s:%s [db:%s:%s][pid:%d]...",
+    logging.warning("Serving via %s at %s:%s [db:%s:%s][pid:%d]...",
                  "gevent" if USE_GEVENT else "eventlet",
                  _SERVER_ADDR, _SERVER_PORT, 
                  'KyotoCabinet' if USE_KYOTO else 'LevelDB',

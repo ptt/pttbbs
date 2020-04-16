@@ -70,13 +70,11 @@
       µM«á±N make alias ¦¨ pmake *
 
     ¥H¤U¬O½sÄ¶«e«ØÄ³¥ý¦w¸Ëªº®M¥ó²M³æ¡A
-    ¥i¥H¥Î apt-get / yum µ¥³nÅéºÞ²z­û«ü¥OÀË¬d¦Û¤v¦³¨S¦³¦w¸Ë¨ì¡G
+    ¥i¥H¥Î apt / yum µ¥®M¥óºÞ²z­û«ü¥OÀË¬d¦Û¤v¦³¨S¦³¦w¸Ë¨ì¡G
+    bmake, ccache, clang, gcc, git, libevent-dev/libevent-devel,
+    pkg-config/pkgconfig/pkgconf, python
 
-    clang
-    ccache
-    libevent-dev
-
- 11.(¦b /home/bbs/pttbbs ¤U)  °õ¦æ make BBSHOME=/home/bbs all install
+ 11.(¦b /home/bbs/pttbbs ¤U)  °õ¦æ make clean; make all install
 
  12.¦pªG¬O·s¬[°_¨Óªº¯¸, ½Ð°õ¦æ cd sample; make install
 

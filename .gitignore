@@ -12,3 +12,4 @@ mbbsd/mbbsd
 mbbsd/testmbbsd
 mbbsd/testsz
 mbbsd/vers.c
+util/pyutil/big5_tbl.py

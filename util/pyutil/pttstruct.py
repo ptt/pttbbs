@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: Big5 -*-
 
+from __future__ import print_function
+from builtins import zip, map
+
 import collections
 import struct
-import big5
+
+from . import big5
 
 IDLEN = 12
 IPV4LEN = 15
@@ -14,74 +18,74 @@ PASSWD_VERSION = 4194
 
 USEREC_SIZE = 512
 USEREC_FMT = (
-	("version", "I"),
-	("userid", "%ds" % (IDLEN+1)),
-	("realname", "20s"),
-	("nickname", "24s"),
-	("passwd", "%ds" % PASSLEN),
-	("pad_1", "B"),
-	("uflag", "I"),
-	("deprecated_uflag2", "I"),
-	("userlevel", "I"),
-	("numlogindays", "I"),
-	("numposts", "I"),
-	("firstlogin", "I"),
-	("lastlogin", "I"),
-	("lasthost", "%ds" % (IPV4LEN+1)),
-	("money", "I"),
-	("_unused", "4s"),
-	("email", "50s"),
-	("address", "50s"),
-	("justify", "%ds" % (REGLEN + 1)),
-	("month", "B"),
-	("day", "B"),
-	("year", "B"),
-	("_unused3", "B"),
-	("pager_ui_type", "B"),
-	("pager", "B"),
-	("invisible", "B"),
-	("_unused4", "2s"),
-	("exmailbox", "I"),
-	("_unused5", "4s"),
-	("career", "40s"),
-	("phone", "20s"),
-	("_unused6", "I"),
-	("chkpad1", "44s"),
-	("role", "I"),
-	("lastseen", "I"),
-	("timesetangel", "I"),
-	("timeplayangel", "I"),
-	("lastsong", "I"),
-	("loginview", "I"),
-	("_unused8", "B"),
-	("pad_2", "B"),
-	("vl_count", "H"),
-	("five_win", "H"),
-	("five_lose", "H"),
-	("five_tie", "H"),
-	("chc_win", "H"),
-	("chc_lose", "H"),
-	("chc_tie", "H"),
-	("mobile", "I"),
-	("mind", "4s"),
-	("go_win", "H"),
-	("go_lose", "H"),
-	("go_tie", "H"),
-	("dark_win", "H"),
-	("dark_lose", "H"),
-	("_unused9", "B"),
-	("signature", "B"),
-	("_unused19", "B"),
-	("badpost", "B"),
-	("dark_tie", "H"),
-	("myangel", "%ds" % (IDLEN + 1)),
-	("pad_3", "B"),
-	("chess_elo_rating", "H"),
-	("withme", "I"),
-	("timeremovebadpost", "I"),
-	("timeviolatelaw", "I"),
-	("pad_trail", "28s"),
-	)
+        ("version", "I"),
+        ("userid", "%ds" % (IDLEN+1)),
+        ("realname", "20s"),
+        ("nickname", "24s"),
+        ("passwd", "%ds" % PASSLEN),
+        ("pad_1", "B"),
+        ("uflag", "I"),
+        ("deprecated_uflag2", "I"),
+        ("userlevel", "I"),
+        ("numlogindays", "I"),
+        ("numposts", "I"),
+        ("firstlogin", "I"),
+        ("lastlogin", "I"),
+        ("lasthost", "%ds" % (IPV4LEN+1)),
+        ("money", "I"),
+        ("_unused", "4s"),
+        ("email", "50s"),
+        ("address", "50s"),
+        ("justify", "%ds" % (REGLEN + 1)),
+        ("month", "B"),
+        ("day", "B"),
+        ("year", "B"),
+        ("_unused3", "B"),
+        ("pager_ui_type", "B"),
+        ("pager", "B"),
+        ("invisible", "B"),
+        ("_unused4", "2s"),
+        ("exmailbox", "I"),
+        ("_unused5", "4s"),
+        ("career", "40s"),
+        ("phone", "20s"),
+        ("_unused6", "I"),
+        ("chkpad1", "44s"),
+        ("role", "I"),
+        ("lastseen", "I"),
+        ("timesetangel", "I"),
+        ("timeplayangel", "I"),
+        ("lastsong", "I"),
+        ("loginview", "I"),
+        ("_unused8", "B"),
+        ("pad_2", "B"),
+        ("vl_count", "H"),
+        ("five_win", "H"),
+        ("five_lose", "H"),
+        ("five_tie", "H"),
+        ("chc_win", "H"),
+        ("chc_lose", "H"),
+        ("chc_tie", "H"),
+        ("mobile", "I"),
+        ("mind", "4s"),
+        ("go_win", "H"),
+        ("go_lose", "H"),
+        ("go_tie", "H"),
+        ("dark_win", "H"),
+        ("dark_lose", "H"),
+        ("_unused9", "B"),
+        ("signature", "B"),
+        ("_unused19", "B"),
+        ("badpost", "B"),
+        ("dark_tie", "H"),
+        ("myangel", "%ds" % (IDLEN + 1)),
+        ("pad_3", "B"),
+        ("chess_elo_rating", "H"),
+        ("withme", "I"),
+        ("timeremovebadpost", "I"),
+        ("timeviolatelaw", "I"),
+        ("pad_trail", "28s"),
+        )
 
 BTLEN = 48
 
@@ -177,18 +181,18 @@ def get_format(format_pattern):
 
 def unpack_data(blob, format_pattern):
     fmt = get_format(format_pattern)
-    data = dict(zip((name for name, _ in format_pattern),
-		    struct.unpack_from(fmt, blob)))
+    data = dict(list(zip((name for name, _ in format_pattern),
+                    struct.unpack_from(fmt, blob))))
     # Convert C-style strings.
     for name, pat in format_pattern:
-	if 's' in pat:
-	    data[name] = big5.decode(data[name].partition(chr(0))[0])
+        if 's' in pat:
+            data[name] = big5.decode(data[name].partition(chr(0))[0])
     return data
 
 def pack_data(data, format_pattern):
     fmt = get_format(format_pattern)
     values = (big5.encode(data[name]) if 's' in f else data[name]
-	      for name, f in format_pattern)
+              for name, f in format_pattern)
     return struct.pack(fmt, *values)
 
 FILE_LOCAL     = 0x01    # local saved,  non-mail
@@ -214,22 +218,22 @@ if __name__ == '__main__':
     assert struct.calcsize(get_format(USEREC_FMT)) == USEREC_SIZE
 
     with open('/home/bbs/boards/A/ALLPOST/.DIR', 'rb') as f:
-	entry = f.read(FILEHEADER_SIZE)
+        entry = f.read(FILEHEADER_SIZE)
     header = unpack_data(entry, FILEHEADER_FMT)
-    print header
+    print(header)
     xblob = pack_data(header, FILEHEADER_FMT)
     assert xblob == entry
 
     with open('/home/bbs/.PASSWDS', 'rb') as f:
-	entry = f.read(USEREC_SIZE)
+        entry = f.read(USEREC_SIZE)
     user = unpack_data(entry, USEREC_FMT)
-    print user
+    print(user)
 
     with open('/home/bbs/.BRD', 'rb') as f:
-	entry = f.read(BOARDHEADER_SIZE)
+        entry = f.read(BOARDHEADER_SIZE)
     board = unpack_data(entry, BOARDHEADER_FMT)
-    print board
+    print(board)
 
-    print 'user name: ', big5.encode(user['realname'])
-    print 'file title: ', big5.encode(header['title'])
-    print 'board title: ', big5.encode(board['title'])
+    print('user name: ', big5.encode(user['realname']))
+    print('file title: ', big5.encode(header['title']))
+    print('board title: ', big5.encode(board['title']))

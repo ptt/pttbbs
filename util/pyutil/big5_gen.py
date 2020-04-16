@@ -18,15 +18,15 @@ b2u = [line.strip().split(b' ')
        if line.strip().startswith(b'0x')]
 b2u = dict((int(b, 0), int(u, 0)) for (b, u) in b2u)
 
-print ("""#!/usr/bin/env python
+print("""#!/usr/bin/env python
 
 """)
-print ("b2u_table = (")
+print("b2u_table = (")
 for i in range(0x10000):
-    print ('0x%04x,' % (i if i not in b2u else b2u[i]), end=' ')
+    print('0x%04x,' % (i if i not in b2u else b2u[i]), end=' ')
     if i % 10 == 9:
-        print ('')
-print (")\n")
+        print('')
+print(")\n")
 
 # u2b
 u2b = U2B_FILE.readlines()
@@ -35,9 +35,9 @@ u2b = [line.strip().split(b' ')
        if line.strip().startswith(b'0x')]
 u2b = dict((int(u, 0), int(b, 0)) for (b, u) in u2b)
 
-print ("u2b_table = (")
+print("u2b_table = (")
 for i in range(0x10000):
-    print ('0x%04x,' % (i if i not in u2b else u2b[i]), end=' ')
+    print('0x%04x,' % (i if i not in u2b else u2b[i]), end=' ')
     if i % 10 == 9:
-        print ('')
-print (")\n")
+        print('')
+print(")\n")

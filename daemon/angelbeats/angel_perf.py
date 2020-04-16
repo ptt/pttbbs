@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 #-*- coding: big5 -*-
 
+from __future__ import print_function, unicode_literals
+from builtins import bytes, chr, map
+
 import collections
 import math
 import os
@@ -34,12 +37,12 @@ PREFIX_DOC = '''== 本週小天使查翅膀建議名單 (系統自動產生: %s) ==
               10:32 C 上線了 (還不統計 - 十分鐘才算一次)
               10:33 A 改為停收 (還不統計 - 十分鐘才算一次)
               10:40 系統再次進行統計，更改記錄如下:
-	            (ABC都在線上，A停收，B關閉，C開呼叫)
-		     [ID] [線上] [停收] [關閉]
-		     A    1+1=2  0+1=1  0+0=0  
-		     B    1+1=2  0+0=0  1+1=2 
-		     C    0+1=1  0+0=0  0+0=0  
-		    且下次統計時間為 10:50。
+                    (ABC都在線上，A停收，B關閉，C開呼叫)
+                     [ID] [線上] [停收] [關閉]
+                     A    1+1=2  0+1=1  0+0=0  
+                     B    1+1=2  0+0=0  1+1=2 
+                     C    0+1=1  0+0=0  0+0=0  
+                    且下次統計時間為 10:50。
 
      換句話說，(數字/6) 就大約是線上/停收/關閉的總小時數。
 ''' % (time.ctime())
@@ -61,68 +64,68 @@ def parse_perf_file(filename):
     sum_sample = 0
     sum_sample_square = 0
     with open(filename, 'r') as f:
-	for l in f:
-	    ls = l.strip()
-	    if ls.startswith('#') or ls == '':
-		continue
-            # format: no. uid sample pause1 pause
-	    no, uid, sample, pause1, pause2 = ls.split()
-	    data[uid] = map(int, (sample, pause1, pause2))
-	    sample = int(sample)
-	    sum_sample += sample
-	    sum_sample_square += sample * sample
-	    if sample > max_sample:
-		max_sample = sample
+        for l in f:
+            ls = l.strip()
+            if ls.startswith('#') or ls == '':
+                continue
+            # format: no. uid sample pause1 pause2
+            no, uid, sample, pause1, pause2 = ls.split()
+            data[uid] = list(map(int, (sample, pause1, pause2)))
+            sample = int(sample)
+            sum_sample += sample
+            sum_sample_square += sample * sample
+            if sample > max_sample:
+                max_sample = sample
     N = len(data) or 1
     avg_sample = sum_sample / N
     std_sample = math.sqrt((sum_sample_square -
-			    (N * avg_sample * avg_sample)) / N)
+                            (N * avg_sample * avg_sample)) / N)
     return max_sample, avg_sample, std_sample, data
 
 def get_nick(uid):
     fn = '%s/home/%c/%s/angelmsg' % (BBSHOME, uid[0], uid)
     nick = ''
     if os.path.exists(fn):
-	nick = open(fn).readline().strip().decode('big5').strip('%%[')
+        nick = open(fn).readline().strip().decode('big5').strip('%%[')
     else:
-	nick = uid
-    return (nick + '小天使'.decode('big5')).encode('big5')
+        nick = uid
+    return (nick + '小天使').encode('big5').decode('big5')
 
 def build_badges(max_sample, avg_sample, std_sample, data):
     result = {}
     filters = [is_all_reject2]
-    for uid, e in data.items():
-	nick = '%s (線上%d 停收%d 關閉%d)' % (get_nick(uid), e[0], e[1], e[2])
-	if DEBUG:
-	    nick += ' {%s/%d/%d/%d}' % (uid, e[0], e[1], e[2])
-	entry = Entry(e[0], e[1], e[2], max_sample, avg_sample, std_sample)
-	if is_lazy(entry):
-	    badges = [is_lazy.__doc__]
-	else:
-	    badges = [f.__doc__ for f in filters if f(entry)]
-	for b in badges:
-	    if b not in result:
-		result[b] = []
-	    result[b] += [nick]
+    for uid, e in list(data.items()):
+        nick = '%s (線上%d 停收%d 關閉%d)' % (get_nick(uid), e[0], e[1], e[2])
+        if DEBUG:
+            nick += ' {%s/%d/%d/%d}' % (uid, e[0], e[1], e[2])
+        entry = Entry(e[0], e[1], e[2], max_sample, avg_sample, std_sample)
+        if is_lazy(entry):
+            badges = [is_lazy.__doc__]
+        else:
+            badges = [f.__doc__ for f in filters if f(entry)]
+        for b in badges:
+            if b not in result:
+                result[b] = []
+            result[b] += [nick]
     return result
 
 def main():
     max_sample, avg_sample, std_sample, data = parse_perf_file(INPUT_FILE)
     # print 'max=%f, avg=%f, std=%f' % (max_sample, avg_sample, std_sample)
     if max_sample < SAMPLE_MINIMAL:
-    	exit()
+            exit()
 
-    print PREFIX_DOC
+    print(PREFIX_DOC)
     if DEBUG:
-	print 'max, avg, std: %d, %d, %d' % (max_sample, avg_sample, std_sample)
+        print('max, avg, std: %d, %d, %d' % (max_sample, avg_sample, std_sample))
     elif REPORT_SAMPLE_STAT:
-	print ' SAMPLE 數最大值 / 平均 / 標準差: %d / %d / %d\n' % (
-	       max_sample, avg_sample, std_sample)
+        print(' SAMPLE 數最大值 / 平均 / 標準差: %d / %d / %d\n' % (
+               max_sample, avg_sample, std_sample))
     else:
-	pass
+        pass
     result = build_badges(max_sample, avg_sample, std_sample, data)
-    for k, v in result.items():
-	print '%s:\n  %s\n' % (k, '\n  '.join(v))
+    for k, v in list(result.items()):
+        print('%s:\n  %s\n' % (k, '\n  '.join(v)))
 
 if __name__ == '__main__':
     main()
