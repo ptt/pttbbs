@@ -478,6 +478,10 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	unlink(buf);
 	setbfile(buf, bname, vbuf->title);
 	unlink(buf);
+	setbfile(buf, bname, vbuf->logs);
+	unlink(buf);
+	setbfile(buf, bname, vbuf->comments);
+	unlink(buf);
 
 	if (fhp->bvote > 0)
 	    fhp->bvote--;
