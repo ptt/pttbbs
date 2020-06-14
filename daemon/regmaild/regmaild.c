@@ -59,7 +59,12 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
     // create table if it doesn't exist
     rc = sqlite3_exec(*Db, 
             "CREATE TABLE IF NOT EXISTS emaildb (userid TEXT, email TEXT, PRIMARY KEY (userid));"
-            "CREATE INDEX IF NOT EXISTS email ON emaildb (email);",
+            "CREATE INDEX IF NOT EXISTS email ON emaildb (email);"
+            "CREATE TABLE IF NOT EXISTS verifydb (\n"
+            "  userid TEXT, generation INTEGER,\n"
+            "  vmethod INTEGER, vkey TEXT, timestamp INTEGER,\n"
+            "  PRIMARY KEY (userid, generation, vmethod));"
+            "CREATE INDEX IF NOT EXISTS vmethodkey ON verifydb (vmethod, vkey);",
             NULL, NULL, NULL);
 
     return rc;
@@ -177,6 +182,7 @@ int main(int argc, char *argv[])
 // As Daemon
 
 #include <event.h>
+#include <buffer.h>
 #include "bbs.h"
 #include "daemons.h"
 
@@ -271,6 +277,200 @@ end:
         sqlite3_finalize(Stmt);
 
     return ret;
+}
+
+static void
+verifydb_count(const verifydb_req *req, verifydb_count_rep *rep)
+{
+    sqlite3 *Db = g_Db;
+    sqlite3_stmt *Stmt = NULL;
+    int r = SQLITE_OK;
+
+    rep->cb = sizeof(*rep);
+    rep->status = VERIFYDB_ERROR;
+
+    r = sqlite3_prepare(Db, "SELECT userid, generation FROM verifydb "
+            "WHERE vmethod = ? AND vkey = ?;", -1, &Stmt, NULL);
+    if (r != SQLITE_OK)
+        goto end;
+
+    r = sqlite3_bind_int64(Stmt, 1, req->vmethod);
+    if (r != SQLITE_OK)
+        goto end;
+    r = sqlite3_bind_text(Stmt, 2, req->vkey, -1, SQLITE_STATIC);
+    if (r != SQLITE_OK)
+        goto end;
+
+    while (sqlite3_step(Stmt) == SQLITE_ROW) {
+        userec_t u = {};
+        const char *userid = (const char *)sqlite3_column_text(Stmt, 0);
+        int64_t generation = sqlite3_column_int64(Stmt, 1);
+
+        if (userid == NULL)
+            continue;  // Bad record.
+
+        if (!passwd_load_user(userid, &u))
+            continue;  // No such user.
+
+        // Make sure the record corresponds to user of current generation.
+        if (u.firstlogin != generation) {
+            fprintf(stderr, "verifydb count: skipped old record: %s "
+                    "(generation: db %ld, current %d)\n",
+                    u.userid, generation, u.firstlogin);
+            continue;
+        }
+
+        if (strcasecmp(userid, req->userid) == 0)
+            rep->count_self++;
+        else
+            rep->count_other++;
+    }
+
+    rep->status = VERIFYDB_OK;
+
+end:
+    if (r != SQLITE_OK)
+        fprintf(stderr, "sqlite3: %d %s\n", r, sqlite3_errmsg(Db));
+
+    if (Stmt != NULL) {
+        r = sqlite3_finalize(Stmt);
+        if (r != SQLITE_OK)
+            fprintf(stderr, "sqlite3_finalize error: %d %s\n", r, sqlite3_errmsg(Db));
+    }
+}
+
+static int
+verifydb_set(const verifydb_req *req)
+{
+    int ret = VERIFYDB_ERROR;
+
+    sqlite3 *Db = g_Db;
+    sqlite3_stmt *Stmt = NULL;
+
+    if (!req->vkey[0]) {
+        if (sqlite3_prepare(Db, "DELETE FROM verifydb "
+                    "WHERE userid = lower(?) AND generation = ? AND vmethod = ?;",
+                    -1, &Stmt, NULL) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_text(Stmt, 1, req->userid, -1, SQLITE_STATIC) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_int64(Stmt, 2, req->generation) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_int64(Stmt, 3, req->vmethod) != SQLITE_OK)
+            goto end;
+    } else {
+        if (sqlite3_prepare(Db, "REPLACE INTO verifydb "
+                    "(userid, generation, vmethod, vkey, timestamp) VALUES "
+                    "(lower(?),?,?,?,?);",
+                    -1, &Stmt, NULL) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_text(Stmt, 1, req->userid, -1, SQLITE_STATIC) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_int64(Stmt, 2, req->generation) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_int64(Stmt, 3, req->vmethod) != SQLITE_OK)
+            goto end;
+        if (sqlite3_bind_text(Stmt, 4, req->vkey, -1, SQLITE_STATIC) != SQLITE_OK)
+            goto end;
+        int64_t timestamp = time(NULL);
+        if (sqlite3_bind_int64(Stmt, 5, timestamp) != SQLITE_OK)
+            goto end;
+    }
+
+    if (sqlite3_step(Stmt) == SQLITE_DONE)
+        ret = VERIFYDB_OK;
+
+end:
+    if (Stmt != NULL)
+        sqlite3_finalize(Stmt);
+
+    return ret;
+}
+
+static void
+verifydb_get(const verifydb_req *req, int fd)
+{
+    sqlite3 *Db = g_Db;
+    sqlite3_stmt *Stmt = NULL;
+    struct evbuffer *buf = NULL;
+    int r = SQLITE_OK;
+
+    verifydb_get_rep rep = {};
+    rep.cb = sizeof(rep);
+    rep.status = VERIFYDB_ERROR;
+    rep.entry_size = sizeof(verifydb_entry);
+
+    r = sqlite3_prepare(Db, "SELECT timestamp, vmethod, vkey FROM verifydb "
+            "WHERE userid = lower(?) AND generation = ? AND "
+            "(1 = ? OR vmethod = ?) "
+            "ORDER BY vmethod ASC;",
+            -1, &Stmt, NULL);
+    if (r != SQLITE_OK)
+        goto end;
+
+    r = sqlite3_bind_text(Stmt, 1, req->userid, -1, SQLITE_STATIC);
+    if (r != SQLITE_OK)
+        goto end;
+    r = sqlite3_bind_int64(Stmt, 2, req->generation);
+    if (r != SQLITE_OK)
+        goto end;
+    r = sqlite3_bind_int64(Stmt, 3, req->vmethod == VMETHOD_UNSET ? 1 : 0);
+    if (r != SQLITE_OK)
+        goto end;
+    r = sqlite3_bind_int64(Stmt, 4, req->vmethod);
+    if (r != SQLITE_OK)
+        goto end;
+
+    buf = evbuffer_new();
+    if (!buf)
+        goto end;
+    while (sqlite3_step(Stmt) == SQLITE_ROW) {
+        const int64_t timestamp = sqlite3_column_int64(Stmt, 0);
+        const int32_t vmethod = sqlite3_column_int64(Stmt, 1);
+        const char *vkey = (const char *)sqlite3_column_text(Stmt, 2);
+        if (!vkey)
+            vkey = "";
+
+        verifydb_entry ent = {};
+        ent.timestamp = timestamp;
+        ent.vmethod = vmethod;
+        strlcpy(ent.vkey, vkey, sizeof(ent.vkey));
+
+        fprintf(stderr, "verifydb get-entry: %s generation [%ld] vmethod [%d] "
+                "(timestamp %ld, vmethod [%d], vkey [%s])\n",
+                req->userid, req->generation, req->vmethod,
+                ent.timestamp, ent.vmethod, ent.vkey);
+
+        if (evbuffer_add(buf, &ent, sizeof(ent)) != 0)
+            goto end;
+        rep.num_entries++;
+    }
+
+    rep.status = VERIFYDB_OK;
+    if (evbuffer_prepend(buf, &rep, sizeof(rep)) != 0)
+        goto end;
+
+    fprintf(stderr, "verifydb get: %s generation [%ld] vmethod [%d] "
+            "(status %d, num_entries %lu)\n",
+            req->userid, req->generation, req->vmethod,
+            rep.status, rep.num_entries);
+
+    size_t len = evbuffer_get_length(buf);
+    if (towrite(fd, evbuffer_pullup(buf, len), len) != len)
+        fprintf(stderr, "error: cannot write response...\n");
+
+end:
+    if (buf)
+        evbuffer_free(buf);
+
+    if (r != SQLITE_OK)
+        fprintf(stderr, "sqlite3: %d %s\n", r, sqlite3_errmsg(Db));
+
+    if (Stmt != NULL) {
+        r = sqlite3_finalize(Stmt);
+        if (r != SQLITE_OK)
+            fprintf(stderr, "sqlite3_finalize error: %d %s\n", r, sqlite3_errmsg(Db));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -506,6 +706,12 @@ regcheck_ambiguous_id(const char *userid)
 // operation: set,count
 
 static bool
+check_null_terminated(const char *s, size_t sz)
+{
+    return memchr(s, 0, sz) != NULL;
+}
+
+static bool
 validate_regmaildb_request(const regmaildb_req *req)
 {
     if (req->cb != sizeof(*req)) {
@@ -533,6 +739,40 @@ validate_regmaildb_request(const regmaildb_req *req)
         default:
             fprintf(stderr, "unknown request: op=[%d]\n", req->operation);
             return false;
+    }
+    return true;
+}
+
+static bool
+validate_verifydb_request(const verifydb_req *req)
+{
+    if (req->cb != sizeof(*req)) {
+        fprintf(stderr, "error: corrupted request, cb: %lu != %lu\n",
+                req->cb, sizeof(*req));
+        return false;
+    }
+    if (!check_null_terminated(req->userid, sizeof(req->userid))) {
+        fprintf(stderr, "invalid request: op=[%d], userid is not null-terminated\n",
+                req->operation);
+        return false;
+    }
+    if (!*req->userid) {
+        fprintf(stderr, "invalid request: op=[%d], empty userid\n",
+                req->operation);
+        return false;
+    }
+    if (req->operation == VERIFYDB_REQ_COUNT ||
+        req->operation == VERIFYDB_REQ_SET) {
+        if (req->vmethod == VMETHOD_UNSET) {
+            fprintf(stderr, "invalid request: op=[%d], vmethod is not set\n",
+                    req->operation);
+            return false;
+        }
+        if (!check_null_terminated(req->vkey, sizeof(req->vkey))) {
+            fprintf(stderr, "invalid request: op=[%d], vkey is not null-terminated\n",
+                    req->operation);
+            return false;
+        }
     }
     return true;
 }
@@ -607,6 +847,47 @@ client_cb(int fd, short event, void *arg)
             {
                 fprintf(stderr, " error: cannot write response...\n");
             }
+            break;
+        }
+
+        case VERIFYDB_REQ_COUNT:
+        {
+            const verifydb_req *req = &storage.verifydb;
+            if (!validate_verifydb_request(req))
+                goto end;
+
+            verifydb_count_rep rep = {};
+            verifydb_count(req, &rep);
+            fprintf(stderr, "verifydb count: %s generation [%ld] vmethod [%d] vkey [%s] "
+                    "(status: %d, self: %d, other %d)\n",
+                    req->userid, req->generation, req->vmethod, req->vkey,
+                    rep.status, rep.count_self, rep.count_other);
+            if (towrite(fd, &rep, sizeof(rep)) != sizeof(rep))
+                fprintf(stderr, " error: cannot write response...\n");
+            break;
+        }
+
+        case VERIFYDB_REQ_SET:
+        {
+            const verifydb_req *req = &storage.verifydb;
+            if (!validate_verifydb_request(req))
+                goto end;
+
+            int ret = verifydb_set(req);
+            fprintf(stderr, "verifydb set: %s generation [%ld] vmethod [%d] vkey [%s] (status: %d)\n",
+                    req->userid, req->generation, req->vmethod, req->vkey, ret);
+            if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
+                fprintf(stderr, " error: cannot write response...\n");
+            break;
+        }
+
+        case VERIFYDB_REQ_GET:
+        {
+            const verifydb_req *req = &storage.verifydb;
+            if (!validate_verifydb_request(req))
+                goto end;
+
+            verifydb_get(req, fd);
             break;
         }
 

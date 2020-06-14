@@ -21,6 +21,31 @@ enum {
     REGMAILDB_REQ_COUNT = 1,
     REGMAILDB_REQ_SET,
     REGCHECK_REQ_AMBIGUOUS,
+
+    // Counts number of uses on (vmethod, vkey).
+    // User info is to separate count into self and others.
+    //
+    // Request: verifydb_req
+    // Requires: userid, generation, vmethod, vkey
+    // Reply: verifydb_count_rep
+    VERIFYDB_REQ_COUNT,
+
+    // Sets the (vmethod, vkey) for user.
+    //
+    // Request: verifydb_req
+    // Requires: userid, generation, vmethod, vkey
+    // Reply: int
+    VERIFYDB_REQ_SET,
+
+    // Gets the (vmethod, vkey) and its timestamp for user.
+    // If vmethod is VMETHOD_UNSET, it returns all entries. Otherwise it returns
+    // entry for the specified vmethod only.
+    //
+    // Request: verifydb_req
+    // Requires: userid, generation
+    // Optional: vmethod
+    // Reply: verifydb_get_rep followed by num_entries of verifydb_entry
+    VERIFYDB_REQ_GET,
 };
 
 typedef struct
@@ -30,6 +55,48 @@ typedef struct
     char userid   [IDLEN+1];
     char email    [EMAILSZ];
 }   regmaildb_req;
+
+#define VERIFYDB_VKEY_SIZE (160)
+
+// verifydb status codes.
+#define VERIFYDB_OK (0)
+#define VERIFYDB_ERROR (-1)
+
+// verifydb vmethod keys. Data persisted to database. Do not change value.
+typedef enum {
+    VMETHOD_UNSET = 0
+} verifydb_vmethod_t;
+
+typedef struct {
+    size_t cb;
+    int operation;
+    char userid[IDLEN+1];
+    // generation identifies the generation of userid. This is the firstlogin
+    // time in userec_t.
+    int64_t generation;
+    int32_t vmethod;
+    char vkey[VERIFYDB_VKEY_SIZE];
+} verifydb_req;
+
+typedef struct {
+    size_t cb;
+    int status;
+    int count_self;
+    int count_other;
+} verifydb_count_rep;
+
+typedef struct {
+    int64_t timestamp;
+    int32_t vmethod;
+    char vkey[VERIFYDB_VKEY_SIZE];
+} verifydb_entry;
+
+typedef struct {
+    size_t cb;
+    int status;
+    size_t num_entries;
+    size_t entry_size;
+} verifydb_get_rep;
 
 // Request header just to calculate offsets.
 typedef struct {
@@ -42,6 +109,7 @@ typedef struct {
     union {
         regmaildb_req_header header;
         regmaildb_req regmaildb;
+        verifydb_req verifydb;
     };
 } regmaildb_req_storage;
 
