@@ -1,4 +1,5 @@
 // $Id$
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,15 +9,70 @@
 
 // standalone client to test fromd
 
-int main(int argc, char *argv[])
+static bool
+read_int_reply(int fd)
 {
-    int fd, ret = 0;
-    int op = 0;
-    regmaildb_req req = {0};
+    int ret;
+    if (toread(fd, &ret, sizeof(ret)) != sizeof(ret)) {
+	perror("toread");
+	return false;
+    }
+    printf("result: %d\n", ret);
+    return true;
+}
 
-    if (argc < 4) {
-	fprintf(stderr, "Usage: %s operation userid email\n", argv[0]);
-	return 0;
+static int
+usage(const char *prog)
+{
+    fprintf(stderr, "Usage: %s table operation [args ...]\n\n", prog);
+    fprintf(stderr, "\t%s regmaildb <count|set|amb> userid email\n", prog);
+    return 1;
+}
+
+int main(int argc, char **argv)
+{
+    const char *prog = argv[0];
+    int fd;
+    regmaildb_req_storage storage = {};
+
+    if (argc < 3)
+	return usage(prog);
+    const char *table = argv[1];
+    const char *operation = argv[2];
+
+    if (strcmp(table, "regmaildb") == 0)
+    {
+	if (argc < 5)
+	    return usage(prog);
+	const char *userid = argv[3];
+	const char *email = argv[4];
+	regmaildb_req *req = &storage.regmaildb;
+	req->cb = sizeof(*req);
+
+	if (strcmp(operation, "count") == 0)
+	{
+	    req->operation = REGMAILDB_REQ_COUNT;
+	    strlcpy(req->userid, userid, sizeof(req->userid));
+	    strlcpy(req->email,  email,  sizeof(req->email));
+	}
+	else if (strcmp(operation, "set") == 0)
+	{
+	    req->operation = REGMAILDB_REQ_SET;
+	    strlcpy(req->userid, userid, sizeof(req->userid));
+	    strlcpy(req->email,  email,  sizeof(req->email));
+	}
+	else if (strcmp(operation, "amb") == 0)
+	{
+	    req->operation = REGCHECK_REQ_AMBIGUOUS;
+	    strlcpy(req->userid, userid, sizeof(req->userid));
+	    strlcpy(req->email,  "ambiguous@check.nonexist", sizeof(req->email));
+	}
+	else
+	    return usage(prog);
+    }
+    else
+    {
+	return usage(prog);
     }
 
     if ( (fd = toconnect(REGMAILD_ADDR)) < 0 ) {
@@ -24,41 +80,15 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    if (strcmp(argv[1], "count") == 0)
-    {
-	op = REGMAILDB_REQ_COUNT;
-	strlcpy(req.userid, argv[2], sizeof(req.userid));
-	strlcpy(req.email,  argv[3], sizeof(req.email));
-    }
-    else if (strcmp(argv[1], "set") == 0)
-    {
-	op = REGMAILDB_REQ_SET;
-	strlcpy(req.userid, argv[2], sizeof(req.userid));
-	strlcpy(req.email,  argv[3], sizeof(req.email));
-    }
-    else if (strcmp(argv[1], "amb") == 0)
-    {
-	op = REGCHECK_REQ_AMBIGUOUS;
-	strlcpy(req.userid, argv[2], sizeof(req.userid));
-	strlcpy(req.email,  "ambiguous@check.nonexist", sizeof(req.email));
-    }
-    else
-	return 0;
-
-    req.cb = sizeof(req);
-    req.operation = op;
-
-    if (towrite(fd, &req, sizeof(req)) != sizeof(req)) {
+    if (towrite(fd, &storage, storage.header.cb) != storage.header.cb) {
 	perror("towrite");
 	return 1;
     }
 
-    if (toread(fd, &ret, sizeof(ret)) != sizeof(ret)) {
-	perror("toread");
+    if (!read_int_reply(fd)) {
+	fprintf(stderr, "failed to read reply\n");
 	return 1;
     }
-
-    printf("result: %d\n", ret);
     return 0;
 }
 
