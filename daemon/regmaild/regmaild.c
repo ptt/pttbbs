@@ -59,7 +59,12 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
     // create table if it doesn't exist
     rc = sqlite3_exec(*Db, 
             "CREATE TABLE IF NOT EXISTS emaildb (userid TEXT, email TEXT, PRIMARY KEY (userid));"
-            "CREATE INDEX IF NOT EXISTS email ON emaildb (email);",
+            "CREATE INDEX IF NOT EXISTS email ON emaildb (email);"
+            "CREATE TABLE IF NOT EXISTS verifydb (\n"
+            "  userid TEXT, generation INTEGER,\n"
+            "  vmethod INTEGER, vkey TEXT, timestamp INTEGER,\n"
+            "  PRIMARY KEY (userid, generation, vmethod));"
+            "CREATE INDEX IF NOT EXISTS vmethodkey ON verifydb (vmethod, vkey);",
             NULL, NULL, NULL);
 
     return rc;
@@ -272,6 +277,11 @@ end:
 
     return ret;
 }
+
+///////////////////////////////////////////////////////////////////////
+// VerifyDB forward declarations
+
+void verifydb_message_handler(const verifydb_message_t *vm, int fd);
 
 ///////////////////////////////////////////////////////////////////////
 // Ambiguous user id checking
@@ -538,35 +548,20 @@ validate_regmaildb_request(const regmaildb_req *req)
 }
 
 static void 
-client_cb(int fd, short event, void *arg)
+regmaild_request_handler(const regmaildb_req *req, int fd)
 {
-    struct event *ev = (struct event*) arg;
-    regmaildb_req_storage storage = {};
-    regmaildb_req_header *header = &storage.header;
-    int8_t *rest = (int8_t *)&storage;
-    rest += sizeof(*header);
-
-    assert(ev);
-
-    if ((event & EV_TIMEOUT) ||
-        !(event & EV_READ) ||
-        toread(fd, header, sizeof(*header)) != sizeof(*header) ||
-        header->cb < sizeof(*header) ||
-        header->cb > sizeof(storage) ||
-        toread(fd, rest, header->cb - sizeof(*header)) != header->cb - sizeof(*header))
-    {
+    if (req->cb != sizeof(*req)) {
         fprintf(stderr, "error: corrupted request.\n");
-        goto end;
+        return;
     }
 
-    switch (header->operation)
+    if (!validate_regmaildb_request(req))
+        return;
+
+    switch (req->operation)
     {
         case REGMAILDB_REQ_COUNT:
         {
-            regmaildb_req *req = &storage.regmaildb;
-            if (!validate_regmaildb_request(req))
-                goto end;
-
             int ret = regmaildb_check_email(req->email, strlen(req->email), req->userid);
             fprintf(stderr, "%-*s check  mail (result: %d): [%s]\n", 
                     IDLEN, req->userid, ret, req->email);
@@ -579,10 +574,6 @@ client_cb(int fd, short event, void *arg)
 
         case REGMAILDB_REQ_SET:
         {
-            regmaildb_req *req = &storage.regmaildb;
-            if (!validate_regmaildb_request(req))
-                goto end;
-
             int ret = regmaildb_update_email(req->userid, strlen(req->userid),
                     req->email, strlen(req->email));
             fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\n", 
@@ -596,10 +587,6 @@ client_cb(int fd, short event, void *arg)
 
         case REGCHECK_REQ_AMBIGUOUS:
         {
-            regmaildb_req *req = &storage.regmaildb;
-            if (!validate_regmaildb_request(req))
-                goto end;
-
             int ret = regcheck_ambiguous_id(req->userid);
             fprintf(stderr, "%-*s check ambiguous id exist (result: %d)\n", 
                     IDLEN, req->userid, ret);
@@ -611,17 +598,79 @@ client_cb(int fd, short event, void *arg)
         }
 
         default:
-            fprintf(stderr, "error: invalid operation: %d.\n", header->operation);
+            fprintf(stderr, "error: invalid operation: %d.\n", req->operation);
             break;
     }
-
-end:
-    // close connection anyway
-    close(fd);
-    free(ev);
 }
 
 ///////////////////////////////////////////////////////////////////////
+
+struct conn_ctx {
+    struct event ev;
+    uint8_t *buf;
+    size_t len;
+    size_t cap;
+};
+
+static void
+client_cb(int fd, short event, void *arg)
+{
+    struct conn_ctx *conn = (struct conn_ctx *)arg;
+
+    if (event & EV_TIMEOUT) {
+        fprintf(stderr, "fd %d: timed out\n", fd);
+        goto close_conn;
+    }
+
+    // We only want read event further on.
+    if (!(event & EV_READ))
+        goto close_conn;
+
+    // Resize buffer if full.
+    if (conn->len >= conn->cap) {
+        conn->cap = conn->cap ? conn->cap * 2 : 1024;
+        conn->buf = realloc(conn->buf, conn->cap);
+    }
+
+    // Read from socket.
+    ssize_t nread = read(fd, conn->buf + conn->len, conn->cap - conn->len);
+    if (nread < 0) {
+        if (errno == EINTR)
+            return;
+        fprintf(stderr, "fd %d: read error: %s\n", fd, strerror(errno));
+        goto close_conn;
+    }
+    conn->len += nread;
+
+    if (conn->len < sizeof(regmaildb_req_header))
+        return;
+
+    regmaildb_req_header *header = (regmaildb_req_header *)conn->buf;
+    if (header->cb > 4096) {
+        fprintf(stderr, "fd %d: request too big\n", fd);
+        goto close_conn;
+    }
+
+    if (conn->len < header->cb)
+        return;
+
+    if (conn->len > header->cb)
+        fprintf(stderr, "fd %d: warning: excessive data at end\n", fd);
+
+    // Request ready.
+
+    if (header->operation == VERIFYDB_MESSAGE)
+        verifydb_message_handler((const verifydb_message_t *)conn->buf, fd);
+    else
+        regmaild_request_handler((const regmaildb_req *)conn->buf, fd);
+
+close_conn:
+    event_del(&conn->ev);
+    close(fd);
+    if (conn->buf)
+        free(conn->buf);
+    free(conn);
+}
 
 struct timeval tv = {60, 0};
 static struct event ev_listen;
@@ -633,10 +682,10 @@ static void listen_cb(int fd, short event, void *arg)
     if ((cfd = accept(fd, NULL, NULL)) < 0 )
 	return;
 
-    struct event *ev = malloc(sizeof(struct event));
+    struct conn_ctx *conn = calloc(1, sizeof(struct conn_ctx));
 
-    event_set(ev, cfd, EV_READ, client_cb, ev);
-    event_add(ev, &tv);
+    event_set(&conn->ev, cfd, EV_READ|EV_PERSIST, client_cb, conn);
+    event_add(&conn->ev, &tv);
 }
 
 ///////////////////////////////////////////////////////////////////////

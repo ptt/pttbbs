@@ -612,6 +612,9 @@ p_sysinfo(void)
 #ifdef FROMD
 		" FROMD"
 #endif
+#ifdef USE_MBBSD_CXX
+		" CXX"
+#endif
 		);
     }
     pressanykey();

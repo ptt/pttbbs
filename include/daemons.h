@@ -22,6 +22,7 @@ enum {
     REGMAILDB_REQ_COUNT = 1,
     REGMAILDB_REQ_SET,
     REGCHECK_REQ_AMBIGUOUS,
+    VERIFYDB_MESSAGE,
 };
 
 typedef struct
@@ -32,19 +33,27 @@ typedef struct
     char email    [EMAILSZ];
 }   regmaildb_req;
 
+#define VERIFYDB_VKEY_SIZE (160)
+
+// verifydb status codes.
+#define VERIFYDB_OK (0)
+#define VERIFYDB_ERROR (-1)
+
+// verifydb vmethod keys. Data persisted to database. Do not change value.
+typedef enum {
+    VMETHOD_UNSET = 0
+} verifydb_vmethod_t;
+
 // Request header just to calculate offsets.
 typedef struct {
     size_t cb;
     int operation;
 } regmaildb_req_header;
 
-// Storage struct that fits all possible messages.
 typedef struct {
-    union {
-        regmaildb_req_header header;
-        regmaildb_req regmaildb;
-    };
-} regmaildb_req_storage;
+    regmaildb_req_header header;
+    char message[0];
+} verifydb_message_t;
 
 ///////////////////////////////////////////////////////////////////////
 // Login Daemon (logind)

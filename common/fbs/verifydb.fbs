@@ -1,0 +1,54 @@
+namespace VerifyDb;
+
+union AnyMessage {
+    PutRequest,
+    PutReply,
+    GetRequest,
+    GetReply,
+}
+
+table Message {
+    message:AnyMessage;
+}
+
+table Entry {
+    userid:string;
+    generation:long;
+    vmethod:int;
+    vkey:string;
+    timestamp:long;
+}
+
+enum Conflict : byte {
+    Ignore,
+    Replace,
+}
+
+table PutRequest {
+    entry:Entry;
+    conflict:Conflict;
+}
+
+table PutReply {
+    ok:bool;
+    message:string;
+}
+
+enum Field : byte {
+    UserId = 1,
+    Generation,
+    Verify,
+}
+
+table GetRequest {
+    entry:Entry;
+    match_field:[Field];
+}
+
+table GetReply {
+    ok:bool;
+    entry:[Entry];
+    message:string;
+}
+
+root_type Message;

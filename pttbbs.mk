@@ -35,6 +35,7 @@ PTT_LDFLAGS:=	-Wl,--as-needed
 .if $(CLANG)
 PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
 		-fcolor-diagnostics -Wno-invalid-source-encoding
+PTT_CXXFLAGS+=	-Wno-invalid-source-encoding
 .endif
 
 # enable assert()

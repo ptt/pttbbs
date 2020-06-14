@@ -11,20 +11,18 @@ LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	-levent \
-	-lsqlite3
+	-lsqlite3 \
+	-lstdc++
+
+CXXFLAGS+=-std=c++17 \
+	  -I$(SRCROOT)/common/fbs
 
 all:	${PROGRAMS}
 
-.SUFFIXES: .c .cpp .o
-.c.o:
-	$(CC) $(CFLAGS) -c $*.c
-.cpp.o:
-	$(CXX) $(CXXFLAGS) -c $*.cpp
-
-regmaild: regmaild.o 
+regmaild: regmaild.o verifydb_handler.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
-regmailc: regmailc.o 
+regmailc: regmailc.o verifydb_client.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
 
 install: $(PROGS)
@@ -35,4 +33,4 @@ initemaildb: regmaild.c
 	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb regmaild.c $(LDLIBS)
 
 clean:
-	rm -f *~ ${PROGRAMS} regmaild.o regmailc.o
+	rm -f ${PROGRAMS} *.o

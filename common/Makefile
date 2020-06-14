@@ -1,3 +1,3 @@
-SUBDIR:=	bbs osdep sys
+SUBDIR:=	bbs fbs osdep sys
 
 .include <bsd.subdir.mk>
