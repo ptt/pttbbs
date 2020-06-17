@@ -33,8 +33,11 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 
-#include "pttstruct.h"
 #include "common.h"
+#include "cmbbs.h"
+#include "daemons.h"
+#include "perm.h"
+#include "pttstruct.h"
 
 ///////////////////////////////////////////////////////////////////////
 // EmailDB Common Section
@@ -111,6 +114,45 @@ emaildb_filter_user(const userec_t *u)
     return true;
 }
 
+static bool
+verifydb_prepare_stmt(sqlite3 *db, sqlite3_stmt **stmt)
+{
+    // Note that we lowercase vkey, as we are only importing email.
+    if (sqlite3_prepare(db, "REPLACE INTO verifydb "
+                "(userid, generation, vmethod, vkey, timestamp) VALUES "
+                "(lower(?),?,?,lower(?),?);",
+                -1, stmt, NULL) != SQLITE_OK)
+    {
+        fprintf(stderr, "Error preparing stmt: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    return true;
+}
+
+static bool
+verifydb_bind_args(sqlite3 *db, sqlite3_stmt *stmt, const userec_t *u)
+{
+    // vkey (email) will be lower-cased in sql stmt.
+    if (sqlite3_bind_text(stmt, 1, u->userid, -1, SQLITE_STATIC) != SQLITE_OK ||
+        sqlite3_bind_int64(stmt, 2, u->firstlogin) != SQLITE_OK ||
+        sqlite3_bind_int64(stmt, 3, VMETHOD_EMAIL) != SQLITE_OK ||
+        sqlite3_bind_text(stmt, 4, u->email, -1, SQLITE_STATIC) != SQLITE_OK ||
+        sqlite3_bind_int64(stmt, 5, 0) != SQLITE_OK)
+    {
+        fprintf(stderr, "Error binding args: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    return true;
+}
+
+static bool
+verifydb_filter_user(const userec_t *u)
+{
+    return is_validuserid(u->userid) &&
+        (u->userlevel & PERM_LOGINOK) &&
+        strchr(u->email, '@') != NULL;
+}
+
 typedef struct {
     bool (*prepare_stmt)(sqlite3 *db, sqlite3_stmt **stmt);
     bool (*bind_args)(sqlite3 *db, sqlite3_stmt *stmt, const userec_t *u);
@@ -123,6 +165,12 @@ static initemaildb_ops emaildb_ops = {
     .filter_user = emaildb_filter_user,
 };
 
+static initemaildb_ops verifydb_ops = {
+    .prepare_stmt = verifydb_prepare_stmt,
+    .bind_args = verifydb_bind_args,
+    .filter_user = verifydb_filter_user,
+};
+
 #define TRANSCATION_PERIOD (4096)
 int main(int argc, char *argv[])
 {
@@ -132,7 +180,24 @@ int main(int argc, char *argv[])
     sqlite3 *Db = NULL;
     sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
     const char *fpath = EMAILDB_PATH;
-    const initemaildb_ops *ops = &emaildb_ops;
+    const initemaildb_ops *ops = NULL;
+
+    if (argc != 2 && argc != 3) {
+        fprintf(stderr, "Usage: %s <emaildb|verifydb> [dbfile]\n", argv[0]);
+        return 1;
+    }
+
+    if (!strcmp(argv[1], "emaildb"))
+        ops = &emaildb_ops;
+    else if (!strcmp(argv[1], "verifydb"))
+        ops = &verifydb_ops;
+    else {
+        fprintf(stderr, "Unknown db: %s\n", argv[1]);
+        return 1;
+    }
+
+    if (argc > 2)
+        fpath = argv[2];
 
     // init passwd
     sz = dashs(FN_PASSWD);
@@ -143,9 +208,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     sz /= sizeof(userec_t);
-
-    if (argc > 1)
-        fpath = argv[1];
 
     // init emaildb
     if (regmaildb_open(&Db, fpath) != SQLITE_OK)
@@ -226,7 +288,6 @@ int main(int argc, char *argv[])
 #include <event.h>
 #include <buffer.h>
 #include "bbs.h"
-#include "daemons.h"
 
 int 
 regmaildb_check_email(const char * email, int email_len, const char *myid)
