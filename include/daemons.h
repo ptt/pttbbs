@@ -41,7 +41,8 @@ typedef struct
 
 // verifydb vmethod keys. Data persisted to database. Do not change value.
 typedef enum {
-    VMETHOD_UNSET = 0
+    VMETHOD_UNSET = 0,
+    VMETHOD_EMAIL = 1
 } verifydb_vmethod_t;
 
 // Request header just to calculate offsets.
