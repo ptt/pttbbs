@@ -77,6 +77,52 @@ regmaildb_open(sqlite3 **Db, const char *fpath) {
 
 // standalone initialize builder
 
+static bool
+emaildb_prepare_stmt(sqlite3 *db, sqlite3_stmt **stmt)
+{
+    if (sqlite3_prepare(db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
+                -1, stmt, NULL) != SQLITE_OK)
+    {
+        fprintf(stderr, "Error preparing stmt: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    return true;
+}
+
+static bool
+emaildb_bind_args(sqlite3 *db, sqlite3_stmt *stmt, const userec_t *u)
+{
+    if (sqlite3_bind_text(stmt, 1, u->userid, -1, SQLITE_STATIC) != SQLITE_OK ||
+        sqlite3_bind_text(stmt, 2, u->email, -1, SQLITE_STATIC) != SQLITE_OK)
+    {
+        fprintf(stderr, "Error binding args: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    return true;
+}
+
+static bool
+emaildb_filter_user(const userec_t *u)
+{
+    if (strlen(u->userid) < 2 || strlen(u->userid) > IDLEN)
+        return false;
+    if (strlen(u->email) < 5)
+        return false;
+    return true;
+}
+
+typedef struct {
+    bool (*prepare_stmt)(sqlite3 *db, sqlite3_stmt **stmt);
+    bool (*bind_args)(sqlite3 *db, sqlite3_stmt *stmt, const userec_t *u);
+    bool (*filter_user)(const userec_t *u);
+} initemaildb_ops;
+
+static initemaildb_ops emaildb_ops = {
+    .prepare_stmt = emaildb_prepare_stmt,
+    .bind_args = emaildb_bind_args,
+    .filter_user = emaildb_filter_user,
+};
+
 #define TRANSCATION_PERIOD (4096)
 int main(int argc, char *argv[])
 {
@@ -86,6 +132,7 @@ int main(int argc, char *argv[])
     sqlite3 *Db = NULL;
     sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
     const char *fpath = EMAILDB_PATH;
+    const initemaildb_ops *ops = &emaildb_ops;
 
     // init passwd
     sz = dashs(FN_PASSWD);
@@ -107,42 +154,37 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
-                -1, &Stmt, NULL) != SQLITE_OK ||
-        sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
+    if (!ops->prepare_stmt(Db, &Stmt))
+        return 1;
+
+    if (sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
         sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
     {
         fprintf(stderr, "Error preparing txn stmts: %s\n", sqlite3_errmsg(Db));
         return 1;
     }
 
+    int error = 0;
     sqlite3_step(tranStart);
     sqlite3_reset(tranStart);
     while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
     {
         i++;
         // got a record
-        if (strlen(xuser.userid) < 2 || strlen(xuser.userid) > IDLEN)
-            continue;
-        if (strlen(xuser.email) < 5)
+        if (!ops->filter_user(&xuser))
             continue;
 
-        if (sqlite3_bind_text(Stmt, 1, xuser.userid, strlen(xuser.userid), 
-                    SQLITE_STATIC) != SQLITE_OK)
+        if (!ops->bind_args(Db, Stmt, &xuser))
         {
-            fprintf(stderr, "\ncannot prepare userid param.\n");
-            break;
-        }
-        if (sqlite3_bind_text(Stmt, 2, xuser.email, strlen(xuser.email), 
-                    SQLITE_STATIC) != SQLITE_OK)
-        {
-            fprintf(stderr, "\ncannot prepare email param.\n");
+            error = 1;
             break;
         }
 
         if (sqlite3_step(Stmt) != SQLITE_DONE)
         {
-            fprintf(stderr, "\ncannot execute statement.\n");
+            error = 1;
+            fprintf(stderr, "cannot execute statement: %s\n",
+                    sqlite3_errmsg(Db));
             break;
         }
         sqlite3_reset(Stmt);
@@ -173,7 +215,7 @@ int main(int argc, char *argv[])
         sqlite3_close(Db);
 
     close(fd);
-    return 0;
+    return error;
 }
 
 #else  // !INIT_MAIN
