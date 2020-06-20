@@ -10,6 +10,10 @@ int emaildb_check_email(const char * userid, const char * email)
     int fd = -1;
     regmaildb_req req = {0};
 
+    // regmaild rejects empty userid, use a dummy value if there isn't one yet.
+    if (!userid)
+        userid = "-";
+
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_COUNT;

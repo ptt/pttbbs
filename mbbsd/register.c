@@ -645,9 +645,7 @@ new_register_email_verify(char *email)
 	    return REGISTER_ERR_CANCEL;
 	}
 
-	// Use "-" for userid, regmaild rejects empty userid, which we don't
-	// really have a userid yet.
-	err = register_email_input("-", email);
+	err = register_email_input(NULL, email);
 	switch (err) {
 	    case REGISTER_OK:
 		if (strcasecmp(email, "x") != 0)
