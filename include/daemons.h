@@ -1,6 +1,7 @@
 #ifndef BBS_DAEMONS_H
 #define BBS_DAEMONS_H
 
+#include "fnv_hash.h"
 #include "pttstruct.h"
 
 ///////////////////////////////////////////////////////////////////////
