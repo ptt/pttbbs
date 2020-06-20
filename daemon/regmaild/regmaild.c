@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
         sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
     {
-        fprintf(stderr, "SQLite 3 internal error.\n");
+        fprintf(stderr, "Error preparing txn stmts: %s\n", sqlite3_errmsg(Db));
         return 1;
     }
 
@@ -142,9 +142,9 @@ int main(int argc, char *argv[])
         }
         sqlite3_reset(Stmt);
 
-        valids ++;
+        valids++;
         if (valids % 10 == 0)
-            fprintf(stderr, "%d/%d (valid: %d)\r", 
+            fprintf(stderr, "%d/%d (valid: %d)\r",
                     (int)i, (int)sz, (int)valids);
         if (valids % TRANSCATION_PERIOD == 0)
         {
@@ -160,6 +160,9 @@ int main(int argc, char *argv[])
 
     if (Stmt != NULL)
         sqlite3_finalize(Stmt);
+
+    fprintf(stderr, "%d/%d (valid: %d)\n",
+            (int)i, (int)sz, (int)valids);
 
     if (Db != NULL)
         sqlite3_close(Db);
