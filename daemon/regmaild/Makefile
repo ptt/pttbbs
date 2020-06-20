@@ -3,7 +3,7 @@ SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 PROGS=          regmaild
-PROGRAMS=	regmaild regmailc
+PROGRAMS=	regmaild regmailc initemaildb
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
@@ -31,10 +31,8 @@ install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 
-# TODO FIXME
 initemaildb: regmaild.c
 	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb regmaild.c $(LDLIBS)
-
 
 clean:
 	rm -f *~ ${PROGRAMS} regmaild.o regmailc.o
