@@ -24,7 +24,8 @@ enum {
     REGCHECK_REQ_AMBIGUOUS,
 
     // Counts number of uses on (vmethod, vkey).
-    // User info is to separate count into self and others.
+    // User info is to separate count into self and others. If userid is empty,
+    // it counts every entry as others.
     //
     // Request: verifydb_req
     // Requires: userid, generation, vmethod, vkey

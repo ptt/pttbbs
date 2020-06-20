@@ -859,10 +859,13 @@ validate_verifydb_request(const verifydb_req *req)
                 req->operation);
         return false;
     }
-    if (!*req->userid) {
-        fprintf(stderr, "invalid request: op=[%d], empty userid\n",
-                req->operation);
-        return false;
+    if (req->operation == VERIFYDB_REQ_GET ||
+        req->operation == VERIFYDB_REQ_SET) {
+        if (!*req->userid) {
+            fprintf(stderr, "invalid request: op=[%d], empty userid\n",
+                    req->operation);
+            return false;
+        }
     }
     if (req->operation == VERIFYDB_REQ_COUNT ||
         req->operation == VERIFYDB_REQ_SET) {
