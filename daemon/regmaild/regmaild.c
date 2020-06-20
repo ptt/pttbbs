@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     if (fd < 0 || sz <= 0)
     {
         fprintf(stderr, "cannot open %s.\n", FN_PASSWD);
-        return 0;
+        return 1;
     }
     sz /= sizeof(userec_t);
 
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     if (regmaildb_open(&Db, fpath) != SQLITE_OK)
     {
         fprintf(stderr, "cannot initialize emaildb: %s.\n", fpath);
-        return 0;
+        return 1;
     }
 
     if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
         sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
     {
         fprintf(stderr, "SQLite 3 internal error.\n");
-        return 0;
+        return 1;
     }
 
     sqlite3_step(tranStart);
