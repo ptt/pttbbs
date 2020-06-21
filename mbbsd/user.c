@@ -635,14 +635,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     char	    pre_confirmed = 0;
     int y = 0;
     int perm_changed;
-    int mail_changed;
     int money_changed;
     int tokill = 0;
     int changefrom = 0;
     int xuid;
 
     fail = 0;
-    mail_changed = money_changed = perm_changed = 0;
+    money_changed = perm_changed = 0;
 
     // verify unum
     xuid = getuser(orig_uid, &x);
@@ -669,13 +668,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     ans = vans(adminmode ?
-    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(M)信箱 [0]結束 " :
+    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文 [0]結束 " :
     "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 [0]結束 ");
 
     if (ans > '2' && ans != 'c' && !adminmode)
 	ans = '0';
 
-    if (ans == '1' || ans == '3' || ans == 'm') {
+    if (ans == '1' || ans == '3') {
 	clear();
 	y = 1;
 	move(y++, 0);
@@ -683,7 +682,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	outs(x.userid);
     }
 
-    if (adminmode && ((ans >= '1' && ans <= '8') || ans == 'm') &&
+    if (adminmode && (ans >= '1' && ans <= '8') &&
 	search_ulist(unum))
     {
 	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ")
@@ -700,63 +699,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (!adminmode)
 	    Customize();
 	return;
-
-    case 'm':
-	while (1) {
-	    getdata_str(y, 0,
-                    adminmode ? "E-Mail (站長變更不需認證): " :
-                                "電子信箱 [變動要重新認證]：",
-                    buf, sizeof(x.email), DOECHO, x.email);
-
-	    strip_blank(buf, buf);
-
-	    // fast break
-	    if (!buf[0] || strcasecmp(buf, "x") == 0)
-		break;
-
-	    if (!check_regmail(buf))
-		continue;
-
-	    // XXX 這裡也要 emaildb_check
-#ifdef USE_EMAILDB
-	    {
-		int email_count = emaildb_check_email(cuser.userid, buf);
-
-		if (email_count < 0)
-		    vmsg("暫時不允許\ email 認證, 請稍後再試");
-		else if (email_count >= EMAILDB_LIMIT)
-		    vmsg("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail");
-		else
-		    break; // valid mail
-		// invalid mail
-		continue;
-	    }
-#endif
-	    // valid mail.
-	    break;
-	}
-	y++;
-
-	// admins may want to use special names
-	if (buf[0] &&
-		strcmp(buf, x.email) &&
-		(strchr(buf, '@') || adminmode)) {
-
-	    // TODO 這裡也要 emaildb_check
-#ifdef USE_EMAILDB
-	    if (emaildb_update_email(x.userid, buf) < 0) {
-		vmsg("暫時不允許\ email 認證, 請稍後再試");
-		break;
-	    }
-#endif
-	    strlcpy(x.email, buf, sizeof(x.email));
-	    mail_changed = 1;
-
-            //  XXX delregcodefile 會看 cuser.userid...
-            if (!adminmode)
-                delregcodefile();
-	}
-	break;
 
     case '1':
 	move(0, 0);
@@ -1205,10 +1147,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
 		 orig_uid, x.userid, cuser.userid);
 	post_msg(BN_SECURITY, title, title, "[系統安全局]");
-    }
-    if (mail_changed && !adminmode) {
-	// wait registration.
-	x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
     }
 
     if (tokill) {
