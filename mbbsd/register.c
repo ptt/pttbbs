@@ -1,5 +1,6 @@
 #define PWCU_IMPL
 #include "bbs.h"
+#include "daemons.h"
 
 #define FN_REGISTER_LOG  "register.log"	// global registration history
 #define FN_REJECT_NOTIFY "justify.reject"
@@ -38,10 +39,13 @@
 #define REGISTER_ERR_CANCEL (-4)
 
 static int
-register_email_input(const char *userid, char *email);
+register_email_input(const userec_t *u, char *email);
 
 static int
-register_check_and_update_emaildb(const char *userid, const char *email);
+register_count_email(const userec_t *u, const char *email);
+
+static int
+register_check_and_update_emaildb(const userec_t *u, const char *email);
 
 ////////////////////////////////////////////////////////////////////////////
 // Value Validation
@@ -991,7 +995,7 @@ new_register(void)
 
     // Mark register complete after the user has been created.
     if (email_verified) {
-	if (register_check_and_update_emaildb(newuser.userid, newuser.email) ==
+	if (register_check_and_update_emaildb(&newuser, newuser.email) ==
 		REGISTER_OK) {
 	    char justify[sizeof(newuser.justify)];
 	    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
@@ -1285,7 +1289,7 @@ create_regform_request()
 }
 
 static int
-register_email_input(const char *userid, char *email)
+register_email_input(const userec_t *u, char *email)
 {
     while (1) {
 	email[0] = 0;
@@ -1297,23 +1301,19 @@ register_email_input(const char *userid, char *email)
 	if (strcmp(email, "x") == 0)
 	    return REGISTER_OK;
 
-	if (!check_regmail(email))
-	    return REGISTER_ERR_INVALID_EMAIL;
-
-#ifdef USE_EMAILDB
-	int email_count;
-
 	// before long waiting, alert user
 	move(18, 0); clrtobot();
 	outs("正在確認 email, 請稍候...\n");
 	doupdate();
 
-	email_count = emaildb_check_email(userid, email);
+	if (!check_regmail(email))
+	    return REGISTER_ERR_INVALID_EMAIL;
+
+	int email_count = register_count_email(u, email);
 	if (email_count < 0)
 	    return REGISTER_ERR_EMAILDB;
 	if (email_count >= EMAILDB_LIMIT)
 	    return REGISTER_ERR_TOO_MANY_ACCOUNTS;
-#endif
 
 	move(17, 0);
 	outs(ANSI_COLOR(1;31)
@@ -1329,18 +1329,61 @@ register_email_input(const char *userid, char *email)
 }
 
 static int
-register_check_and_update_emaildb(const char *userid, const char *email)
+register_count_email(const userec_t *u, const char *email)
 {
+    const char *userid = u ? u->userid : NULL;
+    int count = 0;
+
 #ifdef USE_EMAILDB
-    int email_count = emaildb_check_email(userid, email);
+    {
+	int r = emaildb_check_email(userid, email);
+	if (r < 0)
+	    return -1;
+	if (count < r)
+	    count = r;
+    }
+#endif
+
+#ifdef USE_VERIFYDB
+    {
+	char lcemail[EMAILSZ];
+	str_lower(lcemail, email);
+
+	int count_self, count_other;
+	if (verifydb_count_by_verify(VMETHOD_EMAIL, lcemail,
+				     &count_self, &count_other) != 0)
+	    return -1;
+	if (count < count_other)
+	    count = count_other;
+    }
+#endif
+
+    return count;
+}
+
+static int
+register_check_and_update_emaildb(const userec_t *u, const char *email)
+{
+    assert(u);
+
+    int email_count = register_count_email(u, email);
     if (email_count < 0)
 	return REGISTER_ERR_EMAILDB;
     if (email_count >= EMAILDB_LIMIT)
 	return REGISTER_ERR_TOO_MANY_ACCOUNTS;
 
+#ifdef USE_EMAILDB
     if (emaildb_update_email(cuser.userid, email) < 0)
 	return REGISTER_ERR_EMAILDB;
 #endif
+
+#ifdef USE_VERIFYDB
+    char lcemail[EMAILSZ];
+    str_lower(lcemail, email);
+    if (verifydb_set(u->userid, u->firstlogin, VMETHOD_EMAIL, lcemail, 0) != 0)
+	return REGISTER_ERR_EMAILDB;
+#endif
+
     return REGISTER_OK;
 }
 
@@ -1371,10 +1414,10 @@ toregister(char *email)
 
     int err;
     do {
-	err = register_email_input(cuser.userid, email);
+	err = register_email_input(&cuser, email);
 
 	if (err == REGISTER_OK && strcasecmp(email, "x") != 0)
-	    err = register_check_and_update_emaildb(cuser.userid, email);
+	    err = register_check_and_update_emaildb(&cuser, email);
 
 	switch (err) {
 	    case REGISTER_OK:

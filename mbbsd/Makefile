@@ -84,6 +84,7 @@ OBJS+=		screen.o
 .if $(USE_MBBSD_CXX)
 CXXFLAGS+=	-std=c++17 -I$(SRCROOT)/common/fbs
 LDLIBS+=	-lstdc++
+OBJS+=		verifydb.o
 .endif
 
 #######################################################################

@@ -766,6 +766,18 @@ int u_editsig(void);
 int u_cloak(void);
 int u_list(void);
 
+/* verifydb */
+#ifdef USE_VERIFYDB
+int verifydb_count_by_verify(int32_t vmethod, const char *vkey,
+    int *count_self, int *count_other);
+int verifydb_set(const char *userid, int64_t generation,
+    int32_t vmethod, const char *vkey, int64_t timestamp);
+
+# ifndef USE_MBBSD_CXX
+#   error "USE_VERIFYDB requires USE_MBBSD_CXX"
+# endif
+#endif
+
 /* vote */
 void b_suckinfile(FILE *fp, const char *fname);
 void b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname);
