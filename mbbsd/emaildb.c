@@ -83,4 +83,44 @@ int regcheck_ambiguous_userid_exist(const char *userid)
 
 #endif
 
+#ifdef USE_VERIFYDB
+
+int verifydb_count(const char *userid, int64_t generation,
+        int32_t vmethod, const char *vkey, void *rep)
+{
+    verifydb_req req = {};
+    req.cb = sizeof(req);
+    req.operation = VERIFYDB_REQ_COUNT;
+    if (userid)
+        strlcpy(req.userid, userid, sizeof(req.userid));
+    req.generation = generation;
+    req.vmethod = vmethod;
+    if (vkey)
+        strlcpy(req.vkey, vkey, sizeof(req.vkey));
+
+    return regmail_transact(&req, sizeof(req), rep, sizeof(verifydb_count_rep));
+}
+
+int verifydb_set(const char *userid, int64_t generation,
+        int32_t vmethod, const char *vkey)
+{
+    verifydb_req req = {};
+    req.cb = sizeof(req);
+    req.operation = VERIFYDB_REQ_SET;
+    if (userid)
+        strlcpy(req.userid, userid, sizeof(req.userid));
+    req.generation = generation;
+    req.vmethod = vmethod;
+    if (vkey)
+        strlcpy(req.vkey, vkey, sizeof(req.vkey));
+
+    int status;
+    int r = regmail_transact(&req, sizeof(req), &status, sizeof(status));
+    if (r < 0)
+        return r;
+    return status;
+}
+
+#endif
+
 // vim:et

@@ -383,7 +383,7 @@ end:
 }
 
 static void
-verifydb_count(const verifydb_req *req, verifydb_count_rep *rep)
+verifydb_count_handler(const verifydb_req *req, verifydb_count_rep *rep)
 {
     sqlite3 *Db = g_Db;
     sqlite3_stmt *Stmt = NULL;
@@ -443,7 +443,7 @@ end:
 }
 
 static int
-verifydb_set(const verifydb_req *req)
+verifydb_set_handler(const verifydb_req *req)
 {
     int ret = VERIFYDB_ERROR;
 
@@ -491,7 +491,7 @@ end:
 }
 
 static void
-verifydb_get(const verifydb_req *req, int fd)
+verifydb_get_handler(const verifydb_req *req, int fd)
 {
     sqlite3 *Db = g_Db;
     sqlite3_stmt *Stmt = NULL;
@@ -963,7 +963,7 @@ client_cb(int fd, short event, void *arg)
                 goto end;
 
             verifydb_count_rep rep = {};
-            verifydb_count(req, &rep);
+            verifydb_count_handler(req, &rep);
             fprintf(stderr, "verifydb count: %s generation [%ld] vmethod [%d] vkey [%s] "
                     "(status: %d, self: %d, other %d)\n",
                     req->userid, req->generation, req->vmethod, req->vkey,
@@ -979,7 +979,7 @@ client_cb(int fd, short event, void *arg)
             if (!validate_verifydb_request(req))
                 goto end;
 
-            int ret = verifydb_set(req);
+            int ret = verifydb_set_handler(req);
             fprintf(stderr, "verifydb set: %s generation [%ld] vmethod [%d] vkey [%s] (status: %d)\n",
                     req->userid, req->generation, req->vmethod, req->vkey, ret);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
@@ -993,7 +993,7 @@ client_cb(int fd, short event, void *arg)
             if (!validate_verifydb_request(req))
                 goto end;
 
-            verifydb_get(req, fd);
+            verifydb_get_handler(req, fd);
             break;
         }
 

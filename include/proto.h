@@ -235,6 +235,10 @@ int emaildb_update_email(const char *userid, const char *email);
 #ifdef USE_REGCHECKD
 int regcheck_ambiguous_userid_exist(const char *userid);
 #endif
+#ifdef USE_VERIFYDB
+int verifydb_count(const char *userid, int64_t generation, int32_t vmethod, const char *vkey, void *rep);
+int verifydb_set(const char *userid, int64_t generation, int32_t vmethod, const char *vkey);
+#endif
 
 /* fav */
 void fav_set_old_folder(fav_t *fp);
