@@ -43,14 +43,14 @@ bool IsPublic(const boardheader_t *bp) {
   return bp->brdname[0] && !BOARD_HIDDEN(bp);
 }
 
-boost::optional<boardheader_t *> Get(bid_t bid) {
+std::optional<boardheader_t *> Get(bid_t bid) {
   if (!IsValidBid(bid)) {
     return {};
   }
   return getbcache(bid);
 }
 
-boost::optional<bid_t> Resolve(const std::string &name) {
+std::optional<bid_t> Resolve(const std::string &name) {
   bid_t bid = getbnum(name.c_str());
   if (!IsValidBid(bid)) {
     return {};
@@ -85,8 +85,8 @@ std::vector<bid_t> Children(bid_t bid) {
   return bids;
 }
 
-boost::optional<std::string> Search(bid_t bid, const std::string &base_name,
-                                    const fileheader_predicate_t &pred) {
+std::optional<std::string> Search(bid_t bid, const std::string &base_name,
+                                  const fileheader_predicate_t &pred) {
   auto bp = Get(bid);
   if (!bp) {
     return {};
