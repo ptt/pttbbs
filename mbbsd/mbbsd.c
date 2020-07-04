@@ -992,16 +992,15 @@ setup_utmp(int mode)
 	    // Check for newline separating source name and country
 	    p = strtok_r(buf, "\n", &ptr);
 
-	    // copy to uinfo and currutmp
-	    if (*p) {
-		strlcpy(uinfo.from, p, sizeof(uinfo.from));
-		strlcpy(currutmp->from, uinfo.from, sizeof(currutmp->from));
-	    }
+	    // copy to currutmp
+	    if (p) {
+		strlcpy(currutmp->from, p, sizeof(currutmp->from));
 
-	    // Did fromd send country name separately?
-	    p = strtok_r(NULL, "\n", &ptr);
-	    if (p)
-		strlcpy(from_cc, p, sizeof(from_cc));
+		// Did fromd send country name separately?
+		p = strtok_r(NULL, "\n", &ptr);
+		if (p)
+		    strlcpy(from_cc, p, sizeof(from_cc));
+	    }
 	}
     }
 #endif // WHERE
