@@ -180,13 +180,8 @@ int
 regmaildb_check_email(const char * email, int email_len, const char *myid)
 {
     int count = -1;
-    sqlite3 *Db = NULL;
+    sqlite3 *Db = g_Db;
     sqlite3_stmt *Stmt = NULL;
-
-    if (g_Db)
-        Db =g_Db;
-    else if (regmaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
-        goto end;
 
     // XXX == is faster than LIKE in this case, although it does not support '%' and case sensitive
     if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email == lower(?);",
@@ -231,9 +226,6 @@ end:
         }
     }
 
-    if (Db != NULL && !g_Db)
-        sqlite3_close(Db);
-
     return count;
 }
 
@@ -242,13 +234,8 @@ regmaildb_update_email(const char * userid, int userid_len, const char * email, 
 {
     int ret = -1;
 
-    sqlite3 *Db = NULL;
+    sqlite3 *Db = g_Db;
     sqlite3_stmt *Stmt = NULL;
-
-    if (g_Db)
-        Db =g_Db;
-    else if (regmaildb_open(&Db, EMAILDB_PATH) != SQLITE_OK)
-        goto end;
 
     if (strcmp(email, "x") == 0)
     {
@@ -278,8 +265,6 @@ regmaildb_update_email(const char * userid, int userid_len, const char * email, 
 end:
     if (Stmt != NULL)
         sqlite3_finalize(Stmt);
-    if (Db != NULL && !g_Db)
-        sqlite3_close(Db);
 
     return ret;
 }
