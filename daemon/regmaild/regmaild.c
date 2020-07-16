@@ -654,7 +654,12 @@ int main(int argc, char *argv[])
 	return 1;
 
     if (as_daemon) daemonize(BBSHOME "/run/regmaild.pid", BBSHOME "/log/regmaild.log");
-    regmaildb_open(&g_Db, EMAILDB_PATH);
+
+    int res = regmaildb_open(&g_Db, EMAILDB_PATH);
+    if (res != SQLITE_OK) {
+        fprintf(stderr, "regmaildb_open: %d %s\n", res, sqlite3_errstr(res));
+        return 1;
+    }
     reload_unambiguous_user_list();
 
     event_init();
