@@ -20,6 +20,7 @@
 
 // TODO:
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -501,14 +502,36 @@ regcheck_ambiguous_id(const char *userid)
 //
 // operation: set,count
 
-static void
-err_request(regmaildb_req *req, int fd, struct event *ev)
+static bool
+validate_regmaildb_request(const regmaildb_req *req)
 {
-    fprintf(stderr, "invalid request(%d): uid=[%s]\n",
-            req->operation,
-            req->userid);
-    close(fd);
-    free(ev);
+    if (req->cb != sizeof(*req)) {
+        fprintf(stderr, "error: corrupted request, cb: %lu != %lu\n",
+                req->cb, sizeof(*req));
+        return false;
+    }
+
+    switch (req->operation)
+    {
+        case REGMAILDB_REQ_COUNT:
+        case REGMAILDB_REQ_SET:
+            if (!*req->userid || !*req->email) {
+                fprintf(stderr, "invalid request: op=[%d], uid=[%s]\n",
+                        req->operation,
+                        req->userid);
+                return false;
+            }
+            break;
+
+        case REGCHECK_REQ_AMBIGUOUS:
+            // No checks.
+            break;
+
+        default:
+            fprintf(stderr, "unknown request: op=[%d]\n", req->operation);
+            return false;
+    }
+    return true;
 }
 
 static void 
@@ -516,7 +539,6 @@ client_cb(int fd, short event, void *arg)
 {
     struct event *ev = (struct event*) arg;
     regmaildb_req req = {0};
-    int ret = -1;
 
     assert(ev);
 
@@ -526,20 +548,17 @@ client_cb(int fd, short event, void *arg)
          req.cb != sizeof(req))
     {
         fprintf(stderr, "error: corrupted request.\n");
-        close(fd);
-        free(ev);
-        return;
+        goto end;
     }
-
 
     switch(req.operation)
     {
         case REGMAILDB_REQ_COUNT:
-            if (!*req.userid || !*req.email) {
-                err_request(&req, fd, ev);
-                return;
-            }
-            ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
+        {
+            if (!validate_regmaildb_request(&req))
+                goto end;
+
+            int ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
             fprintf(stderr, "%-*s check  mail (result: %d): [%s]\n", 
                     IDLEN, req.userid, ret, req.email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
@@ -547,13 +566,14 @@ client_cb(int fd, short event, void *arg)
                 fprintf(stderr, " error: cannot write response...\n");
             }
             break;
+        }
 
         case REGMAILDB_REQ_SET:
-            if (!*req.userid || !*req.email) {
-                err_request(&req, fd, ev);
-                return;
-            }
-            ret = regmaildb_update_email(req.userid, strlen(req.userid),
+        {
+            if (!validate_regmaildb_request(&req))
+                goto end;
+
+            int ret = regmaildb_update_email(req.userid, strlen(req.userid),
                     req.email, strlen(req.email));
             fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\n", 
                     IDLEN, req.userid, ret, req.email);
@@ -562,9 +582,14 @@ client_cb(int fd, short event, void *arg)
                 fprintf(stderr, " error: cannot write response...\n");
             }
             break;
+        }
 
         case REGCHECK_REQ_AMBIGUOUS:
-            ret = regcheck_ambiguous_id(req.userid);
+        {
+            if (!validate_regmaildb_request(&req))
+                goto end;
+
+            int ret = regcheck_ambiguous_id(req.userid);
             fprintf(stderr, "%-*s check ambiguous id exist (result: %d)\n", 
                     IDLEN, req.userid, ret);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
@@ -572,14 +597,14 @@ client_cb(int fd, short event, void *arg)
                 fprintf(stderr, " error: cannot write response...\n");
             }
             break;
+        }
 
         default:
             fprintf(stderr, "error: invalid operation: %d.\n", req.operation);
-            close(fd);
-            free(ev);
-            return;
+            break;
     }
 
+end:
     // close connection anyway
     close(fd);
     free(ev);
