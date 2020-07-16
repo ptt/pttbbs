@@ -31,6 +31,19 @@ typedef struct
     char email    [EMAILSZ];
 }   regmaildb_req;
 
+// Request header just to calculate offsets.
+typedef struct {
+    size_t cb;
+    int operation;
+} regmaildb_req_header;
+
+// Storage struct that fits all possible messages.
+typedef struct {
+    union {
+        regmaildb_req_header header;
+        regmaildb_req regmaildb;
+    };
+} regmaildb_req_storage;
 
 ///////////////////////////////////////////////////////////////////////
 // Login Daemon (logind)

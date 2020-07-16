@@ -538,29 +538,35 @@ static void
 client_cb(int fd, short event, void *arg)
 {
     struct event *ev = (struct event*) arg;
-    regmaildb_req req = {0};
+    regmaildb_req_storage storage = {};
+    regmaildb_req_header *header = &storage.header;
+    int8_t *rest = (int8_t *)&storage;
+    rest += sizeof(*header);
 
     assert(ev);
 
-    if ( (event & EV_TIMEOUT) ||
+    if ((event & EV_TIMEOUT) ||
         !(event & EV_READ) ||
-         toread(fd, &req, sizeof(req)) != sizeof(req) ||
-         req.cb != sizeof(req))
+        toread(fd, header, sizeof(*header)) != sizeof(*header) ||
+        header->cb < sizeof(*header) ||
+        header->cb > sizeof(storage) ||
+        toread(fd, rest, header->cb - sizeof(*header)) != header->cb - sizeof(*header))
     {
         fprintf(stderr, "error: corrupted request.\n");
         goto end;
     }
 
-    switch(req.operation)
+    switch (header->operation)
     {
         case REGMAILDB_REQ_COUNT:
         {
-            if (!validate_regmaildb_request(&req))
+            regmaildb_req *req = &storage.regmaildb;
+            if (!validate_regmaildb_request(req))
                 goto end;
 
-            int ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
+            int ret = regmaildb_check_email(req->email, strlen(req->email), req->userid);
             fprintf(stderr, "%-*s check  mail (result: %d): [%s]\n", 
-                    IDLEN, req.userid, ret, req.email);
+                    IDLEN, req->userid, ret, req->email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\n");
@@ -570,13 +576,14 @@ client_cb(int fd, short event, void *arg)
 
         case REGMAILDB_REQ_SET:
         {
-            if (!validate_regmaildb_request(&req))
+            regmaildb_req *req = &storage.regmaildb;
+            if (!validate_regmaildb_request(req))
                 goto end;
 
-            int ret = regmaildb_update_email(req.userid, strlen(req.userid),
-                    req.email, strlen(req.email));
+            int ret = regmaildb_update_email(req->userid, strlen(req->userid),
+                    req->email, strlen(req->email));
             fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\n", 
-                    IDLEN, req.userid, ret, req.email);
+                    IDLEN, req->userid, ret, req->email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\n");
@@ -586,12 +593,13 @@ client_cb(int fd, short event, void *arg)
 
         case REGCHECK_REQ_AMBIGUOUS:
         {
-            if (!validate_regmaildb_request(&req))
+            regmaildb_req *req = &storage.regmaildb;
+            if (!validate_regmaildb_request(req))
                 goto end;
 
-            int ret = regcheck_ambiguous_id(req.userid);
+            int ret = regcheck_ambiguous_id(req->userid);
             fprintf(stderr, "%-*s check ambiguous id exist (result: %d)\n", 
-                    IDLEN, req.userid, ret);
+                    IDLEN, req->userid, ret);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
                 fprintf(stderr, " error: cannot write response...\n");
@@ -600,7 +608,7 @@ client_cb(int fd, short event, void *arg)
         }
 
         default:
-            fprintf(stderr, "error: invalid operation: %d.\n", req.operation);
+            fprintf(stderr, "error: invalid operation: %d.\n", header->operation);
             break;
     }
 
