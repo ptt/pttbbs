@@ -195,7 +195,7 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
 
     if (sqlite3_bind_text(Stmt, 1, email, email_len, SQLITE_STATIC) != SQLITE_OK)
     {
-        fprintf(stderr, "failed in sqlite3_bind_text\r\n");
+        fprintf(stderr, "failed in sqlite3_bind_text\n");
         goto end;
     }
 
@@ -226,7 +226,7 @@ end:
         int r = sqlite3_finalize(Stmt);
         if (r != SQLITE_OK)
         {
-            fprintf(stderr, "sqlite3_finalize error: %d %s\r\n", r, sqlite3_errmsg(Db));
+            fprintf(stderr, "sqlite3_finalize error: %d %s\n", r, sqlite3_errmsg(Db));
             count = -1;
         }
     }
@@ -519,7 +519,7 @@ regcheck_ambiguous_id(const char *userid)
 static void
 err_request(regmaildb_req *req, int fd, struct event *ev)
 {
-    fprintf(stderr, "invalid request(%d): uid=[%s]\r\n",
+    fprintf(stderr, "invalid request(%d): uid=[%s]\n",
             req->operation,
             req->userid);
     close(fd);
@@ -540,7 +540,7 @@ client_cb(int fd, short event, void *arg)
          toread(fd, &req, sizeof(req)) != sizeof(req) ||
          req.cb != sizeof(req))
     {
-        fprintf(stderr, "error: corrupted request.\r\n");
+        fprintf(stderr, "error: corrupted request.\n");
         close(fd);
         free(ev);
         return;
@@ -555,11 +555,11 @@ client_cb(int fd, short event, void *arg)
                 return;
             }
             ret = regmaildb_check_email(req.email, strlen(req.email), req.userid);
-            fprintf(stderr, "%-*s check  mail (result: %d): [%s]\r\n", 
+            fprintf(stderr, "%-*s check  mail (result: %d): [%s]\n", 
                     IDLEN, req.userid, ret, req.email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
-                fprintf(stderr, " error: cannot write response...\r\n");
+                fprintf(stderr, " error: cannot write response...\n");
             }
             break;
 
@@ -570,26 +570,26 @@ client_cb(int fd, short event, void *arg)
             }
             ret = regmaildb_update_email(req.userid, strlen(req.userid),
                     req.email, strlen(req.email));
-            fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\r\n", 
+            fprintf(stderr, "%-*s UPDATE mail (result: %d): [%s]\n", 
                     IDLEN, req.userid, ret, req.email);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
-                fprintf(stderr, " error: cannot write response...\r\n");
+                fprintf(stderr, " error: cannot write response...\n");
             }
             break;
 
         case REGCHECK_REQ_AMBIGUOUS:
             ret = regcheck_ambiguous_id(req.userid);
-            fprintf(stderr, "%-*s check ambiguous id exist (result: %d)\r\n", 
+            fprintf(stderr, "%-*s check ambiguous id exist (result: %d)\n", 
                     IDLEN, req.userid, ret);
             if (towrite(fd, &ret, sizeof(ret)) != sizeof(ret))
             {
-                fprintf(stderr, " error: cannot write response...\r\n");
+                fprintf(stderr, " error: cannot write response...\n");
             }
             break;
 
         default:
-            fprintf(stderr, "error: invalid operation: %d.\r\n", req.operation);
+            fprintf(stderr, "error: invalid operation: %d.\n", req.operation);
             close(fd);
             free(ev);
             return;
@@ -660,7 +660,7 @@ int main(int argc, char *argv[])
     event_init();
     event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
     event_add(&ev_listen, NULL);
-    fprintf(stderr, "start dispatch.\r\n");
+    fprintf(stderr, "start dispatch.\n");
     event_dispatch();
 
     return 0;
