@@ -176,28 +176,36 @@ user_display(const userec_t * u, int adminmode)
 	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET
            "\n");
     prints("\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
-    prints("\t真實姓名: %s", u->realname);
-#if FOREIGN_REG_DAY > 0
-    prints(" %s%s",
-	   u->uflag & UF_FOREIGN ? "(外籍: " : "",
-	   u->uflag & UF_FOREIGN ?
-		(u->uflag & UF_LIVERIGHT) ? "永久居留)" : "未取得居留權)"
-		: "");
-#elif defined(FOREIGN_REG)
-    prints(" %s", u->uflag & UF_FOREIGN ? "(外籍)" : "");
-#endif
-    outs("\n"); // end of realname
-    prints("\t職業學歷: %s\n", u->career);
-    prints("\t居住地址: %s\n", u->address);
 
-    prints("\t電子信箱: %s\n", u->email);
+    // This funciton is called with adminmode == 0 only to display the user's
+    // own information. Limit displaying register info of other users to
+    // PERM_ACCOUNT and PERM_ACCTREG.
+    // For PERM_ACCTREG, this is used when reviewing register forms.
+    if (!adminmode || HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
+	prints("\t真實姓名: %s", u->realname);
+#if FOREIGN_REG_DAY > 0
+	prints(" %s%s",
+	       u->uflag & UF_FOREIGN ? "(外籍: " : "",
+	       u->uflag & UF_FOREIGN ?
+		    (u->uflag & UF_LIVERIGHT) ? "永久居留)" : "未取得居留權)"
+		    : "");
+#elif defined(FOREIGN_REG)
+	prints(" %s", u->uflag & UF_FOREIGN ? "(外籍)" : "");
+#endif
+	outs("\n"); // end of realname
+	prints("\t職業學歷: %s\n", u->career);
+	prints("\t居住地址: %s\n", u->address);
+
+	prints("\t電子信箱: %s\n", u->email);
+    }
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
     prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
 
     prints("\t註冊日期: %s (已滿 %d 天)\n",
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
 
-    if (adminmode) {
+    // See comment above
+    if (adminmode && HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
@@ -205,7 +213,6 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t帳號權限: %s\n", genbuf);
 	prints("\t認證資料: %s\n", u->justify);
     }
-
 
     sethomedir(genbuf, u->userid);
     prints("\t私人信箱: %d 封  (購買信箱: %d 封)\n",
