@@ -650,7 +650,7 @@ static const commands_t m_admin_user[] = {
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
     {m_user, PERM_SYSOP,		"User          使用者資料"},
-    {m_board, PERM_SYSOP|PERM_BOARD,	"Board         設定看板"},
+    {m_board, PERM_BOARD,		"Board         設定看板"},
     {m_register,
 	PERM_ACCOUNTS|PERM_ACCTREG,	"Register      審核註冊表單"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"Xfile         編輯系統檔案"},

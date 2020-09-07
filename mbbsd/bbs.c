@@ -374,7 +374,7 @@ set_board(void)
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
     if (!HasUserPerm(PERM_NOCITIZEN) &&
-        (HasUserPerm(PERM_ALLBOARD) ||
+        (HasUserPerm(PERM_BOARD) ||
          is_BM_cache(currbid) ||
          (bp->BM[0] <= ' ' && GROUPOP()))) {
 	currmode |= MODE_BOARD;
@@ -2498,12 +2498,12 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     boardheader_t  *bp = getbcache(currbid);
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD) ||
 		(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
 
     strcpy(buf, "更改 ");
-    if (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))
+    if (HasUserPerm(PERM_BOARD) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))
 	strcat(buf, "(A)本板發表限制 ");
     strcat(buf, "(B)本板預設");
     if (fhdr->filemode & FILE_VOTE)
@@ -2511,7 +2511,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     strcat(buf, "連署限制 (Q)取消？[Q]");
     buf[0] = vans(buf);
 
-    if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
+    if ((HasUserPerm(PERM_BOARD) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
 	editLimits(
 		&bp->post_limit_logins,
@@ -2574,7 +2574,7 @@ b_man(void)
 #endif
     setapath(apath, currboard);
 
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) {
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)) {
 	char rebuild_path[PATHLEN];
 	int  fd;
 
@@ -2583,7 +2583,7 @@ b_man(void)
 	    close(fd);
     }
 
-    return a_menu(currboard, apath,HasUserPerm(PERM_ALLBOARD) ? 2 :
+    return a_menu(currboard, apath,HasUserPerm(PERM_BOARD) ? 2 :
 		  (currmode & MODE_BOARD ? 1 : 0),
 		  currbid, // getbnum(currboard)?
 		  NULL, backup_path);
@@ -2615,7 +2615,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     // should we allow edit-title here?
     if (currstat == RMAIL)
 	allow = 0;
-    else if (HasUserPerm(PERM_SYSOP))
+    else if (HasUserPerm(PERM_BOARD))
 	allow = 2;
     else if (strcmp(BN_ALLPOST, currboard) == 0)
         allow = 0;
@@ -3342,7 +3342,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         (not_owned || !is_file_owner(fhdr, &cuser)))
             return DONOTHING;
 
-    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
+    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARD)) ||
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
@@ -3925,7 +3925,7 @@ tar_addqueue(void)
     FILE           *fp;
     char            bakboard, bakman;
 
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)))
         return DONOTHING;
 
     snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
