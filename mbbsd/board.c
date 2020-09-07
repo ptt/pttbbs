@@ -1581,7 +1581,7 @@ set_menu_group_op(char *BM)
     int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
         return;
-    if (HasUserPerm(PERM_ALLBOARD)) {
+    if (HasUserPerm(PERM_BOARD)) {
         is_bm = 1;
     } else if (is_uBM(BM, cuser.userid)) {
         is_bm = 1;
@@ -2048,7 +2048,7 @@ choose_board(int newflag)
 
 	case 'L':
 	    if (IN_CLASS() &&
-                (HasUserPerm(PERM_SYSOP) ||
+                (HasUserPerm(PERM_BOARD) ||
                  (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
 		brdnum = -1;
 		head = 9999;
@@ -2252,7 +2252,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'D':
-	    if (HasUserPerm(PERM_SYSOP) ||
+	    if (HasUserPerm(PERM_BOARD) ||
 		    (HasUserPerm(PERM_SYSSUPERSUBOP) &&	GROUPOP())) {
 		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
@@ -2264,7 +2264,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'E':
-	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
+	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
 		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
 		move(1, 1);
@@ -2274,20 +2274,20 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'R':
-	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
+	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
 		m_newbrd(class_bid, 1);
 		brdnum = -1;
 	    }
 	    break;
 	case 'B':
-	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
+	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
 		m_newbrd(class_bid, 0);
 		brdnum = -1;
 	    }
 	    break;
 	case 'W':
 	    if (IN_SUBCLASS() &&
-		(HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP())) {
+		(HasUserPerm(PERM_BOARD) || GROUPOP())) {
 		setbpath(buf, getbcache(class_bid)->brdname);
 		Mkdir(buf);	/* Ptt:¶}¸s²Õ¥Ø¿ý */
 		b_note_edit_bname(class_bid);

@@ -435,7 +435,7 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	chomp(inbuf);
 	inbuf[30] = '\0';	/* truncate */
 #ifdef RESTRICT_PREVIEW_VOTE_RESULTS
-        if (HasUserPerm(PERM_ALLBOARD | PERM_SYSSUPERSUBOP))
+        if (HasUserPerm(PERM_BOARD | PERM_SYSSUPERSUBOP))
 #endif
         {
             move(num % 15 + 6, num / 15 * 40);

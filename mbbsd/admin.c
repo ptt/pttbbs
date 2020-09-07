@@ -729,8 +729,7 @@ m_mod_board(char *bname)
         snprintf(genbuf, sizeof(genbuf), "[看板連結] (D)刪除 [Q]取消? ");
     } else {
         snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
-                 HasUserPerm(PERM_SYSOP |
-                             PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
+                 HasUserPerm(PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
                  HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
     }
     getdata(10, 0, genbuf, ans, 3, LCECHO);
@@ -750,7 +749,7 @@ m_mod_board(char *bname)
 
     switch (*ans) {
     case 'g':
-	if (HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	    char            path[PATHLEN];
 	    setbfile(genbuf, bname, FN_TICKET_LOCK);
 	    setbfile(path, bname, FN_TICKET_END);
@@ -758,7 +757,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 's':
-	if (HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	  snprintf(genbuf, sizeof(genbuf),
 		   BBSHOME "/bin/buildir boards/%c/%s &",
 		   bh.brdname[0], bh.brdname);
@@ -766,7 +765,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'c':
-	if (HasUserPerm(PERM_SYSOP)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	   char frombname[20], fromdir[PATHLEN];
 	    CompleteBoard(MSG_SELECT_BOARD, frombname);
             if (frombname[0] == '\0' || !getbnum(frombname) ||
@@ -779,7 +778,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'b':
-	if (HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	    char            bvotebuf[10];
 
 	    memcpy(&newbh, &bh, sizeof(bh));
@@ -810,7 +809,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'd':
-	if (!(HasUserPerm(PERM_SYSOP | PERM_BOARD) ||
+	if (!(HasUserPerm(PERM_BOARD) ||
 		    (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	    break;
 	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
@@ -856,7 +855,7 @@ m_mod_board(char *bname)
                     // change to 0 if you want to force permission when renaming
                     // with different initial character.
                     const int free_rename = 1;
-                    if (free_rename || HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
+                    if (free_rename || HasUserPerm(PERM_BOARD)) {
                         mvouts(y + 1, 0, ANSI_COLOR(1;31)
                                 "警告: 看板首字母不同,大看板改名會非常久,"
                                 "千萬不可中途斷線否則看板會壞掉"
@@ -929,7 +928,7 @@ m_mod_board(char *bname)
         y++;
 
 #ifdef CHESSCOUNTRY
-	if (HasUserPerm(PERM_SYSOP)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
 	    if (getdata_str(y++, 0,
 			"設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋 (4) 黑白棋",
@@ -942,7 +941,7 @@ m_mod_board(char *bname)
 	}
 #endif /* defined(CHESSCOUNTRY) */
 
-	if (HasUserPerm(PERM_SYSOP|PERM_BOARD)) {
+	if (HasUserPerm(PERM_BOARD)) {
 	    move(1, 0);
 	    clrtobot();
 	    newbh.brdattr = setperms(newbh.brdattr, str_permboard);
@@ -961,7 +960,7 @@ m_mod_board(char *bname)
 	    newbh.title[6] = brd_symbol[1];
 	}
 
-	if (HasUserPerm(PERM_SYSOP|PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
+	if (HasUserPerm(PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
             getdata(y++, 0, "設定讀寫權限(y/N)？", ans, sizeof(ans), LCECHO);
 	    if (*ans == 'y') {
 		getdata_str(y++, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,
@@ -1121,7 +1120,7 @@ m_newbrd(int whatclass, int recover)
     newboard.brdattr |= BRD_CPLOG;
 #endif
 
-    if (HasUserPerm(PERM_SYSOP)) {
+    if (HasUserPerm(PERM_BOARD)) {
 	move(1, 0);
 	clrtobot();
 	newboard.brdattr = setperms(newboard.brdattr, str_permboard);
@@ -1158,7 +1157,7 @@ m_newbrd(int whatclass, int recover)
     }
 #endif /* defined(CHESSCOUNTRY) */
 
-    if (HasUserPerm(PERM_SYSOP) && !(newboard.brdattr & BRD_HIDE)) {
+    if (HasUserPerm(PERM_BOARD) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	if (*ans == 'y') {
 	    getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO, "R");
