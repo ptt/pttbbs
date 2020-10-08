@@ -39,18 +39,28 @@ m_user(void)
     usercomplete(msg_uid, genbuf);
     if (*genbuf) {
 	move(2, 0);
-	if ((id = getuser(genbuf, &xuser))) {
-	    user_display(&xuser, 1);
-	    if( HasUserPerm(PERM_ACCOUNTS) )
-		uinfo_query(xuser.userid, 1, id);
-	    else
-		pressanykey();
-	} else {
+	if (user_info_admin(genbuf) < 0) {
 	    outs(err_uid);
 	    clrtoeol();
 	    pressanykey();
 	}
     }
+    return 0;
+}
+
+int
+user_info_admin(const char *userid)
+{
+    userec_t xuser;
+    int id = getuser(userid, &xuser);
+    if (!id)
+	return -1;
+    vs_hdr("使用者設定");
+    user_display(&xuser, 1);
+    if (HasUserPerm(PERM_ACCOUNTS))
+	uinfo_query(xuser.userid, 1, id);
+    else
+	pressanykey();
     return 0;
 }
 

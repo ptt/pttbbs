@@ -17,6 +17,7 @@ int m_loginmsg(void);
 int m_mod_board(char *bname);
 int m_newbrd(int whatclass, int recover);
 int m_user(void);
+int user_info_admin(const char *userid);
 int search_user_bypwd(void);
 int search_user_bybakpwd(void);
 int m_board(void);
