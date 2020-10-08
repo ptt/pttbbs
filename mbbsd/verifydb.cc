@@ -1,6 +1,7 @@
 extern "C" {
 #include "bbs.h"
 #include "daemons.h"
+#include "psb.h"
 }
 
 #ifdef USE_VERIFYDB

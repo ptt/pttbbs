@@ -773,6 +773,7 @@ int verifydb_count_by_verify(int32_t vmethod, const char *vkey,
 int verifydb_set(const char *userid, int64_t generation,
     int32_t vmethod, const char *vkey, int64_t timestamp);
 void verify_info(const userec_t *u, int adminmode);
+int verifydb_admin_search_display();
 
 # ifndef USE_MBBSD_CXX
 #   error "USE_VERIFYDB requires USE_MBBSD_CXX"
