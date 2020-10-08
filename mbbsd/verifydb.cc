@@ -5,14 +5,14 @@ extern "C" {
 
 #ifdef USE_VERIFYDB
 
-#include <vector>
+#include <optional>
+#include <string>
 
 #include "flatbuffers/flatbuffers.h"
+#include "verifydb.h"
 #include "verifydb.fbs.h"
 
 namespace {
-
-using Bytes = std::vector<uint8_t>;
 
 bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
   int fd = toconnect(REGMAILD_ADDR);
@@ -38,6 +38,33 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
   return true;
 }
 
+}  // namespace
+
+std::optional<std::string> FormatVerify(int32_t vmethod, const char *vkey,
+                                        bool ansi_color) {
+  std::string s;
+  switch (vmethod) {
+  case VMETHOD_EMAIL:
+    s = "(¹q¤l«H½c) ";
+    if (vkey) {
+      if (ansi_color)
+        s += ANSI_COLOR(1);
+      s += vkey;
+      if (ansi_color)
+        s += ANSI_RESET;
+    } else
+      s += "?";
+    return s;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> FormatVerify(int32_t vmethod,
+                                        const flatbuffers::String *vkey,
+                                        bool ansi_color) {
+  return FormatVerify(vmethod, vkey ? vkey->c_str() : nullptr, ansi_color);
+}
+
 bool is_entry_user_present(const VerifyDb::Entry *entry) {
   const char *userid = "";
   if (entry->userid())
@@ -52,10 +79,34 @@ bool is_entry_user_present(const VerifyDb::Entry *entry) {
   return entry->generation() == u.firstlogin;
 }
 
-}  // namespace
+bool verifydb_getuser(const char *userid, int64_t generation, Bytes *buf,
+                      const VerifyDb::GetReply **reply) {
+  // Create request.
+  flatbuffers::FlatBufferBuilder fbb;
+  auto entry = VerifyDb::CreateEntryDirect(fbb, userid, generation);
+  auto match_fields = fbb.CreateVector<int8_t>(
+      {VerifyDb::Field_UserId, VerifyDb::Field_Generation});
+  auto req = VerifyDb::CreateMessage(
+      fbb, VerifyDb::AnyMessage_GetRequest,
+      VerifyDb::CreateGetRequest(fbb, entry, match_fields).Union());
+  fbb.Finish(req);
 
-int verifydb_count_by_verify(int32_t vmethod, const char *vkey, int *count_self,
-                             int *count_other) {
+  // Transact.
+  if (!verifydb_transact(fbb.GetBufferPointer(), fbb.GetSize(), buf))
+    return false;
+
+  // Verify reply.
+  auto verifier = flatbuffers::Verifier(&buf->front(), buf->size());
+  if (!VerifyDb::VerifyMessageBuffer(verifier))
+    return false;
+
+  // Expect reply is a GetReply message.
+  *reply = VerifyDb::GetMessage(&buf->front())->message_as_GetReply();
+  return *reply != nullptr;
+}
+
+bool verifydb_getverify(int32_t vmethod, const char *vkey, Bytes *buf,
+                        const VerifyDb::GetReply **reply) {
   // Create request.
   flatbuffers::FlatBufferBuilder fbb;
   auto entry = VerifyDb::CreateEntryDirect(fbb, nullptr, 0, vmethod, vkey);
@@ -66,18 +117,25 @@ int verifydb_count_by_verify(int32_t vmethod, const char *vkey, int *count_self,
   fbb.Finish(req);
 
   // Transact.
-  Bytes out;
-  if (!verifydb_transact(fbb.GetBufferPointer(), fbb.GetSize(), &out))
-    return -1;
+  if (!verifydb_transact(fbb.GetBufferPointer(), fbb.GetSize(), buf))
+    return false;
 
   // Verify reply.
-  auto verifier = flatbuffers::Verifier(&out.front(), out.size());
+  auto verifier = flatbuffers::Verifier(&buf->front(), buf->size());
   if (!VerifyDb::VerifyMessageBuffer(verifier))
-    return -1;
+    return false;
 
   // Expect reply is a GetReply message.
-  const auto *reply = VerifyDb::GetMessage(&out.front())->message_as_GetReply();
-  if (!reply || !reply->ok() || !reply->entry())
+  *reply = VerifyDb::GetMessage(&buf->front())->message_as_GetReply();
+  return *reply != nullptr;
+}
+
+int verifydb_count_by_verify(int32_t vmethod, const char *vkey, int *count_self,
+                             int *count_other) {
+  const VerifyDb::GetReply *reply;
+  Bytes buf;
+  if (!verifydb_getverify(vmethod, vkey, &buf, &reply) || !reply->ok() ||
+      !reply->entry())
     return -1;
 
   *count_self = 0;
