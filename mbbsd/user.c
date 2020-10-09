@@ -636,6 +636,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     int y = 0;
     int perm_changed;
     int money_changed;
+    bool update_emaildb = false;
     int tokill = 0;
     int changefrom = 0;
     int xuid;
@@ -1150,6 +1151,9 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	Rename(src, dst);
 	setuserid(unum, x.userid);
 
+	// Do this later.
+	update_emaildb = true;
+
 	// log change for security reasons.
 	char title[STRLEN];
 	snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
@@ -1191,6 +1195,26 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     if (adminmode)
 	kick_all(x.userid);
+
+    if (update_emaildb) {
+#ifdef USE_EMAILDB
+	// If we separate email in userec_t and emaildb, there is no way for us
+	// to find out the real verified email here. Don't update it.
+#   ifndef SEPARATE_VERIFY_EMAIL
+	// We only want to update emaildb when user is known to use email
+	// verification. It's okay to keep existing entry for old userid; it
+	// will get filtered out when read. This is best-effort, and does not
+	// account for failures. We can't rollback.
+	if (strchr(x.email, '@') != NULL && (x.userlevel & PERM_LOGINOK))
+	    emaildb_update_email(x.userid, x.email);
+#   endif
+#endif
+
+#ifdef USE_VERIFYDB
+	// Best effort, errors ignored. We can't rollback.
+	verifydb_change_userid(orig_uid, x.userid, x.firstlogin);
+#endif
+    }
 }
 
 int

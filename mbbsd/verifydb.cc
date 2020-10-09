@@ -182,4 +182,31 @@ int verifydb_set(const char *userid, int64_t generation, int32_t vmethod,
   return 0;
 }
 
+int verifydb_change_userid(const char *from_userid, const char *to_userid,
+                           int64_t generation) {
+  Bytes buf;
+  const VerifyDb::GetReply *reply;
+  if (!verifydb_getuser(from_userid, generation, &buf, &reply) || !reply->ok())
+    return -1;
+
+  bool ok = true;
+  if (reply->entry()) {
+    for (const auto *entry : *reply->entry()) {
+      // Skip bad records.
+      if (!entry->vkey())
+        continue;
+
+      // Change the userid by inserting a new record and deleting the old one
+      // (by using an empty vkey). Also, make sure the insert is successful
+      // before deleting.
+      if (verifydb_set(to_userid, entry->generation(), entry->vmethod(),
+                       entry->vkey()->c_str(), entry->timestamp() < 0) ||
+          verifydb_set(from_userid, entry->generation(), entry->vmethod(), "",
+                       0) < 0)
+        ok = false;
+    }
+  }
+  return ok ? 0 : -1;
+}
+
 #endif
