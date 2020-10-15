@@ -660,8 +660,10 @@ static const commands_t adminlist[] = {
                                         "LUser Log     【使用者資料記錄】"},
     {search_user_bypwd,
 	PERM_ACCOUNTS|PERM_POLICE_MAN,	"Search User    特殊搜尋使用者"},
+#ifdef USE_VERIFYDB
     {verifydb_admin_search_display,
 	PERM_ACCOUNTS,			"Verify Search  搜尋認證資料庫"},
+#endif
     {m_loginmsg, PERM_SYSOP,		"GMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
