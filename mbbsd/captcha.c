@@ -156,16 +156,6 @@ verify_captcha(const char *reason)
 ////////////////////////////////////////////////////////////////////////////
 #ifdef USE_REMOTE_CAPTCHA
 
-static void captcha_random(char *buf, size_t len)
-{
-    // prevent ambigious characters: oOlI
-    const char * const chars = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
-
-    for (int i = 0; i < len; i++)
-	buf[i] = chars[random() % strlen(chars)];
-    buf[len] = '\0';
-}
-
 static const char *
 captcha_insert_remote(const char *handle, const char *verify)
 {
@@ -197,8 +187,8 @@ remote_captcha()
 
     vs_hdr("¨ú±oÅçÃÒ½X");
 
-    captcha_random(handle, CAPTCHA_CODE_LENGTH);
-    captcha_random(verify, CAPTCHA_CODE_LENGTH);
+    random_text_code(handle, CAPTCHA_CODE_LENGTH);
+    random_text_code(verify, CAPTCHA_CODE_LENGTH);
 
     msg = captcha_insert_remote(handle, verify);
     if (msg)

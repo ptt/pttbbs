@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
@@ -814,4 +815,18 @@ str_decode_M3(char *str)
     *dst = 0;
     assert(strlen(str) >= strlen((char*)buf));
     strcpy(str, (char*)buf);
+}
+
+/**
+ * Generate a random ascii text code.
+ */
+void
+random_text_code(char *buf, size_t len)
+{
+    // prevent ambigious characters: oOlI
+    const char * const chars = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
+
+    for (size_t i = 0; i < len; i++)
+	buf[i] = chars[random() % strlen(chars)];
+    buf[len] = '\0';
 }
