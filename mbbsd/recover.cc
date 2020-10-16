@@ -44,6 +44,8 @@ private:
   static bool SendRecoveryCode(const std::string &email,
                                const std::string &code);
   static bool SetPasswd(const UserHandle &user, const char *hashed_passwd);
+  static void LogToSecurity(const UserHandle &user, const std::string &email);
+  static void NotifyUser(const std::string &userid, const std::string &email);
   static std::string GenCode(size_t len);
   static void UserErrorExit();
 };
@@ -113,6 +115,38 @@ bool AccountRecovery::SetPasswd(const UserHandle &user,
     return false;
   strlcpy(u.passwd, hashed_passwd, sizeof(u.passwd));
   return 0 == passwd_sync_update(unum, &u);
+}
+
+
+// static
+void AccountRecovery::LogToSecurity(const UserHandle &user,
+                                    const std::string &email) {
+  std::string title = "重設密碼: ";
+  title.append(user.userid);
+  title.append(" (以信箱認證身份)");
+
+  std::string msg;
+  msg.append("userid: ");
+  msg.append(user.userid);
+  msg.append("\nfirstlogin: ");
+  msg.append(std::to_string(user.generation));
+  msg.append("\nemail: ");
+  msg.append(email);
+  msg.append("\nip: ");
+  msg.append(fromhost);
+  msg.append("\n");
+
+  post_msg(BN_SECURITY, title.c_str(), msg.c_str(), "[系統安全局]");
+}
+
+// static
+void AccountRecovery::NotifyUser(const std::string &userid,
+                                 const std::string &email) {
+  std::string subject;
+  subject.append(" " BBSNAME " - ");
+  subject.append(userid);
+  subject.append(", 您的密碼已更變");
+  bsmtp("etc/passwdchanged", subject.c_str(), email.c_str(), "non-exist");
 }
 
 // static
@@ -251,10 +285,15 @@ void AccountRecovery::ResetPasswd() {
   }
   assert(hashed);
 
-  if (!SetPasswd(user_.value(), hashed))
+  if (!SetPasswd(user_.value(), hashed)) {
     vmsg("密碼重設失敗，請稍候再試。");
-  else
-    vmsg("密碼重設完成，請以新密碼登入。");
+    return;
+  }
+
+  LogToSecurity(user_.value(), email_);
+  NotifyUser(user_->userid, email_);
+
+  vmsg("密碼重設完成，請以新密碼登入。");
 }
 
 void AccountRecovery::Run() {
