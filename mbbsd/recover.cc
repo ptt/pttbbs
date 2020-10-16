@@ -306,6 +306,14 @@ void AccountRecovery::Run() {
 }  // namespace
 
 void recover_account() {
+#ifdef USE_REMOTE_CAPTCHA
+  const char *errmsg = remote_captcha();
+  if (errmsg) {
+    vmsg(errmsg);
+    exit(1);
+  }
+#endif
+
   AccountRecovery ac;
   ac.Run();
   exit(0);
