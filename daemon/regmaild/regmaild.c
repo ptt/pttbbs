@@ -120,7 +120,7 @@ verifydb_prepare_stmt(sqlite3 *db, sqlite3_stmt **stmt)
     // Note that we lowercase vkey, as we are only importing email.
     if (sqlite3_prepare(db, "REPLACE INTO verifydb "
                 "(userid, generation, vmethod, vkey, timestamp) VALUES "
-                "(lower(?),?,?,lower(?),?);",
+                "(lower(?),?,?,trim(lower(?)),?);",
                 -1, stmt, NULL) != SQLITE_OK)
     {
         fprintf(stderr, "Error preparing stmt: %s\n", sqlite3_errmsg(db));
