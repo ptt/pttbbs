@@ -716,6 +716,19 @@ load_current_user(const char *uid)
     } else
 #endif
 
+    // ----------------------------------------------------- RECOVER ACCOUNT
+
+#ifdef STR_RECOVER
+    if (!is_admin_only && strcasecmp(uid, STR_RECOVER) == 0) {
+	// Allow more time due to sending emails for verification code.
+	alarm(1800);
+	recover_account();
+	// Should have exited.
+	assert(false);
+	exit(1);
+    } else
+#endif
+
     // --------------------------------------------------- GUEST ACCOUNT
 
 #ifdef STR_GUEST

@@ -193,6 +193,7 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
+    AUTH_RESULT_INVALID_ID = -5,
     AUTH_RESULT_FAIL_INSECURE = -4,
     AUTH_RESULT_STOP   = -3,
     AUTH_RESULT_FREEID_TOOMANY = -2,
@@ -1220,6 +1221,11 @@ auth_is_free_userid(const char *userid)
         return STR_REGNEW;
 #endif
 
+#ifdef STR_RECOVER
+    if (strcasecmp(userid, STR_RECOVER) == 0)
+        return STR_RECOVER;
+#endif
+
     return NULL;
 }
 static int
@@ -1233,6 +1239,12 @@ auth_check_free_userid_allowance(const char *userid)
 #ifdef STR_REGNEW
     // accept all 'new' command.
     if (strcasecmp(userid, STR_REGNEW) == 0)
+        return 1;
+#endif
+
+#ifdef STR_RECOVER
+    // accept all '/recover' command.
+    if (strcasecmp(userid, STR_RECOVER) == 0)
         return 1;
 #endif
 
@@ -1315,6 +1327,11 @@ auth_user_challenge(login_ctx *ctx)
     {
         strlcpy(ctx->userid, free_uid, sizeof(ctx->userid));
         return AUTH_RESULT_FREEID;
+    }
+
+    if (!is_validuserid(ctx->userid))
+    {
+        return AUTH_RESULT_INVALID_ID;
     }
 
     if (passwd_load_user(uid, &user) < 1 ||
@@ -1530,67 +1547,66 @@ auth_start(int fd, login_conn_ctx *conn)
 
     draw_check_passwd(conn);
 
-    if (is_validuserid(ctx->userid))
+    // ctx content may be changed.
+    prompt = draw_auth_fail;
+    switch (auth_user_challenge(ctx))
     {
-        // ctx content may be changed.
-        prompt = draw_auth_fail;
-        switch (auth_user_challenge(ctx))
-        {
-            case AUTH_RESULT_FAIL:
-                // logattempt(ctx->userid , '-', time(0), ctx->hostip);
-                logattempt2(ctx->userid , '-', time(0), ctx->hostip);
-                break;
+        case AUTH_RESULT_INVALID_ID:
+            prompt = draw_empty_userid_warn;
+            break;
 
-            case AUTH_RESULT_FAIL_INSECURE:
-                // failure due to user setting for forcing secure connection
-                // will not be logged.
-                prompt = draw_reject_insecure_connection_msg;
-                break;
+        case AUTH_RESULT_FAIL:
+            // logattempt(ctx->userid , '-', time(0), ctx->hostip);
+            logattempt2(ctx->userid , '-', time(0), ctx->hostip);
+            break;
 
-            case AUTH_RESULT_FREEID:
-                isfree = 1;
-                // share FREEID case, no break here!
-                // fall through
-            case AUTH_RESULT_OK:
-                if (!isfree)
-                {
-                    // do nothing. logattempt for auth-ok users is
-                    // now done in mbbsd.
-                }
-                else if (!auth_check_free_userid_allowance(ctx->userid))
-                {
-                    // XXX since the only case of free
-                    draw_reject_free_userid(conn, ctx->userid);
-                    return AUTH_RESULT_STOP;
-                }
+        case AUTH_RESULT_FAIL_INSECURE:
+            // failure due to user setting for forcing secure connection
+            // will not be logged.
+            prompt = draw_reject_insecure_connection_msg;
+            break;
 
-                // consider system as overloaded if tunnel is not available.
-                if (g_overload || !is_tunnel_available())
-                {
-                    // set overload again to reject all incoming connections
-                    g_overload = 1;
-                    draw_overload(conn, 1);
-                    return AUTH_RESULT_STOP;
-                }
+        case AUTH_RESULT_FREEID:
+            isfree = 1;
+            // share FREEID case, no break here!
+            // fall through
+        case AUTH_RESULT_OK:
+            if (!isfree)
+            {
+                // do nothing. logattempt for auth-ok users is
+                // now done in mbbsd.
+            }
+            else if (!auth_check_free_userid_allowance(ctx->userid))
+            {
+                // XXX since the only case of free
+                draw_reject_free_userid(conn, ctx->userid);
+                return AUTH_RESULT_STOP;
+            }
 
-                draw_auth_success(conn, isfree);
-                if (!start_service(fd, conn))
-                {
-                    // too bad, we can't start service.
-                    retry_service();
-                    draw_service_failure(conn);
-                    return AUTH_RESULT_STOP;
-                }
-                STATINC(STAT_LOGIND_SERVSTART);
-                return AUTH_RESULT_OK;
+            // consider system as overloaded if tunnel is not available.
+            if (g_overload || !is_tunnel_available())
+            {
+                // set overload again to reject all incoming connections
+                g_overload = 1;
+                draw_overload(conn, 1);
+                return AUTH_RESULT_STOP;
+            }
 
-            default:
-                assert(!"unknown auth state.");
-                break;
-        }
+            draw_auth_success(conn, isfree);
+            if (!start_service(fd, conn))
+            {
+                // too bad, we can't start service.
+                retry_service();
+                draw_service_failure(conn);
+                return AUTH_RESULT_STOP;
+            }
+            STATINC(STAT_LOGIND_SERVSTART);
+            return AUTH_RESULT_OK;
+
+        default:
+            assert(!"unknown auth state.");
+            break;
     }
-    else
-        prompt = draw_empty_userid_warn;
 
     return auth_fail(fd, conn, prompt);
 }

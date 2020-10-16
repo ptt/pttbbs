@@ -564,6 +564,9 @@ int delete_file_content2(const char *direct, const fileheader_t *fh,
 #define DELETE_FILE_CONTENT_BACKUP_FAILED  (1)
 #define IS_DELETE_FILE_CONTENT_OK(x) ((x) != DELETE_FILE_CONTENT_FAILED)
 
+/* recover */
+void recover_account();
+
 /* register */
 int u_register(void);
 int bad_user_id(const char *userid);
