@@ -839,9 +839,8 @@ login_query(char *ruid)
 	    uid[IDLEN] = 0;
 #endif
 
-	if (!is_validuserid(uid)) {
-
-	    outs(err_uid);
+	if (0) {
+	    assert(false);
 
 #ifdef STR_GUEST
 	} else if (strcasecmp(uid, STR_GUEST) == 0) {	/* guest */
@@ -866,7 +865,15 @@ login_query(char *ruid)
 
 #endif // STR_REGNEW
 
-	} else {
+#ifdef STR_RECOVER
+	} else if (strcasecmp(uid, STR_RECOVER) == 0) {
+
+	    strlcpy(ruid, STR_RECOVER, IDLEN+1);
+	    break;
+
+#endif // STR_RECOVER
+
+	} else if (is_validuserid(uid)) {
 	    /* normal user */
 
             int valid_user = 1;
@@ -911,6 +918,8 @@ login_query(char *ruid)
 		clrtoeol();
 		break;
 	    }
+	} else {
+	    outs(err_uid);
 	}
     }
 
