@@ -2,8 +2,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "fnv_hash.h"
+#include <sys/random.h>
 
+#include "fnv_hash.h"
 #include "ansi.h"
 #include "cmsys.h"
 
@@ -818,15 +819,38 @@ str_decode_M3(char *str)
 }
 
 /**
+ * Obtain random bytes from /dev/urandom.
+ */
+void
+must_getrandom(void *buf, size_t len)
+{
+    while (1) {
+	ssize_t r = getrandom(buf, len, 0);
+	if (r == (ssize_t)len)
+	    return;
+	if (r < 0 && errno == EINTR)
+	    continue;
+	assert(!"getrandom failed");
+	exit(1);
+    }
+}
+
+
+/**
  * Generate a random ascii text code.
  */
 void
 random_text_code(char *buf, size_t len)
 {
     // prevent ambigious characters: oOlI
-    const char * const chars = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
+    static const char chars[] = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
+    static size_t charslen = (sizeof(chars) / sizeof(chars[0])) - 1;
 
+    must_getrandom(buf, sizeof(*buf) * len);
+
+    // read rand values as unsigned
+    const unsigned char *rnd = (const unsigned char *)buf;
     for (size_t i = 0; i < len; i++)
-	buf[i] = chars[random() % strlen(chars)];
+	buf[i] = chars[rnd[i] % charslen];
     buf[len] = '\0';
 }

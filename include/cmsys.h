@@ -132,6 +132,7 @@ size_t str_iconv(
 	  size_t dstlen);
 void str_decode_M3(char *str);
 void random_text_code(char *buf, size_t len);
+void must_getrandom(void *buf, size_t len);
 
 /* time.c */
 int is_leap_year(int year);
