@@ -361,7 +361,10 @@ signal_xcpu_handler(int sig)
 static void
 mysrand(void)
 {
-    srandom(time(NULL) + getpid());	/* 時間跟 pid 當 rand 的 seed */
+    unsigned int seed;
+    must_getrandom(&seed, sizeof(seed));
+    seed ^= getpid();
+    srandom(seed);
 }
 
 void
@@ -629,7 +632,6 @@ multi_user_check(void)
     if (HasUserPerm(PERM_SYSOP))
 	return;			/* don't check sysops */
 
-    srandom(getpid());
     // race condition here, sleep may help..?
     if (cuser.userlevel) {
 	usleep(random()%1000000); // 0~1s
