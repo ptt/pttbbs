@@ -53,7 +53,7 @@ bool write_email_to_passwd(const char *userid, const char *email) {
   if (unum < 0)
     return false;
   strlcpy(u.email, email, sizeof(u.email));
-  strlcpy(u.justify, "<E-Mail>: Manual", sizeof(u.justify));
+  strlcpy(u.justify, *email ? "<E-Mail>: Manual" : "", sizeof(u.justify));
   if (passwd_sync_update(unum, &u) < 0)
     return false;
 #endif
@@ -136,6 +136,26 @@ void verify_entry_email_edit(const VerifyDb::Entry *entry, bool *dirty) {
     vmsg("部分資料寫入失敗，請回報站長。");
 }
 
+void verify_entry_email_delete(const VerifyDb::Entry *entry, bool *dirty) {
+  if (vans("確認刪除此筆記錄? [y/N]") != 'y')
+    return;
+
+  // Mark dirty anyway.
+  *dirty = true;
+  const char *userid = entry->userid()->c_str();
+  if (verifydb_set(userid, entry->generation(), entry->vmethod(), "", 0) < 0)
+    vmsg("認證資料庫暫時無法使用，請稍候再試。");
+
+  // Cannot sync cross systems. Fail gracefully.
+  bool ok = true;
+  if (emaildb_update_email(userid, "x") < 0)
+    ok = false;
+  if (!write_email_to_passwd(userid, ""))
+    ok = false;
+  if (!ok)
+    vmsg("部分資料寫入失敗，請回報站長。");
+}
+
 void verify_entry_email_popup(const VerifyDb::Entry *entry, bool *dirty) {
   assert(entry->vmethod() == VMETHOD_EMAIL);
 
@@ -145,13 +165,7 @@ void verify_entry_email_popup(const VerifyDb::Entry *entry, bool *dirty) {
     break;
 
   case 'd':
-    if (vans("確認刪除此筆記錄? [y/N]") == 'y') {
-      // Mark dirty anyway.
-      *dirty = true;
-      if (verifydb_set(entry->userid()->c_str(), entry->generation(),
-                       entry->vmethod(), "", 0) < 0)
-        vmsg("認證資料庫暫時無法使用，請稍候再試。");
-    }
+    verify_entry_email_delete(entry, dirty);
     break;
   }
 }
