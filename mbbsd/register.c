@@ -1007,7 +1007,7 @@ new_register(void)
 }
 
 bool
-check_email_allow_reject_lists(char *email, const char **errmsg, const char **notice_file)
+check_email_allow_reject_lists(const char *email, const char **errmsg, const char **notice_file)
 {
     FILE           *fp;
     char            buf[128], *c;

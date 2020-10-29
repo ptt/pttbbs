@@ -578,6 +578,8 @@ void new_register(void);
 void check_register(void);
 int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
 void delregcodefile(void);
+bool check_email_allow_reject_lists(
+    const char *email, const char **errmsg, const char **notice_file);
 
 /* reversi */
 void reversi(int s, ChessGameMode mode);

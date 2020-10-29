@@ -86,6 +86,28 @@ void verify_entry_email_edit(const VerifyDb::Entry *entry, bool *dirty) {
       email[0] = '\0';
       continue;
     }
+
+    const char *errmsg;
+    if (!check_email_allow_reject_lists(email, &errmsg, nullptr)) {
+      move(y + 1, 2 + 11);
+      // clang-format off
+      outs(ANSI_COLOR(1;31));
+      // clang-format on
+      outs("系統目前不允許\以此信箱註冊, 錯誤訊息為:");
+      outs(ANSI_RESET);
+      move(y + 2, 2 + 11);
+      outs(ANSI_COLOR(1));
+      outs(errmsg);
+      outs(ANSI_RESET);
+
+      char force_in[2] = {};
+      getdata_buf(y + 4, 2 + 11, "仍要使用此信箱? [y/N]", force_in,
+                  sizeof(force_in), DOECHO);
+      move(y + 1, 0);
+      clrtobot();
+      if (tolower(force_in[0]) != 'y')
+        continue;
+    }
     break;
   } while (1);
   y++;
