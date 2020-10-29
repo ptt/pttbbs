@@ -670,7 +670,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     ans = vans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(V)認證 [0]結束 " :
-    "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 (V) 認證資料 [0]結束 ");
+    "請選擇 (1)修改資料 (2)設定密碼 (C)個人化設定 (V)認證資料 [0]結束 ");
 
     if (ans != '1' && ans != '2' && ans != 'c' && ans != 'v' && !adminmode)
 	ans = '0';
