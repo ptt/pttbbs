@@ -102,6 +102,15 @@ CXXFLAGS+=	-DNO_FORK
 ######################################
 # Settings for common libraries
 
+#######################################################################
+# conditional configurations and optional modules
+#######################################################################
+
+BBSCONF:=       $(SRCROOT)/pttbbs.conf
+DEF_PATTERN:=   ^[ \t]*\#[ \t]*define[ \t]*
+DEF_CMD:=       grep -Ewq "${DEF_PATTERN}"
+DEF_YES:=       && echo "YES" || echo ""
+
 #libevent
 LIBEVENT_CFLAGS!=	pkg-config --cflags libevent
 LIBEVENT_LIBS_L!=	pkg-config --libs-only-L libevent
@@ -119,6 +128,10 @@ NOGCCERROR:=no
 
 # FreeBSD make
 WITHOUT_PROFILE:=yes
+
+# Apply conditional configurations for NetBSD Makefiles in commons/,
+# mbbsd/ or more directory
+USE_MBBSD_CXX!= sh -c '${DEF_CMD}"USE_MBBSD_CXX" ${BBSCONF} ${DEF_YES}'
 
 ######################################
 
