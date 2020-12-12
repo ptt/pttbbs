@@ -16,34 +16,34 @@
 // GCC pragma to prevent paddings
 #define PACKSTRUCT	__attribute__ ((packed))
 
-/* ¤pÂûªº¸ê®Æ */
+/* å°é›žçš„è³‡æ–™ */
 typedef struct chicken_t { /* 128 bytes */
     char    name[20];
-    uint8_t type;             /* ª«ºØ */
+    uint8_t type;             /* ç‰©ç¨® */
     uint8_t _pad0[3];
     int32_t _pad1[4];
-    time4_t birthday;         /* ¥Í¤é */
-    time4_t lastvisit;        /* ¤W¦¸·ÓÅU®É¶¡ */
-    int32_t oo;               /* ¸É«~ */
-    int32_t food;             /* ­¹ª« */
-    int32_t medicine;         /* ÃÄ«~ */
-    int32_t weight;           /* Åé­« */
-    int32_t dirty;            /* Å¼¶Ã */
-    int32_t _run;             /* (¤w°±¥Î) ±Ó±¶«× */
-    int32_t _attack;          /* (¤w°±¥Î) §ðÀ»¤O */
-    int32_t book;             /* ¾Ç°Ý */
-    int32_t happy;            /* §Ö¼Ö */
-    int32_t satis;            /* º¡·N«× */
-    int32_t _temperament;     /* (¤w°±¥Î) ®ð½è */
-    int32_t tired;            /* ¯h³Ò«× */
-    int32_t sick;             /* ¯f®ð«ü¼Æ */
-    int32_t hp;               /* ¦å¶q */
-    int32_t hp_max;           /* º¡¦å¶q */
-    int32_t _mm;              /* (¤w°±¥Î) ªk¤O */
-    int32_t _mm_max;          /* (¤w°±¥Î) º¡ªk¤O */
-    time4_t cbirth;           /* ¹ê»Ú­pºâ¥Îªº¥Í¤é */
-    int32_t commonsense;      /* ±`ÃÑÂI¼Æ */
-    int32_t pad2[1];           /* ¯dµÛ¥H«á¥Î */
+    time4_t birthday;         /* ç”Ÿæ—¥ */
+    time4_t lastvisit;        /* ä¸Šæ¬¡ç…§é¡§æ™‚é–“ */
+    int32_t oo;               /* è£œå“ */
+    int32_t food;             /* é£Ÿç‰© */
+    int32_t medicine;         /* è—¥å“ */
+    int32_t weight;           /* é«”é‡ */
+    int32_t dirty;            /* é«’äº‚ */
+    int32_t _run;             /* (å·²åœç”¨) æ•æ·åº¦ */
+    int32_t _attack;          /* (å·²åœç”¨) æ”»æ“ŠåŠ› */
+    int32_t book;             /* å­¸å• */
+    int32_t happy;            /* å¿«æ¨‚ */
+    int32_t satis;            /* æ»¿æ„åº¦ */
+    int32_t _temperament;     /* (å·²åœç”¨) æ°£è³ª */
+    int32_t tired;            /* ç–²å‹žåº¦ */
+    int32_t sick;             /* ç—…æ°£æŒ‡æ•¸ */
+    int32_t hp;               /* è¡€é‡ */
+    int32_t hp_max;           /* æ»¿è¡€é‡ */
+    int32_t _mm;              /* (å·²åœç”¨) æ³•åŠ› */
+    int32_t _mm_max;          /* (å·²åœç”¨) æ»¿æ³•åŠ› */
+    time4_t cbirth;           /* å¯¦éš›è¨ˆç®—ç”¨çš„ç”Ÿæ—¥ */
+    int32_t commonsense;      /* å¸¸è­˜é»žæ•¸ */
+    int32_t pad2[1];           /* ç•™è‘—ä»¥å¾Œç”¨ */
 } PACKSTRUCT chicken_t;
 
 #define PASS_INPUT_LEN  8         /* Length of valid input password length.
@@ -58,80 +58,80 @@ typedef struct userec_t {
     uint32_t	version;	/* version number of this sturcture, we
     				 * use revision number of project to denote.*/
 
-    char	userid[IDLEN+1];/* ¨Ï¥ÎªÌID */
-    char	realname[20];	/* ¯u¹ê©m¦W */
-    char	nickname[24];	/* ¼ÊºÙ */
-    char	passwd[PASSLEN];/* ±K½X */
+    char	userid[IDLEN+1];/* ä½¿ç”¨è€…ID */
+    char	realname[20];	/* çœŸå¯¦å§“å */
+    char	nickname[24];	/* æš±ç¨± */
+    char	passwd[PASSLEN];/* å¯†ç¢¼ */
     char	pad_1;
 
-    uint32_t    uflag;		/* ²ßºD, see uflags.h */
-    uint32_t    _unused1;	/* ±q«e©ñ²ßºD2, ¨Ï¥Î«e½Ð¥ý²M0 */
-    uint32_t    userlevel;	/* Åv­­ */
-    uint32_t    numlogindays;	/* ¤W½u¸ê¾ú (¨C¤é³Ì¦h+1ªºµn¤J¦¸¼Æ) */
-    uint32_t    numposts;	/* ¤å³¹½g¼Æ */
-    time4_t	firstlogin;	/* µù¥U®É¶¡ */
-    time4_t	lastlogin;	/* ³Ìªñ¤W¯¸®É¶¡(¥]§tÁô¨­) */
-    char	lasthost[IPV4LEN+1];/* ¤W¦¸¤W¯¸¨Ó·½ */
-    int32_t     money;		/* Ptt¹ô */
+    uint32_t    uflag;		/* ç¿’æ…£, see uflags.h */
+    uint32_t    _unused1;	/* å¾žå‰æ”¾ç¿’æ…£2, ä½¿ç”¨å‰è«‹å…ˆæ¸…0 */
+    uint32_t    userlevel;	/* æ¬Šé™ */
+    uint32_t    numlogindays;	/* ä¸Šç·šè³‡æ­· (æ¯æ—¥æœ€å¤š+1çš„ç™»å…¥æ¬¡æ•¸) */
+    uint32_t    numposts;	/* æ–‡ç« ç¯‡æ•¸ */
+    time4_t	firstlogin;	/* è¨»å†Šæ™‚é–“ */
+    time4_t	lastlogin;	/* æœ€è¿‘ä¸Šç«™æ™‚é–“(åŒ…å«éš±èº«) */
+    char	lasthost[IPV4LEN+1];/* ä¸Šæ¬¡ä¸Šç«™ä¾†æº */
+    int32_t     money;		/* Pttå¹£ */
     char	_unused[4];
 
     char	email[EMAILSZ]; /* Email */
-    char	address[50];	/* ¦í§} */
-    char	justify[REGLEN+1];/* ¼f®Ö¸ê®Æ */
-    uint8_t     _unused_birth[3]; /* ¥Í¤é ¤ë¤é¦~ */
-    uint8_t     over_18;        /* ¬O§_¤wº¡18·³ */
-    uint8_t	pager_ui_type;	/* ©I¥s¾¹¬É­±Ãþ§O (was: WATER_*) */
-    uint8_t	pager;		/* ©I¥s¾¹ª¬ºA */
-    uint8_t	invisible;	/* Áô§Îª¬ºA */
+    char	address[50];	/* ä½å€ */
+    char	justify[REGLEN+1];/* å¯©æ ¸è³‡æ–™ */
+    uint8_t     _unused_birth[3]; /* ç”Ÿæ—¥ æœˆæ—¥å¹´ */
+    uint8_t     over_18;        /* æ˜¯å¦å·²æ»¿18æ­² */
+    uint8_t	pager_ui_type;	/* å‘¼å«å™¨ç•Œé¢é¡žåˆ¥ (was: WATER_*) */
+    uint8_t	pager;		/* å‘¼å«å™¨ç‹€æ…‹ */
+    uint8_t	invisible;	/* éš±å½¢ç‹€æ…‹ */
     char	_unused4[2];
-    uint32_t    exmailbox;	/* ÁÊ¶R«H½c¼Æ */
+    uint32_t    exmailbox;	/* è³¼è²·ä¿¡ç®±æ•¸ */
 
-    // r3968 ²¾¥X sizeof(chicken_t)=128 bytes
+    // r3968 ç§»å‡º sizeof(chicken_t)=128 bytes
     char	_unused5[4];
-    char	career[40];	/* ¾Ç¾úÂ¾·~ */
-    char	_unused_phone[20];	/* ¹q¸Ü */
-    uint32_t	_unused6;	/* ±q«e©ñÂà´««eªº numlogins, ¨Ï¥Î«e½Ð¥ý²M0 */
+    char	career[40];	/* å­¸æ­·è·æ¥­ */
+    char	_unused_phone[20];	/* é›»è©± */
+    uint32_t	_unused6;	/* å¾žå‰æ”¾è½‰æ›å‰çš„ numlogins, ä½¿ç”¨å‰è«‹å…ˆæ¸…0 */
     char	chkpad1[44];
     uint32_t    role;           /* Role-specific permissions */
-    time4_t	lastseen;	/* ³Ìªñ¤W¯¸®É¶¡(Áô¨­¤£­p) */
-    time4_t     timesetangel;   /* ¤W¦¸±o¨ì¤Ñ¨Ï®É¶¡ */
-    time4_t	timeplayangel;	/* ¤W¦¸»P¤Ñ¨Ï¤¬°Ê®É¶¡ (by day) */
-    // ¥H¤WÀ³¬° sizeof(chicken_t) ¦Pµ¥¤j¤p
+    time4_t	lastseen;	/* æœ€è¿‘ä¸Šç«™æ™‚é–“(éš±èº«ä¸è¨ˆ) */
+    time4_t     timesetangel;   /* ä¸Šæ¬¡å¾—åˆ°å¤©ä½¿æ™‚é–“ */
+    time4_t	timeplayangel;	/* ä¸Šæ¬¡èˆ‡å¤©ä½¿äº’å‹•æ™‚é–“ (by day) */
+    // ä»¥ä¸Šæ‡‰ç‚º sizeof(chicken_t) åŒç­‰å¤§å°
 
-    time4_t	lastsong;	/* ¤W¦¸ÂIºq®É¶¡ */
-    uint32_t	loginview;	/* ¶i¯¸µe­± */
+    time4_t	lastsong;	/* ä¸Šæ¬¡é»žæ­Œæ™‚é–“ */
+    uint32_t	loginview;	/* é€²ç«™ç•«é¢ */
     uint8_t	_unused8;	// was: channel
     uint8_t	pad_2;
 
-    uint16_t	vl_count;	/* ¹Hªk°O¿ý ViolateLaw counter */
-    uint16_t	five_win;	/* ¤­¤l´Ñ¾ÔÁZ ³Ó */
-    uint16_t	five_lose;	/* ¤­¤l´Ñ¾ÔÁZ ±Ñ */
-    uint16_t	five_tie;	/* ¤­¤l´Ñ¾ÔÁZ ©M */
-    uint16_t	chc_win;	/* ¶H´Ñ¾ÔÁZ ³Ó */
-    uint16_t	chc_lose;	/* ¶H´Ñ¾ÔÁZ ±Ñ */
-    uint16_t	chc_tie;	/* ¶H´Ñ¾ÔÁZ ©M */
-    uint16_t    conn6_win;      /* ¤»¤l´Ñ¾ÔÁZ ³Ó */
-    uint16_t    conn6_lose;     /* ¤»¤l´Ñ¾ÔÁZ ±Ñ */
-    uint16_t    conn6_tie;      /* ¤»¤l´Ñ¾ÔÁZ ©M */
-    char	_unused_mind[2];/* ÂÂ¤ß±¡ */
-    uint16_t	go_win;		/* ³ò´Ñ¾ÔÁZ ³Ó */
-    uint16_t	go_lose;	/* ³ò´Ñ¾ÔÁZ ±Ñ */
-    uint16_t	go_tie;		/* ³ò´Ñ¾ÔÁZ ©M */
-    uint16_t    dark_win;       /* ·t´Ñ¾ÔÁZ ³Ó */
-    uint16_t    dark_lose;      /* ·t´Ñ¾ÔÁZ ±Ñ */
+    uint16_t	vl_count;	/* é•æ³•è¨˜éŒ„ ViolateLaw counter */
+    uint16_t	five_win;	/* äº”å­æ£‹æˆ°ç¸¾ å‹ */
+    uint16_t	five_lose;	/* äº”å­æ£‹æˆ°ç¸¾ æ•— */
+    uint16_t	five_tie;	/* äº”å­æ£‹æˆ°ç¸¾ å’Œ */
+    uint16_t	chc_win;	/* è±¡æ£‹æˆ°ç¸¾ å‹ */
+    uint16_t	chc_lose;	/* è±¡æ£‹æˆ°ç¸¾ æ•— */
+    uint16_t	chc_tie;	/* è±¡æ£‹æˆ°ç¸¾ å’Œ */
+    uint16_t    conn6_win;      /* å…­å­æ£‹æˆ°ç¸¾ å‹ */
+    uint16_t    conn6_lose;     /* å…­å­æ£‹æˆ°ç¸¾ æ•— */
+    uint16_t    conn6_tie;      /* å…­å­æ£‹æˆ°ç¸¾ å’Œ */
+    char	_unused_mind[2];/* èˆŠå¿ƒæƒ… */
+    uint16_t	go_win;		/* åœæ£‹æˆ°ç¸¾ å‹ */
+    uint16_t	go_lose;	/* åœæ£‹æˆ°ç¸¾ æ•— */
+    uint16_t	go_tie;		/* åœæ£‹æˆ°ç¸¾ å’Œ */
+    uint16_t    dark_win;       /* æš—æ£‹æˆ°ç¸¾ å‹ */
+    uint16_t    dark_lose;      /* æš—æ£‹æˆ°ç¸¾ æ•— */
     uint8_t     ua_version;     /* Applicable user agreement version */
 
-    uint8_t	signature;	/* ºD¥ÎÃ±¦WÀÉ */
-    uint8_t	_unused10;	/* ±q«e©ñ¦n¤å³¹¼Æ, ¨Ï¥Î«e½Ð¥ý²M0 */
-    uint8_t	badpost;	/* µû»ù¬°Ãa¤å³¹¼Æ */
-    uint16_t    dark_tie;       /* ·t´Ñ¾ÔÁZ ©M */
-    char	myangel[IDLEN+1];/* §Úªº¤p¤Ñ¨Ï */
+    uint8_t	signature;	/* æ…£ç”¨ç°½åæª” */
+    uint8_t	_unused10;	/* å¾žå‰æ”¾å¥½æ–‡ç« æ•¸, ä½¿ç”¨å‰è«‹å…ˆæ¸…0 */
+    uint8_t	badpost;	/* è©•åƒ¹ç‚ºå£žæ–‡ç« æ•¸ */
+    uint16_t    dark_tie;       /* æš—æ£‹æˆ°ç¸¾ å’Œ */
+    char	myangel[IDLEN+1];/* æˆ‘çš„å°å¤©ä½¿ */
     char	pad_3;
 
-    uint16_t	chess_elo_rating;/* ¶H´Ñµ¥¯Å¤À */
-    uint32_t    withme;	 	 /* §Ú·Q§ä¤H¤U´Ñ¡A²á¤Ñ.... */
-    time4_t	timeremovebadpost;/* ¤W¦¸§R°£¦H¤å®É¶¡ */
-    time4_t	timeviolatelaw;  /* ³Q¶}»@³æ®É¶¡ */
+    uint16_t	chess_elo_rating;/* è±¡æ£‹ç­‰ç´šåˆ† */
+    uint32_t    withme;	 	 /* æˆ‘æƒ³æ‰¾äººä¸‹æ£‹ï¼ŒèŠå¤©.... */
+    time4_t	timeremovebadpost;/* ä¸Šæ¬¡åˆªé™¤åŠ£æ–‡æ™‚é–“ */
+    time4_t	timeviolatelaw;  /* è¢«é–‹ç½°å–®æ™‚é–“ */
 
     char	pad_tail[28];
 } PACKSTRUCT userec_t;
@@ -164,74 +164,74 @@ typedef struct userec_t {
 
 #define BTLEN      48             /* Length of board title */
 
-/* TODO °ÊºA§ó·sªºÄæ¦ì¤£À³¸Ó¸ò­n¼g¤JÀÉ®×ªº²V¦b¤@°_,
- * ¦Ü¤Ö¥Î­Ó struct ¥]°_¨Ó¤§Ãþ */
+/* TODO å‹•æ…‹æ›´æ–°çš„æ¬„ä½ä¸æ‡‰è©²è·Ÿè¦å¯«å…¥æª”æ¡ˆçš„æ··åœ¨ä¸€èµ·,
+ * è‡³å°‘ç”¨å€‹ struct åŒ…èµ·ä¾†ä¹‹é¡ž */
 typedef struct boardheader_t { /* 256 bytes */
     char    brdname[IDLEN + 1];	    /* bid */
     char    title[BTLEN + 1];
     char    BM[IDLEN * 3 + 3];	    /* BMs' userid, token '/' */
     char    pad1[3];
-    uint32_t brdattr;		    /* boardªºÄÝ©Ê */
-    char    chesscountry;	    /* ´Ñ°ê */
-    uint8_t _vote_limit_posts;	    /* (¤w°±¥Î) ³s¸p : ¤å³¹½g¼Æ¤U­­ */
-    uint8_t vote_limit_logins;	    /* ³s¸p : µn¤J¦¸¼Æ¤U­­ */
-    uint8_t pad2_1[1];	            /* (¤w°±¥Î) ³s¸p : µù¥U®É¶¡­­¨î */
+    uint32_t brdattr;		    /* boardçš„å±¬æ€§ */
+    char    chesscountry;	    /* æ£‹åœ‹ */
+    uint8_t _vote_limit_posts;	    /* (å·²åœç”¨) é€£ç½² : æ–‡ç« ç¯‡æ•¸ä¸‹é™ */
+    uint8_t vote_limit_logins;	    /* é€£ç½² : ç™»å…¥æ¬¡æ•¸ä¸‹é™ */
+    uint8_t pad2_1[1];	            /* (å·²åœç”¨) é€£ç½² : è¨»å†Šæ™‚é–“é™åˆ¶ */
     time4_t bupdate;		    /* note update time */
-    uint8_t _post_limit_posts;	    /* (¤w°±¥Î) µoªí¤å³¹ : ¤å³¹½g¼Æ¤U­­ */
-    uint8_t post_limit_logins;	    /* µoªí¤å³¹ : µn¤J¦¸¼Æ¤U­­ */
-    uint8_t pad2_2[1];	            /* (¤w°±¥Î) µoªí¤å³¹ : µù¥U®É¶¡­­¨î */
-    uint8_t bvote;		    /* ¥¿Á|¿ì Vote ¼Æ */
+    uint8_t _post_limit_posts;	    /* (å·²åœç”¨) ç™¼è¡¨æ–‡ç«  : æ–‡ç« ç¯‡æ•¸ä¸‹é™ */
+    uint8_t post_limit_logins;	    /* ç™¼è¡¨æ–‡ç«  : ç™»å…¥æ¬¡æ•¸ä¸‹é™ */
+    uint8_t pad2_2[1];	            /* (å·²åœç”¨) ç™¼è¡¨æ–‡ç«  : è¨»å†Šæ™‚é–“é™åˆ¶ */
+    uint8_t bvote;		    /* æ­£èˆ‰è¾¦ Vote æ•¸ */
     time4_t vtime;		    /* Vote close time */
-    uint32_t level;		    /* ¥i¥H¬Ý¦¹ªOªºÅv­­ */
-    time4_t perm_reload;	    /* ³Ì«á³]©w¬ÝªOªº®É¶¡ */
-    int32_t gid;		    /* ¬ÝªO©ÒÄÝªºÃþ§O ID */
-    int32_t next[2];		    /* ¦b¦P¤@­Ógid¤U¤@­Ó¬ÝªO °ÊºA²£¥Í*/
-    int32_t firstchild[2];	    /* ÄÝ©ó³o­Ó¬ÝªOªº²Ä¤@­Ó¤l¬ÝªO */
-    int32_t parent;		    /* ³o­Ó¬ÝªOªº parent ¬ÝªO bid */
-    int32_t childcount;		    /* ¦³¦h¤Ö­Óchild */
-    int32_t nuser;		    /* ¦h¤Ö¤H¦b³oªO */
+    uint32_t level;		    /* å¯ä»¥çœ‹æ­¤æ¿çš„æ¬Šé™ */
+    time4_t perm_reload;	    /* æœ€å¾Œè¨­å®šçœ‹æ¿çš„æ™‚é–“ */
+    int32_t gid;		    /* çœ‹æ¿æ‰€å±¬çš„é¡žåˆ¥ ID */
+    int32_t next[2];		    /* åœ¨åŒä¸€å€‹gidä¸‹ä¸€å€‹çœ‹æ¿ å‹•æ…‹ç”¢ç”Ÿ*/
+    int32_t firstchild[2];	    /* å±¬æ–¼é€™å€‹çœ‹æ¿çš„ç¬¬ä¸€å€‹å­çœ‹æ¿ */
+    int32_t parent;		    /* é€™å€‹çœ‹æ¿çš„ parent çœ‹æ¿ bid */
+    int32_t childcount;		    /* æœ‰å¤šå°‘å€‹child */
+    int32_t nuser;		    /* å¤šå°‘äººåœ¨é€™æ¿ */
     int32_t postexpire;		    /* postexpire */
     time4_t endgamble;
     char    posttype[33];
     char    posttype_f;
-    uint8_t fastrecommend_pause;    /* §Ö³t³s±À¶¡¹j */
-    uint8_t vote_limit_badpost;	    /* ³s¸p : ¦H¤å¤W­­ */
-    uint8_t post_limit_badpost;	    /* µoªí¤å³¹ : ¦H¤å¤W­­ */
+    uint8_t fastrecommend_pause;    /* å¿«é€Ÿé€£æŽ¨é–“éš” */
+    uint8_t vote_limit_badpost;	    /* é€£ç½² : åŠ£æ–‡ä¸Šé™ */
+    uint8_t post_limit_badpost;	    /* ç™¼è¡¨æ–‡ç«  : åŠ£æ–‡ä¸Šé™ */
     char    pad3[3];
     time4_t SRexpire;		    /* SR Records expire time */
     char    pad4[40];
 } PACKSTRUCT boardheader_t;
 
-// TODO BRD §ÖÃz¤F¡A«ç»ò¿ì¡H ·Ç³Æ±q pad3 °½¤@­Ó¨Ó·í attr2 §a...
-// #define BRD_NOZAP       	0x00000001	/* ¤£¥i ZAP */
-#define BRD_NOCOUNT		0x00000002	/* ¤£¦C¤J²Î­p */
-//#define BRD_NOTRAN		0x00000004	/* ¤£Âà«H */
-#define BRD_GROUPBOARD		0x00000008	/* ¸s²ÕªO */
-#define BRD_HIDE		0x00000010	/* ÁôÂÃªO (¬ÝªO¦n¤Í¤~¥i¬Ý) */
-#define BRD_POSTMASK		0x00000020	/* ­­¨îµoªí©Î¾\Åª */
-#define BRD_ANONYMOUS		0x00000040	/* °Î¦WªO */
-#define BRD_DEFAULTANONYMOUS	0x00000080	/* ¹w³]°Î¦WªO */
-#define BRD_NOCREDIT		0x00000100	/* µo¤åµL¼úÀy¬ÝªO */
-#define BRD_VOTEBOARD		0x00000200	/* ³s¸p¾÷¬ÝªO */
-#define BRD_WARNEL		0x00000400	/* ³s¸p¾÷¬ÝªO */
-#define BRD_TOP			0x00000800	/* ¼öªù¬ÝªO¸s²Õ */
-#define BRD_NORECOMMEND		0x00001000	/* ¤£¥i±ÀÂË */
-#define BRD_ANGELANONYMOUS	0x00002000	/* ¤p¤Ñ¨Ï¥i°Î¦W */
-#define BRD_BMCOUNT		0x00004000	/* ªO¥D³]©w¦C¤J°O¿ý */
+// TODO BRD å¿«çˆ†äº†ï¼Œæ€Žéº¼è¾¦ï¼Ÿ æº–å‚™å¾ž pad3 å·ä¸€å€‹ä¾†ç•¶ attr2 å§...
+// #define BRD_NOZAP       	0x00000001	/* ä¸å¯ ZAP */
+#define BRD_NOCOUNT		0x00000002	/* ä¸åˆ—å…¥çµ±è¨ˆ */
+//#define BRD_NOTRAN		0x00000004	/* ä¸è½‰ä¿¡ */
+#define BRD_GROUPBOARD		0x00000008	/* ç¾¤çµ„æ¿ */
+#define BRD_HIDE		0x00000010	/* éš±è—æ¿ (çœ‹æ¿å¥½å‹æ‰å¯çœ‹) */
+#define BRD_POSTMASK		0x00000020	/* é™åˆ¶ç™¼è¡¨æˆ–é–±è®€ */
+#define BRD_ANONYMOUS		0x00000040	/* åŒ¿åæ¿ */
+#define BRD_DEFAULTANONYMOUS	0x00000080	/* é è¨­åŒ¿åæ¿ */
+#define BRD_NOCREDIT		0x00000100	/* ç™¼æ–‡ç„¡çŽå‹µçœ‹æ¿ */
+#define BRD_VOTEBOARD		0x00000200	/* é€£ç½²æ©Ÿçœ‹æ¿ */
+#define BRD_WARNEL		0x00000400	/* å·²è­¦å‘Šè¦å»¢é™¤ */
+#define BRD_TOP			0x00000800	/* ç†±é–€çœ‹æ¿ç¾¤çµ„ */
+#define BRD_NORECOMMEND		0x00001000	/* ä¸å¯æŽ¨è–¦ */
+#define BRD_ANGELANONYMOUS	0x00002000	/* å°å¤©ä½¿å¯åŒ¿å */
+#define BRD_BMCOUNT		0x00004000	/* æ¿ä¸»è¨­å®šåˆ—å…¥è¨˜éŒ„ */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
-#define BRD_NOBOO		0x00010000	/* ¤£¥i¼N */
-//#define BRD_LOCALSAVE		0x00020000	/* ¹w³] Local Save */
-#define BRD_RESTRICTEDPOST	0x00040000	/* ªO¤Í¤~¯àµo¤å */
-#define BRD_GUESTPOST		0x00080000	/* guest¯à post */
-#define BRD_COOLDOWN		0x00100000	/* §NÀR */
-#define BRD_CPLOG		0x00200000	/* ¦Û°Ê¯dÂà¿ý°O¿ý */
-#define BRD_NOFASTRECMD		0x00400000	/* ¸T¤î§Ö³t±À¤å */
-#define BRD_IPLOGRECMD		0x00800000	/* ±À¤å°O¿ý IP */
-#define BRD_OVER18		0x01000000	/* ¤Q¤K¸T */
-#define BRD_NOREPLY		0x02000000	/* ¤£¥i¦^¤å */
-#define BRD_ALIGNEDCMT		0x04000000	/* ¹ï»ô¦¡ªº±À¤å */
-#define BRD_NOSELFDELPOST       0x08000000      /* ¤£¥i¦Û§R */
-#define BRD_BM_MASK_CONTENT	0x10000000	/* ¤¹³\ªO¥D§R°£¯S©w¤å¦r */
+#define BRD_NOBOO		0x00010000	/* ä¸å¯å™“ */
+//#define BRD_LOCALSAVE		0x00020000	/* é è¨­ Local Save */
+#define BRD_RESTRICTEDPOST	0x00040000	/* æ¿å‹æ‰èƒ½ç™¼æ–‡ */
+#define BRD_GUESTPOST		0x00080000	/* guestèƒ½ post */
+#define BRD_COOLDOWN		0x00100000	/* å†·éœ */
+#define BRD_CPLOG		0x00200000	/* è‡ªå‹•ç•™è½‰éŒ„è¨˜éŒ„ */
+#define BRD_NOFASTRECMD		0x00400000	/* ç¦æ­¢å¿«é€ŸæŽ¨æ–‡ */
+#define BRD_IPLOGRECMD		0x00800000	/* æŽ¨æ–‡è¨˜éŒ„ IP */
+#define BRD_OVER18		0x01000000	/* åå…«ç¦ */
+#define BRD_NOREPLY		0x02000000	/* ä¸å¯å›žæ–‡ */
+#define BRD_ALIGNEDCMT		0x04000000	/* å°é½Šå¼çš„æŽ¨æ–‡ */
+#define BRD_NOSELFDELPOST       0x08000000      /* ä¸å¯è‡ªåˆª */
+#define BRD_BM_MASK_CONTENT	0x10000000	/* å…è¨±æ¿ä¸»åˆªé™¤ç‰¹å®šæ–‡å­— */
 
 // Board group linked-list type. Used for array index of firstchild and next.
 #define BRD_GROUP_LL_TYPE_NAME  (0)
@@ -364,14 +364,14 @@ typedef struct userinfo_t {
     uint16_t dark_tie;
 
     /* friends */
-    int     friendtotal;              /* ¦n¤Í¤ñ¸ûªºcache ¤j¤p */ 
-    short   nFriends;                /* ¤U­± friend[] ¥u¥Î¨ì«e´X­Ó,
-                                        ¥Î¨Ó bsearch */
+    int     friendtotal;              /* å¥½å‹æ¯”è¼ƒçš„cache å¤§å° */ 
+    short   nFriends;                /* ä¸‹é¢ friend[] åªç”¨åˆ°å‰å¹¾å€‹,
+                                        ç”¨ä¾† bsearch */
     short   _unused3;
     int     myfriend[MAX_FRIEND];
     char    gap_1[4];
-    unsigned int friend_online[MAX_FRIEND];/* point¨ì½u¤W¦n¤Í utmpshmªº¦ì¸m */
-			          /* ¦n¤Í¤ñ¸ûªºcache «e¨â­Óbit¬Oª¬ºA */
+    unsigned int friend_online[MAX_FRIEND];/* pointåˆ°ç·šä¸Šå¥½å‹ utmpshmçš„ä½ç½® */
+			          /* å¥½å‹æ¯”è¼ƒçš„cache å‰å…©å€‹bitæ˜¯ç‹€æ…‹ */
     char    gap_2[4];
     int     reject[MAX_REJECT];
     char    gap_3[4];
@@ -383,14 +383,14 @@ typedef struct userinfo_t {
     char    gap_4[sizeof(msgque_t)];   /* avoid msgs racing and overflow */
 
     /* user status */
-    char    birth;                   /* ¬O§_¬O¥Í¤é Ptt*/
+    char    birth;                   /* æ˜¯å¦æ˜¯ç”Ÿæ—¥ Ptt*/
     unsigned char   active;         /* When allocated this field is true */
     unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
     char    _unused5;
     uint16_t conn6_win;
-    time4_t lastact;               /* ¤W¦¸¨Ï¥ÎªÌ°Êªº®É¶¡ */
+    time4_t lastact;               /* ä¸Šæ¬¡ä½¿ç”¨è€…å‹•çš„æ™‚é–“ */
     char    alerts;             /* mail alert, passwd update... */
     char    _unused_mind;
     uint16_t conn6_lose;
@@ -408,10 +408,10 @@ typedef struct userinfo_t {
     char    chatid[11];             /* chat id, if in chat mode */
 
     /* games */
-    unsigned char   lockmode;       /* ¤£­ã multi_login ª±ªºªF¦è */
-    char    turn;                    /* ¹CÀ¸ªº¥ý«á */
-    char    mateid[IDLEN + 1];       /* ¹CÀ¸¹ï¤âªº id */
-    char    color;                   /* ·t´Ñ ÃC¦â */
+    unsigned char   lockmode;       /* ä¸å‡† multi_login çŽ©çš„æ±è¥¿ */
+    char    turn;                    /* éŠæˆ²çš„å…ˆå¾Œ */
+    char    mateid[IDLEN + 1];       /* éŠæˆ²å°æ‰‹çš„ id */
+    char    color;                   /* æš—æ£‹ é¡è‰² */
 
     /* game record */
     uint16_t five_win;
@@ -439,7 +439,7 @@ typedef struct water_t {
     char    userid[IDLEN + 1];
     int     top, count;
     msgque_t        msg[MAX_REVIEW];
-    userinfo_t      *uin;     // Ptt:³o¥i¥H¨ú¥Nalive
+    userinfo_t      *uin;     // Ptt:é€™å¯ä»¥å–ä»£alive
 } water_t;
 
 typedef struct {
@@ -449,7 +449,7 @@ typedef struct {
     void *raw_memory;
 } screen_backup_t;
 
-// menu_t ¨ä¹ê¬O gmenu_t (deprecated), ºëµØ°Ï±M¥Î menu
+// menu_t å…¶å¯¦æ˜¯ gmenu_t (deprecated), ç²¾è¯å€å°ˆç”¨ menu
 typedef struct menu_t {
     int     num, page, now, level, bid;
     int     header_size;
@@ -462,8 +462,8 @@ typedef struct menu_t {
 /* Used to pass commands to the readmenu.
  * direct mapping, indexed by ascii code. */
 #define onekey_size ((int) '~')
-/* keymap, ­Y needitem = 0 ªí¥Ü¤£»Ý­n item, func ªº type À³¬° int (*)(void).
- * §_«hÀ³¬° int (*)(int ent, const fileheader_t *fhdr, const char *direct) */
+/* keymap, è‹¥ needitem = 0 è¡¨ç¤ºä¸éœ€è¦ item, func çš„ type æ‡‰ç‚º int (*)(void).
+ * å¦å‰‡æ‡‰ç‚º int (*)(int ent, const fileheader_t *fhdr, const char *direct) */
 typedef struct {
     char needitem;
     int (*func)();
@@ -487,16 +487,16 @@ typedef struct keeploc_t {
 
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
 #define USHM_SIZE       ((MAX_ACTIVE)*41/40)
-/* USHM_SIZE ¤ñ MAX_ACTIVE ¤j¬O¬°¤F¨¾¤îÀË¬d¤H¼Æ¤W­­®É, ¤S¦P®É½Ä¶i¨Ó
- * ·|³y¦¨§ä shm ªÅ¦ìªºµL½a°j°é. 
- * ¤S, ¦] USHM ¤¤¥Î hash, ªÅ¶¡µy¤j®É®Ä²v¸û¦n. */
+/* USHM_SIZE æ¯” MAX_ACTIVE å¤§æ˜¯ç‚ºäº†é˜²æ­¢æª¢æŸ¥äººæ•¸ä¸Šé™æ™‚, åˆåŒæ™‚è¡é€²ä¾†
+ * æœƒé€ æˆæ‰¾ shm ç©ºä½çš„ç„¡çª®è¿´åœˆ. 
+ * åˆ, å›  USHM ä¸­ç”¨ hash, ç©ºé–“ç¨å¤§æ™‚æ•ˆçŽ‡è¼ƒå¥½. */
 
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
-#define MAX_BMs         4                 /* for BMcache, ¤@­Ó¬ÝªO³Ì¦h´XªO¥D */
+#define MAX_BMs         4                 /* for BMcache, ä¸€å€‹çœ‹æ¿æœ€å¤šå¹¾æ¿ä¸» */
 
 // TODO
-// ­þ¤Ñ½Ð¦n¤ß¤H¾ã²z shm: 
-// (2) userinfo_t ¥i¥H²¾±¼¤@¨Ç¤w¤£¥Îªº
+// å“ªå¤©è«‹å¥½å¿ƒäººæ•´ç† shm: 
+// (2) userinfo_t å¯ä»¥ç§»æŽ‰ä¸€äº›å·²ä¸ç”¨çš„
 
 #define SHM_VERSION 4842
 typedef struct {
@@ -525,8 +525,8 @@ typedef struct {
     userinfo_t      uinfo[USHM_SIZE];
     char    gap_6[sizeof(userinfo_t)];
     int             sorted[2][9][USHM_SIZE];
-                    /* ²Ä¤@ºûdouble buffer ¥Ñcurrsorted«ü¦V¥Ø«e¨Ï¥Îªº
-		       ²Ä¤Gºûsort type */
+                    /* ç¬¬ä¸€ç¶­double buffer ç”±currsortedæŒ‡å‘ç›®å‰ä½¿ç”¨çš„
+		       ç¬¬äºŒç¶­sort type */
     char    gap_7[sizeof(int)];
     int     currsorted;
     time4_t UTMPuptime;
@@ -540,7 +540,7 @@ typedef struct {
     char    gap_9[sizeof(int)];
     boardheader_t   bcache[MAX_BOARD];
     char    gap_10[sizeof(int)];
-    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* ¸ÌÀY¦sªº¬O bid-1 */
+    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* è£¡é ­å­˜çš„æ˜¯ bid-1 */
     char    gap_11[sizeof(int)];
     // TODO(piaip) Always have this var - no more #ifdefs in structure.
 #if HOTBOARDCACHE
@@ -569,36 +569,36 @@ typedef struct {
     char    gap_18[sizeof(int)];
     char    today_is[20];
     // FIXME remove it
-    int     __never_used__n_notes[MAX_ADBANNER_SECTION];      /* ¤@¸`¤¤¦³´X­Ó ¬ÝªO */
+    int     __never_used__n_notes[MAX_ADBANNER_SECTION];      /* ä¸€ç¯€ä¸­æœ‰å¹¾å€‹ çœ‹æ¿ */
     char    gap_19[sizeof(int)];
     // FIXME remove it
-    int     __never_used__next_refresh[MAX_ADBANNER_SECTION]; /* ¤U¤@¦¸­nrefreshªº ¬ÝªO */
+    int     __never_used__next_refresh[MAX_ADBANNER_SECTION]; /* ä¸‹ä¸€æ¬¡è¦refreshçš„ çœ‹æ¿ */
     char    gap_20[sizeof(int)];
-    msgque_t loginmsg;  /* ¶i¯¸¤ô²y */
+    msgque_t loginmsg;  /* é€²ç«™æ°´çƒ */
     int     last_film;
     int     last_usong;
     time4_t Puptime;
     time4_t Ptouchtime;
     int     Pbusystate;
 
-    /* SHM ¤¤ªº¥þ°ìÅÜ¼Æ, ¥i¥Î shmctl ³]©w©ÎÅã¥Ü. ¨Ñ°ÊºA½Õ¾ã©Î´ú¸Õ¨Ï¥Î */
+    /* SHM ä¸­çš„å…¨åŸŸè®Šæ•¸, å¯ç”¨ shmctl è¨­å®šæˆ–é¡¯ç¤º. ä¾›å‹•æ…‹èª¿æ•´æˆ–æ¸¬è©¦ä½¿ç”¨ */
     union {
 	int     v[512];
 	struct {
-	    int     dymaxactive;  /* °ÊºA³]©w³Ì¤j¤H¼Æ¤W­­     */
-	    int     toomanyusers; /* ¶W¹L¤H¼Æ¤W­­¤£µ¹¶iªº­Ó¼Æ */
-	    int     noonlineuser; /* ¯¸¤W¨Ï¥ÎªÌ¤£°ª«G«×Åã¥Ü   */
+	    int     dymaxactive;  /* å‹•æ…‹è¨­å®šæœ€å¤§äººæ•¸ä¸Šé™     */
+	    int     toomanyusers; /* è¶…éŽäººæ•¸ä¸Šé™ä¸çµ¦é€²çš„å€‹æ•¸ */
+	    int     noonlineuser; /* ç«™ä¸Šä½¿ç”¨è€…ä¸é«˜äº®åº¦é¡¯ç¤º   */
 	    time4_t now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
 
-	    /* ª`·N, À³«O«ù align sizeof(int) */
+	    /* æ³¨æ„, æ‡‰ä¿æŒ align sizeof(int) */
 	} e;
     } GV2;
     /* statistic */
     unsigned int    statistic[STAT_MAX];
 
-    // ±q«e§@¬°¬G¶m¨Ï¥Î (fromcache). ²{¤w³Q daemon/fromd ¨ú¥N¡C
+    // å¾žå‰ä½œç‚ºæ•…é„‰ä½¿ç”¨ (fromcache). ç¾å·²è¢« daemon/fromd å–ä»£ã€‚
     unsigned int    _deprecated_home_ip[MAX_FROM];
     unsigned int    _deprecated_home_mask[MAX_FROM];
     char            _deprecated_home_desc[MAX_FROM][32];
@@ -626,7 +626,7 @@ typedef struct {
     unsigned short sso;                   /* start stand out */
     unsigned short eso;                   /* end stand out */
     unsigned char mode;                  /* status of line, as far as update */
-    /* data ¥²»Ý¬O³Ì«á¤@­ÓÄæ¦ì, see screen_backup() */
+    /* data å¿…éœ€æ˜¯æœ€å¾Œä¸€å€‹æ¬„ä½, see screen_backup() */
     unsigned char data[ANSILINELEN + 1];
 } screenline_t;
 
