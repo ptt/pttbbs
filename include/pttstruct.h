@@ -213,7 +213,7 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_DEFAULTANONYMOUS	0x00000080	/* 預設匿名板 */
 #define BRD_NOCREDIT		0x00000100	/* 發文無獎勵看板 */
 #define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
-#define BRD_WARNEL		0x00000400	/* 連署機看板 */
+#define BRD_WARNEL		0x00000400	/* 已警告要廢除 */
 #define BRD_TOP			0x00000800	/* 熱門看板群組 */
 #define BRD_NORECOMMEND		0x00001000	/* 不可推薦 */
 #define BRD_ANGELANONYMOUS	0x00002000	/* 小天使可匿名 */
