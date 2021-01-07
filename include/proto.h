@@ -577,7 +577,6 @@ void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
 int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
-void delregcodefile(void);
 bool check_email_allow_reject_lists(
     const char *email, const char **errmsg, const char **notice_file);
 
@@ -852,6 +851,7 @@ int pwcuSetNickname	(const char *nickname);
 int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
 int pwcuSaveUserFlags	(void);
+int pwcuRegCompleteEmailJustify(const char *email, const char *justify);
 int pwcuRegCompleteJustify    (const char *justify);
 int pwcuRegSetTemporaryJustify(const char *justify, const char *email);
 int pwcuRegisterSetInfo (const char *rname,

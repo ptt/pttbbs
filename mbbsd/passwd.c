@@ -246,6 +246,19 @@ pwcuRegCompleteJustify(const char *justify)
 }
 
 int
+pwcuRegCompleteEmailJustify(const char *email, const char *justify)
+{
+    PWCU_START();
+    strlcpy(    u.email, email, sizeof(u.email));
+    strlcpy(cuser.email, email, sizeof(cuser.email));
+    strlcpy(    u.justify, justify, sizeof(u.justify));
+    strlcpy(cuser.justify, justify, sizeof(cuser.justify));
+    _ENABLE_BIT(    u.userlevel, (PERM_POST | PERM_LOGINOK));
+    _ENABLE_BIT(cuser.userlevel, (PERM_POST | PERM_LOGINOK));
+    PWCU_END();
+}
+
+int
 pwcuRegSetTemporaryJustify(const char *justify, const char *email)
 {
     PWCU_START();

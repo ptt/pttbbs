@@ -235,33 +235,6 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
 #define REGCODE_LEN     (13)
 #define REGCODE_SZ      (REGCODE_LEN + 1)
 
-static char *
-getregfile(char *buf)
-{
-    // not in user's home because s/he could zip his/her home
-    snprintf(buf, PATHLEN, FN_JOBSPOOL_DIR ".regcode.%s", cuser.userid);
-    return buf;
-}
-
-static bool
-saveregcode(const char *regcode)
-{
-    char    fpath[PATHLEN];
-    int     fd;
-
-    getregfile(fpath);
-    if((fd = OpenCreate(fpath, O_WRONLY)) == -1){
-	perror("open");
-	return false;
-    }
-    if (write(fd, regcode, strlen(regcode)) < 0) {
-	close(fd);
-	return false;
-    }
-    close(fd);
-    return true;
-}
-
 static void
 makeregcode(char *buf)
 {
@@ -276,35 +249,6 @@ makeregcode(char *buf)
     for( i = 2 ; i < REGCODE_LEN ; ++i )
 	buf[i] = alphabet[random() % strlen(alphabet)];
 }
-
-// getregcode reads the register code from jobspool directory. If found,
-// regcode is copied to buf and 0 is returned. Otherwise, an empty string is
-// copied to buf and non-zero is returned.
-static int
-getregcode(char *buf)
-{
-    int     fd;
-    char    fpath[PATHLEN];
-
-    getregfile(fpath);
-    if( (fd = open(fpath, O_RDONLY)) == -1 ){
-	buf[0] = 0;
-	return -1;
-    }
-    int r = read(fd, buf, REGCODE_LEN);
-    close(fd);
-    buf[REGCODE_LEN] = 0;
-    return r == REGCODE_LEN ? 0 : -1;
-}
-
-void
-delregcodefile(void)
-{
-    char    fpath[PATHLEN];
-    getregfile(fpath);
-    unlink(fpath);
-}
-
 
 ////////////////////////////////////////////////////////////////////////////
 // Justify Utilities
@@ -327,27 +271,6 @@ static void email_regcode(const char *regcode, const char *email)
 
     bsmtp("etc/registermail", buf, email, "non-exist");
 }
-
-static void
-email_justify(const userec_t *muser)
-{
-	char regcode[REGCODE_SZ];
-
-	makeregcode(regcode);
-	if (!saveregcode(regcode))
-	    exit(1);
-
-	email_regcode(regcode, muser->email);
-
-        move(20,0);
-        clrtobot();
-	outs("我們即將寄出認證信 (您應該會在數分鐘到數小時內收到)\n"
-	     "收到後您可以根據認證信標題的認證碼\n"
-	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
-	pressanykey();
-	return;
-}
-
 
 /* 使用者填寫註冊表格 */
 static void
@@ -625,7 +548,7 @@ query_yn(int y, const char *msg)
 /////////////////////////////////////////////////////////////////////////////
 
 static int
-new_register_email_verify(char *email)
+register_email_verification(char *email)
 {
     clear();
     vs_hdr("E-Mail 認證");
@@ -769,7 +692,7 @@ new_register(void)
 #endif
 
 #ifdef REQUIRE_VERIFY_EMAIL_AT_REGISTER
-    if (new_register_email_verify(newuser.email) == REGISTER_OK) {
+    if (register_email_verification(newuser.email) == REGISTER_OK) {
 	email_verified = true;
     } else {
 	exit(1);
@@ -1388,95 +1311,42 @@ register_check_and_update_emaildb(const userec_t *u, const char *email)
 }
 
 static void
-toregister(char *email)
+u_email_verification()
 {
-    clear();
-    vs_hdr("認證設定");
-    if (cuser.userlevel & PERM_NOREGCODE) {
-	strcpy(email, "x");
-	goto REGFORM2;
-    }
-    move(1, 0);
-    outs("您好, 本站註冊認證的方式有:\n"
-	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
-	 "    請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
-	 "    收到後請到 (U)ser => (R)egister 輸入認證碼, 即可通過認證\n"
-	 "\n"
-	 "  2.若您沒有 E-Mail 或是一直無法收到認證信, 請輸入 x \n"
-	 "  會有站長親自人工審核註冊資料，" ANSI_COLOR(1;33)
-	   "但注意這可能會花上數天或更多時間。" ANSI_RESET "\n"
-	 "**********************************************************\n"
-	 "* 注意! 通常應該會在輸入完成後數分至數小時內收到認證信,  *\n"
-	 "* 若過久未收到請到郵件垃圾桶檢查是否被當作垃圾信(SPAM)了,*\n"
-	 "* 另外若輸入後發生認證碼錯誤請先確認輸入是否為最後一封   *\n"
-	 "* 收到的認證信，若真的仍然不行請再重填一次 E-Mail.       *\n"
-	 "**********************************************************\n");
+    char email[EMAILSZ] = {};
 
-    int err;
-    do {
-	err = register_email_input(&cuser, email);
+    if (register_email_verification(email) != REGISTER_OK)
+	return;
 
-	if (err == REGISTER_OK && strcasecmp(email, "x") != 0)
-	    err = register_check_and_update_emaildb(&cuser, email);
-
-	switch (err) {
-	    case REGISTER_OK:
-		break;
-
-	    case REGISTER_ERR_INVALID_EMAIL:
-		move(15, 0); clrtobot();
-		move(17, 0);
-		outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
-		outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
-		outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
-		outs("但注意手動認證通常會花上數天以上的時間。\n");
-		pressanykey();
-		continue;
-
-	    case REGISTER_ERR_EMAILDB:
-		move(15, 0); clrtobot();
-		move(17, 0);
-		outs("email 認證系統發生問題, 請稍後再試，或輸入 x 採手動認證。\n");
-		pressanykey();
-		continue;
-
-	    case REGISTER_ERR_TOO_MANY_ACCOUNTS:
-		move(15, 0); clrtobot();
-		move(17, 0);
-		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
-		outs("但注意手動認證通常會花上數天以上的時間。\n");
-		pressanykey();
-		continue;
-
-	    case REGISTER_ERR_CANCEL:
-		vmsg("操作取消。");
-		return;
-
-	    default:
-		assert(!"unhandled");
-		exit(1);
-		return;
-	}
-    } while (err != REGISTER_OK);
-
-    if (strcasecmp(email, "x") != 0) {
-	pwcuRegSetTemporaryJustify("<Email>", email);
-	email_justify(cuser_ref);
+    if (register_check_and_update_emaildb(&cuser, email) != REGISTER_OK) {
+	vmsg("Email 認證設定失敗, 請稍後自行再次填寫註冊單");
 	return;
     }
 
- REGFORM2:
-    // Manual verification.
-    if (!create_regform_request())
-	vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
+    // Update passwd.
+    char justify[sizeof(cuser.justify)];
+    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
+    pwcuRegCompleteEmailJustify(email, justify);
+
+    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+#if FOREIGN_REG_DAY > 0
+    if(HasUserFlag(UF_FOREIGN))
+	mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
+#endif
+
+    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
+	   "請按下任一鍵跳離後重新上站~ :)");
+    pressanykey();
+    u_exit("registed");
+    exit(0);
+    assert(!"unreached");
 }
 
 int
 u_register(void)
 {
     char            rname[20], addr[50];
-    char            career[40], email[EMAILSZ];
-    char            inregcode[REGCODE_SZ], regcode[REGCODE_SZ];
+    char            career[40];
     char            ans[3], *errcode;
     int		    i = 0;
     int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
@@ -1512,127 +1382,21 @@ u_register(void)
 
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr,  cuser.address,  sizeof(addr));
-    strlcpy(email, cuser.email,    sizeof(email));
     strlcpy(career,cuser.career,   sizeof(career));
 
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
-	goto REGFORM;
-    }
-
-    // getregcode(regcode);
-
-    if (cuser.email[0] && /* 已經第一次填過了~ ^^" */
-	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
-	strcmp(cuser.email, "X") != 0)
-    {
-	vs_hdr("EMail認證");
-	move(2, 0);
-
-	prints("請輸入您的認證碼。(由 %s 開頭無空白的十三碼)\n"
-               "若尚未收到信件或不想現在輸入可直接按 ENTER 離開，\n"
-	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n",
-               REGCODE_INITIAL);
-	inregcode[0] = 0;
-
-	do{
-	    getdata(10, 0, "您的認證碼：",
-		    inregcode, sizeof(inregcode), DOECHO);
-	    if( ! *inregcode ||
-                strcmp(inregcode, "x") == 0 ||
-                strcmp(inregcode, "X") == 0 )
-		break;
-	    if( strlen(inregcode) != REGCODE_LEN || inregcode[0] == ' ') {
-                LOG_IF((LOG_CONF_BAD_REG_CODE && inregcode[0]),
-                       log_filef("log/reg_badcode.log", LOG_CREAT,
-                                 "%s %s INCOMPLETE [%s]\n",
-                                 Cdate(&now), cuser.userid, inregcode));
-		vmsg("認證碼輸入不完整，總共應有十三碼，沒有空白字元。");
-            } else if(inregcode[0] != REGCODE_INITIAL[0] ||
-                      inregcode[1] != REGCODE_INITIAL[1] ) {
-		/* old regcode */
-                LOG_IF(LOG_CONF_BAD_REG_CODE,
-                       log_filef("log/reg_badcode.log", LOG_CREAT,
-                                 "%s %s INVALID [%s]\n",
-                                 Cdate(&now), cuser.userid, inregcode));
-		vmsg("輸入的認證碼錯誤，" // "或因系統昇級已失效，"
-		     "請輸入 x 重填一次 E-Mail");
-	    }
-	    else
-		break;
-	} while( 1 );
-
-	if (!*inregcode) {
-            // simply enter.
-            return FULLUPDATE;
-	} else if (getregcode(regcode) == 0 &&
-		   /* make it case insensitive. */
-		   strcasecmp(inregcode, regcode) == 0) {
-	    int  unum;
-	    char justify[sizeof(cuser.justify)] = "";
-	    delregcodefile();
-	    if ((unum = searchuser(cuser.userid, NULL)) == 0) {
-		vmsg("系統錯誤，查無此人！");
-		u_exit("getuser error");
-		exit(0);
-	    }
-	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
-#if FOREIGN_REG_DAY > 0
-	    if(HasUserFlag(UF_FOREIGN))
-		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
-#endif
-	    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
-	    pwcuRegCompleteJustify(justify);
-	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
-		   "請按下任一鍵跳離後重新上站~ :)");
-	    pressanykey();
-	    u_exit("registed");
-	    exit(0);
-	    // XXX shall never reach here.
-	    return QUIT;
-
-	} else if (strcasecmp(inregcode, "x") != 0) {
-	    if (regcode[0])
-	    {
-		vmsg("認證碼錯誤！");
-                LOG_IF(LOG_CONF_BAD_REG_CODE,
-                       log_filef("log/reg_badcode.log", LOG_CREAT,
-                                 "%s %s INCORRECT [%s] (should be: %s)\n",
-                                 Cdate(&now), cuser.userid, inregcode,
-                                 regcode));
-		return FULLUPDATE;
-	    }
-	    else
-	    {
-		vmsg("認證碼已過期，請重新註冊。");
-		toregister(email);
-		return FULLUPDATE;
-	    }
-	} else {
-            char fpath[PATHLEN];
-            time4_t  last_request_time;
-            int hours = 0;
-
-            getregfile(fpath);
-            last_request_time = dasht(fpath);
-            if (last_request_time < now &&
-                last_request_time + DAY_SECONDS / 2 > now)
-                hours = (last_request_time + DAY_SECONDS / 2 - now) / 3600 + 1;
-            if (hours > 0) {
-                outs("由於某些使用者的信箱收信間隔較長、"
-                     "且每次寄出新認證信時前封認證碼會自動失效，\n"
-                     // 為了避免有人搞不清狀況跑去 SYSOP 哭哭說認證碼無效，
-                     "每次重寄認證信或變更 EMail 要間隔 12 小時。\n");
-                prints("距離您下次可以重新認證尚有 %d 小時。", hours);
-                pressanykey();
-                return FULLUPDATE;
-            }
-	    toregister(email);
+    } else {
+	// Email Verification.
+	getdata(b_lines - 1, 0, "是否要使用 E-Mail 來認證(Y/N)？[N] ",
+		ans, 3, LCECHO);
+	if (ans[0] == 'y') {
+	    u_email_verification();
 	    return FULLUPDATE;
 	}
     }
 
-    REGFORM:
+    // Registration Form.
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
 	    ans, 3, LCECHO);
     if (ans[0] != 'y')
@@ -1717,10 +1481,11 @@ u_register(void)
     }
 
     // copy values to cuser
-    pwcuRegisterSetInfo(rname, addr, career, email, isForeign);
+    pwcuRegisterSetInfo(rname, addr, career, "x", isForeign);
 
-    // if reach here, email is apparently 'x'.
-    toregister(email);
+    // Manual verification.
+    if (!create_regform_request())
+	vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
 
     return FULLUPDATE;
 }
