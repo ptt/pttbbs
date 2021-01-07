@@ -576,7 +576,6 @@ int regform_estimate_queuesize();
 void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
-int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
 bool check_email_allow_reject_lists(
     const char *email, const char **errmsg, const char **notice_file);
 

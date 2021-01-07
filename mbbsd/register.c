@@ -579,15 +579,16 @@ register_email_verification(char *email)
 		    break;
 		// User input is "x".
 		err = REGISTER_ERR_INVALID_EMAIL;
-		// fallthrough
-	    case REGISTER_ERR_INVALID_EMAIL:
-	    case REGISTER_ERR_CANCEL:
-		move(15, 0); clrtobot();
-		move(17, 0);
-		outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
-		outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
-		pressanykey();
+		vmsg("指定的 E-Mail 不正確。");
 		continue;
+
+	    case REGISTER_ERR_INVALID_EMAIL:
+		// Error message already shown.
+		continue;
+
+	    case REGISTER_ERR_CANCEL:
+		vmsg("操作取消。");
+		return REGISTER_ERR_CANCEL;
 
 	    case REGISTER_ERR_TOO_MANY_ACCOUNTS:
 		move(15, 0); clrtobot();
@@ -1048,7 +1049,7 @@ check_email_allow_reject_lists(const char *email, const char **errmsg, const cha
     return allow;
 }
 
-int
+static int
 check_regmail(char *email)
 {
     const char *errmsg, *notice_file;
@@ -1064,6 +1065,9 @@ check_regmail(char *email)
 	vscr_restore(scr);
     } else if (errmsg) {
 	vmsg(errmsg);
+    } else {
+	// Catch-all message.
+	vmsg("無法使用此 Email。");
     }
     return 0;
 }
