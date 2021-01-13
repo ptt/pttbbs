@@ -276,15 +276,7 @@ strip_nonebig5(unsigned char *str, int maxlen)
   for(i=0;i<maxlen && str[i];i++) {
     if(32<=str[i] && str[i]<128)
       str[len++]=str[i];
-    else if(str[i]==255) {
-      if(i+1<maxlen)
-	if(251<=str[i+1] && str[i+1]<=254) {
-	  i++;
-	  if(i+1<maxlen && str[i+1])
-	    i++;
-	}
-      continue;
-    } else if(str[i]&0x80) {
+    else if(str[i]&0x80) {
       if(i+1<maxlen)
 	if((0x40<=str[i+1] && str[i+1]<=0x7e) ||
 	   (0xa1<=str[i+1] && str[i+1]<=0xfe)) {
