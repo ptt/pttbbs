@@ -2,10 +2,6 @@
 
 The websocket to telnet bbs proxy.
 
-## Dependency
-
-- [vstruct](https://github.com/toxicfrog/vstruct/) -- Lua library for binary manipulation.
-
 ## Install
 
 - Install OpenResty.
@@ -13,18 +9,9 @@ The websocket to telnet bbs proxy.
 Follow the [installation instruction](https://openresty.org/en/installation.html) on the OpenResty
 official website.
 
-- Download vstruct
-
-```
-$ cd ~bbs/pttbbs/daemon/wsproxy && mkdir lib && cd lib
-$ git clone https://github.com/toxicfrog/vstruct/
-```
-
 - Configure nginx
 
 ```nginx
-lua_package_path ";;/home/bbs/pttbbs/daemon/wsproxy/lib/?.lua;/home/bbs/pttbbs/daemon/wsproxy/lib/?/init.lua";
-
 map $http_origin $bbs_origin_checked {
     "http://www.ptt.cc" 1;
     "https://www.ptt.cc" 1;

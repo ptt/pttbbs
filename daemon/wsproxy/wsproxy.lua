@@ -23,7 +23,7 @@ SOFTWARE.
 --]]
 
 local server = require "resty.websocket.server"
-local vstruct = require "vstruct"
+local ffi = require "ffi"
 
 local timeout_ms = 7*24*60*60*1000
 local bbs_receive_size = 1024
@@ -33,7 +33,7 @@ local bbs_receive_size = 1024
 -- response code back.
 local ngx_close_conn_code = 444
 
-local check_origin = function ()
+local function check_origin()
     local checked = tonumber(ngx.var.bbs_origin_checked)
     if checked ~= 1 then
         ngx.log(ngx.ERR, "origin checked failed: ", ngx.req.get_headers().origin)
@@ -41,26 +41,38 @@ local check_origin = function ()
     end
 end
 
-local build_conn_data = function ()
-    local fmt = vstruct.compile("< u4 u4 u4 s16 u2 u2 u4")
+local function build_conn_data()
+    ffi.cdef[[
+    typedef struct
+    {
+        // size of current structure
+        uint32_t cb;
+        uint32_t encoding;
+        uint32_t raddr_len;
+        uint8_t  raddr[16];
+        uint16_t rport;
+        uint16_t lport;
+        uint32_t flags;
+    } __attribute__ ((packed)) conn_data;
+    ]]
     local flags = 0
     local bbs_lport = tonumber(ngx.var.bbs_lport)
     local bbs_secure = tonumber(ngx.var.bbs_secure)
     if bbs_secure == 1 then
         flags = flags + 1 -- CONN_FLAG_SECURE
     end
-    return fmt:write({
-        36, -- size
-        0,  -- encoding
-        ngx.var.binary_remote_addr:len(),   -- len_ip
-        ngx.var.binary_remote_addr,         -- ip16
-        tonumber(ngx.var.remote_port) or 0, -- rport
-        bbs_lport or tonumber(ngx.var.server_port) or 0, -- lport
-        flags,
-    })
+    return ffi.string(ffi.new("conn_data", {
+        cb = 36,
+        encoding = 0,
+        raddr_len = ngx.var.binary_remote_addr:len(),
+        raddr = ngx.var.binary_remote_addr,
+        rport = tonumber(ngx.var.remote_port) or 0,
+        lport = bbs_lport or tonumber(ngx.var.server_port) or 0,
+        flags = flags,
+    }), ffi.sizeof("conn_data"))
 end
 
-local connect_mbbsd = function ()
+local function connect_mbbsd()
     local addr = ngx.var.bbs_logind_addr
     if not addr then
         ngx.log(ngx.ERR, "bbs_logind_addr not set")
@@ -83,7 +95,7 @@ local connect_mbbsd = function ()
     return mbbsd
 end
 
-local start_websocket_server = function ()
+local function start_websocket_server()
     local ws, err = server:new({
         timeout = timeout_ms,
         max_payload_len = 65535,
@@ -95,7 +107,7 @@ local start_websocket_server = function ()
     return ws
 end
 
-local ws2sock = function (ws, sock)
+local function ws2sock(ws, sock)
     local last_typ = ""
     while true do
         local data, typ, err = ws:recv_frame()
@@ -141,7 +153,7 @@ local ws2sock = function (ws, sock)
     end
 end
 
-local sock2ws = function (sock, ws)
+local function sock2ws(sock, ws)
     while true do
         sock:settimeout(timeout_ms)
         local data, err = sock:receiveany(bbs_receive_size)
@@ -161,7 +173,7 @@ local sock2ws = function (sock, ws)
     end
 end
 
-local main = function ()
+local function main()
     check_origin()
 
     -- Start websocket first to make protocol-level dos harder.
