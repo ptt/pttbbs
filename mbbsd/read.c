@@ -556,7 +556,7 @@ forward_file(const fileheader_t * fhdr, const char *direct)
 #endif
 	break;
     case -4:
-	vmsg("信箱已滿");
+	vmsg("對方信箱已滿");
 	break;
     default:
 	break;

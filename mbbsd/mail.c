@@ -269,7 +269,7 @@ loadmailusage(void)
     mailkeep = get_num_records(currmaildir,sizeof(fileheader_t));
 }
 
-int
+static int
 get_max_keepmail(const userec_t *u) {
     int lvl = u->userlevel;
     int keep = MAX_KEEPMAIL;  // default: 200
@@ -302,12 +302,31 @@ setupmailusage(void)
     loadmailusage();
 }
 
+static int
+get_user_mailbox_usage(const char *userid)
+{
+    char fpath[PATHLEN];
+    sethomedir(fpath, userid);
+    return get_num_records(fpath, sizeof(fileheader_t));
+}
+
+static int
+get_user_mailbox_limit(const char *userid)
+{
+    int limit = -1;
+    userec_t u = {};
+    if (passwd_load_user(userid, &u) > 0)
+	limit = get_max_keepmail(&u);
+    memset(&u, 0, sizeof(u));
+    return limit;
+}
+
 #define MAILBOX_LIM_OK   0
 #define MAILBOX_LIM_KEEP 1
 #define MAILBOX_LIM_HARD  2
 
 static int
-chk_mailbox_limit(void)
+chk_cuser_mailbox_limit(void)
 {
     if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_MAILLIMIT))
 	return MAILBOX_LIM_OK;
@@ -411,7 +430,12 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver) {
     /* to avoid DDOS of disk */
     sethomedir(fname, rightid);
     if (strcmp(rightid, cuser.userid) == 0) {
-	if (chk_mailbox_limit())
+	if (chk_cuser_mailbox_limit())
+	    return -4;
+    } else {
+	int limit = get_user_mailbox_limit(rightid);
+	/* okay for failure: limit < 0 */
+	if (limit && get_user_mailbox_usage(rightid) >= limit)
 	    return -4;
     }
 
@@ -686,7 +710,7 @@ chkmailbox(void)
 {
     m_init();
 
-    switch (chk_mailbox_limit()) {
+    switch (chk_cuser_mailbox_limit()) {
 	case MAILBOX_LIM_HARD:
 	    bell();
 	case MAILBOX_LIM_KEEP:
@@ -701,7 +725,7 @@ chkmailbox(void)
 
 int
 chkmailbox_hard_limit() {
-    if (chk_mailbox_limit() == MAILBOX_LIM_HARD) {
+    if (chk_cuser_mailbox_limit() == MAILBOX_LIM_HARD) {
         vmsgf("您保存信件數目 %d 遠超出上限 %d, 請整理", mailkeep, mailmaxkeep);
         return 1;
     }
