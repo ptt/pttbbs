@@ -7,13 +7,13 @@
  * @param mode	F_WRLCK, F_UNLCK
  */
 void
-PttLock(int fd, int start, int size, int mode)
+PttLock(int fd, int offset, int size, int mode)
 {
     static struct flock lock_it;
     int             ret;
 
-    lock_it.l_whence = SEEK_CUR;/* from current point */
-    lock_it.l_start = start;	/* -"- */
+    lock_it.l_whence = SEEK_SET;/* provided offset, we should use SEEK_SET */
+    lock_it.l_start = offset;	/* -"- */
     lock_it.l_len = size;	/* length of data */
     lock_it.l_type = mode;	/* set exclusive/write lock */
     lock_it.l_pid = 0;		/* pid not actually interesting */
