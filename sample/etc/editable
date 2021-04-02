@@ -46,6 +46,7 @@ etc/registered	註冊通過通知
 #etc/bademail	email 通過確認	    (deprecated)
 #etc/justify	身份確認方法	    (deprecated)
 etc/newuser	新使用者需知
+etc/reg.methods		開放的帳號認證方式
 etc/reg_reject.notes    退註通知附加說明
 etc/regnotes/front	註冊單填寫說明
 etc/regnotes/foreign	註冊細項說明[是否現住台灣]

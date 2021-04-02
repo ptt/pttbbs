@@ -14,6 +14,16 @@
 #define FN_REGFORM_LOG	"regform.log"	// regform history in user home
 #define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
 
+#define FN_REG_METHODS	"etc/reg.methods"
+
+// Max number of reg methods to load.
+#define MAX_REG_METHODS (2)
+
+typedef struct {
+    const char *disp_name;
+    void (*enter)();
+} reg_method_t;
+
 #define FN_REJECT_NOTES	"etc/reg_reject.notes"
 #define REGNOTES_ROOT "etc/regnotes/"	// a folder to hold detail description
 
@@ -1306,10 +1316,19 @@ register_check_and_update_emaildb(const userec_t *u, const char *email)
     return REGISTER_OK;
 }
 
+////////////////////////////////////////////////////////////////////////////
+// Email Verification
+////////////////////////////////////////////////////////////////////////////
+
 static void
 u_email_verification()
 {
     char email[EMAILSZ] = {};
+
+    if (cuser.userlevel & PERM_NOREGCODE) {
+	vmsg("您不被允許\使用認證碼認證。");
+	return;
+    }
 
     if (register_email_verification(email) != REGISTER_OK)
 	return;
@@ -1337,6 +1356,15 @@ u_email_verification()
     exit(0);
     assert(!"unreached");
 }
+
+static reg_method_t email_reg_method_ops = {
+    .disp_name = "信箱認證",
+    .enter = u_email_verification,
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Manual Verification
+////////////////////////////////////////////////////////////////////////////
 
 void
 u_manual_verification(void)
@@ -1461,35 +1489,76 @@ u_manual_verification(void)
 	vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
 }
 
+static reg_method_t manual_reg_method_ops = {
+    .disp_name = "註冊單人工審核",
+    .enter = u_manual_verification,
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Account Verification Menu
+////////////////////////////////////////////////////////////////////////////
+
+static int
+load_reg_methods(reg_method_t *rms, size_t maxcount)
+{
+    char line[80], *p;
+
+    FILE *fp = fopen(FN_REG_METHODS, "r");
+    if (!fp)
+	return 0;
+
+    size_t i = 0;
+    while (i < maxcount && fgets(line, sizeof(line), fp) != NULL) {
+	// Cut off at comment, new-line or other space-like chars.
+	strtok_r(line, "# \t\n", &p);
+
+	if (!strcmp(line, "manual"))
+	    rms[i++] = manual_reg_method_ops;
+	else if (!strcmp(line, "email"))
+	    rms[i++] = email_reg_method_ops;
+    }
+
+    fclose(fp);
+    return i;
+}
+
+static void
+u_register_menu()
+{
+    char ans[3] = {};
+    int pick;
+    reg_method_t rms[MAX_REG_METHODS];
+
+    size_t n = load_reg_methods(rms, MAX_REG_METHODS);
+    if (!n) {
+	vmsg("目前暫時不開放認證帳號。");
+	return;
+    }
+
+    clear();
+    vs_hdr("選擇帳號認證方式");
+    outs("\n");
+    for (size_t i = 0; i < n; i++) {
+	prints("  [%lu] %s\n", i + 1, rms[i].disp_name);
+    }
+    getdata(3 + n, 2, "認證方式 ", ans, sizeof(ans), LCECHO);
+    pick = atoi(ans);
+    if (pick < 1 || (size_t) pick > n) {
+	vmsg("操作取消。");
+	return;
+    }
+    rms[pick - 1].enter();
+}
+
 int
 u_register()
 {
-    char ans[3] = {};
-
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
 	return XEASY;
     }
 
-    if (cuser.userlevel & PERM_NOREGCODE) {
-	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
-    } else {
-	// Email Verification.
-	getdata(b_lines - 1, 0, "是否要使用 E-Mail 來認證(Y/N)？[N] ",
-		ans, 3, LCECHO);
-	if (ans[0] == 'y') {
-	    u_email_verification();
-	    return FULLUPDATE;
-	}
-    }
-
-    // Registration Form.
-    getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
-	    ans, 3, LCECHO);
-    if (ans[0] != 'y')
-	return FULLUPDATE;
-
-    u_manual_verification();
+    u_register_menu();
     return FULLUPDATE;
 }
 
