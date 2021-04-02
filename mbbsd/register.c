@@ -1338,8 +1338,8 @@ u_email_verification()
     assert(!"unreached");
 }
 
-int
-u_register(void)
+void
+u_manual_verification(void)
 {
     char            rname[20], addr[50];
     char            career[40];
@@ -1350,11 +1350,6 @@ u_register(void)
 #ifndef FOREIGN_REG
     isForeign = 0;
 #endif
-
-    if (cuser.userlevel & PERM_LOGINOK) {
-	outs("您的身份確認已經完成，不需填寫申請表");
-	return XEASY;
-    }
 
     // TODO REGFORM 2 checks 2 parts.
     i = file_find_record(FN_REQLIST, cuser.userid);
@@ -1373,30 +1368,12 @@ u_register(void)
 	     "     進入人工審核程序後 Email 註冊碼自動失效，要等到審核完成\n"
 	     "      (會多花很多時間，數天到數週是正常的) ，所以請耐心等候。\n\n");
 	vmsg("您的註冊申請單尚在處理中");
-	return FULLUPDATE;
+	return;
     }
 
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr,  cuser.address,  sizeof(addr));
     strlcpy(career,cuser.career,   sizeof(career));
-
-    if (cuser.userlevel & PERM_NOREGCODE) {
-	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
-    } else {
-	// Email Verification.
-	getdata(b_lines - 1, 0, "是否要使用 E-Mail 來認證(Y/N)？[N] ",
-		ans, 3, LCECHO);
-	if (ans[0] == 'y') {
-	    u_email_verification();
-	    return FULLUPDATE;
-	}
-    }
-
-    // Registration Form.
-    getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
-	    ans, 3, LCECHO);
-    if (ans[0] != 'y')
-	return FULLUPDATE;
 
     // show REGNOTES_ROOT front page
     if (dashs(REGNOTES_ROOT "front") > 0)
@@ -1471,7 +1448,7 @@ u_register(void)
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
-	    return 0;
+	    return;
 	if (ans[0] == 'y')
 	    break;
     }
@@ -1482,7 +1459,37 @@ u_register(void)
     // Manual verification.
     if (!create_regform_request())
 	vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
+}
 
+int
+u_register()
+{
+    char ans[3] = {};
+
+    if (cuser.userlevel & PERM_LOGINOK) {
+	outs("您的身份確認已經完成，不需填寫申請表");
+	return XEASY;
+    }
+
+    if (cuser.userlevel & PERM_NOREGCODE) {
+	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
+    } else {
+	// Email Verification.
+	getdata(b_lines - 1, 0, "是否要使用 E-Mail 來認證(Y/N)？[N] ",
+		ans, 3, LCECHO);
+	if (ans[0] == 'y') {
+	    u_email_verification();
+	    return FULLUPDATE;
+	}
+    }
+
+    // Registration Form.
+    getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
+	    ans, 3, LCECHO);
+    if (ans[0] != 'y')
+	return FULLUPDATE;
+
+    u_manual_verification();
     return FULLUPDATE;
 }
 
