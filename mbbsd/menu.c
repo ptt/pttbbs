@@ -807,7 +807,7 @@ static const commands_t userlist[] = {
     {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
     {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
-    {u_register,    MENU_UNREGONLY, "Register      填寫《註冊申請單》"},
+    {u_register,    PERM_BASIC,     "Register      新增帳號認證"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除退文"},
 #endif // ASSESS

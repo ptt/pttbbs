@@ -1553,8 +1553,8 @@ load_reg_methods(reg_method_t *rms, size_t maxcount)
     return i;
 }
 
-static void
-u_register_menu()
+int
+u_register()
 {
     char ans[3] = {};
     int pick;
@@ -1563,7 +1563,7 @@ u_register_menu()
     size_t n = load_reg_methods(rms, MAX_REG_METHODS);
     if (!n) {
 	vmsg("目前暫時不開放認證帳號。");
-	return;
+	return FULLUPDATE;
     }
 
     clear();
@@ -1576,20 +1576,9 @@ u_register_menu()
     pick = atoi(ans);
     if (pick < 1 || (size_t) pick > n) {
 	vmsg("操作取消。");
-	return;
+	return FULLUPDATE;
     }
     rms[pick - 1].enter();
-}
-
-int
-u_register()
-{
-    if (cuser.userlevel & PERM_LOGINOK) {
-	outs("您的身份確認已經完成，不需填寫申請表");
-	return XEASY;
-    }
-
-    u_register_menu();
     return FULLUPDATE;
 }
 
