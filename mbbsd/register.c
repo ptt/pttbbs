@@ -1164,25 +1164,17 @@ check_register(void)
 	unlink(fn);
     }
 
-    // 只有以下情形需要自動叫出註冊選單:
-    // 1. 首次註冊 (numlogindays < 2)
-    // 2. 正在 e-mail 認證
-    // 3. 申請板主然後被取消(email)認證
-    // 其它情形就假設 user 不想註冊了
-
-    setuserfile(fn, FN_REJECT_NOTIFY);
-    if ((cuser.numlogindays < 2) ||
-        HasUserPerm(PERM_NOREGCODE) ||
-        strstr(cuser.email, "@")) {
+    if (cuser.numlogindays < 2 ||
+        HasUserPerm(PERM_NOREGCODE)) {
         clear();
         vs_hdr2(" 未完成註冊認證 ", " 您的帳號尚未完成認證");
         move(9, 0);
-        outs("  您目前尚未通過註冊認證程序，請細詳填寫"
-             ANSI_COLOR(32) "註冊申請單" ANSI_RESET "，\n"
-             "  通告站長以獲得進階使用權力。\n\n");
+        outs("  您目前尚未通過註冊認證程序，" ANSI_COLOR(1;33)
+	     "請至 (U) -> (R) 進行帳號認證" ANSI_RESET "\n"
+             "  以獲得進階使用權力。\n\n");
         outs("  如果您之前曾使用 email 等認證方式通過註冊認證但又看到此訊息，\n"
              "  代表您的認證由於資料不完整已被取消 (常見於申請開新看板的板主)。\n");
-        u_register();
+	pressanykey();
     }
 }
 
