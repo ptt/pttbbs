@@ -1,7 +1,7 @@
 SRCROOT:=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-SRCS:=	verifydb.fbs
+SRCS:=	verifydb.fbs register_sms.fbs
 
 .for SRC in $(SRCS)
 $(SRC).h: $(SRC)

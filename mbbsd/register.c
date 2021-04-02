@@ -17,7 +17,7 @@
 #define FN_REG_METHODS	"etc/reg.methods"
 
 // Max number of reg methods to load.
-#define MAX_REG_METHODS (2)
+#define MAX_REG_METHODS (3)
 
 typedef struct {
     const char *disp_name;
@@ -1316,6 +1316,21 @@ register_check_and_update_emaildb(const userec_t *u, const char *email)
     return REGISTER_OK;
 }
 
+void register_mail_complete_and_exit() {
+    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+#if FOREIGN_REG_DAY > 0
+    if(HasUserFlag(UF_FOREIGN))
+	mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
+#endif
+
+    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
+	   "請按下任一鍵跳離後重新上站~ :)");
+    pressanykey();
+    u_exit("registed");
+    exit(0);
+    assert(!"unreached");
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // Email Verification
 ////////////////////////////////////////////////////////////////////////////
@@ -1343,24 +1358,26 @@ u_email_verification()
     snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
     pwcuRegCompleteEmailJustify(email, justify);
 
-    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
-#if FOREIGN_REG_DAY > 0
-    if(HasUserFlag(UF_FOREIGN))
-	mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
-#endif
-
-    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
-	   "請按下任一鍵跳離後重新上站~ :)");
-    pressanykey();
-    u_exit("registed");
-    exit(0);
-    assert(!"unreached");
+    register_mail_complete_and_exit();
 }
 
 static reg_method_t email_reg_method_ops = {
     .disp_name = "信箱認證",
     .enter = u_email_verification,
 };
+
+////////////////////////////////////////////////////////////////////////////
+// SMS Verification
+////////////////////////////////////////////////////////////////////////////
+
+#ifdef USE_SMS_VERIFICATION
+
+static reg_method_t sms_reg_method_ops = {
+    .disp_name = "手機認證",
+    .enter = u_sms_verification,
+};
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////
 // Manual Verification
@@ -1516,6 +1533,10 @@ load_reg_methods(reg_method_t *rms, size_t maxcount)
 	    rms[i++] = manual_reg_method_ops;
 	else if (!strcmp(line, "email"))
 	    rms[i++] = email_reg_method_ops;
+#ifdef USE_SMS_VERIFICATION
+	else if (!strcmp(line, "sms"))
+	    rms[i++] = sms_reg_method_ops;
+#endif
     }
 
     fclose(fp);

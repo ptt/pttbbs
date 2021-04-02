@@ -39,6 +39,16 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
   return true;
 }
 
+std::string Highlighed(const char *txt, bool ansi_color) {
+  std::string s;
+  if (ansi_color)
+    s += ANSI_COLOR(1);
+  s += txt;
+  if (ansi_color)
+    s += ANSI_RESET;
+  return s;
+}
+
 }  // namespace
 
 std::optional<std::string> FormatVerify(int32_t vmethod, const char *vkey,
@@ -46,16 +56,9 @@ std::optional<std::string> FormatVerify(int32_t vmethod, const char *vkey,
   std::string s;
   switch (vmethod) {
   case VMETHOD_EMAIL:
-    s = "(電子信箱) ";
-    if (vkey) {
-      if (ansi_color)
-        s += ANSI_COLOR(1);
-      s += vkey;
-      if (ansi_color)
-        s += ANSI_RESET;
-    } else
-      s += "?";
-    return s;
+    return std::string("(電子信箱) ") + Highlighed(vkey ?: "?", ansi_color);
+  case VMETHOD_SMS:
+    return std::string("(手機認證) ") + Highlighed(vkey ?: "?", ansi_color);
   }
   return std::nullopt;
 }

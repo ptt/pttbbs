@@ -1,0 +1,12 @@
+namespace RegisterSms;
+
+table State {
+    userid:string;
+    generation:long;
+    timestamp:long;
+    session_id:string;
+    phone:string;
+    code:string;
+}
+
+root_type State;
