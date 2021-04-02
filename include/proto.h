@@ -781,6 +781,8 @@ int verifydb_set(const char *userid, int64_t generation,
     int32_t vmethod, const char *vkey, int64_t timestamp);
 int verifydb_change_userid(const char *from_userid, const char *to_userid,
     int64_t generation);
+bool verifydb_check_vmethod_unused(const char *userid, int64_t generation,
+                                   int32_t vmethod);
 void verify_info(const userec_t *u, int adminmode);
 int verifydb_admin_search_display();
 

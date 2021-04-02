@@ -1340,6 +1340,11 @@ u_email_verification()
 {
     char email[EMAILSZ] = {};
 
+#ifdef USE_VERIFYDB
+    if (!verifydb_check_vmethod_unused(cuser.userid, cuser.firstlogin,
+		VMETHOD_EMAIL))
+	return;
+#endif
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。");
 	return;
@@ -1391,6 +1396,11 @@ u_manual_verification(void)
     char            ans[3], *errcode;
     int		    i = 0;
     int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
+
+    if (cuser.userlevel & PERM_LOGINOK) {
+	vmsg("您已經通過認證了, 無法再填寫註冊單.");
+	return;
+    }
 
 #ifndef FOREIGN_REG
     isForeign = 0;

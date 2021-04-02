@@ -212,4 +212,30 @@ int verifydb_change_userid(const char *from_userid, const char *to_userid,
   return ok ? 0 : -1;
 }
 
+const char *verifydb_find_vmethod(const VerifyDb::GetReply *reply,
+                                  int32_t vmethod) {
+  if (reply->entry()) {
+    for (const auto *entry : *reply->entry()) {
+      if (entry->vmethod() == vmethod && entry->vkey())
+        return entry->vkey()->c_str();
+    }
+  }
+  return nullptr;
+}
+
+bool verifydb_check_vmethod_unused(const char *userid, int64_t generation,
+                                   int32_t vmethod) {
+  Bytes buf;
+  const VerifyDb::GetReply *reply;
+  if (!verifydb_getuser(userid, generation, &buf, &reply)) {
+    vmsg("認證系統無法使用，請稍候再試。");
+    return false;
+  }
+  if (verifydb_find_vmethod(reply, vmethod)) {
+    vmsg("您已經使用過此方式認證。");
+    return false;
+  }
+  return true;
+}
+
 #endif

@@ -315,6 +315,9 @@ bool SmsValidation::InsertSession() {
 }
 
 void SmsValidation::Run() {
+  if (!verifydb_check_vmethod_unused(cuser.userid, cuser.firstlogin,
+                                     VMETHOD_SMS))
+    return;
   if (cuser.userlevel & PERM_NOREGCODE) {
     vmsg("您不被允許\使用認證碼認證。");
     return;
