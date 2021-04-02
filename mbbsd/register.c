@@ -1569,10 +1569,19 @@ u_register()
     clear();
     vs_hdr("選擇帳號認證方式");
     outs("\n");
+
+    int y = 3;
+    if (cuser.userlevel & PERM_LOGINOK) {
+	outs(ANSI_COLOR(1;33)
+	     "注意：您的帳號已經通過認證, 但您仍可新增認證方式." ANSI_RESET);
+	outs("\n\n");
+	y += 2;
+    }
+
     for (size_t i = 0; i < n; i++) {
 	prints("  [%lu] %s\n", i + 1, rms[i].disp_name);
     }
-    getdata(3 + n, 2, "認證方式 ", ans, sizeof(ans), LCECHO);
+    getdata(y + n, 2, "認證方式 ", ans, sizeof(ans), LCECHO);
     pick = atoi(ans);
     if (pick < 1 || (size_t) pick > n) {
 	vmsg("操作取消。");
