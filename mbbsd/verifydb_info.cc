@@ -192,6 +192,27 @@ void verify_entry_email_popup(const VerifyDb::Entry *entry, bool *dirty) {
   }
 }
 
+void verify_entry_sms_delete(const VerifyDb::Entry *entry, bool *dirty) {
+  if (vans("確認刪除此筆記錄? [y/N]") != 'y')
+    return;
+
+  // Mark dirty anyway.
+  *dirty = true;
+  const char *userid = entry->userid()->c_str();
+  if (verifydb_set(userid, entry->generation(), entry->vmethod(), "", 0) < 0)
+    vmsg("認證資料庫暫時無法使用，請稍候再試。");
+}
+
+void verify_entry_sms_popup(const VerifyDb::Entry *entry, bool *dirty) {
+  assert(entry->vmethod() == VMETHOD_SMS);
+
+  switch (vans("(D)刪除 (Q)結束 : [Q]")) {
+  case 'd':
+    verify_entry_sms_delete(entry, dirty);
+    break;
+  }
+}
+
 void verify_entry_edit_popup(const VerifyDb::Entry *entry, bool *dirty) {
   int y = b_lines - 10;
   grayout(0, y, GRAYOUT_DARK);
@@ -214,6 +235,10 @@ void verify_entry_edit_popup(const VerifyDb::Entry *entry, bool *dirty) {
   switch (entry->vmethod()) {
   case VMETHOD_EMAIL:
     verify_entry_email_popup(entry, dirty);
+    break;
+
+  case VMETHOD_SMS:
+    verify_entry_sms_popup(entry, dirty);
     break;
 
   default:
