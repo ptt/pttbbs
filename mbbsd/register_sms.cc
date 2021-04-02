@@ -16,6 +16,12 @@ void u_sms_verification();
 
 #define FN_SMS_AGREEMENT "etc/reg.sms.notes"
 
+#define REGISTER_SMS_LOG(ev, fmt, ...) \
+  log_filef("log/register_sms.log", LOG_CREAT, \
+      "%ld %s %s %d %s " fmt "\n", \
+      time(nullptr), (ev), \
+      cuser.userid, cuser.firstlogin, fromhost, __VA_ARGS__)
+
 namespace {
 
 using Bytes = std::vector<uint8_t>;
@@ -212,24 +218,30 @@ bool SmsValidation::InputPhone() {
 bool SmsValidation::CompleteVerification() {
   assert(phone_.size() > 0);
 
+  REGISTER_SMS_LOG("BEGIN_VERIFY_WRITE", "%s", phone_.c_str());
+
   // Check DB if it's already used.
   Bytes buf;
   const VerifyDb::GetReply *reply;
   if (!verifydb_getverify(VMETHOD_SMS, phone_.c_str(), &buf, &reply) ||
       !reply->ok() || !reply->entry()) {
+    REGISTER_SMS_LOG("VERIFYDB_FAILED_CONN", "%s", phone_.c_str());
     vmsg("認證系統無法使用，請稍候再試。");
     return false;
   }
   if (reply->entry()->size() > 0) {
+    REGISTER_SMS_LOG("VERIFYDB_FAILED_DUP", "%s", phone_.c_str());
     vmsg("一個號碼只能認證一個帳號喔！");
     return false;
   }
   // Write to DB.
   if (verifydb_set(uref_.userid.c_str(), uref_.generation, VMETHOD_SMS,
                    phone_.c_str(), 0) != 0) {
+    REGISTER_SMS_LOG("VERIFYDB_WRITE_FAILED", "%s", phone_.c_str());
     vmsg("認證系統無法寫入，請稍候再試。");
     return false;
   }
+  REGISTER_SMS_LOG("VERIFYDB_WRITE_OK", "%s", phone_.c_str());
 
   // Remove the state file first, as we may exit.
   unlink(StatePath(uref_).c_str());
@@ -265,6 +277,7 @@ bool SmsValidation::InputCode() {
       vmsgf("認證碼錯誤! 還有 %d 次機會.", tries);
     else
       vmsg("認證碼錯誤次數過多, 認證取消.");
+    REGISTER_SMS_LOG("INVALID_CODE", "%s %s", code_.c_str(), incode);
   } while (tries);
   return false;
 }
@@ -293,6 +306,10 @@ bool SmsValidation::InsertSession() {
       session_id_.assign(sid, sid_len);
   }
   thttp_cleanup(&t);
+
+  REGISTER_SMS_LOG(
+      session_id_.empty() ? "NEW_SESSION_FAILED" : "NEW_SESSION_OK", "%s %s %s",
+      phone_.c_str(), code_.c_str(), session_id_.c_str());
 
   return !session_id_.empty();
 }
