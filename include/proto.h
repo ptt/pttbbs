@@ -577,7 +577,7 @@ void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
 bool check_email_allow_reject_lists(
-    const char *email, const char **errmsg, const char **notice_file);
+    char *email, const char **errmsg, const char **notice_file);
 void register_mail_complete_and_exit();
 
 /* register_sms */

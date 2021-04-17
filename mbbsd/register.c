@@ -47,9 +47,22 @@ typedef struct {
 #define REGISTER_ERR_EMAILDB (-2)
 #define REGISTER_ERR_TOO_MANY_ACCOUNTS (-3)
 #define REGISTER_ERR_CANCEL (-4)
+#define REGISTER_ERR_AGAIN (-5)
+
+typedef struct email_input {
+    const userec_t *u;
+
+    // Output variables
+    char *email;
+    bool is_trusted:1;
+
+    // Input flags
+    bool allow_untrusted:1;
+    bool warn_untrusted:1;
+} email_input_t;
 
 static int
-register_email_input(const userec_t *u, char *email);
+register_email_input(email_input_t *ein);
 
 static int
 register_count_email(const userec_t *u, const char *email);
@@ -292,11 +305,13 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
     // clear first
     move(line, 0); clrtobot();
     // notes appear in line+3 (+0=msg, +1=input, +2=blank)
-    if (dashs(notes_fn) > 0 && (line+3) < b_lines )
+    if (notes_fn && dashs(notes_fn) > 0 && (line+3) < b_lines )
     {
 	show_file(notes_fn, line+3, t_lines - (line+3), SHOWFILE_ALLOW_ALL);
     }
-    move(line, 0); prints("  原先設定：%-30.30s (%s)", buf, info);
+    move(line, 0);
+    prints("  原先設定：%-30.30s", buf);
+    if (info) prints(" (%s)", info);
     snprintf(prompt, sizeof(prompt),
 	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：",
 	    desc);
@@ -558,16 +573,25 @@ query_yn(int y, const char *msg)
 /////////////////////////////////////////////////////////////////////////////
 
 static int
-register_email_verification(char *email)
+register_email_verification(email_input_t *ein)
 {
+    char *email = ein->email;
     clear();
-    vs_hdr("E-Mail 認證");
-    move(1, 0);
-    outs("您好, 本站要求註冊時進行 E-Mail 認證:\n"
-	 "  請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
-	 "  收到後請到請輸入認證碼, 即可進行註冊\n"
-	 "  註: 本站不接受 yahoo, kimo等免費的 E-Mail\n"
-	 "\n"
+    if (ein->allow_untrusted) {
+	vs_hdr("E-Mail");
+	move(1, 0);
+	outs("您好,\n"
+	     "  請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
+	     "  收到後請到請輸入認證碼.\n");
+    } else {
+	vs_hdr("E-Mail 認證");
+	move(1, 0);
+	outs("您好, 本站要求註冊時進行 E-Mail 認證:\n"
+	     "  請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
+	     "  收到後請到請輸入認證碼, 即可進行註冊\n"
+	     "  註: 本站不接受 yahoo, kimo等免費的 E-Mail\n");
+    }
+    outs("\n"
 	 "**********************************************************\n"
 	 "* 若過久未收到請到郵件垃圾桶檢查是否被當作垃圾信(SPAM)了,*\n"
 	 "* 另外若輸入後發生認證碼錯誤請先確認輸入是否為最後一封   *\n"
@@ -577,12 +601,15 @@ register_email_verification(char *email)
     // Get a valid email from user.
     int err;
     int tries = 0;
+    char orig[EMAILSZ];
+    strlcpy(orig, email, sizeof(orig));
     do {
-	if (++tries > 10) {
+	if (++tries > 10)
 	    return REGISTER_ERR_CANCEL;
-	}
+	if (tries > 1)
+	    strcpy(email, orig);
 
-	err = register_email_input(NULL, email);
+	err = register_email_input(ein);
 	switch (err) {
 	    case REGISTER_OK:
 		if (strcasecmp(email, "x") != 0)
@@ -590,22 +617,25 @@ register_email_verification(char *email)
 		// User input is "x".
 		err = REGISTER_ERR_INVALID_EMAIL;
 		vmsg("指定的 E-Mail 不正確。");
-		continue;
+		break;
 
 	    case REGISTER_ERR_INVALID_EMAIL:
 		// Error message already shown.
-		continue;
+		break;
 
 	    case REGISTER_ERR_CANCEL:
 		vmsg("操作取消。");
 		return REGISTER_ERR_CANCEL;
+
+	    case REGISTER_ERR_AGAIN:
+		break;
 
 	    case REGISTER_ERR_TOO_MANY_ACCOUNTS:
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail.\n");
 		pressanykey();
-		continue;
+		break;
 
 	    default:
 		return err;
@@ -703,7 +733,10 @@ new_register(void)
 #endif
 
 #ifdef REQUIRE_VERIFY_EMAIL_AT_REGISTER
-    if (register_email_verification(newuser.email) == REGISTER_OK) {
+    email_input_t ein = {};
+    ein.email = newuser.email;
+    if (register_email_verification(&ein) == REGISTER_OK) {
+	assert(ein.is_trusted);
 	email_verified = true;
     } else {
 	exit(1);
@@ -940,8 +973,23 @@ new_register(void)
     }
 }
 
+static bool
+normalize_email(char *email)
+{
+    char *c = strchr(email, '@');
+
+    // reject no '@' or multiple '@'
+    if (c == NULL || c != strrchr(email, '@'))
+	return false;
+
+    // domain tolower
+    str_lower(c, c);
+
+    return true;
+}
+
 bool
-check_email_allow_reject_lists(const char *email, const char **errmsg, const char **notice_file)
+check_email_allow_reject_lists(char *email, const char **errmsg, const char **notice_file)
 {
     FILE           *fp;
     char            buf[128], *c;
@@ -951,17 +999,12 @@ check_email_allow_reject_lists(const char *email, const char **errmsg, const cha
     if (notice_file)
 	*notice_file = NULL;
 
-    c = strchr(email, '@');
-
-    // reject no '@' or multiple '@'
-    if (c == NULL || c != strrchr(email, '@'))
+    if (!normalize_email(email))
     {
 	if (errmsg) *errmsg = "E-Mail 的格式不正確。";
 	return false;
     }
-
-    // domain tolower
-    str_lower(c, c);
+    c = strchr(email, '@');
 
     // allow list
     bool allow = false;
@@ -1059,15 +1102,26 @@ check_email_allow_reject_lists(const char *email, const char **errmsg, const cha
     return allow;
 }
 
-static int
-check_regmail(char *email)
+static bool
+check_regmail(email_input_t *ein)
 {
-    const char *errmsg, *notice_file;
-    bool allow = check_email_allow_reject_lists(email, &errmsg, &notice_file);
-    if (allow)
-	return 1;
+    char *email = ein->email;
 
-    // show whitemail notice if it exists.
+    if (!normalize_email(email)) {
+	vmsg("E-Mail 的格式不正確。");
+	return false;
+    }
+
+    const char *errmsg, *notice_file;
+    ein->is_trusted = check_email_allow_reject_lists(email, &errmsg, &notice_file);
+    if (ein->is_trusted)
+	return true;
+
+    // Untrusted email
+    if (ein->allow_untrusted)
+	return true;
+
+    // Show whitemail notice if it exists.
     if (notice_file) {
 	VREFSCR scr = vscr_save();
 	more(notice_file, NA);
@@ -1079,7 +1133,7 @@ check_regmail(char *email)
 	// Catch-all message.
 	vmsg("無法使用此 Email。");
     }
-    return 0;
+    return false;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1218,43 +1272,54 @@ create_regform_request()
 }
 
 static int
-register_email_input(const userec_t *u, char *email)
+register_email_input(email_input_t *ein)
 {
-    while (1) {
-	email[0] = 0;
-	getfield(15, "身分認證用", REGNOTES_ROOT "email", "E-Mail Address", email, EMAILSZ);
-	strip_blank(email, email);
-	if (strlen(email) == 0)
-	    return REGISTER_ERR_CANCEL;
-	if (strcmp(email, "X") == 0) email[0] = 'x';
-	if (strcmp(email, "x") == 0)
-	    return REGISTER_OK;
+    char *email = ein->email;
+    getfield(15,
+	    ein->allow_untrusted ? NULL : "身分認證用",
+	    ein->allow_untrusted ? NULL : (REGNOTES_ROOT "email"),
+	    "E-Mail Address", email, EMAILSZ);
+    strip_blank(email, email);
+    if (strlen(email) == 0)
+	return REGISTER_ERR_CANCEL;
+    if (strcmp(email, "X") == 0) email[0] = 'x';
+    if (strcmp(email, "x") == 0)
+	return REGISTER_OK;
 
-	// before long waiting, alert user
-	move(18, 0); clrtobot();
-	outs("正在確認 email, 請稍候...\n");
-	doupdate();
+    // before long waiting, alert user
+    move(18, 0); clrtobot();
+    outs("正在確認 email, 請稍候...\n");
+    doupdate();
 
-	if (!check_regmail(email))
-	    return REGISTER_ERR_INVALID_EMAIL;
+    if (!check_regmail(ein))
+	return REGISTER_ERR_INVALID_EMAIL;
 
-	int email_count = register_count_email(u, email);
+    if (ein->is_trusted) {
+	int email_count = register_count_email(ein->u, email);
 	if (email_count < 0)
 	    return REGISTER_ERR_EMAILDB;
 	if (email_count >= EMAILDB_LIMIT)
 	    return REGISTER_ERR_TOO_MANY_ACCOUNTS;
 
-	move(17, 0);
+	move(17, 0); clrtobot();
 	outs(ANSI_COLOR(1;31)
 		"\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
 		"原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
-	char yn[3];
-	getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嗎? [y/N]",
-		yn, sizeof(yn), LCECHO);
-	clrtobot();
-	if (yn[0] == 'y')
-	    return REGISTER_OK;
+    } else if (ein->warn_untrusted) {
+	move(17, 0); clrtobot();
+	outs(ANSI_COLOR(1;31)
+		"\n提醒您: 您輸入的 Email 無法作為認證用途，\n"
+		"您之後需要使另外認證帳號後才能使用進階功\能。\n" ANSI_RESET);
+    } else {
+	move(17, 0); clrtobot();
     }
+    char yn[3];
+    getdata(16, 0, "請再次確認此 E-Mail 位置正確嗎? [y/N]",
+	    yn, sizeof(yn), LCECHO);
+    clrtobot();
+    if (yn[0] != 'y')
+	return REGISTER_ERR_AGAIN;
+    return REGISTER_OK;
 }
 
 static int
@@ -1350,8 +1415,11 @@ u_email_verification()
 	return;
     }
 
-    if (register_email_verification(email) != REGISTER_OK)
+    email_input_t ein = {};
+    ein.email = email;
+    if (register_email_verification(&ein) != REGISTER_OK)
 	return;
+    assert(ein.is_trusted);
 
     if (register_check_and_update_emaildb(&cuser, email) != REGISTER_OK) {
 	vmsg("Email 認證設定失敗, 請稍後自行再次填寫註冊單");
