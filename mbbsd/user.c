@@ -936,6 +936,16 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '2':
 	y = 19;
 	if (!adminmode) {
+#ifdef USEREC_EMAIL_IS_CONTACT
+#   ifdef REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
+	    if (!user_has_email(&cuser)) {
+		move(y, 0);
+		outs("設定聯絡信箱後才能修改密碼唷!");
+		fail++;
+		break;
+	    }
+#   endif
+#endif
             if (!getdata(y++, 0, "請輸入原密碼：", buf, PASS_INPUT_LEN + 1,
                          PASSECHO) ||
 		!checkpasswd(x.passwd, buf)) {
