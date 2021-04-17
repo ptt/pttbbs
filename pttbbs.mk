@@ -28,7 +28,8 @@ CXX:=		ccache $(CXX)
 
 # Common build flags
 
-PTT_WARN:=	-W -Wall -Wunused -Wno-missing-field-initializers
+PTT_WARN:=	-W -Wall -Wunused \
+    		-Wno-missing-field-initializers -Wno-address-of-packed-member
 PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
