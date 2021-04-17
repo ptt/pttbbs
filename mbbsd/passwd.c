@@ -235,6 +235,15 @@ pwcuSetLoginView(unsigned int bits)
 }
 
 int
+pwcuSetEmail(const char *email)
+{
+    PWCU_START();
+    strlcpy(    u.email, email, sizeof(u.email));
+    strlcpy(cuser.email, email, sizeof(cuser.email));
+    PWCU_END();
+}
+
+int
 pwcuRegCompleteJustify(const char *justify)
 {
     PWCU_START();

@@ -580,6 +580,7 @@ bool user_has_email(const userec_t *u);
 bool check_email_allow_reject_lists(
     char *email, const char **errmsg, const char **notice_file);
 void register_mail_complete_and_exit();
+void change_contact_email();
 
 /* register_sms */
 void u_sms_verification();
@@ -857,6 +858,7 @@ int pwcuSetNickname	(const char *nickname);
 int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
 int pwcuSaveUserFlags	(void);
+int pwcuSetEmail        (const char *email);
 int pwcuRegCompleteEmailJustify(const char *email, const char *justify);
 int pwcuRegCompleteJustify    (const char *justify);
 int pwcuRegSetTemporaryJustify(const char *justify, const char *email);

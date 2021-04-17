@@ -674,9 +674,17 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     ans = vans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(V)認證 [0]結束 " :
+#ifdef USEREC_EMAIL_IS_CONTACT
+    "請選擇 (1)修改資料 (2)設定密碼 (M)聯絡信箱 (V)認證資料 [0]結束 ");
+#else
     "請選擇 (1)修改資料 (2)設定密碼 (V)認證資料 [0]結束 ");
+#endif
 
-    if (ans != '1' && ans != '2' && ans != 'v' && !adminmode)
+    if (ans != '1' && ans != '2' && ans != 'v'
+#ifdef USEREC_EMAIL_IS_CONTACT
+	    && ans != 'm'
+#endif
+	    && !adminmode)
 	ans = '0';
 
     if (ans == '1' || ans == '3') {
@@ -699,6 +707,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		return;
     }
     switch (ans) {
+#ifdef USEREC_EMAIL_IS_CONTACT
+    case 'm':
+	if (!adminmode)
+	    change_contact_email();
+	return;
+#endif
+
     case '1':
 	move(0, 0);
 	outs("請逐項修改。");

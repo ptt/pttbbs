@@ -642,6 +642,12 @@ register_email_verification(email_input_t *ein)
 	}
     } while (err != REGISTER_OK);
 
+    // Nothing changed.
+    if (!strcmp(email, orig)) {
+	vmsg("E-Mail 與原本相同。");
+	return REGISTER_ERR_CANCEL;
+    }
+
     // Send and check regcode.
     char inregcode[REGCODE_SZ] = {0}, regcode[REGCODE_SZ];
     char buf[80];
@@ -1674,6 +1680,30 @@ u_register()
     rms[pick - 1].enter();
     return FULLUPDATE;
 }
+
+////////////////////////////////////////////////////////////////////////////
+// Contact Email Functions
+////////////////////////////////////////////////////////////////////////////
+
+#ifdef USEREC_EMAIL_IS_CONTACT
+
+void
+change_contact_email()
+{
+    char email[EMAILSZ] = {};
+    memcpy(email, cuser.email, sizeof(email));
+
+    email_input_t ein = {};
+    ein.email = email;
+    ein.allow_untrusted = true;
+    if (register_email_verification(&ein) != REGISTER_OK)
+	return;
+
+    pwcuSetEmail(email);
+    vmsg("聯絡信箱更新完成。");
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////
 // Regform Utilities
