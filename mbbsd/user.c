@@ -196,7 +196,11 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t職業學歷: %s\n", u->career);
 	prints("\t居住地址: %s\n", u->address);
 
+#ifdef USEREC_EMAIL_IS_CONTACT
+	prints("\t聯絡信箱: %s\n", u->email);
+#else
 	prints("\t電子信箱: %s\n", u->email);
+#endif
     }
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
     prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
@@ -1200,7 +1204,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef USE_EMAILDB
 	// If we separate email in userec_t and emaildb, there is no way for us
 	// to find out the real verified email here. Don't update it.
-#   ifndef SEPARATE_VERIFY_EMAIL
+#   ifndef USEREC_EMAIL_IS_CONTACT
 	// We only want to update emaildb when user is known to use email
 	// verification. It's okay to keep existing entry for old userid; it
 	// will get filtered out when read. This is best-effort, and does not

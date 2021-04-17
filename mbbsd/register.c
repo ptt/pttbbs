@@ -735,13 +735,21 @@ new_register(void)
 #ifdef REQUIRE_VERIFY_EMAIL_AT_REGISTER
     email_input_t ein = {};
     ein.email = newuser.email;
+
+#   ifdef ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
+#	ifndef USEREC_EMAIL_IS_CONTACT
+#	    error "ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL requires USEREC_EMAIL_IS_CONTACT"
+#	endif
+    ein.allow_untrusted = true;
+    ein.warn_untrusted = true;
+#   endif  // ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
+
     if (register_email_verification(&ein) == REGISTER_OK) {
-	assert(ein.is_trusted);
-	email_verified = true;
+	email_verified = ein.is_trusted;
     } else {
 	exit(1);
     }
-#endif
+#endif  // REQUIRE_VERIFY_EMAIL_AT_REGISTER
 
 #ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))

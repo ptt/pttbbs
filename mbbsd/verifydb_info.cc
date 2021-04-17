@@ -47,7 +47,7 @@ void verify_display(const userec_t *u, const VerifyDb::GetReply *reply) {
 }
 
 bool write_email_to_passwd(const char *userid, const char *email) {
-#ifndef SEPARATE_VERIFY_EMAIL
+#ifndef USEREC_EMAIL_IS_CONTACT
   userec_t u = {};
   int unum = passwd_load_user(userid, &u);
   if (unum < 0)
