@@ -32,15 +32,16 @@ public:
 private:
   std::optional<UserHandle> user_;
   std::string email_;
+  std::vector<std::string> all_emails_;
   int y_ = 2;
 
+  bool LoadUser(const char *userid);
+  bool LoadVerifyDbEmail();
   void InputUserEmail();
   void EmailCodeChallenge();
   void ResetPasswd();
 
-  static std::optional<UserHandle> LoadUser(const char *userid);
-  static bool CheckUserEmail(const UserHandle &user, const std::string &email,
-                             bool *email_matches);
+  static std::optional<std::string> NormalizeEmail(const std::string &email);
   static bool SendRecoveryCode(const std::string &email,
                                const std::string &code);
   static bool SetPasswd(const UserHandle &user, const char *hashed_passwd);
@@ -50,45 +51,62 @@ private:
   static void UserErrorExit();
 };
 
-// static
-std::optional<UserHandle> AccountRecovery::LoadUser(const char *userid) {
+bool AccountRecovery::LoadUser(const char *userid) {
   if (!is_validuserid(userid))
-    return std::nullopt;
+    return false;
 
   userec_t u = {};
   if (!getuser(userid, &u))
-    return std::nullopt;
+    return false;
 
   // Double check.
   if (!is_validuserid(u.userid))
-    return std::nullopt;
+    return false;
 
   UserHandle user;
   user.userid = u.userid;
   user.generation = u.firstlogin;
-  return user;
+  user_ = user;
+
+#ifdef USEREC_EMAIL_IS_CONTACT
+  auto email = NormalizeEmail(u.email);
+  if (email)
+    all_emails_.push_back(email.value());
+#endif
+
+  return true;
 }
 
-// static
-bool AccountRecovery::CheckUserEmail(const UserHandle &user,
-                                     const std::string &email,
-                                     bool *email_matches) {
+bool AccountRecovery::LoadVerifyDbEmail() {
   Bytes buf;
   const VerifyDb::GetReply *reply;
-  if (!verifydb_getuser(user.userid.c_str(), user.generation, &buf, &reply))
+  if (!verifydb_getuser(user_->userid.c_str(), user_->generation, &buf, &reply))
     return false;
 
-  *email_matches = false;
   if (reply->entry()) {
     for (const auto *ent : *reply->entry()) {
-      if (ent->vmethod() == VMETHOD_EMAIL && ent->vkey() != nullptr &&
-          ent->vkey()->str() == email) {
-        *email_matches = true;
-        break;
+      if (ent->vmethod() == VMETHOD_EMAIL && ent->vkey() != nullptr) {
+        auto email = NormalizeEmail(ent->vkey()->str());
+        if (email)
+          all_emails_.push_back(email.value());
       }
     }
   }
   return true;
+}
+
+// static
+std::optional<std::string>
+AccountRecovery::NormalizeEmail(const std::string &email) {
+  auto out = email;
+  for (auto& c : out)
+    c = std::tolower(c);
+  auto idx = out.find('@');
+  if (idx == std::string::npos)
+    return std::nullopt;
+  if (idx != out.rfind('@'))
+    return std::nullopt;
+  return out;
 }
 
 // static
@@ -171,8 +189,7 @@ void AccountRecovery::InputUserEmail() {
   int errcnt = 0;
   while (1) {
     getdata_buf(y_, 0, "欲取回帳號ID：", userid, sizeof(userid), DOECHO);
-    user_ = LoadUser(userid);
-    if (user_)
+    if (LoadUser(userid))
       break;
     if (++errcnt >= kMaxErrCnt)
       UserErrorExit();
@@ -199,22 +216,29 @@ void AccountRecovery::InputUserEmail() {
   y_++;
   move(y_, 0);
   clrtoeol(); // There might be error message at this line.
+
+  if (!LoadVerifyDbEmail()) {
+    vmsg("系統錯誤，請稍候再試。");
+    exit(0);
+  }
 }
 
 void AccountRecovery::EmailCodeChallenge() {
   // Generate code.
   auto code = GenCode(kCodeLen);
 
-  // Check and send recovery code.
-  bool email_matches = false;
-  if (!CheckUserEmail(user_.value(), email_, &email_matches)) {
-    vmsg("系統錯誤，請稍候再試。");
-    exit(0);
-  }
-
   y_++;
   mvprints(y_, 0, "系統處理中...");
   doupdate();
+
+  // Check and send recovery code. Don't exit if email doesn't match, so user
+  // can't guess email.
+  bool email_matches = false;
+  for (const auto &email : all_emails_) {
+    if (email == email_)
+      email_matches = true;
+  }
+
   if (email_matches) {
     // We only want to send email if the user input the matching address.
     // Silently fail if email is not matching, so that user cannot guess other
@@ -291,7 +315,9 @@ void AccountRecovery::ResetPasswd() {
   }
 
   LogToSecurity(user_.value(), email_);
-  NotifyUser(user_->userid, email_);
+  for (const auto &email : all_emails_) {
+    NotifyUser(user_->userid, email);
+  }
 
   vmsg("密碼重設完成，請以新密碼登入。");
 }
