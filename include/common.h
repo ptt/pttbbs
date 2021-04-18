@@ -55,6 +55,7 @@
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
+#define FN_USERSECURITY	"user.security"	// in user directory
 #define FN_FORWARD      ".forward"      /* auto forward */
 #ifndef SZ_RECENTLOGIN
 #define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation

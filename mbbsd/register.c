@@ -1699,7 +1699,15 @@ change_contact_email()
     if (register_email_verification(&ein) != REGISTER_OK)
 	return;
 
+    // Log.
+    char logfn[PATHLEN];
+    setuserfile(logfn, FN_USERSECURITY);
+    log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
+	      Cdatelite(&now), fromhost, cuser.email, email);
+
+    // Write.
     pwcuSetEmail(email);
+
     vmsg("聯絡信箱更新完成。");
 }
 
