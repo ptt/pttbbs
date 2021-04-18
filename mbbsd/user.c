@@ -1044,6 +1044,14 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
 	    }
 	}
+
+	// Log to user log.
+	{
+	    char logfn[PATHLEN];
+	    sethomefile(logfn, x.userid, FN_USERSECURITY);
+	    log_filef(logfn, LOG_CREAT, "%s %s (Passwd)\n",
+		      Cdatelite(&now), adminmode ? "[Admin]" : fromhost);
+	}
 	break;
 
     case '3':
