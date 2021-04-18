@@ -2526,7 +2526,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 {
     char            buf[80], *ptr;
     time4_t         chrono;
-    MailQueue       mqueue;
+    MailQueue       mqueue = {};
 
     if (!from)
 	from = cuser.userid;
