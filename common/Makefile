@@ -7,4 +7,9 @@ SUBDIR:=	bbs osdep sys
 SUBDIR+=	fbs
 .endif
 
+all:
+
+install: all
+	@true
+
 .include <bsd.subdir.mk>
