@@ -1320,9 +1320,17 @@ register_email_input(email_input_t *ein)
 	int email_count = register_count_email(ein->u, email);
 	if (email_count < 0)
 	    return REGISTER_ERR_EMAILDB;
-	if (email_count >= EMAILDB_LIMIT)
-	    return REGISTER_ERR_TOO_MANY_ACCOUNTS;
+	if (email_count >= EMAILDB_LIMIT) {
+	    // The usage of the email is over-limit. If we allow untrusted,
+	    // downgrade to untrusted. Otherwise, fails.
+	    if (ein->allow_untrusted)
+		ein->is_trusted = false;
+	    else
+		return REGISTER_ERR_TOO_MANY_ACCOUNTS;
+	}
+    }
 
+    if (ein->is_trusted) {
 	move(17, 0); clrtobot();
 	outs(ANSI_COLOR(1;31)
 		"\n提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
