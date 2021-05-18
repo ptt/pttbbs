@@ -583,42 +583,43 @@ int search_aidu(char *bfile, aidu_t aidu)
 {
   char fn[FNLEN];
   int fd;
-  fileheader_t fhs[64];
+  const int batch = 64;
+  fileheader_t fhs[batch];
   int len, i;
-  int pos = 0;
-  int found = 0;
-  int lastpos = 0;
+  int pos = -1;
 
   if(aidu2fn(fn, aidu) == NULL)
     return -1;
   if((fd = open(bfile, O_RDONLY, 0)) < 0)
     return -1;
 
-  while(!found && (len = read(fd, fhs, sizeof(fhs))) > 0)
+  struct stat st;
+  if (fstat(fd, &st) < 0 || !st.st_size) {
+    close(fd);
+    return -1;
+  }
+  off_t off = ((st.st_size - 1) / sizeof(fhs)) * sizeof(fhs);
+
+  while ((len = pread(fd, fhs, sizeof(fhs), off)) > 0)
   {
     len /= sizeof(fileheader_t);
-    for(i = 0; i < len; i ++)
+    for(i = 0; i < len; i++)
     {
       int l;
       if(strcmp(fhs[i].filename, fn) == 0 ||
          ((aidu & 0xfff) == 0 && (l = strlen(fhs[i].filename)) > 6 &&
           strncmp(fhs[i].filename, fn, l) == 0))
       {
-        if(fhs[i].filemode & FILE_BOTTOM)
-        {
-          lastpos = pos;
-        }
-        else
-        {
-          found = 1;
-          break;
-        }
+	pos = off / sizeof(fileheader_t) + i;
       }
-      pos ++;
     }
+
+    if (!off || pos >= 0)
+	break;
+    off -= sizeof(fhs);
   }
   close(fd);
 
-  return (found ? pos : (lastpos ? lastpos : -1));
+  return pos;
 }
 /* end of AIDS */
