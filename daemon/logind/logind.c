@@ -517,10 +517,38 @@ ackq_del(login_conn_ctx *conn)
 ///////////////////////////////////////////////////////////////////////
 // I/O
 
-static ssize_t 
+static ssize_t
 _buff_write(login_conn_ctx *conn, const void *buf, size_t nbytes)
 {
     return bufferevent_write(conn->bufev, buf, nbytes);
+}
+
+// convert.c
+struct evbuffer *evbuffer_b2u(struct evbuffer *source);
+
+static ssize_t
+_text_write(login_conn_ctx *conn, const void *buf, size_t nbytes)
+{
+    if (conn->ctx.encoding != CONV_UTF8)
+        return bufferevent_write(conn->bufev, buf, nbytes);
+
+    // CONV_UTF8
+
+    struct evbuffer *evb = evbuffer_new();
+    if (!evb)
+        return 0;
+
+    // N.B. evbuffer_b2u will append to new buffer char by char, so the new
+    // buffer won't refer to buf after conversion.
+    evbuffer_add_reference(evb, buf, nbytes, NULL, NULL);
+
+    evb = evbuffer_b2u(evb);
+    if (!evb)
+        return 0;
+
+    ssize_t r = bufferevent_write_buffer(conn->bufev, evb);
+    evbuffer_free(evb);
+    return r;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -841,6 +869,7 @@ typedef struct {
 
 typedef struct {
     screen_extent_chain_t chain;
+    screen_extent_chain_t chain_utf8;
 } screen_t;
 
 static screen_t *welcome_screen, *goodbye_screen, *ban_screen, *banip_screen;
@@ -965,6 +994,44 @@ screen_extent_chain_add_to_evbuffer(screen_extent_chain_t *chain,
     return 0;
 }
 
+static bool
+screen_extent_chain_conv_utf8(screen_extent_chain_t *out,
+                              screen_extent_chain_t *in)
+{
+    struct evbuffer *evb = NULL;
+    for (screen_extent_t *ext = in->head; ext; ext = ext->next) {
+        if (ext->type) {
+            screen_extent_chain_add_dynamic(out, ext->type);
+            continue;
+        }
+
+        // Text.
+        evb = evbuffer_new();
+        if (!evb)
+            goto fail;
+
+        if (screen_extent_add_to_evbuffer(ext, evb) < 0)
+            goto fail;
+
+        evb = evbuffer_b2u(evb);
+        if (!evb)
+            goto fail;
+
+        size_t sz = evbuffer_get_length(evb);
+        if (!screen_extent_chain_add(
+                    out, (char *)evbuffer_pullup(evb, sz), sz))
+            goto fail;
+
+        evbuffer_free(evb);
+        evb = NULL;
+    }
+    return true;
+fail:
+    if (evb)
+        evbuffer_free(evb);
+    return false;
+}
+
 static screen_t *
 screen_new(const char *data);
 
@@ -972,6 +1039,7 @@ static void
 screen_free(screen_t *scr)
 {
     screen_extent_chain_clear(&scr->chain);
+    screen_extent_chain_clear(&scr->chain_utf8);
     free(scr);
 }
 
@@ -1075,7 +1143,18 @@ draw_text_screen(login_conn_ctx *conn, screen_t *scr)
     struct evbuffer *evb = evbuffer_new();
     if (!evb)
         return;
-    screen_extent_chain_add_to_evbuffer(&scr->chain, evb);
+
+    switch (conn->ctx.encoding) {
+        case CONV_UTF8:
+            screen_extent_chain_add_to_evbuffer(&scr->chain_utf8, evb);
+            break;
+
+        case CONV_NORMAL:
+        default:
+            screen_extent_chain_add_to_evbuffer(&scr->chain, evb);
+            break;
+    }
+
     bufferevent_write_buffer(conn->bufev, evb);
     evbuffer_free(evb);
 }
@@ -1127,6 +1206,14 @@ screen_new(const char *data)
         pe++;
         ps = pe;
     }
+
+    // Prepare a UTF8 version.
+    if (!screen_extent_chain_conv_utf8(&scr->chain_utf8, &scr->chain)) {
+        fprintf(stderr, LOG_PREFIX "screen utf8 conversion failed\n");
+        screen_free(scr);
+        return NULL;
+    }
+
     return scr;
 }
 
@@ -1142,7 +1229,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
     char box[IDBOXLEN];
 
     _mt_move_yx(conn, LOGIN_PROMPT_YX);  _mt_clrtoeol(conn);
-    _buff_write(conn, LOGIN_PROMPT_MSG, sizeof(LOGIN_PROMPT_MSG)-1);
+    _text_write(conn, LOGIN_PROMPT_MSG, sizeof(LOGIN_PROMPT_MSG)-1);
     // draw input box
     memset(box, ' ', sizeof(box));
     if (uid) memcpy(box, uid, strlen(uid));
@@ -1164,28 +1251,28 @@ draw_passwd_prompt(login_conn_ctx *conn)
 {
     STATINC(STAT_LOGIND_PASSWDPROMPT);
     _mt_move_yx(conn, PASSWD_PROMPT_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, PASSWD_PROMPT_MSG, sizeof(PASSWD_PROMPT_MSG)-1);
+    _text_write(conn, PASSWD_PROMPT_MSG, sizeof(PASSWD_PROMPT_MSG)-1);
 }
 
 static void
 draw_reject_insecure_connection_msg(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, REJECT_INSECURE_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, REJECT_INSECURE_MSG, sizeof(REJECT_INSECURE_MSG)-1);
+    _text_write(conn, REJECT_INSECURE_MSG, sizeof(REJECT_INSECURE_MSG)-1);
 }
 
 static void
 draw_empty_userid_warn(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, USERID_EMPTY_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, USERID_EMPTY_MSG, sizeof(USERID_EMPTY_MSG)-1);
+    _text_write(conn, USERID_EMPTY_MSG, sizeof(USERID_EMPTY_MSG)-1);
 }
 
 static void 
 draw_check_passwd(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, PASSWD_CHECK_MSG, sizeof(PASSWD_CHECK_MSG)-1);
+    _text_write(conn, PASSWD_CHECK_MSG, sizeof(PASSWD_CHECK_MSG)-1);
 }
 
 static void
@@ -1194,10 +1281,10 @@ draw_auth_success(login_conn_ctx *conn, int free)
     if (free)
     {
         _mt_move_yx(conn, FREEAUTH_SUCCESS_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, FREEAUTH_SUCCESS_MSG, sizeof(FREEAUTH_SUCCESS_MSG)-1);
+        _text_write(conn, FREEAUTH_SUCCESS_MSG, sizeof(FREEAUTH_SUCCESS_MSG)-1);
     } else {
         _mt_move_yx(conn, AUTH_SUCCESS_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, AUTH_SUCCESS_MSG, sizeof(AUTH_SUCCESS_MSG)-1);
+        _text_write(conn, AUTH_SUCCESS_MSG, sizeof(AUTH_SUCCESS_MSG)-1);
     }
 }
 
@@ -1206,7 +1293,7 @@ draw_auth_fail(login_conn_ctx *conn)
 {
     STATINC(STAT_LOGIND_AUTHFAIL);
     _mt_move_yx(conn, AUTH_FAIL_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, AUTH_FAIL_MSG, sizeof(AUTH_FAIL_MSG)-1);
+    _text_write(conn, AUTH_FAIL_MSG, sizeof(AUTH_FAIL_MSG)-1);
 }
 
 static void
@@ -1215,7 +1302,7 @@ draw_service_failure(login_conn_ctx *conn)
     STATINC(STAT_LOGIND_SERVFAIL);
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
     _mt_move_yx(conn, SERVICE_FAIL_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, SERVICE_FAIL_MSG, sizeof(SERVICE_FAIL_MSG)-1);
+    _text_write(conn, SERVICE_FAIL_MSG, sizeof(SERVICE_FAIL_MSG)-1);
 }
 
 static void
@@ -1229,17 +1316,17 @@ draw_overload(login_conn_ctx *conn, int type)
     if (type == 1)
     {
         // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
+        _text_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
     } 
     else if (type == 2)
     {
         // _mt_move_yx(conn, OVERLOAD_USER_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, OVERLOAD_USER_MSG, sizeof(OVERLOAD_USER_MSG)-1);
+        _text_write(conn, OVERLOAD_USER_MSG, sizeof(OVERLOAD_USER_MSG)-1);
     } 
     else {
         assert(!"unknown overload type");
         // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
+        _text_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
     }
 }
 
@@ -1251,12 +1338,12 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
     if (strcasecmp(freeid, STR_GUEST) == 0)
     {
         _mt_move_yx(conn, TOO_MANY_GUEST_YX); _mt_clrtoeol(conn);
-        _buff_write(conn, TOO_MANY_GUEST_MSG, sizeof(TOO_MANY_GUEST_MSG)-1);
+        _text_write(conn, TOO_MANY_GUEST_MSG, sizeof(TOO_MANY_GUEST_MSG)-1);
         return;
     }
 #endif
     _mt_move_yx(conn, REJECT_FREE_UID_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, REJECT_FREE_UID_MSG, sizeof(REJECT_FREE_UID_MSG)-1);
+    _text_write(conn, REJECT_FREE_UID_MSG, sizeof(REJECT_FREE_UID_MSG)-1);
 
 }
 
@@ -1264,7 +1351,7 @@ static void
 draw_no_such_encoding(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, NO_SUCH_ENCODING_YX); _mt_clrtoeol(conn);
-    _buff_write(conn, NO_SUCH_ENCODING_MSG, sizeof(NO_SUCH_ENCODING_MSG)-1);
+    _text_write(conn, NO_SUCH_ENCODING_MSG, sizeof(NO_SUCH_ENCODING_MSG)-1);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -2372,7 +2459,7 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
         STATINC(STAT_LOGIND_BANNED);
         if (banmsg) {
             _mt_clear(conn);
-            _buff_write(conn, banmsg, strlen(banmsg));
+            _text_write(conn, banmsg, strlen(banmsg));
         } else {
             draw_text_screen(conn, banip_screen);
         }

@@ -22,7 +22,7 @@ all:	${PROGRAMS}
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
-logind: logind.o 
+logind: logind.o convert.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
 
 loginc: loginc.o 
