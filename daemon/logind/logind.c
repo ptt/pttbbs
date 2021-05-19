@@ -826,10 +826,157 @@ DEBUG_IO(int fd, const char *msg) {
 #define FN_BANIP            BBSHOME "/etc/banip.scr"
 #define FN_BAN              BBSHOME "/" BAN_FILE
 
-static char *welcome_screen, *goodbye_screen, *ban_screen, *banip_screen;
+typedef struct screen_extent {
+    struct screen_extent *next;
+    char *data;
+    size_t len;
+    int refs;
+    char type;
+} screen_extent_t;
+
+typedef struct {
+    screen_extent_t *head;
+    screen_extent_t *tail;
+} screen_extent_chain_t;
+
+typedef struct {
+    screen_extent_chain_t chain;
+} screen_t;
+
+static screen_t *welcome_screen, *goodbye_screen, *ban_screen, *banip_screen;
 
 static void
-load_text_screen_file(const char *filename, char **pptr)
+screen_extent_add_ref(screen_extent_t *ext)
+{
+    assert(ext->refs > 0);
+    ext->refs++;
+}
+
+static void
+screen_extent_dec_ref(screen_extent_t *ext)
+{
+    assert(ext->refs > 0);
+    if (!--ext->refs) {
+        free(ext->data);
+        free(ext);
+    }
+}
+
+static void
+screen_extent_evbuffer_cleanup(
+        const void *data GCC_UNUSED, size_t datalen GCC_UNUSED, void *extra)
+{
+    screen_extent_t *ext = (screen_extent_t *)extra;
+    screen_extent_dec_ref(ext);
+}
+
+static void
+screen_extent_chain_clear(screen_extent_chain_t *chain)
+{
+    while (chain->head) {
+        screen_extent_t *ext = chain->head;
+        chain->head = ext->next;
+        screen_extent_dec_ref(ext);
+    }
+    chain->tail = NULL;
+}
+
+static void
+_screen_extent_chain_add(screen_extent_chain_t *chain, screen_extent_t *ext)
+{
+    if (chain->tail) {
+        chain->tail->next = ext;
+        chain->tail = ext;
+    } else {
+        chain->head = chain->tail = ext;
+    }
+}
+
+static bool
+screen_extent_chain_add_dynamic(screen_extent_chain_t *chain, char type)
+{
+    screen_extent_t *ext = calloc(1, sizeof(screen_extent_t));
+    if (!ext)
+        return false;
+    ext->refs = 1;
+    ext->type = type;
+    _screen_extent_chain_add(chain, ext);
+    return true;
+}
+
+static bool
+screen_extent_chain_add(screen_extent_chain_t *chain,
+                        const char *data, size_t len)
+{
+    screen_extent_t *ext = calloc(1, sizeof(screen_extent_t));
+    if (!ext)
+        return false;
+
+    ext->data = malloc(len);
+    if (!ext->data) {
+        free(ext);
+        return false;
+    }
+    memcpy(ext->data, data, len);
+    ext->len = len;
+    ext->refs = 1;
+    _screen_extent_chain_add(chain, ext);
+    return true;
+}
+
+static int
+screen_extent_add_to_evbuffer(screen_extent_t *ext, struct evbuffer *evb)
+{
+    int r;
+    switch (ext->type) {
+        case 0:
+            r = evbuffer_add_reference(evb, ext->data, ext->len,
+                                       screen_extent_evbuffer_cleanup, ext);
+            if (r < 0)
+                return r;
+            screen_extent_add_ref(ext);
+            break;
+
+        case 't':   // current time
+            now = time(0);
+            r = evbuffer_add_printf(evb, "%s", Cdate(&now));
+            break;
+
+        case 'u':   // current online users
+            r = evbuffer_add_printf(evb, "%d", SHM->UTMPnumber);
+            break;
+
+        default:
+            r = -1;
+            break;
+    }
+    return r;
+}
+
+static int
+screen_extent_chain_add_to_evbuffer(screen_extent_chain_t *chain,
+                                    struct evbuffer *evb)
+{
+    for (screen_extent_t *ext = chain->head; ext; ext = ext->next) {
+        int r = screen_extent_add_to_evbuffer(ext, evb);
+        if (r < 0)
+            return r;
+    }
+    return 0;
+}
+
+static screen_t *
+screen_new(const char *data);
+
+static void
+screen_free(screen_t *scr)
+{
+    screen_extent_chain_clear(&scr->chain);
+    free(scr);
+}
+
+static void
+load_text_screen_file(const char *filename, screen_t **pscr)
 {
     FILE *fp = NULL;
     off_t sz, wsz=0, psz;
@@ -844,26 +991,24 @@ load_text_screen_file(const char *filename, char **pptr)
     }
 
     // check valid file
-    assert(pptr);
-    s = *pptr;
-    if (!fp)
+    assert(pscr);
+    if (*pscr)
     {
-        if (s) free(s);
-        *pptr = NULL;
-        return;
+        screen_free(*pscr);
+        *pscr = NULL;
     }
+    if (!fp)
+        return;
 
     // check memory buffer
-    s = realloc(*pptr, wsz);  
+    s = calloc(wsz, 1);
     if (!s)
     {
         fclose(fp);
         return;
     }
-    *pptr = s;
 
     // prepare buffer
-    memset(s, 0, wsz);
     p = s;
     psz = wsz;
 
@@ -888,6 +1033,9 @@ load_text_screen_file(const char *filename, char **pptr)
         }
     }
     fclose(fp);
+
+    *pscr = screen_new(s);
+    free(s);
 }
 
 static void regular_check();
@@ -918,22 +1066,32 @@ reload_data()
 }
 
 static void
-draw_text_screen(login_conn_ctx *conn, const char *scr)
+draw_text_screen(login_conn_ctx *conn, screen_t *scr)
 {
-    const char *ps, *pe;
-    char buf[64];
-    time4_t now;
-
     _mt_clear(conn);
-    if (!scr || !*scr)
+    if (!scr)
         return;
 
-    // draw the screen from text file
+    struct evbuffer *evb = evbuffer_new();
+    if (!evb)
+        return;
+    screen_extent_chain_add_to_evbuffer(&scr->chain, evb);
+    bufferevent_write_buffer(conn->bufev, evb);
+    evbuffer_free(evb);
+}
+
+static screen_t *
+screen_new(const char *data)
+{
+    screen_t *scr = calloc(1, sizeof(screen_t));
+    if (!scr)
+        return NULL;
+
     // XXX Because the text file may contain a very small subset of escape sequence
     // *t[Cdate] and *u[SHM->UTMPnumber], we implement a tiny version of 
     // expand_esc_star here.
-
-    ps = pe = scr;
+    const char *ps, *pe;
+    ps = pe = data;
     while(pe && *pe)
     {
         // find a safe range between (ps, pe) to print
@@ -941,7 +1099,7 @@ draw_text_screen(login_conn_ctx *conn, const char *scr)
         if (!pe)
         {
             // no more escapes, print all.
-            _buff_write(conn, ps, strlen(ps));
+            screen_extent_chain_add(&scr->chain, ps, strlen(ps));
             break;
         }
 
@@ -953,30 +1111,23 @@ draw_text_screen(login_conn_ctx *conn, const char *scr)
             continue;
 
         // flush previous data
-        _buff_write(conn, ps, pe - ps - 1);
+        screen_extent_chain_add(&scr->chain, ps, pe - ps - 1);
 
-        buf[0] = 0; pe++;
+        pe++;
 
         // expand the star
         switch(*pe)
         {
             case 't':   // current time
-                // strcpy(buf, "[date]");
-                now = time(0);
-                strlcpy(buf, Cdate(&now), sizeof(buf));
-                break;
-
             case 'u':   // current online users
-                // strcpy(buf, "[SHM->UTMPnumber]");
-                snprintf(buf, sizeof(buf), "%d", SHM->UTMPnumber);
+                screen_extent_chain_add_dynamic(&scr->chain, *pe);
                 break;
         }
 
-        if(buf[0])
-            _buff_write(conn, buf, strlen(buf));
-        pe ++;
+        pe++;
         ps = pe;
     }
+    return scr;
 }
 
 static void
@@ -2219,7 +2370,12 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
     if ((banmsg = in_banip_list_addr(g_banip, conn->ctx.addr.sin_addr.s_addr)))
     {
         STATINC(STAT_LOGIND_BANNED);
-        draw_text_screen (conn, *banmsg ? banmsg : banip_screen);
+        if (banmsg) {
+            _mt_clear(conn);
+            _buff_write(conn, banmsg, strlen(banmsg));
+        } else {
+            draw_text_screen(conn, banip_screen);
+        }
         login_conn_remove(conn, fd, BAN_SLEEP_SEC);
         return -1;
     }
