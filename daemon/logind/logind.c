@@ -1139,10 +1139,16 @@ regular_check()
     g_guest_usernum  = 0;
 #endif
 
-    if (cpuload(NULL) > MAX_CPULOAD)
+    int cpu = cpuload(NULL);
+    if (cpu > MAX_CPULOAD)
     {
         g_overload = 1;
         fprintf(stderr, LOG_PREFIX "%s: system overload (cpu)\n", Cdate(&now));
+    }
+    else if (was_overload == 1 && cpu > MAX_CPULOAD / 2)
+    {
+        // Don't leave overload state unless the load is halved.
+        g_overload = 1;
     }
     else if (SHM->UTMPnumber >= MAX_ACTIVE
 #ifdef DYMAX_ACTIVE
