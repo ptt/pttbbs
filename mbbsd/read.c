@@ -1015,6 +1015,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    if(rcmdlist[ch - 1].needitem && locmem->crs_ln == 0)
 		break;
 	    if (func != NULL){
+                bool skip = false;
 		num  = locmem->crs_ln - bottom_line;
 
 		if(!rcmdlist[ch - 1].needitem)
@@ -1029,8 +1030,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                     mode = (*func)(locmem->crs_ln,
 				   &headers[locmem->crs_ln - locmem->top_ln],
 				   currdirect, locmem->crs_ln - locmem->top_ln);
-		if(mode == READ_SKIP)
+		if(mode == READ_SKIP) {
                     mode = lastmode;
+                    skip = true;
+                }
 
 		if (mode == RET_SELECTAID)
 		{
@@ -1057,6 +1060,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                         break;
 	            case RELATE_PREV:
                         new_ln = thread(locmem, RELATE_PREV);
+                        if (skip && new_ln == locmem->crs_ln) {
+                            default_ch = 0;
+                            return FULLUPDATE;
+                        }
 			break;
                     case RELATE_NEXT:
                         new_ln = thread(locmem, RELATE_NEXT);
@@ -1068,9 +1075,17 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		        break;
                     case RELATE_FIRST:
                         new_ln = thread(locmem, RELATE_FIRST);
+                        if (skip && new_ln == locmem->crs_ln) {
+                            default_ch = 0;
+                            return FULLUPDATE;
+                        }
 		        break;
                     case AUTHOR_PREV:
                         new_ln = thread(locmem, AUTHOR_PREV);
+                        if (skip && new_ln == locmem->crs_ln) {
+                            default_ch = 0;
+                            return FULLUPDATE;
+                        }
 		        break;
                     case AUTHOR_NEXT:
                         new_ln = thread(locmem, AUTHOR_NEXT);
