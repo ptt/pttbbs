@@ -36,4 +36,4 @@ install: $(PROGS)
 	@ln -sfv logind.$(DATETIME) $(BBSHOME)/bin/logind
 
 clean:
-	rm -f *~ ${PROGRAMS} logind.o loginc.o
+	rm -f *~ ${PROGRAMS} logind.o loginc.o convert.o
