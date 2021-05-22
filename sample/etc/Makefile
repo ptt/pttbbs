@@ -5,6 +5,7 @@ INSTALLTAG=$(TARGET).installed
 FILES=	Welcome		Welcome_login	\
 	Logout		goodbye		bad_host 	today_boring	\
 	register	registered	registermail	registeredmail 	\
+	reg.methods	reg.sms.notes \
 	feast		sysop		banip.conf	\
 	ve.hlp		board.help	boardlist.help	\
 	editable	expire2.conf	domain_name_query.cidr	\
