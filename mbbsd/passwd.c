@@ -563,8 +563,11 @@ int pwcuLoginSave	()
 int
 pwcuExitSave	()
 {
+    const time4_t reftime = time4(NULL);
+
     // determine dirty
     if (pwcu_dirty	||
+	cuser.lastlogin <= reftime - DAY_SECONDS ||
 	cuser.withme	!= currutmp->withme ||
 	cuser.pager	!= currutmp->pager  ||
 	cuser.invisible != currutmp->invisible)
@@ -575,6 +578,15 @@ pwcuExitSave	()
 
 	// XXX we may work harder to determine if this is a real
 	// dirty cache, however maybe it's not that important.
+
+	// Update login count if the online duration >= 1 day
+	// Check again in case u is more recent than cuser
+	if (u.lastlogin <= reftime - DAY_SECONDS)
+	{
+	    const int days = (reftime - u.lastlogin) / DAY_SECONDS;
+	    u.lastlogin += days * DAY_SECONDS;
+	    u.numlogindays += days;
+	}
 
 	// configure new utmp values
 	u.withme    = currutmp->withme;

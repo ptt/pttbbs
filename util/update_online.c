@@ -12,6 +12,7 @@ void fastcheck()
     userec_t urec;
     userinfo_t u;
     time4_t base;
+    int days;
 
     base = time4(0) - DAY_SECONDS;
 
@@ -47,15 +48,16 @@ void fastcheck()
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
-        if (urec.lastlogin >= base)
+        if (urec.lastlogin > base)
             continue;
 
         if (verbose)
             fprintf(stderr, "update: %s (%s, %d) ->", urec.userid,
                     Cdatelite(&urec.lastlogin), urec.numlogindays);
         /* user still online, let's mock it. */
-        urec.lastlogin = now;
-        urec.numlogindays++;
+        days = 1 + (base - urec.lastlogin) / DAY_SECONDS;
+        urec.lastlogin += days * DAY_SECONDS;
+        urec.numlogindays += days;
         if (verbose)
             fprintf(stderr, "(%s, %d).\n", Cdatelite(&urec.lastlogin), urec.numlogindays);
         passwd_update(last_uid, &urec);
@@ -74,7 +76,6 @@ int main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
             return -1;
         }
     }
-    now = time(NULL);
     chdir(BBSHOME);
 
     attach_SHM();
