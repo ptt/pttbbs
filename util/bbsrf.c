@@ -49,6 +49,17 @@ static int showbanfile(const char *filename)
     return fp ? 0 : -1;
 }
 
+static int checkload()
+{
+    if (cpuload(NULL) <= MAX_CPULOAD)
+	return 0;
+
+    fputs("系統過載, 請稍後再來\n", stdout);
+    sleep(10);
+
+    return 1;
+}
+
 int main(int argc, const char **argv)
 {
     int uid;
@@ -74,6 +85,10 @@ int main(int argc, const char **argv)
 
 
     if (!showbanfile(BAN_FILE)) {
+	return 1;
+    }
+
+    if (checkload()) {
 	return 1;
     }
 
