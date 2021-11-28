@@ -15,7 +15,8 @@ FROMD_LDFLAGS = -levent
 .if ${ENABLE_MAXMIND_DB} == "y"
 CFLAGS += -DFROMD_USE_MAXMIND_DB
 FROMD_LDFLAGS += -lmaxminddb
-.elif ${ENABLE_GEOIP_DB} == "y"
+.endif
+.if ${ENABLE_GEOIP_DB} == "y"
 CFLAGS += -DFROMD_USE_GEOIP_DB
 FROMD_LDFLAGS += -lGeoIP
 .endif
