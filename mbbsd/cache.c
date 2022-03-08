@@ -233,6 +233,12 @@ postperm_msg(const char *bname)
     assert(0<=i-1 && i-1<MAX_BOARD);
     bp = getbcache(i);
 
+#ifdef POST_COMMENT_WITH_TAIWAN_IP_ONLY
+    if (bp->brdattr & BRD_TAIWAN_IP_ONLY)
+        if (!is_taiwan_ip())
+            return "看板限定臺灣IP發/推文";
+#endif // POST_COMMENT_WITH_TAIWAN_IP_ONLY
+
     if (bp->brdattr & BRD_GUESTPOST)
         return NULL;
 

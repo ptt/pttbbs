@@ -101,6 +101,9 @@ void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 #ifdef USE_COOLDOWN
 int check_cooldown(boardheader_t *bp);
 #endif
+#ifdef POST_COMMENT_WITH_TAIWAN_IP_ONLY
+bool is_taiwan_ip();
+#endif
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;

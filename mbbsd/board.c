@@ -496,6 +496,13 @@ b_config(void)
 		(bp->brdattr & BRD_OVER18) ?
 		ANSI_COLOR(1) "禁止 " : "允許\ " );
 
+#ifdef POST_COMMENT_WITH_TAIWAN_IP_ONLY
+	prints( " " ANSI_COLOR(1;36) "t" ANSI_RESET
+		" - %s" ANSI_RESET "台灣IP發/推文\n",
+		(bp->brdattr & BRD_TAIWAN_IP_ONLY) ?
+		ANSI_COLOR(1) "限定 " : "不限定 " );
+#endif
+
 	if (!canpost)
 	    outs(ANSI_COLOR(1;31)"  ★ 您在此看板無發文或推文權限，"
 		"詳細原因請參考上面顯示為紅色或有 * 的項目。"ANSI_RESET"\n");
@@ -812,6 +819,13 @@ b_config(void)
 		    touched = 1;
 		}
 		break;
+
+#ifdef POST_COMMENT_WITH_TAIWAN_IP_ONLY
+		case 't':
+		bp->brdattr ^= BRD_TAIWAN_IP_ONLY;
+		touched = 1;
+		break;
+#endif // POST_COMMENT_WITH_TAIWAN_IP_ONLY
 
 	    case 'v':
 		clear();

@@ -433,6 +433,23 @@ int IsFreeBoardName(const char *brdname)
     return 0;
 }
 
+#ifdef POST_COMMENT_WITH_TAIWAN_IP_ONLY
+/*
+ * Check if user ip address is from Taiwan
+ *
+ * This function will compare from_cc string and "Taiwan" in Chinese (Big5)
+ * from_cc will generate when user login bbs system, and set from FROMD
+ *
+ * Return true when user is from Taiwan IP, false when outside Taiwan
+ */
+bool
+is_taiwan_ip()
+{
+    // TODO: move this string to string table, eg: common.h
+    return !strncmp("»OÆW", from_cc, sizeof(from_cc));
+}
+#endif
+
 int
 CheckModifyPerm(const char **preason)
 {
