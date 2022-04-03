@@ -1,12 +1,11 @@
 /* standalone uhash loader -- jochang */
 #include "bbs.h"
 #include "fnv_hash.h"
+#include "var.h"
 
 void userec_add_to_uhash(int n, userec_t *id, int onfly);
 void fill_uhash(int onfly);
 void load_uhash(void);
-
-SHM_t *SHM;
 
 int main()
 {
