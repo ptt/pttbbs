@@ -348,7 +348,7 @@ void SmsValidation::Run() {
       vmsg("系統錯誤，請至 " BN_BUGREPORT " 看板回報");
       return;
     }
-    if (vans("請問您接受使用條款嗎? (Y/n) ") != 'y') {
+    if (vans("請問您接受使用條款嗎? (y/N) ") != 'y') {
       vmsg("操作取消");
       return;
     }
