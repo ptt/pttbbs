@@ -244,6 +244,15 @@ pwcuSetEmail(const char *email)
 }
 
 int
+pwcuSetIsContactEmail(uint8_t is_contact_email)
+{
+    PWCU_START();
+    u.is_contact_email = 1;
+    cuser.is_contact_email = 1;
+    PWCU_END();
+}
+
+int
 pwcuRegCompleteJustify(const char *justify)
 {
     PWCU_START();

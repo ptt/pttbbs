@@ -1698,8 +1698,19 @@ u_register()
 void
 change_contact_email()
 {
+    char orig_email[EMAILSZ] = {};
     char email[EMAILSZ] = {};
+    char subject[IDLEN+STRLEN+1] = {};
+    memcpy(orig_email, cuser.email, sizeof(email));
     memcpy(email, cuser.email, sizeof(email));
+
+    if (!HasUserPerm(PERM_LOGINOK)) {
+      vmsg("尚未完成認證！");
+    }
+
+    if (cuser.is_contact_email && email_challenge(&cuser, " " BBSNAME " - 更改聯絡信箱認證碼 [ ", "etc/changecontactmail") != ERR_OK) {
+        return;
+    }
 
     email_input_t ein = {};
     ein.email = email;
@@ -1715,6 +1726,11 @@ change_contact_email()
 
     // Write.
     pwcuSetEmail(email);
+    pwcuSetIsContactEmail(1);
+
+    // notify-user
+    sprintf(subject, " " BBSNAME " - %s, 您的聯絡信箱已變更", cuser.userid);
+    bsmtp("etc/contactchanged", subject, orig_email, "non-exist");
 
     vmsg("聯絡信箱更新完成。");
 }

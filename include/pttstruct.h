@@ -52,7 +52,7 @@ typedef struct chicken_t { /* 128 bytes */
 #define REGLEN     38             /* Length of registration data */
 #define EMAILSZ    50             /* Size of email field */
 
-#define PASSWD_VERSION	4194
+#define PASSWD_VERSION	4195
 
 typedef struct userec_t {
     uint32_t	version;	/* version number of this sturcture, we
@@ -133,7 +133,9 @@ typedef struct userec_t {
     time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
     time4_t	timeviolatelaw;  /* 被開罰單時間 */
 
-    char	pad_tail[28];
+    uint8_t	is_contact_email; /* email 是否是聯絡信箱 */
+
+    char	pad_tail[27];
 } PACKSTRUCT userec_t;
 
 #ifndef NO_CONST_CUSER

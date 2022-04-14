@@ -318,5 +318,15 @@
 
 #define LOG_IF(x, y)    { if ((x)) { y; } else {} }
 
+/* ----------------------------------------------------- */
+/* Errors                                                */
+/* ----------------------------------------------------- */
+
+#define ERR_OK (0)                                      // error code as OK
+#define ERR_EMAIL_CHALLENGE_INPUT_USER_EMAIL (1)
+#define ERR_EMAIL_CHALLENGE_EMAIL_CODE_CHALLENGE (2)
+#define ERR_EMAIL_CHALLENGE_LOAD_USER_EMAIL (3)
+#define ERR_INVALID_PERM (4)
+
 
 #endif

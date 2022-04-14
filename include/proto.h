@@ -567,6 +567,9 @@ int delete_file_content2(const char *direct, const fileheader_t *fh,
 /* recover */
 void recover_account();
 
+/* email-challenge */
+int email_challenge(const userec_t *u, const char *email_prompt, const char *email_template_fpath);
+
 /* register */
 int u_register(void);
 int bad_user_id(const char *userid);
@@ -859,6 +862,7 @@ int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
 int pwcuSaveUserFlags	(void);
 int pwcuSetEmail        (const char *email);
+int pwcuSetIsContactEmail(uint8_t is_contact_email);
 int pwcuRegCompleteEmailJustify(const char *email, const char *justify);
 int pwcuRegCompleteJustify    (const char *justify);
 int pwcuRegSetTemporaryJustify(const char *justify, const char *email);
