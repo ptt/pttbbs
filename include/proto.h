@@ -576,6 +576,7 @@ int regform_estimate_queuesize();
 void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
+void check_contact_email();
 bool user_has_email(const userec_t *u);
 bool check_email_allow_reject_lists(
     char *email, const char **errmsg, const char **notice_file);
@@ -859,6 +860,7 @@ int pwcuChessResult	(int sigType, ChessGameResult);
 int pwcuSetChessEloRating(uint16_t elo_rating);
 int pwcuSaveUserFlags	(void);
 int pwcuSetEmail        (const char *email);
+int pwcuSetIsContactEmail(uint8_t is_contact_email);
 int pwcuRegCompleteEmailJustify(const char *email, const char *justify);
 int pwcuRegCompleteJustify    (const char *justify);
 int pwcuRegSetTemporaryJustify(const char *justify, const char *email);

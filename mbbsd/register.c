@@ -48,6 +48,7 @@ typedef struct {
 #define REGISTER_ERR_TOO_MANY_ACCOUNTS (-3)
 #define REGISTER_ERR_CANCEL (-4)
 #define REGISTER_ERR_AGAIN (-5)
+#define REGISTER_ERR_SAME_WITH_ORIG (-6)
 
 typedef struct email_input {
     const userec_t *u;
@@ -645,7 +646,7 @@ register_email_verification(email_input_t *ein)
     // Nothing changed.
     if (!strcmp(email, orig)) {
 	vmsg("E-Mail 與原本相同。");
-	return REGISTER_ERR_CANCEL;
+	return REGISTER_ERR_SAME_WITH_ORIG;
     }
 
     // Send and check regcode.
@@ -1696,25 +1697,60 @@ u_register()
 #ifdef USEREC_EMAIL_IS_CONTACT
 
 void
+check_contact_email()
+{
+    if (!HasUserPerm(PERM_LOGINOK)) {
+        return;
+    }
+    if (cuser.is_contact_email) {
+        return;
+    }
+
+    clear();
+    vs_hdr2(" 未設定聯絡信箱 ", " 您似乎尚未設定聯絡信箱");
+    move(9, 0);
+    outs("  您似乎尚未設定聯絡信箱，\n" ANSI_COLOR(1;33)
+         "  請至 (U) -> (I) ->(M) 設定聯絡信箱" ANSI_RESET "\n"
+         "  忘記密碼時可從聯絡信箱重新設定。\n\n");
+    outs("  如果您目前的信箱就是聯絡信箱，則可設定同一個信箱。\n");
+    pressanykey();
+}
+
+void
 change_contact_email()
 {
+    char orig_email[EMAILSZ] = {};
     char email[EMAILSZ] = {};
+    char subject[IDLEN+STRLEN+1] = {};
+    memcpy(orig_email, cuser.email, sizeof(email));
     memcpy(email, cuser.email, sizeof(email));
+
+    if (!HasUserPerm(PERM_LOGINOK)) {
+        vmsg("尚未完成認證！");
+        pressanykey();
+        return;
+    }
 
     email_input_t ein = {};
     ein.email = email;
     ein.allow_untrusted = true;
-    if (register_email_verification(&ein) != REGISTER_OK)
-	return;
+    int err = 0;
+    if ((err = register_email_verification(&ein)) != REGISTER_OK) {
+        if(err == REGISTER_ERR_SAME_WITH_ORIG && !cuser.is_contact_email) {
+            pwcuSetIsContactEmail(1);
+        }
+        return;
+    }
 
     // Log.
     char logfn[PATHLEN];
     setuserfile(logfn, FN_USERSECURITY);
     log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
-	      Cdatelite(&now), fromhost, cuser.email, email);
+              Cdatelite(&now), fromhost, cuser.email, email);
 
     // Write.
     pwcuSetEmail(email);
+    pwcuSetIsContactEmail(1);
 
     vmsg("聯絡信箱更新完成。");
 }
