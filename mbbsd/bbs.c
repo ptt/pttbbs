@@ -433,6 +433,38 @@ int IsFreeBoardName(const char *brdname)
     return 0;
 }
 
+/*
+ * Check if user phone number is verified by sms
+ *
+ * This function check if current user has already register their
+ * phone number with verifydb library.
+ * The verify process is modified from verifydb_check_vmethod_unused.
+ * It will pass cuser.userid and cuser.firstlogin as parameters and search
+ * for the VMETHOD_SMS record.
+ *
+ * Please note that, ptt system might have two different users with the same userid,
+ * but this won't happen at the same time. Therefore. we need to use firstlogin as the second
+ * parameter. And, ptt only accept phone registrations from Taiwan since July 2021
+ * so we can simply verify it in database.
+ *
+ * Return true when user has verified phone, false when no register record
+ */
+bool
+is_user_sms_verified()
+{
+    Bytes buf;
+    const VerifyDb::GetReply *reply;
+    if (!verifydb_getuser(cuser.userid, cuser.firstlogin, &buf, &reply)) {
+        // The verifydb may occur some problem, maybe we should log it and
+        // notify SYSOP?
+        return false;
+    }
+    if (verifydb_find_vmethod(reply, VMETHOD_SMS)) {
+        return true;
+    }
+    return false;
+}
+
 int
 CheckModifyPerm(const char **preason)
 {
