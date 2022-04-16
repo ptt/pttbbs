@@ -247,8 +247,8 @@ int
 pwcuSetIsContactEmail(uint8_t is_contact_email)
 {
     PWCU_START();
-    u.is_contact_email = 1;
-    cuser.is_contact_email = 1;
+    u.is_contact_email = is_contact_email;
+    cuser.is_contact_email = is_contact_email;
     PWCU_END();
 }
 

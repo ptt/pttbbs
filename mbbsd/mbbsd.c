@@ -1246,6 +1246,7 @@ user_login(void)
         check_bad_clients();
 #endif
 	check_register();
+        check_contact_email();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
 	restore_backup();

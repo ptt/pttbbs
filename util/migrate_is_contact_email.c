@@ -50,7 +50,7 @@ int migrate_is_contact_email(userec_t *rec)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     int i, fd, fdw;
     userec_t user;

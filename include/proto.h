@@ -579,6 +579,7 @@ int regform_estimate_queuesize();
 void ensure_user_agreement_version();
 void new_register(void);
 void check_register(void);
+void check_contact_email();
 bool user_has_email(const userec_t *u);
 bool check_email_allow_reject_lists(
     char *email, const char **errmsg, const char **notice_file);
