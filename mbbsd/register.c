@@ -5,6 +5,7 @@
 #define FN_REGISTER_LOG  "register.log"	// global registration history
 #define FN_REJECT_NOTIFY "justify.reject"
 #define FN_NOTIN_WHITELIST_NOTICE "etc/whitemail.notice"
+#define FN_NOTIN_CONTACT_WHITELIST_NOTICE "etc/contact_whitemail.notice"
 
 // Regform1 file name (deprecated)
 #define fn_register	"register.new"
@@ -69,6 +70,9 @@ register_count_email(const userec_t *u, const char *email);
 
 static int
 register_check_and_update_emaildb(const userec_t *u, const char *email);
+
+static bool
+check_email_allow_reject_lists_core(char *email, const char **errmsg, const char **notice_file, const char *white_email, const char *ban_email, const char *notice_filename);
 
 ////////////////////////////////////////////////////////////////////////////
 // Value Validation
@@ -1013,6 +1017,12 @@ user_has_email(const userec_t *u)
 bool
 check_email_allow_reject_lists(char *email, const char **errmsg, const char **notice_file)
 {
+    return check_email_allow_reject_lists_core(email, errmsg, notice_file, "etc/whitemail", "etc/banemail", FN_NOTIN_WHITELIST_NOTICE);
+}
+
+static bool
+check_email_allow_reject_lists_core(char *email, const char **errmsg, const char **notice_file, const char *white_email, const char *ban_email, const char *notice_filename)
+{
     FILE           *fp;
     char            buf[128], *c;
 
@@ -1030,7 +1040,7 @@ check_email_allow_reject_lists(char *email, const char **errmsg, const char **no
 
     // allow list
     bool allow = false;
-    if ((fp = fopen("etc/whitemail", "rt")))
+    if ((fp = fopen(white_email, "rt")))
     {
 	while (fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
@@ -1062,8 +1072,8 @@ check_email_allow_reject_lists(char *email, const char **errmsg, const char **no
 	fclose(fp);
 	if (!allow)
 	{
-	    if (notice_file && dashf(FN_NOTIN_WHITELIST_NOTICE))
-		*notice_file = FN_NOTIN_WHITELIST_NOTICE;
+	    if (notice_file && dashf(notice_filename))
+		*notice_file = notice_filename;
 	    if (errmsg)
 		*errmsg = "抱歉，目前不接受此 Email 的註冊申請。";
 	    return false;
@@ -1072,7 +1082,7 @@ check_email_allow_reject_lists(char *email, const char **errmsg, const char **no
 
     // reject list
     allow = true;
-    if ((fp = fopen("etc/banemail", "r"))) {
+    if ((fp = fopen(ban_email, "r"))) {
 	while (allow && fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
 		continue;
@@ -1695,6 +1705,43 @@ u_register()
 
 #ifdef USEREC_EMAIL_IS_CONTACT
 
+bool
+check_contact_email_allow_reject_lists(char *email, const char **errmsg, const char **notice_file)
+{
+    return check_email_allow_reject_lists_core(email, errmsg, notice_file, "etc/contact_whitemail", "etc/contact_banemail", FN_NOTIN_CONTACT_WHITELIST_NOTICE);
+}
+
+static bool
+check_contact_email_input(email_input_t *ein)
+{
+    char *email = ein->email;
+
+    if (!normalize_email(email)) {
+        vmsg("E-Mail 的格式不正確。");
+        return false;
+    }
+
+    const char *errmsg, *notice_file;
+    ein->is_trusted = check_contact_email_allow_reject_lists(email, &errmsg, &notice_file);
+    if (ein->is_trusted) {
+        return true;
+    }
+
+    // Show whitemail notice if it exists.
+    if (notice_file) {
+        VREFSCR scr = vscr_save();
+        more(notice_file, NA);
+        pressanykey();
+        vscr_restore(scr);
+    } else if (errmsg) {
+        vmsg(errmsg);
+    } else {
+        // Catch-all message.
+        vmsg("無法使用此 Email。");
+    }
+    return false;
+}
+
 void
 change_contact_email()
 {
@@ -1704,8 +1751,13 @@ change_contact_email()
     email_input_t ein = {};
     ein.email = email;
     ein.allow_untrusted = true;
-    if (register_email_verification(&ein) != REGISTER_OK)
+    if (register_email_verification(&ein) != REGISTER_OK) {
 	return;
+    }
+
+    if (!check_contact_email_input(&ein)) {
+        return;
+    }
 
     // Log.
     char logfn[PATHLEN];

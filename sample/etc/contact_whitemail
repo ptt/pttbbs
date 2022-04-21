@@ -1,0 +1,10 @@
+# using same syntax as banemail, and
+# extended with the D syntax:
+# Dstr matches *.str and *@str
+# % allows all.
+#
+Dedu.tw
+#
+# 底下這行如果沒註解(寫 %)表示全開放！
+# using % to allow all.
+%

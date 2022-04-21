@@ -1,0 +1,22 @@
+# 用來設定哪些信箱不接受
+# 開頭 A表示全部 match的時候就不接受 (ex: 不歡迎的使用者)
+# 開頭 P表示 match這個部份就不接受
+# 開頭 S表示不接受這台 server
+#--
+# 不接受打 ip 的mail server
+P@[
+Purl.com.tw
+P.bbs@
+Skkcity.com.tw
+Syahoo.com
+Syahoo.com.tw
+Syahoo.com.hk
+Skimo.com.tw
+Skimo.com
+Ssinamail.com
+Spchome.com.tw
+Shotmail.com
+Smsn.com
+Syam.com
+Syammail.com
+Smail.taipeilink.net
