@@ -1052,6 +1052,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    log_filef(logfn, LOG_CREAT, "%s %s (Passwd)\n",
 		      Cdatelite(&now), adminmode ? "[Admin]" : fromhost);
 	}
+        // passwd notify me.
+        {
+            passwd_notify_me();
+        }
 	break;
 
     case '3':

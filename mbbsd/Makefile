@@ -79,7 +79,7 @@ OBJS+=		screen.o
 .if $(USE_MBBSD_CXX)
 CXXFLAGS+=	-std=c++17 -I$(SRCROOT)/common/fbs
 LDLIBS+=	-lstdc++
-OBJS+=		recover.o register_sms.o \
+OBJS+=		recover.o passwd_notify.o register_sms.o \
 		verifydb.o verifydb_info.o verifydb_search.o
 .endif
 

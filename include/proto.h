@@ -567,6 +567,9 @@ int delete_file_content2(const char *direct, const fileheader_t *fh,
 /* recover */
 void recover_account();
 
+/* passwd_notify */
+void passwd_notify_me();
+
 /* register */
 int u_register(void);
 int bad_user_id(const char *userid);

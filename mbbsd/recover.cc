@@ -15,6 +15,8 @@ extern "C" {
 #include "verifydb.h"
 #include "verifydb.fbs.h"
 
+#include "passwd_notify.hpp"
+
 namespace {
 
 constexpr int kMaxErrCnt = 3;
@@ -46,7 +48,6 @@ private:
                                const std::string &code);
   static bool SetPasswd(const UserHandle &user, const char *hashed_passwd);
   static void LogToSecurity(const UserHandle &user, const std::string &email);
-  static void NotifyUser(const std::string &userid, const std::string &email);
   static std::string GenCode(size_t len);
   static void UserErrorExit();
 };
@@ -155,16 +156,6 @@ void AccountRecovery::LogToSecurity(const UserHandle &user,
   msg.append("\n");
 
   post_msg(BN_SECURITY, title.c_str(), msg.c_str(), "[系統安全局]");
-}
-
-// static
-void AccountRecovery::NotifyUser(const std::string &userid,
-                                 const std::string &email) {
-  std::string subject;
-  subject.append(" " BBSNAME " - ");
-  subject.append(userid);
-  subject.append(", 您的密碼已更變");
-  bsmtp("etc/passwdchanged", subject.c_str(), email.c_str(), "non-exist");
 }
 
 // static
@@ -315,8 +306,9 @@ void AccountRecovery::ResetPasswd() {
   }
 
   LogToSecurity(user_.value(), email_);
+  std::string fromhost_str = std::string(fromhost);
   for (const auto &email : all_emails_) {
-    NotifyUser(user_->userid, email);
+    passwdnotify::NotifyUser(user_->userid, fromhost_str, email);
   }
 
   // Log to user security.
