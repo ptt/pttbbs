@@ -581,7 +581,11 @@ bool user_has_email(const userec_t *u);
 bool check_email_allow_reject_lists(
     char *email, const char **errmsg, const char **notice_file);
 void register_mail_complete_and_exit();
+
+#ifdef USEREC_EMAIL_IS_CONTACT
+void check_contact_email();
 void change_contact_email();
+#endif // USEREC_EMAIL_IS_CONTACT
 
 /* register_sms */
 void u_sms_verification();
