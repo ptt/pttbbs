@@ -673,7 +673,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     ans = vans(adminmode ?
+#ifdef USEREC_EMAIL_IS_CONTACT
+    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(M)信箱(V)認證 " :
+#else
     "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(V)認證 [0]結束 " :
+#endif
 #ifdef USEREC_EMAIL_IS_CONTACT
     "請選擇 (1)修改資料 (2)設定密碼 (M)聯絡信箱 (V)認證資料 [0]結束 ");
 #else
@@ -709,9 +713,60 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     switch (ans) {
 #ifdef USEREC_EMAIL_IS_CONTACT
     case 'm':
-	if (!adminmode)
+	if (!adminmode) {
 	    change_contact_email();
-	return;
+	    return;
+	} else {
+	    char email[EMAILSZ];
+
+	    move(y+1, 0);
+	    outs("請注意在此修改聯絡信箱將跳過黑白名單檢查。");
+
+	    if (!getdata_str(y++, 0, "請修改聯絡信箱： ", email, sizeof(email),
+			     DOECHO, x.email))
+		return;
+
+	    // Nothing changed.
+	    if (!strcmp(email, x.email)) {
+		vmsg("E-Mail 與原本相同。");
+		fail++;
+		break;
+	    }
+
+	    char reason[30];
+	    while (!getdata(y++, 0, "請輸入理由以示負責：",
+			    reason, sizeof(reason), DOECHO));
+
+	    if (vans(msg_sure_ny) != 'y') {
+		fail++;
+		break;
+	    }
+
+	    pre_confirmed = 1;
+
+	    // Log change for security reasons.
+	    char title[TTLEN], buf[STRLEN + EMAILSZ*2 + sizeof(reason)];
+	    snprintf(title, sizeof(title), "%s 的聯絡信箱變更通知 (by %s)",
+		     orig_uid, cuser.userid);
+	    snprintf(buf, sizeof(buf), "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
+		     cuser.userid, orig_uid, x.email, email, reason);
+	    post_msg(BN_SECURITY, title, buf, "[系統安全局]");
+
+	    // Notify user
+	    strlcpy(title, "聯絡信箱變更通知", sizeof(title));
+	    snprintf(buf, sizeof(buf), "您的聯絡信箱已變更為 %s\n", email);
+	    mail_log2id_text(orig_uid, title, buf, cuser.userid, 1);
+
+	    // Log to user log.
+	    char logfn[PATHLEN];
+	    sethomefile(logfn, x.userid, FN_USERSECURITY);
+	    log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
+		      Cdatelite(&now), "[Admin]", x.email, email);
+
+	    strlcpy(x.email, email, sizeof(x.email));
+	}
+
+	break;
 #endif
 
     case '1':
