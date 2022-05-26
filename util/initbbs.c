@@ -104,12 +104,19 @@ static void initBoards() {
     
     if(fp) {
 	memset(&b, 0, sizeof(b));
-	
+
+	strcpy(b.brdname, "0ClassRoot");
+	strcpy(b.title, ".... Σ分組討論區");
+	b.brdattr = BRD_GROUPBOARD;
+	b.level = PERM_SYSOP;
+	b.gid = 3;
+	newboard(fp, &b);
+
 	strcpy(b.brdname, "SYSOP");
 	strcpy(b.title, "嘰哩 ◎站長好!");
 	b.brdattr = BRD_POSTMASK;
 	b.level = 0;
-	b.gid = 2;
+	b.gid = 3;
 	newboard(fp, &b);
 
 	strcpy(b.brdname, "1...........");
@@ -123,14 +130,14 @@ static void initBoards() {
 	strcpy(b.title, "發電 ◎雜七雜八的垃圾");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
-	b.gid = 2;
+	b.gid = 3;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Security");
 	strcpy(b.title, "發電 ◎站內系統安全");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
-	b.gid = 2;
+	b.gid = 3;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "2...........");
@@ -144,28 +151,28 @@ static void initBoards() {
 	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "deleted");
 	strcpy(b.title, "嘰哩 ◎資源回收筒");
 	b.brdattr = 0;
 	b.level = PERM_BM;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Note");
 	strcpy(b.title, "嘰哩 ◎動態看板及歌曲投稿");
 	b.brdattr = 0;
 	b.level = 0;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "Record");
 	strcpy(b.title, "嘰哩 ◎我們的成果");
 	b.brdattr = 0 | BRD_POSTMASK;
 	b.level = 0;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 	
@@ -173,21 +180,21 @@ static void initBoards() {
 	strcpy(b.title, "嘰哩 ◎呵呵，猜猜我是誰！");
 	b.brdattr = 0;
 	b.level = 0;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 	strcpy(b.brdname, "EditExp");
 	strcpy(b.title, "嘰哩 ◎範本精靈投稿區");
 	b.brdattr = 0;
 	b.level = 0;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 
 	strcpy(b.brdname, "ALLHIDPOST");
 	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章(隱板)");
 	b.brdattr = BRD_POSTMASK | BRD_HIDE;
 	b.level = PERM_SYSOP;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 	
 #ifdef BN_FIVECHESS_LOG
@@ -195,7 +202,7 @@ static void initBoards() {
 	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
-	b.gid = 5;
+	b.gid = 6;
 	newboard(fp, &b);
 #endif
 
