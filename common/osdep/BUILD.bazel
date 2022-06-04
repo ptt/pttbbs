@@ -1,0 +1,27 @@
+load("//:build_tools/vars.bzl", "PTT_WARN")
+
+SRCS = [
+    "cpuload.c",
+    "proctitle.c",
+    "strlcat.c",
+    "strlcpy.c",
+    "memusage.c",
+]
+
+cc_library(
+    name = "commonosdep",
+    srcs = SRCS,
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-Ibazel-out/k8-fastbuild/bin/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)

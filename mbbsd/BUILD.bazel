@@ -1,0 +1,206 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+COREOBJS = [
+    "bbs.c",
+    "announce.c",
+    "read.c",
+    "board.c",
+    "brc.c",
+    "mail.c",
+    "record.c",
+    "fav.c",
+]
+
+ABUSEOBJS = [
+    "captcha.c",
+]
+
+ACCOBJS = [
+    "user.c",
+    "acl.c",
+    "register.c",
+    "passwd.c",
+    "emaildb.c",
+]
+
+NETOBJS = [
+    "mbbsd.c",
+    "io.c",
+    "term.c",
+    "telnet.c",
+    "nios.c",
+]
+
+TALKOBJS = [
+    "friend.c",
+    "talk.c",
+    "ccw.c",
+]
+
+UTILOBJS = [
+    "stuff.c",
+    "kaede.c",
+    "convert.c",
+    "name.c",
+    "syspost.c",
+    "cache.c",
+    "cal.c",
+]
+
+UIOBJS = [
+    "menu.c",
+    "vtuikit.c",
+    "psb.c",
+]
+
+PAGEROBJS = [
+    "more.c",
+    "pmore.c",
+]
+
+PLUGOBJS = [
+    "ordersong.c",
+    "angel.c",
+    "timecap.c",
+]
+
+CHESSOBJS = [
+    "chess.c",
+    "chc.c",
+    "chc_tab.c",
+    "ch_go.c",
+    "ch_gomo.c",
+    "ch_dark.c",
+    "ch_reversi.c",
+    "ch_conn6.c",
+]
+
+GAMEOBJS = [
+    "chicken.c",
+    "gamble.c",
+]
+
+MISCOBJS = [
+    "admin.c",
+    "assess.c",
+    "edit.c",
+    "xyz.c",
+    "var.c",
+    "vote.c",
+    "voteboard.c",
+    "comments.c",
+]
+
+BBSLUAOBJS = [
+    "bbslua.c",
+    "bbsluaext.c",
+]
+
+SCREENOBJS = [
+    "screen.c",
+]
+
+MBBSD_CXX_OBJS = [
+    "recover.cc",
+    "register_sms.cc",
+    "verifydb.cc",
+    "verifydb_info.cc",
+    "verifydb_search.cc",
+]
+
+ALL_SRCS = MISCOBJS + COREOBJS + ABUSEOBJS + \
+    ACCOBJS + NETOBJS + TALKOBJS + UTILOBJS + \
+    UIOBJS + PAGEROBJS + PLUGOBJS + CHESSOBJS + \
+    GAMEOBJS + BBSLUAOBJS + SCREENOBJS
+
+cc_binary(
+    name = "mbbsd",
+    srcs = ALL_SRCS + ["//mbbsd:genversc"],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-pipe",
+        "-Iinclude",
+        "-Ibazel-out/k8-fastbuild/bin/include",
+        "-Ibazel-out/k8-fastbuild/bin/common/fbs",
+        LUACFLAGS,
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    linkopts = [
+        "-Os",
+        "-Wl,--as-needed",
+        "-Wl,--sort-common",
+
+        "-Lbazel-out/k8-fastbuild/bin/common/bbs/_objs/commonbbs",
+        "-Lbazel-out/k8-fastbuild/bin/common/sys/_objs/commonsys",
+        "-Lbazel-out/k8-fastbuild/bin/common/osdep/_objs/commonosdep",
+        "-Lbazel-out/k8-fastbuild/bin/testutil/_objs/testutil",
+
+        LUALIBS,
+
+        "-lstdc++",
+        "-lncurses",
+    ],
+    data = [
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/fbs:verifydbfbs",
+        "//common/fbs:registersmsfbs",
+        "//common/osdep:commonosdep",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+
+        "//mbbsd:mbbsdcxx",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+cc_library(
+    name = "mbbsdcxx",
+    srcs = MBBSD_CXX_OBJS,
+    copts = PTT_WARN + [
+        "-pipe",
+        "-std=c++17",
+        "-Iinclude",
+        "-Ibazel-out/k8-fastbuild/bin/include",
+        "-Ibazel-out/k8-fastbuild/bin/common/fbs",
+        "-Wno-invalid-source-encoding",
+    ],
+    linkstatic = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/fbs:verifydbfbs",
+        "//common/fbs:registersmsfbs",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+# used for //include:genvarh"
+filegroup(
+    name = "varc",
+    srcs = glob(["var.c"]),
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "genversc",
+    srcs = [],
+    outs = ["vers.c"],
+    cmd = "echo \"\"; echo \"versc@: $@\"; echo \"pwd: `pwd`\"; mkdir -p mbbsd; cd mbbsd; sh ../$(location //util:newvers); cd ..; cp mbbsd/vers.c $@",
+    visibility = ["//visibility:public"],
+    tools = [
+        "//util:newvers"
+    ],
+)

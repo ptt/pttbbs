@@ -1,0 +1,52 @@
+load("//:build_tools/vars.bzl", "PTT_WARN")
+
+SRCS = [
+    "daemon.c",
+    "file.c",
+    "lock.c",
+    "log.c",
+    "net.c",
+    "sort.c",
+    "string.c",
+    "time.c",
+
+    "crypt.c",
+    "record.c",
+    "vector.c",
+    "telnet.c",
+    "vbuf.c",
+    "vtkbd.c",
+    "utf8.c",
+    "//common/sys:genbig5c",
+    "buffer.c",
+    "thttp.c",
+]
+
+cc_library(
+    name = "commonsys",
+    srcs = SRCS,
+    linkstatic = True,
+    copts = [
+        "-Iinclude",
+        "-Ibazel-out/k8-fastbuild/bin/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+genrule(
+    name = "genbig5c",
+    srcs = ["big5_gen.py", "big5data.tar.bz2"],
+    outs = ["big5.c"],
+    cmd = "echo \"\"; echo \"big5_c@: $@\"; cd common/sys; echo \"pwd: `pwd`\"; ./big5_gen.py > \"../../$@\"; cd ../../",
+    visibility = ["//visibility:public"],
+    tools = [
+        "//util:parsevar"
+    ],
+)

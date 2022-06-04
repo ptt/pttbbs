@@ -1,0 +1,25 @@
+load("//:build_tools/func.bzl", "cc_flatbuffers_compile")
+
+cc_flatbuffers_compile(
+    name = "verifydbfbs",
+    src = "verifydb.fbs",
+    out = "verifydb.fbs.h",
+    visibility = ["//visibility:public"],
+)
+
+cc_flatbuffers_compile(
+    name = "registersmsfbs",
+    src = "register_sms.fbs",
+    out = "register_sms.fbs.h",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "fbs",
+    srcs = [],
+    deps = [
+        "verifydbfbs",
+        "registersmsfbs",
+    ],
+    visibility = ["//visibility:public"],
+)
