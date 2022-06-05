@@ -421,6 +421,7 @@ void talk_request(int sig);
 int establish_talk_connection(const userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
 int query_file_money(const fileheader_t *pfh);
+int main_core(int argc, char *argv[], char *envp[]);
 int mbbsd_is_secure_connection();
 
 /* menu */

@@ -19,10 +19,11 @@ PAGEROBJS= more.o pmore.o
 PLUGOBJS = ordersong.o angel.o timecap.o
 CHESSOBJS= chess.o chc.o chc_tab.o ch_go.o ch_gomo.o ch_dark.o ch_reversi.o ch_conn6.o
 GAMEOBJS = chicken.o gamble.o
+MAINOBJ = main.o
 OBJS:=	admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o comments.o \
 	$(COREOBJS) $(ABUSEOBJS) $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
 	$(UIOBJS) $(PAGEROBJS) $(PLUGOBJS) \
-	$(CHESSOBJS) $(GAMEOBJS)
+	$(CHESSOBJS) $(GAMEOBJS) $(MAINOBJ)
 
 #######################################################################
 # special library (DIET) configuration

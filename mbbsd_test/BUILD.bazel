@@ -1,0 +1,49 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+cc_test(
+    name = "fav_test",
+    size = "small",
+    srcs = [
+        "fav_test.cc",
+    ],
+    tags = [
+        "exclusive",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    data = [
+        "//testcase:testcase",
+    ],
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+        "-I$(BINDIR)/common/fbs",
+        LUACFLAGS,
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+
+        "-Itestutil",
+    ],
+    linkopts = [
+        "-Os",
+        "-Wl,--as-needed",
+        "-Wl,--sort-common",
+
+        LUALIBS,
+
+        "-lstdc++",
+        "-lncurses",
+    ],
+    deps = [
+        "//testutil:testutil",
+        "//mbbsd:mbbsdlib",
+        "//mbbsd:mbbsdcxx",
+        "@com_google_googletest//:gtest_main",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)

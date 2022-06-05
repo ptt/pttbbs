@@ -1,0 +1,35 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+SRCS = [
+    "load_uhash.c",
+    "setup_root_link.c",
+]
+
+cc_library(
+    name = "testutil",
+    srcs = SRCS,
+    hdrs = [
+        "testutil.h",
+        "mbbsd_s.c",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)

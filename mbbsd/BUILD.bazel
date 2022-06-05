@@ -115,7 +115,7 @@ ALL_SRCS = MISCOBJS + COREOBJS + ABUSEOBJS + \
 
 cc_binary(
     name = "mbbsd",
-    srcs = ALL_SRCS + ["//mbbsd:genversc"],
+    srcs = ["main.c"],
     visibility = ["//visibility:public"],
     linkstatic = True,
     copts = PTT_WARN + [
@@ -141,6 +141,40 @@ cc_binary(
         "-lncurses",
     ],
     data = [
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/fbs:verifydbfbs",
+        "//common/fbs:registersmsfbs",
+        "//common/osdep:commonosdep",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+
+        "//mbbsd:mbbsdlib",
+        "//mbbsd:mbbsdcxx",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+cc_library(
+    name = "mbbsdlib",
+    srcs = ALL_SRCS + ["//mbbsd:genversc"],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-pipe",
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+        "-I$(BINDIR)/common/fbs",
+        LUACFLAGS,
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
     ],
     deps = [
         "//include:all",
