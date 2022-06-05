@@ -28,7 +28,7 @@ cc_library(
     linkstatic = True,
     copts = [
         "-Iinclude",
-        "-Ibazel-out/k8-fastbuild/bin/include",
+        "-I$(BINDIR)/include",
     ],
     visibility = ["//visibility:public"],
     deps = [

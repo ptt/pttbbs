@@ -2,6 +2,8 @@ BAZEL?=	bazelisk
 
 .include "pttbbs.mk"
 
+MACHINETYPE!=	uname -m
+
 # overwrite and remove ccache in CC and CXX
 # https://github.com/bazelbuild/bazel/issues/12124
 CC:= gcc
@@ -14,6 +16,12 @@ CLANG:=
 .elif $(CLANG)
 CC:=		clang
 CXX:=		clang++
+.endif
+
+.if ${MACHINETYPE} == "aarch64" || ${MACHINETYPE} == "arm64"
+ARCH="arm64"
+.else
+ARCH="amd64"
 .endif
 
 #######################################################################
@@ -41,7 +49,7 @@ bbsuser:
 pre-bazel:
 	apt update && \
 	apt install -y wget bmake gcc g++ clang ccache libc6-dev libevent-dev pkg-config gnupg libflatbuffers-dev flatbuffers-compiler-dev liblua5.1-0-dev python && \
-	wget https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 -O /usr/local/bin/bazelisk && \
+	wget https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-$(ARCH) -O /usr/local/bin/bazelisk && \
 	chmod 755 /usr/local/bin/bazelisk && \
 	bazelisk info
 

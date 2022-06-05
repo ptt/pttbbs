@@ -121,8 +121,8 @@ cc_binary(
     copts = PTT_WARN + [
         "-pipe",
         "-Iinclude",
-        "-Ibazel-out/k8-fastbuild/bin/include",
-        "-Ibazel-out/k8-fastbuild/bin/common/fbs",
+        "-I$(BINDIR)/include",
+        "-I$(BINDIR)/common/fbs",
         LUACFLAGS,
 
         # "-Qunused-arguments",
@@ -134,11 +134,6 @@ cc_binary(
         "-Os",
         "-Wl,--as-needed",
         "-Wl,--sort-common",
-
-        "-Lbazel-out/k8-fastbuild/bin/common/bbs/_objs/commonbbs",
-        "-Lbazel-out/k8-fastbuild/bin/common/sys/_objs/commonsys",
-        "-Lbazel-out/k8-fastbuild/bin/common/osdep/_objs/commonosdep",
-        "-Lbazel-out/k8-fastbuild/bin/testutil/_objs/testutil",
 
         LUALIBS,
 
@@ -170,8 +165,8 @@ cc_library(
         "-pipe",
         "-std=c++17",
         "-Iinclude",
-        "-Ibazel-out/k8-fastbuild/bin/include",
-        "-Ibazel-out/k8-fastbuild/bin/common/fbs",
+        "-I$(BINDIR)/include",
+        "-I$(BINDIR)/common/fbs",
         "-Wno-invalid-source-encoding",
     ],
     linkstatic = True,
@@ -181,6 +176,7 @@ cc_library(
         "//:pttbbsconf",
         "//common/fbs:verifydbfbs",
         "//common/fbs:registersmsfbs",
+        "//common/sys:commonsys",
     ],
     defines = [
         "BBSHOME='\"$(BBSHOME)\"'",
