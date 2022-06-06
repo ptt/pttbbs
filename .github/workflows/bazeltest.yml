@@ -23,3 +23,7 @@ jobs:
       run: cp sample/pttbbs_test.conf pttbbs.conf
     - name: bazeltest
       run: sudo pmake bazeltest
+    - name: bazelbuild
+      run: sudo mkdir -p /home/bbs && sudo BBSHOME=/home/bbs pmake bazelbuild
+    - name: pmake
+      run: sudo mkdir -p /home/bbs && sudo BBSHOME=/home/bbs pmake clean all
