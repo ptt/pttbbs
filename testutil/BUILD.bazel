@@ -10,6 +10,38 @@ cc_library(
     srcs = SRCS,
     hdrs = [
         "testutil.h",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+MOCK_SRCS = [
+    "mock_io.c",
+]
+
+cc_library(
+    name = "testmock",
+    srcs = MOCK_SRCS,
+    hdrs = [
+        "testmock.h",
         "mbbsd_s.c",
     ],
     visibility = ["//visibility:public"],

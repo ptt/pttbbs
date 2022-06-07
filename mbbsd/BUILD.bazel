@@ -31,6 +31,8 @@ NETOBJS = [
     "nios.c",
 ]
 
+MOCK_NETOBJS = [each for each in NETOBJS if each not in ["io.c"]]
+
 TALKOBJS = [
     "friend.c",
     "talk.c",
@@ -113,6 +115,11 @@ ALL_SRCS = MISCOBJS + COREOBJS + ABUSEOBJS + \
     UIOBJS + PAGEROBJS + PLUGOBJS + CHESSOBJS + \
     GAMEOBJS + BBSLUAOBJS + SCREENOBJS
 
+MOCK_ALL_SRCS = MISCOBJS + COREOBJS + ABUSEOBJS + \
+    ACCOBJS + MOCK_NETOBJS + TALKOBJS + UTILOBJS + \
+    UIOBJS + PAGEROBJS + PLUGOBJS + CHESSOBJS + \
+    GAMEOBJS + BBSLUAOBJS + SCREENOBJS
+
 cc_binary(
     name = "mbbsd",
     srcs = ["main.c"],
@@ -186,6 +193,41 @@ cc_library(
         "//common/bbs:commonbbs",
 
         "//mbbsd:mbbsdcxx",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+cc_library(
+    name = "mockmbbsdlib",
+    srcs = MOCK_ALL_SRCS + ["//mbbsd:genversc"],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-pipe",
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+        "-I$(BINDIR)/common/fbs",
+        LUACFLAGS,
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/fbs:verifydbfbs",
+        "//common/fbs:registersmsfbs",
+        "//common/osdep:commonosdep",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+
+        "//mbbsd:mbbsdcxx",
+
+        "//testutil:testmock",
     ],
     defines = [
         "BBSHOME='\"$(BBSHOME)\"'",

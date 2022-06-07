@@ -20,8 +20,11 @@
 // #define DBG_OUTRPT
 #endif
 
-static VBUF vout, *pvout = &vout;
-static VBUF vin, *pvin = &vin;
+VBUF vout = {}, *pvout = &vout;
+VBUF vin = {}, *pvin = &vin;
+
+unsigned char OFLUSH_BUF[OBUFSIZE*5] = {};
+unsigned char *pOFLUSH_BUF = OFLUSH_BUF;
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
@@ -96,12 +99,60 @@ init_io() {
 /* ----------------------------------------------------- */
 /* output routines                                       */
 /* ----------------------------------------------------- */
+
+void reset_oflush_buf() {
+  bzero(OFLUSH_BUF, sizeof(OFLUSH_BUF));
+  pOFLUSH_BUF = OFLUSH_BUF;
+}
+
+void log_oflush_buf() {
+  size_t len_buf = pOFLUSH_BUF - OFLUSH_BUF;
+  fprintf(stderr, "[mock_io.log_oflush_buf] buf-len: %lu\n", len_buf);
+  if(len_buf == 0) {
+    return;
+  }
+  for(unsigned long i = 0; i < len_buf; i++) {
+    if(i && i % 10 == 0) {
+      fprintf(stderr, "\n");
+    }
+    fprintf(stderr, " %02X", OFLUSH_BUF[i]);
+  }
+  fprintf(stderr, "\n");
+  fprintf(stderr, "|%s|\n", OFLUSH_BUF);
+}
+
 void
 oflush(void)
 {
+  unsigned char *OFLUSH_BUF_END = OFLUSH_BUF + sizeof(OFLUSH_BUF);
+  size_t lenbuf = OFLUSH_BUF_END - pOFLUSH_BUF;
+  size_t lenpv = vbuf_size(pvout);
+
+  fprintf(stderr, "[mock_io.oflush] start\n");
+
+  assert(pOFLUSH_BUF < OFLUSH_BUF_END);
+
+  if(lenbuf < lenpv) {
+    fprintf(stderr, "[mock_io.oflush] OFLUSH_BUF < pvout! lenbuf: %lu len_pvout: %lu\n", lenbuf, lenpv);
+    return;
+  }
+
   if (!vbuf_is_empty(pvout)) {
     STATINC(STAT_SYSWRITESOCKET);
-    vbuf_write(pvout, 1, VBUF_RWSZ_ALL);
+    if(pvout->tail > pvout->head) {
+      memcpy(pOFLUSH_BUF, pvout->head, lenpv);
+      pOFLUSH_BUF += pvout->tail - pvout->head;
+    } else if(pvout->tail < pvout->head) {
+      size_t len_end_head = pvout->buf_end - pvout->head;
+      memcpy(pOFLUSH_BUF, pvout->head, len_end_head);
+      pOFLUSH_BUF += len_end_head;
+      size_t len_tail_buf = pvout->tail - pvout->buf;
+      memcpy(pOFLUSH_BUF, pvout->buf, len_tail_buf);
+      pOFLUSH_BUF += len_tail_buf;
+    }
+
+    pvout->head = pvout->tail;
+    // vbuf_write(pvout, 1, VBUF_RWSZ_ALL);
   }
 
 #ifdef DBG_OUTRPT
@@ -358,6 +409,25 @@ drop_input(void)
   vbuf_clear(pvin);
 }
 
+ssize_t put_vin(unsigned char *buf, ssize_t len) {
+  fprintf(stderr, "[mock_io.put_vin] start: buf: len: %lu\n", len);
+  for(int i = 0; i < len; i++) {
+    if(i && i % 10 == 0) {
+      fprintf(stderr, "\n");
+    }
+    fprintf(stderr, " %02X", buf[i]);
+  }
+  fprintf(stderr, "\n");
+
+#ifdef CONVERT
+  len = convert_read(pvin, buf, len);
+#else
+  len = vbuf_putblk(pvin, buf, len);
+#endif
+  fprintf(stderr, "[mock_io.put_vin] to return: buf: len (ret): %lu\n", len);
+  return len;
+}
+
 /* returns:
  * >0 if read something
  * =0 if nothing read
@@ -365,45 +435,8 @@ drop_input(void)
  */
 static inline ssize_t
 read_vin() {
-  // Note: buf should be larger than pvin buffer size.
-  unsigned char buf[IBUFSIZE];
-  /* tty_read will handle abort_bbs.
-   * len <= 0: read more */
-  ssize_t len;
-  assert(sizeof(buf) >= vbuf_space(pvin));
-  len = tty_read(buf, vbuf_space(pvin));
-  if (len <= 0)
-    return len;
-
-  // apply additional converts
-#ifdef DBCSAWARE
-  if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
-    len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
-  if (len <= 0)
-    return len;
-#endif
-
-#ifdef DBG_OUTRPT
-#if 1
-  if (len > 0)
-    debug_print_input_buffer(buf, len);
-#else
-  {
-    static char xbuf[128];
-    sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] "
-            ESC_STR "[u", len);
-    write(1, xbuf, strlen(xbuf));
-  }
-#endif
-#endif // DBG_OUTRPT
-
-  // len = 1 if success
-#ifdef CONVERT
-  len = convert_read(pvin, buf, len);
-#else
-  len = vbuf_putblk(pvin, buf, len);
-#endif
-  return len;
+  assert(!"[mock_io.read_vin] SHOULD NOT BE HERE!\n");
+  return 0;
 }
 
 /*
@@ -417,6 +450,9 @@ dogetch(void)
 {
   ssize_t         len;
   static time4_t  lastact;
+
+  size_t buf_size = vbuf_size(pvin);
+  fprintf(stderr, "[mock_io.dogetch] start: buf_size: %zu\n", buf_size);
 
   while (vbuf_is_empty(pvin)) {
     refresh();
@@ -459,7 +495,7 @@ dogetch(void)
 #ifdef NOKILLWATERBALL
     if( currutmp && currutmp->msgcount && !reentrant_write_request )
       write_request(1);
-#endif
+#endif // NOKILLWATERBALL
 
     STATINC(STAT_SYSREADSOCKET);
 
@@ -517,17 +553,21 @@ igetch(void)
     {
       case KEY_INCOMPLETE:
         // XXX what if endless?
+        fprintf(stderr, "[mock_io.igetch]: KEY_INCOMPLETE\n");
         continue;
 
       case KEY_ESC:
         KEY_ESC_arg = vtkbd_ctx.esc_arg;
+        fprintf(stderr, "[mock_io.igetch]: KEY_ESC: esc_arg: %d\n", KEY_ESC_arg);
         return ch;
 
       case KEY_UNKNOWN:
+        fprintf(stderr, "[mock_io.igetch]: KEY_UNKNOWN\n");
         return ch;
 
         // common global hot keys...
       case Ctrl('L'):
+        fprintf(stderr, "[mock_io.igetch]: to redraw\n");
         redrawwin();
         refresh();
         continue;
@@ -539,16 +579,19 @@ igetch(void)
           vmsg(usage);
         }
         continue;
-#endif
+#endif // DEBUG
     }
 
     // complex pager hot keys
     if (currutmp)
     {
       ch = process_pager_keys(ch);
+      fprintf(stderr, "[mock_io.igetch]: after currutmp.process_pager_keys: ch: %d KEY_INCOMPLETE: %d\n", ch, KEY_INCOMPLETE);
       if (ch == KEY_INCOMPLETE)
         continue;
     }
+
+    fprintf(stderr, "[mock_io.igetch: to return: ch: %d\n", ch);
 
     return ch;
   }
@@ -565,57 +608,8 @@ igetch(void)
 static inline int
 wait_input(float f, int bIgnoreBuf)
 {
-  int sel = 0;
-  fd_set readfds;
-  struct timeval tv, *ptv = &tv;
-
-  if(!bIgnoreBuf && num_in_buf() > 0)
-    return 1;
-
-  FD_ZERO(&readfds);
-  FD_SET(0, &readfds);
-  if (i_newfd) FD_SET(i_newfd, &readfds);
-
-  // adjust time
-  if(f > 0)
-  {
-    tv.tv_sec = (long) f;
-    tv.tv_usec = (f - (long)f) * 1000000L;
-  }
-  else if (f == 0)
-  {
-    tv.tv_sec  = 0;
-    tv.tv_usec = 0;
-  }
-  else if (f < 0)
-  {
-    ptv = NULL;
-  }
-
-#ifdef STATINC
-  STATINC(STAT_SYSSELECT);
-#endif
-
-  do {
-    assert(i_newfd >= 0);	// if == 0, use only fd=0 => count sill u_newfd+1.
-    sel = select(i_newfd+1, &readfds, NULL, NULL, ptv);
-
-  } while (sel < 0 && errno == EINTR);
-  /* EINTR, interrupted. I don't care! */
-
-  // XXX should we abort? (from dogetch)
-  if (sel < 0 && errno != EINTR)
-  {
-    abort_bbs(0);
-    /* raise(SIGHUP); */
-  }
-
-  // syncnow();
-
-  if(sel == 0)
-    return 0;
-
-  return 1;
+#pragma unused(f, bIgnoreBuf)
+  return 0;
 }
 
 /* nios vkey system emulation */
@@ -700,7 +694,4 @@ vkey_is_prefetched(char c) {
   return vbuf_strchr(pvin, c) >= 0 ? 1 : 0;
 }
 
-#endif
-
-/* vim:sw=4
- */
+#endif // USE_NIOS

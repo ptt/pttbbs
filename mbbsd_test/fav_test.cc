@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "bbs.h"
 #include "testutil.h"
+#include "testmock.h"
 #include "mbbsd_s.c"
 
 // fav-load
@@ -15,10 +16,12 @@ class FavLoadTest : public ::testing::Test {
 
     system("mkdir -p " BBSHOME);
     system("rm -r " BBSHOME "/home");
+    system("rm -r " BBSHOME "/etc");
     system("rm  " BBSHOME "/.PASSWDS");
     system("rm " BBSHOME "/.BRD");
 
     system("cp -R ./testcase/home1 " BBSHOME "/home");
+    system("cp -R ./testcase/etc " BBSHOME "/etc");
     system("cp ./testcase/.PASSWDS1 " BBSHOME "/.PASSWDS");
     system("cp ./testcase/.BRD1 " BBSHOME "/.BRD");
     system("echo \"pwd:\" && pwd");
@@ -29,9 +32,14 @@ class FavLoadTest : public ::testing::Test {
     system("echo \"(after setup_root_link BBSHOME) pwd:\" && pwd");
 
     load_uhash();
+    initscr();
+    if(vin.buf == NULL) {
+      init_io();
+    }
   }
 
   void TearDown() override {
+    reset_oflush_buf();
   }
 };
 
@@ -86,9 +94,13 @@ static void _log_fav(fav_t *fp, int level) {
 }
 
 TEST_F(FavLoadTest, Basic) {
+  char buf[20] = {};
+  sprintf(buf, "  y\r\n");
+  put_vin((unsigned char *)buf, strlen(buf));
+
   // fav load of SYSOP2
   load_current_user("SYSOP2");
-  fprintf(stderr, "after load current_user");
+  fprintf(stderr, "after load current_user\n");
 
   fav_load();
   fav_t *fav_root = get_fav_root();

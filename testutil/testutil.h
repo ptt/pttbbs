@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
   // load uhash
   void load_uhash();
@@ -12,4 +12,4 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
