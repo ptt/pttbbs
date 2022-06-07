@@ -3,6 +3,7 @@ load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
 SRCS = [
     "load_uhash.c",
     "setup_root_link.c",
+    "check_SHM.c",
 ]
 
 cc_library(

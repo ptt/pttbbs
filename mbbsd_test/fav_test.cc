@@ -26,12 +26,17 @@ class FavLoadTest : public ::testing::Test {
     system("cp ./testcase/.BRD1 " BBSHOME "/.BRD");
     system("echo \"pwd:\" && pwd");
 
+    // chdir
     chdir(BBSHOME);
     system("echo \"(after chdir BBSHOME) pwd:\" && pwd");
     setup_root_link((char *)BBSHOME);
     system("echo \"(after setup_root_link BBSHOME) pwd:\" && pwd");
+    typeahead(TYPEAHEAD_NONE);
 
+    // load uhash
     load_uhash();
+
+    // init scr / io
     initscr();
     if(vin.buf == NULL) {
       init_io();
@@ -39,8 +44,14 @@ class FavLoadTest : public ::testing::Test {
   }
 
   void TearDown() override {
+    // reset scr / io
     reset_oflush_buf();
+
+    // chdir
+    chdir(pwd_path);
   }
+
+  char pwd_path[TEST_BUFFER_SIZE];
 };
 
 static void _log_fav(fav_t *fp, int level);

@@ -111,6 +111,10 @@ void log_oflush_buf() {
   if(len_buf == 0) {
     return;
   }
+
+  //fprintf(stderr, "|%s|\n", OFLUSH_BUF);
+
+  fprintf(stderr, "(raw)\n");
   for(unsigned long i = 0; i < len_buf; i++) {
     if(i && i % 10 == 0) {
       fprintf(stderr, "\n");
@@ -118,7 +122,6 @@ void log_oflush_buf() {
     fprintf(stderr, " %02X", OFLUSH_BUF[i]);
   }
   fprintf(stderr, "\n");
-  fprintf(stderr, "|%s|\n", OFLUSH_BUF);
 }
 
 void
@@ -128,7 +131,7 @@ oflush(void)
   size_t lenbuf = OFLUSH_BUF_END - pOFLUSH_BUF;
   size_t lenpv = vbuf_size(pvout);
 
-  fprintf(stderr, "[mock_io.oflush] start\n");
+  fprintf(stderr, "[mock_io.oflush] start: len_pvout: %d\n", lenpv);
 
   assert(pOFLUSH_BUF < OFLUSH_BUF_END);
 
@@ -452,7 +455,10 @@ dogetch(void)
   static time4_t  lastact;
 
   size_t buf_size = vbuf_size(pvin);
-  fprintf(stderr, "[mock_io.dogetch] start: buf_size: %zu\n", buf_size);
+  fprintf(stderr, "[mock_io.dogetch] start: buf_size: %zu to refresh\n", buf_size);
+
+  // XXX do refresh because never vbuf_is_empty.
+  refresh();
 
   while (vbuf_is_empty(pvin)) {
     refresh();
