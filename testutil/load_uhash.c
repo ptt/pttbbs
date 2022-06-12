@@ -14,7 +14,7 @@ void load_uhash() {
 #endif
                  0600 | IPC_CREAT | IPC_EXCL);
   err = errno;
-  fprintf(stderr, "load_uhash: shmid: %d err: %d EEXIST: %d\n", shmid, err, EEXIST);
+  fprintf(stderr, "load_uhash: SHM_KEY: %d shmid: %d err: %d EEXIST: %d\n", SHM_KEY, shmid, err, EEXIST);
 
   if( err == EEXIST ) {
     shmid = shmget(SHM_KEY, SHMSIZE,
@@ -35,7 +35,9 @@ void load_uhash() {
     exit(1);
   }
 
-  if( err  != EEXIST ) {
+  fprintf(stderr, "load_uhash: err: %d EEXIST: %d SHM->version: %d\n", err, EEXIST, SHM->version);
+
+  if( err != EEXIST || SHM->version == 0 ) {
     SHM->number=SHM->loaded = 0;
     SHM->version = SHM_VERSION;
     SHM->size    = sizeof(SHM_t);

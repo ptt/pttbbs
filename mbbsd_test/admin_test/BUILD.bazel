@@ -1,0 +1,298 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+TAGS = [
+    "exclusive",
+]
+
+VISIBILITY = [
+    "//visibility:public",
+]
+
+DATA = [
+    "//testcase:testcase",
+]
+
+COPTS = PTT_WARN + [
+    "-Iinclude",
+    "-I$(BINDIR)/include",
+    "-I$(BINDIR)/common/fbs",
+    LUACFLAGS,
+
+    # "-Qunused-arguments",
+    "-Wno-parentheses-equality",
+    # "-fcolor-diagnostics",
+    "-Wno-invalid-source-encoding",
+
+    "-Itestutil",
+]
+
+LINKOPTS = [
+    "-Os",
+    "-Wl,--as-needed",
+    "-Wl,--sort-common",
+
+    LUALIBS,
+
+    "-lstdc++",
+    "-lncurses",
+]
+
+DEPS = [
+    "admin_test_h",
+
+    "//testutil:testutil",
+    "//mbbsd:mockmbbsdlib",
+    "//mbbsd:mbbsdcxx",
+    "@com_google_googletest//:gtest_main",
+]
+
+DEFINES = [
+    "BBSHOME='\"$(BBSHOME)\"'",
+]
+
+cc_library(
+    name = "admin_test_h",
+    hdrs = ["admin_test.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "admin_test1",
+    srcs = [
+        "admin_test1.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test2",
+    srcs = [
+        "admin_test2.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test3",
+    srcs = [
+        "admin_test3.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test4",
+    srcs = [
+        "admin_test4.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test5",
+    srcs = [
+        "admin_test5.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test6",
+    srcs = [
+        "admin_test6.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test7",
+    srcs = [
+        "admin_test7.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test8",
+    srcs = [
+        "admin_test8.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test9",
+    srcs = [
+        "admin_test9.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+
+cc_test(
+    name = "admin_test10",
+    srcs = [
+        "admin_test10.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test11",
+    srcs = [
+        "admin_test11.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test12",
+    srcs = [
+        "admin_test12.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test13",
+    srcs = [
+        "admin_test13.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test14",
+    srcs = [
+        "admin_test14.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test15",
+    srcs = [
+        "admin_test15.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "admin_test16",
+    srcs = [
+        "admin_test16.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)

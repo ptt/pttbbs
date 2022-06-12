@@ -4,10 +4,23 @@
 extern "C" {
 #endif // __cplusplus
 
+#include "mbbsd_s.h"
+
 #define TEST_BUFFER_SIZE 8192
+
+  //admin.c
+  int upgrade_passwd(userec_t *puser);
+
+  //mbbsd.c
+  void do_aloha(const char *hello);
+  void check_bad_clients();
+  bool parse_argv(int argc, char *argv[], struct ProgramOption *option);
 
   // load uhash
   void load_uhash();
+
+  // reset_SHM
+  void reset_SHM();
 
   // check SHM
   void check_SHM();

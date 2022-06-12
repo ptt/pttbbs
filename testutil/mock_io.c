@@ -131,7 +131,7 @@ oflush(void)
   size_t lenbuf = OFLUSH_BUF_END - pOFLUSH_BUF;
   size_t lenpv = vbuf_size(pvout);
 
-  fprintf(stderr, "[mock_io.oflush] start: len_pvout: %d\n", lenpv);
+  fprintf(stderr, "[mock_io.oflush] start: len_pvout: %zu\n", lenpv);
 
   assert(pOFLUSH_BUF < OFLUSH_BUF_END);
 
@@ -692,9 +692,9 @@ int
 vkey_is_prefetched(char c) {
   // only ^x keys are safe to be detected.
   // other keys may fall into escape sequence.
-  assert (c == EOF || (c > 0 && c < ' '));
+  assert ((int)c == EOF || (c > 0 && c < ' '));
 
-  if (c == EOF)
+  if ((int)c == EOF)
     return 0;
 
   return vbuf_strchr(pvin, c) >= 0 ? 1 : 0;

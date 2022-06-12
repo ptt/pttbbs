@@ -4,6 +4,7 @@ SRCS = [
     "load_uhash.c",
     "setup_root_link.c",
     "check_SHM.c",
+    "reset_SHM.c",
 ]
 
 cc_library(
@@ -28,6 +29,7 @@ cc_library(
         "//:pttbbsconf",
         "//common/sys:commonsys",
         "//common/bbs:commonbbs",
+        "testmock",
     ],
     defines = [
         "BBSHOME='\"$(BBSHOME)\"'",
@@ -43,6 +45,7 @@ cc_library(
     srcs = MOCK_SRCS,
     hdrs = [
         "testmock.h",
+        "mbbsd_s.h",
         "mbbsd_s.c",
     ],
     visibility = ["//visibility:public"],
