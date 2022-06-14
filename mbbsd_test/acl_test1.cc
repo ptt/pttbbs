@@ -17,25 +17,25 @@ TEST_F(AclTest, BanUserForBoard) {
 
   int ret = ban_user_for_board(user0, board0, expire, reason);
 
-  EXPECT_EQ(1, ret);
+  EXPECT_EQ(ret, 1);
 
   time4_t ret_t = is_user_banned_by_board(user0, board0);
-  EXPECT_EQ(expire, ret_t);
+  EXPECT_EQ(ret_t, expire);
 
   ret_t = is_banned_by_board(board0);
-  EXPECT_EQ(expire, ret_t);
+  EXPECT_EQ(ret_t, expire);
 
   bzero(buf, TEST_BUFFER_SIZE);
   ret = get_user_banned_status_by_board(user0, board0, TEST_BUFFER_SIZE, buf);
-  EXPECT_EQ(expire, ret);
-  EXPECT_STREQ(reason, buf);
+  EXPECT_EQ(ret, expire);
+  EXPECT_STREQ(buf, reason);
 
   ret = unban_user_for_board(user0, board0);
-  EXPECT_EQ(1, ret);
+  EXPECT_EQ(ret, 1);
 
   ret_t = is_user_banned_by_board(user0, board0);
-  EXPECT_EQ(0, ret_t);
+  EXPECT_EQ(ret_t, 0);
 
   ret_t = is_banned_by_board(board0);
-  EXPECT_EQ(0, ret_t);
+  EXPECT_EQ(ret_t, 0);
 }

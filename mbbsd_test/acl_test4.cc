@@ -22,11 +22,11 @@ TEST_F(AclTest, EditUserAclForBoard) {
   char board[] = "WhoAmI\0";
   int ret = edit_user_acl_for_board(user0, board);
   fprintf(stderr, "[AclTest.EditUserAclForBoard]: after edit_user_acl_for_board\n");
-  EXPECT_EQ(0, ret);
+  EXPECT_EQ(ret, 0);
   reset_oflush_buf();
 
   time4_t ret_t = is_user_banned_by_board(user0, board0);
-  EXPECT_LT(the_now + 3 * 28 * 86400, ret_t);
+  EXPECT_GE(ret_t, the_now + 3 * 28 * 86400);
 
   vkey_purge();
   bzero(buf, TEST_BUFFER_SIZE);
@@ -35,8 +35,8 @@ TEST_F(AclTest, EditUserAclForBoard) {
 
   ret = edit_user_acl_for_board(user0, board);
   fprintf(stderr, "[AclTest.EditUserAclForBoard]: after edit_user_acl_for_board\n");
-  EXPECT_EQ(0, ret);
+  EXPECT_EQ(ret, 0);
 
   ret_t = is_user_banned_by_board(user0, board0);
-  EXPECT_EQ(0, ret_t);
+  EXPECT_EQ(ret_t, 0);
 }

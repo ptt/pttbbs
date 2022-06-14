@@ -19,7 +19,7 @@ TEST_F(AclTest, EditBannedListForBoard2) {
   char board[] = "WhoAmI\0";
   int ret = edit_banned_list_for_board(board);
   fprintf(stderr, "[AclTest.EditBannedListForBoard: after edit_banned_list_for_board\n");
-  EXPECT_EQ(0, ret);
+  EXPECT_THAT(ret, testing::Eq(0));
 
   refresh();
   log_oflush_buf();
@@ -272,5 +272,5 @@ TEST_F(AclTest, EditBannedListForBoard2) {
       "\x1B\x5B\x4B\x1B\x5B\x33\x3B\x31\x48" //\x1b[K\x1b[3;1H
       "\0";
 
-  EXPECT_STREQ((char *)expected, (char *)OFLUSH_BUF);
+  EXPECT_STREQ((char *)OFLUSH_BUF, (char *)expected);
 }

@@ -19,7 +19,7 @@ TEST_F(AclTest, EditBannedListForBoard) {
   char board[] = "WhoAmI\0";
   int ret = edit_banned_list_for_board(board);
   fprintf(stderr, "[AclTest.EditBannedListForBoard2]: after edit_banned_list_for_board\n");
-  EXPECT_EQ(0, ret);
+  EXPECT_EQ(ret, 0);
 
   refresh();
   log_oflush_buf();
@@ -499,18 +499,5 @@ TEST_F(AclTest, EditBannedListForBoard) {
       "\x1B\x5B\x4B\x1B\x5B\x33\x3B\x31\x48" //\x1b[K\x1b[3;1H
       "\0";
 
-  fprintf(stderr, "expected: %lu OFLUSH_BUF: %lu\n", strlen((char *)expected), strlen((char *)OFLUSH_BUF));
-  char tmp_expected[101] = {};
-  char tmp_OFLUSH_BUF[101] = {};
-  for(int i = 0; i < (int)strlen((char *)expected); i++) {
-    if(expected[i] != OFLUSH_BUF[i]) {
-      strncpy((char *)tmp_expected, (char *)expected + i, 100);
-      strncpy((char *)tmp_OFLUSH_BUF, (char *)OFLUSH_BUF + i, 100);
-      //fprintf(stderr, "(%d) expected: \\x%02X OFLUSH_BUF: \\x%02X\ntmp_expected: %s\n tmp_OFLUSH_BUF: %s\n", i, expected[i], OFLUSH_BUF[i], tmp_expected, tmp_OFLUSH_BUF);
-      break;
-    }
-  }
-  EXPECT_STREQ((char *)expected, (char *)OFLUSH_BUF);
-
-  //assert(0);
+  EXPECT_STREQ((char *)OFLUSH_BUF, (char *)expected);
 }

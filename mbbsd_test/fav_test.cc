@@ -116,75 +116,75 @@ TEST_F(FavLoadTest, Basic) {
   fav_load();
   fav_t *fav_root = get_fav_root();
 
-  EXPECT_NE((fav_t *)NULL, fav_root);
+  EXPECT_NE(fav_root, (fav_t *)NULL);
 
   _log_fav(fav_root, 0);
 
-  EXPECT_EQ(14, fav_root->nAllocs);
-  EXPECT_EQ(6, fav_root->DataTail);
-  EXPECT_EQ(3, fav_root->nBoards);
-  EXPECT_EQ(2, fav_root->nLines);
-  EXPECT_EQ(1, fav_root->nFolders);
-  EXPECT_EQ(2, fav_root->lineID);
-  EXPECT_EQ(1, fav_root->folderID);
+  EXPECT_EQ(fav_root->nAllocs, 14);
+  EXPECT_EQ(fav_root->DataTail, 6);
+  EXPECT_EQ(fav_root->nBoards, 3);
+  EXPECT_EQ(fav_root->nLines, 2);
+  EXPECT_EQ(fav_root->nFolders, 1);
+  EXPECT_EQ(fav_root->lineID, 2);
+  EXPECT_EQ(fav_root->folderID, 1);
 
   fav_type_t *ft0 = &fav_root->favh[0];
-  EXPECT_EQ(FAVT_BOARD, ft0->type);
-  EXPECT_EQ(FAVH_FAV, ft0->attr);
+  EXPECT_EQ(ft0->type, FAVT_BOARD);
+  EXPECT_EQ(ft0->attr, FAVH_FAV);
   fav_board_t *fboard0 = (fav_board_t *)ft0->fp;
-  EXPECT_EQ(1, fboard0->bid);
-  EXPECT_EQ(0, fboard0->lastvisit);
-  EXPECT_EQ(0, fboard0->attr);
+  EXPECT_EQ(fboard0->bid, 1);
+  EXPECT_EQ(fboard0->lastvisit, 0);
+  EXPECT_EQ(fboard0->attr, 0);
 
   fav_type_t *ft1 = &fav_root->favh[1];
-  EXPECT_EQ(FAVT_LINE, ft1->type);
-  EXPECT_EQ(FAVH_FAV, ft1->attr);
+  EXPECT_EQ(ft1->type, FAVT_LINE);
+  EXPECT_EQ(ft1->attr, FAVH_FAV);
   fav_line_t *fline1 = (fav_line_t *)ft1->fp;
-  EXPECT_EQ(1, fline1->lid);
+  EXPECT_EQ(fline1->lid, 1);
 
   fav_type_t *ft2 = &fav_root->favh[2];
-  EXPECT_EQ(FAVT_FOLDER, ft2->type);
-  EXPECT_EQ(FAVH_FAV, ft2->attr);
+  EXPECT_EQ(ft2->type, FAVT_FOLDER);
+  EXPECT_EQ(ft2->attr, FAVH_FAV);
   fav_folder_t *ffolder2 = (fav_folder_t *)ft2->fp;
-  EXPECT_EQ(1, ffolder2->fid);
-  EXPECT_STREQ("新的目錄", ffolder2->title);
+  EXPECT_EQ(ffolder2->fid, 1);
+  EXPECT_STREQ(ffolder2->title, "新的目錄");
 
   fav_t *fav2 = ffolder2->this_folder;
-  EXPECT_EQ(9, fav2->nAllocs);
-  EXPECT_EQ(1, fav2->DataTail);
-  EXPECT_EQ(1, fav2->nBoards);
-  EXPECT_EQ(0, fav2->nLines);
-  EXPECT_EQ(0, fav2->nFolders);
-  EXPECT_EQ(0, fav2->lineID);
-  EXPECT_EQ(0, fav2->folderID);
+  EXPECT_EQ(fav2->nAllocs, 9);
+  EXPECT_EQ(fav2->DataTail, 1);
+  EXPECT_EQ(fav2->nBoards, 1);
+  EXPECT_EQ(fav2->nLines, 0);
+  EXPECT_EQ(fav2->nFolders, 0);
+  EXPECT_EQ(fav2->lineID, 0);
+  EXPECT_EQ(fav2->folderID, 0);
 
   fav_type_t *ft2_0 = &fav2->favh[0];
-  EXPECT_EQ(FAVT_BOARD, ft2_0->type);
-  EXPECT_EQ(FAVH_FAV, ft2_0->attr);
+  EXPECT_EQ(ft2_0->type, FAVT_BOARD);
+  EXPECT_EQ(ft2_0->attr, FAVH_FAV);
   fav_board_t *fboard2_0 = (fav_board_t *)ft2_0->fp;
-  EXPECT_EQ(1, fboard2_0->bid);
-  EXPECT_EQ(0, fboard2_0->lastvisit);
-  EXPECT_EQ(0, fboard2_0->attr);
+  EXPECT_EQ(fboard2_0->bid, 1);
+  EXPECT_EQ(fboard2_0->lastvisit, 0);
+  EXPECT_EQ(fboard2_0->attr, 0);
 
   fav_type_t *ft3 = &fav_root->favh[3];
-  EXPECT_EQ(FAVT_LINE, ft3->type);
-  EXPECT_EQ(FAVH_FAV, ft3->attr);
+  EXPECT_EQ(ft3->type, FAVT_LINE);
+  EXPECT_EQ(ft3->attr, FAVH_FAV);
   fav_line_t *fline3 = (fav_line_t *)ft3->fp;
-  EXPECT_EQ(2, fline3->lid);
+  EXPECT_EQ(fline3->lid, 2);
 
   fav_type_t *ft4 = &fav_root->favh[4];
-  EXPECT_EQ(FAVT_BOARD, ft4->type);
-  EXPECT_EQ(FAVH_FAV, ft4->attr);
+  EXPECT_EQ(ft4->type, FAVT_BOARD);
+  EXPECT_EQ(ft4->attr, FAVH_FAV);
   fav_board_t *fboard4 = (fav_board_t *)ft4->fp;
-  EXPECT_EQ(9, fboard4->bid);
-  EXPECT_EQ(0, fboard4->lastvisit);
-  EXPECT_EQ(0, fboard4->attr);
+  EXPECT_EQ(fboard4->bid, 9);
+  EXPECT_EQ(fboard4->lastvisit, 0);
+  EXPECT_EQ(fboard4->attr, 0);
 
   fav_type_t *ft5 = &fav_root->favh[5];
-  EXPECT_EQ(FAVT_BOARD, ft5->type);
-  EXPECT_EQ(FAVH_FAV, ft5->attr);
+  EXPECT_EQ(ft5->type, FAVT_BOARD);
+  EXPECT_EQ(ft5->attr, FAVH_FAV);
   fav_board_t *fboard5 = (fav_board_t *)ft5->fp;
-  EXPECT_EQ(8, fboard5->bid);
-  EXPECT_EQ(0, fboard5->lastvisit);
-  EXPECT_EQ(0, fboard5->attr);
+  EXPECT_EQ(fboard5->bid, 8);
+  EXPECT_EQ(fboard5->lastvisit, 0);
+  EXPECT_EQ(fboard5->attr, 0);
 }

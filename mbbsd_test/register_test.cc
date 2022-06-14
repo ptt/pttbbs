@@ -222,5 +222,5 @@ TEST_F(RegisterTest, EnsureUserAgreementVerion) {
       "\x1B\x5B\x6D\x1B\x5B\x32\x34\x3B\x33\x39\x48\x0D" //\x1b[m\x1b[24;39K
       "\0";
 
-  EXPECT_STREQ((char *)expected, (char *)OFLUSH_BUF);
+  EXPECT_STREQ((char *)OFLUSH_BUF, (char *)expected);
 }
