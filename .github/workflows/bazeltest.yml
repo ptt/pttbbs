@@ -20,16 +20,24 @@ jobs:
         path: "~/.cache/bazel"
         key: bazel
     - name: install pmake
-      run: sudo apt update && sudo apt install -y pmake unzip
+      run: sudo apt update && sudo apt install -y pmake unzip libsqlite3-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev liblua5.1-0-dev libgflags-dev libmaxminddb-dev libgeoip-dev
+    - name: bbsuser
+      run: sudo pmake bbsuser
     - name: pre-bazel
       run: sudo pmake pre-bazel
-    - name: flatbuffer
+    - name: flatc
       run: wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip && unzip Linux.flatc.binary.clang++-9.zip && chmod 755 flatc && sudo mv flatc /usr/bin && flatc --version
+    - name: flatbuffers
+      run: wget https://github.com/google/flatbuffers/archive/refs/tags/v2.0.0.zip && sudo unzip v2.0.0.zip -d /opt && sudo cp -R /opt/flatbuffers-2.0.0/include/flatbuffers /usr/local/include && flatc --version
     - name: cp pttbbs_test.conf
       run: cp sample/pttbbs_test.conf pttbbs.conf
-    - name: bazeltest
-      run: sudo pmake bazeltest
-    - name: bazelbuild
-      run: sudo mkdir -p /home/bbs && sudo BBSHOME=/home/bbs pmake bazelbuild
+    - name: /home/bbs
+      run: sudo -u bbs pwd; sudo -u bbs cp testcase/.BRD1 /home/bbs/.BRD && sudo -u bbs cp testcase/.PASSWDS1 /home/bbs/.PASSWDS && sudo -u bbs cp -R testcase/home1 /home/bbs/home && sudo -u bbs cp -R testcase/etc1 /home/bbs/etc && sudo -u bbs cp -R testcase/boards1 /home/bbs/boards && sudo -u bbs mkdir -p /home/bbs/log /home/bbs/run
     - name: pmake
-      run: sudo mkdir -p /home/bbs && sudo BBSHOME=/home/bbs pmake clean all
+      run: sudo BBSHOME=/home/bbs pmake clean all install
+    - name: regmaild
+      run: sudo pmake regmaild
+    - name: pre-test
+      run: sudo -u bbs pmake pre-bazeltest
+    - name: bazeltest
+      run: sudo -u bbs pmake bazeltest

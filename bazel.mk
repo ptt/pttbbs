@@ -40,6 +40,8 @@ DATETIME!=	date '+%Y%m%d%H%M'
 # Make Rules
 #######################################################################
 
+ORIG_PWD!= pwd
+
 bbsuser:
 	groupadd --gid 99 bbs && \
 	useradd -m -g bbs -s /bin/bash --uid 9999 bbs && \
@@ -48,10 +50,13 @@ bbsuser:
 
 pre-bazel:
 	apt update && \
-	apt install -y wget bmake gcc g++ clang ccache libc6-dev libevent-dev pkg-config gnupg libflatbuffers-dev flatbuffers-compiler-dev liblua5.1-0-dev python && \
+	apt install -y unzip wget bmake gcc g++ clang ccache libc6-dev libevent-dev pkg-config gnupg libflatbuffers-dev flatbuffers-compiler-dev liblua5.1-0-dev python libsqlite3-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libgflags-dev libmaxminddb-dev libgeoip-dev && \
 	wget https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-$(ARCH) -O /usr/local/bin/bazelisk && \
 	chmod 755 /usr/local/bin/bazelisk && \
 	bazelisk info
+
+regmaild:
+	cd daemon/regmaild; BBSHOME="/home/bbs" pmake clean all install; cd ../..
 
 bazelbuild:
 	CC=$(CC) $(BAZEL) build --sandbox_debug --subcommands --define BBSHOME="$(BBSHOME)" ...
@@ -65,11 +70,22 @@ bazelinstall: $(BAZELPROG)
 	@cd $(BBSHOME)/bin && objcopy --add-gnu-debuglink=mbbsd.bazel.$(DATETIME).debug mbbsd.bazel.$(DATETIME)
 	@ln -sfv mbbsd.bazel.$(DATETIME) $(BBSHOME)/bin/mbbsd
 
+pre-bazeltest:
+	ipcrm -M 0x000004cc; echo "ORIG_PWD: ${ORIG_PWD}"; cd /home/bbs; ${ORIG_PWD}/util/uhash_loader; ${ORIG_PWD}/daemon/regmaild/initemaildb verifydb /home/bbs/emaildb.db; /home/bbs/bin/regmaild -i /home/bbs/localhost:5678; cd "${ORIG_PWD}"; ipcs; ps ax|grep regmaild; pwd
+
 bazeltest:
-	ipcrm -M 0x000004cc; CC=$(CC) $(BAZEL) test --define BBSHOME="testhome" --test_output=errors ...
+	CC=$(CC) $(BAZEL) test --define BBSHOME="testhome" --test_output=errors ...
+
+bazelretest:
+	CC=$(CC) $(BAZEL) test --cache_test_results=no --define BBSHOME="testhome" --test_output=errors ...
 
 bazeltestall:
-	ipcrm -M 0x000004cc; CC=$(CC) $(BAZEL) test --define BBSHOME="testhome" --test_output=all ...
+	CC=$(CC) $(BAZEL) test --define BBSHOME="testhome" --test_output=all ...
 
 bazelclean:
 	$(BAZEL) clean
+
+post-bazeltest:
+	kill -9 `cat /home/bbs/run/regmaild.pid` && rm /home/bbs/run/regmaild.pid; \
+	ipcrm -M 0x000004cc; \
+	pwd
