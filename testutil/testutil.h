@@ -16,6 +16,24 @@ extern "C" {
   void check_bad_clients();
   bool parse_argv(int argc, char *argv[], struct ProgramOption *option);
 
+  //register.c
+#define FN_NOTIN_WHITELIST_NOTICE "etc/whitemail.notice"
+#define FN_REGISTER_LOG  "register.log"
+#define FN_REJECT_NOTIFY "justify.reject"
+
+#define FN_REGFORM	"regform"	// registration form in user home
+#define FN_REGFORM_LOG	"regform.log"	// regform history in user home
+#define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
+
+#define FN_REG_METHODS	"etc/reg.methods"
+
+  int check_and_expire_account(int uid, const userec_t * urec, int expireRange);
+  int query_adbanner_usong_pref_changed(const userec_t *u, char force_yn);
+  void u_manual_verification(void);
+
+  void regform2_validate_single(const char *xuid);
+  int regform2_validate_page(int dryrun);
+
   // load uhash
   void load_uhash();
 
