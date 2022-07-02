@@ -411,6 +411,8 @@ bl_getstr(lua_State* L)
     if (n > 2)
         pmsg = lua_tostring(L, 3);
 
+    echo &= ~GCARRY; // avoid assertion failure
+
     if (len < 2)
         len = 2;
     if (len >= (int)sizeof(buf))
