@@ -40,6 +40,27 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "testcommonsys",
+    srcs = SRCS,
+    linkstatic = True,
+    copts = [
+        "-Iinclude",
+        "-Itestutil",
+        "-I$(BINDIR)/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//testutil:testmocksysrandom",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+        "BAZELTEST=",
+    ],
+)
+
 genrule(
     name = "genbig5c",
     srcs = ["big5_gen.py", "big5data.tar.bz2"],

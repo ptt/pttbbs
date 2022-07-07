@@ -13,6 +13,7 @@ DATA = [
 ]
 
 COPTS = PTT_WARN + [
+    "-pipe",
     "-Iinclude",
     "-I$(BINDIR)/include",
     "-I$(BINDIR)/common/fbs",
@@ -24,6 +25,7 @@ COPTS = PTT_WARN + [
     "-Wno-invalid-source-encoding",
 
     "-Itestutil",
+    "-Imbbsd",
     "-std=c++17",
 ]
 
@@ -39,16 +41,17 @@ LINKOPTS = [
 ]
 
 DEPS = [
-    "register_test_h",
-
     "//testutil:testutil",
     "//mbbsd:mockmbbsdlib",
     "//mbbsd:mbbsdcxx",
     "@com_google_googletest//:gtest_main",
+
+    "register_test_h",
 ]
 
 DEFINES = [
     "BBSHOME='\"$(BBSHOME)\"'",
+    "BAZELTEST=",
 ]
 
 cc_library(

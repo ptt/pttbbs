@@ -69,3 +69,24 @@ cc_library(
         "BBSHOME='\"$(BBSHOME)\"'",
     ],
 )
+
+MOCK_SYS_RANDOM_SRCS = [
+    "mock_getrandom.c",
+]
+
+cc_library(
+    name = "testmocksysrandom",
+    srcs = MOCK_SYS_RANDOM_SRCS,
+    hdrs = [
+        "testmocksysrandom.h",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+    ],
+    deps = [
+    ],
+    defines = [
+        "BAZELTEST=",
+    ],
+)

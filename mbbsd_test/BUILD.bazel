@@ -15,6 +15,7 @@ cc_test(
         "//testcase:testcase",
     ],
     copts = PTT_WARN + [
+        "-pipe",
         "-Iinclude",
         "-I$(BINDIR)/include",
         "-I$(BINDIR)/common/fbs",
@@ -26,6 +27,8 @@ cc_test(
         "-Wno-invalid-source-encoding",
 
         "-Itestutil",
+        "-Imbbsd",
+        "-std=c++17",
     ],
     linkopts = [
         "-Os",
