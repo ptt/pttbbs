@@ -3,10 +3,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
   // mock-io
+  //kcwu: 80x24 一般使用者名單 1.9k, 含 header 2.4k
+  // 一般文章推文頁約 2590 bytes
+  // 注意實際可用的空間為 N-1。
   #define OBUFSIZE 3072
-  #define IBUFSIZE 128
+  #define IBUFSIZE 2048
 
   extern VBUF vout, *pvout;
   extern VBUF vin, *pvin;

@@ -71,7 +71,7 @@ bazelinstall: $(BAZELPROG)
 	@ln -sfv mbbsd.bazel.$(DATETIME) $(BBSHOME)/bin/mbbsd
 
 pre-bazeltest:
-	ipcrm -M 0x000004cc; echo "ORIG_PWD: ${ORIG_PWD}"; cd /home/bbs; ${ORIG_PWD}/util/uhash_loader; ${ORIG_PWD}/daemon/regmaild/initemaildb verifydb /home/bbs/emaildb.db; /home/bbs/bin/regmaild -i /home/bbs/localhost:5678; cd "${ORIG_PWD}"; ipcs; ps ax|grep regmaild; pwd
+	ipcrm -M 0x000004cc; ipcrm -S 0x000007da; echo "ORIG_PWD: ${ORIG_PWD}"; cd /home/bbs; ${ORIG_PWD}/util/uhash_loader; ${ORIG_PWD}/daemon/regmaild/initemaildb verifydb /home/bbs/emaildb.db; /home/bbs/bin/regmaild -i /home/bbs/localhost:5678; cd "${ORIG_PWD}"; ipcs; ps ax|grep regmaild; pwd
 
 bazeltest:
 	CC=$(CC) $(BAZEL) test --define BBSHOME="testhome" --test_output=errors ...
@@ -88,4 +88,5 @@ bazelclean:
 post-bazeltest:
 	kill -9 `cat /home/bbs/run/regmaild.pid` && rm /home/bbs/run/regmaild.pid; \
 	ipcrm -M 0x000004cc; \
+	ipcrm -S 0x000007da; \
 	pwd

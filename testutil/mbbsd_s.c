@@ -81,6 +81,8 @@ multi_user_check(void)
   }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static int
 load_current_user(const char *uid)
 {
@@ -169,6 +171,7 @@ load_current_user(const char *uid)
   multi_user_check();
   return 1;
 }
+#pragma GCC diagnostic pop
 
 static void
 check_BM(void)

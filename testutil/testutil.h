@@ -34,6 +34,11 @@ extern "C" {
   void regform2_validate_single(const char *xuid);
   int regform2_validate_page(int dryrun);
 
+  //user.c
+  void ban_usermail(const userec_t *u, const char *reason);
+  void user_display(const userec_t *u, int adminmode);
+  void Customize(void);
+
   // load uhash
   void load_uhash();
 

@@ -1,0 +1,283 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+TAGS = [
+    "exclusive",
+]
+
+VISIBILITY = [
+    "//visibility:public",
+]
+
+DATA = [
+    "//testcase:testcase",
+]
+
+COPTS = PTT_WARN + [
+    "-Iinclude",
+    "-I$(BINDIR)/include",
+    "-I$(BINDIR)/common/fbs",
+    LUACFLAGS,
+
+    # "-Qunused-arguments",
+    "-Wno-parentheses-equality",
+    # "-fcolor-diagnostics",
+    "-Wno-invalid-source-encoding",
+
+    "-Itestutil",
+    "-std=c++17",
+]
+
+LINKOPTS = [
+    "-Os",
+    "-Wl,--as-needed",
+    "-Wl,--sort-common",
+
+    LUALIBS,
+
+    "-lstdc++",
+    "-lncurses",
+]
+
+DEPS = [
+    "user_test_h",
+
+    "//testutil:testutil",
+    "//mbbsd:mockmbbsdlib",
+    "//mbbsd:mbbsdcxx",
+    "@com_google_googletest//:gtest_main",
+]
+
+DEFINES = [
+    "BBSHOME='\"$(BBSHOME)\"'",
+]
+
+cc_library(
+    name = "user_test_h",
+    hdrs = ["user_test.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "user_test1",
+    srcs = [
+        "user_test1.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test2",
+    srcs = [
+        "user_test2.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test3",
+    srcs = [
+        "user_test3.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test5",
+    srcs = [
+        "user_test5.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test6",
+    srcs = [
+        "user_test6.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test8",
+    srcs = [
+        "user_test8.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test9",
+    srcs = [
+        "user_test9.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test10",
+    srcs = [
+        "user_test10.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test11",
+    srcs = [
+        "user_test11.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test12",
+    srcs = [
+        "user_test12.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test13",
+    srcs = [
+        "user_test13.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test14",
+    srcs = [
+        "user_test14.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test15",
+    srcs = [
+        "user_test15.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test16",
+    srcs = [
+        "user_test16.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)
+
+cc_test(
+    name = "user_test17",
+    srcs = [
+        "user_test17.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)

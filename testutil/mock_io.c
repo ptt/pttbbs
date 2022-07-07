@@ -1,10 +1,5 @@
 #include "bbs.h"
-
-//kcwu: 80x24 一般使用者名單 1.9k, 含 header 2.4k
-// 一般文章推文頁約 2590 bytes
-// 注意實際可用的空間為 N-1。
-#define OBUFSIZE  16384
-#define IBUFSIZE  2048
+#include "testmock.h"
 
 // When CONVERT is applied, we may need to write extra N bytes into buffer for
 // one character input. Currently the number is 3 (UTF8).
