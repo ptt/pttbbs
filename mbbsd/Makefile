@@ -24,16 +24,6 @@ OBJS:=	admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o comments.o \
 	$(UIOBJS) $(PAGEROBJS) $(PLUGOBJS) \
 	$(CHESSOBJS) $(GAMEOBJS)
 
-#######################################################################
-# special library (DIET) configuration
-#######################################################################
-
-.if defined(DIET)
-LDFLAGS+=	-L$(SRCROOT)/common/diet
-LDLIBS+=	-ldiet
-DIETCC:=	diet -Os
-.endif
-
 # reduce .bss align overhead
 .if !defined(DEBUG) && $(OSTYPE)!="Darwin"
 LDFLAGS+=-Wl,--sort-common
@@ -118,9 +108,6 @@ testsz:	$(SRCROOT)/pttbbs.conf $(SRCROOT)/include/*.h testsz.c
 	@printf "\033[0;1;33mChecking configuration data sizes...\033[m\n"
 	@./testsz
 	@printf "\033[0;1;32mData size configuration OK\033[m\n"
-
-mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h
-	$(DIETCC) $(CC) $(CFLAGS) -c $<
 
 ctags:
 	ctags *.c $(SRCROOT)/include/*.h $(SRCROOT)/common/sys/*.c $(SRCROOT)/common/bbs/*.c

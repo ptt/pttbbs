@@ -38,10 +38,6 @@ extern "C" {
 #include "cmsys.h"
 #include "cmbbs.h"
 
-#ifdef __dietlibc__
-#include "cmdiet.h"
-#endif
-
 #include "ansi.h"
 #include "vtkbd.h"
 #include "vtuikit.h"
