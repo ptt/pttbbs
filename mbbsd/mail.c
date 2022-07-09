@@ -2575,3 +2575,20 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
     return chrono;
 }
 #endif				/* USE_BSMTP */
+
+/*
+ * Simple wrapper to send password changed notification letter to
+ * designated email address.
+ */
+int notify_password_change(const char *userid, const char *email)
+{
+    char subject[128];
+    int ret;
+
+    snprintf(subject, sizeof(subject), " %s - %s (%s) - ±K½X¤w§óÅÜ",
+	     BBSNAME, userid, fromhost);
+
+    ret = bsmtp("etc/passwdchanged", subject, email, "non-exist");
+
+    return ret > 0 ? 0 : -1;
+}

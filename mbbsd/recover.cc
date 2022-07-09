@@ -158,16 +158,6 @@ void AccountRecovery::LogToSecurity(const UserHandle &user,
 }
 
 // static
-void AccountRecovery::NotifyUser(const std::string &userid,
-                                 const std::string &email) {
-  std::string subject;
-  subject.append(" " BBSNAME " - ");
-  subject.append(userid);
-  subject.append(", 您的密碼已更變");
-  bsmtp("etc/passwdchanged", subject.c_str(), email.c_str(), "non-exist");
-}
-
-// static
 std::string AccountRecovery::GenCode(size_t len) {
   std::string s(len, '\0');
   random_text_code(&s[0], s.size());
@@ -316,7 +306,7 @@ void AccountRecovery::ResetPasswd() {
 
   LogToSecurity(user_.value(), email_);
   for (const auto &email : all_emails_) {
-    NotifyUser(user_->userid, email);
+    notify_password_change(user_->userid.c_str(), email.c_str());
   }
 
   // Log to user security.
