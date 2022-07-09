@@ -1107,6 +1107,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    log_filef(logfn, LOG_CREAT, "%s %s (Passwd)\n",
 		      Cdatelite(&now), adminmode ? "[Admin]" : fromhost);
 	}
+
+        // Send notification email if user has email set.
+	// Only do so if not Admin to avoid confusing user.
+	if (user_has_email(&cuser) && !adminmode)
+	    notify_password_change(cuser.userid, cuser.email);
+
 	break;
 
     case '3':
