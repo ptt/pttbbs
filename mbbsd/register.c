@@ -1687,6 +1687,18 @@ u_register()
 
 #ifdef USEREC_EMAIL_IS_CONTACT
 
+static int notify_email_change(const char *userid, const char *email)
+{
+    char subject[128];
+    int ret;
+
+    snprintf(subject, sizeof(subject), " %s - %s (%s) - 聯絡信箱已更變",
+	     BBSNAME, userid, fromhost);
+
+    ret = bsmtp("etc/emailchanged", subject, email, "non-exist");
+
+    return ret > 0 ? 0 : -1;
+}
 void
 change_contact_email()
 {
@@ -1704,6 +1716,10 @@ change_contact_email()
     setuserfile(logfn, FN_USERSECURITY);
     log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
 	      Cdatelite(&now), fromhost, cuser.email, email);
+
+    // Send notification to old email address if it was valid
+    if (is_valid_email(cuser.email))
+	notify_email_change(cuser.userid, cuser.email);
 
     // Write.
     pwcuSetEmail(email);

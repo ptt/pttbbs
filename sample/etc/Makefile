@@ -8,6 +8,7 @@ FILES=	Welcome		Welcome_login	\
 	feast		sysop		banip.conf	\
 	ve.hlp		board.help	boardlist.help	\
 	editable	expire2.conf	domain_name_query.cidr	\
+	passwdchanged	emailchanged	\
 	banemail	whitemail	whitemail.notice ziphome.exclude
 
 all:
