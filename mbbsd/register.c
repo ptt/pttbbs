@@ -992,8 +992,8 @@ normalize_email(char *email)
 {
     char *c = strchr(email, '@');
 
-    // reject no '@' or multiple '@'
-    if (c == NULL || c != strrchr(email, '@'))
+    // reject no '@' or invalid email address
+    if (!c || !is_valid_email(email))
 	return false;
 
     // domain tolower
