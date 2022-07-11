@@ -1003,14 +1003,6 @@ normalize_email(char *email)
 }
 
 bool
-user_has_email(const userec_t *u)
-{
-    char email[sizeof(u->email)];
-    strlcpy(email, u->email, sizeof(email));
-    return normalize_email(email);
-}
-
-bool
 check_email_allow_reject_lists(char *email, const char **errmsg, const char **notice_file)
 {
     FILE           *fp;

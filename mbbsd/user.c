@@ -1002,7 +1002,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (!adminmode) {
 #ifdef USEREC_EMAIL_IS_CONTACT
 #   ifdef REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
-	    if (!user_has_email(&cuser)) {
+	    if (is_valid_email(cuser.email)) {
 		move(y, 0);
 		outs("設定聯絡信箱後才能修改密碼唷!");
 		fail++;
@@ -1110,7 +1110,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
         // Send notification email if user has email set.
 	// Only do so if not Admin to avoid confusing user.
-	if (user_has_email(&cuser) && !adminmode)
+	if (is_valid_email(cuser.email) && !adminmode)
 	    notify_password_change(cuser.userid, cuser.email);
 
 	break;
