@@ -54,7 +54,6 @@
 
 #if 0
 #define DEBUG
-#define inline
 #endif
 
 /**
@@ -182,7 +181,7 @@ static editor_internal_t *curr_buf = NULL;
 static const char * const fp_bak = "bak";
 
 // forward declare
-static inline int has_block_selection(void);
+static int has_block_selection(void);
 static textline_t * alloc_line(short length);
 static void block_cancel(void);
 
@@ -283,7 +282,7 @@ fix_cursor(char *str, int pos, int dir)
 #endif
 
 /* 記憶體管理與編輯處理 */
-static inline void
+static void
 edit_buffer_constructor(editor_internal_t *buf)
 {
     /* all unspecified columns are 0 */
@@ -297,7 +296,7 @@ edit_buffer_constructor(editor_internal_t *buf)
 
 }
 
-static inline void
+static void
 enter_edit_buffer(void)
 {
     editor_internal_t *p = curr_buf;
@@ -307,7 +306,7 @@ enter_edit_buffer(void)
     edit_buffer_constructor(curr_buf);
 }
 
-static inline void
+static void
 free_line(textline_t *p)
 {
     if (p == curr_buf->oldcurrline)
@@ -318,7 +317,7 @@ free_line(textline_t *p)
     free(p);
 }
 
-static inline void
+static void
 edit_buffer_destructor(void)
 {
     textline_t *p, *pnext;
@@ -335,7 +334,7 @@ edit_buffer_destructor(void)
 	free(curr_buf->sitesig_string);
 }
 
-static inline void
+static void
 exit_edit_buffer(void)
 {
     editor_internal_t *p = curr_buf;
@@ -406,7 +405,7 @@ n2ansi(short nx, textline_t * line)
 
 /* 螢幕處理：輔助訊息、顯示編輯內容 */
 
-static inline void
+static void
 show_phone_mode_panel(void)
 {
     int i;
@@ -515,7 +514,7 @@ edit_buffer_check_healthy(textline_t *line)
 #endif
 }
 
-static inline int visible_window_height(void);
+static int visible_window_height(void);
 
 static void
 edit_check_healthy()
@@ -597,7 +596,7 @@ edit_check_healthy()
 /**
  * return the middle line of the window.
  */
-static inline int
+static int
 middle_line(void)
 {
     return p_lines / 2 + 1;
@@ -624,7 +623,7 @@ back_line(textline_t * pos, int num, bool changeln)
     return pos;
 }
 
-static inline int
+static int
 visible_window_height(void)
 {
     if (curr_buf->phone_mode)
@@ -657,7 +656,7 @@ forward_line(textline_t * pos, int num, bool changeln)
 /**
  * move the cursor to the next line with ansimode fixed.
  */
-static inline void
+static void
 cursor_to_next_line(void)
 {
     short pos;
@@ -682,7 +681,7 @@ cursor_to_next_line(void)
 /**
  * opposite to cursor_to_next_line.
  */
-static inline void
+static void
 cursor_to_prev_line(void)
 {
     short pos;
@@ -704,7 +703,7 @@ cursor_to_prev_line(void)
     }
 }
 
-static inline void
+static void
 edit_window_adjust(void)
 {
     int offset = 0;
@@ -731,7 +730,7 @@ edit_window_adjust(void)
     }
 }
 
-static inline void
+static void
 edit_window_adjust_middle(void)
 {
     if (curr_buf->currln < middle_line()) {
@@ -2081,7 +2080,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     return 0;
 }
 
-static inline int
+static int
 has_block_selection(void)
 {
     return curr_buf->blockln >= 0;
@@ -2104,7 +2103,7 @@ block_cancel(void)
     }
 }
 
-static inline void
+static void
 setup_block_begin_end(textline_t **begin, textline_t **end)
 {
     if (curr_buf->currln >= curr_buf->blockln) {
@@ -2919,7 +2918,7 @@ detect_attr(const char *ps, size_t len)
     return attr;
 }
 
-static inline void
+static void
 display_textline_internal(textline_t *p, int i)
 {
     short tmp;
@@ -3364,7 +3363,7 @@ insert_ansi_code(void)
     curr_buf->insert_mode = ch;
 }
 
-static inline void
+static void
 phone_mode_switch(void)
 {
     if (curr_buf->phone_mode)
@@ -3403,7 +3402,7 @@ phone_char(char c)
  * When get the key for phone mode, handle it (e.g. edit_msg) and return the
  * key.  Otherwise return 0.
  */
-static inline char
+static char
 phone_mode_filter(char ch)
 {
     if (!curr_buf->phone_mode)

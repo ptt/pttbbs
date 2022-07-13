@@ -2151,7 +2151,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
     return 0;
 }
 
-inline static void
+static void
 userlist(void)
 {
     pickup_t       *currpickup;

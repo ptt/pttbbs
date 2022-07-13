@@ -1036,7 +1036,7 @@ setup_utmp(int mode)
     nice(3);
 }
 
-inline static void welcome_msg(void)
+static void welcome_msg(void)
 {
     prints(ANSI_RESET "      歡迎您再度拜訪，上次您是從 "
 	    ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站。"
@@ -1044,7 +1044,7 @@ inline static void welcome_msg(void)
     pressanykey();
 }
 
-inline static void check_bad_login(void)
+static void check_bad_login(void)
 {
     char            genbuf[200];
     setuserfile(genbuf, FN_BADLOGIN);
@@ -1120,7 +1120,7 @@ check_bad_clients(void) {
     vmsg("謝謝您的合作。如果您想提供更多資訊歡迎至" BN_BUGREPORT "報告");
 }
 
-inline static void append_log_recent_login()
+static void append_log_recent_login()
 {
     char buf[STRLEN], logfn[PATHLEN];
     int szlogfn = 0, szlogentry = 0;
@@ -1140,7 +1140,7 @@ inline static void append_log_recent_login()
     log_file(logfn, LOG_CREAT, buf);
 }
 
-inline static void check_mailbox_quota(void)
+static void check_mailbox_quota(void)
 {
     if (!HasUserPerm(PERM_READMAIL))
         return;
@@ -1157,7 +1157,7 @@ static void init_guest_info(void)
 }
 
 #if FOREIGN_REG_DAY > 0
-inline static void foreign_warning(void){
+static void foreign_warning(void){
     if ((HasUserFlag(UF_FOREIGN)) && !(HasUserFlag(UF_LIVERIGHT))){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
 	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");

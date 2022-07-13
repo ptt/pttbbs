@@ -225,7 +225,7 @@ ChessRedraw(const ChessInfo* info)
 	ChessDrawLine(info, i);
 }
 
-inline static int
+static int
 ChessTimeCountDownCalc(ChessInfo* info, int who, int length)
 {
     info->lefttime[who] -= length;
@@ -272,7 +272,7 @@ ChessStepMade(ChessInfo* info, int who)
 /*
  * Start of the network communication function.
  */
-inline static ChessStepType
+static ChessStepType
 ChessRecvMove(ChessInfo* info, int sock, void *step)
 {
     if (read(sock, step, info->constants->step_entry_size)
@@ -281,7 +281,7 @@ ChessRecvMove(ChessInfo* info, int sock, void *step)
     return *(ChessStepType*) step;
 }
 
-inline static int
+static int
 ChessSendMove(ChessInfo* info, int sock, const void *step)
 {
     if (write(sock, step, info->constants->step_entry_size)
@@ -290,7 +290,7 @@ ChessSendMove(ChessInfo* info, int sock, const void *step)
     return 1;
 }
 
-inline static int
+static int
 ChessStepSendOpposite(ChessInfo* info, const void* step)
 {
     void (*orig_handler)(int);
@@ -310,7 +310,7 @@ ChessStepSendOpposite(ChessInfo* info, const void* step)
     return result;
 }
 
-inline static void
+static void
 ChessStepBroadcast(ChessInfo* info, const void *step)
 {
     ChessBroadcastListNode *p = &(info->broadcast_list.head);
@@ -350,7 +350,7 @@ ChessMessageSend(ChessInfo* info, ChessStepType type)
     return ChessStepSend(info, &type);
 }
 
-static inline int
+static int
 ChessCheckAlive(ChessInfo* info)
 {
     ChessStepType type = CHESS_STEP_NOP;
@@ -373,7 +373,7 @@ ChessStepReceive(ChessInfo* info, void* step)
     return result;
 }
 
-inline static void
+static void
 ChessReplayUntil(ChessInfo* info, int n)
 {
     const void* step;
@@ -1649,7 +1649,7 @@ ChessShowRequest(void)
     }
 }
 
-inline static const char*
+static const char*
 ChessTimeStr(int second)
 {
     static char buf[10];

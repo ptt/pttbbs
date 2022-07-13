@@ -61,15 +61,15 @@ static void fav_free_branch(fav_t *fp);
  * cast_(board|line|folder) 一族用於將 base class 作轉型
  * (不檢查實際 data type)
  */
-inline static fav_board_t *cast_board(fav_type_t *p){
+static fav_board_t *cast_board(fav_type_t *p){
     return (fav_board_t *)p->fp;
 }
 
-inline static fav_line_t *cast_line(fav_type_t *p){
+static fav_line_t *cast_line(fav_type_t *p){
     return (fav_line_t *)p->fp;
 }
 
-inline static fav_folder_t *cast_folder(fav_type_t *p){
+static fav_folder_t *cast_folder(fav_type_t *p){
     return (fav_folder_t *)p->fp;
 }
 
@@ -103,11 +103,11 @@ inline int get_item_type(fav_type_t *ft){
 /**
  * 將一個指定的 dir pointer 存下來，之後可用 fav_get_tmp_fav 來存用
  */
-inline static void fav_set_tmp_folder(fav_t *fp){
+static void fav_set_tmp_folder(fav_t *fp){
     fav_tmp = fp;
 }
 
-inline static fav_t *fav_get_tmp_fav(void){
+static fav_t *fav_get_tmp_fav(void){
     return fav_tmp;
 }
 
@@ -156,11 +156,11 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
     fp->DataTail++;
 }
 
-inline static int get_folder_num(fav_t *fp) {
+static int get_folder_num(fav_t *fp) {
     return fp->nFolders;
 }
 
-inline static int get_line_num(fav_t *fp) {
+static int get_line_num(fav_t *fp) {
     return fp->nLines;
 }
 
@@ -228,7 +228,7 @@ static int get_type_size(int type)
     return 0;
 }
 
-inline static void* fav_malloc(int size){
+static void* fav_malloc(int size){
     void *p;
     assert(size>0);
     p = (void *)malloc(size);
@@ -240,7 +240,7 @@ inline static void* fav_malloc(int size){
 /**
  * 只複製 fav_type_t
  */
-inline static void
+static void
 fav_item_copy(fav_type_t *target, const fav_type_t *source){
     target->type = source->type;
     target->attr = source->attr;
@@ -391,20 +391,20 @@ inline int fav_stack_full(void){
     return fav_stack_num >= FAV_MAXDEPTH;
 }
 
-inline static int fav_stack_push_fav(fav_t *fp){
+static int fav_stack_push_fav(fav_t *fp){
     if (fav_stack_full())
 	return -1;
     fav_stack[fav_stack_num++] = fp;
     return 0;
 }
 
-inline static int fav_stack_push(fav_type_t *ft){
+static int fav_stack_push(fav_type_t *ft){
 //    if (ft->type != FAVT_FOLDER)
 //	return -1;
     return fav_stack_push_fav(get_fav_folder(ft));
 }
 
-inline static void fav_stack_pop(void){
+static void fav_stack_pop(void){
     fav_stack[--fav_stack_num] = NULL;
 }
 
@@ -629,7 +629,7 @@ int fav_save(void)
 /**
  * remove ft (設為 invalid，實際上會等到 save 時才清除)
  */
-static inline void fav_free_item(fav_type_t *ft)
+static void fav_free_item(fav_type_t *ft)
 {
     set_attr(ft, 0xFFFF, FALSE);
 }
@@ -770,7 +770,7 @@ int fav_getid(fav_type_t *ft)
     return -1;
 }
 
-inline static int is_maxsize(void){
+static int is_maxsize(void){
     return fav_number >= MAX_FAV;
 }
 
@@ -872,7 +872,7 @@ void move_in_current_folder(int from, int to)
 /**
  * allocate 一個 folder entry
  */
-inline static fav_t *alloc_folder_item(void){
+static fav_t *alloc_folder_item(void){
     fav_t *fp = (fav_t *)fav_malloc(sizeof(fav_t));
     fp->nAllocs = FAV_PRE_ALLOC;
     fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * FAV_PRE_ALLOC);
@@ -993,7 +993,7 @@ static int remove_tagged_item(fav_t *fp, fav_type_t *ft)
     return fav_remove(fp, ft);
 }
 
-inline static int fav_remove_tagged_item(fav_t *fp){
+static int fav_remove_tagged_item(fav_t *fp){
     fav_dosomething_tagged_item(fp, remove_tagged_item);
     return 0;
 }
@@ -1031,7 +1031,7 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     return 0;
 }
 
-inline static int fav_add_tagged_item(fav_t *fp){
+static int fav_add_tagged_item(fav_t *fp){
     if (fp == fav_get_tmp_fav())
 	return -1;
     fav_dosomething_tagged_item(fp, add_and_remove_tag);
@@ -1075,13 +1075,13 @@ void fav_add_all_tagged_item(void)
     fav_dosomething_all_tagged_item(fav_add_tagged_item);
 }
 
-inline static int remove_tag(fav_t *fp GCC_UNUSED, fav_type_t  *ft)
+static int remove_tag(fav_t *fp GCC_UNUSED, fav_type_t  *ft)
 {
     set_attr(ft, FAVH_TAG, FALSE);
     return 0;
 }
 
-inline static int remove_tags(fav_t *fp)
+static int remove_tags(fav_t *fp)
 {
     fav_dosomething_tagged_item(fp, remove_tag);
     return 0;

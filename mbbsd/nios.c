@@ -44,7 +44,7 @@
 #endif
 
 #ifndef DEBUG
-#define CIN_PROTO  static inline
+#define CIN_PROTO  static
 #define VKEY_PROTO inline
 #else
 #define CIN_PROTO

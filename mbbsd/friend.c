@@ -58,7 +58,7 @@ setfriendfile(char *fpath, int type)
 	setbfile(fpath, currboard, friend_file[type]);
 }
 
-inline static int
+static int
 friend_count(const char *fname)
 {
     return file_count_line(fname);
@@ -395,7 +395,7 @@ friend_editdesc(const char *uident, int type)
 	fclose(nfp);
 }
 
-static inline void friend_load_real(int tosort, int maxf,
+static void friend_load_real(int tosort, int maxf,
 			     short *destn, int *destar, const char *fn)
 {
     char    genbuf[PATHLEN];

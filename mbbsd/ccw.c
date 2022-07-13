@@ -98,7 +98,7 @@ typedef struct CCW_CTX {
 // CCW helpers
 
 #ifndef DEBUG
-# define CCW_PROTO  static inline
+# define CCW_PROTO  static
 #else
 # define CCW_PROTO
 #endif

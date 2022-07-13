@@ -137,7 +137,7 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid,
     return ptr;
 }
 
-static inline int
+static int
 brc_enlarge_buf(void)
 {
     char *buffer;
@@ -175,7 +175,7 @@ brc_enlarge_buf(void)
 #undef THE_FREE
 }
 
-static inline void
+static void
 brc_get_buf(int size){
     if (!size)
 	brc_alloc = BRC_BLOCKSIZE;
@@ -187,7 +187,7 @@ brc_get_buf(int size){
     assert(brc_buf);
 }
 
-static inline void
+static void
 brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 {
     char           *ptr;

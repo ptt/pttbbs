@@ -759,7 +759,7 @@ FindAngel(void){
 }
 
 #ifdef BN_NEWBIE
-static inline void
+static void
 GotoNewHand(){
     char old_board[IDLEN + 1] = "";
     int canRead = 1;
@@ -785,7 +785,7 @@ GotoNewHand(){
 #endif
 
 
-static inline void
+static void
 NoAngelFound(const char* msg){
     // don't worry about the screen -
     // it should have been backuped before entering here.
@@ -807,7 +807,7 @@ NoAngelFound(const char* msg){
 #endif
 }
 
-static inline void
+static void
 AngelNotOnline(){
     char msg_fn[PATHLEN];
 

@@ -366,7 +366,7 @@ static int debug = 0;
 # define MFFPROTO
 #else
 # define MFPROTO  static
-# define MFFPROTO inline static
+# define MFFPROTO static
 #endif
 
 /* DBCS users tend to write unsigned char. let's make compiler happy */

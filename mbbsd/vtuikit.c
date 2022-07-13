@@ -64,7 +64,7 @@ nblank(int n)
     outnc(n, ' ');
 }
 
-static inline void
+static void
 fillns(int n, const char *s)
 {
     while (n > 0 && *s)
@@ -73,7 +73,7 @@ fillns(int n, const char *s)
 	outnc(n, ' ');
 }
 
-static inline void
+static void
 fillns_ansi(int n, const char *s)
 {
     int d = strat_ansi(n, s);
@@ -1117,7 +1117,7 @@ InputHistoryNext(char *s, int sz)
 // vget*: mini editbox
 ////////////////////////////////////////////////////////////////////////
 
-static inline int
+static int
 _vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, int c, VGET_RUNTIME *prt, void *instance)
 {
     if (!cbptr)

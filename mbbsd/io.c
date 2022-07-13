@@ -333,7 +333,7 @@ process_pager_keys(int ch)
 static int    i_newfd = 0;
 static struct timeval i_to, *i_top = NULL;
 
-static inline void
+static void
 add_io(int fd, int timeout)
 {
     i_newfd = fd;
@@ -346,13 +346,13 @@ add_io(int fd, int timeout)
 	i_top = NULL;
 }
 
-static inline int
+static int
 num_in_buf(void)
 {
     return vbuf_size(pvin);
 }
 
-static inline void
+static void
 drop_input(void)
 {
     vbuf_clear(pvin);
@@ -363,7 +363,7 @@ drop_input(void)
  * =0 if nothing read
  * <0 if need to read again
  */
-static inline ssize_t
+static ssize_t
 read_vin() {
     // Note: buf should be larger than pvin buffer size.
     unsigned char buf[IBUFSIZE];
@@ -502,7 +502,7 @@ dogetch(void)
 // virtual terminal keyboard context
 static VtkbdCtx vtkbd_ctx;
 
-static inline int
+static int
 igetch(void)
 {
     register int ch;
@@ -562,7 +562,7 @@ igetch(void)
  * if f < 0,  wait forever.
  * Return 1 if anything available.
  */
-static inline int
+static int
 wait_input(float f, int bIgnoreBuf)
 {
     int sel = 0;

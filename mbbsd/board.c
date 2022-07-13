@@ -153,7 +153,7 @@ save_brdbuf(void)
     fav_free();
 }
 
-static inline int
+static int
 HasBoardPermNormally(boardheader_t *bptr)
 {
     register int    level, brdattr;
@@ -1320,7 +1320,7 @@ brdlist_foot(void)
 }
 
 
-static inline const char *
+static const char *
 make_class_color(char *name)
 {
     /* 0;34 is too dark */
