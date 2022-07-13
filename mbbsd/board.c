@@ -54,18 +54,6 @@ static time4_t   last_save_fav_and_brc;
 #define IS_LISTING_FAV()   (yank_flag == 0)
 #define IS_LISTING_BRD()   (yank_flag == 1)
 
-inline int getbid(const boardheader_t *fh)
-{
-    return (fh - bcache);
-}
-inline boardheader_t *getparent(const boardheader_t *fh)
-{
-    if(fh->parent>0)
-	return getbcache(fh->parent);
-    else
-	return NULL;
-}
-
 // 程式中有特別用途所以不得自行 post / 修改的看板
 int
 is_readonly_board(const char *bname)
