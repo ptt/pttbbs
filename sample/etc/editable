@@ -58,6 +58,8 @@ etc/regnotes/phone	註冊細項說明[電話]
 etc/regnotes/mobile	註冊細項說明[手機]
 etc/regnotes/birthday	註冊細項說明[生日]
 etc/regnotes/sex	註冊細項說明[性別]
+etc/passwdchanged	密碼更動通知信
+etc/emailchanged	聯絡信箱更動通知信
 # ----------------------------------------
 # 按鍵說明系列
 # ----------------------------------------
