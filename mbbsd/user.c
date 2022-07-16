@@ -1002,7 +1002,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (!adminmode) {
 #ifdef USEREC_EMAIL_IS_CONTACT
 #   ifdef REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
-	    if (is_valid_email(cuser.email)) {
+	    if (!is_valid_email(cuser.email)) {
 		move(y, 0);
 		outs("設定聯絡信箱後才能修改密碼唷!");
 		fail++;
