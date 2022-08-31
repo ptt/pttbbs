@@ -228,6 +228,11 @@ void auto_backup(void);
 void restore_backup(void);
 const char *ask_tmpbuf(int y);
 
+/* email-challenge */
+#ifdef USE_VERIFYDB_ACCOUNT_RECOVERY
+int email_challenge(const char *email, const userec_t *user, const int y, const char *prompt, const char *filename, int *out_y);
+#endif
+
 /* emaildb */
 #ifdef USE_EMAILDB
 int emaildb_check_email (const char *userid, const char *email);

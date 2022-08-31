@@ -1008,8 +1008,17 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		fail++;
 		break;
 	    }
-#   endif
-#endif
+
+#      ifdef USE_VERIFYDB_ACCOUNT_RECOVERY
+            int out_y = 0;
+            if(!email_challenge(cuser.email, &cuser, y, " " BBSNAME " - 重設密碼認證碼 [ ", "etc/resetpasswdmail", &out_y)) {
+                fail++;
+                break;
+            }
+            y = out_y;
+#      endif // USE_VERIFYDB_ACCOUNT_RECOVERY
+#   endif //REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
+#endif //USEREC_EMAIL_IS_CONTACT
             if (!getdata(y++, 0, "請輸入原密碼：", buf, PASS_INPUT_LEN + 1,
                          PASSECHO) ||
 		!checkpasswd(x.passwd, buf)) {
