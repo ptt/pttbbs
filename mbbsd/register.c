@@ -572,8 +572,25 @@ query_yn(int y, const char *msg)
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
 
+// register_email_verification
+//
+// given the email input, generate a random code and send to
+// the email address to verify the validity of the email.
+//
+// Params:
+//   ein: email input information.
+//
+//   skip_same_email_check:
+//     whether to skip checking the input email is the same as the original
+//     email.
+//     0: not skip checking (to check whether they are the same.)
+//     1: skip checking (not to check whether they are the same.)
+//
+// Return:
+//     0 (REGISTER_OK): ok
+//     < 0: error code
 static int
-register_email_verification(email_input_t *ein)
+register_email_verification(email_input_t *ein, bool skip_same_email_check)
 {
     char *email = ein->email;
     clear();
@@ -643,7 +660,7 @@ register_email_verification(email_input_t *ein)
     } while (err != REGISTER_OK);
 
     // Nothing changed.
-    if (!strcmp(email, orig)) {
+    if (!skip_same_email_check && !strcmp(email, orig)) {
 	vmsg("E-Mail 與原本相同。");
 	return REGISTER_ERR_CANCEL;
     }
@@ -750,7 +767,7 @@ new_register(void)
     ein.warn_untrusted = true;
 #   endif  // ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
 
-    if (register_email_verification(&ein) == REGISTER_OK) {
+    if (register_email_verification(&ein, 0) == REGISTER_OK) {
 	email_verified = ein.is_trusted;
     } else {
 	exit(1);
@@ -1166,7 +1183,15 @@ check_register(void)
         pressanykey();
 
         // additional parentheses around "ret =" to please compiler
-        while ((ret = change_contact_email()));
+        while ((ret = change_contact_email(0)));
+#ifdef FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
+    } else if (last_login_time < FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN) {
+        more("etc/forceupdatecontactemail", NA);
+        pressanykey();
+
+        // additional parentheses around "ret =" to please compiler
+        while ((ret = change_contact_email(1)));
+#endif //FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
     }
 
     // 已經通過的就不用了
@@ -1449,7 +1474,7 @@ u_email_verification()
 
     email_input_t ein = {};
     ein.email = email;
-    if (register_email_verification(&ein) != REGISTER_OK)
+    if (register_email_verification(&ein, 0) != REGISTER_OK)
 	return;
     assert(ein.is_trusted);
 
@@ -1712,10 +1737,17 @@ static int notify_email_change(const char *userid, const char *email)
 
 // change_contact_email
 //
+// Params:
+//   skip_same_email_check:
+//     whether to skip checking the input email is the same as the original
+//     email.
+//     0: not skip checking (to check whether they are the same.)
+//     1: skip checking (not to check whether they are the same.)
+//
 // Return:
 //   int: 0: ok -1: err
 int
-change_contact_email()
+change_contact_email(bool skip_same_email_check)
 {
     char email[EMAILSZ] = {};
     memcpy(email, cuser.email, sizeof(email));
@@ -1723,7 +1755,7 @@ change_contact_email()
     email_input_t ein = {};
     ein.email = email;
     ein.allow_untrusted = true;
-    if (register_email_verification(&ein) != REGISTER_OK)
+    if (register_email_verification(&ein, skip_same_email_check) != REGISTER_OK)
 	return -1;
 
     // Log.
