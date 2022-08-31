@@ -580,7 +580,7 @@ void check_register(void);
 bool check_email_allow_reject_lists(
     char *email, const char **errmsg, const char **notice_file);
 void register_mail_complete_and_exit();
-void change_contact_email();
+int change_contact_email();
 
 /* register_sms */
 void u_sms_verification();

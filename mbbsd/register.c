@@ -1699,7 +1699,12 @@ static int notify_email_change(const char *userid, const char *email)
 
     return ret > 0 ? 0 : -1;
 }
-void
+
+// change_contact_email
+//
+// Return:
+//   int: 0: ok -1: err
+int
 change_contact_email()
 {
     char email[EMAILSZ] = {};
@@ -1709,7 +1714,7 @@ change_contact_email()
     ein.email = email;
     ein.allow_untrusted = true;
     if (register_email_verification(&ein) != REGISTER_OK)
-	return;
+	return -1;
 
     // Log.
     char logfn[PATHLEN];
@@ -1725,6 +1730,8 @@ change_contact_email()
     pwcuSetEmail(email);
 
     vmsg("聯絡信箱更新完成。");
+
+    return 0;
 }
 
 #endif

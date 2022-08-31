@@ -1178,6 +1178,7 @@ user_login(void)
 {
     struct tm       ptime, lasttime;
     int             nowusers, i;
+    int             ret = 0;
 
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
@@ -1191,6 +1192,20 @@ user_login(void)
 #ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
 #endif
+
+    // ensuring the contact email if lastlogin before sometime.
+#ifdef USEREC_EMAIL_IS_CONTACT
+    #ifdef ENSURE_CONTACT_EMAIL_LASTLOGIN
+    if(cuser.lastlogin < ENSURE_CONTACT_EMAIL_LASTLOGIN) {
+        more("etc/ensurecontactemail", NA);
+        pressanykey();
+
+        // additional parentheses around "ret =" to please compiler
+        while( (ret = change_contact_email()) );
+    }
+    #endif //ENSURE_CONTACT_EMAIL_LASTLOGIN
+#endif //USEREC_EMAIL_IS_CONTACT
+
 
     /* get local time */
     localtime4_r(&now, &ptime);
