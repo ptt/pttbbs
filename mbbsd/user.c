@@ -714,7 +714,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef USEREC_EMAIL_IS_CONTACT
     case 'm':
 	if (!adminmode) {
-	    change_contact_email();
+	    change_contact_email(0);
 	    return;
 	} else {
 	    char email[EMAILSZ];
