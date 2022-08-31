@@ -1158,6 +1158,16 @@ void
 check_register(void)
 {
     char fn[PATHLEN];
+    int ret = 0;
+
+    // 確認一定要有聯絡信箱
+    if (!is_valid_email(cuser.email)) {
+        more("etc/ensurevalidcontactemail", NA);
+        pressanykey();
+
+        // additional parentheses around "ret =" to please compiler
+        while ((ret = change_contact_email()));
+    }
 
     // 已經通過的就不用了
     if (HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_SYSOP))
@@ -1699,7 +1709,12 @@ static int notify_email_change(const char *userid, const char *email)
 
     return ret > 0 ? 0 : -1;
 }
-void
+
+// change_contact_email
+//
+// Return:
+//   int: 0: ok -1: err
+int
 change_contact_email()
 {
     char email[EMAILSZ] = {};
@@ -1709,7 +1724,7 @@ change_contact_email()
     ein.email = email;
     ein.allow_untrusted = true;
     if (register_email_verification(&ein) != REGISTER_OK)
-	return;
+	return -1;
 
     // Log.
     char logfn[PATHLEN];
@@ -1725,6 +1740,8 @@ change_contact_email()
     pwcuSetEmail(email);
 
     vmsg("聯絡信箱更新完成。");
+
+    return 0;
 }
 
 #endif
