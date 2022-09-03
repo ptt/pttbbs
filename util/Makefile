@@ -26,6 +26,7 @@ CPROG_WITH_UTIL= \
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
 	munin		useractive_munin	\
+	cleancontactemail
 
 # 下面是 C++ 的程式
 CPP_WITH_UTIL= \
