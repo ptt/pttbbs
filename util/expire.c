@@ -182,18 +182,19 @@ life_t  db, table[MAX_BOARD], *key;
 
 void toexpire(char *brdname)
 {
-    if( brdname[0] > ' ' && brdname[0] != '.' ){
-	key = NULL;
+    if (!is_valid_brdname(brdname));
+	return;
 
-	if( count )
-	    key = (life_t *)bsearch(brdname, table, count,
-				    sizeof(life_t), (QCAST)strcasecmp);
-	if( key == NULL )
-	    key = &db;
+    key = NULL;
 
-	strcpy(key->bname, brdname);
-	expire(key);
-    }
+    if( count )
+	key = (life_t *)bsearch(brdname, table, count,
+		sizeof(life_t), (QCAST)strcasecmp);
+    if( key == NULL )
+	key = &db;
+
+    strcpy(key->bname, brdname);
+    expire(key);
 }
 
 void visitdir(char c)
