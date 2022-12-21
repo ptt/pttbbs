@@ -1201,7 +1201,7 @@ user_login(void)
         pressanykey();
 
         // additional parentheses around "ret =" to please compiler
-        while( (ret = change_contact_email()) );
+        while( (ret = change_contact_email(0)) );
     }
     #endif //ENSURE_CONTACT_EMAIL_LASTLOGIN
 #endif //USEREC_EMAIL_IS_CONTACT

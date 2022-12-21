@@ -253,7 +253,7 @@ static bool SendChallengeCode(const std::string &email,
   subject.append(prompt);
   subject.append(" [ ");
   subject.append(code);
-  subject.append(" ] @ IP ");
+  subject.append(" ]@");
   subject.append(ip);
   bsmtp(filename.c_str(), subject.c_str(), email.c_str(), "non-exist");
   return true;

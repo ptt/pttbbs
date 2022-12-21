@@ -1702,13 +1702,26 @@ static int notify_email_change(const char *userid, const char *email)
 
 // change_contact_email
 //
+// Params:
+//   is_2fa: 0: no 1: yes
+//
 // Return:
 //   int: 0: ok -1: err
 int
-change_contact_email()
+change_contact_email(int is_2fa)
 {
     char email[EMAILSZ] = {};
     memcpy(email, cuser.email, sizeof(email));
+
+    int y = 1;
+    int out_y = 0;
+
+    if(is_2fa && is_valid_email(cuser.email)) {
+        clear();
+        vs_hdr("重設聯絡信箱認證碼");
+        if(!email_challenge(cuser.email, &cuser, y, " " BBSNAME " - 聯絡信箱認證碼 ", "etc/contactemail2fa", &out_y))
+        return -1;
+    }
 
     email_input_t ein = {};
     ein.email = email;
