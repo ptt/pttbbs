@@ -1,4 +1,5 @@
 #include "daemon/boardd/evbuffer.hpp"
+#include <string_view>
 extern "C" {
 #include <event2/buffer.h>
 }
@@ -13,4 +14,9 @@ bool Evbuffer::ConvertUTF8() {
     return true;
   buf_ = evbuffer_new();
   return false;
+}
+
+std::string_view Evbuffer::StringView() {
+  size_t len = evbuffer_get_length(buf_);
+  return {reinterpret_cast<const char *>(evbuffer_pullup(buf_, len)), len};
 }

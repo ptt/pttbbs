@@ -208,13 +208,11 @@ Status DoSelect(const std::string &fn, const std::string &consistency_token,
 
   select_result_t result;
   Evbuffer buf;
-  RETURN_ON_FAIL(SelectStatus(select_article(buf.Get(), &result, &spec)));
+  RETURN_ON_FAIL(SelectStatus(select_article(buf.GetBuffer(), &result, &spec)));
   if (!buf.ConvertUTF8())
     return Status(StatusCode::INTERNAL, "convert utf8 failed");
 
-  content->mutable_content()->assign(
-      reinterpret_cast<const char *>(evbuffer_pullup(buf.Get(), -1)),
-      evbuffer_get_length(buf.Get()));
+  content->mutable_content()->assign(buf.StringView());
   content->set_consistency_token(result.cachekey);
   content->set_offset(result.sel_offset);
   content->set_length(result.sel_size);

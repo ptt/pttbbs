@@ -106,14 +106,12 @@ Status ManServiceImpl::Article(ServerContext *context,
 
   select_result_t result;
   Evbuffer buf;
-  if (select_article(buf.Get(), &result, &spec) < 0)
+  if (select_article(buf.GetBuffer(), &result, &spec) < 0)
     return Status(StatusCode::INTERNAL, "select_article failed");
   if (!buf.ConvertUTF8())
     return Status(StatusCode::INTERNAL, "convert utf8 failed");
 
-  rep->mutable_content()->assign(
-      reinterpret_cast<const char *>(evbuffer_pullup(buf.Get(), -1)),
-      evbuffer_get_length(buf.Get()));
+  rep->mutable_content()->assign(buf.StringView());
   rep->set_cache_key(result.cachekey);
   rep->set_file_size(result.size);
   rep->set_selected_offset(result.sel_offset);
