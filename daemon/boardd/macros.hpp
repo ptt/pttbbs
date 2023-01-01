@@ -7,7 +7,7 @@
 
 #define RETURN_ON_FAIL(Expr) \
   do { \
-    Status s = (Expr); \
+    auto s = (Expr); \
     if (!s.ok()) \
       return s; \
   } while (0)
