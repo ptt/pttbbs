@@ -1,0 +1,92 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+SRCS = [
+    "load_uhash.c",
+    "setup_root_link.c",
+    "check_SHM.c",
+    "reset_SHM.c",
+]
+
+cc_library(
+    name = "testutil",
+    srcs = SRCS,
+    hdrs = [
+        "testutil.h",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+        "testmock",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+MOCK_SRCS = [
+    "mock_io.c",
+]
+
+cc_library(
+    name = "testmock",
+    srcs = MOCK_SRCS,
+    hdrs = [
+        "testmock.h",
+        "mbbsd_s.h",
+        "mbbsd_s.c",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+        "-Iinclude",
+        "-I$(BINDIR)/include",
+
+        # "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        # "-fcolor-diagnostics",
+        "-Wno-invalid-source-encoding",
+    ],
+    deps = [
+        "//include:all",
+        "//:pttbbsconf",
+        "//common/sys:commonsys",
+        "//common/bbs:commonbbs",
+    ],
+    defines = [
+        "BBSHOME='\"$(BBSHOME)\"'",
+    ],
+)
+
+MOCK_SYS_RANDOM_SRCS = [
+    "mock_getrandom.c",
+]
+
+cc_library(
+    name = "testmocksysrandom",
+    srcs = MOCK_SYS_RANDOM_SRCS,
+    hdrs = [
+        "testmocksysrandom.h",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = PTT_WARN + [
+    ],
+    deps = [
+    ],
+    defines = [
+        "BAZELTEST=",
+    ],
+)

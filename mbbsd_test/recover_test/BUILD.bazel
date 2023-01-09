@@ -1,0 +1,77 @@
+load("//:build_tools/vars.bzl", "LUACFLAGS", "LUALIBS", "PTT_WARN")
+
+TAGS = [
+    "exclusive",
+]
+
+VISIBILITY = [
+    "//visibility:public",
+]
+
+DATA = [
+    "//testcase:testcase",
+]
+
+COPTS = PTT_WARN + [
+    "-pipe",
+    "-Iinclude",
+    "-I$(BINDIR)/include",
+    "-I$(BINDIR)/common/fbs",
+    LUACFLAGS,
+
+    # "-Qunused-arguments",
+    "-Wno-parentheses-equality",
+    # "-fcolor-diagnostics",
+    "-Wno-invalid-source-encoding",
+
+    "-Itestutil",
+    "-Imbbsd",
+    "-std=c++17",
+]
+
+LINKOPTS = [
+    "-Os",
+    "-Wl,--as-needed",
+    "-Wl,--sort-common",
+
+    LUALIBS,
+
+    "-lstdc++",
+    "-lncurses",
+]
+
+DEPS = [
+    "//testutil:testutil",
+    "//mbbsd:mockmbbsdlib",
+    "//mbbsd:mbbsdcxx",
+    "@com_google_googletest//:gtest_main",
+
+    "recover_test_h",
+    "//mbbsd:recovercc",
+]
+
+DEFINES = [
+    "BBSHOME='\"$(BBSHOME)\"'",
+    "BAZELTEST=",
+]
+
+cc_library(
+    name = "recover_test_h",
+    hdrs = ["recover_test.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "recover_test1",
+    srcs = [
+        "recover_test1.cc",
+    ],
+    tags = TAGS,
+    visibility = VISIBILITY,
+    linkstatic = True,
+    data = DATA,
+    copts = COPTS,
+    linkopts = LINKOPTS,
+    deps = DEPS,
+    defines = DEFINES,
+)

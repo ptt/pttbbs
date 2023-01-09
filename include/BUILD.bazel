@@ -1,0 +1,25 @@
+cc_library(
+    name = "all",
+    hdrs = glob(["**"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "varh",
+    ],
+)
+
+cc_library(
+    name = "varh",
+    hdrs = ["genvarh"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "genvarh",
+    srcs = ["//mbbsd:varc"],
+    outs = ["var.h"],
+    cmd = "echo \"\"; echo \"var_h@: $@\"; echo \"pwd: `pwd`\"; mkdir -p include; perl $(location //util:parsevar) < $< > $@",
+    visibility = ["//visibility:public"],
+    tools = [
+        "//util:parsevar"
+    ],
+)

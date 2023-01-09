@@ -1791,7 +1791,7 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 }
 
 int
-main(int argc, char *argv[], char *envp[])
+main_core(int argc, char *argv[], char *envp[])
 {
     bool oklogin = false;
     struct ProgramOption *option;

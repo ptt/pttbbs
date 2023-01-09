@@ -1,0 +1,11 @@
+filegroup(
+    name = "parsevar",
+    srcs = glob(["parsevar.pl"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "newvers",
+    srcs = glob(["newvers.sh"]),
+    visibility = ["//visibility:public"],
+)
