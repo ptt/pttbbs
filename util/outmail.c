@@ -115,6 +115,9 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
     char buf[256];
     
+    if (sendRequest(sock, "rset\n") || waitReply(sock) != 2)
+	return;
+
     snprintf(buf, sizeof(buf), "mail from: %s\n", from);
     if(sendRequest(sock, buf) || waitReply(sock) != 2)
 	return;
