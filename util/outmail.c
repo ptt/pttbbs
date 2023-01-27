@@ -2,7 +2,7 @@
 
 #define SPOOL BBSHOME "/out"
 #define INDEX SPOOL "/.DIR"
-#define NEWINDEX SPOOL "/.DIR.sending"
+#define NEWINDEX_PATTERN SPOOL "/.DIR.sending.%d"
 #define FROM ".bbs@" MYHOSTNAME
 #define SMTPPORT 25
 char    *smtpname;
@@ -138,11 +138,14 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
 void sendMail() {
     int fd, smtpsock, counter = 0;
     long int total_count;
+    char spool_path[PATHLEN];
     struct stat st;
     MailQueue mq;
-    
-    if(access(NEWINDEX, R_OK | W_OK)) {
-	if(link(INDEX, NEWINDEX) || unlink(INDEX))
+
+    snprintf(spool_path, sizeof(spool_path), NEWINDEX_PATTERN, getpid());
+
+    if(access(spool_path, R_OK | W_OK)) {
+	if(link(INDEX, spool_path) || unlink(INDEX))
 	    /* nothing to do */
 	    return;
     }
@@ -154,7 +157,7 @@ void sendMail() {
 	return;
     }
     
-    fd = open(NEWINDEX, O_RDONLY);
+    fd = open(spool_path, O_RDONLY);
     flock(fd, LOCK_EX);
     fstat(fd, &st);
     total_count = st.st_size / sizeof(mq);
@@ -178,7 +181,7 @@ void sendMail() {
     }
     flock(fd, LOCK_UN);
     close(fd);
-    unlink(NEWINDEX);
+    unlink(spool_path);
     
     disconnectMailServer(smtpsock);
 }
