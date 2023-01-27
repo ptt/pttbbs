@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "bbs.h"
 
 #define SPOOL BBSHOME "/out"
@@ -8,6 +10,7 @@
 char    *smtpname;
 int     smtpport;
 char	disclaimer[1024];
+bool	one_shot;
 
 int waitReply(int sock) {
     char buf[256];
@@ -240,12 +243,16 @@ int main(int argc, char **argv, char **envp) {
 	case 's':
 	    parseserver(optarg, &smtpname, &smtpport);
 	    break;
+	case 'o':
+	    one_shot = true;
+	    break;
 	case 'q':
 	    listQueue();
 	    return 0;
 	default:
-	    printf("usage:\toutmail [-qh] -s host[:port]\n"
+	    printf("usage:\toutmail [-qoh] -s host[:port]\n"
 		   "\t-q\tlistqueue\n"
+		   "\t-o\texit when current spool is fully processed (One-shot)\n"
 		   "\t-h\thelp\n"
 		   "\t-s\tset default smtp server to host[:port]\n");
 	    return 0;
@@ -262,10 +269,11 @@ int main(int argc, char **argv, char **envp) {
     }
 
     qp_encode(disclaimer, sizeof(disclaimer), "[" BBSNAME "]對本信內容恕不負責", "big5");
-    for(;;) {
+    do {
 	sendMail();
 	setproctitle("outmail: sleeping");
 	sleep(60); /* send mail every minute */
-    }
+    } while (!one_shot);
+
     return 0;
 }
