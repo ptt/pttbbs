@@ -88,7 +88,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "From: %s <%s>\r\n"
 		 "To: %s\r\n"
 		 "Subject: %s\r\n"
-		 "X-Sender: outmail of pttbbs\r\n"
+		 "X-Sender: outmail of pttbbs " __DATE__ "\r\n"
 		 "Mime-Version: 1.0\r\n"
 		 "Content-Type: text/plain; charset=\"big5\"\r\n"
 		 "Content-Transfer-Encoding: 8bit\r\n"
