@@ -136,7 +136,9 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
 }
 
 void sendMail() {
-    int fd, smtpsock;
+    int fd, smtpsock, counter = 0;
+    long int total_count;
+    struct stat st;
     MailQueue mq;
     
     if(access(NEWINDEX, R_OK | W_OK)) {
@@ -154,14 +156,19 @@ void sendMail() {
     
     fd = open(NEWINDEX, O_RDONLY);
     flock(fd, LOCK_EX);
+    fstat(fd, &st);
+    total_count = st.st_size / sizeof(mq);
+
     while(read(fd, &mq, sizeof(mq)) > 0) {
 	FILE *fp;
 	char buf[256];
 	
+	counter++;
 	snprintf(buf, sizeof(buf), "%s%s", mq.sender, FROM);
 	if((fp = fopen(mq.filepath, "r"))) {
-	    setproctitle("outmail: sending %s", mq.filepath);
-	    printf("mailto: %s, relay server: %s:%d\n", mq.rcpt, smtpname, smtpport);
+	    setproctitle("outmail: sending %d/%ld %s", counter, total_count, mq.filepath);
+	    printf("mailto: %s, %d of %ld, relay server: %s:%d\n", mq.rcpt, counter, total_count,
+		   smtpname, smtpport);
 	    doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject);
 	    fclose(fp);
 	    unlink(mq.filepath);
