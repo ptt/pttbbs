@@ -171,8 +171,10 @@ void AccountRecovery::UserErrorExit() {
 }
 
 void AccountRecovery::InputUserEmail() {
-  mvprints(y_++, 0, "目前僅能取回使用 Email 註冊之帳號。");
-  y_++;
+#ifndef USEREC_EMAIL_IS_CONTACT
+  mvprints(y_, 0, "目前僅能取回使用 Email 註冊之帳號。");
+#endif
+  y_ += 2;
 
   // Input userid.
   char userid[IDLEN + 1] = {};
