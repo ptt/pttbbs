@@ -1732,7 +1732,7 @@ static int notify_email_change(const char *userid, const char *email)
     char subject[128];
     int ret;
 
-    snprintf(subject, sizeof(subject), " %s - %s (%s) - 聯絡信箱已更變",
+    snprintf(subject, sizeof(subject), " %s - %s (%s) - 聯絡信箱已變更",
 	     BBSNAME, userid, fromhost);
 
     ret = bsmtp("etc/emailchanged", subject, email, "non-exist");

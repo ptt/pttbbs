@@ -131,7 +131,7 @@ void verify_entry_email_edit(const VerifyDb::Entry *entry, bool *dirty) {
   // clang-format off
   outs(ANSI_COLOR(1;33));
   // clang-format on
-  outs("      如需修改認證狀態, 請使用權限更變選項.");
+  outs("      如需修改認證狀態, 請使用權限變更選項.");
   outs(ANSI_RESET);
 
   char confirm[2] = {};
