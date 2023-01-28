@@ -2585,7 +2585,7 @@ int notify_password_change(const char *userid, const char *email)
     char subject[128];
     int ret;
 
-    snprintf(subject, sizeof(subject), " %s - %s (%s) - 密碼已更變",
+    snprintf(subject, sizeof(subject), " %s - %s (%s) - 密碼已變更",
 	     BBSNAME, userid, fromhost);
 
     ret = bsmtp("etc/passwdchanged", subject, email, "non-exist");
