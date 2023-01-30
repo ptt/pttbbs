@@ -2187,9 +2187,17 @@ fterm_rawscroll (int dy)
     // we are not going to preserve (rx,ry)
     // so don't use fterm_move*.
     if (dy > 0)
-        fterm_rawcmd2(ft.rows, 1, 1, 'H');
+    {
+        // use a large row number in case terminal height > ft.rows
+        // The terminal height passed to resizeterm() can be unreliable
+        fterm_rawcmd2(9999, 1, 1, 'H');
+    }
     else
+    {
+        fterm_rawcmd2(ft.rows + 1 - ady, 1, 1, 'H');
+        fterm_raws(ESC_STR "[J");
         fterm_rawcmd2(1, 1, 1, 'H');
+    }
 
     for (; ady > 0; ady--)
     {
