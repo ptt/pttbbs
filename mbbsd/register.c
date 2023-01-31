@@ -1755,6 +1755,9 @@ int
 change_contact_email(bool skip_same_email_check)
 {
     char email[EMAILSZ] = {};
+    if (pwcuReload()) {
+        return -1;
+    }
     memcpy(email, cuser.email, sizeof(email));
 
     email_input_t ein = {};
