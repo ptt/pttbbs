@@ -13,11 +13,11 @@ extern "C" {
 
 #include "user_handle.hpp"
 
-void LoadUserEmail(const userec_t &u, std::vector<std::string> &all_emails_);
-bool LoadVerifyDbEmail(const std::optional<UserHandle> &user_,
-                       std::vector<std::string> &all_emails_);
-void EmailCodeChallenge(const std::string &email_,
-                        const std::vector<std::string> &all_emails_,
-                        int &y_);
+void LoadUserEmail(const userec_t &u, std::vector<std::string> &all_emails);
+bool LoadVerifyDbEmail(const std::optional<UserHandle> &user,
+                       std::vector<std::string> &all_emails);
+void EmailCodeChallenge(const std::string &email,
+                        const std::vector<std::string> &all_emails,
+                        int &y);
 
 #endif
