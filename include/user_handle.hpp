@@ -2,11 +2,13 @@
 
 #include <string>
 
-#ifdef USE_VERIFYDB_ACCOUNT_RECOVERY
+namespace user_handle {
 
 struct UserHandle {
   std::string userid;
   int64_t generation;
 };
 
-#endif
+bool InitUserHandle(const userec_t *u, UserHandle &user);
+
+} // namespace user_handle

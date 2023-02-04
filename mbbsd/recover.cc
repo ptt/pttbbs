@@ -25,7 +25,7 @@ public:
   void Run();
 
 private:
-  std::optional<UserHandle> user_;
+  std::optional<user_handle::UserHandle> user_;
   std::string email_;
   std::vector<std::string> all_emails_;
   int y_ = 2;
@@ -34,9 +34,8 @@ private:
   void InputUserEmail();
   void ResetPasswd();
 
-  static bool SetPasswd(const UserHandle &user, const char *hashed_passwd);
-  static void LogToSecurity(const UserHandle &user, const std::string &email);
-  static void NotifyUser(const std::string &userid, const std::string &email);
+  static bool SetPasswd(const user_handle::UserHandle &user, const char *hashed_passwd);
+  static void LogToSecurity(const user_handle::UserHandle &user, const std::string &email);
   static void UserErrorExit();
 };
 
@@ -52,18 +51,19 @@ bool AccountRecovery::LoadUser(const char *userid) {
   if (!is_validuserid(u.userid))
     return false;
 
-  UserHandle user;
-  user.userid = u.userid;
-  user.generation = u.firstlogin;
+  user_handle::UserHandle user;
+  if (!user_handle::InitUserHandle(&u, user)) {
+    return false;
+  }
   user_ = user;
 
-  LoadUserEmail(u, all_emails_);
+  email_challenge::LoadUserEmail(&u, all_emails_);
 
   return true;
 }
 
 // static
-bool AccountRecovery::SetPasswd(const UserHandle &user,
+bool AccountRecovery::SetPasswd(const user_handle::UserHandle &user,
                                 const char *hashed_passwd) {
   userec_t u = {};
   int unum = getuser(user.userid.c_str(), &u);
@@ -78,7 +78,7 @@ bool AccountRecovery::SetPasswd(const UserHandle &user,
 
 
 // static
-void AccountRecovery::LogToSecurity(const UserHandle &user,
+void AccountRecovery::LogToSecurity(const user_handle::UserHandle &user,
                                     const std::string &email) {
   std::string title = "重設密碼: ";
   title.append(user.userid);
@@ -143,7 +143,7 @@ void AccountRecovery::InputUserEmail() {
   move(y_, 0);
   clrtoeol(); // There might be error message at this line.
 
-  if (!LoadVerifyDbEmail(user_, all_emails_)) {
+  if (!email_challenge::LoadVerifyDbEmail(user_, all_emails_)) {
     vmsg("系統錯誤，請稍候再試。");
     exit(0);
   }
@@ -210,7 +210,10 @@ void AccountRecovery::ResetPasswd() {
 void AccountRecovery::Run() {
   vs_hdr("取回帳號");
   InputUserEmail();
-  EmailCodeChallenge(email_, all_emails_, y_);
+  const std::string prompt = " " BBSNAME " - 重設密碼認證碼 ";
+  std::string ip = fromhost;
+  const std::string filename = "etc/recovermail";
+  email_challenge::EmailCodeChallenge(true, email_, all_emails_, prompt, ip, filename, y_);
   ResetPasswd();
 }
 
