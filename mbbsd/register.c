@@ -1182,6 +1182,7 @@ check_register(void)
     char fn[PATHLEN];
     int ret = 0;
 
+#ifdef USEREC_EMAIL_IS_CONTACT
     // 確認一定要有聯絡信箱
     if (!is_valid_email(cuser.email)) {
         more("etc/ensurevalidcontactemail", NA);
@@ -1198,6 +1199,7 @@ check_register(void)
         while ((ret = change_contact_email(1)));
 #endif //FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
     }
+#endif //USEREC_EMAIL_IS_CONTACT
 
     // 已經通過的就不用了
     if (HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_SYSOP))
