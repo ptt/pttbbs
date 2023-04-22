@@ -203,7 +203,7 @@ int verifydb_change_userid(const char *from_userid, const char *to_userid,
       // (by using an empty vkey). Also, make sure the insert is successful
       // before deleting.
       if (verifydb_set(to_userid, entry->generation(), entry->vmethod(),
-                       entry->vkey()->c_str(), entry->timestamp() < 0) ||
+                       entry->vkey()->c_str(), entry->timestamp()) < 0 ||
           verifydb_set(from_userid, entry->generation(), entry->vmethod(), "",
                        0) < 0)
         ok = false;
