@@ -1081,7 +1081,7 @@ isvisible_man(const menu_t * me)
 	return 0;
     if (fhdr->filemode & FILE_HIDE)
     {
-	if (currstat == ANNOUNCE ||
+	if (currstat == ANNOUNCE || currstat == EDITEXP ||
 	    !is_hidden_board_friend(me->bid, currutmp->uid))
 	    return 0;
     }
