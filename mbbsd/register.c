@@ -251,29 +251,6 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// Regcode Support
-////////////////////////////////////////////////////////////////////////////
-
-#define REGCODE_INITIAL "v6" // always 2 characters
-#define REGCODE_LEN     (13)
-#define REGCODE_SZ      (REGCODE_LEN + 1)
-
-static void
-makeregcode(char *buf)
-{
-    int     i;
-    // prevent ambigious characters: oOlI
-    const char *alphabet = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
-
-    /* generate a new regcode */
-    buf[REGCODE_LEN] = 0;
-    buf[0] = REGCODE_INITIAL[0];
-    buf[1] = REGCODE_INITIAL[1];
-    for( i = 2 ; i < REGCODE_LEN ; ++i )
-	buf[i] = alphabet[random() % strlen(alphabet)];
-}
-
-////////////////////////////////////////////////////////////////////////////
 // Justify Utilities
 ////////////////////////////////////////////////////////////////////////////
 
@@ -670,10 +647,16 @@ register_email_verification(email_input_t *ein, bool skip_same_email_check)
 	return REGISTER_ERR_CANCEL;
     }
 
+#define REGCODE_INITIAL "v6" // always 2 characters
+#define REGCODE_LEN     (13)
+
     // Send and check regcode.
-    char inregcode[REGCODE_SZ] = {0}, regcode[REGCODE_SZ];
+    char inregcode[REGCODE_LEN + 1] = {0};
+    char regcode[REGCODE_LEN + 1] = REGCODE_INITIAL;
     char buf[80];
-    makeregcode(regcode);
+
+    random_text_code(regcode + strlen(REGCODE_INITIAL),
+		     REGCODE_LEN - strlen(REGCODE_INITIAL));
 
     tries = 0;
     int num_sent = 0;
