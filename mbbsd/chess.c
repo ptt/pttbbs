@@ -1724,7 +1724,7 @@ ChessDrawExtraInfo(const ChessInfo* info, int line, int space)
 	    prints(ANSI_COLOR(1;33) "%s" ANSI_RESET,
 		    info->myturn == info->turn ?
 		    "輪到你下棋了" : "等待對方下棋");
-	} else if (line == CHESS_DRAWING_REAL_STEP_ROW && info->last_movestr) {
+	} else if (line == CHESS_DRAWING_REAL_STEP_ROW && info->last_movestr[0]) {
 	    outs(info->last_movestr);
 	} else if (line == CHESS_DRAWING_REAL_TIME_ROW1) {
 	    if (info->lefthand[0])
