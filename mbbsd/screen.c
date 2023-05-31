@@ -79,6 +79,16 @@ initscr(void)
 }
 
 int
+resizeterm_within(int rows, int cols, int rows_full GCC_UNUSED, int cols_full GCC_UNUSED)
+{
+    // FIXME: rows_full instead of b_lines should be used for forward scrolling
+    if (rows != t_lines || cols != t_columns) {
+        return resizeterm(rows, cols);
+    }
+    return 0;
+}
+
+int
 resizeterm(int w, int h)
 {
     screenline_t   *new_picture;

@@ -241,7 +241,8 @@ typedef struct
     ftchar  *dmap;          // dirty map
     ftchar  *dcmap;         // processed display map
     ftattr  attr;
-    int     rows, cols;
+    int     rows, cols;     // the (possibly cropped) display region size
+    int     rows_full, cols_full; // the full terminal size
     int     y, x;
     int     sy,sx;  // stored cursor
     int     mi;     // map index, mi = current map and (1-mi) = old map
@@ -346,6 +347,7 @@ static FlatTerm ft;
 // initialization
 void    initscr     (void);
 int     resizeterm  (int rows, int cols);
+int     resizeterm_within(int rows, int cols, int rows_full, int cols_full);
 int     endwin      (void);
 
 // attributes
@@ -498,7 +500,17 @@ endwin(void)
 int
 resizeterm(int rows, int cols)
 {
+    // assume that the full terminal size == the display region size
+    return resizeterm_within(rows, cols, rows, cols);
+}
+
+int
+resizeterm_within(int rows, int cols, int rows_full, int cols_full)
+{
     int dirty = 0, mi = 0, i = 0;
+
+    ft.rows_full = rows_full;
+    ft.cols_full = cols_full;
 
     rows = ranged(rows, FTSZ_MIN_ROW, FTSZ_MAX_ROW);
     cols = ranged(cols, FTSZ_MIN_COL, FTSZ_MAX_COL);
@@ -2188,9 +2200,7 @@ fterm_rawscroll (int dy)
     // so don't use fterm_move*.
     if (dy > 0)
     {
-        // use a large row number in case terminal height > ft.rows
-        // The terminal height passed to resizeterm() can be unreliable
-        fterm_rawcmd2(9999, 1, 1, 'H');
+        fterm_rawcmd2(ft.rows_full, 1, 1, 'H');
     }
     else
     {
