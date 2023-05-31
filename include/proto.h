@@ -595,6 +595,7 @@ ChessInfo* reversi_replay(FILE* fp);
 /* screen/pfterm (ncurses-like) */
 void initscr	(void);
 int  resizeterm	(int rows, int cols);
+int  resizeterm_within(int rows, int cols, int rows_full, int cols_full);
 void getyx	(int *py, int *px);
 void move	(int y, int x);
 void clear	(void);

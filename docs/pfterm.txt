@@ -6,8 +6,9 @@
     API Manual
     函式說明手冊
 
-    VERSION 1.1
-    最後更新: 2007/12/24 18:00   piaip
+    VERSION 1.2
+    v1.1:     2007/12/24 18:00   piaip
+    最後更新: 2023/06/01 01:55   IID
 
 =============================================================================
 
@@ -32,8 +33,15 @@
 
 // initialization   初始化
 void    initscr     (void);                 初始系統
-int     resizeterm  (int rows, int cols);   調整視窗大小為(rows,col)
+int     resizeterm  (int rows, int cols);   調整畫面大小為(rows,cols)
+int     resizeterm_within(                  調整顯示範圍為終端機畫面的部分區域：
+            int rows, int cols,             顯示範圍大小為(rows,cols)，
+            int rows_full, int cols_full);  實際終端機則為(rows_full,cols_full)
 int     endwin      (void);                 結束系統
+
+            resizeterm() 假設顯示範圍大小 (rows,cols) 即為實際終端機大小。
+            但當顯示範圍與實際終端機大小不符時，畫面捲動行為將會不正確；
+            可用 resizeterm_within() 指定實際終端機大小 (rows_full,cols_full)。
 
 // cursor           游標
 void    getyx       (int *y, int *x);       取得目前游標位置

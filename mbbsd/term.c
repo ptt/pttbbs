@@ -52,18 +52,17 @@ void term_resize(int w, int h)
 
 
     /* make sure reasonable size */
-    h = MAX(24, MIN(100, h));
-    w = MAX(80, MIN(200, w));
+    int h_crop = MAX(24, MIN(100, h));
+    int w_crop = MAX(80, MIN(200, w));
 
-    if (w != t_columns || h != t_lines)
+    // invoke terminal system resize
+    resizeterm_within(h_crop, w_crop, h, w);
+    if (w_crop != t_columns || h_crop != t_lines)
     {
-	// invoke terminal system resize
-	resizeterm(h, w);
-
-	t_lines = h;
-	t_columns = w;
 	dorefresh = 1;
     }
+    t_lines = h_crop;
+    t_columns = w_crop;
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
