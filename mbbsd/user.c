@@ -714,7 +714,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef USEREC_EMAIL_IS_CONTACT
     case 'm':
 	if (!adminmode) {
-	    change_contact_email(0);
+	    change_contact_email(false, true);
 	    return;
 	} else {
 	    char email[EMAILSZ];
@@ -1008,8 +1008,17 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		fail++;
 		break;
 	    }
-#   endif
-#endif
+#       ifdef USE_EMAIL_2FA
+	    int out_y = 0;
+	    if (email_code_challenge(NULL, &cuser, y, BBSNAME " - 重設密碼認證碼",
+                                     fromhost, "etc/resetpasswdmail", &out_y)) {
+		fail++;
+		break;
+	    }
+	    y = out_y;
+#       endif //USE_EMAIL_2FA
+#   endif // REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
+#endif // USEREC_EMAIL_IS_CONTACT
             if (!getdata(y++, 0, "請輸入原密碼：", buf, PASS_INPUT_LEN + 1,
                          PASSECHO) ||
 		!checkpasswd(x.passwd, buf)) {
