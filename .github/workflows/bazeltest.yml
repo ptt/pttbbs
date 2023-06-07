@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: install pmake
+      run: sudo apt update && sudo apt install -y pmake unzip
+    - name: pre-bazel
+      run: sudo pmake pre-bazel
+    - name: flatbuffer
+      run: wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip && unzip Linux.flatc.binary.clang++-9.zip && chmod 755 flatc && sudo mv flatc /usr/bin && flatc --version
+    - name: cp pttbbs_test.conf
+      run: cp sample/pttbbs_test.conf pttbbs.conf
+    - name: bazeltest
+      run: sudo pmake bazeltest

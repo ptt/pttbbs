@@ -253,8 +253,9 @@ inline fav_t *get_fav_root(void){
 
 /**
  * 是否為有效的 entry
+ * https://stackoverflow.com/questions/19068705/undefined-reference-when-calling-inline-function
  */
-inline int valid_item(fav_type_t *ft){
+static inline int valid_item(fav_type_t *ft){
     return ft->attr & FAVH_FAV;
 }
 

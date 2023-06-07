@@ -4,3 +4,5 @@ SUBDIR=	common mbbsd util
 
 .ORDER: all-common all-mbbsd
 .ORDER: all-common all-util
+
+.include "bazel.mk"
