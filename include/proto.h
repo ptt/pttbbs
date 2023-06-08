@@ -101,6 +101,7 @@ void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 #ifdef USE_COOLDOWN
 int check_cooldown(boardheader_t *bp);
 #endif
+bool is_user_sms_verified();
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
