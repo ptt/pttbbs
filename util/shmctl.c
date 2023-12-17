@@ -100,7 +100,7 @@ int utmpfix(int argc, char **argv)
 	    upperbound = atoi(optarg);
 	    break;
 	default:
-	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout] [-F] [-D sleep]\n");
+	    printf("usage:\tshmctl\tutmpfix [-n (fast)] [-t timeout] [-l target] [-F (fork)] [-D sleep] [-u trigger]\n");
 	    return 1;
 	}
 
@@ -586,7 +586,7 @@ int setglobal(int argc, char **argv)
 {
     int     where, value;
     if( argc != 3 ){
-	puts("usage: shmctl setglobal (GV2) newvalue");
+	puts("usage: shmctl setglobal <GV2> newvalue");
 	return 1;
     }
     value = atoi(argv[2]);
@@ -846,7 +846,7 @@ int SHMinit(int argc, char **argv)
 	    no_uhash_loader = 1;
 	    break;
 	default:
-	    printf("usage:\tshmctl\tSHMinit\n");
+	    printf("usage:\tshmctl\tSHMinit [-n (no utmpsortd)]\n");
 	    return 0;
 	}
 
@@ -1163,9 +1163,9 @@ struct Cmd {
     const char    *cmd, *descript;
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
-    {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
+    {utmpsortd,  "utmpsortd",  "[interval-ms [sortxid-per-sortall]] utmp sorting daemon"},
 #ifdef NOKILLWATERBALL
-    {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
+    {nkwbd,      "nkwbd",      "(-h for usage) NOKillWaterBall daemon"},
 #endif
 
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
@@ -1173,7 +1173,7 @@ struct Cmd {
     {fixbcache,  "fixbcache",  "fix bcache"},
     {rlfcache,   "reloadfcache", "reload fcache"},
     {bBMC,       "bBMC",       "build BM cache"},
-    {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user"},
+    {utmpfix,    "utmpfix",    "(-h for usage) clear dead userlist entry & kick idle user"},
     {utmpreset,  "utmpreset",  "SHM->busystate=0"},
     {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
 
@@ -1181,17 +1181,18 @@ struct Cmd {
     {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
     {utmpstatus, "utmpstatus", "list utmpstatus"},
     {listpid,    "listpid",    "list all pids of mbbsd"},
-    {listbrd,    "listbrd",    "list board info in SHM"},
+    {listbrd,    "listbrd",    "[board-id] list board info in SHM"},
     {fixbrd,     "fixbrd",     "fix board info in SHM"},
-    {hotboard,   "hotboard",   "list boards of most bfriends"},
+    {hotboard,   "hotboard",   "(-h for usage) list boards of most bfriends"},
     {usermode,   "usermode",   "list #users in the same mode"},
-    {showstat,   "showstat",   "show statistics"},
+    {showstat,   "showstat",   "[-c (clear stats)] show statistics"},
     {testgap,    "testgap",    "test SHM->gap zeroness"},
 
     {dummy,      "\b\b\b\bMisc:", ""},
     {showglobal, "showglobal", "show GLOBALVAR[]"},
-    {setglobal,  "setglobal",  "set GLOBALVAR[]"},
-    {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
+    {setglobal,  "setglobal",  "(-h for usage) set GLOBALVAR[]"},
+    {SHMinit,    "init",       "(-h for usage) initialize SHM (including uhash_loader)"},
+    {SHMinit,    "SHMinit",    "(= init)"},
     {NULL, NULL, NULL}
 };
 
@@ -1204,20 +1205,9 @@ int main(int argc, char **argv)
     chdir(BBSHOME);
     initsetproctitle(argc, argv, environ);
     if( argc >= 2 ){
-	if( strcmp(argv[1], "init") == 0 ){
-	    /* in this case, do NOT run attach_SHM here.
-	       because uhash_loader is not run yet.      */
-	    return SHMinit(argc - 1, &argv[1]);
-	}
-
-	attach_SHM();
-	/* shmctl doesn't need resolve_boards() first */
-	//resolve_boards();
-	resolve_garbage();
-	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    if( strcmp(cmd[i].cmd, argv[1]) == 0 ){
-		return cmd[i].func(argc - 1, &argv[1]);
+		break;
 	    }
     }
     if( argc == 1 || cmd[i].func == NULL ){
@@ -1226,6 +1216,18 @@ int main(int argc, char **argv)
 	printf("commands:\n");
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    printf("\t%-15s%s\n", cmd[i].cmd, cmd[i].descript);
+	return 0;
     }
-    return 0;
+    if( cmd[i].func == SHMinit ){
+	/* in this case, do NOT run attach_SHM here.
+	   because uhash_loader is not run yet.      */
+	return SHMinit(argc - 1, &argv[1]);
+    }
+
+    attach_SHM();
+    /* shmctl doesn't need resolve_boards() first */
+    //resolve_boards();
+    resolve_garbage();
+    resolve_fcache();
+    return cmd[i].func(argc - 1, &argv[1]);
 }
