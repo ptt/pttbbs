@@ -1071,7 +1071,8 @@ struct Cmd {
     {dummy,      "\b\b\b\bMisc:", ""},
     {showglobal, "showglobal", "show GLOBALVAR[]"},
     {setglobal,  "setglobal",  "set GLOBALVAR[]"},
-    {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
+    {SHMinit,    "init",       "initialize SHM (including uhash_loader)"},
+    {SHMinit,    "SHMinit",    "(= init)"},
     {NULL, NULL, NULL}
 };
 
@@ -1084,20 +1085,9 @@ int main(int argc, char **argv)
     chdir(BBSHOME);
     initsetproctitle(argc, argv, environ);
     if( argc >= 2 ){
-	if( strcmp(argv[1], "init") == 0 ){
-	    /* in this case, do NOT run attach_SHM here.
-	       because uhash_loader is not run yet.      */
-	    return SHMinit(argc - 1, &argv[1]);
-	}
-
-	attach_SHM();
-	/* shmctl doesn't need resolve_boards() first */
-	//resolve_boards();
-	resolve_garbage();
-	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    if( strcmp(cmd[i].cmd, argv[1]) == 0 ){
-		return cmd[i].func(argc - 1, &argv[1]);
+		break;
 	    }
     }
     if( argc == 1 || cmd[i].func == NULL ){
@@ -1106,6 +1096,16 @@ int main(int argc, char **argv)
 	printf("commands:\n");
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    printf("\t%-15s%s\n", cmd[i].cmd, cmd[i].descript);
+	return 0;
     }
-    return 0;
+
+    bool do_init = (cmd[i].func == SHMinit);
+    if (!do_init) {
+	attach_SHM();
+	/* shmctl doesn't need resolve_boards() first */
+	//resolve_boards();
+	resolve_garbage();
+	resolve_fcache();
+    }
+    return cmd[i].func(argc - 1, &argv[1]);
 }
