@@ -19,7 +19,7 @@ LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	$(LIBEVENT_LIBS_l) \
 	-pthread -lstdc++ \
-	-lgrpc++ -lprotobuf -lgflags \
+	`pkg-config --libs protobuf grpc++` -lgflags \
 	$(LDADD)
 
 GEN_SRCS=board.pb.cc board.grpc.pb.cc
