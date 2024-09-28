@@ -19,8 +19,13 @@
 #include <sys/file.h>      /* for flock() */
 #include <strings.h>       /* for strcasecmp() */
 
+#if !defined(__has_builtin) || !__has_builtin(strlcpy)
 #define NEED_STRLCPY
+#endif
+#if !defined(__has_builtin) || !__has_builtin(strlcat)
 #define NEED_STRLCAT
+#endif
+
 #define NEED_SETPROCTITLE
 
 #elif ! defined(__FreeBSD__) || ! defined( DARWIN )
