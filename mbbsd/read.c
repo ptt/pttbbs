@@ -6,61 +6,7 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 
 #include <sys/mman.h>
 
-/* ----------------------------------------------------- */
-/* Tag List 標籤                                         */
-/* ----------------------------------------------------- */
-static TagItem         *TagList = NULL;	/* ascending list */
-
-int compare_tagitem(const void *pa, const void *pb) {
-    TagItem *taga = (TagItem*) pa,
-            *tagb = (TagItem*) pb;
-    return strcmp(taga->filename, tagb->filename);
-}
-
-int IsEmptyTagList() {
-    return !TagList || TagNum <= 0;
-}
-
-TagItem *FindTaggedItem(const fileheader_t *fh) {
-    if (IsEmptyTagList())
-        return NULL;
-
-    return (TagItem*)bsearch(
-            fh->filename, TagList, TagNum, sizeof(TagItem), compare_tagitem);
-}
-
-TagItem *RemoveTagItem(const fileheader_t *fh) {
-    TagItem *tag = IsEmptyTagList() ? NULL : FindTaggedItem(fh);
-    if (!tag)
-        return tag;
-
-    TagNum--;
-    memmove(tag, tag + 1, (TagNum - (tag - TagList)) * sizeof(TagItem));
-    return tag;
-}
-
-TagItem *AddTagItem(const fileheader_t *fh) {
-    if (TagNum == MAXTAGS)
-        return NULL;
-    if(TagList == NULL) {
-        const size_t sz = sizeof(TagItem) * (MAXTAGS + 1);
-        TagList = (TagItem*) malloc(sz);
-        memset(TagList, 0, sz);
-    } else {
-        memset(TagList+TagNum, 0, sizeof(TagItem));
-    }
-    // assert(!FindTaggedItem(fh));
-    strlcpy(TagList[TagNum++].filename, fh->filename, sizeof(fh->filename));
-    qsort(TagList, TagNum, sizeof(TagItem), compare_tagitem);
-    return FindTaggedItem(fh);
-}
-
-TagItem *ToggleTagItem(const fileheader_t *fh) {
-    TagItem *tag = RemoveTagItem(fh);
-    if (tag)
-        return tag;
-    return AddTagItem(fh);
-}
+/* tag extension */
 
 static int
 _iter_tag_match_title(void *ptr, void *opt) {
@@ -101,7 +47,7 @@ _iter_delete_tagged(void *ptr, void *opt) {
 }
 
 
-int
+static int
 TagPruner(int bid)
 {
     boardheader_t  *bp=NULL;
@@ -141,7 +87,7 @@ TagPruner(int bid)
 #endif
         delete_range(currdirect, 0, 0);
 
-    TagNum = 0;
+    ClearTagList();
     if (bid)
         setbtotal(bid);
     else if(currstat == RMAIL)
@@ -956,7 +902,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		    TagBoard = 0;
 		else
 		    TagBoard = bid;
-		TagNum = 0;
+		ClearTagList();
 	    }
 	    /* rocker.011112: 解決再select mode標記文章的問題 */
             if (ToggleTagItem(&headers[locmem->crs_ln - locmem->top_ln]))
@@ -967,8 +913,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
     case Ctrl('C'):
-	if (TagNum) {
-	    TagNum = 0;
+	if (!IsEmptyTagList()) {
+	    ClearTagList();
 	    mode = FULLUPDATE;
 	}
         break;
@@ -981,7 +927,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		TagBoard = 0;
 	    else
 		TagBoard = bid;
-	    TagNum = 0;
+	    ClearTagList();
 	}
 	mode = TagThread(currdirect);
         break;

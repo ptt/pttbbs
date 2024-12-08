@@ -516,18 +516,6 @@ void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 void forward_file(const fileheader_t * fhdr, const char *direct);
 
-typedef struct
-{ 
-    // TODO use aid_t
-    char filename[FNLEN];
-} TagItem;
-
-TagItem *FindTaggedItem(const fileheader_t *fh);
-TagItem *RemoveTagItem(const fileheader_t *fh);
-TagItem *AddTagItem(const fileheader_t *fh);
-TagItem *ToggleTagItem(const fileheader_t *fh);
-int IsEmptyTagList();
-
 /* record */
 int stampfile_u(char *fpath, fileheader_t *fh);
 int stampadir(char *fpath, fileheader_t * fh, int large_set);
@@ -697,6 +685,19 @@ void post_policelog(const char *bname, const char *atitle, const char *action,
                     const char *reason, const int toggle);
 void post_policelog2(const char *bname, const char *atitle, const char *action,
                      const char *reason, const int toggle, const char *attach_file);
+
+/* tag */
+typedef struct {
+    // TODO use aid_t
+    char filename[FNLEN];
+} TagItem;
+
+TagItem *FindTaggedItem(const fileheader_t *fh);
+TagItem *RemoveTagItem(const fileheader_t *fh);
+TagItem *AddTagItem(const fileheader_t *fh);
+TagItem *ToggleTagItem(const fileheader_t *fh);
+int IsEmptyTagList();
+void ClearTagList();
 
 /* talk */
 #define iswritable(uentp)    \

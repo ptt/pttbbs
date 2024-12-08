@@ -708,14 +708,6 @@ a_pastetagpost(menu_t * pm, int mode)
         param.bh = bh;
     }
 
-    // prevent if anything wrong
-    if (TagNum > MAXTAGS || TagNum < 0)
-    {
-	vmsg("內部錯誤。請把你剛剛進行的完整步驟貼到 "
-		BN_BUGREPORT " 板。");
-	return 0;
-    }
-
     if (IsEmptyTagList())
 	return 0;
 
@@ -723,8 +715,8 @@ a_pastetagpost(menu_t * pm, int mode)
      * copyqueue is not required/used. */
     copyqueue_reset();
     apply_record(dirname, _iter_paste_tag, sizeof(fileheader_t),  &param);
+    ClearTagList();
 
-    TagNum = 0;
     return param.copied;
 }
 
