@@ -113,9 +113,9 @@ DEF_CMD:=       grep -Ewq "${DEF_PATTERN}"
 DEF_YES:=       && echo "YES" || echo ""
 
 #libevent
-LIBEVENT_CFLAGS!=	(pkg-config --cflags libevent || true) 2>/dev/null
-LIBEVENT_LIBS_L!=	(pkg-config --libs-only-L libevent || true) 2>/dev/null
-LIBEVENT_LIBS_l!=	(pkg-config --libs-only-l libevent || true) 2>/dev/null
+LIBEVENT_CFLAGS!=	(pkg-config --cflags libevent_pthreads || true) 2>/dev/null
+LIBEVENT_LIBS_L!=	(pkg-config --libs-only-L libevent_pthreads || true) 2>/dev/null
+LIBEVENT_LIBS_l!=	(pkg-config --libs-only-l libevent_pthreads || true) 2>/dev/null
 
 # grpc++
 GRPCPP_CFLAGS!=		(pkg-config --cflags grpc++ || true) 2>/dev/null

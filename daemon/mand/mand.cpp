@@ -4,6 +4,7 @@
 #include "man_directory_impl.hpp"
 #include "man_service_impl.hpp"
 extern "C" {
+#include <event2/thread.h>
 #include "cmbbs.h"
 }
 
@@ -21,6 +22,11 @@ int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (argc > 1) {
     std::cerr << "Unrecognized command line argument: " << argv[1] << std::endl;
+    return 1;
+  }
+
+  if (evthread_use_pthreads()) {
+    std::cerr << "evthread_use_pthreads() failed" << std::endl;
     return 1;
   }
 

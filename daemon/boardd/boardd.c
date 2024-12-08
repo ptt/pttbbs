@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <event2/thread.h>
 #include <sys/stat.h>
 
 #include <cmbbs.h>
@@ -54,6 +55,11 @@ int main(int argc, char *argv[])
 	    perror("daemon");
 	    exit(EXIT_FAILURE);
 	}
+
+    if (evthread_use_pthreads()) {
+	perror("evthread_use_pthreads()");
+	exit(EXIT_FAILURE);
+    }
 
     setup_program();
 
