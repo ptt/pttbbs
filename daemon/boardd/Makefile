@@ -10,16 +10,17 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 
 COMMONFLAGS= -I$(SRCROOT) -I. -Wno-unused-parameter
 CXXFLAGS+=	-std=c++17 $(COMMONFLAGS)
-CFLAGS+=	$(LIBEVENT_CFLAGS) $(COMMONFLAGS)
-LDFLAGS+=	$(LIBEVENT_LIBS_L)
+CFLAGS+=	$(LIBEVENT_CFLAGS) $(GFLAGS_CFLAGS) \
+		$(GRPCPP_CFLAGS) $(PROTOBUF_CFLAGS) $(COMMONFLAGS)
+LDFLAGS+=	$(LIBEVENT_LIBS_L) $(GFLAGS_LIBS_L) \
+		$(GRPCPP_LIBS_L) $(PROTOBUF_LIBS_L)
 
 LDADD:=  $(UTILOBJ) \
 	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
-	$(LIBEVENT_LIBS_l) \
-	-pthread -lstdc++ \
-	-lgrpc++ -lprotobuf -lgflags \
+	$(LIBEVENT_LIBS_l) $(GFLAGS_LIBS_l) \
+	$(GRPCPP_LIBS_l) $(PROTOBUF_LIBS_l) \
 	$(LDADD)
 
 GEN_SRCS=board.pb.cc board.grpc.pb.cc

@@ -113,9 +113,24 @@ DEF_CMD:=       grep -Ewq "${DEF_PATTERN}"
 DEF_YES:=       && echo "YES" || echo ""
 
 #libevent
-LIBEVENT_CFLAGS!=	pkg-config --cflags libevent
-LIBEVENT_LIBS_L!=	pkg-config --libs-only-L libevent
-LIBEVENT_LIBS_l!=	pkg-config --libs-only-l libevent
+LIBEVENT_CFLAGS!=	(pkg-config --cflags libevent || true) 2>/dev/null
+LIBEVENT_LIBS_L!=	(pkg-config --libs-only-L libevent || true) 2>/dev/null
+LIBEVENT_LIBS_l!=	(pkg-config --libs-only-l libevent || true) 2>/dev/null
+
+# grpc++
+GRPCPP_CFLAGS!=		(pkg-config --cflags grpc++ || true) 2>/dev/null
+GRPCPP_LIBS_L!=		(pkg-config --libs-only-L grpc++ || true) 2>/dev/null
+GRPCPP_LIBS_l!=		(pkg-config --libs-only-l grpc++ || true) 2>/dev/null
+
+# protobuf
+PROTOBUF_CFLAGS!=	(pkg-config --cflags protobuf || true) 2>/dev/null
+PROTOBUF_LIBS_L!=	(pkg-config --libs-only-L protobuf || true) 2>/dev/null
+PROTOBUF_LIBS_l!=	(pkg-config --libs-only-l protobuf || true) 2>/dev/null
+
+# gflags
+GFLAGS_CFLAGS!=		(pkg-config --cflags gflags || true) 2>/dev/null
+GFLAGS_LIBS_L!=		(pkg-config --libs-only-L gflags || true) 2>/dev/null
+GFLAGS_LIBS_l!=		(pkg-config --libs-only-l gflags || true) 2>/dev/null
 
 # pmake common
 CLEANFILES+=	*~
