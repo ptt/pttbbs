@@ -6,12 +6,16 @@
 /* ----------------------------------------------------- */
 /* Tag List ╪пер                                         */
 /* ----------------------------------------------------- */
-static TagItem         *TagList = NULL;	/* ascending list */
+struct TagItem {
+    // TODO use aid_t
+    char filename[FNLEN];
+};
+
+static struct TagItem *TagList = NULL;	/* ascending list */
 static int             TagNum = 0;	/* tag's number */
 
 static int compare_tagitem(const void *pa, const void *pb) {
-    TagItem *taga = (TagItem*) pa,
-            *tagb = (TagItem*) pb;
+    const struct TagItem *taga = pa, *tagb = pb;
     return strcmp(taga->filename, tagb->filename);
 }
 
@@ -23,42 +27,38 @@ void ClearTagList() {
     TagNum = 0;
 }
 
-TagItem *FindTaggedItem(const fileheader_t *fh) {
+struct TagItem *FindTaggedItem(const fileheader_t *fh) {
     if (IsEmptyTagList())
         return NULL;
 
-    return (TagItem*)bsearch(
-            fh->filename, TagList, TagNum, sizeof(TagItem), compare_tagitem);
+    return bsearch(fh->filename, TagList, TagNum, sizeof(*TagList), compare_tagitem);
 }
 
-TagItem *RemoveTagItem(const fileheader_t *fh) {
-    TagItem *tag = IsEmptyTagList() ? NULL : FindTaggedItem(fh);
+struct TagItem *RemoveTagItem(const fileheader_t *fh) {
+    struct TagItem *tag = IsEmptyTagList() ? NULL : FindTaggedItem(fh);
     if (!tag)
-        return tag;
+        return NULL;
 
     TagNum--;
-    memmove(tag, tag + 1, (TagNum - (tag - TagList)) * sizeof(TagItem));
+    memmove(tag, tag + 1, (TagNum - (tag - TagList)) * sizeof(*tag));
     return tag;
 }
 
-TagItem *AddTagItem(const fileheader_t *fh) {
+struct TagItem *AddTagItem(const fileheader_t *fh) {
     if (TagNum == MAXTAGS)
         return NULL;
-    if (TagList == NULL) {
-        const size_t sz = sizeof(TagItem) * (MAXTAGS + 1);
-        TagList = (TagItem*) malloc(sz);
-        memset(TagList, 0, sz);
-    } else {
-        memset(TagList+TagNum, 0, sizeof(TagItem));
-    }
+    if (TagList == NULL)
+        TagList = calloc(MAXTAGS + 1, sizeof(*TagList));
+    else
+        memset(TagList+TagNum, 0, sizeof(*TagList));
     // assert(!FindTaggedItem(fh));
     strlcpy(TagList[TagNum++].filename, fh->filename, sizeof(fh->filename));
-    qsort(TagList, TagNum, sizeof(TagItem), compare_tagitem);
+    qsort(TagList, TagNum, sizeof(*TagList), compare_tagitem);
     return FindTaggedItem(fh);
 }
 
-TagItem *ToggleTagItem(const fileheader_t *fh) {
-    TagItem *tag = RemoveTagItem(fh);
+struct TagItem *ToggleTagItem(const fileheader_t *fh) {
+    struct TagItem *tag = RemoveTagItem(fh);
     if (tag)
         return tag;
     return AddTagItem(fh);

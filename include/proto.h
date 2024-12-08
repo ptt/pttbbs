@@ -687,15 +687,11 @@ void post_policelog2(const char *bname, const char *atitle, const char *action,
                      const char *reason, const int toggle, const char *attach_file);
 
 /* tag */
-typedef struct {
-    // TODO use aid_t
-    char filename[FNLEN];
-} TagItem;
-
-TagItem *FindTaggedItem(const fileheader_t *fh);
-TagItem *RemoveTagItem(const fileheader_t *fh);
-TagItem *AddTagItem(const fileheader_t *fh);
-TagItem *ToggleTagItem(const fileheader_t *fh);
+struct TagItem;
+struct TagItem *FindTaggedItem(const fileheader_t *fh);
+struct TagItem *RemoveTagItem(const fileheader_t *fh);
+struct TagItem *AddTagItem(const fileheader_t *fh);
+struct TagItem *ToggleTagItem(const fileheader_t *fh);
 int IsEmptyTagList();
 void ClearTagList();
 
