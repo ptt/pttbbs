@@ -711,11 +711,10 @@ readdoent(int num, fileheader_t * ent)
     }
 
     // tag should override everything
-    if ((currmode & MODE_BOARD) || HasBasicUserPerm(PERM_LOGINOK))
-    {
+    if (((currstat & RMAIL) && TagBoard == 0) ||
+	(!(currstat & RMAIL) && TagBoard == currbid))
 	if (FindTaggedItem(ent))
 	    type = 'D';
-    }
 
     // the only special case: ' ' with isunread == 2,
     // change to '+' with gray attribute.
