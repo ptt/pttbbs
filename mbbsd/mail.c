@@ -1219,7 +1219,7 @@ mail_all(void)
     return 0;
 }
 
-int
+static int
 get_account_sysop(struct Vector *namelist)
 {
     FILE *fp;
