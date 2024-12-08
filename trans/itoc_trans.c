@@ -1,4 +1,3 @@
-/* $Id$ */
 /* tool to convert itoc bbs to ptt bbs */
 
 #include "bbs.h"

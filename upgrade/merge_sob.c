@@ -1,4 +1,3 @@
-/* $Id$ */
 #define _XOPEN_SOURCE
 #define _ISOC99_SOURCE
 /* this is a interface provided when we merge BBS */ 

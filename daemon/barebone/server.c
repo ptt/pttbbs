@@ -1,4 +1,3 @@
-// $Id$
 // Barebone TCP socket server daemon based on libevent 2.0
 
 // Copyright (c) 2011, Chen-Yu Tsai <wens@csie.org>

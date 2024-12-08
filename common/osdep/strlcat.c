@@ -1,4 +1,3 @@
-/* $Id$ */
 #include "osdep.h"
 
 #ifdef NEED_STRLCAT

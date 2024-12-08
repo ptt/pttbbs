@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 

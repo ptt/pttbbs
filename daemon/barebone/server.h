@@ -1,5 +1,3 @@
-// $Id$
-
 // Copyright (c) 2011, Chen-Yu Tsai <wens@csie.org>
 // All rights reserved.
 

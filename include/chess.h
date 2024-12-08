@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef INCLUDE_CHESS_H
 #define INCLUDE_CHESS_H
 

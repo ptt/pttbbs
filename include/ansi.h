@@ -1,4 +1,3 @@
-/* $Id */
 #ifndef INCLUDE_ANSI_H
 #define INCLUDE_ANSI_H
 

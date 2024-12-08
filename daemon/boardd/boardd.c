@@ -1,4 +1,3 @@
-// $Id$
 // Memcached protocol based board data export daemon
 
 // Copyright (c) 2010-2011, Chen-Yu Tsai <wens@csie.org>

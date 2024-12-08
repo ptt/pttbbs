@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef XCHAT_H_
 #define XCHAT_H_
 

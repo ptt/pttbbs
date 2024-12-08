@@ -1,4 +1,3 @@
-/* $Id: uflags.h  $ */
 /* PTT BBS User Flags */
 
 #ifndef INCLUDE_UFLAGS_H

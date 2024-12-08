@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# $Id: weather.perl,v 1.8 2003/05/06 16:54:42 victor Exp $
 #
 # 不能跑的話，看看 bbspost 的路徑是否正確。
 # 如果發出的 post 沒有氣象報告而是說 URL 找不到，則確定一下能不能看到

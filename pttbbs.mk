@@ -1,5 +1,3 @@
-# $Id$
-
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 

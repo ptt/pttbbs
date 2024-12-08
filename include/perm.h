@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef INCLUDE_PERM_H
 #define INCLUDE_PERM_H
 

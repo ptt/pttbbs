@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 

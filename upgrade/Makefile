@@ -1,4 +1,3 @@
-# $Id: Makefile 3673 2007-12-12 01:42:23Z kcwu $
 # Usually you won't build everything for upgrading, so we let you decide what to run.
 
 SRCROOT=	..

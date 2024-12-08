@@ -1,4 +1,3 @@
-// $Id$
 #ifndef VTUIKIT_H
 #define VTUIKIT_H
 

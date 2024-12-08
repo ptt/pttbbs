@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id$
+
 print << '.';
 /*
  * This header file is auto-generated from pttbbs/mbbsd/var.c .

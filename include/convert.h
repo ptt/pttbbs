@@ -1,5 +1,3 @@
-/* $Id: convert.h 1374 2003-11-27 14:11:40Z victor $ */
-
 #ifndef BBS_CONVERT_H
 #define BBS_CONVERT_H
 

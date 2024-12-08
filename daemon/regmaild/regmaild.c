@@ -1,5 +1,4 @@
 // Register Check Daemon
-// $Id$
 //
 // sqlite portion from wens
 // Create:       Hung-Te Lin <piaip@csie.ntu.edu.tw>

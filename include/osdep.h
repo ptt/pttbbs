@@ -1,4 +1,3 @@
-/* $Id */
 #ifndef OSDEP_H__
 #define OSDEP_H__
 

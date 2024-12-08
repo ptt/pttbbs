@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id: backpasswd.sh,v 1.3 2002/04/06 08:32:34 in2 Exp $
 
 mv PASSWDS.NEW5 PASSWDS.NEW6
 mv PASSWDS.NEW4 PASSWDS.NEW5

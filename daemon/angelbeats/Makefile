@@ -1,4 +1,3 @@
-# $Id: Makefile 4384 2008-06-28 15:50:14Z wens $
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 

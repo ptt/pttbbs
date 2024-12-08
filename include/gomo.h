@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef INCLUDE_GOMO_H
 #define INCLUDE_GOMO_H
 

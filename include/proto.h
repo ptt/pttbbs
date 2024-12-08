@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 

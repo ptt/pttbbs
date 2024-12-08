@@ -1,4 +1,3 @@
-/* $Id$ */
 /* tool to convert sob bbs to ptt bbs, based on sob 20030803 pack */
 
 #include "bbs.h"

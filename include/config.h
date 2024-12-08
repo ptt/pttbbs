@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 

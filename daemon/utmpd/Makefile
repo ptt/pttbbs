@@ -1,4 +1,3 @@
-# $Id$
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 

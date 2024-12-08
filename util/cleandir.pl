@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id$
+
 use strict;
 use lib '/home/bbs/bin/';
 use BBSFileHeader;

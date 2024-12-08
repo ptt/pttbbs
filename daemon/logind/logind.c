@@ -1,5 +1,4 @@
 // The High Performance Login Daemon (works with tunnel mode)
-// $Id$
 //
 // Create:       Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // Contributors: wens, kcwu

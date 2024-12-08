@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id$
+
 use lib '/home/bbs/bin/';
 use LocalVars;
 use strict;

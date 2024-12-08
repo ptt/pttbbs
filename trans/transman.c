@@ -1,4 +1,3 @@
-/* $Id$ */
 // tools to translate the format of eagle bbs -> Ptt bbs */
 
 #include "bbs.h"
