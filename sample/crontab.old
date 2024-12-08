@@ -11,7 +11,6 @@
 1 * * * * bin/account > /dev/null 2> /dev/null
 
 # 每個小時 10 分執行熱門話題統計
-50 * * * * bin/parse_news
 10 * * * * bin/poststat /home/bbs > /dev/null
 
 # 每天5:30執行使用者排行榜更新
@@ -43,9 +42,6 @@
 
 # 每天砍掉點歌超過5天檔案
 40 6 * * * ( find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';' )
-
-#天氣股票
-0 5,11,17,23 * * * bin/weather.sh > /dev/null
 
 # 每個月一號早上 3:50 , 將 BBS 系統中長度為零的檔案砍掉
 50 3 1 * * ( /usr/bin/find /home1/bbs -size 0 -exec rm -f {} ';' )

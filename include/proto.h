@@ -810,11 +810,7 @@ int x_issue(void);
 int x_today(void);
 int x_yesterday(void);
 int x_user100(void);
-int x_birth(void);
 int x_history(void);
-int x_weather(void);
-int x_stock(void);
-int x_mrtmap(void);
 int Goodbye(void);
 
 /* BBS-LUA */

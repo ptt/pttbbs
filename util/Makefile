@@ -39,8 +39,7 @@ CPROG_WITHOUT_UTIL= \
 PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	shmctl	\
 	backpasswd.sh	mailog.sh	\
-	openticket.sh	topsong.sh	weather.sh	\
-	weather.perl	toplazyBM.sh	\
+	openticket.sh	topsong.sh	toplazyBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	rebuildaloha.pl timecap_expire.sh
 
