@@ -484,7 +484,7 @@ setforward(void) {
     time4_t auth_time = 0;
     const char *prefix = "va";
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasSendMailUserPerm())
 	return DONOTHING;
 
     // There may be race condition but that's probably ok.
@@ -845,7 +845,7 @@ m_send(void)
     // in-site mail
     char uident[IDLEN+1];
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasSendMailUserPerm())
 	return DONOTHING;
 
     vs_hdr("站內寄信");
@@ -1133,7 +1133,7 @@ mailbox_reply(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_list(void)
 {
-    if (!HasBasicUserPerm(PERM_LOGINOK) ||
+    if (!HasSendMailUserPerm() ||
         HasUserPerm(PERM_VIOLATELAW))
         return DONOTHING;
 
@@ -1383,7 +1383,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     char            uid[STRLEN];
     char save_title[STRLEN];
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasSendMailUserPerm())
 	return DONOTHING;
 
     vs_hdr("轉達信件");
@@ -2012,7 +2012,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     char            genbuf[200];
     int		    xbid;
 
-    if (!HasBasicUserPerm(PERM_LOGINOK))
+    if (!HasSendMailUserPerm())
         return DONOTHING;
 
     // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。

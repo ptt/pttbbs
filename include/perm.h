@@ -55,6 +55,7 @@
 
 #define HasUserPerm(x)  ((cuser.userlevel & (x)) != 0)
 #define HasBasicUserPerm(x)  (HasUserPerm(PERM_BASIC) && HasUserPerm(x))
+#define HasSendMailUserPerm()	HasBasicUserPerm(PERM_LOGINOK)
 #define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 
 #define ROLE_ANGEL_CIA          0x00000001  /* Angel: CIA. */

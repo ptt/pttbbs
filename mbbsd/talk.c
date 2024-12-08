@@ -2609,14 +2609,15 @@ userlist(void)
 		*/
 
 	    case 'g':
-		if (HasBasicUserPerm(PERM_LOGINOK) && cuser.money) {
+		// Give money requires mail permission
+		if (HasSendMailUserPerm() && cuser.money) {
 		    give_money_ui(uentp->userid);
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'm':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
+		if (HasSendMailUserPerm()) {
 		    char   userid[IDLEN + 1];
 		    strlcpy(userid, uentp->userid, sizeof(userid));
 		    vs_hdr("±H  «H");
