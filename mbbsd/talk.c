@@ -2692,7 +2692,7 @@ userlist(void)
 		break;
 
 	    case 'r':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_READMAIL)) {
                     // XXX in fact we should check size here...
                     // chkmailbox();
                     m_read();
