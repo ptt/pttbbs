@@ -1652,8 +1652,10 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 
-    if (!CheckPostRestriction(currbid))
-    {
+    if (!CheckPostRestriction(currbid) && !HasSendMailUserPerm())
+	return;
+
+    if (!CheckPostRestriction(currbid)) {
 	getdata(b_lines - 1, 0,
 		ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
 		"改回應至 (M)作者信箱 (Q)取消？[Q] ",
@@ -1665,8 +1667,19 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 	    default:
 		break;
 	}
-    }
-    else {
+    } else if (!HasSendMailUserPerm()) {
+	getdata(b_lines - 1, 0, "▲ 回應至 (F)看板 (Q)取消？[F] ",
+		genbuf, sizeof(genbuf), LCECHO);
+	switch (genbuf[0]) {
+	    case 'q':
+		break;
+
+	    default:
+		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
+		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
+		do_post(edflags);
+	}
+    } else {
 	getdata(b_lines - 1, 0,
 		"▲ 回應至 (F)看板 (M)作者信箱 (B)二者皆是 (Q)取消？[F] ",
 		genbuf, sizeof(genbuf), LCECHO);
@@ -1730,7 +1743,8 @@ do_reply(/*const*/ fileheader_t * fhdr)
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NOREPLY) {
 	// try to reply by mail.
-	if (vans("很抱歉, 本板不開放回覆文章，要改回信給作者嗎？ [y/N]: ") == 'y')
+	if (HasSendMailUserPerm() &&
+	    vans("很抱歉, 本板不開放回覆文章，要改回信給作者嗎？ [y/N]: ") == 'y')
 	    return mail_reply(0, fhdr, 0);
 	else
 	    return FULLUPDATE;
