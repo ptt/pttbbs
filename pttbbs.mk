@@ -101,6 +101,24 @@ CXXFLAGS+=	-DNO_FORK
 ######################################
 # Settings for common libraries
 
+# This will attempt to compile a small test program that only calls strlcpy()
+HAVE_STRLCPY != \
+       echo '\#include <string.h>\nint main(){char b[4];strlcpy(b,"x",4);}' | \
+       ${CC} -x c -o /dev/null - 2>/dev/null && echo 1 || echo 0
+
+HAVE_STRLCAT != \
+       echo '\#include <string.h>\nint main(){char b[4]="x";strlcat(b,"y",4);}' | \
+       ${CC} -x c -o /dev/null - 2>/dev/null && echo 1 || echo 0
+
+.if ${HAVE_STRLCPY} != 1
+CFLAGS+= -DNEED_STRLCPY=1
+CXXFLAGS+= -DNEED_STRLCPY=1
+.endif
+.if ${HAVE_STRLCAT} != 1
+CFLAGS+= -DNEED_STRLCAT=1
+CXXFLAGS+= -DNEED_STRLCAT=1
+.endif
+
 #######################################################################
 # conditional configurations and optional modules
 #######################################################################
