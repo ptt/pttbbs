@@ -88,6 +88,7 @@ search(t)
 int
 sort(pp, count)
     struct postrec *pp;
+    int count;
 {
     int i, j;
 
@@ -272,6 +273,7 @@ poststat(mytype)
 
 
 int main(argc, argv)
+    int argc;
     char *argv[];
 {
     time4_t now;
