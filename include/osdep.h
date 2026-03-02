@@ -18,11 +18,18 @@
 #include <sys/file.h>      /* for flock() */
 #include <strings.h>       /* for strcasecmp() */
 
-#if !defined(__has_builtin) || !__has_builtin(strlcpy)
-#define NEED_STRLCPY
-#endif
-#if !defined(__has_builtin) || !__has_builtin(strlcat)
-#define NEED_STRLCAT
+#if defined(__GLIBC__) && defined(__GLIBC_MINOR__)
+#  if ((__GLIBC__ << 8) + __GLIBC_MINOR__ >= (2 << 8) + 38)
+#    define HAVE_STRLCPY
+#    define HAVE_STRLCAT
+#  endif
+#else
+# if !defined(__has_builtin) || !__has_builtin(strlcpy)
+# define NEED_STRLCPY
+# endif
+# if !defined(__has_builtin) || !__has_builtin(strlcat)
+# define NEED_STRLCAT
+# endif
 #endif
 
 #define NEED_SETPROCTITLE
