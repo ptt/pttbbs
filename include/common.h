@@ -311,11 +311,12 @@
 #define	MAX(a,b)	(((a)>(b))?(a):(b))
 #endif
 
+#define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
+
 #define toSTR(x)	__toSTR(x)
 #define __toSTR(x)	#x
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
 
 #define LOG_IF(x, y)    { if ((x)) { y; } else {} }
-
 
 #endif

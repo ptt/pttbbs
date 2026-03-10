@@ -310,7 +310,7 @@ user_display(const userec_t * u, int adminmode)
 	if (dashs(buf) > 0)
 	    outs("[¦Û°ÊÂà±H]");
 
-	for (i = 0; (size_t)i < sizeof(uflag_mask)/sizeof(uflag_mask[0]); i++)
+	for (i = 0; (size_t)i < ARRAY_SIZE(uflag_mask); i++)
 	{
 	    if (!(u->uflag & uflag_mask[i]))
 		continue;

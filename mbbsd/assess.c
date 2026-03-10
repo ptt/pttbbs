@@ -35,7 +35,6 @@ static char * const badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
 };
 
-#define DIM(x)	(sizeof(x)/sizeof(x[0]))
 
 int assign_badpost(const char *userid, fileheader_t *fhdr,
 	const char *newpath, const char *comment)
@@ -49,7 +48,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     assert(tusernum > 0 && tusernum < MAX_USERS);
     move(b_lines - 2, 0);
     clrtobot();
-    for (i = 0; i < (int)DIM(badpost_reason); i++)
+    for (i = 0; i < (int)ARRAY_SIZE(badpost_reason); i++)
 	prints("%d.%s ", i + 1, badpost_reason[i]);
     prints("%d.%s ", i + 1, "其他");
     prints("0.取消退文 ");
@@ -60,15 +59,15 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
             vmsg("取消設定退文。");
             return -1;
         }
-        if (i < 0 || i > (int)DIM(badpost_reason))
+        if (i < 0 || i > (int)ARRAY_SIZE(badpost_reason))
             bell();
         else
             break;
     } while (1);
 
-    if (i < (int)DIM(badpost_reason)) {
+    if (i < (int)ARRAY_SIZE(badpost_reason)) {
         snprintf(reason, sizeof(reason), "%s", badpost_reason[i]);
-    } else if (i == DIM(badpost_reason)) {
+    } else if (i == ARRAY_SIZE(badpost_reason)) {
         while (!getdata(b_lines, 0, "請輸入原因", reason, 50, DOECHO)) {
             // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
             if (comment) {
@@ -79,7 +78,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
             continue;
         }
     }
-    assert(i >= 0 && i <= (int)DIM(badpost_reason));
+    assert(i >= 0 && i <= (int)ARRAY_SIZE(badpost_reason));
 
     sprintf(genbuf,"退回%s(%s)", comment ? "推文" : "文章", reason);
 

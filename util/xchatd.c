@@ -2889,15 +2889,15 @@ void selftest_testing(void)
 	if(arc4random_uniform(10)==0) {
 	    switch(arc4random_uniform(4)) {
 		case 0:
-		    r=arc4random_uniform(sizeof(party_data) / sizeof(party_data[0]) - 1);
+		    r=arc4random_uniform(ARRAY_SIZE(party_data) - 1);
 		    sprintf(buf, "//%s",party_data[r].verb);
 		    break;
 		case 1:
-		    r=arc4random_uniform(sizeof(speak_data) / sizeof(speak_data[0]) - 1);
+		    r=arc4random_uniform(ARRAY_SIZE(speak_data) - 1);
 		    sprintf(buf, "//%s",speak_data[r].verb);
 		    break;
 		case 2:
-		    r=arc4random_uniform(sizeof(condition_data) / sizeof(condition_data[0]) - 1);
+		    r=arc4random_uniform(ARRAY_SIZE(condition_data) - 1);
 		    sprintf(buf, "//%s",condition_data[r].verb);
 		    break;
 		case 3:
@@ -2905,7 +2905,7 @@ void selftest_testing(void)
 		    break;
 	    }
 	} else {
-		r=arc4random_uniform(sizeof(chatcmdlist) / sizeof(chatcmdlist[0]) - 1);
+		r=arc4random_uniform(ARRAY_SIZE(chatcmdlist) - 1);
 		sprintf(buf, "/%s",chatcmdlist[r].cmdstr);
 		if(strncmp("/flag",buf,5)==0) {
 		    if(arc4random_uniform(2))

@@ -655,9 +655,6 @@ void pwcuInitGuestPerm	()
 #endif
 }
 
-#undef  DIM
-#define DIM(x) (sizeof(x)/sizeof(x[0]))
-
 void pwcuInitGuestInfo	()
 {
     int i;
@@ -667,7 +664,7 @@ void pwcuInitGuestInfo	()
 	"鐵罐", "考卷", "大美女"
     };
 
-    i = arc4random_uniform(DIM(nick));
+    i = arc4random_uniform(ARRAY_SIZE(nick));
     snprintf(cuser.nickname, sizeof(cuser.nickname),
 	    "海邊漂來的%s", nick[i]);
     strlcpy(currutmp->nickname, cuser.nickname,
