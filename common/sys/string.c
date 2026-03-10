@@ -783,8 +783,9 @@ str_decode_M3(char *str)
 		}
 		if (*tmp && tmp[1] && tmp[2] == '?') {	/* Thor: *tmp == '?' */
 		    int             i = mmdecode(tmp + 3, tmp[1], dst1);
-		    i = str_iconv((char*)charset, "big5", (char*)dst1, i, (char*)dst,
-				  sizeof(buf) - ((int)(dst - buf)));
+		    if (i >= 0)
+			i = str_iconv((char*)charset, "big5", (char*)dst1, i, (char*)dst,
+				      sizeof(buf) - ((int)(dst - buf)));
 		    if (i >= 0) {
 			tmp += 3;	/* Thor: decode's src */
 #if 0
