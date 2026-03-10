@@ -1505,14 +1505,20 @@ do_quote(void)
 
 		while (*(++ptr) == ' ');
 
-		/* 順手牽羊，取得 author's address */
+		/*
+		 * 順手牽羊，取得 author's address
+		 * 這只有用在 do_post_article() 中偵測回信給外部貼文者。
+		 * '.' 前面是什麼不重要，只要 '.' 後面是原作者信箱即可。
+		 */
 		if ((curr_buf->flags & EDITFLAG_KIND_SENDMAIL) &&
                     (curr_buf->flags & EDITFLAG_KIND_REPLYPOST) &&
                     (str = strchr(quote_user, '.'))) {
+		    quote_user[0] = '.';
+		    strlcpy(quote_user + 1, ptr, sizeof(quote_user) - 1);
 		    strcpy(++str, ptr);
-		    str = strchr(str, ' ');
-		    assert(str);
-		    str[0] = '\0';
+		    str = strchr(quote_user, ' ');
+		    if (str)
+			str[0] = '\0';
 		}
 	    } else
 		ptr = quote_user;
