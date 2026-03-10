@@ -975,7 +975,7 @@ gochess_replay(FILE* fp)
     char       sethand_str[4] = "";
     char      *recording = NULL;
     char      *record_end = NULL;
-    go_step_t  step;
+    go_step_t  step = {};
 
     /* for mygetc */
     char buf[512] = "";
