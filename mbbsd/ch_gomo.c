@@ -232,7 +232,7 @@ gomo_move_warn(int style, char buf[])
 static char*
 gomo_getstep(const gomo_step_t* step, char buf[])
 {
-    static const char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢×¢Ø¢Ù¢Ú¢Û¢Ü";
+    static const char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢×¢Ø¢Ù¢Ú¢Û¢Ü¢Ý";
     static const char* const RawName = "151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
     static const int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
 
