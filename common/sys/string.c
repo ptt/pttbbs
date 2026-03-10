@@ -770,6 +770,7 @@ str_decode_M3(char *str)
 	    unsigned char  *tmp = src + 1;
 	    if (*tmp == '?') {	/* Thor: =? coded */
 		/* "=?%s?Q?" for QP, "=?%s?B?" for BASE64 */
+		charset[0] = '\0';
 		tmp++;
 		i = 0;
 		while (*tmp && *tmp != '?') {
