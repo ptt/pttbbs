@@ -1283,6 +1283,8 @@ ChessReplayGame(const char* fname)
     while (found == -1 && fgets(buf, sizeof(buf), fp)) {
 	if (buf[0] == '<') {
 	    const int line_len = strlen(buf);
+	    if (line_len < 5)
+		continue;
 	    if (strcmp(buf + line_len - 5, "log>\n") == 0) {
 		int i;
 		for (i = 0; ChessReplayMap[i].name; ++i)
