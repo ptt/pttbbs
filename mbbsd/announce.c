@@ -21,10 +21,6 @@
 // however to make the prompt bar smaller, we'd reduce few more bytes.
 #define SAFE_ZINDEX_CODELEN (STRLEN-15)
 
-#ifndef arraysize
-#define arraysize(x) (sizeof(x)/sizeof(x[0]))
-#endif
-
 /* copy temp queue operation -------------------------------------- */
 
 /* TODO
@@ -1197,7 +1193,7 @@ int a_parse_zindexes(const char *s, a_menu_session_t *sess)
 	return (sess->z_indexes[i] == 0);
 
     while (NULL != (s = strpbrk(s, "0123456789")) &&
-	    i+1 < (int)arraysize(sess->z_indexes) )
+	    i+1 < (int)ARRAY_SIZE(sess->z_indexes) )
     {
 	sess->z_indexes[i] = atoi(s);
 	// for overflow, ignore all remaining.

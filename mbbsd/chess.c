@@ -3,7 +3,6 @@
 #include <setjmp.h>
 
 #define assert_not_reached() assert(!"Should never be here!!!")
-#define dim(x)               (sizeof(x) / sizeof(x[0]))
 
 #define CHESS_HISTORY_INITIAL_BUFFER_SIZE 300
 #define CHESS_HISTORY_BUFFER_INCREMENT     50
@@ -1716,7 +1715,7 @@ ChessDrawExtraInfo(const ChessInfo* info, int line, int space)
 	}
     } else if (line >= 3 && line <= CHESS_DRAWING_HISWIN_ROW) {
 	prints("%*s", space, "");
-	if (line >= 3 && line < 3 + (int)dim(ChessHintStr)) {
+	if (line >= 3 && line < 3 + (int)ARRAY_SIZE(ChessHintStr)) {
 	    outs(ChessHintStr[line - 3]);
 	} else if (line == CHESS_DRAWING_SIDE_ROW) {
 	    prints(ANSI_COLOR(1) "§A¬O%s%s" ANSI_RESET,
