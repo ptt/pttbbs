@@ -1239,6 +1239,13 @@ user_login(void)
 	check_register();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
+
+	// XXX 這個 check 花不少時間，有點間隔比較好
+	if (HasUserPerm(PERM_BM) &&
+	    (cuser.numlogindays % 10 == 0) &&	// when using numlogindays, check with is_first_login_of_today
+	    is_first_login_of_today )
+	    check_BM();		/* 自動取下離職板主權力 */
+
 	restore_backup();
 	check_mailbox_quota();
 
@@ -1248,12 +1255,6 @@ user_login(void)
                  "\t詳情請至 ViolateLaw 看板搜尋你的 ID。\n" ANSI_RESET);
             pressanykey();
         }
-
-	// XXX 這個 check 花不少時間，有點間隔比較好
-	if (HasUserPerm(PERM_BM) &&
-	    (cuser.numlogindays % 10 == 0) &&	// when using numlogindays, check with is_first_login_of_today
-	    is_first_login_of_today )
-	    check_BM();		/* 自動取下離職板主權力 */
 
 	// XXX only for temporary...
 #ifdef ADBANNER_USONG_TIMEBOMB
