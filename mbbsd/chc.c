@@ -940,6 +940,9 @@ chc_replay(FILE* fp)
 	    while (*p && isspace(*p)) ++p;
 	    if (!*p) continue;
 
+	    /* check validity */
+	    if (strlen(p) < 6) continue;
+
 	    /* p -> "Ch2-e2 ...." */
 	    step.from.c = p[1] - 'a';
 	    step.from.r = BRD_ROW - 1 - (p[2] - '0');
@@ -956,6 +959,9 @@ chc_replay(FILE* fp)
 	    p += 6;
 	    while (*p && isspace(*p)) ++p;
 	    if (!*p) continue;
+
+	    /* check validity */
+	    if (strlen(p) < 6) continue;
 
 	    /* p -> "Nb9-c7\n" */
 	    step.from.c = p[1] - 'a';
