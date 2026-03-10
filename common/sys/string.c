@@ -669,8 +669,8 @@ size_t
 str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */
-	  const char *src,	/* source string */
-	  size_t srclen,		/* source string length */
+	  char *src,		/* source string */
+	  size_t srclen,	/* source string length */
 	  char *dst,		/* destination string */
 	  size_t dstlen)
 {				/* destination string length */
