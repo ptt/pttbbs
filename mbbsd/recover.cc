@@ -238,7 +238,7 @@ void AccountRecovery::EmailCodeChallenge() {
     SendRecoveryCode(email_, code);
   }
   // Add a random 5-10s delay to prevent timing oracle.
-  usleep(5000000 + random() % 5000000);
+  usleep(5000000 + arc4random_uniform(5000000));
   mvprints(y_++, 0, "若您輸入的資料正確，系統已將認證碼寄送至您的信箱。");
 
   // Input code.
