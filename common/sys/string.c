@@ -836,7 +836,7 @@ random_text_code(char *buf, size_t len)
 {
     // prevent ambigious characters: oOlI
     static const char chars[] = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
-    static size_t charslen = (sizeof(chars) / sizeof(chars[0])) - 1;
+    static const size_t charslen = sizeof(chars) - 1;
 
     must_getrandom(buf, sizeof(*buf) * len);
 
