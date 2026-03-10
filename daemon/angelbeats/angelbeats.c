@@ -345,7 +345,6 @@ suggest_online_angel(int master_uid) {
     }
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
     if (crandom_uids > 0) {
-        // Yes I didn't do srand. That's good enough.
         uid = random_uids[arc4random_uniform(crandom_uids)];
     }
 #endif
@@ -868,7 +867,6 @@ main(int argc, char *argv[]) {
 	}
     }
 
-    srand(time(NULL));
     Signal(SIGPIPE, SIG_IGN);
     chdir(BBSHOME);
     attach_SHM();

@@ -358,15 +358,6 @@ signal_xcpu_handler(int sig)
 #endif
 
 /* 登錄 BBS 程式 */
-static void
-mysrand(void)
-{
-    unsigned int seed;
-    must_getrandom(&seed, sizeof(seed));
-    seed ^= getpid();
-    srandom(seed);
-}
-
 void
 talk_request(int sig GCC_UNUSED)
 {
@@ -1432,7 +1423,6 @@ start_client(struct ProgramOption *option)
     Signal(SIGALRM, abort_bbs);
     alarm(600);
 
-    mysrand(); /* 初始化: random number 增加user跟時間的差異 */
     now = time(0);
 
     // if flag_user contains an uid, it is already authorized.

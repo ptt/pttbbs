@@ -84,7 +84,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     char subject_qp[STRLEN*3+100];
     static  int     starttime = -1, msgid = 0;
     if( starttime == -1 ){
-	srandom(starttime = (int)time(NULL));
+	starttime = (int)time(NULL);
 	msgid = arc4random();
     }
     n = snprintf(buf, sizeof(buf),

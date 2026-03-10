@@ -223,7 +223,6 @@ int main(int argc, char *argv[])
     if( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    srandom(getpid() + time(NULL));
     event_init();
     event_set(&ev, sfd, EV_READ | EV_PERSIST, connection_accept, &ev);
     event_add(&ev, NULL);
