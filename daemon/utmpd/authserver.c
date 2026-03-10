@@ -72,7 +72,7 @@ void set_passwd(int uid, char *passwd)
     char saltc[3], c;
     int i;
 
-    i = 9 * random();
+    i = 9 * arc4random();
     saltc[0] = i & 077;
     saltc[1] = (i >> 6) & 077;
 

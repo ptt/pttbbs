@@ -34,7 +34,7 @@ gen_captcha(char *buf, int szbuf, char *fpath)
 
     // fill captcha code
     for (i = 0; i < szbuf-1; i++)
-	buf[i] = alphabet[random() % calphas];
+	buf[i] = alphabet[arc4random_uniform(calphas)];
     buf[i] = 0; // szbuf-1
 
     // decide options
@@ -43,8 +43,8 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     while (optFont[coptFont]) coptFont++;
     snprintf(opts, sizeof(opts),
 	    "%s -f %s",
-	    optSpace[random() % coptSpace],
-	    optFont [random() % coptFont ]);
+	    optSpace[arc4random_uniform(coptSpace)],
+	    optFont [arc4random_uniform(coptFont) ]);
 
     // create file
     snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);

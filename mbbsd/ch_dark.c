@@ -112,7 +112,7 @@ brd_rand(struct DarkData *dd)
     for (y = 0; y < 4; y++)
 	for (x = 0; x < 8; x++)
 	    while (1) {
-		index = random() % 32;
+		index = arc4random_uniform(32);
 		if (tem[index])
 		    continue;
 		dd->brd[y][x].color = (index > 15) ? 0 : 1;

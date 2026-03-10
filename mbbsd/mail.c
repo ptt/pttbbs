@@ -468,7 +468,7 @@ gen_auth_code(const char *prefix, char *buf, int length) {
     strlcpy(buf, prefix, length);
     buf[length-1] = 0;
     for (i = strlen(prefix); i < length - 1; i++)
-        buf[i] = alphabets[random() % strlen(alphabets)];
+        buf[i] = alphabets[arc4random_uniform(strlen(alphabets))];
     return buf;
 }
 

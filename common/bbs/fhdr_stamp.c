@@ -47,7 +47,7 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 	case STAMP_FILE:
 	    do {
 		sprintf(ip, "M.%d.A.%3.3X", (int)(++dtime),
-                        (unsigned int)(random() & 0xFFF));
+                        (unsigned int)(arc4random_uniform(0x1000)));
 	    } while ((res = OpenCreate(fpath, O_EXCL | O_WRONLY)) == -1 && 
                      errno == EEXIST);
 	    break;

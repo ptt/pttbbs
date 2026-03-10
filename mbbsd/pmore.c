@@ -4192,7 +4192,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             if (igs)
             {
                 // make random
-                igs = random() % (igs+1);
+                igs = arc4random_uniform(igs + 1);
 
                 for (pe = p ; igs > 0 && pe < end && *pe &&
                         *pe > ' ' && *pe < 0x80

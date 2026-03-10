@@ -1861,7 +1861,7 @@ browse_sigs:
 	    if (isdigit((int)buf[0]))
 		ch = buf[0];
 	    else
-		ch = '1' + random() % (si.max+1);
+		ch = '1' + arc4random_uniform(si.max + 1);
 	    pwcuSetSignature(buf[0]);
 
 	    if (ch != '0') {

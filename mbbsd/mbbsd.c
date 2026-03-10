@@ -634,7 +634,7 @@ multi_user_check(void)
 
     // race condition here, sleep may help..?
     if (cuser.userlevel) {
-	usleep(random()%1000000); // 0~1s
+	usleep(arc4random_uniform(1000000)); // 0~1s
 	ui = getotherlogin(1);
 	if(ui == NULL)
 	    return;
@@ -644,7 +644,7 @@ multi_user_check(void)
 	getdata(b_lines - 1, 0, "您想刪除其他重複登入的連線嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
-	usleep(random()%5000000); // 0~5s
+	usleep(arc4random_uniform(5000000)); // 0~5s
 	if (genbuf[0] != 'n') {
 	    do {
 		// scan again, old ui may be invalid
@@ -660,7 +660,7 @@ multi_user_check(void)
 		}  else {
 		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
 		}
-		usleep(random()%2000000+1000000); // 1~3s
+		usleep(arc4random_uniform(2000000)+1000000); // 1~3s
 	    } while(getotherlogin(3) != NULL);
 	} else {
 	    /* deny login if still have 3 */

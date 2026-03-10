@@ -370,7 +370,7 @@ ch_guess(chicken_t *mychicken)
     me -= '1';
     if (me > 2 || me < 0)
 	me = 0;
-    win = (int)(3.0 * random() / (RAND_MAX + 1.0)) - 1;
+    win = (int)(3.0 * arc4random() / (RAND_MAX + 1.0)) - 1;
     ch = (me + win + 3) % 3;
     prints("%s:%s !      %s:%s !.....%s",
 	   cuser.userid, guess[(int)me], mychicken->name, guess[(int)ch],
@@ -403,7 +403,7 @@ ch_hit(chicken_t *mychicken)
 {
     mychicken->weight -= mychicken->hp_max / 15;
     mychicken->hp -= (int)((float)time_change[(int)mychicken->type][HP_MAX] *
-			   random() / (RAND_MAX + 1.0)) / 2 + 1;
+			   arc4random() / (RAND_MAX + 1.0)) / 2 + 1;
 
     if (mychicken->book > 2)
 	mychicken->book -= 2;
@@ -876,7 +876,7 @@ recover_chicken(chicken_t * thechicken)
         return 1;
 #endif
 
-    money = price + (random() % price);
+    money = price + (arc4random_uniform(price));
     price *= 2;
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))

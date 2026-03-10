@@ -85,7 +85,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     static  int     starttime = -1, msgid = 0;
     if( starttime == -1 ){
 	srandom(starttime = (int)time(NULL));
-	msgid = random();
+	msgid = arc4random();
     }
     n = snprintf(buf, sizeof(buf),
 		 "From: %s <%s>\r\n"
@@ -101,7 +101,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 need_qp(subject) ?  
 		    qp_encode(subject_qp, sizeof(subject_qp), subject, "big5") : subject,
 		 starttime,
-		 (msgid += (int)(random() >> 24)),
+		 (msgid += arc4random_uniform(0xff) + 1),
 		 disclaimer);
     assert(n < sizeof(buf));
     if (n > sizeof(buf))

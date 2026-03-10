@@ -186,8 +186,8 @@ acct_load(ACCT *acct, char *userid)
 #ifdef SELFTEST
     memset(acct, 0, sizeof(ACCT));
     acct->userlevel |= PERM_BASIC|PERM_CHAT;
-    if(random()%4==0) acct->userlevel |= PERM_CHATROOM;
-    if(random()%8==0) acct->userlevel |= PERM_SYSOP;
+    if(arc4random_uniform(4)==0) acct->userlevel |= PERM_CHATROOM;
+    if(arc4random_uniform(8)==0) acct->userlevel |= PERM_SYSOP;
     return atoi(userid);
 #endif
     if((id=searchuser(userid, NULL))<0)
@@ -2844,8 +2844,10 @@ void selftest_testing(void)
     cfd=selftest_connect();
     if(cfd<0) exit(1);
     while(1) {
-	snprintf(userid, sizeof(userid), "%ld", random()%(MAXTESTUSER*2));
-	sprintf(buf, "/%s! %s %s %s", random()%4==0?"-":"",userid, userid, "passwd");
+	snprintf(userid, sizeof(userid), "%ld",
+                 arc4random_uniform(MAXTESTUSER * 2));
+	sprintf(buf, "/%s! %s %s %s", arc4random_uniform(4)==0?"-":"",userid,
+                userid, "passwd");
 	selftest_send(cfd, buf);
 	if (recv(cfd, inbuf, 3, 0) != 3) {
 	    close(cfd);
@@ -2855,8 +2857,8 @@ void selftest_testing(void)
 	    break;
     }
 
-    if(random()%4!=0) {
-	sprintf(buf, "/j %d", random()%5);
+    if(arc4random_uniform(4)!=0) {
+	sprintf(buf, "/j %d", arc4random_uniform(5));
 	selftest_send(cfd, buf);
     }
 
@@ -2884,18 +2886,18 @@ void selftest_testing(void)
 	}
 
 
-	if(random()%10==0) {
-	    switch(random()%4) {
+	if(arc4random_uniform(10)==0) {
+	    switch(arc4random_uniform(4)) {
 		case 0:
-		    r=random()%(sizeof(party_data)/sizeof(party_data[0])-1);
+		    r=arc4random_uniform(sizeof(party_data) / sizeof(party_data[0]) - 1);
 		    sprintf(buf, "//%s",party_data[r].verb);
 		    break;
 		case 1:
-		    r=random()%(sizeof(speak_data)/sizeof(speak_data[0])-1);
+		    r=arc4random_uniform(sizeof(speak_data) / sizeof(speak_data[0]) - 1);
 		    sprintf(buf, "//%s",speak_data[r].verb);
 		    break;
 		case 2:
-		    r=random()%(sizeof(condition_data)/sizeof(condition_data[0])-1);
+		    r=arc4random_uniform(sizeof(condition_data) / sizeof(condition_data[0]) - 1);
 		    sprintf(buf, "//%s",condition_data[r].verb);
 		    break;
 		case 3:
@@ -2903,19 +2905,19 @@ void selftest_testing(void)
 		    break;
 	    }
 	} else {
-		r=random()%(sizeof(chatcmdlist)/sizeof(chatcmdlist[0])-1);
+		r=arc4random_uniform(sizeof(chatcmdlist) / sizeof(chatcmdlist[0]) - 1);
 		sprintf(buf, "/%s",chatcmdlist[r].cmdstr);
 		if(strncmp("/flag",buf,5)==0) {
-		    if(random()%2)
+		    if(arc4random_uniform(2))
 			strcat(buf," +");
 		    else
 			strcat(buf," -");
-		    strcat(buf,random()%2?"l":"L");
-		    strcat(buf,random()%2?"h":"H");
-		    strcat(buf,random()%2?"s":"S");
-		    strcat(buf,random()%2?"t":"T");
+		    strcat(buf,arc4random_uniform(2)?"l":"L");
+		    strcat(buf,arc4random_uniform(2)?"h":"H");
+		    strcat(buf,arc4random_uniform(2)?"s":"S");
+		    strcat(buf,arc4random_uniform(2)?"t":"T");
 		} else if(strncmp("/bye",buf,4)==0) {
-		    switch(random()%10) {
+		    switch(arc4random_uniform(10)) {
 			case 0: strcpy(buf,"//"); break;
 			case 1: strcpy(buf,"//1"); break;
 			case 2: strcpy(buf,"//2"); break;
@@ -2929,9 +2931,9 @@ void selftest_testing(void)
 		    }
 		}
 	}
-	for(i=random()%3; i>0; i--) {
+	for(i=arc4random_uniform(3); i>0; i--) {
 	    char tmp[1024];
-	    sprintf(tmp," %ld", random()%(MAXTESTUSER*2));
+	    sprintf(tmp," %ld", arc4random_uniform(MAXTESTUSER * 2));
 	    strcat(buf, tmp);
 	}
 
@@ -2963,7 +2965,7 @@ void selftest(void)
 	if(fork()==0)
 	    selftest_test();
 	sleep(1);
-	random();
+	arc4random();
     }
 
     exit(0);

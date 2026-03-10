@@ -346,7 +346,7 @@ suggest_online_angel(int master_uid) {
 #ifdef ANGELBEATS_ASSIGN_BY_RANDOM
     if (crandom_uids > 0) {
         // Yes I didn't do srand. That's good enough.
-        uid = random_uids[rand() % crandom_uids];
+        uid = random_uids[arc4random_uniform(crandom_uids)];
     }
 #endif
     return uid;

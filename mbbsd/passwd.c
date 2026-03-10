@@ -667,7 +667,7 @@ void pwcuInitGuestInfo	()
 	"鐵罐", "考卷", "大美女"
     };
 
-    i = random() % DIM(nick);
+    i = arc4random_uniform(DIM(nick));
     snprintf(cuser.nickname, sizeof(cuser.nickname),
 	    "海邊漂來的%s", nick[i]);
     strlcpy(currutmp->nickname, cuser.nickname,

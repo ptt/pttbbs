@@ -469,7 +469,8 @@ file_delete_record(const char *file, const char *string, int case_sensitive)
 	return 0;
 
     do {
-	snprintf(fnew, sizeof(fnew), "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
+	snprintf(fnew, sizeof(fnew), "%s.%3.3X", file,
+                 (unsigned int)(arc4random_uniform(0x1000)));
 	if (access(fnew, 0) != 0)
 	    break;
     } while (i++ < 10); // max tries = 10
