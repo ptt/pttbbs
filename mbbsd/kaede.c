@@ -47,7 +47,7 @@ strip_ansi_movecmd(char *s) {
         s = ++esc;
         while (*esc && strchr(pattern_ansi_code, *esc))
             esc++;
-        if (strchr(pattern_movecmd, *esc)) {
+        if (*esc && strchr(pattern_movecmd, *esc)) {
             *esc = 's';
         }
     }
