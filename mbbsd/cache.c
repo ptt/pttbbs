@@ -233,6 +233,10 @@ postperm_msg(const char *bname)
     assert(0<=i-1 && i-1<MAX_BOARD);
     bp = getbcache(i);
 
+    if (bp->brdattr & BRD_NEEDS_SMS_VERIFICATION)
+        if (!is_user_sms_verified())
+            return "看板限定已驗證台灣門號發/推文";
+
     if (bp->brdattr & BRD_GUESTPOST)
         return NULL;
 
