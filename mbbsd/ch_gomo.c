@@ -103,6 +103,11 @@ gomo_getindex(board_t ku, int x, int y, int color, int dx, int dy)
     if (i >= 5)
 	n += k;
 
+    // In review mode, 5+ consecutive same-color stones can yield n > 61,
+    // which would cause an OOB read in pat_gomoku[]. Cap to the max valid index.
+    if (n > 61)
+	n = 61;
+
     return n;
 }
 
