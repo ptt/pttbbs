@@ -163,7 +163,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
 	return;
     for( i = 1 ; (read(fd, &fhdr, sizeof(fileheader_t)) ==
 		  sizeof(fileheader_t)) ; ++i ){
-	strcpy(t, fhdr.filename);
+	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
 	/* rocker.011018: add new tag delete */
 	if (!((fhdr.filemode & FILE_MARKED) ||	/* ¼Ð°O */
 	      (fhdr.filemode & FILE_DIGEST) ||	/* ¤åºK */
@@ -211,7 +211,7 @@ delete_range(const char *fpath, int id1, int id2)
     t++;
 
     while (read(fdr, &fhdr, sizeof(fileheader_t)) == sizeof(fileheader_t)) {
-	strcpy(t, fhdr.filename);
+	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
 
 	/* rocker.011018: add new tag delete */
 	if (

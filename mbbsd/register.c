@@ -293,7 +293,7 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
 	    ANSI_COLOR(1) ">>%s" ANSI_RESET "¡G",
 	    desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
-	strcpy(buf, genbuf);
+	strlcpy(buf, genbuf, len);
     move(line, 0); clrtobot();
     prints("  %s¡G%s\n", desc, buf);
 }
@@ -606,7 +606,7 @@ register_email_verification(email_input_t *ein, bool skip_same_email_check)
 	if (++tries > 10)
 	    return REGISTER_ERR_CANCEL;
 	if (tries > 1)
-	    strcpy(email, orig);
+	    strlcpy(email, orig, EMAILSZ);
 
 	err = register_email_input(ein);
 	switch (err) {

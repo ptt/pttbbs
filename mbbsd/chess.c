@@ -1439,9 +1439,9 @@ ChessPhotoInitial(ChessInfo* info)
 		chomp(genbuf);
 		sprintf(PHOTO(line), "%s", genbuf);
 	    } else
-		strcpy(PHOTO(line), "                ");
+		strlcpy(PHOTO(line), "                ", CHESS_PHOTO_COLUMN);
 	} else
-	    strcpy(PHOTO(line), blank_photo[line]);
+	    strlcpy(PHOTO(line), blank_photo[line], CHESS_PHOTO_COLUMN);
 
 	switch (line) {
 	    case 0: sprintf(genbuf, " <¥N¸¹> %s", xuser.userid);      break;

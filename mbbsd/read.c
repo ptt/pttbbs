@@ -576,7 +576,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	    return DONOTHING;
 
 	if (sr_mode & RS_TITLE) {
-	    strcpy(keyword, subject(fh->title));
+	    strlcpy(keyword, subject(fh->title), STRLEN);
 	}
     }
     *success = 1;
