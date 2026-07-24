@@ -280,9 +280,9 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 #ifdef FN_SAFEDEL_PREFIX_LEN
     strncpy(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
 #else
-    strcpy(fhdr->filename, FN_SAFEDEL);
+    STRLCPY(fhdr->filename, FN_SAFEDEL);
 #endif
-    strcpy(fhdr->owner, "-");
+    STRLCPY(fhdr->owner, "-");
     fhdr->modified = now;
 }
 

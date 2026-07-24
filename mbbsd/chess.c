@@ -1552,7 +1552,7 @@ NewChessInfo(const ChessActions* actions, const ChessConstants* constants,
 	(ChessInfo*) calloc(1, sizeof(ChessInfo) + constants->step_entry_size);
 
     if (mode == CHESS_MODE_PERSONAL)
-	strcpy(currutmp->mateid, cuser.userid);
+	STRLCPY(currutmp->mateid, cuser.userid);
 
     /* compiler don't know it's actually const... */
     info->actions   = (ChessActions*)   actions;

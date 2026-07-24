@@ -760,7 +760,7 @@ readdoent(int num, fileheader_t * ent)
     isonline = query_online(ent->owner);
 
     if (title_type == SUBJECT_LOCKED)
-        strcpy(recom,"0m--");
+        STRLCPY(recom, "0m--");
     else if(ent->recommend >= MAX_RECOMMENDS)
 	  strcpy(recom,"1mÃz");
     else if(ent->recommend>9)
@@ -771,7 +771,7 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"0mXX");
     else if(ent->recommend<-10)
 	  sprintf(recom,"0mX%d",-ent->recommend);
-    else strcpy(recom,"0m  ");
+    else STRLCPY(recom, "0m  ");
 
     /* start printing */
     if (ent->filemode & FILE_BOTTOM) {
@@ -1130,7 +1130,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     memcpy(&fh, postfile, sizeof(fileheader_t));
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
-    strlcpy(fh.owner, cuser.userid, sizeof(fh.owner));
+    STRLCPY(fh.owner, cuser.userid);
     strlcpy(genbuf, title, len + 1);
     if ((int)strlen(title) > len) {
         genbuf[len-2] = 0;
@@ -1186,7 +1186,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     setbfile(genbuf, brd, postfile->filename);
 
     if(!strcasecmp(brd, BN_UNANONYMOUS))
-       strcpy(fh.owner, cuser.userid);
+       STRLCPY(fh.owner, cuser.userid);
 
     snprintf(fh.title, sizeof(fh.title), "%s%s", prefix, *prefix ? " " : "");
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
@@ -1478,7 +1478,7 @@ do_post_article(int edflags)
     // Ptt: stamp file again to make it order
     //      fix the bug that search failure in getindex
     //      stampfile_u is used when you don't want to clear other fields
-    strcpy(genbuf, fpath);
+    STRLCPY(genbuf, fpath);
     setbpath(fpath, currboard);
     stampfile_u(fpath, &postfile);
 

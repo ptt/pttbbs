@@ -780,7 +780,7 @@ new_register(void)
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
 		sizeof(newuser.userid), DOECHO);
-        strcpy(passbuf, newuser.userid);
+        STRLCPY(passbuf, newuser.userid);
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");

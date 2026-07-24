@@ -44,7 +44,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     char rptpath[PATHLEN];
     int i, tusernum = searchuser(userid, NULL);
 
-    strcpy(rptpath, newpath);
+    STRLCPY(rptpath, newpath);
     assert(tusernum > 0 && tusernum < MAX_USERS);
     move(b_lines - 2, 0);
     clrtobot();

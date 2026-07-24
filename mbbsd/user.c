@@ -210,7 +210,7 @@ user_display(const userec_t * u, int adminmode)
 
     // See comment above
     if (adminmode && HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
-	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
+	STRLCPY(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
 		genbuf[diff] = '-';
@@ -378,7 +378,7 @@ violate_law(userec_t * u, int unum)
     getdata(5, 0, "(0)結束", ans, 3, DOECHO);
     switch (ans[0]) {
     case '1':
-	strcpy(reason, "Cross-post");
+	STRLCPY(reason, "Cross-post");
 	break;
     case '2':
 	strcpy(reason, "亂發廣告信");

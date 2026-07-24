@@ -155,10 +155,10 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
     static int flFirstAlert = 1;
 
     memset(&cq, 0, sizeof(CopyQueue));
-    strcpy(cq.copyfile, fpath);
-    strcpy(cq.copytitle, title);
+    STRLCPY(cq.copyfile, fpath);
+    STRLCPY(cq.copytitle, title);
     if (owner)
-	strcpy(cq.copyowner, owner);
+	STRLCPY(cq.copyowner, owner);
 
     //copyqueue_append(&cq);
     copyqueue_toggle(&cq);
@@ -1003,7 +1003,7 @@ a_setchesslist(const menu_t * me)
 
     snprintf(buf_this,  sizeof(buf_this),  "%s/%s", me->path, fhdr->filename);
     if((n = readlink(buf_this, buf_real, sizeof(buf_real) - 1)) == -1)
-	strcpy(buf_real, fhdr->filename);
+	STRLCPY(buf_real, fhdr->filename);
     else
 	// readlink doesn't garentee zero-ended
 	buf_real[n] = 0;

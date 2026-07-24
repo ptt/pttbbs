@@ -32,7 +32,7 @@ change_scroll_range(int top, int bottom)
 {
     char            buf[16], *p;
 
-    snprintf(buf, sizeof(buf), ESC_STR "[%d;%dr", top + 1, bottom + 1);
+    SNPRINTF(buf, ESC_STR "[%d;%dr", top + 1, bottom + 1);
     for (p = buf; *p; p++)
 	ochar(*p);
 }
@@ -49,7 +49,7 @@ do_move(int destcol, int destline)
 {
     char            buf[16], *p;
 
-    snprintf(buf, sizeof(buf), ANSI_MOVETO(%d,%d), destline + 1, destcol + 1);
+    SNPRINTF(buf, ANSI_MOVETO(%d,%d), destline + 1, destcol + 1);
     for (p = buf; *p; p++)
 	ochar(*p);
 }

@@ -588,7 +588,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_ensign", symbolicname);
 
     strcpy(fh.title, "◇ 棋國國徽 (不能刪除，系統需要)");
-    strcpy(fh.owner, str_sysop);
+    STRLCPY(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating member list */
@@ -608,7 +608,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_list", symbolicname);
 
     strcpy(fh.title, "◇ 棋國成員表 (不能刪除，系統需要)");
-    strcpy(fh.owner, str_sysop);
+    STRLCPY(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating profession photos' dir */
@@ -620,7 +620,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_photo", symbolicname);
 
     strcpy(fh.title, "◆ 棋國照片檔 (不能刪除，系統需要)");
-    strcpy(fh.owner, str_sysop);
+    STRLCPY(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 }
 #endif /* defined(CHESSCOUNTRY) */
@@ -666,8 +666,8 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
      int i, pn, sn;
      fileheader_t *fh;
      char *p1, *p2, bakdir[PATHLEN], file1[PATHLEN], file2[PATHLEN];
-     strcpy(file1,dir1);
-     strcpy(file2,dir2);
+     STRLCPY(file1, dir1);
+     STRLCPY(file2, dir2);
      if((p1=strrchr(file1,'/')))
 	 p1 ++;
      else
@@ -687,7 +687,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
          {
              for(i=0; i<sn; i++)
                if(fh[pn+i].owner[0])
-                   strcat(fh[pn+i].owner, ".");
+                   STRLCAT(fh[pn+i].owner, ".");
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
      snprintf(bakdir, sizeof(bakdir), "%s.bak", dir1);
@@ -891,7 +891,7 @@ m_mod_board(char *bname)
 	} while (1);
         y++;
 
-	strcpy(newbh.title, genbuf);
+	STRLCPY(newbh.title, genbuf);
 	newbh.title[4] = ' ';
 
 	// 7 for category
@@ -1099,7 +1099,7 @@ m_newbrd(int whatclass, int recover)
 	    break;
     } while (1);
 
-    strcpy(newboard.title, genbuf);
+    STRLCPY(newboard.title, genbuf);
     newboard.title[4] = ' ';
 
     getdata(8, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO);

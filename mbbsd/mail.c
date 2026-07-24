@@ -1186,7 +1186,7 @@ mail_all(void)
     unlink(genbuf);
     Copy(fpath, genbuf);
     unlink(fpath);
-    strcpy(fpath, genbuf);
+    STRLCPY(fpath, genbuf);
 
     strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));	/* ¯¸ªø ID */
     strlcpy(mymail.title, save_title, sizeof(mymail.title));

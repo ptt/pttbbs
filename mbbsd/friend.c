@@ -143,7 +143,7 @@ friend_append(int type, int count)
     setfriendfile(fpath, type);
 
     if (currboard && *currboard)
-	strcpy(myboard, currboard);
+	STRLCPY(myboard, currboard);
 
     do {
 	move(2, 0);

@@ -216,7 +216,7 @@ ticket(int bid)
 	setbfile(fn_ticket, bh->brdname, FN_TICKET);
 	currbid = bid;
     } else
-	strcpy(path, "etc/");
+	STRLCPY(path, "etc/");
 
     lockreturn0(TICKET, LOCK_MULTI);
     while (1) {
