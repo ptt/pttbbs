@@ -22,8 +22,8 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
 
     req.cb = sizeof(req);
     req.operation = fp ? POSTD_REQ_IMPORT_REMOTE : POSTD_REQ_IMPORT;
-    strlcpy(req.key.board, board, sizeof(req.key.board));
-    strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
+    STRLCPY(req.key.board, board);
+    STRLCPY(req.key.file, fhdr->filename);
     memcpy(&req.header, fhdr, sizeof(req.header));
 
     req.extra.ctime = atoi(fhdr->filename + 2);
@@ -59,7 +59,7 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
             userid = "-expired.";
         }
     }
-    strlcpy(req.extra.userid, userid, sizeof(req.extra.userid));
+    STRLCPY(req.extra.userid, userid);
     debug(" (userref: %s.%d)", req.extra.userid, req.extra.userref);
 
     *written_data += sizeof(req);

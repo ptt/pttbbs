@@ -222,7 +222,7 @@ angel_list_add(const char *userid, int uid) {
     kanade = &(g_angel_list[g_angel_list_size++]);
     memset(kanade, 0, sizeof(*kanade));
     kanade->uid = uid;
-    strlcpy(kanade->userid, userid, sizeof(kanade->userid));
+    STRLCPY(kanade->userid, userid);
     return kanade;
 }
 
@@ -704,9 +704,9 @@ client_cb(int fd, short event, void *arg) {
 
     // solve user ids
     if (data.angel_uid && (uid = getuserid(data.angel_uid)))
-        strlcpy(angel_uid, uid, sizeof(angel_uid));
+        STRLCPY(angel_uid, uid);
     if (data.master_uid && (uid = getuserid(data.master_uid)))
-        strlcpy(master_uid, uid, sizeof(master_uid));
+        STRLCPY(master_uid, uid);
 
     debug("got request: %d\n", data.operation);
     switch(data.operation) {
@@ -730,7 +730,7 @@ client_cb(int fd, short event, void *arg) {
             if (data.angel_uid > 0) {
                 inc_angel_master(data.angel_uid, data.master_uid);
                 uid = getuserid(data.angel_uid);
-                strlcpy(angel_uid, uid, sizeof(angel_uid));
+                STRLCPY(angel_uid, uid);
                 angel_list_sort();
             }
             log("result: [%s]\n", data.angel_uid > 0 ?  angel_uid : "<none>");

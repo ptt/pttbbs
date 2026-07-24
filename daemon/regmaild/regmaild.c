@@ -488,7 +488,7 @@ reload_unambiguous_user_list()
             continue;
 
         add_amb_ulist(&orig_ulist, uid);
-        strlcpy(xuid, uid, sizeof(xuid));
+        STRLCPY(xuid, uid);
         build_unambiguous_userid(xuid);
         add_amb_ulist(&unamb_ulist, xuid);
     }
@@ -522,7 +522,7 @@ find_ambiguous_userid2(const char *userid)
 
     // build un-ambiguous uid
     reload_unambiguous_user_list();
-    strlcpy(ambuid, userid, sizeof(ambuid));
+    STRLCPY(ambuid, userid);
     build_unambiguous_userid(ambuid);
 
     if ((p = bsearch(ambuid, unamb_ulist.list, unamb_ulist.num, ulist_size_element, 
@@ -572,7 +572,7 @@ find_ambiguous_userid(const char *userid)
 	return 0;
 
     // build un-ambiguous uid
-    uidlen = strlcpy(ambuid, userid, sizeof(ambuid));
+    uidlen = STRLCPY(ambuid, userid);
     build_unambiguous_userid(ambuid);
 
     for (i = 0; i < MAX_USERS; i++)

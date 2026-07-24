@@ -87,7 +87,7 @@ void set_passwd(int uid, char *passwd)
     saltc[2] = '\0';
 
     memset(buf, 0, sizeof(buf));
-    strlcpy(buf, crypt(passwd, saltc), sizeof(buf));
+    STRLCPY(buf, crypt(passwd, saltc));
 
     if ((i = open(AUTH_PASSWDS, O_WRONLY)) < 0)
 	return;

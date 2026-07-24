@@ -31,7 +31,7 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
 
     if (ck && cklen) {
 	char ckbuf[128];
-	snprintf(ckbuf, sizeof(ckbuf), "%d-%d", (int) st->st_dev, (int) st->st_ino);
+	SNPRINTF(ckbuf, "%d-%d", (int) st->st_dev, (int) st->st_ino);
 	if ((size_t) cklen != strlen(ckbuf) || strncmp(ck, ckbuf, cklen) != 0) {
 	    ret = SELECT_ECHANGED;
 	    goto answer_file_errout;

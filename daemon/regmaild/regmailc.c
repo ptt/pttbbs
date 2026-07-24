@@ -74,20 +74,20 @@ static int regmaildb_main(const char *prog, int argc, char **argv)
     if (strcmp(operation, "count") == 0)
     {
 	req.operation = REGMAILDB_REQ_COUNT;
-	strlcpy(req.userid, userid, sizeof(req.userid));
-	strlcpy(req.email,  email,  sizeof(req.email));
+	STRLCPY(req.userid, userid);
+	STRLCPY(req.email, email);
     }
     else if (strcmp(operation, "set") == 0)
     {
 	req.operation = REGMAILDB_REQ_SET;
-	strlcpy(req.userid, userid, sizeof(req.userid));
-	strlcpy(req.email,  email,  sizeof(req.email));
+	STRLCPY(req.userid, userid);
+	STRLCPY(req.email, email);
     }
     else if (strcmp(operation, "amb") == 0)
     {
 	req.operation = REGCHECK_REQ_AMBIGUOUS;
-	strlcpy(req.userid, userid, sizeof(req.userid));
-	strlcpy(req.email,  "ambiguous@check.nonexist", sizeof(req.email));
+	STRLCPY(req.userid, userid);
+	STRLCPY(req.email, "ambiguous@check.nonexist");
     }
     else
 	return usage(prog);

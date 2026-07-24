@@ -1568,7 +1568,7 @@ auth_user_challenge(login_ctx *ctx)
 
     if (free_uid)
     {
-        strlcpy(ctx->userid, free_uid, sizeof(ctx->userid));
+        STRLCPY(ctx->userid, free_uid);
         return AUTH_RESULT_FREEID;
     }
 
@@ -1581,12 +1581,12 @@ auth_user_challenge(login_ctx *ctx)
         !user.userid[0])
     {
         if (user.userid[0])
-            strcpy(uid, user.userid);
+            strlcpy(uid, user.userid, IDLEN + 1);
         return AUTH_RESULT_FAIL;
     }
 
     // normalize user id
-    strcpy(uid, user.userid);
+    strlcpy(uid, user.userid, IDLEN + 1);
 
     if (!ctx->is_secure_connection &&
         passwd_require_secure_connection(&user))
@@ -1648,9 +1648,9 @@ start_service(int fd, login_conn_ctx *conn)
     ld.cb  = sizeof(ld);
     ld.ack = (void*)conn;
 
-    strlcpy(ld.userid, ctx->userid, sizeof(ld.userid));
-    strlcpy(ld.hostip, ctx->hostip, sizeof(ld.hostip));
-    strlcpy(ld.port,   ctx->port,   sizeof(ld.port));
+    STRLCPY(ld.userid, ctx->userid);
+    STRLCPY(ld.hostip, ctx->hostip);
+    STRLCPY(ld.port, ctx->port);
     ld.encoding = ctx->encoding;
     ld.client_code = ctx->client_code;
     ld.t_lines  = 24;   // default size
@@ -1715,8 +1715,8 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
         assert(g_logattempt_pipe);
         ctx.cb = sizeof(ctx);
         ctx.logtime = logtime;
-        strlcpy(ctx.userid, userid, sizeof(ctx.userid));
-        strlcpy(ctx.hostip, hostip, sizeof(ctx.hostip));
+        STRLCPY(ctx.userid, userid);
+        STRLCPY(ctx.hostip, hostip);
 
         DEBUG_IO(g_logattempt_pipe, "before logattempt2::towrite()");
         if (towrite(g_logattempt_pipe, &ctx, sizeof(ctx)) == sizeof(ctx))
@@ -2093,7 +2093,7 @@ client_cb(int fd, short event, void *arg)
         if (g_verbose || g_report_timeout)
         {
             time4_t tnow = time(NULL);
-            strlcpy((char*)buf, Cdate(&tnow), sizeof(buf));
+            STRLCPY(buf, Cdate(&tnow));
 
             fprintf(stderr, LOG_PREFIX
                     "timeout: %-16s [%s -> %s : %-4ds] %08X %s%s\n",
@@ -2591,8 +2591,8 @@ static int
 bind_ip_port(const char *ip, int port)
 {
     char name[STRLEN], addr[STRLEN];
-    snprintf(name, sizeof(name), "%d", port);
-    snprintf(addr, sizeof(addr), "%s:%d", ip, port);
+    SNPRINTF(name, "%d", port);
+    SNPRINTF(addr, "%s:%d", ip, port);
     return bind_generic(name, addr, 0, _set_bind_ip_port_opt);
 }
 
@@ -2669,7 +2669,7 @@ parse_bindports_conf(FILE *fp,
                 exit(1);
             }
             if (g_verbose) fprintf(stderr, "client_retry: %s\n", vtunnel);
-            strlcpy(g_retry_cmd, vtunnel, sizeof(g_retry_cmd));
+            STRLCPY(g_retry_cmd, vtunnel);
             continue;
         }
         else if (strcmp(vport, "logfile") == 0)
@@ -2688,7 +2688,7 @@ parse_bindports_conf(FILE *fp,
                 exit(1);
             }
             if (g_verbose) fprintf(stderr, "log_file: %s\n", vtunnel);
-            strlcpy(g_logfile_path, vtunnel, sizeof(g_logfile_path));
+            STRLCPY(g_logfile_path, vtunnel);
             continue;
         }
         else if (strcmp(vport, "pidfile") == 0)
@@ -2706,7 +2706,7 @@ parse_bindports_conf(FILE *fp,
                 exit(1);
             }
             if (g_verbose) fprintf(stderr, "pidfile: %s\n", vtunnel);
-            strlcpy(g_pidfile_path, vtunnel, sizeof(g_pidfile_path));
+            STRLCPY(g_pidfile_path, vtunnel);
             continue;
         }
         else if (strcmp(vport, "tunnel") == 0)
@@ -2841,7 +2841,7 @@ main(int argc, char *argv[], char *envp[])
             break;
 
         case 'l':
-            strlcpy(g_logfile_path, optarg, sizeof(g_logfile_path));
+            STRLCPY(g_logfile_path, optarg);
             break;
 
         case 'p':
@@ -2849,23 +2849,23 @@ main(int argc, char *argv[], char *envp[])
             break;
 
         case 't':
-            strlcpy(tunnel_path, optarg, sizeof(tunnel_path));
+            STRLCPY(tunnel_path, optarg);
             break;
 
         case 'r':
-            strlcpy(g_retry_cmd, optarg, sizeof(g_retry_cmd));
+            STRLCPY(g_retry_cmd, optarg);
             break;
 
         case 'P':
-            strlcpy(g_pidfile_path, optarg, sizeof(g_pidfile_path));
+            STRLCPY(g_pidfile_path, optarg);
             break;
 
         case 'u':
-            strlcpy(unix_path, optarg, sizeof(unix_path));
+            STRLCPY(unix_path, optarg);
             break;
 
         case 'c':
-            strlcpy(tclient_cmd, optarg, sizeof(tclient_cmd));
+            STRLCPY(tclient_cmd, optarg);
             break;
 
         case 'd':
@@ -3000,7 +3000,7 @@ main(int argc, char *argv[], char *envp[])
 
     if (!*g_pidfile_path)
     {
-        strlcpy(g_pidfile_path, LOGIND_DEFAULT_PID_PATH, sizeof(g_pidfile_path));
+        STRLCPY(g_pidfile_path, LOGIND_DEFAULT_PID_PATH);
     }
 
     /* Give up root privileges: no way back from here */
