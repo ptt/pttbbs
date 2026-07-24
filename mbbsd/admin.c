@@ -665,7 +665,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
 {
      int i, pn, sn;
      fileheader_t *fh;
-     char *p1, *p2, bakdir[128], file1[128], file2[128];
+     char *p1, *p2, bakdir[PATHLEN], file1[PATHLEN], file2[PATHLEN];
      strcpy(file1,dir1);
      strcpy(file2,dir2);
      if((p1=strrchr(file1,'/')))

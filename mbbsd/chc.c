@@ -282,7 +282,7 @@ chc_log_poem(FILE* outfp)
     if (n < 0)
 	perror("scandir");
     else {
-	char buf[80];
+	char buf[PATHLEN];
 	FILE *fp;
 	sprintf(buf, BBSHOME"/etc/chess/%s",
                 namelist[arc4random_uniform(n)]->d_name);
@@ -321,7 +321,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     chc_init_board(board);
     /* format: "%3d. %8.8s  %8.8s  %3d. %8.8s  %8.8s\n" */
     for (i = 0; i < nStep; i++) {
-	char buf[80];
+	char buf[PATHLEN];
 	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
 	buf[0]='\0';
 	if (move->type == CHESS_STEP_NORMAL) {
