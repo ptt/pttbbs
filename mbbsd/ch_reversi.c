@@ -131,7 +131,7 @@ caculate_hint(board_t board, color_t who)
 static void
 reversi_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
-    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    STRLCPY(user->userid, uinfo->userid);
     user->win  =
     user->lose =
     user->tie  = 0;
@@ -140,7 +140,7 @@ reversi_init_user(const userinfo_t* uinfo, ChessUser* user)
 static void
 reversi_init_user_userec(const userec_t* urec, ChessUser* user)
 {
-    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    STRLCPY(user->userid, urec->userid);
     user->win  =
     user->lose =
     user->tie  = 0;
@@ -257,8 +257,7 @@ reversi_select(ChessInfo* info, rc_t loc, ChessGameResult* result GCC_UNUSED)
 	    TURN_TO_COLOR(info->turn), loc };
 	reversi_apply_step(board, &step);
 
-	snprintf(info->last_movestr, sizeof(info->last_movestr),
-		"%c%d", step.loc.c - 1 + 'A', step.loc.r);
+	SNPRINTF(info->last_movestr, "%c%d", step.loc.c - 1 + 'A', step.loc.r);
 
 	ChessStepSend(info, &step);
 	ChessHistoryAppend(info, &step);
@@ -300,8 +299,7 @@ static void
 reversi_prepare_step(ChessInfo* info, const reversi_step_t* step)
 {
     if (step->type == CHESS_STEP_NORMAL)
-	snprintf(info->last_movestr, sizeof(info->last_movestr),
-		"%c%d", step->loc.c - 1 + 'A', step->loc.r);
+	SNPRINTF(info->last_movestr, "%c%d", step->loc.c - 1 + 'A', step->loc.r);
     else if (step->color == TURN_TO_COLOR(info->myturn))
 	strcpy(info->last_movestr, "你必須放棄這一步!!");
     else

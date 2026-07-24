@@ -74,7 +74,7 @@ nios_dbgf(const char *fmt, ...)
     snprintf (msg,  sizeof(msg), "%s %*s ", Cdate_mdHMS(&now), IDLEN, cuser.userid);
     vsnprintf(msg + strlen(msg), sizeof(msg)-strlen(msg), fmt, ap);
     va_end(ap);
-    strlcat(msg, "\n", sizeof(msg));
+    STRLCAT(msg, "\n");
 
     log_file(logfn, LOG_CREAT, msg);
 }

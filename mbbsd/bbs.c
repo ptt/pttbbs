@@ -129,11 +129,11 @@ modify_dir_lite(
     if (disable_modes)
         fhdr.filemode &= ~disable_modes;
     if (title && *title)
-	strlcpy(fhdr.title, title, sizeof(fhdr.title));
+	STRLCPY(fhdr.title, title);
     if (owner && *owner)
-	strlcpy(fhdr.owner, owner, sizeof(fhdr.owner));
+	STRLCPY(fhdr.owner, owner);
     if (date && *date)
-	strlcpy(fhdr.date, date, sizeof(fhdr.date));
+	STRLCPY(fhdr.date, date);
     if (multi)
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
@@ -271,8 +271,7 @@ save_violatelaw(void)
     }
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000) {
-	snprintf(buf, sizeof(buf),
-                 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
+	SNPRINTF(buf, ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
                  "必須繳出 %d " MONEYNAME "；但你目前只有 %d ，數量不足!!"
                  ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
                  cuser.money);
@@ -343,7 +342,7 @@ set_board(void)
 	/* calculate with other title information */
 	int l = 0;
 
-	snprintf(currBM, sizeof(currBM), "板主:%s", bp->BM);
+	SNPRINTF(currBM, "板主:%s", bp->BM);
 	/* title has +7 leading symbols */
 	l += strlen(bp->title);
 	if(l >= 7)
@@ -579,7 +578,7 @@ readtitle(void)
 
 #ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN)
-        snprintf(buf, sizeof(buf), "[靜]");
+        SNPRINTF(buf, "[靜]");
     else
 #endif
     {
@@ -588,7 +587,7 @@ readtitle(void)
         // user IS reading it.
         int nuser = SHM->bcache[currbid - 1].nuser;
         if (nuser < 1) nuser = 1;
-        snprintf(buf, sizeof(buf), "人氣:%d ", nuser);
+        SNPRINTF(buf, "人氣:%d ", nuser);
     }
 
     vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ",
@@ -899,7 +898,7 @@ whereami(void)
 	       p[j]->BM);
 
     move(b_lines - 2, 0);
-    strlcpy(category, p[i]->title + 7, sizeof(category));
+    STRLCPY(category, p[i]->title + 7);
     if ((pcat = strchr(category, ' ')) != NULL)
         *pcat = 0;
     prints("位置: ");
@@ -1025,14 +1024,14 @@ deleteCrossPost(const fileheader_t *fhdr, char *bname)
             if (!bn)
                 return;
             bnlen = strlen(++bn) - 1;
-            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
         } else {
             // old format:  .BOARD版, which may conflict with board names.
             bn = strrchr(fhdr->title, '.');
             if (!bn)
                 return;
             bnlen = strlen(++bn) - 2;
-            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
         }
 	do_deleteCrossPost(fhdr, bnbuf);
     } else {
@@ -1137,8 +1136,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
         DBCS_safe_trim(genbuf);
         strcat(genbuf, "…");
     }
-    snprintf(fh.title, sizeof(fh.title),
-             "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
+    SNPRINTF(fh.title, "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
 
     setbdir(genbuf, BN_ALLPOST);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
@@ -1188,7 +1186,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     if(!strcasecmp(brd, BN_UNANONYMOUS))
        STRLCPY(fh.owner, cuser.userid);
 
-    snprintf(fh.title, sizeof(fh.title), "%s%s", prefix, *prefix ? " " : "");
+    SNPRINTF(fh.title, "%s%s", prefix, *prefix ? " " : "");
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
              "(%s)", currboard);
@@ -1233,13 +1231,13 @@ static int PostAddRecord(const char *board, const fileheader_t *fhdr,
 
     req.cb = sizeof(req);
     req.operation = POSTD_REQ_ADD;
-    strlcpy(req.key.board, board, sizeof(req.key.board));
-    strlcpy(req.key.file, fhdr->filename, sizeof(req.key.file));
+    STRLCPY(req.key.board, board);
+    STRLCPY(req.key.file, fhdr->filename);
     memcpy(&req.header, fhdr, sizeof(req.header));
     req.extra.userref = cuser.firstlogin;
     req.extra.ctime = ctime;
     req.extra.ipv4 = inet_addr(fromhost);
-    strlcpy(req.extra.userid, cuser.userid, sizeof(req.extra.userid));
+    STRLCPY(req.extra.userid, cuser.userid);
 
     s = toconnectex(POSTD_ADDR, 10);
     if (s < 0)
@@ -1344,8 +1342,7 @@ do_post_article(int edflags)
 	    posttype = tmp_title[0] - '1';
 	    if (posttype >= 0 && posttype < i)
 	    {
-		snprintf(tmp_title, sizeof(tmp_title),
-			"[%s] ", ctype[posttype]);
+		SNPRINTF(tmp_title, "[%s] ", ctype[posttype]);
 	    } else {
 		tmp_title[0] = '\0';
 		posttype=-1;
@@ -1378,7 +1375,7 @@ do_post_article(int edflags)
 	    break;
 	} while (1);
 
-	strlcpy(save_title, tmp_title, sizeof(save_title));
+	STRLCPY(save_title, tmp_title);
     }
     if (save_title[0] == '\0')
 	return FULLUPDATE;
@@ -1470,8 +1467,8 @@ do_post_article(int edflags)
 
     // ---- END OF MONEY VERIFICATION ----
 
-    strlcpy(postfile.owner, owner, sizeof(postfile.owner));
-    strlcpy(postfile.title, save_title, sizeof(postfile.title));
+    STRLCPY(postfile.owner, owner);
+    STRLCPY(postfile.title, save_title);
 
     setbdir(buf, currboard);
 
@@ -1577,8 +1574,8 @@ do_post_article(int edflags)
 		unlink(genbuf);
 		Copy(fpath, genbuf);
 
-		strlcpy(mailfile.owner, cuser.userid, sizeof(mailfile.owner));
-		strlcpy(mailfile.title, save_title, sizeof(mailfile.title));
+		STRLCPY(mailfile.owner, cuser.userid);
+		STRLCPY(mailfile.title, save_title);
 		sethomedir(genbuf, quote_user);
                 msg = "回應至作者信箱";
 		if (append_record(genbuf, &mailfile, sizeof(mailfile)) == -1)
@@ -1675,8 +1672,8 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 		break;
 
 	    default:
-		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
-		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
+		STRLCPY(currtitle, fhdr->title);
+		STRLCPY(quote_user, fhdr->owner);
 		do_post(edflags);
 	}
     } else {
@@ -1693,8 +1690,8 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
                 // TODO(piaip) Check if fhdr has valid author.
                 edflags |= EDITFLAG_KIND_SENDMAIL;
 	    default:
-		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
-		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
+		STRLCPY(currtitle, fhdr->title);
+		STRLCPY(quote_user, fhdr->owner);
 		do_post(edflags);
 	}
     }
@@ -1948,7 +1945,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     outs("正在載入檔案...");
     refresh();
 
-    strlcpy(save_title, fhdr->title, sizeof(save_title));
+    STRLCPY(save_title, fhdr->title);
 
     Copy(genbuf, fpath);
     // to prevent genbuf being modified after copy, use dashs(fpath) instead.
@@ -2018,7 +2015,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
                          "%s %s(E) %s(%s) %s => %s\n", Cdatelite(&now),
                          cuser.userid, currboard, fhdr->owner, fhdr->title,
                          save_title));
-        strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
+        STRLCPY(fhdr->title, save_title);
     }
 
     // substitute_ref_record(direct, fhdr, ent);
@@ -2202,8 +2199,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
             vmsg("系統錯誤: 無法寫入檔案");
             return FULLUPDATE;
         }
-        strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
-	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
+        STRLCPY(xfile.owner, cuser.userid);
+	STRLCPY(xfile.title, xtitle);
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;
 	}
@@ -2268,17 +2265,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
 #ifdef GUESTRECOMMEND
-	    snprintf(tail, sizeof(tail),
-		    "%15s %s",
+	    SNPRINTF(tail, "%15s %s",
 		    FROMHOST, Cdate_md(&now));
 #else
 	    maxlength += (15 - 6);
-	    snprintf(tail, sizeof(tail),
-		    " %s",
+	    SNPRINTF(tail, " %s",
 		    Cdate_mdHM(&now));
 #endif
-	    snprintf(buf, sizeof(buf),
-		    // ANSI_COLOR(32) <- system will add green
+	    SNPRINTF(buf, // ANSI_COLOR(32) <- system will add green
 		    "※ " ANSI_COLOR(1;32) "%s"
 		    ANSI_COLOR(0;32) ":轉錄至"
 		    "%s" ANSI_RESET "%*s%s\n" ,
@@ -2361,7 +2355,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
         if (!*allpost_base) {
             setbpath(allpost_base, BN_ALLPOST);
-            strlcat(allpost_base, "/", sizeof(allpost_base));
+            STRLCAT(allpost_base, "/");
             allpost_base_len = strlen(allpost_base);
         }
 
@@ -2376,14 +2370,14 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
             if (!bn)
                 break;
             bnlen = strlen(++bn) - 1;
-            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
         } else {
             // old format:  .BOARD版, which may conflict with board names.
             bn = strrchr(fhdr->title, '.');
             if (!bn)
                 break;
             bnlen = strlen(++bn) - 2;
-            snprintf(bnbuf, sizeof(bnbuf), "%*.*s", bnlen, bnlen, bn);
+            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
         }
         setbfile(genbuf, bnbuf, fhdr->filename);
 
@@ -2421,7 +2415,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    STATINC(STAT_READPOST_OLD);
     }
     brc_addlist(fhdr->filename, fhdr->modified);
-    strlcpy(currtitle, subject(fhdr->title), sizeof(currtitle));
+    STRLCPY(currtitle, subject(fhdr->title));
 
     switch(more_result)
     {
@@ -2591,7 +2585,7 @@ b_man(void)
 	char rebuild_path[PATHLEN];
 	int  fd;
 
-	snprintf(rebuild_path, sizeof(rebuild_path), "%s/.rebuild", apath);
+	SNPRINTF(rebuild_path, "%s/.rebuild", apath);
 	if ((fd = OpenCreate(rebuild_path, O_RDWR)) > 0)
 	    close(fd);
     }
@@ -2610,7 +2604,7 @@ cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
     char            title[TTLEN + 1];
 
     setbfile(fpath, currboard, fhdr->filename);
-    strlcpy(title, "◇ ", sizeof(title));
+    STRLCPY(title, "◇ ");
     strlcpy(title + 3, fhdr->title, TTLEN - 3);
     title[TTLEN] = '\0';
     a_copyitem(fpath, title, 0, 1);
@@ -2657,7 +2651,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         getdata_buf(b_lines - 1, 0, "作者：", tmpfhdr.owner, IDLEN + 2, DOECHO);
         getdata_str(b_lines - 1, 0, "日期：", datebuf, 6, DOECHO, tmpfhdr.date);
         // Normalize date to %.5s
-        snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%5.5s", datebuf);
+        SNPRINTF(tmpfhdr.date, "%5.5s", datebuf);
     }
     if (memcmp(&tmpfhdr, fhdr, sizeof(tmpfhdr)) == 0)
         return FULLUPDATE;
@@ -3047,8 +3041,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if (aligncmt)
     {
 	// left align, voted by LydiaWu and LadyNotorious
-	snprintf(buf, sizeof(buf), "%-*s", IDLEN, myid);
-	strlcpy(mynick, buf, sizeof(mynick));
+	SNPRINTF(buf, "%-*s", IDLEN, myid);
+	STRLCPY(mynick, buf);
 	myid = mynick;
     }
 
@@ -3104,13 +3098,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 	if(logIP)
 	{
-	    snprintf(tail, sizeof(tail),
-		    "%15s %s",
+	    SNPRINTF(tail, "%15s %s",
 		    FROMHOST,
 		    Cdate_mdHM(&now));
 	} else {
-	    snprintf(tail, sizeof(tail),
-		    " %s",
+	    SNPRINTF(tail, " %s",
 		    Cdate_mdHM(&now));
 	}
 
@@ -3122,7 +3114,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
         return DIRCHANGED;
 
     lastrecommend = now;
-    strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
+    STRLCPY(lastrecommend_fname, fhdr->filename);
     return FULLUPDATE;
 }
 
@@ -3388,7 +3380,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		break;
 
 	    // build reason string (based on STR_SAFEDEL_TITLE)
-	    snprintf(reason, sizeof(reason), "(已被%s刪除) <%s>",
+	    SNPRINTF(reason, "(已被%s刪除) <%s>",
 		    cuser.userid, fhdr->owner);
 	    move(3, 0); clrtoeol();
 	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: □ ",
@@ -3941,7 +3933,7 @@ tar_addqueue(void)
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)))
         return DONOTHING;
 
-    snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
+    SNPRINTF(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
         vmsg("已經排定行程, 會於每日" TARQUEUE_TIME_STR "依序進行備份");
 	return FULLUPDATE;
@@ -3957,8 +3949,8 @@ tar_addqueue(void)
 	return FULLUPDATE;
     if (strstr(email, "@") == NULL)
     {
-	strlcat(email, ".bbs@", sizeof(email));
-	strlcat(email, MYHOSTNAME, sizeof(email));
+	STRLCAT(email, ".bbs@");
+	STRLCAT(email, MYHOSTNAME);
     }
     move(4,0); clrtoeol();
     outs(email);
@@ -4023,8 +4015,7 @@ b_note_edit_bname(int bid)
        "\t(使用者隨時可按 b 或經由進出不同看板來重新顯示進板畫面)\n");
 
        // 設定日期的效果其實很早就不會動了,所以拔掉
-       snprintf(msg, sizeof(msg),
-	       "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
+       SNPRINTF(msg, "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
 	       fh->bupdate ? 'Y' : 'N');
        getdata(10, 0, msg, buf, 3, LCECHO);
 
@@ -4124,7 +4115,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
     memcpy(&fhdr, old_fhdr, sizeof(fhdr));
 
     if(!(fhdr.filemode & FILE_BOTTOM) ){
-          snprintf(buf, sizeof(buf), "%s.bottom", direct);
+          SNPRINTF(buf, "%s.bottom", direct);
           if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return FULLUPDATE;
@@ -4178,18 +4169,18 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	memcpy(&digest, fhdr, sizeof(digest));
 	digest.filename[0] = 'G';
-	strlcpy(buf, direct, sizeof(buf));
+	STRLCPY(buf, direct);
 	ptr = strrchr(buf, '/');
 	assert(ptr);
 	ptr++;
 	ptr[0] = '\0';
-	snprintf(genbuf, sizeof(genbuf), "%s%s", buf, digest.filename);
+	SNPRINTF(genbuf, "%s%s", buf, digest.filename);
 
 	if (dashf(genbuf))
 	    unlink(genbuf);
 
 	digest.filemode = 0;
-	snprintf(genbuf2, sizeof(genbuf2), "%s%s", buf, fhdr->filename);
+	SNPRINTF(genbuf2, "%s%s", buf, fhdr->filename);
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));

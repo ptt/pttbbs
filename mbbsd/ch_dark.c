@@ -148,14 +148,14 @@ draw_line(struct DarkData *dd, sint y, sint f)
 
     *buf = 0;
     *tmp = 0;
-    strlcpy(buf, ANSI_COLOR(43;30), sizeof(buf));
+    STRLCPY(buf, ANSI_COLOR(43;30));
     for (i = 0; i < 8; i++) {
 	if (dd->brd[y][i].die == 1)
-	    snprintf(tmp, sizeof(tmp), "¢x  ");
+	    SNPRINTF(tmp, "¢x  ");
 	else if (dd->brd[y][i].out == 0)
-	    snprintf(tmp, sizeof(tmp), "¢x¡´");
+	    SNPRINTF(tmp, "¢x¡´");
 	else {
-	    snprintf(tmp, sizeof(tmp), "¢x" ANSI_COLOR(%s1;%d) "%s" ANSI_RESET ANSI_COLOR(43;30) "",
+	    SNPRINTF(tmp, "¢x" ANSI_COLOR(%s1;%d) "%s" ANSI_RESET ANSI_COLOR(43;30) "",
 		     (f == i) ? "1;47;" : "", (dd->brd[y][i].color) ? 31 : 34,
 		     (dd->brd[y][i].color) ? rname[dd->brd[y][i].value] :
 		     bname[dd->brd[y][i].value]);

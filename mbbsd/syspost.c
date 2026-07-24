@@ -27,8 +27,8 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     fclose(fp);
 
     /* 將檔案加入列表 */
-    strlcpy(fhdr.title, title, sizeof(fhdr.title));
-    strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
+    STRLCPY(fhdr.title, title);
+    STRLCPY(fhdr.owner, author);
     setbdir(dirfn, bname);
     if (append_record(dirfn, &fhdr, sizeof(fhdr)) != -1)
 	if ((bid = getbnum(bname)) > 0)
@@ -91,7 +91,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     sprintf(s, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s\n" ANSI_RESET,
 	    cuser.userid, reason);
 
-    snprintf(title, sizeof(title), "[安全報告] 站長%s修改%s權限報告",
+    SNPRINTF(title, "[安全報告] 站長%s修改%s權限報告",
 	    cuser.userid, userid);
 
     post_msg(BN_SECURITY, title, genbuf, "[系統安全局]");
@@ -110,11 +110,10 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     char title[TTLEN+1];
     char msg[ANSILINELEN * 10];
 
-    snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
+    SNPRINTF(title, "[報告] %s:%-*s 判決", crime,
 	    (int)(30 - strlen(crime)), reason);
 
-    snprintf(msg, sizeof(msg),
-	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+    SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
             ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
@@ -124,8 +123,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     if (!strstr(police, "警察")) {
 	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
 
-	snprintf(msg, sizeof(msg),
-		ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+	SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
                 ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
@@ -141,9 +139,8 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 {
     char            genbuf[ANSILINELEN], title[TTLEN+1];
 
-    snprintf(title, sizeof(title), "[新板成立] %s", bname);
-    snprintf(genbuf, sizeof(genbuf),
-	     "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
+    SNPRINTF(title, "[新板成立] %s", bname);
+    SNPRINTF(genbuf, "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
 	     cuser.userid, bname, bgroup, bms);
 
     post_msg("Record", title, genbuf, "[系統]");
@@ -156,10 +153,9 @@ post_policelog2(const char *bname, const char *atitle, const char *action,
     char msg_file[PATHLEN];
     char genbuf[ANSILINELEN], title[TTLEN+1];
 
-    snprintf(title, sizeof(title), "[%s][%s] %s by %s", action,
+    SNPRINTF(title, "[%s][%s] %s by %s", action,
              toggle ? "開啟" : "關閉", bname, cuser.userid);
-    snprintf(genbuf, sizeof(genbuf),
-	     "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n\n",
+    SNPRINTF(genbuf, "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n\n",
 	     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
 	     reason, atitle ? "文章標題 : " : "", atitle ? atitle : "");
 

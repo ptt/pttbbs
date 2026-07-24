@@ -122,7 +122,7 @@ timecap_add_revision(const char *object_path, const char *capsule_index) {
     char capsule_path[PATHLEN];
     const char nul = 0;
 
-    strlcpy(capsule_path, capsule_index, sizeof(capsule_path));
+    STRLCPY(capsule_path, capsule_index);
     // solve index and revision
     rev = timecap_get_max_revision(capsule_index);
     if (rev++ < 0)

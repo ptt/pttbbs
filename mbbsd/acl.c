@@ -280,9 +280,8 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             "請勿濫行提告。\n";
         char xmsg[STRLEN*5 + sizeof(anti_pettifogger)];
 
-        snprintf(xtitle, sizeof(xtitle), "%s 看板暫停發言通知(水桶)", board);
-        snprintf(xmsg, sizeof(xmsg),
-                 "%s 看板已暫時停止讓您發表意見。\n"
+        SNPRINTF(xtitle, "%s 看板暫停發言通知(水桶)", board);
+        SNPRINTF(xmsg, "%s 看板已暫時停止讓您發表意見。\n"
                  "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n\n%s",

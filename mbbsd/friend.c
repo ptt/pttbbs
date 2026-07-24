@@ -78,7 +78,7 @@ friend_add(const char *uident, int type, const char* des)
 	char t_uident[IDLEN + 1];
 
 	/* Thor: avoid uident run away when get data */
-	strlcpy(t_uident, uident, sizeof(t_uident));
+	STRLCPY(t_uident, uident);
 
 	if (type != FRIEND_ALOHA){
            if(!des)
@@ -87,7 +87,7 @@ friend_add(const char *uident, int type, const char* des)
 	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
 	}
 
-    	snprintf(buf2, sizeof(buf2), "%-13s%s\n", t_uident, buf);
+    	SNPRINTF(buf2, "%-13s%s\n", t_uident, buf);
      	file_append_line(fpath, buf2);
     }
 }
@@ -110,7 +110,7 @@ friend_special(void)
     FILE           *fp;
     friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
-	snprintf(genbuf, sizeof(genbuf), "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
+	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
 	special_des[5] = i + '0';
 	setuserfile(fname, special_des);
 	if( (fp = fopen(fname, "r")) != NULL ){
@@ -221,7 +221,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
     char genbuf[STRLEN + 1], buf[STRLEN];
     int ret = 0;
 
-    snprintf(fnew, sizeof(fnew), "%s.%3.3X", file,
+    SNPRINTF(fnew, "%s.%3.3X", file,
              (unsigned int)(arc4random_uniform(0x1000)));
     if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
 	while (fgets(genbuf, sizeof(genbuf), fp))
@@ -375,7 +375,7 @@ friend_editdesc(const char *uident, int type)
     FILE           *fp=NULL, *nfp=NULL;
     char            fnnew[PATHLEN], genbuf[STRLEN], fn[PATHLEN];
     setfriendfile(fn, type);
-    snprintf(fnnew, sizeof(fnnew), "%s-", fn);
+    SNPRINTF(fnnew, "%s-", fn);
     if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
 	int             length = strlen(uident);
 
@@ -485,7 +485,7 @@ friend_edit(int type)
 
     if (type == FRIEND_ALOHA) {
 	if (dashf(fpath)) {
-            snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
+            SNPRINTF(genbuf, "%s.old", fpath);
             Copy(fpath, genbuf);
 	}
     }
@@ -606,7 +606,7 @@ friend_edit(int type)
 	outs("更新資料中..請稍候.....");
 	refresh();
 	if (type == FRIEND_ALOHA) {
-	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
+	    SNPRINTF(genbuf, "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, sizeof(line), fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
@@ -615,7 +615,7 @@ friend_edit(int type)
 		}
 		fclose(fp);
 	    }
-	    strlcpy(genbuf, fpath, sizeof(genbuf));
+	    STRLCPY(genbuf, fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);

@@ -235,7 +235,7 @@ a_showmenu(menu_t * pm)
 	    /*
 	     * Ptt 把時間改為取檔案時間 dtime = atoi(&item->filename[2]);
 	     */
-	    snprintf(buf, sizeof(buf), "%s/%s", pm->path, item->filename);
+	    SNPRINTF(buf, "%s/%s", pm->path, item->filename);
 	    if(copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))
 	    {
 		flTagged = 1;
@@ -255,7 +255,7 @@ a_showmenu(menu_t * pm)
     if(copyqueue_querysize() > 0)
     {		// something in queue
 	char buf[STRLEN];
-	snprintf(buf, sizeof(buf),  "【已標記(複製) %d 項】", copyqueue_querysize());
+	SNPRINTF(buf, "【已標記(複製) %d 項】", copyqueue_querysize());
 	vs_footer(buf, pm->level == 0 ?
 		" (c)標記/複製 - 無管理權限，無法貼上 " :
 		" (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
@@ -345,8 +345,8 @@ a_forward(const char *path, const fileheader_t * pitem, int mode)
 {
     fileheader_t    fhdr;
 
-    strlcpy(fhdr.filename, pitem->filename, sizeof(fhdr.filename));
-    strlcpy(fhdr.title, pitem->title, sizeof(fhdr.title));
+    STRLCPY(fhdr.filename, pitem->filename);
+    STRLCPY(fhdr.title, pitem->title);
     switch (doforward(path, &fhdr, mode)) {
     case 0:
 	outmsg(msg_fwd_ok);
@@ -394,14 +394,14 @@ a_newitem(menu_t * pm, int mode)
     char            fpath[PATHLEN];
     fileheader_t    item;
 
-    strlcpy(fpath, pm->path, sizeof(fpath));
+    STRLCPY(fpath, pm->path);
     if (strlen(pm->path) + FNLEN*2 >= PATHLEN)
 	return;
 
     switch (mode) {
     case ADDITEM:
 	stampfile(fpath, &item);
-	strlcpy(item.title, "◇ ", sizeof(item.title));	/* A1BA */
+	STRLCPY(item.title, "◇ ");	/* A1BA */
 	break;
 
     case ADDGROUP:
@@ -410,7 +410,7 @@ a_newitem(menu_t * pm, int mode)
 	    vmsg("抱歉，無法在本層建立新目錄。");
 	    return;
 	}
-	strlcpy(item.title, "◆ ", sizeof(item.title));	/* A1BB */
+	STRLCPY(item.title, "◆ ");	/* A1BB */
 	break;
     }
 
@@ -446,7 +446,7 @@ a_newitem(menu_t * pm, int mode)
 	break;
     }
 
-    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
+    STRLCPY(item.owner, cuser.userid);
     a_additem(pm, &item);
 }
 
@@ -472,8 +472,7 @@ a_pasteitem(menu_t * pm, int mode)
 	multiple = 1;
 	move(b_lines-2, 0); clrtobot();
 	outs("c: 對各項目個別確認是否要貼上, z: 全部不貼，同時重設並取消全部標記\n");
-	snprintf(buf, sizeof(buf),
-		"確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ",
+	SNPRINTF(buf, "確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ",
 		copyqueue_querysize());
 	getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
 	if(ans[0] == 'y')
@@ -509,13 +508,12 @@ a_pasteitem(menu_t * pm, int mode)
 	    }
 	}
 	if (mode && !skipAll) {
-	    snprintf(buf, sizeof(buf),
-		     "確定要拷貝[%s]嗎(Y/N)？[N] ", cq->copytitle);
+	    SNPRINTF(buf, "確定要拷貝[%s]嗎(Y/N)？[N] ", cq->copytitle);
 	    getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0] = 'y';
 	if (ans[0] == 'y') {
-	    strlcpy(newpath, pm->path, sizeof(newpath));
+	    STRLCPY(newpath, pm->path);
 
 	    if (*cq->copyowner) {
 		char           *fname = strrchr(cq->copyfile, '/');
@@ -527,7 +525,7 @@ a_pasteitem(menu_t * pm, int mode)
 		if (access(pm->path, X_OK | R_OK | W_OK))
 		    Mkdir(pm->path);
 		memset(&item, 0, sizeof(fileheader_t));
-		strlcpy(item.filename, fname + 1, sizeof(item.filename));
+		STRLCPY(item.filename, fname + 1);
 		memcpy(cq->copytitle, "◎", 2);
 		Copy(cq->copyfile, newpath);
 	    } else if (dashf(cq->copyfile)) {
@@ -543,9 +541,8 @@ a_pasteitem(menu_t * pm, int mode)
 		vmsg("無法拷貝！");
 		return;
 	    }
-	    strlcpy(item.owner, *cq->copyowner ? cq->copyowner : cuser.userid,
-		    sizeof(item.owner));
-	    strlcpy(item.title, cq->copytitle, sizeof(item.title));
+	    STRLCPY(item.owner, *cq->copyowner ? cq->copyowner : cuser.userid);
+	    STRLCPY(item.title, cq->copytitle);
 	    a_additem(pm, &item);
 	    cq->copyfile[0] = '\0';
 	}
@@ -577,7 +574,7 @@ a_appenditem(const menu_t * pm, int isask)
 	    return;
 	}
 
-	snprintf(fname, sizeof(fname), "%s/%s", pm->path,
+	SNPRINTF(fname, "%s/%s", pm->path,
 		pm->header[pm->now - pm->page].filename);
 
 	// if same file, abort.
@@ -595,8 +592,7 @@ a_appenditem(const menu_t * pm, int isask)
 	}
 
 	if (isask) {
-	    snprintf(buf, sizeof(buf),
-		    "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
+	    SNPRINTF(buf, "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
 	    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
 	}
 
@@ -725,7 +721,7 @@ a_moveitem(menu_t * pm)
     char            buf[PATHLEN];
     int             fail;
 
-    snprintf(buf, sizeof(buf), "請輸入第 %d 選項的新次序：", pm->now + 1);
+    SNPRINTF(buf, "請輸入第 %d 選項的新次序：", pm->now + 1);
     if (!getdata(b_lines - 1, 1, buf, newnum, sizeof(newnum), DOECHO))
 	return;
     num = (newnum[0] == '$') ? A_INVALID_PAGE : atoi(newnum) - 1;
@@ -763,7 +759,7 @@ a_delrange(menu_t * pm, const char *backup_dir)
 {
     char            fname[PATHLEN];
 
-    snprintf(fname, sizeof(fname), "%s/" FN_DIR, pm->path);
+    SNPRINTF(fname, "%s/" FN_DIR, pm->path);
     del_range(0, NULL, fname, backup_dir);
     pm->num = get_num_records(fname, FHSZ);
 }
@@ -779,8 +775,7 @@ a_delete(menu_t * pm, const char *backup_dir)
                *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT
                                 "報告您試圖刪除檔案的位置。";
 
-    snprintf(fpath, sizeof(fpath),
-	     "%s/%s", pm->path, fhdr->filename);
+    SNPRINTF(fpath, "%s/%s", pm->path, fhdr->filename);
     setadir(buf, pm->path);
 
     if (fhdr->filename[0] == 'H' && fhdr->filename[1] == '.') {
@@ -868,11 +863,10 @@ a_delete(menu_t * pm, const char *backup_dir)
 	    return;
 	}
 
-	snprintf(cmd, sizeof(cmd),
-		"rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
+	SNPRINTF(cmd, "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
 	system(cmd);
 
-	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
+	STRLCPY(backup.owner, cuser.userid);
 	strcpy(backup.title, "◆");
 	strlcpy(backup.title + 2, fhdr->title + 2, sizeof(backup.title) - 3);
 
@@ -881,7 +875,7 @@ a_delete(menu_t * pm, const char *backup_dir)
             backup.filemode |= FILE_BM;
 
 	/* merge setapath(buf, save_bn); setadir(buf, buf); */
-	snprintf(buf, sizeof(buf), "man/boards/%c/%s/" FN_DIR,
+	SNPRINTF(buf, "man/boards/%c/%s/" FN_DIR,
 		*save_bn, save_bn);
 	append_record(buf, &backup, sizeof(backup));
 
@@ -904,7 +898,7 @@ a_newtitle(const menu_t * pm)
 
     fhdr = &pm->header[pm->now - pm->page];
     memcpy(&item, fhdr, FHSZ);
-    strlcpy(buf, item.title + 3, sizeof(buf));
+    STRLCPY(buf, item.title + 3);
     if (getdata_buf(b_lines - 1, 0, "   新標題: ", buf, 60, DOECHO)) {
 	strlcpy(item.title + 3, buf, sizeof(item.title) - 3);
 	setadir(buf, pm->path);
@@ -936,7 +930,7 @@ a_editsign(const menu_t * pm)
     fileheader_t    item;
 
     memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
-    snprintf(buf, sizeof(buf), "%c%c", item.title[0], item.title[1]);
+    SNPRINTF(buf, "%c%c", item.title[0], item.title[1]);
     if (getdata_buf(b_lines - 1, 1, "符號", buf, 3, DOECHO)) {
 	item.title[0] = buf[0] ? buf[0] : ' ';
 	item.title[1] = buf[1] ? buf[1] : ' ';
@@ -957,8 +951,7 @@ a_showname(const menu_t * pm)
     int             sym;
 
     move(b_lines - 1, 0);
-    snprintf(buf, sizeof(buf),
-	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+    SNPRINTF(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     if (dashl(buf)) {
 	prints("此 symbolic link 名稱為 %s\n",
 	       pm->header[pm->now - pm->page].filename);
@@ -1001,7 +994,7 @@ a_setchesslist(const menu_t * me)
     fileheader_t* fhdr = me->header + me->now - me->page;
     int n;
 
-    snprintf(buf_this,  sizeof(buf_this),  "%s/%s", me->path, fhdr->filename);
+    SNPRINTF(buf_this, "%s/%s", me->path, fhdr->filename);
     if((n = readlink(buf_this, buf_real, sizeof(buf_real) - 1)) == -1)
 	STRLCPY(buf_real, fhdr->filename);
     else
@@ -1014,8 +1007,8 @@ a_setchesslist(const menu_t * me)
 	return;
     }
 
-    snprintf(buf_list,  sizeof(buf_list),  "%s/chess_list",  me->path);
-    snprintf(buf_photo, sizeof(buf_photo), "%s/chess_photo", me->path);
+    SNPRINTF(buf_list, "%s/chess_list",  me->path);
+    SNPRINTF(buf_photo, "%s/chess_photo", me->path);
 
     list_exist = dashf(buf_list);
     photo_exist = dashd(buf_photo);
@@ -1048,7 +1041,7 @@ a_setchesslist(const menu_t * me)
 	if (buf[0] == 'y' || buf[0] == 'Y') {
 	    if(strncmp(buf_photo, "man/boards/", 11) == 0 && // guarding
 		    buf_photo[11] && buf_photo[12] == '/' && // guarding
-		    snprintf(buf_list, sizeof(buf_list), "rm -rf %s", buf_photo)
+		    SNPRINTF(buf_list, "rm -rf %s", buf_photo)
 		    == (int)strlen(buf_photo) + 7)
 		system(buf_list);
 	    Rename(buf_this, buf_photo);
@@ -1100,7 +1093,7 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     move(1, 0); clrtobot(); outs(A_WHEREAMI_PREFIX_STR ANSI_COLOR(1));
 
     // decide length of last index
-    snprintf(abuf, sizeof(abuf), "-%d", current_idx);
+    SNPRINTF(abuf, "-%d", current_idx);
     last_idx_len = strlen(abuf)+1;
     // calculate remaining length
     zidx_len = sizeof(zidx_buf) - strlen(zidx) - last_idx_len;
@@ -1109,7 +1102,7 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
     // first round, quick render zidx
     for (p = root; p != NULL; p = p->next)
     {
-	snprintf(abuf, sizeof(abuf), "-%d", p->now+1);
+	SNPRINTF(abuf, "-%d", p->now+1);
 	if (p->next == NULL)
 	{
 	    // tail. always print it.
@@ -1268,7 +1261,7 @@ a_menu_rec(const char *maintitle, const char *path,
     me.header_size = p_lines;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
-    strlcpy(me.mtitle, maintitle, sizeof(me.mtitle));
+    STRLCPY(me.mtitle, maintitle);
     setadir(fname, me.path);
     me.num = get_num_records(fname, FHSZ);
     me.bid = lastbid;
@@ -1427,8 +1420,7 @@ a_menu_rec(const char *maintitle, const char *path,
 
 	case 'e':
 	case 'E':
-	    snprintf(fname, sizeof(fname),
-		     "%s/%s", path, me.header[me.now - me.page].filename);
+	    SNPRINTF(fname, "%s/%s", path, me.header[me.now - me.page].filename);
 	    if (dashf(fname) && me.level >= MANAGER) {
 		int edflags = 0;
 		*quote_file = 0;
@@ -1445,12 +1437,10 @@ a_menu_rec(const char *maintitle, const char *path,
 		if (vedit2(fname, NA, NULL, edflags) != -1) {
 		    char            fpath[PATHLEN];
 		    fileheader_t    fhdr;
-		    strlcpy(fpath, path, sizeof(fpath));
+		    STRLCPY(fpath, path);
 		    stampfile(fpath, &fhdr);
 		    unlink(fpath);
-		    strlcpy(fhdr.filename,
-			    me.header[me.now - me.page].filename,
-			    sizeof(fhdr.filename));
+		    STRLCPY(fhdr.filename, me.header[me.now - me.page].filename);
 		    strlcpy(me.header[me.now - me.page].owner,
 			    cuser.userid,
 			    sizeof(me.header[me.now - me.page].owner));
@@ -1469,7 +1459,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		if (!isvisible_man(&me))
 		    break;
 
-		snprintf(fname, sizeof(fname), "%s/%s", path,
+		SNPRINTF(fname, "%s/%s", path,
 			 me.header[me.now - me.page].filename);
 
 		/* XXX: dirty fix
@@ -1508,7 +1498,7 @@ a_menu_rec(const char *maintitle, const char *path,
 #ifdef DEBUG
 		vmsgf("%s/%s", &path[11], fhdr->filename);;
 #endif
-		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
+		SNPRINTF(fname, "%s/%s", path, fhdr->filename);
 		if (dashf(fname)) {
 		    int             more_result;
 
@@ -1552,7 +1542,7 @@ a_menu_rec(const char *maintitle, const char *path,
 			    break;
 			if (!isvisible_man(&me))
 			    break;
-			snprintf(fname, sizeof(fname), "%s/%s", path,
+			SNPRINTF(fname, "%s/%s", path,
 				 me.header[me.now - me.page].filename);
 			if (!dashf(fname))
 			    break;
@@ -1598,8 +1588,7 @@ a_menu_rec(const char *maintitle, const char *path,
                 fileheader_t   *fhdr = &me.header[me.now - me.page];
                 if (!isvisible_man(&me))
                     break;
-		snprintf(fname, sizeof(fname),
-			 "%s/%s", path, fhdr->filename);
+		SNPRINTF(fname, "%s/%s", path, fhdr->filename);
 		if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
 		    a_forward(path, fhdr, ch /* == 'U' */ );
 		    /* By CharlieL */

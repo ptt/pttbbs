@@ -59,36 +59,36 @@ gettime(int line, time4_t dt, const char* head)
 
     localtime4_r(&dt, &ptime);
     endtime = ptime;
-    snprintf(yn, sizeof(yn), "%4d", ptime.tm_year + 1900);
+    SNPRINTF(yn, "%4d", ptime.tm_year + 1900);
     move(line, 0); SOLVE_ANSI_CACHE(); clrtoeol();
-    snprintf(prompt, sizeof(prompt), "%s 西元年:", head);
+    SNPRINTF(prompt, "%s 西元年:", head);
     do {
 	getdata_buf(line, 0, prompt, yn, 5, NUMECHO);
 	// signed:   limited on (2037, ...)
 	// unsigned: limited on (..., 1970)
 	// let's restrict inside the boundary.
     } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
-    strlcat(prompt, yn, sizeof(prompt));
-    strlcat(prompt, " 月:", sizeof(prompt));
-    snprintf(yn, sizeof(yn), "%d", ptime.tm_mon + 1);
+    STRLCAT(prompt, yn);
+    STRLCAT(prompt, " 月:");
+    SNPRINTF(yn, "%d", ptime.tm_mon + 1);
     do {
 	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_mon = atoi(yn) - 1) < 0 || endtime.tm_mon > 11);
-    strlcat(prompt, yn, sizeof(prompt));
-    strlcat(prompt, " 日:", sizeof(prompt));
-    snprintf(yn, sizeof(yn), "%d", ptime.tm_mday);
+    STRLCAT(prompt, yn);
+    STRLCAT(prompt, " 日:");
+    SNPRINTF(yn, "%d", ptime.tm_mday);
     do {
 	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_mday = atoi(yn)) < 1 || endtime.tm_mday > 31);
-    snprintf(yn, sizeof(yn), "%d", ptime.tm_hour);
-    strlcat(prompt, yn, sizeof(prompt));
-    strlcat(prompt, " 時(0-23):", sizeof(prompt));
+    SNPRINTF(yn, "%d", ptime.tm_hour);
+    STRLCAT(prompt, yn);
+    STRLCAT(prompt, " 時(0-23):");
     do {
 	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
-    strlcat(prompt, yn, sizeof(prompt));
-    strlcat(prompt, " 分(0-59):", sizeof(prompt));
-    snprintf(yn, sizeof(yn), "%d", ptime.tm_min);
+    STRLCAT(prompt, yn);
+    STRLCAT(prompt, " 分(0-59):");
+    SNPRINTF(yn, "%d", ptime.tm_min);
     do {
 	getdata_buf(line, 0, prompt, yn, 3, NUMECHO);
     } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 59);
@@ -422,7 +422,7 @@ int ParseDateTime(const char *date, int *year, int *month, int *day,
     char           buf[128];
     char *strtok_pos;
 
-    strlcpy(buf, date, sizeof(buf));
+    STRLCPY(buf, date);
     y = strtok_r(buf, "/", &strtok_pos); if (!y) return 1;
     m = strtok_r(NULL, "/", &strtok_pos);if (!m) return 1;
     d = strtok_r(NULL, " ", &strtok_pos); if (!d) return 1;

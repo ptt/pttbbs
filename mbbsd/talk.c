@@ -115,20 +115,20 @@ modestring(const userinfo_t * uentp, int simple)
 	 !((fri_stat & HFM) && (fri_stat & HRM))))
 	return notonline;
     else if (mode == EDITING) {
-	snprintf(modestr, sizeof(modestr), "E:%s",
+	SNPRINTF(modestr, "E:%s",
 		ModeTypeTable[uentp->destuid < EDITING ? uentp->destuid :
 			      EDITING]);
 	word = modestr;
     } else if (!mode && *uentp->chatid == 1) {
 	if (!simple)
-	    snprintf(modestr, sizeof(modestr), "回應 %s",
+	    SNPRINTF(modestr, "回應 %s",
 		    isvisible_uid(uentp->destuid) ?
 		    getuserid(uentp->destuid) : "空氣");
 	else
-	    snprintf(modestr, sizeof(modestr), "回應呼叫");
+	    SNPRINTF(modestr, "回應呼叫");
     }
     else if (!mode && *uentp->chatid == 3)
-	snprintf(modestr, sizeof(modestr), "水球準備中");
+	SNPRINTF(modestr, "水球準備中");
     else if (
 #ifdef NOKILLWATERBALL
 	     uentp->msgcount > 0
@@ -140,32 +140,29 @@ modestring(const userinfo_t * uentp, int simple)
 	    const char *cnum[10] =
 	    {"", "一", "兩", "三", "四", "五",
 		 "六", "七", "八", "九"};
-	    snprintf(modestr, sizeof(modestr),
-		     "中%s顆水球", cnum[(int)(uentp->msgcount)]);
+	    SNPRINTF(modestr, "中%s顆水球", cnum[(int)(uentp->msgcount)]);
 	} else
-	    snprintf(modestr, sizeof(modestr), "不行了 @_@");
+	    SNPRINTF(modestr, "不行了 @_@");
     else if (!mode)
 	return (uentp->destuid == 6) ? uentp->chatid : "發呆中";
 
     else if (simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
-	snprintf(modestr, sizeof(modestr), "%s (%s)", word, uentp->chatid);
+	SNPRINTF(modestr, "%s (%s)", word, uentp->chatid);
     else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == UMODE_GO
 	    || mode == DARK || mode == M_CONN6) {
 	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
-	    snprintf(modestr, sizeof(modestr), "%s 空氣", word);
+	    SNPRINTF(modestr, "%s 空氣", word);
 	/* Leeym * 大家自己發揮吧！ */
 	else
-	    snprintf(modestr, sizeof(modestr),
-		     "%s %s", word, getuserid(uentp->destuid));
+	    SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destuid));
     } else if (mode == CHESSWATCHING) {
-	snprintf(modestr, sizeof(modestr), "觀棋");
+	SNPRINTF(modestr, "觀棋");
     } else if (mode != PAGE && mode != TQUERY)
 	return word;
     else
-	snprintf(modestr, sizeof(modestr),
-		 "%s %s", word, getuserid(uentp->destuid));
+	SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destuid));
 
     return (modestr);
 }
@@ -412,8 +409,7 @@ my_kick(userinfo_t * uentp)
     getdata(1, 0, msg_sure_ny, genbuf, 4, LCECHO);
     clrtoeol();
     if (genbuf[0] == 'y') {
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s (%s)", uentp->userid, uentp->nickname);
+	SNPRINTF(genbuf, "%s (%s)", uentp->userid, uentp->nickname);
 	log_usies("KICK ", genbuf);
 	if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) && (errno == ESRCH))
 	    purge_utmp(uentp);
@@ -545,7 +541,7 @@ void check_water_init(void)
 	memset(water, 0, sizeof(water_t) * (WB_OFO_USER_NUM + 1));
 	water_which = &water[0];
 
-	strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
+	STRLCPY(water[0].userid, " 全部 ");
     }
 }
 
@@ -699,22 +695,22 @@ ofo_my_write(void)
             switch(tw->msg[0].msgmode) {
                 case MSGMODE_WRITE:
                 case MSGMODE_ALOHA:
-                    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+                    SNPRINTF(genbuf, "攻擊 %s:", tw->userid);
                     i = WATERBALL_CONFIRM;
                     break;
 
                 case MSGMODE_TOANGEL:
-                    strlcpy(genbuf, "回答小主人:", sizeof(genbuf));
+                    STRLCPY(genbuf, "回答小主人:");
                     i = WATERBALL_CONFIRM_ANSWER;
                     break;
 
                 case MSGMODE_FROMANGEL:
-                    strlcpy(genbuf, "再問他一次：", sizeof(genbuf));
+                    STRLCPY(genbuf, "再問他一次：");
                     i = WATERBALL_CONFIRM_ANGEL;
                     break;
             }
 #else
-	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+	    SNPRINTF(genbuf, "攻擊 %s:", tw->userid);
 	    i = WATERBALL_CONFIRM;
 #endif
 	    if (!getdata_buf(0, 0, genbuf, msg,
@@ -722,8 +718,7 @@ ofo_my_write(void)
 		break;
 
 	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
-		strlcpy(tw->msg[5].last_call_in, t_last_write,
-			sizeof(tw->msg[5].last_call_in));
+		STRLCPY(tw->msg[5].last_call_in, t_last_write);
 	    break;
 	}
     } while (!done);
@@ -765,7 +760,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     unsigned char   mode0 = currutmp->mode;
     userinfo_t     *uin;
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
-    strlcpy(destid, id, sizeof(destid));
+    STRLCPY(destid, id);
     check_water_init();
 
     /* what if uin is NULL but other conditions are not true?
@@ -850,11 +845,11 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    else
 		flag = WATERBALL_GENERAL;
 #endif
-	    strlcpy(destid, water_which->msg[i].userid, sizeof(destid));
+	    STRLCPY(destid, water_which->msg[i].userid);
 	}
     } else {
 	/* pre-edit 的水球 */
-	strlcpy(msg, prompt, sizeof(msg));
+	STRLCPY(msg, prompt);
 	len = strlen(msg);
     }
 
@@ -868,7 +863,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 #endif
 	     ))
     {
-	snprintf(buf, sizeof(buf), "丟 %s: %s [Y/n]?", destid, msg);
+	SNPRINTF(buf, "丟 %s: %s [Y/n]?", destid, msg);
 
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {
@@ -956,10 +951,8 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
                                        sizeof(uin->msgs[write_pos].userid));
 	    else
 #endif
-            strlcpy(uin->msgs[write_pos].userid, cuser.userid,
-                    sizeof(uin->msgs[write_pos].userid));
-	    strlcpy(uin->msgs[write_pos].last_call_in, msg,
-		    sizeof(uin->msgs[write_pos].last_call_in));
+            STRLCPY(uin->msgs[write_pos].userid, cuser.userid);
+	    STRLCPY(uin->msgs[write_pos].last_call_in, msg);
 	    switch (flag) {
 #ifdef PLAY_ANGEL
 		case WATERBALL_ANGEL:
@@ -1299,7 +1292,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    return;
 		}
 		close(sock);
-		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+		STRLCPY(currutmp->mateid, uin->userid);
 
 		switch (uin->sig) {
 		    case SIG_CHC:
@@ -1398,8 +1391,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 	uin->turn = 1;
 	currutmp->turn = 0;
-	strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
-	strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+	STRLCPY(uin->mateid, currutmp->userid);
+	STRLCPY(currutmp->mateid, uin->userid);
 
 	sock = make_connection_to_somebody(uin, 5);
 	if(sock==-1) {
@@ -1620,7 +1613,7 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
 
     STATINC(STAT_FRIENDDESC_FILE);
     if ((fp = fopen(fpath, "r"))) {
-	snprintf(name, sizeof(name), "%s ", uentp->userid);
+	SNPRINTF(name, "%s ", uentp->userid);
 	len = strlen(name);
 	desc = genbuf + 13;
 
@@ -2050,19 +2043,19 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #ifdef SHOW_IDLE_TIME
 	idletime = (now - uentp->lastact);
 	if (idletime > DAY_SECONDS)
-	    strlcpy(idlestr, " -----", sizeof(idlestr));
+	    STRLCPY(idlestr, " -----");
 	else if (idletime >= 3600)
-	    snprintf(idlestr, sizeof(idlestr), "%dh%02d",
+	    SNPRINTF(idlestr, "%dh%02d",
 		     idletime / 3600, (idletime / 60) % 60);
 	else if (idletime > 0)
-	    snprintf(idlestr, sizeof(idlestr), "%d'%02d",
+	    SNPRINTF(idlestr, "%d'%02d",
 		     idletime / 60, idletime % 60);
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
             mind = ANSI_COLOR(1;31) "違規";
 
-	snprintf(num, sizeof(num), "%d",
+	SNPRINTF(num, "%d",
 #ifdef SHOWUID
 		show_uid ? uentp->uid :
 #endif
@@ -2074,7 +2067,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
 	/* color of userid, userid */
 	if(fcolor[state])
-	    snprintf(xuid, sizeof(xuid), "%s%s",
+	    SNPRINTF(xuid, "%s%s",
 		    fcolor[state], uentp->userid);
 
 	vs_cols(ulist_coldef, cols, ULISTCOLS,
@@ -2144,7 +2137,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
-	snprintf(genbuf, sizeof(genbuf), "丟 %s 水球: ", uentp->userid);
+	SNPRINTF(genbuf, "丟 %s 水球: ", uentp->userid);
 	my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_GENERAL, NULL);
 	return 1;
     }
@@ -2441,9 +2434,8 @@ userlist(void)
 			}
 
 			msg.pid = currpid;
-			strlcpy(msg.userid, cuser.userid, sizeof(msg.userid));
-			snprintf(msg.last_call_in, sizeof(msg.last_call_in),
-				 "[廣播]%s", genbuf);
+			STRLCPY(msg.userid, cuser.userid);
+			SNPRINTF(msg.last_call_in, "[廣播]%s", genbuf);
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
 			    // XXX why use sorted list?
 			    //     can we just scan uinfo with proper checking?
@@ -2619,7 +2611,7 @@ userlist(void)
 	    case 'm':
 		if (HasSendMailUserPerm()) {
 		    char   userid[IDLEN + 1];
-		    strlcpy(userid, uentp->userid, sizeof(userid));
+		    STRLCPY(userid, uentp->userid);
 		    vs_hdr("寄  信");
 		    prints("[寄信] 收信人：%s", userid);
 		    my_send(userid);
@@ -2708,7 +2700,7 @@ userlist(void)
 				tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0)
 		    {
 			pwcuSetNickname(tmp_nick);
-			strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
+			STRLCPY(currutmp->nickname, cuser.nickname);
 		    }
 		    redrawall = redraw = 1;
 		}
@@ -2840,8 +2832,7 @@ reply_connection_request(const userinfo_t *uip)
     char            buf[4], genbuf[200];
 
     if (uip->mode != PAGE) {
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s 已停止呼叫，按Enter繼續...", uip->userid);
+	SNPRINTF(genbuf, "%s 已停止呼叫，按Enter繼續...", uip->userid);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	return -1;
     }
@@ -2919,9 +2910,8 @@ talkreply(void)
 
     getuser(uip->userid, &xuser);
     currutmp->msgs[0].pid = uip->pid;
-    strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
-    strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
-	    sizeof(currutmp->msgs[0].last_call_in));
+    STRLCPY(currutmp->msgs[0].userid, uip->userid);
+    STRLCPY(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)");
     currutmp->msgs[0].msgmode = MSGMODE_TALK;
     prints("對方來自 [%s]，" STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，文章共 %d 篇\n",
 	    uip->from, xuser.numlogindays, xuser.numposts);
@@ -2933,8 +2923,7 @@ talkreply(void)
 	show_call_in(0, 0);
     }
 
-    snprintf(genbuf, sizeof(genbuf),
-	    "你想跟 %s (%s) %s嗎？請選擇[N]: ",
+    SNPRINTF(genbuf, "你想跟 %s (%s) %s嗎？請選擇[N]: ",
 	    uip->userid, uip->nickname, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
@@ -2945,15 +2934,14 @@ talkreply(void)
     r = write(a, buf, 1);
     if (buf[0] == 'f' || buf[0] == 'F') {
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
-	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
+	    STRLCPY(genbuf, "不告訴你咧 !! ^o^");
 	r = write(a, genbuf, 60);
     }
     Signal(SIGPIPE, sig_pipe_handle);
 
     if (r == -1) {
 	close(a);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s 已停止呼叫，按Enter繼續...", uip->userid);
+	SNPRINTF(genbuf, "%s 已停止呼叫，按Enter繼續...", uip->userid);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	clear();
 	currstat = currstat0;

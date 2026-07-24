@@ -486,7 +486,7 @@ forward_file(const fileheader_t * fhdr, const char *direct)
     char            buf[PATHLEN];
     char           *p;
 
-    strlcpy(buf, direct, sizeof(buf));
+    STRLCPY(buf, direct);
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
     switch (i = doforward(buf, fhdr, 'F')) {
@@ -657,7 +657,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    }
 
    if (count) {
-       strlcpy(currdirect, newdirect, sizeof(currdirect));
+       STRLCPY(currdirect, newdirect);
        currmode |= MODE_SELECT;
        currsrmode |= sr_mode;
        return NEWDIRECT;
@@ -1090,7 +1090,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
 
     if (n > 0) {
 	char    directbottom[PATHLEN];
-	snprintf(directbottom, sizeof(directbottom), "%s.bottom", direct);
+	SNPRINTF(directbottom, "%s.bottom", direct);
 	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), recbase, n);
 	if (n < 0) n = 0;
 	rv += n;
@@ -1116,12 +1116,12 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     const size_t FHSZ = sizeof(fileheader_t);
     int             needs_fullupdate = 0;
 
-    strlcpy(currdirect0, currdirect, sizeof(currdirect0));
+    STRLCPY(currdirect0, currdirect);
     /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
     headers_size = p_lines;
     headers = (fileheader_t *) calloc(headers_size, FHSZ);
     assert(headers != NULL);
-    strlcpy(currdirect, direct, sizeof(currdirect));
+    STRLCPY(currdirect, direct);
     mode = NEWDIRECT;
 
     do {
@@ -1263,6 +1263,6 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     last_line = last_line0;
     headers = headers0;
     headers_size = headers_size0;
-    strlcpy(currdirect, currdirect0, sizeof(currdirect));
+    STRLCPY(currdirect, currdirect0);
     return;
 }

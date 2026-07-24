@@ -254,7 +254,7 @@ gomo_getstep(const gomo_step_t* step, char buf[])
 static void
 gomo_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
-    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    STRLCPY(user->userid, uinfo->userid);
     user->win  = uinfo->five_win;
     user->lose = uinfo->five_lose;
     user->tie  = uinfo->five_tie;
@@ -263,7 +263,7 @@ gomo_init_user(const userinfo_t* uinfo, ChessUser* user)
 static void
 gomo_init_user_userec(const userec_t* urec, ChessUser* user)
 {
-    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    STRLCPY(user->userid, urec->userid);
     user->win  = urec->five_win;
     user->lose = urec->five_lose;
     user->tie  = urec->five_tie;

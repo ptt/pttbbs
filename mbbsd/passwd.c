@@ -193,7 +193,7 @@ int pwcuSetMyAngel	(const char *angel_uid)
 {
     PWCU_START();
     strlcpy(    u.myangel, angel_uid, sizeof(    u.myangel));
-    strlcpy(cuser.myangel, angel_uid, sizeof(cuser.myangel));
+    STRLCPY(cuser.myangel, angel_uid);
     syncnow();
     cuser.timesetangel = u.timesetangel = now;
     PWCU_END();
@@ -211,7 +211,7 @@ int pwcuSetNickname	(const char *nickname)
 {
     PWCU_START();
     strlcpy(    u.nickname, nickname, sizeof(    u.nickname));
-    strlcpy(cuser.nickname, nickname, sizeof(cuser.nickname));
+    STRLCPY(cuser.nickname, nickname);
     PWCU_END();
 }
 
@@ -238,8 +238,8 @@ int
 pwcuSetEmail(const char *email)
 {
     PWCU_START();
-    strlcpy(    u.email, email, sizeof(u.email));
-    strlcpy(cuser.email, email, sizeof(cuser.email));
+    STRLCPY(u.email, email);
+    STRLCPY(cuser.email, email);
     PWCU_END();
 }
 
@@ -247,8 +247,8 @@ int
 pwcuRegCompleteJustify(const char *justify)
 {
     PWCU_START();
-    strlcpy(    u.justify, justify, sizeof(u.justify));
-    strlcpy(cuser.justify, justify, sizeof(cuser.justify));
+    STRLCPY(u.justify, justify);
+    STRLCPY(cuser.justify, justify);
     _ENABLE_BIT(    u.userlevel, (PERM_POST | PERM_LOGINOK));
     _ENABLE_BIT(cuser.userlevel, (PERM_POST | PERM_LOGINOK));
     PWCU_END();
@@ -258,10 +258,10 @@ int
 pwcuRegCompleteEmailJustify(const char *email, const char *justify)
 {
     PWCU_START();
-    strlcpy(    u.email, email, sizeof(u.email));
-    strlcpy(cuser.email, email, sizeof(cuser.email));
-    strlcpy(    u.justify, justify, sizeof(u.justify));
-    strlcpy(cuser.justify, justify, sizeof(cuser.justify));
+    STRLCPY(u.email, email);
+    STRLCPY(cuser.email, email);
+    STRLCPY(u.justify, justify);
+    STRLCPY(cuser.justify, justify);
     _ENABLE_BIT(    u.userlevel, (PERM_POST | PERM_LOGINOK));
     _ENABLE_BIT(cuser.userlevel, (PERM_POST | PERM_LOGINOK));
     PWCU_END();
@@ -271,10 +271,10 @@ int
 pwcuRegSetTemporaryJustify(const char *justify, const char *email)
 {
     PWCU_START();
-    strlcpy(    u.email, email, sizeof(u.email));
-    strlcpy(cuser.email, email, sizeof(cuser.email));
-    strlcpy(    u.justify, justify, sizeof(u.justify));
-    strlcpy(cuser.justify, justify, sizeof(cuser.justify));
+    STRLCPY(u.email, email);
+    STRLCPY(cuser.email, email);
+    STRLCPY(u.justify, justify);
+    STRLCPY(cuser.justify, justify);
     _DISABLE_BIT(    u.userlevel, (PERM_POST | PERM_LOGINOK));
     _DISABLE_BIT(cuser.userlevel, (PERM_POST | PERM_LOGINOK));
     PWCU_END();
@@ -287,17 +287,17 @@ int pwcuRegisterSetInfo (const char *rname,
 			 uint8_t     is_foreign)
 {
     PWCU_START();
-    strlcpy(u.realname, rname,  sizeof(u.realname));
-    strlcpy(u.address,  addr,   sizeof(u.address));
-    strlcpy(u.career,   career, sizeof(u.career));
-    strlcpy(u.email,    email,  sizeof(u.email));
+    STRLCPY(u.realname, rname);
+    STRLCPY(u.address, addr);
+    STRLCPY(u.career, career);
+    STRLCPY(u.email, email);
     _SETBY_BIT(u.uflag, UF_FOREIGN, is_foreign);
 
     // duplicate to cuser
-    strlcpy(cuser.realname, rname,  sizeof(cuser.realname));
-    strlcpy(cuser.address,  addr,   sizeof(cuser.address));
-    strlcpy(cuser.career,   career, sizeof(cuser.career));
-    strlcpy(cuser.email,    email,  sizeof(cuser.email));
+    STRLCPY(cuser.realname, rname);
+    STRLCPY(cuser.address, addr);
+    STRLCPY(cuser.career, career);
+    STRLCPY(cuser.email, email);
     _SETBY_BIT(cuser.uflag, UF_FOREIGN, is_foreign);
 
     PWCU_END();
@@ -516,7 +516,7 @@ int pwcuLoginSave	()
 
     // new host from 'fromhost'
     strlcpy(    u.lasthost, fromhost, sizeof(    u.lasthost));
-    strlcpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
+    STRLCPY(cuser.lasthost, fromhost);
 
     // this must be valid.
     assert(login_start_time > 0);
@@ -665,9 +665,7 @@ void pwcuInitGuestInfo	()
     };
 
     i = arc4random_uniform(ARRAY_SIZE(nick));
-    snprintf(cuser.nickname, sizeof(cuser.nickname),
-	    "海邊漂來的%s", nick[i]);
-    strlcpy(currutmp->nickname, cuser.nickname,
-	    sizeof(currutmp->nickname));
-    strlcpy(cuser.realname, "guest", sizeof(cuser.realname));
+    SNPRINTF(cuser.nickname, "海邊漂來的%s", nick[i]);
+    STRLCPY(currutmp->nickname, cuser.nickname);
+    STRLCPY(cuser.realname, "guest");
 }

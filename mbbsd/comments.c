@@ -49,15 +49,15 @@ int CommentsAddRecord(const char *board, const char *file,
 
     req.cb = sizeof(req);
     req.operation = COMMENTD_REQ_ADD;
-    strlcpy(req.key.board, board, sizeof(req.key.board));
-    strlcpy(req.key.file, file, sizeof(req.key.file));
+    STRLCPY(req.key.board, board);
+    STRLCPY(req.key.file, file);
 
     req.comment.time = now;
     req.comment.ipv4 = inet_addr(fromhost);
     req.comment.userref = cuser.firstlogin;
     req.comment.type = type;
-    strlcpy(req.comment.userid, cuser.userid, sizeof(req.comment.userid));
-    strlcpy(req.comment.msg, msg, sizeof(req.comment.msg));
+    STRLCPY(req.comment.userid, cuser.userid);
+    STRLCPY(req.comment.msg, msg);
 
     s = toconnectex(COMMENTD_ADDR, 10);
     if (s < 0)
@@ -74,8 +74,8 @@ void *CommentsOpen(const char *board, const char *file)
 {
     CommentsCtx *c = (CommentsCtx *)malloc(sizeof(*c));
     memset(c, 0, sizeof(*c));
-    strlcpy(c->key.board, board, sizeof(c->key.board));
-    strlcpy(c->key.file, file, sizeof(c->key.file));
+    STRLCPY(c->key.board, board);
+    STRLCPY(c->key.file, file);
     return c;
 }
 
@@ -115,8 +115,8 @@ static int CommentsLoad(CommentsCtx *c, int i)
     resp = &c->resp[i];
     req.cb = sizeof(req);
     req.operation = COMMENTD_REQ_QUERY_BODY;
-    strlcpy(req.key.board, c->key.board, sizeof(req.key.board));
-    strlcpy(req.key.file, c->key.file, sizeof(req.key.file));
+    STRLCPY(req.key.board, c->key.board);
+    STRLCPY(req.key.file, c->key.file);
     req.start = i;
     s = toconnectex(COMMENTD_ADDR, 10);
     if (s < 0) {
@@ -158,8 +158,8 @@ static int CommentsDelete(void *ctx, int i)
     CommentQueryRequest req = {0};
     req.cb = sizeof(req);
     req.operation = COMMENTD_REQ_MARK_DELETED;
-    strlcpy(req.key.board, c->key.board, sizeof(req.key.board));
-    strlcpy(req.key.file, c->key.file, sizeof(req.key.file));
+    STRLCPY(req.key.board, c->key.board);
+    STRLCPY(req.key.file, c->key.file);
     req.start = i;
     s = toconnectex(COMMENTD_ADDR, 10);
     if (s < 0) {
@@ -181,8 +181,8 @@ int CommentsGetCount(void *ctx)
     CommentQueryRequest req = {0};
     req.cb = sizeof(req);
     req.operation = COMMENTD_REQ_QUERY_COUNT;
-    strlcpy(req.key.board, c->key.board, sizeof(req.key.board));
-    strlcpy(req.key.file, c->key.file, sizeof(req.key.file));
+    STRLCPY(req.key.board, c->key.board);
+    STRLCPY(req.key.file, c->key.file);
     req.start = 0;
     s = toconnectex(COMMENTD_ADDR, 10);
     if (s < 0)
@@ -210,7 +210,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
         return -1;
 
     setbfile(filename, c->key.board, c->key.file);
-    snprintf(tmpfile, sizeof(tmpfile), "%s.tmp", filename);
+    SNPRINTF(tmpfile, "%s.tmp", filename);
     FormatCommentString(pattern, sizeof(pattern), req->type,
                         req->userid, 0, req->msg, "");
     sprintf(buf, "%-*s", IDLEN, req->userid);

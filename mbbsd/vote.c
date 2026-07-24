@@ -47,17 +47,17 @@ static void
 votebuf_init(vote_buffer_t *vbuf, int n)
 {
     assert(vbuf);
-    snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, n);
-    snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, n);
-    snprintf(vbuf->desc,    sizeof(vbuf->desc),    "%s%d", STR_bv_desc,    n);
-    snprintf(vbuf->flags,   sizeof(vbuf->flags),   "%s%d", STR_bv_flags,   n);
-    snprintf(vbuf->comments,sizeof(vbuf->comments),"%s%d", STR_bv_comments,n);
-    snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, n);
-    snprintf(vbuf->limits,  sizeof(vbuf->limits),  "%s%d", STR_bv_limits,  n);
-    snprintf(vbuf->title,   sizeof(vbuf->title),   "%s%d", STR_bv_title,   n);
-    snprintf(vbuf->lock,    sizeof(vbuf->lock),    "%s%d", STR_bv_lock,    n);
-    snprintf(vbuf->logs,    sizeof(vbuf->logs),    "%s%d", STR_bv_logs,    n);
-    snprintf(vbuf->logconf, sizeof(vbuf->logconf), "%s%d", STR_bv_logconf, n);
+    SNPRINTF(vbuf->ballots, "%s%d", STR_bv_ballots, n);
+    SNPRINTF(vbuf->control, "%s%d", STR_bv_control, n);
+    SNPRINTF(vbuf->desc, "%s%d", STR_bv_desc,    n);
+    SNPRINTF(vbuf->flags, "%s%d", STR_bv_flags,   n);
+    SNPRINTF(vbuf->comments, "%s%d", STR_bv_comments,n);
+    SNPRINTF(vbuf->limited, "%s%d", STR_bv_limited, n);
+    SNPRINTF(vbuf->limits, "%s%d", STR_bv_limits,  n);
+    SNPRINTF(vbuf->title, "%s%d", STR_bv_title,   n);
+    SNPRINTF(vbuf->lock, "%s%d", STR_bv_lock,    n);
+    SNPRINTF(vbuf->logs, "%s%d", STR_bv_logs,    n);
+    SNPRINTF(vbuf->logconf, "%s%d", STR_bv_logconf, n);
 }
 
 static int
@@ -165,8 +165,8 @@ vote_report(const char *bname, const char *post_bname, const char *fname)
 
     setbpath(buf, post_bname);
     stampfile(buf, &header);
-    strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
-    snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
+    STRLCPY(header.owner, "[馬路探子]");
+    SNPRINTF(header.title, "[%s] 看板 選情報導", bname);
 
     Copy(fname, buf);
 
@@ -523,7 +523,7 @@ vote_view_all(const char *bname)
 		fgets(inbuf, sizeof(inbuf), xfp);
 		fclose(xfp);
 	    } else
-		strlcpy(inbuf, "無標題", sizeof(inbuf));
+		STRLCPY(inbuf, "無標題");
 	    prints("%s\n", inbuf);
 	}
     }
@@ -531,12 +531,12 @@ vote_view_all(const char *bname)
     if (x < 0)
 	return FULLUPDATE;
 
-    snprintf(buf, sizeof(buf), "要看幾號投票 [%d] ", x);
+    SNPRINTF(buf, "要看幾號投票 [%d] ", x);
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
 
     if (atoi(genbuf) < 0 || atoi(genbuf) > MAX_VOTE_NR)
-	snprintf(genbuf, sizeof(genbuf), "%d", x);
+	SNPRINTF(genbuf, "%d", x);
 
     votebuf_init(&vbuf, atoi(genbuf));
     setbfile(buf, bname, vbuf.control);
@@ -680,7 +680,7 @@ vote_maintain(const char *bname)
 		    STR_bv_title, STR_bv_logs, STR_bv_logconf, NULL
 		};
 		for (j = 0; filename[j] != NULL; j++) {
-		    snprintf(buf2, sizeof(buf2), "%s%d", filename[j], i);
+		    SNPRINTF(buf2, "%s%d", filename[j], i);
 		    setbfile(buf, bname, buf2);
 		    unlink(buf);
 		}
@@ -724,7 +724,7 @@ vote_maintain(const char *bname)
     setbfile(buf, bname, vbuf.title);
     getdata(4, 0, "請輸入投票名稱:", inbuf, 50, DOECHO);
     if (inbuf[0] == '\0')
-	strlcpy(inbuf, "不知名的", sizeof(inbuf));
+	STRLCPY(inbuf, "不知名的");
     fp = fopen(buf, "w");
     assert(fp);
     fputs(inbuf, fp);
@@ -832,7 +832,7 @@ vote_maintain(const char *bname)
 		prints(ANSI_COLOR(1;30) "%c)" ANSI_RESET " ", i + 'A');
 	    }
 	}
-	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
+	SNPRINTF(buf, "%c) ", num + 'A');
 	getdata((num % 15) + 2, (num / 15) * 40, buf,
 		inbuf, 37, DOECHO);
 	if (*inbuf) {
@@ -846,7 +846,7 @@ vote_maintain(const char *bname)
 	    num = 0;
 	}
     }
-    snprintf(buf, sizeof(buf), "請問每人最多可投幾票？([1]～%d): ", x * ITEM_PER_PAGE + num);
+    SNPRINTF(buf, "請問每人最多可投幾票？([1]～%d): ", x * ITEM_PER_PAGE + num);
 
     getdata(t_lines - 3, 0, buf, inbuf, 3, DOECHO);
 
@@ -909,28 +909,28 @@ maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
     genbuf[0] = 0;
 
     if (logconf->log_id) {
-	snprintf(tmpbuf, sizeof(tmpbuf), "投票人 %-12s ", cuser.userid);
-	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+	SNPRINTF(tmpbuf, "投票人 %-12s ", cuser.userid);
+	STRLCAT(genbuf, tmpbuf);
     }
     if (logconf->log_ip) {
-	snprintf(tmpbuf, sizeof(tmpbuf), "投票來源 %-15s ", cuser.lasthost);
-	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+	SNPRINTF(tmpbuf, "投票來源 %-15s ", cuser.lasthost);
+	STRLCAT(genbuf, tmpbuf);
     }
     if (logconf->log_date) {
-	snprintf(tmpbuf, sizeof(tmpbuf), "投票時間 %-23s ", Cdate(&now));
-	strlcat(genbuf, tmpbuf, sizeof(genbuf));
+	SNPRINTF(tmpbuf, "投票時間 %-23s ", Cdate(&now));
+	STRLCAT(genbuf, tmpbuf);
     }
     if (genbuf[0])
-	strlcat(genbuf, "\n", sizeof(genbuf));
+	STRLCAT(genbuf, "\n");
 
     if (logconf->log_choice) {
-	strlcat(genbuf, "投票選項 ", sizeof(genbuf));
+	STRLCAT(genbuf, "投票選項 ");
 	for (i = 0; i < nitems; i++)
 	    if (chosen[i]) {
-		snprintf(tmpbuf, sizeof(tmpbuf), "%d ", i + 1);
-		strlcat(genbuf, tmpbuf, sizeof(genbuf));
+		SNPRINTF(tmpbuf, "%d ", i + 1);
+		STRLCAT(genbuf, tmpbuf);
 	    }
-	strlcat(genbuf, "\n", sizeof(genbuf));
+	STRLCAT(genbuf, "\n");
     }
 
     if ((fd = OpenCreate(logfile, O_WRONLY | O_APPEND)) >= 0) {
@@ -1142,7 +1142,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		char            buf[3], mycomments[3][74], b_comments[80];
 
 		for (i = 0; i < 3; i++)
-		    strlcpy(mycomments[i], "\n", sizeof(mycomments[i]));
+		    STRLCPY(mycomments[i], "\n");
 
 		flock(fd, LOCK_EX);
 		for (count = 0; count < item_num; count++) {
@@ -1268,7 +1268,7 @@ user_vote(const char *bname)
 	    fgets(inbuf, sizeof(inbuf), fp);
 	    fclose(fp);
 	} else {
-	    strlcpy(inbuf, "無標題", sizeof(inbuf));
+	    STRLCPY(inbuf, "無標題");
 	}
 	prints("%s\n", inbuf);
     }
@@ -1276,7 +1276,7 @@ user_vote(const char *bname)
     if (x < 0)
 	return FULLUPDATE;
 
-    snprintf(buf, sizeof(buf), "要投幾號投票 [%d] ", x);
+    SNPRINTF(buf, "要投幾號投票 [%d] ", x);
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
     i = atoi(genbuf);
 

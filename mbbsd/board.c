@@ -91,7 +91,7 @@ int enter_board(const char *boardname)
     if (IS_GROUP(bh))
 	return -1;
 
-    strlcpy(bname, bh->brdname, sizeof(bname));
+    STRLCPY(bname, bh->brdname);
     if (bname[0] == '\0')
 	return -3;
 
@@ -264,7 +264,7 @@ b_posttype()
            if (i < 0 || i > 8)
                continue;
            while (i > types++)
-               strlcat(posttype, "    ", sizeof(posttype));
+               STRLCAT(posttype, "    ");
            posttype[i * 4] = 0;
            continue;
        }
@@ -275,7 +275,7 @@ b_posttype()
        strlcpy(genbuf, posttype + i * 4, 5);
        if(getdata_str(16, 0, "類別名稱: ", genbuf, 5, DOECHO, genbuf)) {
            char tmp[5];
-           snprintf(tmp, sizeof(tmp), "%-4.4s", genbuf);
+           SNPRINTF(tmp, "%-4.4s", genbuf);
            memcpy(posttype + (i * 4), tmp, 4);
        }
        getdata(17, 0, "要使用範本嗎? [y/n/K(不改變)]: ", genbuf, 2, LCECHO);
@@ -300,7 +300,7 @@ b_posttype()
    }
    if (strcmp(bp->posttype, posttype) != 0) {
        /* 這邊應該要防race condition */
-       strlcpy(bp->posttype, posttype, sizeof(bp->posttype));
+       STRLCPY(bp->posttype, posttype);
        modified = 1;
    }
    if (modified) {
@@ -2122,7 +2122,7 @@ choose_board(int newflag)
 	    assert(0<=num && num<nbrdsize);
 	    if (HasFavEditPerm() && nbrd[num].myattr & NBRD_FOLDER) {
 		fav_type_t *ft = getfolder(nbrd[num].bid);
-		strlcpy(buf, get_item_title(ft), sizeof(buf));
+		STRLCPY(buf, get_item_title(ft));
 		getdata_buf(b_lines-1, 0, "請修改名稱: ", buf, BTLEN+1, DOECHO);
 		fav_set_folder_title(ft, buf);
 		brdnum = -1;

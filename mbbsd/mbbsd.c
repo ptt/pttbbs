@@ -396,7 +396,7 @@ show_call_in(int save, int which)
 
 #ifdef PLAY_ANGEL
     if (mode == MSGMODE_TOANGEL) {
-        snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45)
+        SNPRINTF(buf, ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET,
                  currutmp->msgs[which].userid,
                  currutmp->msgs[which].last_call_in);
@@ -405,7 +405,7 @@ show_call_in(int save, int which)
         angel_notify_activity(currutmp->msgs[which].userid);
     } else
 #endif
-    snprintf(buf, sizeof(buf), ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
+    SNPRINTF(buf, ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
              " %s " ANSI_RESET, currutmp->msgs[which].userid,
              currutmp->msgs[which].last_call_in);
     outmsg(buf);
@@ -955,9 +955,9 @@ setup_utmp(int mode)
     // only enable this after you've really changed talk.c to NOT use from_alias.
     uinfo.from_ip   = inet_addr(fromhost);
 
-    strlcpy(uinfo.userid,   cuser.userid,   sizeof(uinfo.userid));
-    strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
-    strlcpy(uinfo.from,	    fromhost,	    sizeof(uinfo.from));
+    STRLCPY(uinfo.userid, cuser.userid);
+    STRLCPY(uinfo.nickname, cuser.nickname);
+    STRLCPY(uinfo.from, fromhost);
 
     uinfo.five_win  = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
@@ -1009,12 +1009,12 @@ setup_utmp(int mode)
 
 	    // copy to currutmp
 	    if (p) {
-		strlcpy(currutmp->from, p, sizeof(currutmp->from));
+		STRLCPY(currutmp->from, p);
 
 		// Did fromd send country name separately?
 		p = strtok_r(NULL, "\n", &ptr);
 		if (p)
-		    strlcpy(from_cc, p, sizeof(from_cc));
+		    STRLCPY(from_cc, p);
 	    }
 	}
     }
@@ -1055,12 +1055,12 @@ check_bad_clients(void) {
     int i, y;
     char src[PATHLEN], dest[PATHLEN], buf[STRLEN];
     FILE *fp;
-    snprintf(src, sizeof(src), "bad_clients/%s", cuser.userid);
+    SNPRINTF(src, "bad_clients/%s", cuser.userid);
     if (!dashf(src))
 	return;
 
-    strlcpy(dest, src, sizeof(dest));
-    strlcat(dest, ".reply", sizeof(dest));
+    STRLCPY(dest, src);
+    STRLCAT(dest, ".reply");
     if (dashf(dest))
 	return;
 
@@ -1117,7 +1117,7 @@ static void append_log_recent_login()
     int szlogfn = 0, szlogentry = 0;
 
     // prepare log format
-    snprintf(buf, sizeof(buf), "%s %-15s\n",
+    SNPRINTF(buf, "%s %-15s\n",
 	    Cdatelite(&login_start_time), fromhost);
     szlogentry = strlen(buf);	// should be the same for all entries
 
@@ -1190,7 +1190,7 @@ user_login(void)
     redrawwin();
 
     /* mask fromhost a.b.c.d to a.b.c.* */
-    strlcpy(fromhost_masked, fromhost, sizeof(fromhost_masked));
+    STRLCPY(fromhost_masked, fromhost);
     obfuscate_ipstr(fromhost_masked);
 
 #ifndef MULTI_WELCOME_LOGIN
@@ -1198,7 +1198,7 @@ user_login(void)
 #else
     if( SHM->GV2.e.nWelcomes ){
         char            buf[80];
-        snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
+        SNPRINTF(buf, "etc/Welcome_login.%d",
                  (int)login_start_time % SHM->GV2.e.nWelcomes);
         more(buf, NA);
     }
@@ -1700,7 +1700,7 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		}
 		break;
 	    case 'h':
-		strlcpy(fromhost, optarg, sizeof(fromhost));
+		STRLCPY(fromhost, optarg);
 		break;
 	    case 'e':
 #ifdef CONVERT
@@ -1715,7 +1715,7 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 #endif
 		break;
 	    case 'u':
-		strlcpy(option->flag_user, optarg, sizeof(option->flag_user));
+		STRLCPY(option->flag_user, optarg);
 		break;
 	    case 'F':
 		option->flag_fork = false;
@@ -1847,7 +1847,7 @@ shell_login(char *argv0, struct ProgramOption *option)
 //    mtrace();
 #endif
 
-    snprintf(margs, sizeof(margs), "%s ssh ", argv0);
+    SNPRINTF(margs, "%s ssh ", argv0);
     close(2);
     /* don't close fd 1, at least init_tty need it */
     if(((fd = OpenCreate("log/stderr", O_WRONLY | O_APPEND)) >= 0) &&
@@ -1862,7 +1862,7 @@ shell_login(char *argv0, struct ProgramOption *option)
     if(getenv("SSH_CONNECTION") != NULL){
 	char frombuf[50];
 	sscanf(getenv("SSH_CONNECTION"), "%s", frombuf);
-	strlcpy(fromhost, frombuf, sizeof(fromhost));
+	STRLCPY(fromhost, frombuf);
     }
 
     // XXX shell_login 時 load banip table 比較慢, 所以用 cache.
@@ -1911,19 +1911,18 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     chdir(BBSHOME);
 
     // log pid
-    snprintf(buf, sizeof(buf),
-	     "run/mbbsd.%s.%u.pid", "tunnel",pid);
+    SNPRINTF(buf, "run/mbbsd.%s.%u.pid", "tunnel",pid);
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%u\n", pid);
 	fclose(fp);
     }
 
     // XXX on Linux, argv0 will change if you setproctitle.
-    strlcpy(buf, argv0, sizeof(buf));
+    STRLCPY(buf, argv0);
 
     /* proctitle */
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s tunnel(%u) ", buf, pid);
+    SNPRINTF(margs, "%s tunnel(%u) ", buf, pid);
     setproctitle("%s: listening ", margs);
 #endif
 
@@ -1959,7 +1958,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     /* here is only child running */
 
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s tunnel(%u)-%s ", buf, pid, dat.port);
+    SNPRINTF(margs, "%s tunnel(%u)-%s ", buf, pid, dat.port);
     setproctitle("%s: ...login wait... ", margs);
 #endif
     close(tunnel);
@@ -1967,8 +1966,8 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     close(csock);
     dup2(0, 1);
 
-    strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
-    strlcpy(fromhost, dat.hostip, sizeof(fromhost));
+    STRLCPY(option->flag_user, dat.userid);
+    STRLCPY(fromhost, dat.hostip);
     listen_port = atoi(dat.port);
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
@@ -2036,7 +2035,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
 
     /* proctitle */
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s %d ", argv0, listen_port);
+    SNPRINTF(margs, "%s %d ", argv0, listen_port);
     setproctitle("%s: listening ", margs);
 #endif
 
@@ -2054,8 +2053,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     }
 #endif
 
-    snprintf(buf, sizeof(buf),
-	     "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
+    SNPRINTF(buf, "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", (int)getpid());
 	fclose(fp);

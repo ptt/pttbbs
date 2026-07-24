@@ -291,8 +291,7 @@ int more(const char *fpath, int promptend)
 		showall = 1;
 
 	    // print prompt bar
-	    snprintf(buf, sizeof(buf),
-		    "  ÂsÄý P.%d  ", 1 + (lineno / (t_lines-2)));
+	    SNPRINTF(buf, "  ÂsÄý P.%d  ", 1 + (lineno / (t_lines-2)));
 	    vs_footer(buf,
 	    " (¡÷¡õ[PgUp][PgDn][Home][End])´å¼Ð²¾°Ê\t(¡ö/q)µ²§ô");
 	}

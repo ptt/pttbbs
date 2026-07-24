@@ -290,7 +290,7 @@ load_remote_brc() {
     int err = 1;
 
     brc_size = 0;
-    snprintf(command, sizeof(command), "%c%s#%d\n",
+    SNPRINTF(command, "%c%s#%d\n",
              BRCSTORED_REQ_READ, cuser.userid, cuser.firstlogin);
 
     do {
@@ -339,7 +339,7 @@ save_remote_brc() {
     char command[PATHLEN];
     int err = 1;
 
-    snprintf(command, sizeof(command), "%c%s#%d\n",
+    SNPRINTF(command, "%c%s#%d\n",
              BRCSTORED_REQ_WRITE, cuser.userid, cuser.firstlogin);
     len = brc_size;
 
@@ -390,7 +390,7 @@ save_local_brc() {
     char tmpfile[STRLEN];
 
     setuserfile(brcfile, fn_brc);
-    snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
+    SNPRINTF(tmpfile, "%s.tmp.%x", brcfile, getpid());
     if (brc_buf != NULL) {
 	int fd = OpenCreate(tmpfile, O_WRONLY | O_TRUNC);
 	if (fd != -1) {

@@ -238,17 +238,15 @@ do_voteboard(int type)
     case 1:
 	if (!getdata(7, 0, "請輸入活動主題：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "%s %s", "[活動連署]", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n", "活動連署", "活動主題: ", topic);
+	SNPRINTF(title, "%s %s", "[活動連署]", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n", "活動連署", "活動主題: ", topic);
 	strcat(genbuf, "\n活動內容: \n");
 	break;
     case 2:
 	if (!getdata(7, 0, "請輸入公投主題：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "%s %s", "[記名公投]", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n", "記名公投", "公投主題: ", topic);
+	SNPRINTF(title, "%s %s", "[記名公投]", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n", "記名公投", "公投主題: ", topic);
 	strcat(genbuf, "\n公投原因: \n");
 	break;
     case 3:
@@ -262,9 +260,8 @@ do_voteboard(int type)
 	    else
 		break;
 	} while (temp > 0);
-	snprintf(title, sizeof(title), "[申請新板] %s", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
+	SNPRINTF(title, "[申請新板] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
 
 	if (!getdata(8, 0, "請輸入看板中文名稱：", topic, BTLEN + 1, DOECHO))
 	    return FULLUPDATE;
@@ -291,9 +288,8 @@ do_voteboard(int type)
 	    vmsg("無此看版。");
 	    return FULLUPDATE;
 	}
-	snprintf(title, sizeof(title), "[廢除舊板] %s", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
+	SNPRINTF(title, "[廢除舊板] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
 	strcat(genbuf, "\n廢除原因: \n");
 	break;
     case 5:
@@ -309,8 +305,8 @@ do_voteboard(int type)
 	    vmsg("無此看版。");
 	    return FULLUPDATE;
 	}
-	snprintf(title, sizeof(title), "[連署板主] %s", topic);
-	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
+	SNPRINTF(title, "[連署板主] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 6:
@@ -326,9 +322,8 @@ do_voteboard(int type)
 	    vmsg("無此看版。");
 	    return FULLUPDATE;
 	}
-	snprintf(title, sizeof(title), "[罷免板主] %s", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
+	SNPRINTF(title, "[罷免板主] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
 		 topic, "板主 ID : ");
         temp=getbnum(topic);
 	assert(0<=temp-1 && temp-1<MAX_BOARD);
@@ -342,17 +337,16 @@ do_voteboard(int type)
     case 7:
 	if (!getdata(7, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "[連署小組長] %s", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ",
+	SNPRINTF(title, "[連署小組長] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ",
 		 topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 8:
 	if (!getdata(7, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "[罷免小組長] %s", topic);
-	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s",
+	SNPRINTF(title, "[罷免小組長] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s",
 		 "罷免小組長", "小組名稱: ", topic, "小組長 ID : ");
 	if (!getdata(8, 0, "請輸入小組長ID：", topic, IDLEN + 1, DOECHO))
 	    return FULLUPDATE;
@@ -362,8 +356,8 @@ do_voteboard(int type)
     case 9:
 	if (!getdata(7, 0, "請輸入群組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "[申請新群組] %s", topic);
-	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s",
+	SNPRINTF(title, "[申請新群組] %s", topic);
+	SNPRINTF(genbuf, "%s\n\n%s%s\n%s%s",
 		 "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
@@ -381,7 +375,7 @@ do_voteboard(int type)
 	    return FULLUPDATE;
     strcat(genbuf, "連署結束時間: ");
     now += 14 * 24 * 60 * 60;
-    snprintf(topic, sizeof(topic), "(%d)", now);
+    SNPRINTF(topic, "(%d)", now);
     strcat(genbuf, topic);
     strcat(genbuf, Cdate(&now));
     strcat(genbuf, "\n\n");
@@ -403,8 +397,8 @@ do_voteboard(int type)
     fprintf(fp, ANSI_COLOR(1;33) "若想加入連署請按 y 回應" ANSI_RESET "\n\n");
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
-    strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
-    strlcpy(votefile.title, title, sizeof(votefile.title));
+    STRLCPY(votefile.owner, cuser.userid);
+    STRLCPY(votefile.title, title);
     votefile.filemode |= FILE_VOTE;
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */

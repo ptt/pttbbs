@@ -39,10 +39,10 @@ kill_user(int num, const char *userid)
 
     if(!userid || num<=0 ) return -1;
     sethomepath(src, userid);
-    snprintf(dst, sizeof(dst), "tmp/%s", userid);
+    SNPRINTF(dst, "tmp/%s", userid);
     friend_delete_all(userid, FRIEND_ALOHA);
     if (dashd(src) && Rename(src, dst) == 0) {
-	snprintf(src, sizeof(src), "/bin/rm -fr home/%c/%s >/dev/null 2>&1", userid[0], userid);
+	SNPRINTF(src, "/bin/rm -fr home/%c/%s >/dev/null 2>&1", userid[0], userid);
 	system(src);
     }
 
@@ -613,8 +613,8 @@ static void set_chess(const char *name, int y,
     char prompt[STRLEN];
     char *p;
     char *strtok_pos;
-    snprintf(buf, sizeof(buf), "%d/%d/%d", *p_win, *p_lose, *p_tie);
-    snprintf(prompt, sizeof(prompt), "%s 戰績 勝/敗/和:", name);
+    SNPRINTF(buf, "%d/%d/%d", *p_win, *p_lose, *p_tie);
+    SNPRINTF(prompt, "%s 戰績 勝/敗/和:", name);
     if (!getdata_str(y, 0, prompt, buf, 5 * 3 + 3, DOECHO, buf))
         return;
     p = strtok_r(buf, "/\r\n", &strtok_pos);
@@ -746,15 +746,15 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	    // Log change for security reasons.
 	    char title[TTLEN], buf[STRLEN + EMAILSZ*2 + sizeof(reason)];
-	    snprintf(title, sizeof(title), "%s 的聯絡信箱變更通知 (by %s)",
+	    SNPRINTF(title, "%s 的聯絡信箱變更通知 (by %s)",
 		     orig_uid, cuser.userid);
-	    snprintf(buf, sizeof(buf), "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
+	    SNPRINTF(buf, "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
 		     cuser.userid, orig_uid, x.email, email, reason);
 	    post_msg(BN_SECURITY, title, buf, "[系統安全局]");
 
 	    // Notify user
-	    strlcpy(title, "聯絡信箱變更通知", sizeof(title));
-	    snprintf(buf, sizeof(buf), "您的聯絡信箱已變更為 %s\n", email);
+	    STRLCPY(title, "聯絡信箱變更通知");
+	    SNPRINTF(buf, "您的聯絡信箱已變更為 %s\n", email);
 	    mail_log2id_text(orig_uid, title, buf, cuser.userid, 1);
 
 	    // Log to user log.
@@ -763,7 +763,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
 		      Cdatelite(&now), "[Admin]", x.email, email);
 
-	    strlcpy(x.email, email, sizeof(x.email));
+	    STRLCPY(x.email, email);
 	}
 
 	break;
@@ -785,7 +785,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	}
 
         do {
-            snprintf(buf, sizeof(buf), x.over_18 ? "y" : "n");
+            SNPRINTF(buf, x.over_18 ? "y" : "n");
             mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
             getdata_buf(y+1, 0,"您是否年滿十八歲並同意觀看此類看板"
                         "(若否請輸入n)[y/n]: ", buf, 3, LCECHO);
@@ -879,7 +879,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (adminmode) {
 	    int tmp;
 	    if (HasUserPerm(PERM_BBSADM)) {
-		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
+		SNPRINTF(genbuf, "%d", x.money);
 		if (getdata_str(y++, 0, BBSMNAME "幣：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atol(buf)) != 0) {
 			if (tmp != x.money) {
@@ -889,7 +889,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 			}
 		    }
 	    }
-	    snprintf(genbuf, sizeof(genbuf), "%d", x.exmailbox);
+	    SNPRINTF(genbuf, "%d", x.exmailbox);
 	    if (getdata_str(y++, 0, "購買信箱：", buf, 6,
 			    DOECHO, genbuf))
 		if ((tmp = atoi(buf)) != 0)
@@ -904,7 +904,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		struct tm t = {0};
 		time4_t clk = x.lastlogin;
 		localtime4_r(&clk, &t);
-		snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i %02i:%02i:%02i",
+		SNPRINTF(genbuf, "%04i/%02i/%02i %02i:%02i:%02i",
 			t.tm_year + 1900, t.tm_mon+1, t.tm_mday,
 			t.tm_hour, t.tm_min, t.tm_sec);
 		if (getdata_str(y, 0, "最近上線時間：", buf, 20, DOECHO, genbuf) != 0) {
@@ -928,7 +928,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	    do {
 		int max_days = (x.lastlogin - x.firstlogin) / DAY_SECONDS;
-		snprintf(genbuf, sizeof(genbuf), "%d", x.numlogindays);
+		SNPRINTF(genbuf, "%d", x.numlogindays);
 		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atoi(buf)) >= 0)
 			x.numlogindays = tmp;
@@ -942,7 +942,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    } while (1);
 
-	    snprintf(genbuf, sizeof(genbuf), "%d", x.numposts);
+	    SNPRINTF(genbuf, "%d", x.numposts);
 	    if (getdata_str(y++, 0, "文章數目：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.numposts = tmp;
@@ -950,7 +950,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    prints("文章數目： %d (退: %d, 修改退文數請選項8)\n",
 		    x.numposts, x.badpost);
 
-	    snprintf(genbuf, sizeof(genbuf), "%d", x.vl_count);
+	    SNPRINTF(genbuf, "%d", x.vl_count);
 	    if (getdata_str(y++, 0, "違法記錄：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.vl_count = tmp;
@@ -1036,7 +1036,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    break;
 	}
 	buf[8] = '\0';
-	strlcpy(x.passwd, genpasswd(buf), sizeof(x.passwd));
+	STRLCPY(x.passwd, genpasswd(buf));
 
 	// for admin mode, do verify after.
 	if (adminmode)
@@ -1065,7 +1065,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 			i--;
 		    }
 		    // Adjust upper or lower case
-                    strlcpy(witness[i], atuser.userid, sizeof(witness[i]));
+                    STRLCPY(witness[i], atuser.userid);
 		}
 	    }
 	    y += 3;
@@ -1140,10 +1140,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    }
 	    pre_confirmed = 1;
-	    snprintf(title, sizeof(title),
-		    "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
-	    snprintf(msg, sizeof(msg),
-		    "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+	    SNPRINTF(title, "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
+	    SNPRINTF(msg, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
 		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
 		    x.userid, cuser.userid, reason,
 		    x.realname, x.address, x.justify, x.email);
@@ -1176,7 +1174,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    fail++;
 #endif
 	    } else
-		strlcpy(x.userid, genbuf, sizeof(x.userid));
+		STRLCPY(x.userid, genbuf);
 	}
 	break;
 
@@ -1248,7 +1246,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	// log change for security reasons.
 	char title[STRLEN];
-	snprintf(title, sizeof(title), "變更ID: %s -> %s (站長: %s)",
+	SNPRINTF(title, "變更ID: %s -> %s (站長: %s)",
 		 orig_uid, x.userid, cuser.userid);
 	post_msg(BN_SECURITY, title, title, "[系統安全局]");
     }
@@ -1270,14 +1268,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	while (!getdata(5, 0, "請輸入理由以示負責：",
 		    reason, sizeof(reason), DOECHO));
 
-	snprintf(msg, sizeof(msg),
-		"   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
+	SNPRINTF(msg, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
 		"從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
 		"   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
 		cuser.userid, x.userid, changefrom, x.money,
 		cuser.userid, reason);
-	snprintf(title, sizeof(title),
-		"[安全報告] 站長%s修改%s金錢", cuser.userid,
+	SNPRINTF(title, "[安全報告] 站長%s修改%s金錢", cuser.userid,
 		x.userid);
 	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
 	setumoney(unum, x.money);
@@ -1317,7 +1313,7 @@ u_info(void)
     user_display(cuser_ref, 0);
     uinfo_query (cuser.userid, 0, usernum);
     pwcuReload();
-    strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
+    STRLCPY(currutmp->nickname, cuser.nickname);
     return 0;
 }
 
@@ -1356,7 +1352,7 @@ showplans_userec(userec_t *user)
 	    {
 		chomp(genbuf);
 		if (i < 6)  /* 讀照片檔 */
-		    strlcpy(photo[i], genbuf, sizeof(photo[i]));
+		    STRLCPY(photo[i], genbuf);
 		else if (i == 6)
 		    kingdom_bid = atoi(genbuf);
 		else
@@ -1378,7 +1374,7 @@ showplans_userec(userec_t *user)
 
 	    /* 棋國國徽 */
 	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
-	    strlcat(genbuf, "/chess_ensign", sizeof(genbuf));
+	    STRLCAT(genbuf, "/chess_ensign");
 	    show_file(genbuf, 13, 10, SHOWFILE_ALLOW_COLOR);
 	    return;
 	}

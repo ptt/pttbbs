@@ -49,7 +49,7 @@ do_order_song(void)
     }
 #endif
 
-    strlcpy(buf, Cdatedate(&now), sizeof(buf));
+    STRLCPY(buf, Cdatedate(&now));
     lockreturn0(OSONG, LOCK_MULTI);
     pwcuReload();
 
@@ -109,7 +109,7 @@ do_order_song(void)
 	}
     } while (!say[0]);
 
-    snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
+    SNPRINTF(save_title, "%s:%s", sender, say);
 
     if (override_receiver) {
         *address = 0;
@@ -140,7 +140,7 @@ do_order_song(void)
 #ifdef DEBUG
     vmsg(trans_buffer);
 #endif
-    strlcpy(filename, OSONGPATH, sizeof(filename));
+    STRLCPY(filename, OSONGPATH);
     stampfile(filename, &mail);
     unlink(filename);
 
@@ -149,8 +149,8 @@ do_order_song(void)
 	unlockutmpmode();
 	return 0;
     }
-    strlcpy(mail.owner, "[心情點播]", sizeof(mail.owner));
-    snprintf(mail.title, sizeof(mail.title), "◇ %s 留言給 %s ", sender,
+    STRLCPY(mail.owner, "[心情點播]");
+    SNPRINTF(mail.title, "◇ %s 留言給 %s ", sender,
              receiver);
 
     while (fgets(buf, sizeof(buf), fp)) {
@@ -170,8 +170,8 @@ do_order_song(void)
 	    if (is_validuserid(sender) && strcmp(sender, cuser.userid) != 0)
 		dot = ".";
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s%s", buf, sender, dot, po + 7);
-	    strlcpy(buf, genbuf, sizeof(buf));
+	    SNPRINTF(genbuf, "%s%s%s%s", buf, sender, dot, po + 7);
+	    STRLCPY(buf, genbuf);
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
             const char *r = receiver;
@@ -182,13 +182,13 @@ do_order_song(void)
             }
 #endif
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, r, po + 7);
-	    strlcpy(buf, genbuf, sizeof(buf));
+	    SNPRINTF(genbuf, "%s%s%s", buf, r, po + 7);
+	    STRLCPY(buf, genbuf);
 	}
 	while ((po = strstr(buf, "<~Say~>"))) {
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, say, po + 7);
-	    strlcpy(buf, genbuf, sizeof(buf));
+	    SNPRINTF(genbuf, "%s%s%s", buf, say, po + 7);
+	    STRLCPY(buf, genbuf);
 	}
 	fputs(buf, fp1);
     }
@@ -224,11 +224,11 @@ do_order_song(void)
 	    // XXX race condition
 	    delete_range(OSONGPATH "/" FN_DIR, 1, nsongs - MAX_SONGS);
 	}
-	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.",
+	SNPRINTF(genbuf, "%s says \"%s\" to %s.",
 		sender, say, receiver);
 	log_usies("OSONG", genbuf);
     }
-    snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
+    SNPRINTF(save_title, "%s:%s", sender, say);
     hold_mail(filename, receiver, save_title);
     if (*address) {
 	bsmtp(filename, save_title, address, NULL);
@@ -310,8 +310,8 @@ sortsong(void)
 	for (n = 0; n < MAX_SONGS && songs[n].name[0]; n++)
 	    if (!strcmp(songs[n].cname, cbuf))
 		break;
-	strlcpy(songs[n].name, buf, sizeof(songs[n].name));
-	strlcpy(songs[n].cname, cbuf, sizeof(songs[n].cname));
+	STRLCPY(songs[n].name, buf);
+	STRLCPY(songs[n].cname, cbuf);
 	songs[n].count++;
 	totalcount++;
     }

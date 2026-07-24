@@ -21,8 +21,8 @@ m_loginmsg(void)
      getdata_str(23, 0, "設定進站水球:", msg, 56, DOECHO, SHM->loginmsg.last_call_in))
     {
           SHM->loginmsg.pid=currutmp->pid; /*站長不多 就不管race condition */
-          strlcpy(SHM->loginmsg.last_call_in, msg, sizeof(SHM->loginmsg.last_call_in));
-          strlcpy(SHM->loginmsg.userid, cuser.userid, sizeof(SHM->loginmsg.userid));
+          STRLCPY(SHM->loginmsg.last_call_in, msg);
+          STRLCPY(SHM->loginmsg.userid, cuser.userid);
     }
   return 0;
 }
@@ -87,7 +87,7 @@ static int retrieve_backup(userec_t *user)
     if (setupnewuser((const userec_t *)user) >= 0) {
 	sethomepath(dst, user->userid);
 	if (!dashd(dst)) {
-	    snprintf(src, sizeof(src), "tmp/%s", user->userid);
+	    SNPRINTF(src, "tmp/%s", user->userid);
 	    if (!dashd(src) || !Rename(src, dst))
 		mkuserdir(user->userid);
 	}
@@ -580,10 +580,10 @@ AddingChessCountryFiles(const char* apath)
     setadir(adir, apath);
 
     /* creating chess country regalia */
-    snprintf(filename, sizeof(filename), "%s/chess_ensign", apath);
+    SNPRINTF(filename, "%s/chess_ensign", apath);
     close(OpenCreate(filename, O_WRONLY));
 
-    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    STRLCPY(symbolicname, apath);
     stampfile(symbolicname, &fh);
     symlink("chess_ensign", symbolicname);
 
@@ -592,7 +592,7 @@ AddingChessCountryFiles(const char* apath)
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating member list */
-    snprintf(filename, sizeof(filename), "%s/chess_list", apath);
+    SNPRINTF(filename, "%s/chess_list", apath);
     if (!dashf(filename)) {
 	fp = fopen(filename, "w");
 	assert(fp);
@@ -603,7 +603,7 @@ AddingChessCountryFiles(const char* apath)
 	fclose(fp);
     }
 
-    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    STRLCPY(symbolicname, apath);
     stampfile(symbolicname, &fh);
     symlink("chess_list", symbolicname);
 
@@ -612,10 +612,10 @@ AddingChessCountryFiles(const char* apath)
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating profession photos' dir */
-    snprintf(filename, sizeof(filename), "%s/chess_photo", apath);
+    SNPRINTF(filename, "%s/chess_photo", apath);
     Mkdir(filename);
 
-    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    STRLCPY(symbolicname, apath);
     stampfile(symbolicname, &fh);
     symlink("chess_photo", symbolicname);
 
@@ -690,7 +690,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
                    STRLCAT(fh[pn+i].owner, ".");
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
-     snprintf(bakdir, sizeof(bakdir), "%s.bak", dir1);
+     SNPRINTF(bakdir, "%s.bak", dir1);
      Rename(dir1, bakdir);
      for(i=1; i<=pn+sn; i++ )
         {
@@ -737,9 +737,9 @@ m_mod_board(char *bname)
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
     if (bh.brdattr & BRD_SYMBOLIC) {
-        snprintf(genbuf, sizeof(genbuf), "[看板連結] (D)刪除 [Q]取消? ");
+        SNPRINTF(genbuf, "[看板連結] (D)刪除 [Q]取消? ");
     } else {
-        snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
+        SNPRINTF(genbuf, "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
                  HasUserPerm(PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
                  HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
     }
@@ -769,8 +769,7 @@ m_mod_board(char *bname)
 	break;
     case 's':
 	if (HasUserPerm(PERM_BOARD)) {
-	  snprintf(genbuf, sizeof(genbuf),
-		   BBSHOME "/bin/buildir boards/%c/%s &",
+	  SNPRINTF(genbuf, BBSHOME "/bin/buildir boards/%c/%s &",
 		   bh.brdname[0], bh.brdname);
 	    system(genbuf);
 	}
@@ -793,7 +792,7 @@ m_mod_board(char *bname)
 	    char            bvotebuf[10];
 
 	    memcpy(&newbh, &bh, sizeof(bh));
-	    snprintf(bvotebuf, sizeof(bvotebuf), "%d", newbh.bvote);
+	    SNPRINTF(bvotebuf, "%d", newbh.bvote);
 	    move(20, 0);
 	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, bvotebuf);
@@ -831,15 +830,13 @@ m_mod_board(char *bname)
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
-	    snprintf(genbuf, sizeof(genbuf),
-		    "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
+	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
 		    "/bin/rm -fr boards/%c/%s man/boards/%c/%s",
 		    bname, bname[0], bname, bname[0],
 		    bname, bname[0], bname, bname[0], bname);
 	    system(genbuf);
 	    memset(&bh, 0, sizeof(bh));
-	    snprintf(bh.title, sizeof(bh.title),
-		     "     %s 看板 %s 刪除", bname, cuser.userid);
+	    SNPRINTF(bh.title, "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg(BN_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
@@ -878,7 +875,7 @@ m_mod_board(char *bname)
                         continue;
                     }
                 }
-		strlcpy(newbh.brdname, genbuf, sizeof(newbh.brdname));
+		STRLCPY(newbh.brdname, genbuf);
 		break;
 	    }
 	}
@@ -930,7 +927,7 @@ m_mod_board(char *bname)
             if (getdata(y + 4, 0, "確定此板主名單正確?[y/N] ", ans,
                         sizeof(ans), LCECHO) &&
                 ans[0] == 'y') {
-                strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
+                STRLCPY(newbh.BM, genbuf);
                 move(y + 1, 0); clrtobot();
                 break;
             }
@@ -940,7 +937,7 @@ m_mod_board(char *bname)
 
 #ifdef CHESSCOUNTRY
 	if (HasUserPerm(PERM_BOARD)) {
-	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
+	    SNPRINTF(genbuf, "%d", bh.chesscountry);
 	    if (getdata_str(y++, 0,
 			"設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋 (4) 黑白棋",
 			ans, sizeof(ans), NUMECHO, genbuf)){
@@ -1012,9 +1009,8 @@ m_mod_board(char *bname)
             sort_bcache();
 	    log_usies("SetBoard", newbh.brdname);
 
-	    snprintf(buf, sizeof(buf), "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    snprintf(genbuf, sizeof(genbuf),
-		    "板名: %s => %s\n"
+	    SNPRINTF(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    SNPRINTF(genbuf, "板名: %s => %s\n"
 		    "板主: %s => %s\n",
 		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
 	    post_msg(BN_SECURITY, buf, genbuf, "[系統安全局]");
@@ -1229,9 +1225,9 @@ int make_board_link(const char *bname, int gid)
      *   board.c:load_boards().
      */
 
-    strlcpy(newboard.brdname, bname, sizeof(newboard.brdname));
+    STRLCPY(newboard.brdname, bname);
     newboard.brdname[strlen(bname) - 1] = '~';
-    strlcpy(newboard.title, bcache[bid - 1].title, sizeof(newboard.title));
+    STRLCPY(newboard.title, bcache[bid - 1].title);
     strcpy(newboard.title + 5, "＠看板連結");
 
     newboard.gid = gid;
@@ -1285,7 +1281,7 @@ adm_give_id_money(const char *user_id, int money, const char *mail_title)
 	prints("id:%s money:%d 不對吧!!", user_id, money);
 	pressanykey();
     } else {
-	snprintf(tt, sizeof(tt), "%s : %d " MONEYNAME, mail_title, money);
+	SNPRINTF(tt, "%s : %d " MONEYNAME, mail_title, money);
 	mail_id(user_id, tt, "etc/givemoney.why", "[" BBSMNAME "銀行]");
     }
 }

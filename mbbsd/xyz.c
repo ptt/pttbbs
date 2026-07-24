@@ -71,7 +71,7 @@ Goodbye(void)
     show_80x24_screen("etc/Logout");
     {
 	int diff = (now - login_start_time) / 60;
-	snprintf(genbuf, sizeof(genbuf), "此次停留時間: %d 小時 %2d 分",
+	SNPRINTF(genbuf, "此次停留時間: %d 小時 %2d 分",
 		diff / 60, diff % 60);
     }
     if(!HasUserPerm(PERM_LOGINOK))

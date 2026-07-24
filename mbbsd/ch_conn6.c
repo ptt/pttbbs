@@ -147,7 +147,7 @@ conn6_getstep(const conn6_step_t* step, char buf[])
 static void
 conn6_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
-    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    STRLCPY(user->userid, uinfo->userid);
     user->win  = uinfo->conn6_win;
     user->lose = uinfo->conn6_lose;
     user->tie  = uinfo->conn6_tie;
@@ -156,7 +156,7 @@ conn6_init_user(const userinfo_t* uinfo, ChessUser* user)
 static void
 conn6_init_user_userec(const userec_t* urec, ChessUser* user)
 {
-    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    STRLCPY(user->userid, urec->userid);
     user->win  = urec->conn6_win;
     user->lose = urec->conn6_lose;
     user->tie  = urec->conn6_tie;

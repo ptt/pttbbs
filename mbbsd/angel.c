@@ -169,7 +169,7 @@ angel_reload_nick()
     // see if we have angel id change (reload whole)
     if (strcmp(_myangel, cuser.myangel) != 0)
     {
-	strlcpy(_myangel, cuser.myangel, sizeof(_myangel));
+	STRLCPY(_myangel, cuser.myangel);
 	reload = 1;
     }
     // see if we need to check file touch date
@@ -270,10 +270,10 @@ select_angel() {
         sethomefile(fn, userid, FN_ANGELMSG);
         if ((fp = fopen(fn, "rt")) != NULL) {
             angel_parse_nick_fp(fp, nick, sizeof(nick));
-            strlcat(nick, "小天使", sizeof(nick));
+            STRLCAT(nick, "小天使");
             fclose(fp);
         } else {
-            strlcpy(nick, "(未設定暱稱)", sizeof(nick));
+            STRLCPY(nick, "(未設定暱稱)");
         }
         if (uinfo && uinfo->angelpause == 1)
             pause_msg = ANSI_COLOR(1;32) "(停收新問題/新主人) " ANSI_RESET;
@@ -400,7 +400,7 @@ angel_order_song(char *receiver, size_t sz_receiver) {
         return NULL;
 
     angel_nick = angel_get_nick();
-    snprintf(prompt, sizeof(prompt), "要留言給你的%s小天使嗎? [y/N]: ",
+    SNPRINTF(prompt, "要留言給你的%s小天使嗎? [y/N]: ",
              angel_nick);
     if (getdata(20, 0, prompt, ans, sizeof(ans), LCECHO) && *ans == 'y') {
         snprintf(receiver, sz_receiver, "%s小天使", angel_nick);
@@ -454,10 +454,9 @@ angel_log_order_song(const char *angel_nick) {
 
     syncnow();
     if (cuser.timesetangel && now >= cuser.timesetangel)
-        snprintf(angel_exp, sizeof(angel_exp),
-                 "%d天", (now - cuser.timesetangel) / DAY_SECONDS + 1);
+        SNPRINTF(angel_exp, "%d天", (now - cuser.timesetangel) / DAY_SECONDS + 1);
     else
-        strlcpy(angel_exp, "很久", sizeof(angel_exp));
+        STRLCPY(angel_exp, "很久");
 
     log_filef("log/osong_angel.log", LOG_CREAT,
               "%s %*s 點歌給 %*s小天使 (%s - %s)\n",
@@ -644,8 +643,8 @@ angel_edit_msg(const char *prompt, const char *filename,
             fgets(buf, sizeof(buf), fp);
             if (strstr(buf, "%%[") == buf) {
                 chomp(buf);
-                strlcpy(nick, buf + 3, sizeof(nick));
-                strlcpy(old_nick, nick, sizeof(old_nick));
+                STRLCPY(nick, buf + 3);
+                STRLCPY(old_nick, nick);
                 prints(" 暱稱: %s小天使\n", nick);
             }
         }
@@ -956,8 +955,8 @@ TalkToAngel(){
 
     {
 	char xnick[IDLEN+1], prompt[IDLEN*2];
-	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
-	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
+	SNPRINTF(xnick, "%s小天使", _myangel_nick);
+	SNPRINTF(prompt, "問%s小天使: ", _myangel_nick);
 	// if success, record uent.
 	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent)) {
 	    lastuent = uent;

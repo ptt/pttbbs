@@ -22,7 +22,7 @@ get_sum_records(const char *fpath, int size)
     if ((fp = fopen(fpath, "r"))==NULL)
 	return -1;
 
-    strlcpy(buf, fpath, sizeof(buf));
+    STRLCPY(buf, fpath);
     p = strrchr(buf, '/');
     assert(p);
     p++;
@@ -144,9 +144,9 @@ typedef struct nol_t {
 static void
 nolfilename(nol_t * n, const char *fpath)
 {
-    snprintf(n->newfn, sizeof(n->newfn), "%s.new", fpath);
-    snprintf(n->oldfn, sizeof(n->oldfn), "%s.old", fpath);
-    snprintf(n->lockfn, sizeof(n->lockfn), "%s.lock", fpath);
+    SNPRINTF(n->newfn, "%s.new", fpath);
+    SNPRINTF(n->oldfn, "%s.old", fpath);
+    SNPRINTF(n->lockfn, "%s.lock", fpath);
 }
 
 #ifdef SAFE_ARTICLE_DELETE
@@ -155,7 +155,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
     int     fd, i;
     fileheader_t    fhdr;
     char            fullpath[STRLEN], *t;
-    strlcpy(fullpath, fpath, sizeof(fullpath));
+    STRLCPY(fullpath, fpath);
     t = strrchr(fullpath, '/');
     assert(t);
     t++;
@@ -205,7 +205,7 @@ delete_range(const char *fpath, int id1, int id2)
 	return -1;
     }
     count = 1;
-    strlcpy(fullpath, fpath, sizeof(fullpath));
+    STRLCPY(fullpath, fpath);
     t = strrchr(fullpath, '/');
     assert(t);
     t++;
@@ -252,8 +252,7 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 {
     if (newtitle && *newtitle)
     {
-	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s", newtitle);
+	SNPRINTF(fhdr->title, "%s", newtitle);
     }
     else if (fhdr->filemode & FILE_ANONYMOUS ||
 	!fhdr->owner[0] ||
@@ -261,22 +260,19 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
     {
 	// not putting owner because we can't know
 	// if it is deleted by BM or owner.
-	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s", STR_SAFEDEL_TITLE);
+	SNPRINTF(fhdr->title, "%s", STR_SAFEDEL_TITLE);
     }
     else if ( strcmp(fhdr->owner, cuser.userid) == 0 )
     {
 	// i'm the one to delete it
-	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
+	SNPRINTF(fhdr->title, "%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
     }
     else // deleted by BM, system, SYSOP, or other services...
 	// maybe not revealing the names would be better.
     {
-	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s <%s>", STR_SAFEDEL_TITLE, fhdr->owner);
+	SNPRINTF(fhdr->title, "%s <%s>", STR_SAFEDEL_TITLE, fhdr->owner);
     }
-    // snprintf(fhdr->title, sizeof(fhdr->title), "%s", STR_SAFEDEL_TITLE);
+    // SNPRINTF(fhdr->title, "%s", STR_SAFEDEL_TITLE);
 #ifdef FN_SAFEDEL_PREFIX_LEN
     strncpy(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
 #else
@@ -303,7 +299,7 @@ safe_article_delete_range(const char *direct, int from, int to)
     int     fd;
     char    fn[128], *ptr;
 
-    strlcpy(fn, direct, sizeof(fn));
+    STRLCPY(fn, direct);
     if( (ptr = rindex(fn, '/')) == NULL )
 	return -1;
 
@@ -389,10 +385,10 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
                   cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
-        strlcpy(backup.owner, fh->owner, sizeof(backup.owner));
-        strlcpy(backup.date, fh->date, sizeof(backup.date));
-        strlcpy(backup.title, fh->title, sizeof(backup.title));
-        strlcpy(backup.filename, fh->filename, sizeof(backup.filename));
+        STRLCPY(backup.owner, fh->owner);
+        STRLCPY(backup.date, fh->date);
+        STRLCPY(backup.title, fh->title);
+        STRLCPY(backup.filename, fh->filename);
 
         if (backup_direct != direct &&
             strcmp(backup_direct, direct) != 0) {
@@ -400,13 +396,13 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
             char *slash = NULL;
             char bakpath[PATHLEN];
 
-            strlcpy(bakpath, backup_direct, sizeof(bakpath));
+            STRLCPY(bakpath, backup_direct);
             slash = strrchr(bakpath, '/');
             if (slash)
                 *slash = 0;
             if (stampfile_u(bakpath, &backup) == 0 &&
                 Rename(fpath, bakpath) == 0) {
-                strlcpy(fpath, bakpath, sizeof(fpath));
+                STRLCPY(fpath, bakpath);
             } else {
                 backup_direct = NULL;
                 backup_failed = 1;
@@ -488,10 +484,9 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 
     } while (Mkdir(fpath) == -1);
 
-    strlcpy(fh->filename, ip, sizeof(fh->filename));
+    STRLCPY(fh->filename, ip);
     localtime4_r(&dtime, &ptime);
-    snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
 
     return 0;
 }

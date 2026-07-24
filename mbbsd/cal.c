@@ -161,12 +161,12 @@ p_from(void)
     if (vans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
 
-    strlcpy(tmp_from, currutmp->from, sizeof(tmp_from));
+    STRLCPY(tmp_from, currutmp->from);
     if (getdata(b_lines - 1, 0, "請輸入新故鄉:",
 		tmp_from, sizeof(tmp_from), DOECHO) &&
 	strcmp(tmp_from, currutmp->from) != 0)
     {
-	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
+	STRLCPY(currutmp->from, tmp_from);
     }
     return 0;
 }
@@ -202,9 +202,8 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
     fclose(fp);
 
     // colorize topic to make sure this is issued by system.
-    snprintf(fhdr.title, sizeof(fhdr.title),
-	    ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
-    strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
+    SNPRINTF(fhdr.title, ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
+    STRLCPY(fhdr.owner, from);
     sethomedir(dirent, to);
     append_record(dirent, &fhdr, sizeof(fhdr));
     return 0;

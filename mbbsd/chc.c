@@ -640,7 +640,7 @@ chc_ischeck(board_t board, int turn)
 static void
 chc_init_user(const userinfo_t *uinfo, ChessUser *user)
 {
-    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    STRLCPY(user->userid, uinfo->userid);
     user->win    = uinfo->chc_win;
     user->lose   = uinfo->chc_lose;
     user->tie    = uinfo->chc_tie;
@@ -653,7 +653,7 @@ chc_init_user(const userinfo_t *uinfo, ChessUser *user)
 static void
 chc_init_user_userec(const userec_t *urec, ChessUser *user)
 {
-    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    STRLCPY(user->userid, urec->userid);
     user->win    = urec->chc_win;
     user->lose   = urec->chc_lose;
     user->tie    = urec->chc_tie;
@@ -667,8 +667,7 @@ static int
 chc_prepare_play(ChessInfo* info)
 {
     if (chc_ischeck((board_p) info->board, info->turn)) {
-	strlcpy(info->warnmsg, ANSI_COLOR(1;31) "將軍!" ANSI_RESET,
-		sizeof(info->warnmsg));
+	STRLCPY(info->warnmsg, ANSI_COLOR(1;31) "將軍!" ANSI_RESET);
 	bell();
     } else
 	info->warnmsg[0] = 0;
@@ -737,9 +736,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    return 1;
 	} else {
 	    /* 王見王 */
-	    strlcpy(info->warnmsg,
-		    ANSI_COLOR(1;33) "不可以王見王" ANSI_RESET,
-		    sizeof(info->warnmsg));
+	    STRLCPY(info->warnmsg, ANSI_COLOR(1;33) "不可以王見王" ANSI_RESET);
 	    bell();
 	    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	    return 0;

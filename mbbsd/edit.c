@@ -450,8 +450,7 @@ edit_msg(void)
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
 
-    snprintf(buf, sizeof(buf),
-	    " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
+    SNPRINTF(buf, " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
 	    "║%s│%c%c%c%c║%3d:%3d",
 	    curr_buf->insert_mode ? "插入" : "取代",
 	    curr_buf->ansimode ? 'A' : 'a',
@@ -1663,7 +1662,7 @@ write_header(FILE * fp,  const char *mytitle)
 	}               postlog;
 
 	memset(&postlog, 0, sizeof(postlog));
-	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
+	STRLCPY(postlog.author, cuser.userid);
 	if (curr_buf)
 	    curr_buf->ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
@@ -1700,9 +1699,9 @@ write_header(FILE * fp,  const char *mytitle)
 
                 if (!*real_name) {
                     if (defanony)
-                        strlcpy(real_name, "Anonymous", sizeof(real_name));
+                        STRLCPY(real_name, "Anonymous");
                     else
-                        strlcpy(real_name, "r", sizeof(real_name));
+                        STRLCPY(real_name, "r");
                 }
 
                 if (strcmp("r", real_name) == 0)
@@ -1721,19 +1720,18 @@ write_header(FILE * fp,  const char *mytitle)
             } while (1);
 
             if (use_userid) {
-                strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
+                STRLCPY(postlog.author, cuser.userid);
             } else {
-                snprintf(postlog.author, sizeof(postlog.author),
-                         "%s.", real_name);
+                SNPRINTF(postlog.author, "%s.", real_name);
                 nickname = "猜猜我是誰 ? ^o^";
                 if (curr_buf)
                     curr_buf->ifuseanony = 1;
             }
 	}
 #endif
-	strlcpy(postlog.board, currboard, sizeof(postlog.board));
+	STRLCPY(postlog.board, currboard);
         ptr = subject(ptr);
-	strlcpy(postlog.title, ptr, sizeof(postlog.title));
+	STRLCPY(postlog.title, ptr);
 	postlog.date = now;
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
@@ -1791,7 +1789,7 @@ addforwardsignature(FILE *fp, const char *host) {
     char temp[STRLEN];
 
     if (!host && from_cc[0]) {
-	snprintf(temp, sizeof(temp), "%s %s", FROMHOST, from_cc);
+	SNPRINTF(temp, "%s %s", FROMHOST, from_cc);
         host = temp;
     } else if (!host) {
         host = FROMHOST;
@@ -1808,7 +1806,7 @@ addsimplesignature(FILE *fp, const char *host) {
     char temp[STRLEN];
 
     if (!host && from_cc[0]) {
-	snprintf(temp, sizeof(temp), "%s (%s)", FROMHOST, from_cc);
+	SNPRINTF(temp, "%s (%s)", FROMHOST, from_cc);
         host = temp;
     } else if (!host) {
         host = FROMHOST;
@@ -2014,7 +2012,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 	    return KEEP_EDITING;
 	move(3, 0);
 	prints("舊標題：%s", mytitle);
-	strlcpy(ans, mytitle, sizeof(ans));
+	STRLCPY(ans, mytitle);
 	if (getdata_buf(4, 0, "新標題：", ans, sizeof(ans), DOECHO))
 	    strlcpy(mytitle, ans, STRLEN);
 	return KEEP_EDITING;

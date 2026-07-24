@@ -66,7 +66,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     } while (1);
 
     if (i < (int)ARRAY_SIZE(badpost_reason)) {
-        snprintf(reason, sizeof(reason), "%s", badpost_reason[i]);
+        SNPRINTF(reason, "%s", badpost_reason[i]);
     } else if (i == ARRAY_SIZE(badpost_reason)) {
         while (!getdata(b_lines, 0, "請輸入原因", reason, 50, DOECHO)) {
             // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
@@ -121,8 +121,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	    stampfile(rptpath, &report_fh);
 
 	    strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
-	    snprintf(report_fh.title, sizeof(report_fh.title),
-		    "%s 板 %s 板主退回 %s %s",
+	    SNPRINTF(report_fh.title, "%s 板 %s 板主退回 %s %s",
 		    currboard, cuser.userid, userid, comment ? "推文" : "文章");
 	    Copy(newpath, rptpath);
 	    fp = fopen(rptpath, "at");
@@ -171,7 +170,7 @@ reassign_badpost(const char *userid) {
     }
     orig_badpost = u.badpost;
     prints("\n使用者 %s 的退文數目前為: %d\n", userid, u.badpost);
-    snprintf(buf, sizeof(buf), "%d", u.badpost);
+    SNPRINTF(buf, "%d", u.badpost);
     if (!getdata_str(5, 0, "調整退文數目為: ", buf, sizeof(buf), DOECHO, buf) ||
         atoi(buf) == u.badpost) {
         vmsg("退文數目不變，未變動。");
@@ -199,14 +198,12 @@ reassign_badpost(const char *userid) {
     }
 
     // GOGOGO
-    snprintf(msg, sizeof(msg),
-             "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
+    SNPRINTF(msg, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
              "%s" ANSI_RESET "的退文從" ANSI_COLOR(1;35) "%d" ANSI_RESET
              "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
              "   " ANSI_COLOR(1;37) "修改理由是：%s" ANSI_RESET,
              cuser.userid, u.userid, orig_badpost, u.badpost, reason);
-    snprintf(title, sizeof(title),
-             "[安全報告] 站長%s修改%s退文報告", cuser.userid, u.userid);
+    SNPRINTF(title, "[安全報告] 站長%s修改%s退文報告", cuser.userid, u.userid);
     post_msg(BN_SECURITY, title, msg, "[系統安全局]");
     mail_log2id_text(u.userid, "[系統通知] 退文變更", msg,
                      "[系統安全局]", NA);

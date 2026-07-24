@@ -225,7 +225,7 @@ show_chicken_stat(const chicken_t * thechicken, int age)
            "", ptime.tm_year + 1900, ptime.tm_mon + 1, ptime.tm_mday,
 	   cage[age > 16 ? 16 : age], age);
 
-    snprintf(hp_buf, sizeof(hp_buf), "%d / %d", thechicken->hp,
+    SNPRINTF(hp_buf, "%d / %d", thechicken->hp,
              thechicken->hp_max);
 
     prints( "砰:" ANSI_COLOR(33) " %-19s" ANSI_RESET
@@ -272,7 +272,7 @@ show_chicken_data(chicken_t * thechicken)
     move(1, 0);
 
     show_chicken_stat(thechicken, age);
-    snprintf(buf, sizeof(buf), CHICKEN_PIC "/%c%d", thechicken->type + 'a',
+    SNPRINTF(buf, CHICKEN_PIC "/%c%d", thechicken->type + 'a',
 	     age > 16 ? 16 : age);
     show_chicken_picture(buf);
     move(18, 0);
@@ -427,8 +427,7 @@ ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken GCC_U
     if (ch_buyitem_cs(money, item, mychicken))
         return;
 #endif
-    snprintf(prompt, sizeof(prompt),
-             "虫基 $%d " MONEYNAME "璶禦ぶ㎡: ", money);
+    SNPRINTF(prompt, "虫基 $%d " MONEYNAME "璶禦ぶ㎡: ", money);
 
     getdata_str(b_lines - 1, 0, prompt, buf, sizeof(buf), NUMECHO, "1");
     num = atoi(buf);
@@ -641,7 +640,7 @@ revive_chicken(chicken_t *thechicken, int admin)
     assert(thechicken);
     // check deadtype for what to do
 
-    strlcpy(thechicken->name, "[具ㄓ]", sizeof(thechicken->name));
+    STRLCPY(thechicken->name, "[具ㄓ]");
 
     c = thechicken->hp_max / 5 +1;
     if (c < 2)	    c = 2;
@@ -724,7 +723,7 @@ showdeath(int type)
     if (type <= DEADTYPE_NOTYET || type >= DEADTYPE_UNKNOWN)
         return 0;
 
-    snprintf(fn, sizeof(fn), CHICKEN_PIC "/%s", death_file_names[type - 1]);
+    SNPRINTF(fn, CHICKEN_PIC "/%s", death_file_names[type - 1]);
     more(fn, YEA);
     // "deadth" here is a typo, but let's take it (otherwise we need to also
     // change resource file name).
@@ -751,7 +750,7 @@ ch_changename(chicken_t *mychicken)
                 DOECHO, mychicken->name);
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
-	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
+	STRLCPY(mychicken->name, newname);
 	log_filef(CHICKENLOG, LOG_CREAT,
                 ANSI_COLOR(31) "%s" ANSI_RESET " р痥稲" ANSI_COLOR(33)
                 " %s" ANSI_COLOR(32) " %s "
@@ -929,7 +928,7 @@ chicken_toggle_death(const char *uid)
     else
     {
 	revive_chicken(mychicken, 1);
-	strlcpy(mychicken->name, "[]", sizeof(mychicken->name));
+	STRLCPY(mychicken->name, "[]");
 	vmsgf("%s 胐確", uid);
     }
     free_live_chicken(mychicken);

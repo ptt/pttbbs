@@ -234,7 +234,7 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
     char            genbuf[200];
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
-	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %s %d %d %d",
+	SNPRINTF(genbuf, "#%d %-12s %s %d %d %d",
 		 uid, urec->userid, Cdatelite(&(urec->lastlogin)),
 		 urec->numlogindays, urec->numposts, val);
 
@@ -267,7 +267,7 @@ static void email_regcode(const char *regcode, const char *email)
      * And please keep BBSENAME short or it may be truncated
      * by evil mail servers.
      */
-    snprintf(buf, sizeof(buf), " " BBSENAME " - [ %s ]", regcode);
+    SNPRINTF(buf, " " BBSENAME " - [ %s ]", regcode);
 
     bsmtp("etc/registermail", buf, email, "non-exist");
 }
@@ -289,8 +289,7 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
     move(line, 0);
     prints("  原先設定：%-30.30s", buf);
     if (info) prints(" (%s)", info);
-    snprintf(prompt, sizeof(prompt),
-	    ANSI_COLOR(1) ">>%s" ANSI_RESET "：",
+    SNPRINTF(prompt, ANSI_COLOR(1) ">>%s" ANSI_RESET "：",
 	    desc);
     if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strlcpy(buf, genbuf, len);
@@ -356,7 +355,7 @@ setupnewuser(const userec_t *user)
     }
 
     setuserid(uid, user->userid);
-    snprintf(genbuf, sizeof(genbuf), "uid %d", uid);
+    SNPRINTF(genbuf, "uid %d", uid);
     log_usies("APPLY", genbuf);
 
     SHM->money[uid - 1] = user->money;
@@ -601,7 +600,7 @@ register_email_verification(email_input_t *ein, bool skip_same_email_check)
     int err;
     int tries = 0;
     char orig[EMAILSZ];
-    strlcpy(orig, email, sizeof(orig));
+    STRLCPY(orig, email);
     do {
 	if (++tries > 10)
 	    return REGISTER_ERR_CANCEL;
@@ -671,8 +670,7 @@ register_email_verification(email_input_t *ein, bool skip_same_email_check)
 	    email_regcode(regcode, email);
 	    send_code = false;
 	    num_sent++;
-	    snprintf(buf, sizeof(buf),
-		    ANSI_COLOR(1;31) " (第 %d 次)" ANSI_RESET, num_sent);
+	    SNPRINTF(buf, ANSI_COLOR(1;31) " (第 %d 次)" ANSI_RESET, num_sent);
 	}
 
 	move(15, 0); clrtobot();
@@ -737,7 +735,7 @@ new_register(void)
     newuser.pager = PAGER_ON;
     newuser.numlogindays = 1;
     newuser.ua_version = ua_version;
-    strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
+    STRLCPY(newuser.lasthost, fromhost);
 
 #ifdef DBCSAWARE
     newuser.uflag |= UF_DBCS_AWARE | UF_DBCS_DROP_REPEAT;
@@ -971,8 +969,7 @@ new_register(void)
 #ifdef USE_REMOVEBM_ON_NEWREG
     {
         char buf[PATHLEN];
-        snprintf(buf, sizeof(buf),
-                 BBSHOME "/bin/removebm '%s' >>"
+        SNPRINTF(buf, BBSHOME "/bin/removebm '%s' >>"
                  BBSHOME "/log/removebm.log 2>&1",
                  newuser.userid);
         system(buf);
@@ -984,7 +981,7 @@ new_register(void)
 	if (register_check_and_update_emaildb(&newuser, newuser.email) ==
 		REGISTER_OK) {
 	    char justify[sizeof(newuser.justify)];
-	    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
+	    SNPRINTF(justify, "<E-Mail>: %s", Cdate(&now));
 	    pwcuRegCompleteJustify(justify);
 	} else {
 	    vmsg("Email 認證設定失敗, 請稍後自行再次填寫註冊單");
@@ -1249,7 +1246,7 @@ check_register(void)
 
 		    // mail to user
 		    setuserfile(quote_file, FN_REJECT_NOTIFY);
-		    strlcpy(quote_user, "[退註通知]", sizeof(quote_user));
+		    STRLCPY(quote_user, "[退註通知]");
 		    clear();
 		    do_innersend(u.userid, NULL, "[註冊問題] 退註相關問題", NULL);
 		    abort = 1;
@@ -1475,7 +1472,7 @@ u_email_verification()
 
     // Update passwd.
     char justify[sizeof(cuser.justify)];
-    snprintf(justify, sizeof(justify), "<E-Mail>: %s", Cdate(&now));
+    SNPRINTF(justify, "<E-Mail>: %s", Cdate(&now));
     pwcuRegCompleteEmailJustify(email, justify);
 
     register_mail_complete_and_exit();
@@ -1541,9 +1538,9 @@ u_manual_verification(void)
 	return;
     }
 
-    strlcpy(rname, cuser.realname, sizeof(rname));
-    strlcpy(addr,  cuser.address,  sizeof(addr));
-    strlcpy(career,cuser.career,   sizeof(career));
+    STRLCPY(rname, cuser.realname);
+    STRLCPY(addr, cuser.address);
+    STRLCPY(career, cuser.career);
 
     // show REGNOTES_ROOT front page
     if (dashs(REGNOTES_ROOT "front") > 0)
@@ -1717,7 +1714,7 @@ static int notify_email_change(const char *userid, const char *email)
     char subject[128];
     int ret;
 
-    snprintf(subject, sizeof(subject), " %s - %s (%s) - 聯絡信箱已變更",
+    SNPRINTF(subject, " %s - %s (%s) - 聯絡信箱已變更",
 	     BBSNAME, userid, fromhost);
 
     ret = bsmtp("etc/emailchanged", subject, email, "non-exist");
@@ -1885,8 +1882,7 @@ regform_log2board(const RegformEntry *pre, char accepted,
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
-    snprintf(title, sizeof(title),
-	    "[審核] %s: %s (%s: %s)",
+    SNPRINTF(title, "[審核] %s: %s (%s: %s)",
 	    accepted ? "○通過":"╳退回", pre->u.userid,
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);
@@ -1897,12 +1893,12 @@ regform_log2board(const RegformEntry *pre, char accepted,
 
 
     // construct msg
-    strlcpy(msg, title2 ? title2 : title, sizeof(msg));
-    strlcat(msg, "\n", sizeof(msg));
+    STRLCPY(msg, title2 ? title2 : title);
+    STRLCAT(msg, "\n");
     if (!accepted) {
 	regform_concat_reasons(reason, msg, sizeof(msg));
     }
-    strlcat(msg, "\n", sizeof(msg));
+    STRLCAT(msg, "\n");
     concat_regform_entry_localized(pre, msg, sizeof(msg));
 
     post_msg(BN_ID_RECORD, title, msg, "[註冊系統]");
@@ -1917,8 +1913,7 @@ regform_log2file(const RegformEntry *pre, char accepted,
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
-    snprintf(msg, sizeof(msg),
-	    "%s\n%s: %s (%s: %s)\n",
+    SNPRINTF(msg, "%s\n%s: %s (%s: %s)\n",
             Cdate(&now),
 	    accepted ? "○通過":"╳退回", pre->u.userid,
 	    priority ? "指定審核" : "審核者",
@@ -1928,7 +1923,7 @@ regform_log2file(const RegformEntry *pre, char accepted,
     if (!accepted) {
 	regform_concat_reasons(reason, msg, sizeof(msg));
     }
-    strlcat(msg, "\n", sizeof(msg));
+    STRLCAT(msg, "\n");
     concat_regform_entry_localized(pre, msg, sizeof(msg));
     log_file(FN_ID_RECORD, LOG_CREAT, msg);
 #else
@@ -1951,9 +1946,9 @@ regform_accept(const char *userid, const char *justify)
 	return; // invalid user
 
     muser.userlevel |= (PERM_LOGINOK | PERM_POST);
-    strlcpy(muser.justify, justify, sizeof(muser.justify));
+    STRLCPY(muser.justify, justify);
     // manual accept sets email to 'x'
-    strlcpy(muser.email, "x", sizeof(muser.email));
+    STRLCPY(muser.email, "x");
 
     // handle files
     sethomefile(buf, muser.userid, FN_REJECT_NOTIFY);
@@ -2280,8 +2275,7 @@ regfrm_accept(RegformEntry *pre, int priority)
     sethomefile(fn, pre->u.userid, FN_REGFORM);
 
     // build justify string
-    snprintf(justify, sizeof(justify),
-	    "[%s] %s", cuser.userid, Cdate(&now));
+    SNPRINTF(justify, "[%s] %s", cuser.userid, Cdate(&now));
 
     // call handler
     regform_accept(pre->u.userid, justify);
@@ -2291,7 +2285,7 @@ regfrm_accept(RegformEntry *pre, int priority)
     append_regform(pre, fnlog, "");
 
     // log to global history
-    snprintf(buf, sizeof(buf), "Approved: %s -> %s\n",
+    SNPRINTF(buf, "Approved: %s -> %s\n",
 	    cuser.userid, pre->u.userid);
     append_regform(pre, FN_REGISTER_LOG, buf);
 
@@ -2323,7 +2317,7 @@ regfrm_reject(RegformEntry *pre, const char *reason, int priority)
     regform_reject(pre->u.userid, reason, pre);
 
     // log to global history
-    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\n",
+    SNPRINTF(buf, "Rejected: %s -> %s [%s]\n",
 	    cuser.userid, pre->u.userid, reason);
     append_regform(pre, FN_REGISTER_LOG, buf);
 
@@ -2817,7 +2811,7 @@ regform2_validate_page(int dryrun)
 	    {
 		char justify[REGLEN+1];
 		if (ans[i] == 'y')
-		    snprintf(justify, sizeof(justify), // build justify string
+		    SNPRINTF(justify, // build justify string
 			    "%s %s", cuser.userid, Cdate(&now));
 
 		prints("%2d. %-12s - %c %s\n", i+1, forms[i].u.userid, ans[i],

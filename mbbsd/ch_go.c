@@ -447,7 +447,7 @@ go_init_tag(go_tag_t* tag)
 static void
 go_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
-    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    STRLCPY(user->userid, uinfo->userid);
     user->win  = uinfo->go_win;
     user->lose = uinfo->go_lose;
     user->tie  = uinfo->go_tie;
@@ -456,7 +456,7 @@ go_init_user(const userinfo_t* uinfo, ChessUser* user)
 static void
 go_init_user_userec(const userec_t* urec, ChessUser* user)
 {
-    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    STRLCPY(user->userid, urec->userid);
     user->win  = urec->go_win;
     user->lose = urec->go_lose;
     user->tie  = urec->go_tie;
@@ -546,8 +546,7 @@ static int
 go_prepare_play(ChessInfo* info)
 {
     if (((go_tag_t*) info->tag)->game_end) {
-	strlcpy(info->warnmsg, "請清除死子，以便計算勝負",
-		sizeof(info->warnmsg));
+	STRLCPY(info->warnmsg, "請清除死子，以便計算勝負");
 	if (info->last_movestr[0] != ' ')
 	    strcpy(info->last_movestr, "        ");
     }
@@ -618,8 +617,7 @@ go_process_key(ChessInfo* info, int key, ChessGameResult* result)
 	    go_sethand(info->board, n);
 	    ((go_tag_t*)info->tag)->feed_back = 0.0;
 
-	    snprintf(info->last_movestr, sizeof(info->last_movestr),
-		    ANSI_COLOR(1) "授 %d 子" ANSI_RESET, n);
+	    SNPRINTF(info->last_movestr, ANSI_COLOR(1) "授 %d 子" ANSI_RESET, n);
 	    ChessRedraw(info);
 	    return 1;
 	} else
@@ -711,8 +709,7 @@ go_prepare_step(ChessInfo* info, const go_step_t* step)
 	    tag->need_redraw =
 		go_examboard(tag->backup_board, !step->color, info);
 	} else {
-	    snprintf(info->last_movestr, sizeof(info->last_movestr),
-		    ANSI_COLOR(1) "授 %d 子" ANSI_RESET, step->loc.r);
+	    SNPRINTF(info->last_movestr, ANSI_COLOR(1) "授 %d 子" ANSI_RESET, step->loc.r);
 	    tag->need_redraw = 1;
 	    ((go_tag_t*)info->tag)->feed_back = 0.0;
 	}

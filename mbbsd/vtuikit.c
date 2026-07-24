@@ -1069,7 +1069,7 @@ InputHistoryAdd(const char *s)
     }
 
     // now append s.
-    strlcpy(ih.buf[ih.iappend], s, sizeof(ih.buf[ih.iappend]));
+    STRLCPY(ih.buf[ih.iappend], s);
     ih.iappend ++;
     ih.iappend %= IH_MAX_ENTRIES;
     ih.icurr = ih.iappend;

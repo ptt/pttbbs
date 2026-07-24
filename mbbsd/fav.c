@@ -613,7 +613,7 @@ int fav_save(void)
 	return 0;
 
     setuserfile(buf2, FAV);
-    snprintf(buf, sizeof(buf), "%s.tmp.%x",buf2, getpid());
+    SNPRINTF(buf, "%s.tmp.%x",buf2, getpid());
     fwp = fopen(buf, "w");
     if(fwp == NULL)
 	return -1;

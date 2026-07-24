@@ -421,7 +421,7 @@ bl_getstr(lua_State* L)
      * this part now done in getdata_str
     if (pmsg && *pmsg)
     {
-        strlcpy(buf, pmsg, sizeof(buf));
+        STRLCPY(buf, pmsg);
     }
     */
 
@@ -1334,8 +1334,7 @@ bbslua_logo(lua_State *L)
         move(y-1, 0);
         outs(ANSI_COLOR(0;1;37;41));
         fullmsg("");
-        snprintf(msg, sizeof(msg),
-                " ▲ 此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
+        SNPRINTF(msg, " ▲ 此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
                 tocinterface);
         fullmsg(msg);
         fullmsg("   若執行出現錯誤，建議您重新登入 BBS 後再重試");
@@ -1370,7 +1369,7 @@ bbslua_logo(lua_State *L)
                 continue;
             }
             move(++y, 0);
-            snprintf(msg, sizeof(msg), "  %s: %-.*s",
+            SNPRINTF(msg, "  %s: %-.*s",
                     bbsluaTocPrompts[i], STRLEN-12, lua_tostring(L, -1));
             msg[sizeof(msg)-1] = 0;
             fullmsg(msg);
@@ -1382,8 +1381,7 @@ bbslua_logo(lua_State *L)
     // print caption
     move(by-2, 0); outc('\n');
     outs(ANSI_COLOR(0;1;37;44));
-    snprintf(msg, sizeof(msg),
-            " ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
+    SNPRINTF(msg, " ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
             (double)BBSLUA_INTERFACE_VER);
     fullmsg(msg);
 
@@ -1585,7 +1583,7 @@ void bbslua_loadLatest(lua_State *L,
             if (*lastref == '(') lastref ++;
 
             if (!*lastref) break;
-            strlcpy(bn, lastref, sizeof(bn));
+            STRLCPY(bn, lastref);
             // truncate board name
             // (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
             while (*p &&
@@ -1694,7 +1692,7 @@ bbslua(const char *fpath)
         return 0;
     lua_atpanic(L, &panic);
 
-    strlcpy(bfpath, fpath, sizeof(bfpath));
+    STRLCPY(bfpath, fpath);
 
     // load file
     bbslua_loadLatest(L, &bs, &ps, &pe, &pc, &sz, &lineshift, bfpath, &fpath);

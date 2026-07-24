@@ -21,7 +21,7 @@ load_ticket_record(const char *direct, bignum_t ticket[])
     int i;
     bignum_t total = 0;
 
-    snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
+    SNPRINTF(buf, "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
 	return 0;
     for (i = 0; i < MAX_ITEM && fscanf(fp, "%lld ", &ticket[i]) == 1; i++)
@@ -43,21 +43,20 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 
     clear();
     if (bh) {
-	snprintf(genbuf, sizeof(genbuf), "%s 樂透", bh->brdname);
+	SNPRINTF(genbuf, "%s 樂透", bh->brdname);
 	if (bh->endgamble && now < bh->endgamble &&
 	    bh->endgamble - now < 3600) {
-	    snprintf(t, sizeof(t),
-		     "封盤倒數 %d 秒", (int)(bh->endgamble - now));
+	    SNPRINTF(t, "封盤倒數 %d 秒", (int)(bh->endgamble - now));
 	    showtitle(genbuf, t);
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
 	showtitle(BBSMNAME "彩券", BBSNAME);
     move(2, 0);
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
+    SNPRINTF(genbuf, "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
 	outs("\n目前並沒有舉辦樂透\n");
-	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_OUTCOME, direct);
+	SNPRINTF(genbuf, "%s/" FN_TICKET_OUTCOME, direct);
 	more(genbuf, NA);
 	return 0;
     }
@@ -84,9 +83,9 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	   bh ? ", 其中 0.05% 分給開獎板主, 最多 500" : "",
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
 
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
+    SNPRINTF(genbuf, "%s/" FN_TICKET, direct);
     if (!dashf(genbuf)) {
-	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_END, direct);
+	SNPRINTF(genbuf, "%s/" FN_TICKET_END, direct);
 	end = 1;
     }
     show_file(genbuf, 8, -1, SHOWFILE_ALLOW_ALL);
@@ -132,14 +131,14 @@ append_ticket_record(const char *direct, int ch, int n, int count)
     int i;
     char genbuf[256];
 
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
+    SNPRINTF(genbuf, "%s/" FN_TICKET, direct);
     if (!dashf(genbuf))
 	return -1;
 
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_USER, direct);
+    SNPRINTF(genbuf, "%s/" FN_TICKET_USER, direct);
     log_filef(genbuf, LOG_CREAT, "%s %d %d\n", cuser.userid, ch, n);
 
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_RECORD, direct);
+    SNPRINTF(genbuf, "%s/" FN_TICKET_RECORD, direct);
 
     if (!dashf(genbuf)) {
 	creat(genbuf, S_IRUSR | S_IWUSR);
@@ -319,7 +318,7 @@ openticket(int bid)
         getdata(21, 0, "輸入項目名稱以確認你的意識清醒(開錯無法回溯): ",
                 buf, MAX_ITEM_INPUT_LEN, DOECHO);
         if (strcasecmp(buf, betname_sel) == 0) {
-            snprintf(buf, sizeof(buf), "%d", bet);
+            SNPRINTF(buf, "%d", bet);
         } else {
             getdata(21, 0, "項目名稱不合。要改輸入項目編號嗎[y/N]? ",
                     buf, 3, LCECHO);
@@ -454,14 +453,13 @@ openticket(int bid)
 		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5lld "
                             MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
-		snprintf(buf, sizeof(buf),
-			 "%s 樂透退費! $ %lld", bh->brdname, money * i);
+		SNPRINTF(buf, "%s 樂透退費! $ %lld", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
 		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld "
 			    MONEYNAME "\n",
 			    IDLEN, userid, i, betname[mybet], money * i);
-		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %lld",
+		SNPRINTF(buf, "%s 中獎咧! $ %lld",
                          bh->brdname, money * i);
 	    } else {
 		if (fp)
@@ -484,9 +482,9 @@ openticket(int bid)
     }
 
     if (bet != 98)
-	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透開獎", bh->brdname);
+	SNPRINTF(buf, TN_ANNOUNCE " %s 樂透開獎", bh->brdname);
     else
-	snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透取消", bh->brdname);
+	SNPRINTF(buf, TN_ANNOUNCE " %s 樂透取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[彩券]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
     post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
@@ -631,8 +629,7 @@ hold_gamble(void)
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
     move(6, 0);
-    snprintf(genbuf, sizeof(genbuf),
-	     "\n請到 %s 板 按'f'參與樂透!\n\n"
+    SNPRINTF(genbuf, "\n請到 %s 板 按'f'參與樂透!\n\n"
 	     "一張 %d " MONEYNAME " (%s)\n%s%s\n",
 	     currboard,
 	     i, i < 100 ? "迷你級" : i < 500 ? "平民級" :
@@ -644,7 +641,7 @@ hold_gamble(void)
     outs("請依次輸入彩券名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");
     //outs(ANSI_COLOR(1;33) "注意輸入後無法修改！\n");
     for( i = 0 ; i < 8 ; ++i ){
-	snprintf(yn, sizeof(yn), " %d)", i + 1);
+	SNPRINTF(yn, " %d)", i + 1);
 	getdata(7 + i, 0, yn, genbuf, MAX_ITEM_INPUT_LEN, DOECHO);
 	if (!genbuf[0] && i > 1)
 	    break;
@@ -662,7 +659,7 @@ hold_gamble(void)
     if(!dashf(fn_ticket))
 	Rename(tmp, genbuf);
 
-    snprintf(genbuf, sizeof(genbuf), TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
+    SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
     /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */

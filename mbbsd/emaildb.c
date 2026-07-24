@@ -33,8 +33,8 @@ int emaildb_check_email(const char * userid, const char * email)
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_COUNT;
-    strlcpy(req.userid, userid, sizeof(req.userid));
-    strlcpy(req.email,  email,  sizeof(req.email));
+    STRLCPY(req.userid, userid);
+    STRLCPY(req.email, email);
 
     if (regmail_transact(&req, sizeof(req), &count, sizeof(count)) < 0)
         return -1;
@@ -50,8 +50,8 @@ int emaildb_update_email(const char * userid, const char * email)
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGMAILDB_REQ_SET;
-    strlcpy(req.userid, userid, sizeof(req.userid));
-    strlcpy(req.email,  email,  sizeof(req.email));
+    STRLCPY(req.userid, userid);
+    STRLCPY(req.email, email);
 
     if (regmail_transact(&req, sizeof(req), &result, sizeof(result)) < 0)
         return -1;
@@ -72,8 +72,8 @@ int regcheck_ambiguous_userid_exist(const char *userid)
     // initialize request
     req.cb = sizeof(req);
     req.operation = REGCHECK_REQ_AMBIGUOUS;
-    strlcpy(req.userid, userid, sizeof(req.userid));
-    strlcpy(req.email,  "ambiguous@check.non-exist",  sizeof(req.email));
+    STRLCPY(req.userid, userid);
+    STRLCPY(req.email, "ambiguous@check.non-exist");
 
     if (regmail_transact(&req, sizeof(req), &result, sizeof(result)) < 0)
         return -1;

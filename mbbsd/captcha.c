@@ -41,14 +41,13 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     coptSpace = coptFont = 0;
     while (optSpace[coptSpace]) coptSpace++;
     while (optFont[coptFont]) coptFont++;
-    snprintf(opts, sizeof(opts),
-	    "%s -f %s",
+    SNPRINTF(opts, "%s -f %s",
 	    optSpace[arc4random_uniform(coptSpace)],
 	    optFont [arc4random_uniform(coptFont) ]);
 
     // create file
     snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);
-    snprintf(cmd, sizeof(cmd), FIGLET_PATH
+    SNPRINTF(cmd, FIGLET_PATH
              " %s %s >%s 2>/dev/null || rm %s",
              opts, buf, fpath, fpath);
 
@@ -161,7 +160,7 @@ captcha_insert_remote(const char *handle, const char *verify)
 {
     int ret, code = 0;
     char uri[320];
-    snprintf(uri, sizeof(uri), "%s?secret=%s&handle=%s&verify=%s",
+    SNPRINTF(uri, "%s?secret=%s&handle=%s&verify=%s",
 	     CAPTCHA_INSERT_URI, CAPTCHA_INSERT_SECRET, handle, verify);
     THTTP t;
     thttp_init(&t);
@@ -203,7 +202,7 @@ remote_captcha()
     for (int i = 3; i > 0; i--) {
 	if (i < 3) {
 	    char buf[80];
-	    snprintf(buf, sizeof(buf), ANSI_COLOR(1;31)
+	    SNPRINTF(buf, ANSI_COLOR(1;31)
 		     "驗證碼錯誤, 您還有 %d 次機會." ANSI_RESET, i);
 	    move(6, 0);
 	    outs(buf);

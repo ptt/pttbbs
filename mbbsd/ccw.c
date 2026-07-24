@@ -499,9 +499,9 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
         {
             char subj[STRLEN];
             if (is_chat)
-                snprintf(subj, sizeof(subj), "會議記錄");
+                SNPRINTF(subj, "會議記錄");
             else
-                snprintf(subj, sizeof(subj), "對話記錄 (%s)", ctx->remote_id);
+                SNPRINTF(subj, "對話記錄 (%s)", ctx->remote_id);
 
             if (mail_log2id(cuser.userid, subj, fpath, "[備.忘.錄]", 0, 1) < 0)
                 vmsg("錯誤: 備忘錄儲存失敗。");
@@ -686,8 +686,8 @@ ccw_talk(int fd, int destuid)
 
     // get dest user id
     assert(getuserid(destuid));
-    strlcpy(remote_id, getuserid(destuid), sizeof(remote_id));
-    strlcpy(local_id,  cuser.userid, sizeof(local_id));
+    STRLCPY(remote_id, getuserid(destuid));
+    STRLCPY(local_id, cuser.userid);
     assert(ctx.remote_id[0]);
     assert(ctx.local_id[0]);
 
@@ -778,7 +778,7 @@ ccw_chat_send(CCW_CTX *ctx, const char *buf)
     int  len;
     char genbuf[200];
 
-    len = snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
+    len = SNPRINTF(genbuf, "%s\n", buf);
     assert(len < (int)sizeof(genbuf));
     if (len > (int)sizeof(genbuf))
         len = sizeof(genbuf);
@@ -1088,7 +1088,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local GCC_UNUSED)
         }
         while (*p)
         {
-            snprintf(msg, sizeof(msg), "  %-20s- %s", p[0], p[1]);
+            SNPRINTF(msg, "  %-20s- %s", p[0], p[1]);
             ccw_print_line(ctx, msg, CCW_LOCAL_MSG);
             p += 2;
         }
@@ -1104,8 +1104,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local GCC_UNUSED)
     {
         char genbuf[STRLEN];
         syncnow();
-        snprintf(genbuf, sizeof(genbuf),
-                "◆ " BBSNAME "標準時間: %s", Cdate(&now));
+        SNPRINTF(genbuf, "◆ " BBSNAME "標準時間: %s", Cdate(&now));
         ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
         return 1;
     }
@@ -1114,7 +1113,7 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local GCC_UNUSED)
         char genbuf[STRLEN];
         currutmp->pager ++;
         currutmp->pager %= PAGER_MODES;
-        snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器已設為: [%s]",
+        SNPRINTF(genbuf, "◆ 您的呼叫器已設為: [%s]",
                 str_pager_modes[currutmp->pager]);
         ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
         return 1;
@@ -1216,14 +1215,13 @@ ccw_chat(int fd)
             return 0;
 
         if(!chatid[0])
-            strlcpy(chatid, cuser.userid, sizeof(chatid));
+            STRLCPY(chatid, cuser.userid);
 
         // safe truncate
         DBCS_safe_trim(chatid);
 
         // login format: /! UserID ChatID password
-        snprintf(cmd, sizeof(cmd),
-                "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
+        SNPRINTF(cmd, "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
         ccw_chat_send(&ctx, cmd);
         if (recv(ctx.fd, cmd, 3, 0) != 3) {
             close(ctx.fd);
@@ -1248,7 +1246,7 @@ ccw_chat(int fd)
 
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
-    strlcpy(currutmp->chatid, chatid, sizeof(currutmp->chatid));
+    STRLCPY(currutmp->chatid, chatid);
 
     // generate log file
     setuserfile(fpath, "chat_XXXXXX");

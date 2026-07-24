@@ -402,13 +402,11 @@ ChessAnswerRequest(ChessInfo* info, const char* req_name)
     char buf[4];
     char msg[64];
 
-    snprintf(info->warnmsg, sizeof(info->warnmsg),
-	    ANSI_COLOR(1;31) "要求%s!" ANSI_RESET, req_name);
+    SNPRINTF(info->warnmsg, ANSI_COLOR(1;31) "要求%s!" ANSI_RESET, req_name);
     ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
     bell();
 
-    snprintf(msg, sizeof(msg),
-	    "對方要求%s，是否接受?(y/N)", req_name);
+    SNPRINTF(msg, "對方要求%s，是否接受?(y/N)", req_name);
     DO_WITHOUT_PEER(30,
     getdata(b_lines, 0, msg, buf, sizeof(buf), DOECHO),
     buf[0] = 'n');
@@ -575,9 +573,7 @@ ChessPlayFuncMy(ChessInfo* info)
 
 		    if (buf[0] == 'y' || buf[1] == 'Y') {
 			ChessMessageSend(info, CHESS_STEP_TIE);
-			strlcpy(info->warnmsg,
-				ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET,
-				sizeof(info->warnmsg));
+			STRLCPY(info->warnmsg, ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET);
 			ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 			bell();
 		    }
@@ -766,8 +762,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 
 	info->actions->prepare_play(info);
 	if (info->sock == -1)
-	    strlcpy(info->warnmsg, ANSI_COLOR(1;33) "棋局已結束" ANSI_RESET,
-		    sizeof(info->warnmsg));
+	    STRLCPY(info->warnmsg, ANSI_COLOR(1;33) "棋局已結束" ANSI_RESET);
 
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
@@ -956,8 +951,8 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 
     fp = fopen(fname, "w");
     if (fp != NULL) {
-	strlcpy(log_header.owner, "[棋譜機器人]", sizeof(log_header.owner));
-	snprintf(log_header.title, sizeof(log_header.title), "[棋譜] %s VS %s",
+	STRLCPY(log_header.owner, "[棋譜機器人]");
+	SNPRINTF(log_header.title, "[棋譜] %s VS %s",
 		info->user1.userid, info->user2.userid);
 
 	fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", log_header.owner, info->constants->log_board, log_header.title);
@@ -988,7 +983,7 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 	info->actions->genlog(info, fp, result);
 	fclose(fp);
 
-	snprintf(log_header.owner, sizeof(log_header.owner), "[%s]",
+	SNPRINTF(log_header.owner, "[%s]",
 		info->constants->chess_name);
 	if(info->myturn == 0)
 	    sprintf(log_header.title, "%s V.S. %s",
@@ -1131,7 +1126,7 @@ ChessPlay(ChessInfo* info)
 	game_result_str = "結束看譜";
 
     if (game_result_str) {
-	strlcpy(info->warnmsg, game_result_str, sizeof(info->warnmsg));
+	STRLCPY(info->warnmsg, game_result_str);
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
     }
 
@@ -1176,8 +1171,8 @@ ChessStartGame(char func_char, int sig, const char* title)
 	return -1;
     uin->turn = 1;
     currutmp->turn = 0;
-    strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
-    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+    STRLCPY(uin->mateid, currutmp->userid);
+    STRLCPY(currutmp->mateid, uin->userid);
 
     vs_hdr(title);
     buf[0] = 0;
@@ -1210,8 +1205,7 @@ ChessStartGame(char func_char, int sig, const char* title)
 	    } while (_current_time_limit->limit_time < 0 || _current_time_limit->limit_time > 30);
 	    _current_time_limit->limit_time *= 60; /* minute -> second */
 
-	    snprintf(display_buf, sizeof(display_buf),
-		    "請設定限步 (每 %d 分鐘需走幾步):",
+	    SNPRINTF(display_buf, "請設定限步 (每 %d 分鐘需走幾步):",
 		    _current_time_limit->limit_time / 60);
 	    do {
 		getdata_str(5, 0, display_buf, buf, 3, DOECHO, "10");
@@ -1259,7 +1253,7 @@ ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
     if (msgsock < 0)
 	return -1;
 
-    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+    STRLCPY(currutmp->mateid, uin->userid);
     play(msgsock, CHESS_MODE_WATCH);
     close(msgsock);
     return 0;
@@ -1325,24 +1319,24 @@ ChessInitUser(ChessInfo* info)
 
     switch (info->mode) {
 	case CHESS_MODE_PERSONAL:
-	    strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	    strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
+	    STRLCPY(userid[0], cuser.userid);
+	    STRLCPY(userid[1], cuser.userid);
 	    break;
 
 	case CHESS_MODE_WATCH:
 	    uinfo = search_ulist_userid(currutmp->mateid);
 	    if (uinfo) {
-		strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
-		strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+		STRLCPY(userid[0], uinfo->userid);
+		STRLCPY(userid[1], uinfo->mateid);
 	    } else {
-		strlcpy(userid[0], currutmp->mateid, sizeof(userid[0]));
+		STRLCPY(userid[0], currutmp->mateid);
 		userid[1][0] = 0;
 	    }
 	    break;
 
 	case CHESS_MODE_VERSUS:
-	    strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	    strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
+	    STRLCPY(userid[0], cuser.userid);
+	    STRLCPY(userid[1], currutmp->mateid);
 	    break;
 
 	case CHESS_MODE_REPLAY:
@@ -1654,7 +1648,7 @@ static const char*
 ChessTimeStr(int second)
 {
     static char buf[10];
-    snprintf(buf, sizeof(buf), "%d:%02d", second / 60, second % 60);
+    SNPRINTF(buf, "%d:%02d", second / 60, second % 60);
     return buf;
 }
 
