@@ -151,7 +151,7 @@ load_banip_list(const char *filename, FILE* err) {
     while (fgets(buf, sizeof(buf), fp)) {
         // To allow client printing message to screen directly,
         // always append \r.
-        strlcat(buf, "\r", sizeof(buf));
+        STRLCAT(buf, "\r");
         p = buf;
         while (*p && isascii(*p) && isspace(*p))
             p++;
@@ -178,10 +178,10 @@ load_banip_list(const char *filename, FILE* err) {
                         fprintf(err, "(banip) WARN: Text before IP: %s", buf);
                     continue;
                 }
-                strlcpy(msg, buf, sizeof(msg));
+                STRLCPY(msg, buf);
             }
             else
-                strlcat(msg, buf, sizeof(msg));
+                STRLCAT(msg, buf);
             was_ip = 0;
             continue;
         }
@@ -255,7 +255,7 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     // invalid cache, rebuild it.
     blist = load_banip_list(basefile, NULL);
     list = (IPv4List*)blist;
-    snprintf(tmpfn, sizeof(tmpfn), "%s.%d", cachefile, getpid());
+    SNPRINTF(tmpfn, "%s.%d", cachefile, getpid());
     fp = fopen(tmpfn, "wb");
     if (fp) {
         fwrite(list->ar, sizeof(BanRecord), list->sz, fp);

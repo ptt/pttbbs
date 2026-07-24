@@ -1,6 +1,8 @@
 #ifndef LIBBBSUTIL_H_
 #define LIBBBSUTIL_H_
 
+#include "common.h"
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/uio.h>

@@ -73,9 +73,9 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
     if (type == STAMP_FILE)
 	close(res);
 
-    strlcpy(fh->filename, ip, sizeof(fh->filename));
+    STRLCPY(fh->filename, ip);
     localtime4_r(&dtime, &ptime);
-    snprintf(fh->date, sizeof(fh->date), "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
 
     return 0;
 }

@@ -29,7 +29,7 @@ ipstr2int(const char *ip)
     char buf[32];
     char *nil, *p;
 
-    strlcpy(buf, ip, sizeof(buf));
+    STRLCPY(buf, ip);
     p = buf;
     for (i = 0; i < 4; i++) {
 	nil = strchr(p, '.');
@@ -65,7 +65,7 @@ int tobindex(const char *addr, int qlen, int (*_setsock)(int), int do_listen)
 	}
 
 	servaddr.sun_family = AF_UNIX;
-	strlcpy(servaddr.sun_path, addr, sizeof(servaddr.sun_path));
+	STRLCPY(servaddr.sun_path, addr);
 
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 		   (void *)&v_on, sizeof(v_on));
@@ -90,7 +90,7 @@ int tobindex(const char *addr, int qlen, int (*_setsock)(int), int do_listen)
 	    exit(1);
 	}
 
-	strlcpy(buf, addr, sizeof(buf));
+	STRLCPY(buf, addr);
 	if ( (port = strchr(buf, ':')) != NULL)
 	    *port++ = '\0';
 
@@ -160,7 +160,7 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 #endif
 
 	serv_name.sun_family = AF_UNIX;
-	strlcpy(serv_name.sun_path, addr, sizeof(serv_name.sun_path));
+	STRLCPY(serv_name.sun_path, addr);
 
 	if (connect(sock, (struct sockaddr *)&serv_name, sizeof(serv_name)) < 0) {
 	    close(sock);
@@ -189,7 +189,7 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    fcntl(sock, F_SETFL, oflags | O_NONBLOCK);
 	}
 
-	strlcpy(buf, addr, sizeof(buf));
+	STRLCPY(buf, addr);
 	if ( (port = strchr(buf, ':')) != NULL)
 	    *port++ = '\0';
 
@@ -419,7 +419,7 @@ int recv_remote_fd(int tunnel, const char *tunnel_path)
     msg.msg_name    = &sun;
     msg.msg_namelen = sizeof(sun);
     sun.sun_family  = AF_UNIX;
-    strlcpy(sun.sun_path, tunnel_path, sizeof(sun.sun_path));
+    STRLCPY(sun.sun_path, tunnel_path);
 
     do {
 	// ignore EINTR

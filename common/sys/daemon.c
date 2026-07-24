@@ -42,7 +42,7 @@ daemonize(const char * pidfile, const char * logfile)
 
     if (pidfile) {
 	if ((fd = creat(pidfile, DEFAULT_FILE_CREATE_PERM)) >= 0) {
-	    snprintf(buf, sizeof(buf), "%d", (int)getpid());
+	    SNPRINTF(buf, "%d", (int)getpid());
 	    write(fd, buf, strlen(buf));
 	    close(fd);
 	} else

@@ -137,9 +137,9 @@ int copy_file_to_dir(const char *src, const char *dst)
     char buf[PATH_MAX];
     char *slash;
     if ((slash = rindex(src, '/')) == NULL)
-	snprintf(buf, sizeof(buf), "%s/%s", dst, src);
+	SNPRINTF(buf, "%s/%s", dst, src);
     else
-	snprintf(buf, sizeof(buf), "%s/%s", dst, slash);
+	SNPRINTF(buf, "%s/%s", dst, slash);
     return copy_file_to_file(src, buf);
 }
 
@@ -161,8 +161,8 @@ int copy_dir_to_dir(const char *src, const char *dst)
 	if (strcmp(entry->d_name, ".") == 0 ||
 	    strcmp(entry->d_name, "..") == 0)
 	    continue;
-	snprintf(buf, sizeof(buf), "%s/%s", src, entry->d_name);
-	snprintf(buf2, sizeof(buf2), "%s/%s", dst, entry->d_name);
+	SNPRINTF(buf, "%s/%s", src, entry->d_name);
+	SNPRINTF(buf2, "%s/%s", dst, entry->d_name);
 	if (stat(buf, &st) < 0)
 	    continue;
 	if (S_ISDIR(st.st_mode))
@@ -469,7 +469,7 @@ file_delete_record(const char *file, const char *string, int case_sensitive)
 	return 0;
 
     do {
-	snprintf(fnew, sizeof(fnew), "%s.%3.3X", file,
+	SNPRINTF(fnew, "%s.%3.3X", file,
                  (unsigned int)(arc4random_uniform(0x1000)));
 	if (access(fnew, 0) != 0)
 	    break;

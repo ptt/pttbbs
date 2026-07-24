@@ -24,7 +24,7 @@ static int write_string(THTTP *t, const char *str) {
 
 static int write_int(THTTP *t, int val) {
     char conv[16];
-    snprintf(conv, sizeof(conv), "%d", val);
+    SNPRINTF(conv, "%d", val);
     return write_string(t, conv);
 }
 

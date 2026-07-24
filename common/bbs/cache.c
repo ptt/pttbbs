@@ -163,7 +163,7 @@ add_to_uhash(int n, const char *id)
 {
     int            *p, h = StringHash(id)%(1<<HASH_BITS);
     int             times;
-    strlcpy(SHM->userid[n], id, sizeof(SHM->userid[n]));
+    STRLCPY(SHM->userid[n], id);
 
     p = &(SHM->hash_head[h]);
 
@@ -675,7 +675,7 @@ parseBMlist(const char *input, int uids[MAX_BMs]) {
     char *ptr, *strtok_pos;
     char s[(IDLEN + 1) * MAX_BMs];
 
-    strlcpy(s, input, sizeof(s));
+    STRLCPY(s, input);
     // reset BM list
     for (i = 0; i < MAX_BMs; i++)
         uids[i] = -1;
@@ -793,7 +793,7 @@ reload_pttcache(void)
 		if (strncmp(item.title+3, BN_NOTE_AGGCHKDIR, strlen(BN_NOTE_AGGCHKDIR)) == 0)
 		    chkagg = 1;
 #endif
-		snprintf(buf, sizeof(buf), "%s/%s/" FN_DIR,
+		SNPRINTF(buf, "%s/%s/" FN_DIR,
 			pbuf, item.filename);
 
 		if (!(fp1 = fopen(buf, "r")))
@@ -802,8 +802,7 @@ reload_pttcache(void)
 		// file loop
 		while (fread(&subitem, sizeof(subitem), 1, fp1)) {
 
-		    snprintf(buf, sizeof(buf),
-			    "%s/%s/%s", pbuf, item.filename,
+		    SNPRINTF(buf, "%s/%s/%s", pbuf, item.filename,
 			    subitem.filename);
 
 		    if (!(fp2 = fopen(buf, "r")))
