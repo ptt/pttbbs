@@ -171,7 +171,7 @@ typedef struct editor_internal_t {
 
     char *searched_string;
     char *sitesig_string;
-    char *(*substr_fp) ();
+    char *(*substr_fp)(const char *, const char *);
 
 } editor_internal_t;
 // } __attribute__ ((packed))
