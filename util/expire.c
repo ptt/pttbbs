@@ -91,7 +91,7 @@ void expire(life_t *brd)
     }
     flock(fdlock, LOCK_EX);
 
-    strcpy(fpath, index);
+    STRLCPY(fpath, index);
     fname = (char *) strrchr(fpath, '.');
 
     done = 0;
@@ -193,7 +193,7 @@ void toexpire(char *brdname)
     if( key == NULL )
 	key = &db;
 
-    strcpy(key->bname, brdname);
+    STRLCPY(key->bname, brdname);
     expire(key);
 }
 
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
 		ptr = (char *) strtok(NULL, " \t\r\n");
 		if( ptr && (number = atoi(ptr)) > 0 ){
 		    key = &(table[count++]);
-		    strcpy(key->bname, bname);
+		    STRLCPY(key->bname, bname);
 		    key->maxp = number;
 		}
 	    }

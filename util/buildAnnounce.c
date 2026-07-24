@@ -49,7 +49,7 @@ void buildchilds(int level,char *path,int gid)
 	       ptr->brdname, ptr->title);
 
         if(ptr->brdattr & BRD_GROUPBOARD){
-	    snprintf(newpath,sizeof(newpath),"%s/%s",path,ptr->brdname);
+	    SNPRINTF(newpath, "%s/%s",path,ptr->brdname);
 	    Mkdir(newpath);
 	    buildchilds(level+1,newpath,ptr-bcache+1); 
 	}
@@ -63,13 +63,13 @@ void buildchilds(int level,char *path,int gid)
 		printf("something wrong: %s, %s\n",path, ptr->brdname);
 	    }
 	}
-        strlcpy(item.owner,ptr->BM, sizeof(item.owner));
+        STRLCPY(item.owner, ptr->BM);
 	if((p=strchr(item.owner,'/'))!=NULL)
 	    *p='\0';
-        snprintf(item.title,sizeof(item.title),"%-13.13s %-32.32s", level?ptr->brdname:"", ptr->title+7);
+        SNPRINTF(item.title, "%-13.13s %-32.32s", level?ptr->brdname:"", ptr->title+7);
         item.filemode =  0 ;
-	strlcpy(item.filename,ptr->brdname,sizeof(item.filename));
-        snprintf(newpath,sizeof(newpath),"%s/.DIR",path);
+	STRLCPY(item.filename, ptr->brdname);
+        SNPRINTF(newpath, "%s/.DIR",path);
 	append_record(newpath, &item, sizeof(item));
     }
     free(selected);
@@ -80,7 +80,7 @@ int main(void)
 { 
     char path[512];
     setsid();
-    strcpy(path,GROUPROOT);
+    STRLCPY(path, GROUPROOT);
     system("rm -rf "GROUPROOT);
     Mkdir(GROUPROOT);
     attach_SHM();

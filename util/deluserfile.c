@@ -31,11 +31,11 @@ void del_file(char *userid)
 		char log_filename[PATHLEN];
 		char dir_filename[PATHLEN];
 
-		strcpy(new_filename, user_home);
+		STRLCPY(new_filename, user_home);
 		stampfile(new_filename, &mymail);
 		mymail.filemode = FILE_READ;
-		strcpy(mymail.owner, "[備.忘.錄]");
-		strcpy(mymail.title, "熱線記錄");
+		STRLCPY(mymail.owner, "[備.忘.錄]");
+		STRLCPY(mymail.title, "熱線記錄");
 
 		sethomefile(log_filename, userid, "writelog");
 		rename(log_filename, new_filename);

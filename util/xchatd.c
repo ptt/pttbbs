@@ -237,7 +237,7 @@ logit(char *key, char *msg)
 
     now = (time4_t)time(NULL);
     p = localtime4(&now);
-    snprintf(buf, sizeof(buf), "%02d/%02d %02d:%02d:%02d %-13s%s\n",
+    SNPRINTF(buf, "%02d/%02d %02d:%02d:%02d %-13s%s\n",
 	    p->tm_mon + 1, p->tm_mday,
 	    p->tm_hour, p->tm_min, p->tm_sec, key, msg);
     write(flog, buf, strlen(buf));
@@ -283,7 +283,7 @@ debug_user()
     i = 0;
     for (user = mainuser; user; user = user->unext)
     {
-	snprintf(buf, sizeof(buf), "%d) %s %s", ++i, user->userid, user->chatid);
+	SNPRINTF(buf, "%d) %s %s", ++i, user->userid, user->chatid);
 	logit("DEBUG_U", buf);
     }
 }
@@ -301,7 +301,7 @@ debug_room()
 
     do
     {
-	snprintf(buf, sizeof(buf), "%d) %s %d", ++i, room->name, room->occupants);
+	SNPRINTF(buf, "%d) %s %d", ++i, room->name, room->occupants);
 	logit("DEBUG_R", buf);
     } while (room = room->next);
 }
@@ -481,7 +481,7 @@ list_add_id(UserList **list, const char *id)
 
     if((node = (UserList *) malloc(sizeof(UserList)))) {
 	/* Thor: 防止空間不夠 */
-	strlcpy(node->userid, id, sizeof(node->userid));
+	STRLCPY(node->userid, id);
 	node->userno = uid;
 	node->next = *list;
 	*list = node;
@@ -497,7 +497,7 @@ list_add(UserList **list, ChatUser *user)
 
     if((node = (UserList *) malloc(sizeof(UserList)))) {
 	/* Thor: 防止空間不夠 */
-	strcpy(node->userid, user->userid);
+	STRLCPY(node->userid, user->userid);
 	node->userno = user->userno;
 	node->next = *list;
 	*list = node;
@@ -666,7 +666,7 @@ room_changed(ChatRoom *room)
     if (!room)
 	return;
 
-    snprintf(chatbuf, sizeof(chatbuf), "= %s %d %d %s", room->name, room->occupants, room->rflag, room->topic);
+    SNPRINTF(chatbuf, "= %s %d %d %s", room->name, room->occupants, room->rflag, room->topic);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 }
 
@@ -676,7 +676,7 @@ user_changed(ChatUser *cu)
     if (!cu)
 	return;
 
-    snprintf(chatbuf, sizeof(chatbuf), "= %s %s %s %s", cu->userid, cu->chatid, cu->room->name, cu->lasthost);
+    SNPRINTF(chatbuf, "= %s %s %s %s", cu->userid, cu->chatid, cu->room->name, cu->lasthost);
     if (ROOMOP(cu))
 	strcat(chatbuf, " Op");
     send_to_room(cu->room, chatbuf, 0, MSG_USERNOTIFY);
@@ -853,14 +853,14 @@ chat_nick(ChatUser *cu, char *msg)
     }
 #endif
 
-    snprintf(chatbuf, sizeof(chatbuf), "※ %s 將聊天代號改為 " ANSI_COLOR(1;33) "%s" ANSI_RESET, cu->chatid, chatid);
+    SNPRINTF(chatbuf, "※ %s 將聊天代號改為 " ANSI_COLOR(1;33) "%s" ANSI_RESET, cu->chatid, chatid);
     if (!CLOAK(cu))               /* Thor: 聊天室隱身術 */
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 
-    strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
+    STRLCPY(cu->chatid, chatid);
     user_changed(cu);
 
-    snprintf(chatbuf, sizeof(chatbuf), "/n%s", chatid);
+    SNPRINTF(chatbuf, "/n%s", chatid);
     send_to_user(cu, chatbuf, 0, 0);
 }
 
@@ -889,12 +889,12 @@ chat_list_rooms(ChatUser *cuser, char *msg)
 	{
 	    if (common_client_command)
 	    {
-		snprintf(chatbuf, sizeof(chatbuf), "%s %d %d %s", cr->name, cr->occupants, cr->rflag, cr->topic);
+		SNPRINTF(chatbuf, "%s %d %d %s", cr->name, cr->occupants, cr->rflag, cr->topic);
 		send_to_user(cuser, chatbuf, 0, MSG_ROOMLIST);
 	    }
 	    else
 	    {
-		snprintf(chatbuf, sizeof(chatbuf), " %-12s│%4d│%s", cr->name, cr->occupants, cr->topic);
+		SNPRINTF(chatbuf, " %-12s│%4d│%s", cr->name, cr->occupants, cr->topic);
 		if (LOCKED(cr))
 		    strcat(chatbuf, " [鎖住]");
 		if (SECRET(cr))
@@ -962,13 +962,13 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 	    if (!room)
 		continue;               /* Xshadow: 還沒進入任何房間的就不列出 */
 
-	    snprintf(chatbuf, sizeof(chatbuf), "%s %s %s %s", user->chatid, user->userid, room->name, user->lasthost);
+	    SNPRINTF(chatbuf, "%s %s %s %s", user->chatid, user->userid, room->name, user->lasthost);
 	    if (ROOMOP(user))
 		strcat(chatbuf, " Op");
 	}
 	else
 	{
-	    snprintf(chatbuf, sizeof(chatbuf), " %-8s│%-12s│%s", user->chatid, user->userid, room ? room->name : "[在門口徘徊]");
+	    SNPRINTF(chatbuf, " %-8s│%-12s│%s", user->chatid, user->userid, room ? room->name : "[在門口徘徊]");
 	    if (ROOMOP(user))
 		strcat(chatbuf, " [Op]");
 	}
@@ -996,7 +996,7 @@ chat_list_by_room(ChatUser *cu, char *msg)
     {
 	if ((whichroom = croom_by_roomid(roomstr)) == NULL)
 	{
-	    snprintf(chatbuf, sizeof(chatbuf), "※ 沒有 [%s] 這個聊天室", roomstr);
+	    SNPRINTF(chatbuf, "※ 沒有 [%s] 這個聊天室", roomstr);
 	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	    return;
 	}
@@ -1177,7 +1177,7 @@ chat_private(ChatUser *cu, char *msg)
     }
     else if (xuser == FUZZY_USER)
     {                             /* ambiguous */
-	strcpy(chatbuf, "※ 請指明聊天代號");
+	STRLCPY(chatbuf, "※ 請指明聊天代號");
     }
     else if (*msg)
     {
@@ -1188,11 +1188,11 @@ chat_private(ChatUser *cu, char *msg)
 	// prefix 的字串要小心不能過長
 
 	sprintf(chatbuf, COLOR_PRIVATEMSG "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
-	strlcat(chatbuf, msg, sizeof(chatbuf));
+	STRLCAT(chatbuf, msg);
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
 	sprintf(chatbuf, COLOR_PRIVATEMSG "%s" ANSI_RESET "> ", xuser->chatid);
-	strlcat(chatbuf, msg, sizeof(chatbuf));
+	STRLCAT(chatbuf, msg);
     }
     else
     {
@@ -1215,15 +1215,13 @@ chat_query(ChatUser *cu, char *msg)
     if (xuser == NULL)
 	sprintf(chatbuf, msg_no_such_id, recipient);
     else if (xuser == FUZZY_USER)
-	strcpy(chatbuf, "※ 請清楚指明對方的聊天代號"); // ambiguous
+	STRLCPY(chatbuf, "※ 請清楚指明對方的聊天代號"); // ambiguous
     else 
     {
-	snprintf(chatbuf, sizeof(chatbuf),
-		"※ 聊天暱稱: %s ，" BBSMNAME " ID: %s (%s)",
+	SNPRINTF(chatbuf, "※ 聊天暱稱: %s ，" BBSMNAME " ID: %s (%s)",
 		xuser->chatid, xuser->userid, xuser->nickname);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-	snprintf(chatbuf, sizeof(chatbuf),
-		"   " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，"
+	SNPRINTF(chatbuf, "   " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，"
 		"發表過 %d 篇文章，最近從 %s 上站",
 		xuser->numlogindays, xuser->numposts, xuser->lasthost);
     }
@@ -1254,7 +1252,7 @@ arrive_room(ChatUser *cuser, ChatRoom *room)
     char *rname;
 
     /* Xshadow: 不必送給自己, 反正換房間就會重新 build user list */
-    snprintf(chatbuf, sizeof(chatbuf), "+ %s %s %s %s", cuser->userid, cuser->chatid, room->name, cuser->lasthost);
+    SNPRINTF(chatbuf, "+ %s %s %s %s", cuser->userid, cuser->chatid, room->name, cuser->lasthost);
     if (ROOMOP(cuser))
 	strcat(chatbuf, " Op");
     send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
@@ -1306,10 +1304,10 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
 	}
 
 	memset(room, 0, sizeof(ChatRoom));
-	strlcpy(room->name, rname, sizeof(room->name));
-	strcpy(room->topic, "這是一個新天地");
+	STRLCPY(room->name, rname);
+	STRLCPY(room->topic, "這是一個新天地");
 
-	snprintf(chatbuf, sizeof(chatbuf), "+ %s 1 0 %s", room->name, room->topic);
+	SNPRINTF(chatbuf, "+ %s 1 0 %s", room->name, room->topic);
 	send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 
 	if (mainroom.next != NULL)
@@ -1550,13 +1548,13 @@ login_user(ChatUser *cu, char *msg)
     cu->userno = utent;
     cu->uflag = level & ~(PERM_ROOMOP | PERM_CLOAK | PERM_HANDUP | PERM_SAY);
     /* Thor: 進來先清空ROOMOP(同PERM_CHAT), CLOAK */
-    strcpy(cu->userid, userid);
-    strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
+    STRLCPY(cu->userid, userid);
+    STRLCPY(cu->chatid, chatid);
     // fill user information from acct
-    strlcpy(cu->nickname, acct.nickname, sizeof(cu->nickname));
+    STRLCPY(cu->nickname, acct.nickname);
     cu->numposts = acct.numposts;
     cu->numlogindays = acct.numlogindays;
-    strlcpy(cu->lasthost, acct.lasthost, sizeof(cu->lasthost));
+    STRLCPY(cu->lasthost, acct.lasthost);
 
     send_to_user(cu, CHAT_LOGIN_OK, 0, 0);
     arrive_room(cu, &mainroom);
@@ -1590,7 +1588,7 @@ chat_ignore(ChatUser *cu, char *msg)
 
     if (RESTRICTED(cu))
     {
-	strcpy(chatbuf, "※ 您沒有 ignore 別人的權利");
+	STRLCPY(chatbuf, "※ 您沒有 ignore 別人的權利");
     }
     else
     {
@@ -1665,7 +1663,7 @@ chat_ignore(ChatUser *cu, char *msg)
 	    }
 	    else
 	    {
-		strcpy(chatbuf, "◆ 您目前並沒有 ignore 任何人");
+		STRLCPY(chatbuf, "◆ 您目前並沒有 ignore 任何人");
 	    }
 	}
     }
@@ -1689,7 +1687,7 @@ chat_unignore(ChatUser *cu, char *msg)
     }
     else
     {
-	strcpy(chatbuf, "◆ 請指明使用者 ID");
+	STRLCPY(chatbuf, "◆ 請指明使用者 ID");
     }
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
@@ -1717,7 +1715,7 @@ chat_unban(ChatUser *cu, char *msg)
     }
     else
     {
-	strcpy(chatbuf, "◆ 請指明使用者 ID");
+	STRLCPY(chatbuf, "◆ 請指明使用者 ID");
     }
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
@@ -1911,7 +1909,7 @@ chat_ban(ChatUser *cu, char *msg)
 	UserList *list;
 	if(!(list = cu->room->ban))
 	{
-	    strcpy(chatbuf, "◆ 目前黑名單是空的");
+	    STRLCPY(chatbuf, "◆ 目前黑名單是空的");
 	} 
 	else 
 	{
@@ -2831,7 +2829,7 @@ selftest_send(int fd, char *buf)
     int             len;
     char            genbuf[200];
 
-    snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
+    SNPRINTF(genbuf, "%s\n", buf);
     len = strlen(genbuf);
     return (send(fd, genbuf, len, 0) == len);
 }
@@ -2844,7 +2842,7 @@ void selftest_testing(void)
     cfd=selftest_connect();
     if(cfd<0) exit(1);
     while(1) {
-	snprintf(userid, sizeof(userid), "%ld",
+	SNPRINTF(userid, "%ld",
                  arc4random_uniform(MAXTESTUSER * 2));
 	sprintf(buf, "/%s! %s %s %s", arc4random_uniform(4)==0?"-":"",userid,
                 userid, "passwd");
@@ -2918,16 +2916,16 @@ void selftest_testing(void)
 		    strcat(buf,arc4random_uniform(2)?"t":"T");
 		} else if(strncmp("/bye",buf,4)==0) {
 		    switch(arc4random_uniform(10)) {
-			case 0: strcpy(buf,"//"); break;
-			case 1: strcpy(buf,"//1"); break;
-			case 2: strcpy(buf,"//2"); break;
-			case 3: strcpy(buf,"//3"); break;
-			case 4: strcpy(buf,"/bye"); break;
-			case 5: strcpy(buf,"/help op"); break;
+			case 0: STRLCPY(buf, "//"); break;
+			case 1: STRLCPY(buf, "//1"); break;
+			case 2: STRLCPY(buf, "//2"); break;
+			case 3: STRLCPY(buf, "//3"); break;
+			case 4: STRLCPY(buf, "/bye"); break;
+			case 5: STRLCPY(buf, "/help op"); break;
 			case 6: close(cfd); return; break;
-			case 7: strcpy(buf,"/help"); break;
-			case 8: strcpy(buf,"/help"); break;
-			case 9: strcpy(buf,"/help"); break;
+			case 7: STRLCPY(buf, "/help"); break;
+			case 8: STRLCPY(buf, "/help"); break;
+			case 9: STRLCPY(buf, "/help"); break;
 		    }
 		}
 	}
@@ -3017,8 +3015,8 @@ main(int argc, char *argv[])
 
     mainuser = NULL;
     memset(&mainroom, 0, sizeof(mainroom));
-    strcpy(mainroom.name, MAIN_NAME);
-    strcpy(mainroom.topic, MAIN_TOPIC);
+    STRLCPY(mainroom.name, MAIN_NAME);
+    STRLCPY(mainroom.topic, MAIN_TOPIC);
 
     /* ----------------------------------- */
     /* main loop                           */

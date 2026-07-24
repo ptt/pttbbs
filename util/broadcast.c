@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
     UTMPnumber = SHM->UTMPnumber;
 
     msg.pid = getpid();
-    strlcpy(msg.userid, owner, sizeof(msg.userid));
-    snprintf(msg.last_call_in, sizeof(msg.last_call_in), "[¼s¼½]%s", argv[optind]);
+    STRLCPY(msg.userid, owner);
+    SNPRINTF(msg.last_call_in, "[¼s¼½]%s", argv[optind]);
 
     now = time(NULL);
 

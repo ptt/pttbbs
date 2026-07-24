@@ -16,7 +16,7 @@ int check(void *data, int bid, boardheader_t *bh)
     if (!strcasestr(bh->BM, userid))
         return 0;
 
-    strlcpy(bmsrc, bh->BM, sizeof(bmsrc));
+    STRLCPY(bmsrc, bh->BM);
     p = bmsrc;
 
     if (*p == '[') {
@@ -38,8 +38,8 @@ int check(void *data, int bid, boardheader_t *bh)
             continue;
         }
         if (bmout[0])
-            strlcat(bmout, "/", sizeof(bmout));
-        strlcat(bmout, bmid, sizeof(bmout));
+            STRLCAT(bmout, "/");
+        STRLCAT(bmout, bmid);
     }
 
     if (!changed)
@@ -52,9 +52,9 @@ int check(void *data, int bid, boardheader_t *bh)
               bh->brdname, bh->BM, bmout);
 
     if (has_quote)
-        snprintf(bh->BM, sizeof(bh->BM), "[%s]", bmout);
+        SNPRINTF(bh->BM, "[%s]", bmout);
     else
-        strlcpy(bh->BM, bmout, sizeof(bh->BM));
+        STRLCPY(bh->BM, bmout);
 
     substitute_record(BBSHOME "/" FN_BOARD, bh, sizeof(boardheader_t), bid);
     reset_board(bid);

@@ -132,8 +132,8 @@ void mailUser(char *userid)
     fclose(fp);
     fclose(fp2);
 
-    strcpy(header.title, "給小天使的一封信");
-    strcpy(header.owner, "小天使系統");
+    STRLCPY(header.title, "給小天使的一封信");
+    STRLCPY(header.owner, "小天使系統");
     sethomedir(filename, userid);
     append_record(filename, &header, sizeof(header));
     mailalertuser(userid);

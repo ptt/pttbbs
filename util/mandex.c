@@ -51,7 +51,7 @@ mandex(const int level, const char *num_header, char *fpath)
 	*fname = '\0';
 	strlcat(fpath, fhdr.filename, PATHLEN);
 
-	snprintf(buf, sizeof(buf), "%.*s%s%3d. %s [m\n",
+	SNPRINTF(buf, "%.*s%s%3d. %s [m\n",
 		11 * level, num_header, color[level % 4], count, fhdr.title);
 	                                                              /* Ptt */
 	fputs(buf, fp_index);
@@ -89,7 +89,7 @@ man_index(const char * brdname)
 	return;
 
     memset(&curr_brdinfo, 0, sizeof(curr_brdinfo));
-    strlcpy(curr_brdinfo.bname, brdname, sizeof(curr_brdinfo.bname));
+    STRLCPY(curr_brdinfo.bname, brdname);
 
     setapath(buf, brdname);
     setadir(fpath, buf);
@@ -142,8 +142,8 @@ man_index(const char * brdname)
     stamplink(buf, &fhdr);
     unlink(buf);
     symlink(fn_index, buf);
-    strlcpy(fhdr.owner, "¨C¤Ñ¦Û°Ê§ó·s", sizeof(fhdr.owner));
-    snprintf(fhdr.title, sizeof(fhdr.title), "%s (%.1fk)", index_title, st.st_size / 1024.);
+    STRLCPY(fhdr.owner, "¨C¤Ñ¦Û°Ê§ó·s");
+    SNPRINTF(fhdr.title, "%s (%.1fk)", index_title, st.st_size / 1024.);
     fhdr.filemode = filemode;
 
     sprintf(buf, "%s.new", fpath);
@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
     }
 
     for (i = 0; dirs[i] != 0; ++i) {
-	snprintf(fpath, sizeof(fpath), "man/boards/%c", dirs[i]);
+	SNPRINTF(fpath, "man/boards/%c", dirs[i]);
 	if (!(dirp = opendir(fpath))) {
 	    printf("## unable to enter [man/boards/%c]\n", dirs[i]);
 	    exit(-1);

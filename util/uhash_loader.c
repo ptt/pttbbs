@@ -151,7 +151,7 @@ void userec_add_to_uhash(int n, userec_t *user, int onfly)
     if(!onfly || SHM->userid[n][0] != user->userid[0] || 
 	       strncmp(SHM->userid[n], user->userid, IDLEN-1))
     {
-       strcpy(SHM->userid[n], user->userid);
+       STRLCPY(SHM->userid[n], user->userid);
        SHM->money[n] = user->money;
 #ifdef USE_COOLDOWN
        SHM->cooldowntime[n] = 0;

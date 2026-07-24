@@ -137,7 +137,7 @@ int main(void)
 		p=strtok(NULL,"/ ]");
 		continue;
 	    }
-	    strlcpy(bms[index].bmname, p, sizeof(bms[index].bmname));
+	    STRLCPY(bms[index].bmname, p);
 	    bms[index].flag = 0;
 
 	    diff = now - xuser.lastlogin;
@@ -186,10 +186,10 @@ int main(void)
 		    strcat(bmbuf, bms[k].bmname);
 		}
 	    }
-	    strcpy(allbrd[i].BM, bmbuf);
+	    STRLCPY(allbrd[i].BM, bmbuf);
             printf("board %s: %s -> %s\n",
                     allbrd[i].brdname, bp->BM, allbrd[i].BM);
-            strcpy(bp->BM, allbrd[i].BM);
+            STRLCPY(bp->BM, allbrd[i].BM);
 	    if (substitute_record(BBSHOME"/"FN_BOARD, &allbrd[i], 
 			sizeof(boardheader_t), i+1) == -1) {
 		printf("Update Board Failed: %s\n", allbrd[i].brdname);
@@ -233,7 +233,7 @@ int main(void)
 		lostbms[i].bmname[0], lostbms[i].bmname);
 	stampfile(genbuf, &mymail);
 
-	strcpy(mymail.owner, "[" BBSMNAME "警察局]");
+	STRLCPY(mymail.owner, "[" BBSMNAME "警察局]");
 	if (lostdays <= LAZY_BM_LIMIT_DAYS)
 	    sprintf(mymail.title,
 		    ANSI_COLOR(32) "版主通知" ANSI_RESET " %s版版主%s",

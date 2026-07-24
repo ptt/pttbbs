@@ -22,7 +22,7 @@ int mailalertuid(int tuid)
 
 char *CTIMEx(char *buf, time_t t)
 {
-    strcpy(buf, ctime(&t));
+    strlcpy(buf, ctime(&t), 32);
     buf[strlen(buf) - 1] = 0;
     return buf;
 }
@@ -70,8 +70,8 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
 	    );
     fclose(fp);
 
-    strcpy(mymail.title, "警告: 貴板板友即將過期/已經過期");
-    strcpy(mymail.owner, "系統通知.");
+    STRLCPY(mymail.title, "警告: 貴板板友即將過期/已經過期");
+    STRLCPY(mymail.owner, "系統通知.");
     sethomedir(filename, userid);
     mailalertuid(uid);
     append_record(filename, &mymail, sizeof(mymail));
@@ -95,13 +95,13 @@ void chkhbf(boardheader_t *bptr)
 		break;
 	    }
 	if( passwd_load_user(chkuser, &xuser) < 1 || strcasecmp(chkuser, STR_GUEST) == 0 ){
-	    strcpy(explist[nEXP].userid, chkuser);
+	    STRLCPY(explist[nEXP].userid, chkuser);
 	    explist[nEXP].expire = -1;
 	    ++nEXP;
 	}
 	else if( (xuser.lastlogin < now - 86400 * 90) &&
 		 !(xuser.userlevel & PERM_XEMPT) ){
-	    strcpy(explist[nEXP].userid, chkuser);
+	    STRLCPY(explist[nEXP].userid, chkuser);
 	    explist[nEXP].lastlogin = xuser.lastlogin;
 	    explist[nEXP].expire = xuser.lastlogin + 86400 * 120;
 	    ++nEXP;
@@ -110,7 +110,7 @@ void chkhbf(boardheader_t *bptr)
     fclose(fp);
     if( nEXP ){
 	char    BM[IDLEN * 3 + 3], *p;
-	strlcpy(BM, bptr->BM, sizeof(BM));
+	STRLCPY(BM, bptr->BM);
 	for( p = BM ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
 		*p = ' ';

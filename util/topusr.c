@@ -129,8 +129,8 @@ int main(int argc, char **argv)
 	    continue;
 	}
 	else {
-	    strcpy(theman.userid, aman.userid);
-	    strcpy(theman.nickname, aman.nickname);
+	    STRLCPY(theman.userid, aman.userid);
+	    STRLCPY(theman.nickname, aman.nickname);
             theman.values[TYPE_POST] =  aman.numposts;
             theman.values[TYPE_MONEY] = aman.money;
             for(i=0; i<TYPE_COUNT; i++)

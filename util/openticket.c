@@ -249,7 +249,7 @@ int main()
                 }
                 sethomepath(genbuf, userid);
 		stampfile(genbuf, &mymail);
-		strcpy(mymail.owner, BBSNAME);
+		STRLCPY(mymail.owner, BBSNAME);
 		sprintf(mymail.title, "[%s] ¤¤¼úÅo! $ %d", Cdatelite(&now), money * num);
 		unlink(genbuf);
 		Link("etc/ticket", genbuf);

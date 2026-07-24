@@ -61,7 +61,7 @@ void dumpdetail(void)
 	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(&bptr->title[7]));
 	printf("$db{'%d.over18'} = '%d';\n",
 	       bid, (bptr->brdattr & BRD_OVER18) ? 1 : 0);
-	strlcpy(BM, bptr->BM, sizeof(BM));
+	STRLCPY(BM, bptr->BM);
 	for( p = BM ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
 		*p = ' ';

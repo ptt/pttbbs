@@ -221,7 +221,7 @@ int stopbbs(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 			printf("invalid pid record: %s\n", fn);
 		    } else {
 			char *sdot = NULL;
-			strlcpy(buf, de->d_name, sizeof(buf));
+			STRLCPY(buf, de->d_name);
 			sdot = strchr(buf, '.');
 			if (sdot) *sdot = 0;
 			printf("stopping listening-%s at pid %5d\n", buf, pid);

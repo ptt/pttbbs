@@ -23,7 +23,7 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
     strncpy(fhdr.title, title, sizeof(fhdr.title) - 1);
     fhdr.title[sizeof(fhdr.title) - 1] = '\0';
     
-    strcpy(fhdr.owner, owner);
+    STRLCPY(fhdr.owner, owner);
     sprintf(genbuf, BBSHOME "/boards/%c/%s/.DIR", board[0], board);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     /* XXX: bid of cache.c's getbnum starts from 1 */

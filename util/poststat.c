@@ -243,7 +243,7 @@ poststat(mytype)
 	    if (filter(tp->board))
 		continue;
 
-	    strcpy(buf, ctime4(&(tp->date)));
+	    STRLCPY(buf, ctime4(&(tp->date)));
 	    buf[20] = 0;
 	    fprintf(fp,
 		    "[1;31m%3d. [33m¬ÝªO : [32m%-16s[35m¡m %s¡n[36m%4d ½g[33m%16s\n"

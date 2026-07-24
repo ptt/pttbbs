@@ -28,7 +28,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    snprintf(archive_path, sizeof(archive_path), "%s/%s",
+    SNPRINTF(archive_path, "%s/%s",
              dirpath, TIME_CAPSULE_ARCHIVE_INDEX_NAME);
     if (dashs(archive_path) <= 0) {
         // no archive. abort.
@@ -36,8 +36,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    strlcpy(tmp_archive_path, archive_path, sizeof(tmp_archive_path));
-    strlcat(tmp_archive_path, ".tmp", sizeof(tmp_archive_path));
+    STRLCPY(tmp_archive_path, archive_path);
+    STRLCAT(tmp_archive_path, ".tmp");
 
     fin = fopen(archive_path, "rb");
     fout = fopen(tmp_archive_path, "wb");
@@ -51,8 +51,7 @@ int main(int argc, char **argv)
         // build file name
         char rev_index_path[PATHLEN];
         setdirpath(rev_index_path, archive_path, fh.filename);
-        strlcat(rev_index_path, TIME_CAPSULE_REVISION_INDEX_NAME,
-                sizeof(rev_index_path));
+        STRLCAT(rev_index_path, TIME_CAPSULE_REVISION_INDEX_NAME);
         if (!dashf(rev_index_path)) {
             num_remove++;
             continue;

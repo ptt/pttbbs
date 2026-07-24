@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	    FILE *fp;
 	    struct stat st;
 	    
-	    strcpy(ptr, dirlist[count]->d_name);
+	    strlcpy(ptr, dirlist[count]->d_name, sizeof(path) - (ptr - path));
 	    if(stat(path, &st) == 0 && st.st_size > 0 &&
 	       (fp = fopen(path, "r")) != NULL) {
 		char buf[512];
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 		
 		memset(&fhdr, 0, sizeof(fhdr));
 		/* set file name */
-		strcpy(fhdr.filename, dirlist[count]->d_name);
+		STRLCPY(fhdr.filename, dirlist[count]->d_name);
 		
 		/* set file time */
 		filetime = atoi(dirlist[count]->d_name + 2);
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 		    sprintf(fhdr.date, "%2d/%02d", ptime->tm_mon + 1,
 			    ptime->tm_mday);
 		} else
-		    strcpy(fhdr.date, "     ");
+		    STRLCPY(fhdr.date, "     ");
 		
 		/* set file mode */
 		fhdr.filemode = FILE_READ;
@@ -101,13 +101,13 @@ int main(int argc, char **argv)
 			    break;
 			}
 		} else if(strncmp(buf, "⊙ 歡迎光臨", 11) == 0) {
-		    strcpy(fhdr.title, "會議記錄");
+		    STRLCPY(fhdr.title, "會議記錄");
 		} else if(strncmp(buf, "\33[1;33;46m★", 12) == 0||
 			  strncmp(buf, "To", 2) == 0) {
-		    strcpy(fhdr.title, "熱線記錄");
+		    STRLCPY(fhdr.title, "熱線記錄");
 		}
 //		if(!fhdr.title[0])
-//		    strcpy(fhdr.title, dirlist[count]->d_name);
+//		    STRLCPY(fhdr.title, dirlist[count]->d_name);
 		fclose(fp);
 		write(fdir, &fhdr, sizeof(fhdr));
 	    }

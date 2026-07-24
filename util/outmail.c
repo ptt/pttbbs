@@ -87,8 +87,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 	starttime = (int)time(NULL);
 	msgid = arc4random();
     }
-    n = snprintf(buf, sizeof(buf),
-		 "From: %s <%s>\r\n"
+    n = SNPRINTF(buf, "From: %s <%s>\r\n"
 		 "To: %s\r\n"
 		 "Subject: %s\r\n"
 		 "X-Sender: outmail of pttbbs " __DATE__ "\r\n"
@@ -110,7 +109,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 
     while(fgets(buf, sizeof(buf), fp)) {
 	if(buf[0] == '.' && buf[1] == '\n')
-	    strcpy(buf, "..\n");
+	    STRLCPY(buf, "..\n");
 	write(sock, buf, strlen(buf));
     }
 }
@@ -121,11 +120,11 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
     if (sendRequest(sock, "rset\n") || waitReply(sock) != 2)
 	return;
 
-    snprintf(buf, sizeof(buf), "mail from: %s\n", from);
+    SNPRINTF(buf, "mail from: %s\n", from);
     if(sendRequest(sock, buf) || waitReply(sock) != 2)
 	return;
     
-    snprintf(buf, sizeof(buf), "rcpt to: %s\n", to);
+    SNPRINTF(buf, "rcpt to: %s\n", to);
     if(sendRequest(sock, buf) || waitReply(sock) != 2)
 	return;
     
@@ -145,7 +144,7 @@ void sendMail() {
     struct stat st;
     MailQueue mq;
 
-    snprintf(spool_path, sizeof(spool_path), NEWINDEX_PATTERN, getpid());
+    SNPRINTF(spool_path, NEWINDEX_PATTERN, getpid());
 
     if(access(spool_path, R_OK | W_OK)) {
 	if(link(INDEX, spool_path) || unlink(INDEX))
@@ -170,7 +169,7 @@ void sendMail() {
 	char buf[256];
 	
 	counter++;
-	snprintf(buf, sizeof(buf), "%s%s", mq.sender, FROM);
+	SNPRINTF(buf, "%s%s", mq.sender, FROM);
 	if((fp = fopen(mq.filepath, "r"))) {
 	    setproctitle("outmail: sending %d/%ld %s", counter, total_count, mq.filepath);
 	    printf("mailto: %s, %d of %ld, relay server: %s:%d\n", mq.rcpt, counter, total_count,

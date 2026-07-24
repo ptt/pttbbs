@@ -511,7 +511,7 @@ int utmpsortd(int argc, char **argv)
 
 char *CTIMEx(char *buf, time4_t t)
 {
-    strcpy(buf, ctime4(&t));
+    strlcpy(buf, ctime4(&t), 32);
     buf[strlen(buf) - 1] = 0;
     return buf;
 }

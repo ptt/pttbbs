@@ -57,8 +57,8 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 
     if (sym) {
 	char genbuf2[PATHLEN];
-	strcpy(genbuf2, "../");
-	strlcat(genbuf2, genbuf, sizeof(genbuf2));
+	STRLCPY(genbuf2, "../");
+	STRLCAT(genbuf2, genbuf);
         sprintf(buf, "log/%s", sym);
         unlink(buf);
         symlink(genbuf2, buf);
@@ -66,8 +66,8 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
      */
-    strlcpy(fhdr.title, title, sizeof(fhdr.title));
-    strlcpy(fhdr.owner, "[歷史老師]", sizeof(fhdr.owner));
+    STRLCPY(fhdr.title, title);
+    STRLCPY(fhdr.owner, "[歷史老師]");
     setbfile(genbuf, board, FN_DIR);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     /* XXX: bid of cache.c's getbnum starts from 1 */
@@ -81,7 +81,7 @@ static void
 gzip(const char *source, const char *target, const char *suffix)
 {
     char buf[PATHLEN];
-    snprintf(buf, sizeof(buf), "gzip -f9n adm/%s%s", target, suffix);
+    SNPRINTF(buf, "gzip -f9n adm/%s%s", target, suffix);
     Rename(source, &buf[14]);
     system(buf);
 }
@@ -357,7 +357,7 @@ update_holiday(struct tm *ptime)
     chomp(buf);
 
     memset(SHM->today_is, 0, sizeof(SHM->today_is));
-    strlcpy(SHM->today_is, buf, sizeof(SHM->today_is));
+    STRLCPY(SHM->today_is, buf);
 
     return 0;
 }
@@ -421,7 +421,7 @@ main(/*int argc, char **argv*/)
         // Restore etc/yesterday because keeplog removes it.
         Copy("etc/yesterday", "etc/today");
 
-	snprintf(buf, sizeof(buf), "[安全報告] 使用者上線監控 [%02d/%02d:%02d]",
+	SNPRINTF(buf, "[安全報告] 使用者上線監控 [%02d/%02d:%02d]",
 		tm_now.tm_mon + 1, tm_now.tm_mday, tm_now.tm_hour);
 	keeplog("usies", "Security", buf, "usies");
         // usies is removed - so we have to also delete .act
@@ -446,7 +446,7 @@ main(/*int argc, char **argv*/)
 	    char            temp[50];
 	    while (fscanf(fp, "%d %d %s\n", &mo, &da, buf1) == 3) {
 		if (tm_now.tm_mday == da && tm_now.tm_mon + 1 == mo) {
-		    strcpy(temp, buf1);
+		    STRLCPY(temp, buf1);
 		    sprintf(buf1, "cp -f etc/Welcomes/%s etc/Welcome", temp);
 		    system(buf1);
 		    break;

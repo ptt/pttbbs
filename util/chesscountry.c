@@ -113,7 +113,7 @@ main(void)
 	    while (fgets(buf, sizeof(buf), fp))
 	    {
 		i = 0;
-		strcpy(line, buf);
+		STRLCPY(line, buf);
 		p = strtok(buf, " ");
 		name[0] = '\0';
 		if (p && *p != '#' && searchuser(p, userid))
@@ -121,17 +121,17 @@ main(void)
 		    i = 1;
 
 		    if ((p = strtok(NULL, " ")))
-			strlcpy(name, p, sizeof(name));
+			STRLCPY(name, p);
 		    else
 			i = 0;
 
 		    if ((p = strtok(NULL, " ")))
-			strlcpy(date, p, sizeof(date));
+			STRLCPY(date, p);
 		    else
 			i = 0;
 
 		    if ((p = strtok(NULL, " ")))
-			strlcpy(other, p, sizeof(other));
+			STRLCPY(other, p);
 		    else
 			i = 0;
 		}

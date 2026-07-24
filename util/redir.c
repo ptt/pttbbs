@@ -129,7 +129,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    snprintf(index_path, sizeof(index_path), "%s/%s", dirpath, FN_DIR);
+    SNPRINTF(index_path, "%s/%s", dirpath, FN_DIR);
     if (dashs(index_path) <= 0) {
         // no archive. abort.
         // fprintf(stderr, "missing time capsule archive: %s\n", index_path);
@@ -148,8 +148,8 @@ int main(int argc, char **argv)
 	char tmp_index_path[PATHLEN];
 	FILE *fout;
 
-	strlcpy(tmp_index_path, index_path, sizeof(tmp_index_path));
-	strlcat(tmp_index_path, ".tmp", sizeof(tmp_index_path));
+	STRLCPY(tmp_index_path, index_path);
+	STRLCAT(tmp_index_path, ".tmp");
 	fout = fopen(tmp_index_path, "wb");
 	if (!fout) {
 	    fprintf(stderr, "failed to create ouptut file.\n");

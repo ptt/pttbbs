@@ -18,7 +18,7 @@ static void initHome() {
     char buf[256];
     
     Mkdir("home");
-    strcpy(buf, "home/?");
+    STRLCPY(buf, "home/?");
     for(i = 0; i < 26; i++) {
 	buf[5] = 'A' + i;
 	Mkdir(buf);
@@ -41,7 +41,7 @@ static void initBoardsDIR() {
     char buf[256];
     
     Mkdir("boards");
-    strcpy(buf, "boards/?");
+    STRLCPY(buf, "boards/?");
     for(i = 0; i < 26; i++) {
 	buf[7] = 'A' + i;
 	Mkdir(buf);
@@ -61,7 +61,7 @@ static void initManDIR() {
     
     Mkdir("man");
     Mkdir("man/boards");
-    strcpy(buf, "man/boards/?");
+    STRLCPY(buf, "man/boards/?");
     for(i = 0; i < 26; i++) {
 	buf[11] = 'A' + i;
 	Mkdir(buf);
@@ -105,94 +105,94 @@ static void initBoards() {
     if(fp) {
 	memset(&b, 0, sizeof(b));
 	
-	strcpy(b.brdname, "SYSOP");
-	strcpy(b.title, "嘰哩 ◎站長好!");
+	STRLCPY(b.brdname, "SYSOP");
+	STRLCPY(b.title, "嘰哩 ◎站長好!");
 	b.brdattr = BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 2;
 	newboard(fp, &b);
 
-	strcpy(b.brdname, "1...........");
+	STRLCPY(b.brdname, "1...........");
 	strcpy(b.title, ".... Σ中央政府  《高壓危險,非人可敵》");
 	b.brdattr = BRD_GROUPBOARD;
 	b.level = PERM_SYSOP;
 	b.gid = 1;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "junk");
-	strcpy(b.title, "發電 ◎雜七雜八的垃圾");
+	STRLCPY(b.brdname, "junk");
+	STRLCPY(b.title, "發電 ◎雜七雜八的垃圾");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "Security");
-	strcpy(b.title, "發電 ◎站內系統安全");
+	STRLCPY(b.brdname, "Security");
+	STRLCPY(b.title, "發電 ◎站內系統安全");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "2...........");
-	strcpy(b.title, ".... Σ市民廣場     報告  站長  ㄜ！");
+	STRLCPY(b.brdname, "2...........");
+	STRLCPY(b.title, ".... Σ市民廣場     報告  站長  ㄜ！");
 	b.brdattr = BRD_GROUPBOARD;
 	b.level = 0;
 	b.gid = 1;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, BN_ALLPOST);
-	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章");
+	STRLCPY(b.brdname, BN_ALLPOST);
+	STRLCPY(b.title, "嘰哩 ◎跨板式LOCAL新文章");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "deleted");
-	strcpy(b.title, "嘰哩 ◎資源回收筒");
+	STRLCPY(b.brdname, "deleted");
+	STRLCPY(b.title, "嘰哩 ◎資源回收筒");
 	b.brdattr = 0;
 	b.level = PERM_BM;
 	b.gid = 5;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "Note");
-	strcpy(b.title, "嘰哩 ◎動態看板及歌曲投稿");
+	STRLCPY(b.brdname, "Note");
+	STRLCPY(b.title, "嘰哩 ◎動態看板及歌曲投稿");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "Record");
-	strcpy(b.title, "嘰哩 ◎我們的成果");
+	STRLCPY(b.brdname, "Record");
+	STRLCPY(b.title, "嘰哩 ◎我們的成果");
 	b.brdattr = 0 | BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	
-	strcpy(b.brdname, "WhoAmI");
-	strcpy(b.title, "嘰哩 ◎呵呵，猜猜我是誰！");
+	STRLCPY(b.brdname, "WhoAmI");
+	STRLCPY(b.title, "嘰哩 ◎呵呵，猜猜我是誰！");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "EditExp");
-	strcpy(b.title, "嘰哩 ◎範本精靈投稿區");
+	STRLCPY(b.brdname, "EditExp");
+	STRLCPY(b.title, "嘰哩 ◎範本精靈投稿區");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 
-	strcpy(b.brdname, "ALLHIDPOST");
-	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章(隱板)");
+	STRLCPY(b.brdname, "ALLHIDPOST");
+	STRLCPY(b.title, "嘰哩 ◎跨板式LOCAL新文章(隱板)");
 	b.brdattr = BRD_POSTMASK | BRD_HIDE;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 #ifdef BN_FIVECHESS_LOG
-	strcpy(b.brdname, BN_FIVECHESS_LOG);
-	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
+	STRLCPY(b.brdname, BN_FIVECHESS_LOG);
+	STRLCPY(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
@@ -210,34 +210,34 @@ static void initMan() {
     struct tm *tm = localtime(&t);
     
     memset(&f, 0, sizeof(f));
-    strcpy(f.owner, "SYSOP");
+    STRLCPY(f.owner, "SYSOP");
     sprintf(f.date, "%2d/%02d", tm->tm_mon + 1, tm->tm_mday);
     f.multi.money = 0;
     f.filemode = 0;
     
     if((fp = fopen("man/boards/N/Note/.DIR", "w"))) {
-	strcpy(f.filename, "SONGBOOK");
-	strcpy(f.title, "◆ 【點 歌 歌 本】");
+	STRLCPY(f.filename, "SONGBOOK");
+	STRLCPY(f.title, "◆ 【點 歌 歌 本】");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SONGBOOK");
 	
-	strcpy(f.filename, "SYS");
-	strcpy(f.title, "◆ <系統> 動態看板");
+	STRLCPY(f.filename, "SYS");
+	STRLCPY(f.title, "◆ <系統> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SYS");
 		
-	strcpy(f.filename, "SONGO");
-	strcpy(f.title, "◆ <點歌> 動態看板");
+	STRLCPY(f.filename, "SONGO");
+	STRLCPY(f.title, "◆ <點歌> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/SONGO");
 
-	strcpy(f.filename, "AD");
-	strcpy(f.title, "◆ <廣告> 動態看板");
+	STRLCPY(f.filename, "AD");
+	STRLCPY(f.title, "◆ <廣告> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/AD");
 	
-	strcpy(f.filename, "NEWS");
-	strcpy(f.title, "◆ <新聞> 動態看板");
+	STRLCPY(f.filename, "NEWS");
+	STRLCPY(f.title, "◆ <新聞> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
 	Mkdir("man/boards/N/Note/NEWS");
 	

@@ -45,7 +45,7 @@ int check(void *data, int n, userec_t *u) {
 	    int unum = searchuser(u->userid, u->userid);
 	    if (unum == 0)
 	    {
-		strcpy(buf, ctime4(&u->lastlogin));
+		STRLCPY(buf, ctime4(&u->lastlogin));
 		syslog(LOG_NOTICE, "invalid user record (%d): %s (%s) %s", n+1, 
 			u->userid, (u->userlevel & PERM_LOGINOK) ? "regok" : "unreg",
 			buf
@@ -76,7 +76,7 @@ int check(void *data, int n, userec_t *u) {
 		int unum;
 		
 		unum = searchuser(u->userid, u->userid);
-		strcpy(buf, ctime4(&u->lastlogin));
+		STRLCPY(buf, ctime4(&u->lastlogin));
 		if (unum != n+1)
 		{
 		    syslog(LOG_NOTICE, "out-of-sync user(%d/%d): %s %s", unum, n, 
@@ -136,7 +136,7 @@ int check_last_login(void *data, int n, userec_t *u) {
     if (u->userlevel & PERM_XEMPT)
         return 0;
 
-    strcpy(buf, Cdate(&u->firstlogin));
+    STRLCPY(buf, Cdate(&u->firstlogin));
 
     if (u->lastlogin > now + 86400 || u->lastlogin < 0) // should not be newer than now plus one day.
     {

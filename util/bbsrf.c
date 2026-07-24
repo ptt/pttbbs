@@ -7,6 +7,7 @@
 #include <syslog.h>
 #include "config.h"
 #include "osdep.h"
+#include "common.h"
 
 #define MAX_REMOTE_IP_LEN 32
 
@@ -20,7 +21,7 @@ static void get_remote_ip(int len, char *remote_ip)
 	// SSH_CONNECTION format: "client-ip client-port server-ip server-port"
 	sscanf(ssh_client, "%s", frombuf);
     } else {
-	strcpy(frombuf, "127.0.0.1");
+	STRLCPY(frombuf, "127.0.0.1");
     }
 
     strlcpy(remote_ip, frombuf, len);

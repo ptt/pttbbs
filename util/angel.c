@@ -195,7 +195,7 @@ int main(int argc, char *argv[]){
             if ((bid = getbnum(target)) < 1)
                 die("Invalid board: %s\n", target);
             bp = getbcache(bid);
-            strlcpy(target_name, bp->brdname, sizeof(target_name));
+            STRLCPY(target_name, bp->brdname);
             target = target_name;
             setbpath(output_path, target);
             setbfile(output_dir, target, ".DIR");
@@ -231,8 +231,8 @@ int main(int argc, char *argv[]){
 
     if (target) {
         fclose(fp);
-        strlcpy(fhdr.title, REPORT_SUBJECT, sizeof(fhdr.title));
-        strlcpy(fhdr.owner, REPORT_AUTHOR, sizeof(fhdr.owner));
+        STRLCPY(fhdr.title, REPORT_SUBJECT);
+        STRLCPY(fhdr.owner, REPORT_AUTHOR);
         append_record(output_dir, &fhdr, sizeof(fhdr));
 
         if (target_is_user) {
