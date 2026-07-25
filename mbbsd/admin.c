@@ -31,8 +31,6 @@ m_loginmsg(void)
 int
 m_user(void)
 {
-    userec_t        xuser;
-    int             id;
     char            genbuf[200];
 
     vs_hdr("使用者設定");
@@ -641,6 +639,9 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard)
 	if (board->chesscountry != CHESSCODE_NONE)
 	    AddingChessCountryFiles(genbuf);
 	// else // doesn't remove files..
+#else
+    // Declare that we know oldboard is not needed.
+    (void)oldboard;
 #endif
 }
 

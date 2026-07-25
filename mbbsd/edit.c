@@ -1932,7 +1932,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     FILE           *fp = NULL;
     textline_t     *p;
     char            ans[TTLEN], *msg;
-    int             aborted = 0, line = 0;
+    int             aborted = 0;
     int             entropy = 0;
 
     int upload = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
@@ -1966,6 +1966,9 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 #ifdef EXP_EDIT_UPLOAD
     if (upload)
 	outs(" (U)上傳資料");
+#else
+    // upload is not used in this case.
+    (void)upload;
 #endif // EXP_EDIT_UPLOAD
 
     if (chtitle)
@@ -2042,7 +2045,6 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 
 	    trim(msg);
             strip_ansi_movecmd(msg);
-	    line++;
 
 #ifdef USE_POST_ENTROPY
 	    // calculate the real content of msg
