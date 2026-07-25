@@ -159,14 +159,14 @@ typedef struct editor_internal_t {
     short lastindent;
     char last_phone_mode;
 
-    char ifuseanony		:1;
-    char redraw_everything	:1;
+    unsigned char redraw_everything	:1;
+    unsigned char ifuseanony	:1;
 
-    char insert_mode		:1;
-    char ansimode		:1;
-    char indent_mode		:1;
-    char phone_mode		:1;
-    char raw_mode		:1;
+    unsigned char insert_mode	:1;
+    unsigned char ansimode	:1;
+    unsigned char indent_mode	:1;
+    unsigned char phone_mode	:1;
+    unsigned char raw_mode	:1;
     char synparser;		// syntax parser
 
     char *searched_string;
