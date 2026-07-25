@@ -1930,7 +1930,7 @@ mf_display()
                                      */
                                     // move(lines, col-1);
                                     char ansicmd[16];
-                                    sprintf(ansicmd, ANSI_MOVETO(%d,%d),
+                                    snprintf(ansicmd, sizeof(ansicmd), ANSI_MOVETO(%d,%d),
                                             lines+1, col-1+1);
                                     /* to preven ANSI ESCAPE being tranlated as
                                      * DBCS trailing byte. */
