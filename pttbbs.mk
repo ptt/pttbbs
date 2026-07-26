@@ -50,7 +50,7 @@ PTT_LDLIBS+=	-liconv
 .endif
 
 .if ${OSTYPE} == "Linux"
-PTT_LDLIBS+=    -lrt
+PTT_LDLIBS+=    -lrt -pthread
 .endif
 
 .if ${OSTYPE} == "FreeBSD"

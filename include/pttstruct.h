@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "cmsys.h"	// for time4_t
 #include "config.h"	// various sizes in SHM
 #include "statistic.h"	// for MAX_STATS
@@ -587,7 +588,7 @@ typedef struct {
 	    int     dymaxactive;  /* 笆篈砞﹚程计     */
 	    int     toomanyusers; /* 禬筁计ぃ倒秈计 */
 	    int     noonlineuser; /* ㄏノぃ蔼獹陪ボ   */
-	    time4_t now __attribute__ ((deprecated));
+        time4_t deprecated_now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
 
@@ -597,11 +598,22 @@ typedef struct {
     /* statistic */
     unsigned int    statistic[STAT_MAX];
 
-    // 眖玡珿秏ㄏノ (fromcache). 瞷砆 daemon/fromd 
-    unsigned int    _deprecated_home_ip[MAX_FROM];
-    unsigned int    _deprecated_home_mask[MAX_FROM];
-    char            _deprecated_home_desc[MAX_FROM][32];
-    int        	    _deprecated_home_num;
+    /* SHM dynamic variables (formerly _deprecated_home_*, 12004 bytes / 3001 ints) */
+    union {
+        struct {
+            unsigned int    _home_ip[MAX_FROM];
+            unsigned int    _home_mask[MAX_FROM];
+            char            _home_desc[MAX_FROM][32];
+            int             _home_num;
+        } _deprecated __attribute__ ((deprecated));
+        struct {
+            // Only used if USE_PTHREAD_MUTEX_PASSWD is set, but we always keep
+            // it to prevent changing SHM size.
+            // Note: this has different sizes on different platforms,
+            // for example 40 bytes on Linux and 8 on FreeBSD, 64 on Darwin.
+            pthread_mutex_t passwd_mutex;
+        } e;
+    } __attribute__((packed)) GV3;
 
     int     max_user;
     time4_t max_time;

@@ -51,6 +51,39 @@ union semun {
 };
 #endif
 
+#ifdef USE_PTHREAD_MUTEX_PASSWD
+#include <pthread.h>
+
+int
+passwd_init(void)
+{
+    return 0;
+}
+
+void
+passwd_lock(void)
+{
+    int rc = pthread_mutex_lock(&SHM->GV3.e.passwd_mutex);
+    if (rc == EOWNERDEAD) {
+        pthread_mutex_consistent(&SHM->GV3.e.passwd_mutex);
+    } else if (rc != 0) {
+        fprintf(stderr, "[passwd_lock error] pthread_mutex_lock failed: %s\n", strerror(rc));
+        exit(1);
+    }
+}
+
+void
+passwd_unlock(void)
+{
+    int rc = pthread_mutex_unlock(&SHM->GV3.e.passwd_mutex);
+    if (rc != 0) {
+        fprintf(stderr, "[passwd_unlock error] pthread_mutex_unlock failed: %s\n", strerror(rc));
+        exit(1);
+    }
+}
+
+#else
+
 // semaphore based PASSWD locking
 
 int
@@ -102,6 +135,8 @@ passwd_unlock(void)
 	exit(1);
     }
 }
+
+#endif
 
 // updateing passwd/userec_t
 
