@@ -1,24 +1,12 @@
 #include "bbs.h"
+#include "cmbbs.h"
 
-SHM_t   *SHM;
+extern SHM_t *SHM;
 
 int main(int argc, char **argv) {
-    int i, shm, counter;
-    
-    shm = shmget(SHM_KEY, SHMSIZE,
-#ifdef USE_HUGETLB
-                SHM_HUGETLB |
-#endif
-	    SHM_R | SHM_W);
-    if(shm == -1) {
-	perror("shmget");
-	exit(0);
-    }
-    
-    if( (SHM = shmat(shm, NULL, 0)) == (void*)-1 ){
-	perror("shmat");
-	exit(0);
-    }
+    int i, counter;
+
+    attach_SHM();
 
     if(argc == 2) {
 	/* list specific id */

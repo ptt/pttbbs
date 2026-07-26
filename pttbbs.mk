@@ -49,6 +49,10 @@ PTT_LDFLAGS+=	-L/opt/local/lib
 PTT_LDLIBS+=	-liconv
 .endif
 
+.if ${OSTYPE} == "Linux"
+PTT_LDLIBS+=    -lrt
+.endif
+
 .if ${OSTYPE} == "FreeBSD"
 # FreeBSD特有的環境
 PTT_CFLAGS+=	-I/usr/local/include

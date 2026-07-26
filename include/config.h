@@ -93,6 +93,10 @@
 #define SHM_KEY         1228
 #endif
 
+#ifndef SHM_NAME
+#define SHM_NAME        "/bbs_" BBSMNAME
+#endif
+
 #ifndef PASSWDSEM_KEY
 #define PASSWDSEM_KEY   2010    /* semaphore key */
 #endif

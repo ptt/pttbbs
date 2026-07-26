@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 #include "cmsys.h"
 #include "cmbbs.h"
 #include "common.h"
@@ -62,49 +63,130 @@ safe_sleep(unsigned int seconds)
 /*
  * section - SHM
  */
-static void
-attach_err(int shmkey, const char *name)
+#ifdef USE_POSIX_SHM
+void *
+attach_posix_shm(const char *path, size_t shmsize, int create, int *is_created)
 {
-    fprintf(stderr, "[%s error] key = %x\n", name, shmkey);
-    fprintf(stderr, "errno = %d: %s\n", errno, strerror(errno));
-    exit(1);
-}
+    void *shmptr = NULL;
+    int is_new = 0;
+    int fd = -1;
 
-void           *
-attach_shm(int shmkey, int shmsize)
-{
-    void           *shmptr = (void *)NULL;
-    int             shmid;
-
-    shmid = shmget(shmkey, shmsize,
-#ifdef USE_HUGETLB
-	    SHM_HUGETLB |
-#endif
-	    0);
-    if (shmid < 0) {
-	// SHM should be created by uhash_loader, NOT mbbsd or other utils
-	attach_err(shmkey, "shmget");
+    if (create) {
+        fd = shm_open(path, O_CREAT | O_EXCL | O_RDWR, 0666);
+        if (fd >= 0) {
+            is_new = 1;
+        } else if (errno == EEXIST) {
+            fd = shm_open(path, O_RDWR, 0666);
+        }
+        if (fd < 0) {
+            fprintf(stderr, "[shm_open error] name = %s, errno = %d: %s\n", path, errno, strerror(errno));
+            exit(1);
+        }
+        if (is_new) {
+            if (ftruncate(fd, shmsize) < 0) {
+                fprintf(stderr, "[ftruncate error] name = %s, errno = %d: %s\n", path, errno, strerror(errno));
+                exit(1);
+            }
+        }
     } else {
-	shmptr = (void *)shmat(shmid, NULL, 0);
-	if (shmptr == (void *)-1)
-	    attach_err(shmkey, "shmat");
+        fd = shm_open(path, O_RDWR, 0666);
+        if (fd < 0) {
+            fprintf(stderr, "[shm_open error] name = %s, errno = %d: %s\n", path, errno, strerror(errno));
+            exit(1);
+        }
     }
 
+    if (is_created)
+        *is_created = is_new;
+
+    shmptr = mmap(NULL, shmsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if (shmptr == MAP_FAILED) {
+        fprintf(stderr, "[mmap error] name = %s, errno = %d: %s\n", path, errno, strerror(errno));
+        exit(1);
+    }
     return shmptr;
 }
 
-static void 
+#else
+
+void *
+attach_sysv_shm(int shmkey, size_t shmsize, int create, int *is_created)
+{
+    void *shmptr = NULL;
+    int shmid = -1;
+    int is_new = 0;
+
+    int flags = 0;
+
+#ifdef USE_HUGETLB
+    flags |= SHM_HUGETLB;
+#endif
+
+    if (create) {
+        flags |= 0600 | IPC_CREAT;
+        shmid = shmget(shmkey, shmsize, flags | IPC_EXCL);
+        if (shmid >= 0) {
+            is_new = 1;
+        } else if (errno == EEXIST) {
+            shmid = shmget(shmkey, shmsize, flags);
+        }
+    } else {
+        shmid = shmget(shmkey, shmsize, flags);
+    }
+
+    if (is_created)
+        *is_created = is_new;
+
+    if (shmid < 0) {
+        fprintf(stderr, "[shmget error] key = %x, errno = %d: %s\n", shmkey, errno, strerror(errno));
+        exit(1);
+    } else {
+        shmptr = (void *)shmat(shmid, NULL, 0);
+        if (shmptr == (void *)-1) {
+            fprintf(stderr, "[shmat error] key = %x, errno = %d: %s\n", shmkey, errno, strerror(errno));
+            exit(1);
+        }
+    }
+    return shmptr;
+}
+
+#endif
+
+void *
+attach_shm_ex(size_t shmsize, int create, int *is_created)
+{
+#ifdef USE_POSIX_SHM
+    return attach_posix_shm(SHM_NAME, shmsize, create, is_created);
+#else
+    return attach_sysv_shm(SHM_KEY, shmsize, create, is_created);
+#endif
+}
+
+void *
+attach_shm(size_t shmsize, int create)
+{
+    return attach_shm_ex(shmsize, create, NULL);
+}
+
+static void
 shm_check_error()
 {
-    fprintf(stderr, "Please use the source code version corresponding to SHM,\n"
-	    "or use ipcrm(1) command to clean share memory.\n");
+#ifdef USE_POSIX_SHM
+    fprintf(stderr, "Please check if SHM in %s is for version %d, "
+            "check /dev/shm or `posixshmcontrol rm` to clean it.\n",
+            SHM_NAME, SHM_VERSION);
+#else
+    fprintf(stderr, "Please check if SHM key %d is for version %d, "
+            "or use ipcrm(1) to clean it.\n", SHM_KEY, SHM_VERSION);
+#endif
     exit(1);
 }
 
 void
-attach_check_SHM(int version, int SHM_t_size)
+attach_check_SHM(int version, size_t SHM_t_size)
 {
-    SHM = attach_shm(SHM_KEY, SHMSIZE);
+    SHM = attach_shm(SHMSIZE, 0);
 
     // check main program -> common bbs library
     if (version      != SHM_VERSION) {
@@ -113,7 +195,7 @@ attach_check_SHM(int version, int SHM_t_size)
 	shm_check_error();
     }
     if (SHM_t_size   != sizeof(SHM_t)) {
-	fprintf(stderr, "Error: SHM_t_size(%d) != sizeof(SHM_t)(%zd)\n",
+	fprintf(stderr, "Error: SHM_t_size(%zd) != sizeof(SHM_t)(%zd)\n",
 		SHM_t_size, sizeof(SHM_t));
 	shm_check_error();
     }

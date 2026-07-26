@@ -1,5 +1,6 @@
 /* standalone uhash loader -- jochang */
 #include "bbs.h"
+#include "cmbbs.h"
 #include "fnv_hash.h"
 #include "var.h"
 
@@ -17,33 +18,13 @@ int main()
 }
 
 void load_uhash(void) {
-    int shmid, err;
-    shmid = shmget(SHM_KEY, SHMSIZE,
-#ifdef USE_HUGETLB
-		   SHM_HUGETLB |
-#endif
-		   0600 | IPC_CREAT | IPC_EXCL);
-    err = errno;
-    if( err == EEXIST )
-	shmid = shmget(SHM_KEY, SHMSIZE,
-#ifdef USE_HUGETLB
-		       SHM_HUGETLB |
-#endif
-		       0600 | IPC_CREAT);
+    int is_new = 0;
+    SHM = (SHM_t *) attach_shm_ex(SHMSIZE, 1, &is_new);
 
-    if( shmid < 0 ){
-	perror("shmget");
-	exit(1);
-    }
-    SHM = (void *) shmat(shmid, NULL, 0);
-    if( SHM == (void *)-1 ){
-	perror("shmat");
-	exit(1);
-    }
-    if( err  != EEXIST ) {
-	SHM->number=SHM->loaded = 0;
-	SHM->version = SHM_VERSION;
-	SHM->size    = sizeof(SHM_t);
+    if (is_new) {
+        SHM->number = SHM->loaded = 0;
+        SHM->version = SHM_VERSION;
+        SHM->size    = sizeof(SHM_t);
     }
 
     if(SHM->version != SHM_VERSION) {

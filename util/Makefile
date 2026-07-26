@@ -18,7 +18,7 @@ CPROG_WITH_UTIL= \
 	openticket	topusr		\
 	toplazyBM	writemoney	\
 	reaper		buildAnnounce	mailangel	\
-	outmail		chkhbf		\
+	outmail		chkhbf		userlist	\
 	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
@@ -33,7 +33,7 @@ CPP_WITH_UTIL= \
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
 	showboard	bbsrf		\
-	initbbs		userlist	merge_board	bbsmail
+	initbbs		merge_board	bbsmail
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
