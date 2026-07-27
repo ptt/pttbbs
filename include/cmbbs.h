@@ -111,6 +111,7 @@ void passwd_lock  (void);
 void passwd_unlock(void);
 int  passwd_update_money(int num);
 int  passwd_update(int num, userec_t *buf);
+int  purge_user_account(int unum, const char *userid, const char *action_tag);
 void friend_delete_all(const char *uident, int type);
 int  passwd_query (int num, userec_t *buf);
 int  passwd_load_user(const char *userid, userec_t *buf);

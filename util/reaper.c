@@ -84,40 +84,11 @@ int check(void *data, int n, userec_t *u) {
 		} 
 		else if (unum != 0)
 		{
-		    syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, 
-			    // (u->userlevel & PERM_LOGINOK) ? "regok" : "guest",
-			    u->userid, buf);
-
-		    log_filef(FN_USIES, LOG_CREAT,
-			    "%s %s %-12s %s",
-			    Cdate(&now), "CLEAN(EXPIRE)", u->userid, buf);
-
-		    sprintf(buf, "mv home/%c/%s tmp/", u->userid[0], u->userid);
-		    if(system(buf))
-			syslog(LOG_ERR, "can't move user home: %s", u->userid);
-		    u->userid[0] = '\0';
-		    setuserid(unum, u->userid);
-
-		    // flush into passwd
-		    memset(u, 0, sizeof(userec_t));
-		    passwd_update(unum, u);
+		    syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, u->userid, buf);
+		    purge_user_account(unum, u->userid, "CLEAN(EXPIRE)");
 		} else {
-		    /*
-		    static int changed = 0;
-
-		    if (changed ++ > 10)
-			exit(0);
-			*/
-    
-		    syslog(LOG_NOTICE, "clean user(%d): %s %s", n+1, 
-			    u->userid, buf);
-
-		    log_filef(FN_USIES, LOG_CREAT,
-			    "%s %s %-12s %s",
-			    Cdate(&now), "CLEAN(CLEAR)", u->userid, buf);
-		    u->userid[0] = '\0';
-		    memset(u, 0, sizeof(userec_t));
-		    passwd_update(n+1, u);
+		    syslog(LOG_NOTICE, "clean user(%d): %s %s", n+1, u->userid, buf);
+		    purge_user_account(n+1, u->userid, "CLEAN(CLEAR)");
 		}
 	    }
 	}

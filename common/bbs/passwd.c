@@ -176,6 +176,68 @@ passwd_update(int num, userec_t * buf)
     return 0;
 }
 
+/**
+ * Safely purge/delete a user account and clean up home directory,
+ * SHM hash table, audit logs, and .PASSWDS file.
+ *
+ * @param unum User ID number (1-indexed)
+ * @param userid User ID string
+ * @param action_tag Action description tag for audit logging (e.g. "KILL", "CLEAN(EXPIRE)", "CLEAN(CLEAR)")
+ * @return 0 on success, -1 on failure
+ */
+int
+purge_user_account(int unum, const char *userid, const char *action_tag)
+{
+    userec_t u = {0};
+    char src[PATH_MAX], dst[PATH_MAX];
+    time4_t now_t;
+    const char *uid_shm;
+    int ret;
+
+    if (!userid || !*userid || unum <= 0 || unum > MAX_USERS)
+        return -1;
+
+    // Acquire lock to guarantee atomic check, SHM clearing, and .PASSWDS update
+    passwd_lock();
+
+    // Verify unum matches expected userid in SHM if present
+    uid_shm = getuserid(unum);
+    if (uid_shm && *uid_shm && strcasecmp(uid_shm, userid) != 0) {
+        passwd_unlock();
+        return -1;
+    }
+
+    // Clear user hash table mapping and money in memory SHM
+    setumoney(unum, 0);
+    setuserid(unum, "");
+
+    // Zero out user record and update .PASSWDS file
+    ret = passwd_update(unum, &u);
+
+    passwd_unlock();
+
+    // Audit log entry to USIES log
+    time4(&now_t);
+    if (!action_tag || !*action_tag)
+        action_tag = "CLEAN(PURGE)";
+
+    log_filef(FN_USIES, LOG_CREAT, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
+
+    // Remove user references from friends' aloha notification lists
+    friend_delete_all(userid, FRIEND_ALOHA);
+
+    // Archive or remove user home directory
+    sethomepath(src, userid);
+    SNPRINTF(dst, "tmp/%s", userid);
+    if (dashd(src)) {
+        if (Rename(src, dst) != 0) {
+            RmTree(src);
+        }
+    }
+
+    return ret;
+}
+
 int
 passwd_query(int num, userec_t * buf)
 {

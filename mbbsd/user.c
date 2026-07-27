@@ -34,23 +34,8 @@ ban_usermail(const userec_t *u, const char *reason) {
 int
 kill_user(int num, const char *userid)
 {
-    userec_t u;
-    char src[256], dst[256];
-
-    if(!userid || num<=0 ) return -1;
-    sethomepath(src, userid);
-    SNPRINTF(dst, "tmp/%s", userid);
-    friend_delete_all(userid, FRIEND_ALOHA);
-    if (dashd(src) && Rename(src, dst) == 0) {
-	sethomepath(src, userid);
-	RmTree(src);
-    }
-
-    memset(&u, 0, sizeof(userec_t));
-    log_usies("KILL", getuserid(num));
-    setuserid(num, "");
-    passwd_sync_update(num, &u);
-    return 0;
+    if (!userid || num <= 0) return -1;
+    return purge_user_account(num, userid, "KILL ");
 }
 
 int
