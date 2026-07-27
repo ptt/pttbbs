@@ -18,6 +18,10 @@ rXXXX 的版號是 SVN 時代的，目前已沒有簡單方法對應回去。
     make r5858_birth
 
 -----------------------------------------------------------------------------
+2026-07-28: feat(xchatd): Use firstlogin token for xchatd auth
+聊天室通訊協定更新，昇到此版後請記得要重開 xchatd 與所有的 mbbsd, 不然會
+無法進入聊天室。
+
 2026-07-27: [upgrade] cleanup(upgrade): Remove outdated upgrade tools
 許多舊的 upgrade script 已移除，如果從非常舊的版本昇級，請自行找到還能編譯
 的中間版本來跑 upgrade。

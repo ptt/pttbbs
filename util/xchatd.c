@@ -195,17 +195,6 @@ acct_load(ACCT *acct, char *userid)
     return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
 }
 
-int
-chkpasswd(const char *passwd, const char *test)
-{
-    char *pw;
-    char pwbuf[PASSLEN];
-
-    strlcpy(pwbuf, test, PASSLEN);
-    pw = fcrypt(pwbuf, passwd);
-    return (!strncmp(pw, passwd, PASSLEN));
-}
-
 /* ----------------------------------------------------- */
 /* operation log and debug information                   */
 /* ----------------------------------------------------- */
@@ -1426,7 +1415,7 @@ login_user(ChatUser *cu, char *msg)
 {
     int utent;
 
-    char *passwd;
+    char *token;
     char *userid;
     char *chatid;
 
@@ -1452,21 +1441,13 @@ login_user(ChatUser *cu, char *msg)
 
     userid = nextword(&msg);
     chatid = nextword(&msg);
+    token = nextword(&msg);
 
     chat_safe_trim(chatid, sizeof(cu->chatid));
 
 #ifdef  DEBUG
     logit("ENTER", userid);
 #endif
-    /* Thor.0730: parse space before passwd */
-    passwd = msg;
-
-    /* Thor.0813: 跳過一空格即可, 因為反正如果chatid有空格, 密碼也不對 */
-    /* 就算密碼對, 也不會怎麼樣:p */
-    /* 可是如果密碼第一個字是空格, 那跳太多空格會進不來... */
-    if (*passwd == ' ')
-	passwd++;
-
     /* Thor.0729: load acct */
     if (!*userid || (acct_load(&acct, userid) < 0))
     {
@@ -1479,11 +1460,10 @@ login_user(ChatUser *cu, char *msg)
 
 	return -1;
     }
-    else if(strncmp(passwd, acct.passwd, PASSLEN) &&
-	    !chkpasswd(acct.passwd, passwd))
+    else if (*token && (time4_t)atoi(token) != acct.firstlogin)
     {
 #ifdef  DEBUG
-	logit("fake", chatid);
+	logit("renewed", chatid);
 #endif
 
 	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);

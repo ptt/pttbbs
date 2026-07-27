@@ -1221,7 +1221,7 @@ ccw_chat(int fd)
         DBCS_safe_trim(chatid);
 
         // login format: /! UserID ChatID password
-        SNPRINTF(cmd, "/! %s %s %s", cuser.userid, chatid, cuser.passwd);
+        SNPRINTF(cmd, "/! %s %s %u", cuser.userid, chatid, (unsigned int)cuser.firstlogin);
         ccw_chat_send(&ctx, cmd);
         if (recv(ctx.fd, cmd, 3, 0) != 3) {
             close(ctx.fd);
