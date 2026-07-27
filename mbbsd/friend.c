@@ -337,37 +337,7 @@ friend_delete(const char *uident, int type)
     delete_friend_from_file(fn, uident, 0);
 }
 
-static void
-delete_user_friend(const char *uident, const char *thefriend, int type GCC_UNUSED)
-{
-    char fn[PATHLEN];
-    // some stupid user simply set themselves and caused recursion here.
-    if (strcasecmp(uident, thefriend) == 0)
-        return;
-    sethomefile(fn, uident, FN_ALOHA);
-    delete_friend_from_file(fn, thefriend, 0);
-}
 
-void
-friend_delete_all(const char *uident, int type)
-{
-    char buf[PATHLEN], line[PATHLEN];
-    FILE *fp;
-
-    sethomefile(buf, uident, friend_file[type]);
-
-    if ((fp = fopen(buf, "r")) == NULL)
-	return;
-
-    while (fgets(line, sizeof(line), fp)) {
-	sscanf(line, "%s", buf);
-        if (!is_validuserid(buf))
-            continue;
-	delete_user_friend(buf, uident, type);
-    }
-
-    fclose(fp);
-}
 
 static void
 friend_editdesc(const char *uident, int type)
