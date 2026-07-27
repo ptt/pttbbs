@@ -1,3 +1,10 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+#endif
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h> // random
 #include <sys/file.h> // flock
@@ -540,4 +547,26 @@ int file_foreach_entry(const char *file, int (*func)(char *, int), int info)
 
     fclose(fp);
     return 0;
+}
+
+
+/**
+ * Recursively remove a file or directory tree (pure C, equivalent to rm -rf).
+ *
+ * @param path Path to file or directory
+ * @return 0 on success, -1 on failure
+ */
+static int
+rmtree_nftw_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+    (void)sb; (void)typeflag; (void)ftwbuf;
+    return remove(fpath);
+}
+
+int
+RmTree(const char *path)
+{
+    if (!path || !*path)
+        return -1;
+    return nftw(path, rmtree_nftw_cb, 64, FTW_DEPTH | FTW_PHYS);
 }

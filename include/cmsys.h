@@ -78,6 +78,7 @@ int AppendTail(const char *src, const char *dst, int off);
 int Link(const char *src, const char *dst);
 int HardLink(const char *src, const char *dst);
 int Mkdir(const char *path);
+int RmTree(const char *path);
 int OpenCreate(const char *path, int flags);
 int file_count_line(const char *file);
 int file_append_line(const char *file, const char *string); // does not append "\n"
