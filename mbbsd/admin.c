@@ -769,8 +769,9 @@ m_mod_board(char *bname)
 	break;
     case 's':
 	if (HasUserPerm(PERM_BOARD)) {
-	  SNPRINTF(genbuf, BBSHOME "/bin/buildir boards/%c/%s &",
-		   bh.brdname[0], bh.brdname);
+	  char bpath[PATHLEN];
+	  setbpath(bpath, bh.brdname);
+	  SNPRINTF(genbuf, BBSHOME "/bin/buildir %s &", bpath);
 	    system(genbuf);
 	}
 	break;
@@ -830,13 +831,14 @@ m_mod_board(char *bname)
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
-	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1",
-		    bname, bname[0], bname, bname[0], bname);
+	    char bpath[PATHLEN], apath[PATHLEN];
+	    setbpath(bpath, bname);
+	    setapath(apath, bname);
+	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
+		    bname, bpath, apath);
 	    system(genbuf);
-	    setbpath(genbuf, bname);
-	    RmTree(genbuf);
-	    setapath(genbuf, bname);
-	    RmTree(genbuf);
+	    RmTree(bpath);
+	    RmTree(apath);
 	    memset(&bh, 0, sizeof(bh));
 	    SNPRINTF(bh.title, "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg(BN_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");

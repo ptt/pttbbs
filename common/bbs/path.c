@@ -15,6 +15,7 @@
 static const char * const str_home_file = "home/%c/%s/%s";
 static const char * const str_board_file = "boards/%c/%s/%s";
 static const char * const str_board_n_file = "boards/%c/%s/%s.%d";
+static const char * const str_man_file = "man/boards/%c/%s/%s";
 static const char * const str_dotdir = FN_DIR;
 
 static int is_validfilename(const char *fname) {
@@ -80,7 +81,7 @@ setapath(char *buf, const char *boardname)
 void
 setadir(char *buf, const char *path)
 {
-    //assert(path[0]);
+    assert(buf != path);
     snprintf(buf, PATHLEN, "%s/%s", path, str_dotdir);
 }
 
@@ -91,15 +92,12 @@ setbpath(char *buf, const char *boardname)
     snprintf(buf, PATHLEN, "boards/%c/%s", boardname[0], boardname);
 }
 
-#if 0
 void
-setbdir(char *buf, const char *boardname)
+setafile(char *buf, const char *boardname, const char *fname)
 {
-    //assert(boardname[0]);
-    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
-	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
+    assert(fname[0] && is_validfilename(fname));
+    snprintf(buf, PATHLEN, str_man_file, boardname[0], boardname, fname);
 }
-#endif
 
 void
 setbfile(char *buf, const char *boardname, const char *fname)

@@ -85,7 +85,7 @@ void chkhbf(boardheader_t *bptr)
     FILE    *fp;
     userec_t xuser;
 
-    sprintf(fn, "boards/%c/%s/visable", bptr->brdname[0], bptr->brdname);
+    setbfile(fn, bptr->brdname, "visable");
     if( (fp = fopen(fn, "rt")) == NULL )
 	return;
     while( fgets(chkuser, sizeof(chkuser), fp) != NULL ){

@@ -1007,9 +1007,7 @@ int fixbcache(int argc, char **argv)
 	    bcache[bid] = bh;
 	    unlockbcache();
 
-	    sprintf(fn, "boards/%c/%s/.DIR.bottom",
-                    bh.brdname[0],
-                    bh.brdname);
+	    setbfile(fn, bh.brdname, ".DIR.bottom");
 	    n = get_num_records(fn, sizeof(fileheader_t));
             if( n > 5 )
                 n = 5;

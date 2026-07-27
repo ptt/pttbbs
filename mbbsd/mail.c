@@ -1534,23 +1534,25 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if (mode == 'Z') {
 	assert(is_validuserid(cuser.userid));
 	assert(is_valid_email(address));
+        char hpath[PATHLEN];
+        sethomepath(hpath, cuser.userid);
 #ifdef MUTT_PATH
-	SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf /tmp/home.%s.tgz home/%c/%s; "
-		 MUTT_PATH " -s 'home.%s.tgz' "
+        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-czf /tmp/home.%s.tgz %s; "
+                 MUTT_PATH " -s 'home.%s.tgz' "
                  "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
-		 "rm /tmp/home.%s.tgz",
-		 cuser.userid, cuser.userid[0], cuser.userid,
-		 cuser.userid, cuser.userid, address, cuser.userid);
-	system(fname);
-	return 0;
+                 "rm /tmp/home.%s.tgz",
+                 cuser.userid, hpath,
+                 cuser.userid, cuser.userid, address, cuser.userid);
+        system(fname);
+        return 0;
 #else
-	SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf - home/%c/%s | "
-		"/usr/bin/uuencode %s.tgz > %s",
-		cuser.userid[0], cuser.userid, cuser.userid, direct);
-	system(fname);
-	STRLCPY(fname, direct);
+        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+                 "-czf - %s | "
+                 "/usr/bin/uuencode %s.tgz > %s",
+                 hpath, cuser.userid, direct);
+        system(fname);
+        STRLCPY(fname, direct);
 #endif
     } else if (mode == 'U') {
 	char            tmp_buf[PATHLEN];

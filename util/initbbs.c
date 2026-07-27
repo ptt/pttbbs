@@ -92,9 +92,9 @@ static void newboard(FILE *fp, boardheader_t *b) {
     char buf[256];
     
     fwrite(b, sizeof(boardheader_t), 1, fp);
-    sprintf(buf, "boards/%c/%s", b->brdname[0], b->brdname);
+    setbpath(buf, b->brdname);
     Mkdir(buf);
-    sprintf(buf, "man/boards/%c/%s", b->brdname[0], b->brdname);
+    setapath(buf, b->brdname);
     Mkdir(buf);
 }
 

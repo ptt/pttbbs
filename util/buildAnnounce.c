@@ -56,8 +56,10 @@ void buildchilds(int level,char *path,int gid)
 	else{
 	    if(!invalid_pname(path) && !invalid_pname(ptr->brdname) &&
 		    isalpha(ptr->brdname[0])) {
-		sprintf(newpath,"/bin/ln -s "BBSHOME"/man/boards/%c/%s %s/%s",
-			ptr->brdname[0], ptr->brdname,path,ptr->brdname);
+		char apath[PATHLEN];
+		setapath(apath, ptr->brdname);
+		SNPRINTF(newpath, "/bin/ln -s " BBSHOME "/%s %s/%s",
+			apath, path, ptr->brdname);
 		system(newpath);
 	    } else {
 		printf("something wrong: %s, %s\n",path, ptr->brdname);

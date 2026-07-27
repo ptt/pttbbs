@@ -1498,11 +1498,12 @@ do_post_article(int edflags)
         rename(genbuf, fpath);
 	setbtotal(currbid);
 
-        LOG_IF(LOG_CONF_POST,
-               log_filef("log/post", LOG_CREAT,
-                         "%d %s boards/%c/%s/%s %d\n",
-                         (int)now, cuser.userid, currboard[0], currboard,
-                         postfile.filename, money));
+        if (LOG_CONF_POST) {
+            char bfilepath[PATHLEN];
+            setbfile(bfilepath, currboard, postfile.filename);
+            log_filef("log/post", LOG_CREAT, "%d %s %s %d\n",
+                      (int)now, cuser.userid, bfilepath, money);
+        }
 
 	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));

@@ -195,17 +195,6 @@ acct_load(ACCT *acct, char *userid)
     return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
 }
 
-/* ----------------------------------------------------- */
-/* usr_fpath for check acct                              */
-/* ----------------------------------------------------- */
-char *str_home_file = "home/%c/%s/%s";
-
-void
-usr_fpath(char *buf, char *userid, char *fname)
-{
-    sprintf(buf, str_home_file, userid[0], userid, fname);
-}
-
 int
 chkpasswd(const char *passwd, const char *test)
 {

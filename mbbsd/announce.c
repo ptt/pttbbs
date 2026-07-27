@@ -874,9 +874,7 @@ a_delete(menu_t * pm, const char *backup_dir)
         if ((fhdr->filemode & FILE_BM) || (fhdr->filemode & FILE_HIDE))
             backup.filemode |= FILE_BM;
 
-	/* merge setapath(buf, save_bn); setadir(buf, buf); */
-	SNPRINTF(buf, "man/boards/%c/%s/" FN_DIR,
-		*save_bn, save_bn);
+	setafile(buf, save_bn, FN_DIR);
 	append_record(buf, &backup, sizeof(backup));
 
     } else {			/* Ptt ·l·´ªº¶µ¥Ø */

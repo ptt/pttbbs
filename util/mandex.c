@@ -296,7 +296,7 @@ int main(int argc, char* argv[])
 		continue;
 
 	    if (checkrebuild) {
-		sprintf(fpath, "man/boards/%c/%s/.rebuild", dirs[i], fname);
+		setafile(fpath, fname, ".rebuild");
 		if (access(fpath, 0) < 0) {
 		    printf("skip no modify board %s\n", fname);
 		    fflush(stdout); // in case the output is redirected...

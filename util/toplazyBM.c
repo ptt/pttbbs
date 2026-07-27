@@ -229,8 +229,7 @@ int main(void)
         if (need_alert(lostdays) < ALERT_WARN)
             continue;
 
-	sprintf(genbuf, BBSHOME "/home/%c/%s", 
-		lostbms[i].bmname[0], lostbms[i].bmname);
+	sethomepath(genbuf, lostbms[i].bmname);
 	stampfile(genbuf, &mymail);
 
 	STRLCPY(mymail.owner, "[" BBSMNAME "ĵ�]");
@@ -249,8 +248,7 @@ int main(void)
 	else
 	    Link(FIREFILE, genbuf);
 
-	sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", 
-		lostbms[i].bmname[0], lostbms[i].bmname);
+	sethomedir(genbuf, lostbms[i].bmname);
 	append_record(genbuf, &mymail, sizeof(mymail)); 	
     }
     return 0;

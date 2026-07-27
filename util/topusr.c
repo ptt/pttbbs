@@ -79,7 +79,7 @@ int
     FILE *fh;
     int counter = 0;
 
-    sprintf(buf, "%s/home/%c/%s/.tin/posted", home_path, name[0], name);
+    sethomefile(buf, name, ".tin/posted");
     fh = fopen(buf, "r");
     if (fh == NULL)
 	return 0;

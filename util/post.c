@@ -6,7 +6,7 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
     FILE *fout;
     int bid;
     
-    sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
+    setbpath(genbuf, board);
     stampfile(genbuf, &fhdr);
     
     if(!(fout = fopen(genbuf, "w"))) {
@@ -24,7 +24,7 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
     fhdr.title[sizeof(fhdr.title) - 1] = '\0';
     
     STRLCPY(fhdr.owner, owner);
-    sprintf(genbuf, BBSHOME "/boards/%c/%s/.DIR", board[0], board);
+    setbfile(genbuf, board, FN_DIR);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if((bid = getbnum(board)) > 0)
