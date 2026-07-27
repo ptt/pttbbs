@@ -43,7 +43,7 @@ int getHoroscope(int m, int d)
 const char*
 Cdate(const time4_t *clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -57,7 +57,7 @@ Cdate(const time4_t *clock)
 const char*
 Cdatelite(const time4_t *clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -71,7 +71,7 @@ Cdatelite(const time4_t *clock)
 const char*
 Cdatedate(const time4_t * clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -85,7 +85,7 @@ Cdatedate(const time4_t * clock)
 const char*
 Cdate_md(const time4_t * clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -99,7 +99,7 @@ Cdate_md(const time4_t * clock)
 const char*
 Cdate_mdHM(const time4_t * clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -113,7 +113,7 @@ Cdate_mdHM(const time4_t * clock)
 const char*
 Cdate_mdHMS(const time4_t * clock)
 {
-    time_t          temp = (time_t)*clock;
+    time_t          temp = time4_to_time(*clock);
     struct tm       mytm;
 
     localtime_r(&temp, &mytm);
@@ -124,7 +124,7 @@ Cdate_mdHMS(const time4_t * clock)
 char           *
 ctime4(const time4_t *clock)
 {
-    time_t temp = (time_t)*clock;
+    time_t temp = time4_to_time(*clock);
     
     return ctime(&temp);
 }
@@ -132,7 +132,7 @@ ctime4(const time4_t *clock)
 char *
 ctime4_r(const time4_t *t, char *buf)
 {
-    time_t temp = (time_t)*t;
+    time_t temp = time4_to_time(*t);
 
     return ctime_r(&temp, buf);
 }
@@ -143,7 +143,7 @@ struct tm *localtime4(const time4_t *t)
     if( t == NULL )
 	return localtime(NULL);
     else {
-	time_t  temp = (time_t)*t;
+	time_t  temp = time4_to_time(*t);
 	return localtime(&temp);
     }
 }
@@ -153,7 +153,7 @@ localtime4_r(const time4_t *t, struct tm *pt)
 {
     if (t)
     {
-	time_t temp  = (time_t)*t;
+	time_t temp  = time4_to_time(*t);
 	localtime_r(&temp, pt);
     }
     else

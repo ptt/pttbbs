@@ -437,8 +437,8 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
         return 0;
 
     // Update now (before skipping user) in case the master never called angel.
-    if (u->timesetangel > kanade->last_assigned) {
-        kanade->last_assigned = u->timesetangel;
+    if (time4_gt(u->timesetangel, kanade->last_assigned)) {
+        kanade->last_assigned = time4_to_time(u->timesetangel);
         kanade->last_assigned_master = unum;
     }
 

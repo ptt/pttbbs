@@ -1060,8 +1060,8 @@ is_hidden_board_friend(int bid, int uid)
 void add_cooldowntime(int uid, int min)
 {
     // Ptt: I will use the number below 15 seconds.
-    time4_t base= now > SHM->cooldowntime[uid - 1]? 
-                    now : SHM->cooldowntime[uid - 1];
+    time4_t cd = SHM->cooldowntime[uid - 1];
+    time4_t base = time4_gt(now, cd) ? now: cd;
     base += min*60;
     base &= 0xFFFFFFF0;
 

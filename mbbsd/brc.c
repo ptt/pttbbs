@@ -570,7 +570,7 @@ brc_addlist(const char *fname, time4_t modified)
 	    // special case here:
 	    // in order to support special system like 'always bottom',
 	    // they may share same create time and different time.
-	    if (brc_list[n].modified < modified)
+	    if (time4_lt(brc_list[n].modified, modified))
 	    {
 		brc_list[n].modified = modified;
 		brc_changed = 1;
@@ -614,7 +614,7 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 	return 1;
 
     for (i = 0; i < bnum; i++) { /* using linear search */
-	if (ftime > blist[i].create)
+	if (time4_gt(ftime, blist[i].create))
 	    return 1;
 	else if (ftime == blist[i].create)
 	{
@@ -630,7 +630,7 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 	    // always bottom) may cause issue. They share create
 	    // time (filename) and apply different modify time.
 	    // so let's back to 'greater'.
-	    return modified > brcm ? 2 : 0;
+	    return time4_gt(modified, brcm) ? 2 : 0;
 	}
     }
     return 0;

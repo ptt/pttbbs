@@ -46,5 +46,23 @@ int main()
     ENSURE(fileheader_t, 128);
     ENSURE(boardheader_t, 256);
     ENSURE(chicken_t, 128);
+
+    // Y2038 overflow verification test (Year 2040 & Year 2100)
+    time4_t t2040 = (time4_t)2208988800U; // 2040-01-01 00:00:00 UTC
+    struct tm *tm2040 = localtime4(&t2040);
+    if (!tm2040 || tm2040->tm_year != 140) {
+        fprintf(stderr, "Y2038 verification failed for Year 2040!\n");
+        return 1;
+    }
+    printf("Y2038 Year 2040 test passed: %s\n", Cdate(&t2040));
+
+    time4_t t2100 = (time4_t)4102444800U; // 2100-01-01 00:00:00 UTC
+    struct tm *tm2100 = localtime4(&t2100);
+    if (!tm2100 || tm2100->tm_year != 200) {
+        fprintf(stderr, "Y2038 verification failed for Year 2100!\n");
+        return 1;
+    }
+    printf("Y2038 Year 2100 test passed: %s\n", Cdate(&t2100));
+
     return 0;
 }

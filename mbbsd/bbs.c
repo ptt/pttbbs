@@ -1604,7 +1604,7 @@ do_post_article(int edflags)
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
-	    if ((time4_t)cooldowntimeof(usernum) < now)
+	    if (time4_lt(cooldowntimeof(usernum), now))
 		add_cooldowntime(usernum, 5);
 	}
 	add_posttimes(usernum, 1);
@@ -2300,7 +2300,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
-	    if ((time4_t)cooldowntimeof(usernum) < now)
+	    if (time4_lt(cooldowntimeof(usernum), now))
 		add_cooldowntime(usernum, 5);
 	}
 	add_posttimes(usernum, 1);

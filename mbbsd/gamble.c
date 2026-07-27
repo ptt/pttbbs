@@ -44,7 +44,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     clear();
     if (bh) {
 	SNPRINTF(genbuf, "%s ¼Ö³z", bh->brdname);
-	if (bh->endgamble && now < bh->endgamble &&
+	if (bh->endgamble && time4_lt(now, bh->endgamble) &&
 	    bh->endgamble - now < 3600) {
 	    SNPRINTF(t, "«Ê½L­Ë¼Æ %d ¬í", (int)(bh->endgamble - now));
 	    showtitle(genbuf, t);
@@ -508,7 +508,7 @@ stop_gamble(void)
     boardheader_t  *bp = getbcache(currbid);
     char            fn_ticket[128], fn_ticket_end[128];
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (!bp->endgamble || bp->endgamble > now)
+    if (!bp->endgamble || time4_gt(bp->endgamble, now))
 	return 0;
 
     setbfile(fn_ticket, currboard, FN_TICKET);

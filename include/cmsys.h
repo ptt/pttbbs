@@ -39,6 +39,21 @@ enum _DBCS_STATUS {
 typedef int32_t time4_t;
 typedef int64_t time8_t;
 
+/* time4_t to 64-bit time_t conversion helper (Y2038 safe zero-extension) */
+static inline time_t time4_to_time(time4_t t) {
+    return (time_t)(uint32_t)t;
+}
+
+/* time4_t Y2038-safe unsigned comparison helpers */
+static inline int time4_cmp(time4_t a, time4_t b) {
+    uint32_t ua = (uint32_t)a, ub = (uint32_t)b;
+    return (ua > ub) - (ua < ub);
+}
+static inline int time4_gt(time4_t a, time4_t b) { return (uint32_t)a > (uint32_t)b; }
+static inline int time4_ge(time4_t a, time4_t b) { return (uint32_t)a >= (uint32_t)b; }
+static inline int time4_lt(time4_t a, time4_t b) { return (uint32_t)a < (uint32_t)b; }
+static inline int time4_le(time4_t a, time4_t b) { return (uint32_t)a <= (uint32_t)b; }
+
 /* crypt.c */
 char *fcrypt(const char *key, const char *salt);
 
