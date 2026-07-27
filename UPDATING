@@ -8,20 +8,20 @@ PTT BBS [Current] Updating Log (in Big5 encoding)
 跟著 Current 一起昇級的朋友們要注意是否有跨過下列的版號，若有請依序手動更新。
 會列在這裡的版號，強烈建議先整個關站再更新。
 
-關於該版號的進一步訊息，可用 https://opentrac.csie.org/pttbbs/changeset/
-來查詢，如下面列 r2273 的查詢網址就是
-https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
+最新的版本目前是放在 github 上：
+   https://github.com/ptt/pttbbs
+
+rXXXX 的版號是 SVN 時代的，目前已沒有簡單方法對應回去。
 
 註: 昇級時的檔案很多在 upgrade 目錄底下，若是有 *.c 的，多半用
     make XXXX 就可以編譯出來，如
-    make r3968_chicken
-    make r4035_regnew
-    make r4194_passwd
-    make r4826_numlogin
-    make r4848_watermode
-    make r4871_uflag
+    make r5858_birth
 
 -----------------------------------------------------------------------------
+2026-07-27: [upgrade] cleanup(upgrade): Remove outdated upgrade tools
+許多舊的 upgrade script 已移除，如果從非常舊的版本昇級，請自行找到還能編譯
+的中間版本來跑 upgrade。
+
 2019-03-14: [shm]
 OUTTA_TIMER 已經被移除。現代作業系統 (至少 Linux 和 FreeBSD) 在各硬體平台上
 都有支援 vDSO 之類的機制，可以讓 gettimeofday 不用 syscall 進 kernel 就取得
