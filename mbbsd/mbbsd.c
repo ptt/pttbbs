@@ -780,7 +780,7 @@ login_query(char *ruid)
     char            uid[IDLEN + 1];
 #endif
 
-    char	    passbuf[PASSLEN];
+    char	    passbuf[PW_PLAIN_SIZE];
     int             attempts;
 
     resolve_garbage();
@@ -887,7 +887,6 @@ login_query(char *ruid)
             /* ask user for password, even the user does not exists. */
 	    getdata(21, 0, MSG_PASSWD,
 		    passbuf, sizeof(passbuf), NOECHO);
-	    passbuf[8] = '\0';
 
 	    move (22, 0); clrtoeol();
 	    outs("•ø¶b¿À¨d±KΩX...");
@@ -896,7 +895,7 @@ login_query(char *ruid)
 	    /* prepare for later */
 	    clrtoeol();
 
-            if (!valid_user || !checkpasswd(cuser.passwd, passbuf)) {
+            if (!valid_user || !checkuser_passwd(cuser_ref, passbuf)) {
 
 		if(is_validuserid(cuser.userid))
 		    logattempt(cuser.userid , '-', login_start_time, fromhost);

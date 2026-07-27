@@ -219,7 +219,7 @@ typedef struct {
     int  is_secure_connection;
     char userid [IDBOXLEN];
     char pad0;   // for safety
-    char passwd [PASSLEN+1];
+    char passwd [PW_PLAIN_LEN+1];
     char pad1;   // for safety
     char hostip [IPV4LEN+1];
     char pad2;   // for safety
@@ -1594,7 +1594,7 @@ auth_user_challenge(login_ctx *ctx)
         return AUTH_RESULT_FAIL_INSECURE;
     }
 
-    if (!checkpasswd(user.passwd, passbuf))
+    if (!checkuser_passwd(&user, passbuf))
     {
         return AUTH_RESULT_FAIL;
     }

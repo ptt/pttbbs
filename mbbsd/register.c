@@ -824,21 +824,20 @@ new_register(void)
     "為避免被偷看，您的密碼會顯示為 * ，直接輸入完後按 Enter 鍵即可。\n"
     "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
 	ANSI_RESET);
-        if ((getdata(18, 0, "請設定密碼：", passbuf, PASS_INPUT_LEN + 1,
+        char passbuf_confirm[PW_PLAIN_SIZE];
+        if ((getdata(18, 0, "新密碼：", passbuf, PW_PLAIN_SIZE,
                      PASSECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {
 	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
 	    continue;
 	}
-	strlcpy(newuser.passwd, passbuf, PASSLEN);
-	getdata(19, 0, "請確認密碼：", passbuf, PASS_INPUT_LEN + 1, PASSECHO);
-	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
+	getdata(19, 0, "確認密碼：", passbuf_confirm, PW_PLAIN_SIZE, PASSECHO);
+	if (strcmp(passbuf, passbuf_confirm)) {
 	    move(19, 0);
 	    outs("設定與確認時輸入的密碼不一致, 請重新輸入密碼.\n");
 	    continue;
 	}
-	passbuf[8] = '\0';
-	strlcpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
+	setuser_passwd(&newuser, passbuf);
 	break;
     }
 

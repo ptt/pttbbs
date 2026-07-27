@@ -995,33 +995,32 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
 #   endif
 #endif
-            if (!getdata(y++, 0, "請輸入原密碼：", buf, PASS_INPUT_LEN + 1,
+            if (!getdata(y++, 0, "原密碼：", buf, PW_PLAIN_SIZE,
                          PASSECHO) ||
-		!checkpasswd(x.passwd, buf)) {
+		!checkuser_passwd(&x, buf)) {
 		outs("\n\n您輸入的密碼不正確\n");
 		fail++;
 		break;
 	    }
 	}
-        if (!getdata(y++, 0, "請設定新密碼：", buf, PASS_INPUT_LEN + 1,
+        if (!getdata(y++, 0, "新密碼：", buf, PW_PLAIN_SIZE,
                      PASSECHO)) {
 	    outs("\n\n密碼設定取消, 繼續使用舊密碼\n");
 	    fail++;
 	    break;
 	}
-	strlcpy(genbuf, buf, PASSLEN);
+	strlcpy(genbuf, buf, sizeof(genbuf));
 
 	move(y+1, 0);
 	outs("請注意設定密碼只有前八個字元有效，超過的將自動忽略。");
 
-	getdata(y++, 0, "請檢查新密碼：", buf, PASS_INPUT_LEN + 1, PASSECHO);
-	if (strncmp(buf, genbuf, PASSLEN)) {
+	getdata(y++, 0, "確認密碼：", buf, PW_PLAIN_SIZE, PASSECHO);
+	if (strcmp(buf, genbuf)) {
 	    outs("\n\n新密碼確認失敗, 無法設定新密碼\n");
 	    fail++;
 	    break;
 	}
-	buf[8] = '\0';
-	STRLCPY(x.passwd, genpasswd(buf));
+	setuser_passwd(&x, buf);
 
 	// for admin mode, do verify after.
 	if (adminmode)

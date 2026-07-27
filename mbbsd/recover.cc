@@ -44,7 +44,7 @@ private:
   static std::optional<std::string> NormalizeEmail(const std::string &email);
   static bool SendRecoveryCode(const std::string &email,
                                const std::string &code);
-  static bool SetPasswd(const UserHandle &user, const char *hashed_passwd);
+  static bool SetPasswd(const UserHandle &user, const char *new_passwd);
   static void LogToSecurity(const UserHandle &user, const std::string &email);
   static void NotifyUser(const std::string &userid, const std::string &email);
   static std::string GenCode(size_t len);
@@ -123,7 +123,7 @@ bool AccountRecovery::SendRecoveryCode(const std::string &email,
 
 // static
 bool AccountRecovery::SetPasswd(const UserHandle &user,
-                                const char *hashed_passwd) {
+                                const char *new_passwd) {
   userec_t u = {};
   int unum = getuser(user.userid.c_str(), &u);
   if (unum <= 0)
@@ -131,7 +131,7 @@ bool AccountRecovery::SetPasswd(const UserHandle &user,
   // Check userid and generation again.
   if (std::string(u.userid) != user.userid || u.firstlogin != user.generation)
     return false;
-  strlcpy(u.passwd, hashed_passwd, sizeof(u.passwd));
+  setuser_passwd(&u, new_passwd);
   return 0 == passwd_sync_update(unum, &u);
 }
 
@@ -266,15 +266,15 @@ void AccountRecovery::EmailCodeChallenge() {
 
 void AccountRecovery::ResetPasswd() {
   // Input new password.
-  const char *hashed = nullptr;
   y_++;
   int errcnt = 0;
+  char pass[PW_PLAIN_SIZE] = {};
+
   while (1) {
     if (errcnt++ >= kMaxErrCnt * 2)
       UserErrorExit();
 
-    char pass[PASS_INPUT_LEN + 1] = {};
-    char confirm[PASS_INPUT_LEN + 1] = {};
+    char confirm[PW_PLAIN_SIZE] = {};
 
     move(y_, 0);
     clrtobot();
@@ -293,15 +293,13 @@ void AccountRecovery::ResetPasswd() {
       continue;
     }
 
-    // Hash password.
-    hashed = genpasswd(pass);
-    memset(pass, 0, sizeof(pass));
-    memset(confirm, 0, sizeof(confirm));
+    explicit_bzero(confirm, sizeof(confirm));
     break;
   }
-  assert(hashed);
 
-  if (!SetPasswd(user_.value(), hashed)) {
+  bool ok = *pass && SetPasswd(user_.value(), pass);
+  explicit_bzero(pass, sizeof(pass));
+  if (!ok) {
     vmsg("密碼重設失敗，請稍候再試。");
     return;
   }

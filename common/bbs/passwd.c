@@ -307,20 +307,62 @@ passwd_require_secure_connection(const userec_t *u)
     return (u->uflag & UF_SECURE_LOGIN) ? 1 : 0;
 }
 
-// XXX NOTE: string in plain will be destroyed.
 int
-checkpasswd(const char *passwd, char *plain)
+is_bcrypt_hash(const char *hash)
 {
-    int             ok;
-    char           *pw;
+    return (hash && strncmp(hash, "$2b$", 4) == 0);
+}
 
-    ok = 0;
-    pw = fcrypt(plain, passwd);
-    if(pw && strcmp(pw, passwd)==0)
-	ok = 1;
+// XXX NOTE: string in plain will be destroyed.
+static int
+checkpasswd(const char *pwhash, char *plain)
+{
+    int ok = 0;
+    if (is_bcrypt_hash(pwhash)) {
+        ok = (bcrypt_checkpass(plain, pwhash) == 0);
+    } else if (pwhash && pwhash[0]) {
+        char buf[9];
+        STRLCPY(buf, plain);
+        char *pw = fcrypt(buf, pwhash);
+        if (pw && strcmp(pw, pwhash) == 0)
+            ok = 1;
+        explicit_bzero(buf, sizeof(buf));
+    }
     explicit_bzero(plain, strlen(plain));
-
     return ok;
+}
+
+int
+checkuser_passwd(const userec_t *u, char *plain)
+{
+    int ok = 0;
+    /* If fhash is available, the user has previously set a password <= 8
+     * characters so verifying with fcrypt is enough.
+     * Do not try bcrypt first because they may consider 'extra chars are fine'.
+     * Only when fhash is empty, we can make sure the user did set a long
+     * password with the right prompt.
+     */
+    if (u->pw_fhash[0] != '\0')
+        return checkpasswd(u->pw_fhash, plain);
+    return checkpasswd(u->pw_bhash, plain);
+}
+
+void
+setuser_passwd(userec_t *u, const char *plain)
+{
+    size_t len = strlen(plain);
+    char salt[32];
+
+    if (bcrypt_gensalt(10, salt, sizeof(salt)) == 0) {
+        bcrypt_hashpass(plain, salt, u->pw_bhash, sizeof(u->pw_bhash));
+    }
+
+    if (len <= 8) {
+        const char *des_hash = genpasswd(plain);
+        STRLCPY(u->pw_fhash, des_hash);
+    } else {
+        u->pw_fhash[0] = '\0';
+    }
 }
 
 const char *

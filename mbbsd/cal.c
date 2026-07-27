@@ -328,7 +328,7 @@ give_money_ui(const char *userid)
 {
     int             uid, can_send_mail = 1;
     char            id[IDLEN + 1], money_buf[20];
-    char	    passbuf[PASSLEN];
+    char	    passbuf[PW_PLAIN_SIZE];
     int		    m = 0, mtax = 0, tries = 3, skipauth = 0;
     static time4_t  lastauth = 0;
     const char	    *myid = cuser.userid;
@@ -459,8 +459,7 @@ give_money_ui(const char *userid)
     {
 	getdata(8, 0, MSG_PASSWD,
 		passbuf, sizeof(passbuf), NOECHO);
-	passbuf[8] = '\0';
-	if (checkpasswd(cuser.passwd, passbuf))
+	if (checkuser_passwd(cuser_ref, passbuf))
 	{
 	    lastauth = now;
 	    break;

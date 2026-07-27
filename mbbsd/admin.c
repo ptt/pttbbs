@@ -71,7 +71,7 @@ static int retrieve_backup(userec_t *user)
     if ((uid = searchuser(user->userid, user->userid))) {
 	userec_t orig;
 	passwd_sync_query(uid, &orig);
-	strlcpy(user->passwd, orig.passwd, sizeof(orig.passwd));
+	STRLCPY(user->pw_fhash, orig.pw_fhash);
 	setumoney(uid, user->money);
 	passwd_sync_update(uid, user);
 	return 0;

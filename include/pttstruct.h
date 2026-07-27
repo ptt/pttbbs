@@ -46,22 +46,24 @@ typedef struct chicken_t { /* 128 bytes */
     int32_t pad2[1];           /* 留著以後用 */
 } PACKSTRUCT chicken_t;
 
-#define PASS_INPUT_LEN  8         /* Length of valid input password length.
-                                     For DES, set to 8. */
-#define PASSLEN    14             /* Length of encrypted passwd field */
+#define PW_PLAIN_LEN    72        /* Length of valid input password length (without NUL), based on bcrypt */
+#define PW_PLAIN_SIZE   (PW_PLAIN_LEN+1) /* Size of valid input password length (incl NUL) */
+#define PW_FHASH_SIZE   14        /* Size of fcrypt password hash (13+NUL) */
+#define PW_BHASH_SIZE   64        /* Size of long password hash (bcrypt=60+NUL=61 for now, pad to 64) */
+
 #define REGLEN     38             /* Length of registration data */
 #define EMAILSZ    50             /* Size of email field */
 
 #define PASSWD_VERSION	4194
 
 typedef struct userec_t {
-    uint32_t	version;	/* version number of this sturcture, we
+    uint32_t	version;	/* version number of this structure, we
     				 * use revision number of project to denote.*/
 
     char	userid[IDLEN+1];/* 使用者ID */
     char	realname[20];	/* 真實姓名 */
     char	nickname[24];	/* 暱稱 */
-    char	passwd[PASSLEN];/* 密碼 */
+    char	pw_fhash[PW_FHASH_SIZE]; /* fcrypt (DES) 密碼雜湊 */
     char	pad_1;
 
     uint32_t    uflag;		/* 習慣, see uflags.h */
@@ -86,17 +88,14 @@ typedef struct userec_t {
     char	_unused4[2];
     uint32_t    exmailbox;	/* 購買信箱數 */
 
-    // r3968 移出 sizeof(chicken_t)=128 bytes
     char	_unused5[4];
     char	career[40];	/* 學歷職業 */
-    char	_unused_phone[20];	/* 電話 */
-    uint32_t	_unused6;	/* 從前放轉換前的 numlogins, 使用前請先清0 */
-    char	chkpad1[44];
+    char	pw_bhash[PW_BHASH_SIZE]; /* bcrypt 長密碼雜湊 */
+    char	chkpad1[4];
     uint32_t    role;           /* Role-specific permissions */
     time4_t	lastseen;	/* 最近上站時間(隱身不計) */
     time4_t     timesetangel;   /* 上次得到天使時間 */
     time4_t	timeplayangel;	/* 上次與天使互動時間 (by day) */
-    // 以上應為 sizeof(chicken_t) 同等大小
 
     time4_t	lastsong;	/* 上次點歌時間 */
     uint32_t	loginview;	/* 進站畫面 */
