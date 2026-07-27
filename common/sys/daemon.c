@@ -9,6 +9,7 @@
 
 #include "osdep.h"
 #include "cmsys.h"
+#include "config.h"
 
 int
 daemonize(const char * pidfile, const char * logfile)

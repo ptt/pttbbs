@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <pthread.h>
-#include "cmsys.h"	// for time4_t
 #include "config.h"	// various sizes in SHM
 #include "statistic.h"	// for MAX_STATS
 

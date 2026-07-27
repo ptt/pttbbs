@@ -121,7 +121,6 @@ Cdate_mdHMS(const time4_t * clock)
     return cdate_buffer;
 }
 
-#ifdef TIMET64
 char           *
 ctime4(const time4_t *clock)
 {
@@ -170,4 +169,3 @@ time4_t time4(time4_t *ptr)
     else
 	return *ptr = (time4_t)time(NULL);
 }
-#endif

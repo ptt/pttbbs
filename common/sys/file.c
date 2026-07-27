@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 
 #include "cmsys.h"
+#include "config.h"
 
 
 /* ----------------------------------------------------- */

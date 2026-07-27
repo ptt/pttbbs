@@ -28,7 +28,6 @@ int main()
 {
     // System type length.
     CHECK(size_t);
-    CHECK(size_t);
     CHECK(off_t);
     CHECK(int);
     CHECK(long);
@@ -41,7 +40,8 @@ int main()
     printf("SHMSIZE = %lu\n", SHMSIZE);
 
     // Data types that need to be checked.
-    ENSURE3(time4_t, 4, "Please define TIMET64 in your pttbbs.conf.");
+    ENSURE(time4_t, 4);
+    ENSURE(time8_t, 8);
     ENSURE(userec_t, 512);
     ENSURE(fileheader_t, 128);
     ENSURE(boardheader_t, 256);

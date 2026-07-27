@@ -11,7 +11,6 @@
 #include <time.h>
 
 #include "osdep.h"
-#include "config.h" // XXX for TIMET64, but config.h has too much thing I don't want ...
 
 #ifdef __GNUC__
 #define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))
@@ -37,11 +36,8 @@ enum _DBCS_STATUS {
     DBCS_TRAILING,
 };
 
-#ifdef TIMET64
 typedef int32_t time4_t;
-#else
-typedef time_t time4_t;
-#endif
+typedef int64_t time8_t;
 
 /* crypt.c */
 char *fcrypt(const char *key, const char *salt);
@@ -146,19 +142,11 @@ const char * Cdate_md(const time4_t * clock);
 const char * Cdate_mdHM(const time4_t * clock);
 const char * Cdate_mdHMS(const time4_t * clock);
 
-#ifdef TIMET64
-    struct tm*	localtime4(const time4_t *);
-    struct tm*	localtime4_r(const time4_t *, struct tm *);
-    time4_t	time4(time4_t *);
-    char*	ctime4(const time4_t *);
-    char*	ctime4_r(const time4_t *, char *);
-#else
-    #define localtime4_r(a,b) localtime_r(a,b)
-    #define localtime4(a) localtime(a)
-    #define time4(a)      time(a)
-    #define ctime4(a)     ctime(a)
-    #define ctime4_r(a)   ctime_r(a)
-#endif
+struct tm*	localtime4(const time4_t *);
+struct tm*	localtime4_r(const time4_t *, struct tm *);
+time4_t	time4(time4_t *);
+char*	ctime4(const time4_t *);
+char*	ctime4_r(const time4_t *, char *);
 
 int log_filef(const char *fn, int flag, const char *fmt,...) GCC_CHECK_FORMAT(3,4);
 int log_file(const char *fn, int flag, const char *msg);
