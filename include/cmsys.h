@@ -316,6 +316,11 @@ void telnet_ctx_set_ttype_arg (TelnetCtx *ctx, void *arg);
 
 ssize_t telnet_process        (TelnetCtx *ctx, unsigned char *buf, ssize_t size);
 
+/* bcrypt.c */
+int bcrypt_hashpass (const char *pass, const char *salt, char *hash, size_t hashlen);
+int bcrypt_gensalt  (int workfactor, char *salt, size_t saltlen);
+int bcrypt_checkpass(const char *pass, const char *goodhash);
+
 /* utf8.c */
 int ucs2utf(uint16_t ucs2, uint8_t *utf8);
 int utf2ucs(const uint8_t *utf8, uint16_t *pucs);
