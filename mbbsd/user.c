@@ -42,8 +42,8 @@ kill_user(int num, const char *userid)
     SNPRINTF(dst, "tmp/%s", userid);
     friend_delete_all(userid, FRIEND_ALOHA);
     if (dashd(src) && Rename(src, dst) == 0) {
-	SNPRINTF(src, "/bin/rm -fr home/%c/%s >/dev/null 2>&1", userid[0], userid);
-	system(src);
+	sethomepath(src, userid);
+	RmTree(src);
     }
 
     memset(&u, 0, sizeof(userec_t));

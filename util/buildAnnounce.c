@@ -81,7 +81,7 @@ int main(void)
     char path[512];
     setsid();
     STRLCPY(path, GROUPROOT);
-    system("rm -rf "GROUPROOT);
+    RmTree(GROUPROOT);
     Mkdir(GROUPROOT);
     attach_SHM();
     resolve_boards();

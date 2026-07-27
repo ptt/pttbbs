@@ -863,8 +863,8 @@ a_delete(menu_t * pm, const char *backup_dir)
 	    return;
 	}
 
-	SNPRINTF(cmd, "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
-	system(cmd);
+	RmTree(buf);
+	Rename(fpath, buf);
 
 	STRLCPY(backup.owner, cuser.userid);
 	strcpy(backup.title, "¡»");
@@ -1040,10 +1040,8 @@ a_setchesslist(const menu_t * me)
 
 	if (buf[0] == 'y' || buf[0] == 'Y') {
 	    if(strncmp(buf_photo, "man/boards/", 11) == 0 && // guarding
-		    buf_photo[11] && buf_photo[12] == '/' && // guarding
-		    SNPRINTF(buf_list, "rm -rf %s", buf_photo)
-		    == (int)strlen(buf_photo) + 7)
-		system(buf_list);
+		    buf_photo[11] && buf_photo[12] == '/') // guarding
+		RmTree(buf_photo);
 	    Rename(buf_this, buf_photo);
 	    symlink("chess_photo", buf_this);
 	}

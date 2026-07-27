@@ -71,8 +71,7 @@ void mv_user_home(char *userid)
     if (!system(command))
     {				//Copy success
 
-	sprintf(command, "rm -rf %s", user_home);
-	system(command);
+	RmTree(user_home);
     }
 }
 

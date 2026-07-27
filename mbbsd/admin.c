@@ -830,11 +830,13 @@ m_mod_board(char *bname)
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
-	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
-		    "/bin/rm -fr boards/%c/%s man/boards/%c/%s",
-		    bname, bname[0], bname, bname[0],
+	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1",
 		    bname, bname[0], bname, bname[0], bname);
 	    system(genbuf);
+	    setbpath(genbuf, bname);
+	    RmTree(genbuf);
+	    setapath(genbuf, bname);
+	    RmTree(genbuf);
 	    memset(&bh, 0, sizeof(bh));
 	    SNPRINTF(bh.title, "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg(BN_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");

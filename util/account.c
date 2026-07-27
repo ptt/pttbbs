@@ -472,8 +472,7 @@ main(/*int argc, char **argv*/)
 	sprintf(buf, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
 		fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
 	system(buf);
-	sprintf(buf, "/bin/rm -fr %s", fn2);
-	system(buf);
+	RmTree(fn2);
     }
 
     /* Ptt reset Ptt's share memory */
