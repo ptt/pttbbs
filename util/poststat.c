@@ -47,8 +47,7 @@ top[TOPCOUNT], *tp;
 
 
 void
-search(t)
-    struct posttop *t;
+search(struct posttop *t)
 {
     struct postrec *p, *q, *s;
     int i, found = 0;
@@ -86,9 +85,9 @@ search(t)
 
 
 int
-sort(pp, count)
-    struct postrec *pp;
-    int count;
+sort(
+    struct postrec *pp,
+    int count)
 {
     int i, j;
 
@@ -110,8 +109,8 @@ sort(pp, count)
 
 
 void
-load_stat(fname)
-    char *fname;
+load_stat(
+    char *fname)
 {
     FILE *fp;
 
@@ -126,8 +125,8 @@ load_stat(fname)
 
 
 int
-filter(board)
-    char *board;
+filter(
+    char *board)
 {
     boardheader_t bh;
     int bid;
@@ -153,8 +152,8 @@ filter(board)
 
 
 void
-poststat(mytype)
-    int mytype;
+poststat(
+    int mytype)
 {
     static char *logfile = ".post";
     static char *oldfile = ".post.old";
@@ -272,9 +271,9 @@ poststat(mytype)
 }
 
 
-int main(argc, argv)
-    int argc;
-    char *argv[];
+int main(
+    int argc,
+    char *argv[])
 {
     time4_t now;
     struct tm *ptime;

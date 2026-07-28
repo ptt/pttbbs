@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 #ifdef NOKILLWATERBALL
 		uentp->wbtime = (time4_t)now;
 #else
+                (void)now; // unused.
 		kill(uentp->pid, SIGUSR2);
 #endif
 	    }

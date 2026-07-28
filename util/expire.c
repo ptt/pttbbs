@@ -63,7 +63,7 @@ void expire(life_t *brd)
     char fpath[128], index[128], *fname;
     int total, bid;
     int fdlock, fdr, fdw = 0, done, keep;
-    int ftime, nKeep = 0, nDelete = 0;
+    int nKeep = 0, nDelete = 0;
 
     printf("%s\n", brd->bname);
     /* XXX: bid of cache.c's getbnum starts from 1 */
@@ -113,7 +113,6 @@ void expire(life_t *brd)
 			done = 0;
 		    break;
 		}
-		ftime = atoi(head.filename + 2);
                 if (head.owner[0] == '-' ||
                     (!*head.filename) ||
 #ifdef SAFE_ARTICLE_DELETE

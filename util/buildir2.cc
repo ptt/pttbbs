@@ -225,6 +225,8 @@ int main(int argc, char **argv)
     int total;
     struct dirent **dirlist;
 
+    (void)nr_skip; // We currently don't use it.
+
     if ((total = scandir(bdir.c_str(), &dirlist, dirselect, mysort)) == -1) {
 	fprintf(stderr, "scandir failed!\n");
     }

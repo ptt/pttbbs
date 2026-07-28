@@ -90,6 +90,9 @@ int main(int argc, char **argv)
         remove_modified_days = 0;
     int verbose = 0;
 
+    // We currently don't use verbose to control output.
+    (void)verbose;
+
     while ((opt = getopt(argc, argv, "vsed:m:")) != -1) {
         switch (opt) {
             case 's':

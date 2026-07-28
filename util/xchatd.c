@@ -135,7 +135,7 @@ struct UserList
 struct ChatCmd
 {
     char *cmdstr;
-    void (*cmdfunc) ();
+    void (*cmdfunc) (ChatUser *cu, char *msg);
     int exact;
 };
 
@@ -2577,7 +2577,7 @@ cuser_serve(ChatUser *cu)
 static int
 start_daemon()
 {
-    int fd, value;
+    int fd;
     char buf[80];
     struct linger ld;
     struct rlimit limit;
@@ -2655,13 +2655,11 @@ start_daemon()
     fd = OpenCreate(CHAT_PIDFILE, O_WRONLY | O_TRUNC);
     if (fd >= 0)
     {
-	/* sprintf(buf, "%5d\n", value); */
 	sprintf(buf, "%5d\n", (int)getpid());
 	write(fd, buf, 6);
 	close(fd);
     }
 
-    value = 1;
     fd = tobind(XCHATD_ADDR);
 
     ld.l_onoff = ld.l_linger = 0;

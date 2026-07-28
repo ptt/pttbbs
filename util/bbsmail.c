@@ -17,8 +17,7 @@ int mailalertuid(int tuid)
 }      
 
 void
-mailog(msg)
-    char *msg;
+mailog(char *msg)
 {
     FILE *fp;
 

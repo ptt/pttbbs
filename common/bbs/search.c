@@ -125,7 +125,7 @@ select_read_build(const char *src_direct, const char *dst_direct,
 
     // Do not create black hole.
     off_t current_size = lseek(fd, 0, SEEK_CUR);
-    if (current_size >= 0 && dst_count * sizeof(fileheader_t) <= current_size)
+    if (current_size >= 0 && (off_t)(dst_count * sizeof(fileheader_t)) <= current_size)
 	ftruncate(fd, dst_count * sizeof(fileheader_t));
     close(fd);
 

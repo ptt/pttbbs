@@ -18,6 +18,13 @@ log_payment(const char *filename, int money, int oldm, int newm,
                      newm,
                      reason); 
 #else
+    // Unused
+    (void)filename;
+    (void)money;
+    (void)oldm;
+    (void)newm;
+    (void)reason;
+    (void)now;
     return 0;
 #endif
 }
