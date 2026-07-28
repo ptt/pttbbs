@@ -64,12 +64,16 @@ safe_sleep(unsigned int seconds)
  * section - SHM
  */
 #ifdef USE_POSIX_SHM
-void *
-attach_posix_shm(const char *path, size_t shmsize, int create, int *is_created)
+
+#define SHM_SOURCE (SHM_NAME)
+
+static void *
+open_shm(const char *path, size_t shmsize, int *is_created)
 {
     void *shmptr = NULL;
     int is_new = 0;
     int fd = -1;
+    int create = !!is_created;
 
     if (create) {
         fd = shm_open(path, O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -108,14 +112,25 @@ attach_posix_shm(const char *path, size_t shmsize, int create, int *is_created)
     return shmptr;
 }
 
-#else
+static void
+shm_error()
+{
+    fprintf(stderr, "Please check if SHM in %s is for version %d, "
+            "check /dev/shm or `posixshmcontrol rm` to clean it.\n",
+            SHM_NAME, SHM_VERSION);
+}
 
-void *
-attach_sysv_shm(int shmkey, size_t shmsize, int create, int *is_created)
+#else // System V
+
+#define SHM_SOURCE (SHM_KEY)
+
+static void *
+open_shm(int shmkey, size_t shmsize, int *is_created)
 {
     void *shmptr = NULL;
     int shmid = -1;
     int is_new = 0;
+    int create = !!is_created;
 
     int flags = 0;
 
@@ -151,42 +166,38 @@ attach_sysv_shm(int shmkey, size_t shmsize, int create, int *is_created)
     return shmptr;
 }
 
+static void
+shm_error()
+{
+    fprintf(stderr, "Please check if SHM key %d is for version %d, "
+            "or use ipcrm(1) to clean it.\n", SHM_KEY, SHM_VERSION);
+}
+
 #endif
 
 void *
-attach_shm_ex(size_t shmsize, int create, int *is_created)
+create_shm(size_t shmsize, int *is_created)
 {
-#ifdef USE_POSIX_SHM
-    return attach_posix_shm(SHM_NAME, shmsize, create, is_created);
-#else
-    return attach_sysv_shm(SHM_KEY, shmsize, create, is_created);
-#endif
+    return open_shm(SHM_SOURCE, shmsize, is_created);
 }
 
 void *
-attach_shm(size_t shmsize, int create)
+attach_shm(size_t shmsize)
 {
-    return attach_shm_ex(shmsize, create, NULL);
+    return open_shm(SHM_SOURCE, shmsize, NULL);
 }
 
 static void
 shm_check_error()
 {
-#ifdef USE_POSIX_SHM
-    fprintf(stderr, "Please check if SHM in %s is for version %d, "
-            "check /dev/shm or `posixshmcontrol rm` to clean it.\n",
-            SHM_NAME, SHM_VERSION);
-#else
-    fprintf(stderr, "Please check if SHM key %d is for version %d, "
-            "or use ipcrm(1) to clean it.\n", SHM_KEY, SHM_VERSION);
-#endif
+    shm_error();
     exit(1);
 }
 
 void
 attach_check_SHM(int version, size_t SHM_t_size)
 {
-    SHM = attach_shm(SHMSIZE, 0);
+    SHM = attach_shm(SHMSIZE);
 
     // check main program -> common bbs library
     if (version      != SHM_VERSION) {

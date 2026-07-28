@@ -20,7 +20,7 @@ int main()
 
 void load_uhash(void) {
     int is_new = 0;
-    SHM = (SHM_t *) attach_shm_ex(SHMSIZE, 1, &is_new);
+    SHM = (SHM_t *) create_shm(SHMSIZE, &is_new);
 
     if (is_new) {
         SHM->number = SHM->loaded = 0;
