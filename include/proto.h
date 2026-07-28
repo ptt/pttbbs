@@ -657,6 +657,8 @@ int  is_uBM(const char *list, const char *id);
 time4_t  gettime(int line, time4_t dt, const char* head);
 // vgets/getdata utilities
 int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
+int  get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size);
+int  set_user_new_passwd(int y, userec_t *u);
 int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 int ParseDate(const char *date, int *year, int *month, int *day);

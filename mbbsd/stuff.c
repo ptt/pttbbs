@@ -372,6 +372,67 @@ getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     return vgets(buf, len, getdata2vgetflag(echo));
 }
 
+int
+get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size)
+{
+    char confirm[PW_PLAIN_SIZE];
+    const int min_len = 4;
+
+    mvouts(y + 1, 0, ANSI_RESET
+           "為避免被偷看，您的密碼會顯示為 * ，輸入完後按 Enter 鍵即可。\n");
+    mvprints(y + 2, 0, ANSI_RESET ANSI_COLOR(1;33)
+           "請注意本站密碼上限已改為 %d 個字元，超過 8 個字的部份不會再被忽略。"
+           ANSI_RESET, PW_PLAIN_LEN);
+
+    while (1) {
+
+      if (!getdata(y, 0, "新密碼:", out_passwd, out_size, PASSECHO)) {
+          mvouts(y, 0, "未輸入新密碼。");
+          mvouts(y+2, 0, "");
+          mvouts(y+1, 0, "");
+          return 0;
+      }
+
+      if (strlen(out_passwd) < min_len) {
+          mvprints(y+1, 0, "請重新輸入，密碼至少要有 %d 個字元", min_len);
+          continue;
+      }
+
+      if (userid && *userid && strcmp(out_passwd, userid) == 0) {
+          mvouts(y+1, 0, "密碼不可以跟帳號一樣，請重新輸入");
+          continue;
+      }
+
+      mvouts(y, 0, "請再輸入一次新密碼以確認。");
+      getdata(y+1, 0, "新密碼:", confirm, sizeof(confirm), PASSECHO);
+
+      if (strcmp(out_passwd, confirm) != 0) {
+          mvouts(y+1, 0, "新密碼兩次輸入結果不符合，請重新輸入");
+          continue;
+      }
+
+      explicit_bzero(confirm, sizeof(confirm));
+      mvouts(y, 0, "已確認兩次輸入新密碼結果一致。");
+      mvouts(y+2, 0, "");
+      break;
+    }
+    return 1;
+}
+
+int
+set_user_new_passwd(int y, userec_t *u)
+{
+    char passbuf[PW_PLAIN_SIZE];
+    int ok = 0;
+
+    if (get_new_passwd(y, u->userid, passbuf, sizeof(passbuf))) {
+        setuser_passwd(u, passbuf);
+        ok = 1;
+    }
+    explicit_bzero(passbuf, sizeof(passbuf));
+    return ok;
+}
+
 /* ----------------------------------------------------- */
 /* use mmap() to malloc large memory in CRITICAL_MEMORY  */
 /* ----------------------------------------------------- */

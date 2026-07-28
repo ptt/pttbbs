@@ -274,27 +274,11 @@ void AccountRecovery::ResetPasswd() {
     if (errcnt++ >= kMaxErrCnt * 2)
       UserErrorExit();
 
-    char confirm[PW_PLAIN_SIZE] = {};
-
     move(y_, 0);
     clrtobot();
-    if (!getdata(y_, 0, "請設定新密碼：", pass, sizeof(pass), PASSECHO) ||
-        strlen(pass) < 4) {
-      vmsg("請重新輸入，密碼必須至少四字元");
-      continue;
+    if (get_new_passwd(y_, user_.value().userid.c_str(), pass, sizeof(pass))) {
+      break;
     }
-
-    move(y_ + 1, 0);
-    outs("請注意設定密碼只有前八個字元有效，超過的將自動忽略。");
-
-    getdata(y_ + 2, 0, "請檢查新密碼：", confirm, sizeof(confirm), PASSECHO);
-    if (strcmp(pass, confirm)) {
-      vmsg("新密碼確認失敗, 請重新輸入");
-      continue;
-    }
-
-    explicit_bzero(confirm, sizeof(confirm));
-    break;
   }
 
   bool ok = *pass && SetPasswd(user_.value(), pass);

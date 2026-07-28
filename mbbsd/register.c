@@ -763,8 +763,8 @@ new_register(void)
 #ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))
 	newuser.uflag |= UF_ADBANNER_USONG;
+    clear(); // In case etc/register does not exist.
 #endif
-
 
     more("etc/register", NA);
     try = 0;
@@ -812,33 +812,12 @@ new_register(void)
     }
 
     // XXX 記得最後 create account 前還要再檢查一次 acc
-
-    try = 0;
-    while (1) {
-	if (++try >= 6) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-	move(20, 0); clrtoeol();
-	outs(ANSI_COLOR(1;33)
-    "為避免被偷看，您的密碼會顯示為 * ，直接輸入完後按 Enter 鍵即可。\n"
-    "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
-	ANSI_RESET);
-        char passbuf_confirm[PW_PLAIN_SIZE];
-        if ((getdata(18, 0, "新密碼：", passbuf, PW_PLAIN_SIZE,
-                     PASSECHO) < 3) ||
-	    !strcmp(passbuf, newuser.userid)) {
-	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
-	    continue;
-	}
-	getdata(19, 0, "確認密碼：", passbuf_confirm, PW_PLAIN_SIZE, PASSECHO);
-	if (strcmp(passbuf, passbuf_confirm)) {
-	    move(19, 0);
-	    outs("設定與確認時輸入的密碼不一致, 請重新輸入密碼.\n");
-	    continue;
-	}
-	setuser_passwd(&newuser, passbuf);
-	break;
+    while (!set_user_new_passwd(18, &newuser)) {
+        if (++try > 8) {
+            vmsg(MSG_ERR_MAXTRIES);
+            exit(1);
+        }
+        vmsg("請確實輸入要使用的新密碼。");
     }
 
     // set-up more information.
