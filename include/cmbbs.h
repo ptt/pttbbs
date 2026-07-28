@@ -118,7 +118,7 @@ int passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *));
 int passwd_require_secure_connection(const userec_t *u);
 int  checkpasswd  (const char *passwd, char *test);  // test will be destroyed
 void logattempt   (const char *uid, char type, time4_t now, const char *fromhost);
-char*genpasswd    (char *pw);
+const char *genpasswd(const char *pw);
 
 /* record */
 int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);

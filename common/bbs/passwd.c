@@ -323,8 +323,8 @@ checkpasswd(const char *passwd, char *plain)
     return ok;
 }
 
-char *
-genpasswd(char *pw)
+const char *
+genpasswd(const char *pw)
 {
     if (pw[0]) {
 	char            saltc[2], c;
