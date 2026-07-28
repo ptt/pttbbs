@@ -26,14 +26,14 @@ void load_uhash(void) {
         SHM->number = SHM->loaded = 0;
         SHM->version = SHM_VERSION;
         SHM->size    = sizeof(SHM_t);
-#ifdef USE_PTHREAD_MUTEX_PASSWD
+
+        // Always initialize the mutex, even if without USE_PTHREAD_MUTEX_PASSWD
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
         pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
         pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST);
         pthread_mutex_init(&SHM->GV3.e.passwd_mutex, &attr);
         pthread_mutexattr_destroy(&attr);
-#endif
     }
 
     if(SHM->version != SHM_VERSION) {
