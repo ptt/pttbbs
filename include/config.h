@@ -423,6 +423,10 @@
 #define WRAPMARGIN      (511)           /* 編輯器 wrap 長度 */
 #endif
 
+#ifndef PW_PLAIN_MIN
+#define PW_PLAIN_MIN    (4)             /* 密碼最小長度 */
+#endif
+
 #ifdef USE_MASKED_FROMHOST
 #define FROMHOST    fromhost_masked
 #else

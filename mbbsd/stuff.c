@@ -376,7 +376,6 @@ int
 get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size)
 {
     char confirm[PW_PLAIN_SIZE];
-    const int min_len = 4;
 
     mvouts(y + 1, 0, ANSI_RESET
            "為避免被偷看，您的密碼會顯示為 * ，輸入完後按 Enter 鍵即可。\n");
@@ -393,8 +392,8 @@ get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size)
           return 0;
       }
 
-      if (strlen(out_passwd) < min_len) {
-          mvprints(y+1, 0, "請重新輸入，密碼至少要有 %d 個字元", min_len);
+      if (strlen(out_passwd) < PW_PLAIN_MIN) {
+          mvprints(y+1, 0, "請重新輸入，密碼至少要有 %d 個字元", PW_PLAIN_MIN);
           continue;
       }
 
