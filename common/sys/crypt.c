@@ -389,9 +389,9 @@ static int body();
 static int des_set_key();
 #endif
 
-static int des_set_key(key, schedule)
-des_cblock (*key);
-struct des_ks_struct *schedule;
+static int des_set_key(
+des_cblock (*key),
+struct des_ks_struct *schedule)
 	{
 	register unsigned long c,d,t,s;
 	register unsigned char *in;
@@ -524,9 +524,9 @@ static unsigned const char cov_2char[64]={
 #ifdef PERL5
 char *des_crypt(buf,salt)
 #else
-char *fcrypt(buf, salt)
-char *buf;
-char *salt;
+char *fcrypt(
+char *buf,
+char *salt)
           
            
 #endif
@@ -593,12 +593,12 @@ char *salt;
 	return((char *)buff);
 	}
 
-static int body(out0, out1, ks, Eswap0, Eswap1)
-unsigned long *out0;
-unsigned long *out1;
-des_key_schedule ks;
-unsigned long Eswap0;
-unsigned long Eswap1;
+static int body(
+unsigned long *out0,
+unsigned long *out1,
+des_key_schedule ks,
+unsigned long Eswap0,
+unsigned long Eswap1)
 	{
 	register unsigned long l,r,t,u;
 #ifdef ALT_ECB

@@ -31,8 +31,6 @@
 #define abort_bbs YOU_FAILED
 #define log_usies YOU_FAILED
 
-static int      semid = -1;
-
 #ifndef SEM_R
 #define SEM_R 0400
 #endif
@@ -85,6 +83,8 @@ passwd_unlock(void)
 #else
 
 // semaphore based PASSWD locking
+
+static int      semid = -1;
 
 int
 passwd_init(void)
@@ -147,7 +147,6 @@ passwd_update_money(int num)
 {
     int  pwdfd;
     int  money=moneyof(num);
-    userec_t u;
     if (num < 1 || num > MAX_USERS)
         return -1;
 
@@ -335,7 +334,6 @@ checkpasswd(const char *pwhash, char *plain)
 int
 checkuser_passwd(const userec_t *u, char *plain)
 {
-    int ok = 0;
     /* If fhash is available, the user has previously set a password <= 8
      * characters so verifying with fcrypt is enough.
      * Do not try bcrypt first because they may consider 'extra chars are fine'.

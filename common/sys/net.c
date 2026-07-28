@@ -179,6 +179,8 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	}
 #ifdef SO_NOSIGPIPE
         setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
+#else
+        (void)n; // not used.
 #endif
 
 	if (timed)
