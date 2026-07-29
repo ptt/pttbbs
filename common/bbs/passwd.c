@@ -350,16 +350,25 @@ setuser_passwd(userec_t *u, const char *plain)
 {
     size_t len = strlen(plain);
     char salt[32];
+    const int fcrypt_input_max = 8;
+
+    assert(plain && *plain);
+
+    explicit_bzero(u->pw_bhash, sizeof(u->pw_bhash));
+    explicit_bzero(u->pw_fhash, sizeof(u->pw_fhash));
 
     if (bcrypt_gensalt(10, salt, sizeof(salt)) == 0) {
         bcrypt_hashpass(plain, salt, u->pw_bhash, sizeof(u->pw_bhash));
     }
 
-    if (len <= 8) {
+    // In theory, we may drop the fhash; but to allow better fail-safe
+    // we'd like to retain the fhash as long as possible.
+    // However, with plain text >= 8 characters, fhash-style users may expect
+    // (or get confused) they can add random garbage to the end, so we should
+    // enforce them using bcrypt only.
+    if (len < fcrypt_input_max) {
         const char *des_hash = genpasswd(plain);
         STRLCPY(u->pw_fhash, des_hash);
-    } else {
-        u->pw_fhash[0] = '\0';
     }
 }
 

@@ -72,6 +72,7 @@ static int retrieve_backup(userec_t *user)
 	userec_t orig;
 	passwd_sync_query(uid, &orig);
 	STRLCPY(user->pw_fhash, orig.pw_fhash);
+	STRLCPY(user->pw_bhash, orig.pw_bhash);
 	setumoney(uid, user->money);
 	passwd_sync_update(uid, user);
 	return 0;
