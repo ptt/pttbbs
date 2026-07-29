@@ -2248,6 +2248,7 @@ static int
 mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
                const char *direct GCC_UNUSED)
 {
+    assert(is_valid_fileheader(fhdr));
 #ifdef OUTJOBSPOOL
     static char     address[60] = "", cmode = 1;
     char            fname[500], genbuf[PATHLEN];

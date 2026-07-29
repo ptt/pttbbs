@@ -125,6 +125,7 @@ const char *genpasswd(const char *pw);
 /* record */
 int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);
 int delete_fileheader(const char *dir_path, const void *rptr, int id);
+int is_valid_fileheader(const fileheader_t *fhdr);
 
 /* search.c */
 typedef struct fileheader_predicate_t {

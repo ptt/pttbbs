@@ -22,3 +22,13 @@ delete_fileheader(const char *dir_path, const void *rptr, int id)
     return delete_record2(dir_path, rptr, sizeof(fileheader_t),
                           id, _is_same_fhdr_filename);
 }
+
+int
+is_valid_fileheader(const fileheader_t *fhdr)
+{
+    int i, size = sizeof(fhdr->filename);
+    for (i = 0; i < size && fhdr->filename[i]; i++)
+	if (fhdr->filename[i] == '/')
+	    return 0;
+    return i < size ? 1 : 0;
+}

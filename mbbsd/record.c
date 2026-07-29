@@ -314,6 +314,8 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    // the (from, to) range may be invalid...
 	    if (read(fd, &newfhdr, sizeof(fileheader_t)) != sizeof(fileheader_t))
 		break;
+	    if (!is_valid_fileheader(&newfhdr))
+		continue;
 	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST) )
 		continue;
 	    if(newfhdr.filename[0]=='L') newfhdr.filename[0]='M';
@@ -347,7 +349,7 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
     fileheader_t backup = { {0} };
     int backup_failed = DELETE_FILE_CONTENT_SUCCESS;
 
-    if(!fh->filename[0] || !direct)
+    if(!is_valid_fileheader(fh) || !fh->filename[0] || !direct)
         return DELETE_FILE_CONTENT_FAILED;
 
 #ifdef FN_SAFEDEL
