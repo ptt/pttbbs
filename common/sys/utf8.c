@@ -51,6 +51,72 @@ int utf2ucs(const uint8_t *utf8, uint16_t *pucs) {
     return 1;
 }
 
+extern const uint16_t u2b_table[];
+
+void utf8_to_big5(const char *utf8, char *big5, size_t max_len) {
+    if (!utf8 || !big5 || max_len == 0) {
+        return;
+    }
+    const uint8_t *p = (const uint8_t *)utf8;
+    size_t out_idx = 0;
+    while (*p && out_idx < (max_len - 1)) {
+        uint16_t ucs2 = 0;
+        int step = utf2ucs(p, &ucs2);
+        p += step;
+        uint16_t b5 = u2b_table[ucs2];
+        if (b5 == 0) {
+            b5 = '?';
+        }
+        if (b5 > 0xFF) {
+            if (out_idx + 2 >= max_len) {
+                break;
+            }
+            big5[out_idx++] = (char)(b5 >> 8);
+            big5[out_idx++] = (char)(b5 & 0xFF);
+        } else {
+            big5[out_idx++] = (char)b5;
+        }
+    }
+    big5[out_idx] = '\0';
+}
+
+extern const uint16_t b2u_table[];
+
+void big5_to_utf8(const char *big5, char *utf8, size_t max_len) {
+    if (!big5 || !utf8 || max_len == 0) {
+        return;
+    }
+    const uint8_t *p = (const uint8_t *)big5;
+    size_t out_idx = 0;
+    while (*p && out_idx < (max_len - 1)) {
+        uint16_t b5 = *p;
+        uint16_t ucs2 = 0;
+        if (b5 & 0x80) {
+            if (p[1] != '\0') {
+                uint16_t b5_full = ((uint16_t)p[0] << 8) | (uint16_t)p[1];
+                p += 2;
+                ucs2 = b2u_table[b5_full];
+            } else {
+                p++;
+                ucs2 = '?';
+            }
+        } else {
+            p++;
+            ucs2 = b5;
+        }
+
+        uint8_t utf_buf[4] = {0};
+        int utf_len = ucs2utf(ucs2, utf_buf);
+        if (out_idx + (size_t)utf_len >= max_len) {
+            break;
+        }
+        for (int i = 0; i < utf_len; i++) {
+            utf8[out_idx++] = (char)utf_buf[i];
+        }
+    }
+    utf8[out_idx] = '\0';
+}
+
 #ifdef _TEST_MAIN_
 
 const char * print_bits(uint8_t c) {

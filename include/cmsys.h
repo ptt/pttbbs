@@ -324,6 +324,8 @@ int bcrypt_checkpass(const char *pass, const char *goodhash);
 /* utf8.c */
 int ucs2utf(uint16_t ucs2, uint8_t *utf8);
 int utf2ucs(const uint8_t *utf8, uint16_t *pucs);
+void utf8_to_big5(const char *utf8, char *big5, size_t max_len);
+void big5_to_utf8(const char *big5, char *utf8, size_t max_len);
 
 /* big5.c */
 extern const uint16_t b2u_table[];
