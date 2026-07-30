@@ -10,7 +10,7 @@ int logout_friend_online(userinfo_t *utmp)
 {
     int my_friend_idx, thefriend;
     int k;
-    int offset=(int) (utmp - &SHM->uinfo[0]);
+    int offset = get_utmp_id(utmp);
     userinfo_t *ui;
     for(; utmp->friendtotal>0; utmp->friendtotal--) {
 	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )

@@ -66,6 +66,7 @@ SHM_t *create_shm(int *is_created);
 SHM_t *attach_shm(void);
 SHM_t *attach_check_SHM(void);
 void attach_SHM(void);
+int get_utmp_id(const userinfo_t *uentp);
 void add_to_uhash(int n, const char *id);
 void remove_from_uhash(int n);
 int  dosearchuser(const char *userid, char *rightid);

@@ -223,7 +223,7 @@ reverse_friend_stat(int stat)
 int sync_outta_server(int sfd, int do_login)
 {
     int i;
-    int offset = (int)(currutmp - &SHM->uinfo[0]);
+    int offset = get_utmp_id(currutmp);
 
     int cmd, res;
     int nfs;
@@ -299,7 +299,7 @@ void login_friend_online(int do_login)
     userinfo_t     *uentp;
     int             i;
     unsigned int    stat, stat1;
-    int             offset = (int)(currutmp - &SHM->uinfo[0]);
+    int             offset = get_utmp_id(currutmp);
 
 #ifdef UTMPD
     int sfd;
@@ -322,7 +322,7 @@ void login_friend_online(int do_login)
 	if (uentp && uentp->uid && (stat = set_friend_bit(currutmp, uentp))) {
 	    stat1 = reverse_friend_stat(stat);
 	    stat <<= 24;
-	    stat |= (int)(uentp - &SHM->uinfo[0]);
+	    stat |= get_utmp_id(uentp);
 	    currutmp->friend_online[currutmp->friendtotal++] = stat;
 	    if (uentp != currutmp && uentp->friendtotal < MAX_FRIEND) {
 		stat1 <<= 24;
@@ -340,7 +340,7 @@ logout_friend_online(userinfo_t * utmp)
 {
     int my_friend_idx, thefriend;
     int k;
-    int             offset = (int)(utmp - &SHM->uinfo[0]);
+    int             offset = get_utmp_id(utmp);
     userinfo_t     *ui;
     for(; utmp->friendtotal>0; utmp->friendtotal--) {
 	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
@@ -913,7 +913,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     }
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
 	/* 不懂 */
-	uin->destuip = currutmp - &SHM->uinfo[0];
+	uin->destuip = get_utmp_id(currutmp);
 	uin->sig = 2;
 	if (uin->pid > 0)
 	    kill(uin->pid, SIGUSR1);
@@ -1192,7 +1192,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     // so, let's temporary break currstat here.
     currstat = IDLE;
     setutmpmode(PAGE);
-    uin->destuip = currutmp - &SHM->uinfo[0];
+    uin->destuip = get_utmp_id(currutmp);
     pid = uin->pid;
     if (pid > 0)
 	kill(pid, SIGUSR1);
@@ -1212,7 +1212,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	} else { // if (ch == I_TIMEOUT) {
 	    ch = uin->mode;
 	    if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == currutmp - &SHM->uinfo[0]) {
+		    uin->destuip == get_utmp_id(currutmp)) {
 		bell();
 		outmsg("對方回應中...");
 		refresh();
@@ -1235,7 +1235,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		bell();
 		refresh();
 
-		uin->destuip = currutmp - &SHM->uinfo[0];
+		uin->destuip = get_utmp_id(currutmp);
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
 		    close(sock);
 		    currutmp->sockactive = currutmp->destuid = 0;
@@ -2948,7 +2948,7 @@ talkreply(void)
 	return;
     }
 
-    uip->destuip = currutmp - &SHM->uinfo[0];
+    uip->destuip = get_utmp_id(currutmp);
     if (buf[0] == 'y')
 	switch (sig) {
 	case SIG_DARK:

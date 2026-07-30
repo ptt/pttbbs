@@ -195,3 +195,12 @@ attach_SHM(void)
     }
 }
 
+
+/* Return the index of uentp (in uinfo). */
+int
+get_utmp_id(const userinfo_t *uentp)
+{
+    if (!uentp)
+        return -1;
+    return (int)(uentp - &SHM->uinfo[0]);
+}
