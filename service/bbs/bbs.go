@@ -75,8 +75,7 @@ func (c *SHMClient) IsAlohaSvcEnabled() bool {
 	if c == nil {
 		return false
 	}
-	// TODO Add the C implementation.
-	return false
+	return C.is_aloha_svc_enabled() != 0
 }
 
 // SendAlohaMessage sends an Aloha notification waterball to a target online session in SHM
@@ -88,8 +87,7 @@ func (c *SHMClient) SendAlohaMessage(sid int, toPID int, fromPID int, fromID str
 	cFrom := C.CString(fromID)
 	defer C.free(unsafe.Pointer(cFrom))
 
-	// TODO Add the C implementation.
-	res := -1
+	res := C.send_aloha_message(C.int(sid), C.pid_t(toPID), C.pid_t(fromPID), cFrom)
 	if res != 0 {
 		var reason string
 		switch res {

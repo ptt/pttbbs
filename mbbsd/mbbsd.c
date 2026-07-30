@@ -15,7 +15,7 @@
 
 #define SOCKET_QLEN 4
 
-void do_aloha(const char *hello);
+void do_aloha(void);
 static void getremotename(const struct in_addr from, char *rhost);
 
 //////////////////////////////////////////////////////////////////
@@ -1176,12 +1176,7 @@ user_login(void)
 	SHM->max_time = now;
     }
 
-    if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
-        !HasUserRole(ROLE_HIDE_FROM) && !currutmp->invisible) {
-	/* do_aloha is costly. do it later? And don't alert if previous
-         * login was just minutes ago... */
-	do_aloha("<<上站通知>> -- 我來啦！");
-    }
+    do_aloha();
 
     if (SHM->loginmsg.pid){
         if(search_ulist_pid(SHM->loginmsg.pid))
@@ -1308,8 +1303,17 @@ user_login(void)
 }
 
 void
-do_aloha(const char *hello)
+do_aloha(void)
 {
+    if ((HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) ||
+        HasUserRole(ROLE_HIDE_FROM) || currutmp->invisible) {
+        return;
+    }
+
+    if (aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_id(currutmp)) == 0 && is_aloha_svc_enabled()) {
+        return;
+    }
+
     FILE           *fp;
     char            userid[80];
     char            genbuf[200];
@@ -1322,8 +1326,7 @@ do_aloha(const char *hello)
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) &&
                 isvisible(uentp, currutmp) &&
                 strcasecmp(uentp->userid, cuser.userid) != 0) {
-                my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA,
-                         uentp);
+                send_aloha_message(get_utmp_id(uentp), uentp->pid, currpid, cuser.userid);
 	    }
 	}
 	fclose(fp);

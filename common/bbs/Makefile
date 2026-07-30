@@ -2,7 +2,8 @@ SRCROOT:=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 SRCS:=	log.c money.c names.c path.c time.c string.c fhdr_stamp.c cache.c \
-	passwd.c filehdr.c banip.c search.c friend.c shm.c cgo.c message.c
+	passwd.c filehdr.c banip.c search.c friend.c shm.c cgo.c message.c \
+	aloha.c
 LIB:=	cmbbs
 
 install:
