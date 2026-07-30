@@ -383,7 +383,7 @@ typedef struct userinfo_t {
 
     /* user status */
     char    birth;                   /* 是否是生日 Ptt*/
-    unsigned char   active;         /* When allocated this field is true */
+    unsigned char   deprecated_active; /* Deprecated/Unused legacy field; PTT BBS uses pid != 0 */
     unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
@@ -587,6 +587,7 @@ typedef struct {
         time4_t deprecated_now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
+	    int     aloha_svc;    /* Enable aloha.svc microservice */
 
 	    /* 注意, 應保持 align sizeof(int) */
 	} e;
