@@ -731,7 +731,7 @@ MFPROTO int mf_movieWaitKey(struct timeval *ptv, int dorefresh);
 MFPROTO int mf_movieNextFrame();
 MFPROTO int mf_movieSyncFrame();
 MFPROTO int mf_moviePromptPlaying(int type);
-MFPROTO unsigned char *mf_movieNextLine();
+MFPROTO unsigned char *mf_movieNextLine(unsigned char *frame);
 MFFPROTO int mf_movieMaskedInput(int c);
 
 #define MOVIE_MIN_FRAMECLK (0.1f)

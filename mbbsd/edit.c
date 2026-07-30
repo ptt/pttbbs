@@ -1933,7 +1933,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     int             aborted = 0;
     int             entropy = 0;
 
-    int upload = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
+    int upload GCC_UNUSED = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
     int chtitle = (flags & EDITFLAG_ALLOWTITLE) ? 1 : 0;
     const char *kind_prompt = get_edit_kind_prompt(flags);
     const char *warn_prompt = get_edit_warn_prompt(flags);
@@ -1964,9 +1964,6 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 #ifdef EXP_EDIT_UPLOAD
     if (upload)
 	outs(" (U)上傳資料");
-#else
-    // upload is not used in this case.
-    (void)upload;
 #endif // EXP_EDIT_UPLOAD
 
     if (chtitle)

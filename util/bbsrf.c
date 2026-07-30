@@ -61,14 +61,13 @@ static int checkload()
     return 1;
 }
 
-int main(int argc, const char **argv)
+int main(int argc GCC_UNUSED, const char **argv)
 {
     int uid;
     int is_utf8 = 0;
     char remote_ip[MAX_REMOTE_IP_LEN + 1];
-    (void)argc;
 
-    if (strstr(argv[0], "utf8")) 
+    if (strstr(argv[0], "utf8"))
         is_utf8 = 1;
 
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);

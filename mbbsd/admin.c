@@ -628,7 +628,7 @@ AddingChessCountryFiles(const char* apath)
 
 /* 自動設立精華區 */
 void
-setup_man(const boardheader_t * board, const boardheader_t * oldboard)
+setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED)
 {
     char            genbuf[200];
 
@@ -640,9 +640,6 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard)
 	if (board->chesscountry != CHESSCODE_NONE)
 	    AddingChessCountryFiles(genbuf);
 	// else // doesn't remove files..
-#else
-    // Declare that we know oldboard is not needed.
-    (void)oldboard;
 #endif
 }
 

@@ -88,10 +88,7 @@ int main(int argc, char **argv)
     FILE *fin;
     int remove_spam = 0, remove_days = 0, remove_deleted = 0,
         remove_modified_days = 0;
-    int verbose = 0;
-
-    // We currently don't use verbose to control output.
-    (void)verbose;
+    int verbose GCC_UNUSED = 0;
 
     while ((opt = getopt(argc, argv, "vsed:m:")) != -1) {
         switch (opt) {

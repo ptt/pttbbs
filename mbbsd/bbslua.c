@@ -301,33 +301,29 @@ bl_moverel(lua_State* L)
 }
 
 BLAPI_PROTO
-bl_clear(lua_State* L)
+bl_clear(lua_State* L GCC_UNUSED)
 {
-    (void)L;  /* to avoid warnings */
     clear();
     return 0;
 }
 
 BLAPI_PROTO
-bl_clrtoeol(lua_State* L)
+bl_clrtoeol(lua_State* L GCC_UNUSED)
 {
-    (void)L;  /* to avoid warnings */
     clrtoeol();
     return 0;
 }
 
 BLAPI_PROTO
-bl_clrtobot(lua_State* L)
+bl_clrtobot(lua_State* L GCC_UNUSED)
 {
-    (void)L;  /* to avoid warnings */
     clrtobot();
     return 0;
 }
 
 BLAPI_PROTO
-bl_refresh(lua_State* L)
+bl_refresh(lua_State* L GCC_UNUSED)
 {
-    (void)L;  /* to avoid warnings */
     // refresh();
     // Seems like that most people don't understand the relationship
     // between refresh() and input queue, so let's force update here.
@@ -908,6 +904,7 @@ static const struct luaL_reg lib_bbslua [] = {
     { NULL, NULL},
 };
 
+#ifdef BLSCONF_ENABLED
 static const struct luaL_reg lib_store [] = {
     { "load",       bls_load },
     { "save",       bls_save },
@@ -915,6 +912,7 @@ static const struct luaL_reg lib_store [] = {
     { "iolimit",    bls_iolimit },
     { NULL, NULL},
 };
+#endif
 
 // non-standard modules in bbsluaext.c
 LUALIB_API int luaopen_bit (lua_State *L);
@@ -1414,10 +1412,9 @@ typedef struct LoadS {
     int lineshift;
 } LoadS;
 
-static const char* bbslua_reader(lua_State *L, void *ud, size_t *size)
+static const char* bbslua_reader(lua_State *L GCC_UNUSED, void *ud, size_t *size)
 {
     LoadS *ls = (LoadS *)ud;
-    (void)L;
     if (ls->size == 0) return NULL;
     if (ls->lineshift > 0) {
         const char *linefeed = "\n";
@@ -1470,8 +1467,7 @@ static void *allocf (void *ud, void *ptr, size_t osize, size_t nsize) {
     else
         return realloc(ptr, nsize);
 }
-static int panic (lua_State *L) {
-    (void)L;  /* to avoid warnings */
+static int panic (lua_State *L GCC_UNUSED) {
     fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
             lua_tostring(L, -1));
     return 0;

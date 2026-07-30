@@ -968,7 +968,6 @@ multi_send(const char *title)
     int             recipient, listing;
     char            genbuf[PATHLEN];
     char	    buf[IDLEN+1];
-    int             edflags = EDITFLAG_ALLOWTITLE;
     struct Vector   namelist;
     int             i;
     const char     *p;
@@ -1048,7 +1047,6 @@ multi_send(const char *title)
 	    fprintf(fp, "\n%s\n\n", genbuf);
 	    fclose(fp);
 	}
-        edflags |= EDITFLAG_KIND_MAILLIST;
 
 	if (vedit(fpath, YEA, save_title) == EDIT_ABORTED) {
 	    unlink(fpath);

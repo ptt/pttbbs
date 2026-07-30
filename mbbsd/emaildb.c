@@ -2,8 +2,9 @@
 #include "bbs.h"
 #include "daemons.h"
 
+#if defined(USE_EMAILDB) || defined(USE_REGCHECKD)
 static
-int regmail_transact(const void *in, size_t inlen, void *out, size_t outlen)
+int regmail_transact(const void *in, ssize_t inlen, void *out, ssize_t outlen)
 {
     int fd = toconnect(REGMAILD_ADDR);
     if (fd < 0)
@@ -18,6 +19,7 @@ int regmail_transact(const void *in, size_t inlen, void *out, size_t outlen)
 
     return 0;
 }
+#endif
 
 #ifdef USE_EMAILDB
 

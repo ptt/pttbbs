@@ -6,6 +6,8 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 
 #include <sys/mman.h>
 
+typedef int (*onekey_func4)(int, const fileheader_t *, const char *, int);
+typedef int (*onekey_func0)(void);
 /* tag extension */
 
 static int
@@ -297,7 +299,7 @@ search_read(const int bid, const keeploc_t * locmem, int stypen)
     if( last_line <= 1 ) return pos;
 
     /* First load the timestamp of article where cursor points to */
-reload_fh:
+reload_fh: GCC_UNUSED;
     rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), pos, 1, &fd);
     if( rk < 0 ) goto out;
     if( rk == 0 /* EOF */ ) {
@@ -957,24 +959,26 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	if( ch == 'h' && currmode & (MODE_DIGEST) )
 	    break;
 	if (ch > 0 && ch <= onekey_size) {
-	    int (*func)() = rcmdlist[ch - 1].func;
+            onekey_func4 func = rcmdlist[ch - 1].func;
 	    if(rcmdlist[ch - 1].needitem && locmem->crs_ln == 0)
 		break;
 	    if (func != NULL){
 		num  = locmem->crs_ln - bottom_line;
 
-		if(!rcmdlist[ch - 1].needitem)
-		    mode = (*func)();
-		else if( num > 0 ){
+		if(!rcmdlist[ch - 1].needitem) {
+                    onekey_func0 func0 = (onekey_func0)(void *)func;
+		    mode = (*func0)();
+                } else if( num > 0 ) {
 		    char    direct[60];
                     sprintf(direct,"%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
 				  direct, locmem->crs_ln - locmem->top_ln);
-		}
-		else
+		} else {
                     mode = (*func)(locmem->crs_ln,
 				   &headers[locmem->crs_ln - locmem->top_ln],
 				   currdirect, locmem->crs_ln - locmem->top_ln);
+                }
+
 		if(mode == READ_SKIP)
                     mode = lastmode;
 
@@ -1102,7 +1106,8 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
 
 void
 i_read(int cmdmode, const char *direct, void (*dotitle) (),
-       void (*doentry) (), const onekey_t * rcmdlist, int bidcache)
+       void (*doentry)(int, fileheader_t*), const onekey_t * rcmdlist,
+       int bidcache)
 {
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode;

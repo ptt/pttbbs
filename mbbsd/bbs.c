@@ -1050,7 +1050,7 @@ void
 delete_allpost(const char *userid)
 {
     fileheader_t fhdr;
-    int     fd, i;
+    int     fd;
     char    bdir[PATHLEN], file[PATHLEN];
 
     if(!userid) return;
@@ -1058,7 +1058,7 @@ delete_allpost(const char *userid)
     setbdir(bdir, BN_ALLPOST);
     if( (fd = open(bdir, O_RDWR)) != -1)
     {
-       for(i=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; i++){
+       while (read(fd, &fhdr, sizeof(fileheader_t)) > 0) {
            if(strcmp(fhdr.owner, userid))
              continue;
            deleteCrossPost(&fhdr, BN_ALLPOST);
@@ -3916,7 +3916,8 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
 #else // USE_TIME_CAPSULE
 
 static int
-view_posthistory(int ent, const fileheader_t * fhdr, const char *direct) {
+view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
+                 const char *direct GCC_UNUSED) {
     return DONOTHING;
 }
 
@@ -4283,7 +4284,8 @@ int check_cooldown(boardheader_t *bp)
 #endif
 
 static int
-mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
+mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
+                  const char *direct GCC_UNUSED) {
 #ifndef USE_TIME_CAPSULE
     vmsg("此功\能未開啟，請洽站長。");
     return FULLUPDATE;

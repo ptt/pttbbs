@@ -209,8 +209,7 @@ void listQueue() {
     }
 }
 
-void wakeup(int s) {
-    (void)s;
+void wakeup(int s GCC_UNUSED) {
 }
 
 void parseserver(char *sx, char **name, int *port)

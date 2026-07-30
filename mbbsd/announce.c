@@ -767,7 +767,7 @@ a_delrange(menu_t * pm, const char *backup_dir)
 static void
 a_delete(menu_t * pm, const char *backup_dir)
 {
-    char            fpath[PATHLEN], buf[PATHLEN], cmd[PATHLEN];
+    char            fpath[PATHLEN], buf[PATHLEN];
     char            ans[4];
     fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
     const char *msg_errsync = "刪除檔案失敗，請退回上層目錄後再重試一次",

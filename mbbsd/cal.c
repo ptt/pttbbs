@@ -5,10 +5,10 @@
 // comparison.
 char *get_restriction_reason(
         unsigned int numlogindays,
-        unsigned int badpost,
+        unsigned int badpost GCC_UNUSED,
 
         unsigned int limits_logins,
-        unsigned int limits_badpost,
+        unsigned int limits_badpost GCC_UNUSED,
 
         size_t sz_msg, char *msg) {
 

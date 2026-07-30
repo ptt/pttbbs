@@ -449,7 +449,7 @@ get_system_user_agreement_version()
 #define UAVER_OUTDATED (-2)
 
 static int
-check_user_agreement_version(uint8_t version)
+check_user_agreement_version(uint8_t version GCC_UNUSED)
 {
 #ifdef HAVE_USERAGREEMENT_ACCEPTABLE
     FILE *fp = fopen(HAVE_USERAGREEMENT_ACCEPTABLE, "r");
@@ -1138,7 +1138,7 @@ void
 check_register(void)
 {
     char fn[PATHLEN];
-    int ret = 0;
+    int ret GCC_UNUSED = 0;
 
 #ifdef USEREC_EMAIL_IS_CONTACT
     // 確認一定要有聯絡信箱
@@ -1345,13 +1345,13 @@ register_email_input(email_input_t *ein)
 }
 
 static int
-register_count_email(const userec_t *u, const char *email)
+register_count_email(const userec_t *u GCC_UNUSED, const char *email GCC_UNUSED)
 {
-    const char *userid = u ? u->userid : NULL;
     int count = 0;
 
 #ifdef USE_EMAILDB
     {
+        const char *userid = u ? u->userid : NULL;
 	int r = emaildb_check_email(userid, email);
 	if (r < 0)
 	    return -1;
@@ -1850,8 +1850,8 @@ static const char *reasonstr[REJECT_REASONS] = {
 #define REASON_EXPANDABBREV(x)	 reasonstr[(x) - REASON_FIRSTABBREV]
 
 void
-regform_log2board(const RegformEntry *pre, char accepted,
-	const char *reason, int priority)
+regform_log2board(const RegformEntry *pre GCC_UNUSED, char accepted GCC_UNUSED,
+                  const char *reason GCC_UNUSED, int priority GCC_UNUSED)
 {
 #ifdef BN_ID_RECORD
     char title[STRLEN];
@@ -1884,8 +1884,8 @@ regform_log2board(const RegformEntry *pre, char accepted,
 }
 
 void
-regform_log2file(const RegformEntry *pre, char accepted,
-	const char *reason, int priority)
+regform_log2file(const RegformEntry *pre GCC_UNUSED, char accepted GCC_UNUSED,
+                 const char *reason GCC_UNUSED, int priority GCC_UNUSED)
 {
 #ifdef FN_ID_RECORD
     // The message may contain ANSI escape sequences (regform_concat_reasons)
@@ -1904,11 +1904,6 @@ regform_log2file(const RegformEntry *pre, char accepted,
     STRLCAT(msg, "\n");
     concat_regform_entry_localized(pre, msg, sizeof(msg));
     log_file(FN_ID_RECORD, LOG_CREAT, msg);
-#else
-    (void)pre;
-    (void)accepted;
-    (void)reason;
-    (void)priority;
 #endif  // FN_ID_RECORD
 }
 

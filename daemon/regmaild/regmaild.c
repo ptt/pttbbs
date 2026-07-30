@@ -777,7 +777,7 @@ close_conn:
 struct timeval tv = {60, 0};
 static struct event ev_listen;
 
-static void listen_cb(int fd, short event, void *arg)
+static void listen_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     int cfd;
 
@@ -791,7 +791,7 @@ static void listen_cb(int fd, short event, void *arg)
 }
 
 ///////////////////////////////////////////////////////////////////////
-// Daemon Main 
+// Daemon Main
 
 int main(int argc, char *argv[])
 {

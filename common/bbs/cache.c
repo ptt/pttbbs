@@ -621,9 +621,8 @@ buildBMcache(int bid) /* bid starts from 1 */
  * 動態看板與其它
  */
 int 
-filter_aggressive(const char*s)
+filter_aggressive(const char*s GCC_UNUSED)
 {
-    (void)s;
     if (
 	/*
 	strstr(s, "此處放較不適當的爭議性字句") != NULL ||

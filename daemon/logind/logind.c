@@ -2093,7 +2093,7 @@ client_cb(int fd, short event, void *arg)
         if (g_verbose || g_report_timeout)
         {
             time4_t tnow = time(NULL);
-            STRLCPY(buf, Cdate(&tnow));
+            strlcpy((char*)buf, Cdate(&tnow), sizeof(buf));
 
             fprintf(stderr, LOG_PREFIX
                     "timeout: %-16s [%s -> %s : %-4ds] %08X %s%s\n",

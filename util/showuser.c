@@ -1,9 +1,7 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-int check(void *data, int n, userec_t *u) {
-    (void)data;
-    (void)n;
+int check(void *data GCC_UNUSED, int n GCC_UNUSED, userec_t *u) {
 
     if (!u->userid[0])
         return 0;

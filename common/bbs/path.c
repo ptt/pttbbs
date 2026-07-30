@@ -53,7 +53,7 @@ sethomefile(char *buf, const char *userid, const char *fname)
 }
 
 void 
-setuserhashedfile(char *buf, const char *filename)
+setuserhashedfile(char *buf GCC_UNUSED, const char *filename GCC_UNUSED)
 {
 #ifdef USERHASHSTORE_ROOTPATH
     // hash designed by kcwu
@@ -64,8 +64,6 @@ setuserhashedfile(char *buf, const char *filename)
             (hash >> 8) & 0xff, hash & 0xff, 
             filename, cuser.userid, cuser.firstlogin);
 #else
-    (void)buf;
-    (void)filename;
     assert(!"you must define and initialize USERHASHSTORE_ROOTPATH");
 #endif
 }

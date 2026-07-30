@@ -145,7 +145,7 @@ int toconnectex(const char *addr, int timeout)
 
 int toconnect3(const char *addr, int timeout, int microseconds)
 {
-    int sock, n = 1;
+    int sock, n GCC_UNUSED = 1;
     assert(addr && *addr);
 
     if (!isdigit(addr[0]) && addr[0] != ':' && addr[0] != '*') {
@@ -179,8 +179,6 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	}
 #ifdef SO_NOSIGPIPE
         setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
-#else
-        (void)n; // not used.
 #endif
 
 	if (timed)

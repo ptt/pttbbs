@@ -12,19 +12,16 @@
 #define MAX_LIFE           (365L *10 * 24 * 60 * 60)
 
 static int free_accs = 0;
-int check_free(void *data, int n, userec_t *u)
+int check_free(void *data GCC_UNUSED, int n GCC_UNUSED, userec_t *u)
 {
-    (void)data;
-    (void)n;
     if (u->userid[0] == 0)
-	free_accs++;
+        free_accs++;
     return 0;
 }
 
-int check(void *data, int n, userec_t *u) {
+int check(void *data GCC_UNUSED, int n, userec_t *u) {
     time4_t d;
     char buf[256];
-    (void)data;
 
     if (u->userid[0] == 0 && u->userid[1])
     {
@@ -96,9 +93,8 @@ int check(void *data, int n, userec_t *u) {
     return 0;
 }
 
-int check_last_login(void *data, int n, userec_t *u) {
+int check_last_login(void *data GCC_UNUSED, int n, userec_t *u) {
     char buf[256];
-    (void)data;
 
     if (u->userid[0] == 0)
         return 0;

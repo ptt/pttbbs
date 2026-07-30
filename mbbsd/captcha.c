@@ -143,7 +143,7 @@ int verify_captcha(const char *reason)
 #else // !USE_FIGLET_CAPTCHA
 
 int
-verify_captcha(const char *reason)
+verify_captcha(const char *reason GCC_UNUSED)
 {
     return 1;
 }

@@ -1500,12 +1500,11 @@ struct ListAllUsetCtx {
 };
 
 static int
-u_list_CB(void *data, int num, userec_t * uentp)
+u_list_CB(void *data, int num GCC_UNUSED, userec_t * uentp)
 {
     char            permstr[8], *ptr;
     register int    level;
     struct ListAllUsetCtx *ctx = (struct ListAllUsetCtx*) data;
-    (void)num;
 
     if (uentp == NULL) {
 	move(2, 0);

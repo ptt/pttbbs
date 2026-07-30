@@ -777,17 +777,15 @@ chat_topic(ChatUser *cu, char *msg)
 
 
 static void
-chat_version(ChatUser *cu, char *msg)
+chat_version(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     sprintf(chatbuf, "%d %d", XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR);
     send_to_user(cu, chatbuf, 0, MSG_VERSION);
 }
 
 static void
-chat_xinfo(ChatUser *cu, char *msg)
+chat_xinfo(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     // report system information
     time4_t uptime = time(0) - boot_time;
     int dd =  uptime / DAY_SECONDS, 
@@ -843,10 +841,9 @@ chat_nick(ChatUser *cu, char *msg)
 }
 
 static void
-chat_list_rooms(ChatUser *cuser, char *msg)
+chat_list_rooms(ChatUser *cuser, char *msg GCC_UNUSED)
 {
     ChatRoom *cr;
-    (void)msg;
 
     if (RESTRICTED(cuser))
     {
@@ -997,9 +994,8 @@ chat_list_users(ChatUser *cu, char *msg)
 }
 
 static void
-chat_chatroom(ChatUser *cu, char *msg)
+chat_chatroom(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     if (common_client_command)
 	send_to_user(cu, "批踢踢茶藝館 4 21", 0, MSG_CHATROOM);
 }
@@ -1045,9 +1041,8 @@ chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: 還沒有作不同間的 */
 
 
 static void
-chat_map_chatids_thisroom(ChatUser *cu, char *msg)
+chat_map_chatids_thisroom(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     chat_map_chatids(cu, cu->room);
 }
 
@@ -1208,9 +1203,8 @@ chat_query(ChatUser *cu, char *msg)
 
 
 static void
-chat_cloak(ChatUser *cu, char *msg)
+chat_cloak(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     if (CHATSYSOP(cu))
     {
 	cu->uflag ^= PERM_CLOAK;
@@ -2285,9 +2279,8 @@ ChatAction *catbl[] =
 };
 
 static void
-chat_partyinfo(ChatUser *cu, char *msg)
+chat_partyinfo(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    (void)msg;
     if (!common_client_command)
 	return;                     /* only allow common client to retrieve it */
 
@@ -2938,7 +2931,7 @@ void selftest(void)
 #endif
 
 int
-main(int argc, char *argv[])
+main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     register int msock, csock, nfds;
     register ChatUser *cu, *cunext;
@@ -2946,8 +2939,6 @@ main(int argc, char *argv[])
     fd_set rset, xset;
     struct timeval tv;
     time4_t uptime, tmaintain;
-    (void)argc;
-    (void)argv;
 
 #ifdef SELFTESTER
     if(argc>1) {

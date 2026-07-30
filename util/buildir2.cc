@@ -220,12 +220,10 @@ int main(int argc, char **argv)
     }
     fprintf(stderr, "%d entries loaded.\n", (int)indexed.size());
 
-    int nr_indexed = 0, nr_written = 0, nr_failed = 0, nr_skip = 0;
+    int nr_indexed = 0, nr_written = 0, nr_failed = 0, nr_skip GCC_UNUSED = 0;
     int fout;
     int total;
     struct dirent **dirlist;
-
-    (void)nr_skip; // We currently don't use it.
 
     if ((total = scandir(bdir.c_str(), &dirlist, dirselect, mysort)) == -1) {
 	fprintf(stderr, "scandir failed!\n");

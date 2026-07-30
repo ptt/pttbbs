@@ -294,7 +294,7 @@ int sync_outta_server(int sfd, int do_login)
 }
 #endif
 
-void login_friend_online(int do_login)
+void login_friend_online(int do_login GCC_UNUSED)
 {
     userinfo_t     *uentp;
     int             i;
@@ -2984,7 +2984,7 @@ talkreply(void)
 int
 t_chat(void)
 {
-    static time4_t lastEnter = 0;
+    static time4_t lastEnter GCC_UNUSED = 0;
     int    fd;
 
     if (!HasBasicUserPerm(PERM_CHAT)) {

@@ -1,7 +1,7 @@
 #include "bbs.h"
 #include "daemons.h"
 
-void FormatCommentString(char *buf, size_t szbuf, int type,
+void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
                          const char *myid, int maxlength,
                          const char *msg, const char *tail)
 {

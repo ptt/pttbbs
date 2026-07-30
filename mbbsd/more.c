@@ -195,14 +195,6 @@ common_pager_exit_handler(int r, const char *fpath)
     return r;
 }
 
-static int
-memory_pager_exit_handler(int r, const void *ctx GCC_UNUSED)
-{
-    // TODO: port some functionality from `common_pager_exit_handler'.
-    return r;
-}
-
-
 #ifndef USE_PMORE ///////////////////////////////////////////////////////////
 
 // minimore: a mini pager in exactly 130 lines
@@ -472,6 +464,13 @@ more(const char *fpath, int promptend)
 	    common_pmore_help_handler);
 
     return common_pager_exit_handler(r, fpath);
+}
+
+static int
+memory_pager_exit_handler(int r, const void *ctx GCC_UNUSED)
+{
+    // TODO: port some functionality from `common_pager_exit_handler'.
+    return r;
 }
 
 int

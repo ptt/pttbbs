@@ -885,7 +885,7 @@ ccw_chat_print_highlights(CCW_CTX *ctx, const char *s)
 #endif // EXP_CHAT_HIGHLIGHTS
 
 CCW_PROTO void
-ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
+ccw_chat_print_line(CCW_CTX *ctx GCC_UNUSED, const char *buf, int local)
 {
 #ifdef EXP_CHAT_HIGHLIGHTS
     size_t szid;
@@ -911,7 +911,6 @@ ccw_chat_print_line(CCW_CTX *ctx, const char *buf, int local)
         ccw_chat_print_highlights(ctx, buf);
     }
 #else  // !EXP_CHAT_HIGHLIGHTS
-    (void)ctx;
     outs(buf);
 #endif // !EXP_CHAT_HIGHLIGHTS
     assert(local != CCW_LOCAL);

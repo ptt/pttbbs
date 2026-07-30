@@ -4,8 +4,9 @@
 // common log with formats for BBS (utils and clients)
 
 int
-log_payment(const char *filename, int money, int oldm, int newm,
-            const char *reason, time4_t now)
+log_payment(const char *filename GCC_UNUSED, int money GCC_UNUSED,
+            int oldm GCC_UNUSED, int newm GCC_UNUSED,
+            const char *reason GCC_UNUSED, time4_t now GCC_UNUSED)
 {
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
     return log_filef(filename,
@@ -16,15 +17,8 @@ log_payment(const char *filename, int money, int oldm, int newm,
                      money >= 0 ? money : -money,
                      oldm,
                      newm,
-                     reason); 
+                     reason);
 #else
-    // Unused
-    (void)filename;
-    (void)money;
-    (void)oldm;
-    (void)newm;
-    (void)reason;
-    (void)now;
     return 0;
 #endif
 }
