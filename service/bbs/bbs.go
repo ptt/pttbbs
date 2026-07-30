@@ -70,6 +70,45 @@ func (c *SHMClient) GetUserID(uid int) (string, error) {
 	return C.GoString(cStr), nil
 }
 
+// IsAlohaSvcEnabled returns true if SHM->GV2.e.aloha_svc is non-zero
+func (c *SHMClient) IsAlohaSvcEnabled() bool {
+	if c == nil {
+		return false
+	}
+	// TODO Add the C implementation.
+	return false
+}
+
+// SendAlohaMessage sends an Aloha notification waterball to a target online session in SHM
+func (c *SHMClient) SendAlohaMessage(sid int, toPID int, fromPID int, fromID string) error {
+	if c == nil {
+		return errors.New("null SHM client")
+	}
+
+	cFrom := C.CString(fromID)
+	defer C.free(unsafe.Pointer(cFrom))
+
+	// TODO Add the C implementation.
+	res := -1
+	if res != 0 {
+		var reason string
+		switch res {
+		case -1:
+			reason = fmt.Sprintf("invalid sid %d", sid)
+		case -2:
+			reason = fmt.Sprintf("sid %d is inactive", sid)
+		case -3:
+			reason = fmt.Sprintf("sid %d message queue full", sid)
+		case -4:
+			reason = fmt.Sprintf("sid %d pid mismatch (expected %d)", sid, toPID)
+		default:
+			reason = fmt.Sprintf("kill signal USR2 failed (code %d)", res)
+		}
+		return fmt.Errorf("failed to send aloha message to sid %d: %s", sid, reason)
+	}
+	return nil
+}
+
 // GetOnlineSessions returns active online session details from SHM
 type OnlineSession struct {
 	SID    int
