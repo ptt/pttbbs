@@ -150,4 +150,10 @@ int select_read_build(const char *src_direct, const char *dst_direct,
 int select_read_should_build(const char *dst_direct, int bid,
                              time4_t *resume_from, int *count);
 
+/* cgo.c */
+const char *get_bbshome(void);
+const char *get_userid_by_uid(int uid);
+int get_ushm_size(void);
+int get_online_session(int uip, int *out_pid, int *out_uid, char *out_userid);
+
 #endif
