@@ -122,8 +122,9 @@ install: $(PROG)
 	install -d $(BBSHOME)/bin/
 	install -s $(PROG) $(BBSHOME)/bin/mbbsd.$(DATETIME)
 	objcopy --only-keep-debug --compress-debug-sections $(PROG) $(BBSHOME)/bin/mbbsd.$(DATETIME).debug
-	@cd $(BBSHOME)/bin && objcopy --add-gnu-debuglink=mbbsd.$(DATETIME).debug mbbsd.$(DATETIME)
-	@ln -sfv mbbsd.$(DATETIME) $(BBSHOME)/bin/mbbsd
+	@(cd $(BBSHOME)/bin && \
+	  objcopy --add-gnu-debuglink=mbbsd.$(DATETIME).debug mbbsd.$(DATETIME) && \
+	  ln -sfv mbbsd.$(DATETIME) $(BBSHOME)/bin/mbbsd)
 
 clean:
 	rm -f $(OBJS) $(PROG)
