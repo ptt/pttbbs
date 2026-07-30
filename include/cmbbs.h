@@ -62,10 +62,10 @@ BanIpList *cached_banip_list(const char *basefile, const char *cachefile);
 #define getbtotal(bid) SHM->total[bid - 1]
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
 unsigned int safe_sleep(unsigned int seconds);
-void *create_shm(size_t shmsize, int *is_created);
-void *attach_shm(size_t shmsize);
-#define attach_SHM()    (attach_check_SHM(SHM_VERSION, sizeof(SHM_t)))
-void attach_check_SHM(int version, size_t SHM_t_size);
+SHM_t *create_shm(int *is_created);
+SHM_t *attach_shm(void);
+SHM_t *attach_check_SHM(void);
+void attach_SHM(void);
 void add_to_uhash(int n, const char *id);
 void remove_from_uhash(int n);
 int  dosearchuser(const char *userid, char *rightid);
