@@ -38,6 +38,11 @@
  * 當操作到一段落之後才 check b_lines 是否有改變.
  */
 #include "bbs.h"
+#ifdef ALL_REEDIT_LOG
+# define HAS_ALL_REEDIT_LOG 1
+#else
+# define HAS_ALL_REEDIT_LOG 0
+#endif
 
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
@@ -2065,10 +2070,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     }
     else if (currstat == REEDIT)
     {
-#ifndef ALL_REEDIT_LOG
-	// why force signature in SYSOP board?
-	if(strcmp(currboard, BN_SYSOP) == 0)
-#endif
+	if (HAS_ALL_REEDIT_LOG || strcmp(currboard, BN_SYSOP) == 0)
 	{
 	    fprintf(fp,
 		    "※ 編輯: %s (%s%s%s), %s\n",
