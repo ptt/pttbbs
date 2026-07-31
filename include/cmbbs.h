@@ -150,6 +150,10 @@ int select_read_build(const char *src_direct, const char *dst_direct,
 int select_read_should_build(const char *dst_direct, int bid,
                              time4_t *resume_from, int *count);
 
+/* message.c */
+int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
+                  const char *msg, int msgmode);
+
 /* cgo.c */
 const char *get_bbshome(void);
 const char *get_userid_by_uid(int uid);
