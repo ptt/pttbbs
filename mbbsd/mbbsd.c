@@ -1310,7 +1310,13 @@ do_aloha(void)
         return;
     }
 
-    if (aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_id(currutmp)) == 0 && is_aloha_svc_enabled()) {
+    /* Reach Aloha SVC if configured.
+     * Always let the SVC know we have a new login,
+     * and only stop if the SVC is enabled & acked successfully.
+     */
+    if (EXP_ALOHA_SVC &&
+        aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_id(currutmp)) == 0 &&
+        is_aloha_svc_enabled()) {
         return;
     }
 

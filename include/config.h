@@ -519,4 +519,9 @@
 # define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
 
+/* Experimental flags - always set them either 0 or 1. */
+#ifndef EXP_ALOHA_SVC
+#define EXP_ALOHA_SVC (0)
+#endif
+
 #endif
