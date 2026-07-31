@@ -756,13 +756,9 @@ load_current_user(const char *uid)
 static void
 login_query(char *ruid)
 {
-#ifdef CONVERT
     /* uid ¥[¤@¦ì, for gb login */
     char            uid[IDLEN + 2];
     int		    len;
-#else
-    char            uid[IDLEN + 1];
-#endif
 
     char	    passbuf[PW_PLAIN_SIZE];
     int             attempts;
@@ -800,7 +796,6 @@ login_query(char *ruid)
 	}
 	telnet_turnoff_client_detect();
 
-#ifdef CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
 	if (uid[0] && uid[len - 1] == ',') {
@@ -814,7 +809,6 @@ login_query(char *ruid)
 	}
 	else if (len >= IDLEN + 1)
 	    uid[IDLEN] = 0;
-#endif
 
 	if (0) {
 	    assert(false);
@@ -1513,9 +1507,7 @@ static void init(void)
 {
     start_time = time(NULL);
     init_io();
-#ifdef CONVERT
     init_convert();
-#endif
 
     /* avoid SIGPIPE */
     Signal(SIGPIPE, SIG_IGN);
@@ -1686,7 +1678,6 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		STRLCPY(fromhost, optarg);
 		break;
 	    case 'e':
-#ifdef CONVERT
 		if (strcmp(optarg, "big5") == 0) {
 		    set_converting_type(CONV_NORMAL);
 		} else if (strcmp(optarg, "utf8") == 0) {
@@ -1695,7 +1686,6 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		    fprintf(stderr, "unknown encoding: %s\n", optarg);
 		    exit(1);
 		}
-#endif
 		break;
 	    case 'u':
 		STRLCPY(option->flag_user, optarg);
@@ -1956,10 +1946,8 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     option->term_height = dat.t_lines;
     is_secure_connection = (dat.flags & CONN_FLAG_SECURE);
 
-#ifdef CONVERT
     if (dat.encoding)
 	set_converting_type(dat.encoding);
-#endif
 
     telnet_init(0);
 

@@ -1,6 +1,5 @@
 #include "bbs.h"
 
-#ifdef CONVERT
 int (*convert_write)(VBUF *v, char c) = vbuf_add;
 int (*convert_read)(VBUF *v, const void *buf, size_t len) = vbuf_putblk;
 ConvertMode convert_mode = CONV_NORMAL;
@@ -95,4 +94,3 @@ void init_convert()
     // nothing now.
 }
 
-#endif

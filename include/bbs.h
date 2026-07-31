@@ -51,13 +51,10 @@ extern "C" {
 #include "chess.h"
 #include "proto.h"
 #include "fnv_hash.h"
+#include "convert.h"
 
 #ifdef ASSESS
     #include "assess.h"
-#endif
-
-#ifdef CONVERT
-    #include "convert.h"
 #endif
 
 #ifndef INCLUDE_VAR_H

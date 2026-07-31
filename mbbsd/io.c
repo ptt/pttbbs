@@ -6,13 +6,9 @@
 #define OBUFSIZE  3072
 #define IBUFSIZE  128
 
-// When CONVERT is applied, we may need to write extra N bytes into buffer for
-// one character input. Currently the number is 3 (UTF8).
-#ifdef CONVERT
+// When charset encoding conversion is applied, we may need to write extra N
+// bytes into buffer for one character input. Currently the number is 3 (UTF8).
 # define OBUFMINSPACE (3)
-#else
-# define OBUFMINSPACE (1)
-#endif
 
 #ifdef DEBUG
 #define register
@@ -139,11 +135,7 @@ ochar(int c)
     if (vbuf_space(pvout) < OBUFMINSPACE)
         oflush();
 
-#ifdef CONVERT
     convert_write(pvout, c);
-#else
-    vbuf_add(pvout, c);
-#endif
 
     return 0;
 }
@@ -396,11 +388,7 @@ read_vin() {
 #endif // DBG_OUTRPT
 
     // len = 1 if success
-#ifdef CONVERT
     len = convert_read(pvin, buf, len);
-#else
-    len = vbuf_putblk(pvin, buf, len);
-#endif
     return len;
 }
 

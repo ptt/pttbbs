@@ -202,11 +202,7 @@ enum {
     AUTH_RESULT_OK     = 1,
 };
 
-#ifdef  CONVERT
 #define IDBOXLEN    (IDLEN+2)   // one extra char for encoding
-#else
-#define IDBOXLEN    (IDLEN+1)
-#endif
 
 typedef struct {
     int  state;
@@ -2305,7 +2301,6 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     char *uid_lastc = uid + strlen(uid)-1;
 
                     draw_passwd_prompt(conn);
-#ifdef CONVERT
                     // convert encoding if required
                     switch(*uid_lastc)
                     {

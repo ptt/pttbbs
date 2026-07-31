@@ -1,7 +1,6 @@
 #ifndef BBS_CONVERT_H
 #define BBS_CONVERT_H
 
-#ifdef CONVERT
 
 typedef enum {
     CONV_NORMAL,
@@ -32,5 +31,4 @@ extern void set_converting_type(ConvertMode which);
     }
 #endif 
 
-#endif // CONVERT
 #endif // BBS_CONVERT_H

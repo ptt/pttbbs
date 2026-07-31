@@ -310,12 +310,7 @@ cin_fetch_fd(int fd)
         // for tty_read: sz<0 = EAGAIN
         if (sz > 0)
         {
-# ifdef CONVERT
             sz = convert_read(cin, buf, sz);
-# else  // !CONVERT
-            sz = vbuf_putblk(cin, buf, sz);
-            // sz becomes -1/0/1 after putblk calls
-# endif  // !CONVERT
             if (sz < 1)
                 sz = -1;
         }

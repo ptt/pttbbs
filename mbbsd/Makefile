@@ -42,7 +42,6 @@ LDLIBS:= -lcmbbs -lcmsys -losdep $(LDLIBS)
 USE_BBSLUA!=  	sh -c '${DEF_CMD}"USE_BBSLUA" ${BBSCONF} ${DEF_YES}'
 USE_PFTERM!=	sh -c '${DEF_CMD}"USE_PFTERM" ${BBSCONF} ${DEF_YES}'
 USE_NIOS!=	sh -c '${DEF_CMD}"USE_NIOS"   ${BBSCONF} ${DEF_YES}'
-USE_CONVERT!=	sh -c '${DEF_CMD}"CONVERT"    ${BBSCONF} ${DEF_YES}'
 
 .if $(USE_BBSLUA)
 .if $(OSTYPE)=="FreeBSD"
@@ -95,7 +94,6 @@ $(PROG): testsz $(OBJS)
 	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"
 	@[ -z "$(USE_BBSLUA)" ] || echo -n "+BBSLUA "
 	@[ -z "$(USE_PFTERM)" ] || echo -n "+PFTERM "
-	@[ -z "$(USE_CONVERT)" ] || echo -n "+CONVERT "
 	@[ -z "$(USE_NIOS)" ] || echo -n "+NIOS "
 	@[ -z "$(USE_MBBSD_CXX)" ] || echo -n "+CXX "
 	@printf "\033[m"

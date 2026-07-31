@@ -47,14 +47,12 @@ int main(int argc, char *argv[])
 	    fprintf(stderr, "towrite error. abort.\r\n");
 	    break;
 	}
-#ifdef CONVERT
 	switch (dat.encoding)
 	{
 	    case CONV_UTF8:
 		encoding = "[UTF-8] ";
 		break;
 	}
-#endif
 	fprintf(stderr, "got login data: userid=%s, (%dx%d) %sfrom: %s\r\n", 
 		dat.userid, dat.t_cols, dat.t_lines, 
 		encoding, dat.hostip);
