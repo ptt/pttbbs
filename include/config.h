@@ -309,9 +309,6 @@
 #define THREAD_SEARCH_RANGE     (500)       /* 系列文章搜尋上限 */
 #endif
 
-#ifndef FOREIGN_REG_DAY
-#define FOREIGN_REG_DAY         (30)        /* 外籍使用者試用日期上限 */
-#endif
 
 #ifndef FORCE_PROCESS_REGISTER_FORM
 #define FORCE_PROCESS_REGISTER_FORM     (0)

@@ -1490,9 +1490,6 @@ u_manual_verification(void)
 	return;
     }
 
-#ifndef FOREIGN_REG
-    isForeign = 0;
-#endif
 
     // TODO REGFORM 2 checks 2 parts.
     i = file_find_record(FN_REQLIST, cuser.userid);
@@ -1535,7 +1532,6 @@ u_manual_verification(void)
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.nickname);
-#ifdef FOREIGN_REG
 	{
 	    char not_fore[2] = "";  // use default values instead of pre-inputs
 
@@ -1553,14 +1549,9 @@ u_manual_verification(void)
 	    }
 	}
 	move(2, 0); prints("  是否現在住在台灣: %s\n", isForeign ? "N (否)" : "Y (是)");
-#endif
 	while (1) {
 	    getfield(4,
-#ifdef FOREIGN_REG
                      "請用本名",
-#else
-                     "請用中文",
-#endif
 		     REGNOTES_ROOT "name",
                      "真實姓名", rname, 20);
 	    if( (errcode = isvalidname(rname)) == NULL )

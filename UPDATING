@@ -18,9 +18,17 @@ rXXXX 的版號是 SVN 時代的，目前已沒有簡單方法對應回去。
     make r5858_birth
 
 -----------------------------------------------------------------------------
+2026-07-31: cleanup(reg): make FOREIGN_REG always enabled
+FOREIGN_REG 變成標準行為，且 FOREIGN_REG_DAY 相關行為被移除。
+
 2026-07-31: cleanup(talk): remove obsolete NOKILLWATERBALL feature
 NOKILLWATERBALL 已被移除，如果之前有使用，注意 SHM 大小會有變化要重新 init.
 正常站台應該沒使用，可正常昇級
+
+注意在此 patch 後有不少移除各種不需要的選項的相關修改，多半是不影響系統
+行為(INNTIMEZONE)或是只有非常老的系統才有差(RFORK)，或是早已被視為必要的選項 (如
+CONVERT, DBCSAWARE, BMCHS, ALLOW_FREE_TN_ANNOUNCE, FOREIGN_REG)。
+若系統的新行為不符合您的 需求請自行修改。
 
 2026-07-28: feat(passwd, #112): Support long passwords up to 72 chars
 密碼系統自此版本開始昇級增加 bcrypt, 支援 72 字元內的密碼。

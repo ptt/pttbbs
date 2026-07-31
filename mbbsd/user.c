@@ -168,15 +168,7 @@ user_display(const userec_t * u, int adminmode)
     // For PERM_ACCTREG, this is used when reviewing register forms.
     if (!adminmode || HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
 	prints("\t真實姓名: %s", u->realname);
-#if FOREIGN_REG_DAY > 0
-	prints(" %s%s",
-	       u->uflag & UF_FOREIGN ? "(外籍: " : "",
-	       u->uflag & UF_FOREIGN ?
-		    (u->uflag & UF_LIVERIGHT) ? "永久居留)" : "未取得居留權)"
-		    : "");
-#elif defined(FOREIGN_REG)
 	prints(" %s", u->uflag & UF_FOREIGN ? "(外籍)" : "");
-#endif
 	outs("\n"); // end of realname
 	prints("\t職業學歷: %s\n", u->career);
 	prints("\t居住地址: %s\n", u->address);
@@ -947,7 +939,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    x.chc_win, x.chc_lose, x.chc_tie,
 		    x.go_win, x.go_lose, x.go_tie,
 		    x.dark_win, x.dark_lose, x.dark_tie);
-#ifdef FOREIGN_REG
 	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag & UF_FOREIGN ? "2" : "1"))
 		if ((tmp = atoi(buf)) > 0){
 		    if (tmp == 2){
@@ -969,7 +960,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 			}
 		    }
 		}
-#endif
 	}
 
         if (!adminmode) {

@@ -1124,19 +1124,6 @@ static void init_guest_info(void)
     currutmp->pager = PAGER_DISABLE;
 }
 
-#if FOREIGN_REG_DAY > 0
-static void foreign_warning(void){
-    if ((HasUserFlag(UF_FOREIGN)) && !(HasUserFlag(UF_LIVERIGHT))){
-	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
-	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
-	}
-	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
-	    pwcuBitDisableLevel(PERM_LOGINOK | PERM_POST);
-	    vmsg("警告：請至出入境管理局申請永久居留");
-	}
-    }
-}
-#endif
 
 // XXX temporary...
 int query_adbanner_usong_pref_changed(const userec_t *u, char force_yn);
@@ -1283,10 +1270,6 @@ user_login(void)
 	if(ptime.tm_yday!=lasttime.tm_yday)
 	    STATINC(STAT_TODAYLOGIN_MIN);
     }
-
-#if FOREIGN_REG_DAY > 0
-    foreign_warning();
-#endif
 
     if(HasUserFlag(UF_FAV_ADDNEW)) {
 	fav_load();
