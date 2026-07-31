@@ -18,6 +18,10 @@ rXXXX 的版號是 SVN 時代的，目前已沒有簡單方法對應回去。
     make r5858_birth
 
 -----------------------------------------------------------------------------
+2026-07-31: cleanup(talk): remove obsolete NOKILLWATERBALL feature
+NOKILLWATERBALL 已被移除，如果之前有使用，注意 SHM 大小會有變化要重新 init.
+正常站台應該沒使用，可正常昇級
+
 2026-07-28: feat(passwd, #112): Support long passwords up to 72 chars
 密碼系統自此版本開始昇級增加 bcrypt, 支援 72 字元內的密碼。
 為了避免衝擊使用者已有習慣（主要是利用超過8個字元會被忽略來輸入亂數尾碼的人），

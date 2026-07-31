@@ -456,10 +456,6 @@ dogetch(void)
 	    }
 	}
 
-#ifdef NOKILLWATERBALL
-	if( currutmp && currutmp->msgcount && !reentrant_write_request )
-	    write_request(1);
-#endif
 
 	STATINC(STAT_SYSREADSOCKET);
 

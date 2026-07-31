@@ -428,9 +428,6 @@ typedef struct userinfo_t {
     unsigned int    withme;
     unsigned int    brc_id;
 
-#ifdef NOKILLWATERBALL
-    time4_t wbtime;
-#endif
 } userinfo_t;
 
 typedef struct water_t {

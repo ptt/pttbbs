@@ -451,9 +451,6 @@ char           *friend_file[8] = {
     FN_VISABLE
 };
 
-#ifdef NOKILLWATERBALL
-char    reentrant_write_request = 0;
-#endif
 
 #ifdef PTTBBS_UTIL
     #define COMMON_TIME (time(0))

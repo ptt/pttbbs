@@ -495,11 +495,6 @@ write_request(int sig)
     int             i, msgcount;
 
     STATINC(STAT_WRITEREQUEST);
-#ifdef NOKILLWATERBALL
-    if( reentrant_write_request ) /* kill again by shmctl */
-	return;
-    reentrant_write_request = 1;
-#endif
     syncnow();
     check_water_init();
     if (PAGER_UI_IS(PAGER_UI_OFO)) {
@@ -555,9 +550,6 @@ write_request(int sig)
 	    currutmp->chatid[0] = 2;
 	    currstat = HIT;
 
-#ifdef NOKILLWATERBALL
-	    currutmp->wbtime = 0;
-#endif
 	    if( (msgcount = currutmp->msgcount) > 0 ){
 		for( i = 0 ; i < msgcount ; ++i ){
 		    bell();
@@ -586,10 +578,6 @@ write_request(int sig)
 	    currutmp->msgcount = 0;
 	}
     }
-#ifdef NOKILLWATERBALL
-    reentrant_write_request = 0;
-    currutmp->wbtime = 0; /* race */
-#endif
 }
 
 static userinfo_t*

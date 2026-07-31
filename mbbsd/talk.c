@@ -129,13 +129,7 @@ modestring(const userinfo_t * uentp, int simple)
     }
     else if (!mode && *uentp->chatid == 3)
 	SNPRINTF(modestr, "水球準備中");
-    else if (
-#ifdef NOKILLWATERBALL
-	     uentp->msgcount > 0
-#else
-	     (!mode) && *uentp->chatid == 2
-#endif
-	     )
+    else if ((!mode) && *uentp->chatid == 2)
 	if (uentp->msgcount < 10) {
 	    const char *cnum[10] =
 	    {"", "一", "兩", "三", "四", "五",
@@ -981,13 +975,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	} else if (flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
 
-	if (uin->msgcount >= 1 &&
-#ifdef NOKILLWATERBALL
-	    !(uin->wbtime = now) /* race */
-#else
-	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1)
-#endif
-	    && flag != WATERBALL_ALOHA)
+	if (uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) && flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
 	else if (uin->msgcount == 1 && flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
@@ -995,13 +983,6 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 		flag != WATERBALL_ALOHA)
 	    outmsg(ANSI_COLOR(1;33;44) "再補上一粒! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
 
-#if defined(NOKILLWATERBALL) && defined(PLAY_ANGEL)
-	/* Questioning and answering should better deliver immediately. */
-	if ((flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
-	    flag == WATERBALL_CONFIRM_ANGEL ||
-	    flag == WATERBALL_CONFIRM_ANSWER) && uin->pid)
-	    kill(uin->pid, SIGUSR2);
-#endif
     }
 
     clrtoeol();
@@ -2447,11 +2428,7 @@ userlist(void)
 				    uentp->msgcount = write_pos + 1;
 				    memcpy(&uentp->msgs[write_pos], &msg,
 					   sizeof(msg));
-#ifdef NOKILLWATERBALL
-				    uentp->wbtime = now;
-#else
 				    kill(uentp->pid, SIGUSR2);
-#endif
 				}
 			    }
 			}

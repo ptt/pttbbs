@@ -759,66 +759,6 @@ int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     return 0;
 }
 
-#ifdef NOKILLWATERBALL
-int nkwbd(int argc, char **argv)
-{
-    int     ch, sleeptime = 5, timeout = 5;
-    while( (ch = getopt(argc, argv, "s:t:h")) != -1 )
-	switch( ch ){
-	case 's':
-	    if( (sleeptime = atoi(optarg)) <= 0 ){
-		fprintf(stderr, "sleeptime <= 0? set to 5");
-		sleeptime = 5;
-	    }
-	    break;
-
-	case 't':
-	    if( (timeout = atoi(optarg)) <= 0 ){
-		fprintf(stderr, "timeout <= 0? set to 5");
-		timeout = 20;
-	    }
-	    break;
-
-	default:
-	    fprintf(stderr, "usage: shmctl nkwbd [-s sleeptime] [-t timeout]\n");
-	    return 0;
-	}
-
-#ifndef VALGRIND
-    setproctitle("shmctl nkwbd(sleep%d,timeout%d)", sleeptime, timeout);
-#endif
-
-    switch( fork() ){
-    case -1:
-	perror("fork()");
-	return 0;
-	break;
-
-    case 0:  /* child */
-	while( 1 ){
-	    int     i;
-	    time_t  now, t;
-
-	    now = time(NULL);
-	    t = now - timeout;
-
-	    for( i = 0 ; i < USHM_SIZE ; ++i )
-		if( SHM->uinfo[i].pid        &&
-		    SHM->uinfo[i].wbtime     &&
-		    SHM->uinfo[i].wbtime < t    ){
-		    kill(SHM->uinfo[i].pid, SIGUSR2);
-		}
-	    sleep(sleeptime);
-	}
-	break;
-
-    default: /* parent */
-	fprintf(stderr, "nkwbd\n");
-	return 0;
-    }
-    return 0;
-}
-#endif
 
 int SHMinit(int argc, char **argv)
 {
@@ -855,10 +795,6 @@ int SHMinit(int argc, char **argv)
 	utmpsortd(1, argv);
     }
 
-#ifdef NOKILLWATERBALL
-    puts("nkwbd...");
-    nkwbd(1, argv);
-#endif
 
     return 0;
 }
@@ -1135,9 +1071,6 @@ struct Cmd {
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
     {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
-#ifdef NOKILLWATERBALL
-    {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
-#endif
 
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
     {torb,       "reloadbcache", "reload bcache"},

@@ -66,12 +66,8 @@ int main(int argc, char *argv[])
 	    if (write_pos < (MAX_MSGS - 1)){
 		uentp->msgcount = write_pos + 1;
 		memcpy(&uentp->msgs[write_pos], &msg, sizeof(msg));
-#ifdef NOKILLWATERBALL
-		uentp->wbtime = (time4_t)now;
-#else
                 (void)now; // unused.
 		kill(uentp->pid, SIGUSR2);
-#endif
 	    }
 	}
 
