@@ -1,5 +1,7 @@
 # PTT BBS [Current] Updating Log
 
+This file is encoded in UTF-8.
+
 這裡是 PTT Current 的重大更新記錄，主要是「檔案格式」或位置的重要改變，通常是更新程式碼時要注意一起更新的部份。
 
 跟著 Current 一起升級的朋友們要注意是否有跨過下列的版號，若有請依序手動更新。會列在這裡的版號，強烈建議先整個關站再更新。
@@ -14,12 +16,15 @@
 
 ---
 
+## 2026-08-01: `cleanup(mbbsd)`: Remove `m_loginmsg` feature
+
+移除了進站水球，請改用編輯進站畫面代替。
+
 ## 2026-08-01: feat(acl): Make USE_NEW_BAN_SYSTEM official
 
 配合 Y2038 修正， `USE_NEW_BAN_SYSTEM` 相關條件被移除，未來一律只支援
 新式的看板水桶系統。 如果您的系統尚未轉換，請參考
 [r5149_waterban.sh](https://github.com/ptt/pttbbs/commit/7099257c55c69b979d4a782c90877100a82ab82e)
-
 
 ## 2026-07-31: [`cleanup(reg)`: make `FOREIGN_REG` always enabled](https://github.com/ptt/pttbbs/commit/c5fb4285f5b6d6994a8e52c6eef5ba88e49133ed)
 

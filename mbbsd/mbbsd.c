@@ -1178,13 +1178,6 @@ user_login(void)
 
     do_aloha();
 
-    if (SHM->loginmsg.pid){
-        if(search_ulist_pid(SHM->loginmsg.pid))
-	    getmessage(SHM->loginmsg);
-        else
-	    SHM->loginmsg.pid=0;
-    }
-
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
 	clrtobot();

@@ -681,7 +681,6 @@ static const commands_t adminlist[] = {
     {verifydb_admin_search_display,
 	PERM_ACCOUNTS,			"Verify Search  搜尋認證資料庫"},
 #endif
-    {m_loginmsg, PERM_SYSOP,		"GMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
 

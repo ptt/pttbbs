@@ -4,7 +4,6 @@
 #include "osdep.h"
 
 /* admin */
-int m_loginmsg(void);
 int m_mod_board(char *bname);
 int m_newbrd(int whatclass, int recover);
 int m_user(void);
