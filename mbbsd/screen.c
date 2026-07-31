@@ -251,7 +251,6 @@ redrawwin(void)
 	if ((len = bp->len)) {
 	    rel_move(tc_col, tc_line, 0, i);
 
-#ifdef DBCSAWARE
 	    if (!(bp->mode & STANDOUT) &&
 		    (HasUserFlag(UF_DBCS_NOINTRESC)) &&
 		    DBCS_RemoveIntrEscape(bp->data, &len))
@@ -259,7 +258,6 @@ redrawwin(void)
 		// if anything changed, dirty whole line.
 		bp->len = len;
 	    }
-#endif // DBCSAWARE
 
 	    if (bp->mode & STANDOUT) {
 		standoutput((char *)bp->data, 0, len, bp->sso, bp->eso);
@@ -348,7 +346,6 @@ doupdate(void)
 	{
 	    bp->mode &= ~(MODIFIED);
 
-#ifdef DBCSAWARE
 	    if (!(bp->mode & STANDOUT) &&
 		(HasUserFlag(UF_DBCS_NOINTRESC)) &&
 		DBCS_RemoveIntrEscape(bp->data, &len))
@@ -357,7 +354,6 @@ doupdate(void)
 		bp->len = len;
 		bp->smod = 0; bp->emod = len;
 	    }
-#endif // DBCSAWARE
 
 // disable this if you encounter some bugs.
 // bug history:

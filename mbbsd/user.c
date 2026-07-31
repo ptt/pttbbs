@@ -430,11 +430,9 @@ void Customize(void)
 	UF_FAV_NOHILIGHT,
 	UF_NO_MODMARK	,
 	UF_COLORED_MODMARK,
-#ifdef DBCSAWARE
 	UF_DBCS_AWARE,
 	UF_DBCS_DROP_REPEAT,
 	UF_DBCS_NOINTRESC,
-#endif
         UF_CURSOR_ASCII,
 #ifdef USE_PFTERM
         UF_MENU_LIGHTBAR,
@@ -455,11 +453,9 @@ void Customize(void)
 	"MYFAV      單色顯示我的最愛",
 	"MODMARK    隱藏文章修改符號(推文/修文) (~)",
 	"MODMARK    使用色彩代替修改符號 (+)",
-#ifdef DBCSAWARE
 	"DBCS       自動偵測雙位元字集(如全型中文)",
 	"DBCS       忽略連線程式為雙位元字集送出的重複按鍵",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
-#endif
         "CURSOR     使用新式簡化游標",
 #ifdef USE_PFTERM
         "CURSOR     (實驗性)啟用光棒選單系統",

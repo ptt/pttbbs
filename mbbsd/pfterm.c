@@ -5,7 +5,6 @@
 
 #define USE_PFTERM
 #define EXP_PFTERM
-#define DBCSAWARE
 #define FT_DBCS_NOINTRESC 1
 #define DBG_TEXT_FD
 
@@ -1016,7 +1015,6 @@ doupdate(void)
             if (y != ft.ry || x != ft.rx)
                 fterm_rawmove_opt(y, x);
 
-#ifdef DBCSAWARE
             if (FTD[x] & FTDIRTY_CLEAR_DBCS) {
                 fterm_raws("  \b\b");
             }
@@ -1025,7 +1023,6 @@ doupdate(void)
                 // prevent changing attributes inside DBCS
             }
             else
-#endif // DBCSAWARE
 #ifdef DBG_SHOW_DIRTY
             fterm_rawattr(FTD[x] ?
                 (FTAMAP[y][x] | FTATTR_BOLD) : (FTAMAP[y][x] & ~FTATTR_BOLD));

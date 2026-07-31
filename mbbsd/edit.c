@@ -237,7 +237,6 @@ static const char *table_mode[6] = {
   "╪"
 };
 
-#ifdef DBCSAWARE
 static char mbcs_mode		=1;
 
 #define IS_BIG5_HI(x) (0x81 <= (x) && (x) <= 0xfe)
@@ -279,7 +278,6 @@ fix_cursor(char *str, int pos, int dir)
     return newpos;
 }
 
-#endif
 
 /* 記憶體管理與編輯處理 */
 static void
@@ -2688,10 +2686,8 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	outs(reset);
     }
 
-#ifdef DBCSAWARE
     /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
     unsigned char isDBCS = 0;
-#endif
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
     {
@@ -2718,14 +2714,12 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	else if(ch == ESC_CHR)
 	{
 	    inAnsi = 1;
-#ifdef DBCSAWARE
 	    if(isDBCS == 1)
 	    {
 		isDBCS = 2;
 		outs(ANSI_COLOR(1;33) "?");
 		outs(reset);
 	    }
-#endif
 	    outs(ANSI_COLOR(1) "*");
 	}
 	else
@@ -2958,7 +2952,6 @@ display_textline_internal(textline_t *p, int i)
 
     attr |= detect_attr(p->data, p->len);
 
-#ifdef DBCSAWARE
     if(mbcs_mode && curr_buf->edit_margin > 0)
     {
 	if(curr_buf->edit_margin >= p->len)
@@ -2984,7 +2977,6 @@ display_textline_internal(textline_t *p, int i)
 	}
 
     } else
-#endif
     (*output)((curr_buf->edit_margin < p->len) ?
 	    &p->data[curr_buf->edit_margin] : "", attr);
 
@@ -3575,9 +3567,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
 
-#ifdef DBCSAWARE
     mbcs_mode = ISDBCSAWARE() ? 1 : 0;
-#endif
 
     enter_edit_buffer();
     curr_buf->flags = flags;
@@ -3668,18 +3658,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    count = 0;
 	    tin = interval;
 	}
-#ifndef DBCSAWARE
-	/* this is almost useless! */
-	if (curr_buf->raw_mode) {
-	    switch (ch) {
-	    case Ctrl('S'):
-	    case Ctrl('Q'):
-	    case Ctrl('T'):
-		continue;
-	    }
-	}
-#endif
-
 	if (phone_mode_filter(ch))
 	    continue;
 
@@ -3828,10 +3806,8 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    undelete_line();
 		    break;
 		case 'R':
-#ifdef DBCSAWARE
 		case 'r':
 		    mbcs_mode =! mbcs_mode;
-#endif
 		    curr_buf->raw_mode ^= 1;
 		    break;
 		case 'I':
@@ -3951,10 +3927,8 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    curr_buf->currpnt--;
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
-#ifdef DBCSAWARE
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
-#endif
 		} else if (curr_buf->currline->prev) {
 		    curr_buf->curr_window_line--;
 		    curr_buf->currln--;
@@ -3969,10 +3943,8 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    curr_buf->currpnt++;
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
-#ifdef DBCSAWARE
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_RIGHT);
-#endif
 		} else if (curr_buf->currline->next) {
 		    curr_buf->currpnt = 0;
 		    curr_buf->curr_window_line++;
@@ -4061,10 +4033,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 			join(curr_buf->currline);
 			break;
 		    }
-#ifndef DBCSAWARE
-		    curr_buf->currpnt--;
-		    delete_char();
-#else
 		    {
 		      int newpnt = curr_buf->currpnt - 1;
 
@@ -4077,7 +4045,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		        delete_char();
 		      }
 		    }
-#endif
 		}
 		break;
 	    case Ctrl('D'):
@@ -4087,19 +4054,14 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    join(curr_buf->currline);
 		    curr_buf->redraw_everything = YEA;
 		} else {
-#ifndef DBCSAWARE
-		    delete_char();
-#else
-		    {
-		      int w = 1;
+                    int w = 1;
 
-		      if(mbcs_mode)
-		        w = mchar_len((unsigned char*)(curr_buf->currline->data + curr_buf->currpnt));
+                    if(mbcs_mode)
+                        w = mchar_len((unsigned char*)(curr_buf->currline->data + curr_buf->currpnt));
 
-		      for(; w > 0; w --)
-		        delete_char();
-		    }
-#endif
+                    for(; w > 0; w --)
+                        delete_char();
+
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
 		}

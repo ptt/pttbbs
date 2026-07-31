@@ -647,12 +647,10 @@ void pwcuInitGuestPerm	()
     cuser.userlevel = 0;
     cuser.uflag = UF_BRDSORT;
     cuser.pager = PAGER_OFF;
-#ifdef DBCSAWARE
     _ENABLE_BIT(cuser.uflag, (UF_DBCS_AWARE | UF_DBCS_DROP_REPEAT));
 # ifdef GUEST_DEFAULT_DBCS_NOINTRESC
     _ENABLE_BIT(cuser.uflag, UF_DBCS_NOINTRESC);
 # endif
-#endif
 }
 
 void pwcuInitGuestInfo	()

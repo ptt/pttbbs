@@ -1016,11 +1016,7 @@ vs_quick_pref(int default_value, const char *title, const char *entry,
 // DBCS Aware Helpers
 ////////////////////////////////////////////////////////////////////////
 
-#ifdef DBCSAWARE
-#   define CHKDBCSTRAIL(_buf,_i) (ISDBCSAWARE() && DBCS_Status(_buf, _i) == DBCS_TRAILING)
-#else  // !DBCSAWARE
-#   define CHKDBCSTRAIL(buf,i) (0)
-#endif // !DBCSAWARE
+#define CHKDBCSTRAIL(_buf,_i) (ISDBCSAWARE() && DBCS_Status(_buf, _i) == DBCS_TRAILING)
 
 ////////////////////////////////////////////////////////////////////////
 // History Helpers
