@@ -325,10 +325,6 @@
 #define MAX_EXKEEPMAIL    (1000)        /* 最多信箱加大多少封 */
 #endif
 
-#ifndef INNTIMEZONE
-#define INNTIMEZONE       "+0000 (UTC)" /* 轉信時 timestamp 的時區 */
-#endif
-
 #ifndef ADD_EXMAILBOX
 #define ADD_EXMAILBOX     0             /* 贈送信箱 */
 #endif
