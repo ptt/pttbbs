@@ -282,10 +282,8 @@ get_max_keepmail(const userec_t *u) {
         keep = MAX_KEEPMAIL * 10.0;  // 700 -> 2000
     } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_SYSSUBOP)) {
         keep = MAX_KEEPMAIL * 5.0;  // 500 -> 1000
-#ifdef PLAY_ANGEL
-    } else if (lvl & (PERM_ANGEL)) {
+    } else if (HAS_ANGEL && (lvl & (PERM_ANGEL))) {
         keep = MAX_KEEPMAIL * 3.5;  // 700 -> 700
-#endif
     } else if (lvl & (PERM_BM)) {
         keep = MAX_KEEPMAIL * 2.5;  // 300 -> 500
     } else if (!(lvl & (PERM_LOGINOK))) {

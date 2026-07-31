@@ -390,8 +390,7 @@ show_call_in(int save, int which)
     char buf[200];
     int mode = currutmp->msgs[which].msgmode;
 
-#ifdef PLAY_ANGEL
-    if (mode == MSGMODE_TOANGEL) {
+    if (HAS_ANGEL && mode == MSGMODE_TOANGEL) {
         SNPRINTF(buf, ANSI_COLOR(1;37;46) "¡¹%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET,
                  currutmp->msgs[which].userid,
@@ -400,7 +399,6 @@ show_call_in(int save, int which)
         // TODO maybe it's better to move this to "sender".
         angel_notify_activity(currutmp->msgs[which].userid);
     } else
-#endif
     SNPRINTF(buf, ANSI_COLOR(1;33;46) "¡¹%s" ANSI_COLOR(37;45)
              " %s " ANSI_RESET, currutmp->msgs[which].userid,
              currutmp->msgs[which].last_call_in);
@@ -444,10 +442,8 @@ add_history(const msgque_t * msg)
 	    if (swater[i] == NULL)
 		break;
 	    if (swater[i]->pid == msg->pid
-#ifdef PLAY_ANGEL
-		    && swater[i]->msg[0].msgmode == msg->msgmode
+		    && (!HAS_ANGEL || swater[i]->msg[0].msgmode == msg->msgmode)
 		    /* When throwing waterball to angel directly */
-#endif
 	       	)
 		break;
 	}

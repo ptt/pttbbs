@@ -700,8 +700,7 @@ static const commands_t maillist[] = {
     {NULL, 0, NULL}
 };
 
-#ifdef PLAY_ANGEL
-static const commands_t angelmenu[] = {
+static const commands_t angelmenu[] GCC_UNUSED = {
     {a_angelmsg, PERM_ANGEL,"Leave message 留言給小主人"},
     {a_angelmsg2,PERM_ANGEL,"Call screen   呼叫畫面個性留言"},
     {angel_check_master,PERM_ANGEL,
@@ -711,6 +710,7 @@ static const commands_t angelmenu[] = {
     {NULL, 0, NULL}
 };
 
+#ifdef PLAY_ANGEL
 static int menu_angelbeats() {
     domenu(M_TMENU, "Angel Beats! 天使公會", 'L', angelmenu);
     return 0;

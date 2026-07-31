@@ -405,8 +405,7 @@ give_money_ui(const char *userid)
 	    cuser.userid, id, m, mtax, m-mtax);
 
     // safe context starts at (6, 0).
-#ifdef PLAY_ANGEL
-    if (HasUserPerm(PERM_ANGEL))
+    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL))
     {
 	userec_t xuser = {0};
 	getuser(id, &xuser);
@@ -429,7 +428,7 @@ give_money_ui(const char *userid)
             break;
 	}
     }
-#endif // PLAY_ANGEL
+
 
     if (is_rejected(id)) {
         move(13, 0);

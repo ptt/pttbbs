@@ -227,11 +227,11 @@ process_pager_keys(int ch)
 		my_newfd = vkey_detach();
 		show_call_in(0, 0);
 		watermode = 0;
-#ifndef PLAY_ANGEL
-		my_write(currutmp->msgs[0].pid, "水球丟過去： ",
-			currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
-#else
-		switch (currutmp->msgs[0].msgmode) {
+		if (!HAS_ANGEL) {
+		    my_write(currutmp->msgs[0].pid, "水球丟過去： ",
+			    currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+		} else {
+		    switch (currutmp->msgs[0].msgmode) {
 		    case MSGMODE_TALK:
 		    case MSGMODE_WRITE:
 		    case MSGMODE_ALOHA:
@@ -246,8 +246,8 @@ process_pager_keys(int ch)
 			my_write(currutmp->msgs[0].pid, "回答小主人： ",
 				 currutmp->msgs[0].userid, WATERBALL_ANSWER, NULL);
 			break;
+		    }
 		}
-#endif
 		vkey_attach(my_newfd);
 
 		/* 還原螢幕 */

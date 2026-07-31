@@ -570,11 +570,9 @@ ofo_water_scr(const water_t * tw, int which, char type)
 	move(0, 0);
 	SOLVE_ANSI_CACHE();
 	clrtoeol();
-#ifdef PLAY_ANGEL
-	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
+if (HAS_ANGEL && tw->msg[0].msgmode == MSGMODE_TOANGEL)
 	    outs("回答小主人: ");
 	else
-#endif
 	prints("反擊 %s: ", tw->userid);
     } else {
 
@@ -913,23 +911,19 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	if (uin->pid > 0)
 	    kill(uin->pid, SIGUSR1);
     } else if ((flag != WATERBALL_ALOHA &&
-#ifdef PLAY_ANGEL
-	       flag != WATERBALL_ANGEL &&
+	       (!HAS_ANGEL || (flag != WATERBALL_ANGEL &&
 	       flag != WATERBALL_ANSWER &&
 	       flag != WATERBALL_CONFIRM_ANGEL &&
-	       flag != WATERBALL_CONFIRM_ANSWER &&
+	       flag != WATERBALL_CONFIRM_ANSWER)) &&
 	       /* Angel accept or not is checked outside.
 		* Avoiding new users don't know what pager is. */
-#endif
 	       !HasUserPerm(PERM_SYSOP) &&
 	       (uin->pager == PAGER_ANTIWB ||
 		uin->pager == PAGER_DISABLE ||
 		(uin->pager == PAGER_FRIENDONLY &&
 		 !(fri_stat & HFM))))
-#ifdef PLAY_ANGEL
-	       || ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
+	       || (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
 		   && angel_reject_me(uin))
-#endif
 	       ) {
 	outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方防水了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
@@ -1958,8 +1952,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		"");
 	outs(ANSI_RESET);
 
-#ifdef PLAY_ANGEL
-	if (HasUserPerm(PERM_ANGEL) && currutmp)
+if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
 	{
 	    // modes should match ANGELPAUSE*
 	    static const char *modestr[ANGELPAUSE_MODES] = {
@@ -1977,7 +1970,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		   ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
 		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
 	} else
-#endif
 	vs_footer(" 休閒聊天 ",
 		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
@@ -2636,14 +2628,12 @@ userlist(void)
 		}
 		break;
 
-#ifdef PLAY_ANGEL
 	    case Ctrl('P'):
-		if (HasBasicUserPerm(PERM_ANGEL) && currutmp) {
+		if (HAS_ANGEL && HasBasicUserPerm(PERM_ANGEL) && currutmp) {
                     angel_toggle_pause();
 		    redrawall = redraw = 1;
 		}
 		break;
-#endif // PLAY_ANGEL
 
 	    case Ctrl('W'):
 		if (HasBasicUserPerm(PERM_LOGINOK)) {

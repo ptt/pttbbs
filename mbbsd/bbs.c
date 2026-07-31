@@ -1392,14 +1392,12 @@ do_post_article(int edflags)
     if (bp->brdattr & BRD_NOSELFDELPOST)
         edflags |= EDITFLAG_WARN_NOSELFDEL;
 
-#if defined(PLAY_ANGEL)
     // XXX 惡搞的 code。
-    if (HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS))
+    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS))
     {
 	currbrdattr |= BRD_ANONYMOUS;
 	currbrdattr |= BRD_DEFAULTANONYMOUS;
     };
-#endif
 
     money = vedit2(fpath, YEA, save_title, edflags);
     if (money == EDIT_ABORTED) {
@@ -3022,8 +3020,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	logIP = 1;
     }
 
-#if defined(PLAY_ANGEL)
-    if (HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
+    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
 	vans("要使用小天使匿名推文嗎？ [Y/n]: ") != 'n')
     {
 	// angel push
@@ -3031,7 +3028,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	angel_load_my_fullnick(mynick, sizeof(mynick));
 	myid = mynick;
     }
-#endif
 
     if (aligncmt)
     {

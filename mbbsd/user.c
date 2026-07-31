@@ -429,9 +429,7 @@ void Customize(void)
 #ifdef USE_PFTERM
         UF_MENU_LIGHTBAR,
 #endif
-#ifdef PLAY_ANGEL
         UF_NEW_ANGEL_PAGER,
-#endif
 	0,
     };
 
@@ -474,14 +472,12 @@ void Customize(void)
 	/* print uflag options */
 	for (i = 0; masks1[i]; i++, ia++)
 	{
-#ifdef PLAY_ANGEL
             // XXX dirty hack: ANGEL must be in end of list.
-            if (strstr(desc1[i], "ANGEL ") == desc1[i] &&
+            if (HAS_ANGEL && strstr(desc1[i], "ANGEL ") == desc1[i] &&
                 !HasUserPerm(PERM_ANGEL)) {
                 ia--;
                 continue;
             }
-#endif
 	    clrtoeol();
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-*s%s\n",
@@ -501,9 +497,8 @@ void Customize(void)
 		    col_opt,
 		    "PAGER      水球模式",
 		    wm[cuser.pager_ui_type % PAGER_UI_TYPES]);
-#ifdef PLAY_ANGEL
             // TODO move this to Ctrl-U Ctrl-P.
-	    if (HasUserPerm(PERM_ANGEL))
+	    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL))
 	    {
 		static const char *msgs[ANGELPAUSE_MODES] = {
 		    "開放 (接受所有小主人發問)",
@@ -515,7 +510,6 @@ void Customize(void)
 			"ANGEL      小天使神諭呼叫器: ",
 			msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
 	    }
-#endif // PLAY_ANGEL
 	}
 
 	/* input */
@@ -554,8 +548,7 @@ void Customize(void)
 		}
 		continue;
 	}
-#ifdef PLAY_ANGEL
-	if( HasUserPerm(PERM_ANGEL) ){
+	if( HAS_ANGEL && HasUserPerm(PERM_ANGEL) ){
 	    if (key == iax-1)
 	    {
 		angel_toggle_pause();
@@ -563,7 +556,6 @@ void Customize(void)
 		continue;
 	    }
 	}
-#endif //PLAY_ANGEL
     }
 
     grayout(1, b_lines-2, GRAYOUT_DARK);
@@ -767,8 +759,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
         mvprints(y, 0, "是否年滿十八歲: %s\n\n", x.over_18 ? "是" : "否");
         y++;
 
-#ifdef PLAY_ANGEL
-	if (adminmode) {
+	if (HAS_ANGEL && adminmode) {
 	    const char* prompt;
 	    userec_t the_angel;
 	    if (x.myangel[0] == 0 || x.myangel[0] == '-' ||
@@ -803,7 +794,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
             ++y;
 	}
-#endif
 
 #ifdef CHESSCOUNTRY
 	{
@@ -1179,14 +1169,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     if (perm_changed) {
 	sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
 	post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
-#ifdef PLAY_ANGEL
         // TODO notify Angelbeats
-	if (x.userlevel & ~changefrom & PERM_ANGEL) {
+	if (HAS_ANGEL && (x.userlevel & ~changefrom & PERM_ANGEL)) {
             angel_register_new(x.userid);
             mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify",
                     "[天使公會]");
         }
-#endif
     }
 
     if (strcmp(orig_uid, x.userid)) {

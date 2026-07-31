@@ -1007,4 +1007,19 @@ pressanykey_or_callangel(){
     clrtoeol();
 }
 
+#else  // !PLAY_ANGEL
+
+int angel_reject_me(userinfo_t *uin GCC_UNUSED) { return 0; }
+void angel_register_new(const char *userid GCC_UNUSED) { }
+void angel_notify_activity(const char *userid GCC_UNUSED) { }
+void angel_log_order_song(const char *angel_nick GCC_UNUSED) { }
+void angel_log_msg_to_angel(void) {}
+const char *angel_order_song(char *receiver GCC_UNUSED, size_t sz_receiver GCC_UNUSED) {
+    return ""; }
+void CallAngel(void) {}
+void angel_toggle_pause(void) {}
+void angel_load_my_fullnick(char *buf GCC_UNUSED, int szbuf GCC_UNUSED) { }
+const char *angel_get_nick(void) { return ""; }
+void pressanykey_or_callangel(void){ pressanykey(); }
+
 #endif // PLAY_ANGEL

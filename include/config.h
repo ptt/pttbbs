@@ -525,3 +525,9 @@
 #endif
 
 #endif
+
+#ifdef PLAY_ANGEL
+#define HAS_ANGEL 1
+#else
+#define HAS_ANGEL 0
+#endif

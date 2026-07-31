@@ -27,6 +27,7 @@ int a_angelmsg(void);
 int a_angelmsg2(void);
 int a_angelreport(void);
 int a_angelreload(void);
+
 int angel_reject_me(userinfo_t * uin);
 void angel_register_new(const char *userid);
 void angel_notify_activity(const char *userid);
@@ -38,11 +39,7 @@ void angel_toggle_pause();
 void angel_load_my_fullnick(char *buf, int szbuf); // full nick!
 const char *angel_get_nick();
 void pressanykey_or_callangel(void);
-#ifdef PLAY_ANGEL
 #define PRESSANYKEY() pressanykey_or_callangel()
-#else  // !PLAY_ANGEL
-#define PRESSANYKEY() pressanykey()
-#endif
 
 /* announce */
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid,

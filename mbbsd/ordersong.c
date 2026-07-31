@@ -174,13 +174,11 @@ do_order_song(void)
 	    STRLCPY(buf, genbuf);
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
-            const char *r = receiver;
-#ifdef PLAY_ANGEL
-            if (strstr(po, "小天使") && strstr(receiver, "小天使") &&
-                override_receiver) {
-                r = override_receiver;
-            }
-#endif
+        const char *r = receiver;
+        if (HAS_ANGEL && strstr(po, "小天使") && strstr(receiver, "小天使") &&
+            override_receiver) {
+            r = override_receiver;
+        }
 	    po[0] = 0;
 	    SNPRINTF(genbuf, "%s%s%s", buf, r, po + 7);
 	    STRLCPY(buf, genbuf);

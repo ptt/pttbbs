@@ -182,12 +182,10 @@
 #define WATERBALL_ALOHA   2
 #define WATERBALL_SYSOP   3
 #define WATERBALL_CONFIRM 4
-#ifdef PLAY_ANGEL
 #define WATERBALL_ANGEL   5
 #define WATERBALL_ANSWER  6
 #define WATERBALL_CONFIRM_ANGEL 7
 #define WATERBALL_CONFIRM_ANSWER 8
-#endif
 
 /* chat.c, talk.c: pager modes */
 #define PAGER_OFF	(0)
