@@ -17,7 +17,7 @@
 ### 根目錄與說明文件
 
 - **`LICENSE`**：本軟體各檔案在未另外指定時的授權方式（GPL v2）。請注意部份檔案使用不同的授權（如 BSD License）。由於 GPL 的限制，授權不相容的程式碼已預設為不使用，並提供 GPL 相容版本的替代用程式碼以維持功能完整，詳情與設定請參見各檔案內文。
-- **`UPDATING.md`**：重大更新與版本升級說明紀錄
+- **[`UPDATING.md`](UPDATING.md)**：重大更新與版本升級說明紀錄
 - **`docs/`**：各項文件說明目錄
   - [`ADVANCE`](docs/ADVANCE)：進階功能說明 (bbsctl, shmctl 等)
   - [`ANCESTOR`](docs/ANCESTOR)：沿承歷史與發展腳步

@@ -14,11 +14,11 @@
 
 ---
 
-## 2026-07-31: `cleanup(reg)`: make `FOREIGN_REG` always enabled
+## 2026-07-31: [`cleanup(reg)`: make `FOREIGN_REG` always enabled](https://github.com/ptt/pttbbs/commit/c5fb4285f5b6d6994a8e52c6eef5ba88e49133ed)
 
 `FOREIGN_REG` 變成標準行為，且 `FOREIGN_REG_DAY` 相關行為被移除。
 
-## 2026-07-31: `cleanup(talk)`: remove obsolete `NOKILLWATERBALL` feature
+## 2026-07-31: [`cleanup(talk)`: remove obsolete `NOKILLWATERBALL` feature](https://github.com/ptt/pttbbs/commit/71f93737f971cb005d5f96f6ad87d417677cbef5)
 
 `NOKILLWATERBALL` 已被移除，如果之前有使用，注意 SHM 大小會有變化要重新 init。正常站台應該沒使用，可正常升級。
 
@@ -26,7 +26,7 @@
 > 注意在此 patch 後有不少移除各種不需要的選項的相關修改，多半是不影響系統行為 (`INNTIMEZONE`) 或是只有非常老的系統才有差 (`RFORK`)，或是早已被視為必要的選項 (如 `CONVERT`, `DBCSAWARE`, `BMCHS`, `ALLOW_FREE_TN_ANNOUNCE`, `FOREIGN_REG`)。
 > 若系統的新行為不符合您的需求請自行修改。
 
-## 2026-07-28: `feat(passwd, #112)`: Support long passwords up to 72 chars
+## 2026-07-28: [`feat(passwd, #112)`: Support long passwords up to 72 chars](https://github.com/ptt/pttbbs/commit/d3d68907893ca321069358edaf01afcf75d69e5f)
 
 密碼系統自此版本開始升級增加 bcrypt, 支援 72 字元內的密碼。
 
@@ -35,13 +35,13 @@
 程式上沒有要設定或升級的地方，但請確實的通知使用者。
 
 另，此 patch 未包含完整使用者界面修正。請一併套用下個 patch:
-- `refactor(ui, #112): Consolidate new password input and confirmation logic`
+- [`refactor(ui, #112): Consolidate new password input and confirmation logic`](https://github.com/ptt/pttbbs/commit/2db36a605114d24d745c7a50b7af9c9685506c8a)
 
-## 2026-07-28: `feat(xchatd)`: Use firstlogin token for xchatd auth
+## 2026-07-28: [`feat(xchatd)`: Use firstlogin token for xchatd auth](https://github.com/ptt/pttbbs/commit/44493f6131d564d0751821bc4b61a2b4e82e3e2c)
 
 聊天室通訊協定更新，升到此版後請記得要重開 `xchatd` 與所有的 `mbbsd`, 不然會無法進入聊天室。
 
-## 2026-07-27: `[upgrade]` `cleanup(upgrade)`: Remove outdated upgrade tools
+## 2026-07-27: [`[upgrade]` `cleanup(upgrade)`: Remove outdated upgrade tools](https://github.com/ptt/pttbbs/commit/797ec89a843421d27045a4604449104f2bf33da0)
 
 許多舊的 upgrade script 已移除，如果從非常舊的版本升級，請自行找到還能編譯的中間版本來跑 upgrade。
 
