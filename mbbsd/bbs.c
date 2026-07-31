@@ -604,9 +604,6 @@ is_tn_announce(const char *title)
 static int
 is_tn_allowed(const char *title)
 {
-#ifdef ALLOW_FREE_TN_ANNOUNCE
-    return 1;
-#else
     // TN_ANNOUNCE is prohibited for non-BMs
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
 	HasUserPerm(PERM_ACCOUNTS | PERM_BOARD | PERM_BBSADM |
@@ -623,7 +620,6 @@ is_tn_allowed(const char *title)
     if (is_tn_announce(title))
 	return 0;
     return 1;
-#endif
 }
 
 static void
