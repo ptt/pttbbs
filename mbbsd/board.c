@@ -661,13 +661,6 @@ b_config(void)
 		break;
 
 	    case 'h':
-#ifndef BMCHS
-		if (!HasUserPerm(PERM_SYSOP))
-		{
-		    vmsg("此項設定需要站長權限");
-		    break;
-		}
-#endif
 		{
 		    char ans[2];
 		    move(b_lines-2, 0); clrtobot();
@@ -736,13 +729,6 @@ b_config(void)
 #endif
 
 	    case 'g':
-#ifndef BMCHS
-		if (!HasUserPerm(PERM_SYSOP))
-		{
-		    vmsg("此項設定需要站長權限");
-		    break;
-		}
-#endif
 		bp->brdattr ^= BRD_BMCOUNT;
 		touched = 1;
 		break;
