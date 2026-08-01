@@ -1256,16 +1256,7 @@ mf_parseHeaders()
 
         // p is pointing at a new line. (\n)
         l = (int)(p - pb);
-#ifdef CRITICAL_MEMORY
-        // kcwu: dirty hack, avoid 64byte slot. use 128byte slot instead.
-        if (l<100) {
-            p = (unsigned char*) malloc (100+1);
-        } else {
-            p = (unsigned char*) malloc (l+1);
-        }
-#else
         p = (unsigned char*) malloc (l+1);
-#endif
         fh.headers[i] = p;
         memcpy(p, pb, l);
         p[l] = 0;
@@ -4280,15 +4271,6 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             // MFDISP_SKIPCURLINE();
             return p;
         }
-#if 0
-        else if (*p == 'L')
-        {
-            // LOOP
-            // Lm,n
-            // m times to backward n
-            break;
-        }
-#endif
         else
         {
             // end of known control codes
