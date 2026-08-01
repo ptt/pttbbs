@@ -1349,7 +1349,7 @@ mail_mbox(void)
     if (last_tag > 0 && (now - last_tag) < 7 * DAY_SECONDS &&
         !HasUserPerm(PERM_SYSOP)) {
         vmsgf("每週僅可備份一次，離下次還有 %d 天。",
-              7 - (now - last_tag) / DAY_SECONDS);
+              7 - time4_days_elapsed(now, last_tag));
         return 0;
     }
 

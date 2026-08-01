@@ -160,7 +160,7 @@ pwcuCancelBadpost()
     cuser.timeremovebadpost = u.timeremovebadpost;
 
     // check timebomb again
-    day = time4_diff(now, u.timeremovebadpost) / DAY_SECONDS;
+    day = time4_days_elapsed(now, u.timeremovebadpost);
     if (day < BADPOST_CLEAR_DURATION)
 	return -1;
     if (u.badpost < 1)
@@ -533,8 +533,8 @@ int pwcuLoginSave	()
     if (time4_lt(reftime, u.lastlogin))
 	reftime = u.lastlogin;
 
-    regdays =      (    reftime - baseref) / DAY_SECONDS;
-    prev_regdays = time4_diff(u.lastlogin, baseref) / DAY_SECONDS;
+    regdays =      time4_days_elapsed(reftime, baseref);
+    prev_regdays = time4_days_elapsed(u.lastlogin, baseref);
     // assert(regdays >= prev_regdays);
 
     // plus one for initial day

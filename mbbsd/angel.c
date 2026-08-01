@@ -526,7 +526,7 @@ int a_angelreport() {
             rpt.max_masters_of_active_angels,
             rpt.inactive_days);
 #ifdef ANGELBEATS_ACTIVE_MASTER_RECORD_START
-       int days = (now - ANGELBEATS_ACTIVE_MASTER_RECORD_START) / DAY_SECONDS;
+       int days = time4_days_elapsed(now, ANGELBEATS_ACTIVE_MASTER_RECORD_START);
        days += 1;
        if (days < rpt.inactive_days)
            prints("\t (由於活躍小主人是新增的統計項目，"
@@ -886,7 +886,7 @@ TalkToAngel(){
                 log_filef("log/auto_change_angel.log", LOG_CREAT,
                           "%s master %s (%d days), angel %s, state (%s)\n",
                           Cdatelite(&now), cuser.userid,
-                          time4_diff(now, cuser.timeplayangel) / DAY_SECONDS,
+                          time4_days_elapsed(now, cuser.timeplayangel),
                           cuser.myangel,
                           !uent ? "not online" : angel_reject_me(uent) ?
                           "reject" : uent->angelpause ? "pause" : "debugsleep");

@@ -144,14 +144,14 @@ int main(void)
 	    if (diff < 0)
 		diff = 0;
 
-	    if (need_alert(diff / 86400) && 
+	    if (need_alert(time4_days_elapsed(now, xuser.lastlogin)) && 
                 !(xuser.userlevel & PERM_SYSOPHIDE) &&
                 !(xuser.userlevel & PERM_SYSOP))
             {
 		strlcpy(lostbms[j].bmname, p, sizeof(bms[index].bmname));
 		lostbms[j].title = allbrd[i].brdname;
 		lostbms[j].ctitle = allbrd[i].title;
-		lostbms[j].lostdays = diff / 86400;
+		lostbms[j].lostdays = time4_days_elapsed(now, xuser.lastlogin);
 
 		//¶W¹L LAZY_BM_LIMIT_DAYS ¤Ñ §KÂ¾
 		if (lostbms[j].lostdays > LAZY_BM_LIMIT_DAYS) {

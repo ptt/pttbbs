@@ -59,10 +59,18 @@ static inline int64_t time4_diff(time4_t a, time4_t b) {
     return (int64_t)(uint32_t)a - (int64_t)(uint32_t)b;
 }
 
+// Remaining checks for ceil, usually used by checking if things expired.
 static inline int time4_days_remaining(time4_t expire, time4_t now_time) {
     if (!time4_gt(expire, now_time))
         return 0;
     return (int)(time4_diff(expire, now_time) / 86400 + 1);
+}
+
+/* Elapsed days calculation (floor, e.g. age, account registration days) */
+static inline int time4_days_elapsed(time4_t now_time, time4_t start_time) {
+    if (!time4_gt(now_time, start_time))
+        return 0;
+    return (int)(time4_diff(now_time, start_time) / 86400);
 }
 
 static inline int time4_add_sec(time4_t base, uint64_t seconds, time4_t *out) {
