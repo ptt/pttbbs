@@ -17,9 +17,10 @@ import (
 )
 
 type SubscriberSession struct {
-	PID    int
-	SID    int
-	UserID string
+	PID     int
+	SID     int
+	UserID  string
+	Targets []string // list of target UserIDs (lowercased) watched by this session
 }
 
 type Service struct {
@@ -33,6 +34,12 @@ type Service struct {
 
 	// onlineSubscribers maps targetUserID (lowercase) -> pid -> SubscriberSession
 	onlineSubscribers map[string]map[int]SubscriberSession
+
+	// userPIDs maps userID (lowercase) -> pid -> true
+	userPIDs map[string]map[int]bool
+
+	// sem limits concurrent active IPC connections to prevent goroutine explosion
+	sem chan struct{}
 }
 
 func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
@@ -58,6 +65,8 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		socketPath:        socketPath,
 		onlineSessions:    make(map[int]SubscriberSession),
 		onlineSubscribers: make(map[string]map[int]SubscriberSession),
+		userPIDs:          make(map[string]map[int]bool),
+		sem:               make(chan struct{}, 5000),
 	}, nil
 }
 
@@ -82,6 +91,12 @@ func (s *Service) Start() error {
 		return err
 	}
 
+	// Check if another active instance is already listening on this socket
+	if conn, err := net.DialTimeout("unix", s.socketPath, 500*time.Millisecond); err == nil {
+		conn.Close()
+		return fmt.Errorf("another instance of aloha.svc is already running and listening on socket %s", s.socketPath)
+	}
+
 	_ = os.Remove(s.socketPath)
 
 	listener, err := net.Listen("unix", s.socketPath)
@@ -103,12 +118,25 @@ func (s *Service) Start() error {
 			log.Printf("[aloha.svc] Accept error: %v", err)
 			continue
 		}
-		go s.handleConnection(conn)
+
+		select {
+		case s.sem <- struct{}{}:
+			go func(c net.Conn) {
+				defer func() { <-s.sem }()
+				s.handleConnection(c)
+			}(conn)
+		default:
+			_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+			_ = json.NewEncoder(conn).Encode(Response{Success: false, Message: "service overloaded"})
+			conn.Close()
+		}
 	}
 }
 
 func (s *Service) handleConnection(conn net.Conn) {
 	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
+
 	decoder := json.NewDecoder(conn)
 	encoder := json.NewEncoder(conn)
 
@@ -199,24 +227,41 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 }
 
 func (s *Service) RegisterSubscriber(subscriberID string, pid int, sid int) {
+	// Perform Disk I/O OUTSIDE global mutex lock
+	alohaList, _ := storage.LoadAlohaTargets(s.bbsHome, subscriberID)
+
+	subscriberLower := strings.ToLower(subscriberID)
+
+	var targetsLower []string
+	if len(alohaList) > 0 {
+		for _, t := range alohaList {
+			targetsLower = append(targetsLower, strings.ToLower(t))
+		}
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Cleanup old session for this PID if present
+	if oldSess, ok := s.onlineSessions[pid]; ok {
+		s.cleanupSessionLocked(oldSess)
+	}
+
 	session := SubscriberSession{
-		PID:    pid,
-		SID:    sid,
-		UserID: subscriberID,
+		PID:     pid,
+		SID:     sid,
+		UserID:  subscriberID,
+		Targets: targetsLower,
 	}
 
 	s.onlineSessions[pid] = session
 
-	alohaList, err := storage.LoadAlohaTargets(s.bbsHome, subscriberID)
-	if err != nil || len(alohaList) == 0 {
-		return
+	if _, ok := s.userPIDs[subscriberLower]; !ok {
+		s.userPIDs[subscriberLower] = make(map[int]bool)
 	}
+	s.userPIDs[subscriberLower][pid] = true
 
-	for _, target := range alohaList {
-		targetLower := strings.ToLower(target)
+	for _, targetLower := range targetsLower {
 		if _, ok := s.onlineSubscribers[targetLower]; !ok {
 			s.onlineSubscribers[targetLower] = make(map[int]SubscriberSession)
 		}
@@ -244,18 +289,12 @@ func (s *Service) HandleUserLogout(userID string, pid int) Response {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.onlineSessions, pid)
-
-	cleaned := 0
-	for target, subMap := range s.onlineSubscribers {
-		if _, ok := subMap[pid]; ok {
-			delete(subMap, pid)
-			cleaned++
-			if len(subMap) == 0 {
-				delete(s.onlineSubscribers, target)
-			}
-		}
+	session, exists := s.onlineSessions[pid]
+	if !exists {
+		return Response{Success: true, Message: fmt.Sprintf("User %s (PID %d) logged out, cleaned 0 subscriptions", userID, pid)}
 	}
+
+	cleaned := s.cleanupSessionLocked(session)
 
 	log.Printf("[aloha.svc] LOGOUT: user=%s, pid=%d -> cleaned %d subscriptions", userID, pid, cleaned)
 
@@ -265,18 +304,63 @@ func (s *Service) HandleUserLogout(userID string, pid int) Response {
 	}
 }
 
+func (s *Service) cleanupSessionLocked(session SubscriberSession) int {
+	pid := session.PID
+	userLower := strings.ToLower(session.UserID)
+
+	delete(s.onlineSessions, pid)
+
+	if pids, ok := s.userPIDs[userLower]; ok {
+		delete(pids, pid)
+		if len(pids) == 0 {
+			delete(s.userPIDs, userLower)
+		}
+	}
+
+	cleaned := 0
+	for _, targetLower := range session.Targets {
+		if subMap, ok := s.onlineSubscribers[targetLower]; ok {
+			if _, present := subMap[pid]; present {
+				delete(subMap, pid)
+				cleaned++
+				if len(subMap) == 0 {
+					delete(s.onlineSubscribers, targetLower)
+				}
+			}
+		}
+	}
+	return cleaned
+}
+
 func (s *Service) HandleAddAloha(subID string, targetID string) Response {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	subLower := strings.ToLower(subID)
 	targetLower := strings.ToLower(targetID)
-	for pid, session := range s.onlineSessions {
-		if strings.EqualFold(session.UserID, subID) {
+
+	pids, exists := s.userPIDs[subLower]
+	if exists {
+		for pid := range pids {
+			session := s.onlineSessions[pid]
+			hasTarget := false
+			for _, t := range session.Targets {
+				if t == targetLower {
+					hasTarget = true
+					break
+				}
+			}
+			if !hasTarget {
+				session.Targets = append(session.Targets, targetLower)
+				s.onlineSessions[pid] = session
+			}
+
 			if _, ok := s.onlineSubscribers[targetLower]; !ok {
 				s.onlineSubscribers[targetLower] = make(map[int]SubscriberSession)
 			}
 			s.onlineSubscribers[targetLower][pid] = session
 		}
 	}
-	s.mu.Unlock()
 
 	log.Printf("[aloha.svc] ADD: sub=%s -> target=%s", subID, targetID)
 	return Response{Success: true, Message: fmt.Sprintf("Added %s to watch target %s", subID, targetID)}
@@ -284,18 +368,32 @@ func (s *Service) HandleAddAloha(subID string, targetID string) Response {
 
 func (s *Service) HandleRemoveAloha(subID string, targetID string) Response {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	subLower := strings.ToLower(subID)
 	targetLower := strings.ToLower(targetID)
-	if subMap, ok := s.onlineSubscribers[targetLower]; ok {
-		for pid, session := range subMap {
-			if strings.EqualFold(session.UserID, subID) {
+
+	pids, exists := s.userPIDs[subLower]
+	if exists {
+		for pid := range pids {
+			session := s.onlineSessions[pid]
+			newTargets := make([]string, 0, len(session.Targets))
+			for _, t := range session.Targets {
+				if t != targetLower {
+					newTargets = append(newTargets, t)
+				}
+			}
+			session.Targets = newTargets
+			s.onlineSessions[pid] = session
+
+			if subMap, ok := s.onlineSubscribers[targetLower]; ok {
 				delete(subMap, pid)
+				if len(subMap) == 0 {
+					delete(s.onlineSubscribers, targetLower)
+				}
 			}
 		}
-		if len(subMap) == 0 {
-			delete(s.onlineSubscribers, targetLower)
-		}
 	}
-	s.mu.Unlock()
 
 	log.Printf("[aloha.svc] REMOVE: sub=%s -> target=%s", subID, targetID)
 	return Response{Success: true, Message: fmt.Sprintf("Removed %s watching target %s", subID, targetID)}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"strings"
 	"time"
 )
 
@@ -18,12 +19,11 @@ func TestDaemonIPCProtocol(t *testing.T) {
 
 	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
 
-	svc := &Service{
-		bbsHome:           tempDir,
-		socketPath:        sockPath,
-		onlineSessions:    make(map[int]SubscriberSession),
-		onlineSubscribers: make(map[string]map[int]SubscriberSession),
+	svc, err := NewService(tempDir, sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create service: %v", err)
 	}
+	svc.shmClient = nil
 
 	go func() {
 		_ = svc.Start()
@@ -100,5 +100,54 @@ func TestSubscriberNotificationFlow(t *testing.T) {
 
 	if resp3.Message != "User xyz logged in, notified 1 subscribers" && resp3.Message != "User xyz logged in, found 1 subscribers" {
 		t.Fatalf("Expected 1 subscriber found/notified, got: %s", resp3.Message)
+	}
+}
+
+func TestDuplicateInstancePrevention(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "aloha_dup_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	svc1, err := NewService(tempDir, sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create service 1: %v", err)
+	}
+	svc1.shmClient = nil
+
+	go func() {
+		_ = svc1.Start()
+	}()
+
+	// Wait for socket to be active
+	var conn net.Conn
+	for i := 0; i < 50; i++ {
+		time.Sleep(10 * time.Millisecond)
+		conn, err = net.Dial("unix", sockPath)
+		if err == nil {
+			conn.Close()
+			break
+		}
+	}
+	if err != nil {
+		t.Fatalf("Failed to connect to service 1: %v", err)
+	}
+
+	// Try starting instance 2 on the same socket -> should fail!
+	svc2, err := NewService(tempDir, sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create service 2: %v", err)
+	}
+	svc2.shmClient = nil
+
+	err2 := svc2.Start()
+	if err2 == nil {
+		t.Fatalf("Expected service 2 Start() to fail, but it succeeded")
+	}
+
+	if !strings.Contains(err2.Error(), "already running") {
+		t.Fatalf("Expected error to contain \"already running\", got: %v", err2)
 	}
 }
