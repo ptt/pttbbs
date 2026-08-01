@@ -2096,7 +2096,7 @@ client_cb(int fd, short event, void *arg)
                      conn->ctx.hostip,
                      Cdate(&conn->enter),
                      buf,
-                     tnow - conn->enter,
+                     (int)time4_diff(tnow, conn->enter),
                     (unsigned int)conn->ctx.client_code,
                     (conn->ctx.state == LOGIN_STATE_INIT) ? "(*dummy*) " : "",
                      conn->ctx.userid

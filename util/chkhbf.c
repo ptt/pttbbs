@@ -99,11 +99,11 @@ void chkhbf(boardheader_t *bptr)
 	    explist[nEXP].expire = -1;
 	    ++nEXP;
 	}
-	else if( (xuser.lastlogin < now - 86400 * 90) &&
+	else if( (time4_days_elapsed(now, xuser.lastlogin) > 90) &&
 		 !(xuser.userlevel & PERM_XEMPT) ){
 	    STRLCPY(explist[nEXP].userid, chkuser);
 	    explist[nEXP].lastlogin = xuser.lastlogin;
-	    explist[nEXP].expire = xuser.lastlogin + 86400 * 120;
+	    explist[nEXP].expire = time4_to_time(xuser.lastlogin) + DAY_SECONDS * 120;
 	    ++nEXP;
 	}
     }

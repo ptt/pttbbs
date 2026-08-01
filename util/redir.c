@@ -35,14 +35,14 @@ int process(FILE *fin, FILE *fout, const char *index_path,
             should_remove = 1;
 
         if (!should_remove && remove_modified_days > 0 && fh.modified) {
-            if (fh.modified < now - DAY_SECONDS * remove_modified_days)
+            if (time4_days_elapsed(now, fh.modified) >= remove_modified_days)
                 should_remove = 1;
         }
 
         if (!should_remove && remove_days > 0 && strlen(fh.filename) > 2 &&
             fh.filename[1] == '.') {
-            int ts = atoi(fh.filename + 2);
-            if (ts < now - DAY_SECONDS * remove_days)
+            time4_t ts = (time4_t)atoi(fh.filename + 2);
+            if (time4_days_elapsed(now, ts) >= remove_days)
                 should_remove = 1;
         }
 

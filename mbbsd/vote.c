@@ -327,7 +327,7 @@ b_result(boardheader_t * fh)
 	fgets(temp, sizeof(temp), cfp);
 	fscanf(cfp, "%d\n", &closetime);
 	fclose(cfp);
-	if (closetime < now)
+	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);
     }
 }
@@ -816,7 +816,7 @@ vote_maintain(const char *bname)
     else if (closetime > 30)
 	closetime = 30;
 
-    closetime = closetime * DAY_SECONDS + now;
+    time4_add_sec(now, (uint64_t)closetime * DAY_SECONDS, &closetime);
     setbfile(buf, bname, vbuf.control);
     fp = fopen(buf, "w");
     assert(fp);

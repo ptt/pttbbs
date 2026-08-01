@@ -47,7 +47,7 @@ void fastcheck()
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
-        if (urec.lastlogin >= base)
+        if (time4_ge(urec.lastlogin, base))
             continue;
 
         if (verbose)

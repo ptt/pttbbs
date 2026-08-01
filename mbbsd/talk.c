@@ -2976,7 +2976,7 @@ t_chat(void)
     }
 
 #ifdef CHAT_GAPMINS
-    if ((now - lastEnter)/60 < CHAT_GAPMINS)
+    if (time4_diff(now, lastEnter) / 60 < CHAT_GAPMINS)
     {
        vmsg("您才剛離開聊天室，裡面正在整理中。請稍後再試。");
        return 0;

@@ -164,10 +164,10 @@ select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from,
 	}
     }
 
-    if (filetime < 0 || now-filetime > 60*60) {
+    if (filetime == -1 || time4_diff(now, filetime) > 60*60) {
 	*resume_from = 0;
 	return 1;
-    } else if (now-filetime > 3*60) {
+    } else if (time4_diff(now, filetime) > 3*60) {
 	*resume_from = filetime;
 	return 1;
     } else {

@@ -421,7 +421,7 @@ reload_bcache(void)
 
 void resolve_boards(void)
 {
-    while (SHM->Buptime < SHM->Btouchtime) {
+    while (time4_lt(SHM->Buptime, SHM->Btouchtime)) {
 	reload_bcache();
     }
 }
@@ -447,7 +447,7 @@ reset_board(int bid) /* XXXbid: from 1 */
     if (--bid < 0)
 	return;
     assert(0<=bid && bid<MAX_BOARD);
-    if (SHM->Bbusystate || COMMON_TIME - SHM->busystate_b[bid] < 10) {
+    if (SHM->Bbusystate || time4_diff(COMMON_TIME, SHM->busystate_b[bid]) < 10) {
 	safe_sleep(1);
     } else {
 	SHM->busystate_b[bid] = COMMON_TIME;
@@ -791,7 +791,7 @@ resolve_garbage(void)
 {
     int             count = 0;
 
-    while (SHM->Puptime < SHM->Ptouchtime) {	/* 不用while等 */
+    while (time4_lt(SHM->Puptime, SHM->Ptouchtime)) {	/* 不用while等 */
 	reload_pttcache();
 	if (count++ > 10 && SHM->Pbusystate) {
 	    /*
@@ -831,7 +831,7 @@ reload_fcache(void)
 void
 resolve_fcache(void)
 {
-    while (SHM->Fuptime < SHM->Ftouchtime)
+    while (time4_lt(SHM->Fuptime, SHM->Ftouchtime))
 	reload_fcache();
 }
 

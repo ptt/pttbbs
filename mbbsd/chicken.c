@@ -547,7 +547,7 @@ time_diff(chicken_t * thechicken)
     const short *delta = time_change[(int)thechicken->type];
 
     thechicken->type %= NUM_KINDS;
-    diff = (now - thechicken->lastvisit) / 60;
+    diff = (int)(time4_diff(now, thechicken->lastvisit) / 60);
 
     if (diff < 1)
 	return;
@@ -878,7 +878,7 @@ recover_chicken(chicken_t * thechicken)
     money = price + (arc4random_uniform(price));
     price *= 2;
 
-    if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
+    if (time4_days_elapsed(now, thechicken->lastvisit) >= 7)
 	return 0;
 
     vs_hdr2(" ¾iÂû³õ ", " ´_¬¡Ãdª«");

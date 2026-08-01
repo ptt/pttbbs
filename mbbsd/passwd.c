@@ -519,7 +519,7 @@ int pwcuLoginSave	()
     STRLCPY(cuser.lasthost, fromhost);
 
     // this must be valid.
-    assert(login_start_time > 0);
+    assert(login_start_time != 0);
 
     // adjust base reference by rounding to beginning of each day (0:00am)
     baseref = u.firstlogin;

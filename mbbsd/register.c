@@ -320,7 +320,7 @@ setupnewuser(const userec_t *user)
     /* Lazy method : 先找尋已經清除的過期帳號 */
     if ((uid = dosearchuser("", NULL)) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
-	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < clock - 3600)) {
+	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < time4_to_time(clock) - 3600)) {
 	    if ((fd = OpenCreate(fn_fresh, O_RDWR)) == -1)
 		return -1;
 	    write(fd, ctime(&clock), 25);

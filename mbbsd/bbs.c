@@ -122,7 +122,7 @@ modify_dir_lite(
     }
 
     // update records
-    if (modified > 0)
+    if (modified != 0)
 	fhdr.modified = modified;
     if (enable_modes)
         fhdr.filemode |= enable_modes;
@@ -2749,7 +2749,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     // since we want to do 'modification'...
     fhdr->modified = dasht(path);
 
-    if (fhdr->modified > 0)
+    if (fhdr->modified != 0)
     {
 	if (modify_dir_lite(direct, ent, fhdr->filename,
 		fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
@@ -2928,7 +2928,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) &&
-	    (now - lastrecommend) < (
+	    time4_diff(now, lastrecommend) < (
 #if 0
 	    /* i'm not sure whether this is better or not */
 		(bp->brdattr & BRD_NOFASTRECMD) ?
@@ -4243,7 +4243,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
 int check_cooldown(boardheader_t *bp)
 {
-    int diff = cooldowntimeof(usernum) - now;
+    int diff = (int)time4_diff(cooldowntimeof(usernum), now);
     int i, limit[8] = {4000,1,2000,2,1000,3,-1,10};
 
     if(diff<0)

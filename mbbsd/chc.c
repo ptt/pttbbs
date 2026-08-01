@@ -345,7 +345,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
      * http://www.elephantbase.net/protocol/cchess_pgn.htm */
     {
 	/* machine readable header */
-	time_t     temp = (time_t) now;
+	time_t     temp = time4_to_time(now);
 	struct tm *mytm = localtime(&temp);
 
 	fprintf(fp,

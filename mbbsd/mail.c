@@ -507,7 +507,7 @@ setforward(void) {
     // verify auth
     if (*ip && *auth_code) {
         char input[sizeof(auth_code)] = "";
-        int hours = (now - auth_time) / 3600;
+        int hours = (int)(time4_diff(now, auth_time) / 3600);
         int min_hours = 24;
 
         if (hours < 0)
@@ -1346,7 +1346,7 @@ mail_mbox(void)
     setuserfile(tagname, ".zipped_home");
     last_tag = dasht(tagname);
 
-    if (last_tag > 0 && (now - last_tag) < 7 * DAY_SECONDS &&
+    if (last_tag != 0 && time4_days_elapsed(now, last_tag) < 7 &&
         !HasUserPerm(PERM_SYSOP)) {
         vmsgf("每週僅可備份一次，離下次還有 %d 天。",
               7 - time4_days_elapsed(now, last_tag));
