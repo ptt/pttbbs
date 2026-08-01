@@ -16,7 +16,6 @@ static const unsigned int friend_max[8] = {
     MAX_POST_INFO,  /* FRIEND_POST     */
     MAX_NAMELIST,   /* FRIEND_SPECIAL  */
     MAX_FRIEND,     /* FRIEND_CANVOTE  */
-    MAX_FRIEND,     /* BOARD_WATER     */
     MAX_FRIEND,     /* BOARD_VISABLE   */
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
@@ -607,15 +606,6 @@ friend_edit(int type)
 		fputs(genbuf, fp);
 		fclose(fp);
 	    }
-	} else if (type == BOARD_WATER) {
-	    boardheader_t *bp = NULL;
-	    currbid = getbnum(currboard);
-	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	    bp = getbcache(currbid);
-	    bp->perm_reload = now;
-	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-	    // log_usies("SetBoard", bp->brdname);
 	}
 	friend_load(0, 0);
     }

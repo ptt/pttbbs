@@ -186,7 +186,6 @@ is_BM_cache(int bid) /* bid starts from 1 */
 const char *
 banned_msg(const char *bname)
 {
-#ifdef USE_NEW_BAN_SYSTEM
     // static is bad, but this is faster...
     static char ban_msg[STRLEN];
     time4_t expire = is_banned_by_board(bname);
@@ -195,12 +194,6 @@ banned_msg(const char *bname)
                 time4_days_remaining(expire, now));
         return ban_msg;
     }
-#else
-    char buf[PATHLEN];
-    setbfile(buf, bname, fn_water);
-    if (file_exist_record(buf, cuser.userid))
-        return "使用者不可發言";
-#endif
     return NULL;
 }
 

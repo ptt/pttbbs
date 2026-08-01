@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-08-01: feat(acl): Make USE_NEW_BAN_SYSTEM official
+
+配合 Y2038 修正， `USE_NEW_BAN_SYSTEM` 相關條件被移除，未來一律只支援
+新式的看板水桶系統。 如果您的系統尚未轉換，請參考
+[r5149_waterban.sh](https://github.com/ptt/pttbbs/commit/7099257c55c69b979d4a782c90877100a82ab82e)
+
+
 ## 2026-07-31: [`cleanup(reg)`: make `FOREIGN_REG` always enabled](https://github.com/ptt/pttbbs/commit/c5fb4285f5b6d6994a8e52c6eef5ba88e49133ed)
 
 `FOREIGN_REG` 變成標準行為，且 `FOREIGN_REG_DAY` 相關行為被移除。

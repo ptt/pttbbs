@@ -356,42 +356,23 @@ edit_banned_list_for_board(const char *board) {
         "                          - 自動生效的時效限制\n"
         "                          - 名單內舊帳號過期重新註冊時自動失效\n\n"
         ANSI_RESET
-#if 1
-        ANSI_COLOR(1;32)
-        "   提醒您: 此系統的設計並無意干涉板主執行板務的方式，但若板主有特別的\n"
-        "           使用方法 (如: 設定比公告長的時限，或是規定要另行信件才得解除)\n"
-        "           請自行與板友及相關組別溝通好並明定板規。若因此造成使用者抗議\n"
-        "           或爭議時後果請自負。\n"
-        ANSI_RESET
-#endif
-        "   小提示: 跟舊系統稍有不同，新系統不會(也無法)列出 [現在名單內有哪些人]，\n"
+        "   小提示: 本系統不會(也無法)列出 [現在名單內有哪些人]，\n"
         "           它採取的是設後免理+記錄式的概念: (可由歷史記錄自行推算)\n"
         "         - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
         "         - 想確認是否設錯或查某個使用者是不是仍在禁言中，可用(S)來檢查\n"
         "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
-        "         - 目前沒有[永久禁言]的設定，若有需要請設個 10年或 20年\n"
+        "         - 目前沒有[永久禁言]的設定，若有需要請設個 50年之類的大數字\n"
         "         - 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
                    "帳號被砍後禁言會自動解除\n" ANSI_RESET
         "         - 禁言自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
-ANSI_COLOR(1) "         - 想查看某使用者為何被禁言可用(S)或是(L)再用 / 搜尋\n"
+        ANSI_COLOR(1)
+        "         - 想查看某使用者為何被禁言可用(S)或是(L)再用 / 搜尋\n"
         ANSI_RESET
-#ifdef WATERBAN_UPGRADE_TIME_STR
-        // enable and change this if you've just made an upgrade
-        ANSI_COLOR(0;32)
-        " 系統更新資訊: 本系統啟用時已把所有您放在舊水桶名單的帳號全部設上了\n"
-        "               " WATERBAN_UPGRADE_TIME_STR "的水桶，但沒有記錄在(L)的列表裡面。您可以參考(O)的舊名單\n"
-        "               看看有沒有想修改的部份，然後利用(D)跟(A)來調整。\n"
-        ANSI_COLOR(1;31) "               注意舊水桶內 ID 有改變過大小寫的無法轉換，請手動重設\n"
-        ANSI_RESET
-#endif
-        "");
+        );
 
         getdata(1, 0, "(A)增加 (D)提前清除 (S)取得目前狀態 "
                       "(L)列出設定歷史 "
-#ifdef SHOW_OLD_BAN
-                      "(O)檢視舊水桶 "
-#endif
                       "[Q]結束? ",
                 ans, 2, LCECHO);
         move(2, 0); clrtobot();
@@ -437,21 +418,6 @@ ANSI_COLOR(1) "         - 想查看某使用者為何被禁言可用(S)或是(L)再用 / 搜尋\n"
                         vmsg("目前尚無設定記錄。");
                 } while (0);
                 break;
-
-#ifdef SHOW_OLD_BAN
-            case 'o':
-                {
-                    char old_log[PATHLEN];
-                    setbfile(old_log, board, fn_water);
-                    if (dashf(old_log)) {
-                        vmsg("請注意: 此份資料僅供參考，與現在實際禁言名單完全沒有關係。");
-                        more(old_log, YEA);
-                    } else {
-                        vmsg("無舊水桶資料。");
-                    }
-                }
-                break;
-#endif
 
             default:
                 break;

@@ -221,8 +221,8 @@
 // #define FRIEND_POST     3	    // deprecated
 #define FRIEND_SPECIAL  4
 #define FRIEND_CANVOTE  5
-#define BOARD_WATER     6
-#define BOARD_VISABLE   7 
+// #define BOARD_WATER     6        // deprecated
+#define BOARD_VISABLE   7
 
 #define LOCK_THIS   1    // lock這線不能重複玩
 #define LOCK_MULTI  2    // lock所有線不能重複玩   

@@ -797,11 +797,7 @@ b_config(void)
 
 	    case 'w':
 		clear();
-#ifdef USE_NEW_BAN_SYSTEM
                 edit_banned_list_for_board(currboard);
-#else
-		friend_edit(BOARD_WATER);
-#endif
 		clear();
 		break;
 
@@ -809,6 +805,7 @@ b_config(void)
 		clear();
 		friend_edit(FRIEND_CANVOTE);
 		clear();
+                break;
 
 	    case 'm':
 		clear();
@@ -885,7 +882,6 @@ int
 b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr GCC_UNUSED,
             const char *direct GCC_UNUSED)
 {
-#ifdef USE_NEW_BAN_SYSTEM
     const boardheader_t *bp = getbcache(currbid);
     if (!bp)
         return FULLUPDATE;
@@ -918,9 +914,6 @@ b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr GCC_UNUSED,
     edit_user_acl_for_board(uid, bp->brdname);
 
     return FULLUPDATE;
-#else // !USE_NEW_BAN_SYSTEM
-    return DONOTHING;
-#endif // USE_NEW_BAN_SYSTEM
 }
 
 static int
