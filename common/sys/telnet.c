@@ -207,15 +207,6 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 	    return 0;
 
 	case IAC_COMMAND:
-#if 0 // def DEBUG
-	    {
-		int cx = c; /* to make compiler happy */
-		telnet_write(ctx, "-", 1);
-		if(TELCMD_OK(cx))
-		    telnet_write(ctx, TELCMD(c), strlen(TELCMD(c)));
-		telnet_write(ctx, " ", 1);
-	    }
-#endif
 	    ctx->iac_state = IAC_NONE; /* by default we restore state. */
 	    switch(c) {
 		case IAC:
@@ -273,12 +264,6 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 	    return 1;
 
 	case IAC_WAIT_OPT:
-#if 0 // def DEBUG
-	    telnet_write(ctx, "-", 1);
-	    if(TELOPT_OK(c))
-		telnet_write(ctx, TELOPT(c), strlen(TELOPT(c)));
-	    telnet_write(ctx, " ", 1);
-#endif
 	    ctx->iac_state = IAC_NONE;
 	    /*
 	     * According to RFC, there're some tricky steps to prevent loop.
@@ -334,12 +319,6 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 
 	case IAC_PROCESS_OPT:
 	    ctx->iac_state = IAC_NONE;
-#if 0 // def DEBUG
-	    telnet_write(ctx, "-", 1);
-	    if(TELOPT_OK(ctx->iac_buf[0]))
-		telnet_write(ctx, TELOPT(ctx->iac_buf[0]), strlen(TELOPT(ctx->iac_buf[0])));
-	    telnet_write(ctx, " ", 1);
-#endif
 	    switch(ctx->iac_buf[0]) {
 
 		/* resize terminal */

@@ -107,8 +107,8 @@ upgrade_passwd(userec_t *puser)
     // unknown version
     return 0;
 
-#if 0
     // this is a sample.
+    /*
     if (puser->version == 2275) // chicken change
     {
 	memset(puser->career,  0, sizeof(puser->career));
@@ -119,7 +119,7 @@ upgrade_passwd(userec_t *puser)
 	puser->version = PASSWD_VERSION;
 	return ;
     }
-#endif
+    */
 }
 
 struct userec_filter_t;

@@ -680,15 +680,6 @@ int listbrd(int argc, char **argv)
     return 0;
 }
 
-#if 0
-static void update_brd(int i) {
-    if(substitute_record(BBSHOME "/" FN_BOARD, &bcache[i],sizeof(boardheader_t),i+1) < 0) {
-	printf("\n! CANNOT WRITE: " BBSHOME "/" FN_BOARD "\n");
-	exit(0);
-    }
-}
-#endif
-
 int fixbrd(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int     i = 0;
@@ -697,59 +688,10 @@ int fixbrd(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     {
 	if(!bcache[i].brdname[0])
 	    continue;
-	/* do whatever you wanna fix here. */
-
-#if 0
-	/* upgrade from old NOFASTRECMD (default pause) to new format
-	 * (BM config) */
-	if(bcache[i].brdattr & BRD_NOFASTRECMD)
-	{
-	    printf("board with no fastrecmd: #%d [%s]\n",
-		    i+1, bcache[i].brdname);
-	    bcache[i].fastrecommend_pause = 90;
-	    update_brd(i);
-	}
-#endif
-
-#if 0
-	/* fix parent, hope so */
-	if(bcache[i].parent > MAX_BOARD) {
-	    printf("parent: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].parent);
-	    bcache[i].parent = 0;
-	    update_brd(i);
-	}
-#endif
-
-#if 0
-	/* alert wrong gid */
-	if(bcache[i].gid < 1) {
-	    printf("gid: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].gid);
-	}
-#endif
+	/* do whatever you wanna fix below. */
     }
     return 0;
 }
-
-#if 0
-void buildclass(int bid, int level)
-{
-    boardheader_t  *bptr;
-    if( level == 20 ){ /* for safty */
-	printf("is there something wrong? class level: %d\n", level);
-	return;
-    }
-    bptr = &bcache[bid];
-    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
-        load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
-    if (bptr->firstchild[1] == NULL || bptr->childcount <= 0)
-        load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
-
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
-	if( bptr->brdattr & BRD_GROUPBOARD )
-            buildclass(bptr - bcache, level + 1);
-    }
-}
-#endif
 
 int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
@@ -785,11 +727,6 @@ int SHMinit(int argc, char **argv)
 
     puts("building BMcache...");
     bBMC(1, argv);
-
-#if 0
-    puts("building class...");
-    buildclass(0, 0);
-#endif
 
     if( !no_uhash_loader ){
 	puts("utmpsortd...");

@@ -24,15 +24,6 @@ static void initHome() {
 	Mkdir(buf);
 	buf[5] = 'a' + i;
 	Mkdir(buf);
-#if 0
-	/* in current implementation we don't allow 
-	 * id as digits so we don't create now. */
-	if(i >= 10)
-	    continue;
-	/* 0~9 */
-	buf[5] = '0' + i;
-	Mkdir(buf);
-#endif
     }
 }
 

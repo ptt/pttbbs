@@ -4,7 +4,6 @@
 #ifdef _PFTERM_TEST_MAIN
 
 #define USE_PFTERM
-#define EXP_PFTERM
 #define FT_DBCS_NOINTRESC 1
 #define DBG_TEXT_FD
 
@@ -153,7 +152,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 // Experimental now
-#if defined(EXP_PFTERM) || defined(USE_PFTERM)
+#if defined(USE_PFTERM)
 
 //////////////////////////////////////////////////////////////////////////
 // pfterm Configurations
@@ -2558,6 +2557,6 @@ int main(int argc, char* argv[])
 }
 #endif // _PFTERM_TEST_MAIN
 
-#endif // defined(EXP_PFTERM) || defined(USE_PFTERM)
+#endif // defined(USE_PFTERM)
 
 // vim:ts=4:sw=4:expandtab

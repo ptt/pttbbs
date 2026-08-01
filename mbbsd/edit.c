@@ -57,9 +57,7 @@
 
 #define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
 
-#if 0
-#define DEBUG
-#endif
+// #define DEBUG
 
 /**
  * data 欄位的用法:

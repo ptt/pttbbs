@@ -1330,11 +1330,6 @@ logout_user(ChatUser *cuser)
 
     FD_CLR(sock, &mainfds);
 
-#if 0   /* Thor: 也許不差這一個 */
-    if (sock >= maxfds)
-	maxfds = sock - 1;
-#endif
-
     list_free(cuser->ignore);
 
     xuser = mainuser;
@@ -1413,13 +1408,6 @@ login_user(ChatUser *cu, char *msg)
     char *userid;
     char *chatid;
 
-    // deprecated: we don't lookup real host now.
-#if 0
-    struct sockaddr_in from;
-    unsigned int fromlen;
-    struct hostent *hp;
-#endif
-
     ACCT acct;
     int level;
 
@@ -1483,18 +1471,6 @@ login_user(ChatUser *cu, char *msg)
 	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return 0;
     }
-
-#ifdef REJECT_NICK_BY_USERID
-    // Currently some user may choose random names (that is probably not trying
-    // to fake accounts) like "apple" when entering xchatd. Let's relax about
-    // the "first login" case.
-#if 0
-    if (searchuser(chatid, NULL) && strcasecmp(chatid, userid) != 0) {
-	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
-	return 0;
-    }
-#endif
-#endif
 
     if (cuser_by_chatid(chatid) != NULL)
     {

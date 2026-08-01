@@ -465,9 +465,6 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     size_t i;
     AngelInfo *kanade = g_angel_list;
     int from_cmd = (!myuid);
-#if 0
-    time4_t now = time4(0);
-#endif
 
     prpt->min_masters_of_active_angels = SHRT_MAX;
     prpt->min_masters_of_online_angels = SHRT_MAX;
@@ -514,12 +511,6 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
                     prpt->max_masters_of_active_angels = kanade->masters;
                 if (prpt->min_masters_of_active_angels > kanade->masters)
                     prpt->min_masters_of_active_angels = kanade->masters;
-#if 0
-                if (prpt->max_inactive_time > time4_diff(now, kanade->last_activity))
-                    prpt->max_inactive_time = time4_diff(now, kanade->last_activity);
-                if (prpt->max_unassigned_time > time4_diff(now, kanade->last_assigned))
-                    prpt->max_unassigned_time = time4_diff(now, kanade->last_assigned);
-#endif
             }
             if (prpt->max_masters_of_online_angels < kanade->masters)
                 prpt->max_masters_of_online_angels = kanade->masters;
