@@ -1,7 +1,7 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-PROGRAMS=	utmpserver utmpsync utmpserver2 utmpserver3 authserver
+PROGRAMS=	utmpsync utmpserver3
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
 
@@ -17,17 +17,10 @@ all:	${PROGRAMS}
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
-utmpserver: utmpserver.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(LDLIBS)
-utmpserver2: utmpserver2.o friend.o
-	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o friend.o $(LDLIBS)
 utmpserver3: utmpserver3.o friend.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $* $*.o friend.o $(LDLIBS) -levent
 utmpsync: utmpsync.o $(UTILOBJ)
 	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 
-authserver: authserver.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $> $(LDLIBS) -lcrypt -levent
-
 clean:
-	rm -f *~ ${PROGRAMS} friend.o utmpserver.o utmpserver2.o utmpserver3.o utmpsync.o authserver.o
+	rm -f *~ ${PROGRAMS} friend.o utmpserver3.o utmpsync.o
