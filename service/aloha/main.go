@@ -14,14 +14,14 @@ import (
 func main() {
 	bbsHome := bbs.BBSHome()
 
-	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/run/aloha.svc.log)")
+	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/aloha.svc.log)")
 	debugMode := flag.Bool("d", false, "Enable debug mode (log directly to stdout)")
 	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -d)")
 
 	flag.Parse()
 
 	if *logPath == "" {
-		*logPath = filepath.Join(bbsHome, "run", "aloha.svc.log")
+		*logPath = filepath.Join(bbsHome, "log", "aloha.svc.log")
 	}
 
 	log.SetFlags(log.LstdFlags)

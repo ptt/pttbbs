@@ -25,12 +25,12 @@ static int send_alohad_req(const char *json_payload) {
     return (n == len) ? 0 : -1;
 }
 
-int aloha_notify_login(const char *userid, pid_t pid, int uip) {
+int aloha_notify_login(const char *userid, pid_t pid, int sid) {
     if (!userid || !*userid) {
         return -1;
     }
     char payload[256];
-    SNPRINTF(payload, "{\"action\":\"login\",\"userid\":\"%s\",\"pid\":%d,\"uip\":%d}\n", userid, (int)pid, uip);
+    SNPRINTF(payload, "{\"action\":\"login\",\"userid\":\"%s\",\"pid\":%d,\"sid\":%d}\n", userid, (int)pid, sid);
     return send_alohad_req(payload);
 }
 
@@ -66,9 +66,9 @@ int is_aloha_svc_enabled(void) {
     return SHM->GV2.e.aloha_svc != 0;
 }
 
-int send_aloha_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id) {
+int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id) {
     char msg[128];
     time4_t now = time4(NULL);
     SNPRINTF(msg, "<<上站通知>> -- 我來啦! [%s]", Cdatelite(&now));
-    return write_message(uip, to_pid, from_pid, from_id, msg, MSGMODE_ALOHA);
+    return write_message(sid, to_pid, from_pid, from_id, msg, MSGMODE_ALOHA);
 }
