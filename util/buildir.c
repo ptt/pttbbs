@@ -7,7 +7,8 @@ int dirselect(const struct dirent *dir)
 
 int mysort(const struct dirent **a, const struct dirent **b)
 {
-    return atoi(((*a)->d_name+2))-atoi(((*b)->d_name+2));
+    return time4_cmp(get_fhdr_stamp_ts((*a)->d_name),
+                     get_fhdr_stamp_ts((*b)->d_name));
 }
 
 int main(int argc, char **argv)
@@ -53,7 +54,7 @@ int main(int argc, char **argv)
 		STRLCPY(fhdr.filename, dirlist[count]->d_name);
 		
 		/* set file time */
-		filetime = atoi(dirlist[count]->d_name + 2);
+		filetime = get_fhdr_stamp_ts(dirlist[count]->d_name);
 		if(filetime > 740000000) {
 		    struct tm *ptime = localtime4(&filetime);
 		    sprintf(fhdr.date, "%2d/%02d", ptime->tm_mon + 1,

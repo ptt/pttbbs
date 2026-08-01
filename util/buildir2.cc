@@ -35,7 +35,7 @@ int detect_header(fileheader_t *fhdr, const char *path)
     strcpy(fhdr->filename, filename);
 
     /* set file time */
-    time4_t filetime = atoi(filename + 2);
+    time4_t filetime = get_fhdr_stamp_ts(filename);
     if(filetime > 740000000) {
 	struct tm *ptime = localtime4(&filetime);
 	sprintf(fhdr->date, "%2d/%02d", ptime->tm_mon + 1,
@@ -104,7 +104,8 @@ int dirselect(const struct dirent *dir)
 
 int mysort(const struct dirent **a, const struct dirent **b)
 {
-    return atoi(((*a)->d_name+2))-atoi(((*b)->d_name+2));
+    return time4_cmp(get_fhdr_stamp_ts((*a)->d_name),
+                     get_fhdr_stamp_ts((*b)->d_name));
 }
 
 bool insert_filenames(
@@ -242,7 +243,7 @@ int main(int argc, char **argv)
 	    continue;
 	}
 	snprintf(path, sizeof(path), "%s/%s", bdir.c_str(), filename);
-	time4_t posttime = atoi(filename + 2);
+	time4_t posttime = get_fhdr_stamp_ts(filename);
 	if (posttime < ignore_before) {
 	    ++nr_skip;
 	} else if (detect_header(&fhdr, path) == DETECT_OK) {

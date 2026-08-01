@@ -28,7 +28,7 @@ struct AnnotatedHeader {
     int order;
     fileheader_t header;
 
-    time4_t posttime() const { return atoi(header.filename + 2); }
+    time4_t posttime() const { return get_fhdr_stamp_ts(header.filename); }
     std::string filename() const { return header.filename; }
     bool valid() const {
 	return header.owner[0] && header.filename[0] && header.filename[0] != '.';

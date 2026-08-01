@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -80,6 +81,15 @@ static inline int time4_add_sec(time4_t base, uint64_t seconds, time4_t *out) {
     if (out)
         *out = (time4_t)(uint32_t)res;
     return 0;
+}
+
+/* Parse timestamp from fileheader filename (e.g. M.1120582370.A.1EA) */
+static inline time4_t get_fhdr_stamp_ts(const char *fn) {
+    if (!fn)
+        return 0;
+    if (fn[0] && fn[1] == '.')
+        fn += 2;
+    return (time4_t)strtoul(fn, NULL, 10);
 }
 
 /* crypt.c */

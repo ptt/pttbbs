@@ -314,7 +314,7 @@ reload_fh: GCC_UNUSED;
             goto reload_fh;
         }
 #endif
-        ftime = atoi( &fh.filename[2] );
+        ftime = get_fhdr_stamp_ts(fh.filename);
     }
 
     /* given the ftime to resolve the read article */
@@ -351,7 +351,7 @@ reload_fh: GCC_UNUSED;
                 continue;
             }
 #endif
-            if( atoi( &fh.filename[2] ) == result ) {
+            if( get_fhdr_stamp_ts(fh.filename) == result ) {
                 pos = i;
                 goto out;
             }

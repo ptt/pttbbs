@@ -50,15 +50,15 @@ getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney)
     int n = get_num_records(direct, sizeof(fileheader_t));
     if( end > n || end<=0 )
            end = n;
-    stamp = atoi(fhdr->filename + 2);
+    stamp = get_fhdr_stamp_ts(fhdr->filename);
     for( i = (begin + end ) / 2, times = 0 ;
 	 end >= begin  && times < 20    ; /* 最多只找 20 次 */
 	 i = (begin + end ) / 2, ++times ){
         if( get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1 ||
 	    !fh.filename[0] )
               break;
-	s = atoi(fh.filename + 2);
-	if( s > stamp )
+	s = get_fhdr_stamp_ts(fh.filename);
+	if (time4_gt(s, stamp))
 	    end = i - 1;
 	else if( s == stamp ){
 	    close(fd);

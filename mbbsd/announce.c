@@ -233,7 +233,7 @@ a_showmenu(menu_t * pm)
 	    title = item->title;
 	    editor = item->owner;
 	    /*
-	     * Ptt 把時間改為取檔案時間 dtime = atoi(&item->filename[2]);
+	     * Ptt 把時間改為取檔案時間 dtime = get_fhdr_stamp_ts(item->filename);
 	     */
 	    SNPRINTF(buf, "%s/%s", pm->path, item->filename);
 	    if(copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))

@@ -59,7 +59,7 @@ find_resume_point_compar(const void *key, const void *memb)
 {
     const time4_t *ts = (const time4_t *) key;
     const fileheader_t *fh = (const fileheader_t *) memb;
-    time4_t fts = (time4_t)strtoul(fh->filename + 2, NULL, 10);
+    time4_t fts = get_fhdr_stamp_ts(fh->filename);
     return time4_cmp(*ts, fts);
 }
 

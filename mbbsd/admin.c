@@ -655,8 +655,9 @@ void delete_board_link(boardheader_t *bh, int bid)
 
 int dir_cmp(const void *a, const void *b)
 {
-  return (atoi( &((fileheader_t *)a)->filename[2] ) -
-          atoi( &((fileheader_t *)b)->filename[2] ));
+    const fileheader_t *fa = a, *fb = b;
+    return time4_cmp(get_fhdr_stamp_ts(fa->filename),
+                     get_fhdr_stamp_ts(fb->filename));
 }
 
 void merge_dir(const char *dir1, const char *dir2, int isoutter)

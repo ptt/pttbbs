@@ -26,7 +26,7 @@ int PostAddRecord(int s, const char *board, const fileheader_t *fhdr,
     STRLCPY(req.key.file, fhdr->filename);
     memcpy(&req.header, fhdr, sizeof(req.header));
 
-    req.extra.ctime = atoi(fhdr->filename + 2);
+    req.extra.ctime = get_fhdr_stamp_ts(fhdr->filename);
     // It is possible to generate req.extra.ipv4 from fhdr site sig, but we
     // probably don't really care.
 

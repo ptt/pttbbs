@@ -41,7 +41,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 
         if (!should_remove && remove_days > 0 && strlen(fh.filename) > 2 &&
             fh.filename[1] == '.') {
-            time4_t ts = (time4_t)atoi(fh.filename + 2);
+            time4_t ts = get_fhdr_stamp_ts(fh.filename);
             if (time4_days_elapsed(now, ts) >= remove_days)
                 should_remove = 1;
         }

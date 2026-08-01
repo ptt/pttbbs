@@ -543,7 +543,7 @@ brc_addlist(const char *fname, time4_t modified)
 	return;
     brc_initialize();
 
-    frec.create = atoi(&fname[2]);
+    frec.create = get_fhdr_stamp_ts(fname);
     frec.modified = modified;
 
     if (frec.create <= brc_expire_time /* too old, don't do any thing  */
@@ -641,7 +641,7 @@ brc_unread(int bid, const char *fname, time4_t modified)
 {
     int             ftime;
 
-    ftime = atoi(&fname[2]); /* this will get the time of the file created */
+    ftime = get_fhdr_stamp_ts(fname); /* this will get the time of the file created */
 
     return brc_unread_time(bid, ftime, modified);
 }

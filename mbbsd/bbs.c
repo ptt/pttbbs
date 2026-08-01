@@ -52,7 +52,7 @@ is_file_owner(const fileheader_t *fhdr, const userec_t *usr) {
 
     // deal with the format M.TIMESTAMP, return as 0 if unknown
     if (strlen(fhdr->filename) > 3) {
-        time4_t ts = atoi(fhdr->filename + 2);
+        time4_t ts = get_fhdr_stamp_ts(fhdr->filename);
         if (ts && ts >= usr->firstlogin)
             return 1;
     }
@@ -2397,7 +2397,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
            });
 
     {
-	int posttime=atoi(fhdr->filename+2);
+	int posttime=get_fhdr_stamp_ts(fhdr->filename);
 	if(posttime>now-12*3600)
 	    STATINC(STAT_READPOST_12HR);
 	else if(posttime>now-1*DAY_SECONDS)
@@ -3470,7 +3470,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
                 // case 2, got error in file deletion (already deleted, also skip badpost)
                 outs("退文設定: 已刪或刪除錯誤 (跳過)\n");
-	    } else if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60) {
+	    } else if (now - get_fhdr_stamp_ts(fhdr->filename) > 7 * 24 * 60 * 60) {
                 // case 3, post older than one week (TODO use macro for the duration)
 		outs("退文設定: 文章超過一週 (跳過)\n");
 	    } else {
@@ -4226,7 +4226,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
             break;
         case 'w':
             // XXX dirty hack: file name timestamp in [2]
-            curr = atoi(fhdr->filename + 2);
+            curr = get_fhdr_stamp_ts(fhdr->filename);
             if (curr > 1 && curr <= now) {
                 brc_toggle_read(currbid, curr);
             } else {
