@@ -239,27 +239,33 @@ pveh_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
     const char *subject = "";
     char fname[PATHLEN];
     time4_t ftime = 0;
+    const time4_t INVALID_TS = -1;
     pveh_ctx *cx = (pveh_ctx*) ctx;
     int rev = total - i; // i/curr = 0 based, rev = 1 based
 
     if (cx->timestamps[i] == 0) {
         pveh_solve_rev_filename(rev, i, fname, sizeof(fname), cx);
         ftime = dasht(fname);
+        // dasht returns 0 (same as 'never read' here) so we have to give ftime
+        // a special value so it won't re-read next time.
         if (!ftime)
-            ftime++;
+            ftime = INVALID_TS;
         cx->timestamps[i] = ftime;
     } else {
         ftime = cx->timestamps[i];
     }
 
-    if (ftime != -1)
+    // ftime=-1 means 'invalid, but we've checked'. Check explicitly so we don't
+    // need to worry if time4_is_valid considered -1 as ok or not.
+    bool ts_is_valid = time4_is_valid(ftime) && (ftime != INVALID_TS);
+    if (ts_is_valid)
         subject = Cdate(&ftime);
     else
         subject = "(記錄已過保留期限/已清除)";
 
     prints("   %s%s  版本: ",
            (i == curr) ? ANSI_COLOR(1;41;37) : "",
-           (ftime == -1) ? ANSI_COLOR(1;30) : "");
+           ts_is_valid ? "" : ANSI_COLOR(1;30));
     if (cx->base_as_current && i == 0)
         outs("[目前版本]");
     else

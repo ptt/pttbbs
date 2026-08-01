@@ -581,8 +581,7 @@ setforward(void) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
-        time4_t t_buf = dasht(buf);
-        if (t_buf == (time4_t)-1 || time4_lt(t_buf, UNTRUSTED_FORWARD_TIMEBOMB))
+        if (time4_lt(dasht(buf), UNTRUSTED_FORWARD_TIMEBOMB))
             unlink(buf);
 #endif
 
@@ -1347,7 +1346,7 @@ mail_mbox(void)
     setuserfile(tagname, ".zipped_home");
     last_tag = dasht(tagname);
 
-    if (last_tag != 0 && time4_days_elapsed(now, last_tag) < 7 &&
+    if (time4_is_valid(last_tag) && time4_days_elapsed(now, last_tag) < 7 &&
         !HasUserPerm(PERM_SYSOP)) {
         vmsgf("每週僅可備份一次，離下次還有 %d 天。",
               7 - time4_days_elapsed(now, last_tag));

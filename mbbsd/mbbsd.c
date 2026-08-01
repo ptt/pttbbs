@@ -1226,8 +1226,7 @@ user_login(void)
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
         {   char fwd_path[PATHLEN];
             setuserfile(fwd_path, FN_FORWARD);
-            time4_t t_fwd = dasht(fwd_path);
-            if (dashf(fwd_path) && (t_fwd == (time4_t)-1 || time4_lt(t_fwd, UNTRUSTED_FORWARD_TIMEBOMB)))
+            if (dashf(fwd_path) && time4_lt(dasht(fwd_path), UNTRUSTED_FORWARD_TIMEBOMB))
             {
                 vs_hdr("自動轉寄設定已變更");
                 unlink(fwd_path);

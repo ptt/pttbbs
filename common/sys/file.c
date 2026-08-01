@@ -53,7 +53,7 @@ dasht(const char *fname)
     if (!stat(fname, &st))
 	return st.st_mtime;
     else
-	return -1;
+	return 0;
 }
 
 /**
@@ -68,7 +68,7 @@ dashc(const char *fname)
     if (!stat(fname, &st))
 	return st.st_ctime;
     else
-	return -1;
+	return 0;
 }
 
 /**

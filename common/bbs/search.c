@@ -160,11 +160,11 @@ select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from,
 		bp->SRexpire = now;
 
 	    if (time4_gt(bp->SRexpire, filecreate))
-		filetime = -1;
+		filetime = 0;
 	}
     }
 
-    if (filetime == -1 || time4_diff(now, filetime) > 60*60) {
+    if (filetime == 0 || time4_diff(now, filetime) > 60*60) {
 	*resume_from = 0;
 	return 1;
     } else if (time4_diff(now, filetime) > 3*60) {

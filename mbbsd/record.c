@@ -126,8 +126,7 @@ force_open(const char *fname)
 
     expire = now - 3600;	/* lock 存在超過一個小時就是有問題! */
 
-    time4_t t_fn = dasht(fname);
-    if (t_fn != (time4_t)-1 && time4_gt(t_fn, expire))
+    if (time4_gt(dasht(fname), expire))
 	return -1;
     unlink(fname);
     fd = OpenCreate(fname, O_WRONLY | O_TRUNC);
@@ -528,8 +527,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strip_blank(address, address);
 
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
-    time4_t t_buf = dasht(buf);
-    if (t_buf == (time4_t)-1 || time4_lt(t_buf, UNTRUSTED_FORWARD_TIMEBOMB)) {
+    if (time4_lt(dasht(buf), UNTRUSTED_FORWARD_TIMEBOMB)) {
         // We may unlink here, but for systems with timebomb,
         // just leave it alone and let user see it in login screen.
         // unlink(buf);

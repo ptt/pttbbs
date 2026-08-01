@@ -221,11 +221,13 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     IPv4List *list = NULL;
     char tmpfn[PATHLEN];
     FILE *fp;
-    time4_t m_base = dasht(basefile), m_cache = dasht(cachefile);
-    size_t sz = dashs(cachefile);
+    time4_t m_base = dasht(basefile);
 
-    if (m_base < 0)
+    if (time4_is_invalid(m_base))
         return NULL;
+
+    time4_t m_cache = dasht(cachefile);
+    size_t sz = dashs(cachefile);
 
     // TODO currently we only save the ipv4 address & index (BanRecord) without
     // message body; in future we should also cache that, or throw everything

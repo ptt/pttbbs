@@ -177,7 +177,7 @@ angel_reload_nick()
     {
 	sethomefile(fn, _myangel, FN_ANGELMSG);
 	ts = dasht(fn);
-	if (ts != -1 && ts > _myangel_touched)
+	if (time4_is_valid(ts) && time4_gt(ts, _myangel_touched))
 	    reload = 1;
     }
     // if no need to reload, reuse current data.
@@ -329,9 +329,8 @@ do_changeangel(int force) {
         char bad_master_file[PATHLEN];
         setuserfile(bad_master_file, ".bad_master");
         is_bad_master = dashf(bad_master_file);
-        time4_t t_bad = dasht(bad_master_file);
         if (is_bad_master &&
-            (t_bad == (time4_t)-1 || time4_lt(t_bad, now - ANGEL_INACTIVE_DAYS * DAY_SECONDS))) {
+            time4_lt(dasht(bad_master_file), now - ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
             log_filef("log/bad_master.log", LOG_CREAT,
                       "%s %s removed from bad master list (%d)\n",
                       Cdatelite(&now), cuser.userid, dasht(bad_master_file));

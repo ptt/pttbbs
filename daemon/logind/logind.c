@@ -160,7 +160,7 @@ int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 
 // banned ip
 BanIpList *g_banip;
-time4_t g_banip_mtime = -1;
+time4_t g_banip_mtime = 0;
 
 // options
 int g_reuseport = 0;

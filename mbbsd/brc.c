@@ -561,10 +561,10 @@ brc_addlist(const char *fname, time4_t modified)
     for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (frec.create == brc_list[n].create) {
 	    // check if we got bad value.
-	    if (modified == (time4_t)-1)
+	    if (time4_is_invalid(modified))
 		return;
 
-	    if (brc_list[n].modified == (time4_t)-1)
+	    if (time4_is_invalid(brc_list[n].modified))
 		brc_list[n].modified = 0;
 
 	    // special case here:
@@ -623,7 +623,7 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 		return 0;
 
 	    // bad  case... seems like that someone is making -1.
-	    if (modified == (time4_t)-1 || brcm == (time4_t)-1)
+	    if (time4_is_invalid(modified) || time4_is_invalid(brcm))
 		return 0;
 
 	    // one case is, some special file headers (ex,

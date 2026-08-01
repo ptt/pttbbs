@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 		break;
 
 	    case 't':
-		ignore_before = (time4_t) strtoul(optarg, NULL, 10);
+		ignore_before = get_fhdr_stamp_ts(optarg);
 		if (std::to_string(ignore_before) != optarg)
 		    die("Unable to parse option -t");
 		break;

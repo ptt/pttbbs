@@ -1969,8 +1969,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #else
     // without smart merge, simply alert by size and mtime.
-    time4_t tg = dasht(genbuf), tc = dashc(fpath);
-    if (dashs(genbuf) != oldsz || tg == (time4_t)-1 || tc == (time4_t)-1 || time4_gt(tg, tc))
+    if (dashs(genbuf) != oldsz || time4_gt(dasht(genbuf), dashc(fpath)))
         is_race_condition = 1;
 #endif
     if (is_race_condition) {
@@ -2398,14 +2397,14 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
            });
 
     {
-	int posttime=get_fhdr_stamp_ts(fhdr->filename);
-	if(posttime>now-12*3600)
+	time4_t posttime = get_fhdr_stamp_ts(fhdr->filename);
+	if (time4_gt(posttime, now - 12*3600))
 	    STATINC(STAT_READPOST_12HR);
-	else if(posttime>now-1*DAY_SECONDS)
+	else if (time4_gt(posttime, now - 1*DAY_SECONDS))
 	    STATINC(STAT_READPOST_1DAY);
-	else if(posttime>now-3*DAY_SECONDS)
+	else if (time4_gt(posttime, now - 3*DAY_SECONDS))
 	    STATINC(STAT_READPOST_3DAY);
-	else if(posttime>now-7*DAY_SECONDS)
+	else if (time4_gt(posttime, now - 7*DAY_SECONDS))
 	    STATINC(STAT_READPOST_7DAY);
 	else
 	    STATINC(STAT_READPOST_OLD);

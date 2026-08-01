@@ -40,6 +40,16 @@ enum _DBCS_STATUS {
 typedef int32_t time4_t;
 typedef int64_t time8_t;
 
+#define TIME4_INVALID ((time4_t)0)
+
+static inline int time4_is_invalid(time4_t t) {
+    return t == 0 || t == (time4_t)-1;
+}
+
+static inline int time4_is_valid(time4_t t) {
+    return t != 0 && t != (time4_t)-1;
+}
+
 /* time4_t to 64-bit time_t conversion helper (Y2038 safe zero-extension) */
 static inline time_t time4_to_time(time4_t t) {
     return (time_t)(uint32_t)t;

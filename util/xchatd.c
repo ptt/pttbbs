@@ -1442,7 +1442,7 @@ login_user(ChatUser *cu, char *msg)
 
 	return -1;
     }
-    else if (*token && (time4_t)strtoul(token, NULL, 10) != acct.firstlogin)
+    else if (*token && get_fhdr_stamp_ts(token) != acct.firstlogin)
     {
 #ifdef  DEBUG
 	logit("renewed", chatid);
