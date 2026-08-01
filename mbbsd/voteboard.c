@@ -156,9 +156,9 @@ do_voteboardreply(const fileheader_t * fhdr)
 	fputs(genbuf, fo);
     }
     if (!endtime) {
-	now += 14 * 24 * 60 * 60;
+	now += 14 * DAY_SECONDS;
 	fprintf(fo, "連署結束時間: (%d)%s\n\n", now, Cdate(&now));
-	now -= 14 * 24 * 60 * 60;
+	now -= 14 * DAY_SECONDS;
     }
     fputs(genbuf, fo);
     len = strlen(cuser.userid);
@@ -374,12 +374,12 @@ do_voteboard(int type)
     if (temp == 11)
 	    return FULLUPDATE;
     strcat(genbuf, "連署結束時間: ");
-    now += 14 * 24 * 60 * 60;
+    now += 14 * DAY_SECONDS;
     SNPRINTF(topic, "(%d)", now);
     strcat(genbuf, topic);
     strcat(genbuf, Cdate(&now));
     strcat(genbuf, "\n\n");
-    now -= 14 * 24 * 60 * 60;
+    now -= 14 * DAY_SECONDS;
     strcat(genbuf, "----------支持----------\n");
     strcat(genbuf, "----------反對----------\n");
     outs("開始連署嘍");

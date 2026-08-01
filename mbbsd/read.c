@@ -1131,7 +1131,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 
     do {
 	/* 檢查權限是否已改 */
-	if (currbid > 0 && getbcache(currbid)->perm_reload > enter_time)
+	if (currbid > 0 && time4_gt(getbcache(currbid)->perm_reload, enter_time))
 	{
 	    boardheader_t *bp = getbcache(currbid);
 	    if(!HasBoardPerm(bp))

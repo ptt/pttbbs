@@ -512,9 +512,10 @@ my_query(const char *uident)
 	}
 	else
 	   pressanykey();
-	if(now-last_query<1)
+	int diff = (int)time4_diff(now, last_query);
+	if (diff < 1)
 	    sleep(2);
-	else if(now-last_query<2)
+	else if (diff < 2)
 	    sleep(1);
 	last_query=now;
 	return FULLUPDATE;
@@ -2244,7 +2245,7 @@ userlist(void)
 		    if (newpage != page) {
 			page = newpage;
 			redraw = 1;
-		    } else if (now >= lastupdate + 2)
+		    } else if (time4_ge(now, lastupdate + 2))
 			redrawall = redraw = 1;
 		}
 		break;
@@ -2689,7 +2690,7 @@ userlist(void)
 		break;
 
 	    default:
-		if (now >= lastupdate + 2)
+		if (time4_ge(now, lastupdate + 2))
 		    redraw = 1;
 	    }
 	}

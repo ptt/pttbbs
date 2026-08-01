@@ -787,7 +787,7 @@ static void
 chat_xinfo(ChatUser *cu, char *msg GCC_UNUSED)
 {
     // report system information
-    time4_t uptime = time(0) - boot_time;
+    time_t uptime = time(0) - time4_to_time(boot_time);
     int dd =  uptime / DAY_SECONDS, 
 	hh = (uptime % DAY_SECONDS) / 3600,
 	mm = (uptime % 3600) / 60;
@@ -1442,7 +1442,7 @@ login_user(ChatUser *cu, char *msg)
 
 	return -1;
     }
-    else if (*token && (time4_t)atoi(token) != acct.firstlogin)
+    else if (*token && (time4_t)strtoul(token, NULL, 10) != acct.firstlogin)
     {
 #ifdef  DEBUG
 	logit("renewed", chatid);

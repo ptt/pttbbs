@@ -118,7 +118,7 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid,
 	      brcnbrd_t num, const brc_rec *list)
 {
     char * tmp;
-    if (num > 0 && list[0].create > brc_expire_time &&
+    if (num > 0 && time4_gt(list[0].create, brc_expire_time) &&
 	    ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
 	if (num > BRC_MAXNUM)
 	    num = BRC_MAXNUM;
@@ -196,7 +196,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
 
-    while (num > 0 && list[num - 1].create < brc_expire_time)
+    while (num > 0 && time4_lt(list[num - 1].create, brc_expire_time))
 	num--; /* don't write the times before brc_expire_time */
 
     if (!ptr) {
@@ -546,7 +546,7 @@ brc_addlist(const char *fname, time4_t modified)
     frec.create = get_fhdr_stamp_ts(fname);
     frec.modified = modified;
 
-    if (frec.create <= brc_expire_time /* too old, don't do any thing  */
+    if (time4_le(frec.create, brc_expire_time) /* too old, don't do any thing  */
 	 /* || fname[0] != 'M' || fname[1] != '.' */ ) {
 	return;
     }
@@ -556,7 +556,7 @@ brc_addlist(const char *fname, time4_t modified)
 	brc_changed = 1;
 	return;
     }
-    if ((brc_num == 1) && (frec.create < brc_list[0].create)) /* most when after 'v' */
+    if ((brc_num == 1) && time4_lt(frec.create, brc_list[0].create)) /* most when after 'v' */
 	return;
     for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (frec.create == brc_list[n].create) {
@@ -576,7 +576,7 @@ brc_addlist(const char *fname, time4_t modified)
 		brc_changed = 1;
 	    }
 	    return;
-	} else if (frec.create > brc_list[n].create) {
+	} else if (time4_gt(frec.create, brc_list[n].create)) {
 	    if (brc_num < BRC_MAXNUM)
 		brc_num++;
 	    /* insert frec into brc_list */
@@ -600,7 +600,7 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
     const brc_rec *blist;
 
     brc_initialize();
-    if (ftime <= brc_expire_time) /* too old */
+    if (time4_le(ftime, brc_expire_time)) /* too old */
 	return 0;
 
     if (brc_currbid && bid == brc_currbid) {
@@ -683,7 +683,7 @@ brc_search_read(int bid, time4_t ftime, int forward, time4_t *result)
     // [0].create is the biggest.
     // 首先要找到 ftime 所在的區間, 然後再視 forward 的值來取前後的已讀文章.
     for( i = 0; i < bnum; i++ ) { /* using linear search */
-	if( ftime > blist[i].create ) {
+	if( time4_gt(ftime, blist[i].create) ) {
 	    if( forward ) {
                 if( i ) {
                     goto return_newer;

@@ -109,9 +109,10 @@ wait_penalty(int sec)
     static time4_t lastWait = 0;
 
     syncnow();
-    if (now - lastWait < sec)
+    int diff = (int)time4_diff(now, lastWait);
+    if (diff < sec)
     {
-        sec = now - lastWait;
+        sec = diff;
         if (sec < 0 || sec >= 5)
             sec = 5;
         sleep(sec);

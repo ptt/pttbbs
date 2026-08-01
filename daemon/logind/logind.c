@@ -1359,7 +1359,7 @@ regular_check()
     static time_t last_check_time = 0;
     time4_t now = time(0);
 
-    if ( now - last_check_time < LOGIND_REGULAR_CHECK_DURATION)
+    if ( time4_diff(now, last_check_time) < LOGIND_REGULAR_CHECK_DURATION)
         return;
 
     int was_overload = g_overload;

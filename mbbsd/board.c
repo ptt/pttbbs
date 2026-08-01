@@ -2195,15 +2195,15 @@ choose_board(int newflag)
 
 	case 'w':
 	    /* allowing save BRC/fav once per 10 minutes */
-	    if (now - last_save_fav_and_brc > 10 * 60) {
+	    if (time4_diff(now, last_save_fav_and_brc) > 10 * 60) {
 		fav_save();
 		brc_finalize();
 
 		last_save_fav_and_brc = now;
 		vmsg("已儲存看板閱\讀記錄");
 	    } else
-		vmsgf("間隔時間太近，未儲存看板閱\讀記錄 [請等 %d 秒後再試]",
-			(int)(600 - (now-last_save_fav_and_brc)));
+		vmsgf("間隔時間太短, 暫不儲存看板閱\讀記錄 [請等 %d 秒]",
+			(int)(600 - time4_diff(now, last_save_fav_and_brc)));
 	    break;
 
 		///////////////////////////////////////////////////////

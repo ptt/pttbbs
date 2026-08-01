@@ -55,7 +55,7 @@ struct AnnotatedHeaderSet {
 
 bool cmp_by_posttime_order(const AnnotatedHeader& a, const AnnotatedHeader& b)
 {
-    return a.posttime() != b.posttime() ? a.posttime() < b.posttime() : a.order < b.order;
+    return a.posttime() != b.posttime() ? time4_lt(a.posttime(), b.posttime()) : a.order < b.order;
 }
 
 int read_dir(AnnotatedHeaderSet &hdrset, const char *path, int offset)

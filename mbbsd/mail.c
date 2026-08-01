@@ -581,7 +581,8 @@ setforward(void) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
-        if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOMB)
+        time4_t t_buf = dasht(buf);
+        if (t_buf == (time4_t)-1 || time4_lt(t_buf, UNTRUSTED_FORWARD_TIMEBOMB))
             unlink(buf);
 #endif
 
@@ -2544,7 +2545,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
     /* stamp the queue file */
     STRLCPY(buf, "out/");
     for (;;) {
-	snprintf(buf + 4, sizeof(buf) - 4, "M.%d.%d.A", (int)++chrono, getpid());
+	snprintf(buf + 4, sizeof(buf) - 4, "M.%u.%d.A", (unsigned int)++chrono, getpid());
 	if (!dashf(buf)) {
 	    Copy(fpath, buf);
 	    break;

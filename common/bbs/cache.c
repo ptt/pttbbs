@@ -547,7 +547,7 @@ setbtotal(int bid)
                 SHM->lastposttime[bid - 1] = 0;
             else
 #endif
-	    SHM->lastposttime[bid - 1] = (time4_t) atoi(&genbuf[2]);
+	    SHM->lastposttime[bid - 1] = get_fhdr_stamp_ts(genbuf);
 	}
     } else
 	SHM->lastposttime[bid - 1] = 0;

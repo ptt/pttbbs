@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 		
 		/* set file time */
 		filetime = get_fhdr_stamp_ts(dirlist[count]->d_name);
-		if(filetime > 740000000) {
+		if(time4_gt(filetime, 740000000)) {
 		    struct tm *ptime = localtime4(&filetime);
 		    sprintf(fhdr.date, "%2d/%02d", ptime->tm_mon + 1,
 			    ptime->tm_mday);

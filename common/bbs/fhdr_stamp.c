@@ -53,12 +53,12 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 	    break;
 	case STAMP_DIR:
 	    do {
-		sprintf(ip, "D%X", (int)++dtime & 07777);
+		sprintf(ip, "D%X", (unsigned)(time4_t)++dtime & 07777);
 	    } while ((res = Mkdir(fpath)) == -1 && errno == EEXIST);
 	    break;
 	case STAMP_LINK:
 	    do {
-		sprintf(ip, "S%X", (int)++dtime);
+		sprintf(ip, "S%X", (unsigned)(time4_t)++dtime);
 	    } while ((res = symlink("temp", fpath)) == -1 && errno == EEXIST);
 	    break;
 	default:

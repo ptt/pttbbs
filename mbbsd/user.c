@@ -207,7 +207,7 @@ user_display(const userec_t * u, int adminmode)
         prints("\t最後上線: %s (掛站時每日增加) / %s\n",
                Cdate(&u->lastlogin), u->lasthost);
     } else {
-	diff = (now - login_start_time) / 60;
+	diff = (int)(time4_diff(now, login_start_time) / 60);
 	prints("\t停留期間: %d 小時 %2d 分\n",
 	       diff / 60, diff % 60);
     }

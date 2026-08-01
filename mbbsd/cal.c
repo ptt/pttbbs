@@ -440,7 +440,7 @@ give_money_ui(const char *userid)
 
     // safe context starts at (7, 0)
     move(7, 0);
-    if (now - lastauth >= 15*60) // valid through 15 minutes
+    if (time4_diff(now, lastauth) >= 15*60) // valid through 15 minutes
     {
 	outs(ANSI_COLOR(1;31) "為了避免誤按或是惡意詐騙，"
 		"在完成交易前要重新確認您的身份。" ANSI_RESET);

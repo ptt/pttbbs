@@ -46,7 +46,7 @@ int action_frequently(int uid)
 	flood_base_hour=hour;
     }
 
-    if(abs(flooding[uid].lastlogin-(unsigned short)now)<=3 ||
+    if(abs((int)flooding[uid].lastlogin - (int)(unsigned short)now) <= 3 ||
 	    flooding[uid].minute_count>30 ||
 	    flooding[uid].hour_count>60) {
 	count_flooding++;

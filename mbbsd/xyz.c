@@ -70,7 +70,7 @@ Goodbye(void)
     adbanner_goodbye();
     show_80x24_screen("etc/Logout");
     {
-	int diff = (now - login_start_time) / 60;
+	int diff = (int)(time4_diff(now, login_start_time) / 60);
 	SNPRINTF(genbuf, "此次停留時間: %d 小時 %2d 分",
 		diff / 60, diff % 60);
     }

@@ -68,7 +68,7 @@ search(struct posttop *t)
     if (found)
     {
 	p->number += t->number;
-	if (p->date < t->date)	/* 取較近日期 */
+	if (time4_lt(p->date, t->date))	/* 取較近日期 */
 	    p->date = t->date;
     }
     else

@@ -1226,7 +1226,8 @@ user_login(void)
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
         {   char fwd_path[PATHLEN];
             setuserfile(fwd_path, FN_FORWARD);
-            if (dashf(fwd_path) && dasht(fwd_path) < UNTRUSTED_FORWARD_TIMEBOMB)
+            time4_t t_fwd = dasht(fwd_path);
+            if (dashf(fwd_path) && (t_fwd == (time4_t)-1 || time4_lt(t_fwd, UNTRUSTED_FORWARD_TIMEBOMB)))
             {
                 vs_hdr("自動轉寄設定已變更");
                 unlink(fwd_path);
@@ -2115,7 +2116,7 @@ check_ban_and_load(int fd, struct ProgramOption *option,
     write(fd, INSCREEN, sizeof(INSCREEN));
 #endif
 
-    if ((time(0) - chkload_time) > 1) {
+    if ((time(0) - time4_to_time(chkload_time)) > 1) {
 	overload = 0;
 	banned = 0;
 

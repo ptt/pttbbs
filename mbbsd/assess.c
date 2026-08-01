@@ -9,9 +9,9 @@ adjust_badpost_time(time4_t timeremovebadpost) {
     // reset timer to at least some days to prevent user directly
     // canceling his badpost.
     syncnow();
-    min_timer = (now - (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) *
-                 DAY_SECONDS);
-    if (timeremovebadpost < min_timer)
+    min_timer = time4_diff(
+            now, (BADPOST_CLEAR_DURATION - BADPOST_MIN_CLEAR_DURATION) * DAY_SECONDS);
+    if (time4_lt(timeremovebadpost, min_timer))
         timeremovebadpost = min_timer;
 
     return timeremovebadpost;

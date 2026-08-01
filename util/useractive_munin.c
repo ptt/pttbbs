@@ -2,12 +2,13 @@
 
 static int run()
 {
-    int     i, maxidle, i60, i300, i600, total;
+    int     i, i60, i300, i600, total;
     time_t  now, t60, t300, t600;
+    time4_t maxidle_time;
 
     i60 = i300 = i600 = total = 0;
     now = time(NULL); t60 = now - 60; t300 = now - 300; t600 = now - 600;
-    maxidle = now;
+    maxidle_time = (time4_t)now;
 
     attach_SHM();
     for (i = 0; i < USHM_SIZE; ++i) {
@@ -19,12 +20,12 @@ static int run()
 		++i300; ++i600;
 	    } else if (SHM->uinfo[i].lastact >= t600) {
 		++i600;
-	    } else if (SHM->uinfo[i].lastact < maxidle) {
-		maxidle = SHM->uinfo[i].lastact;
+	    } else if (time4_lt(SHM->uinfo[i].lastact, maxidle_time)) {
+		maxidle_time = SHM->uinfo[i].lastact;
 	    }
 	}
     }
-    maxidle = now - maxidle;
+    int maxidle = (int)time4_diff((time4_t)now, maxidle_time);
 
     printf("multigraph bbs_maxidle\n");
     printf("maxidle.value %d\n", maxidle);

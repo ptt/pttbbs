@@ -931,7 +931,7 @@ new_register(void)
         char home[PATHLEN], tmp[PATHLEN];
         syncnow();
         sethomepath(home, newuser.userid);
-        sprintf(tmp, "tmp/%s.%d", newuser.userid, now);
+        sprintf(tmp, "tmp/%s.%u", newuser.userid, (unsigned int)now);
         if (dashd(home) && Rename(home, tmp) != 0) {
             // failed to active account.
             pwcuBitDisableLevel(PERM_BASIC);

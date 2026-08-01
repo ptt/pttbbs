@@ -36,7 +36,7 @@ int detect_header(fileheader_t *fhdr, const char *path)
 
     /* set file time */
     time4_t filetime = get_fhdr_stamp_ts(filename);
-    if(filetime > 740000000) {
+    if(time4_gt(filetime, 740000000)) {
 	struct tm *ptime = localtime4(&filetime);
 	sprintf(fhdr->date, "%2d/%02d", ptime->tm_mon + 1,
 		ptime->tm_mday);
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 		break;
 
 	    case 't':
-		ignore_before = atoi(optarg);
+		ignore_before = (time4_t) strtoul(optarg, NULL, 10);
 		if (std::to_string(ignore_before) != optarg)
 		    die("Unable to parse option -t");
 		break;
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
 	}
 	snprintf(path, sizeof(path), "%s/%s", bdir.c_str(), filename);
 	time4_t posttime = get_fhdr_stamp_ts(filename);
-	if (posttime < ignore_before) {
+	if (time4_lt(posttime, ignore_before)) {
 	    ++nr_skip;
 	} else if (detect_header(&fhdr, path) == DETECT_OK) {
 	    write(fout, &fhdr, sizeof(fhdr));

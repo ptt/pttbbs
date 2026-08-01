@@ -1005,7 +1005,7 @@ ccw_chat_anti_flood(CCW_CTX *ctx)
     ccw_chat_ext *ext = ccw_chat_get_ext(ctx);
 
     syncnow();
-    if (now - ext->lasttime < 3 )
+    if (time4_diff(now, ext->lasttime) < 3 )
     {
         // 3 秒內洗半面是不行的 ((25-5)/2)
         if( ++ext->flood > 10 )

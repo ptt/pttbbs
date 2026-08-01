@@ -126,7 +126,8 @@ force_open(const char *fname)
 
     expire = now - 3600;	/* lock 存在超過一個小時就是有問題! */
 
-    if (dasht(fname) > expire)
+    time4_t t_fn = dasht(fname);
+    if (t_fn != (time4_t)-1 && time4_gt(t_fn, expire))
 	return -1;
     unlink(fname);
     fd = OpenCreate(fname, O_WRONLY | O_TRUNC);
@@ -482,7 +483,7 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 	    return -1;
 
 	// create minimal length file name.
-	sprintf(ip, "D%X", (int)++dtime & mask);
+	sprintf(ip, "D%X", (unsigned)(time4_t)++dtime & mask);
 
     } while (Mkdir(fpath) == -1);
 
@@ -527,7 +528,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strip_blank(address, address);
 
 #ifdef UNTRUSTED_FORWARD_TIMEBOMB
-    if (dasht(buf) < UNTRUSTED_FORWARD_TIMEBOMB) {
+    time4_t t_buf = dasht(buf);
+    if (t_buf == (time4_t)-1 || time4_lt(t_buf, UNTRUSTED_FORWARD_TIMEBOMB)) {
         // We may unlink here, but for systems with timebomb,
         // just leave it alone and let user see it in login screen.
         // unlink(buf);

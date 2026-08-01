@@ -53,7 +53,7 @@ is_file_owner(const fileheader_t *fhdr, const userec_t *usr) {
     // deal with the format M.TIMESTAMP, return as 0 if unknown
     if (strlen(fhdr->filename) > 3) {
         time4_t ts = get_fhdr_stamp_ts(fhdr->filename);
-        if (ts && ts >= usr->firstlogin)
+        if (ts && time4_ge(ts, usr->firstlogin))
             return 1;
     }
     return 0;
@@ -1969,7 +1969,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #else
     // without smart merge, simply alert by size and mtime.
-    if (dashs(genbuf) != oldsz || dasht(genbuf) > dashc(fpath))
+    time4_t tg = dasht(genbuf), tc = dashc(fpath);
+    if (dashs(genbuf) != oldsz || tg == (time4_t)-1 || tc == (time4_t)-1 || time4_gt(tg, tc))
         is_race_condition = 1;
 #endif
     if (is_race_condition) {
@@ -2851,7 +2852,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if (bp->brdattr & BRD_NOFASTRECMD)
     {
-	int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
+	int d = (int)bp->fastrecommend_pause - (int)time4_diff(now, lastrecommend);
 	if (d > 0)
 	{
 	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
@@ -2885,7 +2886,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	if (size > 100*1024) {
-	    int d = 10 - (now - lastrecommend);
+	    int d = 10 - (int)time4_diff(now, lastrecommend);
 	    if (d > 0) {
 		vmsgf("本文已過長, 禁止快速連續推文, 請再等 %d 秒", d);
 		return FULLUPDATE;
@@ -3470,7 +3471,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
                 // case 2, got error in file deletion (already deleted, also skip badpost)
                 outs("退文設定: 已刪或刪除錯誤 (跳過)\n");
-	    } else if (now - get_fhdr_stamp_ts(fhdr->filename) > 7 * 24 * 60 * 60) {
+	    } else if (time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS) {
                 // case 3, post older than one week (TODO use macro for the duration)
 		outs("退文設定: 文章超過一週 (跳過)\n");
 	    } else {
@@ -4227,7 +4228,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
         case 'w':
             // XXX dirty hack: file name timestamp in [2]
             curr = get_fhdr_stamp_ts(fhdr->filename);
-            if (curr > 1 && curr <= now) {
+            if (curr > 1 && time4_le(curr, now)) {
                 brc_toggle_read(currbid, curr);
             } else {
                 vmsg("請改用其它文章設定當參考點");
