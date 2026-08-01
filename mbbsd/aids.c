@@ -1,8 +1,7 @@
 #include "bbs.h"
-
-#ifndef NEW_AIDS
-#error "Not complete yet"
-#endif
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 aidu_t fn2aidu(const char *fn)
 {
@@ -111,8 +110,10 @@ aidu_t aidc2aidu(const char *aidc)
       v = 62;
     else if(*sp == '_')
       v = 63;
+#ifdef NEW_AIDS
     else if(*sp == '@')
       break;
+#endif
     else
       return 0;
     aidu <<= 6;
@@ -123,6 +124,51 @@ aidu_t aidc2aidu(const char *aidc)
   return aidu;
 }
 
+int search_aidu(char *bfile, aidu_t aidu)
+{
+  char fn[FNLEN];
+  int fd;
+  const int batch = 64;
+  fileheader_t fhs[batch];
+  int len, i;
+  int pos = -1;
+
+  if(aidu2fn(fn, aidu) == NULL)
+    return -1;
+  if((fd = open(bfile, O_RDONLY, 0)) < 0)
+    return -1;
+
+  struct stat st;
+  if (fstat(fd, &st) < 0 || !st.st_size) {
+    close(fd);
+    return -1;
+  }
+  off_t off = ((st.st_size - 1) / sizeof(fhs)) * sizeof(fhs);
+
+  while ((len = pread(fd, fhs, sizeof(fhs), off)) > 0)
+  {
+    len /= sizeof(fileheader_t);
+    for(i = 0; i < len; i++)
+    {
+      int l;
+      if(strcmp(fhs[i].filename, fn) == 0 ||
+         ((aidu & 0xfff) == 0 && (l = strlen(fhs[i].filename)) > 6 &&
+          strncmp(fhs[i].filename, fn, l) == 0))
+      {
+	pos = off / sizeof(fileheader_t) + i;
+      }
+    }
+
+    if (!off || pos >= 0)
+	break;
+    off -= sizeof(fhs);
+  }
+  close(fd);
+
+  return pos;
+}
+
+#ifdef NEW_AIDS
 int search_aidu_in_bfile(const char *bfile, const aidu_t aidu)
 {
   char fn[FNLEN];
@@ -299,3 +345,4 @@ int do_search_aid(SearchAIDResult_t *r)
     return r->n;
   }
 }
+#endif
