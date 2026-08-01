@@ -156,10 +156,10 @@ select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from,
 
 	if (bp->SRexpire)
 	{
-	    if (bp->SRexpire > now) // invalid expire time.
+	    if (time4_gt(bp->SRexpire, now)) // invalid expire time.
 		bp->SRexpire = now;
 
-	    if (bp->SRexpire > filecreate)
+	    if (time4_gt(bp->SRexpire, filecreate))
 		filetime = -1;
 	}
     }

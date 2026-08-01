@@ -53,7 +53,7 @@ int check(void *data GCC_UNUSED, int n, userec_t *u) {
 	    return 0;
 	    */
 
-	    d = now - u->lastlogin;
+	    d = time4_diff(now, u->lastlogin);
 
 	    // ignore regged accounts now.
 	    if (u->userlevel & PERM_LOGINOK)
@@ -105,7 +105,7 @@ int check_last_login(void *data GCC_UNUSED, int n, userec_t *u) {
 
     STRLCPY(buf, Cdate(&u->firstlogin));
 
-    if (u->lastlogin > now + 86400 || u->lastlogin < 0) // should not be newer than now plus one day.
+    if (time4_gt(u->lastlogin, now + 86400)) // should not be newer than now plus one day.
     {
         // invalid record
         printf("使用者 %-*s (登入%3d 次, %s%s, %s [%04X])\n 最後登入日期異常 [%04X]: %s",
@@ -119,7 +119,7 @@ int check_last_login(void *data GCC_UNUSED, int n, userec_t *u) {
         // fix it
         u->lastlogin = u->firstlogin;
 
-        if (u->lastlogin > now)
+        if (time4_gt(u->lastlogin, now))
         {
             printf(" (首次登入日期也異常)");
             u->lastlogin = u->firstlogin = 0x362CFC7E;

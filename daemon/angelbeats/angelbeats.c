@@ -152,16 +152,16 @@ int angel_list_comp_advanced(const void *pva, const void *pvb) {
            assign_a = pa->last_assigned, assign_b = pb->last_assigned;
 
     if (now - assign_a >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
-        pa->last_activity >= assign_a)
+        time4_ge(pa->last_activity, assign_a))
         assign_a -= assign_a % ANGELBEATS_REASSIGN_PERIOD;
     if (now - assign_b >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
-        pb->last_activity >= assign_b)
+        time4_ge(pb->last_activity, assign_b))
         assign_b -= assign_b % ANGELBEATS_REASSIGN_PERIOD;
 
     if (assign_a != assign_b)
         return assign_a > assign_b ? 1 : -1;
     if (pa->last_activity != pb->last_activity)
-        return pa->last_activity > pb->last_activity ? 1 : -1;
+        return time4_cmp(pa->last_activity, pb->last_activity);
     return pa->masters - pb->masters;
 }
 
@@ -321,11 +321,11 @@ suggest_online_angel(int master_uid) {
         log("\n %d.%*s(missed=%d,masters=%d,act=%d,assigned=%d%s) ",
             ++found, IDLEN,
             kanade->userid, kanade->missed_assign, kanade->masters,
-            (int)(clk - kanade->last_activity),
-            (int)(clk - kanade->last_assigned),
-            ((int)(clk - kanade->last_assigned) <
+            (int)time4_diff(clk, kanade->last_activity),
+            (int)time4_diff(clk, kanade->last_assigned),
+            ((int)time4_diff(clk, kanade->last_assigned) <
              ANGELBEATS_ASSIGN_PROBATION_PERIOD &&
-             kanade->last_activity < kanade->last_assigned) ?
+             time4_lt(kanade->last_activity, kanade->last_assigned)) ?
             "[probation]" : "");
 #endif
 
@@ -445,7 +445,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     // skip inactive users. however, this makes the counter
     // incorrect when those kind of use goes online.
     // anyway that should not be a big change...
-    if (time4(0) > u->timeplayangel + ANGELBEATS_INACTIVE_TIME )
+    if (time4_gt(time4(0), u->timeplayangel + ANGELBEATS_INACTIVE_TIME))
         return 0;
 
     kanade->masters++;
@@ -515,10 +515,10 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
                 if (prpt->min_masters_of_active_angels > kanade->masters)
                     prpt->min_masters_of_active_angels = kanade->masters;
 #if 0
-                if (prpt->max_inactive_time > (now - kanade->last_activity))
-                    prpt->max_inactive_time = (now - kanade->last_activity);
-                if (prpt->max_unassigned_time > (now - kanade->last_assigned))
-                    prpt->max_unassigned_time = (now - kanade->last_assigned);
+                if (prpt->max_inactive_time > time4_diff(now, kanade->last_activity))
+                    prpt->max_inactive_time = time4_diff(now, kanade->last_activity);
+                if (prpt->max_unassigned_time > time4_diff(now, kanade->last_assigned))
+                    prpt->max_unassigned_time = time4_diff(now, kanade->last_assigned);
 #endif
             }
             if (prpt->max_masters_of_online_angels < kanade->masters)
@@ -599,7 +599,7 @@ void load_state_data() {
         if (!kanade->last_assigned_master) {
             kanade->last_assigned = assigned;
             kanade->last_assigned_master = assigned_master;
-        } else if (assigned > kanade->last_assigned &&
+        } else if (time4_gt(assigned, kanade->last_assigned) &&
                    kanade->last_assigned_master != assigned_master) {
             const char *uid1 = getuserid(kanade->last_assigned_master),
                        *uid2 = getuserid(assigned_master);

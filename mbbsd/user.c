@@ -101,7 +101,7 @@ int u_cancelbadpost(void)
    if (prev <= 0) return 0;
 
    // early check for time (must do again later)
-   day = (now - cuser.timeremovebadpost ) / DAY_SECONDS;
+   day = time4_diff(now, cuser.timeremovebadpost) / DAY_SECONDS;
    if (day < BADPOST_CLEAR_DURATION) {
        vmsgf("離下次可以申請解除尚有 %d 天。", BADPOST_CLEAR_DURATION - day);
        return 0;
@@ -183,7 +183,7 @@ user_display(const userec_t * u, int adminmode)
     prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
 
     prints("\t註冊日期: %s (已滿 %d 天)\n",
-	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
+	    Cdate(&u->firstlogin), (int)(time4_diff(now, u->firstlogin) / DAY_SECONDS));
 
     // See comment above
     if (adminmode && HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
@@ -900,7 +900,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
 
 	    do {
-		int max_days = (x.lastlogin - x.firstlogin) / DAY_SECONDS;
+		int max_days = time4_diff(x.lastlogin, x.firstlogin) / DAY_SECONDS;
 		SNPRINTF(genbuf, "%d", x.numlogindays);
 		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO, genbuf))
 		    if ((tmp = atoi(buf)) >= 0)

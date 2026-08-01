@@ -32,7 +32,7 @@ static int
 bakuman_get_info(const char *filename,
                  time4_t *pexpire, size_t szreason, char *reason) {
     FILE *fp = fopen(filename, "rt");
-    int ts = 0;
+    uint32_t ts = 0;
     char buf[STRLEN];
 
     if(!fp)
@@ -83,7 +83,7 @@ is_banned_by(const char *who, const char *object, char object_type,
         return 0;
 
     // check expire
-    if (bakuman_get_info(tag_fn, &expire, szreason, reason) && now > expire) {
+    if (bakuman_get_info(tag_fn, &expire, szreason, reason) && time4_gt(now, expire)) {
         unlink(tag_fn);
         return 0;
     }
@@ -136,12 +136,12 @@ unban_user_for_board(const char *user, const char *board) {
 static time4_t
 ui_print_user_banned_status_for_board(const char *uid, const char *board) {
     char reason[STRLEN];
-    time4_t expire = expire = get_user_banned_status_by_board(
+    time4_t expire = get_user_banned_status_by_board(
         uid, board, sizeof(reason), reason);
 
-    if (expire > now) {
+    if (time4_gt(expire, now)) {
         prints("暫停使用者 %s 發言，解除時間尚有 %d 天: %s\n理由:%s",
-               uid, (expire-now)/DAY_SECONDS+1,
+               uid, time4_days_remaining(expire, now),
                Cdatelite(&expire), reason);
     } else {
         prints("使用者 %s 目前不在禁言名單中。\n",
@@ -166,7 +166,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     getyx(&y, &x);
     if ((expire = is_user_banned_by_board(uid, board))) {
         vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
-              (expire - now) / DAY_SECONDS+1);
+              time4_days_remaining(expire, now));
         return -1;
     }
     prints("將使用者 %s 加入看板 %s 的禁言名單。", uid, board);
@@ -185,7 +185,6 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     } else {
         int val = atoi(datebuf);
-        uint64_t long_now;
         switch(tolower(datebuf[strlen(datebuf)-1])) {
             case 'y':
                 val *= 365;
@@ -201,9 +200,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             vmsg("日期格式輸入錯誤或是小於一天無法處理。");
             return -1;
         }
-        long_now = (uint64_t)now + val * (uint64_t)DAY_SECONDS;
-        expire = long_now;
-        if ((uint64_t)expire != long_now) {
+        if (time4_add_sec(now, (uint64_t)val * DAY_SECONDS, &expire) < 0) {
             vmsg("日期過大或無法處理，請重新輸入。");
             return -1;
         }
@@ -310,7 +307,7 @@ ui_unban_user_for_board(const char *uid, const char *board) {
     }
     move(y, 0); clrtobot();
     prints("提前解除使用者 %s 於看板 %s 的禁言限制 (尚有 %d 天)。",
-           uid, board, (expire-now)/DAY_SECONDS+1);
+           uid, board, time4_days_remaining(expire, now));
     assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
     getdata(y+1, 0, "請輸入理由(空白可取消解除): ",
             reason, BAKUMAN_REASON_LEN, DOECHO);
@@ -333,7 +330,7 @@ ui_unban_user_for_board(const char *uid, const char *board) {
               " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET
               " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
               Cdatelite(&now), cuser.userid, uid,
-              (expire - now) / DAY_SECONDS+1, reason);
+              time4_days_remaining(expire, now), reason);
     vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
     invalid_board_permission_cache(board);
     return 0;

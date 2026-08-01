@@ -87,15 +87,15 @@ int buildMasterInfo(AngelRecord *rec, int num_recs) {
             continue;
         angel = rec + (angel_uid - 1);
         angel->masters++;
-        if (now - user.timeplayangel < DAY_SECONDS * 7)
+        if (time4_diff(now, user.timeplayangel) < DAY_SECONDS * 7)
             angel->masters_week++;
-        if (now - user.timeplayangel < DAY_SECONDS * 30)
+        if (time4_diff(now, user.timeplayangel) < DAY_SECONDS * 30)
             angel->masters_month++;
-        if (now - user.timeplayangel < DAY_SECONDS * 90)
+        if (time4_diff(now, user.timeplayangel) < DAY_SECONDS * 90)
             angel->masters_quarter++;
-        if (now - user.timeplayangel < DAY_SECONDS * 120)
+        if (time4_diff(now, user.timeplayangel) < DAY_SECONDS * 120)
             angel->masters_season++;
-        if (now - user.timeplayangel < DAY_SECONDS * 180)
+        if (time4_diff(now, user.timeplayangel) < DAY_SECONDS * 180)
             angel->masters_period++;
     }
     fclose(fp);

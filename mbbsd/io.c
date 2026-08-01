@@ -455,7 +455,7 @@ dogetch(void)
 	syncnow();
 	/* 3 秒內超過兩 byte 才算 active, anti-antiidle.
 	 * 不過方向鍵等組合鍵不止 1 byte */
-	if (now - lastact < 3)
+	if (time4_diff(now, lastact) < 3)
 	    currutmp->lastact = now;
 	lastact = now;
     }

@@ -45,8 +45,8 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     if (bh) {
 	SNPRINTF(genbuf, "%s ¼Ö³z", bh->brdname);
 	if (bh->endgamble && time4_lt(now, bh->endgamble) &&
-	    bh->endgamble - now < 3600) {
-	    SNPRINTF(t, "«Ê½L­Ë¼Æ %d ¬í", (int)(bh->endgamble - now));
+	    time4_diff(bh->endgamble, now) < 3600) {
+	    SNPRINTF(t, "«Ê½L­Ë¼Æ %d ¬í", (int)time4_diff(bh->endgamble, now));
 	    showtitle(genbuf, t);
 	} else
 	    showtitle(genbuf, BBSNAME);

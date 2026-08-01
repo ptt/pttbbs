@@ -259,7 +259,7 @@ static void
 show_chicken_data(chicken_t * thechicken)
 {
     char            buf[1024];
-    int age = ((now - thechicken->cbirth) / (60 * 60 * 24));
+    int age = (time4_diff(now, thechicken->cbirth) / (60 * 60 * 24));
     if (age < 0) {
 	thechicken->birthday = thechicken->cbirth = now - 10 * (60 * 60 * 24);
 	age = 10;
@@ -543,7 +543,7 @@ static void
 time_diff(chicken_t * thechicken)
 {
     int             diff;
-    int             theage = ((now - thechicken->cbirth) / DAY_SECONDS);
+    int             theage = (time4_diff(now, thechicken->cbirth) / DAY_SECONDS);
     const short *delta = time_change[(int)thechicken->type];
 
     thechicken->type %= NUM_KINDS;
@@ -998,7 +998,7 @@ chicken_main(void)
 	}
     }
     assert(mychicken);
-    age = ((now - mychicken->cbirth) / DAY_SECONDS);
+    age = (time4_diff(now, mychicken->cbirth) / DAY_SECONDS);
     do {
 	time_diff(mychicken);
 	if (isdeath(mychicken, mychicken))

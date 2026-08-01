@@ -140,7 +140,7 @@ int main(void)
 	    STRLCPY(bms[index].bmname, p);
 	    bms[index].flag = 0;
 
-	    diff = now - xuser.lastlogin;
+	    diff = time4_diff(now, xuser.lastlogin);
 	    if (diff < 0)
 		diff = 0;
 

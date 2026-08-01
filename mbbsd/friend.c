@@ -299,7 +299,7 @@ friend_validate(int type, int expire, int badpost)
 		    // although we will have 'lastseen' in future,
 		    // never count people with PERM_HIDE.
 		    if (!(PERM_HIDE(pu)) &&
-			    now - u.lastlogin > expire)
+			    time4_diff(now, u.lastlogin) > expire)
 			continue;
 		}
 		if (badpost > 0)

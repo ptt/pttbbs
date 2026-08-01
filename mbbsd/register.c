@@ -215,7 +215,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
     /* || (urec->userlevel & PERM_LOGINOK) */
 	|| !strcmp(STR_GUEST, urec->userid))
 	return 999999;
-    value = (clock - urec->lastlogin) / 60;	/* minutes */
+    value = time4_diff(clock, urec->lastlogin) / 60;	/* minutes */
 
 #ifdef STR_REGNEW
     /* new user should register in 30 mins */

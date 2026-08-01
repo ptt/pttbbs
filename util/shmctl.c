@@ -162,7 +162,7 @@ int utmpfix(int argc, char **argv)
     for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].pid ){
 	    idle[nactive].index = i;
-	    idle[nactive].idle = now - SHM->uinfo[i].lastact;
+	    idle[nactive].idle = time4_diff(now, SHM->uinfo[i].lastact);
 	    ++nactive;
 	}
     if( !fast )
@@ -269,7 +269,7 @@ cmputmpmode(const void * i, const void * j)
 static int
 cmputmpidle(const void * i, const void * j)
 {
-    return SHM->uinfo[*(int*)i].lastact - SHM->uinfo[*(int*)j].lastact;
+    return time4_cmp(SHM->uinfo[*(int*)i].lastact, SHM->uinfo[*(int*)j].lastact);
 }
 
 static int

@@ -190,9 +190,9 @@ banned_msg(const char *bname)
     // static is bad, but this is faster...
     static char ban_msg[STRLEN];
     time4_t expire = is_banned_by_board(bname);
-    if (expire > now) {
+    if (time4_gt(expire, now)) {
         sprintf(ban_msg, "使用者不可發言(尚有%d天)",
-                ((expire - now) / DAY_SECONDS) +1);
+                time4_days_remaining(expire, now));
         return ban_msg;
     }
 #else

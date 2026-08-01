@@ -345,7 +345,7 @@ do_changeangel(int force) {
         if (is_bad_master)
             duration *= 3;
         if (cuser.timesetangel &&
-            (now - cuser.timesetangel < duration * 60)) {
+            (time4_diff(now, cuser.timesetangel) < duration * 60)) {
             vmsgf("每次更換小天使最少間隔 %d 分鐘。", duration);
             return 0;
         }
@@ -431,8 +431,8 @@ int angel_check_master(void) {
                xuser.userid);
         if (xuser.timesetangel)
             prints("小天使與主人的關係已維持了 %d 天。\n",
-                   (now - xuser.timesetangel) / DAY_SECONDS + 1);
-        if (xuser.timeplayangel && xuser.timeplayangel > xuser.timesetangel)
+                   time4_days_remaining(now, xuser.timesetangel));
+        if (xuser.timeplayangel && time4_gt(xuser.timeplayangel, xuser.timesetangel))
             prints("小主人最後與天使互動(hh成功\呼叫或點歌)的時間: %s\n",
                    Cdatelite(&xuser.timeplayangel));
         else if (xuser.timesetangel)
@@ -453,8 +453,8 @@ angel_log_order_song(const char *angel_nick) {
     char angel_exp[STRLEN];
 
     syncnow();
-    if (cuser.timesetangel && now >= cuser.timesetangel)
-        SNPRINTF(angel_exp, "%d天", (now - cuser.timesetangel) / DAY_SECONDS + 1);
+    if (cuser.timesetangel && time4_ge(now, cuser.timesetangel))
+        SNPRINTF(angel_exp, "%d天", time4_days_remaining(now, cuser.timesetangel));
     else
         STRLCPY(angel_exp, "很久");
 
@@ -468,9 +468,9 @@ angel_log_order_song(const char *angel_nick) {
 void
 angel_log_msg_to_angel(void) {
 #ifdef ANGEL_CHANGE_TIMELIMIT_MINS
-    if (cuser.timeplayangel > cuser.timesetangel) {
+    if (time4_gt(cuser.timeplayangel, cuser.timesetangel)) {
         // Try to avoid mass logs
-        if ((now - cuser.timeplayangel) >= ANGEL_CHANGE_TIMELIMIT_MINS * 60)
+        if (time4_diff(now, cuser.timeplayangel) >= ANGEL_CHANGE_TIMELIMIT_MINS * 60)
             return;
     }
 #endif
@@ -877,7 +877,7 @@ TalkToAngel(){
 	    pwcuSetMyAngel("");
 #ifdef USE_FREE_ANGEL_FOR_INACTIVE_MASTER
         } else if (!supervisor &&
-                   (now - cuser.timeplayangel >
+                   (time4_diff(now, cuser.timeplayangel) >
                     ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
             // Inactive master.
             uent = search_ulist_userid(cuser.myangel);
@@ -886,7 +886,7 @@ TalkToAngel(){
                 log_filef("log/auto_change_angel.log", LOG_CREAT,
                           "%s master %s (%d days), angel %s, state (%s)\n",
                           Cdatelite(&now), cuser.userid,
-                          (now - cuser.timeplayangel) / DAY_SECONDS,
+                          time4_diff(now, cuser.timeplayangel) / DAY_SECONDS,
                           cuser.myangel,
                           !uent ? "not online" : angel_reject_me(uent) ?
                           "reject" : uent->angelpause ? "pause" : "debugsleep");

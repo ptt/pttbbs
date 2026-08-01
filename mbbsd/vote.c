@@ -381,7 +381,7 @@ void
 auto_close_polls(void)
 {
     /* 最多一天開票一次 */
-    if (now - SHM->close_vote_time > DAY_SECONDS) {
+    if (time4_diff(now, SHM->close_vote_time) > DAY_SECONDS) {
 	b_closepolls();
 	SHM->close_vote_time = now;
     }
@@ -983,7 +983,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	fscanf(lfp, "%d%d%d", &closetime, &limits_logins, &limits_posts);
 	fclose(lfp);
 	// XXX if this is a private vote (limited), I think we don't need to check limits?
-	if (cuser.firstlogin > closetime)
+	if (time4_gt(cuser.firstlogin, closetime))
             reason = "註冊時間";
         else if (cuser.numlogindays < (uint32_t)limits_logins)
             reason = STR_LOGINDAYS;

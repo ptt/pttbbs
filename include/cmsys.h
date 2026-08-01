@@ -54,6 +54,26 @@ static inline int time4_ge(time4_t a, time4_t b) { return (uint32_t)a >= (uint32
 static inline int time4_lt(time4_t a, time4_t b) { return (uint32_t)a < (uint32_t)b; }
 static inline int time4_le(time4_t a, time4_t b) { return (uint32_t)a <= (uint32_t)b; }
 
+/* time4_t Y2038-safe unsigned arithmetic & difference helpers */
+static inline int64_t time4_diff(time4_t a, time4_t b) {
+    return (int64_t)(uint32_t)a - (int64_t)(uint32_t)b;
+}
+
+static inline int time4_days_remaining(time4_t expire, time4_t now_time) {
+    if (!time4_gt(expire, now_time))
+        return 0;
+    return (int)(time4_diff(expire, now_time) / 86400 + 1);
+}
+
+static inline int time4_add_sec(time4_t base, uint64_t seconds, time4_t *out) {
+    uint64_t res = (uint64_t)(uint32_t)base + seconds;
+    if (res > 0xFFFFFFFFULL)
+        return -1;
+    if (out)
+        *out = (time4_t)(uint32_t)res;
+    return 0;
+}
+
 /* crypt.c */
 char *fcrypt(const char *key, const char *salt);
 

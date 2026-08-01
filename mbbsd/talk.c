@@ -2022,7 +2022,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
         idlestr[0] = 0;
 #ifdef SHOW_IDLE_TIME
-	idletime = (now - uentp->lastact);
+	idletime = time4_diff(now, uentp->lastact);
 	if (idletime > DAY_SECONDS)
 	    STRLCPY(idlestr, " -----");
 	else if (idletime >= 3600)

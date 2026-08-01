@@ -1956,7 +1956,7 @@ choose_board(int newflag)
 		    if (!GROUPOP())	/* 如果還沒有小組長權限 */
 			set_menu_group_op(B_BH(ptr)->BM);
 
-		    if (now < B_BH(ptr)->bupdate) {
+		    if (time4_lt(now, B_BH(ptr)->bupdate)) {
 			int mr = 0;
 
 			setbfile(buf, B_BH(ptr)->brdname, fn_notes);
