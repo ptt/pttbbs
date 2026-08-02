@@ -1,14 +1,76 @@
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
-/* pager processor                                       */
+/* pager processor (Step 1: Extract OFO UI hook)        */
 /* ----------------------------------------------------- */
 
-int
+static int
+pager_handle_ctrl_u(int ch)
+{
+    if (!is_login_ready || !currutmp ||
+        !HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_VIOLATELAW))
+        return ch;
+    if (currutmp->mode == EDITING ||
+        currutmp->mode == LUSERS  ||
+        !currutmp->mode) {
+        return ch;
+    } else {
+        screen_backup_t old_screen;
+        int             my_newfd;
+
+        scr_dump(&old_screen);
+        my_newfd = vkey_detach();
+
+        t_users();
+
+        vkey_attach(my_newfd);
+        scr_restore(&old_screen);
+    }
+    return KEY_INCOMPLETE;
+}
+
+static int
+pager_handle_ctrl_r_ofo(int ch)
+{
+    int my_newfd;
+    screen_backup_t old_screen;
+
+    if (!currutmp->msgs[0].pid ||
+        wmofo != NOTREPLYING)
+        return ch;
+
+    scr_dump(&old_screen);
+
+    my_newfd = vkey_detach();
+    ofo_my_write();
+    scr_restore(&old_screen);
+    vkey_attach(my_newfd);
+    return KEY_INCOMPLETE;
+}
+
+static int
+pager_ofo_key_hook(int ch)
+{
+    switch (ch)
+    {
+    case Ctrl('U'):
+        return pager_handle_ctrl_u(ch);
+
+    case Ctrl('R'):
+        return pager_handle_ctrl_r_ofo(ch);
+    }
+    return ch;
+}
+
+static int
 process_pager_keys(int ch)
 {
     static int water_which_flag = 0;
     assert(currutmp);
+
+    if (PAGER_UI_IS(PAGER_UI_OFO))
+        return pager_ofo_key_hook(ch);
+
     switch (ch)
     {
 	case Ctrl('U') :
@@ -35,25 +97,6 @@ process_pager_keys(int ch)
 
 	    // TODO 醜死了的 code ，等好心人 refine
 	case Ctrl('R'):
-
-	    if (PAGER_UI_IS(PAGER_UI_OFO))
-	    {
-		int my_newfd;
-		screen_backup_t old_screen;
-
-		if (!currutmp->msgs[0].pid ||
-		    wmofo != NOTREPLYING)
-		    break;
-
-		scr_dump(&old_screen);
-
-		my_newfd = vkey_detach();
-		ofo_my_write();
-		scr_restore(&old_screen);
-		vkey_attach(my_newfd);
-		return KEY_INCOMPLETE;
-
-	    }
 
 	    // non-UFO
 	    check_water_init();
