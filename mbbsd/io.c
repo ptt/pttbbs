@@ -200,7 +200,7 @@ process_pager_keys(int ch)
 	    {
 		watermode = (watermode + water_which->count)
 		    % water_which->count + 1;
-		t_display_new();
+		pager_show_panel();
 		return KEY_INCOMPLETE;
 	    }
 	    else if (watermode == 0 &&
@@ -210,7 +210,7 @@ process_pager_keys(int ch)
 	    {
 		/* ²Ä¤G¦¸«ö Ctrl-R */
 		watermode = 1;
-		t_display_new();
+		pager_show_panel();
 		return KEY_INCOMPLETE;
 	    }
 	    else if (watermode == -1 &&
@@ -262,7 +262,7 @@ process_pager_keys(int ch)
 	    check_water_init();
 	    watermode = (watermode + water_which->count)
 		% water_which->count + 1;
-	    t_display_new();
+	    pager_show_panel();
 	    return KEY_INCOMPLETE;
 
 	case Ctrl('T'):
@@ -275,7 +275,7 @@ process_pager_keys(int ch)
 		watermode--;
 	    else
 		watermode = water_which->count;
-	    t_display_new();
+	    pager_show_panel();
 	    return KEY_INCOMPLETE;
 
 	case Ctrl('F'):
@@ -290,7 +290,7 @@ process_pager_keys(int ch)
 	    else
 		water_which = swater[water_which_flag - 1];
 	    watermode = 1;
-	    t_display_new();
+	    pager_show_panel();
 	    return KEY_INCOMPLETE;
 
 	case Ctrl('G'):
@@ -306,7 +306,7 @@ process_pager_keys(int ch)
 		water_which = swater[water_which_flag - 1];
 
 	    watermode = 1;
-	    t_display_new();
+	    pager_show_panel();
 	    return KEY_INCOMPLETE;
     }
     return ch;

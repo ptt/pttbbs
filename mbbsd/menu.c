@@ -734,7 +734,7 @@ static const commands_t talklist[] = {
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
                             "BAngel Beats! 天使公會"},
 #endif
-    {t_display, 0,          "Display       顯示上幾次熱訊"},
+    {pager_show_log, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 

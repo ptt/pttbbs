@@ -1979,7 +1979,7 @@ userlist(void)
 
 	    case 'l':
 		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    t_display();
+		    pager_show_log();
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -1991,7 +1991,7 @@ userlist(void)
 
 	    case 'p':
 		if (HasUserPerm(PERM_BASIC)) {
-		    t_pager();
+		    pager_toggle_mode();
 		    redrawall = redraw = 1;
 		}
 		break;

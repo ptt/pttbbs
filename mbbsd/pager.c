@@ -490,7 +490,7 @@ getmessage(msgque_t msg)
 }
 
 void
-t_display_new(void)
+pager_show_panel(void)
 {
     static int      t_display_new_flag = 0;
     int             i, off = 2;
@@ -578,7 +578,7 @@ t_display_new(void)
 }
 
 int
-t_display(void) {
+pager_show_log(void) {
     char genbuf[PATHLEN], ans[4];
     if (fp_writelog) {
         // Why not simply fflush here? Because later when user enter (M) or (C),
@@ -634,7 +634,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 
 
 int
-t_pager(void)
+pager_toggle_mode(void)
 {
     currutmp->pager = (currutmp->pager + 1) % PAGER_MODES;
     return 0;
@@ -698,7 +698,7 @@ pager_handle_ctrl_r_default(int ch)
         // Press Ctrl-R for N+ times.
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
     }
     else if (watermode == 0 &&
@@ -708,7 +708,7 @@ pager_handle_ctrl_r_default(int ch)
     {
         // Press Ctrl-R for the "2nd" time.
         watermode = 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
     }
     else if (watermode == -1 &&
@@ -783,7 +783,7 @@ pager_orig_key_hook(int ch)
         check_water_init();
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('T'):
@@ -795,7 +795,7 @@ pager_orig_key_hook(int ch)
             watermode--;
         else
             watermode = water_which->count;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
     }
     return ch;
@@ -821,7 +821,7 @@ pager_new_key_hook(int ch)
         check_water_init();
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('T'):
@@ -833,7 +833,7 @@ pager_new_key_hook(int ch)
             watermode--;
         else
             watermode = water_which->count;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('F'):
@@ -848,7 +848,7 @@ pager_new_key_hook(int ch)
         else
             water_which = swater[water_which_flag - 1];
         watermode = 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('G'):
@@ -864,7 +864,7 @@ pager_new_key_hook(int ch)
             water_which = swater[water_which_flag - 1];
 
         watermode = 1;
-        t_display_new();
+        pager_show_panel();
         return KEY_INCOMPLETE;
     }
     return ch;
@@ -1061,7 +1061,7 @@ add_history(const msgque_t * msg)
         (water_which == swater[0] || water_which == &water[0])) {
         if (watermode < water_which->count)
             watermode++;
-        t_display_new();
+        pager_show_panel();
     }
 
     return 0;
