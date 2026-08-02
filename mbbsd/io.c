@@ -314,6 +314,64 @@ process_pager_keys(int ch)
     return ch;
 }
 
+#define MAX_HOOKS_PER_PRIO 8
+
+static vkey_hook_fn hook_tables[VKEY_HOOK_PRIO_MAX][MAX_HOOKS_PER_PRIO];
+static int hook_counts[VKEY_HOOK_PRIO_MAX];
+
+int
+vkey_register_hook(VKeyHookPriority prio, vkey_hook_fn fn)
+{
+    int i;
+    if (prio < 0 || prio >= VKEY_HOOK_PRIO_MAX || !fn)
+        return -1;
+
+    if (hook_counts[prio] >= MAX_HOOKS_PER_PRIO)
+        return -1;
+
+    for (i = 0; i < hook_counts[prio]; i++) {
+        if (hook_tables[prio][i] == fn)
+            return 0;
+    }
+
+    hook_tables[prio][hook_counts[prio]++] = fn;
+    return 0;
+}
+
+int
+vkey_unregister_hook(vkey_hook_fn fn)
+{
+    int p, i, j;
+    if (!fn) return -1;
+    for (p = 0; p < VKEY_HOOK_PRIO_MAX; p++) {
+        for (i = 0; i < hook_counts[p]; i++) {
+            if (hook_tables[p][i] == fn) {
+                for (j = i; j < hook_counts[p] - 1; j++) {
+                    hook_tables[p][j] = hook_tables[p][j + 1];
+                }
+                hook_counts[p]--;
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+int
+vkey_dispatch_hooks(int ch)
+{
+    int p, i;
+    for (p = 0; p < VKEY_HOOK_PRIO_MAX; p++) {
+        for (i = 0; i < hook_counts[p]; i++) {
+            int ret = hook_tables[p][i](ch);
+            if (ret == KEY_INCOMPLETE)
+                return KEY_INCOMPLETE;
+            ch = ret;
+        }
+    }
+    return ch;
+}
+
 #ifndef USE_NIOS
 
 /* ----------------------------------------------------- */

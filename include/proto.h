@@ -347,6 +347,20 @@ int  vkey_is_full(void);     // test if input buffer is full
 void vkey_purge(void);		// discard clear all data in input buffer
 int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
 int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
+
+typedef enum {
+    VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
+    VKEY_HOOK_PRIO_MODAL,      // Modal dialogs/popups (e.g., active waterball list)
+    VKEY_HOOK_PRIO_PAGER,      // Global Pager/waterball hotkeys (e.g., Ctrl-R, Ctrl-U)
+    VKEY_HOOK_PRIO_NORMAL,     // Normal screen handlers
+    VKEY_HOOK_PRIO_MAX
+} VKeyHookPriority;
+
+typedef int (*vkey_hook_fn)(int ch);
+
+int vkey_register_hook(VKeyHookPriority prio, vkey_hook_fn fn);
+int vkey_unregister_hook(vkey_hook_fn fn);
+int vkey_dispatch_hooks(int ch);
 /////////////////////////////////////////////////////////////////////////////
 #ifdef  EXP_NIOS
 #define USE_NIOS_VKEY
