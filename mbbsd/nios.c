@@ -514,6 +514,10 @@ vkey_process(int timeout, int peek)
             continue;
         }
 
+        // Going to wait user input, and let's refresh the screen to make sure
+        // every pending update is really shown to the user.
+        refresh();
+
         // XXX should we let cin_poll select from fds of fd_empty?
 
         // now, try to read from fd.
