@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strings"
+	"syscall"
 	"time"
 
 	"pttbbs/aloha/daemon"
@@ -15,11 +18,15 @@ import (
 )
 
 func main() {
-	bbsHome := bbs.BBSHome()
+	bbsHome := os.Getenv("BBSHOME")
+	if bbsHome == "" {
+		bbsHome = bbs.BBSHome()
+	}
 
 	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/aloha.svc.log)")
-	debugMode := flag.Bool("d", false, "Enable debug mode (log directly to stdout)")
-	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -d)")
+	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
+	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -D)")
+	daemonize := flag.Bool("d", true, "Daemonize mode (fork and exit 0 after setup ok)")
 	maxProcs := flag.Int("maxprocs", 2, "GOMAXPROCS limit (default: 2)")
 	maxThreads := flag.Int("maxthreads", 1000, "Max OS threads limit (default: 1000)")
 	gcPercent := flag.Int("gcpercent", 50, "GC percent target (default: 50)")
@@ -27,6 +34,26 @@ func main() {
 	flag.DurationVar(reconcileInterval, "reconcile", 1*time.Hour, "Alias for -reconcile-interval")
 
 	flag.Parse()
+
+	if *debugMode {
+		*daemonize = false
+	}
+
+	socketPath := filepath.Join(bbsHome, "run", "aloha.svc.sock")
+
+	if *daemonize {
+		if daemon.IsSocketOccupied(socketPath) {
+			fmt.Fprintf(os.Stderr, "[aloha.svc] Error: UNIX domain socket %s is already occupied by another instance\n", socketPath)
+			os.Exit(1)
+		}
+
+		if err := forkDaemon(); err != nil {
+			fmt.Fprintf(os.Stderr, "[aloha.svc] Failed to daemonize: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("[aloha.svc] Starting PTT BBS Aloha Service in background...\n")
+		os.Exit(0)
+	}
 
 	if *logPath == "" {
 		*logPath = filepath.Join(bbsHome, "log", "aloha.svc.log")
@@ -44,14 +71,14 @@ func main() {
 
 	log.SetFlags(log.LstdFlags)
 
-	// Always print startup banner to stdout so user receives immediate startup feedback
+	// Print startup banner so stdout receives startup feedback when running directly or in debug
 	fmt.Printf("[aloha.svc] Starting PTT BBS Aloha Service...\n")
 	fmt.Printf("[aloha.svc] BBSHOME: %s, Log: %s\n", bbsHome, *logPath)
 	fmt.Printf("[aloha.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v\n", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval)
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
-		log.Printf("[aloha.svc] Debug mode enabled (-d): logging directly to stdout")
+		log.Printf("[aloha.svc] Debug mode enabled (-D/-debug): logging directly to stdout")
 	} else {
 		// Configure logger to write to log file for all subsequent operational logs
 		if err := os.MkdirAll(filepath.Dir(*logPath), 0755); err == nil {
@@ -68,7 +95,7 @@ func main() {
 		}
 	}
 
-	service, err := daemon.NewService(bbsHome)
+	service, err := daemon.NewService(bbsHome, socketPath)
 	if err != nil {
 		log.Fatalf("[aloha.svc] Failed to initialize Aloha Service: %v", err)
 	}
@@ -80,6 +107,29 @@ func main() {
 	}
 }
 
-func logPrefix() string {
-	return time.Now().Format("2006/01/02 15:04:05")
+func forkDaemon() error {
+	execPath, err := os.Executable()
+	if err != nil {
+		execPath = os.Args[0]
+	}
+
+	var args []string
+	for i := 1; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "-d" || strings.HasPrefix(arg, "-d=") || arg == "--d" || strings.HasPrefix(arg, "--d=") {
+			continue
+		}
+		args = append(args, arg)
+	}
+	args = append(args, "-d=false")
+
+	cmd := exec.Command(execPath, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	return cmd.Start()
 }

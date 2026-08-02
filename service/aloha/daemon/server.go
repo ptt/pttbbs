@@ -89,14 +89,23 @@ type Response struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+// IsSocketOccupied checks if another active process is listening on the UNIX domain socket
+func IsSocketOccupied(socketPath string) bool {
+	conn, err := net.DialTimeout("unix", socketPath, 500*time.Millisecond)
+	if err == nil {
+		conn.Close()
+		return true
+	}
+	return false
+}
+
 func (s *Service) Start() error {
 	if err := os.MkdirAll(filepath.Dir(s.socketPath), 0755); err != nil {
 		return err
 	}
 
 	// Check if another active instance is already listening on this socket
-	if conn, err := net.DialTimeout("unix", s.socketPath, 500*time.Millisecond); err == nil {
-		conn.Close()
+	if IsSocketOccupied(s.socketPath) {
 		return fmt.Errorf("another instance of aloha.svc is already running and listening on socket %s", s.socketPath)
 	}
 
