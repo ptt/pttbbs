@@ -40,6 +40,8 @@ type Service struct {
 
 	// sem limits concurrent active IPC connections to prevent goroutine explosion
 	sem chan struct{}
+
+	reconcileInterval time.Duration
 }
 
 func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
@@ -63,6 +65,7 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		bbsHome:           bbsHome,
 		shmClient:         shmClient,
 		socketPath:        socketPath,
+		reconcileInterval: 1 * time.Hour,
 		onlineSessions:    make(map[int]SubscriberSession),
 		onlineSubscribers: make(map[string]map[int]SubscriberSession),
 		userPIDs:          make(map[string]map[int]bool),
@@ -111,6 +114,9 @@ func (s *Service) Start() error {
 	startMemoryReporter(1 * time.Hour)
 
 	s.ScanOnlineSessions()
+	if s.reconcileInterval > 0 {
+		s.StartReconciler(s.reconcileInterval)
+	}
 
 	for {
 		conn, err := listener.Accept()
@@ -436,4 +442,76 @@ func logMemStats() {
 		float64(m.HeapSys)/(1024*1024),
 		float64(m.Sys)/(1024*1024),
 		m.NumGC)
+}
+
+func (s *Service) SetReconcileInterval(interval time.Duration) {
+	s.reconcileInterval = interval
+}
+
+func (s *Service) StartReconciler(interval time.Duration) {
+	if interval <= 0 {
+		return
+	}
+	ticker := time.NewTicker(interval)
+	go func() {
+		log.Printf("[aloha.svc] Started background reconciler with interval: %v", interval)
+		for range ticker.C {
+			s.ReconcileOnlineSessions()
+		}
+	}()
+}
+
+func (s *Service) ReconcileOnlineSessions() (added int, removed int) {
+	if s.shmClient == nil {
+		return 0, 0
+	}
+	start := time.Now()
+
+	sessions := s.shmClient.GetOnlineSessions()
+
+	type shmSessInfo struct {
+		userID string
+		sid    int
+	}
+	activeSHM := make(map[int]shmSessInfo, len(sessions))
+	for _, sess := range sessions {
+		if sess.UserID != "" && sess.PID > 0 {
+			activeSHM[sess.PID] = shmSessInfo{
+				userID: sess.UserID,
+				sid:    sess.SID,
+			}
+		}
+	}
+
+	s.mu.Lock()
+	var toClean []SubscriberSession
+	for pid, session := range s.onlineSessions {
+		shmInfo, exists := activeSHM[pid]
+		if !exists || !strings.EqualFold(shmInfo.userID, session.UserID) {
+			toClean = append(toClean, session)
+		}
+	}
+
+	cleanedCount := 0
+	for _, sess := range toClean {
+		cleanedCount += s.cleanupSessionLocked(sess)
+		removed++
+	}
+	s.mu.Unlock()
+
+	for pid, shmInfo := range activeSHM {
+		s.mu.RLock()
+		_, exists := s.onlineSessions[pid]
+		s.mu.RUnlock()
+
+		if !exists {
+			s.RegisterSubscriber(shmInfo.userID, pid, shmInfo.sid)
+			added++
+		}
+	}
+
+	elapsed := time.Since(start)
+	log.Printf("[aloha.svc] RECONCILE: cleaned %d stale sessions (removed %d subscriptions), added %d new sessions from SHM in %v",
+		len(toClean), cleanedCount, added, elapsed)
+	return added, removed
 }

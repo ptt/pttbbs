@@ -151,3 +151,36 @@ func TestDuplicateInstancePrevention(t *testing.T) {
 		t.Fatalf("Expected error to contain \"already running\", got: %v", err2)
 	}
 }
+
+func TestReconcileOnlineSessions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "aloha_reconcile_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	svc, err := NewService(tempDir, sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create service: %v", err)
+	}
+	svc.shmClient = nil
+
+	svc.SetReconcileInterval(1 * time.Hour)
+	if svc.reconcileInterval != 1*time.Hour {
+		t.Fatalf("Expected reconcileInterval to be 1h, got %v", svc.reconcileInterval)
+	}
+
+	svc.ProcessRequest(Request{Action: "login", UserID: "staleuser", PID: 9999, SID: 9})
+
+	svc.mu.RLock()
+	if len(svc.onlineSessions) != 1 {
+		t.Fatalf("Expected 1 online session, got %d", len(svc.onlineSessions))
+	}
+	svc.mu.RUnlock()
+
+	added, removed := svc.ReconcileOnlineSessions()
+	if added != 0 || removed != 0 {
+		t.Fatalf("Expected 0 added and 0 removed when shmClient is nil, got added=%d removed=%d", added, removed)
+	}
+}
