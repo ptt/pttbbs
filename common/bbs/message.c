@@ -19,31 +19,38 @@ int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
         return -4;
     }
 
-    int pos = (int)uentp->msgcount;
-    if (pos >= MAX_MSGS) {
-        return -3;
-    }
+    pid_t target_pid = from_pid > 0 ? from_pid : uentp->pid;
+    int pos = -1;
+    msgque_t *msg = NULL;
 
-    msgque_t *msg = &(uentp->msgs[pos]);
-    if (msg->pid) {
-        for (pos = 0; pos < MAX_MSGS; pos++) {
-            msg = &(uentp->msgs[pos]);
-            if (!msg->pid) {
-                break;
-            }
+    for (int i = 0; i < MAX_MSGS; i++) {
+        msgque_t *cand = &(uentp->msgs[i]);
+        if (__sync_bool_compare_and_swap(&cand->pid, 0, target_pid)) {
+            pos = i;
+            msg = cand;
+            break;
         }
     }
 
-    msg->pid = from_pid > 0 ? from_pid : uentp->pid;
+    if (pos < 0 || pos >= MAX_MSGS) {
+        return -3;
+    }
+
     msg->msgmode = msgmode;
     if (from_id) {
         STRLCPY(msg->userid, from_id);
     }
     if (text) {
-        STRLCPY(msg->last_call_in,text);
+        STRLCPY(msg->last_call_in, text);
     }
 
-    uentp->msgcount = pos + 1;
+    while (1) {
+        int cur_count = uentp->msgcount;
+        if (cur_count >= pos + 1)
+            break;
+        if (__sync_bool_compare_and_swap(&uentp->msgcount, cur_count, pos + 1))
+            break;
+    }
 
     int r = kill(uentp->pid, SIGUSR2);
     if (r != 0) {
