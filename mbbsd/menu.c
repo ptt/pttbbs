@@ -725,7 +725,7 @@ static const commands_t talklist[] = {
     // 沒道理可以 talk 不能水球。
     {t_talk, PERM_LOGINOK,  "Talk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
-    {t_chat, PERM_LOGINOK,  "Chat          【" BBSMNAME2 "多人聊天室】"},
+    {t_chat, PERM_LOGINOK,  "Chat          多人聊天室"},
     {deprecate_userlist, 0, "Pager         切換呼叫器"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
@@ -1037,7 +1037,7 @@ static const commands_t conn6list[] = {
 };
 
 static int conn6_menu() {
-    domenu(M_CHC, BBSMNAME2 "六子棋", '1', conn6list);
+    domenu(M_CHC, "六子棋", '1', conn6list);
     return 0;
 }
 
