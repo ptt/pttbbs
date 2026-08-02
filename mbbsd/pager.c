@@ -1,5 +1,7 @@
 #include "bbs.h"
 
+const int PAGER_TABS = WB_OFO_USER_NUM;
+
 /* ----------------------------------------------------- */
 /* pager processor (Step 3: Extract ORIG UI hook & Table Dispatch) */
 /* ----------------------------------------------------- */
@@ -322,10 +324,13 @@ show_call_in(int save, int which)
 }
 
 static int
-add_history_water(water_t * w, const msgque_t * msg)
+add_history_entry(water_t * w, const msgque_t * msg)
 {
     memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
+    // TODO: In Pager_UI_OFO, the ofo_water_scr is hard-coded to 5 rows.
+    // We should fix that in the future, but meanwhile msg[5] is for the buffer
+    // of user input. We need to refactor all these together.
     w->top %= PAGER_UI_IS(PAGER_UI_OFO) ? 5 : MAX_REVIEW;
 
     if (w->count < MAX_REVIEW)
@@ -340,65 +345,93 @@ is_angel_msgmode(int mode)
     return (mode == MSGMODE_FROMANGEL || mode == MSGMODE_TOANGEL);
 }
 
+static inline int
+is_swater_compatible(const water_t *w, const msgque_t *msg)
+{
+    if (w->pid != msg->pid)
+        return 0;
+
+    if (!HAS_ANGEL)
+        return 1;
+
+    /* Angel modes (FROMANGEL/TOANGEL) and Non-Angel modes (WRITE/ALOHA/TALK)
+     * must never mix, but all Angel modes match each other and all Non-Angel modes match each other. */
+    return is_angel_msgmode(w->msg[0].msgmode) == is_angel_msgmode(msg->msgmode);
+}
+
+/* Locate or allocate a swater session slot, promoting it to swater[0] */
+static water_t *
+swater_get_slot(const msgque_t *msg)
+{
+    int i, j;
+    int waterinit = 0;
+    water_t *tmp;
+
+    assert(PAGER_TABS <= ARRAY_SIZE(swater));
+
+    for (i = 0; i < PAGER_TABS; i++) {
+        if (swater[i] == NULL)
+            break;
+        if (is_swater_compatible(swater[i], msg))
+            break;
+    }
+
+    if (i == PAGER_TABS) {
+        waterinit = 1;
+        i = PAGER_TABS - 1;
+        memset(swater[i], 0, sizeof(water_t));
+    } else if (!swater[i]) {
+        water_usies = i + 1;
+        swater[i] = &water[i + 1];
+        waterinit = 1;
+    }
+
+    tmp = swater[i];
+
+    if (waterinit) {
+        memcpy(swater[i]->userid, msg->userid, sizeof(swater[i]->userid));
+        swater[i]->pid = msg->pid;
+    }
+    if (!swater[i]->uin)
+        swater[i]->uin = currutmp;
+
+    /* Shift elements so the active slot becomes swater[0] */
+    for (j = i; j > 0; j--)
+        swater[j] = swater[j - 1];
+    swater[0] = tmp;
+
+    return swater[0];
+}
+
 static int
 add_history(const msgque_t * msg)
 {
-    int             i = 0, j, waterinit = 0;
-    water_t        *tmp;
     check_water_init();
-    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW))
-        add_history_water(&water[0], msg);
-    if (PAGER_UI_IS(PAGER_UI_NEW) || PAGER_UI_IS(PAGER_UI_OFO)) {
-        for (i = 0; i < WB_OFO_USER_NUM; i++) {
-            if (swater[i] == NULL)
-                break;
-            if (swater[i]->pid == msg->pid
-                && (!HAS_ANGEL ||
-                    (is_angel_msgmode(swater[i]->msg[0].msgmode) || is_angel_msgmode(msg->msgmode)
-                     ? swater[i]->msg[0].msgmode == msg->msgmode
-                     : 1))
-                /* When throwing waterball to angel directly */
-               )
-                break;
-        }
-        if (i == WB_OFO_USER_NUM) {
-            waterinit = 1;
-            i = WB_OFO_USER_NUM - 1;
-            memset(swater[i], 0, sizeof(water_t));
-        } else if (!swater[i]) {
-            water_usies = i + 1;
-            swater[i] = &water[i + 1];
-            waterinit = 1;
-        }
-        tmp = swater[i];
 
-        if (waterinit) {
-            memcpy(swater[i]->userid, msg->userid, sizeof(swater[i]->userid));
-            swater[i]->pid = msg->pid;
-        }
-        if (!swater[i]->uin)
-            swater[i]->uin = currutmp;
+    /* 1. Always record to global linear history buffer (water[0]) */
+    add_history_entry(&water[0], msg);
 
-        for (j = i; j > 0; j--)
-            swater[j] = swater[j - 1];
-        swater[0] = tmp;
-        add_history_water(swater[0], msg);
+    /* 2. Record to per-user session history buffer (swater[0]) */
+    if (!PAGER_UI_IS(PAGER_UI_ORIG)) {
+        water_t *target_slot = swater_get_slot(msg);
+        add_history_entry(target_slot, msg);
     }
-    if (PAGER_UI_IS(PAGER_UI_ORIG) || PAGER_UI_IS(PAGER_UI_NEW)) {
-        if (watermode > 0 &&
-            (water_which == swater[0] || water_which == &water[0])) {
-            if (watermode < water_which->count)
-                watermode++;
-            t_display_new();
-        }
+
+    /* 3. Refresh display if user is currently reviewing messages */
+    if (watermode > 0 &&
+        (water_which == swater[0] || water_which == &water[0])) {
+        if (watermode < water_which->count)
+            watermode++;
+        t_display_new();
     }
-    return i;
+
+    return 0;
 }
 
 void
 write_request(int sig)
 {
-    int             i, msgcount;
+    int i, msgcount;
 
     STATINC(STAT_WRITEREQUEST);
     syncnow();
