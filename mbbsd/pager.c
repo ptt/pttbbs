@@ -23,133 +23,192 @@ static char     t_last_write[80];
 
 void check_water_init(void)
 {
-    if(water==NULL) {
-        water = (water_t*)malloc(sizeof(water_t) * (WB_OFO_USER_NUM + 1));
-        memset(water, 0, sizeof(water_t) * (WB_OFO_USER_NUM + 1));
-        water_which = &water[0];
+    if(water)
+        return;
 
-        STRLCPY(water[0].userid, " 全部 ");
-    }
+    water = (water_t*)malloc(sizeof(water_t) * (WB_OFO_USER_NUM + 1));
+    memset(water, 0, sizeof(water_t) * (WB_OFO_USER_NUM + 1));
+    water_which = &water[0];
+
+    STRLCPY(water[0].userid, " 全部 ");
 }
 
 static void
-ofo_water_scr(const water_t * tw, int which, char type)
+ofo_water_scr(const water_t *tw, int which, char type)
 {
-    if (type == 1) {
-        int             i;
-        const int colors[] = {33, 37, 33, 37, 33};
-        move(8 + which, 28);
-        SOLVE_ANSI_CACHE();
-        prints(ANSI_COLOR(0;1;37;45) "  %c %-14s " ANSI_RESET,
-               tw->uin ? ' ' : 'x',
-               tw->userid);
-        for (i = 0; i < 5; ++i) {
-            move(16 + i, 4);
-            SOLVE_ANSI_CACHE();
-            if (tw->msg[(tw->top - i + 4) % 5].last_call_in[0] != 0)
-                prints("   " ANSI_COLOR(1;%d;44) "★%-64s" ANSI_RESET "   \n",
-                       colors[i],
-                       tw->msg[(tw->top - i + 4) % 5].last_call_in);
-            else
-                outs("　\n");
-        }
+    move(8 + which, 28);
+    SOLVE_ANSI_CACHE();
 
-        move(21, 4);
-        SOLVE_ANSI_CACHE();
-        prints("   " ANSI_COLOR(1;37;46) "%-66s" ANSI_RESET "   \n",
-               tw->msg[5].last_call_in);
-
-        move(0, 0);
-        SOLVE_ANSI_CACHE();
-        clrtoeol();
-        if (HAS_ANGEL && tw->msg[0].msgmode == MSGMODE_TOANGEL)
-            outs("回答小主人: ");
-        else
-            prints("反擊 %s: ", tw->userid);
-    } else {
-
-        move(8 + which, 28);
-        SOLVE_ANSI_CACHE();
+    if (type != 1) {
         prints(ANSI_COLOR(0;1;37;44) "  %c %-13s　" ANSI_RESET,
-               tw->uin ? ' ' : 'x',
-               tw->userid);
+               tw->uin ? ' ' : 'x', tw->userid);
+        return;
+    }
+
+    prints(ANSI_COLOR(0;1;37;45) "  %c %-14s " ANSI_RESET,
+           tw->uin ? ' ' : 'x', tw->userid);
+
+    static const int colors[] = {33, 37, 33, 37, 33};
+    for (int i = 0; i < 5; ++i) {
+        move(16 + i, 4);
+        SOLVE_ANSI_CACHE();
+        const char *call_in_msg = tw->msg[(tw->top - i + 4) % 5].last_call_in;
+        if (call_in_msg[0] != '\0')
+            prints("   " ANSI_COLOR(1;%d;44) "★%-64s" ANSI_RESET "   \n",
+                   colors[i], call_in_msg);
+        else
+            outs("　\n");
+    }
+
+    move(21, 4);
+    SOLVE_ANSI_CACHE();
+    prints("   " ANSI_COLOR(1;37;46) "%-66s" ANSI_RESET "   \n",
+           tw->msg[5].last_call_in);
+
+    move(0, 0);
+    SOLVE_ANSI_CACHE();
+    clrtoeol();
+    if (HAS_ANGEL && tw->msg[0].msgmode == MSGMODE_TOANGEL)
+        outs("回答小主人: ");
+    else
+        prints("反擊 %s: ", tw->userid);
+}
+
+static void
+ofo_init_screen(void)
+{
+    move(WB_OFO_USER_TOP - 1, 0);
+    SOLVE_ANSI_CACHE();
+    clrtoln(WB_OFO_MSG_BOTTOM + 1);
+    SOLVE_ANSI_CACHE();
+
+#ifndef USE_PFTERM
+    refresh();
+#endif
+
+    mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
+           ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
+
+    for (int i = 0; i < WB_OFO_USER_NUM; ++i) {
+        if (swater[i] == NULL || swater[i]->pid == 0)
+            break;
+
+        if (swater[i]->uin &&
+            (swater[i]->pid != swater[i]->uin->pid ||
+             swater[i]->userid[0] != swater[i]->uin->userid[0]))
+            swater[i]->uin = (userinfo_t *) search_ulist_pid(swater[i]->pid);
+
+        ofo_water_scr(swater[i], i, 0);
+    }
+
+    move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
+    outs(ANSI_RESET " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
+         "─────────────────────────────────"
+         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
+
+    move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
+    outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
+         "─────────────────────────────────"
+         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
+
+    ofo_water_scr(swater[0], 0, 1);
+    refresh();
+}
+
+static void
+ofo_switch_user(int *which, int delta)
+{
+    if (water_usies <= 1)
+        return;
+
+    assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
+    int curr = *which;
+    int next = (curr + delta + water_usies) % water_usies;
+
+    ofo_water_scr(swater[curr], curr, 0);
+    ofo_water_scr(swater[next], next, 1);
+    *which = next;
+    refresh();
+}
+
+static int
+ofo_get_confirm_mode(const water_t *tw, char genbuf[256])
+{
+    if (HAS_ANGEL) {
+        switch (tw->msg[0].msgmode) {
+        case MSGMODE_TOANGEL:
+            strlcpy(genbuf, "回答小主人:", 256);
+            return WATERBALL_CONFIRM_ANSWER;
+        case MSGMODE_FROMANGEL:
+            strlcpy(genbuf, "再問他一次：", 256);
+            return WATERBALL_CONFIRM_ANGEL;
+        default:
+            break;
+        }
+    }
+    snprintf(genbuf, 256, "攻擊 %s:", tw->userid);
+    return WATERBALL_CONFIRM;
+}
+
+static void
+ofo_reply_waterball(water_t *tw, int ch)
+{
+    if (!tw || !tw->uin)
+        return;
+
+    char msg[80];
+    if ((ch < 0x100 && !isascii(ch)) || isprint(ch)) {
+        msg[0] = (char)ch;
+        msg[1] = '\0';
+    } else {
+        msg[0] = '\0';
+    }
+
+    move(0, 0);
+    SOLVE_ANSI_CACHE();
+    outs(ANSI_RESET);
+    clrtoeol();
+
+    char genbuf[256];
+    int confirm_mode = ofo_get_confirm_mode(tw, genbuf);
+
+    if (getdata_buf(0, 0, genbuf, msg, 80 - strlen(tw->userid) - 6, DOECHO)) {
+        if (my_write(tw->pid, msg, tw->userid, confirm_mode, tw->uin))
+            STRLCPY(tw->msg[5].last_call_in, t_last_write);
     }
 }
 
 void
 ofo_my_write(void)
 {
-    int             i, ch, currstat0;
-    char            genbuf[256], msg[80], done = 0, c0, which;
-    water_t        *tw;
-    unsigned char   mode0;
-
     check_water_init();
     if (swater[0] == NULL)
         return;
+
     wmofo = REPLYING;
-    currstat0 = currstat;
-    c0 = currutmp->chatid[0];
-    mode0 = currutmp->mode;
+    int currstat0 = currstat;
+    char c0 = currutmp->chatid[0];
+    unsigned char mode0 = currutmp->mode;
+
     currutmp->mode = 0;
     currutmp->chatid[0] = 3;
     currstat = DBACK;
 
-    //init screen
-    move(WB_OFO_USER_TOP-1, 0);
-    SOLVE_ANSI_CACHE();
-    clrtoln(WB_OFO_MSG_BOTTOM+1);
-    SOLVE_ANSI_CACHE();
-    // extra refresh to solve stupid screen.c escape caching issue
-#ifndef USE_PFTERM
-    refresh();
-#endif
-    mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
-           ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
-    for (i = 0; i < WB_OFO_USER_NUM; ++i)
-        if (swater[i] == NULL || swater[i]->pid == 0)
-            break;
-        else {
-            if (swater[i]->uin &&
-                (swater[i]->pid != swater[i]->uin->pid ||
-                 swater[i]->userid[0] != swater[i]->uin->userid[0]))
-                swater[i]->uin = search_ulist_pid(swater[i]->pid);
-            ofo_water_scr(swater[i], i, 0);
-        }
-    move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
-    outs(ANSI_RESET " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
-         "─────────────────────────────────"
-         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
-    move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
-    outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36)
-         "─────────────────────────────────"
-         ANSI_COLOR(1;35) "◇" ANSI_RESET " ");
-    ofo_water_scr(swater[0], 0, 1);
-    refresh();
+    ofo_init_screen();
 
-    which = 0;
-    do {
-        switch ((ch = vkey())) {
+    int which = 0;
+    char done = 0;
+    while (!done) {
+        int ch = vkey();
+        switch (ch) {
         case Ctrl('T'):
         case KEY_UP:
-            if (water_usies != 1) {
-                assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
-                ofo_water_scr(swater[(int)which], which, 0);
-                which = (which - 1 + water_usies) % water_usies;
-                ofo_water_scr(swater[(int)which], which, 1);
-                refresh();
-            }
+            ofo_switch_user(&which, -1);
             break;
 
-        case KEY_DOWN:
         case Ctrl('R'):
-            if (water_usies != 1) {
-                assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
-                ofo_water_scr(swater[(int)which], which, 0);
-                which = (which + 1 + water_usies) % water_usies;
-                ofo_water_scr(swater[(int)which], which, 1);
-                refresh();
-            }
+        case KEY_DOWN:
+            ofo_switch_user(&which, 1);
             break;
 
         case KEY_LEFT:
@@ -161,56 +220,15 @@ ofo_my_write(void)
 
         default:
             done = 1;
-            tw = swater[(int)which];
-
-            if (!tw->uin)
-                break;
-
-            // TODO(piaip) 這裡很危險。使用者可能趁機亂塞東西進 buf.
-            // 另外 KEY_UP 之類的是 >0xFF 所以或許我們該徹查一下 isascii 的判斷。
-            if ((ch < 0x100 && !isascii(ch)) || isprint(ch)) {
-                msg[0] = ch, msg[1] = 0;
-            } else
-                msg[0] = 0;
-            move(0, 0);
-            SOLVE_ANSI_CACHE();
-            outs(ANSI_RESET);
-            clrtoeol();
-            if (HAS_ANGEL) {
-                switch(tw->msg[0].msgmode) {
-                case MSGMODE_WRITE:
-                case MSGMODE_ALOHA:
-                    SNPRINTF(genbuf, "攻擊 %s:", tw->userid);
-                    i = WATERBALL_CONFIRM;
-                    break;
-
-                case MSGMODE_TOANGEL:
-                    STRLCPY(genbuf, "回答小主人:");
-                    i = WATERBALL_CONFIRM_ANSWER;
-                    break;
-
-                case MSGMODE_FROMANGEL:
-                    STRLCPY(genbuf, "再問他一次：");
-                    i = WATERBALL_CONFIRM_ANGEL;
-                    break;
-                }
-            } else {
-                SNPRINTF(genbuf, "攻擊 %s:", tw->userid);
-                i = WATERBALL_CONFIRM;
-            }
-            if (!getdata_buf(0, 0, genbuf, msg,
-                             80 - strlen(tw->userid) - 6, DOECHO))
-                break;
-
-            if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
-                STRLCPY(tw->msg[5].last_call_in, t_last_write);
+            ofo_reply_waterball(swater[which], ch);
             break;
         }
-    } while (!done);
+    }
 
     currstat = currstat0;
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
+
     if (wmofo == RECVINREPLYING) {
         wmofo = NOTREPLYING;
         write_request(0);
