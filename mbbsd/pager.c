@@ -305,14 +305,15 @@ show_call_in(int save, int which)
         // I must be an Angel. Let's try to update angel beats info.
         // TODO maybe it's better to move this to "sender".
         angel_notify_activity(currutmp->msgs[which].userid);
-    } else
+    } else {
         SNPRINTF(buf, ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET, currutmp->msgs[which].userid,
                  currutmp->msgs[which].last_call_in);
+    }
     outmsg(buf);
 
     if (save && mode != MSGMODE_ALOHA) {
-        char            genbuf[200];
+        char genbuf[PATHLEN];
         if (!fp_writelog) {
             sethomefile(genbuf, cuser.userid, fn_writelog);
             fp_writelog = fopen(genbuf, "a");
@@ -428,93 +429,106 @@ add_history(const msgque_t * msg)
     return 0;
 }
 
-void
-write_request(int sig)
+static inline int
+can_pop_pager_ui(void)
+{
+    return currutmp->mode != 0 &&
+           currutmp->pager != PAGER_OFF &&
+           cuser.userlevel != 0 &&
+           currutmp->msgcount != 0 &&
+           currutmp->mode != TALK &&
+           currutmp->mode != EDITING &&
+           currutmp->mode != CHATING &&
+           currutmp->mode != PAGE &&
+           currutmp->mode != IDLE &&
+           currutmp->mode != MAILALL &&
+           currutmp->mode != MONITOR;
+}
+
+static void
+write_request_ofo(int sig)
+{
+    static int alreadyshow = 0;
+    int i, msgcount;
+
+    if (sig) { /* Incoming waterball signal */
+        /* If currently in REPLYING mode, switch to RECVINREPLYING
+         * so write_request(0) is triggered after reply finishes. */
+        if (wmofo == REPLYING)
+            wmofo = RECVINREPLYING;
+
+        for (; alreadyshow < currutmp->msgcount && alreadyshow < MAX_MSGS; ++alreadyshow) {
+            bell();
+            show_call_in(1, alreadyshow);
+            refresh();
+        }
+    }
+
+    /* Flush pending messages from currutmp->msg to water[] when NOTREPLYING */
+    if (wmofo == NOTREPLYING && (msgcount = currutmp->msgcount) > 0) {
+        for (i = 0; i < msgcount; ++i)
+            add_history(&currutmp->msgs[i]);
+        if ((currutmp->msgcount -= msgcount) < 0)
+            currutmp->msgcount = 0;
+        alreadyshow = 0;
+    }
+}
+
+static void
+write_request_default(void)
 {
     int i, msgcount;
 
+    if (!can_pop_pager_ui()) {
+        bell();
+        show_call_in(1, 0);
+        add_history(&currutmp->msgs[0]);
+
+        refresh();
+        currutmp->msgcount = 0;
+        return;
+    }
+
+    char c0 = currutmp->chatid[0];
+    int currstat0 = currstat;
+    unsigned char mode0 = currutmp->mode;
+
+    currutmp->mode = 0;
+    currutmp->chatid[0] = 2;
+    currstat = HIT;
+    msgcount = currutmp->msgcount;
+
+    for (i = 0; i < msgcount; ++i) {
+        bell();
+        show_call_in(1, 0);
+        add_history(&currutmp->msgs[0]);
+
+        if ((--currutmp->msgcount) < 0)
+            break;
+
+        if (currutmp->msgcount > 0) {
+            memmove(&currutmp->msgs[0],
+                    &currutmp->msgs[1],
+                    sizeof(msgque_t) * currutmp->msgcount);
+        }
+        vkey();
+    }
+
+    currutmp->chatid[0] = c0;
+    currutmp->mode = mode0;
+    currstat = currstat0;
+}
+
+void
+write_request(int sig)
+{
     STATINC(STAT_WRITEREQUEST);
     syncnow();
     check_water_init();
+
     if (PAGER_UI_IS(PAGER_UI_OFO)) {
-        /* 如果目前在回水球模式, 則不可 add_history() ,
-           因為會寫 water[], 而使回水球的指標亂掉, 所以分兩種情況考慮.
-           sig != 0有水球進, 嗶嗶.
-           sig == 0表示沒水球進, 只是把先前還沒寫入 water[].
-           */
-        static  int     alreadyshow = 0;
-
-        if( sig ){ /* 有水球進 */
-
-            /* 若原本在 REPLYING , 則改成 RECVINREPLYING,
-               這樣在回水球完, 會再呼叫一次 write_request(0) */
-            if( wmofo == REPLYING )
-                wmofo = RECVINREPLYING;
-
-            /* 嗶 */
-            for( ; alreadyshow < currutmp->msgcount && alreadyshow < MAX_MSGS
-                 ; ++alreadyshow ){
-                bell();
-                show_call_in(1, alreadyshow);
-                refresh();
-            }
-        }
-
-        /* 看看是不是要把 currutmp->msg 寫回 water[] (by add_history())
-           要不在回水球中 (NOTREPLYING) */
-        if( wmofo == NOTREPLYING &&
-            (msgcount = currutmp->msgcount) > 0 ){
-            for( i = 0 ; i < msgcount ; ++i )
-                add_history(&currutmp->msgs[i]);
-            if( (currutmp->msgcount -= msgcount) < 0 )
-                currutmp->msgcount = 0;
-            alreadyshow = 0;
-        }
+        write_request_ofo(sig);
     } else {
-        if (currutmp->mode != 0 &&
-            currutmp->pager != PAGER_OFF &&
-            cuser.userlevel != 0 &&
-            currutmp->msgcount != 0 &&
-            currutmp->mode != TALK &&
-            currutmp->mode != EDITING &&
-            currutmp->mode != CHATING &&
-            currutmp->mode != PAGE &&
-            currutmp->mode != IDLE &&
-            currutmp->mode != MAILALL && currutmp->mode != MONITOR) {
-            char            c0 = currutmp->chatid[0];
-            int             currstat0 = currstat;
-            unsigned char   mode0 = currutmp->mode;
-
-            currutmp->mode = 0;
-            currutmp->chatid[0] = 2;
-            currstat = HIT;
-
-            if( (msgcount = currutmp->msgcount) > 0 ){
-                for( i = 0 ; i < msgcount ; ++i ){
-                    bell();
-                    show_call_in(1, 0);
-                    add_history(&currutmp->msgs[0]);
-
-                    if( (--currutmp->msgcount) < 0 )
-                        i = msgcount; /* force to exit for() */
-                    else if( currutmp->msgcount > 0 )
-                        memmove(&currutmp->msgs[0],
-                                &currutmp->msgs[1],
-                                sizeof(msgque_t) * currutmp->msgcount);
-                    vkey();
-                }
-            }
-
-            currutmp->chatid[0] = c0;
-            currutmp->mode = mode0;
-            currstat = currstat0;
-        } else {
-            bell();
-            show_call_in(1, 0);
-            add_history(&currutmp->msgs[0]);
-
-            refresh();
-            currutmp->msgcount = 0;
-        }
+        write_request_default();
     }
 }
