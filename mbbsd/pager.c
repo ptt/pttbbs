@@ -401,25 +401,21 @@ my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
 static void
 my_write_deliver(int flag, const char *msg, userinfo_t *uin)
 {
-    int write_pos = uin->msgcount;
-    if (write_pos >= MAX_MSGS - 1) {
-        if (flag != WATERBALL_ALOHA)
-            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
+    if (!uin)
         return;
-    }
 
-    unsigned char pager0 = uin->pager;
-    uin->msgcount = write_pos + 1;
-    uin->pager = PAGER_DISABLE;
-    uin->msgs[write_pos].pid = currpid;
+    int uip = get_utmp_id(uin);
+    if (uip < 0)
+        return;
 
+    char from_id[IDLEN + 1];
     if (HAS_ANGEL && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)) {
-        angel_load_my_fullnick(uin->msgs[write_pos].userid, sizeof(uin->msgs[write_pos].userid));
+        angel_load_my_fullnick(from_id, sizeof(from_id));
     } else {
-        STRLCPY(uin->msgs[write_pos].userid, cuser.userid);
+        STRLCPY(from_id, cuser.userid);
     }
-    STRLCPY(uin->msgs[write_pos].last_call_in, msg);
 
+    int msgmode = MSGMODE_WRITE;
     switch (flag) {
     case WATERBALL_ANGEL:
     case WATERBALL_CONFIRM_ANGEL:
@@ -429,27 +425,31 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
             if (flag == WATERBALL_ANGEL)
                 angel_log_msg_to_angel();
             if (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-                uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
+                msgmode = MSGMODE_TOANGEL;
             else
-                uin->msgs[write_pos].msgmode = MSGMODE_FROMANGEL;
+                msgmode = MSGMODE_FROMANGEL;
             break;
         }
         /* FALLTHROUGH */
     case WATERBALL_ALOHA:
-        uin->msgs[write_pos].msgmode = MSGMODE_ALOHA;
+        msgmode = MSGMODE_ALOHA;
         break;
 
     default:
-        uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
+        msgmode = MSGMODE_WRITE;
         break;
     }
-    uin->pager = pager0;
+
+    int res = write_message(uip, uin->pid, currpid, from_id, msg, msgmode);
 
     if (flag == WATERBALL_ALOHA)
         return;
 
-    if (uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1)) {
-        outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
+    if (res < 0) {
+        if (res == -3)
+            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
+        else
+            outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else if (uin->msgcount == 1) {
         outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
     } else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS) {
