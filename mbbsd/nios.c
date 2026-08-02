@@ -537,15 +537,19 @@ vkey_process(int timeout, int peek)
 
         if (r == 0) // timeout
         {
-            if (KEY_INCOMPLETE != I_TIMEOUT && CIN_IS_VALID_FD2(vkctx.attached_fd))
+            if (KEY_INCOMPLETE != I_TIMEOUT && CIN_IS_VALID_FD2(vkctx.attached_fd)) {
+                syncnow();
                 r = I_TIMEOUT;
-            else
+            } else
                 return KEY_INCOMPLETE; // must directly return here.
         }
         if (r < 0) // error
             r = KEY_UNKNOWN;        // or EOF?
         else if (r & CIN_POLL_FD2)  // the second fd
+        {
+            syncnow();
             r = I_OTHERDATA;
+        }
         else {
             assert(r & CIN_POLL_CINFD);
             r = vkey_process_cin();
