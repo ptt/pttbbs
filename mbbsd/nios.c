@@ -57,7 +57,7 @@
 #endif
 
 // XXX use this temporary...
-int process_pager_keys(int ch);
+
 
 // debug helpers
 #if defined(CIN_DEBUG) || defined(VKEY_DEBUG)
@@ -388,6 +388,7 @@ vkey_init()
     memset(&vkctx, 0, sizeof(vkctx));
     cin_init();
     VKEY_RESET_PEEK();
+    pager_init_hooks();
     // XXX initialize telnet, convert, ...?
 }
 
@@ -479,7 +480,7 @@ vkey_process_cin()
             break;
 #endif
     }
-    if (currutmp) ch = process_pager_keys(ch);
+    ch = vkey_dispatch_hooks(ch);
     return ch;
 }
 
