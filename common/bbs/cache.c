@@ -348,13 +348,12 @@ void
 sort_bcache(void)
 {
     int             i;
-    /* critical section 盡量不要呼叫  */
-    /* 只有新增 或移除看板 需要呼叫到 */
-    if(SHM->Bbusystate) {
+    /* critical section 時常被呼叫  */
+    /* 僅新增 或刪除看板 需要呼叫 */
+    if (!__sync_bool_compare_and_swap(&SHM->Bbusystate, 0, 1)) {
 	sleep(1);
 	return;
     }
-    SHM->Bbusystate = 1;
     for (i = 0; i < SHM->Bnumber; i++) {
 	SHM->bsorted[BRD_GROUP_LL_TYPE_NAME][i] = i;
 	SHM->bsorted[BRD_GROUP_LL_TYPE_CLASS][i] = i;
@@ -376,13 +375,15 @@ reload_bcache(void)
 {
     int     i, fd;
     pid_t   pid;
-    for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
+    for (i = 0; i < 10; ++i) {
+	if (__sync_bool_compare_and_swap(&SHM->Bbusystate, 0, 1))
+	    break;
 	fprintf(stderr, "SHM->Bbusystate is currently locked (value: %d). "
 	       "please wait... \r\n", SHM->Bbusystate);
 	sleep(1);
     }
-
-    SHM->Bbusystate = 1;
+    if (i == 10)
+	return;
     if ((fd = open(fn_board, O_RDONLY)) > 0) {
 	SHM->Bnumber =
 	    read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /

@@ -820,16 +820,18 @@ int torb(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     return 0;
 }
 
-void lockbcache(void)
+void
+lockbcache(void)
 {
     int     i;
-    for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
+    for (i = 0; i < 10; ++i) {
+	if (__sync_bool_compare_and_swap(&SHM->Bbusystate, 0, 1))
+	    return;
 	printf("SHM->Bbusystate is currently locked (value: %d). "
 		"please wait... ", SHM->Bbusystate);
 	sleep(1);
     }
-    if( i == 10 )
-	puts("steal bcache lock\n");
+    puts("steal bcache lock\n");
     SHM->Bbusystate = 1;
 }
 
