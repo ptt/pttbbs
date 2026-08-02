@@ -429,6 +429,12 @@ add_history_water(water_t * w, const msgque_t * msg)
     return w->count;
 }
 
+static inline int
+is_angel_msgmode(int mode)
+{
+    return (mode == MSGMODE_FROMANGEL || mode == MSGMODE_TOANGEL);
+}
+
 static int
 add_history(const msgque_t * msg)
 {
@@ -442,7 +448,10 @@ add_history(const msgque_t * msg)
 	    if (swater[i] == NULL)
 		break;
 	    if (swater[i]->pid == msg->pid
-		    && (!HAS_ANGEL || swater[i]->msg[0].msgmode == msg->msgmode)
+		    && (!HAS_ANGEL ||
+		        (is_angel_msgmode(swater[i]->msg[0].msgmode) || is_angel_msgmode(msg->msgmode)
+		         ? swater[i]->msg[0].msgmode == msg->msgmode
+		         : 1))
 		    /* When throwing waterball to angel directly */
 	       	)
 		break;
