@@ -323,7 +323,7 @@ void output(const char *s, int len);
 void oflush(void);
 
 // pager hotkeys processor
-int process_pager_keys(int ch);
+void pager_init_hooks(void);
 
 // new input api
 /* nios.c / io.c */

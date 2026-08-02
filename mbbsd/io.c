@@ -86,6 +86,7 @@ int
 init_io() {
     vbuf_new(pvout, OBUFSIZE);
     vbuf_new(pvin, IBUFSIZE);
+    pager_init_hooks();
     return 0;
 }
 
@@ -140,9 +141,6 @@ ochar(int c)
     return 0;
 }
 
-/* ----------------------------------------------------- */
-/* pager processor                                       */
-/* ----------------------------------------------------- */
 
 int
 process_pager_keys(int ch)
@@ -582,13 +580,9 @@ igetch(void)
 #endif
 	}
 
-	// complex pager hot keys
-	if (currutmp)
-	{
-	    ch = process_pager_keys(ch);
-	    if (ch == KEY_INCOMPLETE)
-		continue;
-	}
+	ch = vkey_dispatch_hooks(ch);
+	if (ch == KEY_INCOMPLETE)
+	    continue;
 
 	return ch;
     }
