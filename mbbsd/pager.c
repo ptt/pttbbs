@@ -132,21 +132,21 @@ ofo_switch_user(int *which, int delta)
 }
 
 static int
-ofo_get_confirm_mode(const water_t *tw, char genbuf[256])
+ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
 {
     if (HAS_ANGEL) {
         switch (tw->msg[0].msgmode) {
         case MSGMODE_TOANGEL:
-            strlcpy(genbuf, "回答小主人:", 256);
+            strlcpy(genbuf, "回答小主人:", sz);
             return WATERBALL_CONFIRM_ANSWER;
         case MSGMODE_FROMANGEL:
-            strlcpy(genbuf, "再問他一次：", 256);
+            strlcpy(genbuf, "再問他一次：", sz);
             return WATERBALL_CONFIRM_ANGEL;
         default:
             break;
         }
     }
-    snprintf(genbuf, 256, "攻擊 %s:", tw->userid);
+    snprintf(genbuf, sz, "攻擊 %s:", tw->userid);
     return WATERBALL_CONFIRM;
 }
 
@@ -156,7 +156,7 @@ ofo_reply_waterball(water_t *tw, int ch)
     if (!tw || !tw->uin)
         return;
 
-    char msg[80];
+    char msg[STRLEN];
     if ((ch < 0x100 && !isascii(ch)) || isprint(ch)) {
         msg[0] = (char)ch;
         msg[1] = '\0';
@@ -170,9 +170,9 @@ ofo_reply_waterball(water_t *tw, int ch)
     clrtoeol();
 
     char genbuf[256];
-    int confirm_mode = ofo_get_confirm_mode(tw, genbuf);
+    int confirm_mode = ofo_get_confirm_mode(tw, genbuf, sizeof(genbuf));
 
-    if (getdata_buf(0, 0, genbuf, msg, 80 - strlen(tw->userid) - 6, DOECHO)) {
+    if (getdata_buf(0, 0, genbuf, msg, sizeof(msg) - strlen(tw->userid) - 6, DOECHO)) {
         if (my_write(tw->pid, msg, tw->userid, confirm_mode, tw->uin))
             STRLCPY(tw->msg[5].last_call_in, t_last_write);
     }
@@ -932,7 +932,7 @@ talk_request(int sig GCC_UNUSED)
 void
 show_call_in(int save, int which)
 {
-    char buf[200];
+    char buf[ANSILINELEN];
     int mode = currutmp->msgs[which].msgmode;
 
     if (HAS_ANGEL && mode == MSGMODE_TOANGEL) {
