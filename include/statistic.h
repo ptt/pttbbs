@@ -4,7 +4,11 @@
     if(SHM && SHM->version==SHM_VERSION && 0<=(X) && (X)<STAT_MAX) \
       SHM->statistic[X] OP; \
 } while(0)
-#define STATINC(X) STAT(X, ++)
+#define STATADD(X, val) do { \
+    if(SHM && SHM->version==SHM_VERSION && 0<=(X) && (X)<STAT_MAX) \
+      __sync_fetch_and_add(&SHM->statistic[X], (val)); \
+} while(0)
+#define STATINC(X) STATADD(X, 1)
 
 #ifdef CPU_STATS
 
@@ -18,8 +22,8 @@
 #define ENDSTAT(name) do { \
     struct rusage *_start = &( name ## _start), _end; \
     getrusage(RUSAGE_SELF, &_end); \
-    STAT(name ## _SCPU, += TVALDIFF_TO_MS(_start->ru_stime, _end.ru_stime));          \
-    STAT(name ## _UCPU, += TVALDIFF_TO_MS(_start->ru_utime, _end.ru_utime));          \
+    STATADD(name ## _SCPU, TVALDIFF_TO_MS(_start->ru_stime, _end.ru_stime));          \
+    STATADD(name ## _UCPU, TVALDIFF_TO_MS(_start->ru_utime, _end.ru_utime));          \
     STATINC(name); \
 } while(0);
 
