@@ -1,7 +1,7 @@
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
-/* pager processor (Step 2: Extract NEW UI hook)        */
+/* pager processor (Step 3: Extract ORIG UI hook & Table Dispatch) */
 /* ----------------------------------------------------- */
 
 static int
@@ -125,6 +125,42 @@ pager_ofo_key_hook(int ch)
 }
 
 static int
+pager_orig_key_hook(int ch)
+{
+    switch (ch)
+    {
+    case Ctrl('U'):
+        return pager_handle_ctrl_u(ch);
+
+    case Ctrl('R'):
+        return pager_handle_ctrl_r_default(ch);
+
+    case KEY_TAB:
+        if (watermode <= 0)
+            break;
+
+        check_water_init();
+        watermode = (watermode + water_which->count)
+                % water_which->count + 1;
+        t_display_new();
+        return KEY_INCOMPLETE;
+
+    case Ctrl('T'):
+        if (watermode <= 0)
+            break;
+
+        check_water_init();
+        if (watermode > 1)
+            watermode--;
+        else
+            watermode = water_which->count;
+        t_display_new();
+        return KEY_INCOMPLETE;
+    }
+    return ch;
+}
+
+static int
 pager_new_key_hook(int ch)
 {
     static int water_which_flag = 0;
@@ -193,57 +229,23 @@ pager_new_key_hook(int ch)
     return ch;
 }
 
+static vkey_hook_fn pager_ui_hooks[PAGER_UI_TYPES] = {
+    [PAGER_UI_ORIG] = pager_orig_key_hook,
+    [PAGER_UI_NEW]  = pager_new_key_hook,
+    [PAGER_UI_OFO]  = pager_ofo_key_hook,
+};
+
 static int
-process_pager_keys(int ch)
-{
-    assert(currutmp);
-
-    if (PAGER_UI_IS(PAGER_UI_OFO))
-        return pager_ofo_key_hook(ch);
-
-    if (PAGER_UI_IS(PAGER_UI_NEW))
-        return pager_new_key_hook(ch);
-
-    /* ORIG UI handling */
-    switch (ch)
-    {
-	case Ctrl('U') :
-            return pager_handle_ctrl_u(ch);
-
-	case Ctrl('R'):
-            return pager_handle_ctrl_r_default(ch);
-
-	case KEY_TAB:
-	    if (watermode <= 0)
-		break;
-
-	    check_water_init();
-	    watermode = (watermode + water_which->count)
-		% water_which->count + 1;
-	    t_display_new();
-	    return KEY_INCOMPLETE;
-
-	case Ctrl('T'):
-	    if (watermode <= 0)
-		   break;
-
-	    check_water_init();
-	    if (watermode > 1)
-		watermode--;
-	    else
-		watermode = water_which->count;
-	    t_display_new();
-	    return KEY_INCOMPLETE;
-    }
-    return ch;
-}
-
-int
 pager_key_hook(int ch)
 {
     if (!currutmp)
         return ch;
-    return process_pager_keys(ch);
+
+    int uitype = cuser.pager_ui_type % PAGER_UI_TYPES;
+    if (pager_ui_hooks[uitype])
+        return pager_ui_hooks[uitype](ch);
+
+    return ch;
 }
 
 void
