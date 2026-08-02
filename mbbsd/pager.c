@@ -254,225 +254,285 @@ ofo_my_write(void)
  * 10. (when defined PLAY_ANGEL)
  *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
-int
-my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * puin)
+static void
+my_write_restore_state(char c0, unsigned char mode0, int currstat0)
 {
-    int             len, currstat0 = currstat, fri_stat = -1;
-    char            msg[80], destid[IDLEN + 1];
-    char            genbuf[200], buf[200], c0 = currutmp->chatid[0];
-    unsigned char   mode0 = currutmp->mode;
-    userinfo_t     *uin;
-    uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
+    currutmp->chatid[0] = c0;
+    currutmp->mode = mode0;
+    currstat = currstat0;
+}
+
+static bool
+my_write_check_pager_status(void)
+{
+    switch (currutmp->pager) {
+    case PAGER_DISABLE:
+    case PAGER_ANTIWB:
+        if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARD)) {
+            move(1, 0);
+            clrtoeol();
+            outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人丟水球，對方可能無法回話。" ANSI_RESET);
+        } else {
+            if ('n' == vans("您的呼叫器目前設定為關閉。要打開它嗎?[Y/n] "))
+                return false;
+            currutmp->pager = PAGER_ON;
+        }
+        break;
+
+    case PAGER_FRIENDONLY:
+        move(1, 0);
+        clrtoeol();
+        outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，若對方非好友則可能無法回話。" ANSI_RESET);
+        break;
+    }
+    return true;
+}
+
+static bool
+my_write_get_input(const char *prompt, char *msg, size_t msg_size,
+                   int *flag_out, userinfo_t **uin_out, char *destid)
+{
+    if (!my_write_check_pager_status())
+        return false;
+
+    int len = getdata(0, 0, prompt, msg, msg_size, DOECHO);
+    if (!len)
+        return false;
+
+    if (watermode > 0) {
+        int i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
+        *uin_out = (userinfo_t *) search_ulist_pid(water_which->msg[i].pid);
+        if (HAS_ANGEL) {
+            if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
+                *flag_out = WATERBALL_ANGEL;
+            else if (water_which->msg[i].msgmode == MSGMODE_TOANGEL)
+                *flag_out = WATERBALL_ANSWER;
+            else
+                *flag_out = WATERBALL_GENERAL;
+        }
+        strlcpy(destid, water_which->msg[i].userid, IDLEN + 1);
+    }
+    return true;
+}
+
+static bool
+my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t *uin)
+{
+    bool is_confirm_needed = (
+        flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM ||
+        (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
+                       flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
+    );
+
+    if (is_confirm_needed && uin && *uin->userid) {
+        char buf[ANSILINELEN], genbuf[3];
+        SNPRINTF(buf, "丟 %s: %s [Y/n]?", destid, msg);
+        getdata(0, 0, buf, genbuf, sizeof(genbuf), LCECHO);
+        if (genbuf[0] == 'n')
+            return false;
+    }
+    return true;
+}
+
+static bool
+my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
+{
+    if (!uin || !*uin->userid)
+        return false;
+
+    if (strcasecmp(destid, uin->userid) != 0) {
+        if (!HAS_ANGEL || (flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL))
+            return false;
+    }
+
+    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+        if (strcasecmp(cuser.myangel, uin->userid) != 0 || uin->angelpause >= ANGELPAUSE_REJALL)
+            return false;
+    }
+
+    return true;
+}
+
+static bool
+my_write_log_to_file(const char *destid, const char *msg)
+{
+    if (!fp_writelog) {
+        char genbuf[PATHLEN];
+        sethomefile(genbuf, cuser.userid, fn_writelog);
+        fp_writelog = fopen(genbuf, "a");
+    }
+
+    if (!fp_writelog) {
+        vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
+        return false;
+    }
+
+    fprintf(fp_writelog, "To %s: %s [%s]\n", destid, msg, Cdatelite(&now));
+    snprintf(t_last_write, sizeof(t_last_write), "To %s: %s", destid, msg);
+    return true;
+}
+
+static bool
+my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
+{
+    if (flag == WATERBALL_ALOHA)
+        return false;
+    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+        if (angel_reject_me(uin))
+            return true;
+    }
+
+    if (HasUserPerm(PERM_SYSOP))
+        return false;
+
+    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
+                      flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
+        return false;
+
+    if (uin->pager == PAGER_ANTIWB || uin->pager == PAGER_DISABLE)
+        return true;
+
+    if (uin->pager == PAGER_FRIENDONLY && !(fri_stat & HFM))
+        return true;
+
+    return false;
+}
+
+static void
+my_write_deliver(int flag, const char *msg, userinfo_t *uin)
+{
+    int write_pos = uin->msgcount;
+    if (write_pos >= MAX_MSGS - 1) {
+        if (flag != WATERBALL_ALOHA)
+            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
+        return;
+    }
+
+    unsigned char pager0 = uin->pager;
+    uin->msgcount = write_pos + 1;
+    uin->pager = PAGER_DISABLE;
+    uin->msgs[write_pos].pid = currpid;
+
+    if (HAS_ANGEL && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)) {
+        angel_load_my_fullnick(uin->msgs[write_pos].userid, sizeof(uin->msgs[write_pos].userid));
+    } else {
+        STRLCPY(uin->msgs[write_pos].userid, cuser.userid);
+    }
+    STRLCPY(uin->msgs[write_pos].last_call_in, msg);
+
+    switch (flag) {
+    case WATERBALL_ANGEL:
+    case WATERBALL_CONFIRM_ANGEL:
+    case WATERBALL_ANSWER:
+    case WATERBALL_CONFIRM_ANSWER:
+        if (HAS_ANGEL) {
+            if (flag == WATERBALL_ANGEL)
+                angel_log_msg_to_angel();
+            if (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
+                uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
+            else
+                uin->msgs[write_pos].msgmode = MSGMODE_FROMANGEL;
+            break;
+        }
+        /* FALLTHROUGH */
+    case WATERBALL_ALOHA:
+        uin->msgs[write_pos].msgmode = MSGMODE_ALOHA;
+        break;
+
+    default:
+        uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
+        break;
+    }
+    uin->pager = pager0;
+
+    if (flag == WATERBALL_ALOHA)
+        return;
+
+    if (uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1)) {
+        outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
+    } else if (uin->msgcount == 1) {
+        outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
+    } else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS) {
+        outmsg(ANSI_COLOR(1;33;44) "再補上一粒! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
+    }
+}
+
+int
+my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *puin)
+{
+    userinfo_t *uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
+    char destid[IDLEN + 1];
     STRLCPY(destid, id);
     check_water_init();
 
-    /* what if uin is NULL but other conditions are not true?
-     * will this situation cause SEGV?
-     * should this "!uin &&" replaced by "!uin ||" ?
-     */
-    if ((!uin || !uin->userid[0]) && !((flag == WATERBALL_GENERAL
-                                        || (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER))
-                                       )
-                                       && water_which->count > 0)) {
+    bool is_interactive = (flag == WATERBALL_GENERAL ||
+                           (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
+
+    if ((!uin || !*uin->userid) && !(is_interactive && water_which->count > 0)) {
         vmsg("糟糕! 對方已落跑了(不在站上)! ");
         watermode = -1;
         return 0;
     }
+
+    int currstat0 = currstat;
+    char c0 = currutmp->chatid[0];
+    unsigned char mode0 = currutmp->mode;
+
     currutmp->mode = 0;
     currutmp->chatid[0] = 3;
     currstat = DBACK;
 
-    if (flag == WATERBALL_GENERAL
-        || (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER))
-       ) {
-        /* 一般水球 */
+    char msg[80];
+    if (is_interactive) {
         watermode = 0;
-
-        switch(currutmp->pager)
-        {
-        case PAGER_DISABLE:
-        case PAGER_ANTIWB:
-            if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARD)) {
-                // Admins are free to bother people.
-                move(1, 0);  clrtoeol();
-                outs(ANSI_COLOR(1;31)
-                     "你的呼叫器目前不接受別人丟水球，對方可能無法回話。"
-                     ANSI_RESET);
-            } else {
-                // Normal users should not bother people.
-                if ('n' == vans("您的呼叫器目前設定為關閉。"
-                                "要打開它嗎?[Y/n] "))
-                    return 0;
-                // enable pager
-                currutmp->pager = PAGER_ON;
-            }
-            break;
-
-        case PAGER_FRIENDONLY:
-            move(1, 0);  clrtoeol();
-            outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，若對方非好友則可能無法回話。" ANSI_RESET);
-            break;
-        }
-
-        if (!(len = getdata(0, 0, prompt, msg, 56, DOECHO))) {
-            currutmp->chatid[0] = c0;
-            currutmp->mode = mode0;
-            currstat = currstat0;
+        if (!my_write_get_input(prompt, msg, 56, &flag, &uin, destid)) {
+            my_write_restore_state(c0, mode0, currstat0);
             watermode = -1;
             return 0;
         }
-
-        if (watermode > 0) {
-            int             i;
-
-            i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
-            uin = (userinfo_t *) search_ulist_pid(water_which->msg[i].pid);
-            if (HAS_ANGEL) {
-                if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
-                    flag = WATERBALL_ANGEL;
-                else if (water_which->msg[i].msgmode == MSGMODE_TOANGEL)
-                    flag = WATERBALL_ANSWER;
-                else
-                    flag = WATERBALL_GENERAL;
-            }
-            STRLCPY(destid, water_which->msg[i].userid);
-        }
     } else {
-        /* pre-edit 的水球 */
         STRLCPY(msg, prompt);
-        len = strlen(msg);
     }
 
     strip_ansi(msg, msg, STRIP_ALL);
-    if (uin && *uin->userid &&
-        (flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM
-         || (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER
-                           || flag == WATERBALL_CONFIRM_ANGEL
-                           || flag == WATERBALL_CONFIRM_ANSWER))
-        ))
-    {
-        SNPRINTF(buf, "丟 %s: %s [Y/n]?", destid, msg);
 
-        getdata(0, 0, buf, genbuf, 3, LCECHO);
-        if (genbuf[0] == 'n') {
-            currutmp->chatid[0] = c0;
-            currutmp->mode = mode0;
-            currstat = currstat0;
-            watermode = -1;
-            return 0;
-        }
-    }
-    watermode = -1;
-    if (!uin || !*uin->userid ||
-        (strcasecmp(destid, uin->userid) && (!HAS_ANGEL || (flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL))) ||
-        // check if user is changed of angelpause.
-        // XXX if flag == WATERBALL_ANGEL, shuold be (uin->angelpause) only.
-        (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL) &&
-         (strcasecmp(cuser.myangel, uin->userid) || uin->angelpause >= ANGELPAUSE_REJALL))) {
-        bell();
-        vmsg("糟糕! 對方已落跑了(不在站上)! ");
-        currutmp->chatid[0] = c0;
-        currutmp->mode = mode0;
-        currstat = currstat0;
+    if (!my_write_confirm_send(flag, destid, msg, uin)) {
+        my_write_restore_state(c0, mode0, currstat0);
+        watermode = -1;
         return 0;
     }
-    if(fri_stat < 0)
-        fri_stat = friend_stat(currutmp, uin);
-    // else, fri_stat was already calculated. */
 
-    if (flag != WATERBALL_ALOHA) {	/* aloha 的水球不用存下來 */
-        /* 存到自己的水球檔 */
-        if (!fp_writelog) {
-            sethomefile(genbuf, cuser.userid, fn_writelog);
-            fp_writelog = fopen(genbuf, "a");
-        }
-        if (fp_writelog) {
-            fprintf(fp_writelog, "To %s: %s [%s]\n",
-                    destid, msg, Cdatelite(&now));
-            snprintf(t_last_write, 66, "To %s: %s", destid, msg);
-        } else {
-            vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
+    watermode = -1;
+
+    if (!my_write_validate_recipient(flag, destid, uin)) {
+        bell();
+        vmsg("糟糕! 對方已落跑了(不在站上)! ");
+        my_write_restore_state(c0, mode0, currstat0);
+        return 0;
+    }
+
+    int fri_stat = friend_stat(currutmp, uin);
+
+    if (flag != WATERBALL_ALOHA) {
+        if (!my_write_log_to_file(destid, msg)) {
+            my_write_restore_state(c0, mode0, currstat0);
             return 0;
         }
     }
+
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
-        /* 不懂 */
         uin->destuip = get_utmp_id(currutmp);
         uin->sig = 2;
         if (uin->pid > 0)
             kill(uin->pid, SIGUSR1);
-    } else if ((flag != WATERBALL_ALOHA &&
-                (!HAS_ANGEL || (flag != WATERBALL_ANGEL &&
-                                flag != WATERBALL_ANSWER &&
-                                flag != WATERBALL_CONFIRM_ANGEL &&
-                                flag != WATERBALL_CONFIRM_ANSWER)) &&
-                /* Angel accept or not is checked outside.
-                 * Avoiding new users don't know what pager is. */
-                !HasUserPerm(PERM_SYSOP) &&
-                (uin->pager == PAGER_ANTIWB ||
-                 uin->pager == PAGER_DISABLE ||
-                 (uin->pager == PAGER_FRIENDONLY &&
-                  !(fri_stat & HFM))))
-               || (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-                   && angel_reject_me(uin))
-              ) {
+    } else if (my_write_is_rejected(flag, uin, fri_stat)) {
         outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方防水了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
-        int     write_pos = uin->msgcount; /* try to avoid race */
-        if ( write_pos < (MAX_MSGS - 1) ) { /* race here */
-            unsigned char   pager0 = uin->pager;
-
-            uin->msgcount = write_pos + 1;
-            uin->pager = PAGER_DISABLE;
-            uin->msgs[write_pos].pid = currpid;
-            if (HAS_ANGEL && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER))
-                angel_load_my_fullnick(uin->msgs[write_pos].userid,
-                                       sizeof(uin->msgs[write_pos].userid));
-            else
-                STRLCPY(uin->msgs[write_pos].userid, cuser.userid);
-            STRLCPY(uin->msgs[write_pos].last_call_in, msg);
-            switch (flag) {
-            case WATERBALL_ANGEL:
-            case WATERBALL_CONFIRM_ANGEL:
-            case WATERBALL_ANSWER:
-            case WATERBALL_CONFIRM_ANSWER:
-                if (HAS_ANGEL) {
-                    if (flag == WATERBALL_ANGEL)
-                        angel_log_msg_to_angel();
-                    if (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-                        uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
-                    else
-                        uin->msgs[write_pos].msgmode = MSGMODE_FROMANGEL;
-                    break;
-                }
-                /* FALLTHROUGH */
-            case WATERBALL_ALOHA:
-                uin->msgs[write_pos].msgmode = MSGMODE_ALOHA;
-                break;
-
-            default:
-                uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
-                break;
-            }
-            uin->pager = pager0;
-        } else if (flag != WATERBALL_ALOHA)
-            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
-
-        if (uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) && flag != WATERBALL_ALOHA)
-            outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
-        else if (uin->msgcount == 1 && flag != WATERBALL_ALOHA)
-            outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
-        else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS &&
-                 flag != WATERBALL_ALOHA)
-            outmsg(ANSI_COLOR(1;33;44) "再補上一粒! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
-
+        my_write_deliver(flag, msg, uin);
     }
 
     clrtoeol();
-
-    currutmp->chatid[0] = c0;
-    currutmp->mode = mode0;
-    currstat = currstat0;
+    my_write_restore_state(c0, mode0, currstat0);
     return 1;
 }
 
@@ -489,92 +549,122 @@ getmessage(msgque_t msg)
     }
 }
 
+static void
+pager_show_panel_orig(void)
+{
+    water_which = &water[0];
+    if (!water[0].count || watermode <= 0)
+        return;
+
+    move(1, 0);
+    outs("───────水─球─回─顧─────────用[Ctrl-R Ctrl-T]鍵切換─────");
+
+    int i;
+    for (i = 0; i < water_which->count; i++) {
+        int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
+        int len = 75 - strlen(water_which->msg[a].last_call_in) - strlen(water_which->msg[a].userid);
+        if (len < 0)
+            len = 0;
+
+        move(i + 2, 0);
+        clrtoeol();
+        if (watermode - 1 != i)
+            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
+                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
+        else
+            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
+                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
+    }
+
+    if (t_last_write[0]) {
+        move(i + 2, 0);
+        clrtoeol();
+        outs(t_last_write);
+        i++;
+    }
+    move(i + 2, 0);
+    outs("───────────────────────────────────────");
+}
+
+static void
+pager_show_panel_new(void)
+{
+    if (!water[0].count || watermode <= 0)
+        return;
+
+    move(1, 0);
+    outs("───────水─球─回─顧───用[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]鍵切換────");
+
+    move(2, 0);
+    clrtoeol();
+    for (int idx = 0; idx < 6; idx++) {
+        if (idx == 0) {
+            prints("%s 全部  " ANSI_RESET,
+                   water_which == &water[0] ? ANSI_COLOR(1;33;47) " " : " ");
+            continue;
+        }
+
+        water_t *w = swater[idx - 1];
+        if (!w) {
+            outs("              ");
+            continue;
+        }
+
+        if (w->uin && (w->pid != w->uin->pid || w->userid[0] != w->uin->userid[0]))
+            w->uin = (userinfo_t *) search_ulist_pid(w->pid);
+
+        prints("%s%c%-13.13s" ANSI_RESET,
+               w != water_which ? "" : w->uin ? ANSI_COLOR(1;33;47) : ANSI_COLOR(1;33;45),
+               !w->uin ? '#' : ' ',
+               w->userid);
+    }
+
+    int i;
+    for (i = 0; i < water_which->count; i++) {
+        int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
+        int len = 75 - strlen(water_which->msg[a].last_call_in) - strlen(water_which->msg[a].userid);
+        if (len < 0)
+            len = 0;
+
+        move(i + 3, 0);
+        clrtoeol();
+        if (watermode - 1 != i)
+            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
+                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
+        else
+            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
+                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
+    }
+
+    if (t_last_write[0]) {
+        move(i + 3, 0);
+        clrtoeol();
+        outs(t_last_write);
+        i++;
+    }
+    move(i + 3, 0);
+    outs("───────────────────────────────────────");
+    while (i++ <= water[0].count) {
+        move(i + 3, 0);
+        clrtoeol();
+    }
+}
+
 void
 pager_show_panel(void)
 {
-    static int      t_display_new_flag = 0;
-    int             i, off = 2;
-    if (t_display_new_flag)
+    static int in_panel = 0;
+    if (in_panel)
         return;
-    else
-        t_display_new_flag = 1;
+    in_panel = 1;
 
     check_water_init();
     if (PAGER_UI_IS(PAGER_UI_ORIG))
-        water_which = &water[0];
-    else
-        off = 3;
+        pager_show_panel_orig();
+    else if (PAGER_UI_IS(PAGER_UI_NEW))
+        pager_show_panel_new();
 
-    if (water[0].count && watermode > 0) {
-        move(1, 0);
-        outs("───────水─球─回─顧───");
-        outs(PAGER_UI_IS(PAGER_UI_ORIG) ?
-             "──────用[Ctrl-R Ctrl-T]鍵切換─────" :
-             "用[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]鍵切換────");
-        if (PAGER_UI_IS(PAGER_UI_NEW)) {
-            move(2, 0);
-            clrtoeol();
-            for (i = 0; i < 6; i++) {
-                if (i > 0)
-                    if (swater[i - 1]) {
-
-                        if (swater[i - 1]->uin &&
-                            (swater[i - 1]->pid != swater[i - 1]->uin->pid ||
-                             swater[i - 1]->userid[0] != swater[i - 1]->uin->userid[0]))
-                            swater[i - 1]->uin = (userinfo_t *) search_ulist_pid(swater[i - 1]->pid);
-                        prints("%s%c%-13.13s" ANSI_RESET,
-                               swater[i - 1] != water_which ? "" :
-                               swater[i - 1]->uin ? ANSI_COLOR(1;33;47) :
-                               ANSI_COLOR(1;33;45),
-                               !swater[i - 1]->uin ? '#' : ' ',
-                               swater[i - 1]->userid);
-                    } else
-                        outs("              ");
-                    else
-                        prints("%s 全部  " ANSI_RESET,
-                               water_which == &water[0] ? ANSI_COLOR(1;33;47) " " :
-                               " "
-                              );
-            }
-        }
-        for (i = 0; i < water_which->count; i++) {
-            int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
-            int len = 75 - strlen(water_which->msg[a].last_call_in)
-                    - strlen(water_which->msg[a].userid);
-            if (len < 0)
-                len = 0;
-
-            move(i + (PAGER_UI_IS(PAGER_UI_ORIG) ? 2 : 3), 0);
-            clrtoeol();
-            if (watermode - 1 != i)
-                prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                       water_which->msg[a].userid,
-                       water_which->msg[a].last_call_in, len,
-                       "");
-            else
-                prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s "
-                       ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                       water_which->msg[a].userid,
-                       water_which->msg[a].last_call_in,
-                       len, "");
-        }
-
-        if (t_last_write[0]) {
-            move(i + off, 0);
-            clrtoeol();
-            outs(t_last_write);
-            i++;
-        }
-        move(i + off, 0);
-        outs("──────────────────────"
-             "─────────────────");
-        if (PAGER_UI_IS(PAGER_UI_NEW))
-            while (i++ <= water[0].count) {
-                move(i + off, 0);
-                clrtoeol();
-            }
-    }
-    t_display_new_flag = 0;
+    in_panel = 0;
 }
 
 int
