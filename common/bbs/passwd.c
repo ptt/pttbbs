@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,17 +51,20 @@ union semun {
 #endif
 
 #ifdef USE_PTHREAD_MUTEX_PASSWD
-#include <pthread.h>
+#define PWD_USE_PTHREAD (1)
+#else
+#define PWD_USE_PTHREAD (0)
+#endif
 
-int
-passwd_init(void)
+static int
+passwd_init_pthread(void)
 {
     // Must be already done in uhash_loader.c to the SHM variable
     return 0;
 }
 
-void
-passwd_lock(void)
+static void
+passwd_lock_pthread(void)
 {
     int rc = pthread_mutex_lock(&SHM->GV3.e.passwd_mutex);
     if (rc == EOWNERDEAD) {
@@ -71,8 +75,8 @@ passwd_lock(void)
     }
 }
 
-void
-passwd_unlock(void)
+static void
+passwd_unlock_pthread(void)
 {
     int rc = pthread_mutex_unlock(&SHM->GV3.e.passwd_mutex);
     if (rc != 0) {
@@ -81,14 +85,12 @@ passwd_unlock(void)
     }
 }
 
-#else
-
 // semaphore based PASSWD locking
 
 static int      semid = -1;
 
-int
-passwd_init(void)
+static int
+passwd_init_sysv(void)
 {
     semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
     if (semid == -1) {
@@ -115,8 +117,8 @@ passwd_init(void)
     return 0;
 }
 
-void
-passwd_lock(void)
+static void
+passwd_lock_sysv(void)
 {
     struct sembuf   buf = {0, -1, SEM_UNDO};
 
@@ -129,8 +131,8 @@ passwd_lock(void)
     }
 }
 
-void
-passwd_unlock(void)
+static void
+passwd_unlock_sysv(void)
 {
     struct sembuf   buf = {0, 1, SEM_UNDO};
 
@@ -140,7 +142,29 @@ passwd_unlock(void)
     }
 }
 
-#endif
+int
+passwd_init(void) {
+    if (PWD_USE_PTHREAD)
+        return passwd_init_pthread();
+    else
+        return passwd_init_sysv();
+}
+
+void
+passwd_lock(void) {
+    if (PWD_USE_PTHREAD)
+        passwd_lock_pthread();
+    else
+        passwd_lock_sysv();
+}
+
+void
+passwd_unlock(void) {
+    if (PWD_USE_PTHREAD)
+        passwd_unlock_pthread();
+    else
+        passwd_unlock_sysv();
+}
 
 // updateing passwd/userec_t
 
