@@ -80,19 +80,6 @@ debug_print_input_buffer(char *s, size_t len)
 #endif
 
 /* ----------------------------------------------------- */
-/* Input Output System                                   */
-/* ----------------------------------------------------- */
-int
-init_io() {
-    vbuf_new(pvout, OBUFSIZE);
-    vbuf_new(pvin, IBUFSIZE);
-    vkey_init();
-    pager_init_hooks();
-    talk_init_hooks();
-    return 0;
-}
-
-/* ----------------------------------------------------- */
 /* output routines                                       */
 /* ----------------------------------------------------- */
 void
@@ -143,7 +130,10 @@ ochar(int c)
     return 0;
 }
 
-#define MAX_HOOKS_PER_PRIO 8
+/* ----------------------------------------------------- */
+/* VKey & dispatcher                                     */
+/* ----------------------------------------------------- */
+#define MAX_HOOKS_PER_PRIO 4
 
 static vkey_hook_fn hook_tables[VKEY_HOOK_PRIO_MAX][MAX_HOOKS_PER_PRIO];
 static int hook_counts[VKEY_HOOK_PRIO_MAX];
@@ -155,6 +145,7 @@ vkey_register_hook(VKeyHookPriority prio, vkey_hook_fn fn)
     if (prio < 0 || prio >= VKEY_HOOK_PRIO_MAX || !fn)
         return -1;
 
+    assert(hook_counts[prio] < MAX_HOOKS_PER_PRIO);
     if (hook_counts[prio] >= MAX_HOOKS_PER_PRIO)
         return -1;
 
@@ -199,6 +190,48 @@ vkey_dispatch_hooks(int ch)
         }
     }
     return ch;
+}
+
+static int
+system_key_hook(int ch)
+{
+    switch (ch)
+    {
+    case Ctrl('L'):
+        redrawwin();
+        refresh();
+        return KEY_INCOMPLETE;
+
+    case Ctrl('Q'):
+        if (IS_DEBUG) {
+            char usage[STRLEN];
+            get_memusage(sizeof(usage), usage);
+            vmsg(usage);
+            return KEY_INCOMPLETE;
+        }
+        return ch;
+    }
+    return ch;
+}
+
+static void
+system_init_hooks(void)
+{
+    vkey_register_hook(VKEY_HOOK_PRIO_SYSTEM, system_key_hook);
+}
+
+/* ----------------------------------------------------- */
+/* Input Output System                                   */
+/* ----------------------------------------------------- */
+int
+init_io() {
+    vbuf_new(pvout, OBUFSIZE);
+    vbuf_new(pvin, IBUFSIZE);
+    vkey_init();
+    system_init_hooks();
+    pager_init_hooks();
+    talk_init_hooks();
+    return 0;
 }
 
 #ifndef USE_NIOS
@@ -394,21 +427,6 @@ igetch(void)
 
 	    case KEY_UNKNOWN:
 		return ch;
-
-	    // common global hot keys...
-	    case Ctrl('L'):
-		redrawwin();
-		refresh();
-		continue;
-#ifdef DEBUG
-	    case Ctrl('Q'):
-		{
-		    char usage[80];
-		    get_memusage(sizeof(usage), usage);
-		    vmsg(usage);
-		}
-		continue;
-#endif
 	}
 
 	ch = vkey_dispatch_hooks(ch);

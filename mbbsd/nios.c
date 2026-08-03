@@ -454,30 +454,6 @@ vkey_process_cin()
             // XXX change this to (META|key) someday...
             KEY_ESC_arg = vkctx.vtkbd.esc_arg;
             break;
-
-            // TODO move this to somewhere else?
-        case Ctrl('L'):
-            ch = KEY_INCOMPLETE;
-            redrawwin();
-            refresh();
-            // doupdate();
-            break;
-
-#ifdef DEBUG
-	    case Ctrl('Q'):
-            ch = KEY_INCOMPLETE;
-            {
-                struct rusage ru;
-                getrusage(RUSAGE_SELF, &ru);
-                vmsgf("sbrk: %ld KB, idrss: %d KB, isrss: %d KB",
-                        (sbrk(0) - (void*)0x8048000) / 1024,
-                        (int)ru.ru_idrss, (int)ru.ru_isrss);
-#ifdef CIN_DEBUG
-                cin_debugging = !cin_debugging;
-#endif
-            }
-            break;
-#endif
     }
     ch = vkey_dispatch_hooks(ch);
     return ch;
