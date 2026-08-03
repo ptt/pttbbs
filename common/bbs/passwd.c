@@ -55,6 +55,7 @@ union semun {
 int
 passwd_init(void)
 {
+    // Must be already done in uhash_loader.c to the SHM variable
     return 0;
 }
 
@@ -118,6 +119,9 @@ void
 passwd_lock(void)
 {
     struct sembuf   buf = {0, -1, SEM_UNDO};
+
+    if (semid == -1)
+        passwd_init();
 
     if (semop(semid, &buf, 1)) {
 	perror("semop");
