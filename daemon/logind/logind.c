@@ -2316,7 +2316,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     // force to eliminate the extra field.
                     // (backward behavior compatible)
                     uid[IDLEN] = 0;
-#endif
+
                     // accounts except free_auth [guest / new]
                     // require passwd.
                     if (!auth_is_free_userid(uid))
