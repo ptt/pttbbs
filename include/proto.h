@@ -19,6 +19,7 @@ void delete_board_link(boardheader_t *bh, int bid);
 int make_board_link(const char *bname, int gid);
 int make_board_link_interactively(int gid);
 void merge_dir(const char *dir1, const char *dir2, int isoutter);
+void test_banip_conf(const char *filename);
 
 /* angel */
 int a_changeangel(void);

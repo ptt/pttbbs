@@ -1,4 +1,6 @@
 #include "bbs.h"
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 /* 使用者管理 */
 int
@@ -1007,6 +1009,62 @@ m_board(void)
 	return 0;
     m_mod_board(bname);
     return 0;
+}
+
+void
+test_banip_conf(const char *filename)
+{
+    BanIpList *blist = load_banip_list(filename, NULL);
+    if (!blist) {
+        vmsgf("無法載入 %s", filename);
+        return;
+    }
+
+    char buf[32];
+    struct in_addr addr;
+
+    while (1) {
+        vs_hdr("測試拒絕連線設定");
+        mvouts(2, 0, "測試設定後的 IP 連線結果。請輸入想測試的 IP, 或直接 Enter 離開。");
+        buf[0] = '\0';
+        if (getdata(5, 0, "測試 IP: ", buf, sizeof(buf), DOECHO) <= 0)
+            break;
+
+        // Trim whitespace
+        char *ip_str = buf;
+        while (*ip_str && isspace((unsigned char)*ip_str))
+            ip_str++;
+        char *end = ip_str + strlen(ip_str) - 1;
+        while (end > ip_str && isspace((unsigned char)*end))
+            *end-- = '\0';
+
+        if (*ip_str == '\0')
+            break;
+
+        // Validate IP
+        if (inet_pton(AF_INET, ip_str, &addr) != 1) {
+            mvouts(7, 0, ANSI_COLOR(1;31) "輸入內容不像 IP。" ANSI_RESET);
+            pressanykey();
+            continue;
+        }
+        move(2, 0); clrtobot();
+        prints("%s 測試結果：", ip_str);
+
+        // Query ban list
+        const char *banmsg = in_banip_list_addr(blist, addr.s_addr);
+        if (banmsg) {
+            outs(ANSI_COLOR(1;31)"[ 拒絕連線 ]" ANSI_RESET);
+            outs("\n顯示訊息:\n");
+            outs(banmsg);
+            outs("\n--------------------\n");
+        } else {
+            outs(ANSI_COLOR(1;32) "[ 連線成功\ ]" ANSI_RESET);
+            prints("\n\n使用者可以正常連線。");
+        }
+        pressanykey();
+    }
+
+    free_banip_list(blist);
 }
 
 /* 設定系統檔案 */

@@ -849,6 +849,10 @@ pae_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED
             vmsgf("系統檔案[%s]: %s",
                   cx->files[curr],
                   (result == EDIT_ABORTED) ?  "未改變" : "更新完畢");
+            // FN_CONF_BANIP should be $BBSHOME/etc/banip.conf
+            if (str_ends_with(cx->files[curr], path_basename(FN_CONF_BANIP))) {
+                test_banip_conf(cx->files[curr]);
+            }
             return PSB_NOP;
     }
     return PSB_NA;
