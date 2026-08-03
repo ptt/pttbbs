@@ -112,27 +112,32 @@ signal_restart(SIGUSR2, write_request);
 
 ## 5. 熱鍵與互動介面 (Key Hooks & Interactive Controls)
 
-水球系統透過 `pager_init_hooks()` 在系統按鍵監聽器中註冊了高優先級的 Modal 按鍵鉤子 (`VKEY_HOOK_PRIO_MODAL`) 與全局呼叫器按鍵鉤子 (`VKEY_HOOK_PRIO_PAGER`)。
+水球系統與全站按鍵事件透過 `vkey_hook` 機制（定義於 [`include/proto.h`](file:///usr/local/google/home/hungte/pttdev/pttbbs/include/proto.h#L350) 與 [`mbbsd/io.c`](file:///usr/local/google/home/hungte/pttdev/pttbbs/mbbsd/io.c#L190)）進行分層攔截與處理。水球系統透過 `pager_init_hooks()` 在系統按鍵監聽器中註冊了 `VKEY_HOOK_PRIO_MODAL` 與 `VKEY_HOOK_PRIO_PAGER` 優先級的 Hook。
 
-### 5.1 按鍵鉤子架構 (`pager_init_hooks`)
+### 5.1 按鍵鉤子層次架構 (`VKeyHookPriority`)
 
-按鍵事件分發採用優先級分層處理：
-- **`VKEY_HOOK_PRIO_MODAL` ➔ `pager_modal_key_hook()`**：
-  僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲導覽與切換按鍵 (`Tab`, `Ctrl-T`, `Ctrl-F`, `Ctrl-G`)。
-- **`VKEY_HOOK_PRIO_PAGER` ➔ `pager_global_key_hook()`**：
-  處理全域呼叫器快捷鍵 (`Ctrl-U`, `Ctrl-R`)，根據 `cuser.pager_ui_type` 分流至對應的 Ctrl-R 處理函式 (`pager_handle_ctrl_r_default` 或 `pager_handle_ctrl_r_ofo`)。
+按鍵事件分發採用優先級 (`VKEY_HOOK_PRIO_SYSTEM` ➔ `VKEY_HOOK_PRIO_NORMAL`) 分層處理：
+
+| 優先級 (Priority) | Hook 處理函式 | 註冊模組/檔案 | 職責與攔截按鍵 |
+| :--- | :--- | :--- | :--- |
+| **`VKEY_HOOK_PRIO_SYSTEM` (0)** | `system_key_hook()` | [`mbbsd/io.c`](file:///usr/local/google/home/hungte/pttdev/pttbbs/mbbsd/io.c#L204) | **無狀態全站系統級熱鍵**：<br>• `Ctrl-L`：重繪畫面 (`redrawwin()` + `refresh()`)<br>• `Ctrl-Q`：顯示記憶體狀態 (`get_memusage()`, DEBUG 模式) |
+| **`VKEY_HOOK_PRIO_MODAL` (1)** | `pager_modal_key_hook()` | [`mbbsd/pager.c`](file:///usr/local/google/home/hungte/pttdev/pttbbs/mbbsd/pager.c#L845) | **Modal 視窗/歷史面板導覽**：<br>• 僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲 `Tab`, `Ctrl-T`, `Ctrl-F`, `Ctrl-G` 等面板導覽按鍵。 |
+| **`VKEY_HOOK_PRIO_PAGER` (2)** | `pager_global_key_hook()` | [`mbbsd/pager.c`](file:///usr/local/google/home/hungte/pttdev/pttbbs/mbbsd/pager.c#L880) | **全域呼叫器熱鍵**：<br>• `Ctrl-R`：查水球 / 回覆水球（根據 `cuser.pager_ui_type` 分流至 `pager_handle_ctrl_r_default` 或 `pager_handle_ctrl_r_ofo`）。 |
+| **`VKEY_HOOK_PRIO_NORMAL` (3)** | `talk_key_hook()` | [`mbbsd/talk.c`](file:///usr/local/google/home/hungte/pttdev/pttbbs/mbbsd/talk.c#L2370) | **一般畫面層級熱鍵 (Mode Switch)**：<br>• `Ctrl-U`：快速線上使用者列表（暫存畫面 `scr_dump()` ➔ 執行 `t_users()` ➔ 還原畫面 `scr_restore()`）。 |
 
 ---
 
 ### 5.2 核心按鍵功能表
 
-| 按鍵組合 | 作用功能 | 適用介面模式 | 內部處理邏輯 |
+| 按鍵組合 | 優先級與 Hook | 適用介面模式 | 內部處理邏輯 |
 | :--- | :--- | :--- | :--- |
-| **`Ctrl-U`** | 快速線上使用者列表 | 全部模式 | `pager_handle_ctrl_u()`：暫存畫面 `scr_dump()` ➔ 執行 `t_users()` ➔ 還原畫面 `scr_restore()`。 |
-| **`Ctrl-R`** | 查水球 / 回覆水球 | ORIG / NEW | `pager_handle_ctrl_r_default()`：<br>• 第 1 次連按 (收到水球時)：顯示該條訊息並直接開啟 `my_write()` 輸入框回覆。<br>• 第 2 次連按：開啟水球歷史面板 (`watermode = 1`)。<br>• 第 3+ 次連按：切換至更早的水球歷史訊息。 |
-| **`Ctrl-R`** | 開啟 OFO 分頁介面 | OFO 模式 | `pager_handle_ctrl_r_ofo()` ➔ 執行 `ofo_my_write()`。 |
-| **`Tab` / `Ctrl-T`** | 循環切換歷史水球 | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息。 |
-| **`Ctrl-F` / `Ctrl-G`**| 切換對話 User Tab | NEW 模式 | 在 `watermode > 0` 查閱模式下，切換 `swater[0..5]` 不同的對話對象。 |
+| **`Ctrl-L`** | `PRIO_SYSTEM`<br>`system_key_hook` | 全部畫面 | 重繪螢幕 (`redrawwin()` ➔ `refresh()`)。 |
+| **`Ctrl-Q`** | `PRIO_SYSTEM`<br>`system_key_hook` | DEBUG 模式 | 檢視系統記憶體使用狀態 (`get_memusage()`)。 |
+| **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | ORIG / NEW | `pager_handle_ctrl_r_default()`：<br>• 第 1 次連按 (收到水球時)：顯示該條訊息並直接開啟 `my_write()` 輸入框回覆。<br>• 第 2 次連按：開啟水球歷史面板 (`watermode = 1`)。<br>• 第 3+ 次連按：切換至更早的水球歷史訊息。 |
+| **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | OFO 模式 | `pager_handle_ctrl_r_ofo()` ➔ 執行 `ofo_my_write()`。 |
+| **`Tab` / `Ctrl-T`** | `PRIO_MODAL`<br>`pager_modal_key_hook` | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息。 |
+| **`Ctrl-F` / `Ctrl-G`**| `PRIO_MODAL`<br>`pager_modal_key_hook` | NEW 模式 | 在 `watermode > 0` 查閱模式下，切換 `swater[0..5]` 不同的對話對象。 |
+| **`Ctrl-U`** | `PRIO_NORMAL`<br>`talk_key_hook` | 全部模式 | `talk_key_hook()`：暫存畫面 `scr_dump()` ➔ 切換模式執行 `t_users()` ➔ 還原畫面 `scr_restore()`。 |
 
 ---
 
