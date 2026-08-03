@@ -2364,3 +2364,41 @@ t_chat(void)
     return ccw_chat(fd);
 }
 
+/* ----------------------------------------------------- */
+/* Global Talk Hotkeys (Ctrl-U Userlist)                 */
+/* ----------------------------------------------------- */
+
+static int
+talk_key_hook(int ch)
+{
+    if (ch != Ctrl('U'))
+        return ch;
+
+    if (!is_login_ready || !currutmp ||
+        !HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_VIOLATELAW))
+        return ch;
+
+    if (currutmp->mode == EDITING ||
+        currutmp->mode == LUSERS  ||
+        !currutmp->mode) {
+        return ch;
+    } else {
+        screen_backup_t old_screen;
+        int             my_newfd;
+
+        scr_dump(&old_screen);
+        my_newfd = vkey_detach();
+
+        t_users();
+
+        vkey_attach(my_newfd);
+        scr_restore(&old_screen);
+    }
+    return KEY_INCOMPLETE;
+}
+
+void
+talk_init_hooks(void)
+{
+    vkey_register_hook(VKEY_HOOK_PRIO_NORMAL, talk_key_hook);
+}

@@ -388,7 +388,6 @@ vkey_init()
     memset(&vkctx, 0, sizeof(vkctx));
     cin_init();
     VKEY_RESET_PEEK();
-    pager_init_hooks();
     // XXX initialize telnet, convert, ...?
 }
 

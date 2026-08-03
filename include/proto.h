@@ -325,6 +325,7 @@ void oflush(void);
 
 // pager hotkeys processor
 void pager_init_hooks(void);
+void talk_init_hooks(void);
 
 // new input api
 /* nios.c / io.c */
@@ -352,8 +353,8 @@ int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in p
 typedef enum {
     VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
     VKEY_HOOK_PRIO_MODAL,      // Modal dialogs/popups (e.g., active waterball list)
-    VKEY_HOOK_PRIO_PAGER,      // Global Pager/waterball hotkeys (e.g., Ctrl-R, Ctrl-U)
-    VKEY_HOOK_PRIO_NORMAL,     // Normal screen handlers
+    VKEY_HOOK_PRIO_PAGER,      // Global Pager/waterball hotkeys (e.g., Ctrl-R)
+    VKEY_HOOK_PRIO_NORMAL,     // Normal screen handlers (e.g., Ctrl-U userlist)
     VKEY_HOOK_PRIO_MAX
 } VKeyHookPriority;
 

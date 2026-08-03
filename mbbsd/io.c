@@ -86,7 +86,9 @@ int
 init_io() {
     vbuf_new(pvout, OBUFSIZE);
     vbuf_new(pvin, IBUFSIZE);
+    vkey_init();
     pager_init_hooks();
+    talk_init_hooks();
     return 0;
 }
 
@@ -512,6 +514,10 @@ vkey_purge(void)
         read_vin();
         drop_input();
     }
+}
+
+void
+vkey_init() {
 }
 
 int

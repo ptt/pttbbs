@@ -735,31 +735,6 @@ pager_toggle_mode(void)
 /* ----------------------------------------------------- */
 
 static int
-pager_handle_ctrl_u(int ch)
-{
-    if (!is_login_ready || !currutmp ||
-        !HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_VIOLATELAW))
-        return ch;
-    if (currutmp->mode == EDITING ||
-        currutmp->mode == LUSERS  ||
-        !currutmp->mode) {
-        return ch;
-    } else {
-        screen_backup_t old_screen;
-        int             my_newfd;
-
-        scr_dump(&old_screen);
-        my_newfd = vkey_detach();
-
-        t_users();
-
-        vkey_attach(my_newfd);
-        scr_restore(&old_screen);
-    }
-    return KEY_INCOMPLETE;
-}
-
-static int
 pager_handle_ctrl_r_ofo(int ch)
 {
     int my_newfd;
@@ -909,9 +884,6 @@ pager_global_key_hook(int ch)
 
     switch (ch)
     {
-    case Ctrl('U'):
-        return pager_handle_ctrl_u(ch);
-
     case Ctrl('R'):
         if (PAGER_UI_IS(PAGER_UI_OFO))
             return pager_handle_ctrl_r_ofo(ch);
