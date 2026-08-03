@@ -732,7 +732,7 @@ static const commands_t talklist[] = {
     {a_changeangel,
 	PERM_LOGINOK,	    "AChange Angel 更換小天使"},
     {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
-                            "BAngel Beats! 天使公會"},
+                            "BAngel Beats! 【天使公會】"},
 #endif
     {pager_show_log, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
@@ -942,8 +942,8 @@ x_users(void)
 
 /* XYZ tool menu */
 static const commands_t xyzlist[] = {
-    {x_hot,  0,      "THot Topics   《熱門話題與看板》"},
-    {x_users,0,      "Users         《使用者相關統計》"},
+    {x_hot,  0,      "THot Topics   【熱門話題與看板】"},
+    {x_users,0,      "Users         【使用者相關統計】"},
 #ifndef DEBUG
     /* All these are useless in debug mode. */
 #ifdef HAVE_USERAGREEMENT
@@ -1022,17 +1022,17 @@ static int chessroom();
 static const commands_t playlist[] = {
     {p_money, PERM_LOGINOK,  "Pay         【 " BBSMNAME2 "量販店 】"},
     {chicken_main, PERM_LOGINOK,
-			     "Chicken     【 " BBSMNAME2 "養雞場 】"},
+			     "Chicken     " BBSMNAME2 "養雞場"},
     {ticket_main, PERM_LOGINOK,
-                             "Gamble      【 " BBSMNAME2 "彩券   】"},
+                             "Gamble      " BBSMNAME2 "彩券"},
     {chessroom, PERM_LOGINOK,"BChess      【 " BBSMNAME2 "棋院   】"},
     {NULL, 0, NULL}
 };
 
 static const commands_t conn6list[] = {
-    {conn6_main,       PERM_LOGINOK, "1Conn6Fight    【" ANSI_COLOR(1;33) "六子棋邀局" ANSI_RESET "】"},
-    {conn6_personal,   PERM_LOGINOK, "2Conn6Self     【" ANSI_COLOR(1;34) "六子棋打譜" ANSI_RESET "】"},
-    {conn6_watch,      PERM_LOGINOK, "3Conn6Watch    【" ANSI_COLOR(1;35) "六子棋觀棋" ANSI_RESET "】"},
+    {conn6_main,       PERM_LOGINOK, "1Conn6Fight    " ANSI_COLOR(1;33) "六子棋邀局" ANSI_RESET},
+    {conn6_personal,   PERM_LOGINOK, "2Conn6Self     " ANSI_COLOR(1;34) "六子棋打譜" ANSI_RESET},
+    {conn6_watch,      PERM_LOGINOK, "3Conn6Watch    " ANSI_COLOR(1;35) "六子棋觀棋" ANSI_RESET},
     {NULL, 0, NULL}
 };
 
@@ -1042,16 +1042,16 @@ static int conn6_menu() {
 }
 
 static const commands_t chesslist[] = {
-    {chc_main,         PERM_LOGINOK, "1CChessFight   【" ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET "】"},
-    {chc_personal,     PERM_LOGINOK, "2CChessSelf    【" ANSI_COLOR(1;34) " 象棋打譜 " ANSI_RESET "】"},
-    {chc_watch,        PERM_LOGINOK, "3CChessWatch   【" ANSI_COLOR(1;35) " 象棋觀棋 " ANSI_RESET "】"},
-    {gomoku_main,      PERM_LOGINOK, "4GomokuFight   【" ANSI_COLOR(1;33) "五子棋邀局" ANSI_RESET "】"},
-    {gomoku_personal,  PERM_LOGINOK, "5GomokuSelf    【" ANSI_COLOR(1;34) "五子棋打譜" ANSI_RESET "】"},
-    {gomoku_watch,     PERM_LOGINOK, "6GomokuWatch   【" ANSI_COLOR(1;35) "五子棋觀棋" ANSI_RESET "】"},
-    {gochess_main,     PERM_LOGINOK, "7GoChessFight  【" ANSI_COLOR(1;33) " 圍棋邀局 " ANSI_RESET "】"},
-    {gochess_personal, PERM_LOGINOK, "8GoChessSelf   【" ANSI_COLOR(1;34) " 圍棋打譜 " ANSI_RESET "】"},
-    {gochess_watch,    PERM_LOGINOK, "9GoChessWatch  【" ANSI_COLOR(1;35) " 圍棋觀棋 " ANSI_RESET "】"},
-    {conn6_menu,       PERM_LOGINOK, "CConnect6      【" ANSI_COLOR(1;33) "  六子棋  " ANSI_RESET "】"},
+    {chc_main,         PERM_LOGINOK, "1CChessFight   " ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET},
+    {chc_personal,     PERM_LOGINOK, "2CChessSelf    " ANSI_COLOR(1;34) " 象棋打譜 " ANSI_RESET},
+    {chc_watch,        PERM_LOGINOK, "3CChessWatch   " ANSI_COLOR(1;35) " 象棋觀棋 " ANSI_RESET},
+    {gomoku_main,      PERM_LOGINOK, "4GomokuFight   " ANSI_COLOR(1;33) "五子棋邀局" ANSI_RESET},
+    {gomoku_personal,  PERM_LOGINOK, "5GomokuSelf    " ANSI_COLOR(1;34) "五子棋打譜" ANSI_RESET},
+    {gomoku_watch,     PERM_LOGINOK, "6GomokuWatch   " ANSI_COLOR(1;35) "五子棋觀棋" ANSI_RESET},
+    {gochess_main,     PERM_LOGINOK, "7GoChessFight  " ANSI_COLOR(1;33) " 圍棋邀局 " ANSI_RESET},
+    {gochess_personal, PERM_LOGINOK, "8GoChessSelf   " ANSI_COLOR(1;34) " 圍棋打譜 " ANSI_RESET},
+    {gochess_watch,    PERM_LOGINOK, "9GoChessWatch  " ANSI_COLOR(1;35) " 圍棋觀棋 " ANSI_RESET},
+    {conn6_menu,       PERM_LOGINOK, "CConnect6      【" ANSI_COLOR(1;33) "六子棋" ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
