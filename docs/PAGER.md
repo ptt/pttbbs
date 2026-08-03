@@ -112,14 +112,15 @@ signal_restart(SIGUSR2, write_request);
 
 ## 5. 熱鍵與互動介面 (Key Hooks & Interactive Controls)
 
-水球系統透過 `pager_init_hooks()` 在系統按鍵監聽器中註冊了 `VKEY_HOOK_PRIO_PAGER` 優先級的 Hook。
+水球系統透過 `pager_init_hooks()` 在系統按鍵監聽器中註冊了高優先級的 Modal 按鍵鉤子 (`VKEY_HOOK_PRIO_MODAL`) 與全局呼叫器按鍵鉤子 (`VKEY_HOOK_PRIO_PAGER`)。
 
-### 5.1 全局按鍵鉤子 (`pager_key_hook`)
+### 5.1 按鍵鉤子架構 (`pager_init_hooks`)
 
-當使用者在 BBS 中按下按鍵時，Hook 會根據 `cuser.pager_ui_type` 分流至對應處理函式：
-- `PAGER_UI_ORIG` ➔ `pager_orig_key_hook()`
-- `PAGER_UI_NEW` ➔ `pager_new_key_hook()`
-- `PAGER_UI_OFO` ➔ `pager_ofo_key_hook()`
+按鍵事件分發採用優先級分層處理：
+- **`VKEY_HOOK_PRIO_MODAL` ➔ `pager_modal_key_hook()`**：
+  僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲導覽與切換按鍵 (`Tab`, `Ctrl-T`, `Ctrl-F`, `Ctrl-G`)。
+- **`VKEY_HOOK_PRIO_PAGER` ➔ `pager_global_key_hook()`**：
+  處理全域呼叫器快捷鍵 (`Ctrl-U`, `Ctrl-R`)，根據 `cuser.pager_ui_type` 分流至對應的 Ctrl-R 處理函式 (`pager_handle_ctrl_r_default` 或 `pager_handle_ctrl_r_ofo`)。
 
 ---
 

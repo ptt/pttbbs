@@ -842,72 +842,16 @@ pager_handle_ctrl_r_default(int ch)
 }
 
 static int
-pager_ofo_key_hook(int ch)
-{
-    switch (ch)
-    {
-    case Ctrl('U'):
-        return pager_handle_ctrl_u(ch);
-
-    case Ctrl('R'):
-        return pager_handle_ctrl_r_ofo(ch);
-    }
-    return ch;
-}
-
-static int
-pager_orig_key_hook(int ch)
-{
-    switch (ch)
-    {
-    case Ctrl('U'):
-        return pager_handle_ctrl_u(ch);
-
-    case Ctrl('R'):
-        return pager_handle_ctrl_r_default(ch);
-
-    case KEY_TAB:
-        if (watermode <= 0)
-            break;
-
-        check_water_init();
-        watermode = (watermode + water_which->count)
-                % water_which->count + 1;
-        pager_show_panel();
-        return KEY_INCOMPLETE;
-
-    case Ctrl('T'):
-        if (watermode <= 0)
-            break;
-
-        check_water_init();
-        if (watermode > 1)
-            watermode--;
-        else
-            watermode = water_which->count;
-        pager_show_panel();
-        return KEY_INCOMPLETE;
-    }
-    return ch;
-}
-
-static int
-pager_new_key_hook(int ch)
+pager_modal_key_hook(int ch)
 {
     static int water_which_flag = 0;
 
+    if (!currutmp || watermode <= 0)
+        return ch;
+
     switch (ch)
     {
-    case Ctrl('U'):
-        return pager_handle_ctrl_u(ch);
-
-    case Ctrl('R'):
-        return pager_handle_ctrl_r_default(ch);
-
     case KEY_TAB:
-        if (watermode <= 0)
-            break;
-
         check_water_init();
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
@@ -915,9 +859,6 @@ pager_new_key_hook(int ch)
         return KEY_INCOMPLETE;
 
     case Ctrl('T'):
-        if (watermode <= 0)
-            break;
-
         check_water_init();
         if (watermode > 1)
             watermode--;
@@ -925,11 +866,14 @@ pager_new_key_hook(int ch)
             watermode = water_which->count;
         pager_show_panel();
         return KEY_INCOMPLETE;
+    }
 
+    // PAGER_UI_NEW specific bindings.
+    if (!PAGER_UI_IS(PAGER_UI_NEW))
+        return ch;
+
+    switch (ch) {
     case Ctrl('F'):
-        if (watermode <= 0)
-            break;
-
         check_water_init();
         water_which_flag =
                 (water_which_flag + 1) % (int)(water_usies + 1);
@@ -942,9 +886,6 @@ pager_new_key_hook(int ch)
         return KEY_INCOMPLETE;
 
     case Ctrl('G'):
-        if (watermode <= 0)
-            break;
-
         check_water_init();
         water_which_flag = (water_which_flag + water_usies) %
                 (water_usies + 1);
@@ -960,29 +901,30 @@ pager_new_key_hook(int ch)
     return ch;
 }
 
-static vkey_hook_fn pager_ui_hooks[PAGER_UI_TYPES] = {
-    [PAGER_UI_ORIG] = pager_orig_key_hook,
-    [PAGER_UI_NEW]  = pager_new_key_hook,
-    [PAGER_UI_OFO]  = pager_ofo_key_hook,
-};
-
 static int
-pager_key_hook(int ch)
+pager_global_key_hook(int ch)
 {
     if (!currutmp)
         return ch;
 
-    int uitype = cuser.pager_ui_type % PAGER_UI_TYPES;
-    if (pager_ui_hooks[uitype])
-        return pager_ui_hooks[uitype](ch);
+    switch (ch)
+    {
+    case Ctrl('U'):
+        return pager_handle_ctrl_u(ch);
 
+    case Ctrl('R'):
+        if (PAGER_UI_IS(PAGER_UI_OFO))
+            return pager_handle_ctrl_r_ofo(ch);
+        return pager_handle_ctrl_r_default(ch);
+    }
     return ch;
 }
 
 void
 pager_init_hooks(void)
 {
-    vkey_register_hook(VKEY_HOOK_PRIO_PAGER, pager_key_hook);
+    vkey_register_hook(VKEY_HOOK_PRIO_MODAL, pager_modal_key_hook);
+    vkey_register_hook(VKEY_HOOK_PRIO_PAGER, pager_global_key_hook);
 }
 
 /* ----------------------------------------------------- */
