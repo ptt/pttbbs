@@ -1196,9 +1196,12 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     if (tokill) {
+        int ret;
 	kick_all(x.userid);
 	delete_allpost(x.userid);
-	kill_user(unum, x.userid);
+        ret = kill_user(unum, x.userid);
+	if (ret)
+            vmsgf("§R°£¥¢±Ñ¡A¿ù»~½X: %d", ret);
 	return;
     } else
 	log_usies("SetUser", x.userid);
