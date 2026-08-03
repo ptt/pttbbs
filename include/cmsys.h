@@ -162,6 +162,9 @@ unsigned int *uintbsearch(const unsigned int key, const unsigned int *base0, con
 void str_lower(char *t, const char *s);
 int str_starts_with(const char *str, const char *prefix);
 int str_case_starts_with(const char *str, const char *prefix);
+int str_ends_with(const char *str, const char *suffix);
+int str_case_ends_with(const char *str, const char *suffix);
+const char *path_basename(const char *path);
 void trim(char *buf);
 void chomp(char *src);
 int  strlen_noansi(const char *s);

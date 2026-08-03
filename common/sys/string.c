@@ -46,6 +46,36 @@ str_case_starts_with(const char *str, const char *prefix) {
     return 1;
 }
 
+int
+str_ends_with(const char *str, const char *suffix) {
+    if (!str || !suffix)
+        return 0;
+    size_t len_str = strlen(str);
+    size_t len_suffix = strlen(suffix);
+    if (len_str < len_suffix)
+        return 0;
+    return strcmp(str + len_str - len_suffix, suffix) == 0;
+}
+
+int
+str_case_ends_with(const char *str, const char *suffix) {
+    if (!str || !suffix)
+        return 0;
+    size_t len_str = strlen(str);
+    size_t len_suffix = strlen(suffix);
+    if (len_str < len_suffix)
+        return 0;
+    return strcasecmp(str + len_str - len_suffix, suffix) == 0;
+}
+
+const char *
+path_basename(const char *path) {
+    if (!path)
+        return "";
+    const char *p = strrchr(path, '/');
+    return p ? p + 1 : path;
+}
+
 /**
  * 移除字串 buf 後端多餘的空白。
  * @param buf
