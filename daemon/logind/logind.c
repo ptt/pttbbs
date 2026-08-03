@@ -1407,16 +1407,28 @@ regular_check()
         load_text_screen_file(FN_BAN, &ban_screen);
     }
 
-    // check welcome screen
-    if (g_verbose > VERBOSE_INFO) 
-        fprintf(stderr, LOG_PREFIX "check welcome screen.\n");
-    if (dasht(FN_WELCOME) != g_welcome_mtime)
-    {
-        g_reload_data = 1;
+    const char *files[] = {
+        FN_WELCOME,
+        FN_CONF_BANIP,
+    };
+    const time4_t tss[] = {
+        g_welcome_mtime,
+        g_banip_mtime,
+    };
+
+    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) {
+        const char *fn = files[i];
         if (g_verbose > VERBOSE_INFO)
-            fprintf(stderr, LOG_PREFIX 
-                    "modified. must update welcome screen ...\n");
+            fprintf(stderr, LOG_PREFIX "check %s.\n", fn);
+        if (dasht(fn) != tss[i]) {
+            g_reload_data = 1;
+            if (g_verbose > VERBOSE_INFO)
+                fprintf(stderr, LOG_PREFIX
+                        "%s is modified and must be reloaded ...\n", fn);
+        }
     }
+
+    // check welcome screen
 }
 
 static int
