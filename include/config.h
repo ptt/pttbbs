@@ -524,10 +524,16 @@
 #define EXP_ALOHA_SVC (0)
 #endif
 
-#endif
-
 #ifdef PLAY_ANGEL
 #define HAS_ANGEL 1
 #else
 #define HAS_ANGEL 0
+#endif // PLAY_ANGEL
+
+#ifdef DEBUG
+#define IS_DEBUG 1
+#else
+#define IS_DEBUG 0
 #endif
+
+#endif // INCLUDE_CONFIG_H
