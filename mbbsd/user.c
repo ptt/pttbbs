@@ -1572,5 +1572,152 @@ u_list(void)
     return 0;
 }
 
+int u_setup_2fa(void)
+{
+    clear();
+    move(0, 0);
+    outs(ANSI_COLOR(1;33) "==== 設定雙重驗證 (2-Step Authentication / TOTP) ====" ANSI_RESET "\n\n");
+
+    // TODO(hungte) Check if otpauth can be loaded successfully.
+
+    if (cuser.u_2fa) {
+        outs("目前 2FA 狀態：" ANSI_COLOR(1;32) "已啟用" ANSI_RESET "\n\n");
+        char ans[4];
+        int y = 5;
+        getdata(y, 0, "您確定要停用 2FA 雙重驗證嗎？(y/N): ", ans, sizeof(ans), DOECHO);
+        if (ans[0] == 'y' || ans[0] == 'Y') {
+            char pw[32], code_in[16];
+            y += 2;
+            getdata(y, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO);
+            if (!checkuser_passwd(cuser_ref, pw)) {
+                outs("\n" ANSI_COLOR(1;31) "密碼錯誤！無法停用 2FA。" ANSI_RESET "\n");
+                vkey();
+                return 0;
+            }
+            y += 2;
+            getdata(y, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in, sizeof(code_in), DOECHO);
+            if (!user_verify_2fa_or_backup(cuser.userid, code_in)) {
+                outs("\n" ANSI_COLOR(1;31) "驗證碼錯誤！無法停用 2FA。" ANSI_RESET "\n");
+                vkey();
+                return 0;
+            }
+            pwcuSet2FA(cuser.u_2fa ? 0 : 1);
+            user_delete_2fa(cuser.userid);
+            outs("\n" ANSI_COLOR(1;32) "已成功\停用 2FA 雙重驗證！" ANSI_RESET "\n");
+            vkey();
+            return 0;
+        }
+        return 0;
+    }
+
+    outs("目前 2FA 狀態：" ANSI_COLOR(1;31) "未啟用" ANSI_RESET "\n\n");
+    char ans[4];
+    getdata(5, 0, "您是否要開始設定 2FA 雙重驗證？(Y/n): ", ans, sizeof(ans), DOECHO);
+    if (ans[0] == 'n' || ans[0] == 'N') {
+        return 0;
+    }
+
+    user_2fa_t tfa;
+    memset(&tfa, 0, sizeof(tfa));
+    tfa.enabled = true;
+    generate_2fa_secret(tfa.secret);
+    for (int i = 0; i < MAX_BACKUP_CODES; i++) {
+        generate_backup_code(tfa.backup_codes[i]);
+        tfa.backup_used[i] = 0;
+    }
+    char lc_secret[sizeof(tfa.secret)];
+    memcpy(lc_secret, tfa.secret, sizeof(lc_secret));
+    str_lower(lc_secret, tfa.secret);
+
+    vs_hdr("2FA 雙重驗證設定");
+    prints("本系統使用標準 otpauth:// 驗證方法，您可使用任何相容的驗證器來登入，\n"
+           "以 Google Authenticator 為例，請選擇「輸入設定金鑰」，帳戶名稱任意 (如" BBSMNAME ")\n"
+           "在「您的金鑰」(Secret Key)輸入: " ANSI_COLOR(1;36) "%s" ANSI_RESET
+           " ( 小寫: %s )\n"
+           "金鑰類形是「根據時間」，然後按下新增。\n\n",
+           tfa.secret, lc_secret);
+    explicit_bzero(lc_secret, sizeof(lc_secret));
+
+    outs("金鑰的超鏈結形式提供如下 (部份系統可直接點選或複製貼上):\n");
+    prints(ANSI_COLOR(1)"otpauth://totp/%s?secret=%s&issuer=%s" ANSI_RESET "\n\n",
+           cuser.userid, tfa.secret, BBSMNAME);
+
+    outs(ANSI_COLOR(1;35) "[緊急備用救援碼 (8位數，各可使用一次)]:" ANSI_RESET "\n");
+
+    const int y = 9, lines = 5;
+    for (int i = 0; i < MAX_BACKUP_CODES; i++) {
+        mvprints(y+i%lines, (i/lines) * 30, "  救援碼 %02d: " ANSI_COLOR(1;33) "%s" ANSI_RESET "\n",
+                 i + 1, tfa.backup_codes[i]);
+    }
+    outs("\n" ANSI_COLOR(1;31) "請妥善保存以上救援碼！若手機遺失可用於登入。" ANSI_RESET "\n\n");
+
+    char input_code[7];
+    for (int err = 0; err < 5; err++) {
+        getdata(b_lines - 1, 0, "請輸入驗證器產生的六位數字驗證碼以啟用: ",
+                input_code, sizeof(input_code), DOECHO);
+
+        if (!*input_code)
+            break;
+
+        if (verify_2fa(tfa.secret, input_code, 1)) {
+            user_save_2fa(cuser.userid, &tfa);
+            pwcuSet2FA(cuser.u_2fa ? 0 : 1);
+            mvouts(b_lines - 2, 0, ANSI_COLOR(1;32) "[成功\] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
+            break;
+        } else {
+            mvouts(b_lines - 2, 0, ANSI_COLOR(1;31) "[失敗] 驗證碼錯誤，請重新輸入。" ANSI_RESET "\n");
+        }
+    }
+    if (cuser.u_2fa)
+        pressanykey();
+    else
+        vmsg("雙重驗證未啟用。");
+    return 0;
+}
+
+int u_admin_disable_2fa(void) {
+    if (!HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS)) {
+        vmsg("權限不足！此功\能僅限站長或帳號站長使用。");
+        return -1;
+    }
+
+    char target_id[IDLEN + 1];
+    if (!getdata(b_lines - 1, 0, "請輸入欲強制關閉 2FA 的使用者 ID: ", target_id, sizeof(target_id), DOECHO))
+        return -1;
+
+    userec_t target_user;
+    int uid = getuser(target_id, &target_user);
+    if (uid <= 0) {
+        vmsgf("找不到使用者 %s！", target_id);
+        return -1;
+    }
+
+    if (!target_user.u_2fa) {
+        vmsgf("使用者 %s 並未開啟 2FA 雙重驗證。", target_id);
+        return -1;
+    }
+    char reason[STRLEN];
+    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
+
+    if (vansf("確定要強制關閉使用者 %s 的 2FA 雙重驗證嗎？(y/N): ", target_id) != 'y')
+        return -1;
+
+    target_user.u_2fa = 0;
+    passwd_sync_update(uid, &target_user);
+    user_delete_2fa(target_id);
+
+    log_usies("Remove2FA", target_id);
+
+    char title[STRLEN], msg[512];
+    SNPRINTF(title, "解除2FA: %s (站長: %s)", target_id, cuser.userid);
+    SNPRINTF(msg, "帳號 %s 的 2FA 由站長 %s 解除，理由:\n %s\n\n",
+             target_id, cuser.userid, reason);
+    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+
+    vmsgf("已成功\強制關閉使用者 %s 的 2FA 雙重驗證！", target_id);
+    return 0;
+}
+
+
 /* vim:sw=4
  */

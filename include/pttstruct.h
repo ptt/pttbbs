@@ -50,6 +50,7 @@ typedef struct chicken_t { /* 128 bytes */
 #define PW_PLAIN_SIZE   (PW_PLAIN_LEN+1) /* Size of valid input password length (incl NUL) */
 #define PW_FHASH_SIZE   14        /* Size of fcrypt password hash (13+NUL) */
 #define PW_BHASH_SIZE   64        /* Size of long password hash (bcrypt=60+NUL=61 for now, pad to 64) */
+#define TFA_INPUT_LEN   8         /* 6-digits TOTP or 8-digits recovery codes */
 
 #define REGLEN     38             /* Length of registration data */
 #define EMAILSZ    50             /* Size of email field */
@@ -85,7 +86,8 @@ typedef struct userec_t {
     uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
-    char	_unused4[2];
+    uint8_t	u_2fa;		/* 雙重驗證 2FA (0=Off, 1=TOTP) */
+    char	_unused4[1];
     uint32_t    exmailbox;	/* 購買信箱數 */
 
     char	_unused5[4];
@@ -665,5 +667,15 @@ typedef struct
     int show_start;	/* by which page to start display */
     int show_max;	/* max covered range in last display */
 } SigInfo;
+
+/* 2fa (Two-Factor Authentication, using time-based OTP */
+#define MAX_BACKUP_CODES 10
+
+typedef struct {
+    char secret[17];
+    char backup_codes[MAX_BACKUP_CODES][9];
+    short backup_used[MAX_BACKUP_CODES];
+    bool enabled;
+} user_2fa_t;
 
 #endif

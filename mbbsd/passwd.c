@@ -449,6 +449,14 @@ pwcuToggleUserFlag	(unsigned int mask)
 }
 
 int
+pwcuSet2FA(uint8_t val)
+{
+    PWCU_START();
+    cuser.u_2fa = u.u_2fa = val;
+    PWCU_END();
+}
+
+int
 pwcuToggleSortBoard ()
 {
     // XXX if this is executed too often,

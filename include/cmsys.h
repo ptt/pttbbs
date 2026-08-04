@@ -389,4 +389,14 @@ extern const uint8_t  b2u_ambiguous_width[];
 /* thttp.c */
 #include "thttp.h"
 
+/* 2fa.c */
+/* Generate 2FA 6-digit code for a timestamp. code_out size >= 7. */
+int generate_2fa(const uint8_t *secret, size_t secret_len, uint64_t timestamp, uint32_t step_seconds, char code_out[7]);
+/* Generate 16-character Base32 random secret key. secret_base32 size >= 17. */
+void generate_2fa_secret(char secret_base32[17]);
+/* Verify 6-digit user input code against secret. Returns 1 if valid, 0 if invalid. */
+int verify_2fa(const char *secret_base32, const char *user_code, int time_window);
+/* Generate 8-digit random backup recovery code */
+void generate_backup_code(char code_out[9]);
+
 #endif

@@ -3,7 +3,7 @@ SRCROOT=	../..
 
 SRCS:=	daemon.c file.c lock.c log.c net.c sort.c string.c time.c \
 	crypt.c bcrypt.c record.c vector.c telnet.c vbuf.c vtkbd.c \
-	utf8.c big5.c buffer.c thttp.c
+	utf8.c big5.c buffer.c thttp.c 2fa.c
 
 LIB:=	cmsys
 

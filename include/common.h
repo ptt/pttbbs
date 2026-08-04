@@ -134,6 +134,7 @@
 #define ERR_BID         "你搞錯了啦！沒有這個板喔！"
 #define ERR_UID         "這裡沒有這個人啦！"
 #define ERR_PASSWD      "密碼不對喔！請檢查帳號及密碼大小寫有無輸入錯誤。"
+#define ERR_2FA         "2FA 兩階段驗證失敗。"
 #define ERR_FILENAME    "檔名不正確！"
 
 #define TN_ANNOUNCE	"[公告]"

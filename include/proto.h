@@ -875,6 +875,7 @@ int pwcuToggleSortBoard (void);
 int pwcuToggleFriendList(void);
 int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags
 int pwcuToggleUserFlag2	(unsigned int mask);	// not saved until pwcuSaveUserFlags
+int pwcuSet2FA		(uint8_t val);
 
 // session management
 int pwcuLoginSave	(void);
@@ -891,5 +892,8 @@ int  pwcuInitAdminPerm	(void);
 
 int verify_captcha(const char *reason);
 const char *remote_captcha();
+
+int u_setup_2fa(void);
+int u_admin_disable_2fa(void);
 
 #endif
