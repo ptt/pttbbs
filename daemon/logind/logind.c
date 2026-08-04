@@ -53,7 +53,7 @@
 
 #ifndef LOGIND_REGULAR_CHECK_DURATION
 #define LOGIND_REGULAR_CHECK_DURATION   (30)
-#endif 
+#endif
 
 #ifndef LOGIND_MAX_FDS
 #define LOGIND_MAX_FDS      (100000)
@@ -61,7 +61,7 @@
 
 #ifndef LOGIND_ACKQUEUE_BOUND
 #define LOGIND_ACKQUEUE_BOUND   (255)
-#endif 
+#endif
 
 #ifndef LOGIND_TUNNEL_BUFFER_BOUND
 #define LOGIND_TUNNEL_BUFFER_BOUND  (32768)
@@ -257,7 +257,7 @@ typedef struct {
     int    flags;
 } bind_event;
 
-void 
+void
 login_ctx_init(login_ctx *ctx)
 {
     assert(ctx);
@@ -273,7 +273,7 @@ login_ctx_has_conn_data(login_ctx *ctx)
     return ctx->cdata_len == sizeof(ctx->cdata) ? 1 : 0;
 }
 
-int 
+int
 login_ctx_retry(login_ctx *ctx)
 {
     assert(ctx);
@@ -288,7 +288,7 @@ login_ctx_retry(login_ctx *ctx)
     return ctx->retry;
 }
 
-int 
+int
 login_ctx_handle(login_ctx *ctx, int c)
 {
     int l;
@@ -362,7 +362,7 @@ login_ctx_handle(login_ctx *ctx, int c)
             }
 
             // default: insert characters
-            if (!isascii(c) || !isprint(c) || 
+            if (!isascii(c) || !isprint(c) ||
                 c == ' ' || (size_t)l + 1 >= sizeof(ctx->userid))
                 return LOGIN_HANDLE_BEEP;
 
@@ -394,7 +394,7 @@ login_ctx_handle(login_ctx *ctx, int c)
             }
 
             // XXX check VGET_PASSWD = VGET_NOECHO|VGET_ASCIIONLY
-            if ( (!isascii(c) || !isprint(c)) || 
+            if ( (!isascii(c) || !isprint(c)) ||
                 (size_t)l + 1 >= sizeof(ctx->passwd))
                 return LOGIN_HANDLE_BEEP;
 
@@ -469,11 +469,11 @@ ackq_add(login_conn_ctx *ctx)
         if (g_ack_queue.capacity < ACK_QUEUE_DEFAULT_CAPACITY)
             g_ack_queue.capacity = ACK_QUEUE_DEFAULT_CAPACITY;
 
-        fprintf(stderr, LOG_PREFIX "%s: resize ack queue to: %u (%u in use)\n", 
+        fprintf(stderr, LOG_PREFIX "%s: resize ack queue to: %u (%u in use)\n",
                 Cdate(&tnow),
                 (unsigned int)g_ack_queue.capacity, (unsigned int)g_ack_queue.size);
 
-        g_ack_queue.queue = (login_conn_ctx**) realloc (g_ack_queue.queue, 
+        g_ack_queue.queue = (login_conn_ctx**) realloc (g_ack_queue.queue,
                 sizeof(login_conn_ctx*) * g_ack_queue.capacity);
         assert(g_ack_queue.queue);
     }
@@ -549,35 +549,35 @@ _text_write(login_conn_ctx *conn, const void *buf, size_t nbytes)
 ///////////////////////////////////////////////////////////////////////
 // Mini Terminal
 
-static void 
+static void
 _mt_bell(login_conn_ctx *conn)
 {
     static const char b = Ctrl('G');
     _buff_write(conn, &b, 1);
 }
 
-static void 
+static void
 _mt_bs(login_conn_ctx *conn)
 {
     static const char cmd[] = "\b \b";
     _buff_write(conn, cmd, sizeof(cmd)-1);
 }
 
-static void 
+static void
 _mt_home(login_conn_ctx *conn)
 {
     static const char cmd[] = ESC_STR "[H";
     _buff_write(conn, cmd, sizeof(cmd)-1);
 }
 
-static void 
+static void
 _mt_clrtoeol(login_conn_ctx *conn)
 {
     static const char cmd[] = ESC_STR "[K";
     _buff_write(conn, cmd, sizeof(cmd)-1);
 }
 
-static void 
+static void
 _mt_clear(login_conn_ctx *conn)
 {
     static const char cmd[] = ESC_STR "[2J";
@@ -585,7 +585,7 @@ _mt_clear(login_conn_ctx *conn)
     _buff_write(conn, cmd, sizeof(cmd)-1);
 }
 
-static void 
+static void
 _mt_move_yx(login_conn_ctx *conn, const char *mcmd)
 {
     static const char cmd1[] = ESC_STR "[",
@@ -598,7 +598,7 @@ _mt_move_yx(login_conn_ctx *conn, const char *mcmd)
 ///////////////////////////////////////////////////////////////////////
 // Telnet Protocol
 
-static void 
+static void
 _telnet_resize_term_cb(void *resize_arg, int w, int h)
 {
     login_ctx *ctx = (login_ctx*) resize_arg;
@@ -608,7 +608,7 @@ _telnet_resize_term_cb(void *resize_arg, int w, int h)
 }
 
 #ifdef DETECT_CLIENT
-static void 
+static void
 _telnet_update_cc_cb(void *cc_arg, unsigned char c)
 {
     login_ctx *ctx = (login_ctx*) cc_arg;
@@ -619,7 +619,7 @@ _telnet_update_cc_cb(void *cc_arg, unsigned char c)
 }
 #endif
 
-static void 
+static void
 _telnet_write_data_cb(void *write_arg, int fd GCC_UNUSED,
                       const void *buf, size_t nbytes)
 {
@@ -628,7 +628,7 @@ _telnet_write_data_cb(void *write_arg, int fd GCC_UNUSED,
 }
 
 #ifdef  LOGIND_OPENFD_IN_AYT
-static void 
+static void
 _telnet_send_ayt_cb(void *ayt_arg, int fd GCC_UNUSED)
 {
     login_conn_ctx *conn = (login_conn_ctx *)ayt_arg;
@@ -637,21 +637,21 @@ _telnet_send_ayt_cb(void *ayt_arg, int fd GCC_UNUSED)
     assert(conn);
     if (!g_async_ack)
     {
-        snprintf(buf, sizeof(buf), "  (#%d)fd:%u  \r\n", 
+        snprintf(buf, sizeof(buf), "  (#%d)fd:%u  \r\n",
                 g_retry_times, g_opened_fd);
     }
     else
     {
-        snprintf(buf, sizeof(buf), "  (#%d)fd:%u,ack:%u(-%u)  \r\n", 
-                g_retry_times, g_opened_fd, 
-                (unsigned int)g_ack_queue.size, 
+        snprintf(buf, sizeof(buf), "  (#%d)fd:%u,ack:%u(-%u)  \r\n",
+                g_retry_times, g_opened_fd,
+                (unsigned int)g_ack_queue.size,
                 (unsigned int)g_ack_queue.reuse );
     }
     _buff_write(conn, buf, strlen(buf));
 }
 #endif
 
-static const struct TelnetCallback 
+static const struct TelnetCallback
 telnet_callback = {
     _telnet_write_data_cb,
     _telnet_resize_term_cb,
@@ -686,7 +686,7 @@ _disable_nonblock(int sock)
     fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) & (~O_NONBLOCK) );
 }
 
-static int 
+static int
 _set_connection_opt(int sock)
 {
     const int szrecv = 1024, szsend = 4096;
@@ -695,7 +695,7 @@ _set_connection_opt(int sock)
     // keep alive: server will check target connection. (around 2hr)
     const int on = 1;
     setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*)&on, sizeof(on));
-   
+
     // fast close
     setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
     // adjust transmission window
@@ -778,7 +778,7 @@ DEBUG_IO(int fd, const char *msg) {
     if (nread < DEBUG_IO_LIMIT && nwrite < DEBUG_IO_LIMIT)
         return;
 #else
-    if (g_verbose < VERBOSE_DEBUG) 
+    if (g_verbose < VERBOSE_DEBUG)
         return;
 #endif
     now = time(NULL);
@@ -1162,7 +1162,7 @@ screen_new(const char *data)
         return NULL;
 
     // XXX Because the text file may contain a very small subset of escape sequence
-    // *t[Cdate] and *u[SHM->UTMPnumber], we implement a tiny version of 
+    // *t[Cdate] and *u[SHM->UTMPnumber], we implement a tiny version of
     // expand_esc_star here.
     const char *ps, *pe;
     ps = pe = data;
@@ -1236,7 +1236,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
-    if (g_verbose > VERBOSE_DEBUG) 
+    if (g_verbose > VERBOSE_DEBUG)
         fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
@@ -1263,7 +1263,7 @@ draw_empty_userid_warn(login_conn_ctx *conn)
     _text_write(conn, USERID_EMPTY_MSG, sizeof(USERID_EMPTY_MSG)-1);
 }
 
-static void 
+static void
 draw_check_passwd(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
@@ -1312,12 +1312,12 @@ draw_overload(login_conn_ctx *conn, int type)
     {
         // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
         _text_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
-    } 
+    }
     else if (type == 2)
     {
         // _mt_move_yx(conn, OVERLOAD_USER_YX); _mt_clrtoeol(conn);
         _text_write(conn, OVERLOAD_USER_MSG, sizeof(OVERLOAD_USER_MSG)-1);
-    } 
+    }
     else {
         assert(!"unknown overload type");
         // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
@@ -1467,7 +1467,7 @@ auth_is_free_userid(const char *userid)
         return STR_GUEST;
 #endif
 
-#ifdef STR_REGNEW 
+#ifdef STR_REGNEW
     if (strcasecmp(userid, STR_REGNEW) == 0)
         return STR_REGNEW;
 #endif
@@ -1513,7 +1513,7 @@ auth_check_free_userid_allowance(const char *userid)
         // now, load guest account information.
         if (!g_guest_usernum)
         {
-            if (g_verbose > VERBOSE_INFO) 
+            if (g_verbose > VERBOSE_INFO)
                 fprintf(stderr, LOG_PREFIX " reload guest information\n");
 
             // reload guest information
@@ -1527,10 +1527,10 @@ auth_check_free_userid_allowance(const char *userid)
         }
 
         // update the 'too many' status.
-        g_guest_too_many = 
+        g_guest_too_many =
             (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
 
-        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX 
+        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
                 " guests are %s\n", g_guest_too_many ? "TOO MANY" : "ok.");
 
 #  endif // MAX_GUEST
@@ -1625,14 +1625,14 @@ retry_service()
 
     if (g_retry_times >= LOGIND_MAX_RETRY_SERVICE)
     {
-        fprintf(stderr, LOG_PREFIX 
+        fprintf(stderr, LOG_PREFIX
                 "retry too many times (>%d), stop and wait manually maintainance.\n",
                 LOGIND_MAX_RETRY_SERVICE);
         return;
     }
 
     g_retry_times++;
-    fprintf(stderr, LOG_PREFIX "#%d retry to start service: %s\n", 
+    fprintf(stderr, LOG_PREFIX "#%d retry to start service: %s\n",
             g_retry_times, g_retry_cmd);
     system(g_retry_cmd);
 }
@@ -1640,7 +1640,7 @@ retry_service()
 static int
 login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd);
 
-static int 
+static int
 start_service(int fd, login_conn_ctx *conn)
 {
     login_data ld = {0};
@@ -1670,7 +1670,7 @@ start_service(int fd, login_conn_ctx *conn)
     if (login_ctx_has_conn_data(ctx))
         ld.flags = ctx->cdata.flags;
 
-    if (g_verbose > VERBOSE_INFO) 
+    if (g_verbose > VERBOSE_INFO)
         fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\n",
                 ld.userid, ld.hostip, ld.port, fd);
 
@@ -1687,7 +1687,7 @@ start_service(int fd, login_conn_ctx *conn)
                 "failed in send_remote_fd\n");
         return ack;
     }
-   
+
     // deliver the login data to hosting servier
     DEBUG_IO(g_tunnel, "before start_service:towrite(g_tunnel)");
     if (towrite(g_tunnel, &ld, sizeof(ld)) < (int)sizeof(ld))
@@ -1699,7 +1699,7 @@ start_service(int fd, login_conn_ctx *conn)
     DEBUG_IO(g_tunnel, "after  start_service:towrite(g_tunnel)");
 
     // to prevent buffer full, we set priority here to force all ackes processed
-    // (otherwise tunnel daemon may try to send act and 
+    // (otherwise tunnel daemon may try to send act and
     event_priority_set(&conn->ev, EVTPRIORITY_ACK);
 
 
@@ -1732,7 +1732,7 @@ logattempt2(const char *userid, char c, time4_t logtime, const char *hostip)
         DEBUG_IO(g_logattempt_pipe, "after  logattempt2::towrite()");
 
         // failed ... back to internal.
-        fprintf(stderr, LOG_PREFIX 
+        fprintf(stderr, LOG_PREFIX
                 "error: cannot use logattempt daemon, change to internal.\n");
         close(g_logattempt_pipe);
         g_async_logattempt= 0;
@@ -1755,7 +1755,7 @@ auth_fail(int fd, login_conn_ctx *conn, draw_prompt_func draw_prompt)
     {
         // end retry.
         draw_goodbye(conn);
-        if (g_verbose > VERBOSE_INFO) 
+        if (g_verbose > VERBOSE_INFO)
             fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
                     conn->ctx.userid, conn->ctx.hostip, fd);
         return AUTH_RESULT_STOP;
@@ -1789,7 +1789,7 @@ auth_precheck_userid(int fd, login_conn_ctx *conn)
     return auth_fail(fd, conn, draw_empty_userid_warn);
 }
 
-static int 
+static int
 auth_start(int fd, login_conn_ctx *conn)
 {
     login_ctx *ctx = &conn->ctx;
@@ -1867,10 +1867,10 @@ auth_start(int fd, login_conn_ctx *conn)
 
 static struct event ev_sighup, ev_tunnel, ev_ack;
 
-static void 
+static void
 sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
-    fprintf(stderr, LOG_PREFIX 
+    fprintf(stderr, LOG_PREFIX
             "caught sighup (request to reload) with %u opening fd...\n",
             g_opened_fd);
     g_reload_data = 1;
@@ -1898,7 +1898,7 @@ stop_tunnel(int tunnel_fd)
         close(tunnel_fd);
 }
 
-static void 
+static void
 endconn_cb(int fd, short event GCC_UNUSED, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
@@ -1931,7 +1931,7 @@ endconn_cb_buffer(struct bufferevent * evb GCC_UNUSED, short event GCC_UNUSED,
     endconn_cb(EVENT_FD(&conn->ev), 0, arg);
 }
 
-static void 
+static void
 login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
 {
     assert(conn->cb == sizeof(login_conn_ctx));
@@ -1945,7 +1945,7 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
         event_add(&conn->ev, &tv);
         if (g_verbose > VERBOSE_INFO)
             fprintf(stderr, LOG_PREFIX
-                    "login_conn_remove: stop conn #%d in %d seconds later.\n", 
+                    "login_conn_remove: stop conn #%d in %d seconds later.\n",
                     fd, sleep_sec);
     }
 }
@@ -1956,7 +1956,7 @@ get_tunnel_ack(int tunnel)
     void *arg = NULL;
 
 #ifdef VERIFY_BLOCKING_TUNNEL
-    // fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel %s .\n", 
+    // fprintf(stderr, LOG_PREFIX "get_tunnel_ack: tunnel %s .\n",
     // ( fcntl(tunnel, F_GETFL) & O_NONBLOCK ) ? "nonblock" : "blocking");
     if (fcntl(tunnel, F_GETFL) & (O_NONBLOCK))
     {
@@ -1974,7 +1974,7 @@ get_tunnel_ack(int tunnel)
         // sorry... broken, let's shutdown the tunnel.
         if (g_verbose > VERBOSE_ERROR)
             fprintf(stderr, LOG_PREFIX
-                    "get_tunnel_ack: tunnel (%d) is broken with arg %p.\n", 
+                    "get_tunnel_ack: tunnel (%d) is broken with arg %p.\n",
                     tunnel, arg);
 
         stop_tunnel(tunnel);
@@ -1995,7 +1995,7 @@ ack_cb(int tunnel, short event, void *arg)
     if (!(event & EV_READ))
     {
         // not read event (closed? timeout?)
-        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "warning: invalid ack event at tunnel %d.\n", tunnel);
         stop_tunnel(tunnel);
         return;
@@ -2005,7 +2005,7 @@ ack_cb(int tunnel, short event, void *arg)
     conn = (login_conn_ctx*) get_tunnel_ack(tunnel);
     if (!conn)
     {
-        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
+        if (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "warning: invalid ack at tunnel %d.\n", tunnel);
         return;
     }
@@ -2015,7 +2015,7 @@ ack_cb(int tunnel, short event, void *arg)
     // the memory location of previous destroyed one, we'd have problem here.
     if (!ackq_del(conn))
     {
-        if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX 
+        if  (g_verbose > VERBOSE_ERROR) fprintf(stderr, LOG_PREFIX
                 "drop abandoned ack connection: %p.\n", conn);
         return;
     }
@@ -2023,7 +2023,7 @@ ack_cb(int tunnel, short event, void *arg)
     // check connection
     if (conn->cb != sizeof(login_conn_ctx))
     {
-        fprintf(stderr, LOG_PREFIX 
+        fprintf(stderr, LOG_PREFIX
                 "warning: received invalid ack from tunnel. abort/reset tunnel?\n");
         // assert(conn && conn->cb == sizeof(login_conn_ctx));
         return;
@@ -2068,7 +2068,7 @@ login_conn_end_ack(login_conn_ctx *conn, void *ack, int fd)
         if (rack != ack)
         {
             // critical error!
-            fprintf(stderr, LOG_PREFIX 
+            fprintf(stderr, LOG_PREFIX
                     "login_conn_end_ack: failed in ack value (%p != %p).\n",
                     rack, ack);
 
@@ -2087,7 +2087,7 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
 static int
 login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int len);
 
-static void 
+static void
 client_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
@@ -2267,7 +2267,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
 
         if (c == KEY_UNKNOWN)
         {
-            // XXX for stupid clients always doing anti-idle, 
+            // XXX for stupid clients always doing anti-idle,
             // user will get beeps and have no idea what happened...
             // _mt_bell(conn);
             continue;
@@ -2368,7 +2368,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
     return consumed;
 }
 
-static void 
+static void
 listen_cb(int lfd, short event GCC_UNUSED, void *arg)
 {
     int fd;
@@ -2432,7 +2432,7 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         strlcpy(conn->ctx.port, pbindev->bind_name, sizeof(conn->ctx.port));
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
-                "new connection: fd=#%d %s:%s (opened fd: %d)\n", 
+                "new connection: fd=#%d %s:%s (opened fd: %d)\n",
                 fd, conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
         // set events
@@ -2488,7 +2488,7 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
     return 0;
 }
 
-static void 
+static void
 tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     int cfd;
@@ -2511,7 +2511,7 @@ tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 }
 
 ///////////////////////////////////////////////////////////////////////
-// Main 
+// Main
 
 static int
 logattempt_daemon()
@@ -2594,7 +2594,7 @@ bind_generic(const char *name, const char *addr, int flags, int (*_setsock)(int 
     return 0;
 }
 
-static int 
+static int
 bind_ip_port(const char *ip, int port)
 {
     char name[STRLEN], addr[STRLEN];
@@ -2623,8 +2623,8 @@ bind_unix(const char *path, unsigned int mode)
     return 0;
 }
 
-static int 
-parse_bindports_conf(FILE *fp, 
+static int
+parse_bindports_conf(FILE *fp,
         char *tunnel_path, int sz_tunnel_path,
         char *tclient_cmd, int sz_tclient_cmd
         )
@@ -2826,7 +2826,7 @@ parse_bindports_conf(FILE *fp,
     return bound_ports;
 }
 
-int 
+int
 main(int argc, char *argv[], char *envp[])
 {
     int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
@@ -2902,7 +2902,7 @@ main(int argc, char *argv[], char *envp[])
         case 'm':
             g_async_logattempt = 1;
             break;
-            
+
         case 'M':
             g_async_logattempt = 0;
             break;
@@ -2919,7 +2919,7 @@ main(int argc, char *argv[], char *envp[])
         default:
             fprintf(stderr,
                     "usage: %s [-vTmMaAbBdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-P pidfile] [-c client_command]\n", argv[0]);
-            fprintf(stderr, 
+            fprintf(stderr,
                     "\t-v:    provide verbose messages\n"
                     "\t-T:    provide timeout connection info\n"
                     "\t-d/-D: do/not enter daemon mode (default: %s)\n"
@@ -2934,7 +2934,7 @@ main(int argc, char *argv[], char *envp[])
                     g_async_logattempt  ? "true" : "false",
                     BBSHOME "/" FN_CONF_BINDPORTS,
                     LOGIND_DEFAULT_PID_PATH);
-            fprintf(stderr, 
+            fprintf(stderr,
                     "\t-l: log meesages into log_file\n"
                     "\t-p: bind (listen) to specific port\n"
                     "\t-u: bind unix socket for incoming connections (with conn data passing enabled)\n"
@@ -2976,7 +2976,7 @@ main(int argc, char *argv[], char *envp[])
     // bind from port list file
     if( NULL != (fp = fopen(config_file, "rt")) )
     {
-        bound_ports += parse_bindports_conf(fp, 
+        bound_ports += parse_bindports_conf(fp,
                 tunnel_path, sizeof(tunnel_path),
                 tclient_cmd, sizeof(tclient_cmd));
         fclose(fp);
