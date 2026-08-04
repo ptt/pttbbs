@@ -156,10 +156,6 @@
 #define BN_RECORD "Record"
 #endif
 
-#ifndef BN_FOREIGN
-#define BN_FOREIGN BBSMNAME "Foreign"
-#endif
-
 #ifndef BN_DELETED
 #define BN_DELETED "deleted"
 #endif

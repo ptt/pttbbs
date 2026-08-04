@@ -1272,11 +1272,7 @@ do_post_article(int edflags)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if( !CheckPostPerm2(&reason)
-	// 不是外籍使用者在 PttForeign 板
-	&& !(HasUserFlag(UF_FOREIGN) &&
-	    strcmp(bp->brdname, BN_FOREIGN) == 0)
-	) {
+    if(!CheckPostPerm2(&reason)) {
 	vmsgf("無法發文: %s", reason);
 	return READ_REDRAW;
     }
