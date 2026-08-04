@@ -1,12 +1,14 @@
 package daemon
 
 import (
+	"bytes"
 	"encoding/json"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
-	"testing"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -182,5 +184,60 @@ func TestReconcileOnlineSessions(t *testing.T) {
 	added, removed := svc.ReconcileOnlineSessions()
 	if added != 0 || removed != 0 {
 		t.Fatalf("Expected 0 added and 0 removed when shmClient is nil, got added=%d removed=%d", added, removed)
+	}
+}
+
+func TestVerboseZeroLoginLogSuppression(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "aloha_verbose_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	svc, err := NewService(tempDir, filepath.Join(tempDir, "aloha.svc.sock"))
+	if err != nil {
+		t.Fatalf("Failed to create service: %v", err)
+	}
+	svc.shmClient = nil
+
+	// 1. Test verbose == 0 with 0 notifications -> should NOT log LOGIN
+	svc.SetVerbose(0)
+	var logBuf bytes.Buffer
+	log.SetOutput(&logBuf)
+
+	resp1 := svc.HandleUserLogin("user0", 101, 1)
+	if !resp1.Success {
+		t.Fatalf("Login failed: %v", resp1)
+	}
+	if strings.Contains(logBuf.String(), "LOGIN: user=user0") {
+		t.Fatalf("Expected NO login log when verbose=0 and 0 notifications, got log: %s", logBuf.String())
+	}
+
+	// 2. Test verbose == 1 with 0 notifications -> SHOULD log LOGIN
+	svc.SetVerbose(1)
+	logBuf.Reset()
+
+	resp2 := svc.HandleUserLogin("user1", 102, 2)
+	if !resp2.Success {
+		t.Fatalf("Login failed: %v", resp2)
+	}
+	if !strings.Contains(logBuf.String(), "LOGIN: user=user1") {
+		t.Fatalf("Expected login log when verbose=1 even with 0 notifications, got log: %s", logBuf.String())
+	}
+
+	// 3. Test verbose == 0 with >0 notifications -> SHOULD log LOGIN
+	svc.SetVerbose(0)
+	logBuf.Reset()
+
+	// user1 watches target user2
+	svc.HandleAddAloha("user1", "user2")
+
+	// user2 logs in -> notifies user1 (1 notification)
+	resp3 := svc.HandleUserLogin("user2", 103, 3)
+	if !resp3.Success {
+		t.Fatalf("Login failed: %v", resp3)
+	}
+	if !strings.Contains(logBuf.String(), "LOGIN: user=user2") {
+		t.Fatalf("Expected login log when notifications > 0 even if verbose=0, got log: %s", logBuf.String())
 	}
 }

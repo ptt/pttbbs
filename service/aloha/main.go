@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -17,11 +18,73 @@ import (
 	"pttbbs/bbs"
 )
 
+type verboseValue int
+
+func (v *verboseValue) String() string {
+	return fmt.Sprintf("%d", int(*v))
+}
+
+func (v *verboseValue) Set(s string) error {
+	if s == "true" {
+		*v++
+		return nil
+	}
+	if s == "false" {
+		return nil
+	}
+	if n, err := strconv.Atoi(s); err == nil {
+		*v = verboseValue(n)
+		return nil
+	}
+	count := 0
+	for _, r := range s {
+		if r == 'v' || r == 'V' {
+			count++
+		} else {
+			return fmt.Errorf("invalid verbose value: %s", s)
+		}
+	}
+	if count > 0 {
+		*v += verboseValue(count)
+		return nil
+	}
+	return nil
+}
+
+func (v *verboseValue) IsBoolFlag() bool {
+	return true
+}
+
+func preprocessArgs(args []string) []string {
+	var res []string
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") && len(arg) > 2 {
+			allV := true
+			for _, r := range arg[1:] {
+				if r != 'v' && r != 'V' {
+					allV = false
+					break
+				}
+			}
+			if allV {
+				for i := 0; i < len(arg)-1; i++ {
+					res = append(res, "-v")
+				}
+				continue
+			}
+		}
+		res = append(res, arg)
+	}
+	return res
+}
+
 func main() {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
 	}
+
+	var verbose verboseValue
 
 	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/aloha.svc.log)")
 	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
@@ -32,11 +95,15 @@ func main() {
 	gcPercent := flag.Int("gcpercent", 50, "GC percent target (default: 50)")
 	reconcileInterval := flag.Duration("reconcile-interval", 1*time.Hour, "Interval for periodic session reconciliation (default: 1h). Set to 0 to disable.")
 	flag.DurationVar(reconcileInterval, "reconcile", 1*time.Hour, "Alias for -reconcile-interval")
+	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
+	flag.Var(&verbose, "verbose", "Alias for -v")
 
+	os.Args = append([]string{os.Args[0]}, preprocessArgs(os.Args[1:])...)
 	flag.Parse()
 
 	if *debugMode {
 		*daemonize = false
+		verbose += 10
 	}
 
 	socketPath := filepath.Join(bbsHome, "run", "aloha.svc.sock")
@@ -74,11 +141,11 @@ func main() {
 	// Print startup banner so stdout receives startup feedback when running directly or in debug
 	fmt.Printf("[aloha.svc] Starting PTT BBS Aloha Service...\n")
 	fmt.Printf("[aloha.svc] BBSHOME: %s, Log: %s\n", bbsHome, *logPath)
-	fmt.Printf("[aloha.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v\n", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval)
+	fmt.Printf("[aloha.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, Verbose=%d\n", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, int(verbose))
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
-		log.Printf("[aloha.svc] Debug mode enabled (-D/-debug): logging directly to stdout")
+		log.Printf("[aloha.svc] Debug mode enabled (-D/-debug): logging directly to stdout (Verbose=%d)", int(verbose))
 	} else {
 		// Configure logger to write to log file for all subsequent operational logs
 		if err := os.MkdirAll(filepath.Dir(*logPath), 0755); err == nil {
@@ -88,7 +155,7 @@ func main() {
 				// Write startup banner to log file as well
 				log.Printf("[aloha.svc] Starting PTT BBS Aloha Service...")
 				log.Printf("[aloha.svc] BBSHOME: %s, Log: %s", bbsHome, *logPath)
-				log.Printf("[aloha.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval)
+				log.Printf("[aloha.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, Verbose=%d", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, int(verbose))
 			} else {
 				log.Printf("[aloha.svc] Warning: failed to open log file %s: %v", *logPath, err)
 			}
@@ -100,6 +167,7 @@ func main() {
 		log.Fatalf("[aloha.svc] Failed to initialize Aloha Service: %v", err)
 	}
 
+	service.SetVerbose(int(verbose))
 	service.SetReconcileInterval(*reconcileInterval)
 
 	if err := service.Start(); err != nil {
