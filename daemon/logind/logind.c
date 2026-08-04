@@ -809,9 +809,9 @@ DEBUG_IO(int fd, const char *msg) {
 #endif
 
 #define BOTTOM_YX           "24;1"
-#define LOGIN_PROMPT_MSG    ANSI_RESET "請輸入代號" MSG_GUEST MSG_REGNEW ": " ANSI_REVERSE
+#define LOGIN_PROMPT_MSG    ANSI_RESET "請輸入代號" MSG_GUEST MSG_REGNEW ": "
 #define LOGIN_PROMPT_YX     "21;1"
-#define LOGIN_PROMPT_END    ANSI_RESET
+#define LOGIN_INPUT_END      ANSI_RESET
 #define PASSWD_PROMPT_MSG   ANSI_RESET MSG_PASSWD
 #define PASSWD_PROMPT_YX    "22;1"
 #define PASSWD_CHECK_MSG    ANSI_RESET "正在檢查帳號與密碼..."
@@ -1218,27 +1218,39 @@ draw_goodbye(login_conn_ctx *conn)
     draw_text_screen(conn, goodbye_screen);
 }
 
-static void 
-draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
+static void
+draw_input(login_conn_ctx *conn, const char *val, int len, int curr)
 {
-    char box[IDBOXLEN];
+    int i;
+    int val_len = val ? strlen(val) : 0;
+    int remains = len - val_len;
+    const char *attr = ANSI_REVERSE;
+    const char space = ' ', back = '\b';
 
-    _mt_move_yx(conn, LOGIN_PROMPT_YX);  _mt_clrtoeol(conn);
-    _text_write(conn, LOGIN_PROMPT_MSG, sizeof(LOGIN_PROMPT_MSG)-1);
-    // draw input box
-    memset(box, ' ', sizeof(box));
-    if (uid) memcpy(box, uid, strlen(uid));
-    _buff_write (conn, box,   sizeof(box));
-    memset(box, '\b',sizeof(box));
-    _buff_write (conn, box,   sizeof(box)-icurr);
+    _buff_write(conn, attr, strlen(attr));
+    if (val)
+        _buff_write(conn, val, val_len);
+    for (i = 0; i < remains; i++)
+        _buff_write(conn, &space, sizeof(space));
+    for (i = 0; i < len - curr; i++)
+        _buff_write(conn, &back, sizeof(back));
+    // we need to retain the attribute for LOGIN_HANDLE_BS, LOGIN_HANDLE_OUTC.
 }
 
 static void
-draw_userid_prompt_end(login_conn_ctx *conn)
+draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
+{
+    _mt_move_yx(conn, LOGIN_PROMPT_YX);  _mt_clrtoeol(conn);
+    _text_write(conn, LOGIN_PROMPT_MSG, sizeof(LOGIN_PROMPT_MSG)-1);
+    draw_input(conn, uid, IDBOXLEN, icurr);
+}
+
+static void
+draw_input_end(login_conn_ctx *conn)
 {
     if (g_verbose > VERBOSE_DEBUG)
         fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
-    _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
+    _buff_write(conn, LOGIN_INPUT_END, sizeof(LOGIN_INPUT_END)-1);
 }
 
 static void
@@ -2301,7 +2313,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
 
             case LOGIN_HANDLE_PROMPT_PASSWD:
                 // because prompt would reverse attribute, reset here.
-                draw_userid_prompt_end(conn);
+                draw_input_end(conn);
 
 #ifdef DETECT_CLIENT
                 // stop detection
