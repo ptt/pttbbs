@@ -27,6 +27,7 @@ type Service struct {
 	bbsHome    string
 	shmClient  *bbs.SHMClient
 	socketPath string
+	verbose    int
 	mu         sync.RWMutex
 
 	// onlineSessions maps pid -> SubscriberSession
@@ -71,6 +72,10 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		userPIDs:          make(map[string]map[int]bool),
 		sem:               make(chan struct{}, 5000),
 	}, nil
+}
+
+func (s *Service) SetVerbose(v int) {
+	s.verbose = v
 }
 
 // Request and Response formats for IPC via UNIX domain socket
@@ -225,7 +230,9 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 			notifiedCount = len(subscribersToNotify)
 		}
 		s.RegisterSubscriber(userID, pid, sid)
-		log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> notified %d subscribers", userID, pid, sid, notifiedCount)
+		if s.verbose > 0 || notifiedCount > 0 {
+			log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> notified %d subscribers", userID, pid, sid, notifiedCount)
+		}
 		return Response{
 			Success: true,
 			Message: fmt.Sprintf("User %s logged in, notified %d subscribers", userID, notifiedCount),
@@ -233,7 +240,9 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 	} else {
 		foundCount := len(subscribersToNotify)
 		s.RegisterSubscriber(userID, pid, sid)
-		log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> found %d subscribers", userID, pid, sid, foundCount)
+		if s.verbose > 0 || foundCount > 0 {
+			log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> found %d subscribers", userID, pid, sid, foundCount)
+		}
 		return Response{
 			Success: true,
 			Message: fmt.Sprintf("User %s logged in, found %d subscribers", userID, foundCount),
