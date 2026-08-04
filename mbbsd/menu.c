@@ -661,6 +661,8 @@ static const commands_t m_admin_user[] = {
     {u_list, PERM_SYSOP,		"Users List     列出註冊名單"},
     {search_user_bybakpwd, PERM_SYSOP|PERM_ACCOUNTS,
                                         "DOld User data 查閱\備份使用者資料"},
+    {u_admin_disable_2fa, PERM_SYSOP|PERM_ACCOUNTS,
+                                        "2FA Disable    強制關閉 2FA"},
     {NULL, 0, NULL}
 };
 
@@ -832,6 +834,7 @@ static const commands_t userlist[] = {
     {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
     {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
     {u_register,    PERM_BASIC,     "Register      新增帳號認證"},
+    {u_setup_2fa,   PERM_BASIC,     "2FA           設定兩階段認證"},
 #ifdef ASSESS
     {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除退文"},
 #endif // ASSESS

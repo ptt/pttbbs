@@ -15,12 +15,16 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## feat(2FA): Support two-factor authentication
 
-## 2026-08-01: `cleanup(mbbsd)`: Remove `m_loginmsg` feature
+`userec_t` 的 `_unused4[0]` 被移作 2FA 的狀態，昇級前建議先
+確保一下站內帳號的 `_unused4[0]` 都是空的 (0)。
+
+## [`cleanup(mbbsd)`: Remove `m_loginmsg` feature](https://github.com/ptt/pttbbs/commit/184c4bef594b61e2205dc80df1fbd5d427843f4d)
 
 移除了進站水球，請改用編輯進站畫面代替。
 
-## 2026-08-01: feat(acl): Make USE_NEW_BAN_SYSTEM official
+## [feat(acl): Make USE_NEW_BAN_SYSTEM official](https://github.com/ptt/pttbbs/commit/2797906a27078de060a24dbb81e6d6a898e09bb2)
 
 配合 Y2038 修正， `USE_NEW_BAN_SYSTEM` 相關條件被移除，未來一律只支援
 新式的看板水桶系統。 如果您的系統尚未轉換，請參考

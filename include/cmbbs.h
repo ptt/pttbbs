@@ -168,4 +168,10 @@ const char *get_userid_by_uid(int uid);
 int get_ushm_size(void);
 int get_online_session(int uip, int *out_pid, int *out_uid, char *out_userid);
 
+/* 2fa */
+int user_load_2fa(const char *userid, user_2fa_t *totp);
+int user_save_2fa(const char *userid, const user_2fa_t *totp);
+int user_delete_2fa(const char *userid);
+int user_verify_2fa_or_backup(const char *userid, const char *input_code);
+
 #endif

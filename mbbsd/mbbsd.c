@@ -532,6 +532,39 @@ load_current_user(const char *uid)
     return 1;
 }
 
+/* Checks if the user can pass 2FA. Returns 1 on success and 0 on failure.
+ * If the user's 2FA record is broken then it's 2 with 2FA UFlag disabled.
+ */
+static int
+checkuser_2fa(int lineno, const userec_t *u)
+{
+    user_2fa_t tfa_check;
+    if (!user_load_2fa(u->userid, &tfa_check) || !tfa_check.enabled) {
+        // Auto-heal: u_2fa enabled but .otpauth file missing or disabled
+        mvouts(lineno, 0, ANSI_COLOR(1;33)
+               "[系統提示] 找不到 2FA 設定檔，已自動重設 2FA 狀態。" ANSI_RESET);
+        pwcuSet2FA(0);
+        move(lineno + 1, 0); clrtoeol();
+        return 2;
+    }
+
+    char totp_code[TFA_INPUT_LEN + 1];
+    mvouts(lineno + 1, 0, "此帳號需要兩階段驗證。");
+    for (int err = 0; err < 5; err++) {
+        getdata(lineno, 0, "請輸入兩階段(2FA)驗證碼(6位限時數字 或 8位救援碼):",
+                totp_code, sizeof(totp_code), DOECHO);
+        if (user_verify_2fa_or_backup(cuser.userid, totp_code)) {
+            mvouts(lineno, 0, "2FA 兩階段驗證成功\。");
+            move(lineno + 1, 0); clrtoeol();
+            return 1;
+        }
+        mvouts(lineno+1, 0, ANSI_COLOR(1;31) "驗證碼錯誤。請確定在時限前輸入完畢。" ANSI_RESET);
+    }
+    mvouts(lineno, 0, ANSI_COLOR(1;31) "兩階段驗證失敗次數過多。" ANSI_RESET);
+    move(lineno + 1, 0); clrtoeol();
+    return 0;
+}
+
 static void
 login_query(char *ruid)
 {
@@ -659,8 +692,14 @@ login_query(char *ruid)
 		sleep(1);
 		outs(ERR_PASSWD);
 
-	    } else {
+	    } else if (cuser.u_2fa && !checkuser_2fa(21, cuser_ref)) {
 
+                logattempt(cuser.userid, '2', login_start_time, fromhost);
+                // error message was printed by checkuser_2fa.
+                refresh();
+                sleep(1);
+
+            } else {
 		strlcpy(ruid, cuser.userid, IDLEN+1);
 		outs("密碼正確！ 開始登入系統...");
 		move(22, 0); refresh();
