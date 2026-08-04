@@ -181,6 +181,7 @@ enum {
     LOGIN_STATE_INIT  = 1,
     LOGIN_STATE_USERID,
     LOGIN_STATE_PASSWD,
+    LOGIN_STATE_2FA,
     LOGIN_STATE_AUTH,
     LOGIN_STATE_WAITACK,
 
@@ -192,7 +193,9 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
-    AUTH_RESULT_INVALID_ID = -5,
+    AUTH_RESULT_FAIL_2FA      = -7,
+    AUTH_RESULT_NEED_2FA      = -6,
+    AUTH_RESULT_INVALID_ID    = -5,
     AUTH_RESULT_FAIL_INSECURE = -4,
     AUTH_RESULT_STOP   = -3,
     AUTH_RESULT_FREEID_TOOMANY = -2,
@@ -213,14 +216,16 @@ typedef struct {
     int  icurr;         // cursor (only available in userid input mode)
     Fnv32_t client_code;
     int  is_secure_connection;
-    char userid [IDBOXLEN];
-    char pad0;   // for safety
-    char passwd [PW_PLAIN_LEN+1];
-    char pad1;   // for safety
-    char hostip [IPV4LEN+1];
-    char pad2;   // for safety
-    char port   [IDLEN+1];
-    char pad3;   // for safety
+    char userid [IDBOXLEN]; // 14
+    char pad0;  // for safety
+    char hostip [IPV4LEN+1]; // 16
+    char pad1;  // for safety
+    char passwd [PW_PLAIN_LEN+1]; // 73
+    char pad2;  // for safety
+    char port   [IDLEN+1]; // 13
+    char pad3;  // for safety
+    char totp   [TFA_INPUT_LEN+1]; // 9
+    char pad4;
     // buffer for extra connection data
     conn_data cdata;
     int       cdata_len;
@@ -282,6 +287,7 @@ login_ctx_retry(login_ctx *ctx)
                                                  : LOGIND_INITIAL_ENCODING;
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
+    memset(ctx->totp, 0, sizeof(ctx->totp));
     ctx->icurr    = 0;
     // do not touch hostip, client code, t_*
     ctx->retry ++;
@@ -401,6 +407,31 @@ login_ctx_handle(login_ctx *ctx, int c)
             ctx->passwd[l] = c;
 
             return LOGIN_HANDLE_WAIT;
+
+        case LOGIN_STATE_2FA:
+            l = strlen(ctx->totp);
+
+            if (c == KEY_ENTER)
+            {
+                ctx->state = LOGIN_STATE_AUTH;
+                return LOGIN_HANDLE_START_AUTH;
+            }
+            if (c == KEY_BS)
+            {
+                if (!l)
+                    return LOGIN_HANDLE_BEEP;
+                ctx->totp[l-1] = 0;
+                return LOGIN_HANDLE_BS;
+            }
+
+            if (!(isascii(c) && isdigit(c)) ||
+                (size_t)l + 1 >= sizeof(ctx->totp))
+                return LOGIN_HANDLE_BEEP;
+
+            ctx->totp[l] = c;
+            ctx->totp[l+1] = 0;
+
+            return LOGIN_HANDLE_OUTC;
 
         default:
             break;
@@ -814,6 +845,10 @@ DEBUG_IO(int fd, const char *msg) {
 #define LOGIN_INPUT_END      ANSI_RESET
 #define PASSWD_PROMPT_MSG   ANSI_RESET MSG_PASSWD
 #define PASSWD_PROMPT_YX    "22;1"
+#define TFA_PROMPT_MSG      ANSI_RESET "請輸入兩階段(2FA)驗證碼(6位限時數字 或8位救援碼):"
+#define TFA_PROMPT_YX       "22;1"
+#define TFA_FAIL_MSG        ANSI_RESET ANSI_COLOR(1;31) "驗證碼錯誤！請確認後重新輸入。" ANSI_RESET
+#define TFA_FAIL_YX         "21;1"
 #define PASSWD_CHECK_MSG    ANSI_RESET "正在檢查帳號與密碼..."
 #define PASSWD_CHECK_YX     PASSWD_PROMPT_YX
 #define AUTH_SUCCESS_MSG    ANSI_RESET "密碼正確！ 開始登入系統...\r\n"
@@ -1262,6 +1297,22 @@ draw_passwd_prompt(login_conn_ctx *conn)
 }
 
 static void
+draw_2fa_prompt(login_conn_ctx *conn, const char *totp)
+{
+    _mt_move_yx(conn, TFA_PROMPT_YX); _mt_clrtoeol(conn);
+    _text_write(conn, TFA_PROMPT_MSG, sizeof(TFA_PROMPT_MSG)-1);
+
+    draw_input(conn, totp, 9, strlen(totp));
+}
+
+static void
+draw_2fa_fail(login_conn_ctx *conn)
+{
+    _mt_move_yx(conn, TFA_FAIL_YX); _mt_clrtoeol(conn);
+    _text_write(conn, TFA_FAIL_MSG, sizeof(TFA_FAIL_MSG)-1);
+}
+
+static void
 draw_reject_insecure_connection_msg(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, REJECT_INSECURE_YX); _mt_clrtoeol(conn);
@@ -1597,8 +1648,8 @@ auth_user_challenge(login_ctx *ctx)
         return AUTH_RESULT_INVALID_ID;
     }
 
-    if (passwd_load_user(uid, &user) < 1 ||
-        !user.userid[0])
+    int unum = passwd_load_user(uid, &user);
+    if (unum < 1 || !user.userid[0])
     {
         if (user.userid[0])
             strlcpy(uid, user.userid, IDLEN + 1);
@@ -1607,6 +1658,15 @@ auth_user_challenge(login_ctx *ctx)
 
     // normalize user id
     strlcpy(uid, user.userid, IDLEN + 1);
+
+    if (ctx->state == LOGIN_STATE_2FA || ctx->totp[0] != '\0')
+    {
+        int ok = user_verify_2fa_or_backup(uid, ctx->totp);
+        memset(ctx->totp, 0, sizeof(ctx->totp));
+        if (ok)
+            return AUTH_RESULT_OK;
+        return AUTH_RESULT_FAIL_2FA;
+    }
 
     if (!ctx->is_secure_connection &&
         passwd_require_secure_connection(&user))
@@ -1617,6 +1677,19 @@ auth_user_challenge(login_ctx *ctx)
     if (!checkuser_passwd(&user, passbuf))
     {
         return AUTH_RESULT_FAIL;
+    }
+
+    if (user.u_2fa)
+    {
+        user_2fa_t tfa_check;
+        if (!user_load_2fa(uid, &tfa_check) || !tfa_check.enabled)
+        {
+            // Auto-heal: u_2fa enabled but .otpauth file missing or disabled
+            user.u_2fa = 0;
+            passwd_update(unum, &user);
+            return AUTH_RESULT_OK;
+        }
+        return AUTH_RESULT_NEED_2FA;
     }
 
     return AUTH_RESULT_OK;
@@ -1814,6 +1887,26 @@ auth_start(int fd, login_conn_ctx *conn)
     prompt = draw_auth_fail;
     switch (auth_user_challenge(ctx))
     {
+        case AUTH_RESULT_NEED_2FA:
+            conn->ctx.state = LOGIN_STATE_2FA;
+            memset(conn->ctx.totp, 0, sizeof(conn->ctx.totp));
+            draw_2fa_prompt(conn, conn->ctx.totp);
+            return AUTH_RESULT_NEED_2FA;
+
+        case AUTH_RESULT_FAIL_2FA:
+            logattempt2(ctx->userid, '2', time(0), ctx->hostip);
+            conn->ctx.retry++;
+            if (conn->ctx.retry >= LOGINATTEMPTS)
+            {
+                draw_goodbye(conn);
+                return AUTH_RESULT_STOP;
+            }
+            draw_2fa_fail(conn);
+            draw_2fa_prompt(conn, conn->ctx.totp);
+            conn->ctx.state = LOGIN_STATE_2FA;
+            memset(conn->ctx.totp, 0, sizeof(conn->ctx.totp));
+            return AUTH_RESULT_NEED_2FA;
+
         case AUTH_RESULT_INVALID_ID:
             prompt = draw_empty_userid_warn;
             break;
@@ -2364,8 +2457,9 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                 // fall through
             case LOGIN_HANDLE_START_AUTH:
             {
+                draw_input_end(conn);
                 int r = auth_start(fd, conn);
-                if (r != AUTH_RESULT_RETRY)
+                if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_NEED_2FA)
                 {
                     // for AUTH_RESULT_OK, the connection is handled in
                     // login_conn_end_ack.
