@@ -1591,20 +1591,20 @@ int u_setup_2fa(void)
             getdata(y, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO);
             if (!checkuser_passwd(cuser_ref, pw)) {
                 outs("\n" ANSI_COLOR(1;31) "密碼錯誤！無法停用 2FA。" ANSI_RESET "\n");
-                vkey();
+                pressanykey();
                 return 0;
             }
             y += 2;
             getdata(y, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in, sizeof(code_in), DOECHO);
             if (!user_verify_2fa_or_backup(cuser.userid, code_in)) {
                 outs("\n" ANSI_COLOR(1;31) "驗證碼錯誤！無法停用 2FA。" ANSI_RESET "\n");
-                vkey();
+                pressanykey();
                 return 0;
             }
             pwcuSet2FA(cuser.u_2fa ? 0 : 1);
             user_delete_2fa(cuser.userid);
             outs("\n" ANSI_COLOR(1;32) "已成功\停用 2FA 雙重驗證！" ANSI_RESET "\n");
-            vkey();
+            pressanykey();
             return 0;
         }
         return 0;
@@ -1630,24 +1630,35 @@ int u_setup_2fa(void)
     str_lower(lc_secret, tfa.secret);
 
     vs_hdr("2FA 雙重驗證設定");
-    prints("本系統使用標準 otpauth:// 驗證方法，您可使用任何相容的驗證器來登入，\n"
-           "以 Google Authenticator 為例，請選擇「輸入設定金鑰」，帳戶名稱任意 (如" BBSMNAME ")\n"
+    outs("本系統使用標準 otpauth:// 驗證方法，您可使用任何相容的驗證器來登入。\n\n");
+#ifdef TFA_URL
+    outs("請開啟下列網址，並在驗證器選擇掃描QR圖碼:\n");
+    prints(ANSI_COLOR(1;33) TFA_URL "#secret=%s&account=%s" ANSI_RESET "\n",
+           tfa.secret, cuser.userid);
+#else
+    outs("金鑰的超鏈結形式提供如下 (部份系統可直接點選或複製貼上):\n");
+    prints(ANSI_COLOR(1;33)"otpauth://totp/%s?secret=%s&issuer=%s" ANSI_RESET "\n",
+           cuser.userid, tfa.secret, BBSMNAME);
+#endif
+    prints("\n如果需要手動輸入，以 Google Authenticator 為例，請按App右下角的 +，選擇\n"
+           "「輸入設定金鑰」，帳戶名稱「%s@" BBSMNAME "」(可自行修改)，\n"
            "在「您的金鑰」(Secret Key)輸入: " ANSI_COLOR(1;36) "%s" ANSI_RESET
-           " ( 小寫: %s )\n"
+           " (小寫: " ANSI_COLOR(36) "%s" ANSI_RESET ")\n"
            "金鑰類形是「根據時間」，然後按下新增。\n\n",
-           tfa.secret, lc_secret);
+           cuser.userid, tfa.secret, lc_secret);
     explicit_bzero(lc_secret, sizeof(lc_secret));
 
-    outs("金鑰的超鏈結形式提供如下 (部份系統可直接點選或複製貼上):\n");
-    prints(ANSI_COLOR(1)"otpauth://totp/%s?secret=%s&issuer=%s" ANSI_RESET "\n\n",
-           cuser.userid, tfa.secret, BBSMNAME);
+    outs(ANSI_COLOR(1;35) "[緊急備用救援碼]: (8位數，各可使用一次)" ANSI_RESET "\n");
 
-    outs(ANSI_COLOR(1;35) "[緊急備用救援碼 (8位數，各可使用一次)]:" ANSI_RESET "\n");
-
-    const int y = 9, lines = 5;
-    for (int i = 0; i < MAX_BACKUP_CODES; i++) {
-        mvprints(y+i%lines, (i/lines) * 30, "  救援碼 %02d: " ANSI_COLOR(1;33) "%s" ANSI_RESET "\n",
-                 i + 1, tfa.backup_codes[i]);
+    const int lines = 5;
+    for (int i = 0; i < lines; i++) {
+        for (int idx = i; idx < MAX_BACKUP_CODES; idx += lines) {
+            prints("  救援碼 %02d: " ANSI_COLOR(1;33) "%s" ANSI_RESET,
+                   idx + 1, tfa.backup_codes[idx]);
+            if (idx + lines < MAX_BACKUP_CODES)
+                prints("%10s", "");
+        }
+        outs("\n");
     }
     outs("\n" ANSI_COLOR(1;31) "請妥善保存以上救援碼！若手機遺失可用於登入。" ANSI_RESET "\n\n");
 
