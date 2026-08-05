@@ -1603,6 +1603,51 @@ paste_taged_brds(int gid)
 }
 
 static void
+choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
+{
+    if (!IN_FAVORITE() || !HasFavEditPerm())
+        return;
+
+    char bname[IDLEN + 1];
+    int bid;
+    move(0, 0);
+    clrtoeol();
+    CompleteBoard(ANSI_REVERSE "【 增加我的最愛 】" ANSI_RESET "\n"
+                  "請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
+                  bname);
+
+    if (!bname[0] || !(bid = getbnum(bname)) || !HasBoardPerm(getbcache(bid)))
+        return;
+
+    fav_type_t *ptr = getboard(bid);
+    if (ptr != NULL) {
+        int i;
+        for (i = 0; i < nbrdsize; ++i) {
+            if (bid == nbrd[i].bid) {
+                *num_ptr = i;
+                break;
+            }
+        }
+        if (i == nbrdsize) {
+            assert(keyword[0]);
+            vmsg("已經在我的最愛裡了, 取消關鍵字就能看到囉");
+            keyword[0] = '\0';
+        }
+    } else {
+        ptr = fav_add_board(bid);
+        if (ptr == NULL) {
+            vmsg("你的最愛太多了啦 真花心");
+        } else {
+            ptr->attr |= NBRD_FAV;
+            if (ch == 'i' && get_data_number(get_current_fav()) > 1)
+                move_in_current_folder(brdnum, *num_ptr);
+            else
+                *num_ptr = brdnum;
+        }
+    }
+}
+
+static void
 choose_board(int newflag)
 {
     static int      num = 0;
@@ -2145,50 +2190,7 @@ choose_board(int newflag)
 
 	case 'a':
 	case 'i':
-	    if(IN_FAVORITE() && HasFavEditPerm()){
-		char         bname[IDLEN + 1];
-		int          bid;
-		move(0, 0);
-		clrtoeol();
-		/* use CompleteBoard or CompleteBoardAndGroup ? */
-		CompleteBoard(ANSI_REVERSE "【 增加我的最愛 】" ANSI_RESET "\n"
-			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
-			bname);
-
-		if (bname[0] && (bid = getbnum(bname)) &&
-			HasBoardPerm(getbcache(bid))) {
-		    fav_type_t * ptr = getboard(bid);
-		    if (ptr != NULL) { // already in fav list
-			// move curser to item
-			int i;
-			for (i = 0; i < nbrdsize; ++i) {
-			    if (bid == nbrd[i].bid) {
-				num = i;
-				break;
-			    }
-			}
-			if (i == nbrdsize) {
-			    assert(keyword[0]);
-			    vmsg("已經在我的最愛裡了, 取消關鍵字就能看到囉");
-			    keyword[0] = '\0';
-			    brdnum = -1;
-			}
-		    } else {
-			ptr = fav_add_board(bid);
-
-			if (ptr == NULL)
-			    vmsg("你的最愛太多了啦 真花心");
-			else {
-			    ptr->attr |= NBRD_FAV;
-
-			    if (ch == 'i' && get_data_number(get_current_fav()) > 1)
-				move_in_current_folder(brdnum, num);
-			    else
-				num = brdnum;
-			}
-		    }
-		}
-	    }
+	    choose_board_add_favorite(ch, brdnum, &num, keyword);
 	    brdnum = -1;
 	    head = 9999;
 	    break;

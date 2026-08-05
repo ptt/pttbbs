@@ -1361,6 +1361,80 @@ static char *override_attr = NULL;
  * display mf content from disps for MFDISP_PAGE
  */
 
+static void PMORE_UINAV_FORWARDPAGE(void);
+
+#ifdef PMORE_EXPAND_ESC_STAR
+static void
+mf_display_handle_esc_star(int *xprefix_ptr, int *col_ptr, int maxcol,
+                           char **override_attr_ptr, char **override_msg_ptr)
+{
+    char esbuf[4] = "";
+    char buf[64] = "";
+    char *pbuf = buf;
+
+    memcpy(buf, mf.dispe, 3);
+    mf.dispe += 2;
+
+    if (bpref.rawmode)
+        buf[0] = '*';
+    else {
+        strncpy(esbuf, buf, sizeof(esbuf));
+        esbuf[sizeof(esbuf)-1] = 0;
+
+        if (expand_esc_star(buf, esbuf, sizeof(buf)) > 1) {
+            *override_attr_ptr = ANSI_COLOR(1;37;41);
+            *override_msg_ptr  = PMORE_MSG_WARN_FAKEUSERINFO;
+        }
+    }
+    int i = strlen(buf);
+
+    if (*xprefix_ptr > 0) {
+        if (*xprefix_ptr >= i) {
+            *xprefix_ptr -= i;
+            i = 0;
+        } else {
+            pbuf += *xprefix_ptr;
+            *xprefix_ptr = 0;
+        }
+    }
+
+    if (*col_ptr + i > maxcol)
+        i = maxcol - *col_ptr;
+    if (i > 0) {
+        pbuf[i] = 0;
+        *col_ptr += i;
+        outs(pbuf);
+    }
+}
+#endif
+
+#ifdef PMORE_USE_ASCII_MOVIE
+static void
+mf_movie_handle_sync_playing(int promptend, int *flExit_ptr, int *retval_ptr)
+{
+    if (mfmovie.mode == MFDISP_MOVIE_PLAYING) {
+        if (!mf_movieNextFrame()) {
+            STOP_MOVIE();
+            if (promptend == PMORE_AUTO_EXIT) {
+                *flExit_ptr = 1;
+                *retval_ptr = 0;
+            }
+        }
+    } else if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD) {
+        if (mf_viewedAll()) {
+            mfmovie.mode = MFDISP_MOVIE_NO;
+            mf_determinemaxdisps(MFNAV_PAGE, 0);
+            mf_forward(0);
+        } else {
+            if (!mfmovie.compat24)
+                PMORE_UINAV_FORWARDPAGE();
+            else
+                mf_forward(22);
+        }
+    }
+}
+#endif
+
 MFPROTO void
 mf_display()
 {
@@ -1737,58 +1811,7 @@ mf_display()
                             mf.end - mf.dispe > 2 &&
                             *(mf.dispe+1) == '*')
                     {
-                        int i;
-
-                        // the max esc_star sequence in your system
-                        char esbuf[4]= "";
-
-                        // the max expanded size of esc_star.
-                        char buf[64] = "" ;
-                        char *pbuf = buf;
-
-                        memcpy(buf, mf.dispe, 3);  // ^[*s
-                        mf.dispe += 2;
-
-                        if (bpref.rawmode)
-                            buf[0] = '*';
-                        else
-                        {
-                            // prepare variable expansion
-                            //  assert(sizeof(buf) >= sizeof(esbuf));
-                            strncpy(esbuf, buf, sizeof(esbuf));
-                            esbuf[sizeof(esbuf)-1] = 0; // because we use strncpy.
-
-                            if (expand_esc_star(buf, esbuf, sizeof(buf)) > 1)
-                            {
-                                override_attr = ANSI_COLOR(1;37;41);
-                                override_msg  = PMORE_MSG_WARN_FAKEUSERINFO;
-                            }
-                        }
-                        i = strlen(buf);
-
-                        // also try to consider xprefix
-                        // (assume no ANSI stuff in converted buf)
-                        if (xprefix > 0)
-                        {
-                            if (xprefix >= i)
-                            {
-                                xprefix -= i;
-                                i = 0;
-                            } else {
-                                // xprefix < i, change buffer offset.
-                                pbuf += xprefix;
-                                xprefix = 0;
-                            }
-                        }
-
-                        if (col + i > maxcol)
-                            i = maxcol - col;
-                        if (i > 0)
-                        {
-                            pbuf[i] = 0;
-                            col += i;
-                            outs(pbuf);
-                        }
+                        mf_display_handle_esc_star(&xprefix, &col, maxcol, &override_attr, &override_msg);
                         inAnsi = 0;
                     } else
 #endif // PMORE_EXPAND_ESC_STAR
@@ -2462,40 +2485,7 @@ _pmore2(
 
                 if (mf_movieSyncFrame())
                 {
-                    /* user did not hit anything.
-                     * play next frame.
-                     */
-                    if (mfmovie.mode == MFDISP_MOVIE_PLAYING)
-                    {
-                        if (!mf_movieNextFrame())
-                        {
-                            STOP_MOVIE();
-
-                            if (promptend == PMORE_AUTO_EXIT)
-                            {
-                                /* if we played to end,
-                                 * no need to prevent pressanykey().
-                                 */
-                                flExit = 1, retval = 0;
-                            }
-                        }
-                    }
-                    else if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
-                    {
-                        if (mf_viewedAll())
-                        {
-                            mfmovie.mode = MFDISP_MOVIE_NO;
-                            mf_determinemaxdisps(MFNAV_PAGE, 0);
-                            mf_forward(0);
-                        }
-                        else
-                        {
-                            if (!mfmovie.compat24)
-                                PMORE_UINAV_FORWARDPAGE();
-                            else
-                                mf_forward(22);
-                        }
-                    }
+                    mf_movie_handle_sync_playing(promptend, &flExit, &retval);
                 } else {
                     /* TODO simple navigation here? */
 

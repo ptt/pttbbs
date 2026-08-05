@@ -1486,6 +1486,119 @@ void set_withme_flag(void)
     } while(genbuf[0]!='\0');
 }
 
+static int
+userlist_search_online_user(pickup_t *currpickup, int pickup_way, int *page, int *offset,
+                            int *myfriend, int *friendme, int *badfriend)
+{
+    if (HasUserFlag(UF_FRIEND))
+        return 0;
+
+    char swid[IDLEN + 1];
+    move(1, 0);
+
+    int si = CompleteOnlineUser(msg_uid, swid);
+    if (si < 0)
+        return 0;
+
+    pickup_t friends[MAX_FRIEND + 1];
+    int *ulist = SHM->sorted[SHM->currsorted][((pickup_way == 0) ? 0 : (pickup_way - 1))];
+    int fi = ulist[si];
+    int nGots = pickup_myfriend(friends, myfriend, friendme, badfriend);
+
+    int i;
+    for (i = 0; i < nGots; ++i) {
+        if (friends[i].uoffset == fi)
+            break;
+    }
+
+    fi = 0;
+    *offset = 0;
+    if (i != nGots) {
+        *page = i / nPickups;
+        for (; i < nGots && fi < nPickups; ++i) {
+            if (isvisible(currutmp, friends[i].ui))
+                currpickup[fi++] = friends[i];
+        }
+        i = 0;
+    } else {
+        *page = (si + nGots) / nPickups;
+        i = si;
+    }
+
+    for (; fi < nPickups && i < SHM->UTMPnumber; ++i) {
+        userinfo_t *u = &SHM->uinfo[ulist[i]];
+        if (isvisible(currutmp, u)) {
+            currpickup[fi].ui = u;
+            currpickup[fi++].friend = 0;
+        }
+    }
+    return 1;
+}
+
+static void
+userlist_broadcast(void)
+{
+    if (HasUserFlag(UF_FRIEND) || HasUserPerm(PERM_SYSOP)) {
+        char genbuf[60] = "[廣播]";
+        char ans[4];
+
+        if (!getdata(0, 0, "廣播訊息:", genbuf + 6, 54, DOECHO))
+            return;
+
+        if (!getdata(0, 0, "確定廣播? [N]", ans, sizeof(ans), LCECHO) || ans[0] != 'y')
+            return;
+
+        if (!(HasUserFlag(UF_FRIEND)) && HasUserPerm(PERM_SYSOP)) {
+            msgque_t msg;
+            getdata(1, 0, "再次確定站長廣播? [N]", ans, sizeof(ans), LCECHO);
+            if (ans[0] != 'y') {
+                vmsg("abort");
+                return;
+            }
+
+            msg.pid = currpid;
+            STRLCPY(msg.userid, cuser.userid);
+            SNPRINTF(msg.last_call_in, "[廣播]%s", genbuf);
+            for (int i = 0; i < SHM->UTMPnumber; ++i) {
+                userinfo_t *uentp = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]];
+                if (uentp->pid && kill(uentp->pid, 0) != -1) {
+                    int write_pos = uentp->msgcount;
+                    if (write_pos < (MAX_MSGS - 1)) {
+                        uentp->msgcount = write_pos + 1;
+                        memcpy(&uentp->msgs[write_pos], &msg, sizeof(msg));
+                        kill(uentp->pid, SIGUSR2);
+                    }
+                }
+            }
+        } else {
+            userinfo_t *uentp;
+            int where, frstate;
+            for (int i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
+                where = currutmp->friend_online[i] & 0xFFFFFF;
+                if (!VALID_USHM_ENTRY(where))
+                    continue;
+                uentp = &SHM->uinfo[where];
+                if (!uentp || !uentp->pid)
+                    continue;
+                frstate = currutmp->friend_online[i] >> 24;
+                if (!(frstate & IFH))
+                    continue;
+                if (!isvisible_stat(currutmp, uentp, frstate))
+                    continue;
+                if (uentp->pager == PAGER_ANTIWB)
+                    continue;
+                if (uentp->pager == PAGER_FRIENDONLY && !(frstate & HFM))
+                    continue;
+                if ((frstate & HRM) && !(frstate & HFM))
+                    continue;
+                if (kill(uentp->pid, 0) == -1)
+                    continue;
+                my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_PREEDIT, NULL);
+            }
+        }
+    }
+}
+
 static void
 userlist(void)
 {
@@ -1645,61 +1758,11 @@ userlist(void)
 		break;
 
 	    case 's':
-		if (!(HasUserFlag(UF_FRIEND))) {
-		    int             si;	/* utmpshm->sorted[X][0][si] */
-		    int             fi;	/* allpickuplist[fi] */
-		    char            swid[IDLEN + 1];
-		    move(1, 0);
-
-		    // XXX si 已經寫死了 pickup_way = 0
-		    // 若使用者在 pickup_way != 0 時按 's'...
-
-		    si = CompleteOnlineUser(msg_uid, swid);
-		    if (si >= 0) {
-			pickup_t        friends[MAX_FRIEND + 1];
-			int             nGots;
-			int *ulist =
-			    SHM->sorted[SHM->currsorted]
-			    [((pickup_way == 0) ? 0 : (pickup_way - 1))];
-
-			fi = ulist[si];
-			nGots = pickup_myfriend(friends, &myfriend,
-						&friendme, &badfriend);
-			for (i = 0; i < nGots; ++i)
-			    if (friends[i].uoffset == fi)
-				break;
-
-			fi = 0;
-			offset = 0;
-			if( i != nGots ){
-			    page = i / nPickups;
-			    for( ; i < nGots && fi < nPickups ; ++i )
-				if( isvisible(currutmp, friends[i].ui) )
-				    currpickup[fi++] = friends[i];
-			    i = 0;
-			}
-			else{
-			    page = (si + nGots) / nPickups;
-			    i = si;
-			}
-
-			for( ; fi < nPickups && i < SHM->UTMPnumber ; ++i )
-			{
-			    userinfo_t *u;
-			    u = &SHM->uinfo[ulist[i]];
-			    if( isvisible(currutmp, u) ){
-				currpickup[fi].ui = u;
-				currpickup[fi++].friend = 0;
-			    }
-			}
-			skippickup = 1;
-		    }
+		if (userlist_search_online_user(currpickup, pickup_way, &page, &offset,
+						&myfriend, &friendme, &badfriend)) {
+		    skippickup = 1;
 		    redrawall = redraw = 1;
 		}
-		/*
-		 * if ((i = search_pickup(num, actor, pklist)) >= 0) num = i;
-		 * state = US_ACTION;
-		 */
 		break;
 
 	    case '1':
@@ -1755,76 +1818,8 @@ userlist(void)
 #endif
 
 	    case 'b':		/* broadcast */
-		if (HasUserFlag(UF_FRIEND) || HasUserPerm(PERM_SYSOP)) {
-		    char            genbuf[60]="[廣播]";
-		    char            ans[4];
-
-		    if (!getdata(0, 0, "廣播訊息:", genbuf+6, 54, DOECHO))
-			break;
-
-		    if (!getdata(0, 0, "確定廣播? [N]",
-				ans, sizeof(ans), LCECHO) ||
-			ans[0] != 'y')
-			break;
-		    if (!(HasUserFlag(UF_FRIEND)) && HasUserPerm(PERM_SYSOP)) {
-			msgque_t msg;
-			getdata(1, 0, "再次確定站長廣播? [N]",
-				ans, sizeof(ans), LCECHO);
-			if( ans[0] != 'y'){
-			    vmsg("abort");
-			    break;
-			}
-
-			msg.pid = currpid;
-			STRLCPY(msg.userid, cuser.userid);
-			SNPRINTF(msg.last_call_in, "[廣播]%s", genbuf);
-			for (i = 0; i < SHM->UTMPnumber; ++i) {
-			    // XXX why use sorted list?
-			    //     can we just scan uinfo with proper checking?
-			    uentp = &SHM->uinfo[
-                                      SHM->sorted[SHM->currsorted][0][i]];
-			    if (uentp->pid && kill(uentp->pid, 0) != -1){
-				int     write_pos = uentp->msgcount;
-				if( write_pos < (MAX_MSGS - 1) ){
-				    uentp->msgcount = write_pos + 1;
-				    memcpy(&uentp->msgs[write_pos], &msg,
-					   sizeof(msg));
-				    kill(uentp->pid, SIGUSR2);
-				}
-			    }
-			}
-		    } else {
-			userinfo_t     *uentp;
-			int             where, frstate;
-			for (i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
-			    where = currutmp->friend_online[i] & 0xFFFFFF;
-                            if (!VALID_USHM_ENTRY(where))
-                                continue;
-                            uentp = &SHM->uinfo[where];
-                            if (!uentp || !uentp->pid)
-                                continue;
-                            frstate = currutmp->friend_online[i] >> 24;
-                            // Only to people who I've friended him.
-                            if (!(frstate & IFH))
-                                continue;
-                            if (!isvisible_stat(currutmp, uentp, frstate))
-                                continue;
-                            if (uentp->pager == PAGER_ANTIWB)
-                                continue;
-                            if (uentp->pager == PAGER_FRIENDONLY &&
-                                !(frstate & HFM))
-                                continue;
-                            // HRM + HFM = super friend.
-                            if ((frstate & HRM) && !(frstate & HFM))
-                                continue;
-                            if (kill(uentp->pid, 0) == -1)
-                                continue;
-                            my_write(uentp->pid, genbuf, uentp->userid,
-                                     WATERBALL_PREEDIT, NULL);
-			}
-		    }
-		    redrawall = redraw = 1;
-		}
+		userlist_broadcast();
+		redrawall = redraw = 1;
 		break;
 
 	    case 'S':		/* 顯示好友描述 */

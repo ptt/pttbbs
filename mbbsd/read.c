@@ -670,6 +670,39 @@ select_read(const keeploc_t * locmem, int sr_mode)
 static int newdirect_new_ln = -1;
 
 static int
+read_key_handle_mode_navigation(keeploc_t *locmem, int mode, int *new_ln_ptr, char *default_ch_ptr)
+{
+    switch (mode) {
+    case READ_PREV:
+        *new_ln_ptr = locmem->crs_ln - 1;
+        break;
+    case READ_NEXT:
+        *new_ln_ptr = locmem->crs_ln + 1;
+        break;
+    case RELATE_PREV:
+        *new_ln_ptr = thread(locmem, RELATE_PREV);
+        break;
+    case RELATE_NEXT:
+        *new_ln_ptr = thread(locmem, RELATE_NEXT);
+        if (*new_ln_ptr == locmem->crs_ln) {
+            *default_ch_ptr = 0;
+            return 1;
+        }
+        break;
+    case RELATE_FIRST:
+        *new_ln_ptr = thread(locmem, RELATE_FIRST);
+        break;
+    case AUTHOR_PREV:
+        *new_ln_ptr = thread(locmem, AUTHOR_PREV);
+        break;
+    case AUTHOR_NEXT:
+        *new_ln_ptr = thread(locmem, AUTHOR_NEXT);
+        break;
+    }
+    return 0;
+}
+
+static int
 i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
            int bid, int bottom_line, int pending_draws)
 {
@@ -997,35 +1030,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                    mode == AUTHOR_NEXT || mode ==  AUTHOR_PREV ||
                    mode == RELATE_NEXT){
 		    lastmode = mode;
-
-		    switch(mode){
-                    case READ_PREV:
-                        new_ln =  locmem->crs_ln - 1;
-                        break;
-                    case READ_NEXT:
-                        new_ln =  locmem->crs_ln + 1;
-                        break;
-	            case RELATE_PREV:
-                        new_ln = thread(locmem, RELATE_PREV);
-			break;
-                    case RELATE_NEXT:
-                        new_ln = thread(locmem, RELATE_NEXT);
-			/* XXX: 讀到最後一篇要跳出來 */
-			if( new_ln == locmem->crs_ln ){
-			    default_ch = 0;
-			    return FULLUPDATE;
-			}
-		        break;
-                    case RELATE_FIRST:
-                        new_ln = thread(locmem, RELATE_FIRST);
-		        break;
-                    case AUTHOR_PREV:
-                        new_ln = thread(locmem, AUTHOR_PREV);
-		        break;
-                    case AUTHOR_NEXT:
-                        new_ln = thread(locmem, AUTHOR_NEXT);
-		        break;
-		    }
+		    if (read_key_handle_mode_navigation(locmem, mode, &new_ln, &default_ch))
+		        return FULLUPDATE;
 		    mode = DONOTHING; default_ch = 'r';
                 }
 		else {
