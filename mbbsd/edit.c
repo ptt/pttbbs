@@ -1647,7 +1647,8 @@ write_header(FILE * fp,  const char *mytitle)
     // cross_post may call this without setting curr_buf.
     // TODO Isolate curr_buf so we don't need to hack around.
     if (curr_buf &&
-        curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) {
+        (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) &&
+        !(curr_buf->flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST))) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
 		cuser.nickname
 	);

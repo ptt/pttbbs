@@ -1046,7 +1046,7 @@ multi_send(const char *title)
 	    fclose(fp);
 	}
 
-	if (vedit(fpath, YEA, save_title) == EDIT_ABORTED) {
+	if (vedit2(fpath, YEA, save_title, EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    Vector_delete(&namelist);
 	    vmsg(msg_cancel);
