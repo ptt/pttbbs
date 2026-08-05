@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,8 +13,6 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/term"
-	"golang.org/x/text/encoding/traditionalchinese"
-	"golang.org/x/text/transform"
 )
 
 // RawFileHeader represents fileheader_t structure in PTT (128 bytes)
@@ -51,11 +48,25 @@ const (
 	ModeFileView
 )
 
+type dirFrame struct {
+	baseDir        string
+	dirPath        string
+	allArticles    []ArticleHeader
+	articles       []ArticleHeader
+	selectedIndex  int
+	scrollOffset   int
+	inSearchMode   bool
+	searchQuery    string
+	savedSelectIdx int
+	savedScrollOff int
+}
+
 type AppState struct {
 	baseDir   string
 	dirPath   string
 	outputEnc string // "utf8" or "big5"
 
+	dirStack    []dirFrame
 	allArticles []ArticleHeader
 	articles    []ArticleHeader
 	mode        ViewMode
@@ -81,23 +92,62 @@ type AppState struct {
 	rawOldState *term.State
 }
 
+func sanitizeDBCS(data []byte) []byte {
+	out := make([]byte, 0, len(data))
+	l := len(data)
+	isInDBCS := false
+
+	for i := 0; i < l; i++ {
+		b := data[i]
+		if b == 0x1b {
+			j := i + 1
+			if j < l && data[j] == '[' {
+				j++
+				for j < l && data[j] >= 0x20 && data[j] <= 0x3f {
+					j++
+				}
+				if j < l && data[j] >= 0x40 && data[j] <= 0x7e {
+					j++
+				}
+			} else if j < l && data[j] >= 0x40 && data[j] <= 0x5f {
+				j++
+			}
+
+			if j > i+1 {
+				if isInDBCS {
+					// Interrupting ANSI escape sequence inside DBCS character. Ignore it.
+					i = j - 1
+					continue
+				} else {
+					// Normal ANSI escape sequence outside DBCS character. Keep it.
+					out = append(out, data[i:j]...)
+					i = j - 1
+					continue
+				}
+			}
+		}
+
+		if isInDBCS {
+			out = append(out, b)
+			isInDBCS = false
+		} else if b >= 0x80 {
+			out = append(out, b)
+			isInDBCS = true
+		} else {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
 func decodeBig5(b []byte) string {
 	b = bytes.TrimRight(b, "\x00")
-	r := transform.NewReader(bytes.NewReader(b), traditionalchinese.Big5.NewDecoder())
-	decoded, err := io.ReadAll(r)
-	if err != nil {
-		return string(b)
-	}
-	return string(decoded)
+	b = sanitizeDBCS(b)
+	return decodeBig5Raw(b)
 }
 
 func encodeToBig5(utf8Str string) []byte {
-	encoder := traditionalchinese.Big5.NewEncoder()
-	big5Bytes, err := encoder.Bytes([]byte(utf8Str))
-	if err != nil {
-		return []byte(utf8Str)
-	}
-	return big5Bytes
+	return encodeToBig5Raw(utf8Str)
 }
 
 func parseDirFile(dirPath string) ([]ArticleHeader, error) {
@@ -119,8 +169,8 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 			continue
 		}
 
-		owner := string(bytes.TrimRight(raw.Owner[:], "\x00"))
-		date := string(bytes.TrimRight(raw.Date[:], "\x00"))
+		owner := decodeBig5(raw.Owner[:])
+		date := decodeBig5(raw.Date[:])
 		title := decodeBig5(raw.Title[:])
 
 		articles = append(articles, ArticleHeader{
@@ -176,18 +226,28 @@ func formatRecommend(rec int8, isSelected bool) string {
 }
 
 func runeWidth(r rune) int {
-	if r >= 0x1100 && (
-		r <= 0x115F ||
-			r == 0x2329 || r == 0x232A ||
-			(r >= 0x2E80 && r <= 0xA4CF && r != 0x303F) ||
-			(r >= 0xAC00 && r <= 0xD7A3) ||
-			(r >= 0xF900 && r <= 0xFAFF) ||
-			(r >= 0xFE10 && r <= 0xFE19) ||
-			(r >= 0xFE30 && r <= 0xFE6F) ||
-			(r >= 0xFF00 && r <= 0xFF60) ||
-			(r >= 0xFFE0 && r <= 0xFFE6) ||
-			(r >= 0x20000 && r <= 0x2FFFD) ||
-			(r >= 0x30000 && r <= 0x3FFFD)) {
+	if (r >= 0x1100 && r <= 0x115F) ||
+		r == 0x2329 || r == 0x232A ||
+		(r >= 0x2000 && r <= 0x206F) || // General Punctuation (…, —, ※, ‘, ’, “, ”, etc.)
+		(r >= 0x2100 && r <= 0x214F) || // Letterlike Symbols (℃, ℉, №, etc.)
+		(r >= 0x2150 && r <= 0x218F) || // Number Forms (Ⅰ, Ⅱ, Ⅲ, etc.)
+		(r >= 0x2190 && r <= 0x21FF) || // Arrows (←, ↑, →, ↓, etc.)
+		(r >= 0x2200 && r <= 0x22FF) || // Mathematical Operators (√, ∞, ∕, etc.)
+		(r >= 0x2300 && r <= 0x23FF) || // Misc Technical (①..⑩, etc.)
+		(r >= 0x2460 && r <= 0x24FF) || // Enclosed Alphanumerics (①..⑳, etc.)
+		(r >= 0x2500 && r <= 0x257F) || // Box Drawing (─, │, ┌, ┐, etc.)
+		(r >= 0x2580 && r <= 0x259F) || // Block Elements (▀, ▄, █, etc.)
+		(r >= 0x25A0 && r <= 0x25FF) || // Geometric Shapes (■, □, ▲, △, ▼, ▽, ◆, ◇, ★, ☆, etc.)
+		(r >= 0x2600 && r <= 0x26FF) || // Misc Symbols (☀, ☁, ☂, ☎, ♀, ♂, etc.)
+		(r >= 0x2E80 && r <= 0xA4CF && r != 0x303F) || // CJK Radicals, Symbols, CJK Unified Ideographs
+		(r >= 0xAC00 && r <= 0xD7A3) || // Hangul Syllables
+		(r >= 0xF900 && r <= 0xFAFF) || // CJK Compatibility Ideographs
+		(r >= 0xFE10 && r <= 0xFE19) || // Vertical Forms
+		(r >= 0xFE30 && r <= 0xFE6F) || // CJK Compatibility Forms
+		(r >= 0xFF00 && r <= 0xFF60) || // Fullwidth Forms
+		(r >= 0xFFE0 && r <= 0xFFE6) || // Fullwidth Symbol Variants
+		(r >= 0x20000 && r <= 0x2FFFD) ||
+		(r >= 0x30000 && r <= 0x3FFFD) {
 		return 2
 	}
 	return 1
@@ -413,33 +473,113 @@ func (app *AppState) renderFileView(buf *bytes.Buffer) {
 	buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 }
 
+func stripANSI(s string) string {
+	var res strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEscape = false
+			}
+			continue
+		}
+		res.WriteRune(r)
+	}
+	return res.String()
+}
+
+func resolveBoardArticlePath(boardsDir, boardName, filename string) string {
+	if len(boardName) == 0 {
+		return ""
+	}
+
+	firstCharUpper := strings.ToUpper(string(boardName[0]))
+	firstCharLower := strings.ToLower(string(boardName[0]))
+
+	candidates := []string{
+		filepath.Join(boardsDir, firstCharUpper, boardName, filename),
+		filepath.Join(boardsDir, firstCharLower, boardName, filename),
+		filepath.Join(boardsDir, firstCharUpper, strings.ToLower(boardName), filename),
+		filepath.Join(boardsDir, firstCharLower, strings.ToLower(boardName), filename),
+		filepath.Join(boardsDir, boardName, filename),
+	}
+
+	for _, cand := range candidates {
+		if _, err := os.Stat(cand); err == nil {
+			return cand
+		}
+	}
+
+	// Case-insensitive directory scan fallback
+	dirCandidates := []string{
+		filepath.Join(boardsDir, firstCharUpper),
+		filepath.Join(boardsDir, firstCharLower),
+		boardsDir,
+	}
+
+	for _, parentDir := range dirCandidates {
+		entries, err := os.ReadDir(parentDir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() && strings.EqualFold(entry.Name(), boardName) {
+				cand := filepath.Join(parentDir, entry.Name(), filename)
+				if _, err := os.Stat(cand); err == nil {
+					return cand
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
 func (app *AppState) getArticlePath(art ArticleHeader) string {
-	titleTrimmed := strings.TrimSpace(art.Title)
+	if filepath.IsAbs(art.Filename) {
+		return art.Filename
+	}
+
+	cleanTitle := strings.TrimSpace(stripANSI(art.Title))
 	var resolvedPath string
 
-	if strings.HasSuffix(titleTrimmed, ")") {
-		lastOpenParen := strings.LastIndex(titleTrimmed, "(")
-		if lastOpenParen != -1 && lastOpenParen < len(titleTrimmed)-1 {
-			boardName := strings.TrimSpace(titleTrimmed[lastOpenParen+1 : len(titleTrimmed)-1])
-			if len(boardName) > 0 {
-				parentDir := filepath.Dir(app.baseDir)
-				boardsDir := filepath.Dir(parentDir)
+	lastClose := strings.LastIndexAny(cleanTitle, ")）")
+	if lastClose != -1 {
+		lastOpen := strings.LastIndexAny(cleanTitle[:lastClose], "(（")
+		if lastOpen != -1 {
+			_, openRuneSize := utf8.DecodeRuneInString(cleanTitle[lastOpen:])
+			if lastOpen+openRuneSize < lastClose {
+				boardName := strings.TrimSpace(cleanTitle[lastOpen+openRuneSize : lastClose])
+				if len(boardName) > 0 {
+					parentDir := filepath.Dir(app.baseDir)
+					boardsDir := filepath.Dir(parentDir)
+					resolvedPath = resolveBoardArticlePath(boardsDir, boardName, art.Filename)
+					if resolvedPath == "" {
+						resolvedPath = resolveBoardArticlePath(parentDir, boardName, art.Filename)
+					}
 
-				firstCharUpper := strings.ToUpper(string(boardName[0]))
-				firstCharLower := strings.ToLower(string(boardName[0]))
+					if resolvedPath == "" {
+						var candidateBbsBoards []string
+						if bbsHome := os.Getenv("BBSHOME"); bbsHome != "" {
+							candidateBbsBoards = append(candidateBbsBoards, filepath.Join(bbsHome, "boards"))
+						}
+						candidateBbsBoards = append(candidateBbsBoards, "/home/bbs/boards")
 
-				candidates := []string{
-					filepath.Join(boardsDir, firstCharUpper, boardName, art.Filename),
-					filepath.Join(boardsDir, firstCharLower, boardName, art.Filename),
-					filepath.Join(boardsDir, firstCharUpper, strings.ToLower(boardName), art.Filename),
-					filepath.Join(boardsDir, firstCharLower, strings.ToLower(boardName), art.Filename),
-					filepath.Join(boardsDir, boardName, art.Filename),
-				}
-
-				for _, cand := range candidates {
-					if _, err := os.Stat(cand); err == nil {
-						resolvedPath = cand
-						break
+						for _, candidateDir := range candidateBbsBoards {
+							if candidateDir == boardsDir || candidateDir == parentDir {
+								continue
+							}
+							if fi, err := os.Stat(candidateDir); err == nil && fi.IsDir() {
+								resolvedPath = resolveBoardArticlePath(candidateDir, boardName, art.Filename)
+								if resolvedPath != "" {
+									break
+								}
+							}
+						}
 					}
 				}
 			}
@@ -463,6 +603,28 @@ func (app *AppState) getArticlePath(art ArticleHeader) string {
 	return primaryPath
 }
 
+func (app *AppState) popDirectory() bool {
+	if len(app.dirStack) == 0 {
+		return false
+	}
+	n := len(app.dirStack) - 1
+	frame := app.dirStack[n]
+	app.dirStack = app.dirStack[:n]
+
+	app.baseDir = frame.baseDir
+	app.dirPath = frame.dirPath
+	app.allArticles = frame.allArticles
+	app.articles = frame.articles
+	app.selectedIndex = frame.selectedIndex
+	app.scrollOffset = frame.scrollOffset
+	app.inSearchMode = frame.inSearchMode
+	app.searchQuery = frame.searchQuery
+	app.savedSelectIdx = frame.savedSelectIdx
+	app.savedScrollOff = frame.savedScrollOff
+	app.mode = ModeDirView
+	return true
+}
+
 func (app *AppState) openArticle() {
 	if len(app.articles) == 0 || app.selectedIndex < 0 || app.selectedIndex >= len(app.articles) {
 		return
@@ -470,6 +632,55 @@ func (app *AppState) openArticle() {
 
 	art := app.articles[app.selectedIndex]
 	filePath := app.getArticlePath(art)
+
+	fi, err := os.Stat(filePath)
+	if err == nil {
+		var subDirFile, subBaseDir string
+		isDirIndex := false
+
+		if fi.IsDir() {
+			subBaseDir = filePath
+			subDirFile = filepath.Join(filePath, ".DIR")
+			isDirIndex = true
+		} else if strings.HasSuffix(filePath, ".DIR") || filepath.Base(filePath) == ".DIR" {
+			subBaseDir = filepath.Dir(filePath)
+			subDirFile = filePath
+			isDirIndex = true
+		}
+
+		if isDirIndex {
+			subArticles, err := parseDirFile(subDirFile)
+			if err == nil {
+				frame := dirFrame{
+					baseDir:        app.baseDir,
+					dirPath:        app.dirPath,
+					allArticles:    app.allArticles,
+					articles:       app.articles,
+					selectedIndex:  app.selectedIndex,
+					scrollOffset:   app.scrollOffset,
+					inSearchMode:   app.inSearchMode,
+					searchQuery:    app.searchQuery,
+					savedSelectIdx: app.savedSelectIdx,
+					savedScrollOff: app.savedScrollOff,
+				}
+				app.dirStack = append(app.dirStack, frame)
+
+				app.baseDir = subBaseDir
+				app.dirPath = subDirFile
+				app.allArticles = subArticles
+				app.articles = subArticles
+				app.selectedIndex = 0
+				if len(subArticles) > 0 {
+					app.selectedIndex = len(subArticles) - 1
+				}
+				app.scrollOffset = 0
+				app.inSearchMode = false
+				app.searchQuery = ""
+				app.mode = ModeDirView
+				return
+			}
+		}
+	}
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -570,15 +781,43 @@ func detectDefaultEncoding() string {
 	return "utf8"
 }
 
+func truncateFrontWidth(s string, maxWidth int) string {
+	w := stringWidth(s)
+	if w <= maxWidth {
+		return s
+	}
+
+	prefix := "..."
+	prefixW := stringWidth(prefix)
+	targetWidth := maxWidth - prefixW
+	if targetWidth < 1 {
+		targetWidth = 1
+	}
+
+	runes := []rune(s)
+	suffixWidth := 0
+	cutIdx := len(runes)
+	for i := len(runes) - 1; i >= 0; i-- {
+		rw := runeWidth(runes[i])
+		if suffixWidth+rw > targetWidth {
+			break
+		}
+		suffixWidth += rw
+		cutIdx = i
+	}
+
+	return prefix + string(runes[cutIdx:])
+}
+
 func main() {
 	var encFlag string
 	flag.StringVar(&encFlag, "encoding", "", "Output encoding (utf8 or big5)")
 	flag.StringVar(&encFlag, "e", "", "Output encoding (utf8 or big5), shorthand")
 	flag.Parse()
 
-	inputPath := "."
-	if flag.NArg() >= 1 {
-		inputPath = flag.Arg(0)
+	paths := flag.Args()
+	if len(paths) == 0 {
+		paths = []string{"."}
 	}
 
 	outputEnc := strings.ToLower(strings.TrimSpace(encFlag))
@@ -589,44 +828,67 @@ func main() {
 		outputEnc = "utf8"
 	}
 
-	absPath, err := filepath.Abs(inputPath)
-	if err == nil {
-		if realPath, err := filepath.EvalSymlinks(absPath); err == nil {
-			absPath = realPath
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Printf("Failed to enter raw terminal mode: %v\n", err)
+		os.Exit(1)
+	}
+
+	var articles []ArticleHeader
+	var baseDir, dirFile string
+
+	if len(paths) == 1 {
+		inputPath := paths[0]
+		absPath, err := filepath.Abs(inputPath)
+		if err == nil {
+			inputPath = absPath
 		}
-		inputPath = absPath
-	}
 
-	fi, err := os.Stat(inputPath)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
+		fi, err := os.Stat(inputPath)
+		if err != nil {
+			term.Restore(int(os.Stdin.Fd()), oldState)
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
 
-	var dirFile, baseDir string
-	if fi.IsDir() {
-		baseDir = inputPath
-		dirFile = filepath.Join(inputPath, ".DIR")
+		if fi.IsDir() {
+			baseDir = inputPath
+			dirFile = filepath.Join(inputPath, ".DIR")
+		} else {
+			dirFile = inputPath
+			baseDir = filepath.Dir(inputPath)
+		}
+
+		arts, err := parseDirFile(dirFile)
+		if err != nil {
+			term.Restore(int(os.Stdin.Fd()), oldState)
+			fmt.Printf("讀取 .DIR 失敗 (%s): %v\n", dirFile, err)
+			os.Exit(1)
+		}
+		articles = arts
 	} else {
-		dirFile = inputPath
-		baseDir = filepath.Dir(inputPath)
-	}
+		baseDir = "路徑列表"
+		dirFile = "路徑列表"
+		for _, rawPath := range paths {
+			absPath, err := filepath.Abs(rawPath)
+			if err != nil {
+				absPath = rawPath
+			}
 
-	articles, err := parseDirFile(dirFile)
-	if err != nil {
-		fmt.Printf("讀取 .DIR 失敗 (%s): %v\n", dirFile, err)
-		os.Exit(1)
+			displayTitle := truncateFrontWidth(rawPath, 64)
+			articles = append(articles, ArticleHeader{
+				Filename: absPath,
+				Owner:    "DIR",
+				Date:     "",
+				Title:    displayTitle,
+				Filemode: 0x20, // Directory bit
+			})
+		}
 	}
 
 	initialIndex := 0
 	if len(articles) > 0 {
 		initialIndex = len(articles) - 1
-	}
-
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		fmt.Printf("Failed to enter raw terminal mode: %v\n", err)
-		os.Exit(1)
 	}
 
 	app := &AppState{
@@ -691,8 +953,7 @@ func (app *AppState) handleInput(input []byte) bool {
 			app.onRight()
 			return false
 		case 'D': // Left Arrow (pmore.c KEY_LEFT)
-			app.onLeft()
-			return false
+			return app.onLeft()
 		case '5': // Page Up (\x1b[5~, pmore.c KEY_PGUP)
 			app.onPageUp()
 			return false
@@ -715,10 +976,12 @@ func (app *AppState) handleInput(input []byte) bool {
 				app.mode = ModeDirView
 			} else if app.inSearchMode {
 				app.exitSearchMode()
+			} else if app.popDirectory() {
+				// Popped sub-directory
 			} else {
 				return true // Quit app
 			}
-		case '/': // pmore.c '/' -> search
+		case '/', '?': // pmore.c '/' or '?' -> search
 			if app.mode == ModeDirView {
 				app.mode = ModeSearchInput
 				app.searchQuery = ""
@@ -749,7 +1012,9 @@ func (app *AppState) handleInput(input []byte) bool {
 				}
 			}
 		case 'h': // pmore.c 'h' -> left
-			app.onLeft()
+			if app.onLeft() {
+				return true
+			}
 		case 'l': // pmore.c 'l' -> right
 			app.onRight()
 		case 'b', 0x02: // pmore.c 'b' / Ctrl+B -> page up
@@ -779,22 +1044,21 @@ func (app *AppState) handleSearchInput(input []byte) bool {
 	}
 
 	for _, r := range inputStr {
-		if r == '\r' || r == '\n' {
+		switch r {
+		case '\r', '\n':
 			app.executeSearch()
-			return false
-		} else if r == 0x7f || r == '\b' {
+		case 0x7f, 0x08: // Backspace
 			if len(app.searchQuery) > 0 {
-				_, size := utf8.DecodeLastRuneInString(app.searchQuery)
-				app.searchQuery = app.searchQuery[:len(app.searchQuery)-size]
+				runes := []rune(app.searchQuery)
+				app.searchQuery = string(runes[:len(runes)-1])
 			}
-		} else if r == 0x1b { // ESC
+		case 0x1b, 0x03: // ESC / Ctrl+C
 			app.mode = ModeDirView
 			return false
-		} else if r == 0x03 { // Ctrl+C
-			app.mode = ModeDirView
-			return false
-		} else if r >= 32 {
-			app.searchQuery += string(r)
+		default:
+			if r >= 32 {
+				app.searchQuery += string(r)
+			}
 		}
 	}
 	return false
@@ -828,12 +1092,21 @@ func (app *AppState) onDown() {
 	}
 }
 
-func (app *AppState) onLeft() {
+func (app *AppState) onLeft() bool {
 	if app.mode == ModeFileView {
 		app.mode = ModeDirView
-	} else if app.mode == ModeDirView && app.inSearchMode {
-		app.exitSearchMode()
+		return false
+	} else if app.mode == ModeDirView {
+		if app.inSearchMode {
+			app.exitSearchMode()
+			return false
+		} else if app.popDirectory() {
+			return false
+		} else {
+			return true
+		}
 	}
+	return false
 }
 
 func (app *AppState) onRight() {
