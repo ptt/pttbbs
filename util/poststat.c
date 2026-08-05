@@ -133,7 +133,7 @@ filter(
 
     /* XXX: bid of cache.c's getbnum starts from 1 */
     bid = getbnum(board);
-    if (get_record(".BRD", &bh, sizeof(bh), bid) == -1)
+    if (bid <= 0 || get_record(".BRD", &bh, sizeof(bh), bid) == -1)
 	return 1;
     if (bh.brdattr & BRD_NOCOUNT)
 	return 1;
