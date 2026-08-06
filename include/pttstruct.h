@@ -86,7 +86,7 @@ typedef struct userec_t {
     uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
-    uint8_t	u_2fa;		/* 雙重驗證 2FA (0=Off, 1=TOTP) */
+    uint8_t	u_2fa;		/* 雙重驗證 2FA */
     char	_unused4[1];
     uint32_t    exmailbox;	/* 購買信箱數 */
 
@@ -164,6 +164,13 @@ typedef struct userec_t {
 #define WITHME_NOCONN6	0x00002000
 
 #define BTLEN      48             /* Length of board title */
+
+/* flags for userec_t.u_2fa */
+typedef enum {
+    U_2FA_OFF = 0,
+    U_2FA_ALWAYS = 1,
+    U_2FA_NEWIP = 2,
+} U_2FA;
 
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */

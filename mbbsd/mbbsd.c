@@ -548,6 +548,10 @@ checkuser_2fa(int lineno, const userec_t *u)
         return 2;
     }
 
+    if (u->u_2fa == U_2FA_NEWIP && strcmp(u->lasthost, fromhost) == 0) {
+        return 1;
+    }
+
     char totp_code[TFA_INPUT_LEN + 1];
     mvouts(lineno + 1, 0, "此帳號需要兩階段驗證。");
     for (int err = 0; err < 5; err++) {
