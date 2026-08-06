@@ -1685,8 +1685,12 @@ auth_user_challenge(login_ctx *ctx)
         if (!user_load_2fa(uid, &tfa_check) || !tfa_check.enabled)
         {
             // Auto-heal: u_2fa enabled but .otpauth file missing or disabled
-            user.u_2fa = 0;
+            user.u_2fa = U_2FA_OFF;
             passwd_update(unum, &user);
+            return AUTH_RESULT_OK;
+        }
+        if (user.u_2fa == U_2FA_NEWIP && strcmp(user.lasthost, ctx->hostip) == 0)
+        {
             return AUTH_RESULT_OK;
         }
         return AUTH_RESULT_NEED_2FA;

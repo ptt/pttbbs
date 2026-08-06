@@ -1581,12 +1581,16 @@ int u_setup_2fa(void)
     // TODO(hungte) Check if otpauth can be loaded successfully.
 
     if (cuser.u_2fa) {
-        outs("目前 2FA 狀態：" ANSI_COLOR(1;32) "已啟用" ANSI_RESET "\n\n");
+        const char *mode = "每次登入皆驗證";
+        if (cuser.u_2fa == U_2FA_NEWIP)
+            mode = "同 IP 免驗證";
+        prints("目前 2FA 狀態：" ANSI_COLOR(1;32) "已啟用 (%s)" ANSI_RESET "\n\n", mode);
+
         char ans[4];
         int y = 5;
         getdata(y, 0, "您確定要停用 2FA 雙重驗證嗎？(y/N): ", ans, sizeof(ans), DOECHO);
         if (ans[0] == 'y' || ans[0] == 'Y') {
-            char pw[32], code_in[16];
+            char pw[PW_PLAIN_SIZE], code_in[TFA_INPUT_LEN + 1];
             y += 2;
             getdata(y, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO);
             if (!checkuser_passwd(cuser_ref, pw)) {
@@ -1672,8 +1676,12 @@ int u_setup_2fa(void)
 
         if (verify_2fa(tfa.secret, input_code, 1)) {
             user_save_2fa(cuser.userid, &tfa);
-            pwcuSet2FA(cuser.u_2fa ? 0 : 1);
-            mvouts(b_lines - 2, 0, ANSI_COLOR(1;32) "[成功\] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
+            char mode_ans[4];
+            getdata(b_lines - 2, 0, "請選擇模式 (1)每次登入皆驗證 (2)同IP免驗證 [2]: ",
+                    mode_ans, sizeof(mode_ans), DOECHO);
+            uint8_t init_mode = (mode_ans[0] == '1') ? U_2FA_ALWAYS : U_2FA_NEWIP;
+            pwcuSet2FA(init_mode);
+            mvouts(b_lines - 1, 0, ANSI_COLOR(1;32) "[成功\] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
             break;
         } else {
             mvouts(b_lines - 2, 0, ANSI_COLOR(1;31) "[失敗] 驗證碼錯誤，請重新輸入。" ANSI_RESET "\n");
