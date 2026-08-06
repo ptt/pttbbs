@@ -2436,68 +2436,6 @@ static const onekey_t mail_comms[] = {
 #include <pwd.h>
 #include <time.h>
 
-#ifndef USE_BSMTP
-static int
-bbs_sendmail(const char *fpath, const char *title, char *receiver)
-{
-    char           *ptr;
-    char            genbuf[256];
-    FILE           *fin, *fout;
-
-    /* 中途攔截 */
-    if ((ptr = strchr(receiver, ';'))) {
-	*ptr = '\0';
-    }
-    if ((ptr = strstr(receiver, str_mail_address)) || !strchr(receiver, '@')) {
-	char            hacker[20];
-	int             len;
-
-	if (strchr(receiver, '@')) {
-	    len = ptr - receiver;
-	    memcpy(hacker, receiver, len);
-	    hacker[len] = '\0';
-	} else
-	    STRLCPY(hacker, receiver);
-	return send_inner_mail(fpath, title, hacker);
-    }
-    /* Running the sendmail */
-    assert(*fpath);
-    SNPRINTF(genbuf, "/usr/sbin/sendmail -f %s%s %s > /dev/null",
-	    cuser.userid, str_mail_address, receiver);
-    fin = fopen(fpath, "r");
-    if (fin == NULL)
-	return -1;
-    fout = popen(genbuf, "w");
-    if (fout == NULL) {
-	fclose(fin);
-	return -1;
-    }
-
-    if (fpath)
-	fprintf(fout, "Reply-To: %s%s\nFrom: %s <%s%s>\n",
-		cuser.userid, str_mail_address,
-		cuser.nickname,
-		cuser.userid, str_mail_address);
-    fprintf(fout,"To: %s\nSubject: %s\n"
-		 "Mime-Version: 1.0\r\n"
-		 "Content-Type: text/plain; charset=\"big5\"\r\n"
-		 "Content-Transfer-Encoding: 8bit\r\n"
-		 "X-Disclaimer: " BBSNAME "對本信內容恕不負責。\n\n",
-		receiver, title);
-
-    while (fgets(genbuf, sizeof(genbuf), fin)) {
-	if (genbuf[0] == '.' && genbuf[1] == '\n')
-	    fputs(". \n", fout);
-	else
-	    fputs(genbuf, fout);
-    }
-    fclose(fin);
-    fprintf(fout, ".\n");
-    pclose(fout);
-    return 0;
-}
-#else				/* USE_BSMTP */
-
 int
 bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 {
@@ -2551,7 +2489,6 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 	return 0;
     return chrono;
 }
-#endif				/* USE_BSMTP */
 
 /*
  * Simple wrapper to send password changed notification letter to
