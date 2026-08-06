@@ -16,6 +16,7 @@ static const unsigned int friend_max[8] = {
     MAX_POST_INFO,  /* FRIEND_POST     */
     MAX_NAMELIST,   /* FRIEND_SPECIAL  */
     MAX_FRIEND,     /* FRIEND_CANVOTE  */
+    0,              /* deprecated: BOARD_WATER */
     MAX_FRIEND,     /* BOARD_VISABLE   */
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
