@@ -498,10 +498,6 @@
 #define    HAVE_ORIGIN          /* 顯示 author 來自何處 */
 #endif
 
-#ifndef NO_USE_BSMTP
-#define    USE_BSMTP            /* 使用opus的BSMTP 寄收信? */
-#endif
-
 #ifndef NO_REJECT_FLOOD_POST
 #define    REJECT_FLOOD_POST    /* 防止BlahBlah式灌水 */
 #endif
