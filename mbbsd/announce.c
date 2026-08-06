@@ -334,7 +334,6 @@ a_showhelp(int level)
     }
     if (level >= SYSOP) {
 	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n"
-	     "[l]             建 symbolic link\n"
 	     "[N]             查詢檔名\n");
     }
     pressanykey();

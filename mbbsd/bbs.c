@@ -2900,14 +2900,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) &&
-	    time4_diff(now, lastrecommend) < (
-#if 0
-	    /* i'm not sure whether this is better or not */
-		(bp->brdattr & BRD_NOFASTRECMD) ?
-		 bp->fastrecommend_pause :
-#endif
-		90))
-    {
+	    time4_diff(now, lastrecommend) < 90) {
 	// too close
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
@@ -4340,26 +4333,6 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
 }
 
 static int
-b_moved_to_config()
-{
-    if (currmode & MODE_BOARD) {
-	vmsg("這個功\能已移入看板設定 (i) 去了！");
-	return FULLUPDATE;
-    }
-    return DONOTHING;
-}
-
-static int
-moved_to_ctrl_e()
-{
-    if (currmode & MODE_BOARD) {
-	vmsg("這個功\能已移入文章管理 (Ctrl-E) 去了！");
-	return FULLUPDATE;
-    }
-    return DONOTHING;
-}
-
-static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
     const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
@@ -4457,7 +4430,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // 'G'
     { 0, NULL }, // 'H'
     { 0, b_config }, // 'I'
-    { 0, b_moved_to_config }, // 'J'
+    { 0, NULL }, // 'J'
     { 0, NULL }, // 'K'
     { 1, solve_post }, // 'L'
     { 0, NULL }, // 'M'
@@ -4470,9 +4443,9 @@ const onekey_t read_comms[] = {
     { 1, edit_title }, // 'T'
     { 1, b_quick_acl }, // 'U'
     { 0, b_vote }, // 'V'
-    { 0, b_moved_to_config }, // 'W'
+    { 0, NULL }, // 'W'
     { 1, recommend }, // 'X'
-    { 0, moved_to_ctrl_e }, // 'Y'
+    { 0, NULL }, // 'Y'
     { 0, NULL }, // 'Z' 90
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 1, pin_post }, // '_' 95
