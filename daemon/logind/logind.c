@@ -2421,7 +2421,6 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     char *uid = conn->ctx.userid;
                     char *uid_lastc = uid + strlen(uid)-1;
 
-                    draw_passwd_prompt(conn);
                     // convert encoding if required
                     switch(*uid_lastc)
                     {
@@ -2442,6 +2441,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     // require passwd.
                     if (!auth_is_free_userid(uid))
                     {
+                        draw_passwd_prompt(conn);
                         int r = auth_precheck_userid(fd, conn);
                         if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_OK)
                         {
