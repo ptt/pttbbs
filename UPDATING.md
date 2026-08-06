@@ -15,7 +15,12 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
-## feat(2FA): Support two-factor authentication
+## cleanup(recycle): Always enable the time capsule
+
+Time Capsule based 資源回收筒改為預設且唯一的刪除系統。
+deleted 跟 junk 只剩保存刪除的精華區目錄所用，暫時還沒有替代方案。
+
+## [feat(2FA): Support two-factor authentication](https://github.com/ptt/pttbbs/commit/12ceb7b6b3e402080204fcada3ad1f41107a33ca)
 
 `userec_t` 的 `_unused4[0]` 被移作 2FA 的狀態，昇級前建議先
 確保一下站內帳號的 `_unused4[0]` 都是空的 (0)。

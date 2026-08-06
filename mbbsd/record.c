@@ -413,24 +413,10 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
 
         // now, always backup according to fpath
         if (backup_direct) {
-#ifdef USE_TIME_CAPSULE
             if (!timecapsule_archive_new_revision(
                         fpath, &backup, sizeof(backup),
                         backup_path, sz_backup_path))
                 backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
-#else
-            // we can't backup to same folder.
-            if (strcmp(direct, backup_direct) == 0) {
-                backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
-            } else {
-                if (append_record(backup_direct, &backup, sizeof(backup)) < 0)
-                    backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
-                if (backup_path)
-                    strlcpy(backup_path, fpath, sz_backup_path);
-            }
-            // the fpath is used as-is.
-            *fpath = 0;
-#endif
         }
     }
 

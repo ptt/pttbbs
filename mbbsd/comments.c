@@ -245,12 +245,10 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     fclose(in);
     if (found) {
         // For everytime we have to use time capsule system.
-#ifdef USE_TIME_CAPSULE
         int rev = timecapsule_add_revision(filename);
-#endif
+
         remove(filename);
         rename(tmpfile, filename);
-#ifdef USE_TIME_CAPSULE
         if (rev > 0) {
             char revfn[PATHLEN];
             timecapsule_get_by_revision(filename, rev, revfn, sizeof(revfn));
@@ -258,7 +256,6 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
                       "推文內容: %s: %s\n", Cdatelite(&now), cuser.userid,
                       reason, req->userid, req->msg);
         }
-#endif
         CommentsDelete(ctx, i);
     } else {
         remove(tmpfile);
