@@ -1108,8 +1108,10 @@ write_request_ofo(int sig)
 
     /* Flush pending messages from currutmp->msg to water[] when NOTREPLYING */
     if (wmofo == NOTREPLYING && (msgcount = currutmp->msgcount) > 0) {
-        for (i = 0; i < msgcount; ++i)
+        for (i = 0; i < msgcount; ++i) {
             add_history(&currutmp->msgs[i]);
+            currutmp->msgs[i].pid = 0;
+        }
         if ((currutmp->msgcount -= msgcount) < 0)
             currutmp->msgcount = 0;
         alreadyshow = 0;
@@ -1122,12 +1124,15 @@ write_request_default(void)
     int i, msgcount;
 
     if (!can_pop_pager_ui()) {
-        bell();
-        show_call_in(1, 0);
-        add_history(&currutmp->msgs[0]);
-
-        refresh();
+        msgcount = currutmp->msgcount;
+        for (i = 0; i < msgcount; ++i) {
+            bell();
+            show_call_in(1, i);
+            add_history(&currutmp->msgs[i]);
+            currutmp->msgs[i].pid = 0;
+        }
         currutmp->msgcount = 0;
+        refresh();
         return;
     }
 
@@ -1153,6 +1158,7 @@ write_request_default(void)
                     &currutmp->msgs[1],
                     sizeof(msgque_t) * currutmp->msgcount);
         }
+        currutmp->msgs[(int)currutmp->msgcount].pid = 0;
         vkey();
     }
 
