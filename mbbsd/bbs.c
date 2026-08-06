@@ -933,22 +933,11 @@ cancelpost(const char *direct, const fileheader_t *fh,
     int ret = 0;
     char bakdir[PATHLEN];
 
-#ifdef USE_TIME_CAPSULE
     setbdir(bakdir, currboard);
-#else
-    const char *brd = not_owned ? BN_DELETED : BN_JUNK;
-    setbdir(bakdir, brd);
-#endif
 
     ret = delete_file_content2(direct, fh, bakdir, newpath, sznewpath, reason);
     if (!IS_DELETE_FILE_CONTENT_OK(ret))
         return ret;
-
-#ifdef USE_TIME_CAPSULE
-    // do nothing for capsule
-#else
-    setbtotal(getbnum(brd));
-#endif
 
     return ret;
 }
@@ -1847,10 +1836,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     int		    edflags = 0, is_race_condition = 0;
     char save_title[STRLEN];
 
-#ifdef USE_TIME_CAPSULE
     int rev = 0;
     time4_t oldmt = 0;
-#endif
 
 #ifdef EDITPOST_SMARTMERGE
     unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
@@ -1978,10 +1965,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // OK to save file.
-#ifdef USE_TIME_CAPSULE
     oldmt = dasht(genbuf);
     rev = timecapsule_add_revision(genbuf);
-#endif
 
 #ifdef EDITPOST_SMARTMERGE
     // atomic lock-merge-replace
@@ -2015,13 +2000,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     brc_addlist(fhdr->filename, fhdr->modified);
 
     // tag revision history file to solve expire issue
-#ifdef USE_TIME_CAPSULE
     if (rev > 0) {
         char revfn[PATHLEN];
         timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
         log_filef(revfn, 0, "\n※ Last modified: %s", Cdatelite(&oldmt));
     }
-#endif
 
     return FULLUPDATE;
 }
@@ -2562,12 +2545,7 @@ b_man(void)
 {
     char apath[PATHLEN], backup_path[PATHLEN];
 
-#ifdef USE_TIME_CAPSULE
     setbdir(backup_path, currboard);
-#else
-    boardheader_t *bp = getbcache(currbid);
-    setbdir(backup_path, (bp->brdattr & BRD_HIDE) ? BN_JUNK : BN_DELETED);
-#endif
     setapath(apath, currboard);
 
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)) {
@@ -3841,7 +3819,6 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     return FULLUPDATE;
 }
 
-#ifdef USE_TIME_CAPSULE
 static int
 view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *direct)
 {
@@ -3898,16 +3875,6 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
             psb_recycle_bin(direct, currboard);
     return FULLUPDATE;
 }
-
-#else // USE_TIME_CAPSULE
-
-static int
-view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
-                 const char *direct GCC_UNUSED) {
-    return DONOTHING;
-}
-
-#endif // USE_TIME_CAPSULE
 
 /* 看板備份 */
 static int
@@ -4272,10 +4239,6 @@ int check_cooldown(boardheader_t *bp)
 static int
 mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
                   const char *direct GCC_UNUSED) {
-#ifndef USE_TIME_CAPSULE
-    vmsg("此功\能未開啟，請洽站長。");
-    return FULLUPDATE;
-#else
     char pattern[STRLEN];
     char reason[15];
     char buf[ANSILINELEN], buf2[ANSILINELEN];
@@ -4374,7 +4337,6 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
     vmsg("違規文字已刪除。");
     return FULLUPDATE;
-#endif
 }
 
 static int
@@ -4402,7 +4364,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
     const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
 #ifdef USE_COMMENTD
-        " [V](實驗)推文管理"
+        " [V]推文管理"
 #endif
         ":";
 

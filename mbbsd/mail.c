@@ -1599,11 +1599,7 @@ mailtitle(void)
     showtitle("郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
-#ifdef USE_TIME_CAPSULE
             "[~]" RECYCLE_BIN_NAME
-#else
-            ""
-#endif
             );
     vbarf(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題\t%s ", buf);
 }
@@ -1956,9 +1952,7 @@ static const char *hlp_mailmove[] = {
     "  砍掉待刪信件", "^D",
     "  整理水球後寄回", "u",
     "  重建信箱",     "^G (毀損時才用)",
-#ifdef USE_TIME_CAPSULE
     "  " RECYCLE_BIN_NAME,   "~",
-#endif
     NULL,
 }, *hlp_mailconf[] = {
     "【設定】", NULL,
@@ -2328,7 +2322,6 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 #endif
 }
 
-#ifdef USE_TIME_CAPSULE
 static int
 mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
                  const char *direct) {
@@ -2336,14 +2329,6 @@ mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         return DONOTHING;
     return psb_recycle_bin(direct, "個人信箱");
 }
-#else // USE_TIME_CAPSULE
-static int
-mail_recycle_bin(int ent GCC_UNUSED,
-                 fileheader_t * fhdr GCC_UNUSED,
-                 const char *direct GCC_UNUSED) {
-    return DONOTHING;
-}
-#endif // USE_TIME_CAPSULE
 
 ////////////////////////////////////////////////////////////////////////
 // Command List
