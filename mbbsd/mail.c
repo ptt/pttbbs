@@ -218,9 +218,6 @@ mail_log2id(const char *id, const char *title, const char *src,
     STRLCPY(mhdr.title, title);
     mhdr.filemode = newmail ? 0 :  FILE_READ;
 
-    // XXX try link first?
-    //if (HardLink(src, dst) < 0 && Copy(src, dst) < 0)
-    //	return -1;
     if (trymove)
     {
 	if (Rename(src, dst) < 0)
