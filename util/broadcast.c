@@ -16,8 +16,6 @@ int main(int argc, char *argv[])
 
     int i, j;
     userinfo_t *uentp;
-    msgque_t msg;
-    time_t now;
     int *sorted, UTMPnumber; // SHM snapshot
 
     while ((i = getopt(argc, argv, "t:n:o:h")) != -1)
@@ -51,30 +49,21 @@ int main(int argc, char *argv[])
     memcpy(sorted, SHM->sorted[SHM->currsorted][0], sizeof(int) * USHM_SIZE);
     UTMPnumber = SHM->UTMPnumber;
 
-    msg.pid = getpid();
-    STRLCPY(msg.userid, owner);
-    SNPRINTF(msg.last_call_in, "[¼s¼½]%s", argv[optind]);
-
-    now = time(NULL);
+    char msgbuf[PATHLEN];
+    SNPRINTF(msgbuf, "[¼s¼½]%s", argv[optind]);
 
     for (i = 0, j = 0; i < UTMPnumber; ++i, ++j) {
 	// XXX why use sorted list?
 	//     can we just scan uinfo with proper checking?
-	uentp = &SHM->uinfo[sorted[i]];
+	int uip = sorted[i];
+	uentp = &SHM->uinfo[uip];
 	if (uentp->pid && kill(uentp->pid, 0) != -1){
-	    int write_pos = uentp->msgcount;
-	    if (write_pos < (MAX_MSGS - 1)){
-		uentp->msgcount = write_pos + 1;
-		memcpy(&uentp->msgs[write_pos], &msg, sizeof(msg));
-                (void)now; // unused.
-		kill(uentp->pid, SIGUSR2);
-	    }
+	    write_message(uip, uentp->pid, getpid(), owner, msgbuf, MSGMODE_WRITE);
 	}
 
 	if (j == num_per_loop) {
 	    fprintf(stderr, "%5d/%5d\n", i + 1, UTMPnumber);
 	    j = 0;
-	    now = time(NULL);
 	    sleep(sleep_time);
 	}
     }
