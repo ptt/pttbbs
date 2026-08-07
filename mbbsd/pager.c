@@ -740,8 +740,8 @@ pager_handle_ctrl_r_ofo(int ch)
     int my_newfd;
     screen_backup_t old_screen;
 
-    if (!currutmp->msgs[0].pid ||
-        wmofo != NOTREPLYING)
+    water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
+    if (w->count == 0 || wmofo != NOTREPLYING)
         return ch;
 
     scr_dump(&old_screen);
@@ -776,35 +776,47 @@ pager_handle_ctrl_r_default(int ch)
         pager_show_panel();
         return KEY_INCOMPLETE;
     }
-    else if (watermode == -1 &&
-             currutmp->msgs[0].pid)
+    else if (watermode == -1)
     {
+        water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
+        if (w->count == 0)
+            return ch;
+
+        int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
+        msgque_t *last_msg = &w->msg[last_idx];
+        if (last_msg->pid == 0)
+            return ch;
+
         // Press Ctrl-R for the "1st" time (and already received a message for reply)
         screen_backup_t old_screen;
         int             my_newfd;
         scr_dump(&old_screen);
 
         my_newfd = vkey_detach();
-        show_call_in(0, 0);
+        char buf[ANSILINELEN];
+        SNPRINTF(buf, ANSI_COLOR(1;33;46) "Ｂ%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET, last_msg->userid, last_msg->last_call_in);
+        outmsg(buf);
+
         watermode = 0;
         if (!HAS_ANGEL) {
-            my_write(currutmp->msgs[0].pid, "水球丟過去： ",
-                     currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+            my_write(last_msg->pid, "水球丟過去： ",
+                     last_msg->userid, WATERBALL_GENERAL, NULL);
         } else {
-            switch (currutmp->msgs[0].msgmode) {
+            switch (last_msg->msgmode) {
             case MSGMODE_TALK:
             case MSGMODE_WRITE:
             case MSGMODE_ALOHA:
-                my_write(currutmp->msgs[0].pid, "水球丟過去： ",
-                         currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+                my_write(last_msg->pid, "水球丟過去： ",
+                         last_msg->userid, WATERBALL_GENERAL, NULL);
                 break;
             case MSGMODE_FROMANGEL:
-                my_write(currutmp->msgs[0].pid, "再問一次： ",
-                         currutmp->msgs[0].userid, WATERBALL_ANGEL, NULL);
+                my_write(last_msg->pid, "再問一次： ",
+                         last_msg->userid, WATERBALL_ANGEL, NULL);
                 break;
             case MSGMODE_TOANGEL:
-                my_write(currutmp->msgs[0].pid, "回答小主人： ",
-                         currutmp->msgs[0].userid, WATERBALL_ANSWER, NULL);
+                my_write(last_msg->pid, "回答小主人： ",
+                         last_msg->userid, WATERBALL_ANSWER, NULL);
                 break;
             }
         }
