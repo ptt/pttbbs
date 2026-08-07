@@ -1547,25 +1547,19 @@ userlist_broadcast(void)
             return;
 
         if (!(HasUserFlag(UF_FRIEND)) && HasUserPerm(PERM_SYSOP)) {
-            msgque_t msg;
             getdata(1, 0, "再次確定站長廣播? [N]", ans, sizeof(ans), LCECHO);
             if (ans[0] != 'y') {
                 vmsg("abort");
                 return;
             }
 
-            msg.pid = currpid;
-            STRLCPY(msg.userid, cuser.userid);
-            SNPRINTF(msg.last_call_in, "[廣播]%s", genbuf);
+            char msgbuf[PATHLEN];
+            SNPRINTF(msgbuf, "[廣播]%s", genbuf);
             for (int i = 0; i < SHM->UTMPnumber; ++i) {
-                userinfo_t *uentp = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]];
+                int uip = SHM->sorted[SHM->currsorted][0][i];
+                userinfo_t *uentp = &SHM->uinfo[uip];
                 if (uentp->pid && kill(uentp->pid, 0) != -1) {
-                    int write_pos = uentp->msgcount;
-                    if (write_pos < (MAX_MSGS - 1)) {
-                        uentp->msgcount = write_pos + 1;
-                        memcpy(&uentp->msgs[write_pos], &msg, sizeof(msg));
-                        kill(uentp->pid, SIGUSR2);
-                    }
+                    write_message(uip, uentp->pid, currpid, cuser.userid, msgbuf, MSGMODE_WRITE);
                 }
             }
         } else {
