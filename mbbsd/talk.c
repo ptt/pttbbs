@@ -113,14 +113,12 @@ modestring(const userinfo_t * uentp, int simple)
     }
     else if (!mode && *uentp->chatid == 3)
 	SNPRINTF(modestr, "水球準備中");
-    else if ((!mode) && *uentp->chatid == 2)
-	if (uentp->msgcount < 10) {
-	    const char *cnum[10] =
-	    {"", "一", "兩", "三", "四", "五",
-		 "六", "七", "八", "九"};
-	    SNPRINTF(modestr, "中%s顆水球", cnum[(int)(uentp->msgcount)]);
-	} else
-	    SNPRINTF(modestr, "不行了 @_@");
+    else if ((!mode) && *uentp->chatid == 2) {
+        if (uentp->msgcount >= 0 && uentp->msgcount < MAX_MSGS) {
+            SNPRINTF(modestr, "中%d顆水球", (int)uentp->msgcount);
+        } else
+            SNPRINTF(modestr, "不行了 @_@");
+    }
     else if (!mode)
 	return (uentp->destuid == 6) ? uentp->chatid : "發呆中";
 
