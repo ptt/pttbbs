@@ -536,19 +536,6 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     return 1;
 }
 
-void
-getmessage(msgque_t msg)
-{
-    int     write_pos = currutmp->msgcount;
-    if ( write_pos < (MAX_MSGS - 1) ) {
-        unsigned char pager0 = currutmp->pager;
-        currutmp->msgcount = write_pos+1;
-        memcpy(&currutmp->msgs[write_pos], &msg, sizeof(msgque_t));
-        currutmp->pager = pager0;
-        write_request(SIGUSR1);
-    }
-}
-
 static void
 pager_show_panel_orig(void)
 {

@@ -709,7 +709,6 @@ void ClearTagList();
 int iswritable_stat(const userinfo_t *uentp, int fri_stat);
 int isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
-void getmessage(msgque_t msg);
 void ofo_my_write(void);
 void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
