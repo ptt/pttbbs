@@ -1,6 +1,7 @@
 #include "bbs.h"
 
 const int PAGER_TABS = WB_OFO_USER_NUM;
+static char     t_last_write[80];
 
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
@@ -18,8 +19,38 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
             (fri_stat & HFM || uentp->pager != PAGER_FRIENDONLY));
 }
 
+static void
+show_msg(int save, const msgque_t *msg)
+{
+    char buf[ANSILINELEN];
+    int mode = msg->msgmode;
 
-static char     t_last_write[80];
+    if (HAS_ANGEL && mode == MSGMODE_TOANGEL) {
+        SNPRINTF(buf, ANSI_COLOR(1;37;46) "々%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET,
+                 msg->userid,
+                 msg->last_call_in);
+        // I must be an Angel. Let's try to update angel beats info.
+        // TODO maybe it's better to move this to "sender".
+        angel_notify_activity(msg->userid);
+    } else {
+        SNPRINTF(buf, ANSI_COLOR(1;33;46) "々%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET, msg->userid,
+                 msg->last_call_in);
+    }
+    outmsg(buf);
+
+    if (save && mode != MSGMODE_ALOHA) {
+        char genbuf[PATHLEN];
+        if (!fp_writelog) {
+            sethomefile(genbuf, cuser.userid, fn_writelog);
+            fp_writelog = fopen(genbuf, "a");
+        }
+        if (fp_writelog) {
+            fprintf(fp_writelog, "%s [%s]\n", buf, Cdatelite(&now));
+        }
+    }
+}
 
 void check_water_init(void)
 {
@@ -935,34 +966,7 @@ talk_request(int sig GCC_UNUSED)
 void
 show_call_in(int save, int which)
 {
-    char buf[ANSILINELEN];
-    int mode = currutmp->msgs[which].msgmode;
-
-    if (HAS_ANGEL && mode == MSGMODE_TOANGEL) {
-        SNPRINTF(buf, ANSI_COLOR(1;37;46) "々%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET,
-                 currutmp->msgs[which].userid,
-                 currutmp->msgs[which].last_call_in);
-        // I must be an Angel. Let's try to update angel beats info.
-        // TODO maybe it's better to move this to "sender".
-        angel_notify_activity(currutmp->msgs[which].userid);
-    } else {
-        SNPRINTF(buf, ANSI_COLOR(1;33;46) "々%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET, currutmp->msgs[which].userid,
-                 currutmp->msgs[which].last_call_in);
-    }
-    outmsg(buf);
-
-    if (save && mode != MSGMODE_ALOHA) {
-        char genbuf[PATHLEN];
-        if (!fp_writelog) {
-            sethomefile(genbuf, cuser.userid, fn_writelog);
-            fp_writelog = fopen(genbuf, "a");
-        }
-        if (fp_writelog) {
-            fprintf(fp_writelog, "%s [%s]\n", buf, Cdatelite(&now));
-        }
-    }
+    show_msg(save, &currutmp->msgs[which]);
 }
 
 static int
