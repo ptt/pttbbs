@@ -4,9 +4,9 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <pthread.h>
-#include "cmsys.h"
 #include "config.h"	// various sizes in SHM
 #include "statistic.h"	// for MAX_STATS
+#include "cmsys.h"      // for time4_t
 
 // warning: because some other places is using #IDLEN to convert as string,
 // so don't quote it - otherwise those code will fail.
