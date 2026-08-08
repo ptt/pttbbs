@@ -320,22 +320,4 @@
 
 #define LOG_IF(x, y)    { if ((x)) { y; } else {} }
 
-#endif
-
-#ifndef STRLCPY
-#define MUST_BE_ARRAY(arr) \
-    _Static_assert(!__builtin_types_compatible_p(__typeof__(arr), __typeof__(&(arr)[0])), \
-                   #arr " must be a fixed-size array, not a pointer!")
-
-#define STRLCPY(dest, src) \
-    ({ MUST_BE_ARRAY(dest); strlcpy((dest), (src), sizeof(dest)); })
-
-#define STRLCAT(dest, src) \
-    ({ MUST_BE_ARRAY(dest); strlcat((dest), (src), sizeof(dest)); })
-#endif
-
-
-#ifndef SNPRINTF
-#define SNPRINTF(dest, fmt, ...) \
-    ({ MUST_BE_ARRAY(dest); snprintf((dest), sizeof(dest), (fmt), ##__VA_ARGS__); })
-#endif
+#endif // INCLUDE_COMMON_H

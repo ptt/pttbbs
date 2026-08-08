@@ -7,7 +7,7 @@
 #include <syslog.h>
 #include "config.h"
 #include "osdep.h"
-#include "common.h"
+#include "cmsys.h"
 
 #define MAX_REMOTE_IP_LEN 32
 

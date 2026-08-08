@@ -1,8 +1,6 @@
 #ifndef LIBBBSUTIL_H_
 #define LIBBBSUTIL_H_
 
-#include "common.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -198,6 +196,18 @@ size_t str_iconv(
 void str_decode_M3(char *str);
 void random_text_code(char *buf, size_t len);
 void must_getrandom(void *buf, size_t len);
+
+#ifndef STRLCPY
+#define MUST_BE_ARRAY(arr) \
+    _Static_assert(!__builtin_types_compatible_p(__typeof__(arr), __typeof__(&(arr)[0])), \
+                   #arr " must be a fixed-size array, not a pointer!")
+#define STRLCPY(dest, src) \
+    ({ MUST_BE_ARRAY(dest); strlcpy((dest), (src), sizeof(dest)); })
+#define STRLCAT(dest, src) \
+    ({ MUST_BE_ARRAY(dest); strlcat((dest), (src), sizeof(dest)); })
+#define SNPRINTF(dest, fmt, ...) \
+    ({ MUST_BE_ARRAY(dest); snprintf((dest), sizeof(dest), (fmt), ##__VA_ARGS__); })
+#endif
 
 /* time.c */
 int is_leap_year(int year);
