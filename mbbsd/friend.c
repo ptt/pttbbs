@@ -575,25 +575,8 @@ friend_edit(int type)
 	move(2, 0);
 	outs("更新資料中..請稍候.....");
 	refresh();
-	if (type == FRIEND_ALOHA && aloha_notify_reload(cuser.userid)) {
-	    SNPRINTF(genbuf, "%s.old", fpath);
-	    if ((fp = fopen(genbuf, "r"))) {
-		while (fgets(line, sizeof(line), fp)) {
-		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident, FN_ALOHA);
-                    file_delete_record(genbuf, cuser.userid, 0);
-		}
-		fclose(fp);
-	    }
-	    STRLCPY(genbuf, fpath);
-	    if ((fp = fopen(genbuf, "r"))) {
-		while (fgets(line, 80, fp)) {
-		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
-		    sethomefile(genbuf, uident, FN_ALOHA);
-                    file_append_record(genbuf, cuser.userid);
-		}
-		fclose(fp);
-	    }
+	if (type == FRIEND_ALOHA) {
+            aloha_notify_reload(cuser.userid);
 	} else if (type == FRIEND_SPECIAL) {
 	    genbuf[0] = 0;
 	    setuserfile(line, special_des);
