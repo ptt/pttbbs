@@ -39,6 +39,7 @@ func main() {
 		fmt.Println("  status")
 		fmt.Println("  login <userid> <pid> <sid>")
 		fmt.Println("  logout <userid> <pid>")
+		fmt.Println("  reload <userid>")
 		os.Exit(1)
 	}
 
@@ -66,6 +67,13 @@ func main() {
 		}
 		req.UserID = args[1]
 		fmt.Sscanf(args[2], "%d", &req.PID)
+
+	case "reload":
+		if len(args) < 2 {
+			fmt.Println("Usage: aloha.ctl reload <userid>")
+			os.Exit(1)
+		}
+		req.UserID = args[1]
 
 	default:
 		fmt.Printf("Unknown action: %s\n", action)

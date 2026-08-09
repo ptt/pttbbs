@@ -80,7 +80,7 @@ func (s *Service) SetVerbose(v int) {
 
 // Request and Response formats for IPC via UNIX domain socket
 type Request struct {
-	Action   string `json:"action"` // "login", "logout", "status"
+	Action   string `json:"action"` // "login", "logout", "reload", "status"
 	UserID   string `json:"userid,omitempty"`
 	TargetID string `json:"target_id,omitempty"`
 	SubID    string `json:"sub_id,omitempty"`
@@ -176,7 +176,8 @@ func (s *Service) ProcessRequest(req Request) Response {
 		return s.HandleUserLogin(req.UserID, req.PID, req.SID)
 	case "logout":
 		return s.HandleUserLogout(req.UserID, req.PID)
-
+	case "reload":
+		return s.HandleReloadAloha(req.UserID)
 	case "status":
 		return s.HandleStatus()
 	default:
@@ -353,7 +354,62 @@ func (s *Service) cleanupSessionLocked(session SubscriberSession) int {
 	return cleaned
 }
 
+func (s *Service) HandleReloadAloha(subscriberID string) Response {
+	if subscriberID == "" {
+		return Response{Success: false, Message: "missing userid for reload"}
+	}
 
+	alohaList, _ := storage.LoadAlohaTargets(s.bbsHome, subscriberID)
+
+	subscriberLower := strings.ToLower(subscriberID)
+
+	var targetsLower []string
+	if len(alohaList) > 0 {
+		for _, t := range alohaList {
+			targetsLower = append(targetsLower, strings.ToLower(t))
+		}
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	pids, exists := s.userPIDs[subscriberLower]
+	updatedSessions := 0
+	if exists {
+		for pid := range pids {
+			session, ok := s.onlineSessions[pid]
+			if !ok {
+				continue
+			}
+
+			for _, oldTarget := range session.Targets {
+				if subMap, ok := s.onlineSubscribers[oldTarget]; ok {
+					delete(subMap, pid)
+					if len(subMap) == 0 {
+						delete(s.onlineSubscribers, oldTarget)
+					}
+				}
+			}
+
+			session.Targets = targetsLower
+			s.onlineSessions[pid] = session
+
+			for _, targetLower := range targetsLower {
+				if _, ok := s.onlineSubscribers[targetLower]; !ok {
+					s.onlineSubscribers[targetLower] = make(map[int]SubscriberSession)
+				}
+				s.onlineSubscribers[targetLower][pid] = session
+			}
+			updatedSessions++
+		}
+	}
+
+	log.Printf("[aloha.svc] RELOAD: user=%s -> %d targets (updated %d sessions)", subscriberID, len(targetsLower), updatedSessions)
+	return Response{
+		Success: true,
+		Message: fmt.Sprintf("Reloaded aloha targets for %s (%d targets, %d sessions updated)", subscriberID, len(targetsLower), updatedSessions),
+	}
+}
 
 func (s *Service) HandleStatus() Response {
 	s.mu.RLock()
