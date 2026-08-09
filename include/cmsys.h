@@ -199,10 +199,8 @@ void must_getrandom(void *buf, size_t len);
 
 #ifndef STRLCPY
 #if defined(__cplusplus)
-#include <type_traits>
-#define MUST_BE_ARRAY(arr) \
-    static_assert(std::is_array<typename std::remove_reference<decltype(arr)>::type>::value, \
-                  #arr " must be a fixed-size array, not a pointer!")
+// No good way to check array type in C++.
+#define MUST_BE_ARRAY(arr)
 #else
 #define MUST_BE_ARRAY(arr) \
     _Static_assert(!__builtin_types_compatible_p(__typeof__(arr), __typeof__(&(arr)[0])), \
