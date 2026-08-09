@@ -1124,34 +1124,7 @@ do_aloha(void)
         HasUserRole(ROLE_HIDE_FROM) || currutmp->invisible) {
         return;
     }
-
-    /* Reach Aloha SVC if configured.
-     * Always let the SVC know we have a new login,
-     * and only stop if the SVC is enabled & acked successfully.
-     */
-    if (EXP_ALOHA_SVC &&
-        aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_id(currutmp)) == 0 &&
-        is_aloha_svc_enabled()) {
-        return;
-    }
-
-    FILE           *fp;
-    char            userid[80];
-    char            genbuf[200];
-
-    setuserfile(genbuf, FN_ALOHA);
-    if ((fp = fopen(genbuf, "r"))) {
-	while (fgets(userid, 80, fp)) {
-	    userinfo_t     *uentp;
-            chomp(userid);
-	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) &&
-                isvisible(uentp, currutmp) &&
-                strcasecmp(uentp->userid, cuser.userid) != 0) {
-                send_aloha_message(get_utmp_id(uentp), uentp->pid, currpid, cuser.userid);
-	    }
-	}
-	fclose(fp);
-    }
+    aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_id(currutmp));
 }
 
 static void
