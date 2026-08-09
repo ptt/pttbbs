@@ -564,7 +564,7 @@ int utmpnum(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 const char    *GV2str[] = {"dymaxactive", "toomanyusers",
                            "noonlineuser","now", "nWelcomes", "shutdown",
-                           "aloha_svc", NULL};
+                           "DEPRECATE_aloha_svc", NULL};
 int showglobal(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int     i;

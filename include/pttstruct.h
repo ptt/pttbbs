@@ -596,7 +596,7 @@ typedef struct {
         time4_t deprecated_now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
-	    int     aloha_svc;    /* Enable aloha.svc microservice */
+	    int     deprecated_aloha_svc __attribute__ ((deprecated));    /* Enable aloha.svc microservice */
 
 	    /* 注意, 應保持 align sizeof(int) */
 	} e;
