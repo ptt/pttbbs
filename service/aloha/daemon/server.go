@@ -80,7 +80,7 @@ func (s *Service) SetVerbose(v int) {
 
 // Request and Response formats for IPC via UNIX domain socket
 type Request struct {
-	Action   string `json:"action"` // "login", "logout", "add", "remove", "status"
+	Action   string `json:"action"` // "login", "logout", "status"
 	UserID   string `json:"userid,omitempty"`
 	TargetID string `json:"target_id,omitempty"`
 	SubID    string `json:"sub_id,omitempty"`
@@ -176,10 +176,7 @@ func (s *Service) ProcessRequest(req Request) Response {
 		return s.HandleUserLogin(req.UserID, req.PID, req.SID)
 	case "logout":
 		return s.HandleUserLogout(req.UserID, req.PID)
-	case "add":
-		return s.HandleAddAloha(req.SubID, req.TargetID)
-	case "remove":
-		return s.HandleRemoveAloha(req.SubID, req.TargetID)
+
 	case "status":
 		return s.HandleStatus()
 	default:
@@ -356,72 +353,7 @@ func (s *Service) cleanupSessionLocked(session SubscriberSession) int {
 	return cleaned
 }
 
-func (s *Service) HandleAddAloha(subID string, targetID string) Response {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
-	subLower := strings.ToLower(subID)
-	targetLower := strings.ToLower(targetID)
-
-	pids, exists := s.userPIDs[subLower]
-	if exists {
-		for pid := range pids {
-			session := s.onlineSessions[pid]
-			hasTarget := false
-			for _, t := range session.Targets {
-				if t == targetLower {
-					hasTarget = true
-					break
-				}
-			}
-			if !hasTarget {
-				session.Targets = append(session.Targets, targetLower)
-				s.onlineSessions[pid] = session
-			}
-
-			if _, ok := s.onlineSubscribers[targetLower]; !ok {
-				s.onlineSubscribers[targetLower] = make(map[int]SubscriberSession)
-			}
-			s.onlineSubscribers[targetLower][pid] = session
-		}
-	}
-
-	log.Printf("[aloha.svc] ADD: sub=%s -> target=%s", subID, targetID)
-	return Response{Success: true, Message: fmt.Sprintf("Added %s to watch target %s", subID, targetID)}
-}
-
-func (s *Service) HandleRemoveAloha(subID string, targetID string) Response {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	subLower := strings.ToLower(subID)
-	targetLower := strings.ToLower(targetID)
-
-	pids, exists := s.userPIDs[subLower]
-	if exists {
-		for pid := range pids {
-			session := s.onlineSessions[pid]
-			newTargets := make([]string, 0, len(session.Targets))
-			for _, t := range session.Targets {
-				if t != targetLower {
-					newTargets = append(newTargets, t)
-				}
-			}
-			session.Targets = newTargets
-			s.onlineSessions[pid] = session
-
-			if subMap, ok := s.onlineSubscribers[targetLower]; ok {
-				delete(subMap, pid)
-				if len(subMap) == 0 {
-					delete(s.onlineSubscribers, targetLower)
-				}
-			}
-		}
-	}
-
-	log.Printf("[aloha.svc] REMOVE: sub=%s -> target=%s", subID, targetID)
-	return Response{Success: true, Message: fmt.Sprintf("Removed %s watching target %s", subID, targetID)}
-}
 
 func (s *Service) HandleStatus() Response {
 	s.mu.RLock()

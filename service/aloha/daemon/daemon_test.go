@@ -82,16 +82,15 @@ func TestSubscriberNotificationFlow(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	// 1. abc logs in
+	// 1. Setup abc's alohaed file with xyz as target
+	alohaFileDir := filepath.Join(tempDir, "home", "a", "abc")
+	_ = os.MkdirAll(alohaFileDir, 0755)
+	_ = os.WriteFile(filepath.Join(alohaFileDir, "alohaed"), []byte("xyz\n"), 0644)
+
+	// abc logs in
 	resp1 := svc.ProcessRequest(Request{Action: "login", UserID: "abc", PID: 100, SID: 1})
 	if !resp1.Success {
 		t.Fatalf("abc login failed: %v", resp1)
-	}
-
-	// 2. abc adds xyz to abc's aloha list
-	resp2 := svc.ProcessRequest(Request{Action: "add", SubID: "abc", TargetID: "xyz"})
-	if !resp2.Success {
-		t.Fatalf("abc add xyz failed: %v", resp2)
 	}
 
 	// 3. xyz logs in -> should notify 1 subscriber (abc)
@@ -230,7 +229,10 @@ func TestVerboseZeroLoginLogSuppression(t *testing.T) {
 	logBuf.Reset()
 
 	// user1 watches target user2
-	svc.HandleAddAloha("user1", "user2")
+	user1Dir := filepath.Join(tempDir, "home", "u", "user1")
+	_ = os.MkdirAll(user1Dir, 0755)
+	_ = os.WriteFile(filepath.Join(user1Dir, "alohaed"), []byte("user2\n"), 0644)
+	svc.HandleUserLogin("user1", 101, 1)
 
 	// user2 logs in -> notifies user1 (1 notification)
 	resp3 := svc.HandleUserLogin("user2", 103, 3)
