@@ -1,8 +1,6 @@
 #ifndef LIBBBS_H_
 #define LIBBBS_H_
 
-#include "common.h"
-
 #include "pttstruct.h" /* for fileheader_t */
 
 /* name.c */

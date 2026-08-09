@@ -1,6 +1,10 @@
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
+// Load local configurations because we will use that to decide default
+// configurations now.
+#include "config.h"
+
 #define STR_GUEST	"guest"	    // guest account
 #define STR_REGNEW	"new"	    // 用來建新帳號的名稱
 #ifdef USE_VERIFYDB_ACCOUNT_RECOVERY
