@@ -278,7 +278,6 @@ int t_override(void);
 int t_reject(void);
 void friend_add(const char *uident, int type, const char *des);
 void friend_delete(const char *uident, int type);
-void friend_delete_all(const char *uident, int type);
 void friend_special(void);
 void setfriendfile(char *fpath, int type);
 int is_rejected(const char *userid);

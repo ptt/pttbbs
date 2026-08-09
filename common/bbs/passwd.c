@@ -250,9 +250,6 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
 
     log_filef(FN_USIES, LOG_CREAT, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
 
-    // Remove user references from friends' aloha notification lists
-    friend_delete_all(userid, FRIEND_ALOHA);
-
     // Archive or remove user home directory
     sethomepath(src, userid);
     SNPRINTF(dst, "tmp/%s", userid);
