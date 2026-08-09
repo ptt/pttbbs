@@ -56,7 +56,7 @@ int aloha_notify_reload(const char *userid) {
 
 int is_aloha_svc_enabled(void) {
     assert(SHM);
-    return SHM->GV2.e.aloha_svc != 0;
+    return true;
 }
 
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id) {
