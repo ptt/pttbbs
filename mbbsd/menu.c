@@ -741,7 +741,6 @@ static const commands_t namelist[] = {
     {t_override, PERM_LOGINOK,"OverRide      好友名單"},
     {t_reject, PERM_LOGINOK,  "Black         壞人名單"},
     {t_aloha,PERM_LOGINOK,    "ALOHA         上站通知名單"},
-    {t_fix_aloha,PERM_LOGINOK,"XFixALOHA     修正上站通知"},
     {t_special,PERM_LOGINOK,  "Special       其他特別名單"},
     {NULL, 0, NULL}
 };
