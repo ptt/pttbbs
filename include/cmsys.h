@@ -198,9 +198,13 @@ void random_text_code(char *buf, size_t len);
 void must_getrandom(void *buf, size_t len);
 
 #ifndef STRLCPY
+#if defined(__cplusplus)
+#define MUST_BE_ARRAY(arr)
+#else
 #define MUST_BE_ARRAY(arr) \
     _Static_assert(!__builtin_types_compatible_p(__typeof__(arr), __typeof__(&(arr)[0])), \
                    #arr " must be a fixed-size array, not a pointer!")
+#endif
 #define STRLCPY(dest, src) \
     ({ MUST_BE_ARRAY(dest); strlcpy((dest), (src), sizeof(dest)); })
 #define STRLCAT(dest, src) \
