@@ -43,6 +43,15 @@ int aloha_notify_logout(const char *userid, pid_t pid) {
     return send_alohad_req(payload);
 }
 
+int aloha_notify_reload(const char *userid) {
+    if (!userid || !*userid) {
+        return -1;
+    }
+    char payload[256];
+    SNPRINTF(payload, "{\"action\":\"reload\",\"userid\":\"%s\"}\n", userid);
+    return send_alohad_req(payload);
+}
+
 
 
 int is_aloha_svc_enabled(void) {

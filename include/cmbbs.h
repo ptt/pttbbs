@@ -159,6 +159,7 @@ int is_aloha_svc_enabled(void);
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id);
 int aloha_notify_login(const char *userid, pid_t pid, int sid);
 int aloha_notify_logout(const char *userid, pid_t pid);
+int aloha_notify_reload(const char *userid);
 
 
 /* cgo.c */
