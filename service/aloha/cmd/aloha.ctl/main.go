@@ -39,8 +39,6 @@ func main() {
 		fmt.Println("  status")
 		fmt.Println("  login <userid> <pid> <sid>")
 		fmt.Println("  logout <userid> <pid>")
-		fmt.Println("  add <sub_id> <target_id>")
-		fmt.Println("  remove <sub_id> <target_id>")
 		os.Exit(1)
 	}
 
@@ -68,22 +66,6 @@ func main() {
 		}
 		req.UserID = args[1]
 		fmt.Sscanf(args[2], "%d", &req.PID)
-
-	case "add":
-		if len(args) < 3 {
-			fmt.Println("Usage: aloha.ctl add <sub_id> <target_id>")
-			os.Exit(1)
-		}
-		req.SubID = args[1]
-		req.TargetID = args[2]
-
-	case "remove":
-		if len(args) < 3 {
-			fmt.Println("Usage: aloha.ctl remove <sub_id> <target_id>")
-			os.Exit(1)
-		}
-		req.SubID = args[1]
-		req.TargetID = args[2]
 
 	default:
 		fmt.Printf("Unknown action: %s\n", action)

@@ -43,23 +43,7 @@ int aloha_notify_logout(const char *userid, pid_t pid) {
     return send_alohad_req(payload);
 }
 
-int aloha_notify_add(const char *sub_id, const char *target_id) {
-    if (!sub_id || !target_id) {
-        return -1;
-    }
-    char payload[256];
-    SNPRINTF(payload, "{\"action\":\"add\",\"sub_id\":\"%s\",\"target_id\":\"%s\"}\n", sub_id, target_id);
-    return send_alohad_req(payload);
-}
 
-int aloha_notify_remove(const char *sub_id, const char *target_id) {
-    if (!sub_id || !target_id) {
-        return -1;
-    }
-    char payload[256];
-    SNPRINTF(payload, "{\"action\":\"remove\",\"sub_id\":\"%s\",\"target_id\":\"%s\"}\n", sub_id, target_id);
-    return send_alohad_req(payload);
-}
 
 int is_aloha_svc_enabled(void) {
     assert(SHM);
