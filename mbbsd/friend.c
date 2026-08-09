@@ -575,7 +575,7 @@ friend_edit(int type)
 	move(2, 0);
 	outs("更新資料中..請稍候.....");
 	refresh();
-	if (type == FRIEND_ALOHA) {
+	if (type == FRIEND_ALOHA && aloha_notify_reload(cuser.userid)) {
 	    SNPRINTF(genbuf, "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, sizeof(line), fp)) {
