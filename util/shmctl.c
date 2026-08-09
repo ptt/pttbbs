@@ -702,6 +702,40 @@ int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     return 0;
 }
 
+int start_services()
+{
+    int err = 0;
+    char buf[PATHLEN];
+    const char *services[] = {
+        "aloha",
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(services); i++) {
+        const char *name = services[i];
+        char rchar = ' ';
+        SNPRINTF(buf, "bin/%s.svc", name);
+        if (!dashf(buf)) {
+            rchar = '-';
+            err++;
+        } else {
+            STRLCAT(buf, " >/dev/null");
+            // All svc should return 0 on success, 1 if a previous service is
+            // still serving.
+            int r = system(buf);
+            if (r < 0 || !WIFEXITED(r)) {
+                rchar = '!';
+                err++;
+            } else if (WEXITSTATUS(r) == 0 || WEXITSTATUS(r) == 1) {
+                rchar = '+';
+            } else {
+                rchar = '?';
+                err++;
+            }
+        }
+        fprintf(stderr, "%c%s", rchar, name);
+    }
+    return err;
+}
 
 int SHMinit(int argc, char **argv)
 {
@@ -733,7 +767,9 @@ int SHMinit(int argc, char **argv)
 	utmpsortd(1, argv);
     }
 
-
+    puts("\nstarting BBS services...");
+    start_services();
+    puts("\n");
     return 0;
 }
 
