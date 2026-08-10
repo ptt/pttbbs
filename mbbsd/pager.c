@@ -758,8 +758,10 @@ pager_handle_ctrl_r_ofo(int ch)
     int my_newfd;
     screen_backup_t old_screen;
 
+    check_water_init();
+
     water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
-    if (w->count == 0 || wmofo != NOTREPLYING)
+    if (!w || w->count == 0 || wmofo != NOTREPLYING)
         return ch;
 
     scr_dump(&old_screen);
@@ -797,7 +799,7 @@ pager_handle_ctrl_r_default(int ch)
     else if (watermode == -1)
     {
         water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
-        if (w->count == 0)
+        if (!w || w->count == 0)
             return ch;
 
         int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
