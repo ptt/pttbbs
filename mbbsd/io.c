@@ -288,7 +288,7 @@ read_vin() {
         return len;
 
     // apply additional converts
-    if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
+    if (ISDBCSAWARE())
 	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
     if (len <= 0)
         return len;

@@ -14,9 +14,9 @@
 #define UF_ADBANNER	    0x00000040	// (was: MOVIE_FLAG, true if show advertisement banner
 #define UF_ADBANNER_USONG   0x00000080	// true if show user songs in banner
 // #define UF_MIND	    0x00000100	// deprecated: true if mind search mode open <-Heat
-#define UF_DBCS_AWARE	    0x00000200	// true if DBCS-aware enabled.
+// #define UF_DBCS_AWARE    0x00000200	// DEPRECATED (was default true)
 #define UF_DBCS_NOINTRESC   0x00000400	// no Escapes interupting DBCS characters
-#define UF_DBCS_DROP_REPEAT 0x00000800	// detect and drop repeated input from evil clients
+// #define UF_DBCS_DROP_REPEAT 0x00000800	// DEPRECATED (Was default true)
 // #define UF_DBCS_???	    0x00000800	// reserved
 #define UF_NO_MODMARK	    0x00001000	// true if modified files are NOT marked
 #define UF_COLORED_MODMARK  0x00002000	// true if mod-mark is coloured.
@@ -45,14 +45,6 @@
 	(x != 'n') : \
 	(x == 'y') )
 #define REJECT_OUTTAMAIL(x) (x.uflag & UF_REJ_OUTTAMAIL)
-#define ISDBCSAWARE()	(cuser.uflag & UF_DBCS_AWARE)
-
-/* -------------------- userec_t.uflag2 (unsigned int) */
-
-#define OUF2_FAVNOHILIGHT    0x00000010  /* false if hilight favorite */
-#define OUF2_FAVNEW_FLAG     0x00000020  /* true if add new board into one's fav */
-#define OUF2_FOREIGN         0x00000100  /* true if a foreign */
-#define OUF2_LIVERIGHT       0x00000200  /* true if get "liveright" already */
-#define OUF2_REJ_OUTTAMAIL   0x00000400  /* true if don't accept outside mails */
+#define ISDBCSAWARE()	1
 
 #endif //  INCLUDE_UFLAGS_H
