@@ -217,13 +217,8 @@ cursor_show(int row, int column)
         grayout(row, row + 1, GRAYOUT_COLORBOLD);
     }
     move(row, column);
-    if (HasUserFlag(UF_CURSOR_ASCII)) {
-        outs(STR_CURSOR);
-        move(row, column);
-    } else {
-        outs(STR_CURSOR2);
-        move(row, column + 1);
-    }
+    outs(STR_CURSOR);
+    move(row, column);
 }
 
 // TODO
@@ -232,10 +227,7 @@ void
 cursor_clear(int row, int column)
 {
     move(row, column);
-    if (HasUserFlag(UF_CURSOR_ASCII))
-        outs(STR_UNCUR);
-    else
-        outs(STR_UNCUR2);
+    outs(STR_UNCUR);
 
     if (HasUserFlag(UF_MENU_LIGHTBAR)) {
         grayout(row, row + 1, GRAYOUT_COLORNORM);
