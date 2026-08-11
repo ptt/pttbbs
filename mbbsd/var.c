@@ -20,11 +20,7 @@ const char * const str_permid[] = {
     "BBSADM",			/* PERM_POSTMARK */
     "不列入排行榜",		/* PERM_NOTOP */
     "違法通緝中",		/* PERM_VIOLATELAW */
-#ifdef PLAY_ANGEL
-    "可擔任小天使",		/* PERM_ANGEL */
-#else
-    "小天使(本站無效)",
-#endif
+    HAS_ANGEL ? "可擔任小天使" : "小天使(本站無效)", /* PERM_ANGEL */
     "不允許\認證碼註冊",	/* PERM_NOREGCODE */
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */

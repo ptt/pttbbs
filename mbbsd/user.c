@@ -251,11 +251,9 @@ user_display(const userec_t * u, int adminmode)
     }
 #endif
 
-#ifdef PLAY_ANGEL
-    if (adminmode)
+    if (HAS_ANGEL && adminmode)
 	prints("\t小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
-#endif
 
     outs("        " ANSI_COLOR(30;41) "┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴"
 	 "┬┴┬┴┬┴┬" ANSI_RESET);
