@@ -23,7 +23,7 @@
 // #define UF_MODMARK_???   0x00004000	// reserved
 // #define UF_MODMARK_???   0x00008000	// reserved
 #define UF_DEFBACKUP	    0x00010000	// true if user defaults to backup
-#define UF_NEW_ANGEL_PAGER  0x00020000	// true if user (angel) wants the new pager
+// #define UF_NEW_ANGEL_PAGER  0x00020000	// true if user (angel) wants the new pager
 #define UF_REJ_OUTTAMAIL    0x00040000  // true if don't accept outside mails
 #define UF_SECURE_LOGIN     0x00080000  // true if login from insecure (ex, telnet) connection will be rejected.
 #define UF_FOREIGN	    0x00100000  // true if a foreign

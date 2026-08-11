@@ -96,15 +96,13 @@ angel_toggle_pause()
 	return;
     currutmp->angelpause ++;
     currutmp->angelpause %= ANGELPAUSE_MODES;
-    if (cuser.uflag & UF_NEW_ANGEL_PAGER) {
-        // pmore_QuickRawModePref-like conf
-        currutmp->angelpause = vs_quick_pref(
+    // pmore_QuickRawModePref-like conf
+    currutmp->angelpause = vs_quick_pref(
             currutmp->angelpause % ANGELPAUSE_MODES,
             "設定小天使神諭呼叫器(可直接按數字選取,方便設定熱鍵也避免誤按)",
             "請選取神諭呼叫器的新狀態: ",
             "開放\t停收\t關閉",
             NULL) % ANGELPAUSE_MODES;
-    }
 }
 
 void

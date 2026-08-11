@@ -418,7 +418,6 @@ void Customize(void)
 	UF_FAV_ADDNEW,
 	UF_FAV_NOHILIGHT,
 	UF_DBCS_NOINTRESC,
-        UF_NEW_ANGEL_PAGER,
 	0,
     };
 
@@ -431,9 +430,6 @@ void Customize(void)
 	"MYFAV      新板自動進我的最愛",
 	"MYFAV      單色顯示我的最愛",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
-#ifdef PLAY_ANGEL
-        "ANGEL      (小天使)啟用新的神諭呼叫器設定界面",
-#endif
 	0,
     };
 
