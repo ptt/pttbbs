@@ -417,8 +417,6 @@ void Customize(void)
         UF_SECURE_LOGIN,
 	UF_FAV_ADDNEW,
 	UF_FAV_NOHILIGHT,
-	UF_NO_MODMARK	,
-	UF_COLORED_MODMARK,
 	UF_DBCS_NOINTRESC,
 #ifdef USE_PFTERM
         UF_MENU_LIGHTBAR,
@@ -435,8 +433,6 @@ void Customize(void)
         "LOGIN      只允許\使用安全連線(ex, ssh)登入",
 	"MYFAV      新板自動進我的最愛",
 	"MYFAV      單色顯示我的最愛",
-	"MODMARK    隱藏文章修改符號(推文/修文) (~)",
-	"MODMARK    使用色彩代替修改符號 (+)",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
 #ifdef USE_PFTERM
         "CURSOR     (實驗性)啟用光棒選單系統",

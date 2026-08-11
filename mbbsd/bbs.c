@@ -665,22 +665,6 @@ readdoent(int num, fileheader_t * ent)
     oisunread = isunread =
 	brc_unread(currbid, ent->filename, ent->modified);
 
-    // modified tag
-    if (isunread == 2)
-    {
-	// ignore unread, if user doesn't want to show it.
-	if (HasUserFlag(UF_NO_MODMARK))
-	{
-	    oisunread = isunread = 0;
-	}
-	// if user wants colored marks, use 'read' marks
-	else if (HasUserFlag(UF_COLORED_MODMARK))
-	{
-	    isunread = 0;
-	    typeattr = ANSI_COLOR(36);
-	}
-    }
-
     // handle 'type'
     type = isunread ? '+' : ' ';
     if (isunread == 2) type = '~';
