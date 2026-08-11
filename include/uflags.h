@@ -27,7 +27,7 @@
 #define UF_REJ_OUTTAMAIL    0x00040000  // true if don't accept outside mails
 #define UF_SECURE_LOGIN     0x00080000  // true if login from insecure (ex, telnet) connection will be rejected.
 #define UF_FOREIGN	    0x00100000  // true if a foreign
-#define UF_LIVERIGHT	    0x00200000  // true if get "liveright" already
+// #define UF_LIVERIGHT	    0x00200000  // true if get "liveright" already
 // #define UF_COUNTRY_???   0x00400000	// reserved
 // #define UF_COUNTRY_???   0x00800000	// reserved
 #define UF_MENU_LIGHTBAR    0x01000000	// true to use lightbar-based menu
