@@ -235,9 +235,7 @@
 #define MAX_RECOMMENDS  (100)
 
 #define STR_CURSOR      ">"
-#define STR_CURSOR2     "¡´"
 #define STR_UNCUR       " "
-#define STR_UNCUR2      "  "
 
 #define NOTREPLYING     -1
 #define REPLYING        0
