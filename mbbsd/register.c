@@ -737,8 +737,6 @@ new_register(void)
     newuser.ua_version = ua_version;
     STRLCPY(newuser.lasthost, fromhost);
 
-    newuser.uflag |= UF_DBCS_AWARE | UF_DBCS_DROP_REPEAT;
-
 #ifdef REQUIRE_VERIFY_EMAIL_AT_REGISTER
     email_input_t ein = {};
     ein.email = newuser.email;

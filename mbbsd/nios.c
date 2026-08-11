@@ -304,7 +304,7 @@ cin_fetch_fd(int fd)
         if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
             continue;
 
-        if (ISDBCSAWARE() && HasUserFlag(UF_DBCS_DROP_REPEAT))
+        if (ISDBCSAWARE())
             sz = vtkbd_ignore_dbcs_evil_repeats((unsigned char*)buf, sz);
 
         // for tty_read: sz<0 = EAGAIN
