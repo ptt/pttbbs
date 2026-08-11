@@ -213,9 +213,6 @@ search_num(int ch, int max)
 void
 cursor_show(int row, int column)
 {
-    if (HasUserFlag(UF_MENU_LIGHTBAR)) {
-        grayout(row, row + 1, GRAYOUT_COLORBOLD);
-    }
     move(row, column);
     outs(STR_CURSOR);
     move(row, column);
@@ -228,10 +225,6 @@ cursor_clear(int row, int column)
 {
     move(row, column);
     outs(STR_UNCUR);
-
-    if (HasUserFlag(UF_MENU_LIGHTBAR)) {
-        grayout(row, row + 1, GRAYOUT_COLORNORM);
-    }
 }
 
 // TODO

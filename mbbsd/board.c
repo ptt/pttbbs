@@ -1295,11 +1295,8 @@ make_class_color(char *name)
     const char *colorset[8] = {"", ANSI_COLOR(32),
 	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34),
 	ANSI_COLOR(1), ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
-    const char *colorset2[8] = {"", ANSI_COLOR(32),
-	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(35),
-	"", ANSI_COLOR(32), ANSI_COLOR(33)};
 
-    return HasUserFlag(UF_MENU_LIGHTBAR) ? colorset2[index] : colorset[index];
+    return colorset[index];
 }
 
 #define HILIGHT_COLOR	ANSI_COLOR(1;36)
@@ -1346,8 +1343,6 @@ show_brdlist(int head, int clsflag, int newflag)
     if (brdnum > 0) {
 	boardstat_t    *ptr;
  	char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "£¾" ANSI_RESET};
-        if (HasUserFlag(UF_MENU_LIGHTBAR))
-            unread[1] = ANSI_COLOR(31) "£¾" ANSI_RESET;
 
 	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
 
@@ -1403,8 +1398,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    // think about new way some otherday.
 		    prints("%sMyFavFolder" ANSI_RESET "  ¥Ø¿ý ¡¼%-34s",
 			    !(HasUserFlag(UF_FAV_NOHILIGHT))?
-                             (HasUserFlag(UF_MENU_LIGHTBAR) ?
-                              HILIGHT_COLOR2 : HILIGHT_COLOR) : "",
+                              HILIGHT_COLOR : "",
 			    title);
 		    /*
 		    if (!(HasUserFlag(UF_FAV_NOHILIGHT)))
@@ -1484,9 +1478,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
 			    "%2.2s" ANSI_RESET "%-34.34s",
 			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
-			      getboard(ptr->bid) != NULL))?
-                             (HasUserFlag(UF_MENU_LIGHTBAR) ? HILIGHT_COLOR2 :
-                              HILIGHT_COLOR) : "",
+			      getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
 			    B_BH(ptr)->brdname,
 			    make_class_color(B_BH(ptr)->title),
 			    B_BH(ptr)->title,

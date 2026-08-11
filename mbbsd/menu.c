@@ -424,8 +424,7 @@ show_menu(int menu_index, const commands_t * p)
 	if (CheckMenuPerm(p[n].level)) {
             prints("%*s  (%s%c" ANSI_RESET ")%s\n",
                    menu_column, "",
-                   (HasUserFlag(UF_MENU_LIGHTBAR) ? ANSI_COLOR(36) :
-                    ANSI_COLOR(1;36)), s[0], s+1);
+                   ANSI_COLOR(1;36), s[0], s+1);
 	}
 	n++;
     }
