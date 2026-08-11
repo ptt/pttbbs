@@ -275,7 +275,6 @@ user_display(const userec_t * u, int adminmode)
 	    UF_REJ_OUTTAMAIL,
 	    UF_FAV_ADDNEW,
 	    UF_FOREIGN,
-	    UF_LIVERIGHT,
 	};
 	char buf[PATHLEN];
 
@@ -928,19 +927,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    }
 		    else
 			x.uflag &= ~UF_FOREIGN;
-		}
-	    if (x.uflag & UF_FOREIGN)
-		if (getdata_str(y++, 0, "¥Ã¤[©~¯dÅv 1)¬O 2)§_¡G", buf, 2, DOECHO, x.uflag & UF_LIVERIGHT ? "1" : "2")){
-		    if ((tmp = atoi(buf)) > 0){
-			if (tmp == 1){
-			    x.uflag |= UF_LIVERIGHT;
-			    x.userlevel |= (PERM_LOGINOK | PERM_POST);
-			}
-			else{
-			    x.uflag &= ~UF_LIVERIGHT;
-			    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
-			}
-		    }
 		}
 	}
 
