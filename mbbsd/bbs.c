@@ -754,10 +754,7 @@ readdoent(int num, fileheader_t * ent)
 
     /* start printing */
     if (ent->filemode & FILE_BOTTOM) {
-        if (HasUserFlag(UF_MENU_LIGHTBAR))
-            outs("  " ANSI_COLOR(33) "  ¡¹ " ANSI_RESET);
-        else
-            outs("  " ANSI_COLOR(1;33) "  ¡¹ " ANSI_RESET);
+        outs("  " ANSI_COLOR(1;33) "  ¡¹ " ANSI_RESET);
     }
     else
 	/* recently we found that many boards have >10k articles,
@@ -766,12 +763,8 @@ readdoent(int num, fileheader_t * ent)
 	 */
 	prints("%7d", num);
 
-    if (HasUserFlag(UF_MENU_LIGHTBAR))
-        prints(" %s%c" ESC_STR "[0;3%4.4s" ANSI_RESET,
-               typeattr, type, recom);
-    else
-        prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET,
-               typeattr, type, recom);
+    prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET,
+           typeattr, type, recom);
 
     if(IS_LISTING_MONEY)
     {
@@ -793,10 +786,7 @@ readdoent(int num, fileheader_t * ent)
 
     // print author
     if(isonline) {
-        if (HasUserFlag(UF_MENU_LIGHTBAR))
-            outs(ANSI_COLOR(36));
-        else
-            outs(ANSI_COLOR(1));
+        outs(ANSI_COLOR(1));
     }
     prints("%-13.12s", ent->owner);
     if(isonline) outs(ANSI_RESET);
@@ -807,10 +797,7 @@ readdoent(int num, fileheader_t * ent)
     // print subject prefix
     ent->title[sizeof(ent->title)-1] = 0;
     if (strcmp(currtitle, title) == 0) {
-        if (HasUserFlag(UF_MENU_LIGHTBAR))
-            prints(ANSI_COLOR(3%c), color);
-        else
-            prints(ANSI_COLOR(1;3%c), color);
+        prints(ANSI_COLOR(1;3%c), color);
         outs(mark);
         outc(' ');
         special = 1;
@@ -819,8 +806,7 @@ readdoent(int num, fileheader_t * ent)
         outc(' ');
         if (special) {
             int len_announce = strlen(TN_ANNOUNCE);
-            if (!HasUserFlag(UF_MENU_LIGHTBAR))
-                outs(ANSI_COLOR(1));
+            outs(ANSI_COLOR(1));
             outs(TN_ANNOUNCE);
             outs(ANSI_RESET);
             title += len_announce;
