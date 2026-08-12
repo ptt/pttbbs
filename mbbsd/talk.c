@@ -1603,7 +1603,7 @@ userlist(void)
     static int      pickup_way = 0;
     char            skippickup = 0, redraw, redrawall;
     int             page, offset, ch, leave, fri_stat;
-    int             nfriend, myfriend, friendme, bfriend, badfriend, i;
+    int             nfriend, myfriend, friendme, bfriend, badfriend;
     time4_t          lastupdate;
 
     nPickups = b_lines - 3;
