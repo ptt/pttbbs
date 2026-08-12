@@ -708,13 +708,6 @@ new_register(void)
     uint8_t         ua_version = get_system_user_agreement_version();
     bool	    email_verified = false;
 
-#ifdef REQUIRE_SECURE_CONN_TO_REGISTER
-    if (!mbbsd_is_secure_connection()) {
-	vmsg("請使用安全連線註冊帳號!");
-	exit(1);
-    }
-#endif
-
     if (!accept_user_aggrement()) {
 	vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
 	exit(1);
@@ -895,18 +888,6 @@ new_register(void)
     if (query_yn(y + 1,
 		"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:"))
 	newuser.over_18 = 1;
-
-    // Whether to limit login to secure connection only.
-    if (mbbsd_is_secure_connection()) {
-	// Screen full.
-	y = 17;
-	move(y, 0); clrtobot();
-	outs("[ 連線設定 ]");
-
-	y++;
-	if (query_yn(y, "您是否要限制此帳號僅能使用安全連線登入? [y/n]:"))
-	    newuser.uflag |= UF_SECURE_LOGIN;
-    }
 
 #ifdef REGISTER_VERIFY_CAPTCHA
     if (!verify_captcha("為了繼續您的註冊程序\n"))

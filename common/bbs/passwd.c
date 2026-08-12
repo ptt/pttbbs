@@ -326,12 +326,6 @@ passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *))
 }
 
 int
-passwd_require_secure_connection(const userec_t *u)
-{
-    return (u->uflag & UF_SECURE_LOGIN) ? 1 : 0;
-}
-
-int
 is_bcrypt_hash(const char *hash)
 {
     return (hash && strncmp(hash, "$2b$", 4) == 0);

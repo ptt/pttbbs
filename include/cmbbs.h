@@ -113,7 +113,6 @@ int  passwd_query (int num, userec_t *buf);
 int  passwd_load_user(const char *userid, userec_t *buf);
 int  passwd_apply (void *data, int (*fptr)(void *, int, userec_t *));
 int passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *));
-int passwd_require_secure_connection(const userec_t *u);
 int  is_bcrypt_hash(const char *hash);
 int  checkuser_passwd(const userec_t *u, char *test);
 void setuser_passwd(userec_t *u, const char *plain);
