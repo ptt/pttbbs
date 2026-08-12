@@ -100,7 +100,7 @@ signal_restart(SIGUSR2, write_request);
 
 1. **判斷目前 UI 模式**：
    - `PAGER_UI_OFO`: 執行 `write_request_ofo(sig)`。
-   - `PAGER_UI_ORIG` / `PAGER_UI_NEW`: 執行 `write_request_default()`。
+   - `PAGER_UI_NEW`: 執行 `write_request_default()`。
 2. **判斷是否能彈出 UI (`can_pop_pager_ui`)**：
    若使用者正處於文章編輯中 (`EDITING`)、聊天中 (`CHATING`)、呼叫中 (`TALK`) 或已關閉 Pager，系統僅播放音效提示 (`bell()`)，並將水球靜默寫入歷史紀錄。
 3. **畫面繪製與音效 (`show_call_in`)**：

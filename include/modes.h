@@ -196,12 +196,17 @@
 
 #define PAGER_MODES 	(5)
 
-#define PAGER_UI_ORIG	    0x00000000	// was: WATER_ORIG
-#define PAGER_UI_NEW	    0x00000001	// was: WATER_NEW
-#define PAGER_UI_OFO	    0x00000002	// was: WATER_OFO
-#define PAGER_UI_IS(uitype) ((cuser.pager_ui_type%PAGER_UI_TYPES) == (uitype))
+#define PAGER_UI_NEW	    0x00000000  // default (merged PAGER_UI_ORIG into PAGER_UI_NEW)
+#define PAGER_UI_LEGACY	    0x00000001  // legacy value (was: NEW) that should be removed soon.
+#define PAGER_UI_OFO	    0x00000002
+#define PAGER_UI_IS(uitype) (((cuser.pager_ui_type == PAGER_UI_OFO) ? PAGER_UI_OFO : PAGER_UI_NEW) == (uitype))
 #define PAGER_UI_TYPES	    0x00000003	// the types that we really support
-#define PAGER_UI_TYPES_USER 0x00000003	// the types we allow user to select
+static inline uint8_t PAGER_UI_CYCLE(uint8_t ui) {
+    // return (ui + 1) % PAGER_UI_TYPES;
+    if (ui == PAGER_UI_OFO)
+        return PAGER_UI_NEW;
+    return PAGER_UI_OFO;
+}
 
 /* stuff.c: show_file */
 #define SHOWFILE_RAW	     (0x00)

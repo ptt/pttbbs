@@ -466,8 +466,7 @@ void Customize(void)
 	}
 	/* extended stuff */
 	{
-	    static const char *wm[PAGER_UI_TYPES+1] =
-		{"一般", "進階", "未來", ""};
+	    static const char *wm[PAGER_UI_TYPES] = {"一般", "一般", "未來"};
 
 	    prints("%c. %-*s%s\n",
 		    '1' + iax++,
@@ -519,7 +518,7 @@ void Customize(void)
 	{
 	    case 0:
 		{
-		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
+		    pwcuSetPagerUIType(PAGER_UI_CYCLE(cuser.pager_ui_type));
 		    vmsg("修改水球模式後請正常離線再重新上線");
 		    dirty = 1;
 		}

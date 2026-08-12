@@ -372,7 +372,7 @@ int             KEY_ESC_arg;
 int             watermode = -1;
 int             wmofo = NOTREPLYING;
 /*
- * PAGER_UI_IS(PAGER_UI_ORIG) | PAGER_UI_IS(PAGER_UI_NEW):
+ * PAGER_UI_IS(PAGER_UI_NEW):
  * ????????????????????
  * Ptt 水球回顧   (FIXME: guessed by scw)
  * watermode = -1 沒在回水球

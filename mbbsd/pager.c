@@ -568,43 +568,6 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
 }
 
 static void
-pager_show_panel_orig(void)
-{
-    water_which = &water[0];
-    if (!water[0].count || watermode <= 0)
-        return;
-
-    move(1, 0);
-    outs("───────水─球─回─顧─────────用[Ctrl-R Ctrl-T]鍵切換─────");
-
-    int i;
-    for (i = 0; i < water_which->count; i++) {
-        int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
-        int len = 75 - strlen(water_which->msg[a].last_call_in) - strlen(water_which->msg[a].userid);
-        if (len < 0)
-            len = 0;
-
-        move(i + 2, 0);
-        clrtoeol();
-        if (watermode - 1 != i)
-            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
-        else
-            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
-    }
-
-    if (t_last_write[0]) {
-        move(i + 2, 0);
-        clrtoeol();
-        outs(t_last_write);
-        i++;
-    }
-    move(i + 2, 0);
-    outs("───────────────────────────────────────");
-}
-
-static void
 pager_show_panel_new(void)
 {
     if (!water[0].count || watermode <= 0)
@@ -668,7 +631,7 @@ pager_show_panel_new(void)
     }
 }
 
-void
+static void
 pager_show_panel(void)
 {
     static int in_panel = 0;
@@ -677,10 +640,7 @@ pager_show_panel(void)
     in_panel = 1;
 
     check_water_init();
-    if (PAGER_UI_IS(PAGER_UI_ORIG))
-        pager_show_panel_orig();
-    else if (PAGER_UI_IS(PAGER_UI_NEW))
-        pager_show_panel_new();
+    pager_show_panel_new();
 
     in_panel = 0;
 }
@@ -814,7 +774,7 @@ pager_handle_ctrl_r_default(int ch)
 
         my_newfd = vkey_detach();
         char buf[ANSILINELEN];
-        SNPRINTF(buf, ANSI_COLOR(1;33;46) "Ｂ%s" ANSI_COLOR(37;45)
+        SNPRINTF(buf, ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET, last_msg->userid, last_msg->last_call_in);
         outmsg(buf);
 
@@ -1060,10 +1020,8 @@ add_history(const msgque_t * msg)
     add_history_entry(&water[0], msg);
 
     /* 2. Record to per-user session history buffer (swater[0]) */
-    if (!PAGER_UI_IS(PAGER_UI_ORIG)) {
-        water_t *target_slot = swater_get_slot(msg);
-        add_history_entry(target_slot, msg);
-    }
+    water_t *target_slot = swater_get_slot(msg);
+    add_history_entry(target_slot, msg);
 
     /* 3. Refresh display if user is currently reviewing messages */
     if (watermode > 0 &&
