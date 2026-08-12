@@ -196,7 +196,6 @@ enum {
     AUTH_RESULT_FAIL_2FA      = -7,
     AUTH_RESULT_NEED_2FA      = -6,
     AUTH_RESULT_INVALID_ID    = -5,
-    AUTH_RESULT_FAIL_INSECURE = -4,
     AUTH_RESULT_STOP   = -3,
     AUTH_RESULT_FREEID_TOOMANY = -2,
     AUTH_RESULT_FREEID = -1,
@@ -857,8 +856,6 @@ DEBUG_IO(int fd, const char *msg) {
 #define FREEAUTH_SUCCESS_YX AUTH_SUCCESS_YX
 #define AUTH_FAIL_MSG       ANSI_RESET ERR_PASSWD
 #define AUTH_FAIL_YX        PASSWD_PROMPT_YX
-#define REJECT_INSECURE_MSG ANSI_RESET "抱歉，此帳號已設定為只能使用安全連線(如ssh)登入。"
-#define REJECT_INSECURE_YX  PASSWD_PROMPT_YX
 #define USERID_EMPTY_MSG    ANSI_RESET "請重新輸入。"
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
 #define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，部份系統正在維護中，請稍候再試。 " ANSI_RESET
@@ -1313,13 +1310,6 @@ draw_2fa_fail(login_conn_ctx *conn)
 }
 
 static void
-draw_reject_insecure_connection_msg(login_conn_ctx *conn)
-{
-    _mt_move_yx(conn, REJECT_INSECURE_YX); _mt_clrtoeol(conn);
-    _text_write(conn, REJECT_INSECURE_MSG, sizeof(REJECT_INSECURE_MSG)-1);
-}
-
-static void
 draw_empty_userid_warn(login_conn_ctx *conn)
 {
     _mt_move_yx(conn, USERID_EMPTY_YX); _mt_clrtoeol(conn);
@@ -1606,27 +1596,6 @@ auth_check_free_userid_allowance(const char *userid)
     return 0;
 }
 
-// Check if the userid specified in ctx can continue to login.
-static int
-auth_check_userid(login_ctx *ctx)
-{
-    // NOTE: for security reasons, only report error when a secure
-    // connection is required. Otherwise, silently let user continue.
-    if (is_validuserid(ctx->userid))
-    {
-        userec_t user = {0};
-
-        if (!ctx->is_secure_connection &&
-            passwd_load_user(ctx->userid, &user) >= 1 &&
-            user.userid[0] &&
-            passwd_require_secure_connection(&user))
-        {
-            return AUTH_RESULT_FAIL_INSECURE;
-        }
-    }
-    return AUTH_RESULT_OK;
-}
-
 // NOTE ctx->passwd will be destroyed (must > PASSLEN+1)
 // NOTE ctx->userid may be changed (must > IDLEN+1)
 static int
@@ -1666,12 +1635,6 @@ auth_user_challenge(login_ctx *ctx)
         if (ok)
             return AUTH_RESULT_OK;
         return AUTH_RESULT_FAIL_2FA;
-    }
-
-    if (!ctx->is_secure_connection &&
-        passwd_require_secure_connection(&user))
-    {
-        return AUTH_RESULT_FAIL_INSECURE;
     }
 
     if (!checkuser_passwd(&user, passbuf))
@@ -1861,24 +1824,6 @@ auth_fail(int fd, login_conn_ctx *conn, draw_prompt_func draw_prompt)
 }
 
 static int
-auth_precheck_userid(int fd, login_conn_ctx *conn)
-{
-    switch (auth_check_userid(&conn->ctx))
-    {
-        case AUTH_RESULT_OK:
-            return AUTH_RESULT_OK;
-
-        case AUTH_RESULT_FAIL_INSECURE:
-            return auth_fail(fd, conn, draw_reject_insecure_connection_msg);
-
-        default:
-            break;
-    }
-
-    return auth_fail(fd, conn, draw_empty_userid_warn);
-}
-
-static int
 auth_start(int fd, login_conn_ctx *conn)
 {
     login_ctx *ctx = &conn->ctx;
@@ -1918,12 +1863,6 @@ auth_start(int fd, login_conn_ctx *conn)
         case AUTH_RESULT_FAIL:
             // logattempt(ctx->userid , '-', time(0), ctx->hostip);
             logattempt2(ctx->userid , '-', time(0), ctx->hostip);
-            break;
-
-        case AUTH_RESULT_FAIL_INSECURE:
-            // failure due to user setting for forcing secure connection
-            // will not be logged.
-            prompt = draw_reject_insecure_connection_msg;
             break;
 
         case AUTH_RESULT_FREEID:
@@ -2442,13 +2381,6 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     if (!auth_is_free_userid(uid))
                     {
                         draw_passwd_prompt(conn);
-                        int r = auth_precheck_userid(fd, conn);
-                        if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_OK)
-                        {
-                            login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
-                            return -1;
-                        }
-
                         // leave the switch case, user will be prompt for
                         // password.
                         break;

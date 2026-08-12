@@ -414,7 +414,6 @@ void Customize(void)
 	UF_ADBANNER_USONG,
 	UF_REJ_OUTTAMAIL,
 	UF_DEFBACKUP,
-        UF_SECURE_LOGIN,
 	UF_FAV_ADDNEW,
 	UF_FAV_NOHILIGHT,
 	UF_DBCS_NOINTRESC,
@@ -426,7 +425,6 @@ void Customize(void)
 	"ADBANNER   顯示使用者心情點播(需開啟動態看板)",
 	"MAIL       拒收站外信",
 	"BACKUP     預設備份信件與其它記錄", //"與聊天記錄",
-        "LOGIN      只允許\使用安全連線(ex, ssh)登入",
 	"MYFAV      新板自動進我的最愛",
 	"MYFAV      單色顯示我的最愛",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
@@ -496,11 +494,6 @@ void Customize(void)
 	{
 	    /* normal pref */
 	    key -= 'a';
-
-            if (masks1[key] == UF_SECURE_LOGIN && !mbbsd_is_secure_connection()) {
-                vmsg("您必須使用安全連線才能修改此設定");
-                continue;
-            }
 
 	    dirty = 1;
 	    pwcuToggleUserFlag(masks1[key]);

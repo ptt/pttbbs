@@ -35,7 +35,6 @@ static void getremotename(const struct in_addr from, char *rhost);
 #endif
 
 static int listen_port;
-static int is_secure_connection;
 
 #define MAX_BINDPORT 20
 enum TermMode {
@@ -668,15 +667,6 @@ login_query(char *ruid)
             /* load the user record */
             if (initcuser(uid) < 1 || !cuser.userid[0])
                 valid_user = 0;
-
-            /* check if the user is forced to login via secure connection. */
-            if (valid_user &&
-                (passwd_require_secure_connection(&cuser) && !is_secure_connection)) {
-                outs("抱歉，此帳號已設定為只能使用安全連線(如ssh)登入。\n");
-                doupdate();
-                sleep(5);
-                continue;
-            }
 
             /* ask user for password, even the user does not exists. */
 	    getdata(21, 0, MSG_PASSWD,
@@ -1625,7 +1615,6 @@ shell_login(char *argv0, struct ProgramOption *option)
 	return 0;
     }
     banip = free_banip_list(banip);
-    is_secure_connection = 1;
 
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);
@@ -1724,7 +1713,6 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     listen_port = atoi(dat.port);
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
-    is_secure_connection = (dat.flags & CONN_FLAG_SECURE);
 
     if (dat.encoding)
 	set_converting_type(dat.encoding);
@@ -1946,12 +1934,6 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 	return -1;
 
     return 0;
-}
-
-int
-mbbsd_is_secure_connection()
-{
-    return is_secure_connection;
 }
 
 /* vim: sw=4
