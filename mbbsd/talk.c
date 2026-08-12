@@ -1992,9 +1992,8 @@ userlist(void)
 
 	    case Ctrl('W'):
 		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    static const char *wm[PAGER_UI_TYPES] = {"一般", "進階", "未來"};
-
-		    pwcuSetPagerUIType((cuser.pager_ui_type +1) % PAGER_UI_TYPES_USER);
+		    static const char *wm[PAGER_UI_TYPES] = {"一般", "一般", "未來"};
+		    pwcuSetPagerUIType(PAGER_UI_CYCLE(cuser.pager_ui_type));
 		    /* vmsg cannot support multi lines */
 		    move(b_lines - 4, 0);
 		    clrtobot();

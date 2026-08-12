@@ -712,7 +712,6 @@ void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
 int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *);
-void pager_show_panel(void);
 void talkreply(void);
 int pager_toggle_mode(void);
 int t_query(void);
