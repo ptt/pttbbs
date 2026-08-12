@@ -114,7 +114,11 @@ modestring(const userinfo_t * uentp, int simple)
     else if (!mode && *uentp->chatid == 3)
 	SNPRINTF(modestr, "水球準備中");
     else if ((!mode) && *uentp->chatid == 2) {
-        if (uentp->msgcount >= 0 && uentp->msgcount < MAX_MSGS) {
+        // TODO(hungte) The msgcount is not reliable and we're seeing 'zero
+        // messages'. Before that is fixed, have a workaround without numbers.
+        if (uentp->msgcount == 0) {
+            SNPRINTF(modestr, "中了水球");
+        } else if (uentp->msgcount > 0 && uentp->msgcount < MAX_MSGS) {
             SNPRINTF(modestr, "中%d顆水球", (int)uentp->msgcount);
         } else
             SNPRINTF(modestr, "不行了 @_@");
