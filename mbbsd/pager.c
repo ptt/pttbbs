@@ -64,10 +64,71 @@ void check_water_init(void)
     STRLCPY(water[0].userid, " 场 ");
 }
 
+static int
+pager_render_history_list(const water_t *w, int start_row, int max_rows, int selected_idx, int msg_bg)
+{
+    if (!w)
+        return 0;
+
+    int count = w->count;
+    if (count > max_rows)
+        count = max_rows;
+
+    int i;
+    for (i = 0; i < count; i++) {
+        int a = (w->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
+        int len = 75 - strlen(w->msg[a].last_call_in) - strlen(w->msg[a].userid);
+        if (len < 0)
+            len = 0;
+
+        move(i + start_row, 0);
+        clrtoeol();
+        if (selected_idx != i)
+            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;%d) " %s " ANSI_RESET "%*s",
+                   w->msg[a].userid, msg_bg, w->msg[a].last_call_in, len, "");
+        else
+            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;%d) " %s " ANSI_RESET "%*s",
+                   w->msg[a].userid, msg_bg, w->msg[a].last_call_in, len, "");
+    }
+    return i;
+}
+
+static void
+pager_render_history_section(const water_t *w, int start_row, int max_rows, int selected_idx, bool top_sep, int msg_bg)
+{
+    int y = start_row;
+    if (top_sep) {
+        move(y, 0);
+        clrtoeol();
+        outs(MSG_SEPARATOR);
+        y++;
+    }
+    int i = pager_render_history_list(w, y, max_rows, selected_idx, msg_bg);
+    y += i;
+
+    const char *last_write = (w == &water[0]) ? t_last_write : w->msg[5].last_call_in;
+
+    if (last_write && last_write[0]) {
+        move(y, 0);
+        clrtoeol();
+        outs(last_write);
+        i++, y++;
+    }
+
+    move(y, 0);
+    outs(MSG_SEPARATOR);
+    y++;
+
+    while (i++ <= water[0].count && y < b_lines) {
+        move(y++, 0);
+        clrtoeol();
+    }
+}
+
 static void
 ofo_water_scr(const water_t *tw, int which, char type)
 {
-    move(8 + which, 28);
+    move(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
     SOLVE_ANSI_CACHE();
 
     if (type != 1) {
@@ -79,22 +140,7 @@ ofo_water_scr(const water_t *tw, int which, char type)
     prints(ANSI_COLOR(0;1;37;45) "  %c %-14s " ANSI_RESET,
            tw->uin ? ' ' : 'x', tw->userid);
 
-    static const int colors[] = {33, 37, 33, 37, 33};
-    for (int i = 0; i < 5; ++i) {
-        move(16 + i, 4);
-        SOLVE_ANSI_CACHE();
-        const char *call_in_msg = tw->msg[(tw->top - i + 4) % 5].last_call_in;
-        if (call_in_msg[0] != '\0')
-            prints("   " ANSI_COLOR(1;%d;44) "」%-64s" ANSI_RESET "   \n",
-                   colors[i], call_in_msg);
-        else
-            outs("\n");
-    }
-
-    move(21, 4);
-    SOLVE_ANSI_CACHE();
-    prints("   " ANSI_COLOR(1;37;46) "%-66s" ANSI_RESET "   \n",
-           tw->msg[5].last_call_in);
+    pager_render_history_section(tw, WB_OFO_MSG_TOP, 5, -1, true, 44);
 
     move(0, 0);
     SOLVE_ANSI_CACHE();
@@ -108,7 +154,7 @@ ofo_water_scr(const water_t *tw, int which, char type)
 static void
 ofo_init_screen(void)
 {
-    move(WB_OFO_USER_TOP - 1, 0);
+    move(WB_OFO_USER_TOP, 0);
     SOLVE_ANSI_CACHE();
     clrtoln(WB_OFO_MSG_BOTTOM + 1);
     SOLVE_ANSI_CACHE();
@@ -131,16 +177,6 @@ ofo_init_screen(void)
 
         ofo_water_scr(swater[i], i, 0);
     }
-
-    move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
-    outs(ANSI_RESET " " ANSI_COLOR(1;35) "『" ANSI_COLOR(1;36)
-         ""
-         ANSI_COLOR(1;35) "『" ANSI_RESET " ");
-
-    move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
-    outs(" " ANSI_COLOR(1;35) "『" ANSI_COLOR(1;36)
-         ""
-         ANSI_COLOR(1;35) "『" ANSI_RESET " ");
 
     ofo_water_scr(swater[0], 0, 1);
     refresh();
@@ -488,6 +524,8 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
     }
 }
 
+static water_t *swater_get_slot(const msgque_t *msg);
+
 int
 my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *puin)
 {
@@ -560,6 +598,13 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         outmsg(ANSI_COLOR(1;33;41) "罺縷! 癸よň! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
         my_write_deliver(flag, msg, uin);
+        msgque_t dummy_msg;
+        memset(&dummy_msg, 0, sizeof(dummy_msg));
+        dummy_msg.pid = uin->pid;
+        STRLCPY(dummy_msg.userid, destid);
+        water_t *target_slot = swater_get_slot(&dummy_msg);
+        if (target_slot)
+            STRLCPY(target_slot->msg[5].last_call_in, t_last_write);
     }
 
     clrtoeol();
@@ -572,12 +617,11 @@ pager_show_panel_new(void)
 {
     if (!water[0].count || watermode <= 0)
         return;
+    int oy, ox;
+    getyx_ansi(&oy, &ox);
 
-    move(1, 0);
-    outs("瞴臮ノ[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]龄ち传");
-
-    move(2, 0);
-    clrtoeol();
+    mvouts(1, 0,
+           "瞴臮ノ[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]龄ち传\n");
     for (int idx = 0; idx < 6; idx++) {
         if (idx == 0) {
             prints("%s 场  " ANSI_RESET,
@@ -599,36 +643,9 @@ pager_show_panel_new(void)
                !w->uin ? '#' : ' ',
                w->userid);
     }
-
-    int i;
-    for (i = 0; i < water_which->count; i++) {
-        int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
-        int len = 75 - strlen(water_which->msg[a].last_call_in) - strlen(water_which->msg[a].userid);
-        if (len < 0)
-            len = 0;
-
-        move(i + 3, 0);
-        clrtoeol();
-        if (watermode - 1 != i)
-            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
-        else
-            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
-                   water_which->msg[a].userid, water_which->msg[a].last_call_in, len, "");
-    }
-
-    if (t_last_write[0]) {
-        move(i + 3, 0);
-        clrtoeol();
-        outs(t_last_write);
-        i++;
-    }
-    move(i + 3, 0);
-    outs("");
-    while (i++ <= water[0].count) {
-        move(i + 3, 0);
-        clrtoeol();
-    }
+    outs("\n");
+    pager_render_history_section(water_which, 3, MAX_REVIEW, watermode - 1, false, 45);
+    move_ansi(oy, ox);
 }
 
 static void
@@ -936,10 +953,7 @@ add_history_entry(water_t * w, const msgque_t * msg)
 {
     memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
-    // TODO: In Pager_UI_OFO, the ofo_water_scr is hard-coded to 5 rows.
-    // We should fix that in the future, but meanwhile msg[5] is for the buffer
-    // of user input. We need to refactor all these together.
-    w->top %= PAGER_UI_IS(PAGER_UI_OFO) ? 5 : MAX_REVIEW;
+    w->top %= MAX_REVIEW;
 
     if (w->count < MAX_REVIEW)
         w->count++;
