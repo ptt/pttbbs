@@ -1,7 +1,7 @@
-// Panty & Stocking Browser
+// Page & Service Browser
 //
 // A generic framework for displaying pre-generated data by a simplified
-// page-view user interface.
+// page-view user interface to support various services.
 //
 // Author: Hung-Te Lin (piaip)
 // --------------------------------------------------------------------------

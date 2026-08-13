@@ -2,10 +2,10 @@
 #include "daemons.h"
 #include "psb.h"
 
-// Panty & Stocking Browser
+// Page & Service Browser
 //
 // A generic framework for displaying pre-generated data by a simplified
-// page-view user interface.
+// page-view user interface to support various services.
 //
 // Author: Hung-Te Lin (piaip)
 // --------------------------------------------------------------------------
@@ -25,7 +25,7 @@
 
 static int
 psb_default_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar("Panty & Stocking Browser", BBSNAME);
+    vs_hdr2bar("P&S Browser", BBSNAME);
     return 0;
 }
 
@@ -149,7 +149,7 @@ psb_main(PSB_CTX *psbctx)
         if (psbctx->allow_pbs_version_message) {
             SOLVE_ANSI_CACHE();
             prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
-                   "-- Powered by Panty & Stocking Browser System");
+                   "-- Powered by P&S Browser System");
         }
         i = psbctx->header_lines + psbctx->curr - base;
         move(i, 0);
@@ -710,11 +710,11 @@ pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSE
 static int
 pvcm_welcome() {
     clear();
-    vs_hdr2("刪除推文", "實驗警告");
+    vs_hdr2("刪除推文", "警告");
     move(2, 0);
     // This must be a outs because we have '%' inside.
     outs(ANSI_COLOR(1;31)
-"  這是實驗中的刪推文界面。\n\n" ANSI_RESET
+"  這是刪除推文的界面。\n\n" ANSI_RESET
 "  提醒您: (1) 刪推文界面顯示的內容是來自於獨立的資料庫，所以不會有\n"
 "              原作者修文假造推文內容的問題。但也因此，若原推文被修改\n"
 "              使得內容不同時(或是假推文)則此界面就無法刪除。\n\n"
