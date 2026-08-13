@@ -860,13 +860,7 @@ pager_modal_key_hook(int ch)
             watermode = water_which->count;
         pager_show_panel();
         return KEY_INCOMPLETE;
-    }
 
-    // PAGER_UI_NEW specific bindings.
-    if (!PAGER_UI_IS(PAGER_UI_NEW))
-        return ch;
-
-    switch (ch) {
     case Ctrl('F'):
         check_water_init();
         water_which_flag =
