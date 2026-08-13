@@ -888,7 +888,6 @@ static const char
     "  修改暱稱",    "N",
     "  切換隱身",    "C",
     "  切換呼叫器",  "p",
-    "  水球模式",    "^W",
     "  增加好友",    "a",
     "  刪除好友",    "d",
     "  修改好友",    "o",
@@ -1994,19 +1993,9 @@ userlist(void)
 		}
 		break;
 
+            // TOOD(hungte) Remove this info after 2027.
 	    case Ctrl('W'):
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    static const char *wm[PAGER_UI_TYPES] = {"一般", "一般", "未來"};
-		    pwcuSetPagerUIType(PAGER_UI_CYCLE(cuser.pager_ui_type));
-		    /* vmsg cannot support multi lines */
-		    move(b_lines - 4, 0);
-		    clrtobot();
-		    move(b_lines - 3, 0);
-		    outs("系統提供數種水球模式可供選擇\n"
-		    "在切換後請正常下線再重新登入, 以確保結構正確\n");
-		    vmsgf( "目前切換到 [%s] 水球模式", wm[cuser.pager_ui_type%PAGER_UI_TYPES]);
-		    redrawall = redraw = 1;
-		}
+                vmsg("請改至 (U)ser個人設定->(U)Customize 個人化設定調整水球模式");
 		break;
 
 	    case 'r':

@@ -478,19 +478,6 @@ static char
 pwcu_dirty;
 
 int
-pwcuSetPagerUIType  (unsigned int  uitype)
-{
-    // XXX you MUST save this variable in pwcuExitSave();
-    uitype %= PAGER_UI_TYPES;
-    if (cuser.pager_ui_type != uitype)
-    {
-	pwcu_dirty = 1;
-	cuser.pager_ui_type = uitype;
-    }
-    return 0;
-}
-
-int
 pwcuSetSignature(unsigned char newsig)
 {
     // XXX you MUST save this variable in pwcuExitSave();
@@ -591,7 +578,6 @@ pwcuExitSave	()
 
 	// configure those changed by 'not important variables' API
 	u.signature	= cuser.signature;
-	u.pager_ui_type = cuser.pager_ui_type;
 	// u.money		= moneyof(usernum); // should be already updated by deumoney
 
 #ifdef DEBUG
