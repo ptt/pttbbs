@@ -43,22 +43,8 @@ psb_default_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx 
 }
 
 static int
-psb_default_cursor(int y GCC_UNUSED, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
-#ifdef USE_PFTERM
-    if (!HasUserFlag(UF_CURSOR_LEGACY))
-        outs(STR_CURSOR "\b");
-    else
-        outs(STR_CURSOR2 "\b");
-#else
-    // simulate but do not call cursor_show.
-    if (!HasUserFlag(UF_CURSOR_LEGACY)) {
-        mvouts(y, 0, STR_CURSOR);
-        move(y, 0);
-    } else {
-        mvouts(y, 0, STR_CURSOR2);
-        move(y, 1);
-    }
-#endif
+psb_default_cursor(int y, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
+    cursor_show(y, 0);
     return 0;
 }
 
