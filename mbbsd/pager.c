@@ -178,23 +178,30 @@ ofo_init_screen(void)
         ofo_water_scr(swater[i], i, 0);
     }
 
+    water_which = swater[0];
     ofo_water_scr(swater[0], 0, 1);
     refresh();
 }
 
 static void
-ofo_switch_user(int *which, int delta)
+ofo_switch_user(int delta)
 {
     if (water_usies <= 1)
         return;
 
     assert(0 < water_usies && water_usies <= WB_OFO_USER_NUM);
-    int curr = *which;
-    int next = (curr + delta + water_usies) % water_usies;
+    int curr = 0;
+    for (int i = 0; i < water_usies; i++) {
+        if (water_which == swater[i]) {
+            curr = i;
+            break;
+        }
+    }
 
+    int next = (curr + delta + water_usies) % water_usies;
     ofo_water_scr(swater[curr], curr, 0);
     ofo_water_scr(swater[next], next, 1);
-    *which = next;
+    water_which = swater[next];
     refresh();
 }
 
@@ -263,19 +270,18 @@ ofo_my_write(void)
 
     ofo_init_screen();
 
-    int which = 0;
     char done = 0;
     while (!done) {
         int ch = vkey();
         switch (ch) {
         case Ctrl('T'):
         case KEY_UP:
-            ofo_switch_user(&which, -1);
+            ofo_switch_user(-1);
             break;
 
         case Ctrl('R'):
         case KEY_DOWN:
-            ofo_switch_user(&which, 1);
+            ofo_switch_user(1);
             break;
 
         case KEY_LEFT:
@@ -287,7 +293,7 @@ ofo_my_write(void)
 
         default:
             done = 1;
-            ofo_reply_waterball(swater[which], ch);
+            ofo_reply_waterball(water_which, ch);
             break;
         }
     }
