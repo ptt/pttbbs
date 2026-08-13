@@ -898,7 +898,7 @@ pager_global_key_hook(int ch)
     switch (ch)
     {
     case Ctrl('R'):
-        if (PAGER_UI_IS(PAGER_UI_OFO))
+        if (HasUserFlag(UF_PAGER_OFO))
             return pager_handle_ctrl_r_ofo(ch);
         return pager_handle_ctrl_r_default(ch);
     }
@@ -1155,7 +1155,7 @@ write_request(int sig)
     syncnow();
     check_water_init();
 
-    if (PAGER_UI_IS(PAGER_UI_OFO)) {
+    if (HasUserFlag(UF_PAGER_OFO)) {
         write_request_ofo(sig);
     } else {
         write_request_default();

@@ -418,6 +418,7 @@ void Customize(void)
 	UF_FAV_NOHILIGHT,
 	UF_DBCS_NOINTRESC,
         UF_CURSOR_LEGACY,
+        UF_PAGER_OFO,
 	0,
     };
 
@@ -430,6 +431,7 @@ void Customize(void)
 	"MYFAV      單色顯示我的最愛",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
         "CURSOR     使用舊式圓圈游標",
+        "PAGER      使用OFO水球模式",
 	0,
     };
 
@@ -449,12 +451,6 @@ void Customize(void)
 	/* print uflag options */
 	for (i = 0; masks1[i]; i++, ia++)
 	{
-            // XXX dirty hack: ANGEL must be in end of list.
-            if (HAS_ANGEL && strstr(desc1[i], "ANGEL ") == desc1[i] &&
-                !HasUserPerm(PERM_ANGEL)) {
-                ia--;
-                continue;
-            }
 	    clrtoeol();
 	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
 		    ". %-*s%s\n",
@@ -465,32 +461,25 @@ void Customize(void)
 		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
 	/* extended stuff */
-	{
-	    static const char *wm[PAGER_UI_TYPES] = {"一般", "一般", "未來"};
-
-	    prints("%c. %-*s%s\n",
-		    '1' + iax++,
-		    col_opt,
-		    "PAGER      水球模式",
-		    wm[cuser.pager_ui_type % PAGER_UI_TYPES]);
-            // TODO move this to Ctrl-U Ctrl-P.
-	    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL))
-	    {
-		static const char *msgs[ANGELPAUSE_MODES] = {
-		    "開放 (接受所有小主人發問)",
-		    "停收 (只接受已回應過的小主人的問題)",
-		    "關閉 (停止接受所有小主人的問題)",
-		};
-		prints("%c. %s%s\n",
-			'1' + iax++,
-			"ANGEL      小天使神諭呼叫器: ",
-			msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
-	    }
-	}
+        const char *ext = "";
+        if (HAS_ANGEL && HasUserPerm(PERM_ANGEL))
+        {
+            static const char *msgs[ANGELPAUSE_MODES] = {
+                "開放 (接受所有小主人發問)",
+                "停收 (只接受已回應過的小主人的問題)",
+                "關閉 (停止接受所有小主人的問題)",
+            };
+            prints("%c. %s%s\n",
+                   '1' + iax++,
+                   "ANGEL      小天使神諭呼叫器: ",
+                   msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
+            ext = "1";
+        }
 
 	/* input */
-	key = vmsgf("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ",
-		'a' + ia-1, '1' + iax -1);
+	key = vmsgf("請按 [a-%c,%s] 切換設定，其它任意鍵結束: ",
+		'a' + ia-1, ext);
+        // ext could be %c % ('1' + iax -1);
 
 	if (key >= 'a' && key < 'a' + ia)
 	{
@@ -509,19 +498,8 @@ void Customize(void)
 	/* extended keys */
 	key -= '1';
 
-	switch(key)
-	{
-	    case 0:
-		{
-		    pwcuSetPagerUIType(PAGER_UI_CYCLE(cuser.pager_ui_type));
-		    vmsg("修改水球模式後請正常離線再重新上線");
-		    dirty = 1;
-		}
-		continue;
-	}
-	if( HAS_ANGEL && HasUserPerm(PERM_ANGEL) ){
-	    if (key == iax-1)
-	    {
+	if (HAS_ANGEL && HasUserPerm(PERM_ANGEL)) {
+	    if (key == iax-1) {
 		angel_toggle_pause();
 		// dirty = 1; // pure utmp change does not need pw dirty
 		continue;

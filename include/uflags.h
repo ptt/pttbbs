@@ -7,7 +7,7 @@
 
 #define UF_FAV_NOHILIGHT    0x00000001	// false if hilight favorite
 #define UF_FAV_ADDNEW	    0x00000002	// true to add new board into one's fav
-// #define UF_PAGER	    0x00000004	// deprecated by cuser.pager: true if pager was OFF last session
+#define UF_PAGER_OFO	    0x00000004	// true to use the OFO style pager
 // #define UF_CLOAK	    0x00000008	// deprecated by cuser.invisible: true if cloak was ON last session
 #define UF_FRIEND	    0x00000010	// true if show friends only
 #define UF_BRDSORT	    0x00000020	// true if the boards sorted alphabetical

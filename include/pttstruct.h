@@ -83,7 +83,7 @@ typedef struct userec_t {
     char	justify[REGLEN+1];/* 審核資料 */
     uint8_t     _unused_birth[3]; /* 生日 月日年 */
     uint8_t     over_18;        /* 是否已滿18歲 */
-    uint8_t	pager_ui_type;	/* 呼叫器界面類別 (was: WATER_*) */
+    uint8_t	deprecated_pager_ui_type;	/* 呼叫器界面類別,移入 UF_PAGER_OFO */
     uint8_t	pager;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
     uint8_t	u_2fa;		/* 雙重驗證 2FA */

@@ -865,7 +865,6 @@ int pwcuSetUserAgreementVersion(uint8_t version);
 
 // non-important based variables (only save on exit)
 int pwcuSetSignature	(unsigned char newsig);
-int pwcuSetPagerUIType	(unsigned int  uitype);
 int pwcuToggleSortBoard (void);
 int pwcuToggleFriendList(void);
 int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags
