@@ -280,4 +280,4 @@ trunk 與 stable 第一次分枝。
 ## [from OpenPTT 1.0.2]
 
 `.DIR` 有變，`.BOARDS` 變 `.BRD`, ...
-請見 PTT2 PttSrc 板\n
+請見 PTT2 PttSrc 板
