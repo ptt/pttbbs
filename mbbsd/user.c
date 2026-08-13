@@ -417,6 +417,7 @@ void Customize(void)
 	UF_FAV_ADDNEW,
 	UF_FAV_NOHILIGHT,
 	UF_DBCS_NOINTRESC,
+        UF_CURSOR_LEGACY,
 	0,
     };
 
@@ -428,6 +429,7 @@ void Customize(void)
 	"MYFAV      新板自動進我的最愛",
 	"MYFAV      單色顯示我的最愛",
 	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
+        "CURSOR     使用舊式圓圈游標",
 	0,
     };
 

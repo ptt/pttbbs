@@ -214,8 +214,13 @@ void
 cursor_show(int row, int column)
 {
     move(row, column);
-    outs(STR_CURSOR);
-    move(row, column);
+    if (!HasUserFlag(UF_CURSOR_LEGACY)) {
+        outs(STR_CURSOR);
+        move(row, column);
+    } else {
+        outs(STR_CURSOR2);
+        move(row, column + 1);
+    }
 }
 
 // TODO
@@ -224,7 +229,10 @@ void
 cursor_clear(int row, int column)
 {
     move(row, column);
-    outs(STR_UNCUR);
+    if (!HasUserFlag(UF_CURSOR_LEGACY))
+        outs(STR_UNCUR);
+    else
+        outs(STR_UNCUR2);
 }
 
 // TODO
