@@ -126,19 +126,35 @@ pager_render_history_section(const water_t *w, int start_row, int max_rows, int 
 }
 
 static void
-ofo_water_scr(const water_t *tw, int which, char type)
+pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 {
-    move(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
-    SOLVE_ANSI_CACHE();
-
-    if (type != 1) {
-        prints(ANSI_COLOR(0;1;37;44) "  %c %-13s　" ANSI_RESET,
-               tw->uin ? ' ' : 'x', tw->userid);
+    if (!w || !w->userid[0]) {
+        outs("              ");
         return;
     }
 
-    prints(ANSI_COLOR(0;1;37;45) "  %c %-14s " ANSI_RESET,
-           tw->uin ? ' ' : 'x', tw->userid);
+    userinfo_t *uin = w->uin;
+    if (uin && (w->pid != uin->pid || w->userid[0] != uin->userid[0]))
+        uin = (userinfo_t *) search_ulist_pid(w->pid);
+
+    char online_mark = uin ? ' ' : (is_vertical ? 'x' : '#');
+
+    if (is_vertical) {
+        const char *color = is_selected ? ANSI_COLOR(1;45) : ANSI_COLOR(1;44);
+        prints("%s%c %-12s" ANSI_RESET, color, online_mark, w->userid);
+    } else {
+        const char *color = is_selected ? (uin ? ANSI_COLOR(1;33;47) : ANSI_COLOR(1;33;45)) : "";
+        prints("%s%c%-13.13s" ANSI_RESET, color, online_mark, w->userid);
+    }
+}
+
+static void
+ofo_water_scr(const water_t *tw, int which, char type)
+{
+    move_ansi(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
+    pager_render_tab_item(tw, type == 1, true);
+    if (type != 1)
+        return;
 
     pager_render_history_section(tw, WB_OFO_MSG_TOP, 5, -1, true, 44);
 
@@ -164,7 +180,7 @@ ofo_init_screen(void)
 #endif
 
     mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
-           ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_RESET);
+           ANSI_COLOR(1;33;46) " ↑反擊對象↓ " ANSI_RESET);
 
     for (int i = 0; i < WB_OFO_USER_NUM; ++i) {
         if (swater[i] == NULL || swater[i]->pid == 0)
@@ -634,20 +650,8 @@ pager_show_panel_new(void)
                    water_which == &water[0] ? ANSI_COLOR(1;33;47) " " : " ");
             continue;
         }
-
-        water_t *w = swater[idx - 1];
-        if (!w) {
-            outs("              ");
-            continue;
-        }
-
-        if (w->uin && (w->pid != w->uin->pid || w->userid[0] != w->uin->userid[0]))
-            w->uin = (userinfo_t *) search_ulist_pid(w->pid);
-
-        prints("%s%c%-13.13s" ANSI_RESET,
-               w != water_which ? "" : w->uin ? ANSI_COLOR(1;33;47) : ANSI_COLOR(1;33;45),
-               !w->uin ? '#' : ' ',
-               w->userid);
+        const water_t *itm = swater[idx - 1];
+        pager_render_tab_item(itm, itm == water_which, false);
     }
     outs("\n");
     pager_render_history_section(water_which, 3, MAX_REVIEW, watermode - 1, false, 45);
