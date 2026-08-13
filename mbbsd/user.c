@@ -400,45 +400,102 @@ violate_law(userec_t * u, int unum)
     pressanykey();
 }
 
+typedef struct {
+    const char *desc;
+    const int flag, perm;
+    const char *(*getter)(int flag);
+    int (*setter)(int flag);
+} CustomItem;
+
+static const char *uflag_getter(int flag)
+{
+    return HasUserFlag(flag) ? ANSI_COLOR(1;36) "是" ANSI_RESET : "否";
+}
+
+static int uflag_setter(int flag)
+{
+    return pwcuToggleUserFlag(flag);
+}
+
+static const char *angel_getter(int flag GCC_UNUSED)
+{
+    static const char *msgs[ANGELPAUSE_MODES] = {
+        "開放 (接受所有小主人發問)",
+        "停收 (只接受已回應過的小主人的問題)",
+        "關閉 (停止接受所有小主人的問題)",
+    };
+    return msgs[currutmp->angelpause % ARRAY_SIZE(msgs)];
+}
+static int angel_setter(int flag GCC_UNUSED)
+{
+    angel_toggle_pause();
+    return 0;
+}
+
+static const char *Getter(CustomItem *item)
+{
+    assert(item->flag || item->getter);
+    const char *(*getter)(int flag) = item->getter;
+    if (!getter)
+        getter = uflag_getter;
+
+    return getter(item->flag);
+}
+
+static int Setter(const CustomItem *item)
+{
+    assert(item->flag || item->setter);
+    int (*setter)(int flag) = item->setter;
+    if (!setter)
+        setter = uflag_setter;
+
+    return setter(item->flag);
+}
+
+static CustomItem items[] = { {
+        .desc = "ADBANNER   顯示動態看板",
+        .flag = UF_ADBANNER,
+    }, {
+        .desc = "ADBANNER   顯示使用者心情點播(需開啟動態看板)",
+        .flag = UF_ADBANNER_USONG,
+    }, {
+        .desc = "MAIL       拒收站外信",
+        .flag = UF_REJ_OUTTAMAIL,
+    }, {
+        .desc = "BACKUP     預設備份信件與其它記錄",
+        .flag = UF_DEFBACKUP,
+    }, {
+        .desc = "MYFAV      新看板自動進我的最愛",
+        .flag = UF_FAV_ADDNEW,
+    }, {
+        .desc = "MYFAV      單色顯示我的最愛",
+        .flag = UF_FAV_NOHILIGHT,
+    }, {
+        .desc = "DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
+        .flag = UF_DBCS_NOINTRESC,
+    }, {
+        .desc = "CURSOR     使用●舊式實心圓游標",
+        .flag =  UF_CURSOR_LEGACY,
+    }, {
+        .desc = "PAGER      使用OFO水球模式",
+        .flag =  UF_PAGER_OFO,
+    }, {
+        .desc = "ANGEL      小天使神諭呼叫器: ",
+        .perm = PERM_ANGEL,
+        .getter = angel_getter,
+        .setter = angel_setter,
+    },
+};
+
 void Customize(void)
 {
     char    done = 0;
-    int     dirty = 0;
     int     key;
 
     const int col_opt = 54;
-
-    /* cuser.uflag settings */
-    static const unsigned int masks1[] = {
-	UF_ADBANNER,
-	UF_ADBANNER_USONG,
-	UF_REJ_OUTTAMAIL,
-	UF_DEFBACKUP,
-	UF_FAV_ADDNEW,
-	UF_FAV_NOHILIGHT,
-	UF_DBCS_NOINTRESC,
-        UF_CURSOR_LEGACY,
-        UF_PAGER_OFO,
-	0,
-    };
-
-    static const char* desc1[] = {
-	"ADBANNER   顯示動態看板",
-	"ADBANNER   顯示使用者心情點播(需開啟動態看板)",
-	"MAIL       拒收站外信",
-	"BACKUP     預設備份信件與其它記錄", //"與聊天記錄",
-	"MYFAV      新板自動進我的最愛",
-	"MYFAV      單色顯示我的最愛",
-	"DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
-        "CURSOR     使用舊式圓圈游標",
-        "PAGER      使用OFO水球模式",
-	0,
-    };
+    const int num = ARRAY_SIZE(items);
 
     while ( !done ) {
-	int i = 0, ia = 0; /* general uflags */
-	int iax = 0; /* extended flags */
-
 	clear();
 	showtitle("個人化設定", "個人化設定");
 	move(2, 0);
@@ -447,75 +504,31 @@ void Customize(void)
 		"分類", col_opt-11,
 		"描述", "設定值");
 	move(4, 0);
-
-	/* print uflag options */
-	for (i = 0; masks1[i]; i++, ia++)
-	{
-	    clrtoeol();
-	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
-		    ". %-*s%s\n",
-		    'a' + ia,
-		    col_opt,
-		    desc1[i],
-		    HasUserFlag(masks1[i]) ?
-		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
-	}
-	/* extended stuff */
-        const char *ext = "";
-        if (HAS_ANGEL && HasUserPerm(PERM_ANGEL))
-        {
-            static const char *msgs[ANGELPAUSE_MODES] = {
-                "開放 (接受所有小主人發問)",
-                "停收 (只接受已回應過的小主人的問題)",
-                "關閉 (停止接受所有小主人的問題)",
-            };
-            prints("%c. %s%s\n",
-                   '1' + iax++,
-                   "ANGEL      小天使神諭呼叫器: ",
-                   msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
-            ext = "1";
+        int valid_num = 0;
+        for (int i = 0; i < num; i++) {
+            if (items[i].perm && !HasUserPerm(items[i].perm))
+                continue;
+            const char *val = Getter(&items[i]);
+            prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
+                   'a' + i,
+                   strlen(val) < 16 ? col_opt : 0,
+                   items[i].desc, val);
+            valid_num = i;
         }
 
 	/* input */
-	key = vmsgf("請按 [a-%c,%s] 切換設定，其它任意鍵結束: ",
-		'a' + ia-1, ext);
-        // ext could be %c % ('1' + iax -1);
-
-	if (key >= 'a' && key < 'a' + ia)
-	{
-	    /* normal pref */
-	    key -= 'a';
-
-	    dirty = 1;
-	    pwcuToggleUserFlag(masks1[key]);
-	    continue;
-	}
-
-	if (key < '1' || key >= '1' + iax)
-	{
-	    done = 1; continue;
-	}
-	/* extended keys */
-	key -= '1';
-
-	if (HAS_ANGEL && HasUserPerm(PERM_ANGEL)) {
-	    if (key == iax-1) {
-		angel_toggle_pause();
-		// dirty = 1; // pure utmp change does not need pw dirty
-		continue;
-	    }
-	}
+	key = vmsgf("請按 [a-%c] 切換設定，其它任意鍵結束: ", 'a' + valid_num);
+        int sel = key - 'a';
+        if (sel < 0 || sel > valid_num ||
+            (items[sel].perm && !HasUserPerm(items[sel].perm))) {
+            done = 1;
+            continue;
+        }
+        Setter(&items[sel]);
     }
 
     grayout(1, b_lines-2, GRAYOUT_DARK);
     move(b_lines-1, 0); clrtoeol();
-
-    if(dirty)
-    {
-	outs("設定已儲存。\n");
-    } else {
-	outs("結束設定。\n");
-    }
 
     redrawwin(); // in case we changed output pref (like DBCS)
     vmsg("設定完成");
