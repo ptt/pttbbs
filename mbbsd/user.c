@@ -409,7 +409,7 @@ typedef struct {
 
 static const char *uflag_getter(int flag)
 {
-    return HasUserFlag(flag) ? ANSI_COLOR(1;36) "是" ANSI_RESET : "否";
+    return HasUserFlag(flag) ? ANSI_COLOR(1;36) "Y 是" ANSI_RESET : "N 否";
 }
 
 static int uflag_setter(int flag)
@@ -474,7 +474,7 @@ static CustomItem items[] = { {
         .desc = "DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
         .flag = UF_DBCS_NOINTRESC,
     }, {
-        .desc = "CURSOR     使用●舊式實心圓游標",
+        .desc = "CURSOR     使用舊式實心圓游標●",
         .flag =  UF_CURSOR_LEGACY,
     }, {
         .desc = "PAGER      使用OFO水球模式",
