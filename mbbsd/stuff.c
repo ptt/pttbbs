@@ -294,26 +294,6 @@ log_user(const char *fmt, ...)
 // TODO
 // move this function to vtuikit.c
 void
-show_help(const char * const helptext[])
-{
-    const char     *str;
-    int             i;
-
-    clear();
-    for (i = 0; (str = helptext[i]); i++) {
-	if (*str == '\0')
-	    prints(ANSI_COLOR(1) "¡i %s ¡j" ANSI_RESET "\n", str + 1);
-	else if (*str == '\01')
-	    prints("\n" ANSI_COLOR(36) "¡i %s ¡j" ANSI_RESET "\n", str + 1);
-	else
-	    prints("        %s\n", str);
-    }
-    PRESSANYKEY();
-}
-
-// TODO
-// move this function to vtuikit.c
-void
 show_helpfile(const char *helpfile)
 {
     clear();

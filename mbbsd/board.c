@@ -1639,6 +1639,8 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
     }
 }
 
+static void board_list_help(void);
+
 static void
 choose_board(int newflag)
 {
@@ -1723,7 +1725,7 @@ choose_board(int newflag)
 		///////////////////////////////////////////////////////
 
 	case 'h':
-	    show_helpfile(fn_boardlisthelp);
+	    board_list_help();
 	    show_brdlist(head, 1, newflag);
 	    break;
 	case Ctrl('W'):
@@ -2306,4 +2308,71 @@ New(void)
     currutmp->mode = mode0;
     currstat = stat0;
     return 0;
+}
+
+static void
+board_list_help(void)
+{
+    static const char *col1[] = {
+        "【基本命令】", NULL,
+        "  進入看板",     "r Enter →",
+        "  回到主選單",   "q ←",
+        "  快速切換",     "^Z",
+        "", "",
+        "【我的最愛】", NULL,
+        "  新增看板",     "a i",
+        "  新增目錄",     "g",
+        "  新增分隔線",   "L",
+        "  切換",         "m z",
+        "  刪除",         "d",
+        "  改變位置",     "M",
+        "  加入已標記",   "^A",
+        "  刪除已標記",   "^D",
+        "  修改目錄名稱", "T",
+        "  備份/清理",   "K",
+        "  寫入已讀記錄", "w",
+        NULL,
+    };
+    static const char *col2[] = {
+        "【移動瀏覽】", NULL,
+        "  上個看板",     "p k ↑",
+        "  下個看板",     "n j ↓",
+        "  往前翻頁",     "^B P PgUp",
+        "  往後翻頁",     "^F N PgDn",
+        "  跳至首項",     "Home 0",
+        "  跳至末項",     "End $",
+        "  跳至編號",     "(數字)",
+        "", "",
+        "【看板操作】", NULL,
+        "  全部已讀",     "v",
+        "  全部未讀",     "V",
+        "  排序方式",     "S",
+        "  編號/文章數", "c",
+        "  切換顯示全部", "y",
+        "  標記看板",     "t",
+        "  取消標記",     "^T",
+        "  切換全部標記", "*",
+        NULL,
+    };
+    static const char *col3[] = {
+        "【搜尋】", NULL,
+        "  搜尋已列看板", "^S",
+        "  搜尋全站看板", "s",
+        "  搜尋看板標題", "/",
+        "  我在哪裡",     "^W",
+        "", "",
+        "【小組長指令】", NULL,
+        "  設定看板",     "E",
+        "  設定小組備忘", "W",
+        "  開新看板",     "B",
+        "  移動已標看板", "^P",
+        "", "",
+        "【群組長指令】", NULL,
+        "  建立看板連結", "L",
+        "  刪除看板連結", "D",
+        NULL,
+    };
+
+    const char **p[] = { col1, col2, col3 };
+    show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
 }
