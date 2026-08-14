@@ -1,8 +1,19 @@
 #include "bbs.h"
 
+// When shown on screen, the format is
+// star[2] [IDLEN] space[1] [msg] space[1] prevent-col80[NUL]
+#define PAGER_MSG_MAX_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
+
+// Various prompts:
+// OFO1   "反擊 %s: "
+// OFO2   "攻擊 %s:"
+// NEW    "水球丟過去： "
+// VERIFY "丟%s: %s [Y/n]" ans[2]
+// Based on Verify, plus NUL
+#define PAGER_MSG_INPUT_SIZE (STRLEN - IDLEN - 10 - 2)
+
 const int PAGER_TABS = WB_OFO_USER_NUM;
 static char     t_last_write[80];
-
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
 {
@@ -100,7 +111,7 @@ pager_render_history_section(const water_t *w, int start_row, int max_rows, int 
     if (top_sep) {
         move(y, 0);
         clrtoeol();
-        outs(MSG_SEPARATOR);
+        outs(MSG_SEPARATOR "\n");
         y++;
     }
     int i = pager_render_history_list(w, y, max_rows, selected_idx, msg_bg);
@@ -116,7 +127,7 @@ pager_render_history_section(const water_t *w, int start_row, int max_rows, int 
     }
 
     move(y, 0);
-    outs(MSG_SEPARATOR);
+    outs(MSG_SEPARATOR "\n");
     y++;
 
     while (i++ <= water[0].count && y < b_lines) {
@@ -262,7 +273,7 @@ ofo_reply_waterball(water_t *tw, int ch)
     char genbuf[256];
     int confirm_mode = ofo_get_confirm_mode(tw, genbuf, sizeof(genbuf));
 
-    if (getdata_buf(0, 0, genbuf, msg, sizeof(msg) - strlen(tw->userid) - 6, DOECHO)) {
+    if (getdata_buf(0, 0, genbuf, msg, PAGER_MSG_INPUT_SIZE, DOECHO)) {
         if (my_write(tw->pid, msg, tw->userid, confirm_mode, tw->uin))
             STRLCPY(tw->msg[5].last_call_in, t_last_write);
     }
@@ -362,7 +373,7 @@ my_write_check_pager_status(void)
             clrtoeol();
             outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人丟水球，對方可能無法回話。" ANSI_RESET);
         } else {
-            if ('n' == vans("您的呼叫器目前設定為關閉。要打開它嗎?[Y/n] "))
+            if ('n' == vans("您的呼叫器目前設定為關閉。要打開它嗎?[Y/n]:"))
                 return false;
             currutmp->pager = PAGER_ON;
         }
@@ -414,8 +425,8 @@ my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t 
     );
 
     if (is_confirm_needed && uin && *uin->userid) {
-        char buf[ANSILINELEN], genbuf[3];
-        SNPRINTF(buf, "丟 %s: %s [Y/n]?", destid, msg);
+        char buf[ANSILINELEN], genbuf[2];
+        SNPRINTF(buf, "丟%s: %s [Y/n]", destid, msg);
         getdata(0, 0, buf, genbuf, sizeof(genbuf), LCECHO);
         if (genbuf[0] == 'n')
             return false;
@@ -576,7 +587,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     char msg[80];
     if (is_interactive) {
         watermode = 0;
-        if (!my_write_get_input(prompt, msg, 56, &flag, &uin, destid)) {
+        if (!my_write_get_input(prompt, msg, PAGER_MSG_INPUT_SIZE, &flag, &uin, destid)) {
             my_write_restore_state(c0, mode0, currstat0);
             watermode = -1;
             return 0;
