@@ -192,12 +192,32 @@ vkey_dispatch_hooks(int ch)
     return ch;
 }
 
+static void
+draw_80x24() {
+    int ox, oy, y, x;
+    getyx(&oy, &ox);
+    for (y = 0; y < 24; y++) {
+        move(y, 0); prints("%d", (y + 1) % 10);
+        move(y, 79); prints("%d", (y + 1) % 10);
+    }
+    for (int i = 0; i < 2; i++) {
+        move (i * 23, 0);
+        for (x = 0; x < 80; x++) {
+            prints("%d", (x+1) % 10);
+        }
+    }
+    move(oy, ox);
+}
+
 static int
 system_key_hook(int ch)
 {
     switch (ch)
     {
     case Ctrl('L'):
+#ifdef CTRL_L_FOR_80x24
+        draw_80x24();
+#endif
         redrawwin();
         refresh();
         return KEY_INCOMPLETE;
