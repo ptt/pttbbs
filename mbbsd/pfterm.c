@@ -2245,35 +2245,45 @@ fterm_rawnc(int c, int n)
 //////////////////////////////////////////////////////////////////////////
 // grayout advanced control
 //////////////////////////////////////////////////////////////////////////
+
+static void
+grayout_shift(int y, int end, int right, int attr1, int attr2)
+{
+    int x;
+    for (; y < end; y++) {
+        for (x = 0; x < ft.cols - 1; x++) {
+            if (right) {
+                if (FTAMAP[y][x] & attr1)
+                    FTAMAP[y][x] |= attr2;
+                else
+                    FTAMAP[y][x] |= attr1;
+            } else {
+                if (FTAMAP[y][x] & attr2)
+                    FTAMAP[y][x] &= ~attr2;
+                else
+                    FTAMAP[y][x] &= ~attr1;
+            }
+        }
+    }
+}
+
 void
 grayout(int y, int end, int level)
 {
     char grattr = FTATTR_DEFAULT;
-    int x;
 
     y   = ranged(y,   0, ft.rows-1);
     end = ranged(end, 0, ft.rows-1);
+    fterm_markdirty();
 
     // modify attribute based on existing data.
     switch (level) {
         case GRAYOUT_COLORBOLD:
-            for (; y < end; y++) {
-                for (x = 0; x < ft.cols-1; x++) {
-                    grattr = ((FTAMAP[y][x] & FTATTR_BOLD) ? FTATTR_BLINK :
-                              FTATTR_BOLD);
-                    FTAMAP[y][x] |= grattr;
-                }
-            }
+            grayout_shift(y, end, 1, FTATTR_BOLD, FTATTR_BLINK);
             return;
 
         case GRAYOUT_COLORNORM:
-            for (; y < end; y++) {
-                for (x = 0; x < ft.cols-1; x++) {
-                    grattr = (FTAMAP[y][x] & FTATTR_BLINK) ? FTATTR_BOLD : 0;
-                    FTAMAP[y][x] = (FTAMAP[y][x] & ~(FTATTR_BLINK |
-                                                     FTATTR_BOLD)) | grattr;
-                }
-            }
+            grayout_shift(y, end, 0, FTATTR_BOLD, FTATTR_BLINK);
             return;
     }
 
