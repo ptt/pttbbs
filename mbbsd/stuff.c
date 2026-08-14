@@ -221,6 +221,8 @@ cursor_show(int row, int column)
         outs(STR_CURSOR2);
         move(row, column + 1);
     }
+    if (HasUserFlag(UF_CURSOR_STANDOUT))
+        grayout(row, row+1, GRAYOUT_STANDOUT);
 }
 
 // TODO
@@ -228,6 +230,8 @@ cursor_show(int row, int column)
 void
 cursor_clear(int row, int column)
 {
+    if (HasUserFlag(UF_CURSOR_STANDOUT))
+        grayout(row, row+1, GRAYOUT_STANDEND);
     move(row, column);
     if (!HasUserFlag(UF_CURSOR_LEGACY))
         outs(STR_UNCUR);
