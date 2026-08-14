@@ -2,18 +2,23 @@
 
 // When shown on screen, the format is
 // star[2] [IDLEN] space[1] [msg] space[1] prevent-col80[NUL]
-#define PAGER_MSG_MAX_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
+// So the input size should be 64.
+#define PAGER_MSG_INPUT_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
 
-// Various prompts:
-// OFO1   "反擊 %s: "
-// OFO2   "攻擊 %s:"
-// NEW    "水球丟過去： "
-// VERIFY "丟%s: %s [Y/n]" ans[2]
-// Based on Verify, plus NUL
-#define PAGER_MSG_INPUT_SIZE (STRLEN - IDLEN - 10 - 2)
+// As a result, the prompts should be less than IDLEN + 3.
+#define PROMPT_OFO          "丟%s:"
+#define PROMPT_STD          "丟%s:"
+#define PROMPT_ANGEL_AGAIN  "再問一次: "
+#define PROMPT_ANGEL_ANSWER "回答小主人: "
+#define PROMPT_TO           "水球丟過去: "
+// PROMPT_VERIFY is apparently longer, so we'll do a safe trim.
+#define PROMPT_VERIFY       "丟%s: %s [Y/n]: "
+
+#define ERR_TARGET_NOT_ONLINE "糟糕! 對方已落跑了(不在站上)! "
 
 const int PAGER_TABS = WB_OFO_USER_NUM;
-static char     t_last_write[80];
+static char     t_last_write[STRLEN];
+
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
 {
@@ -84,22 +89,22 @@ pager_render_history_list(const water_t *w, int start_row, int max_rows, int sel
     int count = w->count;
     if (count > max_rows)
         count = max_rows;
+    bool isOFO = (msg_bg == 44);
 
     int i;
     for (i = 0; i < count; i++) {
         int a = (w->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
-        int len = 75 - strlen(w->msg[a].last_call_in) - strlen(w->msg[a].userid);
-        if (len < 0)
-            len = 0;
+        int fg = (isOFO && (i % 2 == 0)) ? 33 : 37;
+        int pad1 = (isOFO) ? IDLEN : 0;
+        int pad2 = (isOFO) ? -PAGER_MSG_INPUT_SIZE : 0;
 
         move(i + start_row, 0);
-        clrtoeol();
-        if (selected_idx != i)
-            prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;%d) " %s " ANSI_RESET "%*s",
-                   w->msg[a].userid, msg_bg, w->msg[a].last_call_in, len, "");
+        if (selected_idx == i)
+            outs(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47));
         else
-            prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s " ANSI_COLOR(37;%d) " %s " ANSI_RESET "%*s",
-                   w->msg[a].userid, msg_bg, w->msg[a].last_call_in, len, "");
+            outs(ANSI_COLOR(1;33;46) " ");
+        prints("%*s" ANSI_COLOR(1;%d;%d) " %*s" ANSI_RESET "\n",
+               pad1, w->msg[a].userid, fg, msg_bg, pad2, w->msg[a].last_call_in);
     }
     return i;
 }
@@ -173,9 +178,9 @@ ofo_water_scr(const water_t *tw, int which, char type)
     SOLVE_ANSI_CACHE();
     clrtoeol();
     if (HAS_ANGEL && tw->msg[0].msgmode == MSGMODE_TOANGEL)
-        outs("回答小主人: ");
+        outs(PROMPT_ANGEL_ANSWER);
     else
-        prints("反擊 %s: ", tw->userid);
+        prints(PROMPT_OFO, tw->userid);
 }
 
 static void
@@ -238,16 +243,16 @@ ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
     if (HAS_ANGEL) {
         switch (tw->msg[0].msgmode) {
         case MSGMODE_TOANGEL:
-            strlcpy(genbuf, "回答小主人:", sz);
+            strlcpy(genbuf, PROMPT_ANGEL_ANSWER, sz);
             return WATERBALL_CONFIRM_ANSWER;
         case MSGMODE_FROMANGEL:
-            strlcpy(genbuf, "再問他一次：", sz);
+            strlcpy(genbuf, PROMPT_ANGEL_AGAIN, sz);
             return WATERBALL_CONFIRM_ANGEL;
         default:
             break;
         }
     }
-    snprintf(genbuf, sz, "攻擊 %s:", tw->userid);
+    snprintf(genbuf, sz, PROMPT_OFO, tw->userid);
     return WATERBALL_CONFIRM;
 }
 
@@ -425,9 +430,15 @@ my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t 
     );
 
     if (is_confirm_needed && uin && *uin->userid) {
-        char buf[ANSILINELEN], genbuf[2];
-        SNPRINTF(buf, "丟%s: %s [Y/n]", destid, msg);
-        getdata(0, 0, buf, genbuf, sizeof(genbuf), LCECHO);
+        // The PROMPT_VERIFY could be longer so we should truncate.
+        char trunc[STRLEN], prompt[STRLEN], genbuf[2];
+        STRLCPY(trunc, msg);
+        trunc[STRLEN - strlen(PROMPT_VERIFY) - IDLEN - 2] = '\0';
+        DBCS_safe_trim(trunc);
+        if (strlen(trunc) != strlen(msg))
+            STRLCAT(trunc, "...");
+        SNPRINTF(prompt, PROMPT_VERIFY, destid, trunc);
+        getdata(0, 0, prompt, genbuf, sizeof(genbuf), LCECHO);
         if (genbuf[0] == 'n')
             return false;
     }
@@ -571,7 +582,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
                            (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
 
     if ((!uin || !*uin->userid) && !(is_interactive && water_which->count > 0)) {
-        vmsg("糟糕! 對方已落跑了(不在站上)! ");
+        vmsg(ERR_TARGET_NOT_ONLINE);
         watermode = -1;
         return 0;
     }
@@ -584,7 +595,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     currutmp->chatid[0] = 3;
     currstat = DBACK;
 
-    char msg[80];
+    char msg[STRLEN];
     if (is_interactive) {
         watermode = 0;
         if (!my_write_get_input(prompt, msg, PAGER_MSG_INPUT_SIZE, &flag, &uin, destid)) {
@@ -608,7 +619,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
 
     if (!my_write_validate_recipient(flag, destid, uin)) {
         bell();
-        vmsg("糟糕! 對方已落跑了(不在站上)! ");
+        vmsg(ERR_TARGET_NOT_ONLINE);
         my_write_restore_state(c0, mode0, currstat0);
         return 0;
     }
@@ -730,8 +741,8 @@ int
 call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
-        char            genbuf[60];
-        SNPRINTF(genbuf, "丟 %s 水球: ", uentp->userid);
+        char genbuf[STRLEN];
+        SNPRINTF(genbuf, PROMPT_STD, uentp->userid);
         my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_GENERAL, NULL);
         return 1;
     }
@@ -817,27 +828,26 @@ pager_handle_ctrl_r_default(int ch)
         outmsg(buf);
 
         watermode = 0;
-        if (!HAS_ANGEL) {
-            my_write(last_msg->pid, "水球丟過去： ",
-                     last_msg->userid, WATERBALL_GENERAL, NULL);
-        } else {
+        const char *prompt = NULL;
+        int flag = WATERBALL_GENERAL;
+
+        if (HAS_ANGEL) {
             switch (last_msg->msgmode) {
-            case MSGMODE_TALK:
-            case MSGMODE_WRITE:
-            case MSGMODE_ALOHA:
-                my_write(last_msg->pid, "水球丟過去： ",
-                         last_msg->userid, WATERBALL_GENERAL, NULL);
-                break;
             case MSGMODE_FROMANGEL:
-                my_write(last_msg->pid, "再問一次： ",
-                         last_msg->userid, WATERBALL_ANGEL, NULL);
+                prompt = PROMPT_ANGEL_AGAIN;
+                flag = WATERBALL_ANGEL;
                 break;
             case MSGMODE_TOANGEL:
-                my_write(last_msg->pid, "回答小主人： ",
-                         last_msg->userid, WATERBALL_ANSWER, NULL);
+                prompt = PROMPT_ANGEL_ANSWER;
+                flag = WATERBALL_ANSWER;
                 break;
             }
         }
+
+        if (!prompt)
+            prompt = PROMPT_TO;
+
+        my_write(last_msg->pid, prompt, last_msg->userid, flag, NULL);
         vkey_attach(my_newfd);
 
         scr_restore(&old_screen);
@@ -939,7 +949,7 @@ talk_request(int sig GCC_UNUSED)
         clrtoeol();
         prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_RESET,
                SHM->uinfo[currutmp->destuip].userid, Cdatelite(&now),
-               (currutmp->sig == 2) ? "有急事！(按Ctrl-U,l可看訊息)"
+               (currutmp->sig == 2) ? "有急事!(按Ctrl-U,l 可看訊息)"
                : "呼叫、呼叫，聽到請回答");
         refresh();
     } else {
