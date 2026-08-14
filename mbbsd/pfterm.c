@@ -58,11 +58,13 @@
 // #include "grayout.h"
 //////////////////////////////////////////////////////////////////////////
 #ifndef GRAYOUT_DARK
+#define GRAYOUT_STANDOUT (-3)
 #define GRAYOUT_COLORBOLD (-2)
 #define GRAYOUT_BOLD (-1)
 #define GRAYOUT_DARK (0)
 #define GRAYOUT_NORM (1)
 #define GRAYOUT_COLORNORM (+2)
+#define GRAYOUT_STANDEND (+3)
 #endif // GRAYOUT_DARK
 
 //////////////////////////////////////////////////////////////////////////
@@ -196,6 +198,7 @@
 
 #define FTCHAR_ERASE     (' ')
 #define FTATTR_ERASE     (0x07)
+#define FTATTR_REVERSE   (0x70)
 #define FTCHAR_BLANK     (' ')
 #define FTATTR_DEFAULT   (FTATTR_ERASE)
 #define FTCHAR_INVALID_DBCS ('?')
@@ -246,6 +249,7 @@ typedef struct
     int     mi;     // map index, mi = current map and (1-mi) = old map
     int     dirty;
     int     scroll;
+    int     standout;
 
     // memory allocation
     int     mrows, mcols;
@@ -648,6 +652,7 @@ clrscr(void)
     for (r = 0; r < ft.rows; r++)
         memset(FTAMAP[r], FTATTR_ERASE, ft.cols * sizeof(ftattr));
     fterm_markdirty();
+    ft.standout = 0;
 }
 
 void
@@ -1781,6 +1786,13 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
         ofg, obg, obold, oblink;
     char lead = 1;
 
+    if (ft.standout) {
+        if (oattr & FTATTR_BLINK)
+            oattr = FTATTR_REVERSE;
+        if (nattr & FTATTR_BLINK)
+            nattr = FTATTR_REVERSE;
+    }
+
     if (oattr == nattr)
         return 0;
 
@@ -2242,9 +2254,42 @@ fterm_rawnc(int c, int n)
         fterm_rawc(c);
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+// standout / standend minimal support
+//////////////////////////////////////////////////////////////////////////
+void
+standout(void)
+{
+    // Reuse BLINK for standout.
+    attrset(attrget() | FTATTR_BLINK);
+    ft.standout = 1;
+}
+
+void
+standend(void)
+{
+    // Reuse BLINK for standout.
+    attrset(attrget() & ~FTATTR_BLINK);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // grayout advanced control
 //////////////////////////////////////////////////////////////////////////
+
+static void
+grayout_apply(int y, int end, char enable_mask, char disable_mask)
+{
+    int x;
+    for (; y < end; y++) {
+        for (x = 0; x < ft.cols - 1; x++) {
+            if (disable_mask)
+                FTAMAP[y][x] &= ~disable_mask;
+            if (enable_mask)
+                FTAMAP[y][x] |= enable_mask;
+        }
+    }
+}
 
 static void
 grayout_shift(int y, int end, int right, int attr1, int attr2)
@@ -2284,6 +2329,16 @@ grayout(int y, int end, int level)
 
         case GRAYOUT_COLORNORM:
             grayout_shift(y, end, 0, FTATTR_BOLD, FTATTR_BLINK);
+            return;
+
+        case GRAYOUT_STANDOUT:
+            grayout_apply(y, end, FTATTR_BLINK, 0);
+            ft.standout = 1;
+            return;
+
+        case GRAYOUT_STANDEND:
+            grayout_apply(y, end, 0, FTATTR_BLINK);
+            ft.standout = 0;
             return;
     }
 
