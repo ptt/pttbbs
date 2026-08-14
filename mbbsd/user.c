@@ -474,6 +474,11 @@ static CustomItem items[] = { {
         .desc = "DBCS       禁止在雙位元中使用色碼(去除一字雙色)",
         .flag = UF_DBCS_NOINTRESC,
     }, {
+#ifdef USE_PFTERM
+        .desc = "CURSOR     使用光棒式游標",
+        .flag =  UF_CURSOR_STANDOUT,
+    }, {
+#endif
         .desc = "CURSOR     使用舊式實心圓游標●",
         .flag =  UF_CURSOR_LEGACY,
     }, {
