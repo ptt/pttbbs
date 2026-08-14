@@ -1,5 +1,6 @@
 #define PWCU_IMPL
 #include "bbs.h"
+#include "psb.h"
 
 #ifdef CHESSCOUNTRY
 static const char * const chess_photo_name[4] = {
@@ -484,56 +485,98 @@ static CustomItem items[] = { {
     }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_PAGER_OFO,
+#ifdef PLAY_ANGEL
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,
         .getter = angel_getter,
         .setter = angel_setter,
+#endif
     },
 };
 
-void Customize(void)
-{
-    char    done = 0;
-    int     key;
+typedef struct {
+    int valid_indices[ARRAY_SIZE(items)];
+    int valid_count;
+} customize_ctx_t;
 
+static int customize_header(void *ctx GCC_UNUSED) {
     const int col_opt = 54;
-    const int num = ARRAY_SIZE(items);
+    showtitle("個人設定", "個人化設定");
+    move(2, 0);
+    prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
+           "分類", col_opt - 11, "描述", "設定值");
+    return 0;
+}
 
-    while ( !done ) {
-	clear();
-	showtitle("個人化設定", "個人化設定");
-	move(2, 0);
-	outs("您目前的個人化設定: \n");
-	prints(ANSI_COLOR(32)"   %-11s%-*s%s" ANSI_RESET "\n",
-		"分類", col_opt-11,
-		"描述", "設定值");
-	move(4, 0);
-        int valid_num = 0;
-        for (int i = 0; i < num; i++) {
-            if (items[i].perm && !HasUserPerm(items[i].perm))
-                continue;
-            const char *val = Getter(&items[i]);
-            prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
-                   'a' + i,
-                   strlen(val) < 16 ? col_opt : 0,
-                   items[i].desc, val);
-            valid_num = i;
-        }
+static int customize_footer(void *ctx GCC_UNUSED) {
+    vs_footer(" 個人化設定 ",
+              " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
+    move(b_lines - 1, 0);
+    return 0;
+}
 
-	/* input */
-	key = vmsgf("請按 [a-%c] 切換設定，其它任意鍵結束: ", 'a' + valid_num);
-        int sel = key - 'a';
-        if (sel < 0 || sel > valid_num ||
-            (items[sel].perm && !HasUserPerm(items[sel].perm))) {
-            done = 1;
-            continue;
-        }
-        Setter(&items[sel]);
+static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
+                               int rows GCC_UNUSED, void *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx;
+    int item_idx = cx->valid_indices[i];
+    CustomItem *item = &items[item_idx];
+    const int col_opt = 54;
+    const char *val = Getter(item);
+
+    outs("   ");
+    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
+           'a' + i,
+           strlen(val) < 16 ? col_opt : 0,
+           item->desc, val);
+    return 0;
+}
+
+static int customize_input_processor(int key, int curr, int total GCC_UNUSED,
+                                       int rows GCC_UNUSED, void *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx;
+    int sel = key - 'a';
+    if (key == KEY_RIGHT || key == '\r' || key == '\n' || key == ' ') {
+        // Just use curr.
+    } else if (sel >= 0 && sel < cx->valid_count) {
+        curr = sel;
+    } else {
+        return PSB_NA;
     }
 
-    grayout(1, b_lines-2, GRAYOUT_DARK);
-    move(b_lines-1, 0); clrtoeol();
+    assert(curr >= 0 && curr < (int)ARRAY_SIZE(items));
+    Setter(&items[cx->valid_indices[curr]]);
+    return curr;
+}
+
+void Customize(void)
+{
+    customize_ctx_t cx;
+    cx.valid_count = 0;
+    for (size_t i = 0; i < ARRAY_SIZE(items); i++) {
+        if (items[i].perm && !HasUserPerm(items[i].perm))
+            continue;
+        cx.valid_indices[cx.valid_count++] = i;
+    }
+
+    PSB_CTX ctx = {
+        .curr = 0,
+        .total = cx.valid_count,
+        .header_lines = 3,
+        .footer_lines = 2,
+        .allow_pbs_version_message = 0,
+        .ctx = &cx,
+        .header = customize_header,
+        .footer = customize_footer,
+        .renderer = customize_renderer,
+        .input_processor = customize_input_processor,
+    };
+
+    psb_main(&ctx);
+
+    grayout(1, b_lines - 2, GRAYOUT_DARK);
+    move(b_lines - 1, 0);
+    clrtoeol();
 
     redrawwin(); // in case we changed output pref (like DBCS)
     vmsg("設定完成");
