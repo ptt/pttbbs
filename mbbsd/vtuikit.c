@@ -1466,3 +1466,60 @@ vgetstr(char *buf, int len, int flags, const char *defstr)
     return vgetstring(buf, len, flags, defstr, NULL, NULL);
 }
 
+static void
+vs_multi_T_table_auto(
+	const char ***t_tables,   int  n_t_tables,
+	const char *attr_caption, const char *attr_l, const char *attr_r)
+{
+    int auto_cols[8], auto_l[8];
+    assert(n_t_tables <= 8);
+
+    int total_w = 0;
+    for (int i = 0; i < n_t_tables; i++) {
+        int max_l = 0, max_r = 0, max_cap = 0;
+        const char **ptr = t_tables[i];
+        while (ptr && *ptr) {
+            const char *lvar = *ptr++;
+            const char *rvar = *ptr++;
+            if (lvar && rvar && *rvar) {
+                int len_l = strlen(lvar);
+                int len_r = strlen(rvar);
+                if (len_l > max_l) max_l = len_l;
+                if (len_r > max_r) max_r = len_r;
+            } else if (lvar && (!rvar || !*rvar)) {
+                int len_cap = strlen(lvar);
+                if (len_cap > max_cap) max_cap = len_cap;
+            }
+        }
+        auto_l[i] = max_l + 1;
+        int col_w = auto_l[i] + max_r + 1;
+        if (max_cap + 1 > col_w)
+            col_w = max_cap + 1;
+        auto_cols[i] = col_w;
+        total_w += auto_cols[i];
+    }
+
+    if (total_w > 79 && n_t_tables == 3) {
+        int max_col = 79 / 3; // 26 cols
+        for (int i = 0; i < n_t_tables; i++) {
+            if (auto_cols[i] > max_col) {
+                auto_cols[i] = max_col;
+                if (auto_l[i] > max_col - 5)
+                    auto_l[i] = max_col - 5;
+            }
+        }
+    }
+
+    vs_multi_T_table_simple(t_tables, n_t_tables, auto_cols, auto_l,
+                            attr_caption, attr_l, attr_r);
+}
+
+void
+show_help_table(const char ***t_tables, int n_tables, const char *title)
+{
+    clear();
+    showtitle(title, "使用說明");
+    vs_multi_T_table_auto(t_tables, n_tables,
+                          HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
+    PRESSANYKEY();
+}
