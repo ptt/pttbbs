@@ -117,11 +117,11 @@ const char * const str_permboard[] = {
 /* modes.h */
 const char * const str_pager_modes[PAGER_MODES] =
 {
-    "關閉",	// PAGER_OFF
-    "打開",	// PAGER_ON
-    "拔掉",	// PAGER_DISABLE
-    "防水",	// PAGER_ANTIWB
-    "好友",	// PAGER_FRIENDONLY
+    [PAGER_OFF]        = "關閉",
+    [PAGER_ON]         = "打開",
+    [PAGER_DISABLE]    = "拔掉",
+    [PAGER_ANTIWB]     = "防水",
+    [PAGER_FRIENDONLY] = "好友",
 };
 
 int             usernum;
@@ -215,136 +215,82 @@ char           * const BBSName = BBSNAME;
 
 /* MAX_MODES is defined in common.h */
 
-char           * const ModeTypeTable[] = {
-    "發呆",			/* IDLE */
-    "主選單",			/* MMENU */
-    "系統維護",			/* ADMIN */
-    "郵件選單",			/* MAIL */
-    "交談選單",			/* TMENU */
-    "使用者選單",		/* UMENU */
-    "XYZ 選單",			/* XMENU */
-    "分類看板",			/* CLASS */
-    "Play選單",			/* PMENU */
-    "編特別名單",		/* NMENU */
-    BBSMNAME2 "量販店",		/* PSALE */
-    "發表文章",			/* POSTING */
-    "看板列表",			/* READBRD */
-    "閱\讀文章",		/* READING */
-    "新文章列表",		/* READNEW */
-    "選擇看板",			/* SELECT */
-    "讀信",			/* RMAIL */
-    "寫信",			/* SMAIL */
-    "聊天室",			/* CHATING */
-    "其他",			/* XMODE */
-    "尋找好友",			/* FRIEND */
-    "上線使用者",		/* LAUSERS */
-    "使用者名單",		/* LUSERS */
-    "追蹤站友",			/* MONITOR */
-    "呼叫",			/* PAGE */
-    "查詢",			/* TQUERY */
-    "交談",			/* TALK  */
-    "編名片檔",			/* EDITPLAN */
-    "編簽名檔",			/* EDITSIG */
-    "投票中",			/* VOTING */
-    "設定資料",			/* XINFO */
-    "寄給站長",			/* MSYSOP */
-    "汪汪汪",			/* WWW */
-    "打大老二",			/* BIG2 */
-    "回應",			/* REPLY */
-    "被水球打中",		/* HIT */
-    "水球準備中",		/* DBACK */
-    "筆記本",			/* NOTE */
-    "編輯文章",			/* EDITING */
-    "發系統通告",		/* MAILALL */
-    "摸兩圈",			/* MJ */
-    "電腦擇友",			/* P_FRIEND */
-    "上站途中",			/* LOGIN */
-    "查字典",			/* DICT */
-    "打橋牌",			/* BRIDGE */
-    "找檔案",			/* ARCHIE */
-    "打地鼠",			/* GOPHER */
-    "看News",			/* NEWS */
-    "情書產生器",		/* LOVE */
-    "編輯輔助器",		/* EDITEXP */
-    "申請IP位址",		/* IPREG */
-    "網管辦公中",		/* NetAdm */
-    "虛擬實業坊",		/* DRINK */
-    "計算機",			/* CAL */
-    "編輯座右銘",		/* PROVERB */
-    "公佈欄",			/* ANNOUNCE */
-    "刻流言板",			/* EDNOTE */
-    "英漢翻譯機",		/* CDICT */
-    "檢視自己物品",		/* LOBJ */
-    "心情點播",			/* OSONG */
-    "與寵物同樂",		/* CHICKEN */
-    "玩彩券",			/* TICKET */
-    "猜數字",			/* GUESSNUM */
-    "遊樂場",			/* AMUSE */
-    "單人黑白棋",		/* OTHELLO */
-    "玩骰子",			/* DICE */
-    "發票對獎",			/* VICE */
-    "逼逼摳ing",		/* BBCALL */
-    "繳罰單",			/* CROSSPOST */
-    "五子棋",			/* M_FIVE */
-    "21點ing",			/* JACK_CARD */
-    "10點半ing",		/* TENHALF */
-    "超級九十九",		/* CARD_99 */
-    "火車查詢",			/* RAIL_WAY */
-    "搜尋選單",			/* SREG */
-    "下象棋",			/* CHC */
-    "下暗棋",			/* DARK */
-    "NBA大猜測",		/* TMPJACK */
-    BBSMNAME2 "查榜系統",		/* JCEE */
-    "重編文章",			/* REEDIT */
-    "部落格",                   /* BLOGGING */
-    "看棋",			/* CHESSWATCHING */
-    "下圍棋",			/* UMODE_GO */
-    "[系統錯誤]",		/* DEBUGSLEEPING */
-    "連六棋",			/* UMODE_CONN6 */
-    "黑白棋",			/* REVERSI */
-    "BBS-Lua",			/* UMODE_BBSLUA */
-    "播放動畫",			/* UMODE_ASCIIMOVIE */
-    "",
-    "",
-    "", // 90
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "", // 100
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "", // 110
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "", // 120
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    ""
+char           * const ModeTypeTable[MODE_MAX] = {
+    [IDLE]             = "發呆",
+    [MMENU]            = "主選單",
+    [ADMIN]            = "系統維護",
+    [MAIL]             = "郵件選單",
+    [TMENU]            = "交談選單",
+    [UMENU]            = "使用者選單",
+    [XMENU]            = "XYZ 選單",
+    [CLASS]            = "分類看板",
+    [PMENU]            = "Play選單",
+    [NMENU]            = "編特別名單",
+    [PSALE]            = BBSMNAME2 "量販店",
+    [POSTING]          = "發表文章",
+    [READBRD]          = "看板列表",
+    [READING]          = "閱\讀文章",
+    [READNEW]          = "新文章列表",
+    [SELECT]           = "選擇看板",
+    [RMAIL]            = "讀信",
+    [SMAIL]            = "寫信",
+    [CHATING]          = "聊天室",
+    [XMODE]            = "其他",
+    [FRIEND]           = "尋找好友",
+    [LAUSERS]          = "上線使用者",
+    [LUSERS]           = "使用者名單",
+    [MONITOR]          = "追蹤站友",
+    [PAGE]             = "呼叫",
+    [TQUERY]           = "查詢",
+    [TALK]             = "交談",
+    [EDITPLAN]         = "編名片檔",
+    [EDITSIG]          = "編簽名檔",
+    [VOTING]           = "投票中",
+    [XINFO]            = "設定資料",
+    [MSYSOP]           = "寄給站長",
+    [REPLY]            = "回應",
+    [HIT]              = "被水球打中",
+    [DBACK]            = "水球準備中",
+    [NOTE]             = "筆記本",
+    [EDITING]          = "編輯文章",
+    [MAILALL]          = "發系統通告",
+    [MJ]               = "摸兩圈",
+    [P_FRIEND]         = "電腦擇友",
+    [LOGIN]            = "上站途中",
+    [DICT]             = "查字典",
+    [ARCHIE]           = "找檔案",
+    [GOPHER]           = "打地鼠",
+    [NEWS]             = "看News",
+    [LOVE]             = "情書產生器",
+    [EDITEXP]          = "編輯輔助器",
+    [IPREG]            = "申請IP位址",
+    [NADM]             = "網管辦公中",
+    [DRINK]            = "虛擬實業坊",
+    [CAL]              = "計算機",
+    [ANNOUNCE]         = "公佈欄",
+    [EDNOTE]           = "刻流言板",
+    [CDICT]            = "英漢翻譯機",
+    [LOBJ]             = "檢視自己物品",
+    [OSONG]            = "心情點播",
+    [CHICKEN]          = "與寵物同樂",
+    [TICKET]           = "玩彩券",
+    [AMUSE]            = "遊樂場",
+    [OTHELLO]          = "單人黑白棋",
+    [DICE]             = "玩骰子",
+    [VIOLATELAW]       = "繳罰單",
+    [M_FIVE]           = "五子棋",
+    [M_CONN6]          = "21點ing",
+    [SREG]             = "搜尋選單",
+    [CHC]              = "下象棋",
+    [DARK]             = "下暗棋",
+    [REEDIT]           = "重編文章",
+    [CHESSWATCHING]    = "看棋",
+    [UMODE_GO]         = "下圍棋",
+    [DEBUGSLEEPING]    = "[系統錯誤]",
+    [UMODE_CONN6]      = "連六棋",
+    [REVERSI]          = "黑白棋",
+    [UMODE_BBSLUA]     = "BBS-Lua",
+    [UMODE_ASCIIMOVIE] = "播放動畫",
 };
 
 /* term.c */
@@ -437,14 +383,14 @@ const char     * const bw_chess[] = {"○", "●", "。", "‧"};
 /* friend.c */
 /* Ptt 各種特別名單的檔名 */
 char           *friend_file[8] = {
-    FN_OVERRIDES,
-    FN_REJECT,
-    FN_ALOHAED,
-    "", /* deprecated: post list */
-    "", /* may point to other filename */
-    FN_CANVOTE,
-    FN_WATER,
-    FN_VISABLE
+    [FRIEND_OVERRIDE] = FN_OVERRIDES,
+    [FRIEND_REJECT] = FN_REJECT,
+    [FRIEND_ALOHA] = FN_ALOHAED,
+    [3] = "", /* deprecated: post list */
+    [FRIEND_SPECIAL] = "", /* may point to other filename */
+    [FRIEND_CANVOTE] = FN_CANVOTE,
+    [6] = FN_WATER, /* deprecated: board water ban */
+    [BOARD_VISABLE] = FN_VISABLE,
 };
 
 

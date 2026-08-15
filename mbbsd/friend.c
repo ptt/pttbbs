@@ -10,40 +10,40 @@ static char     special_des[7] = "ldes.0";
 
 /* 特別名單的上限 */
 static const unsigned int friend_max[8] = {
-    MAX_FRIEND,     /* FRIEND_OVERRIDE */
-    MAX_REJECT,     /* FRIEND_REJECT   */
-    MAX_LOGIN_INFO, /* FRIEND_ALOHA    */
-    MAX_POST_INFO,  /* FRIEND_POST     */
-    MAX_NAMELIST,   /* FRIEND_SPECIAL  */
-    MAX_FRIEND,     /* FRIEND_CANVOTE  */
-    0,              /* deprecated: BOARD_WATER */
-    MAX_FRIEND,     /* BOARD_VISABLE   */
+    [FRIEND_OVERRIDE] = MAX_FRIEND,
+    [FRIEND_REJECT]   = MAX_REJECT,
+    [FRIEND_ALOHA]    = MAX_LOGIN_INFO,
+    // [FRIEND_POST]  = MAX_POST_INFO,
+    [FRIEND_SPECIAL]  = MAX_NAMELIST,
+    [FRIEND_CANVOTE]  = MAX_FRIEND,
+    // [BOARD_WATER]  = BOARD_WATER,
+    [BOARD_VISABLE]   = MAX_FRIEND,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
 
 /* Ptt 各種特別名單的補述 */
 static char    * const friend_desc[8] = {
-    "友誼描述：",
-    "惡形惡狀：",
-    "",
-    "",
-    "描述一下：",
-    "投票者描述：",
-    "惡形惡狀：",
-    "看板會員描述"
+    [FRIEND_OVERRIDE] = "友誼描述：",
+    [FRIEND_REJECT]   = "惡形惡狀：",
+    [FRIEND_ALOHA]    = "",
+    // [FRIEND_POST]  = "",
+    [FRIEND_SPECIAL]  = "描述一下：",
+    [FRIEND_CANVOTE]  = "投票者描述：",
+    // [BOARD_WATER]  = "惡形惡狀：",
+    [BOARD_VISABLE]   = "看板會員描述",
 };
 
 /* Ptt 各種特別名單的中文敘述 */
 static char    * const friend_list[8] = {
-    "好友名單",
-    "壞人名單",
-    "上線通知",
-    "",
-    "其它特別名單",
-    "私人投票名單",
-    "看板舊水桶名單",
-    "看板會員名單"
+    [FRIEND_OVERRIDE] = "好友名單",
+    [FRIEND_REJECT]   = "壞人名單",
+    [FRIEND_ALOHA]    = "上線通知",
+    // [FRIEND_POST]  = "",
+    [FRIEND_SPECIAL]  = "其它特別名單",
+    [FRIEND_CANVOTE]  = "私人投票名單",
+    // [BOARD_WATER]  = "看板舊水桶名單",
+    [BOARD_VISABLE]   = "看板會員名單",
 };
 
 /* sized in screen width */
