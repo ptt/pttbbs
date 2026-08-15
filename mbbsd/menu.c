@@ -311,7 +311,8 @@ show_status(void)
 	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
 	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
-	  ANSI_COLOR(30) "\t[呼叫器]" ANSI_COLOR(31) "%s ",
+          "\t" ANSI_COLOR(0;31;47)"(h)" ANSI_COLOR(30)
+          "說明 [呼叫器]" ANSI_COLOR(31) "%s ",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
 	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
@@ -440,6 +441,34 @@ show_menu(int menu_index, const commands_t * p)
 }
 
 static void
+menu_help(void)
+{
+    static const char *col1[] = {
+        "【 選單基本操作 】", NULL,
+        "  上個選項",     "↑",
+        "  下個選項",     "↓",
+        "  執行選項",     "→Enter",
+        "  回到前一層",   "← e",
+        "  最上方選項",   "Home PgUp",
+        "  最下方選項",   "End  PgDn",
+        "  跳到選項",     "(選項字母)",
+        "  按鍵說明",     "h",
+        "", "",
+        "【 快捷鍵 】",   NULL,
+        "  選擇看板",     "s",
+        "  進入看板",     "r",
+        "  未讀文章",     "Ctrl-N",
+        "  回覆訊息",     "Ctrl-R",
+        "  使用者名單",   "Ctrl-U",
+        "  隨處切換(ZA)", "Ctrl-Z",
+        NULL,
+    };
+    const char **p[] = { col1 };
+
+    show_help_table(p, ARRAY_SIZE(p), "選單按鍵說明");
+}
+
+static void
 domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr, cmdmode;
@@ -545,7 +574,10 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    }
 
 	    if (cmd == 'H' && i > total){
-		/* TODO: Add menu help */
+		menu_help();
+		refscreen = YEA;
+		i = lastcmdptr;
+		break;
 	    }
 	}
 
