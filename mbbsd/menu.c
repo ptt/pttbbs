@@ -189,6 +189,14 @@ showtitle(const char *title, const char *mid)
 
 }
 
+static void
+clear_main(void)
+{
+    // Keep the title (and bottom line) and clear the main UI.
+    move(1, 0);
+    clrtoln(b_lines - 1);
+}
+
 int TopBoards(void);
 
 /* Ctrl-Z Anywhere Fast Switch, not ZG. */
@@ -457,6 +465,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    i = lastcmdptr;
 	    break;
 	case Ctrl('N'):
+            clear_main();
 	    New();
 	    refscreen = YEA;
 	    i = lastcmdptr;
@@ -496,6 +505,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	default:
 	    if ((cmd == 's' || cmd == 'r') &&
 		(cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU)) {
+                clear_main();
 		if (cmd == 's')
 		    ReadSelect();
 		else
@@ -506,10 +516,9 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		break;
 	    }
 	    if (cmd == KEY_ENTER || cmd == KEY_RIGHT) {
-		move(b_lines, 0);
-		clrtoeol();
 
 		currstat = XMODE;
+                clear_main();
 
 		if ((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
 		    return;
