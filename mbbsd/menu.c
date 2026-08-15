@@ -470,11 +470,6 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    refscreen = YEA;
 	    i = lastcmdptr;
 	    break;
-	case Ctrl('A'):
-	    if (mail_man() == FULLUPDATE)
-		refscreen = YEA;
-	    i = lastcmdptr;
-	    break;
 	case KEY_DOWN:
 	    i = lastcmdptr;
 	case KEY_HOME:
