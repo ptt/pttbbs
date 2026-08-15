@@ -1044,9 +1044,9 @@ static int chessroom();
 static const commands_t playlist[] = {
     {p_money, PERM_LOGINOK,  "Pay         ¡i " BBSMNAME2 "¶q³c©± ¡j"},
     {chicken_main, PERM_LOGINOK,
-			     "Chicken     " BBSMNAME2 "¾iÂû³õ"},
+			     "Chicken        " BBSMNAME2 "¾iÂû³õ"},
     {ticket_main, PERM_LOGINOK,
-                             "Gamble      " BBSMNAME2 "±m¨é"},
+                             "Gamble         " BBSMNAME2 "±m¨é"},
     {chessroom, PERM_LOGINOK,"BChess      ¡i " BBSMNAME2 "´Ñ°|   ¡j"},
     {NULL, 0, NULL}
 };
