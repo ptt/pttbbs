@@ -297,14 +297,7 @@ passwd_load_user(const char *userid, userec_t *buf)
 int
 passwd_apply(void *ctx, int (*fptr) (void *ctx, int, userec_t *))
 {
-    int             i;
-    userec_t        user;
-    for (i = 0; i < MAX_USERS; i++) {
-	passwd_query(i + 1, &user);
-	if ((*fptr) (ctx, i, &user) < 0)
-	    return -1;
-    }
-    return 0;
+    return passwd_fast_apply(ctx, fptr);
 }
 
 int
