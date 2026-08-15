@@ -15,7 +15,13 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
-## cleanup(recycle): Always enable the time capsule
+## refactor(fileheader_t): Change filemode to 16 bits
+
+這是個可能會造成檔案不相容的修改。
+理論上在 Little-endian 架構的機器上沒有問題不用另外轉換，
+Big-endian (現代應該幾乎沒有了?) 請自行想辦法。
+
+## [cleanup(recycle): Always enable the time capsule](https://github.com/ptt/pttbbs/commit/2938463053279e682d973a978167967dbc704817)
 
 Time Capsule based 資源回收筒改為預設且唯一的刪除系統。
 deleted 跟 junk 只剩保存刪除的精華區目錄所用，暫時還沒有替代方案。
