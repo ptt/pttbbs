@@ -498,6 +498,10 @@
 #define    HAVE_ORIGIN          /* 顯示 author 來自何處 */
 #endif
 
+#ifndef SITE_MAIL_FACTOR
+#define SITE_MAIL_FACTOR (1.0)
+#endif
+
 #ifndef NO_REJECT_FLOOD_POST
 #define    REJECT_FLOOD_POST    /* 防止BlahBlah式灌水 */
 #endif
