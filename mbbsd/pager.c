@@ -770,7 +770,7 @@ pager_handle_ctrl_r_ofo(int ch)
     check_water_init();
 
     water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
-    if (!w || w->count == 0 || wmofo != NOTREPLYING)
+    if (!w || (w == &water[0] && w->count == 0) || wmofo != NOTREPLYING)
         return ch;
 
     scr_dump(&old_screen);
@@ -808,12 +808,32 @@ pager_handle_ctrl_r_default(int ch)
     else if (watermode == -1)
     {
         water_t *w = (swater[0] != NULL && swater[0]->pid != 0) ? swater[0] : &water[0];
-        if (!w || w->count == 0)
+        if (!w || (w == &water[0] && w->count == 0))
             return ch;
 
-        int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
-        msgque_t *last_msg = &w->msg[last_idx];
-        if (last_msg->pid == 0)
+        pid_t target_pid = 0;
+        char target_id[IDLEN + 1] = {0};
+        const char *last_call_in = NULL;
+        int msgmode = 0;
+
+        if (w->count > 0) {
+            int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
+            msgque_t *last_msg = &w->msg[last_idx];
+            if (last_msg->pid != 0) {
+                target_pid = last_msg->pid;
+                STRLCPY(target_id, last_msg->userid);
+                last_call_in = last_msg->last_call_in;
+                msgmode = last_msg->msgmode;
+            }
+        }
+
+        if (target_pid == 0 && w->pid != 0) {
+            target_pid = w->pid;
+            STRLCPY(target_id, w->userid);
+            last_call_in = w->msg[5].last_call_in;
+        }
+
+        if (target_pid == 0)
             return ch;
 
         // Press Ctrl-R for the "1st" time (and already received a message for reply)
@@ -824,7 +844,7 @@ pager_handle_ctrl_r_default(int ch)
         my_newfd = vkey_detach();
         char buf[ANSILINELEN];
         SNPRINTF(buf, ANSI_COLOR(1;33;46) "¡¹%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET, last_msg->userid, last_msg->last_call_in);
+                 " %s " ANSI_RESET, target_id, last_call_in ? last_call_in : "");
         outmsg(buf);
 
         watermode = 0;
@@ -832,7 +852,7 @@ pager_handle_ctrl_r_default(int ch)
         int flag = WATERBALL_GENERAL;
 
         if (HAS_ANGEL) {
-            switch (last_msg->msgmode) {
+            switch (msgmode) {
             case MSGMODE_FROMANGEL:
                 prompt = PROMPT_ANGEL_AGAIN;
                 flag = WATERBALL_ANGEL;
@@ -847,7 +867,7 @@ pager_handle_ctrl_r_default(int ch)
         if (!prompt)
             prompt = PROMPT_TO;
 
-        my_write(last_msg->pid, prompt, last_msg->userid, flag, NULL);
+        my_write(target_pid, prompt, target_id, flag, NULL);
         vkey_attach(my_newfd);
 
         scr_restore(&old_screen);
