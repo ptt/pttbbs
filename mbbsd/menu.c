@@ -529,7 +529,6 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	default:
 	    if ((cmd == 's' || cmd == 'r') &&
 		(cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU)) {
-                clear_main();
 		if (cmd == 's')
 		    ReadSelect();
 		else
