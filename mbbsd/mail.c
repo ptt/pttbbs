@@ -276,13 +276,13 @@ get_max_keepmail(const userec_t *u) {
     }
 
     if (lvl & (PERM_SYSSUPERSUBOP)) {
-        keep = MAX_KEEPMAIL * 10.0;  // 700 -> 2000
+        keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 10.0;
     } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_SYSSUBOP)) {
-        keep = MAX_KEEPMAIL * 5.0;  // 500 -> 1000
-    } else if (HAS_ANGEL && (lvl & (PERM_ANGEL))) {
-        keep = MAX_KEEPMAIL * 3.5;  // 700 -> 700
+        keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 5.0;
     } else if (lvl & (PERM_BM)) {
-        keep = MAX_KEEPMAIL * 2.5;  // 300 -> 500
+        keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 2.5;
+    } else if (HAS_ANGEL && (lvl & (PERM_ANGEL))) {
+        keep = MAX_KEEPMAIL * 3.5;
     } else if (!(lvl & (PERM_LOGINOK))) {
         // less than normal user
         keep = MAX_KEEPMAIL * 0.5;  // 100
