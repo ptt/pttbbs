@@ -366,6 +366,12 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder,
     append_record_forward(holder_dir, &mymail, sizeof(mymail), holder);
 }
 
+void
+keep_copy(const char *fpath, const char *title)
+{
+    do_hold_mail(fpath, NULL, cuser.userid, title);
+}
+
 int
 do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle)
 {

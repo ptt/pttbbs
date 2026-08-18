@@ -392,6 +392,7 @@ int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
 int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from);
 int notify_password_change(const char *userid, const char *email);
 void hold_mail(const char *fpath, const char *receiver, const char *title);
+void keep_copy(const char *fpath, const char *title);
 void m_init(void);
 int chkmailbox(void);
 int chkmailbox_hard_limit(void);
