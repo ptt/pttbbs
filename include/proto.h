@@ -688,6 +688,7 @@ void post_policelog(const char *bname, const char *atitle, const char *action,
                     const char *reason, const int toggle);
 void post_policelog2(const char *bname, const char *atitle, const char *action,
                      const char *reason, const int toggle, const char *attach_file);
+void post_policelog_spam(const char *bname, const char *attach_file);
 
 /* tag */
 struct TagItem;

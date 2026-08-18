@@ -146,6 +146,22 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
     post_msg("Record", title, genbuf, "[系統]");
 }
 
+void post_policelog_spam(const char *bname, const char *attach_file)
+{
+    char fpath[PATHLEN] = "";
+    char msg[ANSILINELEN], title[STRLEN];
+    SNPRINTF(title, "[報告] %s:偵測到不當發言", cuser.userid);
+    SNPRINTF(msg, "系統偵測到 %s 試圖於 %s %s 發表不當言論，\n"
+             "原文如下 (不予發出，但有備份至使用者信箱):\n%s\n\n",
+             cuser.userid, bname ? "看板" : "郵件", bname ? bname : "",
+             MSG_SEPARATOR);
+    if (post_msg2(BN_POLICELOG, title, msg, "[系統]", fpath))
+        return;
+    assert(attach_file && *attach_file);
+    if (*fpath)
+        AppendTail(attach_file, fpath, 0);
+}
+
 void
 post_policelog2(const char *bname, const char *atitle, const char *action,
                 const char *reason, const int toggle, const char *attach_file)
