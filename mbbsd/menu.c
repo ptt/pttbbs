@@ -307,12 +307,14 @@ show_status(void)
     localtime4_r(&now, &ptime);
     i = ptime.tm_wday << 1;
     move(b_lines, 0);
-    vbarf(ANSI_COLOR(34;46) "%d/%d 週%c%c %d:%02d"
-	  ANSI_COLOR(1;33;45) " %-14s"
+    // Length: timer =15, today=14, online=8+N, me=5+12,
+    // pager=10, help=7
+    vbarf(ANSI_COLOR(34;46) "%d/%d周%c%c %d:%02d"
+	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
-	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
-          ANSI_COLOR(30) " 呼叫器" ANSI_COLOR(31) "%s"
-          "\t" ANSI_COLOR(0;31;47)" (h)" ANSI_COLOR(30) "說明 ",
+	  "%d" ANSI_COLOR(30) "人,我是" ANSI_COLOR(31) "%s"
+          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s\t"
+          ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明",
 	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
 	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
