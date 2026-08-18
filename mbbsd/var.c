@@ -118,7 +118,7 @@ const char * const str_permboard[] = {
 const char * const str_pager_modes[PAGER_MODES] =
 {
     [PAGER_OFF]        = "關閉",
-    [PAGER_ON]         = "打開",
+    [PAGER_ON]         = "開啟",
     [PAGER_DISABLE]    = "拔掉",
     [PAGER_ANTIWB]     = "防水",
     [PAGER_FRIENDONLY] = "好友",
