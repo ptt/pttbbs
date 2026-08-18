@@ -502,6 +502,10 @@
 #define SITE_MAIL_FACTOR (1.0)
 #endif
 
+#ifndef POST_KEYWORDS_MAX
+#define POST_KEYWORDS_MAX (0)
+#endif
+
 #ifndef NO_REJECT_FLOOD_POST
 #define    REJECT_FLOOD_POST    /* ¨¾¤îBlahBlah¦¡Äé¤ô */
 #endif

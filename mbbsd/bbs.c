@@ -317,6 +317,93 @@ save_violatelaw(void)
     return 0;
 }
 
+static void
+warn_post_contents(const char *msg)
+{
+    vs_hdr2(" 廣告及違法發言偵測 ", " 疑似不當內容");
+    outs("\n\n請注意: 你的訊息已被判定為可能有廣告或其它違法內容。\n\n");
+    outs("注意系統偵測是機器判定未經人工介入，判定可能有誤所以此訊息\n"
+         "只是警告與提醒，但多次發送此類訊息可能會被" ANSI_COLOR(1;31)
+         "開罰單或停權。" ANSI_RESET "\n\n");
+    outs("原文未送出，但已留存至你的信箱。\n");
+    if (msg)
+        outs(msg);
+    vkey_purge();
+    while (1) {
+        char x = 'a' + arc4random_uniform(26);
+        if (tolower(vmsgf(
+                "為確定你有看到上面訊息，請按<%c>繼續，其它鍵不起作用",
+                x)) == x)
+            break;
+        bell();
+    }
+}
+
+// Be aware find_keywords IS case sensitive.
+static int
+find_keywords(const char *fpath, const char *keywords_fpath)
+{
+    int ret = 0;
+    FILE *fp = fopen(keywords_fpath, "r");
+    if (!fp)
+        return ret;
+
+    off_t sz = dashs(fpath);
+    int fd = open(fpath, O_RDONLY);
+    if (fd < 0) {
+        fclose(fp);
+        return ret;
+    }
+    uint8_t *start = mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
+    if (!start) {
+        close(fd);
+        fclose(fp);
+        return ret;
+    }
+
+    char buf[STRLEN];
+    while (fgets(buf, sizeof(buf), fp)) {
+        char *lf = strchr(buf, '\n');
+        if (lf)
+            *lf = '\0';
+        buf[sizeof(buf) - 1] = '\0';
+        size_t szbuf = strlen(buf);
+        if (!szbuf)
+            continue;
+        off_t remains = sz;
+        for (uint8_t *ptr = start;
+             remains > 0 && (ptr = memmem(ptr, remains, buf, szbuf));
+             ptr += szbuf, remains = sz - (ptr - start))
+        {
+            ret++;
+        }
+    }
+    munmap(start, sz);
+    close(fd);
+    fclose(fp);
+    return ret;
+}
+
+// Returns false if the contents do not look good.
+static bool
+check_post_contents(const char *fpath, const boardheader_t *bp)
+{
+    // Define this in `pttbbs.conf` if you want keywords based content checking.
+    // Alert if = MAX.
+    if (POST_KEYWORDS_MAX < 1)
+        return true;
+
+    // Ignore if the user or board is restricted.
+    if (HasUserPerm(PERM_ADMIN | PERM_BM) ||
+        (bp->brdattr & (BRD_HIDE | BRD_RESTRICTEDPOST |
+                        BRD_GUESTPOST)))
+        return true;
+
+    int keywords = find_keywords(fpath, FN_POST_KEYWORDS);
+    bool r = keywords < POST_KEYWORDS_MAX;
+    return r;
+}
+
 static time4_t  *board_note_time = NULL;
 
 void
@@ -1360,11 +1447,19 @@ do_post_article(int edflags)
 	pressanykey();
 	return FULLUPDATE;
     }
-    /* set owner to Anonymous for Anonymous board */
+
+    if (!check_post_contents(fpath, bp)) {
+        keep_copy(fpath, "[發文退回]");
+        post_policelog_spam(bp->brdname, fpath);
+        unlink(fpath);
+        warn_post_contents(NULL);
+        return FULLUPDATE;
+    }
 
     // check TN_ANNOUNCE again for non-BMs...
     tn_safe_strip(save_title);
 
+    /* set owner to Anonymous for Anonymous board */
 #ifdef HAVE_ANONYMOUS
     /* Ptt and Jaky */
     if ((currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
