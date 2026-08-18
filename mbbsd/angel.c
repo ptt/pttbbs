@@ -988,13 +988,14 @@ pressanykey_or_callangel(){
 
     move(b_lines, 0); clrtoeol();
 
-    // message string length = 38
+    w--;
     outs(VCLR_PAUSE_PAD " ");
-    w -= 1 + 38;
+    w -= 39; // message below
     vpad(w / 2, VMSG_PAUSE_PAD);
-    outs(VCLR_PAUSE     " 請按 " ANSI_COLOR(36) "空白鍵"
-           VCLR_PAUSE     " 繼續，或 " ANSI_COLOR(36) "H"
-           VCLR_PAUSE     " 呼叫小天使協助 " VCLR_PAUSE_PAD);
+    // message below string length = 39
+    outs(VCLR_PAUSE " 請按 " ANSI_COLOR(36) "空白鍵"
+         VCLR_PAUSE " 繼續，或 " ANSI_COLOR(36) "H"
+         VCLR_PAUSE " 呼叫小天使協助 " VCLR_PAUSE_PAD);
     vpad(w - w / 2, VMSG_PAUSE_PAD);
     outs(" " ANSI_RESET);
 
