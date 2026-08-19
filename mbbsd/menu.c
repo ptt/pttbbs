@@ -1004,11 +1004,7 @@ static const commands_t      cmdlist[] = {
     {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
 				"0Admin       【 系統維護區 】"},
     {Announce,	0,		"Announce     【 精華公佈欄 】"},
-#ifdef DEBUG
-    {Favorite,	0,		"Favorite     【 我的最不愛 】"},
-#else
     {Favorite,	0,		"Favorite     【 我 的 最愛 】"},
-#endif
     {Class,	0,		"Class        【 分組討論區 】"},
     // TODO 目前很多人被停權時會變成 -R-1-3 (PERM_LOGINOK, PERM_VIOLATELAW,
     // PERM_NOREGCODE) 沒有 PERM_READMAIL，但這樣麻煩的是他們就搞不懂發生什麼事
@@ -1019,11 +1015,7 @@ static const commands_t      cmdlist[] = {
     {Xyz, 	0,		"Xyz          【 系統資訊區 】"},
     {Play_Play, PERM_LOGINOK, 	"Play         【 娛樂與休閒 】"},
     {Name_Menu, PERM_LOGINOK,	"Namelist     【 編特別名單 】"},
-#ifdef DEBUG
-    {Goodbye, 	0, 		"Goodbye      再見再見再見再見"},
-#else
     {Goodbye, 	0, 		"Goodbye         離開，再見… "},
-#endif
     {NULL, 	0, 		NULL}
 };
 
