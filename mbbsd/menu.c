@@ -541,7 +541,8 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    if (cmd == KEY_ENTER || cmd == KEY_RIGHT) {
 
 		currstat = XMODE;
-                clear_main();
+                if (cmdtable[lastcmdptr].cmdfunc != Goodbye)
+                    clear_main();
 
 		if ((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
 		    return;
