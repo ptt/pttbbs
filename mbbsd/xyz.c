@@ -60,14 +60,14 @@ int
 Goodbye(void)
 {
     char            genbuf[STRLEN];
+    adbanner_goodbye();
 
     getdata(b_lines - 1, 0, "您確定要離開【 " BBSNAME " 】嗎(Y/N)？[N] ",
-	    genbuf, 3, LCECHO);
+	    genbuf, 2, LCECHO);
 
     if (*genbuf != 'y')
-	return 0;
+	return FULLUPDATE;
 
-    adbanner_goodbye();
     show_80x24_screen("etc/Logout");
     {
 	int diff = (int)(time4_diff(now, login_start_time) / 60);
