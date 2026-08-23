@@ -311,32 +311,51 @@ enum {
 static void
 a_showhelp(int level)
 {
-    clear();
-    outs(ANSI_COLOR(36) "【 " BBSNAME "公佈欄使用說明 】" ANSI_RESET "\n\n"
-	 "[←][q]         離開到上一層目錄\n"
-	 "[↑][k]         上一個選項\n"
-	 "[↓][j]         下一個選項\n"
-	 "[→][r][enter]  進入目錄／讀取文章\n"
-	 "[^B][PgUp]      上頁選單\n"
-	 "[^F][PgDn][Spc] 下頁選單\n"
-	 "[##]            移到該選項\n"
-	 "[^W]            我在哪裡\n"
-	 "[F][U]          將文章寄回 Internet 郵箱/"
-	 "將文章 uuencode 後寄回郵箱\n");
-    if (level >= MANAGER) {
-	outs("\n" ANSI_COLOR(36) "【 板主專用鍵 】" ANSI_RESET "\n"
-	     "[H]             切換為 公開/可見會員名單/板主 才能閱\讀\n"
-	     "[n/g]           收錄精華文章/開闢目錄\n"
-	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
-	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"
-	     "[c/p/a]         精華區內 標記(複製)/貼上(可多篇)/附加單篇文章\n"
-	     "[^P/^A]         貼上/附加精華區外已用't'標記文章\n");
-    }
-    if (level >= SYSOP) {
-	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n"
-	     "[N]             查詢檔名\n");
-    }
-    pressanykey();
+    static const char *col1[] = {
+        "【基本命令】", NULL,
+        "  進入目錄/文章", "→r Enter",
+        "  回到上一層",   "← q",
+        "  移到該選項",   "(數字)",
+        "  我在哪裡",     "^W",
+        "  寄回電子郵箱", "F U",
+        "", "",
+        "【移動瀏覽】", NULL,
+        "  上個選項",     "↑ k",
+        "  下個選項",     "↓ j",
+        "  往前翻頁",     "^B PgUp",
+        "  往後翻頁",     "^F PgDn 空白鍵",
+        NULL,
+    };
+    static const char *col2[] = {
+        "【板主專用鍵】", NULL,
+        "  切換閱\讀權限", "H",
+        "  建新文章",      "n",
+        "  建新目錄",      "g",
+        "  移動文章",      "m",
+        "  刪除文章",      "d",
+        "  範圍刪除",      "D",
+        "  修改符號",      "f",
+        "  修改標題",      "T",
+        "  修改內容",      "e",
+        "  複製項目",      "c",
+        "  貼上項目",      "p",
+        "  附加項目",      "a",
+        NULL,
+    };
+    static const char *col3[] = {
+        "【看板與信箱】", NULL,
+        "  標記內容",     "(看板或信箱內)t",
+        "  貼上標記",     "^P",
+        "  附加標記",     "^A",
+        "", "",
+        "【站長專用鍵】", NULL,
+        "  查詢檔名",     "N",
+        NULL,
+    };
+
+    const char **p[] = {col1, col2, col3};
+    int n = level ? ARRAY_SIZE(p) : 1;
+    show_help_table(p, n, "公佈欄輔助說明");
 }
 
 static void
