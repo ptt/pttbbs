@@ -681,7 +681,7 @@ static const commands_t m_admin_user[] = {
     {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD,
                                         "OLogin Log     最近上線記錄"},
     {view_security_log, PERM_SYSOP|PERM_ACCOUNTS,
-                                        "SSecurity Log  帳號安全記錄"},
+                                        "Security Log   帳號安全記錄"},
     {u_list, PERM_SYSOP,		"Users List     列出註冊名單"},
     {search_user_bybakpwd, PERM_SYSOP|PERM_ACCOUNTS,
                                         "DOld User data 查閱\備份使用者資料"},
@@ -820,7 +820,7 @@ static const commands_t myuserlog[] = {
 #ifdef USE_RECENTPAY
     {u_view_recentpay,   0,   "PRecent Pay    最近交易記錄"},
 #endif
-    {u_view_security,    0,   "SSecurity      帳號安全記錄"},
+    {u_view_security,    0,   "Security       帳號安全記錄"},
     {NULL, 0, NULL}
 };
 
