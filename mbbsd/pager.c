@@ -13,6 +13,7 @@
 #define PROMPT_TO           "水球丟過去: "
 // PROMPT_VERIFY is apparently longer, so we'll do a safe trim.
 #define PROMPT_VERIFY       "丟%s: %s [Y/n]: "
+#define STR_ANGEL           "小天使"
 
 #define ERR_TARGET_NOT_ONLINE "糟糕! 對方已落跑了(不在站上)! "
 
@@ -141,6 +142,12 @@ pager_render_history_section(const water_t *w, int start_row, int max_rows, int 
     }
 }
 
+static inline int
+is_angel_msgmode(int mode)
+{
+    return (mode == MSGMODE_FROMANGEL || mode == MSGMODE_TOANGEL);
+}
+
 static void
 pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 {
@@ -155,12 +162,19 @@ pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 
     char online_mark = uin ? ' ' : (is_vertical ? 'x' : '#');
 
+    char dispname[STRLEN];
+    if (HAS_ANGEL && is_angel_msgmode(w->msg[0].msgmode) && !strstr(w->userid, STR_ANGEL)) {
+        snprintf(dispname, sizeof(dispname), "★小主人 %s", w->userid);
+    } else {
+        STRLCPY(dispname, w->userid);
+    }
+
     if (is_vertical) {
         const char *color = is_selected ? ANSI_COLOR(1;45) : ANSI_COLOR(1;44);
-        prints("%s%c %-12s" ANSI_RESET, color, online_mark, w->userid);
+        prints("%s%c %-12s" ANSI_RESET, color, online_mark, dispname);
     } else {
         const char *color = is_selected ? (uin ? ANSI_COLOR(1;33;47) : ANSI_COLOR(1;33;45)) : "";
-        prints("%s%c%-13.13s" ANSI_RESET, color, online_mark, w->userid);
+        prints("%s%c%-13.13s" ANSI_RESET, color, online_mark, dispname);
     }
 }
 
@@ -177,10 +191,14 @@ ofo_water_scr(const water_t *tw, int which, char type)
     move(0, 0);
     SOLVE_ANSI_CACHE();
     clrtoeol();
-    if (HAS_ANGEL && tw->msg[0].msgmode == MSGMODE_TOANGEL)
-        outs(PROMPT_ANGEL_ANSWER);
-    else
+    if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
+        if (strstr(tw->userid, STR_ANGEL))
+            outs(PROMPT_ANGEL_AGAIN);
+        else
+            outs(PROMPT_ANGEL_ANSWER);
+    } else {
         prints(PROMPT_OFO, tw->userid);
+    }
 }
 
 static void
@@ -240,16 +258,13 @@ ofo_switch_user(int delta)
 static int
 ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
 {
-    if (HAS_ANGEL) {
-        switch (tw->msg[0].msgmode) {
-        case MSGMODE_TOANGEL:
-            strlcpy(genbuf, PROMPT_ANGEL_ANSWER, sz);
-            return WATERBALL_CONFIRM_ANSWER;
-        case MSGMODE_FROMANGEL:
+    if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
+        if (strstr(tw->userid, STR_ANGEL)) {
             strlcpy(genbuf, PROMPT_ANGEL_AGAIN, sz);
             return WATERBALL_CONFIRM_ANGEL;
-        default:
-            break;
+        } else {
+            strlcpy(genbuf, PROMPT_ANGEL_ANSWER, sz);
+            return WATERBALL_CONFIRM_ANSWER;
         }
     }
     snprintf(genbuf, sz, PROMPT_OFO, tw->userid);
@@ -351,7 +366,7 @@ ofo_my_write(void)
  * 5. 丟水球     flag = WATERBALL_GENERAL, 0
  * 6. ofo_my_write  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
  * 7. (when defined PLAY_ANGEL)
- *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = "小天使")
+ *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = STR_ANGEL)
  * 8. (when defined PLAY_ANGEL)
  *    回答小主人 flag = WATERBALL_ANSWER,  6 (隱藏 id)
  * 9. (when defined PLAY_ANGEL)
@@ -359,6 +374,23 @@ ofo_my_write(void)
  * 10. (when defined PLAY_ANGEL)
  *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
+static inline int
+waterball_flag_to_msgmode(int flag)
+{
+    switch (flag) {
+    case WATERBALL_ANGEL:
+    case WATERBALL_CONFIRM_ANGEL:
+        return HAS_ANGEL ? MSGMODE_TOANGEL : MSGMODE_WRITE;
+    case WATERBALL_ANSWER:
+    case WATERBALL_CONFIRM_ANSWER:
+        return HAS_ANGEL ? MSGMODE_FROMANGEL : MSGMODE_WRITE;
+    case WATERBALL_ALOHA:
+        return MSGMODE_ALOHA;
+    default:
+        return MSGMODE_WRITE;
+    }
+}
+
 static void
 my_write_restore_state(char c0, unsigned char mode0, int currstat0)
 {
@@ -526,31 +558,10 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         STRLCPY(from_id, cuser.userid);
     }
 
-    int msgmode = MSGMODE_WRITE;
-    switch (flag) {
-    case WATERBALL_ANGEL:
-    case WATERBALL_CONFIRM_ANGEL:
-    case WATERBALL_ANSWER:
-    case WATERBALL_CONFIRM_ANSWER:
-        if (HAS_ANGEL) {
-            if (flag == WATERBALL_ANGEL)
-                angel_log_msg_to_angel();
-            if (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-                msgmode = MSGMODE_TOANGEL;
-            else
-                msgmode = MSGMODE_FROMANGEL;
-            break;
-        }
-        /* FALLTHROUGH */
-    case WATERBALL_ALOHA:
-        msgmode = MSGMODE_ALOHA;
-        break;
+    if (HAS_ANGEL && flag == WATERBALL_ANGEL)
+        angel_log_msg_to_angel();
 
-    default:
-        msgmode = MSGMODE_WRITE;
-        break;
-    }
-
+    int msgmode = waterball_flag_to_msgmode(flag);
     int res = write_message(uip, uin->pid, currpid, from_id, msg, msgmode);
 
     if (flag == WATERBALL_ALOHA)
@@ -646,6 +657,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         memset(&dummy_msg, 0, sizeof(dummy_msg));
         dummy_msg.pid = uin->pid;
         STRLCPY(dummy_msg.userid, destid);
+        dummy_msg.msgmode = waterball_flag_to_msgmode(flag);
         water_t *target_slot = swater_get_slot(&dummy_msg);
         if (target_slot)
             STRLCPY(target_slot->msg[5].last_call_in, t_last_write);
@@ -1007,12 +1019,6 @@ add_history_entry(water_t * w, const msgque_t * msg)
 }
 
 static inline int
-is_angel_msgmode(int mode)
-{
-    return (mode == MSGMODE_FROMANGEL || mode == MSGMODE_TOANGEL);
-}
-
-static inline int
 is_swater_compatible(const water_t *w, const msgque_t *msg)
 {
     if (w->pid != msg->pid)
@@ -1021,9 +1027,19 @@ is_swater_compatible(const water_t *w, const msgque_t *msg)
     if (!HAS_ANGEL)
         return 1;
 
-    /* Angel modes (FROMANGEL/TOANGEL) and Non-Angel modes (WRITE/ALOHA/TALK)
-     * must never mix, but all Angel modes match each other and all Non-Angel modes match each other. */
-    return is_angel_msgmode(w->msg[0].msgmode) == is_angel_msgmode(msg->msgmode);
+    if (w->count == 0 && w->msg[0].msgmode == 0)
+        return 1;
+
+    if (is_angel_msgmode(w->msg[0].msgmode) != is_angel_msgmode(msg->msgmode))
+        return 0;
+
+    if (is_angel_msgmode(msg->msgmode)) {
+        bool w_is_master_side = (strstr(w->userid, STR_ANGEL) != NULL);
+        bool msg_is_master_side = (strstr(msg->userid, STR_ANGEL) != NULL);
+        return w_is_master_side == msg_is_master_side;
+    }
+
+    return 1;
 }
 
 /* Locate or allocate a swater session slot, promoting it to swater[0] */
@@ -1058,6 +1074,7 @@ swater_get_slot(const msgque_t *msg)
     if (waterinit) {
         memcpy(swater[i]->userid, msg->userid, sizeof(swater[i]->userid));
         swater[i]->pid = msg->pid;
+        swater[i]->msg[0].msgmode = msg->msgmode;
     }
     if (!swater[i]->uin)
         swater[i]->uin = currutmp;
