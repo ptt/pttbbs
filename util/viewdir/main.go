@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"unicode/utf8"
 
@@ -89,7 +90,38 @@ type AppState struct {
 	termWidth  int
 	termHeight int
 
-	rawOldState *term.State
+	rawOldState   *term.State
+	sigChan       chan os.Signal
+	suspendMu     sync.Mutex
+	suspendAction func()
+}
+
+func (app *AppState) suspend() {
+	app.suspendMu.Lock()
+	defer app.suspendMu.Unlock()
+
+	if app.suspendAction != nil {
+		app.suspendAction()
+		return
+	}
+
+	app.restoreTerminal()
+
+	contChan := make(chan os.Signal, 1)
+	signal.Notify(contChan, syscall.SIGCONT)
+
+	_ = syscall.Kill(0, syscall.SIGTSTP)
+
+	<-contChan
+	signal.Stop(contChan)
+
+	newState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err == nil {
+		app.rawOldState = newState
+	}
+
+	fmt.Print("\x1b[2J\x1b[?25l")
+	app.render()
 }
 
 func sanitizeDBCS(data []byte) []byte {
@@ -891,6 +923,9 @@ func main() {
 		initialIndex = len(articles) - 1
 	}
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
 	app := &AppState{
 		baseDir:       baseDir,
 		dirPath:       dirFile,
@@ -901,13 +936,12 @@ func main() {
 		selectedIndex: initialIndex,
 		scrollOffset:  0,
 		rawOldState:   oldState,
+		sigChan:       sigChan,
 	}
 
 	// Setup signal handler for graceful exit
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
+		<-sigChan
 		app.restoreTerminal()
 		os.Exit(0)
 	}()
@@ -971,6 +1005,9 @@ func (app *AppState) handleInput(input []byte) bool {
 
 	for _, b := range input {
 		switch b {
+		case 0x1a: // Ctrl+Z -> Suspend process
+			app.suspend()
+			return false
 		case 'q', 'Q': // pmore.c 'q' -> exit
 			if app.mode == ModeFileView {
 				app.mode = ModeDirView
@@ -1045,6 +1082,9 @@ func (app *AppState) handleSearchInput(input []byte) bool {
 
 	for _, r := range inputStr {
 		switch r {
+		case 0x1a: // Ctrl+Z -> Suspend process
+			app.suspend()
+			return false
 		case '\r', '\n':
 			app.executeSearch()
 		case 0x7f, 0x08: // Backspace

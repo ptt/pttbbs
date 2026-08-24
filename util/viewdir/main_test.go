@@ -499,3 +499,40 @@ func TestSymlinkLoadBalancingResolution(t *testing.T) {
 		t.Errorf("Physical path fallback: expected resolved target %s, got %s", targetFile, resolvedPhysical)
 	}
 }
+
+func TestCtrlZSuspend(t *testing.T) {
+	suspended := false
+	app := &AppState{
+		mode: ModeDirView,
+	}
+	app.suspendAction = func() {
+		suspended = true
+	}
+
+	quit := app.handleInput([]byte{0x1a}) // Ctrl-Z
+	if quit {
+		t.Errorf("Expected Ctrl-Z not to exit app")
+	}
+	if !suspended {
+		t.Errorf("Expected Ctrl-Z to trigger suspend")
+	}
+}
+
+func TestCtrlZSuspendInSearchMode(t *testing.T) {
+	suspended := false
+	app := &AppState{
+		mode: ModeSearchInput,
+	}
+	app.suspendAction = func() {
+		suspended = true
+	}
+
+	quit := app.handleInput([]byte{0x1a}) // Ctrl-Z
+	if quit {
+		t.Errorf("Expected Ctrl-Z in search mode not to exit app")
+	}
+	if !suspended {
+		t.Errorf("Expected Ctrl-Z in search mode to trigger suspend")
+	}
+}
+
