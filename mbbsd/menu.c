@@ -103,18 +103,20 @@ showtitle(const char *title, const char *mid)
     int is_currboard_special = 0;
     char buf[64];
 
+    const char *high_attr = HasUserFlag(UF_CURSOR_STANDOUT) ? ANSI_COLOR(41) :
+	ANSI_COLOR(41;5);
 
     /* prepare mid */
 #ifdef DEBUG
     {
 	sprintf(buf, "  current pid: %6d  ", getpid());
 	mid = buf;
-	mid_attr = ANSI_COLOR(41;5);
+	mid_attr = high_attr;
     }
 #else
     if (ISNEWMAIL(currutmp)) {
 	mid = "    你有新信件    ";
-	mid_attr = ANSI_COLOR(41;5);
+	mid_attr = high_attr;
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
 	// TODO cache this value?
 	int nreg = regform_estimate_queuesize();
@@ -122,7 +124,7 @@ showtitle(const char *title, const char *mid)
 	{
 	    nreg -= (nreg % 10);
 	    sprintf(buf, "  超過 %03d 篇未審核  ", nreg);
-	    mid_attr = ANSI_COLOR(41;5);
+	    mid_attr = high_attr;
 	    mid = buf;
 	}
     }
