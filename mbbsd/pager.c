@@ -171,7 +171,7 @@ pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 
     if (is_vertical) {
         const char *color = is_selected ? ANSI_COLOR(1;45) : ANSI_COLOR(1;44);
-        prints("%s%c %-12s" ANSI_RESET, color, online_mark, dispname);
+        prints("%c%s%c %-12s" ANSI_RESET, is_selected ? '>' : ' ', color, online_mark, dispname);
     } else {
         const char *color = is_selected ? (uin ? ANSI_COLOR(1;33;47) : ANSI_COLOR(1;33;45)) : "";
         prints("%s%c%-13.13s" ANSI_RESET, color, online_mark, dispname);
@@ -213,7 +213,7 @@ ofo_init_screen(void)
     refresh();
 #endif
 
-    mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT,
+    mvouts(WB_OFO_USER_TOP, WB_OFO_USER_LEFT + 1,
            ANSI_COLOR(1;33;46) " °Ù§œ¿ªπÔ∂H°ı " ANSI_RESET);
 
     for (int i = 0; i < WB_OFO_USER_NUM; ++i) {
