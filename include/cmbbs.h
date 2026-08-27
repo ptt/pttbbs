@@ -43,6 +43,7 @@ int stampfile_u(char *fpath, fileheader_t *fh);	// does not zero existing data i
 /* log.c */
 int log_payment(const char *filename, int money, int oldm, int newm,
                        const char *reason, time4_t now);
+int log_user_security(const char *user, const char *fmt, ...) GCC_CHECK_FORMAT(2, 3);
 
 /* banip.c */
 typedef in_addr_t IPv4;     // derived from in_addr.s_addr
