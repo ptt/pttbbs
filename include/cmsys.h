@@ -233,7 +233,8 @@ time4_t	time4(time4_t *);
 char*	ctime4(const time4_t *);
 char*	ctime4_r(const time4_t *, char *);
 
-int log_filef(const char *fn, const char *fmt,...) GCC_CHECK_FORMAT(2,3);
+/* log.c */
+int log_filef(const char *fn, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
 int log_file(const char *fn, const char *msg);
 
 /* record.c */
