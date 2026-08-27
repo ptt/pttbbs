@@ -721,7 +721,6 @@ static const commands_t maillist[] = {
     {mail_mbox, PERM_INTERNET,  "Zip UserHome  把所有私人資料打包回去"},
     {built_mail_index,
 	PERM_LOGINOK,		"Savemail      重建信箱索引"},
-    {mail_all, PERM_SYSOP,      "All           寄信給所有使用者"},
 #ifdef USE_MAIL_ACCOUNT_SYSOP
     {mail_account_sysop, 0,     "Contact AM    寄信給帳號站長"},
 #endif
