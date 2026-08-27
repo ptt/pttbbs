@@ -136,7 +136,7 @@ append_ticket_record(const char *direct, int ch, int n, int count)
 	return -1;
 
     SNPRINTF(genbuf, "%s/" FN_TICKET_USER, direct);
-    log_filef(genbuf, "%s %d %d\n", cuser.userid, ch, n);
+    file_appendf(genbuf, "%s %d %d\n", cuser.userid, ch, n);
 
     SNPRINTF(genbuf, "%s/" FN_TICKET_RECORD, direct);
 

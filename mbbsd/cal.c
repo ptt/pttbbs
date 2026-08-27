@@ -500,7 +500,7 @@ give_money_ui(const char *userid)
             if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
                 veditfile(fpath);
             if (dashf(fpath))
-                log_file(fpath, alert_trade);
+                file_append(fpath, alert_trade);
             sendalert(id, ALERT_NEW_MAIL);
         }
     }

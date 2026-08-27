@@ -382,7 +382,7 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
         // FIXME maybe for non-board files we should do this by simply touching
         // file instead of full log.
         if (reason && *reason)
-            log_filef(fpath, "\n※ 刪除原因: %s", reason);
+            file_appendf(fpath, "\n※ 刪除原因: %s", reason);
         log_filef(fpath, "\n※ Deleted by: %s (%s) %s\n",
                   cuser.userid, fromhost, Cdatelite(&now));
 

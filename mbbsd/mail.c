@@ -195,7 +195,7 @@ mail_log2id_text(const char *id, const char *title, const char *message,
     STRLCPY(mhdr.owner, owner);
     STRLCPY(mhdr.title, title);
     mhdr.filemode = newmail ? 0 :  FILE_READ;
-    log_filef(dst, "%s", message);
+    file_appendf(dst, "%s", message);
 
     sethomedir(dirf, id);
     append_record(dirf, &mhdr, sizeof(mhdr));

@@ -1868,7 +1868,7 @@ regform_log2file(const RegformEntry *pre GCC_UNUSED, char accepted GCC_UNUSED,
     }
     STRLCAT(msg, "\n");
     concat_regform_entry_localized(pre, msg, sizeof(msg));
-    log_file(FN_ID_RECORD, msg);
+    file_append(FN_ID_RECORD, msg);
 #endif  // FN_ID_RECORD
 }
 

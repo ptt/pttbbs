@@ -2069,7 +2069,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         char revfn[PATHLEN];
         timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
         if (dashf(revfn))
-            log_filef(revfn, "\n¡° Last modified: %s", Cdatelite(&oldmt));
+            file_appendf(revfn, "\n¡° Last modified: %s", Cdatelite(&oldmt));
     }
 
     return FULLUPDATE;
@@ -3518,7 +3518,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #endif // ASSESS
             if (*newpath && *reason) {
-                log_filef(newpath, "¡° Delete Reason: %s\n", reason);
+                file_appendf(newpath, "¡° Delete Reason: %s\n", reason);
             }
 
             if (del_fee <= 0)

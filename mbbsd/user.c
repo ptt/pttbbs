@@ -27,7 +27,7 @@ ban_usermail(const userec_t *u, const char *reason) {
         return;
     if (!reason || !*reason)
         reason = "(站長忘了打)";
-    log_filef("etc/banemail",
+    file_appendf("etc/banemail",
               "# %s: %s (by %s)\nA%s\n",
               u->userid, reason, cuser.userid, u->email);
 }
