@@ -95,7 +95,7 @@ int EntryBrowser::Footer() {
 }
 
 int EntryBrowser::Renderer(int i, int curr, int total, int rows) {
-  if (curr >= entries_.size()) {
+  if (curr >= (int)entries_.size()) {
     outs("   查無資料");
     return 0;
   }
@@ -116,7 +116,7 @@ int EntryBrowser::Renderer(int i, int curr, int total, int rows) {
 }
 
 int EntryBrowser::InputProcessor(int key, int curr, int total, int rows) {
-  if (curr >= entries_.size())
+  if (curr >= (int)entries_.size())
     return PSB_NA;
 
   switch (key) {

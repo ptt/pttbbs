@@ -418,7 +418,7 @@ static int uflag_setter(int flag)
     return pwcuToggleUserFlag(flag);
 }
 
-static const char *angel_getter(int flag GCC_UNUSED)
+static const char * GCC_UNUSED angel_getter(int flag GCC_UNUSED)
 {
     static const char *msgs[ANGELPAUSE_MODES] = {
         "開放 (接受所有小主人發問)",
@@ -427,7 +427,7 @@ static const char *angel_getter(int flag GCC_UNUSED)
     };
     return msgs[currutmp->angelpause % ARRAY_SIZE(msgs)];
 }
-static int angel_setter(int flag GCC_UNUSED)
+static int GCC_UNUSED angel_setter(int flag GCC_UNUSED)
 {
     angel_toggle_pause();
     return 0;

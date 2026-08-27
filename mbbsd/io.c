@@ -192,7 +192,7 @@ vkey_dispatch_hooks(int ch)
     return ch;
 }
 
-static void
+static void GCC_UNUSED
 draw_80x24() {
     int ox, oy, y, x;
     getyx(&oy, &ox);

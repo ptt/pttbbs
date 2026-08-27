@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+#include <stdio.h>
 #include "bbs.h"
 #include "cmbbs.h"
 #include "config.h"
