@@ -73,8 +73,6 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
                       int n_items) {
     int i;
     int unum = 0;
-    time4_t now = (time4_t)time(NULL);
-
     // initialize names by duplicating
     for (i = 0; i < n_items; i++) {
         strlcpy(items[i], ref_items[i], MAX_ITEM_LEN);
@@ -89,8 +87,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
         }
     }
     log_filef(FN_LOGFILE,
-             "%s last user index: %d (%s)\n",
-             Cdatelite(&now), unum,
+             "last user index: %d (%s)\n", unum,
              VALID_UNUM(unum) ? SHM->userid[unum - 2] : "-unkonwn-");
 
     // pickup new names
@@ -104,7 +101,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
             // rewind
             unum = 1;
             log_filef(FN_LOGFILE,
-                      "%s rewind user index.\n", Cdatelite(&now));
+                      "rewind user index.\n");
             continue;
         }
 #ifdef USE_SERIOUS_ID_CHECK_FOR_TICKETS
@@ -184,7 +181,7 @@ int main()
      * 若是小站當站開獎前開站, 則有被猜中的可能 */
     bet = (SHM->UTMPnumber + getpid()) % MAX_ITEM;
 
-    log_filef(FN_LOGFILE, "%s bet=%d\n", Cdatelite(&now), bet);
+    log_filef(FN_LOGFILE, "bet=%d\n", bet);
 
     money = ticket[bet] ? total * 95 / ticket[bet] : 9999999;
     if((fp = fopen("etc/" FN_TICKET, "w")))

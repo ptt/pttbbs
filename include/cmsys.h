@@ -25,10 +25,6 @@ enum STRIP_FLAG {
     NO_RELOAD	    // allow all known (color+move)
 };
 
-enum LOG_FLAG {
-    LOG_CREAT = 1,
-};
-
 /* DBCS aware modes */
 enum _DBCS_STATUS {
     DBCS_ASCII,

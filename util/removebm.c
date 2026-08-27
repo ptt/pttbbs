@@ -47,8 +47,7 @@ int check(void *data, int bid, boardheader_t *bh)
 
     now = time(0);
     log_filef(BBSHOME "/log/removebm.log",
-              "%s [%s] %s: %s->%s\n",
-              Cdatelite(&now), userid,
+              "[%s] %s: %s->%s\n", userid,
               bh->brdname, bh->BM, bmout);
 
     if (has_quote)

@@ -803,8 +803,8 @@ do_send(const char *userid, const char *title, const char *log_source)
 	    ret = bsmtp(fpath, save_title, userid, NULL);
             LOG_IF(LOG_CONF_INTERNETMAIL,
                    log_filef("log/internet_mail.log",
-                             "%s [%s - %s] %s -> %s: %s\n",
-                             Cdatelite(&now), log_source, __FUNCTION__,
+                             "[%s - %s] %s -> %s: %s\n",
+                             log_source, __FUNCTION__,
                              cuser.userid, userid, save_title));
 	    hold_mail(fpath, userid, save_title);
 	    break;
@@ -1284,7 +1284,7 @@ mail_mbox(void)
     // fix it in future.
     if (doforward(cmd, &fhdr, 'Z') == 0) {
         log_filef(tagname,
-                  "%s %s\n", Cdatelite(&now), cmd);
+                  "%s\n", cmd);
         rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
     }
     return 0;
@@ -1501,8 +1501,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if (hostaddr) {
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
-                         "%s [%s] %s -> %s: %s - %s\n",
-                         Cdatelite(&now), __FUNCTION__,
+                         "[%s] %s -> %s: %s - %s\n",
+                         __FUNCTION__,
                          cuser.userid, address, direct, fh->title));
     }
 

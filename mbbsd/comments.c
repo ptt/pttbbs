@@ -253,7 +253,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
             char revfn[PATHLEN];
             timecapsule_get_by_revision(filename, rev, revfn, sizeof(revfn));
             if (dashf(revfn))
-            log_filef(revfn, "\n※ 刪除推文: %s %s理由: %s\n"
+            file_appendf(revfn, "\n※ 刪除推文: %s %s理由: %s\n"
                       "推文內容: %s: %s\n", Cdatelite(&now), cuser.userid,
                       reason, req->userid, req->msg);
         }

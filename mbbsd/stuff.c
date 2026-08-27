@@ -292,7 +292,7 @@ log_user(const char *fmt, ...)
     va_end(ap);
 
     sethomefile(filename, cuser.userid, "USERLOG");
-    return log_filef(filename, "%s: %s %s", cuser.userid, msg,  Cdate(&now));
+    return file_appendf(filename, "%s: %s %s", cuser.userid, msg,  Cdate(&now));
 }
 
 // TODO

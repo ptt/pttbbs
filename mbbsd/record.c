@@ -383,7 +383,7 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
         // file instead of full log.
         if (reason && *reason)
             file_appendf(fpath, "\n¡° §R°£­ì¦]: %s", reason);
-        log_filef(fpath, "\n¡° Deleted by: %s (%s) %s\n",
+        file_appendf(fpath, "\n¡° Deleted by: %s (%s) %s\n",
                   cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
@@ -497,7 +497,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 
     if (strlen(fpath) + strlen(FN_FORWARD) >= PATHLEN) {
         log_filef("log/invalid_append_record_forward",
-                  "%s %s %s\n", Cdatelite(&now), cuser.userid, fpath);
+                  "%s %s\n", cuser.userid, fpath);
         return -1;
     }
     setdirpath(buf, fpath, FN_FORWARD);
@@ -526,8 +526,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         // TODO add a mail so that origid knows what happened.
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
-                         "%s [%s] (%s -> %s) mailbox overflow (%d > %d)\n",
-                         Cdatelite(&now), __FUNCTION__,
+                         "[%s] (%s -> %s) mailbox overflow (%d > %d)\n",
+                         __FUNCTION__,
                          origid, address,
                          get_num_records(fpath, sizeof(fileheader_t)),
                          MAX_KEEPMAIL_HARDLIMIT));
@@ -543,8 +543,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         unlink(buf);
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
-                         "%s [%s] Removed bad address: %s (%s)\n",
-                         Cdatelite(&now), __FUNCTION__,
+                         "[%s] Removed bad address: %s (%s)\n",
+                         __FUNCTION__,
                          address, origid));
 #endif
         return 0;
@@ -561,8 +561,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     bsmtp(buf, fwd_title, address, origid);
     LOG_IF(LOG_CONF_INTERNETMAIL,
            log_filef("log/internet_mail.log",
-                     "%s [%s] %s -> (%s) %s: %s\n",
-                     Cdatelite(&now), __FUNCTION__,
+                     "[%s] %s -> (%s) %s: %s\n",
+                     __FUNCTION__,
                      cuser.userid, origid, address, fwd_title));
 // #endif // USE_MAIL_AUTO_FORWARD
     return 0;

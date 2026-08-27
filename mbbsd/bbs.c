@@ -299,8 +299,8 @@ save_violatelaw(void)
     if (cuser.money < (int)cuser.vl_count * 1000)
     {
 	log_filef("log/violation",
-		"%s %s pay-violation error: race-conditionn hack?\n",
-		Cdate(&now), cuser.userid);
+		"%s pay-violation error: race-conditionn hack?\n",
+		cuser.userid);
 	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
 	return 0;
     }
@@ -308,8 +308,8 @@ save_violatelaw(void)
     pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
     log_filef("log/violation",
-	    "%s %s pay-violation: $%d complete.\n",
-	    Cdate(&now), cuser.userid, (int)cuser.vl_count*1000);
+	    "%s pay-violation: $%d complete.\n",
+	    cuser.userid, (int)cuser.vl_count*1000);
 
     vmsg("罰單已付，請重新登入。");
     u_exit("save_violate");
@@ -534,7 +534,7 @@ CheckModifyPerm(const char **preason)
     if (ISNEWPERM(currutmp))
     {
 #ifdef DEBUG
-	log_filef("log/newperm.log",
+	file_appendf("log/newperm.log",
 		"%-13s: reloaded perm %s\n",
 		cuser.userid, Cdate(&now));
 #endif
@@ -1234,7 +1234,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
              "(%s)", currboard);
     if (dashs(genbuf) > 0) {
         log_filef("log/conflict.log",
-                  "%s %s->%s %s: %s\n", Cdatelite(&now),
+                  "%s->%s %s: %s\n",
                   currboard, brd, fh.filename, fh.title);
     }
 
@@ -1543,7 +1543,7 @@ do_post_article(int edflags)
         if (LOG_CONF_POST) {
             char bfilepath[PATHLEN];
             setbfile(bfilepath, currboard, postfile.filename);
-            log_filef("log/post", "%d %s %s %d\n",
+            file_appendf("log/post", "%d %s %s %d\n",
                       (int)now, cuser.userid, bfilepath, money);
         }
 
@@ -1628,8 +1628,8 @@ do_post_article(int edflags)
 	    } else if ((str = strchr(quote_user, '.'))) {
                 LOG_IF(LOG_CONF_INTERNETMAIL,
                        log_filef("log/internet_mail.log",
-                                 "%s [%s (%s)] %s -> %s: %s\n",
-                                 Cdatelite(&now), __FUNCTION__,
+                                 "[%s (%s)] %s -> %s: %s\n",
+                                 __FUNCTION__,
                                  currboard, cuser.userid, str + 1, save_title));
                 msg = "回應至作者外部信箱";
 		if ( bsmtp(fpath, save_title, str + 1, NULL) < 0)
@@ -1951,7 +1951,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return DONOTHING;
 
 	// admin edit!
-	log_filef("log/security",
+	file_appendf("log/security",
 		"%d %s %d %s admin edit (board) file=%s\n",
 		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
 #else
@@ -2051,7 +2051,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (strcmp(save_title, fhdr->title) != 0) {
         LOG_IF(LOG_CONF_EDIT_TITLE,
                log_filef("log/edit_title.log",
-                         "%s %s(E) %s(%s) %s => %s\n", Cdatelite(&now),
+                         "%s(E) %s(%s) %s => %s\n",
                          cuser.userid, currboard, fhdr->owner, fhdr->title,
                          save_title));
         STRLCPY(fhdr->title, save_title);
@@ -2348,8 +2348,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
         LOG_IF(LOG_CONF_CROSSPOST,
                log_filef("log/cross_post.log",
-                         "%s %s %s #%u %s -> %s %s | %s\n",
-                         Cdatelite(&now), cuser.userid, cuser.lasthost,
+                         "%s %s #%u %s -> %s %s | %s\n",
+                         cuser.userid, cuser.lasthost,
                          (unsigned) getpid(),
                          currboard, xboard, fhdr->filename, fhdr->title));
 
@@ -2434,7 +2434,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
            ++read_count;
            syncnow();
            if (read_count % 1000 == 0)
-               log_filef("log/read_alot",
+               file_appendf("log/read_alot",
                         "%d %s %d %s %08x %d\n", (int)now, Cdate(&now), getpid(),
                         cuser.userid, client_code, read_count);
            });
@@ -2707,7 +2707,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     }
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
-                     "%s %s(%d) %s %s=>%s %s=>%s %s => %s\n", Cdatelite(&now),
+                     "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
                      cuser.userid, allow, currboard, fhdr->owner, tmpfhdr.owner,
                      fhdr->date, tmpfhdr.date, fhdr->title, tmpfhdr.title));
     // Sync caller.
@@ -3106,9 +3106,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
             return FULLUPDATE;
     }
     STATINC(STAT_RECOMMEND);
-    LOG_IF(LOG_CONF_PUSH, log_filef("log/push",
-                                    "%s %d %s %s %s\n", cuser.userid,
-                                    (int)now, currboard, fhdr->filename, msg));
+    LOG_IF(LOG_CONF_PUSH, file_appendf("log/push",
+                                    "%d %s %s %s\n", (int)now,
+                                    currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
     if (CommentsAddRecord(bp->brdname, fhdr->filename, type, msg)) {
         vmsg("錯誤: 資料庫連線異常，無法寫入。請稍候再試。");
@@ -3237,9 +3237,8 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     ret = 0;
     LOG_IF((LOG_CONF_MASS_DELETE && (num >= 50)),
            log_filef("log/del_range.log",
-                     "%s range %d->%d %s [%s]\n",
-                     cuser.userid, num1, num2,
-                     Cdate(&now), direct));
+                     "%s range %d->%d [%s]\n",
+                     cuser.userid, num1, num2, direct));
     do {
         int id = num1, i;
         for (i = 0; ret == 0 && i < num; i++) {
@@ -3736,7 +3735,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     substitute_ref_record(direct, fhdr, ent);
     setdirpath(fn, direct, fhdr->filename);
     if (dashf(fn))
-        log_filef(fn, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
+        file_appendf(fn, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
     return FULLUPDATE;
 }
@@ -4465,9 +4464,9 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     }
     fclose(fp);
     fclose(fpw);
-    log_filef(fpath, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
+    file_appendf(fpath, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
               Cdatelite(&now), reason);
-    log_filef(revpath,
+    file_appendf(revpath,
               "※ %s 於 %s 刪除部份違規文字,原因: %s\n"
               "※ 違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);

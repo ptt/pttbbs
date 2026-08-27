@@ -825,8 +825,7 @@ pae_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED
             if (result != EDIT_ABORTED)
             {
                 log_filef("log/etc_edit.log",
-                          "%s %s %s # %s\n",
-                          Cdate(&now),
+                          "%s %s # %s\n",
                           cuser.userid,
                           cx->files[curr],
                           cx->descs[curr]);

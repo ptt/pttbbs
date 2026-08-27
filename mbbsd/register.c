@@ -2448,8 +2448,8 @@ regform2_validate_single(const char *xuid)
     regq_end_pull(fpregq);
     LOG_IF(LOG_CONF_VALIDATE_REG,
            log_filef("log/validate_reg.log",
-                     "%s %s SINGLE finished: %d forms\n",
-                     Cdatelite(&now), cuser.userid, tid));
+                     "%s SINGLE finished: %d forms\n",
+                     cuser.userid, tid));
     // finishing
     clear(); move(5, 0);
     if (xuid && tid == 0)
@@ -2798,8 +2798,8 @@ regform2_validate_page(int dryrun)
     regq_end_pull(fpregq);
     LOG_IF(LOG_CONF_VALIDATE_REG,
            log_filef("log/validate_reg.log",
-                     "%s %s PAGE finished: %d forms\n",
-                     Cdatelite(&now), cuser.userid, tid));
+                     "%s PAGE finished: %d forms\n",
+                     cuser.userid, tid));
     // finishing
     clear(); move(5, 0);
     prints("您檢視了 %d 份註冊單。", tid);

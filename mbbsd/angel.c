@@ -296,8 +296,8 @@ select_angel() {
         // No need to tell AngelBeats since this is only for ANGEL_CIA_ACCOUNT.
         pwcuSetMyAngel(getuserid(list.uids[idx - 1]));
 	log_filef(BBSHOME "/log/changeangel.log",
-                  "%s 珇恨 %s ┾代 %s ぱㄏ\n",
-                  Cdatelite(&now), cuser.userid, cuser.myangel);
+                  "珇恨 %s ┾代 %s ぱㄏ\n",
+                  cuser.userid, cuser.myangel);
         vmsg("ぱㄏ传ЧΘ");
         break;
     }
@@ -330,8 +330,8 @@ do_changeangel(int force) {
         if (is_bad_master &&
             time4_lt(dasht(bad_master_file), now - ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
             log_filef("log/bad_master.log",
-                      "%s %s removed from bad master list (%d)\n",
-                      Cdatelite(&now), cuser.userid, dasht(bad_master_file));
+                      "%s removed from bad master list (%d)\n",
+                      cuser.userid, dasht(bad_master_file));
             remove(bad_master_file);
         }
     }
@@ -350,7 +350,7 @@ do_changeangel(int force) {
 #endif
        if (is_bad_master)
            log_filef("log/bad_master.log",
-                     "%s %s change angel.\n", Cdatelite(&now), cuser.userid);
+                     "%s change angel.\n", cuser.userid);
         if (is_bad_master &&
             !verify_captcha("磷秖獶タ盽传ぱㄏ\n"))
             return 0;
@@ -359,8 +359,8 @@ do_changeangel(int force) {
     getdata(b_lines - 1, 0, "絋﹚璶传ぱㄏ [y/N]", buf, 3, LCECHO);
     if (buf[0] == 'y') {
 	log_filef(BBSHOME "/log/changeangel.log",
-                  "%s  %s 传奔 %s ぱㄏ\n",
-                  Cdatelite(&now), cuser.userid, cuser.myangel);
+                  " %s 传奔 %s ぱㄏ\n",
+                  cuser.userid, cuser.myangel);
         angel_beats_do_request(ANGELBEATS_REQ_REMOVE_LINK,
                                usernum, searchuser(cuser.myangel, NULL));
 	pwcuSetMyAngel("");
@@ -441,7 +441,7 @@ int angel_check_master(void) {
                xuser.userid);
     }
     log_filef("log/angel_query_master.log",
-             "%s [%s] query [%s]\n", Cdatelite(&now), cuser.userid, uid);
+             "[%s] query [%s]\n", cuser.userid, uid);
     pressanykey();
     return 0;
 }
@@ -457,8 +457,8 @@ angel_log_order_song(const char *angel_nick) {
         STRLCPY(angel_exp, "");
 
     log_filef("log/osong_angel.log",
-              "%s %*s 翴簈倒 %*sぱㄏ (%s - %s)\n",
-              Cdatelite(&now), IDLEN, cuser.userid,
+              "%*s 翴簈倒 %*sぱㄏ (%s - %s)\n",
+              IDLEN, cuser.userid,
               IDLEN - 6, angel_nick, fromhost, angel_exp);
     pwcuPlayAngel();
 }
@@ -688,8 +688,8 @@ angel_edit_msg(const char *prompt, const char *filename,
 
     if (strcmp(nick, old_nick) != 0) {
         log_filef("log/change_angel_nick.log",
-                  "%s %s (%sぱㄏ)传际嘿%sぱㄏ\n",
-                  Cdatelite(&now), cuser.userid, old_nick, nick);
+                  "%s (%sぱㄏ)传际嘿%sぱㄏ\n",
+                  cuser.userid, old_nick, nick);
     }
 
     if (do_delete_file) {
@@ -882,8 +882,8 @@ TalkToAngel(){
             if (uent == NULL || angel_reject_me(uent) ||
                 uent->angelpause || uent->mode == DEBUGSLEEPING) {
                 log_filef("log/auto_change_angel.log",
-                          "%s master %s (%d days), angel %s, state (%s)\n",
-                          Cdatelite(&now), cuser.userid,
+                          "master %s (%d days), angel %s, state (%s)\n",
+                          cuser.userid,
                           time4_days_elapsed(now, cuser.timeplayangel),
                           cuser.myangel,
                           !uent ? "not online" : angel_reject_me(uent) ?

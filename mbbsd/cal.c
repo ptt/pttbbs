@@ -302,7 +302,7 @@ do_give_money(char *id, int uid, int money, const char *myid)
     pay(money, "%s", prompt);
     pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)",
                myid, money);
-    log_filef(FN_MONEY, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
+    file_appendf(FN_MONEY, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
               cuser.userid, id, money, money - tax, Cdate(&now));
 
     // penalty

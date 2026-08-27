@@ -217,7 +217,6 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
 {
     userec_t u = {0};
     char src[PATH_MAX], dst[PATH_MAX];
-    time4_t now_t;
     const char *uid_shm;
     int ret;
 
@@ -244,11 +243,11 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
     passwd_unlock();
 
     // Audit log entry to USIES log
-    time4(&now_t);
     if (!action_tag || !*action_tag)
         action_tag = "CLEAN(PURGE)";
 
-    log_filef(FN_USIES, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
+    time4_t now_t = (time4_t)time(NULL);
+    file_appendf(FN_USIES, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
 
     // Archive or remove user home directory
     sethomepath(src, userid);

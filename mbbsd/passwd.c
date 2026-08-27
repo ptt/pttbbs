@@ -58,8 +58,8 @@ pwcuInitCUser(userec_t *u)
     if (passwd_sync_query(usernum, u) != 0)
 	return -1;
 #ifdef DEBUG
-    log_filef("log/pwcu_exitsave.log", "%s InitCUser  invoked at %s\n",
-	    cuser.userid, Cdatelite(&now));
+    log_filef("log/pwcu_exitsave.log", "%s InitCUser  invoked\n",
+	    cuser.userid);
 #endif
     assert(strncmp(u->userid, cuser.userid, IDLEN) == 0);
     if    (strncmp(u->userid, cuser.userid, IDLEN) != 0)
@@ -73,8 +73,8 @@ pwcuFinalCUser(userec_t *u)
     assert(usernum > 0 && usernum <= MAX_USERS);
     assert(strcmp(u->userid, cuser.userid) == 0);
 #ifdef DEBUG
-    log_filef("log/pwcu_exitsave.log", "%s FinalCUser invoked at %s\n",
-	    cuser.userid, Cdatelite(&now));
+    log_filef("log/pwcu_exitsave.log", "%s FinalCUser invoked\n",
+	    cuser.userid);
 #endif
     if (passwd_sync_update(usernum, u) != 0)
 	return -1;
@@ -581,15 +581,15 @@ pwcuExitSave	()
 	// u.money		= moneyof(usernum); // should be already updated by deumoney
 
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", "%s exit %s at %s\n",
-		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
+	log_filef("log/pwcu_exitsave.log", "%s exit %s\n",
+		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN");
 #endif
 	PWCU_END();
 	// XXX return 0 here (PWCU_END), following code is not executed.
     }
 #ifdef DEBUG
-	log_filef("log/pwcu_exitsave.log", "%s exit %s at %s\n",
-		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN", Cdatelite(&now));
+	log_filef("log/pwcu_exitsave.log", "%s exit %s\n",
+		cuser.userid, pwcu_dirty ? "DIRTY" : "CLEAN");
 #endif
     return 0;
 }

@@ -138,8 +138,8 @@ int u_cancelbadpost(void)
    }
 
    log_filef("log/cancelbadpost.log",
-	   "%s %s 刪除一篇退文 (%d -> %d 篇)\n",
-	   Cdate(&now), cuser.userid, prev, cuser.badpost);
+	   "%s 刪除一篇退文 (%d -> %d 篇)\n",
+	   cuser.userid, prev, cuser.badpost);
 
    vmsgf("恭喜您已成功\刪除一篇退文 (由 %d 變為 %d 篇)",
 	   prev, cuser.badpost);
@@ -790,8 +790,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
                     x.timesetangel = now;
                     log_filef(BBSHOME "/log/changeangel.log",
-                              "%s 站長 %s 修改 %s 的小天使為 %s\n",
-                              Cdatelite(&now), cuser.userid, x.userid, x.myangel);
+                              "站長 %s 修改 %s 的小天使為 %s\n",
+                              cuser.userid, x.userid, x.myangel);
 		    break;
 		}
 
