@@ -115,7 +115,6 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	if (rpt_bid > 0) {
 	    fileheader_t report_fh;
 	    char rptdir[PATHLEN];
-	    FILE *fp;
 
 	    setbpath(rptpath, BAD_POST_RECORD);
 	    stampfile(rptpath, &report_fh);
@@ -124,16 +123,10 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	    SNPRINTF(report_fh.title, "%s 板 %s 板主退回 %s %s",
 		    currboard, cuser.userid, userid, comment ? "推文" : "文章");
 	    Copy(newpath, rptpath);
-	    fp = fopen(rptpath, "at");
-
-	    if (fp)
-	    {
-		fprintf(fp, "\n退文原因: %s\n", genbuf);
-		if (comment)
-		    fprintf(fp, "\n退回推文項目:\n%s", comment);
-		fprintf(fp, "\n");
-		fclose(fp);
-	    }
+	    file_appendf(rptpath, "\n退文原因: %s\n", genbuf);
+	    if (comment)
+		file_appendf(rptpath, "\n退回推文項目:\n%s", comment);
+	    file_append(rptpath, "\n");
 
 	    setbdir(rptdir, BAD_POST_RECORD);
 	    append_record(rptdir, &report_fh, sizeof(report_fh));
