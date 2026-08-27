@@ -441,7 +441,7 @@ int file_append(const char *file, const char *string)
  * @param key 沒有換行的字串
  * @return 成功傳回 0，失敗傳回 -1。
  */
-int file_append_record(const char *file, const char *key)
+int file_append_entry(const char *file, const char *key)
 {
     if (!key || !*key)
         return -1;
@@ -471,7 +471,7 @@ int file_append_record(const char *file, const char *key)
 /**
  * 傳回檔案 file 中 key 所在行數
  */
-int file_find_record(const char *file, const char *key)
+int file_find_entry(const char *file, const char *key)
 {
     FILE           *fp;
     char            buf[LINEBUFSZ], *ptr;
@@ -495,9 +495,9 @@ int file_find_record(const char *file, const char *key)
 /**
  * 傳回檔案 file 中是否有 key
  */
-int file_exist_record(const char *file, const char *key)
+int file_exist_entry(const char *file, const char *key)
 {
-    return file_find_record(file, key) > 0 ? 1 : 0;
+    return file_find_entry(file, key) > 0 ? 1 : 0;
 }
 
 /**
@@ -508,7 +508,7 @@ int file_exist_record(const char *file, const char *key)
  * @return 成功傳回 0，失敗傳回 -1。
  */
 int
-file_delete_record(const char *file, const char *string, int case_sensitive)
+file_delete_entry(const char *file, const char *string, int case_sensitive)
 {
     // TODO nfp 用 tmpfile() 比較好？ 不過 Rename 會變慢...
     FILE *fp = NULL, *nfp = NULL;

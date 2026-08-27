@@ -108,7 +108,7 @@ strlen_without_space(const char *s)
 int
 reserved_user_id(const char *userid)
 {
-    if (file_exist_record(FN_CONF_RESERVED_ID, userid))
+    if (file_exist_entry(FN_CONF_RESERVED_ID, userid))
        return 1;
     return 0;
 }
@@ -1255,7 +1255,7 @@ create_regform_request()
     fclose(fn);
 
     // regform2 must update request list
-    file_append_record(FN_REQLIST, cuser.userid);
+    file_append_entry(FN_REQLIST, cuser.userid);
 
     // save justify information
     pwcuRegSetTemporaryJustify("<Manual>", "x");
@@ -1471,7 +1471,7 @@ u_manual_verification(void)
 
 
     // TODO REGFORM 2 checks 2 parts.
-    i = file_find_record(FN_REQLIST, cuser.userid);
+    i = file_find_entry(FN_REQLIST, cuser.userid);
 
     if (i > 0)
     {
@@ -2073,7 +2073,7 @@ resolve_reason(char *s, int y, int force)
 int
 regq_append(const char *userid)
 {
-    if (file_append_record(FN_REQLIST, userid) < 0)
+    if (file_append_entry(FN_REQLIST, userid) < 0)
 	return 0;
     return 1;
 }
@@ -2081,13 +2081,13 @@ regq_append(const char *userid)
 int
 regq_find(const char *userid)
 {
-    return file_find_record(FN_REQLIST, userid);
+    return file_find_entry(FN_REQLIST, userid);
 }
 
 int
 regq_delete(const char *userid)
 {
-    return file_delete_record(FN_REQLIST, userid, 0);
+    return file_delete_entry(FN_REQLIST, userid, 0);
 }
 
 // user home regform operation

@@ -131,10 +131,10 @@ int file_count_line(const char *file);
 int file_append(const char *file, const char *string); // does not append "\n"
 int file_appendv(const char *file, const char *fmt, va_list ap);
 int file_appendf(const char *file, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
-int file_append_record(const char *file, const char *key);  // will append "\n"
-int file_exist_record(const char *file, const char *key);
-int file_find_record(const char *file, const char *key);
-int file_delete_record(const char *file, const char *key, int case_sensitive);
+int file_append_entry(const char *file, const char *key);  // will append "\n"
+int file_exist_entry(const char *file, const char *key);
+int file_find_entry(const char *file, const char *key);
+int file_delete_entry(const char *file, const char *key, int case_sensitive);
 
 /* lock.c */
 void PttLock(int fd, int start, int size, int mode);

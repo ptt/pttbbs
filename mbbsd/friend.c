@@ -73,7 +73,7 @@ friend_add(const char *uident, int type, const char* des)
     if (friend_count(fpath) > (int)friend_max[type])
 	return;
 
-    if ((uident[0] > ' ') && !file_exist_record(fpath, uident)) {
+    if ((uident[0] > ' ') && !file_exist_entry(fpath, uident)) {
 	char buf[MAX_DESCLEN] = "", buf2[STRLEN];
 	char t_uident[IDLEN + 1];
 
@@ -88,7 +88,7 @@ friend_add(const char *uident, int type, const char* des)
 	}
 
     	SNPRINTF(buf2, "%-13s%s", t_uident, buf);
-     	file_append_record(fpath, buf2);
+     	file_append_entry(fpath, buf2);
     }
 }
 
@@ -97,10 +97,10 @@ int
 is_rejected(const char *userid) {
     char fpath[PATHLEN];
     sethomefile(fpath, userid, FN_REJECT);
-    if (!file_exist_record(fpath, cuser.userid))
+    if (!file_exist_entry(fpath, cuser.userid))
         return 0;
     sethomefile(fpath, userid, FN_OVERRIDES);
-    return !file_exist_record(fpath, cuser.userid);
+    return !file_exist_entry(fpath, cuser.userid);
 }
 
 void
@@ -198,7 +198,7 @@ friend_append(int type, int count)
 	while (fgets(buf, sizeof(buf), fp) && (unsigned)count <= friend_max[type]) {
 	    char the_id[IDLEN + 1];
 	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
-	    if (!file_exist_record(fpath, the_id))
+	    if (!file_exist_entry(fpath, the_id))
 		file_append(fpath, buf);
 	}
 	fclose(fp);
