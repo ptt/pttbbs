@@ -4,6 +4,7 @@
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #endif
+#include <stdarg.h>
 #include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h> // random
@@ -386,12 +387,30 @@ int file_count_line(const char *file)
     return count;
 }
 
-/**
- * 將 string append 到檔案 file 後端 (不加換行)
- * @param file 要被 append 的檔
- * @param string
- * @return 成功傳回 0，失敗傳回 -1。
- */
+/* Append a format string (with params) to a file. */
+int
+file_appendv(const char *file, const char *fmt, va_list ap)
+{
+    char *buf = NULL;
+    int len = vasprintf(&buf, fmt, ap);
+    if (len < 0 || !buf)
+        return -1;
+
+    int ret = file_append(file, buf);
+    free(buf);
+    return ret;
+}
+
+int
+file_appendf(const char *file, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = file_appendv(file, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+
 int file_append(const char *file, const char *string)
 {
     if (!file || !*file || !string)

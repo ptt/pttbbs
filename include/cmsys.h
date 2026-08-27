@@ -1,6 +1,7 @@
 #ifndef LIBBBSUTIL_H_
 #define LIBBBSUTIL_H_
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -128,6 +129,8 @@ int RmTree(const char *path);
 int OpenCreate(const char *path, int flags);
 int file_count_line(const char *file);
 int file_append(const char *file, const char *string); // does not append "\n"
+int file_appendv(const char *file, const char *fmt, va_list ap);
+int file_appendf(const char *file, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
 int file_append_record(const char *file, const char *key);  // will append "\n"
 int file_exist_record(const char *file, const char *key);
 int file_find_record(const char *file, const char *key);
