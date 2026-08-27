@@ -294,12 +294,8 @@ void AccountRecovery::ResetPasswd() {
   }
 
   // Log to user security.
-  {
-    char logfn[PATHLEN];
-    sethomefile(logfn, user_->userid.c_str(), FN_USERSECURITY);
-    log_filef(logfn, "%s %s (ResetPasswd) Email: %s\n",
-              Cdatelite(&now), fromhost, email_.c_str());
-  }
+  log_user_security(user_->userid.c_str(), "%s (ResetPasswd) Email: %s\n",
+                    fromhost, email_.c_str());
 
   vmsg("密碼重設完成，請以新密碼登入。");
 }

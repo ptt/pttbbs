@@ -731,13 +731,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    STRLCPY(title, "聯絡信箱變更通知");
 	    SNPRINTF(buf, "您的聯絡信箱已變更為 %s\n", email);
 	    mail_log2id_text(orig_uid, title, buf, cuser.userid, 1);
-
-	    // Log to user log.
-	    char logfn[PATHLEN];
-	    sethomefile(logfn, x.userid, FN_USERSECURITY);
-	    log_filef(logfn, "%s %s (ContactEmail) %s -> %s\n",
-		      Cdatelite(&now), "[Admin]", x.email, email);
-
+            log_user_security(x.userid, "%s (ContactEmail) %s -> %s\n",
+                              "[Admin]", x.email, email);
 	    STRLCPY(x.email, email);
 	}
 
@@ -1044,12 +1039,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	}
 
 	// Log to user log.
-	{
-	    char logfn[PATHLEN];
-	    sethomefile(logfn, x.userid, FN_USERSECURITY);
-	    log_filef(logfn, "%s %s (Passwd)\n",
-		      Cdatelite(&now), adminmode ? "[Admin]" : fromhost);
-	}
+        log_user_security(x.userid, "%s (Passwd)\n",
+                          adminmode ? "[Admin]" : fromhost);
 
         // Send notification email if user has email set.
 	// Only do so if not Admin to avoid confusing user.

@@ -1691,11 +1691,8 @@ change_contact_email(bool skip_same_email_check)
     if (register_email_verification(&ein, skip_same_email_check) != REGISTER_OK)
 	return -1;
 
-    // Log.
-    char logfn[PATHLEN];
-    setuserfile(logfn, FN_USERSECURITY);
-    log_filef(logfn, "%s %s (ContactEmail) %s -> %s\n",
-	      Cdatelite(&now), fromhost, cuser.email, email);
+    log_user_security(cuser.userid, "%s (ContactEmail) %s -> %s\n", fromhost,
+                      cuser.email, email);
 
     // Send notification to old email address if it was valid
     if (is_valid_email(cuser.email))
