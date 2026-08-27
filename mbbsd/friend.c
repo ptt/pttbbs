@@ -87,8 +87,8 @@ friend_add(const char *uident, int type, const char* des)
 	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
 	}
 
-    	SNPRINTF(buf2, "%-13s%s\n", t_uident, buf);
-     	file_append_line(fpath, buf2);
+    	SNPRINTF(buf2, "%-13s%s", t_uident, buf);
+     	file_append_record(fpath, buf2);
     }
 }
 

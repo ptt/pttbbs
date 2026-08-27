@@ -127,7 +127,7 @@ int Mkdir(const char *path);
 int RmTree(const char *path);
 int OpenCreate(const char *path, int flags);
 int file_count_line(const char *file);
-int file_append_line(const char *file, const char *string); // does not append "\n"
+int file_append(const char *file, const char *string); // does not append "\n"
 int file_append_record(const char *file, const char *key);  // will append "\n"
 int file_exist_record(const char *file, const char *key);
 int file_find_record(const char *file, const char *key);

@@ -392,7 +392,7 @@ int file_count_line(const char *file)
  * @param string
  * @return 成功傳回 0，失敗傳回 -1。
  */
-int file_append_line(const char *file, const char *string)
+int file_append(const char *file, const char *string)
 {
     FILE *fp;
     if ((fp = fopen(file, "a")) == NULL)
