@@ -903,7 +903,7 @@ maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
     	!logconf->log_choice)
     	return 0;
 
-    int fd, i;
+    int i;
     char genbuf[300], tmpbuf[64];
 
     genbuf[0] = 0;
@@ -933,10 +933,7 @@ maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
 	STRLCAT(genbuf, "\n");
     }
 
-    if ((fd = OpenCreate(logfile, O_WRONLY | O_APPEND)) >= 0) {
-	write(fd, genbuf, strlen(genbuf));
-	close(fd);
-    }
+    file_append(logfile, genbuf);
     return 0;
 }
 
