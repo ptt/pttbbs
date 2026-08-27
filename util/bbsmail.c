@@ -17,22 +17,16 @@ int mailalertuid(int tuid)
 }      
 
 void
-mailog(char *msg)
+mailog(const char *msg)
 {
-    FILE *fp;
+    time_t now;
+    struct tm *p;
 
-    if ((fp = fopen(LOG_FILE, "a")))
-    {
-	time_t now;
-	struct tm *p;
-
-	time(&now);
-	p = localtime(&now);
-	fprintf(fp, "%02d/%02d/%02d %02d:%02d:%02d <bbsmail> %s\n",
-		p->tm_year % 100, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
-		msg);
-	fclose(fp);
-    }
+    time(&now);
+    p = localtime(&now);
+    file_appendf(LOG_FILE, "%02d/%02d/%02d %02d:%02d:%02d <bbsmail> %s\n",
+	    p->tm_year % 100, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
+	    msg);
 }
 
 static const char *
