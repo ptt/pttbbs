@@ -1173,17 +1173,13 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		    setbfile(b_comments, bname, vbuf->comments);
 		    if (mycomments[0][0])
 		    {
-			FILE *fcm = fopen(b_comments, "a");
-			if (fcm) {
-			    fprintf(fcm,
-				    ANSI_COLOR(36) "○使用者" ANSI_COLOR(1;36) " %s "
-				    ANSI_COLOR(;36) "的建議：" ANSI_RESET "\n",
-				    cuser.userid);
-			    for (i = 0; i < 3; i++)
-				fprintf(fcm, "    %s\n", mycomments[i]);
-			    fprintf(fcm, "\n");
-			    fclose(fcm);
-			}
+			file_appendf(b_comments,
+				ANSI_COLOR(36) "○使用者" ANSI_COLOR(1;36) " %s "
+				ANSI_COLOR(;36) "的建議：" ANSI_RESET "\n",
+				cuser.userid);
+			for (i = 0; i < 3; i++)
+			    file_appendf(b_comments, "    %s\n", mycomments[i]);
+			file_append(b_comments, "\n");
 		    }
 		}
 		move(b_lines - 1, 0);
