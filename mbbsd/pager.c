@@ -20,6 +20,20 @@
 const int PAGER_TABS = WB_OFO_USER_NUM;
 static char     t_last_write[STRLEN];
 
+static const char *
+get_writelog_path(void) {
+    static char path[PATHLEN];
+
+    // Not cached in case if cuser is changed, or sig1 called before we complete
+    // login process... (but is that really possible?)
+#if 0
+    if (*path)
+        return path;
+#endif
+    setuserfile(path, fn_writelog);
+    return path;
+}
+
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
 {
@@ -58,9 +72,7 @@ show_msg(int save, const msgque_t *msg)
     outmsg(buf);
 
     if (save && mode != MSGMODE_ALOHA) {
-        char genbuf[PATHLEN];
-        setuserfile(genbuf, fn_writelog);
-        file_appendf(genbuf, "%s [%s]\n", buf, Cdatelite(&now));
+        file_appendf(get_writelog_path(), "%s [%s]\n", buf, Cdatelite(&now));
     }
 }
 
@@ -494,9 +506,7 @@ my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
 static bool
 my_write_log_to_file(const char *destid, const char *msg)
 {
-    char genbuf[PATHLEN];
-    setuserfile(genbuf, fn_writelog);
-    if (file_appendf(genbuf, "To %s: %s [%s]\n", destid, msg, Cdatelite(&now)) < 0) {
+    if (file_appendf(get_writelog_path(), "To %s: %s [%s]\n", destid, msg, Cdatelite(&now)) < 0) {
         vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
         return false;
     }
@@ -698,9 +708,9 @@ pager_show_panel(void)
 
 int
 pager_show_log(void) {
-    char genbuf[PATHLEN], ans[4];
-    setuserfile(genbuf, fn_writelog);
-    if (more(genbuf, YEA) == -1) {
+    char ans[4];
+    const char *fpath = get_writelog_path();
+    if (more(fpath, YEA) == -1) {
         vmsg("暫無訊息記錄");
         return FULLUPDATE;
     } else {
@@ -715,15 +725,15 @@ pager_show_log(void) {
                 ans, sizeof(ans), LCECHO);
         if (*ans == 'm') {
             // only delete if success because the file can be re-used.
-            if (mail_log2id(cuser.userid, "熱線記錄", genbuf, "[備.忘.錄]", 0, 1) == 0)
-                unlink(genbuf);
+            if (mail_log2id(cuser.userid, "熱線記錄", fpath, "[備.忘.錄]", 0, 1) == 0)
+                unlink(fpath);
             else
                 vmsg("信箱儲存失敗。");
         } else if (*ans == 'c') {
             getdata(b_lines - 1, 0, "確定清除？(y/N) [N] ",
                     ans, sizeof(ans), LCECHO);
             if(*ans == 'Y' || *ans == 'y')
-                unlink(genbuf);
+                unlink(fpath);
             else
                 vmsg("取消清除。");
         }
