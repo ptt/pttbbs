@@ -413,26 +413,15 @@ void
 logattempt(const char *uid, char type, time4_t now, const char *loghost)
 {
     char fname[PATHLEN];
-    int  fd, len;
-    char genbuf[200];
 
-    SNPRINTF(genbuf, "%c%-12s[%s] ?@%s\n", type, uid,
-	    Cdate(&now), loghost);
-    len = strlen(genbuf);
     // log to public (BBSHOME)
-    if ((fd = OpenCreate(FN_BADLOGIN, O_WRONLY | O_APPEND)) >= 0) {
-	write(fd, genbuf, len);
-	close(fd);
-    }
+    file_appendf(FN_BADLOGIN, "%c%-12s[%s] ?@%s\n", type, uid,
+	    Cdate(&now), loghost);
+
     // log to user private log
     if (type == '-') {
-	SNPRINTF(genbuf, "[%s] %s\n", Cdate(&now), loghost);
-	len = strlen(genbuf);
 	sethomefile(fname, uid, FN_BADLOGIN);
-	if ((fd = OpenCreate(fname, O_WRONLY | O_APPEND)) >= 0) {
-	    write(fd, genbuf, len);
-	    close(fd);
-	}
+	file_appendf(fname, "[%s] %s\n", Cdate(&now), loghost);
     }
 }
 
