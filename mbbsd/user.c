@@ -1596,6 +1596,7 @@ int u_setup_2fa(void)
             pwcuSet2FA(cuser.u_2fa ? 0 : 1);
             user_delete_2fa(cuser.userid);
             outs("\n" ANSI_COLOR(1;32) "已成功\停用 2FA 雙重驗證！" ANSI_RESET "\n");
+            log_user_security(cuser.userid, "%s 2FA Disabled.\n", fromhost);
             pressanykey();
             return 0;
         }
@@ -1670,6 +1671,8 @@ int u_setup_2fa(void)
             uint8_t init_mode = (mode_ans[0] == '1') ? U_2FA_ALWAYS : U_2FA_NEWIP;
             pwcuSet2FA(init_mode);
             mvouts(b_lines - 1, 0, ANSI_COLOR(1;32) "[成功\] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
+            log_user_security(cuser.userid, "%s 2FA Enabled (%s mode).\n", fromhost,
+                              init_mode == U_2FA_ALWAYS ? "ALWAYS" : "NEWIP");
             break;
         } else {
             mvouts(b_lines - 2, 0, ANSI_COLOR(1;31) "[失敗] 驗證碼錯誤，請重新輸入。" ANSI_RESET "\n");
@@ -1714,6 +1717,7 @@ int u_admin_disable_2fa(void) {
     user_delete_2fa(target_id);
 
     log_usies("Remove2FA", target_id);
+    log_user_security(target_id, "2FA Disabled by Admin.\n");
 
     char title[STRLEN], msg[512];
     SNPRINTF(title, "解除2FA: %s (站長: %s)", target_id, cuser.userid);

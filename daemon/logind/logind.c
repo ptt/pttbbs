@@ -1650,6 +1650,7 @@ auth_user_challenge(login_ctx *ctx)
             // Auto-heal: u_2fa enabled but .otpauth file missing or disabled
             user.u_2fa = U_2FA_OFF;
             passwd_update(unum, &user);
+            log_user_security(user.userid, "%s 2FA credential corrupted (force disabled).\n", ctx->hostip);
             return AUTH_RESULT_OK;
         }
         if (user.u_2fa == U_2FA_NEWIP && strcmp(user.lasthost, ctx->hostip) == 0)
