@@ -136,7 +136,7 @@ static void
 friend_append(int type, int count)
 {
     char            fpath[PATHLEN], i, j, buf[STRLEN], sfile[PATHLEN];
-    FILE           *fp, *fp1;
+    FILE           *fp;
     char	    myboard[IDLEN+1] = "";
     int		    boardChanged = 0;
 
@@ -198,14 +198,8 @@ friend_append(int type, int count)
 	while (fgets(buf, sizeof(buf), fp) && (unsigned)count <= friend_max[type]) {
 	    char the_id[IDLEN + 1];
 	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
-	    if (!file_exist_record(fpath, the_id)) {
-		if ((fp1 = fopen(fpath, "a"))) {
-		    flock(fileno(fp1), LOCK_EX);
-		    fputs(buf, fp1);
-		    flock(fileno(fp1), LOCK_UN);
-		    fclose(fp1);
-		}
-	    }
+	    if (!file_exist_record(fpath, the_id))
+		file_append(fpath, buf);
 	}
 	fclose(fp);
     }
