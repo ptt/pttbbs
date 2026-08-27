@@ -394,14 +394,26 @@ int file_count_line(const char *file)
  */
 int file_append(const char *file, const char *string)
 {
-    FILE *fp;
-    if ((fp = fopen(file, "a")) == NULL)
-	return -1;
-    flock(fileno(fp), LOCK_EX);
-    fputs(string, fp);
-    flock(fileno(fp), LOCK_UN);
-    fclose(fp);
-    return 0;
+    if (!file || !*file || !string)
+        return -1;
+
+    int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
+    if (fd < 0)
+        return -1;
+
+    int len = strlen(string);
+    int res;
+    /* Linux / POSIX guarantees O_APPEND write <= 4KB (PIPE_BUF) is atomic without flock */
+    if (len <= PIPE_BUF) {
+        res = towrite(fd, string, len);
+    } else {
+        flock(fd, LOCK_EX);
+        res = towrite(fd, string, len);
+        flock(fd, LOCK_UN);
+    }
+
+    close(fd);
+    return (res == len) ? 0 : -1;
 }
 
 /**
@@ -412,16 +424,29 @@ int file_append(const char *file, const char *string)
  */
 int file_append_record(const char *file, const char *key)
 {
-    FILE *fp;
-    if (!key || !*key) return -1;
-    if ((fp = fopen(file, "a")) == NULL)
-	return -1;
-    flock(fileno(fp), LOCK_EX);
-    fputs(key, fp);
-    fputs("\n", fp);
-    flock(fileno(fp), LOCK_UN);
-    fclose(fp);
-    return 0;
+    if (!key || !*key)
+        return -1;
+
+    char buf[512];
+    char *allocated = NULL;
+    const char *final_str;
+    size_t len = strlen(key);
+
+    if (len + 2 <= sizeof(buf)) {
+        STRLCPY(buf, key);
+        STRLCAT(buf, "\n");
+        final_str = buf;
+    } else {
+        if (asprintf(&allocated, "%s\n", key) < 0 || !allocated)
+            return -1;
+        final_str = allocated;
+    }
+
+    int res = file_append(file, final_str);
+    if (allocated)
+        free(allocated);
+
+    return res;
 }
 
 /**
