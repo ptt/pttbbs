@@ -59,13 +59,8 @@ show_msg(int save, const msgque_t *msg)
 
     if (save && mode != MSGMODE_ALOHA) {
         char genbuf[PATHLEN];
-        if (!fp_writelog) {
-            sethomefile(genbuf, cuser.userid, fn_writelog);
-            fp_writelog = fopen(genbuf, "a");
-        }
-        if (fp_writelog) {
-            fprintf(fp_writelog, "%s [%s]\n", buf, Cdatelite(&now));
-        }
+        setuserfile(genbuf, fn_writelog);
+        file_appendf(genbuf, "%s [%s]\n", buf, Cdatelite(&now));
     }
 }
 
@@ -499,18 +494,13 @@ my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
 static bool
 my_write_log_to_file(const char *destid, const char *msg)
 {
-    if (!fp_writelog) {
-        char genbuf[PATHLEN];
-        sethomefile(genbuf, cuser.userid, fn_writelog);
-        fp_writelog = fopen(genbuf, "a");
-    }
-
-    if (!fp_writelog) {
+    char genbuf[PATHLEN];
+    setuserfile(genbuf, fn_writelog);
+    if (file_appendf(genbuf, "To %s: %s [%s]\n", destid, msg, Cdatelite(&now)) < 0) {
         vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
         return false;
     }
 
-    fprintf(fp_writelog, "To %s: %s [%s]\n", destid, msg, Cdatelite(&now));
     snprintf(t_last_write, sizeof(t_last_write), "To %s: %s", destid, msg);
     return true;
 }
@@ -709,12 +699,6 @@ pager_show_panel(void)
 int
 pager_show_log(void) {
     char genbuf[PATHLEN], ans[4];
-    if (fp_writelog) {
-        // Why not simply fflush here? Because later when user enter (M) or (C),
-        // fp_writelog must be re-opened -- and there will be a race condition.
-        fclose(fp_writelog);
-        fp_writelog = NULL;
-    }
     setuserfile(genbuf, fn_writelog);
     if (more(genbuf, YEA) == -1) {
         vmsg("暫無訊息記錄");
