@@ -88,7 +88,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
             break;
         }
     }
-    log_filef(FN_LOGFILE, LOG_CREAT,
+    log_filef(FN_LOGFILE,
              "%s last user index: %d (%s)\n",
              Cdatelite(&now), unum,
              VALID_UNUM(unum) ? SHM->userid[unum - 2] : "-unkonwn-");
@@ -103,7 +103,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
             strlcpy(items[i], unique_betnames[i], MAX_ITEM_LEN);
             // rewind
             unum = 1;
-            log_filef(FN_LOGFILE, LOG_CREAT,
+            log_filef(FN_LOGFILE,
                       "%s rewind user index.\n", Cdatelite(&now));
             continue;
         }
@@ -118,7 +118,7 @@ void create_new_items(char items[MAX_ITEM][MAX_ITEM_LEN],
                 unum++;
                 continue;
             }
-            log_filef(FN_LOGFILE, LOG_CREAT, "%d: [unum:%d] "
+            log_filef(FN_LOGFILE, "%d: [unum:%d] "
                       "%-*s (lvl=0x%08X, %d days, %d posts, shm=%s)\n",
                       i + 1, unum, IDLEN, u.userid, u.userlevel,
                       u.numlogindays, u.numposts, SHM->userid[unum - 1]);
@@ -184,7 +184,7 @@ int main()
      * 若是小站當站開獎前開站, 則有被猜中的可能 */
     bet = (SHM->UTMPnumber + getpid()) % MAX_ITEM;
 
-    log_filef(FN_LOGFILE, LOG_CREAT, "%s bet=%d\n", Cdatelite(&now), bet);
+    log_filef(FN_LOGFILE, "%s bet=%d\n", Cdatelite(&now), bet);
 
     money = ticket[bet] ? total * 95 / ticket[bet] : 9999999;
     if((fp = fopen("etc/" FN_TICKET, "w")))

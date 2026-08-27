@@ -27,7 +27,7 @@ ban_usermail(const userec_t *u, const char *reason) {
         return;
     if (!reason || !*reason)
         reason = "(站長忘了打)";
-    log_filef("etc/banemail", LOG_CREAT,
+    log_filef("etc/banemail",
               "# %s: %s (by %s)\nA%s\n",
               u->userid, reason, cuser.userid, u->email);
 }
@@ -137,7 +137,7 @@ int u_cancelbadpost(void)
        return 0;
    }
 
-   log_filef("log/cancelbadpost.log", LOG_CREAT,
+   log_filef("log/cancelbadpost.log",
 	   "%s %s 刪除一篇退文 (%d -> %d 篇)\n",
 	   Cdate(&now), cuser.userid, prev, cuser.badpost);
 
@@ -735,7 +735,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    // Log to user log.
 	    char logfn[PATHLEN];
 	    sethomefile(logfn, x.userid, FN_USERSECURITY);
-	    log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
+	    log_filef(logfn, "%s %s (ContactEmail) %s -> %s\n",
 		      Cdatelite(&now), "[Admin]", x.email, email);
 
 	    STRLCPY(x.email, email);
@@ -794,7 +794,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
                 if (getuser(buf, &xuser) && (xuser.userlevel & PERM_ANGEL)) {
 		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
                     x.timesetangel = now;
-                    log_filef(BBSHOME "/log/changeangel.log",LOG_CREAT,
+                    log_filef(BBSHOME "/log/changeangel.log",
                               "%s 站長 %s 修改 %s 的小天使為 %s\n",
                               Cdatelite(&now), cuser.userid, x.userid, x.myangel);
 		    break;
@@ -1047,7 +1047,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	{
 	    char logfn[PATHLEN];
 	    sethomefile(logfn, x.userid, FN_USERSECURITY);
-	    log_filef(logfn, LOG_CREAT, "%s %s (Passwd)\n",
+	    log_filef(logfn, "%s %s (Passwd)\n",
 		      Cdatelite(&now), adminmode ? "[Admin]" : fromhost);
 	}
 

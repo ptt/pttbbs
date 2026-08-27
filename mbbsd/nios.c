@@ -76,7 +76,7 @@ nios_dbgf(const char *fmt, ...)
     va_end(ap);
     STRLCAT(msg, "\n");
 
-    log_file(logfn, LOG_CREAT, msg);
+    log_file(logfn, msg);
 }
 #endif
 

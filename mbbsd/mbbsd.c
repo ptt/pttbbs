@@ -168,12 +168,12 @@ log_usies(const char *mode, const char *mesg)
 {
     now = time(NULL);
     if (!mesg)
-        log_filef(FN_USIES, LOG_CREAT,
+        log_filef(FN_USIES,
                  "%s %s %-12s Stay:%d\n",
                  Cdate(&now), mode, cuser.userid ,
                  (int)(now - login_start_time) / 60);
     else
-        log_filef(FN_USIES, LOG_CREAT,
+        log_filef(FN_USIES,
                  "%s %s %-12s %s\n",
                  Cdate(&now), mode, cuser.userid, mesg);
 
@@ -292,7 +292,7 @@ abort_bbs_debug(int sig)
 
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
-    log_filef("log/crash.log", LOG_CREAT,
+    log_filef("log/crash.log",
 	    "%d %d %d %.12s\n", (int)time4(NULL), getpid(), sig, cuser.userid);
 
     /* try logout... not a good idea, maybe crash again. now disabled */
@@ -880,14 +880,14 @@ check_bad_clients(void) {
         }
     } while (strlen(buf) < 2);
     mvprints(y-1, 0, "發文程式: %s\n", buf); clrtobot();
-    log_filef(dest, LOG_CREAT, "%s program: %s\n", Cdatelite(&now), buf);
+    log_filef(dest, "%s program: %s\n", Cdatelite(&now), buf);
 
     do {
 	getdata(y, 0, "發文時你是在信箱(m)回文還是在看板(b)上回文？ [m/b]: ",
 		buf, 3, LCECHO);
     } while (*buf != 'm' && *buf != 'b');
     mvprints(y++, 0, "發文位置: %s", *buf == 'm' ? "信箱" : "看板");
-    log_filef(dest, LOG_CREAT, "%s location: %c %s\n", Cdatelite(&now),
+    log_filef(dest, "%s location: %c %s\n", Cdatelite(&now),
 	      *buf, *buf == 'm' ? "mailbox" : "board");
 
     do {
@@ -895,7 +895,7 @@ check_bad_clients(void) {
 	getdata(y+1, 0, "其它: ", buf, DISP_TTLEN, DOECHO);
 	trim(buf);
     } while (0);
-    log_filef(dest, LOG_CREAT, "%s info: %s\n", Cdatelite(&now),  buf);
+    log_filef(dest, "%s info: %s\n", Cdatelite(&now),  buf);
 
     vmsg("謝謝您的合作。如果您想提供更多資訊歡迎至" BN_BUGREPORT "報告");
 }
@@ -917,7 +917,7 @@ static void append_log_recent_login()
 	delete_records(logfn, szlogentry, 1,
 		(szlogfn-(SZ_RECENTLOGIN/4)) / szlogentry);
     }
-    log_file(logfn, LOG_CREAT, buf);
+    log_file(logfn, buf);
 }
 
 static void check_mailbox_quota(void)

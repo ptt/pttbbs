@@ -193,12 +193,12 @@ do_order_song(void)
     fclose(fp1);
     fclose(fp);
 
-    log_filef("etc/osong.log",  LOG_CREAT,
+    log_filef("etc/osong.log",
               "id: %-12s ◇ %s 留言給 %s : \"%s\", 轉寄至 %s\n",
               cuser.userid, sender, receiver, say, address);
 
     LOG_IF(LOG_CONF_OSONG_VERBOSE,
-           log_filef("log/osong_verbose.log",  LOG_CREAT,
+           log_filef("log/osong_verbose.log",
                      "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                      Cdate(&now), cuser.userid, trans_buffer, address,
                      sender, receiver, say));

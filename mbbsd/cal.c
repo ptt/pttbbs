@@ -302,7 +302,7 @@ do_give_money(char *id, int uid, int money, const char *myid)
     pay(money, "%s", prompt);
     pay_as_uid(uid, -(money - tax), "來自 %s 的轉帳 (稅前 $%d)",
                myid, money);
-    log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
+    log_filef(FN_MONEY, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
               cuser.userid, id, money, money - tax, Cdate(&now));
 
     // penalty
@@ -499,7 +499,8 @@ give_money_ui(const char *userid)
 	} else {
             if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
                 veditfile(fpath);
-            log_file(fpath, 0,  alert_trade);
+            if (dashf(fpath))
+                log_file(fpath, alert_trade);
             sendalert(id, ALERT_NEW_MAIL);
         }
     }

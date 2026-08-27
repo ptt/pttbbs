@@ -273,7 +273,7 @@ brc_update(){
 
 #ifdef LOG_REMOTE_BRC_FAILURE
 # define BRC_FAILURE(msg) { syncnow(); \
-    log_filef("log/brc_remote_failure.log", LOG_CREAT, "%s %s ERR: %s", \
+    log_filef("log/brc_remote_failure.log", "%s %s ERR: %s", \
               Cdate(&now), msg, command); break; }
 #else
 # define BRC_FAILURE(msg) { break; }

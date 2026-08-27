@@ -9,7 +9,7 @@
 #include "config.h" // for DEFAULT_FILE_CREATE_PERM
 
 int
-log_filef(const char *fn, int log_flag, const char *fmt,...)
+log_filef(const char *fn, const char *fmt,...)
 {
     char buf[1024], *msg = buf;
     int len = sizeof(buf), ret;
@@ -28,7 +28,7 @@ log_filef(const char *fn, int log_flag, const char *fmt,...)
     }
     va_end(ap);
 
-    ret = log_file(fn, log_flag, msg);
+    ret = log_file(fn, msg);
     if (msg != buf)
         free(msg);
 
@@ -36,14 +36,11 @@ log_filef(const char *fn, int log_flag, const char *fmt,...)
 }
 
 int
-log_file(const char *fn, int log_flag, const char *msg)
+log_file(const char *fn, const char *msg)
 {
     int        fd;
-    int flag = O_APPEND | O_WRONLY;
+    int flag = O_APPEND | O_WRONLY | O_CREAT;
     int mode = DEFAULT_FILE_CREATE_PERM;
-
-    if (log_flag & LOG_CREAT)
-	flag |= O_CREAT;
 
     fd = open(fn, flag, mode);
     if( fd < 0 )
@@ -56,4 +53,3 @@ log_file(const char *fn, int log_flag, const char *msg)
     close(fd);
     return 0;
 }
-

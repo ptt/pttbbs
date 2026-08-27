@@ -10,7 +10,6 @@ log_payment(const char *filename GCC_UNUSED, int money GCC_UNUSED,
 {
 #if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
     return log_filef(filename,
-                     LOG_CREAT,
                      "%s %s $%d ($%d => $%d) %s\n",
                      Cdatelite(&now),
                      money >= 0 ? "支出" : "收入",

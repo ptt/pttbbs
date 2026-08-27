@@ -244,7 +244,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     }
 
     result = ban_user_for_board(uid, board, expire, reason);
-    log_filef(history_log, LOG_CREAT,
+    log_filef(history_log,
               ANSI_COLOR(1) "%s %s" ANSI_COLOR(33) "%s" ANSI_RESET
               " 暫停 " ANSI_COLOR(1;31) "%s" ANSI_RESET
               " 發言，期限為 %s\n  理由: %s\n",
@@ -325,7 +325,7 @@ ui_unban_user_for_board(const char *uid, const char *board) {
     }
 
     unban_user_for_board(uid, board);
-    log_filef(history_log, LOG_CREAT,
+    log_filef(history_log,
               ANSI_COLOR(1) "%s " ANSI_COLOR(33) "%s" ANSI_RESET
               " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET
               " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",

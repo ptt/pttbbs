@@ -1518,7 +1518,7 @@ a_menu_rec(const char *maintitle, const char *path,
 				strlcpy(trans_buffer, fname, PATHLEN);
 				sess->bReturnToRoot = 1;
 				if (currstat == OSONG) {
-				    log_filef(FN_USSONG, LOG_CREAT, "%s\n", fhdr->title);
+				    log_filef(FN_USSONG, "%s\n", fhdr->title);
 				}
 				free(me.header);
 				return FULLUPDATE;

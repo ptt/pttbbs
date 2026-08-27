@@ -248,7 +248,7 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
     if (!action_tag || !*action_tag)
         action_tag = "CLEAN(PURGE)";
 
-    log_filef(FN_USIES, LOG_CREAT, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
+    log_filef(FN_USIES, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
 
     // Archive or remove user home directory
     sethomepath(src, userid);

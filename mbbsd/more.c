@@ -150,7 +150,7 @@ common_pager_exit_handler(int r, const char *fpath)
 	    r = FULLUPDATE;
 	    if (!check_sysop_edit_perm(fpath))
 		break;
-	    log_filef("log/security", LOG_CREAT,
+	    log_filef("log/security",
 		    "%u %s %d %s admin edit file=%s\n",
 		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
 	    veditfile(fpath);

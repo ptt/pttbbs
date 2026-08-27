@@ -105,7 +105,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
     }
 
     if (!comment) {
-        log_filef(newpath, LOG_CREAT, "¡° BadPost Reason: %s\n", reason);
+        log_filef(newpath, "¡° BadPost Reason: %s\n", reason);
     }
 
 #ifdef BAD_POST_RECORD

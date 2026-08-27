@@ -17,7 +17,7 @@ void u_sms_verification();
 #define FN_SMS_AGREEMENT "etc/reg.sms.notes"
 
 #define REGISTER_SMS_LOG(ev, fmt, ...) \
-  log_filef("log/register_sms.log", LOG_CREAT, \
+  log_filef("log/register_sms.log", \
       "%ld %s %s %d %s " fmt "\n", \
       time(nullptr), (ev), \
       cuser.userid, cuser.firstlogin, fromhost, __VA_ARGS__)

@@ -854,7 +854,7 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 		    user2->userid, user2->rating, user2->win,
 		    user2->tie, lose2);
 	    buf[24] = ' '; // replace '\n'
-	    log_file(BBSHOME "/log/chc.log", LOG_CREAT, buf);
+	    log_file(BBSHOME "/log/chc.log", buf);
 	}
 
 	// lost was already initialized

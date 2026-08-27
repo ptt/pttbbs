@@ -227,7 +227,7 @@ anticrosspost(void)
         exit(0);
     }
 
-    log_filef("etc/illegal_money",  LOG_CREAT,
+    log_filef("etc/illegal_money",
              ANSI_COLOR(1;33;46) "%s "
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n",
@@ -298,7 +298,7 @@ save_violatelaw(void)
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000)
     {
-	log_filef("log/violation", LOG_CREAT,
+	log_filef("log/violation",
 		"%s %s pay-violation error: race-conditionn hack?\n",
 		Cdate(&now), cuser.userid);
 	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
@@ -307,7 +307,7 @@ save_violatelaw(void)
 
     pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
-    log_filef("log/violation", LOG_CREAT,
+    log_filef("log/violation",
 	    "%s %s pay-violation: $%d complete.\n",
 	    Cdate(&now), cuser.userid, (int)cuser.vl_count*1000);
 
@@ -534,7 +534,7 @@ CheckModifyPerm(const char **preason)
     if (ISNEWPERM(currutmp))
     {
 #ifdef DEBUG
-	log_filef("log/newperm.log", LOG_CREAT,
+	log_filef("log/newperm.log",
 		"%-13s: reloaded perm %s\n",
 		cuser.userid, Cdate(&now));
 #endif
@@ -549,7 +549,7 @@ CheckModifyPerm(const char **preason)
         // if board is different, rebuild cache
         if (currbid != last_board_index) {
 #ifdef DEBUG
-            log_filef("log/reload_board_perm.log", LOG_CREAT,
+            log_filef("log/reload_board_perm.log",
                       "%-13s: reload board perm (curr=%d, last=%d)\n",
                       cuser.userid, currbid, last_board_index);
 #endif
@@ -1233,7 +1233,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
              "(%s)", currboard);
     if (dashs(genbuf) > 0) {
-        log_filef("log/conflict.log", LOG_CREAT,
+        log_filef("log/conflict.log",
                   "%s %s->%s %s: %s\n", Cdatelite(&now),
                   currboard, brd, fh.filename, fh.title);
     }
@@ -1525,7 +1525,7 @@ do_post_article(int edflags)
     if (IsBoardForWeb(bp)) {
         char url[STRLEN];
         if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
-            log_filef(genbuf, LOG_CREAT,
+            log_filef(genbuf,
                       "※ " URL_DISPLAYNAME ": %s\n", url);
         }
     }
@@ -1543,7 +1543,7 @@ do_post_article(int edflags)
         if (LOG_CONF_POST) {
             char bfilepath[PATHLEN];
             setbfile(bfilepath, currboard, postfile.filename);
-            log_filef("log/post", LOG_CREAT, "%d %s %s %d\n",
+            log_filef("log/post", "%d %s %s %d\n",
                       (int)now, cuser.userid, bfilepath, money);
         }
 
@@ -1627,7 +1627,7 @@ do_post_article(int edflags)
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
                 LOG_IF(LOG_CONF_INTERNETMAIL,
-                       log_filef("log/internet_mail.log", LOG_CREAT,
+                       log_filef("log/internet_mail.log",
                                  "%s [%s (%s)] %s -> %s: %s\n",
                                  Cdatelite(&now), __FUNCTION__,
                                  currboard, cuser.userid, str + 1, save_title));
@@ -1951,7 +1951,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return DONOTHING;
 
 	// admin edit!
-	log_filef("log/security", LOG_CREAT,
+	log_filef("log/security",
 		"%d %s %d %s admin edit (board) file=%s\n",
 		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
 #else
@@ -2050,7 +2050,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fhdr->modified = dasht(genbuf);
     if (strcmp(save_title, fhdr->title) != 0) {
         LOG_IF(LOG_CONF_EDIT_TITLE,
-               log_filef("log/edit_title.log", LOG_CREAT,
+               log_filef("log/edit_title.log",
                          "%s %s(E) %s(%s) %s => %s\n", Cdatelite(&now),
                          cuser.userid, currboard, fhdr->owner, fhdr->title,
                          save_title));
@@ -2068,7 +2068,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (rev > 0) {
         char revfn[PATHLEN];
         timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
-        log_filef(revfn, 0, "\n※ Last modified: %s", Cdatelite(&oldmt));
+        if (dashf(revfn))
+            log_filef(revfn, "\n※ Last modified: %s", Cdatelite(&oldmt));
     }
 
     return FULLUPDATE;
@@ -2346,7 +2347,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
         LOG_IF(LOG_CONF_CROSSPOST,
-               log_filef("log/cross_post.log", LOG_CREAT,
+               log_filef("log/cross_post.log",
                          "%s %s %s #%u %s -> %s %s | %s\n",
                          Cdatelite(&now), cuser.userid, cuser.lasthost,
                          (unsigned) getpid(),
@@ -2433,7 +2434,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
            ++read_count;
            syncnow();
            if (read_count % 1000 == 0)
-               log_filef("log/read_alot", LOG_CREAT,
+               log_filef("log/read_alot",
                         "%d %s %d %s %08x %d\n", (int)now, Cdate(&now), getpid(),
                         cuser.userid, client_code, read_count);
            });
@@ -2705,7 +2706,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
     }
     LOG_IF(LOG_CONF_EDIT_TITLE,
-           log_filef("log/edit_title.log", LOG_CREAT,
+           log_filef("log/edit_title.log",
                      "%s %s(%d) %s %s=>%s %s=>%s %s => %s\n", Cdatelite(&now),
                      cuser.userid, allow, currboard, fhdr->owner, tmpfhdr.owner,
                      fhdr->date, tmpfhdr.date, fhdr->title, tmpfhdr.title));
@@ -3105,7 +3106,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
             return FULLUPDATE;
     }
     STATINC(STAT_RECOMMEND);
-    LOG_IF(LOG_CONF_PUSH, log_filef("log/push", LOG_CREAT,
+    LOG_IF(LOG_CONF_PUSH, log_filef("log/push",
                                     "%s %d %s %s %s\n", cuser.userid,
                                     (int)now, currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
@@ -3235,7 +3236,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     refresh();
     ret = 0;
     LOG_IF((LOG_CONF_MASS_DELETE && (num >= 50)),
-           log_filef("log/del_range.log", LOG_CREAT,
+           log_filef("log/del_range.log",
                      "%s range %d->%d %s [%s]\n",
                      cuser.userid, num1, num2,
                      Cdate(&now), direct));
@@ -3517,7 +3518,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #endif // ASSESS
             if (*newpath && *reason) {
-                log_filef(newpath, LOG_CREAT, "※ Delete Reason: %s\n", reason);
+                log_filef(newpath, "※ Delete Reason: %s\n", reason);
             }
 
             if (del_fee <= 0)
@@ -3735,7 +3736,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     substitute_ref_record(direct, fhdr, ent);
     setdirpath(fn, direct, fhdr->filename);
     if (dashf(fn))
-        log_filef(fn, LOG_CREAT, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
+        log_filef(fn, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
     return FULLUPDATE;
 }
@@ -4464,9 +4465,9 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     }
     fclose(fp);
     fclose(fpw);
-    log_filef(fpath, LOG_CREAT, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
+    log_filef(fpath, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
               Cdatelite(&now), reason);
-    log_filef(revpath, LOG_CREAT,
+    log_filef(revpath,
               "※ %s 於 %s 刪除部份違規文字,原因: %s\n"
               "※ 違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);

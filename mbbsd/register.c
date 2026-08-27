@@ -914,7 +914,7 @@ new_register(void)
         if (dashd(home) && Rename(home, tmp) != 0) {
             // failed to active account.
             pwcuBitDisableLevel(PERM_BASIC);
-            log_filef("log/home_fail.log", LOG_CREAT,
+            log_filef("log/home_fail.log",
                       "%s: failed to remove.\n", newuser.userid);
             vmsg("抱歉，系統出錯，此帳號已鎖定。");
             exit(0);
@@ -1694,7 +1694,7 @@ change_contact_email(bool skip_same_email_check)
     // Log.
     char logfn[PATHLEN];
     setuserfile(logfn, FN_USERSECURITY);
-    log_filef(logfn, LOG_CREAT, "%s %s (ContactEmail) %s -> %s\n",
+    log_filef(logfn, "%s %s (ContactEmail) %s -> %s\n",
 	      Cdatelite(&now), fromhost, cuser.email, email);
 
     // Send notification to old email address if it was valid
@@ -1871,7 +1871,7 @@ regform_log2file(const RegformEntry *pre GCC_UNUSED, char accepted GCC_UNUSED,
     }
     STRLCAT(msg, "\n");
     concat_regform_entry_localized(pre, msg, sizeof(msg));
-    log_file(FN_ID_RECORD, LOG_CREAT, msg);
+    log_file(FN_ID_RECORD, msg);
 #endif  // FN_ID_RECORD
 }
 
@@ -2450,7 +2450,7 @@ regform2_validate_single(const char *xuid)
     }
     regq_end_pull(fpregq);
     LOG_IF(LOG_CONF_VALIDATE_REG,
-           log_filef("log/validate_reg.log", LOG_CREAT,
+           log_filef("log/validate_reg.log",
                      "%s %s SINGLE finished: %d forms\n",
                      Cdatelite(&now), cuser.userid, tid));
     // finishing
@@ -2800,7 +2800,7 @@ regform2_validate_page(int dryrun)
 
     regq_end_pull(fpregq);
     LOG_IF(LOG_CONF_VALIDATE_REG,
-           log_filef("log/validate_reg.log", LOG_CREAT,
+           log_filef("log/validate_reg.log",
                      "%s %s PAGE finished: %d forms\n",
                      Cdatelite(&now), cuser.userid, tid));
     // finishing

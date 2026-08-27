@@ -3644,7 +3644,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
              money = 0;
              count = 0;
 /*
-             log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
+             log_file("etc/illegal_money",
              ANSI_COLOR(1;33;46) "%s " ANSI_COLOR(37;45) " 用機器人發表文章 " ANSI_COLOR(37) " %s" ANSI_RESET "\n",
              cuser.userid, Cdate(&now));
              post_violatelaw(cuser.userid, BBSMNAME "系統警察",

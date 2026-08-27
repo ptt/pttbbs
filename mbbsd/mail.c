@@ -195,7 +195,7 @@ mail_log2id_text(const char *id, const char *title, const char *message,
     STRLCPY(mhdr.owner, owner);
     STRLCPY(mhdr.title, title);
     mhdr.filemode = newmail ? 0 :  FILE_READ;
-    log_filef(dst, LOG_CREAT, "%s", message);
+    log_filef(dst, "%s", message);
 
     sethomedir(dirf, id);
     append_record(dirf, &mhdr, sizeof(mhdr));
@@ -802,7 +802,7 @@ do_send(const char *userid, const char *title, const char *log_source)
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    ret = bsmtp(fpath, save_title, userid, NULL);
             LOG_IF(LOG_CONF_INTERNETMAIL,
-                   log_filef("log/internet_mail.log", LOG_CREAT,
+                   log_filef("log/internet_mail.log",
                              "%s [%s - %s] %s -> %s: %s\n",
                              Cdatelite(&now), log_source, __FUNCTION__,
                              cuser.userid, userid, save_title));
@@ -1283,7 +1283,7 @@ mail_mbox(void)
     // TODO doforward does not return real execution code... we may need to
     // fix it in future.
     if (doforward(cmd, &fhdr, 'Z') == 0) {
-        log_filef(tagname, LOG_CREAT,
+        log_filef(tagname,
                   "%s %s\n", Cdatelite(&now), cmd);
         rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
     }
@@ -1500,7 +1500,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     if (hostaddr) {
         LOG_IF(LOG_CONF_INTERNETMAIL,
-               log_filef("log/internet_mail.log", LOG_CREAT,
+               log_filef("log/internet_mail.log",
                          "%s [%s] %s -> %s: %s - %s\n",
                          Cdatelite(&now), __FUNCTION__,
                          cuser.userid, address, direct, fh->title));

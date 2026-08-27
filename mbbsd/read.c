@@ -537,7 +537,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		    keyword, TTLEN, DOECHO) || trim_blank(keyword))
 	    return READ_REDRAW;
 
-	LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log", LOG_CREAT,
+	LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log",
 					   "%s:%s\n", currboard, keyword));
     } else if(sr_mode & RS_KEYWORD_EXCLUDE) {
 	if (currmode & MODE_SELECT) {

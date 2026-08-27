@@ -46,7 +46,7 @@ int check(void *data, int bid, boardheader_t *bh)
         return 0;
 
     now = time(0);
-    log_filef(BBSHOME "/log/removebm.log", LOG_CREAT,
+    log_filef(BBSHOME "/log/removebm.log",
               "%s [%s] %s: %s->%s\n",
               Cdatelite(&now), userid,
               bh->brdname, bh->BM, bmout);
