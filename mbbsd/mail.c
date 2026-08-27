@@ -418,9 +418,9 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     return 0;
 }
 
-/* 寄站內信 */
+/* bsmtp 發現是站內信而轉送 */
 static int
-send_inner_mail(const char *fpath, const char *title, const char *receiver) {
+bsmtp_inner_mail(const char *fpath, const char *title, const char *receiver) {
     char            fname[PATHLEN];
     fileheader_t    mymail;
     char            rightid[IDLEN+1];
@@ -2385,7 +2385,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 		hacker[len] = '\0';
 	} else
 	    STRLCPY(hacker, rcpt);
-	return send_inner_mail(fpath, title, hacker);
+	return bsmtp_inner_mail(fpath, title, hacker);
     }
     chrono = now;
 
