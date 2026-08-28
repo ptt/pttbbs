@@ -522,15 +522,20 @@ vkey_process(int timeout, int peek)
             // Error
             r = KEY_UNKNOWN;        // or EOF?
         }
+        else if (r & CIN_POLL_CINFD)
+        {
+            // Primary fd (user keyboard input)
+            r = vkey_process_cin();
+        }
         else if (r & CIN_POLL_FD2)
         {
             // The second fd
             syncnow();
             r = I_OTHERDATA;
-        }
-        else {
-            assert(r & CIN_POLL_CINFD);
-            r = vkey_process_cin();
+        } else {
+            assert(false);
+            // Shall never reach here.
+            r = KEY_UNKNOWN;
         }
     } while (r == KEY_INCOMPLETE);
 
