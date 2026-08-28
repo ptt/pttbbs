@@ -57,9 +57,6 @@
 #define INFTIM (-1)
 #endif
 
-// XXX use this temporary...
-
-
 // debug helpers
 #if defined(CIN_DEBUG) || defined(VKEY_DEBUG)
 #include <stdarg.h>
@@ -176,27 +173,15 @@ cin_is_fd_empty(int fd)
     CINDBGLOG("cin_is_fd_empty(%d)", fd);
 
 #ifdef FIONREAD
-// #warning nios:cin_is_fd_empty(): using ioctl(FIONREAD) method.
-    // try ioctl
+
     int r;
     if (ioctl(fd, FIONREAD, &r) == 0)
         return r == 0;
-    assert(!"sorry, your system failed for FIONREAD...");
-    return 0;   // error
-
-#elif defined(MSG_DONTWAIT) && defined(MSG_PEEK)
-# warning nios:cin_is_fd_empty(): changed to recv(MSG_DONTWAIT) method.
-    // try recv
-    int r;
-    char c = 0;
-    r = recv(fd, &c, sizeof(c), MSG_PEEK | MSG_DONTWAIT);
-    if (errno == EAGAIN)
-        return 1;
-    // XXX errno should not be EINTR...
-    assert(errno != EINTR);
-    return r > 0 ? 0 : 1;
+    // fd closed, or the device doesn't support FIONREAD.
+    return 0;  // error
 
 #else
+
 # warning nios:cin_is_fd_empty(): changed to polling method.
     // we can only use poll.
     return cin_poll_fds(-1, 0) == 0;
