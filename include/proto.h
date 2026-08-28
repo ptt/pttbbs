@@ -347,6 +347,7 @@ int  vkey_is_full(void);     // test if input buffer is full
 void vkey_purge(void);		// discard clear all data in input buffer
 int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
 int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
+ssize_t tty_read(unsigned char *buf, size_t max);
 
 typedef enum {
     VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
@@ -466,7 +467,7 @@ int pmore2_inmemory(
 	int (*help_handler)  (int y,   void *ctx));
 /* piaip's new telnet, telnet.c */
 void telnet_init(int do_init_cmd);
-ssize_t tty_read(unsigned char *buf, size_t max);
+ssize_t telnet_filter_process(unsigned char *buf, ssize_t len);
 void telnet_turnoff_client_detect(void);
 
 /* name */

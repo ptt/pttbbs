@@ -43,24 +43,13 @@ telnet_init(int do_init_cmd)
 	telnet_ctx_send_init_cmds(ctx);
 }
 
-/* tty_read
- * read from tty, process telnet commands if raw connection.
- * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
- */
 ssize_t
-tty_read(unsigned char *buf, size_t max)
+telnet_filter_process(unsigned char *buf, ssize_t len)
 {
-    ssize_t l = read(0, buf, max);
     TelnetCtx *ctx = &telnet_ctx;
-
-    if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
-	abort_bbs(0);
-
-    if(!raw_connection || l <= 0)
-	return l;
-
-    l = telnet_process(ctx, buf, l);
-    return l;
+    if (!raw_connection || len <= 0)
+        return len;
+    return telnet_process(ctx, buf, len);
 }
 
 void

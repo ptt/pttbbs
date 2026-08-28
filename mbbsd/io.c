@@ -250,6 +250,21 @@ system_init_hooks(void)
     vkey_register_hook(VKEY_HOOK_PRIO_SYSTEM, system_key_hook);
 }
 
+/* tty_read
+ * read from tty, abort if socket closed.
+ * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
+ */
+ssize_t
+tty_read(unsigned char *buf, size_t max)
+{
+    ssize_t l = read(0, buf, max);
+
+    if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
+	abort_bbs(0);
+
+    return l;
+}
+
 /* ----------------------------------------------------- */
 /* Input Output System                                   */
 /* ----------------------------------------------------- */
@@ -314,6 +329,10 @@ read_vin() {
     ssize_t len;
     assert(sizeof(buf) >= vbuf_space(pvin));
     len = tty_read(buf, vbuf_space(pvin));
+    if (len <= 0)
+        return len;
+
+    len = telnet_filter_process(buf, len);
     if (len <= 0)
         return len;
 
