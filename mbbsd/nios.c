@@ -561,7 +561,8 @@ VKEY_PROTO int
 vkey_poll(int timeout)
 {
     VKEYDBGLOG("vkey_poll(%d)", timeout);
-    if (timeout) refresh();
+    if (timeout && !VKEY_HAS_PEEK() && cin_is_buffer_empty())
+        refresh();
     return vkey_process(timeout, 1) != KEY_INCOMPLETE;
 }
 
@@ -622,7 +623,11 @@ vkey()
     VKEYDBGLOG("vkey()");
 
     int c;
-    refresh();
+
+    // It's more efficient to only refresh when we're going to wait for user
+    // input.
+    if (cin_is_buffer_empty())
+        refresh();
 
     while ((c = vkey_process(INFTIM, 1)) == KEY_INCOMPLETE);
     // we can either read again without peek, or simly reset peek.
