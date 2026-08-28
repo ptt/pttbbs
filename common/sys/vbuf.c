@@ -131,12 +131,20 @@ vbuf_peekat(VBUF *v, int i)
     return EOF;
 }
 
+static VBUFPROTO void
+vbuf_normalize(VBUF *v)
+{
+    if (v->head == v->tail)
+        v->head = v->tail = v->buf;
+}
+
 VBUFPROTO int
 vbuf_pop(VBUF *v)
 {
     int c = vbuf_peek(v);
     if (c >= 0 && ++v->head == v->buf_end)
         v->head = v->buf;
+    vbuf_normalize(v);
     return c;
 }
 
@@ -150,6 +158,7 @@ vbuf_popn(VBUF *v, size_t n)
     v->head -= (v->buf_end - v->buf);
     if (v->head > v->tail)
         v->head = v->tail;
+    vbuf_normalize(v);
 }
 
 VBUFPROTO int
@@ -289,6 +298,7 @@ vbuf_getblk(VBUF *v, void *p, size_t sz)
         if (v->head == v->buf_end)
             v->head =  v->buf;
     }
+    vbuf_normalize(v);
     assert(sz == 0);
     return 1;
 }
