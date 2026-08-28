@@ -514,20 +514,22 @@ void vbuf_dbg_fragmentize(VBUF *v)
     v->head = v->tail = v->buf + v->capacity/2;
 }
 
+#define SZBUF (40)
+
 // TODO add API unit tests
 int main()
 {
     int i, r;
-    const int szbuf = 40, szfrag = szbuf / 4 * 3;
-    const char src[szbuf *2] = "hello, world";
+    const int szfrag = SZBUF / 4 * 3;
+    const char src[SZBUF *2] = "hello, world";
     const char *fragstring = "1234567890ABCDEFGHIJabcdefhijk";
     const char *s;
-    char dest[szbuf*2] = "";
+    char dest[SZBUF * 2] = "";
     VBUF vbuf, *v = &vbuf;
-    vbuf_new(v, szbuf);
+    vbuf_new(v, SZBUF);
 
     // check basic structure
-    assert(v->buf && v->capacity == szbuf -1);
+    assert(v->buf && v->capacity == SZBUF -1);
     assert(v->head == v->tail && v->tail == v->buf);
     assert(v->buf_end == v->buf + v->capacity + 1);
 
@@ -539,7 +541,7 @@ int main()
     // check macro API
     assert(!vbuf_is_empty(v));
     assert(!vbuf_is_full(v));
-    assert(vbuf_capacity(v) == szbuf-1);
+    assert(vbuf_capacity(v) == SZBUF-1);
     assert(vbuf_size(v) == szfrag);
     assert(vbuf_space(v) == vbuf_capacity(v) - szfrag);
     assert(vbuf_peek(v) == src[0]);
@@ -548,7 +550,7 @@ int main()
     vbuf_dbg_fragmentize(v);
     for (i = 0; i < 10; i++)
     {
-        r = vbuf_putblk(v, src, szbuf / 10);
+        r = vbuf_putblk(v, src, SZBUF / 10);
         vbuf_dbg_rpt(v);
         assert( i == 9 ? !r : r);
         assert(!vbuf_is_full(v));
@@ -558,8 +560,8 @@ int main()
 
     for (i = 0; i < 10; i++)
     {
-        r = vbuf_getblk(v, dest, szbuf / 10);
-        dest[szbuf/10] = 0;
+        r = vbuf_getblk(v, dest, SZBUF / 10);
+        dest[SZBUF/10] = 0;
         printf("%2d. [got: %s] ", i+1, dest);
         vbuf_dbg_rpt(v);
         assert(i == 9 ? !r : r);
@@ -574,11 +576,11 @@ int main()
     assert(r && vbuf_is_full(v));
     r = vbuf_putblk(v, src, 1);
     assert(!r);
-    r = vbuf_getblk(v, dest, szbuf-1);
+    r = vbuf_getblk(v, dest, SZBUF-1);
     assert(r && vbuf_is_empty(v));
     r = vbuf_getblk(v, dest, 1);
     assert(!r && vbuf_is_empty(v));
-    r = vbuf_putblk(v, src, szbuf);
+    r = vbuf_putblk(v, src, SZBUF);
     assert(!r && vbuf_is_empty(v));
 
     // string operation
@@ -612,6 +614,16 @@ int main()
     vbuf_putblk(v, "*** peek test OK\n", sizeof("*** peek test OK\n"));
     while (EOF != (i = vbuf_pop(v)))
         putchar(i);
+
+    vbuf_dbg_fragmentize(v);
+    vbuf_putstr(v, fragstring);
+
+    r = vbuf_strchr(v, '2');
+    printf("strchr('2'): %d %s\n", r, r == 1 ? "OK" : "FAILED");
+    assert(r == 1);
+    r = vbuf_strchr(v, 'k');
+    printf("strchr('k'): %d %s\n", r, r == 29 ? "OK" : "FAILED");
+    assert(r == 29);
 
     // read/write test
     vbuf_dbg_fragmentize(v);
