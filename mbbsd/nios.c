@@ -57,6 +57,13 @@
 #define INFTIM (-1)
 #endif
 
+#ifdef FIONREAD
+#define HAVE_FIONREAD   (1)
+#else
+#define HAVE_FIONREAD   (0)
+#define FIONREAD        (-1)
+#endif
+
 // debug helpers
 #if defined(CIN_DEBUG) || defined(VKEY_DEBUG)
 #include <stdarg.h>
@@ -172,21 +179,15 @@ cin_is_fd_empty(int fd)
 {
     CINDBGLOG("cin_is_fd_empty(%d)", fd);
 
-#ifdef FIONREAD
+    if (!HAVE_FIONREAD) {
+        // we can only use poll.
+        return cin_poll_fds(fd, -1, 0) == 0;
+    }
 
     int r;
-    if (ioctl(fd, FIONREAD, &r) == 0)
-        return r == 0;
-    // fd closed, or the device doesn't support FIONREAD.
-    return 0;  // error
-
-#else
-
-# warning nios:cin_is_fd_empty(): changed to polling method.
-    // we can only use poll.
-    return cin_poll_fds(-1, 0) == 0;
-
-#endif
+    if (ioctl(fd, FIONREAD, &r))
+        return 0;  // error - fd closed or the not supported.
+    return r == 0;
 }
 
 /**
