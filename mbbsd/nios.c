@@ -126,7 +126,7 @@ static char cin_buf[CIN_BUFFER_SIZE];
 static VBUF vcin = {
     .head    = cin_buf,
     .tail    = cin_buf,
-    .capacity= sizeof(cin_buf)-1,
+    .capacity= sizeof(cin_buf) - 1,
     .buf     = cin_buf,
     .buf_end = cin_buf + sizeof(cin_buf),
 }, *cin = &vcin;
@@ -279,33 +279,26 @@ cin_fetch_fd(int fd)
 #endif
     assert(fd == cin_fd);
 
-#ifdef NIOS_RAW_FETCH
-    // Try to read data from stdin (without any conversion).
-    vbuf_read(cin, fd, VBUF_RWSZ_MIN);
-#else // !NIOS_RAW_FETCH
-    // Legacy way to read data (with telnet context & converts).
-    char buf[sizeof(cin_buf)];
+    // Ideally we want to call vbuf_read() and handle the protocols later for
+    // example `cin_read()` or `vkey_process_cin()`; however currently the
+    // telnet, DBCS and convert filters all need to work on a flat buffer
+    // so let's try to follow their process.
+    // Note we can't loop on empty input because this request may come from a
+    // prefetch command.
+
+    if (0) {
+        // Try to read data from stdin (without any conversion).
+        vbuf_read(cin, fd, VBUF_RWSZ_MIN);
+        return;
+    }
+
+    // Legacy way to read data compatible with `io.c`.
     ssize_t sz = 0;
 
-    do {
-        if (vbuf_is_full(cin))
-            break;
-        // The assumption is tty_read uses a blocking FD.
-        if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
-            continue;
-
-        if (ISDBCSAWARE())
-            sz = vtkbd_ignore_dbcs_evil_repeats((unsigned char*)buf, sz);
-
-        // for tty_read: sz<0 = EAGAIN
-        if (sz > 0)
-        {
-            sz = convert_read(cin, buf, sz);
-            if (sz < 1)
-                sz = -1;
-        }
-    } while (sz < 0);
-#endif // !NIOS_RAW_FETCH
+    // sz<0 from vbuf_from_tty may be EAGAIN or EINTR so we can loop.
+    while (!vbuf_is_full(cin) && sz <= 0) {
+        sz = vbuf_from_tty(cin);
+    }
 
 #ifdef CIN_DEBUG
     cin_debug_print_content();

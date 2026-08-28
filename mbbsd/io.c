@@ -265,12 +265,24 @@ system_init_hooks(void)
     vkey_register_hook(VKEY_HOOK_PRIO_SYSTEM, system_key_hook);
 }
 
+/* ----------------------------------------------------- */
+/* vbuf filter pipeline                                  */
+/* ----------------------------------------------------- */
+
+static ssize_t
+dbcs_filter_process(unsigned char *buf, ssize_t len)
+{
+    if (!ISDBCSAWARE())
+        return len;
+    return vtkbd_ignore_dbcs_evil_repeats(buf, len);
+}
+
 /* tty_read
  * read from tty, abort if socket closed.
  * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
  */
-ssize_t
-tty_read(unsigned char *buf, size_t max)
+static ssize_t
+tty_read(unsigned char *buf, ssize_t max)
 {
     ssize_t l = read(0, buf, max);
 
@@ -278,6 +290,26 @@ tty_read(unsigned char *buf, size_t max)
 	abort_bbs(0);
 
     return l;
+}
+
+ssize_t vbuf_from_tty(VBUF *v)
+{
+    // To prevent unnecessary vbuf copies, we will use a flat buffer and only
+    // send it to a vbuf at the pipe sink.
+    unsigned char buf[IBUFSIZE];
+    ssize_t len = MIN(sizeof(buf), vbuf_space(v));
+
+    static const vbuf_filter_fn tty_filters[] = {
+        tty_read,
+#ifdef DBG_OUTRPT
+        debug_print_input_buffer,
+#endif
+        telnet_filter_process,
+        dbcs_filter_process,
+    };
+
+    return vbuf_pipeline(
+            v, buf, len, tty_filters, ARRAY_SIZE(tty_filters), convert_read);
 }
 
 /* ----------------------------------------------------- */
@@ -337,36 +369,7 @@ drop_input(void)
  */
 static ssize_t
 read_vin() {
-    // Note: buf should be larger than pvin buffer size.
-    unsigned char buf[IBUFSIZE];
-    /* tty_read will handle abort_bbs.
-     * len <= 0: read more */
-    ssize_t len;
-    assert(sizeof(buf) >= vbuf_space(pvin));
-    len = tty_read(buf, vbuf_space(pvin));
-    if (len <= 0)
-        return len;
-
-    len = telnet_filter_process(buf, len);
-    if (len <= 0)
-        return len;
-
-    // apply additional converts
-    if (ISDBCSAWARE())
-	len = vtkbd_ignore_dbcs_evil_repeats(buf, len);
-    if (len <= 0)
-        return len;
-
-#ifdef DBG_OUTRPT
-    if (len > 0) {
-        // debug_simple_input_buffer(buf len);
-        debug_print_input_buffer(buf, len);
-    }
-#endif // DBG_OUTRPT
-
-    // len = 1 if success
-    len = convert_read(pvin, buf, len);
-    return len;
+    return vbuf_from_tty(pvin);
 }
 
 /*

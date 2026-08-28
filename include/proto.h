@@ -347,7 +347,7 @@ int  vkey_is_full(void);     // test if input buffer is full
 void vkey_purge(void);		// discard clear all data in input buffer
 int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
 int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
-ssize_t tty_read(unsigned char *buf, size_t max);
+ssize_t vbuf_from_tty(VBUF *v);
 
 typedef enum {
     VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
