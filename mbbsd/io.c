@@ -212,6 +212,16 @@ draw_80x24() {
 static int
 system_key_hook(int ch)
 {
+    if (currutmp && ch != KEY_INCOMPLETE) {
+        static time4_t lastact;
+        syncnow();
+        /* 3 秒內超過兩 byte 才算 active, anti-antiidle.
+         * 不過方向鍵等組合鍵不止 1 byte */
+        if (time4_diff(now, lastact) < 3)
+            currutmp->lastact = now;
+        lastact = now;
+    }
+
     switch (ch)
     {
     case Ctrl('L'):
@@ -342,7 +352,6 @@ static int
 dogetch(void)
 {
     ssize_t         len;
-    static time4_t  lastact;
 
     while (vbuf_is_empty(pvin)) {
 	refresh();
@@ -389,15 +398,6 @@ dogetch(void)
             len = read_vin();
             // warning: len is 1/0/-1 now, not real length.
 	} while (len <= 0);
-    }
-
-    if (currutmp) {
-	syncnow();
-	/* 3 秒內超過兩 byte 才算 active, anti-antiidle.
-	 * 不過方向鍵等組合鍵不止 1 byte */
-	if (time4_diff(now, lastact) < 3)
-	    currutmp->lastact = now;
-	lastact = now;
     }
 
     // see vtkbd.c for CR/LF Rules
