@@ -124,7 +124,7 @@ vbuf_peekat(VBUF *v, int i)
         return EOF;
     if (s < v->tail)
         return (unsigned char)*s;
-    if (s >= v->buf_end) 
+    if (s >= v->buf_end)
         s -= v->buf_end - v->buf;
     if (s < v->tail)
         return (unsigned char)*s;
@@ -144,7 +144,7 @@ VBUFPROTO void
 vbuf_popn(VBUF *v, size_t n)
 {
     v->head += n;
-    if (v->head < v->buf_end) 
+    if (v->head < v->buf_end)
         return;
 
     v->head -= (v->buf_end - v->buf);
@@ -194,7 +194,7 @@ vbuf_strchr(VBUF *v, char c)
 
 /* string operation */
 
-VBUFPROTO char * 
+VBUFPROTO char *
 vbuf_getstr (VBUF *v, char *s, size_t sz)
 {
     char *sbase = s;
@@ -213,7 +213,7 @@ vbuf_getstr (VBUF *v, char *s, size_t sz)
     return sbase;
 }
 
-VBUFPROTO int 
+VBUFPROTO int
 vbuf_putstr (VBUF *v, const char *s)
 {
     size_t len = strlen(s) + 1;
@@ -223,7 +223,7 @@ vbuf_putstr (VBUF *v, const char *s)
     return 1;
 }
 
-VBUFPROTO static void 
+VBUFPROTO static void
 vbuf_reverse(char *begin, char *end)
 {
     char c;
@@ -321,7 +321,7 @@ vbuf_putblk(VBUF *v, const void *p, size_t sz)
 // XXX warning: the return value of these callbacks are a little differnet:
 // 0 means 'can continue (EAGAIN)', and -1 means EOF or error.
 
-static ssize_t 
+static ssize_t
 vbuf_rw_write(struct iovec iov[2], void *ctx)
 {
     int fd = *(int*)ctx;
@@ -345,7 +345,7 @@ vbuf_rw_read(struct iovec iov[2], void *ctx)
     return ret;
 }
 
-static ssize_t 
+static ssize_t
 vbuf_rw_send(struct iovec iov[2], void *ctx)
 {
     int *fdflag = (int*)ctx;
@@ -371,28 +371,28 @@ vbuf_rw_recv(struct iovec iov[2], void *ctx)
     return ret;
 }
 
-/* read/write herlpers */
+/* read/write helpers */
 
-ssize_t 
+ssize_t
 vbuf_read (VBUF *v, int fd, ssize_t sz)
 {
     return vbuf_general_read(v, sz, &fd, vbuf_rw_read);
 }
 
-ssize_t 
+ssize_t
 vbuf_write(VBUF *v, int fd, ssize_t sz)
 {
     return vbuf_general_write(v, sz, &fd, vbuf_rw_write);
 }
 
-ssize_t 
+ssize_t
 vbuf_recv (VBUF *v, int fd, ssize_t sz, int flags)
 {
     int ctx[2] = {fd, flags};
     return vbuf_general_read(v, sz, &ctx, vbuf_rw_recv);
 }
 
-ssize_t 
+ssize_t
 vbuf_send (VBUF *v, int fd, ssize_t sz, int flags)
 {
     int ctx[2] = {fd, flags};
@@ -422,7 +422,7 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 
     if (sz < 1 || (ssize_t)vbuf_size(v) < sz)
         return 0;
-    
+
     do {
         rw = VBUF_TAIL_SZ(v);
         if (rw > sz) rw = sz;
@@ -447,7 +447,7 @@ vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 }
 
 // read from reader to vbuf
-ssize_t 
+ssize_t
 vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
                    ssize_t (reader)(struct iovec[2], void *ctx))
 {
@@ -467,7 +467,7 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
 
     if (sz < 1 || (ssize_t)vbuf_space(v) < sz)
         return 0;
-    
+
     do {
         rw = VBUF_HEAD_SZ(v);
         if (rw > sz) rw = sz;
@@ -496,9 +496,9 @@ vbuf_general_read(VBUF *v, ssize_t sz, void *ctx,
 #ifdef _VBUF_TEST_MAIN
 void vbuf_dbg_rpt(VBUF *v)
 {
-    printf("v: [ cap: %u, size: %2lu, empty: %s, ptr=(%p,h=%p,t=%p,%p)]\n", 
-            (unsigned int)vbuf_capacity(v), vbuf_size(v), 
-            vbuf_is_empty(v) ? "YES" : "NO", 
+    printf("v: [ cap: %u, size: %2lu, empty: %s, ptr=(%p,h=%p,t=%p,%p)]\n",
+            (unsigned int)vbuf_capacity(v), vbuf_size(v),
+            vbuf_is_empty(v) ? "YES" : "NO",
             v->buf, v->head, v->tail, v->buf_end);
     assert(v->buf_end == v->buf + v->capacity +1);
 }
@@ -622,6 +622,6 @@ int main()
 
     return 0;
 }
-#endif 
+#endif
 
 // vim:ts=8:sw=4:et

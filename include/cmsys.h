@@ -303,13 +303,15 @@ void vbuf_delete(VBUF *v);
 void vbuf_attach(VBUF *v, char *buf, size_t szbuf);
 void vbuf_detach(VBUF *v);
 void vbuf_clear (VBUF *v);
-// data accessing 
-int  vbuf_getblk(VBUF *v, void *p, size_t sz);       // get data from vbuf, return true/false
-int  vbuf_putblk(VBUF *v, const void *p, size_t sz); // put data into vbuf, return true/false
+
+// data accessing
+int  vbuf_getblk(VBUF *v, void *p, size_t sz);      // get data from vbuf, return true/false
+int  vbuf_putblk(VBUF *v, const void *p, size_t sz);// put data into vbuf, return true/false
 int  vbuf_peekat(VBUF *v, int i);		    // peek at given index, EOF(-1) if invalid index
 int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, EOF(-1) if buffer empty
 int  vbuf_add   (VBUF *v, char c);		    // append one byte into vbuf, return true/false
 void vbuf_popn  (VBUF *v, size_t n);		    // pop (remove) n bytes from vbuf
+
 // search and test
 int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise EOF(-1)
 
@@ -328,10 +330,10 @@ ssize_t vbuf_send (VBUF *v, int fd, ssize_t sz, int flags);
 ssize_t vbuf_recv (VBUF *v, int fd, ssize_t sz, int flags);
 
 // write from vbuf to writer (writer should return -1 for EOF/error, 0 for EAGAIN)
-ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx, 
+ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 	ssize_t (writer)(struct iovec[2], void *ctx));
 // read from reader to vbuf (reader should return -1 for EOF/error, 0 for EAGAIN)
-ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx, 
+ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx,
 	ssize_t (reader)(struct iovec[2], void *ctx));
 
 /* telnet.c */
