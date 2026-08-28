@@ -100,7 +100,9 @@ nios_dbgf(const char *fmt, ...)
 // console stream input (nios:cin): fd -> buffer
 
 // configuration
-#define CIN_BUFFER_SIZE (PIPE_BUF)
+#ifndef CIN_BUFFER_SIZE
+#define CIN_BUFFER_SIZE (256)
+#endif
 #define CIN_DEFAULT_FD  (cin_fd)
 
 // API prototypes
@@ -250,7 +252,7 @@ cin_clear_fd(int fd)
     //                          sizeof(optval));
     // method 2, fetch and discard
     VBUF vgarbage, *v = &vgarbage;
-    char garbage[4096]; // any magic number works here
+    char garbage[PIPE_BUF]; // any magic number works here
 
     if (cin_is_fd_empty(fd))
         return;
