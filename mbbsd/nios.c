@@ -301,6 +301,7 @@ cin_fetch_fd(int fd)
     do {
         if (vbuf_is_full(cin))
             break;
+        // The assumption is tty_read uses a blocking FD.
         if ((sz = tty_read((unsigned char*)buf, vbuf_space(cin))) < 0)
             continue;
 
@@ -482,7 +483,7 @@ vkey_process(int timeout, int peek)
 
     int r;
 
-    // process lask peeked data
+    // process last peeked data
     if (VKEY_HAS_PEEK())
     {
         // cached
