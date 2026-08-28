@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <limits.h>
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
@@ -95,7 +96,7 @@ nios_dbgf(const char *fmt, ...)
 // console stream input (nios:cin): fd -> buffer
 
 // configuration
-#define CIN_BUFFER_SIZE (4096)
+#define CIN_BUFFER_SIZE (PIPE_BUF)
 #define CIN_DEFAULT_FD  (cin_fd)
 
 // API prototypes
