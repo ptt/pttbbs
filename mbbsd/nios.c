@@ -181,15 +181,18 @@ cin_is_fd_empty(int fd)
 {
     CINDBGLOG("cin_is_fd_empty(%d)", fd);
 
-    if (!HAVE_FIONREAD) {
-        // we can only use poll.
-        return cin_poll_fds(fd, -1, 0) == 0;
+    if (HAVE_FIONREAD) {
+        int r;
+        if (ioctl(fd, FIONREAD, &r) == 0) {
+            if (r > 0)
+                return 0;  // Fast path: data available in kernel buffer.
+        } else {
+            return 0;      // Error (fd closed/invalid), treat as not empty to trigger read/error handling.
+        }
     }
 
-    int r;
-    if (ioctl(fd, FIONREAD, &r))
-        return 0;  // error - fd closed or the not supported.
-    return r == 0;
+    // Fallback/Disconnect check when r == 0: poll to distinguish truly empty vs POLLHUP/POLLERR.
+    return cin_poll_fds(fd, -1, 0) == 0;
 }
 
 /**
