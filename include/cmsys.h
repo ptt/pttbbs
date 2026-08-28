@@ -319,7 +319,7 @@ int  vbuf_add   (VBUF *v, char c);		    // append one byte into vbuf, return tru
 void vbuf_popn  (VBUF *v, size_t n);		    // pop (remove) n bytes from vbuf
 
 // search and test
-int  vbuf_strchr(VBUF *v, char c);		    // index of first location of c, otherwise EOF(-1)
+int  vbuf_strchr(const VBUF *v, char c);	    // index of first location of c, otherwise EOF(-1)
 
 // vector of C-style NULL terminated strings
 char* vbuf_getstr(VBUF *v, char *s, size_t sz);	    // get a string from vbuf, return NULL if empty

@@ -154,29 +154,33 @@ vbuf_add(VBUF *v, char c)
     return 1;
 }
 
-VBUFPROTO int  
-vbuf_strchr(VBUF *v, char c)
+VBUFPROTO int
+vbuf_strchr(const VBUF *v, char c)
 {
-    const char *s = v->head, *d = v->tail;
+    const char *s = v->head, *d = v->tail, *p;
+    int ch = (unsigned char)c;
 
     if (vbuf_is_empty(v))
         return EOF;
 
-    if (d < s) 
+    // Search from head -> [tail, buf_end].
+    if (d < s)
         d = v->buf_end;
 
-    while (s < d)
-        if (*s++ == c)
-            return s - v->head -1;
+    if (d - s) {
+        p = memchr(s, ch, d - s);
+        if (p)
+            return p - s;
+    }
 
     if (v->tail > v->head)
         return EOF;
 
+    // Search from buf -> tail
     s = v->buf; d = v->tail;
-
-    while (s < d)
-        if (*s++ == c)
-            return (v->buf_end - v->head) + s - v->buf -1;
+    p = memchr(s, ch, d - s);
+    if (p)
+        return (v->buf_end - v->head) + (p - s);
 
     return EOF;
 }
