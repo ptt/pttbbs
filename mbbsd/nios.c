@@ -448,11 +448,21 @@ vkey_process_cin()
     ch = vtkbd_process(ch, &vkctx.vtkbd);
 
     // process transparent keys
-    switch(ch)
+    switch (ch)
     {
         case KEY_ESC:
             // XXX change this to (META|key) someday...
             KEY_ESC_arg = vkctx.vtkbd.esc_arg;
+            break;
+
+        case KEY_CR:
+            // Change CR+LF to CR (KEY_ENTER).
+            if (vbuf_peek(cin) == KEY_LF)
+                vbuf_pop(cin);
+            break;
+
+        case KEY_LF:
+            ch = KEY_INCOMPLETE;
             break;
     }
     ch = vkey_dispatch_hooks(ch);
