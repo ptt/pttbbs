@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/param.h>
 
 // for read/write/send/recv/readv/writev
 #include <sys/types.h>
@@ -43,6 +44,9 @@
 #else
 # define VBUFPROTO inline
 #endif
+
+// Change to 1 if we want to flatten using in-place algorithm
+#define VBUF_FLAT_INPLACE (0)
 
 VBUFPROTO void
 vbuf_new(VBUF *v, size_t szbuf)
@@ -222,31 +226,65 @@ vbuf_reverse(char *begin, char *end)
     }
 }
 
-VBUFPROTO char *
-vbuf_cstr  (VBUF *v)
+VBUFPROTO static void
+vbuf_flat_inplace(VBUF *v)
 {
-    size_t sz;
-    if (vbuf_is_empty(v))
-        return NULL;
+    if (v->tail >= v->head)
+        return;
 
-    // if the buffer is cstr safe, simply return
-    if (v->tail > v->head)
-    {
-        *v->tail = 0;
-        return v->head;
-    }
-
-    // wrapped ring buffer. now reverse 3 times to merge:
-    // [buf head tail buf_end]
-    sz = vbuf_size(v);
+    // Wrapped ring buffer. Now reverse 3 times + 1 move to flatten:
+    // [buf-B>tail GAP head-A>buf_end] -> [buf<B-tail GAP head<A-buf_end] ->
+    // [buf<B-tail head<A-buf_end GAP ] -> [buf=head> AB >tail GAP buf_end]
+    size_t sz = vbuf_size(v);
     vbuf_reverse(v->buf, v->tail);
     vbuf_reverse(v->head, v->buf_end);
     memmove(v->tail, v->head, v->buf_end - v->head);
     v->head = v->buf;
     v->tail = v->buf + sz;
-    v->buf[sz] = 0;
     vbuf_reverse(v->head, v->tail);
-    return v->buf;
+}
+
+VBUFPROTO static void
+vbuf_flat(VBUF *v)
+{
+    if (v->tail >= v->head)
+        return;
+
+    // [ Segment B (v->buf => v->tail) | ... | Segment A (v->head => v->buf_end) ]
+    size_t len_b = v->tail - v->buf;
+    size_t len_a = v->buf_end - v->head;
+    size_t sz = len_a + len_b;
+
+    // Step 1. Make A close to B.
+    memmove(v->buf + len_b, v->head, len_a);
+    char tmp[128];
+    size_t processed = 0;
+    // Step 2. Rotate [B|A] to [A|B] using tmp.
+    while (processed < len_b) {
+        size_t chunk = MIN(sizeof(tmp), len_b - processed);
+        memcpy(tmp, v->buf + processed, chunk);
+        memmove(v->buf + processed, v->buf + processed + chunk, len_a);
+        memcpy(v->buf + processed + len_a, tmp, chunk);
+        processed += chunk;
+    }
+    // Step 3. Adjust pointers.
+    v->head = v->buf;
+    v->tail = v->buf + sz;
+}
+
+VBUFPROTO char *
+vbuf_cstr  (VBUF *v)
+{
+    if (vbuf_is_empty(v))
+        return NULL;
+
+    if (VBUF_FLAT_INPLACE)
+        vbuf_flat_inplace(v);
+    else
+        vbuf_flat(v);
+
+    *v->tail = 0;
+    return v->head;
 }
 
 // NOTE: VBUF_*_SZ may return a size larger than capacity, so you must check
