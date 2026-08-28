@@ -22,12 +22,15 @@ static VBUF vin, *pvin = &vin;
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
 
-#ifdef DBG_OUTRPT
+/* ----------------------------------------------------- */
+/* debug reporting                                       */
+/* ----------------------------------------------------- */
+#if defined(DEBUG) || defined(DBG_OUTRPT)
 // output counter
 static unsigned long szTotalOutput = 0, szLastOutput = 0;
 unsigned char fakeEscape = 0;
 
-static unsigned char fakeEscFilter(unsigned char c)
+unsigned char fakeEscFilter(unsigned char c)
 {
     if (!fakeEscape) return c;
     if (c == ESC_CHR) return '*';
@@ -37,24 +40,38 @@ static unsigned char fakeEscFilter(unsigned char c)
     else if (c == '\t') return 'I';
     return c;
 }
-#endif // DBG_OUTRPT
 
-/* ----------------------------------------------------- */
-/* debug reporting                                       */
-/* ----------------------------------------------------- */
-
-#if defined(DEBUG) || defined(DBG_OUTRPT)
 void
-debug_print_input_buffer(char *s, size_t len)
+debug_output_buffer(void)
+{
+    char xbuf[STRLEN];
+    SNPRINTF(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
+             szLastOutput, szTotalOutput);
+    write(1, xbuf, strlen(xbuf));
+    szLastOutput = 0;
+}
+
+ssize_t
+debug_simple_input_buffer(unsigned char *buf GCC_UNUSED, ssize_t len)
+{
+    char xbuf[STRLEN];
+    SNPRINTF(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] "
+             ESC_STR "[u", len);
+    write(1, xbuf, strlen(xbuf));
+    return len;
+}
+
+ssize_t
+debug_print_input_buffer(unsigned char *s, ssize_t len)
 {
     int y, x, i;
     if (!s || !len)
-        return;
+        return len;
 
     getyx_ansi(&y, &x);
-    move(b_lines, 0); clrtoeol();
+    move(0, 0); clrtocol();
     SOLVE_ANSI_CACHE();
-    prints("Input Buffer (%d): [ ", (int)len);
+    prints(ANSI_RESET "Input Buffer (%d): [ ", (int)len);
     for (i = 0; i < len; i++, s++)
     {
         int c = (unsigned char)*s;
@@ -74,10 +91,12 @@ debug_print_input_buffer(char *s, size_t len)
             outc(c);
         }
     }
-    prints(" ] ");
+    prints(" ]\n");
     move_ansi(y, x);
+    return len;
 }
-#endif
+
+#endif // DBG_OUTRPT
 
 /* ----------------------------------------------------- */
 /* output routines                                       */
@@ -91,14 +110,8 @@ oflush(void)
     }
 
 #ifdef DBG_OUTRPT
-    {
-	static char xbuf[128];
-	sprintf(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
-		szLastOutput, szTotalOutput);
-	write(1, xbuf, strlen(xbuf));
-	szLastOutput = 0;
-    }
-#endif // DBG_OUTRPT
+    debug_output_buffer();
+#endif
 
     // XXX to flush, set TCP_NODELAY instead.
     // fsync does NOT work on network sockets.
@@ -343,17 +356,10 @@ read_vin() {
         return len;
 
 #ifdef DBG_OUTRPT
-#if 1
-    if (len > 0)
-	debug_print_input_buffer(buf, len);
-#else
-    {
-	static char xbuf[128];
-	sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] "
-		ESC_STR "[u", len);
-	write(1, xbuf, strlen(xbuf));
+    if (len > 0) {
+        // debug_simple_input_buffer(buf len);
+        debug_print_input_buffer(buf, len);
     }
-#endif
 #endif // DBG_OUTRPT
 
     // len = 1 if success
