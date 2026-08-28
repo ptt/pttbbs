@@ -290,13 +290,18 @@ typedef struct VBUF {
     size_t  capacity;
 } VBUF;
 
-// speedy macros
-#define vbuf_is_empty(v)    ((v)->head == (v)->tail)
-#define vbuf_is_full(v)	    (!vbuf_space(v))
-#define vbuf_capacity(v)    ((v)->capacity)
-#define vbuf_size(v)        ((size_t)((v)->tail >= (v)->head ? (v)->tail - (v)->head : (v)->buf_end - (v)->head + (v)->tail - (v)->buf))
-#define vbuf_space(v)       ((size_t)((v)->capacity - vbuf_size(v)))
-#define vbuf_peek(v)	    (vbuf_is_empty(v) ? EOF : (unsigned char)(*v->head))
+// speedy inline functions
+static inline size_t vbuf_size(const VBUF *v)     {
+    if (v->tail >= v->head)
+        return v->tail - v->head;
+    else
+        return v->buf_end - v->head + v->tail - v->buf;
+}
+static inline size_t vbuf_capacity(const VBUF *v) { return v->capacity; }
+static inline size_t vbuf_space(const VBUF *v)    { return v->capacity - vbuf_size(v); }
+static inline bool   vbuf_is_full(const VBUF *v)  { return !vbuf_space(v); }
+static inline bool   vbuf_is_empty(const VBUF *v) { return v->head == v->tail; }
+
 // buffer management
 void vbuf_new   (VBUF *v, size_t szbuf);
 void vbuf_delete(VBUF *v);
@@ -307,7 +312,8 @@ void vbuf_clear (VBUF *v);
 // data accessing
 int  vbuf_getblk(VBUF *v, void *p, size_t sz);      // get data from vbuf, return true/false
 int  vbuf_putblk(VBUF *v, const void *p, size_t sz);// put data into vbuf, return true/false
-int  vbuf_peekat(VBUF *v, int i);		    // peek at given index, EOF(-1) if invalid index
+int  vbuf_peek  (const VBUF *v);		    // peek the one byte from vbuf, EOF(-1) if empty
+int  vbuf_peekat(const VBUF *v, int i);		    // peek at given index, EOF(-1) if invalid index
 int  vbuf_pop   (VBUF *v);			    // pop one byte from vbuf, EOF(-1) if buffer empty
 int  vbuf_add   (VBUF *v, char c);		    // append one byte into vbuf, return true/false
 void vbuf_popn  (VBUF *v, size_t n);		    // pop (remove) n bytes from vbuf

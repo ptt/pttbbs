@@ -2,6 +2,9 @@
 // vbuf.c
 // piaip's simple virtual (ring) buffer
 //
+// vbuf -> [buf head -> tail buf_end]
+//      pop here -^      ^- add here
+//
 // Author: Hung-Te Lin (piaip)
 // Create: Sat Oct 24 22:44:00 CST 2009
 // An implementation from scratch, with the API names inspired by STL and vrb
@@ -35,45 +38,10 @@
 // #include "vbuf.h"
 #include "cmsys.h"
 
-// #define VBUFPROTO  inline
-#define VBUFPROTO
-
-// These APIs are defined as macro in vbuf.h(cmsys.h) for faster access
-#if 0
-
-VBUFPROTO int
-vbuf_is_empty(VBUF *v)
-{
-    return v->head == v->tail;
-}
-
-VBUFPROTO size_t
-vbuf_capacity(VBUF *v)
-{
-    return v->capacity;
-}
-
-VBUFPROTO size_t
-vbuf_size(VBUF *v)
-{
-    return (v->tail >= v->head) ? (v->tail - v->head) :
-        (v->buf_end - v->head + v->tail - v->buf);
-}
-
-VBUFPROTO size_t
-vbuf_space(VBUF *v)
-{
-    return v->capacity - vbuf_size(v);
-}
-
-VBUFPROTO int
-vbuf_peek(VBUF *v)
-{
-    if (vbuf_is_empty(v))
-        return EOF;
-    return (unsigned char)(*v->head);
-}
-
+#ifdef DEBUG
+# define VBUFPROTO
+#else
+# define VBUFPROTO inline
 #endif
 
 VBUFPROTO void
@@ -117,7 +85,15 @@ vbuf_clear(VBUF *v)
 }
 
 VBUFPROTO int
-vbuf_peekat(VBUF *v, int i)
+vbuf_peek(const VBUF *v)
+{
+    if (vbuf_is_empty(v))
+        return EOF;
+    return (unsigned char)(*v->head);
+}
+
+VBUFPROTO int
+vbuf_peekat(const VBUF *v, int i)
 {
     const char *s = v->head + i;
     if (vbuf_is_empty(v) || i >= (int)vbuf_capacity(v))
