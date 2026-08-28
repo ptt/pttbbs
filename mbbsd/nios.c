@@ -488,7 +488,7 @@ vkey_process(int timeout, int peek)
 
         // XXX should we let cin_poll select from fds of fd_empty?
 
-        // now, try to read from fd.
+        // Now, try to read from fd.
         assert(1 == CIN_POLL_CINFD);    // cin_is_fd_empty() will return 1.
         if (timeout > 0 || CIN_IS_VALID_FD2(vkctx.attached_fd))
         {
@@ -503,18 +503,28 @@ vkey_process(int timeout, int peek)
             r = CIN_POLL_CINFD;
         }
 
-        if (r == 0) // timeout
+        if (r == 0)
         {
-            if (KEY_INCOMPLETE != I_TIMEOUT && CIN_IS_VALID_FD2(vkctx.attached_fd)) {
+            // No data for both FD.
+            assert(KEY_INCOMPLETE != I_TIMEOUT);
+            // I_TIMEOUT is a special value only when fd2 is attached and
+            // timeout (not in timeout=0 peek mode).
+            if (timeout > 0  && CIN_IS_VALID_FD2(vkctx.attached_fd)) {
                 syncnow();
                 r = I_TIMEOUT;
-            } else
+            } else {
                 return KEY_INCOMPLETE; // must directly return here.
+            }
         }
-        if (r < 0) // error
-            r = KEY_UNKNOWN;        // or EOF?
-        else if (r & CIN_POLL_FD2)  // the second fd
+
+        if (r < 0)
         {
+            // Error
+            r = KEY_UNKNOWN;        // or EOF?
+        }
+        else if (r & CIN_POLL_FD2)
+        {
+            // The second fd
             syncnow();
             r = I_OTHERDATA;
         }
