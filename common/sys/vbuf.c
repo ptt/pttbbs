@@ -399,6 +399,26 @@ vbuf_send (VBUF *v, int fd, ssize_t sz, int flags)
     return vbuf_general_write(v, sz, &ctx, vbuf_rw_send);
 }
 
+ssize_t
+vbuf_pipeline(VBUF *v, unsigned char *buf, ssize_t len,
+              const vbuf_filter_fn *filters, int nfilters,
+              vbuf_sink_fn sink)
+{
+    int i;
+    for (i = 0; i < nfilters; i++) {
+        if (len <= 0)
+            break;
+        len = filters[i](buf, len);
+    }
+
+    if (len <= 0)
+        return len;
+    if (!sink)
+        sink = vbuf_putblk;
+
+    return sink(v, buf, len);
+}
+
 /* read/write primitives */
 
 // write from vbuf to writer

@@ -336,6 +336,13 @@ ssize_t vbuf_general_write(VBUF *v, ssize_t sz, void *ctx,
 ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx,
 	ssize_t (reader)(struct iovec[2], void *ctx));
 
+// vbuf filter pipeline
+typedef ssize_t (*vbuf_filter_fn)(unsigned char *buf, ssize_t len);
+typedef int (*vbuf_sink_fn)(VBUF *v, const void *buf, size_t len);
+ssize_t vbuf_pipeline(VBUF *v, unsigned char *buf, ssize_t len,
+                      const vbuf_filter_fn *filters, int nfilters,
+                      vbuf_sink_fn sink);
+
 /* telnet.c */
 struct TelnetCallback {
     void (*write_data)		(void *write_arg, int fd, const void *buf, size_t nbytes);
