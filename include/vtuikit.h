@@ -159,9 +159,9 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
 void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_hdr2	(const char *left, const char *right);
-void vs_hdr2f	(const char *fmt, ...);
+void vs_hdr2f	(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void vs_hdr2bar	(const char *left, const char *right);
-void vs_hdr2barf(const char *fmt, ...);
+void vs_hdr2barf(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void vs_footer	(const char *caption, const char *prompt);
 
 int vs_quick_pref(int default_value, const char *title, const char *entry,
