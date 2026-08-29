@@ -20,12 +20,9 @@ telnet_cb_resize_term(void *resize_arg GCC_UNUSED, int w, int h)
 }
 
 static const struct TelnetCallback telnet_callback = {
-    NULL,
-    telnet_cb_resize_term,
+    .term_resize = telnet_cb_resize_term,
 #ifdef DETECT_CLIENT
-    telnet_cb_update_client_code,
-#else
-    NULL,
+    .update_client_code = telnet_cb_update_client_code,
 #endif
 };
 
