@@ -229,7 +229,7 @@ do_order_song(void)
     SNPRINTF(save_title, "%s:%s", sender, say);
     hold_mail(filename, receiver, save_title);
     if (*address) {
-	save_mailbox(cuser.userid, address, save_title, NULL, filename, 0, 0, 0, NULL);
+	save_mailbox(cuser.userid, address, save_title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
     }
 
     clear();

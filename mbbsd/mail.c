@@ -190,7 +190,7 @@ mail_log2id_text(const char *id, const char *title, const char *message,
                  const char *owner, char newmail)
 {
     int filemode = newmail ? 0 : FILE_READ;
-    return save_mailbox(owner, id, title, message, NULL, filemode, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
+    return save_mailbox(owner, id, title, message, NULL, filemode, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 
@@ -200,13 +200,13 @@ mail_log2id(const char *id, const char *title, const char *src,
             const char *owner, char newmail, char trymove GCC_UNUSED)
 {
     int filemode = newmail ? 0 : FILE_READ;
-    return save_mailbox(owner, id, title, NULL, src, filemode, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
+    return save_mailbox(owner, id, title, NULL, src, filemode, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 int
 mail_id(const char *id, const char *title, const char *src, const char *owner)
 {
-    return save_mailbox(owner, id, title, NULL, src, 0, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
+    return save_mailbox(owner, id, title, NULL, src, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 void
@@ -305,7 +305,7 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder,
         STRLCPY(title, save_title ? save_title : "");
     }
 
-    save_mailbox(STR_MEMO, holder, title, NULL, fpath, 0, 0, 0, NULL);
+    save_mailbox(STR_MEMO, holder, title, NULL, fpath, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
 }
 
 /*
@@ -365,7 +365,7 @@ is_local_mail_address(const char *addr)
 MailSendResult
 save_mailbox(const char *sender, const char *recipient, const char *title,
              const char *message, const char *src_file, int filemode,
-             int check_quota, int is_user_content, char *out_dst_fpath)
+             int send_flags, char *out_dst_fpath)
 {
     char rightid[IDLEN + 1];
     char dst_fpath[PATHLEN];
@@ -383,8 +383,8 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
         STRLCPY(rightid, recipient);
     }
 
-    /* Mailbox quota limit check (only if check_quota is set, e.g. for mail forwarding) */
-    if (check_quota) {
+    /* Mailbox quota limit check (only if MAILSEND_FLAG_CHECK_QUOTA is set) */
+    if (send_flags & MAILSEND_FLAG_CHECK_QUOTA) {
         if (strcmp(rightid, cuser.userid) == 0) {
             if (chk_cuser_mailbox_limit())
                 return MAILSEND_ERR_QUOTA;
@@ -437,11 +437,16 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
     }
 
     sethomedir(dir_fpath, rightid);
-    if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid) == -1)
-        return MAILSEND_ERR_PARAM;
+    if (send_flags & MAILSEND_FLAG_ALLOW_FORWARD) {
+        if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid) == -1)
+            return MAILSEND_ERR_PARAM;
+    } else {
+        if (append_record(dir_fpath, &mhdr, sizeof(mhdr)) == -1)
+            return MAILSEND_ERR_PARAM;
+    }
 
-    /* Track mail ONLY if mail is user-generated content (do_innersend / multi_send) */
-    if (is_user_content) {
+    /* Track mail ONLY if MAILSEND_FLAG_USER_CONTENT is set */
+    if (send_flags & MAILSEND_FLAG_USER_CONTENT) {
 #ifdef USE_TRACKMAIL_SVC
         trackmail_notify_send(mhdr.owner, rightid, mhdr.title, mhdr.filename, dst_fpath, mhdr.modified);
 #elif defined(TRACKMAIL)
@@ -449,7 +454,9 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
                   "%s %s %s %s\n", mhdr.owner, rightid, mhdr.filename, mhdr.title);
 #endif
     }
-    sendalert(rightid, ALERT_NEW_MAIL);
+    if (!(mhdr.filemode & FILE_READ)) {
+        sendalert(rightid, ALERT_NEW_MAIL);
+    }
 
     if (out_dst_fpath) {
         strlcpy(out_dst_fpath, dst_fpath, PATHLEN);
@@ -494,7 +501,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
 
     if (newtitle) strlcpy(newtitle, save_title, STRLEN);
 
-    MailSendResult ret = save_mailbox(cuser.userid, userid, save_title, NULL, tmp_fpath, 0, 0, 1, mfpath);
+    MailSendResult ret = save_mailbox(cuser.userid, userid, save_title, NULL, tmp_fpath, 0, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, mfpath);
     unlink(tmp_fpath);
     setutmpmode(oldstat);
     return ret;
@@ -1055,7 +1062,7 @@ multi_send(const char *title)
 
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
-	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, 0, 1, NULL) != MAILSEND_OK)
+	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
 		vmsg(err_uid);
 	}
 	hold_mail(fpath, NULL, save_title);
@@ -1215,7 +1222,7 @@ mail_account_sysop(void)
 
     for (i = 0; i < Vector_length(&namelist); i++) {
         const char *userid = Vector_get(&namelist, i);
-        if (save_mailbox(cuser.userid, userid, save_title, NULL, fpath, FILE_MULTI, 1, 0, NULL) != MAILSEND_OK)
+        if (save_mailbox(cuser.userid, userid, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
             vmsg(err_uid);
     }
     Vector_delete(&namelist);
@@ -1477,7 +1484,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     }
 
     if (strcasestr(address, str_mail_address) || strchr(address, '@') == NULL) {
-        return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, 1, 0, NULL);
+        return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, MAILSEND_FLAG_CHECK_QUOTA | MAILSEND_FLAG_ALLOW_FORWARD, NULL);
     } else {
         return_no = bsmtp(fname, fh->title, address, NULL);
     }

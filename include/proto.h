@@ -416,13 +416,20 @@ typedef enum {
     MAILSEND_ERR_QUOTA = -4,
 } MailSendResult;
 
+typedef enum {
+    MAILSEND_FLAG_NONE          = 0,
+    MAILSEND_FLAG_CHECK_QUOTA   = (1 << 0),
+    MAILSEND_FLAG_USER_CONTENT  = (1 << 1),
+    MAILSEND_FLAG_ALLOW_FORWARD = (1 << 2),
+} MailSendFlag;
+
 int do_send(const char *userid, const char *title);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);
 MailSendResult save_mailbox(const char *sender, const char *recipient, const char *title,
                             const char *message, const char *src_file, int filemode,
-                            int check_quota, int is_user_content, char *out_dst_fpath);
+                            int send_flags, char *out_dst_fpath);
 bool is_local_mail_address(const char *addr);
 bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len);
 
