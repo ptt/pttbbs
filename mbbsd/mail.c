@@ -792,7 +792,7 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 }
 
 int
-do_send(const char *userid, const char *title)
+mail_ui_send(const char *userid, const char *title)
 {
     char            fpath[PATHLEN];
     userec_t        xuser;
@@ -825,7 +825,7 @@ do_send(const char *userid, const char *title)
 void
 my_send(const char *uident)
 {
-    switch (do_send(uident, NULL)) {
+    switch (mail_ui_send(uident, NULL)) {
 	case -1:
 	outs(err_uid);
 	break;
@@ -1291,7 +1291,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
     showplans(uid);
 
-    switch (do_send(uid, save_title)) {
+    switch (mail_ui_send(uid, save_title)) {
     case -1:
 	outs(err_uid);
 	break;
@@ -1766,7 +1766,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     prints("\n收信人: %s\n標  題: %s\n", uid, save_title);
 
     /* edit, then send the mail */
-    switch (do_send(uid, save_title)) {
+    switch (mail_ui_send(uid, save_title)) {
     case -1:
 	outs(err_uid);
 	break;

@@ -422,7 +422,7 @@ typedef enum {
     MAILSEND_FLAG_ALLOW_FORWARD = (1 << 2),
 } MailSendFlag;
 
-int do_send(const char *userid, const char *title);
+int mail_ui_send(const char *userid, const char *title);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);
