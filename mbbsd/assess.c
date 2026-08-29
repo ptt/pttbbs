@@ -198,8 +198,8 @@ reassign_badpost(const char *userid) {
              cuser.userid, u.userid, orig_badpost, u.badpost, reason);
     SNPRINTF(title, "[厨] %sэ%s癶ゅ厨", cuser.userid, u.userid);
     post_msg(BN_SECURITY, title, msg, "[╰参Ы]");
-    mail_log2id_text(u.userid, "[╰参硄] 癶ゅ跑", msg,
-                     "[╰参Ы]", NA);
+    mail_send_text(u.userid, "[╰参硄] 癶ゅ跑", msg,
+                   "[╰参Ы]");
     passwd_sync_update(uid, &u);
     kick_all(u.userid);
 

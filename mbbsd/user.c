@@ -730,7 +730,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    // Notify user
 	    STRLCPY(title, "聯絡信箱變更通知");
 	    SNPRINTF(buf, "您的聯絡信箱已變更為 %s\n", email);
-	    mail_log2id_text(orig_uid, title, buf, cuser.userid, 1);
+	    mail_send_text(orig_uid,  title,  buf,  cuser.userid);
             log_user_security(x.userid, "%s (ContactEmail) %s -> %s\n",
                               "[Admin]", x.email, email);
 	    STRLCPY(x.email, email);

@@ -197,13 +197,6 @@ mail_send_text(const char *recipient, const char *title, const char *message, co
     return save_mailbox(sender, recipient, title, message, NULL, 0, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
-int
-mail_log2id_text(const char *id, const char *title, const char *message,
-                 const char *owner, char newmail)
-{
-    int filemode = newmail ? 0 : FILE_READ;
-    return save_mailbox(owner, id, title, message, NULL, filemode, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
-}
 
 
 // TODO add header option?

@@ -283,7 +283,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n\n%s",
                  board, Cdatelite(&now), datebuf, reason, anti_pettifogger);
-        mail_log2id_text(uid, xtitle, xmsg, "[系統通知]", 1);
+        mail_send_text(uid,  xtitle,  xmsg,  "[系統通知]");
         sendalert(uid, ALERT_NEW_MAIL);
     }
     invalid_board_permission_cache(board);
