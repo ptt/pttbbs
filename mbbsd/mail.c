@@ -349,7 +349,6 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder,
     char            buf[PATHLEN], title[128];
     char            holder_dir[PATHLEN];
 
-    fileheader_t    mymail;
 
     sethomepath(buf, holder);
     stampfile(buf, &mymail);
@@ -1024,11 +1023,9 @@ static void
 multi_send(const char *title)
 {
     FILE           *fp;
-    fileheader_t    mymail;
     char            fpath[TTLEN], *ptr;
     int             recipient, listing;
     char            genbuf[PATHLEN];
-    char	    buf[IDLEN+1];
     struct Vector   namelist;
     int             i;
     const char     *p;
@@ -1118,19 +1115,8 @@ multi_send(const char *title)
 
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
-            searchuser(p, buf);
-            sethomepath(genbuf, buf);
-	    stampfile(genbuf, &mymail);
-	    unlink(genbuf);
-	    Copy(fpath, genbuf);
-
-	    STRLCPY(mymail.owner, cuser.userid);
-	    STRLCPY(mymail.title, save_title);
-	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
-	    sethomedir(genbuf, buf);
-	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), buf) == -1)
+	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, 0, 1, NULL) != MAILSEND_OK)
 		vmsg(err_uid);
-	    sendalert(buf, ALERT_NEW_MAIL);
 	}
 	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
@@ -1239,7 +1225,6 @@ mail_account_sysop(void)
 {
     // send mail to account sysop
     int             i;
-    fileheader_t    mymail;
     char            fpath[TTLEN];
     char            genbuf[PATHLEN];
     char            idbuf[IDLEN+1];
