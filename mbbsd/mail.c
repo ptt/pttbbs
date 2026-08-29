@@ -298,27 +298,14 @@ static void
 do_hold_mail(const char *fpath, const char *receiver, const char *holder,
              const char *save_title)
 {
-    char            buf[PATHLEN], title[128];
-    char            holder_dir[PATHLEN];
+    char title[STRLEN];
+    if (receiver && *receiver) {
+        SNPRINTF(title, "(%s) %s", receiver, save_title);
+    } else {
+        STRLCPY(title, save_title ? save_title : "");
+    }
 
-    fileheader_t    mymail;
-
-    sethomepath(buf, holder);
-    stampfile(buf, &mymail);
-
-    mymail.filemode = FILE_READ ;
-    STRLCPY(mymail.owner, "[³Æ.§Ñ.¿ý]");
-    if (receiver) {
-	SNPRINTF(title, "(%s) %s", receiver, save_title);
-	STRLCPY(mymail.title, title);
-    } else
-	STRLCPY(mymail.title, save_title);
-
-    sethomedir(holder_dir, holder);
-
-    unlink(buf);
-    Copy(fpath, buf);
-    append_record_forward(holder_dir, &mymail, sizeof(mymail), holder);
+    save_mailbox(STR_MEMO, holder, title, NULL, fpath, 0, 0, 0, NULL);
 }
 
 /*
