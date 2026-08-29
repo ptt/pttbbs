@@ -67,6 +67,8 @@
 // debug helpers
 #if defined(CIN_DEBUG) || defined(VKEY_DEBUG)
 #include <stdarg.h>
+
+static void nios_dbgf(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 static void
 nios_dbgf(const char *fmt, ...)
 {
@@ -581,8 +583,8 @@ vkey_poll(int timeout)
 VKEY_PROTO int
 vkey_is_typeahead()
 {
-    VKEYDBGLOG("vkey_is_typeahead(): %d|%d",
-            VKEY_HAS_PEEK() || !cin_is_buffer_empty());
+    VKEYDBGLOG("vkey_is_typeahead(): %d||%d",
+            VKEY_HAS_PEEK(), !cin_is_buffer_empty());
 
     return  VKEY_HAS_PEEK() || !cin_is_buffer_empty();
 }
