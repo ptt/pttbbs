@@ -416,7 +416,7 @@ typedef enum {
     MAILSEND_ERR_QUOTA = -4,
 } MailSendResult;
 
-int do_send(const char *userid, const char *title, const char *log_source);
+int do_send(const char *userid, const char *title);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);
