@@ -186,6 +186,18 @@ void setmailalert()
 }
 
 int
+mail_send_file(const char *recipient, const char *title, const char *src_file, const char *sender)
+{
+    return save_mailbox(sender, recipient, title, NULL, src_file, 0, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
+}
+
+int
+mail_send_text(const char *recipient, const char *title, const char *message, const char *sender)
+{
+    return save_mailbox(sender, recipient, title, message, NULL, 0, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
+}
+
+int
 mail_log2id_text(const char *id, const char *title, const char *message,
                  const char *owner, char newmail)
 {
