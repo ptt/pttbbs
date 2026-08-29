@@ -349,6 +349,7 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder,
     char            buf[PATHLEN], title[128];
     char            holder_dir[PATHLEN];
 
+    fileheader_t    mymail;
 
     sethomepath(buf, holder);
     stampfile(buf, &mymail);
@@ -1226,8 +1227,6 @@ mail_account_sysop(void)
     // send mail to account sysop
     int             i;
     char            fpath[TTLEN];
-    char            genbuf[PATHLEN];
-    char            idbuf[IDLEN+1];
     int             oldstat = currstat;
     char            save_title[STRLEN];
     char            tmp_title[STRLEN-20];
@@ -1277,21 +1276,8 @@ mail_account_sysop(void)
 
     for (i = 0; i < Vector_length(&namelist); i++) {
         const char *userid = Vector_get(&namelist, i);
-        if(!searchuser(userid, idbuf))
-            continue;
-        sethomepath(genbuf, idbuf);
-        stampfile(genbuf, &mymail);
-        unlink(genbuf);
-        Copy(fpath, genbuf);
-
-        STRLCPY(mymail.owner, cuser.userid);
-        STRLCPY(mymail.title, save_title);
-        mymail.filemode |= FILE_MULTI;
-        sethomedir(genbuf, idbuf);
-
-        if (append_record_forward(genbuf, &mymail, sizeof(mymail), idbuf) == -1)
+        if (save_mailbox(cuser.userid, userid, save_title, NULL, fpath, FILE_MULTI, 1, 0, NULL) != MAILSEND_OK)
             vmsg(err_uid);
-        sendalert(idbuf, ALERT_NEW_MAIL);
     }
     Vector_delete(&namelist);
 
