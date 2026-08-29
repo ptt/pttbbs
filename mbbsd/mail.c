@@ -215,11 +215,6 @@ mail_log2id(const char *id, const char *title, const char *src,
     return save_mailbox(owner, id, title, NULL, src, filemode, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
-int
-mail_id(const char *id, const char *title, const char *src, const char *owner)
-{
-    return save_mailbox(owner, id, title, NULL, src, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL) == MAILSEND_OK ? 0 : -1;
-}
 
 void
 m_init(void)
@@ -765,7 +760,7 @@ built_mail_index(void)
 int
 mail_muser(userec_t muser, const char *title, const char *filename)
 {
-    return mail_id(muser.userid, title, filename, cuser.userid);
+    return save_mailbox(cuser.userid, muser.userid, title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
 }
 
 int

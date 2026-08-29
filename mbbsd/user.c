@@ -1031,10 +1031,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    fclose(fp);
 
 	    post_file(BN_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
-	    mail_id(x.userid, title, "etc/updatepwd.log", cuser.userid);
+	    mail_send_file(x.userid, title, "etc/updatepwd.log", cuser.userid);
 	    for(i=0; i<3; i++)
 	    {
-		mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
+		mail_send_file(witness[i], title, "etc/updatepwd.log", cuser.userid);
 	    }
 	}
 
@@ -1160,7 +1160,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
         // TODO notify Angelbeats
 	if (HAS_ANGEL && (x.userlevel & ~changefrom & PERM_ANGEL)) {
             angel_register_new(x.userid);
-            mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify",
+            mail_send_file(x.userid, "翅膀長出來了！", "etc/angel_notify",
                     "[天使公會]");
         }
     }

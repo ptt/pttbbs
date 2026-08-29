@@ -236,7 +236,7 @@ anticrosspost(void)
     post_violatelaw(cuser.userid, BBSMNAME "系統警察",
                     "Cross-post", "罰單處份");
     pwcuViolateLaw();
-    mail_id(cuser.userid, "Cross-Post罰單",
+    mail_send_file(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", BBSMNAME "警察部隊");
     // Delete all references from BN_ALLPOST, if available.
     delete_allpost(cuser.userid);
@@ -3620,7 +3620,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         setbfile(fn1, currboard, fhdr->filename);
 
 	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] > 0; i++)
-            mail_id(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
+            mail_send_file(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
                     "[鎖文通知]");
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);

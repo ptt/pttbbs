@@ -471,7 +471,7 @@ openticket(int bid)
 		continue;
             pay_as_uid(uid, -(money * i), BBSMNAME "±m¨é - [%s]",
                        betname[mybet]);
-	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "±m¨é");
+	    mail_send_file(userid, buf, "etc/ticket.win", BBSMNAME "±m¨é");
 	}
 	fclose(fp1);
     }

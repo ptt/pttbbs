@@ -1316,7 +1316,7 @@ adm_give_id_money(const char *user_id, int money, const char *mail_title)
 	pressanykey();
     } else {
 	SNPRINTF(tt, "%s : %d " MONEYNAME, mail_title, money);
-	mail_id(user_id, tt, "etc/givemoney.why", "[" BBSMNAME "»È¦æ]");
+	mail_send_file(user_id, tt, "etc/givemoney.why", "[" BBSMNAME "»È¦æ]");
     }
 }
 

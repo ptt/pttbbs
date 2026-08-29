@@ -137,7 +137,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 #endif /* defined(BAD_POST_RECORD) */
 
     sendalert(userid,  ALERT_PWD_PERM);
-    mail_id(userid, genbuf, rptpath, cuser.userid);
+    mail_send_file(userid, genbuf, rptpath, cuser.userid);
 
     return 0;
 }
