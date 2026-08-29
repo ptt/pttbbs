@@ -187,22 +187,10 @@ void setmailalert()
 
 int
 mail_log2id_text(const char *id, const char *title, const char *message,
-                 const char *owner, char newmail) {
-    fileheader_t    mhdr;
-    char            dst[PATHLEN], dirf[PATHLEN];
-
-    sethomepath(dst, id);
-    if (stampfile(dst, &mhdr) < 0)
-	return -1;
-
-    STRLCPY(mhdr.owner, owner);
-    STRLCPY(mhdr.title, title);
-    mhdr.filemode = newmail ? 0 :  FILE_READ;
-    file_appendf(dst, "%s", message);
-
-    sethomedir(dirf, id);
-    append_record(dirf, &mhdr, sizeof(mhdr));
-    return 0;
+                 const char *owner, char newmail)
+{
+    int filemode = newmail ? 0 : FILE_READ;
+    return save_mailbox(owner, id, title, message, NULL, filemode, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 
