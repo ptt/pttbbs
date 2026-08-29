@@ -570,45 +570,6 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     return 0;
 }
 
-/* bsmtp 發現是站內信而轉送 */
-static int
-bsmtp_inner_mail(const char *fpath, const char *title, const char *receiver) {
-    char            fname[PATHLEN];
-    fileheader_t    mymail;
-    char            rightid[IDLEN+1];
-
-    if (!searchuser(receiver, rightid))
-	return -2;
-
-    /* to avoid DDOS of disk */
-    sethomedir(fname, rightid);
-    if (strcmp(rightid, cuser.userid) == 0) {
-	if (chk_cuser_mailbox_limit())
-	    return -4;
-    } else {
-	int limit = get_user_mailbox_limit(rightid);
-	/* okay for failure: limit < 0 */
-	if (limit && get_user_mailbox_usage(rightid) >= limit)
-	    return -4;
-    }
-
-    sethomepath(fname, rightid);
-    stampfile(fname, &mymail);
-    if (!strcmp(rightid, cuser.userid)) {
-	/* Using BBSNAME may be too loooooong. */
-	STRLCPY(mymail.owner, "[站內]");
-	mymail.filemode = FILE_READ;
-    } else
-	STRLCPY(mymail.owner, cuser.userid);
-    STRLCPY(mymail.title, title);
-    unlink(fname);
-    Copy(fpath, fname);
-    sethomedir(fname, rightid);
-    append_record_forward(fname, &mymail, sizeof(mymail), rightid);
-    sendalert(receiver, ALERT_NEW_MAIL);
-    return 0;
-}
-
 static char *
 gen_auth_code(const char *prefix, char *buf, int length) {
     // prevent ambigious characters: oOlI
@@ -901,25 +862,19 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 }
 
 int
-do_send(const char *userid, const char *title, const char *log_source)
+do_send(const char *userid, const char *title, const char *log_source GCC_UNUSED)
 {
-    fileheader_t    mhdr;
-    char            fpath[STRLEN];
-    int             internet_mail;
+    char            fpath[PATHLEN];
     userec_t        xuser;
-    int ret	    = -1;
-    char save_title[STRLEN];
+    int             ret;
+    char            save_title[STRLEN];
 
     STATINC(STAT_DOSEND);
-    if (strchr(userid, '@'))
-	internet_mail = 1;
-    else {
-	internet_mail = 0;
-	if (!getuser(userid, &xuser))
-	    return -1;
-	if (!(xuser.userlevel & PERM_READMAIL))
-	    return -3;
-    }
+    if (!getuser(userid, &xuser))
+	return -1;
+    if (!(xuser.userlevel & PERM_READMAIL))
+	return -3;
+
     /* process title */
     if (title)
 	STRLCPY(save_title, title);
@@ -929,49 +884,11 @@ do_send(const char *userid, const char *title, const char *log_source)
 	STRLCPY(save_title, tmp_title);
     }
 
-    if (internet_mail) {
+    ret = do_innersend(userid, fpath, save_title, save_title);
+    if (ret == 0) // success
+	hold_mail(fpath, userid, save_title);
 
-	setutmpmode(SMAIL);
-	sethomepath(fpath, cuser.userid);
-	stampfile(fpath, &mhdr);
-
-	if (vedit2(fpath, NA, save_title,
-		    EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
-	    unlink(fpath);
-	    clear();
-	    return -2;
-	}
-	clear();
-	prints("信件即將寄給 %s\n標題為：%s\n確定要寄出嗎? (Y/N) [Y]",
-	       userid, save_title);
-	switch (vkey()) {
-	case 'N':
-	case 'n':
-	    outs("N\n信件已取消");
-	    ret = -2;
-	    break;
-	default:
-	    outs("Y\n請稍候, 信件傳遞中...\n");
-	    ret = bsmtp(fpath, save_title, userid, NULL);
-            LOG_IF(LOG_CONF_INTERNETMAIL,
-                   log_filef("log/internet_mail.log",
-                             "[%s - %s] %s -> %s: %s\n",
-                             log_source, __FUNCTION__,
-                             cuser.userid, userid, save_title));
-	    hold_mail(fpath, userid, save_title);
-	    break;
-	}
-	unlink(fpath);
-
-    } else {
-
-	// XXX the title maybe changed inside do_innersend...
-	ret = do_innersend(userid, fpath, save_title, save_title);
-	if (ret == 0) // success
-	    hold_mail(fpath, userid, save_title);
-
-	clear();
-    }
+    clear();
     return ret;
 }
 
@@ -1658,7 +1575,11 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
                          cuser.userid, address, direct, fh->title));
     }
 
-    return_no = bsmtp(fname, fh->title, address, NULL);
+    if (strcasestr(address, str_mail_address) || strchr(address, '@') == NULL) {
+        return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, 1, 0, NULL);
+    } else {
+        return_no = bsmtp(fname, fh->title, address, NULL);
+    }
     unlink(fname);
     return (return_no);
 }
@@ -2518,26 +2439,16 @@ static const onekey_t mail_comms[] = {
 int
 bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 {
-    char            buf[80], *ptr;
+    char            buf[80];
     time4_t         chrono;
     MailQueue       mqueue = {};
 
     if (!from)
 	from = cuser.userid;
 
-    /* check if the mail is a inner mail */
-    if ((ptr = strstr(rcpt, str_mail_address)) || !strchr(rcpt, '@')) {
-	char            hacker[20];
-	int             len;
-
-	if (strchr(rcpt, '@')) {
-	    STRLCPY(hacker, rcpt);
-	    len = ptr - rcpt;
-	    if (0 <= len && (size_t)len < sizeof(hacker))
-		hacker[len] = '\0';
-	} else
-	    STRLCPY(hacker, rcpt);
-	return bsmtp_inner_mail(fpath, title, hacker);
+    /* bsmtp strictly handles 100% external internet email. Reject local addresses. */
+    if (strcasestr(rcpt, str_mail_address) || !strchr(rcpt, '@')) {
+        return -1;
     }
     chrono = now;
 
