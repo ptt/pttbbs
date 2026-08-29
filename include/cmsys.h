@@ -305,7 +305,7 @@ static inline bool   vbuf_is_empty(const VBUF *v) { return v->head == v->tail; }
 // buffer management
 void vbuf_new   (VBUF *v, size_t szbuf);
 void vbuf_delete(VBUF *v);
-void vbuf_attach(VBUF *v, char *buf, size_t szbuf);
+void vbuf_attach(VBUF *v, void *buf, size_t szbuf);
 void vbuf_detach(VBUF *v);
 void vbuf_clear (VBUF *v);
 
@@ -343,9 +343,9 @@ ssize_t vbuf_general_read (VBUF *v, ssize_t sz, void *ctx,
 	ssize_t (reader)(struct iovec[2], void *ctx));
 
 // vbuf filter pipeline
-typedef ssize_t (*vbuf_filter_fn)(unsigned char *buf, ssize_t len);
+typedef ssize_t (*vbuf_filter_fn)(void *buf, ssize_t len);
 typedef int (*vbuf_sink_fn)(VBUF *v, const void *buf, size_t len);
-ssize_t vbuf_pipeline(VBUF *v, unsigned char *buf, ssize_t len,
+ssize_t vbuf_pipeline(VBUF *v, void *buf, ssize_t len,
                       const vbuf_filter_fn *filters, int nfilters,
                       vbuf_sink_fn sink);
 

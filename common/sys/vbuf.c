@@ -68,7 +68,7 @@ vbuf_delete(VBUF *v)
 }
 
 VBUFPROTO void
-vbuf_attach(VBUF *v, char *buf, size_t szbuf)
+vbuf_attach(VBUF *v, void *buf, size_t szbuf)
 {
     assert(szbuf > 1);
     v->head = v->tail = v->buf = buf;
@@ -428,22 +428,20 @@ vbuf_send (VBUF *v, int fd, ssize_t sz, int flags)
 }
 
 ssize_t
-vbuf_pipeline(VBUF *v, unsigned char *buf, ssize_t len,
+vbuf_pipeline(VBUF *v, void *buf, ssize_t len,
               const vbuf_filter_fn *filters, int nfilters,
               vbuf_sink_fn sink)
 {
     int i;
-    for (i = 0; i < nfilters; i++) {
-        if (len <= 0)
-            break;
+    for (i = 0; len > 0 && i < nfilters; i++) {
         len = filters[i](buf, len);
     }
 
     if (len <= 0)
         return len;
+
     if (!sink)
         sink = vbuf_putblk;
-
     return sink(v, buf, len);
 }
 

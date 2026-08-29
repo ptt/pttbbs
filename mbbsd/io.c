@@ -270,7 +270,7 @@ system_init_hooks(void)
 /* ----------------------------------------------------- */
 
 static ssize_t
-dbcs_filter_process(unsigned char *buf, ssize_t len)
+dbcs_filter_process(void *buf, ssize_t len)
 {
     if (!ISDBCSAWARE())
         return len;
@@ -282,7 +282,7 @@ dbcs_filter_process(unsigned char *buf, ssize_t len)
  * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
  */
 static ssize_t
-tty_read(unsigned char *buf, ssize_t max)
+tty_read(void *buf, ssize_t max)
 {
     ssize_t l = read(0, buf, max);
 

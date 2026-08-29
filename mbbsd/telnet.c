@@ -41,7 +41,7 @@ telnet_init(int do_init_cmd)
 }
 
 ssize_t
-telnet_filter_process(unsigned char *buf, ssize_t len)
+telnet_filter_process(void *buf, ssize_t len)
 {
     TelnetCtx *ctx = &telnet_ctx;
     if (!enabled || len <= 0)

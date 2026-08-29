@@ -467,7 +467,7 @@ int pmore2_inmemory(
 	int (*help_handler)  (int y,   void *ctx));
 /* piaip's new telnet, telnet.c */
 void telnet_init(int do_init_cmd);
-ssize_t telnet_filter_process(unsigned char *buf, ssize_t len);
+ssize_t telnet_filter_process(void *buf, ssize_t len);
 void telnet_turnoff_client_detect(void);
 
 /* name */
