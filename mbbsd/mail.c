@@ -239,22 +239,7 @@ mail_log2id(const char *id, const char *title, const char *src,
 int
 mail_id(const char *id, const char *title, const char *src, const char *owner)
 {
-    fileheader_t    mhdr;
-    char            dst[PATHLEN], dirf[PATHLEN];
-    sethomepath(dst, id);
-    if (stampfile(dst, &mhdr) < 0)
-	return -1;
-
-    STRLCPY(mhdr.owner, owner);
-    STRLCPY(mhdr.title, title);
-    mhdr.filemode = 0;
-    if (Copy(src, dst) < 0)
-	return -1;
-
-    sethomedir(dirf, id);
-    append_record_forward(dirf, &mhdr, sizeof(mhdr), id);
-    sendalert(id, ALERT_NEW_MAIL);
-    return 0;
+    return save_mailbox(owner, id, title, NULL, src, 0, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 void
