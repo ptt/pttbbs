@@ -1,7 +1,7 @@
 #include "bbs.h"
 
 static TelnetCtx telnet_ctx;
-static char		raw_connection = 0;
+static bool enabled = 0;
 
 #ifdef DETECT_CLIENT
 extern void UpdateClientCode(unsigned char c);
@@ -34,7 +34,7 @@ telnet_init(int do_init_cmd)
 {
     int fd = 0;
     TelnetCtx *ctx = &telnet_ctx;
-    raw_connection = 1;
+    enabled = 1;
     telnet_ctx_init(ctx, &telnet_callback, fd);
 #ifdef DETECT_CLIENT
     telnet_ctx_set_cc_arg(ctx, (void*)1);
@@ -47,7 +47,7 @@ ssize_t
 telnet_filter_process(unsigned char *buf, ssize_t len)
 {
     TelnetCtx *ctx = &telnet_ctx;
-    if (!raw_connection || len <= 0)
+    if (!enabled || len <= 0)
         return len;
     return telnet_process(ctx, buf, len);
 }
