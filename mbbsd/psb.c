@@ -285,8 +285,8 @@ pveh_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ct
                 getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
                         ans, sizeof(ans), LCECHO);
                 if (*ans == 'y') {
-                    if (mail_log2id(cuser.userid, cx->subject,
-                                    fname, RECYCLE_BIN_OWNER, 1, 0) == 0) {
+                    if (mail_send_file(cuser.userid,  cx->subject, 
+                                    fname,  RECYCLE_BIN_OWNER) == 0) {
                         vmsg("儲存完成，請至信箱檢查備忘錄信件");
                     } else
                         vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
@@ -505,9 +505,8 @@ pvrb_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ct
                 getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
                         ans, sizeof(ans), LCECHO);
                 if (*ans == 'y') {
-                    if (mail_log2id(cuser.userid, fh->title,
-                                    revfname, RECYCLE_BIN_OWNER,
-                                    1, 0) == 0) {
+                    if (mail_send_file(cuser.userid,  fh->title, 
+                                    revfname,  RECYCLE_BIN_OWNER) == 0) {
                         vmsg("儲存完成，請至信箱檢查備忘錄信件");
                     } else {
                         vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");

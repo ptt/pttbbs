@@ -1905,13 +1905,12 @@ regform_accept(const char *userid, const char *justify)
     // it is better to use anonymous here.
 #if FOREIGN_REG_DAY > 0
     if(muser.uflag & UF_FOREIGN)
-	mail_log2id(muser.userid, "[System] Registration Complete ", "etc/foreign_welcome",
-		"[SYSTEM]", 1, 0);
+	mail_send_file(muser.userid, "[System] Registration Complete ", "etc/foreign_welcome", "[SYSTEM]");
     else
 #endif
     // last: send notification mail
-    mail_log2id(muser.userid, "[系統通知] 註冊成功\ ", "etc/registered",
-	    "[系統通知]", 1, 0);
+    mail_send_file(muser.userid,  "[系統通知] 註冊成功\ ",  "etc/registered", 
+	    "[系統通知]");
 }
 
 void
@@ -1970,7 +1969,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // mail_muser(muser, "[註冊失敗]", buf);
 
     // use regform2! no need to set 'newmail'.
-    mail_log2id(muser.userid, "[註冊失敗記錄]", buf, "[註冊系統]", 0, 0);
+    mail_send_file(muser.userid,  "[註冊失敗記錄]",  buf,  "[註冊系統]");
 }
 
 // New Regform UI

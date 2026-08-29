@@ -503,7 +503,7 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
             else
                 SNPRINTF(subj, "對話記錄 (%s)", ctx->remote_id);
 
-            if (mail_log2id(cuser.userid, subj, fpath, "[備.忘.錄]", 0, 1) < 0)
+            if (mail_send_file(cuser.userid,  subj,  fpath,  "[備.忘.錄]") < 0)
                 vmsg("錯誤: 備忘錄儲存失敗。");
             break;
         }

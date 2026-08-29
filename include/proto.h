@@ -387,7 +387,6 @@ int mail_muser(const userec_t muser, const char *title, const char *filename);
 int mail_send_file(const char *recipient, const char *title, const char *src_file, const char *sender);
 int mail_send_text(const char *recipient, const char *title, const char *message, const char *sender);
 int mail_log2id_text(const char *id, const char *title, const char *message, const char *owner, char newmail);
-int mail_log2id(const char *id, const char *title, const char *srcfile, const char *owner, char newmail, char trymove);
 int m_read(void);
 int doforward(const char *direct, const fileheader_t *fh, int mode);
 int mail_reply(int ent, fileheader_t *fhdr, const char *direct);

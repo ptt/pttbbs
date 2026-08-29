@@ -207,13 +207,6 @@ mail_log2id_text(const char *id, const char *title, const char *message,
 
 
 // TODO add header option?
-int
-mail_log2id(const char *id, const char *title, const char *src,
-            const char *owner, char newmail, char trymove GCC_UNUSED)
-{
-    int filemode = newmail ? 0 : FILE_READ;
-    return save_mailbox(owner, id, title, NULL, src, filemode, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
-}
 
 
 void

@@ -151,7 +151,7 @@ signal_restart(SIGUSR2, write_request);
 1. 先關閉全域檔案控制代碼 `fp_writelog`（避免檔案 Race Condition）。
 2. 呼叫 `more(genbuf, YEA)` 讓使用者以內建閱讀器瀏覽 `water.log`。
 3. 退出瀏覽後，下方提示選單：
-   - **`(M)` 寄回信箱**：呼叫 `mail_log2id()` 將 `water.log` 作為站內信寄給使用者自己，成功後刪除原始檔。
+   - **`(M)` 寄回信箱**：呼叫 `mail_send_file()` 將 `water.log` 作為站內信寄給使用者自己，成功後刪除原始檔。
    - **`(C)` 清除紀錄**：確認後刪除 `water.log` (`unlink(genbuf)`)。
    - **`(R)` 保留紀錄**：維持現狀不變。
 

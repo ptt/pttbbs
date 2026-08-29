@@ -725,7 +725,7 @@ pager_show_log(void) {
                 ans, sizeof(ans), LCECHO);
         if (*ans == 'm') {
             // only delete if success because the file can be re-used.
-            if (mail_log2id(cuser.userid, "熱線記錄", fpath, "[備.忘.錄]", 0, 1) == 0)
+            if (mail_send_file(cuser.userid,  "熱線記錄",  fpath,  "[備.忘.錄]") == 0)
                 unlink(fpath);
             else
                 vmsg("信箱儲存失敗。");
