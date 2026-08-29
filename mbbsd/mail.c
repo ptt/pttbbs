@@ -24,6 +24,9 @@ struct ReadNewMailArg {
     int mrd;
 };
 
+#define STR_MEMO "[³Æ.§Ñ.¿ý]"
+#define STR_INNER "[¯¸¤º]"
+
 ////////////////////////////////////////////////////////////////////////
 // Local variables (to speed up)
 static int      mailkeep = 0;
@@ -364,6 +367,155 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder,
     unlink(buf);
     Copy(fpath, buf);
     append_record_forward(holder_dir, &mymail, sizeof(mymail), holder);
+}
+
+/*
+ * parse_mail_address: Parses a recipient mail address.
+ * Returns true if the address is a local BBS account, and extracts out_userid.
+ * Returns false if it is an external internet mail address.
+ */
+bool
+parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len)
+{
+    if (!addr || !*addr)
+        return false;
+
+    char buf[PATHLEN];
+    strlcpy(buf, addr, sizeof(buf));
+
+    const char *at = strchr(buf, '@');
+    bool is_local = false;
+
+    if (!at) {
+        is_local = true;
+    } else {
+        char *dot_bbs = strcasestr(buf, ".bbs@");
+        if (dot_bbs) {
+            *dot_bbs = '\0';
+            is_local = true;
+        } else if (strcasestr(addr, str_mail_address)) {
+            char *p = strchr(buf, '.');
+            if (p) *p = '\0';
+            is_local = true;
+        }
+    }
+
+    if (is_local) {
+        if (out_userid && out_userid_len > 0) {
+            strlcpy(out_userid, buf, out_userid_len);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool
+is_local_mail_address(const char *addr)
+{
+    return parse_mail_address(addr, NULL, 0);
+}
+
+/*
+ * save_mailbox: Single unified internal mail delivery function.
+ * All internal mail sending, forwarding, syspost, and group mail delivery paths
+ * in mbbsd MUST call this function.
+ *
+ * Returns MAILSEND_OK on success, otherwise error status.
+ */
+MailSendResult
+save_mailbox(const char *sender, const char *recipient, const char *title,
+             const char *message, const char *src_file, int filemode,
+             int check_quota, int is_user_content, char *out_dst_fpath)
+{
+    char rightid[IDLEN + 1];
+    char dst_fpath[PATHLEN];
+    char dir_fpath[PATHLEN];
+    fileheader_t mhdr;
+
+    if (!recipient || !*recipient)
+        return MAILSEND_ERR_PARAM;
+
+    char user_id[IDLEN + 1];
+    if (parse_mail_address(recipient, user_id, sizeof(user_id))) {
+        if (!searchuser(user_id, rightid))
+            return MAILSEND_ERR_NOUSER;
+    } else {
+        STRLCPY(rightid, recipient);
+    }
+
+    /* Mailbox quota limit check (only if check_quota is set, e.g. for mail forwarding) */
+    if (check_quota) {
+        if (strcmp(rightid, cuser.userid) == 0) {
+            if (chk_cuser_mailbox_limit())
+                return MAILSEND_ERR_QUOTA;
+        } else {
+            int limit = get_user_mailbox_limit(rightid);
+            if (limit > 0 && get_user_mailbox_usage(rightid) >= limit)
+                return MAILSEND_ERR_QUOTA;
+        }
+    }
+
+    sethomepath(dst_fpath, rightid);
+    if (stampfile(dst_fpath, &mhdr) < 0)
+        return MAILSEND_ERR_PARAM;
+
+    if (message && *message) {
+        if (file_append(dst_fpath, message) < 0)
+            return MAILSEND_ERR_PARAM;
+    }
+
+    if (src_file && *src_file) {
+        if (message && *message) {
+            if (AppendTail(src_file, dst_fpath, 0) < 0)
+                return MAILSEND_ERR_PARAM;
+        } else {
+            unlink(dst_fpath);
+            if (Copy(src_file, dst_fpath) < 0)
+                return MAILSEND_ERR_PARAM;
+        }
+    }
+
+    if ((!message || !*message) && (!src_file || !*src_file)) {
+        return MAILSEND_ERR_PARAM;
+    }
+
+    const char *effective_sender = (sender && *sender) ? sender : cuser.userid;
+    if (strcasecmp(rightid, effective_sender) == 0) {
+        // Self-mail / memo
+        STRLCPY(mhdr.owner, STR_INNER);
+        mhdr.filemode |= FILE_READ;
+    } else {
+        STRLCPY(mhdr.owner, effective_sender);
+    }
+
+    if (title && *title) {
+        STRLCPY(mhdr.title, title);
+    }
+
+    if (filemode) {
+        mhdr.filemode |= filemode;
+    }
+
+    sethomedir(dir_fpath, rightid);
+    if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid) == -1)
+        return MAILSEND_ERR_PARAM;
+
+    /* Track mail ONLY if mail is user-generated content (do_innersend / multi_send) */
+    if (is_user_content) {
+#ifdef USE_TRACKMAIL_SVC
+        trackmail_notify_send(mhdr.owner, rightid, mhdr.title, mhdr.filename, dst_fpath, mhdr.modified);
+#elif defined(TRACKMAIL)
+        log_filef("log/trackmail.log",
+                  "%s %s %s %s\n", mhdr.owner, rightid, mhdr.filename, mhdr.title);
+#endif
+    }
+    sendalert(rightid, ALERT_NEW_MAIL);
+
+    if (out_dst_fpath) {
+        strlcpy(out_dst_fpath, dst_fpath, PATHLEN);
+    }
+    return MAILSEND_OK;
 }
 
 void

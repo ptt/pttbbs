@@ -408,10 +408,23 @@ int mail_all(void);
 int mail_account_sysop(void);
 int invalidaddr(const char *addr);
 int is_valid_email(const char *full_address);
+typedef enum {
+    MAILSEND_OK = 0,
+    MAILSEND_ERR_PARAM = -1,
+    MAILSEND_ERR_NOUSER = -2,
+    MAILSEND_ERR_NOPERM = -3,
+    MAILSEND_ERR_QUOTA = -4,
+} MailSendResult;
+
 int do_send(const char *userid, const char *title, const char *log_source);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);
+MailSendResult save_mailbox(const char *sender, const char *recipient, const char *title,
+                            const char *message, const char *src_file, int filemode,
+                            int check_quota, int is_user_content, char *out_dst_fpath);
+bool is_local_mail_address(const char *addr);
+bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len);
 
 /* mbbsd */
 void show_call_in(int save, int which);
