@@ -288,7 +288,7 @@ chk_cuser_mailbox_limit(void)
 }
 
 static void
-do_hold_mail(const char *fpath, const char *receiver, const char *holder,
+mail_save_memo(const char *fpath, const char *receiver, const char *holder,
              const char *save_title)
 {
     char title[STRLEN];
@@ -460,7 +460,7 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
 void
 keep_copy(const char *fpath, const char *title)
 {
-    do_hold_mail(fpath, NULL, cuser.userid, title);
+    mail_save_memo(fpath, NULL, cuser.userid, title);
 }
 
 int
@@ -788,7 +788,7 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 	    buf, sizeof(buf), LCECHO);
 
     if (TOBACKUP(buf[0]))
-	do_hold_mail(fpath, receiver, cuser.userid, title);
+	mail_save_memo(fpath, receiver, cuser.userid, title);
 }
 
 int
