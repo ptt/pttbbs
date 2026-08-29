@@ -209,31 +209,10 @@ mail_log2id_text(const char *id, const char *title, const char *message,
 // TODO add header option?
 int
 mail_log2id(const char *id, const char *title, const char *src,
-            const char *owner, char newmail, char trymove) {
-    fileheader_t    mhdr;
-    char            dst[PATHLEN], dirf[PATHLEN];
-
-    sethomepath(dst, id);
-    if (stampfile(dst, &mhdr) < 0)
-	return -1;
-
-    STRLCPY(mhdr.owner, owner);
-    STRLCPY(mhdr.title, title);
-    mhdr.filemode = newmail ? 0 :  FILE_READ;
-
-    if (trymove)
-    {
-	if (Rename(src, dst) < 0)
-	    return -1;
-    } else {
-	if (Copy(src, dst) < 0)
-	    return -1;
-    }
-
-    sethomedir(dirf, id);
-    // do not forward.
-    append_record(dirf, &mhdr, sizeof(mhdr));
-    return 0;
+            const char *owner, char newmail, char trymove GCC_UNUSED)
+{
+    int filemode = newmail ? 0 : FILE_READ;
+    return save_mailbox(owner, id, title, NULL, src, filemode, 0, 0, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
 int
