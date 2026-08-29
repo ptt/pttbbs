@@ -527,47 +527,38 @@ keep_copy(const char *fpath, const char *title)
 int
 do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle)
 {
-    fileheader_t    mhdr;
-    char            fpath[PATHLEN];
-    char	    _mfpath[PATHLEN];
-    int		    oldstat = currstat;
-    char save_title[STRLEN];
+    char            _mfpath[PATHLEN];
+    char            tmp_fpath[PATHLEN];
+    int             oldstat = currstat;
+    char            save_title[STRLEN];
 
     if (is_rejected(userid)) {
-        vmsg("對方拒收。");
+        vmsg("對方拒收");
         return -2;
     }
 
     if (!mfpath)
-	mfpath = _mfpath;
+        mfpath = _mfpath;
 
     setutmpmode(SMAIL);
 
-    sethomepath(mfpath, userid);
-    stampfile(mfpath, &mhdr);
-    STRLCPY(mhdr.owner, cuser.userid);
-    STRLCPY(save_title, title);
+    sethomepath(tmp_fpath, cuser.userid);
+    stampfile(tmp_fpath, NULL);
+    STRLCPY(save_title, title ? title : "");
 
-    if (vedit2(mfpath, YEA, save_title,
-		EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED)
-    {
-	unlink(mfpath);
-	setutmpmode(oldstat);
-	return -2;
-    }
-
-    STRLCPY(mhdr.title, save_title);
-    if (newtitle) strlcpy(newtitle, save_title, STRLEN);
-    sethomedir(fpath, userid);
-    if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
-    {
-        unlink(mfpath);
+    if (vedit2(tmp_fpath, YEA, save_title,
+               EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
+        unlink(tmp_fpath);
         setutmpmode(oldstat);
-        return -1;
+        return -2;
     }
-    sendalert(userid, ALERT_NEW_MAIL);
+
+    if (newtitle) strlcpy(newtitle, save_title, STRLEN);
+
+    MailSendResult ret = save_mailbox(cuser.userid, userid, save_title, NULL, tmp_fpath, 0, 0, 1, mfpath);
+    unlink(tmp_fpath);
     setutmpmode(oldstat);
-    return 0;
+    return ret;
 }
 
 static char *
