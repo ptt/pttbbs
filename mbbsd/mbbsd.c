@@ -917,7 +917,7 @@ static void append_log_recent_login()
 	delete_records(logfn, szlogentry, 1,
 		(szlogfn-(SZ_RECENTLOGIN/4)) / szlogentry);
     }
-    log_file(logfn, buf);
+    file_append(logfn, buf);
 }
 
 static void check_mailbox_quota(void)
