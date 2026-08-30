@@ -73,9 +73,11 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
     if (type == STAMP_FILE)
 	close(res);
 
-    STRLCPY(fh->filename, ip);
-    localtime4_r(&dtime, &ptime);
-    SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    if (fh) {
+        STRLCPY(fh->filename, ip);
+        localtime4_r(&dtime, &ptime);
+        SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    }
 
     return 0;
 }
@@ -83,7 +85,8 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 int
 stampfile(char *fpath, fileheader_t *fh)
 {
-    memset(fh, 0, sizeof(fileheader_t));
+    if (fh)
+        memset(fh, 0, sizeof(fileheader_t));
     return fhdr_stamp(fpath, fh, STAMP_FILE);
 }
 
