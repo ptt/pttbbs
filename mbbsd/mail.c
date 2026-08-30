@@ -413,8 +413,8 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
     }
 
     const char *effective_sender = (sender && *sender) ? sender : cuser.userid;
-    if (strcasecmp(rightid, effective_sender) == 0) {
-        // Self-mail / memo
+    if (!(send_flags & MAILSEND_FLAG_USER_CONTENT) && strcasecmp(rightid, effective_sender) == 0) {
+        // Self-mail / memo (only for non-user-generated content)
         STRLCPY(mhdr.owner, STR_INNER);
         mhdr.filemode |= FILE_READ;
     } else {
