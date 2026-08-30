@@ -57,6 +57,8 @@ _set_ptype(int *ptype, int type) {
 const char *
 subject_ex(const char *title, int *ptype)
 {
+    if (!title)
+        return "";
     do {
         if (str_case_starts_with(title, str_reply)) {
             title += strlen(str_reply);

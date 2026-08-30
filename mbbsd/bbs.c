@@ -1138,12 +1138,15 @@ void
 do_reply_title(int row, const char *title, const char *prefix,
                char *result, int len) {
     char ans[4];
+    char tmp_title[STRLEN];
 
-    snprintf(result, len, "%s %s", prefix, subject(title));
+    SNPRINTF(tmp_title, "%s %s", prefix ? prefix : "", subject(title));
     if (len > TTLEN)
         len = TTLEN;
-    result[TTLEN - 1] = '\0';
-    DBCS_safe_trim(result);
+    tmp_title[len - 1] = '\0';
+    DBCS_safe_trim(tmp_title);
+    strlcpy(result, tmp_title, len);
+
     mvouts(row++, 0, "原標題: "); outs(result);
     getdata(row, 0, "採用原標題[Y/n]? ", ans, 3, LCECHO);
     if (ans[0] == 'n')
