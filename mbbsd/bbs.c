@@ -1525,8 +1525,8 @@ do_post_article(int edflags)
     if (IsBoardForWeb(bp)) {
         char url[STRLEN];
         if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
-            log_filef(genbuf,
-                      "¡° " URL_DISPLAYNAME ": %s\n", url);
+            file_appendf(genbuf,
+                         "¡° " URL_DISPLAYNAME ": %s\n", url);
         }
     }
 #endif
