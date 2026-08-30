@@ -536,3 +536,224 @@ func TestCtrlZSuspendInSearchMode(t *testing.T) {
 	}
 }
 
+func TestFileSolvedRender(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{
+		{Filename: "M.100", Owner: "SYSOP", Date: "01/01", Title: "Normal Article", Filemode: 0x00},
+		{Filename: "M.101", Owner: "SYSOP", Date: "01/02", Title: "Solved Article", Filemode: FILE_SOLVED},
+	})
+
+	arts, err := parseDirFile(dirPath)
+	if err != nil {
+		t.Fatalf("Failed to parse mock dir file: %v", err)
+	}
+
+	app := &AppState{
+		baseDir:       tmpDir,
+		dirPath:       dirPath,
+		allArticles:   arts,
+		articles:      arts,
+		mode:          ModeDirView,
+		outputEnc:     "utf8",
+		selectedIndex: 1, // Solved Article selected
+		termWidth:     80,
+		termHeight:    24,
+	}
+
+	var buf bytes.Buffer
+	app.renderDirView(&buf)
+	rendered := buf.String()
+
+	if !strings.Contains(rendered, ">S") {
+		t.Errorf("Expected '>S' prefix for selected solved article, got rendered:\n%s", rendered)
+	}
+
+	app.selectedIndex = 0 // Normal Article selected
+	buf.Reset()
+	app.renderDirView(&buf)
+	rendered = buf.String()
+
+	if !strings.Contains(rendered, " S ") {
+		t.Errorf("Expected ' S ' prefix for unselected solved article, got rendered:\n%s", rendered)
+	}
+}
+
+func TestToggleSolveKeyAndConfirm(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{
+		{Filename: "M.100", Owner: "SYSOP", Date: "01/01", Title: "Article 1", Filemode: 0x00},
+	})
+
+	arts, err := parseDirFile(dirPath)
+	if err != nil {
+		t.Fatalf("Failed to parse mock dir file: %v", err)
+	}
+
+	app := &AppState{
+		baseDir:       tmpDir,
+		dirPath:       dirPath,
+		allArticles:   arts,
+		articles:      arts,
+		mode:          ModeDirView,
+		outputEnc:     "utf8",
+		selectedIndex: 0,
+		termWidth:     80,
+		termHeight:    24,
+	}
+
+	// Press 'L' to open confirm solve
+	quit := app.handleInput([]byte("L"))
+	if quit {
+		t.Errorf("Expected 'L' not to quit app")
+	}
+	if app.mode != ModeConfirmSolve {
+		t.Fatalf("Expected mode to be ModeConfirmSolve after 'L', got %v", app.mode)
+	}
+
+	// Press 'y' to confirm toggle
+	quit = app.handleInput([]byte("y"))
+	if quit {
+		t.Errorf("Expected 'y' not to quit app")
+	}
+	if app.mode != ModeDirView {
+		t.Errorf("Expected mode to return to ModeDirView after 'y', got %v", app.mode)
+	}
+
+	if app.articles[0].Filemode&FILE_SOLVED == 0 {
+		t.Errorf("Expected article filemode in memory to have FILE_SOLVED bit set")
+	}
+
+	// Verify disk persistence
+	diskArts, err := parseDirFile(dirPath)
+	if err != nil {
+		t.Fatalf("Failed to re-parse dir file from disk: %v", err)
+	}
+	if diskArts[0].Filemode&FILE_SOLVED == 0 {
+		t.Errorf("Expected article filemode on disk to have FILE_SOLVED bit set")
+	}
+
+	// Press 'L' and 'y' again to toggle back off
+	app.handleInput([]byte("L"))
+	app.handleInput([]byte("y"))
+
+	if app.articles[0].Filemode&FILE_SOLVED != 0 {
+		t.Errorf("Expected article filemode in memory to have FILE_SOLVED bit cleared after second toggle")
+	}
+
+	diskArts2, _ := parseDirFile(dirPath)
+	if diskArts2[0].Filemode&FILE_SOLVED != 0 {
+		t.Errorf("Expected article filemode on disk to have FILE_SOLVED bit cleared after second toggle")
+	}
+}
+
+func TestToggleSolveCancel(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{
+		{Filename: "M.100", Owner: "SYSOP", Date: "01/01", Title: "Article 1", Filemode: 0x00},
+	})
+
+	arts, _ := parseDirFile(dirPath)
+
+	app := &AppState{
+		baseDir:       tmpDir,
+		dirPath:       dirPath,
+		allArticles:   arts,
+		articles:      arts,
+		mode:          ModeDirView,
+		outputEnc:     "utf8",
+		selectedIndex: 0,
+		termWidth:     80,
+		termHeight:    24,
+	}
+
+	// Press 'L' to enter confirm mode
+	app.handleInput([]byte("L"))
+	if app.mode != ModeConfirmSolve {
+		t.Fatalf("Expected mode ModeConfirmSolve, got %v", app.mode)
+	}
+
+	// Press 'n' to cancel
+	app.handleInput([]byte("n"))
+	if app.mode != ModeDirView {
+		t.Errorf("Expected mode ModeDirView, got %v", app.mode)
+	}
+
+	if app.articles[0].Filemode&FILE_SOLVED != 0 {
+		t.Errorf("Expected filemode to remain unchanged after 'n'")
+	}
+
+	diskArts, _ := parseDirFile(dirPath)
+	if diskArts[0].Filemode&FILE_SOLVED != 0 {
+		t.Errorf("Expected disk filemode to remain unchanged after 'n'")
+	}
+}
+
+func TestSearchAuthor(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{
+		{Filename: "M.100", Owner: "hungte", Date: "01/01", Title: "Title A"},
+		{Filename: "M.101", Owner: "sysop", Date: "01/02", Title: "hungte's title"},
+		{Filename: "M.102", Owner: "Hungte", Date: "01/03", Title: "Title C"},
+	})
+
+	arts, err := parseDirFile(dirPath)
+	if err != nil {
+		t.Fatalf("Failed to parse .DIR: %v", err)
+	}
+
+	app := &AppState{
+		baseDir:       tmpDir,
+		dirPath:       dirPath,
+		allArticles:   arts,
+		articles:      arts,
+		mode:          ModeDirView,
+		outputEnc:     "utf8",
+		selectedIndex: 0,
+		termWidth:     80,
+		termHeight:    24,
+	}
+
+	// Press 'a' to enter author search mode
+	app.handleInput([]byte("a"))
+	if app.mode != ModeSearchInput {
+		t.Fatalf("Expected ModeSearchInput, got %v", app.mode)
+	}
+	if app.searchTarget != SearchTargetAuthor {
+		t.Fatalf("Expected SearchTargetAuthor, got %v", app.searchTarget)
+	}
+
+	// Type query "hungte" and press Enter
+	app.handleInput([]byte("hungte\n"))
+
+	if !app.inSearchMode {
+		t.Fatalf("Expected app.inSearchMode to be true")
+	}
+	if len(app.articles) != 2 {
+		t.Fatalf("Expected 2 articles with owner matching 'hungte', got %d", len(app.articles))
+	}
+	for _, art := range app.articles {
+		if !strings.EqualFold(art.Owner, "hungte") {
+			t.Errorf("Expected owner 'hungte', got '%s'", art.Owner)
+		}
+	}
+
+	var buf bytes.Buffer
+	app.renderDirView(&buf)
+	rendered := buf.String()
+	if !strings.Contains(rendered, "搜尋作者: \"hungte\"") {
+		t.Errorf("Expected header to contain '搜尋作者: \"hungte\"', got:\n%s", rendered)
+	}
+}
+

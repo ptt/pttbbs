@@ -41,12 +41,22 @@ type ArticleHeader struct {
 	Filemode  uint8
 }
 
+const FILE_SOLVED uint8 = 0x10
+
 type ViewMode int
 
 const (
 	ModeDirView ViewMode = iota
 	ModeSearchInput
 	ModeFileView
+	ModeConfirmSolve
+)
+
+type SearchTarget int
+
+const (
+	SearchTargetTitle SearchTarget = iota
+	SearchTargetAuthor
 )
 
 type dirFrame struct {
@@ -58,6 +68,7 @@ type dirFrame struct {
 	scrollOffset   int
 	inSearchMode   bool
 	searchQuery    string
+	searchTarget   SearchTarget
 	savedSelectIdx int
 	savedScrollOff int
 }
@@ -71,6 +82,7 @@ type AppState struct {
 	allArticles []ArticleHeader
 	articles    []ArticleHeader
 	mode        ViewMode
+	prevMode    ViewMode
 
 	// DirView State
 	selectedIndex int
@@ -79,6 +91,7 @@ type AppState struct {
 	// Search State
 	inSearchMode   bool
 	searchQuery    string
+	searchTarget   SearchTarget
 	savedSelectIdx int
 	savedScrollOff int
 
@@ -366,6 +379,12 @@ func (app *AppState) render() {
 		app.renderDirView(&buf)
 	case ModeFileView:
 		app.renderFileView(&buf)
+	case ModeConfirmSolve:
+		if app.prevMode == ModeFileView {
+			app.renderFileView(&buf)
+		} else {
+			app.renderDirView(&buf)
+		}
 	}
 
 	outputBytes := buf.Bytes()
@@ -379,7 +398,11 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 	// Top Header Bar
 	headerStr := fmt.Sprintf(" 看板 [%s] 文章列表  [共 %d 篇]", filepath.Base(app.baseDir), len(app.articles))
 	if app.inSearchMode {
-		headerStr = fmt.Sprintf(" 看板 [%s] 搜尋標題: \"%s\"  [共 %d 篇]", filepath.Base(app.baseDir), app.searchQuery, len(app.articles))
+		searchLabel := "標題"
+		if app.searchTarget == SearchTargetAuthor {
+			searchLabel = "作者"
+		}
+		headerStr = fmt.Sprintf(" 看板 [%s] 搜尋%s: \"%s\"  [共 %d 篇]", filepath.Base(app.baseDir), searchLabel, app.searchQuery, len(app.articles))
 	}
 	buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m\r\n", padRightWidth(headerStr, app.termWidth)))
 
@@ -422,9 +445,13 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		dateStr := padRightWidth(art.Date, 5)
 
 		// Build output line
-		prefix := "  "
+		flagChar := " "
+		if (art.Filemode & FILE_SOLVED) != 0 {
+			flagChar = "S"
+		}
+		prefix := " " + flagChar
 		if isSelected {
-			prefix = " >"
+			prefix = ">" + flagChar
 		}
 
 		itemNo := fmt.Sprintf("%5d", idx+1)
@@ -445,14 +472,29 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 
 	// Bottom Status Bar
 	if app.mode == ModeSearchInput {
-		promptStr := fmt.Sprintf(" 搜尋標題: %s█", app.searchQuery)
+		searchLabel := "標題"
+		if app.searchTarget == SearchTargetAuthor {
+			searchLabel = "作者"
+		}
+		promptStr := fmt.Sprintf(" 搜尋%s: %s█", searchLabel, app.searchQuery)
+		buf.WriteString(fmt.Sprintf("\x1b[1;33;44m%s\x1b[0m", padRightWidth(promptStr, app.termWidth)))
+	} else if app.mode == ModeConfirmSolve {
+		isSolved := false
+		if app.selectedIndex >= 0 && app.selectedIndex < len(app.articles) {
+			isSolved = (app.articles[app.selectedIndex].Filemode & FILE_SOLVED) != 0
+		}
+		actionStr := "設定"
+		if isSolved {
+			actionStr = "取消"
+		}
+		promptStr := fmt.Sprintf(" 確定要%s FILE_SOLVED 標記 (S) 嗎？(y/N) ", actionStr)
 		buf.WriteString(fmt.Sprintf("\x1b[1;33;44m%s\x1b[0m", padRightWidth(promptStr, app.termWidth)))
 	} else {
-		statusStr := " [↑/↓: 選擇  Enter: 閱讀  /: 搜尋  PgUp/PgDn: 翻頁  q: 離開]"
+		statusStr := " [↑/↓: 選擇  Enter: 閱讀  L: 解決  a: 搜作者  /: 搜標題  PgUp/PgDn: 翻頁  q: 離開]"
 		if app.inSearchMode {
-			statusStr = fmt.Sprintf(" 搜尋結果 %d/%d  [Enter: 閱讀  ←/q: 結束搜尋  ↑/↓: 選擇]", app.selectedIndex+1, len(app.articles))
+			statusStr = fmt.Sprintf(" 搜尋結果 %d/%d  [Enter: 閱讀  L: 解決  ←/q: 結束搜尋  ↑/↓: 選擇]", app.selectedIndex+1, len(app.articles))
 		} else if len(app.articles) > 0 {
-			statusStr = fmt.Sprintf(" 文章 %d/%d  [↑/↓: 選擇  Enter: 閱讀  /: 搜尋  PgUp/PgDn: 翻頁  q: 離開]", app.selectedIndex+1, len(app.articles))
+			statusStr = fmt.Sprintf(" 文章 %d/%d  [↑/↓: 選擇  Enter: 閱讀  L: 解決  a: 搜作者  /: 搜標題  PgUp/PgDn: 翻頁  q: 離開]", app.selectedIndex+1, len(app.articles))
 		}
 		buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 	}
@@ -494,15 +536,25 @@ func (app *AppState) renderFileView(buf *bytes.Buffer) {
 	}
 
 	// Status Bar
-	percent := 100
-	if totalLines > 0 {
-		percent = ((app.fileScrollLine + contentHeight) * 100) / totalLines
-		if percent > 100 {
-			percent = 100
+	if app.mode == ModeConfirmSolve {
+		isSolved := (app.currentArticle.Filemode & FILE_SOLVED) != 0
+		actionStr := "設定"
+		if isSolved {
+			actionStr = "取消"
 		}
+		promptStr := fmt.Sprintf(" 確定要%s FILE_SOLVED 標記 (S) 嗎？(y/N) ", actionStr)
+		buf.WriteString(fmt.Sprintf("\x1b[1;33;44m%s\x1b[0m", padRightWidth(promptStr, app.termWidth)))
+	} else {
+		percent := 100
+		if totalLines > 0 {
+			percent = ((app.fileScrollLine + contentHeight) * 100) / totalLines
+			if percent > 100 {
+				percent = 100
+			}
+		}
+		statusStr := fmt.Sprintf(" [頁次: %d/%d (%d%%)]  (Left/q: 返回  L: 解決  ↑/↓/PgUp/PgDn/Space: 翻頁)", app.fileScrollLine+1, totalLines, percent)
+		buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 	}
-	statusStr := fmt.Sprintf(" [頁次: %d/%d (%d%%)]  (Left/q: 返回  ↑/↓/PgUp/PgDn/Space: 翻頁)", app.fileScrollLine+1, totalLines, percent)
-	buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 }
 
 func stripANSI(s string) string {
@@ -651,6 +703,7 @@ func (app *AppState) popDirectory() bool {
 	app.scrollOffset = frame.scrollOffset
 	app.inSearchMode = frame.inSearchMode
 	app.searchQuery = frame.searchQuery
+	app.searchTarget = frame.searchTarget
 	app.savedSelectIdx = frame.savedSelectIdx
 	app.savedScrollOff = frame.savedScrollOff
 	app.mode = ModeDirView
@@ -692,6 +745,7 @@ func (app *AppState) openArticle() {
 					scrollOffset:   app.scrollOffset,
 					inSearchMode:   app.inSearchMode,
 					searchQuery:    app.searchQuery,
+					searchTarget:   app.searchTarget,
 					savedSelectIdx: app.savedSelectIdx,
 					savedScrollOff: app.savedScrollOff,
 				}
@@ -739,7 +793,11 @@ func (app *AppState) executeSearch() {
 	var filtered []ArticleHeader
 	qLower := strings.ToLower(q)
 	for _, art := range app.allArticles {
-		if strings.Contains(strings.ToLower(art.Title), qLower) {
+		targetStr := art.Title
+		if app.searchTarget == SearchTargetAuthor {
+			targetStr = art.Owner
+		}
+		if strings.Contains(strings.ToLower(targetStr), qLower) {
 			filtered = append(filtered, art)
 		}
 	}
@@ -974,6 +1032,9 @@ func (app *AppState) handleInput(input []byte) bool {
 	if app.mode == ModeSearchInput {
 		return app.handleSearchInput(input)
 	}
+	if app.mode == ModeConfirmSolve {
+		return app.handleConfirmSolveInput(input)
+	}
 
 	if len(input) >= 3 && input[0] == 0x1b && input[1] == '[' {
 		switch input[2] {
@@ -1018,10 +1079,24 @@ func (app *AppState) handleInput(input []byte) bool {
 			} else {
 				return true // Quit app
 			}
-		case '/', '?': // pmore.c '/' or '?' -> search
+		case '/', '?': // pmore.c '/' or '?' -> search title
 			if app.mode == ModeDirView {
 				app.mode = ModeSearchInput
+				app.searchTarget = SearchTargetTitle
 				app.searchQuery = ""
+				return false
+			}
+		case 'a', 'A': // 'a' or 'A' -> search author
+			if app.mode == ModeDirView {
+				app.mode = ModeSearchInput
+				app.searchTarget = SearchTargetAuthor
+				app.searchQuery = ""
+				return false
+			}
+		case 'L': // Toggle FILE_SOLVED with y/n confirmation
+			if (app.mode == ModeDirView || app.mode == ModeFileView) && len(app.articles) > 0 && app.selectedIndex >= 0 && app.selectedIndex < len(app.articles) {
+				app.prevMode = app.mode
+				app.mode = ModeConfirmSolve
 				return false
 			}
 		case '\r', '\n': // pmore.c Enter -> down / next article
@@ -1065,6 +1140,90 @@ func (app *AppState) handleInput(input []byte) bool {
 		}
 	}
 	return false
+}
+
+func (app *AppState) handleConfirmSolveInput(input []byte) bool {
+	for _, b := range input {
+		switch b {
+		case 'y', 'Y':
+			app.toggleSolve()
+			app.mode = app.prevMode
+			return false
+		case 'n', 'N', 0x1b, 'q', 'Q':
+			app.mode = app.prevMode
+			return false
+		default:
+			app.mode = app.prevMode
+			return false
+		}
+	}
+	return false
+}
+
+func (app *AppState) findArticleIndexInAll(art ArticleHeader) int {
+	for i, a := range app.allArticles {
+		if a.Filename == art.Filename {
+			return i
+		}
+	}
+	return -1
+}
+
+func (app *AppState) toggleSolve() {
+	if len(app.articles) == 0 || app.selectedIndex < 0 || app.selectedIndex >= len(app.articles) {
+		return
+	}
+
+	art := app.articles[app.selectedIndex]
+	newFilemode := art.Filemode ^ FILE_SOLVED
+
+	app.articles[app.selectedIndex].Filemode = newFilemode
+
+	idxInAll := app.findArticleIndexInAll(art)
+	if idxInAll != -1 {
+		app.allArticles[idxInAll].Filemode = newFilemode
+	} else {
+		idxInAll = app.selectedIndex
+	}
+
+	if app.currentArticle.Filename == art.Filename {
+		app.currentArticle.Filemode = newFilemode
+	}
+
+	_ = updateArticleFilemode(app.dirPath, idxInAll, newFilemode)
+}
+
+func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint8) error {
+	if articleIdx < 0 {
+		return fmt.Errorf("invalid article index")
+	}
+
+	f, err := os.OpenFile(dirPath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	offset := int64(articleIdx * 128)
+	buf := make([]byte, 128)
+	if _, err := f.ReadAt(buf, offset); err != nil {
+		return err
+	}
+
+	var raw RawFileHeader
+	if err := binary.Read(bytes.NewReader(buf), binary.LittleEndian, &raw); err != nil {
+		return err
+	}
+
+	raw.Filemode = newFilemode
+
+	var outBuf bytes.Buffer
+	if err := binary.Write(&outBuf, binary.LittleEndian, &raw); err != nil {
+		return err
+	}
+
+	_, err = f.WriteAt(outBuf.Bytes(), offset)
+	return err
 }
 
 func (app *AppState) handleSearchInput(input []byte) bool {
