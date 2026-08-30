@@ -776,7 +776,7 @@ chkmailbox_hard_limit() {
     return 0;
 }
 
-void
+int
 hold_mail(const char *fpath, const char *receiver, const char *title)
 {
     char            buf[4];
@@ -787,8 +787,11 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
 	    buf, sizeof(buf), LCECHO);
 
-    if (TOBACKUP(buf[0]))
+    if (TOBACKUP(buf[0])) {
 	mail_save_memo(fpath, receiver, cuser.userid, title);
+	return 1;
+    }
+    return 0;
 }
 
 int
@@ -815,8 +818,10 @@ mail_ui_send(const char *userid, const char *title)
     }
 
     ret = do_innersend(userid, fpath, save_title, save_title);
-    if (ret == 0) // success
-	hold_mail(fpath, userid, save_title);
+    if (ret == 0) { // success
+	if (hold_mail(fpath, userid, save_title))
+	    ret = 1;
+    }
 
     clear();
     return ret;
@@ -853,7 +858,21 @@ m_send(void)
     showplans(uident);
     if (uident[0])
     {
-	my_send(uident);
+	int ret = mail_ui_send(uident, NULL);
+	switch (ret) {
+	case -1:
+	    outs(err_uid);
+	    break;
+	case -2:
+	    outs(msg_cancel);
+	    break;
+	case -3:
+	    prints("使用者 [%s] 無法收信", uident);
+	    break;
+	}
+	pressanykey();
+	if (ret == 1 || strcasecmp(uident, cuser.userid) == 0)
+	    return DIRCHANGED;
 	return FULLUPDATE;
     }
     return DIRCHANGED;
@@ -1220,12 +1239,14 @@ mail_account_sysop(void)
     }
     Vector_delete(&namelist);
 
-    hold_mail(fpath, NULL, save_title);
+    int memo_saved = hold_mail(fpath, NULL, save_title);
     unlink(fpath);
 
     setutmpmode(oldstat);
 
     pressanykey();
+    if (memo_saved)
+        return DIRCHANGED;
     return FULLUPDATE;
 }
 
@@ -1291,7 +1312,8 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
     showplans(uid);
 
-    switch (mail_ui_send(uid, save_title)) {
+    int mail_ret = mail_ui_send(uid, save_title);
+    switch (mail_ret) {
     case -1:
 	outs(err_uid);
 	break;
@@ -1305,7 +1327,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     pressanykey();
     quote_user[0]='\0';
     quote_file[0]='\0';
-    if (strcasecmp(uid, cuser.userid) == 0)
+    if (mail_ret == 1 || strcasecmp(uid, cuser.userid) == 0)
 	return DIRCHANGED;
     return FULLUPDATE;
 }
@@ -1766,7 +1788,8 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     prints("\n收信人: %s\n標  題: %s\n", uid, save_title);
 
     /* edit, then send the mail */
-    switch (mail_ui_send(uid, save_title)) {
+    int mail_ret = mail_ui_send(uid, save_title);
+    switch (mail_ret) {
     case -1:
 	outs(err_uid);
 	break;
@@ -1778,6 +1801,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	break;
 
     case 0:
+    case 1:
 	/* success */
 	if (direct &&	/* for board, no direct */
             !(fhdr->filemode & FILE_REPLIED))
@@ -1790,7 +1814,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     pressanykey();
     quote_user[0]='\0';
     quote_file[0]='\0';
-    if (strcasecmp(uid, cuser.userid) == 0)
+    if (mail_ret == 1 || strcasecmp(uid, cuser.userid) == 0)
 	return DIRCHANGED;
     return FULLUPDATE;
 }
