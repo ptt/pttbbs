@@ -229,9 +229,9 @@ anticrosspost(void)
 
     log_filef("etc/illegal_money",
              ANSI_COLOR(1;33;46) "%s "
-             ANSI_COLOR(37;45) "cross post 文章 "
-             ANSI_COLOR(37) " %s" ANSI_RESET "\n",
-             cuser.userid, Cdatelite(&now));
+             ANSI_COLOR(37;45) "cross post 文章"
+             ANSI_RESET "\n",
+             cuser.userid);
 
     post_violatelaw(cuser.userid, BBSMNAME "系統警察",
                     "Cross-post", "罰單處份");
