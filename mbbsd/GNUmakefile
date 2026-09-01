@@ -1,5 +1,6 @@
 SRCROOT=	..
 include $(SRCROOT)/pttbbs.mk
+MKDIR= $(SRCROOT)/mk
 
 #######################################################################
 # common modules
@@ -133,6 +134,8 @@ install: $(PROG)
 	@(cd $(BBSHOME)/bin && \
 	  objcopy --add-gnu-debuglink=mbbsd.$(DATETIME).debug mbbsd.$(DATETIME) && \
 	  ln -sfv mbbsd.$(DATETIME) $(BBSHOME)/bin/mbbsd)
+	# Track incremental builds, avoid pushing experimental changes accidentally.
+	[ -x "$(MKDIR)/mkdiff" ] && "$(MKDIR)"/mkdiff "${SRCROOT}/diff"
 
 clean:
 	rm -f $(OBJS) $(PROG)

@@ -1,0 +1,79 @@
+#!/bin/sh
+TMPFILE="$(mktemp)"
+
+: ${SRCROOT:="$(realpath $(dirname $(realpath "$0"))/..)"}
+
+die() {
+    echo "$*" >&2
+    exit 1
+}
+
+cleanup() {
+    if [ -n "${TMPFILE}" ]; then
+        [ -f "$TMPFILE" ] && rm -f "$TMPFILE"
+        TMPFILE=""
+    fi
+}
+
+trap cleanup EXIT
+
+build_change_list() {
+    git diff 2>/dev/null || true
+
+    # Diff local files
+    if [ -f pttbbs.conf ] && [ -f sample/pttbbs.conf ]; then
+        diff -Nurbs pttbbs.conf sample/pttbbs.conf 2>/dev/null || true
+    fi
+    if command -v crontab >/dev/null 2>&1 && [ -f sample/crontab ]; then
+        crontab -l 2>/dev/null | diff -Nurbs sample/crontab - 2>/dev/null || true
+    fi
+}
+
+output_local_files() {
+    local X
+    for X in local.h mbbsd/local.c mbbsd/chicken_cs.c; do
+        if [ -f "$X" ]; then
+            echo "--- $X ---"
+            cat "$X"
+        fi
+    done
+}
+
+main() {
+    set -e
+    local output="$1"
+    if [ -z "$output" ]; then
+        output="${SRCROOT}/diff"
+    fi
+    mkdir -p "${output}"
+
+    local new="${output}/diff.new"
+    local last="${output}/diff.last"
+
+    (cd "$SRCROOT"; output_local_files) >"$TMPFILE"
+    (cd "$SRCROOT"; build_change_list) >>"$TMPFILE"
+    mv -f "$TMPFILE" "$new"
+
+    # If running the full difflog cycle
+    NOW="$(date +'%Y%m%d_%H%M')"
+    cp "${new}" "${output}/diff-${NOW}" 2>/dev/null || true
+
+    # Clean revision and timestamp headers
+    sed -i -e "/^--- .*(revision [0-9]/d" -e "/^+++ .* +0800$/d" -e "/^@@/d" "${new}" 2>/dev/null || true
+
+    if [ -e "${last}" ]; then
+        echo " "
+        echo "-- Local modification difference from last difflog --"
+        echo " "
+        local diff="diff"
+        if command -v colordiff >/dev/null 2>&1; then
+            diff="colordiff"
+        fi
+        "${diff}" -Nurbs "${last}" "${new}" 2>/dev/null || true
+    fi
+
+    mv -f "${new}" "${last}" 2>/dev/null || true
+    echo "-- end list --"
+}
+
+main "$@"

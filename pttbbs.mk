@@ -135,21 +135,7 @@ GFLAGS_CFLAGS:=		$(shell (pkg-config --cflags gflags || true) 2>/dev/null)
 GFLAGS_LIBS_L:=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
 GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
-# pmake common
-CLEANFILES+=	*~
-
-# NetBSD pmake
-MKLINT:=no
-MKPROFILE:=no
-MKPIC:=no
-# Do not take warnings as errors
-NOGCCERROR:=no
-
-# FreeBSD make
-WITHOUT_PROFILE:=yes
-
-# Apply conditional configurations for NetBSD Makefiles in commons/,
-# mbbsd/ or more directory
+# Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
 DEF_CHECK=	$(shell grep -Ewq "^[ \t]*\#[ \t]*define[ \t]*$$1" $(BBSCONF) 2>/dev/null && echo "YES")
 USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
