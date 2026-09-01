@@ -63,8 +63,8 @@ LDLIBS       += -Wl,--no-as-needed
 else
 LUA_PKG_NAME ?= lua5.1
 endif
-LUA_CFLAGS := $(shell pkg-config --cflags $(LUA_PKG_NAME))
-LUA_LIBS   := $(shell pkg-config --libs $(LUA_PKG_NAME))
+LUA_CFLAGS := $(shell (pkg-config --cflags $(LUA_PKG_NAME) || true) 2>/dev/null)
+LUA_LIBS   := $(shell (pkg-config --libs $(LUA_PKG_NAME) || true) 2>/dev/null)
 CFLAGS     += $(LUA_CFLAGS)
 LDLIBS     += $(LUA_LIBS)
 OBJS       += bbslua.o bbsluaext.o
