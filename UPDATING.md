@@ -15,9 +15,19 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
-## feat(make): Move to GNU Make
+## [feat(make): Move to GNU Make](https://github.com/ptt/pttbbs/commit/9e33145939a2f9353c39b85ba7600d3115f9d7dc)
 
 由 BSD Make (bmake, pmake) 改用 GNU Make。
+
+換成 GNU Make 最大的好處是可以搭配 ckati+ninja. 先裝上：
+    apt-get install ckati ninja-build
+
+在 pttbbs 下打 ckati --ninja
+然後以後 build 就打
+    ./ninja.sh
+
+會有超快的 incremental build。 但注意清除檔案還是要打
+    make -j32 clean
 
 ## [cleanup(trans): Remove the trans/ folder](https://github.com/ptt/pttbbs/commit/ba24e2db30314589adedaad4d2cb9b3a90b751cf)
 

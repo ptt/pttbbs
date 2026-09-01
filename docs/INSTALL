@@ -73,6 +73,12 @@
     gmake, ccache, clang, gcc, git, libevent-dev/libevent-devel,
     pkg-config/pkgconfig/pkgconf, python
 
+    想加速的話還可以使用 ckati+ninja:
+    先安裝 ckati ninja-build 兩個套件，在 pttbbs/ 下打
+        ckati --ninja
+    之後要重 build 打 ./ninja.sh 即可。
+    (注意 clean 仍然要靠 make clean)
+
  11.(在 /home/bbs/pttbbs 下)  執行 make clean; make all install
 
  12.如果是新架起來的站, 請執行 cd sample; make install
