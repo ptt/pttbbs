@@ -298,7 +298,7 @@ mail_save_memo(const char *fpath, const char *receiver, const char *holder,
         STRLCPY(title, save_title ? save_title : "");
     }
 
-    save_mailbox(STR_MEMO, holder, title, NULL, fpath, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
+    save_mailbox(STR_MEMO, holder, title, NULL, fpath, FILE_READ, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
 }
 
 /*
