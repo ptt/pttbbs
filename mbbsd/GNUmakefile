@@ -111,7 +111,7 @@ $(PROG): testsz $(OBJS)
 	@printf "\033[m"
 	$(CC) vers.c -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
-testsz: $(SRCROOT)/pttbbs.conf $(SRCROOT)/include/*.h testsz.c
+testsz: $(SRCROOT)/pttbbs.conf $(wildcard $(SRCROOT)/include/*.h) testsz.c
 	$(CC) $(CFLAGS) testsz.c -o testsz $(LDFLAGS) $(LDLIBS)
 	@printf "\033[0;1;33mChecking configuration data sizes...\033[m\n"
 	@./testsz

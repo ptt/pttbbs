@@ -79,6 +79,11 @@
     之後要重 build 打 ./ninja.sh 即可。
     (注意 clean 仍然要靠 make clean)
 
+    mbbsd 可以有自己的 ninja:
+        cd pttbbs/mbbsd
+        ckati --ninja all
+    之後就可以打 ./ninja.sh 超快編譯了
+
  11.(在 /home/bbs/pttbbs 下)  執行 make clean; make all install
 
  12.如果是新架起來的站, 請執行 cd sample; make install
