@@ -56,7 +56,7 @@ Status ManServiceImpl::CheckPathPermission(const ManPath &path) {
   return Status::OK;
 }
 
-Status ManServiceImpl::List(ServerContext *context, const ListRequest *req,
+Status ManServiceImpl::List(ServerContext *context GCC_UNUSED, const ListRequest *req,
                             ListReply *rep) {
   ManPath path(req->board_name(), req->path());
 
@@ -89,7 +89,7 @@ int ArticleSelectType(ArticleRequest::SelectType t) {
   }
 }
 
-Status ManServiceImpl::Article(ServerContext *context,
+Status ManServiceImpl::Article(ServerContext *context GCC_UNUSED,
                                const ArticleRequest *req, ArticleReply *rep) {
   ManPath path(req->board_name(), req->path());
 

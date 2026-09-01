@@ -30,7 +30,7 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
   rep.header.cb = sizeof(rep.header) + len;
   rep.header.operation = VERIFYDB_MESSAGE;
   if (towrite(fd, &rep.header, sizeof(rep.header)) != sizeof(rep.header) ||
-      towrite(fd, msg, len) != len) {
+      towrite(fd, msg, len) != (int)len) {
     perror("towrite");
     return false;
   }
@@ -41,7 +41,7 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
     return false;
   }
   out->resize(rep.header.cb - sizeof(rep.header));
-  if (toread(fd, &out->front(), out->size()) != out->size()) {
+  if (toread(fd, &out->front(), out->size()) != (int)out->size()) {
     perror("toread");
     return false;
   }

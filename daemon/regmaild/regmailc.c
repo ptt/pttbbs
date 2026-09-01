@@ -97,7 +97,7 @@ static int regmaildb_main(const char *prog, int argc, char **argv)
 	perror("toconnect");
 	return 1;
     }
-    if (towrite(fd, &req, req.cb) != req.cb) {
+    if (towrite(fd, &req, req.cb) != (int)req.cb) {
 	perror("towrite");
 	return 1;
     }

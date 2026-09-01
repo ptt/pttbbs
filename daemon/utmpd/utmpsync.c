@@ -3,7 +3,7 @@
 
 extern SHM_t *SHM;
 
-int main(int argc, char **argv)
+int main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int     sfd, index, i;
     attach_SHM();

@@ -80,7 +80,7 @@ void write_message(int fd, const flatbuffers::DetachedBuffer &buf) {
   if (towrite(fd, &rep.header, sizeof(rep.header)) != sizeof(rep.header))
     perror("towrite");
   // Write message.
-  if (towrite(fd, buf.data(), len) != len)
+  if (towrite(fd, buf.data(), len) != (int)len)
     perror("towrite");
 }
 

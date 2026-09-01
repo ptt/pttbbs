@@ -285,7 +285,7 @@ void connection_client(int cfd, short event, void *arg)
     event_add(&cs->ev, &tv);
 }
 
-void connection_accept(int fd, short event, void *arg)
+void connection_accept(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     struct sockaddr_in clientaddr;
     socklen_t len = sizeof(clientaddr);

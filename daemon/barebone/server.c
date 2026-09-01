@@ -32,6 +32,8 @@
 #include <event2/thread.h>
 #endif
 
+#define UNUSED __attribute__((unused))
+
 #include "server.h"
 
 static const struct timeval timeout = {600, 0};
@@ -60,13 +62,13 @@ split_args(char *line, char ***argp)
 }
 
 void __attribute__((weak))
-client_read_cb(struct bufferevent *bev, void *ctx)
+client_read_cb(struct bufferevent *bev, void *ctx UNUSED)
 {
     bufferevent_write_buffer(bev, bufferevent_get_input(bev));
 }
 
 void __attribute__((weak))
-client_event_cb(struct bufferevent *bev, short events, void *ctx)
+client_event_cb(struct bufferevent *bev, short events, void *ctx UNUSED)
 {
     if (events & BEV_EVENT_ERROR)
 	perror("Error from bufferevent");
@@ -77,7 +79,7 @@ client_event_cb(struct bufferevent *bev, short events, void *ctx)
 
 void __attribute__((weak))
 setup_client(struct event_base *base, evutil_socket_t fd,
-       	struct sockaddr *address, int socklen)
+             struct sockaddr *address UNUSED, int socklen UNUSED)
 {
     struct bufferevent *bev = bufferevent_socket_new(base, fd,
 	    BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_THREADSAFE);
@@ -88,7 +90,7 @@ setup_client(struct event_base *base, evutil_socket_t fd,
 
 static void
 accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd,
-       	struct sockaddr *address, int socklen, void *ctx)
+               struct sockaddr *address, int socklen, void *ctx UNUSED)
 {
     struct event_base *base = evconnlistener_get_base(listener);
     return setup_client(base, fd, address, socklen);

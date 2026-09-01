@@ -96,7 +96,7 @@ static const char *my_MMDB_lookup(MMDB_s *mmdb, const char *str)
 }
 #endif
 
-static void sighup_cb(int signal, short event, void *arg)
+static void sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     ip_desc_db_reload(cfgfile);
 
@@ -167,7 +167,7 @@ end:
     free(arg);
 }
 
-static void listen_cb(int fd, short event, void *arg)
+static void listen_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 {
     int cfd;
 
