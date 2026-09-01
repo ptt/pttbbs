@@ -15,7 +15,11 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
-## refactor(fileheader_t): Change filemode to 16 bits
+## cleanup(trans): Remove the trans/ folder
+
+不再維護其它 BBS 資料的轉換程式。
+
+## [refactor(fileheader_t): Change filemode to 16 bits](https://github.com/ptt/pttbbs/commit/ad89efbcce3e00dda83ccc9097865b84cfd90bf0)
 
 這是個可能會造成檔案不相容的修改。
 理論上在 Little-endian 架構的機器上沒有問題不用另外轉換，
