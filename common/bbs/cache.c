@@ -122,7 +122,9 @@ remove_from_uhash(int n)
 	*p = SHM->next_in_hash[n];
 }
 
-#if (1<<HASH_BITS)*10 < MAX_USERS
+#if !defined(SKIP_HASH_BITS_CHECK) && ((1<<HASH_BITS)*10 < MAX_USERS)
+// Changing HASH_BITS will change SHM size so we may skip this value if
+// that's already decided.
 #warning "Suggest to use bigger HASH_BITS for better searchuser() performance,"
 #warning "searchuser() average chaining MAX_USERS/(1<<HASH_BITS) times."
 #endif
