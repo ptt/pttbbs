@@ -1,15 +1,23 @@
 SRCROOT=        ..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
-SUBDIR:=	bbs osdep sys
+SUBDIRS:=	bbs osdep sys
 
-.if $(USE_MBBSD_CXX)
-SUBDIR+=	fbs
-.endif
+ifneq ($(strip $(USE_MBBSD_CXX)),)
+SUBDIRS+=	fbs
+endif
 
-all:
+.PHONY: all clean install $(SUBDIRS)
+
+all: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
 
 install: all
 	@true
 
-.include <bsd.subdir.mk>
+clean:
+	@for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir $@ || exit 1; \
+	done

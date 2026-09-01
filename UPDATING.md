@@ -15,7 +15,11 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
-## cleanup(trans): Remove the trans/ folder
+## feat(make): Move to GNU Make
+
+由 BSD Make (bmake, pmake) 改用 GNU Make。
+
+## [cleanup(trans): Remove the trans/ folder](https://github.com/ptt/pttbbs/commit/ba24e2db30314589adedaad4d2cb9b3a90b751cf)
 
 不再維護其它 BBS 資料的轉換程式。
 

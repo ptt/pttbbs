@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 ENABLE_MAXMIND_DB=y
 ENABLE_GEOIP_DB=y
@@ -11,14 +11,16 @@ LDLIBS+=$(SRCROOT)/common/sys/libcmsys.a \
 
 FROMD_LDFLAGS = -levent
 
-.if ${ENABLE_MAXMIND_DB} == "y"
+ifeq (${ENABLE_MAXMIND_DB},y)
 CFLAGS += -DFROMD_USE_MAXMIND_DB
 FROMD_LDFLAGS += -lmaxminddb
-.endif
-.if ${ENABLE_GEOIP_DB} == "y"
+endif
+ifeq (${ENABLE_GEOIP_DB},y)
 CFLAGS += -DFROMD_USE_GEOIP_DB
 FROMD_LDFLAGS += -lGeoIP
-.endif
+endif
+
+.PHONY: all clean
 
 all:	${PROGRAMS}
 
@@ -29,10 +31,10 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 fromd: fromd.o ip_desc_db.o country_names.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS) $(FROMD_LDFLAGS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(LDLIBS) $(FROMD_LDFLAGS)
 
 fromc: fromc.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(LDLIBS)
 
 clean:
 	rm -f *~ ${PROGRAMS} fromd.o fromc.o ip_desc_db.o country_names.o

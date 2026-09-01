@@ -1,18 +1,17 @@
 SRCROOT:=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 SRCS:=	verifydb.fbs register_sms.fbs
+HDRS:=	$(SRCS:=.h)
 
-.for SRC in $(SRCS)
-$(SRC).h: $(SRC)
-	flatc --cpp $(SRC) --filename-suffix .fbs
-
-HDRS+=	$(SRC).h
-.endfor
-
-install:
+.PHONY: all clean install
 
 all: $(HDRS)
+
+%.fbs.h: %.fbs
+	flatc --cpp $< --filename-suffix .fbs
+
+install:
 
 clean:
 	@rm -f $(HDRS)

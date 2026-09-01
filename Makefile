@@ -1,7 +1,10 @@
-SUBDIR=	common mbbsd util service
+GMAKE!= command -v gmake 2>/dev/null || command -v gnumake 2>/dev/null || true
 
-.include <bsd.subdir.mk>
+.if !empty(GMAKE)
+.MAIN: all
 
-.ORDER: all-common all-mbbsd
-.ORDER: all-common all-util
-.ORDER: all-common all-service
+.DEFAULT:
+	@${GMAKE} ${.TARGETS}
+.else
+.error PttBBS requires GNU Make (gmake). Please install 'gmake' and try again.
+.endif

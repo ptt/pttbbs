@@ -64,13 +64,13 @@
 
     #define SHMALIGNEDSIZE (1048576*4)
 
-    * 如果您是用 Linux 系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
-    * 如果您是用 MacOSX 系統, 請先由 ports 安裝 bmake,
-      然後將 make alias 成 pmake *
+    * Linux 或其它 UNIX 系統應該已有安裝 GNU make (make).
+    * 如果您是用 BSD / MacOSX 系統, 請先由 ports 安裝 gmake,
+      然後執行 gmake (或 alias 成 make).
 
     以下是編譯前建議先安裝的套件清單，
     可以用 apt / yum 等套件管理員指令檢查自己有沒有安裝到：
-    bmake, ccache, clang, gcc, git, libevent-dev/libevent-devel,
+    gmake, ccache, clang, gcc, git, libevent-dev/libevent-devel,
     pkg-config/pkgconfig/pkgconf, python
 
  11.(在 /home/bbs/pttbbs 下)  執行 make clean; make all install

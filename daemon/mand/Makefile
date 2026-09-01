@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 .SUFFIXES: .proto .pb.cc .pb.h .grpc.pb.cc .grpc.pb.h
 
@@ -52,4 +52,4 @@ LDADD:=  $(UTILOBJ) \
 clean:
 	rm -f $(MAND_OBJS) $(MANC_OBJS) $(GENERATED_SRCS) mand manc
 
-.include <bsd.prog.mk>
+.PHONY: all clean

@@ -2,27 +2,27 @@ BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 
 SRCROOT?=	.
-OSTYPE!=	uname
+OSTYPE:=	$(shell uname)
 
 # Detect best compiler
 #
 CC:=		gcc
 CXX:=		g++
 
-CLANG!=		sh -c 'type clang >/dev/null 2>&1 && echo 1 || echo 0'
-CCACHE!=	sh -c 'type ccache >/dev/null 2>&1 && echo 1 || echo 0'
+CLANG:=		$(shell type clang >/dev/null 2>&1 && echo 1 || echo 0)
+CCACHE:=	$(shell type ccache >/dev/null 2>&1 && echo 1 || echo 0)
 
-.if defined(WITHOUT_CLANG)
+ifdef WITHOUT_CLANG
 CLANG:=
-.elif $(CLANG)
+else ifneq ($(strip $(CLANG)),0)
 CC:=		clang
 CXX:=		clang++
-.endif
+endif
 
-.if $(CCACHE)
+ifneq ($(strip $(CCACHE)),0)
 CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
-.endif
+endif
 
 # Common build flags
 
@@ -32,76 +32,76 @@ PTT_WARN:=	-W -Wall -Wunused \
 PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
-.if $(CLANG)
+ifneq ($(strip $(CLANG)),0)
 PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
 		-fcolor-diagnostics -Wno-invalid-source-encoding
 PTT_CXXFLAGS+=	-Wno-invalid-source-encoding
-.endif
+endif
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
 
 # Platform specific build flags
 
-.if ${OSTYPE} == "Darwin"
+ifeq (${OSTYPE},Darwin)
 PTT_CFLAGS+=	-I/opt/local/include -DNEED_SETPROCTITLE
 PTT_CXXFLAGS+=	-I/opt/local/include
 PTT_LDFLAGS+=	-L/opt/local/lib
 PTT_LDLIBS+=	-liconv
-.endif
+endif
 
-.if ${OSTYPE} == "Linux"
+ifeq (${OSTYPE},Linux)
 PTT_LDLIBS+=    -lrt -pthread
-.endif
+endif
 
-.if ${OSTYPE} == "FreeBSD"
+ifeq (${OSTYPE},FreeBSD)
 # FreeBSD特有的環境
 PTT_CFLAGS+=	-I/usr/local/include
 PTT_CXXFLAGS+=	-I/usr/local/include
 PTT_LDFLAGS+=	-L/usr/local/lib
 PTT_LDLIBS+=	-lkvm -liconv
-.endif
+endif
 
 # 若有定義 PROFILING
-.if defined(PROFILING)
+ifdef PROFILING
 PTT_CFLAGS+=	-pg
 PTT_CXXFLAGS+=	-pg
 PTT_LDFLAGS+=	-pg
 NO_OMITFP=	yes
 NO_FORK=	yes
-.endif
+endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
-.if defined(DEBUG)
+ifdef DEBUG
 GDB=		1
 PTT_CFLAGS+=	-DDEBUG 
 PTT_CXXFLAGS+=	-DDEBUG 
-.endif
+endif
 
-.if defined(GDB)
+ifdef GDB
 CFLAGS:=	-g -O0 $(PTT_CFLAGS)
 CXXFLAGS:=	-g -O0 $(PTT_CXXFLAGS)
 LDFLAGS:=	-O0 $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
-.else
+else
 CFLAGS:=	-g -Os $(PTT_CFLAGS) $(EXT_CFLAGS)
 CXXFLAGS:=	-g -Os $(PTT_CXXFLAGS) $(EXT_CXXFLAGS)
 LDFLAGS:=	-Os $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
 
-.if defined(OMITFP)
+ifdef OMITFP
 CFLAGS+=	-fomit-frame-pointer
 CXXFLAGS+=	-fomit-frame-pointer
-.endif
-.endif
+endif
+endif
 
 LDADD=		$(LDLIBS)
 
 # 若有定義 NO_FORK, 則在 CFLAGS內定義 NO_FORK
-.if defined(NO_FORK)
+ifdef NO_FORK
 CFLAGS+=	-DNO_FORK
 CXXFLAGS+=	-DNO_FORK
-.endif
+endif
 
 ######################################
 # Settings for common libraries
@@ -116,24 +116,24 @@ DEF_CMD:=       grep -Ewq "${DEF_PATTERN}"
 DEF_YES:=       && echo "YES" || echo ""
 
 #libevent
-LIBEVENT_CFLAGS!=	(pkg-config --cflags libevent_pthreads || true) 2>/dev/null
-LIBEVENT_LIBS_L!=	(pkg-config --libs-only-L libevent_pthreads || true) 2>/dev/null
-LIBEVENT_LIBS_l!=	(pkg-config --libs-only-l libevent_pthreads || true) 2>/dev/null
+LIBEVENT_CFLAGS:=	$(shell (pkg-config --cflags libevent_pthreads || true) 2>/dev/null)
+LIBEVENT_LIBS_L:=	$(shell (pkg-config --libs-only-L libevent_pthreads || true) 2>/dev/null)
+LIBEVENT_LIBS_l:=	$(shell (pkg-config --libs-only-l libevent_pthreads || true) 2>/dev/null)
 
 # grpc++
-GRPCPP_CFLAGS!=		(pkg-config --cflags grpc++ || true) 2>/dev/null
-GRPCPP_LIBS_L!=		(pkg-config --libs-only-L grpc++ || true) 2>/dev/null
-GRPCPP_LIBS_l!=		(pkg-config --libs-only-l grpc++ || true) 2>/dev/null
+GRPCPP_CFLAGS:=		$(shell (pkg-config --cflags grpc++ || true) 2>/dev/null)
+GRPCPP_LIBS_L:=		$(shell (pkg-config --libs-only-L grpc++ || true) 2>/dev/null)
+GRPCPP_LIBS_l:=		$(shell (pkg-config --libs-only-l grpc++ || true) 2>/dev/null)
 
 # protobuf
-PROTOBUF_CFLAGS!=	(pkg-config --cflags protobuf || true) 2>/dev/null
-PROTOBUF_LIBS_L!=	(pkg-config --libs-only-L protobuf || true) 2>/dev/null
-PROTOBUF_LIBS_l!=	(pkg-config --libs-only-l protobuf || true) 2>/dev/null
+PROTOBUF_CFLAGS:=	$(shell (pkg-config --cflags protobuf || true) 2>/dev/null)
+PROTOBUF_LIBS_L:=	$(shell (pkg-config --libs-only-L protobuf || true) 2>/dev/null)
+PROTOBUF_LIBS_l:=	$(shell (pkg-config --libs-only-l protobuf || true) 2>/dev/null)
 
 # gflags
-GFLAGS_CFLAGS!=		(pkg-config --cflags gflags || true) 2>/dev/null
-GFLAGS_LIBS_L!=		(pkg-config --libs-only-L gflags || true) 2>/dev/null
-GFLAGS_LIBS_l!=		(pkg-config --libs-only-l gflags || true) 2>/dev/null
+GFLAGS_CFLAGS:=		$(shell (pkg-config --cflags gflags || true) 2>/dev/null)
+GFLAGS_LIBS_L:=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
+GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
 # pmake common
 CLEANFILES+=	*~
@@ -150,11 +150,12 @@ WITHOUT_PROFILE:=yes
 
 # Apply conditional configurations for NetBSD Makefiles in commons/,
 # mbbsd/ or more directory
-USE_MBBSD_CXX!= sh -c '${DEF_CMD}"USE_MBBSD_CXX" ${BBSCONF} ${DEF_YES}'
+DEF_CHECK=	$(shell grep -Ewq "^[ \t]*\#[ \t]*define[ \t]*$$1" $(BBSCONF) 2>/dev/null && echo "YES")
+USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
 ######################################
 
-.MAIN: all
+.DEFAULT_GOAL := all
 
 .clang_complete:
 	make CC='~/.vim/bin/cc_args.py clang' clean all
@@ -163,4 +164,4 @@ $(SRCROOT)/include/var.h:	$(SRCROOT)/mbbsd/var.c
 	perl $(SRCROOT)/util/parsevar.pl < $(SRCROOT)/mbbsd/var.c > $(SRCROOT)/include/var.h
 
 
-.PHONY: .clang_complete ctags
+.PHONY: all .clang_complete ctags

@@ -1,11 +1,21 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 SRCS:=	cpuload.c proctitle.c strlcat.c strlcpy.c memusage.c
-LIB:=	osdep
+LIB:=	libosdep.a
+OBJS:=	$(SRCS:.c=.o)
 
-all: .depend
+.PHONY: all clean install
+
+all: $(LIB)
+
+$(LIB): $(OBJS)
+	$(AR) rcs $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 install:
 
-.include <bsd.lib.mk>
+clean:
+	rm -f $(OBJS) $(LIB)

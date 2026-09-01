@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 PROGRAMS=	utmpsync utmpserver3
 UTILDIR=	$(SRCROOT)/util
@@ -8,6 +8,8 @@ UTILOBJ=	$(UTILDIR)/util_var.o
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/osdep/libosdep.a
+
+.PHONY: all clean
 
 all:	${PROGRAMS}
 

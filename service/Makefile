@@ -1,3 +1,8 @@
-SUBDIR=	aloha
+SUBDIRS:=	aloha
 
-.include <bsd.subdir.mk>
+.PHONY: all clean install test $(SUBDIRS)
+
+all clean install test: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@ $(MAKECMDGOALS)

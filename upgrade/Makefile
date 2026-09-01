@@ -1,7 +1,7 @@
 # Usually you won't build everything for upgrading, so we let you decide what to run.
 
 SRCROOT=	..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 CFLAGS+= -DPTTBBS_UTIL
 
@@ -14,6 +14,8 @@ LDLIBS:=  $(UTIL_OBJS) \
 	  $(SRCROOT)/common/sys/libcmsys.a \
 	  $(SRCROOT)/common/osdep/libosdep.a \
 	  $(LDLIBS)
+
+.PHONY: all
 
 all:
 	@echo "Usually you won't build everything for upgrading, "

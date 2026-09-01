@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 .SUFFIXES: .proto .pb.cc .pb.h .grpc.pb.cc .grpc.pb.h
 
@@ -39,5 +39,7 @@ boardd: $(GEN_OBJS) $(BOARDD_OBJS)
 
 clean:
 	rm -f $(BOARDC_OBJS) $(BOARDD_OBJS) $(GEN_SRCS) $(GEN_HDRS) $(GEN_OBJS) boardc boardd
+
+.PHONY: all clean
 
 all: boardc boardd

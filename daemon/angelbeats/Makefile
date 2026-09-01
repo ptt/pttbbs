@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 PROGRAMS=	angelbeats abc
 UTILDIR=	$(SRCROOT)/util
@@ -10,6 +10,8 @@ LDLIBS:=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	-levent $(LDLIBS)
 
+.PHONY: all clean install
+
 all:	${PROGRAMS}
 
 .SUFFIXES: .c .cpp .o
@@ -19,10 +21,10 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 angelbeats: angelbeats.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(UTILOBJ) $(LDLIBS)
 
 abc: abc.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(UTILOBJ) $(LDLIBS)
 
 install: $(PROGRAMS)
 	install -d $(BBSHOME)/bin/

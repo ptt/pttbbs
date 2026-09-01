@@ -1,5 +1,5 @@
 SRCROOT=	../..
-.include "$(SRCROOT)/pttbbs.mk"
+include $(SRCROOT)/pttbbs.mk
 
 PROGS=          logind
 PROGRAMS=	logind loginc
@@ -11,7 +11,9 @@ LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/osdep/libosdep.a \
 	-levent
 
-DATETIME!=	date '+%Y%m%d%H%M'
+DATETIME:=	$(shell date '+%Y%m%d%H%M')
+
+.PHONY: all install clean
 
 all:	${PROGRAMS}
 
@@ -22,10 +24,10 @@ all:	${PROGRAMS}
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 logind: logind.o convert.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(UTILOBJ) $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(UTILOBJ) $(LDLIBS)
 
 loginc: loginc.o 
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $> $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

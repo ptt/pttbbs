@@ -1,8 +1,12 @@
-SUBDIRS:=	boardd fromd logind regmaild
+SUBDIRS:=	common mbbsd util service
 
 .PHONY: all clean install $(SUBDIRS)
 
 all: $(SUBDIRS)
+
+mbbsd: common
+util: common
+service: common
 
 $(SUBDIRS):
 	$(MAKE) -C $@
