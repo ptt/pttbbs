@@ -1,0 +1,2 @@
+libmaxminddb-dev
+libgeoip-dev
