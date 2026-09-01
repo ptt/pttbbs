@@ -1,5 +1,4 @@
 BBSHOME?=	$(HOME)
-BBSHOME?=	/home/bbs
 
 SRCROOT?=	.
 OSTYPE:=	$(shell uname)
@@ -9,8 +8,8 @@ OSTYPE:=	$(shell uname)
 CC:=		gcc
 CXX:=		g++
 
-CLANG:=		$(shell type clang >/dev/null 2>&1 && echo 1 || echo 0)
-CCACHE:=	$(shell type ccache >/dev/null 2>&1 && echo 1 || echo 0)
+CLANG:=		$(shell command -v clang >/dev/null 2>&1 && echo 1 || echo 0)
+CCACHE:=	$(shell command -v ccache >/dev/null 2>&1 && echo 1 || echo 0)
 
 ifdef WITHOUT_CLANG
 CLANG:=
@@ -43,7 +42,7 @@ endif
 
 # Platform specific build flags
 
-ifeq (${OSTYPE},Darwin)
+ifeq ($(OSTYPE),Darwin)
 PTT_CFLAGS+=	-I/opt/local/include -DNEED_SETPROCTITLE
 PTT_CXXFLAGS+=	-I/opt/local/include
 PTT_LDFLAGS+=	-L/opt/local/lib
