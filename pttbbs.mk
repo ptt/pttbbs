@@ -135,7 +135,7 @@ GFLAGS_LIBS_L:=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
 GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
 # Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
-DEF_CHECK=	$(shell grep -Ewq "^[ \t]*\#[ \t]*define[ \t]*$1" $(BBSCONF) 2>/dev/null && echo "YES")
+DEF_CHECK=	$(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | grep -qE "^#define[ \t]+$1\b" && echo "YES")
 USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
 ######################################

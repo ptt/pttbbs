@@ -17,7 +17,7 @@ ifneq ($(call DEF_CHECK,UTMPD),)
 SUBDIRS += utmpd
 endif
 
-ifndef ($(call DEF_CHECK,QUERY_ARTICLE_URL),)
+ifneq ($(call DEF_CHECK,QUERY_ARTICLE_URL),)
 SUBDIRS += mand boardd
 endif
 
