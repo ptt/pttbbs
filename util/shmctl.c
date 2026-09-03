@@ -100,7 +100,16 @@ int utmpfix(int argc, char **argv)
 	    upperbound = atoi(optarg);
 	    break;
 	default:
-	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout] [-F] [-D sleep]\n");
+	    printf("usage: shmctl utmpfix [options]\n"
+		   "options:\n"
+		   "    -n: fast mode - do not kicks out non-guest users. -n ignores -t\n"
+		   "    -t <seconds>: utmpfix kicks out non-guest users idle for <seconds>. Default: -t %ld\n"
+		   "    -l <#users>: utmpfix kicks idle users until <= <#users> are online. Default: -l %d\n"
+		   "    -F: no fork()\n"
+		   "    -D <seconds>: launch a daemon checking for idle users every (seconds). -D 0 disables daemon. -D ignores -F\n"
+		   "    -u <#users>: only check for idle users while >= <#users> are online (but always check at launch). -u requires -D\n"
+		   "When checking idle users, utmpfix always kicks out guests idle for >=%d minutes, regardless of -t\n",
+	       (time_t)IDLE_TIMEOUT, 100, 15);
 	    return 1;
 	}
 
@@ -577,7 +586,7 @@ int setglobal(int argc, char **argv)
 {
     int     where, value;
     if( argc != 3 ){
-	puts("usage: shmctl setglobal (GV2) newvalue");
+	puts("usage: shmctl setglobal <GV2> newvalue");
 	return 1;
     }
     value = atoi(argv[2]);
@@ -747,7 +756,8 @@ int SHMinit(int argc, char **argv)
 	    no_uhash_loader = 1;
 	    break;
 	default:
-	    printf("usage:\tshmctl\tSHMinit\n");
+	    printf("usage: shmctl init [-n]\n"
+		   "    -n: no utmpsortd\n");
 	    return 0;
 	}
 
@@ -801,7 +811,10 @@ int hotboard(int argc, char **argv)
 	case 'h':
 	default:
 	hotboardusage:
-	    fprintf(stderr, "usage: shmctl hotboard [-t topn]\n");
+	    fprintf(stderr,
+		    "usage: shmctl hotboard [-t topn]\n"
+		    "    -t topn: # of boards to list. Default: -t %d\n",
+		20);
 	    return 1;
 	}
 
@@ -1046,14 +1059,14 @@ struct Cmd {
     const char    *cmd, *descript;
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
-    {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
+    {utmpsortd,  "utmpsortd",  "utmp sorting daemon. Options: [usec: sort interval] [#sorts: full sort interval]"},
 
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
     {torb,       "reloadbcache", "reload bcache"},
     {fixbcache,  "fixbcache",  "fix bcache"},
     {rlfcache,   "reloadfcache", "reload fcache"},
     {bBMC,       "bBMC",       "build BM cache"},
-    {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user"},
+    {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user. Options: [-h: see full usage]"},
     {utmpreset,  "utmpreset",  "SHM->busystate=0"},
     {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
 
@@ -1061,18 +1074,18 @@ struct Cmd {
     {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
     {utmpstatus, "utmpstatus", "list utmpstatus"},
     {listpid,    "listpid",    "list all pids of mbbsd"},
-    {listbrd,    "listbrd",    "list board info in SHM"},
+    {listbrd,    "listbrd",    "list board info in SHM. Options: [board-id]"},
     {fixbrd,     "fixbrd",     "fix board info in SHM"},
-    {hotboard,   "hotboard",   "list boards of most bfriends"},
+    {hotboard,   "hotboard",   "list boards with the most bfriends. Options: [-h: see full usage]"},
     {usermode,   "usermode",   "list #users in the same mode"},
-    {showstat,   "showstat",   "show statistics"},
+    {showstat,   "showstat",   "show statistics. Options: [-c: clear stats]"},
     {testgap,    "testgap",    "test SHM->gap zeroness"},
 
     {dummy,      "\b\b\b\bMisc:", ""},
     {showglobal, "showglobal", "show GLOBALVAR[]"},
-    {setglobal,  "setglobal",  "set GLOBALVAR[]"},
-    {SHMinit,    "init",       "initialize SHM (including uhash_loader)"},
-    {SHMinit,    "SHMinit",    "(= init)"},
+    {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
+    {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start sutmpsortd and helper services. Options: [-h: see full usage]"},
+    {SHMinit,    "SHMinit",    "(= init). Deprecated alias."},
     {NULL, NULL, NULL}
 };
 
