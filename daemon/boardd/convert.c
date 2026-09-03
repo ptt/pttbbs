@@ -6,6 +6,11 @@
 #include "cmbbs.h"
 #include "convert.h"
 
+#define ESC_STR "\x1b"
+#ifndef WORKAROUND_CJKWIDTH
+#define WORKAROUND_CJKWIDTH (0)
+#endif
+
 static int
 move_string_end(char **buf)
 {
@@ -169,11 +174,30 @@ evbuffer_b2u(struct evbuffer *source)
 		break;
 
 	    uint8_t utf8[4];
-	    int len = ucs2utf(b2u_table[c[0] << 8 | c[1]], utf8);
+            int b5c = c[0] << 8 | c[1];
+            bool need_jump = false;
+
+            if (WORKAROUND_CJKWIDTH && b2u_ambiguous_width[b5c]) {
+                need_jump = true;
+                // Keep cursor position
+                const char *DECSC = ESC_STR "7";
+                if (evbuffer_add(destination, DECSC, strlen(DECSC)))
+                    break;
+            }
+
+	    int len = ucs2utf(b2u_table[b5c], utf8);
 	    utf8[len] = 0;
 
 	    if (evbuffer_add(destination, utf8, len) < 0)
 		break;
+
+            if (need_jump) {
+                // Print 1 space (to clear the remaining byte),
+                // restore cursor and the move to 2 bytes right.
+                const char *SPACE_DECRC_CUF2 = " " ESC_STR "8" ESC_STR "[2C";
+                if (evbuffer_add(destination, SPACE_DECRC_CUF2, strlen(SPACE_DECRC_CUF2)))
+                    break;
+            }
 
 #ifndef EXTENDED_INCHAR_ANSI
             // Output in-char control codes to make state consistent

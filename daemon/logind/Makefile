@@ -19,7 +19,7 @@ all:	${PROGRAMS}
 
 .SUFFIXES: .c .cpp .o
 .c.o:
-	$(CC) $(CFLAGS) -c $*.c
+	$(CC) -DWORKAROUND_CJKWIDTH=1 $(CFLAGS) -c $*.c
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
