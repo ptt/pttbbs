@@ -1085,7 +1085,6 @@ struct Cmd {
     {showglobal, "showglobal", "show GLOBALVAR[]"},
     {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
     {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start sutmpsortd and helper services. Options: [-h: see full usage]"},
-    {SHMinit,    "SHMinit",    "(= init). Deprecated alias."},
     {NULL, NULL, NULL}
 };
 
