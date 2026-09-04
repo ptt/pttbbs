@@ -180,7 +180,7 @@ typedef struct boardheader_t { /* 256 bytes */
     char    BM[IDLEN * 3 + 3];	    /* BMs' userid, token '/' */
     char    pad1[3];
     uint32_t brdattr;		    /* board的屬性 */
-    char    chesscountry;	    /* 棋國 */
+    char    deprecated_chesscountry;	    /* deprecated: 棋國 */
     uint8_t _vote_limit_posts;	    /* (已停用) 連署 : 文章篇數下限 */
     uint8_t vote_limit_logins;	    /* 連署 : 登入次數下限 */
     uint8_t pad2_1[1];	            /* (已停用) 連署 : 註冊時間限制 */
@@ -247,16 +247,6 @@ typedef struct boardheader_t { /* 256 bytes */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
-
-#ifdef CHESSCOUNTRY
-#define CHESSCODE_NONE   0
-#define CHESSCODE_FIVE   1
-#define CHESSCODE_CCHESS 2
-#define CHESSCODE_GO     3
-#define CHESSCODE_REVERSI 4
-#define CHESSCODE_MAX    4
-#endif /* defined(CHESSCOUNTRY) */
-
 
 #define TTLEN      64             /* Length of title */
 #define FNLEN      28             /* Length of filename */

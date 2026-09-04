@@ -982,73 +982,6 @@ a_showname(const menu_t * pm)
 	outs("此項目已損毀, 建議將其刪除！");
     pressanykey();
 }
-#ifdef CHESSCOUNTRY
-static void
-a_setchesslist(const menu_t * me)
-{
-    char buf[4];
-    char buf_list[PATHLEN];
-    char buf_photo[PATHLEN];
-    char buf_this[PATHLEN];
-    char buf_real[PATHLEN];
-    int list_exist, photo_exist;
-    fileheader_t* fhdr = me->header + me->now - me->page;
-    int n;
-
-    SNPRINTF(buf_this, "%s/%s", me->path, fhdr->filename);
-    if((n = readlink(buf_this, buf_real, sizeof(buf_real) - 1)) == -1)
-	STRLCPY(buf_real, fhdr->filename);
-    else
-	// readlink doesn't garentee zero-ended
-	buf_real[n] = 0;
-
-    if (strcmp(buf_real, "chess_list") == 0
-	    || strcmp(buf_real, "chess_photo") == 0) {
-	vmsg("不需重設！");
-	return;
-    }
-
-    SNPRINTF(buf_list, "%s/chess_list",  me->path);
-    SNPRINTF(buf_photo, "%s/chess_photo", me->path);
-
-    list_exist = dashf(buf_list);
-    photo_exist = dashd(buf_photo);
-
-    if (!list_exist && !photo_exist) {
-	vmsg("此看板非棋國！");
-	return;
-    }
-
-    getdata(b_lines, 0, "將此項目設定為 (1) 棋國名單 (2) 棋國照片檔目錄：",
-	    buf, sizeof(buf), 1);
-    if (buf[0] == '1') {
-	if (list_exist)
-	    getdata(b_lines, 0, "原有之棋國名單將被取代，請確認 (y/N)",
-		    buf, sizeof(buf), 1);
-	else
-	    buf[0] = 'y';
-
-	if (buf[0] == 'y' || buf[0] == 'Y') {
-	    Rename(buf_this, buf_list);
-	    symlink("chess_list", buf_this);
-	}
-    } else if (buf[0] == '2') {
-	if (photo_exist)
-	    getdata(b_lines, 0, "原有之棋國照片將被取代，請確認 (y/N)",
-		    buf, sizeof(buf), 1);
-	else
-	    buf[0] = 'y';
-
-	if (buf[0] == 'y' || buf[0] == 'Y') {
-	    if(strncmp(buf_photo, "man/boards/", 11) == 0 && // guarding
-		    buf_photo[11] && buf_photo[12] == '/') // guarding
-		RmTree(buf_photo);
-	    Rename(buf_this, buf_photo);
-	    symlink("chess_photo", buf_this);
-	}
-    }
-}
-#endif /* defined(CHESSCOUNTRY) */
 
 static int
 isvisible_man(const menu_t * me)
@@ -1658,11 +1591,6 @@ a_menu_rec(const char *maintitle, const char *path,
 		    a_newtitle(&me);
 		    me.page = A_INVALID_PAGE;
 		    break;
-#ifdef CHESSCOUNTRY
-		case 'L':
-		    a_setchesslist(&me);
-		    break;
-#endif
 		}
 	}
 	if (me.level >= SYSOP) {

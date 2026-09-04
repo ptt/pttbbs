@@ -543,64 +543,6 @@ setperms(unsigned int pbits, const char * const pstring[])
     return pbits;
 }
 
-#ifdef CHESSCOUNTRY
-static void
-AddingChessCountryFiles(const char* apath)
-{
-    char filename[PATHLEN];
-    char symbolicname[PATHLEN];
-    char adir[PATHLEN];
-    FILE* fp;
-    fileheader_t fh;
-
-    setadir(adir, apath);
-
-    /* creating chess country regalia */
-    SNPRINTF(filename, "%s/chess_ensign", apath);
-    close(OpenCreate(filename, O_WRONLY));
-
-    STRLCPY(symbolicname, apath);
-    stampfile(symbolicname, &fh);
-    symlink("chess_ensign", symbolicname);
-
-    strcpy(fh.title, "◇ 棋國國徽 (不能刪除，系統需要)");
-    STRLCPY(fh.owner, str_sysop);
-    append_record(adir, &fh, sizeof(fileheader_t));
-
-    /* creating member list */
-    SNPRINTF(filename, "%s/chess_list", apath);
-    if (!dashf(filename)) {
-	fp = fopen(filename, "w");
-	assert(fp);
-	fputs("棋國國名\n"
-		"帳號            階級    加入日期        等級或被誰俘虜\n"
-		"──────    ───  ─────      ───────\n",
-		fp);
-	fclose(fp);
-    }
-
-    STRLCPY(symbolicname, apath);
-    stampfile(symbolicname, &fh);
-    symlink("chess_list", symbolicname);
-
-    strcpy(fh.title, "◇ 棋國成員表 (不能刪除，系統需要)");
-    STRLCPY(fh.owner, str_sysop);
-    append_record(adir, &fh, sizeof(fileheader_t));
-
-    /* creating profession photos' dir */
-    SNPRINTF(filename, "%s/chess_photo", apath);
-    Mkdir(filename);
-
-    STRLCPY(symbolicname, apath);
-    stampfile(symbolicname, &fh);
-    symlink("chess_photo", symbolicname);
-
-    strcpy(fh.title, "◆ 棋國照片檔 (不能刪除，系統需要)");
-    STRLCPY(fh.owner, str_sysop);
-    append_record(adir, &fh, sizeof(fileheader_t));
-}
-#endif /* defined(CHESSCOUNTRY) */
-
 /* 自動設立精華區 */
 void
 setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED)
@@ -609,13 +551,6 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED
 
     setapath(genbuf, board->brdname);
     Mkdir(genbuf);
-
-#ifdef CHESSCOUNTRY
-    if (oldboard == NULL || oldboard->chesscountry != board->chesscountry)
-	if (board->chesscountry != CHESSCODE_NONE)
-	    AddingChessCountryFiles(genbuf);
-	// else // doesn't remove files..
-#endif
 }
 
 void delete_board_link(boardheader_t *bh, int bid)
@@ -913,20 +848,6 @@ m_mod_board(char *bname)
         } while (1);
         y++;
 
-#ifdef CHESSCOUNTRY
-	if (HasUserPerm(PERM_BOARD)) {
-	    SNPRINTF(genbuf, "%d", bh.chesscountry);
-	    if (getdata_str(y++, 0,
-			"設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋 (4) 黑白棋",
-			ans, sizeof(ans), NUMECHO, genbuf)){
-		newbh.chesscountry = atoi(ans);
-		if (newbh.chesscountry > CHESSCODE_MAX ||
-			newbh.chesscountry < CHESSCODE_NONE)
-		    newbh.chesscountry = bh.chesscountry;
-	    }
-	}
-#endif /* defined(CHESSCOUNTRY) */
-
 	if (HasUserPerm(PERM_BOARD)) {
 	    move(1, 0);
 	    clrtobot();
@@ -1188,15 +1109,6 @@ m_newbrd(int whatclass, int recover)
 
     newboard.level = 0;
     getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
-#ifdef CHESSCOUNTRY
-    if (getdata_str(12, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋", ans,
-		sizeof(ans), LCECHO, "0")){
-	newboard.chesscountry = atoi(ans);
-	if (newboard.chesscountry > CHESSCODE_MAX ||
-		newboard.chesscountry < CHESSCODE_NONE)
-	    newboard.chesscountry = CHESSCODE_NONE;
-    }
-#endif /* defined(CHESSCOUNTRY) */
 
     if (HasUserPerm(PERM_BOARD) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");

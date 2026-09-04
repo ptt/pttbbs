@@ -1823,18 +1823,6 @@ userlist(void)
 #else
 		show_mode = (show_mode+1) % (MAX_SHOW_MODE - 1);
 #endif
-#ifdef CHESSCOUNTRY
-		if (show_mode == 2)
-		    user_query_mode = 1;
-		else if (show_mode == 3 || show_mode == 4)
-		    user_query_mode = 2;
-		else if (show_mode == 5)
-		    user_query_mode = 3;
-		else if (show_mode == 6)
-		    user_query_mode = 4;
-		else
-		    user_query_mode = 0;
-#endif /* defined(CHESSCOUNTRY) */
 		redrawall = redraw = 1;
 		break;
 

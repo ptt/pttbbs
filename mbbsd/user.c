@@ -2,22 +2,6 @@
 #include "bbs.h"
 #include "psb.h"
 
-#ifdef CHESSCOUNTRY
-static const char * const chess_photo_name[4] = {
-    "photo_fivechess",
-    "photo_cchess",
-    "photo_connect6",
-    "photo_go",
-};
-
-static const char * const chess_type[4] = {
-    "五子棋",
-    "象棋",
-    "六子旗",
-    "圍棋",
-};
-#endif
-
 void
 ban_usermail(const userec_t *u, const char *reason) {
     assert(u);
@@ -233,24 +217,6 @@ user_display(const userec_t * u, int adminmode)
 #ifdef ASSESS
     prints("\t退文數目: %u\n", (unsigned int)u->badpost);
 #endif // ASSESS
-
-#ifdef CHESSCOUNTRY
-    {
-	int i, j;
-	FILE* fp;
-	for(i = 0; i < 2; ++i){
-	    sethomefile(genbuf, u->userid, chess_photo_name[i]);
-	    fp = fopen(genbuf, "r");
-	    if(fp != NULL){
-		for(j = 0; j < 11; ++j)
-		    fgets(genbuf, 200, fp);
-		fgets(genbuf, 200, fp);
-		prints("%12s棋國自我描述: %s", chess_type[i], genbuf + 11);
-		fclose(fp);
-	    }
-	}
-    }
-#endif
 
     if (HAS_ANGEL && adminmode)
 	prints("\t小 天 使: %s\n",
@@ -800,50 +766,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
             ++y;
 	}
 
-#ifdef CHESSCOUNTRY
-	{
-	    int j, k;
-	    FILE* fp;
-	    for(j = 0; j < 2; ++j){
-		sethomefile(genbuf, x.userid, chess_photo_name[j]);
-		fp = fopen(genbuf, "r");
-		if(fp != NULL){
-		    FILE* newfp;
-		    char mybuf[200];
-		    for(k = 0; k < 11; ++k)
-			fgets(genbuf, 200, fp);
-		    fgets(genbuf, 200, fp);
-		    chomp(genbuf);
-
-		    snprintf(mybuf, 200, "%s棋國自我描述：", chess_type[j]);
-		    getdata_buf(y, 0, mybuf, genbuf + 11, 80 - 11, DOECHO);
-		    ++y;
-
-		    sethomefile(mybuf, x.userid, chess_photo_name[j]);
-		    strcat(mybuf, ".new");
-		    if((newfp = fopen(mybuf, "w")) != NULL){
-			rewind(fp);
-			for(k = 0; k < 11; ++k){
-			    fgets(mybuf, 200, fp);
-			    fputs(mybuf, newfp);
-			}
-			fputs(genbuf, newfp);
-			fputc('\n', newfp);
-
-			fclose(newfp);
-
-			sethomefile(genbuf, x.userid, chess_photo_name[j]);
-			sethomefile(mybuf, x.userid, chess_photo_name[j]);
-			strcat(mybuf, ".new");
-
-			Rename(mybuf, genbuf);
-		    }
-		    fclose(fp);
-		}
-	    }
-	}
-#endif
-
 	if (adminmode) {
 	    int tmp;
 	    if (HasUserPerm(PERM_BBSADM)) {
@@ -1269,52 +1191,6 @@ showplans_userec(userec_t *user)
             prints(" (已累計 %d 次)", user->vl_count);
 	return;
     }
-
-#ifdef CHESSCOUNTRY
-    if (user_query_mode) {
-	int    i = 0;
-	FILE  *fp;
-
-       sethomefile(genbuf, user->userid, chess_photo_name[user_query_mode - 1]);
-	if ((fp = fopen(genbuf, "r")) != NULL)
-	{
-	    char   photo[6][ANSILINELEN];
-	    int    kingdom_bid = 0;
-	    int    win = 0, lost = 0;
-
-	    move(7, 0);
-	    while (i < 12 && fgets(genbuf, sizeof(genbuf), fp))
-	    {
-		chomp(genbuf);
-		if (i < 6)  /* 讀照片檔 */
-		    STRLCPY(photo[i], genbuf);
-		else if (i == 6)
-		    kingdom_bid = atoi(genbuf);
-		else
-		    prints("%s %s\n", photo[i - 7], genbuf);
-
-		i++;
-	    }
-	    fclose(fp);
-
-	    if (user_query_mode == 1) {
-		win = user->five_win;
-		lost = user->five_lose;
-	    } else if(user_query_mode == 2) {
-		win = user->chc_win;
-		lost = user->chc_lose;
-	    }
-	    prints("%s <總共戰績> %d 勝 %d 敗\n", photo[5], win, lost);
-
-
-	    /* 棋國國徽 */
-	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
-	    STRLCAT(genbuf, "/chess_ensign");
-	    show_file(genbuf, 13, 10, SHOWFILE_ALLOW_COLOR);
-	    return;
-	}
-    }
-#endif /* defined(CHESSCOUNTRY) */
 
     sethomefile(genbuf, user->userid, fn_plans);
     if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
