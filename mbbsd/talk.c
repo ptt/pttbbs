@@ -660,18 +660,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    case SIG_GOMO:
 			gomoku(msgsock, CHESS_MODE_WATCH);
 			break;
-
-		    case SIG_GO:
-			gochess(msgsock, CHESS_MODE_WATCH);
-			break;
-
-		    case SIG_REVERSI:
-			reversi(msgsock, CHESS_MODE_WATCH);
-			break;
-
-		    case SIG_CONN6:
-			connect6(msgsock, CHESS_MODE_WATCH);
-			break;
 		}
 	    }
 	}
@@ -711,10 +699,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    outc('\n');
 		}
 	    }
-	    move(4, 0);
-	    outs("要和他(她) (T)談天(F)五子棋"
-		    "(C)象棋(D)暗棋(G)圍棋(R)黑白棋(6)六子旗");
-	    getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+	    getdata(4, 0, "要和對方 (T)談天(F)五子棋(C)象棋(N)取消?[N] ",
+                    genbuf, 4, LCECHO);
 	}
 
 	switch (*genbuf) {
@@ -729,19 +715,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	case 'c':
 	    lockreturn(CHC, LOCK_THIS);
 	    uin->sig = SIG_CHC;
-	    break;
-	case '6':
-	    lockreturn(M_CONN6, LOCK_THIS);
-	    uin->sig = SIG_CONN6;
-	    break;
-	case 'd':
-	    uin->sig = SIG_DARK;
-	    break;
-	case 'g':
-	    uin->sig = SIG_GO;
-	    break;
-	case 'r':
-	    uin->sig = SIG_REVERSI;
 	    break;
 	default:
 	    return;
@@ -769,9 +742,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	close(sock);
 	currutmp->sockactive = NA;
 
-	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO ||
-	    uin->sig == SIG_GO || uin->sig == SIG_REVERSI ||
-	    uin->sig == SIG_CONN6)
+	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO)
 	    ChessEstablishRequest(msgsock);
 
 	vkey_attach(msgsock);
@@ -792,23 +763,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 	if (c == 'y') {
 	    switch (uin->sig) {
-	    case SIG_DARK:
-		main_dark(msgsock, uin);
-		break;
 	    case SIG_GOMO:
 		gomoku(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_CHC:
 		chc(msgsock, CHESS_MODE_VERSUS);
-		break;
-	    case SIG_GO:
-		gochess(msgsock, CHESS_MODE_VERSUS);
-		break;
-	    case SIG_REVERSI:
-		reversi(msgsock, CHESS_MODE_VERSUS);
-		break;
-	    case SIG_CONN6:
-		connect6(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_TALK:
 	    default:
@@ -820,18 +779,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    move(9, 9);
 	    outs("【回音】 ");
 	    switch (c) {
-	    case 'a':
-		outs("我現在很忙，請等一會兒再 call 我，好嗎？");
-		break;
-	    case 'b':
-		prints("對不起，我有事情不能跟你 %s....", sig_des[uin->sig]);
-		break;
-	    case 'd':
-		outs("我要離站囉..下次再聊吧..........");
-		break;
-	    case 'c':
-		outs("請不要吵我好嗎？");
-		break;
 	    case 'e':
 		outs("找我有事嗎？請先來信唷....");
 		break;
@@ -840,19 +787,13 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    char            msgbuf[60];
 
 		    read(msgsock, msgbuf, 60);
-		    prints("對不起，我現在不能跟你 %s，因為\n", sig_des[uin->sig]);
+		    prints("我現在不方便 %s，因為\n", sig_des[uin->sig]);
 		    move(10, 18);
 		    outs(msgbuf);
 		}
 		break;
-	    case '1':
-		prints("%s？先拿$100來..", sig_des[uin->sig]);
-		break;
-	    case '2':
-		prints("%s？先拿$1000來..", sig_des[uin->sig]);
-		break;
 	    default:
-		prints("我現在不想 %s 啦.....:)", sig_des[uin->sig]);
+		prints("我現在不方便 %s .....:)", sig_des[uin->sig]);
 	    }
 	    close(msgsock);
 	}
@@ -2175,8 +2116,7 @@ talkreply(void)
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
-    is_chess = (sig == SIG_CHC || sig == SIG_GOMO || sig == SIG_CONN6 ||
-		sig == SIG_GO || sig == SIG_REVERSI);
+    is_chess = (sig == SIG_CHC || sig == SIG_GOMO);
 
     a = reply_connection_request(uip);
     if (a < 0) {
@@ -2192,17 +2132,10 @@ talkreply(void)
     outs("\n\n");
     // FIXME CRASH here
     assert(sig>=0 && sig<(int) ARRAY_SIZE(sig_des));
-    prints("       (Y) 讓我們 %s 吧！"
-	   "       (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
-    prints("       (N) 我現在不想 %s "
-	   "       (B) 對不起，我有事情不能跟你 %s\n",
-	    sig_des[sig], sig_des[sig]);
-    prints("       (C) 請不要吵我好嗎？"
-	   "       (D) 我要離站囉..下次再聊吧.......\n");
-    prints("       (E) 有事嗎？請先來信"
-	   "       (F) " ANSI_COLOR(1;33) "<自行輸入理由>..." ANSI_RESET "\n");
-    prints("       (1) %s？先拿$100來"
-	   "       (2) %s？先拿$1000來..\n\n", sig_des[sig], sig_des[sig]);
+    prints("       (Y) 讓我們 %s 吧！\n", sig_des[sig]);
+    prints("       (N) 我現在不方便 %s。\n", sig_des[sig]);
+    prints("       (E) 有事嗎？請先來信\n");
+    prints("       (F) " ANSI_COLOR(1;33) "<自行輸入理由>..." ANSI_RESET "\n\n");
 
     getuser(uip->userid, &xuser);
     currutmp->msgs[0].pid = uip->pid;
@@ -2223,7 +2156,7 @@ talkreply(void)
 	    uip->userid, uip->nickname, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
-    if (!buf[0] || !strchr("yabcdef12", buf[0]))
+    if (!buf[0] || !strchr("yef", buf[0]))
 	buf[0] = 'n';
 
     sig_pipe_handle = Signal(SIGPIPE, SIG_IGN);
@@ -2247,23 +2180,11 @@ talkreply(void)
     uip->destuip = get_utmp_id(currutmp);
     if (buf[0] == 'y')
 	switch (sig) {
-	case SIG_DARK:
-	    main_dark(a, uip);
-	    break;
 	case SIG_GOMO:
 	    gomoku(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_CHC:
 	    chc(a, CHESS_MODE_VERSUS);
-	    break;
-	case SIG_GO:
-	    gochess(a, CHESS_MODE_VERSUS);
-	    break;
-	case SIG_REVERSI:
-	    reversi(a, CHESS_MODE_VERSUS);
-	    break;
-	case SIG_CONN6:
-	    connect6(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_TALK:
 	default:

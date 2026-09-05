@@ -55,9 +55,6 @@ struct ChessReplayMap_t {
 static const struct ChessReplayMap_t ChessReplayMap[] = {
     { "gomoku", 6, &gomoku_replay },
     { "chc",    3, &chc_replay },
-    { "go",     2, &gochess_replay },
-    { "reversi",7, &reversi_replay },
-    { "connect6",8, &conn6_replay },
     { NULL     ,0, NULL }
 };
 

@@ -342,18 +342,6 @@ pwcuChessResult(int sigType, ChessGameResult r)
 	    u_tie     = &(        u.chc_tie);
 	    break;
 
-	case SIG_GO:
-	    utmp_win  = &(currutmp->go_win);
-	    utmp_lose = &(currutmp->go_lose);
-	    utmp_tie  = &(currutmp->go_tie);
-	    cuser_win = &(    cuser.go_win);
-	    cuser_lose= &(    cuser.go_lose);
-	    cuser_tie = &(    cuser.go_tie);
-	    u_win     = &(        u.go_win);
-	    u_lose    = &(        u.go_lose);
-	    u_tie     = &(        u.go_tie);
-	    break;
-
 	case SIG_GOMO:
 	    utmp_win  = &(currutmp->five_win);
 	    utmp_lose = &(currutmp->five_lose);
@@ -364,31 +352,6 @@ pwcuChessResult(int sigType, ChessGameResult r)
 	    u_win     = &(        u.five_win);
 	    u_lose    = &(        u.five_lose);
 	    u_tie     = &(        u.five_tie);
-	    break;
-
-        case SIG_DARK:
-	    utmp_win  = &(currutmp->dark_win);
-	    utmp_lose = &(currutmp->dark_lose);
-	    utmp_tie  = &(currutmp->dark_tie);
-	    cuser_win = &(    cuser.dark_win);
-	    cuser_lose= &(    cuser.dark_lose);
-	    cuser_tie = &(    cuser.dark_tie);
-	    u_win     = &(        u.dark_win);
-	    u_lose    = &(        u.dark_lose);
-	    u_tie     = &(        u.dark_tie);
-            break;
-
-
-	case SIG_CONN6:
-	    utmp_win  = &(currutmp->conn6_win);
-	    utmp_lose = &(currutmp->conn6_lose);
-	    utmp_tie  = &(currutmp->conn6_tie);
-	    cuser_win = &(    cuser.conn6_win);
-	    cuser_lose= &(    cuser.conn6_lose);
-	    cuser_tie = &(    cuser.conn6_tie);
-	    u_win     = &(        u.conn6_win);
-	    u_lose    = &(        u.conn6_lose);
-	    u_tie     = &(        u.conn6_tie);
 	    break;
 
 	default:
