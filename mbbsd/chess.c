@@ -118,17 +118,6 @@ ChessBroadcastListClear(ChessBroadcastList* list)
     }
 }
 
-static ChessBroadcastListNode*
-ChessBroadcastListInsert(ChessBroadcastList* list)
-{
-    ChessBroadcastListNode* p =
-	(ChessBroadcastListNode*) malloc(sizeof(ChessBroadcastListNode));
-
-    p->next = list->head.next;
-    list->head.next = p;
-    return p;
-}
-
 static void
 ChessDrawHelpLine(const ChessInfo* info)
 {
@@ -872,36 +861,6 @@ ChessPlayFuncWatch(ChessInfo* info)
 }
 
 static void
-ChessWatchRequest(int sig GCC_UNUSED)
-{
-    int sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
-    ChessBroadcastListNode* node;
-
-    if (sock < 0 || !CurrentPlayingGameInfo)
-	return;
-
-    node = ChessBroadcastListInsert(&CurrentPlayingGameInfo->broadcast_list);
-    node->sock = sock;
-
-#define SEND(X) write(sock, &(X), sizeof(X))
-    SEND(CurrentPlayingGameInfo->myturn);
-    SEND(CurrentPlayingGameInfo->turn);
-
-    if (!CurrentPlayingGameInfo->timelimit)
-	write(sock, "T", 1);
-    else {
-	write(sock, "L", 1);
-	SEND(*(CurrentPlayingGameInfo->timelimit));
-    }
-
-    SEND(CurrentPlayingGameInfo->history.used);
-    write(sock, CurrentPlayingGameInfo->history.body,
-	    CurrentPlayingGameInfo->constants->step_entry_size
-	    * CurrentPlayingGameInfo->history.used);
-#undef SEND
-}
-
-static void
 ChessReceiveWatchInfo(ChessInfo* info)
 {
     char time_mode;
@@ -1033,15 +992,10 @@ ChessPlay(ChessInfo* info)
     CurrentPlayingGameInfo = info;
 
     {
-	char buf[4] = "";
 	sigset_t sigset;
 
-	if(info->mode == CHESS_MODE_VERSUS)
-	    getdata(b_lines, 0, "是否接受觀棋? (Y/n)", buf, sizeof(buf), DOECHO);
-	if(buf[0] == 'n' || buf[0] == 'N')
-	    old_handler = Signal(SIGUSR1, SIG_IGN);
-	else
-	    old_handler = Signal(SIGUSR1, &ChessWatchRequest);
+        // Previously for ChessWatchPlay
+        old_handler = Signal(SIGUSR1, SIG_IGN);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);

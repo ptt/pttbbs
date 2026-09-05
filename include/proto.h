@@ -190,16 +190,12 @@ int psb_comment_manager(const char *board, const char *file);
 void chc(int s, ChessGameMode mode);
 int chc_main(void);
 int chc_personal(void);
-int chc_watch(void);
 ChessInfo* chc_replay(FILE* fp);
 
 /* chicken */
 int chicken_main(void);
 void chicken_query(const char *userid);
 void chicken_toggle_death(const char *uid);
-
-/* dark */
-int main_dark(int fd,userinfo_t *uin);
 
 /* dice */
 int dice_main(void);
@@ -289,26 +285,11 @@ int ticket(int bid);
 int hold_gamble(void);
 int join_gamble(int, const fileheader_t *, const char *);
 
-/* go */
-void gochess(int s, ChessGameMode mode);
-int gochess_main(void);
-int gochess_personal(void);
-int gochess_watch(void);
-ChessInfo* gochess_replay(FILE* fp);
-
 /* gomo */
 void gomoku(int s, ChessGameMode mode);
 int gomoku_main(void);
 int gomoku_personal(void);
-int gomoku_watch(void);
 ChessInfo* gomoku_replay(FILE* fp);
-
-/* connect6 */
-void connect6(int s, ChessGameMode mode);
-int conn6_main(void);
-int conn6_personal(void);
-int conn6_watch(void);
-ChessInfo* conn6_replay(FILE* fp);
 
 /* guess */
 int guess_main(void);
@@ -593,13 +574,6 @@ int change_contact_email(bool skip_same_email_check);
 
 /* register_sms */
 void u_sms_verification();
-
-/* reversi */
-void reversi(int s, ChessGameMode mode);
-int reversi_main(void);
-int reversi_personal(void);
-int reversi_watch(void);
-ChessInfo* reversi_replay(FILE* fp);
 
 /* screen/pfterm (ncurses-like) */
 void initscr	(void);

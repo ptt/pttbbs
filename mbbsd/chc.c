@@ -796,7 +796,6 @@ count_chess_elo_rating(ChessUser* user1, const ChessUser* user2, double myres)
 /* 象棋功能進入點:
  * chc_main: 對奕
  * chc_personal: 打譜
- * chc_watch: 觀棋
  * talk.c: 對奕
  */
 void
@@ -891,12 +890,6 @@ chc_personal(void)
 {
     chc(0, CHESS_MODE_PERSONAL);
     return 0;
-}
-
-int
-chc_watch(void)
-{
-    return ChessWatchGame(&chc, CHC, "楚河漢界之爭");
 }
 
 ChessInfo*

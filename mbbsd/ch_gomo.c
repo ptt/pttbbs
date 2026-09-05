@@ -545,12 +545,6 @@ gomoku_personal(void)
     return 0;
 }
 
-int
-gomoku_watch(void)
-{
-    return ChessWatchGame(&gomoku, M_FIVE, "¤­¤l´Ñ");
-}
-
 ChessInfo*
 gomoku_replay(FILE* fp)
 {
