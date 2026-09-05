@@ -323,8 +323,6 @@ cmputmpchc(const void * i, const void * j)
 
     // NOTE: 目前 "別找我下棋" 不影響排序
     /* 1. "找我下棋" 排最前面 */
-    if ((a->withme&WITHME_CHESS)!=(b->withme&WITHME_CHESS))
-	return (a->withme&WITHME_CHESS)?-1:1;
 #ifdef CHC_SORTBY_RATING
     /* 2. 下超過十盤棋用等級分排序 */
     if ((total_a>=10)!=(total_b>=10))

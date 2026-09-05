@@ -763,10 +763,6 @@ setup_utmp(int mode)
     uinfo.dark_tie    = cuser.dark_tie;
     uinfo.invisible = (cuser.invisible % 2) && (!HasUserPerm(PERM_VIOLATELAW));
     uinfo.pager	    = cuser.pager % PAGER_MODES;
-    uinfo.withme    = cuser.withme & ~WITHME_ALLFLAG;
-
-    if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
-	uinfo.withme = 0;
 
     getnewutmpent(&uinfo);
 

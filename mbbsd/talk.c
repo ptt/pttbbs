@@ -6,11 +6,10 @@
 static char    * const sig_des[] = {
     "", "交談", "", "五子棋", "象棋", "暗棋", "圍棋", "黑白棋", "六子旗",
 };
-static char    * const withme_str[] = {
-  "談天", "五子棋", "", "象棋", "暗棋", "圍棋", "黑白棋", "六子旗", NULL
+static const char *MODE_STRING[] = {
+    "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
 };
-
-#define MAX_SHOW_MODE 7
+#define MAX_SHOW_MODE ARRAY_SIZE(MODE_STRING)
 /* M_INT: monitor mode update interval */
 #define M_INT 15
 /* P_INT: interval to check for page req. in talk/chat */
@@ -633,12 +632,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
-	ch == DARK || ch == UMODE_GO || ch == CHESSWATCHING || ch == REVERSI ||
-	ch == M_CONN6 ||
-	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
+	ch == CHESSWATCHING  ||
+		(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == M_CONN6 || uin->lockmode == CHC) {
-	if (ch == CHC || ch == M_FIVE || ch == UMODE_GO ||
-	    ch == M_CONN6 || ch == CHESSWATCHING || ch == REVERSI) {
+	if (ch == CHC || ch == M_FIVE || ch == CHESSWATCHING) {
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
@@ -679,26 +676,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	//resetutmpent();
 	outs(msg_usr_left);
     } else {
-	int i,j;
-
 	if (!defact) {
 	    showplans(uin->userid);
-	    move(2, 0);
-	    for(i=0;i<2;i++) {
-		if(uin->withme & (WITHME_ALLFLAG<<i)) {
-		    if(i==0)
-			outs("歡迎跟我：");
-		    else
-			outs("請別找我：");
-		    for(j=0; j<32 && withme_str[j/2]; j+=2)
-			if(uin->withme & (1<<(j+i)))
-			    if(withme_str[j/2]) {
-				outs(withme_str[j/2]);
-				outc(' ');
-			    }
-		    outc('\n');
-		}
-	    }
 	    getdata(4, 0, "要和對方 (T)談天(F)五子棋(C)象棋(N)取消?[N] ",
                     genbuf, 4, LCECHO);
 	}
@@ -832,7 +811,6 @@ static const char
     "  增加好友",    "a",
     "  刪除好友",    "d",
     "  修改好友",    "o",
-    "  互動回應方式","y",
     NULL,
 },
 *hlp_talkdisp[] = {
@@ -937,52 +915,28 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
 static const char    *
 descript(int show_mode, const userinfo_t * uentp, int diff, char *description, int len)
 {
+    // Map to MODE_STRING
     switch (show_mode) {
-    case 1:
-	return friend_descript(uentp, description, len);
     case 0:
 	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
 		 HasUserPerm(PERM_SYSOP)) ?  uentp->from : "*");
+    case 1:
+	return friend_descript(uentp, description, len);
     case 2:
-	snprintf(description, len, "%4d/%4d/%2d %c",
-                 uentp->five_win, uentp->five_lose, uentp->five_tie,
-		 (uentp->withme&WITHME_FIVE)?'o':
-                 (uentp->withme&WITHME_NOFIVE)?'x':' ');
+	snprintf(description, len, "%4d/%4d/%2d",
+                 uentp->five_win, uentp->five_lose, uentp->five_tie);
 	return description;
     case 3:
-	snprintf(description, len, "%4d/%4d/%2d %c",
-                 uentp->chc_win, uentp->chc_lose, uentp->chc_tie,
-		 (uentp->withme&WITHME_CHESS)?'o':
-                 (uentp->withme&WITHME_NOCHESS)?'x':' ');
+	snprintf(description, len, "%4d/%4d/%2d",
+                 uentp->chc_win, uentp->chc_lose, uentp->chc_tie);
 	return description;
     case 4:
 	snprintf(description, len,
-		 "%4d %s", uentp->chess_elo_rating,
-		 (uentp->withme&WITHME_CHESS)?"找我下棋":
-                 (uentp->withme&WITHME_NOCHESS)?"別找我":"");
-	return description;
-    case 5:
-	snprintf(description, len, "%4d/%4d/%2d %c",
-                 uentp->go_win, uentp->go_lose, uentp->go_tie,
-		 (uentp->withme&WITHME_GO)?'o':
-                 (uentp->withme&WITHME_NOGO)?'x':' ');
-	return description;
-    case 6:
-	snprintf(description, len, "%4d/%4d/%2d %c",
-                 uentp->dark_win, uentp->dark_lose, uentp->dark_tie,
-		 (uentp->withme&WITHME_DARK)?'o':
-                 (uentp->withme&WITHME_NODARK)?'x':' ');
-	return description;
-    case 7:
-	snprintf(description, len, "%s",
-		 (uentp->withme&WITHME_CONN6)?"找我下棋":
-                 (uentp->withme&WITHME_NOCONN6)?"別找我":"");
+		 "%4d", uentp->chess_elo_rating);
 	return description;
 
     default:
-	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
-	       show_mode);
-	return "";
+        return "";
     }
 }
 
@@ -1224,10 +1178,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
         "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
         " 五子棋 ", "  象棋  ", "  圍棋  ",
     };
-    char           *MODE_STRING[MAX_SHOW_MODE] = {
-	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分", "圍棋戰績",
-        "暗棋戰績",
-    };
     char            pagerchar[6] = "* -Wf";
 
     userinfo_t     *uentp;
@@ -1383,49 +1333,6 @@ if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
 		idlestr,
 	        "");
     }
-}
-
-void set_withme_flag(void)
-{
-    int i;
-    char genbuf[20];
-    int line;
-
-    move(1, 0);
-    clrtobot();
-
-    do {
-	move(1, 0);
-	line=1;
-	for(i=0; i<16 && withme_str[i]; i++) {
-	    clrtoeol();
-            if (!*withme_str[i])
-                continue;
-	    if(currutmp->withme&(1<<(i*2)))
-		prints("[%c] 我很想跟人%s, 歡迎任何人找我\n",'a'+i, withme_str[i]);
-	    else if(currutmp->withme&(1<<(i*2+1)))
-		prints("[%c] 我不太想%s\n",'a'+i, withme_str[i]);
-	    else
-		prints("[%c] (%s)沒意見\n",'a'+i, withme_str[i]);
-	    line++;
-	}
-	getdata(line,0,"用字母切換 [想/不想/沒意見]",genbuf, sizeof(genbuf), DOECHO);
-	for(i=0;genbuf[i];i++) {
-	    int ch=genbuf[i];
-	    ch=tolower(ch);
-	    if('a'<=ch && ch<'a'+16) {
-		ch-='a';
-		if(currutmp->withme&(1<<ch*2)) {
-		    currutmp->withme&=~(1<<ch*2);
-		    currutmp->withme|=1<<(ch*2+1);
-		} else if(currutmp->withme&(1<<(ch*2+1))) {
-		    currutmp->withme&=~(1<<(ch*2+1));
-		} else {
-		    currutmp->withme|=1<<(ch*2);
-		}
-	    }
-	}
-    } while(genbuf[0]!='\0');
 }
 
 static int
@@ -1759,11 +1666,7 @@ userlist(void)
 		break;
 
 	    case 'S':		/* 顯示好友描述 */
-#ifdef HAVE_DARK_CHESS_LOG
-		show_mode = (show_mode+1) % MAX_SHOW_MODE;
-#else
-		show_mode = (show_mode+1) % (MAX_SHOW_MODE - 1);
-#endif
+                show_mode = (show_mode + 1) % MAX_SHOW_MODE;
 		redrawall = redraw = 1;
 		break;
 
@@ -1948,11 +1851,6 @@ userlist(void)
 		    }
 		    redrawall = redraw = 1;
 		}
-		break;
-
-	    case 'y':
-		set_withme_flag();
-		redrawall = redraw = 1;
 		break;
 
 	    default:
