@@ -25,7 +25,7 @@ endif
 
 # Common build flags
 
-PTT_WARN:=	-W -Wall -Wunused -Werror=format \
+PTT_WARN:=	-Wall -Wextra -Wformat=2 \
 		-Wno-missing-field-initializers -Wno-address-of-packed-member
 PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
