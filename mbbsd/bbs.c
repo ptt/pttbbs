@@ -1058,7 +1058,8 @@ deleteCrossPost(const fileheader_t *fhdr, char *bname)
         // These files (in BN_ALLPOST etc) have '.BOARDªO' or '(BOARD)' refrence
         // in title
         int bnlen;
-	char bnbuf[IDLEN + 1] = "", *bn;
+	char bnbuf[IDLEN + 1] = "";
+        const char *bn;
 
         if (*fhdr->title && fhdr->title[strlen(fhdr->title) - 1] == ')') {
             // new format:  (BOARD)
@@ -3027,7 +3028,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     // warn if in non-standard mode
     {
-	char *p = strrchr(direct, '/');
+	const char *p = strrchr(direct, '/');
 	// allow .DIR or .DIR.bottom
 	if (!p || strncmp(p+1, FN_DIR, strlen(FN_DIR)) != 0)
 	{
