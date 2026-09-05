@@ -36,6 +36,10 @@ PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
 		-fcolor-diagnostics -Wno-invalid-source-encoding \
 		-Werror
 PTT_CXXFLAGS+=	-Wno-invalid-source-encoding
+else
+PTT_CFLAGS+=	-Wno-format-truncation \
+                -Wno-incompatible-pointer-types \
+                -Wno-implicit-fallthrough
 endif
 
 # enable assert()
