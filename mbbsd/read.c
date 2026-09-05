@@ -578,7 +578,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	    return DONOTHING;
 
 	if (sr_mode & RS_TITLE) {
-	    strlcpy(keyword, subject(fh->title), STRLEN);
+	    strlcpy(keyword, subject(fh->title), TTLEN);
 	}
     }
     *success = 1;
@@ -1002,8 +1002,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                     onekey_func0 func0 = (onekey_func0)(void *)func;
 		    mode = (*func0)();
                 } else if( num > 0 ) {
-		    char    direct[60];
-                    sprintf(direct,"%s.bottom", currdirect);
+		    char    direct[64 + 8];
+                    SNPRINTF(direct, "%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
 				  direct, locmem->crs_ln - locmem->top_ln);
 		} else {

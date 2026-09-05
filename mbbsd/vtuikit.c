@@ -346,7 +346,7 @@ vshowmsg(const char *msg)
 	vpad(w - w/2, VMSG_PAUSE_PAD);
     } else {
 	// print in left, with floating (if \t exists)
-	char *pfloat = strchr(msg, '\t');
+	const char *pfloat = strchr(msg, '\t');
 	int  szfloat = 0;
 	int  nmsg = 0;
 

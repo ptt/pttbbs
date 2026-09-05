@@ -335,7 +335,7 @@ search_key_user(const char *passwdfile, int mode)
     int             unum = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
     char            friendfile[PATHLEN]="";
-    const char	    *keymatch;
+    const char	    *keymatch = NULL;
     int	            isCurrentPwd;
     userec_filter_t ufs[MAX_USEREC_FILTERS];
     size_t	    num_ufs = 0;

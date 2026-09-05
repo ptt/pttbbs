@@ -156,7 +156,7 @@ ccw_separators(CCW_CTX *ctx)
     outc('\n');
 
     i = ctx->sep_msg_width ? ctx->sep_msg_width :
-        ctx->sep_msg ? strlen(ctx->sep_msg) : 0;
+        ctx->sep_msg ? (int)strlen(ctx->sep_msg) : 0;
     move(CCW_STOP_LINE, 0);
     vpad(t_columns - 2 - i, "¢w");
     if (i) outs(ctx->sep_msg);
