@@ -3,8 +3,10 @@
 
 #define QCAST   int (*)(const void *, const void *)
 
-static char    * const sig_des[] = {
-    "", "交談", "", "五子棋", "象棋", "暗棋", "圍棋", "黑白棋", "六子旗",
+static char * const sig_descriptions[] = {
+    [SIG_TALK] = "交談",
+    [SIG_GOMO] ="五子棋",
+    [SIG_CHC] = "象棋",
 };
 static const char *MODE_STRING[] = {
     "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
@@ -35,6 +37,15 @@ static char    * const fcolor[11] = {
 
 static userinfo_t *uip;
 
+const char *get_sig_des(int sig)
+{
+    if (sig < 0 || sig >= (int)ARRAY_SIZE(sig_descriptions))
+        return "";
+    const char *r = sig_descriptions[sig];
+    if (!r)
+        return "";
+    return r;
+}
 int
 isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat)
 {
@@ -769,13 +780,13 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    char            msgbuf[60];
 
 		    read(msgsock, msgbuf, 60);
-		    prints("我現在不方便 %s，因為\n", sig_des[uin->sig]);
+		    prints("我現在不方便 %s，因為\n", get_sig_des(uin->sig));
 		    move(10, 18);
 		    outs(msgbuf);
 		}
 		break;
 	    default:
-		prints("我現在不方便 %s .....:)", sig_des[uin->sig]);
+		prints("我現在不方便 %s .....:)", get_sig_des(uin->sig));
 	    }
 	    close(msgsock);
 	}
@@ -2029,9 +2040,8 @@ talkreply(void)
 
     outs("\n\n");
     // FIXME CRASH here
-    assert(sig>=0 && sig<(int) ARRAY_SIZE(sig_des));
-    prints("       (Y) 讓我們 %s 吧！\n", sig_des[sig]);
-    prints("       (N) 我現在不方便 %s。\n", sig_des[sig]);
+    prints("       (Y) 讓我們 %s 吧！\n", get_sig_des(sig));
+    prints("       (N) 我現在不方便 %s。\n", get_sig_des(sig));
     prints("       (E) 有事嗎？請先來信\n");
     prints("       (F) " ANSI_COLOR(1;33) "<自行輸入理由>..." ANSI_RESET "\n\n");
 
@@ -2051,7 +2061,7 @@ talkreply(void)
     }
 
     SNPRINTF(genbuf, "你想跟 %s (%s) %s嗎？請選擇[N]: ",
-	    uip->userid, uip->nickname, sig_des[sig]);
+	    uip->userid, uip->nickname, get_sig_des(sig));
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
     if (!buf[0] || !strchr("yef", buf[0]))
