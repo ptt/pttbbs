@@ -9,6 +9,12 @@ static char    * const sig_des[] = {
 static const char *MODE_STRING[] = {
     "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
 };
+// this must map to SHM->sorted[active].
+char           *MSG_PICKUP_WAY[] = {
+    "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
+    " 五子棋 ", "  象棋  "
+};
+#define PICKUP_WAYS ARRAY_SIZE(MSG_PICKUP_WAY)
 #define MAX_SHOW_MODE ARRAY_SIZE(MODE_STRING)
 /* M_INT: monitor mode update interval */
 #define M_INT 15
@@ -20,9 +26,6 @@ typedef struct pickup_t {
     userinfo_t     *ui;
     int             friend, uoffset;
 }               pickup_t;
-
-// If you want to change this, you have to change shm structure and shmctl.c
-#define PICKUP_WAYS     8
 
 static char    * const fcolor[11] = {
     NULL, ANSI_COLOR(36), ANSI_COLOR(32), ANSI_COLOR(1;32),
@@ -1131,6 +1134,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     if (!(HasUserFlag(UF_FRIEND)) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 7 : (pickup_way - 1));
+        assert(sorted_way <= (int)ARRAY_SIZE(SHM->sorted[0]));
 	ulist = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
 	if (which < 0)
@@ -1174,10 +1178,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int page, int show_mode, int show_uid, int show_board,
 	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
 {
-    char           *msg_pickup_way[PICKUP_WAYS] = {
-        "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
-        " 五子棋 ", "  象棋  ", "  圍棋  ",
-    };
     char            pagerchar[6] = "* -Wf";
 
     userinfo_t     *uentp;
@@ -1253,7 +1253,7 @@ if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
 	   ANSI_COLOR(36) "板友:%-4d "
 	   ANSI_COLOR(31) "壞人:%-2d"
 	   ANSI_RESET "\n",
-	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
+	   MSG_PICKUP_WAY[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
 
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
