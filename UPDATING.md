@@ -145,7 +145,7 @@ banip 的 record size 由 `unsigned long` 改為 `in_addr_t`。
 ## r5640: `[build]`
 
 Makefile 調整，現在會自動偵測系統內有無 `ccache` 與 `clang`；有的話就自動啟用（`clang` 的優先權高於 `gcc`）。建議使用 `clang 3.0` 以上的版本。
-若不想使用 `clang` 請加上參數: `make -DWITHOUT_CLANG`
+若不想使用 `clang` 請加上參數: `make WITHOUT_CLANG=1`
 
 ## r5540: `[configs]`
 

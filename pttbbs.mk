@@ -8,17 +8,17 @@ OSTYPE:=	$(shell uname)
 CC:=		gcc
 CXX:=		g++
 
-CLANG:=		$(shell command -v clang >/dev/null 2>&1 && echo 1 || echo 0)
-CCACHE:=	$(shell command -v ccache >/dev/null 2>&1 && echo 1 || echo 0)
+CLANG:=		$(strip $(shell command -v clang >/dev/null 2>&1 && echo 1 || echo 0))
+CCACHE:=	$(strip $(shell command -v ccache >/dev/null 2>&1 && echo 1 || echo 0))
 
 ifdef WITHOUT_CLANG
-CLANG:=
-else ifneq ($(strip $(CLANG)),0)
+CLANG:=		0
+else ifeq ($(CLANG),1)
 CC:=		clang
 CXX:=		clang++
 endif
 
-ifneq ($(strip $(CCACHE)),0)
+ifeq ($(CCACHE),1)
 CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
 endif
@@ -26,14 +26,15 @@ endif
 # Common build flags
 
 PTT_WARN:=	-W -Wall -Wunused -Werror=format \
-		-Wno-missing-field-initializers -Wno-address-of-packed-member \
-		-Werror
+		-Wno-missing-field-initializers -Wno-address-of-packed-member
 PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
-ifneq ($(strip $(CLANG)),0)
+
+ifeq ($(CLANG),1)
 PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
-		-fcolor-diagnostics -Wno-invalid-source-encoding
+		-fcolor-diagnostics -Wno-invalid-source-encoding \
+		-Werror
 PTT_CXXFLAGS+=	-Wno-invalid-source-encoding
 endif
 
