@@ -523,7 +523,6 @@ pwcuExitSave	()
 {
     // determine dirty
     if (pwcu_dirty	||
-	cuser.withme	!= currutmp->withme ||
 	cuser.pager	!= currutmp->pager  ||
 	cuser.invisible != currutmp->invisible)
     {
@@ -535,7 +534,6 @@ pwcuExitSave	()
 	// dirty cache, however maybe it's not that important.
 
 	// configure new utmp values
-	u.withme    = currutmp->withme;
 	u.pager     = currutmp->pager;
 	u.invisible = currutmp->invisible;
 

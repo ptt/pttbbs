@@ -130,7 +130,7 @@ typedef struct userec_t {
     char	pad_3;
 
     uint16_t	chess_elo_rating;/* 象棋等級分 */
-    uint32_t    withme;	 	 /* 我想找人下棋，聊天.... */
+    uint32_t    deprecated_withme;	 	 /* 我想找人下棋，聊天.... */
     time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
     time4_t	timeviolatelaw;  /* 被開罰單時間 */
 
@@ -145,23 +145,6 @@ typedef struct userec_t {
 # define cuser_ref   (&cuser)
 # define cuser	     pwcuser
 #endif
-
-/* flags in userec_t.withme */
-#define WITHME_ALLFLAG	0x55555555
-#define WITHME_TALK	0x00000001
-#define WITHME_NOTALK	0x00000002
-#define WITHME_FIVE	0x00000004
-#define WITHME_NOFIVE	0x00000008
-#define WITHME_PAT	0x00000010
-#define WITHME_NOPAT	0x00000020
-#define WITHME_CHESS	0x00000040
-#define WITHME_NOCHESS	0x00000080
-#define WITHME_DARK	0x00000100
-#define WITHME_NODARK	0x00000200
-#define WITHME_GO	0x00000400
-#define WITHME_NOGO	0x00000800
-#define WITHME_CONN6	0x00001000
-#define WITHME_NOCONN6	0x00002000
 
 #define BTLEN      48             /* Length of board title */
 
@@ -424,7 +407,7 @@ typedef struct userinfo_t {
     uint16_t go_tie;
 
     /* misc */
-    unsigned int    withme;
+    unsigned int    deprecated_withme;
     unsigned int    brc_id;
 
 } userinfo_t;
