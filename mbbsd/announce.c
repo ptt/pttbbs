@@ -946,7 +946,7 @@ a_editsign(const menu_t * pm)
 static void
 a_showname(const menu_t * pm)
 {
-    char            buf[PATHLEN];
+    char            buf[PATHLEN], target[PATHLEN];
     int             len;
     int             i;
     int             sym;
@@ -956,21 +956,21 @@ a_showname(const menu_t * pm)
     if (dashl(buf)) {
 	prints("此 symbolic link 名稱為 %s\n",
 	       pm->header[pm->now - pm->page].filename);
-	if ((len = readlink(buf, buf, PATHLEN - 1)) >= 0) {
-	    buf[len] = '\0';
-	    for (i = 0; BBSHOME[i] && buf[i] == BBSHOME[i]; i++);
-	    if (!BBSHOME[i] && buf[i] == '/') {
+	if ((len = readlink(buf, target, sizeof(target) - 1)) >= 0) {
+	    target[len] = '\0';
+	    for (i = 0; BBSHOME[i] && target[i] == BBSHOME[i]; i++);
+	    if (!BBSHOME[i] && target[i] == '/') {
 		if (HasUserPerm(PERM_BBSADM))
 		    sym = 1;
 		else {
 		    sym = 0;
-		    for (i++; BBSHOME "/man"[i] && buf[i] == BBSHOME "/man"[i];
+		    for (i++; BBSHOME "/man"[i] && target[i] == BBSHOME "/man"[i];
 			 i++);
-		    if (!BBSHOME "/man"[i] && buf[i] == '/')
+		    if (!BBSHOME "/man"[i] && target[i] == '/')
 			sym = 1;
 		}
 		if (sym) {
-		    vmsgf("此 symbolic link 指向 %s", &buf[i + 1]);
+		    vmsgf("此 symbolic link 指向 %s", &target[i + 1]);
 		}
 	    }
 	}

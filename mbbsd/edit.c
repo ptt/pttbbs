@@ -3325,31 +3325,33 @@ insert_ansi_code(void)
 		    ans, sizeof(ans), LCECHO))
 	{
 	    const char      t[] = "BRGYLPCW";
-	    char            color[15];
-	    char           *tmp, *apos = ans;
-	    int             fg, bg;
+	    char  color[15], sbr[2]="", sfg[4]="", sbg[4]="";
+            const char *tmp;
+	    char  *apos = ans;
+	    int   fg = -1, bg = -1;
+            bool  need_sep = false;
 
-	    strcpy(color, ESC_STR "[");
 	    if (isdigit((int)*apos)) {
-		sprintf(color,"%s%c", color, *(apos++));
-		if (*apos)
-		    strcat(color, ";");
-	    }
+                SNPRINTF(sbr, "%c", *apos++);
+                need_sep = true;
+            }
 	    if (*apos) {
 		if ((tmp = strchr(t, toupper(*(apos++)))))
 		    fg = tmp - t + 30;
 		else
 		    fg = 37;
-		sprintf(color, "%s%d", color, fg);
+                SNPRINTF(sfg, "%s%d", need_sep ? ";" : "", fg);
+                need_sep = true;
 	    }
 	    if (*apos) {
 		if ((tmp = strchr(t, toupper(*(apos++)))))
 		    bg = tmp - t + 40;
 		else
 		    bg = 40;
-		sprintf(color, "%s;%d", color, bg);
+                SNPRINTF(sbg, "%s%d", need_sep ? ";" : "", bg);
+                need_sep = true;
 	    }
-	    strcat(color, "m");
+            SNPRINTF(color, ESC_STR "[%s%s%sm", sbr, sfg, sbg);
 	    insert_string(color);
 	} else
     	    insert_string(ANSI_RESET);
