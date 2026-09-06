@@ -148,10 +148,10 @@ static int totaluser;           /* current number of connections */
 static char chatbuf[256];       /* general purpose buffer */
 static int common_client_command;
 
-static char msg_not_op[] = "◆ 您不是這間聊天室的 Op";
-static char msg_no_such_id[] = "◆ 目前沒有人使用 [%s] 這個聊天代號";
-static char msg_no_such_uid[] = "◆ 目前沒有 [%s] 這個使用者 ID";
-static char msg_not_here[] = "◆ [%s] 不在這間聊天室";
+#define msg_not_op "◆ 您不是這間聊天室的 Op"
+#define msg_no_such_id "◆ 目前沒有人使用 [%s] 這個聊天代號"
+#define msg_no_such_uid "◆ 目前沒有 [%s] 這個使用者 ID"
+#define msg_not_here "◆ [%s] 不在這間聊天室"
 
 time4_t boot_time;
 
@@ -683,7 +683,7 @@ exit_room(ChatUser *user, int mode, char *msg)
 	{
 	    case EXIT_LOGOUT:
 
-		sprintf(chatbuf, "◆ %s (%s) 離開了 ...", chatid, user->userid);
+		SNPRINTF(chatbuf, "◆ %s (%s) 離開了 ...", chatid, user->userid);
 		if (msg && *msg)
 		{
 		    strcat(chatbuf, ": ");
@@ -693,12 +693,12 @@ exit_room(ChatUser *user, int mode, char *msg)
 
 	    case EXIT_LOSTCONN:
 
-		sprintf(chatbuf, "◆ %s (%s) 成了斷線的風箏囉", chatid, user->userid);
+		SNPRINTF(chatbuf, "◆ %s (%s) 成了斷線的風箏囉", chatid, user->userid);
 		break;
 
 	    case EXIT_KICK:
 
-		sprintf(chatbuf, "◆ 哈哈！%s (%s) 被踢出去了", chatid, user->userid);
+		SNPRINTF(chatbuf, "◆ 哈哈！%s (%s) 被踢出去了", chatid, user->userid);
 		break;
 	}
 	if (!CLOAK(user))         /* Thor: 聊天室隱身術 */
@@ -708,7 +708,7 @@ exit_room(ChatUser *user, int mode, char *msg)
 	    list_delete(&(room->invite), user->userid);
 	}
 
-	sprintf(chatbuf, "- %s", user->userid);
+	SNPRINTF(chatbuf, "- %s", user->userid);
 	send_to_room(room, chatbuf, user->userno, MSG_USERNOTIFY);
 	room_changed(room);
 
@@ -720,7 +720,7 @@ exit_room(ChatUser *user, int mode, char *msg)
     {                           /* Thor: 人數為0時,不是mainroom才free */
 	register ChatRoom *next;
 
-	sprintf(chatbuf, "- %s", room->name);
+	SNPRINTF(chatbuf, "- %s", room->name);
 	send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 
 	room->prev->next = room->next;
@@ -765,12 +765,12 @@ chat_topic(ChatUser *cu, char *msg)
     strlcpy(topic, msg, sizeof(room->topic));
     DBCS_safe_trim(topic);
 
-    sprintf(chatbuf, "/t%s", topic);
+    SNPRINTF(chatbuf, "/t%s", topic);
     send_to_room(room, chatbuf, 0, 0);
 
     room_changed(room);
 
-    sprintf(chatbuf, "◆ %s 將話題改為 " ANSI_COLOR(1;32) "%s" ANSI_RESET, cu->chatid, topic);
+    SNPRINTF(chatbuf, "◆ %s 將話題改為 " ANSI_COLOR(1;32) "%s" ANSI_RESET, cu->chatid, topic);
     if (!CLOAK(cu))               /* Thor: 聊天室隱身術 */
 	send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 }
@@ -779,7 +779,7 @@ chat_topic(ChatUser *cu, char *msg)
 static void
 chat_version(ChatUser *cu, char *msg GCC_UNUSED)
 {
-    sprintf(chatbuf, "%d %d", XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR);
+    SNPRINTF(chatbuf, "%d %d", XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR);
     send_to_user(cu, chatbuf, 0, MSG_VERSION);
 }
 
@@ -791,7 +791,7 @@ chat_xinfo(ChatUser *cu, char *msg GCC_UNUSED)
     int dd =  uptime / DAY_SECONDS, 
 	hh = (uptime % DAY_SECONDS) / 3600,
 	mm = (uptime % 3600) / 60;
-    sprintf(chatbuf, "⊙ 系統資訊: XCHAT 版本 %d.%02d - " __DATE__ 
+    SNPRINTF(chatbuf, "⊙ 系統資訊: XCHAT 版本 %d.%02d - " __DATE__ 
 	    "，已執行 %d 天 %d 小時 %d 分",
 	    XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR, dd, hh, mm);
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
@@ -1111,7 +1111,7 @@ chat_setroom(ChatUser *cu, char *msg)
 	    break;
 
 	default:
-	    sprintf(chatbuf, "※ 狀態錯誤：[%c]", *modestr);
+	    SNPRINTF(chatbuf, "※ 狀態錯誤：[%c]", *modestr);
 	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	}
 
@@ -1119,7 +1119,7 @@ chat_setroom(ChatUser *cu, char *msg)
 	if (flag && (room->rflag & flag) != sign * flag)
 	{
 	    room->rflag ^= flag;
-	    sprintf(chatbuf, "※ 本聊天室被 %s %s [%s] 狀態",
+	    SNPRINTF(chatbuf, "※ 本聊天室被 %s %s [%s] 狀態",
 		    chatid, sign ? "設定為" : "取消", fstr);
 	    if (!CLOAK(cu))           /* Thor: 聊天室隱身術 */
 		send_to_room(room, chatbuf, 0, MSG_MESSAGE);
@@ -1146,7 +1146,7 @@ chat_private(ChatUser *cu, char *msg)
 
     if (xuser == NULL)
     {
-	sprintf(chatbuf, msg_no_such_id, recipient);
+	SNPRINTF(chatbuf, msg_no_such_id, recipient);
     }
     else if (xuser == FUZZY_USER)
     {                             /* ambiguous */
@@ -1160,16 +1160,16 @@ chat_private(ChatUser *cu, char *msg)
 	// 所以輸入的 MSG 最大為 80-NICKLEN(8)*2-5
 	// prefix 的字串要小心不能過長
 
-	sprintf(chatbuf, COLOR_PRIVATEMSG "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
+	SNPRINTF(chatbuf, COLOR_PRIVATEMSG "*%s (%s)*" ANSI_RESET " ", cu->chatid, cu->userid);
 	STRLCAT(chatbuf, msg);
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
-	sprintf(chatbuf, COLOR_PRIVATEMSG "%s" ANSI_RESET "> ", xuser->chatid);
+	SNPRINTF(chatbuf, COLOR_PRIVATEMSG "%s" ANSI_RESET "> ", xuser->chatid);
 	STRLCAT(chatbuf, msg);
     }
     else
     {
-	sprintf(chatbuf, "※ 您想對 %s 說什麼話呢？", xuser->chatid);
+	SNPRINTF(chatbuf, "※ 您想對 %s 說什麼話呢？", xuser->chatid);
     }
     send_to_user(cu, chatbuf, userno, MSG_MESSAGE);       /* Thor: userno 要改成 0
 							   * 嗎? */
@@ -1186,7 +1186,7 @@ chat_query(ChatUser *cu, char *msg)
     if (xuser == NULL)
 	xuser = cuser_by_userid(recipient);
     if (xuser == NULL)
-	sprintf(chatbuf, msg_no_such_id, recipient);
+	SNPRINTF(chatbuf, msg_no_such_id, recipient);
     else if (xuser == FUZZY_USER)
 	STRLCPY(chatbuf, "※ 請清楚指明對方的聊天代號"); // ambiguous
     else 
@@ -1208,7 +1208,7 @@ chat_cloak(ChatUser *cu, char *msg GCC_UNUSED)
     if (CHATSYSOP(cu))
     {
 	cu->uflag ^= PERM_CLOAK;
-	sprintf(chatbuf, "◆ %s", CLOAK(cu) ? MSG_CLOAKED : MSG_UNCLOAK);
+	SNPRINTF(chatbuf, "◆ %s", CLOAK(cu) ? MSG_CLOAKED : MSG_UNCLOAK);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
     }
 }
@@ -1235,12 +1235,12 @@ arrive_room(ChatUser *cuser, ChatRoom *room)
 
     room_changed(room);
 
-    sprintf(chatbuf, "/r%s", rname);
+    SNPRINTF(chatbuf, "/r%s", rname);
     send_to_user(cuser, chatbuf, 0, 0);
-    sprintf(chatbuf, "/t%s", room->topic);
+    SNPRINTF(chatbuf, "/t%s", room->topic);
     send_to_user(cuser, chatbuf, 0, 0);
 
-    sprintf(chatbuf, "※ " ANSI_COLOR(1;32) "%s (%s)" ANSI_RESET " 進入 "
+    SNPRINTF(chatbuf, "※ " ANSI_COLOR(1;32) "%s (%s)" ANSI_RESET " 進入 "
 	    ANSI_COLOR(1;33) "[%s]" ANSI_RESET " 包廂",
 	    cuser->chatid, cuser->userid, rname);
     if (!CLOAK(cuser))            /* Thor: 聊天室隱身術 */
@@ -1294,7 +1294,7 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
     {
 	if (cuser->room == room)
 	{
-	    sprintf(chatbuf, "※ 您本來就在 [%s] 聊天室囉 :)", rname);
+	    SNPRINTF(chatbuf, "※ 您本來就在 [%s] 聊天室囉 :)", rname);
 	    send_to_user(cuser, chatbuf, 0, MSG_MESSAGE);
 	    return 0;
 	}
@@ -1352,7 +1352,7 @@ logout_user(ChatUser *cuser)
     }
 
 #ifdef DEBUG
-    sprintf(chatbuf, "%p", cuser);
+    SNPRINTF(chatbuf, "%p", cuser);
     logit("free cuser", chatbuf);
 #endif
 
@@ -1388,11 +1388,11 @@ print_user_counts(ChatUser *cuser)
     number = MSG_MESSAGE;
 
     // welcome message here.
-    sprintf(chatbuf, "⊙ 歡迎光臨【批踢踢聊天室】，目前開了 " 
+    SNPRINTF(chatbuf, "⊙ 歡迎光臨【批踢踢聊天室】，目前開了 " 
 	    ANSI_COLOR(1;31) "%d" ANSI_RESET " 間包廂。", roomc);
     send_to_user(cuser, chatbuf, 0, number);
 
-    sprintf(chatbuf, "⊙ 線上有 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人", userc);
+    SNPRINTF(chatbuf, "⊙ 線上有 " ANSI_COLOR(1;36) "%d" ANSI_RESET " 人", userc);
     if (suserc)
 	sprintf(chatbuf + strlen(chatbuf), " [%d 人在秘密聊天室]", suserc);
     send_to_user(cuser, chatbuf, 0, number);
@@ -1515,7 +1515,7 @@ chat_act(ChatUser *cu, char *msg)
 {
     if (*msg && (!RHANDUP(cu->room) || SAY(cu) || ROOMOP(cu)))
     {
-	sprintf(chatbuf, "%s " ANSI_COLOR(36) "%s" ANSI_RESET, cu->chatid, msg);
+	SNPRINTF(chatbuf, "%s " ANSI_COLOR(36) "%s" ANSI_RESET, cu->chatid, msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
     }
 }
@@ -1542,21 +1542,21 @@ chat_ignore(ChatUser *cu, char *msg)
 
 	    if (list_belong_id(cu->ignore, ignoree))
 	    {
-		sprintf(chatbuf, "※ %s 已經被凍結了", ignoree);
+		SNPRINTF(chatbuf, "※ %s 已經被凍結了", ignoree);
 	    } 
 	    else if (xuser == NULL)
 	    {
 		// try more harder to see if this user can be
 		// pre-ignored. Do not use xuser!
 		if (list_add_id(&(cu->ignore), ignoree))
-		    sprintf(chatbuf, "※ %s 已經被凍結了", ignoree);
+		    SNPRINTF(chatbuf, "※ %s 已經被凍結了", ignoree);
 		else
-		    sprintf(chatbuf, msg_no_such_uid, ignoree);
+		    SNPRINTF(chatbuf, msg_no_such_uid, ignoree);
 	    }
 	    else if (xuser == cu || CHATSYSOP(xuser) ||
 		     (ROOMOP(xuser) && (xuser->room == cu->room)))
 	    {
-		sprintf(chatbuf, "◆ 不可以忽略 %s (%s)", 
+		SNPRINTF(chatbuf, "◆ 不可以忽略 %s (%s)", 
 			xuser->chatid, xuser->userid);
 	    }
 	    else
@@ -1564,13 +1564,13 @@ chat_ignore(ChatUser *cu, char *msg)
 
 		if (list_belong(cu->ignore, xuser->userno))
 		{
-		    sprintf(chatbuf, "※ %s (%s) 已經被凍結了", 
+		    SNPRINTF(chatbuf, "※ %s (%s) 已經被凍結了", 
 			    xuser->chatid, xuser->userid);
 		}
 		else
 		{
 		    list_add(&(cu->ignore), xuser);
-		    sprintf(chatbuf, "◆ 將 [%s] 打入冷宮了 :p", xuser->chatid);
+		    SNPRINTF(chatbuf, "◆ 將 [%s] 打入冷宮了 :p", xuser->chatid);
 		}
 	    }
 	}
@@ -1587,7 +1587,7 @@ chat_ignore(ChatUser *cu, char *msg)
 		len = 0;
 		do
 		{
-		    sprintf(buf, "%-13s", list->userid);
+		    SNPRINTF(buf, "%-13s", list->userid);
 		    strcpy(chatbuf + len, buf);
 		    len += 13;
 		    if (len >= 78)
@@ -1620,7 +1620,7 @@ chat_unignore(ChatUser *cu, char *msg)
 
     if (*ignoree)
     {
-	sprintf(chatbuf, (list_delete(&(cu->ignore), ignoree)) ?
+	SNPRINTF(chatbuf, (list_delete(&(cu->ignore), ignoree)) ?
 		"◆ [%s] 不再被你冷落了" :
 		"◆ 您並未忽略 [%s]，請用 /ignore 檢查列表。", ignoree);
     }
@@ -1648,7 +1648,7 @@ chat_unban(ChatUser *cu, char *msg)
 
     if (*unban)
     {
-	sprintf(chatbuf, (list_delete(list, unban)) ?
+	SNPRINTF(chatbuf, (list_delete(list, unban)) ?
 		"◆ [%s] 不再被列為黑名單" :
 		"◆ [%s] 並不在黑名單中，請用 /ban 檢查列表", unban);
     }
@@ -1697,7 +1697,7 @@ chat_kick(ChatUser *cu, char *msg)
 
     if (xuser == NULL)
     {
-	sprintf(chatbuf, msg_no_such_id, twit);
+	SNPRINTF(chatbuf, msg_no_such_id, twit);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1705,14 +1705,14 @@ chat_kick(ChatUser *cu, char *msg)
     room = cu->room;
     if (room != xuser->room || CLOAK(xuser))
     {                             /* Thor: 聊天室隱身術 */
-	sprintf(chatbuf, msg_not_here, twit);
+	SNPRINTF(chatbuf, msg_not_here, twit);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
 
     if (CHATSYSOP(xuser))
     {                             /* Thor: 踢不走 CHATSYSOP */
-	sprintf(chatbuf, "◆ 不可以 kick [%s]", twit);
+	SNPRINTF(chatbuf, "◆ 不可以 kick [%s]", twit);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1745,14 +1745,14 @@ chat_makeop(ChatUser *cu, char *msg)
 
     if (xuser == NULL)
     {
-	sprintf(chatbuf, msg_no_such_id, newop);
+	SNPRINTF(chatbuf, msg_no_such_id, newop);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
 
     if (cu == xuser)
     {
-	sprintf(chatbuf, "※ 您已經是管理員(Op)了，無法改變自己的權限");
+	SNPRINTF(chatbuf, "※ 您已經是管理員(Op)了，無法改變自己的權限");
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1761,7 +1761,7 @@ chat_makeop(ChatUser *cu, char *msg)
 
     if (room != xuser->room || CLOAK(xuser))
     {                             /* Thor: 聊天室隱身術 */
-	sprintf(chatbuf, msg_not_here, xuser->chatid);
+	SNPRINTF(chatbuf, msg_not_here, xuser->chatid);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1773,12 +1773,12 @@ chat_makeop(ChatUser *cu, char *msg)
     if (wasop == (ROOMOP(xuser) ? 1 : 0))
     {
 	// 動不了他
-	sprintf(chatbuf, "※ 無法改變對方的管理員(Op)權限。");
+	SNPRINTF(chatbuf, "※ 無法改變對方的管理員(Op)權限。");
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
 
-    sprintf(chatbuf, "※ %s %s %s 的管理員(Op)權限",
+    SNPRINTF(chatbuf, "※ %s %s %s 的管理員(Op)權限",
 	    cu->chatid, 
 	    ROOMOP(xuser) ? "提昇了" : "解除了",
 	    xuser->chatid);
@@ -1807,7 +1807,7 @@ chat_invite(ChatUser *cu, char *msg)
     xuser = cuser_by_chatid(invitee);
     if (xuser == NULL)
     {
-	sprintf(chatbuf, msg_no_such_id, invitee);
+	SNPRINTF(chatbuf, msg_no_such_id, invitee);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1818,16 +1818,16 @@ chat_invite(ChatUser *cu, char *msg)
 
     if (list_belong(*list, xuser->userno))
     {
-	sprintf(chatbuf, "※ %s 已經接受過邀請了", xuser->chatid);
+	SNPRINTF(chatbuf, "※ %s 已經接受過邀請了", xuser->chatid);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
     list_add(list, xuser);
 
-    sprintf(chatbuf, "※ %s 邀請您到 [%s] 聊天室",
+    SNPRINTF(chatbuf, "※ %s 邀請您到 [%s] 聊天室",
 	    cu->chatid, room->name);
     send_to_user(xuser, chatbuf, 0, MSG_MESSAGE); /* Thor: 要不要可以 ignore? */
-    sprintf(chatbuf, "※ %s 收到您的邀請了", xuser->chatid);
+    SNPRINTF(chatbuf, "※ %s 收到您的邀請了", xuser->chatid);
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
 
@@ -1859,7 +1859,7 @@ chat_ban(ChatUser *cu, char *msg)
 	    len = 0;
 	    do
 	    {
-		sprintf(buf, "%-13s", list->userid);
+		SNPRINTF(buf, "%-13s", list->userid);
 		strcpy(chatbuf + len, buf);
 		len += 13;
 		if (len >= 78)
@@ -1889,7 +1889,7 @@ chat_ban(ChatUser *cu, char *msg)
 
     if (!unum)
     {
-	sprintf(chatbuf, msg_no_such_id, banned);
+	SNPRINTF(chatbuf, msg_no_such_id, banned);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1900,7 +1900,7 @@ chat_ban(ChatUser *cu, char *msg)
 
     if (list_belong(*list, unum))
     {
-	sprintf(chatbuf, "※ %s 已經在黑名單內了", banned);
+	SNPRINTF(chatbuf, "※ %s 已經在黑名單內了", banned);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	return;
     }
@@ -1908,12 +1908,12 @@ chat_ban(ChatUser *cu, char *msg)
     if (xuser)
     {
 	list_add(list, xuser);
-	sprintf(chatbuf, "※ %s (%s) 已被加入黑名單", xuser->chatid, xuser->userid);
+	SNPRINTF(chatbuf, "※ %s (%s) 已被加入黑名單", xuser->chatid, xuser->userid);
     }
     else
     {
 	list_add_id(list, banned);
-	sprintf(chatbuf, "※ %s 已被加入黑名單", banned);
+	SNPRINTF(chatbuf, "※ %s 已被加入黑名單", banned);
     }
 
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
@@ -1933,10 +1933,10 @@ chat_broadcast(ChatUser *cu, char *msg)
 	send_to_user(cu, "※ 請指定廣播內容", 0, MSG_MESSAGE);
 	return;
     }
-    sprintf(chatbuf, ANSI_COLOR(1) "※ " BBSNAME "聊天室廣播中 [%s]....." ANSI_RESET,
+    SNPRINTF(chatbuf, ANSI_COLOR(1) "※ " BBSNAME "聊天室廣播中 [%s]....." ANSI_RESET,
 	    cu->chatid);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_MESSAGE);
-    sprintf(chatbuf, "◆ %s", msg);
+    SNPRINTF(chatbuf, "◆ %s", msg);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_MESSAGE);
 }
 
@@ -2073,19 +2073,19 @@ party_action(ChatUser *cu, char *cmd, char *party)
 
 	    if (xuser == NULL)
 	    {
-		sprintf(chatbuf, msg_no_such_id, party);
+		SNPRINTF(chatbuf, msg_no_such_id, party);
 		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 		return 0;
 	    }
 	    else if (xuser == FUZZY_USER)
 	    {
-		sprintf(chatbuf, "※ 請指明聊天代號");
+		SNPRINTF(chatbuf, "※ 請指明聊天代號");
 		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 		return 0;
 	    }
 	    else if (cu->room != xuser->room || CLOAK(xuser))
 	    {
-		sprintf(chatbuf, msg_not_here, party);
+		SNPRINTF(chatbuf, msg_not_here, party);
 		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 		return 0;
 	    }
@@ -2094,7 +2094,7 @@ party_action(ChatUser *cu, char *cmd, char *party)
 		party = xuser->chatid;
 	    }
 	}
-	sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_COLOR(33) " %s " ANSI_COLOR(31) "%s" ANSI_RESET,
+	SNPRINTF(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_COLOR(33) " %s " ANSI_COLOR(31) "%s" ANSI_RESET,
 		cu->chatid, cap->part1_msg, party, cap->part2_msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
@@ -2151,7 +2151,7 @@ speak_action(ChatUser *cu, char *cmd, char *msg)
     {
 	if (!str_equal(cmd, verb))
 	    continue;
-	sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s：" ANSI_COLOR(33) " %s" ANSI_RESET,
+	SNPRINTF(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s：" ANSI_COLOR(33) " %s" ANSI_RESET,
 		cu->chatid, cap->part1_msg, msg);
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
@@ -2228,7 +2228,7 @@ condition_action(ChatUser *cu, char *cmd)
     {
 	if (str_equal(cmd, verb))
 	{
-	    sprintf(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_RESET,
+	    SNPRINTF(chatbuf, ANSI_COLOR(1;32) "%s " ANSI_COLOR(31) "%s" ANSI_RESET,
 		    cu->chatid, cap->part1_msg);
 	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	    return 1;
@@ -2260,7 +2260,7 @@ chat_partyinfo(ChatUser *cu, char *msg GCC_UNUSED)
     if (!common_client_command)
 	return;                     /* only allow common client to retrieve it */
 
-    sprintf(chatbuf, "3 動作  交談  狀態");
+    SNPRINTF(chatbuf, "3 動作  交談  狀態");
     send_to_user(cu, chatbuf, 0, MSG_PARTYINFO);
 }
 
@@ -2277,7 +2277,7 @@ chat_party(ChatUser *cu, char *msg)
     if (kind < 0 || kind > 2)
 	return;
 
-    sprintf(chatbuf, "%d  %s", kind, kind == 2 ? "I" : "");
+    SNPRINTF(chatbuf, "%d  %s", kind, kind == 2 ? "I" : "");
 
     /* Xshadow: 只有 condition 才是 immediate mode */
     send_to_user(cu, chatbuf, 0, MSG_PARTYLISTSTART);
@@ -2285,12 +2285,12 @@ chat_party(ChatUser *cu, char *msg)
     cap = catbl[kind];
     for (i = 0; cap[i].verb; i++)
     {
-	sprintf(chatbuf, "%-10s %-20s", cap[i].verb, cap[i].chinese);
+	SNPRINTF(chatbuf, "%-10s %-20s", cap[i].verb, cap[i].chinese);
 	/* for (j=0;j<1000000;j++); */
 	send_to_user(cu, chatbuf, 0, MSG_PARTYLIST);
     }
 
-    sprintf(chatbuf, "%d", kind);
+    SNPRINTF(chatbuf, "%d", kind);
     send_to_user(cu, chatbuf, 0, MSG_PARTYLISTEND);
 }
 
@@ -2314,8 +2314,8 @@ view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: 新加動詞分類顯示 */
     {                             /* Thor.0726: 寫得不好, 想辦法改進... */
 	for (i = 0; (p = dscrb[i]); i++)
 	{
-	    sprintf(data, "  [//]help %d          - MUD-like 社交動詞   第 %d 類", i + 1, i + 1);
-	    send_to_user(cu, data, 0, MSG_MESSAGE);
+	    SNPRINTF(chatbuf, "  [//]help %d          - MUD-like 社交動詞   第 %d 類", i + 1, i + 1);
+	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	    send_to_user(cu, p, 0, MSG_MESSAGE);
 	    send_to_user(cu, " ", 0, MSG_MESSAGE);    /* Thor.0726: 換行, 需要 " "
 						       * 嗎? */
@@ -2426,8 +2426,8 @@ command_execute(ChatUser *cu)
     {
 	char buf[16];
 
-	sprintf(buf, "%s:", cu->chatid);
-	sprintf(chatbuf, "%-10s%s", buf, msg);
+	SNPRINTF(buf, "%s:", cu->chatid);
+	SNPRINTF(chatbuf, "%-10s%s", buf, msg);
 	if (!CLOAK(cu))           /* Thor: 聊天室隱身術 */
 	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
@@ -2485,7 +2485,7 @@ command_execute(ChatUser *cu)
 
     if (!match)
     {
-	sprintf(chatbuf, "◆ 指令錯誤：/%s", cmd);
+	SNPRINTF(chatbuf, "◆ 指令錯誤：/%s", cmd);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
     }
     return 0;
@@ -2624,7 +2624,7 @@ start_daemon()
     fd = OpenCreate(CHAT_PIDFILE, O_WRONLY | O_TRUNC);
     if (fd >= 0)
     {
-	sprintf(buf, "%5d\n", (int)getpid());
+	SNPRINTF(buf, "%5d\n", (int)getpid());
 	write(fd, buf, 6);
 	close(fd);
     }
@@ -2659,7 +2659,7 @@ free_resource(int fd)
 	    fd = sock;
     }
 
-    sprintf(chatbuf, "%d, %d user (maxfds %d -> %d)", ++loop, num, maxfds, fd+1);
+    SNPRINTF(chatbuf, "%d, %d user (maxfds %d -> %d)", ++loop, num, maxfds, fd+1);
     logit("LOOP", chatbuf);
 
     maxfds = fd + 1;
@@ -2676,7 +2676,7 @@ server_usage()
     if (getrusage(RUSAGE_SELF, &ru))
 	return;
 
-    sprintf(buf, "\n[Server Usage]\n\n"
+    SNPRINTF(buf, "\n[Server Usage]\n\n"
 	    "user time: %.6f\n"
 	    "system time: %.6f\n"
 	    "maximum resident set size: %lu P\n"
@@ -2780,7 +2780,7 @@ void selftest_testing(void)
     while(1) {
 	SNPRINTF(userid, "%ld",
                  arc4random_uniform(MAXTESTUSER * 2));
-	sprintf(buf, "/%s! %s %s %s", arc4random_uniform(4)==0?"-":"",userid,
+	SNPRINTF(buf, "/%s! %s %s %s", arc4random_uniform(4)==0?"-":"",userid,
                 userid, "passwd");
 	selftest_send(cfd, buf);
 	if (recv(cfd, inbuf, 3, 0) != 3) {
@@ -2792,7 +2792,7 @@ void selftest_testing(void)
     }
 
     if(arc4random_uniform(4)!=0) {
-	sprintf(buf, "/j %d", arc4random_uniform(5));
+	SNPRINTF(buf, "/j %d", arc4random_uniform(5));
 	selftest_send(cfd, buf);
     }
 
@@ -2824,23 +2824,23 @@ void selftest_testing(void)
 	    switch(arc4random_uniform(4)) {
 		case 0:
 		    r=arc4random_uniform(ARRAY_SIZE(party_data) - 1);
-		    sprintf(buf, "//%s",party_data[r].verb);
+		    SNPRINTF(buf, "//%s",party_data[r].verb);
 		    break;
 		case 1:
 		    r=arc4random_uniform(ARRAY_SIZE(speak_data) - 1);
-		    sprintf(buf, "//%s",speak_data[r].verb);
+		    SNPRINTF(buf, "//%s",speak_data[r].verb);
 		    break;
 		case 2:
 		    r=arc4random_uniform(ARRAY_SIZE(condition_data) - 1);
-		    sprintf(buf, "//%s",condition_data[r].verb);
+		    SNPRINTF(buf, "//%s",condition_data[r].verb);
 		    break;
 		case 3:
-		    sprintf(buf, "blah");
+		    SNPRINTF(buf, "blah");
 		    break;
 	    }
 	} else {
 		r=arc4random_uniform(ARRAY_SIZE(chatcmdlist) - 1);
-		sprintf(buf, "/%s",chatcmdlist[r].cmdstr);
+		SNPRINTF(buf, "/%s",chatcmdlist[r].cmdstr);
 		if(strncmp("/flag",buf,5)==0) {
 		    if(arc4random_uniform(2))
 			strcat(buf," +");
@@ -2867,7 +2867,7 @@ void selftest_testing(void)
 	}
 	for(i=arc4random_uniform(3); i>0; i--) {
 	    char tmp[1024];
-	    sprintf(tmp," %ld", arc4random_uniform(MAXTESTUSER * 2));
+	    SNPRINTF(tmp," %ld", arc4random_uniform(MAXTESTUSER * 2));
 	    strcat(buf, tmp);
 	}
 
