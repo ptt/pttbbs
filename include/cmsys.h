@@ -125,7 +125,7 @@ int RmTree(const char *path);
 int OpenCreate(const char *path, int flags);
 int file_count_line(const char *file);
 int file_append(const char *file, const char *string); // does not append "\n"
-int file_appendv(const char *file, const char *fmt, va_list ap);
+int file_appendv(const char *file, const char *fmt, va_list ap) GCC_CHECK_FORMAT(2, 0);
 int file_appendf(const char *file, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
 int file_append_entry(const char *file, const char *key);  // will append "\n"
 int file_exist_entry(const char *file, const char *key);
