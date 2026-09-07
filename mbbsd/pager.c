@@ -967,8 +967,6 @@ void
 talk_request(int sig GCC_UNUSED)
 {
     STATINC(STAT_TALKREQUEST);
-    bell();
-    bell();
     if (currutmp->msgcount) {
         syncnow();
         move(0, 0);
@@ -991,6 +989,8 @@ talk_request(int sig GCC_UNUSED)
         currutmp->chatid[0] = c0;
         scr_restore(&old_screen);
     }
+    bell();
+    bell();
 }
 
 void
@@ -1133,9 +1133,8 @@ write_request_ofo(int sig)
             wmofo = RECVINREPLYING;
 
         for (; alreadyshow < currutmp->msgcount && alreadyshow < MAX_MSGS; ++alreadyshow) {
-            bell();
             show_call_in(1, alreadyshow);
-            refresh();
+            bell();
         }
     }
 
@@ -1159,8 +1158,8 @@ write_request_default(void)
     if (!can_pop_pager_ui()) {
         msgcount = currutmp->msgcount;
         for (i = 0; i < msgcount; ++i) {
-            bell();
             show_call_in(1, i);
+            bell();
             add_history(&currutmp->msgs[i]);
             currutmp->msgs[i].pid = 0;
         }
@@ -1179,8 +1178,8 @@ write_request_default(void)
     msgcount = currutmp->msgcount;
 
     for (i = 0; i < msgcount; ++i) {
-        bell();
         show_call_in(1, 0);
+        bell();
         add_history(&currutmp->msgs[0]);
 
         if ((--currutmp->msgcount) < 0)

@@ -84,6 +84,7 @@ term_init(void)
 void
 bell(void)
 {
+    refresh();
     const char c = Ctrl('G');
     write(1, &c, 1);
 }
