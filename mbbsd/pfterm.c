@@ -49,6 +49,10 @@
 #define ANSI_RESET ESC_STR "[m"
 #endif // PMORE_STYLE_ANSI
 
+// Synchronized output (DEC Private Mode 2026: BSU / ESU)
+#define DEC_SYNC_BEGIN ESC_STR "[?2026h"
+#define DEC_SYNC_END   ESC_STR "[?2026l"
+
 #ifndef ANSI_IS_PARAM
 #define ANSI_IS_PARAM(c) (c == ';' || (c >= '0' && c <= '9'))
 #endif // ANSI_IS_PARAM
@@ -433,6 +437,8 @@ void    fterm_rawcursor (void);
 void    fterm_rawmove   (int y, int x);
 void    fterm_rawmove_opt(int y, int x);
 void    fterm_rawmove_rel(int dy, int dx);
+void    fterm_rawbegin  (void);
+void    fterm_rawend    (void);
 
 int     fterm_chattr    (char *s, ftattr oa, ftattr na); // size(s) > FTATTR_MINCMD
 void    fterm_exec      (void);             // execute ft.cmd
@@ -814,9 +820,11 @@ doupdate(void)
     int y, x;
     char touched = 0;
 
+    fterm_rawbegin();
     if (!ft.dirty)
     {
         fterm_rawcursor();
+        fterm_rawend();
         return;
     }
 
@@ -1063,8 +1071,8 @@ doupdate(void)
 
 #endif // !_WIN32
 
-    // doing fterm_rawcursor() earlier to enable max display time
     fterm_rawcursor();
+    fterm_rawend();
     fterm_dupe2bk();
     ft.dirty = 0;
 }
@@ -2164,7 +2172,6 @@ fterm_rawcursor(void)
     // fterm_rawattr(FTATTR_DEFAULT);
     fterm_rawattr(ft.attr);
     fterm_rawmove_opt(ft.y, ft.x);
-    fterm_rawflush();
 #endif // !_WIN32
 }
 
@@ -2237,6 +2244,23 @@ fterm_rawscroll (int dy)
     // the coordinates are already out of sync.
     fterm_rawcmd2(ft.ry+1, ft.rx+1, 1, 'H');
     ft.scroll -= dy;
+#endif
+}
+
+void
+fterm_rawbegin()
+{
+#ifndef _WIN32
+    fterm_raws(DEC_SYNC_BEGIN);
+#endif
+}
+
+void
+fterm_rawend()
+{
+#ifndef _WIN32
+    fterm_raws(DEC_SYNC_END);
+    fterm_rawflush();
 #endif
 }
 
