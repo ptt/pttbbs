@@ -143,68 +143,116 @@ reduce_blank(char *cbuf, const char *buf) {
     return 0;
 }
 
-static const char EscapeFlag[] = {
-    /*  0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0,
-    /* 20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 30 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, /* 0~9 ;= */
-    /* 40 */ 0, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, /* ABCDHIJK */
-    /* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 60 */ 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, /* fhlm */
-    /* 70 */ 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* su */
-    /* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 90 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* A0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* B0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* C0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* D0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* E0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* F0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
+/*
+ * Scans an ANSI/ECMA-48 escape sequence starting at `src` (where *src == ESC_CHR).
+ * Returns the pointer to the last byte of the escape sequence (e.g. the final char),
+ * or returns src if it is a truncated/lone ESC at the end of the string.
+ * Also sets *is_color to 1 if it is an SGR color sequence (ESC [ ... m).
+ * Sets *is_safe_cmd to 1 if it is a safe command in NO_RELOAD mode.
+ */
+static const char *
+scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
+{
+    if (is_color)
+        *is_color = 0;
+    if (is_safe_cmd)
+        *is_safe_cmd = 0;
+
+    const char *p = src + 1;
+    if (*p == '\0')
+        return src;
+
+    if (*p == '[') {
+        // CSI: ESC [ [P...P] [I...I] F
+        p++;
+        int has_private = (*p >= 0x3C && *p <= 0x3F); // '<', '=', '>', '?'
+        while (*p >= 0x30 && *p <= 0x3F)
+            p++;
+        while (*p >= 0x20 && *p <= 0x2F)
+            p++;
+        if (*p >= 0x40 && *p <= 0x7E) {
+            // Valid final character reached
+            if (*p == 'm' && !has_private) {
+                if (is_color)
+                    *is_color = 1;
+            }
+            if (!has_private && strchr("ABCDHIJKfhlmsu", *p) != NULL) {
+                if (is_safe_cmd)
+                    *is_safe_cmd = 1;
+            }
+            return p;
+        }
+        // Incomplete / malformed CSI: consume up to p - 1 if advanced
+        return (p > src + 2) ? (p - 1) : (src + 1);
+    }
+
+    if (*p == ']') {
+        // OSC: ESC ] ... (BEL | ESC \)
+        p++;
+        while (*p && *p != '\x07' && !(*p == ESC_CHR && *(p + 1) == '\\'))
+            p++;
+        if (*p == '\x07')
+            return p;
+        if (*p == ESC_CHR && *(p + 1) == '\\')
+            return p + 1;
+        return (*p) ? p : (p - 1);
+    }
+
+    // Standard 3-byte escape sequences: ESC [()*+-./#] <char>
+    if (*p == '(' || *p == ')' || *p == '*' || *p == '+' ||
+        *p == '-' || *p == '.' || *p == '/' || *p == '#') {
+        if (*(p + 1) != '\0')
+            return p + 1;
+        return p;
+    }
+
+    // 2-byte escape sequences (e.g. ESC M, ESC E, ESC =, ESC >)
+    return p;
+}
+
+#define isEscapeParam(X) (((X) >= 0x30 && (X) <= 0x3F) || ((X) >= 0x20 && (X) <= 0x2F))
+
 /**
- * 根據 mode 來 strip 字串 src，並把結果存到 dst
+ * strip ANSI escape sequences from src according to mode
  * @param dst
  * @param src (if NULL then only return length)
  * @param mode enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
- *             STRIP_ALL:  全部吃掉
- *             ONLY_COLOR: 只留跟顏色有關的 (ESC[*m)
- *             NO_RELOAD:  只留上面認識的(移位+色彩)
- * @return strip 後的長度
+ *             STRIP_ALL:  strip all
+ *             ONLY_COLOR: keep only color commands (ESC[*m)
+ *             NO_RELOAD:  keep safe commands (cursor move + color)
+ * @return stripped length
  */
 int
 strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
 {
-    register int    count = 0;
-#define isEscapeParam(X) (EscapeFlag[(int)(X)] & 1)
-#define isEscapeCommand(X) (EscapeFlag[(int)(X)] & 2)
+    register int count = 0;
 
-    for(; *src; ++src)
-	if( *src != ESC_CHR ){
-	    if( dst )
-		*dst++ = *src;
-	    ++count;
-	}else{
-	    const char* p = src + 1;
-	    if( *p != '[' ){
-		++src;
-		if(*src=='\0') break;
-		continue;
-	    }
-	    while(isEscapeParam(*++p));
-	    if( (mode == NO_RELOAD && isEscapeCommand(*p)) ||
-		(mode == ONLY_COLOR && *p == 'm' )){
-		register int len = p - src + 1;
-		if( dst ){
-		    memmove(dst, src, len);
-		    dst += len;
-		}
-		count += len;
-	    }
-	    src = p;
-	    if(*src=='\0') break;
-	}
-    if( dst )
-	*dst = 0;
+    for (; *src; ++src) {
+        if (*src != ESC_CHR) {
+            if (dst)
+                *dst++ = *src;
+            ++count;
+        } else {
+            int is_color = 0, is_safe_cmd = 0;
+            const char *end = scan_escape_sequence(src, &is_color, &is_safe_cmd);
+
+            if ((mode == NO_RELOAD && is_safe_cmd) ||
+                (mode == ONLY_COLOR && is_color)) {
+                int len = end - src + 1;
+                if (dst) {
+                    memmove(dst, src, len);
+                    dst += len;
+                }
+                count += len;
+            }
+
+            src = end;
+            if (*src == '\0')
+                break;
+        }
+    }
+    if (dst)
+        *dst = '\0';
     return count;
 }
 
@@ -215,83 +263,28 @@ strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
 int
 strat_ansi(int count, const char *s)
 {
-    register int mode = 0;
     const char *os = s;
 
-    for (; count > 0 && *s; ++s)
-    {
-	// 0 - no ansi, 1 - [, 2 - param+cmd
-	switch (mode)
-	{
-	    case 0:
-		if (*s == ESC_CHR)
-		    mode = 1;
-		else
-		    count --;
-		break;
-
-	    case 1:
-		if (*s == '[')
-		    mode = 2;
-		else
-		    mode = 0; // unknown command
-		break;
-
-	    case 2:
-		if (isEscapeParam(*s))
-		    continue;
-		else if (isEscapeCommand(*s))
-		    mode = 0;
-		else
-		    mode = 0;
-		break;
-	}
+    for (; count > 0 && *s; ++s) {
+        if (*s == ESC_CHR) {
+            s = scan_escape_sequence(s, NULL, NULL);
+            if (*s == '\0')
+                break;
+        } else {
+            count--;
+        }
     }
     if (count > 0)
-	return -count;
+        return -count;
     return s - os;
 }
 
 int 
 strlen_noansi(const char *s)
 {
-    // XXX this is almost identical to
-    // strip_ansi(NULL, s, STRIP_ALL)
-    register int count = 0, mode = 0;
-
     if (!s || !*s)
-	return 0;
-
-    for (; *s; ++s)
-    {
-	// 0 - no ansi, 1 - [, 2 - param+cmd
-	switch (mode)
-	{
-	    case 0:
-		if (*s == ESC_CHR)
-		    mode = 1;
-		else
-		    count ++;
-		break;
-
-	    case 1:
-		if (*s == '[')
-		    mode = 2;
-		else
-		    mode = 0; // unknown command
-		break;
-
-	    case 2:
-		if (isEscapeParam(*s))
-		    continue;
-		else if (isEscapeCommand(*s))
-		    mode = 0;
-		else
-		    mode = 0;
-		break;
-	}
-    }
-    return count;
+        return 0;
+    return strip_ansi(NULL, s, STRIP_ALL);
 }
 
 /* ----------------------------------------------------- */

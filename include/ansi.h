@@ -22,7 +22,7 @@
 #define ANSI_SAVEPOS	ESC_STR "[s"
 #define ANSI_RESTOREPOS ESC_STR "[u"
 
-#define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
+#define ANSI_IN_ESCAPE(x) (((x) >= 0x30 && (x) <= 0x3F) || \
 	(x) == ';' || (x) == ',' || (x) == '[')
 
 #endif	/* INCLUDE_ANSI_H */
