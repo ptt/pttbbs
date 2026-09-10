@@ -452,6 +452,13 @@ vkey_process_cin()
         case KEY_LF:
             ch = KEY_INCOMPLETE;
             break;
+
+        case KEY_MOUSE:
+        case KEY_MOUSE_RELEASE:
+            last_mouse_event = *vtkbd_get_mouse(&vkctx.vtkbd);
+            if (ch == KEY_MOUSE_RELEASE)
+                ch = KEY_INCOMPLETE;
+            break;
     }
     ch = vkey_dispatch_hooks(ch);
     return ch;
@@ -681,6 +688,20 @@ vkey_purge()
     VKEY_RESET_PEEK();
 
     // TODO reset telnet/vtkbd/conver?
+}
+
+const vtkbd_mouse_t *
+vkey_get_mouse(void)
+{
+    return &last_mouse_event;
+}
+
+int
+vkey_get_mouse_pos(int *x, int *y)
+{
+    if (x) *x = last_mouse_event.x;
+    if (y) *y = last_mouse_event.y;
+    return (last_mouse_event.x >= 0 && last_mouse_event.y >= 0);
 }
 
 #endif // USE_NIOS

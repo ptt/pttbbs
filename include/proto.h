@@ -316,6 +316,8 @@ void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
 int  vkey(void);	     // receive and block infinite time for next key
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
+const vtkbd_mouse_t *vkey_get_mouse(void); // get latest mouse event
+int  vkey_get_mouse_pos(int *x, int *y);   // get latest mouse coordinates
 // status
 int  vkey_poll(int timeout); // poll for timeout milliseconds. return 1 for ready oterwise 0
 int  vkey_is_ready(void);    // determine if input buffer is ready for a key input
@@ -728,6 +730,9 @@ void init_tty(void);
 int  term_init(void);
 void term_resize(int w, int h);
 void bell(void);
+void term_enable_mouse(int mode);
+int  term_get_mouse_mode(void);
+void term_uninit(void);
 
 /* timecap (time capsule) */
 int timecapsule_add_revision(const char *filename);

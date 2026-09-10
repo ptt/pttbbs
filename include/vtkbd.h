@@ -27,15 +27,46 @@
 
 #include <sys/types.h>
 
+/* Mouse tracking mode definitions (XTerm DECSET / DECRST) */
+#define MOUSE_MODE_NONE         (0)
+#define MOUSE_MODE_CLICK        (1000)  /* Normal mouse tracking: press and release */
+#define MOUSE_MODE_DRAG         (1002)  /* Button-event mouse tracking: press, release, drag */
+#define MOUSE_MODE_TRACK        (1003)  /* Any-event mouse tracking: all motion, press, release */
+#define MOUSE_MODE_LOCATION     MOUSE_MODE_TRACK
+
+/* Mouse button definitions */
+#define MOUSE_BTN_LEFT          (0)
+#define MOUSE_BTN_MIDDLE        (1)
+#define MOUSE_BTN_RIGHT         (2)
+#define MOUSE_BTN_WHEEL_UP      (64)
+#define MOUSE_BTN_WHEEL_DOWN    (65)
+#define MOUSE_WHEEL_UP          MOUSE_BTN_WHEEL_UP
+#define MOUSE_WHEEL_DOWN        MOUSE_BTN_WHEEL_DOWN
+
+/* Mouse event definitions */
+typedef struct {
+    int     x;          /* 0-based column */
+    int     y;          /* 0-based row */
+    int     button;     /* MOUSE_BTN_LEFT, MOUSE_BTN_MIDDLE, MOUSE_BTN_RIGHT,
+                           MOUSE_BTN_WHEEL_UP, MOUSE_BTN_WHEEL_DOWN */
+    int     is_release; /* 1 if release ('m'), 0 if press/motion ('M') */
+    int     is_motion;  /* 1 if motion/hover */
+    int     flags;      /* modifier flags (shift=4, meta=8, ctrl=16) */
+} vtkbd_mouse_t;
+
 /* context definition */
 typedef struct {
     int     state;
     int     esc_arg;
+    vtkbd_mouse_t mouse;
+    int     mouse_param_idx;
+    int     mouse_params[3];
 } VtkbdCtx;
 
 /* vtkbd API */
 int     vtkbd_process(int c, VtkbdCtx *ctx);
 ssize_t vtkbd_ignore_dbcs_evil_repeats(const unsigned char *buf, ssize_t len);
+const vtkbd_mouse_t *vtkbd_get_mouse(const VtkbdCtx *ctx);
 
 /* key code macro */
 #define Ctrl(c)         (c & 0x1F)
@@ -85,6 +116,10 @@ ssize_t vtkbd_ignore_dbcs_evil_repeats(const unsigned char *buf, ssize_t len);
 /* vtkbd meta keys */
 #define KEY_INCOMPLETE  0x0420  /* 0x?20 to prevent accident usage */
 #define KEY_UNKNOWN     0x0F20  /* unknown sequence */
+
+/* mouse keys */
+#define KEY_MOUSE       0x0501  /* mouse event (press, motion, wheel) */
+#define KEY_MOUSE_RELEASE 0x0502 /* mouse button release */
 
 /* vkey special data for additional fd to listen (ref: vkey_attach) */
 #define I_TIMEOUT       0x05fd /* additional fd timeout for select (replaced by vkey_poll */

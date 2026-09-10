@@ -74,10 +74,66 @@ void term_resize(int w, int h)
     }
 }
 
+static int current_mouse_mode = MOUSE_MODE_NONE;
+
+#define ENABLE_MOUSE_CLICK      ESC_STR "[?1000h"
+#define ENABLE_MOUSE_DRAG       ESC_STR "[?1002h"
+#define ENABLE_MOUSE_MOTION     ESC_STR "[?1003h"
+#define ENABLE_MOUSE_SGR        ESC_STR "[?1006h"
+#define DISABLE_MOUSE_CLICK     ESC_STR "[?1000l"
+#define DISABLE_MOUSE_DRAG      ESC_STR "[?1002l"
+#define DISABLE_MOUSE_MOTION    ESC_STR "[?1003l"
+#define DISABLE_MOUSE_SGR       ESC_STR "[?1006l"
+
+void
+term_enable_mouse(int mode)
+{
+    const char *seq = "";
+    current_mouse_mode = mode;
+    if (mode == MOUSE_MODE_NONE || !HasUserFlag(UF_MOUSE)) {
+        // Disable all mouse reporting
+        seq = DISABLE_MOUSE_CLICK
+              DISABLE_MOUSE_DRAG
+              DISABLE_MOUSE_MOTION
+              DISABLE_MOUSE_SGR;
+    } else if (mode == MOUSE_MODE_TRACK) {
+        // MOUSE_MODE_TRACK (DECSET 1003 + 1006 SGR):
+        // Any-event tracking (reports all hover motion, clicks, wheel)
+        seq = ENABLE_MOUSE_MOTION
+              ENABLE_MOUSE_SGR;
+    } else if (mode == MOUSE_MODE_DRAG) {
+        // MOUSE_MODE_DRAG (DECSET 1002 + 1006 SGR):
+        // Button-event tracking (reports press, drag motion, release)
+        seq = DISABLE_MOUSE_MOTION
+              ENABLE_MOUSE_DRAG
+              ENABLE_MOUSE_SGR;
+    } else {
+        // MOUSE_MODE_CLICK (DECSET 1000 + 1006 SGR):
+        // Normal tracking (reports press, release, wheel; no hover motion)
+        seq = DISABLE_MOUSE_MOTION
+              ENABLE_MOUSE_CLICK
+              ENABLE_MOUSE_SGR;
+    }
+    write(1, seq, strlen(seq));
+}
+
+int
+term_get_mouse_mode(void)
+{
+    return current_mouse_mode;
+}
+
+void
+term_uninit(void)
+{
+    term_enable_mouse(MOUSE_MODE_NONE);
+}
+
 int
 term_init(void)
 {
     Signal(SIGWINCH, sig_term_resize);
+    term_enable_mouse(MOUSE_MODE_CLICK);
     return YEA;
 }
 

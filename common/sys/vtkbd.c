@@ -106,6 +106,7 @@ typedef enum {
     VKSTATE_ONE,        // <Esc> [ <1> 
     VKSTATE_TWO,        // <Esc> [ <2> 
     VKSTATE_TLIDE,      // <Esc> [ *    (wait ~, return esc_arg)
+    VKSTATE_MOUSE,      // <Esc> [ < ... (XTerm SGR mouse)
 }   VKSTATES;
 
 #define VKRAW_BS    0x08    // \b = Ctrl('H')
@@ -271,6 +272,13 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 case '2':
                     ctx->state = VKSTATE_TWO;
                     return KEY_INCOMPLETE;
+                case '<':
+                    ctx->state = VKSTATE_MOUSE;
+                    ctx->mouse_param_idx = 0;
+                    ctx->mouse_params[0] = 0;
+                    ctx->mouse_params[1] = 0;
+                    ctx->mouse_params[2] = 0;
+                    return KEY_INCOMPLETE;
             }
             break;
 
@@ -329,6 +337,46 @@ vtkbd_process(int c, VtkbdCtx *ctx)
             ctx->state = VKSTATE_NORMAL;
             return ctx->esc_arg;
 
+        case VKSTATE_MOUSE:   // Esc [ < params M/m
+            if (c >= '0' && c <= '9') {
+                if (ctx->mouse_param_idx < 3) {
+                    ctx->mouse_params[ctx->mouse_param_idx] =
+                        ctx->mouse_params[ctx->mouse_param_idx] * 10 + (c - '0');
+                }
+                return KEY_INCOMPLETE;
+            }
+            if (c == ';') {
+                if (ctx->mouse_param_idx < 2)
+                    ctx->mouse_param_idx++;
+                return KEY_INCOMPLETE;
+            }
+            if (c == 'M' || c == 'm') {
+                int btn_raw = ctx->mouse_params[0];
+                int col = ctx->mouse_params[1];
+                int row = ctx->mouse_params[2];
+
+                ctx->mouse.x = (col > 0) ? (col - 1) : 0;
+                ctx->mouse.y = (row > 0) ? (row - 1) : 0;
+                ctx->mouse.is_release = (c == 'm');
+                ctx->mouse.is_motion = (btn_raw & 32) ? 1 : 0;
+                ctx->mouse.flags = btn_raw & (4 | 8 | 16);
+
+                if (btn_raw & MOUSE_BTN_WHEEL_UP) {
+                    ctx->mouse.button = (btn_raw & 1) ? MOUSE_BTN_WHEEL_DOWN : MOUSE_BTN_WHEEL_UP;
+                } else {
+                    ctx->mouse.button = btn_raw & 3;
+                }
+
+                ctx->state = VKSTATE_NORMAL;
+                if (c == 'm') {
+                    return KEY_MOUSE_RELEASE;
+                }
+                return KEY_MOUSE;
+            }
+            // Invalid character in mouse sequence, reset
+            ctx->state = VKSTATE_NORMAL;
+            return KEY_UNKNOWN;
+
         default:
             assert(!"unknown vkstate");
             break;
@@ -337,6 +385,12 @@ vtkbd_process(int c, VtkbdCtx *ctx)
     // what to do now?
     ctx->state = VKSTATE_NORMAL;
     return KEY_UNKNOWN;
+}
+
+const vtkbd_mouse_t *
+vtkbd_get_mouse(const VtkbdCtx *ctx)
+{
+    return ctx ? &ctx->mouse : NULL;
 }
 
 ssize_t 

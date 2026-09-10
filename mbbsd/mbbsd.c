@@ -524,6 +524,7 @@ load_current_user(const char *uid)
 	mkuserdir(cuser.userid);
 	logattempt(cuser.userid, ' ', login_start_time, fromhost);
 	ensure_user_agreement_version();
+	term_enable_mouse(term_get_mouse_mode());
     }
 
     // check multi user

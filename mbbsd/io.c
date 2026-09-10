@@ -477,6 +477,13 @@ igetch(void)
 
 	    case KEY_UNKNOWN:
 		return ch;
+
+	    case KEY_MOUSE:
+	    case KEY_MOUSE_RELEASE:
+		last_mouse_event = *vtkbd_get_mouse(&vtkbd_ctx);
+		if (ch == KEY_MOUSE_RELEASE)
+		    continue;
+		break;
 	}
 
 	ch = vkey_dispatch_hooks(ch);
@@ -608,6 +615,20 @@ inline int
 vkey(void)
 {
     return igetch();
+}
+
+const vtkbd_mouse_t *
+vkey_get_mouse(void)
+{
+    return &last_mouse_event;
+}
+
+int
+vkey_get_mouse_pos(int *x, int *y)
+{
+    if (x) *x = last_mouse_event.x;
+    if (y) *y = last_mouse_event.y;
+    return (last_mouse_event.x >= 0 && last_mouse_event.y >= 0);
 }
 
 inline int

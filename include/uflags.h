@@ -17,10 +17,9 @@
 // #define UF_DBCS_AWARE    0x00000200	// DEPRECATED (was default true)
 #define UF_DBCS_NOINTRESC   0x00000400	// no Escapes interupting DBCS characters
 // #define UF_DBCS_DROP_REPEAT 0x00000800	// DEPRECATED (Was default true)
-// #define UF_DBCS_???	    0x00000800	// reserved
 // #define UF_NO_MODMARK    0x00001000	// true if modified files are NOT marked
 // #define UF_COLORED_MODMARK  0x00002000	// true if mod-mark is coloured.
-// #define UF_MODMARK_???   0x00004000	// reserved
+#define UF_MOUSE	    0x00004000	// true to enable mouse reporting
 // #define UF_MODMARK_???   0x00008000	// reserved
 #define UF_DEFBACKUP	    0x00010000	// true if user defaults to backup
 // #define UF_NEW_ANGEL_PAGER  0x00020000	// true if user (angel) wants the new pager

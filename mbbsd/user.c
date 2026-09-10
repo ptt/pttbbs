@@ -449,6 +449,9 @@ static CustomItem items[] = { {
         .desc = "CURSOR     使用舊式實心圓游標●",
         .flag =  UF_CURSOR_LEGACY,
     }, {
+        .desc = "MOUSE      啟用滑鼠支援",
+        .flag =  UF_MOUSE,
+    }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_PAGER_OFO,
 #ifdef PLAY_ANGEL
@@ -544,6 +547,7 @@ void Customize(void)
     move(b_lines - 1, 0);
     clrtoeol();
 
+    term_enable_mouse(term_get_mouse_mode());
     redrawwin(); // in case we changed output pref (like DBCS)
     vmsg("設定完成");
 }
