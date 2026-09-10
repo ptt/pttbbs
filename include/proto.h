@@ -311,6 +311,15 @@ void talk_init_hooks(void);
 ///////// virtual key: convert from cin(fd) -> buffer -> virtual key //////////
 // timeout: in milliseconds. 0 for 'do not block' and INFTIM(-1) for 'forever'
 ///////////////////////////////////////////////////////////////////////////////
+// vkey context
+typedef struct VKEY_CTX {
+    int         peek_ch;
+    int         attached_fd;
+    VtkbdCtx    vtkbd;
+} VKEY_CTX;
+
+VKEY_CTX *vkey_get_context(void);
+
 // initialization
 void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
@@ -330,6 +339,7 @@ int  vkey_is_full(void);     // test if input buffer is full
 void vkey_purge(void);		// discard clear all data in input buffer
 int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
 int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
+int  vkey_decode(VBUF *inbuf, int raw_ch); // decode raw byte into virtual key
 ssize_t vbuf_from_tty(VBUF *v);
 
 typedef enum {

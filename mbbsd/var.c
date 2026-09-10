@@ -315,7 +315,6 @@ int             automargins = 1;
 /* io.c */
 time4_t         now;
 int             KEY_ESC_arg;
-vtkbd_mouse_t   last_mouse_event;
 int             watermode = -1;
 int             wmofo = NOTREPLYING;
 /*

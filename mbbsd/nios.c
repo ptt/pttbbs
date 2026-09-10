@@ -330,7 +330,7 @@ cin_read()
 }
 
 #ifdef CIN_DEBUG
-void debug_print_input_buffer(char *s, size_t len);
+ssize_t debug_print_input_buffer(void *s, ssize_t len);
 
 CIN_PROTO void
 cin_debug_print_content()
@@ -351,17 +351,15 @@ cin_debug_print_content()
 // using the vkey_process() will handle all these cases. otherwise, you
 // have to take care of all thse input sources.
 
-// vkey context
-typedef struct VKEY_CTX {
-    int         peek_ch;
-    int         attached_fd;
-    VtkbdCtx    vtkbd;
-    // TelnetCtx   telnet;
-} VKEY_CTX;
-
 static VKEY_CTX vkctx = {
     .peek_ch = KEY_INCOMPLETE,
 };
+
+VKEY_CTX *
+vkey_get_context(void)
+{
+    return &vkctx;
+}
 
 #define VKEY_HAS_PEEK()     (vkctx.peek_ch != KEY_INCOMPLETE)
 #define VKEY_GET_PEEK()     (vkctx.peek_ch)
@@ -377,34 +375,6 @@ vkey_init()
     cin_init();
     VKEY_RESET_PEEK();
     // XXX initialize telnet, convert, ...?
-}
-
-/**
- * vkey_attach(fd): attach and replace additional fd to vkey*
- * @param fd: the file descriptor to attach
- * @return: previously attached fd
- */
-VKEY_PROTO int
-vkey_attach(int fd)
-{
-    VKEYDBGLOG("vkey_attach(%d)", fd);
-
-    int r = vkctx.attached_fd;
-    vkctx.attached_fd = fd;
-    return r;
-}
-
-/**
- * vkey_detach(): detach any additional fd in vkey*
- */
-VKEY_PROTO int
-vkey_detach()
-{
-    VKEYDBGLOG("vkey_detach()");
-
-    int r = vkctx.attached_fd;
-    vkctx.attached_fd = 0;
-    return r;
 }
 
 /**
@@ -426,42 +396,11 @@ vkey_process_cin()
 {
     VKEYDBGLOG("vkey_process_cin()");
 
-    int ch;
-
-    ch = cin_read();
-    if (ch  == EOF) // quick abort
+    int ch = cin_read();
+    if (ch == EOF)
         return EOF;
 
-    // convert virtual terminal keys
-    ch = vtkbd_process(ch, &vkctx.vtkbd);
-
-    // process transparent keys
-    switch (ch)
-    {
-        case KEY_ESC:
-            // XXX change this to (META|key) someday...
-            KEY_ESC_arg = vkctx.vtkbd.esc_arg;
-            break;
-
-        case KEY_CR:
-            // Change CR+LF to CR (KEY_ENTER).
-            if (vbuf_peek(cin) == KEY_LF)
-                vbuf_pop(cin);
-            break;
-
-        case KEY_LF:
-            ch = KEY_INCOMPLETE;
-            break;
-
-        case KEY_MOUSE:
-        case KEY_MOUSE_RELEASE:
-            last_mouse_event = *vtkbd_get_mouse(&vkctx.vtkbd);
-            if (ch == KEY_MOUSE_RELEASE)
-                ch = KEY_INCOMPLETE;
-            break;
-    }
-    ch = vkey_dispatch_hooks(ch);
-    return ch;
+    return vkey_decode(cin, ch);
 }
 
 /**
@@ -688,20 +627,6 @@ vkey_purge()
     VKEY_RESET_PEEK();
 
     // TODO reset telnet/vtkbd/conver?
-}
-
-const vtkbd_mouse_t *
-vkey_get_mouse(void)
-{
-    return &last_mouse_event;
-}
-
-int
-vkey_get_mouse_pos(int *x, int *y)
-{
-    if (x) *x = last_mouse_event.x;
-    if (y) *y = last_mouse_event.y;
-    return (last_mouse_event.x >= 0 && last_mouse_event.y >= 0);
 }
 
 #endif // USE_NIOS

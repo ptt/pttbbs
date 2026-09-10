@@ -19,7 +19,9 @@
 #endif
 
 static VBUF vout, *pvout = &vout;
+#ifndef USE_NIOS
 static VBUF vin, *pvin = &vin;
+#endif
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
@@ -64,8 +66,9 @@ debug_simple_input_buffer(unsigned char *buf GCC_UNUSED, ssize_t len)
 }
 
 ssize_t
-debug_print_input_buffer(unsigned char *s, ssize_t len)
+debug_print_input_buffer(void *buf, ssize_t len)
 {
+    unsigned char *s = (unsigned char *)buf;
     int y, x, i;
     if (!s || !len)
         return len;
@@ -255,6 +258,9 @@ system_key_hook(int ch)
             return KEY_INCOMPLETE;
         }
         return ch;
+
+    case KEY_MOUSE_RELEASE:
+        return KEY_INCOMPLETE;
     }
     return ch;
 }
@@ -263,6 +269,69 @@ static void
 system_init_hooks(void)
 {
     vkey_register_hook(VKEY_HOOK_PRIO_SYSTEM, system_key_hook);
+}
+
+const vtkbd_mouse_t *
+vkey_get_mouse(void)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    return ctx ? vtkbd_get_mouse(&ctx->vtkbd) : NULL;
+}
+
+int
+vkey_get_mouse_pos(int *x, int *y)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return 0;
+    if (x) *x = ctx->vtkbd.mouse.x;
+    if (y) *y = ctx->vtkbd.mouse.y;
+    return (ctx->vtkbd.mouse.x >= 0 && ctx->vtkbd.mouse.y >= 0);
+}
+
+int
+vkey_attach(int fd)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return 0;
+    int r = ctx->attached_fd;
+    ctx->attached_fd = fd;
+    return r;
+}
+
+int
+vkey_detach(void)
+{
+    return vkey_attach(0);
+}
+
+int
+vkey_decode(VBUF *inbuf, int raw_ch)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return raw_ch;
+
+    int ch = vtkbd_process(raw_ch, &ctx->vtkbd);
+    switch (ch) {
+    case KEY_INCOMPLETE:
+        return KEY_INCOMPLETE;
+
+    case KEY_ESC:
+        KEY_ESC_arg = ctx->vtkbd.esc_arg;
+        break;
+
+    case KEY_CR:
+        if (inbuf && vbuf_peek(inbuf) == KEY_LF)
+            vbuf_pop(inbuf);
+        break;
+
+    case KEY_LF:
+        return KEY_INCOMPLETE;
+    }
+
+    return vkey_dispatch_hooks(ch);
 }
 
 /* ----------------------------------------------------- */
@@ -318,7 +387,9 @@ ssize_t vbuf_from_tty(VBUF *v)
 int
 init_io() {
     vbuf_new(pvout, OBUFSIZE);
+#ifndef USE_NIOS
     vbuf_new(pvin, IBUFSIZE);
+#endif
     vkey_init();
     system_init_hooks();
     pager_init_hooks();
@@ -334,20 +405,14 @@ init_io() {
 
 // traditional implementation
 
-static int    i_newfd = 0;
-static struct timeval i_to, *i_top = NULL;
+static VKEY_CTX vkctx = {
+    .peek_ch = KEY_INCOMPLETE,
+};
 
-static void
-add_io(int fd, int timeout)
+VKEY_CTX *
+vkey_get_context(void)
 {
-    i_newfd = fd;
-    if (timeout) {
-	i_to.tv_sec = timeout;
-	i_to.tv_usec = 16384;	/* Ptt: 改成16384 避免不按時for loop吃cpu
-				 * time 16384 約每秒64次 */
-	i_top = &i_to;
-    } else
-	i_top = NULL;
+    return &vkctx;
 }
 
 static int
@@ -386,25 +451,19 @@ dogetch(void)
     while (vbuf_is_empty(pvin)) {
 	refresh();
 
-	if (i_newfd) {
+	if (vkctx.attached_fd) {
 
-	    struct timeval  timeout;
 	    fd_set          readfds;
-
-	    if (i_top)
-		timeout = *i_top;	/* copy it because select() might
-					 * change it */
 
 	    FD_ZERO(&readfds);
 	    FD_SET(0, &readfds);
-	    FD_SET(i_newfd, &readfds);
+	    FD_SET(vkctx.attached_fd, &readfds);
 
 	    /* jochang: modify first argument of select from FD_SETSIZE */
-	    /* since we are only waiting input from fd 0 and i_newfd(>0) */
+	    /* since we are only waiting input from fd 0 and attached_fd(>0) */
 
 	    STATINC(STAT_SYSSELECT);
-	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
-			    i_top ? &timeout : NULL)) < 0) {
+	    while ((len = select(vkctx.attached_fd + 1, &readfds, NULL, NULL, NULL)) < 0) {
 		if (errno != EINTR)
 		    abort_bbs(0);
 		/* raise(SIGHUP); */
@@ -415,7 +474,7 @@ dogetch(void)
 		return I_TIMEOUT;
 	    }
 
-	    if (i_newfd && FD_ISSET(i_newfd, &readfds)){
+	    if (vkctx.attached_fd && FD_ISSET(vkctx.attached_fd, &readfds)){
 		syncnow();
 		return I_OTHERDATA;
 	    }
@@ -451,49 +510,21 @@ dogetch(void)
     }
 }
 
-// virtual terminal keyboard context
-static VtkbdCtx vtkbd_ctx;
-
 static int
 igetch(void)
 {
-    register int ch;
-
     while (1)
     {
-	ch = dogetch();
+	int ch = dogetch();
+	if (ch == I_TIMEOUT || ch == I_OTHERDATA)
+	    return ch;
 
-	// convert virtual terminal keys
-	ch = vtkbd_process(ch, &vtkbd_ctx);
-	switch(ch)
-	{
-	    case KEY_INCOMPLETE:
-		// XXX what if endless?
-		continue;
-
-	    case KEY_ESC:
-		KEY_ESC_arg = vtkbd_ctx.esc_arg;
-		return ch;
-
-	    case KEY_UNKNOWN:
-		return ch;
-
-	    case KEY_MOUSE:
-	    case KEY_MOUSE_RELEASE:
-		last_mouse_event = *vtkbd_get_mouse(&vtkbd_ctx);
-		if (ch == KEY_MOUSE_RELEASE)
-		    continue;
-		break;
-	}
-
-	ch = vkey_dispatch_hooks(ch);
+	ch = vkey_decode(pvin, ch);
 	if (ch == KEY_INCOMPLETE)
 	    continue;
 
 	return ch;
     }
-    // should not reach here. just to make compiler happy.
-    return ch;
 }
 
 /*
@@ -514,7 +545,7 @@ wait_input(float f, int bIgnoreBuf)
 
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
-    if (i_newfd) FD_SET(i_newfd, &readfds);
+    if (vkctx.attached_fd) FD_SET(vkctx.attached_fd, &readfds);
 
     // adjust time
     if(f > 0)
@@ -537,8 +568,8 @@ wait_input(float f, int bIgnoreBuf)
 #endif
 
     do {
-	assert(i_newfd >= 0);	// if == 0, use only fd=0 => count sill u_newfd+1.
-	sel = select(i_newfd+1, &readfds, NULL, NULL, ptv);
+	assert(vkctx.attached_fd >= 0);	// if == 0, use only fd=0 => count sill u_newfd+1.
+	sel = select(vkctx.attached_fd+1, &readfds, NULL, NULL, ptv);
 
     } while (sel < 0 && errno == EINTR);
     /* EINTR, interrupted. I don't care! */
@@ -593,42 +624,16 @@ vkey_purge(void)
 
 void
 vkey_init() {
+    memset(&vkctx, 0, sizeof(vkctx));
+    vkctx.peek_ch = KEY_INCOMPLETE;
 }
 
-int
-vkey_attach(int fd)
-{
-    int r = i_newfd;
-    add_io(fd, 0);
-    return r;
-}
 
-int
-vkey_detach(void)
-{
-    int r = i_newfd;
-    add_io(0, 0);
-    return r;
-}
 
 inline int
 vkey(void)
 {
     return igetch();
-}
-
-const vtkbd_mouse_t *
-vkey_get_mouse(void)
-{
-    return &last_mouse_event;
-}
-
-int
-vkey_get_mouse_pos(int *x, int *y)
-{
-    if (x) *x = last_mouse_event.x;
-    if (y) *y = last_mouse_event.y;
-    return (last_mouse_event.x >= 0 && last_mouse_event.y >= 0);
 }
 
 inline int
