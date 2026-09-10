@@ -37,19 +37,26 @@ expand_esc_star(char *buf, const char *src, int szbuf)
 
 void
 strip_ansi_movecmd(char *s) {
-    const char *pattern_movecmd = "ABCDfjHJRu";
-    const char *pattern_ansi_code = "0123456789;,[";
-
     while (*s) {
-        char *esc = strchr(s, ESC_CHR);
-        if (!esc)
-            return;
-        s = ++esc;
-        while (*esc && strchr(pattern_ansi_code, *esc))
-            esc++;
-        if (*esc && strchr(pattern_movecmd, *esc)) {
-            *esc = 's';
+        if (*s == ESC_CHR) {
+            if (*(s + 1) == '[') {
+                char *p = s + 2;
+                int has_private = (*p >= 0x3C && *p <= 0x3F);
+                while (*p >= 0x30 && *p <= 0x3F)
+                    p++;
+                while (*p >= 0x20 && *p <= 0x2F)
+                    p++;
+                if (*p >= 0x40 && *p <= 0x7E) {
+                    if (has_private || strchr("ABCDEFGHJRefjru", *p) != NULL) {
+                        *p = 's';
+                    }
+                    s = p;
+                }
+            } else if (*(s + 1) == ']') {
+                *s = ' ';
+            }
         }
+        s++;
     }
 }
 
