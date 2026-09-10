@@ -54,13 +54,22 @@ typedef struct {
     int     flags;      /* modifier flags (shift=4, meta=8, ctrl=16) */
 } vtkbd_mouse_t;
 
+#define VTKBD_MAX_PARAMS 8
+#define VTKBD_MAX_INTERMEDIATE 4
+
 /* context definition */
 typedef struct {
     int     state;
     int     esc_arg;
     vtkbd_mouse_t mouse;
-    int     mouse_param_idx;
-    int     mouse_params[3];
+    /* ECMA-48 / CSI parsing state */
+    int     csi_prefix;         /* Leading parameter char: '<', '?', '=', '>', etc. */
+    int     csi_params[VTKBD_MAX_PARAMS];
+    int     csi_param_count;
+    int     csi_has_param;      /* 1 if current param has digits */
+    int     csi_inter_count;
+    char    csi_intermediate[VTKBD_MAX_INTERMEDIATE];
+    int     csi_len;            /* Total sequence length to prevent overflow */
 } VtkbdCtx;
 
 /* vtkbd API */

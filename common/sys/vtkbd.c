@@ -101,16 +101,24 @@
 typedef enum {
     VKSTATE_NORMAL = 0,
     VKSTATE_ESC,        // <Esc>
-    VKSTATE_ESC_APP,    // <Esc> O
-    VKSTATE_ESC_QUOTE,  // <Esc> [
-    VKSTATE_ONE,        // <Esc> [ <1> 
-    VKSTATE_TWO,        // <Esc> [ <2> 
-    VKSTATE_TLIDE,      // <Esc> [ *    (wait ~, return esc_arg)
-    VKSTATE_MOUSE,      // <Esc> [ < ... (XTerm SGR mouse)
+    VKSTATE_ESC_APP,    // <Esc> O (SS3)
+    VKSTATE_CSI,        // <Esc> [ (ECMA-48 Control Sequence Introducer)
 }   VKSTATES;
 
 #define VKRAW_BS    0x08    // \b = Ctrl('H')
 #define VKRAW_ERASE 0x7F    // <X]
+
+static void
+vtkbd_reset_csi(VtkbdCtx *ctx)
+{
+    ctx->csi_prefix = 0;
+    ctx->csi_param_count = 0;
+    ctx->csi_has_param = 0;
+    ctx->csi_inter_count = 0;
+    ctx->csi_len = 0;
+    memset(ctx->csi_params, 0, sizeof(ctx->csi_params));
+    memset(ctx->csi_intermediate, 0, sizeof(ctx->csi_intermediate));
+}
 
 /* the processor API */
 int 
@@ -137,7 +145,8 @@ vtkbd_process(int c, VtkbdCtx *ctx)
         case VKSTATE_ESC:       // <Esc>
             switch (c) {
                 case '[':
-                    ctx->state = VKSTATE_ESC_QUOTE;
+                    vtkbd_reset_csi(ctx);
+                    ctx->state = VKSTATE_CSI;
                     return KEY_INCOMPLETE;
 
                 case 'O':
@@ -218,162 +227,182 @@ vtkbd_process(int c, VtkbdCtx *ctx)
             }
             break;
 
-        case VKSTATE_ESC_QUOTE:     // <Esc> [
-
-            switch(c) {
-                case 'A':
-                case 'B':
-                case 'C':
-                case 'D':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_UP + (c - 'A');
-
-                    // SCO
-                case 'H':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_HOME;
-                case 'F':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_END;
-                case 'G':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_PGDN;
-                case 'I':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_PGUP;
-                case 'L':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_INS;
-
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_DEL + (c - '3');
-                    return KEY_INCOMPLETE;
-
-                case '7':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_HOME;
-                    return KEY_INCOMPLETE;
-                case '8':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_END;
-                    return KEY_INCOMPLETE;
-
-                case 'Z':
-                    ctx->state = VKSTATE_NORMAL;
-                    return KEY_STAB;
-
-                case '1':
-                    ctx->state = VKSTATE_ONE;
-                    return KEY_INCOMPLETE;
-                case '2':
-                    ctx->state = VKSTATE_TWO;
-                    return KEY_INCOMPLETE;
-                case '<':
-                    ctx->state = VKSTATE_MOUSE;
-                    ctx->mouse_param_idx = 0;
-                    ctx->mouse_params[0] = 0;
-                    ctx->mouse_params[1] = 0;
-                    ctx->mouse_params[2] = 0;
-                    return KEY_INCOMPLETE;
-            }
-            break;
-
-        case VKSTATE_ONE:   // <Esc> [ 1
-            if (c == '~')
-            {
-                ctx->state = VKSTATE_NORMAL;
-                return KEY_HOME;
-            }
-
-            switch(c) {
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_F1 + c - '1'; // F1 .. F5
-                    return KEY_INCOMPLETE;
-
-                case '7':
-                case '8':
-                case '9':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_F6 + c - '7'; // F6 .. F8
-                    return KEY_INCOMPLETE;
-            }
-            break;
-
-        case VKSTATE_TWO:   // <Esc> [ 2
-            if (c == '~')
-            {
-                ctx->state = VKSTATE_NORMAL;
-                return KEY_INS;         // HOME+1
-            }
-
-            switch(c) {
-                case '0':
-                case '1':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_F9 + c - '0'; // F9 .. F10
-                    return KEY_INCOMPLETE;
-
-                case '3':
-                case '4':
-                    ctx->state = VKSTATE_TLIDE;
-                    ctx->esc_arg = KEY_F11 + c - '3'; // F11 .. F12
-                    return KEY_INCOMPLETE;
-            }
-            break;
-
-        case VKSTATE_TLIDE:   // Esc [ <12> <0-9> ~
-            if (c != '~')
-                break;
-
-            ctx->state = VKSTATE_NORMAL;
-            return ctx->esc_arg;
-
-        case VKSTATE_MOUSE:   // Esc [ < params M/m
-            if (c >= '0' && c <= '9') {
-                if (ctx->mouse_param_idx < 3) {
-                    ctx->mouse_params[ctx->mouse_param_idx] =
-                        ctx->mouse_params[ctx->mouse_param_idx] * 10 + (c - '0');
-                }
+        case VKSTATE_CSI:   // <Esc> [ P...P I...I F (ECMA-48 Control Sequence)
+            if (c == KEY_ESC) {
+                // Interrupted by new ESC, restart ESC state
+                ctx->state = VKSTATE_ESC;
                 return KEY_INCOMPLETE;
             }
-            if (c == ';') {
-                if (ctx->mouse_param_idx < 2)
-                    ctx->mouse_param_idx++;
+
+            if (++ctx->csi_len > 64) {
+                // Sequence too long / malformed; abort to prevent hang
+                ctx->state = VKSTATE_NORMAL;
+                return KEY_UNKNOWN;
+            }
+
+            if (c < 0x20 || c == 0x7F) {
+                // Unexpected control character inside CSI sequence.
+                // Abort sequence and process control character.
+                ctx->state = VKSTATE_NORMAL;
+                if (c == VKRAW_BS || c == VKRAW_ERASE)
+                    return KEY_BS;
+                return c;
+            }
+
+            if (c > 0x7E) {
+                // Non-ASCII byte; abort sequence
+                ctx->state = VKSTATE_NORMAL;
+                return KEY_UNKNOWN;
+            }
+
+            // Parameter characters: 3/0 to 3/15
+            // (0x30 to 0x3F: '0'-'9', ':', ';', '<', '=', '>', '?')
+            if (c >= 0x30 && c <= 0x3F) {
+                if (ctx->csi_inter_count > 0) {
+                    // Parameters cannot follow intermediate characters in ECMA-48
+                    return KEY_INCOMPLETE;
+                }
+                if (ctx->csi_len == 1 && (c == '<' || c == '?' || c == '=' || c == '>')) {
+                    ctx->csi_prefix = c;
+                    return KEY_INCOMPLETE;
+                }
+                if (c == ';' || c == ':') {
+                    if (ctx->csi_param_count < VTKBD_MAX_PARAMS)
+                        ctx->csi_param_count++;
+                    ctx->csi_has_param = 0;
+                    return KEY_INCOMPLETE;
+                }
+                if (c >= '0' && c <= '9') {
+                    if (!ctx->csi_has_param) {
+                        ctx->csi_has_param = 1;
+                        if (ctx->csi_param_count == 0)
+                            ctx->csi_param_count = 1;
+                    }
+                    int idx = (ctx->csi_param_count > 0) ? ctx->csi_param_count - 1 : 0;
+                    if (idx < VTKBD_MAX_PARAMS) {
+                        ctx->csi_params[idx] = ctx->csi_params[idx] * 10 + (c - '0');
+                    }
+                    return KEY_INCOMPLETE;
+                }
+                // Other parameter characters (e.g. private marker not at start)
                 return KEY_INCOMPLETE;
             }
-            if (c == 'M' || c == 'm') {
-                int btn_raw = ctx->mouse_params[0];
-                int col = ctx->mouse_params[1];
-                int row = ctx->mouse_params[2];
 
-                ctx->mouse.x = (col > 0) ? (col - 1) : 0;
-                ctx->mouse.y = (row > 0) ? (row - 1) : 0;
-                ctx->mouse.is_release = (c == 'm');
-                ctx->mouse.is_motion = (btn_raw & 32) ? 1 : 0;
-                ctx->mouse.flags = btn_raw & (4 | 8 | 16);
-
-                if (btn_raw & MOUSE_BTN_WHEEL_UP) {
-                    ctx->mouse.button = (btn_raw & 1) ? MOUSE_BTN_WHEEL_DOWN : MOUSE_BTN_WHEEL_UP;
-                } else {
-                    ctx->mouse.button = btn_raw & 3;
-                }
-
-                ctx->state = VKSTATE_NORMAL;
-                if (c == 'm') {
-                    return KEY_MOUSE_RELEASE;
-                }
-                return KEY_MOUSE;
+            // Intermediate characters: 2/0 to 2/15
+            // (0x20 to 0x2F: space, '!', '"', '#', '$', '%', '&', '\'',
+            // '(', ')', '*', '+', ',', '-', '.', '/')
+            if (c >= 0x20 && c <= 0x2F) {
+                if (ctx->csi_inter_count < VTKBD_MAX_INTERMEDIATE)
+                    ctx->csi_intermediate[ctx->csi_inter_count++] = (char)c;
+                return KEY_INCOMPLETE;
             }
-            // Invalid character in mouse sequence, reset
+
+            // Final character: 4/0 to 7/14 (0x40 to 0x7E: '@' to '~')
+            if (c >= 0x40 && c <= 0x7E) {
+                ctx->state = VKSTATE_NORMAL;
+
+                // 1. XTerm SGR Mouse: ESC [ < btn ; col ; row M/m
+                if (ctx->csi_prefix == '<' && (c == 'M' || c == 'm')) {
+                    int btn_raw = ctx->csi_params[0];
+                    int col = (ctx->csi_param_count > 1) ? ctx->csi_params[1] : 0;
+                    int row = (ctx->csi_param_count > 2) ? ctx->csi_params[2] : 0;
+
+                    ctx->mouse.x = (col > 0) ? (col - 1) : 0;
+                    ctx->mouse.y = (row > 0) ? (row - 1) : 0;
+                    ctx->mouse.is_release = (c == 'm');
+                    ctx->mouse.is_motion = (btn_raw & 32) ? 1 : 0;
+                    ctx->mouse.flags = btn_raw & (4 | 8 | 16);
+
+                    if (btn_raw & MOUSE_BTN_WHEEL_UP) {
+                        ctx->mouse.button = (btn_raw & 1) ?
+                                MOUSE_BTN_WHEEL_DOWN : MOUSE_BTN_WHEEL_UP;
+                    } else {
+                        ctx->mouse.button = btn_raw & 3;
+                    }
+
+                    if (c == 'm')
+                        return KEY_MOUSE_RELEASE;
+                    return KEY_MOUSE;
+                }
+
+                // If private prefix is present (e.g. '?', '=', '>'), unhandled above -> drop
+                if (ctx->csi_prefix != 0) {
+                    return KEY_UNKNOWN;
+                }
+
+                // Standard sequences (no private prefix)
+                switch (c) {
+                    // Directions: Up, Down, Right, Left (also handles modified arrows like Ctrl-Up ESC [ 1;5A)
+                    case 'A':
+                    case 'B':
+                    case 'C':
+                    case 'D':
+                        return KEY_UP + (c - 'A');
+
+                    // SCO / XTerm cursor keys
+                    case 'H':
+                        return KEY_HOME;
+                    case 'F':
+                        return KEY_END;
+                    case 'G':
+                        return KEY_PGDN;
+                    case 'I':
+                        return KEY_PGUP;
+                    case 'L':
+                        return KEY_INS;
+
+                    // Shift-TAB
+                    case 'Z':
+                        return KEY_STAB;
+
+                    // Tilde sequences: ESC [ <param> ~
+                    case '~': {
+                        int p0 = ctx->csi_params[0];
+                        switch (p0) {
+                            case 1:
+                                return KEY_HOME;
+                            case 2:
+                                return KEY_INS;
+                            case 3:
+                                return KEY_DEL;
+                            case 4:
+                                return KEY_END;
+                            case 5:
+                                return KEY_PGUP;
+                            case 6:
+                                return KEY_PGDN;
+                            case 7:
+                                return KEY_HOME;
+                            case 8:
+                                return KEY_END;
+
+                            // F1 .. F5
+                            case 11: case 12: case 13: case 14: case 15:
+                                return KEY_F1 + (p0 - 11);
+
+                            // F6 .. F8
+                            case 17: case 18: case 19:
+                                return KEY_F6 + (p0 - 17);
+
+                            // F9 .. F10
+                            case 20: case 21:
+                                return KEY_F9 + (p0 - 20);
+
+                            // F11 .. F12
+                            case 23: case 24:
+                                return KEY_F11 + (p0 - 23);
+
+                            default:
+                                return KEY_UNKNOWN;
+                        }
+                    }
+
+                    default:
+                        return KEY_UNKNOWN;
+                }
+            }
+
+            // Fallback for any other unexpected character
             ctx->state = VKSTATE_NORMAL;
             return KEY_UNKNOWN;
 
