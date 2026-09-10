@@ -13,7 +13,8 @@ void fastcheck()
     userinfo_t u;
     time4_t base;
 
-    base = time4(0) - DAY_SECONDS;
+    now -= (time4_to_time(now) % 60); // begin of current minute, in case cron delays
+    base = now - DAY_SECONDS;
 
     assert(sizeof(sorted) == sizeof(**SHM->sorted));
     memcpy(sorted, SHM->sorted[SHM->currsorted][7],
@@ -47,7 +48,7 @@ void fastcheck()
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
-        if (time4_ge(urec.lastlogin, base))
+        if (time4_gt(urec.lastlogin, base))
             continue;
 
         if (verbose)
