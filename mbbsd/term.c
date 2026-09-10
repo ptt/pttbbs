@@ -88,6 +88,11 @@ static int current_mouse_mode = MOUSE_MODE_NONE;
 void
 term_enable_mouse(int mode)
 {
+#ifndef USE_MOUSE
+    // Some terminal apps with poor parser really can't handle DEC PCS.
+    return;
+#endif
+
     const char *seq = "";
     current_mouse_mode = mode;
     if (mode == MOUSE_MODE_NONE || !HasUserFlag(UF_MOUSE)) {

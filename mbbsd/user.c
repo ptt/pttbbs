@@ -448,9 +448,11 @@ static CustomItem items[] = { {
 #endif
         .desc = "CURSOR     使用舊式實心圓游標●",
         .flag =  UF_CURSOR_LEGACY,
+#ifdef USE_MOUSE
     }, {
         .desc = "MOUSE      啟用滑鼠支援",
         .flag =  UF_MOUSE,
+#endif
     }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_PAGER_OFO,
