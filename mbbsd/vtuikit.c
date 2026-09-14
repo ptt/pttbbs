@@ -1403,11 +1403,12 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	}
 
 	// prevent incomplete DBCS
-	if (c > 0x80 && vkey_is_ready() &&
-		len - rt.iend < 3)	// we need 3 for DBCS+NUL.
+	if (len - rt.iend < 3 && c > 0x80 &&
+		DBCS_Status(buf, rt.icurr) != DBCS_TRAILING)	// we need 3 for DBCS+NUL.
 	{
 	    // XXX should we purge here, or wait the final DBCS_safe_trim?
-	    vkey_purge();
+	    if (vkey_is_ready())
+		vkey();
 	    bell(); continue;
 	}
 
