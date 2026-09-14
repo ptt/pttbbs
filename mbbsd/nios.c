@@ -103,7 +103,7 @@ nios_dbgf(const char *fmt, ...)
 
 // configuration
 #ifndef CIN_BUFFER_SIZE
-#define CIN_BUFFER_SIZE (256)
+#define CIN_BUFFER_SIZE (128)
 #endif
 #define CIN_DEFAULT_FD  (cin_fd)
 
@@ -121,9 +121,15 @@ CIN_PROTO void cin_clear_fd(int fd);        // drop everying in fd
 CIN_PROTO void cin_fetch_fd(int fd);        // read more data from fd to buffer
 // virtual combination
 CIN_PROTO int  cin_read(void);              // read one byte from cin (buffer then cin_fd)
+CIN_PROTO int  cin_is_empty(void);          // Check if the buffer & fd are both empty.
+
+// Threshold in bytes to consider input as a burst/paste rather than a single keystroke.
+// Single keystrokes are 1-6 bytes (ASCII, Big5, UTF-8, arrow keys, mouse events).
+#define CIN_BURST_THRESHOLD (8)
 
 // virtual buffer for cin
 static const int cin_fd = STDIN_FILENO;
+static int cin_burst = 0;
 static char cin_buf[CIN_BUFFER_SIZE];
 static VBUF vcin = {
     .head    = cin_buf,
@@ -145,6 +151,7 @@ CIN_PROTO void
 cin_init()
 {
     vbuf_attach(cin, cin_buf, sizeof(cin_buf));
+    cin_burst = 0;
 }
 
 /**
@@ -184,16 +191,13 @@ cin_is_fd_empty(int fd)
     CINDBGLOG("cin_is_fd_empty(%d)", fd);
 
     if (HAVE_FIONREAD) {
-        int r;
-        if (ioctl(fd, FIONREAD, &r) == 0) {
-            if (r > 0)
-                return 0;  // Fast path: data available in kernel buffer.
-        } else {
-            return 0;      // Error (fd closed/invalid), treat as not empty to trigger read/error handling.
-        }
+        int r = 0;
+        if (ioctl(fd, FIONREAD, &r) == 0)
+            return r <= 0;
+        // Error (fd closed/invalid), treat as not empty to trigger read/error
+        // handling.
+        return 0;
     }
-
-    // Fallback/Disconnect check when r == 0: poll to distinguish truly empty vs POLLHUP/POLLERR.
     return cin_poll_fds(fd, -1, 0) == 0;
 }
 
@@ -244,6 +248,7 @@ cin_clear_buffer()
 {
     CINDBGLOG("cin_clear_buffer()");
     vbuf_clear(cin);
+    cin_burst = 0;
 }
 
 /**
@@ -261,6 +266,15 @@ cin_clear_fd(int fd)
 
     if (cin_is_fd_empty(fd))
         return;
+
+    if (fd == cin_fd) {
+        int max_try = 64;
+        while (!cin_is_fd_empty(fd) && max_try-- > 0) {
+            vbuf_from_tty(cin);
+            cin_clear_buffer();
+        }
+        return;
+    }
 
     vbuf_attach(v, garbage, sizeof(garbage));
     do {
@@ -300,10 +314,14 @@ cin_fetch_fd(int fd)
     // Legacy way to read data compatible with `io.c`.
     ssize_t sz = 0;
 
-    // sz<0 from vbuf_from_tty may be EAGAIN or EINTR so we can loop.
-    while (!vbuf_is_full(cin) && sz <= 0) {
+    // sz<=0 from vbuf_from_tty may be EAGAIN/EINTR or filtered data (e.g.
+    // telnet IAC or partial UTF-8). Only loop if fd still has data available
+    // so we never block on an empty socket.
+    do {
         sz = vbuf_from_tty(cin);
-    }
+    } while (!vbuf_is_full(cin) && sz <= 0 && !cin_is_fd_empty(fd));
+
+    cin_burst = (vbuf_size(cin) >= CIN_BURST_THRESHOLD);
 
 #ifdef CIN_DEBUG
     cin_debug_print_content();
@@ -327,6 +345,20 @@ cin_read()
         return EOF;
 
     return vbuf_pop(cin);
+}
+
+CIN_PROTO int
+cin_is_empty()
+{
+    if (!cin_is_buffer_empty())
+        return 0;
+    if (!cin_burst)
+        return 1;
+    if (cin_is_fd_empty(cin_fd)) {
+        cin_burst = 0;
+        return 1;
+    }
+    return 0;
 }
 
 #ifdef CIN_DEBUG
@@ -388,113 +420,23 @@ vkey_is_full()
 }
 
 /**
- * vkey_process_cin(): read data from cin and process.
- * @return first byte from cin, or EOF for error
+ * vkey_process(): process available data from cin into peek_ch.
+ * @return: 1 if a complete key is decoded in peek_ch, 0 otherwise.
  */
 static VKEY_PROTO int
-vkey_process_cin()
+vkey_process(void)
 {
-    VKEYDBGLOG("vkey_process_cin()");
+    VKEYDBGLOG("vkey_process()");
 
-    int ch = cin_read();
-    if (ch == EOF)
-        return EOF;
-
-    return vkey_decode(cin, ch);
-}
-
-/**
- * vkey_process(timeout, peek): receive and block (max to timeout milliseconds) next key
- * @param timeout: 0 for non-block, INFTIM(-1) for infinite, otherwise milliseconds
- * @param peek: to keep the data in buffer
- * @return: virtual key code, or KEY_INCOMPLETE for timeout
- */
-static VKEY_PROTO int
-vkey_process(int timeout, int peek)
-{
-    VKEYDBGLOG("vkey_process(%d, %d)", timeout, peek);
-
-    int r;
-
-    // process last peeked data
-    if (VKEY_HAS_PEEK())
-    {
-        // cached
-        r = VKEY_GET_PEEK();
-        if (!peek)
-            VKEY_RESET_PEEK();
-        return r;
+    while (!VKEY_HAS_PEEK() && !cin_is_empty()) {
+        int ch = cin_read();
+        if (ch == EOF)
+            break;
+        int r = vkey_decode(cin, ch);
+        if (r != KEY_INCOMPLETE)
+            VKEY_SET_PEEK(r);
     }
-
-    do {
-        if (!cin_is_buffer_empty())
-        {
-            r = vkey_process_cin();
-            continue;
-        }
-
-        // Going to wait user input, and let's refresh the screen to make sure
-        // every pending update is really shown to the user.
-        refresh();
-
-        // XXX should we let cin_poll select from fds of fd_empty?
-
-        // Now, try to read from fd.
-        assert(1 == CIN_POLL_CINFD);    // cin_is_fd_empty() will return 1.
-        if (timeout > 0 || CIN_IS_VALID_FD2(vkctx.attached_fd))
-        {
-            r = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, timeout);
-        }
-        else if (timeout == 0)
-        {
-            r = !cin_is_fd_empty(CIN_DEFAULT_FD);
-        }
-        else {
-            assert(timeout == INFTIM);  // let's simply read it.
-            r = CIN_POLL_CINFD;
-        }
-
-        if (r == 0)
-        {
-            // No data for both FD.
-            assert(KEY_INCOMPLETE != I_TIMEOUT);
-            // I_TIMEOUT is a special value only when fd2 is attached and
-            // timeout (not in timeout=0 peek mode).
-            if (timeout > 0  && CIN_IS_VALID_FD2(vkctx.attached_fd)) {
-                syncnow();
-                r = I_TIMEOUT;
-            } else {
-                return KEY_INCOMPLETE; // must directly return here.
-            }
-        }
-
-        if (r < 0)
-        {
-            // Error
-            r = KEY_UNKNOWN;        // or EOF?
-        }
-        else if (r & CIN_POLL_CINFD)
-        {
-            // Primary fd (user keyboard input)
-            r = vkey_process_cin();
-        }
-        else if (r & CIN_POLL_FD2)
-        {
-            // The second fd
-            syncnow();
-            r = I_OTHERDATA;
-        } else {
-            assert(false);
-            // Shall never reach here.
-            r = KEY_UNKNOWN;
-        }
-    } while (r == KEY_INCOMPLETE);
-
-    // process peek
-    if (peek && r != KEY_INCOMPLETE)
-        VKEY_SET_PEEK(r);
-
-    return r;
+    return VKEY_HAS_PEEK();
 }
 
 /**
@@ -505,7 +447,10 @@ VKEY_PROTO int
 vkey_is_ready()
 {
     VKEYDBGLOG("vkey_is_ready()");
-    return vkey_process(0, 1) != KEY_INCOMPLETE;
+    if (!VKEY_HAS_PEEK() && cin_is_buffer_empty() && !cin_is_fd_empty(CIN_DEFAULT_FD))
+        cin_fetch_fd(CIN_DEFAULT_FD);
+    vkey_process();
+    return VKEY_HAS_PEEK();
 }
 
 /**
@@ -517,9 +462,44 @@ VKEY_PROTO int
 vkey_poll(int timeout)
 {
     VKEYDBGLOG("vkey_poll(%d)", timeout);
-    if (timeout && !VKEY_HAS_PEEK() && cin_is_buffer_empty())
-        refresh();
-    return vkey_process(timeout, 1) != KEY_INCOMPLETE;
+
+    while (1) {
+        if (vkey_process())
+            return 1;
+
+        if (timeout == 0) {
+            if (CIN_IS_VALID_FD2(vkctx.attached_fd))
+                return (cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, 0) & CIN_POLL_FD2) != 0;
+            return 0;
+        }
+
+        // Going to wait user input, and let's update the screen to make sure
+        // every pending update is really shown to the user.
+        // Note: we call doupdate() directly instead of refresh() because
+        // refresh() checks vkey_is_typeahead(), which is already guaranteed
+        // to be false here (!VKEY_HAS_PEEK() && cin_is_empty()).
+        doupdate();
+
+        if (timeout == INFTIM && !CIN_IS_VALID_FD2(vkctx.attached_fd)) {
+            cin_fetch_fd(CIN_DEFAULT_FD);
+            continue;
+        }
+
+        int r = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, timeout);
+        if (r <= 0) {
+            if (timeout > 0)
+                syncnow();
+            return 0;
+        }
+        if (r & CIN_POLL_CINFD) {
+            cin_fetch_fd(CIN_DEFAULT_FD);
+            continue;
+        }
+        if (r & CIN_POLL_FD2) {
+            syncnow();
+            return 1;
+        }
+    }
 }
 
 /**
@@ -530,9 +510,9 @@ VKEY_PROTO int
 vkey_is_typeahead()
 {
     VKEYDBGLOG("vkey_is_typeahead(): %d||%d",
-            VKEY_HAS_PEEK(), !cin_is_buffer_empty());
+            VKEY_HAS_PEEK(), !cin_is_empty());
 
-    return  VKEY_HAS_PEEK() || !cin_is_buffer_empty();
+    return VKEY_HAS_PEEK() || !cin_is_empty();
 }
 
 /**
@@ -578,18 +558,17 @@ vkey()
 {
     VKEYDBGLOG("vkey()");
 
-    int c;
-
-    // It's more efficient to only refresh when we're going to wait for user
-    // input.
-    if (cin_is_buffer_empty())
-        refresh();
-
-    while ((c = vkey_process(INFTIM, 1)) == KEY_INCOMPLETE);
-    // we can either read again without peek, or simly reset peek.
-    // return vkey_process(INFTIM, 0);
-    VKEY_RESET_PEEK();
-    return c;
+    while (1) {
+        if (!vkey_poll(INFTIM))
+            return KEY_UNKNOWN;
+        if (VKEY_HAS_PEEK()) {
+            int c = VKEY_GET_PEEK();
+            VKEY_RESET_PEEK();
+            return c;
+        }
+        if (CIN_IS_VALID_FD2(vkctx.attached_fd))
+            return I_OTHERDATA;
+    }
 }
 
 /**
@@ -600,20 +579,8 @@ vkey_purge()
 {
     VKEYDBGLOG("vkey_purge()");
 
-    // a magic number to set how much data we're going to process
-    // before a real purge (may contain telnet protocol)
-    int bytes_before_purge = 32;
-
-    // let's still try to process some remaining bytes
-    vkey_prefetch(0);
-    while (vkey_is_ready() && bytes_before_purge-- > 0)
-    {
-        // we can't deal with I_OTHERDATA...
-        if (vkey() == I_OTHERDATA)
-            break;
-    }
-
     // ok, now let's try our best to purge all remaining data
+    // (cin_clear_fd uses vbuf_from_tty for cin_fd so telnet protocol is handled)
     cin_clear_fd(CIN_DEFAULT_FD);
 
     // XXX in current usage,  we don't expect vkey_purge to clean
@@ -626,7 +593,8 @@ vkey_purge()
     cin_clear_buffer();
     VKEY_RESET_PEEK();
 
-    // TODO reset telnet/vtkbd/conver?
+    // TBD should we also reset telnet/convert/ansi filters?
+    memset(&vkctx.vtkbd, 0, sizeof(vkctx.vtkbd));
 }
 
 #endif // USE_NIOS

@@ -6,7 +6,7 @@
 // 一般文章推文頁約 2590 bytes
 // 注意實際可用的空間為 N-1。
 #define OBUFSIZE  3072
-#define IBUFSIZE  256
+#define IBUFSIZE  128
 
 // When charset encoding conversion is applied, we may need to write extra N
 // bytes into buffer for one character input. Currently the number is 3 (UTF8).
