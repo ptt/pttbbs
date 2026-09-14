@@ -7,8 +7,6 @@
 #include "vtkbd.h"
 #include "bbs.h"
 
-#ifdef USE_NIOS
-
 // nios: piaip's Network I/O Stream
 //       piaip's New implementation for Input and Output System
 // Author: Hung-Te Lin (piaip)
@@ -597,7 +595,5 @@ vkey_purge()
 
     vkey_init();
 }
-
-#endif // USE_NIOS
 
 // vim:ts=4:sw=4:et

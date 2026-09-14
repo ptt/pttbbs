@@ -307,7 +307,7 @@ void pager_init_hooks(void);
 void talk_init_hooks(void);
 
 // new input api
-/* nios.c / io.c */
+/* io.c / nios.c / igetch.c */
 ///////// virtual key: convert from cin(fd) -> buffer -> virtual key //////////
 // timeout: in milliseconds. 0 for 'do not block' and INFTIM(-1) for 'forever'
 ///////////////////////////////////////////////////////////////////////////////

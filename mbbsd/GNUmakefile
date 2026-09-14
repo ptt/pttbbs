@@ -11,7 +11,7 @@ PROG      := mbbsd
 COREOBJS  := bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
 ABUSEOBJS := captcha.o
 ACCOBJS   := user.o acl.o register.o passwd.o emaildb.o
-NETOBJS   := mbbsd.o io.o term.o telnet.o nios.o
+NETOBJS   := mbbsd.o io.o term.o telnet.o
 TALKOBJS  := friend.o talk.o ccw.o
 UTILOBJS  := stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o tag.o
 UIOBJS    := menu.o vtuikit.o psb.o
@@ -74,6 +74,12 @@ ifneq ($(USE_PFTERM),)
 OBJS += pfterm.o
 else
 OBJS += screen.o
+endif
+
+ifneq ($(USE_NIOS),)
+OBJS += nios.o
+else
+OBJS += igetch.o
 endif
 
 ifneq ($(USE_MBBSD_CXX),)
