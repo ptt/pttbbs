@@ -859,6 +859,8 @@ int pwcuViolateLaw	(void);
 int pwcuSaveViolateLaw	(void);
 int pwcuCancelBadpost	(void);
 int pwcuAddExMailBox	(int m);
+int pwcuAddMailCount	(int count);
+int pwcuGetDailyMailCount(void);
 int pwcuToggleOutMail	(void);
 int pwcuSetLoginView	(unsigned int bits);
 int pwcuSetLastSongTime (time4_t clk);

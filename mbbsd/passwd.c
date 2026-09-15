@@ -181,6 +181,43 @@ pwcuAddExMailBox(int m)
     PWCU_END();
 }
 
+int
+pwcuGetDailyMailCount(void)
+{
+    char today[16];
+    userec_t u;
+    syncnow();
+    if (pwcuInitCUser(&u) != 0)
+	return cuser.daily_mail_count;
+    STRLCPY(today, Cdatedate(&now));
+    if (strcmp(today, Cdatedate(&u.last_mail_time)) != 0) {
+	cuser.daily_mail_count = 0;
+	return 0;
+    }
+    cuser.daily_mail_count = u.daily_mail_count;
+    cuser.last_mail_time = u.last_mail_time;
+    return (int)u.daily_mail_count;
+}
+
+int
+pwcuAddMailCount(int count)
+{
+    char today[16];
+    if (count <= 0)
+	return 0;
+    syncnow();
+    PWCU_START();
+    STRLCPY(today, Cdatedate(&now));
+    if (strcmp(today, Cdatedate(&u.last_mail_time)) != 0) {
+	u.daily_mail_count = 0;
+    }
+    u.daily_mail_count += count;
+    u.last_mail_time = now;
+    cuser.daily_mail_count = u.daily_mail_count;
+    cuser.last_mail_time = u.last_mail_time;
+    PWCU_END();
+}
+
 int pwcuSetLastSongTime (time4_t clk)
 {
     PWCU_START();
