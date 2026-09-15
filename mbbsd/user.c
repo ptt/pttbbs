@@ -1537,6 +1537,10 @@ int u_setup_2fa(void)
     }
     outs("\n" ANSI_COLOR(1;31) "請妥善保存以上救援碼！若手機遺失可用於登入。" ANSI_RESET "\n\n");
 
+    // Yes some users don't figure out this is authenticator based.
+    outs("注意這不是簡訊認證!!!\n");
+    outs(ANSI_COLOR(1;33) "之後上站是要用驗證器，不會有簡訊通知也不會有email!!!" ANSI_RESET "\n");
+
     char input_code[7];
     for (int err = 0; err < 5; err++) {
         getdata(b_lines - 1, 0, "請輸入驗證器產生的六位數字驗證碼以啟用: ",
