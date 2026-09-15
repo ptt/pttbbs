@@ -16,8 +16,10 @@ ToggleVector(struct Vector *list, int *recipient, const char *listfile, const ch
 	    if (!genbuf[0])
 		continue;
 	    if (Vector_search(list, genbuf) < 0) {
-		Vector_add(list, genbuf);
-		(*recipient)++;
+		if (Vector_length(list) < MAX_MULTILIST) {
+		    Vector_add(list, genbuf);
+		    (*recipient)++;
+		}
 	    } else {
 		Vector_remove(list, genbuf);
 		(*recipient)--;
@@ -487,4 +489,197 @@ char           *
 completeutmp_getname(int where)
 {
     return SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]].userid;
+}
+
+static void
+format_multilist_title(char *buf, size_t sz, const char *prefix, int count)
+{
+    size_t len = prefix ? strlen(prefix) : 0;
+    while (len > 0 && (prefix[len - 1] == '\n' || prefix[len - 1] == '\r'))
+        len--;
+    if (len > 0)
+        snprintf(buf, sz, "%.*s (共 %d 名)", (int)len, prefix, count);
+    else
+        snprintf(buf, sz, "名單： (共 %d 名)", count);
+}
+
+void
+multi_user_list(struct Vector *namelist, int *recipient,
+                const char *title, const char *msg_prefix, int flags)
+{
+    char uid[IDLEN + 1];
+    char genbuf[PATHLEN];
+    char listfile[] = "list.0";
+    char msg_title[80];
+    int i, cRemoved;
+
+    while (1) {
+        vs_hdr(title);
+        format_multilist_title(msg_title, sizeof(msg_title), msg_prefix, Vector_length(namelist));
+        ShowVector(namelist, 3, 0, msg_title, 0);
+        move(1, 0);
+        outs("(I)引入好友 (O)引入上線通知 (0-9)特別名單 (E)檔案編輯/貼上名單");
+        getdata(2, 0,
+                "(A)增加     (D)刪除         (M)確認名單   (Q)取消 ？[M]",
+                genbuf, 4, LCECHO);
+        switch (genbuf[0]) {
+        case 'a':
+            while (1) {
+                if (Vector_length(namelist) >= MAX_MULTILIST) {
+                    vmsgf("名單人數已達上限 (%d 人)！", MAX_MULTILIST);
+                    break;
+                }
+                move(1, 0);
+                usercomplete("請輸入要增加的代號(只按 ENTER 結束新增): ", uid);
+                if (uid[0] == '\0')
+                    break;
+                move(2, 0);
+                clrtoeol();
+                if (!searchuser(uid, uid))
+                    outs(err_uid);
+                else if ((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0)
+                    outs("不能加入自己喔！");
+                else if (strcasecmp(uid, STR_GUEST) == 0)
+                    outs("不能加入 guest！");
+                else if ((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid))
+                    outs("對方拒收信件！");
+                else if (Vector_search(namelist, uid) < 0) {
+                    Vector_add(namelist, uid);
+                    (*recipient)++;
+                }
+                format_multilist_title(msg_title, sizeof(msg_title), msg_prefix, Vector_length(namelist));
+                ShowVector(namelist, 3, 0, msg_title, 0);
+            }
+            break;
+        case 'd':
+            while (*recipient) {
+                move(1, 0);
+                namecomplete2(namelist, "請輸入要刪除的代號(只按 ENTER 結束刪除): ", uid);
+                if (uid[0] == '\0')
+                    break;
+                if (Vector_remove(namelist, uid))
+                    (*recipient)--;
+                format_multilist_title(msg_title, sizeof(msg_title), msg_prefix, Vector_length(namelist));
+                ShowVector(namelist, 3, 0, msg_title, 0);
+            }
+            break;
+        case 'e':
+            {
+                char tmpfile[PATHLEN];
+                FILE *fp;
+                setuserfile(tmpfile, "multi_list.tmp");
+                if ((fp = fopen(tmpfile, "w"))) {
+                    fprintf(fp, "# 請在下方輸入或貼上 ID 名單（單次上限 %d 人，# 開頭為註解自動忽略）\n"
+                                "# 支援格式：\n"
+                                "#   1. 一行一個 ID，或以空白、逗號分隔多個 ID\n"
+                                "#   2. 貼上文章推文（如：推 userid: 內容），系統會擷取 ID 並去除重複 ID\n",
+                            MAX_MULTILIST);
+                    for (i = 0; i < Vector_length(namelist); i++)
+                        fprintf(fp, "%s\n", Vector_get(namelist, i));
+                    fclose(fp);
+                }
+                if (veditfile(tmpfile) != -1 && (fp = fopen(tmpfile, "r"))) {
+                    char line[ANSILINELEN];
+                    Vector_delete(namelist);
+                    Vector_init(namelist, IDLEN + 1);
+                    *recipient = 0;
+                    while (fgets(line, sizeof(line), fp)) {
+                        char *src = line, *dst = line;
+                        while (*src) {
+                            if (*src == ESC_CHR && src[1] == '[') {
+                                src += 2;
+                                while (*src && !isalpha((unsigned char)*src))
+                                    src++;
+                                if (*src)
+                                    src++;
+                            } else {
+                                *dst++ = *src++;
+                            }
+                        }
+                        *dst = '\0';
+
+                        src = line;
+                        while (*src && isspace((unsigned char)*src))
+                            src++;
+                        if (!*src || *src == '#')
+                            continue;
+
+                        char *colon = strchr(src, ':');
+                        if (colon)
+                            *colon = '\0';
+
+                        char *saveptr = NULL;
+                        for (char *tok = strtok_r(src, " \t\r\n,;.", &saveptr);
+                             tok && Vector_length(namelist) < MAX_MULTILIST;
+                             tok = strtok_r(NULL, " \t\r\n,;.", &saveptr)) {
+                            if (!isalpha((unsigned char)tok[0]))
+                                continue;
+                            if (searchuser(tok, uid) &&
+                                strcasecmp(uid, STR_GUEST) != 0 &&
+                                !((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0) &&
+                                !((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid)) &&
+                                Vector_search(namelist, uid) < 0) {
+                                Vector_add(namelist, uid);
+                                (*recipient)++;
+                            }
+                        }
+                    }
+                    fclose(fp);
+                }
+                unlink(tmpfile);
+            }
+            break;
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            listfile[5] = genbuf[0];
+            genbuf[0] = '1';
+        case 'i':
+            setuserfile(genbuf, genbuf[0] == '1' ? listfile : fn_overrides);
+            ToggleVector(namelist, recipient, genbuf, msg_title);
+            break;
+        case 'o':
+            setuserfile(genbuf, FN_ALOHAED);
+            ToggleVector(namelist, recipient, genbuf, msg_title);
+            break;
+        case 'q':
+            *recipient = 0;
+            return;
+        default:
+            vs_hdr(title);
+            outs("\n正在檢查名單... \n");
+            doupdate();
+            cRemoved = 0;
+            for (i = 0; i < Vector_length(namelist); i++) {
+                const char *p = Vector_get(namelist, i);
+                if (searchuser(p, uid) &&
+                    strcasecmp(STR_GUEST, uid) != 0 &&
+                    !((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(cuser.userid, uid) == 0) &&
+                    !((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid)))
+                    continue;
+                if (!cRemoved)
+                    outs("下列 ID 無效或無法加入，已自名單移除；"
+                         "請重新確認名單。\n\n");
+                cRemoved++;
+                prints("%-.*s ", IDLEN, p);
+                Vector_remove(namelist, p);
+                i--;
+                if ((cRemoved + 1) * (IDLEN + 1) >= t_columns)
+                    outs("\n");
+            }
+            *recipient = Vector_length(namelist);
+            if (cRemoved) {
+                pressanykey();
+                continue;
+            }
+            return;
+        }
+    }
 }

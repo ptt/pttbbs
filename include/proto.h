@@ -491,6 +491,11 @@ void namecomplete2(const struct Vector *namelist, const char *prompt, char *data
 void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval);
 int ShowVector(struct Vector *self, int row, int column, const char *prompt, int idx);
 void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
+#define MAX_MULTILIST           (1500)
+#define MULTILIST_CHECK_REJECT  (0x01)
+#define MULTILIST_EXCLUDE_SELF  (0x02)
+void multi_user_list(struct Vector *namelist, int *recipient,
+                     const char *title, const char *msg_prefix, int flags);
 
 void usercomplete(const char *prompt, char *data);
 void usercomplete2(const char *prompt, char *data, const char *defval);
