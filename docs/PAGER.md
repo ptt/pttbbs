@@ -121,7 +121,7 @@ signal_restart(SIGUSR2, write_request);
 | 優先級 (Priority) | Hook 處理函式 | 註冊模組/檔案 | 職責與攔截按鍵 |
 | :--- | :--- | :--- | :--- |
 | **`VKEY_HOOK_PRIO_SYSTEM` (0)** | `system_key_hook()` | [`mbbsd/io.c`](../mbbsd/io.c#L204) | **無狀態全站系統級熱鍵**：<br>• `Ctrl-L`：重繪畫面 (`redrawwin()` + `refresh()`)<br>• `Ctrl-Q`：顯示記憶體狀態 (`get_memusage()`, DEBUG 模式) |
-| **`VKEY_HOOK_PRIO_MODAL` (1)** | `pager_modal_key_hook()` | [`mbbsd/pager.c`](../mbbsd/pager.c#L845) | **Modal 視窗/歷史面板導覽**：<br>• 僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲 `Tab`, `Ctrl-T`, `Ctrl-F`, `Ctrl-G` 等面板導覽按鍵。 |
+| **`VKEY_HOOK_PRIO_MODAL` (1)** | `pager_modal_key_hook()` | [`mbbsd/pager.c`](../mbbsd/pager.c#L845) | **Modal 視窗/歷史面板導覽**：<br>• 僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲 `Tab`, `Shift-Tab`, `Ctrl-F`, `Ctrl-G` 等面板導覽按鍵。 |
 | **`VKEY_HOOK_PRIO_PAGER` (2)** | `pager_global_key_hook()` | [`mbbsd/pager.c`](../mbbsd/pager.c#L880) | **全域呼叫器熱鍵**：<br>• `Ctrl-R`：查水球 / 回覆水球（根據 `cuser.pager_ui_type` 分流至 `pager_handle_ctrl_r_default` 或 `pager_handle_ctrl_r_ofo`）。 |
 | **`VKEY_HOOK_PRIO_NORMAL` (3)** | `talk_key_hook()` | [`mbbsd/talk.c`](../mbbsd/talk.c#L2370) | **一般畫面層級熱鍵 (Mode Switch)**：<br>• `Ctrl-U`：快速線上使用者列表（暫存畫面 `scr_dump()` ➔ 執行 `t_users()` ➔ 還原畫面 `scr_restore()`）。 |
 
@@ -135,7 +135,7 @@ signal_restart(SIGUSR2, write_request);
 | **`Ctrl-Q`** | `PRIO_SYSTEM`<br>`system_key_hook` | DEBUG 模式 | 檢視系統記憶體使用狀態 (`get_memusage()`)。 |
 | **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | ORIG / NEW | `pager_handle_ctrl_r_default()`：<br>• 第 1 次連按 (收到水球時)：顯示該條訊息並直接開啟 `my_write()` 輸入框回覆。<br>• 第 2 次連按：開啟水球歷史面板 (`watermode = 1`)。<br>• 第 3+ 次連按：切換至更早的水球歷史訊息。 |
 | **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | OFO 模式 | `pager_handle_ctrl_r_ofo()` ➔ 執行 `ofo_my_write()`。 |
-| **`Tab` / `Ctrl-T`** | `PRIO_MODAL`<br>`pager_modal_key_hook` | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息。 |
+| **`Tab` / `Shift-Tab`** | `PRIO_MODAL`<br>`pager_modal_key_hook` | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息（亦相容 `Ctrl-T`）。 |
 | **`Ctrl-F` / `Ctrl-G`**| `PRIO_MODAL`<br>`pager_modal_key_hook` | NEW 模式 | 在 `watermode > 0` 查閱模式下，切換 `swater[0..5]` 不同的對話對象。 |
 | **`Ctrl-U`** | `PRIO_NORMAL`<br>`talk_key_hook` | 全部模式 | `talk_key_hook()`：暫存畫面 `scr_dump()` ➔ 切換模式執行 `t_users()` ➔ 還原畫面 `scr_restore()`。 |
 

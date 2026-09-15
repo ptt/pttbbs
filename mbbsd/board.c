@@ -1729,6 +1729,7 @@ choose_board(int newflag)
 	    show_brdlist(head, 1, newflag);
 	    break;
 	case Ctrl('W'):
+	case Ctrl('Y'):
 	    whereami();
 	    head = -1;
 	    break;
@@ -2042,6 +2043,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case Ctrl('T'):
+	case Ctrl('E'):
 	    if (HasFavEditPerm()) {
 		fav_remove_all_tag();
 		brdnum = -1;
@@ -2350,7 +2352,7 @@ board_list_help(void)
         "  編號/文章數", "c",
         "  切換顯示全部", "y",
         "  標記看板",     "t",
-        "  取消標記",     "^T",
+        "  取消標記",     "^E",
         "  切換全部標記", "*",
         NULL,
     };
@@ -2359,7 +2361,7 @@ board_list_help(void)
         "  搜尋已列看板", "^S",
         "  搜尋全站看板", "s",
         "  搜尋看板標題", "/",
-        "  我在哪裡",     "^W",
+        "  我在哪裡",     "^Y",
         "", "",
         "【小組長指令】", NULL,
         "  設定看板",     "E",
