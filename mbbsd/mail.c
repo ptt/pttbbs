@@ -14,6 +14,11 @@
 #define MAX_DAILY_FREE_MAILS    (225)
 #endif
 
+// Higher than Pay->Give.
+#ifndef EXTRA_MAIL_COST
+#define EXTRA_MAIL_COST         (5)
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 // Local definition
 enum SHOWMAIL_MODES {
@@ -483,16 +488,41 @@ mail_precheck_quota(int count)
     if (count <= free_left)
         return 1;
 
-    if (count == 1) {
-        vmsgf("今日寄信已達上限 (%d 封)，無法再寄信！", MAX_DAILY_FREE_MAILS);
-    } else {
-        vmsgf("今日寄信額度剩餘 %d 封，無法寄送 %d 人！", free_left, count);
+    int chargeable = count - free_left;
+    int cost = chargeable * EXTRA_MAIL_COST;
+
+    reload_money();
+    if (cuser.money < cost) {
+        if (count == 1) {
+            vmsgf("今日免費寄信額度(%d封)已滿，寄信需 %d Ptt幣，您的現金不足！",
+                  MAX_DAILY_FREE_MAILS, cost);
+        } else {
+            vmsgf("今日免費額度剩 %d 封，寄 %d 人(超額 %d 封)需 %d Ptt幣，現金不足！",
+                  free_left, count, chargeable, cost);
+        }
+        return 0;
     }
-    return 0;
+
+    char ans[4];
+    char prompt[128];
+    if (count == 1) {
+        snprintf(prompt, sizeof(prompt),
+                 "今日免費額度(%d封)已滿，寄此封信需 %d Ptt幣，確定繼續？[y/N] ",
+                 MAX_DAILY_FREE_MAILS, cost);
+    } else {
+        snprintf(prompt, sizeof(prompt),
+                 "今日免費剩 %d 封，寄 %d 人(超額 %d 封)需 %d Ptt幣，確定繼續？[y/N] ",
+                 free_left, count, chargeable, cost);
+    }
+    getdata(b_lines - 1, 0, prompt, ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y')
+        return 0;
+
+    return 1;
 }
 
 static int
-mail_charge_quota(int count, const char *desc GCC_UNUSED)
+mail_charge_quota(int count, const char *desc)
 {
     if (count <= 0)
         return 0;
@@ -500,9 +530,16 @@ mail_charge_quota(int count, const char *desc GCC_UNUSED)
     if (!is_mail_quota_exempt()) {
         int sent_today = pwcuGetDailyMailCount();
         int free_left = (sent_today < MAX_DAILY_FREE_MAILS) ? (MAX_DAILY_FREE_MAILS - sent_today) : 0;
-        if (count > free_left) {
-            vmsgf("今日寄信已達上限 (%d 封)，無法寄出信件！", MAX_DAILY_FREE_MAILS);
-            return -1;
+        int chargeable = (count > free_left) ? (count - free_left) : 0;
+        int cost = chargeable * EXTRA_MAIL_COST;
+
+        if (cost > 0) {
+            reload_money();
+            if (cuser.money < cost) {
+                vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
+                return -1;
+            }
+            pay(cost, "%s (超額 %d 封)", desc, chargeable);
         }
     }
 
