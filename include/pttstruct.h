@@ -133,8 +133,10 @@ typedef struct userec_t {
     uint32_t    deprecated_withme;	 	 /* 我想找人下棋，聊天.... */
     time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
     time4_t	timeviolatelaw;  /* 被開罰單時間 */
+    time4_t	last_mail_time;  /* 上次寄信時間 */
+    uint32_t	daily_mail_count;/* 當日寄信數量 */
 
-    char	pad_tail[28];
+    char	pad_tail[20];
 } PACKSTRUCT userec_t;
 
 #ifndef NO_CONST_CUSER

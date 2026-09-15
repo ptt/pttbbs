@@ -180,10 +180,15 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t認證資料: %s\n", u->justify);
     }
 
-    sethomedir(genbuf, u->userid);
-    prints("\t私人信箱: %d 封  (購買信箱: %d 封)\n",
-	   get_num_records(genbuf, sizeof(fileheader_t)),
-	   u->exmailbox);
+    {
+	char today_str[16];
+	STRLCPY(today_str, Cdatedate(&now));
+	int today_mails = (strcmp(today_str, Cdatedate(&u->last_mail_time)) == 0) ? u->daily_mail_count : 0;
+	sethomedir(genbuf, u->userid);
+	prints("\t私人信箱: %d 封  (購買信箱: %d 封, 今日寄信: %d 封)\n",
+	       get_num_records(genbuf, sizeof(fileheader_t)),
+	       u->exmailbox, today_mails);
+    }
     prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
            ,u->numlogindays);
     prints(" / 文章 %d 篇\n", u->numposts);

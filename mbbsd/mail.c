@@ -10,6 +10,10 @@
 #define NEWMAIL_CHECK_RANGE (5)
 #endif
 
+#ifndef MAX_DAILY_FREE_MAILS
+#define MAX_DAILY_FREE_MAILS    (225)
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 // Local definition
 enum SHOWMAIL_MODES {
@@ -462,6 +466,50 @@ keep_copy(const char *fpath, const char *title)
     mail_save_memo(fpath, NULL, cuser.userid, title);
 }
 
+static int
+is_mail_quota_exempt(void)
+{
+    return HasUserPerm(PERM_BM | PERM_ADMIN | PERM_MAILLIMIT);
+}
+
+static int
+mail_precheck_quota(int count)
+{
+    if (count <= 0 || is_mail_quota_exempt())
+        return 1;
+
+    int sent_today = pwcuGetDailyMailCount();
+    int free_left = (sent_today < MAX_DAILY_FREE_MAILS) ? (MAX_DAILY_FREE_MAILS - sent_today) : 0;
+    if (count <= free_left)
+        return 1;
+
+    if (count == 1) {
+        vmsgf("今日寄信已達上限 (%d 封)，無法再寄信！", MAX_DAILY_FREE_MAILS);
+    } else {
+        vmsgf("今日寄信額度剩餘 %d 封，無法寄送 %d 人！", free_left, count);
+    }
+    return 0;
+}
+
+static int
+mail_charge_quota(int count, const char *desc GCC_UNUSED)
+{
+    if (count <= 0)
+        return 0;
+
+    if (!is_mail_quota_exempt()) {
+        int sent_today = pwcuGetDailyMailCount();
+        int free_left = (sent_today < MAX_DAILY_FREE_MAILS) ? (MAX_DAILY_FREE_MAILS - sent_today) : 0;
+        if (count > free_left) {
+            vmsgf("今日寄信已達上限 (%d 封)，無法寄出信件！", MAX_DAILY_FREE_MAILS);
+            return -1;
+        }
+    }
+
+    pwcuAddMailCount(count);
+    return 0;
+}
+
 int
 do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle)
 {
@@ -489,6 +537,14 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
         unlink(tmp_fpath);
         setutmpmode(oldstat);
         return -2;
+    }
+
+    if (strcasecmp(userid, cuser.userid) != 0) {
+        if (mail_charge_quota(1, "超額寄信手續費") < 0) {
+            unlink(tmp_fpath);
+            setutmpmode(oldstat);
+            return -2;
+        }
     }
 
     if (newtitle) strlcpy(newtitle, save_title, STRLEN);
@@ -806,6 +862,8 @@ mail_ui_send(const char *userid, const char *title)
 	return -1;
     if (!(xuser.userlevel & PERM_READMAIL))
 	return -3;
+    if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1))
+	return -2;
 
     /* process title */
     if (title)
@@ -933,6 +991,11 @@ multi_send(const char *title)
     clrtobot();
 
     if (recipient) {
+	if (!mail_precheck_quota(Vector_length(&namelist))) {
+	    Vector_delete(&namelist);
+	    vmsg(msg_cancel);
+	    return;
+	}
 	char save_title[STRLEN];
 	setutmpmode(SMAIL);
 	if (title)
@@ -970,6 +1033,12 @@ multi_send(const char *title)
 	    unlink(fpath);
 	    Vector_delete(&namelist);
 	    vmsg(msg_cancel);
+	    return;
+	}
+
+	if (mail_charge_quota(Vector_length(&namelist), "超額群組寄信手續費") < 0) {
+	    unlink(fpath);
+	    Vector_delete(&namelist);
 	    return;
 	}
 
@@ -1353,6 +1422,19 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	    return 1;
         }
     } while (0);
+
+    {
+	char xid[IDLEN+1], *dot;
+	STRLCPY(xid, address);
+	dot = strchr(xid, '.');
+	if (dot) *dot = 0;
+	if (!(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0)) {
+	    if (!mail_precheck_quota(1) || mail_charge_quota(1, "超額轉寄手續費") < 0)
+		return 1;
+	    outmsg("轉寄中請稍候...");
+	    refresh();
+	}
+    }
 
     // PATHLEN will be used as command line, so we need it longer.
     assert(PATHLEN >= 256);
