@@ -33,7 +33,6 @@ static int      mailkeep = 0;
 static int      mailmaxkeep = 0;
 static char     currmaildir[PATHLEN];
 static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
-static char     listfile[] = "list.0";
 static int	showmail_mode = SHOWMAIL_NORM;
 static const    onekey_t mail_comms[];
 
@@ -880,105 +879,6 @@ m_send(void)
 
 /* 群組寄信、回信 : multi_send, (multi_)reply */
 static void
-multi_list(struct Vector *namelist, int *recipient)
-{
-    char            uid[16];
-    char            genbuf[200];
-    int             i, cRemoved;
-
-    while (1) {
-	vs_hdr("群組寄信名單");
-	ShowVector(namelist, 3, 0, msg_cc, 0);
-	move(1, 0);
-	outs("(I)引入好友 (O)引入上線通知 (0-9)引入其他特別名單");
-	getdata(2, 0,
-	       "(A)增加     (D)刪除         (M)確認寄信名單   (Q)取消 ？[M]",
-		genbuf, 4, LCECHO);
-	switch (genbuf[0]) {
-	case 'a':
-	    while (1) {
-		move(1, 0);
-		usercomplete("請輸入要增加的代號(只按 ENTER 結束新增): ", uid);
-		if (uid[0] == '\0')
-		    break;
-
-		move(2, 0);
-		clrtoeol();
-
-		if (!searchuser(uid, uid))
-		    outs(err_uid);
-		else if (Vector_search(namelist, uid) < 0) {
-		    Vector_add(namelist, uid);
-		    (*recipient)++;
-		}
-		ShowVector(namelist, 3, 0, msg_cc, 0);
-	    }
-	    break;
-	case 'd':
-	    while (*recipient) {
-		move(1, 0);
-		namecomplete2(namelist, "請輸入要刪除的代號(只按 ENTER 結束刪除): ", uid);
-		if (uid[0] == '\0')
-		    break;
-		if (Vector_remove(namelist, uid))
-		    (*recipient)--;
-		ShowVector(namelist, 3, 0, msg_cc, 0);
-	    }
-	    break;
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-	    listfile[5] = genbuf[0];
-	    genbuf[0] = '1';
-	case 'i':
-	    setuserfile(genbuf, genbuf[0] == '1' ? listfile : fn_overrides);
-	    ToggleVector(namelist, recipient, genbuf, msg_cc);
-	    break;
-	case 'o':
-	    setuserfile(genbuf, FN_ALOHAED);
-	    ToggleVector(namelist, recipient, genbuf, msg_cc);
-	    break;
-	case 'q':
-	    *recipient = 0;
-	    return;
-	default:
-            vs_hdr("群組寄信名單");
-            outs("\n正在檢查名單... \n"); doupdate();
-            cRemoved = 0;
-            for (i = 0; i < Vector_length(namelist); i++) {
-                const char *p = Vector_get(namelist, i);
-                if (searchuser(p, uid) &&
-                    strcmp(STR_GUEST, uid) &&
-                    !is_rejected(uid))
-                    continue;
-                // ok, bad guys exist.
-                if (!cRemoved)
-                    outs("下列 ID 無法收到信件，已自名單移除；"
-                         "請重新確認名單。\n\n");
-                cRemoved ++;
-                prints("%-.*s ", IDLEN, uid);
-                Vector_remove(namelist, p);
-                i--; // this is a hack. currently vector index is stable after remove.
-                if ((cRemoved + 1) * (IDLEN + 1) >= t_columns)
-                    outs("\n");
-            }
-            if (cRemoved) {
-                pressanykey();
-                continue;
-            }
-            return;
-        }
-    }
-}
-
-static void
 multi_send(const char *title)
 {
     FILE           *fp;
@@ -1007,7 +907,8 @@ multi_send(const char *title)
 		    for (ptr = strtok_r(ptr, " \n\r", &strtok_pos);
 			    ptr;
 			    ptr = strtok_r(NULL, " \n\r", &strtok_pos)) {
-			if (searchuser(ptr, ptr) && Vector_search(&namelist, ptr) < 0 &&
+			if (Vector_length(&namelist) < MAX_MULTILIST &&
+			    searchuser(ptr, ptr) && Vector_search(&namelist, ptr) < 0 &&
 			    strcmp(cuser.userid, ptr)) {
 			    Vector_add(&namelist, ptr);
 			    recipient++;
@@ -1027,7 +928,7 @@ multi_send(const char *title)
             pressanykey();
         }
     }
-    multi_list(&namelist, &recipient);
+    multi_user_list(&namelist, &recipient, "群組寄信名單", msg_cc, MULTILIST_CHECK_REJECT);
     move(1, 0);
     clrtobot();
 
@@ -1072,6 +973,14 @@ multi_send(const char *title)
 	    return;
 	}
 
+	sigset_t mask_set, old_set;
+	sigemptyset(&mask_set);
+	sigaddset(&mask_set, SIGHUP);
+	sigaddset(&mask_set, SIGPIPE);
+	sigaddset(&mask_set, SIGTERM);
+	sigaddset(&mask_set, SIGXCPU);
+	sigprocmask(SIG_BLOCK, &mask_set, &old_set);
+
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
 	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
@@ -1079,6 +988,7 @@ multi_send(const char *title)
 	}
 	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
+	sigprocmask(SIG_SETMASK, &old_set, NULL);
 	Vector_delete(&namelist);
     } else {
 	Vector_delete(&namelist);
