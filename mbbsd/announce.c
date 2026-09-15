@@ -316,7 +316,7 @@ a_showhelp(int level)
         "  進入目錄/文章", "→r Enter",
         "  回到上一層",   "← q",
         "  移到該選項",   "(數字)",
-        "  我在哪裡",     "^W",
+        "  我在哪裡",     "^Y",
         "  寄回電子郵箱", "F U",
         "", "",
         "【移動瀏覽】", NULL,
@@ -1345,6 +1345,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	    break;
 
 	case Ctrl('W'):
+	case Ctrl('Y'):
 	    a_where_am_i(root, me.now, me.header[me.now - me.page].title);
 	    vmsg(NULL);
 	    me.page = A_INVALID_PAGE;

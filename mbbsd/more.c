@@ -71,6 +71,7 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 	    return RET_DOQUERYINFO;
 
 	case Ctrl('T'):
+	case Ctrl('K'):
 	    if (!HasUserPerm(PERM_BASIC))
 		break;
 	    return RET_COPY2TMP;
@@ -365,7 +366,7 @@ static const char
 { "【特殊指令】", NULL,
     "  查詢資訊  ", "Q",
     "  文章代碼搜尋", "#",
-    "  存入暫存檔", "^T",
+    "  存入暫存檔", "^K",
     "  切換看板  ", "s",
     "  棋局打譜  ", "z",
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)

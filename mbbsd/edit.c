@@ -3702,6 +3702,10 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		case 's':
 		    ch = Ctrl('S');
 		    break;
+		case 'w':
+		case 'W':
+		    ch = Ctrl('W');
+		    break;
                 case 'S':
                     curr_buf->synparser = !curr_buf->synparser;
                     break;

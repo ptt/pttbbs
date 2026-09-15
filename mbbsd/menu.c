@@ -461,7 +461,7 @@ menu_help(void)
         "【 快捷鍵 】",   NULL,
         "  選擇看板",     "s",
         "  進入看板",     "r",
-        "  未讀文章",     "Ctrl-N",
+        "  未讀文章",     "Ctrl-Y",
         "  回覆訊息",     "Ctrl-R",
         "  使用者名單",   "Ctrl-U",
         "  隨處切換(ZA)", "Ctrl-Z",
@@ -498,6 +498,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    i = lastcmdptr;
 	    break;
 	case Ctrl('N'):
+	case Ctrl('Y'):
             clear_main();
 	    New();
 	    refscreen = YEA;

@@ -4238,7 +4238,7 @@ b_help(void)
         "  進入精華區",   "z",
         "  進入文摘",     "TAB",
         "  進板畫面",     "b",
-        "  我在哪裡",     "^W",
+        "  我在哪裡",     "^Y",
         "  其它看板",     "s",
         "  查詢看板設定", "i I",
         "  設定已讀未讀", "v",
@@ -4289,7 +4289,7 @@ b_help(void)
         "  收入文摘",     "g",
         "  置底文章",     "_",
         "  設定結案",     "L",
-        "  標記文章",     "t",
+        "  標記文章",     "t / *",
         "  砍除已標文",   "^D",
         "  刪除大範圍",   "D",
         "  重編標題",     "T",
@@ -4558,7 +4558,7 @@ const onekey_t read_comms[] = {
     { 0, do_post_vote }, // Ctrl('V')
     { 0, whereami }, // Ctrl('W')
     { 1, cross_post }, // Ctrl('X')
-    { 0, NULL }, // Ctrl('Y')
+    { 0, whereami }, // Ctrl('Y')
     { 0, NULL }, // Ctrl('Z') 26 // 現在給 ZA 用。
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },

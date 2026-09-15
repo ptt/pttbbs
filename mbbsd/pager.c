@@ -677,7 +677,7 @@ pager_show_panel_new(void)
     getyx_ansi(&oy, &ox);
 
     mvouts(1, 0,
-           "───────水─球─回─顧───用[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]鍵切換───\n");
+           "───────水─球─回─顧──用[Ctrl-R Tab/S-Tab Ctrl-F Ctrl-G]鍵切換───\n");
     for (int idx = 0; idx < 6; idx++) {
         if (idx == 0) {
             prints("%s 全部  " ANSI_RESET,
@@ -900,6 +900,7 @@ pager_modal_key_hook(int ch)
         return KEY_INCOMPLETE;
 
     case Ctrl('T'):
+    case KEY_STAB:
         check_water_init();
         if (watermode > 1)
             watermode--;

@@ -1836,11 +1836,6 @@ userlist(void)
 		}
 		break;
 
-            // TOOD(hungte) Remove this info after 2027.
-	    case Ctrl('W'):
-                vmsg("請改至 (U)ser個人設定->(U)Customize 個人化設定調整水球模式");
-		break;
-
 	    case 'r':
 		if (HasUserPerm(PERM_READMAIL)) {
                     // XXX in fact we should check size here...

@@ -155,8 +155,6 @@ const char * const fn_notes = "notes";
 const char * const fn_water = FN_WATER;
 const char * const fn_visable = FN_VISABLE;
 const char * const fn_mandex = "/.Names";
-const char * const fn_boardlisthelp = FN_BRDLISTHELP;
-const char * const fn_boardhelp = FN_BOARDHELP;
 
 /* are descript in userec.loginview */
 

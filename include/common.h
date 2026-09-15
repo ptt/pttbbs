@@ -50,8 +50,6 @@
 #define FN_TICKET_USER    "ticket.user"  
 #define FN_TICKET_OUTCOME "ticket.outcome"
 #define FN_TICKET_BRDLIST "boardlist"
-#define FN_BRDLISTHELP	"etc/boardlist.help"
-#define FN_BOARDHELP	"etc/board.help"
 #define FN_MAIL_ACCOUNT_SYSOP "etc/mail_account_sysop"  // 帳號站長信箱列表
 #define FN_MAIL_ACCOUNT_SYSOP_DESC "etc/mail_account_sysop_desc"  // 帳號站長信箱說明
 #define FN_POST_KEYWORDS "etc/post_keywords"
