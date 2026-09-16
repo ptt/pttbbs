@@ -39,13 +39,15 @@
 #define PSB_MAX_COLS       (16)
 
 enum {
-    CMD_PRIO_NONE = 0,   // Do not display in footer (alias or help-only)
-    CMD_PRIO_NAV  = 10,  // Basic navigation (up/down/pgup/pgdn/jump)
-    CMD_PRIO_LOW  = 30,  // Less frequent or admin actions
-    CMD_PRIO_NORM = 50,  // Regular actions that should not change the states
-    CMD_PRIO_HIGH = 80,  // Actions that may make state changes
-    CMD_PRIO_TOP  = 90,  // Complicated tasks that needs attention
-    CMD_PRIO_MAX  = 100, // Key actions that must be displayed
+    CMD_PRIO_NONE  = 0,   // Do not display in footer (alias or help-only)
+    CMD_PRIO_LOW   = 10,  // Less frequent or admin actions
+    CMD_PRIO_NAV   = 30,  // Basic navigation (up/down/pgup/pgdn/jump)
+    CMD_PRIO_NORM  = 50,  // Regular actions that should not change the states
+    CMD_PRIO_QUIT  = 70,  // Right-aligned back/quit action (e.g. (←)上一層 / 回上層 / 離開)
+    CMD_PRIO_HIGH  = 80,  // Actions that may make state changes
+    CMD_PRIO_TOP   = 90,  // Complicated tasks that needs attention
+    CMD_PRIO_USAGE = 99,  // Right-aligned help/usage action (e.g. (h)說明)
+    CMD_PRIO_MAX   = 100, // Key actions that must be displayed
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -73,6 +75,11 @@ typedef struct cmd_ctx {
 } cmd_ctx_t;
 
 typedef int (*cmd_cb_t)(cmd_ctx_t *ctx);
+
+#ifndef KEY_ESC_PREFIX
+#define KEY_ESC_PREFIX (0x2000)
+#define KEY_ESC_KEY(c) (KEY_ESC_PREFIX | (unsigned char)(c))
+#endif
 
 typedef struct {
     int key;
@@ -128,6 +135,9 @@ int cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
 void psb_sync_cache(PSB_CTX *psbctx);
 int psb_file_loader(PSB_CTX *psbctx);
 bool psb_check_perm(int perm);
+void cmd_set_has_item(bool has_item);
+int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers);
+void cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers);
 
 void psb_render_header_columns(PSB_CTX *ctx, const char *right_str);
 void render_columns_array(PSB_CTX *ctx, const char *const *data, int n);
