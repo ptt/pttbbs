@@ -58,6 +58,7 @@
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
 #define FN_USERSECURITY	"user.security"	// in user directory
 #define FN_FORWARD      ".forward"      /* auto forward */
+#define FN_MAIL_QUOTA_EXEMPT ".mail_quota_exempt" /* groupbuy host whitelist */
 #ifndef SZ_RECENTLOGIN
 #define SZ_RECENTLOGIN	(16000)		// size of max recent log before rotation
 #endif

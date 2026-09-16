@@ -181,13 +181,19 @@ user_display(const userec_t * u, int adminmode)
     }
 
     {
-	char today_str[16];
+	char today_str[16], mail_quota_buf[32];
 	STRLCPY(today_str, Cdatedate(&now));
 	int today_mails = (strcmp(today_str, Cdatedate(&u->last_mail_time)) == 0) ? u->daily_mail_count : 0;
+	if (user_is_mail_quota_exempt(u)) {
+	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d 封", today_mails);
+	} else {
+	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d/%d 封",
+		     today_mails, user_get_daily_free_mail_limit(u));
+	}
 	sethomedir(genbuf, u->userid);
-	prints("\t私人信箱: %d 封  (購買信箱: %d 封, 今日寄信: %d 封)\n",
+	prints("\t私人信箱: %d 封  (購買信箱: %d 封, 今日寄信: %s)\n",
 	       get_num_records(genbuf, sizeof(fileheader_t)),
-	       u->exmailbox, today_mails);
+	       u->exmailbox, mail_quota_buf);
     }
     prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
            ,u->numlogindays);
@@ -592,6 +598,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     int y = 0;
     int perm_changed;
     int money_changed;
+    int mail_exempt_changed = 0;
+    int new_mail_exempt = 0;
     bool update_emaildb = false;
     int tokill = 0;
     int changefrom = 0;
@@ -795,6 +803,20 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 			    DOECHO, genbuf))
 		if ((tmp = atoi(buf)) != 0)
 		    x.exmailbox = (int)tmp;
+
+	    {
+		char exempt_fpath[PATHLEN];
+		sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
+		int old_exempt = dashf(exempt_fpath) ? 1 : 0;
+		if (getdata_str(y++, 0, "免費寄信不計額度(y/n)：", buf, 3,
+				LCECHO, old_exempt ? "y" : "n")) {
+		    int want_exempt = (buf[0] == 'y') ? 1 : 0;
+		    if (want_exempt != old_exempt) {
+			mail_exempt_changed = 1;
+			new_mail_exempt = want_exempt;
+		    }
+		}
+	    }
 
 	    getdata_buf(y++, 0, "認證資料：", x.justify,
 			sizeof(x.justify), DOECHO);
@@ -1126,6 +1148,25 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	return;
     } else
 	log_usies("SetUser", x.userid);
+
+    if (mail_exempt_changed) {
+	char exempt_fpath[PATHLEN];
+	sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
+	if (new_mail_exempt) {
+	    int fd = OpenCreate(exempt_fpath, O_WRONLY);
+	    if (fd >= 0)
+		close(fd);
+	} else {
+	    unlink(exempt_fpath);
+	}
+	log_user_security(x.userid, "%s (MailQuotaExempt) -> %s\n",
+			  "[Admin]", new_mail_exempt ? "ON" : "OFF");
+	char title[TTLEN], msg[STRLEN];
+	SNPRINTF(title, "%s 的免費寄信豁免變更通知 (by %s)", x.userid, cuser.userid);
+	SNPRINTF(msg, "站長 %s 修改 %s 的免費寄信不計額度 -> %s\n", cuser.userid, x.userid,
+		 new_mail_exempt ? "開啟 (ON)" : "關閉 (OFF)");
+	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+    }
 
     if (money_changed) {
 	char title[TTLEN+1];

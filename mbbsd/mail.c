@@ -14,6 +14,10 @@
 #define MAX_DAILY_FREE_MAILS    (225)
 #endif
 
+#ifndef NEWUSER_DAILY_FREE_MAILS
+#define NEWUSER_DAILY_FREE_MAILS (50)
+#endif
+
 // Higher than Pay->Give.
 #ifndef EXTRA_MAIL_COST
 #define EXTRA_MAIL_COST         (5)
@@ -471,10 +475,39 @@ keep_copy(const char *fpath, const char *title)
     mail_save_memo(fpath, NULL, cuser.userid, title);
 }
 
+#ifndef FN_MAIL_QUOTA_EXEMPT
+#define FN_MAIL_QUOTA_EXEMPT    ".mail_quota_exempt"
+#endif
+
+int
+user_is_mail_quota_exempt(const userec_t *u)
+{
+    if (u->userlevel & (PERM_BM | PERM_ADMIN | PERM_MAILLIMIT))
+        return 1;
+
+    char fpath[PATHLEN];
+    sethomefile(fpath, u->userid, FN_MAIL_QUOTA_EXEMPT);
+    return dashf(fpath);
+}
+
+int
+user_get_daily_free_mail_limit(const userec_t *u)
+{
+    if (u->numlogindays < 30 && NEWUSER_DAILY_FREE_MAILS < MAX_DAILY_FREE_MAILS)
+        return NEWUSER_DAILY_FREE_MAILS;
+    return MAX_DAILY_FREE_MAILS;
+}
+
 static int
 is_mail_quota_exempt(void)
 {
-    return HasUserPerm(PERM_BM | PERM_ADMIN | PERM_MAILLIMIT);
+    return user_is_mail_quota_exempt(&cuser);
+}
+
+static int
+get_daily_free_mail_limit(void)
+{
+    return user_get_daily_free_mail_limit(&cuser);
 }
 
 static int
@@ -483,8 +516,9 @@ mail_precheck_quota(int count)
     if (count <= 0 || is_mail_quota_exempt())
         return 1;
 
+    int free_limit = get_daily_free_mail_limit();
     int sent_today = pwcuGetDailyMailCount();
-    int free_left = (sent_today < MAX_DAILY_FREE_MAILS) ? (MAX_DAILY_FREE_MAILS - sent_today) : 0;
+    int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
     if (count <= free_left)
         return 1;
 
@@ -495,7 +529,7 @@ mail_precheck_quota(int count)
     if (cuser.money < cost) {
         if (count == 1) {
             vmsgf("今日免費寄信額度(%d封)已滿，寄信需 %d Ptt幣，您的現金不足！",
-                  MAX_DAILY_FREE_MAILS, cost);
+                  free_limit, cost);
         } else {
             vmsgf("今日免費額度剩 %d 封，寄 %d 人(超額 %d 封)需 %d Ptt幣，現金不足！",
                   free_left, count, chargeable, cost);
@@ -508,7 +542,7 @@ mail_precheck_quota(int count)
     if (count == 1) {
         snprintf(prompt, sizeof(prompt),
                  "今日免費額度(%d封)已滿，寄此封信需 %d Ptt幣，確定繼續？[y/N] ",
-                 MAX_DAILY_FREE_MAILS, cost);
+                 free_limit, cost);
     } else {
         snprintf(prompt, sizeof(prompt),
                  "今日免費剩 %d 封，寄 %d 人(超額 %d 封)需 %d Ptt幣，確定繼續？[y/N] ",
@@ -528,8 +562,9 @@ mail_charge_quota(int count, const char *desc)
         return 0;
 
     if (!is_mail_quota_exempt()) {
+        int free_limit = get_daily_free_mail_limit();
         int sent_today = pwcuGetDailyMailCount();
-        int free_left = (sent_today < MAX_DAILY_FREE_MAILS) ? (MAX_DAILY_FREE_MAILS - sent_today) : 0;
+        int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
         int chargeable = (count > free_left) ? (count - free_left) : 0;
         int cost = chargeable * EXTRA_MAIL_COST;
 
