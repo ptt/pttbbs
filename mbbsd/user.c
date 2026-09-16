@@ -461,7 +461,7 @@ static const CustomItem items[] = { {
         .flag =  UF_CURSOR_LEGACY,
 #ifdef USE_MOUSE
     }, {
-        .desc = "MOUSE      啟用滑鼠支援",
+        .desc = "MOUSE      啟用原生滑鼠與觸控操作",
         .flag =  UF_MOUSE,
 #endif
     }, {
@@ -482,8 +482,25 @@ typedef struct {
     int valid_count;
 } customize_ctx_t;
 
-static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
-    const int col_opt = 54;
+static int customize_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0) {
+        if (col == 0)
+            return 11 + stream_width("描述");
+        if (col == 1)
+            return stream_width("設定值");
+        return 0;
+    }
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
+    const CustomItem *item = &items[cx->valid_indices[i]];
+    if (col == 0)
+        return stream_width(item->desc);
+    if (col == 1)
+        return stream_width(Getter(item));
+    return 0;
+}
+
+static int customize_header(PSB_CTX *ctx) {
+    int col_opt = ctx->col_widths[0] + 2;
     const char *c0 = "分類", *c1 = "描述";
     int pad0 = 11 - stream_width(c0);
     int pad1 = (col_opt - 11) - stream_width(c1);
@@ -496,25 +513,16 @@ static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     return 0;
 }
 
-static int customize_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 偏好設定 ",
-              " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
-    move(b_lines - 1, 0);
-    return 0;
-}
-
 static int customize_renderer(int i, PSB_CTX *ctx) {
     customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
     int item_idx = cx->valid_indices[i];
     const CustomItem *item = &items[item_idx];
-    const int col_opt = 54;
+    int col_opt = ctx->col_widths[0] + 2;
     const char *val = Getter(item);
+    int pad = (6 + col_opt + stream_width(val) <= t_columns) ? (col_opt - stream_width(item->desc)) : 0;
 
-    int pad = stream_width(val) < 16 ? (col_opt - stream_width(item->desc)) : 0;
-    outs("   ");
-    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %s%*s%s\n",
-           'a' + i,
-           item->desc, pad > 0 ? pad : 0, "", val);
+    prints("  " ANSI_COLOR(1;36) "%2d" ANSI_RESET ". %s%*s%s\n",
+           i + 1, item->desc, pad > 0 ? pad : 0, "", val);
     return 0;
 }
 
@@ -524,18 +532,6 @@ static int customize_cmd_toggle(cmd_ctx_t *ctx) {
     Setter(&items[cx->valid_indices[ctx->curr]]);
     ctx->redraw = true;
     return 0;
-}
-
-static int customize_on_key(PSB_CTX *ctx) {
-    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
-    int sel = ctx->cmd.key - 'a';
-    if (sel >= 0 && sel < cx->valid_count) {
-        ctx->cmd.curr = sel;
-        Setter(&items[cx->valid_indices[sel]]);
-        ctx->cmd.redraw = true;
-        return 0;
-    }
-    return PSB_NA;
 }
 
 static const cmd_t customize_cmds[] = {
@@ -560,15 +556,16 @@ void Customize(void)
             .curr = 0,
             .total = cx.valid_count,
             .priv = &cx,
-            .caption = " 個人化設定 ",
+            .caption = " 偏好設定 ",
         },
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
+        .cols = 2,
+        .col_paddings = 8,
+        .col_measurer = customize_col_measurer,
         .header = customize_header,
-        .footer = customize_footer,
         .renderer = customize_renderer,
-        .on_key = customize_on_key,
         .cmds = customize_cmds,
     };
 

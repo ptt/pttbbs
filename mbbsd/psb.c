@@ -31,8 +31,8 @@ psb_default_header(PSB_CTX *ctx GCC_UNUSED) {
 
 static int
 psb_default_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 頁面瀏覽 ",
-              " (↑/↓/PgUp/PgDn/0-9)移動 (Enter/→)選擇 \t(q/←)離開");
+    vs_footer(" PSB 1.0 ",
+              " (↑/↓/PgUp/PgDn/0-9)Move (Enter/→)Select \t(q/←)Quit");
     return 0;
 }
 
@@ -115,7 +115,7 @@ psb_cmd_num(cmd_ctx_t *ctx) {
 }
 
 const cmd_t psb_base_cmds[] = {
-    { KEY_UP, NULL, "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NONE, true },
+    { KEY_UP, "移動", "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NAV, true },
     { KEY_DOWN, NULL, "向下移動一列", psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'k', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
     { 'p', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
@@ -123,8 +123,8 @@ const cmd_t psb_base_cmds[] = {
     { 'j', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'n', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { Ctrl('N'), NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
-    { KEY_PGUP, "上頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
-    { KEY_PGDN, "下頁", "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NAV, true },
+    { KEY_PGUP, "翻頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
+    { KEY_PGDN, NULL, "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
     { ' ', NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
     { Ctrl('B'), NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
     { 'P', NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
@@ -143,9 +143,9 @@ const cmd_t psb_base_cmds[] = {
     { '7', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '8', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '9', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
-    { KEY_LEFT, "離開", "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_MAX },
-    { 'q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'q', NULL, "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 'Q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -158,6 +158,33 @@ bbs_cmd_za(cmd_ctx_t *ctx) {
         ctx->quit = true;
     else
         ctx->redraw = true;
+    return 0;
+}
+
+static int
+bbs_cmd_help(cmd_ctx_t *ctx) {
+    if (!ctx->active_layers)
+        return PSB_NA;
+    screen_backup_t old_screen;
+    scr_dump(&old_screen);
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    scr_restore(&old_screen);
+    if (sel_key == 'h' || sel_key == 'H') {
+#ifdef PLAY_ANGEL
+        if (HasBasicUserPerm(PERM_LOGINOK) &&
+            strcmp(cuser.myangel, "-") != 0) {
+            CallAngel();
+        }
+#endif
+        ctx->redraw = true;
+        return 0;
+    }
+    if (sel_key > 0 && sel_key != ctx->key) {
+        ctx->key = sel_key;
+        ctx->redispatch = true;
+        return 0;
+    }
+    ctx->redraw = true;
     return 0;
 }
 
@@ -178,11 +205,52 @@ bbs_cmd_ctrl_r(cmd_ctx_t *ctx) {
 }
 
 const cmd_t bbs_global_cmds[] = {
+    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('Z'), "隨處切換(ZA)", "快速切換到文章列表、分類、信箱、使用者名單等", bbs_cmd_za, 0, CMD_PRIO_NONE },
     { Ctrl('U'), "線上使用者", "查看線上使用者名單", bbs_cmd_ctrl_u, PERM_BASIC, CMD_PRIO_NONE },
     { Ctrl('R'), "回應水球", "即時回應剛收到的水球", bbs_cmd_ctrl_r, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
+
+///////////////////////////////////////////////////////////////////////////
+// Layer Dispatch, Help & Footer Rendering Engine
+
+static void
+psb_key_name(int key, char *buf, size_t sz) {
+    switch (key) {
+        case KEY_ENTER:
+        case KEY_LF:    strlcpy(buf, "Enter", sz); break;
+        case KEY_RIGHT: strlcpy(buf, "→", sz); break;
+        case KEY_LEFT:  strlcpy(buf, "←", sz); break;
+        case KEY_UP:    strlcpy(buf, "↑", sz); break;
+        case KEY_DOWN:  strlcpy(buf, "↓", sz); break;
+        case KEY_PGUP:  strlcpy(buf, "PgUp", sz); break;
+        case KEY_PGDN:  strlcpy(buf, "PgDn", sz); break;
+        case KEY_HOME:  strlcpy(buf, "Home", sz); break;
+        case KEY_END:   strlcpy(buf, "End", sz); break;
+        case KEY_INS:   strlcpy(buf, "Ins", sz); break;
+        case KEY_DEL:   strlcpy(buf, "DEL", sz); break;
+        case KEY_BS:    strlcpy(buf, "BS", sz); break;
+        case KEY_TAB:   strlcpy(buf, "Tab", sz); break;
+        case KEY_ESC:   strlcpy(buf, "ESC", sz); break;
+        case ' ':       strlcpy(buf, "Space", sz); break;
+        default:
+            if (key >= KEY_F1 && key <= KEY_F12)
+                snprintf(buf, sz, "F%d", key - KEY_F1 + 1);
+            else if (key >= 1 && key <= 31)
+                snprintf(buf, sz, "^%c", key + 'A' - 1);
+            else if (key >= 32 && key <= 126)
+                snprintf(buf, sz, "%c", key);
+            else if ((key & 0xff00) == 0x2000) {
+                if ((key & 0xff) == ' ')
+                    strlcpy(buf, "ESC-Space", sz);
+                else
+                    snprintf(buf, sz, "ESC-%c", key & 0xff);
+            } else
+                snprintf(buf, sz, "0x%x", key);
+            break;
+    }
+}
 
 bool
 psb_check_perm(int perm) {
@@ -190,12 +258,10 @@ psb_check_perm(int perm) {
         return true;
     if ((perm & PERM_BM) && ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
         return true;
-    if ((perm & PERM_SYSSUBOP) && (HasUserPerm(PERM_SYSOP) || GROUPOP()))
-        return true;
     if ((perm & PERM_SYSSUPERSUBOP) &&
         (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
         return true;
-    perm &= ~(PERM_BM | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP);
+    perm &= ~(PERM_BM | PERM_SYSSUPERSUBOP);
     if (!perm)
         return false;
     if (perm == PERM_BASIC)
@@ -203,11 +269,282 @@ psb_check_perm(int perm) {
     return HasBasicUserPerm(perm);
 }
 
+static bool
+psb_is_key_seen(const int *seen, int n_seen, int key) {
+    int i;
+    for (i = 0; i < n_seen; i++)
+        if (seen[i] == key)
+            return true;
+    return false;
+}
+
+typedef struct {
+    const cmd_t *cmd;
+    int keys[16];
+    int n_keys;
+} psb_help_item_t;
+
+static void
+psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
+    if (item->n_keys == 1) {
+        psb_key_name(item->keys[0], buf, sz);
+        return;
+    }
+    if ((item->keys[0] == '0' || item->keys[0] == '1') &&
+        item->n_keys >= 9 && item->keys[item->n_keys - 1] == '9') {
+        snprintf(buf, sz, "%c-9", item->keys[0]);
+        return;
+    }
+    if (item->keys[0] == (0x2000 | '0') &&
+        item->n_keys >= 10 && item->keys[item->n_keys - 1] == (0x2000 | '9')) {
+        strlcpy(buf, "ESC-0..9", sz);
+        return;
+    }
+    buf[0] = '\0';
+    for (int i = 0; i < item->n_keys; i++) {
+        char kbuf[16];
+        psb_key_name(item->keys[i], kbuf, sizeof(kbuf));
+        if (i > 0)
+            strlcat(buf, "/", sz);
+        strlcat(buf, kbuf, sz);
+    }
+}
+
+static void
+psb_help_print_row(const psb_help_item_t *item) {
+    char kbuf[32], itembuf[64];
+    psb_help_format_keys(item, kbuf, sizeof(kbuf));
+    if (item->cmd->label)
+        snprintf(itembuf, sizeof(itembuf), "(%s) %s", kbuf, item->cmd->label);
+    else
+        snprintf(itembuf, sizeof(itembuf), "(%s)", kbuf);
+    int pad = 28 - stream_width(itembuf);
+    prints("  %s%*s  %s\n", itembuf, pad > 0 ? pad : 0, "",
+           item->cmd->helpstr ? item->cmd->helpstr : "");
+}
+
+static bool cmd_bar_has_item = true;
+
+void
+cmd_set_has_item(bool has_item) {
+    cmd_bar_has_item = has_item;
+}
+
+int
+cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+    int seen_keys[256];
+    int n_seen = 0;
+    psb_help_item_t items[128];
+    int count = 0;
+
+    for (layer = layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            if (cmd->key == EOF || cmd->key == 0)
+                continue;
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < 256)
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            if (cmd->label || cmd->helpstr) {
+                if (count < (int)ARRAY_SIZE(items)) {
+                    items[count].cmd = cmd;
+                    items[count].keys[0] = cmd->key;
+                    items[count].n_keys = 1;
+                    count++;
+                }
+            } else if (cmd->func) {
+                for (int i = count - 1; i >= 0; i--) {
+                    if (items[i].cmd->func == cmd->func) {
+                        if (items[i].n_keys < 16)
+                            items[i].keys[items[i].n_keys++] = cmd->key;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (count <= 0)
+        return 0;
+
+    int curr = 0;
+    int base = 0;
+    int old_base = -1;
+    int rows = 1;
+
+    while (1) {
+        int new_rows = t_lines - 3;
+        if (new_rows < 1)
+            new_rows = 1;
+        if (new_rows != rows) {
+            rows = new_rows;
+            old_base = -1;
+        }
+
+        if (curr >= count)
+            curr = count - 1;
+        if (curr < 0)
+            curr = 0;
+        if (curr < base || curr >= base + rows)
+            base = (curr / rows) * rows;
+
+        if (base != old_base) {
+            clear();
+            vs_hdr2bar(caption ? caption : " P&S Browser ", " 操作說明 (Help)");
+            move(1, 0);
+            vbar(ANSI_REVERSE "  按鍵 / 標籤                   功\能說明");
+            for (int i = 0; i < rows && base + i < count; i++) {
+                move(2 + i, 0);
+                psb_help_print_row(&items[base + i]);
+            }
+
+            int total_pages = (count + rows - 1) / rows;
+            int curr_page = (base / rows) + 1;
+            const char *capbuf = " 操作說明 ";
+            char pagebuf[32] = "";
+            if (total_pages > 1)
+                snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
+            const char *angel_hint = "";
+#ifdef PLAY_ANGEL
+            if (HasBasicUserPerm(PERM_LOGINOK) &&
+                strcmp(cuser.myangel, "-") != 0) {
+                angel_hint = " (h)小天使";
+            }
+#endif
+            char prompt[128];
+            snprintf(prompt, sizeof(prompt),
+                     "%s (↑/↓/PgUp/Dn)移動 (Enter/→)執行%s\t(q/←)離開",
+                     pagebuf, angel_hint);
+            move(b_lines, 0);
+            vs_footer(capbuf, prompt);
+            old_base = base;
+        }
+
+        int ch = cursor_key(2 + curr - base, 0);
+        switch (ch) {
+            case KEY_UP:
+            case 'k':
+            case 'p':
+            case Ctrl('P'):
+                if (curr > 0)
+                    curr--;
+                break;
+            case KEY_DOWN:
+            case 'j':
+            case 'n':
+            case Ctrl('N'):
+                if (curr + 1 < count)
+                    curr++;
+                break;
+            case KEY_PGUP:
+            case Ctrl('B'):
+            case 'N':
+                curr = (curr >= rows) ? curr - rows : 0;
+                break;
+            case KEY_PGDN:
+            case Ctrl('F'):
+            case 'P':
+            case ' ':
+                curr = (curr + rows < count) ? curr + rows : count - 1;
+                break;
+            case KEY_HOME:
+            case '0':
+                curr = 0;
+                break;
+            case KEY_END:
+            case '$':
+                curr = count - 1;
+                break;
+            case KEY_ENTER:
+            case KEY_RIGHT:
+                return items[curr].keys[0];
+            case 'h':
+            case 'H':
+                return 'h';
+            case 'q':
+            case KEY_LEFT:
+                return 0;
+            default:
+                break;
+        }
+    }
+}
+
+static void
+psb_format_footer_item(const cmd_t *cmd, char *buf, size_t sz) {
+    char kbuf[16];
+    psb_key_name(cmd->key, kbuf, sizeof(kbuf));
+    snprintf(buf, sz, " (%s)%s", kbuf, cmd->label);
+}
+
+static void
+psb_prune_footer_items(char items[][64], const int *prios, bool *active, int n, int avail_cols) {
+    while (1) {
+        int total_len = 0;
+        int min_prio = 0x7fffffff;
+        int min_idx = -1;
+        int i;
+        for (i = 0; i < n; i++) {
+            if (!active[i])
+                continue;
+            total_len += strlen(items[i]);
+            if (prios[i] <= min_prio) {
+                min_prio = prios[i];
+                min_idx = i;
+            }
+        }
+        if (total_len <= avail_cols || min_idx < 0)
+            break;
+        active[min_idx] = false;
+    }
+}
+
+void
+cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers) {
+    const char *cap = caption ? caption : " PSB 1.0 ";
+    const char *tail = " \t(h)說明 (q/←)跳出";
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+    int seen_keys[256];
+    int n_seen = 0;
+    char items[32][64];
+    int prios[32];
+    bool active[32];
+    int n = 0, i;
+    int avail_cols = (t_columns - 1) - stream_width(cap) - strlen(tail);
+
+    for (layer = layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < 256)
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !cmd->label || n >= 32 || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            psb_format_footer_item(cmd, items[n], sizeof(items[n]));
+            prios[n] = cmd->prio;
+            active[n] = true;
+            n++;
+        }
+    }
+
+    psb_prune_footer_items(items, prios, active, n, avail_cols);
+
+    char prompt[256] = "";
+    for (i = 0; i < n; i++) {
+        if (active[i])
+            strlcat(prompt, items[i], sizeof(prompt));
+    }
+    strlcat(prompt, tail, sizeof(prompt));
+    vs_footer(cap, prompt);
+}
+
 static int
 cmd_dispatch_single_layer(const cmd_layer_t *layer, cmd_ctx_t *ctx, void *default_priv) {
     const cmd_t *cmd;
-    if (!layer || !layer->cmds)
-        return PSB_NA;
     ctx->priv = layer->priv ? layer->priv : default_priv;
 
     for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
@@ -229,6 +566,7 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
     bool redispatched = false;
     ctx->active_layers = layers;
     ctx->caption = caption;
+    cmd_set_has_item(ctx->total > 0);
 
     while (1) {
         int ret = PSB_NA;
@@ -282,7 +620,7 @@ psb_init_defaults(PSB_CTX *psbctx) {
     assert(psbctx);
     if (!psbctx->header)
         psbctx->header = psb_default_header;
-    if (!psbctx->footer)
+    if (!psbctx->footer && !psbctx->cmds && !psbctx->layers)
         psbctx->footer = psb_default_footer;
     if (!psbctx->renderer)
         psbctx->renderer = psb_default_renderer;
@@ -296,14 +634,9 @@ psb_init_defaults(PSB_CTX *psbctx) {
     psbctx->cmd.quit = false;
     psbctx->cached_base = -1;
 
-    if (psbctx->cmd.total < 0)
-        psbctx->cmd.total = 0;
-    if (psbctx->cmd.total == 0)
-        psbctx->cmd.curr = 0;
-    else if (psbctx->cmd.curr >= psbctx->cmd.total)
-        psbctx->cmd.curr = psbctx->cmd.total - 1;
-    else if (psbctx->cmd.curr < 0)
-        psbctx->cmd.curr = 0;
+    assert(psbctx->cmd.curr >= 0 &&
+           psbctx->cmd.total >= 0 &&
+           (psbctx->cmd.total == 0 || psbctx->cmd.curr < psbctx->cmd.total));
     assert(psbctx->header_lines > 0 &&
            psbctx->footer_lines);
 }
@@ -334,12 +667,7 @@ psb_sync_cache(PSB_CTX *psbctx) {
         if (psbctx->loader)
             psbctx->loader(psbctx);
         psbctx->cmd.reload = false;
-        rows = t_lines - psbctx->header_lines - psbctx->footer_lines;
-        assert(rows > 0);
-        psbctx->cmd.rows = rows;
     }
-    if (psbctx->cmd.quit)
-        return;
 
     if (psbctx->cmd.total <= 0) {
         psbctx->cmd.curr = 0;
@@ -387,41 +715,10 @@ psb_sync_cache(PSB_CTX *psbctx) {
         if (psbctx->loader &&
             (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows))
             psbctx->loader(psbctx);
-        if (psbctx->cmd.quit)
-            return;
         psbctx->cached_base = psbctx->cmd.base;
         psbctx->cached_rows = rows;
         psbctx->cached_cols = t_columns;
         psbctx->cmd.redraw = true;
-    }
-}
-
-static void
-psb_on_select(cmd_ctx_t *ctx, int new_curr) {
-    PSB_CTX *psbctx = container_of(ctx, PSB_CTX, cmd);
-    if (psbctx->cmd.total <= 0)
-        return;
-    int old_curr = psbctx->cmd.curr;
-    psbctx->cmd.curr = new_curr;
-    if (old_curr != new_curr) {
-        int base = psbctx->cmd.base;
-        int rows = psbctx->cmd.rows;
-        if (old_curr >= base && old_curr < base + rows && old_curr < psbctx->cmd.total) {
-            int y = psbctx->header_lines + (old_curr - base);
-            cursor_clear(y, 0);
-            move(y, 0);
-            clrtoeol();
-            psbctx->renderer(old_curr, psbctx);
-        }
-        if (new_curr >= base && new_curr < base + rows && new_curr < psbctx->cmd.total) {
-            int y = psbctx->header_lines + (new_curr - base);
-            move(y, 0);
-            clrtoeol();
-            psbctx->renderer(new_curr, psbctx);
-            move(y, 0);
-            psbctx->cursor(y, psbctx);
-        }
-        refresh();
     }
 }
 
@@ -440,11 +737,9 @@ psb_main(PSB_CTX *psbctx)
 
         assert(rows > 0);
         psbctx->cmd.rows = rows;
-        psb_sync_cache(psbctx);
-        if (psbctx->cmd.quit)
-            break;
-        rows = psbctx->cmd.rows;
         psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
+        psb_sync_cache(psbctx);
+        cmd_set_has_item(psbctx->cmd.total > 0);
 
         base = psbctx->cmd.base;
         bool full = psbctx->cmd.redraw;
@@ -465,38 +760,27 @@ psb_main(PSB_CTX *psbctx)
             psbctx->header(psbctx);
         }
 
-        if (psbctx->cmd.total == 0) {
-            if (full || top_dirty > 0) {
-                move(psbctx->header_lines, 0);
-                if (!full)
-                    clrtoln(psbctx->header_lines + rows);
-                if (psbctx->empty_renderer) {
-                    psbctx->empty_renderer(psbctx);
-                }
-            }
-        } else {
-            int max_i = psbctx->cmd.total - base;
-            if (max_i > rows)
-                max_i = rows;
-            for (i = 0; i < max_i; i++) {
-                bool dirty_row = full ||
-                                 (i < top_dirty) ||
-                                 (i >= rows - bot_dirty) ||
-                                 (old_curr != psbctx->cmd.curr &&
-                                  (base + i == old_curr || base + i == psbctx->cmd.curr));
-                if (!dirty_row)
-                    continue;
-                if (!full && old_curr != psbctx->cmd.curr && base + i == old_curr)
-                    cursor_clear(psbctx->header_lines + i, 0);
-                move(psbctx->header_lines + i, 0);
-                if (!full)
-                    clrtoeol();
-                psbctx->renderer(base + i, psbctx);
-            }
-            if (!full && max_i < rows) {
-                move(psbctx->header_lines + max_i, 0);
-                clrtoln(psbctx->header_lines + rows);
-            }
+        int max_i = psbctx->cmd.total - base;
+        if (max_i > rows)
+            max_i = rows;
+        for (i = 0; i < max_i; i++) {
+            bool dirty_row = full ||
+                             (i < top_dirty) ||
+                             (i >= rows - bot_dirty) ||
+                             (old_curr != psbctx->cmd.curr &&
+                              (base + i == old_curr || base + i == psbctx->cmd.curr));
+            if (!dirty_row)
+                continue;
+            if (!full && old_curr != psbctx->cmd.curr && base + i == old_curr)
+                cursor_clear(psbctx->header_lines + i, 0);
+            move(psbctx->header_lines + i, 0);
+            if (!full)
+                clrtoeol();
+            psbctx->renderer(base + i, psbctx);
+        }
+        if (!full && max_i < rows) {
+            move(psbctx->header_lines + max_i, 0);
+            clrtoln(psbctx->header_lines + rows);
         }
 
         if (draw_footer) {
@@ -505,6 +789,8 @@ psb_main(PSB_CTX *psbctx)
                 clrtobot();
             if (psbctx->footer)
                 psbctx->footer(psbctx);
+            else
+                cmd_render_footer_layers(psbctx->cmd.caption, active_layers);
 
             if (psbctx->allow_pbs_version_message) {
                 prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
@@ -516,27 +802,10 @@ psb_main(PSB_CTX *psbctx)
         psbctx->cmd.redraw_footer_lines = 0;
 
         old_curr = psbctx->cmd.curr;
-        if (psbctx->cmd.total > 0) {
-            i = psbctx->header_lines + psbctx->cmd.curr - base;
-            move(i, 0);
-            psbctx->cursor(i, psbctx);
-        } else {
-            i = psbctx->header_lines;
-            move(i, 0);
-            psbctx->cursor(i, psbctx);
-        }
-        int vis = psbctx->cmd.total - base;
-        if (vis > rows) vis = rows;
-        if (vis < 0) vis = 0;
-        psbctx->cmd.header_lines = psbctx->header_lines;
-        psbctx->cmd.visible_rows = vis;
-        psbctx->cmd.on_select = psb_on_select;
-        int old_newmail = ISNEWMAIL(currutmp);
+        i = psbctx->header_lines + psbctx->cmd.curr - base;
+        move(i, 0);
+        psbctx->cursor(i, psbctx);
         psbctx->cmd.key = vkey();
-        if (psbctx->cmd.key == EOF) {
-            psbctx->cmd.quit = true;
-            break;
-        }
 
         int ret = PSB_NA;
         if (psbctx->on_key) {
@@ -545,12 +814,6 @@ psb_main(PSB_CTX *psbctx)
         if (ret == PSB_NA) {
             ret = cmd_dispatch_layers(active_layers, &psbctx->cmd, psbctx->cmd.caption);
         }
-
-        if (ISNEWMAIL(currutmp) != old_newmail && !psbctx->cmd.redraw && !psbctx->cmd.reload) {
-            psbctx->cmd.redraw_header_lines = psbctx->header_lines;
-        }
-        if (ZA_Waiting()) {
-            psbctx->cmd.quit = true;
         }
     }
     return 0;
@@ -579,16 +842,6 @@ pveh_header(PSB_CTX *ctx) {
     move(1, 0);
     outs("請注意本系統不會永久保留所有的編輯歷史。");
     outs("\n");
-    return 0;
-}
-
-static int
-pveh_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 編輯歷史 ",
-              " (↑↓)移動 (Enter/r/→)選擇 (x)存入信箱 "
-              "(~)" RECYCLE_BIN_NAME
-              "\t(q/←)跳出");
-    move(b_lines-1, 0);
     return 0;
 }
 
@@ -741,7 +994,6 @@ psb_view_edit_history(const char *base, const char *subject,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
         .header = pveh_header,
-        .footer = pveh_footer,
         .renderer = pveh_renderer,
         .cmds = pveh_cmds,
     };
@@ -788,15 +1040,6 @@ pvrb_header(PSB_CTX *ctx) {
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
     vbar(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題");
-    return 0;
-}
-
-static int
-pvrb_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 已刪檔案 ",
-              " (↑/↓/PgUp/PgDn)移動 (Enter/r/→)選擇 (/a#n)搜尋 (x)存入信箱"
-              "\t(q/←)跳出");
-    move(b_lines-1, 0);
     return 0;
 }
 
@@ -1023,7 +1266,6 @@ psb_recycle_bin(const char *base, const char *title) {
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
         .header = pvrb_header,
-        .footer = pvrb_footer,
         .renderer = pvrb_renderer,
         .cmds = pvrb_cmds,
     };
@@ -1069,14 +1311,6 @@ pvcm_header(PSB_CTX *ctx GCC_UNUSED) {
     vs_draw_hdr2("推文管理", "刪除推文");
     move(1, 0);
     vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
-    return 0;
-}
-
-static int
-pvcm_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 推文 ",
-              " (↑/↓/PgUp/PgDn)移動 (d)刪除 (U)快速水桶\t(q/←)跳出");
-    move(b_lines-1, 0);
     return 0;
 }
 
@@ -1170,7 +1404,6 @@ psb_comment_manager(const char *board, const char *file) {
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
         .header = pvcm_header,
-        .footer = pvcm_footer,
         .renderer = pvcm_renderer,
         .cmds = pvcm_cmds,
     };
@@ -1206,15 +1439,34 @@ typedef struct {
 } pae_ctx;
 
 static int
-pae_header(PSB_CTX *ctx GCC_UNUSED) {
+pae_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0) {
+        if (col == 0)
+            return stream_width("名  稱");
+        if (col == 1)
+            return stream_width("檔  名");
+        return 0;
+    }
+    pae_ctx *cx = (pae_ctx *)ctx->cmd.priv;
+    if (col == 0)
+        return stream_width(cx->descs[i]);
+    if (col == 1)
+        return stream_width(cx->files[i]);
+    return 0;
+}
+
+static int
+pae_header(PSB_CTX *ctx) {
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
     const char *h_id = "編號", *h0 = "名  稱", *h1 = "檔  名";
     int pad_id = 5 - stream_width(h_id);
-    int pad0 = 36 - stream_width(h0);
-    int pad1 = 30 - stream_width(h1);
+    int pad0 = w0 - stream_width(h0);
+    int pad1 = w1 - stream_width(h1);
     vs_draw_hdr2("系統檔案", "編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
     vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
-         "%*s%s %s%*s%s%*s",
+         "%*s%s %s%*s %s%*s",
          pad_id > 0 ? pad_id : 0, "", h_id,
          h0, pad0 > 0 ? pad0 : 0, "",
          h1, pad1 > 0 ? pad1 : 0, ""));
@@ -1222,18 +1474,12 @@ pae_header(PSB_CTX *ctx GCC_UNUSED) {
 }
 
 static int
-pae_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 編輯系統檔案 ",
-              " (↑↓/0-9)移動 (Enter/e/r/→)編輯 (DEL/d)刪除 \t(q/←)跳出");
-    move(b_lines-1, 0);
-    return 0;
-}
-
-static int
 pae_renderer(int i, PSB_CTX *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx->cmd.priv;
-    int pad0 = 36 - stream_width(cx->descs[i]);
-    int pad1 = 30 - stream_width(cx->files[i]);
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
+    int pad0 = w0 - stream_width(cx->descs[i]);
+    int pad1 = w1 - stream_width(cx->files[i]);
     prints("  %3d %s%s%s%*s " ANSI_COLOR(1;37) "%s%*s" ANSI_RESET "\n",
             i+1,
             (i == ctx->cmd.curr) ? ANSI_COLOR(41) : "",
@@ -1308,9 +1554,10 @@ psb_admin_edit() {
         .header_lines = 4,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
-
+        .cols = 2,
+        .col_paddings = 7,
+        .col_measurer = pae_col_measurer,
         .header = pae_header,
-        .footer = pae_footer,
         .renderer = pae_renderer,
         .cmds = pae_cmds,
     };

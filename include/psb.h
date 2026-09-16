@@ -113,6 +113,9 @@ int cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
 void psb_sync_cache(PSB_CTX *psbctx);
 int psb_file_loader(PSB_CTX *psbctx);
 bool psb_check_perm(int perm);
+void cmd_set_has_item(bool has_item);
+int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers);
+void cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers);
 
 int psb_main(PSB_CTX *psbctx);
 
