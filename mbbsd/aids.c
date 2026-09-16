@@ -124,11 +124,28 @@ aidu_t aidc2aidu(const char *aidc)
   return aidu;
 }
 
+static inline int
+match_aidu_fn(const char *fh_fn, const char *fn, int fn_len, int allow_prefix)
+{
+  if (fh_fn[0] == fn[0] &&
+      fh_fn[fn_len - 1] == fn[fn_len - 1] &&
+      fh_fn[fn_len - 2] == fn[fn_len - 2] &&
+      strcmp(fh_fn, fn) == 0)
+    return 1;
+  if (allow_prefix)
+  {
+    int l = strlen(fh_fn);
+    if (l > 6 && strncmp(fh_fn, fn, l) == 0)
+      return 1;
+  }
+  return 0;
+}
+
 int search_aidu(char *bfile, aidu_t aidu)
 {
   char fn[FNLEN];
   int fd;
-  const int batch = 64;
+  const int batch = 512;
   fileheader_t fhs[batch];
   int len, i;
   int pos = -1;
@@ -139,23 +156,69 @@ int search_aidu(char *bfile, aidu_t aidu)
     return -1;
 
   struct stat st;
-  if (fstat(fd, &st) < 0 || !st.st_size) {
+  if (fstat(fd, &st) < 0 || st.st_size < (off_t)sizeof(fileheader_t)) {
     close(fd);
     return -1;
   }
+
+  int fn_len = strlen(fn);
+  int allow_prefix = ((aidu & 0xfff) == 0);
+  int total = st.st_size / sizeof(fileheader_t);
+
+  /* Step 1: Fast timestamp binary search for large files (> 1 batch) */
+  if (total > batch)
+  {
+    time4_t target_ts = (aidu >> 12) & 0xffffffff;
+    int low = 0, high = total - 1, mid = 0;
+    fileheader_t fh;
+
+    while (low <= high)
+    {
+      mid = low + (high - low) / 2;
+      if (pread(fd, &fh, sizeof(fh), (off_t)mid * sizeof(fh)) != sizeof(fh))
+        break;
+      time4_t ts = get_fhdr_stamp_ts(fh.filename);
+      if (ts == target_ts)
+        break;
+      else if (ts < target_ts)
+        low = mid + 1;
+      else
+        high = mid - 1;
+    }
+
+    int win_start = mid - batch / 2;
+    if (win_start < 0)
+      win_start = 0;
+    if (win_start + batch > total)
+      win_start = total - batch;
+
+    len = pread(fd, fhs, sizeof(fhs), (off_t)win_start * sizeof(fileheader_t));
+    if (len > 0)
+    {
+      len /= sizeof(fileheader_t);
+      for (i = len - 1; i >= 0; i--)
+      {
+        if (match_aidu_fn(fhs[i].filename, fn, fn_len, allow_prefix))
+        {
+          close(fd);
+          return win_start + i;
+        }
+      }
+    }
+  }
+
+  /* Step 2: Backwards linear scan fallback (for small files or out-of-order entries) */
   off_t off = ((st.st_size - 1) / sizeof(fhs)) * sizeof(fhs);
 
   while ((len = pread(fd, fhs, sizeof(fhs), off)) > 0)
   {
     len /= sizeof(fileheader_t);
-    for(i = 0; i < len; i++)
+    for(i = len - 1; i >= 0; i--)
     {
-      int l;
-      if(strcmp(fhs[i].filename, fn) == 0 ||
-         ((aidu & 0xfff) == 0 && (l = strlen(fhs[i].filename)) > 6 &&
-          strncmp(fhs[i].filename, fn, l) == 0))
+      if(match_aidu_fn(fhs[i].filename, fn, fn_len, allow_prefix))
       {
 	pos = off / sizeof(fileheader_t) + i;
+	break;
       }
     }
 
