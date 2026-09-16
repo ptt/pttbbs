@@ -185,6 +185,9 @@ static int t_lines = 24, t_columns = 80;
 // Some terminals (NetTerm, PacketSite) have bug in bolding attribute.
 #define FTCONF_WORKAROUND_BOLD
 
+// Use ANSI reverse video (ESC[7m) instead of swapping fg/bg colors
+#undef  FTCONF_ANSI_REVERSE
+
 // Some terminals prefer VT100 style scrolling, including Win/DOS telnet
 #undef  FTCONF_USE_ANSI_SCROLL
 #undef  FTCONF_USE_VT100_SCROLL
@@ -211,7 +214,6 @@ static int t_lines = 24, t_columns = 80;
 
 #define FTCHAR_ERASE     (' ')
 #define FTATTR_ERASE     (0x07)
-#define FTATTR_REVERSE   (0x70)
 #define FTCHAR_BLANK     (' ')
 #define FTATTR_DEFAULT   (FTATTR_ERASE)
 #define FTCHAR_INVALID_DBCS ('?')
@@ -229,7 +231,7 @@ static int t_lines = 24, t_columns = 80;
 #define FTDBCS_INVALID  (2)     // invalid
 
 #define FTCMD_MAXLEN    (63)    // max escape command sequence length
-#define FTATTR_MINCMD   (16)
+#define FTATTR_MINCMD   (32)
 
 #ifndef FTCONF_USE_ANSI_RELMOVE
 # define FTMV_COST      (8)     // always ESC[m;nH will costs avg 8 bytes
@@ -242,7 +244,7 @@ static int t_lines = 24, t_columns = 80;
 //////////////////////////////////////////////////////////////////////////
 
 typedef unsigned char ftchar;   // primitive character type
-typedef unsigned char ftattr;   // primitive attribute type
+typedef unsigned short ftattr;  // primitive attribute type
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Structure
@@ -263,7 +265,6 @@ typedef struct
     int     mi;     // map index, mi = current map and (1-mi) = old map
     int     dirty;
     int     scroll;
-    int     standout;
 
     // memory allocation
     int     mrows, mcols;
@@ -297,19 +298,86 @@ static FlatTerm ft;
 // Flat Terminal Utility Macro
 //////////////////////////////////////////////////////////////////////////
 
-// ftattr: 0| FG(3) | BOLD(1) | BG(3) | BLINK(1) |8
-#define FTATTR_FGSHIFT  (0)
-#define FTATTR_BGSHIFT  (4)
-#define FTATTR_GETFG(x) ((x >> FTATTR_FGSHIFT) & 0x7)
-#define FTATTR_GETBG(x) ((x >> FTATTR_BGSHIFT) & 0x7)
-#define FTATTR_FGMASK   ((ftattr)(0x7 << FTATTR_FGSHIFT))
-#define FTATTR_BGMASK   ((ftattr)(0x7 << FTATTR_BGSHIFT))
-#define FTATTR_BOLD     (0x08)
-#define FTATTR_BLINK    (0x80)
-#define FTATTR_DEFAULT_FG   (FTATTR_GETFG(FTATTR_DEFAULT))
-#define FTATTR_DEFAULT_BG   (FTATTR_GETBG(FTATTR_DEFAULT))
-#define FTATTR_MAKE(f,b)    (((f)<<FTATTR_FGSHIFT)|((b)<<FTATTR_BGSHIFT))
-#define FTCHAR_ISBLANK(x)   ((x) == (FTCHAR_BLANK))
+// ftattr (16-bit):
+// low byte:  0| FG(3) | BOLD(1) | BG(3) | reserved(1) |8
+// high byte: 8| LOCATOR | STANDOUT | ITALIC | UNDERLINE | BLINK | REVERSE | HIDDEN | STRIKETHROUGH |16
+#define FTATTR_FGSHIFT          (0)
+#define FTATTR_BGSHIFT          (4)
+#define FTATTR_GETFG(x)         (((x) >> FTATTR_FGSHIFT) & 0x7)
+#define FTATTR_GETBG(x)         (((x) >> FTATTR_BGSHIFT) & 0x7)
+#define FTATTR_FGMASK           ((ftattr)(0x7 << FTATTR_FGSHIFT))
+#define FTATTR_BGMASK           ((ftattr)(0x7 << FTATTR_BGSHIFT))
+#define FTATTR_BOLD             (0x0008)
+
+// high byte attributes (in SGR order)
+// Attribute 1 was BOLD and we moved that to FG, reserving one bit
+// for our special attribute 'locator'.
+// Attribute 2 was DIM and not well supported by legacy terminals but now
+// supported by modern terminals with 256 or full colors.
+// So we want to borrow 1 and 2 for some special attributes.
+#define FTATTR_LOCATOR          ((0x1 << 0) << 8)
+#define FTATTR_FILL             ((0x1 << 1) << 8)
+#define FTATTR_ITALIC           ((0x1 << 2) << 8)
+#define FTATTR_UNDERLINE        ((0x1 << 3) << 8)
+// SGR defined two blinks (fast and slow) and here we treat them the same.
+#define FTATTR_BLINK            ((0x1 << 4) << 8)
+#define FTATTR_REVERSE          ((0x1 << 5) << 8)
+// #define FTATTR_HIDDEN        ((0x1 << 6) << 8)
+// #define FTATTR_STRIKETHROUGH ((0x1 << 7) << 8)
+
+#define FTATTR_STANDOUT         FTATTR_FILL
+
+#define FTATTR_DEFAULT_FG       (FTATTR_GETFG(FTATTR_DEFAULT))
+#define FTATTR_DEFAULT_BG       (FTATTR_GETBG(FTATTR_DEFAULT))
+#define FTATTR_MAKE(f,b)        (((f)<<FTATTR_FGSHIFT)|((b)<<FTATTR_BGSHIFT))
+#define FTCHAR_ISBLANK(x)       ((x) == (FTCHAR_BLANK))
+
+static inline void
+ftattr_fill(ftattr *dst, ftattr val, int count)
+{
+    while (count-- > 0)
+        *dst++ = val;
+}
+
+static inline ftattr
+fterm_resolve_attr(ftattr a)
+{
+    if (a & FTATTR_LOCATOR)
+    {
+        ftattr fg = (a & FTATTR_REVERSE) ? FTATTR_GETBG(a) : FTATTR_GETFG(a);
+        if (fg == 0 || fg == 4)
+            fg = 7;
+        a &= ~(FTATTR_FGMASK | FTATTR_BGMASK | FTATTR_REVERSE | FTATTR_LOCATOR);
+        a |= FTATTR_MAKE(fg, 4) | FTATTR_BOLD;
+    }
+    if (a & FTATTR_FILL)
+    {
+        a &= ~(FTATTR_FGMASK | FTATTR_BGMASK | FTATTR_REVERSE | FTATTR_FILL);
+        a |= FTATTR_MAKE(0, 7);
+    }
+#ifndef FTCONF_ANSI_REVERSE
+    if (a & FTATTR_REVERSE)
+    {
+        ftattr fg = FTATTR_GETFG(a);
+        ftattr bg = FTATTR_GETBG(a);
+        a &= ~(FTATTR_FGMASK | FTATTR_BGMASK | FTATTR_REVERSE);
+        a |= FTATTR_MAKE(bg, fg);
+    }
+#endif
+    return a;
+}
+
+static inline int
+fterm_space_compatible(ftattr a, ftattr b)
+{
+    a = fterm_resolve_attr(a);
+    b = fterm_resolve_attr(b);
+    if (a == b)
+        return 1;
+    if ((a | b) & (FTATTR_UNDERLINE | FTATTR_REVERSE))
+        return 0;
+    return FTATTR_GETBG(a) == FTATTR_GETBG(b);
+}
 
 static inline ftchar *
 FTCMAP(int y)
@@ -605,9 +673,7 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
         for (mi = 0; mi < 2; mi++)
         {
             new_abase[mi] = (ftattr *)p; p += aplane_bytes;
-            size_t k;
-            for (k = 0; k < aplane_cells; k++)
-                new_abase[mi][k] = FTATTR_ERASE;
+            ftattr_fill(new_abase[mi], FTATTR_ERASE, aplane_cells);
         }
 
         for (mi = 0; mi < 2; mi++)
@@ -660,8 +726,7 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
     {
         memset(FTCMAP(i), FTCHAR_ERASE,
                 (cols) * sizeof(ftchar));
-        memset(FTAMAP(i), FTATTR_ERASE,
-                (cols) * sizeof(ftattr));
+        ftattr_fill(FTAMAP(i), FTATTR_ERASE, cols);
     }
     if (cols > ft.cols)
     {
@@ -669,8 +734,7 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
         {
             memset(FTCMAP(i)+ft.cols, FTCHAR_ERASE,
                     (cols-ft.cols) * sizeof(ftchar));
-            memset(FTAMAP(i)+ft.cols, FTATTR_ERASE,
-                    (cols-ft.cols) * sizeof(ftattr));
+            ftattr_fill(FTAMAP(i)+ft.cols, FTATTR_ERASE, cols-ft.cols);
         }
     }
 
@@ -724,9 +788,8 @@ clrscr(void)
     for (r = 0; r < ft.rows; r++)
         memset(FTCMAP(r), FTCHAR_ERASE, ft.cols * sizeof(ftchar));
     for (r = 0; r < ft.rows; r++)
-        memset(FTAMAP(r), FTATTR_ERASE, ft.cols * sizeof(ftattr));
+        ftattr_fill(FTAMAP(r), FTATTR_ERASE, ft.cols);
     fterm_markdirty();
-    ft.standout = 0;
 }
 
 void
@@ -742,7 +805,7 @@ clrtoeol(void)
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
     memset(FTPC, FTCHAR_ERASE,  ft.cols - ft.x);
-    memset(FTPA, FTATTR_ERASE,  ft.cols - ft.x);
+    ftattr_fill(FTPA, FTATTR_ERASE, ft.cols - ft.x);
     fterm_markdirty();
 }
 
@@ -752,7 +815,7 @@ clrtobeg(void)
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
     memset(FTCROW, FTCHAR_ERASE, ft.x+1);
-    memset(FTAROW, FTATTR_ERASE, ft.x+1);
+    ftattr_fill(FTAROW, FTATTR_ERASE, ft.x+1);
     fterm_markdirty();
 }
 
@@ -761,7 +824,7 @@ clrcurrline(void)
 {
     ft.y = ranged(ft.y, 0, ft.rows-1);
     memset(FTCROW, FTCHAR_ERASE, ft.cols);
-    memset(FTAROW, FTATTR_ERASE, ft.cols);
+    ftattr_fill(FTAROW, FTATTR_ERASE, ft.cols);
     fterm_markdirty();
 }
 
@@ -790,7 +853,7 @@ clrregion(int r1, int r2)
     for (; r1 <= r2; r1++)
     {
         memset(FTCMAP(r1), FTCHAR_ERASE, ft.cols);
-        memset(FTAMAP(r1), FTATTR_ERASE, ft.cols);
+        ftattr_fill(FTAMAP(r1), FTATTR_ERASE, ft.cols);
     }
     fterm_markdirty();
 }
@@ -905,9 +968,9 @@ doupdate(void)
     {
         for (x = 0; x < ft.cols; x++)
         {
-            WORD xAttr = FTAMAP(y)[x], xxAttr;
+            WORD xAttr = fterm_resolve_attr(FTAMAP(y)[x]), xxAttr;
             // w32 attribute: bit swap (0,2) and (4, 6)
-            xxAttr = xAttr & 0xAA;
+            xxAttr = (xAttr & 0x2A) | ((xAttr & FTATTR_BLINK) ? 0x80 : 0);
             if (xAttr & 0x01) xxAttr |= 0x04;
             if (xAttr & 0x04) xxAttr |= 0x01;
             if (xAttr & 0x10) xxAttr |= 0x40;
@@ -1063,13 +1126,13 @@ doupdate(void)
                 for (i = ft.rx; i < x; i++)
                 {
                     // if same attribute, simply accept.
-                    if (FTAMAP(y)[i] == ft.rattr && touched)
+                    if (fterm_resolve_attr(FTAMAP(y)[i]) == fterm_resolve_attr(ft.rattr) && touched)
                         continue;
-                    // XXX spaces may accept (BG=rBG),
+                    // XXX spaces may accept compatible BG/attributes,
                     // but that will also change cached attribute.
                     if (!FTCHAR_ISBLANK(FTCMAP(y)[i]))
                         break;
-                    if (FTATTR_GETBG(FTAMAP(y)[i]) != FTATTR_GETBG(ft.rattr))
+                    if (!fterm_space_compatible(FTAMAP(y)[i], ft.rattr))
                         break;
                 }
                 if (i != x)
@@ -1115,14 +1178,19 @@ doupdate(void)
 #ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
             // Disable hidden message, only if current and previous chars are
             // not DBCS chars.  Current dirty format: [CHAR][DBCS]
-            if (FTATTR_GETFG(FTAMAP(y)[x]) == FTATTR_GETBG(FTAMAP(y)[x]) &&
-                (FTAMAP(y)[x] & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0 &&
-                !(FTD[x] & FTDIRTY_DBCS) &&
-                !(x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS)))
-                fterm_rawc(' ');
-            else
-#endif
+            {
+                ftattr rattr = fterm_resolve_attr(FTAMAP(y)[x]);
+                if (FTATTR_GETFG(rattr) == FTATTR_GETBG(rattr) &&
+                    !(rattr & FTATTR_BOLD) &&
+                    !(FTD[x] & FTDIRTY_DBCS) &&
+                    !(x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS)))
+                    fterm_rawc(' ');
+                else
+                    fterm_rawc(FTDC[x]);
+            }
+#else
             fterm_rawc(FTDC[x]);
+#endif
             ft.rx++;
             touched = 1;
 
@@ -1372,7 +1440,7 @@ outc(unsigned char c)
         if (x > ft.x)
         {
             memset(FTCROW+ft.x, FTCHAR_ERASE, x - ft.x);
-            memset(FTAROW+ft.x, ft.attr, x-ft.x);
+            ftattr_fill(FTAROW+ft.x, ft.attr, x-ft.x);
         }
         ft.x = x;
     }
@@ -1614,7 +1682,7 @@ fterm_prepare_str(int len)
     if (len < 0) len = 0;
 
     memset(FTCROW + x, FTCHAR_ERASE, len);
-    memset(FTAROW + x, ft.attr, len);
+    ftattr_fill(FTAROW + x, ft.attr, len);
     return len;
 }
 
@@ -1798,23 +1866,34 @@ fterm_exec(void)
             case 1:
                 attrset(attrget() | FTATTR_BOLD);
                 break;
-            case 22:
-                attrset(attrget() & ~FTATTR_BOLD);
+            case 3:
+                attrset(attrget() | FTATTR_ITALIC);
+                break;
+            case 4:
+                attrset(attrget() | FTATTR_UNDERLINE);
                 break;
             case 5:
             case 6:
+                // 5 =slow and 6 = fast.
                 attrset(attrget() | FTATTR_BLINK);
+                break;
+            case 7:
+                attrset(attrget() | FTATTR_REVERSE);
+                break;
+            case 22:
+                attrset(attrget() & ~FTATTR_BOLD);
+                break;
+            case 23:
+                attrset(attrget() & ~FTATTR_ITALIC);
+                break;
+            case 24:
+                attrset(attrget() & ~FTATTR_UNDERLINE);
                 break;
             case 25:
                 attrset(attrget() & ~FTATTR_BLINK);
                 break;
-            case 3:
-            case 7:
-                {
-                    ftattr a = attrget();
-                    attrsetfg(FTATTR_GETBG(a));
-                    attrsetbg(FTATTR_GETFG(a));
-                }
+            case 27:
+                attrset(attrget() & ~FTATTR_REVERSE);
                 break;
             case 39:
                 attrsetfg(FTATTR_DEFAULT_FG);
@@ -1850,16 +1929,15 @@ int
 fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 {
     ftattr
-        fg, bg, bold, blink,
-        ofg, obg, obold, oblink;
+        fg, bg, bold, blink, underline, italic,
+        ofg, obg, obold, oblink, ounderline, oitalic;
+#ifdef FTCONF_ANSI_REVERSE
+    ftattr reverse, oreverse;
+#endif
     char lead = 1;
 
-    if (ft.standout) {
-        if (oattr & FTATTR_BLINK)
-            oattr = FTATTR_REVERSE;
-        if (nattr & FTATTR_BLINK)
-            nattr = FTATTR_REVERSE;
-    }
+    oattr = fterm_resolve_attr(oattr);
+    nattr = fterm_resolve_attr(nattr);
 
     if (oattr == nattr)
         return 0;
@@ -1877,35 +1955,49 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 
     fg = FTATTR_GETFG(nattr);
     bg = FTATTR_GETBG(nattr);
-    bold =  (nattr & FTATTR_BOLD) ? 1 : 0;
-    blink = (nattr & FTATTR_BLINK)? 1 : 0;
+    bold      = (nattr & FTATTR_BOLD)      ? 1 : 0;
+    blink     = (nattr & FTATTR_BLINK)     ? 1 : 0;
+    underline = (nattr & FTATTR_UNDERLINE) ? 1 : 0;
+    italic    = (nattr & FTATTR_ITALIC)    ? 1 : 0;
+#ifdef FTCONF_ANSI_REVERSE
+    reverse   = (nattr & FTATTR_REVERSE)   ? 1 : 0;
+#endif
 
     ofg = FTATTR_GETFG(oattr);
     obg = FTATTR_GETBG(oattr);
-    obold =  (oattr & FTATTR_BOLD) ? 1 : 0;
-    oblink = (oattr & FTATTR_BLINK)? 1 : 0;
+    obold      = (oattr & FTATTR_BOLD)      ? 1 : 0;
+    oblink     = (oattr & FTATTR_BLINK)     ? 1 : 0;
+    ounderline = (oattr & FTATTR_UNDERLINE) ? 1 : 0;
+    oitalic    = (oattr & FTATTR_ITALIC)    ? 1 : 0;
+#ifdef FTCONF_ANSI_REVERSE
+    oreverse   = (oattr & FTATTR_REVERSE)   ? 1 : 0;
+#endif
 
     // we dont use "disable blink/bold" commands,
     // so if these settings are changed then we must reset.
     // another case is changing background to default background -
     // better use "RESET" to override it.
     // Same for foreground.
-    // Possible optimization: when blink/bold on, don't RESET
-    // for background change?
-    if ((oblink != blink && !blink) ||
-        (obold  != bold  && !bold)  ||
-        (bg == FTATTR_DEFAULT_BG && obg != bg) ||
-        (fg == FTATTR_DEFAULT_FG && ofg != fg) )
+    if ((oblink     != blink     && !blink)     ||
+        (obold      != bold      && !bold)      ||
+        (ounderline != underline && !underline) ||
+#ifdef FTCONF_ANSI_REVERSE
+        (oreverse   != reverse   && !reverse)   ||
+#endif
+        (oitalic    != italic    && !italic)    ||
+        (bg == FTATTR_DEFAULT_BG && obg != bg)  ||
+        (fg == FTATTR_DEFAULT_FG && ofg != fg)  )
     {
         // lead must be 1 since this is the first check.
-        // We have dead code (else *s++) here but that's simply to ease moving
-        // code around.
         if (lead) lead = 0; else *s++ = ';';
         *s++ = '0';
 
         ofg = FTATTR_DEFAULT_FG;
         obg = FTATTR_DEFAULT_BG;
-        obold = 0; oblink = 0;
+        obold = oblink = ounderline = oitalic = 0;
+#ifdef FTCONF_ANSI_REVERSE
+        oreverse = 0;
+#endif
     }
 
     if (bold && !obold)
@@ -1921,13 +2013,29 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
         if (fg == FTATTR_DEFAULT_FG)
             ofg = ~ofg;
 #endif // FTCONF_WORKAROUND_BOLD
-
+    }
+    if (italic && !oitalic)
+    {
+        if (lead) lead = 0; else *s++ = ';';
+        *s++ = '3';
+    }
+    if (underline && !ounderline)
+    {
+        if (lead) lead = 0; else *s++ = ';';
+        *s++ = '4';
     }
     if (blink && !oblink)
     {
         if (lead) lead = 0; else *s++ = ';';
         *s++ = '5'; // XXX 5(slow) or 6(fast)?
     }
+#ifdef FTCONF_ANSI_REVERSE
+    if (reverse && !oreverse)
+    {
+        if (lead) lead = 0; else *s++ = ';';
+        *s++ = '7';
+    }
+#endif
     if (ofg != fg)
     {
         if (lead) lead = 0; else *s++ = ';';
@@ -2002,7 +2110,7 @@ fterm_strdlen(const char *s)
 void
 fterm_rawattr(ftattr rattr)
 {
-    static char cmd[FTATTR_MINCMD*2];
+    char cmd[FTATTR_MINCMD*2];
     if (!fterm_chattr(cmd, ft.rattr, rattr))
         return;
 
@@ -2345,16 +2453,13 @@ fterm_rawnc(int c, int n)
 void
 standout(void)
 {
-    // Reuse BLINK for standout.
-    attrset(attrget() | FTATTR_BLINK);
-    ft.standout = 1;
+    attrset(attrget() | FTATTR_STANDOUT);
 }
 
 void
 standend(void)
 {
-    // Reuse BLINK for standout.
-    attrset(attrget() & ~FTATTR_BLINK);
+    attrset(attrget() & ~FTATTR_STANDOUT);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2362,7 +2467,7 @@ standend(void)
 //////////////////////////////////////////////////////////////////////////
 
 static void
-grayout_apply(int y, int end, char enable_mask, char disable_mask)
+grayout_apply(int y, int end, ftattr enable_mask, ftattr disable_mask)
 {
     int x;
     for (; y < end; y++) {
@@ -2376,7 +2481,7 @@ grayout_apply(int y, int end, char enable_mask, char disable_mask)
 }
 
 static void
-grayout_shift(int y, int end, int right, int attr1, int attr2)
+grayout_shift(int y, int end, int right, ftattr attr1, ftattr attr2)
 {
     int x;
     for (; y < end; y++) {
@@ -2399,7 +2504,7 @@ grayout_shift(int y, int end, int right, int attr1, int attr2)
 void
 grayout(int y, int end, int level)
 {
-    char grattr = FTATTR_DEFAULT;
+    ftattr grattr = FTATTR_DEFAULT;
 
     y   = ranged(y,   0, ft.rows-1);
     end = ranged(end, 0, ft.rows-1);
@@ -2416,13 +2521,11 @@ grayout(int y, int end, int level)
             return;
 
         case GRAYOUT_STANDOUT:
-            grayout_apply(y, end, FTATTR_BLINK, 0);
-            ft.standout = 1;
+            grayout_apply(y, end, FTATTR_STANDOUT, 0);
             return;
 
         case GRAYOUT_STANDEND:
-            grayout_apply(y, end, 0, FTATTR_BLINK);
-            ft.standout = 0;
+            grayout_apply(y, end, 0, FTATTR_STANDOUT);
             return;
     }
 
@@ -2444,7 +2547,7 @@ grayout(int y, int end, int level)
 
     for (; y <= end; y++)
     {
-        memset(FTAMAP(y), grattr, ft.cols);
+        ftattr_fill(FTAMAP(y), grattr, ft.cols);
     }
 }
 
