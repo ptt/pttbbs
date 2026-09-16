@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "psb.h"
 
 static int headers_size = 0;
 static fileheader_t *headers = NULL;
@@ -6,8 +7,6 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 
 #include <sys/mman.h>
 
-typedef int (*onekey_func4)(int, const fileheader_t *, const char *, int);
-typedef int (*onekey_func0)(void);
 /* tag extension */
 
 static int
@@ -167,35 +166,6 @@ fixkeep(const char *s, int first)
     }
 }
 
-/* calc cursor pos and show cursor correctly */
-static int
-cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
-{
-    int  top=locmem->top_ln;
-    if (!last_line){
-	cursor_show(3 , 0);
-	return DONOTHING;
-    }
-    if (val > last_line)
-	val = last_line;
-    if (val <= 0)
-	val = 1;
-    if (val >= top && val < top + headers_size) {
-        if(isshow){
-	    if(locmem->crs_ln >= top)
-		cursor_clear(3 + locmem->crs_ln - top, 0);
-	    cursor_show(3 + val - top, 0);
-	}
-	locmem->crs_ln = val;
-	return DONOTHING;
-    }
-    locmem->top_ln = val - from_top;
-    if (locmem->top_ln <= 0)
-	locmem->top_ln = 1;
-    locmem->crs_ln = val;
-    return isshow ? PARTUPDATE : HEADERS_RELOAD;
-}
-
 /**
  * 根據 stypen 選擇上/下一篇文章
  *
@@ -204,11 +174,11 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
  *           CURSOR_FIRST, CURSOR_NEXT, CURSOR_PREV:
  *             與游標目前位置的文章同標題 的 第一篇/下一篇/前一篇 文章。
  *           RELATE_FIRST, RELATE_NEXT, RELATE_PREV:
- *             與目前正閱讀的文章同標題 的 第一篇/下一篇/前一篇 文章。
+ *             與目前正閱\讀的文章同標題 的 第一篇/下一篇/前一篇 文章。
  *           NEWPOST_NEXT, NEWPOST_PREV:
  *             下一個/前一個 thread 的第一篇。
  *           AUTHOR_NEXT, AUTHOR_PREV:
- *             XXX 這功能目前好像沒用到?
+ *             XXX 這功\能目前好像沒用到?
  *
  * @return 新的游標位置
  */
@@ -702,353 +672,609 @@ read_key_handle_mode_navigation(keeploc_t *locmem, int mode, int *new_ln_ptr, ch
     return 0;
 }
 
+typedef struct {
+    int total;
+    int bottom_line;
+    bool reverse_order;
+} read_view_t;
+
+static inline int
+read_view_v2p(const read_view_t *view, int vidx) {
+    if (view->reverse_order)
+        return view->total - vidx;
+    return vidx + 1;
+}
+
+static inline int
+read_view_p2v(const read_view_t *view, int p_recno) {
+    if (view->reverse_order)
+        return view->total - p_recno;
+    return p_recno - 1;
+}
+
+typedef struct {
+    const cmd_t    *rcmdlist;
+    keeploc_t      *locmem;
+    int             cmdmode;
+    int             bid;
+    int             bidcache;
+    int             bottom_line;
+    int             entries;
+    bool            is_newdirect;
+    time4_t         enter_time;
+    void          (*dotitle)(void);
+    void          (*doentry)(int, fileheader_t *);
+    read_view_t     view;
+} read_ctx_t;
+
 static int
-i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
-           int bid, int bottom_line, int pending_draws)
-{
-    int     mode = DONOTHING, num, new_top=10;
-    int     ch, new_ln = locmem->crs_ln, lastmode = DONOTHING;
-    static  char default_ch = 0;
+get_records_and_bottom(const char *direct, fileheader_t *headers,
+                       int recbase, int headers_size, int last_line, int bottom_line);
 
-    do {
-	if( (mode = cursor_pos(locmem, new_ln, new_top, default_ch ? 0 : 1))
-	    != DONOTHING )
-	    return mode;
+static int
+read_view_load_window(const read_view_t *view, const char *direct,
+                      fileheader_t *buf, int base, int count) {
+    if (!view->reverse_order) {
+        return get_records_and_bottom(direct, buf, base + 1, count,
+                                      view->total, view->bottom_line);
+    }
+    int actual_count = count;
+    if (base + actual_count > view->total)
+        actual_count = view->total - base;
+    if (actual_count <= 0)
+        return 0;
+    int p_start = view->total - (base + actual_count) + 1;
+    int loaded = get_records_and_bottom(direct, buf, p_start, actual_count,
+                                        view->total, view->bottom_line);
+    for (int i = 0; i < loaded / 2; i++) {
+        fileheader_t tmp = buf[i];
+        buf[i] = buf[loaded - 1 - i];
+        buf[loaded - 1 - i] = tmp;
+    }
+    return loaded;
+}
 
-	if( !default_ch ) {
-	    // Waiting for a key.
+static void
+read_move_cursor(read_ctx_t *cx, cmd_ctx_t *ctx, int new_ln, int from_top) {
+    if (last_line <= 0)
+        return;
+    if (new_ln > last_line)
+        new_ln = last_line;
+    if (new_ln <= 0)
+        new_ln = 1;
+    int new_curr = read_view_p2v(&cx->view, new_ln);
+    if (new_curr < ctx->base || new_curr >= ctx->base + ctx->rows) {
+        int new_base = new_curr - from_top;
+        if (new_base < 0)
+            new_base = 0;
+        ctx->base = new_base;
+    }
+    ctx->curr = new_curr;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
+}
 
-	    // We should have drawn the listing.
-	    // If we had not, do it now.
-	    if (pending_draws)
-		return FULLUPDATE;
-
-	    ch = vkey();
-	} else {
-	    if(new_ln != locmem->crs_ln) {// move fault
-		default_ch=0;
-		return FULLUPDATE;
-	    }
-	    ch = default_ch;
-	}
-
-	new_top = 10; // default 10
-	switch (ch) {
-	case Ctrl('Z'):
-	    mode = FULLUPDATE;
-	    if (ZA_Select())
-		mode = DOQUIT;
-	    break;
-        case '0':    case '1':    case '2':    case '3':    case '4':
-	case '5':    case '6':    case '7':    case '8':    case '9':
-	    if( (num = search_num(ch, last_line)) != -1 )
-		new_ln = num + 1;
-	    break;
-    	case 'q':
-    	case 'e':
-    	case KEY_LEFT:
-	    if(currmode & MODE_SELECT && locmem->crs_ln>0){
-		char genbuf[PATHLEN];
-		fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
-		board_select();
-		setbdir(genbuf, currboard);
-		locmem = getkeep(genbuf, 0, 1);
-		locmem->crs_ln = fhdr->multi.refer.ref;
-		num = locmem->crs_ln - p_lines + 1;
-		locmem->top_ln = num < 1 ? 1 : num;
-		mode =  NEWDIRECT;
-	    }
-	    else
-		mode =
-		    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
-	    break;
-
-	case '#':
-	    mode = select_by_aid(locmem, &new_ln, &newdirect_new_ln, &default_ch);
-	    break;
-
-        case Ctrl('L'):
-	    redrawwin();
-	    refresh();
-	    break;
-
-        case Ctrl('H'):
-	    mode = select_read(locmem, RS_NEWPOST);
-	    break;
-
-	case 'Z':
-	    mode = select_read(locmem, RS_RECOMMEND);
-	    break;
-
-        case 'a':
-	    mode = select_read(locmem, RS_AUTHOR);
-	    break;
-
-        case 'A':
-	    mode = select_read(locmem, RS_MONEY);
-	    break;
-
-        case 'G':
-	    // special types
-	    switch(vans( currmode & MODE_SELECT ?
-			"增加條件 標記(m/s)(未輸入則取消): ":
-			"搜尋標記(m/s)(未輸入則取消): "))
-	    {
-		case 's':
-		    mode = select_read(locmem, RS_SOLVED);
-		    break;
-
-		case 'm':
-		    mode = select_read(locmem, RS_MARK);
-		    break;
-
-		default:
-                    mode = READ_REDRAW;
-                    break;
-	    }
-	    break;
-
-        case '/':
-        case '?':
-	    mode = select_read(locmem, RS_KEYWORD);
-	    break;
-
-        case 'S':
-	    mode = select_read(locmem, RS_TITLE);
-	    break;
-
-        case '!':
-	    mode = select_read(locmem, RS_KEYWORD_EXCLUDE);
-	    break;
-
-        case '=':
-	    new_ln = thread(locmem, RELATE_FIRST);
-	    break;
-
-        case '\\':
-	    new_ln = thread(locmem, CURSOR_FIRST);
-	    break;
-
-        case ']':
-	    new_ln = thread(locmem, RELATE_NEXT);
-	    break;
-
-        case '+':
-	    new_ln = thread(locmem, CURSOR_NEXT);
-	    break;
-
-        case '[':
-	    new_ln = thread(locmem, RELATE_PREV);
-	    break;
-
-     	case '-':
-	    new_ln = thread(locmem, CURSOR_PREV);
-	    break;
-
-    	case '<':
-    	case ',':
-	    new_ln = thread(locmem, NEWPOST_PREV);
-	    break;
-
-    	case '.':
-    	case '>':
-	    new_ln = thread(locmem, NEWPOST_NEXT);
-	    break;
-
-    	case 'p':
-    	case 'k':
-	case KEY_UP:
-	    if (locmem->crs_ln <= 1) {
-		new_ln = last_line;
-		new_top = p_lines-1;
-	    } else {
-		new_ln = locmem->crs_ln - 1;
-		new_top = p_lines - 2;
-	    }
-	    break;
-
-	case 'n':
-	case 'j':
-	case KEY_DOWN:
-	    new_ln = locmem->crs_ln + 1;
-	    new_top = 1;
-	    break;
-
-	case ' ':
-	case KEY_PGDN:
-	case 'N':
-	case Ctrl('F'):
-	    new_ln = locmem->top_ln + p_lines;
-	    new_top = 0;
-	    break;
-
-	case KEY_PGUP:
-	case Ctrl('B'):
-	case 'P':
-	    new_ln = locmem->top_ln - p_lines;
-	    new_top = 0;
-	    break;
-
-	    /* add home(top entry) support? */
-	case KEY_HOME:
-	    new_ln = 0;
-	    new_top = 0;
-	    break;
-
-	case KEY_END:
-	case '$':
-	    new_ln = last_line;
-	    new_top = p_lines-1;
-	    break;
-
-	case Ctrl('Q'):
-            // my_query (talk->query) needs PERM_LOGINOK, so no reason to allow
-            // here (seen bots doing this).
-	    if(HasBasicUserPerm(PERM_LOGINOK) && locmem->crs_ln>0)
-		mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
-	    break;
-
-	case Ctrl('S'):
-	    if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP) && locmem->crs_ln>0) {
-		int             id;
-		userec_t        muser;
-
-		vs_hdr("使用者設定");
-		move(1, 0);
-		if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner, &muser))) {
-		    user_display(&muser, 1);
-		    if( HasUserPerm(PERM_ACCOUNTS) )
-			uinfo_query(muser.userid, 1, id);
-		    else
-			pressanykey();
-		}
-		mode = FULLUPDATE;
-	    }
-	    break;
-
-	    /* rocker.011018: 採用新的tag模式 */
-	case 't':
-	    if(locmem->crs_ln == 0)
-		break;
-	    /* 將原本在 Read() 裡面的 "TagNum = 0" 移至此處 */
-	    if ((currstat & RMAIL && TagBoard != 0) ||
-		(!(currstat & RMAIL) && TagBoard != bid)) {
-		if (currstat & RMAIL)
-		    TagBoard = 0;
-		else
-		    TagBoard = bid;
-		ClearTagList();
-	    }
-	    /* rocker.011112: 解決再select mode標記文章的問題 */
-            if (ToggleTagItem(&headers[locmem->crs_ln - locmem->top_ln]))
-	    {
-		locmem->crs_ln ++;
-		mode = PARTUPDATE;
-	    }
-	    break;
-
-    case Ctrl('C'):
-	if (!IsEmptyTagList()) {
-	    ClearTagList();
-	    mode = FULLUPDATE;
-	}
+static void
+read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
+    switch (mode) {
+    case DOQUIT:
+        ctx->quit = true;
         break;
-
-    case Ctrl('T'):
-    case '*':
-	/* XXX duplicated code, copy from case 't' */
-	if ((currstat & RMAIL && TagBoard != 0) ||
-		(!(currstat & RMAIL) && TagBoard != bid)) {
-	    if (currstat & RMAIL)
-		TagBoard = 0;
-	    else
-		TagBoard = bid;
-	    ClearTagList();
-	}
-	mode = TagThread(currdirect);
+    case NEWDIRECT:
+        cx->is_newdirect = true;
+        ctx->reload = true;
         break;
-
-    case Ctrl('D'):
-        if (currmode & MODE_SELECT) {
-            vmsg("請先離開搜尋模式(T標記會保留)再刪除檔案。");
-            mode = FULLUPDATE;
-        } else {
-            mode = TagPruner(bid);
-        }
+    case DIRCHANGED:
+        ctx->reload = true;
         break;
-
-    case '{':
-        new_ln = search_read(bid, locmem, READ_PREV);
+    case FULLUPDATE:
+        ctx->reload = true;
+        ctx->redraw = true;
         break;
-
-    case '}':
-        new_ln = search_read(bid, locmem, READ_NEXT);
+    case PARTUPDATE:
+    case PART_REDRAW:
+    case HEADERS_RELOAD:
+        ctx->reload = true;
         break;
-
-    case KEY_ENTER:
-    case 'l':
-    case KEY_RIGHT:
-	ch = 'r';
+    case TITLE_REDRAW:
+        ctx->redraw_header_lines = 3;
+        ctx->redraw_footer_lines = 1;
+        break;
+    case READ_REDRAW:
+        ctx->redraw_header_lines = 2;
+        ctx->redraw_footer_lines = 1;
+        break;
+    case DONOTHING:
     default:
-	if( ch == 'h' && currmode & (MODE_DIGEST) )
-	    break;
-	if (ch > 0 && ch <= onekey_size) {
-            onekey_func4 func = rcmdlist[ch - 1].func;
-	    if(rcmdlist[ch - 1].needitem && locmem->crs_ln == 0)
-		break;
-	    if (func != NULL){
-		num  = locmem->crs_ln - bottom_line;
+        break;
+    }
+}
 
-		if(!rcmdlist[ch - 1].needitem) {
-                    onekey_func0 func0 = (onekey_func0)(void *)func;
-		    mode = (*func0)();
-                } else if( num > 0 ) {
-		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
-				  TEMPFORMAT(PATHLEN, "%s.bottom", currdirect),
-				  locmem->crs_ln - locmem->top_ln);
-		} else {
-                    mode = (*func)(locmem->crs_ln,
-				   &headers[locmem->crs_ln - locmem->top_ln],
-				   currdirect, locmem->crs_ln - locmem->top_ln);
-                }
+///////////////////////////////////////////////////////////////////////////
+// Layer 2: Read Navigation & Control Commands
 
-		if(mode == READ_SKIP)
-                    mode = lastmode;
+static int
+read_cmd_num(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int num;
+    if ((num = search_num(ctx->key, last_line)) != -1)
+        read_move_cursor(cx, ctx, num + 1, 10);
+    ctx->redraw_footer_lines = 1;
+    return 0;
+}
 
-		if (mode == RET_SELECTAID)
-		{
-		    ch = '#';
-		    lastmode = FULLUPDATE;
-		    select_by_aid(locmem, &new_ln, &newdirect_new_ln, &default_ch);
-		    cursor_pos(locmem, new_ln, new_top, default_ch ? 0 : 1);
-		    return FULLUPDATE;
-		}
+static int
+read_cmd_quit(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
+    if ((currmode & MODE_SELECT) && cx->locmem->crs_ln > 0) {
+        char genbuf[PATHLEN];
+        fileheader_t *fhdr = &headers[ctx->curr - ctx->base];
+        board_select();
+        setbdir(genbuf, currboard);
+        cx->locmem = getkeep(genbuf, 0, 1);
+        cx->locmem->crs_ln = fhdr->multi.refer.ref;
+        int num = cx->locmem->crs_ln - p_lines + 1;
+        cx->locmem->top_ln = num < 1 ? 1 : num;
+        read_apply_mode(cx, ctx, NEWDIRECT);
+    } else {
+        int mode = (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
+        read_apply_mode(cx, ctx, mode);
+    }
+    return 0;
+}
 
-		// 以下這幾種 mode 要再處理游標
-                if(mode == READ_PREV || mode == READ_NEXT ||
-                   mode == RELATE_PREV || mode == RELATE_FIRST ||
-                   mode == AUTHOR_NEXT || mode ==  AUTHOR_PREV ||
-                   mode == RELATE_NEXT){
-		    lastmode = mode;
-		    if (read_key_handle_mode_navigation(locmem, mode, &new_ln, &default_ch))
-		        return FULLUPDATE;
-		    mode = DONOTHING; default_ch = 'r';
-                }
-		else {
-		    default_ch = 0;
-		    lastmode = DONOTHING;
-		}
-	    } //end if (func != NULL)
-	} // ch > 0 && ch <= onekey_size
-    	break;
-	} // end switch
+static int
+read_cmd_up(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int cur_ln = read_view_v2p(&cx->view, ctx->curr);
+    if (cur_ln <= 1)
+        read_move_cursor(cx, ctx, last_line, p_lines - 1);
+    else
+        read_move_cursor(cx, ctx, cur_ln - 1, p_lines - 2);
+    return 0;
+}
 
-	// ZA support
-	if (ZA_Waiting())
-	    mode = DOQUIT;
+static int
+read_cmd_down(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int cur_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, cur_ln + 1, 1);
+    return 0;
+}
 
-    } while (mode == DONOTHING);
-    return mode;
+static int
+read_cmd_pgdn(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int top_ln = read_view_v2p(&cx->view, ctx->base);
+    read_move_cursor(cx, ctx, top_ln + p_lines, 0);
+    return 0;
+}
+
+static int
+read_cmd_pgup(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int top_ln = read_view_v2p(&cx->view, ctx->base);
+    read_move_cursor(cx, ctx, top_ln - p_lines, 0);
+    return 0;
+}
+
+static int
+read_cmd_home(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    read_move_cursor(cx, ctx, 1, 0);
+    return 0;
+}
+
+static int
+read_cmd_end(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    read_move_cursor(cx, ctx, last_line, p_lines - 1);
+    return 0;
+}
+
+static const cmd_t read_nav_cmds[] = {
+    { '0', NULL, "輸入編號跳轉", read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '1', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '2', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '3', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '4', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '5', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '6', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '7', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '8', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '9', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
+    { KEY_LEFT, "離開", "離開列表或結束搜尋", read_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'q', NULL, NULL, read_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'e', NULL, NULL, read_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'p', NULL, "向上移動", read_cmd_up, 0, CMD_PRIO_NONE, true },
+    { 'k', NULL, NULL, read_cmd_up, 0, CMD_PRIO_NONE, true },
+    { KEY_UP, NULL, NULL, read_cmd_up, 0, CMD_PRIO_NONE, true },
+    { 'n', NULL, "向下移動", read_cmd_down, 0, CMD_PRIO_NONE, true },
+    { 'j', NULL, NULL, read_cmd_down, 0, CMD_PRIO_NONE, true },
+    { KEY_DOWN, NULL, NULL, read_cmd_down, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, "向下翻頁", read_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGDN, NULL, NULL, read_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { 'N', NULL, NULL, read_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { Ctrl('F'), NULL, NULL, read_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, NULL, "向上翻頁", read_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { Ctrl('B'), NULL, NULL, read_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { 'P', NULL, NULL, read_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { KEY_HOME, NULL, "移至第一筆", read_cmd_home, 0, CMD_PRIO_NONE, true },
+    { KEY_END, NULL, "移至最後一筆", read_cmd_end, 0, CMD_PRIO_NONE, true },
+    { '$', NULL, NULL, read_cmd_end, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Layer 1: Read Common Search, Thread & Tag Commands
+
+static int
+read_cmd_aid(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
+    int new_ln = cx->locmem->crs_ln;
+    char default_ch = 0;
+    int mode = select_by_aid(cx->locmem, &new_ln, &newdirect_new_ln, &default_ch);
+    if (new_ln != cx->locmem->crs_ln)
+        read_move_cursor(cx, ctx, new_ln, 10);
+    read_apply_mode(cx, ctx, mode);
+    return 0;
+}
+
+static int
+read_cmd_search_newpost(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_NEWPOST));
+    return 0;
+}
+
+static int
+read_cmd_search_recommend(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_RECOMMEND));
+    return 0;
+}
+
+static int
+read_cmd_search_author(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_AUTHOR));
+    return 0;
+}
+
+static int
+read_cmd_search_money(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_MONEY));
+    return 0;
+}
+
+static int
+read_cmd_search_mark(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    int mode;
+    switch (vans(currmode & MODE_SELECT ?
+                 "增加條件 標記(m/s)(未輸入則取消): " :
+                 "搜尋標記(m/s)(未輸入則取消): ")) {
+        case 's':
+            mode = select_read(cx->locmem, RS_SOLVED);
+            break;
+        case 'm':
+            mode = select_read(cx->locmem, RS_MARK);
+            break;
+        default:
+            mode = READ_REDRAW;
+            break;
+    }
+    read_apply_mode(cx, ctx, mode);
+    return 0;
+}
+
+static int
+read_cmd_search_keyword(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_KEYWORD));
+    return 0;
+}
+
+static int
+read_cmd_search_title(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_TITLE));
+    return 0;
+}
+
+static int
+read_cmd_search_exclude(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_KEYWORD_EXCLUDE));
+    return 0;
+}
+
+static int
+read_cmd_thread_first(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_FIRST), 10);
+    return 0;
+}
+
+static int
+read_cmd_cursor_first(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_FIRST), 10);
+    return 0;
+}
+
+static int
+read_cmd_thread_next(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_NEXT), 10);
+    return 0;
+}
+
+static int
+read_cmd_cursor_next(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_NEXT), 10);
+    return 0;
+}
+
+static int
+read_cmd_thread_prev(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_PREV), 10);
+    return 0;
+}
+
+static int
+read_cmd_cursor_prev(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_PREV), 10);
+    return 0;
+}
+
+static int
+read_cmd_newpost_prev(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, NEWPOST_PREV), 10);
+    return 0;
+}
+
+static int
+read_cmd_newpost_next(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, thread(cx->locmem, NEWPOST_NEXT), 10);
+    return 0;
+}
+
+static int
+read_cmd_query(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int row = ctx->curr - ctx->base;
+    if (row >= 0 && row < cx->entries)
+        read_apply_mode(cx, ctx, my_query(headers[row].owner));
+    return 0;
+}
+
+static int
+read_cmd_edituser(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int row = ctx->curr - ctx->base;
+    if (row >= 0 && row < cx->entries) {
+        int id;
+        userec_t muser;
+        vs_hdr("使用者設定");
+        move(1, 0);
+        if ((id = getuser(headers[row].owner, &muser))) {
+            user_display(&muser, 1);
+            if (HasUserPerm(PERM_ACCOUNTS))
+                uinfo_query(muser.userid, 1, id);
+            else
+                pressanykey();
+        }
+        read_apply_mode(cx, ctx, FULLUPDATE);
+    }
+    return 0;
+}
+
+static int
+read_cmd_tag(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int row = ctx->curr - ctx->base;
+    if (row < 0 || row >= cx->entries)
+        return 0;
+    if ((currstat & RMAIL && TagBoard != 0) ||
+        (!(currstat & RMAIL) && TagBoard != cx->bid)) {
+        if (currstat & RMAIL)
+            TagBoard = 0;
+        else
+            TagBoard = cx->bid;
+        ClearTagList();
+    }
+    if (ToggleTagItem(&headers[row])) {
+        int cur_ln = read_view_v2p(&cx->view, ctx->curr);
+        read_move_cursor(cx, ctx, cur_ln + 1, 1);
+        read_apply_mode(cx, ctx, PARTUPDATE);
+    }
+    return 0;
+}
+
+static int
+read_cmd_clear_tag(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    if (!IsEmptyTagList()) {
+        ClearTagList();
+        read_apply_mode(cx, ctx, FULLUPDATE);
+    }
+    return 0;
+}
+
+static int
+read_cmd_tag_thread(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    if ((currstat & RMAIL && TagBoard != 0) ||
+        (!(currstat & RMAIL) && TagBoard != cx->bid)) {
+        if (currstat & RMAIL)
+            TagBoard = 0;
+        else
+            TagBoard = cx->bid;
+        ClearTagList();
+    }
+    read_apply_mode(cx, ctx, TagThread(currdirect));
+    return 0;
+}
+
+static int
+read_cmd_tag_prune(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int mode;
+    if (currmode & MODE_SELECT) {
+        vmsg("請先離開搜尋模式(T標記會保留)再刪除檔案。");
+        mode = FULLUPDATE;
+    } else {
+        mode = TagPruner(cx->bid);
+    }
+    read_apply_mode(cx, ctx, mode);
+    return 0;
+}
+
+static int
+read_cmd_search_prev(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, search_read(cx->bid, cx->locmem, READ_PREV), 10);
+    return 0;
+}
+
+static int
+read_cmd_search_next(cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+    read_move_cursor(cx, ctx, search_read(cx->bid, cx->locmem, READ_NEXT), 10);
+    return 0;
+}
+
+static const cmd_t read_common_cmds[] = {
+    { '/', "搜尋", "搜尋標題關鍵字", read_cmd_search_keyword, 0, CMD_PRIO_NORM, true },
+    { '?', NULL, NULL, read_cmd_search_keyword, 0, CMD_PRIO_NONE, true },
+    { 'a', "找作者", "搜尋作者帳號", read_cmd_search_author, 0, CMD_PRIO_NORM, true },
+    { ']', "主題", "同主題下一篇", read_cmd_thread_next, 0, CMD_PRIO_NORM, true },
+    { '#', "找AID", "以文章代碼(AID)搜尋", read_cmd_aid, 0, CMD_PRIO_LOW, true },
+    { Ctrl('H'), NULL, "只列主題首篇(不含回文)", read_cmd_search_newpost, 0, CMD_PRIO_NONE, true },
+    { 'Z', "找推文數", "搜尋推文數條件", read_cmd_search_recommend, 0, CMD_PRIO_LOW, true },
+    { 'A', NULL, "搜尋稿酬金額條件", read_cmd_search_money, 0, CMD_PRIO_NONE, true },
+    { 'G', "找標記", "搜尋 m 或 s 標記文章", read_cmd_search_mark, 0, CMD_PRIO_LOW, true },
+    { 'S', NULL, "搜尋同標題文章", read_cmd_search_title, 0, CMD_PRIO_NONE, true },
+    { '!', NULL, "排除關鍵字搜尋", read_cmd_search_exclude, 0, CMD_PRIO_NONE, true },
+    { '=', "首篇", "跳至同主題第一篇", read_cmd_thread_first, 0, CMD_PRIO_LOW, true },
+    { '\\', NULL, "跳至游標主題首篇", read_cmd_cursor_first, 0, CMD_PRIO_NONE, true },
+    { '+', NULL, "游標主題下一篇", read_cmd_cursor_next, 0, CMD_PRIO_NONE, true },
+    { '[', NULL, "同主題上一篇", read_cmd_thread_prev, 0, CMD_PRIO_NONE, true },
+    { '-', NULL, "游標主題上一篇", read_cmd_cursor_prev, 0, CMD_PRIO_NONE, true },
+    { ',', NULL, "上一篇新主題(首篇)", read_cmd_newpost_prev, 0, CMD_PRIO_NONE, true },
+    { '<', NULL, NULL, read_cmd_newpost_prev, 0, CMD_PRIO_NONE, true },
+    { '.', NULL, "下一篇新主題(首篇)", read_cmd_newpost_next, 0, CMD_PRIO_NONE, true },
+    { '>', NULL, NULL, read_cmd_newpost_next, 0, CMD_PRIO_NONE, true },
+    { Ctrl('Q'), NULL, "查詢作者名片檔", read_cmd_query, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { Ctrl('S'), NULL, "查詢/設定使用者資料", read_cmd_edituser, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_NONE, true },
+    { 't', "標記", "標記/取消標記文章", read_cmd_tag, 0, CMD_PRIO_LOW, true },
+    { Ctrl('C'), NULL, "清除所有文章標記", read_cmd_clear_tag, 0, CMD_PRIO_NONE, true },
+    { '*', NULL, "標記同主題串文章", read_cmd_tag_thread, 0, CMD_PRIO_NONE, true },
+    { Ctrl('T'), NULL, NULL, read_cmd_tag_thread, 0, CMD_PRIO_NONE, true },
+    { Ctrl('D'), NULL, "批次刪除已標記文章", read_cmd_tag_prune, 0, CMD_PRIO_NONE, true },
+    { '{', NULL, "尋找上一篇已讀文章", read_cmd_search_prev, 0, CMD_PRIO_NONE, true },
+    { '}', NULL, "尋找下一篇已讀文章", read_cmd_search_next, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Read Domain Execution Helpers
+
+int
+read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int mode = (*func)();
+    read_apply_mode(cx, ctx, mode);
+    return 0;
+}
+
+int
+read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
+    read_ctx_t *cx = (read_ctx_t *)ctx->priv;
+    int lastmode = DONOTHING;
+
+    while (1) {
+        cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
+        cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
+
+        int num = cx->locmem->crs_ln - cx->bottom_line;
+        int row = ctx->curr - ctx->base;
+        int mode;
+        if (num > 0) {
+            mode = (*func)(num, &headers[row], TEMPFORMAT(PATHLEN, "%s.bottom", currdirect), row);
+        } else {
+            mode = (*func)(cx->locmem->crs_ln, &headers[row], currdirect, row);
+        }
+
+        if (mode == READ_SKIP)
+            mode = lastmode;
+
+        if (mode == RET_SELECTAID) {
+            int new_ln = cx->locmem->crs_ln;
+            char default_ch = 0;
+            select_by_aid(cx->locmem, &new_ln, &newdirect_new_ln, &default_ch);
+            if (new_ln >= 1 && new_ln <= last_line)
+                read_move_cursor(cx, ctx, new_ln, 10);
+            ctx->reload = true;
+            ctx->redraw = true;
+            return 0;
+        }
+
+        if (mode == READ_PREV || mode == READ_NEXT ||
+            mode == RELATE_PREV || mode == RELATE_FIRST ||
+            mode == AUTHOR_NEXT || mode == AUTHOR_PREV ||
+            mode == RELATE_NEXT) {
+            lastmode = mode;
+            int new_ln = cx->locmem->crs_ln;
+            char default_ch = 0;
+            if (read_key_handle_mode_navigation(cx->locmem, mode, &new_ln, &default_ch)) {
+                ctx->reload = true;
+                ctx->redraw = true;
+                return 0;
+            }
+            if (new_ln < 1 || new_ln > last_line) {
+                ctx->reload = true;
+                ctx->redraw = true;
+                return 0;
+            }
+            read_move_cursor(cx, ctx, new_ln, 10);
+            cx->entries = read_view_load_window(&cx->view, currdirect, headers,
+                                                ctx->base, headers_size);
+            continue;
+        }
+
+        read_apply_mode(cx, ctx, mode);
+        return 0;
+    }
 }
 
 // recbase:	顯示位置的開頭
@@ -1108,170 +1334,215 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     return rv;
 }
 
+static const char *
+i_read_caption(void)
+{
+    if (currstat == RMAIL)
+        return " 信件列表 ";
+    if (currmode & MODE_DIGEST)
+        return " 文摘列表 ";
+    if (currmode & MODE_SELECT)
+        return " 系列文章 ";
+    return " 文章列表 ";
+}
+
+static int
+read_header(PSB_CTX *psbctx)
+{
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    (*cx->dotitle)();
+    const cmd_layer_t layers[] = {
+        { cx->rcmdlist,     NULL },
+        { read_common_cmds, NULL },
+        { read_nav_cmds,    NULL },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    cmd_set_has_item(last_line > 0);
+    vs_cmd_bar(VS_SUB_HEADER, i_read_caption(), layers);
+    return 0;
+}
+
+static int
+read_footer(PSB_CTX *psbctx)
+{
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    const cmd_layer_t layers[] = {
+        { cx->rcmdlist,     NULL },
+        { read_common_cmds, NULL },
+        { read_nav_cmds,    NULL },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    cmd_set_has_item(last_line > 0);
+    vs_cmd_bar(VS_SUB_HEADER | VS_FOOTER, i_read_caption(), layers);
+    return 0;
+}
+
+static int
+read_empty_renderer(PSB_CTX *psbctx GCC_UNUSED)
+{
+    outs("    沒有文章...");
+    return 0;
+}
+
+static int
+read_renderer(int idx, PSB_CTX *psbctx)
+{
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    int i = idx - psbctx->cmd.base;
+    if (i >= 0 && i < cx->entries) {
+        int disp_num = read_view_v2p(&cx->view, idx);
+        (*cx->doentry)(disp_num, &headers[i]);
+    }
+    return 0;
+}
+
+static int
+read_cursor(int y, PSB_CTX *psbctx GCC_UNUSED)
+{
+    cursor_show(y, 0);
+    return 0;
+}
+
+static int
+read_loader(PSB_CTX *psbctx)
+{
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    const size_t FHSZ = sizeof(fileheader_t);
+
+    if (currbid > 0 && time4_gt(getbcache(currbid)->perm_reload, cx->enter_time)) {
+        boardheader_t *bp = getbcache(currbid);
+        if (!HasBoardPerm(bp)) {
+            psbctx->cmd.quit = true;
+            return -1;
+        }
+        cx->enter_time = bp->perm_reload;
+    }
+
+    setutmpmode(cx->cmdmode);
+    psbctx->cmd.caption = i_read_caption();
+
+    if (psbctx->cmd.reload) {
+        if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
+            if ((last_line = getbtotal(currbid)) == 0) {
+                setbtotal(currbid);
+                setbottomtotal(currbid);
+                last_line = getbtotal(currbid);
+            }
+            cx->bottom_line = last_line;
+            last_line += getbottomtotal(currbid);
+        } else {
+            cx->bottom_line = last_line = get_num_records(currdirect, FHSZ);
+        }
+
+        cx->view.total = last_line;
+        cx->view.bottom_line = cx->bottom_line;
+
+        if (cx->is_newdirect) {
+            cx->is_newdirect = false;
+            int num = last_line - p_lines + 1;
+            cx->locmem = getkeep(currdirect, num < 1 ? 1 : num,
+                                 cx->bottom_line ? cx->bottom_line : last_line);
+            if (newdirect_new_ln >= 0) {
+                cx->locmem->crs_ln = newdirect_new_ln + 1;
+                newdirect_new_ln = -1;
+            }
+            psbctx->cmd.curr = read_view_p2v(&cx->view, cx->locmem->crs_ln);
+            psbctx->cmd.base = read_view_p2v(&cx->view, cx->locmem->top_ln);
+        }
+
+        psbctx->cmd.total = last_line;
+        return 0;
+    }
+
+    if (headers_size != p_lines) {
+        headers_size = p_lines;
+        headers = (fileheader_t *)realloc(headers, headers_size * FHSZ);
+        assert(headers);
+    }
+
+    if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
+        int btotal = getbtotal(currbid);
+        int rec_num = btotal + getbottomtotal(currbid);
+        if (last_line != rec_num) {
+            cx->bottom_line = btotal;
+            last_line = rec_num;
+            cx->view.total = last_line;
+            cx->view.bottom_line = cx->bottom_line;
+            psbctx->cmd.total = last_line;
+        }
+    }
+
+    cx->locmem->top_ln = read_view_v2p(&cx->view, psbctx->cmd.base);
+    cx->locmem->crs_ln = read_view_v2p(&cx->view, psbctx->cmd.curr);
+    cx->entries = read_view_load_window(&cx->view, currdirect, headers,
+                                        psbctx->cmd.base, headers_size);
+    return 0;
+}
+
 void
-i_read(int cmdmode, const char *direct, void (*dotitle) (),
-       void (*doentry)(int, fileheader_t*), const onekey_t * rcmdlist,
+i_read(int cmdmode, const char *direct, void (*dotitle)(),
+       void (*doentry)(int, fileheader_t *), const cmd_t *rcmdlist,
        int bidcache)
 {
-    keeploc_t      *locmem = NULL;
-    int             recbase = 0, mode;
-    int             entries = 0;
     char            currdirect0[PATHLEN];
     int             last_line0 = last_line;
-    int             bottom_line = 0;
     fileheader_t   *headers0 = headers;
     int             headers_size0 = headers_size;
-    time4_t	    enter_time = now;
-    const size_t FHSZ = sizeof(fileheader_t);
-    int             needs_fullupdate = 0;
+    const size_t    FHSZ = sizeof(fileheader_t);
 
     STRLCPY(currdirect0, currdirect);
-    /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
     headers_size = p_lines;
-    headers = (fileheader_t *) calloc(headers_size, FHSZ);
+    headers = (fileheader_t *)calloc(headers_size, FHSZ);
     assert(headers != NULL);
     STRLCPY(currdirect, direct);
-    mode = NEWDIRECT;
 
-    do {
-	/* 檢查權限是否已改 */
-	if (currbid > 0 && time4_gt(getbcache(currbid)->perm_reload, enter_time))
-	{
-	    boardheader_t *bp = getbcache(currbid);
-	    if(!HasBoardPerm(bp))
-		break;
-	    enter_time = bp->perm_reload;
-	}
+    read_ctx_t cx = {
+        .rcmdlist = rcmdlist,
+        .locmem = NULL,
+        .cmdmode = cmdmode,
+        .bid = currbid,
+        .bidcache = bidcache,
+        .bottom_line = 0,
+        .entries = 0,
+        .is_newdirect = true,
+        .enter_time = now,
+        .dotitle = dotitle,
+        .doentry = doentry,
+        .view = { .total = 0, .bottom_line = 0, .reverse_order = false },
+    };
 
-	/* 依據 mode 顯示 fileheader */
-	setutmpmode(cmdmode);
-	switch (mode) {
-	case DONOTHING:
-	    break;
+    cmd_layer_t layers[] = {
+        { rcmdlist,         &cx },
+        { read_common_cmds, &cx },
+        { read_nav_cmds,    &cx },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
 
-	case NEWDIRECT:	/* 第一次載入此目錄 */
-	case DIRCHANGED:
-	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
-		if( (last_line = getbtotal(currbid)) == 0 ){
-		    setbtotal(currbid);
-                    setbottomtotal(currbid);
-		    last_line = getbtotal(currbid);
-		}
-                bottom_line = last_line;
-                last_line += getbottomtotal(currbid);
-	    }
-	    else
-		bottom_line = last_line = get_num_records(currdirect, FHSZ);
+    PSB_CTX psbctx = {
+        .cmd = {
+            .curr = 0,
+            .priv = &cx,
+            .caption = i_read_caption(),
+        },
+        .header_lines = 3,
+        .footer_lines = 1,
+        .layers = layers,
+        .loader = read_loader,
+        .header = read_header,
+        .footer = read_footer,
+        .renderer = read_renderer,
+        .empty_renderer = read_empty_renderer,
+        .cursor = read_cursor,
+    };
 
-	    if (mode == NEWDIRECT) {
-		int num;
-		num = last_line - p_lines + 1;
-		locmem = getkeep(currdirect, num < 1 ? 1 : num,
-			bottom_line ? bottom_line : last_line);
-		if(newdirect_new_ln >= 0)
-		{
-		  locmem->crs_ln = newdirect_new_ln + 1;
-		  newdirect_new_ln = -1;
-		}
-	    }
-	    recbase = -1;
-	    /* no break */
-
-	default: // for any unknown keys
-	case FULLUPDATE:
-	    needs_fullupdate = 0;
-	    (*dotitle) ();
-	    /* no break */
-
-	case PARTUPDATE:
-	    if (headers_size != p_lines) {
-		headers_size = p_lines;
-		headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
-		assert(headers);
-	    }
-
-	    /* In general, records won't be reloaded in PARTUPDATE state.
-	     * But since a board is often changed and cached, it is always
-	     * reloaded here. */
-	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
-		int rec_num;
-		bottom_line = getbtotal(currbid);
-		rec_num = bottom_line + getbottomtotal(currbid);
-		if (last_line != rec_num) {
-		    last_line = rec_num;
-		    recbase = -1;
-		}
-	    }
-
-	    if (recbase != locmem->top_ln) { //headers reload
-		recbase = locmem->top_ln;
-		if (recbase > last_line) {
-		    recbase = last_line - headers_size + 1;
-		    if (recbase < 1)
-			recbase = 1;
-		    locmem->top_ln = recbase;
-		}
-		/* XXX if entries return -1 or black-hole */
-                entries = get_records_and_bottom(currdirect,
-                           headers, recbase, headers_size, last_line, bottom_line);
-	    }
-	    if (locmem->crs_ln > last_line)
-		locmem->crs_ln = last_line;
-	    move(3, 0);
-	    clrtobot();
-	    /* no break */
-	case PART_REDRAW:
-	    move(3, 0);
-            if( last_line == 0 )
-                  outs("    沒有文章...");
-            else {
-		int i;
-		for( i = 0; i < entries ; i++ )
-		    (*doentry) (locmem->top_ln + i, &headers[i]);
-	    }
-	    /* no break */
-	case READ_REDRAW:
-	    if (currstat == RMAIL)
-		vs_footer(" 鴻雁往返 ",
-		    " (R/y)回信 (x)站內轉寄 (d/D)刪信 (^P)寄發新信 \t(←/q)離開");
-	    else
-		vs_footer(" 文章選讀 ",
-		    " (y)回應(X)推文(^X)轉錄 (=[]<>)相關主題(/?a)找標題/作者 (b)進板畫面");
-	    break;
-
-	case TITLE_REDRAW:
-	    (*dotitle) ();
-            break;
-
-        case HEADERS_RELOAD:
-	    if (recbase != locmem->top_ln) {
-		recbase = locmem->top_ln;
-		if (recbase > last_line) {
-		    recbase = last_line - p_lines + 1;
-		    if (recbase < 1)
-			recbase = 1;
-		    locmem->top_ln = recbase;
-		}
-		if(headers_size != p_lines) {
-		    headers_size = p_lines;
-		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
-		    assert(headers);
-		}
-		/* XXX if entries return -1 */
-                entries =
-		    get_records_and_bottom(currdirect, headers, recbase,
-					   headers_size, last_line, bottom_line);
-		needs_fullupdate = 1;
-	    }
-            break;
-	} //end switch
-	mode = i_read_key(rcmdlist, locmem, currbid, bottom_line, needs_fullupdate);
-    } while (mode != DOQUIT && !ZA_Waiting());
+    psb_main(&psbctx);
 
     free(headers);
     last_line = last_line0;
     headers = headers0;
     headers_size = headers_size0;
     STRLCPY(currdirect, currdirect0);
-    return;
 }

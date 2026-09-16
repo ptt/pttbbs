@@ -534,7 +534,19 @@ int othello_main(void);
 int main_railway(void);
 
 /* read */
-void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(int, fileheader_t*), const onekey_t *rcmdlist, int bidcache);
+typedef int (*read_item_func_t)(int ent, fileheader_t *fhdr, const char *direct, int row);
+typedef int (*read_noitem_func_t)(void);
+int read_exec_item(read_item_func_t func, cmd_ctx_t *ctx);
+int read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx);
+#define DEFINE_READ_ITEM_CMD(name, fn) \
+    static int name(cmd_ctx_t *ctx) { \
+        return read_exec_item((read_item_func_t)(void *)(fn), ctx); \
+    }
+#define DEFINE_READ_NOITEM_CMD(name, fn) \
+    static int name(cmd_ctx_t *ctx) { \
+        return read_exec_noitem((read_noitem_func_t)(void *)(fn), ctx); \
+    }
+void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(int, fileheader_t*), const cmd_t *rcmdlist, int bidcache);
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 void forward_file(const fileheader_t * fhdr, const char *direct);
