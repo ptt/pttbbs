@@ -992,23 +992,16 @@ read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
         ctx->redraw = true;
         break;
     case PARTUPDATE:
-        if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
-            if (last_line != getbtotal(currbid) + getbottomtotal(currbid))
-                ctx->reload = true;
-        }
-        ctx->redraw = true;
-        break;
     case PART_REDRAW:
-        ctx->redraw = true;
-        break;
     case HEADERS_RELOAD:
         ctx->reload = true;
-        ctx->redraw = true;
         break;
     case TITLE_REDRAW:
         ctx->redraw_header_lines = 3;
+        ctx->redraw_footer_lines = 1;
         break;
     case READ_REDRAW:
+        ctx->redraw_header_lines = 2;
         ctx->redraw_footer_lines = 1;
         break;
     case DONOTHING:
@@ -1160,11 +1153,8 @@ read_cmd_aid(cmd_ctx_t *ctx) {
     ctx->total = cx->view.total;
     if (new_ln != cx->locmem->crs_ln)
         read_move_cursor(cx, ctx, new_ln, 10);
-    if (default_ch != 0) {
-        ctx->key = default_ch;
-        ctx->redispatch = true;
-    }
     read_apply_mode(cx, ctx, mode);
+    ctx->redraw_footer_lines = 1;
     return 0;
 }
 
@@ -1460,10 +1450,6 @@ static const cmd_t read_common_cmds[] = {
 int
 read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
-    if (cx->locmem) {
-        cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-        cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
-    }
     int mode = (*func)();
     read_apply_mode(cx, ctx, mode);
     return 0;
@@ -1491,10 +1477,6 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
             select_by_aid(cx, &new_ln, &newdirect_new_ln, &default_ch);
             if (new_ln >= 1 && new_ln <= last_line)
                 read_move_cursor(cx, ctx, new_ln, 10);
-            if (default_ch != 0) {
-                ctx->key = default_ch;
-                ctx->redispatch = true;
-            }
             ctx->reload = true;
             ctx->redraw = true;
             return 0;
@@ -1545,18 +1527,31 @@ read_header(PSB_CTX *psbctx)
 {
     read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
     (*cx->dotitle)();
+    const cmd_layer_t layers[] = {
+        { cx->rcmdlist,     NULL },
+        { read_common_cmds, NULL },
+        { read_nav_cmds,    NULL },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    cmd_set_has_item(last_line > 0);
+    vs_cmd_bar(VS_SUB_HEADER, i_read_caption(), layers);
     return 0;
 }
 
 static int
-read_footer(PSB_CTX *psbctx GCC_UNUSED)
+read_footer(PSB_CTX *psbctx)
 {
-    if (currstat == RMAIL)
-        vs_footer(" 鴻雁往返 ",
-            " (R/y)回信 (x)站內轉寄 (d/D)刪信 (^P)寄發新信 \t(←/q)離開");
-    else
-        vs_footer(" 文章選讀 ",
-            " (y)回應(X)推文(^X)轉錄 (=[]<>)相關主題(/?a)找標題/作者 (b)進板畫面");
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    const cmd_layer_t layers[] = {
+        { cx->rcmdlist,     NULL },
+        { read_common_cmds, NULL },
+        { read_nav_cmds,    NULL },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    cmd_set_has_item(last_line > 0);
+    vs_cmd_bar(VS_SUB_HEADER | VS_FOOTER, i_read_caption(), layers);
     return 0;
 }
 
@@ -1659,7 +1654,6 @@ read_loader(PSB_CTX *psbctx)
             cx->view.bottom_count = 0;
         }
 
-        cx->bid = currbid;
         cx->view.total = last_line;
         cx->view.bottom_line = cx->bottom_line;
 
@@ -1678,17 +1672,6 @@ read_loader(PSB_CTX *psbctx)
                 cx->locmem->crs_ln = newdirect_new_ln + 1;
                 newdirect_new_ln = -1;
             }
-        }
-
-        if (cx->locmem) {
-            if (cx->locmem->top_ln > last_line) {
-                int recbase = last_line - p_lines + 1;
-                if (recbase < 1)
-                    recbase = 1;
-                cx->locmem->top_ln = recbase;
-            }
-            if (cx->locmem->crs_ln > last_line)
-                cx->locmem->crs_ln = last_line;
             psbctx->cmd.curr = read_view_p2v(&cx->view, cx->locmem->crs_ln);
             psbctx->cmd.base = read_view_p2v(&cx->view, cx->locmem->top_ln);
         }

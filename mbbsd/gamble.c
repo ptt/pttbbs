@@ -530,9 +530,6 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
 #ifdef NO_GAMBLE
     return DONOTHING;
 #else
-
-    if (!HasBasicUserPerm(PERM_LOGINOK))
-	return DONOTHING;
     if (stop_gamble()) {
 	vmsg("目前未舉辦或樂透已開獎");
 	return DONOTHING;

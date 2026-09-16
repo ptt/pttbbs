@@ -651,7 +651,7 @@ readtitle(void)
 	brd_title = TEMP_BRD_TITLE_DESC(bp);
 
     showtitle(currBM, brd_title);
-    outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
+    move(vs_row_line(VS_COL_HEADER), 0);
     buf[0] = 0;
 
     if (bp->brdattr & BRD_COOLDOWN)
@@ -1746,8 +1746,6 @@ b_call_in(int ent GCC_UNUSED, const fileheader_t * fhdr,
           const char *direct GCC_UNUSED)
 {
     userinfo_t *u;
-    if (!HasBasicUserPerm(PERM_LOGINOK))
-        return DONOTHING;
 
     u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
@@ -2077,8 +2075,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 int
 forward_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
-    if (!HasUserPerm(PERM_FORWARD) || fhdr->filename[0] == '.' ||
-        fhdr->filename[0] == 'L')
+    if (fhdr->filename[0] == '.' || fhdr->filename[0] == 'L')
         return DONOTHING;
 
 #ifdef QUERY_ARTICLE_URL
@@ -3561,7 +3558,6 @@ static int  // Ptt: 修石頭文
 show_filename(int ent GCC_UNUSED, const fileheader_t * fhdr,
               const char *direct GCC_UNUSED)
 {
-    if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
     vmsgf("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
 }
@@ -3832,7 +3828,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
     }
     prints("\n");
-    prints("└─────────────────────────────────────┘\n");
+    prints("└──────────────────────── [再按 Q 切換價格列表]  ─┘\n");
 
     /* 印對話框的右邊界 */
     {
@@ -4223,92 +4219,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-b_help(void)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  閱\讀文章",     "r →",
-        "  發表文章",     "^P",
-        "  回覆/連署",    "y",
-        "  推薦文章",     "X %",
-        "  刪除文章",     "d",
-        "  編輯文章",     "E",
-        "  轉寄信箱",     "F",
-        "  轉錄看板",     "^X",
-        "", "",
-        "【看板資料與活動】", NULL,
-        "  進入精華區",   "z",
-        "  進入文摘",     "TAB",
-        "  進板畫面",     "b",
-        "  我在哪裡",     "^Y",
-        "  其它看板",     "s",
-        "  查詢看板設定", "i I",
-        "  設定已讀未讀", "v",
-        "  活動連署",     "^V",
-        "  投票",         "V",
-        "  投票結果",     "R",
-        "  參與樂透",     "f",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【移動瀏覽】", NULL,
-        "  上篇文章",     "p k ↑",
-        "  下篇文章",     "n j ↓",
-        "  往前翻頁",     "^B P PgUp",
-        "  往後翻頁",     "^F N PgDn",
-        "  跳至首篇",     "Home 0",
-        "  跳至末篇",     "End $",
-        "  指定位置",     "(數字鍵)",
-        "  主題式閱\讀",   "=[]<>-+S",
-        "  尋找前/後已讀", "{ }",
-        "", "",
-        "【搜尋】", NULL,
-        "  搜尋文章代碼", "#",
-        "  搜尋關鍵字",   "/ ?",
-        "  搜尋作者",     "a",
-        "  搜尋推文數",   "Z",
-        "  搜尋標記",     "G",
-        "  搜尋稿酬",     "A",
-        "  只列標題",     "^H",
-        "  不列關鍵字",   "!",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【文章資訊】", NULL,
-        "  查詢作者資料", "^Q",
-        "  丟作者水球",   "w",
-        "  查詢文章資訊", "Q",
-        "  切換價格列表", "QQ",
-        "", "",
-        "【板主命令】", NULL,
-        "  看板綜合設定", "i I",
-        "  文章編輯歷史", "~",
-        "  設定門檻",     "C",
-        "  管理樂透",     "^G",
-        "  快速水桶",     "U",
-        "  保留文章",     "m",
-        "  收入精華區",   "c",
-        "  收入文摘",     "g",
-        "  置底文章",     "_",
-        "  設定結案",     "L",
-        "  標記文章",     "t / *",
-        "  砍除已標文",   "^D",
-        "  刪除大範圍",   "D",
-        "  重編標題",     "T",
-        "  管理文章",     "^E",
-        NULL,
-    };
-    const char * const *p[] = {
-        col1,
-        col2,
-        col3,
-    };
-
-    show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
-    return FULLUPDATE;
-}
-
-static int
 b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
                    const char *direct GCC_UNUSED) {
     char ans[3];
@@ -4496,7 +4406,6 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
-/* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
 DEFINE_READ_ITEM_CMD(bbs_cmd_show_filename, show_filename)
 DEFINE_READ_ITEM_CMD(bbs_cmd_manage_post, manage_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_hold_gamble, hold_gamble)
@@ -4523,11 +4432,6 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_cite_post, cite_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_post, del_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_join_gamble, join_gamble)
 DEFINE_READ_ITEM_CMD(bbs_cmd_good_post, good_post)
-static int bbs_cmd_help(cmd_ctx_t *ctx) {
-    if (currmode & MODE_DIGEST)
-        return 0;
-    return read_exec_noitem((read_noitem_func_t)(void *)(b_help), ctx);
-}
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_post, mark_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_read_post, read_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_select_board, do_select)
@@ -4549,7 +4453,6 @@ const cmd_t read_comms[] = {
     { 'b', "進板", "查看進板畫面與備忘錄", bbs_cmd_notes, 0, CMD_PRIO_NORM },
     { 'i', "看板設定", "查詢或修改看板設定", bbs_cmd_config, 0, CMD_PRIO_NORM },
     { 'I', NULL, NULL, bbs_cmd_config, 0, CMD_PRIO_NONE },
-    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('X'), "轉錄", "轉錄文章至其他看板", bbs_cmd_cross_post, 0, CMD_PRIO_NORM, true },
     { Ctrl('P'), "發表", "發表新文章", bbs_cmd_new_post, 0, CMD_PRIO_HIGH },
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },

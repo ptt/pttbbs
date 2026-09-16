@@ -849,9 +849,6 @@ built_mail_index(void)
     char command[1024];
     char homepath[PATHLEN];
 
-    if (!HasUserPerm(PERM_BASIC))
-        return DONOTHING;
-
     move(b_lines - 4, 0);
     outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
 	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
@@ -976,9 +973,6 @@ m_send(void)
 {
     // in-site mail
     char uident[IDLEN+1];
-
-    if (!HasSendMailUserPerm())
-	return DONOTHING;
 
     vs_hdr("站內寄信");
     usercomplete(MSG_UID, uident);
@@ -1139,10 +1133,6 @@ static int
 mailbox_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
     int use_multi = 0;
-
-    // do not allow guest to use this
-    if (!HasUserPerm(PERM_BASIC))
-	return DONOTHING;
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
@@ -1333,8 +1323,6 @@ mail_mbox(void)
 static int
 m_internet_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
 {
-    if (!HasUserPerm(PERM_FORWARD))
-        return DONOTHING;
     forward_file(fhdr, direct);
     return FULLUPDATE;
 }
@@ -1344,9 +1332,6 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 {
     char            uid[STRLEN];
     char save_title[STRLEN];
-
-    if (!HasSendMailUserPerm())
-	return DONOTHING;
 
     vs_hdr("轉達信件");
     usercomplete(MSG_UID, uid);
@@ -1573,18 +1558,16 @@ mailtitle(void)
 {
     char buf[STRLEN];
 
+    const char *outmail_stat = REJECT_OUTTAMAIL(cuser) ? "[站外信:關] " : "[站外信:開] ";
     if (mailmaxkeep)
     {
-	SNPRINTF(buf, ANSI_COLOR(32) "(容量:%d/%d篇) ", mailkeep, mailmaxkeep);
+	SNPRINTF(buf, "%s(容量:%d/%d篇) ", outmail_stat, mailkeep, mailmaxkeep);
     } else {
-	SNPRINTF(buf, ANSI_COLOR(32) "(大小:%d篇) ", mailkeep);
+	SNPRINTF(buf, "%s(大小:%d篇) ", outmail_stat, mailkeep);
     }
 
     showtitle("郵件選單", BBSNAME);
-    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
-	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
-            "[~]" RECYCLE_BIN_NAME
-            );
+    move(vs_row_line(VS_COL_HEADER), 0);
     vbarlr(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題", buf);
 }
 
@@ -1894,8 +1877,6 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 static int
 mail_nooutmail(void)
 {
-    if (!HasBasicUserPerm(PERM_LOGINOK))
-        return DONOTHING;
 
     pwcuToggleOutMail();
     return FULLUPDATE;
@@ -1914,76 +1895,6 @@ mail_mark(int ent, fileheader_t * fhdr, const char *direct)
     return PART_REDRAW;
 }
 
-/* help for mail reading */
-
-static const char * const hlp_mailmove[] = {
-    "【移動游標】", NULL,
-    "  下封郵件", "↓ n j ",
-    "  上封郵件", "↑ p k ",
-    "  往後翻頁", "^F N PgDn 空白鍵",
-    "  往前翻頁", "^B P PgUp",
-    "  第一封信", "Home",
-    "  最後一封", "End  $",
-    "  跳至...",  "0-9數字鍵",
-    "  搜尋標題", "/",
-    "  結束離開", "← q e",
-    NULL,
-}, * const hlp_mailbasic[] = {
-    "【基本操作】", NULL,
-    "  讀信",	  "→ r",
-    "  回信",	  "R y",
-    "  刪除此信", "d",
-    "  寄發新信", "^P",
-    "", "",
-    "【轉信與轉錄】", NULL,
-    "  站內轉信", "x",
-    "  站外轉寄", "F",
-    "  轉錄看板", "^X",
-    NULL,
-}, * const hlp_mailadv[] = {
-    "【進階指令】", NULL,
-    "  指定範圍砍信", "D",
-    "  標記重要信件", "m (避免誤刪)",
-    "  標記待刪信件", "t / *",
-    "  砍掉待刪信件", "^D",
-    "  整理水球後寄回", "u",
-    "  重建信箱",     "^G (毀損時才用)",
-    "  " RECYCLE_BIN_NAME,   "~",
-    NULL,
-}, * const hlp_mailconf[] = {
-    "【設定】", NULL,
-    "  是否接受站外信", "O",
-    NULL,
-}, * const hlp_mailempty[] = {
-    "", "",
-    NULL,
-}, * const hlp_mailman[] = {
-    "【私人信件夾】", NULL,
-    "  瀏覽私人信件夾", "z",
-    "  收入私人信件夾", "c",
-     NULL,
-};
-
-static int
-m_help(void)
-{
-    const char * const * p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
-	       * const * p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
-    const int  cols[3] = { 31, 22, 24 },    // column width
-               desc[3] = { 12, 14, 18 };    // desc width
-    const int  cols2[3]= { 36, 17, 24 },    // columns width
-               desc2[3]= { 18, 14, 18 };    // desc width
-    clear();
-    showtitle("電子信箱", "使用說明");
-    outs("\n");
-    vs_multi_T_table_simple(p1, 3, cols, desc,
-	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-    vs_multi_T_table_simple(p2, HasUserPerm(PERM_MAILLIMIT)?3:2, cols2, desc2,
-	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-    PRESSANYKEY();
-    return FULLUPDATE;
-}
-
 static int
 mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
                 const char *direct GCC_UNUSED)
@@ -1993,9 +1904,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     FILE           *xptr;
     char            genbuf[200];
     int		    xbid;
-
-    if (!HasSendMailUserPerm())
-        return DONOTHING;
 
     // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
     if (HasUserPerm(PERM_VIOLATELAW))
@@ -2116,9 +2024,6 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     char            buf[20];
     int             bid;
 
-    if (!HasUserPerm(PERM_BASIC))
-        return DONOTHING;
-
     setuserfile(fpath, fhdr->filename);
     snprintf(title, sizeof(title), "◇ %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
@@ -2161,9 +2066,6 @@ mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct
 {
     char            fpath[PATHLEN], backup_path[PATHLEN];
     char            title[TTLEN + 1];
-
-    if (!HasUserPerm(PERM_MAILLIMIT))
-        return DONOTHING;
     setuserfile(fpath, fhdr->filename);
     snprintf(title, sizeof(title), "◇ %s", fhdr->title);
     a_copyitem(fpath, title, fhdr->owner, 1);
@@ -2328,7 +2230,6 @@ DEFINE_READ_NOITEM_CMD(mail_cmd_nooutmail, mail_nooutmail)
 DEFINE_READ_ITEM_CMD(mail_cmd_reply, mailbox_reply)
 DEFINE_READ_ITEM_CMD(mail_cmd_cite, mail_cite)
 DEFINE_READ_ITEM_CMD(mail_cmd_del, mail_del)
-DEFINE_READ_NOITEM_CMD(mail_cmd_help, m_help)
 DEFINE_READ_ITEM_CMD(mail_cmd_mark, mail_mark)
 DEFINE_READ_ITEM_CMD(mail_cmd_read, mail_read)
 DEFINE_READ_ITEM_CMD(mail_cmd_save, mail_save)
@@ -2346,7 +2247,6 @@ static const cmd_t mail_comms[] = {
     { 'l', NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
     { 'z', "信件夾", "瀏覽私人信件夾", mail_cmd_man, 0, CMD_PRIO_NORM },
     { '~', RECYCLE_BIN_NAME, "瀏覽資源回收筒", mail_cmd_recycle_bin, PERM_BASIC, CMD_PRIO_NORM },
-    { 'h', "說明", "顯示操作說明", mail_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('P'), "寄信", "寄發新信件", mail_cmd_send, PERM_LOGINOK, CMD_PRIO_HIGH },
     { 'y', "回信", "回覆信件", mail_cmd_reply, PERM_BASIC, CMD_PRIO_HIGH, true },
     { 'R', NULL, NULL, mail_cmd_reply, PERM_BASIC, CMD_PRIO_NONE, true },
