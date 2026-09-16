@@ -181,7 +181,6 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		if (strcmp(prt->buf, target)) {
 		    strlcpy(prt->buf, target, prt->len);
 		    prt->icurr = prt->iend = strlen(prt->buf);
-		    return VGETCB_NEXT;
 		}
 		// When the current input perfectly matches, show the list to
 		// indicate user that the completion has exactly one match.
@@ -337,7 +336,7 @@ gnc_findbound(char *str, int *START, int *END,
 
 static int
 gnc_complete(char *data, int *start, int *end,
-		gnc_perm_func permission, gnc_getname_func getname)
+		gnc_perm_func permission, gnc_getname_func getname, int limit)
 {
     int             i, count, first = -1, last = *end;
     if (*start < 0 || *end < 0)
@@ -348,12 +347,15 @@ gnc_complete(char *data, int *start, int *end,
 		first = i;
 	    last = i;
 	    ++count;
+	    if (limit > 0 && count >= limit)
+		break;
 	}
     if (count == 1)
 	strcpy(data, (*getname)(first));
 
     *start = first;
-    *end = last;
+    if (limit == 0 || count < limit)
+	*end = last;
     return count;
 }
 
@@ -361,6 +363,7 @@ typedef struct {
     int  start, end, nmemb, ptr;
     int  morelist;
     int  page_dirty;  // YEA if screen was dirty and needs a clrtobot().
+    int  is_online_user;
     gnc_comp_func    compar;
     gnc_perm_func    permission;
     gnc_getname_func getname;
@@ -410,28 +413,39 @@ gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 	case ' ':	// render complete page
 	    assert(prt->icurr == prt->iend);
+	    if (gc_int->is_online_user && prt->iend == 0)
+		return VGETCB_NEXT;
 	    if (gc_int->morelist == -1)
 	    {
 		int i;
 		char *first;
+		int limit = gc_int->is_online_user ? (MAX_COMPLETE_LIST + 1) : 0;
 		if (gnc_findbound(data, &gc_int->start, &gc_int->end,
 				         gc_int->nmemb,  gc_int->compar) == -1)
 		    return VGETCB_NEXT;
 
 		i = gnc_complete (data, &gc_int->start, &gc_int->end,
-					 gc_int->permission, gc_int->getname);
-		if (i == 1) {
-		    prt->iend = prt->icurr = strlen(data);
+					 gc_int->permission, gc_int->getname, limit);
+		if (i <= 0) {
+		    if (gc_int->page_dirty) {
+			move(GNC_PAGE_START_Y, 0);
+			clrtobot();
+			printdash(COMPLETE_LIST_TITLE, 0);
+		    }
 		    return VGETCB_NEXT;
 		}
-		first = (*gc_int->getname)(gc_int->start);
-		i = prt->icurr;
-		while (first[i] && (*gc_int->compar)(gc_int->end, first, i + 1) == 0) {
-		    data[i] = first[i];
-		    ++i;
+		if (i == 1) {
+		    prt->iend = prt->icurr = strlen(data);
+		} else {
+		    first = (*gc_int->getname)(gc_int->start);
+		    i = prt->icurr;
+		    while (first[i] && (*gc_int->compar)(gc_int->end, first, i + 1) == 0) {
+			data[i] = first[i];
+			++i;
+		    }
+		    data[i] = '\0';
+		    prt->iend = prt->icurr = i;
 		}
-		data[i] = '\0';
-		prt->iend = prt->icurr = i;
 		gc_int->morelist = gc_int->start;
 	    } else if (gc_int->morelist > gc_int->end)
 		return VGETCB_NEXT;
@@ -444,14 +458,24 @@ gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    {
 		int col = 0, i = 0;
 		int len = prt->len;
+		int printed = 0;
 		while (len + col < t_columns-1) {
 		    for (i = 0; gc_int->morelist <= gc_int->end && i < p_lines; ++gc_int->morelist) {
 			if ((*gc_int->permission)(gc_int->morelist)) {
 			    move(3 + i, col);
+			    if (gc_int->is_online_user && printed >= MAX_COMPLETE_LIST) {
+				prints("... ");
+				++i;
+				gc_int->morelist = gc_int->end + 1;
+				break;
+			    }
 			    prints("%s ", (*gc_int->getname)(gc_int->morelist));
 			    ++i;
+			    ++printed;
 			}
 		    }
+		    if (gc_int->is_online_user && gc_int->morelist > gc_int->end)
+			break;
 		    col += len + 2;
 		}
 	    }
@@ -475,6 +499,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	.nmemb = nmemb,
 	.morelist = -1,
 	.page_dirty = NA,
+	.is_online_user = (getname == &completeutmp_getname),
 	.compar     = compar,
 	.permission = permission,
 	.getname    = getname,
@@ -506,8 +531,8 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
     }
 
     gnc_findbound(data, &gc_int.start, &gc_int.end, nmemb, compar);
-    if (gnc_complete(data, &gc_int.start, &gc_int.end, permission, getname) == 1 ||
-	(*compar)(gc_int.start, data, len) == 0)
+    if (gnc_complete(data, &gc_int.start, &gc_int.end, permission, getname, 2) == 1 ||
+	(gc_int.start >= 0 && (*compar)(gc_int.start, data, len) == 0))
     {
 	strlcpy(data, (*getname)(gc_int.start), len);
 	ret = gc_int.start;
