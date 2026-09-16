@@ -964,60 +964,6 @@ static const cmd_t userlist_cmds[];
 static int ulist_scrw = 0, ulist_scrh = 0;
 static VCOLW ulist_cols[ULISTCOLS];
 
-static void
-t_showhelp(void)
-{
-    clear();
-    showtitle("休閒聊天", "使用說明");
-    outs(
-        ANSI_COLOR(1;36) "  熱鍵控制說明" ANSI_RESET "\n"
-        "  [" ANSI_COLOR(1;37) "e/←" ANSI_RESET "] 離開            "
-        "[" ANSI_COLOR(1;37) "h" ANSI_RESET "]    顯示本畫面       "
-        "[" ANSI_COLOR(1;37) "t/Enter/→" ANSI_RESET "] 聊天\n"
-        "  [" ANSI_COLOR(1;37) "p" ANSI_RESET "]    切換呼叫器模式  "
-        "[" ANSI_COLOR(1;37) "C" ANSI_RESET "]    隱身術           "
-        "[" ANSI_COLOR(1;37) "S" ANSI_RESET "]          變更顯示內容\n"
-        "  [" ANSI_COLOR(1;37) "q" ANSI_RESET "]    查詢網友        "
-        "[" ANSI_COLOR(1;37) "w" ANSI_RESET "]    丟水球           "
-        "[" ANSI_COLOR(1;37) "l" ANSI_RESET "]          看上幾次水球\n"
-        "  [" ANSI_COLOR(1;37) "f" ANSI_RESET "]    列出全部/好友   "
-        "[" ANSI_COLOR(1;37) "m" ANSI_RESET "]    寫信給他         "
-        "[" ANSI_COLOR(1;37) "r" ANSI_RESET "]          看信件\n"
-        "  [" ANSI_COLOR(1;37) "s" ANSI_RESET "]    搜尋該ID位置    "
-        "[" ANSI_COLOR(1;37) "g" ANSI_RESET "]    塞錢給他         "
-        "[" ANSI_COLOR(1;37) "c" ANSI_RESET "]          看寵物\n"
-        "  [" ANSI_COLOR(1;37) "a/d" ANSI_RESET "]  增刪好友        "
-        "[" ANSI_COLOR(1;37) "o" ANSI_RESET "]    編輯好友名單     "
-        "[" ANSI_COLOR(1;37) "b" ANSI_RESET "]          對好友廣播\n"
-        "  [" ANSI_COLOR(1;37) "N" ANSI_RESET "]    修改暱稱        "
-        "[" ANSI_COLOR(1;37) "Q" ANSI_RESET "]    查詢指定網友     "
-        "[" ANSI_COLOR(1;37) "TAB" ANSI_RESET "]        變更排序方式\n"
-#ifdef PLAY_ANGEL
-        "  [" ANSI_COLOR(1;37) "^P" ANSI_RESET "]   切換小天使呼叫器\n"
-#endif
-        "\n"
-        ANSI_COLOR(1;36) "  名單顏色說明" ANSI_RESET "\n"
-        "  " ANSI_COLOR(1;37) "白色" ANSI_RESET " - 我的朋友        "
-        "  " ANSI_COLOR(1;33) "黃色" ANSI_RESET " - 與我為友        "
-        "  " ANSI_COLOR(1;32) "綠色" ANSI_RESET " - 雙向好友\n"
-        "  " ANSI_COLOR(1;36) "青色" ANSI_RESET " - 板友            "
-        "  " ANSI_COLOR(0;31) "暗紅" ANSI_RESET " - 壞人\n");
-    if (HasUserPerm(PERM_SYSOP))
-        outs("\n  " ANSI_COLOR(1;36) "站長專區" ANSI_RESET "\n"
-             "  [" ANSI_COLOR(1;37) "u" ANSI_RESET "]    設定使用者資料  "
-             "[" ANSI_COLOR(1;37) "K" ANSI_RESET "]    把人踢出去       "
-             "[" ANSI_COLOR(1;37) "H" ANSI_RESET "]          切換幽靈模式\n"
-             "  [" ANSI_COLOR(1;37) "#" ANSI_RESET "]    切換顯示 PID    "
-#ifdef SHOWUID
-             "[" ANSI_COLOR(1;37) "U" ANSI_RESET "]    切換顯示 UID     "
-#endif
-#if defined(SHOWBOARD) && defined(DEBUG)
-             "[" ANSI_COLOR(1;37) "Y" ANSI_RESET "]          切換顯示 board"
-#endif
-             "\n");
-    pressanykey();
-}
-
 static int
 userlist_header(PSB_CTX *ctx)
 {
@@ -1034,15 +980,22 @@ userlist_header(PSB_CTX *ctx)
 
     showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
-    move(1, 0);
+    move(vs_row_line(VS_SUB_HEADER), 0);
     prints("  排序:[%s] 上站人數:%-4d "
            ANSI_COLOR(1;32) "我的朋友:%-3d "
            ANSI_COLOR(33) "與我為友:%-3d "
            ANSI_COLOR(36) "板友:%-4d "
            ANSI_COLOR(31) "壞人:%-2d"
-           ANSI_RESET "\n",
+           ANSI_RESET,
            MSG_PICKUP_WAY[*cx->pickup_way], SHM->UTMPnumber,
            cx->myfriend, cx->friendme, currutmp->brc_id ? cx->bfriend : 0, cx->badfriend);
+    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp) {
+        static const char *modestr[ANGELPAUSE_MODES] = {
+            "開放", ANSI_COLOR(32) "停收" ANSI_RESET, ANSI_COLOR(31) "關閉" ANSI_RESET
+        };
+        prints(" 神諭:[%s]", modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
+    }
+    clrtoeol();
 
     move(2, 0);
     outs(ANSI_REVERSE);
@@ -1060,28 +1013,6 @@ userlist_header(PSB_CTX *ctx)
             idletime ? "發呆" : "",
             "");
     outs(ANSI_RESET);
-    return 0;
-}
-
-static int
-userlist_footer(PSB_CTX *ctx GCC_UNUSED)
-{
-    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp) {
-        static const char *modestr[ANGELPAUSE_MODES] = {
-            ANSI_COLOR(0;30;47) "開放",
-            ANSI_COLOR(0;32;47) "停收",
-            ANSI_COLOR(0;31;47) "關閉",
-        };
-        move(b_lines, 0);
-        vbarlr(ANSI_COLOR(34;46) " 休閒聊天 "
-               ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 "
-               ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 "
-               ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器", TEMPFORMAT(STRLEN, ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
-               modestr[currutmp->angelpause % ANGELPAUSE_MODES]));
-    } else {
-        vs_footer(" 休閒聊天 ",
-                  " (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
-    }
     return 0;
 }
 
@@ -1717,15 +1648,7 @@ userlist_cmd_noop(cmd_ctx_t *ctx GCC_UNUSED) {
     return 0;
 }
 
-static int
-userlist_cmd_help(cmd_ctx_t *ctx) {
-    t_showhelp();
-    ctx->redraw = true;
-    return 0;
-}
-
 static const cmd_t userlist_cmds[] = {
-    { 'h', "說明", "顯示操作說明", userlist_cmd_help, 0, CMD_PRIO_NONE },
     { KEY_LEFT, "離開", "離開使用者名單", userlist_cmd_quit, 0, CMD_PRIO_MAX },
     { 'e', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
     { 'E', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
@@ -1935,7 +1858,6 @@ userlist(void)
         .layers = layers,
         .loader = userlist_loader,
         .header = userlist_header,
-        .footer = userlist_footer,
         .renderer = userlist_renderer,
         .cursor = userlist_cursor,
         .on_key = userlist_on_key,
