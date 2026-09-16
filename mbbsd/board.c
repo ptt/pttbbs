@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "psb.h"
 
 /* personal board state
  * 相對於看板的 attr (BRD_* in ../include/pttstruct.h),
@@ -179,7 +180,7 @@ HasBoardPermNormally(boardheader_t *bptr)
     if( (brdattr & BRD_OVER18) && !cuser.over_18 )
 	return 0;
 
-    /* 限制閱讀權限 */
+    /* 限制閱\讀權限 */
     if (level && !(brdattr & BRD_POSTMASK) && !HasUserPerm(level))
 	return 0;
 
@@ -320,550 +321,605 @@ b_notes_edit(void)
 }
 
 // integrated board config
+typedef struct {
+    boardheader_t *bp;
+    PSB_CTX *psb;
+    int touched;
+    bool readonly;
+    bool can_edit;
+} bconfig_ctx_t;
+
+typedef struct BConfigItem {
+    const char *desc;
+    const char *on_str;
+    const char *off_str;
+    int flag;
+    int perm;
+    const char *(*getter)(const bconfig_ctx_t *cx, const struct BConfigItem *item,
+                          char *buf, size_t sz);
+    cmd_cb_t setter;
+} BConfigItem;
+
+static const char *
+bcfg_get_flag(const bconfig_ctx_t *cx, const BConfigItem *item, char *buf, size_t sz)
+{
+    strlcpy(buf, (cx->bp->brdattr & item->flag) ? item->on_str : item->off_str, sz);
+    return buf;
+}
+
+static const char *
+bcfg_get_title(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+               char *buf, size_t sz)
+{
+    strlcpy(buf, TEMP_BRD_TITLE_DESC(cx->bp), sz);
+    return buf;
+}
+
+#ifndef OLDRECOMMEND
+static const char *
+bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+               char *buf, size_t sz)
+{
+    strlcpy(buf, ((cx->bp->brdattr & BRD_NORECOMMEND) || (cx->bp->brdattr & BRD_NOBOO))
+                 ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
+    return buf;
+}
+#endif
+
+static const char *
+bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                   char *buf, size_t sz)
+{
+    const boardheader_t *bp = cx->bp;
+    int d = 0;
+    if (bp->brdattr & BRD_NORECOMMEND)
+        d = -1;
+    else if ((bp->brdattr & BRD_NOFASTRECMD) && bp->fastrecommend_pause > 0)
+        d = bp->fastrecommend_pause;
+    if (d > 0)
+        snprintf(buf, sz, ANSI_COLOR(1) "限制 (間隔 %d 秒)" ANSI_RESET, d);
+    else if (d < 0)
+        strlcpy(buf, ANSI_COLOR(1) "限制 (已禁推)" ANSI_RESET, sz);
+    else
+        strlcpy(buf, "開放", sz);
+    return buf;
+}
+
+static const char *
+bcfg_get_edit_entry(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                    char *buf, size_t sz)
+{
+    strlcpy(buf, cx->readonly ? "[唯讀檢視]" : "[進入編輯]", sz);
+    return buf;
+}
+
+static const char *
+bcfg_get_enter_entry(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                     char *buf, size_t sz)
+{
+    strlcpy(buf, cx->readonly ? "[唯讀檢視]" : "[進入管理]", sz);
+    return buf;
+}
+
+#define PERM_SYSGROUPOP (PERM_SYSOP | PERM_SYSSUPERSUBOP)
+#define PERM_POLICEOP   (PERM_SYSOP | PERM_POLICE | PERM_SYSSUPERSUBOP)
+#ifdef ALLOW_BM_SET_NOSELFDELPOST
+# define PERM_SELFDEL   (PERM_BM | PERM_SYSGROUPOP)
+#else
+# define PERM_SELFDEL   PERM_SYSGROUPOP
+#endif
+
+static const char *
+bcfg_getter(const bconfig_ctx_t *cx, const BConfigItem *item, char *buf, size_t sz)
+{
+    (item->getter ? item->getter : bcfg_get_flag)(cx, item, buf, sz);
+    if (!cx->readonly && item->perm != PERM_BM) {
+        const char *note = NULL;
+        if (item->perm == PERM_SYSOP)
+            note = " (限站長)";
+        else if (item->perm == PERM_SYSGROUPOP)
+            note = " (限群組長/站長)";
+        else if (item->perm == (int)PERM_POLICEOP)
+            note = " (限警察/群組長/站長)";
+        if (note)
+            strlcat(buf, note, sz);
+    }
+    return buf;
+}
+
+static int
+bcfg_set_title(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    char genbuf[SZ_COLS(BTLEN + 1)];
+    ctx->reload = true;
+    move(b_lines, 0); clrtoeol();
+    outs("請輸入看板新中文敘述: ");
+    vgetstr(genbuf, BTLEN - 16, 0, TEMP_BRD_TITLE_DESC(bp));
+    if (!genbuf[0] || strcmp(genbuf, TEMP_BRD_TITLE_DESC(bp)) == 0)
+        return 0;
+    cx->touched = 1;
+    strip_control_sequence(genbuf, genbuf);
+    brd_set_title_desc(bp, genbuf);
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+    log_usies("SetBoard", currboard);
+    return 0;
+}
+
+static int
+bcfg_set_hide(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    char ans[2];
+    ctx->reload = true;
+    move(b_lines - 2, 0); clrtobot();
+    if (getdata(b_lines - 1, 0, (bp->brdattr & BRD_HIDE) ?
+            ANSI_COLOR(1;32) " +++ 確定要解除看板隱形嗎?" ANSI_RESET " [y/N]: " :
+            ANSI_COLOR(1;31) " --- 確定要隱形看板嗎?" ANSI_RESET " [y/N]: ",
+            ans, sizeof(ans), LCECHO) < 1 || ans[0] != 'y')
+        return 0;
+    if (bp->brdattr & BRD_HIDE) {
+        bp->brdattr &= ~BRD_HIDE;
+        bp->brdattr &= ~BRD_POSTMASK;
+        hbflreload(currbid);
+    } else {
+        bp->brdattr |= BRD_HIDE;
+        bp->brdattr |= BRD_POSTMASK;
+    }
+    bp->perm_reload = now;
+    cx->touched = 1;
+    vmsg((bp->brdattr & BRD_HIDE) ? " 注意: 看板已隱形" : " 注意: 看板已解除隱形");
+    return 0;
+}
+
+static int
+bcfg_set_bmcount(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_BMCOUNT;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_restrictedpost(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_RESTRICTEDPOST;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_noreply(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_NOREPLY;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_noselfdelpost(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_NOSELFDELPOST;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_norecommend(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_NORECOMMEND;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+#ifndef OLDRECOMMEND
+static int
+bcfg_set_noboo(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    if (bp->brdattr & BRD_NORECOMMEND)
+        bp->brdattr |= BRD_NOBOO;
+    bp->brdattr ^= BRD_NOBOO;
+    cx->touched = 1;
+    ctx->reload = true;
+    if (!(bp->brdattr & BRD_NOBOO))
+        bp->brdattr &= ~BRD_NORECOMMEND;
+    return 0;
+}
+#endif
+
+static int
+bcfg_set_fastrecmd(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    bp->brdattr &= ~BRD_NORECOMMEND;
+    bp->brdattr ^= BRD_NOFASTRECMD;
+    cx->touched = 1;
+    ctx->reload = true;
+    if (bp->brdattr & BRD_NOFASTRECMD) {
+        char buf[8] = "";
+        if (bp->fastrecommend_pause > 0)
+            sprintf(buf, "%d", bp->fastrecommend_pause);
+        getdata_str(b_lines - 1, 0,
+                    "請輸入連推時間限制(單位: 秒) [5~240]: ",
+                    buf, 4, NUMECHO, buf);
+        if (buf[0] >= '0' && buf[0] <= '9')
+            bp->fastrecommend_pause = atoi(buf);
+        if (bp->fastrecommend_pause < 5 || bp->fastrecommend_pause > 240) {
+            if (buf[0])
+                vmsg("輸入時間無效，請使用 5~240 之間的數字。");
+            bp->fastrecommend_pause = 0;
+            bp->brdattr &= ~BRD_NOFASTRECMD;
+        }
+    }
+    return 0;
+}
+
+static int
+bcfg_set_iplogrecmd(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    char ans[2];
+    ctx->reload = true;
+    move(b_lines - 2, 0); clrtobot();
+    if (getdata(b_lines - 1, 0, (bp->brdattr & BRD_IPLOGRECMD) ?
+            ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
+            ANSI_COLOR(1;31) " +++ 確定要記錄推文 IP 嗎?" ANSI_RESET " [y/N]: ",
+            ans, sizeof(ans), LCECHO) < 1 || ans[0] != 'y')
+        return 0;
+    bp->brdattr ^= BRD_IPLOGRECMD;
+    cx->touched = 1;
+    vmsg((bp->brdattr & BRD_IPLOGRECMD) ? " 注意: 開始記錄推文IP" : " 注意: 已停止記錄推文IP");
+    return 0;
+}
+
+static int
+bcfg_set_alignedcmt(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_ALIGNEDCMT;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_mask_content(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_BM_MASK_CONTENT;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+#ifdef USE_AUTOCPLOG
+static int
+bcfg_set_cplog(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_CPLOG;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+#endif
+
+#ifdef USE_COOLDOWN
+static int
+bcfg_set_cooldown(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    char ans[50];
+    ctx->reload = true;
+    getdata(b_lines - 1, 0, "請輸入理由(空白放棄設定):", ans, sizeof(ans), DOECHO);
+    if (!*ans) {
+        vmsg("未輸入理由，放棄設定。");
+        return 0;
+    }
+    cx->bp->brdattr ^= BRD_COOLDOWN;
+    post_policelog(cx->bp->brdname, NULL, "冷靜", ans, (cx->bp->brdattr & BRD_COOLDOWN));
+    cx->touched = 1;
+    return 0;
+}
+#endif
+
+static int
+bcfg_set_over18(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    ctx->reload = true;
+    if (!cuser.over_18)
+        vmsg("板主本身未滿 18 歲。");
+    else {
+        cx->bp->brdattr ^= BRD_OVER18;
+        cx->touched = 1;
+    }
+    return 0;
+}
+
+static int
+bcfg_set_banned(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    edit_banned_list_for_board(currboard);
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_visible(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    friend_edit(BOARD_VISABLE);
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    hbflreload(currbid);
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_canvote(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    friend_edit(FRIEND_CANVOTE);
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_vote_maintain(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    b_vote_maintain();
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_posttype(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    b_posttype();
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_postnote(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    b_post_note();
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_notes_edit(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    b_notes_edit();
+    clear();
+    return 0;
+}
+
+static const BConfigItem bconfig_items[] = {
+    { "中文敘述", NULL, NULL, 0, PERM_BM, bcfg_get_title, bcfg_set_title },
+    { "公開狀態 (是否隱形)", ANSI_COLOR(1;31) "隱形" ANSI_RESET, "公開", BRD_HIDE, PERM_BM, NULL, bcfg_set_hide },
+    { "隱板時進入十大排行榜", ANSI_COLOR(1) "可以" ANSI_RESET, "不可", BRD_BMCOUNT, PERM_BM, NULL, bcfg_set_bmcount },
+    { "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
+    { "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
+    { "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
+    { "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
+#ifndef OLDRECOMMEND
+    { "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
+#endif
+    { "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
+    { "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_IPLOGRECMD, PERM_BM, NULL, bcfg_set_iplogrecmd },
+    { "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
+    { "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
+#ifdef USE_AUTOCPLOG
+    { "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
+#endif
+#ifdef USE_COOLDOWN
+    { "冷靜模式", ANSI_COLOR(1;31) "已設為冷靜模式" ANSI_RESET, "未設定", BRD_COOLDOWN, PERM_POLICEOP, NULL, bcfg_set_cooldown },
+#endif
+    { "未滿十八歲進入", ANSI_COLOR(1) "禁止" ANSI_RESET, "允許\ ", BRD_OVER18, PERM_BM, NULL, bcfg_set_over18 },
+    { "[名單] 設定水桶名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+    { "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
+    { "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
+    { "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
+    { "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype },
+    { "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote },
+    { "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit },
+};
+
+static int
+bconfig_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0)
+        return 0;
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    const BConfigItem *item = &bconfig_items[i];
+    if (col == 0)
+        return stream_width(item->desc);
+    if (col == 1) {
+        char val[64];
+        bcfg_getter(cx, item, val, sizeof(val));
+        return stream_width(val);
+    }
+    return 0;
+}
+
+static int
+bconfig_header(PSB_CTX *ctx) {
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    boardheader_t *bp = cx->bp;
+    const char *mode;
+
+    if (cx->readonly)
+        mode = cx->can_edit ? "[唯讀模式 (按 Ctrl-P 編輯)]" : "[唯讀檢視]";
+    else
+        mode = "[編輯模式 (按 Ctrl-P 唯讀)]";
+
+    vs_draw_hdr2("看板設定與管理", mode);
+
+    const char *bm = does_board_have_public_bm(bp) ? TEMP_BRD_BM(bp) : "(無)";
+    prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
+           " 板主名單: " ANSI_COLOR(1;36) "%s" ANSI_RESET "\n",
+           bp->brdname, bm);
+    return 0;
+}
+
+static int
+bconfig_renderer(int i, PSB_CTX *ctx) {
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
+    const BConfigItem *item = &bconfig_items[i];
+    char val[SZ_COLS(64)];
+    bcfg_getter(cx, item, val, sizeof(val));
+    if (w1 > 0) {
+        int off = stream_col_offset(w1, val);
+        if (off >= 0) {
+            val[off] = '\0';
+            mbs_safe_trim(val);
+        }
+    }
+    int pad0 = w0 - stream_width(item->desc);
+    prints("  " ANSI_COLOR(1;36) "%2d" ANSI_RESET ".   %s%*s  %s\n",
+           i + 1, item->desc, pad0 > 0 ? pad0 : 0, "", val);
+    return 0;
+}
+
+static int
+bconfig_cmd_select(cmd_ctx_t *ctx) {
+    assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(bconfig_items));
+    const BConfigItem *item = &bconfig_items[ctx->curr];
+    if (!psb_check_perm(item->perm)) {
+        vmsg("您沒有修改此項設定的權限");
+        return 0;
+    }
+    return item->setter(ctx);
+}
+
+static const cmd_t bconfig_edit_cmds[];
+static const cmd_t bconfig_readonly_cmds[];
+
+static int
+bconfig_cmd_toggle_edit(cmd_ctx_t *ctx) {
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    PSB_CTX *psb = cx->psb;
+    cx->readonly = !cx->readonly;
+    if (cx->readonly) {
+        psb->cmds = bconfig_readonly_cmds;
+        ctx->caption = " 看板設定(唯讀) ";
+    } else {
+        psb->cmds = bconfig_edit_cmds;
+        ctx->caption = " 看板設定(編輯) ";
+    }
+    psb->cached_cols = 0;
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t bconfig_readonly_cmds[] = {
+    { Ctrl('P'), "開啟編輯", "開啟看板設定修改與管理模式", bconfig_cmd_toggle_edit, PERM_BM | PERM_POLICEOP, CMD_PRIO_MAX },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t bconfig_edit_cmds[] = {
+    { KEY_ENTER, "切換/執行", "切換選取的設定值或進入管理功\能", bconfig_cmd_select, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
+    { Ctrl('P'), NULL, "切換回唯讀檢視模式", bconfig_cmd_toggle_edit, 0, CMD_PRIO_NONE },
+    { 'w', "水桶名單", "設定看板水桶名單", bcfg_set_banned, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'v', "可見名單", "編輯看板可見會員名單", bcfg_set_visible, PERM_BM, CMD_PRIO_NORM, true },
+    { 'm', "舉辦投票", "舉辦或管理看板投票", bcfg_set_vote_maintain, PERM_BM, CMD_PRIO_NORM, true },
+    { 'c', "文章類別", "設定看板文章類別", bcfg_set_posttype, PERM_BM, CMD_PRIO_NORM, true },
+    { 'o', NULL, "編輯投票限制名單", bcfg_set_canvote, PERM_BM, CMD_PRIO_NONE, true },
+    { 'b', NULL, "修改看板中文敘述", bcfg_set_title, PERM_BM, CMD_PRIO_NONE, true },
+    { 'g', NULL, "切換隱板是否進入十大排行榜", bcfg_set_bmcount, PERM_BM, CMD_PRIO_NONE, true },
+    { 'e', NULL, "切換非看板會員發文限制", bcfg_set_restrictedpost, PERM_SYSOP, CMD_PRIO_NONE, true },
+    { 'y', NULL, "切換是否開放回應文章", bcfg_set_noreply, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
+    { 'd', NULL, "切換是否開放自刪文章", bcfg_set_noselfdelpost, PERM_SELFDEL, CMD_PRIO_NONE, true },
+    { 'r', NULL, "切換是否開放推文", bcfg_set_norecommend, PERM_BM, CMD_PRIO_NONE, true },
+#ifndef OLDRECOMMEND
+    { 's', NULL, "切換是否開放噓文", bcfg_set_noboo, PERM_BM, CMD_PRIO_NONE, true },
+#endif
+    { 'f', NULL, "設定快速連推間隔限制", bcfg_set_fastrecmd, PERM_BM, CMD_PRIO_NONE, true },
+    { 'i', NULL, "切換推文是否記錄來源 IP", bcfg_set_iplogrecmd, PERM_BM, CMD_PRIO_NONE, true },
+    { 'a', NULL, "切換推文開頭是否自動對齊", bcfg_set_alignedcmt, PERM_BM, CMD_PRIO_NONE, true },
+#ifdef USE_AUTOCPLOG
+    { 'x', NULL, "切換轉錄文章是否自動記錄", bcfg_set_cplog, PERM_BM, CMD_PRIO_NONE, true },
+#endif
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
 int
 b_config(void)
 {
-    boardheader_t   *bp=NULL;
-    int touched = 0, finished = 0, check_mod = 1;
-    int i = 0, attr = 0, ipostres;
-    char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
-    char isPolice = HasUserPerm(PERM_POLICE);
-    char isSysGroupOP = (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP());
-    // perm cache
-    char hasres = 0,
-	 cachePostPerm = CheckPostPerm(),
-	 cachePostRes  = CheckPostRestriction(currbid);
-    char canpost = (cachePostPerm && cachePostRes);
-
-#define LNBOARDINFO (19)
-#define LNPOSTRES   (12)
-#define COLPOSTRES  (48)
-
-    int ytitle = b_lines - LNBOARDINFO;
-
-    bp = getbcache(currbid);
-
-#ifdef OLDRECOMMEND
-    ytitle ++;
-#endif  // OLDRECOMMEND
-#ifdef USE_AUTOCPLOG
-    ytitle--;
-#endif
-
-    grayout(0, ytitle-2, GRAYOUT_DARK);
-
-    // available hotkeys yet:
-    // a d p q z
-    // 2 3 4 5 6 7 9
-    // better not: 0
-
-#define CANTPOSTMSG ANSI_COLOR(1;31) "(您未達限制)" ANSI_RESET
-
-    while (!finished) {
-	// limits
-	uint8_t llogin = bp->post_limit_logins,
-		lbp    = bp->post_limit_badpost;
-        char ansk;
-
-	move(ytitle-1, 0);
-	clrtobot();
-
-	// outs(MSG_SEPARATOR); // deprecated by grayout
-	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
-	vbar(TEMPFORMAT(STRLEN, " 《%s》看板設定", bp->brdname));
-
-	move(ytitle + 2, 0);
-
-	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", TEMP_BRD_TITLE(bp));
-	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? TEMP_BRD_BM(bp) : "(無)");
-	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
-		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
-		(bp->brdattr & BRD_HIDE) ?
-		ANSI_COLOR(1;31)"隱形":"公開");
-
-	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET
-		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n",
-		(bp->brdattr & BRD_BMCOUNT) ?
-		ANSI_COLOR(1)"可以" ANSI_RESET: "不可");
-
-	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET
-		" - %s "ANSI_RESET "非看板會員發文\n",
-		(bp->brdattr & BRD_RESTRICTEDPOST) ?
-		ANSI_COLOR(1)"不開放" : "開放"
-		);
-
-	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET
-		" - %s" ANSI_RESET
-		" 回應文章\n",
-		(bp->brdattr & BRD_NOREPLY) ?
-		ANSI_COLOR(1)"不開放" : "開放"
-		);
-
-	prints( " " ANSI_COLOR(1;36) "d" ANSI_RESET
-		" - %s" ANSI_RESET
-		" 自刪文章\n",
-		(bp->brdattr & BRD_NOSELFDELPOST) ?
-		ANSI_COLOR(1)"不開放" : "開放"
-		);
-
-	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET
-		" - %s " ANSI_RESET "推薦文章\n",
-		(bp->brdattr & BRD_NORECOMMEND) ?
-		ANSI_COLOR(1)"不開放":"開放"
-		);
-
-#ifndef OLDRECOMMEND
-	prints( " " ANSI_COLOR(1;36) "s" ANSI_RESET
-	        " - %s " ANSI_RESET "噓文\n",
-		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
-		? ANSI_COLOR(1)"不開放":"開放");
-#endif
-	{
-	    int d = 0;
-
-	    if(bp->brdattr & BRD_NORECOMMEND)
-	    {
-		d = -1;
-	    } else {
-		if ((bp->brdattr & BRD_NOFASTRECMD) &&
-		    (bp->fastrecommend_pause > 0))
-		    d = bp->fastrecommend_pause;
-	    }
-
-	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET
-		    " - %s " ANSI_RESET "快速連推文章",
-		    d != 0 ?
-		     ANSI_COLOR(1)"限制": "開放");
-	    if(d > 0)
-		prints(", 最低間隔時間: %d 秒", d);
-	    outs("\n");
-	}
-
-	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET
-		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n",
-		(bp->brdattr & BRD_IPLOGRECMD) ?
-		ANSI_COLOR(1)"自動":"不會");
-
-	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET
-		" - 推文時 %s" ANSI_RESET " 開頭\n",
-		(bp->brdattr & BRD_ALIGNEDCMT) ?
-		ANSI_COLOR(1)"對齊":"不用對齊");
-
-	prints( " " ANSI_COLOR(1;36) "k" ANSI_RESET
-		" - 板主 %s" ANSI_RESET
-		" 刪除部份違規文字\n",
-		(bp->brdattr & BRD_BM_MASK_CONTENT) ?
-		ANSI_COLOR(1)"可" : "無法"
-		);
-
-#ifdef USE_AUTOCPLOG
-	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET
-		" - 轉錄文章 %s " ANSI_RESET "自動記錄，且 %s "
-		ANSI_RESET "發文權限\n",
-		(bp->brdattr & BRD_CPLOG) ?
-		ANSI_COLOR(1)"會" : "不會" ,
-		(bp->brdattr & BRD_CPLOG) ?
-		ANSI_COLOR(1)"需要" : "不需"
-		);
-#endif
-	prints( " " ANSI_COLOR(1;36) "j" ANSI_RESET
-		" - %s 設為冷靜模式\n",
-		(bp->brdattr & BRD_COOLDOWN) ?
-		ANSI_COLOR(1)"已"ANSI_RESET : "未");
-
-	// use '8' instead of '1', to prevent 'l'/'1' confusion
-	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
-		" - %s" ANSI_RESET "未滿十八歲進入\n",
-		(bp->brdattr & BRD_OVER18) ?
-		ANSI_COLOR(1) "禁止 " : "允許\ " );
-
-	if (!canpost)
-	    outs(ANSI_COLOR(1;31)"  ★ 您在此看板無發文或推文權限，"
-		"詳細原因請參考上面顯示為紅色或有 * 的項目。"ANSI_RESET"\n");
-
-	ipostres = b_lines - LNPOSTRES;
-	move(ipostres++, COLPOSTRES-2);
-
-	if (cachePostPerm && cachePostRes)
-	    outs(ANSI_COLOR(1;32));
-	else
-	    outs(ANSI_COLOR(31));
-
-	if (bp->brdattr & BRD_VOTEBOARD)
-	    outs("提出連署限制:" ANSI_RESET);
-	else
-	    outs("發文與推文限制:" ANSI_RESET);
-
-#define POSTRESTRICTION(msg,utag) \
-	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
-
-	if (bp->brdattr & BRD_VOTEBOARD)
-	{
-	    llogin = bp->vote_limit_logins;
-	    lbp    = bp->vote_limit_badpost;
-	}
-
-	if (llogin)
-	{
-	    move(ipostres++, COLPOSTRES);
-	    i = (int)llogin * 10;
-	    attr = ((int)cuser.numlogindays < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    prints(STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "以上", i);
-	    if (attr) outs(ANSI_RESET);
-	    hasres = 1;
-	}
-
-	if (lbp)
-	{
-	    move(ipostres++, COLPOSTRES);
-	    i = 255 - lbp;
-	    attr = (cuser.badpost > i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(1;31) "*");
-	    prints("退文篇數 %d 篇以下", i);
-	    if (attr) outs(ANSI_RESET);
-	    hasres = 1;
-	}
-
-	if (!cachePostPerm)
-	{
-	    const char *msg = postperm_msg(bp->brdname);
-	    if (msg) // some reasons
-	    {
-		move(ipostres++, COLPOSTRES);
-		outs(ANSI_COLOR(1;31) "*");
-		outs(msg);
-		outs(ANSI_RESET);
-	    }
-	}
-
-	if (!hasres && cachePostPerm)
-	{
-	    move(ipostres++, COLPOSTRES);
-	    outs("無特別限制");
-	}
-
-	// show BM commands
-	{
-	    const char *aCat = ANSI_COLOR(1;32);
-	    const char *aHot = ANSI_COLOR(1;36);
-	    const char *aRst = ANSI_RESET;
-
-	    if (!isBM)
-	    {
-		aCat = ANSI_COLOR(1;30;40);
-		aHot = "";
-		aRst = "";
-	    }
-
-	    ipostres ++;
-	    move(ipostres++, COLPOSTRES-2);
-	    outs(aCat);
-	    outs("名單編輯與其它:");
-	    if (!isBM) outs(" (需板主權限)");
-	    outs(aRst);
-	    move(ipostres++, COLPOSTRES);
-	    prints("%sw%s)設定水桶 %sv%s)可見會員名單 ",
-		    aHot, aRst, aHot, aRst);
-	    move(ipostres++, COLPOSTRES);
-	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",
-		    aHot, aRst, aHot, aRst);
-	    move(ipostres++, COLPOSTRES);
-	    prints("%sc%s)文章類別 %sn%s)發文注意事項 ",
-		    aHot, aRst, aHot, aRst);
-	    move(ipostres++, COLPOSTRES);
-	    prints("%sp%s)進板畫面",
-		    aHot, aRst);
-	    outs(ANSI_RESET);
-
-            if (GROUPOP()) {
-                move(++ipostres, COLPOSTRES);
-                prints(ANSI_COLOR(1;32)
-                       "您目前有此看板的群組管理權"
-                       ANSI_RESET);
-            }
-
-	}
-
-        // 'J' need police perm, which is very stupid.
-	if (!isBM && !isPolice && !isSysGroupOP)
-	{
-	    pressanykey();
-	    return FULLUPDATE;
-	}
-
-        if (check_mod) {
-            if (vmsg("若要進行修改請按 Ctrl-P，其它鍵直接離開。") != Ctrl('P'))
-                return FULLUPDATE;
-            check_mod = 0;
-        }
-
-        ansk = vans("請輸入要改變的設定, 其它鍵結束: ");
-        if (isascii(ansk))
-            ansk = tolower(ansk);
-
-        // Now let's try to restrict the stupid perms.
-        if (!isBM) {
-            const char *sysgroupkeys = "ykd";
-            const char *policekeys = "j";
-
-            if (!(isSysGroupOP && strchr(sysgroupkeys, ansk)) &&
-                !(isPolice && strchr(policekeys, ansk)))
-                return FULLUPDATE;
-        }
-
-	switch(ansk)
-	{
-#ifdef USE_AUTOCPLOG
-	    case 'x':
-		bp->brdattr ^= BRD_CPLOG;
-		touched = 1;
-		break;
-#endif
-	    case 'a':
-		bp->brdattr ^= BRD_ALIGNEDCMT;
-		touched = 1;
-		break;
-
-	    case 'b':
-		{
-		    char genbuf[SZ_COLS(BTLEN + 1)];
-		    move(b_lines, 0); clrtoeol();
-		    outs("請輸入看板新中文敘述: ");
-		    vgetstr(genbuf, BTLEN-16, 0, TEMP_BRD_TITLE_DESC(bp));
-		    if (!genbuf[0] || strcmp(genbuf, TEMP_BRD_TITLE_DESC(bp)) == 0)
-			break;
-		    touched = 1;
-		    strip_control_sequence(genbuf, genbuf);
-		    brd_set_title_desc(bp, genbuf);
-		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
-		    log_usies("SetBoard", currboard);
-		}
-		break;
-
-	    case 'e':
-		if(HasUserPerm(PERM_SYSOP))
-		{
-		    bp->brdattr ^= BRD_RESTRICTEDPOST;
-		    touched = 1;
-		} else {
-		    vmsg("此項設定需要站長權限");
-		}
-		break;
-
-	    case 'h':
-		{
-		    char ans[2];
-		    move(b_lines-2, 0); clrtobot();
-		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_HIDE) ?
-			    ANSI_COLOR(1;32) " +++ 確定要解除看板隱形嗎?" ANSI_RESET " [y/N]: ":
-			    ANSI_COLOR(1;31) " --- 確定要隱形看板嗎?" ANSI_RESET " [y/N]: ",
-			    ans, sizeof(ans), LCECHO) < 1 ||
-			    ans[0] != 'y')
-			break;
-		}
-
-		if(bp->brdattr & BRD_HIDE)
-		{
-		    bp->brdattr &= ~BRD_HIDE;
-		    bp->brdattr &= ~BRD_POSTMASK;
-		} else {
-		    bp->brdattr |= BRD_HIDE;
-		    bp->brdattr |= BRD_POSTMASK;
-		}
-		hbflreload(currbid);
-		bp->perm_reload = now;
-		touched = 1;
-		vmsg((bp->brdattr & BRD_HIDE) ?
-			" 注意: 看板已隱形" :
-			" 注意: 看板已解除隱形");
-		break;
-
-		// ii連按就會誤觸，所以再確認一下
-	    case 'i':
-		{
-		    char ans[2];
-		    move(b_lines-2, 0); clrtobot();
-		    if (getdata(b_lines-1, 0, (bp->brdattr & BRD_IPLOGRECMD) ?
-			    ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
-			    ANSI_COLOR(1;31) " +++ 確定要記錄推文 IP 嗎?" ANSI_RESET " [y/N]: ",
-			    ans, sizeof(ans), LCECHO) < 1 ||
-			    ans[0] != 'y')
-			break;
-		}
-		bp->brdattr ^= BRD_IPLOGRECMD;
-		touched = 1;
-		vmsg((bp->brdattr & BRD_IPLOGRECMD) ?
-			" 注意: 開始記錄推文IP" :
-			" 注意: 已停止記錄推文IP");
-		break;
-
-            case 'j':
-                if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) ||
-                      (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
-		    vmsg("此項設定需要站長或看板警察或群組長權限");
-                    break;
-                }
-                {
-                    char ans[50];
-                    getdata(b_lines - 1, 0, "請輸入理由(空白放棄設定):", ans, sizeof(ans), DOECHO);
-                    if (!*ans) {
-                        vmsg("未輸入理由，放棄設定。");
-                        break;
-                    }
-                    bp->brdattr ^= BRD_COOLDOWN;
-                    post_policelog(bp->brdname, NULL, "冷靜", ans, (bp->brdattr & BRD_COOLDOWN));
-                    touched = 1;
-                }
-                break;
-
-	    case 'g':
-		bp->brdattr ^= BRD_BMCOUNT;
-		touched = 1;
-		break;
-
-	    case 'r':
-		bp->brdattr ^= BRD_NORECOMMEND;
-		touched = 1;
-		break;
-
-	    case 'f':
-		bp->brdattr &= ~BRD_NORECOMMEND;
-		bp->brdattr ^= BRD_NOFASTRECMD;
-		touched = 1;
-
-		if(bp->brdattr & BRD_NOFASTRECMD)
-		{
-		    char buf[8] = "";
-
-		    if(bp->fastrecommend_pause > 0)
-			sprintf(buf, "%d", bp->fastrecommend_pause);
-		    getdata_str(b_lines-1, 0,
-			    "請輸入連推時間限制(單位: 秒) [5~240]: ",
-			    buf, 4, NUMECHO, buf);
-		    if(buf[0] >= '0' && buf[0] <= '9')
-			bp->fastrecommend_pause = atoi(buf);
-
-		    if( bp->fastrecommend_pause < 5 ||
-			bp->fastrecommend_pause > 240)
-		    {
-			if(buf[0])
-			{
-			    vmsg("輸入時間無效，請使用 5~240 之間的數字。");
-			}
-			bp->fastrecommend_pause = 0;
-			bp->brdattr &= ~BRD_NOFASTRECMD;
-		    }
-		}
-		break;
-#ifndef OLDRECOMMEND
-	    case 's':
-		if(bp->brdattr & BRD_NORECOMMEND)
-		    bp->brdattr |= BRD_NOBOO;
-		bp->brdattr ^= BRD_NOBOO;
-		touched = 1;
-		if (!(bp->brdattr & BRD_NOBOO))
-		    bp->brdattr &= ~BRD_NORECOMMEND;
-		break;
-#endif
-	    case '8':
-		if (!cuser.over_18)
-		{
-		    vmsg("板主本身未滿 18 歲。");
-		} else {
-		    bp->brdattr ^= BRD_OVER18;
-		    touched = 1;
-		}
-		break;
-
-	    case 'v':
-		clear();
-		friend_edit(BOARD_VISABLE);
-		assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-		hbflreload(currbid);
-		clear();
-		break;
-
-	    case 'w':
-		clear();
-                edit_banned_list_for_board(currboard);
-		clear();
-		break;
-
-	    case 'o':
-		clear();
-		friend_edit(FRIEND_CANVOTE);
-		clear();
-                break;
-
-	    case 'm':
-		clear();
-		b_vote_maintain();
-		clear();
-		break;
-
-	    case 'n':
-		clear();
-		b_post_note();
-		clear();
-		break;
-
-            case 'p':
-                clear();
-                b_notes_edit();
-                clear();
-                break;
-
-	    case 'c':
-		clear();
-		b_posttype();
-		clear();
-		break;
-
-	    case 'y':
-		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
-		    vmsg("此項設定需要群組長或站長權限");
-		    break;
-		}
-		bp->brdattr ^= BRD_NOREPLY;
-		touched = 1;
-		break;
-
-	    case 'k':
-		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
-		    vmsg("此項設定需要群組長或站長權限");
-		    break;
-		}
-		bp->brdattr ^= BRD_BM_MASK_CONTENT;
-		touched = 1;
-		break;
-
-	    case 'd':
-#ifndef ALLOW_BM_SET_NOSELFDELPOST
-		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
-		    vmsg("此項設定需要群組長或站長權限");
-		    break;
-		}
-#endif
-		bp->brdattr ^= BRD_NOSELFDELPOST;
-		touched = 1;
-		break;
-
-	    default:
-		finished = 1;
-		break;
-	}
+    boardheader_t *bp = getbcache(currbid);
+    bool can_edit = psb_check_perm(PERM_BM | PERM_POLICEOP);
+
+    bconfig_ctx_t cx = {
+        .bp = bp,
+        .touched = 0,
+        .readonly = true,
+        .can_edit = can_edit,
+    };
+
+    PSB_CTX ctx = {
+        .cmd = {
+            .curr = 0,
+            .total = ARRAY_SIZE(bconfig_items),
+            .priv = &cx,
+            .caption = can_edit ? " 看板設定 " : " 看板資訊 ",
+        },
+        .header_lines = 2,
+        .footer_lines = 1,
+        .allow_pbs_version_message = 0,
+        .cols = 2,
+        .col_paddings = 10,
+        .col_measurer = bconfig_col_measurer,
+        .header = bconfig_header,
+        .renderer = bconfig_renderer,
+        .cmds = bconfig_readonly_cmds,
+    };
+    cx.psb = &ctx;
+
+    psb_main(&ctx);
+
+    if (cx.touched) {
+        assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+        substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+        log_usies("SetBoard", bp->brdname);
+        vmsg("已儲存新設定");
+    } else if (!cx.readonly) {
+        vmsg("未改變任何設定");
     }
-    if(touched)
-    {
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
-	log_usies("SetBoard", bp->brdname);
-	vmsg("已儲存新設定");
-    }
-    else
-	vmsg("未改變任何設定");
 
     return FULLUPDATE;
 }
@@ -1046,7 +1102,7 @@ load_boards(char *key)
 		    if (get_item_type(&fav->favh[i]) == FAVT_LINE )
 			continue;
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER ){
-			if( mbs_strcasestr(
+			if( strcasestr(
 			    get_folder_title(fav_getid(&fav->favh[i])),
 			    key)
 			)
@@ -1054,10 +1110,9 @@ load_boards(char *key)
 			else
 			    continue;
 		    }else{
-			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
-			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			if (board_title_has_key(bptr, key))
+				assert(0<=fav_getid(&fav->favh[i])-1 && fav_getid(&fav->favh[i])-1<MAX_BOARD);
+				if (board_title_has_key(bptr, key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
@@ -1071,14 +1126,10 @@ load_boards(char *key)
 		if (is_set_attr(&fav->favh[i], FAVH_ADM_TAG))
 		    state |= NBRD_TAG;
 		// 有些人 某些 bid < 0 Orzz // ptt2 local modification
-		if (get_item_type(&fav->favh[i]) == FAVT_BOARD ?
-		    (fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD) :
-		    fav_getid(&fav->favh[i]) < 1)
+		if (fav_getid(&fav->favh[i]) < 1)
 		    continue;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
 	    }
-	    if (brdnum == 0 && !key[0])
-		addnewbrdstat(0, 0); // dummy
 	}
 #if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
@@ -1154,7 +1205,7 @@ load_boards(char *key)
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = BRD_LINK_TARGET(bptr);
-		    if (bid < 1 || bid > MAX_BOARD || bcache[bid - 1].brdname[0] == 0) {
+		    if (bcache[bid - 1].brdname[0] == 0) {
 			vmsg("連結已損毀，請至 SYSOP 回報此問題。");
 			continue;
 		    }
@@ -1268,6 +1319,9 @@ get_fav_type(boardstat_t *ptr)
     return 0;
 }
 
+static const cmd_t myfav_cmds[];
+static const cmd_t board_fav_cmds[];
+static const cmd_t board_admin_cmds[];
 static const cmd_t boardlist_cmds[];
 
 static const char *
@@ -1283,12 +1337,15 @@ brdlist_caption(void)
 static void
 brdlist_foot(void)
 {
-    vs_footer("  選擇看板  ",
-	    IS_LISTING_FAV() ?
-	    "  (a)增加看板 (s)進入已知板名 (y)列出全部 (v/V)已讀/未讀" :
-            IN_CLASS() ?
-	    "  (m)加入/移出最愛 (s)進入已知板名 (v/V)已讀/未讀 " :
-	    "  (m)加入/移出最愛 (y)只列最愛 (v/V)已讀/未讀 ");
+    const cmd_layer_t layers[] = {
+        { IS_LISTING_FAV() ? myfav_cmds : board_fav_cmds, NULL },
+        { board_admin_cmds, NULL },
+        { boardlist_cmds,   NULL },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    vs_cmd_bar(IN_CLASSROOT() ? VS_FOOTER : (VS_SUB_HEADER | VS_FOOTER),
+               brdlist_caption(), layers);
 }
 
 
@@ -1340,7 +1397,8 @@ brdlist_header(PSB_CTX *ctx)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else {
 	showtitle("看板列表", BBSNAME);
-	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
+	brdlist_foot();
+	move(vs_row_line(VS_COL_HEADER), 0);
 	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"
               "               人氣 板   主", newflag ? "總數" : "編號"));
     }
@@ -1350,10 +1408,7 @@ brdlist_header(PSB_CTX *ctx)
 static int
 brdlist_footer(PSB_CTX *ctx GCC_UNUSED)
 {
-    if (IN_CLASSROOT())
-        show_status();
-    else
-        brdlist_foot();
+    brdlist_foot();
     return 0;
 }
 
@@ -1377,196 +1432,168 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->cmd.priv;
     int newflag = *cx->newflag;
-    int head = idx;
+    int head = idx + 1;
     boardstat_t *ptr;
     char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
 
-		assert(0<=head && head<nbrdsize);
-		ptr = &nbrd[head++];
-		if (ptr->myattr & NBRD_LINE){
-		    if( !newflag )
-			prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
-		    else
-			prints("%7s   ", "");
+    assert(0 <= idx && idx < nbrdsize);
+    ptr = &nbrd[idx];
+    if (ptr->myattr & NBRD_LINE) {
+	if (!newflag)
+	    prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+	else
+	    prints("%7s   ", "");
 
-		    if (!(ptr->myattr & NBRD_FAV))
-			outs(ANSI_COLOR(1;30));
+	if (!(ptr->myattr & NBRD_FAV))
+	    outs(ANSI_COLOR(1;30));
 
-		    outs("------------"
-			    "      "
-			    // "------"
-			    "------------------------------------------"
-			    ANSI_RESET "\n");
-		    clrtoeol();
-		    return 0;
-		}
-		else if (ptr->myattr & NBRD_FOLDER){
-		    char *title = get_folder_title(ptr->bid);
-		    prints("%7d %c ",
-			    newflag ?
-			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
-			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+	outs("------------"
+	     "      "
+	     "------------------------------------------"
+	     ANSI_RESET);
+	clrtoeol();
+	return 0;
+    } else if (ptr->myattr & NBRD_FOLDER) {
+	char *title = get_folder_title(ptr->bid);
+	prints("%7d %c ",
+	       newflag ?
+	       get_data_number(get_fav_folder(getfolder(ptr->bid))) :
+	       head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+	prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
+	       !(HasUserFlag(UF_FAV_NOHILIGHT)) ?
+	       HILIGHT_COLOR : "",
+	       title);
+	clrtoeol();
+	return 0;
+    }
 
-		    // well, what to print with myfav folders?
-		    // this style is too long and we don't want to
-		    // fight with users...
-		    // think about new way some otherday.
-		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
-			    !(HasUserFlag(UF_FAV_NOHILIGHT))?
-                              HILIGHT_COLOR : "",
-			    title);
-		    /*
-		    if (!(HasUserFlag(UF_FAV_NOHILIGHT)))
-			outs(HILIGHT_COLOR);
-		    prints("%-12s", "[Folder]");
-		    outs(ANSI_RESET);
-		    prints(" 目錄 Σ%-34s", title);
-		    */
-		    /*
-		    outs(ANSI_COLOR(0;36));
-		    prints("Σ%-70.70s", title);
-		    outs(ANSI_RESET);
-		    */
-		    clrtoeol();
-		    return 0;
-		}
+    if (IN_CLASSROOT()) {
+	outs("          ");
+    } else if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
+	const char *reason = "[禁入]";
 
-		if (IN_CLASSROOT())
-		    outs("          ");
-		else {
-		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-                        const char *reason = "[禁入]";
+	if (newflag)
+	    prints("%7s", "");
+	else
+	    prints("%7d", head);
 
-			if (newflag)
-                            prints("%7s", "");
-			else
-                            prints("%7d", head);
-
-                        if (B_BH(ptr)->brdattr & BRD_HIDE)
-                            reason = "[隱板]";
-
-                        // we don't print BM and popularity, so subject can be
-                        // longer
-#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-			prints("X%c %-13.13s%s  %s",
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-                                B_BH(ptr)->brdname,
-                                reason,
-                                TEMP_BRD_TITLE_DESC(B_BH(ptr)));
-#else
-			prints("X%c %-13.13s%s  <目前無法進入此看板>",
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-                                B_BH(ptr)->brdname,
-                                reason);
-#endif
-			continue;
-		    }
-		}
+	if (B_BH(ptr)->brdattr & BRD_HIDE)
+	    reason = "[隱板]";
 
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-		const int should_show_sensitive_info = true;
+	prints("X%c %-13.13s%s  %s",
+	       ptr->myattr & NBRD_TAG ? 'D' : ' ',
+	       B_BH(ptr)->brdname,
+	       reason,
+	       TEMP_BRD_TITLE_DESC(B_BH(ptr)));
 #else
-		// Show sensitive info if permission is *not* given by solely
-		// PERM_SYSOP, GROUPOP, or both.
-		const int should_show_sensitive_info =
-		    !BoardPermNeedsSysopOverride(B_BH(ptr)) &&
-		    !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
+	prints("X%c %-13.13s%s  <目前無法進入此看板>",
+	       ptr->myattr & NBRD_TAG ? 'D' : ' ',
+	       B_BH(ptr)->brdname,
+	       reason);
+#endif
+	clrtoeol();
+	return 0;
+    }
+
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+    const int should_show_sensitive_info = true;
+#else
+    const int should_show_sensitive_info =
+	!BoardPermNeedsSysopOverride(B_BH(ptr)) &&
+	!(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
 #endif
 
+    if (newflag && (B_BH(ptr)->brdattr & BRD_GROUPBOARD))
+	outs("          ");
+    else if (should_show_sensitive_info)
+	prints("%7d%c%s",
+	       newflag ? (int)(B_TOTAL(ptr)) : head,
+	       !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+	       (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+	       (ptr->myattr & NBRD_TAG) ? "D " :
+	       (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+	       unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+    else {
+	if (newflag)
+	    prints("%7s", "");
+	else
+	    prints("%7d", head);
+	prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+    }
 
-		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-		    outs("          ");
-		else if (should_show_sensitive_info)
-		    prints("%7d%c%s",
-			    newflag ? (int)(B_TOTAL(ptr)) : head,
-			    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
-			    (ptr->myattr & NBRD_TAG) ? "D " :
-			    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		else {
-		    if (newflag)
-			prints("%7s", "");
-		    else
-			prints("%7d", head);
-		    prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
-		}
+    if (!IN_CLASSROOT()) {
+	char t_cls[SZ_COLS(6)], t_sym[SZ_COLS(3)], t_desc[SZ_COLS(BTLEN + 1)];
+	brd_get_title_class(B_BH(ptr), t_cls, sizeof(t_cls));
+	if (should_show_sensitive_info) {
+	    brd_get_title_symbol(B_BH(ptr), t_sym, sizeof(t_sym));
+	    strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
+	} else {
+	    t_sym[0] = 0;
+	    t_desc[0] = 0;
+	}
+	while (stream_width(t_desc) > 34) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
+	prints("%s%-13s" ANSI_RESET "%s%s%*s" ANSI_COLOR(0;37)
+	       "%s%*s" ANSI_RESET "%s%*s",
+	       ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
+	         getboard(ptr->bid) != NULL)) ? HILIGHT_COLOR : "",
+	       B_BH(ptr)->brdname,
+	       make_class_color(B_BH(ptr)->title),
+	       t_cls, 5 - (int)stream_width(t_cls) > 0 ? 5 - (int)stream_width(t_cls) : 0, "",
+	       t_sym, 2 - (int)stream_width(t_sym) > 0 ? 2 - (int)stream_width(t_sym) : 0, "",
+	       t_desc, 34 - (int)stream_width(t_desc) > 0 ? 34 - (int)stream_width(t_desc) : 0, "");
 
-		if (!IN_CLASSROOT()) {
-		    char t_cls[SZ_COLS(6)], t_sym[SZ_COLS(3)], t_desc[SZ_COLS(BTLEN + 1)];
-		    brd_get_title_class(B_BH(ptr), t_cls, sizeof(t_cls));
-		    if (should_show_sensitive_info) {
-			brd_get_title_symbol(B_BH(ptr), t_sym, sizeof(t_sym));
-			strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
-		    } else {
-			t_sym[0] = 0;
-			t_desc[0] = 0;
-		    }
-		    while (stream_width(t_desc) > 34) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
-		    prints("%s%-13s" ANSI_RESET "%s%s%*s" ANSI_COLOR(0;37)
-			    "%s%*s" ANSI_RESET "%s%*s",
-			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
-			      getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
-			    B_BH(ptr)->brdname,
-			    make_class_color(B_BH(ptr)->title),
-			    t_cls, 5 - (int)stream_width(t_cls) > 0 ? 5 - (int)stream_width(t_cls) : 0, "",
-			    t_sym, 2 - (int)stream_width(t_sym) > 0 ? 2 - (int)stream_width(t_sym) : 0, "",
-			    t_desc, 34 - (int)stream_width(t_desc) > 0 ? 34 - (int)stream_width(t_desc) : 0, "");
-
-		    if (!should_show_sensitive_info)
-			outs("   ");
-		    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-                        outs("靜 ");
-                    // Note the nuser is not updated realtime, or have some bug.
-		    else if (B_BH(ptr)->nuser < 1)
-			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-		    else if (B_BH(ptr)->nuser <= 10)
-			prints("%2d ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser <= 50)
-			prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+	if (!should_show_sensitive_info)
+	    outs("   ");
+	else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+	    outs("靜 ");
+	else if (B_BH(ptr)->nuser < 1)
+	    prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+	else if (B_BH(ptr)->nuser <= 10)
+	    prints("%2d ", B_BH(ptr)->nuser);
+	else if (B_BH(ptr)->nuser <= 50)
+	    prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 #ifdef EXTRA_HOTBOARD_COLORS
-		    // piaip 2008/02/04: new colors
-		    else if (B_BH(ptr)->nuser >= 100000)
-			outs(ANSI_COLOR(1;35) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 60000)
-			outs(ANSI_COLOR(1;33) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 30000)
-			outs(ANSI_COLOR(1;32) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 10000)
-			outs(ANSI_COLOR(1;36) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 100000)
+	    outs(ANSI_COLOR(1;35) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 60000)
+	    outs(ANSI_COLOR(1;33) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 30000)
+	    outs(ANSI_COLOR(1;32) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 10000)
+	    outs(ANSI_COLOR(1;36) "爆!" ANSI_RESET);
 #endif
-		    else if (B_BH(ptr)->nuser >= 5000)
-			outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 2000)
-			outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 1000)
-			outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 100)
-			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
-		    else //if (B_BH(ptr)->nuser > 50)
-			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-		    char t_bm[SZ_COLS(IDLEN * 3 + 3)];
-		    strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
-		    while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
-			t_bm[strlen(t_bm) - 1] = 0;
-			mbs_safe_trim(t_bm);
-		    }
-		    prints("%s" ANSI_CLRTOEND, t_bm);
-		} else {
-		    char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
-		    strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
-		    while (stream_width(t_desc) > 40) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
-		    strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
-		    while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
-			t_bm[strlen(t_bm) - 1] = 0;
-			mbs_safe_trim(t_bm);
-		    }
-		    prints("%s%*s %s", t_desc,
-			   40 - (int)stream_width(t_desc) > 0 ? 40 - (int)stream_width(t_desc) : 0, "",
-			   t_bm);
-		}
-
-    clrtoeol();
+	else if (B_BH(ptr)->nuser >= 5000)
+	    outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 2000)
+	    outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 1000)
+	    outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
+	else if (B_BH(ptr)->nuser >= 100)
+	    outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
+	else
+	    prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+	char t_bm[SZ_COLS(IDLEN * 3 + 3)];
+	strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
+	while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
+	    t_bm[strlen(t_bm) - 1] = 0;
+	    mbs_safe_trim(t_bm);
+	}
+	prints("%s" ANSI_CLRTOEND, t_bm);
+    } else {
+	char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
+	strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
+	while (stream_width(t_desc) > 40) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
+	strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
+	while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
+	    t_bm[strlen(t_bm) - 1] = 0;
+	    mbs_safe_trim(t_bm);
+	}
+	prints("%s%*s %s", t_desc,
+	       40 - (int)stream_width(t_desc) > 0 ? 40 - (int)stream_width(t_desc) : 0, "",
+	       t_bm);
+	clrtoeol();
+    }
     return 0;
 }
 
@@ -1933,7 +1960,7 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
     class_bid = (B_BH(ptr)->brdattr & BRD_TOP) ? -1 : ptr->bid;
 
     if (!GROUPOP())
-        set_menu_group_op(B_BH(ptr)->BM);
+        set_menu_group_op(TEMP_BRD_BM(B_BH(ptr)));
 
     if (time4_lt(now, B_BH(ptr)->bupdate)) {
         setbfile(buf, B_BH(ptr)->brdname, fn_notes);
@@ -2002,82 +2029,7 @@ board_cmd_save_brc(cmd_ctx_t *ctx) {
     return 0;
 }
 
-static void
-board_list_help(void)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  進入看板",     "r Enter →",
-        "  回到主選單",   "q ←",
-        "  快速切換",     "^Z",
-        "", "",
-        "【我的最愛】", NULL,
-        "  新增看板",     "a i",
-        "  新增目錄",     "g",
-        "  新增分隔線",   "L",
-        "  切換",         "m z",
-        "  刪除",         "d",
-        "  改變位置",     "M",
-        "  加入已標記",   "^A",
-        "  刪除已標記",   "^D",
-        "  修改目錄名稱", "T",
-        "  備份/清理",   "K",
-        "  寫入已讀記錄", "w",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【移動瀏覽】", NULL,
-        "  上個看板",     "p k ↑",
-        "  下個看板",     "n j ↓",
-        "  往前翻頁",     "^B P PgUp",
-        "  往後翻頁",     "^F N PgDn",
-        "  跳至首項",     "Home 0",
-        "  跳至末項",     "End $",
-        "  跳至編號",     "(數字)",
-        "", "",
-        "【看板操作】", NULL,
-        "  全部已讀",     "v",
-        "  全部未讀",     "V",
-        "  排序方式",     "S",
-        "  編號/文章數", "c",
-        "  切換顯示全部", "y",
-        "  標記看板",     "t",
-        "  取消標記",     "^E",
-        "  切換全部標記", "*",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【搜尋】", NULL,
-        "  搜尋已列看板", "^S",
-        "  搜尋全站看板", "s",
-        "  搜尋看板標題", "/",
-        "  我在哪裡",     "^Y",
-        "", "",
-        "【小組長指令】", NULL,
-        "  設定看板",     "E",
-        "  設定小組備忘", "W",
-        "  開新看板",     "B",
-        "  移動已標看板", "^P",
-        "", "",
-        "【群組長指令】", NULL,
-        "  建立看板連結", "L",
-        "  刪除看板連結", "D",
-        NULL,
-    };
-
-    const char * const *p[] = { col1, col2, col3 };
-    show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
-}
-
-static int
-board_cmd_help(cmd_ctx_t *ctx) {
-    board_list_help();
-    ctx->redraw = true;
-    return 0;
-}
-
 static const cmd_t boardlist_cmds[] = {
-    { 'h', "說明", "顯示操作說明", board_cmd_help, 0, CMD_PRIO_NONE },
     { KEY_LEFT, "回上層", "離開看板列表", board_cmd_quit, 0, CMD_PRIO_MAX },
     { 'e', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
     { EOF, NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
