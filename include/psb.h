@@ -24,23 +24,93 @@
 
 ///////////////////////////////////////////////////////////////////////////
 // Constant
-#define PSB_EOF (-1)
-#define PSB_NA  (-2)
-#define PSB_NOP (-3)
+#define PSB_OK          (0)
+#define PSB_NA          (-1)
+
+#define PSB_MAX_CMD_LAYERS (8)
+#define PSB_MAX_COLS       (8)
+
+enum {
+    CMD_PRIO_NONE = 0,   // Do not display in footer (alias or help-only)
+    CMD_PRIO_NAV  = 10,  // Basic navigation (up/down/pgup/pgdn/jump)
+    CMD_PRIO_LOW  = 30,  // Less frequent or admin actions
+    CMD_PRIO_NORM = 50,  // Regular actions that should not change the states
+    CMD_PRIO_HIGH = 80,  // Actions that may make state changes
+    CMD_PRIO_TOP  = 90,  // Complicated tasks that needs attention
+    CMD_PRIO_MAX  = 100, // Key actions that must be displayed
+};
 
 ///////////////////////////////////////////////////////////////////////////
 // Data Structure
-typedef struct {
-    int curr, total, header_lines, footer_lines;
+struct cmd_layer;
+
+typedef struct cmd_ctx {
     int key;
+    int curr;
+    int base;
+    int total;
+    int rows;
+    int redraw_header_lines;
+    int redraw_footer_lines;
+    bool redraw;
+    bool reload;
+    bool quit;
+    bool redispatch;
+    void *priv;
+    const struct cmd_layer *active_layers;
+    const char *caption;
+} cmd_ctx_t;
+
+typedef int (*cmd_cb_t)(cmd_ctx_t *ctx);
+
+typedef struct {
+    int key;
+    const char *label;
+    const char *helpstr;
+    cmd_cb_t func;
+    int permission;
+    int prio;
+    bool need_item;
+} cmd_t;
+
+typedef struct cmd_layer {
+    const cmd_t *cmds;
+    void *priv;
+} cmd_layer_t;
+
+typedef struct PSB_CTX {
+    cmd_ctx_t cmd;
+    int header_lines, footer_lines;
     int allow_pbs_version_message;
-    void *ctx;
-    int (*header)(void *ctx);
-    int (*footer)(void *ctx);
-    int (*renderer)(int i, int curr, int total, int rows, void *ctx);
-    int (*cursor)(int y, int curr, void *ctx);
-    int (*input_processor)(int key, int curr, int total, int rows, void *ctx);
+    int cached_base, cached_rows, cached_cols;
+    int cols;
+    int col_paddings;
+    int col_widths[PSB_MAX_COLS];
+    const char *filename;
+    void *window_buf;
+    size_t item_size;
+    int (*loader)(struct PSB_CTX *ctx);
+    int (*header)(struct PSB_CTX *ctx);
+    int (*footer)(struct PSB_CTX *ctx);
+    int (*renderer)(int i, struct PSB_CTX *ctx);
+    int (*cursor)(int y, struct PSB_CTX *ctx);
+    int (*on_key)(struct PSB_CTX *ctx);
+    int (*col_measurer)(int i, int col, struct PSB_CTX *ctx);
+    const cmd_t *cmds;
+    const cmd_layer_t *layers;
 } PSB_CTX;
+
+extern const cmd_t psb_base_cmds[];
+extern const cmd_t bbs_global_cmds[];
+
+int cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
+                        const char *caption);
+void psb_sync_cache(PSB_CTX *psbctx);
+int psb_file_loader(PSB_CTX *psbctx);
+bool psb_check_perm(int perm);
+void cmd_set_has_item(bool has_item);
+int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers);
+void cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers);
 
 int psb_main(PSB_CTX *psbctx);
 

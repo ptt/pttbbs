@@ -319,6 +319,12 @@
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 
+#include <stddef.h>
+#ifndef container_of
+#define container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 

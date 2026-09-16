@@ -2,6 +2,7 @@
 #define INCLUDE_PROTO_H
 
 #include "osdep.h"
+#include "psb.h"
 
 /* admin */
 int m_mod_board(char *bname);

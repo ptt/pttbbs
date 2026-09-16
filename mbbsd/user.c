@@ -482,8 +482,25 @@ typedef struct {
     int valid_count;
 } customize_ctx_t;
 
-static int customize_header(void *ctx GCC_UNUSED) {
-    const int col_opt = 54;
+static int customize_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0) {
+        if (col == 0)
+            return 11 + str_term_width("描述");
+        if (col == 1)
+            return str_term_width("設定值");
+        return 0;
+    }
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
+    const CustomItem *item = &items[cx->valid_indices[i]];
+    if (col == 0)
+        return str_term_width(item->desc);
+    if (col == 1)
+        return str_term_width(Getter(item));
+    return 0;
+}
+
+static int customize_header(PSB_CTX *ctx) {
+    int col_opt = ctx->col_widths[0] + 2;
     showtitle("個人設定", "個人化設定");
     move(2, 0);
     prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
@@ -491,45 +508,34 @@ static int customize_header(void *ctx GCC_UNUSED) {
     return 0;
 }
 
-static int customize_footer(void *ctx GCC_UNUSED) {
-    vs_footer(" 個人化設定 ",
-              " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
-    move(b_lines - 1, 0);
-    return 0;
-}
-
-static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
-                               int rows GCC_UNUSED, void *ctx) {
-    customize_ctx_t *cx = (customize_ctx_t *)ctx;
+static int customize_renderer(int i, PSB_CTX *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
     int item_idx = cx->valid_indices[i];
     const CustomItem *item = &items[item_idx];
-    const int col_opt = 54;
+    int col_opt = ctx->col_widths[0] + 2;
     const char *val = Getter(item);
 
-    outs("   ");
-    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
-           'a' + i,
-           strlen(val) < 16 ? col_opt : 0,
+    prints("  " ANSI_COLOR(1;36) "%2d" ANSI_RESET ". %-*s%s\n",
+           i + 1,
+           (6 + col_opt + str_term_width(val) <= t_columns) ? col_opt : 0,
            item->desc, val);
     return 0;
 }
 
-static int customize_input_processor(int key, int curr, int total GCC_UNUSED,
-                                       int rows GCC_UNUSED, void *ctx) {
-    customize_ctx_t *cx = (customize_ctx_t *)ctx;
-    int sel = key - 'a';
-    if (key == KEY_RIGHT || key == '\r' || key == '\n' || key == ' ') {
-        // Just use curr.
-    } else if (sel >= 0 && sel < cx->valid_count) {
-        curr = sel;
-    } else {
-        return PSB_NA;
-    }
-
-    assert(curr >= 0 && curr < (int)ARRAY_SIZE(items));
-    Setter(&items[cx->valid_indices[curr]]);
-    return curr;
+static int customize_cmd_toggle(cmd_ctx_t *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->priv;
+    assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(items));
+    Setter(&items[cx->valid_indices[ctx->curr]]);
+    ctx->redraw = true;
+    return 0;
 }
+
+static const cmd_t customize_cmds[] = {
+    { KEY_ENTER, "切換/修改", "切換或修改選取的個人化設定項目", customize_cmd_toggle, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, customize_cmd_toggle, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, NULL, customize_cmd_toggle, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 void Customize(void)
 {
@@ -542,16 +548,21 @@ void Customize(void)
     }
 
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = cx.valid_count,
+        .cmd = {
+            .curr = 0,
+            .total = cx.valid_count,
+            .priv = &cx,
+            .caption = " 個人設定 ",
+        },
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
-        .ctx = &cx,
+        .cols = 2,
+        .col_paddings = 8,
+        .col_measurer = customize_col_measurer,
         .header = customize_header,
-        .footer = customize_footer,
         .renderer = customize_renderer,
-        .input_processor = customize_input_processor,
+        .cmds = customize_cmds,
     };
 
     psb_main(&ctx);

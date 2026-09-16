@@ -24,81 +24,592 @@
 // --------------------------------------------------------------------------
 
 static int
-psb_default_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar("P&S Browser", BBSNAME);
+psb_default_header(PSB_CTX *ctx GCC_UNUSED) {
+    vs_hdr2bar(" P&S Browser ", " " BBSNAME);
     return 0;
 }
 
 static int
-psb_default_footer(void *ctx GCC_UNUSED) {
+psb_default_footer(PSB_CTX *ctx GCC_UNUSED) {
     vs_footer(" PSB 1.0 ",
               " (↑/↓/PgUp/PgDn/0-9)Move (Enter/→)Select \t(q/←)Quit");
     return 0;
 }
 
 static int
-psb_default_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx GCC_UNUSED) {
-    prints("   %s(Demo) %5d / %5d Item\n", (i == curr) ? "*" : " ", i, total);
+psb_default_renderer(int i, PSB_CTX *ctx) {
+    prints("   %s(Demo) %5d / %5d Item\n", (i == ctx->cmd.curr) ? "*" : " ", i, ctx->cmd.total);
     return 0;
 }
 
 static int
-psb_default_cursor(int y, int curr GCC_UNUSED, void * ctx GCC_UNUSED) {
+psb_default_cursor(int y, PSB_CTX *ctx GCC_UNUSED) {
     cursor_show(y, 0);
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////
+// Layer 0: PSB Base Navigation Commands
+
 static int
-psb_default_input_processor(int key, int curr, int total, int rows, void *ctx GCC_UNUSED) {
-    switch(key) {
-        case 'q':
-        case KEY_LEFT:
-            return PSB_EOF;
+psb_cmd_quit(cmd_ctx_t *ctx) {
+    ctx->quit = true;
+    return 0;
+}
 
-        case KEY_HOME:
-        case '0':
-            return 0;
+static int
+psb_cmd_home(cmd_ctx_t *ctx) {
+    ctx->curr = 0;
+    return 0;
+}
 
-        case KEY_END:
-        case '$':
-            return total-1;
+static int
+psb_cmd_end(cmd_ctx_t *ctx) {
+    ctx->curr = (ctx->total > 0) ? ctx->total - 1 : 0;
+    return 0;
+}
 
-        case KEY_PGUP:
-        case Ctrl('B'):
-        case 'N':
-            if (curr / rows > 0)
-                return curr - rows;
-            return 0;
+static int
+psb_cmd_pgup(cmd_ctx_t *ctx) {
+    if (ctx->rows > 0 && ctx->curr / ctx->rows > 0)
+        ctx->curr -= ctx->rows;
+    else
+        ctx->curr = 0;
+    return 0;
+}
 
-        case KEY_PGDN:
-        case Ctrl('F'):
-        case 'P':
-            if (curr + rows < total)
-                return curr + rows;
-            return total - 1;
+static int
+psb_cmd_pgdn(cmd_ctx_t *ctx) {
+    if (ctx->rows > 0 && ctx->curr + ctx->rows < ctx->total)
+        ctx->curr += ctx->rows;
+    else
+        ctx->curr = (ctx->total > 0) ? ctx->total - 1 : 0;
+    return 0;
+}
 
-        case KEY_UP:
-        case Ctrl('P'):
-        case 'p':
-        case 'k':
-            return (curr > 0) ? curr-1 : curr;
+static int
+psb_cmd_up(cmd_ctx_t *ctx) {
+    if (ctx->curr > 0)
+        ctx->curr--;
+    return 0;
+}
 
-        case KEY_DOWN:
-        case Ctrl('N'):
-        case 'n':
-        case 'j':
-            return (curr + 1 < total) ? curr + 1 : curr;
+static int
+psb_cmd_down(cmd_ctx_t *ctx) {
+    if (ctx->curr + 1 < ctx->total)
+        ctx->curr++;
+    return 0;
+}
 
+static int
+psb_cmd_num(cmd_ctx_t *ctx) {
+    int key = ctx->key;
+    if (key >= '0' && key <= '9') {
+        int newval = search_num(key, ctx->total);
+        ctx->redraw_footer_lines = 1;
+        if (newval >= 0 && newval < ctx->total)
+            ctx->curr = newval;
+        return 0;
+    }
+    return PSB_NA;
+}
+
+const cmd_t psb_base_cmds[] = {
+    { KEY_UP, "移動", "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NAV, true },
+    { KEY_DOWN, NULL, "向下移動一列", psb_cmd_down, 0, CMD_PRIO_NONE, true },
+    { 'k', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
+    { 'p', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
+    { Ctrl('P'), NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
+    { 'j', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
+    { 'n', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
+    { Ctrl('N'), NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, "翻頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
+    { KEY_PGDN, NULL, "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { Ctrl('B'), NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { 'P', NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { Ctrl('F'), NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { 'N', NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_HOME, NULL, "移至第一筆", psb_cmd_home, 0, CMD_PRIO_NONE, true },
+    { '0', NULL, NULL, psb_cmd_home, 0, CMD_PRIO_NONE, true },
+    { KEY_END, NULL, "移至最後一筆", psb_cmd_end, 0, CMD_PRIO_NONE, true },
+    { '$', NULL, NULL, psb_cmd_end, 0, CMD_PRIO_NONE, true },
+    { '1', "跳號", "輸入編號跳轉", psb_cmd_num, 0, CMD_PRIO_NAV, true },
+    { '2', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '3', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '4', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '5', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '6', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '7', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '8', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '9', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
+    { 'q', NULL, "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'Q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Layer 1: BBS Global Common Commands
+
+static int
+bbs_cmd_za(cmd_ctx_t *ctx) {
+    if (ZA_Select())
+        ctx->quit = true;
+    else
+        ctx->redraw = true;
+    return 0;
+}
+
+static int
+bbs_cmd_help(cmd_ctx_t *ctx) {
+    if (!ctx->active_layers)
+        return PSB_NA;
+    screen_backup_t old_screen;
+    scr_dump(&old_screen);
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    scr_restore(&old_screen);
+    if (sel_key == 'h' || sel_key == 'H') {
+#ifdef PLAY_ANGEL
+        if (HasBasicUserPerm(PERM_LOGINOK) &&
+            strcmp(cuser.myangel, "-") != 0) {
+            CallAngel();
+        }
+#endif
+        ctx->redraw = true;
+        return 0;
+    }
+    if (sel_key > 0 && sel_key != ctx->key) {
+        ctx->key = sel_key;
+        ctx->redispatch = true;
+        return 0;
+    }
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+bbs_cmd_ctrl_u(cmd_ctx_t *ctx) {
+    if (currutmp && currutmp->mode != EDITING && currutmp->mode != LUSERS && currutmp->mode) {
+        t_users();
+        ctx->redraw = true;
+    }
+    return 0;
+}
+
+static int
+bbs_cmd_ctrl_r(cmd_ctx_t *ctx) {
+    ofo_my_write();
+    ctx->redraw = true;
+    return 0;
+}
+
+const cmd_t bbs_global_cmds[] = {
+    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_NONE },
+    { Ctrl('Z'), "隨處切換(ZA)", "快速切換到文章列表、分類、信箱、使用者名單等", bbs_cmd_za, 0, CMD_PRIO_NONE },
+    { Ctrl('U'), "線上使用者", "查看線上使用者名單", bbs_cmd_ctrl_u, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('R'), "回應水球", "即時回應剛收到的水球", bbs_cmd_ctrl_r, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Layer Dispatch, Help & Footer Rendering Engine
+
+static void
+psb_key_name(int key, char *buf, size_t sz) {
+    switch (key) {
+        case KEY_ENTER:
+        case KEY_LF:    strlcpy(buf, "Enter", sz); break;
+        case KEY_RIGHT: strlcpy(buf, "→", sz); break;
+        case KEY_LEFT:  strlcpy(buf, "←", sz); break;
+        case KEY_UP:    strlcpy(buf, "↑", sz); break;
+        case KEY_DOWN:  strlcpy(buf, "↓", sz); break;
+        case KEY_PGUP:  strlcpy(buf, "PgUp", sz); break;
+        case KEY_PGDN:  strlcpy(buf, "PgDn", sz); break;
+        case KEY_HOME:  strlcpy(buf, "Home", sz); break;
+        case KEY_END:   strlcpy(buf, "End", sz); break;
+        case KEY_INS:   strlcpy(buf, "Ins", sz); break;
+        case KEY_DEL:   strlcpy(buf, "DEL", sz); break;
+        case KEY_BS:    strlcpy(buf, "BS", sz); break;
+        case KEY_TAB:   strlcpy(buf, "Tab", sz); break;
+        case KEY_ESC:   strlcpy(buf, "ESC", sz); break;
+        case ' ':       strlcpy(buf, "Space", sz); break;
         default:
-            if (key >= '0' && key <= '9') {
-                int newval = search_num(key, total);
-                if (newval >= 0 && newval < total)
-                    return newval;
-                return curr;
-            }
+            if (key >= KEY_F1 && key <= KEY_F12)
+                snprintf(buf, sz, "F%d", key - KEY_F1 + 1);
+            else if (key >= 1 && key <= 31)
+                snprintf(buf, sz, "^%c", key + 'A' - 1);
+            else if (key >= 32 && key <= 126)
+                snprintf(buf, sz, "%c", key);
+            else if ((key & 0xff00) == 0x2000) {
+                if ((key & 0xff) == ' ')
+                    strlcpy(buf, "ESC-Space", sz);
+                else
+                    snprintf(buf, sz, "ESC-%c", key & 0xff);
+            } else
+                snprintf(buf, sz, "0x%x", key);
             break;
     }
-    return  PSB_NA;
+}
+
+bool
+psb_check_perm(int perm) {
+    if (!perm)
+        return true;
+    if ((perm & PERM_BM) && ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+        return true;
+    if ((perm & PERM_SYSSUPERSUBOP) &&
+        (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
+        return true;
+    perm &= ~(PERM_BM | PERM_SYSSUPERSUBOP);
+    if (!perm)
+        return false;
+    if (perm == PERM_BASIC)
+        return HasUserPerm(PERM_BASIC);
+    return HasBasicUserPerm(perm);
+}
+
+static bool
+psb_is_key_seen(const int *seen, int n_seen, int key) {
+    int i;
+    for (i = 0; i < n_seen; i++)
+        if (seen[i] == key)
+            return true;
+    return false;
+}
+
+typedef struct {
+    const cmd_t *cmd;
+    int keys[16];
+    int n_keys;
+} psb_help_item_t;
+
+static void
+psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
+    if (item->n_keys == 1) {
+        psb_key_name(item->keys[0], buf, sz);
+        return;
+    }
+    if ((item->keys[0] == '0' || item->keys[0] == '1') &&
+        item->n_keys >= 9 && item->keys[item->n_keys - 1] == '9') {
+        snprintf(buf, sz, "%c-9", item->keys[0]);
+        return;
+    }
+    if (item->keys[0] == (0x2000 | '0') &&
+        item->n_keys >= 10 && item->keys[item->n_keys - 1] == (0x2000 | '9')) {
+        strlcpy(buf, "ESC-0..9", sz);
+        return;
+    }
+    buf[0] = '\0';
+    for (int i = 0; i < item->n_keys; i++) {
+        char kbuf[16];
+        psb_key_name(item->keys[i], kbuf, sizeof(kbuf));
+        if (i > 0)
+            strlcat(buf, "/", sz);
+        strlcat(buf, kbuf, sz);
+    }
+}
+
+static void
+psb_help_print_row(const psb_help_item_t *item) {
+    char kbuf[32], itembuf[48];
+    psb_help_format_keys(item, kbuf, sizeof(kbuf));
+    if (item->cmd->label)
+        snprintf(itembuf, sizeof(itembuf), "(%s) %s", kbuf, item->cmd->label);
+    else
+        snprintf(itembuf, sizeof(itembuf), "(%s)", kbuf);
+    prints("  %-28s  %s\n", itembuf, item->cmd->helpstr ? item->cmd->helpstr : "");
+}
+
+static bool cmd_bar_has_item = true;
+
+void
+cmd_set_has_item(bool has_item) {
+    cmd_bar_has_item = has_item;
+}
+
+int
+cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+    int seen_keys[256];
+    int n_seen = 0;
+    psb_help_item_t items[128];
+    int count = 0;
+
+    for (layer = layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            if (cmd->key == EOF || cmd->key == 0)
+                continue;
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < 256)
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            if (cmd->label || cmd->helpstr) {
+                if (count < (int)ARRAY_SIZE(items)) {
+                    items[count].cmd = cmd;
+                    items[count].keys[0] = cmd->key;
+                    items[count].n_keys = 1;
+                    count++;
+                }
+            } else if (cmd->func) {
+                for (int i = count - 1; i >= 0; i--) {
+                    if (items[i].cmd->func == cmd->func) {
+                        if (items[i].n_keys < 16)
+                            items[i].keys[items[i].n_keys++] = cmd->key;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (count <= 0)
+        return 0;
+
+    int curr = 0;
+    int base = 0;
+    int old_base = -1;
+    int rows = 1;
+
+    while (1) {
+        int new_rows = t_lines - 3;
+        if (new_rows < 1)
+            new_rows = 1;
+        if (new_rows != rows) {
+            rows = new_rows;
+            old_base = -1;
+        }
+
+        if (curr >= count)
+            curr = count - 1;
+        if (curr < 0)
+            curr = 0;
+        if (curr < base || curr >= base + rows)
+            base = (curr / rows) * rows;
+
+        if (base != old_base) {
+            clear();
+            vs_hdr2bar(caption ? caption : " P&S Browser ", " 操作說明 (Help)");
+            move(1, 0);
+            vbar(ANSI_REVERSE "  按鍵 / 標籤                   功\能說明");
+            for (int i = 0; i < rows && base + i < count; i++) {
+                move(2 + i, 0);
+                psb_help_print_row(&items[base + i]);
+            }
+
+            int total_pages = (count + rows - 1) / rows;
+            int curr_page = (base / rows) + 1;
+            const char *capbuf = " 操作說明 ";
+            char pagebuf[32] = "";
+            if (total_pages > 1)
+                snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
+            const char *angel_hint = "";
+#ifdef PLAY_ANGEL
+            if (HasBasicUserPerm(PERM_LOGINOK) &&
+                strcmp(cuser.myangel, "-") != 0) {
+                angel_hint = " (h)小天使";
+            }
+#endif
+            char prompt[128];
+            snprintf(prompt, sizeof(prompt),
+                     "%s (↑/↓/PgUp/Dn)移動 (Enter/→)執行%s\t(q/←)離開",
+                     pagebuf, angel_hint);
+            move(b_lines, 0);
+            vs_footer(capbuf, prompt);
+            old_base = base;
+        }
+
+        int ch = cursor_key(2 + curr - base, 0);
+        switch (ch) {
+            case KEY_UP:
+            case 'k':
+            case 'p':
+            case Ctrl('P'):
+                if (curr > 0)
+                    curr--;
+                break;
+            case KEY_DOWN:
+            case 'j':
+            case 'n':
+            case Ctrl('N'):
+                if (curr + 1 < count)
+                    curr++;
+                break;
+            case KEY_PGUP:
+            case Ctrl('B'):
+            case 'N':
+                curr = (curr >= rows) ? curr - rows : 0;
+                break;
+            case KEY_PGDN:
+            case Ctrl('F'):
+            case 'P':
+            case ' ':
+                curr = (curr + rows < count) ? curr + rows : count - 1;
+                break;
+            case KEY_HOME:
+            case '0':
+                curr = 0;
+                break;
+            case KEY_END:
+            case '$':
+                curr = count - 1;
+                break;
+            case KEY_ENTER:
+            case KEY_RIGHT:
+                return items[curr].keys[0];
+            case 'h':
+            case 'H':
+                return 'h';
+            case 'q':
+            case KEY_LEFT:
+                return 0;
+            default:
+                break;
+        }
+    }
+}
+
+static void
+psb_format_footer_item(const cmd_t *cmd, char *buf, size_t sz) {
+    char kbuf[16];
+    psb_key_name(cmd->key, kbuf, sizeof(kbuf));
+    snprintf(buf, sz, " (%s)%s", kbuf, cmd->label);
+}
+
+static void
+psb_prune_footer_items(char items[][64], const int *prios, bool *active, int n, int avail_cols) {
+    while (1) {
+        int total_len = 0;
+        int min_prio = 0x7fffffff;
+        int min_idx = -1;
+        int i;
+        for (i = 0; i < n; i++) {
+            if (!active[i])
+                continue;
+            total_len += strlen(items[i]);
+            if (prios[i] <= min_prio) {
+                min_prio = prios[i];
+                min_idx = i;
+            }
+        }
+        if (total_len <= avail_cols || min_idx < 0)
+            break;
+        active[min_idx] = false;
+    }
+}
+
+void
+cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers) {
+    const char *cap = caption ? caption : " PSB 1.0 ";
+    const char *tail = " \t(h)說明 (q/←)跳出";
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+    int seen_keys[256];
+    int n_seen = 0;
+    char items[32][64];
+    int prios[32];
+    bool active[32];
+    int n = 0, i;
+    int avail_cols = (t_columns - 1) - str_term_width(cap) - strlen(tail);
+
+    for (layer = layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < 256)
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !cmd->label || n >= 32 || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            psb_format_footer_item(cmd, items[n], sizeof(items[n]));
+            prios[n] = cmd->prio;
+            active[n] = true;
+            n++;
+        }
+    }
+
+    psb_prune_footer_items(items, prios, active, n, avail_cols);
+
+    char prompt[256] = "";
+    for (i = 0; i < n; i++) {
+        if (active[i])
+            strlcat(prompt, items[i], sizeof(prompt));
+    }
+    strlcat(prompt, tail, sizeof(prompt));
+    vs_footer(cap, prompt);
+}
+
+static int
+cmd_dispatch_single_layer(const cmd_layer_t *layer, cmd_ctx_t *ctx, void *default_priv) {
+    const cmd_t *cmd;
+    ctx->priv = layer->priv ? layer->priv : default_priv;
+
+    for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+        if (cmd->key != ctx->key || !cmd->func || !psb_check_perm(cmd->permission) ||
+            (cmd->need_item && ctx->total <= 0))
+            continue;
+        if (cmd->func(ctx) == PSB_NA)
+            continue;
+        return 0;
+    }
+    return PSB_NA;
+}
+
+int
+cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
+                    const char *caption) {
+    const cmd_layer_t *layer;
+    void *default_priv = ctx->priv;
+    bool redispatched = false;
+    ctx->active_layers = layers;
+    ctx->caption = caption;
+    cmd_set_has_item(ctx->total > 0);
+
+    while (1) {
+        int ret = PSB_NA;
+        ctx->redispatch = false;
+        for (layer = layers; layer && layer->cmds; layer++) {
+            ret = cmd_dispatch_single_layer(layer, ctx, default_priv);
+            if (ret != PSB_NA)
+                break;
+        }
+        if (ctx->redispatch && !redispatched) {
+            redispatched = true;
+            continue;
+        }
+        ctx->priv = default_priv;
+        return ret;
+    }
+}
+
+static void
+psb_build_default_layers(PSB_CTX *psbctx, cmd_layer_t *buf, size_t max_layers) {
+    size_t idx = 0;
+    if (psbctx->layers) {
+        const cmd_layer_t *l = psbctx->layers;
+        while (l->cmds && idx + 1 < max_layers) {
+            buf[idx++] = *l++;
+        }
+    } else {
+        if (psbctx->cmds && idx + 1 < max_layers) {
+            buf[idx].cmds = psbctx->cmds;
+            buf[idx].priv = psbctx->cmd.priv;
+            idx++;
+        }
+        if (idx + 1 < max_layers) {
+            buf[idx].cmds = bbs_global_cmds;
+            buf[idx].priv = NULL;
+            idx++;
+        }
+        if (idx + 1 < max_layers) {
+            buf[idx].cmds = psb_base_cmds;
+            buf[idx].priv = NULL;
+            idx++;
+        }
+    }
+    buf[idx].cmds = NULL;
+    buf[idx].priv = NULL;
 }
 
 static void
@@ -107,65 +618,197 @@ psb_init_defaults(PSB_CTX *psbctx) {
     assert(psbctx);
     if (!psbctx->header)
         psbctx->header = psb_default_header;
-    if (!psbctx->footer)
+    if (!psbctx->footer && !psbctx->cmds && !psbctx->layers)
         psbctx->footer = psb_default_footer;
     if (!psbctx->renderer)
         psbctx->renderer = psb_default_renderer;
     if (!psbctx->cursor)
         psbctx->cursor = psb_default_cursor;
 
-    assert(psbctx->curr >= 0 &&
-           psbctx->total >= 0 &&
-           psbctx->curr < psbctx->total);
+    psbctx->cmd.reload = true;
+    psbctx->cmd.redraw = true;
+    psbctx->cmd.redraw_header_lines = 0;
+    psbctx->cmd.redraw_footer_lines = 0;
+    psbctx->cmd.quit = false;
+    psbctx->cached_base = -1;
+
+    assert(psbctx->cmd.curr >= 0 &&
+           psbctx->cmd.total >= 0 &&
+           (psbctx->cmd.total == 0 || psbctx->cmd.curr < psbctx->cmd.total));
     assert(psbctx->header_lines > 0 &&
            psbctx->footer_lines);
 }
 
 int
+psb_file_loader(PSB_CTX *psbctx) {
+    if (!psbctx->filename || !psbctx->item_size)
+        return 0;
+    if (psbctx->cmd.reload) {
+        psbctx->cmd.total = get_num_records(psbctx->filename, psbctx->item_size);
+        return 0;
+    }
+    if (psbctx->window_buf && psbctx->cmd.total > 0) {
+        get_records(psbctx->filename, psbctx->window_buf,
+                    psbctx->item_size, psbctx->cmd.base + 1, psbctx->cmd.rows);
+    }
+    return 0;
+}
+
+void
+psb_sync_cache(PSB_CTX *psbctx) {
+    int rows = psbctx->cmd.rows;
+    bool force = psbctx->cmd.reload;
+
+    if (force) {
+        psbctx->cached_base = -1;
+        psbctx->cmd.redraw = true;
+        if (psbctx->loader)
+            psbctx->loader(psbctx);
+        psbctx->cmd.reload = false;
+    }
+
+    if (psbctx->cmd.total <= 0) {
+        psbctx->cmd.curr = 0;
+        psbctx->cmd.base = 0;
+    } else {
+        if (psbctx->cmd.curr >= psbctx->cmd.total)
+            psbctx->cmd.curr = psbctx->cmd.total - 1;
+        if (psbctx->cmd.curr < 0)
+            psbctx->cmd.curr = 0;
+        if (psbctx->cmd.curr < psbctx->cmd.base || psbctx->cmd.curr >= psbctx->cmd.base + rows)
+            psbctx->cmd.base = (psbctx->cmd.curr / rows) * rows;
+    }
+
+    if (psbctx->col_measurer && psbctx->cols > 0) {
+        if (force || t_columns != psbctx->cached_cols) {
+            int sum_w = 0;
+            for (int c = 0; c < psbctx->cols && c < PSB_MAX_COLS; c++) {
+                int max_w = psbctx->col_measurer(-1, c, psbctx);
+                for (int i = 0; i < psbctx->cmd.total; i++) {
+                    int w = psbctx->col_measurer(i, c, psbctx);
+                    if (w > max_w)
+                        max_w = w;
+                }
+                psbctx->col_widths[c] = max_w;
+                sum_w += max_w;
+            }
+            int avail = t_columns - psbctx->col_paddings;
+            if (avail > 0 && sum_w > avail) {
+                int last = (psbctx->cols < PSB_MAX_COLS ? psbctx->cols : PSB_MAX_COLS) - 1;
+                int prev_w = sum_w - psbctx->col_widths[last];
+                if (avail - prev_w >= 8) {
+                    psbctx->col_widths[last] = avail - prev_w;
+                } else {
+                    psbctx->col_widths[last] = 8;
+                    if (last > 0 && avail > 8)
+                        psbctx->col_widths[0] = avail - 8;
+                }
+            }
+        }
+    }
+
+    if (psbctx->cmd.base != psbctx->cached_base ||
+        rows != psbctx->cached_rows ||
+        t_columns != psbctx->cached_cols) {
+        if (psbctx->loader &&
+            (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows))
+            psbctx->loader(psbctx);
+        psbctx->cached_base = psbctx->cmd.base;
+        psbctx->cached_rows = rows;
+        psbctx->cached_cols = t_columns;
+        psbctx->cmd.redraw = true;
+    }
+}
+
+int
 psb_main(PSB_CTX *psbctx)
 {
+    cmd_layer_t active_layers[PSB_MAX_CMD_LAYERS];
+    int old_curr = -1;
+
     psb_init_defaults(psbctx);
 
-    while (1) {
+    while (!psbctx->cmd.quit) {
         int i;
         int rows = t_lines - psbctx->header_lines - psbctx->footer_lines;
         int base;
 
         assert(rows > 0);
-        base = psbctx->curr / rows * rows;
-        clear();
-        psbctx->header(psbctx->ctx);
-        for (i = 0; i < rows; i++) {
+        psbctx->cmd.rows = rows;
+        psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
+        psb_sync_cache(psbctx);
+        cmd_set_has_item(psbctx->cmd.total > 0);
+
+        base = psbctx->cmd.base;
+        bool full = psbctx->cmd.redraw;
+        bool draw_header = full || (psbctx->cmd.redraw_header_lines > 0) ||
+                           (psbctx->cmd.redraw_footer_lines > t_lines - psbctx->header_lines);
+        bool draw_footer = full || (psbctx->cmd.redraw_footer_lines > 0) ||
+                           (psbctx->cmd.redraw_header_lines > t_lines - psbctx->footer_lines);
+        int top_dirty = psbctx->cmd.redraw_header_lines - psbctx->header_lines;
+        int bot_dirty = psbctx->cmd.redraw_footer_lines - psbctx->footer_lines;
+
+        if (full)
+            clear();
+
+        if (draw_header) {
+            move(0, 0);
+            if (!full)
+                clrtoln(psbctx->header_lines);
+            psbctx->header(psbctx);
+        }
+
+        int max_i = psbctx->cmd.total - base;
+        if (max_i > rows)
+            max_i = rows;
+        for (i = 0; i < max_i; i++) {
+            bool dirty_row = full ||
+                             (i < top_dirty) ||
+                             (i >= rows - bot_dirty) ||
+                             (old_curr != psbctx->cmd.curr &&
+                              (base + i == old_curr || base + i == psbctx->cmd.curr));
+            if (!dirty_row)
+                continue;
+            if (!full && old_curr != psbctx->cmd.curr && base + i == old_curr)
+                cursor_clear(psbctx->header_lines + i, 0);
             move(psbctx->header_lines + i, 0);
-            if (base + i < psbctx->total)
-                psbctx->renderer(base + i, psbctx->curr, psbctx->total,
-                                 rows, psbctx->ctx);
+            if (!full)
+                clrtoeol();
+            psbctx->renderer(base + i, psbctx);
         }
-        move(t_lines - psbctx->footer_lines, 0);
-        psbctx->footer(psbctx->ctx);
-        if (psbctx->allow_pbs_version_message) {
-            prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
-                   "-- Powered by P&S Browser System");
+        if (!full && max_i < rows) {
+            move(psbctx->header_lines + max_i, 0);
+            clrtoln(psbctx->header_lines + rows);
         }
-        i = psbctx->header_lines + psbctx->curr - base;
+
+        if (draw_footer) {
+            move(t_lines - psbctx->footer_lines, 0);
+            if (!full)
+                clrtobot();
+            if (psbctx->footer)
+                psbctx->footer(psbctx);
+            else
+                cmd_render_footer_layers(psbctx->cmd.caption, active_layers);
+
+            if (psbctx->allow_pbs_version_message) {
+                prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
+                       "-- Powered by P&S Browser System");
+            }
+        }
+        psbctx->cmd.redraw = false;
+        psbctx->cmd.redraw_header_lines = 0;
+        psbctx->cmd.redraw_footer_lines = 0;
+
+        old_curr = psbctx->cmd.curr;
+        i = psbctx->header_lines + psbctx->cmd.curr - base;
         move(i, 0);
-        psbctx->cursor(i, psbctx->curr, psbctx->ctx);
-        psbctx->key = vkey();
+        psbctx->cursor(i, psbctx);
+        psbctx->cmd.key = vkey();
 
-        i = PSB_NA;
-        if (psbctx->input_processor)
-            i = psbctx->input_processor(psbctx->key, psbctx->curr,
-                                        psbctx->total, rows, psbctx->ctx);
-        if (i == PSB_NA)
-            i = psb_default_input_processor(psbctx->key, psbctx->curr,
-                                            psbctx->total, rows, psbctx->ctx);
-        if (i == PSB_EOF)
-            break;
-        if (i == PSB_NOP)
-            continue;
-
-        if (i >=0 && i < psbctx->total)
-            psbctx->curr = i;
+        int ret = cmd_dispatch_layers(active_layers, &psbctx->cmd, psbctx->cmd.caption);
+        if (ret == PSB_NA && psbctx->on_key) {
+            psbctx->on_key(psbctx);
+        }
     }
     return 0;
 }
@@ -187,22 +830,12 @@ typedef struct {
 } pveh_ctx;
 
 static int
-pveh_header(void *ctx) {
-    pveh_ctx *cx = (pveh_ctx*) ctx;
+pveh_header(PSB_CTX *ctx) {
+    pveh_ctx *cx = (pveh_ctx*) ctx->cmd.priv;
     vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": 編輯歷史】 ", cx->subject);
     move(1, 0);
     outs("請注意本系統不會永久保留所有的編輯歷史。");
     outs("\n");
-    return 0;
-}
-
-static int
-pveh_footer(void *ctx GCC_UNUSED) {
-    vs_footer(" 編輯歷史 ",
-              " (↑↓)移動 (Enter/r/→)選擇 (x)存入信箱 "
-              "(~)" RECYCLE_BIN_NAME
-              "\t(q/←)跳出");
-    move(b_lines-1, 0);
     return 0;
 }
 
@@ -217,12 +850,13 @@ pveh_solve_rev_filename(int rev, int i, char *fname, size_t sz_fname,
 }
 
 static int
-pveh_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
+pveh_renderer(int i, PSB_CTX *ctx) {
     const char *subject = "";
     char fname[PATHLEN];
     time4_t ftime = 0;
     const time4_t INVALID_TS = -1;
-    pveh_ctx *cx = (pveh_ctx*) ctx;
+    pveh_ctx *cx = (pveh_ctx*) ctx->cmd.priv;
+    int curr = ctx->cmd.curr, total = ctx->cmd.total;
     int rev = total - i; // i/curr = 0 based, rev = 1 based
 
     if (cx->timestamps[i] == 0) {
@@ -257,41 +891,52 @@ pveh_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
 }
 
 static int
-pveh_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ctx) {
+pveh_cmd_view(cmd_ctx_t *ctx) {
     char fname[PATHLEN];
-    pveh_ctx *cx = (pveh_ctx*) ctx;
-    int rev = total - curr; // see renderer
-
-    switch (key) {
-        case KEY_ENTER:
-        case KEY_RIGHT:
-        case 'r':
-            pveh_solve_rev_filename(rev, curr, fname, sizeof(fname), cx);
-            more(fname, YEA);
-            return PSB_NOP;
-
-        case '~':
-            cx->leave_for_recycle_bin = 1;
-            return PSB_EOF;
-
-        case 'x':
-            pveh_solve_rev_filename(rev, curr, fname, sizeof(fname), cx);
-            {
-                char ans[3];
-                getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
-                        ans, sizeof(ans), LCECHO);
-                if (*ans == 'y') {
-                    if (mail_send_file(cuser.userid,  cx->subject, 
-                                    fname,  RECYCLE_BIN_OWNER) == 0) {
-                        vmsg("儲存完成，請至信箱檢查備忘錄信件");
-                    } else
-                        vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
-                }
-            }
-            return PSB_NOP;
-    }
-    return PSB_NA;
+    pveh_ctx *cx = (pveh_ctx *)ctx->priv;
+    int rev = ctx->total - ctx->curr;
+    pveh_solve_rev_filename(rev, ctx->curr, fname, sizeof(fname), cx);
+    more(fname, YEA);
+    ctx->redraw = true;
+    return 0;
 }
+
+static int
+pveh_cmd_recycle_bin(cmd_ctx_t *ctx) {
+    pveh_ctx *cx = (pveh_ctx *)ctx->priv;
+    cx->leave_for_recycle_bin = 1;
+    ctx->quit = true;
+                return 0;
+}
+
+static int
+pveh_cmd_mail(cmd_ctx_t *ctx) {
+    char fname[PATHLEN];
+    char ans[3];
+    pveh_ctx *cx = (pveh_ctx *)ctx->priv;
+    int rev = ctx->total - ctx->curr;
+    pveh_solve_rev_filename(rev, ctx->curr, fname, sizeof(fname), cx);
+    getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
+            ans, sizeof(ans), LCECHO);
+    if (*ans == 'y') {
+        if (mail_send_file(cuser.userid, cx->subject,
+                           fname, RECYCLE_BIN_OWNER) == 0) {
+            vmsg("儲存完成，請至信箱檢查備忘錄信件");
+        } else
+            vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
+    }
+    ctx->redraw_footer_lines = 3;
+    return 0;
+}
+
+static const cmd_t pveh_cmds[] = {
+    { KEY_ENTER, "選擇", "檢視此版本的歷史內容", pveh_cmd_view, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, pveh_cmd_view, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, pveh_cmd_view, 0, CMD_PRIO_NONE, true },
+    { 'x', "存入信箱", "將此份歷史文件回存至個人信箱", pveh_cmd_mail, 0, CMD_PRIO_HIGH, true },
+    { '~', RECYCLE_BIN_NAME, "切換至資源回收筒", pveh_cmd_recycle_bin, 0, CMD_PRIO_HIGH },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 static int
 pveh_welcome() {
@@ -333,32 +978,34 @@ psb_view_edit_history(const char *base, const char *subject,
         .base_as_current = current_as_base,
     };
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = maxrev + pvehctx.base_as_current,
+        .cmd = {
+            .curr = 0,
+            .total = maxrev + pvehctx.base_as_current,
+            .priv = (void*)&pvehctx,
+            .caption = " 編輯歷史 ",
+        },
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
-        .ctx = (void*)&pvehctx,
         .header = pveh_header,
-        .footer = pveh_footer,
         .renderer = pveh_renderer,
-        .input_processor = pveh_input_processor,
+        .cmds = pveh_cmds,
     };
 
     pveh_welcome();
 
     if (maxrev > PVEH_LIMIT_NUMBER) {
         pvehctx.rev_base = maxrev - PVEH_LIMIT_NUMBER;
-        ctx.total -= pvehctx.rev_base;
+        ctx.cmd.total -= pvehctx.rev_base;
     }
 
-    pvehctx.timestamps = (time4_t*) malloc (sizeof(time4_t) * ctx.total);
+    pvehctx.timestamps = (time4_t*) malloc (sizeof(time4_t) * ctx.cmd.total);
     if (!pvehctx.timestamps) {
         vmsgf("內部錯誤，請至" BN_BUGREPORT "看板報告，謝謝");
         return FULLUPDATE;
     }
     // load on demand!
-    memset(pvehctx.timestamps, 0, sizeof(time4_t) * ctx.total);
+    memset(pvehctx.timestamps, 0, sizeof(time4_t) * ctx.cmd.total);
 
     psb_main(&ctx);
     free(pvehctx.timestamps);
@@ -381,8 +1028,8 @@ typedef struct {
 } pvrb_ctx;
 
 static int
-pvrb_header(void *ctx) {
-    pvrb_ctx *cx = (pvrb_ctx*) ctx;
+pvrb_header(PSB_CTX *ctx) {
+    pvrb_ctx *cx = (pvrb_ctx*) ctx->cmd.priv;
     vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME "】 ", cx->subject);
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
@@ -391,17 +1038,9 @@ pvrb_header(void *ctx) {
 }
 
 static int
-pvrb_footer(void *ctx GCC_UNUSED) {
-    vs_footer(" 已刪檔案 ",
-              " (↑/↓/PgUp/PgDn)移動 (Enter/r/→)選擇 (/a#n)搜尋 (x)存入信箱"
-              "\t(q/←)跳出");
-    move(b_lines-1, 0);
-    return 0;
-}
-
-static int
-pvrb_renderer(int i, int curr, int total, int rows GCC_UNUSED, void *ctx) {
-    pvrb_ctx *cx = (pvrb_ctx*) ctx;
+pvrb_renderer(int i, PSB_CTX *ctx) {
+    pvrb_ctx *cx = (pvrb_ctx*) ctx->cmd.priv;
+    int curr = ctx->cmd.curr, total = ctx->cmd.total;
     fileheader_t *fh = &cx->records[total - i - 1];
 
     // TODO make this load-on-demand
@@ -462,7 +1101,7 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
             aid_str++;
         aidu = aidc2aidu(aid_str);
         if (!aidu)
-            return PSB_NOP;
+            return -2;
     }
 
     // the records was in reversed ordering
@@ -475,74 +1114,95 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
             return curr;
         }
     }
-    return PSB_NOP;
+    return -2;
 }
 
 static int
-pvrb_input_processor(int key, int curr, int total, int rows GCC_UNUSED, void *ctx) {
+pvrb_cmd_view(cmd_ctx_t *ctx) {
     char fname[PATHLEN];
     int maxrev;
-    pvrb_ctx *cx = (pvrb_ctx*) ctx;
-    fileheader_t *fh = &cx->records[total - curr - 1];
+    pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
+    fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    switch (key) {
-        case 'x':
-            setdirpath(fname, cx->dirbase, fh->filename);
-            maxrev = timecapsule_get_max_revision_number(fname);
-            if (maxrev < 1) {
-                vmsg(err_no_rev);
-            } else {
-                char revfname[PATHLEN];
-                char ans[3];
-                timecapsule_get_by_revision(
-                        fname, maxrev, revfname, sizeof(revfname));
-                getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
-                        ans, sizeof(ans), LCECHO);
-                if (*ans == 'y') {
-                    if (mail_send_file(cuser.userid,  fh->title, 
-                                    revfname,  RECYCLE_BIN_OWNER) == 0) {
-                        vmsg("儲存完成，請至信箱檢查備忘錄信件");
-                    } else {
-                        vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
-                        return PSB_EOF;
-                    }
-                }
-            }
-            return PSB_NOP;
-
-        case '#':
-        case '/':
-        case 'a':
-        case 'n':
-            {
-                int newloc = pvrb_search(key, curr, total, cx);
-                if (newloc >= 0)
-                    return newloc;
-                if (newloc == PSB_NOP)
-                    vmsg("找不到符合的資料。");
-            }
-            return PSB_NOP;
-
-        case KEY_ENTER:
-        case KEY_RIGHT:
-        case 'r':
-            setdirpath(fname, cx->dirbase, fh->filename);
-            maxrev = timecapsule_get_max_revision_number(fname);
-            if (maxrev == 1) {
-                char revfname[PATHLEN];
-                timecapsule_get_by_revision(
-                        fname, 1, revfname, sizeof(revfname));
-                more(revfname, YEA);
-            } else if (maxrev > 1) {
-                psb_view_edit_history(fname, fh->title, maxrev, 0);
-            } else {
-                vmsg(err_no_rev);
-            }
-            return PSB_NOP;
+    setdirpath(fname, cx->dirbase, fh->filename);
+    maxrev = timecapsule_get_max_revision_number(fname);
+    if (maxrev == 1) {
+        char revfname[PATHLEN];
+        timecapsule_get_by_revision(
+                fname, 1, revfname, sizeof(revfname));
+        more(revfname, YEA);
+        ctx->redraw = true;
+    } else if (maxrev > 1) {
+        psb_view_edit_history(fname, fh->title, maxrev, 0);
+        ctx->redraw = true;
+    } else {
+        vmsg(err_no_rev);
+        ctx->redraw_footer_lines = 1;
     }
-    return PSB_NA;
+    return 0;
 }
+
+static int
+pvrb_cmd_mail(cmd_ctx_t *ctx) {
+    char fname[PATHLEN];
+    int maxrev;
+    pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
+    fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
+    const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
+
+    setdirpath(fname, cx->dirbase, fh->filename);
+    maxrev = timecapsule_get_max_revision_number(fname);
+    if (maxrev < 1) {
+        vmsg(err_no_rev);
+        ctx->redraw_footer_lines = 1;
+    } else {
+        char revfname[PATHLEN];
+        char ans[3];
+        timecapsule_get_by_revision(
+                fname, maxrev, revfname, sizeof(revfname));
+        getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
+                ans, sizeof(ans), LCECHO);
+        if (*ans == 'y') {
+            if (mail_send_file(cuser.userid, fh->title,
+                               revfname, RECYCLE_BIN_OWNER) == 0) {
+                vmsg("儲存完成，請至信箱檢查備忘錄信件");
+            } else {
+                vmsg("儲存失敗，請至 " BN_BUGREPORT " 看板報告，謝謝");
+                ctx->quit = true;
+                return 0;
+            }
+        }
+        ctx->redraw_footer_lines = 3;
+    }
+    return 0;
+}
+
+static int
+pvrb_cmd_search(cmd_ctx_t *ctx) {
+    pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
+    int newloc = pvrb_search(ctx->key, ctx->curr, ctx->total, cx);
+    ctx->redraw_footer_lines = 2;
+    if (newloc == PSB_NA)
+        return 0;
+    if (newloc >= 0)
+        ctx->curr = newloc;
+    else
+        vmsg("找不到符合的資料。");
+    return 0;
+}
+
+static const cmd_t pvrb_cmds[] = {
+    { KEY_ENTER, "選擇", "檢視回收筒文章內容或歷史版本", pvrb_cmd_view, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, pvrb_cmd_view, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, pvrb_cmd_view, 0, CMD_PRIO_NONE, true },
+    { 'x', "存入信箱", "將文章最新版本存入個人信箱", pvrb_cmd_mail, 0, CMD_PRIO_HIGH, true },
+    { '/', "搜尋", "搜尋標題關鍵字", pvrb_cmd_search, 0, CMD_PRIO_NORM, true },
+    { 'a', NULL, "搜尋作者帳號", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
+    { '#', NULL, "搜尋文章代碼 (AID)", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
+    { 'n', NULL, "尋找下一筆符合項目", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 static int
 pvrb_welcome() {
@@ -583,16 +1243,18 @@ psb_recycle_bin(const char *base, const char *title) {
         .subject = title,
     };
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = 0, // maxrev + pvrbctx.base_as_current,
+        .cmd = {
+            .curr = 0,
+            .total = 0,
+            .priv = (void*)&pvrbctx,
+            .caption = " 已刪檔案 ",
+        },
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
-        .ctx = (void*)&pvrbctx,
         .header = pvrb_header,
-        .footer = pvrb_footer,
         .renderer = pvrb_renderer,
-        .input_processor = pvrb_input_processor,
+        .cmds = pvrb_cmds,
     };
 
     nrecords = timecapsule_get_max_archive_number(base, sizeof(fileheader_t));
@@ -608,7 +1270,7 @@ psb_recycle_bin(const char *base, const char *title) {
         viewbase = nrecords - PVRB_LIMIT_NUMBER;
         nrecords -= viewbase;
     }
-    ctx.total = nrecords;
+    ctx.cmd.total = nrecords;
 
     pvrbctx.records = (fileheader_t*) malloc (sizeof(fileheader_t) * nrecords);
     if (!pvrbctx.records) {
@@ -631,24 +1293,17 @@ typedef struct {
 } pvcm_ctx;
 
 static int
-pvcm_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar(" 【推文管理】", "");
+pvcm_header(PSB_CTX *ctx GCC_UNUSED) {
+    vs_hdr2bar(" 【推文管理】 ", "");
     move(1, 0);
     vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
     return 0;
 }
 
 static int
-pvcm_footer(void *ctx GCC_UNUSED) {
-    vs_footer(" 推文 ",
-              " (↑/↓/PgUp/PgDn)移動 (d)刪除 (U)快速水桶\t(q/←)跳出");
-    move(b_lines-1, 0);
-    return 0;
-}
-
-static int
-pvcm_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx*) ctx;
+pvcm_renderer(int i, PSB_CTX *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx*) ctx->cmd.priv;
+    int curr = ctx->curr;
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
@@ -661,50 +1316,50 @@ pvcm_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *
 }
 
 static int
-pvcm_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx*) ctx;
-
-    switch(key) {
-        case KEY_DEL:
-        case 'd':
-            do {
-                // See comments.c for max length of reason.
-                char reason[40];
-                const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
-                if (!resp || resp->type < 0)
-                    break;
-                if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
-                            reason, sizeof(reason), DOECHO))
-                    break;
-                if (vans("確定要刪除嗎？ (y/N) ")) == 'y') {
-                    if (CommentsDeleteFromTextFile(cx->cmctx, curr, reason)
-                        != 0) {
-                        vmsg("刪除失敗。可能原文已被修改。");
-                    }
-                }
-
-            } while(0);
-
-            return PSB_NOP;
-
-        case 'U':
-            do {
-                const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
-                const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
-                if (!resp)
-                    break;
-                edit_user_acl_for_board(resp->userid, key->board);
-            } while(0);
-
-            return PSB_NOP;
+pvcm_cmd_delete(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    char reason[40];
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
+    if (!resp || resp->type < 0)
+        return 0;
+    if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
+                 reason, sizeof(reason), DOECHO)) {
+        ctx->redraw_footer_lines = 3;
+        return 0;
     }
-    return PSB_NA;
+    if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
+        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0) {
+            vmsg("刪除失敗。可能原文已被修改。");
+        }
+        ctx->redraw = true;
+    } else {
+        ctx->redraw_footer_lines = 3;
+    }
+    return 0;
 }
+
+static int
+pvcm_cmd_acl(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
+    if (resp)
+        edit_user_acl_for_board(resp->userid, key->board);
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t pvcm_cmds[] = {
+    { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
+    { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
+    { 'U', "快速水桶", "設定該推文作者的看板水桶權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 static int
 pvcm_welcome() {
     clear();
-    vs_hdr2("刪除推文", "警告");
+    vs_hdr2(" 刪除推文 ", " 警告");
     move(2, 0);
     // This must be a outs because we have '%' inside.
     outs(ANSI_COLOR(1;31)
@@ -725,24 +1380,26 @@ psb_comment_manager(const char *board, const char *file) {
         NULL,
     };
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = 0,
+        .cmd = {
+            .curr = 0,
+            .total = 0,
+            .priv = (void*)&pvcmctx,
+            .caption = " 推文管理 ",
+        },
         .header_lines = 2,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
-        .ctx = (void*)&pvcmctx,
         .header = pvcm_header,
-        .footer = pvcm_footer,
         .renderer = pvcm_renderer,
-        .input_processor = pvcm_input_processor,
+        .cmds = pvcm_cmds,
     };
     pvcmctx.cmctx = CommentsOpen(board, file);
     if (!pvcmctx.cmctx) {
         vmsg("系統錯誤，請至 " BN_BUGREPORT " 報告。");
         return FULLUPDATE;
     }
-    ctx.total = CommentsGetCount(pvcmctx.cmctx);
-    if (ctx.total){
+    ctx.cmd.total = CommentsGetCount(pvcmctx.cmctx);
+    if (ctx.cmd.total){
         pvcm_welcome();
         psb_main(&ctx);
     } else {
@@ -768,73 +1425,94 @@ typedef struct {
 } pae_ctx;
 
 static int
-pae_header(void *ctx GCC_UNUSED) {
+pae_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0) {
+        if (col == 0)
+            return str_term_width("名  稱");
+        if (col == 1)
+            return str_term_width("檔  名");
+        return 0;
+    }
+    pae_ctx *cx = (pae_ctx *)ctx->cmd.priv;
+    if (col == 0)
+        return str_term_width(cx->descs[i]);
+    if (col == 1)
+        return str_term_width(cx->files[i]);
+    return 0;
+}
+
+static int
+pae_header(PSB_CTX *ctx) {
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
     vs_hdr2bar(" 【系統檔案】 ", "  編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
     vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
-         "%5s %-36s%-30s", "編號", "名  稱", "檔  名"));
+         "%5s %-*s %-*s", "編號", w0, "名  稱", w1, "檔  名"));
     return 0;
 }
 
 static int
-pae_footer(void *ctx GCC_UNUSED) {
-    vs_footer(" 編輯系統檔案 ",
-              " (↑↓/0-9)移動 (Enter/e/r/→)編輯 (DEL/d)刪除 \t(q/←)跳出");
-    move(b_lines-1, 0);
-    return 0;
-}
-
-static int
-pae_renderer(int i, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
-    pae_ctx *cx = (pae_ctx*) ctx;
-    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET "\n",
+pae_renderer(int i, PSB_CTX *ctx) {
+    pae_ctx *cx = (pae_ctx*) ctx->cmd.priv;
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
+    prints("  %3d %s%s%-*.*s " ANSI_COLOR(1;37) "%-*.*s" ANSI_RESET "\n",
             i+1,
-            (i == curr) ? ANSI_COLOR(41) : "",
+            (i == ctx->cmd.curr) ? ANSI_COLOR(41) : "",
             dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30),
-            cx->descs[i], cx->files[i]);
+            w0, w0, cx->descs[i], w1, w1, cx->files[i]);
     return 0;
 }
 
 static int
-pae_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED, void *ctx) {
-    int result;
-    pae_ctx *cx = (pae_ctx*) ctx;
-
-    switch(key) {
-        case KEY_DEL:
-        case 'd':
-            if (vans(TEMPFORMAT(STRLEN, "確定要刪除 %s 嗎？ (y/N) ", cx->descs[curr])) == 'y')
-                unlink(cx->files[curr]);
-            vmsgf("系統檔案[%s]: %s", cx->files[curr],
-                  !dashf(cx->files[curr]) ?  "刪除成功\ " : "未刪除");
-            return PSB_NOP;
-
-        case KEY_ENTER:
-        case KEY_RIGHT:
-        case 'r':
-        case 'e':
-        case 'E':
-            result = veditfile(cx->files[curr]);
-            // log file change
-            if (result != EDIT_ABORTED)
-            {
-                log_filef("log/etc_edit.log",
-                          "%s %s # %s\n",
-                          cuser.userid,
-                          cx->files[curr],
-                          cx->descs[curr]);
-            }
-            vmsgf("系統檔案[%s]: %s",
-                  cx->files[curr],
-                  (result == EDIT_ABORTED) ?  "未改變" : "更新完畢");
-            // FN_CONF_BANIP should be $BBSHOME/etc/banip.conf
-            if (str_ends_with(cx->files[curr], path_basename(FN_CONF_BANIP))) {
-                test_banip_conf(cx->files[curr]);
-            }
-            return PSB_NOP;
+pae_cmd_delete(cmd_ctx_t *ctx) {
+    pae_ctx *cx = (pae_ctx *)ctx->priv;
+    if (vans(TEMPFORMAT(STRLEN, "確定要刪除 %s 嗎？ (y/N) ", cx->descs[ctx->curr])) == 'y') {
+        unlink(cx->files[ctx->curr]);
+        ctx->redraw = true;
+    } else {
+        ctx->redraw_footer_lines = 1;
     }
-    return PSB_NA;
+    vmsgf("系統檔案[%s]: %s", cx->files[ctx->curr],
+          !dashf(cx->files[ctx->curr]) ?  "刪除成功\ " : "未刪除");
+    return 0;
 }
+
+static int
+pae_cmd_edit(cmd_ctx_t *ctx) {
+    pae_ctx *cx = (pae_ctx *)ctx->priv;
+    int result = veditfile(cx->files[ctx->curr]);
+    // log file change
+    if (result != EDIT_ABORTED)
+    {
+        log_filef("log/etc_edit.log",
+                  "%s %s # %s\n",
+                  cuser.userid,
+                  cx->files[ctx->curr],
+                  cx->descs[ctx->curr]);
+    }
+    vmsgf("系統檔案[%s]: %s",
+          cx->files[ctx->curr],
+          (result == EDIT_ABORTED) ?  "未改變" : "更新完畢");
+    // FN_CONF_BANIP should be $BBSHOME/etc/banip.conf
+    if (str_ends_with(cx->files[ctx->curr], path_basename(FN_CONF_BANIP))) {
+        test_banip_conf(cx->files[ctx->curr]);
+    }
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t pae_cmds[] = {
+    { KEY_ENTER, "編輯", "編輯選取的系統檔案", pae_cmd_edit, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, pae_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, pae_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'e', NULL, NULL, pae_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'E', NULL, NULL, pae_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { KEY_DEL, "刪除", "刪除選取的系統檔案", pae_cmd_delete, 0, CMD_PRIO_HIGH, true },
+    { 'd', NULL, NULL, pae_cmd_delete, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 int
 psb_admin_edit() {
@@ -843,16 +1521,21 @@ psb_admin_edit() {
     FILE *fp;
     pae_ctx paectx = { {0}, };
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = 0,
+        .cmd = {
+            .curr = 0,
+            .total = 0,
+            .priv = (void*)&paectx,
+            .caption = " 系統檔案 ",
+        },
         .header_lines = 4,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
-        .ctx = (void*)&paectx,
+        .cols = 2,
+        .col_paddings = 7,
+        .col_measurer = pae_col_measurer,
         .header = pae_header,
-        .footer = pae_footer,
         .renderer = pae_renderer,
-        .input_processor = pae_input_processor,
+        .cmds = pae_cmds,
     };
 
     fp = fopen(FN_CONF_EDITABLE, "rt");
@@ -864,7 +1547,7 @@ psb_admin_edit() {
 
     // load the editable file.
     // format: filename [ \t]* description
-    while (ctx.total < MAX_PAE_ENTRIES &&
+    while (ctx.cmd.total < MAX_PAE_ENTRIES &&
            fgets(buf, sizeof(buf), fp)) {
         char *k = buf, *v = buf;
         if (!*buf || strchr("#./ \t\n\r", *buf))
@@ -893,16 +1576,16 @@ psb_admin_edit() {
         trim(v);
 
         // add into context
-        paectx.files[ctx.total] = strdup(k);
-        paectx.descs[ctx.total] = strdup(v);
-        ctx.total++;
+        paectx.files[ctx.cmd.total] = strdup(k);
+        paectx.descs[ctx.cmd.total] = strdup(v);
+        ctx.cmd.total++;
     }
-    if (ctx.total >= MAX_PAE_ENTRIES)
+    if (ctx.cmd.total >= MAX_PAE_ENTRIES)
         vmsg("注意: 您的系統設定已超過或接近預設上限，請洽系統站長加大設定");
 
     psb_main(&ctx);
 
-    for (i = 0; i < ctx.total; i++) {
+    for (i = 0; i < ctx.cmd.total; i++) {
         free(paectx.files[i]);
         free(paectx.descs[i]);
     }
