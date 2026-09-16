@@ -193,7 +193,6 @@ u_exit(const char *mode)
     close(1);
 
     // verify if utmp is valid. only flush data if utmp is correct.
-    assert(strncmp(currutmp->userid,cuser.userid, IDLEN)==0);
     if(strncmp(currutmp->userid, cuser.userid, IDLEN)!=0)
 	return;
 
@@ -219,6 +218,7 @@ abort_bbs(int sig GCC_UNUSED)
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGTERM, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
+    Signal(SIGXCPU, SIG_IGN);
     if (currmode) {
 	STATINC(STAT_MBBSD_ABORTED);
 	u_exit("ABORTED");
@@ -255,6 +255,7 @@ abort_bbs_debug(int sig)
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGTERM, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
+    Signal(SIGXCPU, SIG_IGN);
     Signal(SIGSEGV, SIG_DFL);
 
     /* unblock */
@@ -266,7 +267,6 @@ abort_bbs_debug(int sig)
     sigaddset(&sigset, SIGFPE);
     sigaddset(&sigset, SIGBUS);
     sigaddset(&sigset, SIGSEGV);
-    sigaddset(&sigset, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
     fprintf(stderr, "%d %d %d %.12s\n", (int)time4(NULL), getpid(), sig, cuser.userid);
