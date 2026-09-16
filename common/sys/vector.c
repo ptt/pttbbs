@@ -143,9 +143,13 @@ Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag)
     Vector_clear(dst, src->size);
 
     len = strlen(tag);
-    for (i=0; i<src->length; i++)
-	if (len==0 || strncasecmp(src->base + src->size * i, tag, len)==0)
-	    Vector_add(dst, src->base + src->size * i);
+    for (i=0; i<src->length; i++) {
+	const char *p = src->base + src->size * i;
+	if (!p[0])
+	    continue;
+	if (len==0 || strncasecmp(p, tag, len)==0)
+	    Vector_add(dst, p);
+    }
 }
 
 int

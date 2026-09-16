@@ -62,12 +62,76 @@ ShowVector(struct Vector *list, int row, int col, const char * msg, int idx)
     return idx;
 }
 
+#define MAX_COMPLETE_LIST   25
+
 struct namecomplete_int {
     const struct Vector * base;
     struct Vector sublist;
+    char sublist_buf[(MAX_COMPLETE_LIST + 1) * (IDLEN + 1)];
     int idx, dirty;
     int allow_nonexistent_prefix;
+    int is_usercomplete;
+    bool is_truncated;
 };
+
+static int
+nc_sublist(struct namecomplete_int *nc_int, const struct Vector *src, const char *tag,
+	   char *dst_buf, bool *out_truncated)
+{
+    int i, len = strlen(tag);
+    int count = 0;
+    bool truncated = false;
+    char exact_id[IDLEN + 1] = "";
+    int first_uc = len > 0 ? chartoupper((unsigned char)tag[0]) : 0;
+
+    if (len == 0 && nc_int->is_usercomplete) {
+	*out_truncated = true;
+	return 0;
+    }
+
+    if (len > 0 && src == nc_int->base) {
+	if (nc_int->is_usercomplete) {
+	    if (searchuser(tag, exact_id) > 0) {
+		strlcpy(dst_buf, exact_id, IDLEN + 1);
+		count = 1;
+	    }
+	} else {
+	    int idx = Vector_search(src, tag);
+	    if (idx >= 0) {
+		strlcpy(exact_id, Vector_get(src, idx), IDLEN + 1);
+		strlcpy(dst_buf, exact_id, IDLEN + 1);
+		count = 1;
+	    }
+	}
+    }
+
+    for (i = 0; i < src->length; i++) {
+	const char *item = src->base + src->size * i;
+	if (!item[0])
+	    continue;
+	if (len > 0) {
+	    if (chartoupper((unsigned char)item[0]) != first_uc)
+		continue;
+	    if (len > 1 && strncasecmp(item + 1, tag + 1, len - 1) != 0)
+		continue;
+	}
+	if (exact_id[0] && strcasecmp(item, exact_id) == 0)
+	    continue;
+
+	if (count < MAX_COMPLETE_LIST) {
+	    strlcpy(dst_buf + count * (IDLEN + 1), item, IDLEN + 1);
+	    count++;
+	} else {
+	    strlcpy(dst_buf + MAX_COMPLETE_LIST * (IDLEN + 1), "...", IDLEN + 1);
+	    count = MAX_COMPLETE_LIST + 1;
+	    truncated = true;
+	    break;
+	}
+    }
+
+    *out_truncated = truncated;
+    return count;
+}
 
 static int
 nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
@@ -77,17 +141,23 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
     prt->buf[prt->iend] = 0;
 
-    if (nc_int->dirty < 0) {
-	Vector_sublist(nc_int->base, &nc_int->sublist, prt->buf);
-	nc_int->idx = 0;
-	nc_int->dirty = 0;
-    }
-
     switch (key) {
 	case KEY_ENTER:
-	    if (Vector_length(&nc_int->sublist) == 1)
+	    if (prt->iend == 0) {
+		prt->buf[0] = '\0';
+		break;
+	    }
+	    if (nc_int->dirty < 0) {
+		int count = nc_sublist(nc_int, nc_int->base, prt->buf,
+				       nc_int->sublist_buf, &nc_int->is_truncated);
+		Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
+		nc_int->idx = 0;
+		nc_int->dirty = 0;
+	    }
+	    if (!nc_int->is_truncated && Vector_length(&nc_int->sublist) == 1)
 		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
-	    else if ((tmp = Vector_search(&nc_int->sublist, prt->buf)) >= 0)
+	    else if ((tmp = Vector_search(&nc_int->sublist, prt->buf)) >= 0 &&
+		     !(nc_int->is_truncated && tmp == Vector_length(&nc_int->sublist) - 1))
 		strlcpy(prt->buf, Vector_get(&nc_int->sublist, tmp), prt->len);
 	    else
 		prt->buf[0] = '\0';
@@ -95,7 +165,16 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    break;
 
 	case ' ':
-	    if (Vector_length(&nc_int->sublist) == 1) {
+	    if (nc_int->is_usercomplete && prt->iend == 0)
+		return VGETCB_NEXT;
+	    if (nc_int->dirty < 0) {
+		int count = nc_sublist(nc_int, nc_int->base, prt->buf,
+				       nc_int->sublist_buf, &nc_int->is_truncated);
+		Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
+		nc_int->idx = 0;
+		nc_int->dirty = 0;
+	    }
+	    if (!nc_int->is_truncated && Vector_length(&nc_int->sublist) == 1) {
 		const char *target = Vector_get(&nc_int->sublist, 0);
 		// Update the buffer if the current input does not match the
 		// completion target, using exact matching.
@@ -115,7 +194,7 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    printdash(COMPLETE_LIST_TITLE, 0);
 
 	    nc_int->idx = ShowVector(&nc_int->sublist, 3, 0, NULL, nc_int->idx);
-	    if (nc_int->idx < Vector_length(&nc_int->sublist))
+	    if (nc_int->idx > 0)
 		vshowmsg(COMPLETE_MORE_MSG);
 	    return VGETCB_NEXT;
 	    break;
@@ -128,23 +207,26 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 	default:
 	    if (isprint(key)) {
-		struct Vector tmplist;
+		char tmp_buf[(MAX_COMPLETE_LIST + 1) * (IDLEN + 1)];
+		bool tmp_truncated = false;
+		const struct Vector *src = (nc_int->dirty < 0 || nc_int->is_truncated)
+					   ? nc_int->base : &nc_int->sublist;
+		int count;
 
 		prt->buf[prt->iend] = key;
 		prt->buf[prt->iend + 1] = 0;
 
-		Vector_init(&tmplist, IDLEN + 1);
-		Vector_sublist(&nc_int->sublist, &tmplist, prt->buf);
+		count = nc_sublist(nc_int, src, prt->buf, tmp_buf, &tmp_truncated);
 
-		if (!nc_int->allow_nonexistent_prefix &&
-		    Vector_length(&tmplist) == 0) {
-		    Vector_delete(&tmplist);
+		if (!nc_int->allow_nonexistent_prefix && count == 0) {
 		    prt->buf[prt->iend] = 0;
 		    return VGETCB_NEXT;
 		} else {
-		    Vector_delete(&nc_int->sublist);
-		    nc_int->sublist = tmplist;
+		    memcpy(nc_int->sublist_buf, tmp_buf, count * (IDLEN + 1));
+		    Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
+		    nc_int->is_truncated = tmp_truncated;
 		    nc_int->idx = 0;
+		    nc_int->dirty = 0;
 		    prt->buf[prt->iend] = 0;
 		}
 	    }
@@ -168,11 +250,13 @@ namecomplete_internal(struct namecomplete_int *nc_int, const char *prompt, char 
 	.change = NULL,
 	.redraw = NULL,
     };
+    int count;
 
     outs(prompt);
     clrtoeol();
-    Vector_init(&nc_int->sublist, IDLEN+1);
-    Vector_sublist(nc_int->base, &nc_int->sublist, defval ? defval : "");
+    count = nc_sublist(nc_int, nc_int->base, defval ? defval : "",
+		       nc_int->sublist_buf, &nc_int->is_truncated);
+    Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
     vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, defval, &vcb, nc_int);
     Vector_delete(&nc_int->sublist);
 }
@@ -183,6 +267,7 @@ namecomplete3(const struct Vector *namelist, const char *prompt, char *data, con
     struct namecomplete_int nc_int = {
 	.base = namelist,
 	.dirty = 0,
+	.is_usercomplete = 0,
     };
     namecomplete_internal(&nc_int, prompt, data, defval);
 }
@@ -195,10 +280,9 @@ usercomplete2(const char *prompt, char *data, const char *defval)
 	.base = &namelist,
 	.dirty = 0,
 	.allow_nonexistent_prefix = 1,
+	.is_usercomplete = 1,
     };
 
-    // TODO namecomplete3 會把 namelist 東西全部 dupe 一份，在大站上作個幾百次
-    // 就 over cpu computation limit 了； we need a better implementation.
     Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
     namecomplete_internal(&nc_int, prompt, data, defval);
 }
