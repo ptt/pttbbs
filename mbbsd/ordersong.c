@@ -285,16 +285,21 @@ static void
 sortsong(void)
 {
     FILE           *fo, *fp = fopen(BBSHOME "/" FN_USSONG, "r");
-    songcmp_t       songs[MAX_SONGS + 1];
+    songcmp_t      *songs;
     int             n;
     char            buf[256], cbuf[256];
     int totalcount = 0;
 
-    memset(songs, 0, sizeof(songs));
     if (!fp)
 	return;
     if (!(fo = fopen(FN_TOPSONG, "w"))) {
 	fclose(fp);
+	return;
+    }
+    songs = (songcmp_t *)calloc(MAX_SONGS + 1, sizeof(songcmp_t));
+    if (!songs) {
+	fclose(fp);
+	fclose(fo);
 	return;
     }
     totalcount = 0;
@@ -325,4 +330,5 @@ sortsong(void)
     }
     fclose(fp);
     fclose(fo);
+    free(songs);
 }
