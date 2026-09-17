@@ -364,8 +364,14 @@ int more(const char *fpath, int promptend)
 
 	    // print prompt bar
 	    SNPRINTF(buf, "  ÂsÄý P.%d  ", 1 + (lineno / (t_lines-2)));
-	    vs_footer(buf,
-	    " (¡÷¡õ[PgUp][PgDn][Home][End])´å¼Ð²¾°Ê\t(¡ö/q)µ²§ô");
+	    const cmd_layer_t footer_layers[] = {
+	        { minimore_nav_cmds, NULL },
+	        { currstat == READING ? pager_reading_cmds : pager_empty_cmds, NULL },
+	        { pager_common_cmds, NULL },
+	        { bbs_global_cmds, NULL },
+	        { NULL, NULL }
+	    };
+	    vs_cmd_bar(VS_FOOTER, buf, footer_layers);
 	}
 	// process key
 	vk = vkey();
