@@ -215,8 +215,10 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     sscanf(inbuf, "%d", &closetime);
 
     // prevent death caused by a bug, it should be remove later.
-    if (item_num <= 0)
+    if (item_num <= 0) {
+	fclose(cfp);
 	return;
+    }
 
     counts = (int *)malloc(item_num * sizeof(int));
 
@@ -232,10 +234,12 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 
     // Start of the report
     // Create a temp file to hold the vote report
-    if (vote_stampfile(b_report, bname) < 0)
+    if (vote_stampfile(b_report, bname) < 0 ||
+	(tfp = fopen(b_report, "w")) == NULL) {
+	free(counts);
+	fclose(cfp);
 	return;
-    if ((tfp = fopen(b_report, "w")) == NULL)
-	return;
+    }
 
     // Report: title part
     setbfile(buf, bname, vbuf->title);
