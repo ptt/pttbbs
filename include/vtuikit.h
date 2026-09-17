@@ -203,9 +203,10 @@ int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_le
     v_multiline_text((buf), sizeof(buf), (max_lines), V_MULTILINE_LINE_LEN, (prompt), (footer_prefix))
 
 // vs_*: formatted and themed virtual screen layout
-// you cannot use ANSI escapes in these APIs.
-void vs_header	(const char *title,   const char *mid, const char *right);	/// full header for main menu and primary lists (boards, articles, users)
-void vs_draw_header(const char *title, const char *mid, const char *right);	/// full header for main menu and primary lists (boards, articles, users)
+void vs_header	(const char *title,   const char *mid, const char *right,
+		 void (*mid_cb)(int x_start, int x_end));	/// full header for main menu and primary lists (boards, articles, users)
+void vs_draw_header(const char *title, const char *mid, const char *right,
+		 void (*mid_cb)(int x_start, int x_end));	/// draw full header at top without clearing screen
 void vs_hdr	(const char *title);				/// simple header for single-topic forms/dialogs (e.g., give money, mail)
 void vs_hdr2	(const char *left, const char *right);		/// two-part header for category+subtitle/target/long-desc or dynamic state
 void vs_draw_hdr2(const char *left, const char *right);		/// draw two-part header at top without clearing screen

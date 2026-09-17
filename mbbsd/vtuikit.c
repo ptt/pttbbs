@@ -492,9 +492,11 @@ vs_rectangle_simple(int l, int t, int r, int b)
  * @param title: 靠左的主要標題，不會被切斷。
  * @param mid: 置中說明，可被切齊。
  * @param right: 靠右的說明，空間夠才會顯示。
+ * @param mid_cb: 若非 NULL，繪製 mid 時會呼叫 mid_cb(x_start, x_end) 通知座標範圍。
  */
 void
-vs_draw_header(const char *title, const char *mid, const char *right)
+vs_draw_header(const char *title, const char *mid, const char *right,
+          void (*mid_cb)(int x_start, int x_end))
 {
     int w = MAX_COL;
     int szmid   = mid   ? stream_width(mid) : 0;
@@ -527,6 +529,8 @@ vs_draw_header(const char *title, const char *mid, const char *right)
 	szright = 0;
 
     if (szmid) {
+	if (mid_cb)
+	    mid_cb(MAX_COL - w, MAX_COL - w + szmid);
 	if (*mid != ESC_CHR)
 	    outs(VCLR_HEADER_MID);
 	fillns(szmid, mid);
@@ -543,10 +547,12 @@ vs_draw_header(const char *title, const char *mid, const char *right)
 }
 
 void
-vs_header(const char *title, const char *mid, const char *right)
+vs_header(const char *title, const char *mid, const char *right,
+          void (*mid_cb)(int x_start, int x_end))
 {
     clear();
-    vs_draw_header(title, mid, right);
+    cmd_bar_clear_hotspots();
+    vs_draw_header(title, mid, right, mid_cb);
 }
 
 /**
