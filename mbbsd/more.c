@@ -47,97 +47,96 @@ check_sysop_edit_perm(const char *fpath)
 }
 #endif
 
+typedef struct {
+    int retval;
+    int *lineno;
+    int lines;
+    int showall;
+} pager_ctx_t;
+
+static int pager_cmd_chess(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOCHESSREPLAY; return 0; }
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+static int pager_cmd_bbslua(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOBBSLUA; return 0; }
+#endif
+static int pager_cmd_query(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOQUERYINFO; return 0; }
+static int pager_cmd_copy2tmp(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_COPY2TMP; return 0; }
+static int pager_cmd_edit(cmd_ctx_t *ctx) {
+#ifdef USE_SYSOP_EDIT
+    if (check_sysop_edit_perm("")) {
+        ((pager_ctx_t *)ctx->priv)->retval = RET_DOSYSOPEDIT;
+        return 0;
+    }
+#endif
+    ((pager_ctx_t *)ctx->priv)->retval = RET_EDITPOST;
+    return 0;
+}
+static int pager_cmd_edittitle(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_EDITTITLE; return 0; }
+static int pager_cmd_recommend(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DORECOMMEND; return 0; }
+static int pager_cmd_reply(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOREPLY; return 0; }
+static int pager_cmd_replyall(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOREPLYALL; return 0; }
+static int pager_cmd_selectbrd(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_SELECTBRD; return 0; }
+static int pager_cmd_selectaid(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_SELECTAID; return 0; }
+static int pager_cmd_author_prev(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = AUTHOR_PREV; return 0; }
+static int pager_cmd_author_next(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = AUTHOR_NEXT; return 0; }
+static int pager_cmd_read_next(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = READ_NEXT; return 0; }
+static int pager_cmd_read_prev(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = READ_PREV; return 0; }
+static int pager_cmd_relate_next(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RELATE_NEXT; return 0; }
+static int pager_cmd_relate_prev(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RELATE_PREV; return 0; }
+static int pager_cmd_relate_first(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RELATE_FIRST; return 0; }
+
+static const cmd_t pager_reading_cmds[] = {
+    { 's', "切換看板", "搜尋並切換至其他看板", pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
+    { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", pager_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t pager_common_cmds[] = {
+    { 'y', "回應", "回覆文章至看板或信箱", pager_cmd_replyall, 0, CMD_PRIO_HIGH },
+    { 'Y', NULL, NULL, pager_cmd_replyall, 0, CMD_PRIO_NONE },
+    { 'X', "推文", "推薦或評論文章", pager_cmd_recommend, 0, CMD_PRIO_HIGH },
+    { '%', NULL, NULL, pager_cmd_recommend, 0, CMD_PRIO_NONE },
+    { 'r', "回信回文", "回覆給作者或回文", pager_cmd_reply, 0, CMD_PRIO_NORM },
+    { 'R', NULL, NULL, pager_cmd_reply, 0, CMD_PRIO_NONE },
+    { ']', "同主題下篇", "閱\讀同主題的下一篇文章", pager_cmd_relate_next, 0, CMD_PRIO_NORM },
+    { '+', NULL, NULL, pager_cmd_relate_next, 0, CMD_PRIO_NONE },
+    { '[', "同主題前篇", "閱\讀同主題的上一篇文章", pager_cmd_relate_prev, 0, CMD_PRIO_NORM },
+    { '-', NULL, NULL, pager_cmd_relate_prev, 0, CMD_PRIO_NONE },
+    { '=', "同主題首篇", "閱\讀同主題的第一篇文章", pager_cmd_relate_first, 0, CMD_PRIO_LOW },
+    { 'f', "下篇文章", "閱\讀列表中的下一篇文章", pager_cmd_read_next, 0, CMD_PRIO_LOW },
+    { 'F', NULL, NULL, pager_cmd_read_next, 0, CMD_PRIO_NONE },
+    { 'b', "前篇文章", "閱\讀列表中的上一篇文章", pager_cmd_read_prev, 0, CMD_PRIO_LOW },
+    { 'B', NULL, NULL, pager_cmd_read_prev, 0, CMD_PRIO_NONE },
+    { 'a', "同作者下篇", "閱\讀同作者的下一篇文章", pager_cmd_author_next, 0, CMD_PRIO_LOW },
+    { 'A', "同作者前篇", "閱\讀同作者的上一篇文章", pager_cmd_author_prev, 0, CMD_PRIO_LOW },
+    { 'Q', "查詢資訊", "查詢文章代碼(AID)與檔案資訊", pager_cmd_query, 0, CMD_PRIO_LOW },
+    { 'E', "修改文章", "編輯目前文章內容", pager_cmd_edit, 0, CMD_PRIO_LOW },
+    { 'T', "修改標題", "修改目前文章標題", pager_cmd_edittitle, 0, CMD_PRIO_LOW },
+    { Ctrl('T'), "存入暫存檔", "將目前文章存入個人暫存檔", pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_LOW },
+    { Ctrl('K'), NULL, NULL, pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_NONE },
+    { 'z', "棋局打譜", "進入棋局重播/打譜模式", pager_cmd_chess, PERM_BASIC, CMD_PRIO_LOW },
+#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
+    { 'L', "執行BBSLua", "執行文章內嵌的 BBSLua 程式", pager_cmd_bbslua, PERM_BASIC, CMD_PRIO_LOW },
+    { 'l', NULL, NULL, pager_cmd_bbslua, PERM_BASIC, CMD_PRIO_NONE },
+#endif
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t pager_empty_cmds[] = {
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
 static int
 common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 {
-    switch(ch)
-    {
-	// Special service keys
-	case 'z':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOCHESSREPLAY;
-
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case 'L':
-	case 'l':
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_DOBBSLUA;
-#endif
-
-	// Query information and file touch
-	case 'Q':
-	    return RET_DOQUERYINFO;
-
-	case Ctrl('T'):
-	case Ctrl('K'):
-	    if (!HasUserPerm(PERM_BASIC))
-		break;
-	    return RET_COPY2TMP;
-
-	case 'E':
-#ifdef USE_SYSOP_EDIT
-	    // for early check, skip file name (must check again later)
-            if (check_sysop_edit_perm(""))
-                return RET_DOSYSOPEDIT;
-            else
-#endif
-                return RET_EDITPOST;
-
-	case 'T':
-            return RET_EDITTITLE;
-
-	// Making Response
-	case '%':
-	case 'X':
-	    return RET_DORECOMMEND;
-
-	case 'r': case 'R':
-	    return RET_DOREPLY;
-
-	case 'Y': case 'y':
-	    return RET_DOREPLYALL;
-
-	// Special Navigation
-	case 's':
-	    if (!HasUserPerm(PERM_BASIC) ||
-		currstat != READING)
-		break;
-	    return RET_SELECTBRD;
-
-	case '#':
-	    if (!HasUserPerm(PERM_BASIC) ||
-		currstat != READING)
-		break;
-	    return RET_SELECTAID;
-
-	/* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
-	// I'm not sure if these keys are all invented by SOB,
-	// but let's honor their names.
-	// Kaede, Raw, Izero, woju - you are all TWBBS heroes
-	//                                  -- by piaip, 2008.
-	case 'A':
-	    return AUTHOR_PREV;
-	case 'a':
-	    return AUTHOR_NEXT;
-	case 'F': case 'f':
-	    return READ_NEXT;
-	case 'B': case 'b':
-	    return READ_PREV;
-
-	/* from Kaede, thread reading */
-	case ']':
-	case '+':
-	    return RELATE_NEXT;
-	case '[':
-	case '-':
-	    return RELATE_PREV;
-	case '=':
-	    return RELATE_FIRST;
-    }
-
-    return DONOTHING;
+    pager_ctx_t cx = { .retval = DONOTHING };
+    const cmd_layer_t layers[] = {
+        { currstat == READING ? pager_reading_cmds : pager_empty_cmds, &cx },
+        { pager_common_cmds, &cx },
+        { NULL, NULL }
+    };
+    cmd_ctx_t cctx = { .key = ch, .priv = &cx };
+    cmd_dispatch_layers(layers, &cctx, NULL);
+    return cx.retval;
 }
 
 static int
@@ -197,6 +196,85 @@ common_pager_exit_handler(int r, const char *fpath)
 }
 
 #ifndef USE_PMORE ///////////////////////////////////////////////////////////
+
+static int
+minimore_cmd_up(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    if (*cx->lineno == 0)
+        cx->retval = READ_PREV;
+    (*cx->lineno)--;
+    return 0;
+}
+
+static int
+minimore_cmd_pgup(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    if (*cx->lineno == 0)
+        cx->retval = READ_PREV;
+    *cx->lineno -= t_lines - 2;
+    return 0;
+}
+
+static int
+minimore_cmd_pgdn(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    if (cx->showall)
+        cx->retval = READ_NEXT;
+    *cx->lineno += t_lines - 2;
+    return 0;
+}
+
+static int
+minimore_cmd_down(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    if (cx->showall)
+        cx->retval = READ_NEXT;
+    (*cx->lineno)++;
+    return 0;
+}
+
+static int
+minimore_cmd_home(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    *cx->lineno = 0;
+    return 0;
+}
+
+static int
+minimore_cmd_end(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    *cx->lineno = cx->lines - (t_lines - 1);
+    return 0;
+}
+
+static int
+minimore_cmd_quit(cmd_ctx_t *ctx) {
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    cx->retval = FULLUPDATE;
+    return 0;
+}
+
+static const cmd_t minimore_nav_cmds[] = {
+    { KEY_LEFT, "結束", "離開閱\讀", minimore_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'q', NULL, NULL, minimore_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_UP, "上移", "向上捲動一行", minimore_cmd_up, 0, CMD_PRIO_NAV },
+    { 'k', NULL, NULL, minimore_cmd_up, 0, CMD_PRIO_NONE },
+    { Ctrl('P'), NULL, NULL, minimore_cmd_up, 0, CMD_PRIO_NONE },
+    { KEY_DOWN, "下移", "向下捲動一行", minimore_cmd_down, 0, CMD_PRIO_NAV },
+    { 'j', NULL, NULL, minimore_cmd_down, 0, CMD_PRIO_NONE },
+    { Ctrl('N'), NULL, NULL, minimore_cmd_down, 0, CMD_PRIO_NONE },
+    { KEY_PGUP, "上頁", "向上捲動一頁", minimore_cmd_pgup, 0, CMD_PRIO_NAV },
+    { Ctrl('B'), NULL, NULL, minimore_cmd_pgup, 0, CMD_PRIO_NONE },
+    { KEY_PGDN, "下頁", "向下捲動一頁", minimore_cmd_pgdn, 0, CMD_PRIO_NAV },
+    { Ctrl('F'), NULL, NULL, minimore_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { ' ', NULL, NULL, minimore_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { KEY_RIGHT, NULL, NULL, minimore_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { KEY_HOME, NULL, "移至文章開頭", minimore_cmd_home, 0, CMD_PRIO_NONE },
+    { Ctrl('A'), NULL, NULL, minimore_cmd_home, 0, CMD_PRIO_NONE },
+    { KEY_END, NULL, "移至文章結尾", minimore_cmd_end, 0, CMD_PRIO_NONE },
+    { Ctrl('E'), NULL, NULL, minimore_cmd_end, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 // minimore: a mini pager in exactly 130 lines
 #define PAGER_MAXLINES (2048)
@@ -285,52 +363,41 @@ int more(const char *fpath, int promptend)
 
 	    // print prompt bar
 	    SNPRINTF(buf, "  瀏覽 P.%d  ", 1 + (lineno / (t_lines-2)));
-	    vs_footer(buf,
-	    " (→↓[PgUp][PgDn][Home][End])游標移動\t(←/q)結束");
+	    const cmd_layer_t footer_layers[] = {
+	        { minimore_nav_cmds, NULL },
+	        { currstat == READING ? pager_reading_cmds : pager_empty_cmds, NULL },
+	        { pager_common_cmds, NULL },
+	        { bbs_global_cmds, NULL },
+	        { NULL, NULL }
+	    };
+	    vs_cmd_bar(VS_FOOTER, buf, footer_layers);
 	}
 	// process key
-	switch((vk = vkey())) {
-	    case KEY_UP: case 'k': case Ctrl('P'):
-		if (lineno == 0) abort = READ_PREV;
-		lineno--;
-		break;
-
-	    case KEY_PGUP: case Ctrl('B'):
-		if (lineno == 0) abort = READ_PREV;
-		lineno -= t_lines-2;
-		break;
-
-	    case KEY_PGDN: case Ctrl('F'): case ' ':
-	    case KEY_RIGHT:
-		if (showall) abort = READ_NEXT;
-		lineno += t_lines-2;
-		break;
-
-	    case KEY_DOWN: case 'j': case Ctrl('N'):
-		if (showall) abort = READ_NEXT;
-		lineno++;
-		break;
-	    case KEY_HOME: case Ctrl('A'):
-		lineno = 0;
-		break;
-	    case KEY_END: case Ctrl('E'):
-		lineno = lines - (t_lines-1);
-		break;
-	    case KEY_LEFT: case 'q':
-		abort = FULLUPDATE;
-		break;
-
-	    case 'b':
-		abort = READ_PREV;
-		break;
-	    case 'f':
-		abort = READ_NEXT;
-		break;
-
-	    default:
-		abort = common_pager_key_handler(vk, NULL);
-		break;
-	}
+	vk = vkey();
+	pager_ctx_t cx = {
+	    .retval = 0,
+	    .lineno = &lineno,
+	    .lines = lines,
+	    .showall = showall,
+	};
+	const cmd_layer_t layers[] = {
+	    { minimore_nav_cmds, &cx },
+	    { currstat == READING ? pager_reading_cmds : pager_empty_cmds, &cx },
+	    { pager_common_cmds, &cx },
+	    { bbs_global_cmds, NULL },
+	    { NULL, NULL }
+	};
+	cmd_ctx_t cctx = {
+	    .key = vk,
+	    .curr = lineno,
+	    .total = lines,
+	    .priv = &cx,
+	};
+	cmd_dispatch_layers(layers, &cctx, " 文章瀏覽 ");
+	if (cx.retval != 0)
+	    abort = cx.retval;
+	if (cctx.redraw)
+	    oldlineno = -1;
 	if (lineno + (t_lines-1) >= lines)
 	    lineno = lines-(t_lines-1);
 	if (lineno < 0)
