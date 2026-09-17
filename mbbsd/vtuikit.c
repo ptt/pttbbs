@@ -1022,25 +1022,31 @@ vs_quick_pref(int default_value, const char *title, const char *entry,
 // History Helpers
 ////////////////////////////////////////////////////////////////////////
 //
-#define IH_MAX_ENTRIES	(12)	    // buffer size = approx. 1k
+#define IH_BUFSIZE	(508)	    // smart packed buffer (total struct = 512B)
 #define IH_MIN_SIZE	(2)	    // only keep string >= 2 bytes
 
 typedef struct {
-    int icurr;	    // current retrival pointer
-    int iappend;    // new location to append
-    char buf[IH_MAX_ENTRIES][STRLEN];
+    uint16_t len;	    // total bytes currently stored in pool
+    uint16_t curr;	    // byte offset of current recall entry in pool
+    char pool[IH_BUFSIZE];  // packed null-terminated strings: "s0\0s1\0..."
 } InputHistory;
 
-static InputHistory ih; // everything intialized to zero.
+static InputHistory ih; // everything initialized to zero.
 
 int
 InputHistoryExists(const char *s)
 {
-    int i = 0;
+    uint16_t off = 0;
 
-    for (i = 0; i < IH_MAX_ENTRIES; i++)
-	if (strcmp(s, ih.buf[i]) == 0)
-	    return i+1;
+    if (!s || !*s)
+	return 0;
+
+    while (off < ih.len) {
+	const char *ent = &ih.pool[off];
+	if (strcmp(s, ent) == 0)
+	    return off + 1;
+	off += strlen(ent) + 1;
+    }
 
     return 0;
 }
@@ -1048,27 +1054,42 @@ InputHistoryExists(const char *s)
 int
 InputHistoryAdd(const char *s)
 {
-    int i = 0;
-    int l = strlen(s);
+    size_t l;
+    int pos;
 
-    if (l < IH_MIN_SIZE)
+    if (!s)
 	return 0;
 
-    i = InputHistoryExists(s);
-    if (i > 0) // found
-    {
-	i--; // i points to valid index
-	assert(i < IH_MAX_ENTRIES);
+    l = strlen(s);
+    if (l < IH_MIN_SIZE || l >= IH_BUFSIZE)
+	return 0;
 
-	// change order: just delete it.
-	ih.buf[i][0] = 0;
+    pos = InputHistoryExists(s);
+    if (pos > 0) // found: remove old entry to move it to the end
+    {
+	uint16_t off = (uint16_t)(pos - 1);
+	size_t ent_sz = strlen(&ih.pool[off]) + 1;
+	assert(off + ent_sz <= ih.len);
+	memmove(&ih.pool[off], &ih.pool[off + ent_sz], ih.len - (off + ent_sz));
+	ih.len -= ent_sz;
     }
 
-    // now append s.
-    STRLCPY(ih.buf[ih.iappend], s);
-    ih.iappend ++;
-    ih.iappend %= IH_MAX_ENTRIES;
-    ih.icurr = ih.iappend;
+    // Evict oldest entries from front until there is enough space
+    while (ih.len > 0 && ih.len + l + 1 > IH_BUFSIZE) {
+	size_t first_sz = strlen(ih.pool) + 1;
+	if (first_sz >= ih.len) {
+	    ih.len = 0;
+	    break;
+	}
+	memmove(ih.pool, &ih.pool[first_sz], ih.len - first_sz);
+	ih.len -= first_sz;
+    }
+
+    // Append new entry at the end
+    memcpy(&ih.pool[ih.len], s, l);
+    ih.pool[ih.len + l] = '\0';
+    ih.len += l + 1;
+    ih.curr = ih.len;
 
     return 1;
 }
@@ -1076,25 +1097,34 @@ InputHistoryAdd(const char *s)
 static void
 InputHistoryDelta(char *s, int sz, int d)
 {
-    int i, xcurr = 0;
-    for (i = 1; i <= IH_MAX_ENTRIES; i++)
-    {
-	xcurr = (ih.icurr+ IH_MAX_ENTRIES + d*i)%IH_MAX_ENTRIES;
-	if (ih.buf[xcurr][0])
-	{
-	    ih.icurr = xcurr;
+    int i;
 
-	    // copy buffer
-	    strlcpy(s, ih.buf[ih.icurr], sz);
-            // TODO(piaip) serious check here, in case s contains invalid data.
+    if (ih.len == 0 || sz <= 0)
+	return;
 
-	    // DBCS safe
-	    i = strlen(s);
-	    if (DBCS_Status(s, i) == DBCS_TRAILING)
-		s[i-1] = 0;
-	    break;
+    if (d < 0) {
+	uint16_t p = (ih.curr == 0 || ih.curr > ih.len) ? ih.len : ih.curr;
+	p--;
+	while (p > 0 && ih.pool[p - 1] != '\0')
+	    p--;
+	ih.curr = p;
+    } else if (d > 0) {
+	if (ih.curr >= ih.len) {
+	    ih.curr = 0;
+	} else {
+	    ih.curr += strlen(&ih.pool[ih.curr]) + 1;
+	    if (ih.curr >= ih.len)
+		ih.curr = 0;
 	}
     }
+
+    // copy buffer
+    strlcpy(s, &ih.pool[ih.curr], sz);
+
+    // DBCS safe
+    i = strlen(s);
+    if (DBCS_Status(s, i) == DBCS_TRAILING)
+	s[i-1] = 0;
 }
 
 void
