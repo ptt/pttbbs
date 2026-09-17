@@ -140,39 +140,18 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid,
 static int
 brc_enlarge_buf(void)
 {
-    char *buffer;
     if (brc_alloc >= BRC_MAXSIZE)
 	return 0;
 
-#ifdef CRITICAL_MEMORY
-#define THE_MALLOC(X) MALLOC(X)
-#define THE_FREE(X) FREE(X)
-#else
-#define THE_MALLOC(X) alloca(X)
-#define THE_FREE(X) (void)(X)
-    /* alloca get memory from stack and automatically freed when
-     * function returns. */
-#endif
-
-    buffer = (char*)THE_MALLOC(brc_alloc);
-    assert(buffer);
-
-    memcpy(buffer, brc_buf, brc_alloc);
-    free(brc_buf);
     brc_alloc += BRC_BLOCKSIZE;
-    brc_buf = (char*)malloc(brc_alloc);
+    brc_buf = (char*)realloc(brc_buf, brc_alloc);
     assert(brc_buf);
-    memcpy(brc_buf, buffer, brc_alloc - BRC_BLOCKSIZE);
 
 #ifdef DEBUG
     vmsgf("brc enlarged to %d bytes", brc_alloc);
 #endif
 
-    THE_FREE(buffer);
     return 1;
-
-#undef THE_MALLOC
-#undef THE_FREE
 }
 
 static void
