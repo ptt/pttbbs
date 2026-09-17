@@ -135,7 +135,7 @@ ccw_footer(CCW_CTX *ctx)
         return;
     }
 
-    vs_footer(" CCW ", " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
+    vs_footer(" 訊息回顧 ", " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
 }
 
 CCW_PROTO void
@@ -578,7 +578,7 @@ ccw_talk_header(CCW_CTX *ctx)
 CCW_PROTO void
 ccw_talk_footer(CCW_CTX *ctx GCC_UNUSED)
 {
-    vs_footer(" 【" CCW_CAP_TALK "】 ",
+    vs_footer(" 雙人聊天 ",
             " (PgUp/PgDn)回顧訊息記錄\t(Ctrl-C)離開 ");
 }
 
@@ -816,7 +816,7 @@ ccw_chat_footer(CCW_CTX *ctx)
     }
 
     // draw real footer
-    vs_footer("【" CCW_CAP_CHAT "】", " (PgUp/PgDn)回顧" CCW_CAP_CHAT "記錄 "
+    vs_footer(" 聊天大廳 ", " (PgUp/PgDn)回顧" CCW_CAP_CHAT "記錄 "
             "(Ctrl-Z)快速切換\t(Ctrl-C)離開" CCW_CAP_CHAT);
 }
 
