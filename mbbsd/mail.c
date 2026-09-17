@@ -44,7 +44,6 @@ struct ReadNewMailArg {
 // Local variables (to speed up)
 static int      mailkeep = 0;
 static int      mailmaxkeep = 0;
-static char     currmaildir[PATHLEN];
 static const char msg_cc[] = ANSI_COLOR(32) "[¸s²Õ¦W³æ]" ANSI_RESET "\n";
 static int	showmail_mode = SHOWMAIL_NORM;
 static const    onekey_t mail_comms[];
@@ -217,12 +216,13 @@ mail_send_text(const char *recipient, const char *title, const char *message, co
 void
 m_init(void)
 {
-    sethomedir(currmaildir, cuser.userid);
 }
 
 static void
 loadmailusage(void)
 {
+    char currmaildir[PATHLEN];
+    sethomedir(currmaildir, cuser.userid);
     mailkeep = get_num_records(currmaildir,sizeof(fileheader_t));
 }
 
@@ -879,8 +879,6 @@ mail_muser(userec_t muser, const char *title, const char *filename)
 int
 chkmailbox(void)
 {
-    m_init();
-
     switch (chk_cuser_mailbox_limit()) {
 	case MAILBOX_LIM_HARD:
 	    bell();
@@ -1731,8 +1729,10 @@ mail_read_all(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     off_t   i = 0, num = 0;
     int	    fd = 0;
     fileheader_t xfhdr;
+    char    currmaildir[PATHLEN];
 
     currutmp->alerts &= ~ALERT_NEW_MAIL;
+    sethomedir(currmaildir, cuser.userid);
     if ((fd = open(currmaildir, O_RDWR)) < 0)
 	return DONOTHING;
 
@@ -2202,6 +2202,8 @@ m_read(void)
         return FULLUPDATE;
     }
 
+    char currmaildir[PATHLEN];
+    sethomedir(currmaildir, cuser.userid);
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	int was_in_digest = currmode & MODE_DIGEST;
 	currmode &= ~MODE_DIGEST;
