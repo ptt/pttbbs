@@ -486,9 +486,16 @@ cmd_show_help_layers_inner(const char *caption, const psb_help_item_t *items, in
                 snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
                 page_len = strlen(pagebuf);
             }
+            char clean_cap[32] = "操作說明";
+            if (caption) {
+                while (*caption == ' ') caption++;
+                strlcpy(clean_cap, caption, sizeof(clean_cap));
+                int clen = strlen(clean_cap);
+                while (clen > 0 && clean_cap[clen - 1] == ' ')
+                    clean_cap[--clen] = '\0';
+            }
             cmd_bar_clear_hotspots();
-            clear();
-            vs_hdr2bar(caption ? caption : " P&S Browser ", " 操作說明 (Help)");
+            vs_header(clean_cap, "操作說明 (Help)", NULL, NULL);
             move(1, 0);
             vbar(ANSI_REVERSE "  按鍵 / 標籤                   功\能說明");
             for (int i = 0; i < rows && base + i < count; i++) {
@@ -884,7 +891,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
         row_item_count[r] = 0;
         if (active_rows[r] == VS_FOOTER) {
             row_cur_col[r] = stream_width(footer_caption);
-            avail_cols[r] = (t_columns - 1) - row_cur_col[r] - strlen("(h)說明");
+            avail_cols[r] = (t_columns - 2) - row_cur_col[r] - strlen("(h)說明");
         } else {
             const char *p = (r == 0) ? sub_prompt : "";
             row_cur_col[r] = stream_width(p);
@@ -1141,9 +1148,17 @@ static void
 psb_build_default_layers(PSB_CTX *psbctx, cmd_layer_t *buf, size_t max_layers) {
     size_t idx = 0;
     if (psbctx->layers) {
+        bool has_base = false;
         const cmd_layer_t *l = psbctx->layers;
         while (l->cmds && idx + 1 < max_layers) {
+            if (l->cmds == psb_base_cmds)
+                has_base = true;
             buf[idx++] = *l++;
+        }
+        if (!has_base && idx + 1 < max_layers) {
+            buf[idx].cmds = psb_base_cmds;
+            buf[idx].priv = NULL;
+            idx++;
         }
     } else {
         if (psbctx->cmds && idx + 1 < max_layers) {
@@ -1323,7 +1338,12 @@ psb_sync_cache(PSB_CTX *psbctx) {
         if (psbctx->loader)
             psbctx->loader(psbctx);
         psbctx->cmd.reload = false;
+        rows = t_lines - psbctx->header_lines - psbctx->footer_lines;
+        assert(rows > 0);
+        psbctx->cmd.rows = rows;
     }
+    if (psbctx->cmd.quit)
+        return;
 
     if (psbctx->cmd.total <= 0) {
         psbctx->cmd.curr = 0;
@@ -1378,6 +1398,8 @@ psb_sync_cache(PSB_CTX *psbctx) {
             (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows ||
              t_columns != psbctx->cached_cols))
             psbctx->loader(psbctx);
+        if (psbctx->cmd.quit)
+            return;
         psbctx->cached_base = psbctx->cmd.base;
         psbctx->cached_rows = rows;
         psbctx->cached_cols = t_columns;
@@ -1425,8 +1447,11 @@ psb_main(PSB_CTX *psbctx)
 
         assert(rows > 0);
         psbctx->cmd.rows = rows;
-        psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
         psb_sync_cache(psbctx);
+        if (psbctx->cmd.quit)
+            break;
+        rows = psbctx->cmd.rows;
+        psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
         cmd_set_has_item(psbctx->cmd.total > 0);
 
         base = psbctx->cmd.base;
@@ -1507,18 +1532,27 @@ psb_main(PSB_CTX *psbctx)
         psbctx->cmd.redraw_footer_lines = 0;
 
         old_curr = psbctx->cmd.curr;
-        i = psbctx->header_lines + psbctx->cmd.curr - base;
-        move(i, 0);
-        psbctx->cursor(i, psbctx);
+        if (psbctx->cmd.total > 0) {
+            i = psbctx->header_lines + psbctx->cmd.curr - base;
+            move(i, 0);
+            psbctx->cursor(i, psbctx);
+        } else {
+            move(b_lines, t_columns - 1);
+        }
         int vis = psbctx->cmd.total - base;
         if (vis > rows) vis = rows;
         if (vis < 0) vis = 0;
         psbctx->cmd.header_lines = psbctx->header_lines;
         psbctx->cmd.visible_rows = vis;
         psbctx->cmd.on_select = psb_on_select;
+        int old_newmail = ISNEWMAIL(currutmp);
         vs_locator_set_bounds(psbctx->header_lines, psbctx->header_lines + vis);
         psbctx->cmd.key = vkey();
         vs_locator_set_bounds(-1, -1);
+        if (psbctx->cmd.key == EOF) {
+            psbctx->cmd.quit = true;
+            break;
+        }
 
         int ret = PSB_NA;
         if (psbctx->on_key) {
@@ -1529,7 +1563,6 @@ psb_main(PSB_CTX *psbctx)
         if (ret == PSB_NA) {
             ret = cmd_dispatch_layers(active_layers, &psbctx->cmd, psbctx->cmd.caption);
         }
-
 
         if (ISNEWMAIL(currutmp) != old_newmail && !psbctx->cmd.redraw && !psbctx->cmd.reload) {
             psbctx->cmd.redraw = true;
