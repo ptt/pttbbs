@@ -146,7 +146,8 @@ int search_aidu(char *bfile, aidu_t aidu)
   char fn[FNLEN];
   int fd;
   const int batch = 512;
-  fileheader_t fhs[batch];
+  const size_t fhs_bytes = sizeof(fileheader_t) * batch;
+  fileheader_t *fhs;
   int len, i;
   int pos = -1;
 
@@ -157,6 +158,12 @@ int search_aidu(char *bfile, aidu_t aidu)
 
   struct stat st;
   if (fstat(fd, &st) < 0 || st.st_size < (off_t)sizeof(fileheader_t)) {
+    close(fd);
+    return -1;
+  }
+
+  fhs = (fileheader_t *)malloc(fhs_bytes);
+  if (!fhs) {
     close(fd);
     return -1;
   }
@@ -192,7 +199,7 @@ int search_aidu(char *bfile, aidu_t aidu)
     if (win_start + batch > total)
       win_start = total - batch;
 
-    len = pread(fd, fhs, sizeof(fhs), (off_t)win_start * sizeof(fileheader_t));
+    len = pread(fd, fhs, fhs_bytes, (off_t)win_start * sizeof(fileheader_t));
     if (len > 0)
     {
       len /= sizeof(fileheader_t);
@@ -200,6 +207,7 @@ int search_aidu(char *bfile, aidu_t aidu)
       {
         if (match_aidu_fn(fhs[i].filename, fn, fn_len, allow_prefix))
         {
+          free(fhs);
           close(fd);
           return win_start + i;
         }
@@ -208,9 +216,9 @@ int search_aidu(char *bfile, aidu_t aidu)
   }
 
   /* Step 2: Backwards linear scan fallback (for small files or out-of-order entries) */
-  off_t off = ((st.st_size - 1) / sizeof(fhs)) * sizeof(fhs);
+  off_t off = ((st.st_size - 1) / fhs_bytes) * fhs_bytes;
 
-  while ((len = pread(fd, fhs, sizeof(fhs), off)) > 0)
+  while ((len = pread(fd, fhs, fhs_bytes, off)) > 0)
   {
     len /= sizeof(fileheader_t);
     for(i = len - 1; i >= 0; i--)
@@ -224,8 +232,9 @@ int search_aidu(char *bfile, aidu_t aidu)
 
     if (!off || pos >= 0)
 	break;
-    off -= sizeof(fhs);
+    off -= fhs_bytes;
   }
+  free(fhs);
   close(fd);
 
   return pos;
