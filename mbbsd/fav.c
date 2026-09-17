@@ -62,15 +62,15 @@ static void fav_free_branch(fav_t *fp);
  * (不檢查實際 data type)
  */
 static fav_board_t *cast_board(fav_type_t *p){
-    return (fav_board_t *)p->fp;
+    return &p->board;
 }
 
 static fav_line_t *cast_line(fav_type_t *p){
-    return (fav_line_t *)p->fp;
+    return &p->line;
 }
 
 static fav_folder_t *cast_folder(fav_type_t *p){
-    return (fav_folder_t *)p->fp;
+    return p->folder;
 }
 
 /**
@@ -214,19 +214,7 @@ static char *get_item_class(fav_type_t *ft)
 }
 
 
-static int get_type_size(int type)
-{
-    switch (type){
-	case FAVT_BOARD:
-	    return sizeof(fav_board_t);
-	case FAVT_FOLDER:
-	    return sizeof(fav_folder_t);
-	case FAVT_LINE:
-	    return sizeof(fav_line_t);
-    }
-    assert(0);
-    return 0;
-}
+
 
 static void* fav_malloc(int size){
     void *p;
@@ -242,9 +230,7 @@ static void* fav_malloc(int size){
  */
 static void
 fav_item_copy(fav_type_t *target, const fav_type_t *source){
-    target->type = source->type;
-    target->attr = source->attr;
-    target->fp = source->fp;
+    *target = *source;
 }
 
 inline fav_t *get_fav_root(void){
@@ -300,8 +286,14 @@ static void rebuild_fav(fav_t *fp)
     fp->DataTail = 0;
 
     for (i = 0, j = 0; i < nData; i++){
-	if (!valid_item(&fp->favh[i]))
+	if (!valid_item(&fp->favh[i])) {
+	    if (fp->favh[i].type == FAVT_FOLDER && fp->favh[i].folder) {
+		fav_free_branch(fp->favh[i].folder->this_folder);
+		free(fp->favh[i].folder);
+		fp->favh[i].folder = NULL;
+	    }
 	    continue;
+	}
 
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
@@ -458,16 +450,18 @@ static int read_favrec(FILE *frp, fav_t *fp)
 	    return -1;
 	}
 	fread(&ft->attr, sizeof(ft->attr), 1, frp);
-	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
 
 	switch (ft->type) {
 	    case FAVT_FOLDER:
+		ft->folder = (fav_folder_t *)fav_malloc(sizeof(fav_folder_t));
 		fread(&cast_folder(ft)->fid, sizeof(char), 1, frp);
 		fread(&cast_folder(ft)->title, BTLEN + 1, 1, frp);
 		break;
 	    case FAVT_BOARD:
+		fread(&ft->board, sizeof(fav_board_t), 1, frp);
+		break;
 	    case FAVT_LINE:
-		fread(ft->fp, get_type_size(ft->type), 1, frp);
+		fread(&ft->line, sizeof(fav_line_t), 1, frp);
 		break;
 	}
     }
@@ -583,8 +577,10 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 		fwrite(&cast_folder(ft)->title, BTLEN + 1, 1, fwp);
 		break;
 	    case FAVT_BOARD:
+		fwrite(&ft->board, sizeof(fav_board_t), 1, fwp);
+		break;
 	    case FAVT_LINE:
-		fwrite(ft->fp, get_type_size(ft->type), 1, fwp);
+		fwrite(&ft->line, sizeof(fav_line_t), 1, fwp);
 		break;
 	}
     }
@@ -659,12 +655,14 @@ static void fav_free_branch(fav_t *fp)
 	ft = &fp->favh[i];
 	switch(get_item_type(ft)){
 	    case FAVT_FOLDER:
-		fav_free_branch(cast_folder(ft)->this_folder);
+		if (ft->folder) {
+		    fav_free_branch(ft->folder->this_folder);
+		    free(ft->folder);
+		    ft->folder = NULL;
+		}
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
-		if (ft->fp)
-		    free(ft->fp);
 		break;
 	}
     }
@@ -807,7 +805,9 @@ static fav_type_t *fav_preappend(fav_t *fp, int type)
     if (enlarge_if_full(fp) < 0)
 	return NULL;
     item = &fp->favh[fp->DataTail];
-    item->fp = fav_malloc(get_type_size(type));
+    memset(item, 0, sizeof(*item));
+    if (type == FAVT_FOLDER)
+	item->folder = fav_malloc(sizeof(fav_folder_t));
     item->attr = FAVH_FAV;
     item->type = type;
     fav_increase(fp, item);
@@ -1018,14 +1018,13 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     if (ft->type == FAVT_FOLDER) {
 	strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, BTLEN + 1);
 	cast_folder(tmp)->this_folder = cast_folder(ft)->this_folder;
+	free(ft->folder);
+	ft->folder = NULL;
+    } else if (ft->type == FAVT_BOARD) {
+	tmp->board = ft->board;
+    } else if (ft->type == FAVT_LINE) {
+	tmp->line = ft->line;
     }
-    else {
-	memcpy(tmp->fp, ft->fp, get_type_size(ft->type));
-    }
-
-
-    free(ft->fp);
-    ft->fp = NULL;
     set_attr(tmp, FAVH_TAG, FALSE);
     fav_remove(fp, ft);
     return 0;
@@ -1235,18 +1234,7 @@ typedef struct {
     char	    attr;
 } fav4_board_t;
 
-static int fav4_get_type_size(int type)
-{
-    switch (type){
-	case FAVT_BOARD:
-	    return sizeof(fav4_board_t);
-	case FAVT_FOLDER:
-	    return sizeof(fav_folder_t);
-	case FAVT_LINE:
-	    return sizeof(fav_line_t);
-    }
-    return 0;
-}
+
 
 static void fav4_read_favrec(FILE *frp, fav_t *fp)
 {
@@ -1267,7 +1255,6 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 	ft = &fp->favh[i];
 	fread(&ft->type, sizeof(ft->type), 1, frp);
 	fread(&ft->attr, sizeof(ft->attr), 1, frp);
-	ft->fp = (void *)fav_malloc(fav4_get_type_size(ft->type));
 
 	/* TODO A pointer has different size between 32 and 64-bit arch.
 	 * But the pointer in fav_folder_t is irrelevant here.
@@ -1275,11 +1262,14 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 	 * here.  It should be FIXED in the next version. */
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		fread(ft->fp, sizeof(fav_folder4_t), 1, frp);
+		ft->folder = (fav_folder_t *)fav_malloc(sizeof(fav_folder_t));
+		fread(ft->folder, sizeof(fav_folder4_t), 1, frp);
 		break;
 	    case FAVT_BOARD:
+		fread(&ft->board, sizeof(fav4_board_t), 1, frp);
+		break;
 	    case FAVT_LINE:
-		fread(ft->fp, fav4_get_type_size(ft->type), 1, frp);
+		fread(&ft->line, sizeof(fav_line_t), 1, frp);
 		break;
 	}
     }

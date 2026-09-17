@@ -46,6 +46,8 @@ int main()
     ENSURE(fileheader_t, 128);
     ENSURE(boardheader_t, 256);
     ENSURE(chicken_t, 128);
+    ENSURE(fav_board_t, 12);
+    ENSURE(fav_type_t, 16);
 
     // Y2038 overflow verification test (Year 2040 & Year 2100)
     time4_t t2040 = (time4_t)2208988800U; // 2040-01-01 00:00:00 UTC

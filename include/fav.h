@@ -27,25 +27,7 @@
 #define FAV4		".fav4"
 #define FAVNB      	".favnb"
 
-typedef struct {
-    char	    type;
-    char	    attr;
-    /* *fp could be *fav_board_t or *fav_folder_t. */
-    void	   *fp;
-} fav_type_t;
-
-typedef struct {
-    short           nAllocs;
-    short           DataTail;		/* the tail of item list that user
-					   have ever used */
-    short	    nBoards;		/* number of the boards */
-    char            nLines;		/* number of the lines */
-    char            nFolders;		/* number of the folders */
-    char	    lineID;		/* current max line id */
-    char	    folderID;		/* current max folder id */
-
-    fav_type_t	   *favh;		/* record of boards/folders */
-} fav_t;
+typedef struct fav_t fav_t;
 
 typedef struct {
     int             bid;
@@ -62,3 +44,33 @@ typedef struct {
 typedef struct {
     char	    lid;
 } fav_line_t;
+
+typedef struct {
+    union {
+	struct {
+	    char	type;
+	    char	attr;
+	    union {
+		fav_board_t board;
+		fav_line_t  line;
+	    };
+	};
+	struct {
+	    char	  _pad[8];
+	    fav_folder_t *folder;
+	};
+    };
+} fav_type_t;
+
+struct fav_t {
+    short           nAllocs;
+    short           DataTail;		/* the tail of item list that user
+					   have ever used */
+    short	    nBoards;		/* number of the boards */
+    char            nLines;		/* number of the lines */
+    char            nFolders;		/* number of the folders */
+    char	    lineID;		/* current max line id */
+    char	    folderID;		/* current max folder id */
+
+    fav_type_t	   *favh;		/* record of boards/folders */
+};
