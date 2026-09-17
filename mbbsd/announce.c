@@ -203,75 +203,7 @@ a_timestamp(char *buf, const time4_t *time)
     sprintf(buf, "%02d/%02d/%02d", pt.tm_mon + 1, pt.tm_mday, (pt.tm_year + 1900) % 100);
 }
 
-static int
-a_showmenu(menu_t * pm)
-{
-    char           *title, *editor;
-    int             n;
-    fileheader_t   *item;
-    time4_t         dtime;
 
-    showtitle("精華文章", pm->mtitle);
-    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_RESET,
-	   "編    選      日    期");
-
-    if (!pm->num)
-    {
-	outs("\n  《精華區》尚在吸取天地間的日月精華中... :)");
-    }
-    else
-    {
-	char buf[PATHLEN];
-
-	// determine if path is valid.
-	if (!a_loadname(pm))
-	    return 0;
-
-	for (n = 0; n < p_lines && pm->page + n < pm->num; n++) {
-	    int flTagged = 0;
-	    item = &pm->header[n];
-	    title = item->title;
-	    editor = item->owner;
-	    /*
-	     * Ptt 把時間改為取檔案時間 dtime = get_fhdr_stamp_ts(item->filename);
-	     */
-	    SNPRINTF(buf, "%s/%s", pm->path, item->filename);
-	    if(copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))
-	    {
-		flTagged = 1;
-	    }
-	    dtime = dasht(buf);
-	    a_timestamp(buf, &dtime);
-	    prints("\n%6d%c%c%-47.46s%-13s[%s]", pm->page + n + 1,
-		   (item->filemode & FILE_BM) ? 'X' :
-		   (item->filemode & FILE_HIDE) ? ')' : '.',
-		   flTagged ? 'c' : ' ',
-		   title, editor,
-		   buf);
-	}
-    }
-
-    move(b_lines, 0);
-    if(copyqueue_querysize() > 0)
-    {		// something in queue
-	char buf[STRLEN];
-	SNPRINTF(buf, "【已標記(複製) %d 項】", copyqueue_querysize());
-	vs_footer(buf, pm->level == 0 ?
-		" (c)標記/複製 - 無管理權限，無法貼上 " :
-		" (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
-    }
-    else if(pm->level)
-    {		// BM
-	vs_footer(" 【板  主】 ",
-		" (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
-    }
-    else
-    {		// normal user
-	vs_footer(" 【功\能鍵】 ",
-		" (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
-    }
-    return 1;
-}
 
 static int
 a_searchtitle(menu_t * pm, int rev)
@@ -309,56 +241,6 @@ enum {
 };
 
 static void
-a_showhelp(int level)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  進入目錄/文章", "→r Enter",
-        "  回到上一層",   "← q",
-        "  移到該選項",   "(數字)",
-        "  我在哪裡",     "^Y",
-        "  寄回電子郵箱", "F U",
-        "", "",
-        "【移動瀏覽】", NULL,
-        "  上個選項",     "↑ k",
-        "  下個選項",     "↓ j",
-        "  往前翻頁",     "^B PgUp",
-        "  往後翻頁",     "^F PgDn 空白鍵",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【板主專用鍵】", NULL,
-        "  切換閱\讀權限", "H",
-        "  建新文章",      "n",
-        "  建新目錄",      "g",
-        "  移動文章",      "m",
-        "  刪除文章",      "d",
-        "  範圍刪除",      "D",
-        "  修改符號",      "f",
-        "  修改標題",      "T",
-        "  修改內容",      "e",
-        "  複製項目",      "c",
-        "  貼上項目",      "p",
-        "  附加項目",      "a",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【看板與信箱】", NULL,
-        "  標記內容",     "(看板或信箱內)t",
-        "  貼上標記",     "^P",
-        "  附加標記",     "^A",
-        "", "",
-        "【站長專用鍵】", NULL,
-        "  查詢檔名",     "N",
-        NULL,
-    };
-
-    const char * const *p[] = {col1, col2, col3};
-    int n = level ? ARRAY_SIZE(p) : 1;
-    show_help_table(p, n, "公佈欄輔助說明");
-}
-
-static void
 a_forward(const char *path, const fileheader_t * pitem, int mode)
 {
     fileheader_t    fhdr;
@@ -388,9 +270,8 @@ a_additem(menu_t * pm, const fileheader_t * myheader)
 	return;
     pm->now = pm->num++;
 
-    if (pm->now >= pm->page + p_lines) {
-	pm->page = pm->now - ((pm->page == 10000 && pm->now > p_lines / 2) ?
-			      (p_lines / 2) : (pm->now % p_lines));
+    if (pm->now < pm->page || pm->now >= pm->page + p_lines) {
+	pm->page = pm->now - (pm->now % p_lines);
     }
     /* Ptt */
     strlcpy(pm->header[pm->now - pm->page].filename,
@@ -1160,13 +1041,530 @@ a_menu_rec(const char *maintitle, const char *path,
 	char *trans_buffer,
 	a_menu_session_t *sess,
 	const int *preselect,
+	const menu_t *root, menu_t* const parent);
+
+typedef struct {
+    menu_t *me;
+    const char *path;
+    char *trans_buffer;
+    a_menu_session_t *sess;
+    const int **preselect;
+    const menu_t *root;
+    menu_t *parent;
+    int *returnvalue;
+    cmd_layer_t *layers;
+} announce_ctx_t;
+
+static int
+announce_cmd_search(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    cx->me->now = a_searchtitle(cx->me, ctx->key == '?');
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_whereami(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    const char *title = (cx->me->num > 0 && cx->me->now >= cx->me->page &&
+                         cx->me->now < cx->me->page + cx->me->header_size)
+                        ? cx->me->header[cx->me->now - cx->me->page].title : "";
+    a_where_am_i(cx->root, cx->me->now, title);
+    vmsg(NULL);
+    ctx->redraw = true;
+    return 0;
+}
+
+static int announce_cmd_select(cmd_ctx_t *ctx);
+
+static int
+announce_cmd_num_search(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    int n = a_multi_search_num(ctx->key, cx->sess);
+    ctx->reload = true;
+    if (n > 0) {
+        cx->me->now = n - 1;
+        ctx->curr = cx->me->now;
+    } else if (n == 0 && cx->sess->z_indexes[0] == 0) {
+        // empty/invalid input
+    } else {
+        *cx->preselect = cx->sess->z_indexes;
+        if (**cx->preselect < 0) {
+            if (cx->parent) {
+                cx->sess->bReturnToRoot = 1;
+                *cx->returnvalue = DONOTHING;
+                ctx->quit = true;
+                return 0;
+            }
+            (*cx->preselect)++;
+        }
+        if (**cx->preselect > 0) {
+            cx->me->now = **cx->preselect - 1;
+            ctx->curr = cx->me->now;
+            if ((*cx->preselect)[1])
+                return announce_cmd_select(ctx);
+        } else {
+            *cx->preselect = NULL;
+        }
+    }
+    return 0;
+}
+
+static int
+announce_cmd_copy(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    char fname[PATHLEN];
+    if (!isvisible_man(cx->me))
+        return 0;
+    SNPRINTF(fname, "%s/%s", cx->path,
+             cx->me->header[cx->me->now - cx->me->page].filename);
+    if (!cx->me->level && !HasUserPerm(PERM_SYSOP) &&
+        (cx->me->bid == 0 || !is_BM_cache(cx->me->bid)) && dashd(fname))
+        vmsg("只有板主才可以拷貝目錄唷!");
+    else
+        a_copyitem(fname, cx->me->header[cx->me->now - cx->me->page].title, 0, 1);
+    ctx->reload = true;
+    if (ctx->curr + 1 < ctx->total)
+        ctx->curr++;
+    cx->me->now = ctx->curr;
+    return 0;
+}
+
+static int
+announce_cmd_select(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    cx->me->now = ctx->curr;
+    cx->me->page = ctx->base;
+    char fname[PATHLEN];
+    if (cx->me->now < 0) {
+        *cx->preselect = NULL;
+        return 0;
+    }
+    fileheader_t *fhdr = &cx->me->header[cx->me->now - cx->me->page];
+    const int *newselect = *cx->preselect ? (*cx->preselect + 1) : NULL;
+    *cx->preselect = NULL;
+
+    if (!isvisible_man(cx->me))
+        return 0;
+#ifdef DEBUG
+    vmsgf("%s/%s", &cx->path[11], fhdr->filename);
+#endif
+    SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
+    if (dashf(fname)) {
+        int more_result;
+        while ((more_result = more(fname, YEA))) {
+            if (cx->trans_buffer &&
+                (currstat == EDITEXP || currstat == OSONG)) {
+                char ans[4];
+                move(22, 0);
+                clrtoeol();
+                getdata(22, 1,
+                        currstat == EDITEXP ?
+                        "要把範例加入到文章內嗎?[y/N]" :
+                        "確定要選這篇嗎?[y/N]",
+                        ans, sizeof(ans), LCECHO);
+                if (ans[0] == 'y') {
+                    strlcpy(cx->trans_buffer, fname, PATHLEN);
+                    cx->sess->bReturnToRoot = 1;
+                    if (currstat == OSONG) {
+                        file_appendf(FN_USSONG, "%s\n", fhdr->title);
+                    }
+                    *cx->returnvalue = FULLUPDATE;
+                    ctx->quit = true;
+                    return 0;
+                }
+            }
+            if (more_result == READ_PREV) {
+                if (--cx->me->now < 0) {
+                    cx->me->now = 0;
+                    break;
+                }
+            } else if (more_result == READ_NEXT) {
+                if (++cx->me->now >= cx->me->num) {
+                    cx->me->now = cx->me->num - 1;
+                    break;
+                }
+            } else
+                break;
+            if (cx->me->now < cx->me->page ||
+                cx->me->now >= cx->me->page + cx->me->header_size) {
+                cx->me->page = (cx->me->now / cx->me->header_size) * cx->me->header_size;
+                if (!a_loadname(cx->me))
+                    break;
+            }
+            if (!isvisible_man(cx->me))
+                break;
+            SNPRINTF(fname, "%s/%s", cx->path,
+                     cx->me->header[cx->me->now - cx->me->page].filename);
+            if (!dashf(fname))
+                break;
+        }
+    } else if (dashd(fname)) {
+        int rv = a_menu_rec(cx->me->header[cx->me->now - cx->me->page].title, fname,
+                            cx->me->level, cx->me->bid, cx->trans_buffer,
+                            cx->sess, newselect, cx->root, cx->me);
+        if (rv == DONOTHING) {
+            assert(cx->sess->bReturnToRoot);
+            if (!cx->parent) {
+                assert(cx->sess->z_indexes[0] == -1);
+                cx->sess->bReturnToRoot = 0;
+                *cx->returnvalue = FULLUPDATE;
+                *cx->preselect = cx->sess->z_indexes + 1;
+                if (**cx->preselect > 0)
+                    cx->me->now = **cx->preselect - 1;
+            } else {
+                *cx->returnvalue = DONOTHING;
+            }
+        } else {
+            *cx->returnvalue = FULLUPDATE;
+        }
+        cx->me->next = NULL;
+        if (cx->sess->bReturnToRoot) {
+            ctx->quit = true;
+            return 0;
+        }
+    }
+    ctx->curr = cx->me->now;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_forward(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    char fname[PATHLEN];
+    fileheader_t *fhdr = &cx->me->header[cx->me->now - cx->me->page];
+    if (!isvisible_man(cx->me))
+        return 0;
+    SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
+    if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
+        a_forward(cx->path, fhdr, ctx->key);
+    } else {
+        vmsg("無法轉寄此項目");
+    }
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_edit(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    char fname[PATHLEN];
+    SNPRINTF(fname, "%s/%s", cx->path, cx->me->header[cx->me->now - cx->me->page].filename);
+    if (dashf(fname) && cx->me->level >= MANAGER) {
+        int edflags = 0;
+        *quote_file = 0;
+#ifdef BN_BBSMOVIE
+        if (cx->me->bid && strcmp(getbcache(cx->me->bid)->brdname, BN_BBSMOVIE) == 0) {
+            edflags |= EDITFLAG_UPLOAD;
+            edflags |= EDITFLAG_ALLOWLARGE;
+        }
+#endif
+        if (vedit2(fname, NA, NULL, edflags) != -1) {
+            char fpath[PATHLEN];
+            fileheader_t fhdr;
+            STRLCPY(fpath, cx->path);
+            stampfile(fpath, &fhdr);
+            unlink(fpath);
+            STRLCPY(fhdr.filename, cx->me->header[cx->me->now - cx->me->page].filename);
+            strlcpy(cx->me->header[cx->me->now - cx->me->page].owner,
+                    cuser.userid,
+                    sizeof(cx->me->header[cx->me->now - cx->me->page].owner));
+            setadir(fpath, cx->path);
+            substitute_record(fpath, cx->me->header + cx->me->now - cx->me->page,
+                              sizeof(fhdr), cx->me->now + 1);
+        }
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+announce_cmd_newitem(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_newitem(cx->me, ADDITEM);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_newdir(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_newitem(cx->me, ADDGROUP);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_paste(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_pasteitem(cx->me, 1);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_append(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    if (cx->me->num <= 0)
+        return 0;
+    a_appenditem(cx->me, 1);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_editsign(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_editsign(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_paste_tag(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_pastetagpost(cx->me, -1);
+    *cx->returnvalue = DIRCHANGED;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_append_tag(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_pastetagpost(cx->me, 1);
+    *cx->returnvalue = DIRCHANGED;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_move(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_moveitem(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_del(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_delete(cx->me, cx->sess->backup_dir);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_delrange(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_delrange(cx->me, cx->sess->backup_dir);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_hide(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_hideitem(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_title(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    a_newtitle(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+announce_cmd_showname(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    if (cx->me->num <= 0)
+        return 0;
+    a_showname(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+static const cmd_t announce_cq_bm_cmds[] = {
+    { 'c', "標記/複製", NULL, announce_cmd_copy, 0, CMD_PRIO_MAX, true },
+    { 'p', "貼上/取消/重設", NULL, announce_cmd_paste, 0, CMD_PRIO_MAX },
+    { 'a', "附加至文章後", NULL, announce_cmd_append, 0, CMD_PRIO_MAX, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t announce_cq_user_cmds[] = {
+    { 'c', "標記/複製(無貼上權限)", NULL, announce_cmd_copy, 0, CMD_PRIO_MAX, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t announce_sysop_cmds[] = {
+    { 'N', "查詢檔名", "查看項目對應的實體檔案名稱與路徑", announce_cmd_showname, 0, CMD_PRIO_LOW, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t announce_bm_cmds[] = {
+    { 'n', "新增文章", "在目前目錄建立新文章", announce_cmd_newitem, 0, CMD_PRIO_HIGH },
+    { 'g', "新增目錄", "在目前目錄建立新子目錄", announce_cmd_newdir, 0, CMD_PRIO_HIGH },
+    { 'e', "編輯檔案", "修改選取文章的內容", announce_cmd_edit, 0, CMD_PRIO_HIGH, true },
+    { 'E', NULL, NULL, announce_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'T', "修改標題", "修改選取項目的標題文字", announce_cmd_title, 0, CMD_PRIO_HIGH, true },
+    { 'm', "移動文章", "調整精華區項目的順序位置", announce_cmd_move, 0, CMD_PRIO_HIGH, true },
+    { 'd', "刪除文章", "刪除選取的精華區項目", announce_cmd_del, 0, CMD_PRIO_HIGH, true },
+    { 'D', "範圍刪除", "刪除指定編號範圍內的多個項目", announce_cmd_delrange, 0, CMD_PRIO_LOW, true },
+    { 'H', "閱\讀權限", "切換項目的隱藏/板主專用/公開閱\讀權限", announce_cmd_hide, 0, CMD_PRIO_HIGH, true },
+    { 'f', "修改符號", "修改目錄的看板/進板畫面符號", announce_cmd_editsign, 0, CMD_PRIO_LOW, true },
+    { 'p', "貼上項目", "貼上已複製的項目或重設標記", announce_cmd_paste, 0, CMD_PRIO_HIGH },
+    { 'a', "附加項目", "將已複製的項目附加至選取文章之後", announce_cmd_append, 0, CMD_PRIO_HIGH, true },
+    { Ctrl('P'), "貼上標記", "將看板或信箱內以 t 標記的文章貼入精華區", announce_cmd_paste_tag, 0, CMD_PRIO_LOW },
+    { Ctrl('A'), "附加標記", "將看板或信箱內以 t 標記的文章附加至選取後", announce_cmd_append_tag, 0, CMD_PRIO_LOW, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t announce_base_cmds[] = {
+    { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱\讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
+    { 'r', NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
+    { KEY_ENTER, NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
+    { '/', "搜尋", "搜尋目前目錄下的標題關鍵字", announce_cmd_search, 0, CMD_PRIO_NORM, true },
+    { '?', NULL, "反向搜尋目前目錄下的標題關鍵字", announce_cmd_search, 0, CMD_PRIO_NONE, true },
+    { 'F', "寄回信箱", "將選取的文章轉寄回電子信箱", announce_cmd_forward, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { 'U', NULL, NULL, announce_cmd_forward, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { 'c', "複製項目", "標記或複製目前選取的項目", announce_cmd_copy, 0, CMD_PRIO_HIGH, true },
+    { 't', NULL, NULL, announce_cmd_copy, 0, CMD_PRIO_NONE, true },
+    { Ctrl('Y'), NULL, "查詢目前所在目錄位置與路徑(我在哪裡)", announce_cmd_whereami, 0, CMD_PRIO_NONE },
+    { Ctrl('W'), NULL, NULL, announce_cmd_whereami, 0, CMD_PRIO_NONE },
+    { 'z', NULL, "輸入路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NONE },
+    { 'Z', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t announce_empty_cmds[] = {
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const char *
+announce_caption(const menu_t *pm)
+{
+    if (copyqueue_querysize() > 0)
+        return " 標記項目 ";
+    if (pm->level)
+        return " 精華管理 ";
+    return " 精華列表 ";
+}
+
+static int
+announce_header(PSB_CTX *psbctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
+    showtitle("精華文章", cx->me->mtitle);
+    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_RESET,
+           "編    選      日    期");
+    return 0;
+}
+
+static int
+announce_empty_renderer(PSB_CTX *psbctx GCC_UNUSED)
+{
+    outs("  《精華區》尚在吸取天地間的日月精華中... :)");
+    return 0;
+}
+
+static int
+announce_renderer(int idx, PSB_CTX *psbctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
+    menu_t *pm = cx->me;
+    int n = idx - psbctx->cmd.base;
+    if (n < 0 || n >= pm->header_size)
+        return 0;
+    fileheader_t *item = &pm->header[n];
+    char buf[PATHLEN];
+    int flTagged = 0;
+
+    SNPRINTF(buf, "%s/%s", pm->path, item->filename);
+    if (copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))
+        flTagged = 1;
+    time4_t dtime = dasht(buf);
+    a_timestamp(buf, &dtime);
+    prints("%6d%c%c%-47.46s%-13s[%s]", idx + 1,
+           (item->filemode & FILE_BM) ? 'X' :
+           (item->filemode & FILE_HIDE) ? ')' : '.',
+           flTagged ? 'c' : ' ',
+           item->title, item->owner,
+           buf);
+    return 0;
+}
+
+static int
+announce_loader(PSB_CTX *psbctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
+    menu_t *me = cx->me;
+    int cq = copyqueue_querysize();
+    cx->layers[0].cmds = cq > 0 ? (me->level ? announce_cq_bm_cmds : announce_cq_user_cmds) : announce_empty_cmds;
+    psbctx->cmd.caption = announce_caption(me);
+
+    if (psbctx->cmd.reload) {
+        char fname[PATHLEN];
+        setadir(fname, me->path);
+        int num = get_num_records(fname, FHSZ);
+        if (num < 0) {
+            cx->sess->bReturnToRoot = 1;
+            psbctx->cmd.quit = true;
+            return -1;
+        }
+        me->num = num;
+        psbctx->cmd.total = me->num;
+        psbctx->cmd.curr = me->now;
+        return 0;
+    }
+
+    me->now = psbctx->cmd.curr;
+    me->page = psbctx->cmd.base;
+    if (me->num > 0 && !a_loadname(me)) {
+        cx->sess->bReturnToRoot = 1;
+        psbctx->cmd.quit = true;
+        return -1;
+    }
+    return 0;
+}
+
+int
+a_menu_rec(const char *maintitle, const char *path,
+	int lastlevel, int lastbid,
+	char *trans_buffer,
+	a_menu_session_t *sess,
+	const int *preselect,
 	// we don't change root's value (but may change root pointer)
 	// we may   change parent's value (but never change parent pointer)
 	const menu_t *root, menu_t* const parent)
 {
     menu_t          me = {0};
     char            fname[PATHLEN];
-    int             ch, returnvalue = FULLUPDATE;
+    int             returnvalue = FULLUPDATE;
 
     assert(sess);
 
@@ -1177,7 +1575,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	return returnvalue;
     }
 
-    if(trans_buffer)
+    if (trans_buffer)
 	trans_buffer[0] = '\0';
 
     if (parent)
@@ -1188,7 +1586,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	root = &me;
     }
 
-    me.header_size = p_lines;
+    me.header_size = t_lines - 3;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
     STRLCPY(me.mtitle, maintitle);
@@ -1212,396 +1610,114 @@ a_menu_rec(const char *maintitle, const char *path,
             (ptr = strrchr(me.mtitle, '[')))
 	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
-    me.page = A_INVALID_PAGE;
 
     if (preselect && !*preselect)
 	preselect = NULL;
 
-    me.now = preselect ? (*preselect -1) : 0;
-
-    for (;;) {
-	if (me.now >= me.num)
-	    me.now = me.num - 1;
-	if (me.now < 0)
-	    me.now = 0;
-
-	if (me.now < me.page || me.now >= me.page + me.header_size) {
-	    me.page = me.now - ((me.page == 10000 && me.now > p_lines / 2) ?
-				(p_lines / 2) : (me.now % p_lines));
-	    if (!a_showmenu(&me))
-	    {
-		// some directories are invalid, restart!
-		sess->bReturnToRoot = 1;
-		break;
-	    }
-	}
-
-	if (preselect && *preselect && preselect[1])
-	{
-	    // if this is not the last preselect entry, enter it
-	    ch = KEY_ENTER;
-	} else {
-	    ch = cursor_key(2 + me.now - me.page, 0);
-	}
-
-	if (ch == 'q' || ch == 'Q' || ch == KEY_LEFT)
-	    break;
-
-	// TODO maybe we should let 1-9=simple search and z=tree-search
-	// TODO or let 'z' prefix means 'back to root'
-	if ((ch >= '1' && ch <= '9') || (ch == 'z' || ch == 'Z')) {
-	    int n = a_multi_search_num(ch, sess);
-	    me.page = A_INVALID_PAGE;
-	    if (n > 0)
-	    {
-		// simple (single) selection
-		me.now = n-1;
-		me.page = 10000; // I don't know what's the magic value 10000...
-	    }
-	    else if (n == 0 && sess->z_indexes[0] == 0)
-	    {
-		// empty/invalid input
-	    }
-	    else
-	    {
-		// n == 0 with multiple selects
-		preselect = sess->z_indexes;
-		if (*preselect < 0)
-		{
-		    // return to root first?
-		    if (parent)
-		    {
-			sess->bReturnToRoot = 1;
-			free(me.header);
-			return DONOTHING;
-		    }
-
-		    // already in root
-		    preselect ++;
-		}
-
-		// handle first preselect (maybe zero due to previous 'already in root')
-		if (*preselect > 0)
-		    me.now = *preselect - 1;
-		else
-		    preselect = NULL;
-	    }
-	    continue;
-	}
-	switch (ch) {
-	case KEY_UP:
-	case 'k':
-	    if (--me.now < 0)
-		me.now = me.num - 1;
-	    break;
-
-	case KEY_DOWN:
-	case 'j':
-	    if (++me.now >= me.num)
-		me.now = 0;
-	    break;
-
-	case KEY_PGUP:
-	case Ctrl('B'):
-	    if (me.now >= p_lines)
-		me.now -= p_lines;
-	    else if (me.now > 0)
-		me.now = 0;
-	    else
-		me.now = me.num - 1;
-	    break;
-
-	case ' ':
-	case KEY_PGDN:
-	case Ctrl('F'):
-	    if (me.now < me.num - p_lines)
-		me.now += p_lines;
-	    else if (me.now < me.num - 1)
-		me.now = me.num - 1;
-	    else
-		me.now = 0;
-	    break;
-
-	case KEY_HOME:
-	case '0':
-	    me.now = 0;
-	    break;
-	case KEY_END:
-	case '$':
-	    me.now = me.num - 1;
-	    break;
-
-	case '?':
-	case '/':
-	    if(me.num) {
-		me.now = a_searchtitle(&me, ch == '?');
-		me.page = A_INVALID_PAGE;
-	    }
-	    break;
-	case 'h':
-	    a_showhelp(me.level);
-	    me.page = A_INVALID_PAGE;
-	    break;
-
-	case Ctrl('W'):
-	case Ctrl('Y'):
-	    a_where_am_i(root, me.now, me.header[me.now - me.page].title);
-	    vmsg(NULL);
-	    me.page = A_INVALID_PAGE;
-	    break;
-
-	case 'e':
-	case 'E':
-	    SNPRINTF(fname, "%s/%s", path, me.header[me.now - me.page].filename);
-	    if (dashf(fname) && me.level >= MANAGER) {
-		int edflags = 0;
-		*quote_file = 0;
-
-# ifdef BN_BBSMOVIE
-		if (me.bid && strcmp(getbcache(me.bid)->brdname,
-			    BN_BBSMOVIE) == 0)
-		{
-		    edflags |= EDITFLAG_UPLOAD;
-		    edflags |= EDITFLAG_ALLOWLARGE;
-		}
-# endif // BN_BBSMOVIE
-
-		if (vedit2(fname, NA, NULL, edflags) != -1) {
-		    char            fpath[PATHLEN];
-		    fileheader_t    fhdr;
-		    STRLCPY(fpath, path);
-		    stampfile(fpath, &fhdr);
-		    unlink(fpath);
-		    STRLCPY(fhdr.filename, me.header[me.now - me.page].filename);
-		    strlcpy(me.header[me.now - me.page].owner,
-			    cuser.userid,
-			    sizeof(me.header[me.now - me.page].owner));
-		    setadir(fpath, path);
-		    substitute_record(fpath, me.header + me.now - me.page,
-				      sizeof(fhdr), me.now + 1);
-
-		}
-		me.page = A_INVALID_PAGE;
-	    }
-	    break;
-
-	case 't':
-	case 'c':
-	    if (me.now < me.num) {
-		if (!isvisible_man(&me))
-		    break;
-
-		SNPRINTF(fname, "%s/%s", path,
-			 me.header[me.now - me.page].filename);
-
-		/* XXX: dirty fix
-		   應該要改成如果發現該目錄裡面有隱形目錄的話才拒絕.
-		   不過這樣的話須要整個搜一遍, 而且目前判斷該資料是目錄
-		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
-		   須等該資料寫入 .DIR 內再 implement才有效率.
-		 */
-		if( !me.level && !HasUserPerm(PERM_SYSOP) &&
-		    (me.bid==0 || !is_BM_cache(me.bid)) && dashd(fname) )
-		    vmsg("只有板主才可以拷貝目錄唷!");
-		else
-		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
-		me.page = A_INVALID_PAGE;
-		/* move down */
-		if (++me.now >= me.num)
-		    me.now = 0;
-		break;
-	    }
-	case KEY_ENTER:
-	case KEY_RIGHT:
-	case 'r':
-	    if (me.now >= me.num || me.now < 0)
-	    {
-		preselect = NULL;
-		continue;
-	    }
-	    else
-	    {
-		fileheader_t   *fhdr = &me.header[me.now - me.page];
-		const int *newselect = preselect ? preselect+1 : NULL;
-		preselect = NULL;
-
-		if (!isvisible_man(&me))
-		    break;
-#ifdef DEBUG
-		vmsgf("%s/%s", &path[11], fhdr->filename);;
-#endif
-		SNPRINTF(fname, "%s/%s", path, fhdr->filename);
-		if (dashf(fname)) {
-		    int             more_result;
-
-		    while ((more_result = more(fname, YEA))) {
-			/* Ptt 範本精靈 plugin */
-			if (trans_buffer &&
-				(currstat == EDITEXP || currstat == OSONG)) {
-			    char            ans[4];
-
-			    move(22, 0);
-			    clrtoeol();
-			    getdata(22, 1,
-				    currstat == EDITEXP ?
-				    "要把範例加入到文章內嗎?[y/N]" :
-				    "確定要選這篇嗎?[y/N]",
-				    ans, sizeof(ans), LCECHO);
-			    if (ans[0] == 'y') {
-				strlcpy(trans_buffer, fname, PATHLEN);
-				sess->bReturnToRoot = 1;
-				if (currstat == OSONG) {
-				    file_appendf(FN_USSONG, "%s\n", fhdr->title);
-				}
-				free(me.header);
-				return FULLUPDATE;
-			    }
-			}
-			if (more_result == READ_PREV) {
-			    if (--me.now < 0) {
-				me.now = 0;
-				break;
-			    }
-			} else if (more_result == READ_NEXT) {
-			    if (++me.now >= me.num) {
-				me.now = me.num - 1;
-				break;
-			    }
-			    /* we only load me.header_size pages */
-			    if (me.now - me.page >= me.header_size)
-				break;
-			} else
-			    break;
-			if (!isvisible_man(&me))
-			    break;
-			SNPRINTF(fname, "%s/%s", path,
-				 me.header[me.now - me.page].filename);
-			if (!dashf(fname))
-			    break;
-		    }
-		} else if (dashd(fname)) {
-		    returnvalue = a_menu_rec(me.header[me.now - me.page].title, fname,
-			    me.level, me.bid, trans_buffer,
-			    sess, newselect, root, &me);
-
-		    if (returnvalue == DONOTHING)
-		    {
-			// DONOTHING will only be caused by previous a_multi_search_num + preselect.
-			assert(sess->bReturnToRoot);
-
-			if (!parent)
-			{
-			    // we've reached root menu!
-			    assert(sess->z_indexes[0] == -1);
-			    sess->bReturnToRoot = 0;
-			    returnvalue = FULLUPDATE;
-			    preselect = sess->z_indexes+1;  // skip first 'return to root'
-			    if (*preselect > 0)
-				me.now = *preselect-1;
-			}
-		    } else  {
-			returnvalue = FULLUPDATE;
-		    }
-
-		    me.next = NULL;
-		    /* Ptt  強力跳出recursive */
-		    if (sess->bReturnToRoot) {
-			free(me.header);
-			return returnvalue;
-		    }
-		}
-		me.page = A_INVALID_PAGE;
-	    }
-	    break;
-
-	case 'F':
-	case 'U':
-	    if (me.now < me.num) {
-                fileheader_t   *fhdr = &me.header[me.now - me.page];
-                if (!isvisible_man(&me))
-                    break;
-		SNPRINTF(fname, "%s/%s", path, fhdr->filename);
-		if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
-		    a_forward(path, fhdr, ch /* == 'U' */ );
-		    /* By CharlieL */
-		} else
-		    vmsg("無法轉寄此項目");
-		me.page = A_INVALID_PAGE;
-	    }
-
-	    break;
-
-	}
-
-	if (me.level >= MANAGER) {
-	    switch (ch) {
-	    case 'n':
-		a_newitem(&me, ADDITEM);
-		me.page = A_INVALID_PAGE;
-		break;
-	    case 'g':
-		a_newitem(&me, ADDGROUP);
-		me.page = A_INVALID_PAGE;
-		break;
-	    case 'p':
-		a_pasteitem(&me, 1);
-		me.page = A_INVALID_PAGE;
-		break;
-	    case 'f':
-		a_editsign(&me);
-		me.page = A_INVALID_PAGE;
-		break;
-	    case Ctrl('P'):
-		a_pastetagpost(&me, -1);
-		returnvalue = DIRCHANGED;
-		me.page = A_INVALID_PAGE;
-		break;
-	    case Ctrl('A'):
-		a_pastetagpost(&me, 1);
-		returnvalue = DIRCHANGED;
-		me.page = A_INVALID_PAGE;
-		break;
-	    case 'a':
-		a_appenditem(&me, 1);
-		me.page = A_INVALID_PAGE;
-		break;
-	    }
-
-	    if (me.num)
-		switch (ch) {
-		case 'm':
-		    a_moveitem(&me);
-		    me.page = A_INVALID_PAGE;
-		    break;
-
-		case 'D':
-		    /* Ptt me.page = -1; */
-		    a_delrange(&me, sess->backup_dir);
-		    me.page = A_INVALID_PAGE;
-		    break;
-		case 'd':
-		    a_delete(&me, sess->backup_dir);
-		    me.page = A_INVALID_PAGE;
-		    break;
-		case 'H':
-		    a_hideitem(&me);
-		    me.page = A_INVALID_PAGE;
-		    break;
-		case 'T':
-		    a_newtitle(&me);
-		    me.page = A_INVALID_PAGE;
-		    break;
-		}
-	}
-	if (me.level >= SYSOP) {
-	    switch (ch) {
-	    case 'N':
-		a_showname(&me);
-		me.page = A_INVALID_PAGE;
-		break;
-	    }
-	}
+    me.now = preselect ? (*preselect - 1) : 0;
+    if (me.num <= 0) {
+        me.num = 0;
+        me.now = 0;
+    } else {
+        if (me.now >= me.num)
+            me.now = me.num - 1;
+        if (me.now < 0)
+            me.now = 0;
     }
+
+    cmd_layer_t layers[] = {
+        { announce_empty_cmds, NULL },
+        { me.level >= SYSOP ? announce_sysop_cmds : announce_empty_cmds, NULL },
+        { me.level >= MANAGER ? announce_bm_cmds : announce_empty_cmds, NULL },
+        { announce_base_cmds, NULL },
+        { bbs_global_cmds, NULL },
+        { NULL, NULL }
+    };
+    announce_ctx_t cx = {
+        .me = &me,
+        .path = path,
+        .trans_buffer = trans_buffer,
+        .sess = sess,
+        .preselect = &preselect,
+        .root = root,
+        .parent = parent,
+        .returnvalue = &returnvalue,
+        .layers = layers,
+    };
+    for (int i = 0; layers[i].cmds; i++) {
+        if (layers[i].cmds != bbs_global_cmds)
+            layers[i].priv = &cx;
+    }
+
+    PSB_CTX psbctx = {
+        .cmd = {
+            .curr = me.now,
+            .total = me.num,
+            .priv = &cx,
+            .caption = announce_caption(&me),
+        },
+        .header_lines = 2,
+        .footer_lines = 1,
+        .loader = announce_loader,
+        .header = announce_header,
+        .renderer = announce_renderer,
+        .empty_renderer = announce_empty_renderer,
+        .layers = layers,
+    };
+
+    while (1) {
+        if (preselect && *preselect && preselect[1]) {
+            const int *next_sel = preselect + 1;
+            preselect = NULL;
+            if (me.now >= 0 && me.now < me.num) {
+                me.page = (me.now / me.header_size) * me.header_size;
+                if (a_loadname(&me) && isvisible_man(&me)) {
+                    SNPRINTF(fname, "%s/%s", path, me.header[me.now - me.page].filename);
+                    if (dashd(fname)) {
+                        int rv = a_menu_rec(me.header[me.now - me.page].title, fname,
+                                            me.level, me.bid, trans_buffer,
+                                            sess, next_sel, root, &me);
+                        me.next = NULL;
+                        if (rv == DONOTHING) {
+                            assert(sess->bReturnToRoot);
+                            if (!parent) {
+                                assert(sess->z_indexes[0] == -1);
+                                sess->bReturnToRoot = 0;
+                                returnvalue = FULLUPDATE;
+                                preselect = sess->z_indexes + 1;
+                                if (*preselect > 0)
+                                    me.now = *preselect - 1;
+                                continue;
+                            }
+                            returnvalue = DONOTHING;
+                            break;
+                        }
+                        returnvalue = FULLUPDATE;
+                        if (sess->bReturnToRoot)
+                            break;
+                    }
+                }
+            }
+        }
+        preselect = NULL;
+        psbctx.cmd.curr = me.now;
+        psbctx.cmd.total = me.num;
+        psbctx.cmd.quit = false;
+        psb_main(&psbctx);
+        if (returnvalue == DONOTHING && !parent && sess->bReturnToRoot && sess->z_indexes[0] == -1) {
+            sess->bReturnToRoot = 0;
+            returnvalue = FULLUPDATE;
+            preselect = sess->z_indexes + 1;
+            if (*preselect > 0)
+                me.now = *preselect - 1;
+            continue;
+        }
+        break;
+    }
+
+    if (ZA_Waiting())
+        sess->bReturnToRoot = 1;
+
     free(me.header);
     return returnvalue;
 }
