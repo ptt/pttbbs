@@ -1118,6 +1118,12 @@ static void
 do_term_init(enum TermMode term_mode, int w, int h)
 {
     term_init();
+    if (w)
+	t_columns = MAX(80, MIN(200, w));
+    if (h)
+	t_lines = MAX(24, MIN(100, h));
+    b_lines = t_lines - 1;
+    p_lines = t_lines - 4;
     initscr();
 
     // if the terminal was already determined, resize for it.

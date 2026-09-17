@@ -470,7 +470,7 @@ initscr(void)
 
     memset(&ft, 0, sizeof(ft));
     ft.attr = ft.rattr = FTATTR_DEFAULT;
-    resizeterm(FTSZ_DEFAULT_ROW, FTSZ_DEFAULT_COL);
+    resizeterm(t_lines, t_columns);
 
     // clear both pages
     ft.mi = 0; clrscr();
