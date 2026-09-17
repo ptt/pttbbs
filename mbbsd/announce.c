@@ -1482,70 +1482,6 @@ static const cmd_t announce_bm_cmds[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
-static void
-a_showhelp(int level)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  進入目錄/文章", "→r Enter",
-        "  回到上一層",   "← q",
-        "  移到該選項",   "(數字)",
-        "  我在哪裡",     "^Y",
-        "  寄回電子郵箱", "F U",
-        "", "",
-        "【移動瀏覽】", NULL,
-        "  上個選項",     "↑ k",
-        "  下個選項",     "↓ j",
-        "  往前翻頁",     "^B PgUp",
-        "  往後翻頁",     "^F PgDn 空白鍵",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【板主專用鍵】", NULL,
-        "  切換閱\讀權限", "H",
-        "  建新文章",      "n",
-        "  建新目錄",      "g",
-        "  移動文章",      "m",
-        "  刪除文章",      "d",
-        "  範圍刪除",      "D",
-        "  修改符號",      "f",
-        "  修改標題",      "T",
-        "  修改內容",      "e",
-        "  複製項目",      "c",
-        "  貼上項目",      "p",
-        "  附加項目",      "a",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【看板與信箱】", NULL,
-        "  標記內容",     "(看板或信箱內)t",
-        "  貼上標記",     "^P",
-        "  附加標記",     "^A",
-        "", "",
-        "【站長專用鍵】", NULL,
-        "  查詢檔名",     "N",
-        NULL,
-    };
-
-    const char * const *p[] = {col1, col2, col3};
-    int n = level ? ARRAY_SIZE(p) : 1;
-    show_help_table(p, n, "公佈欄輔助說明");
-}
-
-static int
-announce_cmd_help(cmd_ctx_t *ctx) {
-    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
-    a_showhelp(cx->me->level);
-    ctx->redraw = true;
-    return 0;
-}
-
-static int
-announce_cmd_quit(cmd_ctx_t *ctx) {
-    ctx->quit = true;
-    return 0;
-}
-
 static int
 announce_cmd_up(cmd_ctx_t *ctx) {
     if (ctx->total > 0)
@@ -1599,9 +1535,6 @@ announce_cmd_end(cmd_ctx_t *ctx) {
 }
 
 static const cmd_t announce_base_cmds[] = {
-    { KEY_LEFT, "離開", "離開精華區", announce_cmd_quit, 0, CMD_PRIO_MAX },
-    { 'q', NULL, NULL, announce_cmd_quit, 0, CMD_PRIO_NONE },
-    { 'Q', NULL, NULL, announce_cmd_quit, 0, CMD_PRIO_NONE },
     { KEY_UP, NULL, "向上移動", announce_cmd_up, 0, CMD_PRIO_NONE, true },
     { 'k', NULL, NULL, announce_cmd_up, 0, CMD_PRIO_NONE, true },
     { KEY_DOWN, NULL, "向下移動", announce_cmd_down, 0, CMD_PRIO_NONE, true },
@@ -1615,7 +1548,6 @@ static const cmd_t announce_base_cmds[] = {
     { '0', NULL, NULL, announce_cmd_home, 0, CMD_PRIO_NONE, true },
     { KEY_END, NULL, "移至末筆", announce_cmd_end, 0, CMD_PRIO_NONE, true },
     { '$', NULL, NULL, announce_cmd_end, 0, CMD_PRIO_NONE, true },
-    { 'h', "說明", "顯示操作說明", announce_cmd_help, 0, CMD_PRIO_NONE },
     { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱\讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
     { 'r', NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
     { KEY_ENTER, NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
@@ -1627,7 +1559,7 @@ static const cmd_t announce_base_cmds[] = {
     { 't', NULL, NULL, announce_cmd_copy, 0, CMD_PRIO_NONE, true },
     { Ctrl('Y'), NULL, "查詢目前所在目錄位置與路徑(我在哪裡)", announce_cmd_whereami, 0, CMD_PRIO_NONE },
     { Ctrl('W'), NULL, NULL, announce_cmd_whereami, 0, CMD_PRIO_NONE },
-    { '1', NULL, "輸入編號或路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NONE },
+    { '1', "跳項", "輸入編號或路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NAV },
     { '2', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { '3', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { '4', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
@@ -1670,28 +1602,6 @@ static int
 announce_empty_renderer(PSB_CTX *psbctx GCC_UNUSED)
 {
     outs("  《精華區》尚在吸取天地間的日月精華中... :)");
-    return 0;
-}
-
-static int
-announce_footer(PSB_CTX *psbctx)
-{
-    announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
-    menu_t *pm = cx->me;
-    move(b_lines, 0);
-    if (copyqueue_querysize() > 0) {
-        char buf[STRLEN];
-        SNPRINTF(buf, "【已標記(複製) %d 項】", copyqueue_querysize());
-        vs_footer(buf, pm->level == 0 ?
-                  " (c)標記/複製 - 無管理權限，無法貼上 " :
-                  " (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
-    } else if (pm->level) {
-        vs_footer(" 【板  主】 ",
-                  " (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
-    } else {
-        vs_footer(" 【功\能鍵】 ",
-                  " (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
-    }
     return 0;
 }
 
@@ -1880,7 +1790,6 @@ a_menu_rec(const char *maintitle, const char *path,
         .footer_lines = 2,
         .loader = announce_loader,
         .header = announce_header,
-        .footer = announce_footer,
         .renderer = announce_renderer,
         .empty_renderer = announce_empty_renderer,
         .layers = layers,
