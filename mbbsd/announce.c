@@ -1274,6 +1274,7 @@ a_menu_rec(const char *maintitle, const char *path,
 		    if (parent)
 		    {
 			sess->bReturnToRoot = 1;
+			free(me.header);
 			return DONOTHING;
 		    }
 
