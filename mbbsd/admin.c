@@ -405,7 +405,7 @@ search_key_user(const char *passwdfile, int mode)
 	    // XXX don't trust 'user' variable after here
 	    // because uinfo_query may have changed it.
 
-	    vs_footer("  搜尋帳號  ", mode ?
+	    vs_footer(" 搜尋帳號 ", mode ?
 		      "  (空白鍵)搜尋下一個 (A)加入名單 (F)新增條件 (Q)離開" :
 		      "  (空白鍵)搜尋下一個 (A)加入名單 (S)取用備份資料 "
 		      "(Q)離開");
