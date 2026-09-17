@@ -79,7 +79,9 @@ static int t_lines = 24, t_columns = 80;
 // #include "grayout.h"
 //////////////////////////////////////////////////////////////////////////
 #ifndef GRAYOUT_DARK
+#define GRAYOUT_LOCATOR (-4)
 #define GRAYOUT_STANDOUT (-3)
+#define GRAYOUT_LOCEND (+4)
 #define GRAYOUT_COLORBOLD (-2)
 #define GRAYOUT_BOLD (-1)
 #define GRAYOUT_DARK (0)
@@ -371,7 +373,7 @@ fterm_resolve_attr(ftattr a)
         ftattr fg = (a & FTATTR_REVERSE) ? FTATTR_GETBG(a) : FTATTR_GETFG(a);
         if (fg == 0 || fg == 4)
             fg = 7;
-        a &= ~(FTATTR_FGMASK | FTATTR_BGMASK | FTATTR_REVERSE | FTATTR_LOCATOR);
+        a &= ~(FTATTR_FGMASK | FTATTR_BGMASK | FTATTR_REVERSE | FTATTR_LOCATOR | FTATTR_FILL);
         a |= FTATTR_MAKE(fg, 4) | FTATTR_BOLD;
     }
     if (a & FTATTR_FILL)
@@ -2535,16 +2537,46 @@ standend(void)
 //////////////////////////////////////////////////////////////////////////
 
 static void
-grayout_apply(int y, int end, ftattr enable_mask, ftattr disable_mask)
+grayout_apply_rect(int y, int end, int x_start, int x_end, ftattr enable_mask, ftattr disable_mask)
 {
     int x;
+    y = ranged(y, 0, ft.rows - 1);
+    end = ranged(end, 0, ft.rows);
+    x_start = ranged(x_start, 0, ft.cols - 1);
+    x_end = ranged(x_end, 0, ft.cols - 1);
     for (; y < end; y++) {
-        for (x = 0; x < ft.cols - 1; x++) {
+        for (x = x_start; x < x_end; x++) {
             if (disable_mask)
                 FTAMAP(y)[x] &= ~disable_mask;
             if (enable_mask)
                 FTAMAP(y)[x] |= enable_mask;
         }
+    }
+}
+
+static void
+grayout_apply(int y, int end, ftattr enable_mask, ftattr disable_mask)
+{
+    grayout_apply_rect(y, end, 0, ft.cols - 1, enable_mask, disable_mask);
+}
+
+void
+grayout_rect(int y, int end, int x_start, int x_end, int level)
+{
+    fterm_markdirty();
+    switch (level) {
+        case GRAYOUT_LOCATOR:
+            grayout_apply_rect(y, end, x_start, x_end, FTATTR_LOCATOR, 0);
+            return;
+        case GRAYOUT_LOCEND:
+            grayout_apply_rect(y, end, x_start, x_end, 0, FTATTR_LOCATOR);
+            return;
+        case GRAYOUT_STANDOUT:
+            grayout_apply_rect(y, end, x_start, x_end, FTATTR_STANDOUT, 0);
+            return;
+        case GRAYOUT_STANDEND:
+            grayout_apply_rect(y, end, x_start, x_end, 0, FTATTR_STANDOUT);
+            return;
     }
 }
 
@@ -2586,6 +2618,14 @@ grayout(int y, int end, int level)
 
         case GRAYOUT_COLORNORM:
             grayout_shift(y, end, 0, FTATTR_BOLD, FTATTR_BLINK);
+            return;
+
+        case GRAYOUT_LOCATOR:
+            grayout_apply(y, end, FTATTR_LOCATOR, 0);
+            return;
+
+        case GRAYOUT_LOCEND:
+            grayout_apply(y, end, 0, FTATTR_LOCATOR);
             return;
 
         case GRAYOUT_STANDOUT:

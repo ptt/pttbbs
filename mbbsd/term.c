@@ -100,12 +100,15 @@ term_enable_mouse(int mode)
     const char *seq = "";
     current_mouse_mode = mode;
     if (mode == MOUSE_MODE_NONE || !HasUserFlag(UF_MOUSE)) {
+        cmd_bar_set_hotspots_enabled(false);
         // Disable all mouse reporting
         seq = DISABLE_MOUSE_CLICK
               DISABLE_MOUSE_DRAG
               DISABLE_MOUSE_MOTION
               DISABLE_MOUSE_SGR;
-    } else if (mode == MOUSE_MODE_TRACK) {
+    } else {
+        cmd_bar_set_hotspots_enabled(true);
+        if (mode == MOUSE_MODE_TRACK) {
         // MOUSE_MODE_TRACK (DECSET 1003 + 1006 SGR):
         // Any-event tracking (reports all hover motion, clicks, wheel)
         seq = ENABLE_MOUSE_MOTION
@@ -122,6 +125,7 @@ term_enable_mouse(int mode)
         seq = DISABLE_MOUSE_MOTION
               ENABLE_MOUSE_CLICK
               ENABLE_MOUSE_SGR;
+        }
     }
     write(1, seq, strlen(seq));
 }
@@ -155,7 +159,7 @@ int
 term_init(void)
 {
     Signal(SIGWINCH, sig_term_resize);
-    term_enable_mouse(MOUSE_MODE_CLICK);
+    term_enable_mouse(MOUSE_MODE_TRACK);
     return YEA;
 }
 

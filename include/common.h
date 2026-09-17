@@ -276,6 +276,7 @@
 /* ----------------------------------------------------- */
 /* Grayout Levels                                        */
 /* ----------------------------------------------------- */
+#define GRAYOUT_LOCATOR (-4)
 #define GRAYOUT_STANDOUT (-3)
 #define GRAYOUT_COLORBOLD (-2)
 #define GRAYOUT_BOLD (-1)
@@ -283,6 +284,8 @@
 #define GRAYOUT_NORM (1)
 #define GRAYOUT_COLORNORM (+2)
 #define GRAYOUT_STANDEND (+3)
+#define GRAYOUT_LOCEND (+4)
+#define ATTR_LOCATOR GRAYOUT_LOCATOR
 
 /* Typeahead */
 #define TYPEAHEAD_NONE	(-1)
