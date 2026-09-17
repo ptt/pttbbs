@@ -103,6 +103,7 @@ showtitle(const char *title, const char *mid)
 
     const char *high_attr = HasUserFlag(UF_CURSOR_STANDOUT) ? ANSI_COLOR(41) :
 	ANSI_COLOR(41;5);
+    bool has_new_mail = false;
 
     /* prepare mid */
 #ifdef DEBUG
@@ -113,6 +114,7 @@ showtitle(const char *title, const char *mid)
     if (ISNEWMAIL(currutmp)) {
 	snprintf(mid_buf, sizeof(mid_buf), "%s    你有新信件    ", high_attr);
 	mid = mid_buf;
+	has_new_mail = true;
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
 	// TODO cache this value?
 	int nreg = regform_estimate_queuesize();
@@ -148,7 +150,8 @@ showtitle(const char *title, const char *mid)
 		 title_tail_msgs[tail_type],
 		 is_currboard_special ? ANSI_COLOR(32) : "",
 		 currboard,
-		 title_tail_attrs[tail_type]) : "");
+		 title_tail_attrs[tail_type]) : "",
+	      has_new_mail ? cmd_bar_register_newmail_hotspot : NULL);
 }
 
 static void
