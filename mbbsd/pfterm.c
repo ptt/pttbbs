@@ -1,6 +1,10 @@
 //////////////////////////////////////////////////////////////////////////
 // pfterm environment settings
 //////////////////////////////////////////////////////////////////////////
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+# define _GNU_SOURCE
+#endif
+
 #ifdef _PFTERM_TEST_MAIN
 
 #define USE_PFTERM
@@ -12,6 +16,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#ifndef _WIN32
+# include <sys/mman.h>
+#endif
+static int t_lines = 24, t_columns = 80;
 
 #else
 
@@ -257,6 +265,8 @@ typedef struct
 
     // memory allocation
     int     mrows, mcols;
+    void    *slab;
+    size_t  slab_sz;
 
     // raw terminal status
     int     ry, rx;
@@ -457,6 +467,44 @@ int     fterm_DBCS_Big5(unsigned char c1, unsigned char c2);
 
 #define fterm_markdirty() { ft.dirty = 1; }
 
+// slab memory allocator (POSIX mmap/munmap, Windows calloc/free)
+#define FTERM_PAGE_ALIGN(sz) (((sz) + 4095) & ~((size_t)4095))
+#if !defined(_WIN32) && !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+# define MAP_ANONYMOUS MAP_ANON
+#endif
+
+static void *
+fterm_slab_alloc(size_t sz, size_t *palloc_sz)
+{
+#ifndef _WIN32
+    size_t aligned_sz = FTERM_PAGE_ALIGN(sz);
+    void *p = mmap(NULL, aligned_sz, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED)
+        return NULL;
+    *palloc_sz = aligned_sz;
+    return p;
+#else
+    void *p = calloc(1, sz);
+    if (p)
+        *palloc_sz = sz;
+    return p;
+#endif
+}
+
+static void
+fterm_slab_free(void *ptr, size_t sz)
+{
+    if (!ptr)
+        return;
+#ifndef _WIN32
+    munmap(ptr, sz);
+#else
+    (void)sz;
+    free(ptr);
+#endif
+}
+
 // initialization
 
 void
@@ -487,20 +535,8 @@ initscr(void)
 int
 endwin(void)
 {
-    int r, mi = 0;
-
     // fterm_rawclear();
-
-    for (mi = 0; mi < 2; mi++)
-    {
-        for (r = 0; r < ft.mrows; r++)
-        {
-            free(ft.cmap[mi][r]);
-            free(ft.amap[mi][r]);
-        }
-    }
-    free(ft.dmap);
-    free(ft.dcmap);
+    fterm_slab_free(ft.slab, ft.slab_sz);
     memset(&ft, 0, sizeof(ft));
     return 0;
 }
@@ -526,63 +562,78 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
     // adjust memory only for increasing buffer
     if (rows > ft.mrows || cols > ft.mcols)
     {
+        int new_mrows = max(ft.mrows, rows);
+        int new_mcols = max(ft.mcols, cols);
+        size_t stride = (size_t)(new_mcols + 1);
+        size_t cells_per_plane = (size_t)new_mrows * stride;
+        size_t ptr_bytes = 4 * (size_t)new_mrows * sizeof(void *);
+        size_t aplane_bytes = cells_per_plane * sizeof(ftattr);
+        size_t cplane_bytes = cells_per_plane * sizeof(ftchar);
+        size_t map_bytes = 2 * stride * sizeof(ftchar);
+        size_t req_sz = ptr_bytes + 2 * aplane_bytes + 2 * cplane_bytes + map_bytes;
+
+        size_t new_slab_sz = 0;
+        void *new_slab = fterm_slab_alloc(req_sz, &new_slab_sz);
+        assert(new_slab != NULL);
+
+        // Layout order: pointers (align 8) -> amap planes (align sizeof(ftattr)) -> cmap planes -> dmap/dcmap
+        char *p = (char *)new_slab;
+        ftchar **new_cmap[2];
+        ftattr **new_amap[2];
+
+        new_cmap[0] = (ftchar **)p; p += new_mrows * sizeof(void *);
+        new_cmap[1] = (ftchar **)p; p += new_mrows * sizeof(void *);
+        new_amap[0] = (ftattr **)p; p += new_mrows * sizeof(void *);
+        new_amap[1] = (ftattr **)p; p += new_mrows * sizeof(void *);
+
         for (mi = 0; mi < 2; mi++)
         {
-            // allocate rows
-            if (rows > ft.mrows)
+            ftattr *abase = (ftattr *)p; p += aplane_bytes;
+            size_t k;
+            for (k = 0; k < cells_per_plane; k++)
+                abase[k] = FTATTR_ERASE;
+            for (i = 0; i < new_mrows; i++)
             {
-                ft.cmap[mi] = (ftchar**)realloc(ft.cmap[mi],
-                        sizeof(ftchar*) * rows);
-                ft.amap[mi] = (ftattr**)realloc(ft.amap[mi],
-                        sizeof(ftattr*) * rows);
-
-                // allocate new columns
-                for (i = ft.mrows; i < rows; i++)
-                {
-                    ft.cmap[mi][i] = (ftchar*)malloc((cols+1) * sizeof(ftchar));
-                    ft.amap[mi][i] = (ftattr*)malloc((cols+1) * sizeof(ftattr));
-                    // zero at end to prevent over-run
-                    ft.cmap[mi][i][cols] = 0;
-                    ft.amap[mi][i][cols] = 0;
-                }
+                new_amap[mi][i] = abase + i * stride;
+                new_amap[mi][i][new_mcols] = 0;
             }
+        }
 
-            // resize cols
-            if (cols > ft.mcols)
+        for (mi = 0; mi < 2; mi++)
+        {
+            ftchar *cbase = (ftchar *)p; p += cplane_bytes;
+            memset(cbase, FTCHAR_ERASE, cplane_bytes);
+            for (i = 0; i < new_mrows; i++)
+            {
+                new_cmap[mi][i] = cbase + i * stride;
+                new_cmap[mi][i][new_mcols] = 0;
+            }
+        }
+
+        ft.dmap  = (ftchar *)p; p += stride * sizeof(ftchar);
+        ft.dcmap = (ftchar *)p; p += stride * sizeof(ftchar);
+
+        if (ft.slab)
+        {
+            for (mi = 0; mi < 2; mi++)
             {
                 for (i = 0; i < ft.mrows; i++)
                 {
-                    ft.cmap[mi][i] = (ftchar*)realloc(ft.cmap[mi][i],
-                            (cols+1) * sizeof(ftchar));
-                    ft.amap[mi][i] = (ftattr*)realloc(ft.amap[mi][i],
-                            (cols+1) * sizeof(ftattr));
-                    // zero at end to prevent over-run
-                    ft.cmap[mi][i][cols] = 0;
-                    ft.amap[mi][i][cols] = 0;
+                    memcpy(new_cmap[mi][i], ft.cmap[mi][i], (size_t)ft.mcols * sizeof(ftchar));
+                    memcpy(new_amap[mi][i], ft.amap[mi][i], (size_t)ft.mcols * sizeof(ftattr));
                 }
-            } else {
-                // we have to deal one case:
-                // expand x, shrink x, expand y ->
-                //   now new allocated lines will have small x(col) instead of mcol.
-                // the solution is to modify mcols here, or change the malloc above
-                // to max(ft.mcols, cols).
-                ft.mcols = cols;
             }
+            fterm_slab_free(ft.slab, ft.slab_sz);
         }
 
-        // adjusts dirty and display map.
-        // no need to initialize anyway.
-        if (cols > ft.mcols)
-        {
-            ft.dmap = (ftchar*) realloc(ft.dmap,
-                    (cols+1) * sizeof(ftchar));
-            ft.dcmap = (ftchar*) realloc(ft.dcmap,
-                    (cols+1) * sizeof(ftchar));
-        }
-
-        // do mrows/mcols assignment here, because we had 2 maps running loop above.
-        if (cols > ft.mcols) ft.mcols = cols;
-        if (rows > ft.mrows) ft.mrows = rows;
+        ft.cmap[0] = new_cmap[0];
+        ft.cmap[1] = new_cmap[1];
+        ft.amap[0] = new_amap[0];
+        ft.amap[1] = new_amap[1];
+        ft.slab = new_slab;
+        ft.slab_sz = new_slab_sz;
+        ft.mrows = new_mrows;
+        ft.mcols = new_mcols;
         dirty = 1;
     }
 
