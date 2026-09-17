@@ -148,7 +148,7 @@ ochar(int c)
 /* ----------------------------------------------------- */
 /* VKey & dispatcher                                     */
 /* ----------------------------------------------------- */
-#define MAX_HOOKS_PER_PRIO 4
+#define MAX_HOOKS_PER_PRIO 2
 
 static vkey_hook_fn hook_tables[VKEY_HOOK_PRIO_MAX][MAX_HOOKS_PER_PRIO];
 static int hook_counts[VKEY_HOOK_PRIO_MAX];
@@ -160,14 +160,14 @@ vkey_register_hook(VKeyHookPriority prio, vkey_hook_fn fn)
     if (prio < 0 || prio >= VKEY_HOOK_PRIO_MAX || !fn)
         return -1;
 
-    assert(hook_counts[prio] < MAX_HOOKS_PER_PRIO);
-    if (hook_counts[prio] >= MAX_HOOKS_PER_PRIO)
-        return -1;
-
     for (i = 0; i < hook_counts[prio]; i++) {
         if (hook_tables[prio][i] == fn)
             return 0;
     }
+
+    assert(hook_counts[prio] < MAX_HOOKS_PER_PRIO);
+    if (hook_counts[prio] >= MAX_HOOKS_PER_PRIO)
+        return -1;
 
     hook_tables[prio][hook_counts[prio]++] = fn;
     return 0;
