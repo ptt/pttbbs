@@ -16,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <stdint.h>
 #ifndef _WIN32
 # include <sys/mman.h>
 #endif
@@ -249,10 +250,11 @@ typedef unsigned char ftattr;   // primitive attribute type
 
 typedef struct
 {
-    ftchar  **cmap[2];      // character map
-    ftattr  **amap[2];      // attribute map
-    ftchar  *dmap;          // dirty map
-    ftchar  *dcmap;         // processed display map
+    ftchar  *cbase[2];      // character map base per page
+    ftattr  *abase[2];      // attribute map base per page
+    uint16_t *rmap[2];      // logical row -> physical row index map
+    size_t  cstride;        // character row stride (mcols + 1)
+    size_t  astride;        // attribute row stride (mcols)
     ftattr  attr;
     int     rows, cols;     // the (possibly cropped) display region size
     int     rows_full, cols_full; // the full terminal size
@@ -309,18 +311,36 @@ static FlatTerm ft;
 #define FTATTR_MAKE(f,b)    (((f)<<FTATTR_FGSHIFT)|((b)<<FTATTR_BGSHIFT))
 #define FTCHAR_ISBLANK(x)   ((x) == (FTCHAR_BLANK))
 
-#define FTCMAP  ft.cmap[ft.mi]
-#define FTAMAP  ft.amap[ft.mi]
-#define FTCROW  FTCMAP[ft.y]
-#define FTAROW  FTAMAP[ft.y]
-#define FTC     FTCROW[ft.x]
-#define FTA     FTAROW[ft.x]
-#define FTD     ft.dmap
-#define FTDC    ft.dcmap
-#define FTPC    (FTCROW+ft.x)
-#define FTPA    (FTAROW+ft.x)
-#define FTOCMAP ft.cmap[1-ft.mi]
-#define FTOAMAP ft.amap[1-ft.mi]
+static inline ftchar *
+FTCMAP(int y)
+{
+    return ft.cbase[ft.mi] + (size_t)ft.rmap[ft.mi][y] * ft.cstride;
+}
+
+static inline ftattr *
+FTAMAP(int y)
+{
+    return ft.abase[ft.mi] + (size_t)ft.rmap[ft.mi][y] * ft.astride;
+}
+
+static inline ftchar *
+FTOCMAP(int y)
+{
+    return ft.cbase[1 - ft.mi] + (size_t)ft.rmap[1 - ft.mi][y] * ft.cstride;
+}
+
+static inline ftattr *
+FTOAMAP(int y)
+{
+    return ft.abase[1 - ft.mi] + (size_t)ft.rmap[1 - ft.mi][y] * ft.astride;
+}
+
+#define FTCROW     FTCMAP(ft.y)
+#define FTAROW     FTAMAP(ft.y)
+#define FTC        (FTCROW[ft.x])
+#define FTA        (FTAROW[ft.x])
+#define FTPC       (FTCROW+ft.x)
+#define FTPA       (FTAROW+ft.x)
 
 
 // for fast checking, we use reduced range here.
@@ -564,54 +584,46 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
     {
         int new_mrows = max(ft.mrows, rows);
         int new_mcols = max(ft.mcols, cols);
-        size_t stride = (size_t)(new_mcols + 1);
-        size_t cells_per_plane = (size_t)new_mrows * stride;
-        size_t ptr_bytes = 4 * (size_t)new_mrows * sizeof(void *);
-        size_t aplane_bytes = cells_per_plane * sizeof(ftattr);
-        size_t cplane_bytes = cells_per_plane * sizeof(ftchar);
-        size_t map_bytes = 2 * stride * sizeof(ftchar);
-        size_t req_sz = ptr_bytes + 2 * aplane_bytes + 2 * cplane_bytes + map_bytes;
+        size_t cstride = (size_t)(new_mcols + 1);
+        size_t astride = (size_t)new_mcols;
+        size_t aplane_cells = (size_t)new_mrows * astride;
+        size_t aplane_bytes = aplane_cells * sizeof(ftattr);
+        size_t cplane_bytes = (size_t)new_mrows * cstride * sizeof(ftchar);
+        size_t rmap_bytes = 2 * (size_t)new_mrows * sizeof(uint16_t);
+        size_t req_sz = 2 * aplane_bytes + rmap_bytes + 2 * cplane_bytes;
 
         size_t new_slab_sz = 0;
         void *new_slab = fterm_slab_alloc(req_sz, &new_slab_sz);
         assert(new_slab != NULL);
 
-        // Layout order: pointers (align 8) -> amap planes (align sizeof(ftattr)) -> cmap planes -> dmap/dcmap
+        // Layout order: amap planes (align sizeof(ftattr)) -> rmap[0..1] (align 2) -> cmap planes
         char *p = (char *)new_slab;
-        ftchar **new_cmap[2];
-        ftattr **new_amap[2];
-
-        new_cmap[0] = (ftchar **)p; p += new_mrows * sizeof(void *);
-        new_cmap[1] = (ftchar **)p; p += new_mrows * sizeof(void *);
-        new_amap[0] = (ftattr **)p; p += new_mrows * sizeof(void *);
-        new_amap[1] = (ftattr **)p; p += new_mrows * sizeof(void *);
+        ftchar *new_cbase[2];
+        ftattr *new_abase[2];
+        uint16_t *new_rmap[2];
 
         for (mi = 0; mi < 2; mi++)
         {
-            ftattr *abase = (ftattr *)p; p += aplane_bytes;
+            new_abase[mi] = (ftattr *)p; p += aplane_bytes;
             size_t k;
-            for (k = 0; k < cells_per_plane; k++)
-                abase[k] = FTATTR_ERASE;
-            for (i = 0; i < new_mrows; i++)
-            {
-                new_amap[mi][i] = abase + i * stride;
-                new_amap[mi][i][new_mcols] = 0;
-            }
+            for (k = 0; k < aplane_cells; k++)
+                new_abase[mi][k] = FTATTR_ERASE;
         }
 
         for (mi = 0; mi < 2; mi++)
         {
-            ftchar *cbase = (ftchar *)p; p += cplane_bytes;
-            memset(cbase, FTCHAR_ERASE, cplane_bytes);
+            new_rmap[mi] = (uint16_t *)p; p += new_mrows * sizeof(uint16_t);
             for (i = 0; i < new_mrows; i++)
-            {
-                new_cmap[mi][i] = cbase + i * stride;
-                new_cmap[mi][i][new_mcols] = 0;
-            }
+                new_rmap[mi][i] = (uint16_t)i;
         }
 
-        ft.dmap  = (ftchar *)p; p += stride * sizeof(ftchar);
-        ft.dcmap = (ftchar *)p; p += stride * sizeof(ftchar);
+        for (mi = 0; mi < 2; mi++)
+        {
+            new_cbase[mi] = (ftchar *)p; p += cplane_bytes;
+            memset(new_cbase[mi], FTCHAR_ERASE, cplane_bytes);
+            for (i = 0; i < new_mrows; i++)
+                new_cbase[mi][i * cstride + new_mcols] = 0;
+        }
 
         if (ft.slab)
         {
@@ -619,17 +631,22 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
             {
                 for (i = 0; i < ft.mrows; i++)
                 {
-                    memcpy(new_cmap[mi][i], ft.cmap[mi][i], (size_t)ft.mcols * sizeof(ftchar));
-                    memcpy(new_amap[mi][i], ft.amap[mi][i], (size_t)ft.mcols * sizeof(ftattr));
+                    size_t old_row = (size_t)ft.rmap[mi][i];
+                    memcpy(new_cbase[mi] + i * cstride, ft.cbase[mi] + old_row * ft.cstride, (size_t)ft.mcols * sizeof(ftchar));
+                    memcpy(new_abase[mi] + i * astride, ft.abase[mi] + old_row * ft.astride, (size_t)ft.mcols * sizeof(ftattr));
                 }
             }
             fterm_slab_free(ft.slab, ft.slab_sz);
         }
 
-        ft.cmap[0] = new_cmap[0];
-        ft.cmap[1] = new_cmap[1];
-        ft.amap[0] = new_amap[0];
-        ft.amap[1] = new_amap[1];
+        ft.cbase[0] = new_cbase[0];
+        ft.cbase[1] = new_cbase[1];
+        ft.abase[0] = new_abase[0];
+        ft.abase[1] = new_abase[1];
+        ft.rmap[0] = new_rmap[0];
+        ft.rmap[1] = new_rmap[1];
+        ft.cstride = cstride;
+        ft.astride = astride;
         ft.slab = new_slab;
         ft.slab_sz = new_slab_sz;
         ft.mrows = new_mrows;
@@ -641,18 +658,18 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
     // because we will redawwin(), so need to change front buffer only.
     for (i = ft.rows; i < rows; i++)
     {
-        memset(FTCMAP[i], FTCHAR_ERASE,
+        memset(FTCMAP(i), FTCHAR_ERASE,
                 (cols) * sizeof(ftchar));
-        memset(FTAMAP[i], FTATTR_ERASE,
+        memset(FTAMAP(i), FTATTR_ERASE,
                 (cols) * sizeof(ftattr));
     }
     if (cols > ft.cols)
     {
         for (i = 0; i < ft.rows; i++)
         {
-            memset(FTCMAP[i]+ft.cols, FTCHAR_ERASE,
+            memset(FTCMAP(i)+ft.cols, FTCHAR_ERASE,
                     (cols-ft.cols) * sizeof(ftchar));
-            memset(FTAMAP[i]+ft.cols, FTATTR_ERASE,
+            memset(FTAMAP(i)+ft.cols, FTATTR_ERASE,
                     (cols-ft.cols) * sizeof(ftattr));
         }
     }
@@ -705,9 +722,9 @@ clrscr(void)
 {
     int r;
     for (r = 0; r < ft.rows; r++)
-        memset(FTCMAP[r], FTCHAR_ERASE, ft.cols * sizeof(ftchar));
+        memset(FTCMAP(r), FTCHAR_ERASE, ft.cols * sizeof(ftchar));
     for (r = 0; r < ft.rows; r++)
-        memset(FTAMAP[r], FTATTR_ERASE, ft.cols * sizeof(ftattr));
+        memset(FTAMAP(r), FTATTR_ERASE, ft.cols * sizeof(ftattr));
     fterm_markdirty();
     ft.standout = 0;
 }
@@ -772,8 +789,8 @@ clrregion(int r1, int r2)
 
     for (; r1 <= r2; r1++)
     {
-        memset(FTCMAP[r1], FTCHAR_ERASE, ft.cols);
-        memset(FTAMAP[r1], FTATTR_ERASE, ft.cols);
+        memset(FTCMAP(r1), FTCHAR_ERASE, ft.cols);
+        memset(FTAMAP(r1), FTATTR_ERASE, ft.cols);
     }
     fterm_markdirty();
 }
@@ -813,8 +830,8 @@ void newwin (int nlines, int ncols, int y, int x)
         move(y++, x);
         // use prepare_str to erase character
         fterm_prepare_str(ncols);
-        // memset(FTAMAP[y]+x, ft.attr, ncols);
-        // memset(FTCMAP[y]+x, FTCHAR_ERASE, ncols);
+        // memset(FTAMAP(y)+x, ft.attr, ncols);
+        // memset(FTCMAP(y)+x, FTCHAR_ERASE, ncols);
     }
     move(oy, ox);
 }
@@ -888,7 +905,7 @@ doupdate(void)
     {
         for (x = 0; x < ft.cols; x++)
         {
-            WORD xAttr = FTAMAP[y][x], xxAttr;
+            WORD xAttr = FTAMAP(y)[x], xxAttr;
             // w32 attribute: bit swap (0,2) and (4, 6)
             xxAttr = xAttr & 0xAA;
             if (xAttr & 0x01) xxAttr |= 0x04;
@@ -897,7 +914,7 @@ doupdate(void)
             if (xAttr & 0x40) xxAttr |= 0x10;
 
             winbuf[y*ft.cols + x].Attributes= xxAttr;
-            winbuf[y*ft.cols + x].Char.AsciiChar = FTCMAP[y][x];
+            winbuf[y*ft.cols + x].Char.AsciiChar = FTCMAP(y)[x];
         }
     }
     WriteConsoleOutputA(hStdout, winbuf, coordBufSize, coordBufCoord, &winrect);
@@ -911,38 +928,40 @@ doupdate(void)
     // calculate and optimize dirty
     for (y = 0; y < ft.rows; y++)
     {
+        ftchar FTD[FTSZ_MAX_COL + 1];
+        ftchar FTDC[FTSZ_MAX_COL + 1];
         int len = ft.cols, ds = 0, derase = 0;
         char dbcs = 0, odbcs = 0; // 0: none, 1: lead, 2: tail
 
         // reset dirty and display map
         memset(FTD, 0,          ft.cols * sizeof(ftchar));
-        memcpy(FTDC,FTCMAP[y],  ft.cols * sizeof(ftchar));
+        memcpy(FTDC,FTCMAP(y),  ft.cols * sizeof(ftchar));
 
         // first run: character diff
         for (x = 0; x < len; x++)
         {
             // build base dirty information
-            if (FTCMAP[y][x] != FTOCMAP[y][x])
+            if (FTCMAP(y)[x] != FTOCMAP(y)[x])
                 FTD[x] |= FTDIRTY_CHAR, ds++;
-            if (FTAMAP[y][x] != FTOAMAP[y][x])
+            if (FTAMAP(y)[x] != FTOAMAP(y)[x])
                 FTD[x] |= FTDIRTY_ATTR, ds++;
 
             // determine DBCS status
             if (dbcs == 1)
             {
 #ifdef FTCONF_PREVENT_INVALID_DBCS
-                switch(fterm_DBCS_Big5(FTCMAP[y][x-1], FTCMAP[y][x]))
+                switch(fterm_DBCS_Big5(FTCMAP(y)[x-1], FTCMAP(y)[x]))
                 {
                     case FTDBCS_SAFE:
                         // safe to print
                         FTD[x-1] &= ~FTDIRTY_INVALID_DBCS;
-                        FTDC[x-1] = FTCMAP[y][x-1];
+                        FTDC[x-1] = FTCMAP(y)[x-1];
                         break;
 
                     case FTDBCS_UNSAFE:
                         // ok to print, but need to rawmove.
                         FTD[x-1] &= ~FTDIRTY_INVALID_DBCS;
-                        FTDC[x-1] = FTCMAP[y][x-1];
+                        FTDC[x-1] = FTCMAP(y)[x-1];
                         FTD[x-1] |= FTDIRTY_CHAR;
 #ifdef FTCONF_CLEAR_UNSAFE_DBCS
                         FTD[x-1] |= FTDIRTY_CLEAR_DBCS;
@@ -952,7 +971,7 @@ doupdate(void)
 
                     case FTDBCS_INVALID:
                         // only SBCS safe characters can be print.
-                        if (!FTDBCS_ISSBCSPRINT(FTCMAP[y][x]))
+                        if (!FTDBCS_ISSBCSPRINT(FTCMAP(y)[x]))
                         {
                             FTD[x] |= FTDIRTY_INVALID_DBCS;
                             FTDC[x] = FTCHAR_INVALID_DBCS;
@@ -969,7 +988,7 @@ doupdate(void)
                     FTD[x-1]|= FTDIRTY_CHAR;
                 }
             }
-            else if (FTDBCS_ISLEAD(FTCMAP[y][x]))
+            else if (FTDBCS_ISLEAD(FTCMAP(y)[x]))
             {
                 // LEAD: clear dirty when tail was found.
                 dbcs  = 1;
@@ -994,7 +1013,7 @@ doupdate(void)
                     FTD[x-1]|= FTDIRTY_CHAR;
                 }
             }
-            else if (FTDBCS_ISLEAD(FTOCMAP[y][x]))
+            else if (FTDBCS_ISLEAD(FTOCMAP(y)[x]))
             {
                 // LEAD: dirty next?
                 odbcs  = 1;
@@ -1014,8 +1033,8 @@ doupdate(void)
         // TODO ERASE takes 3 bytes (ESC [ K), so enable only if derase >= 3?
         // TODO ERASE then print can avoid lots of space, optimize in future.
         for (x = ft.cols - 1; x >= 0; x--)
-            if (FTCMAP[y][x] != FTCHAR_ERASE ||
-                FTAMAP[y][x] != FTATTR_ERASE)
+            if (FTCMAP(y)[x] != FTCHAR_ERASE ||
+                FTAMAP(y)[x] != FTATTR_ERASE)
                 break;
             else if (FTD[x])
                 derase++;
@@ -1044,13 +1063,13 @@ doupdate(void)
                 for (i = ft.rx; i < x; i++)
                 {
                     // if same attribute, simply accept.
-                    if (FTAMAP[y][i] == ft.rattr && touched)
+                    if (FTAMAP(y)[i] == ft.rattr && touched)
                         continue;
                     // XXX spaces may accept (BG=rBG),
                     // but that will also change cached attribute.
-                    if (!FTCHAR_ISBLANK(FTCMAP[y][i]))
+                    if (!FTCHAR_ISBLANK(FTCMAP(y)[i]))
                         break;
-                    if (FTATTR_GETBG(FTAMAP[y][i]) != FTATTR_GETBG(ft.rattr))
+                    if (FTATTR_GETBG(FTAMAP(y)[i]) != FTATTR_GETBG(ft.rattr))
                         break;
                 }
                 if (i != x)
@@ -1067,7 +1086,7 @@ doupdate(void)
                 for (i = ft.rx; i < x; i++)
                 {
                     fterm_rawc(FTDC[i]);
-                    FTAMAP[y][i] = FTOAMAP[y][i]; // spaces may change attr...
+                    FTAMAP(y)[i] = FTOAMAP(y)[i]; // spaces may change attr...
                     ft.rx++;
                 }
 
@@ -1088,16 +1107,16 @@ doupdate(void)
             else
 #ifdef DBG_SHOW_DIRTY
             fterm_rawattr(FTD[x] ?
-                (FTAMAP[y][x] | FTATTR_BOLD) : (FTAMAP[y][x] & ~FTATTR_BOLD));
+                (FTAMAP(y)[x] | FTATTR_BOLD) : (FTAMAP(y)[x] & ~FTATTR_BOLD));
 #else // !DBG_SHOW_DIRTY
-            fterm_rawattr(FTAMAP[y][x]);
+            fterm_rawattr(FTAMAP(y)[x]);
 #endif // !DBG_SHOW_DIRTY
 
 #ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
             // Disable hidden message, only if current and previous chars are
             // not DBCS chars.  Current dirty format: [CHAR][DBCS]
-            if (FTATTR_GETFG(FTAMAP[y][x]) == FTATTR_GETBG(FTAMAP[y][x]) &&
-                (FTAMAP[y][x] & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0 &&
+            if (FTATTR_GETFG(FTAMAP(y)[x]) == FTATTR_GETBG(FTAMAP(y)[x]) &&
+                (FTAMAP(y)[x] & ~(FTATTR_FGMASK | FTATTR_BGMASK)) == 0 &&
                 !(FTD[x] & FTDIRTY_DBCS) &&
                 !(x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS)))
                 fterm_rawc(' ');
@@ -1178,25 +1197,20 @@ scroll()
 {
     // scroll up
     int y;
-    ftchar *c0 = FTCMAP[0], *oc0 = FTOCMAP[0];
-    ftattr *a0 = FTAMAP[0], *oa0 = FTOAMAP[0];
+    uint16_t r0 = ft.rmap[ft.mi][0], or0 = ft.rmap[1-ft.mi][0];
 
     // prevent mixing buffered scroll up+down
     if (ft.scroll < 0)
         fterm_rawscroll(ft.scroll);
 
-    // smart scroll: move pointers
+    // smart scroll: move row indices
     for (y = 0; y < ft.rows-1; y++)
     {
-        FTCMAP[y] = FTCMAP[y+1];
-        FTAMAP[y] = FTAMAP[y+1];
-        FTOCMAP[y]= FTOCMAP[y+1];
-        FTOAMAP[y]= FTOAMAP[y+1];
+        ft.rmap[ft.mi][y] = ft.rmap[ft.mi][y+1];
+        ft.rmap[1-ft.mi][y] = ft.rmap[1-ft.mi][y+1];
     }
-    FTCMAP[y] = c0;
-    FTAMAP[y] = a0;
-    FTOCMAP[y]= oc0;
-    FTOAMAP[y]= oa0;
+    ft.rmap[ft.mi][y] = r0;
+    ft.rmap[1-ft.mi][y] = or0;
 
     // XXX also clear backup buffer
     // must carefully consider if up then down scrolling.
@@ -1214,25 +1228,20 @@ rscroll()
 {
     // scroll down
     int y;
-    ftchar *c0 = FTCMAP[ft.rows -1], *oc0 = FTOCMAP[ft.rows -1];
-    ftattr *a0 = FTAMAP[ft.rows -1], *oa0 = FTOAMAP[ft.rows -1];
+    uint16_t r0 = ft.rmap[ft.mi][ft.rows-1], or0 = ft.rmap[1-ft.mi][ft.rows-1];
 
     // prevent mixing buffered scroll up+down
     if (ft.scroll > 0)
         fterm_rawscroll(ft.scroll);
 
-    // smart scroll: move pointers
+    // smart scroll: move row indices
     for (y = ft.rows -1; y > 0; y--)
     {
-        FTCMAP[y] = FTCMAP[y-1];
-        FTAMAP[y] = FTAMAP[y-1];
-        FTOCMAP[y]= FTOCMAP[y-1];
-        FTOAMAP[y]= FTOAMAP[y-1];
+        ft.rmap[ft.mi][y] = ft.rmap[ft.mi][y-1];
+        ft.rmap[1-ft.mi][y] = ft.rmap[1-ft.mi][y-1];
     }
-    FTCMAP[y] = c0;
-    FTAMAP[y] = a0;
-    FTOCMAP[y]= oc0;
-    FTOAMAP[y]= oa0;
+    ft.rmap[ft.mi][y] = r0;
+    ft.rmap[1-ft.mi][y] = or0;
 
     // XXX also clear backup buffer
     // must carefully consider if up then down scrolling.
@@ -1542,8 +1551,8 @@ void fterm_dupe2bk(void)
 
     for (r = 0; r < ft.rows; r++)
     {
-        memcpy(FTOCMAP[r], FTCMAP[r], ft.cols * sizeof(ftchar));
-        memcpy(FTOAMAP[r], FTAMAP[r], ft.cols * sizeof(ftattr));
+        memcpy(FTOCMAP(r), FTCMAP(r), ft.cols * sizeof(ftchar));
+        memcpy(FTOAMAP(r), FTAMAP(r), ft.cols * sizeof(ftattr));
     }
 }
 
@@ -2359,9 +2368,9 @@ grayout_apply(int y, int end, char enable_mask, char disable_mask)
     for (; y < end; y++) {
         for (x = 0; x < ft.cols - 1; x++) {
             if (disable_mask)
-                FTAMAP[y][x] &= ~disable_mask;
+                FTAMAP(y)[x] &= ~disable_mask;
             if (enable_mask)
-                FTAMAP[y][x] |= enable_mask;
+                FTAMAP(y)[x] |= enable_mask;
         }
     }
 }
@@ -2373,15 +2382,15 @@ grayout_shift(int y, int end, int right, int attr1, int attr2)
     for (; y < end; y++) {
         for (x = 0; x < ft.cols - 1; x++) {
             if (right) {
-                if (FTAMAP[y][x] & attr1)
-                    FTAMAP[y][x] |= attr2;
+                if (FTAMAP(y)[x] & attr1)
+                    FTAMAP(y)[x] |= attr2;
                 else
-                    FTAMAP[y][x] |= attr1;
+                    FTAMAP(y)[x] |= attr1;
             } else {
-                if (FTAMAP[y][x] & attr2)
-                    FTAMAP[y][x] &= ~attr2;
+                if (FTAMAP(y)[x] & attr2)
+                    FTAMAP(y)[x] &= ~attr2;
                 else
-                    FTAMAP[y][x] &= ~attr1;
+                    FTAMAP(y)[x] &= ~attr1;
             }
         }
     }
@@ -2435,7 +2444,7 @@ grayout(int y, int end, int level)
 
     for (; y <= end; y++)
     {
-        memset(FTAMAP[y], grattr, ft.cols);
+        memset(FTAMAP(y), grattr, ft.cols);
     }
 }
 
@@ -2460,9 +2469,9 @@ scr_dump(screen_backup_t *psb)
 
     for (y = 0; y < ft.rows; y++)
     {
-        memcpy(p, FTCMAP[y], ft.cols * sizeof(ftchar));
+        memcpy(p, FTCMAP(y), ft.cols * sizeof(ftchar));
         p += ft.cols * sizeof(ftchar);
-        memcpy(p, FTAMAP[y], ft.cols * sizeof(ftattr));
+        memcpy(p, FTAMAP(y), ft.cols * sizeof(ftattr));
         p += ft.cols * sizeof(ftattr);
     }
 }
@@ -2486,9 +2495,9 @@ scr_restore(const screen_backup_t *psb)
 
     for (y = 0; y < r; y++)
     {
-        memcpy(FTCMAP[y], p, c * sizeof(ftchar));
+        memcpy(FTCMAP(y), p, c * sizeof(ftchar));
         p += psb->col * sizeof(ftchar);
-        memcpy(FTAMAP[y], p, c * sizeof(ftattr));
+        memcpy(FTAMAP(y), p, c * sizeof(ftattr));
         p += psb->col * sizeof(ftattr);
     }
 
@@ -2513,8 +2522,7 @@ void
 region_scroll_up(int top, int bottom)
 {
     int i;
-    ftchar *c0;
-    ftattr *a0;
+    uint16_t r0;
 
     // logic same with old screen.c
     if (top > bottom) {
@@ -2525,16 +2533,13 @@ region_scroll_up(int top, int bottom)
     if (top < 0 || bottom >= ft.rows)
         return;
 
-    c0 = FTCMAP[top];
-    a0 = FTAMAP[top];
+    r0 = ft.rmap[ft.mi][top];
 
     for (i = top; i < bottom; i++)
     {
-        FTCMAP[i] = FTCMAP[i+1];
-        FTAMAP[i] = FTAMAP[i+1];
+        ft.rmap[ft.mi][i] = ft.rmap[ft.mi][i+1];
     }
-    FTCMAP[bottom] = c0;
-    FTAMAP[bottom] = a0;
+    ft.rmap[ft.mi][bottom] = r0;
 
     clrregion(bottom, bottom);
     fterm_markdirty();
