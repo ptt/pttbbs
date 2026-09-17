@@ -4,7 +4,7 @@
 #include <netinet/tcp.h>
 
 #ifdef __linux__
-#    ifdef CRITICAL_MEMORY
+#    ifdef __GLIBC__
 #        include <malloc.h>
 #    endif
 #    ifdef DEBUG
@@ -1289,16 +1289,16 @@ static void init(void)
     Signal(SIGUSR1, SIG_IGN);
     Signal(SIGUSR2, SIG_IGN);
 
-#if defined(__GLIBC__) && defined(CRITICAL_MEMORY)
-    #define MY__MMAP_THRESHOLD (1024 * 8)
-    #define MY__MMAP_MAX (0)
-    #define MY__TRIM_THRESHOLD (1024 * 8)
-    #define MY__TOP_PAD (0)
-
-    mallopt (M_MMAP_THRESHOLD, MY__MMAP_THRESHOLD);
-    mallopt (M_MMAP_MAX, MY__MMAP_MAX);
-    mallopt (M_TRIM_THRESHOLD, MY__TRIM_THRESHOLD);
-    mallopt (M_TOP_PAD, MY__TOP_PAD);
+#ifdef __GLIBC__
+#ifdef CRITICAL_MEMORY
+    mallopt(M_MMAP_THRESHOLD, 1024 * 8);
+    mallopt(M_MMAP_MAX, 0);
+    mallopt(M_TRIM_THRESHOLD, 1024 * 8);
+    mallopt(M_TOP_PAD, 0);
+#else
+    mallopt(M_TRIM_THRESHOLD, 1024 * 16);
+    mallopt(M_TOP_PAD, 1024 * 4);
+#endif
 #endif
 
 
