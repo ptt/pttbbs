@@ -117,6 +117,9 @@ void cmd_set_has_item(bool has_item);
 int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers);
 void vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers);
 void cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers);
+void cmd_bar_clear_hotspots(void);
+void cmd_bar_register_custom_hotspot(int y, int x_start, int x_end, int key, const cmd_t *layer_cmd);
+void cmd_bar_register_newmail_hotspot(int x_start, int x_end);
 
 int psb_main(PSB_CTX *psbctx);
 

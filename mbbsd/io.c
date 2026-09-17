@@ -301,6 +301,14 @@ system_key_hook(int ch)
         }
         return ch;
 
+    case KEY_MOUSE: {
+        const vtkbd_mouse_t *m = vkey_get_mouse();
+        if (m && m->is_motion) {
+            vs_locator_handle_motion(m->y, m->x);
+            return KEY_INCOMPLETE;
+        }
+        return ch;
+    }
     case KEY_MOUSE_RELEASE:
         return KEY_INCOMPLETE;
     }

@@ -449,6 +449,7 @@ int main_menu(void);
 // ZA System
 int  ZA_Waiting(void);
 int  ZA_Select(void);
+int  ZA_Set(char cmd);
 void ZA_Enter(void);
 void ZA_Drop(void);
 
@@ -637,6 +638,7 @@ void region_scroll_up(int top, int bottom);
 
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);
+void grayout_rect(int y, int end, int x_start, int x_end, int level);
 
 /* AIDS */
 /* end of AIDS */

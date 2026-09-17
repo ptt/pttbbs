@@ -616,6 +616,138 @@ vs_row_line(int row_bit)
     }
 }
 
+static int curr_locator_y = -1;
+static int curr_hs_y = -1;
+static int curr_hs_x1 = -1;
+static int curr_hs_x2 = -1;
+static int locator_top = -1;
+static int locator_bottom = -1;
+static int last_hover_y = -1;
+static int last_hover_x = -1;
+
+static void
+vs_locator_clear_hs(void)
+{
+    if (curr_hs_y >= 0 && curr_hs_y < t_lines && curr_hs_x2 > curr_hs_x1) {
+        grayout_rect(curr_hs_y, curr_hs_y + 1, curr_hs_x1, curr_hs_x2, GRAYOUT_LOCEND);
+    }
+    curr_hs_y = -1;
+    curr_hs_x1 = -1;
+    curr_hs_x2 = -1;
+}
+
+static void
+vs_locator_clear_row(void)
+{
+    if (curr_locator_y >= 0 && curr_locator_y < t_lines) {
+        grayout(curr_locator_y, curr_locator_y + 1, GRAYOUT_LOCEND);
+    }
+    curr_locator_y = -1;
+}
+
+void
+vs_locator_clear(void)
+{
+    vs_locator_clear_row();
+    vs_locator_clear_hs();
+}
+
+void
+vs_locator_set(int y)
+{
+    vs_locator_clear_hs();
+    if (curr_locator_y == y)
+        return;
+    vs_locator_clear_row();
+    if (y >= 0 && y < t_lines) {
+        grayout(y, y + 1, GRAYOUT_LOCATOR);
+        curr_locator_y = y;
+    }
+}
+
+static void
+vs_locator_set_hs(int y, int x1, int x2)
+{
+    vs_locator_clear_row();
+    if (curr_hs_y == y && curr_hs_x1 == x1 && curr_hs_x2 == x2)
+        return;
+    vs_locator_clear_hs();
+    if (y >= 0 && y < t_lines && x2 > x1) {
+        grayout_rect(y, y + 1, x1, x2, GRAYOUT_LOCATOR);
+        curr_hs_y = y;
+        curr_hs_x1 = x1;
+        curr_hs_x2 = x2;
+    }
+}
+
+void
+vs_locator_set_bounds(int top, int bottom)
+{
+    locator_top = top;
+    locator_bottom = bottom;
+    if (top < 0 || bottom <= top) {
+        vs_locator_clear();
+    } else if (last_hover_y >= 0) {
+        int hx1, hx2;
+        if (cmd_bar_get_hotspot_rect(last_hover_y, last_hover_x, &hx1, &hx2)) {
+            vs_locator_set_hs(last_hover_y, hx1, hx2);
+        } else if (last_hover_y >= top && last_hover_y < bottom) {
+            vs_locator_set(last_hover_y);
+        } else {
+            vs_locator_clear();
+        }
+    } else {
+        vs_locator_clear();
+    }
+}
+
+int
+vs_locator_handle_motion(int y, int x)
+{
+    last_hover_y = y;
+    last_hover_x = x;
+    if (locator_top >= 0) {
+        int hx1, hx2;
+        if (cmd_bar_get_hotspot_rect(y, x, &hx1, &hx2)) {
+            int prev_y = curr_hs_y, prev_x1 = curr_hs_x1, prev_x2 = curr_hs_x2;
+            int prev_row = curr_locator_y;
+            vs_locator_set_hs(y, hx1, hx2);
+            if (prev_row >= 0 || prev_y != y || prev_x1 != hx1 || prev_x2 != hx2)
+                refresh();
+            return 1;
+        }
+        if (y >= locator_top && y < locator_bottom) {
+            int prev_row = curr_locator_y;
+            int prev_hs = curr_hs_y;
+            vs_locator_set(y);
+            if (prev_hs >= 0 || prev_row != y)
+                refresh();
+            return 1;
+        }
+    }
+    if (curr_locator_y >= 0 || curr_hs_y >= 0) {
+        vs_locator_clear();
+        refresh();
+    }
+    return 1;
+}
+
+void
+vs_locator_on_wheel(int y GCC_UNUSED, int x GCC_UNUSED)
+{
+    last_hover_y = -1;
+    last_hover_x = -1;
+    vs_locator_clear();
+}
+
+void
+vs_locator_reset_hover(void)
+{
+    last_hover_y = -1;
+    last_hover_x = -1;
+    vs_locator_clear();
+}
+
 void
 vs_footer(const char *caption, const char *msg)
 {
@@ -1460,6 +1592,7 @@ int
 {
     return vgetstring_sz(_buf, (size_t)-1, len, flags, defstr, pcbs, instance);
 }
+
 
 static void
 vs_multi_T_table_auto(

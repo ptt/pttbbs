@@ -224,6 +224,8 @@ abort_bbs(int sig GCC_UNUSED)
     if (currmode) {
 	STATINC(STAT_MBBSD_ABORTED);
 	u_exit("ABORTED");
+    } else {
+	term_uninit();
     }
     term_uninit();
     exit(0);

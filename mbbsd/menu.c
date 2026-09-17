@@ -177,6 +177,13 @@ ZA_Drop(void)
     zacmd = 0;
 }
 
+int
+ZA_Set(char cmd)
+{
+    zacmd = cmd;
+    return 1;
+}
+
 // Promp user our ZA bar and return for selection.
 int
 ZA_Select(void)
