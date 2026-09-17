@@ -1367,11 +1367,18 @@ void
 DeleteChessInfo(ChessInfo* info)
 {
 #define NULL_OR_FREE(X) if (X) free(X); else (void) 0
+    if (info->mode == CHESS_MODE_REPLAY) {
+	NULL_OR_FREE(info->board);
+	NULL_OR_FREE(info->tag);
+    }
+    if (info->timelimit == _current_time_limit)
+	_current_time_limit = NULL;
     NULL_OR_FREE(info->timelimit);
     NULL_OR_FREE(info->photo);
     NULL_OR_FREE(info->history.body);
 
     ChessBroadcastListClear(&info->broadcast_list);
+    free(info);
 #undef NULL_OR_FREE
 }
 
@@ -1393,9 +1400,11 @@ ChessAcceptingRequest(int sock)
     /* XXX */
     char mode;
     read(sock, &mode, 1);
-    if (mode == 'T')
+    if (_current_time_limit) {
+	free(_current_time_limit);
 	_current_time_limit = NULL;
-    else {
+    }
+    if (mode != 'T') {
 	_current_time_limit = (ChessTimeLimit*) malloc(sizeof(ChessTimeLimit));
 	read(sock, _current_time_limit, sizeof(ChessTimeLimit));
     }
