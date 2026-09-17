@@ -14,9 +14,9 @@
 #include <limits.h>
 
 // THEME DEFINITION ----------------------------------------------------
-#define VCLR_HEADER		ANSI_COLOR(1;37;46)	// was: TITLE_COLOR
-#define VCLR_HEADER_MID		ANSI_COLOR(1;33;46)
-#define VCLR_HEADER_RIGHT	ANSI_COLOR(1;37;46)
+#define VCLR_HEADER		TITLE_COLOR
+#define VCLR_HEADER_MID		TITLE_COLOR ANSI_COLOR(1;33)
+#define VCLR_HEADER_RIGHT	TITLE_COLOR ANSI_COLOR(1;37)
 #define VCLR_HDR		ANSI_COLOR(1;37;46)
 #define VCLR_HDR2_LEFT		ANSI_COLOR(1;37;46)
 #define VCLR_HDR2_RIGHT		ANSI_COLOR(1;37;45)
@@ -153,8 +153,8 @@ int vget    (int y, int x, const char *prompt, char *buf, int len, int mode);
 int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance);
 
 // vs_*: formatted and themed virtual screen layout
-// you cannot use ANSI escapes in these APIs.
-void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
+void vs_header	(const char *title,   const char *mid, const char *right,
+		 void (*mid_cb)(int x_start, int x_end));	// vs_head, showtitle
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_hdr2	(const char *left, const char *right);
 void vs_hdr2bar	(const char *left, const char *right);

@@ -96,6 +96,7 @@ typedef struct PSB_CTX {
     int (*header)(struct PSB_CTX *ctx);
     int (*footer)(struct PSB_CTX *ctx);
     int (*renderer)(int i, struct PSB_CTX *ctx);
+    int (*empty_renderer)(struct PSB_CTX *ctx);
     int (*cursor)(int y, struct PSB_CTX *ctx);
     int (*on_key)(struct PSB_CTX *ctx);
     int (*col_measurer)(int i, int col, struct PSB_CTX *ctx);

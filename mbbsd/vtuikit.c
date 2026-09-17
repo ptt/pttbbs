@@ -490,50 +490,61 @@ vs_rectangle_simple(int l, int t, int r, int b)
  * @param title: 靠左的主要標題，不會被切斷。
  * @param mid: 置中說明，可被切齊。
  * @param right: 靠右的說明，空間夠才會顯示。
+ * @param mid_cb: 若非 NULL，繪製 mid 時會呼叫 mid_cb(x_start, x_end) 通知座標範圍。
  */
 void
-vs_header(const char *title, const char *mid, const char *right)
+vs_header(const char *title, const char *mid, const char *right,
+          void (*mid_cb)(int x_start, int x_end))
 {
     int w = MAX_COL;
-    int szmid   = mid   ? str_term_width(mid) : 0;
+    int sztitle = title ? str_term_width(title) : 0;
+    int szmid   = mid   ? str_term_width(mid)   : 0;
     int szright = right ? str_term_width(right) : 0;
 
     clear();
+    cmd_bar_clear_hotspots();
     outs(VCLR_HEADER);
 
     if (title)
     {
-	int y, x;
-	outs(VMSG_HDR_PREFIX);
+	outs("【");
 	outs(title);
-	outs(VMSG_HDR_POSTFIX);
-	getyx(&y, &x);
-	w -= x;
+	outs("】");
+	w -= 4 + sztitle;
     }
 
-    // determine if we can display right message, and
-    // if we need to truncate mid.
-    if (szmid + szright > w)
+    if (szmid > w)
+	szmid = w;
+    else if (szmid > 0) {
+	int mpos = (MAX_COL - szmid) / 2;
+	int l = mpos - (MAX_COL - w);
+	if (l > 0) {
+	    nblank(l);
+	    w -= l;
+	}
+    }
+
+    if (szmid > 0) {
+	if (mid_cb)
+	    mid_cb(MAX_COL - w, MAX_COL - w + szmid);
+	if (*mid != ESC_CHR)
+	    outs(VCLR_HEADER_MID);
+	if (*mid == ESC_CHR)
+	    outs(mid);
+	else
+	    outns(mid, szmid);
+	outs(VCLR_HEADER);
+	w -= szmid;
+    }
+
+    if (szright > w)
 	szright = 0;
 
-    if (szmid >= w)
-	szmid = w;
-    else {
-	int l = (MAX_COL-szmid)/2;
-	l -= (MAX_COL-w);
-	if (l > 0)
-	    nblank(l), w -= l;
-    }
+    nblank(w - szright);
 
-    if (szmid) {
-	outs(VCLR_HEADER_MID);
-	fillns(szmid, mid);
-	outs(VCLR_HEADER);
-    }
-    nblank(w - szmid - szright);
-
-    if (szright) {
-	outs(VCLR_HEADER_RIGHT);
+    if (szright > 0) {
+	if (*right != ESC_CHR)
+	    outs(VCLR_HEADER_RIGHT);
 	outs(right);
     }
     outs(ANSI_RESET "\n");

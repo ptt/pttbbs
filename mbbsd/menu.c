@@ -91,58 +91,64 @@ typedef struct {
 void
 showtitle(const char *title, const char *mid)
 {
-    int tail_type;
-    int is_currboard_special = 0;
     char mid_buf[64];
-
+    char right_buf[64] = "";
     const char *high_attr = HasUserFlag(UF_CURSOR_STANDOUT) ? ANSI_COLOR(41) :
 	ANSI_COLOR(41;5);
+    bool has_new_mail = false;
 
     /* prepare mid */
 #ifdef DEBUG
-    snprintf(mid_buf, sizeof(mid_buf), "%s  current pid: %6d  ",
-	     high_attr, getpid());
+    snprintf(mid_buf, sizeof(mid_buf), "%s  current pid: %6d  ", high_attr, (int)getpid());
     mid = mid_buf;
 #else
     if (ISNEWMAIL(currutmp)) {
 	snprintf(mid_buf, sizeof(mid_buf), "%s    你有新信件    ", high_attr);
 	mid = mid_buf;
-    } else if ( HasUserPerm(PERM_ACCTREG) ) {
+	has_new_mail = true;
+    } else if (HasUserPerm(PERM_ACCTREG)) {
 	// TODO cache this value?
 	int nreg = regform_estimate_queuesize();
-	if(nreg > 100)
+	if (nreg > 100)
 	{
 	    nreg -= (nreg % 10);
-	    snprintf(mid_buf, sizeof(mid_buf), "%s  超過 %03d 篇未審核  ",
-		     high_attr, nreg);
+	    snprintf(mid_buf, sizeof(mid_buf), "%s  超過 %03d 篇未審核  ", high_attr, nreg);
 	    mid = mid_buf;
 	}
     }
 #endif
 
     /* prepare tail */
-    if (currmode & MODE_SELECT)
-	tail_type = TITLE_TAIL_SELECT;
-    else if (currmode & MODE_DIGEST)
-	tail_type = TITLE_TAIL_DIGEST;
-    else
-	tail_type = TITLE_TAIL_BOARD;
-
-    if(currbid > 0)
+    if (currboard[0])
     {
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	is_currboard_special = (
-		(getbcache(currbid)->brdattr & BRD_HIDE) &&
-		(getbcache(currbid)->brdattr & BRD_POSTMASK));
-    }
+	int tail_type;
+	int is_currboard_special = 0;
 
-    vs_header(title, mid, currboard[0] ?
-	      TEMPFORMAT(64, "%s%s《%s%s%s》",
+	if (currmode & MODE_SELECT)
+	    tail_type = TITLE_TAIL_SELECT;
+	else if (currmode & MODE_DIGEST)
+	    tail_type = TITLE_TAIL_DIGEST;
+	else
+	    tail_type = TITLE_TAIL_BOARD;
+
+	if (currbid > 0)
+	{
+	    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+	    is_currboard_special = (
+		    (getbcache(currbid)->brdattr & BRD_HIDE) &&
+		    (getbcache(currbid)->brdattr & BRD_POSTMASK));
+	}
+
+	snprintf(right_buf, sizeof(right_buf), "%s%s《%s%s%s》",
 		 title_tail_attrs[tail_type],
 		 title_tail_msgs[tail_type],
 		 is_currboard_special ? ANSI_COLOR(32) : "",
 		 currboard,
-		 title_tail_attrs[tail_type]) : "");
+		 title_tail_attrs[tail_type]);
+    }
+
+    vs_header(title, mid, right_buf,
+	      has_new_mail ? cmd_bar_register_newmail_hotspot : NULL);
 }
 
 static void
