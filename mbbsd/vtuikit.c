@@ -596,6 +596,20 @@ vs_hdr2(const char *left, const char *right)
  * @param caption 左邊的分類字串
  * @param msg 訊息字串, \t 後文字靠右、最後面會自動留一個空白。
  */
+int
+vs_row_line(int row_bit)
+{
+    switch (row_bit) {
+        case VS_HEADER:     return 0;
+        case VS_SUB_HEADER: return 1;
+        case VS_COL_HEADER: return 2;
+        case VS_DATA:       return 3;
+        case VS_SUB_FOOTER: return b_lines - 1;
+        case VS_FOOTER:     return b_lines;
+        default:            return -1;
+    }
+}
+
 void
 vs_footer(const char *caption, const char *msg)
 {

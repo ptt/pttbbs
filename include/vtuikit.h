@@ -158,7 +158,21 @@ void vs_header	(const char *title,   const char *mid, const char *right);	// vs_
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_hdr2	(const char *left, const char *right);
 void vs_hdr2bar	(const char *left, const char *right);
+// Virtual Screen Row Bitmasks
+enum {
+    VS_HEADER     = (1 << 0), // 第一排 (row 0)
+    VS_SUB_HEADER = (1 << 1), // 第二排 (row 1)
+    VS_COL_HEADER = (1 << 2), // 第三排 (row 2)
+    VS_DATA       = (1 << 3), // 主要 data (rows) 開始顯示的位置 (row 3)
+    VS_SUB_FOOTER = (1 << 4), // 倒數第二排 (row b_lines - 1)
+    VS_FOOTER     = (1 << 5), // 最後一排 (row b_lines)
+};
+
+int vs_row_line(int row_bit);
+
+struct cmd_layer;
 void vs_footer	(const char *caption, const char *prompt);
+void vs_cmd_bar	(int row_type, const char *prompt, const struct cmd_layer *cmd_layers);
 
 int vs_quick_pref(int default_value, const char *title, const char *entry,
                   const char *options, const char *prompt);

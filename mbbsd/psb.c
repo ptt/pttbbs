@@ -115,7 +115,7 @@ psb_cmd_num(cmd_ctx_t *ctx) {
 }
 
 const cmd_t psb_base_cmds[] = {
-    { KEY_UP, "移動", "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NAV, true },
+    { KEY_UP, NULL, "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NONE, true },
     { KEY_DOWN, NULL, "向下移動一列", psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'k', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
     { 'p', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
@@ -123,8 +123,8 @@ const cmd_t psb_base_cmds[] = {
     { 'j', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'n', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { Ctrl('N'), NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
-    { KEY_PGUP, "翻頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
-    { KEY_PGDN, NULL, "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, "上頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
+    { KEY_PGDN, "下頁", "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NAV, true },
     { ' ', NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
     { Ctrl('B'), NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
     { 'P', NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
@@ -143,9 +143,9 @@ const cmd_t psb_base_cmds[] = {
     { '7', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '8', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '9', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
-    { 'q', NULL, "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, "離開", "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 'Q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
-    { KEY_LEFT, NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -471,73 +471,212 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
     }
 }
 
-static void
-psb_format_footer_item(const cmd_t *cmd, char *buf, size_t sz) {
-    char kbuf[16];
-    psb_key_name(cmd->key, kbuf, sizeof(kbuf));
-    snprintf(buf, sz, " (%s)%s", kbuf, cmd->label);
+typedef struct {
+    const cmd_t *cmd;
+    int prio;
+    int order;
+} cmd_cand_t;
+
+static int
+cmd_cand_cmp(const void *a, const void *b) {
+    const cmd_cand_t *ca = (const cmd_cand_t *)a;
+    const cmd_cand_t *cb = (const cmd_cand_t *)b;
+    if (ca->prio != cb->prio)
+        return cb->prio - ca->prio;
+    return ca->order - cb->order;
 }
 
 static void
-psb_prune_footer_items(char items[][64], const int *prios, bool *active, int n, int avail_cols) {
-    while (1) {
-        int total_len = 0;
-        int min_prio = 0x7fffffff;
-        int min_idx = -1;
-        int i;
-        for (i = 0; i < n; i++) {
-            if (!active[i])
+format_cmd_for_row(const cmd_t *cmd, int row_bit, bool is_first_on_row,
+                   const char *row_prompt, char *buf, size_t sz) {
+    char kbuf[16];
+    psb_key_name(cmd->key, kbuf, sizeof(kbuf));
+    if (row_bit == VS_FOOTER) {
+        snprintf(buf, sz, " (%s)%s", kbuf, cmd->label);
+    } else {
+        bool need_space = !is_first_on_row;
+        if (is_first_on_row && row_prompt && row_prompt[0]) {
+            size_t plen = strlen(row_prompt);
+            if (row_prompt[plen - 1] != ' ')
+                need_space = true;
+        }
+        snprintf(buf, sz, "%s[%s]%s", need_space ? " " : "", kbuf, cmd->label);
+    }
+}
+
+static bool
+cmd_bar_try_place(int r, int row_bit, const char *sub_prompt,
+                  const cmd_t *cmd, char row_bufs[][256],
+                  int *avail_cols, int *row_item_count)
+{
+    char item_str[64];
+    const char *r_prompt = (r == 0 && row_bit != VS_FOOTER) ? sub_prompt : "";
+    format_cmd_for_row(cmd, row_bit, row_item_count[r] == 0, r_prompt,
+                       item_str, sizeof(item_str));
+    int item_len = str_term_width(item_str);
+    if (item_len > avail_cols[r])
+        return false;
+
+    strlcat(row_bufs[r], item_str, sizeof(row_bufs[r]));
+    avail_cols[r] -= item_len;
+    row_item_count[r]++;
+    return true;
+}
+
+void
+vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
+    static const int all_row_bits[] = {
+        VS_HEADER, VS_SUB_HEADER, VS_COL_HEADER,
+        VS_DATA, VS_SUB_FOOTER, VS_FOOTER
+    };
+    int active_rows[6];
+    int n_rows = 0;
+    for (int i = 0; i < 6; i++) {
+        if (row_type & all_row_bits[i])
+            active_rows[n_rows++] = all_row_bits[i];
+    }
+    if (n_rows == 0)
+        return;
+
+    const char *sub_prompt = "";
+    const char *footer_caption = " 頁面瀏覽 ";
+
+    if (prompt) {
+        if (row_type & VS_FOOTER)
+            footer_caption = prompt;
+        else
+            sub_prompt = prompt;
+    }
+
+    int seen_keys[256];
+    int n_seen = 0;
+    cmd_cand_t cands[64];
+    int n_cands = 0;
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+
+    for (layer = cmd_layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            if (cmd->key == EOF || cmd->key == 0)
                 continue;
-            total_len += strlen(items[i]);
-            if (prios[i] <= min_prio) {
-                min_prio = prios[i];
-                min_idx = i;
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < 256)
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            if ((row_type & VS_FOOTER) && (cmd->key == 'h' || cmd->key == 'H'))
+                continue;
+            if (cmd->label && cmd->prio > CMD_PRIO_NONE && n_cands < (int)ARRAY_SIZE(cands)) {
+                cands[n_cands].cmd = cmd;
+                cands[n_cands].prio = cmd->prio;
+                cands[n_cands].order = n_cands;
+                n_cands++;
             }
         }
-        if (total_len <= avail_cols || min_idx < 0)
+    }
+
+    qsort(cands, n_cands, sizeof(cmd_cand_t), cmd_cand_cmp);
+
+    char row_bufs[6][256];
+    int avail_cols[6];
+    int row_item_count[6];
+    const char *footer_tail = "\t(h)說明";
+
+    for (int r = 0; r < n_rows; r++) {
+        row_bufs[r][0] = '\0';
+        row_item_count[r] = 0;
+        if (active_rows[r] == VS_FOOTER) {
+            avail_cols[r] = (t_columns - 1) - str_term_width(footer_caption) - strlen("(h)說明");
+        } else {
+            const char *p = (r == 0) ? sub_prompt : "";
+            avail_cols[r] = (t_columns - 1) - str_term_width(p);
+            if (!(row_type & VS_FOOTER) && r == n_rows - 1)
+                avail_cols[r] -= strlen(" [h]說明");
+        }
+        if (avail_cols[r] < 0)
+            avail_cols[r] = 0;
+    }
+
+    bool placed[64] = {false};
+
+    // Always place KEY_LEFT first on the top-most active row
+    for (int i = 0; i < n_cands; i++) {
+        if (cands[i].cmd->key == KEY_LEFT) {
+            if (cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
+                                  row_bufs, avail_cols, row_item_count)) {
+                placed[i] = true;
+            }
             break;
-        active[min_idx] = false;
+        }
+    }
+
+    if (n_rows > 1) {
+        // Multi-row mode (e.g., VS_SUB_HEADER + VS_FOOTER):
+        // Upper row gets navigation/view commands (prio <= CMD_PRIO_NORM).
+        // Lower row gets state-changing/frequent actions (prio >= CMD_PRIO_HIGH).
+        for (int i = 0; i < n_cands; i++) {
+            if (!placed[i] && cands[i].prio <= CMD_PRIO_NORM) {
+                if (cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
+                                      row_bufs, avail_cols, row_item_count)) {
+                    placed[i] = true;
+                }
+            }
+        }
+        int bottom_r = n_rows - 1;
+        for (int i = 0; i < n_cands; i++) {
+            if (!placed[i] && cands[i].prio >= CMD_PRIO_HIGH) {
+                if (cmd_bar_try_place(bottom_r, active_rows[bottom_r], sub_prompt, cands[i].cmd,
+                                      row_bufs, avail_cols, row_item_count)) {
+                    placed[i] = true;
+                }
+            }
+        }
+        // Pass 2 (Overflow): any unplaced commands fill remaining space on any row
+        for (int i = 0; i < n_cands; i++) {
+            if (placed[i])
+                continue;
+            for (int r = 0; r < n_rows; r++) {
+                if (cmd_bar_try_place(r, active_rows[r], sub_prompt, cands[i].cmd,
+                                      row_bufs, avail_cols, row_item_count)) {
+                    placed[i] = true;
+                    break;
+                }
+            }
+        }
+    } else {
+        // Single-row mode: fill by priority descending
+        for (int i = 0; i < n_cands; i++) {
+            if (!placed[i]) {
+                cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
+                                  row_bufs, avail_cols, row_item_count);
+            }
+        }
+    }
+
+    for (int r = 0; r < n_rows; r++) {
+        if (active_rows[r] == VS_FOOTER) {
+            strlcat(row_bufs[r], footer_tail, sizeof(row_bufs[r]));
+            vs_footer(footer_caption, row_bufs[r]);
+        } else {
+            int line = vs_row_line(active_rows[r]);
+            if (line >= 0) {
+                move(line, 0);
+                clrtoeol();
+                if (r == 0 && sub_prompt[0])
+                    outs(sub_prompt);
+                outs(row_bufs[r]);
+                if (!(row_type & VS_FOOTER) && r == n_rows - 1) {
+                    outs(" [h]說明");
+                }
+            }
+        }
     }
 }
 
 void
 cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers) {
-    const char *cap = caption ? caption : " PSB 1.0 ";
-    const char *tail = " \t(h)說明 (q/←)跳出";
-    const cmd_layer_t *layer;
-    const cmd_t *cmd;
-    int seen_keys[256];
-    int n_seen = 0;
-    char items[32][64];
-    int prios[32];
-    bool active[32];
-    int n = 0, i;
-    int avail_cols = (t_columns - 1) - str_term_width(cap) - strlen(tail);
-
-    for (layer = layers; layer && layer->cmds; layer++) {
-        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
-            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
-            if (n_seen < 256)
-                seen_keys[n_seen++] = cmd->key;
-            if (masked || !cmd->label || n >= 32 || !psb_check_perm(cmd->permission) ||
-                (cmd->need_item && !cmd_bar_has_item))
-                continue;
-            psb_format_footer_item(cmd, items[n], sizeof(items[n]));
-            prios[n] = cmd->prio;
-            active[n] = true;
-            n++;
-        }
-    }
-
-    psb_prune_footer_items(items, prios, active, n, avail_cols);
-
-    char prompt[256] = "";
-    for (i = 0; i < n; i++) {
-        if (active[i])
-            strlcat(prompt, items[i], sizeof(prompt));
-    }
-    strlcat(prompt, tail, sizeof(prompt));
-    vs_footer(cap, prompt);
+    vs_cmd_bar(VS_FOOTER, caption, layers);
 }
 
 static int
