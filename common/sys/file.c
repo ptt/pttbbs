@@ -387,17 +387,66 @@ int file_count_line(const char *file)
     return count;
 }
 
+int
+file_append_len(const char *file, const char *buf, int len)
+{
+    if (!file || !*file || !buf || len < 0)
+        return -1;
+    if (len == 0)
+        return 0;
+
+    int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
+    if (fd < 0)
+        return -1;
+
+    int res;
+    /* Linux / POSIX guarantees O_APPEND write <= 4KB (PIPE_BUF) is atomic without flock */
+    if (len <= PIPE_BUF) {
+        res = towrite(fd, buf, len);
+    } else {
+        flock(fd, LOCK_EX);
+        res = towrite(fd, buf, len);
+        flock(fd, LOCK_UN);
+    }
+
+    close(fd);
+    return (res == len) ? 0 : -1;
+}
+
+int file_append(const char *file, const char *string)
+{
+    if (!string)
+        return -1;
+    return file_append_len(file, string, strlen(string));
+}
+
 /* Append a format string (with params) to a file. */
 int
 file_appendv(const char *file, const char *fmt, va_list ap)
 {
-    char *buf = NULL;
-    int len = vasprintf(&buf, fmt, ap);
-    if (len < 0 || !buf)
+    char sbuf[512];
+    va_list ap_copy;
+    va_copy(ap_copy, ap);
+    int len = vsnprintf(sbuf, sizeof(sbuf), fmt, ap);
+    if (len < 0) {
+        va_end(ap_copy);
         return -1;
+    }
+    if ((size_t)len < sizeof(sbuf)) {
+        va_end(ap_copy);
+        return file_append_len(file, sbuf, len);
+    }
 
-    int ret = file_append(file, buf);
-    free(buf);
+    char *hbuf = (char *)malloc((size_t)len + 1);
+    if (!hbuf) {
+        va_end(ap_copy);
+        return -1;
+    }
+    vsnprintf(hbuf, (size_t)len + 1, fmt, ap_copy);
+    va_end(ap_copy);
+
+    int ret = file_append_len(file, hbuf, len);
+    free(hbuf);
     return ret;
 }
 
@@ -409,30 +458,6 @@ file_appendf(const char *file, const char *fmt, ...)
     int ret = file_appendv(file, fmt, ap);
     va_end(ap);
     return ret;
-}
-
-int file_append(const char *file, const char *string)
-{
-    if (!file || !*file || !string)
-        return -1;
-
-    int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
-    if (fd < 0)
-        return -1;
-
-    int len = strlen(string);
-    int res;
-    /* Linux / POSIX guarantees O_APPEND write <= 4KB (PIPE_BUF) is atomic without flock */
-    if (len <= PIPE_BUF) {
-        res = towrite(fd, string, len);
-    } else {
-        flock(fd, LOCK_EX);
-        res = towrite(fd, string, len);
-        flock(fd, LOCK_UN);
-    }
-
-    close(fd);
-    return (res == len) ? 0 : -1;
 }
 
 /**

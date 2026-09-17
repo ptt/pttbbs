@@ -124,6 +124,7 @@ int Mkdir(const char *path);
 int RmTree(const char *path);
 int OpenCreate(const char *path, int flags);
 int file_count_line(const char *file);
+int file_append_len(const char *file, const char *buf, int len);
 int file_append(const char *file, const char *string); // does not append "\n"
 int file_appendv(const char *file, const char *fmt, va_list ap) GCC_CHECK_FORMAT(2, 0);
 int file_appendf(const char *file, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
@@ -230,6 +231,7 @@ char*	ctime4(const time4_t *);
 char*	ctime4_r(const time4_t *, char *);
 
 /* log.c */
+int log_filev(const char *fn, const char *fmt, va_list ap) GCC_CHECK_FORMAT(2, 0);
 int log_filef(const char *fn, const char *fmt, ...) GCC_CHECK_FORMAT(2,3);
 int log_file(const char *fn, const char *msg);
 

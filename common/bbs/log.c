@@ -37,15 +37,8 @@ int log_user_security(const char *user, const char *fmt, ...)
 
     va_list ap;
     va_start(ap, fmt);
-    char *buf = NULL;
-    if (vasprintf(&buf, fmt, ap) < 0 || !buf) {
-        va_end(ap);
-        return -1;
-    }
+    int res = log_filev(fn, fmt, ap);
     va_end(ap);
-
-    int res = file_appendf(fn, "%s %s", Cdatelite(&now), buf);
-    free(buf);
     return res;
 }
 
