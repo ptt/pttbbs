@@ -9,7 +9,6 @@
          ((x & PERM_LOGINOK) ? HasBasicUserPerm(x) : HasUserPerm(x))))
 
 /* help & menu processring */
-static int      refscreen = NA;
 extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
 
@@ -177,14 +176,20 @@ ZA_Drop(void)
     zacmd = 0;
 }
 
+// Promp user our ZA bar and return for selection.
 int
 ZA_Set(char cmd)
 {
+    if (!is_login_ready ||
+        !HasUserPerm(PERM_BASIC) ||
+        HasUserPerm(PERM_VIOLATELAW))
+        return 0;
+    if (strchr("bcfmut", cmd) == NULL)
+        return 0;
     zacmd = cmd;
     return 1;
 }
 
-// Promp user our ZA bar and return for selection.
 int
 ZA_Select(void)
 {
@@ -196,7 +201,7 @@ ZA_Select(void)
         return 0;
 
     // TODO refresh status bar?
-    vs_footer(VCLR_ZA_CAPTION " ★快速切換: ",
+    vs_footer(VCLR_ZA_CAPTION " 快速切換 ",
 	    " (b)文章列表 (c)分類 (t)熱門 (f)我的最愛 (m)信箱 (u)使用者名單");
     k = vkey();
 
@@ -266,26 +271,91 @@ decide_menu_row(const commands_t *p) {
 # define decide_menu_row(x) (menu_row)
 #endif
 
+static const cmd_t menu_nav_cmds[];
+
+static const char *
+menu_caption(const char *cmdtitle)
+{
+    if (!cmdtitle)
+        return "主功\能表";
+    if (strlen(cmdtitle) == 8)
+        return cmdtitle;
+    if (strcmp(cmdtitle, "網路遊樂場") == 0)
+        return "休閒遊樂";
+    if (strstr(cmdtitle, "量販店"))
+        return "量販商店";
+    if (strstr(cmdtitle, "棋院"))
+        return "休閒棋院";
+    if (strstr(cmdtitle, "天使公會"))
+        return "天使公會";
+    if (strcmp(cmdtitle, "熱門話題與看板") == 0)
+        return "熱門話題";
+    if (strcmp(cmdtitle, "使用者統計資訊") == 0)
+        return "統計資訊";
+    if (strcmp(cmdtitle, "金錢相關管理") == 0)
+        return "金錢管理";
+    if (strcmp(cmdtitle, "使用者記錄管理") == 0)
+        return "記錄管理";
+    return "主功\能表";
+}
+
 static void
-show_status(void)
+show_status(int menu_index, const char *cmdtitle)
 {
     int i;
     struct tm      ptime;
     char           *myweek = "日一二三四五六";
+    char           lbuf[256];
+    const char     *rbuf;
 
     localtime4_r(&now, &ptime);
     i = ptime.tm_wday << 1;
     move(b_lines, 0);
-    // Length: timer =15, today=14, online=8+N, me=5+12,
-    // pager=10, help=7
-    vbarlr(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(34;46) "%d/%d周%c%c %d:%02d"
-	  ANSI_COLOR(1;33;45) "%-14s"
-	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
-	  "%d" ANSI_COLOR(30) "人,我是" ANSI_COLOR(31) "%s"
-          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s", ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
-	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
-	  SHM->UTMPnumber, cuser.userid,
-	  str_pager_modes[currutmp->pager % PAGER_MODES]), ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明");
+
+    snprintf(lbuf, sizeof(lbuf),
+	     VCLR_FOOTER_CAPTION " %s "
+	     ANSI_COLOR(1;33;45) "%-14s"
+	     ANSI_COLOR(30;47) " %d/%d 週%c%c %d:%02d | "
+	     ANSI_COLOR(31) "%s"
+	     ANSI_COLOR(30) " | 線上" ANSI_COLOR(31) "%d"
+	     ANSI_COLOR(30) "人",
+	     menu_caption(cmdtitle),
+	     SHM->today_is,
+	     ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
+	     ptime.tm_hour, ptime.tm_min,
+	     cuser.userid, SHM->UTMPnumber);
+
+    bool show_back = false;
+    if (menu_index != M_MMENU) {
+	int szl = str_term_width(lbuf);
+	if (szl + 22 > t_columns - 1) {
+	    snprintf(lbuf, sizeof(lbuf),
+		     VCLR_FOOTER_CAPTION " %s "
+		     ANSI_COLOR(1;33;45) "%-14s"
+		     ANSI_COLOR(30;47) " %d/%d 週%c%c %d:%02d | "
+		     ANSI_COLOR(31) "%s" ANSI_COLOR(30),
+		     menu_caption(cmdtitle),
+		     SHM->today_is,
+		     ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
+		     ptime.tm_hour, ptime.tm_min,
+		     cuser.userid);
+	    szl = str_term_width(lbuf);
+	}
+	if (szl + 22 <= t_columns - 1)
+	    show_back = true;
+    }
+
+    if (show_back) {
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 22, t_columns - 10, KEY_LEFT, menu_nav_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 9, t_columns - 2, 'h', menu_nav_cmds);
+	rbuf = ANSI_COLOR(31) "(←)" ANSI_COLOR(30) "回到上層 "
+	       ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
+    } else {
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 9, t_columns - 2, 'h', menu_nav_cmds);
+	rbuf = ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
+    }
+
+    vbarlr(lbuf, rbuf);
 }
 
 /*
@@ -364,224 +434,389 @@ adbanner(int menu_index)
 #endif
 }
 
+typedef struct {
+    int menu_index;
+    int cmdmode;
+    const char *cmdtitle;
+    const commands_t *cmdtable;
+    int table_max;
+    int target_table_idx;
+    bool is_refresh;
+} menu_ctx_t;
+
 static int
-show_menu(int menu_index, const commands_t * p)
+menu_first_permitted_item(const commands_t cmdtable[], int table_max)
 {
-    register int    n = 0;
-    register char  *s;
-    int row = menu_row;
+    for (int i = 0; i <= table_max && cmdtable[i].cmdfunc; i++) {
+        if (CheckMenuPerm(cmdtable[i].level))
+            return i;
+    }
+    return -1;
+}
 
-    adbanner(menu_index);
+static int
+menu_find_item_by_key(const commands_t cmdtable[], int table_max, int key)
+{
+    int target = toupper((unsigned char)key);
+    for (int i = 0; i <= table_max && cmdtable[i].desc; i++) {
+        if (toupper((unsigned char)cmdtable[i].desc[0]) == target) {
+            if (CheckMenuPerm(cmdtable[i].level))
+                return i;
+            return menu_first_permitted_item(cmdtable, table_max);
+        }
+    }
+    return -1;
+}
 
-    // seems not everyone likes the menu in center.
-#ifdef LARGETERM_CENTER_MENU
-    // update menu column [fixed const because most items are designed as fixed)
-    menu_column = (t_columns-40)/2;
-    row = 12 + (t_lines-24)/2;
-#endif
+static int
+menu_pos_to_table_idx(const commands_t cmdtable[], int table_max, int pos)
+{
+    int p = -1;
+    for (int i = 0; i <= table_max && cmdtable[i].desc; i++) {
+        if (CheckMenuPerm(cmdtable[i].level)) {
+            if (++p == pos)
+                return i;
+        }
+    }
+    return -1;
+}
+
+static int
+menu_table_idx_to_pos(const commands_t cmdtable[], int table_idx)
+{
+    int p = -1;
+    for (int i = 0; i <= table_idx && cmdtable[i].desc; i++) {
+        if (CheckMenuPerm(cmdtable[i].level))
+            p++;
+    }
+    return p >= 0 ? p : 0;
+}
+
+static int
+menu_header(PSB_CTX *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+    showtitle(cx->cmdtitle, BBSNAME);
+    adbanner(cx->is_refresh ? M_MENU_REFRESH : cx->menu_index);
+    cx->is_refresh = true;
 
 #ifdef EXP_ALERT_ADBANNER_USONG
-    if ((p[0].level && !HasUserPerm(p[0].level)) &&
+    if ((cx->cmdtable[0].level && !HasUserPerm(cx->cmdtable[0].level)) &&
         HasUserFlag(UF_ADBANNER_USONG) &&
         HasUserFlag(UF_ADBANNER)) {
-        // we have one more extra line to display ADBANNER_USONG!
         int alert_column = menu_column;
+        int row = menu_row;
         move(row, 0);
-        vpad(t_columns-2, "─");
+        vpad(t_columns - 2, "─");
         if (alert_column > 2)
             alert_column -= 2;
         alert_column -= alert_column % 2;
-        move(row++, alert_column);
+        move(row, alert_column);
         outs(" 上方為使用者心情點播留言區，不代表本站立場 ");
     }
-    assert(row == decide_menu_row(p));
 #endif
-
-    move(row, 0);
-    while ((s = p[n].desc)) {
-	if (CheckMenuPerm(p[n].level)) {
-            prints("%*s  (%s%c" ANSI_RESET ")%s\n",
-                   menu_column, "",
-                   ANSI_COLOR(1;36), s[0], s+1);
-	}
-	n++;
-    }
-    return n - 1;
+    return 0;
 }
 
-static void
-menu_help(void)
+static int
+menu_footer(PSB_CTX *ctx)
 {
-    static const char * const col1[] = {
-        "【 選單基本操作 】", NULL,
-        "  上個選項",     "↑",
-        "  下個選項",     "↓",
-        "  執行選項",     "→Enter",
-        "  回到前一層",   "← e",
-        "  最上方選項",   "Home PgUp",
-        "  最下方選項",   "End  PgDn",
-        "  跳到選項",     "(選項字母)",
-        "  按鍵說明",     "h",
-        "", "",
-        "【 快捷鍵 】",   NULL,
-        "  選擇看板",     "s",
-        "  進入看板",     "r",
-        "  未讀文章",     "Ctrl-Y",
-        "  回覆訊息",     "Ctrl-R",
-        "  使用者名單",   "Ctrl-U",
-        "  隨處切換(ZA)", "Ctrl-Z",
-        NULL,
-    };
-    const char * const *p[] = { col1 };
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+    show_status(cx->menu_index, cx->cmdtitle);
+    return 0;
+}
 
-    show_help_table(p, ARRAY_SIZE(p), "選單按鍵說明");
+static int
+menu_renderer(int idx, PSB_CTX *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+    int table_idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, idx);
+    if (table_idx < 0)
+        return 0;
+    const char *s = cx->cmdtable[table_idx].desc;
+    if (!s)
+        return 0;
+    prints("%*s  (%s%c" ANSI_RESET ")%s",
+           menu_column, "",
+           ANSI_COLOR(1;36), s[0], s + 1);
+    return 0;
+}
+
+static int
+menu_cursor(int y, PSB_CTX *ctx GCC_UNUSED)
+{
+    cursor_show(y, menu_column);
+    return 0;
+}
+
+static int
+menu_loader(PSB_CTX *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+#ifdef LARGETERM_CENTER_MENU
+    menu_column = (t_columns - 40) / 2;
+    menu_row = 12 + (t_lines - 24) / 2;
+#endif
+    ctx->header_lines = decide_menu_row(cx->cmdtable);
+
+    int permitted = 0;
+    for (int i = 0; i <= cx->table_max && cx->cmdtable[i].desc; i++) {
+        if (CheckMenuPerm(cx->cmdtable[i].level))
+            permitted++;
+    }
+    ctx->cmd.total = permitted;
+
+    if (cx->target_table_idx >= 0) {
+        if (cx->target_table_idx > cx->table_max ||
+            !CheckMenuPerm(cx->cmdtable[cx->target_table_idx].level)) {
+            int first = menu_first_permitted_item(cx->cmdtable, cx->table_max);
+            if (first < 0) {
+                ctx->cmd.quit = true;
+                return 0;
+            }
+            cx->target_table_idx = first;
+        }
+        ctx->cmd.curr = menu_table_idx_to_pos(cx->cmdtable, cx->target_table_idx);
+        cx->target_table_idx = -1;
+    }
+    return 0;
+}
+
+static int
+menu_cmd_up(cmd_ctx_t *ctx)
+{
+    if (--ctx->curr < 0)
+        ctx->curr = ctx->total - 1;
+    return 0;
+}
+
+static int
+menu_cmd_down(cmd_ctx_t *ctx)
+{
+    if (++ctx->curr >= ctx->total)
+        ctx->curr = 0;
+    return 0;
+}
+
+static int
+menu_cmd_home(cmd_ctx_t *ctx)
+{
+    ctx->curr = 0;
+    return 0;
+}
+
+static int
+menu_cmd_end(cmd_ctx_t *ctx)
+{
+    ctx->curr = ctx->total - 1;
+    return 0;
+}
+
+static int
+menu_cmd_left(cmd_ctx_t *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
+    if (cx->cmdmode == MMENU) {
+        int idx = menu_find_item_by_key(cx->cmdtable, cx->table_max, 'G');
+        if (idx >= 0)
+            ctx->curr = menu_table_idx_to_pos(cx->cmdtable, idx);
+    } else if (cx->cmdmode == MAIL && chkmailbox()) {
+        int idx = menu_find_item_by_key(cx->cmdtable, cx->table_max, 'R');
+        if (idx >= 0)
+            ctx->curr = menu_table_idx_to_pos(cx->cmdtable, idx);
+    } else {
+        ctx->quit = true;
+    }
+    return 0;
+}
+
+static int
+menu_cmd_enter(cmd_ctx_t *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
+    int idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, ctx->curr);
+    if (idx < 0)
+        return 0;
+    int err;
+
+    currstat = XMODE;
+    if (cx->cmdtable[idx].cmdfunc != Goodbye)
+        clear_main();
+
+    if ((err = (*cx->cmdtable[idx].cmdfunc)()) == QUIT) {
+        ctx->quit = true;
+        return 0;
+    }
+    currutmp->mode = currstat = cx->cmdmode;
+    cx->target_table_idx = idx;
+
+    if (err == XEASY) {
+        refresh();
+        safe_sleep(1);
+    } else if (err != XEASY + 1 || err == FULLUPDATE) {
+        cx->is_refresh = true;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+menu_cmd_unread(cmd_ctx_t *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
+    int idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, ctx->curr);
+    clear_main();
+    New();
+    currutmp->mode = currstat = cx->cmdmode;
+    cx->target_table_idx = idx;
+    cx->is_refresh = true;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+menu_cmd_select_board(cmd_ctx_t *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
+    int idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, ctx->curr);
+    ReadSelect();
+    currutmp->mode = currstat = cx->cmdmode;
+    cx->target_table_idx = idx;
+    cx->is_refresh = true;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+menu_cmd_read_board(cmd_ctx_t *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
+    int idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, ctx->curr);
+    Read();
+    currutmp->mode = currstat = cx->cmdmode;
+    cx->target_table_idx = idx;
+    cx->is_refresh = true;
+    ctx->reload = true;
+    return 0;
+}
+
+static const cmd_t menu_nav_cmds[] = {
+    { KEY_UP, "上個選項", "移動至上一個選單項目", menu_cmd_up, 0, CMD_PRIO_NAV, true },
+    { KEY_DOWN, "下個選項", "移動至下一個選單項目", menu_cmd_down, 0, CMD_PRIO_NAV, true },
+    { KEY_RIGHT, "執行選項", "執行目前選取的選單項目", menu_cmd_enter, 0, CMD_PRIO_NORM, true },
+    { KEY_ENTER, NULL, NULL, menu_cmd_enter, 0, CMD_PRIO_NONE, true },
+    { KEY_LEFT, "回到前一層", "離開目前選單或回到上一層", menu_cmd_left, 0, CMD_PRIO_MAX },
+    { 'e', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
+    { 'E', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
+    { KEY_HOME, "最上方選項", "移動至第一個選單項目", menu_cmd_home, 0, CMD_PRIO_NAV, true },
+    { KEY_PGUP, NULL, NULL, menu_cmd_home, 0, CMD_PRIO_NONE, true },
+    { KEY_END, "最下方選項", "移動至最後一個選單項目", menu_cmd_end, 0, CMD_PRIO_NAV, true },
+    { KEY_PGDN, NULL, NULL, menu_cmd_end, 0, CMD_PRIO_NONE, true },
+    { Ctrl('Y'), "未讀文章", "檢視所有未讀文章", menu_cmd_unread, 0, CMD_PRIO_NORM },
+    { Ctrl('N'), NULL, NULL, menu_cmd_unread, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t menu_board_shortcut_cmds[] = {
+    { 's', "選擇看板", "搜尋並切換至指定看板", menu_cmd_select_board, 0, CMD_PRIO_NORM },
+    { 'r', "進入看板", "進入目前看板閱\讀文章", menu_cmd_read_board, 0, CMD_PRIO_NORM },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t menu_empty_cmds[] = {
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static int
+menu_on_key(PSB_CTX *ctx)
+{
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+    int idx = menu_find_item_by_key(cx->cmdtable, cx->table_max, ctx->cmd.key);
+    if (idx >= 0) {
+        ctx->cmd.curr = menu_table_idx_to_pos(cx->cmdtable, idx);
+    }
+    return 0;
 }
 
 static void
 domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr, cmdmode;
-    int             n, pos, total, i;
-    int             err;
+    int cmdmode;
+    int total = 0;
+    bool has_board_shortcuts;
 
     assert(0 <= menu_index && menu_index < M_MENU_MAX);
     cmdmode = menu_mode_map[menu_index];
+    has_board_shortcuts = (cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU);
 
     setutmpmode(cmdmode);
-    showtitle(cmdtitle, BBSNAME);
-    total = show_menu(menu_index, cmdtable);
 
-    show_status();
-    lastcmdptr = pos = 0;
+    while (cmdtable[total].desc)
+        total++;
+    total--;
+    if (total < 0)
+        return;
 
-    do {
-	i = -1;
-	switch (cmd) {
-	case Ctrl('Z'):
-	    ZA_Select(); // we'll have za loop later.
-	    refscreen = YEA;
-	    i = lastcmdptr;
-	    break;
-	case Ctrl('N'):
-	case Ctrl('Y'):
-            clear_main();
-	    New();
-	    refscreen = YEA;
-	    i = lastcmdptr;
-	    break;
-	case KEY_DOWN:
-	    i = lastcmdptr;
-	case KEY_HOME:
-	case KEY_PGUP:
-	    do {
-		if (++i > total)
-		    i = 0;
-	    } while (!CheckMenuPerm(cmdtable[i].level));
-	    break;
-	case KEY_UP:
-	    i = lastcmdptr;
-	case KEY_END:
-	case KEY_PGDN:
-	    do {
-		if (--i < 0)
-		    i = total;
-	    } while (!CheckMenuPerm(cmdtable[i].level));
-	    break;
-	case KEY_LEFT:
-	case 'e':
-	case 'E':
-	    if (cmdmode == MMENU)
-		cmd = 'G';	    // to exit
-	    else if ((cmdmode == MAIL) && chkmailbox())
-		cmd = 'R';	    // force keep reading mail
-	    else
-		return;
-	default:
-	    if ((cmd == 's' || cmd == 'r') &&
-		(cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU)) {
-		if (cmd == 's')
-		    ReadSelect();
-		else
-		    Read();
-		refscreen = YEA;
-		i = lastcmdptr;
-		currstat = cmdmode;
-		break;
-	    }
-	    if (cmd == KEY_ENTER || cmd == KEY_RIGHT) {
+    int init_idx = menu_find_item_by_key(cmdtable, total, cmd);
+    if (init_idx < 0)
+        init_idx = menu_first_permitted_item(cmdtable, total);
+    if (init_idx < 0)
+        return;
 
-		currstat = XMODE;
-                if (cmdtable[lastcmdptr].cmdfunc != Goodbye)
-                    clear_main();
+    if (ZA_Waiting()) {
+        ZA_Enter();
+        currstat = cmdmode;
+    }
 
-		if ((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
-		    return;
-		currutmp->mode = currstat = cmdmode;
+    menu_ctx_t cx = {
+        .menu_index = menu_index,
+        .cmdmode = cmdmode,
+        .cmdtitle = cmdtitle,
+        .cmdtable = cmdtable,
+        .table_max = total,
+        .target_table_idx = init_idx,
+        .is_refresh = false,
+    };
+    cmd_layer_t layers[] = {
+        { menu_nav_cmds, &cx },
+        { has_board_shortcuts ? menu_board_shortcut_cmds : menu_empty_cmds, &cx },
+        { bbs_global_cmds, NULL },
+        { NULL, NULL }
+    };
 
-		if (err == XEASY) {
-		    refresh();
-		    safe_sleep(1);
-		} else if (err != XEASY + 1 || err == FULLUPDATE)
-		    refscreen = YEA;
+    PSB_CTX psbctx = {
+        .cmd = {
+            .curr = menu_table_idx_to_pos(cmdtable, init_idx),
+            .priv = &cx,
+            .caption = cmdtitle,
+        },
+        .header_lines = decide_menu_row(cmdtable),
+        .footer_lines = 1,
+        .layers = layers,
+        .loader = menu_loader,
+        .header = menu_header,
+        .footer = menu_footer,
+        .renderer = menu_renderer,
+        .cursor = menu_cursor,
+        .on_key = menu_on_key,
+    };
 
-                // keep current position
-		i = lastcmdptr;
-                break;
-	    }
-
-	    if (cmd >= 'a' && cmd <= 'z')
-		cmd = toupper(cmd);
-	    while (++i <= total && cmdtable[i].desc)
-		if (cmdtable[i].desc[0] == cmd)
-		    break;
-
-	    if (!CheckMenuPerm(cmdtable[i].level)) {
-		for (i = 0; cmdtable[i].cmdfunc; i++)
-		    if (CheckMenuPerm(cmdtable[i].level))
-			break;
-		if (!cmdtable[i].cmdfunc)
-		    return;
-	    }
-
-	    if (cmd == 'H' && i > total){
-		menu_help();
-		refscreen = YEA;
-		i = lastcmdptr;
-		break;
-	    }
-	}
-
-	// end of all commands
-	if (ZA_Waiting())
-	{
-	    ZA_Enter();
-	    refscreen = 1;
-	    currstat = cmdmode;
-	}
-
-	if (i > total || !CheckMenuPerm(cmdtable[i].level))
-	    continue;
-
-	if (refscreen) {
-	    showtitle(cmdtitle, BBSNAME);
-	    // menu 設定 M_MENU_REFRESH 可讓 ADBanner 顯示別的資訊
-	    show_menu(M_MENU_REFRESH, cmdtable);
-	    show_status();
-	    refscreen = NA;
-	}
-	cursor_clear(decide_menu_row(cmdtable) + pos, menu_column);
-	n = pos = -1;
-	while (++n <= (lastcmdptr = i))
-	    if (CheckMenuPerm(cmdtable[n].level))
-		pos++;
-
-        // If we want to replace cursor_show by cursor_key, it must be inside
-        // while(expr) othrewise calling 'continue' inside for-loop won't wait
-        // for key.
-	cursor_show(decide_menu_row(cmdtable) + pos, menu_column);
-    } while (((cmd = vkey()) != EOF) || refscreen);
-
-    abort_bbs(0);
+    while (1) {
+        psb_main(&psbctx);
+        if (psbctx.cmd.key == EOF)
+            abort_bbs(0);
+        if (ZA_Waiting()) {
+            if (cmdmode != MMENU)
+                return;
+            ZA_Enter();
+            currutmp->mode = currstat = cmdmode;
+            cx.is_refresh = true;
+            psbctx.cmd.quit = false;
+            psbctx.cmd.reload = true;
+            continue;
+        }
+        return;
+    }
 }
 /* INDENT OFF */
 
