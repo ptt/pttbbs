@@ -1,5 +1,4 @@
 #include "bbs.h"
-#include "psb.h"
 
 // UNREGONLY 改為由 BASIC 來判斷是否為 guest.
 
@@ -180,14 +179,20 @@ ZA_Drop(void)
     zacmd = 0;
 }
 
+// Promp user our ZA bar and return for selection.
 int
 ZA_Set(char cmd)
 {
+    if (!is_login_ready ||
+        !HasUserPerm(PERM_BASIC) ||
+        HasUserPerm(PERM_VIOLATELAW))
+        return 0;
+    if (strchr("bcfmut", cmd) == NULL)
+        return 0;
     zacmd = cmd;
     return 1;
 }
 
-// Promp user our ZA bar and return for selection.
 int
 ZA_Select(void)
 {
@@ -269,8 +274,10 @@ decide_menu_row(const menuitem_t *p) {
 # define decide_menu_row(x) (menu_row)
 #endif
 
+static const cmd_t menu_nav_cmds[];
+
 static void
-show_status_bar(int menu_index, const char *cmdtitle)
+show_status(int menu_index, const char *cmdtitle)
 {
     struct tm      ptime;
     static const char * const myweek[] = {
@@ -305,19 +312,16 @@ show_status_bar(int menu_index, const char *cmdtitle)
     }
 
     if (show_back) {
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 22, t_columns - 10, KEY_LEFT, menu_nav_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 9, t_columns - 2, 'h', menu_nav_cmds);
 	rbuf = ANSI_COLOR(31) "(←)" ANSI_COLOR(30) "回到上層 "
 	       ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
     } else {
+	cmd_bar_register_custom_hotspot(b_lines, t_columns - 9, t_columns - 2, 'h', menu_nav_cmds);
 	rbuf = ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
     }
 
     vbarlr(lbuf, rbuf);
-}
-
-void
-show_status(void)
-{
-    show_status_bar(M_MMENU, "主選單");
 }
 
 /*
@@ -489,7 +493,7 @@ static int
 menu_footer(PSB_CTX *ctx)
 {
     menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
-    show_status_bar(cx->menu_index, cx->status);
+    show_status(cx->menu_index, cx->status);
     return 0;
 }
 
@@ -673,49 +677,7 @@ menu_cmd_read_board(cmd_ctx_t *ctx)
     return 0;
 }
 
-static void
-menu_help(void)
-{
-    static const char * const col1[] = {
-        "【 選單基本操作 】", NULL,
-        "  上個選項",     "↑",
-        "  下個選項",     "↓",
-        "  執行選項",     "→Enter",
-        "  回到前一層",   "← e",
-        "  最上方選項",   "Home PgUp",
-        "  最下方選項",   "End  PgDn",
-        "  跳到選項",     "(選項字母)",
-        "  按鍵說明",     "h",
-        "", "",
-        "【 快捷鍵 】",   NULL,
-        "  選擇看板",     "s",
-        "  進入看板",     "r",
-        "  未讀文章",     "Ctrl-Y",
-        "  回覆訊息",     "Ctrl-R",
-        "  使用者名單",   "Ctrl-U",
-        "  隨處切換(ZA)", "Ctrl-Z",
-        NULL,
-    };
-    const char * const *p[] = { col1 };
-
-    show_help_table(p, ARRAY_SIZE(p), "選單按鍵說明");
-}
-
-static int
-menu_cmd_help(cmd_ctx_t *ctx)
-{
-    menu_ctx_t *cx = (menu_ctx_t *)ctx->priv;
-    int idx = menu_pos_to_table_idx(cx->cmdtable, cx->table_max, ctx->curr);
-    menu_help();
-    cx->target_table_idx = idx;
-    cx->is_refresh = true;
-    ctx->reload = true;
-    return 0;
-}
-
 static const cmd_t menu_nav_cmds[] = {
-    { 'h', "按鍵說明", "顯示選單按鍵說明", menu_cmd_help, 0, CMD_PRIO_NONE },
-    { 'H', NULL, NULL, menu_cmd_help, 0, CMD_PRIO_NONE },
     { KEY_UP, "上個選項", "移動至上一個選單項目", menu_cmd_up, 0, CMD_PRIO_NAV, true },
     { KEY_DOWN, "下個選項", "移動至下一個選單項目", menu_cmd_down, 0, CMD_PRIO_NAV, true },
     { KEY_RIGHT, "執行選項", "執行目前選取的選單項目", menu_cmd_enter, 0, CMD_PRIO_NORM, true },
@@ -723,6 +685,8 @@ static const cmd_t menu_nav_cmds[] = {
     { KEY_LEFT, "回到前一層", "離開目前選單或回到上一層", menu_cmd_left, 0, CMD_PRIO_MAX },
     { 'e', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
     { 'E', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
+    { 'q', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
+    { 'Q', NULL, NULL, menu_cmd_left, 0, CMD_PRIO_NONE },
     { KEY_HOME, "最上方選項", "移動至第一個選單項目", menu_cmd_home, 0, CMD_PRIO_NAV, true },
     { KEY_PGUP, NULL, NULL, menu_cmd_home, 0, CMD_PRIO_NONE, true },
     { KEY_END, "最下方選項", "移動至最後一個選單項目", menu_cmd_end, 0, CMD_PRIO_NAV, true },
@@ -746,13 +710,7 @@ static int
 menu_on_key(PSB_CTX *ctx)
 {
     menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
-    int key = ctx->cmd.key;
-    if (key == 'e' || key == 'E')
-        return PSB_NA;
-    if ((key == 's' || key == 'r') &&
-        (cx->cmdmode == MMENU || cx->cmdmode == TMENU || cx->cmdmode == XMENU))
-        return PSB_NA;
-    int idx = menu_find_item_by_key(cx->cmdtable, cx->table_max, key);
+    int idx = menu_find_item_by_key(cx->cmdtable, cx->table_max, ctx->cmd.key);
     if (idx >= 0) {
         ctx->cmd.curr = menu_table_idx_to_pos(cx->cmdtable, idx);
         return 0;
@@ -811,7 +769,6 @@ domenu(const menuitem_t *menu)
     if (!status)
         status = title;
 
-
     assert(0 <= menu_index && menu_index < M_MENU_MAX);
     cmdmode = menu_mode_map[menu_index];
     has_board_shortcuts = (cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU);
@@ -857,7 +814,7 @@ domenu(const menuitem_t *menu)
         .cmd = {
             .curr = menu_table_idx_to_pos(cmdtable, init_idx),
             .priv = &cx,
-            .caption = title,
+            .caption = status,
         },
         .header_lines = decide_menu_row(cmdtable),
         .footer_lines = 1,
@@ -1310,7 +1267,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "0Admin       【 系統維護區 】",
 	.mode = M_ADMIN,
 	.status = "系統維護",
-	.title = "系統維護",
 	.default_enter = 'L',
     },
     {Announce,	0,		"Announce     【 精華公佈欄 】"},
@@ -1324,7 +1280,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "Mail         【 私人信件區 】",
 	.mode = M_MAIL,
 	.status = "電子郵件",
-	.title = "電子郵件",
 	.default_enter = 'R',
     },
     // 有些 bot 喜歡整天 query online accounts, 所以聊天改為 LOGINOK
@@ -1334,7 +1289,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "Talk         【 休閒聊天區 】",
 	.mode = M_TMENU,
 	.status = "聊天說話",
-	.title = "聊天說話",
 	.default_enter = 'U',
     },
     {
@@ -1343,7 +1297,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "User         【 個人設定區 】",
 	.mode = M_UMENU,
 	.status = "個人設定",
-	.title = "個人設定",
 	.default_enter = 'U',
     },
     {
@@ -1351,7 +1304,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "Xyz          【 系統資訊區 】",
 	.mode = M_XMENU,
 	.status = "工具程式",
-	.title = "工具程式",
 	.default_enter = 'T',
     },
     {
@@ -1369,7 +1321,6 @@ static const menuitem_t cmdlist[] = {
 	.desc = "Namelist     【 編特別名單 】",
 	.mode = M_NMENU,
 	.status = "名單編輯",
-	.title = "名單編輯",
 	.default_enter = 'O',
     },
     {Goodbye, 	0, 		"Goodbye         離開，再見… "},
@@ -1382,7 +1333,6 @@ main_menu(void)
     const menuitem_t menu = {
 	.submenu = cmdlist,
 	.mode = M_MMENU,
-	.status = "主選單",
 	.title = "主功\能表",
 	.default_enter = ISNEWMAIL(currutmp) ? 'M' : 'C',
 	.default_exit = 'G',
