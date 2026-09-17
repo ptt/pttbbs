@@ -2658,8 +2658,12 @@ static const cmd_t regform_cmds[] = {
 static void
 prompt_regform_ui(void)
 {
-    vs_footer(" 審核 ",
-	    " (y)接受(n)拒絕(d)丟掉 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
+    const cmd_layer_t layers[] = {
+        { regform_cmds, NULL },
+        { bbs_global_cmds, NULL },
+        { NULL, NULL }
+    };
+    vs_cmd_bar(VS_FOOTER, " 註冊審核 ", layers);
 }
 
 static void
