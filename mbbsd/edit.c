@@ -1756,7 +1756,7 @@ loadsitesig(const char *fname)
     if (fd < 0)
 	return -1;
     start = (char*)mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
-    if (start)
+    if (start != MAP_FAILED)
     {
 	sp = start + sz - 4 - 1; // 4 = \n--\n
 	while (sp > start)
@@ -1767,6 +1767,7 @@ loadsitesig(const char *fname)
 		size_t szSig = sz - (sp-start+1);
 		ret = sp - start + 1;
 		// allocate string
+		free(curr_buf->sitesig_string);
 		curr_buf->sitesig_string = (char*) malloc (szSig + 1);
 		if (curr_buf->sitesig_string)
 		{
