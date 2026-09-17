@@ -885,7 +885,7 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
  */
 void
 vs_multi_T_table_simple(
-	const char ***t_tables,   int  n_t_tables,
+	const char * const **t_tables,   int  n_t_tables,
 	const int  *col_widths,   const int  *l_widths,
 	const char *attr_caption, const char *attr_l, const char *attr_r)
 {
@@ -1469,7 +1469,7 @@ vgetstr(char *buf, int len, int flags, const char *defstr)
 
 static void
 vs_multi_T_table_auto(
-	const char ***t_tables,   int  n_t_tables,
+	const char * const **t_tables,   int  n_t_tables,
 	const char *attr_caption, const char *attr_l, const char *attr_r)
 {
     int auto_cols[8], auto_l[8];
@@ -1478,7 +1478,7 @@ vs_multi_T_table_auto(
     int total_w = 0;
     for (int i = 0; i < n_t_tables; i++) {
         int max_l = 0, max_r = 0, max_cap = 0;
-        const char **ptr = t_tables[i];
+        const char * const *ptr = t_tables[i];
         while (ptr && *ptr) {
             const char *lvar = *ptr++;
             const char *rvar = *ptr++;
@@ -1516,7 +1516,7 @@ vs_multi_T_table_auto(
 }
 
 void
-show_help_table(const char ***t_tables, int n_tables, const char *title)
+show_help_table(const char * const **t_tables, int n_tables, const char *title)
 {
     clear();
     showtitle(title, "使用說明");

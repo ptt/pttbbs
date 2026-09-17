@@ -662,11 +662,11 @@ give_money_ui(const char *userid)
     return ret;
 }
 
-// in vers.c
-extern const char *build_remote;
-extern const char *build_origin;
-extern const char *build_hash;
-extern const char *build_time;
+// in vars.c
+extern const char * const build_remote;
+extern const char * const build_origin;
+extern const char * const build_hash;
+extern const char * const build_time;
 
 int
 p_sysinfo(void)

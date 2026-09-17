@@ -26,10 +26,13 @@
 
 #define DO_WITHOUT_PEER(TIMEOUT,ACT,ELSE) \
     do {                                  \
+	sigjmp_buf _env;                  \
+	sigjmp_buf *_orig_env = sigjmpEnv;\
+	sigjmpEnv = &_env;                \
 	void (*orig_alarm_handler)(int) = \
 	    Signal(SIGALRM, &SigjmpEnv);  \
 	IGNORE_PEER();                    \
-	if(sigsetjmp(sigjmpEnv, 1))       \
+	if(sigsetjmp(_env, 1))            \
 	    ELSE;                         \
 	else {                            \
 	    alarm(TIMEOUT);               \
@@ -37,6 +40,7 @@
 	}                                 \
 	CONNECT_PEER();                   \
 	Signal(SIGALRM, orig_alarm_handler); \
+	sigjmpEnv = _orig_env;            \
     } while(0)
 
 static const char * const ChessHintStr[] = {
@@ -59,14 +63,14 @@ static const struct ChessReplayMap_t ChessReplayMap[] = {
 };
 
 static ChessInfo * CurrentPlayingGameInfo;
-static sigjmp_buf sigjmpEnv;
+static sigjmp_buf *sigjmpEnv;
 
 /* XXX: This is a BAD way to pass information.
  *      Fix this by handling chess request ourselves.
  */
 static ChessTimeLimit * _current_time_limit;
 
-static void SigjmpEnv(int sig GCC_UNUSED) { siglongjmp(sigjmpEnv, 1); }
+static void SigjmpEnv(int sig GCC_UNUSED) { siglongjmp(*sigjmpEnv, 1); }
 
 #define CHESS_HISTORY_ENTRY(INFO,N) \
     ((INFO)->history.body + (N) * (INFO)->constants->step_entry_size)

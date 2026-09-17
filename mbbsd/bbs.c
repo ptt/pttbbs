@@ -4223,7 +4223,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 static int
 b_help(void)
 {
-    static const char *col1[] = {
+    static const char * const col1[] = {
         "【基本命令】", NULL,
         "  閱\讀文章",     "r →",
         "  發表文章",     "^P",
@@ -4248,7 +4248,7 @@ b_help(void)
         "  參與樂透",     "f",
         NULL,
     };
-    static const char *col2[] = {
+    static const char * const col2[] = {
         "【移動瀏覽】", NULL,
         "  上篇文章",     "p k ↑",
         "  下篇文章",     "n j ↓",
@@ -4271,7 +4271,7 @@ b_help(void)
         "  不列關鍵字",   "!",
         NULL,
     };
-    static const char *col3[] = {
+    static const char * const col3[] = {
         "【文章資訊】", NULL,
         "  查詢作者資料", "^Q",
         "  丟作者水球",   "w",
@@ -4296,7 +4296,7 @@ b_help(void)
         "  管理文章",     "^E",
         NULL,
     };
-    const char **p[] = {
+    const char * const *p[] = {
         col1,
         col2,
         col3,

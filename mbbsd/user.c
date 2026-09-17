@@ -410,7 +410,7 @@ static int GCC_UNUSED angel_setter(int flag GCC_UNUSED)
     return 0;
 }
 
-static const char *Getter(CustomItem *item)
+static const char *Getter(const CustomItem *item)
 {
     assert(item->flag || item->getter);
     const char *(*getter)(int flag) = item->getter;
@@ -430,7 +430,7 @@ static int Setter(const CustomItem *item)
     return setter(item->flag);
 }
 
-static CustomItem items[] = { {
+static const CustomItem items[] = { {
         .desc = "ADBANNER   顯示動態看板",
         .flag = UF_ADBANNER,
     }, {
@@ -502,7 +502,7 @@ static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
                                int rows GCC_UNUSED, void *ctx) {
     customize_ctx_t *cx = (customize_ctx_t *)ctx;
     int item_idx = cx->valid_indices[i];
-    CustomItem *item = &items[item_idx];
+    const CustomItem *item = &items[item_idx];
     const int col_opt = 54;
     const char *val = Getter(item);
 

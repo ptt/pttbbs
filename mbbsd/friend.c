@@ -23,7 +23,7 @@ static const unsigned int friend_max[8] = {
 
 
 /* Ptt 各種特別名單的補述 */
-static char    * const friend_desc[8] = {
+static const char * const friend_desc[8] = {
     [FRIEND_OVERRIDE] = "友誼描述：",
     [FRIEND_REJECT]   = "惡形惡狀：",
     [FRIEND_ALOHA]    = "",
@@ -35,7 +35,7 @@ static char    * const friend_desc[8] = {
 };
 
 /* Ptt 各種特別名單的中文敘述 */
-static char    * const friend_list[8] = {
+static const char * const friend_list[8] = {
     [FRIEND_OVERRIDE] = "好友名單",
     [FRIEND_REJECT]   = "壞人名單",
     [FRIEND_ALOHA]    = "上線通知",
@@ -52,7 +52,9 @@ static char    * const friend_list[8] = {
 void
 setfriendfile(char *fpath, int type)
 {
-    if (type <= 4)		/* user list Ptt */
+    if (type == FRIEND_SPECIAL)
+	setuserfile(fpath, special_list);
+    else if (type <= 4)		/* user list Ptt */
 	setuserfile(fpath, friend_file[type]);
     else			/* board list */
 	setbfile(fpath, currboard, friend_file[type]);
@@ -108,7 +110,6 @@ friend_special(void)
 {
     char            genbuf[STRLEN], i, fname[PATHLEN];
     FILE           *fp;
-    friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
 	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
 	special_des[5] = i + '0';
@@ -189,8 +190,7 @@ friend_append(int type, int count)
 
     if (j == FRIEND_SPECIAL)
 	friend_special();
-
-    if (!*friend_file[(int)j])
+    else if (!*friend_file[(int)j])
         return;
     setfriendfile(sfile, j);
 

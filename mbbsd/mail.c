@@ -45,7 +45,7 @@ struct ReadNewMailArg {
 static int      mailkeep = 0;
 static int      mailmaxkeep = 0;
 static char     currmaildir[PATHLEN];
-static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
+static const char msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static int	showmail_mode = SHOWMAIL_NORM;
 static const    onekey_t mail_comms[];
 
@@ -1909,7 +1909,7 @@ mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 
 /* help for mail reading */
 
-static const char *hlp_mailmove[] = {
+static const char * const hlp_mailmove[] = {
     "【移動游標】", NULL,
     "  下封郵件", "↓ n j ",
     "  上封郵件", "↑ p k ",
@@ -1921,7 +1921,7 @@ static const char *hlp_mailmove[] = {
     "  搜尋標題", "/",
     "  結束離開", "← q e",
     NULL,
-}, *hlp_mailbasic[] = {
+}, * const hlp_mailbasic[] = {
     "【基本操作】", NULL,
     "  讀信",	  "→ r",
     "  回信",	  "R y",
@@ -1933,7 +1933,7 @@ static const char *hlp_mailmove[] = {
     "  站外轉寄", "F",
     "  轉錄看板", "^X",
     NULL,
-}, *hlp_mailadv[] = {
+}, * const hlp_mailadv[] = {
     "【進階指令】", NULL,
     "  指定範圍砍信", "D",
     "  標記重要信件", "m (避免誤刪)",
@@ -1943,14 +1943,14 @@ static const char *hlp_mailmove[] = {
     "  重建信箱",     "^G (毀損時才用)",
     "  " RECYCLE_BIN_NAME,   "~",
     NULL,
-}, *hlp_mailconf[] = {
+}, * const hlp_mailconf[] = {
     "【設定】", NULL,
     "  是否接受站外信", "O",
     NULL,
-}, *hlp_mailempty[] = {
+}, * const hlp_mailempty[] = {
     "", "",
     NULL,
-}, *hlp_mailman[] = {
+}, * const hlp_mailman[] = {
     "【私人信件夾】", NULL,
     "  瀏覽私人信件夾", "z",
     "  收入私人信件夾", "c",
@@ -1960,8 +1960,8 @@ static const char *hlp_mailmove[] = {
 static int
 m_help(void)
 {
-    const char ** p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
-	       ** p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
+    const char * const * p1[3] = { hlp_mailmove, hlp_mailbasic, hlp_mailconf },
+	       * const * p2[3] = { hlp_mailadv,  hlp_mailempty, hlp_mailman };
     const int  cols[3] = { 31, 22, 24 },    // column width
                desc[3] = { 12, 14, 18 };    // desc width
     const int  cols2[3]= { 36, 17, 24 },    // columns width
@@ -2229,7 +2229,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 {
     assert(is_valid_fileheader(fhdr));
 #ifdef OUTJOBSPOOL
-    static char     address[60] = "", cmode = 1;
+    char            address[60] = "", cmode = 1;
     char            fname[500], genbuf[PATHLEN];
     FILE           *fp;
 

@@ -662,7 +662,7 @@ void printdash(const char *mesg, int msglen);
 int  show_file(const char *filename, int y, int lines, int mode);
 int  show_80x24_screen(const char *filename);
 void show_helpfile(const char * helpfile);
-void show_help_table(const char ***t_tables, int n_tables, const char *title);
+void show_help_table(const char * const **t_tables, int n_tables, const char *title);
 int  search_num(int ch, int max);
 const char* subject(const char *title);
 const char* subject_ex(const char *title, int *ptype);

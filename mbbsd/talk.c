@@ -12,7 +12,7 @@ static const char *MODE_STRING[] = {
     "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
 };
 // this must map to SHM->sorted[active].
-char           *MSG_PICKUP_WAY[] = {
+static const char * const MSG_PICKUP_WAY[] = {
     "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
     " 五子棋 ", "  象棋  "
 };
@@ -804,7 +804,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_REDRAW       1231
 
 static const char
-*hlp_talkbasic[] = {
+* const hlp_talkbasic[] = {
     "【移動游標】", NULL,
     "  往上一行", "↑ k",
     "  往下一行", "↓ j n",
@@ -817,7 +817,7 @@ static const char
     "  結束離開", "←   e",
     NULL,
 },
-*hlp_talkcfg[] = {
+* const hlp_talkcfg[] = {
     "【修改資料】", NULL,
     "  修改暱稱",    "N",
     "  切換隱身",    "C",
@@ -827,7 +827,7 @@ static const char
     "  修改好友",    "o",
     NULL,
 },
-*hlp_talkdisp[] = {
+* const hlp_talkdisp[] = {
     "【查詢資訊】", NULL,
     "  查詢此人",    "q",
     "  輸入查詢ID",  "Q",
@@ -839,7 +839,7 @@ static const char
     "  全部/好友 列表",	"f",
     NULL,
 },
-*hlp_talktalk[] = {
+* const hlp_talktalk[] = {
     "【交談互動】", NULL,
     "  與他聊天",    "→ t Enter",
     "  熱線水球",    "w",
@@ -850,13 +850,13 @@ static const char
     "  給予" MONEYNAME,"g",
     NULL,
 },
-*hlp_talkmisc[] = {
+* const hlp_talkmisc[] = {
     "【其它】", NULL,
     "  閱\讀信件",   "r",
     "  使用說明",    "h",
     NULL,
 },
-*hlp_talkadmin[] = {
+* const hlp_talkadmin[] = {
     "【站長專用】", NULL,
     "  設定使用者",   "u",
     "  切換隱形模式", "H",
@@ -870,8 +870,8 @@ static const char
 static void
 t_showhelp(void)
 {
-    const char ** p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
-	       ** p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
+    const char * const * p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
+	       * const * p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
     const int  cols[3] = { 31, 25, 22 },    // column witdh
                desc[3] = { 12, 18, 16 };    // desc width
     clear();

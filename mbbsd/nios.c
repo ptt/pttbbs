@@ -129,13 +129,7 @@ CIN_PROTO int  cin_is_empty(void);          // Check if the buffer & fd are both
 static const int cin_fd = STDIN_FILENO;
 static int cin_burst = 0;
 static char cin_buf[CIN_BUFFER_SIZE];
-static VBUF vcin = {
-    .head    = cin_buf,
-    .tail    = cin_buf,
-    .capacity= sizeof(cin_buf) - 1,
-    .buf     = cin_buf,
-    .buf_end = cin_buf + sizeof(cin_buf),
-}, *cin = &vcin;
+static VBUF vcin, *cin = &vcin;
 
 #ifdef CIN_DEBUG
 static    int  cin_debugging = 0;
@@ -382,9 +376,7 @@ cin_debug_print_content()
 // using the vkey_process() will handle all these cases. otherwise, you
 // have to take care of all thse input sources.
 
-static VKEY_CTX vkctx = {
-    .peek_ch = KEY_INCOMPLETE,
-};
+static VKEY_CTX vkctx;
 
 VKEY_CTX *
 vkey_get_context(void)

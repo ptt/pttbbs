@@ -2315,7 +2315,7 @@ New(void)
 static void
 board_list_help(void)
 {
-    static const char *col1[] = {
+    static const char * const col1[] = {
         "【基本命令】", NULL,
         "  進入看板",     "r Enter →",
         "  回到主選單",   "q ←",
@@ -2335,7 +2335,7 @@ board_list_help(void)
         "  寫入已讀記錄", "w",
         NULL,
     };
-    static const char *col2[] = {
+    static const char * const col2[] = {
         "【移動瀏覽】", NULL,
         "  上個看板",     "p k ↑",
         "  下個看板",     "n j ↓",
@@ -2356,7 +2356,7 @@ board_list_help(void)
         "  切換全部標記", "*",
         NULL,
     };
-    static const char *col3[] = {
+    static const char * const col3[] = {
         "【搜尋】", NULL,
         "  搜尋已列看板", "^S",
         "  搜尋全站看板", "s",
@@ -2375,6 +2375,6 @@ board_list_help(void)
         NULL,
     };
 
-    const char **p[] = { col1, col2, col3 };
+    const char * const *p[] = { col1, col2, col3 };
     show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
 }

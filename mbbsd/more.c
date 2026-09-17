@@ -343,7 +343,7 @@ int more(const char *fpath, int promptend)
 #else	// USE_PMORE ////////////////////////////////////////////////////////
 
 static const char
-*hlp_nav [] =
+* const hlp_nav [] =
 { "【瀏覽指令】", NULL,
     "  下篇文章  ", "f",
     "  前篇文章  ", "b",
@@ -355,14 +355,14 @@ static const char
     "  同作者下篇", "a",
     NULL,
 },
-*hlp_reply [] =
+* const hlp_reply [] =
 { "【回應指令】", NULL,
     "  推薦文章", "% X",
     "  回信回文", "r",
     "  全部回覆", "y",
     NULL,
 },
-*hlp_spc [] =
+* const hlp_spc [] =
 { "【特殊指令】", NULL,
     "  查詢資訊  ", "Q",
     "  文章代碼搜尋", "#",
@@ -378,7 +378,7 @@ static const char
 static int
 common_pmore_help_handler(int y, void *ctx GCC_UNUSED)
 {
-    const char ** p[3] = { hlp_nav, hlp_reply, hlp_spc };
+    const char * const* p[3] = { hlp_nav, hlp_reply, hlp_spc };
     const int  cols[3] = { 29, 27, 20 },    // columns, to fit pmore built-ins
                desc[3] = { 15, 13, 15 };    // desc width
     move(y, 0);

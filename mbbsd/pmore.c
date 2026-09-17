@@ -3106,7 +3106,7 @@ pmore_Preference()
 #endif
 
 static const char
-*hlp_basic[] = {
+* const hlp_basic[] = {
     "【基本移動】", NULL,
     "  下翻一頁", "^F → PgDn Space",
     "  上翻一頁", "^B ^H PgUp BS",
@@ -3117,7 +3117,7 @@ static const char
     "  離開    ", " q ←",
     NULL,
 },
-*hlp_adv[] = {
+* const hlp_adv[] = {
     "【進階瀏覽】", NULL,
     "  搜尋關鍵字", "/",
     "  往後搜尋  ", "n",
@@ -3128,7 +3128,7 @@ static const char
     "  向左捲動  ", ", < Shift-TAB",
     NULL,
 },
-*hlp_sys[] = {
+* const hlp_sys[] = {
     "【其它】", NULL,
 #ifdef PMORE_USE_ASCII_MOVIE
     "  播放動畫    ", "p",
@@ -3147,7 +3147,7 @@ static const char
 MFPROTO void
 pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 {
-    const char **t_tables[PMHLP_BLOCKS] = { hlp_basic, hlp_adv, hlp_sys};
+    const char * const *t_tables[PMHLP_BLOCKS] = { hlp_basic, hlp_adv, hlp_sys};
     const int  col_widths[PMHLP_BLOCKS] = { 29, 27, 20 },
                l_widths  [PMHLP_BLOCKS] = { 12, 13, 15 };
     const int n_t_tables =PMHLP_BLOCKS;

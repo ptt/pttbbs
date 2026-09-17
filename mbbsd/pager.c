@@ -21,15 +21,7 @@ const int PAGER_TABS = WB_OFO_USER_NUM;
 static char     t_last_write[STRLEN];
 
 static const char *
-get_writelog_path(void) {
-    static char path[PATHLEN];
-
-    // Not cached in case if cuser is changed, or sig1 called before we complete
-    // login process... (but is that really possible?)
-#if 0
-    if (*path)
-        return path;
-#endif
+get_writelog_path(char *path) {
     setuserfile(path, fn_writelog);
     return path;
 }
@@ -72,7 +64,8 @@ show_msg(int save, const msgque_t *msg)
     outmsg(buf);
 
     if (save && mode != MSGMODE_ALOHA) {
-        file_appendf(get_writelog_path(), "%s [%s]\n", buf, Cdatelite(&now));
+        char fpath[PATHLEN];
+        file_appendf(get_writelog_path(fpath), "%s [%s]\n", buf, Cdatelite(&now));
     }
 }
 
@@ -506,7 +499,8 @@ my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
 static bool
 my_write_log_to_file(const char *destid, const char *msg)
 {
-    if (file_appendf(get_writelog_path(), "To %s: %s [%s]\n", destid, msg, Cdatelite(&now)) < 0) {
+    char fpath[PATHLEN];
+    if (file_appendf(get_writelog_path(fpath), "To %s: %s [%s]\n", destid, msg, Cdatelite(&now)) < 0) {
         vmsg("抱歉，目前系統異常，暫時無法傳送資料。");
         return false;
     }
@@ -708,8 +702,8 @@ pager_show_panel(void)
 
 int
 pager_show_log(void) {
-    char ans[4];
-    const char *fpath = get_writelog_path();
+    char ans[4], fpath[PATHLEN];
+    get_writelog_path(fpath);
     if (more(fpath, YEA) == -1) {
         vmsg("暫無訊息記錄");
         return FULLUPDATE;

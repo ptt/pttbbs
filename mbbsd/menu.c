@@ -447,7 +447,7 @@ show_menu(int menu_index, const commands_t * p)
 static void
 menu_help(void)
 {
-    static const char *col1[] = {
+    static const char * const col1[] = {
         "【 選單基本操作 】", NULL,
         "  上個選項",     "↑",
         "  下個選項",     "↓",
@@ -467,7 +467,7 @@ menu_help(void)
         "  隨處切換(ZA)", "Ctrl-Z",
         NULL,
     };
-    const char **p[] = { col1 };
+    const char * const *p[] = { col1 };
 
     show_help_table(p, ARRAY_SIZE(p), "選單按鍵說明");
 }

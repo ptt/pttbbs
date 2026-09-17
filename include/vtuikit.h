@@ -169,7 +169,7 @@ int vs_quick_pref(int default_value, const char *title, const char *entry,
 
 void vs_rectangle_simple(int l, int t, int r, int b);	// draw a single line rectangle, not filling inside interior
 void vs_multi_T_table_simple(
-	const char ***t_tables,   int  n_t_tables, 
+	const char * const **t_tables,   int  n_t_tables,
 	const int  *col_widths,   const int  *l_widths,
 	const char *attr_caption, const char *attr_l, const char *attr_r);
 

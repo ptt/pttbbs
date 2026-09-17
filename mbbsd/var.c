@@ -366,7 +366,7 @@ const char     * const bw_chess[] = {"○", "●", "。", "‧"};
 
 /* friend.c */
 /* Ptt 各種特別名單的檔名 */
-char           *friend_file[8] = {
+const char     * const friend_file[8] = {
     [FRIEND_OVERRIDE] = FN_OVERRIDES,
     [FRIEND_REJECT] = FN_REJECT,
     [FRIEND_ALOHA] = FN_ALOHAED,

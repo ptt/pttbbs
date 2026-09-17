@@ -14,8 +14,8 @@ fi
 build_time="$(date)"
 
 cat >vers.c <<EOF
-const char *build_remote = "${build_remote}";
-const char *build_origin = "${build_origin}";
-const char *build_hash = "${build_hash}";
-const char *build_time = "${build_time}";
+const char * const build_remote = "${build_remote}";
+const char * const build_origin = "${build_origin}";
+const char * const build_hash = "${build_hash}";
+const char * const build_time = "${build_time}";
 EOF

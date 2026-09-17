@@ -311,7 +311,7 @@ enum {
 static void
 a_showhelp(int level)
 {
-    static const char *col1[] = {
+    static const char * const col1[] = {
         "【基本命令】", NULL,
         "  進入目錄/文章", "→r Enter",
         "  回到上一層",   "← q",
@@ -326,7 +326,7 @@ a_showhelp(int level)
         "  往後翻頁",     "^F PgDn 空白鍵",
         NULL,
     };
-    static const char *col2[] = {
+    static const char * const col2[] = {
         "【板主專用鍵】", NULL,
         "  切換閱\讀權限", "H",
         "  建新文章",      "n",
@@ -342,7 +342,7 @@ a_showhelp(int level)
         "  附加項目",      "a",
         NULL,
     };
-    static const char *col3[] = {
+    static const char * const col3[] = {
         "【看板與信箱】", NULL,
         "  標記內容",     "(看板或信箱內)t",
         "  貼上標記",     "^P",
@@ -353,7 +353,7 @@ a_showhelp(int level)
         NULL,
     };
 
-    const char **p[] = {col1, col2, col3};
+    const char * const *p[] = {col1, col2, col3};
     int n = level ? ARRAY_SIZE(p) : 1;
     show_help_table(p, n, "公佈欄輔助說明");
 }
