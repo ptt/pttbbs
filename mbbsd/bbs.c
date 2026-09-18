@@ -665,7 +665,7 @@ readtitle(void)
 
 #ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN)
-        SNPRINTF(buf, "[靜]");
+        SNPRINTF(buf, "[靜] ");
     else
 #endif
     {
@@ -677,9 +677,10 @@ readtitle(void)
         SNPRINTF(buf, "人氣:%d ", nuser);
     }
 
-    vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ",
-	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode],
-	    buf);
+    vbarlr(TEMPFORMAT(STRLEN,
+                ANSI_REVERSE "   編號    %s 作  者       文  章  標  題",
+                IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :
+                listmode_desc[currlistmode]), buf);
 }
 
 static int
@@ -3956,7 +3957,7 @@ tar_addqueue(void)
 	return FULLUPDATE;
     }
 
-    if (vansf("確定要對看板 %s 進行備份嗎？[y/N] ", currboard) != 'y')
+    if (vans(TEMPFORMAT(STRLEN, "確定要對看板 %s 進行備份嗎？[y/N] ", currboard)) != 'y')
         return FULLUPDATE;
 
     vs_hdr2(" 看板備份 ", currboard);

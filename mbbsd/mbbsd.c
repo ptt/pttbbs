@@ -1074,7 +1074,7 @@ user_login(void)
 	    int num;
 	    num = updatenewfav(1);
 	    if (num > NEW_FAV_THRESHOLD &&
-		vansf("找到 %d 個新看板，確定要加入我的最愛嗎？[y/N]", num) != 'y') {
+		vans(TEMPFORMAT(STRLEN, "找到 %d 個新看板，確定要加入我的最愛嗎？[y/N]", num)) != 'y') {
 		fav_free();
 		fav_load();
 	    }

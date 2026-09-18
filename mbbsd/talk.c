@@ -1246,12 +1246,11 @@ if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
 	    // reduced version
 	    // TODO use vs_footer to replace.
 	    move(b_lines, 0);
-	    vbarf( ANSI_COLOR(34;46) " 休閒聊天 "
+	    vbarlr(ANSI_COLOR(34;46) " 休閒聊天 "
 		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 "
 		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 "
-		   ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器\t"
-		   ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
-		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
+		   ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器", TEMPFORMAT(STRLEN, ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
+		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]));
 	} else
 	vs_footer(" 休閒聊天 ",
 		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");

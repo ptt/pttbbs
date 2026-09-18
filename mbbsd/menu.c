@@ -93,7 +93,7 @@ showtitle(const char *title, const char *mid)
 {
     int tail_type;
     int is_currboard_special = 0;
-    char mid_buf[64], right_buf[64];
+    char mid_buf[64];
 
     const char *high_attr = HasUserFlag(UF_CURSOR_STANDOUT) ? ANSI_COLOR(41) :
 	ANSI_COLOR(41;5);
@@ -136,18 +136,13 @@ showtitle(const char *title, const char *mid)
 		(getbcache(currbid)->brdattr & BRD_POSTMASK));
     }
 
-    if (currboard[0]) {
-	snprintf(right_buf, sizeof(right_buf), "%s%s《%s%s%s》",
+    vs_header(title, mid, currboard[0] ?
+	      TEMPFORMAT(64, "%s%s《%s%s%s》",
 		 title_tail_attrs[tail_type],
 		 title_tail_msgs[tail_type],
 		 is_currboard_special ? ANSI_COLOR(32) : "",
 		 currboard,
-		 title_tail_attrs[tail_type]);
-    } else {
-	right_buf[0] = '\0';
-    }
-
-    vs_header(title, mid, right_buf);
+		 title_tail_attrs[tail_type]) : "");
 }
 
 static void
@@ -270,16 +265,14 @@ show_status(void)
     move(b_lines, 0);
     // Length: timer =15, today=14, online=8+N, me=5+12,
     // pager=10, help=7
-    vbarf(ANSI_COLOR(34;46) "%d/%d周%c%c %d:%02d"
+    vbarlr(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(34;46) "%d/%d周%c%c %d:%02d"
 	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
 	  "%d" ANSI_COLOR(30) "人,我是" ANSI_COLOR(31) "%s"
-          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s\t"
-          ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明",
-	  ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
+          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s", ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
 	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
-	  str_pager_modes[currutmp->pager % PAGER_MODES]);
+	  str_pager_modes[currutmp->pager % PAGER_MODES]), ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明");
 }
 
 /*

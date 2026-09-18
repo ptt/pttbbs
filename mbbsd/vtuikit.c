@@ -327,48 +327,26 @@ vshowmsg(const char *msg)
     } else {
 	// print in left, with floating (if \t exists)
 	const char *pfloat = strchr(msg, '\t');
-	int  szfloat = 0;
-	int  nmsg = 0;
+	int y, x;
 
-	// print prefix
-	w -= MACROSTRLEN(VMSG_MSG_PREFIX); // str_term_width(VMSG_MSG_PREFIX);
-	outs(VCLR_MSG);
-	outs(VMSG_MSG_PREFIX);
-
-	// if have float, calculate float size
+	outs(VCLR_MSG VMSG_MSG_PREFIX);
 	if (pfloat) {
-	    nmsg = pfloat - msg;
-	    w -= str_term_width(msg) -1;	    // -1 for \t
-	    pfloat ++; // skip \t
-	    szfloat = str_term_width(pfloat);
+	    outns(msg, pfloat - msg);
+	    pfloat++;
 	} else {
-	    pfloat = VMSG_MSG_FLOAT;
-	    szfloat = MACROSTRLEN(VMSG_MSG_FLOAT); // str_term_width()
-	    w -= str_term_width(msg) + szfloat;
-	}
-
-	// calculate if we can display float
-	if (w < 0)
-	{
-	    w += szfloat;
-	    szfloat = 0;
-	}
-
-	// print msg body
-	if (nmsg)
-	    outns(msg, nmsg);
-	else
 	    outs(msg);
+	    pfloat = VMSG_MSG_FLOAT;
+	}
 
-	// print padding for floats
-	if (w > 0)
-	    nblank(w);
-
-	// able to print float?
-	if (szfloat)
-	{
+	getyx(&y, &x);
+	int rem = SAFE_MAX_COL - x;
+	int szfloat = str_term_width(pfloat);
+	if (rem >= szfloat) {
+	    nblank(rem - szfloat);
 	    outs(VCLR_MSG_FLOAT);
 	    outs(pfloat);
+	} else if (rem > 0) {
+	    nblank(rem);
 	}
     }
 
@@ -398,17 +376,6 @@ vans(const char *msg)
  *
  * @param s 指定訊息，見 vshowmsg
  */
-int
-vansf(const char *fmt, ...)
-{
-    char   msg[VBUFLEN];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    return vans(msg);
-}
 
 /**
  * vmsg(s): 在底部印出指定訊息或單純的暫停訊息，並傳回使用者的按鍵。
@@ -453,29 +420,18 @@ vmsgf(const char *fmt,...)
 }
 
 /**
- * vbarf(s, ...): 格式化輸出左右對齊的字串 (MAX_COL)
+ * vbarlr(s): 從現在位置開始印出 s 後畫滿螢幕 (MAX_COL)
  *
- * @param s 格式化字串 (\t 後的內容會對齊右端)
+ * @param s 靠左對齊的字串 (可含 ANSI 碼)
  */
 void
-vbarf(const char *s, ...)
+vbar(const char *s)
 {
-    char msg[VBUFLEN], *s2;
-    va_list ap;
-    va_start(ap, s);
-    vsnprintf(msg, sizeof(msg), s, ap);
-    va_end(ap);
-
-    s2 = strchr(msg, '\t');
-    if (s2) *s2++ = 0;
-    else s2 = "";
-
-    return vbarlr(msg, s2);
+    vbarlr(s, NULL);
 }
 
 /**
- * vbarlr(l, r): 左右對齊畫滿螢幕 (MAX_COL)
- * 注意: 目前的實作自動認定游標已在行開頭。
+ * vbarlr(l, r): 從現在位置開始左右對齊畫滿螢幕 (MAX_COL)
  *
  * @param l 靠左對齊的字串 (可含 ANSI 碼)
  * @param r 靠右對齊的字串 (可含 ANSI 碼，後面不會補空白)
@@ -483,25 +439,24 @@ vbarf(const char *s, ...)
 void
 vbarlr(const char *l, const char *r)
 {
-    // TODO str_term_width 跑兩次... 其實 l 可以邊 output 邊算。
-    int szl = str_term_width(l),
-	szr = str_term_width(r);
+    int y, x;
+    int szr = str_term_width(r);
 
-    // assume we are already in (y, 0)
     clrtoeol();
     outs(l);
-    szl = MAX_COL - szl;
+    getyx(&y, &x);
+    int rem = MAX_COL - x;
 
-    if (szl > szr)
+    if (rem > szr)
     {
-	nblank(szl - szr);
-	szl = szr;
+	nblank(rem - szr);
+	rem = szr;
     }
 
-    if (szl == szr)
+    if (rem == szr && szr > 0)
 	outs(r);
-    else if (szl > 0)
-	nblank(szl);
+    else if (rem > 0)
+	nblank(rem);
 
     outs(ANSI_RESET);
 }
@@ -561,11 +516,12 @@ vs_header(const char *title, const char *mid, const char *right)
 
     if (title)
     {
+	int y, x;
 	outs(VMSG_HDR_PREFIX);
 	outs(title);
 	outs(VMSG_HDR_POSTFIX);
-	w -= MACROSTRLEN(VMSG_HDR_PREFIX) + MACROSTRLEN(VMSG_HDR_POSTFIX);
-	w -= str_term_width(title);
+	getyx(&y, &x);
+	w -= x;
     }
 
     // determine if we can display right message, and
@@ -622,26 +578,22 @@ vs_hdr(const char *title)
 void
 vs_hdr2bar(const char *left, const char *right)
 {
-    int w = MAX_COL;
-
-    if (*left == ESC_CHR)
-	w -= str_term_width(left);
-    else
-	w -= strlen(left);
+    int y, x;
 
     SOLVE_ANSI_CACHE();
     clrtoeol();
     outs(VCLR_HDR2_LEFT);
     outs(left);
     outs(VCLR_HDR2_RIGHT);
+    getyx(&y, &x);
 
-    if (w <= 0)
-	return;
-
-    if (*right == ESC_CHR)
-	fillns_ansi(w, right);
-    else
-	fillns(w, right);
+    int w = MAX_COL - x;
+    if (w > 0) {
+	if (*right == ESC_CHR)
+	    fillns_ansi(w, right);
+	else
+	    fillns(w, right);
+    }
 
     outs(ANSI_RESET "\n");
 }
@@ -671,11 +623,10 @@ vs_footer(const char *caption, const char *msg)
 
     if (caption)
     {
+	int y;
 	outs(VCLR_FOOTER_CAPTION);
 	outs(caption);
-	i += (*caption == ESC_CHR) ?
-	    str_term_width(caption) :
-	    (int)strlen(caption);
+	getyx(&y, &i);
     }
 
     if (!msg) msg = "";
@@ -904,7 +855,7 @@ vs_quick_pref(int default_value, const char *title, const char *entry,
         move(ystart, 0);
         clrtobot();
         outs(VCLR_QPREF_TITLE);
-        vbarf("%s", title); // in case title has TAB for LR display.
+        vbar(title);
         move(ystart + 1, 0);
         outs(VCLR_QPREF_PROMPT);
         outs(entry);

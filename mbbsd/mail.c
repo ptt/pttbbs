@@ -1586,7 +1586,7 @@ mailtitle(void)
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME
             );
-    vbarf(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題\t%s ", buf);
+    vbarlr(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題", TEMPFORMAT(STRLEN, "%s ", buf));
 }
 
 static void

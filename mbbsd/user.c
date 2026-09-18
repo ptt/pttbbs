@@ -697,7 +697,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    while (!getdata(y++, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
-	    if (vans(MSG_SURE_NY) != 'y') {
+	    if (vans(MSG_SURE_NY)) != 'y') {
 		fail++;
 		break;
 	    }
@@ -1641,7 +1641,7 @@ int u_admin_disable_2fa(void) {
     char reason[STRLEN];
     while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
 
-    if (vansf("確定要強制關閉使用者 %s 的 2FA 雙重驗證嗎？(y/N): ", target_id) != 'y')
+    if (vans(TEMPFORMAT(STRLEN, "確定要強制關閉使用者 %s 的 2FA 雙重驗證嗎？(y/N): ", target_id)) != 'y')
         return -1;
 
     target_user.u_2fa = 0;

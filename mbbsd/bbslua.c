@@ -1384,21 +1384,9 @@ bbslua_logo(lua_State *L)
     fullmsg(msg);
 
     // system break key prompt
-    {
-        int sz = t_columns -1;
-        const char
-            *prompt1 = "    提醒您執行中隨時可按 ",
-            *prompt2 = "[Ctrl-C]",
-            *prompt3 = " 強制中斷 BBS-Lua 程式";
-        sz -= strlen(prompt1);
-        sz -= strlen(prompt2);
-        sz -= strlen(prompt3);
-        outs(ANSI_COLOR(22;37));  outs(prompt1);
-        outs(ANSI_COLOR(1;31));   outs(prompt2);
-        outs(ANSI_COLOR(0;37;44));outs(prompt3);
-        prints("%*s", sz, "");
-        outs(ANSI_RESET);
-    }
+    vbar(ANSI_COLOR(22;37) "    提醒您執行中隨時可按 "
+         ANSI_COLOR(1;31) "[Ctrl-C]"
+         ANSI_COLOR(0;37;44) " 強制中斷 BBS-Lua 程式");
     lua_pop(L, 1);
 }
 
