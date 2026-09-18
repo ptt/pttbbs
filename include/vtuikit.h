@@ -14,11 +14,28 @@
 #include <limits.h>
 
 // THEME DEFINITION ----------------------------------------------------
-#define VCLR_HEADER		ANSI_COLOR(1;37;46)	// was: TITLE_COLOR
-#define VCLR_HEADER_MID		ANSI_COLOR(1;33;46)
-#define VCLR_HEADER_RIGHT	ANSI_COLOR(1;37;46)
+#ifndef THEME_BG_COLOR
+#define THEME_BG_COLOR 46
+#endif
+#ifndef THEME_FG_COLOR
+#define THEME_FG_COLOR 1;37
+#endif
+#ifndef THEME_FG_COLOR2
+#define THEME_FG_COLOR2 1;33
+#endif
+#define THEME_COLOR THEME_FG_COLOR;THEME_BG_COLOR
+
+#ifdef TITLE_COLOR
+#define VCLR_HEADER             TITLE_COLOR
+#else
+#define VCLR_HEADER             ANSI_COLOR(0;THEME_COLOR)
+#endif
+#define VCLR_HEADER_MID		ANSI_COLOR(THEME_FG_COLOR2)
+#define VCLR_HEADER_RIGHT	VCLR_HEADER
+
+// TODO: Replace VCLR_HDR by VCLR_HEADER someday.
 #define VCLR_HDR		ANSI_COLOR(1;37;46)
-#define VCLR_HDR2_LEFT		ANSI_COLOR(1;37;46)
+#define VCLR_HDR2_LEFT		VCLR_HDR
 #define VCLR_HDR2_RIGHT		ANSI_COLOR(1;37;45)
 #define VCLR_FOOTER_CAPTION     ANSI_COLOR(0;34;46)
 #define VCLR_FOOTER             ANSI_COLOR(0;30;47)
@@ -40,6 +57,8 @@
 #define VMSG_PAUSE_PAD		"¢e"
 #define VMSG_MSG_FLOAT		" [«ö¥ô·NÁäÄ~Äò]"
 #define VMSG_MSG_PREFIX		" ¡» "
+#define VMSG_HEADER_PREFIX	"¡i"
+#define VMSG_HEADER_POSTFIX	"¡j"
 #define VMSG_HDR_PREFIX		"¡i "
 #define VMSG_HDR_POSTFIX	" ¡j"
 
@@ -136,7 +155,6 @@ void InputHistoryNext	(char *s, int sz);
 void vpad   (int n, const char *pattern);	    /// pad n fields by pattern
  int vgety  (void);				    /// return cursor position (y)
 void vfill  (int n, int flags, const char *s);	    /// fill n-width space with s
-void vfillf (int n, int flags, const char *s, ...) GCC_CHECK_FORMAT(3,4); /// formatted version of vfill
 void vbarlr (const char *l, const char *r);	    /// draw a left-right expanded bar with (l,r)
 void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2); /// vbarlr with formatted input (\t splits (l,r)
 void vshowmsg(const char *msg);			    /// draw standard pause/message
@@ -159,9 +177,7 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
 void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_hdr2	(const char *left, const char *right);
-void vs_hdr2f	(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void vs_hdr2bar	(const char *left, const char *right);
-void vs_hdr2barf(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void vs_footer	(const char *caption, const char *prompt);
 
 int vs_quick_pref(int default_value, const char *title, const char *entry,

@@ -14,7 +14,8 @@
 
 // Common ANSI commands.
 #define ANSI_RESET	ESC_STR "[m"
-#define ANSI_COLOR(x)	ESC_STR "[" #x "m"
+#define ANSI_COLOR_RAW(x) ESC_STR "[" #x "m"
+#define ANSI_COLOR(x)	ANSI_COLOR_RAW(x)
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
 #define ANSI_CLRTOEND	ESC_STR "[K"
 #define ANSI_REVERSE	ANSI_COLOR(7)

@@ -575,8 +575,8 @@ ccw_talk_end_session(CCW_CTX *ctx)
 CCW_PROTO void
 ccw_talk_header(CCW_CTX *ctx)
 {
-    vs_hdr2barf(" 【" CCW_CAP_TALK "】 \t %s",
-            ctx->remote_id);
+    vs_hdr2bar(" 【" CCW_CAP_TALK "】 ",
+               TEMPFORMAT(STRLEN, " %s", ctx->remote_id));
 }
 
 CCW_PROTO void
@@ -797,8 +797,8 @@ ccw_chat_end_session(CCW_CTX *ctx)
 CCW_PROTO void
 ccw_chat_header(CCW_CTX *ctx)
 {
-    vs_hdr2barf(" " CCW_CAP_CHATROOM " [%s] \t 話題: %s",
-            ctx->remote_id, ccw_chat_get_ext(ctx)->topic);
+    vs_hdr2bar(TEMPFORMAT(64, " " CCW_CAP_CHATROOM " [%s] ", ctx->remote_id),
+               TEMPFORMAT(STRLEN, " 話題: %s", ccw_chat_get_ext(ctx)->topic));
 }
 
 CCW_PROTO void

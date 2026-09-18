@@ -264,26 +264,6 @@ vfill(int n, int flags, const char *s)
 }
 
 /**
- * vfill(n, flags, fmt, ...): 使用 vfill 輸出並格式化字串。
- *
- * @param n	space to occupy
- * @param flags	VFILL_* parameters
- * @param fmt	string to display
- */
-void
-vfillf(int n, int flags, const char *s, ...)
-{
-    va_list args;
-    char buff[VBUFLEN];
-
-    va_start(args, s);
-    vsnprintf(buff, sizeof(buff), s, args);
-    va_end(args);
-
-    vfill(n, flags, s);
-}
-
-/**
  * vpad(n, pattern): 填滿 n 個字元 (使用的格式為 pattern)
  *
  * @param n 要填滿的字元數 (無法填滿時會使用空白填補)
@@ -573,23 +553,23 @@ void
 vs_header(const char *title, const char *mid, const char *right)
 {
     int w = MAX_COL;
-    int szmid   = mid   ? strlen(mid) : 0;
-    int szright = right ? strlen(right) : 0;
+    int szmid   = mid   ? str_term_width(mid) : 0;
+    int szright = right ? str_term_width(right) : 0;
 
     clear();
     outs(VCLR_HEADER);
 
     if (title)
     {
-	outs(VMSG_HDR_PREFIX);
+	outs(VMSG_HEADER_PREFIX);
 	outs(title);
-	outs(VMSG_HDR_POSTFIX);
-	w -= MACROSTRLEN(VMSG_HDR_PREFIX) + MACROSTRLEN(VMSG_HDR_POSTFIX);
-	w -= strlen(title);
+	outs(VMSG_HEADER_POSTFIX);
+	w -= MACROSTRLEN(VMSG_HEADER_PREFIX) + MACROSTRLEN(VMSG_HEADER_POSTFIX);
+	w -= str_term_width(title);
     }
 
     // determine if we can display right message, and
-    // if if we need to truncate mid.
+    // if we need to truncate mid.
     if (szmid + szright > w)
 	szright = 0;
 
@@ -603,14 +583,19 @@ vs_header(const char *title, const char *mid, const char *right)
     }
 
     if (szmid) {
-	outs(VCLR_HEADER_MID);
-	outns(mid, szmid);
+	if (*mid == ESC_CHR)
+	    fillns_ansi(szmid, mid);
+	else {
+	    outs(VCLR_HEADER_MID);
+	    outns(mid, szmid);
+	}
 	outs(VCLR_HEADER);
     }
-    nblank(w - szmid);
+    nblank(w - szmid - szright);
 
     if (szright) {
-	outs(VCLR_HEADER_RIGHT);
+	if (*right != ESC_CHR)
+	    outs(VCLR_HEADER_RIGHT);
 	outs(right);
     }
     outs(ANSI_RESET "\n");
@@ -664,28 +649,6 @@ vs_hdr2bar(const char *left, const char *right)
 }
 
 /**
- * vs_hdr2barf(fmt, ...): (在行首)輸出格式化的簡易左右兩段式的標題
- *
- * @param fmt: 用 \t 分隔左右的格式字串
- */
-void
-vs_hdr2barf(const char *fmt, ...)
-{
-    va_list args;
-    char buff[VBUFLEN];
-    char *tab = NULL;
-
-    va_start(args, fmt);
-    vsnprintf(buff, sizeof(buff), fmt, args);
-    va_end(args);
-
-    tab = strchr(buff, '\t');
-    if (tab) *tab++ = 0;
-
-    vs_hdr2bar(buff, tab ? tab : "");
-}
-
-/**
  * vs_hdr2(left, right): 清空螢幕並輸出簡易左右兩段式的標題
  */
 void
@@ -695,22 +658,6 @@ vs_hdr2(const char *left, const char *right)
     vs_hdr2bar(left, right);
 }
 
-void
-vs_hdr2f(const char *fmt, ...)
-{
-    va_list args;
-    char buff[VBUFLEN];
-    char *tab = NULL;
-
-    va_start(args, fmt);
-    vsnprintf(buff, sizeof(buff), fmt, args);
-    va_end(args);
-
-    tab = strchr(buff, '\t');
-    if (tab) *tab++ = 0;
-
-    vs_hdr2(buff, tab ? tab : "");
-}
 
 /**
  * vs_footer(caption, msg): 在螢幕底部印出格式化的 caption msg (不可含 ANSI 碼)

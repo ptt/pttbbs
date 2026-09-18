@@ -193,7 +193,8 @@ typedef struct {
 static int
 pveh_header(void *ctx) {
     pveh_ctx *cx = (pveh_ctx*) ctx;
-    vs_hdr2barf(" 【" TIME_CAPSULE_NAME ": 編輯歷史】 \t %s", cx->subject);
+    vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": 編輯歷史】 ",
+               TEMPFORMAT(STRLEN, " %s", cx->subject));
     move(1, 0);
     outs("請注意本系統不會永久保留所有的編輯歷史。");
     outs("\n");
@@ -387,8 +388,8 @@ typedef struct {
 static int
 pvrb_header(void *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
-    vs_hdr2barf(" 【" TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME "】 \t %s",
-                cx->subject);
+    vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME "】 ",
+               TEMPFORMAT(STRLEN, " %s", cx->subject));
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
     vbarf(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題\t");
@@ -637,7 +638,7 @@ typedef struct {
 
 static int
 pvcm_header(void *ctx GCC_UNUSED) {
-    vs_hdr2barf(" 【推文管理】\t");
+    vs_hdr2bar(" 【推文管理】", "");
     move(1, 0);
     vbarf(ANSI_REVERSE "  %-6s|%-12.12s|%s\t", "編 號", " 作  者 ", " 內  容\t");
     return 0;

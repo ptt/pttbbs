@@ -78,7 +78,7 @@ int EntryBrowser::Display() {
 }
 
 int EntryBrowser::Header() {
-  vs_hdr2barf(" 【搜尋認證資料庫】 \t %s", title_.c_str());
+  vs_hdr2bar(" 【搜尋認證資料庫】 ", (" " + title_).c_str());
   // clang-format off
   outs(ANSI_COLOR(30;47));
   // clang-format on
