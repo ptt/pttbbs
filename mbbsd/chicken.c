@@ -768,7 +768,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
     reload_money();
     move(19, 0);
 
-    vbarf(ANSI_COLOR(44;37) " " MONEYNAME ":" ANSI_COLOR(33) " %-10d"
+    vbar(TEMPFORMAT(STRLEN, ANSI_COLOR(44;37) " " MONEYNAME ":" ANSI_COLOR(33) " %-10d"
 #ifdef HAVE_CHICKEN_CS
           ANSI_COLOR(37) "  常識點數 :" ANSI_COLOR(33) " %-10d"
 #endif
@@ -776,7 +776,7 @@ select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 #ifdef HAVE_CHICKEN_CS
           , mychicken->commonsense
 #endif
-          );
+          ));
 
     prints("\n" ANSI_COLOR(33) "(" ANSI_COLOR(37) "1" ANSI_COLOR(33) ")清理 "
            "(" ANSI_COLOR(37) "2" ANSI_COLOR(33) ")吃飯 "

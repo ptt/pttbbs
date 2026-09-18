@@ -208,6 +208,8 @@
 // ----------------------------------------------------------------
 // You need to have following APIs to support pmore:
 //  vkey(): return user input, with KEY_* translated (igetch())
+//  vbar(): print a message in the current column, fill to EOL-1 (or safe col)
+//  vbarlr(): prints two messages, one in the left side and one in the right
 //  vmsg(): print a message at bottom line, pause and return user pressed key
 //  outc()/outs()/prints(): character/string/formatstr output (w/ANSI ability)
 //  t_columns / b_lines / t_lines: current terminal dimension
@@ -2049,15 +2051,11 @@ mf_display()
 
 MFPROTO void
 mf_display_footer(
-        int (*footer_handler)(int ratio, int width, void *ctx), void *ctx)
+        int (*footer_handler)(int ratio, void *ctx), void *ctx)
 {
     // format:
     // |PageNo Percentage|Detail Info|Floating1 (context)|Floating2 (quit)
     // |SUMMARY|DETAIL|HELP
-
-    char buf[256];              // must be large enough to hold temporary data
-    int  avail = t_columns-1;   // available space
-    int  w;                     // for width calculation
 
     /*
      * page determination is hard.
@@ -2140,55 +2138,37 @@ mf_display_footer(
 
     // part 1, brief report (SUMMAR)
     if (allpages >= 0)
-        snprintf(buf, sizeof(buf),
-                "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
+        prints("  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
                 nowpage,
                 allpages,
-                progress
-               );
+                progress);
     else
-        snprintf(buf, sizeof(buf),
-                "  瀏覽 第 %1d 頁 (%3d%%) ",
+        prints("  瀏覽 第 %1d 頁 (%3d%%) ",
                 nowpage,
-                progress
-               );
-    avail -= strlen(buf);
-    outs(buf);
+                progress);
 
     // part 2, status report (DETAIL)
     outs(PMORE_COLOR_FOOTER2);
     if (override_msg)
     {
-        buf[0] = 0;
         if (override_attr) outs(override_attr);
-        strlcpy(buf, override_msg, sizeof(buf));
+        outs(override_msg);
         RESET_OVERRIDE_MSG();
+    }
+    else if (mf.xpos > 0)
+    {
+        prints(" 顯示範圍: %d~%d 欄位, %02d~%02d 行",
+                (int)mf.xpos+1,
+                (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
+                (int)(mf.lineno + 1),
+                (int)(mf.lineno + mf.dispedlines));
     }
     else
     {
-        if (mf.xpos > 0)
-        {
-            snprintf(buf, sizeof(buf),
-                    " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
-                    (int)mf.xpos+1,
-                    (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
-                    (int)(mf.lineno + 1),
-                    (int)(mf.lineno + mf.dispedlines)
-                    );
-        } else {
-            snprintf(buf, sizeof(buf),
-                    " 目前顯示: 第 %02d~%02d 行",
-                    (int)(mf.lineno + 1),
-                    (int)(mf.lineno + mf.dispedlines)
-                    );
-        }
+        prints(" 目前顯示: 第 %02d~%02d 行",
+                (int)(mf.lineno + 1),
+                (int)(mf.lineno + mf.dispedlines));
     }
-    avail -= strlen(buf);
-    outs(buf);
-
-    // usually avail is still > 0 here...
-    if (avail <= 0)
-        return;
 
     // prepare the part 3
     outs(PMORE_COLOR_FOOTER3);
@@ -2196,7 +2176,7 @@ mf_display_footer(
     // use customizable footer if available
     if (footer_handler)
     {
-        footer_handler(progress, avail, ctx);
+        footer_handler(progress, ctx);
         return;
     }
 
@@ -2210,32 +2190,8 @@ mf_display_footer(
     PMORE_COLOR_FOOTER3_KEY  "←[q]"    \
     PMORE_COLOR_FOOTER3_TEXT "離開 "
 
-    // first try: long (context + quit)
-    w = PMORE_MACROSTRLEN(PMORE_MSG_FOOTER_FLOAT_LONG) -
-        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_KEY) *2 -
-        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_TEXT)*2;
-    if (avail >= w)
-    {
-        if (avail > w)
-            prints("%*s", avail-w, "");
-        outs(PMORE_MSG_FOOTER_FLOAT_LONG);
-        return;
-    }
 
-    // next try: short 4 only (quit)
-    w = PMORE_MACROSTRLEN(PMORE_MSG_FOOTER_FLOAT_SHORT) -
-        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_KEY) *1 -
-        PMORE_MACROSTRLEN(PMORE_COLOR_FOOTER3_TEXT)*1;
-    if (avail >= w)
-    {
-        if (avail > w)
-            prints("%*s", avail-w, "");
-        outs(PMORE_MSG_FOOTER_FLOAT_SHORT);
-        return;
-    }
-
-    // final: simply fill the extra space.
-    prints("%*s", avail, "");
+    vbarlr("", PMORE_MSG_FOOTER_FLOAT_LONG);
 }
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
@@ -2291,14 +2247,14 @@ _pmore2(
         int promptend, void *ctx,
         int (*mf_attach_handler)(void *), void *ahctx,
         int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*footer_handler)(int ratio, void *ctx),
         int (*help_handler)  (int y,   void *ctx));
 
 int
 pmore2(
         const char *fpath, int promptend, void *ctx,
         int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*footer_handler)(int ratio, void *ctx),
         int (*help_handler)  (int y,   void *ctx)
       )
 {
@@ -2314,7 +2270,7 @@ pmore2_inmemory(
         void *content, int size,
         int promptend, void *ctx,
         int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*footer_handler)(int ratio, void *ctx),
         int (*help_handler)  (int y,   void *ctx)
       )
 {
@@ -2335,7 +2291,7 @@ _pmore2(
         int promptend, void *ctx,
         int (*mf_attach_handler)(void *), void *ahctx,
         int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, int width, void *ctx),
+        int (*footer_handler)(int ratio, void *ctx),
         int (*help_handler)  (int y,   void *ctx)
       )
 {
@@ -3298,26 +3254,19 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
 MFPROTO int
 mf_moviePromptPlaying(int type)
 {
-    int w = t_columns - 1;
-    // s may change to anykey...
     const char *s = PMORE_MSG_MOVIE_PLAYING;
 
     if (override_msg)
     {
         // we must warn user about something...
-        move(type ? b_lines-2 : b_lines-1, 0); // clrtoeol?
+        move(type ? b_lines-2 : b_lines-1, 0);
         outs(ANSI_RESET);
         if (override_attr) outs(override_attr);
-        w -= strlen(override_msg);
-        outs(override_msg);
-        while (w-- > 0) outc(' ');
-
-        outs(ANSI_RESET ANSI_CLRTOEND);
+        vbar(override_msg);
         RESET_OVERRIDE_MSG();
-        w = t_columns -1;
     }
 
-    move(type ? b_lines-1 : b_lines, 0); // clrtoeol?
+    move(type ? b_lines-1 : b_lines, 0);
 
     if (type) {
         outs(ANSI_RESET ANSI_COLOR(1;34;47));
@@ -3328,11 +3277,7 @@ mf_moviePromptPlaying(int type)
     } else {
         outs(ANSI_RESET ANSI_COLOR(1;30;47));
     }
-
-    w -= strlen(s); outs(s);
-
-    while (w-- > 0) outc(' ');
-    outs(ANSI_RESET ANSI_CLRTOEND);
+    vbar(s);
 
     if (type) {
         move(b_lines, 0);

@@ -376,7 +376,7 @@ int a_changeangel(void) {
 const char *
 angel_order_song(char *receiver, size_t sz_receiver) {
     userec_t udata;
-    char prompt[STRLEN], ans[3];
+    char ans[3];
     const char *angel_nick = NULL;
 
     if (!*cuser.myangel)
@@ -398,9 +398,8 @@ angel_order_song(char *receiver, size_t sz_receiver) {
         return NULL;
 
     angel_nick = angel_get_nick();
-    SNPRINTF(prompt, "要留言給你的%s小天使嗎? [y/N]: ",
-             angel_nick);
-    if (getdata(20, 0, prompt, ans, sizeof(ans), LCECHO) && *ans == 'y') {
+    if (getdata(20, 0, TEMPFORMAT(STRLEN, "要留言給你的%s小天使嗎? [y/N]: ",
+             angel_nick), ans, sizeof(ans), LCECHO) && *ans == 'y') {
         snprintf(receiver, sz_receiver, "%s小天使", angel_nick);
         return angel_nick;
     }

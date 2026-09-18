@@ -155,8 +155,8 @@ void InputHistoryNext	(char *s, int sz);
 void vpad   (int n, const char *pattern);	    /// pad n fields by pattern
  int vgety  (void);				    /// return cursor position (y)
 void vfill  (int n, int flags, const char *s);	    /// fill n-width space with s
+void vbar   (const char *s);			    /// draw an expanded bar with s
 void vbarlr (const char *l, const char *r);	    /// draw a left-right expanded bar with (l,r)
-void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2); /// vbarlr with formatted input (\t splits (l,r)
 void vshowmsg(const char *msg);			    /// draw standard pause/message
 
 // v*: input widgets
@@ -164,7 +164,6 @@ void vshowmsg(const char *msg);			    /// draw standard pause/message
  int vmsg   (const char *msg);				    /// draw standard pause/message and return input
  int vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vmsg
  int vans   (const char *msg);				    /// prompt and return (lowercase) single byte input
- int vansf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vans
 
 // vget: (y, x, ...)
 int vgets   (char *buf, int len, int flags);		    /// input with edit box control

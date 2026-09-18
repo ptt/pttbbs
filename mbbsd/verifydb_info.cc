@@ -218,7 +218,7 @@ void verify_entry_edit_popup(const VerifyDb::Entry *entry, bool *dirty) {
   grayout(0, y, GRAYOUT_DARK);
 
   move(y++, 0);
-  vbarf(ANSI_REVERSE " 認證資料設定\t" ANSI_RESET);
+  vbar(ANSI_REVERSE " 認證資料設定");
 
   y++;
   auto disp =
@@ -253,7 +253,7 @@ void verify_entry_add_popup(const userec_t *u,
   grayout(0, y, GRAYOUT_DARK);
 
   move(y++, 0);
-  vbarf(ANSI_REVERSE " 新增認證資料\t" ANSI_RESET);
+  vbar(ANSI_REVERSE " 新增認證資料");
   clrtobot();
 
   // Verify method input.

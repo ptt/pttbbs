@@ -405,9 +405,15 @@ display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
 #define MACROSTRLEN(x) (sizeof(x)-1)
 
 static int
-common_pmore_footer_handler(int ratio GCC_UNUSED, int width,
+common_pmore_footer_handler(int ratio GCC_UNUSED,
                             void *ctx GCC_UNUSED)
 {
+    int y, x;
+    getyx(&y, &x);
+    int width = (t_columns - 1) - x;
+    if (width <= 0)
+	return 0;
+
 #define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 "
 #define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
 #define FOOTERMSG_READ_MID   "(y)回應(X/%)推文 (←)離開 "

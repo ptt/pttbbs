@@ -1841,15 +1841,12 @@ browse_sigs:
 	showsignature(fpath, &idx_pos, &si);
 
 	if (si.total > 0){
-	    char msg[64];
-
 	    ch = isdigit(cuser.signature) ? cuser.signature : 'x';
-	    sprintf(msg,
+	    getdata(0, 0, TEMPFORMAT(64,
 		    (browsing || (si.max > si.show_max))  ?
 		    "請選擇簽名檔 (1-9, 0=不加 n=翻頁 x=隨機)[%c]: ":
 		    "請選擇簽名檔 (1-9, 0=不加 x=隨機)[%c]: ",
-		    ch);
-	    getdata(0, 0, msg, buf, 4, LCECHO);
+		    ch), buf, 4, LCECHO);
 
 	    if(buf[0] == 'n')
 	    {

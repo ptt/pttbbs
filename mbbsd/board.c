@@ -375,7 +375,7 @@ b_config(void)
 
 	// outs(MSG_SEPARATOR); // deprecated by grayout
 	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
-	vbarf(" 《%s》看板設定", bp->brdname);
+	vbar(TEMPFORMAT(STRLEN, " 《%s》看板設定", bp->brdname));
 
 	move(ytitle + 2, 0);
 
@@ -1335,8 +1335,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	//
 	// newflag is not so different now because we use all 5 digits.
 
-	vbarf(ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"    
-              "               人氣 板   主", newflag ? "總數" : "編號");
+	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"    
+              "               人氣 板   主", newflag ? "總數" : "編號"));
 	move(b_lines, 0);
 	brdlist_foot();
     }

@@ -392,7 +392,7 @@ pvrb_header(void *ctx) {
                TEMPFORMAT(STRLEN, " %s", cx->subject));
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
-    vbarf(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題\t");
+    vbar(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題");
     return 0;
 }
 
@@ -640,7 +640,7 @@ static int
 pvcm_header(void *ctx GCC_UNUSED) {
     vs_hdr2bar(" 【推文管理】", "");
     move(1, 0);
-    vbarf(ANSI_REVERSE "  %-6s|%-12.12s|%s\t", "編 號", " 作  者 ", " 內  容\t");
+    vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "  %-6s|%-12.12s|%s", "編 號", " 作  者 ", " 內  容"));
     return 0;
 }
 
@@ -777,8 +777,8 @@ static int
 pae_header(void *ctx GCC_UNUSED) {
     vs_hdr2bar(" 【系統檔案】 ", "  編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
-    vbarf(ANSI_REVERSE
-         "%5s %-36s%-30s", "編號", "名  稱", "檔  名");
+    vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
+         "%5s %-36s%-30s", "編號", "名  稱", "檔  名"));
     return 0;
 }
 
@@ -809,7 +809,7 @@ pae_input_processor(int key, int curr, int total GCC_UNUSED, int rows GCC_UNUSED
     switch(key) {
         case KEY_DEL:
         case 'd':
-            if (vansf("確定要刪除 %s 嗎？ (y/N) ", cx->descs[curr]) == 'y')
+            if (vans(TEMPFORMAT(STRLEN, "確定要刪除 %s 嗎？ (y/N) ", cx->descs[curr])) == 'y')
                 unlink(cx->files[curr]);
             vmsgf("系統檔案[%s]: %s", cx->files[curr],
                   !dashf(cx->files[curr]) ?  "刪除成功\ " : "未刪除");

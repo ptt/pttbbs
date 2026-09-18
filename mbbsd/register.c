@@ -403,8 +403,8 @@ query_adbanner_usong_pref_changed(const userec_t *u, char force_yn)
     do {
 	// alert if not first rounod
 	if (ans != 1) { move(b_lines-2, 0); outs("請確實輸入 y 或 n。"); bell(); }
-	ans = vansf("請問您希望在動態告示區看到來自其它使用者的心情點播嗎? %s: ",
-		force_yn ? "[y/n]" : defyes ? "[Y/n]" : "[y/N]");
+	ans = vans(TEMPFORMAT(STRLEN, "請問您希望在動態告示區看到來自其它使用者的心情點播嗎? %s: ",
+		force_yn ? "[y/n]" : defyes ? "[Y/n]" : "[y/N]"));
 
 	// adjust answers
 	if (!force_yn)
@@ -2558,9 +2558,9 @@ regform2_validate_page(int dryrun)
 	    ci = cforms-1;
 
 	// display page info
-	vbarf(ANSI_REVERSE "\t%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
+	vbarlr(ANSI_REVERSE, TEMPFORMAT(STRLEN, "%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
 		    dryrun? "(測試模式)" : "",
-		    tid);
+		    tid));
 
 	// handle user input
 	prompt_regform_ui();
@@ -2623,8 +2623,8 @@ regform2_validate_page(int dryrun)
 			    break;
 
 			// have more blanks
-			ch = vansf("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ",
-				blanks);
+			ch = vans(TEMPFORMAT(STRLEN, "尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ",
+				blanks));
 		    }
 
 		    if (ch == 'e')

@@ -437,7 +437,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
     while (!finished) {
         move(ytitle-1, 0); clrtobot();
         outs("\n" ANSI_REVERSE);
-        vbarf(" 設定使用者 %s 於看板《%s》之權限", uid, board);
+        vbar(TEMPFORMAT(STRLEN, " 設定使用者 %s 於看板《%s》之權限", uid, board));
 
         move(ytitle+2, 0);
         expire = ui_print_user_banned_status_for_board(uid, board);
@@ -455,7 +455,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 }
                 move(ytitle-1, 0); clrtobot();
                 outs("\n" ANSI_REVERSE);
-                vbarf(" 禁言使用者");
+                vbar(" 禁言使用者");
                 move(ytitle+2, 0);
                 if (ui_ban_user_for_board(uid, board) < 0)
                     continue;
@@ -468,7 +468,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 }
                 move(ytitle-1, 0); clrtobot();
                 outs("\n" ANSI_REVERSE);
-                vbarf(" 提前解除禁言");
+                vbar(" 提前解除禁言");
                 move(ytitle+2, 0);
                 if (ui_unban_user_for_board(uid, board) < 0)
                     continue;
