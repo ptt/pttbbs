@@ -461,7 +461,7 @@ int m_sob(void);
 void m_sob_brd(char *bname,char *fromdir);
 #endif
 
-/* pager */
+/* pager (more) */
 int more(const char *fpath, int promptend);
 int more_inmemory(void *content, int size, int promptend);
 /* piaip's new pager, pmore.c */
@@ -471,7 +471,7 @@ extern const cmd_t pmore_movie_cmds[];
 
 struct pmore_callbacks {
     int (*process_key)(int key, void *ctx);
-    int (*footer)(int ratio, void *ctx);
+    int (*footer)(void *ctx);
     int (*help)(int y, void *ctx);
     int (*vkey)(void *ctx);
     int (*exit)(void *ctx);

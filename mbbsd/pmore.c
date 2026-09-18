@@ -102,7 +102,7 @@
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_VKEY                 // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
-#define PMORE_USE_INTERNAL_HELP      // display pmore internal help
+// #define PMORE_USE_INTERNAL_HELP      // display pmore internal help
 //#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
 //#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
@@ -2208,7 +2208,7 @@ mf_display()
 
 MFPROTO void
 mf_display_footer(
-        int (*footer_handler)(int ratio, void *ctx), void *ctx)
+        int (*footer_handler)(void *ctx), void *ctx)
 {
     // format:
     // |PageNo Percentage|Detail Info|Floating1 (context)|Floating2 (quit)
@@ -2333,7 +2333,7 @@ mf_display_footer(
     // use customizable footer if available
     if (footer_handler)
     {
-        footer_handler(progress, ctx);
+        footer_handler(ctx);
         return;
     }
 
@@ -2426,18 +2426,12 @@ typedef struct {
 #define PSB_NA (-1)
 #endif
 
-typedef struct {
-    int retval;
-    void *user_ctx;
-    const struct pmore_callbacks *cb;
-} pmore_exec_ctx_t;
-
 MFPROTO int
 pmore_cmd_quit(cmd_ctx_t *ctx)
 {
-    pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = (int *)ctx->priv;
     ctx->quit = true;
-    if (p) p->retval = FULLUPDATE;
+    if (retval) *retval = FULLUPDATE;
     return 0;
 }
 
@@ -2446,8 +2440,7 @@ pmore_cmd_pgdn(cmd_ctx_t *ctx)
 {
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
     if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_NEXT;
         return 0;
@@ -2463,8 +2456,7 @@ MFPROTO int
 pmore_cmd_space(cmd_ctx_t *ctx)
 {
     if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_NEXT;
         return 0;
@@ -2477,8 +2469,7 @@ MFPROTO int
 pmore_cmd_right(cmd_ctx_t *ctx)
 {
     if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval)
 #ifdef PMORE_AUTONEXT_ON_RIGHTKEY
@@ -2496,8 +2487,7 @@ MFPROTO int
 pmore_cmd_thread_next(cmd_ctx_t *ctx)
 {
     if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = RELATE_NEXT;
         return 0;
@@ -2511,8 +2501,7 @@ pmore_cmd_pgup(cmd_ctx_t *ctx)
 {
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
     if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_PREV;
         return 0;
@@ -2528,8 +2517,7 @@ MFPROTO int
 pmore_cmd_bksp(cmd_ctx_t *ctx)
 {
     if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_PREV;
         return 0;
@@ -2549,8 +2537,7 @@ MFPROTO int
 pmore_cmd_down(cmd_ctx_t *ctx)
 {
     if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_NEXT;
         return 0;
@@ -2570,8 +2557,7 @@ MFPROTO int
 pmore_cmd_up(cmd_ctx_t *ctx)
 {
     if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
+        int *retval = (int *)ctx->priv;
         ctx->quit = true;
         if (retval) *retval = READ_PREV;
         return 0;
@@ -2772,10 +2758,9 @@ pmore_cmd_movie(cmd_ctx_t *ctx GCC_UNUSED)
 
 #ifdef PMORE_USE_INTERNAL_HELP
 MFPROTO int
-pmore_cmd_help(cmd_ctx_t *ctx)
+pmore_cmd_help(cmd_ctx_t *ctx GCC_UNUSED)
 {
-    pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    pmore_Help(p ? p->user_ctx : NULL, (p && p->cb) ? p->cb->help : NULL);
+    pmore_Help(NULL, NULL);
     MFDISP_DIRTY();
     return 0;
 }
@@ -3037,6 +3022,14 @@ _pmore2(
 
         /* vkey() will do refresh(); */
         ch = cb->vkey ? cb->vkey(ctx) : vkey();
+        if (ch == KEY_MOUSE) {
+            const vtkbd_mouse_t *m = vkey_get_mouse();
+            if (m && !m->is_release &&
+                (m->button == MOUSE_BTN_WHEEL_UP || m->button == MOUSE_BTN_WHEEL_DOWN)) {
+                vs_locator_on_wheel(m->y, m->x);
+                ch = (m->button == MOUSE_BTN_WHEEL_UP) ? 'k' : 'j';
+            }
+        }
 
         // first, try custom process_key
         if (cb->process_key)
@@ -3065,16 +3058,11 @@ _pmore2(
 
         // built-in navigation keys
         {
-            pmore_exec_ctx_t pctx = {
-                .retval = retval,
-                .user_ctx = ctx,
-                .cb = cb,
-            };
             cmd_ctx_t cctx = {
                 .key = ch,
                 .redraw = true,
                 .quit = false,
-                .priv = &pctx,
+                .priv = &retval,
             };
             if (pmore_dispatch_cmds(pmore_cmds, &cctx) == PSB_NA &&
                 pmore_dispatch_cmds(pmore_movie_cmds, &cctx) == PSB_NA) {
@@ -3082,7 +3070,6 @@ _pmore2(
                 return ch;
 #endif
             }
-            retval = pctx.retval;
             invalidate = cctx.redraw;
             if (cctx.quit)
                 flExit = 1;
