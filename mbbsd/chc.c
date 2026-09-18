@@ -328,7 +328,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 	    getstep(board, &move->from, &move->to, buf);
 	    chc_movechess(board, move);
 	    if(i%2==0) fprintf(fp, "%3d. ",i/2+1);
-	    strip_ansi(buf, buf, STRIP_ALL);
+	    strip_ansi(buf, buf);
 	    fprintf(fp, "%8.8s  ", buf);
 	    if(i%4==3 || i==nStep-1) fputc('\n', fp);
 	}

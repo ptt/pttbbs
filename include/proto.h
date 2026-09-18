@@ -785,7 +785,6 @@ int u_info(void);
 void showplans(const char *uid);
 void showplans_userec(userec_t *u);
 int u_loginview(void);
-int u_ansi(void);
 int u_editplan(void);
 int u_editsig(void);
 int u_cloak(void);

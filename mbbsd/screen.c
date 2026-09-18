@@ -689,7 +689,7 @@ instr(char *str)
     if (!slp)
 	return 0;
     slp->data[slp->len] = 0;
-    strip_ansi(str, (char*)slp->data, STRIP_ALL);
+    strip_ansi(str, (char*)slp->data);
     return strlen(str);
 }
 
@@ -702,7 +702,7 @@ innstr(char *str, int n)
     if (!slp)
 	return 0;
     slp->data[slp->len] = 0;
-    strip_ansi(buf, (char*)slp->data, STRIP_ALL);
+    strip_ansi(buf, (char*)slp->data);
     buf[ANSILINELEN-1] = 0;
     strlcpy(str, buf, n);
     return strlen(str);
@@ -769,7 +769,7 @@ grayout(int y, int end, int level)
 		slp->data[i] = ' ';
 	}
 
-	slp->len = strip_ansi(buf, (char*)slp->data, STRIP_ALL);
+	slp->len = strip_ansi(buf, (char*)slp->data);
 	buf[slp->len] = 0;
 
 	switch(level)
