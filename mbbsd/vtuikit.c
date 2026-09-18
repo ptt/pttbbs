@@ -183,7 +183,6 @@ mvouts(int y, int x, const char *str)
 {
     move(y, x);
     clrtoeol();
-    SOLVE_ANSI_CACHE();
     outs(str);
 }
 
@@ -365,7 +364,7 @@ vans(const char *msg)
     char buf[3];
 
     move(b_lines, 0);
-    clrtoeol(); SOLVE_ANSI_CACHE();
+    clrtoeol();
     outs(msg);
     vgets(buf, sizeof(buf), VGET_LOWERCASE);
     return (unsigned char)buf[0];
@@ -582,7 +581,6 @@ vs_hdr2bar(const char *left, const char *right)
 {
     int y, x;
 
-    SOLVE_ANSI_CACHE();
     clrtoeol();
     outs(VCLR_HDR2_LEFT);
     outs(left);
@@ -1143,9 +1141,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	    // print current buffer
 	    move(line, col);
-	    SOLVE_ANSI_CACHE();
 	    clrtoeol();
-	    SOLVE_ANSI_CACHE();
 
 	    if (!(flags & VGET_TRANSPARENT))
 		outs(VCLR_INPUT_FIELD); // change color to prompt fields

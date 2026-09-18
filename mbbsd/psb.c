@@ -134,20 +134,16 @@ psb_main(PSB_CTX *psbctx)
         assert(rows > 0);
         base = psbctx->curr / rows * rows;
         clear();
-        SOLVE_ANSI_CACHE();
         psbctx->header(psbctx->ctx);
         for (i = 0; i < rows; i++) {
             move(psbctx->header_lines + i, 0);
-            SOLVE_ANSI_CACHE();
             if (base + i < psbctx->total)
                 psbctx->renderer(base + i, psbctx->curr, psbctx->total,
                                  rows, psbctx->ctx);
         }
         move(t_lines - psbctx->footer_lines, 0);
-        SOLVE_ANSI_CACHE();
         psbctx->footer(psbctx->ctx);
         if (psbctx->allow_pbs_version_message) {
-            SOLVE_ANSI_CACHE();
             prints(ANSI_COLOR(0;1;30) "%*s" ANSI_RESET, t_columns-2,
                    "-- Powered by P&S Browser System");
         }
@@ -557,7 +553,7 @@ pvrb_welcome() {
 
     if (is_first_enter_pvrb) {
         is_first_enter_pvrb = 0;
-        clear(); SOLVE_ANSI_CACHE();
+        clear();
         move(2, 0);
         outs(ANSI_COLOR(1;36)
 "  Åwªï¨Ï¥Î " TIME_CAPSULE_NAME " " RECYCLE_BIN_NAME "!\n\n" ANSI_RESET

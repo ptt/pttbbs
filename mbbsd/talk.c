@@ -1270,7 +1270,6 @@ if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
         char *mind = "";
 
 	move(i + 3, 0);
-	SOLVE_ANSI_CACHE();
 	uentp = pickup[i].ui;
 	friend = pickup[i].friend;
 	if (uentp == NULL) {

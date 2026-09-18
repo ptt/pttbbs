@@ -636,7 +636,6 @@ b_config(void)
 		{
 		    char genbuf[BTLEN+1];
 		    move(b_lines, 0); clrtoeol();
-		    SOLVE_ANSI_CACHE();
 		    outs("請輸入看板新中文敘述: ");
 		    vgetstr(genbuf, BTLEN-16, 0, bp->title + 7);
 		    if (!genbuf[0] || strcmp(genbuf, bp->title+7) == 0)

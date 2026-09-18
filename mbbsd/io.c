@@ -72,7 +72,6 @@ debug_print_input_buffer(void *buf, ssize_t len)
 
     getyx(&y, &x);
     move(0, 0); clrtocol();
-    SOLVE_ANSI_CACHE();
     prints(ANSI_RESET "Input Buffer (%d): [ ", (int)len);
     for (i = 0; i < len; i++, s++)
     {

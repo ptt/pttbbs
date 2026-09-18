@@ -623,11 +623,6 @@ void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
 void region_scroll_up(int top, int bottom);
 
-#ifndef USE_PFTERM
-# define SOLVE_ANSI_CACHE() {}
-#else  // !USE_PFTERM
-# define SOLVE_ANSI_CACHE() { outs(" \b"); }
-#endif // !USE_PFTERM
 
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);

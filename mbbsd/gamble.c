@@ -307,13 +307,13 @@ openticket(int bid)
 	    return 0;
 	}
         if (bet == 99) {
-            move(22, 0); SOLVE_ANSI_CACHE(); clrtoeol();
+            move(22, 0); clrtoeol();
             prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d" ANSI_RESET,
                     price * 10);
         } else {
             betname_sel = betname[bet - 1];
         }
-        move(20, 0); SOLVE_ANSI_CACHE(); clrtoeol();
+        move(20, 0); clrtoeol();
         prints("預計開獎項目: 編號:%d，名稱:%s\n", bet, betname_sel);
         getdata(21, 0, "輸入項目名稱以確認你的意識清醒(開錯無法回溯): ",
                 buf, MAX_ITEM_INPUT_LEN, DOECHO);
@@ -329,7 +329,7 @@ openticket(int bid)
             getdata(21, 0, "輸入號碼以確認(無回溯機制，開錯責任自負):",
                     buf, 3, LCECHO);
         }
-        move(21, 0); SOLVE_ANSI_CACHE(); clrtoeol();
+        move(21, 0); clrtoeol();
     } while (bet != atoi(buf));
 
     // before we fork to process,
