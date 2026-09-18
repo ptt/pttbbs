@@ -319,6 +319,24 @@
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 
+#include <stdio.h>
+#include <stdarg.h>
+
+GCC_CHECK_FORMAT(3,4)
+static inline const char* _temp_format_helper(
+        char *buf, size_t sz, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sz, fmt, ap);
+    va_end(ap);
+    return buf;
+}
+
+// C99 required. Temporarily allocate a string that will be released on leaving
+// the caller's scope {}.
+#define TEMPFORMAT(n, fmt, ...) \
+    _temp_format_helper((char[n]){0}, (n), (fmt), ##__VA_ARGS__)
+
 #define toSTR(x)	__toSTR(x)
 #define __toSTR(x)	#x
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
