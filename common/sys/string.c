@@ -1,3 +1,6 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -279,12 +282,15 @@ strat_ansi(int count, const char *s)
     return s - os;
 }
 
-int 
-strlen_noansi(const char *s)
+int
+str_term_width(const char *s)
 {
     if (!s || !*s)
         return 0;
-    return strip_ansi(NULL, s, STRIP_ALL);
+    const char *p = strchrnul(s, ESC_CHR);
+    if (!*p)
+        return p - s;
+    return (p - s) + strip_ansi(NULL, p, STRIP_ALL);
 }
 
 /* ----------------------------------------------------- */

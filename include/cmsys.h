@@ -165,7 +165,7 @@ int str_case_ends_with(const char *str, const char *suffix);
 const char *path_basename(const char *path);
 void trim(char *buf);
 void chomp(char *src);
-int  strlen_noansi(const char *s);
+int  str_term_width(const char *s);
 int  strat_ansi(int count, const char *s);
 int  strip_blank(char *cbuf, const char *buf);
 int  reduce_blank(char *cbuf, const char *buf);

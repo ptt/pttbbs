@@ -236,7 +236,7 @@ vfill(int n, int flags, const char *s)
 	if (flags & VFILL_RIGHT_ALIGN)
 	{
 	    // right-align
-	    int l = has_ansi ? strlen_noansi(s) : (int)strlen(s);
+	    int l = has_ansi ? str_term_width(s) : (int)strlen(s);
 
 	    if (l >= n) // '=' prevents blanks
 		l = n;
@@ -337,7 +337,7 @@ vshowmsg(const char *msg)
 	outc(' '); // initial one space
 
 	// VMSG_PAUSE MUST BE A #define STRING.
-	w -= MACROSTRLEN(VMSG_PAUSE); // strlen_noansi(VMSG_PAUSE);
+	w -= MACROSTRLEN(VMSG_PAUSE); // str_term_width(VMSG_PAUSE);
 	w--; // initial space
 	vpad(w/2, VMSG_PAUSE_PAD);
 	outs(VCLR_PAUSE);
@@ -351,20 +351,20 @@ vshowmsg(const char *msg)
 	int  nmsg = 0;
 
 	// print prefix
-	w -= MACROSTRLEN(VMSG_MSG_PREFIX); // strlen_noansi(VMSG_MSG_PREFIX);
+	w -= MACROSTRLEN(VMSG_MSG_PREFIX); // str_term_width(VMSG_MSG_PREFIX);
 	outs(VCLR_MSG);
 	outs(VMSG_MSG_PREFIX);
 
 	// if have float, calculate float size
 	if (pfloat) {
 	    nmsg = pfloat - msg;
-	    w -= strlen_noansi(msg) -1;	    // -1 for \t
+	    w -= str_term_width(msg) -1;	    // -1 for \t
 	    pfloat ++; // skip \t
-	    szfloat = strlen_noansi(pfloat);
+	    szfloat = str_term_width(pfloat);
 	} else {
 	    pfloat = VMSG_MSG_FLOAT;
-	    szfloat = MACROSTRLEN(VMSG_MSG_FLOAT); // strlen_noansi()
-	    w -= strlen_noansi(msg) + szfloat;
+	    szfloat = MACROSTRLEN(VMSG_MSG_FLOAT); // str_term_width()
+	    w -= str_term_width(msg) + szfloat;
 	}
 
 	// calculate if we can display float
@@ -503,9 +503,9 @@ vbarf(const char *s, ...)
 void
 vbarlr(const char *l, const char *r)
 {
-    // TODO strlen_noansi 跑兩次... 其實 l 可以邊 output 邊算。
-    int szl = strlen_noansi(l),
-	szr = strlen_noansi(r);
+    // TODO str_term_width 跑兩次... 其實 l 可以邊 output 邊算。
+    int szl = str_term_width(l),
+	szr = str_term_width(r);
 
     // assume we are already in (y, 0)
     clrtoeol();
@@ -642,7 +642,7 @@ vs_hdr2bar(const char *left, const char *right)
     int w = MAX_COL;
 
     if (*left == ESC_CHR)
-	w -= strlen_noansi(left);
+	w -= str_term_width(left);
     else
 	w -= strlen(left);
 
@@ -729,7 +729,7 @@ vs_footer(const char *caption, const char *msg)
 	outs(VCLR_FOOTER_CAPTION);
 	outs(caption);
 	i += (*caption == ESC_CHR) ?
-	    strlen_noansi(caption) :
+	    str_term_width(caption) :
 	    (int)strlen(caption);
     }
 

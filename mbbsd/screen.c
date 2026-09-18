@@ -146,7 +146,7 @@ move_ansi(int y, int x)
 	return;
 
     slp->data[slp->len] = 0;
-    x += (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
+    x += (strlen((char*)slp->data) - str_term_width((char*)slp->data));
     cur_col = x;
 }
 
@@ -180,7 +180,7 @@ getyx_ansi(int *py, int *px)
 	return;
     c = slp->data[x];
     slp->data[x] = 0;
-    *px -= (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
+    *px -= (strlen((char*)slp->data) - str_term_width((char*)slp->data));
     slp->data[x] = c;
 }
 

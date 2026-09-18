@@ -238,7 +238,7 @@ bl_newwin(int rows, int cols, const char *title)
         return 0;
 
     // draw center-ed title
-    n = strlen_noansi(title);
+    n = str_term_width(title);
     x = ox + (cols - n)/2;
     y = oy + (rows)/2;
     move(y, x);
