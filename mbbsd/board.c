@@ -489,7 +489,7 @@ b_config(void)
 		"詳細原因請參考上面顯示為紅色或有 * 的項目。"ANSI_RESET"\n");
 
 	ipostres = b_lines - LNPOSTRES;
-	move_ansi(ipostres++, COLPOSTRES-2);
+	move(ipostres++, COLPOSTRES-2);
 
 	if (cachePostPerm && cachePostRes)
 	    outs(ANSI_COLOR(1;32));
@@ -512,7 +512,7 @@ b_config(void)
 
 	if (llogin)
 	{
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    i = (int)llogin * 10;
 	    attr = ((int)cuser.numlogindays < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
@@ -523,7 +523,7 @@ b_config(void)
 
 	if (lbp)
 	{
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    i = 255 - lbp;
 	    attr = (cuser.badpost > i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31) "*");
@@ -537,7 +537,7 @@ b_config(void)
 	    const char *msg = postperm_msg(bp->brdname);
 	    if (msg) // some reasons
 	    {
-		move_ansi(ipostres++, COLPOSTRES);
+		move(ipostres++, COLPOSTRES);
 		outs(ANSI_COLOR(1;31) "*");
 		outs(msg);
 		outs(ANSI_RESET);
@@ -546,7 +546,7 @@ b_config(void)
 
 	if (!hasres && cachePostPerm)
 	{
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    outs("無特別限制");
 	}
 
@@ -564,27 +564,27 @@ b_config(void)
 	    }
 
 	    ipostres ++;
-	    move_ansi(ipostres++, COLPOSTRES-2);
+	    move(ipostres++, COLPOSTRES-2);
 	    outs(aCat);
 	    outs("名單編輯與其它:");
 	    if (!isBM) outs(" (需板主權限)");
 	    outs(aRst);
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    prints("%sw%s)設定水桶 %sv%s)可見會員名單 ",
 		    aHot, aRst, aHot, aRst);
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",
 		    aHot, aRst, aHot, aRst);
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    prints("%sc%s)文章類別 %sn%s)發文注意事項 ",
 		    aHot, aRst, aHot, aRst);
-	    move_ansi(ipostres++, COLPOSTRES);
+	    move(ipostres++, COLPOSTRES);
 	    prints("%sp%s)進板畫面",
 		    aHot, aRst);
 	    outs(ANSI_RESET);
 
             if (GROUPOP()) {
-                move_ansi(++ipostres, COLPOSTRES);
+                move(++ipostres, COLPOSTRES);
                 prints(ANSI_COLOR(1;32)
                        "您目前有此看板的群組管理權"
                        ANSI_RESET);

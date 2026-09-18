@@ -116,72 +116,47 @@ void
 move(int y, int x)
 {
     if (y < 0) y = 0;
-    if (y >= t_lines) y = t_lines -1;
+    if (y >= t_lines) y = t_lines - 1;
     if (x < 0) x = 0;
-    if (x >= ANSILINELEN) x = ANSILINELEN -1;
-    // assert(y>=0);
-    // assert(x>=0);
-    cur_col = x;
-    cur_ln = y;
-}
-
-void
-move_ansi(int y, int x)
-{
-    // take ANSI length in consideration
-    register screenline_t *slp;
-    if (y < 0) y = 0;
-    if (y >= t_lines) y = t_lines -1;
-    if (x < 0) x = 0;
-    if (x >= ANSILINELEN) x = ANSILINELEN -1;
+    if (x >= ANSILINELEN) x = ANSILINELEN - 1;
 
     cur_ln = y;
-    cur_col = x;
-
-    if (y >= t_lines || x < 1)
-	return;
-
-    slp = GetLine(y);
-    if (slp->len < 1)
-	return;
-
-    slp->data[slp->len] = 0;
-    x += (strlen((char*)slp->data) - str_term_width((char*)slp->data));
-    cur_col = x;
+    cur_col = 0;
+    if (x > 0) {
+	screenline_t *slp = GetLine(y);
+	slp->data[slp->len] = 0;
+	int r = str_at_ansi(x, (char *)slp->data);
+	cur_col = (r >= 0) ? r : (slp->len - r);
+	if (cur_col >= ANSILINELEN)
+	    cur_col = ANSILINELEN - 1;
+    }
 }
 
 void
-getyx(int *y, int *x)
+getyx(int *py, int *px)
 {
-    *y = cur_ln;
-    *x = cur_col;
-}
-
-void
-getyx_ansi(int *py, int *px)
-{
-    // take ANSI length in consideration
-    register screenline_t *slp;
-    int y = cur_ln,  x = cur_col;
-    char c = 0;
-
+    int y = cur_ln, x = cur_col;
     if (y < 0) y = 0;
-    if (y >= t_lines) y = t_lines -1;
+    if (y >= t_lines) y = t_lines - 1;
     if (x < 0) x = 0;
-    if (x >= ANSILINELEN) x = ANSILINELEN -1;
+    if (x >= ANSILINELEN) x = ANSILINELEN - 1;
 
-    *py = y; *px = x;
-
-    if (y >= t_lines || x < 1)
+    *py = y;
+    if (x == 0) {
+	*px = 0;
 	return;
+    }
 
-    slp = GetLine(y);
-    if (slp->len < 1)
-	return;
-    c = slp->data[x];
-    slp->data[x] = 0;
-    *px -= (strlen((char*)slp->data) - str_term_width((char*)slp->data));
-    slp->data[x] = c;
+    screenline_t *slp = GetLine(y);
+    if (x <= slp->len) {
+	char c = slp->data[x];
+	slp->data[x] = 0;
+	*px = str_term_width((char *)slp->data);
+	slp->data[x] = c;
+    } else {
+	slp->data[slp->len] = 0;
+	*px = str_term_width((char *)slp->data) + (x - slp->len);
+    }
 }
 
 static void
@@ -468,7 +443,7 @@ void newwin	(int nlines, int ncols, int y, int x)
 
     while (nlines-- > 0)
     {
-	move_ansi(y++, x);
+	move(y++, x);
 	for (i = 0; i < ncols; i++)
 	    outc(' ');
     }
@@ -516,7 +491,7 @@ outc(unsigned char c)
     if (c == '\t') {
 	int x, y;
 
-	getyx_ansi(&y, &x);
+	getyx(&y, &x);
 
 	if (x % 8 == 0)
 	    i = 8;

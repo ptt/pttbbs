@@ -2609,17 +2609,6 @@ scr_restore(const screen_backup_t *psb)
     refresh();
 }
 
-void
-move_ansi(int y, int x)
-{
-    move(y, x);
-}
-
-void
-getyx_ansi(int *y, int *x)
-{
-    getyx(y, x);
-}
 
 void
 region_scroll_up(int top, int bottom)

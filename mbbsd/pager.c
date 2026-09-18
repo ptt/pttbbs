@@ -181,7 +181,7 @@ pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 static void
 ofo_water_scr(const water_t *tw, int which, char type)
 {
-    move_ansi(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
+    move(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
     pager_render_tab_item(tw, type == 1, true);
     if (type != 1)
         return;
@@ -668,7 +668,7 @@ pager_show_panel_new(void)
     if (!water[0].count || watermode <= 0)
         return;
     int oy, ox;
-    getyx_ansi(&oy, &ox);
+    getyx(&oy, &ox);
 
     mvouts(1, 0,
            "───────水─球─回─顧──用[Ctrl-R Tab/S-Tab Ctrl-F Ctrl-G]鍵切換───\n");
@@ -683,7 +683,7 @@ pager_show_panel_new(void)
     }
     outs("\n");
     pager_render_history_section(water_which, 3, MAX_REVIEW, watermode - 1, false, 45);
-    move_ansi(oy, ox);
+    move(oy, ox);
 }
 
 static void

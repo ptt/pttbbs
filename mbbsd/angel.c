@@ -606,11 +606,11 @@ angel_display_message(const char *template_fn,
     while (fgets(buf, sizeof(buf), fp))
     {
 	chomp(buf);
-        move_ansi(row++, col);
+        move(row++, col);
         outs(buf);
     }
     fclose(fp);
-    move_ansi(date_row, date_col);
+    move(date_row, date_col);
     outs(ANSI_RESET);
     outs(Cdatelite(&ts));
 }

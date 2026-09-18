@@ -2672,7 +2672,7 @@ regform2_validate_page(int dryrun)
 		    if (ch == KEY_DEL || ch == Ctrl('D')) ch = 'd';
 
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
-		    move_ansi(ci*2, 4); outc(ch);
+		    move(ci*2, 4); outc(ch);
 		    ans[ci] = ch;
 		    ch = 'j'; // go next
 		    break;
@@ -2686,7 +2686,7 @@ regform2_validate_page(int dryrun)
 		    }
 #endif
 		    grayout(ci*2, ci*2+1, GRAYOUT_NORM);
-		    move_ansi(ci*2, 4); outc('.');
+		    move(ci*2, 4); outc('.');
 		    ans[ci] = 0;
 		    ch = 'j'; // go next
 		    break;
@@ -2713,7 +2713,7 @@ regform2_validate_page(int dryrun)
 
 		    // do reject
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
-		    move_ansi(ci*2, 4); outc(ch);
+		    move(ci*2, 4); outc(ch);
 		    ans[ci] = ch;
 		    ch = 'j'; // go next
 
