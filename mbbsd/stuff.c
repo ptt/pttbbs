@@ -55,7 +55,7 @@ gettime(int line, time4_t dt, const char* head)
     localtime4_r(&dt, &ptime);
     endtime = ptime;
     SNPRINTF(yn, "%4d", ptime.tm_year + 1900);
-    move(line, 0); SOLVE_ANSI_CACHE(); clrtoeol();
+    move(line, 0); clrtoeol();
     SNPRINTF(prompt, "%s ¦è¤¸¦~:", head);
     do {
 	getdata_buf(line, 0, prompt, yn, 5, NUMECHO);
@@ -327,7 +327,7 @@ getdata2vgetflag(int echo)
 int
 getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-    move(line, col); SOLVE_ANSI_CACHE();
+    move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), buf);
 }
@@ -336,7 +336,7 @@ int
 getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
             const char *defaultstr)
 {
-    move(line, col); SOLVE_ANSI_CACHE();
+    move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
 }
@@ -344,7 +344,7 @@ getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
 int
 getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-    move(line, col); SOLVE_ANSI_CACHE();
+    move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgets(buf, len, getdata2vgetflag(echo));
 }

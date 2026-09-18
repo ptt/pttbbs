@@ -859,7 +859,6 @@ check_bad_clients(void) {
 	outs(buf);
     }
     fclose(fp);
-    SOLVE_ANSI_CACHE();
     outs(ANSI_RESET ANSI_COLOR(1;31) "\n"
 	 "為了避免類似的問題再度發生，我們必須請您回答下列問題:" ANSI_RESET
          "\n");

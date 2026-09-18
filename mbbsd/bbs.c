@@ -2147,7 +2147,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // prompt user what he's going to do now.
     move(2, 0);
     if (is_BM_cache(currbid)) {
-        SOLVE_ANSI_CACHE();
         clrtoeol();
         outs("準備進行文章轉錄。板主要置底文章請改按 "
                 ANSI_COLOR(1;31) "_" ANSI_RESET " (壓住 "
@@ -2749,7 +2748,6 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
             // try several times
             if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
                 move(b_lines, 0);
-                SOLVE_ANSI_CACHE();
                 prints("==> 檔案正被它人編輯中，等待完成: %d\n", lock_retry+1);
                 doupdate();
                 sleep(lock_wait);

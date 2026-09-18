@@ -112,7 +112,6 @@ CCW_PROTO void
 ccw_header(CCW_CTX *ctx)
 {
     move(0, 0);
-    SOLVE_ANSI_CACHE();
     clrtoeol();
 
     if (ctx->header)
@@ -128,7 +127,6 @@ CCW_PROTO void
 ccw_footer(CCW_CTX *ctx)
 {
     move(b_lines, 0);
-    SOLVE_ANSI_CACHE();
     clrtoeol();
 
     if (ctx->footer)
@@ -167,7 +165,6 @@ CCW_PROTO void
 ccw_prompt(CCW_CTX *ctx)
 {
     move(b_lines-1, 0);
-    SOLVE_ANSI_CACHE();
     clrtoeol();
 
     if (ctx->prompt)

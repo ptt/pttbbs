@@ -189,7 +189,6 @@ ofo_water_scr(const water_t *tw, int which, char type)
     pager_render_history_section(tw, WB_OFO_MSG_TOP, 5, -1, true, 44);
 
     move(0, 0);
-    SOLVE_ANSI_CACHE();
     clrtoeol();
     if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
         if (strstr(tw->userid, STR_ANGEL))
@@ -205,9 +204,7 @@ static void
 ofo_init_screen(void)
 {
     move(WB_OFO_USER_TOP, 0);
-    SOLVE_ANSI_CACHE();
     clrtoln(WB_OFO_MSG_BOTTOM + 1);
-    SOLVE_ANSI_CACHE();
 
 #ifndef USE_PFTERM
     refresh();
@@ -286,7 +283,6 @@ ofo_reply_waterball(water_t *tw, int ch)
     }
 
     move(0, 0);
-    SOLVE_ANSI_CACHE();
     outs(ANSI_RESET);
     clrtoeol();
 
