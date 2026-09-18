@@ -254,7 +254,11 @@ redrawwin(void)
 	    bp->oldlen = len;
 	}
     }
-    rel_move(tc_col, tc_line, cur_col, cur_ln);
+    {
+	int y, x;
+	getyx(&y, &x);
+	rel_move(tc_col, tc_line, x, y);
+    }
     docls = scrollcnt = 0;
     oflush();
 }
@@ -334,22 +338,10 @@ doupdate(void)
 // bug history:
 // (1) input number (goto) in bbs list (search_num) [solved: search_num merged to vget]
 // (2) some empty lines becomes weird (eg, b_config) [not seen anymore?]
-#if 1
-	    if (bp->smod > 0)
-	    {
-		// more effort to determine ANSI smod
-		int iesc;
-		for (iesc = bp->smod-1; iesc >= 0; iesc--)
-		{
-		    if (bp->data[iesc] == ESC_CHR)
-		    {
-			bp->smod = 0;// iesc;
-			bp->emod =len -1;
-			break;
-		    }
-		}
+	    if (bp->smod > 0 && memchr(bp->data, ESC_CHR, bp->smod)) {
+		bp->smod = 0;
+		bp->emod = len - 1;
 	    }
-#endif
 
 	    if (bp->emod >= len)
 		bp->emod = len - 1;
@@ -381,7 +373,11 @@ doupdate(void)
 	bp->oldlen = len;
     }
 
-    rel_move(tc_col, tc_line, cur_col, cur_ln);
+    {
+	int y, x;
+	getyx(&y, &x);
+	rel_move(tc_col, tc_line, x, y);
+    }
 
     oflush();
 }
@@ -424,14 +420,10 @@ clrtoeol(void)
     }
     */
 
-    if (cur_col > slp->oldlen) {
-	for (ln = slp->len; ln <= cur_col; ln++)
-	    slp->data[ln] = ' ';
-    }
-    if (cur_col < slp->oldlen) {
-	for (ln = slp->len; ln >= cur_col; ln--)
-	    slp->data[ln] = ' ';
-    }
+    if (cur_col > slp->len)
+	memset(&slp->data[slp->len], ' ', cur_col - slp->len + 1);
+    else if (cur_col < slp->len)
+	memset(&slp->data[cur_col], ' ', slp->len - cur_col + 1);
     slp->len = cur_col;
 }
 
@@ -493,10 +485,7 @@ outc(unsigned char c)
 
 	getyx(&y, &x);
 
-	if (x % 8 == 0)
-	    i = 8;
-	else
-	    i = 8 - (x % 8);
+	i = 8 - (x & 7);
 
 	for (;i > 0; i--)
 	    outc(' ');
@@ -519,8 +508,8 @@ outc(unsigned char c)
     }
 
     if (cur_col >= slp->len) {
-	for (i = slp->len; i < cur_col; i++)
-	    slp->data[i] = ' ';
+	if (cur_col > slp->len)
+	    memset(&slp->data[slp->len], ' ', cur_col - slp->len);
 	slp->data[cur_col] = '\0';
 	slp->len = cur_col + 1;
     }
@@ -659,8 +648,7 @@ instr(char *str)
     if (!slp)
 	return 0;
     slp->data[slp->len] = 0;
-    strip_ansi(str, (char*)slp->data);
-    return strlen(str);
+    return strip_ansi(str, (char*)slp->data);
 }
 
 int
@@ -669,13 +657,12 @@ innstr(char *str, int n)
     register screenline_t *slp = GetCurrentLine();
     char buf[ANSILINELEN];
     *str = 0;
-    if (!slp)
+    if (!slp || n <= 0)
 	return 0;
     slp->data[slp->len] = 0;
-    strip_ansi(buf, (char*)slp->data);
-    buf[ANSILINELEN-1] = 0;
+    int len = strip_ansi(buf, (char*)slp->data);
     strlcpy(str, buf, n);
-    return strlen(str);
+    return len < n ? len : n - 1;
 }
 
 int
@@ -683,11 +670,11 @@ inansistr(char *str, int n)
 {
     register screenline_t *slp = GetCurrentLine();
     *str = 0;
-    if (!slp)
+    if (!slp || n <= 0)
 	return 0;
     slp->data[slp->len] = 0;
-    strlcpy(str, (char*)slp->data, n);
-    return strlen(str);
+    size_t len = strlcpy(str, (char*)slp->data, n);
+    return (int)len < n ? (int)len : n - 1;
 }
 
 // level:
@@ -740,23 +727,15 @@ grayout(int y, int end, int level)
 	}
 
 	slp->len = strip_ansi(buf, (char*)slp->data);
-	buf[slp->len] = 0;
 
 	switch(level)
 	{
 	    case GRAYOUT_DARK: // dark text
 	    case GRAYOUT_BOLD:// bold text
-		// basically, in current system slp->data will
-		// not exceed t_columns. buffer overflow is impossible.
-		// but to make it more robust, let's quick check here.
-		// of course, t_columns should always be far smaller.
-		if (strlen((char*)slp->data) > (size_t)t_columns)
-		    slp->data[t_columns] = 0;
-		strcpy((char*)slp->data,
-			level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40));
-		strcat((char*)slp->data, buf);
-		strcat((char*)slp->data, ANSI_RESET ANSI_CLRTOEND);
-		slp->len = strlen((char*)slp->data);
+		slp->len = snprintf((char*)slp->data, ANSILINELEN,
+			"%s%.*s" ANSI_RESET ANSI_CLRTOEND,
+			level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40),
+			slp->len, buf);
 		break;
 
 	    case GRAYOUT_NORM: // Plain text
