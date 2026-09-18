@@ -329,7 +329,7 @@ setupnewuser(const userec_t *user)
 
 	    fprintf(stdout, "尋找新帳號中, 請稍待片刻...\n\r");
 
-	    if ((fd = OpenCreate(fn_passwd, O_RDWR)) == -1)
+	    if ((fd = OpenCreate(FN_PASSWD, O_RDWR)) == -1)
 		return -1;
 
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */
@@ -765,7 +765,7 @@ new_register(void)
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(17, 0, msg_uid, newuser.userid,
+	getdata(17, 0, MSG_UID, newuser.userid,
 		sizeof(newuser.userid), DOECHO);
         STRLCPY(passbuf, newuser.userid);
 
@@ -2854,7 +2854,7 @@ m_register(void)
 	regform2_validate_page(0);
     else if (ans[0] == 'u') {
 	vs_hdr("指定審核");
-	usercomplete(msg_uid, genbuf);
+	usercomplete(MSG_UID, genbuf);
 	if (genbuf[0])
 	    regform2_validate_single(genbuf);
     }

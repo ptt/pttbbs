@@ -268,7 +268,7 @@ show_chicken_data(chicken_t * thechicken)
     /* Ptt:debug */
     thechicken->type %= NUM_KINDS;
     clear();
-    showtitle(BBSMNAME2 "ѕiВыіх", BBSName);
+    showtitle(BBSMNAME2 "ѕiВыіх", BBSNAME);
     move(1, 0);
 
     show_chicken_stat(thechicken, age);

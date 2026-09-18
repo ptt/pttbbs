@@ -97,8 +97,8 @@ b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname)
 	if(fgets(inbuf, sizeof(inbuf), sfp))
 	{
 	    /* first time, try if boardname revealed. */
-	    char *post = strstr(inbuf, str_post1);
-	    if(!post) post = strstr(inbuf, str_post2);
+	    char *post = strstr(inbuf, STR_POST1);
+	    if(!post) post = strstr(inbuf, STR_POST2);
 	    if(post)
 		post = strstr(post, boardname);
 	    if(post) {
@@ -245,11 +245,11 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     setbfile(buf, bname, vbuf->title);
     if ((xfp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), xfp);
-	fprintf(tfp, "%s\n』 щ布嘿: %s\n\n", msg_separator, inbuf);
+	fprintf(tfp, "%s\n』 щ布嘿: %s\n\n", MSG_SEPARATOR, inbuf);
 	fclose(xfp);
     }
     fprintf(tfp, "%s\n』 щ布いゎ: %s\n\n\n』 布匡肈ヘ磞瓃:\n\n",
-	    msg_separator, Cdate(&closetime));
+	    MSG_SEPARATOR, Cdate(&closetime));
     fh->vtime = now;
 
     // Report: description part
@@ -273,17 +273,17 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     free(counts);
 
     // Report: comments part
-    fprintf(tfp, "%s\n』 ㄏノ某\n\n", msg_separator);
+    fprintf(tfp, "%s\n』 ㄏノ某\n\n", MSG_SEPARATOR);
     setbfile(buf, bname, vbuf->comments);
     b_suckinfile(tfp, buf);
     unlink(buf);
 
-    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_separator, *total);
+    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", MSG_SEPARATOR, *total);
 
     // Report: logs part
     setbfile(buf, bname, vbuf->logs);
     if (dashf(buf)) {
-	fprintf(tfp, "%s\n』 щ布魁 (度ㄑ把σ) \n\n", msg_separator);
+	fprintf(tfp, "%s\n』 щ布魁 (度ㄑ把σ) \n\n", MSG_SEPARATOR);
 	b_suckinfile(tfp, buf);
 	unlink(buf);
     }
@@ -371,8 +371,8 @@ b_closepolls(void)
 
     for (fhp = bcache, pos = 1, total = num_boards(); pos <= total; fhp++, pos++) {
 	if (fhp->bvote && b_close(fhp)) {
-	    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
-		outs(err_board_update);
+	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+		outs(ERR_BOARD_UPDATE);
 	    else
 		reset_board(pos);
 	}
@@ -490,13 +490,13 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	if (fhp->bvote > 0)
 	    fhp->bvote--;
 
-	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
-	    outs(err_board_update);
+	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
 	b_result_one(vbuf, fhp, &total);
-	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
-	    outs(err_board_update);
+	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	    outs(ERR_BOARD_UPDATE);
 
 	reset_board(pos);
     }
@@ -689,8 +689,8 @@ vote_maintain(const char *bname)
 		    unlink(buf);
 		}
 	    }
-	    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
-		outs(err_board_update);
+	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+		outs(ERR_BOARD_UPDATE);
 
 	    return FULLUPDATE;
 	} else if (genbuf[0] != 'm') {
@@ -865,8 +865,8 @@ vote_maintain(const char *bname)
 
     fhp->bvote++;
 
-    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
-	outs(err_board_update);
+    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
     outs("秨﹍щ布");
 

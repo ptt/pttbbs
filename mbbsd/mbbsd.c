@@ -702,7 +702,7 @@ login_query(char *ruid)
 		break;
 	    }
 	} else {
-	    outs(err_uid);
+	    outs(ERR_UID);
 	}
     }
 

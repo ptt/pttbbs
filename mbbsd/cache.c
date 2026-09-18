@@ -132,7 +132,7 @@ invalid_board_permission_cache(const char *board) {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     bp = getbcache(bid);
     bp->perm_reload = now;
-    substitute_record(fn_board, bp, sizeof(boardheader_t), bid);
+    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), bid);
 }
 
 

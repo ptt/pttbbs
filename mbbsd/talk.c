@@ -399,7 +399,7 @@ my_kick(userinfo_t * uentp)
 {
     char            genbuf[200];
 
-    getdata(1, 0, msg_sure_ny, genbuf, 4, LCECHO);
+    getdata(1, 0, MSG_SURE_NY, genbuf, 4, LCECHO);
     clrtoeol();
     if (genbuf[0] == 'y') {
 	SNPRINTF(genbuf, "%s (%s)", uentp->userid, uentp->nickname);
@@ -408,7 +408,7 @@ my_kick(userinfo_t * uentp)
 	    purge_utmp(uentp);
 	outs("踢出去囉");
     } else
-	outs(msg_cancel);
+	outs(MSG_CANCEL);
     pressanykey();
 }
 
@@ -611,7 +611,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		    close(sock);
 		    currutmp->sockactive = currutmp->destuid = 0;
 		    vkey_detach();
-		    vmsg(msg_usr_left);
+		    vmsg(MSG_USR_LEFT);
 		    unlockutmpmode();
 		    return -1;
 		}
@@ -688,7 +688,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	outs("對方只接受好友的呼叫");
     } else if (!(pid = uin->pid) /* || (kill(pid, 0) == -1) */ ) {
 	//resetutmpent();
-	outs(msg_usr_left);
+	outs(MSG_USR_LEFT);
     } else {
 	if (!defact) {
 	    showplans(uin->userid);
@@ -1218,7 +1218,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
     if (drawall) {
 	showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天",
-		  BBSName);
+		  BBSNAME);
 
 	move(2, 0);
 	outs(ANSI_REVERSE);
@@ -1356,7 +1356,7 @@ userlist_search_online_user(pickup_t *currpickup, int pickup_way, int *page, int
     char swid[IDLEN + 1];
     move(1, 0);
 
-    int si = CompleteOnlineUser(msg_uid, swid);
+    int si = CompleteOnlineUser(MSG_UID, swid);
     if (si < 0)
         return 0;
 
@@ -1906,7 +1906,7 @@ t_qchicken(void)
     char            uident[STRLEN];
 
     vs_hdr("查詢寵物");
-    usercomplete(msg_uid, uident);
+    usercomplete(MSG_UID, uident);
     if (uident[0])
 	chicken_query(uident);
     return 0;
@@ -1918,7 +1918,7 @@ t_query(void)
     char            uident[STRLEN];
 
     vs_hdr("查詢網友");
-    usercomplete(msg_uid, uident);
+    usercomplete(MSG_UID, uident);
     if (uident[0])
 	my_query(uident);
     return 0;
@@ -1936,13 +1936,13 @@ t_talk(void)
      * BBSNAME "】吧！"); return XEASY; }
      */
     vs_hdr("打開話匣子");
-    CompleteOnlineUser(msg_uid, uident);
+    CompleteOnlineUser(MSG_UID, uident);
     if (uident[0] == '\0')
 	return 0;
 
     move(3, 0);
     if (!(tuid = searchuser(uident, uident)) || tuid == usernum) {
-	outs(err_uid);
+	outs(ERR_UID);
 	pressanykey();
 	return 0;
     }

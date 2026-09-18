@@ -493,14 +493,14 @@ forward_file(const fileheader_t * fhdr, const char *direct)
 	*p = '\0';
     switch (i = doforward(buf, fhdr, 'F')) {
     case 0:
-	vmsg(msg_fwd_ok);
+	vmsg(MSG_FWD_OK);
 	break;
     case -1:
-	vmsg(msg_fwd_err1);
+	vmsg(MSG_FWD_ERR1);
 	break;
     case -2:
 #ifndef DEBUG_FWDADDRERR
-	vmsg(msg_fwd_err2);
+	vmsg(MSG_FWD_ERR2);
 #endif
 	break;
     case -4:

@@ -1606,7 +1606,7 @@ do_post_article(int edflags)
 		if (!dashd(genbuf))
 		{
 		    genbuf[0] = 0;
-		    msg = err_uid;
+		    msg = ERR_UID;
 		} else if(is_rejected(quote_user)) {
                     genbuf[0] = 0;
                     msg = "作者拒收";
@@ -1626,7 +1626,7 @@ do_post_article(int edflags)
 		sethomedir(genbuf, quote_user);
                 msg = "回應至作者信箱";
 		if (append_record(genbuf, &mailfile, sizeof(mailfile)) == -1)
-		    msg = err_uid;
+		    msg = ERR_UID;
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
@@ -2567,7 +2567,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 		&bp->post_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -2579,7 +2579,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 		&bp->vote_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -3229,7 +3229,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
         check_digest = 1;
     }
 
-    getdata(10, 0, msg_sure_ny, numstr, 3, LCECHO);
+    getdata(10, 0, MSG_SURE_NY, numstr, 3, LCECHO);
     if (*numstr != 'y') {
         free(recs);
         return FULLUPDATE;
@@ -3425,12 +3425,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    getdata(3, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]",
 		    genbuf, 3, LCECHO);
 
-	    // since the default y/n is same to msg_del_ny, we reuse the genbuf[0] here.
+	    // since the default y/n is same to MSG_DEL_NY, we reuse the genbuf[0] here.
 	} while (0);
     } else
 #endif
     {
-	getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
+	getdata(1, 0, MSG_DEL_NY, genbuf, 3, LCECHO);
     }
 
     if (genbuf[0] == 'y') {
@@ -4018,7 +4018,7 @@ b_note_edit_bname(int bid)
     aborted = veditfile(buf);
     if (aborted == -1) {
 	clear();
-	outs(msg_cancel);
+	outs(MSG_CANCEL);
 	pressanykey();
     } else {
        // alert user our new b_note policy.
@@ -4053,7 +4053,7 @@ b_note_edit_bname(int bid)
        bnote_lastbid = -1;
 
        assert(0<=bid-1 && bid-1<MAX_BOARD);
-       substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
+       substitute_record(FN_BOARD, fh, sizeof(boardheader_t), bid);
     }
     return 0;
 }

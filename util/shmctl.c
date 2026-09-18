@@ -892,7 +892,7 @@ int fixbcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     int     n, fd, bid, changed = 0;
     boardheader_t bh;
 
-    if( (fd = open(fn_board, O_RDONLY)) < 0 ){
+    if( (fd = open(FN_BOARD, O_RDONLY)) < 0 ){
 	perror("open .BRD");
 	return 1;
     }

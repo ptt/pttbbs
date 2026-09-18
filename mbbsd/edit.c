@@ -1649,7 +1649,7 @@ write_header(FILE * fp,  const char *mytitle)
     if (curr_buf &&
         (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) &&
         !(curr_buf->flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST))) {
-	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
+	fprintf(fp, "%s %s (%s)\n", STR_AUTHOR1, cuser.userid,
 		cuser.nickname
 	);
     } else {
@@ -1735,8 +1735,8 @@ write_header(FILE * fp,  const char *mytitle)
 	postlog.date = now;
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
-	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author, nickname,
-		str_post1, currboard);
+	fprintf(fp, "%s %s (%s) %s %s\n", STR_AUTHOR1, postlog.author, nickname,
+		STR_POST1, currboard);
 
     }
     fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));

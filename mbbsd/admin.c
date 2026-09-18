@@ -9,11 +9,11 @@ m_user(void)
     char            genbuf[200];
 
     vs_hdr("使用者設定");
-    usercomplete(msg_uid, genbuf);
+    usercomplete(MSG_UID, genbuf);
     if (*genbuf) {
 	move(2, 0);
 	if (user_info_admin(genbuf) < 0) {
-	    outs(err_uid);
+	    outs(ERR_UID);
 	    clrtoeol();
 	    pressanykey();
 	}
@@ -557,7 +557,7 @@ void delete_board_link(boardheader_t *bh, int bid)
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(bh, 0, sizeof(boardheader_t));
-    substitute_record(fn_board, bh, sizeof(boardheader_t), bid);
+    substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
     sort_bcache();
     log_usies("DelLink", bh->brdname);
@@ -632,8 +632,8 @@ m_mod_board(char *bname)
     int y;
 
     bid = getbnum(bname);
-    if (!bid || !bname[0] || get_record(fn_board, &bh, sizeof(bh), bid) == -1) {
-	vmsg(err_bid);
+    if (!bid || !bname[0] || get_record(FN_BOARD, &bh, sizeof(bh), bid) == -1) {
+	vmsg(ERR_BID);
 	return -1;
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
@@ -708,7 +708,7 @@ m_mod_board(char *bname)
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
+	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("SetBoardBvote", newbh.brdname);
 	    break;
@@ -723,7 +723,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] == 'y') {
             newbh.brdattr ^= BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
+	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
 	}
@@ -732,7 +732,7 @@ m_mod_board(char *bname)
 	if (!(HasUserPerm(PERM_BOARD) ||
 		    (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	    break;
-	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
+	getdata_str(9, 0, MSG_SURE_NY, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else if (bh.brdattr & BRD_SYMBOLIC) {
@@ -752,7 +752,7 @@ m_mod_board(char *bname)
 	    SNPRINTF(bh.title, "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg(BN_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    substitute_record(fn_board, &bh, sizeof(bh), bid);
+	    substitute_record(FN_BOARD, &bh, sizeof(bh), bid);
 	    reset_board(bid);
             sort_bcache();
 	    log_usies("DelBoard", bh.title);
@@ -903,7 +903,7 @@ m_mod_board(char *bname)
 	    }
 	    setup_man(&newbh, &bh);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
+	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
             sort_bcache();
 	    log_usies("SetBoard", newbh.brdname);
@@ -925,7 +925,7 @@ m_board(void)
     char            bname[32];
 
     vs_hdr("看板設定");
-    CompleteBoardAndGroup(msg_bid, bname);
+    CompleteBoardAndGroup(MSG_BID, bname);
     if (!*bname)
 	return 0;
     m_mod_board(bname);
@@ -1000,12 +1000,12 @@ static int add_board_record(const boardheader_t *board)
     int bid;
     if ((bid = getbnum("")) > 0) {
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
-	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
+	substitute_record(FN_BOARD, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
         sort_bcache();
     } else if (SHM->Bnumber >= MAX_BOARD) {
 	return -1;
-    } else if (append_record(fn_board, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
+    } else if (append_record(FN_BOARD, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
 	return -1;
     } else {
 	addbrd_touchcache();
@@ -1035,7 +1035,7 @@ m_newbrd(int whatclass, int recover)
 	return -1;
     }
     do {
-	if (!getdata(3, 0, msg_bid, newboard.brdname,
+	if (!getdata(3, 0, MSG_BID, newboard.brdname,
 		     sizeof(newboard.brdname), DOECHO))
 	    return -1;
         if (is_valid_brdname(newboard.brdname))
@@ -1198,7 +1198,7 @@ int make_board_link_interactively(int gid)
     if (tolower(vmsg("確定要建立新看板連結嗎？ [y/N]: ")) != 'y')
         return -1;
 
-    CompleteBoard(msg_bid, buf);
+    CompleteBoard(MSG_BID, buf);
     if (!buf[0])
 	return -1;
 

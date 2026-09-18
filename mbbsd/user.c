@@ -349,7 +349,7 @@ violate_law(userec_t * u, int unum)
     default:
 	return;
     }
-    getdata(7, 0, msg_sure_ny, ans2, 3, LCECHO);
+    getdata(7, 0, MSG_SURE_NY, ans2, 3, LCECHO);
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
@@ -655,7 +655,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	clear();
 	y = 1;
 	move(y++, 0);
-	outs(msg_uid);
+	outs(MSG_UID);
 	outs(x.userid);
     }
 
@@ -697,7 +697,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    while (!getdata(y++, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
-	    if (vans(msg_sure_ny) != 'y') {
+	    if (vans(MSG_SURE_NY) != 'y') {
 		fail++;
 		break;
 	    }
@@ -963,7 +963,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
 	    y += 3;
 
-	    if (i < 3 || fail > 0 || vans(msg_sure_ny) != 'y')
+	    if (i < 3 || fail > 0 || vans(MSG_SURE_NY) != 'y')
 	    {
 		fail++;
 		break;
@@ -1023,7 +1023,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    char reason[STRLEN];
 	    char title[STRLEN], msg[1024];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
-	    if (vans(msg_sure_ny) != 'y')
+	    if (vans(MSG_SURE_NY) != 'y')
 	    {
 		fail++;
 		break;
@@ -1102,7 +1102,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
     if (!pre_confirmed)
     {
-	if (vans(msg_sure_ny) != 'y')
+	if (vans(MSG_SURE_NY) != 'y')
 	    return;
     }
 
@@ -1345,7 +1345,7 @@ browse_sigs:
 	    genbuf[j] = ans[0];
 	    if (aborted == 1) {
 		unlink(genbuf);
-		outs(msg_del_ok);
+		outs(MSG_DEL_OK);
 	    } else {
 		setutmpmode(EDITSIG);
 		aborted = veditfile(genbuf);

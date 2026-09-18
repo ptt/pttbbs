@@ -381,7 +381,7 @@ edit_banned_list_for_board(const char *board) {
         switch (*ans) {
             case 's':
                 move(1, 0);
-                usercomplete(msg_uid, uid);
+                usercomplete(MSG_UID, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
@@ -391,7 +391,7 @@ edit_banned_list_for_board(const char *board) {
 
             case 'a':
                 move(1, 0);
-                usercomplete(msg_uid, uid);
+                usercomplete(MSG_UID, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
@@ -401,7 +401,7 @@ edit_banned_list_for_board(const char *board) {
 
             case 'd':
                 move(1, 0);
-                usercomplete(msg_uid, uid);
+                usercomplete(MSG_UID, uid);
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0);

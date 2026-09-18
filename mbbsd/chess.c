@@ -1098,7 +1098,7 @@ ChessSearchUser(int sig, const char* title)
     userinfo_t	   *uin;
 
     vs_hdr(title);
-    CompleteOnlineUser(msg_uid, uident);
+    CompleteOnlineUser(MSG_UID, uident);
     if (uident[0] == '\0')
 	return NULL;
 

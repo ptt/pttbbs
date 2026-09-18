@@ -178,7 +178,7 @@ passwd_update_money(int num)
     if (num < 1 || num > MAX_USERS)
         return -1;
 
-    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+    if ((pwdfd = open(FN_PASSWD, O_WRONLY)) < 0)
         exit(1);
     lseek(pwdfd, sizeof(userec_t) * (num - 1) + offsetof(userec_t, money),
 	  SEEK_SET);
@@ -194,7 +194,7 @@ passwd_update(int num, userec_t * buf)
     if (num < 1 || num > MAX_USERS)
 	return -1;
 
-    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+    if ((pwdfd = open(FN_PASSWD, O_WRONLY)) < 0)
 	exit(1);
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     write(pwdfd, buf, sizeof(userec_t));
@@ -267,7 +267,7 @@ passwd_query(int num, userec_t * buf)
     int             pwdfd;
     if (num < 1 || num > MAX_USERS)
 	return -1;
-    if ((pwdfd = open(fn_passwd, O_RDONLY)) < 0)
+    if ((pwdfd = open(FN_PASSWD, O_RDONLY)) < 0)
 	exit(1);
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     read(pwdfd, buf, sizeof(userec_t));
@@ -304,7 +304,7 @@ passwd_fast_apply(void *ctx, int(*fptr)(void *ctx, int, userec_t *))
 {
     int i, fd;
     userec_t user;
-    if ((fd = open(fn_passwd, O_RDONLY)) < 0)
+    if ((fd = open(FN_PASSWD, O_RDONLY)) < 0)
         exit(1);
     for (i = 0; i < MAX_USERS; i++) {
         memset(&user, 0, sizeof(user));

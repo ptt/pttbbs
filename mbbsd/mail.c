@@ -959,10 +959,10 @@ my_send(const char *uident)
 {
     switch (mail_ui_send(uident, NULL)) {
 	case -1:
-	outs(err_uid);
+	outs(ERR_UID);
 	break;
     case -2:
-	outs(msg_cancel);
+	outs(MSG_CANCEL);
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uident);
@@ -981,17 +981,17 @@ m_send(void)
 	return DONOTHING;
 
     vs_hdr("站內寄信");
-    usercomplete(msg_uid, uident);
+    usercomplete(MSG_UID, uident);
     showplans(uident);
     if (uident[0])
     {
 	int ret = mail_ui_send(uident, NULL);
 	switch (ret) {
 	case -1:
-	    outs(err_uid);
+	    outs(ERR_UID);
 	    break;
 	case -2:
-	    outs(msg_cancel);
+	    outs(MSG_CANCEL);
 	    break;
 	case -3:
 	    prints("使用者 [%s] 無法收信", uident);
@@ -1063,7 +1063,7 @@ multi_send(const char *title)
     if (recipient) {
 	if (!mail_precheck_quota(Vector_length(&namelist))) {
 	    Vector_delete(&namelist);
-	    vmsg(msg_cancel);
+	    vmsg(MSG_CANCEL);
 	    return;
 	}
 	char save_title[STRLEN];
@@ -1102,7 +1102,7 @@ multi_send(const char *title)
 	if (vedit2(fpath, YEA, save_title, EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    Vector_delete(&namelist);
-	    vmsg(msg_cancel);
+	    vmsg(MSG_CANCEL);
 	    return;
 	}
 
@@ -1123,7 +1123,7 @@ multi_send(const char *title)
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
 	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
-		vmsg(err_uid);
+		vmsg(ERR_UID);
 	}
 	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
@@ -1131,7 +1131,7 @@ multi_send(const char *title)
 	Vector_delete(&namelist);
     } else {
 	Vector_delete(&namelist);
-	vmsg(msg_cancel);
+	vmsg(MSG_CANCEL);
     }
 }
 
@@ -1276,7 +1276,7 @@ mail_account_sysop(void)
     {
         unlink(fpath);
         setutmpmode(oldstat);
-        vmsg(msg_cancel);
+        vmsg(MSG_CANCEL);
         Vector_delete(&namelist);
         return DIRCHANGED;
     }
@@ -1284,7 +1284,7 @@ mail_account_sysop(void)
     for (i = 0; i < Vector_length(&namelist); i++) {
         const char *userid = Vector_get(&namelist, i);
         if (save_mailbox(cuser.userid, userid, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
-            vmsg(err_uid);
+            vmsg(ERR_UID);
     }
     Vector_delete(&namelist);
 
@@ -1349,7 +1349,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 	return DONOTHING;
 
     vs_hdr("轉達信件");
-    usercomplete(msg_uid, uid);
+    usercomplete(MSG_UID, uid);
     if (uid[0] == '\0')
 	return FULLUPDATE;
 
@@ -1364,10 +1364,10 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     int mail_ret = mail_ui_send(uid, save_title);
     switch (mail_ret) {
     case -1:
-	outs(err_uid);
+	outs(ERR_UID);
 	break;
     case -2:
-	outs(msg_cancel);
+	outs(MSG_CANCEL);
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uid);
@@ -1581,7 +1581,7 @@ mailtitle(void)
 	SNPRINTF(buf, ANSI_COLOR(32) "(大小:%d篇)", mailkeep);
     }
 
-    showtitle("郵件選單", BBSName);
+    showtitle("郵件選單", BBSNAME);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME
@@ -1665,7 +1665,7 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
         return READ_REDRAW;
     }
 
-    if (vans(msg_del_ny) == 'y') {
+    if (vans(MSG_DEL_NY) == 'y') {
 	if (!delete_fileheader(direct, fhdr, ent)) {
             int del_ret = 0;
             setupmailusage();
@@ -1806,7 +1806,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	    fclose(fp);
 	}
 	t = strtok_r(genbuf, str_space, &strtok_pos);
-	if (t && (strcmp(t, str_author1)==0 || strcmp(t, str_author2)==0)
+	if (t && (strcmp(t, STR_AUTHOR1)==0 || strcmp(t, STR_AUTHOR2)==0)
 		&& (t=strtok_r(NULL, str_space, &strtok_pos)) != NULL)
 	    STRLCPY(uid, t);
 	else {
@@ -1855,10 +1855,10 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     int mail_ret = mail_ui_send(uid, save_title);
     switch (mail_ret) {
     case -1:
-	outs(err_uid);
+	outs(ERR_UID);
 	break;
     case -2:
-	outs(msg_cancel);
+	outs(MSG_CANCEL);
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uid);

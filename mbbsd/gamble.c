@@ -518,7 +518,7 @@ stop_gamble(void)
     if (bp->endgamble) {
 	bp->endgamble = 0;
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
     return 1;
 }
@@ -578,7 +578,7 @@ hold_gamble(void)
 	if (bp->endgamble) {
 	    bp->endgamble = 0;
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 
 	}
 	return FULLUPDATE;
@@ -626,7 +626,7 @@ hold_gamble(void)
     if (!getdata(3, 0, "設定自動封盤時間?(Y/n)", yn, 3, LCECHO) || yn[0] != 'n') {
 	bp->endgamble = gettime(4, now, "封盤於");
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
     move(6, 0);
     SNPRINTF(genbuf, "\n請到 %s 板 按'f'參與樂透!\n\n"

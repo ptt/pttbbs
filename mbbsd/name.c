@@ -645,7 +645,7 @@ multi_user_list(struct Vector *namelist, int *recipient,
                 move(2, 0);
                 clrtoeol();
                 if (!searchuser(uid, uid))
-                    outs(err_uid);
+                    outs(ERR_UID);
                 else if ((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0)
                     outs("不能加入自己喔！");
                 else if (strcasecmp(uid, STR_GUEST) == 0)
@@ -751,7 +751,7 @@ multi_user_list(struct Vector *namelist, int *recipient,
             listfile[5] = genbuf[0];
             genbuf[0] = '1';
         case 'i':
-            setuserfile(genbuf, genbuf[0] == '1' ? listfile : fn_overrides);
+            setuserfile(genbuf, genbuf[0] == '1' ? listfile : FN_OVERRIDES);
             ToggleVector(namelist, recipient, genbuf, msg_title);
             break;
         case 'o':

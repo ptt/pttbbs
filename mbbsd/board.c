@@ -304,7 +304,7 @@ b_posttype()
        modified = 1;
    }
    if (modified) {
-       substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+       substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
        vmsg("資料已更新。");
    }
    return FULLUPDATE;
@@ -645,7 +645,7 @@ b_config(void)
 		    strip_ansi(genbuf, genbuf, STRIP_ALL);
 		    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-		    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 		    log_usies("SetBoard", currboard);
 		}
 		break;
@@ -868,7 +868,7 @@ b_config(void)
     if(touched)
     {
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("已儲存新設定");
     }
@@ -1309,7 +1309,7 @@ show_brdlist(int head, int clsflag, int newflag)
     if (unlikely(IN_CLASSROOT())) {
 	currstat = CLASS;
 	myrow = 6;
-	showtitle("分類看板", BBSName);
+	showtitle("分類看板", BBSNAME);
 	move(1, 0);
 	// TODO move ascii art to adbanner?
 	outs(
@@ -1326,7 +1326,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "                                                      " ANSI_COLOR(33) "╫"
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
-	showtitle("看板列表", BBSName);
+	showtitle("看板列表", BBSNAME);
 	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
 
 	// boards in Ptt series are very, very large.

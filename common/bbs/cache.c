@@ -386,7 +386,7 @@ reload_bcache(void)
     }
     if (i == 10)
 	return;
-    if ((fd = open(fn_board, O_RDONLY)) > 0) {
+    if ((fd = open(FN_BOARD, O_RDONLY)) > 0) {
 	SHM->Bnumber =
 	    read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
 	    sizeof(boardheader_t);
@@ -457,7 +457,7 @@ reset_board(int bid) /* XXXbid: from 1 */
 
 	bhdr = bcache;
 	bhdr += bid;
-	if ((fd = open(fn_board, O_RDONLY)) >= 0) {
+	if ((fd = open(FN_BOARD, O_RDONLY)) >= 0) {
 	    lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
 	    read(fd, bhdr, sizeof(boardheader_t));
 	    close(fd);
@@ -850,7 +850,7 @@ hbflreload(int bid)
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(hbfl, 0, sizeof(hbfl));
-    setbfile(buf, bcache[bid - 1].brdname, fn_visable);
+    setbfile(buf, bcache[bid - 1].brdname, FN_VISABLE);
     if ((fp = fopen(buf, "r")) != NULL) {
 	for (num = 1; num <= MAX_FRIEND; ++num) {
 	    if (fgets(buf, sizeof(buf), fp) == NULL)

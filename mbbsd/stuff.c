@@ -4,7 +4,6 @@
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
-static const char * const str_dotdir = FN_DIR;
 
 /* XXX set*() all assume buffer size = PATHLEN */
 
@@ -17,7 +16,7 @@ setuserfile(char *buf, const char *fname)
 void
 setbdir(char *buf, const char *boardname)
 {
-    setbfile(buf, boardname, (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
+    setbfile(buf, boardname, (currmode & MODE_DIGEST ? fn_mandex : FN_DIR));
 }
 
 int

@@ -144,16 +144,10 @@ unsigned int    currstat;
 /* global string variables */
 /* filename */
 
-char * const fn_passwd = FN_PASSWD;
-char * const fn_board = FN_BOARD;
 const char * const fn_plans = "plans";
 const char * const fn_writelog = "writelog";
 const char * const fn_talklog = "talklog";
-const char * const fn_overrides = FN_OVERRIDES;
-const char * const fn_reject = FN_REJECT;
 const char * const fn_notes = "notes";
-const char * const fn_water = FN_WATER;
-const char * const fn_visable = FN_VISABLE;
 const char * const fn_mandex = "/.Names";
 
 /* are descript in userec.loginview */
@@ -176,28 +170,12 @@ char           * const loginview_file[NUMVIEWFILE][2] = {
 };
 
 /* message */
-char           * const msg_separator = MSG_SEPARATOR;
 
-char           * const msg_cancel = MSG_CANCEL;
-char           * const msg_usr_left = MSG_USR_LEFT;
 
-char           * const msg_sure_ny = MSG_SURE_NY;
-char           * const msg_sure_yn = MSG_SURE_YN;
 
-char           * const msg_bid = MSG_BID;
-char           * const msg_uid = MSG_UID;
 
-char           * const msg_del_ok = MSG_DEL_OK;
-char           * const msg_del_ny = MSG_DEL_NY;
 
-char           * const msg_fwd_ok = MSG_FWD_OK;
-char           * const msg_fwd_err1 = MSG_FWD_ERR1;
-char           * const msg_fwd_err2 = MSG_FWD_ERR2;
 
-char           * const err_board_update = ERR_BOARD_UPDATE;
-char           * const err_bid = ERR_BID;
-char           * const err_uid = ERR_UID;
-char           * const err_filename = ERR_FILENAME;
 
 char           * const str_mail_address = "." BBSUSER "@" MYHOSTNAME;
 char           * const str_reply = "Re:";
@@ -205,11 +183,6 @@ char           * const str_forward = "Fw:";
 char           * const str_legacy_forward = "[Âà¿ý]";
 char           * const str_space = " \t\n\r";
 char           * const str_sysop = "SYSOP";
-char           * const str_author1 = STR_AUTHOR1;
-char           * const str_author2 = STR_AUTHOR2;
-char           * const str_post1 = STR_POST1;
-char           * const str_post2 = STR_POST2;
-char           * const BBSName = BBSNAME;
 
 /* MAX_MODES is defined in common.h */
 

@@ -16,7 +16,6 @@ static const char * const str_home_file = "home/%c/%s/%s";
 static const char * const str_board_file = "boards/%c/%s/%s";
 static const char * const str_board_n_file = "boards/%c/%s/%s.%d";
 static const char * const str_man_file = "man/boards/%c/%s/%s";
-static const char * const str_dotdir = FN_DIR;
 
 static int is_validfilename(const char *fname) {
   return strstr(fname, "..") == NULL;
@@ -34,7 +33,7 @@ void
 sethomedir(char *buf, const char *userid)
 {
     assert(is_validuserid(userid));
-    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, str_dotdir);
+    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, FN_DIR);
 }
 
 void
@@ -80,7 +79,7 @@ void
 setadir(char *buf, const char *path)
 {
     assert(buf != path);
-    snprintf(buf, PATHLEN, "%s/%s", path, str_dotdir);
+    snprintf(buf, PATHLEN, "%s/%s", path, FN_DIR);
 }
 
 void

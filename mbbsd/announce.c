@@ -367,13 +367,13 @@ a_forward(const char *path, const fileheader_t * pitem, int mode)
     STRLCPY(fhdr.title, pitem->title);
     switch (doforward(path, &fhdr, mode)) {
     case 0:
-	outmsg(msg_fwd_ok);
+	outmsg(MSG_FWD_OK);
 	break;
     case -1:
-	outmsg(msg_fwd_err1);
+	outmsg(MSG_FWD_ERR1);
 	break;
     case -2:
-	outmsg(msg_fwd_err2);
+	outmsg(MSG_FWD_ERR2);
 	break;
     }
 }

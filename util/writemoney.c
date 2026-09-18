@@ -10,7 +10,7 @@ int main()
 
     attach_SHM();
 
-    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+    if ((pwdfd = open(FN_PASSWD, O_WRONLY)) < 0)
 	exit(1);
     for (num=1;num <= SHM->number;num++) {
 	lseek(pwdfd, sizeof(userec_t) * (num - 1) +

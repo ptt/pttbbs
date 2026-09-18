@@ -483,7 +483,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
     cmdmode = menu_mode_map[menu_index];
 
     setutmpmode(cmdmode);
-    showtitle(cmdtitle, BBSName);
+    showtitle(cmdtitle, BBSNAME);
     total = show_menu(menu_index, cmdtable);
 
     show_status();
@@ -598,7 +598,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    continue;
 
 	if (refscreen) {
-	    showtitle(cmdtitle, BBSName);
+	    showtitle(cmdtitle, BBSNAME);
 	    // menu 設定 M_MENU_REFRESH 可讓 ADBanner 顯示別的資訊
 	    show_menu(M_MENU_REFRESH, cmdtable);
 	    show_status();
