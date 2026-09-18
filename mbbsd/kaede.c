@@ -108,7 +108,7 @@ Ptt_prints(char *str, size_t size, int mode)
         w += strlen(strbuf+w);
     }
     strbuf[w] = 0;
-    strip_ansi(str, strbuf, mode);
+    strip_ansi_ex(str, strbuf, mode);
     return str;
 }
 

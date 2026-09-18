@@ -175,13 +175,24 @@ scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
             p++;
         if (*p >= 0x40 && *p <= 0x7E) {
             // Valid final character reached
-            if (*p == 'm' && !has_private) {
-                if (is_color)
-                    *is_color = 1;
-            }
-            if (!has_private && strchr("ABCDHIJKfhlmsu", *p) != NULL) {
-                if (is_safe_cmd)
-                    *is_safe_cmd = 1;
+            if (!has_private) {
+                if (*p == 'm') {
+                    if (is_color)
+                        *is_color = 1;
+                    if (is_safe_cmd)
+                        *is_safe_cmd = 1;
+                } else if (is_safe_cmd) {
+                    const uint64_t safe_mask =
+                        (1ULL << ('A' - 0x40)) | (1ULL << ('B' - 0x40)) |
+                        (1ULL << ('C' - 0x40)) | (1ULL << ('D' - 0x40)) |
+                        (1ULL << ('H' - 0x40)) | (1ULL << ('I' - 0x40)) |
+                        (1ULL << ('J' - 0x40)) | (1ULL << ('K' - 0x40)) |
+                        (1ULL << ('f' - 0x40)) | (1ULL << ('h' - 0x40)) |
+                        (1ULL << ('l' - 0x40)) | (1ULL << ('m' - 0x40)) |
+                        (1ULL << ('s' - 0x40)) | (1ULL << ('u' - 0x40));
+                    if ((safe_mask >> (*p - 0x40)) & 1)
+                        *is_safe_cmd = 1;
+                }
             }
             return p;
         }
@@ -213,7 +224,48 @@ scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
     return p;
 }
 
-#define isEscapeParam(X) (((X) >= 0x30 && (X) <= 0x3F) || ((X) >= 0x20 && (X) <= 0x2F))
+/*
+ * Fast ECMA-48 escape sequence skipper (*src == ESC_CHR).
+ * Returns pointer to the first character AFTER the escape sequence.
+ */
+static inline const char *
+skip_escape_sequence(const char *src)
+{
+    const char *p = src + 1;
+    unsigned char c = *p;
+    if (c == '\0')
+        return p;
+
+    if (c == '[') {
+        // CSI: ESC [ [0x20..0x3F]* [0x40..0x7E]
+        p++;
+        while ((unsigned char)(*p - 0x20) < 0x20)
+            p++;
+        if ((unsigned char)(*p - 0x40) <= 0x3E)
+            p++;
+        return p;
+    }
+
+    if (c == ']') {
+        // OSC: ESC ] ... (BEL | ESC \)
+        p++;
+        while (*p && *p != '\x07' && !(*p == ESC_CHR && *(p + 1) == '\\'))
+            p++;
+        if (*p == '\x07')
+            return p + 1;
+        if (*p == ESC_CHR && *(p + 1) == '\\')
+            return p + 2;
+        return p;
+    }
+
+    // 3-byte sequences: ESC [()*+-./#] <char>
+    if (c == '(' || c == ')' || c == '*' || c == '+' ||
+        c == '-' || c == '.' || c == '/' || c == '#')
+        return (p[1] != '\0') ? (p + 2) : (p + 1);
+
+    // 2-byte sequence: ESC <char>
+    return p + 1;
+}
 
 /**
  * strip ANSI escape sequences from src according to mode
@@ -226,10 +278,34 @@ scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
  * @return stripped length
  */
 int
-strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
+strip_ansi(char *dst, const char *src)
 {
-    register int count = 0;
+    int count = 0;
 
+    while (*src) {
+        const char *p = strchrnul(src, ESC_CHR);
+        int chunk = p - src;
+        if (dst && chunk > 0) {
+            memmove(dst, src, chunk);
+            dst += chunk;
+        }
+        count += chunk;
+        if (*p == '\0')
+            break;
+        src = skip_escape_sequence(p);
+    }
+    if (dst)
+        *dst = '\0';
+    return count;
+}
+
+int
+strip_ansi_ex(char *dst, const char *src, enum STRIP_FLAG mode)
+{
+    if (mode == STRIP_ALL)
+        return strip_ansi(dst, src);
+
+    int count = 0;
     for (; *src; ++src) {
         if (*src != ESC_CHR) {
             if (dst)
@@ -264,22 +340,21 @@ strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
  * if string is less then nth, return missing blanks in negative value.
  */
 int
-strat_ansi(int count, const char *s)
+str_at_ansi(int count, const char *s)
 {
     const char *os = s;
 
-    for (; count > 0 && *s; ++s) {
-        if (*s == ESC_CHR) {
-            s = scan_escape_sequence(s, NULL, NULL);
-            if (*s == '\0')
-                break;
-        } else {
-            count--;
-        }
+    while (count > 0 && *s) {
+        const char *p = strchrnul(s, ESC_CHR);
+        int chunk = p - s;
+        if (chunk >= count)
+            return (s + count) - os;
+        count -= chunk;
+        if (*p == '\0')
+            break;
+        s = skip_escape_sequence(p);
     }
-    if (count > 0)
-        return -count;
-    return s - os;
+    return (count > 0) ? -count : (s - os);
 }
 
 int
@@ -287,10 +362,16 @@ str_term_width(const char *s)
 {
     if (!s || !*s)
         return 0;
-    const char *p = strchrnul(s, ESC_CHR);
-    if (!*p)
-        return p - s;
-    return (p - s) + strip_ansi(NULL, p, STRIP_ALL);
+
+    int width = 0;
+    while (*s) {
+        const char *p = strchrnul(s, ESC_CHR);
+        width += p - s;
+        if (*p == '\0')
+            break;
+        s = skip_escape_sequence(p);
+    }
+    return width;
 }
 
 /* ----------------------------------------------------- */
@@ -325,62 +406,36 @@ strip_nonebig5(unsigned char *str, int maxlen)
  */
 int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 {
-    register int isInAnsi = 0, isInDBCS = 0;
-    int l = 0, i = 0, oldl, iansi = 0;
+    int l = len ? *len : (int)strlen((const char *)buf);
+    if (!memchr(buf, ESC_CHR, l))
+        return 0;
 
-    if (len) l = *len; else l = strlen((const char*)buf);
-    oldl = l;
+    int oldl = l;
+    int isInDBCS = 0;
 
-    for (i = 0; i < l; i++)
-    {
-	if (buf[i] == ESC_CHR && !isInAnsi)
-	{
-	    // new escape
-	    isInAnsi = 1;
-	    iansi = i;
-	    continue;
-	}
-
-	// character
-	if (isInAnsi)
-	{
-	    // closing ANSI section?
-	    switch (isInAnsi)
-	    {
-	    case 1: // normal ANSI
-		if (buf[i] == '[')
-		    isInAnsi = 2;
-		else
-		    isInAnsi = 0; // unknown command
-		break;
-
-	    case 2:
-		if (isEscapeParam(buf[i]))
-		    break;
-		else
-		    isInAnsi = 0;
-		break;
-	    }
-	    if (isInAnsi == 0 && isInDBCS && i+1 < l)
-	    {
-		// interupting ANSI closed, let's modify the string
-		int sz = i + 1 - iansi; // size to move
-		memmove(buf+iansi, buf+i+1, l-i-1);
-		l -= sz;
-		i = iansi-1; // for the ++ in loop
-	    }
-	} else if (isInDBCS) {
-	    // not ANSI but in DBCS. finished one char.
-	    isInDBCS = 0;
-	} else if (IS_DBCSLEAD(buf[i])) {
-	    // DBCS lead.
-	    isInDBCS = 1;
-	} else {
-	    // normal character.
-	}
+    for (int i = 0; i < l; i++) {
+        if (buf[i] == ESC_CHR) {
+            const char *next = skip_escape_sequence((const char *)(buf + i));
+            int inext = (int)((const unsigned char *)next - buf);
+            if (inext > l)
+                inext = l;
+            if (isInDBCS && inext < l) {
+                int sz = inext - i;
+                memmove(buf + i, buf + inext, l - inext);
+                l -= sz;
+                i--; // for the ++ in loop
+            } else {
+                i = inext - 1;
+            }
+        } else if (isInDBCS) {
+            isInDBCS = 0;
+        } else if (IS_DBCSLEAD(buf[i])) {
+            isInDBCS = 1;
+        }
     }
 
-    if(len) *len = l;
+    if (len)
+        *len = l;
     return (oldl != l) ? 1 : 0;
 }
 

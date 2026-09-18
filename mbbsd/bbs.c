@@ -1403,7 +1403,7 @@ do_post_article(int edflags)
             if (w >= TTLEN - 4)
                 w = TTLEN - 4;
 	    getdata_buf(22, 0, "標題：", tmp_title, w, DOECHO);
-	    strip_ansi(tmp_title, tmp_title, STRIP_ALL);
+	    strip_ansi(tmp_title, tmp_title);
 
 	    if (!is_tn_allowed(tmp_title))
 	    {
@@ -4417,7 +4417,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     mvouts(3, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
     i = 4;
     while (fgets(buf, sizeof(buf), fp)) {
-        strip_ansi(buf, buf, STRIP_ALL);
+        strip_ansi(buf, buf);
         if (strstr(buf, pattern)) {
             found++;
             mvouts(i, 0, ANSI_RESET);
@@ -4459,7 +4459,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     fp = fopen(revpath, "rt");
     fpw = fopen(fpath, "wt");
     while (fgets(buf, sizeof(buf), fp)) {
-        strip_ansi(buf2, buf, STRIP_ALL);
+        strip_ansi(buf2, buf);
         if (strstr(buf2, pattern)) {
             fputs("※ [部份違規文字已刪除]\n", fpw);
             continue;

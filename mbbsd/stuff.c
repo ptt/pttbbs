@@ -164,7 +164,7 @@ show_file(const char *filename, int y, int lines, int mode)
 		ret = 2;
 	    } else {
 		// ESC is very common...
-		strip_ansi(buf, buf, strpmode);
+		strip_ansi_ex(buf, buf, strpmode);
 		outs(buf);
 	    }
 	}

@@ -205,7 +205,7 @@ int mail2bbs(char *userid)
     mailog(genbuf);
 
     /* append the record to the MAIL control file */
-    strip_ansi(title, title, 0);
+    strip_ansi(title, title);
     STRLCPY(mymail.title, bbsmail_pretty_subject(title));
 
     if (strtok(sender, " .@\t\n\r")) {

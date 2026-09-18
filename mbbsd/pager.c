@@ -612,7 +612,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         STRLCPY(msg, prompt);
     }
 
-    strip_ansi(msg, msg, STRIP_ALL);
+    strip_ansi(msg, msg);
 
     if (!my_write_confirm_send(flag, destid, msg, uin)) {
         my_write_restore_state(c0, mode0, currstat0);

@@ -76,7 +76,7 @@ fillns(int n, const char *s)
 static void
 fillns_ansi(int n, const char *s)
 {
-    int d = strat_ansi(n, s);
+    int d = str_at_ansi(n, s);
     if (d < 0) {
 	outs(s); nblank(-d);
     } else {
@@ -1156,7 +1156,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     if (defstr && *defstr)
     {
 	strlcpy(buf, defstr, len);
-	strip_ansi(buf, buf, STRIP_ALL); // safer...
+	strip_ansi(buf, buf); // safer...
 	rt.icurr = rt.iend = strlen(buf);
     }
 

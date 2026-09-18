@@ -626,7 +626,7 @@ bl_strip_ansi(lua_State *L)
 
     os2 = strlen(s)+1;
     s2 = (char*) lua_newuserdata(L, os2);
-    strip_ansi(s2, s, STRIP_ALL);
+    strip_ansi(s2, s);
     lua_pushstring(L, s2);
     lua_remove(L, -2);
     return 1;
