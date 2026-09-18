@@ -67,15 +67,6 @@ nblank(int n)
 static void
 fillns(int n, const char *s)
 {
-    while (n > 0 && *s)
-	outc(*s++), n--;
-    if (n > 0)
-	outnc(n, ' ');
-}
-
-static void
-fillns_ansi(int n, const char *s)
-{
     int d = str_at_ansi(n, s);
     if (d < 0) {
 	outs(s); nblank(-d);
@@ -247,10 +238,7 @@ vfill(int n, int flags, const char *s)
 	}
 
 	// left-align
-	if (has_ansi)
-	    fillns_ansi(n, s);
-	else
-	    fillns(n, s);
+	fillns(n, s);
     }
 
     // print border if required
@@ -539,10 +527,7 @@ vs_header(const char *title, const char *mid, const char *right)
 
     if (szmid) {
 	outs(VCLR_HEADER_MID);
-	if (*mid == ESC_CHR)
-	    fillns_ansi(szmid, mid);
-	else
-	    outns(mid, szmid);
+	fillns(szmid, mid);
 	outs(VCLR_HEADER);
     }
     nblank(w - szmid - szright);
@@ -586,12 +571,8 @@ vs_hdr2bar(const char *left, const char *right)
     getyx(&y, &x);
 
     int w = MAX_COL - x;
-    if (w > 0) {
-	if (*right == ESC_CHR)
-	    fillns_ansi(w, right);
-	else
-	    fillns(w, right);
-    }
+    if (w > 0)
+	fillns(w, right);
 
     outs(ANSI_RESET "\n");
 }
