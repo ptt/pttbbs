@@ -245,6 +245,7 @@ psb_key_name(int key, char *buf, size_t sz) {
         case KEY_DEL:   strlcpy(buf, "DEL", sz); break;
         case KEY_BS:    strlcpy(buf, "BS", sz); break;
         case KEY_TAB:   strlcpy(buf, "Tab", sz); break;
+        case KEY_STAB:  strlcpy(buf, "S-Tab", sz); break;
         case KEY_ESC:   strlcpy(buf, "ESC", sz); break;
         case ' ':       strlcpy(buf, "Space", sz); break;
         default:
@@ -295,6 +296,7 @@ typedef struct {
     const cmd_t *cmd;
     int keys[16];
     int n_keys;
+    int order;
 } psb_help_item_t;
 
 static void
@@ -319,6 +321,13 @@ psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
             continue;
         if (i > 0 && item->keys[i] == 'E' && item->keys[i - 1] == 'e')
             continue;
+        if (item->keys[i] == '1' && i + 8 < item->n_keys && item->keys[i + 8] == '9') {
+            if (buf[0] != '\0')
+                strlcat(buf, "/", sz);
+            strlcat(buf, "1-9", sz);
+            i += 8;
+            continue;
+        }
         char kbuf[16];
         psb_key_name(item->keys[i], kbuf, sizeof(kbuf));
         if (buf[0] != '\0')
@@ -479,7 +488,7 @@ cmd_show_help_layers_inner(const char *caption, const psb_help_item_t *items, in
                 snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
                 page_len = strlen(pagebuf);
             }
-            char clean_cap[32] = "操作說明";
+            char clean_cap[64] = "操作說明";
             if (caption) {
                 while (*caption == ' ') caption++;
                 strlcpy(clean_cap, caption, sizeof(clean_cap));
@@ -645,6 +654,15 @@ cmd_set_has_item(bool has_item) {
     cmd_bar_has_item = has_item;
 }
 
+static int
+psb_help_item_cmp(const void *a, const void *b) {
+    const psb_help_item_t *ia = (const psb_help_item_t *)a;
+    const psb_help_item_t *ib = (const psb_help_item_t *)b;
+    if (ia->cmd->prio != ib->cmd->prio)
+        return ib->cmd->prio - ia->cmd->prio;
+    return ia->order - ib->order;
+}
+
 int
 cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
     const cmd_layer_t *layer;
@@ -669,6 +687,7 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
                     items[count].cmd = cmd;
                     items[count].keys[0] = cmd->key;
                     items[count].n_keys = 1;
+                    items[count].order = count;
                     count++;
                 }
             } else if (cmd->func) {
@@ -679,11 +698,16 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
                         break;
                     }
                 }
+            } else if (count > 0) {
+                if (items[count - 1].n_keys < 16)
+                    items[count - 1].keys[items[count - 1].n_keys++] = cmd->key;
             }
         }
     }
     if (count <= 0)
         return 0;
+
+    qsort(items, count, sizeof(psb_help_item_t), psb_help_item_cmp);
 
     cmd_bar_hotspot_state_t saved_state;
     if (hs_state)
@@ -806,7 +830,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
         return;
 
     const char *sub_prompt = "";
-    const char *footer_caption = " 頁面瀏覽 ";
+    const char *footer_caption = NULL;
 
     if (prompt) {
         if (row_type & VS_FOOTER)
@@ -868,18 +892,48 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
     qsort(cands, n_cands, sizeof(cmd_cand_t), cmd_cand_cmp);
 
+    const cmd_t *left_cmd = NULL;
+    int left_cand_idx = -1;
+    const cmd_t *help_cmd = NULL;
+    int help_cand_idx = -1;
+    for (int i = 0; i < n_cands; i++) {
+        if (!left_cmd && cands[i].cmd->key == KEY_LEFT) {
+            left_cmd = cands[i].cmd;
+            left_cand_idx = i;
+        }
+        if (!help_cmd && cands[i].cmd->key == 'h') {
+            help_cmd = cands[i].cmd;
+            help_cand_idx = i;
+        }
+    }
+
+    const char *help_label = (help_cmd && help_cmd->label) ? help_cmd->label : "說明";
+    char help_buf[32];
+    snprintf(help_buf, sizeof(help_buf), "(h)%s", help_label);
+
+    bool left_in_footer_tail = (left_cmd && active_rows[0] == VS_FOOTER);
+    char footer_tail[64];
+    if (left_in_footer_tail)
+        snprintf(footer_tail, sizeof(footer_tail), "\t(←)%s %s", left_cmd->label, help_buf);
+    else
+        snprintf(footer_tail, sizeof(footer_tail), "\t%s", help_buf);
+
     char row_bufs[6][256];
     int avail_cols[6];
     int row_item_count[6];
     int row_cur_col[6];
-    const char *footer_tail = "\t(h)說明";
 
     for (int r = 0; r < n_rows; r++) {
         row_bufs[r][0] = '\0';
         row_item_count[r] = 0;
         if (active_rows[r] == VS_FOOTER) {
-            row_cur_col[r] = str_term_width(footer_caption);
-            avail_cols[r] = (t_columns - 2) - row_cur_col[r] - strlen("(h)說明");
+            if (footer_caption) {
+                row_cur_col[r] = str_term_width(footer_caption);
+            } else {
+                int y;
+                getyx(&y, &row_cur_col[r]);
+            }
+            avail_cols[r] = (t_columns - 2) - row_cur_col[r] - strlen(footer_tail + 1);
         } else {
             const char *p = (r == 0) ? sub_prompt : "";
             row_cur_col[r] = str_term_width(p);
@@ -893,16 +947,17 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
     bool placed[64] = {false};
 
-    // Always place KEY_LEFT first on the top-most active row
-    for (int i = 0; i < n_cands; i++) {
-        if (cands[i].cmd->key == KEY_LEFT) {
-            if (cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
-                                  row_bufs, avail_cols, row_cur_col, row_item_count)) {
-                placed[i] = true;
-            }
-            break;
+    // Place KEY_LEFT first on top row if it is not right-aligned in footer_tail
+    if (left_cand_idx >= 0) {
+        if (left_in_footer_tail) {
+            placed[left_cand_idx] = true;
+        } else if (cmd_bar_try_place(0, active_rows[0], sub_prompt, left_cmd,
+                                     row_bufs, avail_cols, row_cur_col, row_item_count)) {
+            placed[left_cand_idx] = true;
         }
     }
+    if (help_cand_idx >= 0)
+        placed[help_cand_idx] = true;
 
     if (n_rows > 1) {
         // Multi-row mode (e.g., VS_SUB_HEADER + VS_FOOTER):
@@ -950,9 +1005,16 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
     for (int r = 0; r < n_rows; r++) {
         if (active_rows[r] == VS_FOOTER) {
             int safe_max_col = t_columns - 2;
-            int tail_len = strlen(footer_tail + 1);
+            int help_len = strlen(help_buf);
+            if (left_in_footer_tail) {
+                int tail_len = strlen(footer_tail + 1);
+                int left_start = safe_max_col - tail_len;
+                int left_end = safe_max_col - help_len - 1;
+                cmd_bar_add_hotspot(vs_row_line(VS_FOOTER),
+                                    left_start, left_end, KEY_LEFT, left_cmd);
+            }
             cmd_bar_add_hotspot(vs_row_line(VS_FOOTER),
-                                safe_max_col - tail_len, safe_max_col, 'h', NULL);
+                                safe_max_col - help_len, safe_max_col, 'h', help_cmd);
             strlcat(row_bufs[r], footer_tail, sizeof(row_bufs[r]));
             vs_footer(footer_caption, row_bufs[r]);
         } else {
@@ -974,7 +1036,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
 void
 cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers) {
-    vs_cmd_bar(VS_FOOTER, caption, layers);
+    vs_cmd_bar(VS_FOOTER, caption ? caption : " 頁面瀏覽 ", layers);
 }
 
 static void

@@ -466,21 +466,29 @@ int m_sob(void);
 void m_sob_brd(char *bname,char *fromdir);
 #endif
 
-/* pager */
+/* pager (more) */
 int more(const char *fpath, int promptend);
 int more_inmemory(void *content, int size, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
-int pmore2(const char *fpath, int promptend, void *ctx, 
-	int (*key_handler)   (int key, void *ctx),
-	int (*footer_handler)(int ratio, void *ctx),
-	int (*help_handler)  (int y,   void *ctx));
-int pmore2_inmemory( 
-	void *content, int size,
-	int promptend, void *ctx,
-	int (*key_handler)   (int key, void *ctx),
-	int (*footer_handler)(int ratio, void *ctx),
-	int (*help_handler)  (int y,   void *ctx));
+extern const cmd_t pmore_cmds[];
+extern const cmd_t pmore_movie_cmds[];
+
+struct pmore_callbacks {
+    int (*process_key)(int key, void *ctx);
+    int (*footer)(void *ctx);
+    int (*help)(int y, void *ctx);
+    int (*vkey)(void *ctx);
+    int (*exit)(void *ctx);
+};
+
+int pmore2(
+        const char *fpath, int promptend, void *ctx,
+        const struct pmore_callbacks *cb);
+int pmore2_inmemory(
+        void *content, int size,
+        int promptend, void *ctx,
+        const struct pmore_callbacks *cb);
 /* piaip's new telnet, telnet.c */
 void telnet_init(int do_init_cmd);
 ssize_t telnet_filter_process(void *buf, ssize_t len);

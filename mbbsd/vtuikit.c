@@ -757,14 +757,20 @@ void
 vs_footer(const char *caption, const char *msg)
 {
     int i = 0;
-    move(b_lines, 0); clrtoeol();
 
     if (caption)
     {
 	int y;
+	move(b_lines, 0); clrtoeol();
 	outs(VCLR_FOOTER_CAPTION);
 	outs(caption);
 	getyx(&y, &i);
+    }
+    else
+    {
+	int y;
+	getyx(&y, &i);
+	clrtoeol();
     }
 
     if (!msg) msg = "";

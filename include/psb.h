@@ -66,6 +66,10 @@ typedef struct cmd_ctx {
 
 typedef int (*cmd_cb_t)(cmd_ctx_t *ctx);
 
+#ifndef HAVE_CMD_T
+#define HAVE_CMD_T 1
+#endif
+
 typedef struct {
     int key;
     const char *label;
