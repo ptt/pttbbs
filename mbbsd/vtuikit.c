@@ -527,7 +527,7 @@ vs_rectangle_simple(int l, int t, int r, int b)
 	outs("¢x");
 	// while (l < r-2) { outs("  "); l+= 2; }
 	l += (r-l-1)/2*2;
-	move_ansi(t-1, l);
+	move(t-1, l);
 	outs("¢x");
 	if (l+2 < r) outs(" ");
     }
@@ -1126,7 +1126,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 {
     // rt.iend points to NUL address, and
     // rt.icurr points to cursor.
-    int line, col, line_ansi, col_ansi;
+    int line, col;
     int abort = 0, dirty = 0;
     int c = 0;
     char ismsgline = 0;
@@ -1163,7 +1163,6 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	cb = *pcbs;
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
-    getyx_ansi(&line_ansi, &col_ansi);
 
     // XXX be compatible with traditional...
     if (line == b_lines - msg_occupied)
@@ -1214,7 +1213,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		outs(ANSI_RESET);
 
 	    // move to cursor position
-	    move(line_ansi, col_ansi+rt.icurr);
+	    move(line, col+rt.icurr);
 	} else {
 	    // to simulate the "clrtoeol" behavior...
 	    // XXX make this call only once? or not?

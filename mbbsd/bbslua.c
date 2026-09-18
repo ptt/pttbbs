@@ -279,7 +279,7 @@ bl_move(lua_State* L)
         y = lua_tointeger(L, 1);
     if (n > 1)
         x = lua_tointeger(L, 2);
-    move_ansi(y, x);
+    move(y, x);
     return 0;
 }
 

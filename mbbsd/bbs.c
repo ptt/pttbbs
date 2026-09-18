@@ -3507,7 +3507,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		outs("退文設定: 文章超過一週 (跳過)\n");
 	    } else {
                 // case 4, can assign badpost
-		move_ansi(1, 40); clrtoeol();
+		move(1, 40); clrtoeol();
 		// TODO not_owned 時也要改變 numpost?
                 outs("惡退文章?(y/N) ");
                 // FIXME 有板主會在這裡不小心斷掉連線所以要小心...
@@ -3798,7 +3798,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ",
 	  aidc, currboard && currboard[0] ? currboard : "未知",
 	  AID_HOSTNAME);
-      getyx_ansi(&y, &x);
+      getyx(&y, &x);
       x = 75 - x;
       if (x > 1)
 	  prints("%.*s ", x, fhdr->title);
@@ -3861,7 +3861,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
       for(i = 1; i < area_lines - 1; i ++)
       {
-        move_ansi(area_l + i , 76);
+        move(area_l + i , 76);
         prints("│");
       }
     }

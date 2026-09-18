@@ -70,7 +70,7 @@ debug_print_input_buffer(void *buf, ssize_t len)
     if (!s || !len)
         return len;
 
-    getyx_ansi(&y, &x);
+    getyx(&y, &x);
     move(0, 0); clrtocol();
     SOLVE_ANSI_CACHE();
     prints(ANSI_RESET "Input Buffer (%d): [ ", (int)len);
@@ -94,7 +94,7 @@ debug_print_input_buffer(void *buf, ssize_t len)
         }
     }
     prints(" ]\n");
-    move_ansi(y, x);
+    move(y, x);
     return len;
 }
 

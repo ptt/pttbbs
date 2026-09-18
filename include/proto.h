@@ -621,8 +621,6 @@ void outs(const char *s);
 void outns(const char *str, int n);
 void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
-void move_ansi(int y, int x);
-void getyx_ansi(int *py, int *px);
 void region_scroll_up(int top, int bottom);
 
 #ifndef USE_PFTERM
