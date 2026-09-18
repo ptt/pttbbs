@@ -600,13 +600,6 @@ vs_draw_hdr2(const char *left, const char *right)
     outs(ANSI_RESET "\n");
 }
 
-
-/**
- * vs_footer(caption, msg): 在螢幕底部印出格式化的 caption msg (不可含 ANSI 碼)
- *
- * @param caption 左邊的分類字串
- * @param msg 訊息字串, \t 後文字靠右、最後面會自動留一個空白。
- */
 int
 vs_row_line(int row_bit)
 {
@@ -753,17 +746,28 @@ vs_locator_reset_hover(void)
     vs_locator_clear();
 }
 
+/**
+ * vs_footer(caption, msg): 在螢幕底部印出格式化的 caption msg (不可含 ANSI 碼)
+ *
+ * @param caption 左邊的分類字串
+ * @param msg 訊息字串, \t 後文字靠右、最後面會自動留一個空白。
+ */
 void
 vs_footer(const char *caption, const char *msg)
 {
     int i = 0;
-    move(b_lines, 0); clrtoeol();
 
     if (caption)
     {
+	move(b_lines, 0); clrtoeol();
 	outs(VCLR_FOOTER_CAPTION);
 	outs(caption);
 	i = vgetx();
+    }
+    else
+    {
+	i = vgetx();
+	clrtoeol();
     }
 
     if (!msg) msg = "";
