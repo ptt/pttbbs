@@ -344,9 +344,8 @@ edit_banned_list_for_board(const char *board) {
         return 0;
 
     while (1) {
-        clear();
-        vs_hdr2f(" Bakuman 權限設定系統 \t"
-                 " 看板: %s ，類型: 停止發言(水桶)，名單上限: ∞", board);
+        vs_hdr2(" Bakuman 權限設定系統 ",
+                TEMPFORMAT(STRLEN, " 看板: %s ，類型: 停止發言(水桶)，名單上限: ∞", board));
         move(3, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET

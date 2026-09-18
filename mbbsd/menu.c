@@ -91,41 +91,31 @@ typedef struct {
 void
 showtitle(const char *title, const char *mid)
 {
-    /* we have to...
-     * - display title in left, cannot truncate.
-     * - display mid message, cannot truncate
-     * - display tail (board info), if possible.
-     */
-    int llen, rlen, mlen, mpos = 0;
-    int pos = 0;
     int tail_type;
-    const char *mid_attr = ANSI_COLOR(33);
     int is_currboard_special = 0;
-    char buf[64];
+    char mid_buf[64], right_buf[64];
 
     const char *high_attr = HasUserFlag(UF_CURSOR_STANDOUT) ? ANSI_COLOR(41) :
 	ANSI_COLOR(41;5);
 
     /* prepare mid */
 #ifdef DEBUG
-    {
-	sprintf(buf, "  current pid: %6d  ", getpid());
-	mid = buf;
-	mid_attr = high_attr;
-    }
+    snprintf(mid_buf, sizeof(mid_buf), "%s  current pid: %6d  ",
+	     high_attr, getpid());
+    mid = mid_buf;
 #else
     if (ISNEWMAIL(currutmp)) {
-	mid = "    你有新信件    ";
-	mid_attr = high_attr;
+	snprintf(mid_buf, sizeof(mid_buf), "%s    你有新信件    ", high_attr);
+	mid = mid_buf;
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
 	// TODO cache this value?
 	int nreg = regform_estimate_queuesize();
 	if(nreg > 100)
 	{
 	    nreg -= (nreg % 10);
-	    sprintf(buf, "  超過 %03d 篇未審核  ", nreg);
-	    mid_attr = high_attr;
-	    mid = buf;
+	    snprintf(mid_buf, sizeof(mid_buf), "%s  超過 %03d 篇未審核  ",
+		     high_attr, nreg);
+	    mid = mid_buf;
 	}
     }
 #endif
@@ -146,49 +136,18 @@ showtitle(const char *title, const char *mid)
 		(getbcache(currbid)->brdattr & BRD_POSTMASK));
     }
 
-    /* now, calculate real positioning info */
-    llen = strlen(title);
-    mlen = strlen(mid);
-    mpos = (t_columns -1 - mlen)/2;
-
-    /* first, print left. */
-    clear();
-    outs(TITLE_COLOR "【");
-    outs(title);
-    outs("】");
-    pos = llen + 4;
-
-    /* print mid */
-    while(pos++ < mpos)
-	outc(' ');
-    outs(mid_attr);
-    outs(mid);
-    pos += mlen;
-    outs(TITLE_COLOR);
-
-    /* try to locate right */
-    rlen = strlen(currboard) + 4 + 4;
-    if(currboard[0] && pos+rlen < t_columns)
-    {
-	// print right stuff
-	while(pos++ < t_columns-rlen)
-	    outc(' ');
-	outs(title_tail_attrs[tail_type]);
-	outs(title_tail_msgs[tail_type]);
-	outs("《");
-
-	if (is_currboard_special)
-	    outs(ANSI_COLOR(32));
-	outs(currboard);
-	outs(title_tail_attrs[tail_type]);
-	outs("》" ANSI_RESET "\n");
+    if (currboard[0]) {
+	snprintf(right_buf, sizeof(right_buf), "%s%s《%s%s%s》",
+		 title_tail_attrs[tail_type],
+		 title_tail_msgs[tail_type],
+		 is_currboard_special ? ANSI_COLOR(32) : "",
+		 currboard,
+		 title_tail_attrs[tail_type]);
     } else {
-	// just pad it.
-	while(pos++ < t_columns)
-	    outc(' ');
-	outs(ANSI_RESET "\n");
+	right_buf[0] = '\0';
     }
 
+    vs_header(title, mid, right_buf);
 }
 
 static void
