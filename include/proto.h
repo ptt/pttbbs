@@ -741,6 +741,7 @@ int  term_init(void);
 void term_resize(int w, int h);
 void bell(void);
 void term_enable_mouse(int mode);
+void term_disable_mouse(void);
 int  term_get_mouse_mode(void);
 void term_uninit(void);
 
