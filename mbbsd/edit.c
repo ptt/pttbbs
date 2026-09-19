@@ -1,18 +1,8 @@
 /**
  * edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
- * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
- * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
- * 如果您認為「拿 cpu換記憶體」並不合乎您的須求, 您可以考慮改使用修正前的
- * 版本 (Revision 782)
  *
- * 原本 ve 的做法是, 因為每一行最大可以輸入 WRAPMARGIN 個字, 於是就替每一
- * 行保留了 WRAPMARGIN 這麼大的空間 (約 512 bytes) . 但是實際上, 站在修正
- * 成本最小的考量上, 我們只須要使得游標所在這一行維持 WRAPMARGIN 這麼大,
- * 其他每一行其實不須要這麼多的空間. 於是這個 patch就在每次游標在行間移動
- * 的時候, 將原本的那行記憶體縮小, 再將新移到的那行重新加大, 以達成最小的
- * 記憶體用量.
- * 以上說的這個動作在 adjustline() 中完成, adjustline()另外包括修正數個
- * global pointer, 以避免 dangling pointer .
+ * 目前每一行都只 allocate 需要的記憶體，只有編輯中的行有獨立的 buffer,
+ * 移到別行時看 dirty flag 決定是否要寫回。
  * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
  * 記憶體大小. 以方便測試結果.
  *
@@ -68,6 +58,7 @@ typedef struct textline_t {
     struct textline_t *prev;
     struct textline_t *next;
     short           len;
+    short           alloc_len;
 #ifdef DEBUG
     short           mlength;
 #endif
@@ -803,7 +794,11 @@ alloc_line(short length)
     textline_t *p;
 
     if ((p = (textline_t *) malloc(length + sizeof(textline_t)))) {
-	memset(p, 0, length + sizeof(textline_t));
+	p->prev = NULL;
+	p->next = NULL;
+	p->len = 0;
+	p->alloc_len = length;
+	p->data[0] = '\0';
 #ifdef DEBUG
 	p->mlength = length;
 #endif
@@ -874,11 +869,19 @@ delete_line(textline_t * line, int saved)
     if (saved) {
 	if  (curr_buf->deleted_line != NULL)
 	    free_line(curr_buf->deleted_line);
+	if (line == curr_buf->oldcurrline)
+	    curr_buf->oldcurrline = NULL;
+	if (line->alloc_len > line->len) {
+	    line = (textline_t *) realloc(line, line->len + sizeof(textline_t));
+	    assert(line);
+	    line->alloc_len = line->len;
+#ifdef DEBUG
+	    line->mlength = line->len;
+#endif
+	}
 	curr_buf->deleted_line = line;
 	curr_buf->deleted_line->next = NULL;
 	curr_buf->deleted_line->prev = NULL;
-	if (line == curr_buf->oldcurrline)
-	    curr_buf->oldcurrline = NULL;
     }
     else {
 	free_line(line);
@@ -911,79 +914,99 @@ indent_space(void)
 
 /**
  * adjustline(oldp, len);
- * 用來將 oldp 指到的那一行, 重新修正成 len這麼長.
- *
- * In FreeBSD:
- * 在這邊一共做了兩次的 memcpy() , 第一次從 heap 拷到 stack ,
- * 把原來記憶體 free() 後, 又重新在 stack上 malloc() 一次,
- * 然後再拷貝回來.
- * 主要是用 sbrk() 觀察到的結果, 這樣子才真的能縮減記憶體用量.
- * 詳見 /usr/share/doc/papers/malloc.ascii.gz (in FreeBSD)
+ * 用來將 oldp 指到的那一行, 透過 realloc() 重新調整為 len 長度,
+ * 並在指標位址改變時同步修正相關全域與串列指標.
  */
 static textline_t *
 adjustline(textline_t *oldp, short len)
 {
-    // XXX write a generic version ?
-    char tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
 
     assert(0 <= oldp->len && oldp->len <= WRAPMARGIN);
     assert(oldp != curr_buf->deleted_line);
+    assert(oldp->len <= len);
 
-    memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
-    free_line(oldp);
+    if (oldp->alloc_len == len)
+	return oldp;
 
-    newp = alloc_line(len);
-    memcpy(newp, tmpl, len + sizeof(textline_t));
+    newp = (textline_t *) realloc(oldp, len + sizeof(textline_t));
+    if (!newp) {
+	assert(newp);
+	abort_bbs(0);
+	return NULL;
+    }
+    newp->alloc_len = len;
+    newp->data[newp->len] = '\0';
 #ifdef DEBUG
     newp->mlength = len;
 #endif
-    if( oldp == curr_buf->firstline ) curr_buf->firstline = newp;
-    if( oldp == curr_buf->lastline )  curr_buf->lastline  = newp;
-    if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
-    if( oldp == curr_buf->blockline ) curr_buf->blockline = newp;
-    if( oldp == curr_buf->top_of_win) curr_buf->top_of_win= newp;
-    if(curr_buf->oldcurrline == NULL && len == WRAPMARGIN)
+    if (oldp != newp) {
+	if (oldp == curr_buf->firstline)   curr_buf->firstline   = newp;
+	if (oldp == curr_buf->lastline)    curr_buf->lastline    = newp;
+	if (oldp == curr_buf->currline)    curr_buf->currline    = newp;
+	if (oldp == curr_buf->blockline)   curr_buf->blockline   = newp;
+	if (oldp == curr_buf->top_of_win)  curr_buf->top_of_win  = newp;
+	if (oldp == curr_buf->oldcurrline) curr_buf->oldcurrline = newp;
+	if (newp->prev != NULL) newp->prev->next = newp;
+	if (newp->next != NULL) newp->next->prev = newp;
+    }
+    if (curr_buf->oldcurrline == NULL && len == WRAPMARGIN)
 	curr_buf->oldcurrline = curr_buf->currline;
-    if( newp->prev != NULL ) newp->prev->next = newp;
-    if( newp->next != NULL ) newp->next->prev = newp;
-    //    vmsg("adjust %x to %x, length: %d", (int)oldp, (int)newp, len);
     return newp;
 }
 
 /**
  * split 'line' right before the character pos
  *
- * @return the latter line after splitting
+ * @return the upper line after splitting
  */
 static textline_t *
 split(textline_t * line, int pos, int indent)
 {
     if (pos <= line->len) {
-	textline_t *p = alloc_line(WRAPMARGIN);
 	char  *ptr;
-	int             spcs = indent;
+	int    spcs = indent;
+	int    tail_len, new_len;
 
 	curr_buf->totaln++;
-
-	p->len = line->len - pos + spcs;
-	line->len = pos;
-
-	memset(p->data, ' ', spcs);
-	p->data[spcs] = 0;
 
 	ptr = line->data + pos;
 	if (curr_buf->indent_mode) {
 	    ptr = next_non_space_char(ptr);
-	    p->len = strlen(ptr) + spcs;
+	    tail_len = strlen(ptr);
+	} else {
+	    tail_len = line->len - pos;
 	}
-	strcat(p->data + spcs, ptr);
-	line->data[line->len] = '\0';
+	new_len = tail_len + spcs;
 
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
-	    line = adjustline(line, line->len);
-	    insert_line(line, p);
-	    curr_buf->currline = p;
+	    /* Allocate exact-size node for the upper half, reuse line (WRAPMARGIN) for currline */
+	    textline_t *head = alloc_line(pos);
+	    head->len = pos;
+	    memcpy(head->data, line->data, pos);
+	    head->data[pos] = '\0';
+
+	    if (line->alloc_len < WRAPMARGIN)
+		line = adjustline(line, WRAPMARGIN);
+
+	    head->prev = line->prev;
+	    head->next = line;
+	    if (line->prev)
+		line->prev->next = head;
+	    else
+		curr_buf->firstline = head;
+	    line->prev = head;
+
+	    if (curr_buf->top_of_win == line)
+		curr_buf->top_of_win = head;
+	    if (curr_buf->blockline == line)
+		curr_buf->blockline = head;
+
+	    memmove(line->data + spcs, ptr, tail_len + 1);
+	    if (spcs > 0)
+		memset(line->data, ' ', spcs);
+	    line->len = new_len;
+
 	    if (pos == curr_buf->currpnt)
 		curr_buf->currpnt = spcs;
 	    else {
@@ -997,17 +1020,22 @@ split(textline_t * line, int pos, int indent)
 
 	    /* split may cause cursor hit bottom */
 	    edit_window_adjust();
+	    line = head;
 	} else {
-	    p = adjustline(p, p->len);
+	    /* Allocate exact-size node for the lower half directly */
+	    textline_t *p = alloc_line(new_len);
+	    p->len = new_len;
+	    if (spcs > 0)
+		memset(p->data, ' ', spcs);
+	    memcpy(p->data + spcs, ptr, tail_len + 1);
+	    line->len = pos;
+	    line->data[pos] = '\0';
 	    insert_line(line, p);
 	}
 	curr_buf->redraw_everything = YEA;
 	edit_buffer_check_healthy(line);
 	edit_buffer_check_healthy(line->next);
     }
-#ifdef DEBUG
-    assert(curr_buf->currline->mlength == WRAPMARGIN);
-#endif
     return line;
 }
 
@@ -1020,9 +1048,13 @@ split(textline_t * line, int pos, int indent)
 static void
 insert_char(int ch)
 {
-    textline_t *p = curr_buf->currline;
+    textline_t *p;
     char  *s;
     int             wordwrap = YEA;
+
+    if (curr_buf->currline->alloc_len < WRAPMARGIN)
+	curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+    p = curr_buf->currline;
 
     assert(curr_buf->currpnt <= p->len);
 #ifdef DEBUG
@@ -1060,7 +1092,7 @@ insert_char(int ch)
 
     p = p->next;
     if (wordwrap && p->len >= 1) {
-	if (p != curr_buf->currline)
+	if (p->alloc_len < p->len + 1)
 	    p = adjustline(p, p->len + 1);
 #ifdef DEBUG
 	assert(p->len < p->mlength);
@@ -1071,9 +1103,6 @@ insert_char(int ch)
 	    p->len++;
 	}
     }
-#ifdef DEBUG
-    assert(curr_buf->currline->mlength == WRAPMARGIN);
-#endif
 }
 
 /**
@@ -1137,13 +1166,14 @@ undelete_line(void)
 
     // insert in front of currline
     p->prev = curr_buf->currline->prev;
-    p->next = curr_buf->currline->next;
+    p->next = curr_buf->currline;
     if (curr_buf->currline->prev)
 	curr_buf->currline->prev->next = p;
     curr_buf->currline->prev = p;
     curr_buf->totaln++;
 
-    curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
+    if (curr_buf->currline->alloc_len > curr_buf->currline->len)
+	curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
 
     // maintain special line pointer
     if (curr_buf->top_of_win == curr_buf->currline)
@@ -1153,7 +1183,6 @@ undelete_line(void)
 
     // change currline
     curr_buf->currline = p;
-    curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
     curr_buf->currpnt = 0;
 
     curr_buf->redraw_everything = YEA;
@@ -1198,6 +1227,8 @@ join(textline_t * line)
 
     ovfl = line->len + n->len - WRAPMARGIN;
     if (ovfl < 0) {
+	if (line->alloc_len < WRAPMARGIN)
+	    line = adjustline(line, WRAPMARGIN);
 	strcat(line->data, n->data);
 	line->len += n->len;
 	delete_line(n, 0);
@@ -2187,8 +2218,6 @@ block_delete(void)
 	curr_buf->currline = alloc_line(WRAPMARGIN);
 	curr_buf->currln++;
 	curr_buf->totaln++;
-    } else {
-	curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
     }
 
     // maintain special line pointer
@@ -3586,12 +3615,12 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     if(	curr_buf->oldcurrline != curr_buf->firstline ||
 	curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
+	if (curr_buf->oldcurrline != NULL &&
+	    curr_buf->oldcurrline->alloc_len > curr_buf->oldcurrline->len)
+	    curr_buf->oldcurrline = adjustline(curr_buf->oldcurrline, curr_buf->oldcurrline->len);
 	curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
-           curr_buf->firstline= adjustline(curr_buf->firstline, WRAPMARGIN);
+           curr_buf->firstline;
     }
-#ifdef DEBUG
-    assert(curr_buf->currline->mlength == WRAPMARGIN);
-#endif
 
     /* No matter you quote or not, just start the cursor from (0,0) */
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line =
@@ -3611,13 +3640,11 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    curr_buf->redraw_everything = NA;
 	}
 	if( curr_buf->oldcurrline != curr_buf->currline ){
-	    if (curr_buf->oldcurrline != NULL)
+	    if (curr_buf->oldcurrline != NULL &&
+		curr_buf->oldcurrline->alloc_len > curr_buf->oldcurrline->len)
 		curr_buf->oldcurrline = adjustline(curr_buf->oldcurrline, curr_buf->oldcurrline->len);
-	    curr_buf->oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+	    curr_buf->oldcurrline = curr_buf->currline;
 	}
-#ifdef DEBUG
-	assert(curr_buf->currline->mlength == WRAPMARGIN);
-#endif
 
 	if (curr_buf->ansimode)
 	    ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
@@ -4020,9 +4047,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 			curr_buf->curr_window_line--;
 			curr_buf->currln--;
 
-			curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
+			if (curr_buf->currline->alloc_len > curr_buf->currline->len)
+			    curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
 			curr_buf->currline = curr_buf->currline->prev;
-			curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 			curr_buf->oldcurrline = curr_buf->currline;
 
 			curr_buf->currpnt = curr_buf->currline->len;
@@ -4091,7 +4118,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    delete_line(curr_buf->currline, 1);
 		    curr_buf->currline = p;
 		    curr_buf->redraw_everything = YEA;
-		    adjustline(curr_buf->currline, WRAPMARGIN);
 		    break;
 		}
 		else if (curr_buf->currline->len == curr_buf->currpnt) {
