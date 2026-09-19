@@ -35,6 +35,14 @@ static int t_lines = 24, t_columns = 80;
 # endif
 #endif
 
+#ifndef FT_IS_UTF8
+# define FT_IS_UTF8 (convert_mode == CONV_UTF8)
+#endif
+
+#endif
+
+#ifndef FT_IS_UTF8
+# define FT_IS_UTF8 (1)
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -201,6 +209,20 @@ static int t_lines = 24, t_columns = 80;
 // 0: Very few poor terminals (eg, CrazyTerm/BBMan) cannot omit any parameters
 #define FTCONF_ANSICMD2_OMIT (0)
 
+// SGR 66 half-width / dual-color character support
+// Convert SGR 66 input into latched attribute
+#ifndef FTCONF_USE_DBCS_SGR66
+#define FTCONF_USE_DBCS_SGR66 (1)
+#endif
+// Output SGR 66 when in UTF-8 mode
+#ifndef FTCONF_UTF8_OUTPUT_SGR66
+#define FTCONF_UTF8_OUTPUT_SGR66 (1)
+#endif
+// Output SGR 66 when in DBCS (Big5) mode
+#ifndef FTCONF_DBCS_OUTPUT_SGR66
+#define FTCONF_DBCS_OUTPUT_SGR66 (0)
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Definition
 //////////////////////////////////////////////////////////////////////////
@@ -258,6 +280,8 @@ typedef struct
     size_t  cstride;        // character row stride (mcols + 1)
     size_t  astride;        // attribute row stride (mcols)
     ftattr  attr;
+    ftattr  half_attr;
+    int     has_half_attr;
     int     rows, cols;     // the (possibly cropped) display region size
     int     rows_full, cols_full; // the full terminal size
     int     y, x;
@@ -527,6 +551,7 @@ void    fterm_rawnum    (int arg);
 void    fterm_rawcmd    (int arg, int defval, char c);
 void    fterm_rawcmd2   (int arg1, int arg2, int defval, char c);
 void    fterm_rawattr   (ftattr attr);  // optimized changing attribute
+void    fterm_rawattr_half(ftattr attr); // half-width deferred changing attribute (SGR 66)
 void    fterm_rawclear  (void);
 void    fterm_rawclreol (void);
 void    fterm_rawhome   (void);
@@ -1163,17 +1188,34 @@ doupdate(void)
             if (FTD[x] & FTDIRTY_CLEAR_DBCS) {
                 fterm_raws("  \b\b");
             }
-            if ((FTD[x] & FTDIRTY_DBCS) && (FT_DBCS_NOINTRESC))
+
+            // SGR66
+            int output_sgr66 = 0;
+            if (FT_IS_UTF8)
+            {
+                if (FTCONF_UTF8_OUTPUT_SGR66)
+                    output_sgr66 = 1;
+            } else if (FTCONF_DBCS_OUTPUT_SGR66) {
+                    output_sgr66 = 1;
+            }
+
+            if ((FTD[x] & FTDIRTY_DBCS) && (FT_DBCS_NOINTRESC || output_sgr66))
             {
                 // prevent changing attributes inside DBCS
-            }
-            else
+            } else {
+                ftattr attr = FTAMAP(y)[x];
 #ifdef DBG_SHOW_DIRTY
-            fterm_rawattr(FTD[x] ?
-                (FTAMAP(y)[x] | FTATTR_BOLD) : (FTAMAP(y)[x] & ~FTATTR_BOLD));
-#else // !DBG_SHOW_DIRTY
-            fterm_rawattr(FTAMAP(y)[x]);
-#endif // !DBG_SHOW_DIRTY
+                if (FTD[x])
+                    attr |= FTATTR_BOLD;
+                else
+                    attr &= ~FTATTR_BOLD;
+#endif // DBG_SHOW_DIRTY
+                fterm_rawattr(attr);
+                if (x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS) && output_sgr66)
+                {
+                    fterm_rawattr_half(FTAMAP(y)[x+1]);
+                }
+            }
 
 #ifdef PFTERM_DISABLE_HIDDEN_MESSAGE
             // Disable hidden message, only if current and previous chars are
@@ -1238,6 +1280,7 @@ getmaxyx(int *y, int *x)
 void
 move(int y, int x)
 {
+    ft.has_half_attr = 0;
     ft.y = ranged(y, 0, ft.rows-1);
     ft.x = ranged(x, 0, ft.cols-1);
 }
@@ -1429,6 +1472,7 @@ outc(unsigned char c)
     }
     else if (c == '\t')
     {
+        ft.has_half_attr = 0;
         // tab: move by 8, and erase the moved range
         int x = ft.x;
         if (x % 8 == 0)
@@ -1446,10 +1490,12 @@ outc(unsigned char c)
     }
     else if (c == '\b')
     {
+        ft.has_half_attr = 0;
         ft.x = ranged(ft.x-1, 0, ft.cols-1);
     }
     else if (c == '\r' || c == '\n')
     {
+        ft.has_half_attr = 0;
         // new line: cursor movement, and do not print anything
         // XXX old screen.c also calls clrtoeol() for newlins.
         clrtoeol();
@@ -1471,10 +1517,18 @@ outc(unsigned char c)
     {
         assert (ft.x >= 0 && ft.x < ft.cols);
 
+        if (FTCONF_USE_DBCS_SGR66 && ft.has_half_attr)
+        {
+            FTA = ft.half_attr;
+            ft.has_half_attr = 0;
+        }
+        else
+        {
 #ifdef FTATTR_TRANSPARENT
-        if (ft.attr != FTATTR_TRANSPARENT)
+            if (ft.attr != FTATTR_TRANSPARENT)
 #endif // FTATTR_TRANSPARENT
-        FTA = ft.attr;
+                FTA = ft.attr;
+        }
 
         // normal characters
         FTC = c;
@@ -1844,10 +1898,19 @@ fterm_exec(void)
         //  SGR 39 (FG-reset)           is supported.
         //  SGR 40-47 (BG)              is supported.
         //  SGR 49 (BG-reset)           is supported.
-        if (n == -1)    // first param
-            n = 0;
-        while (n > -1)
+        p = (char*)ft.cmd + 2; // ESC [
+        for (;;)
         {
+            if (isdigit(*p))
+            {
+                n = atoi(p);
+                while (isdigit(*p)) p++;
+            }
+            else
+            {
+                n = 0;
+            }
+
             if (n >= 30 && n <= 37)
             {
                 // set foreground
@@ -1901,22 +1964,17 @@ fterm_exec(void)
             case 49:
                 attrsetbg(FTATTR_DEFAULT_BG);
                 break;
+            case 66:
+                if (FTCONF_USE_DBCS_SGR66) {
+                    ft.half_attr = ft.attr;
+                    ft.has_half_attr = 1;
+                }
+                break;
             }
 
-            // parse next command
-            n = -1;
-            if (*p == ';')
-            {
-                n = 0;
-                p++;
-            }
-            else if (isdigit(*p))
-            {
-                n = atoi(p);
-                while (isdigit(*p)) p++;
-                if (*p == ';')
-                    p++;
-            }
+            if (*p != ';')
+                break;
+            p++;
         }
         break;
 
@@ -2115,6 +2173,18 @@ fterm_rawattr(ftattr rattr)
         return;
 
     fterm_raws(cmd);
+    ft.rattr = rattr;
+}
+
+void
+fterm_rawattr_half(ftattr rattr)
+{
+    char cmd[FTATTR_MINCMD*2];
+    if (!fterm_chattr(cmd, ft.rattr, rattr))
+        return;
+
+    fterm_raws(ESC_STR "[66;");
+    fterm_raws(cmd + 2);
     ft.rattr = rattr;
 }
 
