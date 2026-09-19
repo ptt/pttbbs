@@ -530,7 +530,7 @@ static void debug_rpt(const char *msg GCC_UNUSED, chicken_t *c GCC_UNUSED) {
 static void debug_timediff(chicken_t *c GCC_UNUSED) {
 #ifdef DBG_CHICKEN
     char buf[7];
-    vs_hdr2("寵物", "測試");
+    vs_hdr2(" 寵物 ", " 測試");
     getdata(2, 0, "要模擬幾小時未進入的狀態？", buf, sizeof(buf), NUMECHO);
     syncnow();
     if (*buf)

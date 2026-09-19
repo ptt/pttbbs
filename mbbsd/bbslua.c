@@ -1384,7 +1384,7 @@ bbslua_logo(lua_State *L)
     fullmsg(msg);
 
     // system break key prompt
-    vbar(ANSI_COLOR(22;37) "    提醒您執行中隨時可按 "
+    vbar(ANSI_COLOR(0;37;44) "    提醒您執行中隨時可按 "
          ANSI_COLOR(1;31) "[Ctrl-C]"
          ANSI_COLOR(0;37;44) " 強制中斷 BBS-Lua 程式");
     lua_pop(L, 1);

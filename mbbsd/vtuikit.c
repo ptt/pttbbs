@@ -570,6 +570,8 @@ vs_hdr2bar(const char *left, const char *right)
     outs(VCLR_HDR2_LEFT);
     outs(left);
     outs(VCLR_HDR2_RIGHT);
+    if (*right && *right != ' ')
+	outc(' ');
     getyx(&y, &x);
 
     int w = MAX_COL - x;

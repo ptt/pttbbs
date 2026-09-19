@@ -850,7 +850,7 @@ check_bad_clients(void) {
     if (dashf(dest))
 	return;
 
-    vs_hdr2("安全系統", "異常發文確認");
+    vs_hdr2(" 安全系統 ", " 異常發文確認");
     outs(ANSI_COLOR(1;33)
 	 "親愛的使用者您好，我們發現您曾在 SYSOP 看板有如下的回文，\n"
 	 "看起來像是使用了某些不正常的程式導致發文結果異常: \n" ANSI_RESET);
