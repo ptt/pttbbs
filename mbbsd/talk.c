@@ -1968,11 +1968,11 @@ t_talk(void)
 static int
 reply_connection_request(const userinfo_t *uip)
 {
-    char            buf[4], genbuf[200];
+    char            buf[4];
 
     if (uip->mode != PAGE) {
-	SNPRINTF(genbuf, "%s ¤w°±¤î©I¥s¡A«öEnterÄ~Äò...", uip->userid);
-	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
+	getdata(0, 0, TEMPFORMAT(STRLEN, "%s ¤w°±¤î©I¥s¡A«öEnterÄ~Äò...", uip->userid),
+		buf, sizeof(buf), LCECHO);
 	return -1;
     }
     return establish_talk_connection(uip);

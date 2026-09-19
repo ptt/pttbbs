@@ -390,15 +390,14 @@ static int
 ChessAnswerRequest(ChessInfo* info, const char* req_name)
 {
     char buf[4];
-    char msg[64];
 
     SNPRINTF(info->warnmsg, ANSI_COLOR(1;31) "要求%s!" ANSI_RESET, req_name);
     ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
     bell();
 
-    SNPRINTF(msg, "對方要求%s，是否接受?(y/N)", req_name);
     DO_WITHOUT_PEER(30,
-    getdata(b_lines, 0, msg, buf, sizeof(buf), DOECHO),
+    getdata(b_lines, 0, TEMPFORMAT(64, "對方要求%s，是否接受?(y/N)", req_name),
+	    buf, sizeof(buf), DOECHO),
     buf[0] = 'n');
     ChessDrawHelpLine(info);
 
@@ -1145,8 +1144,6 @@ ChessStartGame(char func_char, int sig, const char* title)
 	_current_time_limit->free_time *= 60; /* minute -> second */
 
 	if (_current_time_limit->time_mode == CHESS_TIMEMODE_MULTIHAND) {
-	    char display_buf[128];
-
 	    do {
 		getdata_str(4, 0, "請設定步時, 以分鐘為單位:",
 			buf, 3, DOECHO, "5");
@@ -1154,10 +1151,10 @@ ChessStartGame(char func_char, int sig, const char* title)
 	    } while (_current_time_limit->limit_time < 0 || _current_time_limit->limit_time > 30);
 	    _current_time_limit->limit_time *= 60; /* minute -> second */
 
-	    SNPRINTF(display_buf, "請設定限步 (每 %d 分鐘需走幾步):",
-		    _current_time_limit->limit_time / 60);
 	    do {
-		getdata_str(5, 0, display_buf, buf, 3, DOECHO, "10");
+		getdata_str(5, 0, TEMPFORMAT(128, "請設定限步 (每 %d 分鐘需走幾步):",
+			    _current_time_limit->limit_time / 60),
+			buf, 3, DOECHO, "10");
 		_current_time_limit->limit_hand = atoi(buf);
 	    } while (_current_time_limit->limit_hand < 1);
 	} else {

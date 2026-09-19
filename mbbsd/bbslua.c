@@ -1295,7 +1295,6 @@ bbslua_logo(lua_State *L)
     int i = 0;
     double tocinterface = 0;
     int tocs = 0;
-    char msg[STRLEN];
 
     // get toc information
     lua_getglobal(L, "toc");
@@ -1332,9 +1331,8 @@ bbslua_logo(lua_State *L)
         move(y-1, 0);
         outs(ANSI_COLOR(0;1;37;41));
         fullmsg("");
-        SNPRINTF(msg, " ▲ 此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
-                tocinterface);
-        fullmsg(msg);
+        fullmsg(TEMPFORMAT(STRLEN, " ▲ 此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
+                tocinterface));
         fullmsg("   若執行出現錯誤，建議您重新登入 BBS 後再重試");
         fullmsg("");
     }
@@ -1367,10 +1365,8 @@ bbslua_logo(lua_State *L)
                 continue;
             }
             move(++y, 0);
-            SNPRINTF(msg, "  %s: %-.*s",
-                    bbsluaTocPrompts[i], STRLEN-12, lua_tostring(L, -1));
-            msg[sizeof(msg)-1] = 0;
-            fullmsg(msg);
+            fullmsg(TEMPFORMAT(STRLEN, "  %s: %-.*s",
+                    bbsluaTocPrompts[i], STRLEN-12, lua_tostring(L, -1)));
             lua_pop(L, 1);
         }
         fullmsg("");
@@ -1379,9 +1375,9 @@ bbslua_logo(lua_State *L)
     // print caption
     move(by-2, 0); outc('\n');
     outs(ANSI_COLOR(0;1;37;44));
-    SNPRINTF(msg, " ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
-            (double)BBSLUA_INTERFACE_VER);
-    fullmsg(msg);
+    fullmsg(TEMPFORMAT(STRLEN,
+                " ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
+                (double)BBSLUA_INTERFACE_VER));
 
     // system break key prompt
     vbar(ANSI_COLOR(0;37;44) "    提醒您執行中隨時可按 "

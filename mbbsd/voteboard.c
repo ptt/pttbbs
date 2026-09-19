@@ -130,9 +130,8 @@ do_voteboardreply(const fileheader_t * fhdr)
 	    return;
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
-    sprintf(genbuf, "請問您與這個議題的關係或%s理由為何：",
-	    opnion[0] == 'y' ? "支持" : "反對");
-    if (!getdata(20, 0, genbuf, reason, 35, DOECHO)) {
+    if (!getdata(20, 0, TEMPFORMAT(STRLEN, "請問您與這個議題的關係或%s理由為何：",
+		 opnion[0] == 'y' ? "支持" : "反對"), reason, 35, DOECHO)) {
 	return;
     }
     if ((fd = open(oldfpath, O_RDONLY)) == -1)

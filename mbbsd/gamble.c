@@ -38,7 +38,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 {
     int i, count, wide = 0, end = 0;
     FILE *fp;
-    char            genbuf[256], t[25];
+    char            genbuf[256];
     bignum_t total = 0, ticket[MAX_ITEM] = {0};
 
     clear();
@@ -46,8 +46,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	SNPRINTF(genbuf, "%s 樂透", bh->brdname);
 	if (bh->endgamble && time4_lt(now, bh->endgamble) &&
 	    time4_diff(bh->endgamble, now) < 3600) {
-	    SNPRINTF(t, "封盤倒數 %d 秒", (int)time4_diff(bh->endgamble, now));
-	    showtitle(genbuf, t);
+	    showtitle(genbuf, TEMPFORMAT(25, "封盤倒數 %d 秒", (int)time4_diff(bh->endgamble, now)));
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
@@ -641,8 +640,7 @@ hold_gamble(void)
     outs("請依次輸入彩券名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");
     //outs(ANSI_COLOR(1;33) "注意輸入後無法修改！\n");
     for( i = 0 ; i < 8 ; ++i ){
-	SNPRINTF(yn, " %d)", i + 1);
-	getdata(7 + i, 0, yn, genbuf, MAX_ITEM_INPUT_LEN, DOECHO);
+	getdata(7 + i, 0, TEMPFORMAT(16, " %d)", i + 1), genbuf, MAX_ITEM_INPUT_LEN, DOECHO);
 	if (!genbuf[0] && i > 1)
 	    break;
 	fprintf(fp, "%s\n", genbuf);

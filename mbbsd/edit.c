@@ -442,7 +442,6 @@ show_phone_mode_panel(void)
 static void
 edit_msg(void)
 {
-    char buf[STRLEN];
     int n = curr_buf->currpnt;
 
     if (curr_buf->ansimode)		/* Thor: 作 ansi 編輯 */
@@ -451,16 +450,15 @@ edit_msg(void)
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
 
-    SNPRINTF(buf, " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
-	    "║%s│%c%c%c%c║%3d:%3d",
-	    curr_buf->insert_mode ? "插入" : "取代",
-	    curr_buf->ansimode ? 'A' : 'a',
-	    curr_buf->indent_mode ? 'I' : 'i',
-	    curr_buf->phone_mode ? 'P' : 'p',
-	    curr_buf->raw_mode ? 'R' : 'r',
-	    curr_buf->currln + 1, n + 1);
-
-    vs_footer(" 編輯文章 ", buf);
+    vs_footer(" 編輯文章 ",
+	    TEMPFORMAT(STRLEN, " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
+		"║%s│%c%c%c%c║%3d:%3d",
+		curr_buf->insert_mode ? "插入" : "取代",
+		curr_buf->ansimode ? 'A' : 'a',
+		curr_buf->indent_mode ? 'I' : 'i',
+		curr_buf->phone_mode ? 'P' : 'p',
+		curr_buf->raw_mode ? 'R' : 'r',
+		curr_buf->currln + 1, n + 1));
 }
 
 static const char *

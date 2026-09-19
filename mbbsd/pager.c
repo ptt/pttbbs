@@ -459,14 +459,13 @@ my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t 
 
     if (is_confirm_needed && uin && *uin->userid) {
         // The PROMPT_VERIFY could be longer so we should truncate.
-        char trunc[STRLEN], prompt[STRLEN], genbuf[2];
+        char trunc[STRLEN], genbuf[2];
         STRLCPY(trunc, msg);
         trunc[STRLEN - strlen(PROMPT_VERIFY) - IDLEN - 2] = '\0';
         DBCS_safe_trim(trunc);
         if (strlen(trunc) != strlen(msg))
             STRLCAT(trunc, "...");
-        SNPRINTF(prompt, PROMPT_VERIFY, destid, trunc);
-        getdata(0, 0, prompt, genbuf, sizeof(genbuf), LCECHO);
+        getdata(0, 0, TEMPFORMAT(STRLEN, PROMPT_VERIFY, destid, trunc), genbuf, sizeof(genbuf), LCECHO);
         if (genbuf[0] == 'n')
             return false;
     }
@@ -737,9 +736,8 @@ int
 call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
-        char genbuf[STRLEN];
-        SNPRINTF(genbuf, PROMPT_STD, uentp->userid);
-        my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_GENERAL, NULL);
+        my_write(uentp->pid, TEMPFORMAT(STRLEN, PROMPT_STD, uentp->userid),
+                 uentp->userid, WATERBALL_GENERAL, NULL);
         return 1;
     }
     return 0;
@@ -838,10 +836,8 @@ pager_handle_ctrl_r_default(int ch)
         scr_dump(&old_screen);
 
         my_newfd = vkey_detach();
-        char buf[ANSILINELEN];
-        SNPRINTF(buf, ANSI_COLOR(1;33;46) "¡¹%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET, target_id, last_call_in ? last_call_in : "");
-        outmsg(buf);
+        outmsg(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(1;33;46) "¡¹%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET, target_id, last_call_in ? last_call_in : ""));
 
         watermode = 0;
         const char *prompt = NULL;

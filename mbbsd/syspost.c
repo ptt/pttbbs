@@ -65,7 +65,6 @@ void
 post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid)
 {
     char genbuf[(NUMPERMS+1) * STRLEN*2] = "", reason[30] = "";
-    char title[TTLEN+1];
     char *s = genbuf;
     int  i, flag = 0;
 
@@ -91,10 +90,9 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     sprintf(s, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s\n" ANSI_RESET,
 	    cuser.userid, reason);
 
-    SNPRINTF(title, "[安全報告] 站長%s修改%s權限報告",
-	    cuser.userid, userid);
-
-    post_msg(BN_SECURITY, title, genbuf, "[系統安全局]");
+    post_msg(BN_SECURITY,
+	     TEMPFORMAT(TTLEN + 1, "[安全報告] 站長%s修改%s權限報告", cuser.userid, userid),
+	     genbuf, "[系統安全局]");
 }
 
 void
@@ -137,25 +135,23 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
 void
 post_newboard(const char *bgroup, const char *bname, const char *bms)
 {
-    char            genbuf[ANSILINELEN], title[TTLEN+1];
-
-    SNPRINTF(title, "[新板成立] %s", bname);
-    SNPRINTF(genbuf, "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
-	     cuser.userid, bname, bgroup, bms);
-
-    post_msg("Record", title, genbuf, "[系統]");
+    post_msg("Record",
+	     TEMPFORMAT(TTLEN + 1, "[新板成立] %s", bname),
+	     TEMPFORMAT(ANSILINELEN, "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
+			cuser.userid, bname, bgroup, bms),
+	     "[系統]");
 }
 
 void post_policelog_spam(const char *bname, const char *attach_file)
 {
     char fpath[PATHLEN] = "";
-    char msg[ANSILINELEN], title[STRLEN];
-    SNPRINTF(title, "[報告] %s:偵測到不當發言", cuser.userid);
-    SNPRINTF(msg, "系統偵測到 %s 試圖於 %s %s 發表不當言論，\n"
-             "原文如下 (不予發出，但有備份至使用者信箱):\n%s\n\n",
-             cuser.userid, bname ? "看板" : "郵件", bname ? bname : "",
-             MSG_SEPARATOR);
-    if (post_msg2(BN_POLICELOG, title, msg, "[系統]", fpath))
+    if (post_msg2(BN_POLICELOG,
+		  TEMPFORMAT(STRLEN, "[報告] %s:偵測到不當發言", cuser.userid),
+		  TEMPFORMAT(ANSILINELEN, "系統偵測到 %s 試圖於 %s %s 發表不當言論，\n"
+			     "原文如下 (不予發出，但有備份至使用者信箱):\n%s\n\n",
+			     cuser.userid, bname ? "看板" : "郵件", bname ? bname : "",
+			     MSG_SEPARATOR),
+		  "[系統]", fpath))
         return;
     assert(attach_file && *attach_file);
     if (*fpath)
@@ -167,15 +163,14 @@ post_policelog2(const char *bname, const char *atitle, const char *action,
                 const char *reason, const int toggle, const char *attach_file)
 {
     char msg_file[PATHLEN];
-    char genbuf[ANSILINELEN], title[TTLEN+1];
 
-    SNPRINTF(title, "[%s][%s] %s by %s", action,
-             toggle ? "開啟" : "關閉", bname, cuser.userid);
-    SNPRINTF(genbuf, "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n\n",
-	     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
-	     reason, atitle ? "文章標題 : " : "", atitle ? atitle : "");
-
-    if (post_msg2(BN_POLICELOG, title, genbuf, "[系統]", msg_file) == 0) {
+    if (post_msg2(BN_POLICELOG,
+		  TEMPFORMAT(TTLEN + 1, "[%s][%s] %s by %s", action,
+			     toggle ? "開啟" : "關閉", bname, cuser.userid),
+		  TEMPFORMAT(ANSILINELEN, "%s (%s) %s %s 看板 %s 功\能\n原因 : %s\n%s%s\n\n",
+			     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
+			     reason, atitle ? "文章標題 : " : "", atitle ? atitle : ""),
+		  "[系統]", msg_file) == 0) {
         if (attach_file)
             AppendTail(attach_file, msg_file, 0);
     }

@@ -1003,10 +1003,9 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                     onekey_func0 func0 = (onekey_func0)(void *)func;
 		    mode = (*func0)();
                 } else if( num > 0 ) {
-		    char    direct[64 + 8];
-                    SNPRINTF(direct, "%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
-				  direct, locmem->crs_ln - locmem->top_ln);
+				  TEMPFORMAT(PATHLEN, "%s.bottom", currdirect),
+				  locmem->crs_ln - locmem->top_ln);
 		} else {
                     mode = (*func)(locmem->crs_ln,
 				   &headers[locmem->crs_ln - locmem->top_ln],
@@ -1100,9 +1099,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
 	n = headers_size - rv;
 
     if (n > 0) {
-	char    directbottom[PATHLEN];
-	SNPRINTF(directbottom, "%s.bottom", direct);
-	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), recbase, n);
+	n = get_records(TEMPFORMAT(PATHLEN, "%s.bottom", direct), headers+rv, sizeof(fileheader_t), recbase, n);
 	if (n < 0) n = 0;
 	rv += n;
     }

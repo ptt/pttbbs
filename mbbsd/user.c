@@ -568,12 +568,12 @@ void Customize(void)
 static void set_chess(const char *name, int y,
                       uint16_t *p_win, uint16_t *p_lose, uint16_t *p_tie) {
     char buf[STRLEN];
-    char prompt[STRLEN];
     char *p;
     char *strtok_pos;
-    SNPRINTF(buf, "%d/%d/%d", *p_win, *p_lose, *p_tie);
-    SNPRINTF(prompt, "%s 戰績 勝/敗/和:", name);
-    if (!getdata_str(y, 0, prompt, buf, 5 * 3 + 3, DOECHO, buf))
+    if (!getdata_str(y, 0,
+                TEMPFORMAT(STRLEN, "%s 戰績 勝/敗/和:", name),
+                buf, 5 * 3 + 3, DOECHO,
+                TEMPFORMAT(STRLEN, "%d/%d/%d", *p_win, *p_lose, *p_tie)))
         return;
     p = strtok_r(buf, "/\r\n", &strtok_pos);
     if (!p) return;
@@ -827,10 +827,10 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		struct tm t = {0};
 		time4_t clk = x.lastlogin;
 		localtime4_r(&clk, &t);
-		SNPRINTF(genbuf, "%04i/%02i/%02i %02i:%02i:%02i",
-			t.tm_year + 1900, t.tm_mon+1, t.tm_mday,
-			t.tm_hour, t.tm_min, t.tm_sec);
-		if (getdata_str(y, 0, "最近上線時間：", buf, 20, DOECHO, genbuf) != 0) {
+		if (getdata_str(y, 0, "最近上線時間：", buf, 20, DOECHO,
+				TEMPFORMAT(32, "%04i/%02i/%02i %02i:%02i:%02i",
+					t.tm_year + 1900, t.tm_mon+1, t.tm_mday,
+					t.tm_hour, t.tm_min, t.tm_sec)) != 0) {
 		    int y, m, d, hh, mm, ss;
 		    if (ParseDateTime(buf, &y, &m, &d, &hh, &mm, &ss))
 			continue;
@@ -851,8 +851,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
 	    do {
 		int max_days = time4_days_elapsed(x.lastlogin, x.firstlogin);
-		SNPRINTF(genbuf, "%d", x.numlogindays);
-		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO, genbuf))
+		if (getdata_str(y++, 0, STR_LOGINDAYS "：", buf, 10, DOECHO,
+				TEMPFORMAT(16, "%d", x.numlogindays)))
 		    if ((tmp = atoi(buf)) >= 0)
 			x.numlogindays = tmp;
 		if ((int)x.numlogindays > max_days)
@@ -1021,7 +1021,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	tokill = 1;
 	{
 	    char reason[STRLEN];
-	    char title[STRLEN], msg[1024];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
 	    if (vans(MSG_SURE_NY) != 'y')
 	    {
@@ -1029,12 +1028,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    }
 	    pre_confirmed = 1;
-	    SNPRINTF(title, "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
-	    SNPRINTF(msg, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
-		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
-		    x.userid, cuser.userid, reason,
-		    x.realname, x.address, x.justify, x.email);
-	    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+	    post_msg(BN_SECURITY,
+		     TEMPFORMAT(STRLEN, "刪除ID: %s (站長: %s)", x.userid, cuser.userid),
+		     TEMPFORMAT(1024, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+			     "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
+			     x.userid, cuser.userid, reason,
+			     x.realname, x.address, x.justify, x.email),
+		     "[系統安全局]");
 	}
 	break;
 
@@ -1161,30 +1161,28 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	}
 	log_user_security(x.userid, "%s (MailQuotaExempt) -> %s\n",
 			  "[Admin]", new_mail_exempt ? "ON" : "OFF");
-	char title[TTLEN], msg[STRLEN];
-	SNPRINTF(title, "%s 的免費寄信豁免變更通知 (by %s)", x.userid, cuser.userid);
-	SNPRINTF(msg, "站長 %s 修改 %s 的免費寄信不計額度 -> %s\n", cuser.userid, x.userid,
-		 new_mail_exempt ? "開啟 (ON)" : "關閉 (OFF)");
-	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+	post_msg(BN_SECURITY,
+		 TEMPFORMAT(TTLEN, "%s 的免費寄信豁免變更通知 (by %s)", x.userid, cuser.userid),
+		 TEMPFORMAT(STRLEN, "站長 %s 修改 %s 的免費寄信不計額度 -> %s\n", cuser.userid, x.userid,
+			    new_mail_exempt ? "開啟 (ON)" : "關閉 (OFF)"),
+		 "[系統安全局]");
     }
 
     if (money_changed) {
-	char title[TTLEN+1];
-	char msg[512];
 	char reason[50];
 	clrtobot();
 	clear();
 	while (!getdata(5, 0, "請輸入理由以示負責：",
 		    reason, sizeof(reason), DOECHO));
 
-	SNPRINTF(msg, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
-		"從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
-		"   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
-		cuser.userid, x.userid, changefrom, x.money,
-		cuser.userid, reason);
-	SNPRINTF(title, "[安全報告] 站長%s修改%s金錢", cuser.userid,
-		x.userid);
-	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+	post_msg(BN_SECURITY,
+		 TEMPFORMAT(TTLEN + 1, "[安全報告] 站長%s修改%s金錢", cuser.userid, x.userid),
+		 TEMPFORMAT(512, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
+			    "從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
+			    "   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
+			    cuser.userid, x.userid, changefrom, x.money,
+			    cuser.userid, reason),
+		 "[系統安全局]");
 	setumoney(unum, x.money);
     }
 
@@ -1651,11 +1649,11 @@ int u_admin_disable_2fa(void) {
     log_usies("Remove2FA", target_id);
     log_user_security(target_id, "2FA Disabled by Admin.\n");
 
-    char title[STRLEN], msg[512];
-    SNPRINTF(title, "解除2FA: %s (站長: %s)", target_id, cuser.userid);
-    SNPRINTF(msg, "帳號 %s 的 2FA 由站長 %s 解除，理由:\n %s\n\n",
-             target_id, cuser.userid, reason);
-    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+    post_msg(BN_SECURITY,
+             TEMPFORMAT(STRLEN, "解除2FA: %s (站長: %s)", target_id, cuser.userid),
+             TEMPFORMAT(512, "帳號 %s 的 2FA 由站長 %s 解除，理由:\n %s\n\n",
+                        target_id, cuser.userid, reason),
+             "[系統安全局]");
 
     vmsgf("已成功\強制關閉使用者 %s 的 2FA 雙重驗證！", target_id);
     return 0;

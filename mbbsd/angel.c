@@ -950,14 +950,12 @@ TalkToAngel(){
         more(FN_ANGEL_USAGE, NA);
     }
 
-    {
-	char xnick[IDLEN+1], prompt[IDLEN*2];
-	SNPRINTF(xnick, "%s小天使", _myangel_nick);
-	SNPRINTF(prompt, "問%s小天使: ", _myangel_nick);
-	// if success, record uent.
-	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent)) {
-	    lastuent = uent;
-        }
+    // if success, record uent.
+    if (my_write(uent->pid,
+		 TEMPFORMAT(IDLEN * 2, "問%s小天使: ", _myangel_nick),
+		 TEMPFORMAT(IDLEN + 1, "%s小天使", _myangel_nick),
+		 WATERBALL_ANGEL, uent)) {
+	lastuent = uent;
     }
 }
 

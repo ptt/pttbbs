@@ -2124,9 +2124,7 @@ fterm_rawnum(int arg)
     if (arg < 0 || arg > 99)
     {
         // complex. use printf.
-        char sarg[16]; // max int
-        sprintf(sarg, "%d", arg);
-        fterm_raws(sarg);
+        fterm_raws(TEMPFORMAT(16, "%d", arg));
     } else if (arg < 10) {
         // 0 .. 10
         fterm_rawc('0' + arg);
