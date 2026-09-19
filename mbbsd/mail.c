@@ -1576,9 +1576,9 @@ mailtitle(void)
 
     if (mailmaxkeep)
     {
-	SNPRINTF(buf, ANSI_COLOR(32) "(容量:%d/%d篇)", mailkeep, mailmaxkeep);
+	SNPRINTF(buf, ANSI_COLOR(32) "(容量:%d/%d篇) ", mailkeep, mailmaxkeep);
     } else {
-	SNPRINTF(buf, ANSI_COLOR(32) "(大小:%d篇)", mailkeep);
+	SNPRINTF(buf, ANSI_COLOR(32) "(大小:%d篇) ", mailkeep);
     }
 
     showtitle("郵件選單", BBSNAME);
@@ -1586,7 +1586,7 @@ mailtitle(void)
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME
             );
-    vbarlr(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題", TEMPFORMAT(STRLEN, "%s ", buf));
+    vbarlr(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題", buf);
 }
 
 static void

@@ -78,11 +78,10 @@ int EntryBrowser::Display() {
 }
 
 int EntryBrowser::Header() {
-  vs_hdr2bar(" 【搜尋認證資料庫】 ", (" " + title_).c_str());
-  // clang-format off
-  outs(ANSI_COLOR(30;47));
-  // clang-format on
-  mvprints(1, 0, "   %-12s %-38s %-24s", "使用者代號", "認證資訊", "認證時間");
+  vs_hdr2bar(" 【搜尋認證資料庫】 ", title_.c_str());
+  move(1, 0);
+  vbar(ANSI_COLOR(30;47)
+       "   使用者代號   認證資訊                               認證時間");
   outs(ANSI_RESET);
   return 0;
 }
