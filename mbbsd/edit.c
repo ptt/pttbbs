@@ -1613,7 +1613,7 @@ check_quote(void)
     while (p) {
 	if (!strcmp(str = p->data, "--"))
 	    break;
-	if (str[1] == ' ' && ((str[0] == ':') || (str[0] == '>')))
+	if (((str[0] == ':') || (str[0] == '>')) && str[1] == ' ')
 	    included_line++;
 	else {
 	    while (*str == ' ' || *str == '\t')
@@ -2302,10 +2302,12 @@ block_prompt(void)
 	    mode[0] = 'w';
     }
 
-    if (vans("刪除區塊(Y/N)?[N] ") != 'y')
-	goto cancel_block;
-
     block_save_to_file(tmpfname, mode[0] == 'a' ? BLOCK_APPEND : BLOCK_TRUNCATE);
+
+    if (vans("刪除區塊(Y/N)?[N] ") == 'y') {
+	block_delete();
+	return;
+    }
 
 cancel_block:
     block_cancel();
@@ -3268,18 +3270,22 @@ static void
 cursor_to_next_word(void)
 {
     while (curr_buf->currpnt < curr_buf->currline->len &&
-	    isalnum((int)curr_buf->currline->data[++curr_buf->currpnt]));
+	    isalnum((unsigned char)curr_buf->currline->data[curr_buf->currpnt]))
+	curr_buf->currpnt++;
     while (curr_buf->currpnt < curr_buf->currline->len &&
-	    isspace((int)curr_buf->currline->data[++curr_buf->currpnt]));
+	    !isalnum((unsigned char)curr_buf->currline->data[curr_buf->currpnt]))
+	curr_buf->currpnt++;
 }
 
 static void
 cursor_to_prev_word(void)
 {
-    while (curr_buf->currpnt && isspace((int)curr_buf->currline->data[--curr_buf->currpnt]));
-    while (curr_buf->currpnt && isalnum((int)curr_buf->currline->data[--curr_buf->currpnt]));
-    if (curr_buf->currpnt > 0)
-	curr_buf->currpnt++;
+    while (curr_buf->currpnt > 0 &&
+	    !isalnum((unsigned char)curr_buf->currline->data[curr_buf->currpnt - 1]))
+	curr_buf->currpnt--;
+    while (curr_buf->currpnt > 0 &&
+	    isalnum((unsigned char)curr_buf->currline->data[curr_buf->currpnt - 1]))
+	curr_buf->currpnt--;
 }
 
 static void
@@ -3287,12 +3293,12 @@ delete_current_word(void)
 {
     while (curr_buf->currpnt < curr_buf->currline->len) {
 	delete_char();
-	if (!isalnum((int)curr_buf->currline->data[curr_buf->currpnt]))
+	if (!isalnum((unsigned char)curr_buf->currline->data[curr_buf->currpnt]))
 	    break;
     }
     while (curr_buf->currpnt < curr_buf->currline->len) {
 	delete_char();
-	if (!isspace((int)curr_buf->currline->data[curr_buf->currpnt]))
+	if (!isspace((unsigned char)curr_buf->currline->data[curr_buf->currpnt]))
 	    break;
     }
 }
