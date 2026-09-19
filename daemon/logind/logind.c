@@ -210,6 +210,7 @@ typedef struct {
     int  state;
     int  retry;
     int  encoding;
+    int  init_encoding;
     int  t_lines;
     int  t_cols;
     int  icurr;         // cursor (only available in userid input mode)
@@ -269,6 +270,7 @@ login_ctx_init(login_ctx *ctx)
     ctx->state = LOGIN_STATE_INIT;
     ctx->client_code = FNV1_32_INIT;
     ctx->encoding = LOGIND_INITIAL_ENCODING;
+    ctx->init_encoding = LOGIND_INITIAL_ENCODING;
 }
 
 static int
@@ -282,8 +284,7 @@ login_ctx_retry(login_ctx *ctx)
 {
     assert(ctx);
     ctx->state = LOGIN_STATE_USERID;
-    ctx->encoding = login_ctx_has_conn_data(ctx) ? ctx->cdata.encoding
-                                                 : LOGIND_INITIAL_ENCODING;
+    ctx->encoding = ctx->init_encoding;
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
     memset(ctx->totp, 0, sizeof(ctx->totp));
@@ -865,8 +866,6 @@ DEBUG_IO(int fd, const char *msg) {
 #define OVERLOAD_USER_MSG   ANSI_RESET " 由於人數過多，請您稍後再來... "
 #define OVERLOAD_USER_YX    BOTTOM_YX
 
-#define NO_SUCH_ENCODING_MSG ANSI_RESET " Sorry, GB encoding is NOT supported anymore. Please use UTF-8."
-#define NO_SUCH_ENCODING_YX PASSWD_PROMPT_YX
 
 #define REJECT_FREE_UID_MSG ANSI_RESET " 抱歉，此帳號或服務已達上限。 "
 #define REJECT_FREE_UID_YX  BOTTOM_YX
@@ -1395,12 +1394,6 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 
 }
 
-static void
-draw_no_such_encoding(login_conn_ctx *conn)
-{
-    _mt_move_yx(conn, NO_SUCH_ENCODING_YX); _mt_clrtoeol(conn);
-    _text_write(conn, NO_SUCH_ENCODING_MSG, sizeof(NO_SUCH_ENCODING_MSG)-1);
-}
 
 ///////////////////////////////////////////////////////////////////////
 // BBS Logic
@@ -2268,7 +2261,7 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
             return -1;
         }
 
-        ctx->encoding = ctx->cdata.encoding;
+        ctx->init_encoding = ctx->encoding = ctx->cdata.encoding;
         snprintf(ctx->port, sizeof(ctx->port), "%u", ctx->cdata.lport);
         ctx->is_secure_connection = (ctx->cdata.flags & CONN_FLAG_SECURE);
 
@@ -2309,13 +2302,30 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
 
     while (len-- > 0)
     {
-        int c = vtkbd_process((unsigned char)*s++, &conn->vtkbd);
+        unsigned char raw_ch = (unsigned char)*s++;
+        int c = vtkbd_process(raw_ch, &conn->vtkbd);
 
         if (c == KEY_INCOMPLETE)
             continue;
 
         if (c == KEY_UNKNOWN)
         {
+            // Check ANSI Cursor Position Report (ESC [ <row> ; <col> R)
+            if (raw_ch == 'R' &&
+                conn->vtkbd.csi_prefix == 0 &&
+                conn->vtkbd.csi_param_count == 2)
+            {
+                if (conn->vtkbd.csi_params[1] == 2)
+                {
+                    conn->ctx.init_encoding = CONV_UTF8;
+                    if (conn->ctx.encoding != CONV_UTF8)
+                    {
+                        conn->ctx.encoding = CONV_UTF8;
+                        draw_text_screen(conn, welcome_screen);
+                        draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
+                    }
+                }
+            }
             // XXX for stupid clients always doing anti-idle,
             // user will get beeps and have no idea what happened...
             // _mt_bell(conn);
@@ -2364,10 +2374,10 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     // convert encoding if required
                     switch(*uid_lastc)
                     {
-                        case '.':   // GB mode
-                            draw_no_such_encoding(conn);
-                            login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
-                            return -1;
+                        case '.':   // Big5 mode
+                            conn->ctx.encoding = CONV_NORMAL;
+                            *uid_lastc = 0;
+                            break;
                         case ',':   // UTF-8 mode
                             conn->ctx.encoding = CONV_UTF8;
                             *uid_lastc = 0;
@@ -2524,6 +2534,10 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
         return -1;
 
     } else {
+        // \xc4\xa1 is valid for both Big5&UTF8 (and not in UAO) so can be used for detection.
+        // \033[6n ask the client to report cursor status.
+        if (conn->ctx.encoding == CONV_NORMAL)
+            _buff_write(conn, "\r\xc4\xa1\033[6n", 7);
         draw_text_screen  (conn, welcome_screen);
         draw_userid_prompt(conn, NULL, 0);
     }

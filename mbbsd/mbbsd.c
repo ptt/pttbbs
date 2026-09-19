@@ -617,16 +617,17 @@ login_query(char *ruid)
 	}
 	telnet_turnoff_client_detect();
 
-	/* switch to gb mode if uid end with '.' */
+	/* switch encoding if uid ends with ',' (UTF-8) or '.' (Big5) */
 	len = strlen(uid);
 	if (uid[0] && uid[len - 1] == ',') {
 	    set_converting_type(CONV_UTF8);
 	    uid[len - 1] = 0;
 	    redrawwin();
 	}
-        else if (uid[0] && uid[len - 1] == '.') {
-            outs("Sorry, GB encoding is not supported anymore. Please use UTF-8 (id,)");
-            continue;
+	else if (uid[0] && uid[len - 1] == '.') {
+	    set_converting_type(CONV_NORMAL);
+	    uid[len - 1] = 0;
+	    redrawwin();
 	}
 	else if (len >= IDLEN + 1)
 	    uid[IDLEN] = 0;

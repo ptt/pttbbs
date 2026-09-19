@@ -55,8 +55,10 @@ for entry in ambcjk_data:
     b = int(b, 0)
     ambcjk = ambcjk + list( range(a, b+1) )
 print("const uint8_t b2u_ambiguous_width[0x10000] = {")
+import unicodedata
+_unichr = chr if sys.version_info[0] >= 3 else unichr
 for i in range(0, 0x10000):
-    if i in b2u and b2u[i] in ambcjk:
+    if i in b2u and (b2u[i] in ambcjk or unicodedata.east_asian_width(_unichr(b2u[i])) not in ('W', 'F')):
         print("1,",end=' '),
     else:
         print("0,",end=' '),

@@ -1692,7 +1692,7 @@ fterm_DBCS_Big5(unsigned char c1, unsigned char c2)
         return  FTDBCS_INVALID;
     if (!FTDBCS_ISTAIL(c2))
         return FTDBCS_INVALID;
-    if (c1 >= 0x80 && c1 <= 0x9F)
+    if (c1 >= 0x80 && c1 <= 0xA0)
         return FTDBCS_UNSAFE;
     return FTDBCS_SAFE;
 }
