@@ -257,9 +257,9 @@ psb_key_name(int key, char *buf, size_t sz) {
                 snprintf(buf, sz, "%c", key);
             else if ((key & 0xff00) == 0x2000) {
                 if ((key & 0xff) == ' ')
-                    strlcpy(buf, "ESC-Space", sz);
+                    strlcpy(buf, "Esc-Space", sz);
                 else
-                    snprintf(buf, sz, "ESC-%c", key & 0xff);
+                    snprintf(buf, sz, "Esc-%c", key & 0xff);
             } else
                 snprintf(buf, sz, "0x%x", key);
             break;
@@ -312,7 +312,7 @@ psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
     }
     if (item->keys[0] == (0x2000 | '0') &&
         item->n_keys >= 10 && item->keys[item->n_keys - 1] == (0x2000 | '9')) {
-        strlcpy(buf, "ESC-0..9", sz);
+        strlcpy(buf, "Esc-0..9", sz);
         return;
     }
     buf[0] = '\0';

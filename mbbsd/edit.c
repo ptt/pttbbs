@@ -183,7 +183,7 @@ static const char * const BIG5[13] = {
   "¡A¡F¡G¡B¡N¡C¡H¡I¡E¡T¡]¡^¡©¡ª¡«¡¬",
   "¢b¢c¢d¢e¢f¢g¢h¢i¢j¢k¢l¢m¢n¢o¢pùþ ",
   "¡³¡ó¡·¡´¡¸¡¹¡¼¡½¡¿¡¶¡¾¡µ¡º¡»¡ð¡ñ",
-  "¡Ë¡\\¡[¡Â¡Ä¡X¡ü¡ý¢y¡þ¢@¢®¢¬¢­¢A¢B",
+  "¡Ë¡\\¡[¡Â¡Ä¡X¡ü¡ý¢y¢A¢B¢®¢¬¢­¢A¢B",
   "¡Ï¡Ð¡Ñ¡Ò¡Ô¡Ó¡×¡Ý¡Ú¡Ü¡Ø¡Ù¡Õ¡Ö¡î¡ï",
   "¡Û¡ã¡ä¡å¡ì¡í¡®¡æ¡ç¡è¡é¡Þ¡ß¡à¡á¡â",
   "¡ô¡õ¡ö¡÷¡ø¡ù¡ú¡û",
@@ -213,13 +213,13 @@ static const char * const BIG_mode[13] = {
 
 static const char *table[8] = {
   "¢x¢w¢|¢r¢}¢u¢q¢t¢z¢s¢{",
-  "ùø¢¤ùãùäùåùàùáùâùÝùÞùß",
+  "ùøùùùãùäùåùàùáùâùÝùÞùß",
   "ùø¢wùõùöù÷ùòùóùôùïùðùñ",
-  "¢x¢¤ùìùíùî¢¥¢¦¢§ùæùçùè",
-  "¢x¢w¢¢¢r¢£¢u¢q¢t¢~¢s¢¡",
-  "ùø¢¤¢¢ùä¢£ùàùáùâ¢~ùÞ¢¡",
+  "¢xùùùìùíùîùéùêùëùæùçùè",
+  "¢x¢wùü¢rùý¢u¢q¢tùú¢sùû",
+  "ùøùùùüùäùýùàùáùâùúùÞùû",
   "ùø¢wùõùöù÷ùòùóùôùïùðùñ",
-  "¢x¢¤ùìùíùî¢¥¢¦¢§ùæùçùè"
+  "¢xùùùìùíùîùéùêùëùæùçùè"
 };
 
 static const char *table_mode[6] = {
@@ -228,7 +228,7 @@ static const char *table_mode[6] = {
   "¢q",
   "ùá",
   "ùó",
-  "¢¦"
+  "ùê"
 };
 
 static char mbcs_mode		=1;
@@ -458,6 +458,19 @@ show_phone_mode_panel(void)
 /**
  * Show the bottom status/help bar, and BIG5/table in phone_mode.
  */
+#define KEY_EDIT_ESC(c) (0x2000 | (unsigned char)(c))
+static const cmd_t edit_cmds[];
+
+static const char *
+edit_find_cmd_label(int key)
+{
+    for (const cmd_t *c = edit_cmds; c->key || c->func; c++) {
+	if (c->key == key && c->label)
+	    return c->label;
+    }
+    return "";
+}
+
 static void
 edit_msg(void)
 {
@@ -467,15 +480,95 @@ edit_msg(void)
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
 
-    vs_footer(" ½s¿è¤å³¹ ",
-	    TEMPFORMAT(STRLEN, " (^Z/F1)»¡©ú (^P/^G)´¡¤J²Å¸¹/½d¥» (^X/^Q)Â÷¶}\t"
-		"ùø%s¢x%c%c%c%cùø%3d:%3d",
-		curr_buf->insert_mode ? "´¡¤J" : "¨ú¥N",
-		curr_buf->ansimode ? 'A' : 'a',
-		curr_buf->indent_mode ? 'I' : 'i',
-		curr_buf->phone_mode ? 'P' : 'p',
-		curr_buf->raw_mode ? 'R' : 'r',
-		curr_buf->currln + 1, n + 1));
+    const char *caption = " ½s¿è¤å³¹ ";
+    int cap_len = stream_width(caption);
+    int safe_max_col = t_columns - 2;
+
+    char status_tail[64];
+    snprintf(status_tail, sizeof(status_tail), "ùø%s¢x%c%c%c%cùø%3d:%3d",
+	     curr_buf->insert_mode ? "´¡¤J" : "¨ú¥N",
+	     curr_buf->ansimode ? 'A' : 'a',
+	     curr_buf->indent_mode ? 'I' : 'i',
+	     curr_buf->phone_mode ? 'P' : 'p',
+	     curr_buf->raw_mode ? 'R' : 'r',
+	     curr_buf->currln + 1, n + 1);
+    int status_len = stream_width(status_tail);
+
+    const struct {
+	const char *kname;
+	int key;
+    } right_btns[] = {
+	{ "Esc-h", KEY_EDIT_ESC('h') },
+	{ "^Z", Ctrl('Z') },
+    }, left_btns[] = {
+	{ "^X", Ctrl('X') },
+	{ "^C", Ctrl('C') },
+	{ "^V", Ctrl('V') },
+	{ "^P", Ctrl('P') },
+	{ "^Q", Ctrl('Q') },
+	{ "^G", Ctrl('G') },
+    };
+
+    char help_tail[64] = "";
+    char help_items[ARRAY_SIZE(right_btns)][32];
+    for (size_t i = 0; i < ARRAY_SIZE(right_btns); i++) {
+	snprintf(help_items[i], sizeof(help_items[i]), "(%s)%s",
+		 right_btns[i].kname, edit_find_cmd_label(right_btns[i].key));
+	if (i > 0)
+	    strlcat(help_tail, " ", sizeof(help_tail));
+	strlcat(help_tail, help_items[i], sizeof(help_tail));
+    }
+    int help_len = stream_width(help_tail);
+    bool show_help = (cap_len + help_len + status_len <= safe_max_col);
+
+    char right_tail[128] = "";
+    if (show_help)
+	strlcat(right_tail, help_tail, sizeof(right_tail));
+    strlcat(right_tail, status_tail, sizeof(right_tail));
+    int right_len = stream_width(right_tail);
+
+    cmd_bar_clear_hotspots();
+
+    char msg[ANSILINELEN] = "";
+    int cur_x = cap_len;
+    int avail_left = safe_max_col - cap_len - right_len;
+    for (size_t i = 0; i < ARRAY_SIZE(left_btns); i++) {
+	char btn[32];
+	snprintf(btn, sizeof(btn), " (%s)%s",
+		 left_btns[i].kname, edit_find_cmd_label(left_btns[i].key));
+	int l = stream_width(btn);
+	if (l > avail_left)
+	    break;
+	cmd_bar_register_custom_hotspot(b_lines, cur_x + 1, cur_x + l,
+					left_btns[i].key, edit_cmds);
+	strlcat(msg, btn, sizeof(msg));
+	cur_x += l;
+	avail_left -= l;
+    }
+
+    if (show_help) {
+	int hx = safe_max_col - right_len;
+	for (size_t i = 0; i < ARRAY_SIZE(right_btns); i++) {
+	    int ilen = stream_width(help_items[i]);
+	    cmd_bar_register_custom_hotspot(b_lines, hx, hx + ilen,
+					    right_btns[i].key, edit_cmds);
+	    hx += ilen + 1;
+	}
+    }
+
+    if (cap_len + status_len <= safe_max_col) {
+	int rx = safe_max_col - status_len;
+	cmd_bar_register_custom_hotspot(b_lines, rx + 2, rx + 6, Ctrl('O'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 8, rx + 9, Ctrl('V'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 9, rx + 10, KEY_EDIT_ESC('I'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 10, rx + 11, Ctrl('P'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 11, rx + 12, KEY_EDIT_ESC('R'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 14, safe_max_col, KEY_F5, edit_cmds);
+    }
+
+    strlcat(msg, "\t", sizeof(msg));
+    strlcat(msg, right_tail, sizeof(msg));
+    vs_footer(caption, msg);
 }
 
 static const char *
@@ -3219,8 +3312,10 @@ display_textline_internal(textline_t *p, int i)
     clrtoeol();
 
     if (!p) {
-	outc('~');
-	outs(ANSI_CLRTOEND);
+        // In ANSI preview mode, the attributes were not cleared so we have to 
+        // enforce a reset before showing '~'.
+        outs(ANSI_RESET "~");
+        clrtoeol();
 	return;
     }
 
@@ -3263,9 +3358,7 @@ display_textline_internal(textline_t *p, int i)
 
     if (attr)
 	outs(ANSI_RESET);
-
-    // workaround poor terminal
-    outs(ANSI_CLRTOEND);
+    clrtoeol();
 }
 
 static void
@@ -3844,8 +3937,6 @@ upload_file(void)
  * 		>= 0		½s¿è¿ú¼Æ
  * ¥Ñ©ó¦U³B³£¥H == EDIT_ABORTED §PÂ_, ­Y·Q¶Ç¦^¨ä¥L­t­È­nª`·N
  */
-#define KEY_EDIT_ESC(c) (0x2000 | (unsigned char)(c))
-
 typedef struct {
     const char *fpath;
     int saveheader;
@@ -4168,9 +4259,15 @@ edit_cmd_help(cmd_ctx_t *ctx GCC_UNUSED)
 }
 
 static int
-edit_cmd_keys_help(cmd_ctx_t *ctx GCC_UNUSED)
+edit_cmd_keys_help(cmd_ctx_t *ctx)
 {
-    return PSB_NA;
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    curr_buf->redraw_everything = YEA;
+    if (sel_key > 0 && sel_key != ctx->key) {
+        ctx->key = sel_key;
+        ctx->redispatch = true;
+    }
+    return PSB_OK;
 }
 
 static int
@@ -4592,7 +4689,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		 curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
+	vs_locator_set_bounds(0, 0);
 	ch = edit_vkey();
+	vs_locator_set_bounds(-1, -1);
 	/* jochang debug */
 	if ((interval = (now - th))) {
 	    th = now;
@@ -4636,8 +4735,37 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    } else
 		curr_buf->lastindent = -1;
 
+	    if (ch == KEY_MOUSE) {
+		const vtkbd_mouse_t *m = vkey_get_mouse();
+		if (m && !m->is_motion && !m->is_release &&
+		    m->button == MOUSE_BTN_LEFT && m->y >= 0 && m->y < b_lines) {
+		    int top_ln = curr_buf->currln - curr_buf->curr_window_line;
+		    textline_t *p = curr_buf->top_of_win;
+		    int k = 0;
+		    while (k < m->y && p->next) {
+			p = p->next;
+			k++;
+		    }
+
+		    curr_buf->currline = p;
+		    curr_buf->curr_window_line = k;
+		    curr_buf->currln = top_ln + k;
+		    int col = m->x + curr_buf->edit_margin;
+		    if (col < 0)
+			col = 0;
+		    curr_buf->currpnt = line_col_to_pos(p, col, curr_buf->ansimode);
+#ifdef DBCSAWARE
+		    if (mbcs_mode)
+			curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
+#endif
+		    edit_msg();
+		    continue;
+		}
+	    }
+
 	    cmd_dispatch_layers(edit_layers, &cctx, "¡i¤å³¹½s¿è¡j");
 	    if (ec.finished) {
+		cmd_bar_clear_hotspots();
 		return ec.retval;
 	    }
 
