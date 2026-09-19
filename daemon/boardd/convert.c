@@ -22,65 +22,36 @@ move_string_end(char **buf)
     return n;
 }
 
-// Make ANSI control code
+// Make ANSI control code with SGR 66 prefix for dual-color characters
 //   fg, bg, bright are the original color code (eg. 30, 42, 1)
 //   provide -1 means no change
-//   all -1 means reset
 static void
-make_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
+make_sgr66_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
 {
-    int sep = 0;
-    strncpy(buf, "\033[", size);
+    strncpy(buf, "\033[66", size);
     size -= move_string_end(&buf);
     if (bright >= 0) {
-	snprintf(buf, size, "%s%d", sep ? ";" : "", bright);
+	snprintf(buf, size, ";%d", bright);
 	size -= move_string_end(&buf);
-	sep = 1;
     }
     if (fg >= 0) {
-	snprintf(buf, size, "%s%d", sep ? ";" : "", fg);
+	snprintf(buf, size, ";%d", fg);
 	size -= move_string_end(&buf);
-	sep = 1;
     }
     if (bg >= 0) {
-	snprintf(buf, size, "%s%d", sep ? ";" : "", bg);
+	snprintf(buf, size, ";%d", bg);
 	size -= move_string_end(&buf);
-	sep = 1;
     }
     snprintf(buf, size, "m");
 }
 
 static int
-evbuffer_add_ansi_escape_code(struct evbuffer *destination, int fg, int bg, int bright)
-{
-    char ansicode[16];
-    make_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
-    return evbuffer_add_printf(destination, ansicode, strlen(ansicode));
-}
-
-#ifdef EXTENDED_INCHAR_ANSI
-// Make extended ANSI control code
-//   1 ==> 111, 0 ==> 110,
-//   3x ==> 13x, 4y ==> 14y.
-//   provide -1 means no change
-//   all -1 means reset
-static void
-make_ext_ansi_ctrl(char *buf, int size, int fg, int bg, int bright)
-{
-    make_ansi_ctrl(buf, size,
-                   fg >= 0 ? 100 + fg : fg,
-                   bg >= 0 ? 100 + bg : bg,
-                   bright >= 0 ? 110 + bright : bright);
-}
-
-static int
-evbuffer_add_ext_ansi_escape_code(struct evbuffer *destination, int fg, int bg, int bright)
+evbuffer_add_sgr66_escape_code(struct evbuffer *destination, int fg, int bg, int bright)
 {
     char ansicode[24];
-    make_ext_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
-    return evbuffer_add_printf(destination, ansicode, strlen(ansicode));
+    make_sgr66_ansi_ctrl(ansicode, sizeof(ansicode), fg, bg, bright);
+    return evbuffer_add(destination, ansicode, strlen(ansicode));
 }
-#endif
 
 // Converts given evbuffer contents to UTF-8 and returns the new buffer.
 // The original buffer is freed. Returns NULL on error
@@ -122,19 +93,16 @@ evbuffer_b2u(struct evbuffer *source)
 		    break;
 
 		unsigned char *p = c + 3;
-		if (*p == 'm') {
-		    // ANSI reset
-		    fg = 7;
-		    bg = 0;
-		    bright = 0;
-		}
 		while (1) {
 		    int v = (int) strtol((char *)p, (char **)&p, 10);
 		    if (*p != 'm' && *p != ';')
 			break;
 
-		    if (v == 0)
+		    if (v == 0) {
 			bright = 0;
+			fg = -1;
+			bg = -1;
+		    }
 		    else if (v == 1)
 			bright = 1;
 		    else if (v >= 30 && v <= 37)
@@ -159,19 +127,18 @@ evbuffer_b2u(struct evbuffer *source)
 		    n++;
 		}
 	    }
-#ifdef EXTENDED_INCHAR_ANSI
-	    // Output control codes before the Big5 character
-	    if (fg >= 0 || bg >= 0 || bright >= 0) {
-                int dlen = evbuffer_add_ext_ansi_escape_code(destination, fg, bg, bright);
-                if (dlen < 0)
-                    break;
-                out += dlen;
-	    }
-#endif
 
 	    // n may be changed, check again
 	    if (n < 2)
 		break;
+
+	    // Output SGR 66 control code before the UTF-8 character
+	    if (fg >= 0 || bg >= 0 || bright >= 0) {
+		int dlen = evbuffer_add_sgr66_escape_code(destination, fg, bg, bright);
+		if (dlen < 0)
+		    break;
+		out += dlen;
+	    }
 
 	    uint8_t utf8[4];
             int b5c = c[0] << 8 | c[1];
@@ -198,16 +165,6 @@ evbuffer_b2u(struct evbuffer *source)
                 if (evbuffer_add(destination, SPACE_DECRC_CUF2, strlen(SPACE_DECRC_CUF2)))
                     break;
             }
-
-#ifndef EXTENDED_INCHAR_ANSI
-            // Output in-char control codes to make state consistent
-            if (fg >= 0 || bg >= 0 || bright >= 0) {
-                int dlen = evbuffer_add_ansi_escape_code(destination, fg, bg, bright);
-                if (dlen < 0)
-                    break;
-                out += dlen;
-            }
-#endif
 
 	    // Remove DBCS character from source buffer
 	    evbuffer_drain(source, todrain);
