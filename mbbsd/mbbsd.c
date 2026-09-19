@@ -188,6 +188,8 @@ u_exit(const char *mode)
 {
     currmode = 0;
 
+    term_uninit();
+
     /* close fd 0 & 1 to terminate network */
     close(0);
     close(1);
@@ -223,6 +225,7 @@ abort_bbs(int sig GCC_UNUSED)
 	STATINC(STAT_MBBSD_ABORTED);
 	u_exit("ABORTED");
     }
+    term_uninit();
     exit(0);
 }
 
@@ -285,6 +288,8 @@ abort_bbs_debug(int sig)
 	write(1, CRASH_MSG, sizeof(CRASH_MSG));
 
     sleep(5);
+
+    term_uninit();
 
     /* close all file descriptors (including the network connection) */
     for (i = 0; i < 256; ++i)

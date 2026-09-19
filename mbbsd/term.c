@@ -4,15 +4,19 @@
 /* ----------------------------------------------------- */
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
+static struct termios tty_state;
+static bool tty_state_saved = false;
+
 void
 init_tty(void)
 {
-    struct termios tty_state, tty_new;
+    struct termios tty_new;
 
     if (tcgetattr(1, &tty_state) < 0) {
 	syslog(LOG_ERR, "tcgetattr(): %m");
 	return;
     }
+    tty_state_saved = true;
     memcpy(&tty_new, &tty_state, sizeof(tty_new));
     tty_new.c_lflag &= ~(ICANON | ECHO | ISIG);
     /*
@@ -122,6 +126,14 @@ term_enable_mouse(int mode)
     write(1, seq, strlen(seq));
 }
 
+void
+term_disable_mouse(void)
+{
+    if (current_mouse_mode == MOUSE_MODE_NONE)
+        return;
+    term_enable_mouse(MOUSE_MODE_NONE);
+}
+
 int
 term_get_mouse_mode(void)
 {
@@ -131,7 +143,13 @@ term_get_mouse_mode(void)
 void
 term_uninit(void)
 {
-    term_enable_mouse(MOUSE_MODE_NONE);
+    term_disable_mouse();
+    if (tty_state_saved) {
+        const char reset_seq[] = ANSI_RESET "\r\n";
+        write(1, reset_seq, sizeof(reset_seq) - 1);
+        tcsetattr(1, TCSANOW, &tty_state);
+        tty_state_saved = false;
+    }
 }
 
 int
