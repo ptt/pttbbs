@@ -969,10 +969,8 @@ user_login(void)
     more("etc/Welcome_login", NA);
 #else
     if( SHM->GV2.e.nWelcomes ){
-        char            buf[80];
-        SNPRINTF(buf, "etc/Welcome_login.%d",
-                 (int)login_start_time % SHM->GV2.e.nWelcomes);
-        more(buf, NA);
+        more(TEMPFORMAT(80, "etc/Welcome_login.%d",
+                        (int)login_start_time % SHM->GV2.e.nWelcomes), NA);
     }
 #endif
 

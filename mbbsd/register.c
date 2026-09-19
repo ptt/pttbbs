@@ -301,7 +301,6 @@ getfield(int line, const char *info, const char *notes_fn, const char *desc, cha
 int
 setupnewuser(const userec_t *user)
 {
-    char            genbuf[50];
     char           *fn_fresh = ".fresh";
     userec_t        utmp;
     time_t          clock;
@@ -355,8 +354,7 @@ setupnewuser(const userec_t *user)
     }
 
     setuserid(uid, user->userid);
-    SNPRINTF(genbuf, "uid %d", uid);
-    log_usies("APPLY", genbuf);
+    log_usies("APPLY", TEMPFORMAT(32, "uid %d", uid));
 
     SHM->money[uid - 1] = user->money;
 
@@ -1657,13 +1655,10 @@ u_register()
 
 static int notify_email_change(const char *userid, const char *email)
 {
-    char subject[128];
-    int ret;
-
-    SNPRINTF(subject, " %s - %s (%s) - 聯絡信箱已變更",
-	     BBSNAME, userid, fromhost);
-
-    ret = bsmtp("etc/emailchanged", subject, email, "non-exist");
+    int ret = bsmtp("etc/emailchanged",
+		    TEMPFORMAT(128, " %s - %s (%s) - 聯絡信箱已變更",
+			       BBSNAME, userid, fromhost),
+		    email, "non-exist");
 
     return ret > 0 ? 0 : -1;
 }
@@ -2200,7 +2195,7 @@ regfrm_unlock(int lockfd)
 int
 regfrm_accept(RegformEntry *pre, int priority)
 {
-    char justify[REGLEN+1], buf[STRLEN*2];
+    char justify[REGLEN+1];
     char fn[PATHLEN], fnlog[PATHLEN];
 
 #ifdef DBG_DRYRUN
@@ -2222,9 +2217,9 @@ regfrm_accept(RegformEntry *pre, int priority)
     append_regform(pre, fnlog, "");
 
     // log to global history
-    SNPRINTF(buf, "Approved: %s -> %s\n",
-	    cuser.userid, pre->u.userid);
-    append_regform(pre, FN_REGISTER_LOG, buf);
+    append_regform(pre, FN_REGISTER_LOG,
+		   TEMPFORMAT(STRLEN * 2, "Approved: %s -> %s\n",
+			      cuser.userid, pre->u.userid));
 
     // log to file / board
     regform_log2file(pre, 1, NULL, priority);
@@ -2239,7 +2234,6 @@ regfrm_accept(RegformEntry *pre, int priority)
 int
 regfrm_reject(RegformEntry *pre, const char *reason, int priority)
 {
-    char buf[STRLEN*2];
     char fn[PATHLEN];
 
 #ifdef DBG_DRYRUN
@@ -2254,9 +2248,9 @@ regfrm_reject(RegformEntry *pre, const char *reason, int priority)
     regform_reject(pre->u.userid, reason, pre);
 
     // log to global history
-    SNPRINTF(buf, "Rejected: %s -> %s [%s]\n",
-	    cuser.userid, pre->u.userid, reason);
-    append_regform(pre, FN_REGISTER_LOG, buf);
+    append_regform(pre, FN_REGISTER_LOG,
+		   TEMPFORMAT(STRLEN * 2, "Rejected: %s -> %s [%s]\n",
+			      cuser.userid, pre->u.userid, reason));
 
     // log to board
     regform_log2board(pre, 0, reason, priority);

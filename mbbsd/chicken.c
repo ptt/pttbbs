@@ -258,7 +258,6 @@ show_chicken_stat(const chicken_t * thechicken, int age)
 static void
 show_chicken_data(chicken_t * thechicken)
 {
-    char            buf[1024];
     int age = time4_days_elapsed(now, thechicken->cbirth);
     if (age < 0) {
 	thechicken->birthday = thechicken->cbirth = now - 10 * DAY_SECONDS;
@@ -272,9 +271,8 @@ show_chicken_data(chicken_t * thechicken)
     move(1, 0);
 
     show_chicken_stat(thechicken, age);
-    SNPRINTF(buf, CHICKEN_PIC "/%c%d", thechicken->type + 'a',
-	     age > 16 ? 16 : age);
-    show_chicken_picture(buf);
+    show_chicken_picture(TEMPFORMAT(64, CHICKEN_PIC "/%c%d", thechicken->type + 'a',
+			 age > 16 ? 16 : age));
     move(18, 0);
 
     // status line - try harder to not exceed column 80.
@@ -421,15 +419,13 @@ ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken GCC_U
 {
     int num = 0;
     char buf[5];
-    char prompt[STRLEN];
 
 #ifdef HAVE_CHICKEN_CS
     if (ch_buyitem_cs(money, item, mychicken))
         return;
 #endif
-    SNPRINTF(prompt, "單價 $%d " MONEYNAME "，要買多少份呢: ", money);
-
-    getdata_str(b_lines - 1, 0, prompt, buf, sizeof(buf), NUMECHO, "1");
+    getdata_str(b_lines - 1, 0, TEMPFORMAT(STRLEN, "單價 $%d " MONEYNAME "，要買多少份呢: ", money),
+		buf, sizeof(buf), NUMECHO, "1");
     num = atoi(buf);
     if (num < 1)
 	return;
@@ -712,7 +708,6 @@ deadtype(const chicken_t * thechicken, chicken_t *mychicken)
 static int
 showdeath(int type)
 {
-    char fn[MAXPATHLEN];
     const char *death_file_names[] = {
         "nohp",
         "tootired",
@@ -723,8 +718,7 @@ showdeath(int type)
     if (type <= DEADTYPE_NOTYET || type >= DEADTYPE_UNKNOWN)
         return 0;
 
-    SNPRINTF(fn, CHICKEN_PIC "/%s", death_file_names[type - 1]);
-    more(fn, YEA);
+    more(TEMPFORMAT(MAXPATHLEN, CHICKEN_PIC "/%s", death_file_names[type - 1]), YEA);
     // "deadth" here is a typo, but let's take it (otherwise we need to also
     // change resource file name).
     more(CHICKEN_PIC "/deadth", YEA);

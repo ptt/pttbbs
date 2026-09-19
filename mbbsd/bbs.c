@@ -249,7 +249,7 @@ anticrosspost(void)
 int
 save_violatelaw(void)
 {
-    char            buf[128], ok[3];
+    char            ok[3];
     int             day;
 
     setutmpmode(VIOLATELAW);
@@ -271,11 +271,10 @@ save_violatelaw(void)
     }
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000) {
-	SNPRINTF(buf, ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
+	mvouts(22, 0, TEMPFORMAT(128, ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
                  "必須繳出 %d " MONEYNAME "；但你目前只有 %d ，數量不足!!"
                  ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
-                 cuser.money);
-	mvouts(22, 0, buf);
+                 cuser.money));
 	pressanykey();
 	return 0;
     }
@@ -1376,10 +1375,9 @@ do_post_article(int edflags)
 	if(i==0) i=8;
 	for(j=0; j<i; j++)
 	    prints("%d.%4.4s ", j+1, ctype[j]);
-	sprintf(buf,"(1-%d或不選)",i);
 
 	do {
-	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO);
+	    getdata(21, 6+7*i, TEMPFORMAT(32, "(1-%d或不選)", i), tmp_title, 3, LCECHO);
 	    posttype = tmp_title[0] - '1';
 	    if (posttype >= 0 && posttype < i)
 	    {
@@ -4021,7 +4019,6 @@ b_note_edit_bname(int bid)
 	pressanykey();
     } else {
        // alert user our new b_note policy.
-       char msg[STRLEN];
        clear();
        vs_hdr("進板畫面顯示設定");
        outs("\n"
@@ -4031,9 +4028,8 @@ b_note_edit_bname(int bid)
        "\t(使用者隨時可按 b 或經由進出不同看板來重新顯示進板畫面)\n");
 
        // 設定日期的效果其實很早就不會動了,所以拔掉
-       SNPRINTF(msg, "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
-	       fh->bupdate ? 'Y' : 'N');
-       getdata(10, 0, msg, buf, 3, LCECHO);
+       getdata(10, 0, TEMPFORMAT(STRLEN, "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
+	       fh->bupdate ? 'Y' : 'N'), buf, 3, LCECHO);
 
        switch(buf[0])
        {

@@ -677,15 +677,13 @@ vote_maintain(const char *bname)
 
 	    for (i = 0; i < MAX_VOTE_NR; i++) {
 		int j;
-		char buf2[64];
 		const char *filename[] = {
 		    STR_bv_ballots, STR_bv_control, STR_bv_desc, STR_bv_desc,
 		    STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_limits,
 		    STR_bv_title, STR_bv_logs, STR_bv_logconf, NULL
 		};
 		for (j = 0; filename[j] != NULL; j++) {
-		    SNPRINTF(buf2, "%s%d", filename[j], i);
-		    setbfile(buf, bname, buf2);
+		    setbfile(buf, bname, TEMPFORMAT(64, "%s%d", filename[j], i));
 		    unlink(buf);
 		}
 	    }
@@ -1273,8 +1271,7 @@ user_vote(const char *bname)
     if (x < 0)
 	return FULLUPDATE;
 
-    SNPRINTF(buf, "要投幾號投票 [%d] ", x);
-    getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
+    getdata(b_lines - 1, 0, TEMPFORMAT(64, "要投幾號投票 [%d] ", x), genbuf, 4, LCECHO);
     i = atoi(genbuf);
 
     // x: default (max), i: user selection

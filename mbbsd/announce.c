@@ -472,7 +472,6 @@ void
 a_pasteitem(menu_t * pm, int mode)
 {
     char            newpath[PATHLEN];
-    char            buf[PATHLEN];
     char            ans[2], skipAll = 0, multiple = 0;
     int             i, copied = 0;
     fileheader_t    item;
@@ -490,9 +489,8 @@ a_pasteitem(menu_t * pm, int mode)
 	multiple = 1;
 	move(b_lines-2, 0); clrtobot();
 	outs("c: 對各項目個別確認是否要貼上, z: 全部不貼，同時重設並取消全部標記\n");
-	SNPRINTF(buf, "確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ",
-		copyqueue_querysize());
-	getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
+	getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ",
+		copyqueue_querysize()), ans, sizeof(ans), LCECHO);
 	if(ans[0] == 'y')
 	    skipAll = 1;
 	else if(ans[0] == 'z')
@@ -526,8 +524,8 @@ a_pasteitem(menu_t * pm, int mode)
 	    }
 	}
 	if (mode && !skipAll) {
-	    SNPRINTF(buf, "確定要拷貝[%s]嗎(Y/N)？[N] ", cq->copytitle);
-	    getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
+	    getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "確定要拷貝[%s]嗎(Y/N)？[N] ", cq->copytitle),
+		    ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0] = 'y';
 	if (ans[0] == 'y') {
@@ -610,8 +608,8 @@ a_appenditem(const menu_t * pm, int isask)
 	}
 
 	if (isask) {
-	    SNPRINTF(buf, "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
-	    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
+	    getdata(b_lines - 2, 1, TEMPFORMAT(STRLEN, "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle),
+		    ans, sizeof(ans), LCECHO);
 	}
 
 	if (ans[0] != 'y' || !(fp = fopen(fname, "a+")))

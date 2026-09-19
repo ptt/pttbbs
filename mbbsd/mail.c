@@ -1386,7 +1386,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 {
     static char     address[STRLEN] = "";
     char            fname[PATHLEN];
-    char            genbuf[PATHLEN];
     int             return_no;
     const char      *hostaddr;
 
@@ -1402,8 +1401,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     // if user has address and not the default 'x' (no-email)...
     if (address[0]) {
-	SNPRINTF(genbuf, "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
-	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
+	getdata(b_lines, 0, TEMPFORMAT(STRLEN, "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address),
+		fname, 3, LCECHO);
 
 	if (fname[0] == 'q') {
 	    outmsg("取消轉寄");
@@ -2249,8 +2248,8 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 	 "於整點的時候 (尖峰時段除外) 將資料整理好寄送給您\n\n\n");
 
     if (address[0]) {
-	SNPRINTF(genbuf, "寄往 [%s] 嗎[Y/n/q]？ ", address);
-	getdata(b_lines - 5, 0, genbuf, fname, 3, LCECHO);
+	getdata(b_lines - 5, 0, TEMPFORMAT(STRLEN, "寄往 [%s] 嗎[Y/n/q]？ ", address),
+		fname, 3, LCECHO);
 	if (fname[0] == 'q') {
 	    outmsg("取消處理");
 	    return 1;
