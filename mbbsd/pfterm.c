@@ -976,13 +976,13 @@ doupdate(void)
     int y, x;
     char touched = 0;
 
-    fterm_rawbegin();
     if (!ft.dirty)
     {
         fterm_rawcursor();
-        fterm_rawend();
+        fterm_rawflush();
         return;
     }
+    fterm_rawbegin();
 
 #ifdef _WIN32
 
@@ -2483,11 +2483,13 @@ fterm_rawscroll (int dy)
 #endif
 }
 
+static int ft_sync_state = 0; // 0: off, 1: pending, 2: active
+
 void
 fterm_rawbegin()
 {
 #ifndef _WIN32
-    fterm_raws(DEC_SYNC_BEGIN);
+    ft_sync_state = 1;
 #endif
 }
 
@@ -2495,7 +2497,15 @@ void
 fterm_rawend()
 {
 #ifndef _WIN32
-    fterm_raws(DEC_SYNC_END);
+    if (ft_sync_state == 2)
+    {
+        ft_sync_state = 0;
+        fterm_raws(DEC_SYNC_END);
+    }
+    else
+    {
+        ft_sync_state = 0;
+    }
     fterm_rawflush();
 #endif
 }
@@ -2724,6 +2734,13 @@ fterm_typeahead(void)
 void
 fterm_rawc(int c)
 {
+#ifndef _WIN32
+    if (ft_sync_state == 1)
+    {
+        ft_sync_state = 2;
+        fterm_raws(DEC_SYNC_BEGIN);
+    }
+#endif
 #ifdef _PFTERM_TEST_MAIN
     // if (c == ESC_CHR) putchar('*'); else
     putchar(c);
