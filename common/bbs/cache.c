@@ -35,32 +35,6 @@
 #define log_usies YOU_FAILED
 
 /*
- * the reason for "safe_sleep" is that we may call sleep during SIGALRM
- * handler routine, while SIGALRM is blocked. if we use the original sleep,
- * we'll never wake up.
- */
-unsigned int
-safe_sleep(unsigned int seconds)
-{
-    /* jochang  sleep有問題時用 */
-    sigset_t        set, oldset;
-
-    sigemptyset(&set);
-    sigprocmask(SIG_BLOCK, &set, &oldset);
-    if (sigismember(&oldset, SIGALRM)) {
-	unsigned int    retv;
-	// log_usies("SAFE_SLEEP ", "avoid hang");
-	sigemptyset(&set);
-	sigaddset(&set, SIGALRM);
-	sigprocmask(SIG_UNBLOCK, &set, NULL);
-	retv = sleep(seconds);
-	sigprocmask(SIG_BLOCK, &set, NULL);
-	return retv;
-    }
-    return sleep(seconds);
-}
-
-/*
  * section - user cache(including uhash)
  */
 
@@ -451,7 +425,7 @@ reset_board(int bid) /* XXXbid: from 1 */
 	return;
     assert(0<=bid && bid<MAX_BOARD);
     if (SHM->Bbusystate || time4_diff(COMMON_TIME, SHM->busystate_b[bid]) < 10) {
-	safe_sleep(1);
+	sleep(1);
     } else {
 	SHM->busystate_b[bid] = COMMON_TIME;
 
@@ -676,7 +650,7 @@ void
 reload_pttcache(void)
 {
     if (SHM->Pbusystate)
-	safe_sleep(1);
+	sleep(1);
     else {			/* jochang: temporary workaround */
 	fileheader_t    item, subitem;
 	char            pbuf[256], buf[256];
@@ -818,7 +792,7 @@ void
 reload_fcache(void)
 {
     if (SHM->Fbusystate)
-	safe_sleep(1);
+	sleep(1);
     else {
 	SHM->Fbusystate = 1;
 	SHM->max_user = 0;

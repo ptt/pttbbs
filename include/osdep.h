@@ -42,6 +42,20 @@
 
 #define Signal (signal)
 
+#if !defined(__FreeBSD__) && !defined(__linux__)
+#include <time.h>
+#include <unistd.h>
+static inline unsigned int
+osdep_sleep(unsigned int seconds)
+{
+    struct timespec req = { seconds, 0 }, rem = { 0, 0 };
+    if (nanosleep(&req, &rem) < 0)
+        return rem.tv_sec;
+    return 0;
+}
+#define sleep(seconds) osdep_sleep(seconds)
+#endif
+
 #ifdef NEED_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t size);
 #endif

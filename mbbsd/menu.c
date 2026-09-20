@@ -507,7 +507,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 
 		if (err == XEASY) {
 		    refresh();
-		    safe_sleep(1);
+		    sleep(1);
 		} else if (err != XEASY + 1 || err == FULLUPDATE)
 		    refscreen = YEA;
 

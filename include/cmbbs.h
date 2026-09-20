@@ -60,7 +60,6 @@ BanIpList *cached_banip_list(const char *basefile, const char *cachefile);
 #define moneyof(uid) SHM->money[uid - 1]
 #define getbtotal(bid) SHM->total[bid - 1]
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
-unsigned int safe_sleep(unsigned int seconds);
 SHM_t *create_shm(int *is_created);
 SHM_t *attach_shm(void);
 SHM_t *attach_check_SHM(void);
