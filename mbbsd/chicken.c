@@ -526,7 +526,7 @@ static void debug_rpt(const char *msg GCC_UNUSED, chicken_t *c GCC_UNUSED) {
 static void debug_timediff(chicken_t *c GCC_UNUSED) {
 #ifdef DBG_CHICKEN
     char buf[7];
-    vs_hdr2(" 寵物 ", " 測試");
+    vs_hdr2("寵物", "測試");
     getdata(2, 0, "要模擬幾小時未進入的狀態？", buf, sizeof(buf), NUMECHO);
     syncnow();
     if (*buf)
@@ -875,7 +875,7 @@ recover_chicken(chicken_t * thechicken)
     if (time4_days_elapsed(now, thechicken->lastvisit) >= 7)
 	return 0;
 
-    vs_hdr2(" 養雞場 ", " 復活寵物");
+    vs_hdr2("養雞場", "復活寵物");
     prints("\n你有一個剛死亡不久的 %s 要招喚回來嗎? 只要 %d 元唷...\n",
            chicken_type[(int)thechicken->type], price);
     do {

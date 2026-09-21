@@ -856,7 +856,7 @@ check_bad_clients(void) {
     if (dashf(dest))
 	return;
 
-    vs_hdr2(" 安全系統 ", " 異常發文確認");
+    vs_hdr2("安全系統", "異常發文確認");
     outs(ANSI_COLOR(1;33)
 	 "親愛的使用者您好，我們發現您曾在 SYSOP 看板有如下的回文，\n"
 	 "看起來像是使用了某些不正常的程式導致發文結果異常: \n" ANSI_RESET);
@@ -1014,7 +1014,7 @@ user_login(void)
 	check_mailbox_quota();
 
         if (!HasUserPerm(PERM_BASIC)) {
-            vs_hdr2(" 停權通知 ", " 部份功\能已被暫停使用");
+            vs_hdr2("停權通知", "部份功\能已被暫停使用");
             outs(ANSI_COLOR(1;31) "\n\n\t抱歉，你的帳號已被停權。\n"
                  "\t詳情請至 ViolateLaw 看板搜尋你的 ID。\n" ANSI_RESET);
             pressanykey();

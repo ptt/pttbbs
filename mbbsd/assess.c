@@ -156,7 +156,7 @@ reassign_badpost(const char *userid) {
     int orig_badpost = 0;
     int uid;
 
-    vs_hdr2(" 退文修正 ", userid);
+    vs_hdr2("退文修正", userid);
     if ((uid = getuser(userid, &u)) == 0) {
         vmsgf("找不到使用者 %s。", userid);
         return -1;

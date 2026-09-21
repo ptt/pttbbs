@@ -319,7 +319,7 @@ save_violatelaw(void)
 static void
 warn_post_contents(const char *msg)
 {
-    vs_hdr2(" 廣告及違法發言偵測 ", " 疑似不當內容");
+    vs_hdr2("廣告及違法發言偵測", "疑似不當內容");
     outs("\n\n請注意: 你的訊息已被判定為可能有廣告或其它違法內容。\n\n");
     outs("注意系統偵測是機器判定未經人工介入，判定可能有誤所以此訊息\n"
          "只是警告與提醒，但多次發送此類訊息可能會被" ANSI_COLOR(1;31)
@@ -3955,7 +3955,7 @@ tar_addqueue(void)
     if (vans(TEMPFORMAT(STRLEN, "確定要對看板 %s 進行備份嗎？[y/N] ", currboard)) != 'y')
         return FULLUPDATE;
 
-    vs_hdr2(" 看板備份 ", currboard);
+    vs_hdr2("看板備份", currboard);
 
     if (!getdata_str(4, 0, "請輸入通知信箱: ", email, sizeof(email), DOECHO,
                      cuser.userid))
@@ -4394,7 +4394,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         return FULLUPDATE;
     }
 
-    vs_hdr2(" 刪除特定文字 ", fhdr->title);
+    vs_hdr2("刪除特定文字", fhdr->title);
     if (!getdata(1, 0, "刪除原因: ", reason, sizeof(reason), DOECHO))
         return FULLUPDATE;
     mvouts(3, 0, "請輸入要刪除的文字 (出現時會整行被[違規內容]取代, 最少兩個字元)\n");

@@ -19,7 +19,7 @@
 #endif
 
 static const char
-*PROMPT_ANGELBEATS = " Angel Beats! 天使公會 ",
+*PROMPT_ANGELBEATS = "Angel Beats! 天使公會",
 *ERR_CONNECTION = "抱歉，無法連線至天使公會，請稍後再試。\n"
                   "若持續發生請至 " BN_BUGREPORT " 看板通知站方管理人員。\n",
 *ERR_PROTOCOL = "抱歉，天使公會連線異常，請稍後再試。\n"
@@ -227,7 +227,7 @@ select_angel() {
     int i;
     int fd;
 
-    vs_hdr2(PROMPT_ANGELBEATS, " 選取天使 ");
+    vs_hdr2(PROMPT_ANGELBEATS, "選取天使");
     outs("\n");
 
     if ((fd = toconnect(ANGELBEATS_ADDR)) < 0) {
@@ -411,7 +411,7 @@ int angel_check_master(void) {
     userec_t xuser;
     int is_my_master;
 
-    vs_hdr2(PROMPT_ANGELBEATS, " 查詢主人狀態 ");
+    vs_hdr2(PROMPT_ANGELBEATS, "查詢主人狀態");
     usercomplete("想查詢的主人 ID: ", uid);
     move(2, 0); clrtobot();
     if (!*uid)
@@ -479,7 +479,7 @@ int a_angelreport() {
     angel_beats_data   req = {0};
     int fd;
 
-    vs_hdr2(PROMPT_ANGELBEATS, " 天使狀態報告 ");
+    vs_hdr2(PROMPT_ANGELBEATS, "天使狀態報告");
     outs("\n");
 
     if ((fd = toconnect(ANGELBEATS_ADDR)) < 0) {

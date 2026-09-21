@@ -1049,7 +1049,7 @@ multi_send(const char *title)
 	fclose(fp);
 	ShowVector(&namelist, 3, 0, msg_cc, 0);
         if (!listing) {
-            vs_hdr2(" 群組回信 ", " 信件格式錯誤");
+            vs_hdr2("群組回信", "信件格式錯誤");
             outs("\n注意，由於發信人的不當編輯，"
                  "此封信件格式有誤，已遺失原通告名單資訊。\n"
                  "你只能手動建立回信名單。");

@@ -25,7 +25,7 @@
 
 static int
 psb_default_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar("P&S Browser", BBSNAME);
+    vs_draw_hdr2("P&S Browser", BBSNAME);
     return 0;
 }
 
@@ -189,7 +189,7 @@ typedef struct {
 static int
 pveh_header(void *ctx) {
     pveh_ctx *cx = (pveh_ctx*) ctx;
-    vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": 編輯歷史】 ", cx->subject);
+    vs_draw_hdr2("【" TIME_CAPSULE_NAME ": 編輯歷史】", cx->subject);
     move(1, 0);
     outs("請注意本系統不會永久保留所有的編輯歷史。");
     outs("\n");
@@ -383,7 +383,7 @@ typedef struct {
 static int
 pvrb_header(void *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx;
-    vs_hdr2bar(" 【" TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME "】 ", cx->subject);
+    vs_draw_hdr2("【" TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME "】", cx->subject);
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
     vbar(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題");
@@ -632,7 +632,7 @@ typedef struct {
 
 static int
 pvcm_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar(" 【推文管理】", "");
+    vs_draw_hdr2("【推文管理】", "");
     move(1, 0);
     vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
     return 0;
@@ -769,7 +769,7 @@ typedef struct {
 
 static int
 pae_header(void *ctx GCC_UNUSED) {
-    vs_hdr2bar(" 【系統檔案】 ", "  編輯系統檔案");
+    vs_draw_hdr2("【系統檔案】", " 編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
     vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
          "%5s %-36s%-30s", "編號", "名  稱", "檔  名"));

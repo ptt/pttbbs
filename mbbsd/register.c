@@ -1220,7 +1220,7 @@ check_register(void)
     if (cuser.numlogindays < 2 ||
         HasUserPerm(PERM_NOREGCODE)) {
         clear();
-        vs_hdr2(" 未完成註冊認證 ", " 您的帳號尚未完成認證");
+        vs_hdr2("未完成註冊認證", "您的帳號尚未完成認證");
         move(9, 0);
         outs("  您目前尚未通過註冊認證程序，" ANSI_COLOR(1;33)
 	     "請至 (U) -> (R) 進行帳號認證" ANSI_RESET "\n"

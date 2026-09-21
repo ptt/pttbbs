@@ -491,7 +491,9 @@ vs_rectangle_simple(int l, int t, int r, int b)
 // ---- THEMED FORMATTING OUTPUT -------------------------------------
 
 /**
- * vs_header(title, mid, right): 清空螢幕並輸出完整標題 (MAX_COL)
+ * vs_header(title, mid, right): 清空螢幕並輸出完整標題 (填滿MAX_COL)
+ *
+ * 適合主選單、主要列表式瀏覽畫面 (看板列表、文章列表、使用者列表等需顯示全域脈絡的功能)
  *
  * @param title: 靠左的主要標題，不會被切斷。
  * @param mid: 置中說明，可被切齊。
@@ -546,7 +548,9 @@ vs_header(const char *title, const char *mid, const char *right)
 }
 
 /**
- * vs_hdr(title): 清空螢幕並輸出簡易的標題
+ * vs_hdr(title): 清空螢幕並輸出簡易的標題 (不填滿)
+ *
+ * 適合單一主題的填表、設定或簡短問答功能 (如給錢、寄信、查詢網友等)
  *
  * @param title
  */
@@ -560,36 +564,40 @@ vs_hdr(const char *title)
 }
 
 /**
- * vs_hdr2bar(left, right): (在行首)輸出簡易左右兩段式的標題
+ * vs_hdr2(left, right): 清空螢幕並輸出簡易左右兩段式的標題(填滿)
+ *
+ * 適合「主分類 + 副標題/目標/長說明」或標題會隨狀態動態改變的複合式功能
+ * (如聊天室、系統通知、子系統工具)。
+ *
+ * @param left: 靠左的主要標題，不會被切斷。
+ * @param right: 靠右的說明，空間夠才會顯示。
+ */
+void
+vs_hdr2(const char *left, const char *right)
+{
+    clear();
+    vs_draw_hdr2(left, right);
+}
+
+/**
+ * vs_draw_hdr2(left, right): 不清空螢幕，在頂端輸出簡易左右兩段式的標題
  *
  * @param left:  靠左的主要標題，不會被切斷。
  * @param right: 文字靠左，用完剩下的所有空間
  */
 void
-vs_hdr2bar(const char *left, const char *right)
+vs_draw_hdr2(const char *left, const char *right)
 {
-    clrtoeol();
-    outs(VCLR_HDR2_LEFT);
+    move(0, 0);
+    outs(VCLR_HDR2_LEFT " ");
     outs(left);
-    outs(VCLR_HDR2_RIGHT);
-    if (*right && *right != ' ')
-	outc(' ');
+    outs(" " VCLR_HDR2_RIGHT " ");
 
     int w = MAX_COL - vgetx();
     if (w > 0)
 	fillns(w, right);
 
     outs(ANSI_RESET "\n");
-}
-
-/**
- * vs_hdr2(left, right): 清空螢幕並輸出簡易左右兩段式的標題
- */
-void
-vs_hdr2(const char *left, const char *right)
-{
-    clear();
-    vs_hdr2bar(left, right);
 }
 
 
