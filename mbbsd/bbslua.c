@@ -200,7 +200,7 @@ bl_k2s(lua_State* L, int v)
         lua_pushstring(L, "ENTER");
     else if (v < ' ')
         lua_pushfstring(L, "^%c", v-1+'A');
-    else if (v < 0x100)
+    else if (!IS_SPECIAL_KEY(v))
         lua_pushfstring(L, "%c", v);
     else if (v >= KEY_F1 && v <= KEY_F12)
         lua_pushfstring(L, "F%d", v - KEY_F1 +1);

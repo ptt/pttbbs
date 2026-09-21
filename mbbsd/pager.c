@@ -275,7 +275,7 @@ ofo_reply_waterball(water_t *tw, int ch)
         return;
 
     char msg[STRLEN];
-    if ((ch < 0x100 && !isascii(ch)) || isprint(ch)) {
+    if (!IS_SPECIAL_KEY(ch) && (!isascii(ch) || isprint(ch))) {
         msg[0] = (char)ch;
         msg[1] = '\0';
     } else {
