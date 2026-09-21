@@ -53,9 +53,9 @@ int utf2ucs(const uint8_t *utf8, uint16_t *pucs) {
 
 extern const uint16_t u2b_table[];
 
-void utf8_to_big5(const char *utf8, char *big5, size_t max_len) {
+char *utf8_to_big5(const char *utf8, char *big5, size_t max_len) {
     if (!utf8 || !big5 || max_len == 0) {
-        return;
+        return big5;
     }
     const uint8_t *p = (const uint8_t *)utf8;
     size_t out_idx = 0;
@@ -78,13 +78,19 @@ void utf8_to_big5(const char *utf8, char *big5, size_t max_len) {
         }
     }
     big5[out_idx] = '\0';
+    return big5;
 }
 
 extern const uint16_t b2u_table[];
 
-void big5_to_utf8(const char *big5, char *utf8, size_t max_len) {
+char *big5_to_utf8(const char *big5, char *utf8, size_t max_len) {
     if (!big5 || !utf8 || max_len == 0) {
-        return;
+        return utf8;
+    }
+    char tmp[big5 == utf8 ? max_len : 1];
+    if (big5 == utf8) {
+        strlcpy(tmp, big5, max_len);
+        big5 = tmp;
     }
     const uint8_t *p = (const uint8_t *)big5;
     size_t out_idx = 0;
@@ -92,7 +98,7 @@ void big5_to_utf8(const char *big5, char *utf8, size_t max_len) {
         uint16_t b5 = *p;
         uint16_t ucs2 = 0;
         if (b5 & 0x80) {
-            if (p[1] != '\0') {
+            if ((unsigned char)p[1] >= 0x40) {
                 uint16_t b5_full = ((uint16_t)p[0] << 8) | (uint16_t)p[1];
                 p += 2;
                 ucs2 = b2u_table[b5_full];
@@ -115,6 +121,7 @@ void big5_to_utf8(const char *big5, char *utf8, size_t max_len) {
         }
     }
     utf8[out_idx] = '\0';
+    return utf8;
 }
 
 #ifdef _TEST_MAIN_

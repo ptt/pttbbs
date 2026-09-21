@@ -358,6 +358,39 @@ str_at_ansi(int count, const char *s)
 }
 
 int
+mb_bytes(const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    if (!p || !p[0])
+        return 0;
+    if (MB_IS_UTF8) {
+        if (p[0] < 0x80)
+            return 1;
+        if ((p[0] & 0xE0) == 0xC0 && (p[1] & 0xC0) == 0x80)
+            return 2;
+        if ((p[0] & 0xF0) == 0xE0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80)
+            return 3;
+        if ((p[0] & 0xF8) == 0xF0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80)
+            return 4;
+        return 1;
+    } else {
+        return (IS_DBCSLEAD(p[0]) && (unsigned char)p[1] >= 0x40) ? 2 : 1;
+    }
+}
+
+int
+mb_width(const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    if (!p || !p[0])
+        return 0;
+    if (MB_IS_UTF8)
+        return (p[0] < 0x80) ? 1 : 2;
+    else
+        return mb_bytes(s);
+}
+
+int
 str_term_width(const char *s)
 {
     if (!s || !*s)
@@ -365,11 +398,18 @@ str_term_width(const char *s)
 
     int width = 0;
     while (*s) {
-        const char *p = strchrnul(s, ESC_CHR);
-        width += p - s;
-        if (*p == '\0')
-            break;
-        s = skip_escape_sequence(p);
+        if (*s == ESC_CHR) {
+            s = skip_escape_sequence(s);
+            continue;
+        }
+        if (MB_IS_BIG5) {
+            const char *p = strchrnul(s, ESC_CHR);
+            width += p - s;
+            s = p;
+        } else {
+            width += mb_width(s);
+            s += mb_bytes(s);
+        }
     }
     return width;
 }

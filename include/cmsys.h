@@ -1,9 +1,11 @@
 #ifndef LIBBBSUTIL_H_
 #define LIBBBSUTIL_H_
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -165,6 +167,63 @@ int str_case_ends_with(const char *str, const char *suffix);
 const char *path_basename(const char *path);
 void trim(char *buf);
 void chomp(char *src);
+/* In-memory multibyte string encoding (MB_IS_BIG5 / MB_IS_UTF8 = 0 or 1) */
+#if !defined(MB_IS_BIG5) && !defined(MB_IS_UTF8)
+#  define MB_IS_BIG5 1
+#  define MB_IS_UTF8 0
+#elif defined(MB_IS_UTF8) && !defined(MB_IS_BIG5)
+#  define MB_IS_BIG5 (!(MB_IS_UTF8))
+#elif defined(MB_IS_BIG5) && !defined(MB_IS_UTF8)
+#  define MB_IS_UTF8 (!(MB_IS_BIG5))
+#endif
+#if (MB_IS_BIG5 && MB_IS_UTF8) || (!MB_IS_BIG5 && !MB_IS_UTF8)
+#  error "Exactly one of MB_IS_BIG5 or MB_IS_UTF8 must be 1"
+#endif
+
+/* On-disk storage encoding (STORAGE_IS_BIG5 / STORAGE_IS_UTF8 = 0 or 1) */
+#if !defined(STORAGE_IS_BIG5) && !defined(STORAGE_IS_UTF8)
+#  define STORAGE_IS_BIG5 1
+#  define STORAGE_IS_UTF8 0
+#elif defined(STORAGE_IS_UTF8) && !defined(STORAGE_IS_BIG5)
+#  define STORAGE_IS_BIG5 (!(STORAGE_IS_UTF8))
+#elif defined(STORAGE_IS_BIG5) && !defined(STORAGE_IS_UTF8)
+#  define STORAGE_IS_UTF8 (!(STORAGE_IS_BIG5))
+#endif
+#if (STORAGE_IS_BIG5 && STORAGE_IS_UTF8) || (!STORAGE_IS_BIG5 && !STORAGE_IS_UTF8)
+#  error "Exactly one of STORAGE_IS_BIG5 or STORAGE_IS_UTF8 must be 1"
+#endif
+
+#define NEED_STORAGE_CONV (MB_IS_UTF8 != STORAGE_IS_UTF8)
+#if MB_IS_UTF8
+#  define SZ_COLS(n) ((((n) - 1) * 3 + 1) / 2 + 1)
+#  define MB_CONVERT_SIZE(x) (((x) * 3 + 1) / 2 + 1)
+#else
+#  define SZ_COLS(n) (n)
+#  define MB_CONVERT_SIZE(x) (x)
+#endif
+#if MB_IS_UTF8 && STORAGE_IS_BIG5
+#  define storage_to_mb(src, dst, sz) big5_to_utf8((src), (dst), (sz))
+#  define mb_to_storage(src, dst, sz) utf8_to_big5((src), (dst), (sz))
+#elif MB_IS_BIG5 && STORAGE_IS_UTF8
+#  define storage_to_mb(src, dst, sz) utf8_to_big5((src), (dst), (sz))
+#  define mb_to_storage(src, dst, sz) big5_to_utf8((src), (dst), (sz))
+#else
+#  define storage_to_mb(src, dst, sz) ((src) == (dst) ? (DBCS_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), DBCS_safe_trim(dst), (dst)))
+#  define mb_to_storage(src, dst, sz) ((src) == (dst) ? (DBCS_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), DBCS_safe_trim(dst), (dst)))
+#endif
+
+#if NEED_STORAGE_CONV
+#  define TEMP_STORAGE_TO_MB_SZ(n, s) storage_to_mb((s), (char[MB_CONVERT_SIZE(n)]){0}, MB_CONVERT_SIZE(n))
+#  define TEMP_MB_TO_STORAGE_SZ(n, s) mb_to_storage((s), (char[MB_CONVERT_SIZE(n)]){0}, MB_CONVERT_SIZE(n))
+#else
+#  define TEMP_STORAGE_TO_MB_SZ(n, s) ((char *)(s))
+#  define TEMP_MB_TO_STORAGE_SZ(n, s) ((char *)(s))
+#endif
+#define TEMP_STORAGE_TO_MB(s) (assert(strlen(s) < ANSILINELEN), TEMP_STORAGE_TO_MB_SZ(ANSILINELEN, (s)))
+#define TEMP_MB_TO_STORAGE(s) (assert(strlen(s) < ANSILINELEN), TEMP_MB_TO_STORAGE_SZ(ANSILINELEN, (s)))
+
+int  mb_bytes(const char *s);
+int  mb_width(const char *s);
 int  str_term_width(const char *s);
 int  str_at_ansi(int count, const char *s);
 int  strip_blank(char *cbuf, const char *buf);
@@ -408,8 +467,8 @@ int bcrypt_checkpass(const char *pass, const char *goodhash);
 /* utf8.c */
 int ucs2utf(uint16_t ucs2, uint8_t *utf8);
 int utf2ucs(const uint8_t *utf8, uint16_t *pucs);
-void utf8_to_big5(const char *utf8, char *big5, size_t max_len);
-void big5_to_utf8(const char *big5, char *utf8, size_t max_len);
+char *utf8_to_big5(const char *utf8, char *big5, size_t max_len);
+char *big5_to_utf8(const char *big5, char *utf8, size_t max_len);
 
 /* big5.c */
 extern const uint16_t b2u_table[];
