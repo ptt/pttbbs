@@ -445,13 +445,6 @@ void showtitle(const char *title, const char *mid);
 void adbanner(int i);
 void adbanner_goodbye();
 int main_menu(void);
-int admin(void);
-int Mail(void);
-int Talk(void);
-int User(void);
-int Xyz(void);
-int Play_Play(void);
-int Name_Menu(void);
 // ZA System
 int  ZA_Waiting(void);
 int  ZA_Select(void);

@@ -80,11 +80,17 @@ static const int menu_mode_map[M_MENU_MAX] = {
     PSALE,	AMUSE,	CHC,	NMENU
 };
 
-typedef struct {
+typedef struct menuitem_t {
     int     (*cmdfunc)();
     int     level;
-    char    *desc;                   /* hotkey/description */
-} commands_t;
+    const char *desc;                /* hotkey/description */
+    const struct menuitem_t *submenu;
+    int     mode;                    /* menu index (M_*) */
+    const char *status;              /* short caption for bottom status bar */
+    const char *title;               /* long title for top header */
+    int     default_enter;           /* default hotkey on entering menu */
+    int     default_exit;            /* default hotkey on KEY_LEFT/exit */
+} menuitem_t;
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -240,7 +246,7 @@ static unsigned short menu_column = 20;
 
 #ifdef EXP_ALERT_ADBANNER_USONG
 static int
-decide_menu_row(const commands_t *p) {
+decide_menu_row(const menuitem_t *p) {
     if ((p[0].level && !HasUserPerm(p[0].level)) &&
         HasUserFlag(UF_ADBANNER_USONG) &&
         HasUserFlag(UF_ADBANNER)) {
@@ -352,10 +358,10 @@ adbanner(int menu_index)
 }
 
 static int
-show_menu(int menu_index, const commands_t * p)
+show_menu(int menu_index, const menuitem_t * p)
 {
     register int    n = 0;
-    register char  *s;
+    register const char *s;
     int row = menu_row;
 
     adbanner(menu_index);
@@ -424,18 +430,59 @@ menu_help(void)
     show_help_table(p, ARRAY_SIZE(p), "選單按鍵說明");
 }
 
-static void
-domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[])
+static const char *
+extract_menu_title(const char *desc, char *buf, size_t size)
 {
+    const char *start, *end;
+
+    if (!desc)
+	return "";
+
+    start = strstr(desc, "【");
+    if (start) {
+	start += strlen("【");
+	end = strstr(start, "】");
+	if (!end)
+	    end = start + strlen(start);
+    } else {
+	start = desc;
+	while (*start && isascii((unsigned char)*start))
+	    start++;
+	end = start + strlen(start);
+    }
+
+    while (start < end && isspace((unsigned char)*start))
+	start++;
+    while (end > start && isspace((unsigned char)*(end - 1)))
+	end--;
+
+    if ((size_t)(end - start) >= size)
+	end = start + size - 1;
+    memcpy(buf, start, end - start);
+    buf[end - start] = '\0';
+    return buf;
+}
+
+static void
+domenu(const menuitem_t *menu)
+{
+    const menuitem_t *cmdtable = menu->submenu;
+    int             menu_index = menu->mode;
+    int             cmd = menu->default_enter;
+    char            title_buf[STRLEN];
+    const char     *title = menu->title;
     int             lastcmdptr, cmdmode;
     int             n, pos, total, i;
     int             err;
+
+    if (!title)
+	title = extract_menu_title(menu->desc, title_buf, sizeof(title_buf));
 
     assert(0 <= menu_index && menu_index < M_MENU_MAX);
     cmdmode = menu_mode_map[menu_index];
 
     setutmpmode(cmdmode);
-    showtitle(cmdtitle, BBSNAME);
+    showtitle(title, BBSNAME);
     total = show_menu(menu_index, cmdtable);
 
     show_status();
@@ -477,10 +524,10 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	case KEY_LEFT:
 	case 'e':
 	case 'E':
-	    if (cmdmode == MMENU)
-		cmd = 'G';	    // to exit
-	    else if ((cmdmode == MAIL) && chkmailbox())
+	    if ((cmdmode == MAIL) && chkmailbox())
 		cmd = 'R';	    // force keep reading mail
+	    else if (menu->default_exit)
+		cmd = menu->default_exit;
 	    else
 		return;
 	default:
@@ -496,12 +543,17 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		break;
 	    }
 	    if (cmd == KEY_ENTER || cmd == KEY_RIGHT) {
-
 		currstat = XMODE;
                 if (cmdtable[lastcmdptr].cmdfunc != Goodbye)
                     clear_main();
 
-		if ((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
+		if (cmdtable[lastcmdptr].submenu) {
+		    domenu(&cmdtable[lastcmdptr]);
+		    err = 0;
+		} else {
+		    err = (*cmdtable[lastcmdptr].cmdfunc) ();
+		}
+		if (err == QUIT)
 		    return;
 		currutmp->mode = currstat = cmdmode;
 
@@ -523,10 +575,10 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 		    break;
 
 	    if (!CheckMenuPerm(cmdtable[i].level)) {
-		for (i = 0; cmdtable[i].cmdfunc; i++)
+		for (i = 0; cmdtable[i].desc; i++)
 		    if (CheckMenuPerm(cmdtable[i].level))
 			break;
-		if (!cmdtable[i].cmdfunc)
+		if (!cmdtable[i].desc)
 		    return;
 	    }
 
@@ -550,7 +602,7 @@ domenu(int menu_index, const char *cmdtitle, int cmd, const commands_t cmdtable[
 	    continue;
 
 	if (refscreen) {
-	    showtitle(cmdtitle, BBSNAME);
+	    showtitle(title, BBSNAME);
 	    // menu 設定 M_MENU_REFRESH 可讓 ADBanner 顯示別的資訊
 	    show_menu(M_MENU_REFRESH, cmdtable);
 	    show_status();
@@ -617,20 +669,18 @@ view_security_log() {
     return 0;
 }
 
-static int x_admin_money(void);
-static int x_admin_user(void);
 
 // ----------------------------------------------------------- MENU DEFINITION
 // 注意每個 menu 最多不能同時顯示超過 11 項 (80x24 標準大小的限制)
 
-static const commands_t m_admin_money[] = {
+static const menuitem_t m_admin_money[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
                                                 "View Log      檢視交易記錄"},
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP,	"Givemoney     紅包雞"},
     {NULL, 0, NULL}
 };
 
-static const commands_t m_admin_user[] = {
+static const menuitem_t m_admin_user[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
                                         "Money Log      最近交易記錄"},
     {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD,
@@ -646,16 +696,30 @@ static const commands_t m_admin_user[] = {
 };
 
 /* administrator's maintain menu */
-static const commands_t adminlist[] = {
+static const menuitem_t adminlist[] = {
     {m_user, PERM_SYSOP,		"User          使用者資料"},
     {m_board, PERM_BOARD,		"Board         設定看板"},
     {m_register,
 	PERM_ACCOUNTS|PERM_ACCTREG,	"Register      審核註冊表單"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"Xfile         編輯系統檔案"},
-    {x_admin_money, PERM_SYSOP|PERM_ACCOUNTS|PERM_VIEWSYSOP,
-                                        "Money         【" MONEYNAME "相關】"},
-    {x_admin_user, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
-                                        "LUser Log     【使用者資料記錄】"},
+    {
+	.submenu = m_admin_money,
+	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_VIEWSYSOP,
+	.desc = "Money         【" MONEYNAME "相關】",
+	.mode = M_XMENU,
+	.status = "金錢管理",
+	.title = "金錢相關管理",
+	.default_enter = 'V',
+    },
+    {
+	.submenu = m_admin_user,
+	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
+	.desc = "LUser Log     【使用者資料記錄】",
+	.mode = M_XMENU,
+	.status = "記錄管理",
+	.title = "使用者記錄管理",
+	.default_enter = 'O',
+    },
     {search_user_bypwd,
 	PERM_ACCOUNTS|PERM_POLICE_MAN,	"Search User    特殊搜尋使用者"},
 #ifdef USE_VERIFYDB
@@ -666,7 +730,7 @@ static const commands_t adminlist[] = {
 };
 
 /* mail menu */
-static const commands_t maillist[] = {
+static const menuitem_t maillist[] = {
     {m_read, PERM_READMAIL,     "Read          我的信箱"},
     {m_send, PERM_LOGINOK,      "Send          站內寄信"},
     {mail_list, PERM_LOGINOK,   "Mail List     群組寄信"},
@@ -680,7 +744,7 @@ static const commands_t maillist[] = {
     {NULL, 0, NULL}
 };
 
-static const commands_t angelmenu[] GCC_UNUSED = {
+static const menuitem_t angelmenu[] GCC_UNUSED = {
     {a_angelmsg, PERM_ANGEL,"Leave message 留言給小主人"},
     {a_angelmsg2,PERM_ANGEL,"Call screen   呼叫畫面個性留言"},
     {angel_check_master,PERM_ANGEL,
@@ -690,15 +754,10 @@ static const commands_t angelmenu[] GCC_UNUSED = {
     {NULL, 0, NULL}
 };
 
-#ifdef PLAY_ANGEL
-static int menu_angelbeats() {
-    domenu(M_TMENU, "Angel Beats! 天使公會", 'L', angelmenu);
-    return 0;
-}
-#endif
+
 
 /* Talk menu */
-static const commands_t talklist[] = {
+static const menuitem_t talklist[] = {
     {t_users, 0,            "Users         線上使用者列表"},
     {t_query, 0,            "Query         查詢網友"},
     // PERM_PAGE - 水球都要 PERM_LOGIN 了
@@ -710,8 +769,15 @@ static const commands_t talklist[] = {
 #ifdef PLAY_ANGEL
     {a_changeangel,
 	PERM_LOGINOK,	    "AChange Angel 更換小天使"},
-    {menu_angelbeats, PERM_ANGEL|PERM_SYSOP,
-                            "BAngel Beats! 【天使公會】"},
+    {
+	.submenu = angelmenu,
+	.level = PERM_ANGEL|PERM_SYSOP,
+	.desc = "BAngel Beats! 【天使公會】",
+	.mode = M_TMENU,
+	.status = "天使公會",
+	.title = "Angel Beats! 天使公會",
+	.default_enter = 'L',
+    },
 #endif
     {pager_show_log, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
@@ -728,7 +794,7 @@ static int t_special() {
     return 0;
 }
 
-static const commands_t namelist[] = {
+static const menuitem_t namelist[] = {
     {t_override, PERM_LOGINOK,"OverRide      好友名單"},
     {t_reject, PERM_LOGINOK,  "Black         壞人名單"},
     {t_aloha,PERM_LOGINOK,    "ALOHA         上站通知名單"},
@@ -763,13 +829,13 @@ static int u_view_security()
     return more(fn, YEA);
 }
 
-static const commands_t myfilelist[] = {
+static const menuitem_t myfilelist[] = {
     {u_editplan,    PERM_LOGINOK,   "QueryEdit     編輯名片檔"},
     {u_editsig,	    PERM_LOGINOK,   "Signature     編輯簽名檔"},
     {NULL, 0, NULL}
 };
 
-static const commands_t myuserlog[] = {
+static const menuitem_t myuserlog[] = {
     {u_view_recentlogin, 0,   "LRecent Login  最近上站記錄"},
 #ifdef USE_RECENTPAY
     {u_view_recentpay,   0,   "PRecent Pay    最近交易記錄"},
@@ -778,19 +844,7 @@ static const commands_t myuserlog[] = {
     {NULL, 0, NULL}
 };
 
-static int
-u_myfiles()
-{
-    domenu(M_UMENU, "個人檔案", 'Q', myfilelist);
-    return 0;
-}
 
-static int
-u_mylogs()
-{
-    domenu(M_UMENU, "個人記錄", 'L', myuserlog);
-    return 0;
-}
 
 void Customize(); // user.c
 
@@ -803,12 +857,24 @@ u_customize()
 
 
 /* User menu */
-static const commands_t userlist[] = {
+static const menuitem_t userlist[] = {
     {u_customize,   PERM_BASIC,	    "UCustomize    個人化設定"},
     {u_info,	    PERM_BASIC,     "Info          設定個人資料與密碼"},
     {u_loginview,   PERM_BASIC,     "VLogin View   選擇進站畫面"},
-    {u_myfiles,	    PERM_LOGINOK,   "My Files      【個人檔案】 (名片,簽名檔...)"},
-    {u_mylogs,	    PERM_LOGINOK,   "LMy Logs      【個人記錄】 (最近上線...)"},
+    {
+	.submenu = myfilelist,
+	.level = PERM_LOGINOK,
+	.desc = "My Files      【個人檔案】 (名片,簽名檔...)",
+	.mode = M_UMENU,
+	.default_enter = 'Q',
+    },
+    {
+	.submenu = myuserlog,
+	.level = PERM_LOGINOK,
+	.desc = "LMy Logs      【個人記錄】 (最近上線...)",
+	.mode = M_UMENU,
+	.default_enter = 'L',
+    },
     {u_register,    PERM_BASIC,     "Register      新增帳號認證"},
     {u_setup_2fa,   PERM_BASIC,     "2FA           設定兩階段認證"},
 #ifdef ASSESS
@@ -826,22 +892,7 @@ x_agreement(void)
 }
 #endif
 
-static int
-x_admin_money(void)
-{
-    char init = 'V';
-    if (HasUserPerm(PERM_VIEWSYSOP))
-        init = 'G';
-    domenu(M_XMENU, "金錢相關管理", init, m_admin_money);
-    return 0;
-}
 
-static int
-x_admin_user(void)
-{
-    domenu(M_XMENU, "使用者記錄管理", 'O', m_admin_user);
-    return 0;
-}
 
 #ifdef HAVE_INFO
 static int
@@ -887,7 +938,7 @@ int _debug_reportstruct()
 #endif
 
 /* XYZ tool sub menu */
-static const commands_t m_xyz_hot[] = {
+static const menuitem_t m_xyz_hot[] = {
     {x_week, 0,      "Week          《本週五十大熱門話題》"},
     {x_issue, 0,     "Issue         《今日十大熱門話題》"},
     {x_boardman,0,   "Man Boards    《看板精華區排行榜》"},
@@ -895,7 +946,7 @@ static const commands_t m_xyz_hot[] = {
 };
 
 /* XYZ tool sub menu */
-static const commands_t m_xyz_user[] = {
+static const menuitem_t m_xyz_user[] = {
     {x_user100 ,0,   "Users         《使用者百大排行榜》"},
     {topsong,PERM_LOGINOK,
 	             "GTop Songs    《使用者心情點播排行》"},
@@ -904,24 +955,25 @@ static const commands_t m_xyz_user[] = {
     {NULL, 0, NULL}
 };
 
-static int
-x_hot(void)
-{
-    domenu(M_XMENU, "熱門話題與看板", 'W', m_xyz_hot);
-    return 0;
-}
 
-static int
-x_users(void)
-{
-    domenu(M_XMENU, "使用者統計資訊", 'U', m_xyz_user);
-    return 0;
-}
 
 /* XYZ tool menu */
-static const commands_t xyzlist[] = {
-    {x_hot,  0,      "THot Topics   【熱門話題與看板】"},
-    {x_users,0,      "Users         【使用者相關統計】"},
+static const menuitem_t xyzlist[] = {
+    {
+	.submenu = m_xyz_hot,
+	.desc = "THot Topics   【熱門話題與看板】",
+	.mode = M_XMENU,
+	.status = "熱門話題",
+	.default_enter = 'W',
+    },
+    {
+	.submenu = m_xyz_user,
+	.desc = "Users         【使用者相關統計】",
+	.mode = M_XMENU,
+	.status = "統計資訊",
+	.title = "使用者統計資訊",
+	.default_enter = 'U',
+    },
 #ifndef DEBUG
     /* All these are useless in debug mode. */
 #ifdef HAVE_USERAGREEMENT
@@ -949,7 +1001,7 @@ static const commands_t xyzlist[] = {
 };
 
 /* Ptt money menu */
-static const commands_t moneylist[] = {
+static const menuitem_t moneylist[] = {
     {p_give, 0,         "0Give        給其他人" MONEYNAME},
     {save_violatelaw, 0,"1ViolateLaw  繳罰單"},
     {p_from, 0,         "2From        暫時修改故鄉"},
@@ -957,118 +1009,121 @@ static const commands_t moneylist[] = {
     {NULL, 0, NULL}
 };
 
-static const commands_t      cmdlist[] = {
-    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
-				"0Admin       【 系統維護區 】"},
+static const menuitem_t chesslist[] = {
+    {chc_main,         PERM_LOGINOK, "1CChessFight    象棋邀局 "},
+    {gomoku_main,      PERM_LOGINOK, "2GomokuFight   五子棋邀局"},
+    {NULL, 0, NULL}
+};
+
+/* Ptt Play menu */
+static const menuitem_t playlist[] = {
+    {
+	.submenu = moneylist,
+	.level = PERM_LOGINOK,
+	.desc = "Pay         【 " BBSMNAME2 "量販店 】",
+	.mode = M_PSALE,
+	.status = "量販商店",
+	.default_enter = '0',
+    },
+    {chicken_main, PERM_LOGINOK,
+			     "Chicken        " BBSMNAME2 "養雞場"},
+    {ticket_main, PERM_LOGINOK,
+                             "Gamble         " BBSMNAME2 "彩券"},
+    {
+	.submenu = chesslist,
+	.level = PERM_LOGINOK,
+	.desc = "BChess      【 " BBSMNAME2 "棋院   】",
+	.mode = M_CHC,
+	.status = "休閒棋院",
+	.default_enter = '1',
+    },
+    {NULL, 0, NULL}
+};
+
+static const menuitem_t cmdlist[] = {
+    {
+	.submenu = adminlist,
+	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
+	.desc = "0Admin       【 系統維護區 】",
+	.mode = M_ADMIN,
+	.status = "系統維護",
+	.title = "系統維護",
+	.default_enter = 'L',
+    },
     {Announce,	0,		"Announce     【 精華公佈欄 】"},
     {Favorite,	0,		"Favorite     【 我 的 最愛 】"},
     {Class,	0,		"Class        【 分組討論區 】"},
     // TODO 目前很多人被停權時會變成 -R-1-3 (PERM_LOGINOK, PERM_VIOLATELAW,
     // PERM_NOREGCODE) 沒有 PERM_READMAIL，但這樣麻煩的是他們就搞不懂發生什麼事
-    {Mail, 	PERM_BASIC,     "Mail         【 私人信件區 】"},
+    {
+	.submenu = maillist,
+	.level = PERM_BASIC,
+	.desc = "Mail         【 私人信件區 】",
+	.mode = M_MAIL,
+	.status = "電子郵件",
+	.title = "電子郵件",
+	.default_enter = 'R',
+    },
     // 有些 bot 喜歡整天 query online accounts, 所以聊天改為 LOGINOK
-    {Talk, 	PERM_LOGINOK,	"Talk         【 休閒聊天區 】"},
-    {User, 	PERM_BASIC,	"User         【 個人設定區 】"},
-    {Xyz, 	0,		"Xyz          【 系統資訊區 】"},
-    {Play_Play, PERM_LOGINOK, 	"Play         【 娛樂與休閒 】"},
-    {Name_Menu, PERM_LOGINOK,	"Namelist     【 編特別名單 】"},
+    {
+	.submenu = talklist,
+	.level = PERM_LOGINOK,
+	.desc = "Talk         【 休閒聊天區 】",
+	.mode = M_TMENU,
+	.status = "聊天說話",
+	.title = "聊天說話",
+	.default_enter = 'U',
+    },
+    {
+	.submenu = userlist,
+	.level = PERM_BASIC,
+	.desc = "User         【 個人設定區 】",
+	.mode = M_UMENU,
+	.status = "個人設定",
+	.title = "個人設定",
+	.default_enter = 'U',
+    },
+    {
+	.submenu = xyzlist,
+	.desc = "Xyz          【 系統資訊區 】",
+	.mode = M_XMENU,
+	.status = "工具程式",
+	.title = "工具程式",
+	.default_enter = 'T',
+    },
+    {
+	.submenu = playlist,
+	.level = PERM_LOGINOK,
+	.desc = "Play         【 娛樂與休閒 】",
+	.mode = M_PMENU,
+	.status = "休閒遊樂",
+	.title = "網路遊樂場",
+	.default_enter = 'G',
+    },
+    {
+	.submenu = namelist,
+	.level = PERM_LOGINOK,
+	.desc = "Namelist     【 編特別名單 】",
+	.mode = M_NMENU,
+	.status = "名單編輯",
+	.title = "名單編輯",
+	.default_enter = 'O',
+    },
     {Goodbye, 	0, 		"Goodbye         離開，再見… "},
     {NULL, 	0, 		NULL}
 };
 
-int main_menu(void) {
-    domenu(M_MMENU, "主功\能表", (ISNEWMAIL(currutmp) ? 'M' : 'C'), cmdlist);
-    return 0;
-}
-
-static int p_money() {
-    domenu(M_PSALE, BBSMNAME2 "量販店", '0', moneylist);
-    return 0;
-};
-
-static int chessroom();
-
-/* Ptt Play menu */
-static const commands_t playlist[] = {
-    {p_money, PERM_LOGINOK,  "Pay         【 " BBSMNAME2 "量販店 】"},
-    {chicken_main, PERM_LOGINOK,
-			     "Chicken        " BBSMNAME2 "養雞場"},
-    {ticket_main, PERM_LOGINOK,
-                             "Gamble         " BBSMNAME2 "彩券"},
-    {chessroom, PERM_LOGINOK,"BChess      【 " BBSMNAME2 "棋院   】"},
-    {NULL, 0, NULL}
-};
-
-static const commands_t chesslist[] = {
-    {chc_main,         PERM_LOGINOK, "1CChessFight   " ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET},
-    {gomoku_main,      PERM_LOGINOK, "2GomokuFight   " ANSI_COLOR(1;33) "五子棋邀局" ANSI_RESET},
-    {NULL, 0, NULL}
-};
-
-static int chessroom() {
-    domenu(M_CHC, BBSMNAME2 "棋院", '1', chesslist);
-    return 0;
-}
-
-// ---------------------------------------------------------------- SUB MENUS
-
-/* main menu */
-
 int
-admin(void)
+main_menu(void)
 {
-    char init = 'L';
-
-    if (HasUserPerm(PERM_VIEWSYSOP))
-        init = 'X';
-    else if (HasUserPerm(PERM_ACCTREG))
-        init = 'R';
-    else if (HasUserPerm(PERM_POLICE_MAN))
-        init = 'S';
-
-    domenu(M_ADMIN, "系統維護", init, adminlist);
-    return 0;
-}
-
-int
-Mail(void)
-{
-    domenu(M_MAIL, "電子郵件", 'R', maillist);
-    return 0;
-}
-
-int
-Talk(void)
-{
-    domenu(M_TMENU, "聊天說話", 'U', talklist);
-    return 0;
-}
-
-int
-User(void)
-{
-    domenu(M_UMENU, "個人設定", 'U', userlist);
-    return 0;
-}
-
-int
-Xyz(void)
-{
-    domenu(M_XMENU, "工具程式", 'T', xyzlist);
-    return 0;
-}
-
-int
-Play_Play(void)
-{
-    domenu(M_PMENU, "網路遊樂場", 'G', playlist);
-    return 0;
-}
-
-int
-Name_Menu(void)
-{
-    domenu(M_NMENU, "名單編輯", 'O', namelist);
+    const menuitem_t menu = {
+	.submenu = cmdlist,
+	.mode = M_MMENU,
+	.title = "主功\能表",
+	.default_enter = ISNEWMAIL(currutmp) ? 'M' : 'C',
+	.default_exit = 'G',
+    };
+    domenu(&menu);
     return 0;
 }
 
