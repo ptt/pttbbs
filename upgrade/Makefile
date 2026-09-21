@@ -22,5 +22,9 @@ all:
 	@echo "        so we let you decide what to run."
 	@echo "Please type make rDDDD_XXXX to build your upgrade program."
 
+convert_sgr_66: convert_sgr_66.c sgr66.o common.o
+convert_utf8: convert_utf8.c sgr66.o common.o
+fix_2026h: fix_2026h.c common.o
+
 #$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 #	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
