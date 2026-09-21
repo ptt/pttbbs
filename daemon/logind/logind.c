@@ -1396,6 +1396,56 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 
 
 ///////////////////////////////////////////////////////////////////////
+static const char *auth_is_free_userid(const char *userid);
+///////////////////////////////////////////////////////////////////////
+// Bot Module Hooks
+
+#include "bot.h"
+
+static void login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec);
+
+static int bot_check_post_auth_ban(login_conn_ctx *conn, int fd)
+{
+    if (!conn || !conn->ctx.userid[0])
+        return 0;
+
+    int delay_sec = 1;
+    char msg[512];
+    msg[0] = '\0';
+
+    if (bot_on_auth_result(conn->ctx.userid, conn->ctx.hostip,
+                           auth_is_free_userid(conn->ctx.userid) != NULL,
+                           &delay_sec, msg, sizeof(msg)) < 0) {
+        _mt_clear(conn);
+        if (msg[0])
+            _text_write(conn, msg, strlen(msg));
+        login_conn_remove(conn, fd, delay_sec);
+        return -1;
+    }
+    return 0;
+}
+
+static int bot_check_user_login(login_conn_ctx *conn, int fd)
+{
+    if (!conn->ctx.userid[0])
+        return 0;
+
+    int delay_sec = 1;
+    char msg[512];
+    msg[0] = '\0';
+
+    if (bot_on_login_attempt(conn->ctx.userid, conn->ctx.hostip,
+                             auth_is_free_userid(conn->ctx.userid) != NULL,
+                             &delay_sec, msg, sizeof(msg)) < 0) {
+        _mt_clear(conn);
+        if (msg[0])
+            _text_write(conn, msg, strlen(msg));
+        login_conn_remove(conn, fd, delay_sec);
+        return -1;
+    }
+    return 0;
+}
+
 // BBS Logic
 
 static void
@@ -1893,6 +1943,9 @@ auth_start(int fd, login_conn_ctx *conn)
                 draw_service_failure(conn);
                 return AUTH_RESULT_STOP;
             }
+            if (bot_check_post_auth_ban(conn, fd) < 0) {
+                return AUTH_RESULT_STOP;
+            }
             STATINC(STAT_LOGIND_SERVSTART);
             return AUTH_RESULT_OK;
 
@@ -2386,6 +2439,9 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     // force to eliminate the extra field.
                     // (backward behavior compatible)
                     uid[IDLEN] = 0;
+
+                    if (bot_check_user_login(conn, fd) < 0)
+                        return -1;
 
                     // accounts except free_auth [guest / new]
                     // require passwd.
