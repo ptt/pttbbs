@@ -509,7 +509,7 @@ static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
     outs("   ");
     prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
            'a' + i,
-           strlen(val) < 16 ? col_opt : 0,
+           str_term_width(val) < 16 ? col_opt : 0,
            item->desc, val);
     return 0;
 }

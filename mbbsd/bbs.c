@@ -430,14 +430,14 @@ set_board(void)
 
 	SNPRINTF(currBM, "ªO¥D:%s", bp->BM);
 	/* title has +7 leading symbols */
-	l += strlen(bp->title);
+	l += str_term_width(bp->title);
 	if(l >= 7)
 	    l -= 7;
 	else
 	    l = 0;
-	l += 8 + strlen(currboard); /* trailing stuff */
-	l += strlen(bp->brdname);
-	l = t_columns - l -strlen(currBM);
+	l += 8 + str_term_width(currboard); /* trailing stuff */
+	l += str_term_width(bp->brdname);
+	l = t_columns - l - str_term_width(currBM);
 
 #ifdef _DEBUG
 	{
@@ -449,7 +449,7 @@ set_board(void)
 	}
 #endif
 
-	if(l < 0 && ((l += strlen(currBM)) > 7))
+	if(l < 0 && ((l += str_term_width(currBM)) > 7))
 	{
 	    currBM[l] = 0;
 	    currBM[l-1] = currBM[l-2] = '.';
@@ -3788,15 +3788,14 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     if(aidu > 0)
     {
       char aidc[10];
-      int y, x;
+      int x;
 
       aidu2aidc(aidc, aidu);
       prints("¢x " AID_DISPLAYNAME ": "
 	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ",
 	  aidc, currboard && currboard[0] ? currboard : "¥¼ª¾",
 	  AID_HOSTNAME);
-      getyx(&y, &x);
-      x = 75 - x;
+      x = 75 - vgetx();
       if (x > 1)
 	  prints("%.*s ", x, fhdr->title);
       outs("\n");

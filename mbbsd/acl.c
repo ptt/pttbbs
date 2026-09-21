@@ -154,7 +154,7 @@ ui_print_user_banned_status_for_board(const char *uid, const char *board) {
 static int
 ui_ban_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
-    int y, x;
+    int y;
     int result;
     char ans[3];
     char history_log[PATHLEN];
@@ -163,7 +163,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
 
     setbfile(history_log, board, FN_BANNED_HISTORY);
 
-    getyx(&y, &x);
+    y = vgety();
     if ((expire = is_user_banned_by_board(uid, board))) {
         vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
               time4_days_remaining(expire, now));
@@ -292,14 +292,14 @@ ui_ban_user_for_board(const char *uid, const char *board) {
 static int
 ui_unban_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
-    int y, x;
+    int y;
     char ans[3];
     char history_log[PATHLEN];
     char reason[STRLEN];
 
     setbfile(history_log, board, FN_BANNED_HISTORY);
 
-    getyx(&y, &x);
+    y = vgety();
     if (!(expire = is_user_banned_by_board(uid, board))) {
         vmsg("使用者未在禁言名單。");
         return -1;

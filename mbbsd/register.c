@@ -181,13 +181,13 @@ isvalidaddr(char *addr, int isForeign)
 	  DBCS_strcasestr(addr, "巿") == 0 &&
 	  DBCS_strcasestr(addr, "縣") == 0 &&
 	  DBCS_strcasestr(addr, "室") == 0) ||
-	 strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
-	 strcmp(&addr[strlen(addr) - 2], "街") == 0))
+	 str_ends_with(addr, "段") ||
+	 str_ends_with(addr, "路") ||
+	 str_ends_with(addr, "巷") ||
+	 str_ends_with(addr, "弄") ||
+	 str_ends_with(addr, "區") ||
+	 str_ends_with(addr, "市") ||
+	 str_ends_with(addr, "街")))
 	return "這個地址似乎並不完整";
 
     if (HaveRejectStr(addr, FN_REJECT_STR_ADDR))

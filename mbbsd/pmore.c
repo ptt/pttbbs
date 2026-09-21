@@ -1664,7 +1664,7 @@ mf_display()
             /* right floating stuff? */
             if (currline == 0 && fh.floats[0])
             {
-                w -= ustrlen(fh.floats[0]) + ustrlen(fh.floats[1]) + 4;
+                w -= str_term_width((const char *)fh.floats[0]) + str_term_width((const char *)fh.floats[1]) + 4;
             }
 
             prints("%-*.*s", w, w,
@@ -2405,7 +2405,7 @@ _pmore2(
                     const char *s = PMORE_MSG_MOVIE_DETECTED;
 
                     outs(ANSI_RESET ANSI_COLOR(1;33;44));
-                    w -= strlen(s); outs(s);
+                    w -= str_term_width(s); outs(s);
 
                     while (w-- > 0)
                         outc(' ');
@@ -2907,7 +2907,7 @@ pmore_PromptBar(const char *caption, int shadow)
 
     outs(ANSI_REVERSE);
     outs(caption);
-    for(i -= strlen(caption); i > 0; i--)
+    for(i -= str_term_width(caption); i > 0; i--)
         outs(" ");
     outs(ANSI_RESET "\n");
 

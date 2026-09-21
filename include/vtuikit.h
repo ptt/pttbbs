@@ -154,6 +154,7 @@ void InputHistoryNext	(char *s, int sz);
 // v*: primitive rendering
 void vpad   (int n, const char *pattern);	    /// pad n fields by pattern
  int vgety  (void);				    /// return cursor position (y)
+ int vgetx  (void);				    /// return cursor position (x)
 void vfill  (int n, int flags, const char *s);	    /// fill n-width space with s
 void vbar   (const char *s);			    /// draw an expanded bar with s
 void vbarlr (const char *l, const char *r);	    /// draw a left-right expanded bar with (l,r)

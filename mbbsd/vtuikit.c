@@ -226,7 +226,7 @@ vfill(int n, int flags, const char *s)
 	if (flags & VFILL_RIGHT_ALIGN)
 	{
 	    // right-align
-	    int l = has_ansi ? str_term_width(s) : (int)strlen(s);
+	    int l = str_term_width(s);
 
 	    if (l >= n) // '=' prevents blanks
 		l = n;
@@ -259,7 +259,7 @@ vfill(int n, int flags, const char *s)
 inline void
 vpad(int n, const char *pattern)
 {
-    int len = strlen(pattern);
+    int len = str_term_width(pattern);
     // assert(len > 0);
 
     while (n >= len)
@@ -284,6 +284,17 @@ vgety(void)
     return y;
 }
 
+/**
+ * vgetx(): 取得目前所在位置的欄位
+ */
+inline int
+vgetx(void)
+{
+    int y, x;
+    getyx(&y, &x);
+    return x;
+}
+
 // ---- HIGH LEVEL API -----------------------------------------------
 
 /**
@@ -303,18 +314,16 @@ vshowmsg(const char *msg)
 	outs(VCLR_PAUSE_PAD);
 	outc(' '); // initial one space
 
-	// VMSG_PAUSE MUST BE A #define STRING.
-	w -= MACROSTRLEN(VMSG_PAUSE); // str_term_width(VMSG_PAUSE);
+	w -= str_term_width(VMSG_PAUSE);
 	w--; // initial space
 	vpad(w/2, VMSG_PAUSE_PAD);
 	outs(VCLR_PAUSE);
 	outs(VMSG_PAUSE);
 	outs(VCLR_PAUSE_PAD);
-	vpad(w - w/2, VMSG_PAUSE_PAD);
+	vpad(SAFE_MAX_COL - vgetx(), VMSG_PAUSE_PAD);
     } else {
 	// print in left, with floating (if \t exists)
 	const char *pfloat = strchr(msg, '\t');
-	int y, x;
 
 	outs(VCLR_MSG VMSG_MSG_PREFIX);
 	if (pfloat) {
@@ -325,8 +334,7 @@ vshowmsg(const char *msg)
 	    pfloat = VMSG_MSG_FLOAT;
 	}
 
-	getyx(&y, &x);
-	int rem = SAFE_MAX_COL - x;
+	int rem = SAFE_MAX_COL - vgetx();
 	int szfloat = str_term_width(pfloat);
 	if (rem >= szfloat) {
 	    nblank(rem - szfloat);
@@ -426,13 +434,11 @@ vbar(const char *s)
 void
 vbarlr(const char *l, const char *r)
 {
-    int y, x;
     int szr = str_term_width(r);
 
     clrtoeol();
     outs(l);
-    getyx(&y, &x);
-    int rem = MAX_COL - x;
+    int rem = MAX_COL - vgetx();
 
     if (rem > szr)
     {
@@ -503,12 +509,10 @@ vs_header(const char *title, const char *mid, const char *right)
 
     if (title)
     {
-	int y, x;
 	outs(VMSG_HEADER_PREFIX);
 	outs(title);
 	outs(VMSG_HEADER_POSTFIX);
-	getyx(&y, &x);
-	w -= x;
+	w -= vgetx();
     }
 
     // determine if we can display right message, and
@@ -564,17 +568,14 @@ vs_hdr(const char *title)
 void
 vs_hdr2bar(const char *left, const char *right)
 {
-    int y, x;
-
     clrtoeol();
     outs(VCLR_HDR2_LEFT);
     outs(left);
     outs(VCLR_HDR2_RIGHT);
     if (*right && *right != ' ')
 	outc(' ');
-    getyx(&y, &x);
 
-    int w = MAX_COL - x;
+    int w = MAX_COL - vgetx();
     if (w > 0)
 	fillns(w, right);
 
@@ -606,10 +607,9 @@ vs_footer(const char *caption, const char *msg)
 
     if (caption)
     {
-	int y;
 	outs(VCLR_FOOTER_CAPTION);
 	outs(caption);
-	getyx(&y, &i);
+	i = vgetx();
     }
 
     if (!msg) msg = "";
@@ -624,7 +624,7 @@ vs_footer(const char *caption, const char *msg)
 	else if (*msg == '\t')
 	{
 	    // if we don't have enough space, ignore whole.
-	    int l = strlen(++msg);
+	    int l = str_term_width(++msg);
 	    if (i + l > SAFE_MAX_COL) break;
 	    l = SAFE_MAX_COL - l - i;
 	    nblank(l);
@@ -1389,12 +1389,12 @@ vs_multi_T_table_auto(
             const char *lvar = *ptr++;
             const char *rvar = *ptr++;
             if (lvar && rvar && *rvar) {
-                int len_l = strlen(lvar);
-                int len_r = strlen(rvar);
+                int len_l = str_term_width(lvar);
+                int len_r = str_term_width(rvar);
                 if (len_l > max_l) max_l = len_l;
                 if (len_r > max_r) max_r = len_r;
             } else if (lvar && (!rvar || !*rvar)) {
-                int len_cap = strlen(lvar);
+                int len_cap = str_term_width(lvar);
                 if (len_cap > max_cap) max_cap = len_cap;
             }
         }

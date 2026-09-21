@@ -256,20 +256,20 @@ decide_menu_row(const commands_t *p) {
 static void
 show_status(void)
 {
-    int i;
     struct tm      ptime;
-    char           *myweek = "日一二三四五六";
+    static const char * const myweek[] = {
+	"日", "一", "二", "三", "四", "五", "六"
+    };
 
     localtime4_r(&now, &ptime);
-    i = ptime.tm_wday << 1;
     move(b_lines, 0);
     // Length: timer =15, today=14, online=8+N, me=5+12,
     // pager=10, help=7
-    vbarlr(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(34;46) "%d/%d周%c%c %d:%02d"
+    vbarlr(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(34;46) "%d/%d周%s %d:%02d"
 	  ANSI_COLOR(1;33;45) "%-14s"
 	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
 	  "%d" ANSI_COLOR(30) "人,我是" ANSI_COLOR(31) "%s"
-          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s", ptime.tm_mon + 1, ptime.tm_mday, myweek[i], myweek[i + 1],
+          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s", ptime.tm_mon + 1, ptime.tm_mday, myweek[ptime.tm_wday],
 	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
 	  SHM->UTMPnumber, cuser.userid,
 	  str_pager_modes[currutmp->pager % PAGER_MODES]), ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明");
