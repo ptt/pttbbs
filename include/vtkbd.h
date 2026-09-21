@@ -90,49 +90,58 @@ const vtkbd_mouse_t *vtkbd_get_mouse(const VtkbdCtx *ctx);
 /* BS/ERASE/DEL, see vtkbd.c for the rules */
 #define KEY_BS          (0x08)      // see vtkbd.c for BS/DEL Rules
 
-/* arrow keys (must follow vt100 ordering) */
-#define KEY_UP          0x0101
-#define KEY_DOWN        0x0102
-#define KEY_RIGHT       0x0103
-#define KEY_LEFT        0x0104
+/*
+ * Virtual key codes are placed in the intersection of:
+ *   1. UTF-16 Surrogates (0xD800 .. 0xDFFF, never valid Unicode scalar values)
+ *   2. Invalid Big5 low bytes (lo = 0x00 .. 0x3F, never valid Big5 trailing bytes)
+ * so they never collide with ASCII, Big5 16-bit words, or Unicode codepoints.
+ */
+#define KEY_SPECIAL_BASE    0xD800
+#define IS_SPECIAL_KEY(c)   (((c) & 0xF800) == KEY_SPECIAL_BASE)
 
-#define KEY_STAB        0x0109  /* shift-tab */
+/* arrow keys (must follow vt100 ordering) */
+#define KEY_UP          0xD901
+#define KEY_DOWN        0xD902
+#define KEY_RIGHT       0xD903
+#define KEY_LEFT        0xD904
+
+#define KEY_STAB        0xD909  /* shift-tab */
 
 /* 6 extended keys (must follow vt220 ordering) */
-#define KEY_HOME        0x0201
-#define KEY_INS         0x0202
-#define KEY_DEL         0x0203
-#define KEY_END         0x0204
-#define KEY_PGUP        0x0205
-#define KEY_PGDN        0x0206
+#define KEY_HOME        0xDA01
+#define KEY_INS         0xDA02
+#define KEY_DEL         0xDA03
+#define KEY_END         0xDA04
+#define KEY_PGUP        0xDA05
+#define KEY_PGDN        0xDA06
 
 /* PFn/Fn function keys */
-#define KEY_F1          0x0301
-#define KEY_F2          0x0302
-#define KEY_F3          0x0303
-#define KEY_F4          0x0304
-#define KEY_F5          0x0305
-#define KEY_F6          0x0306
-#define KEY_F7          0x0307
-#define KEY_F8          0x0308
-#define KEY_F9          0x0309
-#define KEY_F10         0x030A
-#define KEY_F11         0x030B
-#define KEY_F12         0x030C
+#define KEY_F1          0xDB01
+#define KEY_F2          0xDB02
+#define KEY_F3          0xDB03
+#define KEY_F4          0xDB04
+#define KEY_F5          0xDB05
+#define KEY_F6          0xDB06
+#define KEY_F7          0xDB07
+#define KEY_F8          0xDB08
+#define KEY_F9          0xDB09
+#define KEY_F10         0xDB0A
+#define KEY_F11         0xDB0B
+#define KEY_F12         0xDB0C
 
 // XXX TODO use 0x0?00 as 'META(alt)', for example 0x0?41 = META-A instead of esc_arg
 
 /* vtkbd meta keys */
-#define KEY_INCOMPLETE  0x0420  /* 0x?20 to prevent accident usage */
-#define KEY_UNKNOWN     0x0F20  /* unknown sequence */
+#define KEY_INCOMPLETE  0xDC20  /* 0x?20 to prevent accident usage */
+#define KEY_UNKNOWN     0xDF20  /* unknown sequence */
 
 /* mouse keys */
-#define KEY_MOUSE       0x0501  /* mouse event (press, motion, wheel) */
-#define KEY_MOUSE_RELEASE 0x0502 /* mouse button release */
+#define KEY_MOUSE       0xDD01  /* mouse event (press, motion, wheel) */
+#define KEY_MOUSE_RELEASE 0xDD02 /* mouse button release */
 
 /* vkey special data for additional fd to listen (ref: vkey_attach) */
-#define I_TIMEOUT       0x05fd /* additional fd timeout for select (replaced by vkey_poll */
-#define I_OTHERDATA     0x05fe /* data arrived in additional fd */
+#define I_TIMEOUT       0xDD3D /* additional fd timeout for select (replaced by vkey_poll */
+#define I_OTHERDATA     0xDD3E /* data arrived in additional fd */
 
 #endif // _VTKBD_H
 
