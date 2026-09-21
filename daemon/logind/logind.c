@@ -861,7 +861,7 @@ DEBUG_IO(int fd, const char *msg) {
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
 #define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "╆簆场╰参タ蝴臔い叫祔刚 " ANSI_RESET
 #define SERVICE_FAIL_YX     BOTTOM_YX
-#define OVERLOAD_CPU_MSG    ANSI_RESET " ╰参筁更, 叫祔ㄓ... "
+#define OVERLOAD_CPU_MSG    ANSI_RESET " ╰参筁更, 叫祔ㄓ... \r\n"
 #define OVERLOAD_CPU_YX     BOTTOM_YX
 #define OVERLOAD_USER_MSG   ANSI_RESET " パ计筁叫眤祔ㄓ... "
 #define OVERLOAD_USER_YX    BOTTOM_YX
@@ -1535,18 +1535,22 @@ is_tunnel_available() {
     // However, it's hard to estimate how much sendmsg() needs.
 
     if (ackq_size() > LOGIND_ACKQUEUE_BOUND)
+    {
+        fprintf(stderr, LOG_PREFIX "%s: ackq size = %d > %d\n",
+                Cdate(&now), (int) ackq_size(), LOGIND_ACKQUEUE_BOUND);
         return 0;
+    }
 
 #ifdef LOGIND_TUNNEL_BUFFER_BOUND
     {
         int nwrite = 0, sndbuf = g_tunnel_send_buffer_size;
 
         ioctl(g_tunnel, FIONWRITE, &nwrite);
-        if (sndbuf >= nwrite && (sndbuf - nwrite) < LOGIND_TUNNEL_BUFFER_BOUND)
+        if (sndbuf > 0 && sndbuf >= nwrite && (sndbuf - nwrite) < LOGIND_TUNNEL_BUFFER_BOUND)
         {
             time4_t now = time(NULL);
-            fprintf(stderr, LOG_PREFIX "%s: tunnel buffer is full (%d/%d)\n",
-                    Cdate(&now), nwrite, sndbuf);
+            fprintf(stderr, LOG_PREFIX "%s: tunnel buffer is full (%d/%d), ack queue size %d\n",
+                    Cdate(&now), nwrite, sndbuf, (int) ackq_size());
             return 0;
         }
     }
