@@ -517,11 +517,8 @@ vs_header(const char *title, const char *mid, const char *right)
 	w -= vgetx();
     }
 
-    // determine if we can display right message, and
-    // if we need to truncate mid.
-    if (szmid + szright > w)
-	szright = 0;
-
+    // determine if we need to truncate or center mid,
+    // and if we can display right message.
     if (szmid >= w)
 	szmid = w;
     else {
@@ -530,6 +527,9 @@ vs_header(const char *title, const char *mid, const char *right)
 	if (l > 0)
 	    nblank(l), w -= l;
     }
+
+    if (szmid + szright > w)
+	szright = 0;
 
     if (szmid) {
 	if (*mid != ESC_CHR)

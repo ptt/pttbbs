@@ -212,6 +212,7 @@ a_showmenu(menu_t * pm)
     time4_t         dtime;
 
     showtitle("精華文章", pm->mtitle);
+    move(1, 0);
     prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_RESET,
 	   "編    選      日    期");
 
@@ -1462,6 +1463,8 @@ a_menu_rec(const char *maintitle, const char *path,
 				me.now = 0;
 				break;
 			    }
+			    if (me.now < me.page)
+				break;
 			} else if (more_result == READ_NEXT) {
 			    if (++me.now >= me.num) {
 				me.now = me.num - 1;
