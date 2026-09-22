@@ -345,10 +345,11 @@ adbanner(int menu_index)
 
     move(1, 0);
     clrtoln(1 + FILMROW);	/* 清掉上次的 */
+    const char *note_ptr = TEMP_STORAGE_TO_MB_SZ(sizeof(SHM->notes[0]), SHM->notes[i]);
 #ifdef LARGETERM_CENTER_MENU
-    out_lines(SHM->notes[i], 11, (t_columns - 80)/2);	/* 只印11行就好 */
+    out_lines(note_ptr, 11, (t_columns - 80)/2);	/* 只印11行就好 */
 #else
-    out_lines(SHM->notes[i], 11, 0);	/* 只印11行就好 */
+    out_lines(note_ptr, 11, 0);	/* 只印11行就好 */
 #endif
     outs(ANSI_RESET);
 #ifdef DEBUG

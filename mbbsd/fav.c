@@ -458,6 +458,7 @@ static int read_favrec(FILE *frp, fav_t *fp)
 		ft->folder = (fav_folder_t *)fav_malloc(sizeof(fav_folder_t));
 		fread(&cast_folder(ft)->fid, sizeof(char), 1, frp);
 		fread(&cast_folder(ft)->title, BTLEN + 1, 1, frp);
+		storage_to_mb(cast_folder(ft)->title, cast_folder(ft)->title, sizeof(cast_folder(ft)->title));
 		break;
 	    case FAVT_BOARD:
 		fread(&ft->board, sizeof(fav_board_t), 1, frp);
@@ -576,7 +577,13 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 	switch (ft->type) {
 	    case FAVT_FOLDER:
 		fwrite(&cast_folder(ft)->fid, sizeof(char), 1, fwp);
-		fwrite(&cast_folder(ft)->title, BTLEN + 1, 1, fwp);
+		if (NEED_STORAGE_CONV) {
+		    char sbuf[BTLEN + 1] = {0};
+		    mb_to_storage(cast_folder(ft)->title, sbuf, sizeof(sbuf));
+		    fwrite(sbuf, BTLEN + 1, 1, fwp);
+		} else {
+		    fwrite(&cast_folder(ft)->title, BTLEN + 1, 1, fwp);
+		}
 		break;
 	    case FAVT_BOARD:
 		fwrite(&ft->board, sizeof(fav_board_t), 1, fwp);
