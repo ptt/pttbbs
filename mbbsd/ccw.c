@@ -572,7 +572,7 @@ ccw_talk_end_session(CCW_CTX *ctx)
 CCW_PROTO void
 ccw_talk_header(CCW_CTX *ctx)
 {
-    vs_draw_hdr2("¡i" CCW_CAP_TALK "¡j", ctx->remote_id);
+    vs_draw_hdr2(CCW_CAP_TALK, ctx->remote_id);
 }
 
 CCW_PROTO void

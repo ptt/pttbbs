@@ -14,37 +14,40 @@
 #include <limits.h>
 
 // THEME DEFINITION ----------------------------------------------------
-#ifndef THEME_BG_COLOR
-#define THEME_BG_COLOR 46
+#ifndef THEME_BG
+#define THEME_BG                46
 #endif
-#ifndef THEME_FG_COLOR
-#define THEME_FG_COLOR 1;37
+#ifndef THEME_FG
+#define THEME_FG                1;37
 #endif
-#ifndef THEME_FG_COLOR2
-#define THEME_FG_COLOR2 1;33
+#ifndef THEME_FG2
+#define THEME_FG2               1;33
 #endif
-#define THEME_COLOR THEME_FG_COLOR;THEME_BG_COLOR
 
-#ifdef TITLE_COLOR
-#define VCLR_HEADER             TITLE_COLOR
-#else
-#define VCLR_HEADER             ANSI_COLOR(0;THEME_COLOR)
-#endif
-#define VCLR_HEADER_MID		ANSI_COLOR(THEME_FG_COLOR2)
-#define VCLR_HEADER_RIGHT	VCLR_HEADER
+// Common colors
+#define VCLR_MODE               ANSI_COLOR(0;34;46)
+#define VCLR_STANDOUT           ANSI_COLOR(0;30;47)
+#define VCLR_MORE_STANDOUT      ANSI_COLOR(0;31;47)
+#define VCLR_ALT_MODE           ANSI_COLOR(1;37;42)
+#define VCLR_TITLE              ANSI_COLOR(0;THEME_FG;THEME_BG)
+#define VCLR_TITLE2             ANSI_COLOR(0;THEME_FG2;THEME_BG)
 
-// TODO: Replace VCLR_HDR by VCLR_HEADER someday.
-#define VCLR_HDR		ANSI_COLOR(1;37;46)
-#define VCLR_HDR2_LEFT		VCLR_HDR
-#define VCLR_HDR2_RIGHT		ANSI_COLOR(1;37;45)
-#define VCLR_FOOTER_CAPTION     ANSI_COLOR(0;34;46)
-#define VCLR_FOOTER             ANSI_COLOR(0;30;47)
-#define VCLR_FOOTER_QUOTE       ANSI_COLOR(0;31;47)
-#define VCLR_ZA_CAPTION		ANSI_COLOR(1;37;42)
-#define VCLR_MSG_FLOAT		ANSI_COLOR(1;33;46)
-#define VCLR_MSG		ANSI_COLOR(1;36;44)
-#define VCLR_PAUSE_PAD		ANSI_COLOR(1;34;44)
-#define VCLR_PAUSE		ANSI_COLOR(1;37;44)
+// Toolkit colors
+#define VCLR_HEADER             VCLR_TITLE
+#define VCLR_HEADER_MID         VCLR_TITLE2
+#define VCLR_HEADER_RIGHT       VCLR_HEADER
+
+#define VCLR_HDR                VCLR_HEADER
+#define VCLR_HDR2_LEFT          VCLR_HEADER
+#define VCLR_HDR2_RIGHT         VCLR_STANDOUT
+#define VCLR_FOOTER_CAPTION     VCLR_MODE
+#define VCLR_FOOTER             VCLR_STANDOUT
+#define VCLR_FOOTER_QUOTE       VCLR_MORE_STANDOUT
+#define VCLR_ZA_CAPTION         VCLR_ALT_MODE
+#define VCLR_MSG_FLOAT          VCLR_TITLE2
+#define VCLR_MSG                ANSI_COLOR(1;36;44)
+#define VCLR_PAUSE_PAD          ANSI_COLOR(1;34;44)
+#define VCLR_PAUSE              ANSI_COLOR(1;37;44)
 #define VCLR_QPREF_TITLE        ANSI_COLOR(0;30;47)
 #define VCLR_QPREF_PROMPT       ANSI_COLOR(0)
 #define VCLR_QPREF_ENTRY_KEY    ANSI_COLOR(0;1;31)
@@ -59,8 +62,8 @@
 #define VMSG_MSG_PREFIX		" ◆ "
 #define VMSG_HEADER_PREFIX	"【"
 #define VMSG_HEADER_POSTFIX	"】"
-#define VMSG_HDR_PREFIX		"【 "
-#define VMSG_HDR_POSTFIX	" 】"
+#define VMSG_HDR_PREFIX		VMSG_HEADER_PREFIX
+#define VMSG_HDR_POSTFIX	VMSG_HEADER_POSTFIX
 
 #define VMSG_QPREF_TITLE        "請設定下列選項"
 #define VMSG_QPREF_ENTRY        "可使用選項: "

@@ -487,7 +487,7 @@ static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     const char *c0 = "分類", *c1 = "描述";
     int pad0 = 11 - stream_width(c0);
     int pad1 = (col_opt - 11) - stream_width(c1);
-    vs_hdr2bar("偏好設定列表", "調整介面顯示與操作偏好");
+    vs_draw_hdr2("偏好設定列表", "調整介面顯示與操作偏好");
     move(2, 0);
     prints(ANSI_COLOR(32) "      %s%*s%s%*s%s" ANSI_RESET "\n",
            c0, pad0 > 0 ? pad0 : 0, "",
@@ -497,7 +497,7 @@ static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
 }
 
 static int customize_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 個人化設定 ",
+    vs_footer(" 偏好設定 ",
               " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
     move(b_lines - 1, 0);
     return 0;

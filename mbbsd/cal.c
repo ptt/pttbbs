@@ -316,7 +316,7 @@ give_money_ui_list(struct Vector *namelist)
         clrtobot();
         prints("這位幸運兒的id: " ANSI_COLOR(1) "%s\n", first_id);
     } else {
-        vs_hdr("給予" MONEYNAME " - 設定金額");
+        vs_hdr2("給予" MONEYNAME, "設定金額");
         prints("收款對象: 共 %d 人 (%s 等人)\n", count, first_id);
     }
     mvouts(15, 0, alert_trade);
@@ -685,8 +685,7 @@ p_sysinfo(void)
     cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
 #endif
 
-    clear();
-    showtitle("系統資訊", BBSNAME);
+    vs_hdr("系統資訊");
     move(2, 0);
     prints("您現在位於 " TITLE_COLOR BBSNAME ANSI_RESET " (" MYIP ")\n"
 	   "系統負載: %s\n"
