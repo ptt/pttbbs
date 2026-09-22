@@ -66,10 +66,6 @@ static int t_lines = 24, t_columns = 80;
 #define ANSI_RESET ESC_STR "[m"
 #endif // PMORE_STYLE_ANSI
 
-// Synchronized output (DEC Private Mode 2026: BSU / ESU)
-#define DEC_SYNC_BEGIN ESC_STR "[?2026h"
-#define DEC_SYNC_END   ESC_STR "[?2026l"
-
 #ifndef ANSI_IS_PARAM
 #define ANSI_IS_PARAM(c) (c == ';' || (c >= '0' && c <= '9'))
 #endif // ANSI_IS_PARAM
@@ -2483,30 +2479,21 @@ fterm_rawscroll (int dy)
 #endif
 }
 
-static int ft_sync_state = 0; // 0: off, 1: pending, 2: active
-
 void
 fterm_rawbegin()
 {
-#ifndef _WIN32
-    ft_sync_state = 1;
+#if !defined(_WIN32) && !defined(_PFTERM_TEST_MAIN)
+    obegin_frame();
 #endif
 }
 
 void
 fterm_rawend()
 {
-#ifndef _WIN32
-    if (ft_sync_state == 2)
-    {
-        ft_sync_state = 0;
-        fterm_raws(DEC_SYNC_END);
-    }
-    else
-    {
-        ft_sync_state = 0;
-    }
-    fterm_rawflush();
+#ifdef _PFTERM_TEST_MAIN
+    fflush(stdout);
+#elif !defined(_WIN32)
+    oend_frame();
 #endif
 }
 
@@ -2734,13 +2721,6 @@ fterm_typeahead(void)
 void
 fterm_rawc(int c)
 {
-#ifndef _WIN32
-    if (ft_sync_state == 1)
-    {
-        ft_sync_state = 2;
-        fterm_raws(DEC_SYNC_BEGIN);
-    }
-#endif
 #ifdef _PFTERM_TEST_MAIN
     // if (c == ESC_CHR) putchar('*'); else
     putchar(c);

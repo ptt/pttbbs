@@ -41,11 +41,6 @@
 #define SAFE_MAX_COL	(MAX_COL-1)
 #define VBUFLEN		(ANSILINELEN)
 
-// this is a special strlen to speed up processing.
-// warning: x MUST be #define x "msg".
-// otherwise you need to use real strlen.
-#define MACROSTRLEN(x) (sizeof(x)-1)
-
 #ifdef DEBUG
 #define inline
 #endif

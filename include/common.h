@@ -318,6 +318,9 @@
 #endif
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
+#ifndef MACROSTRLEN
+#define MACROSTRLEN(x)	(sizeof(x) - 1)
+#endif
 
 #include <stdio.h>
 #include <stdarg.h>
