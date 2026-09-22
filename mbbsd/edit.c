@@ -239,11 +239,15 @@ static char mbcs_mode		=1;
 #define IS_BIG5_LO(x) (IS_BIG5_LOS(x) || IS_BIG5_LOE(x))
 #define IS_BIG5(hi,lo) (IS_BIG5_HI(hi) && IS_BIG5_LO(lo))
 
-int mchar_len(unsigned char *str)
+static int
+mb_count(const char *str)
 {
-  return ((str[0] != '\0' && str[1] != '\0' && IS_BIG5(str[0], str[1])) ?
-            2 :
-            1);
+    int count = 0, w;
+    while ((w = mb_bytes(str)) > 0) {
+	str += w;
+	count++;
+    }
+    return count;
 }
 
 #define FC_RIGHT (0)
@@ -262,7 +266,7 @@ fix_cursor(char *str, int pos, int dir)
     assert(pos >= 0);
 
     while (*str != '\0' && newpos < pos) {
-	w = mchar_len((unsigned char *) str);
+	w = mb_bytes(str);
 	str += w;
 	newpos += w;
     }
@@ -342,27 +346,69 @@ exit_edit_buffer(void)
  * @return position in the string without escape code.
  */
 static int
-ansi2n(int ansix, textline_t * line)
+line_col_to_pos(const textline_t *line, int col, int strip_esc)
 {
-    char  *data, *tmp;
-    char   ch;
-
-    data = tmp = line->data;
+    const char *data = line->data;
+    const char *tmp = data;
+    char ch;
 
     while (*tmp) {
-	if (*tmp == KEY_ESC) {
-	    while ((ch = *tmp) && !isalpha((int)ch))
+	if (strip_esc && *tmp == KEY_ESC) {
+	    while ((ch = *tmp) && !isalpha((unsigned char)ch))
 		tmp++;
 	    if (ch)
 		tmp++;
 	    continue;
 	}
-	if (ansix <= 0)
+	if (col <= 0)
 	    break;
-	tmp++;
-	ansix--;
+	int w = mb_bytes(tmp);
+	int cw = mb_width(tmp);
+	if (col < cw) {
+	    if (!mbcs_mode)
+		tmp += col;
+	    break;
+	}
+	tmp += w;
+	col -= cw;
     }
-    return tmp - data;
+    return (int)(tmp - data);
+}
+
+static short
+line_pos_to_col(const textline_t *line, int nx, int strip_esc)
+{
+    short col = 0;
+    const char *tmp = line->data;
+    const char *nxp = tmp + nx;
+    char ch;
+
+    while (*tmp) {
+	if (strip_esc && *tmp == KEY_ESC) {
+	    while ((ch = *tmp) && !isalpha((unsigned char)ch))
+		tmp++;
+	    if (ch)
+		tmp++;
+	    continue;
+	}
+	if (tmp >= nxp)
+	    break;
+	int w = mb_bytes(tmp);
+	int cw = mb_width(tmp);
+	if (tmp + w > nxp) {
+	    col += (short)(nxp - tmp);
+	    break;
+	}
+	tmp += w;
+	col += cw;
+    }
+    return col;
+}
+
+static int
+ansi2n(int ansix, textline_t * line)
+{
+    return line_col_to_pos(line, ansix, 1);
 }
 
 /**
@@ -372,27 +418,7 @@ ansi2n(int ansix, textline_t * line)
 static short
 n2ansi(short nx, textline_t * line)
 {
-    short  ansix = 0;
-    char  *tmp, *nxp;
-    char   ch;
-
-    tmp = nxp = line->data;
-    nxp += nx;
-
-    while (*tmp) {
-	if (*tmp == KEY_ESC) {
-	    while ((ch = *tmp) && !isalpha((int)ch))
-		tmp++;
-	    if (ch)
-		tmp++;
-	    continue;
-	}
-	if (tmp >= nxp)
-	    break;
-	tmp++;
-	ansix++;
-    }
-    return ansix;
+    return line_pos_to_col(line, nx, 1);
 }
 
 /* 螢幕處理：輔助訊息、顯示編輯內容 */
@@ -408,10 +434,11 @@ show_phone_mode_panel(void)
     if (curr_buf->last_phone_mode < 20) {
 	int len;
 	prints(ANSI_COLOR(1;46) "【%s輸入】 ", BIG_mode[curr_buf->last_phone_mode - 1]);
-	len = strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2;
-	for (i = 0; i < len; i++)
-	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s",
-		    i + 'A', BIG5[curr_buf->last_phone_mode - 1] + i * 2);
+	const char *p = BIG5[curr_buf->last_phone_mode - 1];
+	len = mb_count(p);
+	for (i = 0; i < len; i++, p += mb_bytes(p))
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%.*s",
+		    i + 'A', mb_bytes(p), p);
 	for (i = 0; i < 16 - len; i++)
 	    outs("   ");
 	outs(ANSI_COLOR(37) " `1~9-=切換 Z表格" ANSI_RESET);
@@ -420,9 +447,10 @@ show_phone_mode_panel(void)
 	prints(ANSI_COLOR(1;46) "【表格繪製】 /=%s *=%s形   ",
 		table_mode[(curr_buf->last_phone_mode - 20) / 4],
 		table_mode[(curr_buf->last_phone_mode - 20) % 4 + 2]);
-	for (i = 0;i < 11;i++)
-	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", i ? i + '/' : '.',
-		    table[curr_buf->last_phone_mode - 20] + i * 2);
+	const char *p = table[curr_buf->last_phone_mode - 20];
+	for (i = 0; i < 11 && *p; i++, p += mb_bytes(p))
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%.*s", i ? i + '/' : '.',
+		    mb_bytes(p), p);
 	outs(ANSI_COLOR(37) "          Z內碼 " ANSI_RESET);
     }
 }
@@ -433,10 +461,8 @@ show_phone_mode_panel(void)
 static void
 edit_msg(void)
 {
-    int n = curr_buf->currpnt;
-
-    if (curr_buf->ansimode)		/* Thor: 作 ansi 編輯 */
-	n = n2ansi(n, curr_buf->currline);
+    int n = line_pos_to_col(curr_buf->currline, curr_buf->currpnt,
+			    curr_buf->ansimode);
 
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
@@ -662,8 +688,8 @@ cursor_to_next_line(void)
 	curr_buf->currpnt = ansi2n(pos, curr_buf->currline);
     }
     else {
-	curr_buf->currpnt = (curr_buf->currline->len > curr_buf->lastindent)
-	    ? curr_buf->lastindent : curr_buf->currline->len;
+	curr_buf->currpnt = line_col_to_pos(curr_buf->currline,
+					    curr_buf->lastindent, 0);
     }
 }
 
@@ -687,8 +713,8 @@ cursor_to_prev_line(void)
 	curr_buf->currpnt = ansi2n(pos, curr_buf->currline);
     }
     else {
-	curr_buf->currpnt = (curr_buf->currline->len > curr_buf->lastindent)
-	    ? curr_buf->lastindent : curr_buf->currline->len;
+	curr_buf->currpnt = line_col_to_pos(curr_buf->currline,
+					    curr_buf->lastindent, 0);
     }
 }
 
@@ -963,6 +989,8 @@ adjustline(textline_t *oldp, short len)
 static textline_t *
 split(textline_t * line, int pos, int indent)
 {
+    if (mbcs_mode && pos > 0 && pos < line->len)
+	pos = fix_cursor(line->data, pos, FC_LEFT);
     if (pos <= line->len) {
 	char  *ptr;
 	int    spcs = indent;
@@ -1085,7 +1113,7 @@ insert_char(int ch)
 	s--;
     if (s == p->data) {
 	wordwrap = NA;
-	s = p->data + (p->len - 2);
+	s = p->data + fix_cursor(p->data, p->len - 1, FC_LEFT) - 1;
     }
 
     p = split(p, (s - p->data) + 1, 0);
@@ -1111,8 +1139,38 @@ insert_char(int ch)
 static void
 insert_dchar(const char *dchar)
 {
-    insert_char(*dchar);
-    insert_char(*(dchar+1));
+    int w = mb_bytes(dchar);
+    textline_t *p = curr_buf->currline;
+    if (mbcs_mode && curr_buf->currpnt < p->len)
+	curr_buf->currpnt = fix_cursor(p->data, curr_buf->currpnt, FC_LEFT);
+    if (p->len + w >= WRAPMARGIN) {
+	char *s = p->data + (p->len - 1);
+	int wordwrap = YEA;
+	while (s != p->data && *s == ' ')
+	    s--;
+	while (s != p->data && *s != ' ')
+	    s--;
+	if (s == p->data) {
+	    wordwrap = NA;
+	    if (curr_buf->currpnt == p->len)
+		s = p->data + p->len - 1;
+	    else
+		s = p->data + fix_cursor(p->data, p->len - 1, FC_LEFT) - 1;
+	}
+	p = split(p, (s - p->data) + 1, 0);
+	p = p->next;
+	if (wordwrap && p->len >= 1) {
+	    if (p->alloc_len < p->len + 1)
+		p = adjustline(p, p->len + 1);
+	    if (p->data[p->len - 1] != ' ') {
+		p->data[p->len] = ' ';
+		p->data[p->len + 1] = '\0';
+		p->len++;
+	    }
+	}
+    }
+    for (int i = 0; i < w; i++)
+	insert_char(dchar[i]);
 }
 
 static void
@@ -1121,7 +1179,7 @@ insert_tab(void)
     do {
 	insert_char(' ');
 	edit_buffer_check_healthy(curr_buf->currline);
-    } while (curr_buf->currpnt & 0x7);
+    } while (line_pos_to_col(curr_buf->currline, curr_buf->currpnt, curr_buf->ansimode) & 0x7);
 }
 
 /**
@@ -1139,6 +1197,14 @@ insert_string(const char *str)
 
     block_cancel();
     while ((ch = *str++)) {
+	if (MB_IS_UTF8 && ((unsigned char)ch >= 0x80)) {
+	    int w = mb_bytes(str - 1);
+	    if (w > 1) {
+		insert_dchar(str - 1);
+		str += w - 1;
+		continue;
+	    }
+	}
 	if (isprint2(ch) || ch == ESC_CHR)
 	    insert_char(ch);
 	else if (ch == '\t')
@@ -1265,6 +1331,27 @@ delete_char(void)
     }
 }
 
+static char *
+edit_fgets_line(char *buf, int size, FILE *fp)
+{
+    if (!fgets(buf, size, fp))
+        return NULL;
+    storage_to_mb(buf, buf, (size_t)size);
+    return buf;
+}
+
+static void
+edit_insert_file_line(const char *buf)
+{
+    insert_string(TEMP_STORAGE_TO_MB_SZ(WRAPMARGIN + 2, buf));
+}
+
+static void
+edit_fprintf_line(FILE *fp, const char *line)
+{
+    fprintf(fp, "%s\n", TEMP_MB_TO_STORAGE_SZ(WRAPMARGIN + 2, line));
+}
+
 static void
 load_file(FILE * fp, off_t offSig)
 {
@@ -1279,7 +1366,7 @@ load_file(FILE * fp, off_t offSig)
 	szread += strlen(buf);
 	if (offSig < 0 || szread <= (size_t)offSig)
 	{
-	    insert_string(buf);
+	    edit_insert_file_line(buf);
 	}
 	else
 	{
@@ -1368,7 +1455,7 @@ write_tmpbuf(void)
     if ((fp = fopen(fp_tmpbuf, (ans[0] == 'w' ? "w" : "a+")))) {
 	for (p = curr_buf->firstline; p; p = p->next) {
 	    if (p->next || p->data[0])
-		fprintf(fp, "%s\n", p->data);
+		edit_fprintf_line(fp, p->data);
 	}
 	fclose(fp);
     }
@@ -1410,7 +1497,7 @@ auto_backup(void)
 	if ((fp = fopen(bakfile, "w"))) {
 	    for (p = curr_buf->firstline; p != NULL && count < 512; p = v, count++) {
 		v = p->next;
-		fprintf(fp, "%s\n", p->data);
+		edit_fprintf_line(fp, p->data);
 		free_line(p);
 	    }
 	    fclose(fp);
@@ -1467,7 +1554,7 @@ garbage_line(const char *str)
     while (*str == ' ' || *str == '\t')
 	str++;
     if (qlevel >= 1) {
-	if (!strncmp(str, "※ ", 3) || !strncmp(str, "==>", 3) ||
+	if (!strncmp(str, "※ ", strlen("※ ")) || !strncmp(str, "==>", 3) ||
 	    mbs_strstr(str, ") 提到:\n"))
 	    return 1;
     }
@@ -1481,26 +1568,20 @@ quote_strip_ansi_inline(unsigned char *is)
 
     while (*is)
     {
-	if(*is != ESC_CHR)
-	    *os++ = *is;
+	if (*is != ESC_CHR)
+	    *os++ = *is++;
+	else if (is[1] == '*')
+	{
+	    /* ptt prints, keep it as normal */
+	    *os++ = '*';
+	    *os++ = '*';
+	    is += 2;
+	}
 	else
 	{
-	    is ++;
-	    if(*is == '*')
-	    {
-		/* ptt prints, keep it as normal */
-		*os++ = '*';
-		*os++ = '*';
-	    }
-	    else
-	    {
-		/* normal ansi, strip them out. */
-		while (*is && ANSI_IN_ESCAPE(*is))
-		    is++;
-	    }
+	    /* normal ansi, strip them out. */
+	    is = (unsigned char *)skip_control_sequence((const char *)is);
 	}
-	is++;
-
     }
 
     *os = 0;
@@ -1523,7 +1604,7 @@ do_quote(void)
 	    char           *ptr;
 	    int             indent_mode0 = curr_buf->indent_mode;
 
-	    fgets(buf, sizeof(buf), inf);
+	    edit_fgets_line(buf, sizeof(buf), inf);
 	    if ((ptr = strrchr(buf, ')')))
 		ptr[1] = '\0';
 	    else if ((ptr = strrchr(buf, '\n')))
@@ -1558,21 +1639,21 @@ do_quote(void)
 	    insert_string("》之銘言：\n");
 
 	    if (op != 'a')	/* 去掉 header */
-		while (fgets(buf, sizeof(buf), inf) && buf[0] != '\n');
+		while (edit_fgets_line(buf, sizeof(buf), inf) && buf[0] != '\n');
 	    /* FIXME by MH:
 	         如果 header 到內文中間沒有空行分隔，會造成 All 以外的模式
 	         都引不到內文。
 	     */
 
 	    if (op == 'a')
-		while (fgets(buf, sizeof(buf), inf)) {
+		while (edit_fgets_line(buf, sizeof(buf), inf)) {
 		    insert_char(':');
 		    insert_char(' ');
 		    quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
 		}
 	    else if (op == 'r')
-		while (fgets(buf, sizeof(buf), inf)) {
+		while (edit_fgets_line(buf, sizeof(buf), inf)) {
 		    /* repost, keep anything */
 		    // quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
@@ -1580,8 +1661,8 @@ do_quote(void)
 	    else {
                 /* 去掉 mail list 之 header */
 		if (curr_buf->flags & EDITFLAG_KIND_MAILLIST)
-		    while (fgets(buf, sizeof(buf), inf) && (!strncmp(buf, "※ ", 3)));
-		while (fgets(buf, sizeof(buf), inf)) {
+		    while (edit_fgets_line(buf, sizeof(buf), inf) && (!strncmp(buf, "※ ", strlen("※ "))));
+		while (edit_fgets_line(buf, sizeof(buf), inf)) {
 		    if (!strcmp(buf, "--\n"))
 			break;
 		    if (!garbage_line(buf)) {
@@ -1675,12 +1756,13 @@ write_header(FILE * fp,  const char *mytitle)
     assert(mytitle);
     // cross_post may call this without setting curr_buf.
     // TODO Isolate curr_buf so we don't need to hack around.
+    char hbuf[WRAPMARGIN];
     if (curr_buf &&
         (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) &&
         !(curr_buf->flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST))) {
-	fprintf(fp, "%s %s (%s)\n", STR_AUTHOR1, cuser.userid,
-		cuser.nickname
-	);
+	snprintf(hbuf, sizeof(hbuf), "%s %s (%s)", STR_AUTHOR1, cuser.userid,
+		 cuser.nickname);
+	edit_fprintf_line(fp, hbuf);
     } else {
 	const char *ptr = mytitle;
         const char *nickname = cuser.nickname;
@@ -1764,11 +1846,15 @@ write_header(FILE * fp,  const char *mytitle)
 	postlog.date = now;
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
-	fprintf(fp, "%s %s (%s) %s %s\n", STR_AUTHOR1, postlog.author, nickname,
-		STR_POST1, currboard);
+	snprintf(hbuf, sizeof(hbuf), "%s %s (%s) %s %s", STR_AUTHOR1,
+		 postlog.author, nickname, STR_POST1, currboard);
+	edit_fprintf_line(fp, hbuf);
 
     }
-    fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));
+    snprintf(hbuf, sizeof(hbuf), "標題: %s", mytitle);
+    edit_fprintf_line(fp, hbuf);
+    snprintf(hbuf, sizeof(hbuf), "時間: %s", ctime4(&now));
+    edit_fprintf_line(fp, hbuf);
 }
 
 off_t
@@ -1824,16 +1910,19 @@ addforwardsignature(FILE *fp, const char *host) {
     } else if (!host) {
         host = FROMHOST;
     }
+    char sbuf[WRAPMARGIN];
     syncnow();
-    fprintf(fp, "\n"
-                "※ 發信站: " BBSNAME "(" MYHOSTNAME ")\n"
-                "※ 轉錄者: %s (%s), %s\n"
-                , cuser.userid, host, Cdatelite(&now));
+    fputc('\n', fp);
+    edit_fprintf_line(fp, "※ 發信站: " BBSNAME "(" MYHOSTNAME ")");
+    snprintf(sbuf, sizeof(sbuf), "※ 轉錄者: %s (%s), %s",
+             cuser.userid, host, Cdatelite(&now));
+    edit_fprintf_line(fp, sbuf);
 }
 
 void
 addsimplesignature(FILE *fp, const char *host) {
     char temp[STRLEN];
+    char sbuf[WRAPMARGIN];
 
     if (!host && from_cc[0]) {
 	SNPRINTF(temp, "%s (%s)", FROMHOST, from_cc);
@@ -1841,8 +1930,10 @@ addsimplesignature(FILE *fp, const char *host) {
     } else if (!host) {
         host = FROMHOST;
     }
-    fprintf(fp,
-            "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s\n", host);
+    fputs("\n--\n", fp);
+    snprintf(sbuf, sizeof(sbuf),
+             "※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s", host);
+    edit_fprintf_line(fp, sbuf);
 }
 
 void
@@ -2076,7 +2167,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 #endif
 		entropy = ENTROPY_MAX;
 	    // write the message body
-	    fprintf(fp, "%s\n", msg);
+	    edit_fprintf_line(fp, msg);
 	}
     }
     curr_buf->currline = NULL;
@@ -2096,10 +2187,12 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     {
 	if (HAS_ALL_REEDIT_LOG || strcmp(currboard, BN_SYSOP) == 0)
 	{
-	    fprintf(fp,
-		    "※ 編輯: %s (%s%s%s), %s\n",
-		    cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
-		    Cdatelite(&now));
+	    char sbuf[WRAPMARGIN];
+	    snprintf(sbuf, sizeof(sbuf),
+		     "※ 編輯: %s (%s%s%s), %s",
+		     cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
+		     Cdatelite(&now));
+	    edit_fprintf_line(fp, sbuf);
 	}
     }
 
@@ -2167,8 +2260,8 @@ block_save_to_file(const char *fname, int mode)
 	textline_t *p;
 
 	for (p = begin; p != end; p = p->next)
-	    fprintf(fp, "%s\n", p->data);
-	fprintf(fp, "%s\n", end->data);
+	    edit_fprintf_line(fp, p->data);
+	edit_fprintf_line(fp, end->data);
 	fclose(fp);
     }
 }
@@ -2714,6 +2807,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
     /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
     unsigned char isDBCS = 0;
+    const char *ansi_end = NULL;
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
     {
@@ -2723,13 +2817,19 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
 	if(inAnsi == 1)
 	{
-	    if(ch == ESC_CHR)
+	    if(ch == ESC_CHR) {
 		outc('*');
+		ansi_end = skip_control_sequence((const char *)(text - 1));
+		if ((const char *)text >= ansi_end) {
+		    inAnsi = 0;
+		    outs(reset);
+		}
+	    }
 	    else
 	    {
 		outc(ch);
 
-		if(!ANSI_IN_ESCAPE(ch))
+		if ((const char *)text >= ansi_end)
 		{
 		    inAnsi = 0;
 		    outs(reset);
@@ -2739,7 +2839,8 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	}
 	else if(ch == ESC_CHR)
 	{
-	    inAnsi = 1;
+	    ansi_end = skip_control_sequence((const char *)(text - 1));
+	    inAnsi = ((const char *)text < ansi_end);
 	    if(isDBCS == 1)
 	    {
 		isDBCS = 2;
@@ -2747,9 +2848,29 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		outs(reset);
 	    }
 	    outs(ANSI_COLOR(1) "*");
+	    if (!inAnsi)
+		outs(reset);
 	}
 	else
 	{
+	    if (MB_IS_UTF8) {
+		if (ch >= 0x80) {
+		    int w = mb_bytes(text - 1);
+		    int cw = mb_width(text - 1);
+		    if (column + (cw - 1) >= t_columns || n < w - 1)
+			break;
+		    outc(ch);
+		    for (int k = 1; k < w; k++) {
+			outc(*text++);
+			n--;
+#ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
+			pmattr++;
+#endif
+		    }
+		    column += cw - 1;
+		    continue;
+		}
+	    } else {
 #ifdef DBCSAWARE
 	    if(isDBCS == 1)
 		isDBCS = 0;
@@ -2770,6 +2891,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			continue;
 		}
 #endif
+	    }
 
 	    // Lua Parser!
 	    if (!attr && curr_buf->synparser && !fComment)
@@ -2978,33 +3100,22 @@ display_textline_internal(textline_t *p, int i)
 
     attr |= detect_attr(p->data, p->len);
 
-    if(mbcs_mode && curr_buf->edit_margin > 0)
-    {
-	if(curr_buf->edit_margin >= p->len)
-	{
+    if (curr_buf->edit_margin > 0) {
+	int pos = line_col_to_pos(p, curr_buf->edit_margin, 0);
+	if (pos >= p->len) {
 	    (*output)("", attr);
 	} else {
-
-	    int newpnt = curr_buf->edit_margin;
-	    unsigned char *pdata = (unsigned char*)
-		(&p->data[0] + curr_buf->edit_margin);
-
-	    if(mbcs_mode)
-		newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
-
-	    if(newpnt == curr_buf->edit_margin-1)
-	    {
-		/* this should be always 'outs'? */
-		// (*output)(ANSI_COLOR(1) "<" ANSI_RESET);
+	    int col = line_pos_to_col(p, pos, 0);
+	    const char *pdata = p->data + pos;
+	    if (col < curr_buf->edit_margin) {
 		outs(ANSI_COLOR(1) "<" ANSI_RESET);
-		pdata++;
+		pdata += mb_bytes(pdata);
 	    }
-	    (*output)((char*)pdata, attr);
+	    (*output)(pdata, attr);
 	}
-
-    } else
-    (*output)((curr_buf->edit_margin < p->len) ?
-	    &p->data[curr_buf->edit_margin] : "", attr);
+    } else {
+	(*output)(p->data, attr);
+    }
 
     if (attr)
 	outs(ANSI_RESET);
@@ -3411,10 +3522,9 @@ phone_char(int c)
     if (!isascii(c))
 	return 0;
     if (curr_buf->last_phone_mode > 0 && curr_buf->last_phone_mode < 20) {
-	if (tolower(c) < 'a' ||
-            (tolower(c)-'a') >= (int)strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2)
+	if (tolower(c) < 'a')
 	    return 0;
-	return BIG5[curr_buf->last_phone_mode - 1] + (tolower(c) - 'a') * 2;
+	return mbs_nth(BIG5[curr_buf->last_phone_mode - 1], tolower(c) - 'a');
     }
     else if (curr_buf->last_phone_mode >= 20) {
 	if (c == '.') c = '/';
@@ -3422,7 +3532,7 @@ phone_char(int c)
 	if (c < '/' || c > '9')
 	    return 0;
 
-	return table[curr_buf->last_phone_mode - 20] + (c - '/') * 2;
+	return mbs_nth(table[curr_buf->last_phone_mode - 20], c - '/');
     }
     return 0;
 }
@@ -3678,7 +3788,8 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	if (curr_buf->ansimode)
 	    ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
 	else
-	    ch = curr_buf->currpnt - curr_buf->edit_margin;
+	    ch = line_pos_to_col(curr_buf->currline, curr_buf->currpnt, 0) -
+		 curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
 	ch = vkey();
@@ -3737,7 +3848,8 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	} else {
 	    if (ch == KEY_UP || ch == KEY_DOWN ){
 		if (curr_buf->lastindent == -1)
-		    curr_buf->lastindent = curr_buf->currpnt;
+		    curr_buf->lastindent = line_pos_to_col(
+			curr_buf->currline, curr_buf->currpnt, curr_buf->ansimode);
 	    } else
 		curr_buf->lastindent = -1;
 	    if (ch == KEY_ESC)
@@ -4008,11 +4120,13 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		break;
 	    case KEY_RIGHT:
 		if (curr_buf->currline->len != curr_buf->currpnt) {
-		    if (curr_buf->ansimode)
-			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
-		    curr_buf->currpnt++;
-		    if (curr_buf->ansimode)
+		    if (curr_buf->ansimode) {
+			int cw = mb_width(curr_buf->currline->data + curr_buf->currpnt);
+			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline) + (cw > 0 ? cw : 1);
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
+		    } else {
+			curr_buf->currpnt++;
+		    }
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_RIGHT);
 		} else if (curr_buf->currline->next) {
@@ -4032,24 +4146,26 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		break;
 
 	    case Ctrl('B'):
-	    case KEY_PGUP:
+	    case KEY_PGUP: {
+		int col = line_pos_to_col(curr_buf->currline, curr_buf->currpnt, curr_buf->ansimode);
 	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, visible_window_height() - 1, false);
 	 	curr_buf->currline = back_line(curr_buf->currline, visible_window_height() - 1, true);
 		curr_buf->curr_window_line = get_lineno_in_window();
-		if (curr_buf->currpnt > curr_buf->currline->len)
-		    curr_buf->currpnt = curr_buf->currline->len;
+		curr_buf->currpnt = line_col_to_pos(curr_buf->currline, col, curr_buf->ansimode);
 		curr_buf->redraw_everything = YEA;
 	 	break;
+	    }
 
 	    case Ctrl('F'):
-	    case KEY_PGDN:
+	    case KEY_PGDN: {
+		int col = line_pos_to_col(curr_buf->currline, curr_buf->currpnt, curr_buf->ansimode);
 		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, visible_window_height() - 1, false);
 		curr_buf->currline = forward_line(curr_buf->currline, visible_window_height() - 1, true);
 		curr_buf->curr_window_line = get_lineno_in_window();
-		if (curr_buf->currpnt > curr_buf->currline->len)
-		    curr_buf->currpnt = curr_buf->currline->len;
+		curr_buf->currpnt = line_col_to_pos(curr_buf->currline, col, curr_buf->ansimode);
 		curr_buf->redraw_everything = YEA;
 		break;
+	    }
 
 	    case KEY_END:
 	    case Ctrl('E'):
@@ -4127,7 +4243,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
                     int w = 1;
 
                     if(mbcs_mode)
-                        w = mchar_len((unsigned char*)(curr_buf->currline->data + curr_buf->currpnt));
+                        w = mb_bytes(curr_buf->currline->data + curr_buf->currpnt);
 
                     for(; w > 0; w --)
                         delete_char();
@@ -4176,16 +4292,12 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		curr_buf->currln = 0;
 
 	    edit_window_adjust();
-#ifdef DBCSAWARE
 	    if(mbcs_mode)
 	      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
-#endif
 	}
 
-	if (curr_buf->ansimode)
-	    tmp = n2ansi(curr_buf->currpnt, curr_buf->currline);
-	else
-	    tmp = curr_buf->currpnt;
+	tmp = line_pos_to_col(curr_buf->currline, curr_buf->currpnt,
+			      curr_buf->ansimode);
 
 	if (tmp < t_columns - 1)
 	    curr_buf->edit_margin = 0;
@@ -4205,7 +4317,20 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		{
 		    int attr = EOATTR_NORMAL;
 		    attr |= detect_attr(curr_buf->currline->data, curr_buf->currline->len);
-		    edit_outs_attr(&curr_buf->currline->data[curr_buf->edit_margin], attr);
+		    if (curr_buf->edit_margin > 0) {
+			int pos = line_col_to_pos(curr_buf->currline, curr_buf->edit_margin, 0);
+			if (pos < curr_buf->currline->len) {
+			    int col = line_pos_to_col(curr_buf->currline, pos, 0);
+			    const char *pdata = curr_buf->currline->data + pos;
+			    if (col < curr_buf->edit_margin) {
+				outs(ANSI_COLOR(1) "<" ANSI_RESET);
+				pdata += mb_bytes(pdata);
+			    }
+			    edit_outs_attr(pdata, attr);
+			}
+		    } else {
+			edit_outs_attr(curr_buf->currline->data, attr);
+		    }
 		}
 		outs(ANSI_RESET ANSI_CLRTOEND);
 		edit_msg();
