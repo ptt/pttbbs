@@ -356,9 +356,8 @@
  *      "maxlineno" which is easily considered as "max(total) line number".
  *
  * HINTS:
- *  - Remember mmap pointers are NOT null terminated strings.
- *    You have to use strn* APIs and make sure not exceeding mmap buffer.
- *    DO NOT USE strcmp, strstr, strchr, ...
+ *  - File mmap buffers are guaranteed to be NUL-terminated at *mf.end
+ *    (via a MAP_ANONYMOUS guard page followed by MAP_FIXED file mapping).
  *  - Scroll handling is painful. If you displayed anything on screen,
  *    remember to MFDISP_DIRTY();
  *  - To be portable between most BBS systems, pmore is designed to
@@ -731,7 +730,7 @@ MF_Movie mfmovie;
     (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD))
 
 unsigned char *
-    mf_movieFrameHeader(unsigned char *p, unsigned char *end);
+    mf_movieFrameHeader(unsigned char *p);
 
 void mf_float2tv(float f, struct timeval *ptv);
 
@@ -830,7 +829,6 @@ mf_gunzip(const char *fn GCC_UNUSED, int fd)
  */
 
 MFPROTO void mf_detach();
-MFPROTO void mf_detach_nounmap();
 MFPROTO int mf_postattach();
 
 MFPROTO int
@@ -855,11 +853,20 @@ mf_attach_file(void *fnptr)
     }
 
     /*
-    mf.len = lseek(fd, 0L, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    */
-
-    mf.start = mmap(NULL, mf.len, PROT_READ, MF_MMAP_OPTION, fd, 0);
+     * POSIX guarantees zero-fill for any partial page at EOF (mf.len % pg != 0).
+     * Only when mf.len is an exact multiple of page size do we need to reserve
+     * an extra MAP_ANONYMOUS page and overlay the file with MAP_FIXED.
+     */
+    if (mf.len % getpagesize() != 0) {
+        mf.start = mmap(NULL, mf.len, PROT_READ, MF_MMAP_OPTION, fd, 0);
+    } else {
+        mf.start = mmap(NULL, mf.len + 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (mf.start != MAP_FAILED &&
+            mmap(mf.start, mf.len, PROT_READ, MF_MMAP_OPTION | MAP_FIXED, fd, 0) == MAP_FAILED) {
+            munmap(mf.start, mf.len + 1);
+            mf.start = MAP_FAILED;
+        }
+    }
     close(fd);
 
     if (mf.start == MAP_FAILED) {
@@ -882,11 +889,11 @@ mf_attach_file(void *fnptr)
         if (ubuf != MAP_FAILED) {
             storage_to_mb_n((const char *)mf.start, (size_t)mf.len,
                             (char *)ubuf, alloc_sz);
-            munmap(mf.start, mf.len);
+            munmap(mf.start, mf.len + 1);
             mf.start = ubuf;
             mf.len = strlen((const char *)ubuf);
             size_t pg = getpagesize();
-            size_t used_pg = ((size_t)(mf.len ? mf.len : 1) + pg - 1) & ~(pg - 1);
+            size_t used_pg = ((size_t)mf.len + 1 + pg - 1) & ~(pg - 1);
             size_t alloc_pg = (alloc_sz + pg - 1) & ~(pg - 1);
             if (used_pg < alloc_pg)
                 munmap(ubuf + used_pg, alloc_pg - used_pg);
@@ -900,11 +907,17 @@ MFPROTO int
 mf_attach_buffer(void *buf)
 {
     struct SimpleBuffer *buffer = (struct SimpleBuffer *)buf;
-    if (!buffer || !buffer->data || !buffer->len)
+    if (!buffer || !buffer->data || buffer->len <= 0)
         return 0;
-    mf.start = buffer->data;
     mf.len = buffer->len;
-    mf.detachHandler = mf_detach_nounmap;
+    mf.start = mmap(NULL, mf.len + 1, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mf.start == MAP_FAILED) {
+        RESETMF();
+        return 0;
+    }
+    memcpy(mf.start, buffer->data, mf.len);
+    mf.detachHandler = mf_detach;
     return mf_postattach();
 }
 
@@ -938,17 +951,9 @@ mf_detach()
 {
     mf_freeHeaders();
     if (mf.start) {
-        munmap(mf.start, mf.len);
+        munmap(mf.start, mf.len + 1);
         RESETMF();
     }
-}
-
-MFPROTO void
-mf_detach_nounmap()
-{
-    mf_freeHeaders();
-    if (mf.start)
-        RESETMF();
 }
 
 /*
@@ -1055,7 +1060,8 @@ mf_forward(int lines)
     int real_moved = 0;
 
     while (mf.disps <= mf.maxdisps && lines > 0) {
-        while (mf.disps <= mf.maxdisps && *mf.disps++ != '\n');
+        unsigned char *next = (unsigned char *)strchrnul((const char *)mf.disps, '\n');
+        mf.disps = (*next == '\n') ? (next + 1) : next;
 
         if (mf.disps <= mf.maxdisps)
             mf.lineno++, lines--, real_moved++;
@@ -1122,25 +1128,37 @@ mf_search(int direction)
     if (!s || !*s)
         return 0;
 
-    if (direction ==  MFSEARCH_FORWARD) {
+    if (direction == MFSEARCH_FORWARD) {
         mf_forward(1);
-        while (mf.disps < mf.end - l) {
-            if (sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0) {
+        if (MB_IS_UTF8) {
+            const char *found = (sr.cmpfunc == strncmp)
+                ? strstr((const char *)mf.disps, (const char *)s)
+                : strcasestr((const char *)mf.disps, (const char *)s);
+            if (found) {
+                mf.disps = (unsigned char *)found;
                 flFound = 1;
-                break;
             } else {
-                /* DBCS check here. */
-                mf.disps += mb_bytes((const char *)mf.disps);
+                mf.disps = mf.end;
+            }
+        } else {
+            while (*mf.disps) {
+                if (sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0) {
+                    flFound = 1;
+                    break;
+                } else {
+                    /* DBCS check here. */
+                    mf.disps += mb_bytes((const char *)mf.disps);
+                }
             }
         }
         mf_backward(0);
         if (mf.disps > mf.maxdisps)
             mf.disps = mf.maxdisps;
         mf_sync_lineno();
-    } else if (direction ==  MFSEARCH_BACKWARD) {
+    } else if (direction == MFSEARCH_BACKWARD) {
         mf_backward(1);
         while (!flFound && mf.disps > mf.start) {
-            while (!flFound && mf.disps < mf.end-l && *mf.disps != '\n') {
+            while (!flFound && *mf.disps && *mf.disps != '\n') {
                 if (sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0) {
                     flFound = 1;
                     break;
@@ -1245,9 +1263,6 @@ mf_parseHeaders()
 
     RESETFH();
 
-    if (mf.len < LEN_AUTHOR2)
-        return;
-
     if (strncmp((char*)mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0) {
         fh.lines = 3;   // local
     } else if (strncmp((char*)mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0) {
@@ -1261,9 +1276,8 @@ mf_parseHeaders()
         int l;
 
         /* first, go to line-end */
-        while (pmf < mf.end && *pmf != '\n')
-            pmf++;
-        if (pmf >= mf.end)
+        pmf = ustrchr(pmf, '\n');
+        if (!pmf)
             break;
 
         // strip last line if it is empty.
@@ -1331,8 +1345,7 @@ mf_parseHeaders()
 MFFPROTO void
 MFDISP_SKIPCURLINE()
 {
-    while (mf.dispe < mf.end && *mf.dispe != '\n')
-        mf.dispe++;
+    mf.dispe = (unsigned char *)strchrnul((const char *)mf.dispe, '\n');
 }
 
 MFFPROTO int
@@ -1342,7 +1355,7 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
      */
     int off = 0;
 
-    while (p < mf.end && *p != '\n') {
+    while (*p && *p != '\n') {
         if (*p == ESC_CHR) {
             const unsigned char *next =
                 (const unsigned char *)skip_control_sequence((const char *)p);
@@ -1593,13 +1606,13 @@ mf_display()
             // detected only applies for first page.
             // since this is not very often, let's prevent
             // showing control codes.
-            if (mf_movieFrameHeader(mf.dispe, mf.end))
+            if (mf_movieFrameHeader(mf.dispe))
                 MFDISP_SKIPCURLINE();
         }
         else if (mfmovie.mode == MFDISP_MOVIE_UNKNOWN ||
                 mfmovie.mode == MFDISP_MOVIE_PLAYING)
         {
-            if (mf_movieFrameHeader(mf.dispe, mf.end))
+            if (mf_movieFrameHeader(mf.dispe))
                 switch (mfmovie.mode)
                 {
 
@@ -1723,21 +1736,17 @@ mf_display()
             if (bpref.rawmode == MFDISP_RAW_NA)
             {
                 unsigned char *line_head = mf.dispe;
-                long dist;
 
                 while (line_head > mf.start && *(line_head - 1) != '\n')
                     line_head--;
-                dist = mf.end - line_head;
 
-                if (dist > 1 &&
-                        (*line_head == ':' || *line_head == '>') &&
+                if ((*line_head == ':' || *line_head == '>') &&
                         *(line_head + 1) == ' ')
                 {
                     outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
-                } else if (dist > 2 &&
-                        (!strncmp((char*)line_head, "¡°", 2) ||
-                         !strncmp((char*)line_head, "==>", 3)))
+                } else if (!strncmp((char*)line_head, "¡°", 2) ||
+                           !strncmp((char*)line_head, "==>", 3))
                 {
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
@@ -1745,7 +1754,7 @@ mf_display()
             }
 
             const unsigned char *ansi_end = NULL;
-            while (!breaknow && mf.dispe < mf.end && (c = *mf.dispe) != '\n')
+            while (!breaknow && (c = *mf.dispe) != '\0' && c != '\n')
             {
                 if (inAnsi)
                 {
@@ -1805,7 +1814,7 @@ mf_display()
                     if (c == ESC_CHR)
                     {
                         ansi_end = (const unsigned char *)skip_control_sequence((const char *)mf.dispe);
-                        inAnsi = (mf.dispe + 1 < ansi_end && mf.dispe + 1 < mf.end);
+                        inAnsi = (mf.dispe + 1 < ansi_end);
                         /* we can't output now because maybe
                          * ptt_prints wants to do something.
                          */
@@ -1814,7 +1823,6 @@ mf_display()
 #ifdef PMORE_USE_DBCS_WRAP
                             dbcs_incomplete == NULL &&
 #endif
-                            mf.end - mf.dispe > sr.len &&
                             sr.cmpfunc((char*)mf.dispe,
                                 (char*)sr.search_str, sr.len) == 0)
                     {
@@ -1833,8 +1841,8 @@ mf_display()
                     // or use the sample version inside pmore source.
                     //
                     if (inAnsi &&
-                            mf.end - mf.dispe > 2 &&
-                            *(mf.dispe+1) == '*')
+                            *(mf.dispe+1) == '*' &&
+                            *(mf.dispe+2) != '\0')
                     {
                         mf_display_handle_esc_star(&xprefix, &col, maxcol, &override_attr, &override_msg);
                         inAnsi = 0;
@@ -1869,8 +1877,6 @@ mf_display()
                         int canOutput = 0;
                         int char_bytes = MB_IS_UTF8 ? mb_bytes((const char *)mf.dispe) : 1;
                         int char_cols = MB_IS_UTF8 ? mb_width((const char *)mf.dispe) : 1;
-                        if (MB_IS_UTF8 && mf.end - mf.dispe < char_bytes)
-                            char_bytes = mf.end - mf.dispe;
                         /* if col > maxcol,
                          * because we have the space for
                          * "indicators" (one byte),
@@ -3210,26 +3216,7 @@ mf_float2tv(float f, struct timeval *ptv)
     ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
 }
 
-int
-mf_str2float(unsigned char *p, unsigned char *end, float *pf)
-{
-    char buf[16] = {0};
-    int cbuf = 0;
 
-    /* process time */
-    while ( p < end &&
-            cbuf < (int)sizeof(buf)-1 &&
-            (isdigit(*p) || *p == '.' || *p == '+' || *p == '-'))
-        buf[cbuf++] = *p++;
-
-    if (!cbuf)
-        return 0;
-
-    buf[cbuf] = 0;
-    *pf = atof(buf);
-
-    return 1;
-}
 
 /*
  * maybe you can use add_io or you have other APIs in
@@ -3461,10 +3448,9 @@ mf_movieMaskedInput(int c)
         c = '\b';
 
     // general look up
-    while (p < mf.end && *p && *p != '\n' && *p != '#')
+    while (*p && *p != '\n' && *p != '#')
     {
-        if (*p == '@' && mf.end - p > 1
-                && isalnum(*(p+1))) // named key
+        if (*p == '@' && isalnum(*(p+1))) // named key
         {
             p++;
 
@@ -3481,56 +3467,37 @@ mf_movieMaskedInput(int c)
 }
 
 unsigned char *
-mf_movieFrameHeader(unsigned char *p, unsigned char *end)
+mf_movieFrameHeader(unsigned char *p)
 {
     // ANSI has ESC_STR [8m as "Conceal" but
     // not widely supported, even PieTTY.
     // So let's go back to fixed format...
-    static char *patHeader = "==" ESC_STR "[30;40m^L";
-    static char *patHeader2= ESC_STR "[30;40m^L"; // patHeader + 2; // "=="
-    // static char *patHeader3= ESC_STR "[m^L";
-    static size_t szPatHeader   = 12; // strlen(patHeader);
-    static size_t szPatHeader2  = 10; // strlen(patHeader2);
-    // static size_t szPatHeader3  = 5;  // strlen(patHeader3);
+    static const char patHeader[]  = "==" ESC_STR "[30;40m^L";
+    static const char patHeader2[] = ESC_STR "[30;40m^L";
 
-    size_t sz = end - p;
-
-    if (sz < 1) return NULL;
     if (*p == 12)        // ^L
-        return p+1;
+        return p + 1;
 
-    if (sz < 2) return NULL;
-    if ( *p == '^' &&
-            *(p+1) == 'L')
-        return p+2;
+    if (*p == '^' && *(p + 1) == 'L')
+        return p + 2;
 
-    // Add more frame headers
+    if (strncmp((const char *)p, patHeader2, sizeof(patHeader2) - 1) == 0)
+        return p + (sizeof(patHeader2) - 1);
 
-    /* // *[m seems not so common, skip.
-    if (sz < szPatHeader3) return NULL;
-    if (memcmp(p, patHeader3, szPatHeader3) == 0)
-        return p + szPatHeader3;
-        */
-
-    if (sz < szPatHeader2) return NULL;
-    if (memcmp(p, patHeader2, szPatHeader2) == 0)
-        return p + szPatHeader2;
-
-    if (sz < szPatHeader) return NULL;
-    if (memcmp(p, patHeader, szPatHeader) == 0)
-        return p + szPatHeader;
+    if (strncmp((const char *)p, patHeader, sizeof(patHeader) - 1) == 0)
+        return p + (sizeof(patHeader) - 1);
 
     return NULL;
 }
 
 MFPROTO int
-mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
+mf_movieGotoNamedFrame(const unsigned char *name)
 {
     const unsigned char *p = name;
     ssize_t sz = 0;
 
     // resolve name first
-    while (p < end && isalnum(*p))
+    while (isalnum(*p))
         p++;
     sz = p - name;
     if (sz < 1) return 0;
@@ -3540,24 +3507,16 @@ mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
 
     do
     {
-        if ((p = mf_movieFrameHeader(mf.disps, mf.end)) == NULL ||
+        if ((p = mf_movieFrameHeader(mf.disps)) == NULL ||
                 *p != ':')
             continue;
 
         // got some frame. let's check the name
         p++;
-        if (mf.end - p < sz)
-            continue;
-
-        // check: target of p must end.
-        if (mf.end -p > sz &&
-                isalnum(*(p+sz)))
-            continue;
-
-        if (memcmp(p, name, sz) == 0)
+        if (strncmp((const char *)p, (const char *)name, sz) == 0 && !isalnum(p[sz]))
             return 1;
 
-    } while  (mf_forward(1) > 0);
+    } while (mf_forward(1) > 0);
     return 0;
 }
 
@@ -3574,7 +3533,7 @@ mf_movieGotoFrame(int fno, int relative)
     {
         // move forward
         do {
-            while (mf_movieFrameHeader(mf.disps, mf.end) == NULL)
+            while (mf_movieFrameHeader(mf.disps) == NULL)
             {
                 if (mf_forward(1) < 1)
                     return 0;
@@ -3586,14 +3545,14 @@ mf_movieGotoFrame(int fno, int relative)
     } else {
         // backward
         // For backward, the first call moves to beginning of current line
-        // (which is frame header).  so the loop should be be (abs(fno)+1),
+        // (which is frame header).  so the loop should be (abs(fno)+1),
         // and that's why use <= here.
         while (fno <= 0)
         {
             do {
                 if (mf_backward(1) < 1)
                     return 0;
-            } while (mf_movieFrameHeader(mf.disps, mf.end) == NULL);
+            } while (mf_movieFrameHeader(mf.disps) == NULL);
             fno ++;
         }
     }
@@ -3610,7 +3569,7 @@ mf_movieCurrentFrameNo()
 
     do
     {
-       if ( mf_movieFrameHeader(mf.disps, mf.end))
+       if (mf_movieFrameHeader(mf.disps))
            no++;
 
        if (mf.disps >= p)
@@ -3619,20 +3578,18 @@ mf_movieCurrentFrameNo()
        if (mf_forward(1) < 1)
            break;
 
-    } while ( 1 ); // mf.disps < p);
+    } while (1);
 
     return no;
 }
 
 MFPROTO int
-mf_parseOffsetCmd(
-        unsigned char *s, unsigned char *end,
-        int base)
+mf_parseOffsetCmd(unsigned char *s, int base)
 {
     // return is always > 0, or base.
     int v = 0;
 
-    if (s >= end)
+    if (!*s)
         return base;
 
     v = atoi((char*)s);
@@ -3654,7 +3611,7 @@ mf_parseOffsetCmd(
 }
 
 MFPROTO int
-mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
+mf_movieExecuteOffsetCmd(unsigned char *s)
 {
     // syntax: type[+-]offset
     //
@@ -3669,7 +3626,7 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
         case 'p':
             // by page
             curr = (mf.lineno / MFDISP_PAGE) + 1;
-            newno = mf_parseOffsetCmd(s+1, end, curr);
+            newno = mf_parseOffsetCmd(s + 1, curr);
 #ifdef DEBUG
             vmsgf("page: %d -> %d\n", curr, newno);
 #endif // DEBUG
@@ -3677,12 +3634,12 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
             if (newno == curr)
                 return 0;
 
-            return mf_goto((newno -1) * MFDISP_PAGE);
+            return mf_goto((newno - 1) * MFDISP_PAGE);
 
         case 'l':
             // by lines
             curr = mf.lineno + 1;
-            newno = mf_parseOffsetCmd(s+1, end, curr);
+            newno = mf_parseOffsetCmd(s + 1, curr);
 #ifdef DEBUG
             vmsgf("line: %d -> %d\n", curr, newno);
 #endif // DEBUG
@@ -3690,11 +3647,11 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
             if (newno == curr)
                 return 0;
 
-            return mf_goto(newno-1);
+            return mf_goto(newno - 1);
 
         case 'f':
             // by frame [optimized]
-            if (++s >= end)
+            if (!*++s)
                 return 0;
 
             curr = 0;
@@ -3708,22 +3665,12 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
                 // newno starts from 1
                 if (newno <= 0)
                     return 0;
-
-                // XXX this is dropping performance...
-                // need to optimize again someday.
-                // XXX by the odisps design in mf_movieNextFrame,
-                // we seems don't really need this...
-                // Prevent endless loop
-                // if (mf_movieCurrentFrameNo() == newno)
-                //     return 0;
             }
             return mf_movieGotoFrame(newno, curr);
 
         case ':':
-            // XXX need to handle endless loop case
-
             // by names
-            return mf_movieGotoNamedFrame(s+1, end);
+            return mf_movieGotoNamedFrame(s + 1);
 
         default:
             // not supported yet
@@ -3739,7 +3686,7 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
  * @return -1: invalid option
  */
 MFPROTO int
-mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
+mf_movieOptionHandler(unsigned char *opt)
 {
     // format: #time#key1,cmd,text1#key2,cmd,text2#
     // if key  is empty, use auto-increased key.
@@ -3760,32 +3707,15 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     int hideOpts = 0;
     int promptlen = 0;
 
-    // TODO handle line length
-    // TODO restrict option size
-
     // set up timer (opt points to optional time now)
-    do {
-        p = opt;
-        while (  p < end &&
-                (isdigit(*p) || *p == '+' || *p == '-' || *p == '.') )
-            p++;
-
-        // if no number, abort.
-        if (p == opt || (p < end && *p != '#')) break;
-
-        // p looks like valid timer now
-        if (mf_str2float(opt, p, &optclk))
-        {
-            // conversion failed.
-            if (optclk == 0)
-                optclk = -1.0f;
+    {
+        char *endp = NULL;
+        float v = strtof((const char *)opt, &endp);
+        if ((unsigned char *)endp > opt && *endp == '#') {
+            optclk = (v == 0) ? -1.0f : v;
+            opt = (unsigned char *)endp + 1;
         }
-
-        // point opt to new var after #.
-        opt = p + 1;
-        break;
-
-    } while (1);
+    }
 
     // UI Selection
     do {
@@ -3802,7 +3732,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
         // parse (key,frame,text)
         for (   p = opt, ient = 0, maxsel = 0,
                 key = '0';      // default command
-                p < end && *p != '\n'; p++)
+                *p && *p != '\n'; p++)
         {
             if (newOpt)
             {
@@ -3865,7 +3795,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
                     // handle special case @a (all) here
 
                     if (*pkey == '@' &&
-                            ++ pkey < end &&
+                            *++pkey &&
                             (nk = mf_movieNamedKey(*pkey)) != MOVIE_KEY_NONE)
                     {
                         key = nk;
@@ -4006,7 +3936,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
         return -1;
 
     // XXX check return value of mf_movieExecuteOffsetCmd someday?
-    mf_movieExecuteOffsetCmd(cmd, cmd+szCmd);
+    mf_movieExecuteOffsetCmd(cmd);
     return 1;
 }
 
@@ -4034,7 +3964,7 @@ mf_movieSyncFrame()
         unsigned char *opt = mfmovie.options;
         mfmovie.options = NULL;
         // if executed of timeout, go for next.
-        if (mf_movieOptionHandler(opt, mf.end) != -1)
+        if (mf_movieOptionHandler(opt) != -1)
             return 1;
         // invalid syntax or not executed...
         // let's treat it as normal frame.
@@ -4067,14 +3997,13 @@ mf_movieSyncFrame()
     }
 }
 
-#define MOVIECMD_SKIP_ALL(p,end) \
-    while (p < end && *p && *p != '\n') \
-    { p++; } \
+#define MOVIECMD_SKIP_ALL(p) \
+    do { p = (unsigned char *)strchrnul((const char *)(p), '\n'); } while (0)
 
 MFPROTO unsigned char *
-mf_movieProcessCommand(unsigned char *p, unsigned char *end)
+mf_movieProcessCommand(unsigned char *p)
 {
-    for (; p < end && *p != '\n'; p++)
+    for (; *p && *p != '\n'; p++)
     {
         if (*p == 'S') {
             // SYNCHRONIZATION
@@ -4085,18 +4014,15 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
         {
             // END
             STOP_MOVIE();
-            // MFDISP_SKIPCURLINE();
-            MOVIECMD_SKIP_ALL(p,end);
+            MOVIECMD_SKIP_ALL(p);
             return p;
         }
         else if (*p == 'P')
         {
             // PAUSE
             mfmovie.pause = 1;
-            // MFDISP_SKIPCURLINE();
-            MOVIECMD_SKIP_ALL(p,end);
+            MOVIECMD_SKIP_ALL(p);
             return p;
-
         }
         else if (*p == 'I')
         {
@@ -4104,42 +4030,37 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             // Syntax: Icmd_from,cmd_to
             // Jump cmd_from, and execute until cmd_to,
             // then back here for next frame.
-            unsigned char *pfs, *pfe, *pts, *pte;
+            unsigned char *pfs, *pfe, *pts;
             int curr_fno;
 
             mfmovie.intr_src = NULL;
             mfmovie.intr_dest_frame = 0;
 
             // find parameters
-            pfs = pfe = p+1;
-            while (pfe < end && *pfe > ' ' && *pfe != ',')
+            pfs = pfe = p + 1;
+            while (*pfe > ' ' && *pfe != ',')
                 pfe++;
-            pts = pte = pfe+1;
-            while (pte < end && *pte > ' ' && *pte != ',')
-                pte++;
+            pts = pfe + 1;
             // check syntax
-            if ( pfe >= end || *pfe != ',' ||
-                 pts >= end)
+            if (*pfe != ',' || *pts <= ' ')
             {
-                MOVIECMD_SKIP_ALL(p,end);
+                MOVIECMD_SKIP_ALL(p);
                 return p;
             }
 
             // get the address of next frame
             curr_fno = mf_movieCurrentFrameNo();
-            mfmovie.intr_dest_frame = curr_fno +1;
+            mfmovie.intr_dest_frame = curr_fno + 1;
 
             // find interrupt source (cmd_to)
-            mf_movieExecuteOffsetCmd(pts, pte);
-            mfmovie.intr_src  = mf.disps;
+            mf_movieExecuteOffsetCmd(pts);
+            mfmovie.intr_src = mf.disps;
 
             // final execution
             mf_movieGotoFrame(curr_fno, 0);
-            mf_movieExecuteOffsetCmd(pfs, pfe);
+            mf_movieExecuteOffsetCmd(pfs);
 
-            // XXX what if jump to same location?
-
-            MOVIECMD_SKIP_ALL(p,end);
+            MOVIECMD_SKIP_ALL(p);
             return p;
         }
         else if (*p == 'G')
@@ -4152,9 +4073,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             unsigned char *pe = p;
             unsigned int igs = 0;
 
-            for (pe = p ; pe < end && *pe &&
-                    *pe > ' ' && *pe < 0x80
-                    ; pe ++)
+            for (pe = p; *pe > ' ' && *pe < 0x80; pe++)
                 if (*pe == ',') igs++;
 
             if (igs)
@@ -4162,17 +4081,15 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
                 // make random
                 igs = arc4random_uniform(igs + 1);
 
-                for (pe = p ; igs > 0 && pe < end && *pe &&
-                        *pe > ' ' && *pe < 0x80
-                        ; pe ++)
+                for (pe = p; igs > 0 && *pe > ' ' && *pe < 0x80; pe++)
                     if (*pe == ',') igs--;
 
                 if (pe != p)
-                    p = pe-1;
+                    p = pe - 1;
             }
 
-            mf_movieExecuteOffsetCmd(p+1, end);
-            MOVIECMD_SKIP_ALL(p,end);
+            mf_movieExecuteOffsetCmd(p + 1);
+            MOVIECMD_SKIP_ALL(p);
             return p;
         }
         else if (*p == ':')
@@ -4181,10 +4098,9 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             // :name:
             // name allows alnum only
             p++;
-            // TODO check isalnum p?
 
             // :name can accept trailing commands
-            while (p < end && *p != '\n' && *p != ':')
+            while (*p && *p != '\n' && *p != ':')
                 p++;
 
             if (*p == ':') p++;
@@ -4197,14 +4113,14 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
         {
             // Reserve Key for interactive usage.
             // Currently only K#...# format is supported.
-            if (p+2 < end && *(p+1) == '#')
+            if (*(p + 1) == '#')
             {
                 p += 2;
                 mfmovie.optkeys = p;
                 mfmovie.interactive = 1;
 
                 // K#..# can accept trailing commands
-                while (p < end && *p != '\n' && *p != '#')
+                while (*p && *p != '\n' && *p != '#')
                     p++;
 
                 // if empty, set optkeys to NULL?
@@ -4217,35 +4133,31 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
                 p--;
                 continue;
             }
-            MOVIECMD_SKIP_ALL(p,end);
+            MOVIECMD_SKIP_ALL(p);
             return p;
         }
         else if (*p == '#')
         {
             // OPTIONS
             // #key1,frame1,text1#key2,frame2,text2#
-            mfmovie.options = p+1;
+            mfmovie.options = p + 1;
             mfmovie.interactive = 1;
-            // MFDISP_SKIPCURLINE();
-            MOVIECMD_SKIP_ALL(p,end);
+            MOVIECMD_SKIP_ALL(p);
             return p;
         }
         else if (*p == 'O')
         {
             // OLD compatible mode
             // =  -> compat24
-            // -  -> ?
-            // == -> ?
-            if (++p >= end)
-                return end;
+            if (!*++p)
+                return p;
             if (*p == '=')
             {
                 mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
                 mfmovie.compat24 = 1;
-                if (++p >= end)
-                    return end;
+                if (!*++p)
+                    return p;
             }
-            // MFDISP_SKIPCURLINE();
             return p;
         }
         else
@@ -4262,11 +4174,10 @@ mf_movieNextFrame()
 {
     while (1)
     {
-        unsigned char *p = mf_movieFrameHeader(mf.disps, mf.end);
+        unsigned char *p = mf_movieFrameHeader(mf.disps);
 
         if (p)
         {
-            float nf = 0;
             unsigned char *odisps = mf.disps;
 
             // However, mf_forward (in STOP_MOVIE, or explicit calls) will
@@ -4284,7 +4195,7 @@ mf_movieNextFrame()
             }
 
             /* process leading */
-            p = mf_movieProcessCommand(p, mf.end);
+            p = mf_movieProcessCommand(p);
 
             // disps may change after commands
             if (mf.disps != odisps)
@@ -4307,9 +4218,11 @@ mf_movieNextFrame()
             }
 
             /* process time */
-            if (mf_str2float(p, mf.end, &nf))
             {
-                mf_float2tv(nf, &mfmovie.frameclk);
+                char *endp = NULL;
+                float nf = strtof((const char *)p, &endp);
+                if ((unsigned char *)endp > p)
+                    mf_float2tv(nf, &mfmovie.frameclk);
             }
 
             if (mfmovie.synctime.tv_sec > 0)
@@ -4342,13 +4255,11 @@ mf_movieNextFrame()
 MFPROTO unsigned char *
 mf_movieNextLine(unsigned char *frame)
 {
-    /* Similiar to mf_forward, without maintaining maxdisps. */
-    while (frame < mf.end && *frame++ != '\n');
-
-    if (frame == mf.end)
-        frame--;
+    /* Similar to mf_forward, without maintaining maxdisps. */
+    unsigned char *next = (unsigned char *)strchrnul((const char *)frame, '\n');
+    frame = (*next == '\n') ? (next + 1) : (next - 1);
     if (frame < mf.start)
-        frame++;
+        frame = mf.start;
 
     return frame;
 }
