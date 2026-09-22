@@ -235,6 +235,7 @@ static int t_lines = 24, t_columns = 80;
 #define FTCHAR_BLANK     (' ')
 #define FTATTR_DEFAULT   (FTATTR_ERASE)
 #define FTCHAR_INVALID_DBCS ('?')
+#define FTCHAR_TRAILING     (0xFFFF)
 // #define FTATTR_TRANSPARENT (0x80)
 
 #define FTDIRTY_CHAR    (0x01)
@@ -261,8 +262,23 @@ static int t_lines = 24, t_columns = 80;
 // Flat Terminal Data Type
 //////////////////////////////////////////////////////////////////////////
 
-typedef unsigned char ftchar;   // primitive character type
+#if MB_IS_BIG5
+typedef unsigned char  ftchar;  // primitive character type (Big5 byte)
+#else
+typedef unsigned short ftchar;  // primitive character type (UCS-2)
+#endif
 typedef unsigned short ftattr;  // primitive attribute type
+
+static inline void
+ftchar_fill(ftchar *p, ftchar c, size_t n)
+{
+    if (MB_IS_BIG5) {
+        memset(p, c, n);
+    } else {
+        while (n-- > 0)
+            *p++ = c;
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Structure
@@ -299,8 +315,11 @@ typedef struct
     char    typeahead;
 
     // escape command
-    ftchar  cmd[FTCMD_MAXLEN+1];
+    char    cmd[FTCMD_MAXLEN+1];
     int     szcmd;
+
+    // UTF-8 state machine
+    utf8_ctx utf8;
 
 } FlatTerm;
 
@@ -431,6 +450,7 @@ FTOAMAP(int y)
 #define FTPA       (FTAROW+ft.x)
 
 
+#if MB_IS_BIG5
 // for fast checking, we use reduced range here.
 // Big5: LEAD = 0x81-0xFE, TAIL = 0x40-0x7E/0xA1-0xFE
 #define FTDBCS_ISLEAD(x) (((unsigned char)(x))>=(0x80))
@@ -440,12 +460,15 @@ FTOAMAP(int y)
 //  - 0x80 is invalid for Big5.
 #define FTDBCS_ISBADLEAD(x) ((((unsigned char)(x)) == 0x80) || (((unsigned char)(x)) == 0xFF))
 
-// even faster:
-// #define FTDBCS_ISLEAD(x) (((unsigned char)(x)) & 0x80)
-// #define FTDBCS_ISTAIL(x) (((unsigned char)(x)) & ((unsigned char)~0x3F))
-
-#define FTDBCS_ISSBCSPRINT(x) \
-    (((unsigned char)(x))>=' ' && ((unsigned char)(x))<0x80)
+#define FTDBCS_ISSBCSPRINT(x) ((x) >= ' ' && (x) < 0x80)
+#define FTCHAR_ISTRAILING(x) (0)
+#else
+#define FTCHAR_ISTRAILING(x) ((unsigned int)(x) == FTCHAR_TRAILING)
+#define FTDBCS_ISLEAD(x) (!FTCHAR_ISTRAILING(x) && ucs_width(x) == 2)
+#define FTDBCS_ISTAIL(x) FTCHAR_ISTRAILING(x)
+#define FTDBCS_ISBADLEAD(x) (0)
+#define FTDBCS_ISSBCSPRINT(x) (!FTCHAR_ISTRAILING(x) && (x) >= ' ' && ucs_width(x) == 1)
+#endif
 
 #ifndef min
 #define min(x,y) (((x)<(y))?(x):(y))
@@ -568,7 +591,7 @@ int     fterm_strdlen   (const char *s);    // length of string for display
 int     fterm_prepare_str(int len);
 
 // DBCS supporting
-int     fterm_DBCS_Big5(unsigned char c1, unsigned char c2);
+int     fterm_DBCS_Big5(ftchar c1, ftchar c2);
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Implementation
@@ -707,7 +730,7 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
         for (mi = 0; mi < 2; mi++)
         {
             new_cbase[mi] = (ftchar *)p; p += cplane_bytes;
-            memset(new_cbase[mi], FTCHAR_ERASE, cplane_bytes);
+            ftchar_fill(new_cbase[mi], FTCHAR_ERASE, (size_t)new_mrows * cstride);
             for (i = 0; i < new_mrows; i++)
                 new_cbase[mi][i * cstride + new_mcols] = 0;
         }
@@ -745,16 +768,14 @@ resizeterm_within(int rows, int cols, int rows_full, int cols_full)
     // because we will redawwin(), so need to change front buffer only.
     for (i = ft.rows; i < rows; i++)
     {
-        memset(FTCMAP(i), FTCHAR_ERASE,
-                (cols) * sizeof(ftchar));
+        ftchar_fill(FTCMAP(i), FTCHAR_ERASE, cols);
         ftattr_fill(FTAMAP(i), FTATTR_ERASE, cols);
     }
     if (cols > ft.cols)
     {
         for (i = 0; i < ft.rows; i++)
         {
-            memset(FTCMAP(i)+ft.cols, FTCHAR_ERASE,
-                    (cols-ft.cols) * sizeof(ftchar));
+            ftchar_fill(FTCMAP(i) + ft.cols, FTCHAR_ERASE, cols - ft.cols);
             ftattr_fill(FTAMAP(i)+ft.cols, FTATTR_ERASE, cols-ft.cols);
         }
     }
@@ -807,7 +828,7 @@ clrscr(void)
 {
     int r;
     for (r = 0; r < ft.rows; r++)
-        memset(FTCMAP(r), FTCHAR_ERASE, ft.cols * sizeof(ftchar));
+        ftchar_fill(FTCMAP(r), FTCHAR_ERASE, ft.cols);
     for (r = 0; r < ft.rows; r++)
         ftattr_fill(FTAMAP(r), FTATTR_ERASE, ft.cols);
     fterm_markdirty();
@@ -825,7 +846,7 @@ clrtoeol(void)
 {
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
-    memset(FTPC, FTCHAR_ERASE,  ft.cols - ft.x);
+    ftchar_fill(FTPC, FTCHAR_ERASE, ft.cols - ft.x);
     ftattr_fill(FTPA, FTATTR_ERASE, ft.cols - ft.x);
     fterm_markdirty();
 }
@@ -835,7 +856,7 @@ clrtobeg(void)
 {
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
-    memset(FTCROW, FTCHAR_ERASE, ft.x+1);
+    ftchar_fill(FTCROW, FTCHAR_ERASE, ft.x + 1);
     ftattr_fill(FTAROW, FTATTR_ERASE, ft.x+1);
     fterm_markdirty();
 }
@@ -844,7 +865,7 @@ void
 clrcurrline(void)
 {
     ft.y = ranged(ft.y, 0, ft.rows-1);
-    memset(FTCROW, FTCHAR_ERASE, ft.cols);
+    ftchar_fill(FTCROW, FTCHAR_ERASE, ft.cols);
     ftattr_fill(FTAROW, FTATTR_ERASE, ft.cols);
     fterm_markdirty();
 }
@@ -873,7 +894,7 @@ clrregion(int r1, int r2)
 
     for (; r1 <= r2; r1++)
     {
-        memset(FTCMAP(r1), FTCHAR_ERASE, ft.cols);
+        ftchar_fill(FTCMAP(r1), FTCHAR_ERASE, ft.cols);
         ftattr_fill(FTAMAP(r1), FTATTR_ERASE, ft.cols);
     }
     fterm_markdirty();
@@ -966,6 +987,25 @@ refresh(void)
     doupdate();
 }
 
+static inline void
+fterm_rawchar(ftchar c)
+{
+    if (MB_IS_BIG5) {
+        fterm_rawc(c);
+        return;
+    }
+    if (FTCHAR_ISTRAILING(c))
+        return;
+    if (c < 0x80) {
+        fterm_rawc(c);
+        return;
+    }
+    utf8_ctx ctx;
+    int len = utf8_from_ucs(&ctx, c);
+    for (int i = 0; i < len; i++)
+        fterm_rawc(ctx.buf[i]);
+}
+
 void
 doupdate(void)
 {
@@ -1031,6 +1071,12 @@ doupdate(void)
                 FTD[x] |= FTDIRTY_ATTR, ds++;
 
             // determine DBCS status
+            if (dbcs == 1 && (MB_IS_UTF8 && !FTCHAR_ISTRAILING(FTCMAP(y)[x])))
+            {
+                FTD[x-1] |= FTDIRTY_CHAR;
+                ds++;
+                dbcs = 0;
+            }
             if (dbcs == 1)
             {
 #ifdef FTCONF_PREVENT_INVALID_DBCS
@@ -1085,8 +1131,20 @@ doupdate(void)
             {
                 // NON-DBCS
                 dbcs  = 0;
+#ifdef FTCONF_PREVENT_INVALID_DBCS
+                if (MB_IS_UTF8 && FTCHAR_ISTRAILING(FTCMAP(y)[x]))
+                {
+                    FTD[x] |= FTDIRTY_INVALID_DBCS | FTDIRTY_CHAR;
+                    FTDC[x] = FTCHAR_INVALID_DBCS;
+                    ds++;
+                }
+#endif // FTCONF_PREVENT_INVALID_DBCS
             }
 
+            if (odbcs == 1 && (MB_IS_UTF8 && !FTCHAR_ISTRAILING(FTOCMAP(y)[x])))
+            {
+                odbcs = 0;
+            }
             if (odbcs == 1)
             {
                 // TAIL: dirty prev and me if any is dirty.
@@ -1169,7 +1227,7 @@ doupdate(void)
 
                 for (i = ft.rx; i < x; i++)
                 {
-                    fterm_rawc(FTDC[i]);
+                    fterm_rawchar(FTDC[i]);
                     FTAMAP(y)[i] = FTOAMAP(y)[i]; // spaces may change attr...
                     ft.rx++;
                 }
@@ -1195,7 +1253,7 @@ doupdate(void)
                     output_sgr66 = 1;
             }
 
-            if ((FTD[x] & FTDIRTY_DBCS) && (FT_DBCS_NOINTRESC || output_sgr66))
+            if ((FTD[x] & FTDIRTY_DBCS) && (MB_IS_UTF8 || FT_DBCS_NOINTRESC || output_sgr66))
             {
                 // prevent changing attributes inside DBCS
             } else {
@@ -1224,10 +1282,10 @@ doupdate(void)
                     !(x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS)))
                     fterm_rawc(' ');
                 else
-                    fterm_rawc(FTDC[x]);
+                    fterm_rawchar(FTDC[x]);
             }
 #else
-            fterm_rawc(FTDC[x]);
+            fterm_rawchar(FTDC[x]);
 #endif
             ft.rx++;
             touched = 1;
@@ -1277,6 +1335,7 @@ void
 move(int y, int x)
 {
     ft.has_half_attr = 0;
+    if (MB_IS_UTF8) utf8_reset(&ft.utf8);
     ft.y = ranged(y, 0, ft.rows-1);
     ft.x = ranged(x, 0, ft.cols-1);
 }
@@ -1440,6 +1499,43 @@ outstr(const char *str)
 #endif
 }
 
+static inline __attribute__((always_inline)) void
+out_ftchar(ftchar c)
+{
+    assert (ft.x >= 0 && ft.x < ft.cols);
+
+    if (FTCONF_USE_DBCS_SGR66 && ft.has_half_attr)
+    {
+        FTA = ft.half_attr;
+        ft.has_half_attr = 0;
+    }
+    else
+    {
+#ifdef FTATTR_TRANSPARENT
+        if (ft.attr != FTATTR_TRANSPARENT)
+#endif // FTATTR_TRANSPARENT
+            FTA = ft.attr;
+    }
+
+    // normal characters
+    FTC = c;
+
+    ft.x++;
+    // XXX allow x == ft.cols?
+    if (ft.x >= ft.cols)
+    {
+        ft.x = 0;
+        ft.y ++;
+        while (ft.y >= ft.rows)
+        {
+            // XXX scroll at next dirty?
+            // screen.c ignored such scroll.
+            // scroll();
+            ft.y --;
+        }
+    }
+}
+
 void
 outc(unsigned char c)
 {
@@ -1469,6 +1565,7 @@ outc(unsigned char c)
     else if (c == '\t')
     {
         ft.has_half_attr = 0;
+        if (MB_IS_UTF8) utf8_reset(&ft.utf8);
         // tab: move by 8, and erase the moved range
         int x = ft.x;
         if (x % 8 == 0)
@@ -1479,7 +1576,7 @@ outc(unsigned char c)
         // erase the characters between
         if (x > ft.x)
         {
-            memset(FTCROW+ft.x, FTCHAR_ERASE, x - ft.x);
+            ftchar_fill(FTCROW + ft.x, FTCHAR_ERASE, x - ft.x);
             ftattr_fill(FTAROW+ft.x, ft.attr, x-ft.x);
         }
         ft.x = x;
@@ -1487,11 +1584,13 @@ outc(unsigned char c)
     else if (c == '\b')
     {
         ft.has_half_attr = 0;
+        if (MB_IS_UTF8) utf8_reset(&ft.utf8);
         ft.x = ranged(ft.x-1, 0, ft.cols-1);
     }
     else if (c == '\r' || c == '\n')
     {
         ft.has_half_attr = 0;
+        if (MB_IS_UTF8) utf8_reset(&ft.utf8);
         // new line: cursor movement, and do not print anything
         // XXX old screen.c also calls clrtoeol() for newlins.
         clrtoeol();
@@ -1505,43 +1604,36 @@ outc(unsigned char c)
             ft.y --;
         }
     }
-    else if (iscntrl((unsigned char)c))
+    else if (iscntrl(c))
     {
         // unknown control characters: ignore
+        if (MB_IS_UTF8)
+            utf8_reset(&ft.utf8);
     }
-    else // normal characters
+    else if (MB_IS_BIG5 || isascii(c))
     {
-        assert (ft.x >= 0 && ft.x < ft.cols);
-
-        if (FTCONF_USE_DBCS_SGR66 && ft.has_half_attr)
-        {
-            FTA = ft.half_attr;
-            ft.has_half_attr = 0;
+        if (MB_IS_UTF8 && utf8_pending(&ft.utf8)) {
+            utf8_reset(&ft.utf8);
+            out_ftchar(FTCHAR_INVALID_DBCS);
         }
-        else
-        {
-#ifdef FTATTR_TRANSPARENT
-            if (ft.attr != FTATTR_TRANSPARENT)
-#endif // FTATTR_TRANSPARENT
-                FTA = ft.attr;
-        }
-
-        // normal characters
-        FTC = c;
-
-        ft.x++;
-        // XXX allow x == ft.cols?
-        if (ft.x >= ft.cols)
-        {
-            ft.x = 0;
-            ft.y ++;
-            while (ft.y >= ft.rows)
-            {
-                // XXX scroll at next dirty?
-                // screen.c ignored such scroll.
-                // scroll();
-                ft.y --;
+        out_ftchar(c);
+    }
+    else
+    {
+        if (!utf8_add_byte(&ft.utf8, c)) {
+            if (!utf8_pending(&ft.utf8)) {
+                out_ftchar(FTCHAR_INVALID_DBCS);
+                utf8_add_byte(&ft.utf8, c);
             }
+            return;
+        }
+        int ucs = utf8_get_ucs(&ft.utf8);
+        int w = ucs_width(ucs);
+        if (w == 1) {
+            out_ftchar((ftchar)(ucs < 0xFFFE ? ucs : '?'));
+        } else if (w >= 2) {
+            out_ftchar((ftchar)(ucs < 0xFFFE ? ucs : 0xFFFD));
+            out_ftchar((ftchar)FTCHAR_TRAILING);
         }
     }
 }
@@ -1559,10 +1651,20 @@ instr       (char *str)
     while (x >= ft.x && FTCROW[x] == FTCHAR_ERASE)
         x--;
     if (x < ft.x) return 0;
-    x = x - ft.x + 1;
-    memcpy(str, FTCROW+ft.x, x);
-    str[x] = 0;
-    return x;
+    int i, len = 0;
+    for (i = ft.x; i <= x; i++) {
+        ftchar ch = FTCROW[i];
+        if (MB_IS_BIG5) {
+            str[len++] = ch;
+        } else if (!FTCHAR_ISTRAILING(ch)) {
+            utf8_ctx ctx;
+            int ulen = utf8_from_ucs(&ctx, ch);
+            memcpy(str + len, ctx.buf, ulen);
+            len += ulen;
+        }
+    }
+    str[len] = 0;
+    return len;
 }
 
 int
@@ -1579,11 +1681,22 @@ innstr      (char *str, int n)
     while (x >= ft.x && FTCROW[x] == FTCHAR_ERASE)
         x--;
     if (x < ft.x) return 0;
-    n = x - ft.x + 1;
-    if (n >= on) n = on-1;
-    memcpy(str, FTCROW+ft.x, n);
-    str[n] = 0;
-    return n;
+    int i, len = 0;
+    for (i = ft.x; i <= x && len < on - 1; i++) {
+        ftchar ch = FTCROW[i];
+        if (MB_IS_BIG5) {
+            str[len++] = ch;
+        } else if (!FTCHAR_ISTRAILING(ch)) {
+            utf8_ctx ctx;
+            int ulen = utf8_from_ucs(&ctx, ch);
+            if (len + ulen >= on)
+                break;
+            memcpy(str + len, ctx.buf, ulen);
+            len += ulen;
+        }
+    }
+    str[len] = 0;
+    return len;
 }
 
 int
@@ -1612,6 +1725,10 @@ inansistr   (char *str, int n)
     // preserve some bytes if last attribute is not FTATTR_DEFAULT
     for (i = ft.x; n > szTrail && i <= x; i++)
     {
+        ftchar ch = FTCROW[i];
+        if (MB_IS_UTF8 && FTCHAR_ISTRAILING(ch))
+            continue;
+
         *str = 0;
 
         if (a != FTAROW[i])
@@ -1633,8 +1750,20 @@ inansistr   (char *str, int n)
         }
 
         // n should > szTrail
-        *str ++ = FTCROW[i];
-        n--;
+        if (MB_IS_BIG5) {
+            if (n < szTrail + 1)
+                break;
+            *str++ = ch;
+            n--;
+        } else {
+            utf8_ctx ctx;
+            int ulen = utf8_from_ucs(&ctx, ch);
+            if (n < szTrail + ulen)
+                break;
+            memcpy(str, ctx.buf, ulen);
+            str += ulen;
+            n -= ulen;
+        }
     }
 
     if (szTrail && n >= szTrail)
@@ -1675,20 +1804,27 @@ void fterm_dupe2bk(void)
 }
 
 int
-fterm_DBCS_Big5(unsigned char c1, unsigned char c2)
+fterm_DBCS_Big5(ftchar c1, ftchar c2)
 {
+    if (MB_IS_UTF8) {
+        if (!FTDBCS_ISLEAD(c1) || !FTCHAR_ISTRAILING(c2))
+            return FTDBCS_INVALID;
+        return is_cjk_ambiguous(c1) ? FTDBCS_UNSAFE : FTDBCS_SAFE;
+    }
     // ref: http://www.cns11643.gov.tw/web/word/big5/index.html
     // High byte: 0xA1-0xFE, 0x8E-0xA0, 0x81-0x8D
     // Low  byte: 0x40-0x7E, 0xA1-0xFE
     // C1:  0x80-0x9F
+    unsigned char b1 = c1 & 0xFF;
+    unsigned char b2 = c2 & 0xFF;
 #ifdef FT_DBCS_BIG5
-    FT_DBCS_BIG5(c1, c2);
+    FT_DBCS_BIG5(b1, b2);
 #endif
-    if (FTDBCS_ISBADLEAD(c1))
+    if (FTDBCS_ISBADLEAD(b1))
         return  FTDBCS_INVALID;
-    if (!FTDBCS_ISTAIL(c2))
+    if (!FTDBCS_ISTAIL(b2))
         return FTDBCS_INVALID;
-    if (c1 >= 0x80 && c1 <= 0xA0)
+    if (b1 >= 0x80 && b1 <= 0xA0)
         return FTDBCS_UNSAFE;
     return FTDBCS_SAFE;
 }
@@ -1731,7 +1867,7 @@ fterm_prepare_str(int len)
     len -= x;
     if (len < 0) len = 0;
 
-    memset(FTCROW + x, FTCHAR_ERASE, len);
+    ftchar_fill(FTCROW + x, FTCHAR_ERASE, len);
     ftattr_fill(FTAROW + x, ft.attr, len);
     return len;
 }
@@ -2139,8 +2275,16 @@ fterm_strdlen(const char *s)
                     break;
 
                 default:
-                    if (!iscntrl((unsigned char)*s))
+                    if (isascii((unsigned char)*s)) {
+                        if (isprint((unsigned char)*s))
+                            sz++;
+                    } else if (MB_IS_BIG5) {
                         sz++;
+                    } else {
+                        sz += mb_width(s);
+                        s += mb_bytes(s);
+                        continue;
+                    }
                     break;
             }
         }
