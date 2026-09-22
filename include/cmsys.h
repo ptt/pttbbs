@@ -223,6 +223,11 @@ void chomp(char *src);
 #define TEMP_STORAGE_TO_MB(s) (assert(strlen(s) < ANSILINELEN), TEMP_STORAGE_TO_MB_SZ(ANSILINELEN, (s)))
 #define TEMP_MB_TO_STORAGE(s) (assert(strlen(s) < ANSILINELEN), TEMP_MB_TO_STORAGE_SZ(ANSILINELEN, (s)))
 
+#include <wchar.h>
+int  mk_wcwidth(wchar_t ucs);
+int  mk_wcwidth_cjk(wchar_t ucs);
+int  is_cjk_ambiguous(wchar_t ucs);
+int  mb_bytes(const char *s);
 int  mb_bytes(const char *s);
 int  mb_width(const char *s);
 int  mb_from_vkey(int key, char *buf);
