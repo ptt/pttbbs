@@ -187,20 +187,94 @@ passwd_update_money(int num)
     return 0;
 }
 
-int
-passwd_update(int num, userec_t * buf)
+static void
+userec_storage_to_mem(userec_t *u)
 {
-    int  pwdfd;
+    if (!NEED_STORAGE_CONV || !u)
+        return;
+#define CONV_FROM_S(field) \
+    storage_to_mb(u->field, u->field, sizeof(u->field))
+    CONV_FROM_S(realname);
+    CONV_FROM_S(nickname);
+    CONV_FROM_S(address);
+    CONV_FROM_S(career);
+    CONV_FROM_S(justify);
+#undef CONV_FROM_S
+}
+
+static inline void
+conv_to_s_diff(char *dst, const char *orig_d, const char *orig_m, size_t sz)
+{
+    int changed = 1;
+    if (orig_m) {
+        changed = (memcmp(orig_m, dst, sz) != 0);
+    } else if (orig_d) {
+        char orig_mb[STRLEN];
+        assert(sz <= sizeof(orig_mb));
+        storage_to_mb(orig_d, orig_mb, sz);
+        changed = (strcmp(dst, orig_mb) != 0);
+    }
+    if (!changed && orig_d)
+        memcpy(dst, orig_d, sz);
+    else
+        mb_to_storage(dst, dst, sz);
+}
+
+static void
+userec_mem_to_storage_diff(userec_t *disk_buf, const userec_t *orig_disk,
+                           const userec_t *orig_mem)
+{
+    if (!NEED_STORAGE_CONV || !disk_buf)
+        return;
+#define CONV_TO_S_DIFF(field) \
+    conv_to_s_diff(disk_buf->field, \
+                   orig_disk ? orig_disk->field : NULL, \
+                   orig_mem ? orig_mem->field : NULL, \
+                   sizeof(disk_buf->field))
+    CONV_TO_S_DIFF(realname);
+    CONV_TO_S_DIFF(nickname);
+    CONV_TO_S_DIFF(address);
+    CONV_TO_S_DIFF(career);
+    CONV_TO_S_DIFF(justify);
+#undef CONV_TO_S_DIFF
+}
+
+int
+passwd_update_diff(int num, const userec_t *orig_mem, userec_t *buf)
+{
+    int pwdfd;
+    userec_t disk_buf, orig_disk;
+    const userec_t *wptr = buf;
+    off_t offset;
     if (num < 1 || num > MAX_USERS)
 	return -1;
 
-    if ((pwdfd = open(FN_PASSWD, O_WRONLY)) < 0)
+    offset = (off_t)sizeof(userec_t) * (num - 1);
+    if ((pwdfd = open(FN_PASSWD, NEED_STORAGE_CONV ? O_RDWR : O_WRONLY)) < 0)
 	exit(1);
-    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
-    write(pwdfd, buf, sizeof(userec_t));
+
+    if (NEED_STORAGE_CONV && buf) {
+        const userec_t *orig_disk_ptr = NULL;
+        if (lseek(pwdfd, offset, SEEK_SET) == offset &&
+            read(pwdfd, &orig_disk, sizeof(userec_t)) == sizeof(userec_t)) {
+            orig_disk_ptr = &orig_disk;
+        }
+        disk_buf = *buf;
+        userec_mem_to_storage_diff(&disk_buf, orig_disk_ptr, orig_mem);
+        wptr = &disk_buf;
+    }
+
+    lseek(pwdfd, offset, SEEK_SET);
+    write(pwdfd, wptr, sizeof(userec_t));
     close(pwdfd);
 
     return 0;
+}
+
+int
+passwd_update(int num, userec_t * buf)
+{
+    return passwd_update_diff(num, NULL, buf);
 }
 
 /**
@@ -272,6 +346,8 @@ passwd_query(int num, userec_t * buf)
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     read(pwdfd, buf, sizeof(userec_t));
     close(pwdfd);
+
+    userec_storage_to_mem(buf);
 
     return 0;
 }
