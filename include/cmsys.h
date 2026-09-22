@@ -226,6 +226,14 @@ void chomp(char *src);
 #define TEMP_STORAGE_TO_MB(s) (assert(strlen(s) < ANSILINELEN), TEMP_STORAGE_TO_MB_SZ(ANSILINELEN, (s)))
 #define TEMP_MB_TO_STORAGE(s) (assert(strlen(s) < ANSILINELEN), TEMP_MB_TO_STORAGE_SZ(ANSILINELEN, (s)))
 
+/*
+ * Whether vkey() returns raw multibyte bytes (1, default) or a decoded
+ * wide character (0: UCS/Unicode scalar for UTF-8, 16-bit word for Big5).
+ */
+#ifndef VKEY_IS_MB
+#  define VKEY_IS_MB 1
+#endif
+
 #include <wchar.h>
 int  mk_wcwidth(wchar_t ucs);
 int  mk_wcwidth_cjk(wchar_t ucs);

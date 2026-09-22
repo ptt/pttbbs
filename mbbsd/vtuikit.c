@@ -1280,7 +1280,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	// all special keys were processed, now treat as 'input data'.
 
 	// content filter
-	if (c < ' ' || c >= 0xFF)
+	if (!vkey_isprint(c))
 	{
 	    bell(); continue;
 	}
@@ -1305,14 +1305,15 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    }
 	}
 
-	// size check
-	if(rt.iend+1 >= len)
+	char mb[5];
+	int mblen = mb_from_vkey(c, mb);
+	if (mblen <= 0 || rt.iend + mblen >= len)
 	{
 	    bell(); continue;
 	}
 
-	// prevent incomplete DBCS
-	if (len - rt.iend < 3 && c > 0x80 &&
+	// prevent incomplete multibyte sequence when VKEY_IS_MB == 1
+	if (VKEY_IS_MB && len - rt.iend < 3 && c > 0x80 &&
 		mbs_status(buf, rt.icurr) != MB_TRAILING)	// we need 3 for DBCS+NUL.
 	{
 	    // XXX should we purge here, or wait the final mbs_safe_trim?
@@ -1326,15 +1327,16 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    continue;
 
 	// size check again, due to data callback.
-	if(rt.iend+1 >= len)
+	if (rt.iend + mblen >= len)
 	{
 	    bell(); continue;
 	}
 
-	// add one character.
-	memmove(buf+rt.icurr+1, buf+rt.icurr, rt.iend-rt.icurr+1);
-	buf[rt.icurr++] = c;
-	rt.iend++;
+	// add character bytes.
+	memmove(buf + rt.icurr + mblen, buf + rt.icurr, rt.iend - rt.icurr + 1);
+	memcpy(buf + rt.icurr, mb, mblen);
+	rt.icurr += mblen;
+	rt.iend += mblen;
 	dirty = 1;
     }
 

@@ -205,7 +205,7 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    break;
 
 	default:
-	    if (isprint(key)) {
+	    if (isascii(key) && isprint(key)) {
 		char tmp_buf[(MAX_COMPLETE_LIST + 1) * (IDLEN + 1)];
 		bool tmp_truncated = false;
 		const struct Vector *src = (nc_int->dirty < 0 || nc_int->is_truncated)
@@ -377,6 +377,8 @@ gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
     int   ret  = VGETCB_NEXT;	// reject by default
     int   i;
 
+    if (!isascii(key))
+	return VGETCB_NEXT;
     assert(prt->icurr+1 < prt->len);	// verify size
     assert(prt->icurr == prt->iend);	// verify cursor position
     gc_int->morelist = -1;

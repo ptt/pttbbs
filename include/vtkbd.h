@@ -25,8 +25,9 @@
 #ifndef VTKBD_H
 #define VTKBD_H
 
+#include <ctype.h>
 #include <sys/types.h>
-#include <stdbool.h>
+#include "cmsys.h"
 
 /* Mouse tracking mode definitions (XTerm DECSET / DECRST) */
 #define MOUSE_MODE_NONE         (0)
@@ -71,6 +72,8 @@ typedef struct {
     int     csi_inter_count;
     char    csi_intermediate[VTKBD_MAX_INTERMEDIATE];
     int     csi_len;            /* Total sequence length to prevent overflow */
+    int     mb_buf;
+    utf8_ctx utf8;
 } VtkbdCtx;
 
 /* vtkbd API */
@@ -100,10 +103,17 @@ const vtkbd_mouse_t *vtkbd_get_mouse(const VtkbdCtx *ctx);
 #define UTF16_SURROGATES_BEGIN  0xD800
 #define UTF16_SURROGATES_END    0xDFFF
 #define KEY_SPECIAL_BASE        UTF16_SURROGATES_BEGIN
+
 static inline bool IS_SPECIAL_KEY(int c) {
     return ((c >= UTF16_SURROGATES_BEGIN) &&
             (c <= UTF16_SURROGATES_END) &&
             (c & 0xFF) < 0x40);
+}
+
+static inline bool vkey_isprint(int c) {
+    if (isascii(c))
+        return isprint(c);
+    return c > 0 && !IS_SPECIAL_KEY(c);
 }
 
 /* arrow keys (must follow vt100 ordering) */

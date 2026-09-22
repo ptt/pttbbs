@@ -245,6 +245,12 @@ vkey_init() {
     vkctx.peek_ch = KEY_INCOMPLETE;
 }
 
+/*
+ * vkey(): receive next key.
+ * Note: returns ASCII (0x00..0x7F), KEY_* special keys, and for non-ASCII
+ * input either raw multibyte bytes (VKEY_IS_MB=1, default) or a decoded
+ * wchar (VKEY_IS_MB=0: UCS/Unicode scalar for UTF-8, 16-bit word for Big5).
+ */
 inline int
 vkey(void)
 {
