@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "cmsys.h"
 
 int
@@ -162,13 +163,18 @@ char *big5_to_utf8_n(const char *big5, size_t src_len, char *utf8, size_t max_le
     if (!big5 || !utf8 || max_len == 0) {
         return utf8;
     }
-    char tmp[big5 == utf8 ? max_len : 1];
+    char sbuf[512];
+    char *heap_buf = NULL;
     if (big5 == utf8) {
+        size_t copy_len = (src_len == (size_t)-1 || src_len >= max_len) ? (max_len - 1) : src_len;
+        char *tmp = (copy_len < sizeof(sbuf)) ? sbuf : (heap_buf = (char *)malloc(copy_len + 1));
+        if (!tmp)
+            return utf8;
         if (src_len == (size_t)-1 || src_len >= max_len) {
-            strlcpy(tmp, big5, max_len);
+            strlcpy(tmp, big5, copy_len + 1);
         } else {
-            memcpy(tmp, big5, src_len);
-            tmp[src_len] = '\0';
+            memcpy(tmp, big5, copy_len);
+            tmp[copy_len] = '\0';
         }
         big5 = tmp;
     }
@@ -203,6 +209,7 @@ char *big5_to_utf8_n(const char *big5, size_t src_len, char *utf8, size_t max_le
         out_idx += utf8_to_mb(&ctx, utf8 + out_idx);
     }
     utf8[out_idx] = '\0';
+    free(heap_buf);
     return utf8;
 }
 
