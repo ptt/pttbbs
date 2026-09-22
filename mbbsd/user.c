@@ -298,7 +298,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
-    strcpy(fhdr.owner, "[" BBSMNAME "警察局]");
+    STRLCPY(fhdr.owner, "[" BBSMNAME "警察局]");
     sethomedir(genbuf, crime);
     append_fileheader(genbuf, &fhdr);
 }
@@ -484,10 +484,15 @@ typedef struct {
 
 static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     const int col_opt = 54;
-    showtitle("個人設定", "個人化設定");
+    const char *c0 = "分類", *c1 = "描述";
+    int pad0 = 11 - stream_width(c0);
+    int pad1 = (col_opt - 11) - stream_width(c1);
+    vs_hdr2bar("偏好設定列表", "調整介面顯示與操作偏好");
     move(2, 0);
-    prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
-           "分類", col_opt - 11, "描述", "設定值");
+    prints(ANSI_COLOR(32) "      %s%*s%s%*s%s" ANSI_RESET "\n",
+           c0, pad0 > 0 ? pad0 : 0, "",
+           c1, pad1 > 0 ? pad1 : 0, "",
+           "設定值");
     return 0;
 }
 
@@ -505,11 +510,11 @@ static int customize_renderer(int i, PSB_CTX *ctx) {
     const int col_opt = 54;
     const char *val = Getter(item);
 
+    int pad = stream_width(val) < 16 ? (col_opt - stream_width(item->desc)) : 0;
     outs("   ");
-    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
+    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %s%*s%s\n",
            'a' + i,
-           stream_width(val) < 16 ? col_opt : 0,
-           item->desc, val);
+           item->desc, pad > 0 ? pad : 0, "", val);
     return 0;
 }
 
