@@ -79,7 +79,7 @@ int EntryBrowser::Display() {
 }
 
 int EntryBrowser::Header() {
-  vs_draw_hdr2("【搜尋認證資料庫】", title_.c_str());
+  vs_draw_hdr2("搜尋認證資料庫", title_.c_str());
   move(1, 0);
   vbar(ANSI_COLOR(30;47)
        "   使用者代號   認證資訊                               認證時間");

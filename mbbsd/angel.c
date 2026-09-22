@@ -814,7 +814,7 @@ AngelNotOnline(){
 	return;
     }
 
-    showtitle("小天使留言", BBSNAME);
+    vs_hdr2(PROMPT_ANGELBEATS, "小天使留言");
     move(2, 0);
     prints("您的%s小天使現在不在線上，祂留言給你：\n", _myangel_nick);
     angel_display_message(FN_ANGEL_OFFLINE2, msg_fn, 1, 5, 4, 9, 53);
