@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "psb.h"
 
 // XXX piaip 2007/12/29
 // 最近發現很多 code 都死在 announce
@@ -1655,6 +1656,16 @@ announce_caption(const menu_t *pm)
     return " 精華列表 ";
 }
 
+static VCOL announce_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號   ", 9, 9, 20},
+    {"標  題", 20, 46, 100},
+    {"編  選       ", 13, 13, 50},
+    {"日  期    ", 10, 10, 30},
+    {0},
+};
+#define ANNOUNCE_COLS (ARRAY_SIZE(announce_coldefs) - 1)
+
 static int
 announce_header(PSB_CTX *psbctx)
 {
@@ -1712,12 +1723,16 @@ announce_renderer(int idx, PSB_CTX *psbctx)
         flTagged = 1;
     time4_t dtime = dasht(buf);
     a_timestamp(buf, &dtime);
-    prints("%6d%c%c%-47.46s%-13s[%s]", idx + 1,
+
+    char num[32];
+    SNPRINTF(num, "%6d%c%c", idx + 1,
            (item->filemode & FILE_BM) ? 'X' :
            (item->filemode & FILE_HIDE) ? ')' : '.',
-           flTagged ? 'c' : ' ',
-           item->title, item->owner,
-           buf);
+           flTagged ? 'c' : ' ');
+    char date_buf[32];
+    SNPRINTF(date_buf, "[%s]", buf);
+
+    render_columns(psbctx, "", num, item->title, item->owner, date_buf);
     return 0;
 }
 
@@ -1861,6 +1876,8 @@ a_menu_rec(const char *maintitle, const char *path,
         },
         .header_lines = 2,
         .footer_lines = 2,
+        .cols = ANNOUNCE_COLS,
+        .vcols = announce_coldefs,
         .loader = announce_loader,
         .header = announce_header,
         .footer = announce_footer,
