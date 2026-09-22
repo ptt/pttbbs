@@ -1712,11 +1712,28 @@ announce_renderer(int idx, PSB_CTX *psbctx)
         flTagged = 1;
     time4_t dtime = dasht(buf);
     a_timestamp(buf, &dtime);
-    prints("%6d%c%c%-47.46s%-13s[%s]", idx + 1,
+    char tbuf[TTLEN + 1];
+    int off = stream_col_offset(46, item->title);
+    if (off >= 0) {
+        strlcpy(tbuf, item->title, off + 1);
+        mbs_safe_trim(tbuf);
+    } else {
+        strlcpy(tbuf, item->title, sizeof(tbuf));
+    }
+    int pad = 47 - stream_width(tbuf);
+    char obuf[sizeof(item->owner)];
+    strlcpy(obuf, item->owner, sizeof(obuf));
+    while (stream_width(obuf) > 12) {
+        obuf[strlen(obuf) - 1] = 0;
+        mbs_safe_trim(obuf);
+    }
+    int opad = 13 - (int)stream_width(obuf);
+    prints("%6d%c%c%s%*s%s%*s[%s]", idx + 1,
            (item->filemode & FILE_BM) ? 'X' :
            (item->filemode & FILE_HIDE) ? ')' : '.',
            flTagged ? 'c' : ' ',
-           item->title, item->owner,
+           tbuf, pad > 0 ? pad : 0, "",
+           obuf, opad > 0 ? opad : 0, "",
            buf);
     return 0;
 }
