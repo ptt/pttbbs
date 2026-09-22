@@ -23,6 +23,25 @@ CC:=		ccache $(CC)
 CXX:=		ccache $(CXX)
 endif
 
+BBSCONF:=	$(SRCROOT)/pttbbs.conf
+# Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
+DEF_CHECK=	$(strip $(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | grep -qE "^#define[ \t]+$1([ \t]+1|[ \t]*$$)" && echo "YES"))
+
+ifeq ($(MB_IS_UTF8),)
+MB_IS_UTF8:=	$(if $(call DEF_CHECK,MB_IS_UTF8),1,)
+endif
+ifeq ($(MB_IS_UTF8),1)
+EXT_CFLAGS+=	-DMB_IS_UTF8=1
+EXT_CXXFLAGS+=	-DMB_IS_UTF8=1
+ifeq ($(CLANG),1)
+CC:=		$(abspath $(SRCROOT)/util/clang_utf8.py) $(CC)
+CXX:=		$(abspath $(SRCROOT)/util/clang_utf8.py) $(CXX)
+else
+EXT_CFLAGS+=	-finput-charset=big5 -fexec-charset=utf-8
+EXT_CXXFLAGS+=	-finput-charset=big5 -fexec-charset=utf-8
+endif
+endif
+
 # Common build flags
 
 PTT_WARN:=	-Wall -Wextra -Wformat=2 \
@@ -114,10 +133,6 @@ endif
 # conditional configurations and optional modules
 #######################################################################
 
-BBSCONF:=       $(SRCROOT)/pttbbs.conf
-DEF_PATTERN:=   ^[ \t]*\#[ \t]*define[ \t]*
-DEF_CMD:=       grep -Ewq "${DEF_PATTERN}"
-DEF_YES:=       && echo "YES" || echo ""
 
 #libevent
 LIBEVENT_CFLAGS:=	$(shell (pkg-config --cflags libevent_pthreads || true) 2>/dev/null)
@@ -139,8 +154,6 @@ GFLAGS_CFLAGS:=		$(shell (pkg-config --cflags gflags || true) 2>/dev/null)
 GFLAGS_LIBS_L:=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
 GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
-# Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
-DEF_CHECK=	$(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | grep -qE "^#define[ \t]+$1\b" && echo "YES")
 USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
 ######################################
