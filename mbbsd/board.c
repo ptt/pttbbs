@@ -1057,7 +1057,7 @@ load_boards(char *key)
 		    if (get_item_type(&fav->favh[i]) == FAVT_LINE )
 			continue;
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER ){
-			if( strcasestr(
+			if( mbs_strcasestr(
 			    get_folder_title(fav_getid(&fav->favh[i])),
 			    key)
 			)

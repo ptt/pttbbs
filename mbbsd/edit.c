@@ -1468,7 +1468,7 @@ garbage_line(const char *str)
 	str++;
     if (qlevel >= 1) {
 	if (!strncmp(str, "※ ", 3) || !strncmp(str, "==>", 3) ||
-	    strstr(str, ") 提到:\n"))
+	    mbs_strstr(str, ") 提到:\n"))
 	    return 1;
     }
     return (*str == '\n');

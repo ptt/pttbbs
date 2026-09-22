@@ -13,7 +13,7 @@ select_read_name(char *buf, size_t size, const char *base,
     snprintf(buf, size, "%s%X.%X.%X",
 	     base ? base : "SR.",
 	     pred->mode, (int) strlen(pred->keyword),
-	     DBCS_StringHash(pred->keyword));
+	     mbs_strcasehash(pred->keyword));
 }
 
 int
@@ -31,11 +31,11 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
     else if (sr_mode & RS_NEWPOST)
 	return strncmp(fh->title, "Re:", 3) != 0;
     else if (sr_mode & RS_AUTHOR)
-	return DBCS_strcasestr(fh->owner, keyword) != NULL;
+	return mbs_strcasestr(fh->owner, keyword) != NULL;
     else if (sr_mode & RS_KEYWORD)
-	return DBCS_strcasestr(fh->title, keyword) != NULL;
+	return mbs_strcasestr(fh->title, keyword) != NULL;
     else if (sr_mode & RS_KEYWORD_EXCLUDE)
-	return DBCS_strcasestr(fh->title, keyword) == NULL;
+	return mbs_strcasestr(fh->title, keyword) == NULL;
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
     else if (sr_mode & RS_RECOMMEND)

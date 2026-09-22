@@ -438,10 +438,10 @@ extract_menu_title(const char *desc, char *buf, size_t size)
     if (!desc)
 	return "";
 
-    start = strstr(desc, "¡i");
+    start = mbs_strstr(desc, "¡i");
     if (start) {
 	start += strlen("¡i");
-	end = strstr(start, "¡j");
+	end = mbs_strstr(start, "¡j");
 	if (!end)
 	    end = start + strlen(start);
     } else {

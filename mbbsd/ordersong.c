@@ -165,7 +165,7 @@ do_order_song(void)
 	    unlockutmpmode();
 	    return 0;
 	}
-	while ((po = strstr(buf, "<~Src~>"))) {
+	while ((po = mbs_strstr(buf, "<~Src~>"))) {
 	    const char *dot = "";
 	    if (is_validuserid(sender) && strcmp(sender, cuser.userid) != 0)
 		dot = ".";
@@ -173,9 +173,9 @@ do_order_song(void)
 	    SNPRINTF(genbuf, "%s%s%s%s", buf, sender, dot, po + 7);
 	    STRLCPY(buf, genbuf);
 	}
-	while ((po = strstr(buf, "<~Des~>"))) {
+	while ((po = mbs_strstr(buf, "<~Des~>"))) {
         const char *r = receiver;
-        if (HAS_ANGEL && strstr(po, "小天使") && strstr(receiver, "小天使") &&
+        if (HAS_ANGEL && mbs_strstr(po, "小天使") && mbs_strstr(receiver, "小天使") &&
             override_receiver) {
             r = override_receiver;
         }
@@ -183,7 +183,7 @@ do_order_song(void)
 	    SNPRINTF(genbuf, "%s%s%s", buf, r, po + 7);
 	    STRLCPY(buf, genbuf);
 	}
-	while ((po = strstr(buf, "<~Say~>"))) {
+	while ((po = mbs_strstr(buf, "<~Say~>"))) {
 	    po[0] = 0;
 	    SNPRINTF(genbuf, "%s%s%s", buf, say, po + 7);
 	    STRLCPY(buf, genbuf);

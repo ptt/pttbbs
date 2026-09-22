@@ -602,7 +602,7 @@ filter_aggressive(const char*s GCC_UNUSED)
 {
     if (
 	/*
-	strstr(s, "此處放較不適當的爭議性字句") != NULL ||
+	mbs_strstr(s, "此處放較不適當的爭議性字句") != NULL ||
 	*/
 	0
 	)
@@ -614,7 +614,7 @@ int
 filter_dirtywords(const char*s)
 {
     if (
-	strstr(s, "幹你娘") != NULL ||
+	mbs_strstr(s, "幹你娘") != NULL ||
 	0)
 	return 1;
     return 0;

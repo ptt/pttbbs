@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <time.h>
 
+#include "config.h"
 #include "osdep.h"
 
 #ifdef __GNUC__
@@ -28,10 +29,10 @@ enum STRIP_FLAG {
 };
 
 /* DBCS aware modes */
-enum _DBCS_STATUS {
-    DBCS_ASCII,
-    DBCS_LEADING,
-    DBCS_TRAILING,
+enum MB_STATUS {
+    MB_ASCII,
+    MB_LEADING,
+    MB_TRAILING,
 };
 
 typedef int32_t time4_t;
@@ -208,8 +209,8 @@ void chomp(char *src);
 #  define storage_to_mb(src, dst, sz) utf8_to_big5((src), (dst), (sz))
 #  define mb_to_storage(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #else
-#  define storage_to_mb(src, dst, sz) ((src) == (dst) ? (DBCS_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), DBCS_safe_trim(dst), (dst)))
-#  define mb_to_storage(src, dst, sz) ((src) == (dst) ? (DBCS_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), DBCS_safe_trim(dst), (dst)))
+#  define storage_to_mb(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
+#  define mb_to_storage(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
 #endif
 
 #if NEED_STORAGE_CONV
@@ -224,6 +225,7 @@ void chomp(char *src);
 
 int  mb_bytes(const char *s);
 int  mb_width(const char *s);
+int  mb_from_vkey(int key, char *buf);
 int  stream_width(const char *s);
 int  stream_col_offset(int count, const char *s);
 int  strip_blank(char *cbuf, const char *buf);
@@ -238,15 +240,14 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);
 unsigned StringHash(const char *s);
 /* DBCS utilities */
 #define IS_DBCSLEAD(c)  (((unsigned char)(c)) >= 0x80)
-int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
-int    DBCS_NextStatus(char c, int prev_status);
-int    DBCS_Status(const char *dbcstr, int pos);
-void   DBCS_safe_trim(char *dbcstr);
-char * DBCS_strcasestr(const char* pool, const char *ptr);
-int    DBCS_strncasecmp(const char *s1, const char *s2, size_t len);
-#define HAVE_DBCS_STRCASESTR
-#define HAVE_DBCS_STRNCASECMP
-unsigned DBCS_StringHash(const char *s);
+int    mbs_remove_intr_escape(unsigned char *buf, int *len);
+int    mbs_status(const char *s, int pos);
+void   mbs_safe_trim(char *s);
+const char *mbs_nth(const char *s, int nth);
+char * mbs_strstr(const char *pool, const char *ptr);
+char * mbs_strcasestr(const char *pool, const char *ptr);
+int    mbs_strncasecmp(const char *s1, const char *s2, size_t len);
+unsigned mbs_strcasehash(const char *s);
 size_t str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */

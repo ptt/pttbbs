@@ -159,16 +159,16 @@ userec_filter_keyword_filter(userec_filter_t *uf, const userec_t *user)
     const char * const key = uf->keyword.key;
     const int keytype = uf->keyword.field;
     if ((!keytype || keytype == 1) &&
-	DBCS_strcasestr(user->userid, key))
+	mbs_strcasestr(user->userid, key))
 	return user->userid;
     else if ((!keytype || keytype == 2) &&
-	     DBCS_strcasestr(user->realname, key))
+	     mbs_strcasestr(user->realname, key))
 	return user->realname;
     else if ((!keytype || keytype == 3) &&
-	     DBCS_strcasestr(user->nickname, key))
+	     mbs_strcasestr(user->nickname, key))
 	return user->nickname;
     else if ((!keytype || keytype == 4) &&
-	     DBCS_strcasestr(user->address, key))
+	     mbs_strcasestr(user->address, key))
 	return user->address;
     else if ((!keytype || keytype == 5) &&
 	     strcasestr(user->email, key)) // not DBCS.
@@ -177,10 +177,10 @@ userec_filter_keyword_filter(userec_filter_t *uf, const userec_t *user)
 	     strcasestr(user->lasthost, key)) // not DBCS.
 	return user->lasthost;
     else if ((!keytype || keytype == 7) &&
-	     DBCS_strcasestr(user->career, key))
+	     mbs_strcasestr(user->career, key))
 	return user->career;
     else if ((!keytype || keytype == 8) &&
-	     DBCS_strcasestr(user->justify, key))
+	     mbs_strcasestr(user->justify, key))
 	return user->justify;
     return NULL;
 }

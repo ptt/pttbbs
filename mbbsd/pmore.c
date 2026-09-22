@@ -410,7 +410,7 @@ static int debug = 0;
 #endif /* PMORE_STYLE_ANSI */
 
 #define ANSI_IN_MOVECMD(x) (strchr("ABCDfjHJRu", x) != NULL)
-#define PMORE_DBCS_LEADING(c) (c >= 0x80)
+#define PMORE_MB_LEADING(c) (c >= 0x80)
 
 // Poor BBS terminal system Workarounds
 // - Most BBS implements clrtoeol() as fake command
@@ -1105,7 +1105,7 @@ mf_search(int direction)
                 break;
             } else {
                 /* DBCS check here. */
-                if (PMORE_DBCS_LEADING(*mf.disps++))
+                if (PMORE_MB_LEADING(*mf.disps++))
                         mf.disps++;
             }
         }
@@ -1122,7 +1122,7 @@ mf_search(int direction)
                     break;
                 } else {
                     /* DBCS check here. */
-                    if (PMORE_DBCS_LEADING(*mf.disps++))
+                    if (PMORE_MB_LEADING(*mf.disps++))
                         mf.disps++;
                 }
             }
@@ -1891,7 +1891,7 @@ mf_display()
 
                             if (dbcs_incomplete)
                                 dbcs_incomplete = NULL;
-                            else if (PMORE_DBCS_LEADING(c))
+                            else if (PMORE_MB_LEADING(c))
                                 dbcs_incomplete = mf.dispe;
 #endif
                             if (xprefix > 0)
@@ -2665,7 +2665,7 @@ _pmore2(
                             sbuf[0] = 0;
                         else
 #ifdef HAVE_DBCS_STRNCASECMP
-                            sr.cmpfunc = DBCS_strncasecmp;
+                            sr.cmpfunc = mbs_strncasecmp;
 #else
                             sr.cmpfunc = strncasecmp;
 #endif

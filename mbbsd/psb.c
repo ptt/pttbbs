@@ -468,8 +468,8 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
     // the records was in reversed ordering
     for (; curr < total; curr++) {
         fh = &cx->records[total - curr - 1];
-        if ((key == '/' && DBCS_strcasestr(fh->title, search_str)) ||
-            (key == 'a' && DBCS_strcasestr(fh->owner, search_str)) ||
+        if ((key == '/' && mbs_strcasestr(fh->title, search_str)) ||
+            (key == 'a' && mbs_strcasestr(fh->owner, search_str)) ||
             (key == '#' && fn2aidu(fh->filename) == aidu)) {
             // found something. return as current index.
             return curr;

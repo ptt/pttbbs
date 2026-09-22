@@ -118,7 +118,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
             "，特此公告\n\n\n%s\n",
 	    police, crime, reason, result, memo ? memo : "");
 
-    if (!strstr(police, "警察")) {
+    if (!mbs_strstr(police, "警察")) {
 	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
 
 	SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"

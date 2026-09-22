@@ -97,10 +97,10 @@ b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname)
 	if(fgets(inbuf, sizeof(inbuf), sfp))
 	{
 	    /* first time, try if boardname revealed. */
-	    char *post = strstr(inbuf, STR_POST1);
-	    if(!post) post = strstr(inbuf, STR_POST2);
+	    char *post = mbs_strstr(inbuf, STR_POST1);
+	    if(!post) post = mbs_strstr(inbuf, STR_POST2);
 	    if(post)
-		post = strstr(post, boardname);
+		post = mbs_strstr(post, boardname);
 	    if(post) {
 		/* found releaved stuff. */
 		/*

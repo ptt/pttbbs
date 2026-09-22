@@ -37,7 +37,7 @@ typedef struct {
 
 typedef struct {
     char	    fid;
-    char	    title[BTLEN + 1];
+    char	    title[SZ_COLS(BTLEN + 1)];
     fav_t	   *this_folder;
 } fav_folder_t;
 

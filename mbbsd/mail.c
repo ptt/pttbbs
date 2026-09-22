@@ -2234,7 +2234,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
     char            fname[500], genbuf[PATHLEN];
     FILE           *fp;
 
-    if (!(strstr(fhdr->title, "熱線") && strstr(fhdr->title, "記錄"))) {
+    if (!(mbs_strstr(fhdr->title, "熱線") && mbs_strstr(fhdr->title, "記錄"))) {
 	vmsg("必須是 熱線記錄 才能使用水球整理的唷!");
 	return 1;
     }
