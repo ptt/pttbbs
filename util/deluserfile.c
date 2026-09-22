@@ -40,7 +40,7 @@ void del_file(char *userid)
 		sethomefile(log_filename, userid, "writelog");
 		rename(log_filename, new_filename);
 		sethomedir(dir_filename, userid);
-		append_record(dir_filename, &mymail, sizeof(mymail));
+		append_fileheader(dir_filename, &mymail);
 	    }
 #else
 	    unlink(user_file);

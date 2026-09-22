@@ -915,7 +915,7 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 	fclose(fp);
 
 	setbdir(fname, info->constants->log_board);
-	append_record(fname, &log_header, sizeof(log_header));
+	append_fileheader(fname, &log_header);
 
 	setbtotal(bid);
     }

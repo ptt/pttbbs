@@ -172,7 +172,7 @@ vote_report(const char *bname, const char *post_bname, const char *fname)
 
     /* append record to .DIR */
     setbfile(buf, post_bname, FN_DIR);
-    if (append_record(buf, &header, sizeof(header)) >= 0)
+    if (append_fileheader(buf, &header) >= 0)
 	if ((bid = getbnum(post_bname)) > 0)
 	    touchbtotal(bid);
 }

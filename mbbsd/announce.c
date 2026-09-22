@@ -183,7 +183,7 @@ a_loadname(menu_t * pm)
     }
 
     setadir(buf, pm->path);
-    len = get_records(buf, pm->header, FHSZ, pm->page + 1, pm->header_size); // XXX if get_records() return -1
+    len = get_fileheaders(buf, pm->header, pm->page + 1, pm->header_size); // XXX if get_records() return -1
 
     // if len < 0, the directory is not valid anymore.
     if (len < 0)
@@ -385,7 +385,7 @@ a_additem(menu_t * pm, const fileheader_t * myheader)
     char            buf[PATHLEN];
 
     setadir(buf, pm->path);
-    if (append_record(buf, myheader, FHSZ) == -1)
+    if (append_fileheader(buf, myheader) == -1)
 	return;
     pm->now = pm->num++;
 
@@ -723,7 +723,7 @@ a_pastetagpost(menu_t * pm, int mode)
     /* since we use different tag features,
      * copyqueue is not required/used. */
     copyqueue_reset();
-    apply_record(dirname, _iter_paste_tag, sizeof(fileheader_t),  &param);
+    apply_fileheader(dirname, _iter_paste_tag, &param);
     ClearTagList();
 
     return param.copied;
@@ -752,21 +752,21 @@ a_moveitem(menu_t * pm)
     tmp = (fileheader_t *) calloc(max + 1, FHSZ);
 
     fail = 0;
-    if (get_records(buf, tmp, FHSZ, 1, min) != min)
+    if (get_fileheaders(buf, tmp, 1, min) != min)
 	fail = 1;
     if (num > pm->now) {
-	if (get_records(buf, &tmp[min], FHSZ, pm->now + 2, max - min) != max - min)
+	if (get_fileheaders(buf, &tmp[min], pm->now + 2, max - min) != max - min)
 	    fail = 1;
-	if (get_records(buf, &tmp[max], FHSZ, pm->now + 1, 1) != 1)
+	if (get_fileheaders(buf, &tmp[max], pm->now + 1, 1) != 1)
 	    fail = 1;
     } else {
-	if (get_records(buf, &tmp[min], FHSZ, pm->now + 1, 1) != 1)
+	if (get_fileheaders(buf, &tmp[min], pm->now + 1, 1) != 1)
 	    fail = 1;
-	if (get_records(buf, &tmp[min + 1], FHSZ, num + 1, max - min) != max - min)
+	if (get_fileheaders(buf, &tmp[min + 1], num + 1, max - min) != max - min)
 	    fail = 1;
     }
     if (!fail)
-	substitute_record(buf, tmp, FHSZ * (max + 1), 1);
+	substitute_fileheaders(buf, tmp, max + 1, 1);
     pm->now = num;
     free(tmp);
 }
@@ -877,7 +877,7 @@ a_delete(menu_t * pm, const char *backup_dir)
             backup.filemode |= FILE_BM;
 
 	setafile(buf, save_bn, FN_DIR);
-	append_record(buf, &backup, sizeof(backup));
+	append_fileheader(buf, &backup);
 
     } else {			/* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",
@@ -1378,8 +1378,7 @@ a_menu_rec(const char *maintitle, const char *path,
 			    cuser.userid,
 			    sizeof(me.header[me.now - me.page].owner));
 		    setadir(fpath, path);
-		    substitute_record(fpath, me.header + me.now - me.page,
-				      sizeof(fhdr), me.now + 1);
+		    modify_fileheader(fpath, me.header + me.now - me.page, me.now + 1);
 
 		}
 		me.page = A_INVALID_PAGE;

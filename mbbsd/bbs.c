@@ -83,7 +83,7 @@ query_file_money(const fileheader_t *pfh)
 
 	/* it is assumed that in MODE_SELECT, currboard is selected. */
 	setbfile(genbuf, currboard, FN_DIR);
-	get_record(genbuf, &hdr, sizeof(hdr), pfh->multi.refer.ref);
+	get_fileheader(genbuf, &hdr, pfh->multi.refer.ref);
 	pfh = &hdr;
     }
 
@@ -129,11 +129,11 @@ modify_dir_lite(
     if (disable_modes)
         fhdr.filemode &= ~disable_modes;
     if (title && *title)
-	STRLCPY(fhdr.title, title);
+	mb_to_storage(title, fhdr.title, sizeof(fhdr.title));
     if (owner && *owner)
-	STRLCPY(fhdr.owner, owner);
+	mb_to_storage(owner, fhdr.owner, sizeof(fhdr.owner));
     if (date && *date)
-	STRLCPY(fhdr.date, date);
+	mb_to_storage(date, fhdr.date, sizeof(fhdr.date));
     if (multi)
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
@@ -1185,7 +1185,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     SNPRINTF(fh.title, "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
 
     setbdir(genbuf, BN_ALLPOST);
-    if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
+    if (append_fileheader(genbuf, &fh) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1252,7 +1252,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
     setbdir(genbuf, brd);
-    if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
+    if (append_fileheader(genbuf, &fh) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1534,7 +1534,7 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (append_record(buf, &postfile, sizeof(postfile)) == -1)
+    if (append_fileheader(buf, &postfile) == -1)
     {
         unlink(genbuf);
     }
@@ -1551,7 +1551,7 @@ do_post_article(int edflags)
         }
 
 	if( currmode & MODE_SELECT )
-	    append_record(currdirect, &postfile, sizeof(postfile));
+	    append_fileheader(currdirect, &postfile);
 	brc_addlist(postfile.filename, postfile.modified);
 
         if (IS_OPENBRD(bp)) {
@@ -1624,7 +1624,7 @@ do_post_article(int edflags)
 		STRLCPY(mailfile.title, save_title);
 		sethomedir(genbuf, quote_user);
                 msg = "回應至作者信箱";
-		if (append_record(genbuf, &mailfile, sizeof(mailfile)) == -1)
+		if (append_fileheader(genbuf, &mailfile) == -1)
 		    msg = ERR_UID;
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
@@ -2336,7 +2336,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
 	setbdir(fname, xboard);
-	append_record(fname, &xfile, sizeof(xfile));
+	append_fileheader(fname, &xfile);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
 	{
@@ -3206,7 +3206,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     // timestamp. that's a good idea and more efficient.
     recs = (fileheader_t*) malloc ( num * sizeof(fileheader_t));
     if (!recs ||
-        get_records(direct, recs, sizeof(fileheader_t), num1, num) != num) {
+        get_fileheaders(direct, recs, num1, num) != num) {
         free(recs);
         vmsg("無法取得指定範圍的資訊，請退出後稍候再試");
         return FULLUPDATE;
@@ -4134,7 +4134,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 	  fhdr.filemode ^= FILE_BOTTOM;
 	  fhdr.multi.refer.flag = 1;
           fhdr.multi.refer.ref = ent;
-          append_record(buf, &fhdr, sizeof(fileheader_t));
+          append_fileheader(buf, &fhdr);
           // make sure original one won't be deleted... add 'm'.
           if (!(old_fhdr->filemode & FILE_MARKED))
               mark_post(ent, old_fhdr, direct);
@@ -4194,7 +4194,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	SNPRINTF(genbuf2, "%s%s", buf, fhdr->filename);
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
-	append_record(buf, &digest, sizeof(digest));
+	append_fileheader(buf, &digest);
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, BN_NOTE) ||

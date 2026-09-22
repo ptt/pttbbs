@@ -69,7 +69,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, "[¾ú¥v¦Ñ®v]");
     setbfile(genbuf, board, FN_DIR);
-    append_record(genbuf, &fhdr, sizeof(fhdr));
+    append_fileheader(genbuf, &fhdr);
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if ((bid = getbnum(board)) > 0)
 	touchbtotal(bid);

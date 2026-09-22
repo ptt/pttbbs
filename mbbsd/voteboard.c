@@ -404,7 +404,7 @@ do_voteboard(int type)
     votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
     votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;
     setbdir(genbuf, currboard);
-    if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
+    if (append_fileheader(genbuf, &votefile) != -1)
 	setbtotal(currbid);
     do_voteboardreply(&votefile);
     return FULLUPDATE;

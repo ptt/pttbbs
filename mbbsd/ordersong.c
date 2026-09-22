@@ -208,7 +208,7 @@ do_order_song(void)
         angel_log_order_song(override_receiver);
 #endif
 
-    if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
+    if (append_fileheader(OSONGPATH "/" FN_DIR, &mail) != -1) {
 	pwcuSetLastSongTime(now);
 	/* Jaky 超過 MAX_ADBANNER 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:

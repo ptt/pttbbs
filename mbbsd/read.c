@@ -28,7 +28,7 @@ _iter_tag_match_title(void *ptr, void *opt) {
 static int
 TagThread(const char *direct)
 {
-    apply_record(direct, _iter_tag_match_title, sizeof(fileheader_t), currtitle);
+    apply_fileheader(direct, _iter_tag_match_title, currtitle);
     return FULLUPDATE;
 }
 
@@ -78,7 +78,7 @@ TagPruner(int bid)
     refresh();
 
     // first, delete and backup all files
-    apply_record(direct, _iter_delete_tagged, sizeof(fileheader_t), direct);
+    apply_fileheader(direct, _iter_delete_tagged, direct);
 
     // now, delete the header
 #ifdef SAFE_ARTICLE_DELETE
@@ -236,7 +236,7 @@ thread(const keeploc_t * locmem, int stypen)
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 
-	if (get_records_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, 1, &fd) <= 0)
+	if (get_fileheaders_keep(currdirect, &fh, new_ln, 1, &fd) <= 0)
 	{
 	    new_ln = pos;
 	    break;
@@ -300,7 +300,7 @@ search_read(const int bid, const keeploc_t * locmem, int stypen)
 
     /* First load the timestamp of article where cursor points to */
 reload_fh: GCC_UNUSED;
-    rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), pos, 1, &fd);
+    rk = get_fileheaders_keep(currdirect, &fh, pos, 1, &fd);
     if( rk < 0 ) goto out;
     if( rk == 0 /* EOF */ ) {
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
@@ -328,7 +328,7 @@ reload_fh: GCC_UNUSED;
         int i;
 
         for( i = last_line; i >= 0; --i ) {
-            rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), i, 1, &fd);
+            rk = get_fileheaders_keep(currdirect, &fh, i, 1, &fd);
             if (rk < 0) goto out;
             if (rk == 0) continue;
             if( 0 == brc_unread( bid, fh.filename, 0 ) ) {
@@ -342,7 +342,7 @@ reload_fh: GCC_UNUSED;
 
         /* find out the position for the article result */
         for( i = pos; i >= 0 && i <= last_line; i += step ) {
-            rk = get_records_keep(currdirect, &fh, sizeof(fileheader_t), i, 1, &fd);
+            rk = get_fileheaders_keep(currdirect, &fh, i, 1, &fd);
             if (rk < 0) goto out;
             if (rk == 0) continue;
 #ifdef SAFE_ARTICLE_DELETE
@@ -1072,8 +1072,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     // 不顯示置底的情形
     if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
     {
-	rv = get_records(direct, headers, sizeof(fileheader_t),
-		recbase, headers_size);
+	rv = get_fileheaders(direct, headers, recbase, headers_size);
 	ENDSTAT(STAT_BOARDREC);
 	return rv > 0 ? rv : 0;
     }
@@ -1083,7 +1082,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     // 讀取 .DIR 本文
     if (n > 0)
     {
-	n = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
+	n = get_fileheaders(direct, headers, recbase, n);
 	if (n < 0) n = 0;
 	rv += n; // rv 為有效本文數
 
@@ -1099,7 +1098,7 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
 	n = headers_size - rv;
 
     if (n > 0) {
-	n = get_records(TEMPFORMAT(PATHLEN, "%s.bottom", direct), headers+rv, sizeof(fileheader_t), recbase, n);
+	n = get_fileheaders(TEMPFORMAT(PATHLEN, "%s.bottom", direct), headers+rv, recbase, n);
 	if (n < 0) n = 0;
 	rv += n;
     }

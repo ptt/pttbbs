@@ -249,7 +249,7 @@ int main(void)
 	    Link(FIREFILE, genbuf);
 
 	sethomedir(genbuf, lostbms[i].bmname);
-	append_record(genbuf, &mymail, sizeof(mymail)); 	
+	append_fileheader(genbuf, &mymail); 	
     }
     return 0;
 }

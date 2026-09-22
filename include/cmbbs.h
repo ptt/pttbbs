@@ -119,7 +119,22 @@ void setuser_passwd(userec_t *u, const char *plain);
 void logattempt   (const char *uid, char type, time4_t now, const char *fromhost);
 const char *genpasswd(const char *pw);
 
-/* record */
+/* filehdr.c */
+void fileheader_storage_to_mem(fileheader_t *fh, size_t count);
+void fileheader_mem_to_storage(fileheader_t *fh);
+int read_fileheader(int fd, fileheader_t *fh);
+int write_fileheader(int fd, const fileheader_t *fh);
+int get_fileheaders_keep(const char *fpath, fileheader_t *rptr, int id, size_t number, int *fd);
+int get_fileheaders(const char *fpath, fileheader_t *rptr, int id, size_t number);
+#define get_fileheader(fpath, rptr, id) get_fileheaders(fpath, rptr, id, 1)
+#define get_fileheader_keep(fpath, rptr, id, fd) get_fileheaders_keep(fpath, rptr, id, 1, fd)
+int append_fileheader(const char *fpath, const fileheader_t *record);
+int modify_fileheader(const char *fpath, const fileheader_t *rptr, int id);
+int substitute_fileheaders(const char *fpath, const fileheader_t *rptr, size_t count, int id);
+int apply_fileheader(const char *fpath, int (*fptr)(void *item, void *optarg), void *arg);
+int getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney);
+int getindex(const char *direct, fileheader_t *fhdr, int end);
+int substitute_ref_record(const char *direct, fileheader_t *fhdr, int ent);
 int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);
 int delete_fileheader(const char *dir_path, const void *rptr, int id);
 int is_valid_fileheader(const fileheader_t *fhdr);

@@ -205,7 +205,7 @@ mail_redenvelop(const char *from, const char *to, int money, char *fpath)
     SNPRINTF(fhdr.title, ANSI_COLOR(1;37;41) "[¬õ¥]]" ANSI_RESET " $%d", money);
     STRLCPY(fhdr.owner, from);
     sethomedir(dirent, to);
-    append_record(dirent, &fhdr, sizeof(fhdr));
+    append_fileheader(dirent, &fhdr);
     return 0;
 }
 
@@ -491,7 +491,7 @@ give_money_ui_list(struct Vector *namelist)
                      first_valid_id, valid_count);
             STRLCPY(receipt_fhdr.owner, cuser.userid);
             sethomedir(dirent, cuser.userid);
-            append_record(dirent, &receipt_fhdr, sizeof(receipt_fhdr));
+            append_fileheader(dirent, &receipt_fhdr);
         }
     }
 

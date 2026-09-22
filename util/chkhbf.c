@@ -74,7 +74,7 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
     STRLCPY(mymail.owner, "系統通知.");
     sethomedir(filename, userid);
     mailalertuid(uid);
-    append_record(filename, &mymail, sizeof(mymail));
+    append_fileheader(filename, &mymail);
 }
 
 void chkhbf(boardheader_t *bptr)

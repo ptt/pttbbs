@@ -72,7 +72,7 @@ void buildchilds(int level,char *path,int gid)
         item.filemode =  0 ;
 	STRLCPY(item.filename, ptr->brdname);
         SNPRINTF(newpath, "%s/.DIR",path);
-	append_record(newpath, &item, sizeof(item));
+	append_fileheader(newpath, &item);
     }
     free(selected);
 }

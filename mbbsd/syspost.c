@@ -30,7 +30,7 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
     setbdir(dirfn, bname);
-    if (append_record(dirfn, &fhdr, sizeof(fhdr)) != -1)
+    if (append_fileheader(dirfn, &fhdr) != -1)
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;

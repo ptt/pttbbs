@@ -217,7 +217,7 @@ int mail2bbs(char *userid)
 
     sethomedir(filename, xuser.userid);
     mailalertuid(uid);
-    return append_record(filename, &mymail, sizeof(mymail));
+    return append_fileheader(filename, &mymail);
 }
 
 

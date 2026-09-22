@@ -446,7 +446,7 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
         if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid) == -1)
             return MAILSEND_ERR_PARAM;
     } else {
-        if (append_record(dir_fpath, &mhdr, sizeof(mhdr)) == -1)
+        if (append_fileheader(dir_fpath, &mhdr) == -1)
             return MAILSEND_ERR_PARAM;
     }
 
@@ -2064,7 +2064,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	}
 
 	setbdir(fname, xboard);
-	append_record(fname, &xfile, sizeof(xfile));
+	append_fileheader(fname, &xfile);
 	setbtotal(getbnum(xboard));
 
 #ifdef USE_COOLDOWN
