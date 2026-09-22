@@ -151,6 +151,7 @@ show_file(const char *filename, int y, int lines, int mode)
     if ((fp = fopen(filename, "r"))) {
 	while (fgets(buf, sizeof(buf), fp) && lines--)
 	{
+	    storage_to_mb(buf, buf, sizeof(buf));
 	    move(y++, 0);
 	    if (mode == SHOWFILE_RAW)
 	    {
