@@ -640,7 +640,7 @@ m_mod_board(char *bname)
     prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
 	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
            ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
-           bh.desc, bh.bclass, bid, bh.gid, bh.BM);
+           TEMP_BRD_TITLE_DESC(&bh), TEMP_STORAGE_TO_MB(bh.bclass), bid, bh.gid, TEMP_BRD_BM(&bh));
     bperm_msg(&bh);
 
     /* Ptt 這邊斷行會檔到下面 */
@@ -797,23 +797,26 @@ m_mod_board(char *bname)
         y++;
 
 	do {
-	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, bh.bclass);
-	    if (strlen(genbuf) == 4)
+	    char cls_mb[SZ_COLS(5)];
+	    brd_get_title_class(&bh, cls_mb, sizeof(cls_mb));
+	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, cls_mb);
+	    if (stream_width(genbuf) == 4)
 		break;
 	} while (1);
         y++;
 
-	STRLCPY(newbh.bclass, genbuf);
+	brd_set_title_class(&newbh, genbuf);
 
 	getdata_str(y++, 0, "看板主題：", genbuf, sizeof(newbh.desc),
-                    DOECHO, bh.desc);
+                    DOECHO, TEMP_BRD_TITLE_DESC(&bh));
 	if (genbuf[0])
-	    strlcpy(newbh.desc, genbuf, sizeof(newbh.desc));
+	    brd_set_title_desc(&newbh, genbuf);
 
         do {
             int uids[MAX_BMs], i;
             if (!getdata_str(y, 0, "新板主名單：", genbuf, IDLEN * 3 + 3,
-                             DOECHO, bh.BM) || strcmp(genbuf, bh.BM) == 0)
+                             DOECHO, TEMP_BRD_BM(&bh)) ||
+                strcmp(genbuf, TEMP_BRD_BM(&bh)) == 0)
                 break;
             // TODO 照理來說在這裡 normalize 一次比較好；可惜目前似乎有奇怪的
             // 代管制度，會有人把 BM list 設定 [ ...... / some_uid]，就會變成
@@ -840,7 +843,7 @@ m_mod_board(char *bname)
             if (getdata(y + 4, 0, "確定此板主名單正確?[y/N] ", ans,
                         sizeof(ans), LCECHO) &&
                 ans[0] == 'y') {
-                STRLCPY(newbh.BM, genbuf);
+                brd_set_BM(&newbh, genbuf);
                 move(y + 1, 0); clrtobot();
                 break;
             }
@@ -902,7 +905,7 @@ m_mod_board(char *bname)
 	    SNPRINTF(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
 	    SNPRINTF(genbuf, "板名: %s => %s\n"
 		    "板主: %s => %s\n",
-		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
+		    bh.brdname, newbh.brdname, TEMP_BRD_BM(&bh), TEMP_BRD_BM(&newbh));
 	    post_msg(BN_SECURITY, buf, genbuf, "[系統安全局]");
 	}
     }
@@ -1037,15 +1040,15 @@ m_newbrd(int whatclass, int recover)
 
     do {
 	getdata(6, 0, "看板類別：", genbuf, 5, DOECHO);
-	if (strlen(genbuf) == 4)
+	if (stream_width(genbuf) == 4)
 	    break;
     } while (1);
 
-    STRLCPY(newboard.bclass, genbuf);
+    brd_set_title_class(&newboard, genbuf);
 
     getdata(8, 0, "看板主題：", genbuf, sizeof(newboard.desc), DOECHO);
     if (genbuf[0])
-	strlcpy(newboard.desc, genbuf, sizeof(newboard.desc));
+	brd_set_title_desc(&newboard, genbuf);
     setbpath(genbuf, newboard.brdname);
 
     // Recover 應只拿來處理目錄已存在(但.BRD沒有)的情況，不然就會在
@@ -1088,7 +1091,8 @@ m_newbrd(int whatclass, int recover)
 
 
     newboard.level = 0;
-    getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
+    if (getdata(11, 0, "板主名單：", genbuf, sizeof(newboard.BM), DOECHO))
+	brd_set_BM(&newboard, genbuf);
 
     if (HasUserPerm(PERM_BOARD) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
@@ -1122,8 +1126,9 @@ m_newbrd(int whatclass, int recover)
     pressanykey();
     setup_man(&newboard, NULL);
     outs("\n新板成立");
-    post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, newboard.BM);
-    log_usies("NewBoard", newboard.desc);
+    post_newboard(TEMPFORMAT(STRLEN, "%s %s", TEMP_STORAGE_TO_MB(newboard.bclass), TEMP_BRD_TITLE_DESC(&newboard)),
+                  newboard.brdname, TEMP_BRD_BM(&newboard));
+    log_usies("NewBoard", TEMP_BRD_TITLE_DESC(&newboard));
     pressanykey();
     return 0;
 }
