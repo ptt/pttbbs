@@ -220,9 +220,20 @@ search_predicates_via_svc(const char *direct, int bid,
     req.num_preds = num_preds;
     strlcpy(req.direct, direct, sizeof(req.direct));
 
+    fileheader_predicate_t svc_preds[MAX_SEARCH_PREDICATES];
+    const fileheader_predicate_t *send_preds = preds;
+    if (NEED_STORAGE_CONV) {
+        memcpy(svc_preds, preds, (size_t)num_preds * sizeof(fileheader_predicate_t));
+        for (int i = 0; i < num_preds; i++) {
+            mb_to_storage(preds[i].keyword, svc_preds[i].keyword,
+                          sizeof(svc_preds[i].keyword));
+        }
+        send_preds = svc_preds;
+    }
+
     size_t preds_bytes = (size_t)num_preds * sizeof(fileheader_predicate_t);
     if (search_svc_io(sfd, &req, sizeof(req), 1) != (int)sizeof(req) ||
-        search_svc_io(sfd, (void *)preds, preds_bytes, 1) != (int)preds_bytes) {
+        search_svc_io(sfd, (void *)send_preds, preds_bytes, 1) != (int)preds_bytes) {
         close(sfd);
         return -1;
     }
@@ -300,9 +311,9 @@ select_read_build(const char *src_direct, const char *dst_direct,
 		  int dst_count,
 		  int (*match)(const fileheader_t *fh, void *arg), void *arg)
 {
-    int fr, fd;
+    int fr = -1, fd;
 
-    if ((fr = open(src_direct, O_RDONLY, 0)) < 0)
+    if (!dashf(src_direct))
 	return -1;
 
     // Find incremental selection start point.
@@ -317,28 +328,24 @@ select_read_build(const char *src_direct, const char *dst_direct,
 	dst_count = 0;
     }
 
-    if ((fd = open(dst_direct, filemode, DEFAULT_FILE_CREATE_PERM)) == -1) {
-	close(fr);
+    if ((fd = open(dst_direct, filemode, DEFAULT_FILE_CREATE_PERM)) == -1)
 	return -1;
-    }
-
-    if (resume_off > 0)
-	lseek(fr, resume_off * sizeof(fileheader_t), SEEK_SET);
 
     fileheader_t fhs[8192 / sizeof(fileheader_t)];
     int i, len;
-    while ((len = read(fr, fhs, sizeof(fhs))) > 0) {
-	len /= sizeof(fileheader_t);
+    while ((len = get_fileheaders_keep(src_direct, fhs, (int)resume_off + 1,
+                                       ARRAY_SIZE(fhs), &fr)) > 0) {
 	for (i = 0; i < len; ++i) {
 	    resume_off++;
 	    if (!match(&fhs[i], arg))
 		continue;
 
 	    ++dst_count;
-	    write(fd, &fhs[i], sizeof(fileheader_t));
+	    write_fileheader(fd, &fhs[i]);
 	}
     }
-    close(fr);
+    if (fr >= 0)
+	close(fr);
 
     // Do not create black hole.
     off_t current_size = lseek(fd, 0, SEEK_CUR);

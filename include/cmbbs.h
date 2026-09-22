@@ -114,6 +114,26 @@ void resolve_garbage(void);
 void resolve_fcache(void);
 void hbflreload(int bid);
 int is_hidden_board_friend(int bid, int uid);
+static inline const char *
+_brd_title_desc_from_mb(const char *mb)
+{
+    int off = stream_col_offset(7, mb);
+    return (off >= 0) ? (mb + off) : "";
+}
+#define TEMP_BRD_TITLE(bp)      TEMP_STORAGE_TO_MB((bp)->title)
+#define TEMP_BRD_TITLE_DESC(bp) _brd_title_desc_from_mb(TEMP_STORAGE_TO_MB((bp)->title))
+#define TEMP_BRD_BM(bp)         TEMP_STORAGE_TO_MB((bp)->BM)
+void brd_get_title_class(const boardheader_t *bp, char *buf, size_t sz);
+void brd_get_title_symbol(const boardheader_t *bp, char *buf, size_t sz);
+void brd_get_posttype_slot(const char *posttype_buf, int idx, char *buf, size_t sz);
+#define brd_get_posttype(bp, idx, buf, sz) brd_get_posttype_slot((bp)->posttype, (idx), (buf), (sz))
+void brd_set_title_class(boardheader_t *bp, const char *mb_class);
+void brd_set_title_symbol(boardheader_t *bp, const char *mb_symbol);
+void brd_set_title_desc(boardheader_t *bp, const char *mb_desc);
+void brd_set_BM(boardheader_t *bp, const char *mb_bm);
+void brd_set_posttype_slot(char *posttype_buf, size_t posttype_sz, int idx, const char *mb_type);
+void brd_set_posttype_count(char *posttype_buf, size_t posttype_sz, int count);
+#define brd_set_posttype(bp, idx, mb_type) brd_set_posttype_slot((bp)->posttype, sizeof((bp)->posttype), (idx), (mb_type))
 
 /* passwd */
 int  passwd_init  (void);

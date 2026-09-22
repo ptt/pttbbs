@@ -460,6 +460,166 @@ deumoney(int uid, int money)
 /*
  * section - board cache
  */
+void
+brd_get_title_class(const boardheader_t *bp, char *buf, size_t sz)
+{
+    const char *mb = TEMP_STORAGE_TO_MB(bp->title);
+    int off = stream_col_offset(4, mb);
+    if (off >= 0 && (size_t)off + 1 <= sz)
+        strlcpy(buf, mb, off + 1);
+    else
+        strlcpy(buf, mb, sz);
+}
+
+void
+brd_get_title_symbol(const boardheader_t *bp, char *buf, size_t sz)
+{
+    const char *mb = TEMP_STORAGE_TO_MB(bp->title);
+    int start = stream_col_offset(5, mb);
+    if (start < 0 || mb[start] == 0) {
+        buf[0] = 0;
+        return;
+    }
+    int len = stream_col_offset(2, mb + start);
+    if (len >= 0 && (size_t)len + 1 <= sz)
+        strlcpy(buf, mb + start, len + 1);
+    else
+        strlcpy(buf, mb + start, sz);
+}
+
+void
+brd_get_posttype_slot(const char *posttype_buf, int idx, char *buf, size_t sz)
+{
+    const char *mb = TEMP_STORAGE_TO_MB(posttype_buf);
+    int start = stream_col_offset(idx * 4, mb);
+    if (start < 0 || mb[start] == 0) {
+        buf[0] = 0;
+        return;
+    }
+    int len = stream_col_offset(4, mb + start);
+    if (len >= 0 && (size_t)len + 1 <= sz)
+        strlcpy(buf, mb + start, len + 1);
+    else
+        strlcpy(buf, mb + start, sz);
+}
+
+static void
+brd_rebuild_title(boardheader_t *bp, const char *new_cls,
+                  const char *new_sym, const char *new_desc)
+{
+    char cls[SZ_COLS(5)] = "    ";
+    char sym[SZ_COLS(3)] = "◎";
+    char desc[SZ_COLS(BTLEN + 1)] = "";
+    char full_mb[SZ_COLS(BTLEN + 1) * 2];
+
+    if (bp->title[0]) {
+        brd_get_title_class(bp, cls, sizeof(cls));
+        if (!cls[0])
+            strcpy(cls, "    ");
+        brd_get_title_symbol(bp, sym, sizeof(sym));
+        if (!sym[0])
+            strcpy(sym, "◎");
+        strlcpy(desc, TEMP_BRD_TITLE_DESC(bp), sizeof(desc));
+    }
+    if (new_cls)
+        strlcpy(cls, new_cls, sizeof(cls));
+    if (new_sym)
+        strlcpy(sym, new_sym, sizeof(sym));
+    if (new_desc)
+        strlcpy(desc, new_desc, sizeof(desc));
+
+    while ((int)stream_width(cls) > 4 && strlen(cls) > 0) {
+        cls[strlen(cls) - 1] = 0;
+        mbs_safe_trim(cls);
+    }
+    while ((int)stream_width(sym) > 2 && strlen(sym) > 0) {
+        sym[strlen(sym) - 1] = 0;
+        mbs_safe_trim(sym);
+    }
+    int cls_pad = 4 - (int)stream_width(cls);
+    int sym_pad = 2 - (int)stream_width(sym);
+    snprintf(full_mb, sizeof(full_mb), "%s%*s %s%*s%s",
+             cls, cls_pad > 0 ? cls_pad : 0, "",
+             sym, sym_pad > 0 ? sym_pad : 0, "",
+             desc);
+    mb_to_storage(full_mb, bp->title, sizeof(bp->title));
+}
+
+void
+brd_set_title_class(boardheader_t *bp, const char *mb_class)
+{
+    brd_rebuild_title(bp, mb_class, NULL, NULL);
+}
+
+void
+brd_set_title_symbol(boardheader_t *bp, const char *mb_symbol)
+{
+    brd_rebuild_title(bp, NULL, mb_symbol, NULL);
+}
+
+void
+brd_set_title_desc(boardheader_t *bp, const char *mb_desc)
+{
+    brd_rebuild_title(bp, NULL, NULL, mb_desc);
+}
+
+void
+brd_set_BM(boardheader_t *bp, const char *mb_bm)
+{
+    mb_to_storage(mb_bm, bp->BM, sizeof(bp->BM));
+}
+
+void
+brd_set_posttype_slot(char *posttype_buf, size_t posttype_sz, int idx, const char *mb_type)
+{
+    char slots[8][SZ_COLS(5)];
+    char full_mb[SZ_COLS(33) * 2] = "";
+    int count = 0;
+
+    for (int i = 0; i < 8; i++) {
+        brd_get_posttype_slot(posttype_buf, i, slots[i], sizeof(slots[i]));
+        if (slots[i][0])
+            count = i + 1;
+    }
+    if (idx >= count)
+        count = idx + 1;
+    for (int i = 0; i < count; i++) {
+        if (i == idx)
+            strlcpy(slots[i], mb_type, sizeof(slots[i]));
+        else if (!slots[i][0])
+            strcpy(slots[i], "    ");
+        while ((int)stream_width(slots[i]) > 4 && strlen(slots[i]) > 0) {
+            slots[i][strlen(slots[i]) - 1] = 0;
+            mbs_safe_trim(slots[i]);
+        }
+        int pad = 4 - (int)stream_width(slots[i]);
+        char padded[SZ_COLS(5)];
+        snprintf(padded, sizeof(padded), "%s%*s", slots[i], pad > 0 ? pad : 0, "");
+        strlcat(full_mb, padded, sizeof(full_mb));
+    }
+    mb_to_storage(full_mb, posttype_buf, posttype_sz);
+}
+
+void
+brd_set_posttype_count(char *posttype_buf, size_t posttype_sz, int count)
+{
+    char slots[8][SZ_COLS(5)];
+    char full_mb[SZ_COLS(33) * 2] = "";
+
+    if (count < 0) count = 0;
+    if (count > 8) count = 8;
+    for (int i = 0; i < count; i++) {
+        brd_get_posttype_slot(posttype_buf, i, slots[i], sizeof(slots[i]));
+        if (!slots[i][0])
+            strcpy(slots[i], "    ");
+        int pad = 4 - (int)stream_width(slots[i]);
+        char padded[SZ_COLS(5)];
+        snprintf(padded, sizeof(padded), "%s%*s", slots[i], pad > 0 ? pad : 0, "");
+        strlcat(full_mb, padded, sizeof(full_mb));
+    }
+    mb_to_storage(full_mb, posttype_buf, posttype_sz);
+}
+
 void touchbtotal(int bid) {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     SHM->total[bid - 1] = 0;
@@ -482,9 +642,12 @@ static int
 cmpboardclass(const void * i, const void * j)
 {
     boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
+    char c1[SZ_COLS(5)], c2[SZ_COLS(5)];
     int cmp;
 
-    cmp=strncmp(brd1->title, brd2->title, 4);
+    brd_get_title_class(brd1, c1, sizeof(c1));
+    brd_get_title_class(brd2, c2, sizeof(c2));
+    cmp = strcmp(c1, c2);
     if(cmp!=0) return cmp;
     return strcasecmp(brd1->brdname, brd2->brdname);
 }
@@ -882,6 +1045,8 @@ set_aggressive_state(int s)
     }
 }
 
+#define ORDERSONG_FOLDERNAME	"<點歌>"
+
 /* cache for 動態看板 */
 void
 reload_pttcache(void)
@@ -903,103 +1068,101 @@ reload_pttcache(void)
     }
 
     fileheader_t    item, subitem;
-    char            pbuf[256], buf[256];
-    FILE           *fp, *fp1, *fp2;
+    char            pbuf[256], adir[256], subdir[256], buf[256];
+    FILE           *fp2;
+    int             fd_dir = -1, idx_dir = 1;
     int             id, aggid, rawid;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
 	setapath(pbuf, BN_NOTE);
-	setadir(buf, pbuf);
+	setadir(adir, pbuf);
 
 	load_aggressive_state();
 	id = aggid = rawid = 0; // effective count, aggressive count, total (raw) count
 
-	if ((fp = fopen(buf, "r"))) {
+	// .DIR loop
+	while (get_fileheader_keep(adir, &item, idx_dir++, &fd_dir) == 1) {
+	    int fd_sub = -1, idx_sub = 1;
+	    int chkagg = 0; // should we check aggressive?
+	    int is_ordersong_dir = 0;
+	    const int pfx = sizeof("◇ ") - 1;
+	    const int sfx = pfx + (int)strlen(ORDERSONG_FOLDERNAME) - 1;
 
-	    // .DIR loop
-	    while (fread(&item, sizeof(item), 1, fp)) {
+	    if (item.title[pfx] != '<' || item.title[sfx] != '>')
+	        continue;
 
-		int chkagg = 0; // should we check aggressive?
-		int is_ordersong_dir = 0;
-
-		if (item.title[3] != '<' || item.title[8] != '>')
-		    continue;
-
-#define ORDERSONG_FOLDERNAME	"<點歌>"
-		if (strncmp(item.title+3, ORDERSONG_FOLDERNAME, strlen(ORDERSONG_FOLDERNAME)) == 0)
-		    is_ordersong_dir = 1;
+	    if (strncmp(item.title+pfx, ORDERSONG_FOLDERNAME, strlen(ORDERSONG_FOLDERNAME)) == 0)
+	        is_ordersong_dir = 1;
 
 #ifdef BN_NOTE_AGGCHKDIR
-		// TODO aggressive: only count '<點歌>' section
-		if (strncmp(item.title+3, BN_NOTE_AGGCHKDIR, strlen(BN_NOTE_AGGCHKDIR)) == 0)
-		    chkagg = 1;
+	    // TODO aggressive: only count '<點歌>' section
+	    if (strncmp(item.title+pfx, BN_NOTE_AGGCHKDIR, strlen(BN_NOTE_AGGCHKDIR)) == 0)
+	        chkagg = 1;
 #endif
-		SNPRINTF(buf, "%s/%s/" FN_DIR,
-			pbuf, item.filename);
+	    SNPRINTF(subdir, "%s/%s/" FN_DIR,
+	    	pbuf, item.filename);
 
-		if (!(fp1 = fopen(buf, "r")))
-		    continue;
+	    // file loop
+	    while (get_fileheader_keep(subdir, &subitem, idx_sub++, &fd_sub) == 1) {
 
-		// file loop
-		while (fread(&subitem, sizeof(subitem), 1, fp1)) {
+	        SNPRINTF(buf, "%s/%s/%s", pbuf, item.filename,
+	    	    subitem.filename);
 
-		    SNPRINTF(buf, "%s/%s/%s", pbuf, item.filename,
-			    subitem.filename);
+	        if (!(fp2 = fopen(buf, "r")))
+	    	continue;
 
-		    if (!(fp2 = fopen(buf, "r")))
-			continue;
+	        fread(SHM->notes[id], sizeof(char), sizeof(SHM->notes[0]), fp2);
+	        SHM->notes[id][sizeof(SHM->notes[0]) - 1] = 0;
+	        rawid ++;
 
-		    fread(SHM->notes[id], sizeof(char), sizeof(SHM->notes[0]), fp2);
-		    SHM->notes[id][sizeof(SHM->notes[0]) - 1] = 0;
-		    rawid ++;
+	        // filtering
+	        if (filter_dirtywords(SHM->notes[id]))
+	        {
+	    	memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
+	    	rawid --;
+	        }
+	        else if (chkagg && filter_aggressive(SHM->notes[id]))
+	        {
+	    	aggid++;
+	    	// handle aggressive notes by last detemined state
+	    	if (drop_aggressive)
+	    	    memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
+	    	else
+	    	    id++;
+	    	// Debug purpose
+	    	// fprintf(stderr, "found aggressive: %s\r\n", buf);
+	        } 
+	        else 
+	        {
+	    	id++;
+	        }
 
-		    // filtering
-		    if (filter_dirtywords(SHM->notes[id]))
-		    {
-			memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
-			rawid --;
-		    }
-		    else if (chkagg && filter_aggressive(SHM->notes[id]))
-		    {
-			aggid++;
-			// handle aggressive notes by last detemined state
-			if (drop_aggressive)
-			    memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
-			else
-			    id++;
-			// Debug purpose
-			// fprintf(stderr, "found aggressive: %s\r\n", buf);
-		    } 
-		    else 
-		    {
-			id++;
-		    }
+	        fclose(fp2);
+	        if (id >= MAX_ADBANNER)
+	    	break;
 
-		    fclose(fp2);
-		    if (id >= MAX_ADBANNER)
-			break;
+	    } // end of file loop
+	    if (fd_sub >= 0)
+	        close(fd_sub);
 
-		} // end of file loop
-		fclose(fp1);
+	    if (is_ordersong_dir)
+	        SHM->last_usong = id - 1;
 
-		if (is_ordersong_dir)
-		    SHM->last_usong = id - 1;
+	    if (id >= MAX_ADBANNER)
+	        break;
 
-		if (id >= MAX_ADBANNER)
-		    break;
+	} // end of .DIR loop
+	if (fd_dir >= 0)
+	    close(fd_dir);
 
-	    } // end of .DIR loop
-	    fclose(fp);
+	// decide next aggressive state
+	if (rawid && aggid*3 >= rawid) // if aggressive exceed 1/3
+	    set_aggressive_state(1);
+	else
+	    set_aggressive_state(0);
 
-	    // decide next aggressive state
-	    if (rawid && aggid*3 >= rawid) // if aggressive exceed 1/3
-		set_aggressive_state(1);
-	    else
-		set_aggressive_state(0);
-
-	    // fprintf(stderr, "id(%d)/agg(%d)/raw(%d)\r\n",
-	    //	    id, aggid, rawid);
-	}
+	// fprintf(stderr, "id(%d)/agg(%d)/raw(%d)\r\n",
+	//	    id, aggid, rawid);
 	SHM->last_film = id - 1;
 
 	/* 等所有資料更新後再設定 uptime */
