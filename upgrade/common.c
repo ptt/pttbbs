@@ -76,41 +76,13 @@ strip_2026_seq(const uint8_t *src, size_t len, uint8_t *dst)
 int
 is_valid_utf8(const uint8_t *buf, size_t len)
 {
-    size_t i = 0;
-    while (i < len) {
-        uint8_t c = buf[i];
-        if (c < 0x80) {
-            i++;
-        } else if (c >= 0xC2 && c <= 0xDF) {
-            if (i + 1 >= len || (buf[i + 1] & 0xC0) != 0x80)
-                return 0;
-            i += 2;
-        } else if (c >= 0xE0 && c <= 0xEF) {
-            if (i + 2 >= len ||
-                (buf[i + 1] & 0xC0) != 0x80 ||
-                (buf[i + 2] & 0xC0) != 0x80)
-                return 0;
-            if (c == 0xE0 && buf[i + 1] < 0xA0)
-                return 0;
-            if (c == 0xED && buf[i + 1] >= 0xA0)
-                return 0;
-            i += 3;
-        } else if (c >= 0xF0 && c <= 0xF4) {
-            if (i + 3 >= len ||
-                (buf[i + 1] & 0xC0) != 0x80 ||
-                (buf[i + 2] & 0xC0) != 0x80 ||
-                (buf[i + 3] & 0xC0) != 0x80)
-                return 0;
-            if (c == 0xF0 && buf[i + 1] < 0x90)
-                return 0;
-            if (c == 0xF4 && buf[i + 1] >= 0x90)
-                return 0;
-            i += 4;
-        } else {
+    utf8_ctx ctx;
+    utf8_init(&ctx);
+    for (size_t i = 0; i < len; i++) {
+        if (!utf8_add_byte(&ctx, buf[i]) && !utf8_pending(&ctx))
             return 0;
-        }
     }
-    return 1;
+    return !utf8_pending(&ctx);
 }
 
 static int

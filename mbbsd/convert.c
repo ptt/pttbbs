@@ -6,7 +6,6 @@ ConvertMode convert_mode = CONV_NORMAL;
 
 int
 convert_write_utf8(VBUF *v, char c) {
-    static uint8_t utf8[4];
     static union {
         char c[2];
         uint16_t u;
@@ -14,18 +13,19 @@ convert_write_utf8(VBUF *v, char c) {
 
     // trail must be little endian.
     if (trail.c[1]) {
+        utf8_ctx ctx;
         int len, i;
         uint16_t ucs;
 
         trail.c[0] = c;
         ucs = b2u_table[trail.u];
 
-        len = ucs2utf(ucs, utf8);
-        utf8[len] = 0;
+        utf8_init(&ctx);
+        len = utf8_from_ucs(&ctx, ucs);
 
         // assert(len > 0 && len < 4);
         for (i = 0; i < len; i++)
-            vbuf_add(v, utf8[i]);
+            vbuf_add(v, (char)ctx.buf[i]);
 
         trail.c[1] = 0;
         return 1;
@@ -41,33 +41,29 @@ convert_write_utf8(VBUF *v, char c) {
 }
 
 int convert_read_utf8(VBUF *v, const void *buf, size_t len) {
-    static uint8_t trail[6];
-    static int ctrail = 0;
-    uint16_t ucs;
+    static utf8_ctx ctx;
     uint8_t c;
     int written = 0;
 
     while (len-- > 0) {
         c = *(uint8_t*)buf ++;
-        if (ctrail) {
-            trail[ctrail++] = c;
-            // TODO this may create invalid chars.
-            if (utf2ucs(trail, &ucs) > ctrail)
-                continue;
-            ucs = u2b_table[ucs];
-            vbuf_add(v, ucs >> 8);
-            vbuf_add(v, ucs & 0xFF);
-            written += 2;
-            ctrail = 0;
-            continue;
-        }
-
         if (isascii(c)) {
+            utf8_reset(&ctx);
             vbuf_add(v, c);
             written++;
-        } else {
-            trail[0] = c;
-            ctrail = 1;
+        } else if (utf8_add_byte(&ctx, c)) {
+            int ucs = utf8_get_ucs(&ctx);
+            uint16_t b5 = (ucs >= 0 && ucs < 0x10000) ? u2b_table[ucs] : 0;
+            if (b5 == 0)
+                b5 = '?';
+            if (b5 > 0xFF) {
+                vbuf_add(v, (char)(b5 >> 8));
+                vbuf_add(v, (char)(b5 & 0xFF));
+                written += 2;
+            } else {
+                vbuf_add(v, (char)b5);
+                written++;
+            }
         }
     }
     return written;

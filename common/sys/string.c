@@ -378,18 +378,25 @@ mb_bytes(const char *s)
     if (!p || !p[0])
         return 0;
     if (MB_IS_UTF8) {
-        if (p[0] < 0x80)
-            return 1;
-        if ((p[0] & 0xE0) == 0xC0 && (p[1] & 0xC0) == 0x80)
-            return 2;
-        if ((p[0] & 0xF0) == 0xE0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80)
-            return 3;
-        if ((p[0] & 0xF8) == 0xF0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80)
-            return 4;
+        utf8_ctx ctx;
+        utf8_init(&ctx);
+        for (int i = 0; p[i]; i++) {
+            if (utf8_add_byte(&ctx, p[i]))
+                return ctx.len;
+            if (!utf8_pending(&ctx))
+                break;
+        }
         return 1;
     } else {
         return (IS_DBCSLEAD(p[0]) && (unsigned char)p[1] >= 0x40) ? 2 : 1;
     }
+}
+
+int
+ucs_width(int ucs)
+{
+    int w = mk_wcwidth_cjk(ucs);
+    return (w < 0) ? 0 : w;
 }
 
 int
@@ -398,10 +405,33 @@ mb_width(const char *s)
     const unsigned char *p = (const unsigned char *)s;
     if (!p || !p[0])
         return 0;
-    if (MB_IS_UTF8)
-        return (p[0] < 0x80) ? 1 : 2;
-    else
+    if (MB_IS_UTF8) {
+        if (p[0] < 0x80)
+            return (p[0] >= 0x20 && p[0] != 0x7F) ? 1 : 0;
+        if ((p[1] & 0xC0) == 0x80) {
+            // Fast path: CJK Unified Ideographs (U+4000..U+9FFF), Hangul, and PUA
+            if ((p[0] >= 0xE4 && p[0] <= 0xE9) ||
+                p[0] == 0xEB || p[0] == 0xEC || p[0] == 0xEE)
+                return 2;
+            // Fast path: Hiragana, Katakana, Bopomofo, CJK Ext-A (U+3040..U+3FFF)
+            if (p[0] == 0xE3 && p[1] != 0x80 && p[1] != 0x82)
+                return 2;
+            // Fast path: PUA, CJK Compat Ideographs (U+F000..U+FAFF) & Fullwidth ASCII (U+FF00..U+FF3F)
+            if (p[0] == 0xEF && (p[1] <= 0xAB || p[1] == 0xBC))
+                return 2;
+        }
+        utf8_ctx ctx;
+        utf8_init(&ctx);
+        for (int i = 0; p[i]; i++) {
+            if (utf8_add_byte(&ctx, p[i]))
+                return ucs_width(utf8_get_ucs(&ctx));
+            if (!utf8_pending(&ctx))
+                break;
+        }
+        return 1;
+    } else {
         return mb_bytes(s);
+    }
 }
 
 int
@@ -411,40 +441,24 @@ mb_from_vkey(int key, char *buf)
         buf[0] = '\0';
         return 0;
     }
+    if (MB_IS_UTF8) {
+        utf8_ctx ctx;
+        if (!utf8_from_ucs(&ctx, key)) {
+            buf[0] = '\0';
+            return 0;
+        }
+        return utf8_to_mb(&ctx, buf);
+    }
     if (key < 0x80) {
         buf[0] = (char)key;
         buf[1] = '\0';
         return 1;
     }
-    if (MB_IS_UTF8) {
-        if (key < 0x800) {
-            buf[0] = (char)(0xC0 | (key >> 6));
-            buf[1] = (char)(0x80 | (key & 0x3F));
-            buf[2] = '\0';
-            return 2;
-        }
-        if (key < 0x10000) {
-            buf[0] = (char)(0xE0 | (key >> 12));
-            buf[1] = (char)(0x80 | ((key >> 6) & 0x3F));
-            buf[2] = (char)(0x80 | (key & 0x3F));
-            buf[3] = '\0';
-            return 3;
-        }
-        if (key <= 0x10FFFF) {
-            buf[0] = (char)(0xF0 | (key >> 18));
-            buf[1] = (char)(0x80 | ((key >> 12) & 0x3F));
-            buf[2] = (char)(0x80 | ((key >> 6) & 0x3F));
-            buf[3] = (char)(0x80 | (key & 0x3F));
-            buf[4] = '\0';
-            return 4;
-        }
-    } else {
-        if (key >= 0x8140 && key <= 0xFEFE) {
-            buf[0] = (char)((key >> 8) & 0xFF);
-            buf[1] = (char)(key & 0xFF);
-            buf[2] = '\0';
-            return 2;
-        }
+    if (key >= 0x8140 && key <= 0xFEFE) {
+        buf[0] = (char)((key >> 8) & 0xFF);
+        buf[1] = (char)(key & 0xFF);
+        buf[2] = '\0';
+        return 2;
     }
     buf[0] = '\0';
     return 0;
@@ -484,21 +498,20 @@ strip_nonebig5(unsigned char *str, int maxlen)
   int i;
   int len=0;
   if (MB_IS_UTF8) {
+    utf8_ctx ctx;
+    utf8_init(&ctx);
     for (i = 0; i < maxlen && str[i]; i++) {
       if (32 <= str[i] && str[i] < 128) {
+        utf8_reset(&ctx);
         str[len++] = str[i];
-      } else if (str[i] & 0x80) {
-        int clen = mb_bytes((const char *)(str + i));
-        if (clen > 1 && i + clen <= maxlen) {
-          int ok = 1, k;
-          for (k = 1; k < clen; k++) {
-            if ((str[i + k] & 0xC0) != 0x80) { ok = 0; break; }
-          }
-          if (ok) {
-            for (k = 0; k < clen; k++) str[len++] = str[i + k];
-            i += clen - 1;
-          }
+      } else if (str[i] >= 0x80) {
+        if (utf8_add_byte(&ctx, str[i])) {
+          memcpy(str + len, ctx.buf, ctx.len);
+          len += ctx.len;
+          utf8_reset(&ctx);
         }
+      } else {
+        utf8_reset(&ctx);
       }
     }
     if (len < maxlen)
@@ -609,17 +622,11 @@ mbs_safe_trim(char *s)
         while (i >= 0 && mbs_status(s, i) == MB_TRAILING)
             i--;
         if (i >= 0 && mbs_status(s, i) == MB_LEADING) {
-            int expected = 0;
-            unsigned char c = (unsigned char)s[i];
-            if ((c & 0xE0) == 0xC0)
-                expected = 2;
-            else if ((c & 0xF0) == 0xE0)
-                expected = 3;
-            else if ((c & 0xF8) == 0xF0)
-                expected = 4;
-            else
-                expected = len - i + 1;
-            if (len - i < expected)
+            utf8_ctx ctx;
+            utf8_init(&ctx);
+            for (int j = i; j < len; j++)
+                utf8_add_byte(&ctx, (unsigned char)s[j]);
+            if (!utf8_is_ready(&ctx))
                 s[i] = '\0';
         }
     } else {
