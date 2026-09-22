@@ -1065,8 +1065,9 @@ load_boards(char *key)
 			else
 			    continue;
 		    }else{
+			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
+			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			assert(0<=fav_getid(&fav->favh[i])-1 && fav_getid(&fav->favh[i])-1<MAX_BOARD);
 			if (strcasestr(bptr->title, key))
 			    state = NBRD_BOARD;
 			else
@@ -1081,10 +1082,14 @@ load_boards(char *key)
 		if (is_set_attr(&fav->favh[i], FAVH_ADM_TAG))
 		    state |= NBRD_TAG;
 		// 有些人 某些 bid < 0 Orzz // ptt2 local modification
-		if (fav_getid(&fav->favh[i]) < 1)
+		if (get_item_type(&fav->favh[i]) == FAVT_BOARD ?
+		    (fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD) :
+		    fav_getid(&fav->favh[i]) < 1)
 		    continue;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
 	    }
+	    if (brdnum == 0 && !key[0])
+		addnewbrdstat(0, 0); // dummy
 	}
 #if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
@@ -1160,7 +1165,7 @@ load_boards(char *key)
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = BRD_LINK_TARGET(bptr);
-		    if (bcache[bid - 1].brdname[0] == 0) {
+		    if (bid < 1 || bid > MAX_BOARD || bcache[bid - 1].brdname[0] == 0) {
 			vmsg("連結已損毀，請至 SYSOP 回報此問題。");
 			continue;
 		    }
@@ -1559,7 +1564,9 @@ set_menu_group_op(char *BM)
 static void replace_link_by_target(boardstat_t *board)
 {
     assert(0<=board->bid-1 && board->bid-1<MAX_BOARD);
-    board->bid = BRD_LINK_TARGET(getbcache(board->bid));
+    int target = BRD_LINK_TARGET(getbcache(board->bid));
+    if (target >= 1 && target <= MAX_BOARD)
+	board->bid = target;
     board->myattr &= ~NBRD_SYMBOLIC;
 }
 
