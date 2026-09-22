@@ -330,7 +330,7 @@ int bsearch_record(const char *fpath, const void *key,
 
   munmap(addr, sz);
   close(fd);
-  return found ? (found - addr) / size : -1;
+  return found ? (int)((found - addr) / size) : -1;
 }
 
 // Find the first record that is greater than key.

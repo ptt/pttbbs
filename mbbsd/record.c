@@ -36,87 +36,6 @@ get_sum_records(const char *fpath, int size)
     return ans / 1024;
 }
 
-/* return index>0 if thisstamp==stamp[index],
- * return -index<0 if stamp[index-1]<thisstamp<stamp[index+1], XXX thisstamp ?<>? stamp[index]
- * 			or XXX filename[index]=""
- * return 0 if error
- */
-int
-getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney)
-{ // Ptt: 從前面找很費力 太暴力
-    int             fd = -1, begin = 1, i, s, times, stamp;
-    fileheader_t    fh;
-
-    int n = get_num_records(direct, sizeof(fileheader_t));
-    if( end > n || end<=0 )
-           end = n;
-    stamp = get_fhdr_stamp_ts(fhdr->filename);
-    for( i = (begin + end ) / 2, times = 0 ;
-	 end >= begin  && times < 20    ; /* 最多只找 20 次 */
-	 i = (begin + end ) / 2, ++times ){
-        if( get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1 ||
-	    !fh.filename[0] )
-              break;
-	s = get_fhdr_stamp_ts(fh.filename);
-	if (time4_gt(s, stamp))
-	    end = i - 1;
-	else if( s == stamp ){
-	    close(fd);
-	    if(isloadmoney)
- 	       fhdr->multi.money = fh.multi.money;
-	    return i;
-	}
-        else
-	    begin = i + 1;
-    }
-
-    if( times < 20)     // Not forever loop. It any because of deletion.
-	{
-	   close(fd);
-           return -i;
-	}
-    if( fd != -1 )
-	close(fd);
-    return 0;
-}
-
-int
-getindex(const char *direct, fileheader_t *fhdr, int end)
-{
-  return getindex_m(direct, fhdr, end, 0);
-}
-
-int
-substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
-{
-    fileheader_t    hdr;
-    char            fname[PATHLEN];
-    int             num = 0;
-
-    // Note: 這段腦殘 code 遇上 FILE_ANONYMOUS 或 FILE_VOTE 就會爆炸。
-
-    /* rocker.011018: 串接模式用reference增進效率 */
-    if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->multi.refer.flag) &&
-	    (num = fhdr->multi.refer.ref)){
-	setdirpath(fname, direct, FN_DIR);
-	get_record(fname, &hdr, sizeof(hdr), num);
-	if (strcmp(hdr.filename, fhdr->filename)) {
-	    if((num = getindex_m(fname, fhdr, num, 1))>0) {
-		substitute_record(fname, fhdr, sizeof(*fhdr), num);
-	    }
-	}
-	else if(num>0) {
-	    fhdr->multi.money = hdr.multi.money;
-	    substitute_record(fname, fhdr, sizeof(*fhdr), num);
-	}
-	fhdr->multi.refer.flag = 1;
-	fhdr->multi.refer.ref = num; // Ptt: update now!
-    }
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    return num;
-}
-
-
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
 int
 force_open(const char *fname)
@@ -161,8 +80,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
     t++;
     if( (fd = open(fpath, O_RDONLY)) == -1 )
 	return;
-    for( i = 1 ; (read(fd, &fhdr, sizeof(fileheader_t)) ==
-		  sizeof(fileheader_t)) ; ++i ){
+    for( i = 1 ; read_fileheader(fd, &fhdr) == 1 ; ++i ){
 	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
 	/* rocker.011018: add new tag delete */
 	if (!((fhdr.filemode & FILE_MARKED) ||	/* 標記 */
@@ -312,7 +230,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 
 	for( ; from <= to ; ++from ){
 	    // the (from, to) range may be invalid...
-	    if (read(fd, &newfhdr, sizeof(fileheader_t)) != sizeof(fileheader_t))
+	    if (read_fileheader(fd, &newfhdr) != 1)
 		break;
 	    if (!is_valid_fileheader(&newfhdr))
 		continue;
@@ -325,7 +243,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    set_safedel_fhdr(&newfhdr, NULL);
 	    // because off_t is unsigned, we could NOT seek backward.
 	    lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
-	    write(fd, &newfhdr, sizeof(fileheader_t));
+	    write_fileheader(fd, &newfhdr);
 	}
 	close(fd);
 	return 0;
@@ -413,6 +331,7 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
 
         // now, always backup according to fpath
         if (backup_direct) {
+            fileheader_mem_to_storage(&backup);
             if (!timecapsule_archive_new_revision(
                         fpath, &backup, sizeof(backup),
                         backup_path, sz_backup_path))
@@ -489,7 +408,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     int r;
 
     // No matter what, append it, and return if that failed.
-    r = append_record(fpath, record, size);
+    (void)size;
+    r = append_fileheader(fpath, record);
     if (r < 0)
         return r;
 

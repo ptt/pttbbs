@@ -233,7 +233,7 @@ int main(int argc, char *argv[]){
         fclose(fp);
         STRLCPY(fhdr.title, REPORT_SUBJECT);
         STRLCPY(fhdr.owner, REPORT_AUTHOR);
-        append_record(output_dir, &fhdr, sizeof(fhdr));
+        append_fileheader(output_dir, &fhdr);
 
         if (target_is_user) {
             userinfo_t *uentp = search_ulistn(uid, 1);

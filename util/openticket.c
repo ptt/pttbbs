@@ -251,7 +251,7 @@ int main()
 		unlink(genbuf);
 		Link("etc/ticket", genbuf);
                 sethomedir(genbuf, userid);
-		append_record(genbuf, &mymail, sizeof(mymail));
+		append_fileheader(genbuf, &mymail);
                 sendalert_uid(uid, ALERT_NEW_MAIL);
 	    } else {
                 printf("     %-*s ¶R¤F%9d ±i %s\n", IDLEN, userid, num, betname[mybet]);

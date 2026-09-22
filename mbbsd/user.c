@@ -300,7 +300,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     strcpy(fhdr.title, "[報告] 違法判決報告");
     strcpy(fhdr.owner, "[" BBSMNAME "警察局]");
     sethomedir(genbuf, crime);
-    append_record(genbuf, &fhdr, sizeof(fhdr));
+    append_fileheader(genbuf, &fhdr);
 }
 
 void

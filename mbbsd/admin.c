@@ -590,8 +590,8 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
      sn=get_num_records(dir2, sizeof(fileheader_t));
      if(!sn) return;
      fh= (fileheader_t *)malloc( (pn+sn)*sizeof(fileheader_t));
-     get_records(dir1, fh, sizeof(fileheader_t), 1, pn);
-     get_records(dir2, fh+pn, sizeof(fileheader_t), 1, sn);
+     get_fileheaders(dir1, fh, 1, pn);
+     get_fileheaders(dir2, fh+pn, 1, sn);
      if(isoutter)
          {
              for(i=0; i<sn; i++)
@@ -608,7 +608,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
 	 {
                 fh[i-1].recommend =0;
 		fh[i-1].filemode |= 1;
-                append_record(dir1, &fh[i-1], sizeof(fileheader_t));
+                append_fileheader(dir1, &fh[i-1]);
 		strcpy(p1, fh[i-1].filename);
                 if(!dashf(file1))
 		      {

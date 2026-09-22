@@ -617,6 +617,7 @@ psb_recycle_bin(const char *base, const char *title) {
     }
     timecapsule_get_archive_blobs(base, viewbase, nrecords, pvrbctx.records,
                                   sizeof(fileheader_t));
+    fileheader_storage_to_mem(pvrbctx.records, nrecords);
     psb_main(&ctx);
     free(pvrbctx.records);
     return DIRCHANGED;

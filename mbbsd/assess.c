@@ -129,7 +129,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	    file_append(rptpath, "\n");
 
 	    setbdir(rptdir, BAD_POST_RECORD);
-	    append_record(rptdir, &report_fh, sizeof(report_fh));
+	    append_fileheader(rptdir, &report_fh);
 
 	    touchbtotal(rpt_bid);
 	}
