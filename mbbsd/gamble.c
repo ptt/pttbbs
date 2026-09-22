@@ -609,8 +609,7 @@ hold_gamble(void)
 	return FULLUPDATE;
     }
 
-    clear();
-    showtitle("舉辦樂透", BBSNAME);
+    vs_hdr2("舉辦樂透", currboard);
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
 
     //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);

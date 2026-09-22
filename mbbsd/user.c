@@ -484,7 +484,7 @@ typedef struct {
 
 static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     const int col_opt = 54;
-    redraw_title("個人設定", "個人化設定");
+    vs_draw_hdr2("偏好設定列表", "調整介面顯示與操作偏好");
     move(2, 0);
     prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
            "分類", col_opt - 11, "描述", "設定值");
@@ -492,7 +492,7 @@ static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
 }
 
 static int customize_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 個人化設定 ",
+    vs_footer(" 偏好設定 ",
               " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
     move(b_lines - 1, 0);
     return 0;
