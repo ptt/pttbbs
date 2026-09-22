@@ -634,10 +634,15 @@ vs_footer(const char *caption, const char *msg)
 	    i += l;
 	    continue;
 	}
-	outc(*msg); i++;
+	int w = mb_width(msg);
+	int b = mb_bytes(msg);
+	if (i + w > SAFE_MAX_COL)
+	    break;
+	outns(msg, b);
+	i += w;
 	if (*msg == ')')
 	    outs(VCLR_FOOTER);
-	msg ++;
+	msg += b;
     }
     nblank(SAFE_MAX_COL-i);
     outc(' ');
@@ -979,8 +984,6 @@ InputHistoryAdd(const char *s)
 static void
 InputHistoryDelta(char *s, int sz, int d)
 {
-    int i;
-
     if (ih.len == 0 || sz <= 0)
 	return;
 
@@ -1002,11 +1005,7 @@ InputHistoryDelta(char *s, int sz, int d)
 
     // copy buffer
     strlcpy(s, &ih.pool[ih.curr], sz);
-
-    // DBCS safe
-    i = strlen(s);
-    if (mbs_status(s, i) == MB_TRAILING)
-	s[i-1] = 0;
+    mbs_safe_trim(s);
 }
 
 void
@@ -1092,6 +1091,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     {
 	strlcpy(buf, defstr, len);
 	strip_control_sequence(buf, buf); // safer...
+	mbs_safe_trim(buf);
 	rt.icurr = rt.iend = strlen(buf);
     }
 
@@ -1148,7 +1148,14 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		outs(ANSI_RESET);
 
 	    // move to cursor position
-	    move(line, col+rt.icurr);
+	    if (MB_IS_UTF8) {
+		int cur_col = 0;
+		for (int p = 0; p < rt.icurr; p += mb_bytes(buf + p))
+		    cur_col += mb_width(buf + p);
+		move(line, col + cur_col);
+	    } else {
+		move(line, col + rt.icurr);
+	    }
 	} else {
 	    // to simulate the "clrtoeol" behavior...
 	    // XXX make this call only once? or not?
@@ -1177,35 +1184,31 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		continue;
 
 	    case KEY_LEFT:  case Ctrl('B'):
-		if (rt.icurr > 0)
-		rt.icurr--;
-		else
-		    bell();
-		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr))
+		if (rt.icurr > 0) {
 		    rt.icurr--;
+		    while (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr))
+			rt.icurr--;
+		} else
+		    bell();
 		continue;
 
 	    case KEY_RIGHT: case Ctrl('F'):
-		if (rt.icurr < rt.iend)
-		rt.icurr++;
-		else
-		    bell();
-		if (rt.icurr < rt.iend && CHKDBCSTRAIL(buf, rt.icurr))
+		if (rt.icurr < rt.iend) {
 		    rt.icurr++;
+		    while (rt.icurr < rt.iend && CHKDBCSTRAIL(buf, rt.icurr))
+			rt.icurr++;
+		} else
+		    bell();
 		continue;
 
 	    // editing keys
 	    case KEY_DEL:   case Ctrl('D'):
-		if (rt.icurr+1 < rt.iend && CHKDBCSTRAIL(buf, rt.icurr+1)) {
-		    // kill next one character.
-		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
-		    rt.iend--;
-		    dirty = 1;
-		}
 		if (rt.icurr < rt.iend) {
-		    // kill next one character.
-		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
-		    rt.iend--;
+		    int n = 1;
+		    while (rt.icurr + n < rt.iend && CHKDBCSTRAIL(buf, rt.icurr + n))
+			n++;
+		    memmove(buf + rt.icurr, buf + rt.icurr + n, rt.iend - rt.icurr - n + 1);
+		    rt.iend -= n;
 		    dirty = 1;
 		}
 		continue;
@@ -1262,18 +1265,16 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    // standard editing keys: backspace
 	    case KEY_BS:
 		if (rt.icurr > 0) {
-		    // kill previous one charracter.
-		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
-		    rt.icurr--; rt.iend--;
+		    int prev = rt.icurr - 1;
+		    while (prev > 0 && CHKDBCSTRAIL(buf, prev))
+			prev--;
+		    int n = rt.icurr - prev;
+		    memmove(buf + prev, buf + rt.icurr, rt.iend - rt.icurr + 1);
+		    rt.icurr = prev;
+		    rt.iend -= n;
 		    dirty = 1;
 		} else
 		    bell();
-		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr)) {
-		    // kill previous one charracter.
-		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
-		    rt.icurr--; rt.iend--;
-		    dirty = 1;
-		}
 		continue;
 	}
 
@@ -1313,13 +1314,24 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	}
 
 	// prevent incomplete multibyte sequence when VKEY_IS_MB == 1
-	if (VKEY_IS_MB && len - rt.iend < 3 && c > 0x80 &&
-		mbs_status(buf, rt.icurr) != MB_TRAILING)	// we need 3 for DBCS+NUL.
-	{
-	    // XXX should we purge here, or wait the final mbs_safe_trim?
-	    if (vkey_is_ready())
-		vkey();
-	    bell(); continue;
+	if (VKEY_IS_MB && c >= 0x80) {
+	    int need = 0;
+	    if (MB_IS_UTF8) {
+		if ((c & 0xC0) != 0x80) {
+		    if ((c & 0xE0) == 0xC0) need = 2;
+		    else if ((c & 0xF0) == 0xE0) need = 3;
+		    else if ((c & 0xF8) == 0xF0) need = 4;
+		}
+	    } else {
+		if (mbs_status(buf, rt.icurr) != MB_TRAILING)
+		    need = 2;
+	    }
+	    if (need > 0 && len - rt.iend < need + 1) {
+		for (int k = 1; k < need && vkey_is_ready(); k++)
+		    vkey();
+		bell();
+		continue;
+	    }
 	}
 
 	// callback: data
