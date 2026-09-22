@@ -209,7 +209,7 @@ vbuf_getstr (VBUF *v, char *s, size_t sz)
 VBUFPROTO int
 vbuf_putstr (VBUF *v, const char *s)
 {
-    size_t len = strlen(s) + 1;
+    size_t len = strlen(s);
     if (vbuf_space(v) < len)
         return 0;
     vbuf_putblk(v, s, len);
