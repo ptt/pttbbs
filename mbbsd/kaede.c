@@ -85,8 +85,10 @@ strip_esc_star(char *s) {
 char *
 Ptt_prints(char *str, size_t size, int mode)
 {
-    char           *strbuf = alloca(size);
+    char            strbuf[ANSILINELEN];
     int             r, w;
+    if (size > sizeof(strbuf))
+        size = sizeof(strbuf);
     for( r = w = 0 ; str[r] != 0 && w < ((int)size - 1) ; ++r )
     {
         if( str[r] != ESC_CHR )
