@@ -189,7 +189,8 @@ char *get_item_title(fav_type_t *ft)
 {
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
-	    assert(0<=cast_board(ft)->bid-1 && cast_board(ft)->bid-1<MAX_BOARD);
+	    if ((cast_board(ft)->bid < 1 || cast_board(ft)->bid > MAX_BOARD))
+		return "";
 	    return bcache[cast_board(ft)->bid - 1].brdname;
 	case FAVT_FOLDER:
 	    return cast_folder(ft)->title;
@@ -203,7 +204,8 @@ static char *get_item_class(fav_type_t *ft)
 {
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
-	    assert(0<=cast_board(ft)->bid-1 && cast_board(ft)->bid-1<MAX_BOARD);
+	    if ((cast_board(ft)->bid < 1 || cast_board(ft)->bid > MAX_BOARD))
+		return "";
 	    return bcache[cast_board(ft)->bid - 1].title;
 	case FAVT_FOLDER:
 	    return "¥Ø¿ý";
