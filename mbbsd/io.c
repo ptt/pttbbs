@@ -18,7 +18,22 @@
 // #define DBG_OUTRPT
 #endif
 
+// Synchronized output (DEC Private Mode 2026: BSU / ESU)
+#define DEC2026_BSU       ESC_STR "[?2026h"
+#define DEC2026_ESU       ESC_STR "[?2026l"
+#define SZ_BSU            MACROSTRLEN(DEC2026_BSU)
+#define SZ_ESU            MACROSTRLEN(DEC2026_ESU)
+#define SYNC_FRAME_THRESHOLD (64)
+
+enum {
+    OFRAME_NONE = 0,
+    OFRAME_PENDING,
+    OFRAME_ACTIVE,
+};
+
+static char obuf[OBUFSIZE] = DEC2026_BSU;
 static VBUF vout, *pvout = &vout;
+static int  oframe_state = OFRAME_NONE;
 
 // we've seen such pattern - make it accessible for movie mode.
 #define CLIENT_ANTI_IDLE_STR   ESC_STR "OA" ESC_STR "OB"
@@ -102,12 +117,37 @@ debug_print_input_buffer(void *buf, ssize_t len)
 /* ----------------------------------------------------- */
 /* output routines                                       */
 /* ----------------------------------------------------- */
+
+// Clears the obuf-based vbuf, to preserve the BSU in the beginning.
+static void
+vout_clear(VBUF *v) {
+    v->head = v->tail = v->buf + SZ_BSU;
+}
+
+void
+obegin_frame(void)
+{
+    if (oframe_state == OFRAME_NONE)
+        oframe_state = OFRAME_PENDING;
+}
+
+void
+oend_frame(void)
+{
+    if (oframe_state == OFRAME_ACTIVE) {
+        vbuf_putblk(pvout, DEC2026_ESU, SZ_ESU);
+    }
+    oframe_state = OFRAME_NONE;
+    oflush();
+}
+
 void
 oflush(void)
 {
     if (!vbuf_is_empty(pvout)) {
         STATINC(STAT_SYSWRITESOCKET);
         vbuf_write(pvout, 1, VBUF_RWSZ_ALL);
+        vout_clear(pvout);
     }
 
 #ifdef DBG_OUTRPT
@@ -136,10 +176,16 @@ ochar(int c)
     szLastOutput ++;
 #endif // DBG_OUTRPT
 
-    if (vbuf_space(pvout) < OBUFMINSPACE)
+    if (vbuf_space(pvout) < OBUFMINSPACE + SZ_BSU + SZ_ESU)
         oflush();
 
     convert_write(pvout, c);
+
+    if (oframe_state == OFRAME_PENDING &&
+        vbuf_size(pvout) >= SYNC_FRAME_THRESHOLD) {
+        pvout->head = pvout->buf;
+        oframe_state = OFRAME_ACTIVE;
+    }
 
     return 0;
 }
@@ -382,7 +428,8 @@ ssize_t vbuf_from_tty(VBUF *v)
 /* ----------------------------------------------------- */
 int
 init_io() {
-    vbuf_new(pvout, OBUFSIZE);
+    vbuf_attach(pvout, obuf, OBUFSIZE);
+    vout_clear(pvout);
     vkey_init();
     system_init_hooks();
     pager_init_hooks();

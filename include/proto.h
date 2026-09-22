@@ -301,6 +301,8 @@ int init_io();
 int  ochar(int c);
 void output(const char *s, int len);
 void oflush(void);
+void obegin_frame(void);
+void oend_frame(void);
 
 // pager hotkeys processor
 void pager_init_hooks(void);

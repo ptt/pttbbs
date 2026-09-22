@@ -402,8 +402,6 @@ display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
     }
 }
 
-#define MACROSTRLEN(x) (sizeof(x)-1)
-
 static int
 common_pmore_footer_handler(int ratio GCC_UNUSED,
                             void *ctx GCC_UNUSED)
