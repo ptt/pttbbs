@@ -2125,8 +2125,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
         return DONOTHING;
 
     setuserfile(fpath, fhdr->filename);
-    STRLCPY(title, "¡º ");
-    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    SNPRINTF(title, "¡º %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
 
     if (cuser.userlevel >= PERM_BM) {
@@ -2171,8 +2170,7 @@ mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct
     if (!HasUserPerm(PERM_MAILLIMIT))
         return DONOTHING;
     setuserfile(fpath, fhdr->filename);
-    STRLCPY(title, "¡º ");
-    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    SNPRINTF(title, "¡º %s", fhdr->title);
     a_copyitem(fpath, title, fhdr->owner, 1);
     sethomeman(fpath, cuser.userid);
     sethomedir(backup_path, cuser.userid);
