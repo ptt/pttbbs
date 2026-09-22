@@ -216,7 +216,7 @@ int more(const char *fpath, int promptend)
 	    if (!fgets(buf, sizeof(buf), fp))
 		break;
 	    else
-		outs(buf);
+		outs(TEMP_STORAGE_TO_MB(buf));
 	fclose(fp);
 	return 0;
     }
@@ -240,6 +240,7 @@ int more(const char *fpath, int promptend)
 		if (!showall)
 		{
 		    fgets(buf, sizeof(buf), fp);
+		    storage_to_mb(buf, buf, sizeof(buf));
 		    if (lineno + i == 0 &&
 			(strncmp(buf, STR_AUTHOR1, strlen(STR_AUTHOR1))==0 ||
 			 strncmp(buf, STR_AUTHOR2, strlen(STR_AUTHOR2))==0))

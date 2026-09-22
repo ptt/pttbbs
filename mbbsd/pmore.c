@@ -217,6 +217,13 @@
 //  move(): move cursor location
 //  scroll() / rscroll() / refresh(): scroll / reverse-scroll / refresh screen
 //  getdata / getdata_buf : query user input
+//  skip_control_sequence(s): skip an ECMA-48 (ANSI) control sequence starting
+//      at s (*s == ESC_CHR) and return pointer to the first byte after it
+//  stream_width(s): return terminal display width of string s (skipping ANSI)
+//  mb_bytes(s) / mb_width(s): return byte length / display column width of the
+//      multibyte character at s
+//  mbs_status() / mbs_strcasestr() / mbs_strncasecmp(): multibyte character
+//      status and case-insensitive search / comparison
 //
 // ----------------------------------------------------------------
 // Maple3 Porting
@@ -404,8 +411,7 @@ static int debug = 0;
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
 #define ANSI_REVERSE	ANSI_COLOR(7)
 
-#define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
-        (x) == ';' || (x) == ',' || (x) == '[')
+#define ANSI_IN_ESCAPE(x) (((x) >= 0x20 && (x) <= 0x3F) || (x) == '[')
 
 #endif /* PMORE_STYLE_ANSI */
 
@@ -868,6 +874,25 @@ mf_attach_file(void *fnptr)
 
     mf.detachHandler = mf_detach;
 
+    if (NEED_STORAGE_CONV) {
+        size_t alloc_sz = MB_CONVERT_SIZE((size_t)mf.len);
+        unsigned char *ubuf = (unsigned char *)mmap(
+            NULL, alloc_sz, PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (ubuf != MAP_FAILED) {
+            storage_to_mb_n((const char *)mf.start, (size_t)mf.len,
+                            (char *)ubuf, alloc_sz);
+            munmap(mf.start, mf.len);
+            mf.start = ubuf;
+            mf.len = strlen((const char *)ubuf);
+            size_t pg = getpagesize();
+            size_t used_pg = ((size_t)(mf.len ? mf.len : 1) + pg - 1) & ~(pg - 1);
+            size_t alloc_pg = (alloc_sz + pg - 1) & ~(pg - 1);
+            if (used_pg < alloc_pg)
+                munmap(ubuf + used_pg, alloc_pg - used_pg);
+        }
+    }
+
     return mf_postattach();
 }
 
@@ -1105,8 +1130,7 @@ mf_search(int direction)
                 break;
             } else {
                 /* DBCS check here. */
-                if (PMORE_MB_LEADING(*mf.disps++))
-                        mf.disps++;
+                mf.disps += mb_bytes((const char *)mf.disps);
             }
         }
         mf_backward(0);
@@ -1122,8 +1146,7 @@ mf_search(int direction)
                     break;
                 } else {
                     /* DBCS check here. */
-                    if (PMORE_MB_LEADING(*mf.disps++))
-                        mf.disps++;
+                    mf.disps += mb_bytes((const char *)mf.disps);
                 }
             }
             if (!flFound)
@@ -1318,19 +1341,21 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
     /* predict from p to line-end, without ANSI seq.
      */
     int off = 0;
-    int inAnsi = 0;
 
     while (p < mf.end && *p != '\n') {
-        if (inAnsi) {
-            if (!ANSI_IN_ESCAPE(*p))
-                inAnsi = 0;
-        } else {
-            if (*p == ESC_CHR)
-                inAnsi = 1;
-            else
-                off ++;
+        if (*p == ESC_CHR) {
+            const unsigned char *next =
+                (const unsigned char *)skip_control_sequence((const char *)p);
+            p = (next > p) ? (unsigned char *)next : (p + 1);
+            continue;
         }
-        p++;
+        if (MB_IS_UTF8) {
+            off += mb_width((const char *)p);
+            p += mb_bytes((const char *)p);
+        } else {
+            off++;
+            p++;
+        }
     }
     return off;
 }
@@ -1719,14 +1744,15 @@ mf_display()
                 }
             }
 
+            const unsigned char *ansi_end = NULL;
             while (!breaknow && mf.dispe < mf.end && (c = *mf.dispe) != '\n')
             {
                 if (inAnsi)
                 {
-                    if (!ANSI_IN_ESCAPE(c))
-                        inAnsi = 0;
                     /* whatever this is, output! */
                     mf.dispe ++;
+                    if (mf.dispe >= ansi_end)
+                        inAnsi = 0;
                     switch (bpref.rawmode)
                     {
                         case MFDISP_RAW_NOANSI:
@@ -1778,7 +1804,8 @@ mf_display()
 
                     if (c == ESC_CHR)
                     {
-                        inAnsi = 1;
+                        ansi_end = (const unsigned char *)skip_control_sequence((const char *)mf.dispe);
+                        inAnsi = (mf.dispe + 1 < ansi_end && mf.dispe + 1 < mf.end);
                         /* we can't output now because maybe
                          * ptt_prints wants to do something.
                          */
@@ -1840,15 +1867,19 @@ mf_display()
                         }
                     } else {
                         int canOutput = 0;
+                        int char_bytes = MB_IS_UTF8 ? mb_bytes((const char *)mf.dispe) : 1;
+                        int char_cols = MB_IS_UTF8 ? mb_width((const char *)mf.dispe) : 1;
+                        if (MB_IS_UTF8 && mf.end - mf.dispe < char_bytes)
+                            char_bytes = mf.end - mf.dispe;
                         /* if col > maxcol,
                          * because we have the space for
                          * "indicators" (one byte),
                          * so we can tolerate one more byte.
                          */
-                        if (col <= maxcol)       // normal case
+                        if (col + char_cols - 1 <= maxcol)       // normal case
                             canOutput = 1;
                         else if (bpref.oldwrapmode && // oldwrapmode
-                            col < t_columns)
+                            col + char_cols - 1 < t_columns)
                         {
                             canOutput = 1;
                             newline = MFDISP_NEWLINE_MOVE;
@@ -1858,8 +1889,8 @@ mf_display()
                             // if we can use indicator space
                             // determine real offset between \n
                             if (predicted_linewidth < 0)
-                                predicted_linewidth = col + 1 +
-                                    MFDISP_PREDICT_LINEWIDTH(mf.dispe+1);
+                                predicted_linewidth = col + char_cols +
+                                    MFDISP_PREDICT_LINEWIDTH(mf.dispe + char_bytes);
                             off = predicted_linewidth - (col + 1);
 
                             if (col + off <= (maxcol+1))
@@ -1879,33 +1910,52 @@ mf_display()
                         {
                             /* the real place to output text
                              */
-#ifdef PMORE_USE_DBCS_WRAP
-                            if (mf.xpos > 0 && dbcs_incomplete && col < 2)
+                            if (MB_IS_UTF8)
                             {
-                                /* col = 0 or 1 only */
-                                if (col == 0) /* no indicators */
-                                    c = ' ';
-                                else if (!bpref.oldwrapmode && bpref.wrapindicator)
-                                    c = ' ';
+                                if (xprefix >= char_cols)
+                                    xprefix -= char_cols;
+                                else
+                                {
+                                    for (int bi = 0; bi < char_bytes; bi++)
+                                        outc(mf.dispe[bi]);
+                                    col += char_cols;
+                                }
+                                mf.dispe += char_bytes - 1;
+                                if (srlen == 0)
+                                    outs(ANSI_RESET);
+                                if (srlen >= 0)
+                                    srlen -= char_bytes;
                             }
-
-                            if (dbcs_incomplete)
-                                dbcs_incomplete = NULL;
-                            else if (PMORE_MB_LEADING(c))
-                                dbcs_incomplete = mf.dispe;
-#endif
-                            if (xprefix > 0)
-                                xprefix --;
                             else
                             {
-                                outc(c);
-                                col++;
-                            }
+#ifdef PMORE_USE_DBCS_WRAP
+                                if (mf.xpos > 0 && dbcs_incomplete && col < 2)
+                                {
+                                    /* col = 0 or 1 only */
+                                    if (col == 0) /* no indicators */
+                                        c = ' ';
+                                    else if (!bpref.oldwrapmode && bpref.wrapindicator)
+                                        c = ' ';
+                                }
 
-                            if (srlen == 0)
-                                outs(ANSI_RESET);
-                            if (srlen >= 0)
-                                srlen --;
+                                if (dbcs_incomplete)
+                                    dbcs_incomplete = NULL;
+                                else if (PMORE_MB_LEADING(c))
+                                    dbcs_incomplete = mf.dispe;
+#endif
+                                if (xprefix > 0)
+                                    xprefix --;
+                                else
+                                {
+                                    outc(c);
+                                    col++;
+                                }
+
+                                if (srlen == 0)
+                                    outs(ANSI_RESET);
+                                if (srlen >= 0)
+                                    srlen --;
+                            }
                         }
                         else
                         /* wrap modes */
@@ -2664,11 +2714,7 @@ _pmore2(
                         else if (*ans == 'q')
                             sbuf[0] = 0;
                         else
-#ifdef HAVE_DBCS_STRNCASECMP
                             sr.cmpfunc = mbs_strncasecmp;
-#else
-                            sr.cmpfunc = strncasecmp;
-#endif
                     }
                     sr.len = strlen(sbuf);
                     if (sr.len) sr.search_str = (unsigned char*)strdup(sbuf);
