@@ -327,9 +327,20 @@ search_predicates_via_svc(const char *direct, int bid,
     req.source = source;
     strlcpy(req.direct, direct, sizeof(req.direct));
 
+    fileheader_predicate_t svc_preds[MAX_SEARCH_PREDICATES];
+    const fileheader_predicate_t *send_preds = preds;
+    if (NEED_STORAGE_CONV) {
+        memcpy(svc_preds, preds, (size_t)num_preds * sizeof(fileheader_predicate_t));
+        for (int i = 0; i < num_preds; i++) {
+            mb_to_storage(preds[i].keyword, svc_preds[i].keyword,
+                          sizeof(svc_preds[i].keyword));
+        }
+        send_preds = svc_preds;
+    }
+
     size_t preds_bytes = (size_t)num_preds * sizeof(fileheader_predicate_t);
     if (search_svc_io(sfd, &req, sizeof(req), 1) != (int)sizeof(req) ||
-        search_svc_io(sfd, (void *)preds, preds_bytes, 1) != (int)preds_bytes) {
+        search_svc_io(sfd, (void *)send_preds, preds_bytes, 1) != (int)preds_bytes) {
         close(sfd);
         return -1;
     }
@@ -393,4 +404,3 @@ search_predicates_window_legacy(const char *direct, int bid,
                                     offset, limit, out_indices, out_total,
                                     SEARCH_SRC_UNKNOWN);
 }
-
