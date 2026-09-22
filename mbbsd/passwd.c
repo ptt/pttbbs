@@ -68,7 +68,7 @@ pwcuInitCUser(userec_t *u)
 }
 
 static int
-pwcuFinalCUser(userec_t *u)
+pwcuFinalCUser(const userec_t *u_orig, userec_t *u)
 {
     assert(usernum > 0 && usernum <= MAX_USERS);
     assert(strcmp(u->userid, cuser.userid) == 0);
@@ -76,17 +76,19 @@ pwcuFinalCUser(userec_t *u)
     log_filef("log/pwcu_exitsave.log", "%s FinalCUser invoked\n",
 	    cuser.userid);
 #endif
-    if (passwd_sync_update(usernum, u) != 0)
+    u->money = moneyof(usernum);
+    if (passwd_update_diff(usernum, u_orig, u) != 0)
 	return -1;
+    cuser.money = moneyof(usernum);
     return 0;
 }
 
 #ifdef   DISABLE_AGGRESSIVE_PWCU_CACHE
-# define PWCU_START()	userec_t u; if(pwcuInitCUser (&u) != 0) return -1
-# define PWCU_END()	if (pwcuFinalCUser(&u) != 0) return -1; return 0
+# define PWCU_START()	userec_t u, u_orig; do { if(pwcuInitCUser (&u) != 0) return -1; memcpy(&u_orig, &u, sizeof(u)); } while(0)
+# define PWCU_END()	if (pwcuFinalCUser(&u_orig, &u) != 0) return -1; return 0
 #else
 # define PWCU_START()	userec_t u, u_orig; do { if(pwcuInitCUser (&u) != 0) return -1; memcpy(&u_orig, &u, sizeof(u)); } while(0)
-# define PWCU_END()	do { if (memcmp(&u_orig, &u, sizeof(u)) != 0 && pwcuFinalCUser(&u) != 0) return -1; return 0; } while(0)
+# define PWCU_END()	do { if (memcmp(&u_orig, &u, sizeof(u)) != 0 && pwcuFinalCUser(&u_orig, &u) != 0) return -1; return 0; } while(0)
 #endif
 
 #define _ENABLE_BIT( var,mask) var |=  (mask)

@@ -107,6 +107,7 @@ int  passwd_init  (void);
 void passwd_lock  (void);
 void passwd_unlock(void);
 int  passwd_update_money(int num);
+int  passwd_update_diff(int num, const userec_t *orig_mem, userec_t *buf);
 int  passwd_update(int num, userec_t *buf);
 int  purge_user_account(int unum, const char *userid, const char *action_tag);
 int  passwd_query (int num, userec_t *buf);
