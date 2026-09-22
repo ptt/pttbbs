@@ -1,5 +1,4 @@
 #include "bbs.h"
-#include "psb.h"
 
 /* personal board state
  * 相對於看板的 attr (BRD_* in ../include/pttstruct.h),
@@ -12,7 +11,12 @@
 #define NBRD_UNREAD     32
 #define NBRD_SYMBOLIC   64
 
-#define TITLE_MATCH(bptr, key)	((key)[0] && !strcasestr((bptr)->title, (key)))
+static int
+board_title_has_key(const boardheader_t *bptr, const char *key)
+{
+    return mbs_strcasestr(TEMP_BRD_TITLE(bptr), key) != NULL;
+}
+#define TITLE_MATCH(bptr, key)	((key)[0] && !board_title_has_key((bptr), (key)))
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
@@ -227,9 +231,9 @@ static int
 b_posttype()
 {
    boardheader_t  *bp;
-   int i, modified = 0, types = 0;
+   int i, modified = 0;
    char filepath[PATHLEN], genbuf[60];
-   char posttype_f, posttype[sizeof(bp->posttype)]="", *p;
+   char posttype_f, posttype[sizeof(bp->posttype)]="";
 
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
@@ -241,16 +245,13 @@ b_posttype()
    do {
        move(2, 0);
        clrtobot();
-       for (i = 0, p = posttype; *p && i < 8; i++, p += 4) {
-           strlcpy(genbuf, p, 5);
+       for (i = 0; i < 8; i++) {
+           brd_get_posttype_slot(posttype, i, genbuf, sizeof(genbuf));
+           if (!genbuf[0])
+               break;
            prints(" %d. %s %s\n", i + 1, genbuf,
                   posttype_f & (1 << i) ? "(有範本)": "");
-           // Workaround broken items
-           if (strlen(p) < 4) {
-               memset(p + strlen(p), ' ', 4 - strlen(p));
-           }
        }
-       types = i;
        if (!getdata(15, 0,
                     "請輸入要設定的項目編號，或 c 設定總數,或 ENTER 離開:",
                     genbuf, 3, LCECHO))
@@ -264,21 +265,17 @@ b_posttype()
            i = atoi(genbuf);
            if (i < 0 || i > 8)
                continue;
-           while (i > types++)
-               STRLCAT(posttype, "    ");
-           posttype[i * 4] = 0;
+           brd_set_posttype_count(posttype, sizeof(posttype), i);
            continue;
        }
 
        i = atoi(genbuf) - 1;
        if (i < 0 || i >= 8)
            continue;
-       strlcpy(genbuf, posttype + i * 4, 5);
-       if(getdata_str(16, 0, "類別名稱: ", genbuf, 5, DOECHO, genbuf)) {
-           char tmp[5];
-           SNPRINTF(tmp, "%-4.4s", genbuf);
-           memcpy(posttype + (i * 4), tmp, 4);
-       }
+       char mb_type[SZ_COLS(5)];
+       brd_get_posttype_slot(posttype, i, mb_type, sizeof(mb_type));
+       if (getdata_str(16, 0, "類別名稱: ", mb_type, 5, DOECHO, mb_type))
+           brd_set_posttype_slot(posttype, sizeof(posttype), i, mb_type);
        getdata(17, 0, "要使用範本嗎? [y/n/K(不改變)]: ", genbuf, 2, LCECHO);
        if (genbuf[0] == 'y')
            posttype_f |= 1 << i;
@@ -377,8 +374,8 @@ b_config(void)
 
 	move(ytitle + 2, 0);
 
-	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
-	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? bp->BM : "(無)");
+	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", TEMP_BRD_TITLE(bp));
+	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? TEMP_BRD_BM(bp) : "(無)");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
 		(bp->brdattr & BRD_HIDE) ?
@@ -630,15 +627,15 @@ b_config(void)
 
 	    case 'b':
 		{
-		    char genbuf[BTLEN+1];
+		    char genbuf[SZ_COLS(BTLEN + 1)];
 		    move(b_lines, 0); clrtoeol();
 		    outs("請輸入看板新中文敘述: ");
-		    vgetstr(genbuf, BTLEN-16, 0, bp->title + 7);
-		    if (!genbuf[0] || strcmp(genbuf, bp->title+7) == 0)
+		    vgetstr(genbuf, BTLEN-16, 0, TEMP_BRD_TITLE_DESC(bp));
+		    if (!genbuf[0] || strcmp(genbuf, TEMP_BRD_TITLE_DESC(bp)) == 0)
 			break;
 		    touched = 1;
 		    strip_control_sequence(genbuf, genbuf);
-		    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
+		    brd_set_title_desc(bp, genbuf);
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 		    log_usies("SetBoard", currboard);
@@ -1060,7 +1057,7 @@ load_boards(char *key)
 			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
 			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			if (strcasestr(bptr->title, key))
+			if (board_title_has_key(bptr, key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
@@ -1271,9 +1268,6 @@ get_fav_type(boardstat_t *ptr)
     return 0;
 }
 
-static const cmd_t myfav_cmds[];
-static const cmd_t board_fav_cmds[];
-static const cmd_t board_admin_cmds[];
 static const cmd_t boardlist_cmds[];
 
 static const char *
@@ -1453,18 +1447,19 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 
                         // we don't print BM and popularity, so subject can be
                         // longer
-			prints("X%c %-13.13s%-7.7s %-48.48s",
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+			prints("X%c %-13.13s%s  %s",
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
                                 B_BH(ptr)->brdname,
                                 reason,
-#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-                                B_BH(ptr)->title + 7
+                                TEMP_BRD_TITLE_DESC(B_BH(ptr)));
 #else
-                                "<目前無法進入此看板>"
+			prints("X%c %-13.13s%s  <目前無法進入此看板>",
+				ptr->myattr & NBRD_TAG ? 'D' : ' ',
+                                B_BH(ptr)->brdname,
+                                reason);
 #endif
-                                );
-			clrtoeol();
-			return 0;
+			continue;
 		    }
 		}
 
@@ -1498,17 +1493,25 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 		}
 
 		if (!IN_CLASSROOT()) {
-		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
-			    "%2.2s" ANSI_RESET "%-34.34s",
+		    char t_cls[SZ_COLS(6)], t_sym[SZ_COLS(3)], t_desc[SZ_COLS(BTLEN + 1)];
+		    brd_get_title_class(B_BH(ptr), t_cls, sizeof(t_cls));
+		    if (should_show_sensitive_info) {
+			brd_get_title_symbol(B_BH(ptr), t_sym, sizeof(t_sym));
+			strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
+		    } else {
+			t_sym[0] = 0;
+			t_desc[0] = 0;
+		    }
+		    while (stream_width(t_desc) > 34) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
+		    prints("%s%-13s" ANSI_RESET "%s%s%*s" ANSI_COLOR(0;37)
+			    "%s%*s" ANSI_RESET "%s%*s",
 			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
 			      getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
 			    B_BH(ptr)->brdname,
 			    make_class_color(B_BH(ptr)->title),
-			    B_BH(ptr)->title,
-			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 5 : "",
-			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 7 : "");
+			    t_cls, 5 - (int)stream_width(t_cls) > 0 ? 5 - (int)stream_width(t_cls) : 0, "",
+			    t_sym, 2 - (int)stream_width(t_sym) > 0 ? 2 - (int)stream_width(t_sym) : 0, "",
+			    t_desc, 34 - (int)stream_width(t_desc) > 0 ? 34 - (int)stream_width(t_desc) : 0, "");
 
 		    if (!should_show_sensitive_info)
 			outs("   ");
@@ -1542,10 +1545,25 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
 		    else //if (B_BH(ptr)->nuser > 50)
 			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-		    prints("%.*s" ANSI_CLRTOEND, t_columns - 68, B_BH(ptr)->BM);
+		    char t_bm[SZ_COLS(IDLEN * 3 + 3)];
+		    strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
+		    while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
+			t_bm[strlen(t_bm) - 1] = 0;
+			mbs_safe_trim(t_bm);
+		    }
+		    prints("%s" ANSI_CLRTOEND, t_bm);
 		} else {
-		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-			   t_columns - 68, B_BH(ptr)->BM);
+		    char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
+		    strlcpy(t_desc, TEMP_BRD_TITLE_DESC(B_BH(ptr)), sizeof(t_desc));
+		    while (stream_width(t_desc) > 40) { t_desc[strlen(t_desc) - 1] = 0; mbs_safe_trim(t_desc); }
+		    strlcpy(t_bm, TEMP_BRD_BM(B_BH(ptr)), sizeof(t_bm));
+		    while (t_columns > 68 && (int)stream_width(t_bm) > t_columns - 68) {
+			t_bm[strlen(t_bm) - 1] = 0;
+			mbs_safe_trim(t_bm);
+		    }
+		    prints("%s%*s %s", t_desc,
+			   40 - (int)stream_width(t_desc) > 0 ? 40 - (int)stream_width(t_desc) : 0, "",
+			   t_bm);
 		}
 
     clrtoeol();
