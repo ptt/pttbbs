@@ -1,5 +1,4 @@
 #include "bbs.h"
-#include "psb.h"
 
 /* personal board state
  * 相對於看板的 attr (BRD_* in ../include/pttstruct.h),
@@ -12,7 +11,13 @@
 #define NBRD_UNREAD     32
 #define NBRD_SYMBOLIC   64
 
-#define TITLE_MATCH(bptr, key)     ((key)[0] && !strcasestr((bptr)->desc, (key)) && !strcasestr((bptr)->bclass, (key)))
+static int
+board_title_has_key(const boardheader_t *bptr, const char *key)
+{
+    return mbs_strcasestr(TEMP_STORAGE_TO_MB((bptr)->desc), key) != NULL ||
+           mbs_strcasestr(TEMP_STORAGE_TO_MB((bptr)->bclass), key) != NULL;
+}
+#define TITLE_MATCH(bptr, key)	((key)[0] && !board_title_has_key((bptr), (key)))
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
@@ -620,8 +625,8 @@ b_config(void)
 
 	move(ytitle + 2, 0);
 
-	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->desc);
-	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? bp->BM : "(無)");
+	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", TEMP_BRD_TITLE_DESC(bp));
+	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? TEMP_BRD_BM(bp) : "(無)");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
 		(bp->brdattr & BRD_HIDE) ?
@@ -873,15 +878,15 @@ b_config(void)
 
 	    case 'b':
 		{
-		    char genbuf[sizeof(bp->desc)];
+		    char genbuf[SZ_COLS(BTLEN + 1)];
 		    move(b_lines, 0); clrtoeol();
 		    outs("請輸入看板新中文敘述: ");
-		    vgetstr(genbuf, sizeof(genbuf), 0, bp->desc);
-		    if (!genbuf[0] || strcmp(genbuf, bp->desc) == 0)
+		    vgetstr(genbuf, BTLEN-16, 0, TEMP_BRD_TITLE_DESC(bp));
+		    if (!genbuf[0] || strcmp(genbuf, TEMP_BRD_TITLE_DESC(bp)) == 0)
 			break;
 		    touched = 1;
 		    strip_control_sequence(genbuf, genbuf);
-		    strlcpy(bp->desc, genbuf, sizeof(bp->desc));
+		    brd_set_title_desc(bp, genbuf);
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 		    log_usies("SetBoard", currboard);
@@ -1280,7 +1285,7 @@ load_boards(char *key)
 			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
 			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			if (strcasestr(bptr->desc, key) || strcasestr(bptr->bclass, key))
+			if (board_title_has_key(bptr, key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
@@ -1484,9 +1489,6 @@ get_fav_type(boardstat_t *ptr)
     return 0;
 }
 
-static const cmd_t myfav_cmds[];
-static const cmd_t board_fav_cmds[];
-static const cmd_t board_admin_cmds[];
 static const cmd_t boardlist_cmds[];
 
 static const char *
@@ -1655,16 +1657,18 @@ brdlist_hidden(int newflag, int head, boardstat_t *ptr) {
 
     // we don't print BM and popularity, so subject can be
     // longer
-    prints("X%c %-13.13s%-7.7s %-48.48s",
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+    prints("X%c %-13.13s%s  %s",
            ptr->myattr & NBRD_TAG ? 'D' : ' ',
            B_BH(ptr)->brdname,
            reason,
-#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-           B_BH(ptr)->desc
+           TEMP_BRD_TITLE_DESC(B_BH(ptr)));
 #else
-           "<目前無法進入此看板>"
+    prints("X%c %-13.13s%s  <目前無法進入該板>",
+           ptr->myattr & NBRD_TAG ? 'D' : ' ',
+           B_BH(ptr)->brdname,
+           reason);
 #endif
-           );
     clrtoeol();
     return 0;
 }
@@ -1752,18 +1756,21 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
               getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
             B_BH(ptr)->brdname);
 
-    const char *sym = (B_BH(ptr)->brdattr & BRD_SYMBOLIC) ? "☆" :
-                      (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "Σ" : "◎";
+    const char *sym = (B_BH(ptr)->brdattr & BRD_SYMBOLIC) ? "\xa1\xb8" :
+                      (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "\xa3U" : "\xa1\xb7";
+
+    char t_cls[SZ_COLS(6)];
+    brd_get_title_class(B_BH(ptr), t_cls, sizeof(t_cls));
 
     char col_class[64];
     SNPRINTF(col_class, "%s%-4.4s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
             make_class_color(B_BH(ptr)->bclass),
-            B_BH(ptr)->bclass,
+            t_cls,
             should_show_sensitive_info ? sym : "");
 
     char col_desc[128];
     SNPRINTF(col_desc, "%s",
-            should_show_sensitive_info ? B_BH(ptr)->desc : "");
+            should_show_sensitive_info ? TEMP_BRD_TITLE_DESC(B_BH(ptr)) : "");
 
     char col_nuser[64];
     if (!should_show_sensitive_info)
@@ -1797,7 +1804,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     else
         SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 
-    render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser, B_BH(ptr)->BM);
+    render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser, TEMP_BRD_BM(B_BH(ptr)));
     return 0;
 }
 
