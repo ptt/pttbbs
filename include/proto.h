@@ -368,7 +368,7 @@ void outmsg(const char *msg);
 void out_lines(const char *str, int line, int col);
 #define HAVE_EXPAND_ESC_STAR
 int  expand_esc_star(char *buf, const char *src, int szbuf);
-void strip_ansi_movecmd(char *s);
+void strip_move_control_sequence(char *s);
 void strip_esc_star(char *s);
 
 /* lovepaper */

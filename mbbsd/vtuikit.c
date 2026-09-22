@@ -62,7 +62,7 @@ nblank(int n)
 static void
 fillns(int n, const char *s)
 {
-    int d = str_at_ansi(n, s);
+    int d = stream_col_offset(n, s);
     if (d < 0) {
 	outs(s); nblank(-d);
     } else {
@@ -221,7 +221,7 @@ vfill(int n, int flags, const char *s)
 	if (flags & VFILL_RIGHT_ALIGN)
 	{
 	    // right-align
-	    int l = str_term_width(s);
+	    int l = stream_width(s);
 
 	    if (l >= n) // '=' prevents blanks
 		l = n;
@@ -254,7 +254,7 @@ vfill(int n, int flags, const char *s)
 inline void
 vpad(int n, const char *pattern)
 {
-    int len = str_term_width(pattern);
+    int len = stream_width(pattern);
     // assert(len > 0);
 
     while (n >= len)
@@ -309,7 +309,7 @@ vshowmsg(const char *msg)
 	outs(VCLR_PAUSE_PAD);
 	outc(' '); // initial one space
 
-	w -= str_term_width(VMSG_PAUSE);
+	w -= stream_width(VMSG_PAUSE);
 	w--; // initial space
 	vpad(w/2, VMSG_PAUSE_PAD);
 	outs(VCLR_PAUSE);
@@ -330,7 +330,7 @@ vshowmsg(const char *msg)
 	}
 
 	int rem = SAFE_MAX_COL - vgetx();
-	int szfloat = str_term_width(pfloat);
+	int szfloat = stream_width(pfloat);
 	if (rem >= szfloat) {
 	    nblank(rem - szfloat);
 	    outs(VCLR_MSG_FLOAT);
@@ -429,7 +429,7 @@ vbar(const char *s)
 void
 vbarlr(const char *l, const char *r)
 {
-    int szr = str_term_width(r);
+    int szr = stream_width(r);
 
     clrtoeol();
     outs(l);
@@ -498,8 +498,8 @@ void
 vs_header(const char *title, const char *mid, const char *right)
 {
     int w = MAX_COL;
-    int szmid   = mid   ? str_term_width(mid) : 0;
-    int szright = right ? str_term_width(right) : 0;
+    int szmid   = mid   ? stream_width(mid) : 0;
+    int szright = right ? stream_width(right) : 0;
 
     clear();
     outs(VCLR_HEADER);
@@ -627,7 +627,7 @@ vs_footer(const char *caption, const char *msg)
 	else if (*msg == '\t')
 	{
 	    // if we don't have enough space, ignore whole.
-	    int l = str_term_width(++msg);
+	    int l = stream_width(++msg);
 	    if (i + l > SAFE_MAX_COL) break;
 	    l = SAFE_MAX_COL - l - i;
 	    nblank(l);
@@ -1091,7 +1091,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     if (defstr && *defstr)
     {
 	strlcpy(buf, defstr, len);
-	strip_ansi(buf, buf); // safer...
+	strip_control_sequence(buf, buf); // safer...
 	rt.icurr = rt.iend = strlen(buf);
     }
 
@@ -1392,12 +1392,12 @@ vs_multi_T_table_auto(
             const char *lvar = *ptr++;
             const char *rvar = *ptr++;
             if (lvar && rvar && *rvar) {
-                int len_l = str_term_width(lvar);
-                int len_r = str_term_width(rvar);
+                int len_l = stream_width(lvar);
+                int len_r = stream_width(rvar);
                 if (len_l > max_l) max_l = len_l;
                 if (len_r > max_r) max_r = len_r;
             } else if (lvar && (!rvar || !*rvar)) {
-                int len_cap = str_term_width(lvar);
+                int len_cap = stream_width(lvar);
                 if (len_cap > max_cap) max_cap = len_cap;
             }
         }

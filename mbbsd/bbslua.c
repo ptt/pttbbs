@@ -238,7 +238,7 @@ bl_newwin(int rows, int cols, const char *title)
         return 0;
 
     // draw center-ed title
-    n = str_term_width(title);
+    n = stream_width(title);
     x = ox + (cols - n)/2;
     y = oy + (rows)/2;
     move(y, x);
@@ -626,7 +626,7 @@ bl_strip_ansi(lua_State *L)
 
     os2 = strlen(s)+1;
     s2 = (char*) lua_newuserdata(L, os2);
-    strip_ansi(s2, s);
+    strip_control_sequence(s2, s);
     lua_pushstring(L, s2);
     lua_remove(L, -2);
     return 1;

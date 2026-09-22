@@ -36,7 +36,7 @@ expand_esc_star(char *buf, const char *src, int szbuf)
 }
 
 void
-strip_ansi_movecmd(char *s) {
+strip_move_control_sequence(char *s) {
     while (*s) {
         if (*s == ESC_CHR) {
             if (*(s + 1) == '[') {
@@ -108,7 +108,7 @@ Ptt_prints(char *str, size_t size, int mode)
         w += strlen(strbuf+w);
     }
     strbuf[w] = 0;
-    strip_ansi_ex(str, strbuf, mode);
+    strip_control_sequence_ex(str, strbuf, mode);
     return str;
 }
 

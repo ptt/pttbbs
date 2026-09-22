@@ -220,8 +220,8 @@ show_chicken_stat(const chicken_t * thechicken, int age)
            ANSI_COLOR(33) "%d" ANSI_RESET "¤é "
 	   "(" ANSI_COLOR(32) "%s %d·³" ANSI_RESET ")\n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
-           (int)(30 - str_term_width(thechicken->name) -
-            str_term_width(chicken_type[(int)thechicken->type])),
+           (int)(30 - stream_width(thechicken->name) -
+            stream_width(chicken_type[(int)thechicken->type])),
            "", ptime.tm_year + 1900, ptime.tm_mon + 1, ptime.tm_mday,
 	   cage[age > 16 ? 16 : age], age);
 

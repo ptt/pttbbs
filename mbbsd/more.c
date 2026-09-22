@@ -256,7 +256,7 @@ int more(const char *fpath, int promptend)
 			    *buf != '\n' && strchr(buf, ':'))
 		    {
 			char *q1 = strchr(buf, ':');
-			int    l = t_columns - 2 - str_term_width(buf);
+			int    l = t_columns - 2 - stream_width(buf);
 			char *q2 = strstr(buf, STR_POST1);
 
 			chomp(buf);
@@ -422,31 +422,31 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
     // XXX if you want to refine code here to use for-loop,
     // remember to use a pre-calculated array to hold MACROSTRLEN
     // or use real strlen(). do not pass string pointer to MACROSTRLEN.
-    if (currstat == RMAIL && (w = str_term_width(FOOTERMSG_MAIL_LONG)) <= width)
+    if (currstat == RMAIL && (w = stream_width(FOOTERMSG_MAIL_LONG)) <= width)
     {
 	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_MAIL_LONG,
 		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    else if (currstat == READING && (w = str_term_width(FOOTERMSG_READ_LONG)) <= width)
+    else if (currstat == READING && (w = stream_width(FOOTERMSG_READ_LONG)) <= width)
     {
 	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_READ_LONG,
 		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    else if (currstat == READING && (w = str_term_width(FOOTERMSG_READ_MID)) <= width)
+    else if (currstat == READING && (w = stream_width(FOOTERMSG_READ_MID)) <= width)
     {
 	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_READ_MID,
 		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    else if ( (w = str_term_width(FOOTERMSG_SHORT)) <= width)
+    else if ( (w = stream_width(FOOTERMSG_SHORT)) <= width)
     {
 	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_SHORT,
 		FOOTERATTR_KEY, FOOTERATTR_TEXT);
     }
-    else if ( (w = str_term_width(FOOTERMSG_VERYSHORT)) <= width)
+    else if ( (w = stream_width(FOOTERMSG_VERYSHORT)) <= width)
     {
 	while (width-- > w) outc(' ');
 	display_hotkey_footer(FOOTERMSG_VERYSHORT,

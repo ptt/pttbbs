@@ -109,7 +109,7 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     char msg[ANSILINELEN * 10];
 
     SNPRINTF(title, "[報告] %s:%-*s 判決", crime,
-	    (int)(30 - str_term_width(crime)), reason);
+	    (int)(30 - stream_width(crime)), reason);
 
     SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"

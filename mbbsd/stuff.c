@@ -124,7 +124,7 @@ wait_penalty(int sec)
 // move this function to vtuikit.c
 /**
  * 眖材 y 秨﹍ show  filename 郎い玡 lines ︽
- * mode  output 家Α把计 strip_ansi
+ * mode  output 家Α把计 strip_control_sequence_ex
  * @param filename: the file to show
  * @param y:	    starting line on screen
  * @param lines:    max lines to be displayed
@@ -164,7 +164,7 @@ show_file(const char *filename, int y, int lines, int mode)
 		ret = 2;
 	    } else {
 		// ESC is very common...
-		strip_ansi_ex(buf, buf, strpmode);
+		strip_control_sequence_ex(buf, buf, strpmode);
 		outs(buf);
 	    }
 	}

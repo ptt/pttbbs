@@ -94,7 +94,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     total = load_ticket_record(direct, ticket);
 
     for (i = 0; i < count && !wide; i++) {
-        if (str_term_width(betname[i]) > NARROW_ITEM_WIDTH ||
+        if (stream_width(betname[i]) > NARROW_ITEM_WIDTH ||
             ticket[i] > 999999)
             wide = 1;
     }
@@ -403,7 +403,7 @@ openticket(int bid)
 
 	fprintf(fp, "\n¤Uª`±¡ªp\n");
         for (i = 0; i < count && !wide; i++) {
-            if (str_term_width(betname[i]) > NARROW_ITEM_WIDTH ||
+            if (stream_width(betname[i]) > NARROW_ITEM_WIDTH ||
                 ticket[i] > 999999)
                 wide = 1;
         }

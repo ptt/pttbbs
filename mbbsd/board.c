@@ -641,7 +641,7 @@ b_config(void)
 		    if (!genbuf[0] || strcmp(genbuf, bp->title+7) == 0)
 			break;
 		    touched = 1;
-		    strip_ansi(genbuf, genbuf);
+		    strip_control_sequence(genbuf, genbuf);
 		    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);

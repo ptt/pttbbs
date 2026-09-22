@@ -20,7 +20,7 @@
 #define GCC_CHECK_FORMAT(a,b)
 #endif
 
-// flags used by strip_ansi
+// flags used by strip_control_sequence_ex (ECMA-48 / ANSI control sequences started by ESC)
 enum STRIP_FLAG {
     STRIP_ALL = 0,
     ONLY_COLOR,	    // allow only colors (ESC [ .. m)
@@ -224,12 +224,13 @@ void chomp(char *src);
 
 int  mb_bytes(const char *s);
 int  mb_width(const char *s);
-int  str_term_width(const char *s);
-int  str_at_ansi(int count, const char *s);
+int  stream_width(const char *s);
+int  stream_col_offset(int count, const char *s);
 int  strip_blank(char *cbuf, const char *buf);
 int  reduce_blank(char *cbuf, const char *buf);
-int  strip_ansi(char *buf, const char *str);
-int  strip_ansi_ex(char *buf, const char *str, enum STRIP_FLAG flag);
+const char *skip_control_sequence(const char *src);
+int  strip_control_sequence(char *buf, const char *str);
+int  strip_control_sequence_ex(char *buf, const char *str, enum STRIP_FLAG flag);
 void strip_nonebig5(unsigned char *str, int maxlen);
 int  invalid_pname(const char *str);
 int  is_number(const char *p);
