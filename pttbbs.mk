@@ -1,5 +1,3 @@
-BBSHOME?=	$(HOME)
-
 SRCROOT?=	.
 OSTYPE:=	$(shell uname)
 
@@ -27,6 +25,9 @@ BBSCONF:=	$(SRCROOT)/pttbbs.conf
 # Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
 DEF_CHECK=	$(strip $(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | grep -qE "^#define[ \t]+$1([ \t]+1|[ \t]*$$)" && echo "YES"))
 
+CONF_BBSHOME:=	$(strip $(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | sed -n 's/^#define[ \t]\+BBSHOME[ \t]\+"\([^"]*\)".*/\1/p'))
+BBSHOME?=	$(if $(CONF_BBSHOME),$(CONF_BBSHOME),$(HOME))
+
 ifeq ($(MB_IS_UTF8),)
 MB_IS_UTF8:=	$(if $(call DEF_CHECK,MB_IS_UTF8),1,)
 endif
@@ -44,7 +45,7 @@ endif
 
 # Common build flags
 
-PTT_WARN:=	-Wall -Wextra -Wformat=2 \
+PTT_WARN:=	-Wall -Wextra -Wformat=2 -Werror=vla -Werror=alloca \
 		-Wno-missing-field-initializers -Wno-address-of-packed-member
 PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
