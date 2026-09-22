@@ -147,9 +147,9 @@ convert_big5_sgr66(const uint8_t *buf, size_t len,
 
         if (to_utf8) {
             uint16_t b5 = ((uint16_t)hi << 8) | (uint16_t)lo;
-            uint8_t utf8[4];
-            int ulen = ucs2utf(b2u_table[b5], utf8);
-            if (buf_append(out, utf8, (size_t)ulen) < 0)
+            utf8_ctx ctx;
+            int ulen = utf8_from_ucs(&ctx, b2u_table[b5]);
+            if (buf_append(out, ctx.buf, (size_t)ulen) < 0)
                 return -1;
         } else {
             uint8_t pair[2] = { hi, lo };

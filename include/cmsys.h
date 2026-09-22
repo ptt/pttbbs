@@ -205,12 +205,15 @@ void chomp(char *src);
 #if MB_IS_UTF8 && STORAGE_IS_BIG5
 #  define storage_to_mb(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #  define mb_to_storage(src, dst, sz) utf8_to_big5((src), (dst), (sz))
+#  define storage_to_mb_n(src, slen, dst, dlen) big5_to_utf8_n((src), (slen), (dst), (dlen))
 #elif MB_IS_BIG5 && STORAGE_IS_UTF8
 #  define storage_to_mb(src, dst, sz) utf8_to_big5((src), (dst), (sz))
 #  define mb_to_storage(src, dst, sz) big5_to_utf8((src), (dst), (sz))
+#  define storage_to_mb_n(src, slen, dst, dlen) utf8_to_big5_n((src), (slen), (dst), (dlen))
 #else
 #  define storage_to_mb(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
 #  define mb_to_storage(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
+#  define storage_to_mb_n(src, slen, dst, dlen) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (dlen)), mbs_safe_trim(dst), (dst)))
 #endif
 
 #if NEED_STORAGE_CONV
@@ -227,6 +230,7 @@ void chomp(char *src);
 int  mk_wcwidth(wchar_t ucs);
 int  mk_wcwidth_cjk(wchar_t ucs);
 int  is_cjk_ambiguous(wchar_t ucs);
+int  ucs_width(int ucs);
 int  mb_bytes(const char *s);
 int  mb_bytes(const char *s);
 int  mb_width(const char *s);
@@ -472,10 +476,67 @@ int bcrypt_gensalt  (int workfactor, char *salt, size_t saltlen);
 int bcrypt_checkpass(const char *pass, const char *goodhash);
 
 /* utf8.c */
-int ucs2utf(uint16_t ucs2, uint8_t *utf8);
-int utf2ucs(const uint8_t *utf8, uint16_t *pucs);
+typedef struct {
+    uint8_t buf[5];
+    uint8_t need;
+    uint8_t got;
+    uint8_t len;
+    int     ucs;
+} utf8_ctx;
+
+static inline void
+utf8_init(utf8_ctx *ctx)
+{
+    ctx->buf[0] = 0;
+    ctx->need = 0;
+    ctx->got = 0;
+    ctx->len = 0;
+    ctx->ucs = -1;
+}
+#define utf8_reset(ctx) utf8_init(ctx)
+
+static inline void
+utf8_error(utf8_ctx *ctx)
+{
+    ctx->buf[0] = '?';
+    ctx->buf[1] = 0;
+    ctx->need = 0;
+    ctx->got = 0;
+    ctx->len = 1;
+    ctx->ucs = '?';
+}
+
+static inline int
+utf8_pending(const utf8_ctx *ctx)
+{
+    return (ctx && ctx->need > ctx->got) ? (ctx->need - ctx->got) : 0;
+}
+
+static inline int
+utf8_is_ready(const utf8_ctx *ctx)
+{
+    return ctx && ctx->need > 0 && ctx->got == ctx->need;
+}
+
+static inline int
+utf8_get_ucs(utf8_ctx *ctx)
+{
+    if (!utf8_is_ready(ctx))
+        return -1;
+    int ucs = ctx->ucs;
+    ctx->need = 0;
+    ctx->got = 0;
+    ctx->ucs = -1;
+    return ucs;
+}
+
+int   utf8_add_byte(utf8_ctx *ctx, unsigned char byte);
+int   utf8_from_ucs(utf8_ctx *ctx, int ucs);
+int   utf8_to_mb(const utf8_ctx *ctx, char *mb);
 char *utf8_to_big5(const char *utf8, char *big5, size_t max_len);
 char *big5_to_utf8(const char *big5, char *utf8, size_t max_len);
+char *utf8_to_big5_n(const char *utf8, size_t src_len, char *big5, size_t max_len);
+char *big5_to_utf8_n(const char *big5, size_t src_len, char *utf8, size_t max_len);
 
 /* big5.c */
 extern const uint16_t b2u_table[];

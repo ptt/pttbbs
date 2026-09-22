@@ -140,7 +140,7 @@ evbuffer_b2u(struct evbuffer *source)
 		out += dlen;
 	    }
 
-	    uint8_t utf8[4];
+	    utf8_ctx ctx;
             int b5c = c[0] << 8 | c[1];
             bool need_jump = false;
 
@@ -152,10 +152,9 @@ evbuffer_b2u(struct evbuffer *source)
                     break;
             }
 
-	    int len = ucs2utf(b2u_table[b5c], utf8);
-	    utf8[len] = 0;
+	    int len = utf8_from_ucs(&ctx, b2u_table[b5c]);
 
-	    if (evbuffer_add(destination, utf8, len) < 0)
+	    if (evbuffer_add(destination, ctx.buf, len) < 0)
 		break;
 
             if (need_jump) {

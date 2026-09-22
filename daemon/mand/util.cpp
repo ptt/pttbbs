@@ -29,6 +29,7 @@ void File::Close() {
 
 std::string Big5ToUTF8(const char *big5) {
   std::string utf8;
+  utf8_ctx ctx;
   const uint8_t *p = reinterpret_cast<const uint8_t *>(big5);
   while (*p) {
     if (isascii(*p))
@@ -37,10 +38,9 @@ std::string Big5ToUTF8(const char *big5) {
       utf8.push_back('?');
       break;
     } else {
-      uint8_t cs[4];
-      utf8.append(
-          reinterpret_cast<const char *>(cs),
-          ucs2utf(b2u_table[static_cast<uint16_t>(p[0]) << 8 | p[1]], cs));
+      int len = utf8_from_ucs(
+          &ctx, b2u_table[static_cast<uint16_t>(p[0]) << 8 | p[1]]);
+      utf8.append(reinterpret_cast<const char *>(ctx.buf), len);
       p++;
     }
     p++;
