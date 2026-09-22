@@ -625,7 +625,7 @@ login_query(char *ruid)
 	    redrawwin();
 	}
 	else if (uid[0] && uid[len - 1] == '.') {
-	    set_converting_type(CONV_NORMAL);
+	    set_converting_type(CONV_BIG5);
 	    uid[len - 1] = 0;
 	    redrawwin();
 	}
@@ -1455,7 +1455,7 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		break;
 	    case 'e':
 		if (strcmp(optarg, "big5") == 0) {
-		    set_converting_type(CONV_NORMAL);
+		    set_converting_type(CONV_BIG5);
 		} else if (strcmp(optarg, "utf8") == 0) {
 		    set_converting_type(CONV_UTF8);
 		} else {

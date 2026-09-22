@@ -659,11 +659,20 @@ int  userid_is_BM(const char *userid, const char *list);
 int  is_uBM(const char *list, const char *id);
 time4_t  gettime(int line, time4_t dt, const char* head);
 // vgets/getdata utilities
+int  getdata_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo);
+int  getdata_str_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo, const char *defaultstr);
+int  getdata_buf_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo);
 int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int  get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size);
 int  set_user_new_passwd(int y, userec_t *u);
 int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
+#define getdata(line, col, prompt, buf, len, echo) \
+    getdata_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo))
+#define getdata_str(line, col, prompt, buf, len, echo, defaultstr) \
+    getdata_str_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo), (defaultstr))
+#define getdata_buf(line, col, prompt, buf, len, echo) \
+    getdata_buf_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo))
 int ParseDate(const char *date, int *year, int *month, int *day);
 int ParseDateTime(const char *date, int *year, int *month, int *day,
 		  int *hour, int *min, int *sec);

@@ -3,7 +3,7 @@
 
 
 typedef enum {
-    CONV_NORMAL,
+    CONV_BIG5,
     CONV_UTF8,
 } ConvertMode;
 

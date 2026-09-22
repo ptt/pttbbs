@@ -1058,7 +1058,7 @@ _vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, int c, VGET_RUNTIME *prt, void
 }
 
 int
-vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance)
+vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance)
 {
     // rt.iend points to NUL address, and
     // rt.icurr points to cursor.
@@ -1071,16 +1071,27 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     VGET_CALLBACKS cb = {NULL};
 
     // always use internal buffer to prevent temporary input issue.
-    char buf[STRLEN] = "";  // zero whole.
-
-    // runtime structure
-    VGET_RUNTIME    rt = { buf, len > STRLEN ? STRLEN : len };
+    char buf[SZ_COLS(STRLEN)] = "";  // zero whole.
 
     // it is wrong to design input with larger buffer
     // than STRLEN. Although we support large screen,
     // inputting huge line will just make troubles...
     if (len > STRLEN) len = STRLEN;
-    assert(len <= (int)sizeof(buf) && len >= 2);
+    assert(len >= 2);
+
+    int max_col = len - 1;
+    int max_bytes = MB_IS_UTF8 ? (max_col * 3 + 1) : len;
+    if (max_bytes > (int)sizeof(buf))
+	max_bytes = (int)sizeof(buf);
+    if (bufsz != (size_t)-1 && bufsz > 0) {
+	if (max_bytes > (int)bufsz)
+	    max_bytes = (int)bufsz;
+    } else {
+	max_bytes = len;
+    }
+
+    // runtime structure
+    VGET_RUNTIME    rt = { buf, max_bytes };
 
     // adjust flags
     if (flags & (VGET_NOECHO | VGET_DIGITS))
@@ -1089,9 +1100,13 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     // memset(buf, 0, len);
     if (defstr && *defstr)
     {
-	strlcpy(buf, defstr, len);
+	strlcpy(buf, defstr, max_bytes);
 	strip_control_sequence(buf, buf); // safer...
 	mbs_safe_trim(buf);
+	while ((int)stream_width(buf) > max_col && strlen(buf) > 0) {
+	    buf[strlen(buf) - 1] = 0;
+	    mbs_safe_trim(buf);
+	}
 	rt.icurr = rt.iend = strlen(buf);
     }
 
@@ -1238,10 +1253,13 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		    InputHistoryAdd(buf);
 
 		if (c == KEY_DOWN)
-		    InputHistoryNext(buf, len);
+		    InputHistoryNext(buf, max_bytes);
 		else
-		    InputHistoryPrev(buf, len);
-
+		    InputHistoryPrev(buf, max_bytes);
+		while ((int)stream_width(buf) > max_col && strlen(buf) > 0) {
+		    buf[strlen(buf) - 1] = 0;
+		    mbs_safe_trim(buf);
+		}
 		rt.icurr = rt.iend = strlen(buf);
 		dirty = 1;
 		continue;
@@ -1308,30 +1326,44 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	char mb[5];
 	int mblen = mb_from_vkey(c, mb);
-	if (mblen <= 0 || rt.iend + mblen >= len)
+	if (mblen <= 0 || rt.iend + mblen >= max_bytes)
 	{
 	    bell(); continue;
 	}
 
-	// prevent incomplete multibyte sequence when VKEY_IS_MB == 1
-	if (VKEY_IS_MB && c >= 0x80) {
-	    int need = 0;
-	    if (MB_IS_UTF8) {
+	// prevent incomplete multibyte sequence and enforce display width limit
+	int need = mblen;
+	int add_width = 0;
+	if (VKEY_IS_MB) {
+	    if (c < 0x80) {
+		need = 1;
+		add_width = 1;
+	    } else if (MB_IS_UTF8) {
 		if ((c & 0xC0) != 0x80) {
 		    if ((c & 0xE0) == 0xC0) need = 2;
 		    else if ((c & 0xF0) == 0xE0) need = 3;
 		    else if ((c & 0xF8) == 0xF0) need = 4;
+		    add_width = 2;
+		} else {
+		    need = 0;
 		}
 	    } else {
-		if (mbs_status(buf, rt.icurr) != MB_TRAILING)
+		if (mbs_status(buf, rt.icurr) != MB_TRAILING) {
 		    need = 2;
+		    add_width = 2;
+		} else {
+		    need = 0;
+		}
 	    }
-	    if (need > 0 && len - rt.iend < need + 1) {
-		for (int k = 1; k < need && vkey_is_ready(); k++)
-		    vkey();
-		bell();
-		continue;
-	    }
+	} else {
+	    add_width = mb_width(mb);
+	}
+	if (need > 0 && (max_bytes - rt.iend < need + 1 ||
+			 (int)stream_width(buf) + add_width > max_col)) {
+	    for (int k = 1; k < need && vkey_is_ready(); k++)
+		vkey();
+	    bell();
+	    continue;
 	}
 
 	// callback: data
@@ -1339,7 +1371,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    continue;
 
 	// size check again, due to data callback.
-	if (rt.iend + mblen >= len)
+	if (rt.iend + mblen >= max_bytes)
 	{
 	    bell(); continue;
 	}
@@ -1352,10 +1384,15 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	dirty = 1;
     }
 
-    assert(rt.iend >= 0 && rt.iend < len);
+    assert(rt.iend >= 0 && rt.iend < max_bytes);
     buf[rt.iend] = 0;
 
     mbs_safe_trim(buf);
+    while ((int)stream_width(buf) > max_col && strlen(buf) > 0) {
+	buf[strlen(buf) - 1] = 0;
+	mbs_safe_trim(buf);
+    }
+    rt.iend = strlen(buf);
 
     // final filtering
     if (rt.iend && (flags & VGET_LOWERCASE))
@@ -1366,7 +1403,9 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	InputHistoryAdd(buf);
 
     // copy buffer!
-    memcpy(_buf, buf, len);
+    strlcpy(_buf, buf, max_bytes);
+    if (rt.iend == 0 && max_bytes >= 2)
+	_buf[1] = buf[1];
 
     // XXX update screen display
     if (ismsgline)
@@ -1379,15 +1418,33 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 }
 
 int
-vgets(char *buf, int len, int flags)
+vgets_sz(char *buf, size_t bufsz, int len, int flags)
 {
-    return vgetstr(buf, len, flags, "");
+    return vgetstr_sz(buf, bufsz, len, flags, "");
 }
 
 int
-vgetstr(char *buf, int len, int flags, const char *defstr)
+vgetstr_sz(char *buf, size_t bufsz, int len, int flags, const char *defstr)
 {
-    return vgetstring(buf, len, flags, defstr, NULL, NULL);
+    return vgetstring_sz(buf, bufsz, len, flags, defstr, NULL, NULL);
+}
+
+int
+(vgets)(char *buf, int len, int flags)
+{
+    return vgetstr_sz(buf, (size_t)-1, len, flags, "");
+}
+
+int
+(vgetstr)(char *buf, int len, int flags, const char *defstr)
+{
+    return vgetstring_sz(buf, (size_t)-1, len, flags, defstr, NULL, NULL);
+}
+
+int
+(vgetstring)(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance)
+{
+    return vgetstring_sz(_buf, (size_t)-1, len, flags, defstr, pcbs, instance);
 }
 
 static void
