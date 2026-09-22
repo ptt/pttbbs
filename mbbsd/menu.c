@@ -259,26 +259,55 @@ decide_menu_row(const menuitem_t *p) {
 # define decide_menu_row(x) (menu_row)
 #endif
 
-void
-show_status(void)
+static void
+show_status_bar(int menu_index, const char *cmdtitle)
 {
     struct tm      ptime;
     static const char * const myweek[] = {
 	"日", "一", "二", "三", "四", "五", "六"
     };
+    char           lbuf[256];
+    const char     *rbuf;
 
     localtime4_r(&now, &ptime);
     move(b_lines, 0);
-    // Length: timer =15, today=14, online=8+N, me=5+12,
-    // pager=10, help=7
-    vbarlr(TEMPFORMAT(ANSILINELEN, ANSI_COLOR(34;46) "%d/%d周%s %d:%02d"
-	  ANSI_COLOR(1;33;45) "%-14s"
-	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31)
-	  "%d" ANSI_COLOR(30) "人,我是" ANSI_COLOR(31) "%s"
-          ANSI_COLOR(30) ",呼叫器" ANSI_COLOR(0;34;47) "%s", ptime.tm_mon + 1, ptime.tm_mday, myweek[ptime.tm_wday],
-	  ptime.tm_hour, ptime.tm_min, SHM->today_is,
-	  SHM->UTMPnumber, cuser.userid,
-	  str_pager_modes[currutmp->pager % PAGER_MODES]), ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明");
+
+    int n = snprintf(lbuf, sizeof(lbuf),
+	     VCLR_FOOTER_CAPTION " %s "
+	     ANSI_COLOR(1;33;45) "%-14s"
+	     ANSI_COLOR(30;47) " %d/%d 週%s %d:%02d | "
+	     ANSI_COLOR(31) "%s" ANSI_COLOR(30),
+	     cmdtitle,
+	     SHM->today_is,
+	     ptime.tm_mon + 1, ptime.tm_mday, myweek[ptime.tm_wday],
+	     ptime.tm_hour, ptime.tm_min,
+	     cuser.userid);
+    snprintf(lbuf + n, sizeof(lbuf) - n,
+	     " | 線上" ANSI_COLOR(31) "%d" ANSI_COLOR(30) "人",
+	     SHM->UTMPnumber);
+
+    bool show_back = false;
+    if (menu_index != M_MMENU) {
+	if (stream_width(lbuf) + 22 > t_columns - 1)
+	    lbuf[n] = '\0';
+	if (stream_width(lbuf) + 22 <= t_columns - 1)
+	    show_back = true;
+    }
+
+    if (show_back) {
+	rbuf = ANSI_COLOR(31) "(←)" ANSI_COLOR(30) "回到上層 "
+	       ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
+    } else {
+	rbuf = ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 ";
+    }
+
+    vbarlr(lbuf, rbuf);
+}
+
+void
+show_status(void)
+{
+    show_status_bar(M_MMENU, "主選單");
 }
 
 /*
@@ -447,9 +476,10 @@ menu_header(PSB_CTX *ctx)
 }
 
 static int
-menu_footer(PSB_CTX *ctx GCC_UNUSED)
+menu_footer(PSB_CTX *ctx)
 {
-    show_status();
+    menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
+    show_status_bar(cx->menu_index, cx->status);
     return 0;
 }
 
@@ -761,12 +791,15 @@ domenu(const menuitem_t *menu)
     int cmd = menu->default_enter;
     char title_buf[STRLEN];
     const char *title = menu->title;
+    const char *status = menu->status;
     int cmdmode;
     int total = 0;
     bool has_board_shortcuts;
 
     if (!title)
         title = extract_menu_title(menu->desc, title_buf, sizeof(title_buf));
+    if (!status)
+        status = title;
 
 
     assert(0 <= menu_index && menu_index < M_MENU_MAX);
@@ -796,7 +829,7 @@ domenu(const menuitem_t *menu)
         .menu_index = menu_index,
         .cmdmode = cmdmode,
         .title = title,
-        .status = title,
+        .status = status,
         .menu = menu,
         .cmdtable = cmdtable,
         .table_max = total,
@@ -1339,6 +1372,7 @@ main_menu(void)
     const menuitem_t menu = {
 	.submenu = cmdlist,
 	.mode = M_MMENU,
+	.status = "主選單",
 	.title = "主功\能表",
 	.default_enter = ISNEWMAIL(currutmp) ? 'M' : 'C',
 	.default_exit = 'G',
