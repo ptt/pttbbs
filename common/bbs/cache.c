@@ -969,6 +969,7 @@ reload_pttcache(void)
 
 		    fread(SHM->notes[id], sizeof(char), sizeof(SHM->notes[0]), fp2);
 		    SHM->notes[id][sizeof(SHM->notes[0]) - 1] = 0;
+		    storage_to_mb(SHM->notes[id], SHM->notes[id], sizeof(SHM->notes[0]));
 		    rawid ++;
 
 		    // filtering
