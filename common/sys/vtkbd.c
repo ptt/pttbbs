@@ -95,6 +95,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include "cmsys.h"
 #include "vtkbd.h"
 
 /* VtkbdCtx.state */
@@ -103,6 +104,8 @@ typedef enum {
     VKSTATE_ESC,        // <Esc>
     VKSTATE_ESC_APP,    // <Esc> O (SS3)
     VKSTATE_CSI,        // <Esc> [ (ECMA-48 Control Sequence Introducer)
+    VKSTATE_UTF8,       // UTF-8 multi-byte sequence
+    VKSTATE_BIG5,       // Big5 2-byte sequence
 }   VKSTATES;
 
 #define VKRAW_BS    0x08    // \b = Ctrl('H')
@@ -133,6 +136,25 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 return KEY_INCOMPLETE;
             }
 
+            if (!VKEY_IS_MB && c >= 0x80) {
+                if (MB_IS_UTF8) {
+                    utf8_reset(&ctx->utf8);
+                    utf8_add_byte(&ctx->utf8, c);
+                    if (utf8_pending(&ctx->utf8)) {
+                        ctx->state = VKSTATE_UTF8;
+                        return KEY_INCOMPLETE;
+                    }
+                    return KEY_UNKNOWN;
+                } else {
+                    if (c >= 0x81 && c <= 0xFE) {
+                        ctx->mb_buf = c & 0xFF;
+                        ctx->state = VKSTATE_BIG5;
+                        return KEY_INCOMPLETE;
+                    }
+                    return KEY_UNKNOWN;
+                }
+            }
+
             // simple mappings
             switch (c) {
                 // BS/ERASE/DEL Rules
@@ -141,6 +163,33 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                     return KEY_BS;
             }
             return c;
+
+        case VKSTATE_UTF8:
+            if (c < 0x80) {
+                utf8_reset(&ctx->utf8);
+                ctx->state = VKSTATE_NORMAL;
+                return vtkbd_process(c, ctx);
+            }
+            if (utf8_add_byte(&ctx->utf8, c)) {
+                int ucs = utf8_get_ucs(&ctx->utf8);
+                ctx->state = VKSTATE_NORMAL;
+                if (IS_SPECIAL_KEY(ucs))
+                    return KEY_UNKNOWN;
+                return ucs;
+            }
+            if (!utf8_pending(&ctx->utf8)) {
+                ctx->state = VKSTATE_NORMAL;
+                return KEY_UNKNOWN;
+            }
+            return KEY_INCOMPLETE;
+
+        case VKSTATE_BIG5:
+            ctx->state = VKSTATE_NORMAL;
+            if ((c >= 0x40 && c <= 0x7E) || (c >= 0xA1 && c <= 0xFE))
+                return (ctx->mb_buf << 8) | (c & 0xFF);
+            if (c < 0x40)
+                return vtkbd_process(c, ctx);
+            return KEY_UNKNOWN;
 
         case VKSTATE_ESC:       // <Esc>
             switch (c) {

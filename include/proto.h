@@ -325,7 +325,7 @@ VKEY_CTX *vkey_get_context(void);
 // initialization
 void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
-int  vkey(void);	     // receive and block infinite time for next key
+int  vkey(void);	     // receive next key (KEY_*, ASCII, raw multibyte byte, or decoded wchar - see VKEY_IS_MB)
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
 const vtkbd_mouse_t *vkey_get_mouse(void); // get latest mouse event
 int  vkey_get_mouse_pos(int *x, int *y);   // get latest mouse coordinates
@@ -632,7 +632,7 @@ int search_aidu(char *bfile, aidu_t aidu);
 /* end of AIDS */
 
 /* stuff */
-#define isprint2(ch) ((ch & 0x80) || isprint(ch))
+#define isprint2(ch) (((ch) & 0x80) || isprint((unsigned char)(ch)))
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define pressanykey() vmsg(NULL)

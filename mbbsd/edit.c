@@ -3406,8 +3406,10 @@ phone_mode_switch(void)
  * return coresponding phone char of given key c
  */
 static const char*
-phone_char(char c)
+phone_char(int c)
 {
+    if (!isascii(c))
+	return 0;
     if (curr_buf->last_phone_mode > 0 && curr_buf->last_phone_mode < 20) {
 	if (tolower(c) < 'a' ||
             (tolower(c)-'a') >= (int)strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2)
@@ -3536,10 +3538,31 @@ upload_file(void)
 	}
 
 	c = vkey();
-	if (c < 0x100 && isprint2(c))
+	if (vkey_isprint(c))
 	{
-	    insert_char(c);
-	    szdata ++;
+	    if (!VKEY_IS_MB && !isascii(c)) {
+		char mb[5];
+		int mblen = mb_from_vkey(c, mb);
+		if (mblen > 0) {
+		    insert_dchar(mb);
+		    szdata += mblen;
+		}
+	    } else if (VKEY_IS_MB && MB_IS_UTF8 && (c & 0x80)) {
+		utf8_ctx uctx;
+		utf8_init(&uctx);
+		utf8_add_byte(&uctx, c);
+		while (utf8_pending(&uctx))
+		    utf8_add_byte(&uctx, vkey());
+		char ubuf[5];
+		int ulen = utf8_to_mb(&uctx, ubuf);
+		if (ulen > 0) {
+		    insert_dchar(ubuf);
+		    szdata += ulen;
+		}
+	    } else {
+		insert_char(c);
+		szdata ++;
+	    }
 	}
 	else if (c == Ctrl('U') || c == ESC_CHR)
 	{
@@ -3691,11 +3714,24 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	if (phone_mode_filter(ch))
 	    continue;
 
-	if (ch < 0x100 && isprint2(ch)) {
+	if (vkey_isprint(ch)) {
 	    const char *pstr;
             if(curr_buf->phone_mode && (pstr=phone_char(ch)))
 	   	insert_dchar(pstr);
-	    else
+	    else if (!VKEY_IS_MB && !isascii(ch)) {
+		char mb[5];
+		if (mb_from_vkey(ch, mb) > 0)
+		    insert_dchar(mb);
+	    } else if (VKEY_IS_MB && MB_IS_UTF8 && (ch & 0x80)) {
+		utf8_ctx uctx;
+		utf8_init(&uctx);
+		utf8_add_byte(&uctx, ch);
+		while (utf8_pending(&uctx))
+		    utf8_add_byte(&uctx, vkey());
+		char ubuf[5];
+		if (utf8_to_mb(&uctx, ubuf) > 0)
+		    insert_dchar(ubuf);
+	    } else
 		insert_char(ch);
 	    curr_buf->lastindent = -1;
 	} else {

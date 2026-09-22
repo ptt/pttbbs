@@ -441,6 +441,15 @@ mb_from_vkey(int key, char *buf)
         buf[0] = '\0';
         return 0;
     }
+    if (VKEY_IS_MB) {
+        if (key <= 0xFF) {
+            buf[0] = (char)key;
+            buf[1] = '\0';
+            return 1;
+        }
+        buf[0] = '\0';
+        return 0;
+    }
     if (MB_IS_UTF8) {
         utf8_ctx ctx;
         if (!utf8_from_ucs(&ctx, key)) {
