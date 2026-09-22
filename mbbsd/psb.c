@@ -931,8 +931,13 @@ pvrb_renderer(int i, PSB_CTX *ctx) {
     if (i == curr)
         // prints(ANSI_COLOR(1;40;3%d), i%8);
         outs(ANSI_COLOR(1;40;31));
-    prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET,
-           total - i, fh->date, fh->owner, fh->title);
+    char obuf[sizeof(fh->owner)];
+    int ocols = 0;
+    int off = stream_col_offset(12, fh->owner, &ocols);
+    strlcpy(obuf, fh->owner, off + 1);
+    int opad = 12 - ocols;
+    prints("%06d  %-5.5s  %s%*s %s" ANSI_RESET,
+           total - i, fh->date, obuf, opad > 0 ? opad : 0, "", fh->title);
     return 0;
 }
 
@@ -1319,10 +1324,17 @@ typedef struct {
 
 static int
 pae_header(PSB_CTX *ctx GCC_UNUSED) {
+    const char *h_id = "編號", *h0 = "名  稱", *h1 = "檔  名";
+    int pad_id = 5 - stream_width(h_id);
+    int pad0 = 36 - stream_width(h0);
+    int pad1 = 30 - stream_width(h1);
     vs_draw_hdr2("系統檔案", "編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
     vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
-         "%5s %-36s%-30s", "編號", "名  稱", "檔  名"));
+         "%*s%s %s%*s%s%*s",
+         pad_id > 0 ? pad_id : 0, "", h_id,
+         h0, pad0 > 0 ? pad0 : 0, "",
+         h1, pad1 > 0 ? pad1 : 0, ""));
     return 0;
 }
 
@@ -1337,11 +1349,14 @@ pae_footer(PSB_CTX *ctx GCC_UNUSED) {
 static int
 pae_renderer(int i, PSB_CTX *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx->cmd.priv;
-    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET,
+    int pad0 = 36 - stream_width(cx->descs[i]);
+    int pad1 = 30 - stream_width(cx->files[i]);
+    prints("  %3d %s%s%s%*s " ANSI_COLOR(1;37) "%s%*s" ANSI_RESET,
             i+1,
             (i == ctx->cmd.curr) ? ANSI_COLOR(41) : "",
             dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30),
-            cx->descs[i], cx->files[i]);
+            cx->descs[i], pad0 > 0 ? pad0 : 0, "",
+            cx->files[i], pad1 > 0 ? pad1 : 0, "");
     return 0;
 }
 
