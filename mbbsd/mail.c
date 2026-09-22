@@ -1641,14 +1641,23 @@ maildoent(int num, fileheader_t * ent)
 	color = "";
     }
 
-    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s\n",
+    char obuf[IDLEN + 2], tbuf[TTLEN + 1];
+    int maxw = t_columns > 34 ? t_columns - 34 : 0;
+    strlcpy(obuf, ent->owner, sizeof(obuf));
+    int o_off = stream_col_offset(14, obuf);
+    if (o_off >= 0) { obuf[o_off] = 0; mbs_safe_trim(obuf); }
+    int o_pad = 15 - stream_width(obuf);
+    strlcpy(tbuf, title, sizeof(tbuf));
+    int t_off = stream_col_offset(maxw, tbuf);
+    if (t_off >= 0) { tbuf[t_off] = 0; mbs_safe_trim(tbuf); }
+    int t_pad = maxw - stream_width(tbuf);
+    prints("%6d %c %-6s%s%s%*s%s%s %s%s%*s%s\n",
 	    num, type, datepart,
 	    isonline ? ANSI_COLOR(1) : "",
-	    ent->owner,
+	    obuf, o_pad > 0 ? o_pad : 0, "",
 	    isonline ? ANSI_RESET : "",
 	    mark, color,
-	    t_columns - 34, t_columns - 34,
-	    title,
+	    tbuf, t_pad > 0 ? t_pad : 0, "",
 	    *color ? ANSI_RESET : "");
 }
 
@@ -2111,8 +2120,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
         return DONOTHING;
 
     setuserfile(fpath, fhdr->filename);
-    STRLCPY(title, "¡º ");
-    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    snprintf(title, sizeof(title), "¡º %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
 
     if (cuser.userlevel >= PERM_BM) {
@@ -2157,8 +2165,7 @@ mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct
     if (!HasUserPerm(PERM_MAILLIMIT))
         return DONOTHING;
     setuserfile(fpath, fhdr->filename);
-    STRLCPY(title, "¡º ");
-    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
+    snprintf(title, sizeof(title), "¡º %s", fhdr->title);
     a_copyitem(fpath, title, fhdr->owner, 1);
     sethomeman(fpath, cuser.userid);
     sethomedir(backup_path, cuser.userid);
