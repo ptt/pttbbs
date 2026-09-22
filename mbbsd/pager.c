@@ -163,7 +163,7 @@ pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
     char online_mark = uin ? ' ' : (is_vertical ? 'x' : '#');
 
     char dispname[STRLEN];
-    if (HAS_ANGEL && is_angel_msgmode(w->msg[0].msgmode) && !strstr(w->userid, STR_ANGEL)) {
+    if (HAS_ANGEL && is_angel_msgmode(w->msg[0].msgmode) && !mbs_strstr(w->userid, STR_ANGEL)) {
         snprintf(dispname, sizeof(dispname), "¡¹¤p¥D¤H %s", w->userid);
     } else {
         STRLCPY(dispname, w->userid);
@@ -191,7 +191,7 @@ ofo_water_scr(const water_t *tw, int which, char type)
     move(0, 0);
     clrtoeol();
     if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
-        if (strstr(tw->userid, STR_ANGEL))
+        if (mbs_strstr(tw->userid, STR_ANGEL))
             outs(PROMPT_ANGEL_AGAIN);
         else
             outs(PROMPT_ANGEL_ANSWER);
@@ -256,7 +256,7 @@ static int
 ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
 {
     if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
-        if (strstr(tw->userid, STR_ANGEL)) {
+        if (mbs_strstr(tw->userid, STR_ANGEL)) {
             strlcpy(genbuf, PROMPT_ANGEL_AGAIN, sz);
             return WATERBALL_CONFIRM_ANGEL;
         } else {
@@ -462,7 +462,7 @@ my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t 
         char trunc[STRLEN], genbuf[2];
         STRLCPY(trunc, msg);
         trunc[STRLEN - strlen(PROMPT_VERIFY) - IDLEN - 2] = '\0';
-        DBCS_safe_trim(trunc);
+        mbs_safe_trim(trunc);
         if (strlen(trunc) != strlen(msg))
             STRLCAT(trunc, "...");
         getdata(0, 0, TEMPFORMAT(STRLEN, PROMPT_VERIFY, destid, trunc), genbuf, sizeof(genbuf), LCECHO);
@@ -1015,8 +1015,8 @@ is_swater_compatible(const water_t *w, const msgque_t *msg)
         return 0;
 
     if (is_angel_msgmode(msg->msgmode)) {
-        bool w_is_master_side = (strstr(w->userid, STR_ANGEL) != NULL);
-        bool msg_is_master_side = (strstr(msg->userid, STR_ANGEL) != NULL);
+        bool w_is_master_side = (mbs_strstr(w->userid, STR_ANGEL) != NULL);
+        bool msg_is_master_side = (mbs_strstr(msg->userid, STR_ANGEL) != NULL);
         return w_is_master_side == msg_is_master_side;
     }
 

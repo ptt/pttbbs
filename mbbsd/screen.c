@@ -228,7 +228,7 @@ redrawwin(void)
 
 	    if (!(bp->mode & STANDOUT) &&
 		    (HasUserFlag(UF_DBCS_NOINTRESC)) &&
-		    DBCS_RemoveIntrEscape(bp->data, &len))
+		    mbs_remove_intr_escape(bp->data, &len))
 	    {
 		// if anything changed, dirty whole line.
 		bp->len = len;
@@ -327,7 +327,7 @@ doupdate(void)
 
 	    if (!(bp->mode & STANDOUT) &&
 		(HasUserFlag(UF_DBCS_NOINTRESC)) &&
-		DBCS_RemoveIntrEscape(bp->data, &len))
+		mbs_remove_intr_escape(bp->data, &len))
 	    {
 		// if anything changed, dirty whole line.
 		bp->len = len;

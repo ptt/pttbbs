@@ -134,7 +134,7 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
     size_t offset = records::Get<fileheader_t>(
         paths::bfile(bp->brdname, FN_DIR), req->offset(), req->length(), &fhs);
     for (auto &fh : fhs) {
-      DBCS_safe_trim(fh.title);
+      mbs_safe_trim(fh.title);
       AsPost(offset++, fh).Swap(rep->add_posts());
     }
   }
@@ -144,7 +144,7 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
     size_t offset = records::Get<fileheader_t>(
         paths::bfile(bp->brdname, FN_DIR ".bottom"), 0, -1, &fhs);
     for (auto &fh : fhs) {
-      DBCS_safe_trim(fh.title);
+      mbs_safe_trim(fh.title);
       AsPost(offset++, fh).Swap(rep->add_bottoms());
     }
   }
@@ -307,7 +307,7 @@ Status BoardServiceImpl::Search(ServerContext *context,
   size_t offset = records::Get<fileheader_t>(
       paths::bfile(bp->brdname, base_name), req->offset(), req->length(), &fhs);
   for (auto &fh : fhs) {
-    DBCS_safe_trim(fh.title);
+    mbs_safe_trim(fh.title);
     AsPost(offset++, fh).Swap(rep->add_posts());
   }
   rep->set_total_posts(

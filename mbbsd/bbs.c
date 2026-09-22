@@ -908,7 +908,7 @@ readdoent(int num, fileheader_t * ent)
 
     // print subject, bounded by w.
     if ((int)strlen(title) > w) {
-        if (DBCS_Status(title, w-2) == DBCS_TRAILING)
+        if (mbs_status(title, w-2) == MB_TRAILING)
             w--;
         outns(title, w-2);
         outs("…");
@@ -1145,7 +1145,7 @@ do_reply_title(int row, const char *title, const char *prefix,
     if (len > TTLEN)
         len = TTLEN;
     tmp_title[len - 1] = '\0';
-    DBCS_safe_trim(tmp_title);
+    mbs_safe_trim(tmp_title);
     strlcpy(result, tmp_title, len);
 
     mvouts(row++, 0, "原標題: "); outs(result);
@@ -1179,7 +1179,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     strlcpy(genbuf, title, len + 1);
     if ((int)strlen(title) > len) {
         genbuf[len-2] = 0;
-        DBCS_safe_trim(genbuf);
+        mbs_safe_trim(genbuf);
         strcat(genbuf, "…");
     }
     SNPRINTF(fh.title, "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
@@ -1195,7 +1195,7 @@ void
 dbcs_safe_trim_title(char *output, const char *title, int len) {
     if ((int)strlen(title) > len) {
         snprintf(output, len + 1, "%-*.*s", len - 2, len - 2, title);
-        DBCS_safe_trim(output);
+        mbs_safe_trim(output);
         strlcat(output, "…", len + 1);
         while ((int)strlen(output) < len)
             strlcat(output, " ", len + 1);
@@ -4412,7 +4412,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     i = 4;
     while (fgets(buf, sizeof(buf), fp)) {
         strip_control_sequence(buf, buf);
-        if (strstr(buf, pattern)) {
+        if (mbs_strstr(buf, pattern)) {
             found++;
             mvouts(i, 0, ANSI_RESET);
             outs(buf);
@@ -4454,7 +4454,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     fpw = fopen(fpath, "wt");
     while (fgets(buf, sizeof(buf), fp)) {
         strip_control_sequence(buf2, buf);
-        if (strstr(buf2, pattern)) {
+        if (mbs_strstr(buf2, pattern)) {
             fputs("※ [部份違規文字已刪除]\n", fpw);
             continue;
         }

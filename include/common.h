@@ -338,7 +338,7 @@ static inline const char* _temp_format_helper(
 // C99 required. Temporarily allocate a string that will be released on leaving
 // the caller's scope {}.
 #define TEMPFORMAT(n, fmt, ...) \
-    _temp_format_helper((char[n]){0}, (n), (fmt), ##__VA_ARGS__)
+    _temp_format_helper((char[SZ_COLS(n)]){0}, SZ_COLS(n), (fmt), ##__VA_ARGS__)
 
 #define toSTR(x)	__toSTR(x)
 #define __toSTR(x)	#x

@@ -86,7 +86,7 @@ HaveRejectStr(const char *s, const char *fn_db)
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         // strip \n
         buf[strlen(buf) - 1] = 0;
-        if (*buf && DBCS_strcasestr(s, buf)) {
+        if (*buf && mbs_strcasestr(s, buf)) {
             ret = 1;
             break;
         }
@@ -169,18 +169,18 @@ isvalidaddr(char *addr, int isForeign)
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (DBCS_strcasestr(addr, "信箱") != 0 ||
-        DBCS_strcasestr(addr, "郵政") != 0)
+    if (mbs_strstr(addr, "信箱") != 0 ||
+        mbs_strstr(addr, "郵政") != 0)
 	return "抱歉我們不接受郵政信箱";
 
     if (strlen_without_space(addr) < 15)
 	return "這個地址似乎並不完整";
 
     if (!isForeign &&
-	((DBCS_strcasestr(addr, "市") == 0 &&
-	  DBCS_strcasestr(addr, "巿") == 0 &&
-	  DBCS_strcasestr(addr, "縣") == 0 &&
-	  DBCS_strcasestr(addr, "室") == 0) ||
+	((mbs_strstr(addr, "市") == 0 &&
+	  mbs_strstr(addr, "巿") == 0 &&
+	  mbs_strstr(addr, "縣") == 0 &&
+	  mbs_strstr(addr, "室") == 0) ||
 	 str_ends_with(addr, "段") ||
 	 str_ends_with(addr, "路") ||
 	 str_ends_with(addr, "巷") ||

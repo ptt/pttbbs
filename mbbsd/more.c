@@ -257,10 +257,10 @@ int more(const char *fpath, int promptend)
 		    {
 			char *q1 = strchr(buf, ':');
 			int    l = t_columns - 2 - stream_width(buf);
-			char *q2 = strstr(buf, STR_POST1);
+			char *q2 = mbs_strstr(buf, STR_POST1);
 
 			chomp(buf);
-			if (q2 == NULL) q2 = strstr(buf, STR_POST2);
+			if (q2 == NULL) q2 = mbs_strstr(buf, STR_POST2);
 			if (q2)	    { *(q2-1) = 0; q2 = strchr(q2, ':'); }
 			else q2 = q1;
 

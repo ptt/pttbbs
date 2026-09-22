@@ -172,7 +172,7 @@ chat_safe_trim(char *s, int size)
     len = strlen(s);
     if (len >= size)
 	s[size-1] = 0;
-    DBCS_safe_trim(s);
+    mbs_safe_trim(s);
 }
 
 /* ----------------------------------------------------- */
@@ -294,8 +294,8 @@ debug_room()
 static int valid_chatid(register char *id) {
     register int ch, len;
     
-    if (DBCS_strcasestr(id, "¡»") ||
-        DBCS_strcasestr(id, "¡°"))
+    if (mbs_strstr(id, "¡»") ||
+        mbs_strstr(id, "¡°"))
         return 0;
     for(len = 0; (ch = *id); id++) {
 	/* Thor: check for endless */
@@ -763,7 +763,7 @@ chat_topic(ChatUser *cu, char *msg)
     assert(room);
     topic = room->topic;
     strlcpy(topic, msg, sizeof(room->topic));
-    DBCS_safe_trim(topic);
+    mbs_safe_trim(topic);
 
     SNPRINTF(chatbuf, "/t%s", topic);
     send_to_room(room, chatbuf, 0, 0);

@@ -898,7 +898,7 @@ vs_quick_pref(int default_value, const char *title, const char *entry,
 // DBCS Aware Helpers
 ////////////////////////////////////////////////////////////////////////
 
-#define CHKDBCSTRAIL(_buf,_i) (ISDBCSAWARE() && DBCS_Status(_buf, _i) == DBCS_TRAILING)
+#define CHKDBCSTRAIL(_buf,_i) (ISDBCSAWARE() && mbs_status(_buf, _i) == MB_TRAILING)
 
 ////////////////////////////////////////////////////////////////////////
 // History Helpers
@@ -1005,7 +1005,7 @@ InputHistoryDelta(char *s, int sz, int d)
 
     // DBCS safe
     i = strlen(s);
-    if (DBCS_Status(s, i) == DBCS_TRAILING)
+    if (mbs_status(s, i) == MB_TRAILING)
 	s[i-1] = 0;
 }
 
@@ -1313,9 +1313,9 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	// prevent incomplete DBCS
 	if (len - rt.iend < 3 && c > 0x80 &&
-		DBCS_Status(buf, rt.icurr) != DBCS_TRAILING)	// we need 3 for DBCS+NUL.
+		mbs_status(buf, rt.icurr) != MB_TRAILING)	// we need 3 for DBCS+NUL.
 	{
-	    // XXX should we purge here, or wait the final DBCS_safe_trim?
+	    // XXX should we purge here, or wait the final mbs_safe_trim?
 	    if (vkey_is_ready())
 		vkey();
 	    bell(); continue;
@@ -1341,7 +1341,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     assert(rt.iend >= 0 && rt.iend < len);
     buf[rt.iend] = 0;
 
-    DBCS_safe_trim(buf);
+    mbs_safe_trim(buf);
 
     // final filtering
     if (rt.iend && (flags & VGET_LOWERCASE))

@@ -349,14 +349,24 @@ stream_col_offset(int count, const char *s)
     const char *os = s;
 
     while (count > 0 && *s) {
-        const char *p = strchrnul(s, ESC_CHR);
-        int chunk = p - s;
-        if (chunk >= count)
-            return (s + count) - os;
-        count -= chunk;
-        if (*p == '\0')
-            break;
-        s = skip_control_sequence(p);
+        if (*s == ESC_CHR) {
+            s = skip_control_sequence(s);
+            continue;
+        }
+        if (MB_IS_BIG5) {
+            const char *p = strchrnul(s, ESC_CHR);
+            int chunk = p - s;
+            if (chunk >= count)
+                return (s + count) - os;
+            count -= chunk;
+            s = p;
+        } else {
+            int w = mb_width(s);
+            if (w > count)
+                return s - os;
+            count -= w;
+            s += mb_bytes(s);
+        }
     }
     return (count > 0) ? -count : (s - os);
 }
@@ -395,6 +405,52 @@ mb_width(const char *s)
 }
 
 int
+mb_from_vkey(int key, char *buf)
+{
+    if (key <= 0 || ((key & 0xF800) == 0xD800)) {
+        buf[0] = '\0';
+        return 0;
+    }
+    if (key < 0x80) {
+        buf[0] = (char)key;
+        buf[1] = '\0';
+        return 1;
+    }
+    if (MB_IS_UTF8) {
+        if (key < 0x800) {
+            buf[0] = (char)(0xC0 | (key >> 6));
+            buf[1] = (char)(0x80 | (key & 0x3F));
+            buf[2] = '\0';
+            return 2;
+        }
+        if (key < 0x10000) {
+            buf[0] = (char)(0xE0 | (key >> 12));
+            buf[1] = (char)(0x80 | ((key >> 6) & 0x3F));
+            buf[2] = (char)(0x80 | (key & 0x3F));
+            buf[3] = '\0';
+            return 3;
+        }
+        if (key <= 0x10FFFF) {
+            buf[0] = (char)(0xF0 | (key >> 18));
+            buf[1] = (char)(0x80 | ((key >> 12) & 0x3F));
+            buf[2] = (char)(0x80 | ((key >> 6) & 0x3F));
+            buf[3] = (char)(0x80 | (key & 0x3F));
+            buf[4] = '\0';
+            return 4;
+        }
+    } else {
+        if (key >= 0x8140 && key <= 0xFEFE) {
+            buf[0] = (char)((key >> 8) & 0xFF);
+            buf[1] = (char)(key & 0xFF);
+            buf[2] = '\0';
+            return 2;
+        }
+    }
+    buf[0] = '\0';
+    return 0;
+}
+
+int
 stream_width(const char *s)
 {
     if (!s || !*s)
@@ -427,6 +483,28 @@ strip_nonebig5(unsigned char *str, int maxlen)
 {
   int i;
   int len=0;
+  if (MB_IS_UTF8) {
+    for (i = 0; i < maxlen && str[i]; i++) {
+      if (32 <= str[i] && str[i] < 128) {
+        str[len++] = str[i];
+      } else if (str[i] & 0x80) {
+        int clen = mb_bytes((const char *)(str + i));
+        if (clen > 1 && i + clen <= maxlen) {
+          int ok = 1, k;
+          for (k = 1; k < clen; k++) {
+            if ((str[i + k] & 0xC0) != 0x80) { ok = 0; break; }
+          }
+          if (ok) {
+            for (k = 0; k < clen; k++) str[len++] = str[i + k];
+            i += clen - 1;
+          }
+        }
+      }
+    }
+    if (len < maxlen)
+      str[len] = '\0';
+    return;
+  }
   for(i=0;i<maxlen && str[i];i++) {
     if(32<=str[i] && str[i]<128)
       str[len++]=str[i];
@@ -445,10 +523,10 @@ strip_nonebig5(unsigned char *str, int maxlen)
 }
 
 /**
- * DBCS_RemoveIntrEscape(buf, len): 去除 DBCS 一字雙色字。
+ * mbs_remove_intr_escape(buf, len): 去除 DBCS 一字雙色字。
  * (deprecated)
  */
-int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
+int mbs_remove_intr_escape(unsigned char *buf, int *len)
 {
     int l = len ? *len : (int)strlen((const char *)buf);
     if (!memchr(buf, ESC_CHR, l))
@@ -484,78 +562,134 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 }
 
 /**
- * DBCS_NextStatus(c, prev_status): 取得 c 的 DBCS 狀態
+ * big5_next_status(c, prev_status): 取得 c 的 DBCS 狀態
  */
-int
-DBCS_NextStatus(char c, int prev_status) {
-    if(prev_status == DBCS_LEADING)
-        return DBCS_TRAILING;
+static int
+big5_next_status(char c, int prev_status)
+{
+    if (prev_status == MB_LEADING)
+        return MB_TRAILING;
     if ((unsigned char)c >= 0x80)
-        return DBCS_LEADING;
-    return prev_status = DBCS_ASCII;
+        return MB_LEADING;
+    return MB_ASCII;
 }
 
-/**
- * DBCS_Status(dbcstr, pos): 取得字串中指定位置的 DBCS 狀態。
- * 若 pos 超過結尾則傳回最後一個字元的 DBCS status
- */
-int DBCS_Status(const char *dbcstr, int pos)
+int
+mbs_status(const char *s, int pos)
 {
-    int sts = DBCS_ASCII;
+    if (MB_IS_UTF8) {
+        unsigned char c = (unsigned char)s[pos];
+        if (c < 0x80)
+            return MB_ASCII;
+        if ((c & 0xC0) == 0x80)
+            return MB_TRAILING;
+        return MB_LEADING;
+    }
+
+    int sts = MB_ASCII;
     char c;
 
     while (pos-- >= 0) {
-        c = *dbcstr++;
-        sts = DBCS_NextStatus(c, sts);
+        c = *s++;
+        sts = big5_next_status(c, sts);
         if (c == 0)
             break;
     }
     return sts;
 }
 
-void DBCS_safe_trim(char *dbcstr)
+void
+mbs_safe_trim(char *s)
 {
-    int len = strlen(dbcstr);
-    if (len < 1) return;
-    if (DBCS_Status(dbcstr, len-1) == DBCS_LEADING)
-	dbcstr[len-1] = 0;
+    int len = strlen(s);
+    if (len < 1)
+        return;
+    if (MB_IS_UTF8) {
+        int i = len - 1;
+        while (i >= 0 && mbs_status(s, i) == MB_TRAILING)
+            i--;
+        if (i >= 0 && mbs_status(s, i) == MB_LEADING) {
+            int expected = 0;
+            unsigned char c = (unsigned char)s[i];
+            if ((c & 0xE0) == 0xC0)
+                expected = 2;
+            else if ((c & 0xF0) == 0xE0)
+                expected = 3;
+            else if ((c & 0xF8) == 0xF0)
+                expected = 4;
+            else
+                expected = len - i + 1;
+            if (len - i < expected)
+                s[i] = '\0';
+        }
+    } else {
+        if (mbs_status(s, len - 1) == MB_LEADING)
+            s[len - 1] = '\0';
+    }
 }
 
-/**
- * DBCS_strcasestr(pool, ptr): 在字串 pool 中尋找 ptr (只忽略英文大小寫)
- */
-char *
-DBCS_strcasestr(const char* pool, const char *ptr)
+const char *
+mbs_nth(const char *s, int nth)
 {
-    // TODO rewrite this with DBCS_Status
+    int w;
+    while (nth-- > 0 && (w = mb_bytes(s)) > 0)
+        s += w;
+    return (*s) ? s : NULL;
+}
+
+char *
+mbs_strstr(const char *pool, const char *ptr)
+{
+    if (MB_IS_UTF8)
+        return (char *)strstr(pool, ptr);
+
+    if (!*ptr)
+        return (char *)pool;
+
+    const char *scan = pool;
+    const char *match;
+    while ((match = strstr(scan, ptr)) != NULL) {
+        while (scan < match) {
+            if (IS_DBCSLEAD(*scan) && scan[1])
+                scan += 2;
+            else
+                scan += 1;
+        }
+        if (scan == match)
+            return (char *)match;
+    }
+    return NULL;
+}
+
+char *
+mbs_strcasestr(const char *pool, const char *ptr)
+{
+    if (MB_IS_UTF8)
+        return (char *)strcasestr(pool, ptr);
+
     int i = 0, i2 = 0, found = 0,
         szpool = strlen(pool),
         szptr  = strlen(ptr);
 
-    for (i = 0; i <= szpool-szptr; i++)
+    for (i = 0; i <= szpool - szptr; i++)
     {
         found = 1;
 
-        // compare szpool[i..szptr] with ptr
         for (i2 = 0; i2 < szptr; i2++)
         {
             if (IS_DBCSLEAD(pool[i + i2]))
             {
-                // non-ascii
-                if (ptr[i2]   != pool[i+i2] ||
-                    ptr[i2+1] != pool[i+i2+1])
+                if (ptr[i2]   != pool[i + i2] ||
+                    ptr[i2 + 1] != pool[i + i2 + 1])
                 {
-		    // printf("break on non-ascii (i=%d, i2=%d).\n", i, i2);
                     found = 0;
                     break;
                 }
-		i2 ++;
+                i2++;
             } else {
-                // ascii
                 if (IS_DBCSLEAD(ptr[i2]) ||
-		    tolower(ptr[i2]) != tolower(pool[i+i2]))
+                    tolower(ptr[i2]) != tolower(pool[i + i2]))
                 {
-		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
                     found = 0;
                     break;
                 }
@@ -563,39 +697,40 @@ DBCS_strcasestr(const char* pool, const char *ptr)
         }
 
         if (found)
-	    return (char *)pool+i;
+            return (char *)pool + i;
 
-        // next iteration: if target is DBCS, skip one more byte.
         if (IS_DBCSLEAD(pool[i]))
             i++;
     }
     return NULL;
 }
 
-/*
- * DBCS_strncasecmp(s1, s2, len): 比較 s1/s2 (只忽略英文大小寫)
- */
 int
-DBCS_strncasecmp(const char *s1, const char *s2, size_t len) {
-    // quick return by strncasecmp
+mbs_strncasecmp(const char *s1, const char *s2, size_t len)
+{
+    if (MB_IS_UTF8)
+        return strncasecmp(s1, s2, len);
+
     int r = strncasecmp(s1, s2, len);
-    int sts1 = DBCS_ASCII, sts2 = DBCS_ASCII;
+    int sts1 = MB_ASCII, sts2 = MB_ASCII;
     if (r != 0)
         return r;
 
     while (len-- > 0) {
         char c1 = *s1++, c2 = *s2++;
-        sts1 = DBCS_NextStatus(c1, sts1);
-        sts2 = DBCS_NextStatus(c2, sts2);
-        if (sts1 != DBCS_ASCII && c1 != c2)
+        sts1 = big5_next_status(c1, sts1);
+        sts2 = big5_next_status(c2, sts2);
+        if (sts1 != MB_ASCII && c1 != c2)
             return (unsigned char)c1 - (unsigned char)c2;
     }
     return 0;
 }
 
 unsigned
-DBCS_StringHash(const char *s)
+mbs_strcasehash(const char *s)
 {
+    if (MB_IS_UTF8)
+        return fnv1a_32_strcase(s, FNV1_32_INIT);
     return fnv1a_32_dbcs_strcase(s, FNV1_32_INIT);
 }
 

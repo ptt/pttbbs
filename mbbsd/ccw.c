@@ -834,7 +834,7 @@ word_match_index(const char *buf, const char *pattern, size_t szpat)
 
     if (!szpat) szpat = strlen(pattern);
 
-    while ((p = DBCS_strcasestr(p, pattern)) != NULL)
+    while ((p = mbs_strcasestr(p, pattern)) != NULL)
     {
         if (p > buf && isascii(*(p-1)) && isalnum(*(p-1)))
         {
@@ -956,19 +956,19 @@ ccw_chat_recv(CCW_CTX *ctx)
 
             case 'n':
                 strlcpy(ctx->local_id, bptr+2, CHAT_ID_LEN+1);
-                DBCS_safe_trim(ctx->local_id);
+                mbs_safe_trim(ctx->local_id);
                 ccw_prompt(ctx);
                 break;
 
             case 'r':
                 strlcpy(ctx->remote_id, bptr+2, CHAT_ROOM_LEN+1);
-                DBCS_safe_trim(ctx->remote_id);
+                mbs_safe_trim(ctx->remote_id);
                 ccw_header(ctx);
                 break;
 
             case 't':
                 strlcpy(ext->topic, bptr+2, CHAT_TOPIC_LEN+1);
-                DBCS_safe_trim(ext->topic);
+                mbs_safe_trim(ext->topic);
                 ccw_header(ctx);
                 break;
 
@@ -1213,7 +1213,7 @@ ccw_chat(int fd)
             STRLCPY(chatid, cuser.userid);
 
         // safe truncate
-        DBCS_safe_trim(chatid);
+        mbs_safe_trim(chatid);
 
         // login format: /! UserID ChatID password
         SNPRINTF(cmd, "/! %s %s %u", cuser.userid, chatid, (unsigned int)cuser.firstlogin);

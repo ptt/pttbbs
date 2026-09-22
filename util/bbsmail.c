@@ -152,7 +152,7 @@ int mail2bbs(char *userid)
 
 #ifdef HMM_USE_ANTI_SPAM
     for (n = 0; notitle[n]; n++) {
-	if (strstr(title, notitle[n])) {
+	if (mbs_strstr(title, notitle[n])) {
 	    SNPRINTF(genbuf, "Title <%s> not accepted", title);
 	    puts(genbuf);
 	    mailog(genbuf);
@@ -160,7 +160,7 @@ int mail2bbs(char *userid)
 	}
     }
     for (n = 0; nofrom[n]; n++) {
-	if (strstr(sender, nofrom[n])) {
+	if (mbs_strstr(sender, nofrom[n])) {
 	    snprintf(genbuf, sizeof(genbuf) "From <%s> not accepted", sender);
 	    puts(genbuf);
 	    mailog(genbuf);
@@ -187,7 +187,7 @@ int mail2bbs(char *userid)
     {
 #ifdef HMM_USE_ANTI_SPAM
 	for (n = 0; nocont[n]; n++)
-	    if (strstr(genbuf, nocont[n]))
+	    if (mbs_strstr(genbuf, nocont[n]))
 	    {
 		fclose(fout);
 		unlink(filename);
