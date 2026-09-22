@@ -264,8 +264,8 @@ typedef struct {
 // online friend relation daemon
 //
 typedef struct {
-    int     index; // åœ¨ SHM->uinfo[index]
-    int     uid;   // é¿å…åœ¨ cache server ä¸Šä¸åŒæ­¥, å†ç¢ºèªç”¨.
+    int     index; // ¦b SHM->uinfo[index]
+    int     uid;   // Á×§K¦b cache server ¤W¤£¦P¨B, ¦A½T»{¥Î.
     int     friendstat;
     int     rfriendstat;
 } ocfs_t;

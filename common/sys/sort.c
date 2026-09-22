@@ -14,8 +14,8 @@ int cmp_int_desc(const void * a, const void * b)
 int *
 intbsearch(int key, const int *base0, int nmemb)
 {
-    /* æ”¹è‡ª /usr/src/lib/libc/stdlib/bsearch.c ,
-       å°ˆçµ¦æœ int array ç”¨çš„, ä¸é€é compar function æ•…è¼ƒå¿«äº› */
+    /* §ï¦Û /usr/src/lib/libc/stdlib/bsearch.c ,
+       ±Mµ¹·j int array ¥Îªº, ¤£³z¹L compar function ¬G¸û§Ö¨Ç */
     const   char *base = (const char *)base0;
     size_t  lim;
     int     *p;
@@ -35,8 +35,8 @@ intbsearch(int key, const int *base0, int nmemb)
 unsigned int *
 uintbsearch(const unsigned int key, const unsigned int *base0, const int nmemb)
 {
-    /* æ”¹è‡ª /usr/src/lib/libc/stdlib/bsearch.c ,
-       å°ˆçµ¦æœ int array ç”¨çš„, ä¸é€é compar function æ•…è¼ƒå¿«äº› */
+    /* §ï¦Û /usr/src/lib/libc/stdlib/bsearch.c ,
+       ±Mµ¹·j int array ¥Îªº, ¤£³z¹L compar function ¬G¸û§Ö¨Ç */
     const   char *base = (const char *)base0;
     size_t  lim;
     unsigned int     *p;

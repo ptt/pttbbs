@@ -51,7 +51,7 @@ _set_ptype(int *ptype, int type) {
 }
 
 /**
- * çµ¦å®šæ–‡ç« æ¨™é¡Œ titleï¼Œå‚³å›žæŒ‡åˆ°ä¸»é¡Œçš„éƒ¨åˆ†çš„æŒ‡æ¨™ã€‚
+ * µ¹©w¤å³¹¼ÐÃD title¡A¶Ç¦^«ü¨ì¥DÃDªº³¡¤Àªº«ü¼Ð¡C
  * @param title
  */
 const char *
