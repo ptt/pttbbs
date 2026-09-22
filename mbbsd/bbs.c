@@ -422,8 +422,8 @@ set_board(void)
 	/* calculate with other title information */
 	int l = 0;
 
-	SNPRINTF(currBM, "板主:%s", bp->BM);
-	l += stream_width(bp->desc);
+	SNPRINTF(currBM, "板主:%s", TEMP_BRD_BM(bp));
+	l += stream_width(TEMP_BRD_TITLE_DESC(bp));
 	l += 8 + stream_width(currboard); /* trailing stuff */
 	l += stream_width(bp->brdname);
 	l = t_columns - l - stream_width(currBM);
@@ -440,8 +440,9 @@ set_board(void)
 
 	if(l < 0 && ((l += stream_width(currBM)) > 7))
 	{
-	    currBM[l] = 0;
-	    currBM[l-1] = currBM[l-2] = '.';
+	    int off = stream_col_offset(l - 2, currBM, NULL);
+	    currBM[off] = 0;
+	    strlcat(currBM, "..", sizeof(currBM));
 	}
     }
 
@@ -647,7 +648,7 @@ static void
 readtitle(PSB_CTX *ctx)
 {
     boardheader_t  *bp;
-    char    *brd_title;
+    const char *brd_title;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -655,7 +656,7 @@ readtitle(PSB_CTX *ctx)
     if(bp->bvote != 2 && bp->bvote)
 	brd_title = "本看板進行投票中";
     else
-	brd_title = bp->desc;
+	brd_title = TEMP_BRD_TITLE_DESC(bp);
 
     redraw_title(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
@@ -735,7 +736,12 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 	prints("%7d    ", num);
 	outs(ANSI_COLOR(1;30));
 	prints("%-6.5s", ent->date);
-	prints("%-13.12s", ent->owner);
+	char obuf[sizeof(ent->owner)];
+	int ocols = 0;
+	int off = stream_col_offset(12, ent->owner, &ocols);
+	strlcpy(obuf, ent->owner, off + 1);
+	int opad = 13 - ocols;
+	prints("%s%*s", obuf, opad > 0 ? opad : 0, "");
 	prints("╳ %-.*s" ANSI_RESET,
 		t_columns-34, ent->title);
 	return;
@@ -891,7 +897,7 @@ int
 whereami(void)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
-    char category[sizeof(bh->desc)] = "", *pcat;
+    char category[SZ_COLS(BTLEN + 1)] = "", *pcat;
     int             i, j;
     int bid = currbid;
     int total_boards;
@@ -909,14 +915,16 @@ whereami(void)
          i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
-    prints("我在哪?\n%-40.40s %.13s\n", p[j]->desc, p[j]->BM);
+    prints("我在哪?\n%-40.40s %.13s\n",
+           TEMP_BRD_TITLE_DESC(p[j]),
+           TEMP_BRD_BM(p[j]));
     for (j--; j >= 0; j--)
 	prints("%*s %-13.13s %-37.37s %.13s\n", (i - j) * 2, "",
-	       p[j]->brdname, p[j]->desc,
-	       p[j]->BM);
+	       p[j]->brdname, TEMP_BRD_TITLE_DESC(p[j]),
+	       TEMP_BRD_BM(p[j]));
 
     move(b_lines - 2, 0);
-    STRLCPY(category, p[i]->desc);
+    STRLCPY(category, TEMP_BRD_TITLE_DESC(p[i]));
     if ((pcat = strchr(category, ' ')) != NULL)
         *pcat = 0;
     prints("位置: ");
@@ -1322,7 +1330,7 @@ do_post_article(int edflags)
     prints("%s於【" ANSI_COLOR(33) " %s" ANSI_RESET " 】 "
 	   ANSI_COLOR(32) "%s" ANSI_RESET " 看板\n",
 	   "發表文章",
-	   currboard, bp->desc);
+	   currboard, TEMP_BRD_TITLE_DESC(bp));
 
     if (quote_file[0])
         do_reply_title(20, currtitle, str_reply, save_title,
@@ -1357,7 +1365,7 @@ do_post_article(int edflags)
 	}
 	if (i == 0) i = 8;
 	for(j=0; j<i; j++)
-	    prints("%d.%4.4s ", j+1, ctype[j]);
+	    prints("%d.%s ", j+1, ctype[j]);
 
 	do {
 	    getdata(21, 6+7*i, TEMPFORMAT(32, "(1-%d或不選)", i), tmp_title, 3, LCECHO);
@@ -2598,9 +2606,7 @@ cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
     char            title[TTLEN + 1];
 
     setbfile(fpath, currboard, fhdr->filename);
-    STRLCPY(title, "◇ ");
-    strlcpy(title + 3, fhdr->title, TTLEN - 3);
-    title[TTLEN] = '\0';
+    snprintf(title, sizeof(title), "◇ %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
     b_man();
     return FULLUPDATE;
@@ -2653,7 +2659,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     if (allow >= 2) {
         // Render in b_lines -2
         move(b_lines - 4, 0); clrtobot();
-        prints("\n%11s%s %-*s %s", "", tmpfhdr.date, IDLEN, tmpfhdr.owner,
+        prints("\n%11s%s %s%*s %s", "", tmpfhdr.date, tmpfhdr.owner,
+               IDLEN - (int)stream_width(tmpfhdr.owner) > 0 ? IDLEN - (int)stream_width(tmpfhdr.owner) : 0, "",
                tmpfhdr.title);
     }
 
@@ -2684,6 +2691,8 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     int     update = 0;
     int fd;
     BEGINSTAT(STAT_DORECOMMEND);
+
+    buf = TEMP_MB_TO_STORAGE(buf);
 
     /*
       race here:
