@@ -128,7 +128,7 @@ char            quote_file[80] = "\0";
 char            quote_user[80] = "\0";
 char            currtitle[TTLEN + 1] = "\0";
 const char     *currboard = "\0";
-char            currBM[IDLEN * 3 + 10];
+char            currBM[SZ_COLS(IDLEN * 3 + 10)];
 char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
 time4_t         login_start_time, last_login_time;

@@ -5,11 +5,14 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
                          const char *myid, int maxlength,
                          const char *msg, const char *tail)
 {
+    int pad = maxlength - stream_width(msg);
+    if (pad < 0)
+        pad = 0;
 #ifdef OLDRECOMMEND
     snprintf(buf, szbuf,
              ANSI_COLOR(1;31) "¡÷ " ANSI_COLOR(33) "%s" ANSI_RESET
-             ANSI_COLOR(33) ":%-*s" ANSI_RESET "±À%s\n",
-             myid, maxlength, msg, tail);
+             ANSI_COLOR(33) ":%s%*s" ANSI_RESET "±À%s\n",
+             myid, msg, pad, "", tail);
 #else
     // TODO(piaip) Make bbs.c#recomment use same structure.
     // Now we just assume they are the same.
@@ -25,9 +28,9 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
     };
     snprintf(buf, szbuf,
              "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
-             ":%-*s" ANSI_RESET "%s\n",
+             ":%s%*s" ANSI_RESET "%s\n",
              ctype_attr2[type], ctype[type], myid,
-             maxlength, msg, tail);
+             msg, pad, "", tail);
 #endif // OLDRECOMMEND
 
 }
