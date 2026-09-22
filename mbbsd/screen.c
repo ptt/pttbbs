@@ -125,7 +125,7 @@ move(int y, int x)
     if (x > 0) {
 	screenline_t *slp = GetLine(y);
 	slp->data[slp->len] = 0;
-	int r = str_at_ansi(x, (char *)slp->data);
+	int r = stream_col_offset(x, (char *)slp->data);
 	cur_col = (r >= 0) ? r : (slp->len - r);
 	if (cur_col >= ANSILINELEN)
 	    cur_col = ANSILINELEN - 1;
@@ -151,11 +151,11 @@ getyx(int *py, int *px)
     if (x <= slp->len) {
 	char c = slp->data[x];
 	slp->data[x] = 0;
-	*px = str_term_width((char *)slp->data);
+	*px = stream_width((char *)slp->data);
 	slp->data[x] = c;
     } else {
 	slp->data[slp->len] = 0;
-	*px = str_term_width((char *)slp->data) + (x - slp->len);
+	*px = stream_width((char *)slp->data) + (x - slp->len);
     }
 }
 
@@ -648,7 +648,7 @@ instr(char *str)
     if (!slp)
 	return 0;
     slp->data[slp->len] = 0;
-    return strip_ansi(str, (char*)slp->data);
+    return strip_control_sequence(str, (char*)slp->data);
 }
 
 int
@@ -660,7 +660,7 @@ innstr(char *str, int n)
     if (!slp || n <= 0)
 	return 0;
     slp->data[slp->len] = 0;
-    int len = strip_ansi(buf, (char*)slp->data);
+    int len = strip_control_sequence(buf, (char*)slp->data);
     strlcpy(str, buf, n);
     return len < n ? len : n - 1;
 }
@@ -726,7 +726,7 @@ grayout(int y, int end, int level)
 		slp->data[i] = ' ';
 	}
 
-	slp->len = strip_ansi(buf, (char*)slp->data);
+	slp->len = strip_control_sequence(buf, (char*)slp->data);
 
 	switch(level)
 	{

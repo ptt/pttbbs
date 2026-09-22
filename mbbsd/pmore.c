@@ -1150,24 +1150,20 @@ mf_search(int direction)
 MFPROTO void
 pmore_str_strip_ansi(unsigned char *p)  // warning: p is NULL terminated
 {
-    unsigned char *pb = p;
+    unsigned char *os = p;
     while (*p != 0) {
-        if (*p == ESC_CHR) {
-            // ansi code sequence, ignore them.
-            pb = p++;
-            while (ANSI_IN_ESCAPE(*p))
-                p++;
-            memmove(pb, p, ustrlen(p)+1);
-            p = pb;
-        } else if (*p < ' ' || *p == 0xff) {
-            // control codes, ignore them.
-            // what is 0xff? old BBS does not handle telnet protocol
-            // so IACs were inserted.
-            memmove(p, p+1, ustrlen(p+1)+1);
-        }
-        else
+        unsigned char *esc = (unsigned char *)strchrnul((const char *)p, ESC_CHR);
+        while (p < esc) {
+            // ignore control codes (< ' ') and telnet IAC (0xff)
+            if (*p >= ' ' && *p != 0xff)
+                *os++ = *p;
             p++;
+        }
+        if (*p == 0)
+            break;
+        p = (unsigned char *)skip_control_sequence((const char *)p);
     }
+    *os = 0;
 }
 
 /* this chomp is a little different:
@@ -1664,7 +1660,7 @@ mf_display()
             /* right floating stuff? */
             if (currline == 0 && fh.floats[0])
             {
-                w -= str_term_width((const char *)fh.floats[0]) + str_term_width((const char *)fh.floats[1]) + 4;
+                w -= stream_width((const char *)fh.floats[0]) + stream_width((const char *)fh.floats[1]) + 4;
             }
 
             prints("%-*.*s", w, w,
@@ -2405,7 +2401,7 @@ _pmore2(
                     const char *s = PMORE_MSG_MOVIE_DETECTED;
 
                     outs(ANSI_RESET ANSI_COLOR(1;33;44));
-                    w -= str_term_width(s); outs(s);
+                    w -= stream_width(s); outs(s);
 
                     while (w-- > 0)
                         outc(' ');
@@ -2907,7 +2903,7 @@ pmore_PromptBar(const char *caption, int shadow)
 
     outs(ANSI_REVERSE);
     outs(caption);
-    for(i -= str_term_width(caption); i > 0; i--)
+    for(i -= stream_width(caption); i > 0; i--)
         outs(" ");
     outs(ANSI_RESET "\n");
 

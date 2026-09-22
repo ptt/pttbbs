@@ -440,8 +440,8 @@ my_query(const char *uident)
 	prints( "¡m¢×¢Ò¼ÊºÙ¡n%s (%s)%*s",
 	       muser.userid,
 	       muser.nickname,
-	       str_term_width(muser.userid) + str_term_width(muser.nickname) >= 25 ? 0 :
-		   (int)(25 - str_term_width(muser.userid) - str_term_width(muser.nickname)), "");
+	       stream_width(muser.userid) + stream_width(muser.nickname) >= 25 ? 0 :
+		   (int)(25 - stream_width(muser.userid) - stream_width(muser.nickname)), "");
 
 	prints( "¡m¸gÀÙª¬ªp¡n%s",
 	       money_level(muser.money));

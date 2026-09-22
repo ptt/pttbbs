@@ -430,14 +430,14 @@ set_board(void)
 
 	SNPRINTF(currBM, "板主:%s", bp->BM);
 	/* title has +7 leading symbols */
-	l += str_term_width(bp->title);
+	l += stream_width(bp->title);
 	if(l >= 7)
 	    l -= 7;
 	else
 	    l = 0;
-	l += 8 + str_term_width(currboard); /* trailing stuff */
-	l += str_term_width(bp->brdname);
-	l = t_columns - l - str_term_width(currBM);
+	l += 8 + stream_width(currboard); /* trailing stuff */
+	l += stream_width(bp->brdname);
+	l = t_columns - l - stream_width(currBM);
 
 #ifdef _DEBUG
 	{
@@ -449,7 +449,7 @@ set_board(void)
 	}
 #endif
 
-	if(l < 0 && ((l += str_term_width(currBM)) > 7))
+	if(l < 0 && ((l += stream_width(currBM)) > 7))
 	{
 	    currBM[l] = 0;
 	    currBM[l-1] = currBM[l-2] = '.';
@@ -1402,7 +1402,7 @@ do_post_article(int edflags)
             if (w >= TTLEN - 4)
                 w = TTLEN - 4;
 	    getdata_buf(22, 0, "標題：", tmp_title, w, DOECHO);
-	    strip_ansi(tmp_title, tmp_title);
+	    strip_control_sequence(tmp_title, tmp_title);
 
 	    if (!is_tn_allowed(tmp_title))
 	    {
@@ -4411,7 +4411,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     mvouts(3, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
     i = 4;
     while (fgets(buf, sizeof(buf), fp)) {
-        strip_ansi(buf, buf);
+        strip_control_sequence(buf, buf);
         if (strstr(buf, pattern)) {
             found++;
             mvouts(i, 0, ANSI_RESET);
@@ -4453,7 +4453,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     fp = fopen(revpath, "rt");
     fpw = fopen(fpath, "wt");
     while (fgets(buf, sizeof(buf), fp)) {
-        strip_ansi(buf2, buf);
+        strip_control_sequence(buf2, buf);
         if (strstr(buf2, pattern)) {
             fputs("※ [部份違規文字已刪除]\n", fpw);
             continue;

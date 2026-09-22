@@ -1903,7 +1903,7 @@ browse_sigs:
 			fputs("\n--\n", fp);
 			for (i = 0; i < MAX_SIGLINES &&
                                     fgets(buf, sizeof(buf), fs); i++) {
-                            strip_ansi_movecmd(buf);
+                            strip_move_control_sequence(buf);
                             strip_esc_star(buf);
 			    fputs(buf, fp);
                         }
@@ -2066,7 +2066,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 		continue;
 
 	    trim(msg);
-            strip_ansi_movecmd(msg);
+            strip_move_control_sequence(msg);
 
 #ifdef USE_POST_ENTROPY
 	    // calculate the real content of msg

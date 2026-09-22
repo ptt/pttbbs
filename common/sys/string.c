@@ -147,14 +147,15 @@ reduce_blank(char *cbuf, const char *buf) {
 }
 
 /*
- * Scans an ANSI/ECMA-48 escape sequence starting at `src` (where *src == ESC_CHR).
+ * Scans an ECMA-48 (also known as ANSI) control sequence, started by the
+ * Escape character (*src == ESC_CHR).
  * Returns the pointer to the last byte of the escape sequence (e.g. the final char),
  * or returns src if it is a truncated/lone ESC at the end of the string.
  * Also sets *is_color to 1 if it is an SGR color sequence (ESC [ ... m).
  * Sets *is_safe_cmd to 1 if it is a safe command in NO_RELOAD mode.
  */
 static const char *
-scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
+scan_control_sequence(const char *src, int *is_color, int *is_safe_cmd)
 {
     if (is_color)
         *is_color = 0;
@@ -225,11 +226,12 @@ scan_escape_sequence(const char *src, int *is_color, int *is_safe_cmd)
 }
 
 /*
- * Fast ECMA-48 escape sequence skipper (*src == ESC_CHR).
- * Returns pointer to the first character AFTER the escape sequence.
+ * Fast skipper for ECMA-48 (also known as ANSI) control sequences, started by
+ * the Escape character (*src == ESC_CHR).
+ * Returns pointer to the first character AFTER the control sequence.
  */
-static inline const char *
-skip_escape_sequence(const char *src)
+const char *
+skip_control_sequence(const char *src)
 {
     const char *p = src + 1;
     unsigned char c = *p;
@@ -268,7 +270,8 @@ skip_escape_sequence(const char *src)
 }
 
 /**
- * strip ANSI escape sequences from src according to mode
+ * Strip ECMA-48 (also known as ANSI) control sequences, started by the
+ * Escape character, from src according to mode.
  * @param dst
  * @param src (if NULL then only return length)
  * @param mode enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
@@ -278,7 +281,7 @@ skip_escape_sequence(const char *src)
  * @return stripped length
  */
 int
-strip_ansi(char *dst, const char *src)
+strip_control_sequence(char *dst, const char *src)
 {
     int count = 0;
 
@@ -292,7 +295,7 @@ strip_ansi(char *dst, const char *src)
         count += chunk;
         if (*p == '\0')
             break;
-        src = skip_escape_sequence(p);
+        src = skip_control_sequence(p);
     }
     if (dst)
         *dst = '\0';
@@ -300,10 +303,10 @@ strip_ansi(char *dst, const char *src)
 }
 
 int
-strip_ansi_ex(char *dst, const char *src, enum STRIP_FLAG mode)
+strip_control_sequence_ex(char *dst, const char *src, enum STRIP_FLAG mode)
 {
     if (mode == STRIP_ALL)
-        return strip_ansi(dst, src);
+        return strip_control_sequence(dst, src);
 
     int count = 0;
     for (; *src; ++src) {
@@ -313,7 +316,7 @@ strip_ansi_ex(char *dst, const char *src, enum STRIP_FLAG mode)
             ++count;
         } else {
             int is_color = 0, is_safe_cmd = 0;
-            const char *end = scan_escape_sequence(src, &is_color, &is_safe_cmd);
+            const char *end = scan_control_sequence(src, &is_color, &is_safe_cmd);
 
             if ((mode == NO_RELOAD && is_safe_cmd) ||
                 (mode == ONLY_COLOR && is_color)) {
@@ -336,11 +339,12 @@ strip_ansi_ex(char *dst, const char *src, enum STRIP_FLAG mode)
 }
 
 /**
- * query the offset of nth non-ANSI element in s
- * if string is less then nth, return missing blanks in negative value.
+ * Query the byte offset of the nth terminal display column in stream s
+ * (skipping ECMA-48 / ANSI control sequences started by the Escape character).
+ * If the stream width is less than count, return missing columns in negative value.
  */
 int
-str_at_ansi(int count, const char *s)
+stream_col_offset(int count, const char *s)
 {
     const char *os = s;
 
@@ -352,7 +356,7 @@ str_at_ansi(int count, const char *s)
         count -= chunk;
         if (*p == '\0')
             break;
-        s = skip_escape_sequence(p);
+        s = skip_control_sequence(p);
     }
     return (count > 0) ? -count : (s - os);
 }
@@ -391,7 +395,7 @@ mb_width(const char *s)
 }
 
 int
-str_term_width(const char *s)
+stream_width(const char *s)
 {
     if (!s || !*s)
         return 0;
@@ -399,7 +403,7 @@ str_term_width(const char *s)
     int width = 0;
     while (*s) {
         if (*s == ESC_CHR) {
-            s = skip_escape_sequence(s);
+            s = skip_control_sequence(s);
             continue;
         }
         if (MB_IS_BIG5) {
@@ -455,7 +459,7 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 
     for (int i = 0; i < l; i++) {
         if (buf[i] == ESC_CHR) {
-            const char *next = skip_escape_sequence((const char *)(buf + i));
+            const char *next = skip_control_sequence((const char *)(buf + i));
             int inext = (int)((const unsigned char *)next - buf);
             if (inext > l)
                 inext = l;

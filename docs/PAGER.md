@@ -62,7 +62,7 @@ typedef struct msgque_t {
 1. **檢查自身 Pager 狀態 (`my_write_check_pager_status`)**：
    若發送者自身的 `pager` 處於 `PAGER_OFF` 或 `PAGER_DISABLE`，提示無法發送。
 2. **取得訊息輸入 (`my_write_get_input`)**：
-   提示使用者輸入單行文字，並去除 ANSI 控碼 (`strip_ansi`)。
+   提示使用者輸入單行文字，並去除 ANSI 控碼 (`strip_control_sequence`)。
 3. **二次確認 (`my_write_confirm_send`)**：
    若為第一次丟該使用者，視設定跳出 `[Y/n]` 確認。
 4. **校驗接收者狀態與小天使 (`my_write_validate_recipient`)**：
