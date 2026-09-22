@@ -1175,7 +1175,7 @@ draw_text_screen(login_conn_ctx *conn, screen_t *scr)
             screen_extent_chain_add_to_evbuffer(&scr->chain_utf8, evb);
             break;
 
-        case CONV_NORMAL:
+        case CONV_BIG5:
         default:
             screen_extent_chain_add_to_evbuffer(&scr->chain, evb);
             break;
@@ -2432,7 +2432,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     switch(*uid_lastc)
                     {
                         case '.':   // Big5 mode
-                            conn->ctx.encoding = CONV_NORMAL;
+                            conn->ctx.encoding = CONV_BIG5;
                             *uid_lastc = 0;
                             break;
                         case ',':   // UTF-8 mode
@@ -2596,7 +2596,7 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
     } else {
         // \xc4\xa1 is valid for both Big5&UTF8 (and not in UAO) so can be used for detection.
         // \033[6n ask the client to report cursor status.
-        if (conn->ctx.encoding == CONV_NORMAL)
+        if (conn->ctx.encoding == CONV_BIG5)
             _buff_write(conn, "\r\xc4\xa1\033[6n", 7);
         draw_text_screen  (conn, welcome_screen);
         draw_userid_prompt(conn, NULL, 0);

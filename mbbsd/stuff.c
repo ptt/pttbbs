@@ -326,28 +326,47 @@ getdata2vgetflag(int echo)
 }
 
 int
-getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
+getdata_buf_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo)
 {
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    return vgetstr(buf, len, getdata2vgetflag(echo), buf);
+    return vgetstr_sz(buf, bufsz, len, getdata2vgetflag(echo), buf);
 }
 
 int
-getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
-            const char *defaultstr)
+getdata_str_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo,
+               const char *defaultstr)
 {
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
+    return vgetstr_sz(buf, bufsz, len, getdata2vgetflag(echo), defaultstr);
 }
 
 int
-getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
+getdata_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo)
 {
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    return vgets(buf, len, getdata2vgetflag(echo));
+    return vgets_sz(buf, bufsz, len, getdata2vgetflag(echo));
+}
+
+int
+(getdata_buf)(int line, int col, const char *prompt, char *buf, int len, int echo)
+{
+    return getdata_buf_sz(line, col, prompt, buf, (size_t)-1, len, echo);
+}
+
+int
+(getdata_str)(int line, int col, const char *prompt, char *buf, int len, int echo,
+              const char *defaultstr)
+{
+    return getdata_str_sz(line, col, prompt, buf, (size_t)-1, len, echo, defaultstr);
+}
+
+int
+(getdata)(int line, int col, const char *prompt, char *buf, int len, int echo)
+{
+    return getdata_sz(line, col, prompt, buf, (size_t)-1, len, echo);
 }
 
 int
