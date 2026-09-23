@@ -46,7 +46,7 @@ static int      mailkeep = 0;
 static int      mailmaxkeep = 0;
 static const char msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static int	showmail_mode = SHOWMAIL_NORM;
-static const    onekey_t mail_comms[];
+static const    cmd_t mail_comms[];
 
 ////////////////////////////////////////////////////////////////////////
 // Core utility functions
@@ -1883,8 +1883,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_nooutmail(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
-               const char *direct GCC_UNUSED)
+mail_nooutmail(void)
 {
     if (!HasBasicUserPerm(PERM_LOGINOK))
         return DONOTHING;
@@ -2313,11 +2312,8 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 }
 
 static int
-mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
-                 const char *direct) {
-    if (!HasUserPerm(PERM_BASIC))
-        return DONOTHING;
-    return psb_recycle_bin(direct, "個人信箱");
+mail_recycle_bin(void) {
+    return psb_recycle_bin(currdirect, "個人信箱");
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -2325,98 +2321,53 @@ mail_recycle_bin(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
 
 // CAUTION: Every commands here should check permission.
 
-static const onekey_t mail_comms[] = {
-    { 0, NULL }, // Ctrl('A')
-    { 0, NULL }, // Ctrl('B')
-    { 0, NULL }, // Ctrl('C')
-    { 0, NULL }, // Ctrl('D')
-    { 0, NULL }, // Ctrl('E')
-    { 0, NULL }, // Ctrl('F')
-    { 0, built_mail_index }, // Ctrl('G')
-    { 0, NULL }, // Ctrl('H')
-    { 0, toggle_showmail_mode }, // Ctrl('I')
-    { 0, NULL }, // Ctrl('J')
-    { 0, NULL }, // Ctrl('K')
-    { 0, NULL }, // Ctrl('L')
-    { 0, NULL }, // Ctrl('M')
-    { 0, NULL }, // Ctrl('N')
-    { 0, NULL }, // Ctrl('O')	// DO NOT USE THIS KEY - UNIX not sending
-    { 0, m_send }, // Ctrl('P')
-    { 0, NULL }, // Ctrl('Q')
-    { 0, NULL }, // Ctrl('R')
-    { 0, NULL }, // Ctrl('S')
-    { 0, NULL }, // Ctrl('T')
-    { 0, NULL }, // Ctrl('U')
-    { 0, NULL }, // Ctrl('V')
-    { 0, NULL }, // Ctrl('W')
-    { 1, mail_cross_post }, // // Ctrl('X')
-    { 0, NULL }, // Ctrl('Y')
-    { 0, NULL }, // Ctrl('Z') 26
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, // 'A' 65
-    { 0, NULL }, // 'B'
-    { 0, NULL }, // 'C'
-    { 1, del_range_mail }, // 'D'
-    { 0, NULL }, // 'E'
-    { 1, m_internet_forward }, // 'F'
-    { 0, NULL }, // 'G'
-    { 0, NULL }, // 'H'
-    { 0, NULL }, // 'I'
-    { 0, NULL }, // 'J'
-    { 0, NULL }, // 'K'
-    { 0, NULL }, // 'L'
-    { 0, NULL }, // 'M'
-    { 0, NULL }, // 'N'
-    { 1, mail_nooutmail }, // 'O'
-    { 0, NULL }, // 'P'
-    { 0, NULL }, // 'Q'
-    { 1, mailbox_reply }, // 'R'
-    { 0, NULL }, // 'S'
-    { 1, NULL }, // 'T'
-    { 0, NULL }, // 'U'
-    { 0, NULL }, // 'V'
-    { 0, NULL }, // 'W'
-    { 0, NULL }, // 'X'
-    { 0, NULL }, // 'Y'
-    { 0, NULL }, // 'Z' 90
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, // 'a' 97
-    { 0, NULL }, // 'b'
-    { 1, mail_cite }, // 'c'
-    { 1, mail_del }, // 'd'
-    { 0, NULL }, // 'e'
-    { 0, NULL }, // 'f'
-    { 0, NULL }, // 'g'
-    { 0, m_help }, // 'h'
-    { 0, NULL }, // 'i'
-    { 0, NULL }, // 'j'
-    { 0, NULL }, // 'k'
-    { 0, NULL }, // 'l'
-    { 1, mail_mark }, // 'm'
-    { 0, NULL }, // 'n'
-    { 0, NULL }, // 'o'
-    { 0, NULL }, // 'p'
-    { 0, NULL }, // 'q'
-    { 1, mail_read }, // 'r'
-    { 1, mail_save }, // 's'
-    { 0, NULL }, // 't'
-    { 1, mail_waterball }, // 'u'
-    { 0, mail_read_all }, // 'v'
-    { 1, b_call_in }, // 'w'
-    { 1, m_forward }, // 'x'
-    { 1, mailbox_reply }, // 'y'
-    { 0, mail_man }, // 'z' 122
-    { 0, NULL }, // '{' 123
-    { 0, NULL }, // '|' 124
-    { 0, NULL }, // '}' 125
-    { 1, mail_recycle_bin }, // '~' 126
+DEFINE_READ_NOITEM_CMD(mail_cmd_built_index, built_mail_index)
+DEFINE_READ_NOITEM_CMD(mail_cmd_toggle_mode, toggle_showmail_mode)
+DEFINE_READ_NOITEM_CMD(mail_cmd_send, m_send)
+DEFINE_READ_ITEM_CMD(mail_cmd_cross_post, mail_cross_post)
+DEFINE_READ_ITEM_CMD(mail_cmd_del_range, del_range_mail)
+DEFINE_READ_ITEM_CMD(mail_cmd_internet_forward, m_internet_forward)
+DEFINE_READ_NOITEM_CMD(mail_cmd_nooutmail, mail_nooutmail)
+DEFINE_READ_ITEM_CMD(mail_cmd_reply, mailbox_reply)
+DEFINE_READ_ITEM_CMD(mail_cmd_cite, mail_cite)
+DEFINE_READ_ITEM_CMD(mail_cmd_del, mail_del)
+DEFINE_READ_NOITEM_CMD(mail_cmd_help, m_help)
+DEFINE_READ_ITEM_CMD(mail_cmd_mark, mail_mark)
+DEFINE_READ_ITEM_CMD(mail_cmd_read, mail_read)
+DEFINE_READ_ITEM_CMD(mail_cmd_save, mail_save)
+DEFINE_READ_ITEM_CMD(mail_cmd_waterball, mail_waterball)
+DEFINE_READ_NOITEM_CMD(mail_cmd_read_all, mail_read_all)
+DEFINE_READ_ITEM_CMD(mail_cmd_call_in, b_call_in)
+DEFINE_READ_ITEM_CMD(mail_cmd_forward, m_forward)
+DEFINE_READ_NOITEM_CMD(mail_cmd_man, mail_man)
+DEFINE_READ_NOITEM_CMD(mail_cmd_recycle_bin, mail_recycle_bin)
+
+static const cmd_t mail_comms[] = {
+    { KEY_RIGHT, "讀信", "閱\讀選取的信件", mail_cmd_read, 0, CMD_PRIO_NORM, true },
+    { KEY_ENTER, NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
+    { 'l', NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
+    { 'z', "信件夾", "瀏覽私人信件夾", mail_cmd_man, 0, CMD_PRIO_NORM },
+    { '~', RECYCLE_BIN_NAME, "瀏覽資源回收筒", mail_cmd_recycle_bin, PERM_BASIC, CMD_PRIO_NORM },
+    { 'h', "說明", "顯示操作說明", mail_cmd_help, 0, CMD_PRIO_NONE },
+    { Ctrl('P'), "寄信", "寄發新信件", mail_cmd_send, PERM_LOGINOK, CMD_PRIO_HIGH },
+    { 'y', "回信", "回覆信件", mail_cmd_reply, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { 'R', NULL, NULL, mail_cmd_reply, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'x', "轉寄", "站內轉寄信件", mail_cmd_forward, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { 'd', "刪信", "刪除選取的信件", mail_cmd_del, 0, CMD_PRIO_HIGH, true },
+    { 'O', "站外信", "設定是否接受站外信", mail_cmd_nooutmail, PERM_LOGINOK, CMD_PRIO_HIGH },
+    { 'v', "全部已讀", "將所有信件標記為已讀", mail_cmd_read_all, 0, CMD_PRIO_HIGH, true },
+    { 'w', "丟水球", "丟水球給寄件者", mail_cmd_call_in, PERM_LOGINOK, CMD_PRIO_LOW, true },
+    { 'F', NULL, "轉寄信件至站外信箱", mail_cmd_internet_forward, PERM_FORWARD, CMD_PRIO_NONE, true },
+    { Ctrl('X'), NULL, "轉錄信件至看板", mail_cmd_cross_post, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { 'm', NULL, "標記/取消 m 重要信件(避免誤刪)", mail_cmd_mark, 0, CMD_PRIO_NONE, true },
+    { 'c', NULL, "收入信件至私人信件夾", mail_cmd_cite, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 's', NULL, "儲存信件", mail_cmd_save, PERM_MAILLIMIT, CMD_PRIO_NONE, true },
+    { 'u', NULL, "整理水球記錄後寄回", mail_cmd_waterball, 0, CMD_PRIO_NONE, true },
+    { 'D', NULL, "指定範圍刪除信件", mail_cmd_del_range, 0, CMD_PRIO_NONE, true },
+    { KEY_TAB, NULL, "切換信箱顯示模式", mail_cmd_toggle_mode, 0, CMD_PRIO_NONE },
+    { Ctrl('G'), NULL, "重建信箱索引(毀損時才用)", mail_cmd_built_index, PERM_BASIC, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
 ////////////////////////////////////////////////////////////////////////
