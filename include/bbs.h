@@ -49,6 +49,7 @@ extern "C" {
 #include "perm.h"
 #include "modes.h"
 #include "chess.h"
+#include "psb.h"
 #include "proto.h"
 #include "fnv_hash.h"
 #include "convert.h"

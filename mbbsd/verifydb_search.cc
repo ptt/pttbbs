@@ -6,6 +6,7 @@ extern "C" {
 
 #ifdef USE_VERIFYDB
 
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -20,8 +21,8 @@ public:
 
   int Header();
   int Footer();
-  int Renderer(int i, int curr, int total, int rows);
-  int InputProcessor(int key, int curr, int total, int rows);
+  int Renderer(int i, int curr);
+  int InputProcessor(PSB_CTX *ctx);
 
 private:
   Bytes buf_;
@@ -37,41 +38,41 @@ private:
 
 extern "C" {
 
-int EntryBrowserHeader(void *ctx) {
-  return reinterpret_cast<EntryBrowser *>(ctx)->Header();
+int EntryBrowserHeader(PSB_CTX *ctx) {
+  return reinterpret_cast<EntryBrowser *>(ctx->cmd.priv)->Header();
 }
-int EntryBrowserFooter(void *ctx) {
-  return reinterpret_cast<EntryBrowser *>(ctx)->Footer();
+int EntryBrowserFooter(PSB_CTX *ctx) {
+  return reinterpret_cast<EntryBrowser *>(ctx->cmd.priv)->Footer();
 }
-int EntryBrowserRenderer(int i, int curr, int total, int rows, void *ctx) {
-  return reinterpret_cast<EntryBrowser *>(ctx)->Renderer(i, curr, total, rows);
+int EntryBrowserRenderer(int i, PSB_CTX *ctx) {
+  return reinterpret_cast<EntryBrowser *>(ctx->cmd.priv)->Renderer(i, ctx->cmd.curr);
 }
-int EntryBrowserInputProcessor(int key, int curr, int total, int rows,
-                               void *ctx) {
-  return reinterpret_cast<EntryBrowser *>(ctx)->InputProcessor(key, curr, total,
-                                                               rows);
+int EntryBrowserOnKey(PSB_CTX *ctx) {
+  return reinterpret_cast<EntryBrowser *>(ctx->cmd.priv)->InputProcessor(ctx);
 }
 
 }
 
 int EntryBrowser::Display() {
   PSB_CTX ctx = {
-      .curr = 0,
-      .total = static_cast<int>(entries_.size()),
+      .cmd = {
+          .curr = 0,
+          .total = static_cast<int>(entries_.size()),
+          .priv = reinterpret_cast<void *>(this),
+      },
       .header_lines = 2,
       .footer_lines = 2,
       .allow_pbs_version_message = 1,
-      .ctx = reinterpret_cast<void *>(this),
       .header = &EntryBrowserHeader,
       .footer = &EntryBrowserFooter,
       .renderer = &EntryBrowserRenderer,
-      .input_processor = &EntryBrowserInputProcessor,
+      .on_key = &EntryBrowserOnKey,
   };
 
   // If empty result, show a line about it.
   // Also PSB does not accept 0 as total.
-  if (ctx.total == 0)
-    ctx.total = 1;
+  if (ctx.cmd.total == 0)
+    ctx.cmd.total = 1;
 
   psb_main(&ctx);
   return 0;
@@ -93,7 +94,7 @@ int EntryBrowser::Footer() {
   return 0;
 }
 
-int EntryBrowser::Renderer(int i, int curr, int total, int rows) {
+int EntryBrowser::Renderer(int i, int curr) {
   if (curr >= (int)entries_.size()) {
     outs("   查無資料");
     return 0;
@@ -114,17 +115,18 @@ int EntryBrowser::Renderer(int i, int curr, int total, int rows) {
   return 0;
 }
 
-int EntryBrowser::InputProcessor(int key, int curr, int total, int rows) {
-  if (curr >= (int)entries_.size())
+int EntryBrowser::InputProcessor(PSB_CTX *ctx) {
+  if (ctx->cmd.curr >= (int)entries_.size())
     return PSB_NA;
 
-  switch (key) {
+  switch (ctx->cmd.key) {
   case KEY_ENTER:
   case KEY_RIGHT:
   case 'r':
-    if (user_info_admin(entries_[curr]->userid()->c_str()) < 0)
+    if (user_info_admin(entries_[ctx->cmd.curr]->userid()->c_str()) < 0)
       vmsg("找不到此使用者");
-    return PSB_NOP;
+    ctx->cmd.redraw = true;
+    return 0;
   }
   return PSB_NA;
 }

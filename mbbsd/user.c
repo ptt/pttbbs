@@ -482,7 +482,7 @@ typedef struct {
     int valid_count;
 } customize_ctx_t;
 
-static int customize_header(void *ctx GCC_UNUSED) {
+static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     const int col_opt = 54;
     showtitle("個人設定", "個人化設定");
     move(2, 0);
@@ -491,16 +491,15 @@ static int customize_header(void *ctx GCC_UNUSED) {
     return 0;
 }
 
-static int customize_footer(void *ctx GCC_UNUSED) {
+static int customize_footer(PSB_CTX *ctx GCC_UNUSED) {
     vs_footer(" 個人化設定 ",
               " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
     move(b_lines - 1, 0);
     return 0;
 }
 
-static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
-                               int rows GCC_UNUSED, void *ctx) {
-    customize_ctx_t *cx = (customize_ctx_t *)ctx;
+static int customize_renderer(int i, PSB_CTX *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
     int item_idx = cx->valid_indices[i];
     const CustomItem *item = &items[item_idx];
     const int col_opt = 54;
@@ -514,22 +513,32 @@ static int customize_renderer(int i, int curr GCC_UNUSED, int total GCC_UNUSED,
     return 0;
 }
 
-static int customize_input_processor(int key, int curr, int total GCC_UNUSED,
-                                       int rows GCC_UNUSED, void *ctx) {
-    customize_ctx_t *cx = (customize_ctx_t *)ctx;
-    int sel = key - 'a';
-    if (key == KEY_RIGHT || key == '\r' || key == '\n' || key == ' ') {
-        // Just use curr.
-    } else if (sel >= 0 && sel < cx->valid_count) {
-        curr = sel;
-    } else {
-        return PSB_NA;
-    }
-
-    assert(curr >= 0 && curr < (int)ARRAY_SIZE(items));
-    Setter(&items[cx->valid_indices[curr]]);
-    return curr;
+static int customize_cmd_toggle(cmd_ctx_t *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->priv;
+    assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(items));
+    Setter(&items[cx->valid_indices[ctx->curr]]);
+    ctx->redraw = true;
+    return 0;
 }
+
+static int customize_on_key(PSB_CTX *ctx) {
+    customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
+    int sel = ctx->cmd.key - 'a';
+    if (sel >= 0 && sel < cx->valid_count) {
+        ctx->cmd.curr = sel;
+        Setter(&items[cx->valid_indices[sel]]);
+        ctx->cmd.redraw = true;
+        return 0;
+    }
+    return PSB_NA;
+}
+
+static const cmd_t customize_cmds[] = {
+    { KEY_ENTER, "切換/修改", "切換或修改選取的個人化設定項目", customize_cmd_toggle, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, customize_cmd_toggle, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, NULL, customize_cmd_toggle, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
 
 void Customize(void)
 {
@@ -542,16 +551,20 @@ void Customize(void)
     }
 
     PSB_CTX ctx = {
-        .curr = 0,
-        .total = cx.valid_count,
+        .cmd = {
+            .curr = 0,
+            .total = cx.valid_count,
+            .priv = &cx,
+            .caption = " 個人化設定 ",
+        },
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
-        .ctx = &cx,
         .header = customize_header,
         .footer = customize_footer,
         .renderer = customize_renderer,
-        .input_processor = customize_input_processor,
+        .on_key = customize_on_key,
+        .cmds = customize_cmds,
     };
 
     psb_main(&ctx);
