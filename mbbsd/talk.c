@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "psb.h"
 #include "daemons.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -803,88 +804,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
-static const char
-* const hlp_talkbasic[] = {
-    "【移動游標】", NULL,
-    "  往上一行", "↑ k",
-    "  往下一行", "↓ j n",
-    "  往前翻頁", "^B PgUp",
-    "  往後翻頁", "^F PgDn 空白鍵",
-    "  列表開頭", "Home 0",
-    "  列表結尾", "End  $",
-    "  跳至...",  "1-9數字鍵",
-    "  搜尋ID",	  "s",
-    "  結束離開", "←   e",
-    NULL,
-},
-* const hlp_talkcfg[] = {
-    "【修改資料】", NULL,
-    "  修改暱稱",    "N",
-    "  切換隱身",    "C",
-    "  切換呼叫器",  "p",
-    "  增加好友",    "a",
-    "  刪除好友",    "d",
-    "  修改好友",    "o",
-    NULL,
-},
-* const hlp_talkdisp[] = {
-    "【查詢資訊】", NULL,
-    "  查詢此人",    "q",
-    "  輸入查詢ID",  "Q",
-    "  查詢寵物",    "c",
-    "", "",
-    "【顯示方式】", NULL,
-    "  調整排序",	"TAB",
-    "  來源/描述/戰績",	"S",
-    "  全部/好友 列表",	"f",
-    NULL,
-},
-* const hlp_talktalk[] = {
-    "【交談互動】", NULL,
-    "  與他聊天",    "→ t Enter",
-    "  熱線水球",    "w",
-    "  即時回應",    "^R (要先收到水球)",
-    "  好友廣播",    " b (要在好友列表)",
-    "  回顧訊息",    "l",
-    "  寄信給他",    "m",
-    "  給予" MONEYNAME,"g",
-    NULL,
-},
-* const hlp_talkmisc[] = {
-    "【其它】", NULL,
-    "  閱\讀信件",   "r",
-    "  使用說明",    "h",
-    NULL,
-},
-* const hlp_talkadmin[] = {
-    "【站長專用】", NULL,
-    "  設定使用者",   "u",
-    "  切換隱形模式", "H",
-    "  踢人",	      "K",
-#if defined(SHOWBOARD) && defined(DEBUG)
-    "  顯示所在看板", "Y",
-#endif
-    NULL,
-};
-
-static void
-t_showhelp(void)
-{
-    const char * const * p1[3] = { hlp_talkbasic, hlp_talkdisp, hlp_talkcfg },
-	       * const * p2[3] = { hlp_talktalk,  hlp_talkmisc, hlp_talkadmin };
-    const int  cols[3] = { 31, 25, 22 },    // column witdh
-               desc[3] = { 12, 18, 16 };    // desc width
-    clear();
-    showtitle("休閒聊天", "使用說明");
-    outs("\n");
-    vs_multi_T_table_simple(p1, 3, cols, desc,
-	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-    if (HasUserPerm(PERM_PAGE))
-    vs_multi_T_table_simple(p2, HasUserPerm(PERM_SYSOP)?3:2, cols, desc,
-	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-    PRESSANYKEY();
-}
-
 /* Kaede show friend description */
 static char    *
 friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
@@ -1184,164 +1103,245 @@ static const VCOL ulist_coldef[ULISTCOLS] = {
     {NULL, 0, VCOL_MAXW, -1}, // for middle alignment
 };
 
+static const cmd_t userlist_cmds[];
+
+typedef struct {
+    pickup_t   *currpickup;
+    userinfo_t *uentp;
+    int         fri_stat;
+    int         page;
+    int         offset;
+    int         nfriend, myfriend, friendme, bfriend, badfriend;
+    char       *show_mode;
+    char       *show_uid;
+#if defined(SHOWBOARD) && defined(DEBUG)
+    char       *show_board;
+#endif
+    char       *show_pid;
+    int        *pickup_way;
+    char        skippickup;
+    time4_t     lastupdate;
+} userlist_ctx_t;
+
+static int ulist_scrw = 0, ulist_scrh = 0;
+static VCOLW ulist_cols[ULISTCOLS];
+
 static void
-draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
-	    int page, int show_mode, int show_uid, int show_board,
-	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
+t_showhelp(void)
 {
-    char            pagerchar[6] = "* -Wf";
+    clear();
+    showtitle("休閒聊天", "使用說明");
+    outs(
+        ANSI_COLOR(1;36) "  熱鍵控制說明" ANSI_RESET "\n"
+        "  [" ANSI_COLOR(1;37) "e/←" ANSI_RESET "] 離開            "
+        "[" ANSI_COLOR(1;37) "h" ANSI_RESET "]    顯示本畫面       "
+        "[" ANSI_COLOR(1;37) "t/Enter/→" ANSI_RESET "] 聊天\n"
+        "  [" ANSI_COLOR(1;37) "p" ANSI_RESET "]    切換呼叫器模式  "
+        "[" ANSI_COLOR(1;37) "C" ANSI_RESET "]    隱身術           "
+        "[" ANSI_COLOR(1;37) "S" ANSI_RESET "]          變更顯示內容\n"
+        "  [" ANSI_COLOR(1;37) "q" ANSI_RESET "]    查詢網友        "
+        "[" ANSI_COLOR(1;37) "w" ANSI_RESET "]    丟水球           "
+        "[" ANSI_COLOR(1;37) "l" ANSI_RESET "]          看上幾次水球\n"
+        "  [" ANSI_COLOR(1;37) "f" ANSI_RESET "]    列出全部/好友   "
+        "[" ANSI_COLOR(1;37) "m" ANSI_RESET "]    寫信給他         "
+        "[" ANSI_COLOR(1;37) "r" ANSI_RESET "]          看信件\n"
+        "  [" ANSI_COLOR(1;37) "s" ANSI_RESET "]    搜尋該ID位置    "
+        "[" ANSI_COLOR(1;37) "g" ANSI_RESET "]    塞錢給他         "
+        "[" ANSI_COLOR(1;37) "c" ANSI_RESET "]          看寵物\n"
+        "  [" ANSI_COLOR(1;37) "a/d" ANSI_RESET "]  增刪好友        "
+        "[" ANSI_COLOR(1;37) "o" ANSI_RESET "]    編輯好友名單     "
+        "[" ANSI_COLOR(1;37) "b" ANSI_RESET "]          對好友廣播\n"
+        "  [" ANSI_COLOR(1;37) "N" ANSI_RESET "]    修改暱稱        "
+        "[" ANSI_COLOR(1;37) "Q" ANSI_RESET "]    查詢指定網友     "
+        "[" ANSI_COLOR(1;37) "TAB" ANSI_RESET "]        變更排序方式\n"
+#ifdef PLAY_ANGEL
+        "  [" ANSI_COLOR(1;37) "^P" ANSI_RESET "]   切換小天使呼叫器\n"
+#endif
+        "\n"
+        ANSI_COLOR(1;36) "  名單顏色說明" ANSI_RESET "\n"
+        "  " ANSI_COLOR(1;37) "白色" ANSI_RESET " - 我的朋友        "
+        "  " ANSI_COLOR(1;33) "黃色" ANSI_RESET " - 與我為友        "
+        "  " ANSI_COLOR(1;32) "綠色" ANSI_RESET " - 雙向好友\n"
+        "  " ANSI_COLOR(1;36) "青色" ANSI_RESET " - 板友            "
+        "  " ANSI_COLOR(0;31) "暗紅" ANSI_RESET " - 壞人\n");
+    if (HasUserPerm(PERM_SYSOP))
+        outs("\n  " ANSI_COLOR(1;36) "站長專區" ANSI_RESET "\n"
+             "  [" ANSI_COLOR(1;37) "u" ANSI_RESET "]    設定使用者資料  "
+             "[" ANSI_COLOR(1;37) "K" ANSI_RESET "]    把人踢出去       "
+             "[" ANSI_COLOR(1;37) "H" ANSI_RESET "]          切換幽靈模式\n"
+             "  [" ANSI_COLOR(1;37) "#" ANSI_RESET "]    切換顯示 PID    "
+#ifdef SHOWUID
+             "[" ANSI_COLOR(1;37) "U" ANSI_RESET "]    切換顯示 UID     "
+#endif
+#if defined(SHOWBOARD) && defined(DEBUG)
+             "[" ANSI_COLOR(1;37) "Y" ANSI_RESET "]          切換顯示 board"
+#endif
+             "\n");
+    pressanykey();
+}
 
-    userinfo_t     *uentp;
-    int             i, ch, state, friend;
-
-    // print buffer
-    char pager[3];
-    char num[10];
-    char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
-    char description[30];
-    char idlestr[32];
+static int
+userlist_header(PSB_CTX *ctx)
+{
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
     int idletime = 0;
-
-    static int scrw = 0, scrh = 0;
-    static VCOLW cols[ULISTCOLS];
-
 #ifdef SHOW_IDLE_TIME
     idletime = 1;
 #endif
-
-    // re-layout if required.
-    if (scrw != t_columns || scrh != t_lines)
-    {
-	vs_cols_layout(ulist_coldef, cols, ULISTCOLS);
-	scrw = t_columns; scrh = t_lines;
+    if (ulist_scrw != t_columns || ulist_scrh != t_lines) {
+        vs_cols_layout(ulist_coldef, ulist_cols, ULISTCOLS);
+        ulist_scrw = t_columns;
+        ulist_scrh = t_lines;
     }
 
-    if (drawall) {
-	showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天",
-		  BBSNAME);
-
-	move(2, 0);
-	outs(ANSI_REVERSE);
-	vs_cols(ulist_coldef, cols, ULISTCOLS,
-                // Columns Header (9 args)
-		show_uid ? "UID" : "編號",
-		"P",
-                "代號",
-                "暱稱",
-		MODE_STRING[show_mode],
-		show_board ? "看板" : "動態",
-		show_pid ? "PID" : "",
-                idletime ? "發呆": "",
-		"");
-	outs(ANSI_RESET);
-
-if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp)
-	{
-	    // modes should match ANGELPAUSE*
-	    static const char *modestr[ANGELPAUSE_MODES] = {
-		ANSI_COLOR(0;30;47) "開放",
-		ANSI_COLOR(0;32;47) "停收",
-		ANSI_COLOR(0;31;47) "關閉",
-	    };
-	    // reduced version
-	    // TODO use vs_footer to replace.
-	    move(b_lines, 0);
-	    vbarlr(ANSI_COLOR(34;46) " 休閒聊天 "
-		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 "
-		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 "
-		   ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器", TEMPFORMAT(STRLEN, ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
-		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]));
-	} else
-	vs_footer(" 休閒聊天 ",
-		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
-    }
+    showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
     move(1, 0);
     prints("  排序:[%s] 上站人數:%-4d "
-	    ANSI_COLOR(1;32) "我的朋友:%-3d "
-	   ANSI_COLOR(33) "與我為友:%-3d "
-	   ANSI_COLOR(36) "板友:%-4d "
-	   ANSI_COLOR(31) "壞人:%-2d"
-	   ANSI_RESET "\n",
-	   MSG_PICKUP_WAY[pickup_way], SHM->UTMPnumber,
-	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
+           ANSI_COLOR(1;32) "我的朋友:%-3d "
+           ANSI_COLOR(33) "與我為友:%-3d "
+           ANSI_COLOR(36) "板友:%-4d "
+           ANSI_COLOR(31) "壞人:%-2d"
+           ANSI_RESET "\n",
+           MSG_PICKUP_WAY[*cx->pickup_way], SHM->UTMPnumber,
+           cx->myfriend, cx->friendme, currutmp->brc_id ? cx->bfriend : 0, cx->badfriend);
 
-    for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
-        char *mind = "";
-
-	move(i + 3, 0);
-	uentp = pickup[i].ui;
-	friend = pickup[i].friend;
-	if (uentp == NULL) {
-	    outc('\n');
-	    continue;
-	}
-
-	if (!uentp->pid) {
-	    vs_cols(ulist_coldef, cols, 3,
-		    "", "", "< 離站中..>");
-	    continue;
-	}
-
-	// prepare user data
-
-	if (PERM_HIDE(uentp))
-	    state = 9;
-	else if (currutmp == uentp)
-	    state = 10;
-	else if (friend & IRH && !(friend & IFH))
-	    state = 8;
-	else
-	    state = (friend & ST_FRIEND) >> 2;
-
-        idlestr[0] = 0;
-#ifdef SHOW_IDLE_TIME
-	idletime = time4_diff(now, uentp->lastact);
-	if (idletime > DAY_SECONDS)
-	    STRLCPY(idlestr, " -----");
-	else if (idletime >= 3600)
-	    SNPRINTF(idlestr, "%dh%02d",
-		     idletime / 3600, (idletime / 60) % 60);
-	else if (idletime > 0)
-	    SNPRINTF(idlestr, "%d'%02d",
-		     idletime / 60, idletime % 60);
-#endif
-
-	if ((uentp->userlevel & PERM_VIOLATELAW))
-            mind = ANSI_COLOR(1;31) "違規";
-
-	SNPRINTF(num, "%d",
-#ifdef SHOWUID
-		show_uid ? uentp->uid :
-#endif
-		ch);
-
-	pager[0] = (friend & HRM) ? 'X' : pagerchar[uentp->pager % 5];
-	pager[1] = (uentp->invisible ? ')' : ' ');
-	pager[2] = 0;
-
-	/* color of userid, userid */
-	if(fcolor[state])
-	    SNPRINTF(xuid, "%s%s",
-		    fcolor[state], uentp->userid);
-
-	vs_cols(ulist_coldef, cols, ULISTCOLS,
-                // Columns data (9 params)
-		num,
-                pager,
-		fcolor[state] ? xuid : uentp->userid,
-		uentp->nickname,
-                descript(show_mode, uentp, uentp->pager & !(friend & HRM),
-                         description, sizeof(description)),
+    move(2, 0);
+    outs(ANSI_REVERSE);
+    vs_cols(ulist_coldef, ulist_cols, ULISTCOLS,
+            *cx->show_uid ? "UID" : "編號",
+            "P",
+            "代號",
+            "暱稱",
+            MODE_STRING[(int)*cx->show_mode],
 #if defined(SHOWBOARD) && defined(DEBUG)
-		show_board ? (uentp->brc_id == 0 ? "" :
-		    getbcache(uentp->brc_id)->brdname) :
+            *cx->show_board ? "看板" :
 #endif
-                    modestring(uentp, 0),
-                mind,
-		idlestr,
-	        "");
+            "動態",
+            *cx->show_pid ? "PID" : "",
+            idletime ? "發呆" : "",
+            "");
+    outs(ANSI_RESET);
+    return 0;
+}
+
+static int
+userlist_footer(PSB_CTX *ctx GCC_UNUSED)
+{
+    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp) {
+        static const char *modestr[ANGELPAUSE_MODES] = {
+            ANSI_COLOR(0;30;47) "開放",
+            ANSI_COLOR(0;32;47) "停收",
+            ANSI_COLOR(0;31;47) "關閉",
+        };
+        move(b_lines, 0);
+        vbarlr(ANSI_COLOR(34;46) " 休閒聊天 "
+               ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 "
+               ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 "
+               ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器", TEMPFORMAT(STRLEN, ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
+               modestr[currutmp->angelpause % ANGELPAUSE_MODES]));
+    } else {
+        vs_footer(" 休閒聊天 ",
+                  " (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
+    return 0;
+}
+
+static int
+userlist_renderer(int idx, PSB_CTX *ctx)
+{
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
+    int i = idx - ctx->cmd.base;
+    int ch = idx + 1;
+    char pagerchar[6] = "* -Wf";
+    userinfo_t *uentp;
+    int state, friend;
+    char pager[3];
+    char num[10];
+    char xuid[IDLEN+1+20];
+    char description[30];
+    char idlestr[32];
+    char *mind = "";
+#ifdef SHOW_IDLE_TIME
+    int idletime;
+#endif
+
+    if (ulist_scrw != t_columns || ulist_scrh != t_lines) {
+        vs_cols_layout(ulist_coldef, ulist_cols, ULISTCOLS);
+        ulist_scrw = t_columns;
+        ulist_scrh = t_lines;
+    }
+
+    if (i < 0 || i >= nPickups) {
+        clrtoeol();
+        return 0;
+    }
+    uentp = cx->currpickup[i].ui;
+    friend = cx->currpickup[i].friend;
+    if (uentp == NULL) {
+        clrtoeol();
+        return 0;
+    }
+    if (!uentp->pid) {
+        vs_cols(ulist_coldef, ulist_cols, 3,
+                "", "", "< 離站中..>");
+        return 0;
+    }
+
+    if (PERM_HIDE(uentp))
+        state = 9;
+    else if (currutmp == uentp)
+        state = 10;
+    else if ((friend & IRH) && !(friend & IFH))
+        state = 8;
+    else
+        state = (friend & ST_FRIEND) >> 2;
+
+    idlestr[0] = 0;
+#ifdef SHOW_IDLE_TIME
+    idletime = time4_diff(now, uentp->lastact);
+    if (idletime > DAY_SECONDS)
+        STRLCPY(idlestr, " -----");
+    else if (idletime >= 3600)
+        SNPRINTF(idlestr, "%dh%02d",
+                 idletime / 3600, (idletime / 60) % 60);
+    else if (idletime > 0)
+        SNPRINTF(idlestr, "%d'%02d",
+                 idletime / 60, idletime % 60);
+#endif
+
+    if (uentp->userlevel & PERM_VIOLATELAW)
+        mind = ANSI_COLOR(1;31) "違規";
+
+    SNPRINTF(num, "%d",
+#ifdef SHOWUID
+             *cx->show_uid ? uentp->uid :
+#endif
+             ch);
+
+    pager[0] = (friend & HRM) ? 'X' : pagerchar[uentp->pager % 5];
+    pager[1] = (uentp->invisible ? ')' : ' ');
+    pager[2] = 0;
+
+    if (fcolor[state])
+        SNPRINTF(xuid, "%s%s", fcolor[state], uentp->userid);
+
+    vs_cols(ulist_coldef, ulist_cols, ULISTCOLS,
+            num,
+            pager,
+            fcolor[state] ? xuid : uentp->userid,
+            uentp->nickname,
+            descript(*cx->show_mode, uentp, uentp->pager & !(friend & HRM),
+                     description, sizeof(description)),
+#if defined(SHOWBOARD) && defined(DEBUG)
+            *cx->show_board ? (uentp->brc_id == 0 ? "" :
+                getbcache(uentp->brc_id)->brdname) :
+#endif
+                modestring(uentp, 0),
+            mind,
+            idlestr,
+            "");
+    return 0;
 }
 
 static int
@@ -1390,6 +1390,8 @@ userlist_search_online_user(pickup_t *currpickup, int pickup_way, int *page, int
             currpickup[fi++].friend = 0;
         }
     }
+    for (; fi < nPickups; ++fi)
+        currpickup[fi].ui = NULL;
     return 1;
 }
 
@@ -1451,419 +1453,625 @@ userlist_broadcast(void)
     }
 }
 
+static int
+userlist_cmd_quit(cmd_ctx_t *ctx) {
+    ctx->quit = true;
+    return 0;
+}
+
+static int
+userlist_cmd_tab(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    *cx->pickup_way = (*cx->pickup_way + 1) % PICKUP_WAYS;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_count_valid(const pickup_t *currpickup) {
+    int vis = 0;
+    while (vis < nPickups && currpickup[vis].ui != NULL)
+        vis++;
+    return vis;
+}
+
+static int
+userlist_cmd_down(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int vis = userlist_count_valid(cx->currpickup);
+    if (++cx->offset >= vis) {
+        int maxp = pickup_maxpages(*cx->pickup_way, cx->nfriend);
+        if (maxp <= 1) {
+            cx->offset = 0;
+            ctx->curr = ctx->base + cx->offset;
+        } else {
+            if (++cx->page >= maxp)
+                cx->offset = cx->page = 0;
+            else
+                cx->offset = 0;
+            ctx->reload = true;
+        }
+    } else {
+        ctx->curr = ctx->base + cx->offset;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_up(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int vis = userlist_count_valid(cx->currpickup);
+    if (--cx->offset < 0) {
+        int maxp = pickup_maxpages(*cx->pickup_way, cx->nfriend);
+        if (maxp <= 1) {
+            cx->offset = vis - 1;
+            ctx->curr = ctx->base + cx->offset;
+        } else {
+            cx->offset = -1;
+            if (--cx->page < 0)
+                cx->page = maxp - 1;
+            ctx->reload = true;
+        }
+    } else {
+        ctx->curr = ctx->base + cx->offset;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_home(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (cx->page != 0) {
+        cx->page = cx->offset = 0;
+        ctx->reload = true;
+    } else {
+        cx->offset = 0;
+        ctx->curr = ctx->base;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_end(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int lastp = pickup_maxpages(*cx->pickup_way, cx->nfriend) - 1;
+    if (lastp < 0)
+        lastp = 0;
+    cx->page = lastp;
+    cx->offset = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_pgdn(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int newpage;
+    if ((newpage = cx->page + 1) >= pickup_maxpages(*cx->pickup_way, cx->nfriend))
+        newpage = cx->offset = 0;
+    if (newpage != cx->page) {
+        cx->page = newpage;
+        ctx->reload = true;
+    } else {
+        ctx->curr = ctx->base + cx->offset;
+        if (time4_ge(now, cx->lastupdate + 2))
+            ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_pgup(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (--cx->page < 0)
+        cx->page = pickup_maxpages(*cx->pickup_way, cx->nfriend) - 1;
+    if (cx->page < 0)
+        cx->page = 0;
+    cx->offset = 0;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_sysophide(cmd_ctx_t *ctx) {
+    currutmp->userlevel ^= PERM_SYSOPHIDE;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_cloak(cmd_ctx_t *ctx) {
+    currutmp->invisible ^= 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_search(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (userlist_search_online_user(cx->currpickup, *cx->pickup_way, &cx->page, &cx->offset,
+                                    &cx->myfriend, &cx->friendme, &cx->badfriend)) {
+        cx->skippickup = 1;
+        ctx->reload = true;
+    } else {
+        ctx->redraw = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_num(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int ch = ctx->key;
+    int tmp;
+    if ((tmp = search_num(ch, SHM->UTMPnumber)) >= 0) {
+        cx->page = tmp / nPickups;
+        cx->offset = tmp % nPickups;
+        ctx->reload = true;
+    } else {
+        ctx->redraw_footer_lines = 1;
+    }
+    return 0;
+}
+
+#ifdef SHOWUID
+static int
+userlist_cmd_showuid(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    *cx->show_uid ^= 1;
+    ctx->reload = true;
+    return 0;
+}
+#endif
+
+#if defined(SHOWBOARD) && defined(DEBUG)
+static int
+userlist_cmd_showboard(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    *cx->show_board ^= 1;
+    ctx->reload = true;
+    return 0;
+}
+#endif
+
+#ifdef SHOWPID
+static int
+userlist_cmd_showpid(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    *cx->show_pid ^= 1;
+    ctx->reload = true;
+    return 0;
+}
+#endif
+
+static int
+userlist_cmd_broadcast(cmd_ctx_t *ctx) {
+    userlist_broadcast();
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_showmode(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    *cx->show_mode = (*cx->show_mode + 1) % MAX_SHOW_MODE;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_edituser(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    int id;
+    userec_t muser;
+    vs_hdr("使用者設定");
+    move(1, 0);
+    if ((id = getuser(cx->uentp->userid, &muser)) > 0) {
+        user_display(&muser, 1);
+        if (HasUserPerm(PERM_ACCOUNTS))
+            uinfo_query(muser.userid, 1, id);
+        else
+            pressanykey();
+    }
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_talk(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (cx->uentp->pid != currpid &&
+        strcmp(cx->uentp->userid, cuser.userid) != 0) {
+        move(1, 0);
+        clrtobot();
+        move(3, 0);
+        my_talk(cx->uentp, cx->fri_stat, 0);
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_kick(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    my_kick(cx->uentp);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_write(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (call_in(cx->uentp, cx->fri_stat))
+        ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_addfriend(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (!(cx->fri_stat & IFH)) {
+        if (vans("確定要加入好友嗎 [N/y]") == 'y') {
+            friend_add(cx->uentp->userid, FRIEND_OVERRIDE, cx->uentp->nickname);
+            friend_load(FRIEND_OVERRIDE, 0);
+        }
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_delfriend(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (cx->fri_stat & IFH) {
+        if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
+            friend_delete(cx->uentp->userid, FRIEND_OVERRIDE);
+            friend_load(FRIEND_OVERRIDE, 0);
+        }
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_override(cmd_ctx_t *ctx) {
+    t_override();
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_friendlist(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    pwcuToggleFriendList();
+    cx->page = cx->offset = 0;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_givemoney(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    if (cuser.money) {
+        give_money_ui(cx->uentp->userid);
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_mail(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    char userid[IDLEN + 1];
+    STRLCPY(userid, cx->uentp->userid);
+    vs_hdr("寄  信");
+    prints("[寄信] 收信人：%s", userid);
+    my_send(userid);
+    setutmpmode(LUSERS);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_query(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    my_query(cx->uentp->userid);
+    setutmpmode(LUSERS);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_query_input(cmd_ctx_t *ctx) {
+    t_query();
+    setutmpmode(LUSERS);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_chicken(cmd_ctx_t *ctx) {
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
+    chicken_query(cx->uentp->userid);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_review(cmd_ctx_t *ctx) {
+    pager_show_log();
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_pager(cmd_ctx_t *ctx) {
+    pager_toggle_mode();
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_angel_pause(cmd_ctx_t *ctx) {
+    if (HAS_ANGEL && currutmp) {
+        angel_toggle_pause();
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+userlist_cmd_readmail(cmd_ctx_t *ctx) {
+    m_read();
+    setutmpmode(LUSERS);
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_nickname(cmd_ctx_t *ctx) {
+    char tmp_nick[sizeof(cuser.nickname)];
+    if (getdata_str(1, 0, "新的暱稱: ",
+                    tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0) {
+        pwcuSetNickname(tmp_nick);
+        STRLCPY(currutmp->nickname, cuser.nickname);
+    }
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+userlist_cmd_noop(cmd_ctx_t *ctx GCC_UNUSED) {
+    return 0;
+}
+
+static int
+userlist_cmd_help(cmd_ctx_t *ctx) {
+    t_showhelp();
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t userlist_cmds[] = {
+    { 'h', "說明", "顯示操作說明", userlist_cmd_help, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, "離開", "離開使用者名單", userlist_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'e', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'E', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'w', "丟水球", "發送水球給選取的使用者", userlist_cmd_write, 0, CMD_PRIO_HIGH, true },
+    { 'q', "查詢", "查詢選取的使用者名片檔", userlist_cmd_query, 0, CMD_PRIO_HIGH, true },
+    { KEY_RIGHT, "聊天", "邀請選取的使用者聊天", userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { KEY_ENTER, NULL, NULL, userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { 't', NULL, NULL, userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { 'm', "寄信", "寄站內信給使用者", userlist_cmd_mail, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { KEY_TAB, "排序", "切換名單排序方式", userlist_cmd_tab, 0, CMD_PRIO_NORM },
+    { 'f', "好友", "切換顯示全部/好友名單", userlist_cmd_friendlist, PERM_LOGINOK, CMD_PRIO_NORM },
+    { KEY_DOWN, NULL, "向下移動", userlist_cmd_down, 0, CMD_PRIO_NONE, true },
+    { 'n', NULL, NULL, userlist_cmd_down, 0, CMD_PRIO_NONE, true },
+    { 'j', NULL, NULL, userlist_cmd_down, 0, CMD_PRIO_NONE, true },
+    { KEY_UP, NULL, "向上移動", userlist_cmd_up, 0, CMD_PRIO_NONE, true },
+    { 'k', NULL, NULL, userlist_cmd_up, 0, CMD_PRIO_NONE, true },
+    { '0', NULL, "移至第一頁首筆", userlist_cmd_home, 0, CMD_PRIO_NONE, true },
+    { KEY_HOME, NULL, NULL, userlist_cmd_home, 0, CMD_PRIO_NONE, true },
+    { KEY_END, NULL, "移至最後一頁末筆", userlist_cmd_end, 0, CMD_PRIO_NONE, true },
+    { '$', NULL, NULL, userlist_cmd_end, 0, CMD_PRIO_NONE, true },
+    { ' ', NULL, "向下翻頁", userlist_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGDN, NULL, NULL, userlist_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { Ctrl('F'), NULL, NULL, userlist_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, NULL, "向上翻頁", userlist_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { Ctrl('B'), NULL, NULL, userlist_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { 'P', NULL, NULL, userlist_cmd_pgup, 0, CMD_PRIO_NONE, true },
+    { 'H', NULL, "切換站長隱身狀態", userlist_cmd_sysophide, PERM_SYSOP | PERM_OLDSYSOP, CMD_PRIO_NONE },
+    { 'C', NULL, "切換隱身模式", userlist_cmd_cloak, 0, CMD_PRIO_NONE },
+    { '/', NULL, NULL, userlist_cmd_noop, 0, CMD_PRIO_NONE },
+    { Ctrl('S'), NULL, NULL, userlist_cmd_noop, 0, CMD_PRIO_NONE },
+    { 's', "搜尋", "搜尋線上使用者", userlist_cmd_search, 0, CMD_PRIO_NORM },
+    { '1', NULL, "輸入編號跳轉", userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '2', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '3', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '4', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '5', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '6', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '7', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '8', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '9', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
+#ifdef SHOWUID
+    { 'U', NULL, "顯示使用者 UID", userlist_cmd_showuid, PERM_SYSOP, CMD_PRIO_NONE },
+#endif
+#if defined(SHOWBOARD) && defined(DEBUG)
+    { 'Y', NULL, "顯示使用者所在看板", userlist_cmd_showboard, PERM_SYSOP, CMD_PRIO_NONE },
+#endif
+#ifdef SHOWPID
+    { '#', NULL, "顯示使用者 PID", userlist_cmd_showpid, PERM_SYSOP, CMD_PRIO_NONE },
+#endif
+    { 'b', "廣播", "發送好友廣播水球", userlist_cmd_broadcast, 0, CMD_PRIO_NORM },
+    { 'S', "顯示切換", "切換故鄉/描述/戰績顯示模式", userlist_cmd_showmode, 0, CMD_PRIO_NORM },
+    { 'u', "查改資料", "查詢或修改使用者帳號資料", userlist_cmd_edituser, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
+
+    { 'K', "踢人", "將使用者踢出系統", userlist_cmd_kick, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
+
+    { 'a', "加好友", "將使用者加入好友名單", userlist_cmd_addfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },
+    { 'd', "刪好友", "將使用者從好友名單移除", userlist_cmd_delfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },
+    { 'o', "名單設定", "編輯好友名單設定", userlist_cmd_override, PERM_LOGINOK, CMD_PRIO_NORM },
+
+    { 'g', "給P幣", "贈送 P 幣給使用者", userlist_cmd_givemoney, PERM_LOGINOK, CMD_PRIO_LOW, true },
+
+
+    { 'Q', "查指定人", "輸入帳號查詢使用者", userlist_cmd_query_input, 0, CMD_PRIO_NORM, true },
+    { 'c', "寵物", "查看使用者的電子雞寵物", userlist_cmd_chicken, PERM_LOGINOK, CMD_PRIO_LOW, true },
+    { 'l', "回顧水球", "檢視水球歷史記錄", userlist_cmd_review, PERM_LOGINOK, CMD_PRIO_LOW },
+    { 'p', "呼叫器", "切換呼叫器開關模式", userlist_cmd_pager, PERM_BASIC, CMD_PRIO_NORM },
+    { Ctrl('P'), "神諭呼叫", "切換小天使暫停狀態", userlist_cmd_angel_pause, PERM_ANGEL, CMD_PRIO_LOW },
+    { 'r', "讀信", "閱\讀個人信箱", userlist_cmd_readmail, PERM_READMAIL, CMD_PRIO_NORM },
+    { 'N', "改暱稱", "修改個人暫時暱稱", userlist_cmd_nickname, PERM_LOGINOK, CMD_PRIO_NORM },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static bool
+userlist_ensure_valid_cursor(userlist_ctx_t *cx) {
+    int vis = userlist_count_valid(cx->currpickup);
+    if (vis > 0) {
+        if (cx->offset < 0 || cx->offset >= vis)
+            cx->offset = vis - 1;
+        return true;
+    }
+    if (cx->page <= 0) {
+        cx->page = 0;
+        cx->offset = 0;
+        return true;
+    }
+    if (cx->offset >= 0) {
+        cx->page = 0;
+        cx->offset = 0;
+    } else {
+        --cx->page;
+        cx->offset = -1;
+    }
+    return false;
+}
+
+static int
+userlist_loader(PSB_CTX *ctx)
+{
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
+    if (nPickups != b_lines - 3) {
+        nPickups = b_lines - 3;
+        cx->currpickup = (pickup_t *)realloc(cx->currpickup, sizeof(pickup_t) * nPickups);
+    }
+    int rows = nPickups;
+
+    if (ctx->cmd.base != ctx->cached_base && !ctx->cmd.reload) {
+        cx->page = ctx->cmd.base / rows;
+        cx->offset = ctx->cmd.curr % rows;
+    }
+
+    while (1) {
+        if (!cx->skippickup) {
+            pickup(cx->currpickup, *cx->pickup_way, &cx->page,
+                   &cx->nfriend, &cx->myfriend, &cx->friendme, &cx->bfriend, &cx->badfriend);
+        }
+        cx->skippickup = 0;
+        if (userlist_ensure_valid_cursor(cx))
+            break;
+    }
+    cx->lastupdate = now;
+
+    int vis = userlist_count_valid(cx->currpickup);
+    int maxp = pickup_maxpages(*cx->pickup_way, cx->nfriend);
+    if (maxp < 1)
+        maxp = 1;
+    ctx->cmd.base = cx->page * rows;
+    ctx->cmd.curr = ctx->cmd.base + cx->offset;
+    if (vis == 0 && cx->page == 0)
+        ctx->cmd.total = 0;
+    else if (cx->page + 1 >= maxp)
+        ctx->cmd.total = ctx->cmd.base + vis;
+    else
+        ctx->cmd.total = maxp * rows;
+
+    cx->uentp = (vis > 0) ? cx->currpickup[cx->offset].ui : NULL;
+    cx->fri_stat = (vis > 0) ? cx->currpickup[cx->offset].friend : 0;
+    return 0;
+}
+
+static int
+userlist_cursor(int y, PSB_CTX *ctx)
+{
+    userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
+    int vis = userlist_count_valid(cx->currpickup);
+    cx->offset = ctx->cmd.curr - ctx->cmd.base;
+    if (cx->offset < 0 || cx->offset >= vis) {
+        cx->uentp = NULL;
+        cx->fri_stat = 0;
+    } else {
+        cx->uentp = cx->currpickup[cx->offset].ui;
+        cx->fri_stat = cx->currpickup[cx->offset].friend;
+    }
+    cursor_show(y, 0);
+    return 0;
+}
+
+static int
+userlist_on_key(PSB_CTX *ctx)
+{
+    int ret = cmd_dispatch_layers(ctx->layers, &ctx->cmd, ctx->cmd.caption);
+    if (ret == PSB_NA) {
+        userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
+        if (time4_ge(now, cx->lastupdate + 2))
+            ctx->cmd.reload = true;
+        return 0;
+    }
+    return ret;
+}
+
 static void
 userlist(void)
 {
-    pickup_t       *currpickup;
-    userinfo_t     *uentp;
     static char     show_mode = 0;
     static char     show_uid = 0;
+#if defined(SHOWBOARD) && defined(DEBUG)
     static char     show_board = 0;
+#endif
     static char     show_pid = 0;
     static int      pickup_way = 0;
-    char            skippickup = 0, redraw, redrawall;
-    int             page, offset, ch, leave, fri_stat;
-    int             nfriend, myfriend, friendme, bfriend, badfriend;
-    time4_t          lastupdate;
+    userlist_ctx_t  cx = { 0 };
+    cmd_layer_t layers[] = {
+        { userlist_cmds, &cx },
+        { bbs_global_cmds, NULL },
+        { NULL, NULL }
+    };
 
     nPickups = b_lines - 3;
-    currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
-    page = offset = 0 ;
-    nfriend = myfriend = friendme = bfriend = badfriend = 0;
-    leave = 0;
-    redrawall = 1;
-    /*
-     * 各個 flag :
-     * redraw:    重新 pickup(), draw_pickup() (僅中間區, 不含標題列等等)
-     * redrawall: 全部重畫 (含標題列等等, 須再指定 redraw 才會有效)
-     * leave:     離開使用者名單
-     */
-    while (!leave && !ZA_Waiting()) {
-	if( !skippickup )
-	    pickup(currpickup, pickup_way, &page,
-		   &nfriend, &myfriend, &friendme, &bfriend, &badfriend);
-	draw_pickup(redrawall, currpickup, pickup_way, page,
-		    show_mode, show_uid, show_board, show_pid,
-		    myfriend, friendme, bfriend, badfriend);
-
-	/*
-	 * 如果因為換頁的時候, 這一頁有的人數比較少,
-	 * (通常都是最後一頁人數不滿的時候) 那要重新計算 offset
-	 * 以免指到沒有人的地方
-	 */
-	if (offset == -1 || currpickup[offset].ui == NULL) {
-	    for (offset = (offset == -1 ? nPickups - 1 : offset);
-		 offset >= 0; --offset)
-		if (currpickup[offset].ui != NULL)
-		    break;
-	    if (offset == -1) {
-		if (--page < 0)
-		    page = pickup_maxpages(pickup_way, nfriend) - 1;
-		offset = 0;
-		continue;
-	    }
-	}
-	skippickup = redraw = redrawall = 0;
-	lastupdate = now;
-	while (!redraw && !ZA_Waiting()) {
-	    ch = cursor_key(offset + 3, 0);
-	    uentp = currpickup[offset].ui;
-	    fri_stat = currpickup[offset].friend;
-
-	    switch (ch) {
-	    case Ctrl('Z'):
-		redrawall = redraw = 1;
-		if (ZA_Select())
-		    leave = 1;
-		break;
-
-	    case KEY_LEFT:
-	    case 'e':
-	    case 'E':
-		redraw = leave = 1;
-		break;
-
-	    case KEY_TAB:
-		pickup_way = (pickup_way + 1) % PICKUP_WAYS;
-		redraw = 1;
-		redrawall = 1;
-		break;
-
-	    case KEY_DOWN:
-	    case 'n':
-	    case 'j':
-		if (++offset == nPickups || currpickup[offset].ui == NULL) {
-		    redraw = 1;
-		    if (++page >= pickup_maxpages(pickup_way,
-						  nfriend))
-			offset = page = 0;
-		    else
-			offset = 0;
-		}
-		break;
-
-	    case '0':
-	    case KEY_HOME:
-		page = offset = 0;
-		redraw = 1;
-		break;
-
-	    case 'H':
-		if (HasUserPerm(PERM_SYSOP)||HasUserPerm(PERM_OLDSYSOP)) {
-		    currutmp->userlevel ^= PERM_SYSOPHIDE;
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'C':
-		currutmp->invisible ^= 1;
-		redrawall = redraw = 1;
-		break;
-
-	    case ' ':
-	    case KEY_PGDN:
-	    case Ctrl('F'):{
-		    int             newpage;
-		    if ((newpage = page + 1) >= pickup_maxpages(pickup_way,
-								nfriend))
-			newpage = offset = 0;
-		    if (newpage != page) {
-			page = newpage;
-			redraw = 1;
-		    } else if (time4_ge(now, lastupdate + 2))
-			redrawall = redraw = 1;
-		}
-		break;
-
-	    case KEY_UP:
-	    case 'k':
-		if (--offset == -1) {
-		    offset = nPickups - 1;
-		    if (--page == -1)
-			page = pickup_maxpages(pickup_way, nfriend)
-			    - 1;
-		    redraw = 1;
-		}
-		break;
-
-	    case KEY_PGUP:
-	    case Ctrl('B'):
-	    case 'P':
-		if (--page == -1)
-		    page = pickup_maxpages(pickup_way, nfriend) - 1;
-		offset = 0;
-		redraw = 1;
-		break;
-
-	    case KEY_END:
-	    case '$':
-		page = pickup_maxpages(pickup_way, nfriend) - 1;
-		offset = -1;
-		redraw = 1;
-		break;
-
-	    case '/':
-		/*
-		 * getdata_buf(b_lines-1,0,"請輸入暱稱關鍵字:", keyword,
-		 * sizeof(keyword), DOECHO); state = US_PICKUP;
-		 */
-		break;
-
-	    case 's':
-		if (userlist_search_online_user(currpickup, pickup_way, &page, &offset,
-						&myfriend, &friendme, &badfriend)) {
-		    skippickup = 1;
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case '1':
-	    case '2':
-	    case '3':
-	    case '4':
-	    case '5':
-	    case '6':
-	    case '7':
-	    case '8':
-	    case '9':
-		{		/* Thor: 可以打數字跳到該人 */
-		    int             tmp;
-		    if ((tmp = search_num(ch, SHM->UTMPnumber)) >= 0) {
-			if (tmp / nPickups == page) {
-			    /*
-			     * in2:目的在目前這一頁, 直接 更新 offset ,
-			     * 不用重畫畫面
-			     */
-			    offset = tmp % nPickups;
-			} else {
-			    page = tmp / nPickups;
-			    offset = tmp % nPickups;
-			}
-			redrawall = redraw = 1;
-		    }
-		}
-		break;
-
-#ifdef SHOWUID
-	    case 'U':
-		if (HasUserPerm(PERM_SYSOP)) {
-		    show_uid ^= 1;
-		    redrawall = redraw = 1;
-		}
-		break;
-#endif
+    cx.currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
+    cx.page = cx.offset = 0;
+    cx.nfriend = cx.myfriend = cx.friendme = cx.bfriend = cx.badfriend = 0;
+    cx.show_mode = &show_mode;
+    cx.show_uid = &show_uid;
 #if defined(SHOWBOARD) && defined(DEBUG)
-	    case 'Y':
-		if (HasUserPerm(PERM_SYSOP)) {
-		    show_board ^= 1;
-		    redrawall = redraw = 1;
-		}
-		break;
+    cx.show_board = &show_board;
 #endif
-#ifdef  SHOWPID
-	    case '#':
-		if (HasUserPerm(PERM_SYSOP)) {
-		    show_pid ^= 1;
-		    redrawall = redraw = 1;
-		}
-		break;
-#endif
+    cx.show_pid = &show_pid;
+    cx.pickup_way = &pickup_way;
 
-	    case 'b':		/* broadcast */
-		userlist_broadcast();
-		redrawall = redraw = 1;
-		break;
+    PSB_CTX psbctx = {
+        .cmd = {
+            .curr = 0,
+            .priv = &cx,
+            .caption = " 休閒聊天 ",
+        },
+        .header_lines = 3,
+        .footer_lines = 1,
+        .layers = layers,
+        .loader = userlist_loader,
+        .header = userlist_header,
+        .footer = userlist_footer,
+        .renderer = userlist_renderer,
+        .cursor = userlist_cursor,
+        .on_key = userlist_on_key,
+    };
 
-	    case 'S':		/* 顯示好友描述 */
-                show_mode = (show_mode + 1) % MAX_SHOW_MODE;
-		redrawall = redraw = 1;
-		break;
+    psb_main(&psbctx);
 
-	    case 'u':		/* 線上修改資料 */
-		if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP)) {
-		    int             id;
-		    userec_t        muser;
-		    vs_hdr("使用者設定");
-		    move(1, 0);
-		    if ((id = getuser(uentp->userid, &muser)) > 0) {
-			user_display(&muser, 1);
-			if( HasUserPerm(PERM_ACCOUNTS) )
-			    uinfo_query(muser.userid, 1, id);
-			else
-			    pressanykey();
-		    }
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case Ctrl('S'):
-		break;
-
-	    case KEY_RIGHT:
-	    case KEY_ENTER:
-	    case 't':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    if (uentp->pid != currpid &&
-			    strcmp(uentp->userid, cuser.userid) != 0) {
-			move(1, 0);
-			clrtobot();
-			move(3, 0);
-			my_talk(uentp, fri_stat, 0);
-			redrawall = redraw = 1;
-		    }
-		}
-		break;
-	    case 'K':
-		if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP)) {
-		    my_kick(uentp);
-		    redrawall = redraw = 1;
-		}
-		break;
-	    case 'w':
-		if (call_in(uentp, fri_stat))
-		    redrawall = redraw = 1;
-		break;
-	    case 'a':
-		if (HasBasicUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
-		    if (vans("確定要加入好友嗎 [N/y]") == 'y') {
-			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->nickname);
-			friend_load(FRIEND_OVERRIDE, 0);
-		    }
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'd':
-		if (HasBasicUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
-		    if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
-			friend_delete(uentp->userid, FRIEND_OVERRIDE);
-			friend_load(FRIEND_OVERRIDE, 0);
-		    }
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'o':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    t_override();
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'f':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    pwcuToggleFriendList();
-                    // reset cursor
-                    page = offset = 0;
-		    redrawall = redraw = 1;
-		}
-		break;
-
-		/*
-	    case 'G':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    p_give();
-		    // give_money_ui(NULL);
-		    redrawall = redraw = 1;
-		}
-		break;
-		*/
-
-	    case 'g':
-		// Give money requires mail permission
-		if (HasSendMailUserPerm() && cuser.money) {
-		    give_money_ui(uentp->userid);
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'm':
-		if (HasSendMailUserPerm()) {
-		    char   userid[IDLEN + 1];
-		    STRLCPY(userid, uentp->userid);
-		    vs_hdr("寄  信");
-		    prints("[寄信] 收信人：%s", userid);
-		    my_send(userid);
-		    setutmpmode(LUSERS);
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'q':
-		my_query(uentp->userid);
-		setutmpmode(LUSERS);
-		redrawall = redraw = 1;
-		break;
-
-	    case 'Q':
-		t_query();
-		setutmpmode(LUSERS);
-		redrawall = redraw = 1;
-		break;
-
-	    case 'c':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    chicken_query(uentp->userid);
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'l':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    pager_show_log();
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'h':
-		t_showhelp();
-		redrawall = redraw = 1;
-		break;
-
-	    case 'p':
-		if (HasUserPerm(PERM_BASIC)) {
-		    pager_toggle_mode();
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case Ctrl('P'):
-		if (HAS_ANGEL && HasBasicUserPerm(PERM_ANGEL) && currutmp) {
-                    angel_toggle_pause();
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'r':
-		if (HasUserPerm(PERM_READMAIL)) {
-                    // XXX in fact we should check size here...
-                    // chkmailbox();
-                    m_read();
-                    setutmpmode(LUSERS);
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'N':
-		if (HasBasicUserPerm(PERM_LOGINOK)) {
-		    char tmp_nick[sizeof(cuser.nickname)];
-		    if (getdata_str(1, 0, "新的暱稱: ",
-				tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0)
-		    {
-			pwcuSetNickname(tmp_nick);
-			STRLCPY(currutmp->nickname, cuser.nickname);
-		    }
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    default:
-		if (time4_ge(now, lastupdate + 2))
-		    redraw = 1;
-	    }
-	}
-    }
-    free(currpickup);
+    free(cx.currpickup);
 }
 
 int
@@ -2174,6 +2382,7 @@ talk_key_hook(int ch)
     } else {
         screen_backup_t old_screen;
         int             my_newfd;
+        int             old_newmail = ISNEWMAIL(currutmp);
 
         scr_dump(&old_screen);
         my_newfd = vkey_detach();
@@ -2182,6 +2391,10 @@ talk_key_hook(int ch)
 
         vkey_attach(my_newfd);
         scr_restore(&old_screen);
+        if (ZA_Waiting())
+            return Ctrl('Z');
+        if (ISNEWMAIL(currutmp) != old_newmail)
+            return 0;
     }
     return KEY_INCOMPLETE;
 }
