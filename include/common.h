@@ -322,6 +322,12 @@
 #define MACROSTRLEN(x)	(sizeof(x) - 1)
 #endif
 
+#include <stddef.h>
+#ifndef container_of
+#define container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 
