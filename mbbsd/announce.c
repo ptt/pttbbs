@@ -1105,12 +1105,7 @@ announce_cmd_num_search(cmd_ctx_t *ctx)
     ctx->reload = true;
     if (n > 0) {
         cx->me->now = n - 1;
-        if (cx->me->now >= cx->me->num)
-            cx->me->now = cx->me->num > 0 ? cx->me->num - 1 : 0;
         ctx->curr = cx->me->now;
-        ctx->base = (ctx->curr > ctx->rows / 2) ?
-                    (ctx->curr - ctx->rows / 2) :
-                    (ctx->curr - (ctx->curr % ctx->rows));
     } else if (n == 0 && cx->sess->z_indexes[0] == 0) {
         // empty/invalid input
     } else {
@@ -1482,72 +1477,7 @@ static const cmd_t announce_bm_cmds[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
-static int
-announce_cmd_up(cmd_ctx_t *ctx) {
-    if (ctx->total > 0)
-        ctx->curr = (ctx->curr - 1 < 0) ? ctx->total - 1 : ctx->curr - 1;
-    return 0;
-}
-
-static int
-announce_cmd_down(cmd_ctx_t *ctx) {
-    if (ctx->total > 0)
-        ctx->curr = (ctx->curr + 1 >= ctx->total) ? 0 : ctx->curr + 1;
-    return 0;
-}
-
-static int
-announce_cmd_pgup(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0)
-        return 0;
-    if (ctx->curr >= p_lines)
-        ctx->curr -= p_lines;
-    else if (ctx->curr > 0)
-        ctx->curr = 0;
-    else
-        ctx->curr = ctx->total - 1;
-    return 0;
-}
-
-static int
-announce_cmd_pgdn(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0)
-        return 0;
-    if (ctx->curr < ctx->total - p_lines)
-        ctx->curr += p_lines;
-    else if (ctx->curr < ctx->total - 1)
-        ctx->curr = ctx->total - 1;
-    else
-        ctx->curr = 0;
-    return 0;
-}
-
-static int
-announce_cmd_home(cmd_ctx_t *ctx) {
-    ctx->curr = 0;
-    return 0;
-}
-
-static int
-announce_cmd_end(cmd_ctx_t *ctx) {
-    ctx->curr = (ctx->total > 0) ? ctx->total - 1 : 0;
-    return 0;
-}
-
 static const cmd_t announce_base_cmds[] = {
-    { KEY_UP, NULL, "向上移動", announce_cmd_up, 0, CMD_PRIO_NONE, true },
-    { 'k', NULL, NULL, announce_cmd_up, 0, CMD_PRIO_NONE, true },
-    { KEY_DOWN, NULL, "向下移動", announce_cmd_down, 0, CMD_PRIO_NONE, true },
-    { 'j', NULL, NULL, announce_cmd_down, 0, CMD_PRIO_NONE, true },
-    { KEY_PGUP, "上頁", "向上翻頁", announce_cmd_pgup, 0, CMD_PRIO_NAV, true },
-    { Ctrl('B'), NULL, NULL, announce_cmd_pgup, 0, CMD_PRIO_NONE, true },
-    { KEY_PGDN, "下頁", "向下翻頁", announce_cmd_pgdn, 0, CMD_PRIO_NAV, true },
-    { ' ', NULL, NULL, announce_cmd_pgdn, 0, CMD_PRIO_NONE, true },
-    { Ctrl('F'), NULL, NULL, announce_cmd_pgdn, 0, CMD_PRIO_NONE, true },
-    { KEY_HOME, NULL, "移至首筆", announce_cmd_home, 0, CMD_PRIO_NONE, true },
-    { '0', NULL, NULL, announce_cmd_home, 0, CMD_PRIO_NONE, true },
-    { KEY_END, NULL, "移至末筆", announce_cmd_end, 0, CMD_PRIO_NONE, true },
-    { '$', NULL, NULL, announce_cmd_end, 0, CMD_PRIO_NONE, true },
     { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱\讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
     { 'r', NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
     { KEY_ENTER, NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
@@ -1559,15 +1489,6 @@ static const cmd_t announce_base_cmds[] = {
     { 't', NULL, NULL, announce_cmd_copy, 0, CMD_PRIO_NONE, true },
     { Ctrl('Y'), NULL, "查詢目前所在目錄位置與路徑(我在哪裡)", announce_cmd_whereami, 0, CMD_PRIO_NONE },
     { Ctrl('W'), NULL, NULL, announce_cmd_whereami, 0, CMD_PRIO_NONE },
-    { '1', "跳項", "輸入編號或路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NAV },
-    { '2', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '3', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '4', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '5', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '6', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '7', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '8', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '9', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 'z', NULL, "輸入路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 'Z', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
@@ -1716,7 +1637,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	root = &me;
     }
 
-    me.header_size = p_lines;
+    me.header_size = (t_columns < 70) ? (t_lines - 3) / 2 : (t_lines - 3);
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
     STRLCPY(me.mtitle, maintitle);
@@ -1787,7 +1708,7 @@ a_menu_rec(const char *maintitle, const char *path,
             .caption = announce_caption(&me),
         },
         .header_lines = 2,
-        .footer_lines = 2,
+        .footer_lines = 1,
         .loader = announce_loader,
         .header = announce_header,
         .renderer = announce_renderer,
