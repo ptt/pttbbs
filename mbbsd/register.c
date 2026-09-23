@@ -1967,13 +1967,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     mail_send_file(muser.userid,  "[註冊失敗記錄]",  buf,  "[註冊系統]");
 }
 
-// New Regform UI
-static void
-prompt_regform_ui()
-{
-    vs_footer(" 審核 ",
-	    " (y)接受(n)拒絕(d)丟掉 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
-}
+static void prompt_regform_ui(void);
 
 static void
 regform_concat_reasons(const char *reason, char *result, int maxlen)
@@ -2455,6 +2449,270 @@ regform2_validate_single(const char *xuid)
 // According to the (soft) max terminal size definition.
 #define MAX_FORMS_IN_PAGE (100)
 
+typedef struct {
+    RegformEntry *forms;
+    char *ans;
+    char (*rejects)[REASON_LEN];
+    int cforms;
+    int *ci;
+    int yMsg;
+    int *action_ch;
+} regform_ctx_t;
+
+static int
+reg_cmd_up(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    if (*cx->ci > 0)
+        (*cx->ci)--;
+    return 0;
+}
+
+static int
+reg_cmd_down(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    if (*cx->ci + 1 < cx->cforms)
+        (*cx->ci)++;
+    return 0;
+}
+
+static int
+reg_cmd_home(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    *cx->ci = 0;
+    return 0;
+}
+
+static int
+reg_cmd_num(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    int target = (ctx->key == '0') ? 9 : (ctx->key - '1');
+    if (target >= cx->cforms)
+        target = cx->cforms - 1;
+    *cx->ci = target;
+    return 0;
+}
+
+static int
+reg_cmd_quit(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    if (vans("確定要離開了嗎？ (本頁變更將不會儲存) [y/N]: ") == 'y') {
+        *cx->action_ch = 'q';
+        ctx->quit = true;
+    } else {
+        prompt_regform_ui();
+    }
+    return 0;
+}
+
+static int
+reg_cmd_next_page(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    char rsn[REASON_LEN] = "";
+    int blanks = 0;
+    int i;
+
+    for (i = 0; i < cx->cforms; i++)
+        if (cx->ans[i] == 0)
+            blanks++;
+
+    if (blanks > 0) {
+        int fill = vans(TEMPFORMAT(STRLEN, "尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", blanks));
+        if (fill == 'e') {
+            prompt_regform_ui();
+            return 0;
+        }
+        if (fill == 'y') {
+            // keep fill = 'y'
+        } else if (fill == 'n') {
+            resolve_reason(rsn, cx->yMsg, 1);
+            if (*rsn == 0)
+                fill = 's';
+        } else {
+            fill = 's';
+        }
+
+        for (i = 0; i < cx->cforms; i++) {
+            if (cx->ans[i] != 0)
+                continue;
+            cx->ans[i] = fill;
+            if (fill == 'n')
+                strlcpy(cx->rejects[i], rsn, REASON_LEN);
+        }
+    }
+
+    *cx->action_ch = ' ';
+    ctx->quit = true;
+    return 0;
+}
+
+static int
+reg_cmd_mark(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    int ci = *cx->ci;
+    char mark = (ctx->key == KEY_DEL || ctx->key == Ctrl('D')) ? 'd' : ctx->key;
+
+#ifdef REGFORM_DISABLE_ONLINE_USER
+    if (mark == 'y' && cx->forms[ci].online) {
+        vmsg("暫不開放審核在線上使用者。");
+        return 0;
+    }
+#endif
+    grayout(ci * 2, ci * 2 + 1, GRAYOUT_DARK);
+    move(ci * 2, 4);
+    outc(mark);
+    cx->ans[ci] = mark;
+    if (*cx->ci + 1 < cx->cforms)
+        (*cx->ci)++;
+    return 0;
+}
+
+static int
+reg_cmd_undo(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    int ci = *cx->ci;
+#ifdef REGFORM_DISABLE_ONLINE_USER
+    if (cx->forms[ci].online) {
+        vmsg("暫不開放審核在線上使用者。");
+        return 0;
+    }
+#endif
+    grayout(ci * 2, ci * 2 + 1, GRAYOUT_NORM);
+    move(ci * 2, 4);
+    outc('.');
+    cx->ans[ci] = 0;
+    if (*cx->ci + 1 < cx->cforms)
+        (*cx->ci)++;
+    return 0;
+}
+
+static int
+reg_cmd_reject(cmd_ctx_t *ctx)
+{
+    regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
+    int ci = *cx->ci;
+#ifdef REGFORM_DISABLE_ONLINE_USER
+    if (cx->forms[ci].online) {
+        vmsg("暫不開放審核在線上使用者。");
+        return 0;
+    }
+#endif
+    resolve_reason(cx->rejects[ci], cx->yMsg, 0);
+    move(cx->yMsg, 0);
+    clrtobot();
+    prompt_regform_ui();
+
+    if (!cx->rejects[ci][0])
+        return 0;
+
+    move(cx->yMsg, 0);
+    prints("退回 %s 註冊單原因:\n %s\n",
+           cx->forms[ci].u.userid, cx->rejects[ci]);
+
+    grayout(ci * 2, ci * 2 + 1, GRAYOUT_DARK);
+    move(ci * 2, 4);
+    outc('n');
+    cx->ans[ci] = 'n';
+    if (*cx->ci + 1 < cx->cforms)
+        (*cx->ci)++;
+    return 0;
+}
+
+static const cmd_t regform_cmds[] = {
+    { 'q', "結束", "離開審核(不儲存本頁變更)", reg_cmd_quit, 0, CMD_PRIO_MAX },
+    { KEY_END, NULL, NULL, reg_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'y', "接受", "通過此份註冊單", reg_cmd_mark, 0, CMD_PRIO_MAX, true },
+    { 'n', "拒絕", "退回此份註冊單並選擇原因", reg_cmd_reject, 0, CMD_PRIO_MAX, true },
+    { 'd', "丟掉", "刪除此份註冊單(不退回)", reg_cmd_mark, 0, CMD_PRIO_HIGH, true },
+    { Ctrl('D'), NULL, NULL, reg_cmd_mark, 0, CMD_PRIO_NONE, true },
+    { KEY_DEL, NULL, NULL, reg_cmd_mark, 0, CMD_PRIO_NONE, true },
+    { 's', "跳過", "暫時跳過此份註冊單", reg_cmd_mark, 0, CMD_PRIO_HIGH, true },
+    { 'u', "復原", "取消對此份註冊單的決定", reg_cmd_undo, 0, CMD_PRIO_HIGH, true },
+    { ' ', "儲存下頁", "儲存本頁決定並前往下一頁", reg_cmd_next_page, 0, CMD_PRIO_TOP },
+    { KEY_PGDN, NULL, NULL, reg_cmd_next_page, 0, CMD_PRIO_NONE },
+    { KEY_UP, "上移", "移動至上一份註冊單", reg_cmd_up, 0, CMD_PRIO_NAV, true },
+    { 'k', NULL, NULL, reg_cmd_up, 0, CMD_PRIO_NONE, true },
+    { KEY_DOWN, "下移", "移動至下一份註冊單", reg_cmd_down, 0, CMD_PRIO_NAV, true },
+    { 'j', NULL, NULL, reg_cmd_down, 0, CMD_PRIO_NONE, true },
+    { KEY_HOME, NULL, "移動至第一份註冊單", reg_cmd_home, 0, CMD_PRIO_NONE, true },
+    { '1', NULL, "跳至指定編號(1-9,0=10)", reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '2', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '3', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '4', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '5', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '6', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '7', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '8', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '9', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { '0', NULL, NULL, reg_cmd_num, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static void
+prompt_regform_ui(void)
+{
+    vs_footer(" 審核 ",
+	    " (y)接受(n)拒絕(d)丟掉 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
+}
+
+static void
+regform_draw_page(const RegformEntry forms[], const char ans[],
+                  const char rejects[][REASON_LEN], int cforms,
+                  int tid, int dryrun, int ci, int yMsg)
+{
+    clear();
+    for (int i = 0; i < cforms; i++) {
+        move(i * 2, 0);
+        prints("  %2d%s %s%-12s " ANSI_RESET,
+               i + 1,
+               ((forms[i].u.userlevel & PERM_LOGINOK) ?
+                ANSI_COLOR(1;33) "Y" :
+#ifdef REGFORM_DISABLE_ONLINE_USER
+                forms[i].online ? "s" :
+#endif
+                "."),
+               forms[i].online ? ANSI_COLOR(1;35) : ANSI_COLOR(1),
+               forms[i].u.userid);
+
+        prints(ANSI_COLOR(1;31) "%19s "
+               ANSI_COLOR(1;32) "%-40s" ANSI_RESET "\n",
+               forms[i].u.realname, forms[i].u.career);
+
+        move(i * 2 + 1, 0);
+        prints("    %s ", (forms[i].u.userlevel & PERM_NOREGCODE) ?
+                          ANSI_COLOR(1;31) "T" ANSI_RESET : " ");
+        prints("%-50s" ANSI_COLOR(0;33) "%s" ANSI_RESET "\n",
+               forms[i].u.address, forms[i].u.lasthost);
+
+        if (ans[i] != 0 &&
+            !(forms[i].u.userlevel & PERM_LOGINOK)
+#ifdef REGFORM_DISABLE_ONLINE_USER
+            && !(forms[i].online && ans[i] == 's')
+#endif
+            ) {
+            grayout(i * 2, i * 2 + 1, GRAYOUT_DARK);
+            move(i * 2, 4);
+            outc(ans[i]);
+        }
+    }
+    move(cforms * 2, 0);
+    vbarlr(ANSI_REVERSE, TEMPFORMAT(STRLEN, "%s 已顯示 %d 份註冊單 ",
+          dryrun ? "(測試模式)" : "", tid));
+    if (ci >= 0 && ci < cforms && ans[ci] == 'n' && rejects[ci][0]) {
+        move(yMsg, 0);
+        prints("退回 %s 註冊單原因:\n %s\n",
+               forms[ci].u.userid, rejects[ci]);
+    }
+    prompt_regform_ui();
+}
+
 int
 regform2_validate_page(int dryrun)
 {
@@ -2462,7 +2720,6 @@ regform2_validate_page(int dryrun)
     char ans	[MAX_FORMS_IN_PAGE];
     int  lfds	[MAX_FORMS_IN_PAGE];
     char rejects[MAX_FORMS_IN_PAGE][REASON_LEN];	// reject reason length
-    char rsn	[REASON_LEN];
     int cforms = 0,	// current loaded forms
 	ci = 0, // cursor index
 	ch = 0,	// input key
@@ -2560,164 +2817,38 @@ regform2_validate_page(int dryrun)
 	prompt_regform_ui();
 	ch = 0;
 	while (ch != 'q' && ch != ' ') {
-	    ch = cursor_key(ci*2, 0);
-	    switch (ch)
-	    {
-		// nav keys
-		case KEY_UP:
-		case 'k':
-		    if (ci > 0) ci--;
-		    break;
+	    int key = cursor_key(ci * 2, 0);
+	    int action_ch = 0;
+	    regform_ctx_t cx = {
+	        .forms = forms,
+	        .ans = ans,
+	        .rejects = rejects,
+	        .cforms = cforms,
+	        .ci = &ci,
+	        .yMsg = yMsg,
+	        .action_ch = &action_ch,
+	    };
+	    const cmd_layer_t layers[] = {
+	        { regform_cmds, &cx },
+	        { bbs_global_cmds, NULL },
+	        { NULL, NULL }
+	    };
+	    cmd_ctx_t cctx = {
+	        .key = key,
+	        .curr = ci,
+	        .total = cforms,
+	        .priv = &cx,
+	    };
 
-		case KEY_DOWN:
-		case 'j':
-		    ch = 'j'; // go next
-		    break;
-
-		    // quick nav (assuming to FORMS_IN_PAGE=10)
-		case '1': case '2': case '3': case '4': case '5':
-		case '6': case '7': case '8': case '9':
-		    ci = ch - '1';
-		    if (ci >= cforms) ci = cforms-1;
-		    break;
-		case '0':
-		    ci = 10-1;
-		    if (ci >= cforms) ci = cforms-1;
-		    break;
-
-		case KEY_HOME: ci = 0; break;
-		    /*
-		case KEY_END:  ci = cforms-1; break;
-		    */
-
-		    // abort
-		case KEY_END:
-		case 'q':
-		    ch = 'q';
-		    if (vans("確定要離開了嗎？ (本頁變更將不會儲存) [y/N]: ") != 'y')
-		    {
-			prompt_regform_ui();
-			ch = 0;
-			continue;
-		    }
-		    break;
-
-		    // prepare to go next page
-		case KEY_PGDN:
-		case ' ':
-		    ch = ' ';
-
-		    {
-			int blanks = 0;
-			// solving blank (undecided entries)
-			for (i = 0, blanks = 0; i < cforms; i++)
-			    if (ans[i] == 0) blanks ++;
-
-			if (!blanks)
-			    break;
-
-			// have more blanks
-			ch = vans(TEMPFORMAT(STRLEN, "尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ",
-				blanks));
-		    }
-
-		    if (ch == 'e')
-		    {
-			prompt_regform_ui();
-			ch = 0;
-			continue;
-		    }
-		    if (ch == 'y') {
-			// do nothing.
-		    } else if (ch == 'n') {
-			// query reject reason
-			resolve_reason(rsn, yMsg, 1);
-			if (*rsn == 0)
-			    ch = 's';
-		    } else ch = 's';
-
-		    // filling answers
-		    for (i = 0; i < cforms; i++)
-		    {
-			if (ans[i] != 0)
-			    continue;
-			ans[i] = ch;
-			if (ch != 'n')
-			    continue;
-			strlcpy(rejects[i], rsn, REASON_LEN);
-		    }
-
-		    ch = ' '; // go to page mode!
-		    break;
-
-		    // function keys
-		case 'y':	// accept
-#ifdef REGFORM_DISABLE_ONLINE_USER
-		    if (forms[ci].online)
-		    {
-			vmsg("暫不開放審核在線上使用者。");
-			break;
-		    }
-#endif
-		case 's':	// skip
-		case 'd':	// delete
-		case Ctrl('D'): // delete
-		case KEY_DEL:	// delete
-		    if (ch == KEY_DEL || ch == Ctrl('D')) ch = 'd';
-
-		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
-		    move(ci*2, 4); outc(ch);
-		    ans[ci] = ch;
-		    ch = 'j'; // go next
-		    break;
-
-		case 'u':	// undo
-#ifdef REGFORM_DISABLE_ONLINE_USER
-		    if (forms[ci].online)
-		    {
-			vmsg("暫不開放審核在線上使用者。");
-			break;
-		    }
-#endif
-		    grayout(ci*2, ci*2+1, GRAYOUT_NORM);
-		    move(ci*2, 4); outc('.');
-		    ans[ci] = 0;
-		    ch = 'j'; // go next
-		    break;
-
-		case 'n':	// reject
-#ifdef REGFORM_DISABLE_ONLINE_USER
-		    if (forms[ci].online)
-		    {
-			vmsg("暫不開放審核在線上使用者。");
-			break;
-		    }
-#endif
-		    // query for reason
-		    resolve_reason(rejects[ci], yMsg, 0);
-		    move(yMsg, 0); clrtobot();
-		    prompt_regform_ui();
-
-		    if (!rejects[ci][0])
-			break;
-
-		    move(yMsg, 0);
-		    prints("退回 %s 註冊單原因:\n %s\n",
-			    forms[ci].u.userid, rejects[ci]);
-
-		    // do reject
-		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
-		    move(ci*2, 4); outc(ch);
-		    ans[ci] = ch;
-		    ch = 'j'; // go next
-
-		    break;
-	    } // switch(ch)
-
-	    // change cursor
-	    if (ch == 'j' && ++ci >= cforms)
-		ci = cforms -1;
-	} // while(ch != QUIT/SAVE)
+	    cmd_dispatch_layers(layers, &cctx, " 註冊單審核 ");
+	    if (action_ch != 0) {
+	        ch = action_ch;
+	        break;
+	    }
+	    if (cctx.redraw) {
+	        regform_draw_page(forms, ans, rejects, cforms, tid, dryrun, ci, yMsg);
+	    }
+	}
 
 	// if exit, we still need to skip all read forms
 	if (ch == 'q')
