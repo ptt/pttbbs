@@ -298,9 +298,7 @@ psb_init_defaults(PSB_CTX *psbctx) {
 
     if (psbctx->cmd.total < 0)
         psbctx->cmd.total = 0;
-    if (psbctx->cmd.total == 0)
-        psbctx->cmd.curr = 0;
-    else if (psbctx->cmd.curr >= psbctx->cmd.total)
+    if (psbctx->cmd.total > 0 && psbctx->cmd.curr >= psbctx->cmd.total)
         psbctx->cmd.curr = psbctx->cmd.total - 1;
     else if (psbctx->cmd.curr < 0)
         psbctx->cmd.curr = 0;
