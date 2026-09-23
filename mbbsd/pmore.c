@@ -98,11 +98,11 @@
 #define PMORE_USE_OPT_SCROLL            // optimized scroll
 #define PMORE_USE_DBCS_WRAP             // safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE           // support ascii movie
-#define PMORE_USE_INTERNAL_HELP         // display pmore internal help
 #define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_VKEY                 // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
+#define PMORE_USE_INTERNAL_HELP      // display pmore internal help
 //#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
 //#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
@@ -241,7 +241,7 @@
 //       if (!cmd)    /* ...
 //  (3) if you want to override to override any special keys
 //     or help pages, you may change to pmore2 and write
-//     your own key_handler and help_handler.
+//     your own on_key and on_help.
 #ifdef M3_USE_PMORE
  // input/output API
  #define getdata(y,x,msg,buf,size,mode)     vget(y,x,msg,buf,size,mode)
@@ -295,6 +295,9 @@
  #define PMORE_COLOR_FOOTER3_TEXT ""
  #define PMORE_COLOR_FOOTER3 COLOR2
 #endif // M3_USE_PMORE
+#ifndef  PRESSANYKEY
+#define  PRESSANYKEY() vmsg(PMORE_MSG_HELP_PAUSE)
+#endif
 // --------------------------------------------------------------- </PORTING>
 
 #include <assert.h>
@@ -1701,8 +1704,18 @@ mf_display()
                 w -= stream_width((const char *)fh.floats[0]) + stream_width((const char *)fh.floats[1]) + 4;
             }
 
-            prints("%-*.*s", w, w,
-                    (val ? val : ""));
+            const char *v = val ? val : "";
+            int off = (w > 0) ? stream_col_offset(w, v) : 0;
+            if (off >= 0) {
+                char vbuf[STRLEN * 2];
+                strlcpy(vbuf, v, off + 1 < (int)sizeof(vbuf) ? off + 1 : (int)sizeof(vbuf));
+                mbs_safe_trim(vbuf);
+                int pad = w - stream_width(vbuf);
+                prints("%s%*s", vbuf, pad > 0 ? pad : 0, "");
+            } else {
+                int pad = w - stream_width(v);
+                prints("%s%*s", v, pad > 0 ? pad : 0, "");
+            }
 
             if (currline == 0 && fh.floats[0])
             {
@@ -2238,9 +2251,9 @@ mf_display_footer(
     PMORE_COLOR_FOOTER3_TEXT "按鍵說明 "
 
 #define PMORE_MSG_FOOTER_FLOAT_LONG \
-    PMORE_MSG_FOOTER_FLOAT_SHORT \
     PMORE_COLOR_FOOTER3_KEY  "←[q]"    \
-    PMORE_COLOR_FOOTER3_TEXT "離開 "
+    PMORE_COLOR_FOOTER3_TEXT "離開 " \
+    PMORE_MSG_FOOTER_FLOAT_SHORT
 
 
     vbarlr("", PMORE_MSG_FOOTER_FLOAT_LONG);
@@ -2291,65 +2304,474 @@ PMORE_UINAV_FORWARDLINE()
 
 #define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; }
 
-/*
- * piaip's more, a replacement for old more
- */
+#ifndef HAVE_CMD_T
+#define HAVE_CMD_T 1
+enum {
+    CMD_PRIO_NONE = 0,
+    CMD_PRIO_NAV,
+    CMD_PRIO_LOW,
+    CMD_PRIO_NORM,
+    CMD_PRIO_HIGH,
+    CMD_PRIO_MAX,
+};
+typedef struct cmd_ctx {
+    int key;
+    bool redraw;
+    bool quit;
+    void *priv;
+} cmd_ctx_t;
+typedef int (*cmd_cb_t)(cmd_ctx_t *ctx);
+typedef struct {
+    int key;
+    const char *label;
+    const char *helpstr;
+    cmd_cb_t func;
+    int permission;
+    int prio;
+    bool need_item;
+} cmd_t;
+#endif
+#ifndef PSB_NA
+#define PSB_NA (-1)
+#endif
+
+typedef struct {
+    int retval;
+    void *user_ctx;
+    const struct pmore_callbacks *cb;
+} pmore_exec_ctx_t;
+
+MFPROTO int
+pmore_cmd_quit(cmd_ctx_t *ctx)
+{
+    pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    ctx->quit = true;
+    if (p) p->retval = FULLUPDATE;
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_pgdn(cmd_ctx_t *ctx)
+{
+#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
+    if (mf_viewedAll()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_NEXT;
+        return 0;
+    }
+#else
+    (void)ctx;
+#endif
+    PMORE_UINAV_FORWARDPAGE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_space(cmd_ctx_t *ctx)
+{
+    if (mf_viewedAll()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_NEXT;
+        return 0;
+    }
+    PMORE_UINAV_FORWARDPAGE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_right(cmd_ctx_t *ctx)
+{
+    if (mf_viewedAll()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval)
+#ifdef PMORE_AUTONEXT_ON_RIGHTKEY
+            *retval = READ_NEXT;
+#else
+            *retval = FULLUPDATE;
+#endif
+        return 0;
+    }
+    PMORE_UINAV_FORWARDPAGE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_thread_next(cmd_ctx_t *ctx)
+{
+    if (mf_viewedAll()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = RELATE_NEXT;
+        return 0;
+    }
+    PMORE_UINAV_FORWARDPAGE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_pgup(cmd_ctx_t *ctx)
+{
+#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
+    if (mf_viewedNone()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_PREV;
+        return 0;
+    }
+#else
+    (void)ctx;
+#endif
+    mf_backward(MFNAV_PAGE);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_bksp(cmd_ctx_t *ctx)
+{
+    if (mf_viewedNone()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_PREV;
+        return 0;
+    }
+    mf_backward(MFNAV_PAGE);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_line_down(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    PMORE_UINAV_FORWARDLINE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_down(cmd_ctx_t *ctx)
+{
+    if (mf_viewedAll()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_NEXT;
+        return 0;
+    }
+    PMORE_UINAV_FORWARDLINE();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_line_up(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf_backward(1);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_up(cmd_ctx_t *ctx)
+{
+    if (mf_viewedNone()) {
+        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    int *retval = p ? &p->retval : NULL;
+        ctx->quit = true;
+        if (retval) *retval = READ_PREV;
+        return 0;
+    }
+    mf_backward(1);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_home(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf_goTop();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_end(cmd_ctx_t *ctx)
+{
+    mf_goBottom();
+#ifdef PMORE_ACCURATE_WRAPEND
+    mf_display();
+    ctx->redraw = false;
+    if (mf_viewedAll())
+        return 0;
+
+    mf_goBottom();
+    ctx->redraw = true;
+#endif
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_scroll_right_char(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    if (mf.xpos == 0)
+        mf.xpos++;
+    mf.xpos++;
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_scroll_right_tab(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf.xpos = (mf.xpos / 8 + 1) * 8;
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_scroll_left_char(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    if (mf.xpos > 0)
+        mf.xpos--;
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_scroll_left_tab(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf.xpos = (mf.xpos / 8 - 1) * 8;
+    if (mf.xpos < 0)
+        mf.xpos = 0;
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_search(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    char sbuf[81] = "";
+    char ans[4] = "n";
+
+    if (sr.search_str) {
+        free(sr.search_str);
+        sr.search_str = NULL;
+    }
+
+    getdata(b_lines - 1, 0, PMORE_MSG_SEARCH_KEYWORD, sbuf, 40, DOECHO);
+
+    if (sbuf[0]) {
+        if (getdata(b_lines - 1, 0, PMORE_MSG_SEARCH_LETTERCASE "[N] ",
+                    ans, sizeof(ans), LCECHO) && *ans == 'y')
+            sr.cmpfunc = strncmp;
+        else if (*ans == 'q')
+            sbuf[0] = 0;
+        else
+            sr.cmpfunc = mbs_strncasecmp;
+    }
+    sr.len = strlen(sbuf);
+    if (sr.len)
+        sr.search_str = (unsigned char *)strdup(sbuf);
+    mf_search(MFSEARCH_FORWARD);
+    MFDISP_DIRTY();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_search_next(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf_search(MFSEARCH_FORWARD);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_search_prev(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    mf_search(MFSEARCH_BACKWARD);
+    return 0;
+}
+
+MFPROTO void
+pmore_do_goto(int pageMode, int init_digit)
+{
+    char buf[16] = "";
+    int i = 0;
+    if (init_digit >= '1' && init_digit <= '9')
+        buf[0] = init_digit, buf[1] = 0;
+
+    pmore_clrtoeol(b_lines - 1, 0);
+    getdata_buf(b_lines - 1, 0,
+                (pageMode ? PMORE_MSG_GOTO_PAGE : PMORE_MSG_GOTO_LINE),
+                buf, 8, DOECHO);
+    if (buf[0]) {
+        i = atoi(buf);
+        if (buf[strlen(buf) - 1] == '.')
+            pageMode = 0;
+        if (i-- > 0)
+            mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
+    }
+    MFDISP_DIRTY();
+}
+
+MFPROTO int
+pmore_cmd_goto_page(cmd_ctx_t *ctx)
+{
+    pmore_do_goto(1, ctx->key);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_goto_line(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    pmore_do_goto(0, 0);
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_pref(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    pmore_Preference();
+    MFDISP_DIRTY();
+    return 0;
+}
+
+MFPROTO int
+pmore_cmd_rawmode(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    pmore_QuickRawModePref();
+    MFDISP_DIRTY();
+    return 0;
+}
+
+#ifdef PMORE_USE_ASCII_MOVIE
+MFPROTO int
+pmore_cmd_movie(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    if (mfmovie.mode == MFDISP_MOVIE_YES) {
+        RESET_MOVIE();
+        mfmovie.mode = MFDISP_MOVIE_PLAYING;
+        mf_determinemaxdisps(0, 0);
+        mf_movieNextFrame();
+        MFDISP_DIRTY();
+    } else if (mfmovie.mode == MFDISP_MOVIE_NO) {
+        static char buf[10] = "1";
+        pmore_clrtoeol(b_lines - 1, 0);
+        getdata_buf(b_lines - 1, 0, PMORE_MSG_MOVIE_PLAYOLD_GETTIME,
+                    buf, 8, LCECHO);
+
+        if (buf[0]) {
+            float nf = atof(buf);
+            RESET_MOVIE();
+
+            mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
+            mf_float2tv(nf, &mfmovie.frameclk);
+            mfmovie.compat24 = 0;
+            if (t_lines != 24) {
+                char ans[4];
+                pmore_clrtoeol(b_lines - 1, 0);
+                getdata(b_lines - 1, 0, PMORE_MSG_MOVIE_PLAYOLD_AS24L,
+                        ans, 3, LCECHO);
+                mfmovie.compat24 = (ans[0] == 'n') ? 0 : 1;
+            }
+            mf_determinemaxdisps(0, 0);
+            MFDISP_DIRTY();
+        }
+    }
+    return 0;
+}
+#endif
+
+#ifdef PMORE_USE_INTERNAL_HELP
+MFPROTO int
+pmore_cmd_help(cmd_ctx_t *ctx)
+{
+    pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
+    pmore_Help(p ? p->user_ctx : NULL, (p && p->cb) ? p->cb->help : NULL);
+    MFDISP_DIRTY();
+    return 0;
+}
+#endif
+
+const cmd_t pmore_cmds[] = {
+    { KEY_PGDN, "下頁", "向下翻一頁", pmore_cmd_pgdn, 0, CMD_PRIO_NAV },
+    { Ctrl('F'), NULL, NULL, pmore_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { ' ', NULL, "向下翻一頁 (到底讀下一篇)", pmore_cmd_space, 0, CMD_PRIO_NAV },
+    { KEY_RIGHT, NULL, "向下翻一頁 (到底離開)", pmore_cmd_right, 0, CMD_PRIO_NAV },
+    { 't', NULL, "向下翻一頁 (到底讀同主題下一篇)", pmore_cmd_thread_next, 0, CMD_PRIO_NAV },
+    { KEY_PGUP, "上頁", "向上翻一頁", pmore_cmd_pgup, 0, CMD_PRIO_NAV },
+    { Ctrl('B'), NULL, NULL, pmore_cmd_pgup, 0, CMD_PRIO_NONE },
+    { Ctrl('H'), NULL, "向上翻一頁 (到頂讀上一篇)", pmore_cmd_bksp, 0, CMD_PRIO_NAV },
+    { KEY_DOWN, "下移", "向下捲動一行 (到底讀下一篇)", pmore_cmd_down, 0, CMD_PRIO_NAV },
+    { KEY_ENTER, NULL, NULL, pmore_cmd_down, 0, CMD_PRIO_NONE },
+    { 'j', NULL, "向下捲動一行", pmore_cmd_line_down, 0, CMD_PRIO_NAV },
+    { KEY_UP, "上移", "向上捲動一行 (到頂讀上一篇)", pmore_cmd_up, 0, CMD_PRIO_NAV },
+    { 'k', NULL, "向上捲動一行", pmore_cmd_line_up, 0, CMD_PRIO_NAV },
+    { KEY_HOME, "開頭", "移至檔案開頭", pmore_cmd_home, 0, CMD_PRIO_NAV },
+    { '0', NULL, NULL, pmore_cmd_home, 0, CMD_PRIO_NONE },
+    { 'g', NULL, NULL, pmore_cmd_home, 0, CMD_PRIO_NONE },
+    { KEY_END, "結尾", "移至檔案結尾", pmore_cmd_end, 0, CMD_PRIO_NAV },
+    { '$', NULL, NULL, pmore_cmd_end, 0, CMD_PRIO_NONE },
+    { 'G', NULL, NULL, pmore_cmd_end, 0, CMD_PRIO_NONE },
+    { '/', "搜尋關鍵字", "在文章中搜尋關鍵字", pmore_cmd_search, 0, CMD_PRIO_NORM },
+    { 'n', "往後搜尋", "搜尋下一個符合的關鍵字", pmore_cmd_search_next, 0, CMD_PRIO_NORM },
+    { 'N', "往前搜尋", "搜尋上一個符合的關鍵字", pmore_cmd_search_prev, 0, CMD_PRIO_NORM },
+    { ';', "指定頁數", "跳至指定的頁數", pmore_cmd_goto_page, 0, CMD_PRIO_NORM },
+    { '1', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '2', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '3', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '4', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '5', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '6', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '7', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '8', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { '9', NULL, NULL, pmore_cmd_goto_page, 0, CMD_PRIO_NONE },
+    { ':', "指定行數", "跳至指定的行數", pmore_cmd_goto_line, 0, CMD_PRIO_NORM },
+    { '.', "向右捲動", "畫面水平向右捲動一字元", pmore_cmd_scroll_right_char, 0, CMD_PRIO_NORM },
+    { '>', NULL, "畫面水平向右捲動一欄", pmore_cmd_scroll_right_tab, 0, CMD_PRIO_NAV },
+    { '\t', NULL, NULL, pmore_cmd_scroll_right_tab, 0, CMD_PRIO_NONE },
+    { ',', "向左捲動", "畫面水平向左捲動一字元", pmore_cmd_scroll_left_char, 0, CMD_PRIO_NORM },
+    { '<', NULL, "畫面水平向左捲動一欄", pmore_cmd_scroll_left_tab, 0, CMD_PRIO_NAV },
+#ifdef KEY_STAB
+    { KEY_STAB, NULL, NULL, pmore_cmd_scroll_left_tab, 0, CMD_PRIO_NONE },
+#endif
+    { KEY_LEFT, NULL, NULL, pmore_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'q', NULL, NULL, pmore_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
+    { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
+#ifdef PMORE_USE_INTERNAL_HELP
+    { 'h', "說明", "顯示 pmore 操作說明", pmore_cmd_help, 0, CMD_PRIO_LOW },
+    { 'H', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
+    { '?', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
+#endif
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+const cmd_t pmore_movie_cmds[] = {
+#ifdef PMORE_USE_ASCII_MOVIE
+    { 'p', "播放動畫", "重新播放 ANSI 動畫", pmore_cmd_movie, 0, CMD_PRIO_NORM },
+#endif
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+MFPROTO int
+pmore_dispatch_cmds(const cmd_t *cmds, cmd_ctx_t *ctx)
+{
+    for (int i = 0; cmds[i].key != 0; i++) {
+        if (cmds[i].key == ctx->key && cmds[i].func)
+            return cmds[i].func(ctx);
+    }
+    return PSB_NA;
+}
+
 static int
 _pmore2(
         int promptend, void *ctx,
         int (*mf_attach_handler)(void *), void *ahctx,
-        int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, void *ctx),
-        int (*help_handler)  (int y,   void *ctx));
-
-int
-pmore2(
-        const char *fpath, int promptend, void *ctx,
-        int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, void *ctx),
-        int (*help_handler)  (int y,   void *ctx)
-      )
-{
-    return _pmore2(promptend, ctx,
-                   mf_attach_file, &fpath,
-                   key_handler,
-                   footer_handler,
-                   help_handler);
-}
-
-int
-pmore2_inmemory(
-        void *content, int size,
-        int promptend, void *ctx,
-        int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, void *ctx),
-        int (*help_handler)  (int y,   void *ctx)
-      )
-{
-    struct SimpleBuffer buf = {
-        .data = content,
-        .len = size
-    };
-
-    return _pmore2(promptend, ctx,
-                   mf_attach_buffer, &buf,
-                   key_handler,
-                   footer_handler,
-                   help_handler);
-}
-
-static int
-_pmore2(
-        int promptend, void *ctx,
-        int (*mf_attach_handler)(void *), void *ahctx,
-        int (*key_handler)   (int key, void *ctx),
-        int (*footer_handler)(int ratio, void *ctx),
-        int (*help_handler)  (int y,   void *ctx)
-      )
+        const struct pmore_callbacks *cb)
 {
     int flExit = 0, retval = 0;
     int ch = 0;
     int invalidate = 1;
+
+    assert(cb);
 
     /* simple re-entrant hack
      * I don't want to write pointers everywhere,
@@ -2518,344 +2940,69 @@ _pmore2(
 #endif
 
         /* PRINT FOOTER */
-        mf_display_footer(footer_handler, ctx);
-        outs(ANSI_RESET);
-        FORCE_CLRTOEOL();
+        mf_display_footer(cb->footer, ctx);
+        if (!cb->footer) {
+            outs(ANSI_RESET);
+            FORCE_CLRTOEOL();
+        }
 
         /* vkey() will do refresh(); */
-        ch = vkey();
+        ch = cb->vkey ? cb->vkey(ctx) : vkey();
 
-        // first, try custom key_handler
-        if (key_handler)
+        // first, try custom process_key
+        if (cb->process_key)
         {
-            int r = key_handler(ch, ctx);
+            int r = cb->process_key(ch, ctx);
             switch (r)
             {
-                case -1:
-                    // common return value of 'file not exist',
-                    // meaning 'bypassing this key' here.
-                    continue;
+            case -1:
+                // common return value of 'file not exist',
+                // meaning 'bypassing this key' here.
+                MFDISP_DIRTY();
+                continue;
 
-                case 0:
-                    // common return value of 'do nothing',
-                    // meaning 'continue processing this key' here.
-                    break;
+            case 0:
+                // common return value of 'do nothing',
+                // meaning 'continue processing this key' here.
+                break;
 
-                default:
-                    // for all other cases, looks like handler wants us to quit.
-                    retval = r;
-                    flExit = 1;
-                    continue;
+            default:
+                // for all other cases, looks like handler wants us to quit.
+                retval = r;
+                flExit = 1;
+                continue;
             }
         }
 
         // built-in navigation keys
-        switch (ch) {
-
-            /* ------------------ EXITING KEYS --------------------- */
-            case KEY_LEFT:
-                flExit = 1,     retval = FULLUPDATE;
-                break;
-            case 'q':
-                flExit = 1,     retval = FULLUPDATE;
-                break;
-
-            /* ------------------ NAVIGATION KEYS ------------------ */
-            /* Simple Navigation */
-            case 'k':
-                mf_backward(1);
-                break;
-            case 'j':
-                PMORE_UINAV_FORWARDLINE();
-                break;
-
-            case Ctrl('F'):
-            case KEY_PGDN:
-#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-                if (mf_viewedAll())
-                    promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_NEXT;
-                else
-#endif // PMORE_AUTONEXT_ON_PAGEFLIP
-                PMORE_UINAV_FORWARDPAGE();
-                break;
-            case Ctrl('B'):
-            case KEY_PGUP:
-#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-                if (mf_viewedNone())
-                    promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_PREV;
-                else
-#endif // PMORE_AUTONEXT_ON_PAGEFLIP
-                mf_backward(MFNAV_PAGE);
-                break;
-
-            case '0':
-            case 'g':
-            case KEY_HOME:
-                mf_goTop();
-                break;
-            case '$':
-            case 'G':
-            case KEY_END:
-                mf_goBottom();
-#ifdef PMORE_ACCURATE_WRAPEND
-                /* allright. in design of pmore,
-                 * it's possible that when user navigates to file end,
-                 * a wrapped line made nav not 100%.
-                 */
-                mf_display();
-                invalidate = 0;
-                if (mf_viewedAll())
-                    break;
-
-                /* one more try. */
-                mf_goBottom();
-                invalidate = 1;
-#endif
-                break;
-
-            /* Compound Navigation */
-            case '.':
-                if (mf.xpos == 0)
-                    mf.xpos ++;
-                mf.xpos ++;
-                break;
-            case ',':
-                if (mf.xpos > 0)
-                    mf.xpos --;
-                break;
-            case '\t':
-            case '>':
-                //if (mf.xpos == 0 || mf.trunclines)
-                    mf.xpos = (mf.xpos/8+1)*8;
-                break;
-                /* acronym form shift-tab, ^[[Z */
-                /* however some terminals does not send that. */
-#ifdef KEY_STAB
-            case KEY_STAB:
-#endif // KEY_STAB
-            case '<':
-                mf.xpos = (mf.xpos/8-1)*8;
-                if (mf.xpos < 0) mf.xpos = 0;
-                break;
-
-            case '\r':
-            case '\n':
-            case KEY_DOWN:
-                // there was an 'promptend==2' option, deprecated.
-                if (mf_viewedAll())
-                    flExit = 1, retval = READ_NEXT;
-                else
-                    PMORE_UINAV_FORWARDLINE();
-                break;
-
-            case ' ':
-                if (mf_viewedAll())
-                    flExit = 1, retval = READ_NEXT;
-                else
-                    PMORE_UINAV_FORWARDPAGE();
-                break;
-
-            case KEY_RIGHT:
-                if (mf_viewedAll())
-                {
-                    // returning READ_NEXT maybe better for RIGHT key.
-                    // but many people are already used to pmore style...
-                    promptend = PMORE_AUTO_EXIT, flExit = 1;
-#ifdef PMORE_AUTONEXT_ON_RIGHTKEY
-                    retval = READ_NEXT;
-#else
-                    retval = FULLUPDATE;
-#endif // PMORE_AUTONEXT_ON_RIGHTKEY
-                }
-                else
-                {
-                    /* drop: if mf.xpos > 0, widenav mode. */
-                    /* because we have other keys to do so,
-                     * disable it now.
-                     */
-                    PMORE_UINAV_FORWARDPAGE();
-                }
-                break;
-
-            case KEY_UP:
-                if (mf_viewedNone())
-                    flExit = 1, retval = READ_PREV;
-                else
-                    mf_backward(1);
-                break;
-            case Ctrl('H'):
-                if (mf_viewedNone())
-                    flExit = 1, retval = READ_PREV;
-                else
-                    mf_backward(MFNAV_PAGE);
-                break;
-
-            case 't':
-                if (mf_viewedAll())
-                    flExit = 1, retval = RELATE_NEXT;
-                else
-                    PMORE_UINAV_FORWARDPAGE();
-                break;
-
-            /* ------------------ SEARCH AND GOTO --------------- */
-            /* Search */
-            case '/':
-                {
-                    char sbuf[81] = "";
-                    char ans[4] = "n";
-
-                    if (sr.search_str) {
-                        free(sr.search_str);
-                        sr.search_str = NULL;
-                    }
-
-                    getdata(b_lines - 1, 0, PMORE_MSG_SEARCH_KEYWORD, sbuf,
-                            40, DOECHO);
-
-                    if (sbuf[0]) {
-                        if (getdata(b_lines - 1, 0,
-                                    PMORE_MSG_SEARCH_LETTERCASE "[N] ",
-                                    ans, sizeof(ans), LCECHO) && *ans == 'y')
-                            sr.cmpfunc = strncmp;
-                        else if (*ans == 'q')
-                            sbuf[0] = 0;
-                        else
-                            sr.cmpfunc = mbs_strncasecmp;
-                    }
-                    sr.len = strlen(sbuf);
-                    if (sr.len) sr.search_str = (unsigned char*)strdup(sbuf);
-                    mf_search(MFSEARCH_FORWARD);
-                    MFDISP_DIRTY();
-                }
-                break;
-            case 'n':
-                mf_search(MFSEARCH_FORWARD);
-                break;
-            case 'N':
-                mf_search(MFSEARCH_BACKWARD);
-                break;
-
-            /* Goto */
-            case '1': case '2': case '3': case '4': case '5':
-            case '6': case '7': case '8': case '9':
-            case ';': case ':':
-                {
-                    char buf[16] = "";
-                    int  i = 0;
-                    int  pageMode = (ch != ':');
-                    if (ch >= '1' && ch <= '9')
-                        buf[0] = ch, buf[1] = 0;
-
-                    pmore_clrtoeol(b_lines-1, 0);
-                    getdata_buf(b_lines-1, 0,
-                            (pageMode ?
-                             PMORE_MSG_GOTO_PAGE : PMORE_MSG_GOTO_LINE),
-                            buf, 8, DOECHO);
-                    if (buf[0]) {
-                        i = atoi(buf);
-                        if (buf[strlen(buf)-1] == '.')
-                            pageMode = 0;
-                        if (i-- > 0)
-                            mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
-                    }
-                    MFDISP_DIRTY();
-                }
-                break;
-
-            /* --------------- PREFERENCE AND HELP -------------- */
-            /* preference */
-            case 'o':
-                pmore_Preference();
-                MFDISP_DIRTY();
-                break;
-            case '\\':  // everyone loves backslash, let's keep it.
-                pmore_QuickRawModePref();
-                MFDISP_DIRTY();
-                break;
-
-            /* internal help */
-#ifdef PMORE_USE_INTERNAL_HELP
-            case 'h': case 'H': case '?':
-#ifdef KEY_F1
-            case KEY_F1:
-#endif
-                pmore_Help(ctx, help_handler);
-                MFDISP_DIRTY();
-                break;
-#endif // PMORE_USE_INTERNAL_HELP
-
-            /* debug system */
-#ifdef DEBUG
-            case 'd':
-                debug = !debug;
-                MFDISP_DIRTY();
-                break;
-#endif
-            /* ------------------ MOVIE SYSTEM ------------------ */
-#ifdef PMORE_USE_ASCII_MOVIE
-            case 'p':
-                /* play ascii movie again
-                 */
-                if (mfmovie.mode == MFDISP_MOVIE_YES)
-                {
-                    RESET_MOVIE();
-                    mfmovie.mode = MFDISP_MOVIE_PLAYING;
-                    mf_determinemaxdisps(0, 0); // display until last line
-                    /* it is said that it's better not to go top. */
-                    // mf_goTop();
-                    mf_movieNextFrame();
-                    MFDISP_DIRTY();
-                }
-                else if (mfmovie.mode == MFDISP_MOVIE_NO)
-                {
-                    static char buf[10]="1";
-                    //move(b_lines-1, 0);
-
-                    /*
-                     * TODO scan current page to confirm if this is a new style movie
-                     */
-                    pmore_clrtoeol(b_lines-1, 0);
-                    getdata_buf(b_lines - 1, 0,
-                            PMORE_MSG_MOVIE_PLAYOLD_GETTIME,
-                            buf, 8, LCECHO);
-
-                    if (buf[0])
-                    {
-                        float nf = 0;
-                        nf = atof(buf); // sscanf(buf, "%f", &nf);
-                        RESET_MOVIE();
-
-                        mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
-                        mf_float2tv(nf, &mfmovie.frameclk);
-                        mfmovie.compat24 = 0;
-                        /* are we really going to start? check termsize! */
-                        if (t_lines != 24)
-                        {
-                            char ans[4];
-                            pmore_clrtoeol(b_lines-1, 0);
-                            getdata(b_lines - 1, 0,
-                                    PMORE_MSG_MOVIE_PLAYOLD_AS24L,
-                                    ans, 3, LCECHO);
-                            if (ans[0] == 'n')
-                                mfmovie.compat24 = 0;
-                            else
-                                mfmovie.compat24 = 1;
-                        }
-                        mf_determinemaxdisps(0, 0); // display until last line
-                        MFDISP_DIRTY();
-                    }
-                }
-                break;
-#endif
-
+        {
+            pmore_exec_ctx_t pctx = {
+                .retval = retval,
+                .user_ctx = ctx,
+                .cb = cb,
+            };
+            cmd_ctx_t cctx = {
+                .key = ch,
+                .redraw = true,
+                .quit = false,
+                .priv = &pctx,
+            };
+            if (pmore_dispatch_cmds(pmore_cmds, &cctx) == PSB_NA &&
+                pmore_dispatch_cmds(pmore_movie_cmds, &cctx) == PSB_NA) {
 #ifndef PMORE_IGNORE_UNKNOWN_NAVKEYS
-            default:
                 return ch;
-#endif // PMORE_IGNORE_UNKNOWN_NAVKEYS
+#endif
+            }
+            retval = pctx.retval;
+            invalidate = cctx.redraw;
+            if (cctx.quit)
+                flExit = 1;
         }
         /* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }
 
+    if (cb->exit)
+        cb->exit(ctx);
     if (mf.detachHandler)
         mf.detachHandler();
     outs(ANSI_RESET);
@@ -2864,11 +3011,40 @@ _pmore2(
     return retval;
 }
 
+/*
+ * piaip's more, a replacement for old more
+ */
+
 // backward compatible
 int
 pmore(const char *fpath, int promptend)
 {
-    return pmore2(fpath, promptend, NULL, NULL, NULL, NULL);
+    struct pmore_callbacks cb = {0};
+    return pmore2(fpath, promptend, NULL, &cb);
+}
+
+int
+pmore2(
+        const char *fpath, int promptend, void *ctx,
+        const struct pmore_callbacks *cb)
+{
+    return _pmore2(promptend, ctx,
+                   mf_attach_file, &fpath, cb);
+}
+
+int
+pmore2_inmemory(
+        void *content, int size,
+        int promptend, void *ctx,
+        const struct pmore_callbacks *cb)
+{
+    struct SimpleBuffer buf = {
+        .data = content,
+        .len = size
+    };
+
+    return _pmore2(promptend, ctx,
+                   mf_attach_buffer, &buf, cb);
 }
 
 // ---------------------------------------------------- Preference and Help
@@ -3193,11 +3369,7 @@ pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
     if (help_handler)
         help_handler(y, ctx);
     else
-#ifdef  PRESSANYKEY
         PRESSANYKEY();
-#else
-        vmsg(PMORE_MSG_HELP_PAUSE);
-#endif
 }
 #endif // PMORE_USE_INTERNAL_HELP
 
