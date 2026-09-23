@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "psb.h"
 
 /* personal board state
  * 相對於看板的 attr (BRD_* in ../include/pttstruct.h),
@@ -1279,6 +1280,21 @@ get_fav_type(boardstat_t *ptr)
     return 0;
 }
 
+static const cmd_t myfav_cmds[];
+static const cmd_t board_fav_cmds[];
+static const cmd_t board_admin_cmds[];
+static const cmd_t boardlist_cmds[];
+
+static const char *
+brdlist_caption(void)
+{
+    if (IN_CLASSROOT())
+        return " 分類看板 ";
+    if (IN_FAVORITE())
+        return " 我的最愛 ";
+    return " 看板列表 ";
+}
+
 static void
 brdlist_foot(void)
 {
@@ -1306,19 +1322,27 @@ make_class_color(char *name)
 #define HILIGHT_COLOR	ANSI_COLOR(1;36)
 #define HILIGHT_COLOR2	ANSI_COLOR(36)
 
-static void
-show_brdlist(int head, int clsflag, int newflag)
+typedef struct {
+    int  *num;
+    int  *newflag;
+    char *keyword;
+    size_t keyword_sz;
+    cmd_layer_t *layers;
+} boardlist_ctx_t;
+
+static int
+brdlist_header(PSB_CTX *ctx)
 {
-    int             myrow = 2;
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->cmd.priv;
+    int newflag = *cx->newflag;
     if (unlikely(IN_CLASSROOT())) {
 	currstat = CLASS;
-	myrow = 6;
 	showtitle("分類看板", BBSNAME);
 	move(1, 0);
 	// TODO move ascii art to adbanner?
 	outs(
 	    "                                                              "
-	    "◣  ╭—" ANSI_COLOR(33) "●\n"
+	    "◣  ╭—" ANSI_COLOR(33) "●\n"
 	    "                                                    ╬—  " ANSI_RESET " "
 	    "◢█" ANSI_COLOR(47) "⊙" ANSI_COLOR(40) "██◣╤\n"
 	    "  " ANSI_COLOR(44) "   ︿︿︿︿︿︿︿︿                               "
@@ -1329,48 +1353,49 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "│" ANSI_RESET "   ◥████◤ ║\n"
 	    "                                                      " ANSI_COLOR(33) "╫"
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
-    } else if (clsflag) {
+    } else {
 	showtitle("看板列表", BBSNAME);
 	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
-
-	// boards in Ptt series are very, very large.
-	// let's create more space for board numbers,
-	// and less space for BM.
-	//
-	// newflag is not so different now because we use all 5 digits.
-
-	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"    
+	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"
               "               人氣 板   主", newflag ? "總數" : "編號"));
-	move(b_lines, 0);
-	brdlist_foot();
     }
-    if (brdnum > 0) {
-	boardstat_t    *ptr;
- 	char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
+    return 0;
+}
 
-	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
+static int
+brdlist_footer(PSB_CTX *ctx GCC_UNUSED)
+{
+    if (IN_CLASSROOT())
+        show_status();
+    else
+        brdlist_foot();
+    return 0;
+}
 
-	    // (a) or (i) needs HasUserPerm(PERM_LOGINOK)).
-	    // 3 = first line of empty area
-	    if (!HasFavEditPerm())
-	    {
-		// TODO actually we cannot use 's' (for PTT)...
-		mvouts(3, 10,
+static int
+brdlist_empty_renderer(PSB_CTX *ctx GCC_UNUSED)
+{
+    if (IS_LISTING_FAV()) {
+	if (!HasFavEditPerm()) {
+	    mvouts(3, 10,
 		"--- 註冊的使用者才能新增看板喔 (可按 s 手動選取) ---");
-	    } else {
-		// normal user. tell him what to do.
-		mvouts(3, 10,
+	} else {
+	    mvouts(3, 10,
 		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
-	    }
-	    return;
 	}
+    }
+    return 0;
+}
 
-	while (++myrow < b_lines) {
+static int
+brdlist_renderer(int idx, PSB_CTX *ctx)
+{
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->cmd.priv;
+    int newflag = *cx->newflag;
+    int head = idx;
+    boardstat_t *ptr;
+    char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
 
-	    move(myrow, 0);
-	    clrtoeol();
-
-	    if (head < brdnum) {
 		assert(0<=head && head<nbrdsize);
 		ptr = &nbrd[head++];
 		if (ptr->myattr & NBRD_LINE){
@@ -1387,7 +1412,8 @@ show_brdlist(int head, int clsflag, int newflag)
 			    // "------"
 			    "------------------------------------------"
 			    ANSI_RESET "\n");
-		    continue;
+		    clrtoeol();
+		    return 0;
 		}
 		else if (ptr->myattr & NBRD_FOLDER){
 		    char *title = get_folder_title(ptr->bid);
@@ -1416,7 +1442,8 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("Σ%-70.70s", title);
 		    outs(ANSI_RESET);
 		    */
-		    continue;
+		    clrtoeol();
+		    return 0;
 		}
 
 		if (IN_CLASSROOT())
@@ -1445,7 +1472,8 @@ show_brdlist(int head, int clsflag, int newflag)
                                 "<目前無法進入此看板>"
 #endif
                                 );
-			continue;
+			clrtoeol();
+			return 0;
 		    }
 		}
 
@@ -1532,14 +1560,20 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
 			   t_columns - 68, B_BH(ptr)->BM);
 		}
-	    }
-	    clrtoeol();
-	}
-    }
+
+    clrtoeol();
+    return 0;
+}
+
+static int
+brdlist_cursor(int y, PSB_CTX *ctx GCC_UNUSED)
+{
+    cursor_show(y, IN_CLASSROOT() ? 10 : 0);
+    return 0;
 }
 
 static void
-set_menu_group_op(char *BM)
+set_menu_group_op(const char *BM)
 {
     int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
@@ -1564,9 +1598,7 @@ set_menu_group_op(char *BM)
 static void replace_link_by_target(boardstat_t *board)
 {
     assert(0<=board->bid-1 && board->bid-1<MAX_BOARD);
-    int target = BRD_LINK_TARGET(getbcache(board->bid));
-    if (target >= 1 && target <= MAX_BOARD)
-	board->bid = target;
+    board->bid = BRD_LINK_TARGET(getbcache(board->bid));
     board->myattr &= ~NBRD_SYMBOLIC;
 }
 
@@ -1645,676 +1677,323 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
     }
 }
 
-static void board_list_help(void);
+
+static void choose_board(int newflag);
+
+///////////////////////////////////////////////////////////////////////////
+// Layer 1: Boardlist Base Commands
+
+static int
+board_cmd_whereami(cmd_ctx_t *ctx) {
+    whereami();
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+board_cmd_toggle_newflag(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    *cx->newflag ^= 1;
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+board_cmd_quit(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    if (cx->keyword[0]) {
+        cx->keyword[0] = 0;
+        brdnum = -1;
+        ctx->reload = true;
+        return 0;
+    }
+    ctx->quit = true;
+    return 0;
+}
+
+static int
+board_cmd_pgup(cmd_ctx_t *ctx) {
+    if (ctx->curr)
+        ctx->curr -= ctx->rows;
+    else
+        ctx->curr = ctx->total - 1;
+    return 0;
+}
+
+static int
+board_cmd_end(cmd_ctx_t *ctx) {
+    ctx->curr = ctx->total - 1;
+    return 0;
+}
+
+static int
+board_cmd_pgdn(cmd_ctx_t *ctx) {
+    if (ctx->curr == ctx->total - 1)
+        ctx->curr = 0;
+    else
+        ctx->curr += ctx->rows;
+    return 0;
+}
+
+static int
+board_cmd_up(cmd_ctx_t *ctx) {
+    if (--ctx->curr < 0)
+        ctx->curr = ctx->total - 1;
+    return 0;
+}
+
+static int
+board_cmd_down(cmd_ctx_t *ctx) {
+    if (++ctx->curr >= ctx->total)
+        ctx->curr = 0;
+    return 0;
+}
+
+static int
+board_cmd_home(cmd_ctx_t *ctx) {
+    ctx->curr = 0;
+    return 0;
+}
+
+static int
+board_cmd_tag(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    boardstat_t *ptr;
+    assert(0 <= num && num < nbrdsize);
+    ptr = &nbrd[num];
+    if (IS_LISTING_FAV()) {
+        assert(nbrdsize > 0);
+        if (get_fav_type(&nbrd[0]) != 0)
+            fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
+    } else if (HasUserPerm(PERM_SYSOP) ||
+               HasUserPerm(PERM_SYSSUPERSUBOP) ||
+               HasUserPerm(PERM_SYSSUBOP) ||
+               HasUserPerm(PERM_BOARD)) {
+        if (ptr->myattr & NBRD_TAG)
+            set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
+        else
+            fav_add_admtag(ptr->bid);
+    }
+    ptr->myattr ^= NBRD_TAG;
+    ctx->redraw = true;
+    if (++ctx->curr >= ctx->total)
+        ctx->curr = 0;
+    return 0;
+}
+
+static int
+board_cmd_num(cmd_ctx_t *ctx) {
+    int tmp;
+    if ((tmp = search_num(ctx->key, ctx->total)) >= 0)
+        ctx->curr = tmp;
+    ctx->redraw_footer_lines = 1;
+    return 0;
+}
+
+static int
+board_cmd_search_keyword(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    if (IN_HOTBOARD()) {
+        vmsg("熱門看板模式下不支援中文關鍵字搜尋");
+        ctx->redraw_footer_lines = 1;
+    } else {
+        getdata_buf(b_lines - 1, 0, "請輸入看板中文關鍵字:",
+                    cx->keyword, cx->keyword_sz, DOECHO);
+        trim(cx->keyword);
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+board_cmd_sort(cmd_ctx_t *ctx) {
+    if (IS_LISTING_FAV()) {
+        int tmp;
+        move(b_lines - 2, 0); clrtobot();
+        outs("重新排序看板 "
+             ANSI_COLOR(1;33) "(注意, 這個動作會覆寫原來設定)" ANSI_RESET " \n");
+        tmp = vans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
+        if (tmp == '1')
+            fav_sort_by_name();
+        else if (tmp == '2')
+            fav_sort_by_class();
+    } else {
+        pwcuToggleSortBoard();
+    }
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_mark_read(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    int ch = ctx->key;
+    boardstat_t *ptr;
+    assert(0 <= num && num < nbrdsize);
+    ptr = &nbrd[num];
+    if (nbrd[num].bid < 0 || !HasBoardPerm(B_BH(ptr)))
+        return 0;
+    if (ch == 'v') {
+        ptr->myattr &= ~NBRD_UNREAD;
+        brc_toggle_all_read(ptr->bid, 1);
+    } else {
+        brc_toggle_all_read(ptr->bid, 0);
+        ptr->myattr |= NBRD_UNREAD;
+    }
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+board_cmd_search_local(cmd_ctx_t *ctx) {
+    int tmp;
+    ctx->redraw = true;
+    if ((tmp = search_local_board()) != -1)
+        ctx->curr = tmp;
+    return 0;
+}
+
+static int
+board_cmd_search_global(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    char bname[IDLEN + 1];
+    int tmp;
+    int tmpbid = currutmp->brc_id;
+    move(0, 0);
+    clrtoeol();
+    CompleteBoard(ANSI_REVERSE
+                  "【 搜尋全站看板 】" ANSI_RESET
+                  "  (若要限定搜尋範圍為目前列表請改用 Ctrl-S)\n"
+                  "請輸入看板名稱(按空白鍵自動搜尋): ",
+                  bname);
+    ctx->redraw = true;
+    if (!*bname)
+        return 0;
+    if ((tmp = search_board(bname)) != -1) {
+        ctx->curr = tmp;
+        return 0;
+    }
+    if (enter_board(bname) >= 0)
+        Read();
+    setutmpbid(tmpbid);
+    setutmpmode(*cx->newflag ? READNEW : READBRD);
+    return 0;
+}
 
 static void
-choose_board(int newflag)
-{
-    static int      num = 0;
-    boardstat_t    *ptr;
-    int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
-    char            keyword[13] = "", buf[PATHLEN];
+board_enter_fav_folder(boardstat_t *ptr, cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    int t = ctx->curr;
+    *cx->num = 0;
+    fav_folder_in(ptr->bid);
+    choose_board(0);
+    fav_folder_out();
+    *cx->num = t;
+    ctx->curr = t;
+    LIST_FAV();
+    brdnum = -1;
+    ctx->reload = true;
+}
 
-    setutmpmode(newflag ? READNEW : READBRD);
-    if( get_fav_root() == NULL ) {
-	fav_load();
-        if (!get_current_fav()) {
-            vmsgf("我的最愛載入失敗，請到" BN_BUGREPORT "報告您之前進行了哪些動作，謝謝");
-            refresh();
-            assert(get_current_fav());
-            exit(-1);
-        }
+static void
+board_enter_normal(boardstat_t *ptr, cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    char buf[PATHLEN];
+    if (!HasBoardPerm(B_BH(ptr)))
+        return;
+    brc_initial_board(B_BH(ptr)->brdname);
+    if (*cx->newflag) {
+        setbdir(buf, currboard);
+        int tmp = unread_position(buf, ptr);
+        int head = tmp - t_lines / 2;
+        getkeep(buf, head > 1 ? head : 1, tmp + 1);
     }
+    Read();
+    check_newpost(ptr);
+    ctx->redraw = true;
+    setutmpmode(*cx->newflag ? READNEW : READBRD);
+}
 
-    ++choose_board_depth;
-    brdnum = 0;
-    if (!cuser.userlevel)	/* guest yank all boards */
-	LIST_BRD();
+static void
+board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    char buf[PATHLEN];
+    move(12, 1);
+    int bidtmp = class_bid;
+    int currmodetmp = currmode;
+    int tmp1 = ctx->curr;
+    *cx->num = 0;
+    class_bid = (B_BH(ptr)->brdattr & BRD_TOP) ? -1 : ptr->bid;
 
-    do {
-	if (brdnum <= 0) {
-	    load_boards(keyword);
-	    if (brdnum <= 0) {
-		if (keyword[0] != 0) {
-		    vmsg("沒有任何看板標題有此關鍵字");
-		    keyword[0] = 0;
-		    brdnum = -1;
-		    continue;
-		}
-		if (IS_LISTING_BRD()) {
-		    if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
-			if (paste_taged_brds(class_bid) ||
-    			    m_newbrd(class_bid, 0) == -1)
-			    break;
-			brdnum = -1;
-			continue;
-		    } else
-			break;
-		}
-	    }
-	    head = -1;
-	}
+    if (!GROUPOP())
+        set_menu_group_op(B_BH(ptr)->BM);
 
-	/* reset the cursor when out of range */
-	if (num < 0)
-	    num = 0;
-	else if (num >= brdnum)
-	    num = brdnum - 1;
-
-	if (head < 0) {
-	    if (newflag) {
-		tmp = num;
-		assert(brdnum<=nbrdsize);
-		while (num < brdnum) {
-		    ptr = &nbrd[num];
-		    if (ptr->myattr & NBRD_UNREAD)
-			break;
-		    num++;
-		}
-		if (num >= brdnum)
-		    num = tmp;
-	    }
-	    head = (num / p_lines) * p_lines;
-	    show_brdlist(head, 1, newflag);
-	} else if (num < head || num >= head + p_lines) {
-	    head = (num / p_lines) * p_lines;
-	    show_brdlist(head, 0, newflag);
-	}
-	if (IN_CLASSROOT())
-	    ch = cursor_key(7 + num - head, 10);
-	else
-	    ch = cursor_key(3 + num - head, 0);
-
-	switch (ch) {
-		///////////////////////////////////////////////////////
-		// General Hotkeys
-		///////////////////////////////////////////////////////
-
-	case 'h':
-	    board_list_help();
-	    show_brdlist(head, 1, newflag);
-	    break;
-	case Ctrl('W'):
-	case Ctrl('Y'):
-	    whereami();
-	    head = -1;
-	    break;
-
-	case 'c':
-	    show_brdlist(head, 1, newflag ^= 1);
-	    break;
-
-	// ZA
-	case Ctrl('Z'):
-	    head = -1;
-	    if (ZA_Select())
-		ch = 'q';
-	    else
-		break;
-	    // if selected, follow q.
-
-	case 'e':
-	case KEY_LEFT:
-	case EOF:
-	    ch = 'q';
-	case 'q':
-	    if (keyword[0]) {
-		keyword[0] = 0;
-		brdnum = -1;
-		ch = ' ';
-	    }
-	    break;
-	case KEY_PGUP:
-	case 'P':
-	case 'b':
-	case Ctrl('B'):
-	    if (num) {
-		num -= p_lines;
-		break;
-	    }
-	case KEY_END:
-	case '$':
-	    num = brdnum - 1;
-	    break;
-	case ' ':
-	case KEY_PGDN:
-	case 'N':
-	case Ctrl('F'):
-	    if (num == brdnum - 1)
-		num = 0;
-	    else
-		num += p_lines;
-	    break;
-	case KEY_UP:
-	case 'p':
-	case 'k':
-	    if (num-- <= 0)
-		num = brdnum - 1;
-	    break;
-	case '*':
-	    if (IS_LISTING_FAV()) {
-		int i = 0;
-		assert(brdnum<=nbrdsize);
-		for (i = 0; i < brdnum; i++)
-		{
-		    ptr = &nbrd[i];
-		    if (IS_LISTING_FAV()){
-			assert(nbrdsize>0);
-			if(get_fav_type(&nbrd[0]) != 0)
-			    fav_tag(ptr->bid, get_fav_type(ptr), 2);
-		    }
-		    ptr->myattr ^= NBRD_TAG;
-		}
-		head = 9999;
-	    }
-	    break;
-	case 't':
-	    assert(0<=num && num<nbrdsize);
-	    ptr = &nbrd[num];
-	    if (IS_LISTING_FAV()){
-		assert(nbrdsize>0);
-		if(get_fav_type(&nbrd[0]) != 0)
-		    fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
-	    }
-	    else if (HasUserPerm(PERM_SYSOP) ||
-		     HasUserPerm(PERM_SYSSUPERSUBOP) ||
-		     HasUserPerm(PERM_SYSSUBOP) ||
-		     HasUserPerm(PERM_BOARD)) {
-		/* 站長管理用的 tag */
-		if (ptr->myattr & NBRD_TAG)
-		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
-		else
-		    fav_add_admtag(ptr->bid);
-	    }
-	    ptr->myattr ^= NBRD_TAG;
-	    head = 9999;
-	case KEY_DOWN:
-	case 'n':
-	case 'j':
-	    if (++num < brdnum)
-		break;
-	case '0':
-	case KEY_HOME:
-	    num = 0;
-	    break;
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-	    if ((tmp = search_num(ch, brdnum)) >= 0)
-		num = tmp;
-	    brdlist_foot();
-	    break;
-
-	case '/':
-            if (IN_HOTBOARD()) {
-                vmsg("熱門看板模式下不支援中文關鍵字搜尋");
-            } else {
-                getdata_buf(b_lines - 1, 0, "請輸入看板中文關鍵字:",
-                        keyword, sizeof(keyword), DOECHO);
-                trim(keyword);
-            }
-            brdnum = -1;
-	    break;
-
-	case 'S':
-	    if(IS_LISTING_FAV()){
-		move(b_lines - 2, 0); clrtobot();
-		outs("重新排序看板 "
-			ANSI_COLOR(1;33) "(注意, 這個動作會覆寫原來設定)" ANSI_RESET " \n");
-		tmp = vans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
-		if( tmp == '1' )
-		    fav_sort_by_name();
-		else if( tmp == '2' )
-		    fav_sort_by_class();
-	    }
-	    else
-		pwcuToggleSortBoard();
-	    brdnum = -1;
-	    break;
-
-
-	case 'v':
-	case 'V':
-	    assert(0<=num && num<nbrdsize);
-	    ptr = &nbrd[num];
-	    if(nbrd[num].bid < 0 || !HasBoardPerm(B_BH(ptr)))
-		break;
-	    if (ch == 'v') {
-		ptr->myattr &= ~NBRD_UNREAD;
-		brc_toggle_all_read(ptr->bid, 1);
-	    } else {
-		brc_toggle_all_read(ptr->bid, 0);
-		ptr->myattr |= NBRD_UNREAD;
-	    }
-	    show_brdlist(head, 0, newflag);
-	    break;
-	case Ctrl('S'):
-	    head = -1;
-	    if ((tmp = search_local_board()) != -1) {
-		num = tmp;
-	    }
-	    break;
-	case 's':
-	    {
-		char bname[IDLEN+1];
-                int tmpbid = currutmp->brc_id;
-		move(0, 0);
-		clrtoeol();
-		// since now user can use Ctrl-S to get access
-		// to folders, let's fallback to boards only here.
-		CompleteBoard(ANSI_REVERSE
-			"【 搜尋全站看板 】" ANSI_RESET
-			"  (若要限定搜尋範圍為目前列表請改用 Ctrl-S)\n"
-			"請輸入看板名稱(按空白鍵自動搜尋): ",
-			bname);
-		// force refresh
-		head = -1;
-		if (!*bname)
-		    break;
-		// try to search board
-		if ((tmp = search_board(bname)) != -1)
-		{
-		    num = tmp;
-		    break;
-		}
-		// try to enter board directly.
-		if(enter_board(bname) >= 0)
-		    Read();
-		// restore my mode
-                setutmpbid(tmpbid);
-		setutmpmode(newflag ? READNEW : READBRD);
-	    }
-	    break;
-
-	case KEY_RIGHT:
-	case KEY_ENTER:
-	case 'r':
-	case 'l':
-	    {
-		if (IS_LISTING_FAV()) {
-		    assert(nbrdsize>0);
-		    if (get_fav_type(&nbrd[0]) == 0)
-			break;
-		    assert(0<=num && num<nbrdsize);
-		    ptr = &nbrd[num];
-		    if (ptr->myattr & NBRD_LINE)
-			break;
-		    if (ptr->myattr & NBRD_FOLDER){
-			int t = num;
-			num = 0;
-			fav_folder_in(ptr->bid);
-			choose_board(0);
-			fav_folder_out();
-			num = t;
-			LIST_FAV(); // XXX press 'y' in fav makes yank_flag = LIST_BRD
-			brdnum = -1;
-			head = 9999;
-			break;
-		    }
-		} else {
-		    assert(0<=num && num<nbrdsize);
-		    ptr = &nbrd[num];
-		    if (ptr->myattr & NBRD_SYMBOLIC) {
-			replace_link_by_target(ptr);
-		    }
-		}
-
-		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
-		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
-		    if (HasBoardPerm(B_BH(ptr))) {
-			brc_initial_board(B_BH(ptr)->brdname);
-
-			if (newflag) {
-			    setbdir(buf, currboard);
-			    tmp = unread_position(buf, ptr);
-			    head = tmp - t_lines / 2;
-			    getkeep(buf, head > 1 ? head : 1, tmp + 1);
-			}
-			Read();
-			check_newpost(ptr);
-			head = -1;
-			setutmpmode(newflag ? READNEW : READBRD);
-		    }
-		} else {	/* sub class */
-		    move(12, 1);
-		    bidtmp = class_bid;
-		    currmodetmp = currmode;
-		    tmp1 = num;
-		    num = 0;
-		    if (!(B_BH(ptr)->brdattr & BRD_TOP))
-			class_bid = ptr->bid;
-		    else
-			class_bid = -1;	/* 熱門群組用 */
-
-		    if (!GROUPOP())	/* 如果還沒有小組長權限 */
-			set_menu_group_op(B_BH(ptr)->BM);
-
-		    if (time4_lt(now, B_BH(ptr)->bupdate)) {
-			int mr = 0;
-
-			setbfile(buf, B_BH(ptr)->brdname, fn_notes);
-			mr = more(buf, NA);
-			if (mr != -1 && mr != READ_NEXT)
-			    pressanykey();
-		    }
-		    tmp = currutmp->brc_id;
-		    setutmpbid(ptr->bid);
-		    free(nbrd);
-		    nbrd = NULL;
-		    nbrdsize = 0;
-	    	    if (IS_LISTING_FAV()) {
-			LIST_BRD();
-			choose_board(0);
-			LIST_FAV();
-    		    }
-		    else
-			choose_board(0);
-		    currmode = currmodetmp;	/* 離開板板後就把權限拿掉喔 */
-		    num = tmp1;
-		    class_bid = bidtmp;
-		    setutmpbid(tmp);
-		    brdnum = -1;
-		}
-	    }
-	    break;
-		///////////////////////////////////////////////////////
-		// MyFav Functionality (Require PERM_BASIC)
-		///////////////////////////////////////////////////////
-	case 'y':
-	    if (HasFavEditPerm() && !(IN_CLASS())) {
-		if (get_current_fav() != NULL || !IS_LISTING_FAV()){
-		    yank_flag ^= 1; /* FAV <=> BRD */
-		}
-		brdnum = -1;
-	    }
-	    break;
-	case Ctrl('D'):
-	    if (HasFavEditPerm()) {
-		if (vans("刪除所有標記[N]?") == 'y'){
-		    fav_remove_all_tagged_item();
-		    brdnum = -1;
-		}
-	    }
-	    break;
-	case Ctrl('A'):
-	    if (HasFavEditPerm()) {
-		fav_add_all_tagged_item();
-		brdnum = -1;
-	    }
-	    break;
-	case Ctrl('T'):
-	case Ctrl('E'):
-	    if (HasFavEditPerm()) {
-		fav_remove_all_tag();
-		brdnum = -1;
-	    }
-	    break;
-	case Ctrl('P'):
-            if (paste_taged_brds(class_bid))
-                brdnum = -1;
-            break;
-
-	case 'L':
-	    if (IN_CLASS() &&
-                (HasUserPerm(PERM_BOARD) ||
-                 (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
-		brdnum = -1;
-		head = 9999;
-		if (make_board_link_interactively(class_bid) < 0)
-		    break;
-	    }
-	    else if (HasFavEditPerm() && IS_LISTING_FAV()) {
-		if (fav_add_line() == NULL) {
-		    vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
-		    break;
-		}
-		/* done move if it's the first item. */
-		assert(nbrdsize>0);
-		if (get_fav_type(&nbrd[0]) != 0)
-		    move_in_current_folder(brdnum, num);
-		brdnum = -1;
-		head = 9999;
-	    }
-	    break;
-
-	case 'd': // why don't we enable 'd'?
-	case 'z':
-	case 'm':
-	    if (HasFavEditPerm()) {
-		assert(0<=num && num<nbrdsize);
-		ptr = &nbrd[num];
-		brdnum = -1;
-		head = 9999;
-		if (IS_LISTING_FAV()) {
-		    if (ptr->myattr & NBRD_FAV) {
-			if (vans("你確定刪除嗎? [N/y]") != 'y')
-			    break;
-			fav_remove_item(ptr->bid, get_fav_type(ptr));
-			ptr->myattr &= ~NBRD_FAV;
-		    }
-		}
-		else
-		{
-		    if (getboard(ptr->bid) != NULL) {
-			fav_remove_item(ptr->bid, FAVT_BOARD);
-			ptr->myattr &= ~NBRD_FAV;
-		    }
-		    else if (ch != 'd') // 'd' only deletes something.
-		    {
-			if (fav_add_board(ptr->bid) == NULL)
-			    vmsg("你的最愛太多了啦 真花心");
-			else
-			    ptr->myattr |= NBRD_FAV;
-		    }
-		}
-	    }
-	    break;
-	case 'M':
-	    if (HasFavEditPerm()){
-		if (IN_FAVORITE() && IS_LISTING_FAV()){
-		    imovefav(num);
-		    brdnum = -1;
-		    head = 9999;
-		}
-	    }
-	    break;
-	case 'g':
-	    if (HasFavEditPerm() && IS_LISTING_FAV()) {
-		fav_type_t  *ft;
-		if (fav_stack_full()){
-		    vmsg("目錄已達最大層數!!");
-		    break;
-		}
-		if ((ft = fav_add_folder()) == NULL) {
-		    vmsg("新增失敗，目錄/總最愛 數量達最大值。");
-		    break;
-		}
-		fav_set_folder_title(ft, "新的目錄");
-		/* don't move if it's the first item */
-		assert(nbrdsize>0);
-		if (get_fav_type(&nbrd[0]) != 0)
-		    move_in_current_folder(brdnum, num);
-		brdnum = -1;
-    		head = 9999;
-	    }
-	    break;
-	case 'T':
-	    assert(0<=num && num<nbrdsize);
-	    if (HasFavEditPerm() && nbrd[num].myattr & NBRD_FOLDER) {
-		fav_type_t *ft = getfolder(nbrd[num].bid);
-		STRLCPY(buf, get_item_title(ft));
-		getdata_buf(b_lines-1, 0, "請修改名稱: ", buf, BTLEN+1, DOECHO);
-		fav_set_folder_title(ft, buf);
-		brdnum = -1;
-	    }
-	    break;
-	case 'K':
-	    if (HasFavEditPerm()) {
-		char c, fname[80];
-		brdnum = -1;
-		if (get_current_fav() != get_fav_root()) {
-		    vmsg("請到我的最愛最上層執行本功\能");
-		    break;
-		}
-
-		c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
-		if(!c)
-		    break;
-		if(vans("確定嗎 [y/N] ") != 'y')
-		    break;
-		switch(c){
-		    case '2':
-			fav_save();
-			setuserfile(fname, FAV);
-			sprintf(buf, "%s.bak", fname);
-                        Copy(fname, buf);
-			break;
-		    case '3':
-			setuserfile(fname, FAV);
-			sprintf(buf, "%s.bak", fname);
-			if (!dashf(buf)){
-			    vmsg("你沒有備份你的最愛喔");
-			    break;
-			}
-                        Copy(buf, fname);
-			fav_free();
-			fav_load();
-			break;
-		}
-	    }
-	    break;
-
-	case 'a':
-	case 'i':
-	    choose_board_add_favorite(ch, brdnum, &num, keyword);
-	    brdnum = -1;
-	    head = 9999;
-	    break;
-
-	case 'w':
-	    /* allowing save BRC/fav once per 10 minutes */
-	    if (time4_diff(now, last_save_fav_and_brc) > 10 * 60) {
-		fav_save();
-		brc_finalize();
-
-		last_save_fav_and_brc = now;
-		vmsg("已儲存看板閱\讀記錄");
-	    } else
-		vmsgf("間隔時間太短, 暫不儲存看板閱\讀記錄 [請等 %d 秒]",
-			(int)(600 - time4_diff(now, last_save_fav_and_brc)));
-	    break;
-
-		///////////////////////////////////////////////////////
-		// Administrator Only
-		///////////////////////////////////////////////////////
-
-	case 'F':
-	case 'f':
-	    if (HasUserPerm(PERM_SYSOP)) {
-		getbcache(class_bid)->firstchild[HasUserFlag(UF_BRDSORT)
-		    ? BRD_GROUP_LL_TYPE_CLASS : BRD_GROUP_LL_TYPE_NAME] = 0;
-		brdnum = -1;
-	    }
-	    break;
-	case 'D':
-	    if (HasUserPerm(PERM_BOARD) ||
-		    (HasUserPerm(PERM_SYSSUPERSUBOP) &&	GROUPOP())) {
-		assert(0<=num && num<nbrdsize);
-		ptr = &nbrd[num];
-		if (ptr->myattr & NBRD_SYMBOLIC) {
-		    if (vans("確定刪除連結？[N/y]") == 'y')
-			delete_board_link(getbcache(ptr->bid), ptr->bid);
-		}
-		brdnum = -1;
-	    }
-	    break;
-	case 'E':
-	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
-		assert(0<=num && num<nbrdsize);
-		ptr = &nbrd[num];
-		move(1, 1);
-		clrtobot();
-		m_mod_board(B_BH(ptr)->brdname);
-		brdnum = -1;
-	    }
-	    break;
-	case 'R':
-	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
-		m_newbrd(class_bid, 1);
-		brdnum = -1;
-	    }
-	    break;
-	case 'B':
-	    if (HasUserPerm(PERM_BOARD) || GROUPOP()) {
-		m_newbrd(class_bid, 0);
-		brdnum = -1;
-	    }
-	    break;
-	case 'W':
-	    if (IN_SUBCLASS() &&
-		(HasUserPerm(PERM_BOARD) || GROUPOP())) {
-		setbpath(buf, getbcache(class_bid)->brdname);
-		Mkdir(buf);	/* Ptt:開群組目錄 */
-		b_note_edit_bname(class_bid);
-		brdnum = -1;
-	    }
-	    break;
-
-	}
-    } while (ch != 'q' && !ZA_Waiting());
+    if (time4_lt(now, B_BH(ptr)->bupdate)) {
+        setbfile(buf, B_BH(ptr)->brdname, fn_notes);
+        int mr = more(buf, NA);
+        if (mr != -1 && mr != READ_NEXT)
+            pressanykey();
+    }
+    int tmp = currutmp->brc_id;
+    setutmpbid(ptr->bid);
     free(nbrd);
     nbrd = NULL;
     nbrdsize = 0;
-    --choose_board_depth;
+    if (IS_LISTING_FAV()) {
+        LIST_BRD();
+        choose_board(0);
+        LIST_FAV();
+    } else {
+        choose_board(0);
+    }
+    currmode = currmodetmp;
+    *cx->num = tmp1;
+    ctx->curr = tmp1;
+    class_bid = bidtmp;
+    setutmpbid(tmp);
+    brdnum = -1;
+    ctx->reload = true;
 }
 
-int
-Class(void)
-{
-    init_brdbuf();
-    class_bid = 1;
-    LIST_BRD();
-    choose_board(0);
+static int
+board_cmd_select(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    assert(0 <= num && num < nbrdsize);
+    boardstat_t *ptr = &nbrd[num];
+
+    if (IS_LISTING_FAV()) {
+        if (get_fav_type(&nbrd[0]) == 0 || (ptr->myattr & NBRD_LINE))
+            return 0;
+        if (ptr->myattr & NBRD_FOLDER) {
+            board_enter_fav_folder(ptr, ctx);
+            return 0;
+        }
+    } else if (ptr->myattr & NBRD_SYMBOLIC) {
+        replace_link_by_target(ptr);
+    }
+
+    assert(0 <= ptr->bid - 1 && ptr->bid - 1 < MAX_BOARD);
+    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
+        board_enter_group(ptr, ctx);
+    else
+        board_enter_normal(ptr, ctx);
     return 0;
 }
 
-int
-TopBoards(void)
-{
-    init_brdbuf();
-    class_bid = -1;
-    LIST_BRD();
-    choose_board(0);
-    return 0;
-}
-
-int
-Favorite(void)
-{
-    init_brdbuf();
-    class_bid = 0;
-    LIST_FAV();
-    choose_board(0);
-    return 0;
-}
-
-int
-New(void)
-{
-    int             mode0 = currutmp->mode;
-    int             stat0 = currstat;
-
-    class_bid = 0;
-    init_brdbuf();
-    choose_board(1);
-    currutmp->mode = mode0;
-    currstat = stat0;
+static int
+board_cmd_save_brc(cmd_ctx_t *ctx) {
+    if (time4_diff(now, last_save_fav_and_brc) > 10 * 60) {
+        fav_save();
+        brc_finalize();
+        last_save_fav_and_brc = now;
+        vmsg("已儲存看板閱\讀記錄");
+    } else {
+        vmsgf("間隔時間太短, 暫不儲存看板閱\讀記錄 [請等 %d 秒]",
+              (int)(600 - time4_diff(now, last_save_fav_and_brc)));
+    }
+    ctx->redraw_footer_lines = 1;
     return 0;
 }
 
@@ -2384,3 +2063,558 @@ board_list_help(void)
     const char * const *p[] = { col1, col2, col3 };
     show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
 }
+
+static int
+board_cmd_help(cmd_ctx_t *ctx) {
+    board_list_help();
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t boardlist_cmds[] = {
+    { 'h', "說明", "顯示操作說明", board_cmd_help, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, "回上層", "離開看板列表", board_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'e', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
+    { EOF, NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'q', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_RIGHT, "進入", "進入選取的看板或目錄", board_cmd_select, 0, CMD_PRIO_NORM, true },
+    { 's', "找看板", "搜尋全站看板名稱", board_cmd_search_global, 0, CMD_PRIO_NORM },
+    { '/', "搜尋", "搜尋看板中文關鍵字", board_cmd_search_keyword, 0, CMD_PRIO_NORM },
+    { 'c', "新文章", "切換顯示看板編號或文章數", board_cmd_toggle_newflag, 0, CMD_PRIO_NORM },
+    { 'S', "排序", "切換看板排序方式", board_cmd_sort, 0, CMD_PRIO_NORM },
+    { 'v', "已讀/未讀", "標記看板為已讀/未讀", board_cmd_mark_read, 0, CMD_PRIO_HIGH, true },
+    { 'V', NULL, NULL, board_cmd_mark_read, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, "上頁", "向上翻頁", board_cmd_pgup, 0, CMD_PRIO_NAV },
+    { 'P', NULL, NULL, board_cmd_pgup, 0, CMD_PRIO_NONE },
+    { 'b', NULL, NULL, board_cmd_pgup, 0, CMD_PRIO_NONE },
+    { Ctrl('B'), NULL, NULL, board_cmd_pgup, 0, CMD_PRIO_NONE },
+    { KEY_PGDN, "下頁", "向下翻頁", board_cmd_pgdn, 0, CMD_PRIO_NAV },
+    { ' ', NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { 'N', NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { Ctrl('F'), NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
+    { KEY_UP, NULL, "向上移動", board_cmd_up, 0, CMD_PRIO_NONE },
+    { 'p', NULL, NULL, board_cmd_up, 0, CMD_PRIO_NONE },
+    { 'k', NULL, NULL, board_cmd_up, 0, CMD_PRIO_NONE },
+    { KEY_DOWN, NULL, "向下移動", board_cmd_down, 0, CMD_PRIO_NONE },
+    { 'n', NULL, NULL, board_cmd_down, 0, CMD_PRIO_NONE },
+    { 'j', NULL, NULL, board_cmd_down, 0, CMD_PRIO_NONE },
+    { '0', NULL, "移至第一筆", board_cmd_home, 0, CMD_PRIO_NONE },
+    { KEY_HOME, NULL, NULL, board_cmd_home, 0, CMD_PRIO_NONE },
+    { KEY_END, NULL, "移至最後一筆", board_cmd_end, 0, CMD_PRIO_NONE },
+    { '$', NULL, NULL, board_cmd_end, 0, CMD_PRIO_NONE },
+    { '1', NULL, "輸入編號跳轉", board_cmd_num, 0, CMD_PRIO_NONE },
+    { '2', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '3', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '4', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '5', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '6', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '7', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '8', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { '9', NULL, NULL, board_cmd_num, 0, CMD_PRIO_NONE },
+    { Ctrl('Y'), NULL, "查詢目前位置", board_cmd_whereami, 0, CMD_PRIO_NONE },
+    { Ctrl('W'), NULL, NULL, board_cmd_whereami, 0, CMD_PRIO_NONE },
+    { 't', "標記", "標記看板項目", board_cmd_tag, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { Ctrl('S'), NULL, "搜尋目前列表看板", board_cmd_search_local, 0, CMD_PRIO_NONE, true },
+    { KEY_ENTER, NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
+    { 'l', NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
+    { 'w', NULL, "手動儲存閱\讀記錄", board_cmd_save_brc, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Layer 2: Board Admin Commands
+
+static int
+board_cmd_reset_sort(cmd_ctx_t *ctx) {
+    getbcache(class_bid)->firstchild[HasUserFlag(UF_BRDSORT)
+        ? BRD_GROUP_LL_TYPE_CLASS : BRD_GROUP_LL_TYPE_NAME] = 0;
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_del_link(cmd_ctx_t *ctx) {
+    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+        return 0;
+    int num = ctx->curr;
+    assert(0 <= num && num < nbrdsize);
+    boardstat_t *ptr = &nbrd[num];
+    if (ptr->myattr & NBRD_SYMBOLIC) {
+        if (vans("確定刪除連結？[N/y]") == 'y')
+            delete_board_link(getbcache(ptr->bid), ptr->bid);
+    }
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_edit_board(cmd_ctx_t *ctx) {
+    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+        return 0;
+    int num = ctx->curr;
+    assert(0 <= num && num < nbrdsize);
+    boardstat_t *ptr = &nbrd[num];
+    move(1, 1);
+    clrtobot();
+    m_mod_board(B_BH(ptr)->brdname);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_new_group(cmd_ctx_t *ctx) {
+    if (!HasUserPerm(PERM_BOARD) && !GROUPOP())
+        return 0;
+    m_newbrd(class_bid, 1);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_new_board(cmd_ctx_t *ctx) {
+    if (!HasUserPerm(PERM_BOARD) && !GROUPOP())
+        return 0;
+    m_newbrd(class_bid, 0);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+board_cmd_edit_note(cmd_ctx_t *ctx) {
+    if (!IN_SUBCLASS() || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+        return 0;
+    char buf[PATHLEN];
+    setbpath(buf, getbcache(class_bid)->brdname);
+    Mkdir(buf);
+    b_note_edit_bname(class_bid);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+#define PERM_BRD_OR_GROUPOP (PERM_BOARD | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP)
+
+static const cmd_t board_admin_cmds[] = {
+    { 'F', NULL, "重設群組排序快取", board_cmd_reset_sort, PERM_SYSOP, CMD_PRIO_NONE },
+    { 'f', NULL, NULL, board_cmd_reset_sort, PERM_SYSOP, CMD_PRIO_NONE },
+    { 'D', NULL, "刪除看板連結", board_cmd_del_link, PERM_BOARD | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
+    { 'E', NULL, "修改看板設定", board_cmd_edit_board, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE, true },
+    { 'R', NULL, "新增群組目錄", board_cmd_new_group, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { 'B', NULL, "開闢新看板", board_cmd_new_board, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { 'W', NULL, "編輯群組進板畫面", board_cmd_edit_note, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Layer 3: MyFav Overlay Commands
+
+static int
+fav_cmd_tag_all(cmd_ctx_t *ctx) {
+    if (ctx->total <= 0 || !IS_LISTING_FAV())
+        return 0;
+    assert(brdnum <= nbrdsize);
+    for (int i = 0; i < brdnum; i++) {
+        boardstat_t *ptr = &nbrd[i];
+        assert(nbrdsize > 0);
+        fav_tag(ptr->bid, get_fav_type(ptr), 2);
+        ptr->myattr ^= NBRD_TAG;
+    }
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+fav_cmd_yank(cmd_ctx_t *ctx) {
+    if (!(IN_CLASS())) {
+        if (get_current_fav() != NULL || !IS_LISTING_FAV())
+            yank_flag ^= 1;
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_del_tagged(cmd_ctx_t *ctx) {
+    if (vans("刪除所有標記[N]?") == 'y') {
+        fav_remove_all_tagged_item();
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_add_tagged(cmd_ctx_t *ctx) {
+    fav_add_all_tagged_item();
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+fav_cmd_untag_all(cmd_ctx_t *ctx) {
+    fav_remove_all_tag();
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+fav_cmd_paste_tagged(cmd_ctx_t *ctx) {
+    if (paste_taged_brds(class_bid)) {
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    if (IN_CLASS() &&
+        (HasUserPerm(PERM_BOARD) ||
+         (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
+        brdnum = -1;
+        ctx->reload = true;
+        if (make_board_link_interactively(class_bid) < 0)
+            return 0;
+    } else if (IS_LISTING_FAV()) {
+        if (fav_add_line() == NULL) {
+            vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
+            return 0;
+        }
+        assert(nbrdsize > 0);
+        if (get_fav_type(&nbrd[0]) != 0)
+            move_in_current_folder(brdnum, num);
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_toggle_or_del(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    int ch = ctx->key;
+    assert(0 <= num && num < nbrdsize);
+    boardstat_t *ptr = &nbrd[num];
+
+    brdnum = -1;
+    ctx->reload = true;
+    if (IS_LISTING_FAV()) {
+        if ((ptr->myattr & NBRD_FAV) && vans("你確定刪除嗎? [N/y]") == 'y') {
+            fav_remove_item(ptr->bid, get_fav_type(ptr));
+            ptr->myattr &= ~NBRD_FAV;
+        }
+        return 0;
+    }
+
+    if (getboard(ptr->bid) != NULL) {
+        fav_remove_item(ptr->bid, FAVT_BOARD);
+        ptr->myattr &= ~NBRD_FAV;
+    } else if (ch != 'd') {
+        if (fav_add_board(ptr->bid) == NULL)
+            vmsg("你的最愛太多了啦 真花心");
+        else
+            ptr->myattr |= NBRD_FAV;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_move(cmd_ctx_t *ctx) {
+    if (IN_FAVORITE() && IS_LISTING_FAV()) {
+        imovefav(ctx->curr);
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_add_folder(cmd_ctx_t *ctx) {
+    if (!IS_LISTING_FAV())
+        return 0;
+    if (fav_stack_full()) {
+        vmsg("目錄已達最大層數!!");
+        return 0;
+    }
+    fav_type_t *ft = fav_add_folder();
+    if (ft == NULL) {
+        vmsg("新增失敗，目錄/總最愛 數量達最大值。");
+        return 0;
+    }
+    fav_set_folder_title(ft, "新的目錄");
+    assert(nbrdsize > 0);
+    if (get_fav_type(&nbrd[0]) != 0)
+        move_in_current_folder(brdnum, ctx->curr);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+fav_cmd_edit_title(cmd_ctx_t *ctx) {
+    int num = ctx->curr;
+    char buf[PATHLEN];
+    assert(0 <= num && num < nbrdsize);
+    if ((nbrd[num].myattr & NBRD_FOLDER)) {
+        fav_type_t *ft = getfolder(nbrd[num].bid);
+        STRLCPY(buf, get_item_title(ft));
+        getdata_buf(b_lines - 1, 0, "請修改名稱: ", buf, BTLEN + 1, DOECHO);
+        fav_set_folder_title(ft, buf);
+        brdnum = -1;
+        ctx->reload = true;
+    }
+    return 0;
+}
+
+static int
+fav_cmd_backup(cmd_ctx_t *ctx) {
+    char c, fname[80], buf[PATHLEN];
+    brdnum = -1;
+    ctx->reload = true;
+    if (get_current_fav() != get_fav_root()) {
+        vmsg("請到我的最愛最上層執行本功\能");
+        return 0;
+    }
+    c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
+    if (!c || vans("確定嗎 [y/N] ") != 'y')
+        return 0;
+    setuserfile(fname, FAV);
+    sprintf(buf, "%s.bak", fname);
+    if (c == '2') {
+        fav_save();
+        Copy(fname, buf);
+    } else if (c == '3') {
+        if (!dashf(buf)) {
+            vmsg("你沒有備份你的最愛喔");
+            return 0;
+        }
+        Copy(buf, fname);
+        fav_free();
+        fav_load();
+    }
+    return 0;
+}
+
+static int
+fav_cmd_add_board(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
+    choose_board_add_favorite(ctx->key, brdnum, &ctx->curr, cx->keyword);
+    brdnum = -1;
+    ctx->reload = true;
+    return 0;
+}
+
+static const cmd_t myfav_cmds[] = {
+    { 'a', "增加看板", "輸入看板名稱加入最愛", fav_cmd_add_board, PERM_BASIC, CMD_PRIO_HIGH },
+    { 'i', NULL, NULL, fav_cmd_add_board, PERM_BASIC, CMD_PRIO_NONE },
+    { 'y', "列出全部", "切換顯示全部看板/我的最愛", fav_cmd_yank, PERM_BASIC, CMD_PRIO_NORM },
+    { 'd', "刪除", "從我的最愛移除項目", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { 'm', NULL, "將看板加入或移出最愛", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'g', "新增目錄", "在我的最愛新增子目錄", fav_cmd_add_folder, PERM_BASIC, CMD_PRIO_HIGH },
+    { 'M', "移動位置", "移動最愛項目順序", fav_cmd_move, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { 'L', "加分隔線", "新增分隔線或看板連結", fav_cmd_add_line_or_link, PERM_BASIC, CMD_PRIO_LOW },
+    { 'T', "改目錄名", "修改最愛子目錄標題", fav_cmd_edit_title, PERM_BASIC, CMD_PRIO_LOW, true },
+    { 'K', "備份還原", "備份或還原我的最愛", fav_cmd_backup, PERM_BASIC, CMD_PRIO_LOW },
+    { '*', NULL, "反選全部標記", fav_cmd_tag_all, PERM_BASIC, CMD_PRIO_NONE, true },
+    { Ctrl('D'), NULL, "刪除所有已標記項目", fav_cmd_del_tagged, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('A'), NULL, "將標記項目加入最愛", fav_cmd_add_tagged, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('E'), NULL, "清除所有標記", fav_cmd_untag_all, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('T'), NULL, NULL, fav_cmd_untag_all, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('P'), NULL, "貼上標記看板", fav_cmd_paste_tagged, PERM_SYSOP | PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_t board_fav_cmds[] = {
+    { 'm', "加入最愛", "將看板加入或移出最愛", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { 'z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'y', "只列最愛", "切換顯示全部看板/我的最愛", fav_cmd_yank, PERM_BASIC, CMD_PRIO_NORM },
+    { 'L', NULL, "新增看板連結", fav_cmd_add_line_or_link, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { '*', NULL, "反選全部標記", fav_cmd_tag_all, PERM_BASIC, CMD_PRIO_NONE, true },
+    { Ctrl('A'), NULL, "將標記項目加入最愛", fav_cmd_add_tagged, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('E'), NULL, "清除所有標記", fav_cmd_untag_all, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('T'), NULL, NULL, fav_cmd_untag_all, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('P'), NULL, "貼上標記看板", fav_cmd_paste_tagged, PERM_SYSOP | PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+// Returns: 1 = loaded successfully, 0 = retry loop (continue), -1 = exit loop (break)
+static int
+board_reload_and_check_empty(char *keyword) {
+    load_boards(keyword);
+    if (brdnum > 0)
+        return 1;
+
+    if (keyword[0] != 0) {
+        vmsg("沒有任何看板標題有此關鍵字");
+        keyword[0] = 0;
+        brdnum = -1;
+        return 0;
+    }
+    if (!IS_LISTING_BRD())
+        return 1;
+    if (!HasUserPerm(PERM_SYSOP) && !GROUPOP())
+        return -1;
+    if (paste_taged_brds(class_bid) || m_newbrd(class_bid, 0) == -1)
+        return -1;
+    brdnum = -1;
+    return 0;
+}
+
+static int
+board_find_first_unread(int num, int total) {
+    assert(total <= nbrdsize);
+    for (int i = num; i < total; i++) {
+        if (nbrd[i].myattr & NBRD_UNREAD)
+            return i;
+    }
+    return num;
+}
+
+static int
+brdlist_loader(PSB_CTX *ctx)
+{
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->cmd.priv;
+    cx->layers[0].cmds = IS_LISTING_FAV() ? myfav_cmds : board_fav_cmds;
+    ctx->header_lines = IN_CLASSROOT() ? 7 : 3;
+    ctx->cmd.caption = brdlist_caption();
+
+    if (brdnum <= 0) {
+        while (brdnum <= 0) {
+            int status = board_reload_and_check_empty(cx->keyword);
+            if (status < 0) {
+                ctx->cmd.quit = true;
+                return 0;
+            }
+            if (status > 0)
+                break;
+        }
+        if (*cx->newflag && brdnum > 0) {
+            ctx->cmd.curr = board_find_first_unread(ctx->cmd.curr, brdnum);
+        }
+    }
+
+    if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
+        ctx->cmd.total = 0;
+    } else {
+        ctx->cmd.total = brdnum;
+    }
+    return 0;
+}
+
+static void
+choose_board(int newflag)
+{
+    static int      num = 0;
+    char            keyword[SZ_COLS(13)] = "";
+    boardlist_ctx_t cx = {
+        .num = &num,
+        .newflag = &newflag,
+        .keyword = keyword,
+        .keyword_sz = sizeof(keyword),
+    };
+    cmd_layer_t layers[] = {
+        { myfav_cmds,       &cx },
+        { board_admin_cmds, &cx },
+        { boardlist_cmds,   &cx },
+        { bbs_global_cmds,  NULL },
+        { NULL, NULL }
+    };
+    cx.layers = layers;
+
+    setutmpmode(newflag ? READNEW : READBRD);
+    if (get_fav_root() == NULL) {
+        fav_load();
+        if (!get_current_fav()) {
+            vmsgf("我的最愛載入失敗，請到" BN_BUGREPORT "報告您之前進行了哪些動作，謝謝");
+            refresh();
+            assert(get_current_fav());
+            exit(-1);
+        }
+    }
+
+    ++choose_board_depth;
+    brdnum = 0;
+    if (!cuser.userlevel)
+        LIST_BRD();
+
+    PSB_CTX psbctx = {
+        .cmd = {
+            .curr = num,
+            .priv = &cx,
+            .caption = brdlist_caption(),
+        },
+        .header_lines = IN_CLASSROOT() ? 7 : 3,
+        .footer_lines = 1,
+        .layers = layers,
+        .loader = brdlist_loader,
+        .header = brdlist_header,
+        .footer = brdlist_footer,
+        .renderer = brdlist_renderer,
+        .empty_renderer = brdlist_empty_renderer,
+        .cursor = brdlist_cursor,
+    };
+
+    psb_main(&psbctx);
+    num = psbctx.cmd.curr;
+
+    free(nbrd);
+    nbrd = NULL;
+    nbrdsize = 0;
+    --choose_board_depth;
+}
+
+int
+Class(void)
+{
+    init_brdbuf();
+    class_bid = 1;
+    LIST_BRD();
+    choose_board(0);
+    return 0;
+}
+
+int
+TopBoards(void)
+{
+    init_brdbuf();
+    class_bid = -1;
+    LIST_BRD();
+    choose_board(0);
+    return 0;
+}
+
+int
+Favorite(void)
+{
+    init_brdbuf();
+    class_bid = 0;
+    LIST_FAV();
+    choose_board(0);
+    return 0;
+}
+
+int
+New(void)
+{
+    int             mode0 = currutmp->mode;
+    int             stat0 = currstat;
+
+    class_bid = 0;
+    init_brdbuf();
+    choose_board(1);
+    currutmp->mode = mode0;
+    currstat = stat0;
+    return 0;
+}
+
