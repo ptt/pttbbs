@@ -75,6 +75,7 @@ typedef struct {
     int prio;
     bool need_item;
 } cmd_t;
+#define HAVE_CMD_T 1
 
 typedef struct cmd_layer {
     const cmd_t *cmds;
