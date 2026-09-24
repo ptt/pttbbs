@@ -76,7 +76,7 @@ int friend_svc_logout(const char *userid, pid_t pid) {
     }
     char payload[256];
     SNPRINTF(payload, "{\"action\":\"logout\",\"userid\":\"%s\",\"pid\":%d}\n", userid, (int)pid);
-    return send_friendd_req(payload);
+    return send_friendd_req_retry(payload);
 }
 
 int friend_svc_reload(const char *userid) {
@@ -95,7 +95,7 @@ int friend_svc_sync(const char *userid, int uid, pid_t pid, int sid) {
     char payload[256];
     SNPRINTF(payload, "{\"action\":\"friend_sync\",\"userid\":\"%s\",\"uid\":%d,\"pid\":%d,\"sid\":%d}\n",
              userid, uid, (int)pid, sid);
-    return send_friendd_req(payload);
+    return send_friendd_req_retry(payload);
 }
 
 static int     hbfl_cached_uid = 0;
@@ -271,58 +271,16 @@ int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_i
     return write_message(sid, to_pid, from_pid, from_id, msg, MSGMODE_ALOHA);
 }
 
+/* Deregister the session from friend.svc. Peers' friend_online[] entries are
+ * owned by friend.svc (it removes them, or rescans on restart), so never touch
+ * them here; only our own array is cleared. */
 int logout_friend_online(userinfo_t *utmp) {
     if (!utmp || !SHM) {
         return 0;
     }
-    if (utmp->pid > 0 && utmp->userid[0] &&
-        friend_svc_logout(utmp->userid, utmp->pid) == 0 &&
-        utmp->friend_svc_flag) {
-        memset(utmp->friend_online, 0, sizeof(utmp->friend_online));
-        utmp->friendtotal = 0;
-        return 0;
-    }
-    return clear_friend_online_local(utmp);
-}
-
-/* Remove utmp from peers' friend_online locally, without notifying friend.svc
- * (used when reloading friend lists; must not deregister the session). */
-int clear_friend_online_local(userinfo_t *utmp) {
-    if (!utmp || !SHM) {
-        return 0;
-    }
-    int offset = get_utmp_id(utmp);
-    for (; utmp->friendtotal > 0; utmp->friendtotal--) {
-        if (!(0 <= utmp->friendtotal && utmp->friendtotal <= MAX_FRIEND_ONLINE)) {
-            return 1;
-        }
-        int my_friend_idx = utmp->friendtotal - 1;
-        int thefriend = FRIEND_ONLINE_SLOT(utmp->friend_online[my_friend_idx]);
-        utmp->friend_online[my_friend_idx] = 0;
-
-        if (!(0 <= thefriend && thefriend < USHM_SIZE)) {
-            continue;
-        }
-
-        userinfo_t *ui = &SHM->uinfo[thefriend];
-        if (ui->pid == 0 || ui == utmp) {
-            continue;
-        }
-        if (ui->friendtotal > MAX_FRIEND_ONLINE || ui->friendtotal < 0) {
-            continue;
-        }
-        int k;
-        for (k = 0; k < ui->friendtotal && k < MAX_FRIEND_ONLINE &&
-             FRIEND_ONLINE_SLOT(ui->friend_online[k]) != offset; k++)
-            ;
-        if (k < ui->friendtotal && k < MAX_FRIEND_ONLINE) {
-            ui->friendtotal--;
-            if (k < ui->friendtotal) {
-                memmove(&ui->friend_online[k], &ui->friend_online[k + 1],
-                        sizeof(unsigned int) * (size_t)(ui->friendtotal - k));
-            }
-            ui->friend_online[ui->friendtotal] = 0;
-        }
-    }
+    if (utmp->pid > 0 && utmp->userid[0])
+        friend_svc_logout(utmp->userid, utmp->pid);
+    memset(utmp->friend_online, 0, sizeof(utmp->friend_online));
+    utmp->friendtotal = 0;
     return 0;
 }

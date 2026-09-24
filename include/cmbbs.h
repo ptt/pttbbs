@@ -211,7 +211,6 @@ int friend_svc_sync(const char *userid, int uid, pid_t pid, int sid);
 int friend_svc_hbfl_reload(int bid);
 int friend_svc_is_hidden_board_friend(int bid, int uid);
 int logout_friend_online(userinfo_t *utmp);
-int clear_friend_online_local(userinfo_t *utmp);
 #define aloha_notify_login  friend_svc_login
 #define aloha_notify_logout friend_svc_logout
 #define aloha_notify_reload friend_svc_reload

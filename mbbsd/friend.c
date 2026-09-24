@@ -365,105 +365,13 @@ friend_editdesc(const char *uident, int type)
 	fclose(nfp);
 }
 
-static void friend_load_real(int tosort, int maxf,
-			     short *destn, int *destar, const char *fn)
+/* friend.svc owns friend_online[] (for both sides of every relation). There
+ * is no local fallback: if friend.svc is down there is simply no friend data
+ * until it comes back and rescans the online sessions. */
+void friend_load(int type GCC_UNUSED, int do_login GCC_UNUSED)
 {
-    char    genbuf[PATHLEN];
-    FILE    *fp;
-    short   nFriends = 0;
-    int     uid, *tarray;
-    char *p;
-
-    if (maxf <= 0)
-	return;
-
-    setuserfile(genbuf, fn);
-    if( (fp = fopen(genbuf, "r")) == NULL ){
-	memset(destar, 0, sizeof(int) * (size_t)maxf);
-	if( destn )
-	    *destn = 0;
-    }
-    else{
-	char *strtok_pos;
-	tarray = (int *)calloc((size_t)maxf, sizeof(int));
-	assert(tarray);
-	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
-	    if( (p = strtok_r(genbuf, str_space, &strtok_pos)) &&
-		(uid = searchuser(p, NULL)) )
-		tarray[nFriends++] = uid;
-	fclose(fp);
-
-	if( tosort )
-	    qsort(tarray, nFriends, sizeof(int), cmp_int);
-	if( destn )
-	    *destn = nFriends;
-	memcpy(destar, tarray, sizeof(int) * (size_t)maxf);
-	free(tarray);
-    }
-}
-
-static short local_nFriends = 0;
-static int   local_myfriend[MAX_FRIEND];
-static int   local_reject[MAX_REJECT];
-static int   local_lists_loaded = 0;
-
-int is_local_friend(int uid)
-{
-    int nf = (local_nFriends > 0) ? (local_nFriends > MAX_FRIEND ? MAX_FRIEND : local_nFriends) : 0;
-    return (uid > 0 && nf > 0 && intbsearch(uid, local_myfriend, nf)) ? 1 : 0;
-}
-
-int is_local_reject(int uid)
-{
-    int i, unum;
-    if (uid <= 0)
-	return 0;
-    for (i = 0; i < MAX_REJECT && (unum = local_reject[i]); i++) {
-	if (unum == uid)
-	    return 1;
-    }
-    return 0;
-}
-
-/* type == 0 : load all */
-void friend_load(int type, int do_login)
-{
-    if (friend_svc_sync(currutmp->userid, currutmp->uid, currutmp->pid,
-			   get_utmp_id(currutmp)) == 0) {
-	local_lists_loaded = 0;
-	return;
-    }
-
-    /* Local lists are not maintained while friend.svc is serving. */
-    if (!local_lists_loaded)
-	type = 0;
-    local_lists_loaded = 1;
-
-    if (!type || type & FRIEND_OVERRIDE)
-	friend_load_real(1, MAX_FRIEND, &local_nFriends,
-			 local_myfriend, FN_OVERRIDES);
-
-    if (!type || type & FRIEND_REJECT)
-	friend_load_real(0, MAX_REJECT, NULL, local_reject, FN_REJECT);
-
-    {
-	/* Keep the "he -> me" bits of our current entries: clearing below
-	 * removes our entries from peers, which is where they are read from. */
-	unsigned int saved[MAX_FRIEND_ONLINE];
-	int nsaved = currutmp->friendtotal;
-	if (nsaved < 0)
-	    nsaved = 0;
-	if (nsaved > MAX_FRIEND_ONLINE)
-	    nsaved = MAX_FRIEND_ONLINE;
-	memcpy(saved, currutmp->friend_online, sizeof(unsigned int) * (size_t)nsaved);
-
-	if (currutmp->friendtotal)
-	    clear_friend_online_local(currutmp);
-
-	set_friend_bit_hint(saved, nsaved);
-	login_friend_online(do_login);
-	set_friend_bit_hint(NULL, 0);
-    }
+    friend_svc_sync(currutmp->userid, currutmp->uid, currutmp->pid,
+		    get_utmp_id(currutmp));
 }
 
 static void
