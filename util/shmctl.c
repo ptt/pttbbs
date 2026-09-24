@@ -293,78 +293,6 @@ cmputmpfrom(const void * i, const void * j)
 }
 
 static int
-cmputmpfive(const void * i, const void * j)
-{
-    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
-    int played_a=(a->five_win+a->five_lose+a->five_tie)!=0;
-    int played_b=(b->five_win+b->five_lose+b->five_tie)!=0;
-    int             type;
-
-    if ((type = played_b - played_a))
-	return type;
-    if (played_a == 0)
-	return 0;
-    if ((type = b->five_win - a->five_win))
-	return type;
-    if ((type = a->five_lose - b->five_lose))
-	return type;
-    return a->five_tie - b->five_tie;
-}
-
-static int
-cmputmpchc(const void * i, const void * j)
-{
-    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
-    int total_a=a->chc_win+a->chc_lose+a->chc_tie;
-    int total_b=b->chc_win+b->chc_lose+b->chc_tie;
-    int played_a=(total_a!=0);
-    int played_b=(total_b!=0);
-    int             type;
-
-    // NOTE: 目前 "別找我下棋" 不影響排序
-    /* 1. "找我下棋" 排最前面 */
-#ifdef CHC_SORTBY_RATING
-    /* 2. 下超過十盤棋用等級分排序 */
-    if ((total_a>=10)!=(total_b>=10))
-	return (total_a>=10)?-1:1;
-    if (total_a>=10 && total_b>=10) {
-	if (a->chess_elo_rating!=b->chess_elo_rating)
-	    return b->chess_elo_rating-a->chess_elo_rating;
-    }
-#endif
-    /* 3. 有下過棋的在沒下過的前面 */
-    if ((type = played_b - played_a))
-	return type;
-    if (played_a == 0)
-	return 0;
-    /* 4. 剩下(下不超過十盤或等級分相同, 或不用等級分排序)的人以勝負和排 */
-    if ((type = b->chc_win - a->chc_win))
-        return type;
-    if ((type = a->chc_lose - b->chc_lose))
-	return type;
-    return a->chc_tie - b->chc_tie;
-}
-
-static int
-cmputmpgo(const void * i, const void * j)
-{
-    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
-    int played_a=(a->go_win+a->go_lose+a->go_tie)!=0;
-    int played_b=(b->go_win+b->go_lose+b->go_tie)!=0;
-    int             type;
-
-    if ((type = played_b - played_a))
-	return type;
-    if (played_a == 0)
-	return 0;
-    if ((type = b->go_win - a->go_win))
-	return type;
-    if ((type = a->go_lose - b->go_lose))
-	return type;
-    return a->go_tie - b->go_tie;
-}
-
-static int
 cmputmppid(const void * i, const void * j)
 {
     return SHM->uinfo[*(int*)i].pid - SHM->uinfo[*(int*)j].pid;
@@ -410,18 +338,9 @@ void utmpsort(int sortall)
 	       SHM->sorted[ns][0], sizeof(int) * count);
 	memcpy(SHM->sorted[ns][3],
 	       SHM->sorted[ns][0], sizeof(int) * count);
-	memcpy(SHM->sorted[ns][4],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	memcpy(SHM->sorted[ns][5],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	memcpy(SHM->sorted[ns][6],
-	       SHM->sorted[ns][0], sizeof(int) * count);
 	qsort(SHM->sorted[ns][1], count, sizeof(int), cmputmpmode);
 	qsort(SHM->sorted[ns][2], count, sizeof(int), cmputmpidle);
 	qsort(SHM->sorted[ns][3], count, sizeof(int), cmputmpfrom);
-	qsort(SHM->sorted[ns][4], count, sizeof(int), cmputmpfive);
-	qsort(SHM->sorted[ns][5], count, sizeof(int), cmputmpchc);
-	qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpgo);
 	memset(nusers, 0, sizeof(nusers));
 	for (i = 0; i < count; ++i) {
 	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];
