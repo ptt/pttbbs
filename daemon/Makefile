@@ -13,9 +13,6 @@ ifneq ($(call DEF_CHECK,FROMD),)
 SUBDIRS += fromd
 endif
 
-ifneq ($(call DEF_CHECK,UTMPD),)
-SUBDIRS += utmpd
-endif
 
 ifneq ($(call DEF_CHECK,QUERY_ARTICLE_URL),)
 SUBDIRS += mand boardd
