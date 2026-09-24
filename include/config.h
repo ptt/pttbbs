@@ -227,6 +227,7 @@
 #define MAX_REJECT        (32)           /* 載入 cache 之最多壞人數目 */
 #endif
 
+
 #ifndef MAX_MSGS
 #define MAX_MSGS          (10)           /* 水球(熱訊)忍耐上限 */
 #endif

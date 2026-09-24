@@ -17,7 +17,7 @@ static const unsigned int friend_max[8] = {
     [FRIEND_SPECIAL]  = MAX_NAMELIST,
     [FRIEND_CANVOTE]  = MAX_FRIEND,
     // [BOARD_WATER]  = BOARD_WATER,
-    [BOARD_VISABLE]   = MAX_FRIEND,
+    [BOARD_VISABLE]   = MAX_USERS,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
@@ -97,7 +97,12 @@ friend_add(const char *uident, int type, const char* des)
 
 int
 is_rejected(const char *userid) {
+    userinfo_t *uentp;
     char fpath[PATHLEN];
+    /* friend_online may be truncated or stale; only trust a positive hit. */
+    if (currutmp && (uentp = search_ulist_userid(userid)) &&
+        (friend_stat(currutmp, uentp) & HRM))
+        return 1;
     sethomefile(fpath, userid, FN_REJECT);
     if (!file_exist_entry(fpath, cuser.userid))
         return 0;
@@ -369,17 +374,19 @@ static void friend_load_real(int tosort, int maxf,
     int     uid, *tarray;
     char *p;
 
+    if (maxf <= 0)
+	return;
+
     setuserfile(genbuf, fn);
     if( (fp = fopen(genbuf, "r")) == NULL ){
-	destar[0] = 0;
+	memset(destar, 0, sizeof(int) * (size_t)maxf);
 	if( destn )
 	    *destn = 0;
     }
     else{
 	char *strtok_pos;
-	tarray = (int *)malloc(sizeof(int) * maxf);
+	tarray = (int *)calloc((size_t)maxf, sizeof(int));
 	assert(tarray);
-	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
 	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
 	    if( (p = strtok_r(genbuf, str_space, &strtok_pos)) &&
 		(uid = searchuser(p, NULL)) )
@@ -390,26 +397,73 @@ static void friend_load_real(int tosort, int maxf,
 	    qsort(tarray, nFriends, sizeof(int), cmp_int);
 	if( destn )
 	    *destn = nFriends;
-	tarray[nFriends] = 0;
-	memcpy(destar, tarray, sizeof(int) * (nFriends + 1));
+	memcpy(destar, tarray, sizeof(int) * (size_t)maxf);
 	free(tarray);
     }
+}
+
+static short local_nFriends = 0;
+static int   local_myfriend[MAX_FRIEND];
+static int   local_reject[MAX_REJECT];
+static int   local_lists_loaded = 0;
+
+int is_local_friend(int uid)
+{
+    int nf = (local_nFriends > 0) ? (local_nFriends > MAX_FRIEND ? MAX_FRIEND : local_nFriends) : 0;
+    return (uid > 0 && nf > 0 && intbsearch(uid, local_myfriend, nf)) ? 1 : 0;
+}
+
+int is_local_reject(int uid)
+{
+    int i, unum;
+    if (uid <= 0)
+	return 0;
+    for (i = 0; i < MAX_REJECT && (unum = local_reject[i]); i++) {
+	if (unum == uid)
+	    return 1;
+    }
+    return 0;
 }
 
 /* type == 0 : load all */
 void friend_load(int type, int do_login)
 {
+    if (friend_svc_sync(currutmp->userid, currutmp->uid, currutmp->pid,
+			   get_utmp_id(currutmp)) == 0) {
+	local_lists_loaded = 0;
+	return;
+    }
+
+    /* Local lists are not maintained while friend.svc is serving. */
+    if (!local_lists_loaded)
+	type = 0;
+    local_lists_loaded = 1;
+
     if (!type || type & FRIEND_OVERRIDE)
-	friend_load_real(1, MAX_FRIEND, &currutmp->nFriends,
-			 currutmp->myfriend, FN_OVERRIDES);
+	friend_load_real(1, MAX_FRIEND, &local_nFriends,
+			 local_myfriend, FN_OVERRIDES);
 
     if (!type || type & FRIEND_REJECT)
-	friend_load_real(0, MAX_REJECT, NULL, currutmp->reject, FN_REJECT);
+	friend_load_real(0, MAX_REJECT, NULL, local_reject, FN_REJECT);
 
-    if (currutmp->friendtotal)
-	logout_friend_online(currutmp);
+    {
+	/* Keep the "he -> me" bits of our current entries: clearing below
+	 * removes our entries from peers, which is where they are read from. */
+	unsigned int saved[MAX_FRIEND_ONLINE];
+	int nsaved = currutmp->friendtotal;
+	if (nsaved < 0)
+	    nsaved = 0;
+	if (nsaved > MAX_FRIEND_ONLINE)
+	    nsaved = MAX_FRIEND_ONLINE;
+	memcpy(saved, currutmp->friend_online, sizeof(unsigned int) * (size_t)nsaved);
 
-    login_friend_online(do_login);
+	if (currutmp->friendtotal)
+	    clear_friend_online_local(currutmp);
+
+	set_friend_bit_hint(saved, nsaved);
+	login_friend_online(do_login);
+	set_friend_bit_hint(NULL, 0);
+    }
 }
 
 static void

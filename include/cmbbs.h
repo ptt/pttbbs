@@ -202,18 +202,38 @@ int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *msg, int msgmode);
 
 /* friend.c */
-int is_friend_svc_enabled(void);
+int is_aloha_svc_enabled(void);
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id);
 int friend_svc_login(const char *userid, pid_t pid, int sid);
 int friend_svc_logout(const char *userid, pid_t pid);
 int friend_svc_reload(const char *userid);
+int friend_svc_sync(const char *userid, int uid, pid_t pid, int sid);
+int logout_friend_online(userinfo_t *utmp);
+int clear_friend_online_local(userinfo_t *utmp);
+#define aloha_notify_login  friend_svc_login
+#define aloha_notify_logout friend_svc_logout
+#define aloha_notify_reload friend_svc_reload
+#define aloha_sync_friends  friend_svc_sync
 
 
 /* cgo.c */
 const char *get_bbshome(void);
 const char *get_userid_by_uid(int uid);
+int get_uid_by_userid(const char *userid);
 int get_ushm_size(void);
 int get_online_session(int uip, int *out_pid, int *out_uid, char *out_userid);
+int set_online_session_friends(int uip, int expected_pid, int expected_uid,
+                               const unsigned int *entries, int count);
+int get_online_session_detail(int uip, int *out_pid, int *out_uid, char *out_userid,
+                              int *out_friend_svc, int *out_friendtotal,
+                              unsigned int *out_friend_online, int max_online);
+int get_max_board(void);
+int get_num_boards(void);
+int get_board_info(int bid, char *out_brdname, unsigned int *out_brdattr);
+int get_board_bid(const char *brdname);
+int get_hbfl_generation(void);
+int bump_hbfl_generation(void);
+void set_hbfl_generation(int gen);
 
 /* 2fa */
 int user_load_2fa(const char *userid, user_2fa_t *totp);

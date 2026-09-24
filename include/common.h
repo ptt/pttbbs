@@ -179,13 +179,68 @@
 #define EQUSTR 0	/* for strcmp */
 
 /* ¦n¤ÍÃö«Y */
-#define IRH 1   /* I reject him.		*/
-#define HRM 2   /* He reject me.		*/
+#define IRH 1   /* I reject him (effective: pure reject, excludes ISH). */
+#define HRM 2   /* He rejects me (effective: pure reject, excludes HSM). */
 #define IBH 4   /* I am board friend of him.	*/
 #define IFH 8   /* I friend him (He is one of my friends). */
 #define HFM 16  /* He friends me (I am one of his friends). */
+#define ISH 32  /* I super-friend him (in both my friend & reject lists). */
+#define HSM 64  /* He super-friends me (in both his friend & reject lists). */
 #define ST_FRIEND  (IBH | IFH | HFM)
-#define ST_REJECT  (IRH | HRM)       
+#define ST_SUPER   (ISH | HSM)
+#define ST_REJECT  (IRH | HRM)
+
+static inline int
+friend_normalize_stat(int stat)
+{
+    if ((stat & (IFH | IRH)) == (IFH | IRH) || (stat & ISH))
+        stat = (stat & ~IRH) | IFH | ISH;
+    if ((stat & (HFM | HRM)) == (HFM | HRM) || (stat & HSM))
+        stat = (stat & ~HRM) | HFM | HSM;
+    return stat;
+}
+
+static inline int
+friend_raw_stat(int stat)
+{
+    if ((stat & (IFH | IRH)) == (IFH | IRH) || (stat & ISH))
+        stat |= IFH | IRH | ISH;
+    if ((stat & (HFM | HRM)) == (HFM | HRM) || (stat & HSM))
+        stat |= HFM | HRM | HSM;
+    return stat;
+}
+
+#define FRIEND_ONLINE_SLOT_BITS 18
+#define FRIEND_ONLINE_UID_BITS  6
+#define FRIEND_ONLINE_STAT_BITS 8
+#define FRIEND_ONLINE_SLOT_MASK ((1U << FRIEND_ONLINE_SLOT_BITS) - 1U)
+#define FRIEND_ONLINE_UID_MASK  ((1U << FRIEND_ONLINE_UID_BITS) - 1U)
+#define FRIEND_ONLINE_STAT_MASK ((1U << FRIEND_ONLINE_STAT_BITS) - 1U)
+/* 2026-09-27 09:00:00 +0800 (Asia/Taipei) */
+#define FRIEND_LEGACY_COMPAT_CUTOFF 1790470800
+#define FRIEND_ONLINE_UID_TAG(uid) \
+    (((uid) > 0) ? ((((unsigned int)(uid) % FRIEND_ONLINE_UID_MASK) + 1U)) : 0U)
+#define FRIEND_ONLINE_PACK(stat, uid, slot) \
+    ((((unsigned int)friend_raw_stat(stat) & FRIEND_ONLINE_STAT_MASK) << (FRIEND_ONLINE_SLOT_BITS + FRIEND_ONLINE_UID_BITS)) | \
+     ((FRIEND_ONLINE_UID_TAG(uid) & FRIEND_ONLINE_UID_MASK) << FRIEND_ONLINE_SLOT_BITS) | \
+     ((unsigned int)(slot) & FRIEND_ONLINE_SLOT_MASK))
+#define FRIEND_ONLINE_SLOT(val) ((int)((unsigned int)(val) & FRIEND_ONLINE_SLOT_MASK))
+#define FRIEND_ONLINE_RAW_STAT(val) ((int)((unsigned int)(val) >> (FRIEND_ONLINE_SLOT_BITS + FRIEND_ONLINE_UID_BITS)))
+#define FRIEND_ONLINE_STAT(val) friend_normalize_stat(FRIEND_ONLINE_RAW_STAT(val))
+#define FRIEND_ONLINE_EXTRACT_TAG(val) (((unsigned int)(val) >> FRIEND_ONLINE_SLOT_BITS) & FRIEND_ONLINE_UID_MASK)
+#define FRIEND_ONLINE_VALID_UID(val, uid) \
+    (FRIEND_ONLINE_EXTRACT_TAG(val) == 0 || \
+     FRIEND_ONLINE_EXTRACT_TAG(val) == FRIEND_ONLINE_UID_TAG(uid))
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(FRIEND_ONLINE_SLOT_BITS + FRIEND_ONLINE_UID_BITS + FRIEND_ONLINE_STAT_BITS == 32,
+               "friend_online bitfields must sum to 32 bits");
+_Static_assert((ST_FRIEND | ST_SUPER | ST_REJECT) <= FRIEND_ONLINE_STAT_MASK,
+               "friend status flags exceed FRIEND_ONLINE_STAT_BITS capacity");
+#ifdef USHM_SIZE
+_Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
+               "USHM_SIZE exceeds FRIEND_ONLINE_SLOT_BITS capacity");
+#endif
+#endif
 
 #define QCAST           int (*)(const void *, const void *)
 #define chartoupper(c)  ((c >= 'a' && c <= 'z') ? c+'A'-'a' : c)

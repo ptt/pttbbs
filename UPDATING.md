@@ -15,6 +15,11 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## service/friend, talk, bbs: Offload friend_online
+
+把好友的計算移出 mbbsd 之外，有點像加強版的 UTMPD。
+一樣因為是獨立的 `friend.svc`, 如果不重跑 `shmctl init` 請手動執行該 svc。
+
 ## read, bbs, search: Replace SR.* and refer with `search.svc`
 
 停用搜尋快取的 .DIR，改用獨立的 `service.svc` 管理。
