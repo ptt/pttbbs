@@ -201,12 +201,12 @@ int select_read_should_build(const char *dst_direct, int bid,
 int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *msg, int msgmode);
 
-/* aloha.c */
-int is_aloha_svc_enabled(void);
+/* friend.c */
+int is_friend_svc_enabled(void);
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id);
-int aloha_notify_login(const char *userid, pid_t pid, int sid);
-int aloha_notify_logout(const char *userid, pid_t pid);
-int aloha_notify_reload(const char *userid);
+int friend_svc_login(const char *userid, pid_t pid, int sid);
+int friend_svc_logout(const char *userid, pid_t pid);
+int friend_svc_reload(const char *userid);
 
 
 /* cgo.c */

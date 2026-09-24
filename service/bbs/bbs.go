@@ -70,12 +70,12 @@ func (c *SHMClient) GetUserID(uid int) (string, error) {
 	return C.GoString(cStr), nil
 }
 
-// IsAlohaSvcEnabled returns true if SHM->GV2.e.aloha_svc is non-zero
-func (c *SHMClient) IsAlohaSvcEnabled() bool {
+// IsFriendSvcEnabled returns true if SHM->GV2.e.aloha_svc is non-zero
+func (c *SHMClient) IsFriendSvcEnabled() bool {
 	if c == nil {
 		return false
 	}
-	return C.is_aloha_svc_enabled() != 0
+	return C.is_friend_svc_enabled() != 0
 }
 
 // SendAlohaMessage sends an Aloha notification waterball to a target online session in SHM

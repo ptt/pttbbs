@@ -3,7 +3,7 @@ include $(SRCROOT)/pttbbs.mk
 
 SRCS:=	log.c money.c names.c path.c time.c string.c fhdr_stamp.c cache.c \
 	passwd.c filehdr.c banip.c search.c shm.c cgo.c message.c \
-	aloha.c 2fa.c aids.c
+	friend.c 2fa.c aids.c
 ifneq ($(wildcard bot.c),)
 SRCS += bot.c
 else

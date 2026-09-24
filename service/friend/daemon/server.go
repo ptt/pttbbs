@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"pttbbs/aloha/storage"
+	"pttbbs/friend/storage"
 	"pttbbs/bbs"
 )
 
@@ -50,7 +50,7 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 	if len(optSocketPath) > 0 && optSocketPath[0] != "" {
 		socketPath = optSocketPath[0]
 	} else {
-		socketPath = filepath.Join(bbsHome, "run", "aloha.svc.sock")
+		socketPath = filepath.Join(bbsHome, "run", "friend.svc.sock")
 	}
 
 	var shmClient *bbs.SHMClient
@@ -58,7 +58,7 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		var err error
 		shmClient, err = bbs.AttachSHM()
 		if err != nil {
-			log.Printf("[aloha.svc] Warning: failed to attach SHM: %v", err)
+			log.Printf("[friend.svc] Warning: failed to attach SHM: %v", err)
 		}
 	}
 
@@ -111,7 +111,7 @@ func (s *Service) Start() error {
 
 	// Check if another active instance is already listening on this socket
 	if IsSocketOccupied(s.socketPath) {
-		return fmt.Errorf("another instance of aloha.svc is already running and listening on socket %s", s.socketPath)
+		return fmt.Errorf("another instance of friend.svc is already running and listening on socket %s", s.socketPath)
 	}
 
 	_ = os.Remove(s.socketPath)
@@ -122,7 +122,7 @@ func (s *Service) Start() error {
 	}
 	defer listener.Close()
 
-	log.Printf("[aloha.svc] Aloha Service started listening on UNIX socket: %s", s.socketPath)
+	log.Printf("[friend.svc] Friend Service started listening on UNIX socket: %s", s.socketPath)
 
 	logMemStats()
 	startMemoryReporter(1 * time.Hour)
@@ -135,7 +135,7 @@ func (s *Service) Start() error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[aloha.svc] Accept error: %v", err)
+			log.Printf("[friend.svc] Accept error: %v", err)
 			continue
 		}
 
@@ -181,7 +181,7 @@ func (s *Service) ProcessRequest(req Request) Response {
 	case "status":
 		return s.HandleStatus()
 	default:
-		log.Printf("[aloha.svc] Received unknown action: %s", req.Action)
+		log.Printf("[friend.svc] Received unknown action: %s", req.Action)
 		return Response{Success: false, Message: fmt.Sprintf("unknown action: %s", req.Action)}
 	}
 }
@@ -206,7 +206,7 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 
 	alohaSvcEnabled := false
 	if s.shmClient != nil {
-		alohaSvcEnabled = s.shmClient.IsAlohaSvcEnabled()
+		alohaSvcEnabled = s.shmClient.IsFriendSvcEnabled()
 	} else {
 		// In standalone test mode without SHM
 		alohaSvcEnabled = true
@@ -220,7 +220,7 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 				if err == nil {
 					notifiedCount++
 				} else {
-					log.Printf("[aloha.svc] SendAlohaMessage FAIL: sub=%s sid=%d pid=%d: %v", sub.UserID, sub.SID, sub.PID, err)
+					log.Printf("[friend.svc] SendAlohaMessage FAIL: sub=%s sid=%d pid=%d: %v", sub.UserID, sub.SID, sub.PID, err)
 				}
 			}
 		} else {
@@ -229,7 +229,7 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 		}
 		s.RegisterSubscriber(userID, pid, sid)
 		if s.verbose > 0 || notifiedCount > 0 {
-			log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> notified %d subscribers", userID, pid, sid, notifiedCount)
+			log.Printf("[friend.svc] LOGIN: user=%s, pid=%d, sid=%d -> notified %d subscribers", userID, pid, sid, notifiedCount)
 		}
 		return Response{
 			Success: true,
@@ -239,7 +239,7 @@ func (s *Service) HandleUserLogin(userID string, pid int, sid int) Response {
 		foundCount := len(subscribersToNotify)
 		s.RegisterSubscriber(userID, pid, sid)
 		if s.verbose > 0 || foundCount > 0 {
-			log.Printf("[aloha.svc] LOGIN: user=%s, pid=%d, sid=%d -> found %d subscribers", userID, pid, sid, foundCount)
+			log.Printf("[friend.svc] LOGIN: user=%s, pid=%d, sid=%d -> found %d subscribers", userID, pid, sid, foundCount)
 		}
 		return Response{
 			Success: true,
@@ -303,7 +303,7 @@ func (s *Service) ScanOnlineSessions() int {
 			count++
 		}
 	}
-	log.Printf("[aloha.svc] Scanned SHM: loaded %d online user sessions into memory", count)
+	log.Printf("[friend.svc] Scanned SHM: loaded %d online user sessions into memory", count)
 	return count
 }
 
@@ -318,7 +318,7 @@ func (s *Service) HandleUserLogout(userID string, pid int) Response {
 
 	cleaned := s.cleanupSessionLocked(session)
 
-	log.Printf("[aloha.svc] LOGOUT: user=%s, pid=%d -> cleaned %d subscriptions", userID, pid, cleaned)
+	log.Printf("[friend.svc] LOGOUT: user=%s, pid=%d -> cleaned %d subscriptions", userID, pid, cleaned)
 
 	return Response{
 		Success: true,
@@ -404,7 +404,7 @@ func (s *Service) HandleReloadAloha(subscriberID string) Response {
 		}
 	}
 
-	log.Printf("[aloha.svc] RELOAD: user=%s -> %d targets (updated %d sessions)", subscriberID, len(targetsLower), updatedSessions)
+	log.Printf("[friend.svc] RELOAD: user=%s -> %d targets (updated %d sessions)", subscriberID, len(targetsLower), updatedSessions)
 	return Response{
 		Success: true,
 		Message: fmt.Sprintf("Reloaded aloha targets for %s (%d targets, %d sessions updated)", subscriberID, len(targetsLower), updatedSessions),
@@ -422,7 +422,7 @@ func (s *Service) HandleStatus() Response {
 		"targets_watched_count": len(s.onlineSubscribers),
 	}
 
-	log.Printf("[aloha.svc] STATUS requested: online_sessions=%d, targets_watched=%d", onlineCount, len(s.onlineSubscribers))
+	log.Printf("[friend.svc] STATUS requested: online_sessions=%d, targets_watched=%d", onlineCount, len(s.onlineSubscribers))
 
 	return Response{
 		Success: true,
@@ -443,7 +443,7 @@ func startMemoryReporter(interval time.Duration) {
 func logMemStats() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	log.Printf("[aloha.svc] [MemStats] HeapAlloc: %.2f MB, HeapSys: %.2f MB, Sys: %.2f MB, NumGC: %d",
+	log.Printf("[friend.svc] [MemStats] HeapAlloc: %.2f MB, HeapSys: %.2f MB, Sys: %.2f MB, NumGC: %d",
 		float64(m.HeapAlloc)/(1024*1024),
 		float64(m.HeapSys)/(1024*1024),
 		float64(m.Sys)/(1024*1024),
@@ -460,7 +460,7 @@ func (s *Service) StartReconciler(interval time.Duration) {
 	}
 	ticker := time.NewTicker(interval)
 	go func() {
-		log.Printf("[aloha.svc] Started background reconciler with interval: %v", interval)
+		log.Printf("[friend.svc] Started background reconciler with interval: %v", interval)
 		for range ticker.C {
 			s.ReconcileOnlineSessions()
 		}
@@ -517,7 +517,7 @@ func (s *Service) ReconcileOnlineSessions() (added int, removed int) {
 	}
 
 	elapsed := time.Since(start)
-	log.Printf("[aloha.svc] RECONCILE: cleaned %d stale sessions (removed %d subscriptions), added %d new sessions from SHM in %v",
+	log.Printf("[friend.svc] RECONCILE: cleaned %d stale sessions (removed %d subscriptions), added %d new sessions from SHM in %v",
 		len(toClean), cleanedCount, added, elapsed)
 	return added, removed
 }

@@ -570,7 +570,7 @@ friend_edit(int type)
 	outs("更新資料中..請稍候.....");
 	refresh();
 	if (type == FRIEND_ALOHA) {
-            aloha_notify_reload(cuser.userid);
+            friend_svc_reload(cuser.userid);
 	} else if (type == FRIEND_SPECIAL) {
 	    genbuf[0] = 0;
 	    setuserfile(line, special_des);

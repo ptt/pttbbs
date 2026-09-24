@@ -19,7 +19,7 @@ func TestDaemonIPCProtocol(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	sockPath := filepath.Join(tempDir, "friend.svc.sock")
 
 	svc, err := NewService(tempDir, sockPath)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestSubscriberNotificationFlow(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	sockPath := filepath.Join(tempDir, "friend.svc.sock")
 
 	svc, err := NewService(tempDir, sockPath)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestDuplicateInstancePrevention(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	sockPath := filepath.Join(tempDir, "friend.svc.sock")
 	svc1, err := NewService(tempDir, sockPath)
 	if err != nil {
 		t.Fatalf("Failed to create service 1: %v", err)
@@ -165,7 +165,7 @@ func TestReconcileOnlineSessions(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	sockPath := filepath.Join(tempDir, "aloha.svc.sock")
+	sockPath := filepath.Join(tempDir, "friend.svc.sock")
 	svc, err := NewService(tempDir, sockPath)
 	if err != nil {
 		t.Fatalf("Failed to create service: %v", err)
@@ -198,7 +198,7 @@ func TestVerboseZeroLoginLogSuppression(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	svc, err := NewService(tempDir, filepath.Join(tempDir, "aloha.svc.sock"))
+	svc, err := NewService(tempDir, filepath.Join(tempDir, "friend.svc.sock"))
 	if err != nil {
 		t.Fatalf("Failed to create service: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestReloadAlohaTargets(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	svc, err := NewService(tempDir, filepath.Join(tempDir, "aloha.svc.sock"))
+	svc, err := NewService(tempDir, filepath.Join(tempDir, "friend.svc.sock"))
 	if err != nil {
 		t.Fatalf("Failed to create service: %v", err)
 	}

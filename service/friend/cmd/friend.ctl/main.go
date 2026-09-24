@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 
-	"pttbbs/aloha/daemon"
+	"pttbbs/friend/daemon"
 )
 
 func sendRequest(socketPath string, req daemon.Request) (*daemon.Response, error) {
@@ -29,12 +29,12 @@ func sendRequest(socketPath string, req daemon.Request) (*daemon.Response, error
 }
 
 func main() {
-	socketPath := flag.String("socket", "/v/bbshome/run/aloha.svc.sock", "Path to UNIX domain socket")
+	socketPath := flag.String("socket", "/v/bbshome/run/friend.svc.sock", "Path to UNIX domain socket")
 	flag.Parse()
 
 	args := flag.Args()
 	if len(args) == 0 {
-		fmt.Println("Usage: aloha.ctl [-socket path] <action> [args...]")
+		fmt.Println("Usage: friend.ctl [-socket path] <action> [args...]")
 		fmt.Println("Actions:")
 		fmt.Println("  status")
 		fmt.Println("  login <userid> <pid> <sid>")
@@ -53,7 +53,7 @@ func main() {
 
 	case "login":
 		if len(args) < 4 {
-			fmt.Println("Usage: aloha.ctl login <userid> <pid> <sid>")
+			fmt.Println("Usage: friend.ctl login <userid> <pid> <sid>")
 			os.Exit(1)
 		}
 		req.UserID = args[1]
@@ -62,7 +62,7 @@ func main() {
 
 	case "logout":
 		if len(args) < 3 {
-			fmt.Println("Usage: aloha.ctl logout <userid> <pid>")
+			fmt.Println("Usage: friend.ctl logout <userid> <pid>")
 			os.Exit(1)
 		}
 		req.UserID = args[1]
@@ -70,7 +70,7 @@ func main() {
 
 	case "reload":
 		if len(args) < 2 {
-			fmt.Println("Usage: aloha.ctl reload <userid>")
+			fmt.Println("Usage: friend.ctl reload <userid>")
 			os.Exit(1)
 		}
 		req.UserID = args[1]

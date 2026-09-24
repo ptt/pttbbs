@@ -633,7 +633,7 @@ int start_services()
     int err = 0;
     char buf[PATHLEN];
     const char *services[] = {
-        "aloha",
+        "friend",
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {
