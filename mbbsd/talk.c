@@ -15,7 +15,6 @@ static const char *MODE_STRING[] = {
 // this must map to SHM->sorted[active].
 static const char * const MSG_PICKUP_WAY[] = {
     "嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方",
-    " 五子棋 ", "  象棋  "
 };
 #define PICKUP_WAYS ARRAY_SIZE(MSG_PICKUP_WAY)
 #define MAX_SHOW_MODE ARRAY_SIZE(MODE_STRING)
