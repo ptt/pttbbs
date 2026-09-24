@@ -31,7 +31,7 @@ enum {
     OFRAME_ACTIVE,
 };
 
-static char obuf[OBUFSIZE] = DEC2026_BSU;
+static char obuf[OBUFSIZE];
 static VBUF vout, *pvout = &vout;
 static int  oframe_state = OFRAME_NONE;
 
@@ -428,6 +428,7 @@ ssize_t vbuf_from_tty(VBUF *v)
 /* ----------------------------------------------------- */
 int
 init_io() {
+    memcpy(obuf, DEC2026_BSU, SZ_BSU);
     vbuf_attach(pvout, obuf, OBUFSIZE);
     vout_clear(pvout);
     vkey_init();
