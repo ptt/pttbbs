@@ -208,6 +208,8 @@ int friend_svc_login(const char *userid, pid_t pid, int sid);
 int friend_svc_logout(const char *userid, pid_t pid);
 int friend_svc_reload(const char *userid);
 int friend_svc_sync(const char *userid, int uid, pid_t pid, int sid);
+int friend_svc_hbfl_reload(int bid);
+int friend_svc_is_hidden_board_friend(int bid, int uid);
 int logout_friend_online(userinfo_t *utmp);
 int clear_friend_online_local(userinfo_t *utmp);
 #define aloha_notify_login  friend_svc_login
