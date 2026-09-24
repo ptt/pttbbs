@@ -213,103 +213,12 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
-#ifdef UTMPD
-int sync_outta_server(int sfd, int do_login)
-{
-    int i;
-    int offset = get_utmp_id(currutmp);
-
-    int cmd, res;
-    int nfs;
-    ocfs_t  fs[MAX_FRIEND*2];
-
-    cmd = -2;
-    if(towrite(sfd, &cmd, sizeof(cmd)) < 0 ||
-	    towrite(sfd, &offset, sizeof(offset)) < 0 ||
-	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) < 0 ||
-	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend)) < 0 ||
-	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) < 0)
-	return -1;
-
-    if(toread(sfd, &res, sizeof(res)) < 0)
-	return -1;
-
-    if(res<0)
-	return -1;
-
-    // when we are not doing real login (ex, ctrl-u a or ctrl-u d)
-    // the frequency check should be avoided.
-    if (!do_login)
-    {
-	sleep(3);   // utmpserver usually treat 3 seconds as flooding.
-	if (res == 2 || res == 1)
-	    res = 0;
-    }
-
-    if(res==2) {
-	close(sfd);
-	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
-	refresh();
-	log_usies("REJECTLOGIN", NULL);
-        // We can't do u_exit because some resources like friends are not ready.
-        currmode = 0;
-	memset(currutmp, 0, sizeof(userinfo_t));
-        // user will try to disconnect here and cause abort_bbs.
-	sleep(30);
-	exit(0);
-    }
-
-    if(toread(sfd, &nfs, sizeof(nfs)) < 0)
-	return -1;
-    if(nfs<0 || nfs>MAX_FRIEND*2) {
-	fprintf(stderr, "invalid nfs=%d\n",nfs);
-	return -1;
-    }
-
-    if(toread(sfd, fs, sizeof(fs[0])*nfs) < 0)
-	return -1;
-
-    close(sfd);
-
-    for(i=0; i<nfs; i++) {
-	if( SHM->uinfo[fs[i].index].uid != fs[i].uid )
-	    continue; // double check, server may not know user have logout
-	currutmp->friend_online[currutmp->friendtotal++]
-	    = fs[i].friendstat;
-	/* XXX: race here */
-	if( SHM->uinfo[fs[i].index].friendtotal < MAX_FRIEND )
-	    SHM->uinfo[fs[i].index].friend_online[ SHM->uinfo[fs[i].index].friendtotal++ ] = fs[i].rfriendstat;
-    }
-
-    if(res==1) {
-	vmsg("請勿頻繁登入以免造成系統過度負荷");
-    }
-    return 0;
-}
-#endif
-
 void login_friend_online(int do_login GCC_UNUSED)
 {
     userinfo_t     *uentp;
     int             i;
     unsigned int    stat, stat1;
     int             offset = get_utmp_id(currutmp);
-
-#ifdef UTMPD
-    int sfd;
-    /* UTMPD is TOO slow, let's prompt user here. */
-    move(b_lines-2, 0); clrtobot();
-    outs("\n正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久...\n");
-    refresh();
-
-    sfd = toconnect(UTMPD_ADDR);
-    if(sfd>=0) {
-	int res=sync_outta_server(sfd, do_login);
-	if(res==0) // sfd will be closed if return 0
-	    return;
-	close(sfd);
-    }
-#endif
 
     for (i = 0; i < SHM->UTMPnumber && currutmp->friendtotal < MAX_FRIEND; i++) {
 	uentp = (&SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]]);
