@@ -2,3 +2,6 @@
 
 SHM_t *SHM = NULL;
 boardheader_t *bcache = NULL;
+time4_t now = 0;
+char * const str_reply = "Re:";
+char * const str_forward = "Fw:";

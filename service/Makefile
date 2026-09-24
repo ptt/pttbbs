@@ -1,4 +1,4 @@
-SUBDIRS:=	aloha
+SUBDIRS:=	aloha search
 
 .PHONY: all clean install test $(SUBDIRS)
 
