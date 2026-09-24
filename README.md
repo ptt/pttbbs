@@ -56,5 +56,4 @@
   - `mand/`：精華區文章服務 (for Web)
   - `postd/`：文章記錄服務 (experimental)
   - `regmaild/`：註冊 Email 驗證與寄送服務
-  - `utmpd/`：UTMP 快取伺服器 (experimental)
   - `wsproxy/`：WebSocket 至 Telnet BBS 代理轉接服務 (experimental)
