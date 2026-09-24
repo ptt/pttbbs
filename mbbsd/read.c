@@ -36,8 +36,10 @@ _iter_delete_tagged(void *ptr, void *opt) {
     fileheader_t *fh = (fileheader_t*) ptr;
     const char *direct = (const char*)opt;
 
+    /* FILE_BOTTOM aliases FILE_MULTI in mail. */
     if ((fh->filemode & FILE_MARKED) ||
-        (fh->filemode & FILE_DIGEST))
+        (fh->filemode & FILE_DIGEST) ||
+        ((fh->filemode & FILE_BOTTOM) && currstat != RMAIL))
         return 0;
     if (!FindTaggedItem(fh))
         return 0;
@@ -89,9 +91,14 @@ TagPruner(int bid)
         delete_range(currdirect, 0, 0);
 
     ClearTagList();
-    if (bid)
+    if (bid) {
         setbtotal(bid);
-    else if(currstat == RMAIL)
+        if (bp) {
+            syncnow();
+            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+        }
+        search_svc_invalidate(currdirect, bid);
+    } else if(currstat == RMAIL)
         setupmailusage();
 
     return NEWDIRECT;
@@ -166,6 +173,141 @@ fixkeep(const char *s, int first)
     }
 }
 
+typedef struct {
+    int total;
+    int bottom_line;
+    bool reverse_order;
+    int32_t bottom_recs[MAX_BOTTOM_POSTS];
+    int bottom_count;
+    int32_t *remap;
+    int remap_base;
+    int remap_count;
+} read_view_t;
+
+static inline int
+read_view_v2p(const read_view_t *view, int vidx) {
+    if (view->reverse_order)
+        return view->total - vidx;
+    return vidx + 1;
+}
+
+static inline int
+read_view_p2v(const read_view_t *view, int p_recno) {
+    if (view->reverse_order)
+        return view->total - p_recno;
+    return p_recno - 1;
+}
+
+typedef struct {
+    const cmd_t    *rcmdlist;
+    keeploc_t      *locmem;
+    keeploc_t       sr_locmem;
+    int             cmdmode;
+    int             bid;
+    int             bidcache;
+    int             bottom_line;
+    int             entries;
+    bool            is_newdirect;
+    time4_t         enter_time;
+    void          (*dotitle)(void);
+    void          (*doentry)(int, fileheader_t *);
+    read_view_t     view;
+    fileheader_predicate_t sr_preds[MAX_SEARCH_PREDICATES];
+    int             sr_pred_count;
+    int             sr_mode_mask;
+    bool            sr_just_selected;
+} read_ctx_t;
+
+static void
+read_view_ensure_window(read_ctx_t *cx, int start_disp_ln, int count)
+{
+    if (!(currmode & MODE_SELECT) || cx->sr_pred_count <= 0 || cx->view.total <= 0)
+        return;
+    if (!cx->view.remap) {
+        cx->view.remap = (int32_t *)calloc(SEARCH_SVC_WINDOW_SIZE, sizeof(int32_t));
+        assert(cx->view.remap != NULL);
+        cx->view.remap_base = 0;
+        cx->view.remap_count = 0;
+    }
+    int idx_start = start_disp_ln - 1;
+    if (idx_start < 0)
+        idx_start = 0;
+    int idx_end = idx_start + (count > 0 ? count : 1);
+    if (idx_end > cx->view.total)
+        idx_end = cx->view.total;
+
+    if (cx->view.remap_count > 0 &&
+        idx_start >= cx->view.remap_base &&
+        idx_end <= cx->view.remap_base + cx->view.remap_count) {
+        return;
+    }
+
+    int new_base = idx_start - SEARCH_SVC_WINDOW_SIZE / 2;
+    if (new_base + SEARCH_SVC_WINDOW_SIZE > cx->view.total)
+        new_base = cx->view.total - SEARCH_SVC_WINDOW_SIZE;
+    if (new_base < 0)
+        new_base = 0;
+
+    int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+    int total = cx->view.total;
+    int loaded = search_predicates_window(currdirect, bid,
+                                          cx->sr_preds, cx->sr_pred_count,
+                                          new_base, SEARCH_SVC_WINDOW_SIZE,
+                                          cx->view.remap, &total);
+    if (loaded >= 0) {
+        cx->view.total = last_line = cx->bottom_line = total;
+        cx->view.remap_base = new_base;
+        cx->view.remap_count = loaded;
+    }
+}
+
+/* Returns the 1-based record number in currdirect for display line disp_ln,
+ * or 0 if it cannot be resolved (empty list, or the select remap is not
+ * available). 0 is rejected by get_records_keep() and the substitute/delete
+ * helpers, so a miss never touches an unrelated record such as #1. */
+static int
+read_view_real_recno(read_ctx_t *cx, int disp_ln)
+{
+    if (disp_ln <= 0)
+        return 0;
+    if (currmode & MODE_SELECT) {
+        read_view_ensure_window(cx, disp_ln, 1);
+        int idx = disp_ln - 1;
+        if (cx->view.remap &&
+            idx >= cx->view.remap_base &&
+            idx < cx->view.remap_base + cx->view.remap_count) {
+            return cx->view.remap[idx - cx->view.remap_base];
+        }
+        return 0;
+    }
+    if (disp_ln > cx->view.bottom_line) {
+        int b_idx = disp_ln - cx->view.bottom_line - 1;
+        if (b_idx >= 0 && b_idx < cx->view.bottom_count)
+            return cx->view.bottom_recs[b_idx];
+    }
+    return disp_ln;
+}
+
+static int
+TagThreadView(read_ctx_t *cx, const char *direct)
+{
+    if (!(currmode & MODE_SELECT)) {
+        return TagThread(direct);
+    }
+    int fd = -1;
+    fileheader_t fh;
+    for (int ln = 1; ln <= last_line; ln++) {
+        int real_recno = read_view_real_recno(cx, ln);
+        if (get_fileheaders_keep(direct, &fh, real_recno, 1, &fd) > 0) {
+            if (_iter_tag_match_title(&fh, currtitle) < 0)
+                break;
+        }
+    }
+    if (fd != -1)
+        close(fd);
+    return FULLUPDATE;
+}
+
 /**
  * 根據 stypen 選擇上/下一篇文章
  *
@@ -183,8 +325,9 @@ fixkeep(const char *s, int first)
  * @return 新的游標位置
  */
 static int
-thread(const keeploc_t * locmem, int stypen)
+thread(read_ctx_t *cx, int stypen)
 {
+    const keeploc_t *locmem = cx->locmem;
     fileheader_t fh;
     int     pos = locmem->crs_ln, jump = THREAD_SEARCH_RANGE, new_ln;
     int     fd = -1, amatch = -1;
@@ -206,7 +349,14 @@ thread(const keeploc_t * locmem, int stypen)
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 
-	if (get_fileheaders_keep(currdirect, &fh, new_ln, 1, &fd) <= 0)
+	/* Pinned lines duplicate .DIR records; treat them as EOF like before. */
+	if (!(currmode & (MODE_SELECT | MODE_DIGEST)) &&
+	    cx->view.bottom_count > 0 && new_ln > cx->view.bottom_line) {
+	    new_ln = pos;
+	    break;
+	}
+	int real_recno = read_view_real_recno(cx, new_ln);
+	if (get_fileheaders_keep(currdirect, &fh, real_recno, 1, &fd) <= 0)
 	{
 	    new_ln = pos;
 	    break;
@@ -254,9 +404,20 @@ thread(const keeploc_t * locmem, int stypen)
  *
  * @return 新的游標位置
  */
+/* Bottom (pinned) lines are treated as EOF, i.e. newer than any post. */
 static int
-search_read(const int bid, const keeploc_t * locmem, int stypen)
+search_read_fh(read_ctx_t *cx, fileheader_t *fh, int ln, int *pfd)
 {
+    if (!(currmode & (MODE_SELECT | MODE_DIGEST)) &&
+        cx->view.bottom_count > 0 && ln > cx->view.bottom_line)
+        return 0;
+    return get_fileheaders_keep(currdirect, fh, read_view_real_recno(cx, ln), 1, pfd);
+}
+
+static int
+search_read(read_ctx_t *cx, const int bid, int stypen)
+{
+    const keeploc_t *locmem = cx->locmem;
     fileheader_t fh;
     int     pos = locmem->crs_ln;
     int     rk;
@@ -270,7 +431,7 @@ search_read(const int bid, const keeploc_t * locmem, int stypen)
 
     /* First load the timestamp of article where cursor points to */
 reload_fh: GCC_UNUSED;
-    rk = get_fileheaders_keep(currdirect, &fh, pos, 1, &fd);
+    rk = search_read_fh(cx, &fh, pos, &fd);
     if( rk < 0 ) goto out;
     if( rk == 0 /* EOF */ ) {
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
@@ -297,8 +458,8 @@ reload_fh: GCC_UNUSED;
          */
         int i;
 
-        for( i = last_line; i >= 0; --i ) {
-            rk = get_fileheaders_keep(currdirect, &fh, i, 1, &fd);
+        for( i = last_line; i >= 1; --i ) {
+            rk = search_read_fh(cx, &fh, i, &fd);
             if (rk < 0) goto out;
             if (rk == 0) continue;
             if( 0 == brc_unread( bid, fh.filename, 0 ) ) {
@@ -311,8 +472,8 @@ reload_fh: GCC_UNUSED;
         int i;
 
         /* find out the position for the article result */
-        for( i = pos; i >= 0 && i <= last_line; i += step ) {
-            rk = get_fileheaders_keep(currdirect, &fh, i, 1, &fd);
+        for( i = pos; i >= 1 && i <= last_line; i += step ) {
+            rk = search_read_fh(cx, &fh, i, &fd);
             if (rk < 0) goto out;
             if (rk == 0) continue;
 #ifdef SAFE_ARTICLE_DELETE
@@ -334,9 +495,10 @@ out:
 }
 
 static int
-select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
+select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	char *pdefault_ch)
 {
+    const keeploc_t *locmem = cx->locmem;
     char aidc[100];
     aidu_t aidu = 0;
     char dirfile[PATHLEN];
@@ -361,46 +523,49 @@ select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
 	return FULLUPDATE;
     }
 
-    /* strip leading spaces and '#' */
+    /* skip leading spaces and '#' */
     sp = aidc;
     while(*sp == ' ')
 	sp ++;
     if(*sp == '#')
 	sp ++;
 
-    if((aidu = aidc2aidu(sp)) > 0)
+    aidu = aidc2aidu(sp);
+
+    if(aidu > 0)
     {
-	/* search bottom */
-	/* FIXME: 置底文但沒列在 .DIR.bottom 的在這段會搜不到，
-	   在下一段 search board 時才會搜到本體。難解。 */
-	{
-	    n = -1;
-	    if (currbid > 0) {
-		int32_t brecs[MAX_BOTTOM_POSTS];
-		int bcnt = resolve_board_bottoms(currbid, brecs);
-		const boardheader_t *bp = getbcache(currbid);
-		for (int i = 0; i < bcnt; i++) {
+	/* search bottom in boardheader_t.bottom[] */
+	if (currbid > 0) {
+	    boardheader_t *bp = getbcache(currbid);
+	    int32_t brecs[MAX_BOTTOM_POSTS];
+	    int bcnt = bp ? resolve_board_bottoms(currbid, brecs) : 0;
+	    if (bp) {
+		int b_slot = 0;
+		for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
 		    aidu_t baidu = aidu_raw(bp->bottom[i]);
-		    if (baidu == aidu_raw(aidu)) {
-			n = i;
+		    if (baidu == 0)
+			continue;
+		    aidu_t qaidu = aidu_raw(aidu);
+		    if (baidu == qaidu || ((qaidu & 0xfffU) == 0 && (baidu & ~0xfffULL) == qaidu)) {
+			int btotal = getbtotal(currbid);
+			if (btotal <= 0) {
+			    setbtotal(currbid);
+			    btotal = getbtotal(currbid);
+			}
+			n = btotal + b_slot;
+			if (currmode & MODE_DIGEST) {
+			    *pnewdirect_new_ln = n;
+			    *pnew_ln = locmem->crs_ln;
+			    *pdefault_ch = KEY_TAB;
+			    return DONOTHING;
+			}
+			memcpy(cx->view.bottom_recs, brecs, sizeof(brecs));
+			cx->view.bottom_count = bcnt;
+			cx->bottom_line = cx->view.bottom_line = btotal;
+			cx->view.total = last_line = btotal + bcnt;
 			break;
 		    }
-		}
-	    }
-	    if (n >= 0)
-	    {
-		n += getbtotal(currbid);
-		/* 不可用 bottom_line，因為如果是在 digest mode，
-		   bottom_line 會是文摘的數目，而不是真正的文章數 */
-		if(currmode & MODE_DIGEST)
-		{
-		    *pnewdirect_new_ln = n;
-
-		    *pnew_ln = locmem->crs_ln;
-		    /* dirty hack for crs_ln = 1, then HOME pressed */
-
-		    *pdefault_ch = KEY_TAB;
-		    return DONOTHING;
+		    b_slot++;
 		}
 	    }
 	}
@@ -565,92 +730,79 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 }
 
 static int
-match_filter_predicate(const fileheader_t *fh, void *arg)
+select_read(read_ctx_t *cx, int sr_mode)
 {
-    fileheader_predicate_t *pred = (fileheader_predicate_t *) arg;
+    const keeploc_t *locmem = cx->locmem;
+    if (!locmem || locmem->crs_ln == 0)
+        return 0;
+    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln];
 
-    if (pred->mode & RS_MONEY)
-	return query_file_money(fh) >= pred->money;
+    if (!(currmode & MODE_SELECT)) {
+        cx->sr_pred_count = 0;
+        cx->sr_mode_mask = 0;
+    }
 
-    return match_fileheader_predicate(fh, pred);
-}
+    if (cx->sr_pred_count >= MAX_SEARCH_PREDICATES) {
+        vmsg("抱歉，已達搜尋條件上限。");
+        return READ_REDRAW;
+    }
 
-static int
-select_read(const keeploc_t * locmem, int sr_mode)
-{
-   char newdirect[PATHLEN];
-   int first_select;
-   char genbuf[PATHLEN], *p = strstr(currdirect, "SR.");
-   static int _mode = 0;
+    STATINC(STAT_SELECTREAD);
 
-   if(locmem->crs_ln == 0)
-       return locmem->crs_ln;
-   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln];
+    fileheader_predicate_t predicate;
+    int success = 0;
+    int ui_ret = ask_filter_predicate(&predicate, cx->sr_mode_mask, sr_mode, fh, &success);
+    if (!success)
+        return ui_ret;
 
-   first_select = p==NULL;
-   if (first_select)
-       _mode = 0;
+    if (!cx->view.remap) {
+        cx->view.remap = (int32_t *)calloc(SEARCH_SVC_WINDOW_SIZE, sizeof(int32_t));
+        assert(cx->view.remap != NULL);
+    }
 
-   STATINC(STAT_SELECTREAD);
+    cx->sr_preds[cx->sr_pred_count] = predicate;
+    int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+    int total = 0;
+    int loaded = search_predicates_window(currdirect, bid,
+                                          cx->sr_preds, cx->sr_pred_count + 1,
+                                          0, SEARCH_SVC_WINDOW_SIZE,
+                                          cx->view.remap, &total);
+    if (loaded < 0 || total <= 0) {
+        return READ_REDRAW;
+    }
 
-   fileheader_predicate_t predicate;
-   int success;
-   int ui_ret = ask_filter_predicate(&predicate, _mode, sr_mode, fh, &success);
-   if (!success)
-       return ui_ret;
-   _mode |= sr_mode;
+    cx->sr_pred_count++;
+    cx->sr_mode_mask |= sr_mode;
+    cx->view.total = total;
+    cx->view.bottom_line = total;
+    cx->view.bottom_count = 0;
+    cx->view.remap_base = 0;
+    cx->view.remap_count = loaded;
 
-   select_read_name(genbuf, sizeof(genbuf),
-		    first_select ? NULL : p, &predicate);
+    if (total > SEARCH_SVC_WINDOW_SIZE) {
+        int tail_base = total - SEARCH_SVC_WINDOW_SIZE;
+        int tail_loaded = search_predicates_window(currdirect, bid,
+                                                   cx->sr_preds, cx->sr_pred_count,
+                                                   tail_base, SEARCH_SVC_WINDOW_SIZE,
+                                                   cx->view.remap, &total);
+        if (tail_loaded > 0) {
+            cx->view.remap_base = tail_base;
+            cx->view.remap_count = tail_loaded;
+        }
+    }
 
-   // pre-calculate board prefix
-   if (currstat == RMAIL)
-       sethomefile(newdirect, cuser.userid, "x");
-   else
-       setbfile(newdirect, currboard, "x");
-
-   // XXX currently currdirect is 64 bytes while newdirect is 256 bytes.
-   // however if we enlarge currdirect, there may be lots of SR generated.
-   // as a result, let's make restriction here.
-   assert( sizeof(newdirect) >= sizeof(currdirect) );
-   if( strlen(genbuf) + strlen(newdirect) >= sizeof(currdirect) )
-   {
-       vmsg("抱歉，已達搜尋條件上限。");
-       return  READ_REDRAW; // avoid overflow
-   }
-
-   if (currstat == RMAIL)
-       sethomefile(newdirect, cuser.userid, genbuf);
-   else
-       setbfile(newdirect, currboard, genbuf);
-
-   /* mark and recommend shouldn't incremental select */
-   int force_full_build = sr_mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED);
-
-   int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
-   time4_t resume_from;
-   int count;
-   if (select_read_should_build(newdirect, bid, &resume_from, &count) &&
-       (count = select_read_build(currdirect, newdirect, !first_select,
-				  force_full_build ? 0 : resume_from, count,
-				  match_filter_predicate, &predicate)) < 0) {
-      return READ_REDRAW;
-   }
-
-   if (count) {
-       STRLCPY(currdirect, newdirect);
-       currmode |= MODE_SELECT;
-       currsrmode |= sr_mode;
-       return NEWDIRECT;
-   }
-   return READ_REDRAW;
+    currmode |= MODE_SELECT;
+    currsrmode |= sr_mode;
+    cx->sr_just_selected = true;
+    return NEWDIRECT;
 }
 
 static int newdirect_new_ln = -1;
 
 static int
-read_key_handle_mode_navigation(keeploc_t *locmem, int mode, int *new_ln_ptr, char *default_ch_ptr)
+read_key_handle_mode_navigation(read_ctx_t *cx, int mode, int *new_ln_ptr, char *default_ch_ptr)
 {
+    keeploc_t *locmem = cx->locmem;
     switch (mode) {
     case READ_PREV:
         *new_ln_ptr = locmem->crs_ln - 1;
@@ -659,86 +811,128 @@ read_key_handle_mode_navigation(keeploc_t *locmem, int mode, int *new_ln_ptr, ch
         *new_ln_ptr = locmem->crs_ln + 1;
         break;
     case RELATE_PREV:
-        *new_ln_ptr = thread(locmem, RELATE_PREV);
+        *new_ln_ptr = thread(cx, RELATE_PREV);
         break;
     case RELATE_NEXT:
-        *new_ln_ptr = thread(locmem, RELATE_NEXT);
+        *new_ln_ptr = thread(cx, RELATE_NEXT);
         if (*new_ln_ptr == locmem->crs_ln) {
             *default_ch_ptr = 0;
             return 1;
         }
         break;
     case RELATE_FIRST:
-        *new_ln_ptr = thread(locmem, RELATE_FIRST);
+        *new_ln_ptr = thread(cx, RELATE_FIRST);
         break;
     case AUTHOR_PREV:
-        *new_ln_ptr = thread(locmem, AUTHOR_PREV);
+        *new_ln_ptr = thread(cx, AUTHOR_PREV);
         break;
     case AUTHOR_NEXT:
-        *new_ln_ptr = thread(locmem, AUTHOR_NEXT);
+        *new_ln_ptr = thread(cx, AUTHOR_NEXT);
         break;
     }
     return 0;
 }
 
-typedef struct {
-    int total;
-    int bottom_line;
-    bool reverse_order;
-    int32_t bottom_recs[MAX_BOTTOM_POSTS];
-    int bottom_count;
-} read_view_t;
-
-static inline int
-read_view_bottom_real_recno(const read_view_t *view, int disp_ln)
+static int
+read_view_load_physical_range(read_ctx_t *cx, const char *direct,
+                              fileheader_t *buf, int recbase, int count)
 {
-    if (disp_ln > view->bottom_line) {
-        int b_idx = disp_ln - view->bottom_line - 1;
-        if (b_idx >= 0 && b_idx < view->bottom_count)
-            return view->bottom_recs[b_idx];
+    const read_view_t *view = &cx->view;
+    if (view->total < 1 || count <= 0)
+        return 0;
+
+    BEGINSTAT(STAT_BOARDREC);
+    if (currmode & MODE_SELECT) {
+        int fd = -1;
+        int rv = 0;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            read_view_ensure_window(cx, recbase, count);
+            rv = 0;
+            int stale = 0;
+            for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
+                int real_recno = read_view_real_recno(cx, recbase + i);
+                if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
+                    !buf[rv].filename[0] || buf[rv].filename[0] == '.' ||
+                    buf[rv].owner[0] == '-') {
+                    stale = 1;
+                    break;
+                }
+                for (int p = 0; p < cx->sr_pred_count; p++) {
+                    /* Any mismatch (shifted remap after a physical delete,
+                     * or an in-place edit) means the cached window is stale. */
+                    if (!match_fileheader_predicate(&buf[rv], &cx->sr_preds[p])) {
+                        stale = 1;
+                        break;
+                    }
+                }
+                if (stale)
+                    break;
+                rv++;
+            }
+            if (!stale || attempt > 0)
+                break;
+            /* Mismatch detected! Notify search.svc that its cached index remap is wrong */
+            int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+            search_svc_invalidate(direct, bid);
+            cx->view.remap_count = 0;
+        }
+        if (fd != -1)
+            close(fd);
+        ENDSTAT(STAT_BOARDREC);
+        return rv;
     }
-    return disp_ln;
-}
 
-static inline int
-read_view_v2p(const read_view_t *view, int vidx) {
-    if (view->reverse_order)
-        return view->total - vidx;
-    return vidx + 1;
-}
+    int n = view->bottom_line - recbase + 1;
+    int rv = 0;
 
-static inline int
-read_view_p2v(const read_view_t *view, int p_recno) {
-    if (view->reverse_order)
-        return view->total - p_recno;
-    return p_recno - 1;
-}
+    if (n >= count || (currmode & MODE_DIGEST)) {
+        rv = get_fileheaders(direct, buf, recbase, count);
+        if (rv < 0)
+            rv = 0;
+        ENDSTAT(STAT_BOARDREC);
+        return rv;
+    }
 
-typedef struct {
-    const cmd_t    *rcmdlist;
-    keeploc_t      *locmem;
-    int             cmdmode;
-    int             bid;
-    int             bidcache;
-    int             bottom_line;
-    int             entries;
-    bool            is_newdirect;
-    time4_t         enter_time;
-    void          (*dotitle)(void);
-    void          (*doentry)(int, fileheader_t *);
-    read_view_t     view;
-} read_ctx_t;
+    if (n > 0) {
+        n = get_fileheaders(direct, buf, recbase, n);
+        if (n < 0)
+            n = 0;
+        rv += n;
+        recbase = 1;
+    } else {
+        recbase = 1 + (-n);
+    }
+
+    int b_avail = view->bottom_count - (recbase - 1);
+    if (rv + b_avail > count)
+        b_avail = count - rv;
+
+    if (b_avail > 0) {
+        int fd = -1;
+        for (int i = 0; i < b_avail; i++) {
+            int b_idx = (recbase - 1) + i;
+            if (b_idx >= 0 && b_idx < view->bottom_count) {
+                int real_recno = view->bottom_recs[b_idx];
+                if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) > 0) {
+                    buf[rv].filemode |= FILE_BOTTOM;
+                    rv++;
+                }
+            }
+        }
+        if (fd != -1)
+            close(fd);
+    }
+
+    ENDSTAT(STAT_BOARDREC);
+    return rv;
+}
 
 static int
-get_records_and_bottom(const char *direct, fileheader_t *headers,
-                       int recbase, int headers_size, int last_line, int bottom_line);
-
-static int
-read_view_load_window(const read_view_t *view, const char *direct,
+read_view_load_window(read_ctx_t *cx, const char *direct,
                       fileheader_t *buf, int base, int count) {
+    const read_view_t *view = &cx->view;
     if (!view->reverse_order) {
-        return get_records_and_bottom(direct, buf, base + 1, count,
-                                      view->total, view->bottom_line);
+        return read_view_load_physical_range(cx, direct, buf, base + 1, count);
     }
     int actual_count = count;
     if (base + actual_count > view->total)
@@ -746,8 +940,7 @@ read_view_load_window(const read_view_t *view, const char *direct,
     if (actual_count <= 0)
         return 0;
     int p_start = view->total - (base + actual_count) + 1;
-    int loaded = get_records_and_bottom(direct, buf, p_start, actual_count,
-                                        view->total, view->bottom_line);
+    int loaded = read_view_load_physical_range(cx, direct, buf, p_start, actual_count);
     for (int i = 0; i < loaded / 2; i++) {
         fileheader_t tmp = buf[i];
         buf[i] = buf[loaded - 1 - i];
@@ -837,15 +1030,26 @@ read_cmd_quit(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
     cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
-    if ((currmode & MODE_SELECT) && cx->locmem->crs_ln > 0) {
+    if (currmode & MODE_SELECT) {
         char genbuf[PATHLEN];
-        fileheader_t *fhdr = &headers[ctx->curr - ctx->base];
+        int real_recno = (cx->view.total > 0 && cx->locmem->crs_ln > 0) ? read_view_real_recno(cx, cx->locmem->crs_ln) : 0;
         board_select();
-        setbdir(genbuf, currboard);
+        cx->sr_pred_count = 0;
+        cx->sr_mode_mask = 0;
+        free(cx->view.remap);
+        cx->view.remap = NULL;
+        cx->view.remap_base = 0;
+        cx->view.remap_count = 0;
+        if (currstat == RMAIL)
+            sethomedir(genbuf, cuser.userid);
+        else
+            setbdir(genbuf, currboard);
         cx->locmem = getkeep(genbuf, 0, 1);
-        cx->locmem->crs_ln = fhdr->multi.refer.ref;
-        int num = cx->locmem->crs_ln - p_lines + 1;
-        cx->locmem->top_ln = num < 1 ? 1 : num;
+        if (real_recno > 0) {
+            cx->locmem->crs_ln = real_recno;
+            int num = cx->locmem->crs_ln - p_lines + 1;
+            cx->locmem->top_ln = num < 1 ? 1 : num;
+        }
         read_apply_mode(cx, ctx, NEWDIRECT);
     } else {
         int mode = (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
@@ -946,7 +1150,9 @@ read_cmd_aid(cmd_ctx_t *ctx) {
     cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
     int new_ln = cx->locmem->crs_ln;
     char default_ch = 0;
-    int mode = select_by_aid(cx->locmem, &new_ln, &newdirect_new_ln, &default_ch);
+    int mode = select_by_aid(cx, &new_ln, &newdirect_new_ln, &default_ch);
+    /* select_by_aid may have refreshed the bottom layout and last_line. */
+    ctx->total = cx->view.total;
     if (new_ln != cx->locmem->crs_ln)
         read_move_cursor(cx, ctx, new_ln, 10);
     if (default_ch != 0) {
@@ -961,7 +1167,7 @@ static int
 read_cmd_search_newpost(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_NEWPOST));
+    read_apply_mode(cx, ctx, select_read(cx, RS_NEWPOST));
     return 0;
 }
 
@@ -969,7 +1175,7 @@ static int
 read_cmd_search_recommend(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_RECOMMEND));
+    read_apply_mode(cx, ctx, select_read(cx, RS_RECOMMEND));
     return 0;
 }
 
@@ -977,7 +1183,7 @@ static int
 read_cmd_search_author(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_AUTHOR));
+    read_apply_mode(cx, ctx, select_read(cx, RS_AUTHOR));
     return 0;
 }
 
@@ -985,7 +1191,7 @@ static int
 read_cmd_search_money(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_MONEY));
+    read_apply_mode(cx, ctx, select_read(cx, RS_MONEY));
     return 0;
 }
 
@@ -998,10 +1204,10 @@ read_cmd_search_mark(cmd_ctx_t *ctx) {
                  "增加條件 標記(m/s)(未輸入則取消): " :
                  "搜尋標記(m/s)(未輸入則取消): ")) {
         case 's':
-            mode = select_read(cx->locmem, RS_SOLVED);
+            mode = select_read(cx, RS_SOLVED);
             break;
         case 'm':
-            mode = select_read(cx->locmem, RS_MARK);
+            mode = select_read(cx, RS_MARK);
             break;
         default:
             mode = READ_REDRAW;
@@ -1015,7 +1221,7 @@ static int
 read_cmd_search_keyword(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_KEYWORD));
+    read_apply_mode(cx, ctx, select_read(cx, RS_KEYWORD));
     return 0;
 }
 
@@ -1023,7 +1229,7 @@ static int
 read_cmd_search_title(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_TITLE));
+    read_apply_mode(cx, ctx, select_read(cx, RS_TITLE));
     return 0;
 }
 
@@ -1031,7 +1237,7 @@ static int
 read_cmd_search_exclude(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx->locmem, RS_KEYWORD_EXCLUDE));
+    read_apply_mode(cx, ctx, select_read(cx, RS_KEYWORD_EXCLUDE));
     return 0;
 }
 
@@ -1039,7 +1245,7 @@ static int
 read_cmd_thread_first(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_FIRST), 10);
+    read_move_cursor(cx, ctx, thread(cx, RELATE_FIRST), 10);
     return 0;
 }
 
@@ -1047,7 +1253,7 @@ static int
 read_cmd_cursor_first(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_FIRST), 10);
+    read_move_cursor(cx, ctx, thread(cx, CURSOR_FIRST), 10);
     return 0;
 }
 
@@ -1055,7 +1261,7 @@ static int
 read_cmd_thread_next(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_NEXT), 10);
+    read_move_cursor(cx, ctx, thread(cx, RELATE_NEXT), 10);
     return 0;
 }
 
@@ -1063,7 +1269,7 @@ static int
 read_cmd_cursor_next(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_NEXT), 10);
+    read_move_cursor(cx, ctx, thread(cx, CURSOR_NEXT), 10);
     return 0;
 }
 
@@ -1071,7 +1277,7 @@ static int
 read_cmd_thread_prev(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, RELATE_PREV), 10);
+    read_move_cursor(cx, ctx, thread(cx, RELATE_PREV), 10);
     return 0;
 }
 
@@ -1079,7 +1285,7 @@ static int
 read_cmd_cursor_prev(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, CURSOR_PREV), 10);
+    read_move_cursor(cx, ctx, thread(cx, CURSOR_PREV), 10);
     return 0;
 }
 
@@ -1087,7 +1293,7 @@ static int
 read_cmd_newpost_prev(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, NEWPOST_PREV), 10);
+    read_move_cursor(cx, ctx, thread(cx, NEWPOST_PREV), 10);
     return 0;
 }
 
@@ -1095,7 +1301,7 @@ static int
 read_cmd_newpost_next(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, thread(cx->locmem, NEWPOST_NEXT), 10);
+    read_move_cursor(cx, ctx, thread(cx, NEWPOST_NEXT), 10);
     return 0;
 }
 
@@ -1172,7 +1378,7 @@ read_cmd_tag_thread(cmd_ctx_t *ctx) {
             TagBoard = cx->bid;
         ClearTagList();
     }
-    read_apply_mode(cx, ctx, TagThread(currdirect));
+    read_apply_mode(cx, ctx, TagThreadView(cx, currdirect));
     return 0;
 }
 
@@ -1194,7 +1400,7 @@ static int
 read_cmd_search_prev(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, search_read(cx->bid, cx->locmem, READ_PREV), 10);
+    read_move_cursor(cx, ctx, search_read(cx, cx->bid, READ_PREV), 10);
     return 0;
 }
 
@@ -1202,7 +1408,7 @@ static int
 read_cmd_search_next(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, search_read(cx->bid, cx->locmem, READ_NEXT), 10);
+    read_move_cursor(cx, ctx, search_read(cx, cx->bid, READ_NEXT), 10);
     return 0;
 }
 
@@ -1263,7 +1469,7 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
         cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
 
-        int real_ent = read_view_bottom_real_recno(&cx->view, cx->locmem->crs_ln);
+        int real_ent = read_view_real_recno(cx, cx->locmem->crs_ln);
         int row = ctx->curr - ctx->base;
         int mode = (*func)(real_ent, &headers[row], currdirect, row);
 
@@ -1273,7 +1479,7 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         if (mode == RET_SELECTAID) {
             int new_ln = cx->locmem->crs_ln;
             char default_ch = 0;
-            select_by_aid(cx->locmem, &new_ln, &newdirect_new_ln, &default_ch);
+            select_by_aid(cx, &new_ln, &newdirect_new_ln, &default_ch);
             if (new_ln >= 1 && new_ln <= last_line)
                 read_move_cursor(cx, ctx, new_ln, 10);
             if (default_ch != 0) {
@@ -1292,7 +1498,7 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
             lastmode = mode;
             int new_ln = cx->locmem->crs_ln;
             char default_ch = 0;
-            if (read_key_handle_mode_navigation(cx->locmem, mode, &new_ln, &default_ch)) {
+            if (read_key_handle_mode_navigation(cx, mode, &new_ln, &default_ch)) {
                 ctx->reload = true;
                 ctx->redraw = true;
                 return 0;
@@ -1303,7 +1509,7 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
                 return 0;
             }
             read_move_cursor(cx, ctx, new_ln, 10);
-            cx->entries = read_view_load_window(&cx->view, currdirect, headers,
+            cx->entries = read_view_load_window(cx, currdirect, headers,
                                                 ctx->base, headers_size);
             continue;
         }
@@ -1311,68 +1517,6 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         read_apply_mode(cx, ctx, mode);
         return 0;
     }
-}
-
-// recbase:	顯示位置的開頭
-// headers_size:要顯示幾行
-// last_line:	全板 .DIR + 置底 的有效數目
-// bottom_line:	全板 .DIR (無置底) 的有效數目
-
-// XXX never return -1!
-
-static int
-get_records_and_bottom(const char *direct,  fileheader_t* headers,
-                     int recbase, int headers_size, int last_line, int bottom_line)
-{
-    // n: 置底除外的可顯示數目
-    int     n = bottom_line - recbase + 1, rv = 0;
-
-    if( last_line < 1)	// 完全沒東西
-	return 0;
-
-    BEGINSTAT(STAT_BOARDREC);
-    // 不顯示置底的情形
-    if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
-    {
-	rv = get_fileheaders(direct, headers, recbase, headers_size);
-	ENDSTAT(STAT_BOARDREC);
-	return rv > 0 ? rv : 0;
-    }
-
-    //////// 顯示本文+置底: ////////
-
-    // 讀取 .DIR 本文
-    if (n > 0)
-    {
-	n = get_fileheaders(direct, headers, recbase, n);
-	if (n < 0) n = 0;
-	rv += n; // rv 為有效本文數
-
-	recbase = 1;
-    } else {
-	// n <= 0
-	recbase = 1 + (-n);
-    }
-
-    // 讀取置底 (注意 recbase 可能超過 bottom_line, 也就是以置底第 n 個開始)
-    n = last_line - bottom_line +1 - (recbase-1);
-    if (rv + n > headers_size)
-	n = headers_size - rv;
-
-    if (n > 0 && currbid > 0) {
-	int32_t brecs[MAX_BOTTOM_POSTS];
-	int bcnt = resolve_board_bottoms(currbid, brecs);
-	int fd = -1;
-	for (int i = 0; i < n && (recbase - 1 + i) < bcnt; i++) {
-	    if (get_fileheaders_keep(direct, &headers[rv], brecs[recbase - 1 + i], 1, &fd) > 0)
-	        rv++;
-	}
-	if (fd != -1)
-	    close(fd);
-    }
-
-    ENDSTAT(STAT_BOARDREC);
-    return rv;
 }
 
 static const char *
@@ -1461,17 +1605,49 @@ read_loader(PSB_CTX *psbctx)
     psbctx->cmd.caption = i_read_caption();
 
     if (psbctx->cmd.reload) {
-        if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
+        if (currmode & MODE_SELECT) {
+            if (!cx->sr_just_selected && cx->sr_pred_count > 0) {
+                int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+                int total = 0;
+                int loaded = search_predicates_window(currdirect, bid,
+                                                      cx->sr_preds, cx->sr_pred_count,
+                                                      cx->view.remap_base, SEARCH_SVC_WINDOW_SIZE,
+                                                      cx->view.remap, &total);
+                if (loaded >= 0) {
+                    cx->view.total = total;
+                    cx->view.remap_count = loaded;
+                }
+            }
+            cx->sr_just_selected = false;
+            cx->bottom_line = last_line = cx->view.total;
+            cx->view.bottom_count = 0;
+        } else if (cx->bidcache > 0 && !(currmode & MODE_DIGEST)) {
+            if (cx->view.remap) {
+                free(cx->view.remap);
+                cx->view.remap = NULL;
+                cx->view.remap_base = 0;
+                cx->view.remap_count = 0;
+                cx->sr_pred_count = 0;
+                cx->sr_mode_mask = 0;
+            }
             if ((last_line = getbtotal(currbid)) == 0) {
                 setbtotal(currbid);
-                setbottomtotal(currbid);
                 last_line = getbtotal(currbid);
             }
             cx->bottom_line = last_line;
             cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
             last_line += cx->view.bottom_count;
         } else {
+            if (cx->view.remap) {
+                free(cx->view.remap);
+                cx->view.remap = NULL;
+                cx->view.remap_base = 0;
+                cx->view.remap_count = 0;
+                cx->sr_pred_count = 0;
+                cx->sr_mode_mask = 0;
+            }
             cx->bottom_line = last_line = get_num_records(currdirect, FHSZ);
+            cx->view.bottom_count = 0;
         }
 
         cx->bid = currbid;
@@ -1481,8 +1657,14 @@ read_loader(PSB_CTX *psbctx)
         if (cx->is_newdirect) {
             cx->is_newdirect = false;
             int num = last_line - p_lines + 1;
-            cx->locmem = getkeep(currdirect, num < 1 ? 1 : num,
-                                 cx->bottom_line ? cx->bottom_line : last_line);
+            if (currmode & MODE_SELECT) {
+                cx->sr_locmem.top_ln = num < 1 ? 1 : num;
+                cx->sr_locmem.crs_ln = last_line > 0 ? last_line : 1;
+                cx->locmem = &cx->sr_locmem;
+            } else {
+                cx->locmem = getkeep(currdirect, num < 1 ? 1 : num,
+                                     cx->bottom_line ? cx->bottom_line : last_line);
+            }
             if (newdirect_new_ln >= 0) {
                 cx->locmem->crs_ln = newdirect_new_ln + 1;
                 newdirect_new_ln = -1;
@@ -1527,10 +1709,29 @@ read_loader(PSB_CTX *psbctx)
         }
     }
 
+    int old_total = cx->view.total;
     cx->locmem->top_ln = read_view_v2p(&cx->view, psbctx->cmd.base);
     cx->locmem->crs_ln = read_view_v2p(&cx->view, psbctx->cmd.curr);
-    cx->entries = read_view_load_window(&cx->view, currdirect, headers,
+    cx->entries = read_view_load_window(cx, currdirect, headers,
                                         psbctx->cmd.base, headers_size);
+    /* view.total may also have been changed by commands (e.g. select_by_aid,
+     * read_view_ensure_window); always resync psb's total. */
+    if (cx->view.total != old_total || psbctx->cmd.total != cx->view.total) {
+        psbctx->cmd.total = cx->view.total;
+        if (psbctx->cmd.total <= 0) {
+            psbctx->cmd.curr = 0;
+            psbctx->cmd.base = 0;
+        } else {
+            if (psbctx->cmd.curr >= psbctx->cmd.total)
+                psbctx->cmd.curr = psbctx->cmd.total - 1;
+            if (psbctx->cmd.base >= psbctx->cmd.total)
+                psbctx->cmd.base = (psbctx->cmd.total > headers_size) ? (psbctx->cmd.total - headers_size) : 0;
+        }
+        cx->locmem->top_ln = read_view_v2p(&cx->view, psbctx->cmd.base);
+        cx->locmem->crs_ln = read_view_v2p(&cx->view, psbctx->cmd.curr);
+        cx->entries = read_view_load_window(cx, currdirect, headers,
+                                            psbctx->cmd.base, headers_size);
+    }
     return 0;
 }
 
@@ -1546,6 +1747,12 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(),
     const size_t    FHSZ = sizeof(fileheader_t);
 
     STRLCPY(currdirect0, currdirect);
+    /* Search state lives in this read_ctx_t; do not inherit (or clear) the
+     * outer i_read's select mode (e.g. reading mail from a searched board). */
+    int select0 = currmode & MODE_SELECT;
+    int srmode0 = currsrmode;
+    currmode &= ~MODE_SELECT;
+    currsrmode = 0;
     headers_size = p_lines;
     headers = (fileheader_t *)calloc(headers_size, FHSZ);
     assert(headers != NULL);
@@ -1593,6 +1800,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(),
 
     psb_main(&psbctx);
 
+    if (currmode & MODE_SELECT)
+        board_select();
+    currmode |= select0;
+    currsrmode = srmode0;
+    free(cx.view.remap);
     free(headers);
     last_line = last_line0;
     headers = headers0;

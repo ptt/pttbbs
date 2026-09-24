@@ -183,6 +183,53 @@ search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
                                   allow_prefix, required_mode, out_fh);
 }
 
+typedef struct {
+    uint32_t magic;
+    int32_t  bid;
+    uint64_t aidu;
+    int32_t  required_mode;
+    char     direct[256];
+} PACKSTRUCT search_aid_req_hdr_t;
+
+typedef struct {
+    int32_t      status;
+    int32_t      found_idx;
+    fileheader_t fh;
+} PACKSTRUCT search_aid_resp_t;
+
+static int
+search_aidu_via_svc(const char *direct, int bid, aidu_t aidu,
+                    int required_mode, fileheader_t *out_fh)
+{
+    int sfd = search_svc_connect();
+    if (sfd < 0)
+        return -1;
+
+    search_aid_req_hdr_t req;
+    memset(&req, 0, sizeof(req));
+    req.magic = SEARCH_AID_MAGIC;
+    req.bid = bid;
+    req.aidu = aidu;
+    req.required_mode = required_mode;
+    strlcpy(req.direct, direct, sizeof(req.direct));
+
+    if (search_svc_io(sfd, &req, sizeof(req), 1) != (int)sizeof(req)) {
+        close(sfd);
+        return -1;
+    }
+
+    search_aid_resp_t resp;
+    if (search_svc_io(sfd, &resp, sizeof(resp), 0) != (int)sizeof(resp) || resp.status != 0) {
+        close(sfd);
+        return -1;
+    }
+    close(sfd);
+
+    if (resp.found_idx > 0 && out_fh)
+        *out_fh = resp.fh;
+    return resp.found_idx;
+}
+
 int
 search_dir_by_aidu(const char *direct, aidu_t aidu,
                    int required_mode, fileheader_t *out_fh)
@@ -200,6 +247,36 @@ search_dir_by_aidu(const char *direct, aidu_t aidu,
         return 0;
     }
     int total = (int)(st.st_size / sizeof(fileheader_t));
+
+    if (aidu_idx(aidu) == 0) {
+        int svc_idx = search_aidu_via_svc(direct, 0, aidu, required_mode, out_fh);
+        if (svc_idx == 0) {
+            close(fd);
+            return 0;
+        }
+        if (svc_idx > 0) {
+            fileheader_t vfh;
+            time4_t target_ts = aidu_stamp(aidu);
+            unsigned int target_hex = aidu_hex(aidu);
+            int allow_prefix = (target_hex == 0 && !(required_mode & FILE_BOTTOM));
+            char prefix_ch = aidu_type(aidu) ? 'G' : 'M';
+            if (svc_idx <= total &&
+                pread(fd, &vfh, sizeof(vfh), (off_t)(svc_idx - 1) * sizeof(vfh)) == (ssize_t)sizeof(vfh) &&
+                match_fhdr_stamp_hex(&vfh, prefix_ch, target_ts, target_hex, allow_prefix, required_mode)) {
+                if (out_fh) {
+                    *out_fh = vfh;
+                    if (NEED_STORAGE_CONV)
+                        fileheader_storage_to_mem(out_fh, 1);
+                }
+                close(fd);
+                return svc_idx;
+            }
+            /* Mismatch detected: search.svc cache is stale. Invalidate it and
+             * fall through to the authoritative local scan (a re-query could
+             * still return an unverified, stale index). */
+            search_svc_invalidate(direct, 0);
+        }
+    }
 
     int found = search_dir_by_aidu_fd(fd, total, aidu, required_mode, out_fh);
     close(fd);
