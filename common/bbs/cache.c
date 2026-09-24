@@ -350,7 +350,6 @@ void
 reload_bcache(void)
 {
     int     i, fd;
-    pid_t   pid;
     for (i = 0; i < 10; ++i) {
 	if (__sync_bool_compare_and_swap(&SHM->Bbusystate, 0, 1))
 	    break;
@@ -375,25 +374,6 @@ reload_bcache(void)
     fprintf(stderr, "cache: reload bcache\r\n");
     SHM->Bbusystate = 0;
     sort_bcache();
-
-    fprintf(stderr, "load bottom in background\r\n");
-    if( (pid = fork()) > 0 )
-	return;
-    setproctitle("loading bottom");
-    for( i = 0 ; i < MAX_BOARD ; ++i )
-	if( SHM->bcache[i].brdname[0] ){
-	    char    fn[PATHLEN];
-	    int n;
-	    setbfile(fn, SHM->bcache[i].brdname, FN_DIR_BOTTOM);
-	    n = get_num_records(fn, sizeof(fileheader_t));
-	    if( n > 5 )
-		n = 5;
-	    SHM->n_bottom[i] = n;
-	}
-    fprintf(stderr, "load bottom done\r\n");
-    if( pid == 0 )
-	exit(0);
-    // if pid == -1 should be returned
 }
 
 void resolve_boards(void)
@@ -476,27 +456,225 @@ resolve_board_group(const int gid, const int type)
 	currbptr->next[type] = -1;
 }
 
+static uint8_t bottom_migrated[(MAX_BOARD + 7) / 8];
+
+static int
+migrate_board_bottom_lazy(int bid, boardheader_t *bh)
+{
+    if (bid >= 1 && bid <= MAX_BOARD &&
+        (bottom_migrated[(bid - 1) >> 3] & (1U << ((bid - 1) & 7))))
+        return 0;
+
+    char fn_bot[PATHLEN], fn_dir[PATHLEN], art_path[PATHLEN];
+    setbfile(fn_bot, bh->brdname, FN_DIR_BOTTOM);
+
+    int fd_bot = open(fn_bot, O_RDWR);
+    if (fd_bot < 0) {
+        if (errno == ENOENT && bid >= 1 && bid <= MAX_BOARD)
+            bottom_migrated[(bid - 1) >> 3] |= (uint8_t)(1U << ((bid - 1) & 7));
+        return 0;
+    }
+
+    /* Exclusive lock serializes concurrent processes entering the same board */
+    if (flock(fd_bot, LOCK_EX) < 0) {
+        close(fd_bot);
+        return 0;
+    }
+
+    struct stat st_bot;
+    if (fstat(fd_bot, &st_bot) < 0 || st_bot.st_nlink == 0) {
+        /* Another process already migrated and unlinked .DIR.bottom */
+        close(fd_bot);
+        int cnt = 0;
+        for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+            if (aidu_raw(bh->bottom[i]) != 0)
+                cnt++;
+        }
+        return cnt;
+    }
+
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bh->bottom[i]) != 0) {
+            unlink(fn_bot);
+            close(fd_bot);
+            int cnt = 0;
+            for (int j = 0; j < MAX_BOTTOM_POSTS; j++) {
+                if (aidu_raw(bh->bottom[j]) != 0)
+                    cnt++;
+            }
+            return cnt;
+        }
+    }
+
+    int bot_count = (int)(st_bot.st_size / sizeof(fileheader_t));
+    if (bot_count <= 0) {
+        unlink(fn_bot);
+        close(fd_bot);
+        return 0;
+    }
+    if (bot_count > MAX_BOTTOM_POSTS)
+        bot_count = MAX_BOTTOM_POSTS;
+
+    setbfile(fn_dir, bh->brdname, FN_DIR);
+    int fd_dir = open(fn_dir, O_RDWR | O_CREAT, DEFAULT_FILE_CREATE_PERM);
+    if (fd_dir < 0) {
+        close(fd_bot);
+        return 0;
+    }
+
+    struct stat st_dir;
+    int total = (fstat(fd_dir, &st_dir) == 0)
+                    ? (int)(st_dir.st_size / sizeof(fileheader_t))
+                    : 0;
+
+    aidu_t new_slots[MAX_BOTTOM_POSTS];
+    memset(new_slots, 0, sizeof(new_slots));
+    int valid_cnt = 0;
+
+    for (int i = 0; i < bot_count && valid_cnt < MAX_BOTTOM_POSTS; i++) {
+        fileheader_t bfh;
+        if (pread(fd_bot, &bfh, sizeof(bfh), (off_t)i * sizeof(bfh)) !=
+            (ssize_t)sizeof(bfh))
+            break;
+
+        aidu_t a = fn2aidu(bfh.filename);
+        if (aidu_raw(a) == 0)
+            continue;
+
+        /* Use legacy multi.refer (bit 31 = flag, bits [30:0] = ref) as O(1) index hint */
+        uint32_t raw_ref = (uint32_t)bfh.multi.money;
+        if ((raw_ref & 0x80000000U) && (raw_ref & 0x7fffffffU) > 0)
+            a = aidu_with_idx(a, (int)(raw_ref & 0x7fffffffU));
+
+        fileheader_t dfh;
+        /* Do not ask for out_fh: it may be converted to memory encoding and
+         * must not be written back to .DIR. Re-read the raw record instead. */
+        int found_idx = search_dir_by_aidu_fd(fd_dir, total, a, 0, NULL);
+        if (found_idx > 0) {
+            off_t off = (off_t)(found_idx - 1) * sizeof(dfh);
+            if (pread(fd_dir, &dfh, sizeof(dfh), off) == (ssize_t)sizeof(dfh) &&
+                (dfh.filemode & (FILE_BOTTOM | FILE_MARKED)) !=
+                (FILE_BOTTOM | FILE_MARKED)) {
+                dfh.filemode |= (FILE_BOTTOM | FILE_MARKED);
+                pwrite(fd_dir, &dfh, sizeof(dfh), off);
+            }
+            new_slots[valid_cnt++] = aidu_with_idx(a, found_idx);
+        } else {
+            /* Orphan bottom post: restore into .DIR if article file exists */
+            setbfile(art_path, bh->brdname, bfh.filename);
+            if (dashf(art_path)) {
+                dfh = bfh;
+                dfh.multi.money = 0;
+                dfh.filemode |= (FILE_BOTTOM | FILE_MARKED);
+                if (append_record(fn_dir, &dfh, sizeof(dfh)) == 0) {
+                    total = get_num_records(fn_dir, sizeof(fileheader_t));
+                    new_slots[valid_cnt++] = aidu_with_idx(a, total);
+                }
+            }
+        }
+    }
+    close(fd_dir);
+
+    memcpy(bh->bottom, new_slots, sizeof(bh->bottom));
+    substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
+    SHM->n_bottom[bid - 1] = valid_cnt;
+
+    unlink(fn_bot);
+    close(fd_bot);
+    return valid_cnt;
+}
+
+int
+getbottomtotal(int bid)
+{
+    if (bid < 1 || bid > MAX_BOARD)
+        return 0;
+    boardheader_t *bh = getbcache(bid);
+    if (!bh->brdname[0])
+        return 0;
+    int n = 0;
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bh->bottom[i]) != 0)
+            n++;
+    }
+    if (n == 0)
+        n = migrate_board_bottom_lazy(bid, bh);
+    return n;
+}
+
+int
+resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS])
+{
+    if (bid < 1 || bid > MAX_BOARD)
+        return 0;
+    boardheader_t *bh = getbcache(bid);
+    if (!bh->brdname[0])
+        return 0;
+
+    int raw_count = 0;
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bh->bottom[i]) != 0)
+            raw_count++;
+    }
+    if (raw_count == 0) {
+        raw_count = migrate_board_bottom_lazy(bid, bh);
+        if (raw_count == 0)
+            return 0;
+    }
+
+    char fname[PATHLEN];
+    setbfile(fname, bh->brdname, FN_DIR);
+    int fd = open(fname, O_RDONLY);
+    if (fd < 0)
+        return 0;
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return 0;
+    }
+    int total = (int)(st.st_size / sizeof(fileheader_t));
+    /* bh->bottom lives in SHM and may be changed by pin_post() while we do
+     * .DIR I/O; work on a snapshot and only write back if unchanged. */
+    aidu_t snap[MAX_BOTTOM_POSTS], new_slots[MAX_BOTTOM_POSTS];
+    memcpy(snap, bh->bottom, sizeof(snap));
+    memset(new_slots, 0, sizeof(new_slots));
+    int valid_cnt = 0;
+    int dirty = 0;
+
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        aidu_t a = snap[i];
+        if (aidu_raw(a) == 0)
+            continue;
+        int old_idx = aidu_idx(a);
+        int found_idx = search_dir_by_aidu_fd(fd, total, a, FILE_BOTTOM, NULL);
+        if (found_idx > 0) {
+            int expected_idx = ((uint32_t)found_idx <= AIDU_IDX_MASK) ? found_idx : 0;
+            new_slots[valid_cnt] = aidu_with_idx(a, expected_idx);
+            if (out_recs)
+                out_recs[valid_cnt] = found_idx;
+            if (expected_idx != old_idx || valid_cnt != i)
+                dirty = 1;
+            valid_cnt++;
+        } else {
+            /* Original article was deleted from .DIR; drop dead bottom slot */
+            dirty = 1;
+        }
+    }
+    close(fd);
+
+    if (dirty && memcmp(snap, bh->bottom, sizeof(snap)) == 0) {
+        memcpy(bh->bottom, new_slots, sizeof(bh->bottom));
+        substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
+    }
+    SHM->n_bottom[bid - 1] = valid_cnt;
+    return valid_cnt;
+}
+
 void
 setbottomtotal(int bid)
 {
-    boardheader_t  *bh = getbcache(bid);
-    char            fname[PATHLEN];
-    int             n;
-
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
-    if(!bh->brdname[0]) return;
-    setbfile(fname, bh->brdname, FN_DIR ".bottom");
-    n = get_num_records(fname, sizeof(fileheader_t));
-    if(n>5)
-      {
-#ifdef DEBUG_BOTTOM
-        file_appendf("fix_bottom", "%s n:%d\n", fname, n);
-#endif
-        unlink(fname);
-        SHM->n_bottom[bid-1]=0;
-      }
-    else
-        SHM->n_bottom[bid-1]=n;
+    (void)resolve_board_bottoms(bid, NULL);
 }
 
 void

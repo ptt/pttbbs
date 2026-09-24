@@ -134,6 +134,7 @@ delete_range(const char *fpath, int id1, int id2)
 	/* rocker.011018: add new tag delete */
 	if (
 	    (fhdr.filemode & FILE_MARKED) ||	/* ¼Ð°O */
+	    ((fhdr.filemode & FILE_BOTTOM) && (currstat != RMAIL)) || /* pinned; FILE_MULTI in mail */
 	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||
 	    /* ¤åºK , FILE_DIGEST is used as REPLIED in mail menu.*/
 	    (id1 && (count < id1 || count > id2)) ||	/* range */

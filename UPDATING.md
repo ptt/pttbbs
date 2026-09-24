@@ -15,6 +15,12 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## bbs, cache: Replace .DIR.bottom with boardheader_t
+
+把置底 `.DIR.bottom` 改成只追蹤 index, 用 AID 的方式記在 boardheader_t 內。
+請關站轉換(或起碼停掉所有舊 mbbsd)。可以用 `upgrade/dir_bottom_to_bh` 一口氣全
+轉，或是讓新 mbbsd 自己檢查 & lazy migrate。 注意 lazy migrate 日後可能移除。
+
 ## [feat(make): Move to GNU Make](https://github.com/ptt/pttbbs/commit/9e33145939a2f9353c39b85ba7600d3115f9d7dc)
 
 由 BSD Make (bmake, pmake) 改用 GNU Make。

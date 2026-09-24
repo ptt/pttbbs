@@ -840,7 +840,9 @@ readdoent(int num, fileheader_t * ent)
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
-    if (ent->filemode & FILE_BOTTOM) {
+    /* read_renderer() sets FILE_BOTTOM only on pinned display lines. */
+    if ((ent->filemode & FILE_BOTTOM) &&
+        !(currmode & (MODE_SELECT | MODE_DIGEST))) {
         outs("  " ANSI_COLOR(1;33) "  ★ " ANSI_RESET);
     }
     else
@@ -4102,49 +4104,75 @@ board_digest(void)
 static int
 pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 {
-    int num;
-    fileheader_t fhdr;
-    char buf[PATHLEN];
-
-    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD)
-        || old_fhdr->filename[0]=='L')
+    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD) ||
+        old_fhdr->filename[0] == 'L')
         return DONOTHING;
 
-    setbottomtotal(currbid);  // <- Ptt : will be remove when stable
-    num = getbottomtotal(currbid);
-    if (!(old_fhdr->filemode & FILE_BOTTOM))
-    {
-	move(b_lines-1, 0); clrtoeol();
-	outs(ANSI_COLOR(1;33) "提醒您置底與原文目前互為連結，刪掉原文也會導致置底消失。" ANSI_RESET);
-    }
-    if( vans(old_fhdr->filemode & FILE_BOTTOM ?
-	       "取消置底公告?(y/N)":
-	       "加入置底公告?(y/N)") != 'y' )
-	return FULLUPDATE;
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    boardheader_t *bp = getbcache(currbid);
+    resolve_board_bottoms(currbid, NULL);
 
-    // Don't change original fhdr.
-    memcpy(&fhdr, old_fhdr, sizeof(fhdr));
+    aidu_t target_raw = aidu_raw(fn2aidu(old_fhdr->filename));
+    if (target_raw == 0)
+        return DONOTHING;
+    int slot_idx = -1;
+    int num = 0;
 
-    if(!(fhdr.filemode & FILE_BOTTOM) ){
-          SNPRINTF(buf, "%s.bottom", direct);
-          if(num >= 5){
-              vmsg("不得超過 5 篇重要公告 請精簡!");
-              return FULLUPDATE;
-	  }
-	  fhdr.filemode ^= FILE_BOTTOM;
-	  fhdr.multi.refer.flag = 1;
-          fhdr.multi.refer.ref = ent;
-          append_fileheader(buf, &fhdr);
-          // make sure original one won't be deleted... add 'm'.
-          if (!(old_fhdr->filemode & FILE_MARKED))
-              mark_post(ent, old_fhdr, direct);
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bp->bottom[i]) == 0)
+            continue;
+        num++;
+        if (aidu_raw(bp->bottom[i]) == target_raw) {
+            slot_idx = i;
+        }
     }
-    else{
-        fhdr.filemode ^= FILE_BOTTOM;
-	num = delete_fileheader(direct, &fhdr, ent);
+
+    if (slot_idx < 0) {
+        move(b_lines - 1, 0);
+        clrtoeol();
+        outs(ANSI_COLOR(1;33) "提醒您置底與原文目前互為連結，刪掉原文也會導致置底消失。" ANSI_RESET);
     }
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+    if (vans(slot_idx >= 0 ? "取消置底公告?(y/N)" : "加入置底公告?(y/N)") != 'y')
+        return FULLUPDATE;
+
+    slot_idx = -1;
+    num = 0;
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bp->bottom[i]) == 0)
+            continue;
+        num++;
+        if (aidu_raw(bp->bottom[i]) == target_raw)
+            slot_idx = i;
+    }
+
+    if (slot_idx < 0) {
+        if (num >= MAX_BOTTOM_POSTS) {
+            vmsg("不得超過 5 篇重要公告 請精簡!");
+            return FULLUPDATE;
+        }
+        if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
+                            NULL, 0, NULL, FILE_BOTTOM | FILE_MARKED, 0) < 0) {
+            vmsg("置底設定失敗，請重新進入看板後再試一次。");
+            return FULLUPDATE;
+        }
+        old_fhdr->filemode |= (FILE_BOTTOM | FILE_MARKED);
+        bp->bottom[num] = aidu_with_idx(target_raw, ent);
+    } else {
+        if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
+                            NULL, 0, NULL, 0, FILE_BOTTOM) < 0) {
+            vmsg("置底設定失敗，請重新進入看板後再試一次。");
+            return FULLUPDATE;
+        }
+        old_fhdr->filemode &= ~FILE_BOTTOM;
+        for (int i = slot_idx; i + 1 < MAX_BOTTOM_POSTS; i++)
+            bp->bottom[i] = bp->bottom[i + 1];
+        bp->bottom[MAX_BOTTOM_POSTS - 1] = 0;
+    }
+
+    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     setbottomtotal(currbid);
+    syncnow();
+    bp->SRexpire = now;
     return DIRCHANGED;
 }
 

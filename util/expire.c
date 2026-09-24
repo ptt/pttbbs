@@ -127,7 +127,7 @@ void expire(life_t *brd)
 		else if (safe_delete_only)
 		    keep = 1;
 #endif
-		else if (head.filemode & FILE_MARKED)
+		else if (head.filemode & (FILE_MARKED | FILE_BOTTOM))
 		    keep = 1;
 		else if (total > brd->maxp)
 		    keep = 0;
