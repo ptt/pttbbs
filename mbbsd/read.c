@@ -440,8 +440,12 @@ reload_fh: GCC_UNUSED;
 #ifdef SAFE_ARTICLE_DELETE
         if (fh.filename[0] == '.' || fh.owner[0] == '-') {
             /* 游標所在文章已被刪除, 跳過, 往下找下一篇文章 */
-            close(fd);
+            /* Keep fd: it is the same .DIR and reused by search_read_fh(). */
             pos += step;
+            if (pos < 1 || pos > last_line) {
+                pos = locmem->crs_ln;
+                goto out;
+            }
             goto reload_fh;
         }
 #endif
