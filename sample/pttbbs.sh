@@ -6,7 +6,8 @@
 case "$1" in
 start)
 	# 初始化 shared-memory, 載入 uhash, utmpsortd, timed(if necessary)
-	# 如果使用 USE_HUGETLB 的話請用 root 跑 shmctl init
+	# 如果使用 USE_HUGETLB, 請先保留 huge page 並設定好權限
+	# (hugetlbfs 掛載點需可被 bbs 寫入), 詳見 pttbbs.conf 的 USE_HUGETLB 說明
 	/usr/bin/su -fm bbs -c '/home/bbs/bin/shmctl init'
 
 	# 寄信至站外
