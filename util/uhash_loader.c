@@ -21,6 +21,10 @@ int main()
 void load_uhash(void) {
     int is_new = 0;
     SHM = create_shm(&is_new);
+    if (!SHM) {
+        fprintf(stderr, "Error: cannot create or attach SHM.\n");
+        exit(1);
+    }
 
     if (is_new) {
         SHM->number = SHM->loaded = 0;
