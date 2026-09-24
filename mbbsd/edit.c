@@ -1008,6 +1008,9 @@ split(textline_t * line, int pos, int indent)
 	new_len = tail_len + spcs;
 
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
+	    /* Save offset: adjustline() below may realloc and move line->data. */
+	    int actual_pos = (int)(ptr - line->data);
+
 	    /* Allocate exact-size node for the upper half, reuse line (WRAPMARGIN) for currline */
 	    textline_t *head = alloc_line(pos);
 	    head->len = pos;
@@ -1016,6 +1019,7 @@ split(textline_t * line, int pos, int indent)
 
 	    if (line->alloc_len < WRAPMARGIN)
 		line = adjustline(line, WRAPMARGIN);
+	    ptr = line->data + actual_pos;
 
 	    head->prev = line->prev;
 	    head->next = line;
@@ -1035,10 +1039,10 @@ split(textline_t * line, int pos, int indent)
 		memset(line->data, ' ', spcs);
 	    line->len = new_len;
 
-	    if (pos == curr_buf->currpnt)
+	    if (curr_buf->currpnt <= actual_pos)
 		curr_buf->currpnt = spcs;
 	    else {
-		curr_buf->currpnt = curr_buf->currpnt - pos + spcs;
+		curr_buf->currpnt = curr_buf->currpnt - actual_pos + spcs;
 		// In indent_mode, the length may be shorter.
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
@@ -1073,8 +1077,24 @@ split(textline_t * line, int pos, int indent)
  * The line will be split if the length is >= WRAPMARGIN.  It'll be split
  * from the last space if any, or start a new line after the last character.
  */
+static void delete_char(void);
+
 static void
-insert_char(int ch)
+del_currchar(void)
+{
+    if (curr_buf->ansimode)
+	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+    if (curr_buf->currpnt >= curr_buf->currline->len)
+	return;
+    if (mbcs_mode)
+	curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
+    int w = mbcs_mode ? mb_bytes(curr_buf->currline->data + curr_buf->currpnt) : 1;
+    for (; w > 0; w--)
+	delete_char();
+}
+
+static void
+raw_insert_char(int ch)
 {
     textline_t *p;
     char  *s;
@@ -1087,22 +1107,13 @@ insert_char(int ch)
     assert(curr_buf->currpnt <= p->len);
 #ifdef DEBUG
     assert(curr_buf->currline->mlength == WRAPMARGIN);
+    assert(p->len < p->mlength);
 #endif
 
     block_cancel();
-    if (curr_buf->currpnt < p->len && !curr_buf->insert_mode) {
-	p->data[curr_buf->currpnt++] = ch;
-	/* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
-	if (curr_buf->ansimode)
-	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, p), p);
-    } else {
-#ifdef DEBUG
-	assert(p->len < p->mlength);
-#endif
-	raw_shift_right(p->data + curr_buf->currpnt, p->len - curr_buf->currpnt + 1);
-	p->data[curr_buf->currpnt++] = ch;
-	++(p->len);
-    }
+    raw_shift_right(p->data + curr_buf->currpnt, p->len - curr_buf->currpnt + 1);
+    p->data[curr_buf->currpnt++] = ch;
+    ++(p->len);
     if (p->len < WRAPMARGIN)
 	return;
 
@@ -1111,15 +1122,18 @@ insert_char(int ch)
 	s--;
     while (s != p->data && *s != ' ')
 	s--;
-    if (s == p->data) {
+    int split_pos = (int)(s - p->data) + 1;
+    if (s == p->data || (p->len - split_pos) >= WRAPMARGIN - 1) {
 	wordwrap = NA;
 	s = p->data + fix_cursor(p->data, p->len - 1, FC_LEFT) - 1;
+	split_pos = (int)(s - p->data) + 1;
     }
 
-    p = split(p, (s - p->data) + 1, 0);
+    p = split(p, split_pos, 0);
 
     p = p->next;
-    if (wordwrap && p->len >= 1) {
+    if (wordwrap && p->len >= 1 && p->len + 1 < WRAPMARGIN &&
+	!(curr_buf->currline == p && curr_buf->currpnt == p->len)) {
 	if (p->alloc_len < p->len + 1)
 	    p = adjustline(p, p->len + 1);
 #ifdef DEBUG
@@ -1133,6 +1147,17 @@ insert_char(int ch)
     }
 }
 
+static void
+insert_char(int ch)
+{
+    if (!curr_buf->insert_mode)
+	del_currchar();
+    raw_insert_char(ch);
+    /* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
+    if (!curr_buf->insert_mode && curr_buf->ansimode)
+	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+}
+
 /**
  * insert_char twice.
  */
@@ -1140,26 +1165,47 @@ static void
 insert_dchar(const char *dchar)
 {
     int w = mb_bytes(dchar);
+    if (!curr_buf->insert_mode && !mbcs_mode) {
+	/* Byte-oriented editing: del_currchar() removes 1 byte; overwrite w. */
+	for (int i = 0; i < w; i++)
+	    del_currchar();
+    } else if (!curr_buf->insert_mode) {
+	int old_len = curr_buf->currline->len;
+	del_currchar();
+	/* If a 2-column dchar overwrote a 1-byte ASCII char, also overwrite the next 1-byte ASCII char */
+	if (old_len - curr_buf->currline->len == 1 &&
+	    mb_width(dchar) >= 2 &&
+	    curr_buf->currpnt < curr_buf->currline->len &&
+	    mb_bytes(curr_buf->currline->data + curr_buf->currpnt) == 1 &&
+	    (!curr_buf->ansimode || curr_buf->currline->data[curr_buf->currpnt] != ESC_CHR)) {
+	    del_currchar();
+	}
+    }
     textline_t *p = curr_buf->currline;
     if (mbcs_mode && curr_buf->currpnt < p->len)
 	curr_buf->currpnt = fix_cursor(p->data, curr_buf->currpnt, FC_LEFT);
     if (p->len + w >= WRAPMARGIN) {
-	char *s = p->data + (p->len - 1);
+	int max_split = (curr_buf->currpnt == p->len) ? p->len : (WRAPMARGIN - 1 - w);
+	char *s = p->data + (max_split - 1);
 	int wordwrap = YEA;
 	while (s != p->data && *s == ' ')
 	    s--;
 	while (s != p->data && *s != ' ')
 	    s--;
-	if (s == p->data) {
+	int split_pos = (int)(s - p->data) + 1;
+	int lower_extra = (curr_buf->currpnt >= split_pos) ? w : 0;
+	if (s == p->data || (p->len - split_pos) + 1 + lower_extra >= WRAPMARGIN) {
 	    wordwrap = NA;
 	    if (curr_buf->currpnt == p->len)
 		s = p->data + p->len - 1;
 	    else
-		s = p->data + fix_cursor(p->data, p->len - 1, FC_LEFT) - 1;
+		s = p->data + fix_cursor(p->data, max_split, FC_LEFT) - 1;
+	    split_pos = (int)(s - p->data) + 1;
 	}
-	p = split(p, (s - p->data) + 1, 0);
+	p = split(p, split_pos, 0);
 	p = p->next;
-	if (wordwrap && p->len >= 1) {
+	if (wordwrap && p->len >= 1 && p->len + 1 + lower_extra < WRAPMARGIN &&
+	    !(curr_buf->currline == p && curr_buf->currpnt == p->len)) {
 	    if (p->alloc_len < p->len + 1)
 		p = adjustline(p, p->len + 1);
 	    if (p->data[p->len - 1] != ' ') {
@@ -1168,9 +1214,107 @@ insert_dchar(const char *dchar)
 		p->len++;
 	    }
 	}
+	if (mbcs_mode && curr_buf->currpnt < curr_buf->currline->len)
+	    curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
     }
     for (int i = 0; i < w; i++)
-	insert_char(dchar[i]);
+	raw_insert_char(dchar[i]);
+    if (!curr_buf->insert_mode && curr_buf->ansimode)
+	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+}
+
+/* A key read ahead by vkey_to_mb() that did not belong to the character. */
+static int edit_pending_key = KEY_INCOMPLETE;
+
+/* Big5 lead byte inserted without its trail byte, e.g. a colored half of a
+ * character ("lead ESC[1;33m trail"). The trail byte should be inserted
+ * alone instead of being paired with the next lead byte. */
+static int edit_dbcs_half = 0;
+/* Inside the ANSI sequence of edit_dbcs_half (after ESC or ^U). */
+static int edit_dbcs_half_esc = 0;
+
+static int
+edit_vkey(void)
+{
+    int c;
+    if (edit_pending_key != KEY_INCOMPLETE) {
+	c = edit_pending_key;
+	edit_pending_key = KEY_INCOMPLETE;
+    } else {
+	c = vkey();
+    }
+    if (c == Ctrl('U') || c == ESC_CHR) {
+	if (edit_dbcs_half)
+	    edit_dbcs_half_esc = 1;
+    } else if (!vkey_isprint(c)) {
+	edit_dbcs_half = edit_dbcs_half_esc = 0;
+    }
+    return c;
+}
+
+static int
+vkey_to_mb(int ch, char mb[5])
+{
+    if (!VKEY_IS_MB)
+	return mb_from_vkey(ch, mb);
+    if (edit_dbcs_half) {
+	if (edit_dbcs_half_esc) {
+	    /* ANSI parameters; a final byte (other than '[') ends it. */
+	    if (ch >= 0x40 && ch <= 0x7E && ch != '[')
+		edit_dbcs_half_esc = 0;
+	    else if (ch < 0x20 || ch > 0x3F)
+		edit_dbcs_half_esc = (ch == '[');
+	    if (isascii(ch)) {
+		mb[0] = (char)ch;
+		mb[1] = '\0';
+		return 1;
+	    }
+	    edit_dbcs_half_esc = 0;
+	}
+	edit_dbcs_half = 0;
+	if ((ch >= 0x40 && ch <= 0x7E) || (ch >= 0x80 && ch <= 0xFE)) {
+	    /* The trail byte of the pending half character. */
+	    mb[0] = (char)ch;
+	    mb[1] = '\0';
+	    return 1;
+	}
+    }
+    if (isascii(ch)) {
+	mb[0] = (char)ch;
+	mb[1] = '\0';
+	return 1;
+    }
+    if (MB_IS_UTF8) {
+	utf8_ctx uctx;
+	utf8_init(&uctx);
+	utf8_add_byte(&uctx, ch);
+	while (utf8_pending(&uctx)) {
+	    int cb = vkey();
+	    if (cb < 0x80 || cb > 0xBF) {
+		/* Not a continuation byte: keep it for the caller. */
+		edit_pending_key = cb;
+		mb[0] = '\0';
+		return 0;
+	    }
+	    utf8_add_byte(&uctx, cb);
+	}
+	return utf8_to_mb(&uctx, mb);
+    }
+    int ch2 = vkey();
+    if ((ch2 >= 0x40 && ch2 <= 0x7E) || (ch2 >= 0x80 && ch2 <= 0xFE)) {
+	mb[0] = (char)ch;
+	mb[1] = (char)ch2;
+	mb[2] = '\0';
+	return 2;
+    }
+    /* Not a valid trail byte: keep the lead byte as-is (like old behavior)
+     * and leave the other key (e.g. Enter) for the caller. */
+    edit_pending_key = ch2;
+    edit_dbcs_half = 1;
+    edit_dbcs_half_esc = 0;
+    mb[0] = (char)ch;
+    mb[1] = '\0';
+    return 1;
 }
 
 static void
@@ -1197,7 +1341,7 @@ insert_string(const char *str)
 
     block_cancel();
     while ((ch = *str++)) {
-	if (MB_IS_UTF8 && ((unsigned char)ch >= 0x80)) {
+	if ((unsigned char)ch >= 0x80) {
 	    int w = mb_bytes(str - 1);
 	    if (w > 1) {
 		insert_dchar(str - 1);
@@ -3647,30 +3791,16 @@ upload_file(void)
 	    promptmsg = 0;
 	}
 
-	c = vkey();
+	c = edit_vkey();
 	if (vkey_isprint(c))
 	{
-	    if (!VKEY_IS_MB && !isascii(c)) {
-		char mb[5];
-		int mblen = mb_from_vkey(c, mb);
-		if (mblen > 0) {
-		    insert_dchar(mb);
-		    szdata += mblen;
-		}
-	    } else if (VKEY_IS_MB && MB_IS_UTF8 && (c & 0x80)) {
-		utf8_ctx uctx;
-		utf8_init(&uctx);
-		utf8_add_byte(&uctx, c);
-		while (utf8_pending(&uctx))
-		    utf8_add_byte(&uctx, vkey());
-		char ubuf[5];
-		int ulen = utf8_to_mb(&uctx, ubuf);
-		if (ulen > 0) {
-		    insert_dchar(ubuf);
-		    szdata += ulen;
-		}
-	    } else {
-		insert_char(c);
+	    char mb[5];
+	    int mblen = vkey_to_mb(c, mb);
+	    if (mblen > 1) {
+		insert_dchar(mb);
+		szdata += mblen;
+	    } else if (mblen == 1) {
+		insert_char(mb[0]);
 		szdata ++;
 	    }
 	}
@@ -4226,14 +4356,7 @@ edit_cmd_delete(cmd_ctx_t *ctx GCC_UNUSED)
         join(curr_buf->currline);
         curr_buf->redraw_everything = YEA;
     } else {
-        int w = 1;
-
-        if (mbcs_mode)
-            w = mb_bytes(curr_buf->currline->data + curr_buf->currpnt);
-
-        for (; w > 0; w--)
-            delete_char();
-
+        del_currchar();
         if (curr_buf->ansimode)
             curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
     }
@@ -4469,7 +4592,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		 curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
-	ch = vkey();
+	ch = edit_vkey();
 	/* jochang debug */
 	if ((interval = (now - th))) {
 	    th = now;
@@ -4493,23 +4616,14 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 
 	if (vkey_isprint(ch)) {
 	    const char *pstr;
+	    char mb[5];
+	    int mblen;
             if(curr_buf->phone_mode && (pstr=phone_char(ch)))
 	   	insert_dchar(pstr);
-	    else if (!VKEY_IS_MB && !isascii(ch)) {
-		char mb[5];
-		if (mb_from_vkey(ch, mb) > 0)
-		    insert_dchar(mb);
-	    } else if (VKEY_IS_MB && MB_IS_UTF8 && (ch & 0x80)) {
-		utf8_ctx uctx;
-		utf8_init(&uctx);
-		utf8_add_byte(&uctx, ch);
-		while (utf8_pending(&uctx))
-		    utf8_add_byte(&uctx, vkey());
-		char ubuf[5];
-		if (utf8_to_mb(&uctx, ubuf) > 0)
-		    insert_dchar(ubuf);
-	    } else
-		insert_char(ch);
+	    else if ((mblen = vkey_to_mb(ch, mb)) > 1)
+		insert_dchar(mb);
+	    else if (mblen == 1)
+		insert_char(mb[0]);
 	    curr_buf->lastindent = -1;
 	} else {
 	    int dispatch_key = (ch == KEY_ESC) ? KEY_EDIT_ESC(KEY_ESC_arg) : ch;
