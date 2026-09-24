@@ -752,9 +752,6 @@ p_sysinfo(void)
 #ifdef CRITICAL_MEMORY
 		" CRITICAL_MEMORY"
 #endif
-#ifdef UTMPD
-		" UTMPD"
-#endif
 #ifdef FROMD
 		" FROMD"
 #endif
