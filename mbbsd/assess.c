@@ -84,10 +84,6 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
     if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf));
 
-#ifdef USE_COOLDOWN
-    add_cooldowntime(tusernum, 60);
-    add_posttimes(tusernum, 15); //Ptt: ­áµ² post for 1 hour
-#endif
 
     if (!(inc_badpost(userid, 1) % 5)){
 	userec_t xuser;
