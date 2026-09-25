@@ -308,12 +308,7 @@ typedef struct fileheader_t { /* 128 bytes */
 	    unsigned char regtime;
 	    unsigned char badpost;
 	} vote_limits;
-	struct {
-	    /* is this ordering correct? */
-	    unsigned int ref:31;
-	    unsigned int flag:1;
-	} refer;
-    }	    multi;		    /* rocker: if bit32 on ==> reference */
+    }	    multi;
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
     char    pad3[2];

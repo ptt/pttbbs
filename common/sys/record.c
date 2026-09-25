@@ -166,6 +166,9 @@ delete_record2(const char *fpath, const void *rptr, size_t size,
     void *p = NULL;
     const int num = 1;
 
+    if (id < 1)
+        return -1;
+
     do {
         err = -1;
         fi = open(fpath, O_RDONLY, 0);
