@@ -1,10 +1,29 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-struct {
+typedef struct {
     char    userid[IDLEN + 1];
     time_t  lastlogin, expire;
-} explist[MAX_FRIEND];
+} exp_entry_t;
+
+static exp_entry_t *explist = NULL;
+static int exp_cap = 0;
+
+static void add_exp_entry(const char *userid, time_t lastlogin, time_t expire, int *nEXP)
+{
+    if (*nEXP >= exp_cap) {
+	int new_cap = exp_cap ? exp_cap * 2 : 256;
+	exp_entry_t *new_list = (exp_entry_t *)realloc(explist, (size_t)new_cap * sizeof(exp_entry_t));
+	if (!new_list)
+	    return;
+	explist = new_list;
+	exp_cap = new_cap;
+    }
+    STRLCPY(explist[*nEXP].userid, userid);
+    explist[*nEXP].lastlogin = lastlogin;
+    explist[*nEXP].expire = expire;
+    ++(*nEXP);
+}
 
 void usage(void)
 {
@@ -95,16 +114,12 @@ void chkhbf(boardheader_t *bptr)
 		break;
 	    }
 	if( passwd_load_user(chkuser, &xuser) < 1 || strcasecmp(chkuser, STR_GUEST) == 0 ){
-	    STRLCPY(explist[nEXP].userid, chkuser);
-	    explist[nEXP].expire = -1;
-	    ++nEXP;
+	    add_exp_entry(chkuser, 0, -1, &nEXP);
 	}
 	else if( (time4_days_elapsed(now, xuser.lastlogin) > 90) &&
 		 !(xuser.userlevel & PERM_XEMPT) ){
-	    STRLCPY(explist[nEXP].userid, chkuser);
-	    explist[nEXP].lastlogin = xuser.lastlogin;
-	    explist[nEXP].expire = time4_to_time(xuser.lastlogin) + DAY_SECONDS * 120;
-	    ++nEXP;
+	    add_exp_entry(chkuser, xuser.lastlogin,
+			  time4_to_time(xuser.lastlogin) + DAY_SECONDS * 120, &nEXP);
 	}
     }
     fclose(fp);
