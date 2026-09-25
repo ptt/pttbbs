@@ -774,7 +774,7 @@ void unlockbcache(void)
 
 int fixbcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
-    int     n, fd, bid, changed = 0;
+    int     fd, bid, changed = 0;
     boardheader_t bh;
 
     if( (fd = open(FN_BOARD, O_RDONLY)) < 0 ){
@@ -786,7 +786,6 @@ int fixbcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 	 (bid < MAX_BOARD && read(fd, &bh, sizeof(bh)) == sizeof(bh)) ;
 	 ++bid ){
 	if( strcmp(bh.brdname, bcache[bid].brdname) != 0 ){
-	    char    fn[PATHLEN];
 	    printf("bid: %d, brdname not match(.BRD: %s, bcache: %s). "
 		   "fix it!\n",
 		   bid + 1, bh.brdname, bcache[bid].brdname);
@@ -795,11 +794,7 @@ int fixbcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 	    bcache[bid] = bh;
 	    unlockbcache();
 
-	    setbfile(fn, bh.brdname, ".DIR.bottom");
-	    n = get_num_records(fn, sizeof(fileheader_t));
-            if( n > 5 )
-                n = 5;
-            SHM->n_bottom[bid] = n;
+	    setbottomtotal(bid + 1);
 	}
     }
     close(fd);

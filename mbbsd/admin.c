@@ -708,6 +708,7 @@ m_mod_board(char *bname)
 	    getdata_str(21, 0, "·sªº Bvote¡G", genbuf, 5, NUMECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("SetBoardBvote", newbh.brdname);
@@ -723,6 +724,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] == 'y') {
             newbh.brdattr ^= BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
@@ -903,6 +905,7 @@ m_mod_board(char *bname)
 	    }
 	    setup_man(&newbh, &bh);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
             sort_bcache();

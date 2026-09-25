@@ -95,9 +95,19 @@ static inline int time4_add_sec(time4_t base, uint64_t seconds, time4_t *out) {
 static inline time4_t get_fhdr_stamp_ts(const char *fn) {
     if (!fn)
         return 0;
-    if (fn[0] && fn[1] == '.')
+    if (fn[0] && (fn[1] == '.' || (fn[0] == '.' && fn[1] == 'd')))
         fn += 2;
     return (time4_t)strtoul(fn, NULL, 10);
+}
+
+/* Parse 12-bit AID hex suffix from fileheader filename (e.g. M.1120582370.A.1EA -> 0x1EA) */
+static inline unsigned int get_fhdr_stamp_hex(const char *fn) {
+    if (!fn)
+        return 0;
+    const char *p = strstr(fn, ".A.");
+    if (!p)
+        return 0;
+    return (unsigned int)(strtoul(p + 3, NULL, 16) & 0xFFFU);
 }
 
 /* crypt.c */
