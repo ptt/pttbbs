@@ -3,14 +3,14 @@
 #include "bbs.h"
 
 /* Like UNIX 'write' command, directly write on the target user's screen. */
-int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
+int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *text, int msgmode) {
     assert(SHM);
-    if (!VALID_USHM_ENTRY(uip)) {
+    if (!VALID_USHM_ENTRY(uslot)) {
         return -1;
     }
 
-    userinfo_t *uentp = &(SHM->uinfo[uip]);
+    userinfo_t *uentp = &(SHM->uinfo[uslot]);
     if (!uentp->pid) {
         return -2;
     }

@@ -396,7 +396,7 @@ attach_SHM(void)
 
 /* Return the index of uentp (in uinfo). */
 int
-get_utmp_id(const userinfo_t *uentp)
+get_utmp_slot(const userinfo_t *uentp)
 {
     if (!uentp)
         return -1;
