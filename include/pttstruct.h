@@ -310,8 +310,9 @@ typedef struct fileheader_t { /* 128 bytes */
 typedef struct msgque_t {
     pid_t   pid;
     char    userid[IDLEN + 1];
+    char    msgmode;
     char    last_call_in[76];
-    int     msgmode;
+    int     uslot;
 } msgque_t;
 
 #define ALERT_NEW_MAIL        (0x01)
