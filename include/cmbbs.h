@@ -187,6 +187,17 @@ int select_read_build(const char *src_direct, const char *dst_direct,
                       int (*match)(const fileheader_t *fh, void *arg),
                       void *arg);
 
+/* utmp snapshot */
+enum {
+    UTMP_SORT_NONE = 0,
+    UTMP_SORT_USERID = 1,
+    UTMP_SORT_FROM = 2,
+};
+int *get_utmp_snapshot(int *out_count);
+int refresh_utmp_snapshot(int *slots);
+void sort_utmp_snapshot(int *slots, int count, int sort_type);
+void free_utmp_snapshot(int *slots);
+
 int select_read_should_build(const char *dst_direct, int bid,
                              time4_t *resume_from, int *count);
 
