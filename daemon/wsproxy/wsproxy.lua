@@ -26,7 +26,7 @@ local server = require "resty.websocket.server"
 local ffi = require "ffi"
 
 local timeout_ms = 7*24*60*60*1000
-local bbs_receive_size = 1024
+local bbs_receive_size = 4096
 
 -- Special code for nginx to close connection directly.
 -- This is used to close websocket, because we can't send a normal http
