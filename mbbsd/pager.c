@@ -148,6 +148,27 @@ is_angel_msgmode(int mode)
     return (mode == MSGMODE_FROMANGEL || mode == MSGMODE_TOANGEL);
 }
 
+static userinfo_t *
+resolve_msg_sender(const msgque_t *msg)
+{
+    if (!msg || !msg->pid)
+        return NULL;
+
+    if (VALID_USHM_ENTRY(msg->uslot)) {
+        userinfo_t *u = &SHM->uinfo[msg->uslot];
+        if (u->pid == msg->pid && (!msg->userid[0] || strcasecmp(u->userid, msg->userid) == 0))
+            return u;
+    }
+
+    if (msg->userid[0]) {
+        userinfo_t *u = search_ulist_userid(msg->userid);
+        if (u && u->pid == msg->pid)
+            return u;
+    }
+
+    return NULL;
+}
+
 static void
 pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 {
@@ -158,7 +179,16 @@ pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 
     userinfo_t *uin = w->uin;
     if (uin && (w->pid != uin->pid || w->userid[0] != uin->userid[0]))
-        uin = (userinfo_t *) search_ulist_pid(w->pid);
+        uin = NULL;
+    if (!uin && w->count > 0) {
+        int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
+        uin = resolve_msg_sender(&w->msg[last_idx]);
+    }
+    if (!uin && w->userid[0]) {
+        userinfo_t *cand = search_ulist_userid(w->userid);
+        if (cand && cand->pid == w->pid)
+            uin = cand;
+    }
 
     char online_mark = uin ? ' ' : (is_vertical ? 'x' : '#');
 
@@ -220,7 +250,16 @@ ofo_init_screen(void)
         if (swater[i]->uin &&
             (swater[i]->pid != swater[i]->uin->pid ||
              swater[i]->userid[0] != swater[i]->uin->userid[0]))
-            swater[i]->uin = (userinfo_t *) search_ulist_pid(swater[i]->pid);
+            swater[i]->uin = NULL;
+        if (!swater[i]->uin && swater[i]->count > 0) {
+            int last_idx = (swater[i]->top - 1 + MAX_REVIEW) % MAX_REVIEW;
+            swater[i]->uin = resolve_msg_sender(&swater[i]->msg[last_idx]);
+        }
+        if (!swater[i]->uin && swater[i]->userid[0]) {
+            userinfo_t *cand = search_ulist_userid(swater[i]->userid);
+            if (cand && cand->pid == swater[i]->pid)
+                swater[i]->uin = cand;
+        }
 
         ofo_water_scr(swater[i], i, 0);
     }
@@ -433,7 +472,8 @@ my_write_get_input(const char *prompt, char *msg, size_t msg_size,
 
     if (watermode > 0) {
         int i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
-        *uin_out = (userinfo_t *) search_ulist_pid(water_which->msg[i].pid);
+        userinfo_t *sender = resolve_msg_sender(&water_which->msg[i]);
+        *uin_out = sender;
         if (HAS_ANGEL) {
             if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
                 *flag_out = WATERBALL_ANGEL;
@@ -549,8 +589,9 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
     if (HAS_ANGEL && flag == WATERBALL_ANGEL)
         angel_log_msg_to_angel();
 
+    int my_slot = currutmp ? get_utmp_slot(currutmp) : -1;
     int msgmode = waterball_flag_to_msgmode(flag);
-    int res = write_message(uslot, uin->pid, currpid, from_id, msg, msgmode);
+    int res = write_message_full(uslot, uin->pid, currpid, my_slot, from_id, msg, msgmode);
 
     if (flag == WATERBALL_ALOHA)
         return;
@@ -572,7 +613,12 @@ static water_t *swater_get_slot(const msgque_t *msg);
 int
 my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *puin)
 {
-    userinfo_t *uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
+    userinfo_t *uin = puin;
+    if (!uin && id && *id) {
+        userinfo_t *cand = search_ulist_userid(id);
+        if (cand && (pid <= 0 || cand->pid == pid))
+            uin = cand;
+    }
     char destid[IDLEN + 1];
     STRLCPY(destid, id);
     check_water_init();
@@ -957,8 +1003,10 @@ talk_request(int sig GCC_UNUSED)
         syncnow();
         move(0, 0);
         clrtoeol();
+        const char *sender_name = VALID_USHM_ENTRY(currutmp->destuip) ?
+            SHM->uinfo[currutmp->destuip].userid : currutmp->msgs[0].userid;
         prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_RESET,
-               SHM->uinfo[currutmp->destuip].userid, Cdatelite(&now),
+               sender_name, Cdatelite(&now),
                (currutmp->sig == 2) ? "有急事!(按Ctrl-U,l 可看訊息)"
                : "呼叫、呼叫，聽到請回答");
         refresh();
@@ -1056,8 +1104,8 @@ swater_get_slot(const msgque_t *msg)
         swater[i]->pid = msg->pid;
         swater[i]->msg[0].msgmode = msg->msgmode;
     }
-    if (!swater[i]->uin)
-        swater[i]->uin = currutmp;
+    userinfo_t *sender = resolve_msg_sender(msg);
+    swater[i]->uin = sender;
 
     /* Shift elements so the active slot becomes swater[0] */
     for (j = i; j > 0; j--)

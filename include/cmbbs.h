@@ -71,7 +71,6 @@ int  dosearchuser(const char *userid, char *rightid);
 int  searchuser(const char *userid, char *rightid);
 void setuserid(int num, const char *userid);
 userinfo_t *search_ulistn(int uid, int unum);
-userinfo_t *search_ulist_pid(int pid);
 userinfo_t *search_ulist_userid(const char *userid);
 int  setumoney(int uid, int money);
 int  deumoney(int uid, int money);
@@ -159,6 +158,8 @@ int select_read_should_build(const char *dst_direct, int bid,
 /* message.c */
 int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *msg, int msgmode);
+int write_message_full(int uslot, pid_t to_pid, pid_t from_pid, int from_uslot,
+                       const char *from_id, const char *msg, int msgmode);
 
 /* friend.c */
 int is_aloha_svc_enabled(void);

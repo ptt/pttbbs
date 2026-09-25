@@ -4,7 +4,13 @@
 
 /* Like UNIX 'write' command, directly write on the target user's screen. */
 int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
-                  const char *text, int msgmode) {
+                  const char *text, int msgmode)
+{
+    return write_message_full(uslot, to_pid, from_pid, -1, from_id, text, msgmode);
+}
+
+int write_message_full(int uslot, pid_t to_pid, pid_t from_pid, int from_uslot,
+                       const char *from_id, const char *text, int msgmode) {
     assert(SHM);
     if (!VALID_USHM_ENTRY(uslot)) {
         return -1;
@@ -37,6 +43,7 @@ int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
     }
 
     msg->msgmode = msgmode;
+    msg->uslot = from_uslot;
     if (from_id) {
         STRLCPY(msg->userid, from_id);
     }
