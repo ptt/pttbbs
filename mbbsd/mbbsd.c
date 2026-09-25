@@ -1110,7 +1110,8 @@ user_login(void)
 void
 do_aloha(void)
 {
-    if ((HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) ||
+    if (strcmp(currutmp->userid, STR_GUEST) == 0 ||
+        (HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) ||
         HasUserRole(ROLE_HIDE_FROM) || currutmp->invisible) {
         return;
     }

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
+	"pttbbs/bbs"
 	"pttbbs/friend/daemon"
 )
 
@@ -29,7 +31,13 @@ func sendRequest(socketPath string, req daemon.Request) (*daemon.Response, error
 }
 
 func main() {
-	socketPath := flag.String("socket", "/v/bbshome/run/friend.svc.sock", "Path to UNIX domain socket")
+	bbsHome := os.Getenv("BBSHOME")
+	if bbsHome == "" {
+		bbsHome = bbs.BBSHome()
+	}
+	defaultSocket := filepath.Join(bbsHome, "run", "friend.svc.sock")
+
+	socketPath := flag.String("socket", defaultSocket, "Path to UNIX domain socket")
 	flag.Parse()
 
 	args := flag.Args()
@@ -37,7 +45,12 @@ func main() {
 		fmt.Println("Usage: friend.ctl [-socket path] <action> [args...]")
 		fmt.Println("Actions:")
 		fmt.Println("  status")
+		fmt.Println("  query <userid>             (or user / info <userid>)")
+		fmt.Println("  hbfl <bid|brdname>         (inspect hidden board visable list)")
+		fmt.Println("  hbfl_user <uid|userid>     (list hidden boards accessible by user)")
+		fmt.Println("  hbfl_reload [bid|brdname]  (reload hidden board visable list)")
 		fmt.Println("  login <userid> <pid> <sid>")
+		fmt.Println("  friend_sync <userid> <uid> <pid> <sid>")
 		fmt.Println("  logout <userid> <pid>")
 		fmt.Println("  reload <userid>")
 		os.Exit(1)
@@ -51,6 +64,38 @@ func main() {
 	case "status":
 		// no extra args
 
+	case "query", "user", "info":
+		if len(args) < 2 {
+			fmt.Println("Usage: friend.ctl query <userid>")
+			os.Exit(1)
+		}
+		req.UserID = args[1]
+
+	case "hbfl", "hbfl_board":
+		if len(args) < 2 {
+			fmt.Println("Usage: friend.ctl hbfl <bid|brdname>")
+			os.Exit(1)
+		}
+		if n, err := fmt.Sscanf(args[1], "%d", &req.BID); err != nil || n != 1 {
+			req.BrdName = args[1]
+		}
+
+	case "hbfl_user":
+		if len(args) < 2 {
+			fmt.Println("Usage: friend.ctl hbfl_user <uid|userid>")
+			os.Exit(1)
+		}
+		if n, err := fmt.Sscanf(args[1], "%d", &req.UID); err != nil || n != 1 {
+			req.UserID = args[1]
+		}
+
+	case "hbfl_reload":
+		if len(args) >= 2 {
+			if n, err := fmt.Sscanf(args[1], "%d", &req.BID); err != nil || n != 1 {
+				req.BrdName = args[1]
+			}
+		}
+
 	case "login":
 		if len(args) < 4 {
 			fmt.Println("Usage: friend.ctl login <userid> <pid> <sid>")
@@ -59,6 +104,16 @@ func main() {
 		req.UserID = args[1]
 		fmt.Sscanf(args[2], "%d", &req.PID)
 		fmt.Sscanf(args[3], "%d", &req.SID)
+
+	case "friend_sync":
+		if len(args) < 5 {
+			fmt.Println("Usage: friend.ctl friend_sync <userid> <uid> <pid> <sid>")
+			os.Exit(1)
+		}
+		req.UserID = args[1]
+		fmt.Sscanf(args[2], "%d", &req.UID)
+		fmt.Sscanf(args[3], "%d", &req.PID)
+		fmt.Sscanf(args[4], "%d", &req.SID)
 
 	case "logout":
 		if len(args) < 3 {
@@ -79,6 +134,7 @@ func main() {
 		fmt.Printf("Unknown action: %s\n", action)
 		os.Exit(1)
 	}
+
 
 	resp, err := sendRequest(*socketPath, req)
 	if err != nil {

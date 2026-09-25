@@ -56,11 +56,12 @@ isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat)
     if (uentp->mode == DEBUGSLEEPING)
 	return 0;
 
+    fri_stat = friend_normalize_stat(fri_stat);
+
     if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))	/* 對方紫色隱形而你沒有 */
 	return 0;
-    else if ((me->userlevel & PERM_SYSOP) ||
-	     ((fri_stat & HRM) && (fri_stat & HFM)))
-	/* 站長看的見任何人 */
+    else if ((me->userlevel & PERM_SYSOP) || (fri_stat & HSM))
+	/* 站長或超級好友看的見任何人 */
 	return 1;
 
     if (uentp->invisible && !(me->userlevel & PERM_SEECLOAK))
@@ -106,10 +107,9 @@ modestring(const userinfo_t * uentp, int simple)
     } else
 	word = ModeTypeTable[mode];
 
-    fri_stat = friend_stat(currutmp, uentp);
+    fri_stat = friend_normalize_stat(friend_stat(currutmp, uentp));
     if (!(HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SEECLOAK)) &&
-	((uentp->invisible || (fri_stat & HRM)) &&
-	 !((fri_stat & HFM) && (fri_stat & HRM))))
+	(uentp->invisible || (fri_stat & HRM)) && !(fri_stat & HSM))
 	return notonline;
     else if (mode == EDITING) {
 	SNPRINTF(modestr, "E:%s",
@@ -160,117 +160,6 @@ modestring(const userinfo_t * uentp, int simple)
     return (modestr);
 }
 
-unsigned int
-set_friend_bit(const userinfo_t * me, const userinfo_t * ui)
-{
-    int             unum;
-    unsigned int hit = 0;
-    const int *myfriends;
-
-    /* 判斷對方是否為我的朋友 ? */
-    if( intbsearch(ui->uid, me->myfriend, me->nFriends) )
-	hit = IFH;
-
-    /* 判斷我是否為對方的朋友 ? */
-    if( intbsearch(me->uid, ui->myfriend, ui->nFriends) )
-	hit |= HFM;
-
-    /* 判斷對方是否為我的仇人 ? */
-    myfriends = me->reject;
-    while ((unum = *myfriends++)) {
-	if (unum == ui->uid) {
-	    hit |= IRH;
-	    break;
-	}
-    }
-
-    /* 判斷我是否為對方的仇人 ? */
-    myfriends = ui->reject;
-    while ((unum = *myfriends++)) {
-	if (unum == me->uid) {
-	    hit |= HRM;
-	    break;
-	}
-    }
-    return hit;
-}
-
-int
-reverse_friend_stat(int stat)
-{
-    int             stat1 = 0;
-    if (stat & IFH)
-	stat1 |= HFM;
-    if (stat & IRH)
-	stat1 |= HRM;
-    if (stat & HFM)
-	stat1 |= IFH;
-    if (stat & HRM)
-	stat1 |= IRH;
-    if (stat & IBH)
-	stat1 |= IBH;
-    return stat1;
-}
-
-void login_friend_online(int do_login GCC_UNUSED)
-{
-    userinfo_t     *uentp;
-    int             i;
-    unsigned int    stat, stat1;
-    int             offset = get_utmp_slot(currutmp);
-
-    for (i = 0; i < SHM->UTMPnumber && currutmp->friendtotal < MAX_FRIEND; i++) {
-	uentp = (&SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]]);
-	if (uentp && uentp->uid && (stat = set_friend_bit(currutmp, uentp))) {
-	    stat1 = reverse_friend_stat(stat);
-	    stat <<= 24;
-	    stat |= get_utmp_slot(uentp);
-	    currutmp->friend_online[currutmp->friendtotal++] = stat;
-	    if (uentp != currutmp && uentp->friendtotal < MAX_FRIEND) {
-		stat1 <<= 24;
-		stat1 |= offset;
-		uentp->friend_online[uentp->friendtotal++] = stat1;
-	    }
-	}
-    }
-    return;
-}
-
-/* TODO merge with util/shmctl.c logout_friend_online() */
-int
-logout_friend_online(userinfo_t * utmp)
-{
-    int my_friend_idx, thefriend;
-    int k;
-    int             offset = get_utmp_slot(utmp);
-    userinfo_t     *ui;
-    for(; utmp->friendtotal>0; utmp->friendtotal--) {
-	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
-	    return 1;
-	my_friend_idx=utmp->friendtotal-1;
-	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
-	utmp->friend_online[my_friend_idx]=0;
-
-	if( !(0 <= thefriend && thefriend < USHM_SIZE) )
-	    continue;
-
-	ui = &SHM->uinfo[thefriend];
-	if(ui->pid==0 || ui==utmp)
-	    continue;
-	if(ui->friendtotal > MAX_FRIEND || ui->friendtotal<0)
-	    continue;
-	for (k = 0; k < ui->friendtotal && k < MAX_FRIEND &&
-	    (int)(ui->friend_online[k] & 0xFFFFFF) != offset; k++);
-	if (k < ui->friendtotal && k < MAX_FRIEND) {
-	  ui->friendtotal--;
-	  ui->friend_online[k] = ui->friend_online[ui->friendtotal];
-	  ui->friend_online[ui->friendtotal] = 0;
-	}
-    }
-    return 0;
-}
-
-
 int
 friend_stat(const userinfo_t * me, const userinfo_t * ui)
 {
@@ -280,15 +169,46 @@ friend_stat(const userinfo_t * me, const userinfo_t * ui)
     if (me->brc_id && ui->brc_id == me->brc_id) {
 	hit = IBH;
     }
-    for (i = 0; me->friend_online[i] && i < MAX_FRIEND; i++) {
-	j = (me->friend_online[i] & 0xFFFFFF);
-	if (VALID_USHM_ENTRY(j) && ui == &SHM->uinfo[j]) {
-	    hit |= me->friend_online[i] >> 24;
-	    break;
+    /* Legacy binaries may still append/swap entries unsorted before cutoff. */
+    if (me->friend_svc_flag && now >= FRIEND_LEGACY_COMPAT_CUTOFF) {
+	int target_slot = (int)(ui - &SHM->uinfo[0]);
+	int total = me->friendtotal;
+	if (VALID_USHM_ENTRY(target_slot) && total > 0) {
+	    if (total > MAX_FRIEND_ONLINE)
+		total = MAX_FRIEND_ONLINE;
+	    int lo = 0, hi = total - 1;
+	    while (lo <= hi) {
+		int mid = lo + ((hi - lo) >> 1);
+		unsigned int entry = me->friend_online[mid];
+		if (!entry) {
+		    hi = mid - 1;
+		    continue;
+		}
+		j = FRIEND_ONLINE_SLOT(entry);
+		if (j == target_slot) {
+		    if (FRIEND_ONLINE_VALID_UID(entry, ui->uid))
+			hit |= FRIEND_ONLINE_STAT(entry);
+		    break;
+		} else if (j < target_slot) {
+		    lo = mid + 1;
+		} else {
+		    hi = mid - 1;
+		}
+	    }
+	}
+    } else {
+	for (i = 0; i < MAX_FRIEND_ONLINE && me->friend_online[i]; i++) {
+	    unsigned int entry = me->friend_online[i];
+	    j = FRIEND_ONLINE_SLOT(entry);
+	    if (VALID_USHM_ENTRY(j) && ui == &SHM->uinfo[j] &&
+		FRIEND_ONLINE_VALID_UID(entry, ui->uid)) {
+		hit |= FRIEND_ONLINE_STAT(entry);
+		break;
+	    }
 	}
     }
     if (PERM_HIDE(ui))
-	return hit & ST_FRIEND;
+	return hit & (ST_FRIEND | ST_SUPER | HRM);
     return hit;
 }
 
@@ -586,11 +506,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	else
 	    outs("人家在忙啦");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	       (((fri_stat & HRM) && !(fri_stat & HFM)) ||
-		((!uin->pager) && !(fri_stat & HFM)))) {
+	       ((fri_stat & HRM) || ((!uin->pager) && !(fri_stat & HFM)))) {
 	outs("對方關掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	     (((fri_stat & HRM) && !(fri_stat & HFM)) || uin->pager == PAGER_DISABLE)) {
+	       ((fri_stat & HRM) || uin->pager == PAGER_DISABLE)) {
 	outs("對方拔掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
 	       !(fri_stat & HFM) && uin->pager == PAGER_FRIENDONLY) {
@@ -723,7 +642,7 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
     char            genbuf[STRLEN];
 
     STATINC(STAT_FRIENDDESC);
-    if((set_friend_bit(currutmp,uentp)&IFH)==0)
+    if ((friend_stat(currutmp, uentp) & IFH) == 0)
 	return space_buf;
 
     setuserfile(fpath, friend_file[0]);
@@ -862,17 +781,19 @@ pickup_myfriend(pickup_t * friends,
     STATINC(STAT_PICKMYFRIEND);
     *badfriend = 0;
     *myfriend = *friendme = 1;
-    for (i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
-	where = currutmp->friend_online[i] & 0xFFFFFF;
+    for (i = 0; i < MAX_FRIEND_ONLINE && currutmp->friend_online[i]; ++i) {
+	unsigned int entry = currutmp->friend_online[i];
+	where = FRIEND_ONLINE_SLOT(entry);
 	if (VALID_USHM_ENTRY(where) &&
 	    (uentp = &SHM->uinfo[where]) && uentp->pid &&
+	    FRIEND_ONLINE_VALID_UID(entry, uentp->uid) &&
 	    uentp != currutmp &&
 	    isvisible_stat(currutmp, uentp,
 			   frstate =
-			   currutmp->friend_online[i] >> 24)){
-	    if( frstate & IRH )
+			   FRIEND_ONLINE_STAT(entry))){
+	    if (frstate & IRH) {
 		++*badfriend;
-	    if( !(frstate & IRH) || ((frstate & IRH) && (frstate & IFH)) ){
+	    } else if (frstate & (ST_FRIEND | ST_SUPER)) {
 		friends[ngets].ui = uentp;
 		friends[ngets].uoffset = where;
 		friends[ngets++].friend = frstate;
@@ -885,6 +806,7 @@ pickup_myfriend(pickup_t * friends,
     }
     /* 把自己加入好友區 */
     friends[ngets].ui = currutmp;
+    friends[ngets].uoffset = get_utmp_slot(currutmp);
     friends[ngets++].friend = (IFH | HFM);
     return ngets;
 }
@@ -898,7 +820,7 @@ pickup_bfriend(pickup_t * friends, int base)
 
     STATINC(STAT_PICKBFRIEND);
     friends = friends + base;
-    for (i = 0; i < number && ngets < MAX_FRIEND - base; ++i) {
+    for (i = 0; i < number && ngets < MAX_FRIEND_ONLINE - base; ++i) {
 	uentp = &SHM->uinfo[SHM->sorted[currsorted][0][i]];
 	/* TODO isvisible() 重複用到了 friend_stat() */
 	if (uentp && uentp->pid && uentp->brc_id == currutmp->brc_id &&
@@ -939,7 +861,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	  /* 不含板友, 最多只會有 friendtotal個 */
 	  (!currutmp->brc_id && which < friendtotal + 1)
 	  ))) {
-	pickup_t        friends[MAX_FRIEND + 1]; /* +1 include self */
+	pickup_t        friends[MAX_FRIEND_ONLINE + 1]; /* +1 include self */
 
 	/* TODO 當 friendtotal<which 時只需顯示板友, 不需 pickup_myfriend */
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
@@ -972,7 +894,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     if (!(HasUserFlag(UF_FRIEND)) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 7 : (pickup_way - 1));
-        assert(sorted_way <= (int)ARRAY_SIZE(SHM->sorted[0]));
+        assert(sorted_way < (int)ARRAY_SIZE(SHM->sorted[0]));
 	ulist = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
 	if (which < 0)
@@ -1200,7 +1122,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
         state = 9;
     else if (currutmp == uentp)
         state = 10;
-    else if ((friend & IRH) && !(friend & IFH))
+    else if (friend & IRH)
         state = 8;
     else
         state = (friend & ST_FRIEND) >> 2;
@@ -1266,7 +1188,7 @@ userlist_search_online_user(pickup_t *currpickup, int pickup_way, int *page, int
     if (si < 0)
         return 0;
 
-    pickup_t friends[MAX_FRIEND + 1];
+    pickup_t friends[MAX_FRIEND_ONLINE + 1];
     int *ulist = SHM->sorted[SHM->currsorted][((pickup_way == 0) ? 0 : (pickup_way - 1))];
     int fi = ulist[si];
     int nGots = pickup_myfriend(friends, myfriend, friendme, badfriend);
@@ -1335,14 +1257,15 @@ userlist_broadcast(void)
         } else {
             userinfo_t *uentp;
             int where, frstate;
-            for (int i = 0; i < MAX_FRIEND && currutmp->friend_online[i]; ++i) {
-                where = currutmp->friend_online[i] & 0xFFFFFF;
+            for (int i = 0; i < MAX_FRIEND_ONLINE && currutmp->friend_online[i]; ++i) {
+                unsigned int entry = currutmp->friend_online[i];
+                where = FRIEND_ONLINE_SLOT(entry);
                 if (!VALID_USHM_ENTRY(where))
                     continue;
                 uentp = &SHM->uinfo[where];
-                if (!uentp || !uentp->pid)
+                if (!uentp || !uentp->pid || !FRIEND_ONLINE_VALID_UID(entry, uentp->uid))
                     continue;
-                frstate = currutmp->friend_online[i] >> 24;
+                frstate = FRIEND_ONLINE_STAT(entry);
                 if (!(frstate & IFH))
                     continue;
                 if (!isvisible_stat(currutmp, uentp, frstate))
@@ -1351,7 +1274,7 @@ userlist_broadcast(void)
                     continue;
                 if (uentp->pager == PAGER_FRIENDONLY && !(frstate & HFM))
                     continue;
-                if ((frstate & HRM) && !(frstate & HFM))
+                if (frstate & HRM)
                     continue;
                 if (kill(uentp->pid, 0) == -1)
                     continue;

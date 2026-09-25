@@ -15,6 +15,11 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## service/friend, talk, bbs: Offload friend_online
+
+把好友的計算移出 mbbsd 之外，有點像加強版的 UTMPD。
+一樣因為是獨立的 `friend.svc`, 如果不重跑 `shmctl init` 請手動執行該 svc。
+
 ## [feat(make): Move to GNU Make](https://github.com/ptt/pttbbs/commit/9e33145939a2f9353c39b85ba7600d3115f9d7dc)
 
 由 BSD Make (bmake, pmake) 改用 GNU Make。

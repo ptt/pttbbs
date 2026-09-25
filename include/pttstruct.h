@@ -348,15 +348,15 @@ typedef struct userinfo_t {
 
     /* friends */
     int     friendtotal;              /* 好友比較的cache 大小 */ 
-    short   nFriends;                /* 下面 friend[] 只用到前幾個,
+    short   deprecated_nFriends __attribute__ ((deprecated)); /* 下面 friend[] 只用到前幾個,
                                         用來 bsearch */
-    short   _unused3;
-    int     myfriend[MAX_FRIEND];
+    short   friend_svc_flag;         /* 1 if friend_online synced by friend.svc */
+    int     deprecated_myfriend[MAX_FRIEND] __attribute__ ((deprecated));
     char    gap_1[4];
-    unsigned int friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
+#define MAX_FRIEND_ONLINE (MAX_FRIEND + MAX_REJECT)
+    unsigned int friend_online[MAX_FRIEND_ONLINE];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
     char    gap_2[4];
-    int     reject[MAX_REJECT];
     char    gap_3[4];
 
     /* messages */
@@ -457,7 +457,17 @@ typedef struct keeploc_t {
 } keeploc_t;
 
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
+#ifndef USHM_SIZE
 #define USHM_SIZE       ((MAX_ACTIVE)*41/40)
+#endif
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(FRIEND_ONLINE_SLOT_BITS)
+_Static_assert(FRIEND_ONLINE_SLOT_BITS + FRIEND_ONLINE_UID_BITS + FRIEND_ONLINE_STAT_BITS == 32,
+               "friend_online bitfields must sum to 32 bits");
+_Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
+               "USHM_SIZE exceeds FRIEND_ONLINE_SLOT_BITS capacity");
+_Static_assert((ST_FRIEND | ST_SUPER | ST_REJECT) <= FRIEND_ONLINE_STAT_MASK,
+               "friend status flags exceed FRIEND_ONLINE_STAT_BITS capacity");
+#endif
 /* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
  * 會造成找 shm 空位的無窮迴圈. 
  * 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
@@ -584,6 +594,7 @@ typedef struct {
             // Note: this has different sizes on different platforms,
             // for example 40 bytes on Linux and 8 on FreeBSD, 64 on Darwin.
             pthread_mutex_t passwd_mutex;
+	    int     hbfl_generation;  /* generation counter for hidden board friend list */
         } e;
     } __attribute__((packed)) GV3;
 

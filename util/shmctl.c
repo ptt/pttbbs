@@ -5,45 +5,6 @@
 extern SHM_t   *SHM;
 
 /* utmpfix ----------------------------------------------------------------- */
-/* TODO merge with mbbsd/talk.c logout_friend_online() */
-int logout_friend_online(userinfo_t *utmp)
-{
-    int my_friend_idx, thefriend;
-    int k;
-    int offset = get_utmp_slot(utmp);
-    userinfo_t *ui;
-    for(; utmp->friendtotal>0; utmp->friendtotal--) {
-	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
-	    return 1;
-	my_friend_idx=utmp->friendtotal-1;
-	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
-	utmp->friend_online[my_friend_idx]=0;
-
-	if( !(0 <= thefriend && thefriend < USHM_SIZE) ) {
-	    printf("\tonline friend error(%d)\n", thefriend);
-	    continue;
-	}
-
-	ui = &SHM->uinfo[thefriend]; 
-
-	if(ui->pid==0 || ui==utmp)
-	    continue;
-	if(ui->friendtotal > MAX_FRIEND || ui->friendtotal<0) {
-	    printf("\tfriend(%d) has too many/less(%d) friends\n", thefriend, ui->friendtotal);
-	    continue;
-	}
-
-	for(k=0; k<ui->friendtotal && k<MAX_FRIEND &&
-		(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
-	if( k < ui->friendtotal && k < MAX_FRIEND ){
-	    ui->friendtotal--;
-	    ui->friend_online[k]=ui->friend_online[ui->friendtotal];
-	    ui->friend_online[ui->friendtotal]=0;
-	}
-    }
-    return 0;
-}
-
 void purge_utmp(userinfo_t *uentp)
 {
     logout_friend_online(uentp);
@@ -196,7 +157,7 @@ int utmpfix(int argc, char **argv)
 	    clean = "userid without z";
 	    addkilllist(which);
 	}
-	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND || SHM->uinfo[which].friendtotal<0 ){
+	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND_ONLINE || SHM->uinfo[which].friendtotal<0 ){
 	    clean = "too many/less friend";
 	    addkilllist(which);
 	}
@@ -341,6 +302,11 @@ void utmpsort(int sortall)
 	qsort(SHM->sorted[ns][1], count, sizeof(int), cmputmpmode);
 	qsort(SHM->sorted[ns][2], count, sizeof(int), cmputmpidle);
 	qsort(SHM->sorted[ns][3], count, sizeof(int), cmputmpfrom);
+	if (SHM->UTMPuptime < FRIEND_LEGACY_COMPAT_CUTOFF) {
+	    memcpy(SHM->sorted[ns][4], SHM->sorted[ns][0], sizeof(int) * count);
+	    memcpy(SHM->sorted[ns][5], SHM->sorted[ns][0], sizeof(int) * count);
+	    memcpy(SHM->sorted[ns][6], SHM->sorted[ns][0], sizeof(int) * count);
+	}
 	memset(nusers, 0, sizeof(nusers));
 	for (i = 0; i < count; ++i) {
 	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];
@@ -490,7 +456,7 @@ int utmpnum(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 const char    *GV2str[] = {"dymaxactive", "toomanyusers",
                            "noonlineuser","now", "nWelcomes", "shutdown",
-                           "DEPRECATE_aloha_svc", NULL};
+                           NULL};
 int showglobal(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int     i;
