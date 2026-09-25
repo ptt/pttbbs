@@ -148,7 +148,7 @@ void userec_add_to_uhash(int n, userec_t *user, int onfly)
        STRLCPY(SHM->userid[n], user->userid);
        SHM->money[n] = user->money;
 #ifdef USE_COOLDOWN
-       SHM->cooldowntime[n] = 0;
+       SHM->deprecated_cooldown[n] = 0;
 #endif
        if(onfly)
            printf("add %s\n", user->userid);
