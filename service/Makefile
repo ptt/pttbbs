@@ -1,4 +1,4 @@
-SUBDIRS:=	friend
+SUBDIRS:=	friend search
 
 .PHONY: all clean install test $(SUBDIRS)
 
