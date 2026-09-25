@@ -1,4 +1,4 @@
-SUBDIRS:=	aloha
+SUBDIRS:=	friend
 
 .PHONY: all clean install test $(SUBDIRS)
 
