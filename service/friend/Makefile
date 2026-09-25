@@ -7,21 +7,21 @@ GO_ENV=	CC="$(CC)" CGO_LDFLAGS_ALLOW="-Wl,--gc-sections" CGO_CFLAGS="-I$(ABS_SRC
 
 .PHONY: all test install clean
 
-all: aloha.svc aloha.ctl
+all: friend.svc friend.ctl
 
-aloha.svc:
-	$(GO_ENV) go build -o aloha.svc .
+friend.svc:
+	$(GO_ENV) go build -o friend.svc .
 
-aloha.ctl:
-	$(GO_ENV) go build -o aloha.ctl ./cmd/aloha.ctl
+friend.ctl:
+	$(GO_ENV) go build -o friend.ctl ./cmd/friend.ctl
 
 test:
 	$(GO_ENV) go test -v ./...
 
 install: all
 	install -d $(BBSHOME)/bin/
-	install -c -m 755 aloha.svc $(BBSHOME)/bin/
-	install -c -m 755 aloha.ctl $(BBSHOME)/bin/
+	install -c -m 755 friend.svc $(BBSHOME)/bin/
+	install -c -m 755 friend.ctl $(BBSHOME)/bin/
 
 clean:
-	rm -f aloha.svc aloha.ctl
+	rm -f friend.svc friend.ctl
