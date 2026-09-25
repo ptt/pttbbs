@@ -748,8 +748,6 @@ int t_talk(void);
 int t_chat(void);
 int pager_show_log(void);
 int my_query(const char *uident);
-int logout_friend_online(userinfo_t*);
-void login_friend_online(int do_login);
 int isvisible_uid(int tuid);
 int friend_stat(const userinfo_t *me, const userinfo_t * ui);
 int call_in(const userinfo_t *uentp, int fri_stat);

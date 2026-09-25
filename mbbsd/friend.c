@@ -17,7 +17,7 @@ static const unsigned int friend_max[8] = {
     [FRIEND_SPECIAL]  = MAX_NAMELIST,
     [FRIEND_CANVOTE]  = MAX_FRIEND,
     // [BOARD_WATER]  = BOARD_WATER,
-    [BOARD_VISABLE]   = MAX_FRIEND,
+    [BOARD_VISABLE]   = MAX_USERS,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
@@ -97,7 +97,12 @@ friend_add(const char *uident, int type, const char* des)
 
 int
 is_rejected(const char *userid) {
+    userinfo_t *uentp;
     char fpath[PATHLEN];
+    /* friend_online may be truncated or stale; only trust a positive hit. */
+    if (currutmp && (uentp = search_ulist_userid(userid)) &&
+        (friend_stat(currutmp, uentp) & HRM))
+        return 1;
     sethomefile(fpath, userid, FN_REJECT);
     if (!file_exist_entry(fpath, cuser.userid))
         return 0;
@@ -360,56 +365,37 @@ friend_editdesc(const char *uident, int type)
 	fclose(nfp);
 }
 
-static void friend_load_real(int tosort, int maxf,
-			     short *destn, int *destar, const char *fn)
+static int
+has_friend_or_reject_file(void)
 {
-    char    genbuf[PATHLEN];
-    FILE    *fp;
-    short   nFriends = 0;
-    int     uid, *tarray;
-    char *p;
+    char fpath[PATHLEN];
 
-    setuserfile(genbuf, fn);
-    if( (fp = fopen(genbuf, "r")) == NULL ){
-	destar[0] = 0;
-	if( destn )
-	    *destn = 0;
-    }
-    else{
-	char *strtok_pos;
-	tarray = (int *)malloc(sizeof(int) * maxf);
-	assert(tarray);
-	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
-	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
-	    if( (p = strtok_r(genbuf, str_space, &strtok_pos)) &&
-		(uid = searchuser(p, NULL)) )
-		tarray[nFriends++] = uid;
-	fclose(fp);
+    setfriendfile(fpath, FRIEND_OVERRIDE);
+    if (dashs(fpath) > 0)
+        return 1;
 
-	if( tosort )
-	    qsort(tarray, nFriends, sizeof(int), cmp_int);
-	if( destn )
-	    *destn = nFriends;
-	tarray[nFriends] = 0;
-	memcpy(destar, tarray, sizeof(int) * (nFriends + 1));
-	free(tarray);
-    }
+    setfriendfile(fpath, FRIEND_REJECT);
+    return dashs(fpath) > 0;
 }
 
-/* type == 0 : load all */
-void friend_load(int type, int do_login)
+/* friend.svc owns friend_online[] (for both sides of every relation). There
+ * is no local fallback: if friend.svc is down there is simply no friend data
+ * until it comes back and rescans the online sessions. */
+void friend_load(int type GCC_UNUSED, int do_login GCC_UNUSED)
 {
-    if (!type || type & FRIEND_OVERRIDE)
-	friend_load_real(1, MAX_FRIEND, &currutmp->nFriends,
-			 currutmp->myfriend, FN_OVERRIDES);
+    if (!currutmp || !currutmp->userid[0])
+        return;
 
-    if (!type || type & FRIEND_REJECT)
-	friend_load_real(0, MAX_REJECT, NULL, currutmp->reject, FN_REJECT);
-
-    if (currutmp->friendtotal)
-	logout_friend_online(currutmp);
-
-    login_friend_online(do_login);
+    if (friend_svc_sync(currutmp->userid, currutmp->uid, currutmp->pid,
+		        get_utmp_slot(currutmp)) != 0) {
+        if (has_friend_or_reject_file()) {
+            vs_hdr("系統通知");
+            outs("\n\n"
+                 "  好友功\能目前無法同步，好友跟黑名單功\能可能暫時失效，\n"
+                 "  如果擔心請直接斷線離開。\n\n");
+            pressanykey();
+        }
+    }
 }
 
 static void
