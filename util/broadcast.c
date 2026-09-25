@@ -55,10 +55,10 @@ int main(int argc, char *argv[])
     for (i = 0, j = 0; i < UTMPnumber; ++i, ++j) {
 	// XXX why use sorted list?
 	//     can we just scan uinfo with proper checking?
-	int uip = sorted[i];
-	uentp = &SHM->uinfo[uip];
+	int uslot = sorted[i];
+	uentp = &SHM->uinfo[uslot];
 	if (uentp->pid && kill(uentp->pid, 0) != -1){
-	    write_message(uip, uentp->pid, getpid(), owner, msgbuf, MSGMODE_WRITE);
+	    write_message(uslot, uentp->pid, getpid(), owner, msgbuf, MSGMODE_WRITE);
 	}
 
 	if (j == num_per_loop) {

@@ -217,14 +217,14 @@ void login_friend_online(int do_login GCC_UNUSED)
     userinfo_t     *uentp;
     int             i;
     unsigned int    stat, stat1;
-    int             offset = get_utmp_id(currutmp);
+    int             offset = get_utmp_slot(currutmp);
 
     for (i = 0; i < SHM->UTMPnumber && currutmp->friendtotal < MAX_FRIEND; i++) {
 	uentp = (&SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]]);
 	if (uentp && uentp->uid && (stat = set_friend_bit(currutmp, uentp))) {
 	    stat1 = reverse_friend_stat(stat);
 	    stat <<= 24;
-	    stat |= get_utmp_id(uentp);
+	    stat |= get_utmp_slot(uentp);
 	    currutmp->friend_online[currutmp->friendtotal++] = stat;
 	    if (uentp != currutmp && uentp->friendtotal < MAX_FRIEND) {
 		stat1 <<= 24;
@@ -242,7 +242,7 @@ logout_friend_online(userinfo_t * utmp)
 {
     int my_friend_idx, thefriend;
     int k;
-    int             offset = get_utmp_id(utmp);
+    int             offset = get_utmp_slot(utmp);
     userinfo_t     *ui;
     for(; utmp->friendtotal>0; utmp->friendtotal--) {
 	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
@@ -472,7 +472,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     // so, let's temporary break currstat here.
     currstat = IDLE;
     setutmpmode(PAGE);
-    uin->destuip = get_utmp_id(currutmp);
+    uin->destuip = get_utmp_slot(currutmp);
     pid = uin->pid;
     if (pid > 0)
 	kill(pid, SIGUSR1);
@@ -492,7 +492,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	} else { // if (ch == I_TIMEOUT) {
 	    ch = uin->mode;
 	    if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == get_utmp_id(currutmp)) {
+		    uin->destuip == get_utmp_slot(currutmp)) {
 		bell();
 		outmsg("對方回應中...");
 		refresh();
@@ -515,7 +515,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		bell();
 		refresh();
 
-		uin->destuip = get_utmp_id(currutmp);
+		uin->destuip = get_utmp_slot(currutmp);
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
 		    close(sock);
 		    currutmp->sockactive = currutmp->destuid = 0;
@@ -1326,10 +1326,10 @@ userlist_broadcast(void)
             char msgbuf[PATHLEN];
             SNPRINTF(msgbuf, "[廣播]%s", genbuf);
             for (int i = 0; i < SHM->UTMPnumber; ++i) {
-                int uip = SHM->sorted[SHM->currsorted][0][i];
-                userinfo_t *uentp = &SHM->uinfo[uip];
+                int uslot = SHM->sorted[SHM->currsorted][0][i];
+                userinfo_t *uentp = &SHM->uinfo[uslot];
                 if (uentp->pid && kill(uentp->pid, 0) != -1) {
-                    write_message(uip, uentp->pid, currpid, cuser.userid, msgbuf, MSGMODE_WRITE);
+                    write_message(uslot, uentp->pid, currpid, cuser.userid, msgbuf, MSGMODE_WRITE);
                 }
             }
         } else {
@@ -2194,7 +2194,7 @@ talkreply(void)
 	return;
     }
 
-    uip->destuip = get_utmp_id(currutmp);
+    uip->destuip = get_utmp_slot(currutmp);
     if (buf[0] == 'y')
 	switch (sig) {
 	case SIG_GOMO:

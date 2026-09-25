@@ -64,7 +64,7 @@ SHM_t *create_shm(int *is_created);
 SHM_t *attach_shm(void);
 SHM_t *attach_check_SHM(void);
 void attach_SHM(void);
-int get_utmp_id(const userinfo_t *uentp);
+int get_utmp_slot(const userinfo_t *uentp);
 void add_to_uhash(int n, const char *id);
 void remove_from_uhash(int n);
 int  dosearchuser(const char *userid, char *rightid);
@@ -157,7 +157,7 @@ int select_read_should_build(const char *dst_direct, int bid,
                              time4_t *resume_from, int *count);
 
 /* message.c */
-int write_message(int uip, pid_t to_pid, pid_t from_pid, const char *from_id,
+int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *msg, int msgmode);
 
 /* aloha.c */

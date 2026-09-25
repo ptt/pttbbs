@@ -535,8 +535,8 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
     if (!uin)
         return;
 
-    int uip = get_utmp_id(uin);
-    if (uip < 0)
+    int uslot = get_utmp_slot(uin);
+    if (uslot < 0)
         return;
 
     char from_id[IDLEN + 1];
@@ -550,7 +550,7 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         angel_log_msg_to_angel();
 
     int msgmode = waterball_flag_to_msgmode(flag);
-    int res = write_message(uip, uin->pid, currpid, from_id, msg, msgmode);
+    int res = write_message(uslot, uin->pid, currpid, from_id, msg, msgmode);
 
     if (flag == WATERBALL_ALOHA)
         return;
@@ -633,7 +633,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     }
 
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
-        uin->destuip = get_utmp_id(currutmp);
+        uin->destuip = get_utmp_slot(currutmp);
         uin->sig = 2;
         if (uin->pid > 0)
             kill(uin->pid, SIGUSR1);
