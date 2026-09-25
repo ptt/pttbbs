@@ -10,9 +10,9 @@
 #include <time.h>
 #include <unistd.h>
 
-static int send_alohad_req(const char *json_payload) {
+static int send_friendd_req(const char *json_payload) {
     char sock_path[PATHLEN];
-    SNPRINTF(sock_path, "%s/run/aloha.svc.sock", BBSHOME);
+    SNPRINTF(sock_path, "%s/run/friend.svc.sock", BBSHOME);
 
     int sfd = toconnect3(sock_path, 0, 10000); // non-blocking connect with 10ms timeout
     if (sfd < 0) {
@@ -25,31 +25,31 @@ static int send_alohad_req(const char *json_payload) {
     return (n == len) ? 0 : -1;
 }
 
-int aloha_notify_login(const char *userid, pid_t pid, int sid) {
+int friend_svc_login(const char *userid, pid_t pid, int sid) {
     if (!userid || !*userid) {
         return -1;
     }
     char payload[256];
     SNPRINTF(payload, "{\"action\":\"login\",\"userid\":\"%s\",\"pid\":%d,\"sid\":%d}\n", userid, (int)pid, sid);
-    return send_alohad_req(payload);
+    return send_friendd_req(payload);
 }
 
-int aloha_notify_logout(const char *userid, pid_t pid) {
+int friend_svc_logout(const char *userid, pid_t pid) {
     if (!userid || !*userid) {
         return -1;
     }
     char payload[256];
     SNPRINTF(payload, "{\"action\":\"logout\",\"userid\":\"%s\",\"pid\":%d}\n", userid, (int)pid);
-    return send_alohad_req(payload);
+    return send_friendd_req(payload);
 }
 
-int aloha_notify_reload(const char *userid) {
+int friend_svc_reload(const char *userid) {
     if (!userid || !*userid) {
         return -1;
     }
     char payload[256];
     SNPRINTF(payload, "{\"action\":\"reload\",\"userid\":\"%s\"}\n", userid);
-    return send_alohad_req(payload);
+    return send_friendd_req(payload);
 }
 
 

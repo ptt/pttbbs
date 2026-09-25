@@ -160,12 +160,15 @@ int select_read_should_build(const char *dst_direct, int bid,
 int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,
                   const char *msg, int msgmode);
 
-/* aloha.c */
+/* friend.c */
 int is_aloha_svc_enabled(void);
+#define aloha_notify_login  friend_svc_login
+#define aloha_notify_logout friend_svc_logout
+#define aloha_notify_reload friend_svc_reload
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id);
-int aloha_notify_login(const char *userid, pid_t pid, int sid);
-int aloha_notify_logout(const char *userid, pid_t pid);
-int aloha_notify_reload(const char *userid);
+int friend_svc_login(const char *userid, pid_t pid, int sid);
+int friend_svc_logout(const char *userid, pid_t pid);
+int friend_svc_reload(const char *userid);
 
 
 /* cgo.c */

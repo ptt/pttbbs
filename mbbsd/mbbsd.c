@@ -1114,7 +1114,7 @@ do_aloha(void)
         HasUserRole(ROLE_HIDE_FROM) || currutmp->invisible) {
         return;
     }
-    aloha_notify_login(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
+    friend_svc_login(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
 }
 
 static void
