@@ -192,7 +192,7 @@ substitute_ref_record(const char *direct, fileheader_t *fhdr, int ent)
     char fname[PATHLEN];
     int num = 0;
 
-    if (!(fhdr->filemode & FILE_BOTTOM) && (fhdr->multi.refer.flag) &&
+    if ((fhdr->multi.refer.flag) &&
         (num = fhdr->multi.refer.ref)) {
         setdirpath(fname, direct, FN_DIR);
         get_fileheader(fname, &hdr, num);

@@ -15,6 +15,11 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## bbs, cache: Replace .DIR.bottom with boardheader_t
+
+把置底 `.DIR.bottom` 改成只追蹤 index, 用 AID 的方式記在 boardheader_t 內。
+請關站轉換(或起碼停掉所有舊 mbbsd)。請用 `upgrade/dir_bottom_to_bh` 進行資料轉換。
+
 ## service/friend, talk, bbs: Offload friend_online
 
 把好友的計算移出 mbbsd 之外，有點像加強版的 UTMPD。

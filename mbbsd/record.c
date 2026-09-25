@@ -84,6 +84,7 @@ void safe_delete_range(const char *fpath, int id1, int id2)
 	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
 	/* rocker.011018: add new tag delete */
 	if (!((fhdr.filemode & FILE_MARKED) ||	/* 標記 */
+	      ((fhdr.filemode & FILE_BOTTOM) && (currstat != RMAIL)) || /* pinned; FILE_MULTI in mail */
 	      (fhdr.filemode & FILE_DIGEST) ||	/* 文摘 */
 	      (id1 && (i < id1 || i > id2)) ||	/* range */
 	      (!id1 && !FindTaggedItem(&fhdr)))) /* TagList */
@@ -134,6 +135,7 @@ delete_range(const char *fpath, int id1, int id2)
 	/* rocker.011018: add new tag delete */
 	if (
 	    (fhdr.filemode & FILE_MARKED) ||	/* 標記 */
+	    ((fhdr.filemode & FILE_BOTTOM) && (currstat != RMAIL)) || /* pinned; FILE_MULTI in mail */
 	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||
 	    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
 	    (id1 && (count < id1 || count > id2)) ||	/* range */

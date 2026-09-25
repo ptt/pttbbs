@@ -37,7 +37,6 @@
 #define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_DIR		".DIR"
-#define FN_DIR_BOTTOM   ".DIR.bottom"
 #define FN_BOARD        ".BRD"          /* board list */
 #define FN_USEBOARD     "usboard"       /* 看板統計 */
 #define FN_TOPSONG      "etc/topsong"

@@ -323,7 +323,6 @@ void
 reload_bcache(void)
 {
     int     i, fd;
-    pid_t   pid;
     for (i = 0; i < 10; ++i) {
 	if (__sync_bool_compare_and_swap(&SHM->Bbusystate, 0, 1))
 	    break;
@@ -341,6 +340,8 @@ reload_bcache(void)
     }
     memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time4_t));
     memset(SHM->total, 0, MAX_BOARD * sizeof(int));
+    for (i = 0; i < MAX_BOARD; ++i)
+        setbottomtotal(i + 1);
 
     /* 等所有 boards 資料更新後再設定 uptime */
     SHM->Buptime = SHM->Btouchtime;
@@ -348,25 +349,6 @@ reload_bcache(void)
     fprintf(stderr, "cache: reload bcache\r\n");
     SHM->Bbusystate = 0;
     sort_bcache();
-
-    fprintf(stderr, "load bottom in background\r\n");
-    if( (pid = fork()) > 0 )
-	return;
-    setproctitle("loading bottom");
-    for( i = 0 ; i < MAX_BOARD ; ++i )
-	if( SHM->bcache[i].brdname[0] ){
-	    char    fn[PATHLEN];
-	    int n;
-	    setbfile(fn, SHM->bcache[i].brdname, FN_DIR_BOTTOM);
-	    n = get_num_records(fn, sizeof(fileheader_t));
-	    if( n > 5 )
-		n = 5;
-	    SHM->n_bottom[i] = n;
-	}
-    fprintf(stderr, "load bottom done\r\n");
-    if( pid == 0 )
-	exit(0);
-    // if pid == -1 should be returned
 }
 
 void resolve_boards(void)
@@ -449,27 +431,94 @@ resolve_board_group(const int gid, const int type)
 	currbptr->next[type] = -1;
 }
 
+int
+getbottomtotal(int bid)
+{
+    if (bid < 1 || bid > MAX_BOARD)
+        return 0;
+    return SHM->n_bottom[bid - 1];
+}
+
+int
+resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS])
+{
+    if (bid < 1 || bid > MAX_BOARD)
+        return 0;
+    boardheader_t *bh = getbcache(bid);
+    if (!bh->brdname[0])
+        return 0;
+
+    int raw_count = 0;
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bh->bottom[i]) != 0)
+            raw_count++;
+    }
+    if (raw_count == 0)
+        return 0;
+
+    char fname[PATHLEN];
+    setbfile(fname, bh->brdname, FN_DIR);
+    int fd = open(fname, O_RDONLY);
+    if (fd < 0)
+        return 0;
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return 0;
+    }
+    int total = (int)(st.st_size / sizeof(fileheader_t));
+    /* bh->bottom lives in SHM and may be changed by pin_post() while we do
+     * .DIR I/O; work on a snapshot and only write back if unchanged. */
+    aidu_t snap[MAX_BOTTOM_POSTS], new_slots[MAX_BOTTOM_POSTS];
+    memcpy(snap, bh->bottom, sizeof(snap));
+    memset(new_slots, 0, sizeof(new_slots));
+    int valid_cnt = 0;
+    int dirty = 0;
+
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        aidu_t a = snap[i];
+        if (aidu_raw(a) == 0)
+            continue;
+        int old_idx = aidu_idx(a);
+        int found_idx = search_dir_by_aidu_fd(fd, total, a, FILE_BOTTOM, NULL);
+        if (found_idx > 0) {
+            int expected_idx = ((uint32_t)found_idx <= AIDU_IDX_MASK) ? found_idx : 0;
+            new_slots[valid_cnt] = aidu_with_idx(a, expected_idx);
+            if (out_recs)
+                out_recs[valid_cnt] = found_idx;
+            if (expected_idx != old_idx || valid_cnt != i)
+                dirty = 1;
+            valid_cnt++;
+        } else {
+            /* Original article was deleted from .DIR; drop dead bottom slot */
+            dirty = 1;
+        }
+    }
+    close(fd);
+
+    if (dirty && memcmp(snap, bh->bottom, sizeof(snap)) == 0) {
+        memcpy(bh->bottom, new_slots, sizeof(bh->bottom));
+        substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
+    }
+    SHM->n_bottom[bid - 1] = valid_cnt;
+    return valid_cnt;
+}
+
 void
 setbottomtotal(int bid)
 {
-    boardheader_t  *bh = getbcache(bid);
-    char            fname[PATHLEN];
-    int             n;
-
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
-    if(!bh->brdname[0]) return;
-    setbfile(fname, bh->brdname, FN_DIR ".bottom");
-    n = get_num_records(fname, sizeof(fileheader_t));
-    if(n>5)
-      {
-#ifdef DEBUG_BOTTOM
-        file_appendf("fix_bottom", "%s n:%d\n", fname, n);
-#endif
-        unlink(fname);
-        SHM->n_bottom[bid-1]=0;
-      }
-    else
-        SHM->n_bottom[bid-1]=n;
+    if (bid < 1 || bid > MAX_BOARD)
+        return;
+    boardheader_t *bh = getbcache(bid);
+    if (!bh->brdname[0])
+        return;
+    int n = 0;
+    for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
+        if (aidu_raw(bh->bottom[i]) != 0)
+            n++;
+    }
+    SHM->n_bottom[bid - 1] = n;
 }
 
 void

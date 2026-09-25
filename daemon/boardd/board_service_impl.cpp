@@ -140,12 +140,18 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
   }
   // Bottoms.
   if (req->include_bottoms()) {
-    std::vector<fileheader_t> fhs;
-    size_t offset = records::Get<fileheader_t>(
-        paths::bfile(bp->brdname, FN_DIR ".bottom"), 0, -1, &fhs);
-    for (auto &fh : fhs) {
-      mbs_safe_trim(fh.title);
-      AsPost(offset++, fh).Swap(rep->add_bottoms());
+    // Pinned posts are referenced from boardheader_t.bottom[] and live in
+    // .DIR itself (.DIR.bottom is migrated away).
+    int32_t recs[MAX_BOTTOM_POSTS];
+    int n = resolve_board_bottoms(bid, recs);
+    const std::string dir = paths::bfile(bp->brdname, FN_DIR);
+    for (int i = 0; i < n; i++) {
+      std::vector<fileheader_t> fhs;
+      size_t offset = records::Get<fileheader_t>(dir, recs[i] - 1, 1, &fhs);
+      if (fhs.empty())
+        continue;
+      mbs_safe_trim(fhs[0].title);
+      AsPost(offset, fhs[0]).Swap(rep->add_bottoms());
     }
   }
   return Status::OK;

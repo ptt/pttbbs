@@ -16,7 +16,7 @@ TALKOBJS  := friend.o talk.o ccw.o
 UTILOBJS  := stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o tag.o
 UIOBJS    := menu.o vtuikit.o psb.o
 PAGEROBJS := more.o pmore.o pager.o
-PLUGOBJS  := ordersong.o angel.o timecap.o aids.o
+PLUGOBJS  := ordersong.o angel.o timecap.o
 CHESSOBJS := chess.o chc.o chc_tab.o ch_gomo.o
 GAMEOBJS  := chicken.o gamble.o
 

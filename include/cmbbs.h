@@ -59,7 +59,6 @@ BanIpList *cached_banip_list(const char *basefile, const char *cachefile);
 #define getbcache(bid) (bcache + bid - 1)
 #define moneyof(uid) SHM->money[uid - 1]
 #define getbtotal(bid) SHM->total[bid - 1]
-#define getbottomtotal(bid) SHM->n_bottom[bid-1]
 SHM_t *create_shm(int *is_created);
 SHM_t *attach_shm(void);
 SHM_t *attach_check_SHM(void);
@@ -82,7 +81,23 @@ int  num_boards(void);
 void addbrd_touchcache(void);
 void reset_board(int bid);
 void resolve_board_group(int gid, int type);
+int  getbottomtotal(int bid);
+int  resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS]);
 void setbottomtotal(int bid);
+int  search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
+                            time4_t target_ts, unsigned int target_hex,
+                            int allow_prefix, int required_mode,
+                            fileheader_t *out_fh);
+int  search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
+                           int required_mode, fileheader_t *out_fh);
+int  search_dir_by_aidu(const char *direct, aidu_t aidu,
+                        int required_mode, fileheader_t *out_fh);
+/* aids.c */
+aidu_t fn2aidu(const char *fn);
+char *aidu2aidc(char *buf, aidu_t aidu);
+char *aidu2fn(char *buf, aidu_t aidu);
+aidu_t aidc2aidu(const char *aidc);
+int  search_aidu(char *bfile, aidu_t aidu);
 void setbtotal(int bid);
 void touchbpostnum(int bid, int delta);
 int  getbnum(const char *bname);

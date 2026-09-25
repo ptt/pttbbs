@@ -157,6 +157,53 @@ typedef enum {
     U_2FA_NEWIP = 2,
 } U_2FA;
 
+typedef uint64_t aidu_t;
+
+/* 64-bit aidu_t layout:
+ *   [63:45] 19-bit 1-based .DIR index hint (0 = unknown)
+ *   [44]    1-bit type (0 = M-type, 1 = G-type / AIDU_TYPE_G)
+ *   [43:12] 32-bit timestamp (M.<stamp>.A.<hex>)
+ *   [11:0]  12-bit hex suffix
+ */
+#define MAX_BOTTOM_POSTS 5
+#define AIDU_TYPE_G      (1ULL << 44)
+#define AIDU_RAW_MASK    0x00001FFFFFFFFFFFULL
+#define AIDU_IDX_SHIFT   45
+#define AIDU_IDX_MASK    0x7FFFFU
+
+static inline int aidu_type(aidu_t a) {
+    return (a & AIDU_TYPE_G) ? 1 : 0;
+}
+
+static inline time4_t aidu_stamp(aidu_t a) {
+    return (time4_t)((a >> 12) & 0xFFFFFFFFU);
+}
+
+static inline unsigned int aidu_hex(aidu_t a) {
+    return (unsigned int)(a & 0xFFFU);
+}
+
+static inline int aidu_idx(aidu_t a) {
+    return (int)((a >> AIDU_IDX_SHIFT) & AIDU_IDX_MASK);
+}
+
+static inline aidu_t aidu_raw(aidu_t a) {
+    return a & AIDU_RAW_MASK;
+}
+
+static inline aidu_t aidu_pack(int idx, time4_t stamp, unsigned int hex) {
+    uint32_t safe_idx = (idx > 0 && (uint32_t)idx <= AIDU_IDX_MASK) ? (uint32_t)idx : 0U;
+    return (((aidu_t)safe_idx) << AIDU_IDX_SHIFT) |
+           (((aidu_t)(uint32_t)stamp) << 12) |
+           ((aidu_t)(hex & 0xFFFU));
+}
+
+static inline aidu_t aidu_with_idx(aidu_t a, int idx) {
+    uint32_t safe_idx = (idx > 0 && (uint32_t)idx <= AIDU_IDX_MASK) ? (uint32_t)idx : 0U;
+    return (a & AIDU_RAW_MASK) |
+           (((aidu_t)safe_idx) << AIDU_IDX_SHIFT);
+}
+
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */
@@ -192,7 +239,7 @@ typedef struct boardheader_t { /* 256 bytes */
     uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
     time4_t SRexpire;		    /* SR Records expire time */
-    char    pad4[40];
+    aidu_t  bottom[MAX_BOTTOM_POSTS]; /* 5 * 8 = 40 bytes */
 } PACKSTRUCT boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
@@ -290,7 +337,7 @@ typedef struct fileheader_t { /* 128 bytes */
  * please help verify and finish these.
  */
 /* modes to invalid multi.money */
-#define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | \
+#define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_DIGEST | \
                             FILE_VOTE | FILE_BID)
 
 
