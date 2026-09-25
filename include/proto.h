@@ -522,10 +522,9 @@ char *completeutmp_getname(int where);
     generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->Bnumber, \
 	&completeboard_compar, &complete_board_and_group_permission, \
 	&completeboard_getname)
+int complete_online_user(const char *prompt, char *data, int len);
 #define CompleteOnlineUser(MSG,BUF) \
-    generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->UTMPnumber, \
-	&completeutmp_compar, &completeutmp_permission, \
-	&completeutmp_getname)
+    complete_online_user(MSG, BUF, sizeof(BUF))
 
 /* othello */
 int othello_main(void);

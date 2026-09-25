@@ -219,6 +219,10 @@
 #define HASH_BITS         (16)           /* userid->uid hashing bits */
 #endif
 
+#ifndef USERLIST_SNAPSHOT_EXPIRE_SECS
+#define USERLIST_SNAPSHOT_EXPIRE_SECS (10)       /* seconds before userlist snapshot is refreshed */
+#endif
+
 #ifndef OVERLOADBLOCKFDS
 #define OVERLOADBLOCKFDS  (0)            /* 超載後會保留這麼多個 fd */
 #endif

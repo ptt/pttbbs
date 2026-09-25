@@ -579,27 +579,59 @@ completeboard_getname(int where)
 }
 
 /* general complete functions (utmpshm) */
+typedef struct {
+    int *slots;
+    int count;
+} gnc_utmp_ctx_t;
+
+static gnc_utmp_ctx_t gnc_utmp = { NULL, 0 };
+
 int
 completeutmp_compar(int where, const char *str, int len)
 {
-    userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
+    if (!gnc_utmp.slots || where < 0 || where >= gnc_utmp.count)
+        return 1;
+    userinfo_t *u = &SHM->uinfo[gnc_utmp.slots[where]];
     return strncasecmp(u->userid, str, len);
 }
 
 int
 completeutmp_permission(int where)
 {
-   userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
+    if (!gnc_utmp.slots || where < 0 || where >= gnc_utmp.count)
+        return 0;
+    userinfo_t *u = &SHM->uinfo[gnc_utmp.slots[where]];
     return (unlikely(HasUserPerm(PERM_SYSOP)) ||
 	    unlikely(HasUserPerm(PERM_SEECLOAK)) ||
-//	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
 	    isvisible(currutmp, u));
 }
 
 char           *
 completeutmp_getname(int where)
 {
-    return SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]].userid;
+    if (!gnc_utmp.slots || where < 0 || where >= gnc_utmp.count)
+        return "";
+    return SHM->uinfo[gnc_utmp.slots[where]].userid;
+}
+
+int
+complete_online_user(const char *prompt, char *data, int len)
+{
+    gnc_utmp.slots = get_utmp_snapshot(&gnc_utmp.count);
+    if (gnc_utmp.slots) {
+        sort_utmp_snapshot(gnc_utmp.slots, gnc_utmp.count, UTMP_SORT_USERID);
+    }
+    int idx = generalnamecomplete(prompt, data, len, gnc_utmp.count,
+                                  &completeutmp_compar, &completeutmp_permission,
+                                  &completeutmp_getname);
+    int res = (gnc_utmp.slots && idx >= 0 && idx < gnc_utmp.count)
+              ? gnc_utmp.slots[idx] : -1;
+    if (gnc_utmp.slots) {
+        free_utmp_snapshot(gnc_utmp.slots);
+        gnc_utmp.slots = NULL;
+        gnc_utmp.count = 0;
+    }
+    return res;
 }
 
 static void

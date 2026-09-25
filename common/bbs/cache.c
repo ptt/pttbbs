@@ -236,6 +236,74 @@ search_ulist_userid(const char *userid)
 }
 
 /*
+ * section - utmp snapshot
+ */
+static int
+cmputmp_snapshot_userid(const void *i, const void *j)
+{
+    int uslot_a = *(const int *)i;
+    int uslot_b = *(const int *)j;
+    return strcasecmp(SHM->uinfo[uslot_a].userid, SHM->uinfo[uslot_b].userid);
+}
+
+static int
+cmputmp_snapshot_from(const void *i, const void *j)
+{
+    int uslot_a = *(const int *)i;
+    int uslot_b = *(const int *)j;
+    return memcmp(&(SHM->uinfo[uslot_a].from_ip), &(SHM->uinfo[uslot_b].from_ip),
+                  sizeof(SHM->uinfo[0].from_ip));
+}
+
+int
+refresh_utmp_snapshot(int *slots)
+{
+    if (!slots || !SHM)
+        return 0;
+    int count = 0;
+    for (int i = 0; i < USHM_SIZE; i++) {
+        if (SHM->uinfo[i].pid > 0 && SHM->uinfo[i].userid[0])
+            slots[count++] = i;
+    }
+    return count;
+}
+
+int *
+get_utmp_snapshot(int *out_count)
+{
+    int *slots = (int *)mmap(NULL, sizeof(int) * USHM_SIZE,
+                             PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (slots == MAP_FAILED) {
+        if (out_count)
+            *out_count = 0;
+        return NULL;
+    }
+    int count = refresh_utmp_snapshot(slots);
+    if (out_count)
+        *out_count = count;
+    return slots;
+}
+
+void
+sort_utmp_snapshot(int *slots, int count, int sort_type)
+{
+    if (!slots || count <= 1 || !SHM)
+        return;
+    if (sort_type == UTMP_SORT_USERID)
+        qsort(slots, count, sizeof(int), cmputmp_snapshot_userid);
+    else if (sort_type == UTMP_SORT_FROM)
+        qsort(slots, count, sizeof(int), cmputmp_snapshot_from);
+}
+
+void
+free_utmp_snapshot(int *slots)
+{
+    if (slots)
+        munmap(slots, sizeof(int) * USHM_SIZE);
+}
+
+/*
  * section - money cache
  */
 int
