@@ -188,27 +188,9 @@ getindex(const char *direct, fileheader_t *fhdr, int end)
 int
 substitute_ref_record(const char *direct, fileheader_t *fhdr, int ent)
 {
-    fileheader_t hdr;
-    char fname[PATHLEN];
-    int num = 0;
-
-    if ((fhdr->multi.refer.flag) &&
-        (num = fhdr->multi.refer.ref)) {
-        setdirpath(fname, direct, FN_DIR);
-        get_fileheader(fname, &hdr, num);
-        if (strcmp(hdr.filename, fhdr->filename)) {
-            if ((num = getindex_m(fname, fhdr, num, 1)) > 0) {
-                modify_fileheader(fname, fhdr, num);
-            }
-        } else if (num > 0) {
-            fhdr->multi.money = hdr.multi.money;
-            modify_fileheader(fname, fhdr, num);
-        }
-        fhdr->multi.refer.flag = 1;
-        fhdr->multi.refer.ref = num;
-    }
-    modify_fileheader(direct, fhdr, ent);
-    return num;
+    /* ent may be stale (e.g. remapped index in select mode); only write
+     * if the record at ent is still the same file. */
+    return substitute_fileheader(direct, fhdr, fhdr, ent);
 }
 
 static int

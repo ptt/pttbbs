@@ -149,17 +149,37 @@ int delete_fileheader(const char *dir_path, const void *rptr, int id);
 int is_valid_fileheader(const fileheader_t *fhdr);
 
 /* search.c */
+#define MAX_SEARCH_PREDICATES   8
+#define SEARCH_SVC_WINDOW_SIZE  4096
+#define SEARCH_SVC_MAGIC        0x53524348U
+#define SEARCH_AID_MAGIC        0x53414944U
+#define SEARCH_INVAL_MAGIC      0x53494E56U
+
 typedef struct fileheader_predicate_t {
-    int mode;
+    int32_t mode;
     char keyword[TTLEN + 1];
-    int recommend;
-    int money;
+    int32_t recommend;
+    int32_t money;
 } fileheader_predicate_t;
 
 void select_read_name(char *buf, size_t size, const char *base,
                       const fileheader_predicate_t *pred);
 
 int match_fileheader_predicate(const fileheader_t *fh, void *arg);
+
+int search_svc_connect(void);
+int search_svc_io(int fd, void *buf, size_t len, int is_write);
+int search_svc_invalidate(const char *direct, int bid);
+
+int search_predicates_local(const char *direct,
+                            const fileheader_predicate_t *preds, int num_preds,
+                            int offset, int limit,
+                            int32_t *out_indices, int *out_total);
+
+int search_predicates_window(const char *direct, int bid,
+                             const fileheader_predicate_t *preds, int num_preds,
+                             int offset, int limit,
+                             int32_t *out_indices, int *out_total);
 
 int select_read_build(const char *src_direct, const char *dst_direct,
                       int src_direct_has_reference, time4_t resume_from,
