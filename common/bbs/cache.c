@@ -818,33 +818,17 @@ resolve_fcache(void)
 void
 hbflreload(int bid)
 {
-    int             hbfl[MAX_FRIEND + 1], i, num, uid;
-    char            buf[128];
-    FILE           *fp;
-
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    memset(hbfl, 0, sizeof(hbfl));
-    setbfile(buf, bcache[bid - 1].brdname, FN_VISABLE);
-    if ((fp = fopen(buf, "r")) != NULL) {
-	for (num = 1; num <= MAX_FRIEND; ++num) {
-	    if (fgets(buf, sizeof(buf), fp) == NULL)
-		break;
-	    for (i = 0; buf[i] != 0; ++i)
-		if (buf[i] == ' ') {
-		    buf[i] = 0;
-		    break;
-		}
-	    if (strcasecmp(STR_GUEST, buf) == 0 ||
-		(uid = searchuser(buf, NULL)) == 0) {
-		--num;
-		continue;
-	    }
-	    hbfl[num] = uid;
-	}
-	fclose(fp);
+    /* Legacy binaries still read SHM->hbfl during the compat window; zero the
+     * load time so they reload from the visable file instead of using a stale
+     * list. */
+    if (COMMON_TIME < FRIEND_LEGACY_COMPAT_CUTOFF) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	SHM->deprecated_hbfl[bid - 1][0] = 0;
+#pragma GCC diagnostic pop
     }
-    hbfl[0] = COMMON_TIME;
-    memcpy(SHM->hbfl[bid-1], hbfl, sizeof(hbfl));
+    friend_svc_hbfl_reload(bid);
 }
 
 /* 是否通過板友測試. 如果在板友名單中的話傳回 1, 否則為 0 */
@@ -852,13 +836,18 @@ int
 is_hidden_board_friend(int bid, int uid)
 {
     int             i;
+    char            buf[PATHLEN];
+    const char     *userid;
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    if (SHM->hbfl[bid-1][0] < login_start_time - HBFLexpire)
-	hbflreload(bid);
-    for (i = 1; SHM->hbfl[bid-1][i] != 0 && i <= MAX_FRIEND; ++i) {
-	if (SHM->hbfl[bid-1][i] == uid)
-	    return 1;
-    }
-    return 0;
+    if (uid <= 0)
+	return 0;
+    i = friend_svc_is_hidden_board_friend(bid, uid);
+    if (i >= 0)
+	return i;
+    userid = getuserid(uid);
+    if (!userid || !*userid || strcasecmp(STR_GUEST, userid) == 0)
+	return 0;
+    setbfile(buf, bcache[bid - 1].brdname, FN_VISABLE);
+    return file_exist_entry(buf, userid) ? 1 : 0;
 }
