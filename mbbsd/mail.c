@@ -2024,11 +2024,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	return FULLUPDATE;
     }
 
-#ifdef USE_COOLDOWN
-   if(check_cooldown(&bcache[xbid - 1]))
-       return READ_REDRAW;
-#endif
-
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     strip_control_sequence(xtitle, xtitle);
 
@@ -2066,11 +2061,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	append_fileheader(fname, &xfile);
 	setbtotal(getbnum(xboard));
 
-#ifdef USE_COOLDOWN
-	if (bcache[getbnum(xboard) - 1].brdattr & BRD_COOLDOWN)
-	    add_cooldowntime(usernum, 5);
-	add_posttimes(usernum, 1);
-#endif
         log_crosspost_in_allpost(xboard, &xfile);
 
 	// cross-post does not add numpost.

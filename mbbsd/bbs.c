@@ -1332,10 +1332,6 @@ do_post_article(int edflags)
 	vmsgf("未達看板發文限制: %s", genbuf);
 	return FULLUPDATE;
     }
-#ifdef USE_COOLDOWN
-   if(check_cooldown(bp))
-       return READ_REDRAW;
-#endif
     clear();
 
 #ifdef USE_POST_CAPTCHA_FOR_NOREG
@@ -1647,14 +1643,6 @@ do_post_article(int edflags)
 
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
-#ifdef USE_COOLDOWN
-        if(bp->nuser>30)
-	{
-	    if (time4_lt(cooldowntimeof(usernum), now))
-		add_cooldowntime(usernum, 5);
-	}
-	add_posttimes(usernum, 1);
-#endif
 #ifdef USE_POSTD
         PostAddRecord(bp->brdname, &postfile, dashc(fpath));
 #endif
@@ -2203,13 +2191,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-#ifdef USE_COOLDOWN
-    if(check_cooldown(getbcache(xbid))) {
-	vmsg("該看板現在無法轉錄。");
-	return FULLUPDATE;
-    }
-#endif
-
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     // FIXME 這裡可能會有人偷偷生出保留標題(如[公告])
     // 不過算了，直接劣退這種人比較方便
@@ -2337,14 +2318,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 */
 	setbdir(fname, xboard);
 	append_fileheader(fname, &xfile);
-#ifdef USE_COOLDOWN
-        if(bp->nuser>30)
-	{
-	    if (time4_lt(cooldowntimeof(usernum), now))
-		add_cooldowntime(usernum, 5);
-	}
-	add_posttimes(usernum, 1);
-#endif
 	setbtotal(getbnum(xboard));
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
@@ -2932,11 +2905,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
     }
 
-
-#ifdef USE_COOLDOWN
-       if(check_cooldown(bp))
-	  return FULLUPDATE;
-#endif
 
     type = RECTYPE_GOOD;
 
@@ -3545,10 +3513,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                             as_badpost ? "退回" : "刪除",
                             reason[0] ? "。原因:" : "", reason);
                     sendalert_uid(tusernum, ALERT_PWD_PERM);
-#ifdef USE_COOLDOWN
-		    if (bp->brdattr & BRD_COOLDOWN)
-			add_cooldowntime(tusernum, 15);
-#endif
 		}
 	    }
 	    else
@@ -4332,44 +4296,6 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
     }
     return FULLUPDATE;
 }
-
-#ifdef USE_COOLDOWN
-
-int check_cooldown(boardheader_t *bp)
-{
-    int diff = (int)time4_diff(cooldowntimeof(usernum), now);
-    int i, limit[8] = {4000,1,2000,2,1000,3,-1,10};
-
-    if(diff<0)
-	SHM->cooldowntime[usernum - 1] &= 0xFFFFFFF0;
-    else if( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-    {
-      if( bp->brdattr & BRD_COOLDOWN )
-       {
-  	 vmsgf("冷靜一下吧！ (限制 %d 分 %d 秒)", diff/60, diff%60);
-	 return 1;
-       }
-      else if(posttimesof(usernum)==0xf)
-      {
-	 vmsgf("對不起，您被設退文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
-	 return 1;
-      }
-#ifdef REJECT_FLOOD_POST
-      else
-      {
-        for(i=0; i<4; i++)
-          if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
-          {
-	    vmsgf("對不起，您的文章或推文間隔太近囉！ (限制 %d 分 %d 秒)",
-		  diff/60, diff%60);
-	    return 1;
-          }
-      }
-#endif // REJECT_FLOOD_POST
-   }
-   return 0;
-}
-#endif
 
 static int
 mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
