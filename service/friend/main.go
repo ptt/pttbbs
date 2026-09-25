@@ -86,6 +86,13 @@ func main() {
 
 	var verbose verboseValue
 
+	defaultReconcile := 1 * time.Hour
+	defaultUIDTag := true
+	if daemon.IsLegacyCompatActive(time.Now()) {
+		defaultReconcile = 10 * time.Second
+		defaultUIDTag = false
+	}
+
 	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/friend.svc.log)")
 	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
 	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -D)")
@@ -93,13 +100,25 @@ func main() {
 	maxProcs := flag.Int("maxprocs", 2, "GOMAXPROCS limit (default: 2)")
 	maxThreads := flag.Int("maxthreads", 1000, "Max OS threads limit (default: 1000)")
 	gcPercent := flag.Int("gcpercent", 50, "GC percent target (default: 50)")
-	reconcileInterval := flag.Duration("reconcile-interval", 1*time.Hour, "Interval for periodic session reconciliation (default: 1h). Set to 0 to disable.")
-	flag.DurationVar(reconcileInterval, "reconcile", 1*time.Hour, "Alias for -reconcile-interval")
+	reconcileInterval := flag.Duration("reconcile-interval", defaultReconcile, "Interval for periodic session reconciliation (default: 10s before 2026/09/27 09:00, 1h after). Set to 0 to disable.")
+	flag.DurationVar(reconcileInterval, "reconcile", defaultReconcile, "Alias for -reconcile-interval")
+	enableUIDTag := flag.Bool("uid-tag", defaultUIDTag, "Pack 6-bit uid_tag in friend_online[18..23] (default: false before 2026/09/27 09:00, true after)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
 
 	os.Args = append([]string{os.Args[0]}, preprocessArgs(os.Args[1:])...)
 	flag.Parse()
+
+	reconcileFlagSet := false
+	uidTagFlagSet := false
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "reconcile", "reconcile-interval":
+			reconcileFlagSet = true
+		case "uid-tag":
+			uidTagFlagSet = true
+		}
+	})
 
 	if *debugMode {
 		*daemonize = false
@@ -141,7 +160,7 @@ func main() {
 	// Print startup banner so stdout receives startup feedback when running directly or in debug
 	fmt.Printf("[friend.svc] Starting PTT BBS Friend Service...\n")
 	fmt.Printf("[friend.svc] BBSHOME: %s, Log: %s\n", bbsHome, *logPath)
-	fmt.Printf("[friend.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, Verbose=%d\n", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, int(verbose))
+	fmt.Printf("[friend.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, UIDTag=%v, Verbose=%d\n", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, *enableUIDTag, int(verbose))
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
@@ -155,7 +174,7 @@ func main() {
 				// Write startup banner to log file as well
 				log.Printf("[friend.svc] Starting PTT BBS Friend Service...")
 				log.Printf("[friend.svc] BBSHOME: %s, Log: %s", bbsHome, *logPath)
-				log.Printf("[friend.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, Verbose=%d", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, int(verbose))
+				log.Printf("[friend.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, ReconcileInterval=%v, UIDTag=%v, Verbose=%d", runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, *reconcileInterval, *enableUIDTag, int(verbose))
 			} else {
 				log.Printf("[friend.svc] Warning: failed to open log file %s: %v", *logPath, err)
 			}
@@ -168,7 +187,12 @@ func main() {
 	}
 
 	service.SetVerbose(int(verbose))
-	service.SetReconcileInterval(*reconcileInterval)
+	if reconcileFlagSet {
+		service.SetReconcileInterval(*reconcileInterval)
+	}
+	if uidTagFlagSet {
+		service.SetEnableUIDTag(*enableUIDTag)
+	}
 
 	if err := service.Start(); err != nil {
 		log.Fatalf("[friend.svc] Service stopped with error: %v", err)

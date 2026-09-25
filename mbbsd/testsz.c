@@ -49,6 +49,20 @@ int main()
     ENSURE(fav_board_t, 12);
     ENSURE(fav_type_t, 16);
 
+    assert(FRIEND_ONLINE_SLOT_BITS + FRIEND_ONLINE_UID_BITS + FRIEND_ONLINE_STAT_BITS == 32);
+    assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS));
+    assert((ST_FRIEND | ST_SUPER | ST_REJECT) <= (int)FRIEND_ONLINE_STAT_MASK);
+    {
+        unsigned int packed = FRIEND_ONLINE_PACK(ST_FRIEND | ST_REJECT, MAX_USERS, USHM_SIZE - 1);
+        assert(FRIEND_ONLINE_SLOT(packed) == USHM_SIZE - 1);
+        assert(FRIEND_ONLINE_RAW_STAT(packed) == (ST_FRIEND | ST_SUPER | ST_REJECT));
+        assert(FRIEND_ONLINE_STAT(packed) == (ST_FRIEND | ST_SUPER));
+        assert(FRIEND_ONLINE_VALID_UID(packed, MAX_USERS));
+
+        unsigned int packed_rej = FRIEND_ONLINE_PACK(ST_REJECT, MAX_USERS, USHM_SIZE - 1);
+        assert(FRIEND_ONLINE_STAT(packed_rej) == ST_REJECT);
+    }
+
     // Y2038 overflow verification test (Year 2040 & Year 2100)
     time4_t t2040 = (time4_t)2208988800U; // 2040-01-01 00:00:00 UTC
     struct tm *tm2040 = localtime4(&t2040);

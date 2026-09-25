@@ -575,17 +575,9 @@ int a_angelreport() {
 
 inline int
 angel_reject_me(userinfo_t * uin){
-    int* iter = uin->reject;
-    int unum;
-    while ((unum = *iter++)) {
-	if (unum == currutmp->uid) {
-            // ¶W¯Å¦n¤Í?
-            if (intbsearch(unum, uin->myfriend, uin->nFriends))
-                return 0;
-	    return 1;
-	}
-    }
-    return 0;
+    if (!currutmp || !uin)
+        return 0;
+    return (friend_stat(currutmp, uin) & HRM) != 0;
 }
 
 static void
