@@ -374,11 +374,20 @@ select_by_aid(const keeploc_t * locmem, int *pnew_ln, int *pnewdirect_new_ln,
 	/* FIXME: 置底文但沒列在 .DIR.bottom 的在這段會搜不到，
 	   在下一段 search board 時才會搜到本體。難解。 */
 	{
-	    char buf[FNLEN];
-
-	    snprintf(buf, FNLEN, "%s.bottom", FN_DIR);
-	    setbfile(dirfile, currboard, buf);
-	    if((n = search_aidu(dirfile, aidu)) >= 0)
+	    n = -1;
+	    if (currbid > 0) {
+		int32_t brecs[MAX_BOTTOM_POSTS];
+		int bcnt = resolve_board_bottoms(currbid, brecs);
+		const boardheader_t *bp = getbcache(currbid);
+		for (int i = 0; i < bcnt; i++) {
+		    aidu_t baidu = aidu_raw(bp->bottom[i]);
+		    if (baidu == aidu_raw(aidu)) {
+			n = i;
+			break;
+		    }
+		}
+	    }
+	    if (n >= 0)
 	    {
 		n += getbtotal(currbid);
 		/* 不可用 bottom_line，因為如果是在 digest mode，
@@ -676,7 +685,20 @@ typedef struct {
     int total;
     int bottom_line;
     bool reverse_order;
+    int32_t bottom_recs[MAX_BOTTOM_POSTS];
+    int bottom_count;
 } read_view_t;
+
+static inline int
+read_view_bottom_real_recno(const read_view_t *view, int disp_ln)
+{
+    if (disp_ln > view->bottom_line) {
+        int b_idx = disp_ln - view->bottom_line - 1;
+        if (b_idx >= 0 && b_idx < view->bottom_count)
+            return view->bottom_recs[b_idx];
+    }
+    return disp_ln;
+}
 
 static inline int
 read_view_v2p(const read_view_t *view, int vidx) {
@@ -1241,14 +1263,9 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
         cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
 
-        int num = cx->locmem->crs_ln - cx->bottom_line;
+        int real_ent = read_view_bottom_real_recno(&cx->view, cx->locmem->crs_ln);
         int row = ctx->curr - ctx->base;
-        int mode;
-        if (num > 0) {
-            mode = (*func)(num, &headers[row], TEMPFORMAT(PATHLEN, "%s.bottom", currdirect), row);
-        } else {
-            mode = (*func)(cx->locmem->crs_ln, &headers[row], currdirect, row);
-        }
+        int mode = (*func)(real_ent, &headers[row], currdirect, row);
 
         if (mode == READ_SKIP)
             mode = lastmode;
@@ -1342,10 +1359,16 @@ get_records_and_bottom(const char *direct,  fileheader_t* headers,
     if (rv + n > headers_size)
 	n = headers_size - rv;
 
-    if (n > 0) {
-	n = get_fileheaders(TEMPFORMAT(PATHLEN, "%s.bottom", direct), headers+rv, recbase, n);
-	if (n < 0) n = 0;
-	rv += n;
+    if (n > 0 && currbid > 0) {
+	int32_t brecs[MAX_BOTTOM_POSTS];
+	int bcnt = resolve_board_bottoms(currbid, brecs);
+	int fd = -1;
+	for (int i = 0; i < n && (recbase - 1 + i) < bcnt; i++) {
+	    if (get_fileheaders_keep(direct, &headers[rv], brecs[recbase - 1 + i], 1, &fd) > 0)
+	        rv++;
+	}
+	if (fd != -1)
+	    close(fd);
     }
 
     ENDSTAT(STAT_BOARDREC);
@@ -1398,7 +1421,16 @@ read_renderer(int idx, PSB_CTX *psbctx)
     int i = idx - psbctx->cmd.base;
     if (i >= 0 && i < cx->entries) {
         int disp_num = read_view_v2p(&cx->view, idx);
-        (*cx->doentry)(disp_num, &headers[i]);
+        fileheader_t fh = headers[i];   /* display copy only */
+        /* Pinned state follows the loaded view, not live SHM counts: rows
+         * redrawn without a reload must match what the cursor acts on. */
+        if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
+            if (disp_num > cx->view.bottom_line)
+                fh.filemode |= FILE_BOTTOM;
+            else
+                fh.filemode &= ~FILE_BOTTOM;  /* original of a pinned post */
+        }
+        (*cx->doentry)(disp_num, &fh);
     }
     return 0;
 }
@@ -1436,7 +1468,8 @@ read_loader(PSB_CTX *psbctx)
                 last_line = getbtotal(currbid);
             }
             cx->bottom_line = last_line;
-            last_line += getbottomtotal(currbid);
+            cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
+            last_line += cx->view.bottom_count;
         } else {
             cx->bottom_line = last_line = get_num_records(currdirect, FHSZ);
         }
@@ -1481,8 +1514,11 @@ read_loader(PSB_CTX *psbctx)
 
     if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
         int btotal = getbtotal(currbid);
-        int rec_num = btotal + getbottomtotal(currbid);
-        if (last_line != rec_num) {
+        /* Always re-resolve: pinned records may have shifted (physical
+         * deletion) even when the counts are unchanged. */
+        cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
+        int rec_num = btotal + cx->view.bottom_count;
+        if (last_line != rec_num || cx->bottom_line != btotal) {
             cx->bottom_line = btotal;
             last_line = rec_num;
             cx->view.total = last_line;
