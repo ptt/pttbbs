@@ -236,7 +236,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 		break;
 	    if (!is_valid_fileheader(&newfhdr))
 		continue;
-	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST) )
+	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST | FILE_BOTTOM) )
 		continue;
 	    if(newfhdr.filename[0]=='L') newfhdr.filename[0]='M';
 	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));

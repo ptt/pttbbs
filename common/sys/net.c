@@ -145,11 +145,17 @@ int toconnectex(const char *addr, int timeout)
 
 int toconnect3(const char *addr, int timeout, int microseconds)
 {
+    return toconnect_timed(addr, timeout, microseconds, 0);
+}
+
+int toconnect_timed(const char *addr, int timeout, int microseconds, int io_timeout)
+{
     int sock, n GCC_UNUSED = 1;
     assert(addr && *addr);
 
     if (!isdigit(addr[0]) && addr[0] != ':' && addr[0] != '*') {
 	struct sockaddr_un serv_name;
+	int timed = timeout > 0 || (timeout == 0 && microseconds > 0);
 
 	if ( (sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket");
@@ -159,12 +165,28 @@ int toconnect3(const char *addr, int timeout, int microseconds)
         setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
 #endif
 
+	if (timed) {
+	    struct timeval ctv;
+	    ctv.tv_sec = timeout;
+	    ctv.tv_usec = microseconds;
+	    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &ctv, sizeof(ctv));
+	}
+
 	serv_name.sun_family = AF_UNIX;
 	STRLCPY(serv_name.sun_path, addr);
 
 	if (connect(sock, (struct sockaddr *)&serv_name, sizeof(serv_name)) < 0) {
 	    close(sock);
 	    return -1;
+	}
+
+	if (io_timeout > 0) {
+	    struct timeval itv = { .tv_sec = io_timeout, .tv_usec = 0 };
+	    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &itv, sizeof(itv));
+	    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &itv, sizeof(itv));
+	} else if (timed) {
+	    struct timeval ztv = { 0, 0 };
+	    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &ztv, sizeof(ztv));
 	}
     }
     else {
@@ -243,6 +265,12 @@ int toconnect3(const char *addr, int timeout, int microseconds)
 	    else
 		oflags |= O_NONBLOCK;
 	    fcntl(sock, F_SETFL, oflags);
+	}
+
+	if (io_timeout > 0) {
+	    struct timeval itv = { .tv_sec = io_timeout, .tv_usec = 0 };
+	    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &itv, sizeof(itv));
+	    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &itv, sizeof(itv));
 	}
     }
 
