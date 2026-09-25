@@ -535,7 +535,7 @@ typedef struct {
     char    gap_14[sizeof(int)];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
     char    gap_15[sizeof(int)];
-    int     hbfl[MAX_BOARD][MAX_FRIEND + 1]; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
+    int     deprecated_hbfl[MAX_BOARD][MAX_FRIEND + 1] __attribute__ ((deprecated)); /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
     char    gap_16[sizeof(int)];
     time4_t lastposttime[MAX_BOARD];
     char    gap_17[sizeof(int)];
