@@ -156,6 +156,7 @@ int tobindex (const char *addr, int qlen, int (*setsock)(int), int do_listen);
 int toconnect(const char *addr);
 int toconnectex(const char *addr, int timeout);
 int toconnect3(const char *addr, int timeout, int microseconds);
+int toconnect_timed(const char *addr, int connect_timeout, int microseconds, int io_timeout);
 int toread   (int fd, void *buf, int len);
 int towrite  (int fd, const void *buf, int len);
 int torecv   (int fd, void *buf, int len, int flag);

@@ -73,20 +73,6 @@ is_file_owner_id(const fileheader_t *fhdr, const char *userid) {
 int
 query_file_money(const fileheader_t *pfh)
 {
-    fileheader_t hdr;
-
-    if(	(currmode & MODE_SELECT) &&
-	(pfh->multi.refer.flag) &&
-	(pfh->multi.refer.ref > 0)) // really? not sure, copied from other's code
-    {
-	char genbuf[PATHLEN];
-
-	/* it is assumed that in MODE_SELECT, currboard is selected. */
-	setbfile(genbuf, currboard, FN_DIR);
-	get_fileheader(genbuf, &hdr, pfh->multi.refer.ref);
-	pfh = &hdr;
-    }
-
     if(pfh->filemode & INVALIDMONEY_MODES || pfh->multi.money > MAX_POST_MONEY)
 	return -1;
 
@@ -151,6 +137,13 @@ modify_dir_lite(
     // PttLock(fd, sz, sizeof(fhdr), F_UNLCK);
 
     close(fd);
+    if (currstat != RMAIL && currbid > 0 && !(currmode & MODE_DIGEST)) {
+	boardheader_t *bp = getbcache(currbid);
+	if (bp) {
+	    syncnow();
+	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+	}
+    }
     return 0;
 }
 
@@ -171,7 +164,7 @@ check_locked(fileheader_t *fhdr)
     if (!(fhdr->filemode & FILE_MARKED))
 	return;
     syncnow();
-    bp->SRexpire = now;
+    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 
 #ifdef ALERT_M_PLUS_L
     {
@@ -1548,8 +1541,6 @@ do_post_article(int edflags)
                       (int)now, cuser.userid, bfilepath, money);
         }
 
-	if( currmode & MODE_SELECT )
-	    append_fileheader(currdirect, &postfile);
 	brc_addlist(postfile.filename, postfile.modified);
 
         if (IS_OPENBRD(bp)) {
@@ -3217,7 +3208,10 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
             fileheader_t *fh = recs + i;
             const char *bypass = NULL;
 
-            if (check_mark && fh->filemode & FILE_MARKED) {
+            /* FILE_BOTTOM aliases FILE_MULTI in mail. */
+            if (is_board && (fh->filemode & FILE_BOTTOM)) {
+                bypass = "置底文章";
+            } else if (check_mark && fh->filemode & FILE_MARKED) {
                 bypass = "標記為 m 的項目";
             } else if (check_digest && fh->filemode & FILE_DIGEST) {
                 /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
@@ -3294,6 +3288,11 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
     ret = del_range(ent, fhdr, direct, direct);
     if (ret == DIRCHANGED) {
         setbtotal(currbid);
+        if (currbid > 0) {
+            boardheader_t *bp = getbcache(currbid);
+            syncnow();
+            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+        }
     }
     return ret;
 }
@@ -3527,6 +3526,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "\n",
                         cuser.numposts, del_fee);
 	    }
+            if (currbid > 0) {
+                syncnow();
+                bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+            }
             pressanykey();
 	    return DIRCHANGED;
 	} else { // delete_fileheader
@@ -3564,6 +3567,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
     bp = getbcache(currbid);
     assert(bp);
+    /* On-disk identity before the M/L rename below. */
+    fileheader_t orig = *fhdr;
 
 #ifdef USE_LIVE_ALLPOST
     // In case idiots do this in ALLPOST...
@@ -3616,9 +3621,10 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
     }
     // TODO fix race condition here.
-    substitute_ref_record(direct, fhdr, ent);
+    /* fhdr->filename was renamed (M<->L); match against the original name. */
+    substitute_fileheader(direct, &orig, fhdr, ent);
     syncnow();
-    bp->SRexpire = now;
+    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
     return FULLUPDATE;
 }
 
@@ -3627,23 +3633,10 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
                  int mode_mask)
 {
     int ret = 0;
-    char dirpath[PATHLEN];
 
     if (!(currmode & MODE_BOARD))
         return DONOTHING;
 
-    if (currmode & MODE_SELECT) {
-        if (!fhdr->multi.refer.flag) {
-            vmsg("請退出搜尋模式再進行此項設定。");
-            return READ_REDRAW;
-        }
-        // Try to solve entx and direct. Note fhdr does not need to be changed.
-        // Instead of updating original "direct", we simply wait for SRexpire to
-        // change before return.
-        ent = fhdr->multi.refer.ref;
-        setdirpath(dirpath, direct, FN_DIR);
-        direct = dirpath;
-    }
     do {
         if (fhdr->filemode & mode_mask) {
             // clear
@@ -3666,7 +3659,7 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
     } else {
         boardheader_t *bp = getbcache(currbid);
         if (bp)
-            bp->SRexpire = now;
+            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
     }
 
     check_locked(fhdr);
@@ -3700,6 +3693,13 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     fhdr->recommend = 0;
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
+    if (currbid > 0 && !(currmode & MODE_DIGEST)) {
+	boardheader_t *bp = getbcache(currbid);
+	if (bp) {
+	    syncnow();
+	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+	}
+    }
     setdirpath(fn, direct, fhdr->filename);
     if (dashf(fn))
         file_appendf(fn, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
@@ -4136,7 +4136,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
     substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     setbottomtotal(currbid);
     syncnow();
-    bp->SRexpire = now;
+    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
     return DIRCHANGED;
 }
 
@@ -4163,8 +4163,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
             if (unum > 0) {
                 pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard);
             }
-	    if (!(currmode & MODE_SELECT))
-		fhdr->multi.money -= 1000;
+            fhdr->multi.money -= 1000;
 	}
     } else {
 	fileheader_t    digest;
@@ -4197,11 +4196,11 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
             if (unum > 0) {
                 pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard);
             }
-	    if (!(currmode & MODE_SELECT))
-		fhdr->multi.money += 1000;
+            fhdr->multi.money += 1000;
 	}
     }
-    // TODO fix race condition here.
+    /* ent may be a stale remapped index in MODE_SELECT; only write if the
+     * record still refers to the same file. */
     substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }

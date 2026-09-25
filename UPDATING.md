@@ -15,6 +15,12 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## read, bbs, search: Replace SR.* and refer with `search.svc`
+
+停用搜尋快取的 .DIR，改用獨立的 `search.svc` 管理。
+`*.svc` 在 `shmctl init` 時會被叫起來，但如果要不關站昇級，請記得
+要另外執行它。
+
 ## bbs, cache: Replace .DIR.bottom with boardheader_t
 
 把置底 `.DIR.bottom` 改成只追蹤 index, 用 AID 的方式記在 boardheader_t 內。
