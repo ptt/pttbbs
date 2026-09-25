@@ -195,6 +195,10 @@
 #define MAX_ACTIVE        (1024)         /* 程计 */
 #endif
 
+#ifndef USHM_SIZE
+#define USHM_SIZE         ((MAX_ACTIVE) * 41 / 40)
+#endif
+
 #ifndef MAX_GUEST
 #define MAX_GUEST         (100)          /* 程 guest 计 */
 #endif
@@ -226,6 +230,7 @@
 #ifndef MAX_REJECT
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #endif
+
 
 #ifndef MAX_MSGS
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */
