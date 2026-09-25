@@ -2053,6 +2053,10 @@ talkreply(void)
     userec_t        xuser;
     void          (*sig_pipe_handle)(int);
 
+    if (!VALID_USHM_ENTRY(currutmp->destuip)) {
+        currstat = currstat0;
+        return;
+    }
     uip = &SHM->uinfo[currutmp->destuip];
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
@@ -2082,6 +2086,7 @@ talkreply(void)
     STRLCPY(currutmp->msgs[0].userid, uip->userid);
     STRLCPY(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)");
     currutmp->msgs[0].msgmode = MSGMODE_TALK;
+    currutmp->msgs[0].uslot = get_utmp_slot(uip);
     prints("對方來自 [%s]，" STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY "，文章共 %d 篇\n",
 	    uip->from, xuser.numlogindays, xuser.numposts);
 

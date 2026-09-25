@@ -152,33 +152,6 @@ setuserid(int num, const char *userid)
     }
 }
 
-userinfo_t     *
-search_ulist_pid(int pid)
-{
-    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    int *ulist;
-    register userinfo_t *u;
-    if (end == -1)
-	return NULL;
-    ulist = SHM->sorted[SHM->currsorted][8];
-    for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	u = &SHM->uinfo[ulist[i]];
-	j = pid - u->pid;
-	if (!j) {
-	    return u;
-	}
-	if (end == start) {
-	    break;
-	} else if (i == start) {
-	    i = end;
-	    start = end;
-	} else if (j > 0)
-	    start = i;
-	else
-	    end = i;
-    }
-    return 0;
-}
 
 userinfo_t     *
 search_ulistn(int uid, int unum)
