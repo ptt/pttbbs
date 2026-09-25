@@ -484,7 +484,7 @@ typedef struct {
     char    gap_3[sizeof(int)];
     // TODO(piaip) Always have this var - no more #ifdefs in structure.
 #ifdef USE_COOLDOWN
-    time4_t cooldowntime[MAX_USERS];
+    time4_t deprecated_cooldown[MAX_USERS];
 #endif
     char    gap_4[sizeof(int)];
     int     hash_head[1 << HASH_BITS];

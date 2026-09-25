@@ -862,28 +862,3 @@ is_hidden_board_friend(int bid, int uid)
     }
     return 0;
 }
-
-/*
- * section - cooldown
- */
-#ifdef USE_COOLDOWN
-
-void add_cooldowntime(int uid, int min)
-{
-    // Ptt: I will use the number below 15 seconds.
-    time4_t cd = SHM->cooldowntime[uid - 1];
-    time4_t base = time4_gt(now, cd) ? now: cd;
-    base += min*60;
-    base &= 0xFFFFFFF0;
-
-    SHM->cooldowntime[uid - 1] = base;
-}
-void add_posttimes(int uid, int times)
-{
-  if((SHM->cooldowntime[uid - 1] & 0xF) + times <0xF)
-       SHM->cooldowntime[uid - 1] += times;
-  else
-       SHM->cooldowntime[uid - 1] |= 0xF;
-}
-
-#endif

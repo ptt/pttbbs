@@ -95,12 +95,6 @@ void resolve_garbage(void);
 void resolve_fcache(void);
 void hbflreload(int bid);
 int is_hidden_board_friend(int bid, int uid);
-#ifdef USE_COOLDOWN
-# define cooldowntimeof(uid) (SHM->cooldowntime[uid - 1] & 0xFFFFFFF0)
-# define posttimesof(uid) (SHM->cooldowntime[uid - 1] & 0xF)
-void add_cooldowntime(int uid, int min);
-void add_posttimes(int uid, int times);
-# endif
 
 /* passwd */
 int  passwd_init  (void);
