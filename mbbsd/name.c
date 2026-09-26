@@ -219,6 +219,7 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 		if (!nc_int->allow_nonexistent_prefix && count == 0) {
 		    prt->buf[prt->iend] = 0;
+		    bell();
 		    return VGETCB_NEXT;
 		} else {
 		    memcpy(nc_int->sublist_buf, tmp_buf, count * (IDLEN + 1));
@@ -377,8 +378,10 @@ gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
     int   ret  = VGETCB_NEXT;	// reject by default
     int   i;
 
-    if (!isascii(key))
+    if (!isascii(key)) {
+	bell();
 	return VGETCB_NEXT;
+    }
     assert(prt->icurr+1 < prt->len);	// verify size
     assert(prt->icurr == prt->iend);	// verify cursor position
     gc_int->morelist = -1;
@@ -397,6 +400,8 @@ gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
     }
     // restore data buffer
     data[prt->icurr]= 0;
+    if (ret != VGETCB_NONE)
+	bell();
     return ret;
 }
 
