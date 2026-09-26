@@ -384,6 +384,7 @@ _Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
 
 #include <stdio.h>
 #include <stdarg.h>
+#include "cmsys.h" // GCC_CHECK_FORMAT
 
 GCC_CHECK_FORMAT(3,4)
 static inline const char* _temp_format_helper(

@@ -32,8 +32,8 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 
-#include "common.h"
 #include "cmbbs.h"
+#include "common.h"
 #include "daemons.h"
 #include "perm.h"
 #include "pttstruct.h"
