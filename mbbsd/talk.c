@@ -191,8 +191,7 @@ friend_stat(const userinfo_t * me, const userinfo_t * ui)
     if (me->brc_id && ui->brc_id == me->brc_id) {
 	hit = IBH;
     }
-    /* Legacy binaries may still append/swap entries unsorted before cutoff. */
-    if (me->friend_svc_flag && now >= FRIEND_LEGACY_COMPAT_CUTOFF) {
+    if (me->friend_svc_flag) {
 	int target_slot = (int)(ui - &SHM->uinfo[0]);
 	int total = me->friendtotal;
 	if (VALID_USHM_ENTRY(target_slot) && total > 0) {

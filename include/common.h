@@ -215,8 +215,6 @@ friend_raw_stat(int stat)
 #define FRIEND_ONLINE_SLOT_MASK ((1U << FRIEND_ONLINE_SLOT_BITS) - 1U)
 #define FRIEND_ONLINE_UID_MASK  ((1U << FRIEND_ONLINE_UID_BITS) - 1U)
 #define FRIEND_ONLINE_STAT_MASK ((1U << FRIEND_ONLINE_STAT_BITS) - 1U)
-/* 2026-09-27 05:10:00 +0800 (Asia/Taipei) */
-#define FRIEND_LEGACY_COMPAT_CUTOFF 1790457000
 #define FRIEND_ONLINE_UID_TAG(uid) \
     (((uid) > 0) ? ((((unsigned int)(uid) % FRIEND_ONLINE_UID_MASK) + 1U)) : 0U)
 #define FRIEND_ONLINE_PACK(stat, uid, slot) \
