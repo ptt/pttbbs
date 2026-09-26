@@ -772,7 +772,7 @@ setup_utmp(int mode)
     //////////////////////////////////////////////////////////////////
 
     currmode = MODE_STARTED;
-    SHM->UTMPneedsort = 1;
+    SHM->UTMPneedupdate = 1;
 
     strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
 
@@ -806,9 +806,9 @@ setup_utmp(int mode)
     }
 #endif // WHERE
 
-    /* Very, very slow friend_load. */
+    /* Sync friend_online via friend.svc. */
     if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
-	friend_load(0, 1);
+	friend_load();
 
     nice(3);
 }

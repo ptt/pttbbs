@@ -560,7 +560,7 @@ typedef struct {
     int     currsorted;
     time4_t UTMPuptime;
     int     UTMPnumber;
-    char    UTMPneedsort;
+    char    UTMPneedupdate;
     char    UTMPbusystate;
 
     /* brdshm */

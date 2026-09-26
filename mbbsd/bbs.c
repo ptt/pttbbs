@@ -659,7 +659,7 @@ readtitle(void)
         SNPRINTF(buf, "[ÀR] ");
     else
     {
-        // nuser is not real-time updated (maintained by utmpsort), so let's
+        // nuser is not real-time updated (maintained by utmp_update in utmpsortd), so let's
         // make some calibration here. It's minimal value is one because the
         // user IS reading it.
         int nuser = SHM->bcache[currbid - 1].nuser;

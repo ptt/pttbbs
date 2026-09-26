@@ -329,59 +329,6 @@ func TestSuperFriendNormalizationAndBackwardCompat(t *testing.T) {
 	}
 }
 
-func TestLegacyCompatCutoffTransition(t *testing.T) {
-	origCutoff := LegacyCompatCutoff
-	defer func() { LegacyCompatCutoff = origCutoff }()
-
-	tempDir, err := os.MkdirTemp("", "pttbbs_compat_cutoff_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	writeUserListFile(t, tempDir, "alice", "overrides", "bob\n")
-
-	svc, err := NewService("")
-	if err != nil {
-		t.Fatalf("NewService failed: %v", err)
-	}
-	svc.bbsHome = tempDir
-	svc.reconcileInterval = 10 * time.Second
-	svc.enableUIDTag = false
-	svc.autoLegacyCompat = true
-	svc.autoUIDTag = true
-
-	// Simulate time before 2026/09/27 05:10
-	LegacyCompatCutoff = time.Now().Add(1 * time.Hour)
-	svc.HandleFriendSync("alice", 10, 1001, 5)
-	svc.HandleFriendSync("bob", 20, 1002, 12)
-
-	beforeEntries := svc.GetSessionFriendsOnline(5)
-	if len(beforeEntries) != 1 {
-		t.Fatalf("Expected 1 entry for Alice, got %d", len(beforeEntries))
-	}
-	_, tagBefore, _ := UnpackFriendOnline(beforeEntries[0])
-	if tagBefore != 0 {
-		t.Fatalf("Expected uidTag=0 before cutoff, got %d", tagBefore)
-	}
-
-	// Simulate time passing 2026/09/27 05:10
-	LegacyCompatCutoff = time.Now().Add(-1 * time.Second)
-	transitioned, nextInterval := svc.checkLegacyCompatTransition()
-	if !transitioned || nextInterval != 1*time.Hour {
-		t.Fatalf("Expected transition to 1h, got transitioned=%v nextInterval=%v", transitioned, nextInterval)
-	}
-
-	afterEntries := svc.GetSessionFriendsOnline(5)
-	if len(afterEntries) != 1 {
-		t.Fatalf("Expected 1 entry for Alice after transition, got %d", len(afterEntries))
-	}
-	_, tagAfter, _ := UnpackFriendOnline(afterEntries[0])
-	if tagAfter == 0 {
-		t.Fatalf("Expected non-zero uidTag after cutoff transition, got 0")
-	}
-}
-
 func TestUppercaseHomeAndAlohaAndPriorityTruncation(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "pttbbs_friend_fixes_*")
 	if err != nil {
@@ -409,7 +356,6 @@ func TestUppercaseHomeAndAlohaAndPriorityTruncation(t *testing.T) {
 		t.Fatalf("NewService failed: %v", err)
 	}
 	svc.enableUIDTag = true
-	svc.autoLegacyCompat = false
 
 	svc.HandleFriendSync("Bob", 20, 2001, 10)
 	svc.HandleFriendSync("Troll", 30, 3001, 20)
