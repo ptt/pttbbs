@@ -762,12 +762,6 @@ setup_utmp(int mode)
     uinfo.chc_lose  = cuser.chc_lose;
     uinfo.chc_tie   = cuser.chc_tie;
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
-    uinfo.go_win    = cuser.go_win;
-    uinfo.go_lose   = cuser.go_lose;
-    uinfo.go_tie    = cuser.go_tie;
-    uinfo.dark_win    = cuser.dark_win;
-    uinfo.dark_lose   = cuser.dark_lose;
-    uinfo.dark_tie    = cuser.dark_tie;
     uinfo.invisible = (cuser.invisible % 2) && (!HasUserPerm(PERM_VIOLATELAW));
     uinfo.pager	    = cuser.pager % PAGER_MODES;
 
