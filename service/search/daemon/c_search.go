@@ -23,6 +23,22 @@ static void c_sanitize_preds(void *buf, int n) {
         p[i].keyword[sizeof(p[i].keyword) - 1] = '\0';
 }
 
+static void c_format_preds(const void *buf, int n, char *out, int outlen) {
+    const fileheader_predicate_t *p = (const fileheader_predicate_t *)buf;
+    out[0] = '\0';
+    for (int i = 0; i < n; i++) {
+        char item[128];
+        const char *mstr = "kw";
+        if (p[i].mode & RS_AUTHOR) mstr = "author";
+        else if (p[i].mode & RS_TITLE) mstr = "title";
+        else if (p[i].mode & RS_RECOMMEND) mstr = "push";
+        else if (p[i].mode & RS_MARK) mstr = "mark";
+        else if (p[i].mode & RS_MONEY) mstr = "money";
+        snprintf(item, sizeof(item), "%s%s=%s", (i > 0 ? " " : ""), mstr, p[i].keyword);
+        strlcat(out, item, outlen);
+    }
+}
+
 static int c_pred_size(void) {
     return (int)sizeof(fileheader_predicate_t);
 }
@@ -35,6 +51,12 @@ static int64_t c_get_board_srexpire(int bid) {
     if (SHM == NULL || bid < 1 || bid > MAX_BOARD)
         return 0;
     return (int64_t)SHM->bcache[bid - 1].SRexpire;
+}
+
+static const char *c_get_board_name(int bid) {
+    if (SHM == NULL || bid < 1 || bid > MAX_BOARD)
+        return "";
+    return SHM->bcache[bid - 1].brdname;
 }
 
 // Reads the filename of 1-based record recno; used as a tail anchor to detect
@@ -98,6 +120,10 @@ static int c_scan_dir_range(const char *direct,
         return -1;
     }
 
+#ifdef POSIX_FADV_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+
     int total_recs = (int)(st.st_size / sizeof(fileheader_t));
 
     if (start_rec < 1)
@@ -119,7 +145,8 @@ static int c_scan_dir_range(const char *direct,
     }
 
     const fileheader_predicate_t *preds = (const fileheader_predicate_t *)preds_buf;
-    fileheader_t fhs[64];
+    enum { SCAN_BATCH = 1024 };
+    fileheader_t fhs[SCAN_BATCH];
     int recno = start_rec - 1;
     int matched_count = 0;
     ssize_t len;
@@ -192,8 +219,124 @@ static int c_filter_candidates(const char *direct,
     return matched_count;
 }
 
+static const char *c_get_userid_by_pid(pid_t pid) {
+    if (SHM == NULL || pid <= 0)
+        return "";
+    for (int i = 0; i < USHM_SIZE; i++) {
+        if (SHM->uinfo[i].pid == pid && SHM->uinfo[i].userid[0] != '\0')
+            return SHM->uinfo[i].userid;
+    }
+    return "";
+}
+
+static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int64_t *out_max_time_diff) {
+    if (out_total_recs)
+        *out_total_recs = 0;
+    if (out_max_time_diff)
+        *out_max_time_diff = 0;
+
+    int fd = open(direct, O_RDONLY);
+    if (fd < 0)
+        return -1;
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    int total = (int)(st.st_size / sizeof(fileheader_t));
+    if (out_total_recs)
+        *out_total_recs = total;
+    if (total <= 1) {
+        close(fd);
+        return 0;
+    }
+
+    time4_t *ts_buf = (time4_t *)malloc((size_t)total * sizeof(time4_t));
+    if (!ts_buf) {
+        close(fd);
+        return -1;
+    }
+
+    enum { BATCH = 512 };
+    fileheader_t fhs[BATCH];
+    int valid_cnt = 0;
+    ssize_t len;
+    while ((len = read(fd, fhs, sizeof(fhs))) > 0) {
+        int n = (int)(len / sizeof(fileheader_t));
+        for (int i = 0; i < n && valid_cnt < total; i++) {
+            if ((fhs[i].filename[0] == 'M' || fhs[i].filename[0] == 'G') && fhs[i].owner[0] != '-') {
+                ts_buf[valid_cnt++] = get_fhdr_stamp_ts(fhs[i].filename);
+            } else {
+                ts_buf[valid_cnt++] = 0;
+            }
+        }
+    }
+    close(fd);
+
+    if (valid_cnt <= 1) {
+        free(ts_buf);
+        return 0;
+    }
+
+    int *cand_idx = (int *)malloc((size_t)valid_cnt * sizeof(int));
+    if (!cand_idx) {
+        free(ts_buf);
+        return -1;
+    }
+
+    int cand_cnt = 0;
+    time4_t max_seen = 0;
+    for (int i = 0; i < valid_cnt; i++) {
+        time4_t t = ts_buf[i];
+        if (t <= 0)
+            continue;
+        if (cand_cnt == 0 || t > max_seen) {
+            cand_idx[cand_cnt++] = i;
+            max_seen = t;
+        }
+    }
+
+    int max_backtrack = 0;
+    int64_t max_time_diff = 0;
+
+    for (int j = valid_cnt - 1; j >= 0; j--) {
+        time4_t tj = ts_buf[j];
+        if (tj <= 0)
+            continue;
+        if (cand_cnt > 0 && tj < ts_buf[cand_idx[cand_cnt - 1]]) {
+            int low = 0, high = cand_cnt - 1, best = cand_cnt - 1;
+            while (low <= high) {
+                int mid = low + (high - low) / 2;
+                if (ts_buf[cand_idx[mid]] > tj) {
+                    best = mid;
+                    high = mid - 1;
+                } else {
+                    low = mid + 1;
+                }
+            }
+            int i = cand_idx[best];
+            int dist = j - i;
+            if (dist > max_backtrack)
+                max_backtrack = dist;
+            int64_t tdiff = (int64_t)(ts_buf[cand_idx[cand_cnt - 1]] - tj);
+            if (tdiff > max_time_diff)
+                max_time_diff = tdiff;
+        }
+    }
+
+    free(cand_idx);
+    free(ts_buf);
+
+    if (out_max_time_diff)
+        *out_max_time_diff = max_time_diff;
+    return max_backtrack;
+}
+
 static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_mode,
-                                int start_rec, void *out_fh, int *out_total_recs)
+                                int start_rec, void *out_fh, int *out_total_recs,
+                                int max_backtrack)
 {
     int fd = open(direct, O_RDONLY);
     if (fd < 0)
@@ -250,7 +393,7 @@ static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_
         return 0;
     }
 
-    int found = search_dir_by_aidu_fd(fd, total_recs, (aidu_t)aidu, required_mode, &fh);
+    int found = search_dir_by_aidu_fd_bounded(fd, total_recs, (aidu_t)aidu, required_mode, &fh, max_backtrack);
     if (found > 0 && out_fh)
         memcpy(out_fh, &fh, sizeof(fh));
     close(fd);
@@ -299,8 +442,23 @@ func SanitizePreds(predsRaw []byte, numPreds int) {
 	}
 }
 
+// FormatPreds returns a human-readable representation of search predicates.
+func FormatPreds(predsRaw []byte, numPreds int) string {
+	if numPreds <= 0 || len(predsRaw) < numPreds*PredSize() {
+		return ""
+	}
+	var buf [256]C.char
+	C.c_format_preds(unsafe.Pointer(&predsRaw[0]), C.int(numPreds), &buf[0], C.int(len(buf)))
+	return C.GoString(&buf[0])
+}
+
 func GetBoardSRExpire(bid int32) int64 {
 	return int64(C.c_get_board_srexpire(C.int(bid)))
+}
+
+func BoardName(bid int32) string {
+	cstr := C.c_get_board_name(C.int(bid))
+	return C.GoString(cstr)
 }
 
 // ReadFilenameAt returns the filename of 1-based record rec.
@@ -340,7 +498,21 @@ func AppendTestFileheader(directPath, filename, owner, title string, filemode in
 	return nil
 }
 
-func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec int32) (int32, [128]byte, int32, error) {
+func UserIDByPID(pid int32) string {
+	cstr := C.c_get_userid_by_pid(C.pid_t(pid))
+	return C.GoString(cstr)
+}
+
+func ComputeDirBacktrack(directPath string) (int32, int32, int64) {
+	cPath := C.CString(directPath)
+	defer C.free(unsafe.Pointer(cPath))
+	var cTotal C.int
+	var cTimeDiff C.int64_t
+	btrack := C.c_compute_dir_backtrack(cPath, &cTotal, &cTimeDiff)
+	return int32(cTotal), int32(btrack), int64(cTimeDiff)
+}
+
+func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec int32, maxBacktrack int) (int32, [128]byte, int32, error) {
 	var fhBuf [128]byte
 	var totalRecs C.int
 	cPath := C.CString(directPath)
@@ -353,6 +525,7 @@ func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec i
 		C.int(startRec),
 		unsafe.Pointer(&fhBuf[0]),
 		&totalRecs,
+		C.int(maxBacktrack),
 	))
 	if found < 0 {
 		return 0, fhBuf, 0, fmt.Errorf("failed to search AID in %s", directPath)
