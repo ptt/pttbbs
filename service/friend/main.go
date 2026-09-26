@@ -88,10 +88,6 @@ func main() {
 
 	defaultReconcile := 1 * time.Hour
 	defaultUIDTag := true
-	if daemon.IsLegacyCompatActive(time.Now()) {
-		defaultReconcile = 10 * time.Second
-		defaultUIDTag = false
-	}
 
 	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/friend.svc.log)")
 	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
@@ -100,9 +96,9 @@ func main() {
 	maxProcs := flag.Int("maxprocs", 2, "GOMAXPROCS limit (default: 2)")
 	maxThreads := flag.Int("maxthreads", 1000, "Max OS threads limit (default: 1000)")
 	gcPercent := flag.Int("gcpercent", 50, "GC percent target (default: 50)")
-	reconcileInterval := flag.Duration("reconcile-interval", defaultReconcile, "Interval for periodic session reconciliation (default: 10s before 2026/09/27 09:00, 1h after). Set to 0 to disable.")
+	reconcileInterval := flag.Duration("reconcile-interval", defaultReconcile, "Interval for periodic session reconciliation (default: 1h). Set to 0 to disable.")
 	flag.DurationVar(reconcileInterval, "reconcile", defaultReconcile, "Alias for -reconcile-interval")
-	enableUIDTag := flag.Bool("uid-tag", defaultUIDTag, "Pack 6-bit uid_tag in friend_online[18..23] (default: false before 2026/09/27 09:00, true after)")
+	enableUIDTag := flag.Bool("uid-tag", defaultUIDTag, "Pack 6-bit uid_tag in friend_online[18..23] (default: true)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
 

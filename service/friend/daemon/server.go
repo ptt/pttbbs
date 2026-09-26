@@ -203,19 +203,6 @@ type Service struct {
 
 	reconcileInterval time.Duration
 	enableUIDTag      bool
-	autoLegacyCompat  bool // auto-switch reconcileInterval at the cutoff
-	autoUIDTag        bool // auto-enable uid tags at the cutoff
-}
-
-// LegacyCompatCutoff is 2026-09-27 05:10:00 +0800 (Asia/Taipei).
-// Before this cutoff, friend.svc runs in legacy mbbsd compatibility mode by default
-// (reconcileInterval=10s, enableUIDTag=false, and 2s HBFL visable mtime polling).
-// Once this cutoff passes, friend.svc automatically disables compatibility mode
-// (reconcileInterval=1h, enableUIDTag=true, and event-driven HBFL updates).
-var LegacyCompatCutoff = time.Date(2026, 9, 27, 5, 10, 0, 0, time.FixedZone("Asia/Taipei", 8*3600))
-
-func IsLegacyCompatActive(now time.Time) bool {
-	return now.Before(LegacyCompatCutoff)
 }
 
 func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
@@ -244,22 +231,12 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		shmClient.SetHBFLGeneration(initGen)
 	}
 
-	legacyCompat := shmClient != nil && IsLegacyCompatActive(time.Now())
-	defaultReconcile := 1 * time.Hour
-	defaultUIDTag := true
-	if legacyCompat {
-		defaultReconcile = 10 * time.Second
-		defaultUIDTag = false
-	}
-
 	svc := &Service{
 		bbsHome:             bbsHome,
 		shmClient:           shmClient,
 		socketPath:          socketPath,
-		reconcileInterval:   defaultReconcile,
-		enableUIDTag:        defaultUIDTag,
-		autoLegacyCompat:    legacyCompat,
-		autoUIDTag:          legacyCompat,
+		reconcileInterval:   1 * time.Hour,
+		enableUIDTag:        true,
 		alohaCooldown:       60 * time.Second,
 		onlineSessions:      make(map[int]SubscriberSession),
 		sidToPID:            make(map[int]int),
@@ -363,9 +340,6 @@ func (s *Service) Start() error {
 	s.ScanOnlineSessions()
 	if s.reconcileInterval > 0 {
 		s.StartReconciler(s.reconcileInterval)
-	} else if s.autoUIDTag {
-		// No reconciler to drive the cutoff transition.
-		time.AfterFunc(time.Until(LegacyCompatCutoff), func() { s.checkLegacyCompatTransition() })
 	}
 
 	for {
@@ -1240,12 +1214,7 @@ func (s *Service) computeFriendOnlineForUIDLocked(uid int) []uint32 {
 			})
 		}
 	}
-	// Before the cutoff, sessions may belong to legacy binaries whose SHM
-	// layout only has MAX_FRIEND friend_online entries (C side caps too).
 	limit := MaxFriendOnline
-	if IsLegacyCompatActive(time.Now()) {
-		limit = MaxFriend
-	}
 	if len(list) > limit {
 		sort.Slice(list, func(i, j int) bool {
 			pi := friendStatPriority(list[i].stat)
@@ -1480,8 +1449,6 @@ func (s *Service) HandleStatus() Response {
 		"hbfl_generation":       s.hbflGen,
 		"reconcile_interval":    s.reconcileInterval.String(),
 		"enable_uid_tag":        s.enableUIDTag,
-		"legacy_compat_mode":    s.autoLegacyCompat && IsLegacyCompatActive(time.Now()),
-		"legacy_compat_cutoff":  LegacyCompatCutoff.Format(time.RFC3339),
 	}
 
 	log.Printf("[friend.svc] STATUS requested: online_sessions=%d, targets_watched=%d, online_uids=%d, hbfl_boards=%d, hbfl_gen=%d, uid_tag=%v, reconcile=%v",
@@ -1518,39 +1485,12 @@ func (s *Service) SetReconcileInterval(interval time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.reconcileInterval = interval
-	s.autoLegacyCompat = false
 }
 
 func (s *Service) SetEnableUIDTag(enable bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.enableUIDTag = enable
-	s.autoUIDTag = false
-}
-
-func (s *Service) checkLegacyCompatTransition() (transitioned bool, nextInterval time.Duration) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if (!s.autoLegacyCompat && !s.autoUIDTag) || IsLegacyCompatActive(time.Now()) {
-		return false, s.reconcileInterval
-	}
-	if s.autoLegacyCompat {
-		s.autoLegacyCompat = false
-		s.reconcileInterval = 1 * time.Hour
-		transitioned = true
-	}
-	if s.autoUIDTag {
-		s.autoUIDTag = false
-		if !s.enableUIDTag {
-			s.enableUIDTag = true
-			for uid := range s.uidToSIDs {
-				s.syncUIDFriendsToSHMLocked(uid)
-			}
-		}
-	}
-	log.Printf("[friend.svc] Legacy compatibility cutoff (%s) reached: switched reconcileInterval to %v and enableUIDTag to %v",
-		LegacyCompatCutoff.Format(time.RFC3339), s.reconcileInterval, s.enableUIDTag)
-	return transitioned, s.reconcileInterval
 }
 
 func (s *Service) StartReconciler(interval time.Duration) {
@@ -1559,14 +1499,10 @@ func (s *Service) StartReconciler(interval time.Duration) {
 	}
 	ticker := time.NewTicker(interval)
 	go func() {
-		log.Printf("[friend.svc] Started background reconciler with interval: %v (autoLegacyCompat=%v, cutoff=%s)",
-			interval, s.autoLegacyCompat, LegacyCompatCutoff.Format(time.RFC3339))
+		log.Printf("[friend.svc] Started background reconciler with interval: %v", interval)
 		for range ticker.C {
 			s.ScanHiddenBoards()
 			s.ReconcileOnlineSessions()
-			if transitioned, nextInterval := s.checkLegacyCompatTransition(); transitioned && nextInterval > 0 {
-				ticker.Reset(nextInterval)
-			}
 		}
 	}()
 }
@@ -1891,9 +1827,8 @@ func (s *Service) ScanHiddenBoards() int {
 func (s *Service) maybeRefreshHBFLStat() {
 	s.mu.RLock()
 	numBoards := len(s.hbflBoards)
-	// Legacy mtime polling is only needed before the cutoff; afterwards rely
-	// on hbfl_reload events (standalone/no-SHM mode keeps polling).
-	if numBoards > 0 && s.shmClient != nil && !IsLegacyCompatActive(time.Now()) {
+	// With SHM attached, rely on hbfl_reload events; standalone/no-SHM mode keeps polling.
+	if numBoards > 0 && s.shmClient != nil {
 		s.mu.RUnlock()
 		return
 	}

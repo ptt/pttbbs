@@ -381,7 +381,7 @@ has_friend_or_reject_file(void)
 /* friend.svc owns friend_online[] (for both sides of every relation). There
  * is no local fallback: if friend.svc is down there is simply no friend data
  * until it comes back and rescans the online sessions. */
-void friend_load(int type GCC_UNUSED, int do_login GCC_UNUSED)
+void friend_load(void)
 {
     if (!currutmp || !currutmp->userid[0])
         return;
@@ -571,7 +571,7 @@ friend_edit(int type)
 		fclose(fp);
 	    }
 	}
-	friend_load(0, 0);
+	friend_load();
     }
 }
 

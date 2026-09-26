@@ -12,7 +12,6 @@ static char * const sig_descriptions[] = {
 static const char *MODE_STRING[] = {
     "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
 };
-// this must map to SHM->sorted[active].
 static const char * const MSG_PICKUP_WAY[] = {
     "嗨! 朋友", "來自何方",
 };
@@ -742,8 +741,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
  *   因為產生好友區的 cost 相當高, "能不產生就不要產生"
  *
  * + 非好友區
- *   透過 shmctl utmpsortd , 定期 (通常一秒一次) 將全站的人按照各種不同的方
- *   式 sort 好, 放置在 SHM->sorted中.
+ *   透過 get_utmp_snapshot() 取得在線使用者快照並動態整序分頁錨示。
  *
  * 接下來, 我們每次只從確定的起始位置拿, 特別是除非有須要, 不然不會去產生好
  * 友區.
@@ -1584,7 +1582,7 @@ userlist_cmd_addfriend(cmd_ctx_t *ctx) {
     if (!(cx->fri_stat & IFH)) {
         if (vans("確定要加入好友嗎 [N/y]") == 'y') {
             friend_add(cx->uentp->userid, FRIEND_OVERRIDE, cx->uentp->nickname);
-            friend_load(FRIEND_OVERRIDE, 0);
+            friend_load();
         }
         ctx->reload = true;
     }
@@ -1597,7 +1595,7 @@ userlist_cmd_delfriend(cmd_ctx_t *ctx) {
     if (cx->fri_stat & IFH) {
         if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
             friend_delete(cx->uentp->userid, FRIEND_OVERRIDE);
-            friend_load(FRIEND_OVERRIDE, 0);
+            friend_load();
         }
         ctx->reload = true;
     }

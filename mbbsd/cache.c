@@ -97,7 +97,7 @@ purge_utmp(userinfo_t * uentp)
     if (uslot >= 0 && uid > 0)
         remove_from_utmp_user(uslot, uid);
     memset(uentp, 0, sizeof(userinfo_t));
-    SHM->UTMPneedsort = 1;
+    SHM->UTMPneedupdate = 1;
 }
 
 void

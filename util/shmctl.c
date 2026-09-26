@@ -216,7 +216,7 @@ int utmpfix(int argc, char **argv)
 	}
     SHM->UTMPbusystate = 0;
     if( changeflag )
-	SHM->UTMPneedsort = 1;
+	SHM->UTMPneedupdate = 1;
 
     if( daemonsleep ){
 	do{
@@ -228,7 +228,7 @@ int utmpfix(int argc, char **argv)
 }
 /* end of utmpfix ---------------------------------------------------------- */
 
-/* utmpsortd --------------------------------------------------------------- */
+/* utmp_update / utmpsortd ------------------------------------------------ */
 
 void utmp_update(void)
 {
@@ -317,9 +317,9 @@ int utmpsortd(int argc, char **argv)
                 for (int i = 0; SHM->UTMPbusystate && i < 5; ++i)
                     usleep(300000);
 
-                if (SHM->UTMPneedsort) {
+                if (SHM->UTMPneedupdate) {
                     utmp_update();
-                    SHM->UTMPneedsort = 0;
+                    SHM->UTMPneedupdate = 0;
                 }
 
                 usleep(interval);
@@ -343,7 +343,6 @@ int utmpstatus(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     CTIMEx(upbuf,  SHM->UTMPuptime);
     CTIMEx(nowbuf, now);
     printf("now:        %s\n", nowbuf);
-    printf("currsorted: %d\n", SHM->currsorted);
     printf("uptime:     %s\n", upbuf);
     printf("number:     %d\n", SHM->UTMPnumber);
     printf("busystate:  %d\n", SHM->UTMPbusystate);
@@ -570,7 +569,7 @@ do_shm_init(int no_uhash_loader, int force_reset, int argc GCC_UNUSED, char **ar
             SHM->Fbusystate = 0;
             memset(SHM->uinfo, 0, sizeof(SHM->uinfo));
             SHM->UTMPnumber = 0;
-            SHM->UTMPneedsort = 0;
+            SHM->UTMPneedupdate = 0;
             init_utmp_user();
             SHM->number = 0;
             SHM->loaded = 0;
@@ -910,7 +909,7 @@ struct Cmd {
     const char    *cmd, *descript;
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
-    {utmpsortd,  "utmpsortd",  "utmp sorting daemon. Options: [usec: sort interval] [#sorts: full sort interval]"},
+    {utmpsortd,  "utmpsortd",  "utmp update daemon (active user and hotboard counter). Options: [usec: update interval]"},
 
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
     {torb,       "reloadbcache", "reload bcache"},
