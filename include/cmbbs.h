@@ -214,10 +214,6 @@ int write_message_full(int uslot, pid_t to_pid, pid_t from_pid, int from_uslot,
 
 /* friend.c */
 int is_aloha_svc_enabled(void);
-#define aloha_notify_login  friend_svc_login
-#define aloha_notify_logout friend_svc_logout
-#define aloha_notify_reload friend_svc_reload
-#define aloha_sync_friends  friend_svc_sync
 int send_aloha_message(int sid, pid_t to_pid, pid_t from_pid, const char *from_id);
 int friend_svc_login(const char *userid, pid_t pid, int sid);
 int friend_svc_logout(const char *userid, pid_t pid);

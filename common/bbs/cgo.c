@@ -43,7 +43,7 @@ get_online_session(int uslot, int *out_pid, int *out_uid, char *out_userid)
     if (kill(pid, 0) == -1 && errno == ESRCH) {
         if (u->pid == pid) {
             memset(u, 0, sizeof(userinfo_t));
-            SHM->UTMPneedsort = 1;
+            SHM->UTMPneedupdate = 1;
         }
         return 0;
     }

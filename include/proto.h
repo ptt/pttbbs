@@ -267,7 +267,7 @@ void reginit_fav(void);
 
 /* friend */
 void friend_edit(int type);
-void friend_load(int type, int do_login);
+void friend_load(void);
 int t_override(void);
 int t_reject(void);
 void friend_add(const char *uident, int type, const char *des);
