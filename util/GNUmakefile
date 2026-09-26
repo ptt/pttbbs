@@ -40,7 +40,7 @@ CPROG_WITHOUT_UTIL := \
 SCRIPT_PROGS := \
 	backpasswd.sh	mailog.sh	openticket.sh	topsong.sh	\
 	toplazyBM.sh	dailybackup.pl	tarqueue.pl	waterball.pl	\
-	filtermail.pl	getbackup.pl	rebuildaloha.pl	timecap_expire.sh	\
+	filtermail.pl	getbackup.pl	timecap_expire.sh	\
 	$(END)
 
 # 下面這些程式會被 install
