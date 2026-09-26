@@ -31,9 +31,13 @@ getnewutmpent(const userinfo_t * up)
 	if (p == USHM_SIZE)
 	    p = 0;
 	uentp = &(SHM->uinfo[p]);
-	if (!(uentp->pid)) {
+	pid_t zero = 0;
+	if (__atomic_compare_exchange_n(&uentp->pid, &zero, up->pid,
+	                                false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
 	    memcpy(uentp, up, sizeof(userinfo_t));
+	    uentp->pid = up->pid;
 	    currutmp = uentp;
+	    add_to_utmp_user(p, uentp->uid);
 	    return;
 	}
     }
@@ -55,48 +59,43 @@ apply_ulist(int (*fptr) (const userinfo_t *))
     return 0;
 }
 
+typedef struct {
+    int show;
+    int count;
+} count_logins_ctx_t;
+
+static int
+_count_logins_cb(userinfo_t *u, void *arg)
+{
+    count_logins_ctx_t *ctx = (count_logins_ctx_t *)arg;
+    if (u->mode == DEBUGSLEEPING)
+        return 0;
+    if (ctx->show) {
+        prints("(%d) 目前狀態為: %-17.16s(來自 %s)\n",
+               ctx->count + 1, modestring(u, 0), u->from);
+    }
+    ctx->count++;
+    return 0;
+}
+
 int
 count_logins(int uid, int show)
 {
-    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
-    int *ulist;
-    userinfo_t *u;
-    if (end == -1)
-	return 0;
-    ulist = SHM->sorted[SHM->currsorted][7];
-    for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	u = &SHM->uinfo[ulist[i]];
-	j = uid - u->uid;
-	if (!j) {
-	    for (; i > 0 && uid == SHM->uinfo[ulist[i - 1]].uid; i--);
-							/* 指到第一筆 */
-	    for (count = 0; (ulist[i + count] &&
-		    (u = &SHM->uinfo[ulist[i + count]]) &&
-		    uid == u->uid); count++) {
-		if (show)
-		    prints("(%d) 目前狀態為: %-17.16s(來自 %s)\n",
-			   count + 1, modestring(u, 0),
-			   u->from);
-	    }
-	    return count;
-	}
-	if (end == start) {
-	    break;
-	} else if (i == start) {
-	    i = end;
-	    start = end;
-	} else if (j > 0)
-	    start = i;
-	else
-	    end = i;
-    }
-    return 0;
+    count_logins_ctx_t ctx = { show, 0 };
+    utmp_apply_user(uid, _count_logins_cb, &ctx);
+    return ctx.count;
 }
 
 void
 purge_utmp(userinfo_t * uentp)
 {
+    if (!uentp)
+        return;
     logout_friend_online(uentp);
+    int uslot = get_utmp_slot(uentp);
+    int uid = uentp->uid;
+    if (uslot >= 0 && uid > 0)
+        remove_from_utmp_user(uslot, uid);
     memset(uentp, 0, sizeof(userinfo_t));
     SHM->UTMPneedsort = 1;
 }

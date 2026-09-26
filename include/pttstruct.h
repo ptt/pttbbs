@@ -548,9 +548,14 @@ typedef struct {
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
     char    gap_6[sizeof(userinfo_t)];
-    int             sorted[2][9][USHM_SIZE];
-                    /* 第一維double buffer 由currsorted指向目前使用的
-		       第二維sort type */
+    struct {
+        int     user_head[MAX_USERS + 1];
+        int     next_session[USHM_SIZE];
+        int     session_user[USHM_SIZE];
+#if ((2 * 9 * USHM_SIZE * 4) > ((MAX_USERS + 1 + 2 * USHM_SIZE) * 4))
+        char    _pad_remaining[(2 * 9 * USHM_SIZE * sizeof(int)) - ((MAX_USERS + 1 + 2 * USHM_SIZE) * sizeof(int))];
+#endif
+    } utmp_user;
     char    gap_7[sizeof(int)];
     int     currsorted;
     time4_t UTMPuptime;
@@ -648,6 +653,13 @@ typedef struct {
     int     Fbusystate;
 
 } SHM_t;
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#if ((2 * 9 * USHM_SIZE * 4) >= ((MAX_USERS + 1 + 2 * USHM_SIZE) * 4))
+_Static_assert(sizeof(((SHM_t *)0)->utmp_user) == sizeof(int[2][9][USHM_SIZE]),
+               "utmp_user must match sorted array capacity when padded");
+#endif
+#endif
 
 #ifdef SHMALIGNEDSIZE
 #   define SHMSIZE (sizeof(SHM_t)/(SHMALIGNEDSIZE)+1)*SHMALIGNEDSIZE

@@ -7,8 +7,14 @@ extern SHM_t   *SHM;
 /* utmpfix ----------------------------------------------------------------- */
 void purge_utmp(userinfo_t *uentp)
 {
+    if (!uentp)
+        return;
     logout_friend_online(uentp);
-    //memset(uentp, 0, sizeof(userinfo_t));
+    int uslot = get_utmp_slot(uentp);
+    int uid = uentp->uid;
+    if (uslot >= 0 && uid > 0)
+        remove_from_utmp_user(uslot, uid);
+    memset(uentp, 0, sizeof(userinfo_t));
 }
 
 typedef struct {
@@ -168,7 +174,6 @@ int utmpfix(int argc, char **argv)
 	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
 	    /* 此條件應放最後; 其他欄位沒問題但 process 不存在才 purge_utmp */
 	    clean = "process error";
-	    purge_utmp(&SHM->uinfo[which]);
 	}
 #ifdef DOTIMEOUT
 	else if( (strcasecmp(SHM->uinfo[which].userid, STR_GUEST)==0 &&
@@ -191,7 +196,7 @@ int utmpfix(int argc, char **argv)
 	if( clean ){
 	    printf("clean %06d(%s), userid: %s\n",
 		   i, clean, SHM->uinfo[which].userid);
-	    memset(&SHM->uinfo[which], 0, sizeof(userinfo_t));
+	    purge_utmp(&SHM->uinfo[which]);
 	    --nownum;
 	    changeflag = 1;
 	}
@@ -224,132 +229,62 @@ int utmpfix(int argc, char **argv)
 /* end of utmpfix ---------------------------------------------------------- */
 
 /* utmpsortd --------------------------------------------------------------- */
-static int
-cmputmpuserid(const void * i, const void * j)
-{
-    return strncasecmp(SHM->uinfo[*(int*)i].userid, SHM->uinfo[*(int*)j].userid, IDLEN);
-}
 
-static int
-cmputmpmode(const void * i, const void * j)
-{
-    return SHM->uinfo[*(int*)i].mode - SHM->uinfo[*(int*)j].mode;
-}
-
-static int
-cmputmpidle(const void * i, const void * j)
-{
-    return time4_cmp(SHM->uinfo[*(int*)i].lastact, SHM->uinfo[*(int*)j].lastact);
-}
-
-static int
-cmputmpfrom(const void * i, const void * j)
-{
-    // int r = strcmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from);
-    // if (r) return r;
-
-    // *** from_ip (in_addr_t) is big endian network number.
-    return memcmp(&(SHM->uinfo[*(int*)i].from_ip), &(SHM->uinfo[*(int*)j].from_ip),
-	    sizeof(SHM->uinfo[0].from_ip));
-}
-
-static int
-cmputmppid(const void * i, const void * j)
-{
-    return SHM->uinfo[*(int*)i].pid - SHM->uinfo[*(int*)j].pid;
-}
-
-static int
-cmputmpuid(const void * i, const void * j)
-{
-    return SHM->uinfo[*(int*)i].uid - SHM->uinfo[*(int*)j].uid;
-}
-
-static inline 
-void utmpsort(int sortall)
+void utmp_update(void)
 {
     userinfo_t     *uentp;
-    int             count, i, ns;
-    // 2008 Baseball event 成功讓 short 爆掉
+    int             count = 0, i;
     int             nusers[MAX_BOARD];
-
 
     SHM->UTMPbusystate = 1;
     SHM->UTMPuptime = time(NULL);
-    ns = (SHM->currsorted ? 0 : 1);
 
-    for (uentp = &SHM->uinfo[0], count = i = 0;
-	 i < USHM_SIZE;
-	 ++i, uentp = &SHM->uinfo[i]) {
-	if (uentp->pid)
-            SHM->sorted[ns][0][count++] = i;
+    memset(nusers, 0, sizeof(nusers));
+    for (i = 0; i < USHM_SIZE; ++i) {
+        uentp = &SHM->uinfo[i];
+        if (uentp->pid) {
+            count++;
+            if (uentp->mode != DEBUGSLEEPING &&
+                0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
+                ++nusers[uentp->brc_id - 1];
+        }
     }
     SHM->UTMPnumber = count;
-    qsort(SHM->sorted[ns][0], count, sizeof(int), cmputmpuserid);
-    memcpy(SHM->sorted[ns][7],
-	   SHM->sorted[ns][0], sizeof(int) * count);
-    memcpy(SHM->sorted[ns][8],
-	   SHM->sorted[ns][0], sizeof(int) * count);
-    qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmpuid);
-    qsort(SHM->sorted[ns][8], count, sizeof(int), cmputmppid);
-    if( sortall ){
-	memcpy(SHM->sorted[ns][1],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	memcpy(SHM->sorted[ns][2],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	memcpy(SHM->sorted[ns][3],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	qsort(SHM->sorted[ns][1], count, sizeof(int), cmputmpmode);
-	qsort(SHM->sorted[ns][2], count, sizeof(int), cmputmpidle);
-	qsort(SHM->sorted[ns][3], count, sizeof(int), cmputmpfrom);
-	if (SHM->UTMPuptime < FRIEND_LEGACY_COMPAT_CUTOFF) {
-	    memcpy(SHM->sorted[ns][4], SHM->sorted[ns][0], sizeof(int) * count);
-	    memcpy(SHM->sorted[ns][5], SHM->sorted[ns][0], sizeof(int) * count);
-	    memcpy(SHM->sorted[ns][6], SHM->sorted[ns][0], sizeof(int) * count);
-	}
-	memset(nusers, 0, sizeof(nusers));
-	for (i = 0; i < count; ++i) {
-	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];
-	    if (uentp && uentp->pid && uentp->mode != DEBUGSLEEPING &&
-		0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
-		++nusers[uentp->brc_id - 1];
-	}
-	{
-#if HOTBOARDCACHE
-	    int     k, r, last = 0, top = 0;
-	    int     HBcache[HOTBOARDCACHE];
-	    for (i = 0; i < HOTBOARDCACHE; i++)  HBcache[i]=-1;
-#endif
-	    for (i = 0; i < SHM->Bnumber; i++)
-		if (SHM->bcache[i].brdname[0] != 0){
-		    SHM->bcache[i].nuser = nusers[i];
-#if HOTBOARDCACHE
-		    if( nusers[i] > 8                             &&
-			(top < HOTBOARDCACHE || nusers[i] > last) &&
-			IS_BOARD(&SHM->bcache[i])                 &&
-			!(SHM->bcache[i].brdattr & BRD_COOLDOWN)  &&
-			IS_OPENBRD(&SHM->bcache[i]) ){
-			for( k = top - 1 ; k >= 0 ; --k )
-			    if(HBcache[k]>=0 &&
-                                nusers[i] < SHM->bcache[HBcache[k]].nuser )
-				break;
-			if( top < HOTBOARDCACHE )
-			    ++top;
-			for( r = top - 1 ; r > (k + 1) ; --r )
-			    HBcache[r] = HBcache[r - 1];
-			HBcache[k + 1] = i;
-			last = nusers[HBcache[top - 1]];
-		    }
-#endif
-		}
-#if HOTBOARDCACHE
-	    memcpy(SHM->HBcache, HBcache, sizeof(HBcache));
-	    SHM->nHOTs = top;
-#endif
-	}
-    }
 
-    SHM->currsorted = ns;
+    {
+#if HOTBOARDCACHE
+        int     k, r, last = 0, top = 0;
+        int     HBcache[HOTBOARDCACHE];
+        for (i = 0; i < HOTBOARDCACHE; i++)  HBcache[i] = -1;
+#endif
+        for (i = 0; i < SHM->Bnumber; i++) {
+            if (SHM->bcache[i].brdname[0] != 0) {
+                SHM->bcache[i].nuser = nusers[i];
+#if HOTBOARDCACHE
+                if (nusers[i] > 8                             &&
+                    (top < HOTBOARDCACHE || nusers[i] > last) &&
+                    IS_BOARD(&SHM->bcache[i])                 &&
+                    !(SHM->bcache[i].brdattr & BRD_COOLDOWN)  &&
+                    IS_OPENBRD(&SHM->bcache[i])) {
+                    for (k = top - 1; k >= 0; --k)
+                        if (HBcache[k] >= 0 &&
+                            nusers[i] < SHM->bcache[HBcache[k]].nuser)
+                            break;
+                    if (top < HOTBOARDCACHE)
+                        ++top;
+                    for (r = top - 1; r > (k + 1); --r)
+                        HBcache[r] = HBcache[r - 1];
+                    HBcache[k + 1] = i;
+                    last = nusers[HBcache[top - 1]];
+                }
+#endif
+            }
+        }
+#if HOTBOARDCACHE
+        memcpy(SHM->HBcache, HBcache, sizeof(HBcache));
+        SHM->nHOTs = top;
+#endif
+    }
     SHM->UTMPbusystate = 0;
 }
 
@@ -357,44 +292,39 @@ int utmpsortd(int argc, char **argv)
 {
     pid_t   pid;
     int     interval; // sleep interval in microsecond(1/10**6)
-    int     sortall, counter = 0;
 
-    if( fork() > 0 ){
-	puts("sortutmpd daemonized...");
-	return 0;
+    utmp_update();
+
+    if (fork() > 0) {
+        puts("sortutmpd daemonized...");
+        return 0;
     }
 
-    if( argc < 2 || (interval = atoi(argv[1])) < 500000 )
-	interval = 1000000; // default to 1 sec
-    sortall = ((argc < 3) ? 1 : atoi(argv[2]));
+    if (argc < 2 || (interval = atoi(argv[1])) < 500000)
+        interval = 1000000; // default to 1 sec
 
 #ifndef VALGRIND
     setproctitle("shmctl utmpsortd");
 #endif
 
-    while( 1 ){
-	if( (pid = fork()) != 0 ){
-	    int     s;
-	    waitpid(pid, &s, 0);
-	}
-	else{
-	    while( 1 ){
-		int     i;
-		for( i = 0 ; SHM->UTMPbusystate && i < 5 ; ++i )
-		    usleep(300000);
+    while (1) {
+        if ((pid = fork()) != 0) {
+            int s;
+            waitpid(pid, &s, 0);
+        } else {
+            utmp_update();
+            while (1) {
+                for (int i = 0; SHM->UTMPbusystate && i < 5; ++i)
+                    usleep(300000);
 
-		if( SHM->UTMPneedsort ){
-		    if( ++counter == sortall ){
-			utmpsort(1);
-			counter = 0;
-		    }
-		    else
-			utmpsort(0);
-		}
+                if (SHM->UTMPneedsort) {
+                    utmp_update();
+                    SHM->UTMPneedsort = 0;
+                }
 
-		usleep(interval);
-	    }
-	}
+                usleep(interval);
+            }
+        }
     }
 }
 /* end of utmpsortd -------------------------------------------------------- */
@@ -627,25 +557,32 @@ int start_services()
     return err;
 }
 
-int SHMinit(int argc, char **argv)
+static int
+do_shm_init(int no_uhash_loader, int force_reset, int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
-    int     ch;
-    int     no_uhash_loader = 0;
-    while( (ch = getopt(argc, argv, "n")) != -1 )
-	switch( ch ){
-	case 'n':
-	    no_uhash_loader = 1;
-	    break;
-	default:
-	    printf("usage: shmctl init [-n]\n"
-		   "    -n: no utmpsortd\n");
-	    return 0;
-	}
+    if (force_reset) {
+        puts("resetting existing SHM in-place...");
+        attach_SHM();
+        if (SHM) {
+            SHM->UTMPbusystate = 0;
+            SHM->Bbusystate = 0;
+            SHM->Pbusystate = 0;
+            SHM->Fbusystate = 0;
+            memset(SHM->uinfo, 0, sizeof(SHM->uinfo));
+            SHM->UTMPnumber = 0;
+            SHM->UTMPneedsort = 0;
+            init_utmp_user();
+            SHM->number = 0;
+            SHM->loaded = 0;
+            SHM->today_is[0] = '\0';
+        }
+    }
 
     puts("loading uhash...");
     system("bin/uhash_loader");
 
     attach_SHM();
+    init_utmp_user();
 
     puts("loading bcache...");
     reload_bcache();
@@ -653,15 +590,53 @@ int SHMinit(int argc, char **argv)
     puts("building BMcache...");
     bBMC(1, argv);
 
-    if( !no_uhash_loader ){
-	puts("utmpsortd...");
-	utmpsortd(1, argv);
+    if (!no_uhash_loader) {
+        puts("utmpsortd...");
+        utmpsortd(1, argv);
     }
 
     puts("\nstarting BBS services...");
     start_services();
     puts("\n");
     return 0;
+}
+
+int SHMinit(int argc, char **argv)
+{
+    int ch;
+    int no_uhash_loader = 0;
+    optind = 1;
+    while ((ch = getopt(argc, argv, "n")) != -1) {
+        switch (ch) {
+        case 'n':
+            no_uhash_loader = 1;
+            break;
+        default:
+            printf("usage: shmctl init [-n]\n"
+                   "    -n: no utmpsortd\n");
+            return 0;
+        }
+    }
+    return do_shm_init(no_uhash_loader, 0, argc, argv);
+}
+
+int SHMreset(int argc, char **argv)
+{
+    int ch;
+    int no_uhash_loader = 0;
+    optind = 1;
+    while ((ch = getopt(argc, argv, "n")) != -1) {
+        switch (ch) {
+        case 'n':
+            no_uhash_loader = 1;
+            break;
+        default:
+            printf("usage: shmctl reset [-n]\n"
+                   "    -n: no utmpsortd\n");
+            return 0;
+        }
+    }
+    return do_shm_init(no_uhash_loader, 1, argc, argv);
 }
 
 int hotboard(int argc, char **argv)
@@ -961,6 +936,7 @@ struct Cmd {
     {showglobal, "showglobal", "show GLOBALVAR[]"},
     {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
     {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start sutmpsortd and helper services. Options: [-h: see full usage]"},
+    {SHMreset,   "reset",      "reset SHM in-place (wipe uinfo/utmp/uhash and re-initialize without recreating SHM). Options: [-n: no utmpsortd]"},
     {NULL, NULL, NULL}
 };
 
@@ -987,7 +963,7 @@ int main(int argc, char **argv)
 	return 0;
     }
 
-    bool do_init = (cmd[i].func == SHMinit);
+    bool do_init = (cmd[i].func == SHMinit || cmd[i].func == SHMreset);
     if (!do_init) {
 	attach_SHM();
 	/* shmctl doesn't need resolve_boards() first */

@@ -15,6 +15,13 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## shm, util, mbbsd: Replace sorted utmp with direct user session table
+
+把原本 SHM->sorted 的 UTMP tables 改為以 UID 直接定址的反向查表（`utmp_user`）
+，不需全表排序。這個 patch 需要關站停止所有舊的 `mbbsd`，砍掉執行中的
+`utmpsortd`（`killall -9 shmctl`）並重設 UTMP 的 SHM（`shmctl reset` 或
+`shmctl init`）。
+
 ## read, bbs, search: Replace SR.* and refer with `search.svc`
 
 停用搜尋快取的 .DIR，改用獨立的 `search.svc` 管理。
