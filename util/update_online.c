@@ -7,22 +7,18 @@ static int verbose = 0;
 
 void fastcheck()
 {
-    int i, total = SHM->UTMPnumber;
-    int sorted[USHM_SIZE], last_uid = -1;
+    int i;
+    static char seen_uid[MAX_USERS + 1];
     userec_t urec;
     userinfo_t u;
     time4_t base;
 
     now -= (time4_to_time(now) % 60); // begin of current minute, in case cron delays
     base = now - DAY_SECONDS;
+    memset(seen_uid, 0, sizeof(seen_uid));
 
-    assert(sizeof(sorted) == sizeof(**SHM->sorted));
-    memcpy(sorted, SHM->sorted[SHM->currsorted][7],
-           sizeof(sorted));
-    for (i = 0; i < total; i++) {
-        if (sorted[i] < 0 || sorted[i] >= USHM_SIZE)
-            continue;
-        memcpy(&u, SHM->uinfo + sorted[i], sizeof(u));
+    for (i = 0; i < USHM_SIZE; i++) {
+        memcpy(&u, SHM->uinfo + i, sizeof(u));
         if (!u.userid[0])
             continue;
         if (verbose > 2)
@@ -33,8 +29,9 @@ void fastcheck()
             u.pid <= 0 ||
             kill(u.pid, 0) != 0)
             continue;
-        if (last_uid == u.uid)
+        if (u.uid <= 0 || u.uid > MAX_USERS || seen_uid[u.uid])
             continue;
+        seen_uid[u.uid] = 1;
 
         // Found new online user.
         passwd_query(u.uid, &urec);
@@ -44,7 +41,6 @@ void fastcheck()
                         u.userid, urec.userid);
             continue;
         }
-        last_uid = u.uid;
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
@@ -59,7 +55,7 @@ void fastcheck()
         urec.numlogindays++;
         if (verbose)
             fprintf(stderr, "(%s, %d).\n", Cdatelite(&urec.lastlogin), urec.numlogindays);
-        passwd_update(last_uid, &urec);
+        passwd_update(u.uid, &urec);
     }
 }
 
