@@ -52,23 +52,18 @@
 void
 add_to_uhash(int n, const char *id)
 {
-    int            *p, h = StringHash(id)%(1<<HASH_BITS);
-    int             times;
+    if (!SHM || n < 0 || n >= MAX_USERS || !id)
+        return;
+
+    int h = StringHash(id) % (1 << HASH_BITS);
     STRLCPY(SHM->userid[n], id);
 
-    p = &(SHM->hash_head[h]);
-
-    for (times = 0; times < MAX_USERS && *p != -1; ++times)
-	p = &(SHM->next_in_hash[*p]);
-
-    if (times >= MAX_USERS)
-    {
-	// abort_bbs(0);
-	fprintf(stderr, "add_to_uhash: exceed max users.\r\n");
-	exit(0);
-    }
-
-    SHM->next_in_hash[*p = n] = -1;
+    int old_head;
+    do {
+        old_head = __atomic_load_n(&SHM->hash_head[h], __ATOMIC_ACQUIRE);
+        __atomic_store_n(&SHM->next_in_hash[n], old_head, __ATOMIC_RELEASE);
+    } while (!__atomic_compare_exchange_n(&SHM->hash_head[h], &old_head, n,
+                                          false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 }
 
 void
@@ -78,22 +73,42 @@ remove_from_uhash(int n)
  * note: after remove_from_uhash(), you should add_to_uhash() (likely with a
  * different name)
  */
-    int             h = StringHash(SHM->userid[n])%(1<<HASH_BITS);
-    int            *p = &(SHM->hash_head[h]);
-    int             times;
+    if (!SHM || n < 0 || n >= MAX_USERS)
+        return;
 
-    for (times = 0; times < MAX_USERS && (*p != -1 && *p != n); ++times)
-	p = &(SHM->next_in_hash[*p]);
+    int h = StringHash(SHM->userid[n]) % (1 << HASH_BITS);
 
-    if (times >= MAX_USERS)
-    {
-	// abort_bbs(0);
-	fprintf(stderr, "remove_from_uhash: current SHM exceed max users.\r\n");
-	exit(0);
+    while (1) {
+        int head = __atomic_load_n(&SHM->hash_head[h], __ATOMIC_ACQUIRE);
+        if (head == -1 || head >= MAX_USERS || head < 0)
+            return;
+
+        if (head == n) {
+            int next = __atomic_load_n(&SHM->next_in_hash[n], __ATOMIC_ACQUIRE);
+            if (__atomic_compare_exchange_n(&SHM->hash_head[h], &head, next,
+                                            false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
+                return;
+            continue;
+        }
+
+        int prev = head;
+        int restart = 0;
+        for (int times = 0; times < MAX_USERS && prev != -1 && prev >= 0 && prev < MAX_USERS; ++times) {
+            int next = __atomic_load_n(&SHM->next_in_hash[prev], __ATOMIC_ACQUIRE);
+            if (next == n) {
+                int succ = __atomic_load_n(&SHM->next_in_hash[n], __ATOMIC_ACQUIRE);
+                if (!__atomic_compare_exchange_n(&SHM->next_in_hash[prev], &next, succ,
+                                                 false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+                    restart = 1;
+                    break;
+                }
+                return;
+            }
+            prev = next;
+        }
+        if (!restart)
+            return;
     }
-
-    if (*p == n)
-	*p = SHM->next_in_hash[n];
 }
 
 #if !defined(SKIP_HASH_BITS_CHECK) && ((1<<HASH_BITS)*10 < MAX_USERS)
@@ -108,15 +123,15 @@ dosearchuser(const char *userid, char *rightid)
 {
     int             h, p, times;
     STATINC(STAT_SEARCHUSER);
-    h = StringHash(userid)%(1<<HASH_BITS);
-    p = SHM->hash_head[h];
+    h = StringHash(userid) % (1 << HASH_BITS);
+    p = __atomic_load_n(&SHM->hash_head[h], __ATOMIC_ACQUIRE);
 
-    for (times = 0; times < MAX_USERS && p != -1 && p < MAX_USERS ; ++times) {
+    for (times = 0; times < MAX_USERS && p != -1 && p >= 0 && p < MAX_USERS; ++times) {
 	if (strcasecmp(SHM->userid[p], userid) == 0) {
-	    if(userid[0] && rightid) strcpy(rightid, SHM->userid[p]);
+	    if (userid[0] && rightid) strlcpy(rightid, SHM->userid[p], IDLEN + 1);
 	    return p + 1;
 	}
-	p = SHM->next_in_hash[p];
+	p = __atomic_load_n(&SHM->next_in_hash[p], __ATOMIC_ACQUIRE);
     }
 
     return 0;
