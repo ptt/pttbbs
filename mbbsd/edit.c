@@ -3852,7 +3852,7 @@ typedef struct {
     char *title;
     int flags;
     int mode0;
-    int destuid0;
+    int destunum0;
     int money;
     int entropy;
     int finished;
@@ -3871,7 +3871,7 @@ edit_cmd_save(cmd_ctx_t *ctx)
                      &ec->entropy);
     if (tmp != KEEP_EDITING) {
         currutmp->mode = ec->mode0;
-        currutmp->destuid = ec->destuid0;
+        currutmp->destunum = ec->destunum0;
 
         exit_edit_buffer();
 
@@ -3899,7 +3899,7 @@ edit_cmd_abort(cmd_ctx_t *ctx)
     ch = vmsg("結束但不儲存 [y/N]? ");
     if (ch == 'y' || ch == 'Y') {
         currutmp->mode = ec->mode0;
-        currutmp->destuid = ec->destuid0;
+        currutmp->destunum = ec->destunum0;
         exit_edit_buffer();
         ec->finished = 1;
         ec->retval = -1;
@@ -4527,11 +4527,11 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     ec.title = title;
     ec.flags = flags;
     ec.mode0 = currutmp->mode;
-    ec.destuid0 = currutmp->destuid;
+    ec.destunum0 = currutmp->destunum;
 
     STATINC(STAT_VEDIT);
     currutmp->mode = EDITING;
-    currutmp->destuid = currstat;
+    currutmp->destunum = currstat;
 
     mbcs_mode = ISDBCSAWARE() ? 1 : 0;
 

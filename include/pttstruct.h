@@ -425,8 +425,8 @@ typedef struct userinfo_t {
     /* chatroom/talk/games calling */
     unsigned char   sig;            /* signal type */
     uint16_t _unused_conn6_tie;
-    int     destuid;              /* talk uses this to identify who called */
-    int     destuip;              /* dest index in utmpshm->uinfo[] */
+    int     destunum;              /* talk uses this to identify who called */
+    int     destuslot;              /* dest index in utmpshm->uinfo[] */
     unsigned char   sockactive;     /* Used to coordinate talk requests */
 
     /* chat */

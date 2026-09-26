@@ -649,7 +649,7 @@ ccw_talk_peek_key(CCW_CTX *ctx, int key)
 }
 
 int
-ccw_talk(int fd, int destuid)
+ccw_talk(int fd, int destunum)
 {
     char fpath[PATHLEN];
     char remote_id[IDLEN+1], local_id[IDLEN+1];
@@ -681,8 +681,8 @@ ccw_talk(int fd, int destuid)
     setutmpmode(TALK);
 
     // get dest user id
-    assert(getuserid(destuid));
-    STRLCPY(remote_id, getuserid(destuid));
+    assert(getuserid(destunum));
+    STRLCPY(remote_id, getuserid(destunum));
     STRLCPY(local_id, cuser.userid);
     assert(ctx.remote_id[0]);
     assert(ctx.local_id[0]);

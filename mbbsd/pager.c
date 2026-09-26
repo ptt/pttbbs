@@ -679,7 +679,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     }
 
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
-        uin->destuip = get_utmp_slot(currutmp);
+        uin->destuslot = get_utmp_slot(currutmp);
         uin->sig = 2;
         if (uin->pid > 0)
             kill(uin->pid, SIGUSR1);
@@ -1003,8 +1003,8 @@ talk_request(int sig GCC_UNUSED)
         syncnow();
         move(0, 0);
         clrtoeol();
-        const char *sender_name = VALID_USHM_ENTRY(currutmp->destuip) ?
-            SHM->uinfo[currutmp->destuip].userid : currutmp->msgs[0].userid;
+        const char *sender_name = VALID_USHM_ENTRY(currutmp->destuslot) ?
+            SHM->uinfo[currutmp->destuslot].userid : currutmp->msgs[0].userid;
         prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_RESET,
                sender_name, Cdatelite(&now),
                (currutmp->sig == 2) ? "有急事!(按Ctrl-U,l 可看訊息)"

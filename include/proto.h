@@ -158,7 +158,7 @@ char *get_restriction_reason(
         size_t sz_msg, char *msg);
 
 /* ccw (common chat window) */
-int ccw_talk(int fd, int destuid);	// common chat window: private talk
+int ccw_talk(int fd, int destunum);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
 /* comments */
