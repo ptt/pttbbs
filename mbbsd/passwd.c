@@ -363,8 +363,6 @@ pwcuChessResult(int sigType, ChessGameResult r)
     // verify variable size
     assert(sizeof(* utmp_win) == sizeof(currutmp->chc_win));
     assert(sizeof(*cuser_lose)== sizeof(   cuser.five_lose));
-    assert(sizeof(*    u_tie) == sizeof(       u.go_tie));
-    assert(sizeof(*    u_tie) == sizeof(       u.dark_tie));
 
     // determine variables
     switch(sigType)
