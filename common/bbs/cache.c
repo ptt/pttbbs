@@ -179,7 +179,7 @@ setuserid(int num, const char *userid)
 static void
 clean_marked_nodes(int unum)
 {
-    while (1) {
+    for (int attempts = 0; attempts < USHM_SIZE; attempts++) {
         int head = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
         if (!VALID_USHM_ENTRY(head))
             return;
@@ -187,6 +187,11 @@ clean_marked_nodes(int unum)
         int head_next = __atomic_load_n(&SHM->utmp_user.next_session[head], __ATOMIC_ACQUIRE);
         if (UTMP_IS_DELETED(head_next)) {
             int next = UTMP_DECODE_SLOT(head_next);
+            if (next == head || !VALID_USHM_ENTRY(next)) {
+                __atomic_compare_exchange_n(&SHM->utmp_user.user_head[unum], &head, -1,
+                                            false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+                return;
+            }
             __atomic_compare_exchange_n(&SHM->utmp_user.user_head[unum], &head, next,
                                         false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
             continue;
@@ -201,12 +206,14 @@ clean_marked_nodes(int unum)
                 break;
             }
             int curr = UTMP_DECODE_SLOT(prev_next);
-            if (!VALID_USHM_ENTRY(curr))
+            if (!VALID_USHM_ENTRY(curr) || curr == prev)
                 break;
 
             int curr_next = __atomic_load_n(&SHM->utmp_user.next_session[curr], __ATOMIC_ACQUIRE);
             if (UTMP_IS_DELETED(curr_next)) {
                 int succ = UTMP_DECODE_SLOT(curr_next);
+                if (succ == curr || succ == prev)
+                    succ = -1;
                 int expected = UTMP_ENCODE_NEXT(curr);
                 if (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[prev], &expected,
                                                  UTMP_ENCODE_NEXT(succ),
@@ -278,6 +285,9 @@ add_to_utmp_user(int uslot, int unum)
     int old_head;
     do {
         old_head = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
+        if (old_head == uslot) {
+            return;
+        }
         __atomic_store_n(&SHM->utmp_user.next_session[uslot], UTMP_ENCODE_NEXT(old_head), __ATOMIC_RELEASE);
     } while (!__atomic_compare_exchange_n(&SHM->utmp_user.user_head[unum],
                                           &old_head,
@@ -293,7 +303,7 @@ utmp_apply_user(int unum, int (*callback)(userinfo_t *uentp, void *arg), void *a
     if (!SHM || unum <= 0 || unum > MAX_USERS)
         return 0;
     int uslot = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
-    for (int count = 0; count < USHM_SIZE && VALID_USHM_ENTRY(uslot); count++) {
+    for (int count = 0; count < 32 && VALID_USHM_ENTRY(uslot); count++) {
         int next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
         int next_slot = UTMP_DECODE_SLOT(next_val);
         if (!UTMP_IS_DELETED(next_val)) {
@@ -302,8 +312,12 @@ utmp_apply_user(int unum, int (*callback)(userinfo_t *uentp, void *arg), void *a
                 int ret = callback(uentp, arg);
                 if (ret != 0)
                     return ret;
+            } else {
+                break;
             }
         }
+        if (next_slot == uslot)
+            break;
         uslot = next_slot;
     }
     return 0;
