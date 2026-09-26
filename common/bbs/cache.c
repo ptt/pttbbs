@@ -309,23 +309,33 @@ free_utmp_snapshot(int *slots)
 int
 setumoney(int uid, int money)
 {
-    SHM->money[uid - 1] = money;
+    if (uid <= 0 || uid > MAX_USERS)
+        return -1;
+    __atomic_store_n(&SHM->money[uid - 1], money, __ATOMIC_RELEASE);
     passwd_update_money(uid);
-    return SHM->money[uid - 1];
+    return money;
 }
 
 int
 deumoney(int uid, int money)
 {
-    if (uid <= 0 || uid > MAX_USERS){
+    if (uid <= 0 || uid > MAX_USERS) {
 	fprintf(stderr, "internal error: deumoney(%d, %d)\r\n", uid, money);
 	return -1;
     }
 
-    if (money < 0 && moneyof(uid) < -money)
-	return setumoney(uid, 0);
-    else
-	return setumoney(uid, SHM->money[uid - 1] + money);
+    int old_m, new_m;
+    do {
+        old_m = __atomic_load_n(&SHM->money[uid - 1], __ATOMIC_ACQUIRE);
+        if (money < 0 && old_m < -money)
+            new_m = 0;
+        else
+            new_m = old_m + money;
+    } while (!__atomic_compare_exchange_n(&SHM->money[uid - 1], &old_m, new_m,
+                                          false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+
+    passwd_update_money(uid);
+    return new_m;
 }
 
 /*
@@ -624,10 +634,21 @@ setbtotal(int bid)
 void
 touchbpostnum(int bid, int delta)
 {
-    int            *total = &SHM->total[bid - 1];
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
-    if (*total)
-	*total += delta;
+    if (bid <= 0 || bid > MAX_BOARD)
+        return;
+    assert(0 <= bid - 1 && bid - 1 < MAX_BOARD);
+    int old_val;
+    do {
+        old_val = __atomic_load_n(&SHM->total[bid - 1], __ATOMIC_ACQUIRE);
+        if (old_val <= 0)
+            return;
+        int new_val = old_val + delta;
+        if (new_val < 0)
+            new_val = 0;
+        if (__atomic_compare_exchange_n(&SHM->total[bid - 1], &old_val, new_val,
+                                        false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
+            break;
+    } while (1);
 }
 
 int
