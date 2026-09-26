@@ -3318,7 +3318,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     /* DIGEST is not visible to users... */
     if ((fhdr->filemode & FILE_BOTTOM) ||
         (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST)) {
-        vmsg("文章被標記或置底或收入文摘，無法刪除，請洽板主");
+        if (is_BM_cache(currbid))
+            vmsg("文章被標記(m)或置底(_)或收入文摘(g)，請先解除");
+        else
+            vmsg("文章被標記或置底或收入文摘，無法刪除，請洽板主");
         return DONOTHING;
     }
 
