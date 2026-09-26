@@ -87,17 +87,11 @@ set_online_session_friends(int uslot, int expected_pid, int expected_uid,
     if (expected_uid > 0 && u->uid != expected_uid) {
         return 0;
     }
-    /* Before the cutoff the session may belong to a legacy binary, whose
-     * userinfo_t has reject[] right after friend_online[MAX_FRIEND] + gap_2.
-     * Only touch friend_online[0..MAX_FRIEND] (the last one is old gap_2,
-     * zeroed as a terminator). */
-    int limit = (time(NULL) < FRIEND_LEGACY_COMPAT_CUTOFF) ? MAX_FRIEND : MAX_FRIEND_ONLINE;
-    int clear_end = (limit < MAX_FRIEND_ONLINE) ? limit + 1 : MAX_FRIEND_ONLINE;
     if (count < 0) {
         count = 0;
     }
-    if (count > limit) {
-        count = limit;
+    if (count > MAX_FRIEND_ONLINE) {
+        count = MAX_FRIEND_ONLINE;
     }
     if (count > 0 && entries) {
         for (int i = 0; i < count; i++) {
@@ -114,9 +108,9 @@ set_online_session_friends(int uslot, int expected_pid, int expected_uid,
         memcpy(u->friend_online, entries, sizeof(unsigned int) * (size_t)count);
     }
 
-    if (count < clear_end) {
+    if (count < MAX_FRIEND_ONLINE) {
         memset(&u->friend_online[count], 0,
-               sizeof(unsigned int) * (size_t)(clear_end - count));
+               sizeof(unsigned int) * (size_t)(MAX_FRIEND_ONLINE - count));
     }
     u->friend_svc_flag = 1;
     __sync_synchronize();

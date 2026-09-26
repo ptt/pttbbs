@@ -933,8 +933,6 @@ static void init_guest_info(void)
 }
 
 
-// XXX temporary...
-int query_adbanner_usong_pref_changed(const userec_t *u, char force_yn);
 
 static void
 user_login(void)
@@ -1019,27 +1017,6 @@ user_login(void)
             pressanykey();
         }
 
-	// XXX only for temporary...
-#ifdef ADBANNER_USONG_TIMEBOMB
-	if (last_login_time < ADBANNER_USONG_TIMEBOMB)
-	{
-	    if (query_adbanner_usong_pref_changed(cuser_ref, 1))
-		pwcuToggleUserFlag(UF_ADBANNER_USONG);
-	}
-#endif
-#ifdef UNTRUSTED_FORWARD_TIMEBOMB
-        {   char fwd_path[PATHLEN];
-            setuserfile(fwd_path, FN_FORWARD);
-            if (dashf(fwd_path) && time4_lt(dasht(fwd_path), UNTRUSTED_FORWARD_TIMEBOMB))
-            {
-                vs_hdr("自動轉寄設定已變更");
-                unlink(fwd_path);
-                outs("\n由於系統調整，您的自動轉寄已被重設，\n"
-                     "如有需求請重新設定。\n");
-                pressanykey();
-            }
-        }
-#endif
 
     } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
 
