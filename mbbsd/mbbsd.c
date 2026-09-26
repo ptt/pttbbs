@@ -977,9 +977,14 @@ user_login(void)
     refresh();
     currutmp->alerts |= load_mailalert(cuser.userid);
 
-    if ((nowusers = SHM->UTMPnumber) > SHM->max_user) {
-	SHM->max_user = nowusers;
-	SHM->max_time = now;
+    nowusers = SHM->UTMPnumber;
+    int cur_max = __atomic_load_n(&SHM->max_user, __ATOMIC_ACQUIRE);
+    while (nowusers > cur_max) {
+	if (__atomic_compare_exchange_n(&SHM->max_user, &cur_max, nowusers,
+	                                false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+	    SHM->max_time = now;
+	    break;
+	}
     }
 
     do_aloha();
@@ -1904,7 +1909,7 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 		    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
 #endif
 		) {
-	    ++SHM->GV2.e.toomanyusers;
+	    __atomic_fetch_add(&SHM->GV2.e.toomanyusers, 1, __ATOMIC_RELAXED);
 	    overload = 2;
 	} else if(!access(BBSHOME "/" BAN_FILE, R_OK))
 	    banned = 1;
