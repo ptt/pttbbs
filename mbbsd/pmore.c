@@ -1503,6 +1503,7 @@ mf_display()
 
     MFDISP_FORCEUPDATE2TOP();
     MFDISP_FORCEUPDATE2BOT();
+    outs(ANSI_RESET); // Ensure the term attributes are not changed by others.
 
 #ifdef PMORE_USE_OPT_SCROLL
 
@@ -2255,7 +2256,6 @@ mf_display_footer(
     PMORE_COLOR_FOOTER3_TEXT "Â÷¶} " \
     PMORE_MSG_FOOTER_FLOAT_SHORT
 
-
     vbarlr("", PMORE_MSG_FOOTER_FLOAT_LONG);
 }
 
@@ -2941,10 +2941,8 @@ _pmore2(
 
         /* PRINT FOOTER */
         mf_display_footer(cb->footer, ctx);
-        if (!cb->footer) {
-            outs(ANSI_RESET);
-            FORCE_CLRTOEOL();
-        }
+        outs(ANSI_RESET);
+        FORCE_CLRTOEOL();
 
         /* vkey() will do refresh(); */
         ch = cb->vkey ? cb->vkey(ctx) : vkey();
