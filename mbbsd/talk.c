@@ -899,9 +899,7 @@ pickup(userlist_ctx_t *cx)
         *nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
 
         if (pickup_way == 0 && currutmp->brc_id != 0
-#ifdef USE_COOLDOWN
             && !(getbcache(currutmp->brc_id)->brdattr & BRD_COOLDOWN)
-#endif
            ) {
             *nfriend += pickup_bfriend(friends, *nfriend);
             *bfriend = SHM->bcache[currutmp->brc_id - 1].nuser;

@@ -92,11 +92,7 @@ const char * const str_permboard[] = {
     "(無作用)",                 /* deprecated: BRD_LOCALSAVE */
     "限看板會員發文",           /* BRD_RESTRICTEDPOST */
     "Guest可以發表",            /* BRD_GUESTPOST */
-#ifdef USE_COOLDOWN
     "冷靜",			/* BRD_COOLDOWN */
-#else
-    "冷靜(本站無效)",		/* BRD_COOLDOWN */
-#endif
 #ifdef USE_AUTOCPLOG
     "自動留轉錄記錄",		/* BRD_CPLOG */
 #else
