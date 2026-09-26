@@ -655,11 +655,9 @@ readtitle(void)
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
     buf[0] = 0;
 
-#ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN)
         SNPRINTF(buf, "[靜] ");
     else
-#endif
     {
         // nuser is not real-time updated (maintained by utmpsort), so let's
         // make some calibration here. It's minimal value is one because the
