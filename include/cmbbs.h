@@ -99,8 +99,15 @@ int  search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
                             time4_t target_ts, unsigned int target_hex,
                             int allow_prefix, int required_mode,
                             fileheader_t *out_fh);
+int  search_dir_by_stamp_fd_bounded(int fd, int total, int hint_idx, char prefix_ch,
+                                     time4_t target_ts, unsigned int target_hex,
+                                     int allow_prefix, int required_mode,
+                                     fileheader_t *out_fh, int max_backtrack);
 int  search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
                            int required_mode, fileheader_t *out_fh);
+int  search_dir_by_aidu_fd_bounded(int fd, int total, aidu_t aidu,
+                                   int required_mode, fileheader_t *out_fh,
+                                   int max_backtrack);
 int  search_dir_by_aidu(const char *direct, aidu_t aidu,
                         int required_mode, fileheader_t *out_fh);
 /* aids.c */

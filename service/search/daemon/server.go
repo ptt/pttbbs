@@ -14,6 +14,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -36,14 +40,67 @@ const (
 )
 
 type ControlRequest struct {
-	Action string `json:"action"`
-	Bid    int32  `json:"bid,omitempty"`
+	Action  string `json:"action"`
+	Bid     int32  `json:"bid,omitempty"`
+	Board   string `json:"board,omitempty"`
+	Limit   int    `json:"limit,omitempty"`
+	SortBy  string `json:"sort_by,omitempty"`
+	Level   *int   `json:"level,omitempty"`
+	Profile string `json:"profile,omitempty"`
+	Seconds int    `json:"seconds,omitempty"`
+	Debug   int    `json:"debug,omitempty"`
 }
 
 type ControlResponse struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
+}
+
+type CachedEntryInfo struct {
+	Board       string    `json:"board"`
+	Bid         int32     `json:"bid"`
+	Predicates  string    `json:"predicates"`
+	Matches     int       `json:"matches"`
+	ScannedRecs int32     `json:"scanned_recs"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type BoardStats struct {
+	Direct          string  `json:"direct"`
+	Board           string  `json:"board"`
+	Bid             int32   `json:"bid"`
+	CachedEntries   int     `json:"cached_entries"`
+	CachedIndices   int64   `json:"cached_indices"`
+	CachedAID       int     `json:"cached_aid_entries"`
+	SearchQueries   int64   `json:"search_queries"`
+	SearchHits      int64   `json:"search_hits"`
+	SearchMisses    int64   `json:"search_misses"`
+	AIDQueries      int64   `json:"aid_queries"`
+	AIDHits         int64   `json:"aid_hits"`
+	AIDMisses       int64   `json:"aid_misses"`
+	ScanDurationMs  float64 `json:"scan_duration_ms"`
+	MaxBacktrack    int32   `json:"max_backtrack"`
+	MaxTimeDiffSecs int64   `json:"max_time_diff_secs"`
+}
+
+type BoardBacktrackInfo struct {
+	Direct          string    `json:"direct"`
+	Board           string    `json:"board"`
+	Bid             int32     `json:"bid"`
+	TotalRecs       int32     `json:"total_recs"`
+	MaxBacktrack    int32     `json:"max_backtrack"`
+	MaxTimeDiffSecs int64     `json:"max_time_diff_secs"`
+	DirMtime        time.Time `json:"dir_mtime"`
+	LastScanned     time.Time `json:"last_scanned"`
+}
+
+type PprofResult struct {
+	Profile string `json:"profile"`
+	Seconds int    `json:"seconds,omitempty"`
+	IsText  bool   `json:"is_text"`
+	Text    string `json:"text,omitempty"`
+	Bytes   []byte `json:"bytes,omitempty"`
 }
 
 type ServiceStats struct {
@@ -126,12 +183,24 @@ type aidInflightCall struct {
 	err      error
 }
 
+type boardActivity struct {
+	direct         string
+	bid            atomic.Int32
+	searchQueries  atomic.Int64
+	searchHits     atomic.Int64
+	searchMisses   atomic.Int64
+	aidQueries     atomic.Int64
+	aidHits        atomic.Int64
+	aidMisses      atomic.Int64
+	scanDurationNs atomic.Int64
+}
+
 type Service struct {
 	bbsHome    string
 	socketPath string
 	listener   net.Listener
 	shm        *bbs.SHMClient
-	verbose    int
+	verbose    atomic.Int32
 	startTime  time.Time
 
 	cacheMu      sync.Mutex
@@ -150,6 +219,14 @@ type Service struct {
 	sfMu        sync.Mutex
 	inflight    map[cacheKey]*inflightCall
 	aidInflight map[aidCacheKey]*aidInflightCall
+
+	boardMu sync.RWMutex
+	boards  map[string]*boardActivity
+
+	backtrackMu sync.RWMutex
+	backtrack   map[string]*BoardBacktrackInfo
+
+	cpuProfileMu sync.Mutex
 
 	// gen is bumped by Invalidate so that scans started before an
 	// invalidation do not re-insert their (possibly stale) results.
@@ -209,12 +286,18 @@ func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 		maxAIDEntries: DefaultMaxAIDEntries,
 		inflight:      make(map[cacheKey]*inflightCall),
 		aidInflight:   make(map[aidCacheKey]*aidInflightCall),
+		boards:        make(map[string]*boardActivity),
+		backtrack:     make(map[string]*BoardBacktrackInfo),
 		stopChan:      make(chan struct{}),
 	}
 }
 
+func (s *Service) Verbose() int {
+	return int(s.verbose.Load())
+}
+
 func (s *Service) SetVerbose(level int) {
-	s.verbose = level
+	s.verbose.Store(int32(level))
 }
 
 func (s *Service) SetCacheLimits(maxEntries int, maxIndices int64, maxAIDEntries int, cacheTTL time.Duration) {
@@ -298,9 +381,41 @@ func (s *Service) Stop() {
 	s.wg.Wait()
 }
 
+func (s *Service) getPeerInfo(conn net.Conn) string {
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return ""
+	}
+	raw, err := unixConn.SyscallConn()
+	if err != nil {
+		return ""
+	}
+	var ucred *syscall.Ucred
+	var sysErr error
+	_ = raw.Control(func(fd uintptr) {
+		ucred, sysErr = syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
+	})
+	if sysErr != nil || ucred == nil || ucred.Pid <= 0 {
+		return ""
+	}
+	pid := ucred.Pid
+	if userid := UserIDByPID(pid); userid != "" {
+		return fmt.Sprintf("user=%s(pid=%d)", userid, pid)
+	}
+	if comm, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid)); err == nil {
+		name := strings.TrimSpace(string(comm))
+		if name != "" {
+			return fmt.Sprintf("pid=%d(%s)", pid, name)
+		}
+	}
+	return fmt.Sprintf("pid=%d", pid)
+}
+
 func (s *Service) handleConn(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	peerInfo := s.getPeerInfo(conn)
 
 	br := bufio.NewReader(conn)
 	first, err := br.Peek(1)
@@ -308,13 +423,13 @@ func (s *Service) handleConn(conn net.Conn) {
 		return
 	}
 	if first[0] == '{' {
-		s.handleControlConn(br, conn)
+		s.handleControlConn(br, conn, conn)
 		return
 	}
-	s.handleBinaryConn(br, conn)
+	s.handleBinaryConn(br, conn, peerInfo)
 }
 
-func (s *Service) handleControlConn(r io.Reader, w io.Writer) {
+func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 	var req ControlRequest
 	if err := json.NewDecoder(r).Decode(&req); err != nil {
 		_ = json.NewEncoder(w).Encode(ControlResponse{
@@ -370,6 +485,79 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer) {
 			Message: fmt.Sprintf("flushed %d cache entries", flushed),
 		})
 
+	case "verbose":
+		if req.Level != nil {
+			s.SetVerbose(*req.Level)
+		}
+		v := s.Verbose()
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "ok",
+			Message: fmt.Sprintf("verbose level is %d", v),
+			Data:    map[string]int{"verbose": v},
+		})
+
+	case "top":
+		limit := req.Limit
+		if limit <= 0 {
+			limit = 20
+		}
+		results := s.TopBoards(limit, req.SortBy)
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "ok",
+			Message: fmt.Sprintf("top %d boards", len(results)),
+			Data:    results,
+		})
+
+	case "backtrack":
+		infos := s.AllBacktrackInfo()
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "ok",
+			Message: fmt.Sprintf("%d boards backtrack cached", len(infos)),
+			Data:    infos,
+		})
+
+	case "entries":
+		filter := req.Board
+		if filter == "" && req.Bid > 0 {
+			filter = s.ResolveBoardName("", req.Bid)
+		}
+		var list []CachedEntryInfo
+		s.cacheMu.Lock()
+		for k, e := range s.entries {
+			bname := s.ResolveBoardName(k.direct, k.bid)
+			if filter != "" && !strings.EqualFold(bname, filter) && !strings.Contains(k.direct, filter) {
+				continue
+			}
+			numPreds := len(e.key.predsHex) / PredSize()
+			predsStr := FormatPreds([]byte(e.key.predsHex), numPreds)
+			list = append(list, CachedEntryInfo{
+				Board:       bname,
+				Bid:         k.bid,
+				Predicates:  predsStr,
+				Matches:     len(e.indices),
+				ScannedRecs: e.scannedRecs,
+				CreatedAt:   e.createdAt,
+			})
+		}
+		s.cacheMu.Unlock()
+		sort.Slice(list, func(i, j int) bool {
+			if list[i].Matches != list[j].Matches {
+				return list[i].Matches > list[j].Matches
+			}
+			return list[i].CreatedAt.After(list[j].CreatedAt)
+		})
+		if req.Limit > 0 && len(list) > req.Limit {
+			list = list[:req.Limit]
+		}
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "ok",
+			Message: fmt.Sprintf("%d cached entries", len(list)),
+			Data:    list,
+		})
+
+	case "pprof":
+		s.handleControlPprof(w, req, conn)
+
 	default:
 		_ = json.NewEncoder(w).Encode(ControlResponse{
 			Status:  "error",
@@ -378,11 +566,410 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer) {
 	}
 }
 
+func (s *Service) handleControlPprof(w io.Writer, req ControlRequest, conn net.Conn) {
+	profile := req.Profile
+	if profile == "" {
+		profile = "goroutine"
+	}
+
+	switch profile {
+	case "cpu":
+		s.cpuProfileMu.Lock()
+		defer s.cpuProfileMu.Unlock()
+
+		seconds := req.Seconds
+		if seconds <= 0 {
+			seconds = 10
+		}
+		if seconds > 60 {
+			seconds = 60
+		}
+		if conn != nil {
+			_ = conn.SetDeadline(time.Now().Add(time.Duration(seconds+15) * time.Second))
+		}
+
+		var buf bytes.Buffer
+		if err := pprof.StartCPUProfile(&buf); err != nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("failed to start cpu profile: %v", err),
+			})
+			return
+		}
+		time.Sleep(time.Duration(seconds) * time.Second)
+		pprof.StopCPUProfile()
+
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "ok",
+			Message: fmt.Sprintf("collected %d seconds cpu profile", seconds),
+			Data: PprofResult{
+				Profile: "cpu",
+				Seconds: seconds,
+				IsText:  false,
+				Bytes:   buf.Bytes(),
+			},
+		})
+
+	case "goroutine":
+		p := pprof.Lookup("goroutine")
+		if p == nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: "goroutine profile not found",
+			})
+			return
+		}
+		debug := req.Debug
+		if debug == 0 {
+			debug = 2
+		}
+		var buf bytes.Buffer
+		if err := p.WriteTo(&buf, debug); err != nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("failed to write goroutine profile: %v", err),
+			})
+			return
+		}
+		if debug > 0 {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: "goroutine dump",
+				Data: PprofResult{
+					Profile: "goroutine",
+					IsText:  true,
+					Text:    buf.String(),
+				},
+			})
+		} else {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: "goroutine profile",
+				Data: PprofResult{
+					Profile: "goroutine",
+					IsText:  false,
+					Bytes:   buf.Bytes(),
+				},
+			})
+		}
+
+	case "heap":
+		runtime.GC()
+		p := pprof.Lookup("heap")
+		if p == nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: "heap profile not found",
+			})
+			return
+		}
+		debug := req.Debug
+		var buf bytes.Buffer
+		if err := p.WriteTo(&buf, debug); err != nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("failed to write heap profile: %v", err),
+			})
+			return
+		}
+		if debug > 0 {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: "heap dump",
+				Data: PprofResult{
+					Profile: "heap",
+					IsText:  true,
+					Text:    buf.String(),
+				},
+			})
+		} else {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: "heap profile",
+				Data: PprofResult{
+					Profile: "heap",
+					IsText:  false,
+					Bytes:   buf.Bytes(),
+				},
+			})
+		}
+
+	case "block", "mutex", "threadcreate":
+		p := pprof.Lookup(profile)
+		if p == nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("%s profile not found", profile),
+			})
+			return
+		}
+		debug := req.Debug
+		var buf bytes.Buffer
+		if err := p.WriteTo(&buf, debug); err != nil {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("failed to write %s profile: %v", profile, err),
+			})
+			return
+		}
+		if debug > 0 {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: fmt.Sprintf("%s dump", profile),
+				Data: PprofResult{
+					Profile: profile,
+					IsText:  true,
+					Text:    buf.String(),
+				},
+			})
+		} else {
+			_ = json.NewEncoder(w).Encode(ControlResponse{
+				Status:  "ok",
+				Message: fmt.Sprintf("%s profile", profile),
+				Data: PprofResult{
+					Profile: profile,
+					IsText:  false,
+					Bytes:   buf.Bytes(),
+				},
+			})
+		}
+
+	default:
+		_ = json.NewEncoder(w).Encode(ControlResponse{
+			Status:  "error",
+			Message: fmt.Sprintf("unknown profile type: %s", profile),
+		})
+	}
+}
+
+func (s *Service) getBoardActivity(direct string, bid int32) *boardActivity {
+	s.boardMu.RLock()
+	b, ok := s.boards[direct]
+	s.boardMu.RUnlock()
+	if ok {
+		if bid > 0 && b.bid.Load() == 0 {
+			b.bid.Store(bid)
+		}
+		return b
+	}
+
+	s.boardMu.Lock()
+	defer s.boardMu.Unlock()
+	if b, ok = s.boards[direct]; ok {
+		if bid > 0 && b.bid.Load() == 0 {
+			b.bid.Store(bid)
+		}
+		return b
+	}
+	b = &boardActivity{
+		direct: direct,
+	}
+	b.bid.Store(bid)
+	s.boards[direct] = b
+	return b
+}
+
+func (s *Service) ResolveBoardName(direct string, bid int32) string {
+	if bid > 0 {
+		if name := BoardName(bid); name != "" {
+			return name
+		}
+	}
+	dir := filepath.Dir(direct)
+	base := filepath.Base(dir)
+	if base != "" && base != "." && base != "/" {
+		return base
+	}
+	return direct
+}
+
+func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
+	statsMap := make(map[string]*BoardStats)
+
+	s.boardMu.RLock()
+	for direct, act := range s.boards {
+		bid := act.bid.Load()
+		statsMap[direct] = &BoardStats{
+			Direct:         direct,
+			Board:          s.ResolveBoardName(direct, bid),
+			Bid:            bid,
+			SearchQueries:  act.searchQueries.Load(),
+			SearchHits:     act.searchHits.Load(),
+			SearchMisses:   act.searchMisses.Load(),
+			AIDQueries:     act.aidQueries.Load(),
+			AIDHits:        act.aidHits.Load(),
+			AIDMisses:      act.aidMisses.Load(),
+			ScanDurationMs: float64(act.scanDurationNs.Load()) / 1e6,
+		}
+	}
+	s.boardMu.RUnlock()
+
+	s.cacheMu.Lock()
+	for k, e := range s.entries {
+		bs, ok := statsMap[k.direct]
+		if !ok {
+			bs = &BoardStats{
+				Direct: k.direct,
+				Board:  s.ResolveBoardName(k.direct, k.bid),
+				Bid:    k.bid,
+			}
+			statsMap[k.direct] = bs
+		}
+		bs.CachedEntries++
+		bs.CachedIndices += int64(len(e.indices))
+		if bs.Bid == 0 && k.bid > 0 {
+			bs.Bid = k.bid
+		}
+	}
+	s.cacheMu.Unlock()
+
+	s.aidMu.Lock()
+	for k := range s.aidEntries {
+		bs, ok := statsMap[k.direct]
+		if !ok {
+			bs = &BoardStats{
+				Direct: k.direct,
+				Board:  s.ResolveBoardName(k.direct, k.bid),
+				Bid:    k.bid,
+			}
+			statsMap[k.direct] = bs
+		}
+		bs.CachedAID++
+		if bs.Bid == 0 && k.bid > 0 {
+			bs.Bid = k.bid
+		}
+	}
+	s.aidMu.Unlock()
+
+	s.backtrackMu.RLock()
+	for direct, bs := range statsMap {
+		if binfo, ok := s.backtrack[direct]; ok && binfo != nil {
+			bs.MaxBacktrack = binfo.MaxBacktrack
+			bs.MaxTimeDiffSecs = binfo.MaxTimeDiffSecs
+		} else {
+			bs.MaxBacktrack = -1
+		}
+	}
+	s.backtrackMu.RUnlock()
+
+	list := make([]BoardStats, 0, len(statsMap))
+	for _, bs := range statsMap {
+		list = append(list, *bs)
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		switch sortBy {
+		case "queries":
+			totI := list[i].SearchQueries + list[i].AIDQueries
+			totJ := list[j].SearchQueries + list[j].AIDQueries
+			if totI != totJ {
+				return totI > totJ
+			}
+		case "time":
+			if list[i].ScanDurationMs != list[j].ScanDurationMs {
+				return list[i].ScanDurationMs > list[j].ScanDurationMs
+			}
+		case "indices":
+			if list[i].CachedIndices != list[j].CachedIndices {
+				return list[i].CachedIndices > list[j].CachedIndices
+			}
+		case "entries":
+			if list[i].CachedEntries != list[j].CachedEntries {
+				return list[i].CachedEntries > list[j].CachedEntries
+			}
+		case "aid":
+			if list[i].CachedAID != list[j].CachedAID {
+				return list[i].CachedAID > list[j].CachedAID
+			}
+		default: // "misses" or empty
+			totMissI := list[i].SearchMisses + list[i].AIDMisses
+			totMissJ := list[j].SearchMisses + list[j].AIDMisses
+			if totMissI != totMissJ {
+				return totMissI > totMissJ
+			}
+			totI := list[i].SearchQueries + list[i].AIDQueries
+			totJ := list[j].SearchQueries + list[j].AIDQueries
+			if totI != totJ {
+				return totI > totJ
+			}
+		}
+		return list[i].Direct < list[j].Direct
+	})
+
+	if limit > 0 && len(list) > limit {
+		list = list[:limit]
+	}
+	return list
+}
+
+func (s *Service) GetBoardBacktrack(direct string, bid int32) int32 {
+	st, err := os.Stat(direct)
+	if err != nil {
+		return -1
+	}
+
+	s.backtrackMu.RLock()
+	info, ok := s.backtrack[direct]
+	if ok && info != nil && info.MaxBacktrack >= 0 {
+		if info.DirMtime.Equal(st.ModTime()) {
+			val := info.MaxBacktrack
+			s.backtrackMu.RUnlock()
+			return val
+		}
+	}
+	s.backtrackMu.RUnlock()
+
+	return s.refreshBoardBacktrack(direct, bid, st.ModTime())
+}
+
+func (s *Service) refreshBoardBacktrack(direct string, bid int32, mtime time.Time) int32 {
+	s.backtrackMu.Lock()
+	defer s.backtrackMu.Unlock()
+
+	if info, ok := s.backtrack[direct]; ok && info != nil && info.DirMtime.Equal(mtime) {
+		return info.MaxBacktrack
+	}
+
+	totalRecs, maxBacktrack, maxTimeDiff := ComputeDirBacktrack(direct)
+	info := &BoardBacktrackInfo{
+		Direct:          direct,
+		Board:           s.ResolveBoardName(direct, bid),
+		Bid:             bid,
+		TotalRecs:       totalRecs,
+		MaxBacktrack:    maxBacktrack,
+		MaxTimeDiffSecs: maxTimeDiff,
+		DirMtime:        mtime,
+		LastScanned:     time.Now(),
+	}
+	s.backtrack[direct] = info
+	return maxBacktrack
+}
+
+func (s *Service) AllBacktrackInfo() []BoardBacktrackInfo {
+	s.backtrackMu.RLock()
+	defer s.backtrackMu.RUnlock()
+	res := make([]BoardBacktrackInfo, 0, len(s.backtrack))
+	for _, info := range s.backtrack {
+		res = append(res, *info)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].MaxBacktrack != res[j].MaxBacktrack {
+			return res[i].MaxBacktrack > res[j].MaxBacktrack
+		}
+		return res[i].Board < res[j].Board
+	})
+	return res
+}
+
 func (s *Service) Flush(bid int32) int {
 	return s.Invalidate("", bid)
 }
 
 func (s *Service) Invalidate(resolvedDirect string, bid int32) int {
+	return s.InvalidateWithPeer("", resolvedDirect, bid)
+}
+
+func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid int32) int {
 	flushed := 0
 	match := func(kDirect string, kBid int32) bool {
 		return (bid == 0 && resolvedDirect == "") ||
@@ -427,6 +1014,13 @@ func (s *Service) Invalidate(resolvedDirect string, bid int32) int {
 	}
 	s.aidMu.Unlock()
 
+	if s.Verbose() >= 1 {
+		peerPrefix := ""
+		if peerInfo != "" {
+			peerPrefix = peerInfo + " "
+		}
+		log.Printf("[search.svc] [INVAL] Invalidate: %sboard=%s bid=%d flushed=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, flushed)
+	}
 	return flushed
 }
 
@@ -531,7 +1125,7 @@ func writeBinaryError(w io.Writer, status int32) {
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer) {
+func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo string) {
 	magicBytes, err := r.Peek(4)
 	if err != nil {
 		return
@@ -539,23 +1133,23 @@ func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer) {
 	magic := binary.LittleEndian.Uint32(magicBytes)
 	switch magic {
 	case SearchSvcMagic:
-		s.handleBinarySearchConn(r, w)
+		s.handleBinarySearchConn(r, w, peerInfo)
 	case SearchAIDMagic:
-		s.handleBinaryAIDConn(r, w)
+		s.handleBinaryAIDConn(r, w, peerInfo)
 	case SearchInvalMagic:
-		s.handleBinaryInvalConn(r, w)
+		s.handleBinaryInvalConn(r, w, peerInfo)
 	default:
 		writeBinaryError(w, -1)
 	}
 }
 
-func (s *Service) handleBinaryInvalConn(r io.Reader, w io.Writer) {
+func (s *Service) handleBinaryInvalConn(r io.Reader, w io.Writer, peerInfo string) {
 	var req binaryInvalReqHeader
 	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
 		return
 	}
 	resolvedDirect := s.resolveDirectPath(req.Direct)
-	s.Invalidate(resolvedDirect, req.Bid)
+	s.InvalidateWithPeer(peerInfo, resolvedDirect, req.Bid)
 	s.invalidations.Add(1)
 	status := int32(0)
 	_ = binary.Write(w, binary.LittleEndian, &status)
@@ -578,7 +1172,7 @@ func (s *Service) resolveDirectPath(raw [256]byte) string {
 	return directStr
 }
 
-func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer) {
+func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo string) {
 	var req binaryAIDReqHeader
 	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
 		return
@@ -590,7 +1184,7 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer) {
 		return
 	}
 
-	foundIdx, fhBytes, err := s.QueryAID(resolvedDirect, req.Bid, req.AIDU, req.RequiredMode)
+	foundIdx, fhBytes, err := s.QueryAIDWithPeer(peerInfo, resolvedDirect, req.Bid, req.AIDU, req.RequiredMode)
 	if err != nil {
 		resp := binaryAIDResp{Status: -2}
 		_ = binary.Write(w, binary.LittleEndian, &resp)
@@ -605,7 +1199,7 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer) {
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer) {
+func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo string) {
 	var hdr binaryReqHeader
 	if err := binary.Read(r, binary.LittleEndian, &hdr); err != nil {
 		return
@@ -630,10 +1224,14 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer) {
 		return
 	}
 
-	indices, err := s.QueryIndices(resolvedDirect, hdr.Bid, predsRaw, int(hdr.NumPreds))
+	indices, err := s.QueryIndicesWithPeer(peerInfo, resolvedDirect, hdr.Bid, predsRaw, int(hdr.NumPreds))
 	if err != nil {
-		if s.verbose > 0 {
-			log.Printf("[search.svc] QueryIndices error on %s: %v", resolvedDirect, err)
+		if s.Verbose() > 0 {
+			peerPrefix := ""
+			if peerInfo != "" {
+				peerPrefix = peerInfo + " "
+			}
+			log.Printf("[search.svc] QueryIndices error on %s%s: %v", peerPrefix, resolvedDirect, err)
 		}
 		writeBinaryError(w, -4)
 		return
@@ -673,7 +1271,7 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer) {
 	_, _ = w.Write(outBuf.Bytes())
 }
 
-func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curSRExpire int64, curTotalRecs int32, curInode uint64) bool {
+func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curTotalRecs int32, curInode uint64) bool {
 	if e == nil {
 		return false
 	}
@@ -683,9 +1281,6 @@ func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curSRExpire int64, cur
 	if curInode != 0 && e.dirInode != 0 && e.dirInode != curInode {
 		return false
 	}
-	if curSRExpire != 0 && e.srExpire != curSRExpire {
-		return false
-	}
 	if curTotalRecs < e.scannedRecs {
 		return false
 	}
@@ -693,6 +1288,14 @@ func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curSRExpire int64, cur
 }
 
 func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
+	return s.QueryAIDWithPeer("", resolvedDirect, bid, aidu, requiredMode)
+}
+
+func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
+	start := time.Now()
+	act := s.getBoardActivity(resolvedDirect, bid)
+	act.aidQueries.Add(1)
+
 	var emptyFH [128]byte
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
@@ -712,26 +1315,35 @@ func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requir
 	}
 
 	var cachedHintIdx int32
+	var startRec int32 = 1
 
 	s.aidMu.Lock()
-	if entry, ok := s.aidEntries[key]; ok && s.isAIDEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode) {
-		if entry.scannedRecs == curTotalRecs && entry.dirMtime.Equal(curMtime) {
+	if entry, ok := s.aidEntries[key]; ok && s.isAIDEntryValidLocked(entry, curTotalRecs, curInode) {
+		if entry.scannedRecs == curTotalRecs {
 			s.aidLRU.MoveToFront(entry.elem)
 			idx := entry.foundIdx
 			fh := entry.fhBytes
 			s.aidMu.Unlock()
 			if idx > 0 {
 				s.aidHits.Add(1)
+				act.aidHits.Add(1)
 			} else {
 				s.aidNegativeHits.Add(1)
+				act.aidHits.Add(1)
+			}
+			if s.Verbose() >= 2 {
+				peerPrefix := ""
+				if peerInfo != "" {
+					peerPrefix = peerInfo + " "
+				}
+				log.Printf("[search.svc] [AID-HIT] QueryAID: %sboard=%s bid=%d foundIdx=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, idx)
 			}
 			return idx, fh, nil
 		}
-		// A negative entry cannot be extended by scanning only the tail:
-		// physical deletion shifts records and in-place edits (undelete,
-		// unlock) change older records. Always rescan in that case.
 		if entry.foundIdx > 0 {
 			cachedHintIdx = entry.foundIdx
+		} else if entry.foundIdx == 0 && entry.scannedRecs > 0 && curTotalRecs > entry.scannedRecs {
+			startRec = entry.scannedRecs + 1
 		}
 	}
 	s.aidMu.Unlock()
@@ -762,8 +1374,9 @@ func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requir
 		aiduWithHint = (aidu & aiduRawMask) | (uint64(cachedHintIdx) << aiduIdxShift)
 	}
 
+	maxBacktrack := s.GetBoardBacktrack(resolvedDirect, bid)
 	gen := s.gen.Load()
-	foundIdx, fhBytes, actualTotal, err := SearchAIDInDir(resolvedDirect, aiduWithHint, int(requiredMode), 1)
+	foundIdx, fhBytes, actualTotal, err := SearchAIDInDir(resolvedDirect, aiduWithHint, int(requiredMode), startRec, int(maxBacktrack))
 	if err != nil {
 		call.err = err
 		return 0, emptyFH, err
@@ -785,17 +1398,47 @@ func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requir
 	}
 	s.aidMu.Unlock()
 
+	dur := time.Since(start)
+	act.scanDurationNs.Add(dur.Nanoseconds())
+	peerPrefix := ""
+	if peerInfo != "" {
+		peerPrefix = peerInfo + " "
+	}
 	if cachedHintIdx > 0 && foundIdx > 0 {
 		s.aidHits.Add(1)
+		act.aidHits.Add(1)
+		if s.Verbose() >= 2 {
+			log.Printf("[search.svc] [AID-HINT-HIT] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
+				peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundIdx, dur)
+		}
 	} else {
 		s.aidMisses.Add(1)
+		act.aidMisses.Add(1)
+		if s.Verbose() >= 1 {
+			log.Printf("[search.svc] [AID-MISS] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
+				peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundIdx, dur)
+		}
 	}
 
 	call.foundIdx, call.fhBytes = foundIdx, fhBytes
 	return foundIdx, fhBytes, nil
 }
 
-func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalRecs int32, curInode uint64) bool {
+func predsRequireSRExpire(predsRaw []byte, numPreds int) bool {
+	predSize := PredSize()
+	for i := 0; i < numPreds; i++ {
+		offset := i * predSize
+		if offset+4 <= len(predsRaw) {
+			mode := int(binary.LittleEndian.Uint32(predsRaw[offset : offset+4]))
+			if mode&(RS_RECOMMEND|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalRecs int32, curInode uint64, requireSRExpire bool) bool {
 	if e == nil {
 		return false
 	}
@@ -805,7 +1448,7 @@ func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalR
 	if curInode != 0 && e.dirInode != 0 && e.dirInode != curInode {
 		return false
 	}
-	if curSRExpire != 0 && e.srExpire != curSRExpire {
+	if requireSRExpire && curSRExpire != 0 && e.srExpire != curSRExpire {
 		return false
 	}
 	if curTotalRecs < e.scannedRecs {
@@ -815,6 +1458,14 @@ func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalR
 }
 
 func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
+	return s.QueryIndicesWithPeer("", resolvedDirect, bid, predsRaw, numPreds)
+}
+
+func (s *Service) QueryIndicesWithPeer(peerInfo string, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
+	start := time.Now()
+	act := s.getBoardActivity(resolvedDirect, bid)
+	act.searchQueries.Add(1)
+
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
 		return nil, err
@@ -831,17 +1482,36 @@ func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte
 		predsHex: string(predsRaw),
 	}
 
+	requireSRExpire := predsRequireSRExpire(predsRaw, numPreds)
+
 	// Fast-path cache check
 	s.cacheMu.Lock()
 	if entry, ok := s.entries[key]; ok {
-		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode) &&
-			entry.scannedRecs == curTotalRecs &&
-			entry.dirMtime.Equal(curMtime) {
-			s.lruList.MoveToFront(entry.elem)
-			res := entry.indices
-			s.cacheMu.Unlock()
-			s.hits.Add(1)
-			return res, nil
+		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) &&
+			entry.scannedRecs == curTotalRecs {
+			valid := entry.dirMtime.Equal(curMtime)
+			if !valid && !requireSRExpire {
+				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
+					entry.dirMtime = curMtime
+					valid = true
+				}
+			}
+			if valid {
+				s.lruList.MoveToFront(entry.elem)
+				res := entry.indices
+				s.cacheMu.Unlock()
+				s.hits.Add(1)
+				act.searchHits.Add(1)
+				if s.Verbose() >= 2 {
+					peerPrefix := ""
+					if peerInfo != "" {
+						peerPrefix = peerInfo + " "
+					}
+					log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
+						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(res))
+				}
+				return res, nil
+			}
 		}
 	}
 	s.cacheMu.Unlock()
@@ -867,7 +1537,7 @@ func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte
 		s.sfMu.Unlock()
 	}()
 
-	call.indices, call.err = s.computeAndCache(key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire)
+	call.indices, call.err = s.computeAndCache(key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire, act, start, peerInfo)
 	return call.indices, call.err
 }
 
@@ -881,27 +1551,48 @@ func (s *Service) computeAndCache(
 	curMtime time.Time,
 	curInode uint64,
 	curSRExpire int64,
+	act *boardActivity,
+	start time.Time,
+	peerInfo string,
 ) ([]int32, error) {
 	var baseEntryCopy *cacheEntry
 	var prefixIndices []int32
 	hasPrefix := false
 
 	predSize := PredSize()
+	predsStr := FormatPreds(predsRaw, numPreds)
 	gen := s.gen.Load()
+	peerPrefix := ""
+	if peerInfo != "" {
+		peerPrefix = peerInfo + " "
+	}
+	requireSRExpire := predsRequireSRExpire(predsRaw, numPreds)
 
 	s.cacheMu.Lock()
-	if entry, ok := s.entries[key]; ok && s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode) {
-		if entry.scannedRecs == curTotalRecs && entry.dirMtime.Equal(curMtime) {
-			s.lruList.MoveToFront(entry.elem)
-			res := entry.indices
-			s.cacheMu.Unlock()
-			s.hits.Add(1)
-			return res, nil
+	if entry, ok := s.entries[key]; ok && s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) {
+		if entry.scannedRecs == curTotalRecs {
+			valid := entry.dirMtime.Equal(curMtime)
+			if !valid && !requireSRExpire {
+				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
+					entry.dirMtime = curMtime
+					valid = true
+				}
+			}
+			if valid {
+				s.lruList.MoveToFront(entry.elem)
+				res := entry.indices
+				s.cacheMu.Unlock()
+				s.hits.Add(1)
+				act.searchHits.Add(1)
+				if s.Verbose() >= 2 {
+					log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
+						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, len(res))
+				}
+				return res, nil
+			}
 		}
-		// Incremental tail reuse is only safe when the prefix is unchanged;
-		// in-place edits are only tracked (by SRexpire) on boards.
-		// Without SHM, SRexpire always reads 0 and cannot detect in-place edits.
-		if curTotalRecs > entry.scannedRecs && entry.scannedRecs > 0 && bid > 0 && SHMReady() {
+		// Incremental tail reuse is safe when the prefix is unchanged.
+		if curTotalRecs > entry.scannedRecs && entry.scannedRecs > 0 {
 			cp := *entry
 			cp.indices = append([]int32(nil), entry.indices...)
 			baseEntryCopy = &cp
@@ -913,12 +1604,21 @@ func (s *Service) computeAndCache(
 			bid:      bid,
 			predsHex: string(predsRaw[:(numPreds-1)*predSize]),
 		}
+		prefixRequireSRExpire := predsRequireSRExpire(predsRaw[:(numPreds-1)*predSize], numPreds-1)
 		if pEntry, ok := s.entries[prefixKey]; ok &&
-			s.isEntryValidLocked(pEntry, curSRExpire, curTotalRecs, curInode) &&
-			pEntry.scannedRecs == curTotalRecs &&
-			pEntry.dirMtime.Equal(curMtime) {
-			prefixIndices = append([]int32(nil), pEntry.indices...)
-			hasPrefix = true
+			s.isEntryValidLocked(pEntry, curSRExpire, curTotalRecs, curInode, prefixRequireSRExpire) &&
+			pEntry.scannedRecs == curTotalRecs {
+			valid := pEntry.dirMtime.Equal(curMtime)
+			if !valid && !prefixRequireSRExpire {
+				if name, ok := ReadFilenameAt(resolvedDirect, pEntry.scannedRecs); ok && name == pEntry.tailName {
+					pEntry.dirMtime = curMtime
+					valid = true
+				}
+			}
+			if valid {
+				prefixIndices = append([]int32(nil), pEntry.indices...)
+				hasPrefix = true
+			}
 		}
 	}
 	s.cacheMu.Unlock()
@@ -949,7 +1649,14 @@ func (s *Service) computeAndCache(
 				s.putEntryLocked(newEntry)
 			}
 			s.cacheMu.Unlock()
+			dur := time.Since(start)
+			act.scanDurationNs.Add(dur.Nanoseconds())
+			act.searchHits.Add(1)
 			s.incrementalUpdates.Add(1)
+			if s.Verbose() >= 1 {
+				log.Printf("[search.svc] [INCR] IncrementalUpdate: %sboard=%s bid=%d preds=[%s] scanned=%d..%d newMatches=%d total=%d dur=%v",
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, baseEntryCopy.scannedRecs+1, actualTotal, len(tailIndices), len(combined), dur)
+			}
 			return combined, nil
 		}
 	}
@@ -974,7 +1681,14 @@ func (s *Service) computeAndCache(
 				s.putEntryLocked(newEntry)
 			}
 			s.cacheMu.Unlock()
+			dur := time.Since(start)
+			act.scanDurationNs.Add(dur.Nanoseconds())
+			act.searchHits.Add(1)
 			s.chainedHits.Add(1)
+			if s.Verbose() >= 2 {
+				log.Printf("[search.svc] [CHAIN] ChainedHit: %sboard=%s bid=%d preds=[%s] cands=%d filtered=%d dur=%v",
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, len(prefixIndices), len(filtered), dur)
+			}
 			return filtered, nil
 		}
 	}
@@ -999,6 +1713,13 @@ func (s *Service) computeAndCache(
 		s.putEntryLocked(newEntry)
 	}
 	s.cacheMu.Unlock()
+	dur := time.Since(start)
+	act.scanDurationNs.Add(dur.Nanoseconds())
+	act.searchMisses.Add(1)
 	s.misses.Add(1)
+	if s.Verbose() >= 1 {
+		log.Printf("[search.svc] [MISS] ScanDirRange: %sboard=%s bid=%d preds=[%s] total=%d matches=%d dur=%v",
+			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, actualTotal, len(indices), dur)
+	}
 	return indices, nil
 }
