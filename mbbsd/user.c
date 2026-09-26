@@ -1135,7 +1135,9 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	sethomepath(src, orig_uid);
 	sethomepath(dst, x.userid);
 	Rename(src, dst);
+	passwd_lock();
 	setuserid(unum, x.userid);
+	passwd_unlock();
 
 	// Do this later.
 	update_emaildb = true;
