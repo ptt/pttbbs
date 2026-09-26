@@ -135,14 +135,14 @@ modestring(const userinfo_t * uentp, int simple)
 	return notonline;
     else if (mode == EDITING) {
 	SNPRINTF(modestr, "E:%s",
-		ModeTypeTable[uentp->destuid < EDITING ? uentp->destuid :
+		ModeTypeTable[uentp->destunum < EDITING ? uentp->destunum :
 			      EDITING]);
 	word = modestr;
     } else if (!mode && *uentp->chatid == 1) {
 	if (!simple)
 	    SNPRINTF(modestr, "回應 %s",
-		    isvisible_uid(uentp->destuid) ?
-		    getuserid(uentp->destuid) : "空氣");
+		    isvisible_uid(uentp->destunum) ?
+		    getuserid(uentp->destunum) : "空氣");
 	else
 	    SNPRINTF(modestr, "回應呼叫");
     }
@@ -159,7 +159,7 @@ modestring(const userinfo_t * uentp, int simple)
             SNPRINTF(modestr, "不行了 @_@");
     }
     else if (!mode)
-	return (uentp->destuid == 6) ? uentp->chatid : "發呆中";
+	return (uentp->destunum == 6) ? uentp->chatid : "發呆中";
 
     else if (simple)
 	return word;
@@ -167,17 +167,17 @@ modestring(const userinfo_t * uentp, int simple)
 	SNPRINTF(modestr, "%s (%s)", word, uentp->chatid);
     else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == UMODE_GO
 	    || mode == DARK || mode == M_CONN6) {
-	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
+	if (!isvisible_uid(uentp->destunum))	/* Leeym 對方(紫色)隱形 */
 	    SNPRINTF(modestr, "%s 空氣", word);
 	/* Leeym * 大家自己發揮吧！ */
 	else
-	    SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destuid));
+	    SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destunum));
     } else if (mode == CHESSWATCHING) {
 	SNPRINTF(modestr, "觀棋");
     } else if (mode != PAGE && mode != TQUERY)
 	return word;
     else
-	SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destuid));
+	SNPRINTF(modestr, "%s %s", word, getuserid(uentp->destunum));
 
     return (modestr);
 }
@@ -278,7 +278,7 @@ my_query(const char *uident)
 	clrtobot();
 	move(1, 0);
 	setutmpmode(TQUERY);
-	currutmp->destuid = tuid;
+	currutmp->destunum = tuid;
 	reload_money();
 
 	if ((uentp = (userinfo_t *) search_ulist(tuid)))
@@ -407,14 +407,14 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     }
     currutmp->sockactive = YEA;
     currutmp->sockaddr = server.sin_port;
-    currutmp->destuid = uin->uid;
+    currutmp->destunum = uin->uid;
     // WORKAROUND setutmpmode() checks currstat as cache of currutmp->mode.
     // however if you invoke page -> rejected -> do something -> page again,
     // the currstat=PAGE but currutmp->mode!=PAGE, and then the paging will fail.
     // so, let's temporary break currstat here.
     currstat = IDLE;
     setutmpmode(PAGE);
-    uin->destuip = get_utmp_slot(currutmp);
+    uin->destuslot = get_utmp_slot(currutmp);
     pid = uin->pid;
     if (pid > 0)
 	kill(pid, SIGUSR1);
@@ -434,7 +434,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	} else { // if (ch == I_TIMEOUT) {
 	    ch = uin->mode;
 	    if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == get_utmp_slot(currutmp)) {
+		    uin->destuslot == get_utmp_slot(currutmp)) {
 		bell();
 		outmsg("對方回應中...");
 		refresh();
@@ -445,7 +445,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 			     uin->chatid[0] == 3))) {
 		vkey_detach();
 		close(sock);
-		currutmp->sockactive = currutmp->destuid = 0;
+		currutmp->sockactive = currutmp->destunum = 0;
 		vmsg("人家在忙啦");
 		unlockutmpmode();
 		return -1;
@@ -457,10 +457,10 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		bell();
 		refresh();
 
-		uin->destuip = get_utmp_slot(currutmp);
+		uin->destuslot = get_utmp_slot(currutmp);
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
 		    close(sock);
-		    currutmp->sockactive = currutmp->destuid = 0;
+		    currutmp->sockactive = currutmp->destunum = 0;
 		    vkey_detach();
 		    vmsg(MSG_USR_LEFT);
 		    unlockutmpmode();
@@ -475,7 +475,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	if (ch == Ctrl('D')) {
 	    vkey_detach();
 	    close(sock);
-	    currutmp->sockactive = currutmp->destuid = 0;
+	    currutmp->sockactive = currutmp->destunum = 0;
 	    unlockutmpmode();
 	    return -1;
 	}
@@ -614,7 +614,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		break;
 	    case SIG_TALK:
 	    default:
-		ccw_talk(msgsock, currutmp->destuid);
+		ccw_talk(msgsock, currutmp->destunum);
 		setutmpmode(XINFO);
 		break;
 	    }
@@ -642,7 +642,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	}
     }
     currutmp->mode = mode0;
-    currutmp->destuid = 0;
+    currutmp->destunum = 0;
     unlockutmpmode();
     pressanykey();
 }
@@ -1953,7 +1953,7 @@ userlist(void)
 int
 t_users(void)
 {
-    int             destuid0 = currutmp->destuid;
+    int             destunum0 = currutmp->destunum;
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
@@ -1977,7 +1977,7 @@ t_users(void)
     setutmpmode(LUSERS);
     userlist();
     currutmp->mode = mode0;
-    currutmp->destuid = destuid0;
+    currutmp->destunum = destunum0;
     currstat = stat0;
     return 0;
 }
@@ -2098,12 +2098,12 @@ talkreply(void)
     userec_t        xuser;
     void          (*sig_pipe_handle)(int);
 
-    if (!VALID_USHM_ENTRY(currutmp->destuip)) {
+    if (!VALID_USHM_ENTRY(currutmp->destuslot)) {
         currstat = currstat0;
         return;
     }
-    uip = &SHM->uinfo[currutmp->destuip];
-    currutmp->destuid = uip->uid;
+    uip = &SHM->uinfo[currutmp->destuslot];
+    currutmp->destunum = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
     is_chess = (sig == SIG_CHC || sig == SIG_GOMO);
@@ -2167,7 +2167,7 @@ talkreply(void)
 	return;
     }
 
-    uip->destuip = get_utmp_slot(currutmp);
+    uip->destuslot = get_utmp_slot(currutmp);
     if (buf[0] == 'y')
 	switch (sig) {
 	case SIG_GOMO:
@@ -2178,7 +2178,7 @@ talkreply(void)
 	    break;
 	case SIG_TALK:
 	default:
-	    ccw_talk(a, currutmp->destuid);
+	    ccw_talk(a, currutmp->destunum);
 	    setutmpmode(XINFO);
 	    break;
 	}
