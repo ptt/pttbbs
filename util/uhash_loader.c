@@ -159,5 +159,6 @@ void userec_add_to_uhash(int n, userec_t *user, int onfly)
     }
     if(onfly)
        printf("add %d %d %d [%s] in hash\n", l, h, n, user->userid);
-    SHM->next_in_hash[*p = n] = -1;
+    SHM->next_in_hash[n] = -1;
+    *p = n;
 }
