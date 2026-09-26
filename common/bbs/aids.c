@@ -41,10 +41,10 @@ match_fhdr_stamp_hex(const fileheader_t *fh, char prefix_ch,
 }
 
 int
-search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
-                       time4_t target_ts, unsigned int target_hex,
-                       int allow_prefix, int required_mode,
-                       fileheader_t *out_fh)
+search_dir_by_stamp_fd_bounded(int fd, int total, int hint_idx, char prefix_ch,
+                               time4_t target_ts, unsigned int target_hex,
+                               int allow_prefix, int required_mode,
+                               fileheader_t *out_fh, int max_backtrack)
 {
     fileheader_t fh;
 
@@ -111,32 +111,50 @@ search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
                 high = mid - 1;
         }
 
-        int wstart = mid - BSEARCH_WIN / 2;
+        int win_size = BSEARCH_WIN;
+        if (max_backtrack >= 0) {
+            win_size = max_backtrack * 2 + BSEARCH_WIN;
+        }
+        if (win_size > total)
+            win_size = total;
+
+        int wstart = mid - win_size / 2;
         if (wstart < 1)
             wstart = 1;
-        if (wstart + BSEARCH_WIN - 1 > total)
-            wstart = total - BSEARCH_WIN + 1;
+        if (wstart + win_size - 1 > total)
+            wstart = total - win_size + 1;
         if (wstart < 1)
             wstart = 1;
 
-        fileheader_t win_buf[BSEARCH_WIN];
-        int wcnt = total - wstart + 1;
-        if (wcnt > BSEARCH_WIN)
-            wcnt = BSEARCH_WIN;
-        ssize_t n = pread(fd, win_buf, (size_t)wcnt * sizeof(fileheader_t),
-                          (off_t)(wstart - 1) * sizeof(fileheader_t));
-        if (n > 0) {
-            wcnt = (int)(n / sizeof(fileheader_t));
-            for (int i = wcnt - 1; i >= 0; i--) {
+        enum { CHUNK = 256 };
+        fileheader_t win_buf[CHUNK];
+        for (int cur = wstart + win_size - 1; cur >= wstart; cur -= CHUNK) {
+            int cstart = cur - CHUNK + 1;
+            if (cstart < wstart)
+                cstart = wstart;
+            int ccnt = cur - cstart + 1;
+            ssize_t n = pread(fd, win_buf, (size_t)ccnt * sizeof(fileheader_t),
+                              (off_t)(cstart - 1) * sizeof(fileheader_t));
+            if (n <= 0)
+                break;
+            ccnt = (int)(n / sizeof(fileheader_t));
+            for (int i = ccnt - 1; i >= 0; i--) {
                 if (match_fhdr_stamp_hex(&win_buf[i], prefix_ch, target_ts, target_hex, allow_prefix, required_mode)) {
                     if (out_fh) {
                         *out_fh = win_buf[i];
                         if (NEED_STORAGE_CONV)
                             fileheader_storage_to_mem(out_fh, 1);
                     }
-                    return wstart + i;
+                    return cstart + i;
                 }
             }
+        }
+
+        if (max_backtrack >= 0) {
+            // Because max_backtrack bounds any timestamp inversion in .DIR,
+            // any article with target_ts is guaranteed to lie within the
+            // window around mid. If not found, skip the full linear scan!
+            return 0;
         }
     }
 
@@ -168,8 +186,21 @@ search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
 }
 
 int
-search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
-                      int required_mode, fileheader_t *out_fh)
+search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
+                       time4_t target_ts, unsigned int target_hex,
+                       int allow_prefix, int required_mode,
+                       fileheader_t *out_fh)
+{
+    return search_dir_by_stamp_fd_bounded(fd, total, hint_idx, prefix_ch,
+                                          target_ts, target_hex,
+                                          allow_prefix, required_mode,
+                                          out_fh, -1);
+}
+
+int
+search_dir_by_aidu_fd_bounded(int fd, int total, aidu_t aidu,
+                              int required_mode, fileheader_t *out_fh,
+                              int max_backtrack)
 {
     if (aidu_raw(aidu) == 0)
         return 0;
@@ -178,9 +209,17 @@ search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
     unsigned int target_hex = aidu_hex(aidu);
     int allow_prefix = (target_hex == 0 && !(required_mode & FILE_BOTTOM));
     char prefix_ch = aidu_type(aidu) ? 'G' : 'M';
-    return search_dir_by_stamp_fd(fd, total, hint_idx, prefix_ch,
-                                  target_ts, target_hex,
-                                  allow_prefix, required_mode, out_fh);
+    return search_dir_by_stamp_fd_bounded(fd, total, hint_idx, prefix_ch,
+                                          target_ts, target_hex,
+                                          allow_prefix, required_mode,
+                                          out_fh, max_backtrack);
+}
+
+int
+search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
+                      int required_mode, fileheader_t *out_fh)
+{
+    return search_dir_by_aidu_fd_bounded(fd, total, aidu, required_mode, out_fh, -1);
 }
 
 typedef struct {
@@ -316,8 +355,8 @@ char *aidu2aidc(char *buf, const aidu_t orig_aidu)
   *(sp --) = '\0';
   while(sp >= buf)
   {
-    /* FIXME: ¯à«OÃÒ aidu2aidc_tablesize ¬O 2 ªº¾­¦¸ªº¸Ü¡A
-              ³o¸Ì¥i¥H§ï¥Î bitwise operation °µ */
+    /* FIXME: èƒ½ä¿è­‰ aidu2aidc_tablesize æ˜¯ 2 çš„å†ªæ¬¡çš„è©±ï¼Œ
+              é€™è£¡å¯ä»¥æ”¹ç”¨ bitwise operation åš */
     v = aidu % aidu2aidc_tablesize;
     aidu = aidu / aidu2aidc_tablesize;
     *(sp --) = aidu2aidc_table[v];
@@ -351,7 +390,7 @@ aidu_t aidc2aidu(const char *aidc)
   while(*sp != '\0' && /* ignore trailing spaces */ *sp != ' ')
   {
     aidu_t v = 0;
-    /* FIXME: ¬dªíªk·|¤£·|¤ñ¸û§Ö¡H */
+    /* FIXME: æŸ¥è¡¨æ³•æœƒä¸æœƒæ¯”è¼ƒå¿«ï¼Ÿ */
     if(*sp >= '0' && *sp <= '9')
       v = *sp - '0';
     else if(*sp >= 'A' && *sp <= 'Z')
@@ -486,7 +525,7 @@ int do_search_aid(SearchAIDResult_t *r)
   if(r == NULL)
     return -1;
   r->n = -1;
-  if(!getdata(b_lines, 0, "·j´M" AID_DISPLAYNAME ": #", aidc, 15 + IDLEN, LCECHO))
+  if(!getdata(b_lines, 0, "æœå°‹" AID_DISPLAYNAME ": #", aidc, 15 + IDLEN, LCECHO))
   {
     move(b_lines, 0);
     clrtoeol();
@@ -498,7 +537,7 @@ int do_search_aid(SearchAIDResult_t *r)
     move(21, 0);
     clrtobot();
     move(22, 0);
-    prints("¦¹ª¬ºA¤UµLªk·j´M" AID_DISPLAYNAME);
+    prints("æ­¤ç‹€æ…‹ä¸‹ç„¡æ³•æœå°‹" AID_DISPLAYNAME);
     pressanykey();
     return -1;
   }
@@ -530,7 +569,7 @@ int do_search_aid(SearchAIDResult_t *r)
         if(enter_board(bname) < 0)
         {
           r->n = -1;
-          emsg = "¿ù»~¡GµLªk¶i¤J«ü©wªº¬İªO %s";
+          emsg = "éŒ¯èª¤ï¼šç„¡æ³•é€²å…¥æŒ‡å®šçš„çœ‹æ¿ %s";
         }
       }
     }
@@ -543,13 +582,13 @@ int do_search_aid(SearchAIDResult_t *r)
   if(r->n < 0)
   {
     if(aidu == 0)
-      emsg = "¤£¦Xªkªº" AID_DISPLAYNAME "¡A½Ğ½T©w¿é¤J¬O¥¿½Tªº";
+      emsg = "ä¸åˆæ³•çš„" AID_DISPLAYNAME "ï¼Œè«‹ç¢ºå®šè¼¸å…¥æ˜¯æ­£ç¢ºçš„";
     else if(emsg == NULL)
     {
       if(bname[0] != '\0')
-        emsg = "¬İªO %s ¤º§ä¤£¨ì³o­Ó" AID_DISPLAYNAME "¡A¥i¯à¬O¤å³¹¤w¸g®ø¥¢¡A©Î¬O§ä¿ù¬İªO¤F";
+        emsg = "çœ‹æ¿ %s å…§æ‰¾ä¸åˆ°é€™å€‹" AID_DISPLAYNAME "ï¼Œå¯èƒ½æ˜¯æ–‡ç« å·²ç¶“æ¶ˆå¤±ï¼Œæˆ–æ˜¯æ‰¾éŒ¯çœ‹æ¿äº†";
       else
-        emsg = "§ä¤£¨ì³o­Ó" AID_DISPLAYNAME "¡A¥i¯à¬O¤å³¹¤w¸g®ø¥¢¡A©Î¬O§ä¿ù¬İªO¤F";
+        emsg = "æ‰¾ä¸åˆ°é€™å€‹" AID_DISPLAYNAME "ï¼Œå¯èƒ½æ˜¯æ–‡ç« å·²ç¶“æ¶ˆå¤±ï¼Œæˆ–æ˜¯æ‰¾éŒ¯çœ‹æ¿äº†";
     }
     move(21, 0);
     clrtoeol();

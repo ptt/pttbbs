@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,6 +98,7 @@ func main() {
 	maxIndices := flag.Int64("max-indices", daemon.DefaultMaxIndices, "Max total cached int32 indices (default: 16M ~ 64MB)")
 	maxAIDEntries := flag.Int("max-aid-entries", daemon.DefaultMaxAIDEntries, "Max cached AID lookup entries (default: 16384)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
+	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
 
@@ -169,6 +172,15 @@ func main() {
 	}
 	service.SetVerbose(int(verbose))
 	service.SetCacheLimits(*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
+
+	if *pprofAddr != "" {
+		go func() {
+			log.Printf("[search.svc] Starting HTTP pprof server on %s", *pprofAddr)
+			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
+				log.Printf("[search.svc] HTTP pprof server stopped: %v", err)
+			}
+		}()
+	}
 
 	if err := service.Start(); err != nil {
 		log.Fatalf("[search.svc] Service stopped with error: %v", err)

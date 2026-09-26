@@ -262,4 +262,117 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	if flushResp.Status != "ok" {
 		t.Fatalf("flush failed: %+v", flushResp)
 	}
+
+	// 10. Control API: verbose get and set
+	vResp := sendControlClient(t, socketPath, ControlRequest{Action: "verbose"})
+	if vResp.Status != "ok" {
+		t.Fatalf("verbose get failed: %+v", vResp)
+	}
+	lvl2 := 2
+	vSetResp := sendControlClient(t, socketPath, ControlRequest{Action: "verbose", Level: &lvl2})
+	if vSetResp.Status != "ok" || svc.Verbose() != 2 {
+		t.Fatalf("verbose set failed: %+v, svc.Verbose=%d", vSetResp, svc.Verbose())
+	}
+
+	// 11. Control API: top boards
+	topResp := sendControlClient(t, socketPath, ControlRequest{Action: "top", Limit: 10, SortBy: "misses"})
+	if topResp.Status != "ok" {
+		t.Fatalf("top failed: %+v", topResp)
+	}
+	topBytes, _ := json.Marshal(topResp.Data)
+	var topItems []BoardStats
+	if err := json.Unmarshal(topBytes, &topItems); err != nil {
+		t.Fatalf("unmarshal top: %v", err)
+	}
+	if len(topItems) == 0 {
+		t.Fatalf("expected top boards to contain testboard, got empty")
+	}
+	if topItems[0].SearchQueries == 0 && topItems[0].AIDQueries == 0 {
+		t.Fatalf("expected non-zero queries for top board: %+v", topItems[0])
+	}
+
+	// 12. Control API: pprof (goroutine, heap, cpu)
+	gResp := sendControlClient(t, socketPath, ControlRequest{Action: "pprof", Profile: "goroutine", Debug: 2})
+	if gResp.Status != "ok" {
+		t.Fatalf("pprof goroutine failed: %+v", gResp)
+	}
+	gBytes, _ := json.Marshal(gResp.Data)
+	var gResult PprofResult
+	if err := json.Unmarshal(gBytes, &gResult); err != nil || !gResult.IsText || len(gResult.Text) == 0 {
+		t.Fatalf("invalid goroutine dump result: %+v err=%v", gResult, err)
+	}
+
+	hResp := sendControlClient(t, socketPath, ControlRequest{Action: "pprof", Profile: "heap", Debug: 0})
+	if hResp.Status != "ok" {
+		t.Fatalf("pprof heap failed: %+v", hResp)
+	}
+	hBytes, _ := json.Marshal(hResp.Data)
+	var hResult PprofResult
+	if err := json.Unmarshal(hBytes, &hResult); err != nil || len(hResult.Bytes) == 0 {
+		t.Fatalf("invalid heap profile result: %+v err=%v", hResult, err)
+	}
+
+	cpuResp := sendControlClient(t, socketPath, ControlRequest{Action: "pprof", Profile: "cpu", Seconds: 1})
+	if cpuResp.Status != "ok" {
+		t.Fatalf("pprof cpu failed: %+v", cpuResp)
+	}
+	cpuBytes, _ := json.Marshal(cpuResp.Data)
+	var cpuResult PprofResult
+	if err := json.Unmarshal(cpuBytes, &cpuResult); err != nil || len(cpuResult.Bytes) == 0 {
+		t.Fatalf("invalid cpu profile result: %+v err=%v", cpuResult, err)
+	}
+
+	// 13. Control API: backtrack
+	bResp := sendControlClient(t, socketPath, ControlRequest{Action: "backtrack"})
+	if bResp.Status != "ok" {
+		t.Fatalf("backtrack failed: %+v", bResp)
+	}
+	bBytes, _ := json.Marshal(bResp.Data)
+	var bItems []BoardBacktrackInfo
+	if err := json.Unmarshal(bBytes, &bItems); err != nil {
+		t.Fatalf("unmarshal backtrack: %v", err)
+	}
+	if len(bItems) == 0 {
+		t.Fatalf("expected backtrack items, got empty")
+	}
+	if bItems[0].MaxBacktrack < 0 || bItems[0].TotalRecs <= 0 {
+		t.Fatalf("invalid backtrack info: %+v", bItems[0])
+	}
+
+	// 14. Push simulation (in-place mtime update) should NOT invalidate keyword search or AID cache!
+	queryBinaryClient(t, socketPath, 1, relDir, [][]byte{predKw}, 0, 100)
+	queryAIDClient(t, socketPath, 1, relDir, aidu5, 0)
+	hitsBefore := svc.hits.Load()
+	missesBefore := svc.misses.Load()
+	aidHitsBefore := svc.aidHits.Load()
+	aidMissesBefore := svc.aidMisses.Load()
+
+	// Simulate a push by touching mtime forward
+	newMtime := time.Now().Add(2 * time.Second)
+	if err := os.Chtimes(dirPath, newMtime, newMtime); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+
+	// Repeat keyword search: MUST be a cache hit (tailName matches, mode doesn't require SRExpire)!
+	resIndices, resTotal := queryBinaryClient(t, socketPath, 1, relDir, [][]byte{predKw}, 0, 100)
+	if resTotal == 0 || len(resIndices) == 0 {
+		t.Fatalf("search after push failed: total=%d indices=%v", resTotal, resIndices)
+	}
+	if svc.hits.Load() != hitsBefore+1 {
+		t.Fatalf("expected keyword search to hit cache after push, hitsBefore=%d, now=%d", hitsBefore, svc.hits.Load())
+	}
+	if svc.misses.Load() != missesBefore {
+		t.Fatalf("expected 0 misses after push, missesBefore=%d, now=%d", missesBefore, svc.misses.Load())
+	}
+
+	// Repeat AID query: MUST also hit cache!
+	if idx := queryAIDClient(t, socketPath, 1, relDir, aidu5, 0); idx != 5 {
+		t.Fatalf("aid query after push failed: got %d", idx)
+	}
+	if svc.aidHits.Load() != aidHitsBefore+1 {
+		t.Fatalf("expected aid query to hit cache after push, before=%d, now=%d", aidHitsBefore, svc.aidHits.Load())
+	}
+	if svc.aidMisses.Load() != aidMissesBefore {
+		t.Fatalf("expected 0 aid misses after push, before=%d, now=%d", aidMissesBefore, svc.aidMisses.Load())
+	}
 }
