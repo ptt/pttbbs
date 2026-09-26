@@ -111,21 +111,21 @@ typedef struct userec_t {
     uint16_t	chc_win;	/* 象棋戰績 勝 */
     uint16_t	chc_lose;	/* 象棋戰績 敗 */
     uint16_t	chc_tie;	/* 象棋戰績 和 */
-    uint16_t    conn6_win;      /* 六子棋戰績 勝 */
-    uint16_t    conn6_lose;     /* 六子棋戰績 敗 */
-    uint16_t    conn6_tie;      /* 六子棋戰績 和 */
+    uint16_t    _unused_conn6_win;      /* 六子棋戰績 勝 */
+    uint16_t    _unused_conn6_lose;     /* 六子棋戰績 敗 */
+    uint16_t    _unused_conn6_tie;      /* 六子棋戰績 和 */
     char	_unused_mind[2];/* 舊心情 */
-    uint16_t	go_win;		/* 圍棋戰績 勝 */
-    uint16_t	go_lose;	/* 圍棋戰績 敗 */
-    uint16_t	go_tie;		/* 圍棋戰績 和 */
-    uint16_t    dark_win;       /* 暗棋戰績 勝 */
-    uint16_t    dark_lose;      /* 暗棋戰績 敗 */
+    uint16_t	_unused_go_win;		/* 圍棋戰績 勝 */
+    uint16_t	_unused_go_lose;	/* 圍棋戰績 敗 */
+    uint16_t	_unused_go_tie;		/* 圍棋戰績 和 */
+    uint16_t    _unused_dark_win;       /* 暗棋戰績 勝 */
+    uint16_t    _unused_dark_lose;      /* 暗棋戰績 敗 */
     uint8_t     ua_version;     /* Applicable user agreement version */
 
     uint8_t	signature;	/* 慣用簽名檔 */
     uint8_t	_unused10;	/* 從前放好文章數, 使用前請先清0 */
     uint8_t	badpost;	/* 評價為壞文章數 */
-    uint16_t    dark_tie;       /* 暗棋戰績 和 */
+    uint16_t    _unused_dark_tie;       /* 暗棋戰績 和 */
     char	myangel[IDLEN+1];/* 我的小天使 */
     char	pad_3;
 
@@ -383,11 +383,11 @@ typedef struct userinfo_t {
     char    nickname[24];
     char    from[27];               /* machine name the user called in from */
     in_addr_t	from_ip;	    // was: int     from_alias;
-    uint16_t dark_win;
-    uint16_t dark_lose;
+    uint16_t _unused_dark_win;
+    uint16_t _unused_dark_lose;
     char    gap_0;
     unsigned char angelpause;       // TODO move to somewhere else in future.
-    uint16_t dark_tie;
+    uint16_t _unused_dark_tie;
 
     /* friends */
     int     friendtotal;              /* 好友比較的cache 大小 */ 
@@ -415,16 +415,16 @@ typedef struct userinfo_t {
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
     char    _unused5;
-    uint16_t conn6_win;
+    uint16_t _unused_conn6_win;
     time4_t lastact;               /* 上次使用者動的時間 */
     char    alerts;             /* mail alert, passwd update... */
     char    _unused_mind;
-    uint16_t conn6_lose;
+    uint16_t _unused_conn6_lose;
     char    _unused_mind2;
 
     /* chatroom/talk/games calling */
     unsigned char   sig;            /* signal type */
-    uint16_t conn6_tie;
+    uint16_t _unused_conn6_tie;
     int     destuid;              /* talk uses this to identify who called */
     int     destuip;              /* dest index in utmpshm->uinfo[] */
     unsigned char   sockactive;     /* Used to coordinate talk requests */
@@ -447,9 +447,9 @@ typedef struct userinfo_t {
     uint16_t chc_lose;
     uint16_t chc_tie;
     uint16_t chess_elo_rating;
-    uint16_t go_win;
-    uint16_t go_lose;
-    uint16_t go_tie;
+    uint16_t unused_go_win;
+    uint16_t unused_go_lose;
+    uint16_t unused_go_tie;
 
     /* misc */
     unsigned int    deprecated_withme;

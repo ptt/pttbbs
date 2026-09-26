@@ -893,15 +893,11 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
             set_chess("五子棋", y++, &x.five_win, &x.five_lose, &x.five_tie);
             set_chess("象棋", y++, &x.chc_win, &x.chc_lose, &x.chc_tie);
-            set_chess("圍棋", y++, &x.go_win, &x.go_lose, &x.go_tie);
-            set_chess("暗棋", y++, &x.dark_win, &x.dark_lose, &x.dark_tie);
-	    y -= 4; // rollback games set to get more space
+	    y -= 2; // rollback games set to get more space
 	    move(y++, 0); clrtobot();
-	    prints("棋類: 五子:%d/%d/%d 象:%d/%d/%d 圍:%d/%d/%d 暗:%d/%d/%d\n",
+	    prints("棋類: 五子:%d/%d/%d 象:%d/%d/%d",
 		    x.five_win, x.five_lose, x.five_tie,
-		    x.chc_win, x.chc_lose, x.chc_tie,
-		    x.go_win, x.go_lose, x.go_tie,
-		    x.dark_win, x.dark_lose, x.dark_tie);
+		    x.chc_win, x.chc_lose, x.chc_tie);
 	    if (getdata_str(y++, 0, "住在 1)台灣 2)其他：", buf, 2, DOECHO, x.uflag & UF_FOREIGN ? "2" : "1"))
 		if ((tmp = atoi(buf)) > 0){
 		    if (tmp == 2){
