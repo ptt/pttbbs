@@ -454,25 +454,32 @@ reset_board(int bid) /* XXXbid: from 1 */
     int             fd;
     boardheader_t  *bhdr;
 
-    if (--bid < 0)
+    if (--bid < 0 || bid >= MAX_BOARD)
 	return;
-    assert(0<=bid && bid<MAX_BOARD);
-    if (SHM->Bbusystate || time4_diff(COMMON_TIME, SHM->busystate_b[bid]) < 10) {
-	sleep(1);
-    } else {
-	SHM->busystate_b[bid] = COMMON_TIME;
+    if (SHM->Bbusystate)
+	return;
 
-	bhdr = bcache;
-	bhdr += bid;
-	if ((fd = open(FN_BOARD, O_RDONLY)) >= 0) {
-	    lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
-	    read(fd, bhdr, sizeof(boardheader_t));
-	    close(fd);
-	}
-	SHM->busystate_b[bid] = 0;
-
-	buildBMcache(bid + 1); /* XXXbid */
+    time4_t zero = 0;
+    time4_t cur_time = COMMON_TIME;
+    if (!__atomic_compare_exchange_n(&SHM->busystate_b[bid], &zero, cur_time,
+                                     false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
+        if (time4_diff(cur_time, zero) < 10)
+            return;
+        if (!__atomic_compare_exchange_n(&SHM->busystate_b[bid], &zero, cur_time,
+                                         false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+            return;
     }
+
+    bhdr = bcache;
+    bhdr += bid;
+    if ((fd = open(FN_BOARD, O_RDONLY)) >= 0) {
+	lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
+	read(fd, bhdr, sizeof(boardheader_t));
+	close(fd);
+    }
+    __atomic_store_n(&SHM->busystate_b[bid], 0, __ATOMIC_RELEASE);
+
+    buildBMcache(bid + 1); /* XXXbid */
 }
 
 void
@@ -760,15 +767,26 @@ set_aggressive_state(int s)
 void
 reload_pttcache(void)
 {
-    if (SHM->Pbusystate)
-	sleep(1);
-    else {			/* jochang: temporary workaround */
-	fileheader_t    item, subitem;
-	char            pbuf[256], buf[256];
-	FILE           *fp, *fp1, *fp2;
-	int             id, aggid, rawid;
+    int zero = 0;
+    int my_pid = getpid();
+    if (my_pid <= 0)
+        my_pid = 1;
 
-	SHM->Pbusystate = 1;
+    if (!__atomic_compare_exchange_n(&SHM->Pbusystate, &zero, my_pid,
+                                     false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
+        if (zero > 0 && kill(zero, 0) == -1 && errno == ESRCH) {
+            if (!__atomic_compare_exchange_n(&SHM->Pbusystate, &zero, my_pid,
+                                             false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+                return;
+        } else {
+            return;
+        }
+    }
+
+    fileheader_t    item, subitem;
+    char            pbuf[256], buf[256];
+    FILE           *fp, *fp1, *fp2;
+    int             id, aggid, rawid;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
 	setapath(pbuf, BN_NOTE);
@@ -870,28 +888,14 @@ reload_pttcache(void)
 	SHM->Puptime = SHM->Ptouchtime;
 	// log_usies("CACHE", "reload pttcache");
 	fprintf(stderr, "cache: reload pttcache\r\n");
-	SHM->Pbusystate = 0;
-    }
+	__atomic_store_n(&SHM->Pbusystate, 0, __ATOMIC_RELEASE);
 }
 
 void
 resolve_garbage(void)
 {
-    int             count = 0;
-
-    while (time4_lt(SHM->Puptime, SHM->Ptouchtime)) {	/* 不用while等 */
+    if (time4_lt(SHM->Puptime, SHM->Ptouchtime)) {
 	reload_pttcache();
-	if (count++ > 10 && SHM->Pbusystate) {
-	    /*
-	     * Ptt: 這邊會有問題  load超過10 秒會所有進loop的process tate = 0
-	     * 這樣會所有prcosee都會在load 動態看板 會造成load大增
-	     * 但沒有用這個function的話 萬一load passwd檔的process死了
-	     * 又沒有人把他 解開  同樣的問題發生在reload passwd
-	     */
-	    SHM->Pbusystate = 0;
-	    // log_usies("CACHE", "refork Ptt dead lock");
-	    fprintf(stderr, "cache: refork Ptt dead lock\r\n");
-	}
     }
 }
 
