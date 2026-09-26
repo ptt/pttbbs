@@ -52,6 +52,7 @@ void load_uhash(void) {
 	SHM->loaded = 0;
 	fill_uhash(0);
 	SHM->today_is[0] = '\0';
+        init_utmp_user();
 	SHM->loaded = 1;
     }
     else{

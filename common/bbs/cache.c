@@ -168,86 +168,190 @@ setuserid(int num, const char *userid)
 }
 
 
-userinfo_t     *
-search_ulistn(int uid, int unum)
+/* utmp user direct mapping functions (Lock-Free Harris CAS) */
+
+#define UTMP_DELETED_BIT (1U << 31)
+#define UTMP_ENCODE_NEXT(slot) ((slot) + 1)
+#define UTMP_DECODE_SLOT(v) ((int)(((unsigned int)(v) & ~UTMP_DELETED_BIT) - 1))
+#define UTMP_IS_DELETED(v) ((((unsigned int)(v)) & UTMP_DELETED_BIT) != 0)
+#define UTMP_MARK_DELETED(v) ((int)(((unsigned int)(v)) | UTMP_DELETED_BIT))
+
+static void
+clean_marked_nodes(int unum)
 {
-    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    int *ulist;
-    register userinfo_t *u;
-    if (end == -1)
-	return NULL;
-    ulist = SHM->sorted[SHM->currsorted][7];
-    for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	u = &SHM->uinfo[ulist[i]];
-	j = uid - u->uid;
-	if (j == 0) {
-	    for (; i > 0 && uid == SHM->uinfo[ulist[i - 1]].uid; --i)
-		;/* 指到第一筆 */
-	    // piaip Tue Jan  8 09:28:03 CST 2008
-	    // many people bugged about that their utmp have invalid
-	    // entry on record.
-	    // we found them caused by crash process (DEBUGSLEEPING) which
-	    // may occupy utmp entries even after process was killed.
-	    // because the memory is invalid, it is not safe for those process
-	    // to wipe their utmp entry. it should be done by some external
-	    // daemon.
-	    // however, let's make a little workaround here...
-	    for (; unum > 0 && i >= 0 && ulist[i] >= 0 &&
-		    SHM->uinfo[ulist[i]].uid == uid; unum--, i++)
-	    {
-		if (SHM->uinfo[ulist[i]].mode == DEBUGSLEEPING)
-		    unum ++;
-	    }
-	    if (unum == 0 && i > 0 && ulist[i-1] >= 0 &&
-		    SHM->uinfo[ulist[i-1]].uid == uid)
-		return &SHM->uinfo[ulist[i-1]];
-	    /*
-	    if ( i + unum - 1 >= 0 &&
-		 (ulist[i + unum - 1] >= 0 &&
-		  uid == SHM->uinfo[ulist[i + unum - 1]].uid ) )
-		return &SHM->uinfo[ulist[i + unum - 1]];
-		*/
-	    break;		/* 超過範圍 */
-	}
-	if (end == start) {
-	    break;
-	} else if (i == start) {
-	    i = end;
-	    start = end;
-	} else if (j > 0)
-	    start = i;
-	else
-	    end = i;
+    while (1) {
+        int head = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
+        if (!VALID_USHM_ENTRY(head))
+            return;
+
+        int head_next = __atomic_load_n(&SHM->utmp_user.next_session[head], __ATOMIC_ACQUIRE);
+        if (UTMP_IS_DELETED(head_next)) {
+            int next = UTMP_DECODE_SLOT(head_next);
+            __atomic_compare_exchange_n(&SHM->utmp_user.user_head[unum], &head, next,
+                                        false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+            continue;
+        }
+
+        int prev = head;
+        int restart = 0;
+        for (int count = 0; count < USHM_SIZE && VALID_USHM_ENTRY(prev); count++) {
+            int prev_next = __atomic_load_n(&SHM->utmp_user.next_session[prev], __ATOMIC_ACQUIRE);
+            if (UTMP_IS_DELETED(prev_next)) {
+                restart = 1;
+                break;
+            }
+            int curr = UTMP_DECODE_SLOT(prev_next);
+            if (!VALID_USHM_ENTRY(curr))
+                break;
+
+            int curr_next = __atomic_load_n(&SHM->utmp_user.next_session[curr], __ATOMIC_ACQUIRE);
+            if (UTMP_IS_DELETED(curr_next)) {
+                int succ = UTMP_DECODE_SLOT(curr_next);
+                int expected = UTMP_ENCODE_NEXT(curr);
+                if (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[prev], &expected,
+                                                 UTMP_ENCODE_NEXT(succ),
+                                                 false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+                    restart = 1;
+                    break;
+                }
+                continue;
+            }
+            prev = curr;
+        }
+        if (!restart)
+            break;
+    }
+}
+
+void
+init_utmp_user(void)
+{
+    if (!SHM)
+        return;
+    memset(SHM->utmp_user.user_head, 0xff, sizeof(SHM->utmp_user.user_head));
+    memset(SHM->utmp_user.next_session, 0, sizeof(SHM->utmp_user.next_session));
+    memset(SHM->utmp_user.session_user, 0, sizeof(SHM->utmp_user.session_user));
+    for (int i = 0; i < USHM_SIZE; i++) {
+        if (SHM->uinfo[i].pid > 0 && SHM->uinfo[i].uid > 0) {
+            add_to_utmp_user(i, SHM->uinfo[i].uid);
+        }
+    }
+}
+
+void
+remove_from_utmp_user(int uslot, int unum)
+{
+    if (!SHM || !VALID_USHM_ENTRY(uslot) || unum <= 0 || unum > MAX_USERS)
+        return;
+
+    __atomic_store_n(&SHM->utmp_user.session_user[uslot], 0, __ATOMIC_RELEASE);
+
+    int next_val;
+    do {
+        next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
+        if (UTMP_IS_DELETED(next_val))
+            break;
+    } while (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[uslot],
+                                          &next_val,
+                                          UTMP_MARK_DELETED(next_val),
+                                          false,
+                                          __ATOMIC_RELEASE,
+                                          __ATOMIC_ACQUIRE));
+
+    clean_marked_nodes(unum);
+}
+
+void
+add_to_utmp_user(int uslot, int unum)
+{
+    if (!SHM || !VALID_USHM_ENTRY(uslot) || unum <= 0 || unum > MAX_USERS)
+        return;
+
+    int old_uid = __atomic_load_n(&SHM->utmp_user.session_user[uslot], __ATOMIC_ACQUIRE);
+    if (old_uid > 0 && old_uid <= MAX_USERS) {
+        remove_from_utmp_user(uslot, old_uid);
+    }
+
+    __atomic_store_n(&SHM->utmp_user.session_user[uslot], unum, __ATOMIC_RELEASE);
+    clean_marked_nodes(unum);
+
+    int old_head;
+    do {
+        old_head = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
+        __atomic_store_n(&SHM->utmp_user.next_session[uslot], UTMP_ENCODE_NEXT(old_head), __ATOMIC_RELEASE);
+    } while (!__atomic_compare_exchange_n(&SHM->utmp_user.user_head[unum],
+                                          &old_head,
+                                          uslot,
+                                          false,
+                                          __ATOMIC_RELEASE,
+                                          __ATOMIC_ACQUIRE));
+}
+
+int
+utmp_apply_user(int unum, int (*callback)(userinfo_t *uentp, void *arg), void *arg)
+{
+    if (!SHM || unum <= 0 || unum > MAX_USERS)
+        return 0;
+    int uslot = __atomic_load_n(&SHM->utmp_user.user_head[unum], __ATOMIC_ACQUIRE);
+    for (int count = 0; count < USHM_SIZE && VALID_USHM_ENTRY(uslot); count++) {
+        int next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
+        int next_slot = UTMP_DECODE_SLOT(next_val);
+        if (!UTMP_IS_DELETED(next_val)) {
+            userinfo_t *uentp = &SHM->uinfo[uslot];
+            if (uentp->uid == unum && uentp->pid > 0) {
+                int ret = callback(uentp, arg);
+                if (ret != 0)
+                    return ret;
+            }
+        }
+        uslot = next_slot;
+    }
+    return 0;
+}
+static int
+_find_nth_cb(userinfo_t *uentp, void *arg)
+{
+    struct {
+        int n;
+        userinfo_t *res;
+    } *ctx = arg;
+    if (uentp->mode == DEBUGSLEEPING)
+        return 0;
+    if (--ctx->n == 0) {
+        ctx->res = uentp;
+        return 1;
     }
     return 0;
 }
 
-userinfo_t     *
+userinfo_t *
+search_ulistn(int uid, int unum)
+{
+    if (unum <= 0)
+        return NULL;
+    struct {
+        int n;
+        userinfo_t *res;
+    } ctx = { unum, NULL };
+    utmp_apply_user(uid, _find_nth_cb, &ctx);
+    return ctx.res;
+}
+
+userinfo_t *
+utmp_find(int unum)
+{
+    return search_ulistn(unum, 1);
+}
+
+userinfo_t *
 search_ulist_userid(const char *userid)
 {
-    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    int *ulist;
-    register userinfo_t * u;
-    if (end == -1)
-	return NULL;
-    ulist = SHM->sorted[SHM->currsorted][0];
-    for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	u = &SHM->uinfo[ulist[i]];
-	j = strcasecmp(userid, u->userid);
-	if (!j) {
-	    return u;
-	}
-	if (end == start) {
-	    break;
-	} else if (i == start) {
-	    i = end;
-	    start = end;
-	} else if (j > 0)
-	    start = i;
-	else
-	    end = i;
-    }
-    return 0;
+    if (!userid || !*userid)
+        return NULL;
+    int unum = searchuser(userid, NULL);
+    if (unum <= 0)
+        return NULL;
+    return search_ulist(unum);
 }
 
 /*

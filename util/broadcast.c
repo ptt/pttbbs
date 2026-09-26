@@ -16,8 +16,7 @@ int main(int argc, char *argv[])
 
     int i, j;
     userinfo_t *uentp;
-    int *sorted, UTMPnumber; // SHM snapshot
-
+    
     while ((i = getopt(argc, argv, "t:n:o:h")) != -1)
 	switch (i) {
 	    case 'h':
@@ -45,26 +44,21 @@ int main(int argc, char *argv[])
 	return 0;
 
     attach_SHM();
-    sorted = (int *)malloc(sizeof(int) * USHM_SIZE);
-    memcpy(sorted, SHM->sorted[SHM->currsorted][0], sizeof(int) * USHM_SIZE);
-    UTMPnumber = SHM->UTMPnumber;
 
     char msgbuf[PATHLEN];
     SNPRINTF(msgbuf, "[¼s¼½]%s", argv[optind]);
 
-    for (i = 0, j = 0; i < UTMPnumber; ++i, ++j) {
-	// XXX why use sorted list?
-	//     can we just scan uinfo with proper checking?
-	int uslot = sorted[i];
+    for (i = 0, j = 0; i < USHM_SIZE; ++i) {
+	int uslot = i;
 	uentp = &SHM->uinfo[uslot];
 	if (uentp->pid && kill(uentp->pid, 0) != -1){
 	    write_message(uslot, uentp->pid, getpid(), owner, msgbuf, MSGMODE_WRITE);
-	}
-
-	if (j == num_per_loop) {
-	    fprintf(stderr, "%5d/%5d\n", i + 1, UTMPnumber);
-	    j = 0;
-	    sleep(sleep_time);
+	    ++j;
+	    if (j == num_per_loop) {
+	        fprintf(stderr, "processed: %d/%d\n", i + 1, USHM_SIZE);
+	        j = 0;
+	        sleep(sleep_time);
+	    }
 	}
     }
     return 0;
