@@ -338,7 +338,7 @@ b_config(void)
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
-#define LNBOARDINFO (18)
+#define LNBOARDINFO (19)
 #define LNPOSTRES   (12)
 #define COLPOSTRES  (48)
 
@@ -349,9 +349,6 @@ b_config(void)
 #ifdef OLDRECOMMEND
     ytitle ++;
 #endif  // OLDRECOMMEND
-#ifdef USE_COOLDOWN
-    ytitle--;
-#endif // USE_COOLDOWN
 #ifdef USE_AUTOCPLOG
     ytitle--;
 #endif
@@ -472,12 +469,10 @@ b_config(void)
 		ANSI_COLOR(1)"需要" : "不需"
 		);
 #endif
-#ifdef USE_COOLDOWN
 	prints( " " ANSI_COLOR(1;36) "j" ANSI_RESET
 		" - %s 設為冷靜模式\n",
 		(bp->brdattr & BRD_COOLDOWN) ?
 		ANSI_COLOR(1)"已"ANSI_RESET : "未");
-#endif
 
 	// use '8' instead of '1', to prevent 'l'/'1' confusion
 	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
@@ -707,7 +702,6 @@ b_config(void)
 			" 注意: 已停止記錄推文IP");
 		break;
 
-#ifdef USE_COOLDOWN
             case 'j':
                 if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) ||
                       (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
@@ -726,7 +720,6 @@ b_config(void)
                     touched = 1;
                 }
                 break;
-#endif
 
 	    case 'g':
 		bp->brdattr ^= BRD_BMCOUNT;
@@ -976,7 +969,6 @@ addnewbrdstat(int n, int state)
 static int
 cmpboardfriends(const void *brd, const void *tmp)
 {
-#ifdef USE_COOLDOWN
     if ((B_BH((boardstat_t*)tmp)->brdattr & BRD_COOLDOWN) &&
 	    (B_BH((boardstat_t*)brd)->brdattr & BRD_COOLDOWN))
 	return 0;
@@ -992,7 +984,6 @@ cmpboardfriends(const void *brd, const void *tmp)
 	else
 	    return -1;
     }
-#endif
     return ((B_BH((boardstat_t*)tmp)->nuser) -
 	    (B_BH((boardstat_t*)brd)->nuser));
 }
@@ -1342,7 +1333,7 @@ brdlist_header(PSB_CTX *ctx)
 	// TODO move ascii art to adbanner?
 	outs(
 	    "                                                              "
-	    "◣  ╭—" ANSI_COLOR(33) "●\n"
+	    "◣  ╭—" ANSI_COLOR(33) "●\n"
 	    "                                                    ╬—  " ANSI_RESET " "
 	    "◢█" ANSI_COLOR(47) "⊙" ANSI_COLOR(40) "██◣╤\n"
 	    "  " ANSI_COLOR(44) "   ︿︿︿︿︿︿︿︿                               "
@@ -1521,11 +1512,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 
 		    if (!should_show_sensitive_info)
 			outs("   ");
-#ifdef USE_COOLDOWN
 		    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-#else
-		    else if (0)
-#endif
                         outs("靜 ");
                     // Note the nuser is not updated realtime, or have some bug.
 		    else if (B_BH(ptr)->nuser < 1)
