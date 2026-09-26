@@ -1053,15 +1053,6 @@ void
 hbflreload(int bid)
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    /* Legacy binaries still read SHM->hbfl during the compat window; zero the
-     * load time so they reload from the visable file instead of using a stale
-     * list. */
-    if (COMMON_TIME < FRIEND_LEGACY_COMPAT_CUTOFF) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	SHM->deprecated_hbfl[bid - 1][0] = 0;
-#pragma GCC diagnostic pop
-    }
     friend_svc_hbfl_reload(bid);
 }
 

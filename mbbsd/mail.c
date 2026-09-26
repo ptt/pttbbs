@@ -751,10 +751,6 @@ setforward(void) {
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
-#ifdef UNTRUSTED_FORWARD_TIMEBOMB
-        if (time4_lt(dasht(buf), UNTRUSTED_FORWARD_TIMEBOMB))
-            unlink(buf);
-#endif
 
     }
     chomp(ip);
