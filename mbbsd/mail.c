@@ -2201,8 +2201,8 @@ m_read(void)
         cReEntrance--;
 	return 0;
     } else {
-	outs("您沒有來信");
-	return XEASY;
+	vmsg("您沒有來信");
+	return REDRAW_FOOTER;
     }
 }
 
