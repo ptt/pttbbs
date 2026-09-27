@@ -189,6 +189,29 @@ int search_svc_connect(void);
 int search_svc_io(int fd, void *buf, size_t len, int is_write);
 int search_svc_invalidate(const char *direct, int bid);
 
+#define SEARCH_HINT_MAGIC   0x53484E54   /* "SHNT" */
+
+enum {
+    HINT_TYPE_POST    = 1,
+    HINT_TYPE_COMMENT = 2,
+    HINT_TYPE_DELETE  = 3,
+};
+
+typedef struct {
+    uint32_t     magic;
+    int32_t      type;
+    int32_t      bid;
+    int32_t      recno;
+    uint64_t     aidu;
+    int32_t      data;
+    fileheader_t fh;
+    char         direct[256];
+} PACKSTRUCT search_hint_req_t;
+
+int search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const fileheader_t *fh);
+int search_svc_hint_comment(const char *direct, int bid, int recno, int recommend);
+int search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu);
+
 int search_predicates_local(const char *direct,
                             const fileheader_predicate_t *preds, int num_preds,
                             int offset, int limit,
