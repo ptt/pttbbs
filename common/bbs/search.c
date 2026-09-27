@@ -9,16 +9,6 @@
 #include "pttstruct.h"
 #include "var.h"
 
-void
-select_read_name(char *buf, size_t size, const char *base,
-		 const fileheader_predicate_t *pred)
-{
-    snprintf(buf, size, "%s%X.%X.%X",
-	     base ? base : "SR.",
-	     pred->mode, (int) strlen(pred->keyword),
-	     mbs_strcasehash(pred->keyword));
-}
-
 int
 match_fileheader_predicate(const fileheader_t *fh, void *arg)
 {
@@ -244,11 +234,44 @@ search_predicates_local(const char *direct,
     int32_t recno = 0;
     int total = 0;
     int count = 0;
-
-    if (offset < 0)
-        offset = 0;
     if (limit < 0)
         limit = 0;
+
+    if (offset < 0) {
+        /* Pass 1: count total matching records to resolve negative offset from tail */
+        while ((len = read(fd, fhs, sizeof(fhs))) > 0) {
+            int n = len / (int)sizeof(fileheader_t);
+            if (NEED_STORAGE_CONV)
+                fileheader_storage_to_mem(fhs, n);
+            for (int i = 0; i < n; i++) {
+                if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+                    continue;
+                int matched = 1;
+                for (int p = 0; p < num_preds; p++) {
+                    if (!match_fileheader_predicate(&fhs[i], (void *)&preds[p])) {
+                        matched = 0;
+                        break;
+                    }
+                }
+                if (matched)
+                    total++;
+            }
+        }
+        offset += total;
+        if (offset < 0)
+            offset = 0;
+        if (lseek(fd, 0, SEEK_SET) < 0) {
+            close(fd);
+            return -1;
+        }
+        if (out_total)
+            *out_total = total;
+        if (limit == 0 || !out_indices) {
+            close(fd);
+            return 0;
+        }
+        total = 0;
+    }
 
     while ((len = read(fd, fhs, sizeof(fhs))) > 0) {
         int n = len / (int)sizeof(fileheader_t);
@@ -371,121 +394,3 @@ search_predicates_window_legacy(const char *direct, int bid,
                                     SEARCH_SRC_UNKNOWN);
 }
 
-static int
-find_resume_point_compar(const void *key, const void *memb)
-{
-    const time4_t *ts = (const time4_t *) key;
-    const fileheader_t *fh = (const fileheader_t *) memb;
-    time4_t fts = get_fhdr_stamp_ts(fh->filename);
-    return time4_cmp(*ts, fts);
-}
-
-static size_t
-find_resume_point(const char *direct, time4_t timestamp)
-{
-    fileheader_t fh;
-    size_t num;
-    ssize_t index = upper_bound_record(
-        direct, &timestamp, find_resume_point_compar, sizeof(fh), &fh, &num);
-    return index < 0 ? 0 : index;
-}
-
-int
-select_read_build(const char *src_direct, const char *dst_direct,
-		  int src_direct_has_reference GCC_UNUSED, time4_t resume_from,
-		  int dst_count,
-		  int (*match)(const fileheader_t *fh, void *arg), void *arg)
-{
-    int fr, fd;
-
-    if ((fr = open(src_direct, O_RDONLY, 0)) < 0)
-	return -1;
-
-    // Find incremental selection start point.
-    size_t resume_off = resume_from ?
-	find_resume_point(src_direct, resume_from) : 0;
-
-    int filemode;
-    if (resume_off) {
-	filemode = O_APPEND | O_RDWR;
-    } else {
-	filemode = O_CREAT | O_RDWR;
-	dst_count = 0;
-    }
-
-    if ((fd = open(dst_direct, filemode, DEFAULT_FILE_CREATE_PERM)) == -1) {
-	close(fr);
-	return -1;
-    }
-
-    if (resume_off > 0)
-	lseek(fr, resume_off * sizeof(fileheader_t), SEEK_SET);
-
-    fileheader_t fhs[8192 / sizeof(fileheader_t)];
-    int i, len;
-    while ((len = read(fr, fhs, sizeof(fhs))) > 0) {
-	len /= sizeof(fileheader_t);
-	for (i = 0; i < len; ++i) {
-	    resume_off++;
-	    if (!match(&fhs[i], arg))
-		continue;
-
-	    ++dst_count;
-	    write(fd, &fhs[i], sizeof(fileheader_t));
-	}
-    }
-    close(fr);
-
-    // Do not create black hole.
-    off_t current_size = lseek(fd, 0, SEEK_CUR);
-    if (current_size >= 0 && (off_t)(dst_count * sizeof(fileheader_t)) <= current_size)
-	ftruncate(fd, dst_count * sizeof(fileheader_t));
-    close(fd);
-
-    return dst_count;
-}
-
-int
-select_read_should_build(const char *dst_direct, int bid, time4_t *resume_from,
-			 int *count)
-{
-    struct stat st;
-    if (stat(dst_direct, &st) < 0)
-    {
-	*resume_from = 0;
-	*count = 0;
-	return 1;
-    }
-
-    *count = st.st_size / sizeof(fileheader_t);
-
-    time4_t filetime = st.st_mtime;
-
-    if (bid > 0)
-    {
-	time4_t filecreate = st.st_ctime;
-	boardheader_t *bp = getbcache(bid);
-	assert(bp);
-
-	if (bp->SRexpire)
-	{
-	    if (time4_gt(bp->SRexpire, now)) // invalid expire time.
-		bp->SRexpire = now;
-
-	    if (time4_gt(bp->SRexpire, filecreate))
-		filetime = 0;
-	}
-    }
-
-    if (filetime == 0 || time4_diff(now, filetime) > 60*60) {
-	*resume_from = 0;
-	return 1;
-    } else if (time4_diff(now, filetime) > 3*60) {
-	*resume_from = filetime;
-	return 1;
-    } else {
-	/* use cached data */
-	*resume_from = 0;
-	return 0;
-    }
-}

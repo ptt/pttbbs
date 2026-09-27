@@ -298,26 +298,57 @@ Status BoardServiceImpl::Search(ServerContext *context,
   if (req->filter().empty()) {
     return Status(StatusCode::INVALID_ARGUMENT, "No search filters specified.");
   }
-  std::string base_name = FN_DIR;
-  for (const auto &filter : req->filter()) {
-    fileheader_predicate_t pred;
-    RETURN_ON_FAIL(SetPredicate(filter, &pred));
-    auto dst_name = boards::Search(bid, base_name, pred);
-    if (!dst_name) {
-      return Status(StatusCode::UNKNOWN, "Search failed");
-    }
-    base_name = dst_name.value();
+  if (req->filter().size() > MAX_SEARCH_PREDICATES) {
+    return Status(StatusCode::INVALID_ARGUMENT, "Too many search filters.");
   }
 
-  std::vector<fileheader_t> fhs;
-  size_t offset = records::Get<fileheader_t>(
-      paths::bfile(bp->brdname, base_name), req->offset(), req->length(), &fhs);
-  for (auto &fh : fhs) {
-    mbs_safe_trim(fh.title);
-    AsPost(offset++, fh).Swap(rep->add_posts());
+  fileheader_predicate_t preds[MAX_SEARCH_PREDICATES];
+  int num_preds = 0;
+  for (const auto &filter : req->filter()) {
+    RETURN_ON_FAIL(SetPredicate(filter, &preds[num_preds++]));
   }
-  rep->set_total_posts(
-      records::Count<fileheader_t>(paths::bfile(bp->brdname, base_name)));
+
+  int limit = req->length();
+  if (limit < 0) {
+    limit = 0;
+  }
+
+  int total_posts = 0;
+  std::vector<int32_t> indices(limit);
+  std::string dir_path = paths::bfile(bp->brdname, FN_DIR);
+
+  int loaded = search_predicates_window(
+      dir_path.c_str(), bid,
+      preds, num_preds,
+      req->offset(), limit,
+      limit > 0 ? indices.data() : nullptr, &total_posts,
+      SEARCH_SRC_BOARDD_WEB);
+  if (loaded < 0) {
+    return Status(StatusCode::UNKNOWN, "Search failed");
+  }
+
+  rep->set_total_posts(total_posts);
+
+  if (loaded > 0) {
+    int fd = -1;
+    for (int i = 0; i < loaded; i++) {
+      int32_t recno = indices[i];
+      if (recno <= 0)
+        continue;
+      fileheader_t fh;
+      if (get_fileheader_keep(dir_path.c_str(), &fh, recno, &fd) <= 0)
+        continue;
+      if (!fh.filename[0] || fh.filename[0] == '.' || fh.owner[0] == '-' ||
+          !is_valid_fileheader(&fh))
+        continue;
+      mbs_safe_trim(fh.title);
+      AsPost(recno - 1, fh).Swap(rep->add_posts());
+    }
+    if (fd != -1) {
+      close(fd);
+    }
+  }
+
   return Status::OK;
 }
 
