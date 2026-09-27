@@ -506,7 +506,7 @@ static int customize_renderer(int i, PSB_CTX *ctx) {
     const char *val = Getter(item);
 
     outs("   ");
-    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s\n",
+    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s",
            'a' + i,
            stream_width(val) < 16 ? col_opt : 0,
            item->desc, val);
