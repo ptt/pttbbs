@@ -255,7 +255,7 @@ int  mb_bytes(const char *s);
 int  mb_width(const char *s);
 int  mb_from_vkey(int key, char *buf);
 int  stream_width(const char *s);
-int  stream_col_offset(int count, const char *s);
+int  stream_col_offset(int count, const char *s, int *real_cols);
 int  strip_blank(char *cbuf, const char *buf);
 int  reduce_blank(char *cbuf, const char *buf);
 const char *skip_control_sequence(const char *src);

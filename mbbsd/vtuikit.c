@@ -62,12 +62,11 @@ nblank(int n)
 static void
 fillns(int n, const char *s)
 {
-    int d = stream_col_offset(n, s);
-    if (d < 0) {
-	outs(s); nblank(-d);
-    } else {
-	outns(s, d);
-    }
+    int cols = 0;
+    int d = stream_col_offset(n, s, &cols);
+    outns(s, d);
+    if (n > cols)
+        nblank(n - cols);
 }
 
 // ---- VREF API --------------------------------------------------
