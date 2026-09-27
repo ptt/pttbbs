@@ -170,11 +170,6 @@ setuserid(int num, const char *userid)
 
 /* utmp user direct mapping functions (Lock-Free Harris CAS) */
 
-#define UTMP_DELETED_BIT (1U << 31)
-#define UTMP_ENCODE_NEXT(slot) ((slot) + 1)
-#define UTMP_DECODE_SLOT(v) ((int)(((unsigned int)(v) & ~UTMP_DELETED_BIT) - 1))
-#define UTMP_IS_DELETED(v) ((((unsigned int)(v)) & UTMP_DELETED_BIT) != 0)
-#define UTMP_MARK_DELETED(v) ((int)(((unsigned int)(v)) | UTMP_DELETED_BIT))
 
 static void
 clean_marked_nodes(int unum)
@@ -239,8 +234,12 @@ init_utmp_user(void)
     memset(SHM->utmp_user.next_session, 0, sizeof(SHM->utmp_user.next_session));
     memset(SHM->utmp_user.session_user, 0, sizeof(SHM->utmp_user.session_user));
     for (int i = 0; i < USHM_SIZE; i++) {
-        if (SHM->uinfo[i].pid > 0 && SHM->uinfo[i].uid > 0) {
-            add_to_utmp_user(i, SHM->uinfo[i].uid);
+        if (SHM->uinfo[i].pid > 0 && SHM->uinfo[i].uid > 0 && SHM->uinfo[i].uid <= MAX_USERS) {
+            int uid = SHM->uinfo[i].uid;
+            int old_head = SHM->utmp_user.user_head[uid];
+            SHM->utmp_user.next_session[i] = UTMP_ENCODE_NEXT(old_head);
+            SHM->utmp_user.user_head[uid] = i;
+            SHM->utmp_user.session_user[i] = uid;
         }
     }
 }

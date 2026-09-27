@@ -62,6 +62,12 @@ BanIpList *cached_banip_list(const char *basefile, const char *cachefile);
 SHM_t *create_shm(int *is_created);
 SHM_t *attach_shm(void);
 SHM_t *attach_check_SHM(void);
+#define UTMP_DELETED_BIT (1U << 31)
+#define UTMP_ENCODE_NEXT(slot) ((slot) + 1)
+#define UTMP_DECODE_SLOT(v) ((int)(((unsigned int)(v) & ~UTMP_DELETED_BIT) - 1))
+#define UTMP_IS_DELETED(v) ((((unsigned int)(v)) & UTMP_DELETED_BIT) != 0)
+#define UTMP_MARK_DELETED(v) ((int)(((unsigned int)(v)) | UTMP_DELETED_BIT))
+
 void attach_SHM(void);
 int get_utmp_slot(const userinfo_t *uentp);
 void init_utmp_user(void);
