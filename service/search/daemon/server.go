@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	"os/signal"
@@ -36,8 +37,12 @@ const (
 	MaxSearchPredicates  int32  = 8
 	DefaultMaxEntries    int    = 2048
 	DefaultMaxIndices    int64  = 16 * 1024 * 1024 // 16M int32s (~64MB)
-	DefaultMaxAIDEntries int    = 16384            // 16K AID cache entries (~2.5MB)
-	DefaultCacheTTL             = 1 * time.Hour
+	DefaultMaxAIDEntries     int           = 16384 // 16K AID cache entries (~2.5MB)
+	DefaultMaxAIDTables      int           = 64    // 64 boards with in-memory AID table (~30-60MB)
+	DefaultAIDTableMinReqs   int64         = 100   // Min cumulative queries (search + aid) before admitting board to AID table cache
+	DefaultAIDTableTTL       time.Duration = 1 * time.Hour
+	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
+	DefaultCacheTTL                        = 1 * time.Hour
 	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
 	aiduTypeG            uint64 = 1 << 44
 	aiduIdxShift                = 45
@@ -186,6 +191,9 @@ type ServiceStats struct {
 	AIDEvictions       int64            `json:"aid_evictions"`
 	AIDTableHits       int64            `json:"aid_table_hits,omitempty"`
 	CachedAIDTables    int              `json:"cached_aid_tables,omitempty"`
+	MaxAIDTables       int              `json:"max_aid_tables,omitempty"`
+	AIDTableMinReqs    int64            `json:"aid_table_min_reqs,omitempty"`
+	AIDTableEvictions  int64            `json:"aid_table_evictions,omitempty"`
 	AIDSources         map[string]int64 `json:"aid_sources,omitempty"`
 	AIDMissSources     map[string]int64 `json:"aid_miss_sources,omitempty"`
 	SearchSources      map[string]int64 `json:"search_sources,omitempty"`
@@ -247,6 +255,7 @@ type BoardAIDTable struct {
 	minTS        uint32
 	maxTS        uint32
 	aids         []uint64 // 0-based: index i corresponds to 1-based recno i+1
+	loadedAt     time.Time
 }
 
 func computeBoardAIDStats(aids []uint64) (maxBacktrack int32, maxTimeDiff int64, minTS uint32, maxTS uint32) {
@@ -523,8 +532,13 @@ type Service struct {
 	backtrackMu sync.RWMutex
 	backtrack   map[string]*BoardBacktrackInfo
 
-	aidTableMu sync.RWMutex
-	aidTables  map[string]*BoardAIDTable
+	aidTableMu        sync.Mutex
+	aidTables         map[string]*BoardAIDTable
+	maxAIDTables      int
+	aidTableMinReqs   int64
+	aidTableTTL       time.Duration
+	aidTableEvictLead int64
+	aidTableEvictions atomic.Int64
 
 	cpuProfileMu sync.Mutex
 
@@ -593,8 +607,12 @@ func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 		aidInflight:   make(map[aidCacheKey]*aidInflightCall),
 		boards:        make(map[string]*boardActivity),
 		backtrack:     make(map[string]*BoardBacktrackInfo),
-		aidTables:     make(map[string]*BoardAIDTable),
-		stopChan:      make(chan struct{}),
+		aidTables:         make(map[string]*BoardAIDTable),
+		maxAIDTables:      DefaultMaxAIDTables,
+		aidTableMinReqs:   DefaultAIDTableMinReqs,
+		aidTableTTL:       DefaultAIDTableTTL,
+		aidTableEvictLead: DefaultAIDTableEvictLead,
+		stopChan:          make(chan struct{}),
 	}
 }
 
@@ -606,7 +624,7 @@ func (s *Service) SetVerbose(level int) {
 	s.verbose.Store(int32(level))
 }
 
-func (s *Service) SetCacheLimits(maxEntries int, maxIndices int64, maxAIDEntries int, cacheTTL time.Duration) {
+func (s *Service) SetCacheLimits(maxEntries int, maxIndices int64, maxAIDEntries int, maxAIDTables int, cacheTTL time.Duration) {
 	s.cacheMu.Lock()
 	if maxEntries > 0 {
 		s.maxEntries = maxEntries
@@ -624,6 +642,34 @@ func (s *Service) SetCacheLimits(maxEntries int, maxIndices int64, maxAIDEntries
 		s.maxAIDEntries = maxAIDEntries
 	}
 	s.aidMu.Unlock()
+
+	s.aidTableMu.Lock()
+	s.maxAIDTables = maxAIDTables
+	s.aidTableMu.Unlock()
+}
+
+func (s *Service) SetAIDTablePolicy(minReqs int64, ttl time.Duration, evictLead int64) {
+	s.aidTableMu.Lock()
+	if minReqs >= 0 {
+		s.aidTableMinReqs = minReqs
+		if evictLead <= 0 {
+			evictLead = minReqs
+		}
+	}
+	if ttl > 0 {
+		s.aidTableTTL = ttl
+	}
+	if evictLead > 0 {
+		s.aidTableEvictLead = evictLead
+	}
+	s.aidTableMu.Unlock()
+}
+
+func (s *Service) boardTotalQueries(act *boardActivity) int64 {
+	if act == nil {
+		return 0
+	}
+	return act.searchQueries.Load() + act.aidQueries.Load()
 }
 
 func (s *Service) Start() error {
@@ -763,9 +809,11 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 		maxAIDEntries := s.maxAIDEntries
 		s.aidMu.Unlock()
 
-		s.aidTableMu.RLock()
+		s.aidTableMu.Lock()
 		aidTablesCount := len(s.aidTables)
-		s.aidTableMu.RUnlock()
+		maxAIDTables := s.maxAIDTables
+		aidTableMinReqs := s.aidTableMinReqs
+		s.aidTableMu.Unlock()
 
 		aidSources := make(map[string]int64)
 		aidMissSources := make(map[string]int64)
@@ -786,6 +834,9 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 			CachedAIDEntries:   aidEntriesCount,
 			MaxAIDEntries:      maxAIDEntries,
 			CachedAIDTables:    aidTablesCount,
+			MaxAIDTables:       maxAIDTables,
+			AIDTableMinReqs:    aidTableMinReqs,
+			AIDTableEvictions:  s.aidTableEvictions.Load(),
 			Hits:               s.hits.Load(),
 			Misses:             s.misses.Load(),
 			IncrementalUpdates: s.incrementalUpdates.Load(),
@@ -1449,18 +1500,50 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 	if bid <= 0 {
 		bid = s.ResolveBoardBID(resolvedDirect, 0)
 	}
-	s.aidTableMu.RLock()
-	tbl := s.aidTables[resolvedDirect]
-	s.aidTableMu.RUnlock()
-	if tbl != nil {
+	s.aidTableMu.Lock()
+	if s.maxAIDTables == 0 {
+		s.aidTableMu.Unlock()
+		return nil
+	}
+	if tbl := s.aidTables[resolvedDirect]; tbl != nil {
+		s.aidTableMu.Unlock()
 		return tbl
 	}
 
-	s.aidTableMu.Lock()
-	defer s.aidTableMu.Unlock()
-	if tbl = s.aidTables[resolvedDirect]; tbl != nil {
-		return tbl
+	act := s.getBoardActivity(resolvedDirect, bid)
+	candQueries := s.boardTotalQueries(act)
+
+	// Rule 1: cumulative queries (search + aid) >= aidTableMinReqs to admit into cache
+	if candQueries < s.aidTableMinReqs {
+		s.aidTableMu.Unlock()
+		return nil
 	}
+
+	// Rule 2 & 3: 當 cache 滿了，除去 TTL 還沒到的看板，query 次數大於目前看板 100 次的才能把 cache 內的替換出來
+	if s.maxAIDTables > 0 && len(s.aidTables) >= s.maxAIDTables {
+		now := time.Now()
+		var minQueries int64 = math.MaxInt64
+		var victimDirect string
+
+		for direct, cachedTbl := range s.aidTables {
+			if now.Sub(cachedTbl.loadedAt) < s.aidTableTTL {
+				continue // Rule 2: TTL 1hr 不被 swap out
+			}
+			cachedAct := s.getBoardActivity(direct, cachedTbl.bid)
+			q := s.boardTotalQueries(cachedAct)
+			if q < minQueries {
+				minQueries = q
+				victimDirect = direct
+			}
+		}
+
+		// Rule 4: 沒法替換的一律走傳統路
+		if victimDirect == "" || candQueries < minQueries+s.aidTableEvictLead {
+			s.aidTableMu.Unlock()
+			return nil
+		}
+	}
+	s.aidTableMu.Unlock()
 
 	aids, err := LoadDirAIDs(resolvedDirect)
 	if err != nil {
@@ -1472,7 +1555,7 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 
 	maxBtrack, maxTdiff, minTS, maxTS := computeBoardAIDStats(aids)
 
-	tbl = &BoardAIDTable{
+	tbl := &BoardAIDTable{
 		direct:       resolvedDirect,
 		bid:          bid,
 		maxBacktrack: maxBtrack,
@@ -1480,8 +1563,48 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 		minTS:        minTS,
 		maxTS:        maxTS,
 		aids:         aids,
+		loadedAt:     time.Now(),
 	}
+
+	s.aidTableMu.Lock()
+	if existing := s.aidTables[resolvedDirect]; existing != nil {
+		s.aidTableMu.Unlock()
+		return existing
+	}
+
+	if s.maxAIDTables > 0 && len(s.aidTables) >= s.maxAIDTables {
+		now := time.Now()
+		var minQueries int64 = math.MaxInt64
+		var victimDirect string
+
+		for direct, cachedTbl := range s.aidTables {
+			if now.Sub(cachedTbl.loadedAt) < s.aidTableTTL {
+				continue
+			}
+			cachedAct := s.getBoardActivity(direct, cachedTbl.bid)
+			q := s.boardTotalQueries(cachedAct)
+			if q < minQueries {
+				minQueries = q
+				victimDirect = direct
+			}
+		}
+
+		if victimDirect == "" || candQueries < minQueries+s.aidTableEvictLead {
+			s.aidTableMu.Unlock()
+			return nil
+		}
+
+		delete(s.aidTables, victimDirect)
+		s.aidTableEvictions.Add(1)
+		if s.Verbose() >= 1 {
+			log.Printf("[search.svc] [AID-TABLE-REPLACE] Replaced board=%s (queries=%d) with board=%s (queries=%d)",
+				s.ResolveBoardName(victimDirect, 0), minQueries,
+				s.ResolveBoardName(resolvedDirect, bid), candQueries)
+		}
+	}
+
 	s.aidTables[resolvedDirect] = tbl
+	s.aidTableMu.Unlock()
 
 	s.backtrackMu.Lock()
 	s.backtrack[resolvedDirect] = &BoardBacktrackInfo{
@@ -1496,8 +1619,8 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 	s.backtrackMu.Unlock()
 
 	if s.Verbose() >= 1 {
-		log.Printf("[search.svc] [AID-TABLE] loaded %d AIDs for board %s (%.2f MB, maxBacktrack=%d, maxTimeDiff=%ds)",
-			len(aids), s.ResolveBoardName(resolvedDirect, bid), float64(len(aids)*8)/(1024*1024), maxBtrack, maxTdiff)
+		log.Printf("[search.svc] [AID-TABLE] loaded %d AIDs for board %s (%.2f MB, maxBacktrack=%d, maxTimeDiff=%ds, queries=%d)",
+			len(aids), s.ResolveBoardName(resolvedDirect, bid), float64(len(aids)*8)/(1024*1024), maxBtrack, maxTdiff, candQueries)
 	}
 
 	return tbl
@@ -1708,9 +1831,9 @@ func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu
 	s.putAIDEntryLocked(entry)
 	s.aidMu.Unlock()
 
-	s.aidTableMu.RLock()
+	s.aidTableMu.Lock()
 	tbl := s.aidTables[direct]
-	s.aidTableMu.RUnlock()
+	s.aidTableMu.Unlock()
 	if tbl != nil {
 		tbl.AppendPost(recno, aidu)
 	}
