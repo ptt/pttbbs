@@ -1009,7 +1009,7 @@ read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
         ctx->redraw = true;
         break;
     case TITLE_REDRAW:
-        ctx->redraw_header_lines = 3;
+        ctx->redraw = true;
         break;
     case READ_REDRAW:
         ctx->redraw_footer_lines = 1;
