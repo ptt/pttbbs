@@ -253,13 +253,17 @@ static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int6
         return 0;
     }
 
+#ifdef POSIX_FADV_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+
     time4_t *ts_buf = (time4_t *)malloc((size_t)total * sizeof(time4_t));
     if (!ts_buf) {
         close(fd);
         return -1;
     }
 
-    enum { BATCH = 512 };
+    enum { BATCH = 1024 };
     fileheader_t fhs[BATCH];
     int valid_cnt = 0;
     ssize_t len;
