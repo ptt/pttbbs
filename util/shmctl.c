@@ -152,6 +152,29 @@ int utmpfix(int argc, char **argv)
 	}
     SHM->UTMPbusystate = 1;
 
+    for (i = 0; i < USHM_SIZE; ++i) {
+        int next_val = SHM->utmp_user.next_session[i];
+        int next_slot = UTMP_DECODE_SLOT(next_val);
+        if (next_slot == i) {
+            SHM->utmp_user.next_session[i] = 0;
+            changeflag = 1;
+        }
+    }
+    for (i = 1; i <= MAX_USERS; ++i) {
+        int h = SHM->utmp_user.user_head[i];
+        if (VALID_USHM_ENTRY(h)) {
+            if (SHM->utmp_user.session_user[h] != i ||
+                SHM->uinfo[h].uid != i ||
+                SHM->uinfo[h].pid <= 0) {
+                SHM->utmp_user.user_head[i] = -1;
+                changeflag = 1;
+            }
+        } else if (h != -1) {
+            SHM->utmp_user.user_head[i] = -1;
+            changeflag = 1;
+        }
+    }
+
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
     nownum = SHM->UTMPnumber;
     now = time(NULL);
