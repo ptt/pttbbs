@@ -1379,6 +1379,66 @@ brdlist_empty_renderer(PSB_CTX *ctx GCC_UNUSED)
 }
 
 static int
+brdlist_separator(int newflag, int head, boardstat_t *ptr) {
+    if (!newflag)
+        prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+    else
+        prints("%7s   ", "");
+
+    if (!(ptr->myattr & NBRD_FAV))
+        outs(ANSI_COLOR(1;30));
+
+    outs("------------"
+         "      "
+         // "------"
+         "------------------------------------------"
+         ANSI_RESET);
+    clrtoeol();
+    return 0;
+}
+
+static int
+brdlist_folder(int newflag, int head, boardstat_t *ptr) {
+    const char *title = get_folder_title(ptr->bid);
+    prints("%7d %c ",
+           newflag ?
+           get_data_number(get_fav_folder(getfolder(ptr->bid))) :
+           head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+
+    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
+           !(HasUserFlag(UF_FAV_NOHILIGHT)) ?
+           HILIGHT_COLOR : "",
+           title);
+    clrtoeol();
+    return 0;
+}
+
+static int
+brdlist_hidden(int newflag, int head, boardstat_t *ptr) {
+    const char *reason = (B_BH(ptr)->brdattr & BRD_HIDE) ? "[隱板]" : "[禁入]";
+
+    if (newflag)
+        prints("%7s", "");
+    else
+        prints("%7d", head);
+
+    // we don't print BM and popularity, so subject can be
+    // longer
+    prints("X%c %-13.13s%-7.7s %-48.48s",
+           ptr->myattr & NBRD_TAG ? 'D' : ' ',
+           B_BH(ptr)->brdname,
+           reason,
+#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
+           B_BH(ptr)->title + 7
+#else
+           "<目前無法進入此看板>"
+#endif
+           );
+    clrtoeol();
+    return 0;
+}
+
+static int
 brdlist_renderer(int idx, PSB_CTX *ctx)
 {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->cmd.priv;
@@ -1387,166 +1447,105 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     boardstat_t *ptr;
     char *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
 
-		assert(0<=head && head<nbrdsize);
-		ptr = &nbrd[head++];
-		if (ptr->myattr & NBRD_LINE){
-		    if( !newflag )
-			prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
-		    else
-			prints("%7s   ", "");
+    assert(0 <= head && head < nbrdsize);
+    ptr = &nbrd[head++];
 
-		    if (!(ptr->myattr & NBRD_FAV))
-			outs(ANSI_COLOR(1;30));
+    if (ptr->myattr & NBRD_LINE)
+        return brdlist_separator(newflag, head, ptr);
 
-		    outs("------------"
-			    "      "
-			    // "------"
-			    "------------------------------------------"
-			    ANSI_RESET "\n");
-		    clrtoeol();
-		    return 0;
-		}
-		else if (ptr->myattr & NBRD_FOLDER){
-		    char *title = get_folder_title(ptr->bid);
-		    prints("%7d %c ",
-			    newflag ?
-			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
-			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+    if (ptr->myattr & NBRD_FOLDER)
+        return brdlist_folder(newflag, head, ptr);
 
-		    // well, what to print with myfav folders?
-		    // this style is too long and we don't want to
-		    // fight with users...
-		    // think about new way some otherday.
-		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
-			    !(HasUserFlag(UF_FAV_NOHILIGHT))?
-                              HILIGHT_COLOR : "",
-			    title);
-		    /*
-		    if (!(HasUserFlag(UF_FAV_NOHILIGHT)))
-			outs(HILIGHT_COLOR);
-		    prints("%-12s", "[Folder]");
-		    outs(ANSI_RESET);
-		    prints(" 目錄 Σ%-34s", title);
-		    */
-		    /*
-		    outs(ANSI_COLOR(0;36));
-		    prints("Σ%-70.70s", title);
-		    outs(ANSI_RESET);
-		    */
-		    clrtoeol();
-		    return 0;
-		}
+    if (IN_CLASSROOT()) {
+        outs("          ");
+    } else {
+        if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
+            return brdlist_hidden(newflag, head, ptr);
+        }
+    }
 
-		if (IN_CLASSROOT())
-		    outs("          ");
-		else {
-		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-                        const char *reason = "[禁入]";
-
-			if (newflag)
-                            prints("%7s", "");
-			else
-                            prints("%7d", head);
-
-                        if (B_BH(ptr)->brdattr & BRD_HIDE)
-                            reason = "[隱板]";
-
-                        // we don't print BM and popularity, so subject can be
-                        // longer
-			prints("X%c %-13.13s%-7.7s %-48.48s",
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-                                B_BH(ptr)->brdname,
-                                reason,
-#ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-                                B_BH(ptr)->title + 7
-#else
-                                "<目前無法進入此看板>"
-#endif
-                                );
-			clrtoeol();
-			return 0;
-		    }
-		}
+    // Normal entries.
 
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-		const int should_show_sensitive_info = true;
+    const int should_show_sensitive_info = true;
 #else
-		// Show sensitive info if permission is *not* given by solely
-		// PERM_SYSOP, GROUPOP, or both.
-		const int should_show_sensitive_info =
-		    !BoardPermNeedsSysopOverride(B_BH(ptr)) &&
-		    !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
+    // Show sensitive info if permission is *not* given by solely
+    // PERM_SYSOP, GROUPOP, or both.
+    const int should_show_sensitive_info =
+        !BoardPermNeedsSysopOverride(B_BH(ptr)) &&
+        !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
 #endif
 
+    if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD) {
+        outs("          ");
+    } else if (should_show_sensitive_info) {
+        prints("%7d%c%s",
+                newflag ? (int)(B_TOTAL(ptr)) : head,
+                !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+                (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+                (ptr->myattr & NBRD_TAG) ? "D " :
+                (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+                unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+    } else {
+        if (newflag)
+            prints("%7s", "");
+        else
+            prints("%7d", head);
+        prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+    }
 
-		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-		    outs("          ");
-		else if (should_show_sensitive_info)
-		    prints("%7d%c%s",
-			    newflag ? (int)(B_TOTAL(ptr)) : head,
-			    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
-			    (ptr->myattr & NBRD_TAG) ? "D " :
-			    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		else {
-		    if (newflag)
-			prints("%7s", "");
-		    else
-			prints("%7d", head);
-		    prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
-		}
+    if (IN_CLASSROOT()) {
+        prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
+               t_columns - 68, B_BH(ptr)->BM);
+        clrtoeol();
+        return 0;
+    }
 
-		if (!IN_CLASSROOT()) {
-		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
-			    "%2.2s" ANSI_RESET "%-34.34s",
-			    ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
-			      getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
-			    B_BH(ptr)->brdname,
-			    make_class_color(B_BH(ptr)->title),
-			    B_BH(ptr)->title,
-			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 5 : "",
-			    should_show_sensitive_info ?
-				B_BH(ptr)->title + 7 : "");
+    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
+            "%2.2s" ANSI_RESET "%-34.34s",
+            ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
+              getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
+            B_BH(ptr)->brdname,
+            make_class_color(B_BH(ptr)->title),
+            B_BH(ptr)->title,
+            should_show_sensitive_info ?
+            B_BH(ptr)->title + 5 : "",
+            should_show_sensitive_info ?
+            B_BH(ptr)->title + 7 : "");
 
-		    if (!should_show_sensitive_info)
-			outs("   ");
-		    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-                        outs("靜 ");
-                    // Note the nuser is not updated realtime, or have some bug.
-		    else if (B_BH(ptr)->nuser < 1)
-			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-		    else if (B_BH(ptr)->nuser <= 10)
-			prints("%2d ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser <= 50)
-			prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+    if (!should_show_sensitive_info)
+        outs("   ");
+    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+        outs("靜 ");
+    // Note the nuser is not updated realtime, or have some bug.
+    else if (B_BH(ptr)->nuser < 1)
+        prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+    else if (B_BH(ptr)->nuser <= 10)
+        prints("%2d ", B_BH(ptr)->nuser);
+    else if (B_BH(ptr)->nuser <= 50)
+        prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 #ifdef EXTRA_HOTBOARD_COLORS
-		    // piaip 2008/02/04: new colors
-		    else if (B_BH(ptr)->nuser >= 100000)
-			outs(ANSI_COLOR(1;35) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 60000)
-			outs(ANSI_COLOR(1;33) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 30000)
-			outs(ANSI_COLOR(1;32) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 10000)
-			outs(ANSI_COLOR(1;36) "爆!" ANSI_RESET);
+    // piaip 2008/02/04: new colors
+    else if (B_BH(ptr)->nuser >= 100000)
+        outs(ANSI_COLOR(1;35) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 60000)
+        outs(ANSI_COLOR(1;33) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 30000)
+        outs(ANSI_COLOR(1;32) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 10000)
+        outs(ANSI_COLOR(1;36) "爆!" ANSI_RESET);
 #endif
-		    else if (B_BH(ptr)->nuser >= 5000)
-			outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 2000)
-			outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 1000)
-			outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
-		    else if (B_BH(ptr)->nuser >= 100)
-			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
-		    else //if (B_BH(ptr)->nuser > 50)
-			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-		    prints("%.*s" ANSI_CLRTOEND, t_columns - 68, B_BH(ptr)->BM);
-		} else {
-		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-			   t_columns - 68, B_BH(ptr)->BM);
-		}
+    else if (B_BH(ptr)->nuser >= 5000)
+        outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 2000)
+        outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 1000)
+        outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
+    else if (B_BH(ptr)->nuser >= 100)
+        outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
+    else //if (B_BH(ptr)->nuser > 50)
+        prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+    prints("%.*s" ANSI_CLRTOEND, t_columns - 68, B_BH(ptr)->BM);
 
     clrtoeol();
     return 0;
