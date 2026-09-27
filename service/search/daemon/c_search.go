@@ -17,11 +17,14 @@ static int c_shm_ready(void) {
     return SHM != NULL;
 }
 
-// Forces NUL termination of every predicate keyword received from clients.
+// Forces NUL termination and zeroes trailing bytes of every predicate keyword.
 static void c_sanitize_preds(void *buf, int n) {
     fileheader_predicate_t *p = (fileheader_predicate_t *)buf;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         p[i].keyword[sizeof(p[i].keyword) - 1] = '\0';
+        size_t len = strlen(p[i].keyword);
+        memset(p[i].keyword + len + 1, 0, sizeof(p[i].keyword) - (len + 1));
+    }
 }
 
 static void c_format_preds(const void *buf, int n, char *out, int outlen) {
