@@ -30,6 +30,7 @@ const (
 	SearchSvcMagic       uint32 = 0x53524348 // "SRCH"
 	SearchAIDMagic       uint32 = 0x53414944 // "SAID"
 	SearchInvalMagic     uint32 = 0x53494E56 // "SINV"
+	SearchHintMagic      uint32 = 0x53484E54 // "SHNT"
 	MaxSearchPredicates  int32  = 8
 	DefaultMaxEntries    int    = 2048
 	DefaultMaxIndices    int64  = 16 * 1024 * 1024 // 16M int32s (~64MB)
@@ -37,6 +38,12 @@ const (
 	DefaultCacheTTL             = 1 * time.Hour
 	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
 	aiduIdxShift                = 45
+)
+
+const (
+	HintTypePost    int32 = 1
+	HintTypeComment int32 = 2
+	HintTypeDelete  int32 = 3
 )
 
 type ControlRequest struct {
@@ -1151,6 +1158,17 @@ type binaryInvalReqHeader struct {
 	Direct [256]byte
 }
 
+type binaryHintReqHeader struct {
+	Magic  uint32
+	Type   int32
+	Bid    int32
+	Recno  int32
+	Aidu   uint64
+	Data   int32
+	Fh     [128]byte
+	Direct [256]byte
+}
+
 func writeBinaryError(w io.Writer, status int32) {
 	resp := binaryRespHeader{
 		Status: status,
@@ -1173,8 +1191,102 @@ func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo string
 		s.handleBinaryAIDConn(r, w, peerInfo)
 	case SearchInvalMagic:
 		s.handleBinaryInvalConn(r, w, peerInfo)
+	case SearchHintMagic:
+		s.handleBinaryHintConn(r, w, peerInfo)
 	default:
 		writeBinaryError(w, -1)
+	}
+}
+
+func (s *Service) handleBinaryHintConn(r io.Reader, w io.Writer, peerInfo string) {
+	var req binaryHintReqHeader
+	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
+		return
+	}
+	resolvedDirect := s.resolveDirectPath(req.Direct)
+
+	switch req.Type {
+	case HintTypePost:
+		s.handleHintPost(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Aidu, req.Fh)
+	case HintTypeComment:
+		s.handleHintComment(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Data)
+	case HintTypeDelete:
+		s.handleHintDelete(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Aidu)
+	}
+
+	status := int32(0)
+	_ = binary.Write(w, binary.LittleEndian, &status)
+}
+
+func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu uint64, fhBytes [128]byte) {
+	if aidu == 0 {
+		fnBytes := bytes.TrimRight(fhBytes[:33], "\x00")
+		aidu = FNToAIDU(string(fnBytes))
+	}
+	if aidu == 0 || recno <= 0 {
+		return
+	}
+
+	key := aidCacheKey{
+		direct:       direct,
+		bid:          bid,
+		aiduRaw:      aidu & aiduRawMask,
+		requiredMode: 0,
+	}
+
+	entry := &aidCacheEntry{
+		key:         key,
+		foundIdx:    recno,
+		fhBytes:     fhBytes,
+		scannedRecs: recno,
+		createdAt:   time.Now(),
+	}
+
+	s.aidMu.Lock()
+	s.putAIDEntryLocked(entry)
+	s.aidMu.Unlock()
+
+	if s.Verbose() >= 1 {
+		log.Printf("[search.svc] [HINT-POST] %sboard=%s bid=%d recno=%d aidu=%012x",
+			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, aidu)
+	}
+}
+
+func (s *Service) handleHintComment(peerInfo, direct string, bid, recno int32, recommend int32) {
+	s.aidMu.Lock()
+	for _, e := range s.aidEntries {
+		if e.foundIdx == recno && (e.key.bid == bid || bid == 0 || e.key.direct == direct) {
+			SetFileheaderRecommend(&e.fhBytes, int(recommend))
+		}
+	}
+	s.aidMu.Unlock()
+
+	if s.Verbose() >= 2 {
+		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d recommend=%d",
+			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, recommend)
+	}
+}
+
+func (s *Service) handleHintDelete(peerInfo, direct string, bid, recno int32, aidu uint64) {
+	if aidu != 0 {
+		key := aidCacheKey{
+			direct:       direct,
+			bid:          bid,
+			aiduRaw:      aidu & aiduRawMask,
+			requiredMode: 0,
+		}
+		s.aidMu.Lock()
+		if e, ok := s.aidEntries[key]; ok {
+			s.removeAIDEntryLocked(e)
+		}
+		s.aidMu.Unlock()
+	}
+
+	s.InvalidateWithPeer(peerInfo, direct, bid)
+
+	if s.Verbose() >= 1 {
+		log.Printf("[search.svc] [HINT-DEL] %sboard=%s bid=%d recno=%d aidu=%012x",
+			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, aidu)
 	}
 }
 

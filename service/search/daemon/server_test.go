@@ -385,4 +385,77 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	if bt < 0 {
 		t.Fatalf("expected backtrack to be recorded after bsearch miss, got %d", bt)
 	}
+
+	// 16. Test Write-side Hints: HINT_POST, HINT_PUSH, HINT_DELETE
+	if err := AppendTestFileheader(dirPath, "M.1655888888.A.111", "testuser", "New Post", 0, 0, 0); err != nil {
+		t.Fatalf("append test fh: %v", err)
+	}
+	aiduNew := (uint64(1655888888) << 12) | 0x111
+	hintConn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial hintConn: %v", err)
+	}
+	var hintReq binaryHintReqHeader
+	hintReq.Magic = SearchHintMagic
+	hintReq.Type = HintTypePost
+	hintReq.Bid = 1
+	hintReq.Recno = 8
+	hintReq.Aidu = aiduNew
+	copy(hintReq.Fh[:], []byte("M.1655888888.A.111"))
+	copy(hintReq.Direct[:], relDir)
+	if err := binary.Write(hintConn, binary.LittleEndian, &hintReq); err != nil {
+		t.Fatalf("write hintReq: %v", err)
+	}
+	var hintStatus int32
+	if err := binary.Read(hintConn, binary.LittleEndian, &hintStatus); err != nil || hintStatus != 0 {
+		t.Fatalf("read hintStatus: %v %d", err, hintStatus)
+	}
+	hintConn.Close()
+
+	// Query immediately: MUST hit aidCache as foundIdx=8!
+	if idx := queryAIDClient(t, socketPath, 1, relDir, aiduNew, 0); idx != 8 {
+		t.Fatalf("expected post hint to prewarm aidCache idx=8, got %d", idx)
+	}
+
+	// Send HINT_COMMENT to update recommend to 99
+	hintConn2, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial hintConn2: %v", err)
+	}
+	var commentHint binaryHintReqHeader
+	commentHint.Magic = SearchHintMagic
+	commentHint.Type = HintTypeComment
+	commentHint.Bid = 1
+	commentHint.Recno = 8
+	commentHint.Data = 99
+	copy(commentHint.Direct[:], relDir)
+	_ = binary.Write(hintConn2, binary.LittleEndian, &commentHint)
+	_ = binary.Read(hintConn2, binary.LittleEndian, &hintStatus)
+	hintConn2.Close()
+
+	// Send HINT_DELETE
+	hintConn3, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial hintConn3: %v", err)
+	}
+	var delHint binaryHintReqHeader
+	delHint.Magic = SearchHintMagic
+	delHint.Type = HintTypeDelete
+	delHint.Bid = 1
+	delHint.Recno = 8
+	delHint.Aidu = aiduNew
+	copy(delHint.Direct[:], relDir)
+	_ = binary.Write(hintConn3, binary.LittleEndian, &delHint)
+	_ = binary.Read(hintConn3, binary.LittleEndian, &hintStatus)
+	hintConn3.Close()
+
+	// In PTT BBS, delete_fileheader marks record as deleted in .DIR
+	if err := DeleteTestFileheader(dirPath, "M.1655888888.A.111", 8); err != nil {
+		t.Fatalf("delete test fh: %v", err)
+	}
+
+	// Query immediately: MUST hit as 0 (deleted)
+	if idx := queryAIDClient(t, socketPath, 1, relDir, aiduNew, 0); idx != 0 {
+		t.Fatalf("expected delete hint to mark 0, got %d", idx)
+	}
 }

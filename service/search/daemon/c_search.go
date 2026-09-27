@@ -47,6 +47,12 @@ static int c_fhdr_size(void) {
     return (int)sizeof(fileheader_t);
 }
 
+static inline void c_set_fileheader_recommend(void *fh, int recommend) {
+    if (fh) {
+        ((fileheader_t *)fh)->recommend = (char)recommend;
+    }
+}
+
 static int64_t c_get_board_srexpire(int bid) {
     if (SHM == NULL || bid < 1 || bid > MAX_BOARD)
         return 0;
@@ -102,6 +108,15 @@ static int c_append_fileheader(const char *direct, const char *filename,
     fh.recommend = (int8_t)recommend;
     fh.multi.money = money;
     return append_fileheader(direct, &fh);
+}
+
+static int c_delete_fileheader(const char *direct, const char *filename, int id)
+{
+    fileheader_t fh;
+    memset(&fh, 0, sizeof(fh));
+    if (filename)
+        strlcpy(fh.filename, filename, sizeof(fh.filename));
+    return delete_fileheader(direct, &fh, id);
 }
 
 static int c_scan_dir_range(const char *direct,
@@ -669,6 +684,16 @@ func ReadFilenameAt(directPath string, rec int32) (string, bool) {
 	return C.GoString(&buf[0]), true
 }
 
+func SetFileheaderRecommend(fh *[128]byte, recommend int) {
+	C.c_set_fileheader_recommend(unsafe.Pointer(&fh[0]), C.int(recommend))
+}
+
+func FNToAIDU(fn string) uint64 {
+	cFn := C.CString(fn)
+	defer C.free(unsafe.Pointer(cFn))
+	return uint64(C.fn2aidu(cFn))
+}
+
 func MakePredBytes(mode int, keyword string, recommend int, money int) []byte {
 	buf := make([]byte, PredSize())
 	cKw := C.CString(keyword)
@@ -691,6 +716,20 @@ func AppendTestFileheader(directPath, filename, owner, title string, filemode in
 	rc := C.c_append_fileheader(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(recommend), C.int(money))
 	if rc < 0 {
 		return fmt.Errorf("append_fileheader failed on %s", directPath)
+	}
+	return nil
+}
+
+func DeleteTestFileheader(directPath, filename string, id int) error {
+	cDir := C.CString(directPath)
+	cFn := C.CString(filename)
+	defer func() {
+		C.free(unsafe.Pointer(cDir))
+		C.free(unsafe.Pointer(cFn))
+	}()
+	rc := C.c_delete_fileheader(cDir, cFn, C.int(id))
+	if rc != 0 {
+		return fmt.Errorf("delete_fileheader failed on %s: %d", directPath, rc)
 	}
 	return nil
 }
