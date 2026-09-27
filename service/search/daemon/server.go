@@ -912,7 +912,7 @@ func (s *Service) LookupBoardBacktrack(direct string) int32 {
 	if info, ok := s.backtrack[direct]; ok && info != nil && info.MaxBacktrack >= 0 {
 		return info.MaxBacktrack
 	}
-	return 0
+	return -1
 }
 
 // RefreshBoardBacktrack computes or refreshes the backtrack for direct (used by admin ctl / maintenance).
@@ -1411,10 +1411,26 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 
 	maxBacktrack := s.LookupBoardBacktrack(resolvedDirect)
 	gen := s.gen.Load()
-	foundIdx, fhBytes, actualTotal, err := SearchAIDInDir(resolvedDirect, aiduWithHint, int(requiredMode), startRec, int(maxBacktrack))
+	foundIdx, fhBytes, actualTotal, computedBacktrack, computedTimeDiff, err := SearchAIDInDir(
+		resolvedDirect, aiduWithHint, int(requiredMode), startRec, int(maxBacktrack))
 	if err != nil {
 		call.err = err
 		return 0, emptyFH, err
+	}
+
+	if computedBacktrack >= 0 {
+		s.backtrackMu.Lock()
+		s.backtrack[resolvedDirect] = &BoardBacktrackInfo{
+			Direct:          resolvedDirect,
+			Board:           s.ResolveBoardName(resolvedDirect, bid),
+			Bid:             bid,
+			TotalRecs:       actualTotal,
+			MaxBacktrack:    computedBacktrack,
+			MaxTimeDiffSecs: computedTimeDiff,
+			DirMtime:        curMtime,
+			LastScanned:     time.Now(),
+		}
+		s.backtrackMu.Unlock()
 	}
 
 	newEntry := &aidCacheEntry{
