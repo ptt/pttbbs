@@ -203,6 +203,138 @@ static int c_scan_dir_range(const char *direct,
     return matched_count;
 }
 
+// Scans direct in reverse (newest posts first) for early-exit web queries.
+// - max_matches: stop once this many matches are found (e.g. 20 or 40).
+// - max_scan_depth: maximum number of records to scan backwards (0 = scan to start).
+// Returns number of matches written to out_indices (newest first).
+// out_total_matches: returns exact count if full scan completed, or matched_count + 1 if stopped early.
+static int c_scan_dir_reverse(const char *direct,
+                              const void *preds_buf, int num_preds,
+                              int max_matches, int max_scan_depth,
+                              int32_t *out_indices, int max_out,
+                              int *out_total_matches, int *out_stopped_early)
+{
+    int fd = open(direct, O_RDONLY);
+    if (fd < 0)
+        return -1;
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    int total_recs = (int)(st.st_size / sizeof(fileheader_t));
+    if (total_recs <= 0) {
+        close(fd);
+        if (out_total_matches)
+            *out_total_matches = 0;
+        if (out_stopped_early)
+            *out_stopped_early = 0;
+        return 0;
+    }
+
+    int stop_rec = 1;
+    if (max_scan_depth > 0 && total_recs - max_scan_depth + 1 > stop_rec) {
+        stop_rec = total_recs - max_scan_depth + 1;
+    }
+
+    const fileheader_predicate_t *preds = (const fileheader_predicate_t *)preds_buf;
+    enum { SCAN_BATCH = 1024 };
+    fileheader_t fhs[SCAN_BATCH];
+    int matched_count = 0;
+    int stopped_early = 0;
+
+    // Fast path: if the entire file fits in a single batch, scan all records
+    // to give exact total and indices without early exit.
+    if (total_recs <= SCAN_BATCH) {
+        ssize_t len = pread(fd, fhs, (size_t)total_recs * sizeof(fileheader_t), 0);
+        close(fd);
+        if (len <= 0) {
+            if (out_total_matches) *out_total_matches = 0;
+            if (out_stopped_early) *out_stopped_early = 0;
+            return 0;
+        }
+        int n = (int)(len / sizeof(fileheader_t));
+        if (NEED_STORAGE_CONV)
+            fileheader_storage_to_mem(fhs, n);
+        for (int i = n - 1; i >= 0; i--) {
+            int recno = 1 + i;
+            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+                continue;
+            int ok = 1;
+            for (int p = 0; p < num_preds; p++) {
+                if (!match_fileheader_predicate(&fhs[i], (void *)&preds[p])) {
+                    ok = 0;
+                    break;
+                }
+            }
+            if (ok) {
+                if (matched_count < max_out)
+                    out_indices[matched_count] = recno;
+                matched_count++;
+            }
+        }
+        if (out_total_matches)
+            *out_total_matches = matched_count;
+        if (out_stopped_early)
+            *out_stopped_early = 0;
+        return matched_count;
+    }
+
+    for (int end_rec = total_recs; end_rec >= stop_rec; end_rec -= SCAN_BATCH) {
+        int chunk_start = end_rec - SCAN_BATCH + 1;
+        if (chunk_start < stop_rec)
+            chunk_start = stop_rec;
+        int chunk_cnt = end_rec - chunk_start + 1;
+
+        off_t offset = (off_t)(chunk_start - 1) * sizeof(fileheader_t);
+        ssize_t len = pread(fd, fhs, (size_t)chunk_cnt * sizeof(fileheader_t), offset);
+        if (len <= 0)
+            break;
+        int n = (int)(len / sizeof(fileheader_t));
+        if (NEED_STORAGE_CONV)
+            fileheader_storage_to_mem(fhs, n);
+
+        for (int i = n - 1; i >= 0; i--) {
+            int recno = chunk_start + i;
+            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+                continue;
+            int ok = 1;
+            for (int p = 0; p < num_preds; p++) {
+                if (!match_fileheader_predicate(&fhs[i], (void *)&preds[p])) {
+                    ok = 0;
+                    break;
+                }
+            }
+            if (ok) {
+                if (matched_count < max_out)
+                    out_indices[matched_count] = recno;
+                matched_count++;
+                if (max_matches > 0 && matched_count >= max_matches) {
+                    stopped_early = (recno > 1);
+                    goto done;
+                }
+            }
+        }
+    }
+
+done:
+    close(fd);
+    if (matched_count == 0) {
+        stopped_early = 0;
+    } else if (!stopped_early && stop_rec > 1) {
+        stopped_early = 1;
+    }
+    if (out_stopped_early) {
+        *out_stopped_early = stopped_early;
+    }
+    if (out_total_matches) {
+        *out_total_matches = stopped_early ? (matched_count + 1) : matched_count;
+    }
+    return matched_count;
+}
+
 static int c_filter_candidates(const char *direct,
                                const void *preds_buf, int num_preds,
                                const int32_t *cand_indices, int num_cands,
@@ -981,4 +1113,43 @@ func FilterCandidates(directPath string, predsRaw []byte, numPreds int, candidat
 	res := make([]int32, matched)
 	copy(res, outBuf[:matched])
 	return res, nil
+}
+
+// ScanDirReverse scans directPath backwards from the tail (newest posts) with early-exit limits.
+// Returns matched 1-based record indices in reverse chronological order (newest first), estimated total matches, and whether it stopped early.
+func ScanDirReverse(directPath string, predsRaw []byte, numPreds int, maxMatches, maxDepth int) ([]int32, int32, bool, error) {
+	if numPreds <= 0 || len(predsRaw) < numPreds*PredSize() {
+		return nil, 0, false, fmt.Errorf("invalid predicates buffer")
+	}
+
+	maxOut := maxMatches
+	if maxOut < 1024 {
+		maxOut = 1024
+	}
+	outBuf := make([]int32, maxOut)
+	cPath := C.CString(directPath)
+	defer C.free(unsafe.Pointer(cPath))
+
+	var totalMatches C.int
+	var stoppedEarly C.int
+	matched := int(C.c_scan_dir_reverse(
+		cPath,
+		unsafe.Pointer(&predsRaw[0]),
+		C.int(numPreds),
+		C.int(maxMatches),
+		C.int(maxDepth),
+		(*C.int32_t)(unsafe.Pointer(&outBuf[0])),
+		C.int(maxOut),
+		&totalMatches,
+		&stoppedEarly,
+	))
+	if matched < 0 {
+		return nil, 0, false, fmt.Errorf("failed to scan reverse %s", directPath)
+	}
+	if matched > maxOut {
+		matched = maxOut
+	}
+	res := make([]int32, matched)
+	copy(res, outBuf[:matched])
+	return res, int32(totalMatches), stoppedEarly != 0, nil
 }

@@ -200,6 +200,7 @@ func main() {
 	flag.Int64Var(aidTableMinReqs, "min-cache-queries", daemon.DefaultAIDTableMinReqs, "Alias for -aid-table-min-reqs")
 	aidTableTTL := flag.Duration("aid-table-ttl", daemon.DefaultAIDTableTTL, "Min duration before cached board can be replaced (default: 1h)")
 	aidTableEvictLead := flag.Int64("aid-table-evict-lead", daemon.DefaultAIDTableEvictLead, "Query lead required to replace an expired cached board (default: 100)")
+	webSearchMaxDepth := flag.Int("web-search-max-depth", daemon.DefaultWebSearchMaxDepth, "Max records to scan backwards for web tail search (default: 100000, 0=unlimited)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
 	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
@@ -264,8 +265,8 @@ func main() {
 	}
 	fmt.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d\n",
 		runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v\n",
-		*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
+	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, web-search-max-depth=%d\n",
+		*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *webSearchMaxDepth)
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
@@ -281,8 +282,8 @@ func main() {
 				}
 				log.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d",
 					runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v",
-					*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
+				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, web-search-max-depth=%d",
+					*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *webSearchMaxDepth)
 			}
 		}
 	}
@@ -294,6 +295,7 @@ func main() {
 	service.SetVerbose(int(verbose))
 	service.SetCacheLimits(*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
 	service.SetAIDTablePolicy(*aidTableMinReqs, *aidTableTTL, *aidTableEvictLead)
+	service.SetWebSearchPolicy(*webSearchMaxDepth)
 
 	if *pprofAddr != "" {
 		go func() {
