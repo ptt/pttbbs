@@ -545,7 +545,7 @@ psb_main(PSB_CTX *psbctx)
         }
 
         if (ISNEWMAIL(currutmp) != old_newmail && !psbctx->cmd.redraw && !psbctx->cmd.reload) {
-            psbctx->cmd.redraw_header_lines = psbctx->header_lines;
+            psbctx->cmd.redraw = true;
         }
         if (ZA_Waiting()) {
             psbctx->cmd.quit = true;
