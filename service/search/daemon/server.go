@@ -902,7 +902,21 @@ func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
 	return list
 }
 
-func (s *Service) GetBoardBacktrack(direct string, bid int32) int32 {
+// LookupBoardBacktrack returns the cached max backtrack for direct.
+// It is strictly a non-blocking in-memory read. If not yet scanned, it returns 0.
+// This guarantees the QueryAID query path NEVER triggers synchronous disk I/O,
+// stat calls, or full directory scans when an AID is not in cache.
+func (s *Service) LookupBoardBacktrack(direct string) int32 {
+	s.backtrackMu.RLock()
+	defer s.backtrackMu.RUnlock()
+	if info, ok := s.backtrack[direct]; ok && info != nil && info.MaxBacktrack >= 0 {
+		return info.MaxBacktrack
+	}
+	return 0
+}
+
+// RefreshBoardBacktrack computes or refreshes the backtrack for direct (used by admin ctl / maintenance).
+func (s *Service) RefreshBoardBacktrack(direct string, bid int32) int32 {
 	st, err := os.Stat(direct)
 	if err != nil {
 		return -1
@@ -911,24 +925,6 @@ func (s *Service) GetBoardBacktrack(direct string, bid int32) int32 {
 	fhSize := int64(FileheaderSize())
 	curTotal := int32(st.Size() / fhSize)
 
-	s.backtrackMu.RLock()
-	info, ok := s.backtrack[direct]
-	if ok && info != nil && info.MaxBacktrack >= 0 {
-		// Boards usually only grow or stay the same size (in-place pushes).
-		// If total records did not increase, historical timestamps cannot change.
-		// If new articles were added, only refresh after a reasonable interval (10 min).
-		if curTotal <= info.TotalRecs || time.Since(info.LastScanned) < 10*time.Minute {
-			val := info.MaxBacktrack
-			s.backtrackMu.RUnlock()
-			return val
-		}
-	}
-	s.backtrackMu.RUnlock()
-
-	return s.refreshBoardBacktrack(direct, bid, curTotal, st.ModTime())
-}
-
-func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32, mtime time.Time) int32 {
 	s.backtrackMu.Lock()
 	info, ok := s.backtrack[direct]
 	if ok && info != nil && info.MaxBacktrack >= 0 {
@@ -937,11 +933,9 @@ func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32
 			s.backtrackMu.Unlock()
 			return val
 		}
-		// Mark LastScanned now so concurrent callers don't duplicate the scan
 		info.LastScanned = time.Now()
 		s.backtrackMu.Unlock()
 	} else {
-		// First time seeing this board
 		info = &BoardBacktrackInfo{
 			Direct:          direct,
 			Board:           s.ResolveBoardName(direct, bid),
@@ -949,14 +943,13 @@ func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32
 			TotalRecs:       curTotal,
 			MaxBacktrack:    0,
 			MaxTimeDiffSecs: 0,
-			DirMtime:        mtime,
+			DirMtime:        st.ModTime(),
 			LastScanned:     time.Now(),
 		}
 		s.backtrack[direct] = info
 		s.backtrackMu.Unlock()
 	}
 
-	// Compute without holding backtrackMu so other boards and queries are not blocked!
 	totalRecs, maxBacktrack, maxTimeDiff := ComputeDirBacktrack(direct)
 
 	s.backtrackMu.Lock()
@@ -964,7 +957,7 @@ func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32
 		info.TotalRecs = totalRecs
 		info.MaxBacktrack = maxBacktrack
 		info.MaxTimeDiffSecs = maxTimeDiff
-		info.DirMtime = mtime
+		info.DirMtime = st.ModTime()
 		info.LastScanned = time.Now()
 	}
 	s.backtrackMu.Unlock()
@@ -973,6 +966,21 @@ func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32
 }
 
 func (s *Service) AllBacktrackInfo() []BoardBacktrackInfo {
+	s.boardMu.RLock()
+	type target struct {
+		direct string
+		bid    int32
+	}
+	var targets []target
+	for direct, act := range s.boards {
+		targets = append(targets, target{direct: direct, bid: act.bid.Load()})
+	}
+	s.boardMu.RUnlock()
+
+	for _, t := range targets {
+		s.RefreshBoardBacktrack(t.direct, t.bid)
+	}
+
 	s.backtrackMu.RLock()
 	defer s.backtrackMu.RUnlock()
 	res := make([]BoardBacktrackInfo, 0, len(s.backtrack))
@@ -1401,7 +1409,7 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 		aiduWithHint = (aidu & aiduRawMask) | (uint64(cachedHintIdx) << aiduIdxShift)
 	}
 
-	maxBacktrack := s.GetBoardBacktrack(resolvedDirect, bid)
+	maxBacktrack := s.LookupBoardBacktrack(resolvedDirect)
 	gen := s.gen.Load()
 	foundIdx, fhBytes, actualTotal, err := SearchAIDInDir(resolvedDirect, aiduWithHint, int(requiredMode), startRec, int(maxBacktrack))
 	if err != nil {
