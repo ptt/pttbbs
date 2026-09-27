@@ -195,6 +195,11 @@ func main() {
 	maxEntries := flag.Int("max-entries", daemon.DefaultMaxEntries, "Max cached search entries (default: 2048)")
 	maxIndices := flag.Int64("max-indices", daemon.DefaultMaxIndices, "Max total cached int32 indices (default: 16M ~ 64MB)")
 	maxAIDEntries := flag.Int("max-aid-entries", daemon.DefaultMaxAIDEntries, "Max cached AID lookup entries (default: 16384)")
+	maxAIDTables := flag.Int("max-aid-tables", daemon.DefaultMaxAIDTables, "Max boards with cached in-memory AID table (default: 64, 0=disabled)")
+	aidTableMinReqs := flag.Int64("aid-table-min-reqs", daemon.DefaultAIDTableMinReqs, "Min cumulative queries (search + aid) to admit board into cache (default: 100)")
+	flag.Int64Var(aidTableMinReqs, "min-cache-queries", daemon.DefaultAIDTableMinReqs, "Alias for -aid-table-min-reqs")
+	aidTableTTL := flag.Duration("aid-table-ttl", daemon.DefaultAIDTableTTL, "Min duration before cached board can be replaced (default: 1h)")
+	aidTableEvictLead := flag.Int64("aid-table-evict-lead", daemon.DefaultAIDTableEvictLead, "Query lead required to replace an expired cached board (default: 100)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
 	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
@@ -259,8 +264,8 @@ func main() {
 	}
 	fmt.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d\n",
 		runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, cache-ttl=%v\n",
-		*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
+	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v\n",
+		*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
@@ -276,8 +281,8 @@ func main() {
 				}
 				log.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d",
 					runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, cache-ttl=%v",
-					*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
+				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v",
+					*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
 			}
 		}
 	}
@@ -287,7 +292,8 @@ func main() {
 		log.Fatalf("[search.svc] Failed to initialize Search Service: %v", err)
 	}
 	service.SetVerbose(int(verbose))
-	service.SetCacheLimits(*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
+	service.SetCacheLimits(*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
+	service.SetAIDTablePolicy(*aidTableMinReqs, *aidTableTTL, *aidTableEvictLead)
 
 	if *pprofAddr != "" {
 		go func() {

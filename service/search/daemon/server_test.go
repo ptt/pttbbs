@@ -557,6 +557,114 @@ func TestBoardAIDTable(t *testing.T) {
 	}
 }
 
+func TestBoardAIDTablePolicy(t *testing.T) {
+	tmpDir := t.TempDir()
+	boards := []string{"BoardA", "BoardB", "BoardC"}
+	paths := make([]string, len(boards))
+
+	for i, b := range boards {
+		bDir := filepath.Join(tmpDir, "boards", b)
+		if err := os.MkdirAll(bDir, 0755); err != nil {
+			t.Fatalf("mkdir failed: %v", err)
+		}
+		dirPath := filepath.Join(bDir, ".DIR")
+		paths[i] = dirPath
+
+		fhBytes := make([]byte, FileheaderSize())
+		fn := fmt.Sprintf("M.170000000%d.A.001", i+1)
+		copy(fhBytes[:33], fn)
+		copy(fhBytes[FHDR_OFF_OWNER:], "tester")
+		if err := os.WriteFile(dirPath, fhBytes, 0644); err != nil {
+			t.Fatalf("write .DIR failed: %v", err)
+		}
+	}
+
+	svc := newService(tmpDir, filepath.Join(tmpDir, "test.sock"), nil)
+	// Cap AID tables to 2, minReqs=100, TTL=1h, evictLead=100
+	svc.SetCacheLimits(1000, 10000, 1000, 2, time.Hour)
+	svc.SetAIDTablePolicy(100, time.Hour, 100)
+
+	actA := svc.getBoardActivity(paths[0], 1)
+	actB := svc.getBoardActivity(paths[1], 2)
+	actC := svc.getBoardActivity(paths[2], 3)
+
+	// 1. Rule 1: cumulative queries (search + aid) < 100 cannot enter cache
+	actA.searchQueries.Store(30)
+	actA.aidQueries.Store(20) // total = 50 < 100
+	if tbl := svc.GetOrCreateAIDTable(paths[0], 1); tbl != nil {
+		t.Fatalf("expected nil when total queries < 100, got %v", tbl)
+	}
+
+	// Reach 100 total queries (30 search + 70 aid = 100) -> admitted
+	actA.aidQueries.Store(70)
+	tblA := svc.GetOrCreateAIDTable(paths[0], 1)
+	if tblA == nil {
+		t.Fatalf("expected tblA admitted at 100 total queries")
+	}
+
+	// BoardB reaches 120 queries (60 search + 60 aid) -> admitted (cache now full at 2/2)
+	actB.searchQueries.Store(60)
+	actB.aidQueries.Store(60)
+	tblB := svc.GetOrCreateAIDTable(paths[1], 2)
+	if tblB == nil {
+		t.Fatalf("expected tblB admitted at 120 queries")
+	}
+
+	svc.aidTableMu.Lock()
+	if count := len(svc.aidTables); count != 2 {
+		t.Fatalf("expected 2 tables, got %d", count)
+	}
+	svc.aidTableMu.Unlock()
+
+	// 2. Rule 2: BoardC has 500 queries, but BoardA and BoardB are within TTL 1hr -> CANNOT evict!
+	actC.aidQueries.Store(500)
+	if tblC := svc.GetOrCreateAIDTable(paths[2], 3); tblC != nil {
+		t.Fatalf("expected BoardC to be rejected because cached boards are TTL protected")
+	}
+
+	// 3. Rule 3: Simulate BoardA's TTL expired (loaded 2 hours ago)
+	svc.aidTableMu.Lock()
+	svc.aidTables[paths[0]].loadedAt = time.Now().Add(-2 * time.Hour)
+	svc.aidTableMu.Unlock()
+
+	// BoardC has 150 queries: lead over BoardA (100) is 50, which is < evictLead (100) -> CANNOT evict!
+	actC.aidQueries.Store(150)
+	if tblC := svc.GetOrCreateAIDTable(paths[2], 3); tblC != nil {
+		t.Fatalf("expected BoardC to be rejected when lead < 100")
+	}
+
+	// BoardC reaches 220 queries (220 >= 100 + 100) -> CAN evict BoardA!
+	actC.aidQueries.Store(220)
+	tblC := svc.GetOrCreateAIDTable(paths[2], 3)
+	if tblC == nil {
+		t.Fatalf("expected BoardC to evict BoardA when lead >= 100 and TTL expired")
+	}
+
+	svc.aidTableMu.Lock()
+	if _, ok := svc.aidTables[paths[0]]; ok {
+		t.Fatalf("expected BoardA to be evicted")
+	}
+	if _, ok := svc.aidTables[paths[1]]; !ok {
+		t.Fatalf("expected BoardB to still be cached")
+	}
+	if _, ok := svc.aidTables[paths[2]]; !ok {
+		t.Fatalf("expected BoardC to be cached")
+	}
+	svc.aidTableMu.Unlock()
+
+	if evictions := svc.aidTableEvictions.Load(); evictions != 1 {
+		t.Fatalf("expected 1 eviction, got %d", evictions)
+	}
+
+	// 4. Test Flush
+	svc.Flush(0)
+	svc.aidTableMu.Lock()
+	if count := len(svc.aidTables); count != 0 {
+		t.Fatalf("expected 0 tables after Flush(0), got %d", count)
+	}
+	svc.aidTableMu.Unlock()
+}
+
 func TestFileheaderModeHelpers(t *testing.T) {
 	var fh [128]byte
 
