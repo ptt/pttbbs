@@ -13,6 +13,8 @@ func TestParseConfigFile(t *testing.T) {
 max-entries = 8192
 max-indices: 67108864
 max_aid_entries = 131072
+max_aid_tables = 64
+aid_table_min_reqs = 100
 gcpercent 100
 pprof-addr = 127.0.0.1:6060
 
@@ -35,6 +37,8 @@ pprof-addr = 127.0.0.1:6060
 		"-max-entries=8192",
 		"-max-indices=67108864",
 		"-max-aid-entries=131072",
+		"-max-aid-tables=64",
+		"-aid-table-min-reqs=100",
 		"-gcpercent=100",
 		"-pprof-addr=127.0.0.1:6060",
 		"-v",
