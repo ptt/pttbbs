@@ -574,7 +574,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 		}
 	    }
 	}
-	if(n < 0)
+	if(n < 0 && aidu_type(aidu) == 0)
 	    /* search board */
 	{
 	    setbfile(dirfile, currboard, FN_DIR);
@@ -591,7 +591,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 		return DONOTHING;
 	    }
 	}
-	if(n < 0)
+	if(n < 0 && aidu_type(aidu) == 1)
 	    /* search digest */
 	{
 	    setbfile(dirfile, currboard, fn_mandex);

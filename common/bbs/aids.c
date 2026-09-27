@@ -276,6 +276,12 @@ search_dir_by_aidu(const char *direct, aidu_t aidu,
     if (!direct || aidu_raw(aidu) == 0)
         return 0;
 
+    int is_g = aidu_type(aidu);
+    if (is_g && strstr(direct, FN_DIR) != NULL)
+        return 0;
+    if (!is_g && (strstr(direct, ".Names") != NULL || strstr(direct, "mandex") != NULL))
+        return 0;
+
     int fd = open(direct, O_RDONLY);
     if (fd < 0)
         return 0;
