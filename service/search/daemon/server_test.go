@@ -24,7 +24,7 @@ func queryBinaryClient(t *testing.T, socketPath string, bid int32, direct string
 	}
 	defer conn.Close()
 
-	var hdr binaryReqHeader
+	var hdr binaryReqHeaderV1
 	hdr.Magic = SearchSvcMagic
 	hdr.Bid = bid
 	hdr.Offset = offset
@@ -69,7 +69,7 @@ func queryAIDClient(t *testing.T, socketPath string, bid int32, direct string, a
 	}
 	defer conn.Close()
 
-	var req binaryAIDReqHeader
+	var req binaryAIDReqHeaderV1
 	req.Magic = SearchAIDMagic
 	req.Bid = bid
 	req.AIDU = aidu
@@ -656,4 +656,195 @@ func BenchmarkBoardAIDTable(b *testing.B) {
 			_ = tbl.SearchAID(targetOutOfRange)
 		}
 	})
+}
+
+
+
+func queryAIDClientWithSource(t *testing.T, socketPath string, bid int32, direct string, aidu uint64, requiredMode int32, source int32) int32 {
+	t.Helper()
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("failed to dial %s: %v", socketPath, err)
+	}
+	defer conn.Close()
+
+	var req binaryAIDReqHeader
+	req.Magic = SearchAIDMagicV2
+	req.Bid = bid
+	req.AIDU = aidu
+	req.RequiredMode = requiredMode
+	req.Source = source
+	copy(req.Direct[:], direct)
+
+	if err := binary.Write(conn, binary.LittleEndian, &req); err != nil {
+		t.Fatalf("write aid req: %v", err)
+	}
+
+	var resp binaryAIDResp
+	if err := binary.Read(conn, binary.LittleEndian, &resp); err != nil {
+		t.Fatalf("read aid resp: %v", err)
+	}
+	if resp.Status != 0 {
+		t.Fatalf("expected aid status 0, got %d", resp.Status)
+	}
+	return resp.FoundIdx
+}
+
+func queryBinaryClientWithSource(t *testing.T, socketPath string, bid int32, direct string, preds [][]byte, offset, limit int32, source int32) ([]int32, int32) {
+	t.Helper()
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("failed to dial %s: %v", socketPath, err)
+	}
+	defer conn.Close()
+
+	var hdr binaryReqHeader
+	hdr.Magic = SearchSvcMagicV2
+	hdr.Bid = bid
+	hdr.Offset = offset
+	hdr.Limit = limit
+	hdr.NumPreds = int32(len(preds))
+	hdr.Source = source
+	copy(hdr.Direct[:], direct)
+
+	var reqBuf bytes.Buffer
+	if err := binary.Write(&reqBuf, binary.LittleEndian, &hdr); err != nil {
+		t.Fatalf("write hdr: %v", err)
+	}
+	for _, p := range preds {
+		reqBuf.Write(p)
+	}
+
+	if _, err := conn.Write(reqBuf.Bytes()); err != nil {
+		t.Fatalf("conn write: %v", err)
+	}
+
+	var respHdr binaryRespHeader
+	if err := binary.Read(conn, binary.LittleEndian, &respHdr); err != nil {
+		t.Fatalf("read resp hdr: %v", err)
+	}
+	if respHdr.Status != 0 {
+		t.Fatalf("expected status 0, got %d", respHdr.Status)
+	}
+
+	indices := make([]int32, respHdr.Count)
+	if respHdr.Count > 0 {
+		if err := binary.Read(conn, binary.LittleEndian, &indices); err != nil && err != io.EOF {
+			t.Fatalf("read indices: %v", err)
+		}
+	}
+	return indices, respHdr.Total
+}
+
+func TestQuerySourcesAttribution(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "G", "Gossiping")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir boardDir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "G", "Gossiping", ".DIR")
+
+	if err := AppendTestFileheader(dirPath, "M.1700000001.A.001", "user1", "Gossiping post 1", 0, 10, 100); err != nil {
+		t.Fatalf("append rec 1: %v", err)
+	}
+	if err := AppendTestFileheader(dirPath, "M.1700000002.A.002", "user2", "Gossiping post 2", 0, 20, 200); err != nil {
+		t.Fatalf("append rec 2: %v", err)
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	svc.verbose.Store(1)
+	go func() {
+		_ = svc.Start()
+	}()
+	defer svc.Stop()
+
+	for i := 0; i < 50; i++ {
+		if IsSocketOccupied(socketPath) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// AID hit with SrcMbbsdHash
+	aidu1 := (uint64(1700000001) << 12) | 0x001
+	idx := queryAIDClientWithSource(t, socketPath, 569, relDir, aidu1, 0, SrcMbbsdHash)
+	if idx != 1 {
+		t.Fatalf("expected idx 1, got %d", idx)
+	}
+
+	// AID miss with SrcMbbsdHash
+	fakeAIDU := (uint64(1700999999) << 12) | 0x999
+	idxMiss := queryAIDClientWithSource(t, socketPath, 569, relDir, fakeAIDU, 0, SrcMbbsdHash)
+	if idxMiss != 0 {
+		t.Fatalf("expected idx 0, got %d", idxMiss)
+	}
+
+	// AID hit with SrcMbbsdLua
+	idxLua := queryAIDClientWithSource(t, socketPath, 569, relDir, aidu1, 0, SrcMbbsdLua)
+	if idxLua != 1 {
+		t.Fatalf("expected idxLua 1, got %d", idxLua)
+	}
+
+	// AID hit with SrcBoarddWeb
+	idxWeb := queryAIDClientWithSource(t, socketPath, 569, relDir, aidu1, 0, SrcBoarddWeb)
+	if idxWeb != 1 {
+		t.Fatalf("expected idxWeb 1, got %d", idxWeb)
+	}
+
+	// Search query with SrcMbbsdSR
+	predBytes := MakePredBytes(RS_KEYWORD, "Gossiping", 0, 0)
+	indices, total := queryBinaryClientWithSource(t, socketPath, 569, relDir, [][]byte{predBytes}, 0, 10, SrcMbbsdSR)
+	if len(indices) != 2 || total != 2 {
+		t.Fatalf("expected 2 matches, got %d (total %d)", len(indices), total)
+	}
+
+	// Check status response
+	statusResp := sendControlClient(t, socketPath, ControlRequest{Action: "status"})
+	statsBytes, _ := json.Marshal(statusResp.Data)
+	var stats ServiceStats
+	if err := json.Unmarshal(statsBytes, &stats); err != nil {
+		t.Fatalf("unmarshal stats: %v", err)
+	}
+
+	if stats.AIDSources["mbbsd_hash"] != 2 {
+		t.Errorf("expected 2 mbbsd_hash AID queries, got %d", stats.AIDSources["mbbsd_hash"])
+	}
+	if stats.AIDMissSources["mbbsd_hash"] != 1 {
+		t.Errorf("expected 1 mbbsd_hash AID miss, got %d", stats.AIDMissSources["mbbsd_hash"])
+	}
+	if stats.AIDSources["mbbsd_lua"] != 1 {
+		t.Errorf("expected 1 mbbsd_lua AID query, got %d", stats.AIDSources["mbbsd_lua"])
+	}
+	if stats.AIDSources["web_boardd"] != 1 {
+		t.Errorf("expected 1 web_boardd AID query, got %d", stats.AIDSources["web_boardd"])
+	}
+	if stats.SearchSources["mbbsd_sr"] != 1 {
+		t.Errorf("expected 1 mbbsd_sr search query, got %d", stats.SearchSources["mbbsd_sr"])
+	}
+
+	// Check top boards
+	topResp := sendControlClient(t, socketPath, ControlRequest{Action: "top", Limit: 10, SortBy: "queries"})
+	boardsBytes, _ := json.Marshal(topResp.Data)
+	var boards []BoardStats
+	if err := json.Unmarshal(boardsBytes, &boards); err != nil {
+		t.Fatalf("unmarshal top boards: %v", err)
+	}
+	if len(boards) == 0 {
+		t.Fatalf("expected at least 1 board in top")
+	}
+	b := boards[0]
+	if b.AIDHashQueries != 2 || b.AIDHashMisses != 1 {
+		t.Errorf("expected AIDHashQueries=2, AIDHashMisses=1, got %d, %d", b.AIDHashQueries, b.AIDHashMisses)
+	}
+	if b.AIDLuaQueries != 1 {
+		t.Errorf("expected AIDLuaQueries=1, got %d", b.AIDLuaQueries)
+	}
+	if b.AIDWebQueries != 1 {
+		t.Errorf("expected AIDWebQueries=1, got %d", b.AIDWebQueries)
+	}
+	if b.SearchSR != 1 {
+		t.Errorf("expected SearchSR=1, got %d", b.SearchSR)
+	}
 }
