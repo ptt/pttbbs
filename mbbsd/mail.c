@@ -1637,7 +1637,7 @@ maildoent(int num, fileheader_t * ent)
 	color = "";
     }
 
-    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s\n",
+    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s",
 	    num, type, datepart,
 	    isonline ? ANSI_COLOR(1) : "",
 	    ent->owner,
