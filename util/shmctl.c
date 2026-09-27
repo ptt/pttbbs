@@ -11,9 +11,29 @@ void purge_utmp(userinfo_t *uentp)
         return;
     logout_friend_online(uentp);
     int uslot = get_utmp_slot(uentp);
-    int uid = uentp->uid;
-    if (uslot >= 0 && uid > 0)
-        remove_from_utmp_user(uslot, uid);
+    if (uslot >= 0 && VALID_USHM_ENTRY(uslot)) {
+        int uid = uentp->uid;
+        __atomic_store_n(&SHM->utmp_user.session_user[uslot], 0, __ATOMIC_RELEASE);
+        int next_val;
+        do {
+            next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
+            if (UTMP_IS_DELETED(next_val))
+                break;
+        } while (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[uslot],
+                                              &next_val,
+                                              UTMP_MARK_DELETED(next_val),
+                                              false,
+                                              __ATOMIC_RELEASE,
+                                              __ATOMIC_ACQUIRE));
+        if (uid > 0 && uid <= MAX_USERS) {
+            int head = uslot;
+            int next_slot = UTMP_DECODE_SLOT(next_val);
+            if (next_slot == uslot || !VALID_USHM_ENTRY(next_slot))
+                next_slot = -1;
+            __atomic_compare_exchange_n(&SHM->utmp_user.user_head[uid], &head, next_slot,
+                                        false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+        }
+    }
     memset(uentp, 0, sizeof(userinfo_t));
 }
 
@@ -206,14 +226,14 @@ int utmpfix(int argc, char **argv)
 	kill(killlist[i].pid, SIGHUP);
     }
     sleep(3);
-    for( i = 0 ; i < killtop ; ++i )
-	// FIXME 前面已經 memset 把 SHM->uinfo[which] 清掉了, 此處檢查 pid 無用
-	if( SHM->uinfo[killlist[i].where].pid == killlist[i].pid &&
-	    kill(killlist[i].pid, 0) == 0 ){ // still alive
+    for( i = 0 ; i < killtop ; ++i ) {
+	if( kill(killlist[i].pid, 0) == 0 ){ // still alive
 	    printf("sending SIGKILL to %d\n", (int)killlist[i].pid);
 	    kill(killlist[i].pid, SIGKILL);
-	    purge_utmp(&SHM->uinfo[killlist[i].where]);
 	}
+    }
+    if( changeflag )
+        init_utmp_user();
     SHM->UTMPbusystate = 0;
     if( changeflag )
 	SHM->UTMPneedupdate = 1;
