@@ -908,10 +908,16 @@ func (s *Service) GetBoardBacktrack(direct string, bid int32) int32 {
 		return -1
 	}
 
+	fhSize := int64(FileheaderSize())
+	curTotal := int32(st.Size() / fhSize)
+
 	s.backtrackMu.RLock()
 	info, ok := s.backtrack[direct]
 	if ok && info != nil && info.MaxBacktrack >= 0 {
-		if info.DirMtime.Equal(st.ModTime()) {
+		// Boards usually only grow or stay the same size (in-place pushes).
+		// If total records did not increase, historical timestamps cannot change.
+		// If new articles were added, only refresh after a reasonable interval (10 min).
+		if curTotal <= info.TotalRecs || time.Since(info.LastScanned) < 10*time.Minute {
 			val := info.MaxBacktrack
 			s.backtrackMu.RUnlock()
 			return val
@@ -919,29 +925,50 @@ func (s *Service) GetBoardBacktrack(direct string, bid int32) int32 {
 	}
 	s.backtrackMu.RUnlock()
 
-	return s.refreshBoardBacktrack(direct, bid, st.ModTime())
+	return s.refreshBoardBacktrack(direct, bid, curTotal, st.ModTime())
 }
 
-func (s *Service) refreshBoardBacktrack(direct string, bid int32, mtime time.Time) int32 {
+func (s *Service) refreshBoardBacktrack(direct string, bid int32, curTotal int32, mtime time.Time) int32 {
 	s.backtrackMu.Lock()
-	defer s.backtrackMu.Unlock()
-
-	if info, ok := s.backtrack[direct]; ok && info != nil && info.DirMtime.Equal(mtime) {
-		return info.MaxBacktrack
+	info, ok := s.backtrack[direct]
+	if ok && info != nil && info.MaxBacktrack >= 0 {
+		if curTotal <= info.TotalRecs || time.Since(info.LastScanned) < 10*time.Minute {
+			val := info.MaxBacktrack
+			s.backtrackMu.Unlock()
+			return val
+		}
+		// Mark LastScanned now so concurrent callers don't duplicate the scan
+		info.LastScanned = time.Now()
+		s.backtrackMu.Unlock()
+	} else {
+		// First time seeing this board
+		info = &BoardBacktrackInfo{
+			Direct:          direct,
+			Board:           s.ResolveBoardName(direct, bid),
+			Bid:             bid,
+			TotalRecs:       curTotal,
+			MaxBacktrack:    0,
+			MaxTimeDiffSecs: 0,
+			DirMtime:        mtime,
+			LastScanned:     time.Now(),
+		}
+		s.backtrack[direct] = info
+		s.backtrackMu.Unlock()
 	}
 
+	// Compute without holding backtrackMu so other boards and queries are not blocked!
 	totalRecs, maxBacktrack, maxTimeDiff := ComputeDirBacktrack(direct)
-	info := &BoardBacktrackInfo{
-		Direct:          direct,
-		Board:           s.ResolveBoardName(direct, bid),
-		Bid:             bid,
-		TotalRecs:       totalRecs,
-		MaxBacktrack:    maxBacktrack,
-		MaxTimeDiffSecs: maxTimeDiff,
-		DirMtime:        mtime,
-		LastScanned:     time.Now(),
+
+	s.backtrackMu.Lock()
+	if info != nil {
+		info.TotalRecs = totalRecs
+		info.MaxBacktrack = maxBacktrack
+		info.MaxTimeDiffSecs = maxTimeDiff
+		info.DirMtime = mtime
+		info.LastScanned = time.Now()
 	}
-	s.backtrack[direct] = info
+	s.backtrackMu.Unlock()
+
 	return maxBacktrack
 }
 
