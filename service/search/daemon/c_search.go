@@ -66,6 +66,12 @@ static const char *c_get_board_name(int bid) {
     return SHM->bcache[bid - 1].brdname;
 }
 
+static int c_get_board_bid(const char *name) {
+    if (SHM == NULL || !name || !*name)
+        return 0;
+    return getbnum(name);
+}
+
 // Reads the filename of 1-based record recno; used as a tail anchor to detect
 // records shifted by physical deletion.
 static int c_read_filename_at(const char *direct, int recno, char *out, int outlen) {
@@ -732,6 +738,15 @@ func GetBoardSRExpire(bid int32) int64 {
 func BoardName(bid int32) string {
 	cstr := C.c_get_board_name(C.int(bid))
 	return C.GoString(cstr)
+}
+
+func BoardBID(name string) int32 {
+	if name == "" {
+		return 0
+	}
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	return int32(C.c_get_board_bid(cName))
 }
 
 // ReadFilenameAt returns the filename of 1-based record rec.

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -542,6 +543,16 @@ func TestBoardAIDTable(t *testing.T) {
 	tbl.DeletePost(newRecno)
 	if rec := tbl.SearchAID(newAID); rec != 0 {
 		t.Fatalf("expected 0 after DeletePost, got %d", rec)
+	}
+
+	// 9. Test /digest naming
+	tmpBoardDir := t.TempDir()
+	namesDir := filepath.Join(tmpBoardDir, ".Names")
+	svc := newService(tmpBoardDir, filepath.Join(tmpBoardDir, "test.sock"), nil)
+
+	// Verify resolve name
+	if got := svc.ResolveBoardName(namesDir, 1); !strings.HasSuffix(got, "/digest") {
+		t.Fatalf("expected name ending in /digest, got %s", got)
 	}
 }
 

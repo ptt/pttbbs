@@ -987,6 +987,9 @@ func (s *Service) handleControlPprof(w io.Writer, req ControlRequest, conn net.C
 }
 
 func (s *Service) getBoardActivity(direct string, bid int32) *boardActivity {
+	if bid <= 0 {
+		bid = s.ResolveBoardBID(direct, 0)
+	}
 	s.boardMu.RLock()
 	b, ok := s.boards[direct]
 	s.boardMu.RUnlock()
@@ -1014,17 +1017,39 @@ func (s *Service) getBoardActivity(direct string, bid int32) *boardActivity {
 }
 
 func (s *Service) ResolveBoardName(direct string, bid int32) string {
+	var bname string
 	if bid > 0 {
 		if name := BoardName(bid); name != "" {
-			return name
+			bname = name
 		}
+	}
+	if bname == "" {
+		dir := filepath.Dir(direct)
+		base := filepath.Base(dir)
+		if base != "" && base != "." && base != "/" {
+			bname = base
+		} else {
+			bname = direct
+		}
+	}
+	if filepath.Base(direct) == ".Names" || strings.HasSuffix(direct, "/.Names") {
+		return bname + "/digest"
+	}
+	return bname
+}
+
+func (s *Service) ResolveBoardBID(direct string, bid int32) int32 {
+	if bid > 0 {
+		return bid
 	}
 	dir := filepath.Dir(direct)
 	base := filepath.Base(dir)
 	if base != "" && base != "." && base != "/" {
-		return base
+		if found := BoardBID(base); found > 0 {
+			return found
+		}
 	}
-	return direct
+	return 0
 }
 
 func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
@@ -1312,6 +1337,9 @@ func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid
 }
 
 func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAIDTable {
+	if bid <= 0 {
+		bid = s.ResolveBoardBID(resolvedDirect, 0)
+	}
 	s.aidTableMu.RLock()
 	tbl := s.aidTables[resolvedDirect]
 	s.aidTableMu.RUnlock()
@@ -1362,6 +1390,7 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 		log.Printf("[search.svc] [AID-TABLE] loaded %d AIDs for board %s (%.2f MB, maxBacktrack=%d, maxTimeDiff=%ds)",
 			len(aids), s.ResolveBoardName(resolvedDirect, bid), float64(len(aids)*8)/(1024*1024), maxBtrack, maxTdiff)
 	}
+
 	return tbl
 }
 
