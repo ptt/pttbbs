@@ -37,6 +37,7 @@ const (
 	DefaultMaxAIDEntries int    = 16384            // 16K AID cache entries (~2.5MB)
 	DefaultCacheTTL             = 1 * time.Hour
 	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
+	aiduTypeG            uint64 = 1 << 44
 	aiduIdxShift                = 45
 )
 
@@ -1789,6 +1790,17 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 	act.aidQueries.Add(1)
 
 	var emptyFH [128]byte
+
+	// Fast check: M. article cannot exist in .Names; G. article cannot exist in .DIR
+	isG := (aidu & aiduTypeG) != 0
+	baseName := filepath.Base(resolvedDirect)
+	if isG && baseName == ".DIR" {
+		return 0, emptyFH, nil
+	}
+	if !isG && (baseName == ".Names" || strings.HasSuffix(resolvedDirect, "/.Names")) {
+		return 0, emptyFH, nil
+	}
+
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
 		return 0, emptyFH, err
