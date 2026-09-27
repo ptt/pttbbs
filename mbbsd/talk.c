@@ -48,6 +48,7 @@ typedef struct {
     int         snapshot_count;
     int         snapshot_way;
     time4_t     snapshot_time;
+    int         bfriend_count;
 } userlist_ctx_t;
 
 static char    * const fcolor[11] = {
@@ -831,24 +832,33 @@ pickup_myfriend(pickup_t * friends,
 }
 
 static int
-pickup_bfriend(pickup_t * friends, int base)
+partition_bfriend(int *slots, int count)
 {
-    userinfo_t     *uentp;
-    int             i, ngets = 0;
-    
     STATINC(STAT_PICKBFRIEND);
-    friends = friends + base;
-    for (i = 0; i < USHM_SIZE && ngets < MAX_FRIEND_ONLINE - base; ++i) {
-	uentp = &SHM->uinfo[i];
-	/* TODO isvisible() 重複用到了 friend_stat() */
-	if (uentp && uentp->pid && uentp->brc_id == currutmp->brc_id &&
-	    currutmp != uentp && isvisible(currutmp, uentp) &&
-	    (base || !(friend_stat(currutmp, uentp) & (IFH | HFM)))) {
-	    friends[ngets].ui = uentp;
-	    friends[ngets++].friend = IBH;
-	}
+    if (!slots || count <= 0 || currutmp->brc_id <= 0 ||
+        currutmp->brc_id >= MAX_BOARD ||
+        (getbcache(currutmp->brc_id)->brdattr & BRD_COOLDOWN))
+        return 0;
+
+    int left = 0, right = count - 1;
+    while (left <= right) {
+        userinfo_t *u = &SHM->uinfo[slots[left]];
+        bool is_bf = (u->brc_id == currutmp->brc_id && u != currutmp &&
+                      isvisible(currutmp, u) &&
+                      !(friend_stat(currutmp, u) & (IFH | HFM)));
+        if (is_bf) {
+            left++;
+        } else {
+            int tmp = slots[left];
+            slots[left] = slots[right];
+            slots[right] = tmp;
+            right--;
+        }
     }
-    return ngets;
+
+    if (left > 0)
+        sort_utmp_snapshot(slots, left, UTMP_SORT_USERID);
+    return left;
 }
 
 static void
@@ -863,6 +873,12 @@ userlist_refresh_snapshot(userlist_ctx_t *cx)
     }
     if (*cx->pickup_way == 1) {
         sort_utmp_snapshot(cx->snapshot_slots, cx->snapshot_count, UTMP_SORT_FROM);
+        cx->bfriend_count = 0;
+    } else if (currutmp->brc_id > 0 && currutmp->brc_id < MAX_BOARD &&
+               !(getbcache(currutmp->brc_id)->brdattr & BRD_COOLDOWN)) {
+        cx->bfriend_count = partition_bfriend(cx->snapshot_slots, cx->snapshot_count);
+    } else {
+        cx->bfriend_count = 0;
     }
     cx->snapshot_way = *cx->pickup_way;
     cx->snapshot_time = now;
@@ -880,54 +896,59 @@ pickup(userlist_ctx_t *cx)
     int *bfriend = &cx->bfriend;
     int *badfriend = &cx->badfriend;
 
-    int friendtotal = currutmp->friendtotal;
-    int which, size = 0, friend;
+    int which, size = 0;
     userinfo_t *u;
 
-    if (friendtotal == 0)
+    if (currutmp->friendtotal == 0)
         *myfriend = *friendme = 1;
 
-    which = *page * nPickups;
-    if ((HasUserFlag(UF_FRIEND)) ||
-        ((pickup_way == 0) &&
-         ((currutmp->brc_id && which < (friendtotal + 1 + getbcache(currutmp->brc_id)->nuser)) ||
-          (!currutmp->brc_id && which < friendtotal + 1)))) {
-        pickup_t friends[MAX_FRIEND_ONLINE + 1];
-        *nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
+    if (!cx->snapshot_slots || cx->snapshot_way != pickup_way ||
+        time4_ge(now, cx->snapshot_time + USERLIST_SNAPSHOT_EXPIRE_SECS))
+        userlist_refresh_snapshot(cx);
 
-        if (pickup_way == 0 && currutmp->brc_id != 0
-            && !(getbcache(currutmp->brc_id)->brdattr & BRD_COOLDOWN)
-           ) {
-            *nfriend += pickup_bfriend(friends, *nfriend);
-            *bfriend = SHM->bcache[currutmp->brc_id - 1].nuser;
-        } else {
-            *bfriend = 0;
+    which = *page * nPickups;
+
+    pickup_t myfriends[MAX_FRIEND_ONLINE + 1];
+    int n_myfriend = 0;
+
+    if (pickup_way == 0) {
+        n_myfriend = pickup_myfriend(myfriends, myfriend, friendme, badfriend);
+        qsort(myfriends, n_myfriend, sizeof(pickup_t), sort_cmpfriend);
+        *bfriend = cx->bfriend_count;
+        *nfriend = n_myfriend + cx->bfriend_count;
+
+        if (which < n_myfriend) {
+            int take = n_myfriend - which;
+            if (take > nPickups - size)
+                take = nPickups - size;
+            memcpy(currpickup + size, myfriends + which, sizeof(pickup_t) * take);
+            size += take;
         }
 
-        if (*nfriend > which) {
-            qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
-            size = *nfriend - which;
-            if (size > nPickups)
-                size = nPickups;
-            memcpy(currpickup, friends + which, sizeof(pickup_t) * size);
+        if (size < nPickups && which + size < *nfriend) {
+            int b_idx = (which + size) - n_myfriend;
+            if (b_idx < 0)
+                b_idx = 0;
+            for (; b_idx < cx->bfriend_count && size < nPickups; b_idx++) {
+                currpickup[size].ui = &SHM->uinfo[cx->snapshot_slots[b_idx]];
+                currpickup[size++].friend = IBH;
+            }
         }
     } else {
         *nfriend = 0;
+        *bfriend = 0;
     }
 
     if (!(HasUserFlag(UF_FRIEND)) && size < nPickups) {
-        if (!cx->snapshot_slots || cx->snapshot_way != pickup_way ||
-            time4_ge(now, cx->snapshot_time + USERLIST_SNAPSHOT_EXPIRE_SECS))
-            userlist_refresh_snapshot(cx);
-
+        int gen_start = cx->bfriend_count;
         int total_users = cx->snapshot_count;
-        which = *page * nPickups - *nfriend;
-        if (which < 0)
-            which = 0;
+        int gen_which = which + size - *nfriend;
+        if (gen_which < 0)
+            gen_which = 0;
 
-        for (; which < total_users && size < nPickups; which++) {
-            u = &SHM->uinfo[cx->snapshot_slots[which]];
-            friend = friend_stat(currutmp, u);
+        for (; gen_start + gen_which < total_users && size < nPickups; gen_which++) {
+            u = &SHM->uinfo[cx->snapshot_slots[gen_start + gen_which]];
+            int friend = friend_stat(currutmp, u);
             if ((pickup_way || (currutmp != u && !(friend & ST_FRIEND))) &&
                 isvisible(currutmp, u)) {
                 currpickup[size].ui = u;
@@ -937,7 +958,7 @@ pickup(userlist_ctx_t *cx)
     }
 
     for (; size < nPickups; ++size)
-        currpickup[size].ui = 0;
+        currpickup[size].ui = NULL;
 }
 
 #define ULISTCOLS (9)
@@ -1182,7 +1203,6 @@ userlist_renderer(int idx, PSB_CTX *ctx)
 static int
 userlist_search_online_user(userlist_ctx_t *cx)
 {
-    pickup_t *currpickup = cx->currpickup;
     int *page = &cx->page;
     int *offset = &cx->offset;
     int *myfriend = &cx->myfriend;
@@ -1199,65 +1219,77 @@ userlist_search_online_user(userlist_ctx_t *cx)
     if (si < 0)
         return 0;
 
-    pickup_t friends[MAX_FRIEND_ONLINE + 1];
-    int fi = si;
-    int nGots = pickup_myfriend(friends, myfriend, friendme, badfriend);
+    if (!cx->snapshot_slots || cx->snapshot_way != *cx->pickup_way ||
+        time4_ge(now, cx->snapshot_time + USERLIST_SNAPSHOT_EXPIRE_SECS))
+        userlist_refresh_snapshot(cx);
 
-    int i;
-    for (i = 0; i < nGots; ++i) {
-        if (friends[i].uoffset == fi)
-            break;
-    }
+    int total_idx = -1;
 
-    fi = 0;
-    *offset = 0;
-    if (i != nGots) {
-        *page = i / nPickups;
-        for (; i < nGots && fi < nPickups; ++i) {
-            if (isvisible(currutmp, friends[i].ui))
-                currpickup[fi++] = friends[i];
+    if (*cx->pickup_way == 0) {
+        pickup_t myfriends[MAX_FRIEND_ONLINE + 1];
+        int n_myfriend = pickup_myfriend(myfriends, myfriend, friendme, badfriend);
+        qsort(myfriends, n_myfriend, sizeof(pickup_t), sort_cmpfriend);
+
+        // 1. Search in personal friends (and self)
+        for (int i = 0; i < n_myfriend; ++i) {
+            if (myfriends[i].uoffset == si) {
+                total_idx = i;
+                break;
+            }
         }
-        i = 0;
-    } else {
-        int snap_idx = -1;
-        if (!cx->snapshot_slots)
-            userlist_refresh_snapshot(cx);
-        if (cx->snapshot_slots) {
-            for (int k = 0; k < cx->snapshot_count; k++) {
-                if (cx->snapshot_slots[k] == si) {
-                    snap_idx = k;
+
+        // 2. Search in board friends
+        if (total_idx < 0 && cx->bfriend_count > 0) {
+            for (int i = 0; i < cx->bfriend_count; ++i) {
+                if (cx->snapshot_slots[i] == si) {
+                    total_idx = n_myfriend + i;
                     break;
                 }
             }
         }
-        if (snap_idx < 0)
-            return 0;
-        int total_idx = nGots + snap_idx;
-        *page = total_idx / nPickups;
-        int start = *page * nPickups;
-        *offset = total_idx % nPickups;
-        if (start < nGots) {
-            for (int k = start; k < nGots && fi < nPickups; ++k) {
-                if (isvisible(currutmp, friends[k].ui))
-                    currpickup[fi++] = friends[k];
+
+        // 3. Search in general users
+        if (total_idx < 0 && cx->snapshot_slots) {
+            int gen_idx = 0;
+            bool found = false;
+            for (int k = cx->bfriend_count; k < cx->snapshot_count; ++k) {
+                int uslot = cx->snapshot_slots[k];
+                if (uslot == si) {
+                    found = true;
+                    break;
+                }
+                userinfo_t *u = &SHM->uinfo[uslot];
+                int fr = friend_stat(currutmp, u);
+                if (currutmp != u && !(fr & ST_FRIEND) && isvisible(currutmp, u))
+                    gen_idx++;
             }
-            i = 0;
-        } else {
-            i = start - nGots;
+            if (found)
+                total_idx = n_myfriend + cx->bfriend_count + gen_idx;
+        }
+    } else {
+        if (cx->snapshot_slots) {
+            int vis_idx = 0;
+            bool found = false;
+            for (int k = 0; k < cx->snapshot_count; ++k) {
+                int uslot = cx->snapshot_slots[k];
+                if (uslot == si) {
+                    found = true;
+                    break;
+                }
+                if (isvisible(currutmp, &SHM->uinfo[uslot]))
+                    vis_idx++;
+            }
+            if (found)
+                total_idx = vis_idx;
         }
     }
 
-    if (cx->snapshot_slots) {
-        for (; fi < nPickups && i < cx->snapshot_count; ++i) {
-            userinfo_t *u = &SHM->uinfo[cx->snapshot_slots[i]];
-            if (isvisible(currutmp, u)) {
-                currpickup[fi].ui = u;
-                currpickup[fi++].friend = friend_stat(currutmp, u);
-            }
-        }
-    }
-    for (; fi < nPickups; ++fi)
-        currpickup[fi].ui = NULL;
+    if (total_idx < 0)
+        return 0;
+
+    *page = total_idx / nPickups;
+    *offset = total_idx % nPickups;
+    pickup(cx);
     return 1;
 }
 
