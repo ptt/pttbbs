@@ -2945,8 +2945,8 @@ m_register(void)
     char            genbuf[200];
 
     if (dashs(FN_REQLIST) <= 0) {
-	outs("目前並無新註冊資料");
-	return XEASY;
+	vmsg("目前並無新註冊資料");
+	return REDRAW_FOOTER;
     }
     fn = fopen(FN_REQLIST, "r");
     assert(fn);

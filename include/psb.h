@@ -27,6 +27,10 @@
 #define PSB_OK          (0)
 #define PSB_NA          (-1)
 
+#ifndef REDRAW_FOOTER
+#define REDRAW_FOOTER   (0x333)
+#endif
+
 #define PSB_MAX_CMD_LAYERS (8)
 #define PSB_MAX_COLS       (8)
 

@@ -124,7 +124,7 @@
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
-#define XEASY   0x333           /* Return value to un-redraw screen */
+#define REDRAW_FOOTER   0x333           /* Return value to redraw only footer */
 
 /* for currmode */
 #define MODE_STARTED     0x0001    /* 是否已經進入系統 */
