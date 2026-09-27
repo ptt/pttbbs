@@ -145,6 +145,74 @@ search_svc_invalidate(const char *direct, int bid)
     return status == 0 ? 0 : -1;
 }
 
+static int
+search_svc_hint_send(const search_hint_req_t *req)
+{
+    char sock_path[PATHLEN];
+    snprintf(sock_path, sizeof(sock_path), "%s/run/search.svc.sock", BBSHOME);
+
+    int sfd = toconnect_timed(sock_path, 0, 20000, 0);
+    if (sfd < 0)
+        return -1;
+
+    ssize_t n = send(sfd, req, sizeof(*req), MSG_DONTWAIT | MSG_NOSIGNAL);
+    close(sfd);
+    return n == (ssize_t)sizeof(*req) ? 0 : -1;
+}
+
+int
+search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const fileheader_t *fh)
+{
+    if (recno <= 0)
+        return -1;
+    search_hint_req_t req;
+    memset(&req, 0, sizeof(req));
+    req.magic = SEARCH_HINT_MAGIC;
+    req.type = HINT_TYPE_POST;
+    req.bid = bid;
+    req.recno = recno;
+    req.aidu = aidu_raw(aidu);
+    if (fh)
+        req.fh = *fh;
+    if (direct)
+        strlcpy(req.direct, direct, sizeof(req.direct));
+    return search_svc_hint_send(&req);
+}
+
+int
+search_svc_hint_comment(const char *direct, int bid, int recno, int recommend)
+{
+    if (recno <= 0)
+        return -1;
+    search_hint_req_t req;
+    memset(&req, 0, sizeof(req));
+    req.magic = SEARCH_HINT_MAGIC;
+    req.type = HINT_TYPE_COMMENT;
+    req.bid = bid;
+    req.recno = recno;
+    req.data = recommend;
+    if (direct)
+        strlcpy(req.direct, direct, sizeof(req.direct));
+    return search_svc_hint_send(&req);
+}
+
+int
+search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu)
+{
+    if (recno <= 0)
+        return -1;
+    search_hint_req_t req;
+    memset(&req, 0, sizeof(req));
+    req.magic = SEARCH_HINT_MAGIC;
+    req.type = HINT_TYPE_DELETE;
+    req.bid = bid;
+    req.recno = recno;
+    req.aidu = aidu_raw(aidu);
+    if (direct)
+        strlcpy(req.direct, direct, sizeof(req.direct));
+    return search_svc_hint_send(&req);
+}
+
 int
 search_predicates_local(const char *direct,
                         const fileheader_predicate_t *preds, int num_preds,

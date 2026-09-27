@@ -77,11 +77,18 @@ get_fileheaders(const char *fpath, fileheader_t *rptr, int id, size_t number)
 int
 append_fileheader(const char *fpath, const fileheader_t *record)
 {
+    int ret;
     if (!NEED_STORAGE_CONV)
-        return append_record(fpath, record, sizeof(fileheader_t));
-    fileheader_t fh_tmp = *record;
-    fileheader_mem_to_storage(&fh_tmp);
-    return append_record(fpath, &fh_tmp, sizeof(fileheader_t));
+        ret = append_record(fpath, record, sizeof(fileheader_t));
+    else {
+        fileheader_t fh_tmp = *record;
+        fileheader_mem_to_storage(&fh_tmp);
+        ret = append_record(fpath, &fh_tmp, sizeof(fileheader_t));
+    }
+    if (ret > 0 && fpath && record && strstr(fpath, "boards/") != NULL && strstr(fpath, FN_DIR) != NULL) {
+        search_svc_hint_post(fpath, 0, ret, fn2aidu(record->filename), record);
+    }
+    return ret;
 }
 
 int
@@ -215,8 +222,13 @@ substitute_fileheader(const char *dir_path,
 int
 delete_fileheader(const char *dir_path, const void *rptr, int id)
 {
-    return delete_record2(dir_path, rptr, sizeof(fileheader_t),
-                          id, _is_same_fhdr_filename);
+    int ret = delete_record2(dir_path, rptr, sizeof(fileheader_t),
+                             id, _is_same_fhdr_filename);
+    if (ret == 0 && dir_path && rptr && strstr(dir_path, "boards/") != NULL && strstr(dir_path, FN_DIR) != NULL) {
+        const fileheader_t *fh = (const fileheader_t *)rptr;
+        search_svc_hint_delete(dir_path, 0, id, fn2aidu(fh->filename));
+    }
+    return ret;
 }
 
 int
