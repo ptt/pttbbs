@@ -128,6 +128,8 @@ type ServiceStats struct {
 	AIDNegativeHits    int64 `json:"aid_negative_hits"`
 	AIDMisses          int64 `json:"aid_misses"`
 	AIDEvictions       int64 `json:"aid_evictions"`
+	AIDTableHits       int64 `json:"aid_table_hits,omitempty"`
+	CachedAIDTables    int   `json:"cached_aid_tables,omitempty"`
 }
 
 type cacheKey struct {
@@ -175,6 +177,230 @@ func fileInode(st os.FileInfo) uint64 {
 		return sys.Ino
 	}
 	return 0
+}
+
+type BoardAIDTable struct {
+	mu           sync.RWMutex
+	direct       string
+	bid          int32
+	maxBacktrack int32
+	maxTimeDiff  int64
+	minTS        uint32
+	maxTS        uint32
+	aids         []uint64 // 0-based: index i corresponds to 1-based recno i+1
+}
+
+func computeBoardAIDStats(aids []uint64) (maxBacktrack int32, maxTimeDiff int64, minTS uint32, maxTS uint32) {
+	if len(aids) == 0 {
+		return 0, 0, 0, 0
+	}
+	var maxSeenTS uint32 = 0
+	maxSeenIdx := 0
+
+	for i, raw := range aids {
+		if raw == 0 {
+			continue
+		}
+		ts := uint32((raw >> 12) & 0xFFFFFFFF)
+		if ts == 0 {
+			continue
+		}
+		if minTS == 0 || ts < minTS {
+			minTS = ts
+		}
+		if ts > maxTS {
+			maxTS = ts
+		}
+
+		if ts >= maxSeenTS {
+			maxSeenTS = ts
+			maxSeenIdx = i
+		} else {
+			tdiff := int64(maxSeenTS - ts)
+			if tdiff > maxTimeDiff {
+				maxTimeDiff = tdiff
+			}
+			earliest := maxSeenIdx
+			for j := maxSeenIdx - 1; j >= 0 && j >= i-int(maxBacktrack)-1000; j-- {
+				rawJ := aids[j]
+				if rawJ == 0 {
+					continue
+				}
+				tsJ := uint32((rawJ >> 12) & 0xFFFFFFFF)
+				if tsJ > ts {
+					earliest = j
+				} else if ts-tsJ > 86400 {
+					break
+				}
+			}
+			btrack := int32(i - earliest)
+			if btrack > maxBacktrack {
+				maxBacktrack = btrack
+			}
+		}
+	}
+	return
+}
+
+func (t *BoardAIDTable) SearchAID(targetAIDU uint64) int32 {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	targetRaw := targetAIDU & aiduRawMask
+	if targetRaw == 0 || len(t.aids) == 0 {
+		return 0
+	}
+	targetTS := uint32((targetRaw >> 12) & 0xFFFFFFFF)
+
+	// Quick range check
+	if targetTS > 0 {
+		if t.minTS > 0 && targetTS < t.minTS {
+			return 0
+		}
+		if t.maxTS > 0 && targetTS > t.maxTS {
+			return 0
+		}
+	}
+
+	// 1. Fast check tail (last 64 records)
+	tailStart := len(t.aids) - 64
+	if tailStart < 0 {
+		tailStart = 0
+	}
+	for i := len(t.aids) - 1; i >= tailStart; i-- {
+		if t.aids[i] == targetRaw {
+			return int32(i + 1)
+		}
+	}
+
+	// 2. Binary search by timestamp
+	low, high := 0, len(t.aids) - 1
+	mid := 0
+	for low <= high {
+		mid = low + (high-low)/2
+		midRaw := t.aids[mid]
+		if midRaw == 0 {
+			found := false
+			for delta := 1; mid+delta <= high || mid-delta >= low; delta++ {
+				if mid+delta <= high && t.aids[mid+delta] != 0 {
+					mid = mid + delta
+					midRaw = t.aids[mid]
+					found = true
+					break
+				}
+				if mid-delta >= low && t.aids[mid-delta] != 0 {
+					mid = mid - delta
+					midRaw = t.aids[mid]
+					found = true
+					break
+				}
+			}
+			if !found {
+				break
+			}
+		}
+		if midRaw == targetRaw {
+			return int32(mid + 1)
+		}
+		midTS := uint32((midRaw >> 12) & 0xFFFFFFFF)
+		if midTS == targetTS {
+			break
+		} else if midTS < targetTS {
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+
+	// 3. Scan window around mid
+	winSize := int(t.maxBacktrack)*2 + 128
+	if winSize < 256 {
+		winSize = 256
+	}
+	wStart := mid - winSize/2
+	if wStart < 0 {
+		wStart = 0
+	}
+	wEnd := mid + winSize/2
+	if wEnd > len(t.aids) {
+		wEnd = len(t.aids)
+	}
+
+	for i := wEnd - 1; i >= wStart; i-- {
+		if t.aids[i] == targetRaw {
+			return int32(i + 1)
+		}
+	}
+	return 0
+}
+
+func (t *BoardAIDTable) AppendPost(recno int32, aidu uint64) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	raw := aidu & aiduRawMask
+	if raw == 0 {
+		return
+	}
+	idx := int(recno - 1)
+	if idx < 0 {
+		return
+	}
+	ts := uint32((raw >> 12) & 0xFFFFFFFF)
+	if ts > 0 {
+		if t.minTS == 0 || ts < t.minTS {
+			t.minTS = ts
+		}
+		if ts > t.maxTS {
+			t.maxTS = ts
+		}
+	}
+	for len(t.aids) < idx {
+		t.aids = append(t.aids, 0)
+	}
+	if len(t.aids) == idx {
+		t.aids = append(t.aids, raw)
+	} else {
+		t.aids[idx] = raw
+	}
+}
+
+func (t *BoardAIDTable) DeletePost(recno int32) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	idx := int(recno - 1)
+	if idx >= 0 && idx < len(t.aids) {
+		t.aids = append(t.aids[:idx], t.aids[idx+1:]...)
+	}
+}
+
+func (t *BoardAIDTable) SyncTail(direct string, curTotal int32) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	curLen := int32(len(t.aids))
+	if curTotal <= curLen {
+		return
+	}
+	for r := curLen + 1; r <= curTotal; r++ {
+		fn, ok := ReadFilenameAt(direct, r)
+		if ok && fn != "" {
+			raw := FNToAIDU(fn) & aiduRawMask
+			t.aids = append(t.aids, raw)
+			ts := uint32((raw >> 12) & 0xFFFFFFFF)
+			if ts > 0 {
+				if t.minTS == 0 || ts < t.minTS {
+					t.minTS = ts
+				}
+				if ts > t.maxTS {
+					t.maxTS = ts
+				}
+			}
+		} else {
+			t.aids = append(t.aids, 0)
+		}
+	}
 }
 
 type inflightCall struct {
@@ -233,6 +459,9 @@ type Service struct {
 	backtrackMu sync.RWMutex
 	backtrack   map[string]*BoardBacktrackInfo
 
+	aidTableMu sync.RWMutex
+	aidTables  map[string]*BoardAIDTable
+
 	cpuProfileMu sync.Mutex
 
 	// gen is bumped by Invalidate so that scans started before an
@@ -249,6 +478,7 @@ type Service struct {
 	aidNegativeHits    atomic.Int64
 	aidMisses          atomic.Int64
 	aidEvictions       atomic.Int64
+	aidTableHits       atomic.Int64
 
 	stopChan chan struct{}
 	wg       sync.WaitGroup
@@ -295,6 +525,7 @@ func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 		aidInflight:   make(map[aidCacheKey]*aidInflightCall),
 		boards:        make(map[string]*boardActivity),
 		backtrack:     make(map[string]*BoardBacktrackInfo),
+		aidTables:     make(map[string]*BoardAIDTable),
 		stopChan:      make(chan struct{}),
 	}
 }
@@ -460,6 +691,10 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 		maxAIDEntries := s.maxAIDEntries
 		s.aidMu.Unlock()
 
+		s.aidTableMu.RLock()
+		aidTablesCount := len(s.aidTables)
+		s.aidTableMu.RUnlock()
+
 		stats := ServiceStats{
 			UptimeSeconds:      int64(time.Since(s.startTime).Seconds()),
 			CachedEntries:      entriesCount,
@@ -468,6 +703,7 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 			MaxIndices:         maxIndices,
 			CachedAIDEntries:   aidEntriesCount,
 			MaxAIDEntries:      maxAIDEntries,
+			CachedAIDTables:    aidTablesCount,
 			Hits:               s.hits.Load(),
 			Misses:             s.misses.Load(),
 			IncrementalUpdates: s.incrementalUpdates.Load(),
@@ -478,6 +714,7 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 			AIDNegativeHits:    s.aidNegativeHits.Load(),
 			AIDMisses:          s.aidMisses.Load(),
 			AIDEvictions:       s.aidEvictions.Load(),
+			AIDTableHits:       s.aidTableHits.Load(),
 		}
 		_ = json.NewEncoder(w).Encode(ControlResponse{
 			Status:  "ok",
@@ -1056,6 +1293,14 @@ func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid
 	}
 	s.aidMu.Unlock()
 
+	s.aidTableMu.Lock()
+	for k, tbl := range s.aidTables {
+		if match(k, tbl.bid) {
+			delete(s.aidTables, k)
+		}
+	}
+	s.aidTableMu.Unlock()
+
 	if s.Verbose() >= 1 {
 		peerPrefix := ""
 		if peerInfo != "" {
@@ -1064,6 +1309,60 @@ func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid
 		log.Printf("[search.svc] [INVAL] Invalidate: %sboard=%s bid=%d flushed=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, flushed)
 	}
 	return flushed
+}
+
+func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAIDTable {
+	s.aidTableMu.RLock()
+	tbl := s.aidTables[resolvedDirect]
+	s.aidTableMu.RUnlock()
+	if tbl != nil {
+		return tbl
+	}
+
+	s.aidTableMu.Lock()
+	defer s.aidTableMu.Unlock()
+	if tbl = s.aidTables[resolvedDirect]; tbl != nil {
+		return tbl
+	}
+
+	aids, err := LoadDirAIDs(resolvedDirect)
+	if err != nil {
+		if s.Verbose() >= 1 {
+			log.Printf("[search.svc] [AID-TABLE] failed to load AIDs for %s: %v", resolvedDirect, err)
+		}
+		return nil
+	}
+
+	maxBtrack, maxTdiff, minTS, maxTS := computeBoardAIDStats(aids)
+
+	tbl = &BoardAIDTable{
+		direct:       resolvedDirect,
+		bid:          bid,
+		maxBacktrack: maxBtrack,
+		maxTimeDiff:  maxTdiff,
+		minTS:        minTS,
+		maxTS:        maxTS,
+		aids:         aids,
+	}
+	s.aidTables[resolvedDirect] = tbl
+
+	s.backtrackMu.Lock()
+	s.backtrack[resolvedDirect] = &BoardBacktrackInfo{
+		Direct:          resolvedDirect,
+		Board:           s.ResolveBoardName(resolvedDirect, bid),
+		Bid:             bid,
+		TotalRecs:       int32(len(aids)),
+		MaxBacktrack:    maxBtrack,
+		MaxTimeDiffSecs: maxTdiff,
+		LastScanned:     time.Now(),
+	}
+	s.backtrackMu.Unlock()
+
+	if s.Verbose() >= 1 {
+		log.Printf("[search.svc] [AID-TABLE] loaded %d AIDs for board %s (%.2f MB, maxBacktrack=%d, maxTimeDiff=%ds)",
+			len(aids), s.ResolveBoardName(resolvedDirect, bid), float64(len(aids)*8)/(1024*1024), maxBtrack, maxTdiff)
+	}
+	return tbl
 }
 
 func (s *Service) removeEntryLocked(e *cacheEntry) {
@@ -1246,6 +1545,13 @@ func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu
 	s.putAIDEntryLocked(entry)
 	s.aidMu.Unlock()
 
+	s.aidTableMu.RLock()
+	tbl := s.aidTables[direct]
+	s.aidTableMu.RUnlock()
+	if tbl != nil {
+		tbl.AppendPost(recno, aidu)
+	}
+
 	if s.Verbose() >= 1 {
 		log.Printf("[search.svc] [HINT-POST] %sboard=%s bid=%d recno=%d aidu=%012x",
 			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, aidu)
@@ -1281,6 +1587,16 @@ func (s *Service) handleHintDelete(peerInfo, direct string, bid, recno int32, ai
 		}
 		s.aidMu.Unlock()
 	}
+
+	s.aidTableMu.Lock()
+	if tbl, ok := s.aidTables[direct]; ok {
+		if recno > 0 {
+			tbl.DeletePost(recno)
+		} else {
+			delete(s.aidTables, direct)
+		}
+	}
+	s.aidTableMu.Unlock()
 
 	s.InvalidateWithPeer(peerInfo, direct, bid)
 
@@ -1494,6 +1810,97 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 		}
 	}
 	s.aidMu.Unlock()
+
+	// Try in-memory BoardAIDTable (nanosecond lookup & negative resolution)
+	tbl := s.GetOrCreateAIDTable(resolvedDirect, bid)
+	if tbl != nil {
+		if curTotalRecs > int32(len(tbl.aids)) {
+			tbl.SyncTail(resolvedDirect, curTotalRecs)
+		} else if curTotalRecs < int32(len(tbl.aids)) {
+			// Directory shrank (e.g. unhinted delete); reload table
+			s.aidTableMu.Lock()
+			delete(s.aidTables, resolvedDirect)
+			s.aidTableMu.Unlock()
+			tbl = s.GetOrCreateAIDTable(resolvedDirect, bid)
+		}
+
+		if tbl != nil {
+			foundRec := tbl.SearchAID(aidu)
+			if foundRec == 0 {
+				// Fast negative hit! The record definitely does not exist on this board.
+				gen := s.gen.Load()
+				newEntry := &aidCacheEntry{
+					key:         key,
+					foundIdx:    0,
+					fhBytes:     emptyFH,
+					scannedRecs: curTotalRecs,
+					dirMtime:    curMtime,
+					dirInode:    curInode,
+					srExpire:    curSRExpire,
+					createdAt:   time.Now(),
+				}
+				s.aidMu.Lock()
+				if s.gen.Load() == gen {
+					s.putAIDEntryLocked(newEntry)
+				}
+				s.aidMu.Unlock()
+
+				dur := time.Since(start)
+				act.scanDurationNs.Add(dur.Nanoseconds())
+				s.aidMisses.Add(1)
+				act.aidMisses.Add(1)
+				s.aidTableHits.Add(1)
+				if s.Verbose() >= 2 {
+					peerPrefix := ""
+					if peerInfo != "" {
+						peerPrefix = peerInfo + " "
+					}
+					log.Printf("[search.svc] [AID-TABLE-NEG] QueryAID: %sboard=%s bid=%d aidu=%012x dur=%v",
+						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, dur)
+				}
+				return 0, emptyFH, nil
+			}
+
+			// In-memory hit! Read the exact fileheader at foundRec (1 pread)
+			fhBytes, ok := ReadFileheaderAt(resolvedDirect, foundRec)
+			if ok {
+				if MatchFileheaderMode(&fhBytes, requiredMode) {
+					gen := s.gen.Load()
+					newEntry := &aidCacheEntry{
+						key:         key,
+						foundIdx:    foundRec,
+						fhBytes:     fhBytes,
+						scannedRecs: curTotalRecs,
+						dirMtime:    curMtime,
+						dirInode:    curInode,
+						srExpire:    curSRExpire,
+						createdAt:   time.Now(),
+					}
+					s.aidMu.Lock()
+					if s.gen.Load() == gen {
+						s.putAIDEntryLocked(newEntry)
+					}
+					s.aidMu.Unlock()
+
+					dur := time.Since(start)
+					act.scanDurationNs.Add(dur.Nanoseconds())
+					s.aidMisses.Add(1)
+					act.aidMisses.Add(1)
+					s.aidTableHits.Add(1)
+					if s.Verbose() >= 2 {
+						peerPrefix := ""
+						if peerInfo != "" {
+							peerPrefix = peerInfo + " "
+						}
+						log.Printf("[search.svc] [AID-TABLE-HIT] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
+							peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundRec, dur)
+					}
+					return foundRec, fhBytes, nil
+				}
+				return 0, emptyFH, nil
+			}
+		}
+	}
 
 	s.sfMu.Lock()
 	if call, ok := s.aidInflight[key]; ok {
