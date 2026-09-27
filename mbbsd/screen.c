@@ -125,7 +125,7 @@ move(int y, int x)
     if (x > 0) {
 	screenline_t *slp = GetLine(y);
 	slp->data[slp->len] = 0;
-	int r = stream_col_offset(x, (char *)slp->data);
+	int r = stream_col_offset(x, (char *)slp->data, NULL);
 	cur_col = (r >= 0) ? r : (slp->len - r);
 	if (cur_col >= ANSILINELEN)
 	    cur_col = ANSILINELEN - 1;
