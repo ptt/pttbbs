@@ -1932,6 +1932,9 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, cli
 
 	total := int32(len(indices))
 	if offset < 0 {
+		offset += total
+	}
+	if offset < 0 {
 		offset = 0
 	}
 	if limit < 0 {

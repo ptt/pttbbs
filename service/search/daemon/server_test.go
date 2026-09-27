@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -848,3 +849,64 @@ func TestQuerySourcesAttribution(t *testing.T) {
 		t.Errorf("expected SearchSR=1, got %d", b.SearchSR)
 	}
 }
+
+func TestQuerySearchNegativeOffset(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "T", "TestBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir boardDir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "T", "TestBoard", ".DIR")
+
+	for i := 1; i <= 5; i++ {
+		fn := fmt.Sprintf("M.170000000%d.A.00%d", i, i)
+		if err := AppendTestFileheader(dirPath, fn, "tester", fmt.Sprintf("title post %d", i), 0, 10, 100); err != nil {
+			t.Fatalf("append rec %d: %v", i, err)
+		}
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() {
+		_ = svc.Start()
+	}()
+	defer svc.Stop()
+
+	for i := 0; i < 50; i++ {
+		if IsSocketOccupied(socketPath) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	predBytes := MakePredBytes(RS_KEYWORD, "title", 0, 0)
+
+	// offset = -2, limit = 2 -> should return last 2 posts (recno 4 and 5)
+	indices, total := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -2, 2, SrcBoarddWeb)
+	if total != 5 {
+		t.Fatalf("expected total 5, got %d", total)
+	}
+	if len(indices) != 2 || indices[0] != 4 || indices[1] != 5 {
+		t.Fatalf("expected [4, 5], got %v", indices)
+	}
+
+	// offset = -4, limit = 2 -> should return recno 2 and 3
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -4, 2, SrcBoarddWeb)
+	if total != 5 {
+		t.Fatalf("expected total 5, got %d", total)
+	}
+	if len(indices) != 2 || indices[0] != 2 || indices[1] != 3 {
+		t.Fatalf("expected [2, 3], got %v", indices)
+	}
+
+	// offset = -10, limit = 2 -> clamp to 0 -> should return recno 1 and 2
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -10, 2, SrcBoarddWeb)
+	if total != 5 {
+		t.Fatalf("expected total 5, got %d", total)
+	}
+	if len(indices) != 2 || indices[0] != 1 || indices[1] != 2 {
+		t.Fatalf("expected [1, 2], got %v", indices)
+	}
+}
+
