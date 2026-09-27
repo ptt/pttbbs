@@ -1706,17 +1706,12 @@ mf_display()
             }
 
             const char *v = val ? val : "";
-            int off = (w > 0) ? stream_col_offset(w, v) : 0;
-            if (off >= 0) {
-                char vbuf[STRLEN * 2];
-                strlcpy(vbuf, v, off + 1 < (int)sizeof(vbuf) ? off + 1 : (int)sizeof(vbuf));
-                mbs_safe_trim(vbuf);
-                int pad = w - stream_width(vbuf);
-                prints("%s%*s", vbuf, pad > 0 ? pad : 0, "");
-            } else {
-                int pad = w - stream_width(v);
-                prints("%s%*s", v, pad > 0 ? pad : 0, "");
-            }
+            int cols = 0;
+            int off = (w > 0) ? stream_col_offset(w, v, &cols) : 0;
+            char vbuf[STRLEN * 2];
+            strlcpy(vbuf, v, off + 1 < (int)sizeof(vbuf) ? off + 1 : (int)sizeof(vbuf));
+            int pad = w - cols;
+            prints("%s%*s", vbuf, pad > 0 ? pad : 0, "");
 
             if (currline == 0 && fh.floats[0])
             {

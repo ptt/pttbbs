@@ -340,36 +340,49 @@ strip_control_sequence_ex(char *dst, const char *src, enum STRIP_FLAG mode)
 }
 
 /**
- * Query the byte offset of the nth terminal display column in stream s
- * (skipping ECMA-48 / ANSI control sequences started by the Escape character).
- * If the stream width is less than count, return missing columns in negative value.
+ * Query the byte offset in stream s corresponding to at most count terminal display columns
+ * without splitting a multibyte character in half (skipping ECMA-48 / ANSI control sequences).
+ *
+ * @param count      maximum display columns
+ * @param s          input string (may contain ANSI escape sequences and multibyte characters)
+ * @param real_cols  if non-NULL, populated with the actual visual columns of the substring [0, offset)
+ * @return           byte offset in s (>= 0)
  */
 int
-stream_col_offset(int count, const char *s)
+stream_col_offset(int count, const char *s, int *real_cols)
 {
     const char *os = s;
+    int cols = 0;
 
-    while (count > 0 && *s) {
+    if (!s || count <= 0) {
+        if (real_cols)
+            *real_cols = 0;
+        return 0;
+    }
+
+    while (*s) {
         if (*s == ESC_CHR) {
             s = skip_control_sequence(s);
             continue;
         }
-        if (MB_IS_BIG5) {
-            const char *p = strchrnul(s, ESC_CHR);
-            int chunk = p - s;
-            if (chunk >= count)
-                return (s + count) - os;
-            count -= chunk;
-            s = p;
-        } else {
-            int w = mb_width(s);
-            if (w > count)
-                return s - os;
-            count -= w;
-            s += mb_bytes(s);
+        if ((unsigned char)*s >= 0x20 && (unsigned char)*s < 0x7F) {
+            if (cols + 1 > count)
+                break;
+            cols++;
+            s++;
+            continue;
         }
+        int w = mb_width(s);
+        if (w < 0)
+            w = 1;
+        if (cols + w > count)
+            break;
+        cols += w;
+        s += mb_bytes(s);
     }
-    return (count > 0) ? -count : (s - os);
+    if (real_cols)
+        *real_cols = cols;
+    return (int)(s - os);
 }
 
 int
