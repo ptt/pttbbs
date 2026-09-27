@@ -375,4 +375,14 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	if svc.aidMisses.Load() != aidMissesBefore {
 		t.Fatalf("expected 0 aid misses after push, before=%d, now=%d", aidMissesBefore, svc.aidMisses.Load())
 	}
+
+	// 15. Query an unknown non-existent AID: triggers linear scan once, records backtrack
+	fakeAIDU := uint64(0x065599999999) // does not exist
+	if idx := queryAIDClient(t, socketPath, 1, relDir, fakeAIDU, 0); idx != 0 {
+		t.Fatalf("expected 0 for fake aid, got %d", idx)
+	}
+	bt := svc.LookupBoardBacktrack(dirPath)
+	if bt < 0 {
+		t.Fatalf("expected backtrack to be recorded after bsearch miss, got %d", bt)
+	}
 }

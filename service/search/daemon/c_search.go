@@ -338,10 +338,161 @@ static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int6
     return max_backtrack;
 }
 
+static inline int match_fhdr_stamp_hex(const fileheader_t *fh, char prefix_ch,
+                                         time4_t target_ts, unsigned int target_hex,
+                                         int allow_prefix, int required_mode)
+{
+    if (!fh->filename[0] || fh->filename[0] == '.')
+        return 0;
+    if (prefix_ch && fh->filename[0] != prefix_ch &&
+        !(prefix_ch == 'M' && fh->filename[0] == 'L' && (required_mode & FILE_BOTTOM)))
+        return 0;
+    if (required_mode) {
+        if (fh->owner[0] == '-')
+            return 0;
+        if ((fh->filemode & required_mode) != required_mode)
+            return 0;
+    }
+    if (get_fhdr_stamp_ts(fh->filename) != target_ts)
+        return 0;
+    unsigned int hex = get_fhdr_stamp_hex(fh->filename);
+    if (hex == target_hex) {
+        if (target_hex != 0 || allow_prefix)
+            return 1;
+        const char *dot = strrchr(fh->filename, '.');
+        return (dot && (dot[1] == '0' || (dot[1] == 'A' && dot[2] == '\0')));
+    }
+    return 0;
+}
+
+static int c_search_aidu_and_compute_backtrack(
+    int fd, int total, uint64_t aidu, int required_mode,
+    char prefix_ch, time4_t target_ts, unsigned int target_hex, int allow_prefix,
+    fileheader_t *out_fh, int *out_backtrack, int64_t *out_max_time_diff)
+{
+    if (out_backtrack)
+        *out_backtrack = 0;
+    if (out_max_time_diff)
+        *out_max_time_diff = 0;
+
+    if (total <= 0)
+        return 0;
+
+#ifdef POSIX_FADV_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+
+    time4_t *ts_buf = (time4_t *)malloc((size_t)total * sizeof(time4_t));
+    if (!ts_buf)
+        return -1;
+
+    enum { SCAN_BATCH = 1024 };
+    fileheader_t fhs[SCAN_BATCH];
+    int valid_cnt = 0;
+    int found_rec = 0;
+    int recno = 0;
+    ssize_t len;
+
+    if (lseek(fd, 0, SEEK_SET) < 0) {
+        free(ts_buf);
+        return -1;
+    }
+
+    while (recno < total && (len = read(fd, fhs, sizeof(fhs))) > 0) {
+        int n = (int)(len / sizeof(fileheader_t));
+        if (NEED_STORAGE_CONV)
+            fileheader_storage_to_mem(fhs, n);
+
+        for (int i = 0; i < n && recno < total; i++) {
+            recno++;
+            fileheader_t *cur = &fhs[i];
+            if (!cur->filename[0] || cur->filename[0] == '.' || cur->owner[0] == '-') {
+                ts_buf[valid_cnt++] = 0;
+                continue;
+            }
+
+            if (!found_rec) {
+                if (match_fhdr_stamp_hex(cur, prefix_ch, target_ts, target_hex, allow_prefix, required_mode)) {
+                    found_rec = recno;
+                    if (out_fh)
+                        *out_fh = *cur;
+                }
+            }
+
+            if (cur->filename[0] == 'M' || cur->filename[0] == 'G') {
+                ts_buf[valid_cnt++] = get_fhdr_stamp_ts(cur->filename);
+            } else {
+                ts_buf[valid_cnt++] = 0;
+            }
+        }
+    }
+
+    int max_btrack = 0;
+    int64_t max_tdiff = 0;
+
+    if (valid_cnt > 1) {
+        int *cand_idx = (int *)malloc((size_t)valid_cnt * sizeof(int));
+        if (cand_idx) {
+            int cand_cnt = 0;
+            time4_t max_seen = 0;
+            for (int i = 0; i < valid_cnt; i++) {
+                time4_t t = ts_buf[i];
+                if (t <= 0)
+                    continue;
+                if (cand_cnt == 0 || t > max_seen) {
+                    cand_idx[cand_cnt++] = i;
+                    max_seen = t;
+                }
+            }
+
+            for (int j = valid_cnt - 1; j >= 0; j--) {
+                time4_t tj = ts_buf[j];
+                if (tj <= 0)
+                    continue;
+                if (cand_cnt > 0 && tj < ts_buf[cand_idx[cand_cnt - 1]]) {
+                    int low = 0, high = cand_cnt - 1, best = cand_cnt - 1;
+                    while (low <= high) {
+                        int mid = low + (high - low) / 2;
+                        if (ts_buf[cand_idx[mid]] > tj) {
+                            best = mid;
+                            high = mid - 1;
+                        } else {
+                            low = mid + 1;
+                        }
+                    }
+                    int i = cand_idx[best];
+                    int dist = j - i;
+                    if (dist > max_btrack)
+                        max_btrack = dist;
+                    int64_t tdiff = (int64_t)(ts_buf[cand_idx[cand_cnt - 1]] - tj);
+                    if (tdiff > max_tdiff)
+                        max_tdiff = tdiff;
+                }
+            }
+            free(cand_idx);
+        }
+    }
+
+    free(ts_buf);
+
+    if (out_backtrack)
+        *out_backtrack = max_btrack;
+    if (out_max_time_diff)
+        *out_max_time_diff = max_tdiff;
+
+    return found_rec;
+}
+
 static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_mode,
                                 int start_rec, void *out_fh, int *out_total_recs,
-                                int max_backtrack)
+                                int max_backtrack, int *out_computed_backtrack,
+                                int64_t *out_computed_time_diff)
 {
+    if (out_computed_backtrack)
+        *out_computed_backtrack = -1;
+    if (out_computed_time_diff)
+        *out_computed_time_diff = 0;
+
     int fd = open(direct, O_RDONLY);
     if (fd < 0)
         return -1;
@@ -397,9 +548,51 @@ static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_
         return 0;
     }
 
-    int found = search_dir_by_aidu_fd_bounded(fd, total_recs, (aidu_t)aidu, required_mode, &fh, max_backtrack);
+    char prefix_ch = aidu_type((aidu_t)aidu) ? 'G' : 'M';
+    time4_t target_ts = aidu_stamp(aidu);
+    unsigned int target_hex = aidu_hex(aidu);
+    int allow_prefix = (target_hex == 0 && !(required_mode & FILE_BOTTOM));
+
+    // Fast path:
+    // If max_backtrack >= 0: bounded binary search with window (max_backtrack * 2 + BSEARCH_WIN).
+    // If max_backtrack < 0: try binary search with default window (BSEARCH_WIN = 256).
+    int btrack_for_bsearch = (max_backtrack >= 0) ? max_backtrack : 0;
+    int found = search_dir_by_aidu_fd_bounded(fd, total_recs, (aidu_t)aidu, required_mode, &fh, btrack_for_bsearch);
+
+    if (found > 0) {
+        // Fast path HIT! Article found by index, tail, or binary search window!
+        // No need to touch or compute backtrack!
+        if (out_fh)
+            memcpy(out_fh, &fh, sizeof(fh));
+        close(fd);
+        return found;
+    }
+
+    // Binary search window missed!
+    if (max_backtrack >= 0) {
+        // We ALREADY had a known backtrack window, and it was not found in [mid - win, mid + win].
+        // Article definitely does not exist on this board. FAIL immediately!
+        close(fd);
+        return 0;
+    }
+
+    // Binary search missed AND we do NOT have a backtrack window (max_backtrack < 0).
+    // Fall back to linear scan once, find the AID, AND compute backtrack window!
+    int computed_bt = 0;
+    int64_t computed_tdiff = 0;
+    found = c_search_aidu_and_compute_backtrack(
+        fd, total_recs, aidu, required_mode,
+        prefix_ch, target_ts, target_hex, allow_prefix,
+        &fh, &computed_bt, &computed_tdiff);
+
     if (found > 0 && out_fh)
         memcpy(out_fh, &fh, sizeof(fh));
+
+    if (out_computed_backtrack)
+        *out_computed_backtrack = computed_bt;
+    if (out_computed_time_diff)
+        *out_computed_time_diff = computed_tdiff;
+
     close(fd);
     return found;
 }
@@ -516,9 +709,11 @@ func ComputeDirBacktrack(directPath string) (int32, int32, int64) {
 	return int32(cTotal), int32(btrack), int64(cTimeDiff)
 }
 
-func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec int32, maxBacktrack int) (int32, [128]byte, int32, error) {
+func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec int32, maxBacktrack int) (int32, [128]byte, int32, int32, int64, error) {
 	var fhBuf [128]byte
 	var totalRecs C.int
+	var cComputedBacktrack C.int = -1
+	var cComputedTimeDiff C.int64_t = 0
 	cPath := C.CString(directPath)
 	defer C.free(unsafe.Pointer(cPath))
 
@@ -530,11 +725,13 @@ func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec i
 		unsafe.Pointer(&fhBuf[0]),
 		&totalRecs,
 		C.int(maxBacktrack),
+		&cComputedBacktrack,
+		&cComputedTimeDiff,
 	))
 	if found < 0 {
-		return 0, fhBuf, 0, fmt.Errorf("failed to search AID in %s", directPath)
+		return 0, fhBuf, 0, -1, 0, fmt.Errorf("failed to search AID in %s", directPath)
 	}
-	return int32(found), fhBuf, int32(totalRecs), nil
+	return int32(found), fhBuf, int32(totalRecs), int32(cComputedBacktrack), int64(cComputedTimeDiff), nil
 }
 
 // ScanDirRange scans directPath starting from 1-based startRec through the end of the file,
