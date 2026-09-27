@@ -638,6 +638,14 @@ int SHMreset(int argc, char **argv)
     return do_shm_init(no_uhash_loader, 1, argc, argv);
 }
 
+int SHMrebuild_utmp(int argc GCC_UNUSED, char **argv GCC_UNUSED)
+{
+    printf("Rebuilding utmp_user table in-place from active sessions (%d online)...\n", SHM->UTMPnumber);
+    init_utmp_user();
+    puts("Done. utmp_user table rebuilt cleanly.");
+    return 0;
+}
+
 int hotboard(int argc, char **argv)
 {
 #define isvisiableboard(bptr)                                              \
@@ -936,6 +944,7 @@ struct Cmd {
     {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
     {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start sutmpsortd and helper services. Options: [-h: see full usage]"},
     {SHMreset,   "reset",      "reset SHM in-place (wipe uinfo/utmp/uhash and re-initialize without recreating SHM). Options: [-n: no utmpsortd]"},
+    {SHMrebuild_utmp, "rebuild_utmp", "rebuild utmp_user table in-place from active sessions without kicking users"},
     {NULL, NULL, NULL}
 };
 
