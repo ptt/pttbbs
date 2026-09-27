@@ -459,3 +459,190 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		t.Fatalf("expected delete hint to mark 0, got %d", idx)
 	}
 }
+
+func TestBoardAIDTable(t *testing.T) {
+	total := 10000
+	aids := make([]uint64, total)
+	baseTS := uint32(1700000000)
+
+	for i := 0; i < total; i++ {
+		ts := baseTS + uint32(i*10)
+		hex := uint32(i % 4096)
+		aids[i] = (uint64(ts) << 12) | uint64(hex)
+	}
+
+	// Introduce an out-of-order article (backtrack of 100 records)
+	outOfOrderTS := baseTS + uint32(400*10)
+	outOfOrderHex := uint32(0xABC)
+	aids[500] = (uint64(outOfOrderTS) << 12) | uint64(outOfOrderHex)
+
+	maxBtrack, maxTdiff, minTS, maxTS := computeBoardAIDStats(aids)
+	if maxBtrack < 90 {
+		t.Fatalf("expected maxBacktrack >= 90, got %d", maxBtrack)
+	}
+	if maxTdiff < 900 {
+		t.Fatalf("expected maxTimeDiff >= 900, got %d", maxTdiff)
+	}
+
+	tbl := &BoardAIDTable{
+		direct:       "/tmp/test.DIR",
+		bid:          1,
+		maxBacktrack: maxBtrack,
+		maxTimeDiff:  maxTdiff,
+		minTS:        minTS,
+		maxTS:        maxTS,
+		aids:         aids,
+	}
+
+	// 1. Search normal article in middle
+	targetAIDU := aids[3500]
+	if rec := tbl.SearchAID(targetAIDU); rec != 3501 {
+		t.Fatalf("expected rec=3501, got %d", rec)
+	}
+
+	// 2. Search out-of-order article
+	targetOO := (uint64(outOfOrderTS) << 12) | uint64(outOfOrderHex)
+	if rec := tbl.SearchAID(targetOO); rec != 501 {
+		t.Fatalf("expected rec=501 for out-of-order post, got %d", rec)
+	}
+
+	// 3. Search tail article
+	targetTail := aids[total-1]
+	if rec := tbl.SearchAID(targetTail); rec != int32(total) {
+		t.Fatalf("expected rec=%d for tail, got %d", total, rec)
+	}
+
+	// 4. Search non-existent AID (ts before minTS)
+	beforeMin := (uint64(baseTS-1000) << 12) | 0x123
+	if rec := tbl.SearchAID(beforeMin); rec != 0 {
+		t.Fatalf("expected 0 for AID before minTS, got %d", rec)
+	}
+
+	// 5. Search non-existent AID (ts after maxTS)
+	afterMax := (uint64(baseTS+uint32(total*10)+1000) << 12) | 0x123
+	if rec := tbl.SearchAID(afterMax); rec != 0 {
+		t.Fatalf("expected 0 for AID after maxTS, got %d", rec)
+	}
+
+	// 6. Search non-existent AID within ts range (wrong hex)
+	midMissing := (uint64(baseTS+uint32(3500*10)) << 12) | 0xFFF
+	if rec := tbl.SearchAID(midMissing); rec != 0 {
+		t.Fatalf("expected 0 for missing AID within range, got %d", rec)
+	}
+
+	// 7. Test AppendPost
+	newRecno := int32(total + 1)
+	newAID := (uint64(baseTS+uint32(total*10)+10) << 12) | 0x555
+	tbl.AppendPost(newRecno, newAID)
+	if rec := tbl.SearchAID(newAID); rec != newRecno {
+		t.Fatalf("expected rec=%d after AppendPost, got %d", newRecno, rec)
+	}
+
+	// 8. Test DeletePost
+	tbl.DeletePost(newRecno)
+	if rec := tbl.SearchAID(newAID); rec != 0 {
+		t.Fatalf("expected 0 after DeletePost, got %d", rec)
+	}
+}
+
+func TestFileheaderModeHelpers(t *testing.T) {
+	var fh [128]byte
+
+	// Initial check on empty/nil
+	if MatchFileheaderMode(nil, 0) {
+		t.Errorf("expected MatchFileheaderMode(nil) == false")
+	}
+	if MatchFileheaderMode(&fh, 0) {
+		t.Errorf("expected MatchFileheaderMode(&fh with zero filename) == false")
+	}
+	if FileheaderFilemode(nil) != 0 {
+		t.Errorf("expected FileheaderFilemode(nil) == 0")
+	}
+
+	// Normal valid filename
+	copy(fh[:], "M.1700000001.A.001")
+	copy(fh[FHDR_OFF_OWNER:], "tester")
+	binary.NativeEndian.PutUint16(fh[FHDR_OFF_FILEMODE:], uint16(FILE_MARKED))
+
+	if !MatchFileheaderMode(&fh, 0) {
+		t.Errorf("expected MatchFileheaderMode with valid file == true")
+	}
+	if !MatchFileheaderMode(&fh, int32(FILE_MARKED)) {
+		t.Errorf("expected MatchFileheaderMode with FILE_MARKED == true")
+	}
+	if MatchFileheaderMode(&fh, int32(FILE_BOTTOM)) {
+		t.Errorf("expected MatchFileheaderMode with FILE_BOTTOM == false")
+	}
+	if FileheaderFilemode(&fh) != FILE_MARKED {
+		t.Errorf("expected FileheaderFilemode == %d, got %d", FILE_MARKED, FileheaderFilemode(&fh))
+	}
+
+	// Dot filename
+	fh[0] = '.'
+	if MatchFileheaderMode(&fh, 0) {
+		t.Errorf("expected dot filename == false")
+	}
+	fh[0] = 'M'
+
+	// Deleted owner '-'
+	fh[FHDR_OFF_OWNER] = '-'
+	if !MatchFileheaderMode(&fh, 0) {
+		t.Errorf("expected MatchFileheaderMode with requiredMode=0 and deleted owner == true")
+	}
+	if MatchFileheaderMode(&fh, int32(FILE_MARKED)) {
+		t.Errorf("expected MatchFileheaderMode with requiredMode!=0 and deleted owner == false")
+	}
+	fh[FHDR_OFF_OWNER] = 't'
+
+	// Test recommend
+	SetFileheaderRecommend(nil, 50) // should not panic
+	SetFileheaderRecommend(&fh, 77)
+	if fh[FHDR_OFF_RECOMMEND] != 77 {
+		t.Errorf("expected recommend=77, got %d", fh[FHDR_OFF_RECOMMEND])
+	}
+}
+
+func BenchmarkBoardAIDTable(b *testing.B) {
+	// Gossiping scale: 800,000 articles
+	total := 800000
+	aids := make([]uint64, total)
+	baseTS := uint32(1700000000)
+
+	for i := 0; i < total; i++ {
+		ts := baseTS + uint32(i*2)
+		hex := uint32(i % 4096)
+		aids[i] = (uint64(ts) << 12) | uint64(hex)
+	}
+
+	tbl := &BoardAIDTable{
+		direct:       "/tmp/benchmark.DIR",
+		bid:          1,
+		maxBacktrack: 150,
+		maxTimeDiff:  300,
+		minTS:        baseTS,
+		maxTS:        baseTS + uint32(total*2),
+		aids:         aids,
+	}
+
+	targetHit := aids[400000]
+	targetMiss := (uint64(baseTS+uint32(400000*2)) << 12) | 0xFFE
+
+	b.Run("Hit-Middle", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = tbl.SearchAID(targetHit)
+		}
+	})
+
+	b.Run("Miss-Range", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = tbl.SearchAID(targetMiss)
+		}
+	})
+
+	b.Run("Miss-OutOfRange", func(b *testing.B) {
+		targetOutOfRange := (uint64(baseTS-5000) << 12) | 0x123
+		for i := 0; i < b.N; i++ {
+			_ = tbl.SearchAID(targetOutOfRange)
+		}
+	})
+}
