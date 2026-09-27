@@ -79,14 +79,112 @@ func preprocessArgs(args []string) []string {
 	return res
 }
 
+func parseConfigFile(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var args []string
+	lines := strings.Split(string(data), "\n")
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "//") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "-") {
+			if eqIdx := strings.Index(line, "="); eqIdx != -1 {
+				k := strings.TrimSpace(line[:eqIdx])
+				v := strings.Trim(strings.TrimSpace(line[eqIdx+1:]), `"'`)
+				args = append(args, fmt.Sprintf("%s=%s", k, v))
+				continue
+			}
+			parts := strings.Fields(line)
+			if len(parts) == 1 {
+				args = append(args, parts[0])
+			} else {
+				args = append(args, parts[0], strings.Trim(parts[1], `"'`))
+			}
+			continue
+		}
+
+		var key, val string
+		if eqIdx := strings.IndexAny(line, "=:"); eqIdx != -1 {
+			key = strings.TrimSpace(line[:eqIdx])
+			val = strings.TrimSpace(line[eqIdx+1:])
+		} else {
+			parts := strings.Fields(line)
+			key = parts[0]
+			if len(parts) > 1 {
+				val = strings.Join(parts[1:], " ")
+			}
+		}
+
+		key = strings.ToLower(key)
+		key = strings.ReplaceAll(key, "_", "-")
+		val = strings.Trim(val, `"'`)
+
+		if key == "daemon" || key == "daemonize" {
+			key = "d"
+		}
+
+		flagKey := "-" + key
+		if val == "" {
+			args = append(args, flagKey)
+		} else {
+			args = append(args, fmt.Sprintf("%s=%s", flagKey, val))
+		}
+	}
+	return args, nil
+}
+
 func main() {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
 	}
 
+	rawArgs := os.Args[1:]
+
+	// Determine configuration file path: default to $BBSHOME/etc/search.conf
+	confPath := filepath.Join(bbsHome, "etc", "search.conf")
+	if _, err := os.Stat(confPath); err != nil {
+		alt := filepath.Join(bbsHome, "etc", "search.svc.conf")
+		if _, err2 := os.Stat(alt); err2 == nil {
+			confPath = alt
+		} else {
+			confPath = ""
+		}
+	}
+
+	// Allow overriding config path from command line
+	for i := 0; i < len(rawArgs); i++ {
+		arg := rawArgs[i]
+		if (arg == "-conf" || arg == "--conf" || arg == "-c") && i+1 < len(rawArgs) {
+			confPath = rawArgs[i+1]
+			break
+		}
+		if strings.HasPrefix(arg, "-conf=") || strings.HasPrefix(arg, "--conf=") || strings.HasPrefix(arg, "-c=") {
+			confPath = strings.SplitN(arg, "=", 2)[1]
+			break
+		}
+	}
+
+	var loadedConf string
+	var configArgs []string
+	if confPath != "" && confPath != "none" {
+		if args, err := parseConfigFile(confPath); err == nil {
+			configArgs = args
+			loadedConf = confPath
+		} else if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "[search.svc] Warning: failed to read config %s: %v\n", confPath, err)
+		}
+	}
+
 	var verbose verboseValue
 
+	confFlag := flag.String("conf", confPath, "Path to configuration file")
+	flag.StringVar(confFlag, "c", confPath, "Alias for -conf")
 	logPath := flag.String("log", "", "Path to log file (default: $BBSHOME/log/search.svc.log)")
 	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
 	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -D)")
@@ -102,7 +200,9 @@ func main() {
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
 
-	os.Args = append([]string{os.Args[0]}, preprocessArgs(os.Args[1:])...)
+	cliArgs := preprocessArgs(rawArgs)
+	allArgs := append(configArgs, cliArgs...)
+	os.Args = append([]string{os.Args[0]}, allArgs...)
 	flag.Parse()
 
 	if *debugMode {
@@ -124,11 +224,15 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := forkDaemon(); err != nil {
+		if err := forkDaemon(cliArgs); err != nil {
 			fmt.Fprintf(os.Stderr, "[search.svc] Failed to daemonize: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("[search.svc] Starting PTT BBS Search Cache Service in background...\n")
+		if loadedConf != "" {
+			fmt.Printf("[search.svc] Starting PTT BBS Search Cache Service in background (config: %s)...\n", loadedConf)
+		} else {
+			fmt.Printf("[search.svc] Starting PTT BBS Search Cache Service in background...\n")
+		}
 		os.Exit(0)
 	}
 
@@ -150,8 +254,13 @@ func main() {
 
 	fmt.Printf("[search.svc] Starting PTT BBS Search Cache Service...\n")
 	fmt.Printf("[search.svc] BBSHOME: %s, Log: %s\n", bbsHome, *logPath)
+	if loadedConf != "" {
+		fmt.Printf("[search.svc] Config: %s\n", loadedConf)
+	}
 	fmt.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d\n",
 		runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
+	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, cache-ttl=%v\n",
+		*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
@@ -162,6 +271,13 @@ func main() {
 				log.SetOutput(logFile)
 				log.Printf("[search.svc] Starting PTT BBS Search Cache Service...")
 				log.Printf("[search.svc] BBSHOME: %s, Log: %s", bbsHome, *logPath)
+				if loadedConf != "" {
+					log.Printf("[search.svc] Config: %s", loadedConf)
+				}
+				log.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d",
+					runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
+				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, cache-ttl=%v",
+					*maxEntries, *maxIndices, *maxAIDEntries, *cacheTTL)
 			}
 		}
 	}
@@ -187,15 +303,14 @@ func main() {
 	}
 }
 
-func forkDaemon() error {
+func forkDaemon(cliArgs []string) error {
 	execPath, err := os.Executable()
 	if err != nil {
 		execPath = os.Args[0]
 	}
 
 	var args []string
-	for i := 1; i < len(os.Args); i++ {
-		arg := os.Args[i]
+	for _, arg := range cliArgs {
 		if arg == "-d" || strings.HasPrefix(arg, "-d=") || arg == "--d" || strings.HasPrefix(arg, "--d=") {
 			continue
 		}
