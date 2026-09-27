@@ -219,8 +219,11 @@ cmd_dispatch_single_layer(const cmd_layer_t *layer, cmd_ctx_t *ctx, void *defaul
         if (cmd->key != ctx->key || !cmd->func || !psb_check_perm(cmd->permission) ||
             (cmd->need_item && ctx->total <= 0))
             continue;
-        if (cmd->func(ctx) == PSB_NA)
+        int ret = cmd->func(ctx);
+        if (ret == PSB_NA)
             continue;
+        if (ret == REDRAW_FOOTER)
+            ctx->redraw_footer_lines = 1;
         return 0;
     }
     return PSB_NA;
@@ -543,6 +546,8 @@ psb_main(PSB_CTX *psbctx)
         int ret = PSB_NA;
         if (psbctx->on_key) {
             ret = psbctx->on_key(psbctx);
+            if (ret == REDRAW_FOOTER)
+                psbctx->cmd.redraw_footer_lines = 1;
         }
         if (ret == PSB_NA) {
             ret = cmd_dispatch_layers(active_layers, &psbctx->cmd, psbctx->cmd.caption);

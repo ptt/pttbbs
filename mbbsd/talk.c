@@ -1723,8 +1723,12 @@ userlist_cmd_angel_pause(cmd_ctx_t *ctx) {
 
 static int
 userlist_cmd_readmail(cmd_ctx_t *ctx) {
-    m_read();
+    int err = m_read();
     setutmpmode(LUSERS);
+    if (err == REDRAW_FOOTER) {
+        ctx->redraw_footer_lines = 1;
+        return 0;
+    }
     ctx->reload = true;
     return 0;
 }
@@ -2047,10 +2051,6 @@ t_talk(void)
     int             tuid, unum, ucount;
     userinfo_t     *uentp;
     char            genbuf[4];
-    /*
-     * if (count_ulist() <= 1){ outs("目前線上只有您一人，快邀請朋友來光臨【"
-     * BBSNAME "】吧！"); return XEASY; }
-     */
     vs_hdr("打開話匣子");
     CompleteOnlineUser(MSG_UID, uident);
     if (uident[0] == '\0')

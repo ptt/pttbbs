@@ -572,10 +572,8 @@ menu_cmd_enter(cmd_ctx_t *ctx)
     int err;
 
     currstat = XMODE;
-    if (cx->cmdtable[idx].cmdfunc != Goodbye)
-        clear_main();
-
     if (cx->cmdtable[idx].submenu) {
+        clear_main();
         domenu(&cx->cmdtable[idx]);
         err = 0;
     } else {
@@ -588,13 +586,13 @@ menu_cmd_enter(cmd_ctx_t *ctx)
     currutmp->mode = currstat = cx->cmdmode;
     cx->target_table_idx = idx;
 
-    if (err == XEASY) {
-        refresh();
-        sleep(1);
-    } else if (err != XEASY + 1 || err == FULLUPDATE) {
-        cx->is_refresh = true;
-        ctx->reload = true;
+    if (err == REDRAW_FOOTER) {
+        ctx->redraw_footer_lines = 1;
+        return 0;
     }
+
+    cx->is_refresh = true;
+    ctx->reload = true;
     return 0;
 }
 
