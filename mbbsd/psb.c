@@ -38,7 +38,7 @@ psb_default_footer(PSB_CTX *ctx GCC_UNUSED) {
 
 static int
 psb_default_renderer(int i, PSB_CTX *ctx) {
-    prints("   %s(Demo) %5d / %5d Item\n", (i == ctx->cmd.curr) ? "*" : " ", i, ctx->cmd.total);
+    prints("   %s(Demo) %5d / %5d Item", (i == ctx->cmd.curr) ? "*" : " ", i, ctx->cmd.total);
     return 0;
 }
 
@@ -637,7 +637,7 @@ pveh_renderer(int i, PSB_CTX *ctx) {
         outs("[目前版本]");
     else
         prints("#%09d", rev + cx->rev_base);
-    prints("  時間: %-*s" ANSI_RESET "\n", t_columns - 31, subject);
+    prints("  時間: %-*s" ANSI_RESET, t_columns - 31, subject);
     return 0;
 }
 
@@ -810,7 +810,7 @@ pvrb_renderer(int i, PSB_CTX *ctx) {
     if (i == curr)
         // prints(ANSI_COLOR(1;40;3%d), i%8);
         outs(ANSI_COLOR(1;40;31));
-    prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET "\n",
+    prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET,
            total - i, fh->date, fh->owner, fh->title);
     return 0;
 }
@@ -1078,7 +1078,7 @@ pvcm_renderer(int i, PSB_CTX *ctx) {
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
-    prints("%c %06d %-12.12s %s\n",
+    prints("%c %06d %-12.12s %s",
            (i == curr) ? '>' : ' ',
            i + 1,
            resp->userid,
@@ -1216,7 +1216,7 @@ pae_footer(PSB_CTX *ctx GCC_UNUSED) {
 static int
 pae_renderer(int i, PSB_CTX *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx->cmd.priv;
-    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET "\n",
+    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET,
             i+1,
             (i == ctx->cmd.curr) ? ANSI_COLOR(41) : "",
             dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30),

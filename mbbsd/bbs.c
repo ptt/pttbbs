@@ -733,7 +733,7 @@ readdoent(int num, fileheader_t * ent)
 	outs(ANSI_COLOR(1;30));
 	prints("%-6.5s", ent->date);
 	prints("%-13.12s", ent->owner);
-	prints("во %-.*s" ANSI_RESET "\n",
+	prints("во %-.*s" ANSI_RESET,
 		t_columns-34, ent->title);
 	return;
 #else // COLORIZED_SAFEDEL
@@ -911,9 +911,7 @@ readdoent(int num, fileheader_t * ent)
     }
 
     if (special)
-        outs(ANSI_RESET "\n");
-    else
-       outc('\n');
+        outs(ANSI_RESET);
 }
 
 int
