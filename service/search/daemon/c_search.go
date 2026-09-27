@@ -2,6 +2,7 @@ package daemon
 
 /*
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -47,11 +48,11 @@ static int c_fhdr_size(void) {
     return (int)sizeof(fileheader_t);
 }
 
-static inline void c_set_fileheader_recommend(void *fh, int recommend) {
-    if (fh) {
-        ((fileheader_t *)fh)->recommend = (char)recommend;
-    }
-}
+enum {
+    FHDR_OFF_RECOMMEND = offsetof(fileheader_t, recommend),
+    FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
+    FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
+};
 
 static int64_t c_get_board_srexpire(int bid) {
     if (SHM == NULL || bid < 1 || bid > MAX_BOARD)
@@ -498,6 +499,61 @@ static int c_search_aidu_and_compute_backtrack(
     return found_rec;
 }
 
+static int c_read_fh_at(const char *direct, int rec, void *out_fh) {
+    if (rec < 1 || !out_fh)
+        return -1;
+    int fd = open(direct, O_RDONLY);
+    if (fd < 0)
+        return -1;
+    fileheader_t fh;
+    ssize_t n = pread(fd, &fh, sizeof(fh), (off_t)(rec - 1) * sizeof(fh));
+    close(fd);
+    if (n != (ssize_t)sizeof(fh))
+        return -1;
+    if (NEED_STORAGE_CONV)
+        fileheader_storage_to_mem(&fh, 1);
+    memcpy(out_fh, &fh, sizeof(fh));
+    return 0;
+}
+
+static int c_load_dir_aids(const char *direct, uint64_t *out_aids, int max_recs) {
+    int fd = open(direct, O_RDONLY);
+    if (fd < 0)
+        return -1;
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return -1;
+    }
+    int total = (int)(st.st_size / sizeof(fileheader_t));
+    if (total > max_recs)
+        total = max_recs;
+    if (total <= 0) {
+        close(fd);
+        return 0;
+    }
+#ifdef POSIX_FADV_SEQUENTIAL
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+    enum { BATCH = 1024 };
+    fileheader_t fhs[BATCH];
+    int recno = 0;
+    ssize_t len;
+    while (recno < total && (len = read(fd, fhs, sizeof(fhs))) > 0) {
+        int n = (int)(len / sizeof(fileheader_t));
+        for (int i = 0; i < n && recno < total; i++) {
+            if ((fhs[i].filename[0] == 'M' || fhs[i].filename[0] == 'G') && fhs[i].owner[0] != '-') {
+                out_aids[recno] = (uint64_t)fn2aidu(fhs[i].filename) & 0x00001FFFFFFFFFFFULL;
+            } else {
+                out_aids[recno] = 0;
+            }
+            recno++;
+        }
+    }
+    close(fd);
+    return recno;
+}
+
 static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_mode,
                                 int start_rec, void *out_fh, int *out_total_recs,
                                 int max_backtrack, int *out_computed_backtrack,
@@ -615,6 +671,7 @@ static int c_search_aidu_in_dir(const char *direct, uint64_t aidu, int required_
 import "C"
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"unsafe"
@@ -632,6 +689,10 @@ const (
 	RS_KEYWORD_EXCLUDE = int(C.RS_KEYWORD_EXCLUDE)
 	FILE_MARKED        = int(C.FILE_MARKED)
 	FILE_BOTTOM        = int(C.FILE_BOTTOM)
+
+	FHDR_OFF_RECOMMEND = int(C.FHDR_OFF_RECOMMEND)
+	FHDR_OFF_OWNER     = int(C.FHDR_OFF_OWNER)
+	FHDR_OFF_FILEMODE  = int(C.FHDR_OFF_FILEMODE)
 )
 
 func PredSize() int {
@@ -685,13 +746,68 @@ func ReadFilenameAt(directPath string, rec int32) (string, bool) {
 }
 
 func SetFileheaderRecommend(fh *[128]byte, recommend int) {
-	C.c_set_fileheader_recommend(unsafe.Pointer(&fh[0]), C.int(recommend))
+	if fh != nil {
+		fh[FHDR_OFF_RECOMMEND] = byte(recommend)
+	}
+}
+
+func FileheaderFilemode(fh *[128]byte) int {
+	if fh == nil {
+		return 0
+	}
+	return int(binary.NativeEndian.Uint16(fh[FHDR_OFF_FILEMODE:]))
+}
+
+func MatchFileheaderMode(fh *[128]byte, requiredMode int32) bool {
+	if fh == nil {
+		return false
+	}
+	if fh[0] == 0 || fh[0] == '.' {
+		return false
+	}
+	if requiredMode != 0 && fh[FHDR_OFF_OWNER] == '-' {
+		return false
+	}
+	if requiredMode != 0 && (FileheaderFilemode(fh)&int(requiredMode)) != int(requiredMode) {
+		return false
+	}
+	return true
 }
 
 func FNToAIDU(fn string) uint64 {
 	cFn := C.CString(fn)
 	defer C.free(unsafe.Pointer(cFn))
 	return uint64(C.fn2aidu(cFn))
+}
+
+func ReadFileheaderAt(directPath string, rec int32) ([128]byte, bool) {
+	var buf [128]byte
+	cPath := C.CString(directPath)
+	defer C.free(unsafe.Pointer(cPath))
+	if C.c_read_fh_at(cPath, C.int(rec), unsafe.Pointer(&buf[0])) != 0 {
+		return buf, false
+	}
+	return buf, true
+}
+
+func LoadDirAIDs(directPath string) ([]uint64, error) {
+	st, err := os.Stat(directPath)
+	if err != nil {
+		return nil, err
+	}
+	fhSize := int64(FileheaderSize())
+	totalRecs := int(st.Size() / fhSize)
+	if totalRecs <= 0 {
+		return []uint64{}, nil
+	}
+	aids := make([]uint64, totalRecs)
+	cPath := C.CString(directPath)
+	defer C.free(unsafe.Pointer(cPath))
+	n := C.c_load_dir_aids(cPath, (*C.uint64_t)(unsafe.Pointer(&aids[0])), C.int(totalRecs))
+	if n < 0 {
+		return nil, fmt.Errorf("failed to load AIDs from %s", directPath)
+	}
+	return aids[:n], nil
 }
 
 func MakePredBytes(mode int, keyword string, recommend int, money int) []byte {
