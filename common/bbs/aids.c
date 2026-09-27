@@ -222,11 +222,24 @@ search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
     return search_dir_by_aidu_fd_bounded(fd, total, aidu, required_mode, out_fh, -1);
 }
 
+#define SEARCH_AID_MAGIC_V2  0x53414932  /* "SAI2" in little-endian */
+
+/* Legacy V1 header (without explicit source field) */
 typedef struct {
     uint32_t magic;
     int32_t  bid;
     uint64_t aidu;
     int32_t  required_mode;
+    char     direct[256];
+} PACKSTRUCT search_aid_req_hdr_v1_t;
+
+/* V2 header with explicit source */
+typedef struct {
+    uint32_t magic;
+    int32_t  bid;
+    uint64_t aidu;
+    int32_t  required_mode;
+    int32_t  source;
     char     direct[256];
 } PACKSTRUCT search_aid_req_hdr_t;
 
@@ -238,7 +251,7 @@ typedef struct {
 
 static int
 search_aidu_via_svc(const char *direct, int bid, aidu_t aidu,
-                    int required_mode, fileheader_t *out_fh)
+                    int required_mode, fileheader_t *out_fh, int source)
 {
     int sfd = search_svc_connect();
     if (sfd < 0)
@@ -246,10 +259,11 @@ search_aidu_via_svc(const char *direct, int bid, aidu_t aidu,
 
     search_aid_req_hdr_t req;
     memset(&req, 0, sizeof(req));
-    req.magic = SEARCH_AID_MAGIC;
+    req.magic = SEARCH_AID_MAGIC_V2;
     req.bid = bid;
     req.aidu = aidu;
     req.required_mode = required_mode;
+    req.source = source;
     strlcpy(req.direct, direct, sizeof(req.direct));
 
     if (search_svc_io(sfd, &req, sizeof(req), 1) != (int)sizeof(req)) {
@@ -271,7 +285,7 @@ search_aidu_via_svc(const char *direct, int bid, aidu_t aidu,
 
 int
 search_dir_by_aidu(const char *direct, aidu_t aidu,
-                   int required_mode, fileheader_t *out_fh)
+                   int required_mode, fileheader_t *out_fh, int source)
 {
     if (!direct || aidu_raw(aidu) == 0)
         return 0;
@@ -294,7 +308,7 @@ search_dir_by_aidu(const char *direct, aidu_t aidu,
     int total = (int)(st.st_size / sizeof(fileheader_t));
 
     if (aidu_idx(aidu) == 0) {
-        int svc_idx = search_aidu_via_svc(direct, 0, aidu, required_mode, out_fh);
+        int svc_idx = search_aidu_via_svc(direct, 0, aidu, required_mode, out_fh, source);
         if (svc_idx == 0) {
             close(fd);
             return 0;
@@ -328,6 +342,12 @@ search_dir_by_aidu(const char *direct, aidu_t aidu,
     return found;
 }
 
+int
+search_dir_by_aidu_legacy(const char *direct, aidu_t aidu,
+                          int required_mode, fileheader_t *out_fh)
+{
+    return search_dir_by_aidu(direct, aidu, required_mode, out_fh, SEARCH_SRC_UNKNOWN);
+}
 
 aidu_t
 fn2aidu(const char *fn)
@@ -422,10 +442,16 @@ aidu_t aidc2aidu(const char *aidc)
 }
 
 int
-search_aidu(char *bfile, aidu_t aidu)
+search_aidu(char *bfile, aidu_t aidu, int source)
 {
-    int idx = search_dir_by_aidu(bfile, aidu, 0, NULL);
+    int idx = search_dir_by_aidu(bfile, aidu, 0, NULL, source);
     return idx > 0 ? idx - 1 : -1;
+}
+
+int
+search_aidu_legacy(char *bfile, aidu_t aidu)
+{
+    return search_aidu(bfile, aidu, SEARCH_SRC_UNKNOWN);
 }
 
 #ifdef NEW_AIDS

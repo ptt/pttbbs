@@ -90,10 +90,13 @@ func handleTop(socketPath string, args []string) {
 	limit := 20
 	sortBy := "misses"
 	jsonOutput := false
+	showSources := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if arg == "-json" || arg == "--json" {
+		if arg == "-sources" || arg == "--sources" {
+			showSources = true
+		} else if arg == "-json" || arg == "--json" {
 			jsonOutput = true
 		} else if arg == "-n" && i+1 < len(args) {
 			i++
@@ -145,10 +148,22 @@ func handleTop(socketPath string, args []string) {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "RANK\tBOARD\tBID\tMISSES\tQUERIES\tAID_MISS\tAID_QUERIES\tSCAN_TIME\tBACKTRACK\tENTRIES\tINDICES\tAID_CACHE")
-	for i, item := range items {
-		scanTimeStr := formatScanDuration(item.ScanDurationMs)
-		btrackStr := "-"
+	if showSources {
+		fmt.Fprintln(w, "RANK\tBOARD\tBID\tHASH_Q\tHASH_MISS\tLUA_Q\tWEB_Q\tSEARCH_SR\tSEARCH_WEB\tSCAN_TIME")
+		for i, item := range items {
+			scanTimeStr := formatScanDuration(item.ScanDurationMs)
+			fmt.Fprintf(w, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\n",
+				i+1, item.Board, item.Bid,
+				item.AIDHashQueries, item.AIDHashMisses,
+				item.AIDLuaQueries, item.AIDWebQueries,
+				item.SearchSR, item.SearchWeb,
+				scanTimeStr)
+		}
+	} else {
+		fmt.Fprintln(w, "RANK\tBOARD\tBID\tMISSES\tQUERIES\tAID_MISS\tAID_QUERIES\tSCAN_TIME\tBACKTRACK\tENTRIES\tINDICES\tAID_CACHE")
+		for i, item := range items {
+			scanTimeStr := formatScanDuration(item.ScanDurationMs)
+			btrackStr := "-"
 		if item.MaxBacktrack >= 0 {
 			btrackStr = fmt.Sprintf("%d", item.MaxBacktrack)
 		}
@@ -159,8 +174,128 @@ func handleTop(socketPath string, args []string) {
 			scanTimeStr,
 			btrackStr,
 			item.CachedEntries, item.CachedIndices, item.CachedAID)
+		}
 	}
 	w.Flush()
+}
+
+func handleSources(socketPath string, args []string) {
+	limit := 50
+	jsonOutput := false
+	var filterBoard string
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "-json" || arg == "--json" {
+			jsonOutput = true
+		} else if arg == "-n" && i+1 < len(args) {
+			i++
+			if n, err := strconv.Atoi(args[i]); err == nil && n > 0 {
+				limit = n
+			}
+		} else if strings.HasPrefix(arg, "-") {
+			// ignore unknown flags
+		} else {
+			filterBoard = arg
+		}
+	}
+
+	statusReq := daemon.ControlRequest{Action: "status"}
+	statusResp, err := sendControlRequest(socketPath, statusReq, 5*time.Second)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching status: %v\n", err)
+		os.Exit(1)
+	}
+
+	topReq := daemon.ControlRequest{
+		Action: "top",
+		Limit:  limit,
+		SortBy: "queries",
+	}
+	topResp, err := sendControlRequest(socketPath, topReq, 10*time.Second)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching top boards: %v\n", err)
+		os.Exit(1)
+	}
+
+	if jsonOutput {
+		combined := map[string]interface{}{
+			"global": statusResp.Data,
+			"boards": topResp.Data,
+		}
+		out, _ := json.MarshalIndent(combined, "", "  ")
+		fmt.Println(string(out))
+		return
+	}
+
+	var stats daemon.ServiceStats
+	statusBytes, _ := json.Marshal(statusResp.Data)
+	_ = json.Unmarshal(statusBytes, &stats)
+
+	var boards []daemon.BoardStats
+	topBytes, _ := json.Marshal(topResp.Data)
+	_ = json.Unmarshal(topBytes, &boards)
+
+	fmt.Println("================================================================================")
+	fmt.Println("GLOBAL QUERY BREAKDOWN BY SOURCE")
+	fmt.Println("================================================================================")
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "SOURCE\tDESCRIPTION\tAID_QUERIES\tAID_MISSES\tSEARCH_QUERIES")
+
+	srcOrder := []int32{
+		daemon.SrcMbbsdHash,
+		daemon.SrcMbbsdSR,
+		daemon.SrcMbbsdLua,
+		daemon.SrcBoarddWeb,
+		daemon.SrcExternal,
+		daemon.SrcUnknown,
+	}
+	srcDesc := map[int32]string{
+		daemon.SrcMbbsdHash: "mbbsd # (manual/app/bot)",
+		daemon.SrcMbbsdSR:   "mbbsd select_read (title/author/etc)",
+		daemon.SrcMbbsdLua:  "bbslua banner template",
+		daemon.SrcBoarddWeb: "web / boardd",
+		daemon.SrcExternal:  "external / maintenance",
+		daemon.SrcUnknown:   "unknown / legacy untagged",
+	}
+
+	var totAIDQ, totAIDM, totSearchQ int64
+	for _, src := range srcOrder {
+		name := daemon.SourceName(src)
+		aidQ := stats.AIDSources[name]
+		aidM := stats.AIDMissSources[name]
+		searchQ := stats.SearchSources[name]
+		totAIDQ += aidQ
+		totAIDM += aidM
+		totSearchQ += searchQ
+		fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%d\n", name, srcDesc[src], aidQ, aidM, searchQ)
+	}
+	fmt.Fprintf(w, "----------------\t---------------------------\t-----------\t-----------\t--------------\n")
+	fmt.Fprintf(w, "TOTAL\t\t%d\t%d\t%d\n", totAIDQ, totAIDM, totSearchQ)
+	w.Flush()
+
+	fmt.Println("\n================================================================================")
+	if filterBoard != "" {
+		fmt.Printf("BOARD QUERY BREAKDOWN (%s)\n", filterBoard)
+	} else {
+		fmt.Println("BOARD QUERY BREAKDOWN")
+	}
+	fmt.Println("================================================================================")
+	w2 := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w2, "RANK\tBOARD\tBID\tHASH_Q\tHASH_MISS\tLUA_Q\tWEB_Q\tSEARCH_SR\tSEARCH_WEB")
+	rank := 1
+	for _, b := range boards {
+		if filterBoard != "" && !strings.EqualFold(b.Board, filterBoard) {
+			continue
+		}
+		fmt.Fprintf(w2, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+			rank, b.Board, b.Bid,
+			b.AIDHashQueries, b.AIDHashMisses,
+			b.AIDLuaQueries, b.AIDWebQueries,
+			b.SearchSR, b.SearchWeb)
+		rank++
+	}
+	w2.Flush()
 }
 
 func handleBacktrack(socketPath string, args []string) {
@@ -414,7 +549,8 @@ func printUsage() {
 	fmt.Println("Usage: search.ctl [-socket path] <action> [args...]")
 	fmt.Println("Actions:")
 	fmt.Println("  status                               Show cache statistics and uptime")
-	fmt.Println("  top [-n limit] [-by sort] [-json]    Show top boards by activity / cache usage")
+	fmt.Println("  sources [board] [-n limit] [-json]   Show query sources breakdown (mbbsd hash, sr, lua, web)")
+	fmt.Println("  top [-n limit] [-by sort] [-sources] Show top boards by activity / cache usage")
 	fmt.Println("                                       (sort: misses, queries, time, indices, entries, aid, backtrack)")
 	fmt.Println("  entries [board] [-n limit] [-json]   Show cached search predicate entries and matches")
 	fmt.Println("  backtrack [board] [-json]            Show cached max backtrack ranges for boards")
@@ -474,6 +610,9 @@ func main() {
 		if resp.Status != "ok" {
 			os.Exit(1)
 		}
+
+	case "sources":
+		handleSources(*socketPath, subArgs)
 
 	case "top":
 		handleTop(*socketPath, subArgs)

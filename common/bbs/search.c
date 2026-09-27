@@ -55,12 +55,26 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
     return 0;
 }
 
+#define SEARCH_SVC_MAGIC_V2  0x53524332  /* "SRC2" in little-endian */
+
+/* Legacy V1 header (without explicit source field) */
 typedef struct {
     uint32_t magic;
     int32_t  bid;
     int32_t  offset;
     int32_t  limit;
     int32_t  num_preds;
+    char     direct[256];
+} PACKSTRUCT search_svc_req_hdr_v1_t;
+
+/* V2 header with explicit source */
+typedef struct {
+    uint32_t magic;
+    int32_t  bid;
+    int32_t  offset;
+    int32_t  limit;
+    int32_t  num_preds;
+    int32_t  source;
     char     direct[256];
 } PACKSTRUCT search_svc_req_hdr_t;
 
@@ -270,7 +284,8 @@ static int
 search_predicates_via_svc(const char *direct, int bid,
                           const fileheader_predicate_t *preds, int num_preds,
                           int offset, int limit,
-                          int32_t *out_indices, int *out_total)
+                          int32_t *out_indices, int *out_total,
+                          int source)
 {
     if (!direct || num_preds <= 0 || num_preds > MAX_SEARCH_PREDICATES)
         return -1;
@@ -281,11 +296,12 @@ search_predicates_via_svc(const char *direct, int bid,
 
     search_svc_req_hdr_t req;
     memset(&req, 0, sizeof(req));
-    req.magic = SEARCH_SVC_MAGIC;
+    req.magic = SEARCH_SVC_MAGIC_V2;
     req.bid = bid;
     req.offset = offset;
     req.limit = out_indices ? limit : 0;
     req.num_preds = num_preds;
+    req.source = source;
     strlcpy(req.direct, direct, sizeof(req.direct));
 
     size_t preds_bytes = (size_t)num_preds * sizeof(fileheader_predicate_t);
@@ -333,14 +349,26 @@ int
 search_predicates_window(const char *direct, int bid,
                          const fileheader_predicate_t *preds, int num_preds,
                          int offset, int limit,
-                         int32_t *out_indices, int *out_total)
+                         int32_t *out_indices, int *out_total,
+                         int source)
 {
     int ret = search_predicates_via_svc(direct, bid, preds, num_preds,
-                                        offset, limit, out_indices, out_total);
+                                        offset, limit, out_indices, out_total, source);
     if (ret >= 0)
         return ret;
     return search_predicates_local(direct, preds, num_preds,
                                    offset, limit, out_indices, out_total);
+}
+
+int
+search_predicates_window_legacy(const char *direct, int bid,
+                                const fileheader_predicate_t *preds, int num_preds,
+                                int offset, int limit,
+                                int32_t *out_indices, int *out_total)
+{
+    return search_predicates_window(direct, bid, preds, num_preds,
+                                    offset, limit, out_indices, out_total,
+                                    SEARCH_SRC_UNKNOWN);
 }
 
 static int
