@@ -190,9 +190,6 @@ typedef struct fileheader_predicate_t {
     int32_t money;
 } fileheader_predicate_t;
 
-void select_read_name(char *buf, size_t size, const char *base,
-                      const fileheader_predicate_t *pred);
-
 int match_fileheader_predicate(const fileheader_t *fh, void *arg);
 
 int search_svc_connect(void);
@@ -246,12 +243,6 @@ int search_predicates_window_legacy(const char *direct, int bid,
                                     int offset, int limit,
                                     int32_t *out_indices, int *out_total);
 
-int select_read_build(const char *src_direct, const char *dst_direct,
-                      int src_direct_has_reference, time4_t resume_from,
-                      int dst_count,
-                      int (*match)(const fileheader_t *fh, void *arg),
-                      void *arg);
-
 /* utmp snapshot */
 enum {
     UTMP_SORT_NONE = 0,
@@ -262,9 +253,6 @@ int *get_utmp_snapshot(int *out_count);
 int refresh_utmp_snapshot(int *slots);
 void sort_utmp_snapshot(int *slots, int count, int sort_type);
 void free_utmp_snapshot(int *slots);
-
-int select_read_should_build(const char *dst_direct, int bid,
-                             time4_t *resume_from, int *count);
 
 /* message.c */
 int write_message(int uslot, pid_t to_pid, pid_t from_pid, const char *from_id,

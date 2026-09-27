@@ -73,10 +73,6 @@ std::optional<bid_t> Resolve(const std::string &name);
 // Resolve the children of the board. It may modify SHM.
 std::vector<bid_t> Children(bid_t bid);
 
-// Search by predicate.
-std::optional<std::string> Search(bid_t bid, const std::string &base_name,
-                                  const fileheader_predicate_t &pred);
-
 }  // namespace boards
 
 #endif
