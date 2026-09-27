@@ -42,6 +42,7 @@ const (
 	DefaultAIDTableMinReqs   int64         = 100   // Min cumulative queries (search + aid) before admitting board to AID table cache
 	DefaultAIDTableTTL       time.Duration = 1 * time.Hour
 	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
+	DefaultWebSearchMaxDepth int           = 100000 // Max records to scan backwards for web tail search (0 = unlimited)
 	DefaultCacheTTL                        = 1 * time.Hour
 	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
 	aiduTypeG            uint64 = 1 << 44
@@ -539,6 +540,7 @@ type Service struct {
 	aidTableTTL       time.Duration
 	aidTableEvictLead int64
 	aidTableEvictions atomic.Int64
+	webSearchMaxDepth int
 
 	cpuProfileMu sync.Mutex
 
@@ -612,6 +614,7 @@ func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 		aidTableMinReqs:   DefaultAIDTableMinReqs,
 		aidTableTTL:       DefaultAIDTableTTL,
 		aidTableEvictLead: DefaultAIDTableEvictLead,
+		webSearchMaxDepth: DefaultWebSearchMaxDepth,
 		stopChan:          make(chan struct{}),
 	}
 }
@@ -663,6 +666,14 @@ func (s *Service) SetAIDTablePolicy(minReqs int64, ttl time.Duration, evictLead 
 		s.aidTableEvictLead = evictLead
 	}
 	s.aidTableMu.Unlock()
+}
+
+func (s *Service) SetWebSearchPolicy(maxDepth int) {
+	s.cacheMu.Lock()
+	if maxDepth >= 0 {
+		s.webSearchMaxDepth = maxDepth
+	}
+	s.cacheMu.Unlock()
 }
 
 func (s *Service) boardTotalQueries(act *boardActivity) int64 {
@@ -2040,38 +2051,56 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, cli
 		return
 	}
 
-	indices, err := s.QueryIndicesWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
-	if err != nil {
-		if s.Verbose() > 0 {
-			peerPrefix := ""
-			if peerInfo != "" {
-				peerPrefix = peerInfo + " "
-			}
-			log.Printf("[search.svc] QueryIndices error on %s%s: %v", peerPrefix, resolvedDirect, err)
-		}
-		writeBinaryError(w, -4)
-		return
-	}
-
-	total := int32(len(indices))
-	if offset < 0 {
-		offset += total
-	}
-	if offset < 0 {
-		offset = 0
-	}
-	if limit < 0 {
-		limit = 0
-	}
-
 	var window []int32
-	if offset < total && limit > 0 {
-		end64 := int64(offset) + int64(limit)
-		if end64 > int64(total) {
-			end64 = int64(total)
+	var total int32
+	var err error
+
+	if source == SrcBoarddWeb && offset < 0 && limit > 0 {
+		window, total, err = s.QueryWebSearchTail(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds, offset, limit)
+		if err != nil {
+			if s.Verbose() > 0 {
+				peerPrefix := ""
+				if peerInfo != "" {
+					peerPrefix = peerInfo + " "
+				}
+				log.Printf("[search.svc] QueryWebSearchTail error on %s%s: %v", peerPrefix, resolvedDirect, err)
+			}
+			writeBinaryError(w, -4)
+			return
 		}
-		end := int32(end64)
-		window = indices[offset:end]
+	} else {
+		indices, err := s.QueryIndicesWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
+		if err != nil {
+			if s.Verbose() > 0 {
+				peerPrefix := ""
+				if peerInfo != "" {
+					peerPrefix = peerInfo + " "
+				}
+				log.Printf("[search.svc] QueryIndices error on %s%s: %v", peerPrefix, resolvedDirect, err)
+			}
+			writeBinaryError(w, -4)
+			return
+		}
+
+		total = int32(len(indices))
+		if offset < 0 {
+			offset += total
+		}
+		if offset < 0 {
+			offset = 0
+		}
+		if limit < 0 {
+			limit = 0
+		}
+
+		if offset < total && limit > 0 {
+			end64 := int64(offset) + int64(limit)
+			if end64 > int64(total) {
+				end64 = int64(total)
+			}
+			end := int32(end64)
+			window = indices[offset:end]
+		}
 	}
 
 	resp := binaryRespHeader{
@@ -2676,4 +2705,156 @@ func (s *Service) computeAndCache(
 			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, actualTotal, len(indices), dur)
 	}
 	return indices, nil
+}
+
+func (s *Service) QueryWebSearchTail(
+	peerInfo, clientComm string, source int32,
+	resolvedDirect string, bid int32,
+	predsRaw []byte, numPreds int,
+	offset, limit int32,
+) ([]int32, int32, error) {
+	start := time.Now()
+	act := s.getBoardActivity(resolvedDirect, bid)
+	act.searchQueries.Add(1)
+	act.searchBySrc[source].Add(1)
+	s.searchBySrc[source].Add(1)
+
+	srcTag := SourceTag(source)
+	peerPrefix := ""
+	if peerInfo != "" {
+		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
+	} else {
+		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
+	}
+
+	st, err := os.Stat(resolvedDirect)
+	if err != nil {
+		return nil, 0, err
+	}
+	fhSize := int64(FileheaderSize())
+	curTotalRecs := int32(st.Size() / fhSize)
+	curMtime := st.ModTime()
+	curInode := fileInode(st)
+	curSRExpire := GetBoardSRExpire(bid)
+
+	key := cacheKey{
+		direct:   resolvedDirect,
+		bid:      bid,
+		predsHex: string(predsRaw),
+	}
+
+	requireSRExpire := predsRequireSRExpire(predsRaw, numPreds)
+
+	// Step 1: Check fast-path cache in s.entries (from prior full scan)
+	s.cacheMu.Lock()
+	if entry, ok := s.entries[key]; ok {
+		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) &&
+			entry.scannedRecs == curTotalRecs {
+			valid := entry.dirMtime.Equal(curMtime)
+			if !valid && !requireSRExpire {
+				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
+					entry.dirMtime = curMtime
+					valid = true
+				}
+			}
+			if valid {
+				s.lruList.MoveToFront(entry.elem)
+				indices := entry.indices
+				s.cacheMu.Unlock()
+				s.hits.Add(1)
+				act.searchHits.Add(1)
+
+				total := int32(len(indices))
+				wOffset := offset + total
+				if wOffset < 0 {
+					wOffset = 0
+				}
+				var window []int32
+				if wOffset < total && limit > 0 {
+					end := wOffset + limit
+					if end > total {
+						end = total
+					}
+					window = indices[wOffset:end]
+				}
+				if s.Verbose() >= 2 {
+					log.Printf("[search.svc] [HIT] QueryWebSearchTail: %sboard=%s bid=%d preds=[%s] matches=%d",
+						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), total)
+				}
+				return window, total, nil
+			}
+		}
+	}
+	s.cacheMu.Unlock()
+
+	// Step 2: Cache miss -> Perform fast Reverse Tail Scan!
+	targetMatches := int(-offset)
+	if targetMatches < int(limit) {
+		targetMatches = int(limit)
+	}
+
+	maxDepth := s.webSearchMaxDepth
+	revMatches, totalMatches, stoppedEarly, err := ScanDirReverse(resolvedDirect, predsRaw, numPreds, targetMatches, maxDepth)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dur := time.Since(start)
+	act.scanDurationNs.Add(dur.Nanoseconds())
+	s.misses.Add(1)
+	s.searchMissBySrc[source].Add(1)
+	act.searchMisses.Add(1)
+	act.searchMissBySrc[source].Add(1)
+
+	var window []int32
+	if !stoppedEarly {
+		// Full scan completed down to record 1: revMatches contains ALL matches in the board.
+		// Reverse revMatches to chronological order (oldest to newest) and apply standard offset window.
+		chronMatches := make([]int32, len(revMatches))
+		for i := 0; i < len(revMatches); i++ {
+			chronMatches[i] = revMatches[len(revMatches)-1-i]
+		}
+		wOffset := offset + totalMatches
+		if wOffset < 0 {
+			wOffset = 0
+		}
+		if wOffset < totalMatches && limit > 0 {
+			end := wOffset + limit
+			if end > totalMatches {
+				end = totalMatches
+			}
+			if end > int32(len(chronMatches)) {
+				end = int32(len(chronMatches))
+			}
+			if wOffset < end {
+				window = chronMatches[wOffset:end]
+			}
+		}
+	} else {
+		// Stopped early: revMatches contains targetMatches newest matches in reverse chronological order.
+		// Slice requested page from revMatches:
+		startIdx := targetMatches - int(limit)
+		endIdx := targetMatches
+		if startIdx < 0 {
+			startIdx = 0
+		}
+		if startIdx < len(revMatches) {
+			if endIdx > len(revMatches) {
+				endIdx = len(revMatches)
+			}
+			pageSlice := revMatches[startIdx:endIdx]
+			// Reverse pageSlice into chronological order (oldest to newest) as expected by boardd/pttweb
+			window = make([]int32, len(pageSlice))
+			for i := 0; i < len(pageSlice); i++ {
+				window[i] = pageSlice[len(pageSlice)-1-i]
+			}
+		}
+	}
+
+	if s.Verbose() >= 1 {
+		log.Printf("[search.svc] [WEB-TAIL] QueryWebSearchTail: %sboard=%s bid=%d preds=[%s] offset=%d limit=%d matches=%d total=%d stoppedEarly=%v dur=%v",
+			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), offset, limit, len(window), totalMatches, stoppedEarly, dur)
+	}
+
+	return window, totalMatches, nil
 }

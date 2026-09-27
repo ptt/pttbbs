@@ -1018,3 +1018,97 @@ func TestQuerySearchNegativeOffset(t *testing.T) {
 	}
 }
 
+func TestQueryWebSearchTailEarlyExit(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "L", "LargeBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir boardDir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "L", "LargeBoard", ".DIR")
+
+	// Create 2500 posts: even records have keyword "TargetPost"
+	for i := 1; i <= 2500; i++ {
+		fn := fmt.Sprintf("M.%010d.A.%03d", 1700000000+i, i%1000)
+		title := fmt.Sprintf("normal post %d", i)
+		if i%2 == 0 {
+			title = fmt.Sprintf("TargetPost number %d", i)
+		}
+		if err := AppendTestFileheader(dirPath, fn, "tester", title, 0, 10, 100); err != nil {
+			t.Fatalf("append rec %d: %v", i, err)
+		}
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() {
+		_ = svc.Start()
+	}()
+	defer svc.Stop()
+
+	for i := 0; i < 50; i++ {
+		if IsSocketOccupied(socketPath) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	predBytes := MakePredBytes(RS_KEYWORD, "TargetPost", 0, 0)
+
+	// Page 1: offset = -20, limit = 20
+	// 20 newest matching posts: 2500, 2498, ..., 2462 (in reverse chronological order)
+	// QueryWebSearchTail returns them in chronological order: 2462, 2464, ..., 2500
+	indices, total := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -20, 20, SrcBoarddWeb)
+	if total != 21 {
+		t.Fatalf("expected total 21 (stopped_early targetMatches+1), got %d", total)
+	}
+	if len(indices) != 20 {
+		t.Fatalf("expected 20 items, got %d", len(indices))
+	}
+	for j := 0; j < 20; j++ {
+		expectedRecno := int32(2462 + j*2)
+		if indices[j] != expectedRecno {
+			t.Errorf("page 1 item %d: expected recno %d, got %d", j, expectedRecno, indices[j])
+		}
+	}
+
+	// Page 2: offset = -40, limit = 20
+	// Matches 21 to 40 from the end: 2460 down to 2422
+	// In chronological order: 2422, 2424, ..., 2460
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -40, 20, SrcBoarddWeb)
+	if total != 41 {
+		t.Fatalf("expected total 41, got %d", total)
+	}
+	if len(indices) != 20 {
+		t.Fatalf("expected 20 items, got %d", len(indices))
+	}
+	for j := 0; j < 20; j++ {
+		expectedRecno := int32(2422 + j*2)
+		if indices[j] != expectedRecno {
+			t.Errorf("page 2 item %d: expected recno %d, got %d", j, expectedRecno, indices[j])
+		}
+	}
+
+	// Non-existent keyword search on web: should return 0 items and total 0
+	nonePred := MakePredBytes(RS_KEYWORD, "NonExistentTermXYZ", 0, 0)
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{nonePred}, -20, 20, SrcBoarddWeb)
+	if total != 0 {
+		t.Fatalf("expected total 0 for non-existent keyword, got %d", total)
+	}
+	if len(indices) != 0 {
+		t.Fatalf("expected 0 items, got %v", indices)
+	}
+
+	// Verify that web searches did not pollute s.entries cache!
+	statusResp := sendControlClient(t, socketPath, ControlRequest{Action: "status"})
+	statsBytes, _ := json.Marshal(statusResp.Data)
+	var stats ServiceStats
+	if err := json.Unmarshal(statsBytes, &stats); err != nil {
+		t.Fatalf("unmarshal stats: %v", err)
+	}
+	if stats.CachedEntries != 0 {
+		t.Errorf("expected 0 cached entries from web tail searches, got %d", stats.CachedEntries)
+	}
+}
+
+
