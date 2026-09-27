@@ -27,8 +27,10 @@ import (
 )
 
 const (
-	SearchSvcMagic       uint32 = 0x53524348 // "SRCH"
-	SearchAIDMagic       uint32 = 0x53414944 // "SAID"
+	SearchSvcMagic       uint32 = 0x53524348 // "SRCH" (legacy V1)
+	SearchSvcMagicV2     uint32 = 0x53524332 // "SRC2" (V2 with explicit source)
+	SearchAIDMagic       uint32 = 0x53414944 // "SAID" (legacy V1)
+	SearchAIDMagicV2     uint32 = 0x53414932 // "SAI2" (V2 with explicit source)
 	SearchInvalMagic     uint32 = 0x53494E56 // "SINV"
 	SearchHintMagic      uint32 = 0x53484E54 // "SHNT"
 	MaxSearchPredicates  int32  = 8
@@ -46,6 +48,49 @@ const (
 	HintTypeComment int32 = 2
 	HintTypeDelete  int32 = 3
 )
+
+const (
+	SrcUnknown   int32 = 0
+	SrcMbbsdHash int32 = 1 // mbbsd '#' AID search (user / mobile app / bot)
+	SrcMbbsdSR   int32 = 2 // mbbsd select_read (title, author, mark, push search)
+	SrcMbbsdLua  int32 = 3 // mbbsd bbslua banner / dynamic template (setaidfile)
+	SrcBoarddWeb int32 = 4 // web / boardd query
+	SrcExternal  int32 = 5 // external tools / scripts
+)
+
+func SourceName(src int32) string {
+	switch src {
+	case SrcMbbsdHash:
+		return "mbbsd_hash"
+	case SrcMbbsdSR:
+		return "mbbsd_sr"
+	case SrcMbbsdLua:
+		return "mbbsd_lua"
+	case SrcBoarddWeb:
+		return "web_boardd"
+	case SrcExternal:
+		return "external"
+	default:
+		return "unknown"
+	}
+}
+
+func SourceTag(src int32) string {
+	switch src {
+	case SrcMbbsdHash:
+		return "HASH"
+	case SrcMbbsdSR:
+		return "SR"
+	case SrcMbbsdLua:
+		return "LUA"
+	case SrcBoarddWeb:
+		return "WEB"
+	case SrcExternal:
+		return "EXT"
+	default:
+		return "UNK"
+	}
+}
 
 type ControlRequest struct {
 	Action  string `json:"action"`
@@ -90,6 +135,16 @@ type BoardStats struct {
 	ScanDurationMs  float64 `json:"scan_duration_ms"`
 	MaxBacktrack    int32   `json:"max_backtrack"`
 	MaxTimeDiffSecs int64   `json:"max_time_diff_secs"`
+
+	AIDHashQueries int64            `json:"aid_hash_queries"`
+	AIDHashMisses  int64            `json:"aid_hash_misses"`
+	AIDLuaQueries  int64            `json:"aid_lua_queries"`
+	AIDWebQueries  int64            `json:"aid_web_queries"`
+	SearchSR       int64            `json:"search_sr_queries"`
+	SearchWeb      int64            `json:"search_web_queries"`
+	AIDSources     map[string]int64 `json:"aid_sources,omitempty"`
+	AIDMissSources map[string]int64 `json:"aid_miss_sources,omitempty"`
+	SearchSources  map[string]int64 `json:"search_sources,omitempty"`
 }
 
 type BoardBacktrackInfo struct {
@@ -112,25 +167,28 @@ type PprofResult struct {
 }
 
 type ServiceStats struct {
-	UptimeSeconds      int64 `json:"uptime_seconds"`
-	CachedEntries      int   `json:"cached_entries"`
-	CachedIndices      int64 `json:"cached_indices"`
-	MaxEntries         int   `json:"max_entries"`
-	MaxIndices         int64 `json:"max_indices"`
-	CachedAIDEntries   int   `json:"cached_aid_entries"`
-	MaxAIDEntries      int   `json:"max_aid_entries"`
-	Hits               int64 `json:"hits"`
-	Misses             int64 `json:"misses"`
-	IncrementalUpdates int64 `json:"incremental_updates"`
-	ChainedHits        int64 `json:"chained_hits"`
-	Evictions          int64 `json:"evictions"`
-	Invalidations      int64 `json:"invalidations"`
-	AIDHits            int64 `json:"aid_hits"`
-	AIDNegativeHits    int64 `json:"aid_negative_hits"`
-	AIDMisses          int64 `json:"aid_misses"`
-	AIDEvictions       int64 `json:"aid_evictions"`
-	AIDTableHits       int64 `json:"aid_table_hits,omitempty"`
-	CachedAIDTables    int   `json:"cached_aid_tables,omitempty"`
+	UptimeSeconds      int64            `json:"uptime_seconds"`
+	CachedEntries      int              `json:"cached_entries"`
+	CachedIndices      int64            `json:"cached_indices"`
+	MaxEntries         int              `json:"max_entries"`
+	MaxIndices         int64            `json:"max_indices"`
+	CachedAIDEntries   int              `json:"cached_aid_entries"`
+	MaxAIDEntries      int              `json:"max_aid_entries"`
+	Hits               int64            `json:"hits"`
+	Misses             int64            `json:"misses"`
+	IncrementalUpdates int64            `json:"incremental_updates"`
+	ChainedHits        int64            `json:"chained_hits"`
+	Evictions          int64            `json:"evictions"`
+	Invalidations      int64            `json:"invalidations"`
+	AIDHits            int64            `json:"aid_hits"`
+	AIDNegativeHits    int64            `json:"aid_negative_hits"`
+	AIDMisses          int64            `json:"aid_misses"`
+	AIDEvictions       int64            `json:"aid_evictions"`
+	AIDTableHits       int64            `json:"aid_table_hits,omitempty"`
+	CachedAIDTables    int              `json:"cached_aid_tables,omitempty"`
+	AIDSources         map[string]int64 `json:"aid_sources,omitempty"`
+	AIDMissSources     map[string]int64 `json:"aid_miss_sources,omitempty"`
+	SearchSources      map[string]int64 `json:"search_sources,omitempty"`
 }
 
 type cacheKey struct {
@@ -427,6 +485,11 @@ type boardActivity struct {
 	aidHits        atomic.Int64
 	aidMisses      atomic.Int64
 	scanDurationNs atomic.Int64
+
+	aidBySrc        [6]atomic.Int64
+	aidMissBySrc    [6]atomic.Int64
+	searchBySrc     [6]atomic.Int64
+	searchMissBySrc [6]atomic.Int64
 }
 
 type Service struct {
@@ -480,6 +543,10 @@ type Service struct {
 	aidMisses          atomic.Int64
 	aidEvictions       atomic.Int64
 	aidTableHits       atomic.Int64
+	aidBySrc           [6]atomic.Int64
+	aidMissBySrc       [6]atomic.Int64
+	searchBySrc        [6]atomic.Int64
+	searchMissBySrc    [6]atomic.Int64
 
 	stopChan chan struct{}
 	wg       sync.WaitGroup
@@ -620,14 +687,14 @@ func (s *Service) Stop() {
 	s.wg.Wait()
 }
 
-func (s *Service) getPeerInfo(conn net.Conn) string {
+func (s *Service) getPeerInfo(conn net.Conn) (string, string) {
 	unixConn, ok := conn.(*net.UnixConn)
 	if !ok {
-		return ""
+		return "", ""
 	}
 	raw, err := unixConn.SyscallConn()
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	var ucred *syscall.Ucred
 	var sysErr error
@@ -635,26 +702,30 @@ func (s *Service) getPeerInfo(conn net.Conn) string {
 		ucred, sysErr = syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
 	})
 	if sysErr != nil || ucred == nil || ucred.Pid <= 0 {
-		return ""
+		return "", ""
 	}
 	pid := ucred.Pid
-	if userid := UserIDByPID(pid); userid != "" {
-		return fmt.Sprintf("user=%s(pid=%d)", userid, pid)
-	}
+	var clientComm string
 	if comm, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid)); err == nil {
-		name := strings.TrimSpace(string(comm))
-		if name != "" {
-			return fmt.Sprintf("pid=%d(%s)", pid, name)
-		}
+		clientComm = strings.TrimSpace(string(comm))
 	}
-	return fmt.Sprintf("pid=%d", pid)
+	if userid := UserIDByPID(pid); userid != "" {
+		if clientComm != "" {
+			return fmt.Sprintf("user=%s(%s,pid=%d)", userid, clientComm, pid), clientComm
+		}
+		return fmt.Sprintf("user=%s(pid=%d)", userid, pid), clientComm
+	}
+	if clientComm != "" {
+		return fmt.Sprintf("pid=%d(%s)", pid, clientComm), clientComm
+	}
+	return fmt.Sprintf("pid=%d", pid), clientComm
 }
 
 func (s *Service) handleConn(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-	peerInfo := s.getPeerInfo(conn)
+	peerInfo, clientComm := s.getPeerInfo(conn)
 
 	br := bufio.NewReader(conn)
 	first, err := br.Peek(1)
@@ -665,7 +736,7 @@ func (s *Service) handleConn(conn net.Conn) {
 		s.handleControlConn(br, conn, conn)
 		return
 	}
-	s.handleBinaryConn(br, conn, peerInfo)
+	s.handleBinaryConn(br, conn, peerInfo, clientComm)
 }
 
 func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
@@ -696,6 +767,16 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 		aidTablesCount := len(s.aidTables)
 		s.aidTableMu.RUnlock()
 
+		aidSources := make(map[string]int64)
+		aidMissSources := make(map[string]int64)
+		searchSources := make(map[string]int64)
+		for src := int32(0); src < 6; src++ {
+			name := SourceName(src)
+			aidSources[name] = s.aidBySrc[src].Load()
+			aidMissSources[name] = s.aidMissBySrc[src].Load()
+			searchSources[name] = s.searchBySrc[src].Load()
+		}
+
 		stats := ServiceStats{
 			UptimeSeconds:      int64(time.Since(s.startTime).Seconds()),
 			CachedEntries:      entriesCount,
@@ -716,6 +797,9 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 			AIDMisses:          s.aidMisses.Load(),
 			AIDEvictions:       s.aidEvictions.Load(),
 			AIDTableHits:       s.aidTableHits.Load(),
+			AIDSources:         aidSources,
+			AIDMissSources:     aidMissSources,
+			SearchSources:      searchSources,
 		}
 		_ = json.NewEncoder(w).Encode(ControlResponse{
 			Status:  "ok",
@@ -1059,6 +1143,20 @@ func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
 	s.boardMu.RLock()
 	for direct, act := range s.boards {
 		bid := act.bid.Load()
+		aidSrcs := make(map[string]int64)
+		aidMissSrcs := make(map[string]int64)
+		searchSrcs := make(map[string]int64)
+		for src := int32(0); src < 6; src++ {
+			if v := act.aidBySrc[src].Load(); v > 0 {
+				aidSrcs[SourceName(src)] = v
+			}
+			if v := act.aidMissBySrc[src].Load(); v > 0 {
+				aidMissSrcs[SourceName(src)] = v
+			}
+			if v := act.searchBySrc[src].Load(); v > 0 {
+				searchSrcs[SourceName(src)] = v
+			}
+		}
 		statsMap[direct] = &BoardStats{
 			Direct:         direct,
 			Board:          s.ResolveBoardName(direct, bid),
@@ -1070,6 +1168,16 @@ func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
 			AIDHits:        act.aidHits.Load(),
 			AIDMisses:      act.aidMisses.Load(),
 			ScanDurationMs: float64(act.scanDurationNs.Load()) / 1e6,
+
+			AIDHashQueries: act.aidBySrc[SrcMbbsdHash].Load(),
+			AIDHashMisses:  act.aidMissBySrc[SrcMbbsdHash].Load(),
+			AIDLuaQueries:  act.aidBySrc[SrcMbbsdLua].Load(),
+			AIDWebQueries:  act.aidBySrc[SrcBoarddWeb].Load(),
+			SearchSR:       act.searchBySrc[SrcMbbsdSR].Load(),
+			SearchWeb:      act.searchBySrc[SrcBoarddWeb].Load(),
+			AIDSources:     aidSrcs,
+			AIDMissSources: aidMissSrcs,
+			SearchSources:  searchSrcs,
 		}
 	}
 	s.boardMu.RUnlock()
@@ -1452,7 +1560,8 @@ func (s *Service) putAIDEntryLocked(e *aidCacheEntry) {
 	}
 }
 
-type binaryReqHeader struct {
+// Legacy V1 request headers (without explicit source field)
+type binaryReqHeaderV1 struct {
 	Magic    uint32
 	Bid      int32
 	Offset   int32
@@ -1461,10 +1570,23 @@ type binaryReqHeader struct {
 	Direct   [256]byte
 }
 
-type binaryRespHeader struct {
-	Status int32
-	Total  int32
-	Count  int32
+type binaryAIDReqHeaderV1 struct {
+	Magic        uint32
+	Bid          int32
+	AIDU         uint64
+	RequiredMode int32
+	Direct       [256]byte
+}
+
+// V2 request headers with explicit source field
+type binaryReqHeader struct {
+	Magic    uint32
+	Bid      int32
+	Offset   int32
+	Limit    int32
+	NumPreds int32
+	Source   int32
+	Direct   [256]byte
 }
 
 type binaryAIDReqHeader struct {
@@ -1472,7 +1594,14 @@ type binaryAIDReqHeader struct {
 	Bid          int32
 	AIDU         uint64
 	RequiredMode int32
+	Source       int32
 	Direct       [256]byte
+}
+
+type binaryRespHeader struct {
+	Status int32
+	Total  int32
+	Count  int32
 }
 
 type binaryAIDResp struct {
@@ -1507,7 +1636,7 @@ func writeBinaryError(w io.Writer, status int32) {
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo string) {
+func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo, clientComm string) {
 	magicBytes, err := r.Peek(4)
 	if err != nil {
 		return
@@ -1515,9 +1644,13 @@ func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo string
 	magic := binary.LittleEndian.Uint32(magicBytes)
 	switch magic {
 	case SearchSvcMagic:
-		s.handleBinarySearchConn(r, w, peerInfo)
+		s.handleBinarySearchConn(r, w, peerInfo, clientComm, false)
+	case SearchSvcMagicV2:
+		s.handleBinarySearchConn(r, w, peerInfo, clientComm, true)
 	case SearchAIDMagic:
-		s.handleBinaryAIDConn(r, w, peerInfo)
+		s.handleBinaryAIDConn(r, w, peerInfo, clientComm, false)
+	case SearchAIDMagicV2:
+		s.handleBinaryAIDConn(r, w, peerInfo, clientComm, true)
 	case SearchInvalMagic:
 		s.handleBinaryInvalConn(r, w, peerInfo)
 	case SearchHintMagic:
@@ -1665,19 +1798,51 @@ func (s *Service) resolveDirectPath(raw [256]byte) string {
 	return directStr
 }
 
-func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo string) {
-	var req binaryAIDReqHeader
-	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
-		return
+func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo, clientComm string, isV2 bool) {
+	var bid int32
+	var aidu uint64
+	var requiredMode int32
+	var source int32
+	var directBytes [256]byte
+
+	if isV2 {
+		var req binaryAIDReqHeader
+		if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
+			return
+		}
+		bid = req.Bid
+		aidu = req.AIDU
+		requiredMode = req.RequiredMode
+		source = req.Source
+		directBytes = req.Direct
+	} else {
+		var req binaryAIDReqHeaderV1
+		if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
+			return
+		}
+		bid = req.Bid
+		aidu = req.AIDU
+		requiredMode = req.RequiredMode
+		source = SrcUnknown
+		directBytes = req.Direct
 	}
-	resolvedDirect := s.resolveDirectPath(req.Direct)
+
+	if source == SrcUnknown {
+		if clientComm == "boardd" {
+			source = SrcBoarddWeb
+		} else if clientComm == "mbbsd" {
+			source = SrcMbbsdHash // legacy mbbsd AID query was always from '#'
+		}
+	}
+
+	resolvedDirect := s.resolveDirectPath(directBytes)
 	if resolvedDirect == "" {
 		resp := binaryAIDResp{Status: -1}
 		_ = binary.Write(w, binary.LittleEndian, &resp)
 		return
 	}
 
-	foundIdx, fhBytes, err := s.QueryAIDWithPeer(peerInfo, resolvedDirect, req.Bid, req.AIDU, req.RequiredMode)
+	foundIdx, fhBytes, err := s.QueryAIDWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, aidu, requiredMode)
 	if err != nil {
 		resp := binaryAIDResp{Status: -2}
 		_ = binary.Write(w, binary.LittleEndian, &resp)
@@ -1692,32 +1857,67 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo string)
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo string) {
-	var hdr binaryReqHeader
-	if err := binary.Read(r, binary.LittleEndian, &hdr); err != nil {
-		return
+func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, clientComm string, isV2 bool) {
+	var bid int32
+	var offset int32
+	var limit int32
+	var numPreds int
+	var source int32
+	var directBytes [256]byte
+
+	if isV2 {
+		var hdr binaryReqHeader
+		if err := binary.Read(r, binary.LittleEndian, &hdr); err != nil {
+			return
+		}
+		bid = hdr.Bid
+		offset = hdr.Offset
+		limit = hdr.Limit
+		numPreds = int(hdr.NumPreds)
+		source = hdr.Source
+		directBytes = hdr.Direct
+	} else {
+		var hdr binaryReqHeaderV1
+		if err := binary.Read(r, binary.LittleEndian, &hdr); err != nil {
+			return
+		}
+		bid = hdr.Bid
+		offset = hdr.Offset
+		limit = hdr.Limit
+		numPreds = int(hdr.NumPreds)
+		source = SrcUnknown
+		directBytes = hdr.Direct
 	}
-	if hdr.Magic != SearchSvcMagic || hdr.NumPreds <= 0 || hdr.NumPreds > MaxSearchPredicates {
+
+	if source == SrcUnknown {
+		if clientComm == "boardd" {
+			source = SrcBoarddWeb
+		} else if clientComm == "mbbsd" {
+			source = SrcMbbsdSR // legacy mbbsd predicate search was select_read (SR)
+		}
+	}
+
+	if numPreds <= 0 || numPreds > int(MaxSearchPredicates) {
 		writeBinaryError(w, -1)
 		return
 	}
 
 	predSize := PredSize()
-	predsBytesLen := int(hdr.NumPreds) * predSize
+	predsBytesLen := numPreds * predSize
 	predsRaw := make([]byte, predsBytesLen)
 	if _, err := io.ReadFull(r, predsRaw); err != nil {
 		writeBinaryError(w, -2)
 		return
 	}
-	SanitizePreds(predsRaw, int(hdr.NumPreds))
+	SanitizePreds(predsRaw, numPreds)
 
-	resolvedDirect := s.resolveDirectPath(hdr.Direct)
+	resolvedDirect := s.resolveDirectPath(directBytes)
 	if resolvedDirect == "" {
 		writeBinaryError(w, -3)
 		return
 	}
 
-	indices, err := s.QueryIndicesWithPeer(peerInfo, resolvedDirect, hdr.Bid, predsRaw, int(hdr.NumPreds))
+	indices, err := s.QueryIndicesWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
 	if err != nil {
 		if s.Verbose() > 0 {
 			peerPrefix := ""
@@ -1731,11 +1931,9 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo stri
 	}
 
 	total := int32(len(indices))
-	offset := hdr.Offset
 	if offset < 0 {
 		offset = 0
 	}
-	limit := hdr.Limit
 	if limit < 0 {
 		limit = 0
 	}
@@ -1781,13 +1979,26 @@ func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curTotalRecs int32, cu
 }
 
 func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
-	return s.QueryAIDWithPeer("", resolvedDirect, bid, aidu, requiredMode)
+	return s.QueryAIDWithPeer("", "", SrcUnknown, resolvedDirect, bid, aidu, requiredMode)
 }
 
-func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
+func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
+	if source < 0 || source >= 6 {
+		source = SrcUnknown
+	}
 	start := time.Now()
 	act := s.getBoardActivity(resolvedDirect, bid)
 	act.aidQueries.Add(1)
+	act.aidBySrc[source].Add(1)
+	s.aidBySrc[source].Add(1)
+
+	srcTag := SourceTag(source)
+	peerPrefix := ""
+	if peerInfo != "" {
+		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
+	} else {
+		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
+	}
 
 	var emptyFH [128]byte
 
@@ -1795,9 +2006,13 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 	isG := (aidu & aiduTypeG) != 0
 	baseName := filepath.Base(resolvedDirect)
 	if isG && baseName == ".DIR" {
+		act.aidMissBySrc[source].Add(1)
+		s.aidMissBySrc[source].Add(1)
 		return 0, emptyFH, nil
 	}
 	if !isG && (baseName == ".Names" || strings.HasSuffix(resolvedDirect, "/.Names")) {
+		act.aidMissBySrc[source].Add(1)
+		s.aidMissBySrc[source].Add(1)
 		return 0, emptyFH, nil
 	}
 
@@ -1834,12 +2049,10 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 			} else {
 				s.aidNegativeHits.Add(1)
 				act.aidHits.Add(1)
+				act.aidMissBySrc[source].Add(1)
+				s.aidMissBySrc[source].Add(1)
 			}
 			if s.Verbose() >= 2 {
-				peerPrefix := ""
-				if peerInfo != "" {
-					peerPrefix = peerInfo + " "
-				}
 				log.Printf("[search.svc] [AID-HIT] QueryAID: %sboard=%s bid=%d foundIdx=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, idx)
 			}
 			return idx, fh, nil
@@ -1890,12 +2103,10 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 				act.scanDurationNs.Add(dur.Nanoseconds())
 				s.aidMisses.Add(1)
 				act.aidMisses.Add(1)
+				act.aidMissBySrc[source].Add(1)
+				s.aidMissBySrc[source].Add(1)
 				s.aidTableHits.Add(1)
 				if s.Verbose() >= 2 {
-					peerPrefix := ""
-					if peerInfo != "" {
-						peerPrefix = peerInfo + " "
-					}
 					log.Printf("[search.svc] [AID-TABLE-NEG] QueryAID: %sboard=%s bid=%d aidu=%012x dur=%v",
 						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, dur)
 				}
@@ -1929,15 +2140,13 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 					act.aidMisses.Add(1)
 					s.aidTableHits.Add(1)
 					if s.Verbose() >= 2 {
-						peerPrefix := ""
-						if peerInfo != "" {
-							peerPrefix = peerInfo + " "
-						}
 						log.Printf("[search.svc] [AID-TABLE-HIT] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
 							peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundRec, dur)
 					}
 					return foundRec, fhBytes, nil
 				}
+				act.aidMissBySrc[source].Add(1)
+				s.aidMissBySrc[source].Add(1)
 				return 0, emptyFH, nil
 			}
 		}
@@ -2011,10 +2220,6 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 
 	dur := time.Since(start)
 	act.scanDurationNs.Add(dur.Nanoseconds())
-	peerPrefix := ""
-	if peerInfo != "" {
-		peerPrefix = peerInfo + " "
-	}
 	if cachedHintIdx > 0 && foundIdx > 0 {
 		s.aidHits.Add(1)
 		act.aidHits.Add(1)
@@ -2025,6 +2230,10 @@ func (s *Service) QueryAIDWithPeer(peerInfo string, resolvedDirect string, bid i
 	} else {
 		s.aidMisses.Add(1)
 		act.aidMisses.Add(1)
+		if foundIdx == 0 {
+			act.aidMissBySrc[source].Add(1)
+			s.aidMissBySrc[source].Add(1)
+		}
 		if s.Verbose() >= 1 {
 			log.Printf("[search.svc] [AID-MISS] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
 				peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundIdx, dur)
@@ -2069,13 +2278,26 @@ func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalR
 }
 
 func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
-	return s.QueryIndicesWithPeer("", resolvedDirect, bid, predsRaw, numPreds)
+	return s.QueryIndicesWithPeer("", "", SrcUnknown, resolvedDirect, bid, predsRaw, numPreds)
 }
 
-func (s *Service) QueryIndicesWithPeer(peerInfo string, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
+func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
+	if source < 0 || source >= 6 {
+		source = SrcUnknown
+	}
 	start := time.Now()
 	act := s.getBoardActivity(resolvedDirect, bid)
 	act.searchQueries.Add(1)
+	act.searchBySrc[source].Add(1)
+	s.searchBySrc[source].Add(1)
+
+	srcTag := SourceTag(source)
+	peerPrefix := ""
+	if peerInfo != "" {
+		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
+	} else {
+		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
+	}
 
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
@@ -2114,10 +2336,6 @@ func (s *Service) QueryIndicesWithPeer(peerInfo string, resolvedDirect string, b
 				s.hits.Add(1)
 				act.searchHits.Add(1)
 				if s.Verbose() >= 2 {
-					peerPrefix := ""
-					if peerInfo != "" {
-						peerPrefix = peerInfo + " "
-					}
 					log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
 						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(res))
 				}
@@ -2148,7 +2366,7 @@ func (s *Service) QueryIndicesWithPeer(peerInfo string, resolvedDirect string, b
 		s.sfMu.Unlock()
 	}()
 
-	call.indices, call.err = s.computeAndCache(key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire, act, start, peerInfo)
+	call.indices, call.err = s.computeAndCache(key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire, act, start, peerPrefix, source)
 	return call.indices, call.err
 }
 
@@ -2164,7 +2382,8 @@ func (s *Service) computeAndCache(
 	curSRExpire int64,
 	act *boardActivity,
 	start time.Time,
-	peerInfo string,
+	peerPrefix string,
+	source int32,
 ) ([]int32, error) {
 	var baseEntryCopy *cacheEntry
 	var prefixIndices []int32
@@ -2173,10 +2392,6 @@ func (s *Service) computeAndCache(
 	predSize := PredSize()
 	predsStr := FormatPreds(predsRaw, numPreds)
 	gen := s.gen.Load()
-	peerPrefix := ""
-	if peerInfo != "" {
-		peerPrefix = peerInfo + " "
-	}
 	requireSRExpire := predsRequireSRExpire(predsRaw, numPreds)
 
 	s.cacheMu.Lock()
@@ -2327,7 +2542,9 @@ func (s *Service) computeAndCache(
 	dur := time.Since(start)
 	act.scanDurationNs.Add(dur.Nanoseconds())
 	act.searchMisses.Add(1)
+	act.searchMissBySrc[source].Add(1)
 	s.misses.Add(1)
+	s.searchMissBySrc[source].Add(1)
 	if s.Verbose() >= 1 {
 		log.Printf("[search.svc] [MISS] ScanDirRange: %sboard=%s bid=%d preds=[%s] total=%d matches=%d dur=%v",
 			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, actualTotal, len(indices), dur)

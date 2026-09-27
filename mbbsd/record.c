@@ -553,7 +553,7 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     if (!HasBoardPerm(bh)) return;
 
     setbfile(bfpath, bh->brdname, FN_DIR);
-    n = search_aidu(bfpath, aidu);
+    n = search_aidu(bfpath, aidu, SEARCH_SRC_MBBSD_LUA);
 
     if (n < 0) return;
     fd = open(bfpath, O_RDONLY);

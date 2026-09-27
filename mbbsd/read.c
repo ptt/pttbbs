@@ -253,7 +253,8 @@ read_view_ensure_window(read_ctx_t *cx, int start_disp_ln, int count)
     int loaded = search_predicates_window(currdirect, bid,
                                           cx->sr_preds, cx->sr_pred_count,
                                           new_base, SEARCH_SVC_WINDOW_SIZE,
-                                          cx->view.remap, &total);
+                                          cx->view.remap, &total,
+                                          SEARCH_SRC_MBBSD_SR);
     if (loaded >= 0) {
         cx->view.total = last_line = cx->bottom_line = total;
         cx->view.remap_base = new_base;
@@ -578,7 +579,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	    /* search board */
 	{
 	    setbfile(dirfile, currboard, FN_DIR);
-	    n = search_aidu(dirfile, aidu);
+	    n = search_aidu(dirfile, aidu, SEARCH_SRC_MBBSD_HASH);
 	    if(n >= 0 && (currmode & MODE_DIGEST))
 		/* switch to normal read mode */
 	    {
@@ -595,7 +596,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	    /* search digest */
 	{
 	    setbfile(dirfile, currboard, fn_mandex);
-	    n = search_aidu(dirfile, aidu);
+	    n = search_aidu(dirfile, aidu, SEARCH_SRC_MBBSD_HASH);
 	    if(n >= 0 && !(currmode & MODE_DIGEST))
 		/* switch to digest mode */
 	    {
@@ -771,7 +772,8 @@ select_read(read_ctx_t *cx, int sr_mode)
     int loaded = search_predicates_window(currdirect, bid,
                                           cx->sr_preds, cx->sr_pred_count + 1,
                                           0, SEARCH_SVC_WINDOW_SIZE,
-                                          cx->view.remap, &total);
+                                          cx->view.remap, &total,
+                                          SEARCH_SRC_MBBSD_SR);
     if (loaded < 0 || total <= 0) {
         return READ_REDRAW;
     }
@@ -789,7 +791,8 @@ select_read(read_ctx_t *cx, int sr_mode)
         int tail_loaded = search_predicates_window(currdirect, bid,
                                                    cx->sr_preds, cx->sr_pred_count,
                                                    tail_base, SEARCH_SVC_WINDOW_SIZE,
-                                                   cx->view.remap, &total);
+                                                   cx->view.remap, &total,
+                                                   SEARCH_SRC_MBBSD_SR);
         if (tail_loaded > 0) {
             cx->view.remap_base = tail_base;
             cx->view.remap_count = tail_loaded;
@@ -1621,7 +1624,8 @@ read_loader(PSB_CTX *psbctx)
                 int loaded = search_predicates_window(currdirect, bid,
                                                       cx->sr_preds, cx->sr_pred_count,
                                                       cx->view.remap_base, SEARCH_SVC_WINDOW_SIZE,
-                                                      cx->view.remap, &total);
+                                                      cx->view.remap, &total,
+                                                      SEARCH_SRC_MBBSD_SR);
                 if (loaded >= 0) {
                     cx->view.total = total;
                     cx->view.remap_count = loaded;

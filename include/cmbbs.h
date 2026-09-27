@@ -109,13 +109,23 @@ int  search_dir_by_aidu_fd_bounded(int fd, int total, aidu_t aidu,
                                    int required_mode, fileheader_t *out_fh,
                                    int max_backtrack);
 int  search_dir_by_aidu(const char *direct, aidu_t aidu,
-                        int required_mode, fileheader_t *out_fh);
+                        int required_mode, fileheader_t *out_fh,
+                        int source);
+int  search_dir_by_aidu_legacy(const char *direct, aidu_t aidu,
+                               int required_mode, fileheader_t *out_fh);
 /* aids.c */
 aidu_t fn2aidu(const char *fn);
 char *aidu2aidc(char *buf, aidu_t aidu);
 char *aidu2fn(char *buf, aidu_t aidu);
 aidu_t aidc2aidu(const char *aidc);
-int  search_aidu(char *bfile, aidu_t aidu);
+int  search_aidu(char *bfile, aidu_t aidu, int source);
+int  search_aidu_legacy(char *bfile, aidu_t aidu);
+static inline int search_aid(char *bfile, aidu_t aidu, int source) {
+    return search_aidu(bfile, aidu, source);
+}
+static inline int search_aid_legacy(char *bfile, aidu_t aidu) {
+    return search_aidu_legacy(bfile, aidu);
+}
 void setbtotal(int bid);
 void touchbpostnum(int bid, int delta);
 int  getbnum(const char *bname);
@@ -211,6 +221,14 @@ typedef struct {
 int search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const fileheader_t *fh);
 int search_svc_hint_comment(const char *direct, int bid, int recno, int recommend);
 int search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu);
+enum {
+    SEARCH_SRC_UNKNOWN     = 0,
+    SEARCH_SRC_MBBSD_HASH  = 1, /* mbbsd '#' command (user / app / bot AID lookup) */
+    SEARCH_SRC_MBBSD_SR    = 2, /* mbbsd select_read (title, author, mark, push search) */
+    SEARCH_SRC_MBBSD_LUA   = 3, /* mbbsd bbslua banner / dynamic template */
+    SEARCH_SRC_BOARDD_WEB  = 4, /* web / boardd query */
+    SEARCH_SRC_EXTERNAL    = 5, /* external maintenance tools / scripts */
+};
 
 int search_predicates_local(const char *direct,
                             const fileheader_predicate_t *preds, int num_preds,
@@ -220,7 +238,13 @@ int search_predicates_local(const char *direct,
 int search_predicates_window(const char *direct, int bid,
                              const fileheader_predicate_t *preds, int num_preds,
                              int offset, int limit,
-                             int32_t *out_indices, int *out_total);
+                             int32_t *out_indices, int *out_total,
+                             int source);
+
+int search_predicates_window_legacy(const char *direct, int bid,
+                                    const fileheader_predicate_t *preds, int num_preds,
+                                    int offset, int limit,
+                                    int32_t *out_indices, int *out_total);
 
 int select_read_build(const char *src_direct, const char *dst_direct,
                       int src_direct_has_reference, time4_t resume_from,
