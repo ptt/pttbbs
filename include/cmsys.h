@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "osdep.h"
+#include "multibyte.h"
 
 #ifdef __GNUC__
 #define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))
@@ -179,19 +180,6 @@ int str_case_ends_with(const char *str, const char *suffix);
 const char *path_basename(const char *path);
 void trim(char *buf);
 void chomp(char *src);
-/* In-memory multibyte string encoding (MB_IS_BIG5 / MB_IS_UTF8 = 0 or 1) */
-#if !defined(MB_IS_BIG5) && !defined(MB_IS_UTF8)
-#  define MB_IS_BIG5 1
-#  define MB_IS_UTF8 0
-#elif defined(MB_IS_UTF8) && !defined(MB_IS_BIG5)
-#  define MB_IS_BIG5 (!(MB_IS_UTF8))
-#elif defined(MB_IS_BIG5) && !defined(MB_IS_UTF8)
-#  define MB_IS_UTF8 (!(MB_IS_BIG5))
-#endif
-#if (MB_IS_BIG5 && MB_IS_UTF8) || (!MB_IS_BIG5 && !MB_IS_UTF8)
-#  error "Exactly one of MB_IS_BIG5 or MB_IS_UTF8 must be 1"
-#endif
-
 /* On-disk storage encoding (STORAGE_IS_BIG5 / STORAGE_IS_UTF8 = 0 or 1) */
 #if !defined(STORAGE_IS_BIG5) && !defined(STORAGE_IS_UTF8)
 #  define STORAGE_IS_BIG5 1
@@ -493,74 +481,6 @@ ssize_t telnet_process        (TelnetCtx *ctx, unsigned char *buf, ssize_t size)
 int bcrypt_hashpass (const char *pass, const char *salt, char *hash, size_t hashlen);
 int bcrypt_gensalt  (int workfactor, char *salt, size_t saltlen);
 int bcrypt_checkpass(const char *pass, const char *goodhash);
-
-/* utf8.c */
-typedef struct {
-    uint8_t buf[5];
-    uint8_t need;
-    uint8_t got;
-    uint8_t len;
-    int     ucs;
-} utf8_ctx;
-
-static inline void
-utf8_init(utf8_ctx *ctx)
-{
-    ctx->buf[0] = 0;
-    ctx->need = 0;
-    ctx->got = 0;
-    ctx->len = 0;
-    ctx->ucs = -1;
-}
-#define utf8_reset(ctx) utf8_init(ctx)
-
-static inline void
-utf8_error(utf8_ctx *ctx)
-{
-    ctx->buf[0] = '?';
-    ctx->buf[1] = 0;
-    ctx->need = 0;
-    ctx->got = 0;
-    ctx->len = 1;
-    ctx->ucs = '?';
-}
-
-static inline int
-utf8_pending(const utf8_ctx *ctx)
-{
-    return (ctx && ctx->need > ctx->got) ? (ctx->need - ctx->got) : 0;
-}
-
-static inline int
-utf8_is_ready(const utf8_ctx *ctx)
-{
-    return ctx && ctx->need > 0 && ctx->got == ctx->need;
-}
-
-static inline int
-utf8_get_ucs(utf8_ctx *ctx)
-{
-    if (!utf8_is_ready(ctx))
-        return -1;
-    int ucs = ctx->ucs;
-    ctx->need = 0;
-    ctx->got = 0;
-    ctx->ucs = -1;
-    return ucs;
-}
-
-int   utf8_add_byte(utf8_ctx *ctx, unsigned char byte);
-int   utf8_from_ucs(utf8_ctx *ctx, int ucs);
-int   utf8_to_mb(const utf8_ctx *ctx, char *mb);
-char *utf8_to_big5(const char *utf8, char *big5, size_t max_len);
-char *big5_to_utf8(const char *big5, char *utf8, size_t max_len);
-char *utf8_to_big5_n(const char *utf8, size_t src_len, char *big5, size_t max_len);
-char *big5_to_utf8_n(const char *big5, size_t src_len, char *utf8, size_t max_len);
-
-/* big5.c */
-extern const uint16_t b2u_table[];
-extern const uint16_t u2b_table[];
-extern const uint8_t  b2u_ambiguous_width[];
 
 /* buffer.c */
 #include "buffer.h"
