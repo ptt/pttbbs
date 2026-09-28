@@ -1327,7 +1327,18 @@ vkey_to_mb(int ch, char mb[5])
 	}
 	return len;
     }
+    if (!big5_is_valid_lead(ch)) {
+	mb[0] = (char)ch;
+	mb[1] = 0;
+	return 1;
+    }
     int ch2 = vk_byte();
+    if (ch2 <= 0) {
+	edit_pending_key = ch2;
+	mb[0] = (char)ch;
+	mb[1] = 0;
+	return 1;
+    }
     if (mb_is_valid_trail(ch2)) {
 	mb[0] = (char)ch;
 	mb[1] = (char)ch2;
