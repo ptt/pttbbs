@@ -252,9 +252,15 @@ vkey_init() {
  * wchar (VKEY_IS_MB=0: UCS/Unicode scalar for UTF-8, 16-bit word for Big5).
  */
 inline int
-vkey(void)
+vk_byte(void)
 {
     return igetch();
+}
+
+inline int
+vkey(void)
+{
+    return vk_byte();
 }
 
 inline int

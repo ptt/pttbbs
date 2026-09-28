@@ -104,7 +104,6 @@ typedef enum {
     VKSTATE_ESC,        // <Esc>
     VKSTATE_ESC_APP,    // <Esc> O (SS3)
     VKSTATE_CSI,        // <Esc> [ (ECMA-48 Control Sequence Introducer)
-    VKSTATE_MB,         // Multi-byte sequence
 }   VKSTATES;
 
 #define VKRAW_BS    0x08    // \b = Ctrl('H')
@@ -135,21 +134,6 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                 return KEY_INCOMPLETE;
             }
 
-            if (!VKEY_IS_MB && c >= 0x80) {
-                mb_reset(&ctx->mb);
-                if (mb_add_byte(&ctx->mb, c)) {
-                    int ch = mb_get_char(&ctx->mb);
-                    if (IS_SPECIAL_KEY(ch))
-                        return KEY_UNKNOWN;
-                    return ch;
-                }
-                if (mb_pending(&ctx->mb)) {
-                    ctx->state = VKSTATE_MB;
-                    return KEY_INCOMPLETE;
-                }
-                return KEY_UNKNOWN;
-            }
-
             // simple mappings
             switch (c) {
                 // BS/ERASE/DEL Rules
@@ -158,25 +142,6 @@ vtkbd_process(int c, VtkbdCtx *ctx)
                     return KEY_BS;
             }
             return c;
-
-        case VKSTATE_MB:
-            if (!mb_is_valid_trail(c)) {
-                mb_reset(&ctx->mb);
-                ctx->state = VKSTATE_NORMAL;
-                return vtkbd_process(c, ctx);
-            }
-            if (mb_add_byte(&ctx->mb, c)) {
-                int ch = mb_get_char(&ctx->mb);
-                ctx->state = VKSTATE_NORMAL;
-                if (IS_SPECIAL_KEY(ch))
-                    return KEY_UNKNOWN;
-                return ch;
-            }
-            if (!mb_pending(&ctx->mb)) {
-                ctx->state = VKSTATE_NORMAL;
-                return KEY_UNKNOWN;
-            }
-            return KEY_INCOMPLETE;
 
         case VKSTATE_ESC:       // <Esc>
             switch (c) {
