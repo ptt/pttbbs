@@ -1910,6 +1910,12 @@ userlist_cursor(int y, PSB_CTX *ctx)
     return 0;
 }
 
+static bool
+userlist_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
+{
+    return cursor_clear(y, 0);
+}
+
 static int
 userlist_on_key(PSB_CTX *ctx)
 {
@@ -1967,6 +1973,7 @@ userlist(void)
         .footer = userlist_footer,
         .renderer = userlist_renderer,
         .cursor = userlist_cursor,
+        .cursor_clear = userlist_cursor_clear,
         .on_key = userlist_on_key,
     };
 
