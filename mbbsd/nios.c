@@ -546,9 +546,9 @@ vkey_is_prefetched(char c)
  * @return: virtual key code
  */
 VKEY_PROTO int
-vkey()
+vk_byte()
 {
-    VKEYDBGLOG("vkey()");
+    VKEYDBGLOG("vk_byte()");
 
     while (1) {
         if (!vkey_poll(INFTIM))
@@ -561,6 +561,17 @@ vkey()
         if (CIN_IS_VALID_FD2(vkctx.attached_fd))
             return I_OTHERDATA;
     }
+}
+
+/**
+ * vkey(): receive and block for next key
+ * @return: virtual key code
+ */
+VKEY_PROTO int
+vkey()
+{
+    VKEYDBGLOG("vkey()");
+    return vk_byte();
 }
 
 /**

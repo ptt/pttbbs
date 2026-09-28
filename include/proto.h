@@ -324,6 +324,7 @@ VKEY_CTX *vkey_get_context(void);
 void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
 int  vkey(void);	     // receive next key (KEY_*, ASCII, raw multibyte byte, or decoded wchar - see VKEY_IS_MB)
+int  vk_byte(void);	     // receive next key in raw byte mode (KEY_*, ASCII, or raw byte)
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
 const vtkbd_mouse_t *vkey_get_mouse(void); // get latest mouse event
 int  vkey_get_mouse_pos(int *x, int *y);   // get latest mouse coordinates

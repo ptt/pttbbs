@@ -72,7 +72,6 @@ typedef struct {
     int     csi_inter_count;
     char    csi_intermediate[VTKBD_MAX_INTERMEDIATE];
     int     csi_len;            /* Total sequence length to prevent overflow */
-    mb_ctx  mb;
 } VtkbdCtx;
 
 /* vtkbd API */
