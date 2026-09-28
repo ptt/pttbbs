@@ -1321,6 +1321,18 @@ typedef struct {
     cmd_layer_t *layers;
 } boardlist_ctx_t;
 
+static VCOL brdlist_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號   ", 9, 9, 20},
+    {"看  板       ", 13, 13, 100},
+    {"類別   ", 7, 7, 75},
+    {"中   文   敘   述", 34, BTLEN + 1, 90},
+    {"人氣 ", 3, 3, 80},
+    {"板   主", 12, 0, 70},
+    {0},
+};
+#define BRDLIST_COLS (ARRAY_SIZE(brdlist_coldefs) - 1)
+
 static int
 brdlist_header(PSB_CTX *ctx)
 {
@@ -1347,7 +1359,7 @@ brdlist_header(PSB_CTX *ctx)
     } else {
 	showtitle("看板列表", BBSNAME);
 	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
-	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   敘   述"
+	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   拓  板       類別   中   文   測   述"
               "               人氣 板   主", newflag ? "總數" : "編號"));
     }
     return 0;
@@ -1456,16 +1468,6 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     if (ptr->myattr & NBRD_FOLDER)
         return brdlist_folder(newflag, head, ptr);
 
-    if (IN_CLASSROOT()) {
-        outs("          ");
-    } else {
-        if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-            return brdlist_hidden(newflag, head, ptr);
-        }
-    }
-
-    // Normal entries.
-
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
     const int should_show_sensitive_info = true;
 #else
@@ -1476,10 +1478,42 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
 #endif
 
+    if (IN_CLASSROOT()) {
+        char col_num[32];
+        if (newflag && (B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
+            SNPRINTF(col_num, "          ");
+        } else if (should_show_sensitive_info) {
+            SNPRINTF(col_num, "%7d%c%s",
+                    newflag ? (int)(B_TOTAL(ptr)) : head,
+                    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+                    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+                    (ptr->myattr & NBRD_TAG) ? "D " :
+                    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+                    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+        } else {
+            if (newflag)
+                SNPRINTF(col_num, "%7sX%s", "", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+            else
+                SNPRINTF(col_num, "%7dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+        }
+
+        prints("          %s%-40.40s %.*s", col_num, B_BH(ptr)->title + 7,
+               t_columns - 68, B_BH(ptr)->BM);
+        clrtoeol();
+        return 0;
+    }
+
+    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
+        return brdlist_hidden(newflag, head, ptr);
+    }
+
+    // Normal entries.
+
+    char col_num[32];
     if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD) {
-        outs("          ");
+        SNPRINTF(col_num, "         ");
     } else if (should_show_sensitive_info) {
-        prints("%7d%c%s",
+        SNPRINTF(col_num, "%6d%c%s",
                 newflag ? (int)(B_TOTAL(ptr)) : head,
                 !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
                 (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
@@ -1488,66 +1522,60 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                 unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
     } else {
         if (newflag)
-            prints("%7s", "");
+            SNPRINTF(col_num, "%6sX%s", "", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
         else
-            prints("%7d", head);
-        prints("X%s", (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
+            SNPRINTF(col_num, "%6dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
     }
 
-    if (IN_CLASSROOT()) {
-        prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-               t_columns - 68, B_BH(ptr)->BM);
-        clrtoeol();
-        return 0;
-    }
-
-    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37)
-            "%2.2s" ANSI_RESET "%-34.34s",
+    char col_name[64];
+    SNPRINTF(col_name, "%s%-13s" ANSI_RESET,
             ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
               getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
-            B_BH(ptr)->brdname,
+            B_BH(ptr)->brdname);
+
+    char col_class[64];
+    SNPRINTF(col_class, "%s%5.5s" ANSI_COLOR(0;37) "%2.2s" ANSI_RESET,
             make_class_color(B_BH(ptr)->title),
             B_BH(ptr)->title,
-            should_show_sensitive_info ?
-            B_BH(ptr)->title + 5 : "",
-            should_show_sensitive_info ?
-            B_BH(ptr)->title + 7 : "");
+            should_show_sensitive_info ? B_BH(ptr)->title + 5 : "");
 
+    char col_desc[128];
+    SNPRINTF(col_desc, "%s",
+            should_show_sensitive_info ? B_BH(ptr)->title + 7 : "");
+
+    char col_nuser[64];
     if (!should_show_sensitive_info)
-        outs("   ");
+        SNPRINTF(col_nuser, "   ");
     else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
-        outs("靜 ");
-    // Note the nuser is not updated realtime, or have some bug.
+        SNPRINTF(col_nuser, "靜 ");
     else if (B_BH(ptr)->nuser < 1)
-        prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+        SNPRINTF(col_nuser, " %c ", B_BH(ptr)->bvote ? 'V' : ' ');
     else if (B_BH(ptr)->nuser <= 10)
-        prints("%2d ", B_BH(ptr)->nuser);
+        SNPRINTF(col_nuser, "%2d ", B_BH(ptr)->nuser);
     else if (B_BH(ptr)->nuser <= 50)
-        prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 #ifdef EXTRA_HOTBOARD_COLORS
-    // piaip 2008/02/04: new colors
     else if (B_BH(ptr)->nuser >= 100000)
-        outs(ANSI_COLOR(1;35) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;35) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 60000)
-        outs(ANSI_COLOR(1;33) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;33) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 30000)
-        outs(ANSI_COLOR(1;32) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;32) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 10000)
-        outs(ANSI_COLOR(1;36) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;36) "爆!" ANSI_RESET);
 #endif
     else if (B_BH(ptr)->nuser >= 5000)
-        outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;34) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 2000)
-        outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;31) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 1000)
-        outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
+        SNPRINTF(col_nuser, ANSI_COLOR(1) "爆!" ANSI_RESET);
     else if (B_BH(ptr)->nuser >= 100)
-        outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
-    else //if (B_BH(ptr)->nuser > 50)
-        prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-    prints("%.*s" ANSI_CLRTOEND, t_columns - 68, B_BH(ptr)->BM);
+        SNPRINTF(col_nuser, ANSI_COLOR(1) "HOT" ANSI_RESET);
+    else
+        SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 
-    clrtoeol();
+    render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser, B_BH(ptr)->BM);
     return 0;
 }
 
@@ -2550,6 +2578,10 @@ choose_board(int newflag)
         },
         .header_lines = IN_CLASSROOT() ? 7 : 3,
         .footer_lines = 1,
+        .cols = BRDLIST_COLS,
+        .vcols = brdlist_coldefs,
+        .col_paddings = 1,
+        .custom_header_columns = true,
         .layers = layers,
         .loader = brdlist_loader,
         .header = brdlist_header,
