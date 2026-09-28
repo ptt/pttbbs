@@ -431,7 +431,7 @@ mb_width(const char *s)
     if (MB_IS_UTF8) {
         if (p[0] < 0x80)
             return (p[0] >= 0x20 && p[0] != 0x7F) ? 1 : 0;
-        if ((p[1] & 0xC0) == 0x80) {
+        if ((p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80) {
             // Fast path: CJK Unified Ideographs (U+4000..U+9FFF), Hangul, and PUA
             if ((p[0] >= 0xE4 && p[0] <= 0xE9) ||
                 p[0] == 0xEB || p[0] == 0xEC || p[0] == 0xEE)
@@ -534,6 +534,13 @@ mbs_sanitize(char *str, int maxlen)
                 memcpy(str + len, ctx.buf, ctx.len);
                 len += ctx.len;
                 mb_reset(&ctx);
+            } else if (mb_is_error(&ctx)) {
+                mb_reset(&ctx);
+                if (mb_add_byte(&ctx, c)) {
+                    memcpy(str + len, ctx.buf, ctx.len);
+                    len += ctx.len;
+                    mb_reset(&ctx);
+                }
             }
         } else {
             mb_reset(&ctx);

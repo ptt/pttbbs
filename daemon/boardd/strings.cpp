@@ -19,18 +19,23 @@ void b2u(std::string *utf8, const char *big5) {
   utf8_ctx ctx;
   const uint8_t *p = reinterpret_cast<const uint8_t *>(big5);
   while (*p) {
-    if (isascii(*p))
-      utf8->push_back(*p);
-    else if (!p[1]) {
+    if (isascii(*p)) {
+      utf8->push_back(*p++);
+    } else if (!p[1]) {
       utf8->push_back('?');
       break;
-    } else {
-      int len = utf8_from_ucs(
-          &ctx, b2u_table[static_cast<uint16_t>(p[0]) << 8 | p[1]]);
-      utf8->append(reinterpret_cast<const char *>(ctx.buf), len);
+    } else if (!big5_is_valid_trail(p[1])) {
+      utf8->push_back('?');
       p++;
+    } else {
+      uint16_t b5_full = (static_cast<uint16_t>(p[0]) << 8) | p[1];
+      uint16_t ucs = b2u_table[b5_full];
+      if (ucs == 0)
+        ucs = '?';
+      int len = utf8_from_ucs(&ctx, ucs);
+      utf8->append(reinterpret_cast<const char *>(ctx.buf), len);
+      p += 2;
     }
-    p++;
   }
 }
 
@@ -49,9 +54,14 @@ void u2b(std::string *big5, const char *utf8) {
   utf8_init(&ctx);
   const uint8_t *p = reinterpret_cast<const uint8_t *>(utf8);
   while (*p) {
-    if (!utf8_add_byte(&ctx, *p++)) {
-      if (!utf8_pending(&ctx))
+    int was_pending = utf8_pending(&ctx);
+    uint8_t c = *p++;
+    if (!utf8_add_byte(&ctx, c)) {
+      if (utf8_is_error(&ctx)) {
         big5->push_back('?');
+        if (was_pending)
+          p--;
+      }
       continue;
     }
     int ucs = utf8_get_ucs(&ctx);
@@ -61,6 +71,9 @@ void u2b(std::string *big5, const char *utf8) {
     if (b5 >> 8)
       big5->push_back(b5 >> 8);
     big5->push_back(b5 & 0xFF);
+  }
+  if (utf8_pending(&ctx)) {
+    big5->push_back('?');
   }
 }
 

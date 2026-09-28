@@ -1670,11 +1670,31 @@ outc(unsigned char c)
             ft.mb_attr = ft.attr;
 
         if (!mb_add_byte(&ft.mb, c)) {
-            if (!mb_pending(&ft.mb)) {
+            if (mb_is_error(&ft.mb)) {
                 out_ftchar(FTCHAR_INVALID_DBCS);
-                mb_add_byte(&ft.mb, c);
-                if (mb_pending(&ft.mb))
-                    ft.mb_attr = ft.attr;
+                mb_reset(&ft.mb);
+                if (!mb_add_byte(&ft.mb, c)) {
+                    if (mb_is_error(&ft.mb)) {
+                        out_ftchar(FTCHAR_INVALID_DBCS);
+                        mb_reset(&ft.mb);
+                    } else if (mb_pending(&ft.mb)) {
+                        ft.mb_attr = ft.attr;
+                    }
+                } else {
+                    int ch = mb_get_char(&ft.mb);
+                    int w = mb_char_width(ch);
+                    if (w == 1) {
+                        out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
+                    } else if (w >= 2) {
+                        ftattr saved_attr = ft.attr;
+                        ft.attr = ft.mb_attr;
+                        out_ftchar((ftchar)(ch < 0xFFFE ? ch : 0xFFFD));
+                        ft.attr = saved_attr;
+                        if (ft.x > 0) {
+                            out_ftchar((ftchar)FTCHAR_TRAILING);
+                        }
+                    }
+                }
             }
             return;
         }

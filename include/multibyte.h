@@ -65,6 +65,12 @@ utf8_error(utf8_ctx *ctx)
 }
 
 static inline int
+utf8_is_error(const utf8_ctx *ctx)
+{
+    return ctx && ctx->need == 0 && ctx->len > 0;
+}
+
+static inline int
 utf8_pending(const utf8_ctx *ctx)
 {
     return (ctx && ctx->need > ctx->got) ? (ctx->need - ctx->got) : 0;
@@ -84,6 +90,7 @@ utf8_get_ucs(utf8_ctx *ctx)
     int ucs = ctx->ucs;
     ctx->need = 0;
     ctx->got = 0;
+    ctx->len = 0;
     ctx->ucs = -1;
     return ucs;
 }
@@ -130,6 +137,12 @@ big5_error(big5_ctx *ctx)
 }
 
 static inline int
+big5_is_error(const big5_ctx *ctx)
+{
+    return ctx && ctx->need == 0 && ctx->len > 0;
+}
+
+static inline int
 big5_pending(const big5_ctx *ctx)
 {
     return (ctx && ctx->need > ctx->got) ? (ctx->need - ctx->got) : 0;
@@ -149,6 +162,7 @@ big5_get_char(big5_ctx *ctx)
     int ch = ctx->ch;
     ctx->need = 0;
     ctx->got = 0;
+    ctx->len = 0;
     ctx->ch = -1;
     return ch;
 }
@@ -165,6 +179,7 @@ typedef utf8_ctx mb_ctx;
 #define mb_init(ctx)            utf8_init(ctx)
 #define mb_reset(ctx)           utf8_reset(ctx)
 #define mb_error(ctx)           utf8_error(ctx)
+#define mb_is_error(ctx)        utf8_is_error(ctx)
 #define mb_pending(ctx)         utf8_pending(ctx)
 #define mb_is_ready(ctx)        utf8_is_ready(ctx)
 #define mb_get_char(ctx)        utf8_get_ucs(ctx)
@@ -176,6 +191,7 @@ typedef big5_ctx mb_ctx;
 #define mb_init(ctx)            big5_init(ctx)
 #define mb_reset(ctx)           big5_reset(ctx)
 #define mb_error(ctx)           big5_error(ctx)
+#define mb_is_error(ctx)        big5_is_error(ctx)
 #define mb_pending(ctx)         big5_pending(ctx)
 #define mb_is_ready(ctx)        big5_is_ready(ctx)
 #define mb_get_char(ctx)        big5_get_char(ctx)
@@ -194,6 +210,28 @@ mb_char_width(int ch)
     if (MB_IS_UTF8)
         return ucs_width(ch);
     return (ch >= 0x0100) ? 2 : (ch >= 0x20 && ch != 0x7F ? 1 : 0);
+}
+
+static inline int
+utf8_is_valid_lead(int c)
+{
+    unsigned char b = (unsigned char)c;
+    return (b >= 0xC2 && b <= 0xF4);
+}
+
+static inline int
+big5_is_valid_lead(int c)
+{
+    unsigned char b = (unsigned char)c;
+    return (b >= 0x81 && b <= 0xFE);
+}
+
+static inline int
+mb_is_valid_lead(int c)
+{
+    if (MB_IS_UTF8)
+        return utf8_is_valid_lead(c);
+    return big5_is_valid_lead(c);
 }
 
 static inline int

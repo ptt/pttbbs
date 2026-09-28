@@ -212,9 +212,14 @@ char *utf8_to_big5_n(const char *utf8, size_t src_len, char *big5, size_t max_le
     const uint8_t *end = (src_len == (size_t)-1) ? (const uint8_t *)-1 : (p + src_len);
     size_t out_idx = 0;
     while (p < end && *p && out_idx < (max_len - 1)) {
-        if (!utf8_add_byte(&ctx, *p++)) {
-            if (!utf8_pending(&ctx))
+        int was_pending = utf8_pending(&ctx);
+        uint8_t c = *p++;
+        if (!utf8_add_byte(&ctx, c)) {
+            if (utf8_is_error(&ctx)) {
                 big5[out_idx++] = '?';
+                if (was_pending)
+                    p--;
+            }
             continue;
         }
         int ucs = utf8_get_ucs(&ctx);
@@ -231,6 +236,9 @@ char *utf8_to_big5_n(const char *utf8, size_t src_len, char *big5, size_t max_le
         } else {
             big5[out_idx++] = (char)b5;
         }
+    }
+    if (utf8_pending(&ctx) && out_idx < (max_len - 1)) {
+        big5[out_idx++] = '?';
     }
     big5[out_idx] = '\0';
     return big5;
