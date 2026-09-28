@@ -249,7 +249,7 @@ int  reduce_blank(char *cbuf, const char *buf);
 const char *skip_control_sequence(const char *src);
 int  strip_control_sequence(char *buf, const char *str);
 int  strip_control_sequence_ex(char *buf, const char *str, enum STRIP_FLAG flag);
-void strip_nonebig5(unsigned char *str, int maxlen);
+void mbs_sanitize(char *str, int maxlen);
 int  invalid_pname(const char *str);
 int  is_number(const char *p);
 char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);

@@ -774,7 +774,7 @@ setup_utmp(int mode)
     currmode = MODE_STARTED;
     SHM->UTMPneedupdate = 1;
 
-    strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
+    mbs_sanitize(currutmp->nickname, sizeof(currutmp->nickname));
 
 #ifdef FROMD
     // resolve fromhost
