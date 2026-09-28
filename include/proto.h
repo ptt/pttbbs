@@ -653,7 +653,7 @@ void setcalfile(char *buf, char *userid);
 int  log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void syncnow(void);
 void wait_penalty(int sec);
-void cursor_clear(int row, int column);
+bool cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 int  cursor_key(int row, int column);
 void printdash(const char *mesg, int msglen);

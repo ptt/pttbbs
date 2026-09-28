@@ -227,16 +227,19 @@ cursor_show(int row, int column)
 
 // TODO
 // move this function to vtuikit.c
-void
+bool
 cursor_clear(int row, int column)
 {
-    if (HasUserFlag(UF_CURSOR_STANDOUT))
+    if (HasUserFlag(UF_CURSOR_STANDOUT)) {
         grayout(row, row+1, GRAYOUT_STANDEND);
+        return true;
+    }
     move(row, column);
     if (!HasUserFlag(UF_CURSOR_LEGACY))
         outs(STR_UNCUR);
     else
         outs(STR_UNCUR2);
+    return false;
 }
 
 // TODO
