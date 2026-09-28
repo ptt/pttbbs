@@ -406,16 +406,14 @@ psb_on_select(cmd_ctx_t *ctx, int new_curr) {
         int rows = psbctx->cmd.rows;
         if (old_curr >= base && old_curr < base + rows && old_curr < psbctx->cmd.total) {
             int y = psbctx->header_lines + (old_curr - base);
-            cursor_clear(y, 0);
-            move(y, 0);
-            clrtoeol();
-            psbctx->renderer(old_curr, psbctx);
+            if (cursor_clear(y, 0)) {
+                move(y, 0);
+                clrtoeol();
+                psbctx->renderer(old_curr, psbctx);
+            }
         }
         if (new_curr >= base && new_curr < base + rows && new_curr < psbctx->cmd.total) {
             int y = psbctx->header_lines + (new_curr - base);
-            move(y, 0);
-            clrtoeol();
-            psbctx->renderer(new_curr, psbctx);
             move(y, 0);
             psbctx->cursor(y, psbctx);
         }
