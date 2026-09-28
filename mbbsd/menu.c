@@ -475,6 +475,12 @@ menu_cursor(int y, PSB_CTX *ctx GCC_UNUSED)
     return 0;
 }
 
+static bool
+menu_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
+{
+    return cursor_clear(y, menu_column);
+}
+
 static int
 menu_loader(PSB_CTX *ctx)
 {
@@ -823,6 +829,7 @@ domenu(const menuitem_t *menu)
         .footer = menu_footer,
         .renderer = menu_renderer,
         .cursor = menu_cursor,
+        .cursor_clear = menu_cursor_clear,
         .on_key = menu_on_key,
     };
 

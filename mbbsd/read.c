@@ -1598,6 +1598,12 @@ read_cursor(int y, PSB_CTX *psbctx GCC_UNUSED)
     return 0;
 }
 
+static bool
+read_cursor_clear(int y, PSB_CTX *psbctx GCC_UNUSED)
+{
+    return cursor_clear(y, 0);
+}
+
 static int
 read_loader(PSB_CTX *psbctx)
 {
@@ -1809,6 +1815,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(),
         .renderer = read_renderer,
         .empty_renderer = read_empty_renderer,
         .cursor = read_cursor,
+        .cursor_clear = read_cursor_clear,
     };
 
     psb_main(&psbctx);
