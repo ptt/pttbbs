@@ -48,6 +48,11 @@ psb_default_cursor(int y, PSB_CTX *ctx GCC_UNUSED) {
     return 0;
 }
 
+static bool
+psb_default_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED) {
+    return cursor_clear(y, 0);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Layer 0: PSB Base Navigation Commands
 
@@ -288,6 +293,8 @@ psb_init_defaults(PSB_CTX *psbctx) {
         psbctx->renderer = psb_default_renderer;
     if (!psbctx->cursor)
         psbctx->cursor = psb_default_cursor;
+    if (!psbctx->cursor_clear)
+        psbctx->cursor_clear = psb_default_cursor_clear;
 
     psbctx->cmd.reload = true;
     psbctx->cmd.redraw = true;
@@ -406,7 +413,7 @@ psb_on_select(cmd_ctx_t *ctx, int new_curr) {
         int rows = psbctx->cmd.rows;
         if (old_curr >= base && old_curr < base + rows && old_curr < psbctx->cmd.total) {
             int y = psbctx->header_lines + (old_curr - base);
-            if (cursor_clear(y, 0)) {
+            if (psbctx->cursor_clear(y, psbctx)) {
                 move(y, 0);
                 clrtoeol();
                 psbctx->renderer(old_curr, psbctx);
@@ -414,7 +421,6 @@ psb_on_select(cmd_ctx_t *ctx, int new_curr) {
         }
         if (new_curr >= base && new_curr < base + rows && new_curr < psbctx->cmd.total) {
             int y = psbctx->header_lines + (new_curr - base);
-            move(y, 0);
             psbctx->cursor(y, psbctx);
         }
         refresh();
@@ -483,7 +489,7 @@ psb_main(PSB_CTX *psbctx)
                 if (!dirty_row)
                     continue;
                 if (!full && old_curr != psbctx->cmd.curr && base + i == old_curr)
-                    cursor_clear(psbctx->header_lines + i, 0);
+                    psbctx->cursor_clear(psbctx->header_lines + i, psbctx);
                 move(psbctx->header_lines + i, 0);
                 if (!full)
                     clrtoeol();

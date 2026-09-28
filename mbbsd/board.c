@@ -1558,6 +1558,12 @@ brdlist_cursor(int y, PSB_CTX *ctx GCC_UNUSED)
     return 0;
 }
 
+static bool
+brdlist_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
+{
+    return cursor_clear(y, IN_CLASSROOT() ? 10 : 0);
+}
+
 static void
 set_menu_group_op(const char *BM)
 {
@@ -2551,6 +2557,7 @@ choose_board(int newflag)
         .renderer = brdlist_renderer,
         .empty_renderer = brdlist_empty_renderer,
         .cursor = brdlist_cursor,
+        .cursor_clear = brdlist_cursor_clear,
     };
 
     psb_main(&psbctx);
