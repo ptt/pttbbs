@@ -372,6 +372,19 @@ stream_col_offset(int count, const char *s, int *real_cols)
             s++;
             continue;
         }
+        if (MB_IS_BIG5 && IS_DBCSLEAD((unsigned char)*s)) {
+            const char *p = s + 1;
+            while (*p == ESC_CHR) {
+                p = skip_control_sequence(p);
+            }
+            if (*p && (unsigned char)*p >= 0x40) {
+                if (cols + 2 > count)
+                    break;
+                cols += 2;
+                s = p + 1;
+                continue;
+            }
+        }
         int w = mb_width(s);
         if (w < 0)
             w = 1;
