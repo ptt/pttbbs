@@ -848,6 +848,9 @@ clrtoeol(void)
 {
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
+    fterm_reset_mb();
+    if (ft.x > 0 && FTCHAR_ISTRAILING(FTC))
+        FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
     ftchar_fill(FTPC, FTCHAR_ERASE, ft.cols - ft.x);
     ftattr_fill(FTPA, FTATTR_ERASE, ft.cols - ft.x);
     fterm_markdirty();
@@ -858,6 +861,9 @@ clrtobeg(void)
 {
     ft.x = ranged(ft.x, 0, ft.cols-1);
     ft.y = ranged(ft.y, 0, ft.rows-1);
+    fterm_reset_mb();
+    if (ft.x + 1 < ft.cols && FTDBCS_ISLEAD(FTC))
+        FTCROW[ft.x + 1] = FTCHAR_INVALID_DBCS;
     ftchar_fill(FTCROW, FTCHAR_ERASE, ft.x + 1);
     ftattr_fill(FTAROW, FTATTR_ERASE, ft.x+1);
     fterm_markdirty();
@@ -1550,6 +1556,11 @@ out_ftchar(ftchar c)
             FTA = ft.attr;
     }
 
+    if (ft.x > 0 && !FTCHAR_ISTRAILING(c) && FTCHAR_ISTRAILING(FTC))
+        FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
+    if (ft.x + 1 < ft.cols && FTDBCS_ISLEAD(FTC))
+        FTCROW[ft.x + 1] = FTCHAR_INVALID_DBCS;
+
     // normal characters
     FTC = c;
 
@@ -1609,6 +1620,10 @@ outc(unsigned char c)
         // erase the characters between
         if (x > ft.x)
         {
+            if (ft.x > 0 && FTCHAR_ISTRAILING(FTCROW[ft.x]))
+                FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
+            if (x < ft.cols && FTCHAR_ISTRAILING(FTCROW[x]))
+                FTCROW[x] = FTCHAR_INVALID_DBCS;
             ftchar_fill(FTCROW + ft.x, FTCHAR_ERASE, x - ft.x);
             ftattr_fill(FTAROW+ft.x, ft.attr, x-ft.x);
         }
