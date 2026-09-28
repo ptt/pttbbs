@@ -311,8 +311,8 @@ typedef struct
     int     szcmd;
 
     // Multibyte state machine
-    unsigned char dbcs_lead;
-    utf8_ctx utf8;
+    mb_ctx  mb;
+    ftattr  mb_attr;
 
 } FlatTerm;
 
@@ -832,6 +832,17 @@ clear(void)
     move(0,0);
 }
 
+static inline void out_ftchar(ftchar c);
+
+static inline void
+fterm_reset_mb(void)
+{
+    if (mb_pending(&ft.mb)) {
+        mb_reset(&ft.mb);
+        out_ftchar(FTCHAR_INVALID_DBCS);
+    }
+}
+
 void
 clrtoeol(void)
 {
@@ -987,14 +998,8 @@ fterm_rawchar(ftchar c)
         fterm_rawc(c);
         return;
     }
-    if (MB_IS_BIG5) {
-        if (c >= 0x0100)
-            fterm_rawc((c >> 8) & 0xFF);
-        fterm_rawc(c & 0xFF);
-        return;
-    }
-    utf8_ctx ctx;
-    int len = utf8_from_ucs(&ctx, c);
+    mb_ctx ctx;
+    int len = mb_from_char(&ctx, c);
     for (int i = 0; i < len; i++)
         fterm_rawc(ctx.buf[i]);
 }
@@ -1359,14 +1364,6 @@ getmaxyx(int *y, int *x)
         *x = ft.cols;
 }
 
-static inline void
-fterm_reset_mb(void)
-{
-    ft.dbcs_lead = 0;
-    if (MB_IS_UTF8)
-        utf8_reset(&ft.utf8);
-}
-
 void
 move(int y, int x)
 {
@@ -1561,7 +1558,6 @@ out_ftchar(ftchar c)
     if (ft.x >= ft.cols)
     {
         ft.x = 0;
-        ft.dbcs_lead = 0;
         ft.y ++;
         while (ft.y >= ft.rows)
         {
@@ -1646,49 +1642,37 @@ outc(unsigned char c)
         // unknown control characters: ignore
         fterm_reset_mb();
     }
-    else if (MB_IS_BIG5)
+    else if (!mb_pending(&ft.mb) && isascii(c))
     {
-        if (ft.dbcs_lead) {
-            unsigned char b1 = ft.dbcs_lead;
-            ft.dbcs_lead = 0;
-            if (ft.x > 0) {
-                FTCROW[ft.x - 1] = ((ftchar)b1 << 8) | c;
-                out_ftchar(FTCHAR_TRAILING);
-                return;
-            }
-        }
-        if (FTDBCS_ISLEAD_BYTE(c)) {
-            out_ftchar(c);
-            if (ft.x > 0)
-                ft.dbcs_lead = c;
-        } else {
-            out_ftchar(c);
-        }
-    }
-    else if (isascii(c))
-    {
-        if (utf8_pending(&ft.utf8)) {
-            utf8_reset(&ft.utf8);
-            out_ftchar(FTCHAR_INVALID_DBCS);
-        }
         out_ftchar(c);
     }
     else
     {
-        if (!utf8_add_byte(&ft.utf8, c)) {
-            if (!utf8_pending(&ft.utf8)) {
+        if (!mb_pending(&ft.mb))
+            ft.mb_attr = ft.attr;
+
+        if (!mb_add_byte(&ft.mb, c)) {
+            if (!mb_pending(&ft.mb)) {
                 out_ftchar(FTCHAR_INVALID_DBCS);
-                utf8_add_byte(&ft.utf8, c);
+                mb_add_byte(&ft.mb, c);
+                if (mb_pending(&ft.mb))
+                    ft.mb_attr = ft.attr;
             }
             return;
         }
-        int ucs = utf8_get_ucs(&ft.utf8);
-        int w = ucs_width(ucs);
+
+        int ch = mb_get_char(&ft.mb);
+        int w = mb_char_width(ch);
         if (w == 1) {
-            out_ftchar((ftchar)(ucs < 0xFFFE ? ucs : '?'));
+            out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
         } else if (w >= 2) {
-            out_ftchar((ftchar)(ucs < 0xFFFE ? ucs : 0xFFFD));
-            out_ftchar((ftchar)FTCHAR_TRAILING);
+            ftattr saved_attr = ft.attr;
+            ft.attr = ft.mb_attr;
+            out_ftchar((ftchar)(ch < 0xFFFE ? ch : 0xFFFD));
+            ft.attr = saved_attr;
+            if (ft.x > 0) {
+                out_ftchar((ftchar)FTCHAR_TRAILING);
+            }
         }
     }
 }
@@ -1699,20 +1683,9 @@ ftchar_to_mb(ftchar ch, char *buf)
 {
     if (FTCHAR_ISTRAILING(ch))
         return 0;
-    if (MB_IS_BIG5) {
-        if (ch >= 0x0100) {
-            buf[0] = (ch >> 8) & 0xFF;
-            buf[1] = ch & 0xFF;
-            return 2;
-        }
-        buf[0] = ch & 0xFF;
-        return 1;
-    } else {
-        utf8_ctx ctx;
-        int ulen = utf8_from_ucs(&ctx, ch);
-        memcpy(buf, ctx.buf, ulen);
-        return ulen;
-    }
+    mb_ctx ctx;
+    mb_from_char(&ctx, ch);
+    return mb_to_str(&ctx, buf);
 }
 
 int
