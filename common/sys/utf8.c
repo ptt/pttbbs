@@ -117,6 +117,89 @@ utf8_to_mb(const utf8_ctx *ctx, char *mb)
     return ctx->len;
 }
 
+int
+big5_add_byte(big5_ctx *ctx, unsigned char byte)
+{
+    if (!ctx)
+        return 0;
+
+    if (big5_is_ready(ctx))
+        big5_reset(ctx);
+
+    if (ctx->need > 0) {
+        if (byte < 0x40 || byte == 0xFF) {
+            big5_error(ctx);
+            return 0;
+        }
+        ctx->buf[1] = byte;
+        ctx->buf[2] = 0;
+        ctx->got = 2;
+        ctx->len = 2;
+        ctx->ch = ((int)ctx->buf[0] << 8) | byte;
+        return 1;
+    }
+
+    if (byte < 0x80) {
+        ctx->buf[0] = byte;
+        ctx->buf[1] = 0;
+        ctx->need = 1;
+        ctx->got = 1;
+        ctx->len = 1;
+        ctx->ch = byte;
+        return 1;
+    }
+
+    if (byte == 0x80 || byte == 0xFF) {
+        big5_error(ctx);
+        return 0;
+    }
+
+    ctx->buf[0] = byte;
+    ctx->buf[1] = 0;
+    ctx->got = 1;
+    ctx->need = 2;
+    ctx->len = 0;
+    ctx->ch = -1;
+    return 0;
+}
+
+int
+big5_from_char(big5_ctx *ctx, int ch)
+{
+    if (!ctx || ch < 0 || ch > 0xFFFF) {
+        if (ctx)
+            big5_reset(ctx);
+        return 0;
+    }
+    ctx->ch = ch;
+    if (ch <= 0xFF) {
+        ctx->buf[0] = (uint8_t)ch;
+        ctx->buf[1] = 0;
+        ctx->need = ctx->got = ctx->len = 1;
+    } else {
+        ctx->buf[0] = (uint8_t)((ch >> 8) & 0xFF);
+        ctx->buf[1] = (uint8_t)(ch & 0xFF);
+        ctx->buf[2] = 0;
+        ctx->need = ctx->got = ctx->len = 2;
+    }
+    return ctx->len;
+}
+
+int
+big5_to_mb(const big5_ctx *ctx, char *mb)
+{
+    if (!ctx || ctx->len == 0) {
+        if (mb)
+            mb[0] = '\0';
+        return 0;
+    }
+    if (mb) {
+        memcpy(mb, ctx->buf, ctx->len);
+        mb[ctx->len] = '\0';
+    }
+    return ctx->len;
+}
+
 extern const uint16_t u2b_table[];
 
 char *utf8_to_big5_n(const char *utf8, size_t src_len, char *big5, size_t max_len) {

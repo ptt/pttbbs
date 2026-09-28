@@ -391,19 +391,15 @@ mb_bytes(const char *s)
     const unsigned char *p = (const unsigned char *)s;
     if (!p || !p[0])
         return 0;
-    if (MB_IS_UTF8) {
-        utf8_ctx ctx;
-        utf8_init(&ctx);
-        for (int i = 0; p[i]; i++) {
-            if (utf8_add_byte(&ctx, p[i]))
-                return ctx.len;
-            if (!utf8_pending(&ctx))
-                break;
-        }
-        return 1;
-    } else {
-        return (IS_DBCSLEAD(p[0]) && (unsigned char)p[1] >= 0x40) ? 2 : 1;
+    mb_ctx ctx;
+    mb_init(&ctx);
+    for (int i = 0; p[i]; i++) {
+        if (mb_add_byte(&ctx, p[i]))
+            return ctx.len;
+        if (!mb_pending(&ctx))
+            break;
     }
+    return 1;
 }
 
 int
@@ -434,18 +430,16 @@ mb_width(const char *s)
             if (p[0] == 0xEF && (p[1] <= 0xAB || p[1] == 0xBC))
                 return 2;
         }
-        utf8_ctx ctx;
-        utf8_init(&ctx);
-        for (int i = 0; p[i]; i++) {
-            if (utf8_add_byte(&ctx, p[i]))
-                return ucs_width(utf8_get_ucs(&ctx));
-            if (!utf8_pending(&ctx))
-                break;
-        }
-        return 1;
-    } else {
-        return mb_bytes(s);
     }
+    mb_ctx ctx;
+    mb_init(&ctx);
+    for (int i = 0; p[i]; i++) {
+        if (mb_add_byte(&ctx, p[i]))
+            return mb_char_width(mb_get_char(&ctx));
+        if (!mb_pending(&ctx))
+            break;
+    }
+    return 1;
 }
 
 int
@@ -464,27 +458,12 @@ mb_from_vkey(int key, char *buf)
         buf[0] = '\0';
         return 0;
     }
-    if (MB_IS_UTF8) {
-        utf8_ctx ctx;
-        if (!utf8_from_ucs(&ctx, key)) {
-            buf[0] = '\0';
-            return 0;
-        }
-        return utf8_to_mb(&ctx, buf);
+    mb_ctx ctx;
+    if (!mb_from_char(&ctx, key)) {
+        buf[0] = '\0';
+        return 0;
     }
-    if (key < 0x80) {
-        buf[0] = (char)key;
-        buf[1] = '\0';
-        return 1;
-    }
-    if (key >= 0x8140 && key <= 0xFEFE) {
-        buf[0] = (char)((key >> 8) & 0xFF);
-        buf[1] = (char)(key & 0xFF);
-        buf[2] = '\0';
-        return 2;
-    }
-    buf[0] = '\0';
-    return 0;
+    return mb_to_str(&ctx, buf);
 }
 
 int
