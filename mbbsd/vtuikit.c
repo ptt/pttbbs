@@ -1162,14 +1162,10 @@ vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, 
 		outs(ANSI_RESET);
 
 	    // move to cursor position
-	    if (MB_IS_UTF8) {
-		int cur_col = 0;
-		for (int p = 0; p < rt.icurr; p += mb_bytes(buf + p))
-		    cur_col += mb_width(buf + p);
-		move(line, col + cur_col);
-	    } else {
-		move(line, col + rt.icurr);
-	    }
+	    int cur_col = 0;
+	    for (int p = 0; p < rt.icurr; p += mb_bytes(buf + p))
+		cur_col += mb_width(buf + p);
+	    move(line, col + cur_col);
 	} else {
 	    // to simulate the "clrtoeol" behavior...
 	    // XXX make this call only once? or not?
@@ -1330,37 +1326,10 @@ vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, 
 	    bell(); continue;
 	}
 
-	// prevent incomplete multibyte sequence and enforce display width limit
-	int need = mblen;
-	int add_width = 0;
-	if (VKEY_IS_MB) {
-	    if (c < 0x80) {
-		need = 1;
-		add_width = 1;
-	    } else if (MB_IS_UTF8) {
-		if ((c & 0xC0) != 0x80) {
-		    if ((c & 0xE0) == 0xC0) need = 2;
-		    else if ((c & 0xF0) == 0xE0) need = 3;
-		    else if ((c & 0xF8) == 0xF0) need = 4;
-		    add_width = 2;
-		} else {
-		    need = 0;
-		}
-	    } else {
-		if (mbs_status(buf, rt.icurr) != MB_TRAILING) {
-		    need = 2;
-		    add_width = 2;
-		} else {
-		    need = 0;
-		}
-	    }
-	} else {
-	    add_width = mb_width(mb);
-	}
-	if (need > 0 && (max_bytes - rt.iend < need + 1 ||
-			 (int)stream_width(buf) + add_width > max_col)) {
-	    for (int k = 1; k < need && vkey_is_ready(); k++)
-		vkey();
+	// enforce display width limit
+	int add_width = mb_width(mb);
+	if (max_bytes - rt.iend < mblen + 1 ||
+	    (int)stream_width(buf) + add_width > max_col) {
 	    bell();
 	    continue;
 	}
