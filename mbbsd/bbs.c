@@ -3293,6 +3293,18 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
     return ret;
 }
 
+static bool
+del_post_check_mode(const fileheader_t *fhdr, int mode, char key, const char *label)
+{
+    if (!(fhdr->filemode & mode))
+        return false;
+    if (is_BM_cache(currbid))
+        vmsgf("文章被%s(%c)，請先解除", label, key);
+    else
+        vmsgf("文章被%s，無法刪除，請洽板主", label);
+    return true;
+}
+
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -3314,14 +3326,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     }
 
     /* DIGEST is not visible to users... */
-    if ((fhdr->filemode & FILE_BOTTOM) ||
-        (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST)) {
-        if (is_BM_cache(currbid))
-            vmsg("文章被標記(m)或置底(_)或收入文摘(g)，請先解除");
-        else
-            vmsg("文章被標記或置底或收入文摘，無法刪除，請洽板主");
+    if (del_post_check_mode(fhdr, FILE_BOTTOM, '_', "置底") ||
+        del_post_check_mode(fhdr, FILE_MARKED, 'm', "標記") ||
+        del_post_check_mode(fhdr, FILE_DIGEST, 'g', "收入文摘"))
         return DONOTHING;
-    }
 
     if (fhdr->owner[0] == '-')
         return DONOTHING;
