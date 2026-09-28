@@ -385,16 +385,25 @@ vkey(void)
 
     mb_ctx ctx;
     mb_init(&ctx);
-    mb_add_byte(&ctx, c);
+    if (!mb_add_byte(&ctx, c)) {
+        if (mb_is_error(&ctx))
+            return KEY_UNKNOWN;
+    }
     while (mb_pending(&ctx)) {
         int b = vk_byte();
+        if (b <= 0)
+            return b;
         if (!mb_is_valid_trail(b)) {
             vk_ungetc(b);
             return KEY_UNKNOWN;
         }
-        mb_add_byte(&ctx, b);
+        if (!mb_add_byte(&ctx, b)) {
+            if (mb_is_error(&ctx))
+                return KEY_UNKNOWN;
+        }
     }
-    return mb_get_char(&ctx);
+    int ch = mb_get_char(&ctx);
+    return (ch >= 0) ? ch : KEY_UNKNOWN;
 }
 
 /* ----------------------------------------------------- */
