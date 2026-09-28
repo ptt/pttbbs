@@ -966,13 +966,13 @@ pickup(userlist_ctx_t *cx)
 // userlist column definition
 static const VCOL ulist_coldef[ULISTCOLS] = {
     {NULL, 8, 9, 0, {0, 1}},	// "編號" 因為游標靠這所以也不該長太大
-    {NULL, 2, 2, 0, {0, 0, 1}}, // "P" (pager, no border)
+    {NULL, 2, 2, 0, { .usewhole = 1 }}, // "P" (pager, no border)
     {NULL, IDLEN+1, IDLEN+3}, // "代號"
     {NULL, 17,25, 2}, // "暱稱", sizeof(userec_t::nickname)
     {NULL, 17,27, 1}, // "故鄉/棋類戰績/等級分"
     {NULL, 12,23, 1}, // "動態" (最大多少才合理？) modestring size=40 但...
-    {NULL, 4, 4, 0, {0, 0, 1}}, // "<通緝>" (原心情)
-    {NULL, 6, 6, -1, {0, 1, 1}}, // "發呆" (optional?)
+    {NULL, 4, 4, 0, { .usewhole = 1 }}, // "<通緝>" (原心情)
+    {NULL, 6, 6, -1, { .right_align = 1, .usewhole = 1 }}, // "發呆" (optional?)
     {NULL, 0, VCOL_MAXW, -1}, // for middle alignment
 };
 

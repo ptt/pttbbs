@@ -22,6 +22,10 @@
 #ifndef _PSB_H_
 #define _PSB_H_
 
+#include <stdarg.h>
+#include <stdbool.h>
+#include "vtuikit.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Constant
 #define PSB_OK          (0)
@@ -32,7 +36,7 @@
 #endif
 
 #define PSB_MAX_CMD_LAYERS (8)
-#define PSB_MAX_COLS       (8)
+#define PSB_MAX_COLS       (16)
 
 enum {
     CMD_PRIO_NONE = 0,   // Do not display in footer (alias or help-only)
@@ -93,7 +97,13 @@ typedef struct PSB_CTX {
     int cached_base, cached_rows, cached_cols;
     int cols;
     int col_paddings;
-    int col_widths[PSB_MAX_COLS];
+    int col_expand_mode;
+    VCOLW col_widths[PSB_MAX_COLS];
+    VCOLW *widths;
+    const VCOL *vcols;
+    const VCOL *cached_vcols;
+    char col_header_right[64];
+    bool custom_header_columns;
     const char *filename;
     void *window_buf;
     size_t item_size;
@@ -118,6 +128,12 @@ int cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
 void psb_sync_cache(PSB_CTX *psbctx);
 int psb_file_loader(PSB_CTX *psbctx);
 bool psb_check_perm(int perm);
+
+void psb_render_header_columns(PSB_CTX *ctx, const char *right_str);
+void render_columns_array(PSB_CTX *ctx, const char *const *data, int n);
+void render_columns_v(PSB_CTX *ctx, va_list ap);
+void render_columns(PSB_CTX *ctx, ...);
+#define psb_render_columns render_columns
 
 int psb_main(PSB_CTX *psbctx);
 
