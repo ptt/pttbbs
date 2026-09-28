@@ -548,7 +548,7 @@ func handlePprof(socketPath string, args []string) {
 func printUsage() {
 	fmt.Println("Usage: search.ctl [-socket path] <action> [args...]")
 	fmt.Println("Actions:")
-	fmt.Println("  status                               Show cache statistics and uptime")
+	fmt.Println("  status, stats                        Show cache statistics, memory usage, and uptime")
 	fmt.Println("  sources [board] [-n limit] [-json]   Show query sources breakdown (mbbsd hash, sr, lua, web)")
 	fmt.Println("  top [-n limit] [-by sort] [-sources] Show top boards by activity / cache usage")
 	fmt.Println("                                       (sort: misses, queries, time, indices, entries, aid, backtrack)")
@@ -579,8 +579,8 @@ func main() {
 	subArgs := args[1:]
 
 	switch action {
-	case "status":
-		req := daemon.ControlRequest{Action: "status"}
+	case "status", "stats":
+		req := daemon.ControlRequest{Action: action}
 		resp, err := sendControlRequest(*socketPath, req, 5*time.Second)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
