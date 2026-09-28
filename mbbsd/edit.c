@@ -1245,7 +1245,7 @@ edit_vkey(void)
 	c = edit_pending_key;
 	edit_pending_key = KEY_INCOMPLETE;
     } else {
-	c = vkey();
+	c = vk_byte();
     }
     if (c == Ctrl('U') || c == ESC_CHR) {
 	if (edit_dbcs_half)
@@ -1259,8 +1259,6 @@ edit_vkey(void)
 static int
 vkey_to_mb(int ch, char mb[5])
 {
-    if (!VKEY_IS_MB)
-	return mb_from_vkey(ch, mb);
     if (edit_dbcs_half) {
 	if (edit_dbcs_half_esc) {
 	    /* ANSI parameters; a final byte (other than '[') ends it. */
@@ -1276,7 +1274,7 @@ vkey_to_mb(int ch, char mb[5])
 	    edit_dbcs_half_esc = 0;
 	}
 	edit_dbcs_half = 0;
-	if ((ch >= 0x40 && ch <= 0x7E) || (ch >= 0x80 && ch <= 0xFE)) {
+	if (mb_is_valid_trail(ch)) {
 	    /* The trail byte of the pending half character. */
 	    mb[0] = (char)ch;
 	    mb[1] = '\0';
@@ -1293,8 +1291,8 @@ vkey_to_mb(int ch, char mb[5])
 	utf8_init(&uctx);
 	utf8_add_byte(&uctx, ch);
 	while (utf8_pending(&uctx)) {
-	    int cb = vkey();
-	    if (cb < 0x80 || cb > 0xBF) {
+	    int cb = vk_byte();
+	    if (!mb_is_valid_trail(cb)) {
 		/* Not a continuation byte: keep it for the caller. */
 		edit_pending_key = cb;
 		mb[0] = '\0';
@@ -1304,8 +1302,8 @@ vkey_to_mb(int ch, char mb[5])
 	}
 	return utf8_to_mb(&uctx, mb);
     }
-    int ch2 = vkey();
-    if ((ch2 >= 0x40 && ch2 <= 0x7E) || (ch2 >= 0x80 && ch2 <= 0xFE)) {
+    int ch2 = vk_byte();
+    if (mb_is_valid_trail(ch2)) {
 	mb[0] = (char)ch;
 	mb[1] = (char)ch2;
 	mb[2] = '\0';
