@@ -210,13 +210,13 @@ wait_input(float f, int bIgnoreBuf)
 inline int
 vkey_is_ready(void)
 {
-    return num_in_buf() > 0;
+    return (vkctx.peek_ch != KEY_INCOMPLETE) || (num_in_buf() > 0);
 }
 
 inline int
 vkey_is_typeahead()
 {
-    return num_in_buf() > 0;
+    return (vkctx.peek_ch != KEY_INCOMPLETE) || (num_in_buf() > 0);
 }
 
 inline int
@@ -230,6 +230,7 @@ vkey_purge(void)
 {
     int max_try = 64;
     drop_input();
+    vkctx.peek_ch = KEY_INCOMPLETE;
 
     STATINC(STAT_SYSREADSOCKET);
     while (wait_input(0.01, 1) && max_try-- > 0) {
@@ -245,27 +246,28 @@ vkey_init() {
     vkctx.peek_ch = KEY_INCOMPLETE;
 }
 
-/*
- * vkey(): receive next key.
- * Note: returns ASCII (0x00..0x7F), KEY_* special keys, and for non-ASCII
- * input either raw multibyte bytes (VKEY_IS_MB=1, default) or a decoded
- * wchar (VKEY_IS_MB=0: UCS/Unicode scalar for UTF-8, 16-bit word for Big5).
- */
 inline int
 vk_byte(void)
 {
+    if (vkctx.peek_ch != KEY_INCOMPLETE) {
+        int c = vkctx.peek_ch;
+        vkctx.peek_ch = KEY_INCOMPLETE;
+        return c;
+    }
     return igetch();
 }
 
-inline int
-vkey(void)
+void
+vk_ungetc(int c)
 {
-    return vk_byte();
+    vkctx.peek_ch = c;
 }
 
 inline int
 vkey_poll(int ms)
 {
+    if (vkctx.peek_ch != KEY_INCOMPLETE)
+        return 1;
     if (ms) refresh();
     // XXX handle I_OTHERDATA?
     return wait_input(ms / (double)MILLISECONDS, 0);

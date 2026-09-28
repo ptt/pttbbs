@@ -564,14 +564,13 @@ vk_byte()
 }
 
 /**
- * vkey(): receive and block for next key
- * @return: virtual key code
+ * vk_ungetc(): push back a key into peek buffer
  */
-VKEY_PROTO int
-vkey()
+VKEY_PROTO void
+vk_ungetc(int c)
 {
-    VKEYDBGLOG("vkey()");
-    return vk_byte();
+    VKEYDBGLOG("vk_ungetc(0x%02X)", c);
+    VKEY_SET_PEEK(c);
 }
 
 /**

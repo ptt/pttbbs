@@ -376,6 +376,27 @@ vkey_decode(VBUF *inbuf, int raw_ch)
     return vkey_dispatch_hooks(ch);
 }
 
+int
+vkey(void)
+{
+    int c = vk_byte();
+    if (c < 0x80 || IS_SPECIAL_KEY(c) || c <= 0)
+        return c;
+
+    mb_ctx ctx;
+    mb_init(&ctx);
+    mb_add_byte(&ctx, c);
+    while (mb_pending(&ctx)) {
+        int b = vk_byte();
+        if (!mb_is_valid_trail(b)) {
+            vk_ungetc(b);
+            return KEY_UNKNOWN;
+        }
+        mb_add_byte(&ctx, b);
+    }
+    return mb_get_char(&ctx);
+}
+
 /* ----------------------------------------------------- */
 /* vbuf filter pipeline                                  */
 /* ----------------------------------------------------- */
