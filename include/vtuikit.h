@@ -1,6 +1,8 @@
 #ifndef VTUIKIT_H
 #define VTUIKIT_H
 
+#include <stdbool.h>
+
 /*
  * vtuikit.h
  * piaip's new implementation of vtuikit
@@ -100,18 +102,25 @@ typedef long	VREFCUR;
 typedef short	VCOLW;
 typedef short	VCOLPRI;
 
+#define VCOL_ELLIPSIS   "¡K"
+
+enum {
+    VCOL_EXPAND_WEIGHTED    = 0, // distribute proportionally based on priority weight
+    VCOL_EXPAND_ROUND_ROBIN = 1, // distribute 1-by-1 in round-robin fashion by priority
+};
+
 typedef struct VCOL {
-    char *attr;	    // default attribute
-    VCOLW minw;	    // minimal width
-    VCOLW maxw;	    // max width
-    VCOLPRI pri;    // priority (higher expands first)
+    const char *label;  // column label (displayed in header)
+    VCOLW minw;         // minimal width
+    VCOLW maxw;         // max width
+    VCOLPRI pri;        // priority (allocation order & expansion weight)
 
     struct {
-	char has_ansi;	    // field data have ANSI escapes
-	char right_align;   // align output to right side
-	char usewhole;	    // draw entire column and prevent borders
+	bool right_align: 1; // align output to right side
+	bool usewhole: 1;    // draw entire column and prevent borders
     }   flags;
 
+    char *attr;	    // default attribute
 } VCOL;
 
 #define VGETCB_NONE	(0) // do nothing
@@ -199,8 +208,16 @@ void vs_multi_T_table_simple(
 	const char *attr_caption, const char *attr_l, const char *attr_r);
 
 // columned output
-void vs_cols_layout (const VCOL* cols, VCOLW *ws, int n);	/// calculate VCOL to fit current screen in ws
-void vs_cols	    (const VCOL* cols, const VCOLW *ws, int n, ...);
+int  vs_cols_layout_ex (const VCOL* cols, VCOLW *ws, int n, int total_width, int expand_mode);
+static inline int vs_cols_layout (const VCOL* cols, VCOLW *ws, int n) {
+    return vs_cols_layout_ex(cols, ws, n, 0, VCOL_EXPAND_WEIGHTED);
+}
+void vs_cols_array  (const VCOL *cols, const VCOLW *ws, int n, const char *const *data, int num_data);
+static inline void vs_cols_labels (const VCOL *cols, const VCOLW *ws, int n) {
+    vs_cols_array(cols, ws, n, NULL, 0);
+}
+void vs_cols_v      (const VCOL *cols, const VCOLW *ws, int n, va_list ap);
+void vs_cols        (const VCOL* cols, const VCOLW *ws, int n, ...);
 
 // VREF: save and storing temporary objects (restore will also free object).
 VREFSCR	vscr_save   (void);

@@ -316,6 +316,105 @@ psb_init_defaults(PSB_CTX *psbctx) {
            psbctx->footer_lines);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// PSB Columned Output Framework (VCOL integration)
+
+static void
+psb_sync_cols(PSB_CTX *psbctx)
+{
+    if (!psbctx || !psbctx->vcols)
+        return;
+    int n = psbctx->cols;
+    if (n <= 0) {
+        for (n = 0; n < PSB_MAX_COLS && (psbctx->vcols[n].label ||
+                                         psbctx->vcols[n].minw ||
+                                         psbctx->vcols[n].maxw ||
+                                         psbctx->vcols[n].pri); n++)
+            ;
+        psbctx->cols = n;
+    }
+    int avail = t_columns - psbctx->col_paddings;
+    VCOLW *w = psbctx->widths ? psbctx->widths : psbctx->col_widths;
+    vs_cols_layout_ex(psbctx->vcols, w, psbctx->cols, avail, psbctx->col_expand_mode);
+    if (psbctx->widths && psbctx->widths != psbctx->col_widths) {
+        for (int c = 0; c < psbctx->cols && c < PSB_MAX_COLS; c++)
+            psbctx->col_widths[c] = psbctx->widths[c];
+    }
+    psbctx->cached_vcols = psbctx->vcols;
+    psbctx->cached_cols = t_columns;
+}
+
+void
+psb_render_header_columns(PSB_CTX *ctx, const char *right_str)
+{
+    if (!ctx || !ctx->vcols)
+        return;
+
+    if (ctx->col_widths[0] == 0 || ctx->vcols != ctx->cached_vcols || ctx->cached_cols != t_columns)
+        psb_sync_cols(ctx);
+
+    const VCOLW *widths = ctx->widths ? ctx->widths : ctx->col_widths;
+    int right_w = (right_str && *right_str) ? stream_width(right_str) : 0;
+    VCOLW hdr_widths[PSB_MAX_COLS];
+    memcpy(hdr_widths, widths, sizeof(VCOLW) * (ctx->cols < PSB_MAX_COLS ? ctx->cols : PSB_MAX_COLS));
+    if (right_w > 0 && ctx->cols > 0) {
+        int last = ctx->cols - 1;
+        if (hdr_widths[last] > right_w)
+            hdr_widths[last] -= right_w;
+    }
+
+    outs(ANSI_REVERSE);
+    vs_cols_labels(ctx->vcols, hdr_widths, ctx->cols);
+
+    int rem = t_columns - vgetx();
+    if (rem > 0) {
+        if (right_w > 0 && rem >= right_w) {
+            while (rem > right_w) {
+                outc(' ');
+                rem--;
+            }
+            outs(right_str);
+        } else {
+            while (rem > 0) {
+                outc(' ');
+                rem--;
+            }
+        }
+    }
+    outs(ANSI_RESET);
+}
+
+void
+render_columns_array(PSB_CTX *ctx, const char *const *data, int n)
+{
+    if (!ctx || !ctx->vcols)
+        return;
+    if (ctx->col_widths[0] == 0 || ctx->vcols != ctx->cached_vcols || ctx->cached_cols != t_columns)
+        psb_sync_cols(ctx);
+    const VCOLW *w = ctx->widths ? ctx->widths : ctx->col_widths;
+    vs_cols_array(ctx->vcols, w, ctx->cols, data, n);
+}
+
+void
+render_columns_v(PSB_CTX *ctx, va_list ap)
+{
+    if (!ctx || !ctx->vcols)
+        return;
+    if (ctx->col_widths[0] == 0 || ctx->vcols != ctx->cached_vcols || ctx->cached_cols != t_columns)
+        psb_sync_cols(ctx);
+    const VCOLW *w = ctx->widths ? ctx->widths : ctx->col_widths;
+    vs_cols_v(ctx->vcols, w, ctx->cols, ap);
+}
+
+void
+render_columns(PSB_CTX *ctx, ...)
+{
+    va_list ap;
+    va_start(ap, ctx);
+    render_columns_v(ctx, ap);
+    va_end(ap);
+}
+
 int
 psb_file_loader(PSB_CTX *psbctx) {
     if (!psbctx->filename || !psbctx->item_size)
@@ -359,6 +458,12 @@ psb_sync_cache(PSB_CTX *psbctx) {
             psbctx->cmd.curr = 0;
         if (psbctx->cmd.curr < psbctx->cmd.base || psbctx->cmd.curr >= psbctx->cmd.base + rows)
             psbctx->cmd.base = (psbctx->cmd.curr / rows) * rows;
+    }
+
+    if (psbctx->vcols) {
+        if (force || psbctx->col_widths[0] == 0 || psbctx->vcols != psbctx->cached_vcols || t_columns != psbctx->cached_cols) {
+            psb_sync_cols(psbctx);
+        }
     }
 
     if (psbctx->col_measurer && psbctx->cols > 0) {
@@ -468,7 +573,13 @@ psb_main(PSB_CTX *psbctx)
             move(0, 0);
             if (!full)
                 clrtoln(psbctx->header_lines);
-            psbctx->header(psbctx);
+            psbctx->col_header_right[0] = 0;
+            if (psbctx->header)
+                psbctx->header(psbctx);
+            if (psbctx->vcols && !psbctx->custom_header_columns && psbctx->header_lines > 0) {
+                move(psbctx->header_lines - 1, 0);
+                psb_render_header_columns(psbctx, psbctx->col_header_right);
+            }
         }
 
         if (psbctx->cmd.total == 0) {

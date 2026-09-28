@@ -648,113 +648,213 @@ vs_footer(const char *caption, const char *msg)
     outs(ANSI_RESET);
 }
 
-/**
- * vs_cols_layout(cols, ws, n): 依據 cols (大小 n) 的定義計算適合的行寬於 ws
- */
-
-void
-vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
+int
+vs_cols_layout_ex(const VCOL *cols, VCOLW *ws, int n, int total_width, int expand_mode)
 {
-    int i, tw;
-    VCOLPRI pri1 = cols[0].pri;
+    if (!cols || !ws || n <= 0)
+        return 0;
+
     memset(ws, 0, sizeof(VCOLW) * n);
 
-    // first run, calculate minimal size
-    for (i = 0, tw = 0; i < n; i++)
-    {
-	// drop any trailing if required
-	if (tw + cols[i].minw > MAX_COL)
-	    break;
-	ws[i] = cols[i].minw;
-	tw += ws[i];
+    if (total_width <= 0)
+        total_width = t_columns > 0 ? t_columns : 80;
+
+    int min_w[64];
+    int max_w[64];
+    int order[64];
+
+    if (n > 64)
+        n = 64;
+
+    for (int i = 0; i < n; i++) {
+        min_w[i] = cols[i].minw > 0 ? cols[i].minw : 0;
+        if (cols[i].maxw <= 0 || cols[i].maxw < min_w[i])
+            max_w[i] = total_width;
+        else
+            max_w[i] = cols[i].maxw;
+        order[i] = i;
     }
 
-    if (tw < MAX_COL) {
-	// calculate highest priorities
-	// (pri1 already set to col[0].pri)
-	for (i = 1; i < n; i++)
-	{
-	    if (cols[i].pri > pri1)
-		pri1 = cols[i].pri;
-	}
+    // Sort order by priority descending (stable sort)
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            if (cols[order[j]].pri < cols[order[j + 1]].pri) {
+                int tmp = order[j];
+                order[j] = order[j + 1];
+                order[j + 1] = tmp;
+            }
+        }
     }
 
-    // try to iterate through all.
-    while (tw < MAX_COL) {
-	char run = 0;
+    // Phase 1: Allocate min_width by priority
+    int rem_w = total_width;
+    for (int k = 0; k < n; k++) {
+        int i = order[k];
+        if (rem_w >= min_w[i]) {
+            ws[i] = min_w[i];
+            rem_w -= min_w[i];
+        } else {
+            ws[i] = 0;
+        }
+    }
 
-	// also update pri2 here for next run.
-	VCOLPRI pri2 = cols[0].pri;
+    // Phase 2: Distribute remaining width proportionally or round-robin up to max_width
+    if (expand_mode == VCOL_EXPAND_ROUND_ROBIN) {
+        while (rem_w > 0) {
+            VCOLPRI pri1 = -32768;
+            bool found = false;
+            for (int i = 0; i < n; i++) {
+                if ((ws[i] > 0 || min_w[i] == 0) && ws[i] < max_w[i]) {
+                    if (!found || cols[i].pri > pri1) {
+                        pri1 = cols[i].pri;
+                        found = true;
+                    }
+                }
+            }
+            if (!found)
+                break;
 
-	for (i = 0; i < n; i++)
-	{
-	    // if reach max, skip.
-	    if (ws[i] >= cols[i].maxw)
-		continue;
+            int added = 0;
+            for (int i = 0; i < n && rem_w > 0; i++) {
+                if ((ws[i] > 0 || min_w[i] == 0) && ws[i] < max_w[i] && cols[i].pri == pri1) {
+                    ws[i]++;
+                    rem_w--;
+                    added++;
+                }
+            }
+            if (added == 0)
+                break;
+        }
+    } else {
+        while (rem_w > 0) {
+            int total_weight = 0;
+            for (int i = 0; i < n; i++) {
+                if (ws[i] > 0 || (min_w[i] == 0 && rem_w > 0)) {
+                    if (ws[i] < max_w[i]) {
+                        int p = cols[i].pri;
+                        total_weight += (p > 0) ? p : 1;
+                    }
+                }
+            }
 
-	    // lower priority, update pri2 and skip.
-	    if (cols[i].pri < pri1)
-	    {
-		if (cols[i].pri > pri2)
-		    pri2 = cols[i].pri;
-		continue;
-	    }
+            if (total_weight <= 0)
+                break;
 
-	    // now increase fields
-	    ws[i] ++;
-	    if (++tw >= MAX_COL) break;
-	    run ++;
-	}
+            int added = 0;
+            for (int i = 0; i < n && rem_w > 0; i++) {
+                if (ws[i] < max_w[i] && (ws[i] > 0 || min_w[i] == 0)) {
+                    int p = cols[i].pri;
+                    int weight = (p > 0) ? p : 1;
+                    int cap = max_w[i] - ws[i];
+                    int share = (rem_w * weight) / total_weight;
+                    if (share > cap)
+                        share = cap;
+                    if (share > 0) {
+                        ws[i] += share;
+                        rem_w -= share;
+                        added += share;
+                    }
+                }
+            }
 
-	// if no more fields...
-	if (!run) {
-	    if (pri1 <= pri2) // no more priorities
-		break;
-	    pri1 = pri2; // try lower priority.
-	}
+            if (added == 0) {
+                for (int k = 0; k < n && rem_w > 0; k++) {
+                    int i = order[k];
+                    if (ws[i] < max_w[i] && (ws[i] > 0 || min_w[i] == 0)) {
+                        ws[i]++;
+                        rem_w--;
+                        added++;
+                    }
+                }
+                if (added == 0)
+                    break;
+            }
+        }
+    }
+
+    return total_width - rem_w;
+}
+
+static void
+vs_col_render(const VCOL *col, int w, const char *s)
+{
+    if (w <= 0)
+        return;
+
+    if (!s)
+        s = "";
+
+    int right_align = (col) ? col->flags.right_align : 0;
+    if (col && col->attr)
+        outs(col->attr);
+
+    int sw = stream_width(s);
+
+    if (sw <= w) {
+        if (right_align) {
+            if (w > sw)
+                nblank(w - sw);
+            outs(s);
+        } else {
+            outs(s);
+            if (w > sw)
+                nblank(w - sw);
+        }
+    } else {
+        if (w >= 2) {
+            int real_cols = 0;
+            int byte_len = stream_col_offset(w - 2, s, &real_cols);
+            outns(s, byte_len);
+            outs(VCOL_ELLIPSIS);
+            if (w > real_cols + 2)
+                nblank(w - (real_cols + 2));
+        } else if (w == 1) {
+            int real_cols = 0;
+            int byte_len = stream_col_offset(1, s, &real_cols);
+            if (byte_len > 0)
+                outns(s, byte_len);
+            else
+                outc(' ');
+        }
+    }
+
+    if (col && col->attr)
+        outs(ANSI_RESET);
+    else if (strchr(s, ESC_CHR))
+        outs(ANSI_RESET);
+}
+
+void
+vs_cols_array(const VCOL *cols, const VCOLW *ws, int n, const char *const *data, int num_data)
+{
+    if (!ws || n <= 0)
+        return;
+
+    for (int i = 0; i < n; i++) {
+        const char *s = (data && i < num_data) ? data[i] : (cols && cols[i].label ? cols[i].label : "");
+        vs_col_render(cols ? &cols[i] : NULL, ws[i], s);
     }
 }
 
-/**
- * vs_cols: 依照已經算好的欄位大小進行輸出
- */
+void
+vs_cols_v(const VCOL *cols, const VCOLW *ws, int n, va_list ap)
+{
+    if (!ws || n <= 0)
+        return;
+
+    for (int i = 0; i < n; i++) {
+        const char *s = va_arg(ap, const char *);
+        vs_col_render(cols ? &cols[i] : NULL, ws[i], s);
+    }
+}
+
 void
 vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 {
-    int i = 0, w = 0;
-    char *s = NULL;
-
     va_list ap;
     va_start(ap, n);
-
-    for (i = 0; i < n; i++, cols++, ws++)
-    {
-	int flags = 0;
-	s = va_arg(ap, char*);
-
-	// quick check input.
-	if (!s)
-	{
-	    s = "";
-	}
-	w = *ws;
-
-	if (cols->attr)
-	    outs(cols->attr);
-
-	// build vfill flag
-	if (cols->flags.right_align)	flags |= VFILL_RIGHT_ALIGN;
-	if (cols->flags.usewhole)	flags |= VFILL_NO_BORDER;
-
-	vfill(w, flags, s);
-
-	if (cols->attr)
-	    outs(ANSI_RESET);
-    }
+    vs_cols_v(cols, ws, n, ap);
     va_end(ap);
-
-    // end line
-    outs(ANSI_RESET "\n");
 }
 
 /*
