@@ -209,8 +209,8 @@ typedef struct {
     int             entries;
     bool            is_newdirect;
     time4_t         enter_time;
-    void          (*dotitle)(void);
-    void          (*doentry)(int, fileheader_t *);
+    void          (*dotitle)(PSB_CTX *);
+    void          (*doentry)(int, fileheader_t *, PSB_CTX *);
     read_view_t     view;
     fileheader_predicate_t sr_preds[MAX_SEARCH_PREDICATES];
     int             sr_pred_count;
@@ -1547,7 +1547,8 @@ static int
 read_header(PSB_CTX *psbctx)
 {
     read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
-    (*cx->dotitle)();
+    if (cx->dotitle)
+        (*cx->dotitle)(psbctx);
     return 0;
 }
 
@@ -1586,7 +1587,7 @@ read_renderer(int idx, PSB_CTX *psbctx)
             else
                 fh.filemode &= ~FILE_BOTTOM;  /* original of a pinned post */
         }
-        (*cx->doentry)(disp_num, &fh);
+        (*cx->doentry)(disp_num, &fh, psbctx);
     }
     return 0;
 }
@@ -1755,8 +1756,8 @@ read_loader(PSB_CTX *psbctx)
 }
 
 void
-i_read(int cmdmode, const char *direct, void (*dotitle)(),
-       void (*doentry)(int, fileheader_t *), const cmd_t *rcmdlist,
+i_read(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
+       void (*doentry)(int, fileheader_t *, PSB_CTX *), const cmd_t *rcmdlist,
        int bidcache)
 {
     char            currdirect0[PATHLEN];
@@ -1808,6 +1809,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(),
         },
         .header_lines = 3,
         .footer_lines = 1,
+        .col_paddings = 1,
         .layers = layers,
         .loader = read_loader,
         .header = read_header,

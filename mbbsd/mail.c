@@ -1564,28 +1564,37 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     return (return_no);
 }
 
+static VCOL mail_coldefs[] = {
+    {"", 1, 1, 100},
+    {" 編號   ", 8, 8, 20},
+    {"日 期 ", 6, 6, 70},
+    {"作 者          ", 15, 15, 80},
+    {"信  件  標  題", 16, TTLEN + 1, 100},
+    {0},
+};
+#define MAIL_COLS (ARRAY_SIZE(mail_coldefs) - 1)
+
 static void
-mailtitle(void)
+mailtitle(PSB_CTX *ctx)
 {
-    char buf[STRLEN];
-
-    if (mailmaxkeep)
-    {
-	SNPRINTF(buf, ANSI_COLOR(32) "(容量:%d/%d篇) ", mailkeep, mailmaxkeep);
-    } else {
-	SNPRINTF(buf, ANSI_COLOR(32) "(大小:%d篇) ", mailkeep);
-    }
-
     showtitle("郵件選單", BBSNAME);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME
             );
-    vbarlr(ANSI_REVERSE "  編號   日 期 作 者          信  件  標  題", buf);
+    if (ctx) {
+        ctx->cols = MAIL_COLS;
+        ctx->vcols = mail_coldefs;
+        ctx->col_paddings = 1;
+        if (mailmaxkeep)
+            SNPRINTF(ctx->col_header_right, ANSI_COLOR(32) "(容量:%d/%d篇) ", mailkeep, mailmaxkeep);
+        else
+            SNPRINTF(ctx->col_header_right, ANSI_COLOR(32) "(大小:%d篇) ", mailkeep);
+    }
 }
 
 static void
-maildoent(int num, fileheader_t * ent)
+maildoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 {
     const char *title, *mark, *color = NULL;
     char isonline = 0, datepart[6], type = ' ';
@@ -1637,15 +1646,24 @@ maildoent(int num, fileheader_t * ent)
 	color = "";
     }
 
-    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s",
-	    num, type, datepart,
-	    isonline ? ANSI_COLOR(1) : "",
-	    ent->owner,
-	    isonline ? ANSI_RESET : "",
-	    mark, color,
-	    t_columns - 34, t_columns - 34,
-	    title,
-	    *color ? ANSI_RESET : "");
+    char col_num[16];
+    SNPRINTF(col_num, "%5d %c ", num, type);
+
+    char col_date[16];
+    SNPRINTF(col_date, "%-6s", datepart);
+
+    char col_owner[64];
+    SNPRINTF(col_owner, "%s%-15.14s%s",
+             isonline ? ANSI_COLOR(1) : "",
+             ent->owner,
+             isonline ? ANSI_RESET : "");
+
+    char col_title[256];
+    SNPRINTF(col_title, "%s%s %s%s",
+             mark, color, title,
+             *color ? ANSI_RESET : "");
+
+    render_columns(ctx, "", col_num, col_date, col_owner, col_title);
 }
 
 

@@ -547,7 +547,7 @@ int read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx);
     static int name(cmd_ctx_t *ctx) { \
         return read_exec_noitem((read_noitem_func_t)(void *)(fn), ctx); \
     }
-void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(int, fileheader_t*), const cmd_t *rcmdlist, int bidcache);
+void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(), const cmd_t *rcmdlist, int bidcache);
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 void forward_file(const fileheader_t * fhdr, const char *direct);
