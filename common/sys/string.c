@@ -372,12 +372,12 @@ stream_col_offset(int count, const char *s, int *real_cols)
             s++;
             continue;
         }
-        if (MB_IS_BIG5 && IS_DBCSLEAD((unsigned char)*s)) {
+        if (MB_IS_BIG5 && big5_is_valid_lead((unsigned char)*s)) {
             const char *p = s + 1;
             while (*p == ESC_CHR) {
                 p = skip_control_sequence(p);
             }
-            if (*p && (unsigned char)*p >= 0x40) {
+            if (*p && big5_is_valid_trail((unsigned char)*p)) {
                 if (cols + 2 > count)
                     break;
                 cols += 2;
