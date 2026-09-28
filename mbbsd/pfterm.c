@@ -1284,11 +1284,14 @@ doupdate(void)
                     if (x + 1 < len && FTAMAP(y)[x+1] != attr) {
                         fterm_rawc(' ');
                         fterm_rawattr(FTAMAP(y)[x+1]);
-                        fterm_raws(" \b\b");
-                        fterm_rawattr(attr);
+                        fterm_rawc(' ');
                     } else {
-                        fterm_raws("  \b\b");
+                        fterm_rawc(' ');
+                        fterm_rawc(' ');
                     }
+                    ft.rx += 2;
+                    fterm_rawmove(y, x);
+                    fterm_rawattr(attr);
                 } else {
                     fterm_rawattr(attr);
                 }
