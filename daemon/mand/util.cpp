@@ -32,18 +32,23 @@ std::string Big5ToUTF8(const char *big5) {
   utf8_ctx ctx;
   const uint8_t *p = reinterpret_cast<const uint8_t *>(big5);
   while (*p) {
-    if (isascii(*p))
-      utf8.push_back(*p);
-    else if (!p[1]) {
+    if (isascii(*p)) {
+      utf8.push_back(*p++);
+    } else if (!p[1]) {
       utf8.push_back('?');
       break;
-    } else {
-      int len = utf8_from_ucs(
-          &ctx, b2u_table[static_cast<uint16_t>(p[0]) << 8 | p[1]]);
-      utf8.append(reinterpret_cast<const char *>(ctx.buf), len);
+    } else if (!big5_is_valid_trail(p[1])) {
+      utf8.push_back('?');
       p++;
+    } else {
+      uint16_t b5_full = (static_cast<uint16_t>(p[0]) << 8) | p[1];
+      uint16_t ucs = b2u_table[b5_full];
+      if (ucs == 0)
+        ucs = '?';
+      int len = utf8_from_ucs(&ctx, ucs);
+      utf8.append(reinterpret_cast<const char *>(ctx.buf), len);
+      p += 2;
     }
-    p++;
   }
   return utf8;
 }

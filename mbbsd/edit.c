@@ -1289,18 +1289,43 @@ vkey_to_mb(int ch, char mb[5])
     if (MB_IS_UTF8) {
 	utf8_ctx uctx;
 	utf8_init(&uctx);
-	utf8_add_byte(&uctx, ch);
+	if (!utf8_add_byte(&uctx, ch)) {
+	    if (utf8_is_error(&uctx)) {
+		mb[0] = '?';
+		mb[1] = 0;
+		return 1;
+	    }
+	}
 	while (utf8_pending(&uctx)) {
 	    int cb = vk_byte();
+	    if (cb <= 0) {
+		edit_pending_key = cb;
+		mb[0] = '?';
+		mb[1] = 0;
+		return 1;
+	    }
 	    if (!mb_is_valid_trail(cb)) {
 		/* Not a continuation byte: keep it for the caller. */
 		edit_pending_key = cb;
-		mb[0] = '\0';
-		return 0;
+		mb[0] = '?';
+		mb[1] = 0;
+		return 1;
 	    }
-	    utf8_add_byte(&uctx, cb);
+	    if (!utf8_add_byte(&uctx, cb)) {
+		if (utf8_is_error(&uctx)) {
+		    mb[0] = '?';
+		    mb[1] = 0;
+		    return 1;
+		}
+	    }
 	}
-	return utf8_to_mb(&uctx, mb);
+	int len = utf8_to_mb(&uctx, mb);
+	if (len <= 0) {
+	    mb[0] = '?';
+	    mb[1] = 0;
+	    return 1;
+	}
+	return len;
     }
     int ch2 = vk_byte();
     if (mb_is_valid_trail(ch2)) {
