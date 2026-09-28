@@ -446,18 +446,11 @@ FTOAMAP(int y)
 #define FTCHAR_ISTRAILING(x) ((unsigned int)(x) == FTCHAR_TRAILING)
 #define FTDBCS_ISTAIL(x)     FTCHAR_ISTRAILING(x)
 
-// Raw Big5 byte checks
-#define FTDBCS_ISLEAD_BYTE(x)    (((unsigned char)(x)) >= 0x80)
-#define FTDBCS_ISTAIL_BYTE(x)    (((unsigned char)(x)) >= 0x40)
-#define FTDBCS_ISBADLEAD_BYTE(x) ((((unsigned char)(x)) == 0x80) || (((unsigned char)(x)) == 0xFF))
-
 #if MB_IS_BIG5
 #define FTDBCS_ISLEAD(x)      (!FTCHAR_ISTRAILING(x) && (x) >= 0x8000)
-#define FTDBCS_ISBADLEAD(x)   FTDBCS_ISBADLEAD_BYTE(x)
 #define FTDBCS_ISSBCSPRINT(x) ((x) >= ' ' && (x) < 0x80)
 #else
 #define FTDBCS_ISLEAD(x)      (!FTCHAR_ISTRAILING(x) && ucs_width(x) == 2)
-#define FTDBCS_ISBADLEAD(x)   (0)
 #define FTDBCS_ISSBCSPRINT(x) (!FTCHAR_ISTRAILING(x) && (x) >= ' ' && ucs_width(x) == 1)
 #endif
 
@@ -1893,9 +1886,7 @@ fterm_DBCS_Big5(ftchar c1, ftchar c2)
 #ifdef FT_DBCS_BIG5
     FT_DBCS_BIG5(b1, b2);
 #endif
-    if (FTDBCS_ISBADLEAD_BYTE(b1))
-        return  FTDBCS_INVALID;
-    if (!FTDBCS_ISTAIL_BYTE(b2))
+    if (!big5_is_valid_lead(b1) || !big5_is_valid_trail(b2))
         return FTDBCS_INVALID;
     if (b1 >= 0x80 && b1 <= 0xA0)
         return FTDBCS_UNSAFE;
