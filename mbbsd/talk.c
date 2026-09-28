@@ -961,26 +961,21 @@ pickup(userlist_ctx_t *cx)
         currpickup[size].ui = NULL;
 }
 
-#define ULISTCOLS (9)
-
-// userlist column definition
-static const VCOL ulist_coldef[ULISTCOLS] = {
-    {NULL, 8, 9, 0, {0, 1}},	// "編號" 因為游標靠這所以也不該長太大
-    {NULL, 2, 2, 0, { .usewhole = 1 }}, // "P" (pager, no border)
-    {NULL, IDLEN+1, IDLEN+3}, // "代號"
-    {NULL, 17,25, 2}, // "暱稱", sizeof(userec_t::nickname)
-    {NULL, 17,27, 1}, // "故鄉/棋類戰績/等級分"
-    {NULL, 12,23, 1}, // "動態" (最大多少才合理？) modestring size=40 但...
-    {NULL, 4, 4, 0, { .usewhole = 1 }}, // "<通緝>" (原心情)
-    {NULL, 6, 6, -1, { .right_align = 1, .usewhole = 1 }}, // "發呆" (optional?)
-    {NULL, 0, VCOL_MAXW, -1}, // for middle alignment
+static VCOL ulist_coldef[] = {
+    {"", 1, 1, 100},
+    {"編號 ", 7, 8, 0, { .right_align = 1 }},
+    {"P", 2, 2, 0},
+    {"代號", IDLEN + 1, IDLEN + 3, 0},
+    {"暱稱", 17, 25, 2},
+    {"動態", 17, 27, 1},
+    {"動態", 12, 23, 1},
+    {"PID", 4, 4, 0},
+    {"發呆", 6, 6, -1, { .right_align = 1 }},
+    {0},
 };
+#define ULISTCOLS (ARRAY_SIZE(ulist_coldef) - 1)
 
 static const cmd_t userlist_cmds[];
-
-
-static int ulist_scrw = 0, ulist_scrh = 0;
-static VCOLW ulist_cols[ULISTCOLS];
 
 static void
 t_showhelp(void)
@@ -1044,11 +1039,6 @@ userlist_header(PSB_CTX *ctx)
 #ifdef SHOW_IDLE_TIME
     idletime = 1;
 #endif
-    if (ulist_scrw != t_columns || ulist_scrh != t_lines) {
-        vs_cols_layout(ulist_coldef, ulist_cols, ULISTCOLS);
-        ulist_scrw = t_columns;
-        ulist_scrh = t_lines;
-    }
 
     showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
@@ -1062,22 +1052,15 @@ userlist_header(PSB_CTX *ctx)
            MSG_PICKUP_WAY[*cx->pickup_way], SHM->UTMPnumber,
            cx->myfriend, cx->friendme, currutmp->brc_id ? cx->bfriend : 0, cx->badfriend);
 
-    move(2, 0);
-    outs(ANSI_REVERSE);
-    vs_cols(ulist_coldef, ulist_cols, ULISTCOLS,
-            *cx->show_uid ? "UID" : "編號",
-            "P",
-            "代號",
-            "暱稱",
-            MODE_STRING[(int)*cx->show_mode],
+    ulist_coldef[1].label = *cx->show_uid ? "UID " : "編號 ";
+    ulist_coldef[5].label = MODE_STRING[(int)*cx->show_mode];
 #if defined(SHOWBOARD) && defined(DEBUG)
-            *cx->show_board ? "看板" :
+    ulist_coldef[6].label = *cx->show_board ? "看板" : "動態";
+#else
+    ulist_coldef[6].label = "動態";
 #endif
-            "動態",
-            *cx->show_pid ? "PID" : "",
-            idletime ? "發呆" : "",
-            "");
-    outs(ANSI_RESET);
+    ulist_coldef[7].label = *cx->show_pid ? "PID" : "";
+    ulist_coldef[8].label = idletime ? "發呆" : "";
     return 0;
 }
 
@@ -1122,11 +1105,6 @@ userlist_renderer(int idx, PSB_CTX *ctx)
     int idletime;
 #endif
 
-    if (ulist_scrw != t_columns || ulist_scrh != t_lines) {
-        vs_cols_layout(ulist_coldef, ulist_cols, ULISTCOLS);
-        ulist_scrw = t_columns;
-        ulist_scrh = t_lines;
-    }
 
     if (i < 0 || i >= nPickups) {
         clrtoeol();
@@ -1139,8 +1117,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
         return 0;
     }
     if (!uentp->pid) {
-        vs_cols(ulist_coldef, ulist_cols, 3,
-                "", "", "< 離站中..>");
+        render_columns(ctx, "", "", "", "< 離站中..>", "", "", "", "", "");
         return 0;
     }
 
@@ -1169,7 +1146,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
     if (uentp->userlevel & PERM_VIOLATELAW)
         mind = ANSI_COLOR(1;31) "違規";
 
-    SNPRINTF(num, "%d",
+    SNPRINTF(num, "%d ",
 #ifdef SHOWUID
              *cx->show_uid ? uentp->uid :
 #endif
@@ -1182,21 +1159,21 @@ userlist_renderer(int idx, PSB_CTX *ctx)
     if (fcolor[state])
         SNPRINTF(xuid, "%s%s", fcolor[state], uentp->userid);
 
-    vs_cols(ulist_coldef, ulist_cols, ULISTCOLS,
-            num,
-            pager,
-            fcolor[state] ? xuid : uentp->userid,
-            uentp->nickname,
-            descript(*cx->show_mode, uentp, uentp->pager & !(friend & HRM),
-                     description, sizeof(description)),
+    render_columns(ctx,
+                   "",
+                   num,
+                   pager,
+                   fcolor[state] ? xuid : uentp->userid,
+                   uentp->nickname,
+                   descript(*cx->show_mode, uentp, uentp->pager & !(friend & HRM),
+                            description, sizeof(description)),
 #if defined(SHOWBOARD) && defined(DEBUG)
-            *cx->show_board ? (uentp->brc_id == 0 ? "" :
-                getbcache(uentp->brc_id)->brdname) :
+                   *cx->show_board ? (uentp->brc_id == 0 ? "" :
+                       getbcache(uentp->brc_id)->brdname) :
 #endif
-                modestring(uentp, 0),
-            mind,
-            idlestr,
-            "");
+                       modestring(uentp, 0),
+                   mind,
+                   idlestr);
     return 0;
 }
 
@@ -1971,6 +1948,8 @@ userlist(void)
         },
         .header_lines = 3,
         .footer_lines = 1,
+        .cols = ULISTCOLS,
+        .vcols = ulist_coldef,
         .layers = layers,
         .loader = userlist_loader,
         .header = userlist_header,
