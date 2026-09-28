@@ -637,12 +637,22 @@ int CheckPostRestriction(int bid) {
 }
 
 
+static VCOL bbs_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號", 6, 6, 20},
+    {"    ", 4, 4, 90},
+    {"日 期", 6, 6, 70},
+    {"作  者       ", 13, 13, 80},
+    {"文  章  標  題", 16, TTLEN + 1, 100},
+    {0},
+};
+#define BBS_COLS (ARRAY_SIZE(bbs_coldefs) - 1)
+
 static void
-readtitle(void)
+readtitle(PSB_CTX *ctx)
 {
     boardheader_t  *bp;
     char    *brd_title;
-    char     buf[32];
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -654,24 +664,21 @@ readtitle(void)
 
     showtitle(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
-    buf[0] = 0;
 
-    if (bp->brdattr & BRD_COOLDOWN)
-        SNPRINTF(buf, "[靜] ");
-    else
-    {
-        // nuser is not real-time updated (maintained by utmp_update in utmpsortd), so let's
-        // make some calibration here. It's minimal value is one because the
-        // user IS reading it.
-        int nuser = SHM->bcache[currbid - 1].nuser;
-        if (nuser < 1) nuser = 1;
-        SNPRINTF(buf, "人氣:%d ", nuser);
+    bbs_coldefs[3].label = IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :
+                           listmode_desc[currlistmode];
+    if (ctx) {
+        ctx->cols = BBS_COLS;
+        ctx->vcols = bbs_coldefs;
+        ctx->col_paddings = 1;
+        if (bp->brdattr & BRD_COOLDOWN) {
+            SNPRINTF(ctx->col_header_right, "[靜] ");
+        } else {
+            int nuser = SHM->bcache[currbid - 1].nuser;
+            if (nuser < 1) nuser = 1;
+            SNPRINTF(ctx->col_header_right, "人氣:%d ", nuser);
+        }
     }
-
-    vbarlr(TEMPFORMAT(STRLEN,
-                ANSI_REVERSE "   編號    %s 作  者       文  章  標  題",
-                IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :
-                listmode_desc[currlistmode]), buf);
 }
 
 static int
@@ -712,15 +719,16 @@ tn_safe_strip(char *title)
 }
 
 static void
-readdoent(int num, fileheader_t * ent)
+readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 {
     int  type = ' ', title_type = SUBJECT_NORMAL;
     const char *title;
     char *mark, color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
-    int w = 0;
-    int const_title = 0;
+
+    ent->title[sizeof(ent->title) - 1] = 0;
+    mbs_sanitize(ent->title, sizeof(ent->title));
 
 #ifdef SAFE_ARTICLE_DELETE
     // TODO maybe we should also check .filename because admin can't change that
@@ -832,86 +840,56 @@ readdoent(int num, fileheader_t * ent)
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
-    /* read_renderer() sets FILE_BOTTOM only on pinned display lines. */
+    char col_num[32];
     if ((ent->filemode & FILE_BOTTOM) &&
         !(currmode & (MODE_SELECT | MODE_DIGEST))) {
-        outs("  " ANSI_COLOR(1;33) "  ★ " ANSI_RESET);
+        SNPRINTF(col_num, " " ANSI_COLOR(1;33) "  ★ " ANSI_RESET);
+    } else {
+        SNPRINTF(col_num, "%6d", num);
     }
-    else
-	/* recently we found that many boards have >10k articles,
-	 * so it's better to use 5+2 (2 for cursor marker) here.
-	 * XXX if we are in big term, enlarge here.
-	 */
-	prints("%7d", num);
 
-    prints(" %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET,
-           typeattr, type, recom);
+    char col_recom[32];
+    SNPRINTF(col_recom, " %s%c" ESC_STR "[0;1;3%4.4s" ANSI_RESET,
+             typeattr, type, recom);
 
-    if(IS_LISTING_MONEY)
-    {
-	int m = query_file_money(ent);
-	if(m < 0)
-	    outs(" ---- ");
-	else
-	    prints("%5d ", m);
-    }
-    else // LISTMODE_DATE
-    {
+    char col_date[32];
+    if (IS_LISTING_MONEY) {
+        int m = query_file_money(ent);
+        if (m < 0)
+            SNPRINTF(col_date, " ---- ");
+        else
+            SNPRINTF(col_date, "%5d ", m);
+    } else {
 #ifdef COLORDATE
-	prints(ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
-		(ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
+        SNPRINTF(col_date, ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
+                 (ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
 #else
-	prints("%-6.5s", ent->date);
+        SNPRINTF(col_date, "%-6.5s", ent->date);
 #endif
     }
 
-    // print author
-    if(isonline) {
-        outs(ANSI_COLOR(1));
-    }
-    prints("%-13.12s", ent->owner);
-    if(isonline) outs(ANSI_RESET);
+    char col_author[64];
+    SNPRINTF(col_author, "%s%-13.12s%s",
+             isonline ? ANSI_COLOR(1) : "",
+             ent->owner,
+             isonline ? ANSI_RESET : "");
 
-    // TODO calculate correct width. 前面約有 33 個字元。 */
-    w = t_columns - 34; /* 33+1, for trailing one more space */
-
-    // print subject prefix
-    ent->title[sizeof(ent->title)-1] = 0;
+    char col_title[512];
     if (strcmp(currtitle, title) == 0) {
-        prints(ANSI_COLOR(1;3%c), color);
-        outs(mark);
-        outc(' ');
-        special = 1;
+        SNPRINTF(col_title, ANSI_COLOR(1;3%c) "%s %s" ANSI_RESET,
+                 color, mark, title);
     } else {
-        outs(mark);
-        outc(' ');
         if (special) {
             int len_announce = strlen(TN_ANNOUNCE);
-            outs(ANSI_COLOR(1));
-            outs(TN_ANNOUNCE);
-            outs(ANSI_RESET);
             title += len_announce;
-            w -= len_announce;
-            special = 0;
+            SNPRINTF(col_title, "%s " ANSI_COLOR(1) "%s" ANSI_RESET "%s",
+                     mark, TN_ANNOUNCE, title);
+        } else {
+            SNPRINTF(col_title, "%s %s", mark, title);
         }
     }
 
-    // strip unsafe characters
-    if (!const_title)
-        mbs_sanitize((char *)title, INT_MAX);
-
-    // print subject, bounded by w.
-    if ((int)strlen(title) > w) {
-        if (mbs_status(title, w-2) == MB_TRAILING)
-            w--;
-        outns(title, w-2);
-        outs("…");
-    } else {
-        outs(title);
-    }
-
-    if (special)
-        outs(ANSI_RESET);
+    render_columns(ctx, "", col_num, col_recom, col_date, col_author, col_title);
 }
 
 int
