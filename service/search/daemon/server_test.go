@@ -255,10 +255,22 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		t.Fatalf("Expected invalidations=1, got %d", svc.invalidations.Load())
 	}
 
-	// 9. Control API: status and flush
+	// 9. Control API: status, stats and flush
 	statusResp := sendControlClient(t, socketPath, ControlRequest{Action: "status"})
 	if statusResp.Status != "ok" {
 		t.Fatalf("status failed: %+v", statusResp)
+	}
+	statsResp := sendControlClient(t, socketPath, ControlRequest{Action: "stats"})
+	if statsResp.Status != "ok" {
+		t.Fatalf("stats failed: %+v", statsResp)
+	}
+	statsBytes, _ := json.Marshal(statsResp.Data)
+	var stats ServiceStats
+	if err := json.Unmarshal(statsBytes, &stats); err != nil {
+		t.Fatalf("unmarshal stats failed: %v", err)
+	}
+	if stats.PrivateDirtyKB <= 0 {
+		t.Errorf("expected positive PrivateDirtyKB on Linux, got %d", stats.PrivateDirtyKB)
 	}
 	flushResp := sendControlClient(t, socketPath, ControlRequest{Action: "flush", Bid: 1})
 	if flushResp.Status != "ok" {

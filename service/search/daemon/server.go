@@ -174,6 +174,7 @@ type PprofResult struct {
 
 type ServiceStats struct {
 	UptimeSeconds      int64            `json:"uptime_seconds"`
+	PrivateDirtyKB     int64            `json:"private_dirty_kb"`
 	CachedEntries      int              `json:"cached_entries"`
 	CachedIndices      int64            `json:"cached_indices"`
 	MaxEntries         int              `json:"max_entries"`
@@ -257,6 +258,30 @@ type BoardAIDTable struct {
 	maxTS        uint32
 	aids         []uint64 // 0-based: index i corresponds to 1-based recno i+1
 	loadedAt     time.Time
+}
+
+// readPrivateDirtyKB reads Private_Dirty from /proc/$PID/smaps_rollup (or /proc/self/smaps_rollup).
+// Returns memory in kilobytes (kB), or 0 if unavailable.
+func readPrivateDirtyKB() int64 {
+	path := fmt.Sprintf("/proc/%d/smaps_rollup", os.Getpid())
+	data, err := os.ReadFile(path)
+	if err != nil {
+		data, err = os.ReadFile("/proc/self/smaps_rollup")
+		if err != nil {
+			return 0
+		}
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "Private_Dirty:") {
+			var kb int64
+			if _, err := fmt.Sscanf(line, "Private_Dirty: %d", &kb); err == nil {
+				return kb
+			}
+		}
+	}
+	return 0
 }
 
 func computeBoardAIDStats(aids []uint64) (maxBacktrack int32, maxTimeDiff int64, minTS uint32, maxTS uint32) {
@@ -807,7 +832,7 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 	}
 
 	switch req.Action {
-	case "status":
+	case "status", "stats":
 		s.cacheMu.Lock()
 		entriesCount := len(s.entries)
 		indicesCount := s.totalIndices
@@ -838,6 +863,7 @@ func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
 
 		stats := ServiceStats{
 			UptimeSeconds:      int64(time.Since(s.startTime).Seconds()),
+			PrivateDirtyKB:     readPrivateDirtyKB(),
 			CachedEntries:      entriesCount,
 			CachedIndices:      indicesCount,
 			MaxEntries:         maxEntries,
