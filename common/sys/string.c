@@ -495,46 +495,48 @@ stream_width(const char *s)
 /* ----------------------------------------------------- */
 
 void
-strip_nonebig5(unsigned char *str, int maxlen)
+mbs_sanitize(char *str, int maxlen)
 {
-  int i;
-  int len=0;
-  if (MB_IS_UTF8) {
-    utf8_ctx ctx;
-    utf8_init(&ctx);
-    for (i = 0; i < maxlen && str[i]; i++) {
-      if (32 <= str[i] && str[i] < 128) {
-        utf8_reset(&ctx);
-        str[len++] = str[i];
-      } else if (str[i] >= 0x80) {
-        if (utf8_add_byte(&ctx, str[i])) {
-          memcpy(str + len, ctx.buf, ctx.len);
-          len += ctx.len;
-          utf8_reset(&ctx);
+    if (!str || maxlen <= 0)
+        return;
+
+    int len = 0;
+    mb_ctx ctx;
+    mb_init(&ctx);
+
+    for (int i = 0; i < maxlen && str[i]; i++) {
+        unsigned char c = (unsigned char)str[i];
+        if (mb_pending(&ctx)) {
+            if (mb_add_byte(&ctx, c)) {
+                memcpy(str + len, ctx.buf, ctx.len);
+                len += ctx.len;
+                mb_reset(&ctx);
+            } else if (!mb_pending(&ctx)) {
+                mb_reset(&ctx);
+                if (32 <= c && c < 127) {
+                    str[len++] = (char)c;
+                } else if (c >= 0x80) {
+                    if (mb_add_byte(&ctx, c)) {
+                        memcpy(str + len, ctx.buf, ctx.len);
+                        len += ctx.len;
+                        mb_reset(&ctx);
+                    }
+                }
+            }
+        } else if (32 <= c && c < 127) {
+            str[len++] = (char)c;
+        } else if (c >= 0x80) {
+            if (mb_add_byte(&ctx, c)) {
+                memcpy(str + len, ctx.buf, ctx.len);
+                len += ctx.len;
+                mb_reset(&ctx);
+            }
+        } else {
+            mb_reset(&ctx);
         }
-      } else {
-        utf8_reset(&ctx);
-      }
     }
     if (len < maxlen)
-      str[len] = '\0';
-    return;
-  }
-  for(i=0;i<maxlen && str[i];i++) {
-    if(32<=str[i] && str[i]<128)
-      str[len++]=str[i];
-    else if(str[i]&0x80) {
-      if(i+1<maxlen)
-	if((0x40<=str[i+1] && str[i+1]<=0x7e) ||
-	   (0xa1<=str[i+1] && str[i+1]<=0xfe)) {
-	  str[len++]=str[i];
-	  str[len++]=str[i+1];
-	  i++;
-	}
-    }
-  }
-  if(len<maxlen)
-    str[len]='\0';
+        str[len] = '\0';
 }
 
 /**

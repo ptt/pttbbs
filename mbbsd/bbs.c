@@ -898,7 +898,7 @@ readdoent(int num, fileheader_t * ent)
 
     // strip unsafe characters
     if (!const_title)
-        strip_nonebig5((unsigned char*)title, INT_MAX);
+        mbs_sanitize((char *)title, INT_MAX);
 
     // print subject, bounded by w.
     if ((int)strlen(title) > w) {
