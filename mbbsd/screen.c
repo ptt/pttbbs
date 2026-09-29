@@ -79,27 +79,13 @@ initscr(void)
 }
 
 int
-resizeterm_within(int rows, int cols, int rows_full GCC_UNUSED, int cols_full GCC_UNUSED)
-{
-    // FIXME: rows_full instead of b_lines should be used for forward scrolling
-    if (rows != t_lines || cols != t_columns) {
-        return resizeterm(rows, cols);
-    }
-    return 0;
-}
-
-int
-resizeterm(int w, int h)
+resizeterm(int rows, int cols)
 {
     screenline_t   *new_picture;
 
-    /* make sure reasonable size */
-    h = MAX(24, MIN(100, h));
-    w = MAX(80, MIN(200, w));
-
-    if (h > t_lines && big_picture) {
+    if (rows > t_lines && big_picture) {
 	new_picture = (screenline_t *)
-		calloc(h, sizeof(screenline_t));
+		calloc(rows, sizeof(screenline_t));
 	if (new_picture == NULL) {
 	    syslog(LOG_ERR, "calloc(): %m");
 	    return 0;

@@ -1,6 +1,20 @@
 #include "bbs.h"
 #include <termios.h>
 
+#define ENABLE_MOUSE_CLICK      ESC_STR "[?1000h"
+#define ENABLE_MOUSE_DRAG       ESC_STR "[?1002h"
+#define ENABLE_MOUSE_MOTION     ESC_STR "[?1003h"
+#define ENABLE_MOUSE_SGR        ESC_STR "[?1006h"
+#define DISABLE_MOUSE_CLICK     ESC_STR "[?1000l"
+#define DISABLE_MOUSE_DRAG      ESC_STR "[?1002l"
+#define DISABLE_MOUSE_MOTION    ESC_STR "[?1003l"
+#define DISABLE_MOUSE_SGR       ESC_STR "[?1006l"
+#define ENABLE_AUTO_WRAP        ESC_STR "[?7h"
+#define DISABLE_AUTO_WRAP       ESC_STR "[?7l"
+#define ENABLE_DECSTBM(v)       ESC_STR "[1;" toSTR(v) "r"
+#define DISABLE_DECSTBM         ESC_STR "[r"
+#define WRITEMACROSTR(v)        write(1, (v), MACROSTRLEN(v))
+
 /* ----------------------------------------------------- */
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
@@ -13,8 +27,8 @@ init_tty(void)
     struct termios tty_new;
 
     if (tcgetattr(1, &tty_state) < 0) {
-	syslog(LOG_ERR, "tcgetattr(): %m");
-	return;
+        syslog(LOG_ERR, "tcgetattr(): %m");
+        return;
     }
     tty_state_saved = true;
     memcpy(&tty_new, &tty_state, sizeof(tty_new));
@@ -22,74 +36,91 @@ init_tty(void)
     /*
      * tty_new.c_cc[VTIME] = 0; tty_new.c_cc[VMIN] = 1;
      */
-#if 1
     cfmakeraw(&tty_new);
     tty_new.c_cflag &= ~(CSIZE|PARENB);
     tty_new.c_cflag |= CS8;
     tcsetattr(1, TCSANOW, &tty_new);
-#else
-    tcsetattr(1, TCSANOW, &tty_new);
-    system("stty raw -echo");
-#endif
 }
 
 /* ----------------------------------------------------- */
 /* init tty control code                                 */
 /* ----------------------------------------------------- */
 
-
-#define TERMCOMSIZE (40)
-
 static void
 sig_term_resize(int sig GCC_UNUSED)
 {
     struct winsize  newsize;
-    Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+    Signal(SIGWINCH, SIG_IGN);  // Prevent re-entrance
+
     ioctl(0, TIOCGWINSZ, &newsize);
     term_resize(newsize.ws_col, newsize.ws_row);
 }
 
-void term_resize(int w, int h)
-{
-    int dorefresh = 0;
-    Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+static bool decstbm_active = false;
 
+static void
+term_restore_cursor(void)
+{
+    int y, x;
+    getyx(&y, &x);
+    char buf[32];
+    int len = SNPRINTF(buf, ESC_STR "[%d;%dH", y + 1, x + 1);
+    write(1, buf, len);
+}
+
+int
+term_set_size(int w, int h)
+{
+    int raw_h = h ? h : DEFAULT_TERM_ROWS;
+    int raw_w = w ? w : DEFAULT_TERM_COLS;
+
+    if (raw_h > MAX_TERM_ROWS)
+    {
+        if (!decstbm_active)
+        {
+            assert(isdigit(toSTR(MAX_TERM_ROWS)[0]));
+            WRITEMACROSTR(ENABLE_DECSTBM(MAX_TERM_ROWS));
+            decstbm_active = true;
+            term_restore_cursor();
+        }
+    }
+    else if (decstbm_active)
+    {
+        WRITEMACROSTR(DISABLE_DECSTBM);
+        decstbm_active = false;
+        term_restore_cursor();
+    }
 
     /* make sure reasonable size */
-    int h_crop = MAX(24, MIN(100, h));
-    int w_crop = MAX(80, MIN(200, w));
+    int h_crop = VALID_TERM_ROWS(raw_h);
+    int w_crop = VALID_TERM_COLS(raw_w);
+    int changed = (w_crop != t_columns || h_crop != t_lines);
 
-    // invoke terminal system resize
-    resizeterm_within(h_crop, w_crop, h, w);
-    if (w_crop != t_columns || h_crop != t_lines)
-    {
-	dorefresh = 1;
-    }
+    resizeterm(h_crop, w_crop);
+
     t_lines = h_crop;
     t_columns = w_crop;
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
+    return changed;
+}
+
+void term_resize(int w, int h)
+{
+    Signal(SIGWINCH, SIG_IGN);  // Prevent re-entrance
+
+    int changed = term_set_size(w, h);
+
     Signal(SIGWINCH, sig_term_resize);
-    if (dorefresh)
+    if (changed)
     {
-	redrawwin();
-	refresh();
+        redrawwin();
+        refresh();
     }
 }
 
 static int current_mouse_mode = MOUSE_MODE_NONE;
-
-#define ENABLE_MOUSE_CLICK      ESC_STR "[?1000h"
-#define ENABLE_MOUSE_DRAG       ESC_STR "[?1002h"
-#define ENABLE_MOUSE_MOTION     ESC_STR "[?1003h"
-#define ENABLE_MOUSE_SGR        ESC_STR "[?1006h"
-#define DISABLE_MOUSE_CLICK     ESC_STR "[?1000l"
-#define DISABLE_MOUSE_DRAG      ESC_STR "[?1002l"
-#define DISABLE_MOUSE_MOTION    ESC_STR "[?1003l"
-#define DISABLE_MOUSE_SGR       ESC_STR "[?1006l"
-#define ENABLE_AUTO_WRAP        ESC_STR "[?7h"
-#define DISABLE_AUTO_WRAP       ESC_STR "[?7l"
 
 void
 term_enable_mouse(int mode)
@@ -146,10 +177,13 @@ void
 term_uninit(void)
 {
     term_disable_mouse();
-    write(1, ENABLE_AUTO_WRAP, sizeof(ENABLE_AUTO_WRAP) - 1);
+    WRITEMACROSTR(ENABLE_AUTO_WRAP);
+    if (decstbm_active) {
+        WRITEMACROSTR(DISABLE_DECSTBM);
+        decstbm_active = false;
+    }
     if (tty_state_saved) {
-        const char reset_seq[] = ANSI_RESET "\r\n";
-        write(1, reset_seq, sizeof(reset_seq) - 1);
+        WRITEMACROSTR(ANSI_RESET "\r\n");
         tcsetattr(1, TCSANOW, &tty_state);
         tty_state_saved = false;
     }
@@ -160,7 +194,7 @@ term_init(void)
 {
     Signal(SIGWINCH, sig_term_resize);
     term_enable_mouse(MOUSE_MODE_CLICK);
-    write(1, DISABLE_AUTO_WRAP, sizeof(DISABLE_AUTO_WRAP) - 1);
+    WRITEMACROSTR(DISABLE_AUTO_WRAP);
     return YEA;
 }
 
