@@ -1576,6 +1576,27 @@ out_ftchar(ftchar c)
     }
 }
 
+static void
+out_mbchar(void)
+{
+    int ch = mb_get_char(&ft.mb);
+    int w = mb_char_width(ch);
+    if (w == 1)
+    {
+        out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
+        return;
+    }
+    if (w >= 2)
+    {
+        ftattr saved_attr = ft.attr;
+        ft.attr = ft.mb_attr;
+        out_ftchar((ftchar)(ch < 0xFFFE ? ch : 0xFFFD));
+        ft.attr = saved_attr;
+        if (ft.x > 0)
+            out_ftchar((ftchar)FTCHAR_TRAILING);
+    }
+}
+
 void
 outc(unsigned char c)
 {
@@ -1584,6 +1605,7 @@ outc(unsigned char c)
         return;
 
     fterm_markdirty();
+
     if (ft.szcmd)
     {
         // collecting commands
@@ -1596,115 +1618,90 @@ outc(unsigned char c)
         // process as command
         fterm_exec();
         ft.szcmd = 0;
+        return;
     }
-    else if (c == ESC_CHR)
+
+    if (c == ESC_CHR)
     {
         // start of escaped commands
         ft.cmd[ft.szcmd++] = c;
+        return;
     }
-    else if (c == '\t')
-    {
-        ft.has_half_attr = 0;
-        fterm_reset_mb();
-        // tab: move by 8, and erase the moved range
-        int x = ft.x;
-        if (x % 8 == 0)
-            x += 8;
-        else
-            x += (8-(x%8));
-        x = ranged(x, 0, ft.cols-1);
-        // erase the characters between
-        if (x > ft.x)
-        {
-            if (ft.x > 0 && FTCHAR_ISTRAILING(FTCROW[ft.x]))
-                FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
-            if (x < ft.cols && FTCHAR_ISTRAILING(FTCROW[x]))
-                FTCROW[x] = FTCHAR_INVALID_DBCS;
-            ftchar_fill(FTCROW + ft.x, FTCHAR_ERASE, x - ft.x);
-            ftattr_fill(FTAROW+ft.x, ft.attr, x-ft.x);
-        }
-        ft.x = x;
-    }
-    else if (c == '\b')
-    {
-        ft.has_half_attr = 0;
-        fterm_reset_mb();
-        ft.x = ranged(ft.x-1, 0, ft.cols-1);
-    }
-    else if (c == '\r' || c == '\n')
-    {
-        ft.has_half_attr = 0;
-        fterm_reset_mb();
-        // new line: cursor movement, and do not print anything
-        // XXX old screen.c also calls clrtoeol() for newlins.
-        clrtoeol();
-        ft.x = 0;
-        ft.y ++;
-        while (ft.y >= ft.rows)
-        {
-            // XXX scroll at next dirty?
-            // screen.c ignored such scroll.
-            // scroll();
-            ft.y --;
-        }
-    }
-    else if (iscntrl(c))
-    {
-        // unknown control characters: ignore
-        fterm_reset_mb();
-    }
-    else if (!mb_pending(&ft.mb) && isascii(c))
-    {
-        out_ftchar(c);
-    }
-    else
-    {
-        if (!mb_pending(&ft.mb))
-            ft.mb_attr = ft.attr;
 
-        if (!mb_add_byte(&ft.mb, c)) {
-            if (mb_is_error(&ft.mb)) {
-                out_ftchar(FTCHAR_INVALID_DBCS);
-                mb_reset(&ft.mb);
-                if (!mb_add_byte(&ft.mb, c)) {
-                    if (mb_is_error(&ft.mb)) {
-                        out_ftchar(FTCHAR_INVALID_DBCS);
-                        mb_reset(&ft.mb);
-                    } else if (mb_pending(&ft.mb)) {
-                        ft.mb_attr = ft.attr;
-                    }
-                } else {
-                    int ch = mb_get_char(&ft.mb);
-                    int w = mb_char_width(ch);
-                    if (w == 1) {
-                        out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
-                    } else if (w >= 2) {
-                        ftattr saved_attr = ft.attr;
-                        ft.attr = ft.mb_attr;
-                        out_ftchar((ftchar)(ch < 0xFFFE ? ch : 0xFFFD));
-                        ft.attr = saved_attr;
-                        if (ft.x > 0) {
-                            out_ftchar((ftchar)FTCHAR_TRAILING);
-                        }
-                    }
-                }
+    if (isascii(c) && iscntrl(c))
+    {
+        ft.has_half_attr = 0;
+        fterm_reset_mb();
+        switch (c)
+        {
+        case '\t': {
+            // tab: move by 8, and erase the moved range
+            int x = ft.x + (8 - (ft.x % 8));
+            x = ranged(x, 0, ft.cols - 1);
+            // erase the characters between
+            if (x > ft.x)
+            {
+                if (ft.x > 0 && FTCHAR_ISTRAILING(FTCROW[ft.x]))
+                    FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
+                if (x < ft.cols && FTCHAR_ISTRAILING(FTCROW[x]))
+                    FTCROW[x] = FTCHAR_INVALID_DBCS;
+                ftchar_fill(FTCROW + ft.x, FTCHAR_ERASE, x - ft.x);
+                ftattr_fill(FTAROW + ft.x, ft.attr, x - ft.x);
             }
+            ft.x = x;
             return;
         }
-
-        int ch = mb_get_char(&ft.mb);
-        int w = mb_char_width(ch);
-        if (w == 1) {
-            out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
-        } else if (w >= 2) {
-            ftattr saved_attr = ft.attr;
-            ft.attr = ft.mb_attr;
-            out_ftchar((ftchar)(ch < 0xFFFE ? ch : 0xFFFD));
-            ft.attr = saved_attr;
-            if (ft.x > 0) {
-                out_ftchar((ftchar)FTCHAR_TRAILING);
+        case '\b':
+            ft.x = ranged(ft.x - 1, 0, ft.cols - 1);
+            return;
+        case '\r':
+        case '\n':
+            // new line: cursor movement, and do not print anything
+            // XXX old screen.c also calls clrtoeol() for newlins.
+            clrtoeol();
+            ft.x = 0;
+            ft.y++;
+            while (ft.y >= ft.rows)
+            {
+                // XXX scroll at next dirty?
+                // screen.c ignored such scroll.
+                // scroll();
+                ft.y--;
             }
+            return;
+        default:
+            // unknown control characters: ignore
+            return;
         }
+    }
+
+    if (!mb_pending(&ft.mb) && isascii(c))
+    {
+        out_ftchar(c);
+        return;
+    }
+
+    int was_pending = mb_pending(&ft.mb);
+    if (!was_pending)
+        ft.mb_attr = ft.attr;
+
+    while (1)
+    {
+        if (mb_add_byte(&ft.mb, c))
+        {
+            out_mbchar();
+            return;
+        }
+        if (!mb_is_error(&ft.mb))
+            return;
+
+        out_ftchar(FTCHAR_INVALID_DBCS);
+        mb_reset(&ft.mb);
+        if (!was_pending)
+            return;
+
+        was_pending = 0;
+        ft.mb_attr = ft.attr;
     }
 }
 
