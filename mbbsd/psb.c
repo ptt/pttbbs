@@ -393,7 +393,8 @@ psb_sync_cache(PSB_CTX *psbctx) {
         rows != psbctx->cached_rows ||
         t_columns != psbctx->cached_cols) {
         if (psbctx->loader &&
-            (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows))
+            (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows ||
+             t_columns != psbctx->cached_cols))
             psbctx->loader(psbctx);
         if (psbctx->cmd.quit)
             return;
