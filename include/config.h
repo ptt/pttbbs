@@ -256,6 +256,35 @@
 #define TARQUEUE_TIME_STR   "深夜"       // 看板備份時間訊息 (應與 contab 一致)
 #endif
 
+#ifndef MAX_TERM_COLS
+#define MAX_TERM_COLS       200
+#endif
+
+#ifndef MIN_TERM_COLS
+#define MIN_TERM_COLS       80
+#endif
+
+// Warning: MAX_TERM_ROWS will be used in `term.c` for macro expansion, so this
+// must be a pure digit without ().
+#ifndef MAX_TERM_ROWS
+#define MAX_TERM_ROWS       100
+#endif
+
+#ifndef MIN_TERM_ROWS
+#define MIN_TERM_ROWS       24
+#endif
+
+#ifndef DEFAULT_TERM_COLS
+#define DEFAULT_TERM_COLS   80
+#endif
+
+#ifndef DEFAULT_TERM_ROWS
+#define DEFAULT_TERM_ROWS   24
+#endif
+
+#define VALID_TERM_COLS(x)  MAX(MIN_TERM_COLS, MIN(MAX_TERM_COLS, (x)))
+#define VALID_TERM_ROWS(x)  MAX(MIN_TERM_ROWS, MIN(MAX_TERM_ROWS, (x)))
+
 /////////////////////////////////////////////////////////////////////////////
 // More system messages 系統訊息
 

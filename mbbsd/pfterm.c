@@ -228,12 +228,7 @@ static int t_lines = 24, t_columns = 80;
 // Flat Terminal Definition
 //////////////////////////////////////////////////////////////////////////
 
-#define FTSZ_DEFAULT_ROW (24)
-#define FTSZ_DEFAULT_COL (80)
-#define FTSZ_MIN_ROW     (24)
-#define FTSZ_MAX_ROW     (100)
-#define FTSZ_MIN_COL     (80)
-#define FTSZ_MAX_COL     (320)
+#define FTSZ_MAX_COL     MAX_TERM_COLS
 
 #define FTCHAR_ERASE     (' ')
 #define FTATTR_ERASE     (0x07)
@@ -291,8 +286,7 @@ typedef struct
     ftattr  attr;
     ftattr  half_attr;
     int     has_half_attr;
-    int     rows, cols;     // the (possibly cropped) display region size
-    int     rows_full, cols_full; // the full terminal size
+    int     rows, cols;     // display region size
     int     y, x;
     int     sy,sx;  // stored cursor
     int     mi;     // map index, mi = current map and (1-mi) = old map
@@ -483,7 +477,6 @@ FTOAMAP(int y)
 // initialization
 void    initscr     (void);
 int     resizeterm  (int rows, int cols);
-int     resizeterm_within(int rows, int cols, int rows_full, int cols_full);
 int     endwin      (void);
 
 // attributes
@@ -665,20 +658,7 @@ endwin(void)
 int
 resizeterm(int rows, int cols)
 {
-    // assume that the full terminal size == the display region size
-    return resizeterm_within(rows, cols, rows, cols);
-}
-
-int
-resizeterm_within(int rows, int cols, int rows_full, int cols_full)
-{
     int dirty = 0, mi = 0, i = 0;
-
-    ft.rows_full = rows_full;
-    ft.cols_full = cols_full;
-
-    rows = ranged(rows, FTSZ_MIN_ROW, FTSZ_MAX_ROW);
-    cols = ranged(cols, FTSZ_MIN_COL, FTSZ_MAX_COL);
 
     // adjust memory only for increasing buffer
     if (rows > ft.mrows || cols > ft.mcols)
@@ -2691,7 +2671,7 @@ fterm_rawscroll (int dy)
     // so don't use fterm_move*.
     if (dy > 0)
     {
-        fterm_rawcmd2(ft.rows_full, 1, 1, 'H');
+        fterm_rawcmd2(ft.rows, 1, 1, 'H');
     }
     else
     {
@@ -2702,7 +2682,7 @@ fterm_rawscroll (int dy)
 
     for (; ady > 0; ady--)
     {
-        if (dy >0)
+        if (dy > 0)
         {
             // Win/DOS telnet may have extra text in new line,
             // because of the IME line.
