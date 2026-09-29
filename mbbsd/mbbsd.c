@@ -1584,6 +1584,16 @@ shell_login(char *argv0, struct ProgramOption *option)
 
     init_tty();
 
+    if (option->term_width <= 0 || option->term_height <= 0) {
+        struct winsize ws;
+        if (ioctl(0, TIOCGWINSZ, &ws) == 0) {
+            if (ws.ws_col > 0)
+                option->term_width = ws.ws_col;
+            if (ws.ws_row > 0)
+                option->term_height = ws.ws_row;
+        }
+    }
+
     // XXX overwrite fromhost here is better?
     if(getenv("SSH_CONNECTION") != NULL){
 	char frombuf[50];
