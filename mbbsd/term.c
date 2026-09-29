@@ -88,6 +88,8 @@ static int current_mouse_mode = MOUSE_MODE_NONE;
 #define DISABLE_MOUSE_DRAG      ESC_STR "[?1002l"
 #define DISABLE_MOUSE_MOTION    ESC_STR "[?1003l"
 #define DISABLE_MOUSE_SGR       ESC_STR "[?1006l"
+#define ENABLE_AUTO_WRAP        ESC_STR "[?7h"
+#define DISABLE_AUTO_WRAP       ESC_STR "[?7l"
 
 void
 term_enable_mouse(int mode)
@@ -144,6 +146,7 @@ void
 term_uninit(void)
 {
     term_disable_mouse();
+    write(1, ENABLE_AUTO_WRAP, sizeof(ENABLE_AUTO_WRAP) - 1);
     if (tty_state_saved) {
         const char reset_seq[] = ANSI_RESET "\r\n";
         write(1, reset_seq, sizeof(reset_seq) - 1);
@@ -157,6 +160,7 @@ term_init(void)
 {
     Signal(SIGWINCH, sig_term_resize);
     term_enable_mouse(MOUSE_MODE_CLICK);
+    write(1, DISABLE_AUTO_WRAP, sizeof(DISABLE_AUTO_WRAP) - 1);
     return YEA;
 }
 
