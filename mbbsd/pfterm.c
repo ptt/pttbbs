@@ -196,6 +196,11 @@ static int t_lines = 24, t_columns = 80;
 #undef  FTCONF_USE_ANSI_SCROLL
 #undef  FTCONF_USE_VT100_SCROLL
 
+// Wrap cursor to next line when reaching end of columns
+#ifndef FTCONF_AUTO_WRAP
+#define FTCONF_AUTO_WRAP (0)
+#endif
+
 // Few poor terminals do not have relative move (ABCD).
 #undef  FTCONF_USE_ANSI_RELMOVE
 
@@ -1537,7 +1542,17 @@ outstr(const char *str)
 static inline __attribute__((always_inline)) void
 out_ftchar(ftchar c)
 {
-    assert (ft.x >= 0 && ft.x < ft.cols);
+    if (!FTCONF_AUTO_WRAP)
+    {
+        if (ft.x >= ft.cols)
+            return;
+    }
+    else
+    {
+        assert(ft.x >= 0 && ft.x < ft.cols);
+    }
+    if (ft.x < 0)
+        ft.x = 0;
 
     if (FTCONF_USE_DBCS_SGR66 && ft.has_half_attr)
     {
@@ -1561,17 +1576,20 @@ out_ftchar(ftchar c)
     FTC = c;
 
     ft.x++;
-    // XXX allow x == ft.cols?
-    if (ft.x >= ft.cols)
+    if (FTCONF_AUTO_WRAP)
     {
-        ft.x = 0;
-        ft.y ++;
-        while (ft.y >= ft.rows)
+        // XXX allow x == ft.cols?
+        if (ft.x >= ft.cols)
         {
-            // XXX scroll at next dirty?
-            // screen.c ignored such scroll.
-            // scroll();
-            ft.y --;
+            ft.x = 0;
+            ft.y++;
+            while (ft.y >= ft.rows)
+            {
+                // XXX scroll at next dirty?
+                // screen.c ignored such scroll.
+                // scroll();
+                ft.y--;
+            }
         }
     }
 }
@@ -1581,6 +1599,22 @@ out_mbchar(void)
 {
     int ch = mb_get_char(&ft.mb);
     int w = mb_char_width(ch);
+    if (w <= 0)
+        return;
+
+    if (!FTCONF_AUTO_WRAP)
+    {
+        if (ft.x >= ft.cols)
+            return;
+
+        if (w >= 2 && ft.x + w > ft.cols)
+        {
+            for (int i = 0; i < w; i++)
+                out_ftchar(FTCHAR_INVALID_DBCS);
+            return;
+        }
+    }
+
     if (w == 1)
     {
         out_ftchar((ftchar)(ch < 0xFFFE ? ch : '?'));
@@ -1635,6 +1669,8 @@ outc(unsigned char c)
         switch (c)
         {
         case '\t': {
+            if (!FTCONF_AUTO_WRAP && ft.x >= ft.cols)
+                return;
             // tab: move by 8, and erase the moved range
             int x = ft.x + (8 - (ft.x % 8));
             x = ranged(x, 0, ft.cols - 1);
@@ -2608,7 +2644,10 @@ fterm_rawcursor(void)
 #else
     // fterm_rawattr(FTATTR_DEFAULT);
     fterm_rawattr(ft.attr);
-    fterm_rawmove_opt(ft.y, ft.x);
+    if (!FTCONF_AUTO_WRAP)
+        fterm_rawmove_opt(ranged(ft.y, 0, ft.rows-1), ranged(ft.x, 0, ft.cols-1));
+    else
+        fterm_rawmove_opt(ft.y, ft.x);
 #endif // !_WIN32
 }
 
