@@ -1095,26 +1095,11 @@ do_aloha(void)
 }
 
 static void
-do_term_init(enum TermMode term_mode, int w, int h)
+do_term_init(int w, int h)
 {
     term_init();
-    if (w)
-	t_columns = MAX(80, MIN(200, w));
-    if (h)
-	t_lines = MAX(24, MIN(100, h));
-    b_lines = t_lines - 1;
-    p_lines = t_lines - 4;
+    term_set_size(w, h);
     initscr();
-
-    // if the terminal was already determined, resize for it.
-    if ((w && (w != t_columns)) ||
-	(h && (h != t_lines  )) )
-    {
-	term_resize(w, h);
-    }
-
-    if (term_mode == TermMode_TTY)
-	raise(SIGWINCH);
 }
 
 static int
@@ -1536,8 +1521,7 @@ main(int argc, char *argv[], char *envp[])
 	return 0;
     }
 
-    do_term_init(option->term_mode,
-	    option->term_width, option->term_height);
+    do_term_init(option->term_width, option->term_height);
 
     if (option->tunnel_mode)
     {

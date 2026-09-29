@@ -261,10 +261,10 @@ char           * const ModeTypeTable[MODE_MAX] = {
 };
 
 /* term.c */
-int             b_lines = 23; // bottom line of screen (= t_lines - 1)
-int             t_lines = 24; // term lines
-int             p_lines = 20; // 扣掉 header(3), footer(1), 畫面上可以顯示資料的行數
-int             t_columns = 80;
+int             t_columns = DEFAULT_TERM_COLS;
+int             t_lines = DEFAULT_TERM_ROWS;
+int             b_lines = DEFAULT_TERM_ROWS - 1; // bottom line of screen
+int             p_lines = DEFAULT_TERM_ROWS - 3 - 1; // 扣掉 header(3), footer(1), 畫面上可以顯示資料的行數
 
 /* refer to ansi.h for *len */
 char           * const strtstandout = ANSI_REVERSE;

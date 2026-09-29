@@ -8,11 +8,11 @@
 
     VERSION 1.2
     v1.1:     2007/12/24 18:00   piaip
-    最後更新: 2023/06/01 01:55   IID
+    最後更新: 2026/09/29 22:00   piaip
 
 =============================================================================
 
-    pfterm 是為了解決 non-ANSI based terminal 處理日漸困難的問題而誕生的。 
+    pfterm 是為了解決 non-ANSI based terminal 處理日漸困難的問題而誕生的。
     舊有的系統 (screen.c) 假設輸出的資料全是單純的 ASCII 文字，
     所以在處理 DBCS以及 ANSI 碼的時候非常容易誤判或輸出不足的資料。
     另外緩衝區字串大小 (ANSILINELEN) 造成的浪費也是個問題。
@@ -28,20 +28,14 @@
 
 =============================================================================
 
-//// common ncurse-like library interface   
+//// common ncurse-like library interface
 //// ncurse 相容部份
 
 // initialization   初始化
 void    initscr     (void);                 初始系統
 int     resizeterm  (int rows, int cols);   調整畫面大小為(rows,cols)
-int     resizeterm_within(                  調整顯示範圍為終端機畫面的部分區域：
-            int rows, int cols,             顯示範圍大小為(rows,cols)，
-            int rows_full, int cols_full);  實際終端機則為(rows_full,cols_full)
 int     endwin      (void);                 結束系統
 
-            resizeterm() 假設顯示範圍大小 (rows,cols) 即為實際終端機大小。
-            但當顯示範圍與實際終端機大小不符時，畫面捲動行為將會不正確；
-            可用 resizeterm_within() 指定實際終端機大小 (rows_full,cols_full)。
 
 // cursor           游標
 void    getyx       (int *y, int *x);       取得目前游標位置
@@ -165,9 +159,9 @@ void    fterm_rawmove   (int y, int x);     移動底層游標到指定的位置
 void    fterm_rawmove_opt(int y, int x);    最佳化移動游標
 void    fterm_rawmove_rel(int dy, int dx);  移動底層游標到指定的相對位置
 
-int     fterm_chattr    (char *s,           將屬性從 oattr 轉為 nattr 所需的 
+int     fterm_chattr    (char *s,           將屬性從 oattr 轉為 nattr 所需的
             ftattr oattr, ftattr nattr);    ANSI 控制碼輸出至 s 處。
-                                            注意s要夠長(起碼要 FTATTR_MINCMD=16 
+                                            注意s要夠長(起碼要 FTATTR_MINCMD=16
                                             字元), 考慮相容性建議 32 以上。
 
         下面是內部函式，不建議直接使用:

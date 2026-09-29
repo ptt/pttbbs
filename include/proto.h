@@ -610,7 +610,6 @@ void u_sms_verification();
 /* screen/pfterm (ncurses-like) */
 void initscr	(void);
 int  resizeterm	(int rows, int cols);
-int  resizeterm_within(int rows, int cols, int rows_full, int cols_full);
 void getyx	(int *py, int *px);
 void move	(int y, int x);
 void clear	(void);
@@ -752,6 +751,7 @@ int query_online(const char *userid);
 /* term */
 void init_tty(void);
 int  term_init(void);
+int  term_set_size(int w, int h);
 void term_resize(int w, int h);
 void bell(void);
 void term_enable_mouse(int mode);
