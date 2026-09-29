@@ -482,13 +482,28 @@ menu_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
 }
 
 static int
+decide_menu_column(const menuitem_t *cmdtable, int table_max)
+{
+    if (t_columns >= 80)
+        return 20;
+
+    int max_w = 0;
+    for (int i = 0; i <= table_max && cmdtable[i].desc; i++) {
+        if (CheckMenuPerm(cmdtable[i].level)) {
+            int w = stream_width(cmdtable[i].desc) + 4;
+            if (w > max_w)
+                max_w = w;
+        }
+    }
+    int col = (t_columns - max_w) / 2;
+    return col > 0 ? col : 0;
+}
+
+static int
 menu_loader(PSB_CTX *ctx)
 {
     menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
-#ifdef LARGETERM_CENTER_MENU
-    menu_column = (t_columns - 40) / 2;
-    menu_row = 12 + (t_lines - 24) / 2;
-#endif
+    menu_column = decide_menu_column(cx->cmdtable, cx->table_max);
     ctx->header_lines = decide_menu_row(cx->cmdtable);
 
     int permitted = 0;
