@@ -1,6 +1,7 @@
 #include "bbs.h"
 #include "daemons.h"
 #include "psb.h"
+#include <sys/time.h>
 
 // Page & Service Browser
 //
@@ -451,6 +452,40 @@ cmd_bar_get_hotspot_rect(int y, int x, int *out_x_start, int *out_x_end) {
     return false;
 }
 
+static int last_wheel_y = -1;
+static struct timeval last_wheel_tv;
+static bool wheel_is_touch = false;
+
+static int
+psb_wheel_cursor_key(const vtkbd_mouse_t *m, bool is_single_page) {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    long elapsed_ms = (now.tv_sec - last_wheel_tv.tv_sec) * 1000 +
+                      (now.tv_usec - last_wheel_tv.tv_usec) / 1000;
+    last_wheel_tv = now;
+
+    if (elapsed_ms >= 350) {
+        wheel_is_touch = false;
+    }
+
+    if (last_wheel_y >= 0 && m->y != last_wheel_y) {
+        wheel_is_touch = true;
+    }
+
+    int key;
+    if (is_single_page && wheel_is_touch) {
+        // Coordinate is changing within gesture: Touch scroll!
+        // Inverse scroll on single page: swipe up -> KEY_UP, swipe down -> KEY_DOWN
+        key = (m->button == MOUSE_BTN_WHEEL_UP) ? KEY_DOWN : KEY_UP;
+    } else {
+        // Stationary coordinates: physical mouse wheel
+        key = (m->button == MOUSE_BTN_WHEEL_UP) ? KEY_UP : KEY_DOWN;
+    }
+
+    last_wheel_y = m->y;
+    return key;
+}
+
 typedef struct {
     const char *text;
     int key;
@@ -577,8 +612,13 @@ dispatch_key:
         switch (ch) {
             case KEY_MOUSE: {
                 const vtkbd_mouse_t *m = vkey_get_mouse();
-                if (!m || m->is_motion || m->is_release)
+                if (!m || m->is_release)
                     break;
+                if (m->is_motion) {
+                    last_wheel_y = m->y;
+                    wheel_is_touch = false;
+                    break;
+                }
                 if (m->button == MOUSE_BTN_WHEEL_UP || m->button == MOUSE_BTN_WHEEL_DOWN) {
                     vs_locator_on_wheel(m->y, m->x);
                     int delta = (m->button == MOUSE_BTN_WHEEL_UP) ? -1 : 1;
@@ -587,8 +627,11 @@ dispatch_key:
                     if (rows > 0 && new_base >= 0 && new_base <= max_base) {
                         base = new_base;
                         curr += delta;
-                    } else if (curr + delta >= 0 && curr + delta < count) {
-                        curr += delta;
+                    } else if (count > 0) {
+                        int key = psb_wheel_cursor_key(m, max_base == 0);
+                        int cdelta = (key == KEY_UP) ? -1 : 1;
+                        if (curr + cdelta >= 0 && curr + cdelta < count)
+                            curr += cdelta;
                     }
                 } else if (m->button == MOUSE_BTN_LEFT) {
                     vs_locator_reset_hover();
@@ -1119,6 +1162,8 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
         bool in_list = (m->y >= list_top && m->y < list_top + vis);
 
         if (m->is_motion) {
+            last_wheel_y = m->y;
+            wheel_is_touch = false;
             if (in_list)
                 vs_locator_set(m->y);
             else
@@ -1147,7 +1192,7 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
                     ctx->curr = 0;
                 return 0;
             }
-            ctx->key = (m->button == MOUSE_BTN_WHEEL_UP) ? KEY_UP : KEY_DOWN;
+            ctx->key = psb_wheel_cursor_key(m, max_base == 0);
         } else if (m->button == MOUSE_BTN_LEFT) {
             vs_locator_reset_hover();
             const cmd_bar_hotspot_t *hs = cmd_bar_find_hotspot(m->y, m->x, layers);
