@@ -1280,8 +1280,6 @@ psb_init_defaults(PSB_CTX *psbctx) {
 static void
 psb_sync_cols(PSB_CTX *psbctx)
 {
-    if (!psbctx || !psbctx->vcols)
-        return;
     int n = psbctx->cols;
     if (n <= 0) {
         for (n = 0; n < PSB_MAX_COLS && (psbctx->vcols[n].label ||
@@ -1316,11 +1314,12 @@ psb_render_header_columns(PSB_CTX *ctx, const char *right_str)
     VCOLW hdr_widths[PSB_MAX_COLS];
     memcpy(hdr_widths, widths, sizeof(VCOLW) * (ctx->cols < PSB_MAX_COLS ? ctx->cols : PSB_MAX_COLS));
     if (right_w > 0 && ctx->cols > 0) {
-        int last = ctx->cols - 1;
+        int last = (ctx->cols < PSB_MAX_COLS ? ctx->cols : PSB_MAX_COLS) - 1;
         if (hdr_widths[last] > right_w)
             hdr_widths[last] -= right_w;
     }
 
+    clrtoeol();
     outs(ANSI_REVERSE);
     vs_cols_labels(ctx->vcols, hdr_widths, ctx->cols);
 

@@ -1759,8 +1759,20 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                 SNPRINTF(col_num, "%7dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
         }
 
-        prints("          %s%-40.40s %.*s", col_num, B_BH(ptr)->desc,
-               t_columns - 68, B_BH(ptr)->BM);
+        char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
+        const char *mb_desc = B_BH(ptr)->desc;
+        int d_cols = 0;
+        int d_off = stream_col_offset(40, mb_desc, &d_cols);
+        strlcpy(t_desc, mb_desc, d_off + 1);
+
+        const char *mb_bm = B_BH(ptr)->BM;
+        int max_bm = (t_columns > 68) ? t_columns - 68 : 0;
+        int bm_off = stream_col_offset(max_bm, mb_bm, NULL);
+        strlcpy(t_bm, mb_bm, bm_off + 1);
+
+        prints("          %s%s%*s %s", col_num, t_desc,
+               40 - d_cols > 0 ? 40 - d_cols : 0, "",
+               t_bm);
         clrtoeol();
         return 0;
     }
@@ -2771,7 +2783,7 @@ choose_board(int newflag)
         .cols = BRDLIST_COLS,
         .vcols = brdlist_coldefs,
         .col_paddings = 1,
-        .custom_header_columns = true,
+        .custom_header_columns = IN_CLASSROOT() ? true : false,
         .layers = layers,
         .loader = brdlist_loader,
         .header = brdlist_header,
