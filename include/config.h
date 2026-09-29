@@ -261,13 +261,13 @@
 #endif
 
 #ifndef MIN_TERM_COLS
-#define MIN_TERM_COLS       80
+#define MIN_TERM_COLS       20
 #endif
 
 // Warning: MAX_TERM_ROWS will be used in `term.c` for macro expansion, so this
 // must be a pure digit without ().
 #ifndef MAX_TERM_ROWS
-#define MAX_TERM_ROWS       100
+#define MAX_TERM_ROWS       150
 #endif
 
 #ifndef MIN_TERM_ROWS
