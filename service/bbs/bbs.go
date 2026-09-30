@@ -4,7 +4,6 @@ package bbs
 #include <stdlib.h>
 #include <string.h>
 #include "cmbbs.h"
-#include "cmsys.h"
 */
 import "C"
 
@@ -12,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
+
+	"pttbbs/big5uao"
 )
 
 // BBSHome returns the default BBSHOME path defined in the C build environment
@@ -19,35 +20,14 @@ func BBSHome() string {
 	return C.GoString(C.get_bbshome())
 }
 
-// UTF8ToBig5 converts a UTF-8 string to native Big5 (UAO 2.50) byte slice using libcmsys.a utf8_to_big5
+// UTF8ToBig5 converts a UTF-8 string to native Big5 (UAO 2.50) byte slice using pure Go UAO 2.50
 func UTF8ToBig5(s string) ([]byte, error) {
-	if s == "" {
-		return []byte{}, nil
-	}
-
-	cStr := C.CString(s)
-	defer C.free(unsafe.Pointer(cStr))
-
-	bufLen := len(s)*2 + 1
-	buf := make([]byte, bufLen)
-
-	C.utf8_to_big5(cStr, (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(bufLen))
-
-	return C.GoBytes(unsafe.Pointer(&buf[0]), C.int(C.strlen((*C.char)(unsafe.Pointer(&buf[0]))))), nil
+	return big5uao.Encode(s), nil
 }
 
-// Big5ToUTF8 converts a Big5 byte slice (UAO 2.50) to a Go UTF-8 string using libcmsys.a big5_to_utf8
+// Big5ToUTF8 converts a Big5 byte slice (UAO 2.50) to a Go UTF-8 string using pure Go UAO 2.50
 func Big5ToUTF8(b []byte) string {
-	if len(b) == 0 {
-		return ""
-	}
-
-	bufLen := len(b)*3 + 1
-	buf := make([]byte, bufLen)
-
-	C.big5_to_utf8((*C.char)(unsafe.Pointer(&b[0])), (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(bufLen))
-
-	return C.GoString((*C.char)(unsafe.Pointer(&buf[0])))
+	return big5uao.Decode(b)
 }
 
 type SHMClient struct{}
