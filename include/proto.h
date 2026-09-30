@@ -636,6 +636,9 @@ void outns(const char *str, int n);
 void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
 void region_scroll_up(int top, int bottom);
+void start_url(const char *url);
+void end_url(void);
+const char *get_url_at(int y, int x);
 
 
 #define HAVE_GRAYOUT
