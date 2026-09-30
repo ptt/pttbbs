@@ -89,7 +89,7 @@ OBJS     += recover.o register_sms.o \
 	    verifydb.o verifydb_info.o verifydb_search.o
 endif
 
-TEST_PROGS = test_brc
+TEST_PROGS = test_brc test_pfterm
 
 #######################################################################
 # variables
@@ -127,6 +127,10 @@ testsz: $(SRCROOT)/pttbbs.conf $(wildcard $(SRCROOT)/include/*.h) testsz.c
 
 test_%: test_%.c
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+	@./$@
+
+test_pfterm: test_pfterm_url.c pfterm.o
+	$(CC) $(CFLAGS) $^ -o test_pfterm $(LDFLAGS) $(LDLIBS)
 	@./$@
 
 ctags:
