@@ -555,6 +555,25 @@ outstr(const char *str)
 }
 
 void
+start_url(const char *url)
+{
+    (void)url;
+}
+
+void
+end_url(void)
+{
+}
+
+const char *
+get_url_at(int y, int x)
+{
+    (void)y;
+    (void)x;
+    return NULL;
+}
+
+void
 addch(unsigned char c)
 {
     outc(c);

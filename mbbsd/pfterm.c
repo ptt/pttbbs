@@ -264,6 +264,7 @@ static int t_lines = 24, t_columns = 80;
 
 typedef unsigned short ftchar;  // primitive character type (Big5 word or UCS-2)
 typedef unsigned short ftattr;  // primitive attribute type
+typedef uint16_t       fturl_id; // primitive URL ID type
 
 static inline void
 ftchar_fill(ftchar *p, ftchar c, size_t n)
@@ -280,10 +281,15 @@ typedef struct
 {
     ftchar  *cbase[2];      // character map base per page
     ftattr  *abase[2];      // attribute map base per page
+    // The current max terminal size is about 150x200 so 16 bits are enough to support
+    // even one link per cell.
+    fturl_id *ubase[2];     // url/meta map base per page
     uint16_t *rmap[2];      // logical row -> physical row index map
     size_t  cstride;        // character row stride (mcols + 1)
     size_t  astride;        // attribute row stride (mcols)
+    size_t  ustride;        // url row stride (mcols)
     ftattr  attr;
+    fturl_id url;           // active url index for outc
     ftattr  half_attr;
     int     has_half_attr;
     int     rows, cols;     // display region size
@@ -301,6 +307,7 @@ typedef struct
     // raw terminal status
     int     ry, rx;
     ftattr  rattr;
+    fturl_id rurl;          // raw terminal current url index
 
     // typeahead
     char    typeahead;
@@ -308,6 +315,12 @@ typedef struct
     // escape command
     char    cmd[FTCMD_MAXLEN+1];
     int     szcmd;
+
+    // OSC escape command
+    char    osc_buf[ANSILINELEN];
+    int     sz_osc;
+    int     in_osc;
+    int     osc_saw_esc;
 
     // Multibyte state machine
     mb_ctx  mb;
@@ -422,6 +435,12 @@ FTAMAP(int y)
     return ft.abase[ft.mi] + (size_t)ft.rmap[ft.mi][y] * ft.astride;
 }
 
+static inline fturl_id *
+FTUMAP(int y)
+{
+    return ft.ubase[ft.mi] + (size_t)ft.rmap[ft.mi][y] * ft.ustride;
+}
+
 static inline ftchar *
 FTOCMAP(int y)
 {
@@ -434,12 +453,30 @@ FTOAMAP(int y)
     return ft.abase[1 - ft.mi] + (size_t)ft.rmap[1 - ft.mi][y] * ft.astride;
 }
 
+static inline fturl_id *
+FTOUMAP(int y)
+{
+    return ft.ubase[1 - ft.mi] + (size_t)ft.rmap[1 - ft.mi][y] * ft.ustride;
+}
+
+static inline void
+fturl_fill(fturl_id *dst, fturl_id val, int count)
+{
+    while (count-- > 0)
+        *dst++ = val;
+}
+
+#define UMAP(y)    FTUMAP(y)
+
 #define FTCROW     FTCMAP(ft.y)
 #define FTAROW     FTAMAP(ft.y)
+#define FTUROW     FTUMAP(ft.y)
 #define FTC        (FTCROW[ft.x])
 #define FTA        (FTAROW[ft.x])
+#define FTU        (FTUROW[ft.x])
 #define FTPC       (FTCROW+ft.x)
 #define FTPA       (FTAROW+ft.x)
+#define FTPU       (FTUROW+ft.x)
 
 
 #define FTCHAR_ISTRAILING(x) ((unsigned int)(x) == FTCHAR_TRAILING)
@@ -540,6 +577,11 @@ void    standend    (void);
 // grayout advanced control
 void    grayout     (int y, int end, int level);
 
+// hyperlink (OSC 8)
+void    start_url   (const char *url);
+void    end_url     (void);
+const char *get_url_at(int y, int x);
+
 //// flat-term internal processor
 
 int     fterm_typeahead (void);         // raw input  adapter
@@ -547,6 +589,7 @@ void    fterm_rawc      (int c);        // raw output adapter
 void    fterm_rawnewline(void);         // raw output adapter
 void    fterm_rawflush  (void);         // raw output adapter
 void    fterm_raws      (const char *s);
+void    fterm_rawurl    (fturl_id url_id);
 void    fterm_rawnc     (int c, int n);
 void    fterm_rawnum    (int arg);
 void    fterm_rawcmd    (int arg, int defval, char c);
@@ -619,6 +662,142 @@ fterm_slab_free(void *ptr, size_t sz)
 #endif
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Hyperlink (OSC 8) Support
+//////////////////////////////////////////////////////////////////////////
+
+#define MAX_URLS 64
+
+typedef struct {
+    fturl_id id;
+    char *url;
+} ft_url_entry;
+
+static ft_url_entry ft_urls[MAX_URLS];
+static fturl_id ft_next_url_id = 1;
+
+static void
+fterm_url_cleanup(void)
+{
+    for (int i = 0; i < MAX_URLS; i++)
+    {
+        if (ft_urls[i].url)
+        {
+            free(ft_urls[i].url);
+            ft_urls[i].url = NULL;
+        }
+        ft_urls[i].id = 0;
+    }
+    ft_next_url_id = 1;
+}
+
+static fturl_id
+fterm_url_register(const char *url)
+{
+    if (!url || !*url)
+        return 0;
+
+    // Deduplication across active entries
+    for (int i = 0; i < MAX_URLS; i++)
+    {
+        if (ft_urls[i].id != 0 && ft_urls[i].url && strcmp(ft_urls[i].url, url) == 0)
+            return ft_urls[i].id;
+    }
+
+    fturl_id id = ft_next_url_id++;
+    if (id == 0)
+        id = ft_next_url_id++; // Avoid 0 on overflow
+
+    int slot = (int)(id % MAX_URLS);
+    if (ft_urls[slot].url)
+    {
+        free(ft_urls[slot].url);
+        ft_urls[slot].url = NULL;
+    }
+
+    ft_urls[slot].id = id;
+    ft_urls[slot].url = strdup(url);
+    return id;
+}
+
+static const char *
+fterm_url_get(fturl_id id)
+{
+    if (id == 0)
+        return NULL;
+    int slot = (int)(id % MAX_URLS);
+    if (ft_urls[slot].id == id)
+        return ft_urls[slot].url;
+    return NULL;
+}
+
+void
+start_url(const char *url)
+{
+    if (!url || !*url)
+    {
+        end_url();
+        return;
+    }
+    ft.url = fterm_url_register(url);
+}
+
+void
+end_url(void)
+{
+    ft.url = 0;
+}
+
+const char *
+get_url_at(int y, int x)
+{
+    if (y < 0 || y >= ft.rows || x < 0 || x >= ft.cols)
+        return NULL;
+    return fterm_url_get(FTUMAP(y)[x]);
+}
+
+void
+fterm_rawurl(fturl_id url_id)
+{
+    if (ft.rurl == url_id)
+        return;
+
+    const char *url = fterm_url_get(url_id);
+    if (url && *url)
+    {
+        fterm_raws(ESC_STR "]8;;");
+        fterm_raws(url);
+        fterm_raws(ESC_STR "\\");
+        ft.rurl = url_id;
+    }
+    else
+    {
+        if (ft.rurl != 0)
+        {
+            fterm_raws(ESC_STR "]8;;" ESC_STR "\\");
+            ft.rurl = 0;
+        }
+    }
+}
+
+static void __attribute__((unused))
+fterm_exec_osc(const char *buf)
+{
+    // Format: 8;<params>;<url>
+    if (buf[0] == '8' && buf[1] == ';')
+    {
+        const char *p = strchr(buf + 2, ';');
+        if (p)
+        {
+            const char *url = p + 1;
+            if (*url)
+                start_url(url);
+            else
+                end_url();
+        }
+    }
+}
+
 // initialization
 
 void
@@ -630,8 +809,10 @@ initscr(void)
     SetConsoleCursorPosition(hStdout, coordBufCoord);
 #endif
 
+    fterm_url_cleanup();
     memset(&ft, 0, sizeof(ft));
     ft.attr = ft.rattr = FTATTR_DEFAULT;
+    ft.url = ft.rurl = 0;
     resizeterm(t_lines, t_columns);
 
     // clear both pages
@@ -650,6 +831,8 @@ int
 endwin(void)
 {
     // fterm_rawclear();
+    fterm_rawurl(0);
+    fterm_url_cleanup();
     fterm_slab_free(ft.slab, ft.slab_sz);
     memset(&ft, 0, sizeof(ft));
     return 0;
@@ -667,26 +850,36 @@ resizeterm(int rows, int cols)
         int new_mcols = max(ft.mcols, cols);
         size_t cstride = (size_t)(new_mcols + 1);
         size_t astride = (size_t)new_mcols;
+        size_t ustride = (size_t)new_mcols;
         size_t aplane_cells = (size_t)new_mrows * astride;
         size_t aplane_bytes = aplane_cells * sizeof(ftattr);
         size_t cplane_bytes = (size_t)new_mrows * cstride * sizeof(ftchar);
         size_t rmap_bytes = 2 * (size_t)new_mrows * sizeof(uint16_t);
-        size_t req_sz = 2 * aplane_bytes + rmap_bytes + 2 * cplane_bytes;
+        size_t uplane_cells = (size_t)new_mrows * ustride;
+        size_t uplane_bytes = uplane_cells * sizeof(fturl_id);
+        size_t req_sz = 2 * aplane_bytes + 2 * uplane_bytes + rmap_bytes + 2 * cplane_bytes;
 
         size_t new_slab_sz = 0;
         void *new_slab = fterm_slab_alloc(req_sz, &new_slab_sz);
         assert(new_slab != NULL);
 
-        // Layout order: amap planes (align sizeof(ftattr)) -> rmap[0..1] (align 2) -> cmap planes
+        // Layout order: amap planes (align 2) -> umap planes (align 2) -> rmap[0..1] (align 2) -> cmap planes (align 1)
         char *p = (char *)new_slab;
-        ftchar *new_cbase[2];
         ftattr *new_abase[2];
+        fturl_id *new_ubase[2];
         uint16_t *new_rmap[2];
+        ftchar *new_cbase[2];
 
         for (mi = 0; mi < 2; mi++)
         {
             new_abase[mi] = (ftattr *)p; p += aplane_bytes;
             ftattr_fill(new_abase[mi], FTATTR_ERASE, aplane_cells);
+        }
+
+        for (mi = 0; mi < 2; mi++)
+        {
+            new_ubase[mi] = (fturl_id *)p; p += uplane_bytes;
+            memset(new_ubase[mi], 0, uplane_bytes);
         }
 
         for (mi = 0; mi < 2; mi++)
@@ -713,6 +906,7 @@ resizeterm(int rows, int cols)
                     size_t old_row = (size_t)ft.rmap[mi][i];
                     memcpy(new_cbase[mi] + i * cstride, ft.cbase[mi] + old_row * ft.cstride, (size_t)ft.mcols * sizeof(ftchar));
                     memcpy(new_abase[mi] + i * astride, ft.abase[mi] + old_row * ft.astride, (size_t)ft.mcols * sizeof(ftattr));
+                    memcpy(new_ubase[mi] + i * ustride, ft.ubase[mi] + old_row * ft.ustride, (size_t)ft.mcols * sizeof(fturl_id));
                 }
             }
             fterm_slab_free(ft.slab, ft.slab_sz);
@@ -722,10 +916,13 @@ resizeterm(int rows, int cols)
         ft.cbase[1] = new_cbase[1];
         ft.abase[0] = new_abase[0];
         ft.abase[1] = new_abase[1];
+        ft.ubase[0] = new_ubase[0];
+        ft.ubase[1] = new_ubase[1];
         ft.rmap[0] = new_rmap[0];
         ft.rmap[1] = new_rmap[1];
         ft.cstride = cstride;
         ft.astride = astride;
+        ft.ustride = ustride;
         ft.slab = new_slab;
         ft.slab_sz = new_slab_sz;
         ft.mrows = new_mrows;
@@ -739,6 +936,7 @@ resizeterm(int rows, int cols)
     {
         ftchar_fill(FTCMAP(i), FTCHAR_ERASE, cols);
         ftattr_fill(FTAMAP(i), FTATTR_ERASE, cols);
+        memset(FTUMAP(i), 0, cols * sizeof(fturl_id));
     }
     if (cols > ft.cols)
     {
@@ -746,6 +944,7 @@ resizeterm(int rows, int cols)
         {
             ftchar_fill(FTCMAP(i) + ft.cols, FTCHAR_ERASE, cols - ft.cols);
             ftattr_fill(FTAMAP(i)+ft.cols, FTATTR_ERASE, cols-ft.cols);
+            memset(FTUMAP(i)+ft.cols, 0, (cols - ft.cols) * sizeof(fturl_id));
         }
     }
 
@@ -800,6 +999,8 @@ clrscr(void)
         ftchar_fill(FTCMAP(r), FTCHAR_ERASE, ft.cols);
     for (r = 0; r < ft.rows; r++)
         ftattr_fill(FTAMAP(r), FTATTR_ERASE, ft.cols);
+    for (r = 0; r < ft.rows; r++)
+        memset(FTUMAP(r), 0, ft.cols * sizeof(fturl_id));
     fterm_markdirty();
 }
 
@@ -831,6 +1032,7 @@ clrtoeol(void)
         FTCROW[ft.x - 1] = FTCHAR_INVALID_DBCS;
     ftchar_fill(FTPC, FTCHAR_ERASE, ft.cols - ft.x);
     ftattr_fill(FTPA, FTATTR_ERASE, ft.cols - ft.x);
+    memset(FTPU, 0, (ft.cols - ft.x) * sizeof(fturl_id));
     fterm_markdirty();
 }
 
@@ -844,6 +1046,7 @@ clrtobeg(void)
         FTCROW[ft.x + 1] = FTCHAR_INVALID_DBCS;
     ftchar_fill(FTCROW, FTCHAR_ERASE, ft.x + 1);
     ftattr_fill(FTAROW, FTATTR_ERASE, ft.x+1);
+    memset(FTUROW, 0, (ft.x + 1) * sizeof(fturl_id));
     fterm_markdirty();
 }
 
@@ -853,6 +1056,7 @@ clrcurrline(void)
     ft.y = ranged(ft.y, 0, ft.rows-1);
     ftchar_fill(FTCROW, FTCHAR_ERASE, ft.cols);
     ftattr_fill(FTAROW, FTATTR_ERASE, ft.cols);
+    memset(FTUROW, 0, ft.cols * sizeof(fturl_id));
     fterm_markdirty();
 }
 
@@ -882,6 +1086,7 @@ clrregion(int r1, int r2)
     {
         ftchar_fill(FTCMAP(r1), FTCHAR_ERASE, ft.cols);
         ftattr_fill(FTAMAP(r1), FTATTR_ERASE, ft.cols);
+        memset(FTUMAP(r1), 0, ft.cols * sizeof(fturl_id));
     }
     fterm_markdirty();
 }
@@ -1051,6 +1256,8 @@ doupdate(void)
                 FTD[x] |= FTDIRTY_CHAR, ds++;
             if (FTAMAP(y)[x] != FTOAMAP(y)[x])
                 FTD[x] |= FTDIRTY_ATTR, ds++;
+            if (FTUMAP(y)[x] != FTOUMAP(y)[x])
+                FTD[x] |= FTDIRTY_ATTR, ds++;
 
             // determine DBCS status
             if (dbcs == 1 && !FTCHAR_ISTRAILING(FTCMAP(y)[x]))
@@ -1166,7 +1373,8 @@ doupdate(void)
         // TODO ERASE then print can avoid lots of space, optimize in future.
         for (x = ft.cols - 1; x >= 0; x--)
             if (FTCMAP(y)[x] != FTCHAR_ERASE ||
-                FTAMAP(y)[x] != FTATTR_ERASE)
+                FTAMAP(y)[x] != FTATTR_ERASE ||
+                FTUMAP(y)[x] != 0)
                 break;
             else if (FTD[x])
                 derase++;
@@ -1196,17 +1404,22 @@ doupdate(void)
                     break;
                 for (i = ft.rx; i < x; i++)
                 {
+                    if (FTUMAP(y)[i] != ft.rurl)
+                        break;
                     if (FTDBCS_ISLEAD(FTDC[i]) &&
                         fterm_DBCS_Big5(FTDC[i], FTCHAR_TRAILING) != FTDBCS_SAFE)
                         break;
                     // if same attribute, simply accept.
-                    if (fterm_resolve_attr(FTAMAP(y)[i]) == fterm_resolve_attr(ft.rattr) && touched)
+                    if (fterm_resolve_attr(FTAMAP(y)[i]) == fterm_resolve_attr(ft.rattr) &&
+                        FTUMAP(y)[i] == ft.rurl && touched)
                         continue;
                     // XXX spaces may accept compatible BG/attributes,
                     // but that will also change cached attribute.
                     if (!FTCHAR_ISBLANK(FTCMAP(y)[i]))
                         break;
                     if (!fterm_space_compatible(FTAMAP(y)[i], ft.rattr))
+                        break;
+                    if (FTUMAP(y)[i] != ft.rurl)
                         break;
                 }
                 if (i != x)
@@ -1222,9 +1435,13 @@ doupdate(void)
 
                 for (i = ft.rx; i < x; i++)
                 {
+                    fterm_rawurl(FTUMAP(y)[i]);
                     fterm_rawchar(FTDC[i]);
                     FTAMAP(y)[i] = FTOAMAP(y)[i]; // spaces may change attr...
+                    FTUMAP(y)[i] = FTOUMAP(y)[i];
                     ft.rx++;
+                    if (i + 1 >= len || FTUMAP(y)[i+1] != FTUMAP(y)[i])
+                        fterm_rawurl(i + 1 < ft.cols ? FTUMAP(y)[i+1] : 0);
                 }
 
                 break;
@@ -1279,6 +1496,9 @@ doupdate(void)
                 }
             }
 
+            // Sync raw URL with cell's URL
+            fterm_rawurl(FTUMAP(y)[x]);
+
             if (split_big5_dbcs && x + 1 < len && (FTD[x+1] & FTDIRTY_DBCS) &&
                 FTAMAP(y)[x+1] != FTAMAP(y)[x] && FTDC[x] >= 0x0100 && !FTCHAR_ISTRAILING(FTDC[x]))
             {
@@ -1310,6 +1530,9 @@ doupdate(void)
             ft.rx++;
             touched = 1;
 
+            if (x + 1 >= len || FTUMAP(y)[x+1] != FTUMAP(y)[x])
+                fterm_rawurl(x + 1 < ft.cols ? FTUMAP(y)[x+1] : 0);
+
             if (FTD[x] & FTDIRTY_RAWMOVE)
             {
                 fterm_rawcmd2(ft.ry+1, ft.rx+1, 1, 'H');
@@ -1318,6 +1541,7 @@ doupdate(void)
 
         if (derase)
         {
+            fterm_rawurl(0);
             fterm_rawmove_opt(y, len);
             fterm_rawclreol();
         }
@@ -1325,6 +1549,7 @@ doupdate(void)
 
 #endif // !_WIN32
 
+    fterm_rawurl(0);
     fterm_rawcursor();
     fterm_rawend();
     fterm_dupe2bk();
@@ -1554,6 +1779,7 @@ out_ftchar(ftchar c)
 
     // normal characters
     FTC = c;
+    FTU = ft.url;
 
     ft.x++;
     if (FTCONF_AUTO_WRAP)
@@ -1620,9 +1846,62 @@ outc(unsigned char c)
 
     fterm_markdirty();
 
+    if (ft.in_osc)
+    {
+        if (c == '\r' || c == '\n')
+        {
+            ft.in_osc = 0;
+            ft.sz_osc = 0;
+            ft.osc_saw_esc = 0;
+            // fall through to handle newline
+        }
+        else if (c == '\x07')
+        {
+            ft.osc_buf[ft.sz_osc] = '\0';
+            fterm_exec_osc(ft.osc_buf);
+            ft.in_osc = 0;
+            ft.sz_osc = 0;
+            ft.osc_saw_esc = 0;
+            return;
+        }
+        else if (c == ESC_CHR)
+        {
+            ft.osc_saw_esc = 1;
+            return;
+        }
+        else if (ft.osc_saw_esc)
+        {
+            if (c == '\\')
+            {
+                ft.osc_buf[ft.sz_osc] = '\0';
+                fterm_exec_osc(ft.osc_buf);
+                ft.in_osc = 0;
+                ft.sz_osc = 0;
+                ft.osc_saw_esc = 0;
+                return;
+            }
+            ft.osc_saw_esc = 0;
+            if (ft.sz_osc < (int)sizeof(ft.osc_buf) - 2)
+                ft.osc_buf[ft.sz_osc++] = ESC_CHR;
+        }
+
+        if (ft.sz_osc < (int)sizeof(ft.osc_buf) - 1)
+            ft.osc_buf[ft.sz_osc++] = c;
+        return;
+    }
+
     if (ft.szcmd)
     {
         // collecting commands
+        if (ft.szcmd == 1 && c == ']')
+        {
+            ft.in_osc = 1;
+            ft.sz_osc = 0;
+            ft.szcmd = 0;
+            ft.osc_saw_esc = 0;
+            return;
+        }
+
         ft.cmd[ft.szcmd++] = c;
 
         if ((ft.szcmd == 2 && c == '[') ||
@@ -1663,6 +1942,7 @@ outc(unsigned char c)
                     FTCROW[x] = FTCHAR_INVALID_DBCS;
                 ftchar_fill(FTCROW + ft.x, FTCHAR_ERASE, x - ft.x);
                 ftattr_fill(FTAROW + ft.x, ft.attr, x - ft.x);
+                fturl_fill(FTUROW + ft.x, ft.url, x - ft.x);
             }
             ft.x = x;
             return;
@@ -1880,6 +2160,7 @@ void fterm_dupe2bk(void)
     {
         memcpy(FTOCMAP(r), FTCMAP(r), ft.cols * sizeof(ftchar));
         memcpy(FTOAMAP(r), FTAMAP(r), ft.cols * sizeof(ftattr));
+        memcpy(FTOUMAP(r), FTUMAP(r), ft.cols * sizeof(fturl_id));
     }
 }
 
@@ -2368,14 +2649,26 @@ fterm_strdlen(const char *s)
         else if (ansi == 1)
         {
             if (*s == '[')
-                ansi++;
+                ansi = 2;
+            else if (*s == ']')
+                ansi = 3;
             else
                 ansi = 0;
         }
-        else if (!ANSI_IS_PARAM(*s)) // ansi == 2
+        else if (ansi == 2) // CSI
         {
-            // TODO outc() take max to FTCMD_MAXLEN now...
-            ansi = 0;
+            if (!ANSI_IS_PARAM(*s))
+                ansi = 0;
+        }
+        else if (ansi == 3) // OSC
+        {
+            if (*s == '\x07')
+                ansi = 0;
+            else if (*s == ESC_CHR && *(s + 1) == '\\')
+            {
+                s++;
+                ansi = 0;
+            }
         }
         s++;
     }
@@ -2460,6 +2753,8 @@ fterm_rawcmd2(int arg1, int arg2, int defval, char c)
 void
 fterm_rawclear(void)
 {
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
     fterm_rawhome();
     // ED: CSI n J, 0 = cursor to bottom, 2 = whole
     fterm_raws(ESC_STR "[2J");
@@ -2468,6 +2763,8 @@ fterm_rawclear(void)
 void
 fterm_rawclreol(void)
 {
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
 #ifdef FTCONF_CLEAR_SETATTR
     // ftattr oattr = ft.rattr;
     // XXX If we skip with "backround only" here, future updating
@@ -2488,6 +2785,8 @@ fterm_rawclreol(void)
 void
 fterm_rawhome(void)
 {
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
     // CUP: CSI n ; m H
     fterm_raws(ESC_STR "[H");
     ft.rx = ft.ry = 0;
@@ -2539,6 +2838,9 @@ fterm_rawmove(int y, int x)
     if (y == ft.ry && x == ft.rx)
         return;
 
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
+
     // CUP: CSI n ; m H
     fterm_rawcmd2(y+1, x+1, 1, 'H');
 
@@ -2554,6 +2856,9 @@ fterm_rawmove_opt(int y, int x)
 
     if (!adx && !ady)
         return;
+
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
 
 #ifdef DBG_DISABLE_OPTMOVE
     return fterm_rawmove(y, x);
@@ -2622,6 +2927,8 @@ fterm_rawcursor(void)
     cursor.Y = ft.y;
     SetConsoleCursorPosition(hStdout, cursor);
 #else
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
     // fterm_rawattr(FTATTR_DEFAULT);
     fterm_rawattr(ft.attr);
     if (!FTCONF_AUTO_WRAP)
@@ -2634,6 +2941,8 @@ fterm_rawcursor(void)
 void
 fterm_rawscroll (int dy)
 {
+    if (ft.rurl != 0)
+        fterm_rawurl(0);
 #ifdef FTCONF_USE_ANSI_SCROLL
     // SU: CSI n S (up)
     // SD: CSI n T (down)
@@ -2857,7 +3166,7 @@ scr_dump(screen_backup_t *psb)
     psb->y   = ft.y;
     psb->x   = ft.x;
     p = psb->raw_memory =
-        malloc (ft.rows * ft.cols * (sizeof(ftchar) + sizeof(ftattr)));
+        malloc (ft.rows * ft.cols * (sizeof(ftchar) + sizeof(ftattr) + sizeof(fturl_id)));
 
     for (y = 0; y < ft.rows; y++)
     {
@@ -2865,6 +3174,8 @@ scr_dump(screen_backup_t *psb)
         p += ft.cols * sizeof(ftchar);
         memcpy(p, FTAMAP(y), ft.cols * sizeof(ftattr));
         p += ft.cols * sizeof(ftattr);
+        memcpy(p, FTUMAP(y), ft.cols * sizeof(fturl_id));
+        p += ft.cols * sizeof(fturl_id);
     }
 }
 
@@ -2891,6 +3202,8 @@ scr_restore(const screen_backup_t *psb)
         p += psb->col * sizeof(ftchar);
         memcpy(FTAMAP(y), p, c * sizeof(ftattr));
         p += psb->col * sizeof(ftattr);
+        memcpy(FTUMAP(y), p, c * sizeof(fturl_id));
+        p += psb->col * sizeof(fturl_id);
     }
 
     free(psb->raw_memory);
@@ -2988,14 +3301,14 @@ int main(int argc, char* argv[])
     {
 #if 0
         // DBCS test
-        char *a1 = ANSI_COLOR(1;33) "´ú¸Õ" ANSI_COLOR(34) "¤¤¤å"
-            ANSI_REVERSE "´ú¸Õ" ANSI_RESET "´ú¸Õ"
-            "´ú¸Õa" ANSI_RESET "\n";
+        char *a1 = ANSI_COLOR(1;33) "æ¸¬è©¦" ANSI_COLOR(34) "ä¸­æ–‡"
+            ANSI_REVERSE "æ¸¬è©¦" ANSI_RESET "æ¸¬è©¦"
+            "æ¸¬è©¦a" ANSI_RESET "\n";
         outstr(a1);
         move(0, 2);
-        outstr("¤¤¤å1");
-        outstr(ANSI_COLOR(1;33)"¤¤¤å2");
-        outstr(" ¤¤\x85");
+        outstr("ä¸­æ–‡1");
+        outstr(ANSI_COLOR(1;33)"ä¸­æ–‡2");
+        outstr(" ä¸­\x85");
         outstr("okok herer\x8a");
 
         move(0, 8);
@@ -3015,7 +3328,7 @@ int main(int argc, char* argv[])
         getchar();
 
         clear();
-        outs("¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å¤¤¤å");
+        outs("ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡ä¸­æ–‡");
         move(0, 0);
         outs(" this\xFF (ff)is te.(80 tail)->\x80 (80)");
         refresh();
