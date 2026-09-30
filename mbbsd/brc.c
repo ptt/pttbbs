@@ -47,6 +47,7 @@ static int     brc_changed = 0;	/**< brc_list/brc_num changed */
 static char   *brc_buf = NULL;
 static int     brc_size;
 static int     brc_alloc;
+static int     brc_needs_file_update;
 
 // read records for currbid
 static int             brc_currbid;
@@ -54,6 +55,20 @@ static int             brc_num;
 static brc_rec         brc_list[BRC_MAXNUM];
 
 static char * const fn_brc = ".brc3";
+
+static inline brcbid_t brc_read_bid(const void *p) {
+    brcbid_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+static inline brcnbrd_t brc_read_num(const void *p) {
+    brcnbrd_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+static inline void brc_write_num(void *p, brcnbrd_t v) {
+    memcpy(p, &v, sizeof(v));
+}
 
 /**
  * find read records of bid in given buffer region
@@ -81,9 +96,9 @@ brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
     while (ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
 	/* for each available records */
 	tmpp = ptr;
-	tbid = *(brcbid_t*)tmpp;
+	tbid = brc_read_bid(tmpp);
 	tmpp += sizeof(brcbid_t);
-	*num = *(brcnbrd_t*)tmpp;
+	*num = brc_read_num(tmpp);
 	tmpp += sizeof(brcnbrd_t) + *num * sizeof(brc_rec); /* end of record */
 
 	if ( tmpp > endp ){
@@ -167,12 +182,89 @@ brc_get_buf(int size){
 }
 
 static void
+brc_compact_tail_drop(int needed)
+{
+    while (brc_size + needed > BRC_MAXSIZE && brc_size > 0) {
+	char *ptr = brc_buf;
+	char *last_rec = NULL;
+	char *endp = brc_buf + brc_size;
+
+	while (ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
+	    brcnbrd_t num = brc_read_num(ptr + sizeof(brcbid_t));
+	    int rec_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(brc_rec);
+	    if (ptr + rec_len > endp)
+		break;
+	    last_rec = ptr;
+	    ptr += rec_len;
+	}
+
+	if (last_rec) {
+	    brc_size = last_rec - brc_buf;
+	} else {
+	    break;
+	}
+    }
+}
+
+/**
+ * On-demand compaction:
+ * Compact records from the tail (oldest / least-recently accessed boards)
+ * down to num = 1 (retaining the latest article timestamp blist[0]).
+ * Stops as soon as needed bytes are freed.
+ */
+static void
+brc_compact(int needed, brcbid_t protect_bid)
+{
+    while (brc_size + needed > BRC_MAXSIZE && brc_size > 0) {
+	/* Find the tail-most candidate record with num > 1 */
+	char *ptr = brc_buf;
+	char *endp = brc_buf + brc_size;
+	char *candidate = NULL;
+
+	while (ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
+	    brcbid_t bid = brc_read_bid(ptr);
+	    brcnbrd_t num = brc_read_num(ptr + sizeof(brcbid_t));
+	    int rec_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(brc_rec);
+	    if (ptr + rec_len > endp)
+		break;
+	    if (bid != protect_bid && num > 1) {
+		candidate = ptr;
+	    }
+	    ptr += rec_len;
+	}
+
+	if (!candidate)
+	    break; /* No more boards can be compacted to num=1 */
+
+	/* Compact candidate to num = 1, keeping blist[0] (latest read article timestamp) */
+	brcnbrd_t cnum = brc_read_num(candidate + sizeof(brcbid_t));
+	int old_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + cnum * sizeof(brc_rec);
+	int new_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + 1 * sizeof(brc_rec);
+	int diff = old_len - new_len;
+	char *tail = candidate + old_len;
+	int tail_size = (brc_buf + brc_size) - tail;
+
+	brc_write_num(candidate + sizeof(brcbid_t), 1);
+	if (tail_size > 0)
+	    memmove(candidate + new_len, tail, tail_size);
+	brc_size -= diff;
+    }
+
+    /* Fallback: if all eligible boards are num=1 and buffer is still exceeding,
+     * drop oldest boards from the tail */
+    if (brc_size + needed > BRC_MAXSIZE) {
+	brc_compact_tail_drop(needed);
+    }
+}
+
+static void
 brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 {
     char           *ptr;
     int             new_size, end_size;
     brcnbrd_t       tnum;
 
+    brc_needs_file_update = 1;
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
 
     while (num > 0 && time4_lt(list[num - 1].create, brc_expire_time))
@@ -185,12 +277,25 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 	if (num){
 	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
 		+ num * sizeof(brc_rec);
-	    brc_size += new_size;
-	    if (brc_size > brc_alloc && !brc_enlarge_buf())
-		brc_size = BRC_MAXSIZE;
-	    if (brc_size > new_size)
-		memmove(brc_buf + new_size, brc_buf, brc_size - new_size);
-	    brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
+
+	    if (brc_size + new_size > BRC_MAXSIZE)
+		brc_compact(new_size, bid);
+
+	    if (!brc_buf)
+		brc_get_buf(new_size);
+
+	    while (brc_size + new_size > brc_alloc && brc_enlarge_buf())
+		;
+
+	    if (brc_size + new_size > BRC_MAXSIZE)
+		brc_compact_tail_drop(new_size);
+
+	    if (brc_size + new_size <= BRC_MAXSIZE) {
+		if (brc_size > 0)
+		    memmove(brc_buf + new_size, brc_buf, brc_size);
+		brc_size += new_size;
+		brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
+	    }
 	}
     } else {
 	/* ptr points to the old current brc list.
@@ -199,11 +304,21 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 	char *tmpp = ptr + len;
 	end_size = brc_buf + brc_size - tmpp;
 	if (num) {
-	    int sindex = ptr - brc_buf;
 	    new_size = (sizeof(brcbid_t) + sizeof(brcnbrd_t)
 			+ num * sizeof(brc_rec));
-	    brc_size += new_size - len;
+	    int delta = new_size - len;
+
+	    if (delta > 0 && brc_size + delta > BRC_MAXSIZE) {
+		brc_compact(delta, bid);
+		ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
+		assert(ptr != NULL);
+		tmpp = ptr + len;
+		end_size = brc_buf + brc_size - tmpp;
+	    }
+
+	    brc_size += delta;
 	    if (brc_size > brc_alloc) {
+		int sindex = ptr - brc_buf;
 		if (brc_enlarge_buf()) {
 		    ptr = brc_buf + sindex;
 		    tmpp = ptr + len;
@@ -240,7 +355,7 @@ brc_release()
 }
 
 /**
- * write \a brc_num and \a brc_list back to \a brc_buf.
+ * write  brc_num and  brc_list back to  brc_buf.
  */
 void
 brc_update(){
@@ -248,99 +363,6 @@ brc_update(){
 	brc_initialize();
 	brc_insert_record(brc_currbid, brc_num, brc_list);
     }
-}
-
-#ifdef LOG_REMOTE_BRC_FAILURE
-# define BRC_FAILURE(msg) { syncnow(); \
-    log_filef("log/brc_remote_failure.log", "%s ERR: %s", \
-              msg, command); break; }
-#else
-# define BRC_FAILURE(msg) { break; }
-#endif
-
-/**
- * Use BRC data on remote daemon.
- */
-int
-load_remote_brc() {
-    int fd;
-    int32_t len;
-    char command[PATHLEN];
-    int err = 1;
-
-    brc_size = 0;
-    SNPRINTF(command, "%c%s#%d\n",
-             BRCSTORED_REQ_READ, cuser.userid, cuser.firstlogin);
-
-    do {
-        int conn_retries = 10;
-        while (conn_retries-- > 0 &&
-               (fd = toconnectex(BRCSTORED_ADDR, 5)) < 0) {
-            mvprints(b_lines, 0, (conn_retries == 0) ?
-                     ANSI_COLOR(1;31)
-                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)"
-                     ANSI_RESET: "正在同步看板已讀未讀資料,請稍候... (#%d)",
-                     conn_retries + 1);
-            refresh();
-            sleep(1);
-        }
-        if (fd < 0) {
-            BRC_FAILURE("(load) connect");
-        }
-        if (towrite(fd, command, strlen(command)) < 0)
-            BRC_FAILURE("(load) send_command");
-        if (toread(fd, &len, sizeof(len)) < 0)
-            BRC_FAILURE("(load) read_len");
-        if (len < 0) // not found
-            break;
-        brc_get_buf(len);
-        if (len && toread(fd, brc_buf, len) < 0)
-            BRC_FAILURE("(load) read_data");
-        brc_size = len;
-        err = 0;
-    } while (0);
-
-    if (fd >= 0)
-        close(fd);
-
-    if (err) {
-        brc_release();
-        return 0;
-    }
-
-    return 1;
-}
-
-int
-save_remote_brc() {
-    int fd;
-    int32_t len;
-    char command[PATHLEN];
-    int err = 1;
-
-    SNPRINTF(command, "%c%s#%d\n",
-             BRCSTORED_REQ_WRITE, cuser.userid, cuser.firstlogin);
-    len = brc_size;
-
-    do {
-        if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
-            BRC_FAILURE("(save) connect");
-        if (towrite(fd, command, strlen(command)) < 0)
-            BRC_FAILURE("(save) send_command");
-        if (towrite(fd, &len, sizeof(len)) < 0)
-            BRC_FAILURE("(save) write_len");
-        if (len && towrite(fd, brc_buf ? brc_buf : "", len) < 0)
-            BRC_FAILURE("(save) write_data");
-        err = 0;
-    } while (0);
-
-    if (fd >= 0)
-        close(fd);
-
-    if (err)
-        return 0;
-
-    return 1;
 }
 
 int
@@ -355,34 +377,48 @@ load_local_brc() {
     if ((fd = open(brcfile, O_RDONLY)) == -1)
 	return 0;
 
+    posix_fadvise(fd, 0, 0, POSIX_FADV_WILLNEED);
     fstat(fd, &brcstat);
     brc_get_buf(brcstat.st_size);
     brc_size = read(fd, brc_buf, brc_alloc);
+    posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED);
     close(fd);
+
+    brc_needs_file_update = 0;
     return 1;
 }
 
 int
 save_local_brc() {
+    if (!brc_needs_file_update)
+	return 1;
+
     int ok = 1;
     char brcfile[STRLEN];
     char tmpfile[STRLEN];
 
     setuserfile(brcfile, fn_brc);
     SNPRINTF(tmpfile, "%s.tmp.%x", brcfile, getpid());
+
     if (brc_buf != NULL) {
 	int fd = OpenCreate(tmpfile, O_WRONLY | O_TRUNC);
 	if (fd != -1) {
-	    int ok=0;
-	    if(write(fd, brc_buf, brc_size)==brc_size)
-		ok=1;
+	    int write_ok = 0;
+	    posix_fallocate(fd, 0, brc_size);
+	    if (write(fd, brc_buf, brc_size) == brc_size)
+		write_ok = 1;
 	    close(fd);
-	    if(ok)
+	    if (write_ok) {
 		Rename(tmpfile, brcfile);
-	    else
+	    } else {
 		unlink(tmpfile);
+		ok = 0;
+	    }
+	} else {
+	    ok = 0;
 	}
     }
+    brc_needs_file_update = 0;
     return ok;
 }
 
@@ -392,9 +428,6 @@ read_brc_buf(void)
     if (brc_buf != NULL)
 	return;
 
-#ifdef USE_REMOTE_BRC
-    if (!load_remote_brc())
-#endif
     load_local_brc();
 }
 
@@ -404,15 +437,6 @@ brc_finalize(){
 	return;
 
     brc_update();
-
-#ifdef USE_REMOTE_BRC
-    if (!save_remote_brc() ||
-#ifdef REMOTE_BRC_BACKUP_DAYS
-        (is_first_login_of_today &&
-         cuser.numlogindays % REMOTE_BRC_BACKUP_DAYS == 0) ||
-#endif
-        0)
-#endif
     save_local_brc();
 
     brc_release();
@@ -449,6 +473,10 @@ brc_read_record(int bid, int *num, brc_rec *list){
 	assert(0 <= *num && *num <= BRC_MAXNUM);
 	memcpy(list, ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t),
 	       *num * sizeof(brc_rec));
+	if(*num < BRC_MAXNUM)
+	{
+	    memset(&list[*num], 0, sizeof(brc_rec));
+	}
 	return *num;
     }
     list[0].create = *num = 1;

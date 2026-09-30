@@ -499,6 +499,11 @@ typedef struct keeploc_t {
     int     crs_ln;
 } keeploc_t;
 
+typedef struct {
+    int     num;
+    int     bids[MAX_HOTBOARDS];
+} hotboards_t;
+
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
 #ifndef USHM_SIZE
 #define USHM_SIZE       ((MAX_ACTIVE)*41/40)
@@ -583,7 +588,10 @@ typedef struct {
     char    gap_14[sizeof(int)];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
     char    gap_15[sizeof(int)];
-    int     deprecated_hbfl[MAX_BOARD][MAX_FRIEND + 1] __attribute__ ((deprecated)); /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
+    union {
+        int     deprecated_hbfl[MAX_BOARD][MAX_FRIEND + 1] __attribute__ ((deprecated));
+        hotboards_t hotboards;
+    }; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
     char    gap_16[sizeof(int)];
     time4_t lastposttime[MAX_BOARD];
     char    gap_17[sizeof(int)];

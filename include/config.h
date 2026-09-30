@@ -252,6 +252,10 @@
 #define HOTBOARDCACHE     (0)            /* 熱門看板快取 */
 #endif
 
+#ifndef MAX_HOTBOARDS
+#define MAX_HOTBOARDS     (128)          /* 熱門看板最大數量 */
+#endif
+
 #ifndef TARQUEUE_TIME_STR
 #define TARQUEUE_TIME_STR   "深夜"       // 看板備份時間訊息 (應與 contab 一致)
 #endif
