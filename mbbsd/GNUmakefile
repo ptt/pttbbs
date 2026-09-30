@@ -89,6 +89,8 @@ OBJS     += recover.o register_sms.o \
 	    verifydb.o verifydb_info.o verifydb_search.o
 endif
 
+TEST_PROGS = test_brc
+
 #######################################################################
 # variables
 #######################################################################
@@ -123,6 +125,10 @@ testsz: $(SRCROOT)/pttbbs.conf $(wildcard $(SRCROOT)/include/*.h) testsz.c
 	@./testsz
 	@printf "\033[0;1;32mData size configuration OK\033[m\n"
 
+test_%: test_%.c
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+	@./$@
+
 ctags:
 	ctags *.c $(SRCROOT)/include/*.h $(SRCROOT)/common/sys/*.c $(SRCROOT)/common/bbs/*.c
 
@@ -145,4 +151,4 @@ install: $(PROG)
 	@[ -x "$(SCRIPT_DIR)/mkdiff" ] && $(SCRIPT_DIR)/mkdiff $(SRCROOT)/diff
 
 clean:
-	rm -f $(OBJS) $(PROG) testsz vers.c
+	rm -f $(OBJS) $(PROG) testsz vers.c $(TEST_PROGS)
