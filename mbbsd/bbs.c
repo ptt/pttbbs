@@ -662,7 +662,7 @@ readtitle(PSB_CTX *ctx)
     else
 	brd_title = bp->title + 7;
 
-    showtitle(currBM, brd_title);
+    redraw_title(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
 
     bbs_coldefs[3].label = IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :

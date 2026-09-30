@@ -484,7 +484,7 @@ typedef struct {
 
 static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
     const int col_opt = 54;
-    showtitle("個人設定", "個人化設定");
+    redraw_title("個人設定", "個人化設定");
     move(2, 0);
     prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
            "分類", col_opt - 11, "描述", "設定值");

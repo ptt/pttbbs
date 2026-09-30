@@ -95,7 +95,7 @@ typedef struct menuitem_t {
 ///////////////////////////////////////////////////////////////////////
 
 void
-showtitle(const char *title, const char *mid)
+redraw_title(const char *title, const char *mid)
 {
     int tail_type;
     int is_currboard_special = 0;
@@ -142,13 +142,20 @@ showtitle(const char *title, const char *mid)
 		(getbcache(currbid)->brdattr & BRD_POSTMASK));
     }
 
-    vs_header(title, mid, currboard[0] ?
+    vs_draw_header(title, mid, currboard[0] ?
 	      TEMPFORMAT(64, "%s%s¡m%s%s%s¡n",
 		 title_tail_attrs[tail_type],
 		 title_tail_msgs[tail_type],
 		 is_currboard_special ? ANSI_COLOR(32) : "",
 		 currboard,
 		 title_tail_attrs[tail_type]) : "");
+}
+
+void
+showtitle(const char *title, const char *mid)
+{
+    clear();
+    redraw_title(title, mid);
 }
 
 static void
@@ -423,7 +430,7 @@ static int
 menu_header(PSB_CTX *ctx)
 {
     menu_ctx_t *cx = (menu_ctx_t *)ctx->cmd.priv;
-    showtitle(cx->title, BBSNAME);
+    redraw_title(cx->title, BBSNAME);
     adbanner(cx->is_refresh ? M_MENU_REFRESH : cx->menu_index);
     cx->is_refresh = true;
 

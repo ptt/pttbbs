@@ -1340,7 +1340,7 @@ brdlist_header(PSB_CTX *ctx)
     int newflag = *cx->newflag;
     if (unlikely(IN_CLASSROOT())) {
 	currstat = CLASS;
-	showtitle("分類看板", BBSNAME);
+	redraw_title("分類看板", BBSNAME);
 	move(1, 0);
 	// TODO move ascii art to adbanner?
 	outs(
@@ -1357,7 +1357,7 @@ brdlist_header(PSB_CTX *ctx)
 	    "                                                      " ANSI_COLOR(33) "╫"
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else {
-	showtitle("看板列表", BBSNAME);
+	redraw_title("看板列表", BBSNAME);
 	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
 	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   拓  板       類別   中   文   測   述"
               "               人氣 板   主", newflag ? "總數" : "編號"));
