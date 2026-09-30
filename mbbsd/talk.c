@@ -1040,7 +1040,7 @@ userlist_header(PSB_CTX *ctx)
     idletime = 1;
 #endif
 
-    showtitle((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
+    redraw_title((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
     move(1, 0);
     prints("  排序:[%s] 上站人數:%-4d "
