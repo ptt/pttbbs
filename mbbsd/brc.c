@@ -55,6 +55,31 @@ static brc_rec         brc_list[BRC_MAXNUM];
 
 static char * const fn_brc = ".brc3";
 
+static inline brcbid_t brc_read_bid(const void *p) {
+    brcbid_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+static inline brcnbrd_t brc_read_num(const void *p) {
+    brcnbrd_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+static inline brc_rec brc_read_rec(const void *p) {
+    brc_rec v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+static inline void brc_write_bid(void *p, brcbid_t v) {
+    memcpy(p, &v, sizeof(v));
+}
+static inline void brc_write_num(void *p, brcnbrd_t v) {
+    memcpy(p, &v, sizeof(v));
+}
+static inline void brc_write_rec(void *p, const brc_rec *v) {
+    memcpy(p, v, sizeof(*v));
+}
+
 /**
  * find read records of bid in given buffer region
  *
@@ -81,9 +106,9 @@ brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
     while (ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
 	/* for each available records */
 	tmpp = ptr;
-	tbid = *(brcbid_t*)tmpp;
+	tbid = brc_read_bid(tmpp);
 	tmpp += sizeof(brcbid_t);
-	*num = *(brcnbrd_t*)tmpp;
+	*num = brc_read_num(tmpp);
 	tmpp += sizeof(brcnbrd_t) + *num * sizeof(brc_rec); /* end of record */
 
 	if ( tmpp > endp ){
@@ -166,11 +191,178 @@ brc_get_buf(int size){
     assert(brc_buf);
 }
 
+static int
+brc_get_hotboard_rank(int bid)
+{
+    if (!SHM || SHM->hotboards.num <= 0)
+	return -1;
+
+    int num = SHM->hotboards.num;
+    if (num > MAX_HOTBOARDS)
+	num = MAX_HOTBOARDS;
+
+    int bidx = bid - 1;
+    if (bidx < 0 || bidx >= MAX_BOARD)
+	return -1;
+
+    for (int i = 0; i < num; i++) {
+	if (SHM->hotboards.bids[i] == bidx)
+	    return i;
+    }
+    return -1;
+}
+
+/**
+ * Step 1: Compact non-hotboard boards to 1 record, and drop dead/expired boards.
+ */
+static void
+brc_compact_non_hotboards(brcbid_t protect_bid)
+{
+    char *src = brc_buf;
+    char *dst = brc_buf;
+    char *endp = brc_buf + brc_size;
+
+    while (src + sizeof(brcbid_t) + sizeof(brcnbrd_t) <= endp) {
+	brcbid_t bid = brc_read_bid(src);
+	brcnbrd_t num = brc_read_num(src + sizeof(brcbid_t));
+	int rec_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(brc_rec);
+	if (src + rec_len > endp)
+	    break; /* ignore trailing dangling data */
+
+	if (bid != protect_bid && brc_get_hotboard_rank(bid) < 0) {
+	    brc_rec first_rec = brc_read_rec(src + sizeof(brcbid_t) + sizeof(brcnbrd_t));
+	    if (first_rec.create == 1 || time4_le(first_rec.create, brc_expire_time)) {
+		/* Drop all-unread or expired board */
+		src += rec_len;
+		continue;
+	    }
+	    if (num > 1) {
+		/* Compact to 1 record */
+		brc_write_bid(dst, bid);
+		brc_write_num(dst + sizeof(brcbid_t), 1);
+		brc_write_rec(dst + sizeof(brcbid_t) + sizeof(brcnbrd_t), &first_rec);
+		dst += sizeof(brcbid_t) + sizeof(brcnbrd_t) + sizeof(brc_rec);
+		src += rec_len;
+		continue;
+	    }
+	}
+
+	if (dst != src)
+	    memmove(dst, src, rec_len);
+	dst += rec_len;
+	src += rec_len;
+    }
+    brc_size = dst - brc_buf;
+}
+
+/**
+ * Step 2: Compact hotboards from lowest rank (highest index) to highest rank.
+ */
+static void
+brc_compact_hotboards(int needed, brcbid_t protect_bid)
+{
+    if (!SHM || SHM->hotboards.num <= 0)
+	return;
+
+    int max_hb = SHM->hotboards.num;
+    if (max_hb > MAX_HOTBOARDS)
+	max_hb = MAX_HOTBOARDS;
+
+    for (int rank = max_hb - 1; rank >= 0; rank--) {
+	if (brc_size + needed <= BRC_MAXSIZE)
+	    break;
+
+	int hb_bid = SHM->hotboards.bids[rank] + 1;
+	if (hb_bid <= 0 || (brcbid_t)hb_bid == protect_bid)
+	    continue;
+
+	brcnbrd_t tnum;
+	char *ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, hb_bid, &tnum);
+	if (ptr && tnum > 1) {
+	    brc_rec first_rec = brc_read_rec(ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t));
+	    int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(brc_rec);
+	    char *tail = ptr + len;
+	    int tail_size = (brc_buf + brc_size) - tail;
+
+	    if (first_rec.create == 1 || time4_le(first_rec.create, brc_expire_time)) {
+		/* Drop expired/sentinel record completely */
+		if (tail_size > 0)
+		    memmove(ptr, tail, tail_size);
+		brc_size -= len;
+	    } else {
+		/* Compact to 1 record */
+		int new_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + 1 * sizeof(brc_rec);
+		int diff = len - new_len;
+
+		brc_write_num(ptr + sizeof(brcbid_t), 1);
+		if (tail_size > 0)
+		    memmove(ptr + new_len, tail, tail_size);
+		brc_size -= diff;
+	    }
+	}
+    }
+}
+
+/**
+ * Step 3: Fallback tail drop in the extreme case that all boards are compacted
+ * and buffer is still exceeding BRC_MAXSIZE.
+ */
+static void
+brc_compact_tail_drop(int needed)
+{
+    while (brc_size + needed > BRC_MAXSIZE && brc_size > 0) {
+	char *ptr = brc_buf;
+	char *last_rec = NULL;
+	char *endp = brc_buf + brc_size;
+
+	while (ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) <= endp) {
+	    brcnbrd_t num = brc_read_num(ptr + sizeof(brcbid_t));
+	    int rec_len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(brc_rec);
+	    if (ptr + rec_len > endp)
+		break;
+	    last_rec = ptr;
+	    ptr += rec_len;
+	}
+
+	if (last_rec) {
+	    brc_size = last_rec - brc_buf;
+	} else {
+	    brc_size = 0;
+	    break;
+	}
+    }
+}
+
+/**
+ * Master compact routine.
+ */
+static void
+brc_compact(int needed, brcbid_t protect_bid)
+{
+    if (brc_size + needed <= BRC_MAXSIZE)
+	return;
+
+    /* 1. Compact non-hotboard boards */
+    brc_compact_non_hotboards(protect_bid);
+
+    /* 2. Compact hotboards by rank (lowest rank first) */
+    if (brc_size + needed > BRC_MAXSIZE)
+	brc_compact_hotboards(needed, protect_bid);
+
+    /* 3. Fallback: drop oldest records at tail if still exceeding */
+    if (brc_size + needed > BRC_MAXSIZE)
+	brc_compact_tail_drop(needed);
+
+#ifdef DEBUG
+    vmsgf("brc compacted to %d bytes", brc_size);
+#endif
+}
+
 static void
 brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 {
     char           *ptr;
-    int             new_size, end_size;
+    int             new_size;
     brcnbrd_t       tnum;
 
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
@@ -178,47 +370,41 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
     while (num > 0 && time4_lt(list[num - 1].create, brc_expire_time))
 	num--; /* don't write the times before brc_expire_time */
 
-    if (!ptr) {
-	brc_size -= (int)tnum;
-
-	/* put on the beginning */
-	if (num){
-	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
-		+ num * sizeof(brc_rec);
-	    brc_size += new_size;
-	    if (brc_size > brc_alloc && !brc_enlarge_buf())
-		brc_size = BRC_MAXSIZE;
-	    if (brc_size > new_size)
-		memmove(brc_buf + new_size, brc_buf, brc_size - new_size);
-	    brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
-	}
-    } else {
-	/* ptr points to the old current brc list.
-	 * tmpp is the end of it (exclusive).       */
+    if (ptr) {
 	int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(brc_rec);
 	char *tmpp = ptr + len;
-	end_size = brc_buf + brc_size - tmpp;
-	if (num) {
-	    int sindex = ptr - brc_buf;
-	    new_size = (sizeof(brcbid_t) + sizeof(brcnbrd_t)
-			+ num * sizeof(brc_rec));
-	    brc_size += new_size - len;
-	    if (brc_size > brc_alloc) {
-		if (brc_enlarge_buf()) {
-		    ptr = brc_buf + sindex;
-		    tmpp = ptr + len;
-		} else {
-		    end_size -= brc_size - BRC_MAXSIZE;
-		    brc_size = BRC_MAXSIZE;
-		}
-	    }
-	    if (end_size > 0 && ptr + new_size != tmpp)
-		memmove(ptr + new_size, tmpp, end_size);
-	    brc_putrecord(ptr, brc_buf + brc_alloc, bid, num, list);
-	} else { /* deleting record */
+	int end_size = (brc_buf + brc_size) - tmpp;
+	if (end_size > 0)
 	    memmove(ptr, tmpp, end_size);
-	    brc_size -= len;
+	brc_size -= len;
+    } else {
+	brc_size -= (int)tnum; /* remove trailing dangling bytes if any */
+    }
+
+    if (num) {
+	new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
+	    + num * sizeof(brc_rec);
+
+	if (brc_size + new_size > BRC_MAXSIZE)
+	    brc_compact(new_size, bid);
+
+	if (!brc_buf)
+	    brc_get_buf(new_size);
+
+	while (brc_size + new_size > brc_alloc && brc_enlarge_buf())
+	    ;
+
+	if (brc_size + new_size > BRC_MAXSIZE) {
+	    if (new_size < BRC_MAXSIZE)
+		brc_size = BRC_MAXSIZE - new_size;
+	    else
+		return;
 	}
+
+	if (brc_size > 0)
+	    memmove(brc_buf + new_size, brc_buf, brc_size);
+	brc_size += new_size;
+	brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
     }
 
     brc_changed = 0;
