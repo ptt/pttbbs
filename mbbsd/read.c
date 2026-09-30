@@ -774,7 +774,12 @@ select_read(read_ctx_t *cx, int sr_mode)
                                           0, SEARCH_SVC_WINDOW_SIZE,
                                           cx->view.remap, &total,
                                           SEARCH_SRC_MBBSD_SR);
-    if (loaded < 0 || total <= 0) {
+    if (loaded < 0) {
+        vmsg("搜尋服務異常，請稍候再試。");
+        return READ_REDRAW;
+    }
+    if (total <= 0) {
+        vmsg("找不到符合條件的文章。");
         return READ_REDRAW;
     }
 

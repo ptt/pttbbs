@@ -1577,7 +1577,7 @@ static VCOL mail_coldefs[] = {
 static void
 mailtitle(PSB_CTX *ctx)
 {
-    showtitle("郵件選單", BBSNAME);
+    redraw_title("郵件選單", BBSNAME);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME

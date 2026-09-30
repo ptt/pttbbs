@@ -494,13 +494,14 @@ vs_rectangle_simple(int l, int t, int r, int b)
  * @param right: 靠右的說明，空間夠才會顯示。
  */
 void
-vs_header(const char *title, const char *mid, const char *right)
+vs_draw_header(const char *title, const char *mid, const char *right)
 {
     int w = MAX_COL;
     int szmid   = mid   ? stream_width(mid) : 0;
     int szright = right ? stream_width(right) : 0;
 
-    clear();
+    move(0, 0);
+    clrtoeol();
     outs(VCLR_HEADER);
 
     if (title)
@@ -539,6 +540,13 @@ vs_header(const char *title, const char *mid, const char *right)
 	outs(right);
     }
     outs(ANSI_RESET "\n");
+}
+
+void
+vs_header(const char *title, const char *mid, const char *right)
+{
+    clear();
+    vs_draw_header(title, mid, right);
 }
 
 /**
