@@ -23,7 +23,7 @@ pprof-addr = 127.0.0.1:6060
 -cache-ttl=2h
 `
 	tmpDir := t.TempDir()
-	confFile := filepath.Join(tmpDir, "search.conf")
+	confFile := filepath.Join(tmpDir, "search.svc.conf")
 	if err := os.WriteFile(confFile, []byte(content), 0644); err != nil {
 		t.Fatalf("failed to write conf: %v", err)
 	}

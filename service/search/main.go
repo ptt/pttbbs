@@ -146,15 +146,10 @@ func main() {
 
 	rawArgs := os.Args[1:]
 
-	// Determine configuration file path: default to $BBSHOME/etc/search.conf
-	confPath := filepath.Join(bbsHome, "etc", "search.conf")
+	// Determine configuration file path: default to $BBSHOME/etc/search.svc.conf
+	confPath := filepath.Join(bbsHome, "etc", "search.svc.conf")
 	if _, err := os.Stat(confPath); err != nil {
-		alt := filepath.Join(bbsHome, "etc", "search.svc.conf")
-		if _, err2 := os.Stat(alt); err2 == nil {
-			confPath = alt
-		} else {
-			confPath = ""
-		}
+		confPath = ""
 	}
 
 	// Allow overriding config path from command line
