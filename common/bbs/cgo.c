@@ -1,7 +1,10 @@
 #include "cmbbs.h"
 #include "common.h"
 #include "var.h"
+#include "modes.h"
+#include "perm.h"
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <signal.h>
 #include <stddef.h>
@@ -188,6 +191,15 @@ get_board_info(int bid, char *out_brdname, unsigned int *out_brdattr)
 }
 
 int
+get_board_nuser(int bid)
+{
+    if (!SHM || bid <= 0 || bid > MAX_BOARD) {
+        return 0;
+    }
+    return SHM->bcache[bid - 1].nuser;
+}
+
+int
 get_board_bid(const char *brdname)
 {
     if (!SHM || !brdname || !*brdname) {
@@ -227,4 +239,248 @@ set_hbfl_generation(int gen)
         }
         cur = __sync_fetch_and_add(&SHM->GV3.e.hbfl_generation, 0);
     }
+}
+
+void
+purge_utmp_slot(int uslot)
+{
+    if (!SHM || !VALID_USHM_ENTRY(uslot))
+        return;
+    userinfo_t *uentp = &SHM->uinfo[uslot];
+    logout_friend_online(uentp);
+    int uid = uentp->uid;
+    __atomic_store_n(&SHM->utmp_user.session_user[uslot], 0, __ATOMIC_RELEASE);
+    int next_val;
+    do {
+        next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
+        if (UTMP_IS_DELETED(next_val))
+            break;
+    } while (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[uslot],
+                                          &next_val,
+                                          UTMP_MARK_DELETED(next_val),
+                                          false,
+                                          __ATOMIC_RELEASE,
+                                          __ATOMIC_ACQUIRE));
+    if (uid > 0 && uid <= MAX_USERS) {
+        int head = uslot;
+        int next_slot = UTMP_DECODE_SLOT(next_val);
+        if (next_slot == uslot || !VALID_USHM_ENTRY(next_slot))
+            next_slot = -1;
+        __atomic_compare_exchange_n(&SHM->utmp_user.user_head[uid], &head, next_slot,
+                                    false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+    }
+    memset(uentp, 0, sizeof(userinfo_t));
+    SHM->UTMPneedupdate = 1;
+}
+
+void
+utmp_update(void)
+{
+    if (!SHM)
+        return;
+    userinfo_t *uentp;
+    int count = 0, i;
+    int nusers[MAX_BOARD];
+
+    SHM->UTMPbusystate = 1;
+    SHM->UTMPuptime = time(NULL);
+
+    memset(nusers, 0, sizeof(nusers));
+    for (i = 0; i < USHM_SIZE; ++i) {
+        uentp = &SHM->uinfo[i];
+        if (uentp->pid) {
+            count++;
+            if (uentp->mode != DEBUGSLEEPING &&
+                0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
+                ++nusers[uentp->brc_id - 1];
+        }
+    }
+    SHM->UTMPnumber = count;
+
+    {
+        int k, r, last = 0, top = 0;
+        int hot_bids[MAX_HOTBOARDS];
+        for (i = 0; i < MAX_HOTBOARDS; i++)
+            hot_bids[i] = -1;
+
+        for (i = 0; i < SHM->Bnumber; i++) {
+            if (SHM->bcache[i].brdname[0] != 0) {
+                SHM->bcache[i].nuser = nusers[i];
+                if (nusers[i] > 1 &&
+                    (top < MAX_HOTBOARDS || nusers[i] > last) &&
+                    IS_BOARD(&SHM->bcache[i]) &&
+                    !(SHM->bcache[i].brdattr & BRD_COOLDOWN) &&
+                    IS_OPENBRD(&SHM->bcache[i])) {
+                    for (k = top - 1; k >= 0; --k)
+                        if (hot_bids[k] >= 0 &&
+                            nusers[i] < SHM->bcache[hot_bids[k]].nuser)
+                            break;
+                    if (top < MAX_HOTBOARDS)
+                        ++top;
+                    for (r = top - 1; r > (k + 1); --r)
+                        hot_bids[r] = hot_bids[r - 1];
+                    hot_bids[k + 1] = i;
+                    last = nusers[hot_bids[top - 1]];
+                }
+            }
+        }
+        memcpy(SHM->hotboards.bids, hot_bids, sizeof(hot_bids));
+        SHM->hotboards.num = top;
+#if HOTBOARDCACHE
+        {
+            int old_max = (int)HOTBOARDCACHE;
+            int n_copy = top < old_max ? top : old_max;
+            if (n_copy > 255)
+                n_copy = 255;
+            for (i = 0; i < old_max; i++) {
+                SHM->HBcache[i] = (i < n_copy) ? hot_bids[i] : -1;
+            }
+            SHM->nHOTs = (unsigned char)n_copy;
+        }
+#endif
+    }
+    SHM->UTMPbusystate = 0;
+}
+
+void
+get_utmp_status(long *out_uptime, int *out_number, int *out_busystate, int *out_needupdate)
+{
+    if (!SHM) {
+        if (out_uptime) *out_uptime = 0;
+        if (out_number) *out_number = 0;
+        if (out_busystate) *out_busystate = 0;
+        if (out_needupdate) *out_needupdate = 0;
+        return;
+    }
+    if (out_uptime) *out_uptime = (long)SHM->UTMPuptime;
+    if (out_number) *out_number = SHM->UTMPnumber;
+    if (out_busystate) *out_busystate = (int)SHM->UTMPbusystate;
+    if (out_needupdate) *out_needupdate = (int)SHM->UTMPneedupdate;
+}
+
+void
+reset_utmp_busystate(void)
+{
+    if (SHM)
+        SHM->UTMPbusystate = 0;
+}
+
+int
+get_utmp_busystate(void)
+{
+    return SHM ? (int)SHM->UTMPbusystate : 0;
+}
+
+void
+set_utmp_busystate(int val)
+{
+    if (SHM)
+        SHM->UTMPbusystate = (char)val;
+}
+
+int
+get_utmp_needupdate(void)
+{
+    return SHM ? (int)SHM->UTMPneedupdate : 0;
+}
+
+void
+set_utmp_needupdate(int val)
+{
+    if (SHM)
+        SHM->UTMPneedupdate = (char)val;
+}
+
+int
+get_utmp_number(void)
+{
+    return SHM ? SHM->UTMPnumber : 0;
+}
+
+int
+get_hotboards(int *out_bids, int max_boards)
+{
+    if (!SHM || !out_bids || max_boards <= 0)
+        return 0;
+    int n = SHM->hotboards.num;
+    if (n > max_boards)
+        n = max_boards;
+    if (n > MAX_HOTBOARDS)
+        n = MAX_HOTBOARDS;
+    for (int i = 0; i < n; i++) {
+        out_bids[i] = SHM->hotboards.bids[i] + 1;
+    }
+    return n;
+}
+
+int
+fix_utmp_user_table(void)
+{
+    if (!SHM)
+        return 0;
+    int changeflag = 0;
+    for (int i = 0; i < USHM_SIZE; ++i) {
+        int next_val = SHM->utmp_user.next_session[i];
+        int next_slot = UTMP_DECODE_SLOT(next_val);
+        if (next_slot == i) {
+            SHM->utmp_user.next_session[i] = 0;
+            changeflag = 1;
+        }
+    }
+    for (int i = 1; i <= MAX_USERS; ++i) {
+        int h = SHM->utmp_user.user_head[i];
+        if (VALID_USHM_ENTRY(h)) {
+            if (SHM->utmp_user.session_user[h] != i ||
+                SHM->uinfo[h].uid != i ||
+                SHM->uinfo[h].pid <= 0) {
+                SHM->utmp_user.user_head[i] = -1;
+                changeflag = 1;
+            }
+        } else if (h != -1) {
+            SHM->utmp_user.user_head[i] = -1;
+            changeflag = 1;
+        }
+    }
+    return changeflag;
+}
+
+void
+rebuild_utmp_user(void)
+{
+    init_utmp_user();
+}
+
+int
+get_utmp_candidates(cgo_utmp_candidate_t *out_candidates, int max_candidates, int *out_count)
+{
+    if (!SHM || !out_candidates || max_candidates <= 0) {
+        if (out_count) *out_count = 0;
+        return 0;
+    }
+    time_t now = time(NULL);
+    int count = 0;
+    for (int i = 0; i < USHM_SIZE && count < max_candidates; i++) {
+        userinfo_t *u = &SHM->uinfo[i];
+        if (u->pid <= 0)
+            continue;
+        cgo_utmp_candidate_t *c = &out_candidates[count++];
+        c->slot = i;
+        c->pid = (int)u->pid;
+        c->uid = u->uid;
+        strlcpy(c->userid, u->userid, sizeof(c->userid));
+        c->lastact = (long)u->lastact;
+        c->idle_sec = (int)time4_diff(now, u->lastact);
+        c->friendtotal = u->friendtotal;
+        c->mode = u->mode;
+        c->brc_id = u->brc_id;
+        c->is_guest = (strcasecmp(u->userid, STR_GUEST) == 0) ? 1 : 0;
+        int valid_name = (isalpha((unsigned char)u->userid[0]) &&
+                          memchr(u->userid, '\0', IDLEN + 1) != NULL);
+        int valid_friends = (u->friendtotal >= 0 && u->friendtotal <= MAX_FRIEND_ONLINE);
+        c->is_userid_valid = (valid_name && valid_friends) ? 1 : 0;
+        c->user_exists = (searchuser(u->userid, NULL) != 0) ? 1 : 0;
+    }
+    if (out_count)
+        *out_count = count;
+    return 1;
 }
