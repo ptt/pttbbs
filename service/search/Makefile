@@ -23,7 +23,7 @@ install: all
 	install -c -m 755 search.svc $(BBSHOME)/bin/
 	install -c -m 755 search.ctl $(BBSHOME)/bin/
 	install -d $(BBSHOME)/etc/
-	[ -f $(BBSHOME)/etc/search.conf ] || install -c -m 644 $(SRCROOT)/sample/etc/search.conf $(BBSHOME)/etc/search.conf
+	[ -f $(BBSHOME)/etc/search.svc.conf ] || install -c -m 644 $(SRCROOT)/sample/etc/search.svc.conf $(BBSHOME)/etc/search.svc.conf
 
 clean:
 	rm -f search.svc search.ctl
