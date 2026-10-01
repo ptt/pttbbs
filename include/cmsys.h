@@ -236,10 +236,28 @@ int  mb_bytes(const char *s);
 int  mb_width(const char *s);
 int  mb_from_vkey(int key, char *buf);
 int  stream_width(const char *s);
+int  stream_width_n(const char *s, int len);
 int  stream_col_offset(int count, const char *s, int *real_cols);
 int  strip_blank(char *cbuf, const char *buf);
 int  reduce_blank(char *cbuf, const char *buf);
 const char *skip_control_sequence(const char *src);
+bool match_url(const char *str, int max_len, int *out_url_len);
+int  match_url_continuation(const char *str, int max_len);
+
+typedef struct {
+    char url[1024];
+    const char *cont_ptr;
+    int cur_line_bytes_left;
+    bool in_url;
+    bool cont_next_line;
+} url_tracker_t;
+
+bool url_tracker_init(url_tracker_t *st, const char *p, int first_len,
+                      const char *buf_end, int col);
+bool url_tracker_init_from_prev_line(url_tracker_t *st, const char *curr_line,
+                                     const char *buf_start, const char *buf_end);
+bool url_tracker_next_line(url_tracker_t *st, const char *line_start,
+                           const char *buf_end);
 int  strip_control_sequence(char *buf, const char *str);
 int  strip_control_sequence_ex(char *buf, const char *str, enum STRIP_FLAG flag);
 void mbs_sanitize(char *str, int maxlen);
