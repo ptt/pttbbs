@@ -270,6 +270,294 @@ skip_control_sequence(const char *src)
     return p + 1;
 }
 
+/*
+ * Check if character is valid in a URL body or continuation.
+ */
+static inline bool
+is_url_char(char c)
+{
+    unsigned char ch = (unsigned char)c;
+    if (ch <= ' ' || ch >= 0x7f || ch == ESC_CHR)
+        return false;
+    if (ch == '"' || ch == '<' || ch == '>' || ch == '`' ||
+        ch == '{' || ch == '}' || ch == '|' || ch == '\\' ||
+        ch == '^' || ch == '[' || ch == ']')
+        return false;
+    return true;
+}
+
+/*
+ * Match URL continuation characters on the next line after a broken URL.
+ * Returns the number of continuation characters (0 if none).
+ */
+int
+match_url_continuation(const char *str, int max_len)
+{
+    if (!str || max_len <= 0)
+        return 0;
+
+    // A continuation line of a URL cannot start a new URL scheme.
+    if (match_url(str, max_len, NULL) ||
+        (max_len >= 7 && strncasecmp(str, "http://", 7) == 0) ||
+        (max_len >= 8 && strncasecmp(str, "https://", 8) == 0))
+        return 0;
+
+    int p = 0;
+    while (p < max_len && is_url_char(str[p]))
+        p++;
+
+    // Trim trailing punctuation commonly used in sentences
+    int len = p;
+    while (len > 0)
+    {
+        char last = str[len - 1];
+        if (last == '.' || last == ',' || last == ';' || last == ':' ||
+            last == '?' || last == '!' || last == '\'' || last == '\"')
+        {
+            len--;
+            continue;
+        }
+        if (last == ')')
+        {
+            int open_parens = 0, close_parens = 0;
+            for (int k = 0; k < len; k++)
+            {
+                if (str[k] == '(') open_parens++;
+                else if (str[k] == ')') close_parens++;
+            }
+            if (close_parens > open_parens)
+            {
+                len--;
+                continue;
+            }
+        }
+        break;
+    }
+
+    return len;
+}
+
+/*
+ * Match plain URL starting with http:// or https://.
+ * If matched, returns true and fills in out_url_len.
+ */
+bool
+match_url(const char *str, int max_len, int *out_url_len)
+{
+    if (!str || max_len < 8)
+        return false;
+
+    int scheme_len = 0;
+    if (max_len >= 7 && strncasecmp(str, "http://", 7) == 0)
+        scheme_len = 7;
+    else if (max_len >= 8 && strncasecmp(str, "https://", 8) == 0)
+        scheme_len = 8;
+    else
+        return false;
+
+    int p = scheme_len;
+    while (p < max_len && is_url_char(str[p]))
+        p++;
+
+    // Trim trailing punctuation commonly used in sentences
+    int url_len = p;
+    while (url_len > scheme_len)
+    {
+        char last = str[url_len - 1];
+        if (last == '.' || last == ',' || last == ';' || last == ':' ||
+            last == '?' || last == '!' || last == '\'' || last == '\"')
+        {
+            url_len--;
+            continue;
+        }
+        if (last == ')')
+        {
+            int open_parens = 0, close_parens = 0;
+            for (int k = scheme_len; k < url_len; k++)
+            {
+                if (str[k] == '(') open_parens++;
+                else if (str[k] == ')') close_parens++;
+            }
+            if (close_parens > open_parens)
+            {
+                url_len--;
+                continue;
+            }
+        }
+        break;
+    }
+
+    if (url_len <= scheme_len)
+        return false;
+
+    if (out_url_len)
+        *out_url_len = url_len;
+
+    return true;
+}
+
+/*
+ * Initialize a url_tracker_t starting at a matched URL at `p` of length `first_len`.
+ * Scans forward across line breaks to stitch multi-line URL continuations into `st->url`.
+ */
+bool
+url_tracker_init(url_tracker_t *st, const char *p, int first_len,
+                 const char *buf_end, int col)
+{
+    if (!st || !p || first_len <= 0)
+        return false;
+
+    memset(st, 0, sizeof(*st));
+    st->in_url = true;
+    st->cur_line_bytes_left = first_len;
+
+    int total_len = first_len;
+    if (total_len >= (int)sizeof(st->url))
+        total_len = sizeof(st->url) - 1;
+    memcpy(st->url, p, total_len);
+    st->url[total_len] = '\0';
+
+    const char *cur_p = p;
+    int cur_len = first_len;
+    int cur_col = col;
+
+    while (cur_p + cur_len < buf_end)
+    {
+        // Only stitch across hard line-breaks if the current line ended at the
+        // terminal wrap boundary (74-80 columns).
+        // 1. < 74: line was broken early by the author (not wrapped by terminal width).
+        // 2. > 80: line is already a long line in the buffer (handled by soft-wrap).
+        int line_end_col = cur_col + cur_len;
+        if (line_end_col < 74 || line_end_col > 80)
+            break;
+
+        const char *chk = cur_p + cur_len;
+        if (chk >= buf_end || (*chk != '\r' && *chk != '\n'))
+            break;
+        if (*chk == '\r') chk++;
+        if (chk < buf_end && *chk == '\n') chk++;
+
+        const char *cptr = chk;
+        if (cptr + 2 <= buf_end && (*cptr == ':' || *cptr == '>') && *(cptr + 1) == ' ')
+            cptr += 2;
+
+        int clen = match_url_continuation(cptr, (int)(buf_end - cptr));
+        if (clen <= 0)
+            break;
+
+        if (total_len + clen < (int)sizeof(st->url))
+        {
+            memcpy(st->url + total_len, cptr, clen);
+            total_len += clen;
+            st->url[total_len] = '\0';
+        }
+
+        st->cont_next_line = true;
+
+        cur_p = cptr;
+        cur_len = clen;
+        cur_col = (int)(cptr - chk);
+    }
+
+    return true;
+}
+
+/*
+ * When moving to a new line in the text buffer, update `st` if the URL continues.
+ * Returns true if continuing on this line, false otherwise.
+ */
+bool
+url_tracker_next_line(url_tracker_t *st, const char *line_start,
+                      const char *buf_end)
+{
+    if (!st || !st->in_url || !st->cont_next_line || !line_start || line_start >= buf_end)
+    {
+        if (st)
+            memset(st, 0, sizeof(*st));
+        return false;
+    }
+
+    const char *cptr = line_start;
+    if (cptr + 2 <= buf_end && (*cptr == ':' || *cptr == '>') && *(cptr + 1) == ' ')
+        cptr += 2;
+
+    int clen = match_url_continuation(cptr, (int)(buf_end - cptr));
+    if (clen > 0)
+    {
+        st->cur_line_bytes_left = clen;
+        st->cont_ptr = cptr;
+        const char *ue = cptr + clen;
+        st->cont_next_line = (ue < buf_end && (*ue == '\r' || *ue == '\n'));
+        return true;
+    }
+
+    memset(st, 0, sizeof(*st));
+    return false;
+}
+
+/*
+ * Scan backward from `curr_line` to see if a previous line had a URL
+ * that continued into `curr_line`.
+ */
+bool
+url_tracker_init_from_prev_line(url_tracker_t *st, const char *curr_line,
+                                const char *buf_start, const char *buf_end)
+{
+    if (!st || !curr_line || curr_line <= buf_start || curr_line >= buf_end)
+        return false;
+
+    memset(st, 0, sizeof(*st));
+
+    const char *p = curr_line;
+    for (int step = 0; step < 5; step++)
+    {
+        if (p <= buf_start)
+            break;
+        const char *prev = p - 1;
+        if (prev > buf_start && *prev == '\n') prev--;
+        if (prev > buf_start && *prev == '\r') prev--;
+        while (prev > buf_start && *(prev - 1) != '\n') prev--;
+
+        const char *line_end = strchrnul(prev, '\n');
+        const char *scan = prev;
+        while (scan < line_end)
+        {
+            int ulen = 0;
+            if ((*scan == 'h' || *scan == 'H') &&
+                match_url(scan, (int)(line_end - scan), &ulen))
+            {
+                url_tracker_init(st, scan, ulen, buf_end, (int)(scan - prev));
+                if (st->cont_next_line)
+                {
+                    const char *next_l = line_end;
+                    if (*next_l == '\r') next_l++;
+                    if (next_l < buf_end && *next_l == '\n') next_l++;
+
+                    while (next_l < curr_line && st->cont_next_line)
+                    {
+                        url_tracker_next_line(st, next_l, buf_end);
+                        const char *nl = strchrnul(next_l, '\n');
+                        if (*nl == '\r') nl++;
+                        if (nl < buf_end && *nl == '\n') nl++;
+                        next_l = nl;
+                    }
+
+                    if (next_l == curr_line && st->cont_next_line)
+                    {
+                        return url_tracker_next_line(st, curr_line, buf_end);
+                    }
+                }
+                memset(st, 0, sizeof(*st));
+                return false;
+            }
+            scan++;
+        }
+        p = prev;
+    }
+
+    return false;
+}
+
 /**
  * Strip ECMA-48 (also known as ANSI) control sequences, started by the
  * Escape character, from src according to mode.
@@ -471,27 +759,41 @@ mb_from_vkey(int key, char *buf)
 }
 
 int
+stream_width_n(const char *s, int len)
+{
+    if (!s || len <= 0)
+        return 0;
+
+    int width = 0;
+    const char *end = s + len;
+    while (s < end && *s) {
+        if (*s == ESC_CHR) {
+            const char *next = skip_control_sequence(s);
+            s = (next > s) ? next : (s + 1);
+            if (s > end)
+                s = end;
+            continue;
+        }
+        if (MB_IS_BIG5) {
+            width++;
+            s++;
+        } else {
+            int b = mb_bytes(s);
+            if (s + b > end)
+                break;
+            width += mb_width(s);
+            s += b;
+        }
+    }
+    return width;
+}
+
+int
 stream_width(const char *s)
 {
     if (!s || !*s)
         return 0;
-
-    int width = 0;
-    while (*s) {
-        if (*s == ESC_CHR) {
-            s = skip_control_sequence(s);
-            continue;
-        }
-        if (MB_IS_BIG5) {
-            const char *p = strchrnul(s, ESC_CHR);
-            width += p - s;
-            s = p;
-        } else {
-            width += mb_width(s);
-            s += mb_bytes(s);
-        }
-    }
-    return width;
+    return stream_width_n(s, (int)strlen(s));
 }
 
 /* ----------------------------------------------------- */
