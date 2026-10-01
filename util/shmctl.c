@@ -4,373 +4,33 @@
 
 extern SHM_t   *SHM;
 
-/* utmpfix ----------------------------------------------------------------- */
-void purge_utmp(userinfo_t *uentp)
-{
-    if (!uentp)
-        return;
-    logout_friend_online(uentp);
-    int uslot = get_utmp_slot(uentp);
-    if (uslot >= 0 && VALID_USHM_ENTRY(uslot)) {
-        int uid = uentp->uid;
-        __atomic_store_n(&SHM->utmp_user.session_user[uslot], 0, __ATOMIC_RELEASE);
-        int next_val;
-        do {
-            next_val = __atomic_load_n(&SHM->utmp_user.next_session[uslot], __ATOMIC_ACQUIRE);
-            if (UTMP_IS_DELETED(next_val))
-                break;
-        } while (!__atomic_compare_exchange_n(&SHM->utmp_user.next_session[uslot],
-                                              &next_val,
-                                              UTMP_MARK_DELETED(next_val),
-                                              false,
-                                              __ATOMIC_RELEASE,
-                                              __ATOMIC_ACQUIRE));
-        if (uid > 0 && uid <= MAX_USERS) {
-            int head = uslot;
-            int next_slot = UTMP_DECODE_SLOT(next_val);
-            if (next_slot == uslot || !VALID_USHM_ENTRY(next_slot))
-                next_slot = -1;
-            __atomic_compare_exchange_n(&SHM->utmp_user.user_head[uid], &head, next_slot,
-                                        false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
-        }
-    }
-    memset(uentp, 0, sizeof(userinfo_t));
-}
-
-typedef struct {
-    int     index;
-    int     idle;
-} IDLE_t;
-
-int sfIDLE(const void *a, const void *b)
-{
-    return ((IDLE_t *)b)->idle - ((IDLE_t *)a)->idle;
-}
-
+/* utmp -------------------------------------------------------------------- */
 int utmpfix(int argc, char **argv)
 {
-    int     i, fast = 0, nownum = SHM->UTMPnumber;
-    int     which, nactive = 0, dofork = 1, daemonsleep = 0;
-    time_t  now;
-    const char    *clean;
-    char buf[1024];
-    IDLE_t  idle[USHM_SIZE];
-    char    changeflag = 0;
-    time_t  idletimeout = IDLE_TIMEOUT;
-    int     lowerbound = 100, upperbound = 0;
-    char    ch;
-
-    int     killtop = 0;
-    struct {
-	pid_t   pid;
-	int     where;
-    } killlist[USHM_SIZE];
-
-    while( (ch = getopt(argc, argv, "nt:l:FD:u:")) != -1 )
-	switch( ch ){
-	case 'n':
-	    fast = 1;
-	    break;
-	case 't':
-	    idletimeout = atoi(optarg);
-	    break;
-	case 'l':
-	    lowerbound = atoi(optarg);
-	    break;
-	case 'F':
-	    dofork = 0;
-	    break;
-	case 'D':
-	    daemonsleep = atoi(optarg);
-	    break;
-	case 'u':
-	    upperbound = atoi(optarg);
-	    break;
-	default:
-	    printf("usage: shmctl utmpfix [options]\n"
-		   "options:\n"
-		   "    -n: fast mode - do not kicks out non-guest users. -n ignores -t\n"
-		   "    -t <seconds>: utmpfix kicks out non-guest users idle for <seconds>. Default: -t %ld\n"
-		   "    -l <#users>: utmpfix kicks idle users until <= <#users> are online. Default: -l %d\n"
-		   "    -F: no fork()\n"
-		   "    -D <seconds>: launch a daemon checking for idle users every (seconds). -D 0 disables daemon. -D ignores -F\n"
-		   "    -u <#users>: only check for idle users while >= <#users> are online (but always check at launch). -u requires -D\n"
-		   "When checking idle users, utmpfix always kicks out guests idle for >=%d minutes, regardless of -t\n",
-	       (time_t)IDLE_TIMEOUT, 100, 15);
-	    return 1;
-	}
-
-    if( daemonsleep )
-	switch( fork() ){
-	case -1:
-	    perror("fork()");
-	    return 0;
-	case 0:
-	    break;
-	default:
-	    return 0;
-	}
-
-    if( daemonsleep || dofork ){
-	int     times = 1000, status;
-	pid_t   pid;
-	while( daemonsleep ? 1 : times-- )
-	    switch( pid = fork() ){
-	    case -1:
-		sleep(1);
-		break;
-	    case 0:
-#ifndef VALGRIND
-		setproctitle("utmpfix");
-#endif
-		goto DoUtmpfix;
-	    default:
-#ifndef VALGRIND
-		setproctitle(daemonsleep ? "utmpfixd(wait for %d)" :
-			     "utmpfix(wait for %d)", (int)pid);
-#endif
-		waitpid(pid, &status, 0);
-		if( WIFEXITED(status) && !daemonsleep )
-		    return 0;
-		if( !WIFEXITED(status) ){
-		    /* last utmpfix fails, so SHM->UTMPbusystate is holded */
-		    SHM->UTMPbusystate = 0;
-		}
-	    }
-	return 0; // never reach
-    }
-
- DoUtmpfix:
-    killtop=0;
-    changeflag=0;
-    for( i = 0 ; i < 5 ; ++i )
-	if( !SHM->UTMPbusystate )
-	    break;
-	else{
-	    puts("utmpshm is busy....");
-	    sleep(1);
-	}
-    SHM->UTMPbusystate = 1;
-
-    for (i = 0; i < USHM_SIZE; ++i) {
-        int next_val = SHM->utmp_user.next_session[i];
-        int next_slot = UTMP_DECODE_SLOT(next_val);
-        if (next_slot == i) {
-            SHM->utmp_user.next_session[i] = 0;
-            changeflag = 1;
+    if (dashf("bin/utmp.ctl")) {
+        char cmd[PATHLEN * 2];
+        strlcpy(cmd, "bin/utmp.ctl fix", sizeof(cmd));
+        for (int i = 1; i < argc; i++) {
+            strlcat(cmd, " ", sizeof(cmd));
+            strlcat(cmd, argv[i], sizeof(cmd));
         }
+        return system(cmd);
     }
-    for (i = 1; i <= MAX_USERS; ++i) {
-        int h = SHM->utmp_user.user_head[i];
-        if (VALID_USHM_ENTRY(h)) {
-            if (SHM->utmp_user.session_user[h] != i ||
-                SHM->uinfo[h].uid != i ||
-                SHM->uinfo[h].pid <= 0) {
-                SHM->utmp_user.user_head[i] = -1;
-                changeflag = 1;
-            }
-        } else if (h != -1) {
-            SHM->utmp_user.user_head[i] = -1;
-            changeflag = 1;
-        }
-    }
+    fprintf(stderr, "Error: bin/utmp.ctl not found. Please build service/utmp first.\n");
+    return 1;
+}
 
-    printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
-    nownum = SHM->UTMPnumber;
-    now = time(NULL);
-    for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
-	if( SHM->uinfo[i].pid ){
-	    idle[nactive].index = i;
-	    idle[nactive].idle = time4_diff(now, SHM->uinfo[i].lastact);
-	    ++nactive;
-	}
-    if( !fast )
-	qsort(idle, nactive, sizeof(IDLE_t), sfIDLE);
-
-    #define addkilllist(a)			\
-        do {					\
-	    pid_t pid=SHM->uinfo[(a)].pid;	\
-	    if(pid > 0) {			\
-		killlist[killtop].where = (a);	\
-		killlist[killtop++].pid = pid;	\
-	    }					\
-        } while( 0 )
-    for( i = 0 ; i < nactive ; ++i ){
-	which = idle[i].index;
-	clean = NULL;
-	if( !isalpha(SHM->uinfo[which].userid[0]) ){
-	    clean = "userid error";
-	    addkilllist(which);
-	}
-	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN + 1) == NULL ){
-	    clean = "userid without z";
-	    addkilllist(which);
-	}
-	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND_ONLINE || SHM->uinfo[which].friendtotal<0 ){
-	    clean = "too many/less friend";
-	    addkilllist(which);
-	}
-	else if( searchuser(SHM->uinfo[which].userid, NULL) == 0 ){
-	    clean = "user not exist";
-	    addkilllist(which);
-	}
-	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
-	    /* 此條件應放最後; 其他欄位沒問題但 process 不存在才 purge_utmp */
-	    clean = "process error";
-	}
-#ifdef DOTIMEOUT
-	else if( (strcasecmp(SHM->uinfo[which].userid, STR_GUEST)==0 &&
-	      idle[i].idle > 60*15) ||
-	    (!fast && nownum > lowerbound && 
-	     idle[i].idle > idletimeout ) ) {
-	  sprintf(buf, "timeout(%s",
-	      ctime4(&SHM->uinfo[which].lastact));
-	  buf[strlen(buf) - 1] = 0;
-	  strcat(buf, ")");
-	  clean = buf;
-	  addkilllist(which);
-	  purge_utmp(&SHM->uinfo[which]);
-	  printf("%s\n", buf);
-	  --nownum;
-	  continue;
-	}
-#endif
-	
-	if( clean ){
-	    printf("clean %06d(%s), userid: %s\n",
-		   i, clean, SHM->uinfo[which].userid);
-	    purge_utmp(&SHM->uinfo[which]);
-	    --nownum;
-	    changeflag = 1;
-	}
+int utmpsortd(int argc GCC_UNUSED, char **argv GCC_UNUSED)
+{
+    if (dashf("bin/utmp.svc")) {
+        puts("Starting utmp.svc...");
+        return system("bin/utmp.svc");
     }
-    for( i = 0 ; i < killtop ; ++i ){
-	printf("sending SIGHUP to %d\n", (int)killlist[i].pid);
-	kill(killlist[i].pid, SIGHUP);
-    }
-    sleep(3);
-    for( i = 0 ; i < killtop ; ++i ) {
-	if( kill(killlist[i].pid, 0) == 0 ){ // still alive
-	    printf("sending SIGKILL to %d\n", (int)killlist[i].pid);
-	    kill(killlist[i].pid, SIGKILL);
-	}
-    }
-    if( changeflag )
-        init_utmp_user();
-    SHM->UTMPbusystate = 0;
-    if( changeflag )
-	SHM->UTMPneedupdate = 1;
-
-    if( daemonsleep ){
-	do{
-	    sleep(daemonsleep);
-	} while( upperbound && SHM->UTMPnumber < upperbound );
-	goto DoUtmpfix; /* XXX: goto */
-    }
+    utmp_update();
+    puts("utmp_update done (utmp.svc not found)");
     return 0;
 }
-/* end of utmpfix ---------------------------------------------------------- */
-
-/* utmp_update / utmpsortd ------------------------------------------------ */
-
-void utmp_update(void)
-{
-    userinfo_t     *uentp;
-    int             count = 0, i;
-    int             nusers[MAX_BOARD];
-
-    SHM->UTMPbusystate = 1;
-    SHM->UTMPuptime = time(NULL);
-
-    memset(nusers, 0, sizeof(nusers));
-    for (i = 0; i < USHM_SIZE; ++i) {
-        uentp = &SHM->uinfo[i];
-        if (uentp->pid) {
-            count++;
-            if (uentp->mode != DEBUGSLEEPING &&
-                0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
-                ++nusers[uentp->brc_id - 1];
-        }
-    }
-    SHM->UTMPnumber = count;
-
-    {
-#if HOTBOARDCACHE
-        int     k, r, last = 0, top = 0;
-        int     HBcache[HOTBOARDCACHE];
-        for (i = 0; i < HOTBOARDCACHE; i++)  HBcache[i] = -1;
-#endif
-        for (i = 0; i < SHM->Bnumber; i++) {
-            if (SHM->bcache[i].brdname[0] != 0) {
-                SHM->bcache[i].nuser = nusers[i];
-#if HOTBOARDCACHE
-                if (nusers[i] > 8                             &&
-                    (top < HOTBOARDCACHE || nusers[i] > last) &&
-                    IS_BOARD(&SHM->bcache[i])                 &&
-                    !(SHM->bcache[i].brdattr & BRD_COOLDOWN)  &&
-                    IS_OPENBRD(&SHM->bcache[i])) {
-                    for (k = top - 1; k >= 0; --k)
-                        if (HBcache[k] >= 0 &&
-                            nusers[i] < SHM->bcache[HBcache[k]].nuser)
-                            break;
-                    if (top < HOTBOARDCACHE)
-                        ++top;
-                    for (r = top - 1; r > (k + 1); --r)
-                        HBcache[r] = HBcache[r - 1];
-                    HBcache[k + 1] = i;
-                    last = nusers[HBcache[top - 1]];
-                }
-#endif
-            }
-        }
-#if HOTBOARDCACHE
-        memcpy(SHM->HBcache, HBcache, sizeof(HBcache));
-        SHM->nHOTs = top;
-#endif
-    }
-    SHM->UTMPbusystate = 0;
-}
-
-int utmpsortd(int argc, char **argv)
-{
-    pid_t   pid;
-    int     interval; // sleep interval in microsecond(1/10**6)
-
-    utmp_update();
-
-    if (fork() > 0) {
-        puts("sortutmpd daemonized...");
-        return 0;
-    }
-
-    if (argc < 2 || (interval = atoi(argv[1])) < 500000)
-        interval = 1000000; // default to 1 sec
-
-#ifndef VALGRIND
-    setproctitle("shmctl utmpsortd");
-#endif
-
-    while (1) {
-        if ((pid = fork()) != 0) {
-            int s;
-            waitpid(pid, &s, 0);
-        } else {
-            utmp_update();
-            while (1) {
-                for (int i = 0; SHM->UTMPbusystate && i < 5; ++i)
-                    usleep(300000);
-
-                if (SHM->UTMPneedupdate) {
-                    utmp_update();
-                    SHM->UTMPneedupdate = 0;
-                }
-
-                usleep(interval);
-            }
-        }
-    }
-}
-/* end of utmpsortd -------------------------------------------------------- */
+/* end of utmp ------------------------------------------------------------- */
 
 char *CTIMEx(char *buf, time4_t t)
 {
@@ -380,6 +40,8 @@ char *CTIMEx(char *buf, time4_t t)
 }
 int utmpstatus(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
+    if (dashf("bin/utmp.ctl"))
+        return system("bin/utmp.ctl status");
     time_t  now;
     char    upbuf[64], nowbuf[64];
     now = time(NULL);
@@ -394,6 +56,8 @@ int utmpstatus(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 int utmpreset(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
+    if (dashf("bin/utmp.ctl"))
+        return system("bin/utmp.ctl reset");
     SHM->UTMPbusystate=0;
     utmpstatus(0, NULL);
     return 0;
@@ -402,6 +66,8 @@ int utmpreset(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 #define TIMES	10
 int utmpwatch(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
+    if (dashf("bin/utmp.ctl"))
+        return system("bin/utmp.ctl watch");
     int     i;
     while( 1 ){
 	for( i = 0 ; i < TIMES ; ++i ){
@@ -420,6 +86,8 @@ int utmpwatch(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 int utmpnum(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
+    if (dashf("bin/utmp.ctl"))
+        return system("bin/utmp.ctl num");
     printf("%d.0\n", SHM->UTMPnumber);
     return 0;
 }
@@ -569,7 +237,7 @@ int start_services()
     int err = 0;
     char buf[PATHLEN];
     const char *services[] = {
-        "friend", "search",
+        "utmp", "friend", "search",
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {
@@ -600,7 +268,7 @@ int start_services()
 }
 
 static int
-do_shm_init(int no_uhash_loader, int force_reset, int argc GCC_UNUSED, char **argv GCC_UNUSED)
+do_shm_init(int force_reset, int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     if (force_reset) {
         puts("resetting existing SHM in-place...");
@@ -632,10 +300,7 @@ do_shm_init(int no_uhash_loader, int force_reset, int argc GCC_UNUSED, char **ar
     puts("building BMcache...");
     bBMC(1, argv);
 
-    if (!no_uhash_loader) {
-        puts("utmpsortd...");
-        utmpsortd(1, argv);
-    }
+    /* utmp.svc is started via start_services() */
 
     puts("\nstarting BBS services...");
     start_services();
@@ -645,44 +310,18 @@ do_shm_init(int no_uhash_loader, int force_reset, int argc GCC_UNUSED, char **ar
 
 int SHMinit(int argc, char **argv)
 {
-    int ch;
-    int no_uhash_loader = 0;
-    optind = 1;
-    while ((ch = getopt(argc, argv, "n")) != -1) {
-        switch (ch) {
-        case 'n':
-            no_uhash_loader = 1;
-            break;
-        default:
-            printf("usage: shmctl init [-n]\n"
-                   "    -n: no utmpsortd\n");
-            return 0;
-        }
-    }
-    return do_shm_init(no_uhash_loader, 0, argc, argv);
+    return do_shm_init(0, argc, argv);
 }
 
 int SHMreset(int argc, char **argv)
 {
-    int ch;
-    int no_uhash_loader = 0;
-    optind = 1;
-    while ((ch = getopt(argc, argv, "n")) != -1) {
-        switch (ch) {
-        case 'n':
-            no_uhash_loader = 1;
-            break;
-        default:
-            printf("usage: shmctl reset [-n]\n"
-                   "    -n: no utmpsortd\n");
-            return 0;
-        }
-    }
-    return do_shm_init(no_uhash_loader, 1, argc, argv);
+    return do_shm_init(1, argc, argv);
 }
 
 int SHMrebuild_utmp(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
+    if (dashf("bin/utmp.ctl"))
+        return system("bin/utmp.ctl rebuild");
     printf("Rebuilding utmp_user table in-place from active sessions (%d online)...\n", SHM->UTMPnumber);
     init_utmp_user();
     puts("Done. utmp_user table rebuilt cleanly.");
@@ -985,8 +624,8 @@ struct Cmd {
     {dummy,      "\b\b\b\bMisc:", ""},
     {showglobal, "showglobal", "show GLOBALVAR[]"},
     {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
-    {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start sutmpsortd and helper services. Options: [-h: see full usage]"},
-    {SHMreset,   "reset",      "reset SHM in-place (wipe uinfo/utmp/uhash and re-initialize without recreating SHM). Options: [-n: no utmpsortd]"},
+    {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start services"},
+    {SHMreset,   "reset",      "reset SHM in-place (wipe uinfo/utmp/uhash and re-initialize without recreating SHM)"},
     {SHMrebuild_utmp, "rebuild_utmp", "rebuild utmp_user table in-place from active sessions without kicking users"},
     {NULL, NULL, NULL}
 };
