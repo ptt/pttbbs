@@ -10,6 +10,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"time"
 	"unsafe"
 
 	"pttbbs/big5uao"
@@ -226,6 +227,14 @@ func (c *SHMClient) GetBoardByBID(bid int) (BoardInfo, bool) {
 	}, true
 }
 
+// GetBoardNUser returns the active online user count for a 1-indexed bid from SHM->bcache
+func (c *SHMClient) GetBoardNUser(bid int) int {
+	if c == nil || bid <= 0 {
+		return 0
+	}
+	return int(C.get_board_nuser(C.int(bid)))
+}
+
 // GetBoardByName resolves a board name to its 1-indexed BoardInfo from SHM->bcache
 func (c *SHMClient) GetBoardByName(brdName string) (BoardInfo, bool) {
 	if c == nil || brdName == "" {
@@ -281,5 +290,176 @@ func (c *SHMClient) SetHBFLGeneration(gen int) {
 		return
 	}
 	C.set_hbfl_generation(C.int(gen))
+}
+
+// UtmpUpdate recalculates online users, board online counts, and hotboards in SHM
+func (c *SHMClient) UtmpUpdate() {
+	if c == nil {
+		return
+	}
+	C.utmp_update()
+}
+
+// ResetUtmpBusystate sets SHM->UTMPbusystate = 0
+func (c *SHMClient) ResetUtmpBusystate() {
+	if c == nil {
+		return
+	}
+	C.reset_utmp_busystate()
+}
+
+// GetUtmpBusystate returns SHM->UTMPbusystate
+func (c *SHMClient) GetUtmpBusystate() int {
+	if c == nil {
+		return 0
+	}
+	return int(C.get_utmp_busystate())
+}
+
+// SetUtmpBusystate sets SHM->UTMPbusystate
+func (c *SHMClient) SetUtmpBusystate(val int) {
+	if c == nil {
+		return
+	}
+	C.set_utmp_busystate(C.int(val))
+}
+
+// GetUtmpNeedUpdate returns SHM->UTMPneedupdate
+func (c *SHMClient) GetUtmpNeedUpdate() int {
+	if c == nil {
+		return 0
+	}
+	return int(C.get_utmp_needupdate())
+}
+
+// SetUtmpNeedUpdate sets SHM->UTMPneedupdate
+func (c *SHMClient) SetUtmpNeedUpdate(val int) {
+	if c == nil {
+		return
+	}
+	C.set_utmp_needupdate(C.int(val))
+}
+
+// GetUtmpNumber returns SHM->UTMPnumber
+func (c *SHMClient) GetUtmpNumber() int {
+	if c == nil {
+		return 0
+	}
+	return int(C.get_utmp_number())
+}
+
+type UtmpStatus struct {
+	Uptime     time.Time
+	Number     int
+	Busystate  int
+	NeedUpdate int
+}
+
+// GetUtmpStatus returns status of UTMP
+func (c *SHMClient) GetUtmpStatus() UtmpStatus {
+	if c == nil {
+		return UtmpStatus{}
+	}
+	var cUptime C.long
+	var cNumber, cBusystate, cNeedupdate C.int
+	C.get_utmp_status(&cUptime, &cNumber, &cBusystate, &cNeedupdate)
+	return UtmpStatus{
+		Uptime:     time.Unix(int64(cUptime), 0),
+		Number:     int(cNumber),
+		Busystate:  int(cBusystate),
+		NeedUpdate: int(cNeedupdate),
+	}
+}
+
+// PurgeUtmpSlot purges an online session in SHM slot atomically
+func (c *SHMClient) PurgeUtmpSlot(slot int) {
+	if c == nil || slot < 0 {
+		return
+	}
+	C.purge_utmp_slot(C.int(slot))
+}
+
+// FixUtmpUserTable fixes circular or invalid references in SHM utmp_user table
+func (c *SHMClient) FixUtmpUserTable() int {
+	if c == nil {
+		return 0
+	}
+	return int(C.fix_utmp_user_table())
+}
+
+// RebuildUtmpUser rebuilds the utmp_user table from active sessions
+func (c *SHMClient) RebuildUtmpUser() {
+	if c == nil {
+		return
+	}
+	C.rebuild_utmp_user()
+}
+
+// GetHotBoardBIDs returns list of hotboard bids from SHM->HBcache
+func (c *SHMClient) GetHotBoardBIDs(max int) []int {
+	if c == nil || max <= 0 {
+		return nil
+	}
+	buf := make([]C.int, max)
+	n := int(C.get_hotboards(&buf[0], C.int(max)))
+	if n <= 0 {
+		return nil
+	}
+	res := make([]int, n)
+	for i := 0; i < n; i++ {
+		res[i] = int(buf[i])
+	}
+	return res
+}
+
+type UtmpCandidate struct {
+	Slot          int
+	PID           int
+	UID           int
+	UserID        string
+	LastAct       time.Time
+	IdleSec       int
+	FriendTotal   int
+	Mode          int
+	BrcID         int
+	IsGuest       bool
+	IsValidUserID bool
+	UserExists    bool
+}
+
+// GetUtmpCandidates fetches candidate session information from SHM for utmpfix
+func (c *SHMClient) GetUtmpCandidates() []UtmpCandidate {
+	if c == nil {
+		return nil
+	}
+	total := int(C.get_ushm_size())
+	if total <= 0 {
+		return nil
+	}
+	cCandidates := make([]C.cgo_utmp_candidate_t, total)
+	var count C.int
+	if C.get_utmp_candidates(&cCandidates[0], C.int(total), &count) == 0 || count <= 0 {
+		return nil
+	}
+	n := int(count)
+	res := make([]UtmpCandidate, n)
+	for i := 0; i < n; i++ {
+		cand := &cCandidates[i]
+		res[i] = UtmpCandidate{
+			Slot:          int(cand.slot),
+			PID:           int(cand.pid),
+			UID:           int(cand.uid),
+			UserID:        C.GoString(&cand.userid[0]),
+			LastAct:       time.Unix(int64(cand.lastact), 0),
+			IdleSec:       int(cand.idle_sec),
+			FriendTotal:   int(cand.friendtotal),
+			Mode:          int(cand.mode),
+			BrcID:         int(cand.brc_id),
+			IsGuest:       cand.is_guest != 0,
+			IsValidUserID: cand.is_userid_valid != 0,
+			UserExists:    cand.user_exists != 0,
+		}
+	}
+	return res
 }
 
