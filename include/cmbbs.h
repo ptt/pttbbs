@@ -286,10 +286,41 @@ int get_online_session_detail(int uslot, int *out_pid, int *out_uid, char *out_u
 int get_max_board(void);
 int get_num_boards(void);
 int get_board_info(int bid, char *out_brdname, unsigned int *out_brdattr);
+int get_board_nuser(int bid);
 int get_board_bid(const char *brdname);
 int get_hbfl_generation(void);
 int bump_hbfl_generation(void);
 void set_hbfl_generation(int gen);
+
+/* utmp / cgo */
+typedef struct {
+    int slot;
+    int pid;
+    int uid;
+    char userid[IDLEN + 1];
+    long lastact;
+    int idle_sec;
+    int friendtotal;
+    int mode;
+    int brc_id;
+    int is_guest;
+    int is_userid_valid;
+    int user_exists;
+} cgo_utmp_candidate_t;
+
+void utmp_update(void);
+void get_utmp_status(long *out_uptime, int *out_number, int *out_busystate, int *out_needupdate);
+void reset_utmp_busystate(void);
+int get_utmp_busystate(void);
+void set_utmp_busystate(int val);
+int get_utmp_needupdate(void);
+void set_utmp_needupdate(int val);
+int get_utmp_number(void);
+int get_hotboards(int *out_bids, int max_boards);
+void purge_utmp_slot(int uslot);
+int fix_utmp_user_table(void);
+void rebuild_utmp_user(void);
+int get_utmp_candidates(cgo_utmp_candidate_t *out_candidates, int max_candidates, int *out_count);
 
 /* 2fa */
 int user_load_2fa(const char *userid, user_2fa_t *totp);

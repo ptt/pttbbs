@@ -1,4 +1,4 @@
-SUBDIRS:=	friend search
+SUBDIRS:=	friend search utmp
 
 .PHONY: all clean install test $(SUBDIRS)
 
