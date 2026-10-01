@@ -160,18 +160,14 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
 Status BoardServiceImpl::Hotboard(ServerContext *context,
                                   const HotboardRequest *req,
                                   HotboardReply *rep) {
-#if HOTBOARDCACHE
-  for (int i = 0; i < SHM->nHOTs; i++) {
-    int bid = SHM->HBcache[i] + 1;
+  for (int i = 0; i < SHM->hotboards.num; i++) {
+    int bid = SHM->hotboards.bids[i] + 1;
     auto bp = boards::Get(bid);
     if (bp && boards::IsPublic(bp.value())) {
       AsBoard(bid, bp.value()).Swap(rep->add_boards());
     }
   }
   return Status::OK;
-#else
-  return Status(StatusCode::UNIMPLEMENTED, "Hotboard cache is not built in");
-#endif
 }
 
 int SelectType(PartialOptions::SelectType t) {
