@@ -1083,18 +1083,20 @@ split(textline_t * line, int pos, int indent)
  */
 static void delete_char(void);
 
-static void
+static int
 del_currchar(void)
 {
     if (curr_buf->ansimode)
 	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
     if (curr_buf->currpnt >= curr_buf->currline->len)
-	return;
+	return 0;
     if (mbcs_mode)
 	curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
     int w = mbcs_mode ? mb_bytes(curr_buf->currline->data + curr_buf->currpnt) : 1;
+    int old_width = stream_width_n(curr_buf->currline->data + curr_buf->currpnt, w);
     for (; w > 0; w--)
 	delete_char();
+    return old_width;
 }
 
 static void
@@ -1154,12 +1156,21 @@ raw_insert_char(int ch)
 static void
 insert_char(int ch)
 {
+    int old_width = 0;
     if (!curr_buf->insert_mode)
-	del_currchar();
+	old_width = del_currchar();
     raw_insert_char(ch);
-    /* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
-    if (!curr_buf->insert_mode && curr_buf->ansimode)
-	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+    if (!curr_buf->insert_mode) {
+	char str[2] = { (char)ch, 0 };
+	int new_width = stream_width(str);
+	if (new_width > 0 && new_width < old_width) {
+	    raw_insert_char(' ');
+	    curr_buf->currpnt--;
+	}
+	/* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
+	if (curr_buf->ansimode)
+	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+    }
 }
 
 /**
@@ -1169,15 +1180,15 @@ static void
 insert_dchar(const char *dchar)
 {
     int w = mb_bytes(dchar);
+    int old_width = 0;
     if (!curr_buf->insert_mode && !mbcs_mode) {
 	/* Byte-oriented editing: del_currchar() removes 1 byte; overwrite w. */
 	for (int i = 0; i < w; i++)
 	    del_currchar();
     } else if (!curr_buf->insert_mode) {
-	int old_len = curr_buf->currline->len;
-	del_currchar();
+	old_width = del_currchar();
 	/* If a 2-column dchar overwrote a 1-byte ASCII char, also overwrite the next 1-byte ASCII char */
-	if (old_len - curr_buf->currline->len == 1 &&
+	if (old_width == 1 &&
 	    mb_width(dchar) >= 2 &&
 	    curr_buf->currpnt < curr_buf->currline->len &&
 	    mb_bytes(curr_buf->currline->data + curr_buf->currpnt) == 1 &&
@@ -1223,8 +1234,15 @@ insert_dchar(const char *dchar)
     }
     for (int i = 0; i < w; i++)
 	raw_insert_char(dchar[i]);
-    if (!curr_buf->insert_mode && curr_buf->ansimode)
-	curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+    if (!curr_buf->insert_mode) {
+	int new_width = mb_width(dchar);
+	if (new_width > 0 && new_width < old_width) {
+	    raw_insert_char(' ');
+	    curr_buf->currpnt--;
+	}
+	if (curr_buf->ansimode)
+	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
+    }
 }
 
 /* A key read ahead by vkey_to_mb() that did not belong to the character. */
