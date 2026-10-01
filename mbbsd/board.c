@@ -965,29 +965,6 @@ addnewbrdstat(int n, int state)
     return ptr;
 }
 
-#if !HOTBOARDCACHE
-static int
-cmpboardfriends(const void *brd, const void *tmp)
-{
-    if ((B_BH((boardstat_t*)tmp)->brdattr & BRD_COOLDOWN) &&
-	    (B_BH((boardstat_t*)brd)->brdattr & BRD_COOLDOWN))
-	return 0;
-    else if ( B_BH((boardstat_t*)tmp)->brdattr & BRD_COOLDOWN ) {
-	if (B_BH((boardstat_t*)brd)->nuser == 0)
-	    return 0;
-	else
-	    return 1;
-    }
-    else if ( B_BH((boardstat_t*)brd)->brdattr & BRD_COOLDOWN ) {
-	if (B_BH((boardstat_t*)tmp)->nuser == 0)
-	    return 0;
-	else
-	    return -1;
-    }
-    return ((B_BH((boardstat_t*)tmp)->nuser) -
-	    (B_BH((boardstat_t*)brd)->nuser));
-}
-#endif
 
 static void
 load_boards(char *key)
@@ -1083,9 +1060,8 @@ load_boards(char *key)
 	    if (brdnum == 0 && !key[0])
 		addnewbrdstat(0, 0); // dummy
 	}
-#if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
-	    nbrdsize = SHM->nHOTs;
+	    nbrdsize = SHM->hotboards.num;
 	    if(nbrdsize == 0) {
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
@@ -1095,12 +1071,14 @@ load_boards(char *key)
 	    assert(0<nbrdsize);
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nbrdsize);
 	    for( i = 0 ; i < nbrdsize; ++i ) {
-		if(SHM->HBcache[i] == -1)
+		int bidx = SHM->hotboards.bids[i];
+		if(bidx < 0 || bidx >= MAX_BOARD)
 		    continue;
-		addnewbrdstat(SHM->HBcache[i], HasBoardPerm(&bcache[SHM->HBcache[i]]));
+		if (TITLE_MATCH(&bcache[bidx], key))
+		    continue;
+		addnewbrdstat(bidx, HasBoardPerm(&bcache[bidx]));
 	    }
 	}
-#endif
 	else { // general case
 	    nbrdsize = num_boards();
 	    assert(0<nbrdsize && nbrdsize<=MAX_BOARD);
@@ -1116,19 +1094,11 @@ load_boards(char *key)
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
 		    !((state = HasBoardPerm(bptr)) || GROUPOP()) ||
-		    TITLE_MATCH(bptr, key)
-#if ! HOTBOARDCACHE
-		    || (IN_HOTBOARD() && bptr->nuser < 5)
-#endif
-		    )
+		    TITLE_MATCH(bptr, key))
 		    continue;
 		addnewbrdstat(n, state);
 	    }
 	}
-#if ! HOTBOARDCACHE
-	if (IN_HOTBOARD())
-	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
-#endif
     } else { /* load boards of a subclass */
 	boardheader_t  *bptr = getbcache(class_bid);
 	int childcount;
