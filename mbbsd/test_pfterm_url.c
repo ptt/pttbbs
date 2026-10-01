@@ -28,7 +28,7 @@ userec_t pwcuser;
 
 static void reset_outbuf(void) {
     outlen = 0;
-    outbuf[0] = '\0';
+    memset(outbuf, 0, sizeof(outbuf));
 }
 
 static void test_basic_hyperlink(void) {
@@ -235,7 +235,7 @@ static void test_multibyte_cjk(void) {
 }
 
 static void test_url_matching(void) {
-    printf("Testing URL matching rules and url_tracker...\n");
+    printf("Testing URL matching rules...\n");
     int ulen = 0;
 
     // Valid URLs
@@ -380,6 +380,38 @@ static void test_url_matching(void) {
     assert(trk.cont_next_line == false);
     assert(strcmp(trk.url, "https://example.com/test1/very_long_url_reaching_seventy_six_chars_exactly__") == 0);
 
+    // Test multi-line Markdown double URL tracking (wrapped across 4 lines)
+    const char *md_text =
+        "[https://www.apple.com/tw/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF\n"
+        "%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2](https://www.apple.com/tw/shop/buy\n"
+        "-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91\n"
+        "%E8%89%B2)\n";
+
+    // URL 1 should stitch across line 1 and line 2
+    int md_u1_len = 0;
+    assert(match_url(md_text + 1, strlen(md_text + 1), &md_u1_len));
+    assert(url_tracker_init(&trk, md_text + 1, md_u1_len, md_text + strlen(md_text), 1));
+    assert(trk.in_url == true);
+    assert(trk.cont_next_line == true);
+    assert(strcmp(trk.url, "https://www.apple.com/tw/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2") == 0);
+
+    // Transition to line 2 for URL 1
+    const char *md_l2 = strchr(md_text, '\n') + 1;
+    assert(url_tracker_next_line(&trk, md_l2, md_text + strlen(md_text)));
+    assert(trk.cont_next_line == false); // ends at ']' on line 2!
+
+    // On line 2, URL 2 starts after "](", at col 44
+    const char *md_l2_u2 = strstr(md_l2, "https://");
+    assert(md_l2_u2 != NULL);
+    int md_u2_len = 0;
+    assert(match_url(md_l2_u2, strlen(md_l2_u2), &md_u2_len));
+    url_tracker_t trk_u2;
+    int md_u2_col = (int)(md_l2_u2 - md_l2);
+    assert(url_tracker_init(&trk_u2, md_l2_u2, md_u2_len, md_text + strlen(md_text), md_u2_col));
+    assert(trk_u2.in_url == true);
+    assert(trk_u2.cont_next_line == true);
+    assert(strcmp(trk_u2.url, "https://www.apple.com/tw/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2") == 0);
+
     // Test quote line with new URL should also NOT be merged
     const char *s_quote_urls = "https://ptt.cc/search?q=123&\n: https://google.com/\n";
     int ulen_q = 0;
@@ -388,6 +420,167 @@ static void test_url_matching(void) {
     assert(trk.in_url == true);
     assert(trk.cont_next_line == false);
     assert(strcmp(trk.url, "https://ptt.cc/search?q=123&") == 0);
+
+    printf("  -> PASS\n");
+}
+
+static void test_pmore_url_modes(void) {
+    printf("Testing pmore URL modes (single line, soft-wrap, and multi-line joining)...\n");
+
+    // 1. Intact single-line URL reading mode simulation:
+    // Intact single-line URLs do NOT emit OSC 8; terminal client regex handles them natively.
+    initscr();
+    reset_outbuf();
+    const char *line1 = "Check https://ptt.cc for info.";
+    const char *p = line1;
+    while (*p) {
+        outc(*p++);
+    }
+    reset_outbuf();
+    doupdate();
+    oflush();
+    // Verify no OSC 8 escape sequences are emitted for intact single-line URLs
+    assert(strstr(outbuf, "\x1b]8;;") == NULL);
+    assert(strstr(outbuf, "https://ptt.cc") != NULL);
+
+    // 2. Soft-wrap (折行) of a 120-char URL across 2 rows (row width 78):
+    clear();
+    reset_outbuf();
+    const char *long_url = "https://example.com/very/long/path/query?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5&extra=abcdefgh";
+    int long_len = strlen(long_url);
+    int row_max = 78;
+
+    // Row 0 gets first 78 chars
+    move(0, 0);
+    start_url(long_url);
+    for (int i = 0; i < row_max; i++)
+        outc(long_url[i]);
+    end_url();
+
+    // Row 1 gets remaining chars
+    move(1, 0);
+    start_url(long_url);
+    for (int i = row_max; i < long_len; i++)
+        outc(long_url[i]);
+    end_url();
+
+    // Verify Row 0 has full URL attached to every cell
+    for (int x = 0; x < row_max; x++) {
+        const char *u = get_url_at(0, x);
+        assert(u != NULL && strcmp(u, long_url) == 0);
+    }
+    // Verify Row 1 has full URL attached to every cell
+    for (int x = 0; x < long_len - row_max; x++) {
+        const char *u = get_url_at(1, x);
+        assert(u != NULL && strcmp(u, long_url) == 0);
+    }
+    assert(get_url_at(1, long_len - row_max) == NULL);
+
+    reset_outbuf();
+    doupdate();
+    // Both lines must contain OSC 8 with the full URL
+    assert(strstr(outbuf, "\x1b]8;;https://example.com/very/long/path/query?param1=value1") != NULL);
+
+    // 2b. Truncate mode (截行) of a 120-char URL on Row 0 (not wrapped to Row 1):
+    clear();
+    reset_outbuf();
+    const char *trunc_url = "https://trunc.example.com/very/long/path/query?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5";
+    move(0, 0);
+    start_url(trunc_url);
+    for (int i = 0; i < row_max; i++)
+        outc(trunc_url[i]);
+    end_url();
+
+    // Verify Row 0 has full URL attached to every cell
+    for (int x = 0; x < row_max; x++) {
+        const char *u = get_url_at(0, x);
+        assert(u != NULL && strcmp(u, trunc_url) == 0);
+    }
+    // Verify Row 1 has NO URL (it was truncated, not wrapped)
+    assert(get_url_at(1, 0) == NULL);
+
+    reset_outbuf();
+    doupdate();
+    oflush();
+    // Outbuf still contains OSC 8 with the full URL for Row 0
+    assert(strstr(outbuf, "\x1b]8;;https://trunc.example.com/very/long/path/query?param1=value1") != NULL);
+
+    // 3. Multi-line hard break (斷行) joining simulation:
+    clear();
+    reset_outbuf();
+    const char *part1 = "https://ptt.cc/search?q=query_part1+";
+    const char *part2 = "part2_rest_of_query&cat=news";
+    char joined_url[256];
+    snprintf(joined_url, sizeof(joined_url), "%s%s", part1, part2);
+
+    // Line 1:
+    move(0, 0);
+    start_url(joined_url);
+    for (int i = 0; part1[i]; i++)
+        outc(part1[i]);
+    end_url();
+
+    // Line 2:
+    move(1, 0);
+    start_url(joined_url);
+    for (int i = 0; part2[i]; i++)
+        outc(part2[i]);
+    end_url();
+
+    // Verify every cell of Line 1 and Line 2 has joined_url
+    for (int x = 0; x < (int)strlen(part1); x++) {
+        const char *u = get_url_at(0, x);
+        assert(u != NULL && strcmp(u, joined_url) == 0);
+    }
+    for (int x = 0; x < (int)strlen(part2); x++) {
+        const char *u = get_url_at(1, x);
+        assert(u != NULL && strcmp(u, joined_url) == 0);
+    }
+
+    // 4. Raw / Show control code mode (MFDISP_RAW_NOANSI) simulation:
+    clear();
+    reset_outbuf();
+    outs("\033[4;36m");
+    for (int i = 0; line1[i]; i++)
+        outc(line1[i]);
+    outs("\033[m");
+    doupdate();
+    // In raw mode, no hyperlinks attached to cells, syntax highlight visible
+    assert(get_url_at(0, 6) == NULL);
+    assert(strstr(outbuf, "https://ptt.cc") != NULL);
+
+    // 5. Two distinct URLs on the same line (e.g. Markdown link with URL as label):
+    clear();
+    reset_outbuf();
+    const char *url_label = "https://example.com/url1";
+    const char *url_dest  = "https://example.com/url2";
+    // [url1](url2)
+    move(0, 0);
+    outc('[');
+    start_url(url_label);
+    for (int i = 0; url_label[i]; i++)
+        outc(url_label[i]);
+    end_url();
+    outc(']');
+    outc('(' );
+    start_url(url_dest);
+    for (int i = 0; url_dest[i]; i++)
+        outc(url_dest[i]);
+    end_url();
+    outc(')');
+
+    // Verify cell at url1 has url_label
+    const char *u_at_label = get_url_at(0, 1);
+    assert(u_at_label != NULL && strcmp(u_at_label, url_label) == 0);
+
+    // Verify cell at url2 has url_dest
+    int dest_start_col = 1 + strlen(url_label) + 2; // '[' + label + ""](""
+    const char *u_at_dest = get_url_at(0, dest_start_col);
+    assert(u_at_dest != NULL && strcmp(u_at_dest, url_dest) == 0);
+
+    // Verify separator ']' and '(' have no URL
+    assert(get_url_at(0, 1 + strlen(url_label)) == NULL);
+    assert(get_url_at(0, 1 + strlen(url_label) + 1) == NULL);
 
     printf("  -> PASS\n");
 }
@@ -403,6 +596,7 @@ int main(void) {
     test_url_pool_eviction_and_invalidation();
     test_multibyte_cjk();
     test_url_matching();
-    printf("\nAll 9 test suites PASSED successfully!\n");
+    test_pmore_url_modes();
+    printf("\nAll 10 test suites PASSED successfully!\n");
     return 0;
 }

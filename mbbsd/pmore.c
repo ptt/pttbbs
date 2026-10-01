@@ -1573,6 +1573,12 @@ mf_display()
         clear(), move(0, 0);
 
     mf.dispe = mf.disps;
+
+    url_tracker_t url_state;
+    memset(&url_state, 0, sizeof(url_state));
+    url_tracker_init_from_prev_line(&url_state, (const char *)mf.disps,
+                                    (const char *)mf.start, (const char *)mf.end);
+
     while (lines < MFDISP_PAGE)
     {
         int inAnsi = 0;
@@ -1586,6 +1592,11 @@ mf_display()
 
         currline = mf.lineno + lines;
         col = 0;
+
+        if (!wrapping && url_state.in_url)
+        {
+            url_tracker_next_line(&url_state, (const char *)mf.dispe, (const char *)mf.end);
+        }
 
         if (!wrapping && mf.dispe < mf.end)
             mf.dispedlines++;
@@ -1883,6 +1894,91 @@ mf_display()
                                 break;
                         }
                     } else {
+                        if (bpref.rawmode == MFDISP_RAW_NA || bpref.rawmode == MFDISP_RAW_NOANSI)
+                        {
+                            int limit = (bpref.rawmode == MFDISP_RAW_NOANSI ? t_columns : maxcol + 1);
+                            int ulen = 0;
+
+                            if (!url_state.in_url && (c == 'h' || c == 'H') &&
+                                match_url((const char *)mf.dispe, (int)(mf.end - mf.dispe), &ulen))
+                            {
+                                url_tracker_init(&url_state, (const char *)mf.dispe, ulen, (const char *)mf.end, col);
+                                if (!url_state.cont_next_line && col + ulen <= limit)
+                                    url_state.in_url = false;
+                            }
+
+                            if (url_state.in_url && url_state.cur_line_bytes_left > 0 &&
+                                (!url_state.cont_ptr || mf.dispe >= (const unsigned char *)url_state.cont_ptr))
+                            {
+                                url_state.cont_ptr = NULL;
+                                if (col < limit)
+                                {
+                                    if (bpref.rawmode == MFDISP_RAW_NA)
+                                        start_url(url_state.url);
+                                    else
+                                        outs(ANSI_COLOR(4;36));
+
+                                    while (url_state.cur_line_bytes_left > 0 && col < limit)
+                                    {
+                                        char ch = *mf.dispe;
+                                        if (xprefix > 0)
+                                            xprefix--;
+                                        else
+                                        {
+                                            outc(ch);
+                                            col++;
+                                        }
+                                        mf.dispe++;
+                                        url_state.cur_line_bytes_left--;
+                                    }
+
+                                    if (bpref.rawmode == MFDISP_RAW_NA)
+                                        end_url();
+                                    else
+                                        outs(ANSI_RESET);
+
+                                    if (url_state.cur_line_bytes_left > 0)
+                                    {
+                                        breaknow = 1;
+                                        if (mf.xpos > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
+                                        {
+                                            mf.trunclines++;
+                                            MFDISP_SKIPCURLINE();
+                                            wrapping = 0;
+                                            memset(&url_state, 0, sizeof(url_state));
+                                        }
+                                        else
+                                        {
+                                            wrapping = 1;
+                                            mf.wraplines++;
+                                        }
+                                    }
+                                    else if (!url_state.cont_next_line)
+                                    {
+                                        memset(&url_state, 0, sizeof(url_state));
+                                    }
+                                    continue;
+                                }
+                                else
+                                {
+                                    breaknow = 1;
+                                    if (mf.xpos > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
+                                    {
+                                        mf.trunclines++;
+                                        MFDISP_SKIPCURLINE();
+                                        wrapping = 0;
+                                        memset(&url_state, 0, sizeof(url_state));
+                                    }
+                                    else
+                                    {
+                                        wrapping = 1;
+                                        mf.wraplines++;
+                                    }
+                                    continue;
+                                }
+                            }
+                        }
+
                         int canOutput = 0;
                         int char_bytes = MB_IS_UTF8 ? mb_bytes((const char *)mf.dispe) : 1;
                         int char_cols = MB_IS_UTF8 ? mb_width((const char *)mf.dispe) : 1;
