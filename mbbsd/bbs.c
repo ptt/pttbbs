@@ -1331,9 +1331,31 @@ do_post_article(int edflags)
 	char tmp_title[STRLEN]="";
 	move(21,0);
 	outs("種類：");
-	for(i=0; i<8 && bp->posttype[i*4]; i++)
-	    strlcpy(ctype[i],bp->posttype+4*i,5);
-	if(i==0) i=8;
+	char posttype_file[PATHLEN];
+	FILE *fp_pt;
+	setbfile(posttype_file, bp->brdname, FN_POSTTYPE);
+	fp_pt = fopen(posttype_file, "r");
+	i = 0;
+	if (fp_pt) {
+	    char linebuf[128];
+	    while (i < 8 && fgets(linebuf, sizeof(linebuf), fp_pt)) {
+		chomp(linebuf);
+		char *p = linebuf;
+		while (*p == ' ' || *p == '	') p++;
+		if (*p == '#' || *p == '\0') continue;
+		char *end = p + strlen(p) - 1;
+		while (end > p && (*end == ' ' || *end == '	')) {
+		    *end = '\0';
+		    end--;
+		}
+		if (*p == '\0') continue;
+		strlcpy(ctype[i], p, sizeof(ctype[i]));
+		mbs_safe_trim(ctype[i]);
+		i++;
+	    }
+	    fclose(fp_pt);
+	}
+	if (i == 0) i = 8;
 	for(j=0; j<i; j++)
 	    prints("%d.%4.4s ", j+1, ctype[j]);
 
@@ -1388,9 +1410,10 @@ do_post_article(int edflags)
         vmsg("系統錯誤: 無法寫入檔案。");
         return FULLUPDATE;
     }
-    if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {
+    if (posttype != -1) {
 	setbnfile(genbuf, bp->brdname, "postsample", posttype);
-	Copy(genbuf, fpath);
+	if (dashf(genbuf))
+	    Copy(genbuf, fpath);
     }
 
     edflags |= EDITFLAG_ALLOWTITLE;
