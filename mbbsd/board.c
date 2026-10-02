@@ -1439,8 +1439,8 @@ unread_position(char *dirfile, boardstat_t * ptr)
     register int    num, fd, step, total;
 
     total = B_TOTAL(ptr);
-    num = total + 1;
-    if ((ptr->myattr & NBRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
+    num = total > 0 ? total + 1 : 1;
+    if (total > 0 && (ptr->myattr & NBRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
 	if (!brc_initial_board(B_BH(ptr)->brdname)) {
 	    num = 1;
 	} else {
@@ -1602,6 +1602,9 @@ brdlist_empty_renderer(PSB_CTX *ctx GCC_UNUSED)
 	    mvouts(3, 10,
 		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
 	}
+    } else {
+        mvouts(3, 10,
+            "--- 本目錄目前尚無看板 ---");
     }
     return 0;
 }
