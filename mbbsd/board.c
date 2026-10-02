@@ -1747,7 +1747,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     }
 
     char col_name[64];
-    SNPRINTF(col_name, "%s%-13s" ANSI_RESET,
+    SNPRINTF(col_name, "%s%s" ANSI_RESET,
             ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
               getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
             B_BH(ptr)->brdname);
@@ -1756,7 +1756,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                       (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "£U" : "¡·";
 
     char col_class[64];
-    SNPRINTF(col_class, "%s%-4.4s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
+    SNPRINTF(col_class, "%s%s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
             make_class_color(B_BH(ptr)->bclass),
             B_BH(ptr)->bclass,
             should_show_sensitive_info ? sym : "");

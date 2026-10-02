@@ -721,13 +721,15 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     if (iscorpse) {
 #ifdef COLORIZED_SAFEDEL
-	// quick display, but lack of recommend counter...
-	prints("%7d    ", num);
-	outs(ANSI_COLOR(1;30));
-	prints("%-6.5s", ent->date);
-	prints("%-13.12s", ent->owner);
-	prints("во %-.*s" ANSI_RESET,
-		t_columns-34, ent->title);
+	char col_num[32];
+	SNPRINTF(col_num, "%7d", num);
+	char col_date[32];
+	SNPRINTF(col_date, ANSI_COLOR(1;30) "%s" ANSI_RESET, ent->date);
+	char col_author[64];
+	SNPRINTF(col_author, ANSI_COLOR(1;30) "%s" ANSI_RESET, ent->owner);
+	char col_title[512];
+	SNPRINTF(col_title, ANSI_COLOR(1;30) "во %s" ANSI_RESET, ent->title);
+	render_columns(ctx, "", col_num, "    ", col_date, col_author, col_title);
 	return;
 #else // COLORIZED_SAFEDEL
         oisunread = isunread = 0;
@@ -854,7 +856,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     }
 
     char col_author[64];
-    SNPRINTF(col_author, "%s%-13.12s%s",
+    SNPRINTF(col_author, "%s%s%s",
              isonline ? ANSI_COLOR(1) : "",
              ent->owner,
              isonline ? ANSI_RESET : "");

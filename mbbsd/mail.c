@@ -1653,7 +1653,7 @@ maildoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     SNPRINTF(col_date, "%-6s", datepart);
 
     char col_owner[64];
-    SNPRINTF(col_owner, "%s%-15.14s%s",
+    SNPRINTF(col_owner, "%s%s%s",
              isonline ? ANSI_COLOR(1) : "",
              ent->owner,
              isonline ? ANSI_RESET : "");
