@@ -900,13 +900,23 @@ typedef struct {
     fileheader_t *records;
 } pvrb_ctx;
 
+static VCOL pvrb_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號  ", 8, 8, 20},
+    {"日 期", 6, 6, 30},
+    {"作  者       ", 13, 13, 50},
+    {"標      題", 20, TTLEN + 1, 100},
+    {0},
+};
+#define PVRB_COLS (ARRAY_SIZE(pvrb_coldefs) - 1)
+
 static int
 pvrb_header(PSB_CTX *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx->cmd.priv;
     vs_draw_hdr2(TIME_CAPSULE_NAME ": " RECYCLE_BIN_NAME, cx->subject);
     move(1, 0);
     outs("請注意此處的檔案將不定期清除。\n");
-    vbar(ANSI_REVERSE "    編號 | 日 期 |   作  者   |   標      題");
+    psb_render_header_columns(ctx, NULL);
     return 0;
 }
 
@@ -922,17 +932,13 @@ pvrb_footer(PSB_CTX *ctx GCC_UNUSED) {
 static int
 pvrb_renderer(int i, PSB_CTX *ctx) {
     pvrb_ctx *cx = (pvrb_ctx*) ctx->cmd.priv;
-    int curr = ctx->cmd.curr, total = ctx->cmd.total;
+    int total = ctx->cmd.total;
     fileheader_t *fh = &cx->records[total - i - 1];
 
-    // TODO make this load-on-demand
-    // quick display, but lack of recommend counter...
-    outs("   ");
-    if (i == curr)
-        // prints(ANSI_COLOR(1;40;3%d), i%8);
-        outs(ANSI_COLOR(1;40;31));
-    prints("%06d  %-5.5s  %-12.12s %s" ANSI_RESET,
-           total - i, fh->date, fh->owner, fh->title);
+    char num[32];
+    SNPRINTF(num, "%06d", total - i);
+
+    render_columns(ctx, "", num, fh->date, fh->owner, fh->title);
     return 0;
 }
 
@@ -1134,6 +1140,9 @@ psb_recycle_bin(const char *base, const char *title) {
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
+        .cols = PVRB_COLS,
+        .vcols = pvrb_coldefs,
+        .col_paddings = 2,
         .header = pvrb_header,
         .footer = pvrb_footer,
         .renderer = pvrb_renderer,
@@ -1317,12 +1326,20 @@ typedef struct {
     char *files[MAX_PAE_ENTRIES];
 } pae_ctx;
 
+static VCOL pae_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號", 7, 7, 20},
+    {"名    稱", 16, 36, 80},
+    {"檔    名", 16, 32, 100},
+    {0},
+};
+#define PAE_COLS (ARRAY_SIZE(pae_coldefs) - 1)
+
 static int
 pae_header(PSB_CTX *ctx GCC_UNUSED) {
     vs_draw_hdr2("系統檔案", "編輯系統檔案");
     outs("請選取要編輯的檔案後按 Enter 開始修改\n");
-    vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE
-         "%5s %-36s%-30s", "編號", "名  稱", "檔  名"));
+    psb_render_header_columns(ctx, NULL);
     return 0;
 }
 
@@ -1337,11 +1354,18 @@ pae_footer(PSB_CTX *ctx GCC_UNUSED) {
 static int
 pae_renderer(int i, PSB_CTX *ctx) {
     pae_ctx *cx = (pae_ctx*) ctx->cmd.priv;
-    prints("  %3d %s%s%-36.36s " ANSI_COLOR(1;37) "%-30.30s" ANSI_RESET,
-            i+1,
-            (i == ctx->cmd.curr) ? ANSI_COLOR(41) : "",
-            dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30),
-            cx->descs[i], cx->files[i]);
+    char num[32];
+    SNPRINTF(num, "  %3d", i + 1);
+
+    const char *attr = (i == ctx->cmd.curr) ? ANSI_COLOR(41) :
+                       dashf(cx->files[i]) ? ANSI_COLOR(1;36) : ANSI_COLOR(1;30);
+    char desc[256];
+    SNPRINTF(desc, "%s%s", attr, cx->descs[i]);
+
+    char file[256];
+    SNPRINTF(file, ANSI_COLOR(1;37) "%s", cx->files[i]);
+
+    render_columns(ctx, "", num, desc, file);
     return 0;
 }
 
@@ -1410,6 +1434,9 @@ psb_admin_edit() {
         .header_lines = 4,
         .footer_lines = 2,
         .allow_pbs_version_message = 1,
+        .cols = PAE_COLS,
+        .vcols = pae_coldefs,
+        .col_paddings = 2,
 
         .header = pae_header,
         .footer = pae_footer,
