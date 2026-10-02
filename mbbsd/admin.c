@@ -640,7 +640,7 @@ m_mod_board(char *bname)
     prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
 	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
            ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
-           TEMP_BRD_TITLE_DESC(&bh), TEMP_STORAGE_TO_MB(bh.bclass), bid, bh.gid, TEMP_BRD_BM(&bh));
+           TEMP_BRD_DESC(&bh), TEMP_BRD_CLASS(&bh), bid, bh.gid, TEMP_BRD_BM(&bh));
     bperm_msg(&bh);
 
     /* Ptt 這邊斷行會檔到下面 */
@@ -797,20 +797,18 @@ m_mod_board(char *bname)
         y++;
 
 	do {
-	    char cls_mb[SZ_COLS(5)];
-	    brd_get_title_class(&bh, cls_mb, sizeof(cls_mb));
-	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, cls_mb);
+	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, TEMP_BRD_CLASS(&bh));
 	    if (stream_width(genbuf) == 4)
 		break;
 	} while (1);
         y++;
 
-	brd_set_title_class(&newbh, genbuf);
+	brd_set_class(&newbh, genbuf);
 
 	getdata_str(y++, 0, "看板主題：", genbuf, sizeof(newbh.desc),
-                    DOECHO, TEMP_BRD_TITLE_DESC(&bh));
+                    DOECHO, TEMP_BRD_DESC(&bh));
 	if (genbuf[0])
-	    brd_set_title_desc(&newbh, genbuf);
+	    brd_set_desc(&newbh, genbuf);
 
         do {
             int uids[MAX_BMs], i;
@@ -1044,11 +1042,11 @@ m_newbrd(int whatclass, int recover)
 	    break;
     } while (1);
 
-    brd_set_title_class(&newboard, genbuf);
+    brd_set_class(&newboard, genbuf);
 
     getdata(8, 0, "看板主題：", genbuf, sizeof(newboard.desc), DOECHO);
     if (genbuf[0])
-	brd_set_title_desc(&newboard, genbuf);
+	brd_set_desc(&newboard, genbuf);
     setbpath(genbuf, newboard.brdname);
 
     // Recover 應只拿來處理目錄已存在(但.BRD沒有)的情況，不然就會在
@@ -1126,9 +1124,9 @@ m_newbrd(int whatclass, int recover)
     pressanykey();
     setup_man(&newboard, NULL);
     outs("\n新板成立");
-    post_newboard(TEMPFORMAT(STRLEN, "%s %s", TEMP_STORAGE_TO_MB(newboard.bclass), TEMP_BRD_TITLE_DESC(&newboard)),
+    post_newboard(TEMPFORMAT(STRLEN, "%s %s", TEMP_BRD_CLASS(&newboard), TEMP_BRD_DESC(&newboard)),
                   newboard.brdname, TEMP_BRD_BM(&newboard));
-    log_usies("NewBoard", TEMP_BRD_TITLE_DESC(&newboard));
+    log_usies("NewBoard", TEMP_BRD_DESC(&newboard));
     pressanykey();
     return 0;
 }

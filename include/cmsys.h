@@ -232,7 +232,6 @@ int  mk_wcwidth_cjk(wchar_t ucs);
 int  is_cjk_ambiguous(wchar_t ucs);
 int  ucs_width(int ucs);
 int  mb_bytes(const char *s);
-int  mb_bytes(const char *s);
 int  mb_width(const char *s);
 int  mb_from_vkey(int key, char *buf);
 int  stream_width(const char *s);

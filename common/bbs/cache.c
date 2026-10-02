@@ -474,47 +474,13 @@ deumoney(int uid, int money)
  * section - board cache
  */
 void
-brd_get_title_class(const boardheader_t *bp, char *buf, size_t sz)
-{
-    strlcpy(buf, TEMP_STORAGE_TO_MB(bp->bclass), sz);
-}
-
-void
-brd_get_title_symbol(const boardheader_t *bp, char *buf, size_t sz)
-{
-    const char *sym = (bp->brdattr & BRD_SYMBOLIC) ? "\xa1\xb8" :
-                      (bp->brdattr & BRD_GROUPBOARD) ? "\xa3U" : "\xa1\xb7";
-    strlcpy(buf, sym, sz);
-}
-
-void
-brd_get_posttype_slot(const char *posttype_buf, int idx, char *buf, size_t sz)
-{
-    const char *mb = TEMP_STORAGE_TO_MB(posttype_buf);
-    int cols = 0;
-    int start = stream_col_offset(idx * 4, mb, &cols);
-    if (cols < idx * 4 || mb[start] == 0) {
-        buf[0] = 0;
-        return;
-    }
-    int len = stream_col_offset(4, mb + start, NULL);
-    strlcpy(buf, mb + start, (size_t)len + 1 < sz ? (size_t)len + 1 : sz);
-}
-
-void
-brd_set_title_class(boardheader_t *bp, const char *mb_class)
+brd_set_class(boardheader_t *bp, const char *mb_class)
 {
     mb_to_storage(mb_class, bp->bclass, sizeof(bp->bclass));
 }
 
 void
-brd_set_title_symbol(boardheader_t *bp GCC_UNUSED, const char *mb_symbol GCC_UNUSED)
-{
-    /* symbol is now dynamically derived from brdattr */
-}
-
-void
-brd_set_title_desc(boardheader_t *bp, const char *mb_desc)
+brd_set_desc(boardheader_t *bp, const char *mb_desc)
 {
     mb_to_storage(mb_desc, bp->desc, sizeof(bp->desc));
 }
@@ -523,55 +489,6 @@ void
 brd_set_BM(boardheader_t *bp, const char *mb_bm)
 {
     mb_to_storage(mb_bm, bp->BM, sizeof(bp->BM));
-}
-
-void
-brd_set_posttype_slot(char *posttype_buf, size_t posttype_sz, int idx, const char *mb_type)
-{
-    char slots[8][SZ_COLS(5)];
-    char full_mb[SZ_COLS(33) * 2] = "";
-    int count = 0;
-
-    for (int i = 0; i < 8; i++) {
-        brd_get_posttype_slot(posttype_buf, i, slots[i], sizeof(slots[i]));
-        if (slots[i][0])
-            count = i + 1;
-    }
-    if (idx >= count)
-        count = idx + 1;
-    for (int i = 0; i < count; i++) {
-        if (i == idx)
-            strlcpy(slots[i], mb_type, sizeof(slots[i]));
-        else if (!slots[i][0])
-            strcpy(slots[i], "    ");
-        int pcols = 0;
-        slots[i][stream_col_offset(4, slots[i], &pcols)] = 0;
-        int pad = 4 - pcols;
-        char padded[SZ_COLS(5)];
-        snprintf(padded, sizeof(padded), "%s%*s", slots[i], pad > 0 ? pad : 0, "");
-        strlcat(full_mb, padded, sizeof(full_mb));
-    }
-    mb_to_storage(full_mb, posttype_buf, posttype_sz);
-}
-
-void
-brd_set_posttype_count(char *posttype_buf, size_t posttype_sz, int count)
-{
-    char slots[8][SZ_COLS(5)];
-    char full_mb[SZ_COLS(33) * 2] = "";
-
-    if (count < 0) count = 0;
-    if (count > 8) count = 8;
-    for (int i = 0; i < count; i++) {
-        brd_get_posttype_slot(posttype_buf, i, slots[i], sizeof(slots[i]));
-        if (!slots[i][0])
-            strcpy(slots[i], "    ");
-        int pad = 4 - (int)stream_width(slots[i]);
-        char padded[SZ_COLS(5)];
-        snprintf(padded, sizeof(padded), "%s%*s", slots[i], pad > 0 ? pad : 0, "");
-        strlcat(full_mb, padded, sizeof(full_mb));
-    }
-    mb_to_storage(full_mb, posttype_buf, posttype_sz);
 }
 
 void touchbtotal(int bid) {
@@ -596,13 +513,8 @@ static int
 cmpboardclass(const void * i, const void * j)
 {
     boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
-    char c1[SZ_COLS(5)], c2[SZ_COLS(5)];
-    int cmp;
-
-    brd_get_title_class(brd1, c1, sizeof(c1));
-    brd_get_title_class(brd2, c2, sizeof(c2));
-    cmp = strcmp(c1, c2);
-    if(cmp!=0) return cmp;
+    int cmp = strcmp(brd1->bclass, brd2->bclass);
+    if (cmp != 0) return cmp;
     return strcasecmp(brd1->brdname, brd2->brdname);
 }
 

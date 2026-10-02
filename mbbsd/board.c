@@ -15,8 +15,8 @@
 static int
 board_title_has_key(const boardheader_t *bptr, const char *key)
 {
-    return mbs_strcasestr(TEMP_STORAGE_TO_MB((bptr)->desc), key) != NULL ||
-           mbs_strcasestr(TEMP_STORAGE_TO_MB((bptr)->bclass), key) != NULL;
+    return mbs_strcasestr(TEMP_BRD_DESC(bptr), key) != NULL ||
+           mbs_strcasestr(TEMP_BRD_CLASS(bptr), key) != NULL;
 }
 #define TITLE_MATCH(bptr, key)	((key)[0] && !board_title_has_key((bptr), (key)))
 
@@ -1819,18 +1819,15 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     const char *sym = (B_BH(ptr)->brdattr & BRD_SYMBOLIC) ? "\xa1\xb8" :
                       (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "\xa3U" : "\xa1\xb7";
 
-    char t_cls[SZ_COLS(6)];
-    brd_get_title_class(B_BH(ptr), t_cls, sizeof(t_cls));
-
     char col_class[64];
     SNPRINTF(col_class, "%s%-4.4s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
             make_class_color(B_BH(ptr)->bclass),
-            t_cls,
+            TEMP_BRD_CLASS(B_BH(ptr)),
             should_show_sensitive_info ? sym : "");
 
     char col_desc[128];
     SNPRINTF(col_desc, "%s",
-            should_show_sensitive_info ? TEMP_BRD_TITLE_DESC(B_BH(ptr)) : "");
+            should_show_sensitive_info ? TEMP_BRD_DESC(B_BH(ptr)) : "");
 
     char col_nuser[64];
     if (!should_show_sensitive_info)
