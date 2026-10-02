@@ -35,9 +35,11 @@ typedef struct {
     char	    attr;
 } fav_board_t;
 
+#define FAV_FOLDER_TITLE_LEN 48
+
 typedef struct {
     char	    fid;
-    char	    title[SZ_COLS(BTLEN + 1)];
+    char	    title[SZ_COLS(FAV_FOLDER_TITLE_LEN + 1)];
     fav_t	   *this_folder;
 } fav_folder_t;
 

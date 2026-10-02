@@ -62,7 +62,7 @@ int bmlostdays_cmp(const void *va, const void *vb)
     if (a->lostdays != b->lostdays)
        return (a->lostdays > b->lostdays) ? -1 : 1;
     // same lost days, let's sort by category -> board -> userid
-    r = strncmp(a->ctitle, b->ctitle, 4);
+    r = strcmp(a->ctitle, b->ctitle);
     if (r != 0)
         return r;
     r = strcmp(a->title, b->title);
@@ -150,7 +150,7 @@ int main(void)
             {
 		strlcpy(lostbms[j].bmname, p, sizeof(bms[index].bmname));
 		lostbms[j].title = allbrd[i].brdname;
-		lostbms[j].ctitle = allbrd[i].title;
+		lostbms[j].ctitle = allbrd[i].bclass;
 		lostbms[j].lostdays = time4_days_elapsed(now, xuser.lastlogin);
 
 		//¶W¹L LAZY_BM_LIMIT_DAYS ¤Ñ §KÂ¾

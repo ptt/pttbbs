@@ -423,12 +423,7 @@ set_board(void)
 	int l = 0;
 
 	SNPRINTF(currBM, "板主:%s", bp->BM);
-	/* title has +7 leading symbols */
-	l += stream_width(bp->title);
-	if(l >= 7)
-	    l -= 7;
-	else
-	    l = 0;
+	l += stream_width(bp->desc);
 	l += 8 + stream_width(currboard); /* trailing stuff */
 	l += stream_width(bp->brdname);
 	l = t_columns - l - stream_width(currBM);
@@ -660,7 +655,7 @@ readtitle(PSB_CTX *ctx)
     if(bp->bvote != 2 && bp->bvote)
 	brd_title = "本看板進行投票中";
     else
-	brd_title = bp->title + 7;
+	brd_title = bp->desc;
 
     redraw_title(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
@@ -896,7 +891,7 @@ int
 whereami(void)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
-    char category[sizeof(bh->title)] = "", *pcat;
+    char category[sizeof(bh->desc)] = "", *pcat;
     int             i, j;
     int bid = currbid;
     int total_boards;
@@ -914,14 +909,14 @@ whereami(void)
          i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
-    prints("我在哪?\n%-40.40s %.13s\n", p[j]->title + 7, p[j]->BM);
+    prints("我在哪?\n%-40.40s %.13s\n", p[j]->desc, p[j]->BM);
     for (j--; j >= 0; j--)
 	prints("%*s %-13.13s %-37.37s %.13s\n", (i - j) * 2, "",
-	       p[j]->brdname, p[j]->title,
+	       p[j]->brdname, p[j]->desc,
 	       p[j]->BM);
 
     move(b_lines - 2, 0);
-    STRLCPY(category, p[i]->title + 7);
+    STRLCPY(category, p[i]->desc);
     if ((pcat = strchr(category, ' ')) != NULL)
         *pcat = 0;
     prints("位置: ");
@@ -1327,7 +1322,7 @@ do_post_article(int edflags)
     prints("%s於【" ANSI_COLOR(33) " %s" ANSI_RESET " 】 "
 	   ANSI_COLOR(32) "%s" ANSI_RESET " 看板\n",
 	   "發表文章",
-	   currboard, bp->title + 7);
+	   currboard, bp->desc);
 
     if (quote_file[0])
         do_reply_title(20, currtitle, str_reply, save_title,

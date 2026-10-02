@@ -58,7 +58,8 @@ void dumpdetail(void)
 	printf("$db{'%d.isboard'} = %d;\n", bid,
 	       (bptr->brdattr & BRD_GROUPBOARD) ? 0 : 1);
 	printf("$db{'%d.brdname'} = '%s';\n", bid, bptr->brdname);
-	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(&bptr->title[7]));
+	printf("$db{'%d.bclass'} = '%s';\n", bid, skipEscape(bptr->bclass));
+	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(bptr->desc));
 	printf("$db{'%d.over18'} = '%d';\n",
 	       bid, (bptr->brdattr & BRD_OVER18) ? 1 : 0);
 	STRLCPY(BM, bptr->BM);

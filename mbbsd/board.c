@@ -12,7 +12,7 @@
 #define NBRD_UNREAD     32
 #define NBRD_SYMBOLIC   64
 
-#define TITLE_MATCH(bptr, key)	((key)[0] && !strcasestr((bptr)->title, (key)))
+#define TITLE_MATCH(bptr, key)     ((key)[0] && !strcasestr((bptr)->desc, (key)) && !strcasestr((bptr)->bclass, (key)))
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
@@ -377,7 +377,7 @@ b_config(void)
 
 	move(ytitle + 2, 0);
 
-	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
+	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->desc);
 	prints("     板主名單: %s\n", does_board_have_public_bm(bp) ? bp->BM : "(無)");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n",
@@ -630,15 +630,15 @@ b_config(void)
 
 	    case 'b':
 		{
-		    char genbuf[BTLEN+1];
+		    char genbuf[sizeof(bp->desc)];
 		    move(b_lines, 0); clrtoeol();
 		    outs("請輸入看板新中文敘述: ");
-		    vgetstr(genbuf, BTLEN-16, 0, bp->title + 7);
-		    if (!genbuf[0] || strcmp(genbuf, bp->title+7) == 0)
+		    vgetstr(genbuf, sizeof(genbuf), 0, bp->desc);
+		    if (!genbuf[0] || strcmp(genbuf, bp->desc) == 0)
 			break;
 		    touched = 1;
 		    strip_control_sequence(genbuf, genbuf);
-		    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
+		    strlcpy(bp->desc, genbuf, sizeof(bp->desc));
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 		    log_usies("SetBoard", currboard);
@@ -1037,7 +1037,7 @@ load_boards(char *key)
 			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
 			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			if (strcasestr(bptr->title, key))
+			if (strcasestr(bptr->desc, key) || strcasestr(bptr->bclass, key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
@@ -1269,10 +1269,13 @@ brdlist_foot(void)
 
 
 static const char *
-make_class_color(char *name)
+make_class_color(const char *name)
 {
     /* 0;34 is too dark */
-    uint32_t index = (((uint32_t)name[0] + name[1] + name[2] + name[3]) & 0x07);
+    uint32_t val = 0;
+    for (int i = 0; i < 4 && name[i]; i++)
+        val += (uint8_t)name[i];
+    uint32_t index = val & 0x07;
     const char *colorset[8] = {"", ANSI_COLOR(32),
 	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34),
 	ANSI_COLOR(1), ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
@@ -1411,7 +1414,7 @@ brdlist_hidden(int newflag, int head, boardstat_t *ptr) {
            B_BH(ptr)->brdname,
            reason,
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-           B_BH(ptr)->title + 7
+           B_BH(ptr)->desc
 #else
            "<目前無法進入此看板>"
 #endif
@@ -1467,7 +1470,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                 SNPRINTF(col_num, "%7dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
         }
 
-        prints("          %s%-40.40s %.*s", col_num, B_BH(ptr)->title + 7,
+        prints("          %s%-40.40s %.*s", col_num, B_BH(ptr)->desc,
                t_columns - 68, B_BH(ptr)->BM);
         clrtoeol();
         return 0;
@@ -1503,15 +1506,18 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
               getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
             B_BH(ptr)->brdname);
 
+    const char *sym = (B_BH(ptr)->brdattr & BRD_SYMBOLIC) ? "☆" :
+                      (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "Σ" : "◎";
+
     char col_class[64];
-    SNPRINTF(col_class, "%s%5.5s" ANSI_COLOR(0;37) "%2.2s" ANSI_RESET,
-            make_class_color(B_BH(ptr)->title),
-            B_BH(ptr)->title,
-            should_show_sensitive_info ? B_BH(ptr)->title + 5 : "");
+    SNPRINTF(col_class, "%s%-4.4s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
+            make_class_color(B_BH(ptr)->bclass),
+            B_BH(ptr)->bclass,
+            should_show_sensitive_info ? sym : "");
 
     char col_desc[128];
     SNPRINTF(col_desc, "%s",
-            should_show_sensitive_info ? B_BH(ptr)->title + 7 : "");
+            should_show_sensitive_info ? B_BH(ptr)->desc : "");
 
     char col_nuser[64];
     if (!should_show_sensitive_info)
@@ -2360,7 +2366,7 @@ fav_cmd_edit_title(cmd_ctx_t *ctx) {
     if ((nbrd[num].myattr & NBRD_FOLDER)) {
         fav_type_t *ft = getfolder(nbrd[num].bid);
         STRLCPY(buf, get_item_title(ft));
-        getdata_buf(b_lines - 1, 0, "請修改名稱: ", buf, BTLEN + 1, DOECHO);
+        getdata_buf(b_lines - 1, 0, "請修改名稱: ", buf, FAV_FOLDER_TITLE_LEN + 1, DOECHO);
         fav_set_folder_title(ft, buf);
         brdnum = -1;
         ctx->reload = true;

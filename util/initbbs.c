@@ -97,63 +97,72 @@ static void initBoards() {
 	memset(&b, 0, sizeof(b));
 	
 	STRLCPY(b.brdname, "SYSOP");
-	STRLCPY(b.title, "嘰哩 ◎站長好!");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "站長好!");
 	b.brdattr = BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 2;
 	newboard(fp, &b);
 
 	STRLCPY(b.brdname, "1...........");
-	strcpy(b.title, ".... Σ中央政府  《高壓危險,非人可敵》");
+	STRLCPY(b.bclass, "....");
+	STRLCPY(b.desc, "中央政府  《高壓危險,非人可敵》");
 	b.brdattr = BRD_GROUPBOARD;
 	b.level = PERM_SYSOP;
 	b.gid = 1;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "junk");
-	STRLCPY(b.title, "發電 ◎雜七雜八的垃圾");
+	STRLCPY(b.bclass, "發電");
+	STRLCPY(b.desc, "雜七雜八的垃圾");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "Security");
-	STRLCPY(b.title, "發電 ◎站內系統安全");
+	STRLCPY(b.bclass, "發電");
+	STRLCPY(b.desc, "站內系統安全");
 	b.brdattr = 0;
 	b.level = PERM_SYSOP;
 	b.gid = 2;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "2...........");
-	STRLCPY(b.title, ".... Σ市民廣場     報告  站長  ㄜ！");
+	STRLCPY(b.bclass, "....");
+	STRLCPY(b.desc, "市民廣場     報告  站長  ㄜ！");
 	b.brdattr = BRD_GROUPBOARD;
 	b.level = 0;
 	b.gid = 1;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, BN_ALLPOST);
-	STRLCPY(b.title, "嘰哩 ◎跨板式LOCAL新文章");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "跨板式LOCAL新文章");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "deleted");
-	STRLCPY(b.title, "嘰哩 ◎資源回收筒");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "資源回收筒");
 	b.brdattr = 0;
 	b.level = PERM_BM;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "Note");
-	STRLCPY(b.title, "嘰哩 ◎動態看板及歌曲投稿");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "動態看板及歌曲投稿");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "Record");
-	STRLCPY(b.title, "嘰哩 ◎我們的成果");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "我們的成果");
 	b.brdattr = 0 | BRD_POSTMASK;
 	b.level = 0;
 	b.gid = 5;
@@ -161,21 +170,24 @@ static void initBoards() {
 	
 	
 	STRLCPY(b.brdname, "WhoAmI");
-	STRLCPY(b.title, "嘰哩 ◎呵呵，猜猜我是誰！");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "呵呵，猜猜我是誰！");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 	
 	STRLCPY(b.brdname, "EditExp");
-	STRLCPY(b.title, "嘰哩 ◎範本精靈投稿區");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "範本精靈投稿區");
 	b.brdattr = 0;
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
 
 	STRLCPY(b.brdname, "ALLHIDPOST");
-	STRLCPY(b.title, "嘰哩 ◎跨板式LOCAL新文章(隱板)");
+	STRLCPY(b.bclass, "嘰哩");
+	STRLCPY(b.desc, "跨板式LOCAL新文章(隱板)");
 	b.brdattr = BRD_POSTMASK | BRD_HIDE;
 	b.level = PERM_SYSOP;
 	b.gid = 5;
@@ -183,7 +195,8 @@ static void initBoards() {
 	
 #ifdef BN_FIVECHESS_LOG
 	STRLCPY(b.brdname, BN_FIVECHESS_LOG);
-	STRLCPY(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
+	STRLCPY(b.bclass, "棋藝");
+	STRLCPY(b.desc, BBSNAME "五子棋譜 站上對局全紀錄");
 	b.brdattr = BRD_POSTMASK;
 	b.level = PERM_SYSOP;
 	b.gid = 5;

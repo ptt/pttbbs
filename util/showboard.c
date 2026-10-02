@@ -31,6 +31,8 @@ int main(int argc, char *argv[])
     memset(allbrd, 0, MAX_BOARD * sizeof(boardheader_t));
     while (read(inf, &allbrd[i], sizeof(boardheader_t)) == sizeof(boardheader_t)) {
 	if (allbrd[i].brdname[0] ) {
+	    if (allbrd[i].bclass[4] == ' ')
+		allbrd[i].bclass[4] = '\0';
 	    i++;
 	}
     }
@@ -57,13 +59,14 @@ int main(int argc, char *argv[])
 		"     看板名稱     板主                     類別   中文敘述\n"
 		"     -----------------------------------------------------------------\n");
 	for (i = 0; i < count; i++) {
-	    printf("%4d %-13s%-25.25s%s\n", i+1, allbrd[i].brdname, allbrd[i].BM, allbrd[i].title);
+	    printf("%4d %-13s%-5.5s %-25.25s%s\n", i+1, allbrd[i].brdname, allbrd[i].bclass, allbrd[i].BM, allbrd[i].desc);
 	}
     } else {
 	/* print details */
 	boardheader_t b = allbrd[detail_i - 1];
 	printf("brdname(bid):\t%s\n", b.brdname);
-	printf("title:\t%s\n", b.title);
+	printf("bclass:\t%s\n", b.bclass);
+	printf("desc:\t%s\n", b.desc);
 	printf("BM:\t%s\n", b.BM);
 	printf("brdattr:\t%08x\n", b.brdattr);
 	printf("post_limit_logins:\t%d\n", b.post_limit_logins);
@@ -82,9 +85,9 @@ int main(int argc, char *argv[])
 	printf("---- children: ---- \n");
 	for (i = 0; i < count; i++) {
 	    if(allbrd[i].gid == detail_i)
-		printf("%4d %-13s%-25.25s%s\n", 
+		printf("%4d %-13s%-5.5s %-25.25s%s\n", 
 			i+1, allbrd[i].brdname, 
-			allbrd[i].BM, allbrd[i].title);
+			allbrd[i].bclass, allbrd[i].BM, allbrd[i].desc);
 	}
     }
     return 0;

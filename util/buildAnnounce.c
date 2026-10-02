@@ -9,8 +9,10 @@ int cmpboardclass(const void *a, const void *b)
 {
     boardheader_t **brd = (boardheader_t **)a;
     boardheader_t **tmp = (boardheader_t **)b;
-    return (strncmp((*brd)->title, (*tmp)->title, 4)<<8)+
-	   strncasecmp((*brd)->brdname, (*tmp)->brdname, IDLEN);
+	int cmp = strcmp((*brd)->bclass, (*tmp)->bclass);
+	if (cmp)
+	    return cmp;
+	return strncasecmp((*brd)->brdname, (*tmp)->brdname, IDLEN);
 } 
 void buildchilds(int level,char *path,int gid)
 {
@@ -45,8 +47,8 @@ void buildchilds(int level,char *path,int gid)
     for(i=0;i<count;i++)
     {
         ptr=selected[i];
-        printf("%*.*s+-%-14s %-s \n",level*2,level*2,"| | | | | | | | |",
-	       ptr->brdname, ptr->title);
+        printf("%*.*s+-%-14s %-5.5s %-s \n",level*2,level*2,"| | | | | | | | |",
+	       ptr->brdname, ptr->bclass, ptr->desc);
 
         if(ptr->brdattr & BRD_GROUPBOARD){
 	    SNPRINTF(newpath, "%s/%s",path,ptr->brdname);
@@ -68,7 +70,7 @@ void buildchilds(int level,char *path,int gid)
         STRLCPY(item.owner, ptr->BM);
 	if((p=strchr(item.owner,'/'))!=NULL)
 	    *p='\0';
-        SNPRINTF(item.title, "%-13.13s %-32.32s", level?ptr->brdname:"", ptr->title+7);
+        SNPRINTF(item.title, "%-13.13s %-32.32s", level?ptr->brdname:"", ptr->desc);
         item.filemode =  0 ;
 	STRLCPY(item.filename, ptr->brdname);
         SNPRINTF(newpath, "%s/.DIR",path);
