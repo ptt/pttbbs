@@ -55,16 +55,19 @@ int main(int argc, char *argv[])
     if (detail_i < 0) {
 	printf(
 		"     看板名稱     板主                     類別   中文敘述\n"
-		"     -----------------------------------------------------------------\n");
+		"     ------------------------------------------------------------------------\n");
 	for (i = 0; i < count; i++) {
-	    printf("%4d %-13s%-25.25s%s\n", i+1, allbrd[i].brdname, allbrd[i].BM, allbrd[i].title);
+            printf("%4d %-13s%-24.24s %4.4s %-35.35s\n", i+1, allbrd[i].brdname,
+                    allbrd[i].BM,
+                    allbrd[i].bclass, allbrd[i].desc);
 	}
     } else {
 	/* print details */
 	boardheader_t b = allbrd[detail_i - 1];
 	printf("brdname(bid):\t%s\n", b.brdname);
-	printf("title:\t%s\n", b.title);
 	printf("BM:\t%s\n", b.BM);
+	printf("bclass:\t%s\n", b.bclass);
+	printf("desc:\t%s\n", b.desc);
 	printf("brdattr:\t%08x\n", b.brdattr);
 	printf("post_limit_logins:\t%d\n", b.post_limit_logins);
 	printf("post_limit_badpost:\t%d\n", b.post_limit_badpost);
@@ -82,9 +85,9 @@ int main(int argc, char *argv[])
 	printf("---- children: ---- \n");
 	for (i = 0; i < count; i++) {
 	    if(allbrd[i].gid == detail_i)
-		printf("%4d %-13s%-25.25s%s\n", 
+		printf("%4d %-13s%-5.5s %-25.25s%s\n", 
 			i+1, allbrd[i].brdname, 
-			allbrd[i].BM, allbrd[i].title);
+			allbrd[i].bclass, allbrd[i].BM, allbrd[i].desc);
 	}
     }
     return 0;

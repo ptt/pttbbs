@@ -15,6 +15,19 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## board, cache: Split boardheader_t title
+
+把原本混合類別、符號與主題的 `boardheader_t.title` 拆分成：
+- `bclass`: 4 bytes 看板類別名稱 + `\0` (5 bytes)
+- `pad_symbol`: 2 bytes (原本的符號改由 `brdattr` 的 `BRD_GROUPBOARD` /
+  `BRD_SYMBOLIC` 即時繪製，不再存於字串內)
+- `desc`: 42 bytes（`BTLEN + 1`，`BTLEN` 由 48 調為 41，長度剛好為原本主題的 41
+  bytes + `\0`）
+
+看板二進位結構維持 256 bytes，且 `desc` 在 `.BRD` 檔案中的 offset 維持在 offset
+7 不變。 昇級時請先關閉所有舊的 `mbbsd` 與相關 daemon，執行
+`upgrade/board_split_title`, 再 `shmctl reload` 重載 cache 後重啟 BBS 服務。
+
 ## shm, util, mbbsd: Replace sorted utmp with direct user session table
 
 把原本 SHM->sorted 的 UTMP tables 改為以 UID 直接定址的反向查表（`utmp_user`）

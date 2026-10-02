@@ -148,7 +148,8 @@ typedef struct userec_t {
 # define cuser	     pwcuser
 #endif
 
-#define BTLEN      48             /* Length of board title */
+#define BTLEN      41             /* Length of board title */
+#define BCLEN      4              /* Length of board class */
 
 /* flags for userec_t.u_2fa */
 typedef enum {
@@ -208,7 +209,9 @@ static inline aidu_t aidu_with_idx(aidu_t a, int idx) {
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */
     char    brdname[IDLEN + 1];	    /* bid */
-    char    title[BTLEN + 1];
+    char    bclass[BCLEN + 1];	    /* 4 bytes class + \0 */
+    char    pad_symbol[2];	    /* deprecated symbol */
+    char    desc[BTLEN + 1];	    /* board title/desc (42 bytes) */
     char    BM[IDLEN * 3 + 3];	    /* BMs' userid, token '/' */
     char    pad1[3];
     uint32_t brdattr;		    /* board的屬性 */

@@ -497,7 +497,7 @@ cmpboardclass(const void * i, const void * j)
     boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
     int cmp;
 
-    cmp=strncmp(brd1->title, brd2->title, 4);
+	cmp = strcmp(brd1->bclass, brd2->bclass);
     if(cmp!=0) return cmp;
     return strcasecmp(brd1->brdname, brd2->brdname);
 }
@@ -608,6 +608,8 @@ reset_board(int bid) /* XXXbid: from 1 */
 	lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
 	read(fd, bhdr, sizeof(boardheader_t));
 	close(fd);
+	if (bhdr->bclass[4] == ' ')
+	    bhdr->bclass[4] = '\0';
     }
     __atomic_store_n(&SHM->busystate_b[bid], 0, __ATOMIC_RELEASE);
 

@@ -637,10 +637,10 @@ m_mod_board(char *bname)
 	return -1;
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    prints("看板名稱：%s %s\n看板說明：%s\n看板bid：%d\n看板GID：%d\n"
+    prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
 	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
            ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
-           bh.title, bid, bh.gid, bh.BM);
+           bh.desc, bh.bclass, bid, bh.gid, bh.BM);
     bperm_msg(&bh);
 
     /* Ptt 這邊斷行會檔到下面 */
@@ -751,13 +751,13 @@ m_mod_board(char *bname)
 	    RmTree(bpath);
 	    RmTree(apath);
 	    memset(&bh, 0, sizeof(bh));
-	    SNPRINTF(bh.title, "     %s 看板 %s 刪除", bname, cuser.userid);
-	    post_msg(BN_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");
+	    SNPRINTF(bh.desc, "%s 看板 %s 刪除", bname, cuser.userid);
+	    post_msg(BN_SECURITY, bh.desc, "請注意刪除的合法性", "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(FN_BOARD, &bh, sizeof(bh), bid);
 	    reset_board(bid);
             sort_bcache();
-	    log_usies("DelBoard", bh.title);
+	    log_usies("DelBoard", bh.desc);
 	    outs("刪板完畢");
 	}
 	break;
@@ -797,20 +797,18 @@ m_mod_board(char *bname)
         y++;
 
 	do {
-	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, bh.title);
+	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, bh.bclass);
 	    if (strlen(genbuf) == 4)
 		break;
 	} while (1);
         y++;
 
-	STRLCPY(newbh.title, genbuf);
-	newbh.title[4] = ' ';
+	STRLCPY(newbh.bclass, genbuf);
 
-	// 7 for category
-	getdata_str(y++, 0, "看板主題：", genbuf, BTLEN + 1 -7,
-                    DOECHO, bh.title + 7);
+	getdata_str(y++, 0, "看板主題：", genbuf, sizeof(newbh.desc),
+                    DOECHO, bh.desc);
 	if (genbuf[0])
-	    strlcpy(newbh.title + 7, genbuf, sizeof(newbh.title) - 7);
+	    strlcpy(newbh.desc, genbuf, sizeof(newbh.desc));
 
         do {
             int uids[MAX_BMs], i;
@@ -858,16 +856,6 @@ m_mod_board(char *bname)
 	    clrtobot();
 	}
 
-	{
-	    const char* brd_symbol;
-	    if (newbh.brdattr & BRD_GROUPBOARD)
-        	brd_symbol = "Σ";
-	    else
-		brd_symbol = "◎";
-
-	    newbh.title[5] = brd_symbol[0];
-	    newbh.title[6] = brd_symbol[1];
-	}
 
 	if (HasUserPerm(PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
             getdata(y++, 0, "設定讀寫權限(y/N)？", ans, sizeof(ans), LCECHO);
@@ -1053,12 +1041,11 @@ m_newbrd(int whatclass, int recover)
 	    break;
     } while (1);
 
-    STRLCPY(newboard.title, genbuf);
-    newboard.title[4] = ' ';
+    STRLCPY(newboard.bclass, genbuf);
 
-    getdata(8, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO);
+    getdata(8, 0, "看板主題：", genbuf, sizeof(newboard.desc), DOECHO);
     if (genbuf[0])
-	strlcpy(newboard.title + 7, genbuf, sizeof(newboard.title) - 7);
+	strlcpy(newboard.desc, genbuf, sizeof(newboard.desc));
     setbpath(genbuf, newboard.brdname);
 
     // Recover 應只拿來處理目錄已存在(但.BRD沒有)的情況，不然就會在
@@ -1099,16 +1086,6 @@ m_newbrd(int whatclass, int recover)
 	newboard.brdattr &= ~BRD_CPLOG;
     }
 
-	{
-	    const char* brd_symbol;
-	    if (newboard.brdattr & BRD_GROUPBOARD)
-        	brd_symbol = "Σ";
-	    else
-		brd_symbol = "◎";
-
-	    newboard.title[5] = brd_symbol[0];
-	    newboard.title[6] = brd_symbol[1];
-	}
 
     newboard.level = 0;
     getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
@@ -1145,8 +1122,8 @@ m_newbrd(int whatclass, int recover)
     pressanykey();
     setup_man(&newboard, NULL);
     outs("\n新板成立");
-    post_newboard(newboard.title, newboard.brdname, newboard.BM);
-    log_usies("NewBoard", newboard.title);
+    post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, newboard.BM);
+    log_usies("NewBoard", newboard.desc);
     pressanykey();
     return 0;
 }
@@ -1176,8 +1153,8 @@ int make_board_link(const char *bname, int gid)
 
     STRLCPY(newboard.brdname, bname);
     newboard.brdname[strlen(bname) - 1] = '~';
-    STRLCPY(newboard.title, bcache[bid - 1].title);
-    strcpy(newboard.title + 5, "＠看板連結");
+    STRLCPY(newboard.bclass, bcache[bid - 1].bclass);
+    STRLCPY(newboard.desc, bcache[bid - 1].desc);
 
     newboard.gid = gid;
     BRD_LINK_TARGET(&newboard) = bid;

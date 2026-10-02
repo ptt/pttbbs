@@ -146,7 +146,8 @@ int listbrd(int argc, char **argv)
 	/* print details */
 	boardheader_t b = bcache[di-1];
 	printf("brdname(bid):\t%s\n", b.brdname);
-	printf("title:\t%s\n", b.title);
+	printf("bclass:\t%s\n", b.bclass);
+	printf("desc:\t%s\n", b.desc);
 	printf("BM:\t%s\n", b.BM);
 	printf("brdattr:\t%08x ", b.brdattr);
 
@@ -197,15 +198,15 @@ int listbrd(int argc, char **argv)
         for (i = 0; i < MAX_BOARD; i++)
         {
             if(bcache[i].gid == di && bcache[i].brdname[0])
-                printf("%4d %-13s%-25.25s%s\n",
-                        i+1, bcache[i].brdname,
-                        bcache[i].BM, bcache[i].title);
+                printf("%4d %-13s%-5.5s %-25.25s%s\n",
+                        i+1, bcache[i].brdname, bcache[i].bclass,
+                        bcache[i].BM, bcache[i].desc);
         }
     } else
     for( i = 0 ; i < MAX_BOARD ; ++i )
     {
 	if(bcache[i].brdname[0])
-	    printf("%03d %-13s%-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].BM, bcache[i].title);
+	    printf("%03d %-13s%-5.5s %-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].bclass, bcache[i].BM, bcache[i].desc);
     }
     return 0;
 }
@@ -389,8 +390,8 @@ int hotboard(int argc, char **argv)
 	}
 
     for( i = 0 ; i < nbrds ; ++i )
-	printf("%05d|%-12s|%s\n",
-	       brd[i].nusers, brd[i].b->brdname, brd[i].b->title);
+	printf("%05d|%-12s|%-5.5s|%s\n",
+	       brd[i].nusers, brd[i].b->brdname, brd[i].b->bclass, brd[i].b->desc);
     return 0;
 }
 
