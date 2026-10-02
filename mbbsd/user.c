@@ -298,7 +298,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
-    strcpy(fhdr.owner, "[" BBSMNAME "警察局]");
+    STRLCPY(fhdr.owner, "[" BBSMNAME "警察局]");
     sethomedir(genbuf, crime);
     append_fileheader(genbuf, &fhdr);
 }
@@ -482,12 +482,19 @@ typedef struct {
     int valid_count;
 } customize_ctx_t;
 
-static int customize_header(PSB_CTX *ctx GCC_UNUSED) {
-    const int col_opt = 54;
+static VCOL customize_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  項", 6, 6, 20},
+    {"項目", 30, 54, 80},
+    {"設定值", 10, 30, 100},
+    {0},
+};
+#define CUSTOMIZE_COLS (ARRAY_SIZE(customize_coldefs) - 1)
+
+static int customize_header(PSB_CTX *ctx) {
     vs_draw_hdr2("偏好設定列表", "調整介面顯示與操作偏好");
     move(2, 0);
-    prints(ANSI_COLOR(32) "      %-11s%-*s%s" ANSI_RESET "\n",
-           "分類", col_opt - 11, "描述", "設定值");
+    psb_render_header_columns(ctx, NULL);
     return 0;
 }
 
@@ -502,14 +509,12 @@ static int customize_renderer(int i, PSB_CTX *ctx) {
     customize_ctx_t *cx = (customize_ctx_t *)ctx->cmd.priv;
     int item_idx = cx->valid_indices[i];
     const CustomItem *item = &items[item_idx];
-    const int col_opt = 54;
     const char *val = Getter(item);
 
-    outs("   ");
-    prints(ANSI_COLOR(1;36) "%c" ANSI_RESET ". %-*s%s",
-           'a' + i,
-           stream_width(val) < 16 ? col_opt : 0,
-           item->desc, val);
+    char num[32];
+    SNPRINTF(num, "  " ANSI_COLOR(1;36) "%c" ANSI_RESET ".", 'a' + i);
+
+    render_columns(ctx, "", num, item->desc, val);
     return 0;
 }
 
@@ -560,6 +565,9 @@ void Customize(void)
         .header_lines = 3,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
+        .cols = CUSTOMIZE_COLS,
+        .vcols = customize_coldefs,
+        .col_paddings = 2,
         .header = customize_header,
         .footer = customize_footer,
         .renderer = customize_renderer,
