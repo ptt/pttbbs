@@ -222,7 +222,8 @@ convert_fileheader(fileheader_t *fh)
 static void
 convert_boardheader(boardheader_t *bh)
 {
-    conv_field_b2u(bh->title, sizeof(bh->title));
+    conv_field_b2u(bh->bclass, sizeof(bh->bclass));
+    conv_field_b2u(bh->desc, sizeof(bh->desc));
     conv_field_b2u(bh->BM, sizeof(bh->BM));
     conv_field_b2u(bh->posttype, sizeof(bh->posttype));
 }

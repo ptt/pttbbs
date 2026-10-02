@@ -206,7 +206,7 @@ static char *get_item_class(fav_type_t *ft)
 	case FAVT_BOARD:
 	    if ((cast_board(ft)->bid < 1 || cast_board(ft)->bid > MAX_BOARD))
 		return "";
-	    return bcache[cast_board(ft)->bid - 1].title;
+	    return bcache[cast_board(ft)->bid - 1].bclass;
 	case FAVT_FOLDER:
 	    return "¥Ø¿ý";
 	case FAVT_LINE:
@@ -356,7 +356,7 @@ static int favcmp_by_class(const void *a, const void *b)
     if (get_item_type(f2) == FAVT_LINE)
 	return -1;
 
-    cmp = strncasecmp(get_item_class(f1), get_item_class(f2), 4);
+    cmp = strcasecmp(get_item_class(f1), get_item_class(f2));
     if (cmp)
 	return cmp;
     return strcasecmp(get_item_title(f1), get_item_title(f2));
@@ -457,7 +457,7 @@ static int read_favrec(FILE *frp, fav_t *fp)
 	    case FAVT_FOLDER:
 		ft->folder = (fav_folder_t *)fav_malloc(sizeof(fav_folder_t));
 		fread(&cast_folder(ft)->fid, sizeof(char), 1, frp);
-		fread(&cast_folder(ft)->title, BTLEN + 1, 1, frp);
+		fread(&cast_folder(ft)->title, sizeof(cast_folder(ft)->title), 1, frp);
 		break;
 	    case FAVT_BOARD:
 		fread(&ft->board, sizeof(fav_board_t), 1, frp);
@@ -576,7 +576,7 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 	switch (ft->type) {
 	    case FAVT_FOLDER:
 		fwrite(&cast_folder(ft)->fid, sizeof(char), 1, fwp);
-		fwrite(&cast_folder(ft)->title, BTLEN + 1, 1, fwp);
+		fwrite(&cast_folder(ft)->title, sizeof(cast_folder(ft)->title), 1, fwp);
 		break;
 	    case FAVT_BOARD:
 		fwrite(&ft->board, sizeof(fav_board_t), 1, fwp);
@@ -1018,7 +1018,7 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     }
     tmp = fav_preappend(fav_get_tmp_fav(), ft->type);
     if (ft->type == FAVT_FOLDER) {
-	strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, BTLEN + 1);
+	strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, sizeof(cast_folder(tmp)->title));
 	cast_folder(tmp)->this_folder = cast_folder(ft)->this_folder;
 	free(ft->folder);
 	ft->folder = NULL;
@@ -1226,7 +1226,7 @@ void reginit_fav(void)
 #if 1 // DEPRECATED
 typedef struct {
     char            fid;
-    char            title[BTLEN + 1];
+    char            title[FAV_FOLDER_TITLE_LEN + 1];
     int             this_folder;
 } fav_folder4_t;
 
