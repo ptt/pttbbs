@@ -750,8 +750,11 @@ setbtotal(int bid)
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(genbuf, bh->brdname, FN_DIR);
-    if ((fd = open(genbuf, O_RDONLY)) < 0)
-	return;			/* .DIR±¾¤F */
+    if ((fd = open(genbuf, O_RDONLY)) < 0) {
+        SHM->total[bid - 1] = 0;
+        SHM->lastposttime[bid - 1] = 0;
+        return;
+    }
     fstat(fd, &st);
     num = st.st_size / sizeof(fileheader_t);
     assert(0<=bid-1 && bid-1<MAX_BOARD);
