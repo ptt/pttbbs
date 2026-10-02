@@ -4578,8 +4578,14 @@ Read(void)
     char            buf[PATHLEN];
 
     const char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
-    if (enter_board(bname) < 0)
-	return 0;
+    int enter_ret = enter_board(bname);
+    if (enter_ret < 0) {
+        if (enter_ret == -2)
+            vmsg("您沒有進入此看板的權限！");
+        else if (enter_ret == -3)
+            vmsg("無法建立或進入看板目錄！");
+        return 0;
+    }
 
     setutmpmode(READING);
 

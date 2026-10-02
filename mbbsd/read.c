@@ -1655,10 +1655,8 @@ read_loader(PSB_CTX *psbctx)
                 cx->sr_pred_count = 0;
                 cx->sr_mode_mask = 0;
             }
-            if ((last_line = getbtotal(currbid)) == 0) {
-                setbtotal(currbid);
-                last_line = getbtotal(currbid);
-            }
+            setbtotal(currbid);
+            last_line = getbtotal(currbid);
             cx->bottom_line = last_line;
             cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
             last_line += cx->view.bottom_count;
@@ -1739,6 +1737,16 @@ read_loader(PSB_CTX *psbctx)
     cx->locmem->crs_ln = read_view_v2p(&cx->view, psbctx->cmd.curr);
     cx->entries = read_view_load_window(cx, currdirect, headers,
                                         psbctx->cmd.base, headers_size);
+    if (psbctx->cmd.base == 0 && cx->entries == 0 && cx->view.bottom_count == 0 && cx->view.total > 0) {
+        cx->view.total = 0;
+        cx->bottom_line = 0;
+        last_line = 0;
+        psbctx->cmd.total = 0;
+        psbctx->cmd.curr = 0;
+        psbctx->cmd.base = 0;
+        if (cx->bidcache > 0)
+            setbtotal(cx->bidcache);
+    }
     /* view.total may also have been changed by commands (e.g. select_by_aid,
      * read_view_ensure_window); always resync psb's total. */
     if (cx->view.total != old_total || psbctx->cmd.total != cx->view.total) {
