@@ -223,92 +223,335 @@ b_post_note(void)
     return FULLUPDATE;
 }
 
-static int
-b_posttype()
+static void
+truncate_category(char *cat, size_t cat_sz, const char *src)
 {
-   boardheader_t  *bp;
-   int i, modified = 0, types = 0;
-   char filepath[PATHLEN], genbuf[60];
-   char posttype_f, posttype[sizeof(bp->posttype)]="", *p;
+    int cur_w = 0;
+    size_t cat_len = 0;
+    while (*src && cur_w < 4) {
+        int char_bytes = mb_bytes(src);
+        int char_w = mb_width(src);
+        if (char_bytes <= 0) char_bytes = 1;
+        if (char_w <= 0) char_w = 1;
+        if (cur_w + char_w > 4)
+            break;
+        if (cat_len + (size_t)char_bytes >= cat_sz)
+            break;
+        memcpy(cat + cat_len, src, char_bytes);
+        cat_len += char_bytes;
+        cur_w += char_w;
+        src += char_bytes;
+    }
+    cat[cat_len] = '\0';
+    mbs_safe_trim(cat);
+}
 
-   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-   bp = getbcache(currbid);
-   posttype_f = bp->posttype_f;
-   memcpy(posttype, bp->posttype, sizeof(bp->posttype));
+#define MAX_POSTTYPES 8
 
-   vs_hdr("設定文章類別");
+typedef struct {
+    boardheader_t *bp;
+    int total;
+    char categories[MAX_POSTTYPES][SZ_COLS(5)];
+    char tmpl_files[MAX_POSTTYPES][PATHLEN];
+    bool has_tmpl[MAX_POSTTYPES];
+    char first_lines[MAX_POSTTYPES][128];
+} posttype_tmpl_ctx_t;
 
-   do {
-       move(2, 0);
-       clrtobot();
-       for (i = 0, p = posttype; *p && i < 8; i++, p += 4) {
-           strlcpy(genbuf, p, 5);
-           prints(" %d. %s %s\n", i + 1, genbuf,
-                  posttype_f & (1 << i) ? "(有範本)": "");
-           // Workaround broken items
-           if (strlen(p) < 4) {
-               memset(p + strlen(p), ' ', 4 - strlen(p));
-           }
-       }
-       types = i;
-       if (!getdata(15, 0,
-                    "請輸入要設定的項目編號，或 c 設定總數,或 ENTER 離開:",
-                    genbuf, 3, LCECHO))
-           break;
+static VCOL tmpl_coldefs[] = {
+    { "", 3, 3, 100 },
+    { "類別", 8, 8, 30 },
+    { "範本", 6, 6, 20 },
+    { "範本內容", 20, 0, 100 },
+    { 0 },
+};
+#define TMPL_COLS (ARRAY_SIZE(tmpl_coldefs) - 1)
 
-       if (genbuf[0] == 'c') {
-           getdata(15, 0, "要保留幾項類別呢？ [0-8或 ENTER 離開]: ", genbuf, 3,
-                   NUMECHO);
-           if (!isdigit(genbuf[0]))
-               continue;
-           i = atoi(genbuf);
-           if (i < 0 || i > 8)
-               continue;
-           while (i > types++)
-               STRLCAT(posttype, "    ");
-           posttype[i * 4] = 0;
-           continue;
-       }
+static void
+tmpl_refresh_item(posttype_tmpl_ctx_t *cx, int idx)
+{
+    const char *filepath = cx->tmpl_files[idx];
+    if (dashs(filepath) > 0) {
+        cx->has_tmpl[idx] = true;
+        cx->first_lines[idx][0] = '\0';
+        FILE *fp = fopen(filepath, "r");
+        if (fp) {
+            char line[128];
+            while (fgets(line, sizeof(line), fp)) {
+                chomp(line);
+                char *p = line;
+                while (*p == ' ' || *p == '\t') p++;
+                if (*p != '\0') {
+                    strip_control_sequence(line, line);
+                    strlcpy(cx->first_lines[idx], line, sizeof(cx->first_lines[idx]));
+                    break;
+                }
+            }
+            fclose(fp);
+            if (cx->first_lines[idx][0] == '\0') {
+                strlcpy(cx->first_lines[idx], "(空白內容)", sizeof(cx->first_lines[idx]));
+            }
+        }
+    } else {
+        if (dashf(filepath))
+            unlink(filepath);
+        cx->has_tmpl[idx] = false;
+        cx->first_lines[idx][0] = '\0';
+    }
+}
 
-       i = atoi(genbuf) - 1;
-       if (i < 0 || i >= 8)
-           continue;
-       strlcpy(genbuf, posttype + i * 4, 5);
-       if(getdata_str(16, 0, "類別名稱: ", genbuf, 5, DOECHO, genbuf)) {
-           char tmp[5];
-           SNPRINTF(tmp, "%-4.4s", genbuf);
-           memcpy(posttype + (i * 4), tmp, 4);
-       }
-       getdata(17, 0, "要使用範本嗎? [y/n/K(不改變)]: ", genbuf, 2, LCECHO);
-       if (genbuf[0] == 'y')
-           posttype_f |= 1 << i;
-       else if (genbuf[0] == 'n') {
-           posttype_f &= ~(1 << i);
-           continue;
-       }
-       getdata(18, 0, "要編輯範本檔案嗎? [y/N]: ", genbuf, 2, LCECHO);
-       if (genbuf[0] == 'y') {
-           setbnfile(filepath, bp->brdname, "postsample", i);
-           veditfile(filepath);
-       }
-   } while (1);
+static int
+tmpl_header(PSB_CTX *ctx)
+{
+    posttype_tmpl_ctx_t *cx = (posttype_tmpl_ctx_t *)ctx->cmd.priv;
+    vs_draw_hdr2("文章類別範本設定", cx->bp->brdname);
+    outs("請按 Enter 編輯範本，按 d 刪除範本，按 ←/q 結束離開。\n");
+    return 0;
+}
 
-   // TODO last chance to confirm.
-   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-   if (bp->posttype_f != posttype_f) {
-       bp->posttype_f = posttype_f;
-       modified = 1;
-   }
-   if (strcmp(bp->posttype, posttype) != 0) {
-       /* 這邊應該要防race condition */
-       STRLCPY(bp->posttype, posttype);
-       modified = 1;
-   }
-   if (modified) {
-       substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
-       vmsg("資料已更新。");
-   }
-   return FULLUPDATE;
+static int
+tmpl_renderer(int i, PSB_CTX *ctx)
+{
+    posttype_tmpl_ctx_t *cx = (posttype_tmpl_ctx_t *)ctx->cmd.priv;
+    if (i < 0 || i >= cx->total)
+        return 0;
+
+    const char *status = cx->has_tmpl[i] ? "有" : "無";
+    render_columns(ctx,
+                   "",
+                   cx->categories[i],
+                   status,
+                   cx->first_lines[i]);
+    return 0;
+}
+
+static int
+tmpl_footer(PSB_CTX *ctx GCC_UNUSED)
+{
+    vs_footer(" 範本設定 ", " (Enter)編輯 (d)刪除 	(q/←)離開");
+    return 0;
+}
+
+static int
+tmpl_cmd_edit(cmd_ctx_t *ctx)
+{
+    posttype_tmpl_ctx_t *cx = (posttype_tmpl_ctx_t *)ctx->priv;
+    int idx = ctx->curr;
+    if (idx < 0 || idx >= cx->total)
+        return 0;
+
+    char *filepath = cx->tmpl_files[idx];
+    char bdir[PATHLEN];
+    setbpath(bdir, cx->bp->brdname);
+    if (!dashd(bdir))
+        Mkdir(bdir);
+
+    veditfile(filepath);
+    tmpl_refresh_item(cx, idx);
+    ctx->redraw = true;
+    return 0;
+}
+
+static int
+tmpl_cmd_delete(cmd_ctx_t *ctx)
+{
+    posttype_tmpl_ctx_t *cx = (posttype_tmpl_ctx_t *)ctx->priv;
+    int idx = ctx->curr;
+    if (idx < 0 || idx >= cx->total)
+        return 0;
+
+    if (!cx->has_tmpl[idx]) {
+        vmsg("此類別尚無範本。");
+        return 0;
+    }
+
+    char prompt[128];
+    snprintf(prompt, sizeof(prompt), "確定要刪除「%s」的範本嗎？(y/N) ", cx->categories[idx]);
+    if (vans(prompt) == 'y') {
+        unlink(cx->tmpl_files[idx]);
+        tmpl_refresh_item(cx, idx);
+        vmsg("範本已刪除。");
+        ctx->redraw = true;
+    } else {
+        ctx->redraw_footer_lines = 1;
+    }
+    return 0;
+}
+
+static const cmd_t tmpl_cmds[] = {
+    { KEY_ENTER, "編輯", "編輯文章範本", tmpl_cmd_edit, 0, CMD_PRIO_MAX, true },
+    { KEY_RIGHT, NULL, NULL, tmpl_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'e', NULL, NULL, tmpl_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, tmpl_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'd', "刪除", "刪除文章範本", tmpl_cmd_delete, 0, CMD_PRIO_HIGH, true },
+    { KEY_DEL, NULL, NULL, tmpl_cmd_delete, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static int
+b_posttype_templates(boardheader_t *bp)
+{
+    char posttype_path[PATHLEN];
+    FILE *fp;
+    char buf[256];
+    posttype_tmpl_ctx_t cx;
+
+    memset(&cx, 0, sizeof(cx));
+    cx.bp = bp;
+    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
+    fp = fopen(posttype_path, "r");
+    if (!fp)
+        return 0;
+
+    int count = 0;
+    while (count < MAX_POSTTYPES && fgets(buf, sizeof(buf), fp)) {
+        chomp(buf);
+        char *p = buf;
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '#' || *p == '\0')
+            continue;
+
+        char *end = p + strlen(p) - 1;
+        while (end > p && (*end == ' ' || *end == '\t')) {
+            *end = '\0';
+            end--;
+        }
+        if (*p == '\0')
+            continue;
+
+        char cat[32];
+        truncate_category(cat, sizeof(cat), p);
+
+        if (cat[0] != '\0') {
+            strlcpy(cx.categories[count], cat, sizeof(cx.categories[count]));
+            setbnfile(cx.tmpl_files[count], bp->brdname, "postsample", count);
+            tmpl_refresh_item(&cx, count);
+            count++;
+        }
+    }
+    fclose(fp);
+
+    if (count == 0)
+        return 0;
+
+    cx.total = count;
+
+    PSB_CTX ctx = {
+        .cmd = {
+            .curr = 0,
+            .total = count,
+            .priv = &cx,
+            .caption = " 文章類別範本設定 ",
+        },
+        .header_lines = 3,
+        .footer_lines = 1,
+        .cols = TMPL_COLS,
+        .vcols = tmpl_coldefs,
+        .col_paddings = 1,
+        .header = tmpl_header,
+        .footer = tmpl_footer,
+        .renderer = tmpl_renderer,
+        .cmds = tmpl_cmds,
+    };
+
+    psb_main(&ctx);
+    return 0;
+}
+
+static int
+b_posttype(void)
+{
+    boardheader_t *bp;
+    char posttype_path[PATHLEN];
+    char tmpfile[PATHLEN];
+    char out_tmp[PATHLEN];
+    char bdir[PATHLEN];
+    FILE *fp_in, *fp_out;
+    char buf[256];
+
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    bp = getbcache(currbid);
+    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
+
+    snprintf(tmpfile, sizeof(tmpfile), "tmp/posttype.%d", (int)getpid());
+    fp_out = fopen(tmpfile, "w");
+    if (!fp_out) {
+        vmsg("無法建立暫存檔");
+        return FULLUPDATE;
+    }
+
+    fputs("# 每一行代表一個類別，類別最多四個字（一個中文字算2字）\n"
+          "# 以 # 開頭為註解，儲存檔案時會自動忽略\n"
+          "# 若清空內容儲存，將會刪除看版的發文類別設定\n"
+          "# 儲存離開後，可繼續設定各類別之範本（Template）\n", fp_out);
+
+    fp_in = fopen(posttype_path, "r");
+    if (fp_in) {
+        while (fgets(buf, sizeof(buf), fp_in)) {
+            fputs(buf, fp_out);
+        }
+        fclose(fp_in);
+    }
+    fclose(fp_out);
+
+    int res = veditfile(tmpfile);
+    if (res >= 0) {
+        fp_in = fopen(tmpfile, "r");
+        if (fp_in) {
+            snprintf(out_tmp, sizeof(out_tmp), "%s.new", posttype_path);
+            FILE *fp_new = fopen(out_tmp, "w");
+            int valid_count = 0;
+
+            if (fp_new) {
+                while (fgets(buf, sizeof(buf), fp_in)) {
+                    chomp(buf);
+                    char *p = buf;
+                    while (*p == ' ' || *p == '\t') p++;
+                    if (*p == '#' || *p == '\0')
+                        continue;
+
+                    char *end = p + strlen(p) - 1;
+                    while (end > p && (*end == ' ' || *end == '\t')) {
+                        *end = '\0';
+                        end--;
+                    }
+                    if (*p == '\0')
+                        continue;
+
+                    char cat[32];
+                    truncate_category(cat, sizeof(cat), p);
+
+                    if (cat[0] != '\0') {
+                        fprintf(fp_new, "%s\n", cat);
+                        valid_count++;
+                    }
+                }
+                fclose(fp_new);
+
+                if (valid_count > 0) {
+                    setbpath(bdir, bp->brdname);
+                    if (!dashd(bdir))
+                        Mkdir(bdir);
+                    rename(out_tmp, posttype_path);
+                    b_posttype_templates(bp);
+                    vmsg("發文類別已更新。");
+                } else {
+                    unlink(out_tmp);
+                    unlink(posttype_path);
+                    vmsg("已清除發文類別設定。");
+                }
+            }
+            fclose(fp_in);
+        }
+    }
+
+    else {
+        if (dashf(posttype_path) && vans("要編輯現有類別的範本嗎？(y/N) ") == 'y') {
+            b_posttype_templates(bp);
+        }
+    }
+
+    unlink(tmpfile);
+    return FULLUPDATE;
 }
 
 static int
