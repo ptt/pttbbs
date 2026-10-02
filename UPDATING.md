@@ -15,6 +15,15 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## board, mbbsd: Move posttype to per-board files
+
+將原本固定存在 `boardheader_t` 內的 `posttype` 與 `posttype_f`
+改為直接讀寫各看板目錄下的檔案 `boards/<B>/<board>/posttype`。
+
+昇級時需匯出既有分類設定（可隨時在背景執行，不影響運行中的 BBS 服務）：
+`./upgrade/board_posttype_to_file`
+
+---
 ## board, cache: Split boardheader_t title
 
 把原本混合類別、符號與主題的 `boardheader_t.title` 拆分成：

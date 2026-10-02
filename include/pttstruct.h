@@ -235,8 +235,8 @@ typedef struct boardheader_t { /* 256 bytes */
     int32_t nuser;		    /* 多少人在這板 */
     int32_t postexpire;		    /* postexpire */
     time4_t endgamble;
-    char    posttype[33];
-    char    posttype_f;
+    char    deprecated_posttype[33];	    /* (已停用) 移至 boards/<board>/posttype */
+    char    deprecated_posttype_f;	    /* (已停用) */
     uint8_t fastrecommend_pause;    /* 快速連推間隔 */
     uint8_t vote_limit_badpost;	    /* 連署 : 劣文上限 */
     uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
