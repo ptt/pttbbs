@@ -865,8 +865,7 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
             for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
                 int real_recno = read_view_real_recno(cx, recbase + i);
                 if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
-                    !buf[rv].filename[0] || buf[rv].filename[0] == '.' ||
-                    buf[rv].owner[0] == '-') {
+                    !buf[rv].filename[0]) {
                     stale = 1;
                     break;
                 }
