@@ -182,7 +182,7 @@ static int c_scan_dir_range(const char *direct,
             fileheader_storage_to_mem(fhs, n);
         for (int i = 0; i < n && recno < total_recs; i++) {
             recno++;
-            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+            if (!fhs[i].filename[0])
                 continue;
             int ok = 1;
             for (int p = 0; p < num_preds; p++) {
@@ -260,7 +260,7 @@ static int c_scan_dir_reverse(const char *direct,
             fileheader_storage_to_mem(fhs, n);
         for (int i = n - 1; i >= 0; i--) {
             int recno = 1 + i;
-            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+            if (!fhs[i].filename[0])
                 continue;
             int ok = 1;
             for (int p = 0; p < num_preds; p++) {
@@ -298,7 +298,7 @@ static int c_scan_dir_reverse(const char *direct,
 
         for (int i = n - 1; i >= 0; i--) {
             int recno = chunk_start + i;
-            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+            if (!fhs[i].filename[0])
                 continue;
             int ok = 1;
             for (int p = 0; p < num_preds; p++) {
@@ -354,7 +354,7 @@ static int c_filter_candidates(const char *direct,
             continue;
         if (NEED_STORAGE_CONV)
             fileheader_storage_to_mem(&fh, 1);
-        if (!fh.filename[0] || fh.filename[0] == '.' || fh.owner[0] == '-')
+        if (!fh.filename[0])
             continue;
         int ok = 1;
         for (int p = 0; p < num_preds; p++) {
