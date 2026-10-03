@@ -130,7 +130,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		{"M.1700000001.A.001", "alice", "[閒聊] 地震警報", 0, 10, 100},
 		{"M.1700000002.A.002", "bob", "[新聞] 天氣預報", FILE_MARKED, 5, 50},
 		{"M.1700000003.A.003", "alice", "Re: [閒聊] 地震警報", FILE_MARKED, 99, 500},
-		{"M.1700000004.A.004", "-deleted", "[閒聊] 地震已被刪除", 0, 50, 100},
+		{"M.1700000004.A.004", "-", "(本文已被刪除) [david]", 0, 50, 100},
 		{"M.1700000005.A.005", "charlie", "[爆卦] 又有地震", 0, 25, 200},
 		{"M.1700000006.A.006", "alice", "[問題] 測試置底", FILE_BOTTOM | FILE_MARKED, 30, 300},
 	}
@@ -155,7 +155,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// 1. Keyword search for "地震" (should match recno 1, 3, 5; recno 4 is soft-deleted)
+	// 1. Keyword search for "地震" (should match recno 1, 3, 5; recno 4 title is "(本文已被刪除)")
 	predKw := MakePredBytes(RS_KEYWORD, "地震", 0, 0)
 	relDir := filepath.Join("boards", "T", "TestBoard", ".DIR")
 	indices, total := queryBinaryClient(t, socketPath, 1, relDir, [][]byte{predKw}, 0, 100)
@@ -171,6 +171,20 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	}
 	if svc.hits.Load() != 1 || svc.misses.Load() != 1 {
 		t.Fatalf("Expected hits=1 misses=1, got hits=%d misses=%d", svc.hits.Load(), svc.misses.Load())
+	}
+
+	// 2b. Keyword search for "本文已被刪除" should match the deleted article corpse (recno 4)
+	predDel := MakePredBytes(RS_KEYWORD, "本文已被刪除", 0, 0)
+	delIndices, delTotal := queryBinaryClient(t, socketPath, 1, relDir, [][]byte{predDel}, 0, 100)
+	if delTotal != 1 || !reflect.DeepEqual(delIndices, []int32{4}) {
+		t.Fatalf("Search for 本文已被刪除 failed: got total=%d indices=%v, want [4]", delTotal, delIndices)
+	}
+
+	// 2c. Keyword search for deleted author "david" should match recno 4 because title is "(本文已被刪除) [david]"
+	predDavid := MakePredBytes(RS_KEYWORD, "david", 0, 0)
+	davidIndices, davidTotal := queryBinaryClient(t, socketPath, 1, relDir, [][]byte{predDavid}, 0, 100)
+	if davidTotal != 1 || !reflect.DeepEqual(davidIndices, []int32{4}) {
+		t.Fatalf("Search for deleted author in title failed: got total=%d indices=%v, want [4]", davidTotal, davidIndices)
 	}
 
 	// 3. Windowed pagination (offset=1, limit=1 -> should return [3], total=3)

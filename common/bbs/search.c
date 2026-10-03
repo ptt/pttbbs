@@ -244,7 +244,7 @@ search_predicates_local(const char *direct,
             if (NEED_STORAGE_CONV)
                 fileheader_storage_to_mem(fhs, n);
             for (int i = 0; i < n; i++) {
-                if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+                if (!fhs[i].filename[0])
                     continue;
                 int matched = 1;
                 for (int p = 0; p < num_preds; p++) {
@@ -279,8 +279,8 @@ search_predicates_local(const char *direct,
             fileheader_storage_to_mem(fhs, n);
         for (int i = 0; i < n; i++) {
             recno++;
-            /* Skip soft-deleted records */
-            if (!fhs[i].filename[0] || fhs[i].filename[0] == '.' || fhs[i].owner[0] == '-')
+            /* Match all valid records including soft-deleted corpses */
+            if (!fhs[i].filename[0])
                 continue;
             int matched = 1;
             for (int p = 0; p < num_preds; p++) {

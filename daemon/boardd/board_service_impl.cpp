@@ -334,8 +334,7 @@ Status BoardServiceImpl::Search(ServerContext *context,
       fileheader_t fh;
       if (get_fileheader_keep(dir_path.c_str(), &fh, recno, &fd) <= 0)
         continue;
-      if (!fh.filename[0] || fh.filename[0] == '.' || fh.owner[0] == '-' ||
-          !is_valid_fileheader(&fh))
+      if (!fh.filename[0] || !is_valid_fileheader(&fh))
         continue;
       mbs_safe_trim(fh.title);
       AsPost(recno - 1, fh).Swap(rep->add_posts());
