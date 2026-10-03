@@ -14,9 +14,7 @@
 
 #define NEWIDPOST_LIMIT_DAYS (14)
 
-static int recommend(int ent, fileheader_t * fhdr, const char *direct);
-static int do_add_recommend(const char *direct, fileheader_t *fhdr,
-                            int ent, const char *buf, int type);
+static int comment(int ent, fileheader_t * fhdr, const char *direct);
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
 
@@ -27,15 +25,7 @@ static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 //  so we may change default to (RECTYPE_ARROW)= comment only.
 //  however, the traditional behavior (which does not have
 //  BRC info for 'new comments available') uses RECTYPE_GOOD.
-enum {
-    RECTYPE_GOOD,
-    RECTYPE_BAD,
-    RECTYPE_ARROW,
 
-    RECTYPE_SIZE,
-    RECTYPE_MAX     = RECTYPE_SIZE-1,
-    RECTYPE_DEFAULT = RECTYPE_GOOD, // match traditional user behavior
-};
 
 /**
  * Test if the fhdr looks like really belong to user
@@ -80,11 +70,11 @@ query_file_money(const fileheader_t *pfh)
 }
 
 // lite weight version to update dir files
-static int
+int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name, time4_t modified,
         const char *title, const char *owner, const char *date,
-        char recommend, void *multi, uint8_t enable_modes, uint8_t disable_modes)
+        char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -123,11 +113,11 @@ modify_dir_lite(
     if (multi)
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
-    if (recommend) {
-	recommend += fhdr.recommend;
-	if (recommend > MAX_RECOMMENDS) recommend = MAX_RECOMMENDS;
-	else if (recommend < -MAX_RECOMMENDS) recommend = -MAX_RECOMMENDS;
-	fhdr.recommend = recommend;
+    if (comment) {
+	comment += fhdr.recommend;
+	if (comment > MAX_RECOMMENDS) comment = MAX_RECOMMENDS;
+	else if (comment < -MAX_RECOMMENDS) comment = -MAX_RECOMMENDS;
+	fhdr.recommend = comment;
     }
 
 
@@ -1490,7 +1480,7 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (append_fileheader(buf, &postfile) == -1)
+    if (PostAddRecord(currboard, &postfile, dashc(genbuf)) == -1)
     {
         unlink(genbuf);
     }
@@ -2257,7 +2247,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
             // use do_add_recommend to log forward info and also modify the file
             // record
-            do_add_recommend(direct, fhdr,  ent, buf, RECTYPE_ARROW);
+            CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW, NULL, buf);
 	} else
 #endif
 	{
@@ -2395,8 +2385,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	case RET_DOREPLYALL:
 	    do_reply(fhdr);
             return FULLUPDATE;
-	case RET_DORECOMMEND:
-            recommend(ent, fhdr, direct);
+	case RET_DOCOMMENT:
+            comment(ent, fhdr, direct);
 	    return FULLUPDATE;
 	case RET_DOQUERYINFO:
 	    view_postinfo(ent, fhdr, direct, b_lines-3);
@@ -2645,96 +2635,9 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 
-static int
-do_add_recommend(const char *direct, fileheader_t *fhdr,
-		 int ent, const char *buf, int type)
-{
-    char    path[PATHLEN];
-    int     update = 0;
-    int fd;
-    BEGINSTAT(STAT_DORECOMMEND);
-
-    /*
-      race here:
-      為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
-      造成
-      1.若該文檔名被換掉的話, 推文將寫至舊檔名中 (造成幽靈檔)
-      2.沒有重新讀一次, 所以推文數可能被少算
-      3.若推的時候前文被刪, 將加到後文的推文數
-
-     */
-
-    // Lock and append, (lock may be caused other add_recommend or edit_post)
-    setdirpath(path, direct, fhdr->filename);
-    fd = open(path, O_APPEND | O_WRONLY);
-    if (fd >= 0) {
-#ifdef EDITPOST_SMARTMERGE
-        int lock_retry = 5, lock_wait = 1, lock_success = 0;
-        while (lock_retry-- > 0) {
-            // try several times
-            if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
-                move(b_lines, 0);
-                prints("==> 檔案正被它人編輯中，等待完成: %d\n", lock_retry+1);
-                doupdate();
-                sleep(lock_wait);
-                // reopen the file because edit_post creates a new file.
-                close(fd);
-                fd = open(path, O_APPEND | O_WRONLY);
-                continue;
-            }
-            lock_success = 1;
-            write(fd, buf, strlen(buf));
-            flock(fd, LOCK_UN);
-            break;
-        }
-        close(fd);
-        if (!lock_success) {
-            vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
-            goto error;
-        }
-#else
-        write(fd, buf, strlen(buf));
-        close(fd);
-#endif
-    } else {
-	vmsg((errno == EROFS) ? "錯誤: 系統目前唯讀中，無法修改。" :
-             "錯誤: 原檔案已被刪除。 無法寫入。");
-	goto error;
-    }
-
-    // XXX do lock some day!
-
-    /* This is a solution to avoid most racing (still some), but cost four
-     * system calls.                                                        */
-
-    if(type == RECTYPE_GOOD && fhdr->recommend < MAX_RECOMMENDS )
-          update = 1;
-    else if(type == RECTYPE_BAD && fhdr->recommend > -MAX_RECOMMENDS)
-          update = -1;
-    fhdr->recommend += update;
-
-    // since we want to do 'modification'...
-    fhdr->modified = dasht(path);
-
-    if (fhdr->modified != 0)
-    {
-	if (modify_dir_lite(direct, ent, fhdr->filename,
-		fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
-	    goto error;
-	// mark my self as "read this file".
-	brc_addlist(fhdr->filename, fhdr->modified);
-    }
-
-    ENDSTAT(STAT_DORECOMMEND);
-    return 0;
-
- error:
-    ENDSTAT(STAT_DORECOMMEND);
-    return -1;
-}
 
 int
-recommend(int ent, fileheader_t * fhdr, const char *direct)
+comment(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            buf[PATHLEN], msg[STRLEN];
     const char	    *myid = cuser.userid;
@@ -2756,8 +2659,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif
     int             type, maxlength;
     boardheader_t  *bp;
-    static time4_t  lastrecommend = 0;
-    static char lastrecommend_fname[FNLEN] = "";
+    static time4_t  lastcomment = 0;
+    static char lastcomment_fname[FNLEN] = "";
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
@@ -2818,7 +2721,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if (bp->brdattr & BRD_NOFASTRECMD)
     {
-	int d = (int)bp->fastrecommend_pause - (int)time4_diff(now, lastrecommend);
+	int d = (int)bp->fastrecommend_pause - (int)time4_diff(now, lastcomment);
 	if (d > 0)
 	{
 	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
@@ -2827,15 +2730,15 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
     {
 	// kcwu
-	static unsigned char lastrecommend_minute = 0;
-	static unsigned short recommend_in_minute = 0;
+	static unsigned char lastcomment_minute = 0;
+	static unsigned short comment_in_minute = 0;
 	unsigned char now_in_minute = (unsigned char)(now / 60);
-	if(now_in_minute != lastrecommend_minute) {
-	    recommend_in_minute = 0;
-	    lastrecommend_minute = now_in_minute;
+	if(now_in_minute != lastcomment_minute) {
+	    comment_in_minute = 0;
+	    lastcomment_minute = now_in_minute;
 	}
-	recommend_in_minute++;
-	if(recommend_in_minute>60) {
+	comment_in_minute++;
+	if(comment_in_minute>60) {
 	    vmsg("系統禁止短時間內大量推文");
 	    return FULLUPDATE;
 	}
@@ -2852,7 +2755,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	if (size > 100*1024) {
-	    int d = 10 - (int)time4_diff(now, lastrecommend);
+	    int d = 10 - (int)time4_diff(now, lastcomment);
 	    if (d > 0) {
 		vmsgf("本文已過長, 禁止快速連續推文, 請再等 %d 秒", d);
 		return FULLUPDATE;
@@ -2890,7 +2793,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) &&
-	    time4_diff(now, lastrecommend) < 90) {
+	    time4_diff(now, lastcomment) < 90) {
 	// too close
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
@@ -3028,7 +2931,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
         } else
             return FULLUPDATE;
     }
-    STATINC(STAT_RECOMMEND);
+    STATINC(STAT_COMMENT);
     LOG_IF(LOG_CONF_PUSH, file_appendf("log/push",
                                     "%d %s %s %s\n", (int)now,
                                     currboard, fhdr->filename, msg));
@@ -3057,11 +2960,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
                             myid, maxlength, msg, tail);
     }
 
-    if (do_add_recommend(direct, fhdr,  ent, buf, type) < 0)
+    if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
         return DIRCHANGED;
 
-    lastrecommend = now;
-    STRLCPY(lastrecommend_fname, fhdr->filename);
+    lastcomment = now;
+    STRLCPY(lastcomment_fname, fhdr->filename);
     return FULLUPDATE;
 }
 
@@ -3651,7 +3554,7 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
+comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
     char yn[5];
     char fn[PATHLEN];
@@ -4424,7 +4327,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 
     switch(tolower(ans)) {
         case 'y':
-            recommend_cancel(ent, fhdr, direct);
+            comment_cancel(ent, fhdr, direct);
             break;
 
         case 'e':
@@ -4460,7 +4363,7 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_new_post, new_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_post_vote, do_post_vote)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_whereami, whereami)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cross_post, cross_post)
-DEFINE_READ_ITEM_CMD(bbs_cmd_recommend, recommend)
+DEFINE_READ_ITEM_CMD(bbs_cmd_comment, comment)
 DEFINE_READ_ITEM_CMD(bbs_cmd_limitedit, do_limitedit)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_range, del_range_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_edit_post, edit_post)
@@ -4508,8 +4411,8 @@ const cmd_t read_comms[] = {
     { Ctrl('X'), "轉錄", "轉錄文章至其他看板", bbs_cmd_cross_post, 0, CMD_PRIO_NORM, true },
     { Ctrl('P'), "發表", "發表新文章", bbs_cmd_new_post, 0, CMD_PRIO_HIGH },
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },
-    { 'X', "推文", "推薦或評論文章", bbs_cmd_recommend, 0, CMD_PRIO_HIGH, true },
-    { '%', NULL, NULL, bbs_cmd_recommend, 0, CMD_PRIO_NONE, true },
+    { 'X', "推文", "推薦或評論文章", bbs_cmd_comment, 0, CMD_PRIO_HIGH, true },
+    { '%', NULL, NULL, bbs_cmd_comment, 0, CMD_PRIO_NONE, true },
     { 'd', "刪除", "刪除選取的文章", bbs_cmd_del_post, 0, CMD_PRIO_HIGH, true },
     { 'E', "編輯", "編輯文章內容", bbs_cmd_edit_post, 0, CMD_PRIO_LOW, true },
     { 'v', "已讀/未讀", "切換文章已讀或未讀狀態", bbs_cmd_mark_read, 0, CMD_PRIO_LOW, true },

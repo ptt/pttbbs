@@ -173,6 +173,26 @@ const struct CommentBodyReq *CommentsRead(void *ctx, int i);
 int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason);
 const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 #endif
+
+/* comment types */
+enum {
+    RECTYPE_GOOD,
+    RECTYPE_BAD,
+    RECTYPE_ARROW,
+
+    RECTYPE_SIZE,
+    RECTYPE_MAX     = RECTYPE_SIZE - 1,
+    RECTYPE_DEFAULT = RECTYPE_GOOD,
+};
+
+/* post & comment storage */
+int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
+int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
+                     int ent, int type, const char *msg, const char *formatted);
+int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
+                    const char *title, const char *owner, const char *date,
+                    char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
+
 void FormatCommentString(char *buf, size_t szbuf, int type,
                          const char *myid, int maxlength,
                          const char *msg, const char *tail);
