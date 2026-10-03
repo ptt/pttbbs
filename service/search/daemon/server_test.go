@@ -1111,6 +1111,59 @@ func TestQueryWebSearchTailEarlyExit(t *testing.T) {
 		t.Fatalf("expected 0 items, got %v", indices)
 	}
 
+	// End of matches check: there are 1250 matches in total.
+	// Requesting offset = -1260, limit = 20 (asking for up to 1260 matches).
+	// Since 1250 < 1260, it reaches record 1 and cannot find 1260 matches.
+	// Must return exact total 1250 (NOT 1251) and stopped_early = false.
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -1260, 20, SrcBoarddWeb)
+	if total != 1250 {
+		t.Fatalf("expected exact total 1250 at end of matches, got %d", total)
+	}
+	// Total is exact 1250, window starts from beginning (recno 2)
+	if len(indices) != 20 || indices[0] != 2 {
+		t.Fatalf("expected 20 items starting at recno 2, got %v", indices)
+	}
+
+	// Requesting far past the end (offset = -3000, limit = 20):
+	// Total must remain exact 1250, and items should clamp or return empty.
+	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -3000, 20, SrcBoarddWeb)
+	if total != 1250 {
+		t.Fatalf("expected exact total 1250 past end of matches, got %d", total)
+	}
+
+	// Deep post search (like author:hicker): post exists only near the beginning of board
+	deepAuthorPred := MakePredBytes(RS_AUTHOR, "deep_author", 0, 0)
+	deepBoardDir := filepath.Join(tmpDir, "boards", "D", "DeepBoard")
+	if err := os.MkdirAll(deepBoardDir, 0755); err != nil {
+		t.Fatalf("mkdir deepBoardDir: %v", err)
+	}
+	deepDirPath := filepath.Join(deepBoardDir, ".DIR")
+	deepRelDir := filepath.Join("boards", "D", "DeepBoard", ".DIR")
+	// Post 1 to 5: deep_author
+	// Post 6 to 2000: other users
+	for i := 1; i <= 2000; i++ {
+		fn := fmt.Sprintf("M.%010d.A.%03d", 1700000000+i, i%1000)
+		author := "other"
+		if i <= 5 {
+			author = "deep_author"
+		}
+		if err := AppendTestFileheader(deepDirPath, fn, author, "test post", 0, 10, 100); err != nil {
+			t.Fatalf("append deep rec %d: %v", i, err)
+		}
+	}
+	indices, total = queryBinaryClientWithSource(t, socketPath, 2, deepRelDir, [][]byte{deepAuthorPred}, -20, 20, SrcBoarddWeb)
+	if total != 5 {
+		t.Fatalf("expected total 5 for deep author posts, got %d", total)
+	}
+	if len(indices) != 5 {
+		t.Fatalf("expected 5 items for deep author, got %d", len(indices))
+	}
+	for j := 0; j < 5; j++ {
+		if indices[j] != int32(j+1) {
+			t.Errorf("expected recno %d, got %d", j+1, indices[j])
+		}
+	}
+
 	// Verify that web searches did not pollute s.entries cache!
 	statusResp := sendControlClient(t, socketPath, ControlRequest{Action: "status"})
 	statsBytes, _ := json.Marshal(statusResp.Data)

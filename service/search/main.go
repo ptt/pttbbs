@@ -195,7 +195,7 @@ func main() {
 	flag.Int64Var(aidTableMinReqs, "min-cache-queries", daemon.DefaultAIDTableMinReqs, "Alias for -aid-table-min-reqs")
 	aidTableTTL := flag.Duration("aid-table-ttl", daemon.DefaultAIDTableTTL, "Min duration before cached board can be replaced (default: 1h)")
 	aidTableEvictLead := flag.Int64("aid-table-evict-lead", daemon.DefaultAIDTableEvictLead, "Query lead required to replace an expired cached board (default: 100)")
-	webSearchMaxDepth := flag.Int("web-search-max-depth", daemon.DefaultWebSearchMaxDepth, "Max records to scan backwards for web tail search (default: 100000, 0=unlimited)")
+	webSearchMaxDepth := flag.Int("web-search-max-depth", daemon.DefaultWebSearchMaxDepth, "Max records to scan backwards for web tail search (default: 0=unlimited)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
 	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
