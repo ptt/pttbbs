@@ -1304,10 +1304,6 @@ static const menuitem_t playlist[] = {
 	.status = "¶q³c°Ó©±",
 	.default_enter = '0',
     },
-    {chicken_main, PERM_LOGINOK,
-			     "Chicken        " BBSMNAME2 "¾iÂû³õ"},
-    {ticket_main, PERM_LOGINOK,
-                             "Gamble         " BBSMNAME2 "±m¨é"},
     {
 	.submenu = chesslist,
 	.level = PERM_LOGINOK,
@@ -1316,6 +1312,8 @@ static const menuitem_t playlist[] = {
 	.status = "¥ð¶¢´Ñ°|",
 	.default_enter = '1',
     },
+    {chicken_main, PERM_LOGINOK,
+			     "Chicken        " BBSMNAME2 "¾iÂû³õ"},
     {NULL, 0, NULL}
 };
 

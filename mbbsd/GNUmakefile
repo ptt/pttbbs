@@ -18,7 +18,7 @@ UIOBJS    := menu.o vtuikit.o psb.o
 PAGEROBJS := more.o pmore.o pager.o
 PLUGOBJS  := ordersong.o angel.o timecap.o
 CHESSOBJS := chess.o chc.o chc_tab.o ch_gomo.o
-GAMEOBJS  := chicken.o gamble.o
+GAMEOBJS  := chicken.o lottery.o
 
 OBJS := admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o comments.o \
 	$(COREOBJS) $(ABUSEOBJS) $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \

@@ -1,8 +1,6 @@
 20 7 * * * bin/mailog.sh > /dev/null
 20 6 * * * rm -f out/*; rm -f out/.DIR
 
-# 每天 12:00 17:00 20:00 00:00 開獎。 
-0 2,11,16,21 * * * bin/openticket.sh > /dev/null
 
 # 每天早上清除過期使用者
 10 7 * * * bin/reaper > /dev/null 2> /dev/null
