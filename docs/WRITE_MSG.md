@@ -1,6 +1,6 @@
-# PTT BBS 水球系統 (Pager System) 架構與流程分析
+# PTT BBS 即時訊息 / 水球系統 (Write Message, wmsg) 架構與流程分析
 
-本文件詳細說明 PTT BBS 中的「水球」（即時訊息 / Instant Message）系統運作機制。主要分析檔為 `mbbsd/pager.c`，涵蓋水球的發送 (`my_write`, `ofo_my_write`)、接收 (`write_request_*`, `add_history`)、跨進程 IPC 機制、資料結構、UI 介面模式以及熱鍵 hook 處理。
+本文件詳細說明 PTT BBS 中的「即時訊息 / 水球」（Write Message / wmsg / Instant Message）系統運作機制。主要分析檔為 `mbbsd/wmsg.c`，涵蓋訊息的發送 (`my_write`, `ofo_my_write`)、接收 (`write_request_*`, `add_history`)、跨進程 IPC 機制、資料結構、UI 介面模式以及熱鍵 hook 處理。
 
 ---
 
@@ -101,7 +101,7 @@ signal_restart(SIGUSR2, write_request);
 1. **判斷目前 UI 模式**：
    - `PAGER_UI_OFO`: 執行 `write_request_ofo(sig)`。
    - `PAGER_UI_NEW`: 執行 `write_request_default()`。
-2. **判斷是否能彈出 UI (`can_pop_pager_ui`)**：
+2. **判斷是否能彈出 UI (`can_pop_wmsg_ui`)**：
    若使用者正處於文章編輯中 (`EDITING`)、聊天中 (`CHATING`)、呼叫中 (`TALK`) 或已關閉 Pager，系統僅播放音效提示 (`bell()`)，並將水球靜默寫入歷史紀錄。
 3. **畫面繪製與音效 (`show_call_in`)**：
    若允許彈出，在螢幕頂端繪製 Top Water Bar（顯示發送者 ID 與訊息），並響鈴提示。
@@ -112,7 +112,7 @@ signal_restart(SIGUSR2, write_request);
 
 ## 5. 熱鍵與互動介面 (Key Hooks & Interactive Controls)
 
-水球系統與全站按鍵事件透過 `vkey_hook` 機制（定義於 [`include/proto.h`](../include/proto.h#L350) 與 [`mbbsd/io.c`](../mbbsd/io.c#L190)）進行分層攔截與處理。水球系統透過 `pager_init_hooks()` 在系統按鍵監聽器中註冊了 `VKEY_HOOK_PRIO_MODAL` 與 `VKEY_HOOK_PRIO_PAGER` 優先級的 Hook。
+水球系統與全站按鍵事件透過 `vkey_hook` 機制（定義於 `include/proto.h` 與 `mbbsd/io.c`）進行分層攔截與處理。水球系統透過 `wmsg_init_hooks()` 在系統按鍵監聽器中註冊了 `VKEY_HOOK_PRIO_MODAL` 與 `VKEY_HOOK_PRIO_WMSG` 優先級的 Hook。
 
 ### 5.1 按鍵鉤子層次架構 (`VKeyHookPriority`)
 
@@ -120,10 +120,10 @@ signal_restart(SIGUSR2, write_request);
 
 | 優先級 (Priority) | Hook 處理函式 | 註冊模組/檔案 | 職責與攔截按鍵 |
 | :--- | :--- | :--- | :--- |
-| **`VKEY_HOOK_PRIO_SYSTEM` (0)** | `system_key_hook()` | [`mbbsd/io.c`](../mbbsd/io.c#L204) | **無狀態全站系統級熱鍵**：<br>• `Ctrl-L`：重繪畫面 (`redrawwin()` + `refresh()`)<br>• `Ctrl-Q`：顯示記憶體狀態 (`get_memusage()`, DEBUG 模式) |
-| **`VKEY_HOOK_PRIO_MODAL` (1)** | `pager_modal_key_hook()` | [`mbbsd/pager.c`](../mbbsd/pager.c#L845) | **Modal 視窗/歷史面板導覽**：<br>• 僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲 `Tab`, `Shift-Tab`, `Ctrl-F`, `Ctrl-G` 等面板導覽按鍵。 |
-| **`VKEY_HOOK_PRIO_PAGER` (2)** | `pager_global_key_hook()` | [`mbbsd/pager.c`](../mbbsd/pager.c#L880) | **全域呼叫器熱鍵**：<br>• `Ctrl-R`：查水球 / 回覆水球（根據 `cuser.pager_ui_type` 分流至 `pager_handle_ctrl_r_default` 或 `pager_handle_ctrl_r_ofo`）。 |
-| **`VKEY_HOOK_PRIO_NORMAL` (3)** | `talk_key_hook()` | [`mbbsd/talk.c`](../mbbsd/talk.c#L2370) | **一般畫面層級熱鍵 (Mode Switch)**：<br>• `Ctrl-U`：快速線上使用者列表（暫存畫面 `scr_dump()` ➔ 執行 `t_users()` ➔ 還原畫面 `scr_restore()`）。 |
+| **`VKEY_HOOK_PRIO_SYSTEM` (0)** | `system_key_hook()` | `mbbsd/io.c` | **無狀態全站系統級熱鍵**：<br>• `Ctrl-L`：重繪畫面 (`redrawwin()` + `refresh()`)<br>• `Ctrl-Q`：顯示記憶體狀態 (`get_memusage()`, DEBUG 模式) |
+| **`VKEY_HOOK_PRIO_MODAL` (1)** | `wmsg_modal_key_hook()` | `mbbsd/wmsg.c` | **Modal 視窗/歷史面板導覽**：<br>• 僅在彈出水球歷史面板 (`watermode > 0`) 狀態下截獲 `Tab`, `Shift-Tab`, `Ctrl-F`, `Ctrl-G` 等面板導覽按鍵。 |
+| **`VKEY_HOOK_PRIO_WMSG` (2)** | `wmsg_global_key_hook()` | `mbbsd/wmsg.c` | **全域呼叫器熱鍵**：<br>• `Ctrl-R`：查水球 / 回覆水球（根據 `cuser.pager_ui_type` 分流至 `wmsg_handle_ctrl_r_default` 或 `wmsg_handle_ctrl_r_ofo`）。 |
+| **`VKEY_HOOK_PRIO_NORMAL` (3)** | `talk_key_hook()` | `mbbsd/talk.c` | **一般畫面層級熱鍵 (Mode Switch)**：<br>• `Ctrl-U`：快速線上使用者列表（暫存畫面 `scr_dump()` ➔ 執行 `t_users()` ➔ 還原畫面 `scr_restore()`）。 |
 
 ---
 
@@ -133,10 +133,10 @@ signal_restart(SIGUSR2, write_request);
 | :--- | :--- | :--- | :--- |
 | **`Ctrl-L`** | `PRIO_SYSTEM`<br>`system_key_hook` | 全部畫面 | 重繪螢幕 (`redrawwin()` ➔ `refresh()`)。 |
 | **`Ctrl-Q`** | `PRIO_SYSTEM`<br>`system_key_hook` | DEBUG 模式 | 檢視系統記憶體使用狀態 (`get_memusage()`)。 |
-| **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | ORIG / NEW | `pager_handle_ctrl_r_default()`：<br>• 第 1 次連按 (收到水球時)：顯示該條訊息並直接開啟 `my_write()` 輸入框回覆。<br>• 第 2 次連按：開啟水球歷史面板 (`watermode = 1`)。<br>• 第 3+ 次連按：切換至更早的水球歷史訊息。 |
-| **`Ctrl-R`** | `PRIO_PAGER`<br>`pager_global_key_hook` | OFO 模式 | `pager_handle_ctrl_r_ofo()` ➔ 執行 `ofo_my_write()`。 |
-| **`Tab` / `Shift-Tab`** | `PRIO_MODAL`<br>`pager_modal_key_hook` | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息（亦相容 `Ctrl-T`）。 |
-| **`Ctrl-F` / `Ctrl-G`**| `PRIO_MODAL`<br>`pager_modal_key_hook` | NEW 模式 | 在 `watermode > 0` 查閱模式下，切換 `swater[0..5]` 不同的對話對象。 |
+| **`Ctrl-R`** | `PRIO_PAGER`<br>`wmsg_global_key_hook` | ORIG / NEW | `wmsg_handle_ctrl_r_default()`：<br>• 第 1 次連按 (收到水球時)：顯示該條訊息並直接開啟 `my_write()` 輸入框回覆。<br>• 第 2 次連按：開啟水球歷史面板 (`watermode = 1`)。<br>• 第 3+ 次連按：切換至更早的水球歷史訊息。 |
+| **`Ctrl-R`** | `PRIO_PAGER`<br>`wmsg_global_key_hook` | OFO 模式 | `wmsg_handle_ctrl_r_ofo()` ➔ 執行 `ofo_my_write()`。 |
+| **`Tab` / `Shift-Tab`** | `PRIO_MODAL`<br>`wmsg_modal_key_hook` | ORIG / NEW | 在 `watermode > 0` 查閱模式下，向前/向後瀏覽歷史訊息（亦相容 `Ctrl-T`）。 |
+| **`Ctrl-F` / `Ctrl-G`**| `PRIO_MODAL`<br>`wmsg_modal_key_hook` | NEW 模式 | 在 `watermode > 0` 查閱模式下，切換 `swater[0..5]` 不同的對話對象。 |
 | **`Ctrl-U`** | `PRIO_NORMAL`<br>`talk_key_hook` | 全部模式 | `talk_key_hook()`：暫存畫面 `scr_dump()` ➔ 切換模式執行 `t_users()` ➔ 還原畫面 `scr_restore()`。 |
 
 ---
@@ -145,9 +145,9 @@ signal_restart(SIGUSR2, write_request);
 
 發送或接收水球時，若使用者開啟紀錄功能，系統會將水球內容附加寫入使用者目錄下的 Log 檔案 `water.log` (`fn_writelog`)。
 
-### 歷史紀錄選單 (`pager_show_log()`)
+### 歷史紀錄選單 (`wmsg_show_log()`)
 
-在選單中選取水球紀錄時，會開啟 `pager_show_log()`：
+在選單中選取水球紀錄時，會開啟 `wmsg_show_log()`：
 1. 先關閉全域檔案控制代碼 `fp_writelog`（避免檔案 Race Condition）。
 2. 呼叫 `more(genbuf, YEA)` 讓使用者以內建閱讀器瀏覽 `water.log`。
 3. 退出瀏覽後，下方提示選單：
