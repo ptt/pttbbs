@@ -1184,7 +1184,7 @@ read_cmd_search_newpost(cmd_ctx_t *ctx) {
 }
 
 static int
-read_cmd_search_recommend(cmd_ctx_t *ctx) {
+read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
     read_apply_mode(cx, ctx, select_read(cx, RS_RECOMMEND));
@@ -1435,7 +1435,7 @@ static const cmd_t read_common_cmds[] = {
     { ']', "主題", "同主題下一篇", read_cmd_thread_next, 0, CMD_PRIO_NORM, true },
     { '#', "找AID", "以文章代碼(AID)搜尋", read_cmd_aid, 0, CMD_PRIO_LOW, true },
     { Ctrl('H'), NULL, "只列主題首篇(不含回文)", read_cmd_search_newpost, 0, CMD_PRIO_NONE, true },
-    { 'Z', "找推文數", "搜尋推文數條件", read_cmd_search_recommend, 0, CMD_PRIO_LOW, true },
+    { 'Z', "找推文數", "搜尋推文數條件", read_cmd_search_comment, 0, CMD_PRIO_LOW, true },
     { 'A', NULL, "搜尋稿酬金額條件", read_cmd_search_money, 0, CMD_PRIO_NONE, true },
     { 'G', "找標記", "搜尋 m 或 s 標記文章", read_cmd_search_mark, 0, CMD_PRIO_LOW, true },
     { 'S', NULL, "搜尋同標題文章", read_cmd_search_title, 0, CMD_PRIO_NONE, true },
