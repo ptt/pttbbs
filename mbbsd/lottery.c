@@ -207,14 +207,14 @@ ticket(int bid)
     vkey_purge();
     usleep(2.5 * GAMBLE_ACTION_DELAY_US);   // delay longer
 
+    if (bid <= 0)
+        return -1;
+
     STATINC(STAT_GAMBLE);
-    if (bid) {
-	bh = getbcache(bid);
-	setbpath(path, bh->brdname);
-	setbfile(fn_ticket, bh->brdname, FN_TICKET);
-	currbid = bid;
-    } else
-	STRLCPY(path, "etc/");
+    bh = getbcache(bid);
+    setbpath(path, bh->brdname);
+    setbfile(fn_ticket, bh->brdname, FN_TICKET);
+    currbid = bid;
 
     lockreturn0(TICKET, LOCK_MULTI);
     while (1) {
@@ -245,10 +245,9 @@ ticket(int bid)
 	    continue;
 	n = 0;
 
-	buy_ticket_ui(price, "etc/buyticket", &n, ch,
-                      bh ? bh->brdname : BBSMNAME);
+	buy_ticket_ui(price, "etc/buyticket", &n, ch, bh->brdname);
 
-	if (bid && !dashf(fn_ticket))
+	if (!dashf(fn_ticket))
 	    goto doesnt_catch_up;
 
 	if (n > 0) {
@@ -278,10 +277,9 @@ openticket(int bid)
 {
     char            path[PATHLEN], buf[PATHLEN], outcome[PATHLEN];
     boardheader_t  *bh = getbcache(bid);
-    FILE           *fp, *fp1;
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
-    int             bet, price, i;
-    bignum_t money = 0, count, total = 0, ticket[MAX_ITEM] = {0};
+    int             bet, price;
+    bignum_t        count;
 
     setbpath(path, bh->brdname);
     count = -show_ticket_data(betname, path, &price, bh);
@@ -306,9 +304,15 @@ openticket(int bid)
 	    return 0;
 	}
         if (bet == 99) {
+            reload_money();
+            if (cuser.money < price * 10) {
+                move(22, 0); clrtoeol();
+                vmsg("您的銀兩不足以支付取消手續費！");
+                continue;
+            }
             move(22, 0); clrtoeol();
-            prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d" ANSI_RESET,
-                    price * 10);
+            prints(ANSI_COLOR(1;31) "請注意: 取消要扣手續費 $%d (您目前有 $%d)" ANSI_RESET,
+                    price * 10, cuser.money);
         } else {
             betname_sel = betname[bet - 1];
         }
@@ -331,6 +335,15 @@ openticket(int bid)
         move(21, 0); clrtoeol();
     } while (bet != atoi(buf));
 
+    if (bet == 99) {
+        reload_money();
+        if (cuser.money < price * 10) {
+            unlockutmpmode();
+            vmsg("您的銀兩不足以支付取消退費手續費！");
+            return 0;
+        }
+    }
+
     // before we fork to process,
     // confirm lock status is correct.
     setbfile(buf, bh->brdname, FN_TICKET_END);
@@ -350,154 +363,25 @@ openticket(int bid)
 
     }
 
-    if (fork()) {
-	/* Ptt: 用 fork() 防止不正常斷線洗錢 */
-	unlockutmpmode();
-	vmsg("系統稍後將自動公佈於中獎結果看板(參加者多時要數分鐘)..");
-	return 0;
+    char bet_str[16];
+    snprintf(bet_str, sizeof(bet_str), "%d", bet);
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        unlockutmpmode();
+        vmsg("系統資源不足，無法執行開獎程式。");
+        return 0;
     }
-    close(0);
-    close(1);
-    setproctitle("open ticket");
-#ifdef CPULIMIT_PER_DAY
-    {
-	struct rlimit   rml;
-	rml.rlim_cur = RLIM_INFINITY;
-	rml.rlim_max = RLIM_INFINITY;
-	setrlimit(RLIMIT_CPU, &rml);
+    if (pid == 0) {
+        close(0);
+        close(1);
+        close(2);
+        execl(BBSHOME "/bin/openticket", "openticket", bh->brdname, bet_str, cuser.userid, (char *)NULL);
+        execl("bin/openticket", "openticket", bh->brdname, bet_str, cuser.userid, (char *)NULL);
+        exit(1);
     }
-#endif
-
-
-    bet--;			/* 轉成矩陣的index */
-    /* 取消樂透由 bet == 99 變成 bet == 98 */
-
-    total = load_ticket_record(path, ticket);
-    setbfile(buf, bh->brdname, FN_TICKET_LOCK);
-    if (!(fp1 = fopen(buf, "r")))
-	exit(1);
-
-    /* 還沒開完獎不能下注 只要mv一項就好 */
-    if (bet != 98) {
-	int forBM;
-	money = total * price;
-
-	forBM = money * 0.0005;
-	if(forBM > 500) forBM = 500;
-        pay(-forBM, "%s 彩金抽成", bh->brdname);
-
-	mail_redenvelop("[彩金抽成]", cuser.userid, forBM, NULL);
-	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
-    } else {
-	pay(price * 10, "樂透退費手續費");
-	money = price;
-    }
-    setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);
-    if ((fp = fopen(outcome, "w"))) {
-        int wide = 0;
-	fprintf(fp, "樂透說明\n");
-	while (fgets(buf, sizeof(buf), fp1)) {
-	    buf[sizeof(buf)-1] = 0;
-	    fputs(buf, fp);
-	}
-
-	fprintf(fp, "\n下注情況\n");
-        for (i = 0; i < count && !wide; i++) {
-            if (stream_width(betname[i]) > NARROW_ITEM_WIDTH ||
-                ticket[i] > 999999)
-                wide = 1;
-        }
-	for (i = 0; i < count; i++) {
-            if (i % (wide ? 3 : 4) == 0)
-                    fputc('\n', fp);
-            fprintf(fp, "%d.%-*s: %-7lld%s",
-                    i + 1, (wide ? IDLEN : 8), betname[i],
-                    ticket[i], wide ? " " : "");
-	}
-        fputs("\n\n", fp);
-
-
-	if (bet != 98) {
-	    fprintf(fp,
-                    "開獎時間: %s\n"
-		    "開獎結果: %s\n"
-		    "下注總額: %lld\n"
-		    "中獎比例: %lld張/%lld張  (%f)\n"
-		    "每張中獎彩券可得 %lld " MONEYNAME "\n\n",
-                    Cdatelite(&now), betname[bet],
-                    total * price,
-                    ticket[bet], total,
-                    total ? (double)ticket[bet] / total : (double)0,
-                    money);
-
-	    fprintf(fp, "%s 開出:%s 總額:%lld 彩金/張:%lld 機率:%1.2f\n\n",
-		    Cdatelite(&now), betname[bet], total * price, money,
-		    total ? (double)ticket[bet] / total : (double)0);
-	} else
-	    fprintf(fp, "樂透取消退回: %s\n\n", Cdatelite(&now));
-
-    } // XXX somebody may use fp even fp==NULL
-    fclose(fp1);
-    /*
-     * 以下是給錢動作
-     */
-    setbfile(buf, bh->brdname, FN_TICKET_USER);
-    if ((bet == 98 || ticket[bet]) && (fp1 = fopen(buf, "r"))) {
-	int             mybet, uid;
-	char            userid[IDLEN + 1];
-
-	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
-	    if (bet == 98 && mybet >= 0 && mybet < count) {
-		if (fp)
-		    fprintf(fp, "%-*s 買了 %3d 張 %s, 退回 %5lld "
-                            MONEYNAME "\n",
-			    IDLEN, userid, i, betname[mybet], money * i);
-		SNPRINTF(buf, "%s 樂透退費! $ %lld", bh->brdname, money * i);
-	    } else if (mybet == bet) {
-		if (fp)
-		    fprintf(fp, "恭喜 %-*s 買了 %3d 張 %s, 獲得 %5lld "
-			    MONEYNAME "\n",
-			    IDLEN, userid, i, betname[mybet], money * i);
-		SNPRINTF(buf, "%s 中獎咧! $ %lld",
-                         bh->brdname, money * i);
-	    } else {
-		if (fp)
-		    fprintf(fp, "     %-*s 買了 %3d 張 %s\n" ,
-			    IDLEN, userid, i, betname[mybet]);
-		continue;
-            }
-	    if ((uid = searchuser(userid, userid)) == 0)
-		continue;
-            pay_as_uid(uid, -(money * i), BBSMNAME "彩券 - [%s]",
-                       betname[mybet]);
-	    mail_send_file(userid, buf, "etc/ticket.win", BBSMNAME "彩券");
-	}
-	fclose(fp1);
-    }
-    if (fp) {
-	fprintf(fp, "\n--\n※ 開獎站 :" BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", fromhost);
-	fclose(fp);
-    }
-
-    if (bet != 98)
-	SNPRINTF(buf, TN_ANNOUNCE " %s 樂透開獎", bh->brdname);
-    else
-	SNPRINTF(buf, TN_ANNOUNCE " %s 樂透取消", bh->brdname);
-    post_file(bh->brdname, buf, outcome, "[彩券]");
-    post_file("Record", buf + 7, outcome, "[馬路探子]");
-    post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
-
-    setbfile(buf, bh->brdname, FN_TICKET_RECORD);
-    unlink(buf);
-
-    setbfile(buf, bh->brdname, FN_TICKET_USER);
-    post_file(BN_SECURITY, bh->brdname, buf, "[下注紀錄]");
-    unlink(buf);
-
-    setbfile(buf, bh->brdname, FN_TICKET_LOCK);
-    unlink(buf);
-    exit(1);
+    unlockutmpmode();
+    vmsg("系統稍後將自動公佈於中獎結果看板(參加者多時要數分鐘)..");
     return 0;
 }
 
@@ -668,9 +552,3 @@ hold_gamble(void)
 #endif
 }
 
-int
-ticket_main(void)
-{
-    ticket(0);
-    return 0;
-}
