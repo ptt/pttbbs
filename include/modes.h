@@ -18,7 +18,7 @@
 
 // values returned by pager
 #define RET_DOREPLY	    (999)
-#define RET_DORECOMMEND	    (998)
+#define RET_DOCOMMENT	    (998)
 #define RET_DOQUERYINFO	    (997)
 #define RET_DOSYSOPEDIT	    (996)
 #define RET_DOCHESSREPLAY   (995)

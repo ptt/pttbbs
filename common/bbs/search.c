@@ -184,7 +184,7 @@ search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const 
 }
 
 int
-search_svc_hint_comment(const char *direct, int bid, int recno, int recommend)
+search_svc_hint_comment(const char *direct, int bid, int recno, int comment)
 {
     if (recno <= 0)
         return -1;
@@ -194,7 +194,7 @@ search_svc_hint_comment(const char *direct, int bid, int recno, int recommend)
     req.type = HINT_TYPE_COMMENT;
     req.bid = bid;
     req.recno = recno;
-    req.data = recommend;
+    req.data = comment;
     if (direct)
         strlcpy(req.direct, direct, sizeof(req.direct));
     return search_svc_hint_send(&req);

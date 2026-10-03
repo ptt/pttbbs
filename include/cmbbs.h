@@ -216,7 +216,7 @@ typedef struct {
 } PACKSTRUCT search_hint_req_t;
 
 int search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const fileheader_t *fh);
-int search_svc_hint_comment(const char *direct, int bid, int recno, int recommend);
+int search_svc_hint_comment(const char *direct, int bid, int recno, int comment);
 int search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu);
 enum {
     SEARCH_SRC_UNKNOWN     = 0,
