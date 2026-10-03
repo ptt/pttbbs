@@ -1058,7 +1058,7 @@ static const menuitem_t talklist[] = {
 	.default_enter = 'L',
     },
 #endif
-    {pager_show_log, 0,          "Display       顯示上幾次熱訊"},
+    {wmsg_show_log, 0,          "Display       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 

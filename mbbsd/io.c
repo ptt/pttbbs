@@ -463,7 +463,7 @@ init_io() {
     vout_clear(pvout);
     vkey_init();
     system_init_hooks();
-    pager_init_hooks();
+    wmsg_init_hooks();
     talk_init_hooks();
     return 0;
 }

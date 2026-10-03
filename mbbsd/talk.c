@@ -1677,14 +1677,14 @@ userlist_cmd_chicken(cmd_ctx_t *ctx) {
 
 static int
 userlist_cmd_review(cmd_ctx_t *ctx) {
-    pager_show_log();
+    wmsg_show_log();
     ctx->reload = true;
     return 0;
 }
 
 static int
 userlist_cmd_pager(cmd_ctx_t *ctx) {
-    pager_toggle_mode();
+    wmsg_toggle_mode();
     ctx->reload = true;
     return 0;
 }
