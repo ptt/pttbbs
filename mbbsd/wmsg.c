@@ -1,23 +1,32 @@
+/*
+ * wmsg.c - write message (wmsg) system
+ *
+ * Implements real-time messaging ('write message' / 'wmsg') between users,
+ * including OFO panel, message history, beeper/pager status, and signal hooks.
+ */
+
 #include "bbs.h"
 
 // When shown on screen, the format is
 // star[2] [IDLEN] space[1] [msg] space[1] prevent-col80[NUL]
 // So the input size should be 64.
-#define PAGER_MSG_INPUT_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
+#define WMSG_INPUT_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
+#define PAGER_MSG_INPUT_SIZE WMSG_INPUT_SIZE
 
 // As a result, the prompts should be less than IDLEN + 3.
 #define PROMPT_OFO          "丟%s:"
 #define PROMPT_STD          "丟%s:"
 #define PROMPT_ANGEL_AGAIN  "再問一次: "
 #define PROMPT_ANGEL_ANSWER "回答小主人: "
-#define PROMPT_TO           "水球丟過去: "
+#define PROMPT_TO           "訊息傳過去: "
 // PROMPT_VERIFY is apparently longer, so we'll do a safe trim.
 #define PROMPT_VERIFY       "丟%s: %s [Y/n]: "
 #define STR_ANGEL           "小天使"
 
 #define ERR_TARGET_NOT_ONLINE "糟糕! 對方已落跑了(不在站上)! "
 
-const int PAGER_TABS = WB_OFO_USER_NUM;
+const int WMSG_TABS = WB_OFO_USER_NUM;
+#define PAGER_TABS WMSG_TABS
 static char     t_last_write[STRLEN];
 
 static const char *
@@ -82,7 +91,7 @@ void check_water_init(void)
 }
 
 static int
-pager_render_history_list(const water_t *w, int start_row, int max_rows, int selected_idx, int msg_bg)
+wmsg_render_history_list(const water_t *w, int start_row, int max_rows, int selected_idx, int msg_bg)
 {
     if (!w)
         return 0;
@@ -111,7 +120,7 @@ pager_render_history_list(const water_t *w, int start_row, int max_rows, int sel
 }
 
 static void
-pager_render_history_section(const water_t *w, int start_row, int max_rows, int selected_idx, bool top_sep, int msg_bg)
+wmsg_render_history_section(const water_t *w, int start_row, int max_rows, int selected_idx, bool top_sep, int msg_bg)
 {
     int y = start_row;
     if (top_sep) {
@@ -120,7 +129,7 @@ pager_render_history_section(const water_t *w, int start_row, int max_rows, int 
         outs(MSG_SEPARATOR "\n");
         y++;
     }
-    int i = pager_render_history_list(w, y, max_rows, selected_idx, msg_bg);
+    int i = wmsg_render_history_list(w, y, max_rows, selected_idx, msg_bg);
     y += i;
 
     const char *last_write = (w == &water[0]) ? t_last_write : w->msg[5].last_call_in;
@@ -170,7 +179,7 @@ resolve_msg_sender(const msgque_t *msg)
 }
 
 static void
-pager_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
+wmsg_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
 {
     if (!w || !w->userid[0]) {
         outs("              ");
@@ -212,11 +221,11 @@ static void
 ofo_water_scr(const water_t *tw, int which, char type)
 {
     move(WB_OFO_USER_TOP + 1 + which, WB_OFO_USER_LEFT);
-    pager_render_tab_item(tw, type == 1, true);
+    wmsg_render_tab_item(tw, type == 1, true);
     if (type != 1)
         return;
 
-    pager_render_history_section(tw, WB_OFO_MSG_TOP, 5, -1, true, 44);
+    wmsg_render_history_section(tw, WB_OFO_MSG_TOP, 5, -1, true, 44);
 
     move(0, 0);
     clrtoeol();
@@ -392,12 +401,12 @@ ofo_my_write(void)
 
 /*
  * 被呼叫的時機:
- * 1. 丟群組水球 flag = WATERBALL_PREEDIT, 1 (pre-edit)
- * 2. 回水球     flag = WATERBALL_GENERAL, 0
+ * 1. 丟群組訊息 flag = WATERBALL_PREEDIT, 1 (pre-edit)
+ * 2. 回訊息     flag = WATERBALL_GENERAL, 0
  * 3. 上站aloha  flag = WATERBALL_ALOHA,   2 (pre-edit)
  * 4. 廣播       flag = WATERBALL_SYSOP,   3 if SYSOP
  *               flag = WATERBALL_PREEDIT, 1 otherwise
- * 5. 丟水球     flag = WATERBALL_GENERAL, 0
+ * 5. 丟訊息     flag = WATERBALL_GENERAL, 0
  * 6. ofo_my_write  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
  * 7. (when defined PLAY_ANGEL)
  *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = STR_ANGEL)
@@ -434,7 +443,7 @@ my_write_restore_state(char c0, unsigned char mode0, int currstat0)
 }
 
 static bool
-my_write_check_pager_status(void)
+my_write_check_wmsg_status(void)
 {
     switch (currutmp->pager) {
     case PAGER_DISABLE:
@@ -442,7 +451,7 @@ my_write_check_pager_status(void)
         if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARD)) {
             move(1, 0);
             clrtoeol();
-            outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人丟水球，對方可能無法回話。" ANSI_RESET);
+            outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人傳訊息，對方可能無法回話。" ANSI_RESET);
         } else {
             if ('n' == vans("您的呼叫器目前設定為關閉。要打開它嗎?[Y/n]:"))
                 return false;
@@ -453,7 +462,7 @@ my_write_check_pager_status(void)
     case PAGER_FRIENDONLY:
         move(1, 0);
         clrtoeol();
-        outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，若對方非好友則可能無法回話。" ANSI_RESET);
+        outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友傳訊息，若對方非好友則可能無法回話。" ANSI_RESET);
         break;
     }
     return true;
@@ -463,7 +472,7 @@ static bool
 my_write_get_input(const char *prompt, char *msg, size_t msg_size,
                    int *flag_out, userinfo_t **uin_out, char *destid)
 {
-    if (!my_write_check_pager_status())
+    if (!my_write_check_wmsg_status())
         return false;
 
     int len = getdata(0, 0, prompt, msg, msg_size, DOECHO);
@@ -598,11 +607,11 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
 
     if (res < 0) {
         if (res == -3)
-            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
+            outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多訊息) " ANSI_COLOR(37) "@_@" ANSI_RESET);
         else
             outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else if (uin->msgcount == 1) {
-        outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
+        outmsg(ANSI_COLOR(1;33;44) "訊息砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
     } else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS) {
         outmsg(ANSI_COLOR(1;33;44) "再補上一粒! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
     }
@@ -684,7 +693,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         if (uin->pid > 0)
             kill(uin->pid, SIGUSR1);
     } else if (my_write_is_rejected(flag, uin, fri_stat)) {
-        outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方防水了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
+        outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方拒收了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
         my_write_deliver(flag, msg, uin);
         msgque_t dummy_msg;
@@ -703,7 +712,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
 }
 
 static void
-pager_show_panel_new(void)
+wmsg_show_panel_new(void)
 {
     if (!water[0].count || watermode <= 0)
         return;
@@ -711,7 +720,7 @@ pager_show_panel_new(void)
     getyx(&oy, &ox);
 
     mvouts(1, 0,
-           "───────水─球─回─顧──用[Ctrl-R Tab/S-Tab Ctrl-F Ctrl-G]鍵切換───\n");
+           "───────訊─息─回─顧──用[Ctrl-R Tab/S-Tab Ctrl-F Ctrl-G]鍵切換───\n");
     for (int idx = 0; idx < 6; idx++) {
         if (idx == 0) {
             prints("%s 全部  " ANSI_RESET,
@@ -719,15 +728,15 @@ pager_show_panel_new(void)
             continue;
         }
         const water_t *itm = swater[idx - 1];
-        pager_render_tab_item(itm, itm == water_which, false);
+        wmsg_render_tab_item(itm, itm == water_which, false);
     }
     outs("\n");
-    pager_render_history_section(water_which, 3, MAX_REVIEW, watermode - 1, false, 45);
+    wmsg_render_history_section(water_which, 3, MAX_REVIEW, watermode - 1, false, 45);
     move(oy, ox);
 }
 
 static void
-pager_show_panel(void)
+wmsg_show_panel(void)
 {
     static int in_panel = 0;
     if (in_panel)
@@ -735,13 +744,13 @@ pager_show_panel(void)
     in_panel = 1;
 
     check_water_init();
-    pager_show_panel_new();
+    wmsg_show_panel_new();
 
     in_panel = 0;
 }
 
 int
-pager_show_log(void) {
+wmsg_show_log(void) {
     char ans[4], fpath[PATHLEN];
     get_writelog_path(fpath);
     if (more(fpath, YEA) == -1) {
@@ -751,9 +760,9 @@ pager_show_log(void) {
         grayout(0, b_lines-5, GRAYOUT_DARK);
         move(b_lines - 4, 0);
         clrtobot();
-        outs(ANSI_COLOR(1;33;45) "★水球整理程式 " ANSI_RESET "\n"
-             "提醒您: 可將水球存入信箱(M)後, 到【郵件選單】該信件前按 u,\n"
-             "系統會將水球紀錄重新整理後寄送給您唷! " ANSI_RESET "\n");
+        outs(ANSI_COLOR(1;33;45) "★訊息整理程式 " ANSI_RESET "\n"
+             "提醒您: 可將訊息存入信箱(M)後, 到【郵件選單】該信件前按 u,\n"
+             "系統會將訊息紀錄重新整理後寄送給您唷! " ANSI_RESET "\n");
 
         getdata(b_lines - 1, 0, "清除(C) 存入信箱(M) 保留(R) (C/M/R)?[R]",
                 ans, sizeof(ans), LCECHO);
@@ -790,7 +799,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 
 
 int
-pager_toggle_mode(void)
+wmsg_toggle_mode(void)
 {
     currutmp->pager = (currutmp->pager + 1) % PAGER_MODES;
     return 0;
@@ -801,7 +810,7 @@ pager_toggle_mode(void)
 /* ----------------------------------------------------- */
 
 static int
-pager_handle_ctrl_r_ofo(int ch)
+wmsg_handle_ctrl_r_ofo(int ch)
 {
     int my_newfd;
     screen_backup_t old_screen;
@@ -822,7 +831,7 @@ pager_handle_ctrl_r_ofo(int ch)
 }
 
 static int
-pager_handle_ctrl_r_default(int ch)
+wmsg_handle_ctrl_r_default(int ch)
 {
     check_water_init();
 
@@ -831,7 +840,7 @@ pager_handle_ctrl_r_default(int ch)
         // Press Ctrl-R for N+ times.
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
     }
     else if (watermode == 0 &&
@@ -841,7 +850,7 @@ pager_handle_ctrl_r_default(int ch)
     {
         // Press Ctrl-R for the "2nd" time.
         watermode = 1;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
     }
     else if (watermode == -1)
@@ -914,7 +923,7 @@ pager_handle_ctrl_r_default(int ch)
 }
 
 static int
-pager_modal_key_hook(int ch)
+wmsg_modal_key_hook(int ch)
 {
     static int water_which_flag = 0;
 
@@ -927,7 +936,7 @@ pager_modal_key_hook(int ch)
         check_water_init();
         watermode = (watermode + water_which->count)
                 % water_which->count + 1;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('T'):
@@ -937,7 +946,7 @@ pager_modal_key_hook(int ch)
             watermode--;
         else
             watermode = water_which->count;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('F'):
@@ -949,7 +958,7 @@ pager_modal_key_hook(int ch)
         else
             water_which = swater[water_which_flag - 1];
         watermode = 1;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
 
     case Ctrl('G'):
@@ -962,14 +971,14 @@ pager_modal_key_hook(int ch)
             water_which = swater[water_which_flag - 1];
 
         watermode = 1;
-        pager_show_panel();
+        wmsg_show_panel();
         return KEY_INCOMPLETE;
     }
     return ch;
 }
 
 static int
-pager_global_key_hook(int ch)
+wmsg_global_key_hook(int ch)
 {
     if (!currutmp)
         return ch;
@@ -978,17 +987,17 @@ pager_global_key_hook(int ch)
     {
     case Ctrl('R'):
         if (HasUserFlag(UF_PAGER_OFO))
-            return pager_handle_ctrl_r_ofo(ch);
-        return pager_handle_ctrl_r_default(ch);
+            return wmsg_handle_ctrl_r_ofo(ch);
+        return wmsg_handle_ctrl_r_default(ch);
     }
     return ch;
 }
 
 void
-pager_init_hooks(void)
+wmsg_init_hooks(void)
 {
-    vkey_register_hook(VKEY_HOOK_PRIO_MODAL, pager_modal_key_hook);
-    vkey_register_hook(VKEY_HOOK_PRIO_PAGER, pager_global_key_hook);
+    vkey_register_hook(VKEY_HOOK_PRIO_MODAL, wmsg_modal_key_hook);
+    vkey_register_hook(VKEY_HOOK_PRIO_PAGER, wmsg_global_key_hook);
 }
 
 /* ----------------------------------------------------- */
@@ -1132,14 +1141,14 @@ add_history(const msgque_t * msg)
         (water_which == swater[0] || water_which == &water[0])) {
         if (watermode < water_which->count)
             watermode++;
-        pager_show_panel();
+        wmsg_show_panel();
     }
 
     return 0;
 }
 
 static inline int
-can_pop_pager_ui(void)
+can_pop_wmsg_ui(void)
 {
     return currutmp->mode != 0 &&
            currutmp->pager != PAGER_OFF &&
@@ -1189,7 +1198,7 @@ write_request_default(void)
 {
     int i, msgcount;
 
-    if (!can_pop_pager_ui()) {
+    if (!can_pop_wmsg_ui()) {
         msgcount = currutmp->msgcount;
         for (i = 0; i < msgcount; ++i) {
             show_call_in(1, i);

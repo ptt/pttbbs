@@ -301,8 +301,8 @@ void oflush(void);
 void obegin_frame(void);
 void oend_frame(void);
 
-// pager hotkeys processor
-void pager_init_hooks(void);
+// wmsg hotkeys processor
+void wmsg_init_hooks(void);
 void talk_init_hooks(void);
 
 // new input api
@@ -346,7 +346,8 @@ ssize_t vbuf_from_tty(VBUF *v);
 typedef enum {
     VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
     VKEY_HOOK_PRIO_MODAL,      // Modal dialogs/popups (e.g., active waterball list)
-    VKEY_HOOK_PRIO_PAGER,      // Global Pager/waterball hotkeys (e.g., Ctrl-R)
+    VKEY_HOOK_PRIO_WMSG,       // Global wmsg hotkeys (e.g., Ctrl-R)
+#define VKEY_HOOK_PRIO_PAGER VKEY_HOOK_PRIO_WMSG
     VKEY_HOOK_PRIO_NORMAL,     // Normal screen handlers (e.g., Ctrl-U userlist)
     VKEY_HOOK_PRIO_MAX
 } VKeyHookPriority;
@@ -739,12 +740,12 @@ const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
 int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *);
 void talkreply(void);
-int pager_toggle_mode(void);
+int wmsg_toggle_mode(void);
 int t_query(void);
 int t_qchicken(void);
 int t_talk(void);
 int t_chat(void);
-int pager_show_log(void);
+int wmsg_show_log(void);
 int my_query(const char *uident);
 int isvisible_uid(int tuid);
 int friend_stat(const userinfo_t *me, const userinfo_t * ui);
