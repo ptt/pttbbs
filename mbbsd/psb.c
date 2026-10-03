@@ -1195,7 +1195,7 @@ pvcm_footer(PSB_CTX *ctx GCC_UNUSED) {
 static int
 pvcm_renderer(int i, PSB_CTX *ctx) {
     pvcm_ctx *cx = (pvcm_ctx*) ctx->cmd.priv;
-    int curr = ctx->curr;
+    int curr = ctx->cmd.curr;
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
