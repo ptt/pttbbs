@@ -220,6 +220,20 @@ typedef struct {
     CommentKeyReq key;
 } PACKSTRUCT CommentQueryRequest;
 
+// Post Service Daemon (post.svc)
+//
+#ifndef POSTSVC_SOCK_PATH
+#define POSTSVC_SOCK_PATH BBSHOME "/run/post.svc.sock"
+#endif
+
+#ifndef USE_POST_SVC
+#define USE_POST_SVC 1
+#endif
+
+static inline const char *get_postsvc_sock(void)
+{
+    return POSTSVC_SOCK_PATH;
+}
 
 #endif // BBS_DAEMONS_H
 

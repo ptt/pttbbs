@@ -3,6 +3,8 @@
 #include "daemons.h"
 #include <arpa/inet.h>
 
+#define REAL_VOTE (0)
+
 #ifdef EDITPOST_SMARTMERGE
 
 #include "fnv_hash.h"
@@ -14,7 +16,8 @@
 
 #define NEWIDPOST_LIMIT_DAYS (14)
 
-static int comment(int ent, fileheader_t * fhdr, const char *direct);
+static int comment_post(int ent, fileheader_t * fhdr, const char *direct);
+static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
 
@@ -1480,13 +1483,19 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (PostAddRecord(currboard, &postfile, dashc(genbuf)) == -1)
+    if (rename(genbuf, fpath) == -1)
     {
         unlink(genbuf);
+        unlink(fpath);
+        return -1;
+    }
+
+    if (PostAddRecord(currboard, &postfile, dashc(fpath)) == -1)
+    {
+        unlink(fpath);
     }
     else
     {
-        rename(genbuf, fpath);
 	setbtotal(currbid);
 
         if (LOG_CONF_POST) {
@@ -2386,7 +2395,10 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    do_reply(fhdr);
             return FULLUPDATE;
 	case RET_DOCOMMENT:
-            comment(ent, fhdr, direct);
+            comment_post(ent, fhdr, direct);
+	    return FULLUPDATE;
+	case RET_DOVOTE:
+            vote_post(ent, fhdr, direct);
 	    return FULLUPDATE;
 	case RET_DOQUERYINFO:
 	    view_postinfo(ent, fhdr, direct, b_lines-3);
@@ -2637,7 +2649,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 
 
 int
-comment(int ent, fileheader_t * fhdr, const char *direct)
+comment_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            buf[PATHLEN], msg[STRLEN];
     const char	    *myid = cuser.userid;
@@ -2965,6 +2977,94 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     lastcomment = now;
     STRLCPY(lastcomment_fname, fhdr->filename);
+    return FULLUPDATE;
+}
+
+static int
+vote_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
+{
+
+    if (!REAL_VOTE)
+        return comment_post(ent, fhdr, direct);
+
+    boardheader_t *bp;
+    int vote = 0;
+    const char *reason = "權限不足";
+    int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
+
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
+
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    bp = getbcache(currbid);
+    if (!bp)
+	return DONOTHING;
+
+    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
+        ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
+	vmsg("抱歉, 禁止評價");
+	return FULLUPDATE;
+    }
+#ifdef SAFE_ARTICLE_DELETE
+    if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
+	vmsg("本文已刪除");
+	return FULLUPDATE;
+    }
+#endif
+    if (!CheckPostPerm2(&reason) || isGuest) {
+	vmsgf("無法評價: %s", reason);
+	return FULLUPDATE;
+    }
+
+#ifndef DEBUG
+    char msg[STRLEN];
+    if (get_board_restriction_reason(currbid, sizeof(msg), msg)) {
+	vmsgf("未達看板發文限制: %s", msg);
+	return FULLUPDATE;
+    }
+#endif
+
+    move(b_lines, 0);
+    clrtoeol();
+    outs(ANSI_COLOR(1) "您覺得這篇文章 ");
+    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦 ");
+    if (!(bp->brdattr & BRD_NOBOO)) {
+	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "給它劣評 ");
+    }
+    outs(ANSI_COLOR(1;37) "0." ANSI_RESET "取消投票 ");
+    outs("[1]? ");
+
+    int ch = vkey();
+    if (ch == '1' || ch == '\r' || ch == '\n' || ch == ' ') {
+	vote = 1;
+    } else if (ch == '2') {
+	if (bp->brdattr & BRD_NOBOO) {
+	    vmsg("本板禁止劣評");
+	    return FULLUPDATE;
+	}
+	vote = -1;
+    } else if (ch == '0') {
+	vote = 0;
+    } else {
+	move(b_lines, 0);
+	clrtoeol();
+	return FULLUPDATE;
+    }
+
+    move(b_lines, 0);
+    clrtoeol();
+    if (VotePostRecord(bp->brdname, fhdr->filename, vote) != 0) {
+	vmsg("投票失敗");
+	return FULLUPDATE;
+    }
+
+    if (vote == 1)
+	vmsg("已完成推薦");
+    else if (vote == -1)
+	vmsg("已完成劣評");
+    else
+	vmsg("已取消投票");
+
     return FULLUPDATE;
 }
 
@@ -4363,7 +4463,8 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_new_post, new_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_post_vote, do_post_vote)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_whereami, whereami)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cross_post, cross_post)
-DEFINE_READ_ITEM_CMD(bbs_cmd_comment, comment)
+DEFINE_READ_ITEM_CMD(bbs_cmd_comment_post, comment_post)
+DEFINE_READ_ITEM_CMD(bbs_cmd_vote_post, vote_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_limitedit, do_limitedit)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_range, del_range_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_edit_post, edit_post)
@@ -4411,8 +4512,8 @@ const cmd_t read_comms[] = {
     { Ctrl('X'), "轉錄", "轉錄文章至其他看板", bbs_cmd_cross_post, 0, CMD_PRIO_NORM, true },
     { Ctrl('P'), "發表", "發表新文章", bbs_cmd_new_post, 0, CMD_PRIO_HIGH },
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },
-    { 'X', "推文", "推薦或評論文章", bbs_cmd_comment, 0, CMD_PRIO_HIGH, true },
-    { '%', NULL, NULL, bbs_cmd_comment, 0, CMD_PRIO_NONE, true },
+    { 'X', "推文", "給予文章評論", bbs_cmd_comment_post, 0, CMD_PRIO_HIGH, true },
+    { '%', "評價", "評價文章(推/噓)", bbs_cmd_vote_post, 0, CMD_PRIO_HIGH, true },
     { 'd', "刪除", "刪除選取的文章", bbs_cmd_del_post, 0, CMD_PRIO_HIGH, true },
     { 'E', "編輯", "編輯文章內容", bbs_cmd_edit_post, 0, CMD_PRIO_LOW, true },
     { 'v', "已讀/未讀", "切換文章已讀或未讀狀態", bbs_cmd_mark_read, 0, CMD_PRIO_LOW, true },

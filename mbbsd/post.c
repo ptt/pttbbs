@@ -1,4 +1,9 @@
 #include "bbs.h"
+#include "daemons.h"
+
+static inline int connect_post_svc() {
+    return toconnectex(get_postsvc_sock(), 2);
+}
 
 int
 PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNUSED)
@@ -7,12 +12,32 @@ PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNU
     setbdir(dir, board);
     if (append_fileheader(dir, fhdr) == -1)
         return -1;
+
+    if(!USE_POST_SVC)
+        return 0;
+
+    int s = connect_post_svc();
+    if (s >= 0) {
+        size_t title_len = strlen(fhdr->title);
+        char hdr_buf[256];
+        int hlen = snprintf(hdr_buf, sizeof(hdr_buf),
+                            "POST_FILE %s %s %s %u %d %ld %zu\n",
+                            board, fhdr->filename, cuser.userid,
+                            (unsigned int)cuser.firstlogin,
+                            fhdr->filemode, (long)ctime, title_len);
+        if (towrite(s, hdr_buf, hlen) >= 0 &&
+            (title_len == 0 || towrite(s, fhdr->title, title_len) >= 0)) {
+            char resp[64] = {0};
+            toread(s, resp, sizeof(resp) - 1);
+        }
+        close(s);
+    }
     return 0;
 }
 
 int
-CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t *fhdr,
-                 int ent, int type, const char *msg GCC_UNUSED, const char *formatted)
+CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
+                 int ent, int type, const char *msg, const char *formatted)
 {
     char path[PATHLEN];
     int update = 0;
@@ -74,10 +99,57 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         brc_addlist(fhdr->filename, fhdr->modified);
     }
 
+    if (USE_POST_SVC && msg != NULL) {
+        int s = connect_post_svc();
+        if (s >= 0) {
+            size_t msg_len = strlen(msg);
+            char hdr_buf[256];
+            int hlen = snprintf(hdr_buf, sizeof(hdr_buf),
+                                "COMMENT %s %s %s %u %s %ld %zu\n",
+                                board, fhdr->filename, cuser.userid,
+                                (unsigned int)cuser.firstlogin,
+                                fromhost, (long)now, msg_len);
+            if (towrite(s, hdr_buf, hlen) >= 0 &&
+                (msg_len == 0 || towrite(s, msg, msg_len) >= 0)) {
+                char resp[64] = {0};
+                toread(s, resp, sizeof(resp) - 1);
+            }
+            close(s);
+        }
+    }
+
     ENDSTAT(STAT_DOCOMMENT);
     return 0;
 
 error:
     ENDSTAT(STAT_DOCOMMENT);
     return -1;
+}
+
+int
+VotePostRecord(const char *board, const char *file, int vote)
+{
+    if (!USE_POST_SVC)
+        return 0;
+
+    int s = connect_post_svc();
+    if (s < 0) {
+        return 1;
+    }
+
+    char cmd[256];
+    int len = snprintf(cmd, sizeof(cmd), "VOTE %s %s %s %u %d\n",
+                       board, file, cuser.userid,
+                       (unsigned int)cuser.firstlogin, vote);
+
+    if (towrite(s, cmd, len) < 0) {
+        close(s);
+        return 1;
+    }
+
+    char resp[64] = {0};
+    toread(s, resp, sizeof(resp) - 1);
+    close(s);
+
+    return (strncmp(resp, "OK", 2) == 0) ? 0 : 1;
 }

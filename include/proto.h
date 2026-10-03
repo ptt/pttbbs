@@ -189,6 +189,7 @@ enum {
 int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
+int VotePostRecord(const char *board, const char *file, int vote);
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
                     char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
