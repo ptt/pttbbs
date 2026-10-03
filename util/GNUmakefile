@@ -15,11 +15,11 @@ CPROG_WITH_UTIL := \
 	boardlist	post		poststat	\
 	account		deluserfile	\
 	expire		mandex		broadcast	\
-	openticket	topusr		\
+	topusr		\
 	toplazyBM	writemoney	\
 	reaper		buildAnnounce	mailangel	\
 	outmail		chkhbf		userlist	\
-	angel		gamblegive	\
+	angel		gamblegive	openticket	\
 	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
@@ -38,7 +38,7 @@ CPROG_WITHOUT_UTIL := \
 	$(END)
 
 SCRIPT_PROGS := \
-	backpasswd.sh	mailog.sh	openticket.sh	topsong.sh	\
+	backpasswd.sh	mailog.sh	topsong.sh	\
 	toplazyBM.sh	dailybackup.pl	tarqueue.pl	waterball.pl	\
 	filtermail.pl	getbackup.pl	timecap_expire.sh	\
 	$(END)

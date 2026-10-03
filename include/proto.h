@@ -297,7 +297,6 @@ void setfriendfile(char *fpath, int type);
 int is_rejected(const char *userid);
 
 /* gamble */
-int ticket_main(void);
 int openticket(int bid);
 int ticket(int bid);
 int hold_gamble(void);
