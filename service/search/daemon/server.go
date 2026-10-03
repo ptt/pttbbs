@@ -42,7 +42,7 @@ const (
 	DefaultAIDTableMinReqs   int64         = 100   // Min cumulative queries (search + aid) before admitting board to AID table cache
 	DefaultAIDTableTTL       time.Duration = 1 * time.Hour
 	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
-	DefaultWebSearchMaxDepth int           = 100000 // Max records to scan backwards for web tail search (0 = unlimited)
+	DefaultWebSearchMaxDepth int           = 0 // Max records to scan backwards for web tail search (0 = unlimited)
 	DefaultCacheTTL                        = 1 * time.Hour
 	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
 	aiduTypeG            uint64 = 1 << 44

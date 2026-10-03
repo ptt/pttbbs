@@ -321,11 +321,6 @@ static int c_scan_dir_reverse(const char *direct,
 
 done:
     close(fd);
-    if (matched_count == 0) {
-        stopped_early = 0;
-    } else if (!stopped_early && stop_rec > 1) {
-        stopped_early = 1;
-    }
     if (out_stopped_early) {
         *out_stopped_early = stopped_early;
     }
