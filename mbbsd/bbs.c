@@ -1233,34 +1233,6 @@ does_board_have_public_bm(const boardheader_t *bp) {
     return bp->BM[0] > ' ';
 }
 
-#ifdef USE_POSTD
-static int PostAddRecord(const char *board, const fileheader_t *fhdr,
-                         time4_t ctime)
-{
-    int s;
-    PostAddRequest req = {0};
-
-    req.cb = sizeof(req);
-    req.operation = POSTD_REQ_ADD;
-    STRLCPY(req.key.board, board);
-    STRLCPY(req.key.file, fhdr->filename);
-    memcpy(&req.header, fhdr, sizeof(req.header));
-    req.extra.userref = cuser.firstlogin;
-    req.extra.ctime = ctime;
-    req.extra.ipv4 = inet_addr(fromhost);
-    STRLCPY(req.extra.userid, cuser.userid);
-
-    s = toconnectex(POSTD_ADDR, 10);
-    if (s < 0)
-        return 1;
-    if (towrite(s, &req, sizeof(req)) < 0) {
-        close(s);
-        return 1;
-    }
-    close(s);
-    return 0;
-}
-#endif
 
 static int
 do_post_article(int edflags)
@@ -1629,9 +1601,6 @@ do_post_article(int edflags)
 
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
-#ifdef USE_POSTD
-        PostAddRecord(bp->brdname, &postfile, dashc(fpath));
-#endif
     }
     pressanykey();
     return FULLUPDATE;

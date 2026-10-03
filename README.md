@@ -54,6 +54,5 @@
   - `fromd/`：故鄉 (IP/Domain) 查詢服務
   - `logind/`：海量登入前導與連線分流服務
   - `mand/`：精華區文章服務 (for Web)
-  - `postd/`：文章記錄服務 (experimental)
   - `regmaild/`：註冊 Email 驗證與寄送服務
   - `wsproxy/`：WebSocket 至 Telnet BBS 代理轉接服務 (experimental)
