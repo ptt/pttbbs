@@ -32,7 +32,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
 
 }
 
-#ifdef USE_COMMENTD
+#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 /* Locally defined context. */
 typedef struct {
     uint32_t allocated;
@@ -76,6 +76,71 @@ void *CommentsOpen(const char *board, const char *file)
     memset(c, 0, sizeof(*c));
     STRLCPY(c->key.board, board);
     STRLCPY(c->key.file, file);
+
+    if (USE_POST_SVC) {
+        int s = toconnectex(POSTSVC_SOCK_PATH, 2);
+        if (s >= 0) {
+            char cmd[PATHLEN + 64];
+            int len = snprintf(cmd, sizeof(cmd), "COMMENTS_FILE %s %s 1 10000\n", board, file);
+            if (towrite(s, cmd, len) >= 0) {
+                char hdr[128] = {0};
+                int hpos = 0;
+                char ch = 0;
+                while (hpos < (int)sizeof(hdr) - 1 && toread(s, &ch, 1) > 0) {
+                    hdr[hpos++] = ch;
+                    if (ch == '\n')
+                        break;
+                }
+                hdr[hpos] = '\0';
+
+                int count = 0, total = 0;
+                if (sscanf(hdr, "OK %d %d", &count, &total) >= 1 && count > 0) {
+                    c->allocated = count;
+                    c->resp = (CommentBodyReq *)calloc(count, sizeof(CommentBodyReq));
+                    if (c->resp) {
+                        char line[1024];
+                        int lpos = 0;
+                        int idx = 0;
+                        while (idx < count && toread(s, &ch, 1) > 0) {
+                            if (ch == '\n') {
+                                line[lpos] = '\0';
+                                char *p = line;
+                                char *fields[7] = {0};
+                                int fidx = 0;
+                                fields[fidx++] = p;
+                                while (*p && fidx < 7) {
+                                    if (*p == '\t') {
+                                        *p = '\0';
+                                        fields[fidx++] = p + 1;
+                                    }
+                                    p++;
+                                }
+                                if (fidx >= 7) {
+                                    time4_t ctime = (time4_t)atoll(fields[2]);
+                                    int is_del = atoi(fields[4]);
+                                    c->resp[idx].time = ctime;
+                                    c->resp[idx].ipv4 = inet_addr(fields[3]);
+                                    STRLCPY(c->resp[idx].userid, fields[1]);
+                                    c->resp[idx].type = (is_del ? -1 : 0);
+                                    if (is_del && fields[5][0]) {
+                                        STRLCPY(c->resp[idx].msg, fields[5]);
+                                    } else {
+                                        STRLCPY(c->resp[idx].msg, fields[6]);
+                                    }
+                                    idx++;
+                                }
+                                lpos = 0;
+                            } else if (lpos < (int)sizeof(line) - 1) {
+                                line[lpos++] = ch;
+                            }
+                        }
+                        c->loaded = idx;
+                    }
+                }
+            }
+            close(s);
+        }
+    }
     return c;
 }
 
@@ -135,6 +200,11 @@ static int CommentsLoad(CommentsCtx *c, int i)
 const struct CommentBodyReq *CommentsRead(void *ctx, int i)
 {
     CommentsCtx *c = (CommentsCtx *)ctx;
+    if (USE_POST_SVC) {
+        if (i < 0 || (uint32_t)i >= c->loaded)
+            return NULL;
+        return &c->resp[i];
+    }
 
     while (i >= (int)c->loaded) {
         if (CommentsLoad(c, c->loaded++))
@@ -177,6 +247,9 @@ static int CommentsDelete(void *ctx, int i)
 int CommentsGetCount(void *ctx)
 {
     CommentsCtx *c = (CommentsCtx *)ctx;
+    if (USE_POST_SVC) {
+        return c->loaded;
+    }
     int s, num = 0;
     CommentQueryRequest req = {0};
     req.cb = sizeof(req);
@@ -208,6 +281,17 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     req = CommentsRead(ctx, i);
     if (!req || req->type < 0)
         return -1;
+
+    if (USE_POST_SVC) {
+        if (CommentDeleteRecord(c->key.board, c->key.file, i + 1, cuser.userid, reason) != 0)
+            return -1;
+        c->resp[i].type = -1;
+        if (reason && reason[0])
+            strlcpy(c->resp[i].msg, reason, sizeof(c->resp[i].msg));
+        else
+            strlcpy(c->resp[i].msg, "<\xb7\xed\xa7\x52>", sizeof(c->resp[i].msg));
+        return 0;
+    }
 
     setbfile(filename, c->key.board, c->key.file);
     SNPRINTF(tmpfile, "%s.tmp", filename);

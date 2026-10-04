@@ -162,7 +162,7 @@ int ccw_talk(int fd, int destunum);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
 /* comments */
-#ifdef USE_COMMENTD
+#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 struct CommentsBodyReq;
 int CommentsAddRecord(const char *board, const char *file,
                       int type, const char *msg);
@@ -185,10 +185,30 @@ enum {
     RECTYPE_DEFAULT = RECTYPE_GOOD,
 };
 
+enum {
+    POST_UPDATE_NO_CHANGE = 0,
+    POST_UPDATE_SUCCESS   = 1,
+    POST_UPDATE_CONFLICT  = 2,
+    POST_UPDATE_ERROR     = -1,
+};
+
 /* post & comment storage */
 int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
+int VotePostRecord(const char *board, const char *file, int vote);
+int CrosspostRecord(const char *src_board, const char *src_file,
+                    const char *target_board, const char *target_file);
+int PostFetchOriginal(const char *board, const char *file, const char *out_path,
+                     time4_t *out_modified);
+int PostUpdateRecord(const char *board, const char *file, const char *title,
+                     const char *filepath, time4_t expected_modified,
+                     time4_t *out_latest_modified);
+int PostUpdateTitleRecord(const char *board, const char *file, const char *title, const char *editor);
+int PostDeleteRecord(const char *board, const char *file, const char *deleter, const char *reason);
+int PostUndeleteRecord(const char *board, const char *file);
+int CommentDeleteRecord(const char *board, const char *file, int seq, const char *deleter, const char *reason);
+int CommentUndeleteRecord(const char *board, const char *file, int seq);
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
                     char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);

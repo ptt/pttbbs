@@ -2164,7 +2164,7 @@ psb_recycle_bin(const char *base, const char *title) {
 ///////////////////////////////////////////////////////////////////////////
 // Comment Management
 
-#ifdef USE_COMMENTD
+#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 typedef struct {
     void *cmctx;
 } pvcm_ctx;
@@ -2216,6 +2216,29 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
 }
 
 static int
+pvcm_cmd_undelete(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
+    if (!resp || resp->type >= 0)
+        return 0;
+    if (vans("確定要復原此則推文嗎？ (y/N) ") == 'y') {
+        const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
+        if (CommentUndeleteRecord(key->board, key->file, ctx->curr + 1) != 0) {
+            vmsg("復原失敗。");
+        } else {
+            vmsg("已復原推文。");
+            void *old = cx->cmctx;
+            cx->cmctx = CommentsOpen(key->board, key->file);
+            CommentsClose(old);
+        }
+        ctx->redraw = true;
+    } else {
+        ctx->redraw_footer_lines = 3;
+    }
+    return 0;
+}
+
+static int
 pvcm_cmd_acl(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
@@ -2229,6 +2252,7 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
 static const cmd_t pvcm_cmds[] = {
     { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
+    { 'u', "復原", "復原被刪除的推文", pvcm_cmd_undelete, 0, CMD_PRIO_MAX, true },
     { 'U', "快速水桶", "設定該推文作者的看板水桶權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };

@@ -20,7 +20,7 @@ This file is encoded in UTF-8.
 將原本固定存在 `boardheader_t` 內的 `posttype` 與 `posttype_f`
 改為直接讀寫各看板目錄下的檔案 `boards/<B>/<board>/posttype`。
 
-昇級時需匯出既有分類設定（可隨時在背景執行，不影響運行中的 BBS 服務）：
+昇級時需匯出既有分類設定，並將未啟用的舊範本檔（postsample.* / sample.*）改名備份為 *.bak（可隨時在背景執行，不影響運行中的 BBS 服務）：
 `./upgrade/board_posttype_to_file`
 
 ---

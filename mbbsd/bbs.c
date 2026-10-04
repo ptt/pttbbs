@@ -3,6 +3,8 @@
 #include "daemons.h"
 #include <arpa/inet.h>
 
+#define REAL_VOTE (0)
+
 #if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
 
 #include "fnv_hash.h"
@@ -14,7 +16,8 @@
 
 #define NEWIDPOST_LIMIT_DAYS (14)
 
-static int comment(int ent, fileheader_t * fhdr, const char *direct);
+static int comment_post(int ent, fileheader_t * fhdr, const char *direct);
+static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
 
@@ -947,6 +950,10 @@ cancelpost(const char *direct, const fileheader_t *fh,
     int ret = 0;
     char bakdir[PATHLEN];
 
+    if (USE_POST_SVC) {
+        PostDeleteRecord(currboard, fh->filename, cuser.userid, reason);
+    }
+
     setbdir(bakdir, currboard);
 
     ret = delete_file_content2(direct, fh, bakdir, newpath, sznewpath, reason);
@@ -1482,13 +1489,19 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (PostAddRecord(currboard, &postfile, dashc(genbuf)) == -1)
+    if (rename(genbuf, fpath) == -1)
     {
         unlink(genbuf);
+        unlink(fpath);
+        return -1;
+    }
+
+    if (PostAddRecord(currboard, &postfile, dashc(fpath)) == -1)
+    {
+        unlink(fpath);
     }
     else
     {
-        rename(genbuf, fpath);
 	setbtotal(currbid);
 
         if (LOG_CONF_POST) {
@@ -1826,6 +1839,37 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
 }
 #endif // CONFIG_EDITPOST_SMARTMERGE
 
+static void
+save_abandoned_edits(const char *fpath)
+{
+    int saved = 0;
+    if (vans("是否將剛才編輯的內容存入暫存檔？ [Y/n] ") != 'n') {
+        while (1) {
+            const char *tmpbuf = ask_tmpbuf(b_lines - 1);
+            char buf_target[PATHLEN];
+            setuserfile(buf_target, tmpbuf);
+            if (dashs(buf_target) > 0) {
+                char qprompt[128];
+                snprintf(qprompt, sizeof(qprompt),
+                         "暫存檔[%c]已有內容，確定要覆寫嗎？ [y/N] ", tmpbuf[4]);
+                if (vans(qprompt) != 'y') {
+                    if (vans("要換選其他暫存檔嗎？ [Y/n] ") != 'n')
+                        continue;
+                    break;
+                }
+            }
+            Rename(fpath, buf_target);
+            vmsgf("剛才編輯的內容已存入暫存檔[%c]。", tmpbuf[4]);
+            saved = 1;
+            break;
+        }
+    }
+    if (!saved) {
+        unlink(fpath);
+        vmsg("放棄覆寫。您剛才編輯的內容未儲存。");
+    }
+}
+
 int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -1923,22 +1967,78 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     refresh();
 
     STRLCPY(save_title, fhdr->title);
+    int use_post_svc_edit = 0;
+    time4_t orig_modified = 0;
 
-    Copy(genbuf, fpath);
-    // to prevent genbuf being modified after copy, use dashs(fpath) instead.
-    oldsz = dashs(fpath);
+    if (USE_POST_SVC &&
+        PostFetchOriginal(currboard, fhdr->filename, fpath, &orig_modified) == 0) {
+        use_post_svc_edit = 1;
+        oldsz = dashs(fpath);
+    } else {
+        Copy(genbuf, fpath);
+        // to prevent genbuf being modified after copy, use dashs(fpath) instead.
+        oldsz = dashs(fpath);
 
 #if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-    if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
-        vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
-        unlink(fpath);
-        return FULLUPDATE;
-    }
+        if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
+            vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
+            unlink(fpath);
+            return FULLUPDATE;
+        }
 #endif
+    }
 
     if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
+    }
+
+    if (use_post_svc_edit) {
+        time4_t target_modified = orig_modified;
+        time4_t latest_modified = 0;
+
+        while (1) {
+            outs("\n\n" ANSI_COLOR(1;30) "正在儲存並更新文章記錄..." ANSI_RESET);
+            refresh();
+
+            int edit_rc = PostUpdateRecord(currboard, fhdr->filename, save_title, fpath,
+                                         target_modified, &latest_modified);
+            if (edit_rc == POST_UPDATE_NO_CHANGE) {
+                unlink(fpath);
+                vmsg("文章未修改。");
+                return FULLUPDATE;
+            } else if (edit_rc == POST_UPDATE_SUCCESS) {
+                unlink(fpath);
+                fhdr->modified = (latest_modified > 0) ? latest_modified : dasht(genbuf);
+                if (strcmp(save_title, fhdr->title) != 0) {
+                    LOG_IF(LOG_CONF_EDIT_TITLE,
+                           log_filef("log/edit_title.log",
+                                     "%s(E) %s(%s) %s => %s\n",
+                                     cuser.userid, currboard, fhdr->owner, fhdr->title,
+                                     save_title));
+                    STRLCPY(fhdr->title, save_title);
+                }
+                modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
+                                NULL, NULL, 0, NULL, 0, 0);
+                brc_addlist(fhdr->filename, fhdr->modified);
+                return FULLUPDATE;
+            } else if (edit_rc == POST_UPDATE_CONFLICT) {
+                char prompt[256];
+                snprintf(prompt, sizeof(prompt),
+                         "此文章已於 %s 被修改，確定仍要覆寫嗎？ (y/N) ",
+                         Cdate_mdHM(&latest_modified));
+                if (vans(prompt) == 'y') {
+                    target_modified = latest_modified;
+                    continue;
+                }
+                save_abandoned_edits(fpath);
+                return FULLUPDATE;
+            } else {
+                unlink(fpath);
+                vmsg("儲存失敗，請稍後再試。");
+                return FULLUPDATE;
+            }
+        }
     }
 
 #if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
@@ -1955,13 +2055,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         is_race_condition = 1;
 #endif
     if (is_race_condition) {
-        // save to ~/buf.0
-        setuserfile(genbuf, "buf.0");
-        Rename(fpath, genbuf);
-        // alert uesr
-        outs("\n\n" ANSI_COLOR(1;31) "檔案已被其它人修改過，無法寫入。\n"
-             "剛才的內容已存入您的暫存檔[0]。 請重新編輯。");
-        pressanykey();
+        outs("\n\n" ANSI_COLOR(1;31) "檔案已被其它人修改過，無法寫入。" ANSI_RESET "\n");
+        save_abandoned_edits(fpath);
         return FULLUPDATE;
     }
 
@@ -2263,6 +2358,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	setbdir(fname, xboard);
 	append_fileheader(fname, &xfile);
 	setbtotal(getbnum(xboard));
+	PostAddRecord(xboard, &xfile, dashc(xfpath));
+	CrosspostRecord(currboard, fhdr->filename, xboard, xfile.filename);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
         LOG_IF(LOG_CONF_CROSSPOST,
@@ -2385,7 +2482,10 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    do_reply(fhdr);
             return FULLUPDATE;
 	case RET_DOCOMMENT:
-            comment(ent, fhdr, direct);
+            comment_post(ent, fhdr, direct);
+	    return FULLUPDATE;
+	case RET_DOVOTE:
+            vote_post(ent, fhdr, direct);
 	    return FULLUPDATE;
 	case RET_DOQUERYINFO:
 	    view_postinfo(ent, fhdr, direct, b_lines-3);
@@ -2624,6 +2724,9 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
     }
+    if (USE_POST_SVC) {
+        PostUpdateTitleRecord(currboard, fhdr->filename, tmpfhdr.title, cuser.userid);
+    }
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
                      "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
@@ -2636,9 +2739,9 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 
 
 int
-comment(int ent, fileheader_t * fhdr, const char *direct)
+comment_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            buf[PATHLEN], msg[STRLEN];
+    char            buf[4096], msg[2048];
     const char	    *myid = cuser.userid;
     char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
@@ -2906,29 +3009,34 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
 #endif // !CONFIG_OLD_RECOMMEND
 
-    move(b_lines, 0);
-    clrtoeol();
-
-    if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
-	return FULLUPDATE;
-
-    // make sure to do modification
-    {
-        // to hold ':wq', ':q!' 'ZZ'
-	char ans[2];
-	sprintf(buf+strlen(buf),
-		ANSI_REVERSE "%-*s" ANSI_RESET " 確定[y/N]:",
-		maxlength, msg);
-	move(b_lines, 0);
-	clrtoeol();
-	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO))
+    if (USE_POST_SVC) {
+        if (v_multiline_text(msg, sizeof(msg), V_MULTILINE_MAX_LINES, STRLEN - 3, NULL, " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ") <= 0)
             return FULLUPDATE;
-        if (ans[0] == 'y' ||
-            strncmp(ans, ":w", 2) == 0 ||
-            strcmp(ans, "zz") == 0) {
-            // success!
-        } else
+    } else {
+        move(b_lines, 0);
+        clrtoeol();
+
+        if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
             return FULLUPDATE;
+
+        // make sure to do modification
+        {
+            // to hold ':wq', ':q!' 'ZZ'
+            char ans[2];
+            sprintf(buf+strlen(buf),
+                    ANSI_REVERSE "%-*s" ANSI_RESET " 確定[y/N]:",
+                    maxlength, msg);
+            move(b_lines, 0);
+            clrtoeol();
+            if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO))
+                return FULLUPDATE;
+            if (ans[0] == 'y' ||
+                strncmp(ans, ":w", 2) == 0 ||
+                strcmp(ans, "zz") == 0) {
+                // success!
+            } else
+                return FULLUPDATE;
+        }
     }
     STATINC(STAT_COMMENT);
     LOG_IF(LOG_CONF_PUSH, file_appendf("log/push",
@@ -2955,8 +3063,28 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		    Cdate_mdHM(&now));
 	}
 
-        FormatCommentString(buf, sizeof(buf), type,
-                            myid, maxlength, msg, tail);
+        if (strchr(msg, '\n') == NULL) {
+            FormatCommentString(buf, sizeof(buf), type,
+                                myid, maxlength, msg, tail);
+        } else {
+            buf[0] = '\0';
+            char *msg_dup = strdup(msg);
+            if (msg_dup) {
+                char *saveptr = NULL;
+                char *line = strtok_r(msg_dup, "\n", &saveptr);
+                int line_idx = 0;
+                while (line) {
+                    char line_buf[512];
+                    int cur_type = (line_idx == 0) ? type : RECTYPE_ARROW;
+                    FormatCommentString(line_buf, sizeof(line_buf), cur_type,
+                                        myid, maxlength, line, tail);
+                    strlcat(buf, line_buf, sizeof(buf));
+                    line = strtok_r(NULL, "\n", &saveptr);
+                    line_idx++;
+                }
+                free(msg_dup);
+            }
+        }
     }
 
     if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
@@ -2964,6 +3092,94 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     lastcomment = now;
     STRLCPY(lastcomment_fname, fhdr->filename);
+    return FULLUPDATE;
+}
+
+static int
+vote_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
+{
+
+    if (!REAL_VOTE)
+        return comment_post(ent, fhdr, direct);
+
+    boardheader_t *bp;
+    int vote = 0;
+    const char *reason = "權限不足";
+    int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
+
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
+
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    bp = getbcache(currbid);
+    if (!bp)
+	return DONOTHING;
+
+    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
+        ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
+	vmsg("抱歉, 禁止評價");
+	return FULLUPDATE;
+    }
+#ifdef SAFE_ARTICLE_DELETE
+    if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
+	vmsg("本文已刪除");
+	return FULLUPDATE;
+    }
+#endif
+    if (!CheckPostPerm2(&reason) || isGuest) {
+	vmsgf("無法評價: %s", reason);
+	return FULLUPDATE;
+    }
+
+#ifndef DEBUG
+    char msg[STRLEN];
+    if (get_board_restriction_reason(currbid, sizeof(msg), msg)) {
+	vmsgf("未達看板發文限制: %s", msg);
+	return FULLUPDATE;
+    }
+#endif
+
+    move(b_lines, 0);
+    clrtoeol();
+    outs(ANSI_COLOR(1) "您覺得這篇文章 ");
+    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦 ");
+    if (!(bp->brdattr & BRD_NOBOO)) {
+	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "給它劣評 ");
+    }
+    outs(ANSI_COLOR(1;37) "0." ANSI_RESET "取消投票 ");
+    outs("[1]? ");
+
+    int ch = vkey();
+    if (ch == '1' || ch == '\r' || ch == '\n' || ch == ' ') {
+	vote = 1;
+    } else if (ch == '2') {
+	if (bp->brdattr & BRD_NOBOO) {
+	    vmsg("本板禁止劣評");
+	    return FULLUPDATE;
+	}
+	vote = -1;
+    } else if (ch == '0') {
+	vote = 0;
+    } else {
+	move(b_lines, 0);
+	clrtoeol();
+	return FULLUPDATE;
+    }
+
+    move(b_lines, 0);
+    clrtoeol();
+    if (VotePostRecord(bp->brdname, fhdr->filename, vote) != 0) {
+	vmsg("投票失敗");
+	return FULLUPDATE;
+    }
+
+    if (vote == 1)
+	vmsg("已完成推薦");
+    else if (vote == -1)
+	vmsg("已完成劣評");
+    else
+	vmsg("已取消投票");
+
     return FULLUPDATE;
 }
 
@@ -3106,6 +3322,9 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
             } else {
                 ret = -1;
                 break;
+            }
+            if (USE_POST_SVC) {
+                PostDeleteRecord(currboard, fh->filename, cuser.userid, "del_range");
             }
             if (!IS_DELETE_FILE_CONTENT_OK(
                         delete_file_content(direct, fh,
@@ -4250,7 +4469,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
             mask_post_content(ent, fhdr, direct);
             break;
 
-#ifdef USE_COMMENTD
+#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
         case 'v':
             if (currbrdattr & (BRD_ANGELANONYMOUS | BRD_ANONYMOUS)) {
                 vmsg("抱歉，暫時不支援匿名板。");
@@ -4274,7 +4493,8 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_new_post, new_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_post_vote, do_post_vote)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_whereami, whereami)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cross_post, cross_post)
-DEFINE_READ_ITEM_CMD(bbs_cmd_comment, comment)
+DEFINE_READ_ITEM_CMD(bbs_cmd_comment_post, comment_post)
+DEFINE_READ_ITEM_CMD(bbs_cmd_vote_post, vote_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_limitedit, do_limitedit)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_range, del_range_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_edit_post, edit_post)
@@ -4316,8 +4536,8 @@ const cmd_t read_comms[] = {
     { Ctrl('X'), "轉錄", "轉錄文章至其他看板", bbs_cmd_cross_post, 0, CMD_PRIO_NORM, true },
     { Ctrl('P'), "發表", "發表新文章", bbs_cmd_new_post, 0, CMD_PRIO_HIGH },
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },
-    { 'X', "推文", "推薦或評論文章", bbs_cmd_comment, 0, CMD_PRIO_HIGH, true },
-    { '%', NULL, NULL, bbs_cmd_comment, 0, CMD_PRIO_NONE, true },
+    { 'X', "推文", "給予文章評論", bbs_cmd_comment_post, 0, CMD_PRIO_HIGH, true },
+    { '%', "評價", "評價文章(推/噓)", bbs_cmd_vote_post, 0, CMD_PRIO_HIGH, true },
     { 'd', "刪除", "刪除選取的文章", bbs_cmd_del_post, 0, CMD_PRIO_HIGH, true },
     { 'E', "編輯", "編輯文章內容", bbs_cmd_edit_post, 0, CMD_PRIO_LOW, true },
     { 'v', "已讀/未讀", "切換文章已讀或未讀狀態", bbs_cmd_mark_read, 0, CMD_PRIO_LOW, true },
