@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"pttbbs/big5uao"
+	"pttbbs/post/importer"
 	"pttbbs/post/model"
 	"pttbbs/post/storage"
 )
@@ -705,6 +706,80 @@ func (s *Server) handleIPC(conn net.Conn) {
 			legacy = true
 		}
 		s.writeRenderOutput(conn, p, outputPath, legacy)
+
+	case "IMPORT_BOARD", "MIGRATE_BOARD":
+		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset]
+		if len(parts) < 2 {
+			conn.Write([]byte("ERR invalid arguments for IMPORT_BOARD\n"))
+			return
+		}
+		community := parts[1]
+		targetDir := ""
+		if len(parts) >= 3 && parts[2] != "-" && parts[2] != "" {
+			targetDir = parts[2]
+		}
+		overwrite := false
+		if len(parts) >= 4 && (parts[3] == "1" || strings.ToLower(parts[3]) == "true" || strings.ToLower(parts[3]) == "overwrite") {
+			overwrite = true
+		}
+		limit := 0
+		if len(parts) >= 5 {
+			limit, _ = strconv.Atoi(parts[4])
+		}
+		offset := 0
+		if len(parts) >= 6 {
+			offset, _ = strconv.Atoi(parts[5])
+		}
+		noMerge := false
+		if len(parts) >= 7 && (parts[6] == "1" || strings.ToLower(parts[6]) == "true" || strings.ToLower(parts[6]) == "nomerge") {
+			noMerge = true
+		}
+		commentdAddr := ""
+		if len(parts) >= 8 && parts[7] != "-" && parts[7] != "" {
+			commentdAddr = parts[7]
+		}
+
+		legacyFormat := false
+		if len(parts) >= 9 && (parts[8] == "1" || strings.ToLower(parts[8]) == "true" || strings.ToLower(parts[8]) == "legacy") {
+			legacyFormat = true
+		}
+
+		dryRun := false
+		if len(parts) >= 10 && (parts[9] == "1" || strings.ToLower(parts[9]) == "true" || strings.ToLower(parts[9]) == "dryrun" || strings.ToLower(parts[9]) == "dry-run") {
+			dryRun = true
+		}
+
+		lastProgress := time.Now()
+		opts := importer.ImportBoardOptions{
+			BBSHome:      s.cfg.BBSHome,
+			Board:        community,
+			RenderTarget: targetDir,
+			Overwrite:    overwrite,
+			Limit:        limit,
+			Offset:       offset,
+			IsBig5:       s.cfg.IsBig5(),
+			NoMerge:      noMerge,
+			CommentdAddr: commentdAddr,
+			LegacyFormat: legacyFormat,
+			DryRun:       dryRun,
+			ProgressFn: func(current, total int) {
+				if time.Since(lastProgress) >= 100*time.Millisecond || current == total {
+					lastProgress = time.Now()
+					conn.Write([]byte(fmt.Sprintf("PROGRESS %d %d\n", current, total)))
+				}
+			},
+		}
+
+		stats, err := importer.MigrateBoard(s.storage, opts)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		for _, errStr := range stats.ErrorDetails {
+			conn.Write([]byte(fmt.Sprintf("ERR_DETAIL %s\n", errStr)))
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %.2f\n",
+			stats.PostsImported, stats.CommentsImported, stats.CrosspostsLogged, stats.Errors, stats.Elapsed.Seconds())))
 
 	case "RENDER_FILE":
 		// RENDER_FILE <community> <post_file> <output_path> [format]

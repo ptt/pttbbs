@@ -456,6 +456,151 @@ func main() {
 			fmt.Println(resp)
 		}
 
+	case "import-community", "import-board", "migrate-community", "migrate-board":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR]")
+		}
+		comm := args[1]
+		renderTarget := "-"
+		overwrite := false
+		limit := 0
+		offset := 0
+		noMerge := false
+		commentdAddr := "-"
+		legacyFormat := false
+		dryRun := false
+
+		for i := 2; i < len(args); i++ {
+			arg := args[i]
+			if arg == "--overwrite" || arg == "-overwrite" {
+				overwrite = true
+			} else if arg == "--dry-run" || arg == "-dry-run" || arg == "--dryrun" || arg == "-n" {
+				dryRun = true
+			} else if arg == "--limit" && i+1 < len(args) {
+				limit, _ = strconv.Atoi(args[i+1])
+				i++
+			} else if strings.HasPrefix(arg, "--limit=") {
+				limit, _ = strconv.Atoi(strings.TrimPrefix(arg, "--limit="))
+			} else if arg == "--offset" && i+1 < len(args) {
+				offset, _ = strconv.Atoi(args[i+1])
+				i++
+			} else if strings.HasPrefix(arg, "--offset=") {
+				offset, _ = strconv.Atoi(strings.TrimPrefix(arg, "--offset="))
+			} else if arg == "--no-merge" || arg == "--no-merge-consecutive" {
+				noMerge = true
+			} else if arg == "--commentd-addr" && i+1 < len(args) {
+				commentdAddr = args[i+1]
+				i++
+			} else if strings.HasPrefix(arg, "--commentd-addr=") {
+				commentdAddr = strings.TrimPrefix(arg, "--commentd-addr=")
+			} else if arg == "--re-render" || arg == "-re-render" {
+				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+					renderTarget = args[i+1]
+					i++
+				} else {
+					renderTarget = "boards"
+				}
+			} else if (arg == "--render-target" || arg == "-render-target") && i+1 < len(args) {
+				renderTarget = args[i+1]
+				i++
+			} else if strings.HasPrefix(arg, "--render-target=") {
+				renderTarget = strings.TrimPrefix(arg, "--render-target=")
+			} else if arg == "--legacy-format" || arg == "-legacy-format" || arg == "--legacy" {
+				legacyFormat = true
+			} else if !strings.HasPrefix(arg, "-") && renderTarget == "-" {
+				renderTarget = arg
+				if abs, err := filepath.Abs(renderTarget); err == nil {
+					renderTarget = abs
+				}
+			}
+		}
+
+		ovStr := "0"
+		if overwrite {
+			ovStr = "1"
+		}
+		nmStr := "0"
+		if noMerge {
+			nmStr = "1"
+		}
+		legStr := "0"
+		if legacyFormat {
+			legStr = "1"
+		}
+		dryStr := "0"
+		if dryRun {
+			dryStr = "1"
+		}
+		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdAddr, legStr, dryStr)
+
+		sockPath := getSocketPath()
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			log.Fatalf("connect to %s failed: %v\n(Is post.svc running?)", sockPath, err)
+		}
+		defer conn.Close()
+
+		if _, err := conn.Write([]byte(header)); err != nil {
+			log.Fatalf("send command failed: %v", err)
+		}
+
+		fmt.Printf("[*] Starting fast Go migration for board '%s'...\n", comm)
+		if dryRun {
+			fmt.Println("    Mode: dry-run (simulation only, database and disk will not be modified)")
+		}
+		if renderTarget != "-" && renderTarget != "" {
+			fmt.Printf("    Render target: %s\n", renderTarget)
+		} else {
+			fmt.Println("    Re-render: disabled (default, import to DB only)")
+		}
+		if overwrite {
+			fmt.Println("    Mode: overwrite (clearing existing board data)")
+		}
+
+		reader := bufio.NewReader(conn)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				log.Fatalf("\nRead error: %v", err)
+			}
+			line = strings.TrimRight(line, "\r\n")
+			if strings.HasPrefix(line, "PROGRESS ") {
+				parts := strings.Fields(line)
+				if len(parts) >= 3 {
+					cur, _ := strconv.Atoi(parts[1])
+					total, _ := strconv.Atoi(parts[2])
+					pct := 0
+					if total > 0 {
+						pct = cur * 100 / total
+					}
+					fmt.Printf("\r%d/%d (%d%%)", cur, total, pct)
+				}
+			} else if strings.HasPrefix(line, "ERR_DETAIL ") {
+				fmt.Printf("\n[!] Error: %s", strings.TrimPrefix(line, "ERR_DETAIL "))
+			} else if strings.HasPrefix(line, "OK") {
+				fmt.Println()
+				parts := strings.Fields(line)
+				if len(parts) >= 6 {
+					if dryRun {
+						fmt.Printf("[+] Dry-run simulation completed in %ss:\n    Posts parsed:       %s\n    Comments parsed:    %s\n    Crossposts found:   %s\n    Errors encountered: %s\n",
+							parts[5], parts[1], parts[2], parts[3], parts[4])
+					} else {
+						fmt.Printf("[+] Migration completed in %ss:\n    Posts imported:     %s\n    Comments imported:  %s\n    Crossposts logged:  %s\n    Errors encountered: %s\n",
+							parts[5], parts[1], parts[2], parts[3], parts[4])
+					}
+				} else {
+					fmt.Println(line)
+				}
+				break
+			} else if strings.HasPrefix(line, "ERR") {
+				fmt.Println()
+				log.Fatalf("[!] Migration failed: %s", line)
+			}
+		}
+
 	case "render-community":
 		if len(args) < 2 {
 			log.Fatalf("Usage: post.ctl render-community <community> [output_dir] [--legacy-format]")
@@ -1004,6 +1149,7 @@ Usage:
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
+  post.ctl import-community <community> [--overwrite] [--dry-run] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR] [--re-render [target_dir]] [--legacy-format]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
