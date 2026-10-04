@@ -602,8 +602,8 @@ func QueryCommentd(addr, board, filename string, seq uint32) (int64, string, err
 	return int64(ctime), ip, nil
 }
 
-// MigrateBoard performs in-process, high-speed migration of an entire board into storage.Engine
-func MigrateBoard(engine *storage.Engine, opts ImportBoardOptions) (*ImportStats, error) {
+// MigrateBoard performs in-process, high-speed migration of an entire board into storage.Storage
+func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats, error) {
 	boardDir, err := LocateBoardDir(opts.BBSHome, opts.Board)
 	if err != nil {
 		return nil, err

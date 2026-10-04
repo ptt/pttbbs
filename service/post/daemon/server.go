@@ -33,13 +33,13 @@ func (c ServerConfig) IsBig5() bool {
 
 type Server struct {
 	cfg       ServerConfig
-	storage   *storage.Engine
+	storage   storage.Storage
 	listeners []net.Listener
 	wg        sync.WaitGroup
 	quit      chan struct{}
 }
 
-func NewServer(cfg ServerConfig, st *storage.Engine) *Server {
+func NewServer(cfg ServerConfig, st storage.Storage) *Server {
 	if cfg.BBSHome == "" {
 		cfg.BBSHome = "/home/bbs"
 	}
