@@ -2335,6 +2335,167 @@ func (e *Engine) ListCommentHistory(postID uint64, seq uint32) ([]*model.Comment
 	return revs, nil
 }
 
+// ImportedPostData packages a post along with its comments and crossposts for batch import.
+type ImportedPostData struct {
+	Post       *model.Post
+	Comments   []*model.Comment
+	Crossposts []*model.CrosspostRecord
+}
+
+// ImportPostBatch imports a slice of posts and their comments atomically into SQLite and Pebble,
+// and optionally renders them directly to renderTarget directory.
+func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string, legacyFormat ...bool) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	e.metaWriteMu.Lock()
+	unlocked := false
+	defer func() {
+		if !unlocked {
+			e.metaWriteMu.Unlock()
+		}
+	}()
+
+	tx, err := e.metaDB.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction failed: %w", err)
+	}
+	defer tx.Rollback()
+
+	stmtPost, err := tx.Prepare(`
+		INSERT INTO posts (parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare insert post failed: %w", err)
+	}
+	defer stmtPost.Close()
+
+	stmtCP, err := tx.Prepare(`
+		INSERT INTO crossposts (source_post_id, target_community, target_post_file, operator, operator_token, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare insert crosspost failed: %w", err)
+	}
+	defer stmtCP.Close()
+
+	postBatch := e.postsDB.NewBatch()
+	defer postBatch.Close()
+	commentBatch := e.commentsDB.NewBatch()
+	defer commentBatch.Close()
+
+	for _, item := range batch {
+		p := item.Post
+		p.NumComments = len(item.Comments)
+		p.NumCrossposts = len(item.Crossposts)
+		if p.Encoding == "" {
+			p.Encoding = "utf-8"
+		}
+
+		res, err := stmtPost.Exec(
+			p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken,
+			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
+			p.NumComments, p.NumCrossposts, p.Encoding,
+		)
+		if err != nil {
+			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		p.ID = uint64(id)
+
+		// Set in postBatch
+		postKey := model.EncodePostKey(p.ID)
+		postVal := model.EncodeRFC822Post(p)
+		if err := postBatch.Set(postKey, postVal, nil); err != nil {
+			return fmt.Errorf("postBatch.Set failed: %w", err)
+		}
+
+		// Comments
+		for i, c := range item.Comments {
+			c.PostID = p.ID
+			c.Sequence = uint32(i + 1)
+			cKey := model.EncodeCommentKey(p.ID, c.Sequence)
+			cVal := model.EncodeRFC822Comment(c)
+			if err := commentBatch.Set(cKey, cVal, nil); err != nil {
+				return fmt.Errorf("commentBatch.Set failed: %w", err)
+			}
+			authKey := model.EncodeAuthorCommentKey(c.Author, c.CreatedAt, p.ID, c.Sequence)
+			if err := commentBatch.Set(authKey, []byte{}, nil); err != nil {
+				return fmt.Errorf("commentBatch.Set author failed: %w", err)
+			}
+		}
+
+		// Crossposts
+		for i, cp := range item.Crossposts {
+			cp.SourcePostID = p.ID
+			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunity, cp.TargetPostFile, cp.Operator, cp.OperatorToken, cp.CreatedAt)
+			if cpErr == nil {
+				cpID, _ := cpRes.LastInsertId()
+				cp.ID = uint64(cpID)
+				cKey := model.EncodeCrosspostKey(p.ID, uint32(i+1))
+				cVal := model.EncodeRFC822Crosspost(cp)
+				_ = postBatch.Set(cKey, cVal, nil)
+			}
+		}
+	}
+
+	e.seqMu.Lock()
+	for _, item := range batch {
+		seqVal := uint32(len(item.Comments))
+		e.postSeqs[item.Post.ID] = &seqVal
+	}
+	e.seqMu.Unlock()
+
+	// Commit Pebble batches
+	if err := postBatch.Commit(pebble.NoSync); err != nil {
+		return fmt.Errorf("commit postBatch failed: %w", err)
+	}
+	if err := commentBatch.Commit(pebble.NoSync); err != nil {
+		return fmt.Errorf("commit commentBatch failed: %w", err)
+	}
+
+	// Commit SQLite transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sqlite batch failed: %w", err)
+	}
+	e.metaWriteMu.Unlock() // Unlock DB write mutex before rendering files
+	unlocked = true
+
+	// Render directly to renderTarget if requested (parallel file writers)
+	if renderTarget != "" {
+		if err := os.MkdirAll(renderTarget, 0755); err != nil {
+			return fmt.Errorf("mkdir renderTarget failed: %w", err)
+		}
+		isLegacy := len(legacyFormat) > 0 && legacyFormat[0]
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 16)
+		for _, item := range batch {
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(it *ImportedPostData) {
+				defer wg.Done()
+				defer func() { <-sem }()
+				var rendered []byte
+				if isLegacy {
+					rendered = RenderLegacyPostWithComments(it.Post, it.Comments, e.cfg.IsBig5())
+				} else {
+					rendered = RenderPostWithComments(it.Post, it.Comments, e.cfg.IsBig5())
+				}
+				targetPath := filepath.Join(renderTarget, it.Post.PostFile)
+				_ = os.WriteFile(targetPath, rendered, 0644)
+			}(item)
+		}
+		wg.Wait()
+	}
+
+	return nil
+}
+
 // RenderPostWithComments renders a post and its comments directly in memory
 func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 bool) []byte {
 	var buf bytes.Buffer
