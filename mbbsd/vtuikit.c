@@ -1523,6 +1523,220 @@ int
     return vgetstring_sz(_buf, (size_t)-1, len, flags, defstr, pcbs, instance);
 }
 
+// -----------------------------------------------------------------------------
+// v_multiline_text: in-place micro-textarea input widget
+// -----------------------------------------------------------------------------
+
+typedef struct {
+    int exit_key;
+} v_multiline_ctx_t;
+
+static int
+multiline_peek_cb(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
+{
+    v_multiline_ctx_t *ctx = (v_multiline_ctx_t *)instance;
+    if (key == '\t' || key == KEY_TAB ||
+        key == KEY_UP || key == KEY_DOWN || key == KEY_STAB ||
+        key == KEY_ENTER || key == KEY_CR || key == KEY_LF ||
+        key == KEY_ESC || key == Ctrl('C')) {
+        ctx->exit_key = key;
+        return VGETCB_END;
+    }
+    return VGETCB_NONE;
+}
+
+static void
+v_multiline_refresh(const char *prompt, const char *footer_prefix,
+                    char lines[][SZ_COLS(STRLEN)],
+                    int num_lines, int curr_line)
+{
+    int prompt_row = b_lines - 2 - num_lines;
+    move(prompt_row, 0);
+    clrtoeol();
+    outs(prompt);
+
+    for (int i = 0; i < num_lines; i++) {
+        int r = b_lines - 1 - num_lines + i;
+        move(r, 0);
+        clrtoeol();
+        if (i == curr_line) {
+            outs(ANSI_COLOR(1;33) " >" ANSI_RESET);
+        } else {
+            outs("  ");
+            outs(lines[i]);
+        }
+    }
+    move(b_lines - 1, 0);
+    clrtoeol();
+    vs_footer(footer_prefix ? footer_prefix : " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ",
+              " (TAB)\xa4\xc7\xa6\xe6 (\xa1\xdc \xa1\xdd)\xa4\xc1\xb4\xab (Enter)\xb0\x65\xa5\x58 (Ctrl-C) \xa9\xf1\xb1\xf3");
+}
+
+int
+v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix)
+{
+    if (!out_buf || out_bufsz == 0)
+        return 0;
+
+    out_buf[0] = '\0';
+
+    if (max_lines <= 0 || max_lines > 16)
+        max_lines = V_MULTILINE_MAX_LINES;
+    if (line_len <= 0 || line_len > STRLEN - 3)
+        line_len = V_MULTILINE_LINE_LEN;
+
+    if (b_lines - max_lines - 2 < 0)
+        max_lines = b_lines - 3;
+    if (max_lines < 1)
+        max_lines = 1;
+
+    if (!prompt || !*prompt)
+        prompt = ANSI_COLOR(1;36) "請輸入留言內容: " ANSI_RESET "(按 TAB 加行，Ctrl-C 放棄)" ANSI_RESET;
+
+    VREFSCR scr = vscr_save();
+
+    char lines[16][SZ_COLS(STRLEN)];
+    memset(lines, 0, sizeof(lines));
+
+    int num_lines = 1;
+    int curr_line = 0;
+
+    v_multiline_ctx_t ctx;
+    VGET_CALLBACKS cbs;
+    memset(&cbs, 0, sizeof(cbs));
+    cbs.peek = multiline_peek_cb;
+
+    v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+
+    while (1) {
+        ctx.exit_key = 0;
+        int cur_row = b_lines - 1 - num_lines + curr_line;
+        move(cur_row, 2);
+        vgetstring_sz(lines[curr_line], sizeof(lines[curr_line]),
+                      line_len, VGET_NO_NAV_HISTORY, lines[curr_line],
+                      &cbs, &ctx);
+
+        int key = ctx.exit_key;
+        if (key == 0)
+            key = KEY_ENTER;
+
+        if (key == '\t' || key == KEY_TAB) {
+            if (curr_line == num_lines - 1) {
+                if (num_lines < max_lines) {
+                    scroll();
+                    num_lines++;
+                    curr_line++;
+                } else {
+                    curr_line = 0;
+                }
+            } else {
+                curr_line++;
+            }
+            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            continue;
+        }
+
+        if (key == KEY_UP) {
+            if (curr_line > 0) {
+                curr_line--;
+                v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            } else {
+                bell();
+            }
+            continue;
+        }
+
+        if (key == KEY_DOWN) {
+            if (curr_line < num_lines - 1) {
+                curr_line++;
+                v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            } else {
+                bell();
+            }
+            continue;
+        }
+
+        if (key == KEY_STAB) {
+            if (curr_line > 0)
+                curr_line--;
+            else
+                curr_line = num_lines - 1;
+            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            continue;
+        }
+
+        if (key == KEY_ESC || key == Ctrl('C')) {
+            bool is_empty = true;
+            for (int i = 0; i < num_lines; i++) {
+                if (lines[i][0] != '\0') {
+                    is_empty = false;
+                    break;
+                }
+            }
+            if (is_empty) {
+                vscr_restore(scr);
+                return 0;
+            }
+            int ans = vans("確定要放棄嗎？[y/N]: ");
+            if (ans == 'y') {
+                vscr_restore(scr);
+                return 0;
+            }
+            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            continue;
+        }
+
+        if (key == KEY_ENTER || key == KEY_CR || key == KEY_LF) {
+            bool is_empty = true;
+            for (int i = 0; i < num_lines; i++) {
+                if (lines[i][0] != '\0') {
+                    is_empty = false;
+                    break;
+                }
+            }
+            if (is_empty) {
+                vscr_restore(scr);
+                return 0;
+            }
+
+            int ans = vans("確定要送出嗎？[Y/n]: ");
+            if (ans == 'y' || ans == '\0' || ans == '\r' || ans == '\n') {
+                int end = num_lines;
+                while (end > 0 && lines[end - 1][0] == '\0')
+                    end--;
+                if (end == 0) {
+                    vscr_restore(scr);
+                    return 0;
+                }
+                out_buf[0] = '\0';
+                size_t cur_len = 0;
+                for (int i = 0; i < end; i++) {
+                    size_t len = strlen(lines[i]);
+                    if (i > 0) {
+                        if (cur_len + 1 < out_bufsz) {
+                            out_buf[cur_len++] = '\n';
+                            out_buf[cur_len] = '\0';
+                        }
+                    }
+                    if (cur_len + len < out_bufsz) {
+                        memcpy(out_buf + cur_len, lines[i], len);
+                        cur_len += len;
+                        out_buf[cur_len] = '\0';
+                    }
+                }
+                vscr_restore(scr);
+                return (int)cur_len;
+            }
+
+            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            continue;
+        }
+
+        v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+    }
+}
+
+
 static void
 vs_multi_T_table_auto(
 	const char * const **t_tables,   int  n_t_tables,

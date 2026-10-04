@@ -193,6 +193,15 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
 #define vgetstring(buf, len, flags, defstr, pcbs, instance) \
     vgetstring_sz((buf), __builtin_object_size((buf), 0), (len), (flags), (defstr), (pcbs), (instance))
 
+
+// v_multiline: micro-textarea input widget
+#define V_MULTILINE_MAX_LINES   5
+#define V_MULTILINE_LINE_LEN    77
+
+int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix);
+#define v_multiline(buf, max_lines, prompt, footer_prefix) \
+    v_multiline_text((buf), sizeof(buf), (max_lines), V_MULTILINE_LINE_LEN, (prompt), (footer_prefix))
+
 // vs_*: formatted and themed virtual screen layout
 // you cannot use ANSI escapes in these APIs.
 void vs_header	(const char *title,   const char *mid, const char *right);	/// full header for main menu and primary lists (boards, articles, users)
