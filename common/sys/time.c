@@ -66,6 +66,20 @@ Cdatelite(const time4_t *clock)
 }
 
 /**
+ * 16+1 bytes, "12/31/2007 00:00\0"
+ */
+const char*
+CdateHM(const time4_t *clock)
+{
+    time_t          temp = time4_to_time(*clock);
+    struct tm       mytm;
+
+    localtime_r(&temp, &mytm);
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d/%Y %H:%M", &mytm);
+    return cdate_buffer;
+}
+
+/**
  * 10+1 bytes, "12/31/2007\0"
  */
 const char*
