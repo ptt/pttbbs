@@ -13,12 +13,16 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"pttbbs/bbs"
+	"pttbbs/post/config"
 	"pttbbs/post/daemon"
 	"pttbbs/post/storage"
 )
 
 var (
+	flagConfig         = flag.String("config", "", "Path to post.svc.conf (default: $BBSHOME/etc/post.svc.conf)")
 	flagBBSHome        = flag.String("bbshome", "", "Path to BBSHOME (default detected or /home/bbs)")
 	flagDataDir        = flag.String("datadir", "", "Path to store Pebble and SQLite databases (default $BBSHOME/db)")
 	flagCacheDir       = flag.String("cachedir", "", "Path to store materialized Cache files (default $BBSHOME/cache)")
@@ -30,12 +34,14 @@ var (
 	flagFlushSeconds   = flag.Int("flush-seconds", 2, "Interval in seconds to batch flush scores/counts to SQLite")
 	flagMinReplyRunes  = flag.Int("min-reply-runes", 20, "Minimum net new characters for a reply post before auto-demoting to comment (0 to disable)")
 	flagFilterEncoding = flag.String("filter-encoding", "big5", "Encoding for legacy import/export and materialized cache files (big5 or utf-8)")
+	flagMaxOpenFiles   = flag.Int("max-files", 0, "Max open files per Pebble DB (0 for auto)")
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
 	flagVerbose        = flag.Bool("v", false, "Enable verbose debug logging")
 )
 
 func init() {
 	flag.BoolVar(flagDebugMode, "debug", false, "Enable debug mode (alias for -D)")
+	flag.StringVar(flagConfig, "c", "", "Path to post.svc.conf (alias for -config)")
 }
 
 func isSocketOccupied(socketPath string) bool {
@@ -74,8 +80,34 @@ func forkDaemon() error {
 	return cmd.Start()
 }
 
+func raiseFDLimit() {
+	var rlim unix.Rlimit
+	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlim); err != nil {
+		log.Printf("[post.svc] warning: failed to query RLIMIT_NOFILE: %v", err)
+		return
+	}
+	target := uint64(65536)
+	if rlim.Max > 0 && rlim.Max < target {
+		target = rlim.Max
+	}
+	if rlim.Cur < target {
+		oldCur := rlim.Cur
+		rlim.Cur = target
+		if err := unix.Setrlimit(unix.RLIMIT_NOFILE, &rlim); err != nil {
+			rlim.Cur = rlim.Max
+			_ = unix.Setrlimit(unix.RLIMIT_NOFILE, &rlim)
+		}
+		_ = unix.Getrlimit(unix.RLIMIT_NOFILE, &rlim)
+		log.Printf("[post.svc] Adjusted RLIMIT_NOFILE from %d to %d (max: %d)", oldCur, rlim.Cur, rlim.Max)
+	}
+	if rlim.Cur < 4096 {
+		log.Printf("[post.svc] WARNING: RLIMIT_NOFILE is low (%d). Pebble may exhaust file descriptors during heavy loads. Run 'ulimit -n 65536' before launching post.svc.", rlim.Cur)
+	}
+}
+
 func main() {
 	flag.Parse()
+	raiseFDLimit()
 
 	bbshome := *flagBBSHome
 	if bbshome == "" {
@@ -85,20 +117,53 @@ func main() {
 		}
 	}
 
-	dataDir := *flagDataDir
-	if dataDir == "" {
-		dataDir = filepath.Join(bbshome, "db")
+	confPath := config.FindConfigFile(*flagConfig, bbshome)
+	var svcConf *config.ServiceConfig
+	if confPath != "" {
+		loaded, err := config.LoadConfigFile(confPath, bbshome)
+		if err != nil {
+			log.Printf("[post.svc] Warning: failed to load config %s: %v", confPath, err)
+			svcConf = config.DefaultConfig(bbshome)
+		} else {
+			svcConf = loaded
+			log.Printf("[post.svc] Loaded configuration from %s (%d engines, %d pinned boards)",
+				confPath, len(svcConf.Engines), len(svcConf.Pins))
+		}
+	} else {
+		svcConf = config.DefaultConfig(bbshome)
 	}
 
-	cacheDir := *flagCacheDir
-	if cacheDir == "" {
-		cacheDir = filepath.Join(bbshome, "cache")
+	// CLI flags override config file values if explicitly specified
+	if *flagDataDir != "" && len(svcConf.Engines) <= 1 {
+		svcConf.Engines[0].DataDir = *flagDataDir
+	}
+	if *flagCacheDir != "" && len(svcConf.Engines) <= 1 {
+		svcConf.Engines[0].CacheDir = *flagCacheDir
+	}
+	if *flagUnixSocket != "" {
+		svcConf.UnixSocket = *flagUnixSocket
+	}
+	if *flagLogPath != "" {
+		svcConf.LogPath = *flagLogPath
+	}
+	if *flagCacheSizeMB != 256 {
+		svcConf.CacheSizeMB = *flagCacheSizeMB
+	}
+	if *flagFlushSeconds != 2 {
+		svcConf.FlushSeconds = *flagFlushSeconds
+	}
+	if *flagMinReplyRunes != 20 {
+		svcConf.MinReplyRunes = *flagMinReplyRunes
+	}
+	if *flagFilterEncoding != "big5" {
+		svcConf.FilterEncoding = *flagFilterEncoding
+	}
+	if *flagMaxOpenFiles > 0 {
+		svcConf.MaxOpenFiles = *flagMaxOpenFiles
 	}
 
-	sockPath := *flagUnixSocket
-	if sockPath == "" {
-		sockPath = filepath.Join(bbshome, "run", "post.svc.sock")
-	}
+	sockPath := svcConf.UnixSocket
+	logPath := svcConf.LogPath
 
 	if *flagDebugMode || *flagRebuild {
 		*flagDaemonize = false
@@ -118,38 +183,29 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *flagLogPath == "" {
-		*flagLogPath = filepath.Join(bbshome, "log", "post.svc.log")
-	}
-
 	if *flagDebugMode {
 		log.SetOutput(os.Stdout)
 		log.Printf("[post.svc] Debug mode enabled (-D/-debug): logging directly to stdout")
 	} else {
-		if err := os.MkdirAll(filepath.Dir(*flagLogPath), 0755); err == nil {
-			if logFile, err := os.OpenFile(*flagLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
+		if err := os.MkdirAll(filepath.Dir(logPath), 0755); err == nil {
+			if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
 				log.SetOutput(logFile)
 			} else {
-				log.Printf("[post.svc] Warning: failed to open log file %s: %v", *flagLogPath, err)
+				log.Printf("[post.svc] Warning: failed to open log file %s: %v", logPath, err)
 			}
 		}
 	}
 
 	log.Printf("[post.svc] Initializing Reddit-aligned post & comment service...")
-	log.Printf("[post.svc] BBSHOME: %s, DataDir: %s, CacheDir: %s, Socket: %s, Log: %s, FilterEncoding: %s",
-		bbshome, dataDir, cacheDir, sockPath, *flagLogPath, *flagFilterEncoding)
+	log.Printf("[post.svc] BBSHOME: %s, Engines: %d, Socket: %s, Log: %s, FilterEncoding: %s",
+		svcConf.BBSHome, len(svcConf.Engines), sockPath, logPath, svcConf.FilterEncoding)
+	for i, eng := range svcConf.Engines {
+		log.Printf("[post.svc]   Engine[%d]: DataDir=%s, CacheDir=%s", i, eng.DataDir, eng.CacheDir)
+	}
 
-	st, err := storage.OpenEngine(storage.Config{
-		BBSHome:        bbshome,
-		DataDir:        dataDir,
-		CacheDir:       cacheDir,
-		CacheSizeMB:    *flagCacheSizeMB,
-		FlushSeconds:   *flagFlushSeconds,
-		MinReplyRunes:  *flagMinReplyRunes,
-		FilterEncoding: *flagFilterEncoding,
-	})
+	st, err := storage.OpenStorage(svcConf)
 	if err != nil {
-		log.Fatalf("[post.svc] Failed to open storage engine: %v", err)
+		log.Fatalf("[post.svc] Failed to open storage: %v", err)
 	}
 	defer st.Close()
 
@@ -164,9 +220,9 @@ func main() {
 	}
 
 	srv := daemon.NewServer(daemon.ServerConfig{
-		BBSHome:        bbshome,
+		BBSHome:        svcConf.BBSHome,
 		UnixSocket:     sockPath,
-		FilterEncoding: *flagFilterEncoding,
+		FilterEncoding: svcConf.FilterEncoding,
 	}, st)
 
 	if err := srv.Start(); err != nil {

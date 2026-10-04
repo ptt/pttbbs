@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/pebble"
+	"golang.org/x/sys/unix"
 	_ "modernc.org/sqlite"
 
 	"pttbbs/big5uao"
@@ -28,6 +29,9 @@ type Config struct {
 	FlushSeconds   int
 	MinReplyRunes  int
 	FilterEncoding string // "big5" (default) or "utf-8"
+	ShardID        int
+	NumShards      int
+	MaxOpenFiles   int
 }
 
 func (c Config) IsBig5() bool {
@@ -36,22 +40,23 @@ func (c Config) IsBig5() bool {
 }
 
 type Engine struct {
-	cfg         Config
-	postsDB     *pebble.DB
-	commentsDB  *pebble.DB
-	votesDB     *pebble.DB
-	historyDB   *pebble.DB
-	metaDB      *sql.DB
-	metaWriteMu sync.Mutex
+	cfg            Config
+	postsDB        *pebble.DB
+	commentsDB     *pebble.DB
+	votesDB        *pebble.DB
+	historyDB      *pebble.DB
+	metaDB         *sql.DB
+	metaWriteMu    sync.Mutex
+	postSeqCounter uint64
 
 	// In-memory atomic sequence counters per post
 	seqMu       sync.RWMutex
 	postSeqs    map[uint64]*uint32
-	dirtyDeltas    map[uint64]*postDelta
-	dirtyMu        sync.Mutex
-	flushTicker    *time.Ticker
-	stopFlush      chan struct{}
-	closeOnce      sync.Once
+	dirtyDeltas map[uint64]*postDelta
+	dirtyMu     sync.Mutex
+	flushTicker *time.Ticker
+	stopFlush   chan struct{}
+	closeOnce   sync.Once
 }
 
 type postDelta struct {
@@ -89,11 +94,37 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		}
 	}
 
+	// Calculate MaxOpenFiles for each Pebble DB
+	maxOpenFiles := cfg.MaxOpenFiles
+	if maxOpenFiles <= 0 {
+		totalFD := 1024
+		var rlim unix.Rlimit
+		if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlim); err == nil && rlim.Cur > 0 {
+			totalFD = int(rlim.Cur)
+		}
+		numShards := cfg.NumShards
+		if numShards <= 0 {
+			numShards = 1
+		}
+		// Reserve 256 FDs for SQLite, sockets, and general system I/O
+		avail := totalFD - 256
+		if avail < 128 {
+			avail = 128
+		}
+		maxOpenFiles = avail / (4 * numShards)
+		if maxOpenFiles < 32 {
+			maxOpenFiles = 32
+		} else if maxOpenFiles > 1000 {
+			maxOpenFiles = 1000
+		}
+	}
+
 	// 1. Posts Pebble DB
 	postsPath := filepath.Join(cfg.DataDir, "posts.pebble")
 	postsOpts := &pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
+		MaxOpenFiles: maxOpenFiles,
 	}
 	postsDB, err := pebble.Open(postsPath, postsOpts)
 	if err != nil {
@@ -105,6 +136,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	commentsOpts := &pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 32 * 1024 * 1024,
+		MaxOpenFiles: maxOpenFiles,
 	}
 	commentsDB, err := pebble.Open(commentsPath, commentsOpts)
 	if err != nil {
@@ -117,6 +149,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	votesOpts := &pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
+		MaxOpenFiles: maxOpenFiles,
 	}
 	votesDB, err := pebble.Open(votesPath, votesOpts)
 	if err != nil {
@@ -150,6 +183,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	historyOpts := &pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/4) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
+		MaxOpenFiles: maxOpenFiles,
 	}
 	historyDB, err := pebble.Open(historyPath, historyOpts)
 	if err != nil {
@@ -171,6 +205,12 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		dirtyDeltas: make(map[uint64]*postDelta),
 		flushTicker: time.NewTicker(time.Duration(cfg.FlushSeconds) * time.Second),
 		stopFlush:   make(chan struct{}),
+	}
+
+	if cfg.NumShards > 1 {
+		var maxID uint64
+		_ = metaDB.QueryRow("SELECT COALESCE(MAX(id), 0) FROM posts").Scan(&maxID)
+		e.postSeqCounter = maxID / uint64(cfg.NumShards)
 	}
 
 	go e.flusherLoop()
@@ -293,22 +333,47 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	}
 
 	// 1. Insert into SQLite to get unique ID if not provided
-	e.metaWriteMu.Lock()
-	res, err := e.metaDB.Exec(`
-		INSERT INTO posts (parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
-	if err != nil {
+	if p.ID == 0 {
+		if e.cfg.NumShards > 1 {
+			seq := atomic.AddUint64(&e.postSeqCounter, 1)
+			p.ID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
+			e.metaWriteMu.Lock()
+			_, err := e.metaDB.Exec(`
+				INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
+			e.metaWriteMu.Unlock()
+			if err != nil {
+				return nil, fmt.Errorf("insert sqlite post with shard id failed: %w", err)
+			}
+		} else {
+			e.metaWriteMu.Lock()
+			res, err := e.metaDB.Exec(`
+				INSERT INTO posts (parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
+			if err != nil {
+				e.metaWriteMu.Unlock()
+				return nil, fmt.Errorf("insert sqlite post failed: %w", err)
+			}
+			id, err := res.LastInsertId()
+			e.metaWriteMu.Unlock()
+			if err != nil {
+				return nil, err
+			}
+			p.ID = uint64(id)
+		}
+	} else {
+		e.metaWriteMu.Lock()
+		_, err := e.metaDB.Exec(`
+			INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
 		e.metaWriteMu.Unlock()
-		return nil, fmt.Errorf("insert sqlite post failed: %w", err)
+		if err != nil {
+			return nil, fmt.Errorf("insert sqlite post with explicit id failed: %w", err)
+		}
 	}
-
-	id, err := res.LastInsertId()
-	e.metaWriteMu.Unlock()
-	if err != nil {
-		return nil, err
-	}
-	p.ID = uint64(id)
 
 	// 2. Package RFC 822 format (Encoding as the FIRST header!) and write to posts.db
 	val := model.EncodeRFC822Post(p)
