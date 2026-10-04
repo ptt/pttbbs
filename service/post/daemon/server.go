@@ -80,7 +80,10 @@ func (s *Server) Start() error {
 	os.Chmod(s.cfg.UnixSocket, 0666)
 	s.listeners = append(s.listeners, lnUnix)
 	s.wg.Add(1)
-	go s.acceptLoop(lnUnix, s.handleIPC)
+	go func() {
+		defer s.wg.Done()
+		s.acceptLoop(lnUnix, s.handleIPC)
+	}()
 	log.Printf("[post.svc] Modern IPC socket listening on %s", s.cfg.UnixSocket)
 	return nil
 }
@@ -94,7 +97,6 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) acceptLoop(ln net.Listener, handler func(net.Conn)) {
-	defer s.wg.Done()
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
