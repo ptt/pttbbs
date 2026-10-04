@@ -308,6 +308,7 @@ int is_leap_year(int year);
 int getHoroscope(int m, int d);
 const char* Cdate(const time4_t *clock);
 const char* Cdatelite(const time4_t *clock);
+const char* CdateHM(const time4_t *clock);
 const char* Cdatedate(const time4_t * clock);
 const char * Cdate_md(const time4_t * clock);
 const char * Cdate_mdHM(const time4_t * clock);
