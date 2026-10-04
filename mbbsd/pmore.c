@@ -189,6 +189,12 @@
     ANSI_COLOR(30)
 #define PMORE_COLOR_FOOTER3 \
     ANSI_COLOR(0;47)
+#define PMORE_COLOR_COMMENTER \
+    ANSI_COLOR(0;33)
+#define PMORE_COLOR_COMMENTER_OP \
+    ANSI_COLOR(1;36)
+#define PMORE_COLOR_COMMENTER_INFO \
+    ANSI_COLOR(1;30)
 
 // Preference
 // header separator default style
@@ -470,8 +476,9 @@ typedef struct
     unsigned char
         *start, *end,   // file buffer
         *disps, *dispe, // displayed content start/end
-        *maxdisps;      // a very special pointer,
+        *maxdisps,      // a very special pointer,
                         //   consider as "disps of last page"
+        *comments_start;// start of comments section, or mf.end if none
     off_t len;          // file total length
     long  lineno,       // lineno of disps
           oldlineno,    // last drawn lineno, < 0 means full update
@@ -495,7 +502,7 @@ typedef struct
 } MmappedFile;
 
 MmappedFile mf = {
-    0, 0, 0, 0, 0, 0L,
+    0, 0, 0, 0, 0, 0, 0L,
     0, -1L, 0, 0, -1L, -1L, -1L, -1L,
     NULL // detachHandler
 };      // current file
@@ -508,6 +515,8 @@ enum MF_NAV_COMMANDS {
 
 /* Navigation units (dynamic, so not in enum const) */
 #define MFNAV_PAGE  (t_lines-2) // when navigation, how many lines in a page to move
+
+#define POST_END_MARK "¡° "
 
 /* Display system */
 enum MF_DISP_CONST {
@@ -585,9 +594,10 @@ typedef struct
     int lines;  // header lines
     unsigned char *headers[FH_HEADERS];
     unsigned char *floats [FH_FLOATS];
+    char op_author[IDLEN+1]; // pure author userid
 } MF_PrettyFormattedHeader;
 
-MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}};
+MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}, {0}};
 
 /* search records */
 typedef struct
@@ -1001,9 +1011,78 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
         } else
             mf_backward(backlines);
     } else {
-        mf.lineno = backlines;
-        mf.disps = mf.end - 1;
-        backlines = mf_backward(backlines);
+        /* Single backward pass: find both maxdisps and comments_start */
+        unsigned char *p = mf.end - 1;
+        unsigned char *next_line = mf.end;
+        unsigned char *maxdisps_ptr = mf.start;
+        int found_comments = 0;
+        int lines_backed = 0;
+        int target_lines = (backlines > 0) ? backlines : 1;
+        int real_moved = 0;
+        int saved_backlines = 0;
+
+        mf.comments_start = mf.end;
+
+        if (p >= mf.start && *p == '\n')
+            p--;
+
+        while (p >= mf.start) {
+            if (*p == '\n') {
+                unsigned char *line_start = p + 1;
+                real_moved++;
+
+                /* 1. Fast match: check [0] first, then strncmp */
+                if (!found_comments) {
+                    if (*line_start == (unsigned char)POST_END_MARK[0] &&
+                        strncmp((const char *)line_start, POST_END_MARK,
+                                sizeof(POST_END_MARK) - 1) == 0) {
+                        unsigned char *cstart = next_line;
+                        while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
+                            cstart++;
+                        mf.comments_start = cstart;
+                        found_comments = 1;
+                    }
+                }
+
+                /* 2. Track maxdisps (last page start) */
+                lines_backed++;
+                if (lines_backed == target_lines) {
+                    maxdisps_ptr = line_start;
+                    saved_backlines = (backlines > 0) ? real_moved : 0;
+                }
+
+                /* If both determined, stop early! */
+                if (lines_backed >= target_lines && found_comments)
+                    break;
+
+                next_line = line_start;
+            }
+            p--;
+        }
+
+        if (p < mf.start) {
+            unsigned char *line_start = mf.start;
+            real_moved++;
+            if (!found_comments) {
+                if (*line_start == (unsigned char)POST_END_MARK[0] &&
+                    strncmp((const char *)line_start, POST_END_MARK,
+                            sizeof(POST_END_MARK) - 1) == 0) {
+                    unsigned char *cstart = next_line;
+                    while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
+                        cstart++;
+                    mf.comments_start = cstart;
+                    found_comments = 1;
+                }
+            }
+            if (lines_backed < target_lines) {
+                maxdisps_ptr = mf.start;
+                saved_backlines = (backlines > 0) ? real_moved : 0;
+            }
+        }
+
+        mf.disps = maxdisps_ptr;
+        backlines = saved_backlines;
+        mf.lineno = 0;
     }
 
     if (mf.disps != mbak) {
@@ -1340,6 +1419,18 @@ mf_parseHeaders()
             }
         }
     }
+
+    if (fh.headers[0]) {
+        const char *src = (const char *)fh.headers[0];
+        int ulen = 0;
+        while (*src && ISSPACE(*src)) src++;
+        while (src[ulen] && !ISSPACE(src[ulen]) && src[ulen] != '(' && ulen < (int)sizeof(fh.op_author) - 1)
+            ulen++;
+        if (ulen > 0) {
+            memcpy(fh.op_author, src, ulen);
+            fh.op_author[ulen] = '\0';
+        }
+    }
 }
 
 /*
@@ -1399,6 +1490,86 @@ static char *override_attr = NULL;
 /*
  * display mf content from disps for MFDISP_PAGE
  */
+
+MFFPROTO int
+mf_display_comment_header(int max_width)
+{
+    const char *line = (const char *)mf.dispe;
+    const char *eol = (const char *)strchrnul(line, '\n');
+    const char *p_close, *u_start, *u_end, *c_start, *c_end;
+    int user_len, c_len, pad;
+
+    if (*line != '[')
+        return 0;
+
+    /* 1. Find closing ']' followed by space */
+    p_close = (const char *)memchr(line + 1, ']', eol - (line + 1));
+    if (!p_close || *(p_close + 1) != ' ')
+        return 0;
+
+    u_start = p_close + 2;
+
+    /* 2. Find next space to separate id from CREATION */
+    u_end = (const char *)memchr(u_start, ' ', eol - u_start);
+    if (!u_end)
+        return 0;
+
+    user_len = u_end - u_start;
+    if (user_len <= 0)
+        return 0;
+
+    c_start = u_end + 1;
+    while (c_start < eol && *c_start == ' ')
+        c_start++;
+
+    c_end = eol;
+    while (c_end > c_start && (*(c_end - 1) == '\r' || *(c_end - 1) == ' '))
+        c_end--;
+
+    c_len = c_end - c_start;
+
+    /* 3. Width: reserve >= 1 space between ID and CREATION */
+    int left_width = u_end - line;
+    int avail = max_width - left_width - 1;
+    int fitted_len = 0;
+
+    if (avail > 0) {
+        while (c_len > avail) {
+            /* Skip past first space and retry when space is insufficient */
+            const char *sp = (const char *)memchr(c_start, ' ', c_len);
+            if (!sp)
+                break;
+            c_start = sp + 1;
+            while (c_start < c_end && *c_start == ' ')
+                c_start++;
+            c_len = c_end - c_start;
+        }
+        if (c_len <= avail && c_len > 0) {
+            fitted_len = c_len;
+        }
+    }
+
+    pad = (fitted_len > 0) ? (max_width - left_width - fitted_len) : 0;
+
+    int is_op = (fh.op_author[0] != '\0' &&
+                 (int)strlen(fh.op_author) == user_len &&
+                 strncmp(u_start, fh.op_author, user_len) == 0);
+
+    /* 4. Sequential Zero-Copy rendering */
+    prints("%.*s", (int)(u_start - line), line);        /* "[N] " */
+    outs(is_op ? PMORE_COLOR_COMMENTER_OP : PMORE_COLOR_COMMENTER);
+    prints("%.*s", user_len, u_start);                  /* ID */
+    outs(ANSI_RESET);
+    if (fitted_len > 0) {
+        prints("%*s", pad, "");                         /* Padding */
+        outs(PMORE_COLOR_COMMENTER_INFO);
+        prints("%.*s", fitted_len, c_start);            /* CREATION (100% Zero-Copy) */
+        outs(ANSI_RESET);
+    }
+
+    MFDISP_SKIPCURLINE();
+    return 1;
+}
 
 static void PMORE_UINAV_FORWARDPAGE(void);
 
@@ -1736,6 +1907,12 @@ mf_display()
             outs(ANSI_RESET);
             MFDISP_SKIPCURLINE();
         }
+        else if (mf.dispe >= mf.comments_start && bpref.rawmode == MFDISP_RAW_NA &&
+                 *mf.dispe == '[' && mf_display_comment_header(headerw))
+        {
+            /* case 2.5, comment header */
+            wrapping = 0;
+        }
         else if (mf.dispe < mf.end)
         {
             /* case 3, normal text */
@@ -1770,6 +1947,11 @@ mf_display()
                 {
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
+                }
+                else if (mf.dispe >= mf.comments_start &&
+                         strncmp((char *)line_head, "  ", 2) == 0) {
+                    outs("¢x");
+                    mf.dispe +=2;
                 }
             }
 
