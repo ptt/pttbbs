@@ -163,7 +163,7 @@ func (s *Server) readDiskPostFile(community, postFile string) []byte {
 		paths = matches
 	}
 	for _, pth := range paths {
-		if b, rErr := os.ReadFile(pth); rErr == nil && len(b) > 0 {
+		if b, rErr := importer.ReadArticleFile(pth); rErr == nil && len(b) > 0 {
 			return b
 		}
 	}
