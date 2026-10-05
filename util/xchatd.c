@@ -2602,7 +2602,7 @@ start_daemon()
     limit.rlim_cur = limit.rlim_max;
     setrlimit(RLIMIT_NOFILE, &limit);
 
-#ifndef NO_ADJUST_CPU_LIMITS
+#if IS_ENABLED(CONFIG_ADJUST_CPU_LIMITS)
     // because xchatd may be started by BBS process, 
     // its cpu resource may be limited and cause regular restart.
     // to workaround this, let's enlarge CPU limit here.
@@ -2612,7 +2612,7 @@ start_daemon()
 # endif
     limit.rlim_cur = XCHATD_CPU_LIMITS;
     setrlimit(RLIMIT_CPU, &limit);
-#endif // !NO_ADJUST_CPU_LIMITS
+#endif // IS_ENABLED(CONFIG_ADJUST_CPU_LIMITS)
 
 #ifdef USE_XCHATD_COREDUMP
     getrlimit(RLIMIT_CORE, &limit);

@@ -37,7 +37,7 @@ typedef struct {
     int         nfriend, myfriend, friendme, bfriend, badfriend;
     char       *show_mode;
     char       *show_uid;
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
     char       *show_board;
 #endif
     char       *show_pid;
@@ -1021,10 +1021,10 @@ t_showhelp(void)
              "[" ANSI_COLOR(1;37) "K" ANSI_RESET "]    把人踢出去       "
              "[" ANSI_COLOR(1;37) "H" ANSI_RESET "]          切換幽靈模式\n"
              "  [" ANSI_COLOR(1;37) "#" ANSI_RESET "]    切換顯示 PID    "
-#ifdef SHOWUID
+#if IS_ENABLED(CONFIG_SHOWUID)
              "[" ANSI_COLOR(1;37) "U" ANSI_RESET "]    切換顯示 UID     "
 #endif
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
              "[" ANSI_COLOR(1;37) "Y" ANSI_RESET "]          切換顯示 board"
 #endif
              "\n");
@@ -1054,7 +1054,7 @@ userlist_header(PSB_CTX *ctx)
 
     ulist_coldef[1].label = *cx->show_uid ? "UID " : "編號 ";
     ulist_coldef[5].label = MODE_STRING[(int)*cx->show_mode];
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
     ulist_coldef[6].label = *cx->show_board ? "看板" : "動態";
 #else
     ulist_coldef[6].label = "動態";
@@ -1147,7 +1147,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
         mind = ANSI_COLOR(1;31) "違規";
 
     SNPRINTF(num, "%d ",
-#ifdef SHOWUID
+#if IS_ENABLED(CONFIG_SHOWUID)
              *cx->show_uid ? uentp->uid :
 #endif
              ch);
@@ -1167,7 +1167,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
                    uentp->nickname,
                    descript(*cx->show_mode, uentp, uentp->pager & !(friend & HRM),
                             description, sizeof(description)),
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
                    *cx->show_board ? (uentp->brc_id == 0 ? "" :
                        getbcache(uentp->brc_id)->brdname) :
 #endif
@@ -1492,7 +1492,7 @@ userlist_cmd_num(cmd_ctx_t *ctx) {
     return 0;
 }
 
-#ifdef SHOWUID
+#if IS_ENABLED(CONFIG_SHOWUID)
 static int
 userlist_cmd_showuid(cmd_ctx_t *ctx) {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
@@ -1502,7 +1502,7 @@ userlist_cmd_showuid(cmd_ctx_t *ctx) {
 }
 #endif
 
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
 static int
 userlist_cmd_showboard(cmd_ctx_t *ctx) {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
@@ -1512,7 +1512,7 @@ userlist_cmd_showboard(cmd_ctx_t *ctx) {
 }
 #endif
 
-#ifdef SHOWPID
+#if IS_ENABLED(CONFIG_SHOWPID)
 static int
 userlist_cmd_showpid(cmd_ctx_t *ctx) {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
@@ -1776,13 +1776,13 @@ static const cmd_t userlist_cmds[] = {
     { '7', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
     { '8', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
     { '9', NULL, NULL, userlist_cmd_num, 0, CMD_PRIO_NONE, true },
-#ifdef SHOWUID
+#if IS_ENABLED(CONFIG_SHOWUID)
     { 'U', NULL, "顯示使用者 UID", userlist_cmd_showuid, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
     { 'Y', NULL, "顯示使用者所在看板", userlist_cmd_showboard, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
-#ifdef SHOWPID
+#if IS_ENABLED(CONFIG_SHOWPID)
     { '#', NULL, "顯示使用者 PID", userlist_cmd_showpid, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
     { 'b', "廣播", "發送好友廣播水球", userlist_cmd_broadcast, 0, CMD_PRIO_NORM },
@@ -1915,7 +1915,7 @@ userlist(void)
 {
     static char     show_mode = 0;
     static char     show_uid = 0;
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
     static char     show_board = 0;
 #endif
     static char     show_pid = 0;
@@ -1934,7 +1934,7 @@ userlist(void)
     cx.nfriend = cx.myfriend = cx.friendme = cx.bfriend = cx.badfriend = 0;
     cx.show_mode = &show_mode;
     cx.show_uid = &show_uid;
-#if defined(SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
     cx.show_board = &show_board;
 #endif
     cx.show_pid = &show_pid;

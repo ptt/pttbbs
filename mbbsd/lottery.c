@@ -271,7 +271,7 @@ doesnt_catch_up:
     return -1;
 }
 
-#ifndef NO_GAMBLE
+#if IS_ENABLED(CONFIG_GAMBLE)
 int
 openticket(int bid)
 {
@@ -411,9 +411,8 @@ int
 join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
             const char *direct GCC_UNUSED)
 {
-#ifdef NO_GAMBLE
-    return DONOTHING;
-#else
+    if (!IS_ENABLED(CONFIG_GAMBLE))
+        return DONOTHING;
 
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return DONOTHING;
@@ -424,15 +423,13 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     ticket(currbid);
     return FULLUPDATE;
-#endif
 }
 
 int
 hold_gamble(void)
 {
-#ifdef NO_GAMBLE
-    return DONOTHING;
-#else
+    if (!IS_ENABLED(CONFIG_GAMBLE))
+        return DONOTHING;
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
     char tmp[128];
@@ -549,6 +546,5 @@ hold_gamble(void)
 
     vmsg("樂透彩券設定完成");
     return FULLUPDATE;
-#endif
 }
 
