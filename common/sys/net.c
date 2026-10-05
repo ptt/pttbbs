@@ -318,6 +318,37 @@ int toread(int fd, void *buf, int len)
 }
 
 /**
+ * Read up to maxlen bytes, continuing on partial reads / EINTR / EAGAIN.
+ * If stop_delim > 0:
+ *   Reads byte-by-byte and stops when stop_delim is reached.
+ * If stop_delim <= 0:
+ *   Reads in chunks until EOF or maxlen bytes are read.
+ * Returns total bytes read (>= 0), or -1 on error.
+ */
+int toread_ex(int fd, void *buf, int maxlen, int stop_delim)
+{
+    char *p = (char *)buf;
+    int t = 0;
+    while (maxlen > 0) {
+        int chunk = (stop_delim > 0) ? 1 : maxlen;
+        int s = read(fd, p, chunk);
+        if (s <= 0) {
+            if (is_to_readwrite_again(s))
+                continue;
+            if (s == 0)
+                break;
+            return -1;
+        }
+        t += s;
+        p += s;
+        maxlen -= s;
+        if (stop_delim > 0 && *(p - 1) == (char)stop_delim)
+            break;
+    }
+    return t;
+}
+
+/**
  * same as write(2), but write until exactly size len
  */
 int towrite(int fd, const void *buf, int len)

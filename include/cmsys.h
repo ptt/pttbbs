@@ -159,6 +159,7 @@ int toconnectex(const char *addr, int timeout);
 int toconnect3(const char *addr, int timeout, int microseconds);
 int toconnect_timed(const char *addr, int connect_timeout, int microseconds, int io_timeout);
 int toread   (int fd, void *buf, int len);
+int toread_ex(int fd, void *buf, int maxlen, int stop_delim);
 int towrite  (int fd, const void *buf, int len);
 int torecv   (int fd, void *buf, int len, int flag);
 int tosend   (int fd, const void *buf, int len, int flag);
