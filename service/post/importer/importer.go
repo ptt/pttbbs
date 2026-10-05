@@ -16,6 +16,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+
 	"pttbbs/big5uao"
 	"pttbbs/post/model"
 	"pttbbs/post/storage"
@@ -616,49 +619,39 @@ type ImportBoardOptions struct {
 	Offset       int
 	IsBig5       bool
 	NoMerge      bool
-	CommentdAddr string
+	CommentdDB   string
 	LegacyFormat bool
 	DryRun       bool
 	Workers      int
 	ProgressFn   func(current, total int)
 }
 
-// QueryCommentd queries legacy COMMENTD daemon over TCP port 5134 for authoritative (ctime, ip)
-func QueryCommentd(addr, board, filename string, seq uint32) (int64, string, error) {
-	if addr == "" {
+// QueryCommentDB queries legacy COMMENTD LevelDB database for authoritative (ctime, ip)
+func QueryCommentDB(db *leveldb.DB, board, filename string, seq uint32) (int64, string, error) {
+	if db == nil {
 		return 0, "", nil
 	}
-	conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+	key := fmt.Sprintf("%s/%s#%08d", board, filename, seq+1)
+	val, err := db.Get([]byte(key), nil)
 	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return 0, "", nil
+		}
 		return 0, "", err
 	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
-
-	payload := make([]byte, 4+14+30)
-	binary.LittleEndian.PutUint32(payload[0:4], seq)
-	copy(payload[4:18], board)
-	copy(payload[18:48], filename)
-
-	hdr := make([]byte, 4)
-	binary.LittleEndian.PutUint16(hdr[0:2], uint16(len(payload)))
-	binary.LittleEndian.PutUint16(hdr[2:4], 3) // COMMENTD_REQ_QUERY_BODY
-
-	if _, err := conn.Write(append(hdr, payload...)); err != nil {
-		return 0, "", err
+	if len(val) < 8 {
+		return 0, "", nil
 	}
 
-	resp := make([]byte, 8)
-	if _, err := io.ReadFull(conn, resp); err != nil {
-		return 0, "", err
-	}
-	ctime := binary.LittleEndian.Uint32(resp[0:4])
+	ctime := int64(binary.LittleEndian.Uint32(val[0:4]))
 	if ctime == 0 {
 		return 0, "", nil
 	}
-	ipv4 := binary.BigEndian.Uint32(resp[4:8])
-	ip := fmt.Sprintf("%d.%d.%d.%d", byte(ipv4>>24), byte(ipv4>>16), byte(ipv4>>8), byte(ipv4))
-	return int64(ctime), ip, nil
+	ip := ""
+	if val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 {
+		ip = fmt.Sprintf("%d.%d.%d.%d", val[4], val[5], val[6], val[7])
+	}
+	return ctime, ip, nil
 }
 
 // MigrateBoard performs in-process, high-speed migration of an entire board into storage.Storage
@@ -697,6 +690,19 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		targetDir = boardDir
 	} else if targetDir == "cache" {
 		targetDir = filepath.Join(opts.BBSHome, "cache", opts.Board)
+	}
+
+	var commentDB *leveldb.DB
+	if opts.CommentdDB != "" && opts.CommentdDB != "-" {
+		cdb, err := leveldb.OpenFile(opts.CommentdDB, &opt.Options{
+			ReadOnly:       true,
+			ErrorIfMissing: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("open commentd LevelDB (%s) failed: %w", opts.CommentdDB, err)
+		}
+		defer cdb.Close()
+		commentDB = cdb
 	}
 
 	startTime := time.Now()
@@ -787,9 +793,9 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 							return
 						}
 
-						if opts.CommentdAddr != "" {
+						if commentDB != nil {
 							for idx, pc := range parsed.Comments {
-								if ts, ip, err := QueryCommentd(opts.CommentdAddr, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
+								if ts, ip, err := QueryCommentDB(commentDB, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
 									pc.CTime = ts
 									if ip != "" && pc.IP == "" {
 										pc.IP = ip

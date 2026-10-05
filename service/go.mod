@@ -39,6 +39,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
