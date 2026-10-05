@@ -2167,46 +2167,199 @@ psb_recycle_bin(const char *base, const char *title) {
 #if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 typedef struct {
     void *cmctx;
+    const char *board;
+    const char *file;
+    const char *filter_user;
+    char token[32];
+    int *seq_map;
+    int filtered_count;
+    bool modified;
 } pvcm_ctx;
 
+static VCOL pvcm_user_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  \xbd\x73\xb8\xb9 ", 7, 7, 20},
+    {"\xae\xc9\xb6\xa1", 12, 12, 30},
+    {"\xc3\xfe\xa7\x4f", 4, 4, 10},
+    {"\xaf\x64\xa8\xa5\xa4\xba\xae\x65", 16, 56, 100},
+    {0},
+};
+#define PVCM_USER_COLS (ARRAY_SIZE(pvcm_user_coldefs) - 1)
+
+static VCOL pvcm_admin_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  \xbd\x73\xb8\xb9 ", 7, 7, 20},
+    {"\xa7\x40\xaa\xcc", 12, 14, 30},
+    {"\xaf\x64\xa8\xa5\xa4\xba\xae\x65", 16, 58, 100},
+    {0},
+};
+#define PVCM_ADMIN_COLS (ARRAY_SIZE(pvcm_admin_coldefs) - 1)
+
 static int
-pvcm_header(PSB_CTX *ctx GCC_UNUSED) {
-    vs_draw_hdr2("推文管理", "刪除推文");
+pvcm_header(PSB_CTX *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->cmd.priv;
+    if (cx->filter_user) {
+        vs_draw_hdr2(" \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ", " \xa7\xda\xaa\xba\xaf\x64\xa8\xa5\xa6\x43\xaa\xed ");
+    } else {
+        vs_draw_hdr2(" \xaf\x64\xa8\xa5\xba\xde\xb2\x7a ", " \xac\xdd\xaa\x4f\xaf\x64\xa8\xa5\xba\xf1\xc7\x40 ");
+    }
     move(1, 0);
-    vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
+    psb_render_header_columns(ctx, NULL);
     return 0;
+}
+
+static inline int
+pvcm_get_seq(const pvcm_ctx *cx, int curr) {
+    if (cx->cmctx) {
+        const CommentBodyReq *resp = CommentsRead(cx->cmctx, curr);
+        if (resp && resp->userref > 0)
+            return (int)resp->userref;
+    }
+    return curr + 1;
 }
 
 static int
 pvcm_renderer(int i, PSB_CTX *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx*) ctx->cmd.priv;
-    int curr = ctx->cmd.curr;
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->cmd.priv;
+    int seq = pvcm_get_seq(cx, i);
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     if (!resp)
         return 0;
-    prints("%c %06d %-12.12s %s",
-           (i == curr) ? '>' : ' ',
-           i + 1,
-           resp->userid,
-           (resp->type >= 0) ? resp->msg : (ANSI_COLOR(0;30;47) "<已刪>" ANSI_RESET));
+
+    char num[32];
+    snprintf(num, sizeof(num), "  %04d ", seq);
+
+    char msg[1024] = "";
+    if (resp->type < 0) {
+        snprintf(msg, sizeof(msg), ANSI_COLOR(0;30;47) "<%s>" ANSI_RESET,
+                 (resp->msg[0] ? resp->msg : "\xa4\x77\xa7\x52\xb0\xa3"));
+    } else {
+        const char *src = resp->msg;
+        char *dst = msg;
+        size_t avail = sizeof(msg) - 1;
+        while (*src && avail > 0) {
+            if (*src == '\n' || *src == '\r') {
+                while (*(src + 1) == '\n' || *(src + 1) == '\r')
+                    src++;
+                if (avail >= 3) {
+                    *dst++ = ' '; *dst++ = '/'; *dst++ = ' ';
+                    avail -= 3;
+                }
+            } else {
+                *dst++ = *src;
+                avail--;
+            }
+            src++;
+        }
+        *dst = '\0';
+    }
+
+    if (cx->filter_user) {
+        char timestr[16] = "";
+        if (resp->time > 0) {
+            time_t t = (time_t)resp->time;
+            struct tm *tm = localtime(&t);
+            if (tm)
+                strftime(timestr, sizeof(timestr), "%m/%d %H:%M", tm);
+        }
+        const char *type_tag = (resp->type == 1) ? ANSI_COLOR(1;37) "\xb1\xc0" ANSI_RESET :
+                               ((resp->type == 2) ? ANSI_COLOR(1;31) "\xc2\xed" ANSI_RESET :
+                                                    ANSI_COLOR(1;33) "\xa1\xf7" ANSI_RESET);
+        render_columns(ctx, "", num, timestr, type_tag, msg);
+    } else {
+        char user[32];
+        snprintf(user, sizeof(user), "%-12s", resp->userid);
+        render_columns(ctx, "", num, user, msg);
+    }
+    return 0;
+}
+
+static void
+pvcm_rebuild_map(pvcm_ctx *cx, PSB_CTX *ctx) {
+    ctx->cmd.total = CommentsGetCount(cx->cmctx);
+    if (ctx->cmd.curr >= ctx->cmd.total && ctx->cmd.total > 0)
+        ctx->cmd.curr = ctx->cmd.total - 1;
+}
+
+static int
+pvcm_cmd_edit(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    int seq = pvcm_get_seq(cx, ctx->curr);
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
+    if (!resp)
+        return 0;
+    if (resp->type < 0) {
+        vmsg("已刪除之留言無法編輯。請先按 u 還原。");
+        return 0;
+    }
+    if (cx->filter_user && strcasecmp(resp->userid, cx->filter_user) != 0) {
+        vmsg("只能編輯自己的留言。");
+        return 0;
+    }
+    char new_msg[2048];
+    strlcpy(new_msg, resp->msg, sizeof(new_msg));
+    if (v_multiline_text(new_msg, sizeof(new_msg), V_MULTILINE_MAX_LINES, STRLEN - 3, "\xbd\xd0\xbd\x73\xbf\xe8\xaf\x64\xa8\xa5\xa4\xba\xae\x65: ", " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ", VMULTI_NO_SCROLL) <= 0) {
+        ctx->redraw = true;
+        return 0;
+    }
+    if (strcmp(new_msg, resp->msg) == 0) {
+        ctx->redraw = true;
+        return 0;
+    }
+    if (CommentUpdateRecord(cx->board, cx->file, seq, new_msg, cuser.userid) != 0) {
+        vmsg("編輯留言失敗。");
+    } else {
+        vmsg("留言已更新。");
+        void *old = cx->cmctx;
+        cx->cmctx = cx->filter_user ? CommentsOpenUser(cx->board, cx->file, cx->filter_user, cx->token) : CommentsOpen(cx->board, cx->file);
+        CommentsClose(old);
+        pvcm_rebuild_map(cx, (PSB_CTX *)ctx);
+        char fpath[PATHLEN];
+        setbfile(fpath, cx->board, cx->file);
+        PostRenderFile(cx->board, cx->file, fpath);
+        cx->modified = true;
+    }
+    ctx->redraw = true;
     return 0;
 }
 
 static int
 pvcm_cmd_delete(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
-    char reason[40];
+    int seq = pvcm_get_seq(cx, ctx->curr);
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
     if (!resp || resp->type < 0)
         return 0;
-    if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
-                 reason, sizeof(reason), DOECHO)) {
-        ctx->redraw_footer_lines = 3;
+    if (cx->filter_user && strcasecmp(resp->userid, cx->filter_user) != 0) {
+        vmsg("只能刪除自己的留言。");
         return 0;
     }
-    if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
-        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0) {
-            vmsg("刪除失敗。可能原文已被修改。");
+    char reason[40] = "自刪";
+    if (!cx->filter_user) {
+        if (!getdata(b_lines - 2, 0, "請輸入刪除理由: ", reason, sizeof(reason), DOECHO)) {
+            ctx->redraw_footer_lines = 3;
+            return 0;
+        }
+    }
+    if (vans("確定要刪除此留言嗎？[y/N] ") == 'y') {
+        int rc = -1;
+        if (USE_POST_SVC) {
+            rc = CommentDeleteRecord(cx->board, cx->file, seq, cuser.userid, reason);
+        } else {
+            rc = CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason);
+        }
+        if (rc != 0) {
+            vmsg("刪除失敗。");
+        } else {
+            vmsg("留言已刪除。");
+            void *old = cx->cmctx;
+            cx->cmctx = cx->filter_user ? CommentsOpenUser(cx->board, cx->file, cx->filter_user, cx->token) : CommentsOpen(cx->board, cx->file);
+            CommentsClose(old);
+            pvcm_rebuild_map(cx, (PSB_CTX *)ctx);
+            char fpath[PATHLEN];
+            setbfile(fpath, cx->board, cx->file);
+            PostRenderFile(cx->board, cx->file, fpath);
+            cx->modified = true;
         }
         ctx->redraw = true;
     } else {
@@ -2218,18 +2371,27 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
 static int
 pvcm_cmd_undelete(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    int seq = pvcm_get_seq(cx, ctx->curr);
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
     if (!resp || resp->type >= 0)
         return 0;
-    if (vans("確定要復原此則推文嗎？ (y/N) ") == 'y') {
-        const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
-        if (CommentUndeleteRecord(key->board, key->file, ctx->curr + 1) != 0) {
-            vmsg("復原失敗。");
+    if (cx->filter_user && strcasecmp(resp->userid, cx->filter_user) != 0) {
+        vmsg("只能還原自己的留言。");
+        return 0;
+    }
+    if (vans("確定要還原此留言嗎？[y/N] ") == 'y') {
+        if (CommentUndeleteRecord(cx->board, cx->file, seq) != 0) {
+            vmsg("還原失敗。");
         } else {
-            vmsg("已復原推文。");
+            vmsg("已還原。");
             void *old = cx->cmctx;
-            cx->cmctx = CommentsOpen(key->board, key->file);
+            cx->cmctx = cx->filter_user ? CommentsOpenUser(cx->board, cx->file, cx->filter_user, cx->token) : CommentsOpen(cx->board, cx->file);
             CommentsClose(old);
+            pvcm_rebuild_map(cx, (PSB_CTX *)ctx);
+            char fpath[PATHLEN];
+            setbfile(fpath, cx->board, cx->file);
+            PostRenderFile(cx->board, cx->file, fpath);
+            cx->modified = true;
         }
         ctx->redraw = true;
     } else {
@@ -2242,7 +2404,8 @@ static int
 pvcm_cmd_acl(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
-    const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
+    int real_idx = cx->seq_map ? cx->seq_map[ctx->curr] : ctx->curr;
+    const CommentBodyReq *resp = CommentsRead(cx->cmctx, real_idx);
     if (resp)
         edit_user_acl_for_board(resp->userid, key->board);
     ctx->redraw = true;
@@ -2250,10 +2413,14 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
 }
 
 static const cmd_t pvcm_cmds[] = {
-    { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
+    { KEY_ENTER, "修改", "編輯留言內容", pvcm_cmd_edit, 0, CMD_PRIO_MAX, true },
+    { 'r', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'e', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'E', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'd', "刪除", "刪除留言", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
-    { 'u', "復原", "復原被刪除的推文", pvcm_cmd_undelete, 0, CMD_PRIO_MAX, true },
-    { 'U', "快速水桶", "設定該推文作者的看板水桶權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { 'u', "還原", "還原被刪除之留言", pvcm_cmd_undelete, 0, CMD_PRIO_HIGH, true },
+    { 'U', "快速處分", "設定該作者之看板權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -2276,40 +2443,69 @@ pvcm_welcome() {
 }
 
 int
-psb_comment_manager(const char *board, const char *file) {
+psb_comment_editor(const char *board, const char *file, const char *userid) {
     pvcm_ctx pvcmctx = {
-        NULL,
+        .cmctx = NULL,
+        .board = board,
+        .file = file,
+        .filter_user = userid,
+        .seq_map = NULL,
+        .filtered_count = 0,
+        .modified = false,
     };
     PSB_CTX ctx = {
         .cmd = {
             .curr = 0,
             .total = 0,
             .priv = (void*)&pvcmctx,
-            .caption = " 推文管理 ",
+        .caption = userid ? " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 " : " \xaf\x64\xa8\xa5\xba\xde\xb2\x7a ",
         },
         .header_lines = 2,
-        .footer_lines = 2,
+        .footer_lines = 1,
         .allow_pbs_version_message = 0,
+        .cols = userid ? PVCM_USER_COLS : PVCM_ADMIN_COLS,
+        .vcols = userid ? pvcm_user_coldefs : pvcm_admin_coldefs,
+        .col_paddings = 2,
         .header = pvcm_header,
         .renderer = pvcm_renderer,
         .cmds = pvcm_cmds,
     };
-    pvcmctx.cmctx = CommentsOpen(board, file);
+    char token_str[32] = "-";
+    if (cuser.firstlogin > 0)
+        snprintf(token_str, sizeof(token_str), "%u", (unsigned int)cuser.firstlogin);
+    strlcpy(pvcmctx.token, token_str, sizeof(pvcmctx.token));
+    pvcmctx.cmctx = userid ? CommentsOpenUser(board, file, userid, token_str) : CommentsOpen(board, file);
     if (!pvcmctx.cmctx) {
-        vmsg("系統錯誤，請至 " BN_BUGREPORT " 報告。");
-        return FULLUPDATE;
+        if (!userid)
+            vmsg("\x74\x79\x73\x74\x65\x6d \x65\x72\x72\x6f\x72");
+        return 0;
     }
     ctx.cmd.total = CommentsGetCount(pvcmctx.cmctx);
-    if (ctx.cmd.total){
-        pvcm_welcome();
+    if (ctx.cmd.total > 0) {
+        if (!userid)
+            pvcm_welcome();
         psb_main(&ctx);
     } else {
-        vmsg("此文章無推文資料。");
+        if (!userid)
+            vmsg("此文章無推文資料。");
     }
+    if (pvcmctx.modified) {
+        char fpath[PATHLEN];
+        setbfile(fpath, board, file);
+        PostRenderFile(board, file, fpath);
+    }
+    if (pvcmctx.seq_map)
+        free(pvcmctx.seq_map);
     CommentsClose(pvcmctx.cmctx);
-    return DIRCHANGED;
+    return pvcmctx.modified ? 1 : 0;
+}
+
+int
+psb_comment_manager(const char *board, const char *file) {
+    return psb_comment_editor(board, file, NULL) > 0 ? DIRCHANGED : FULLUPDATE;
 }
 #endif
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Admin Edit
