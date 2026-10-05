@@ -162,7 +162,6 @@ int ccw_talk(int fd, int destunum);	// common chat window: private talk
 int ccw_chat(int fd);			// common chat window: chatroom
 
 /* comments */
-#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 struct CommentsBodyReq;
 void *CommentsOpen(const char *board, const char *file);
 void *CommentsOpenUser(const char *board, const char *file, const char *userid, const char *token);
@@ -171,7 +170,6 @@ int CommentsGetCount(void *ctx);
 const struct CommentBodyReq *CommentsRead(void *ctx, int i);
 int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason);
 const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
-#endif
 
 /* comment types */
 enum {
@@ -215,10 +213,6 @@ int CommentsUserHasComments(const char *board, const char *file, const char *use
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
                     char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
-
-static inline void FormatCommentString(char *b, size_t sz, int t, const char *u, int l, const char *m, const char *tail) {
-    (void)b; (void)sz; (void)t; (void)u; (void)l; (void)m; (void)tail;
-}
 
 /* psb (page and service browser) */
 int psb_view_edit_history(const char *base, const char *subject,

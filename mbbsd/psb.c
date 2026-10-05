@@ -2164,7 +2164,6 @@ psb_recycle_bin(const char *base, const char *title) {
 ///////////////////////////////////////////////////////////////////////////
 // Comment Management
 
-#if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 typedef struct {
     void *cmctx;
     const char *board;
@@ -2342,12 +2341,7 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
         }
     }
     if (vans("確定要刪除此留言嗎？[y/N] ") == 'y') {
-        int rc = -1;
-        if (USE_POST_SVC) {
-            rc = CommentDeleteRecord(cx->board, cx->file, seq, cuser.userid, reason);
-        } else {
-            rc = CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason);
-        }
+        int rc = CommentDeleteRecord(cx->board, cx->file, seq, cuser.userid, reason);
         if (rc != 0) {
             vmsg("刪除失敗。");
         } else {
@@ -2504,7 +2498,6 @@ int
 psb_comment_manager(const char *board, const char *file) {
     return psb_comment_editor(board, file, NULL) > 0 ? DIRCHANGED : FULLUPDATE;
 }
-#endif
 
 
 ///////////////////////////////////////////////////////////////////////////
