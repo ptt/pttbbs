@@ -23,7 +23,7 @@ CPROG_WITH_UTIL := \
 	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
-	munin		useractive_munin	\
+	munin		useractive_munin	chkfnlen	\
 	$(END)
 
 # 下面是 C++ 的程式
