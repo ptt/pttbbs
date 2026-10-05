@@ -292,17 +292,17 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
 {
     int count = -1;
     sqlite3 *Db = g_Db;
-    sqlite3_stmt *Stmt = NULL;
+    auto_sqlite3_finalize sqlite3_stmt *Stmt = NULL;
 
     // XXX == is faster than LIKE in this case, although it does not support '%' and case sensitive
     if (sqlite3_prepare(Db, "SELECT userid FROM emaildb WHERE email == lower(?);",
                 -1, &Stmt, NULL) != SQLITE_OK)
-        goto end;
+        return -1;
 
     if (sqlite3_bind_text(Stmt, 1, email, email_len, SQLITE_STATIC) != SQLITE_OK)
     {
         fprintf(stderr, "failed in sqlite3_bind_text\n");
-        goto end;
+        return -1;
     }
 
     count = 0;
@@ -326,58 +326,41 @@ regmaildb_check_email(const char * email, int email_len, const char *myid)
                 count++;
     }
 
-end:
-    if (Stmt != NULL)
-    {
-        int r = sqlite3_finalize(Stmt);
-        if (r != SQLITE_OK)
-        {
-            fprintf(stderr, "sqlite3_finalize error: %d %s\n", r, sqlite3_errmsg(Db));
-            count = -1;
-        }
-    }
-
     return count;
 }
 
 int 
 regmaildb_update_email(const char * userid, int userid_len, const char * email, int email_len)
 {
-    int ret = -1;
-
     sqlite3 *Db = g_Db;
-    sqlite3_stmt *Stmt = NULL;
+    auto_sqlite3_finalize sqlite3_stmt *Stmt = NULL;
 
     if (strcmp(email, "x") == 0)
     {
         if (sqlite3_prepare(Db, "DELETE FROM emaildb WHERE userid == lower(?);",
                     -1, &Stmt, NULL) != SQLITE_OK)
-            goto end;
+            return -1;
 
         if (sqlite3_bind_text(Stmt, 1, userid, userid_len, SQLITE_STATIC) != SQLITE_OK)
-            goto end;
+            return -1;
 
     } else {
 
         if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
                     -1, &Stmt, NULL) != SQLITE_OK)
-            goto end;
+            return -1;
 
         if (sqlite3_bind_text(Stmt, 1, userid, userid_len, SQLITE_STATIC) != SQLITE_OK)
-            goto end;
+            return -1;
 
         if (sqlite3_bind_text(Stmt, 2, email, email_len, SQLITE_STATIC) != SQLITE_OK)
-            goto end;
+            return -1;
     }
 
     if (sqlite3_step(Stmt) == SQLITE_DONE)
-        ret = 0;
+        return 0;
 
-end:
-    if (Stmt != NULL)
-        sqlite3_finalize(Stmt);
-
-    return ret;
+    return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////

@@ -676,6 +676,8 @@ sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED) {
 
 static void
 client_cb(int fd, short event, void *arg) {
+    autoclose int cleanup_fd = fd;
+    autofree void *cleanup_arg = arg;
     int len;
     char master_uid[IDLEN+1] = "", angel_uid[IDLEN+1] = "";
     char *uid;
@@ -684,11 +686,11 @@ client_cb(int fd, short event, void *arg) {
 
     // ignore clients that timeout or sending invalid request
     if (event & EV_TIMEOUT)
-	goto end;
+	return;
     if ( (len = read(fd, &data, sizeof(data))) != sizeof(data) )
-	goto end;
+	return;
     if (data.cb != sizeof(data))
-        goto end;
+        return;
 
     debug("%s request: op=%d, mid=%d, aid=%d\n", Cdatelite(&clk),
           data.operation, data.master_uid, data.angel_uid);
@@ -772,7 +774,7 @@ client_cb(int fd, short event, void *arg) {
                 create_angel_report(data.angel_uid, &rpt);
                 // write different kind of data!
                 write(fd, &rpt, rpt.cb);
-                goto end;
+                return;
             }
             break;
         case ANGELBEATS_REQ_GET_ONLINE_LIST:
@@ -784,7 +786,7 @@ client_cb(int fd, short event, void *arg) {
                 fill_online_angel_list(&list);
                 // write different kind of data!
                 write(fd, &list, sizeof(list));
-                goto end;
+                return;
             }
             break;
         default:
@@ -793,11 +795,6 @@ client_cb(int fd, short event, void *arg) {
             break;
     }
     write(fd, &data, sizeof(data));
-
-end:
-    // cleanup
-    close(fd);
-    free(arg);
 }
 
 static void 

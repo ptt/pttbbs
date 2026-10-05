@@ -115,16 +115,18 @@ static void sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg G
 
 static void client_cb(int fd, short event, void *arg)
 {
+    autoclose int cleanup_fd = fd;
+    autofree void *cleanup_arg = arg;
     char buf[32];
     const char *result, *cc = NULL;
     int len;
 
     // ignore clients that timeout
     if (event & EV_TIMEOUT)
-	goto end;
+	return;
 
     if ( (len = read(fd, buf, sizeof(buf) - 1)) <= 0 )
-	goto end;
+	return;
 
     buf[len] = '\0';
 
@@ -160,11 +162,6 @@ static void client_cb(int fd, short event, void *arg)
 
 	writev(fd, iov, cc ? 3 : 1);
     }
-
-end:
-    // cleanup
-    close(fd);
-    free(arg);
 }
 
 static void listen_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
