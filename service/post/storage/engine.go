@@ -2429,8 +2429,21 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer tx.Rollback()
 
 	stmtPost, err := tx.Prepare(`
-		INSERT INTO posts (parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(community, post_file) DO UPDATE SET
+			title = excluded.title,
+			author = excluded.author,
+			author_token = excluded.author_token,
+			created_at = excluded.created_at,
+			modified = excluded.modified,
+			filemode = excluded.filemode,
+			upvotes = excluded.upvotes,
+			downvotes = excluded.downvotes,
+			num_comments = excluded.num_comments,
+			num_crossposts = excluded.num_crossposts,
+			encoding = excluded.encoding
+		RETURNING id
 	`)
 	if err != nil {
 		return fmt.Errorf("prepare insert post failed: %w", err)
@@ -2459,19 +2472,24 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			p.Encoding = "utf-8"
 		}
 
-		res, err := stmtPost.Exec(
-			p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken,
+		var candidateID any
+		if p.ID > 0 {
+			candidateID = p.ID
+		} else if e.cfg.NumShards > 1 {
+			seq := atomic.AddUint64(&e.postSeqCounter, 1)
+			candidateID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
+		}
+
+		var id uint64
+		err := stmtPost.QueryRow(
+			candidateID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken,
 			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
 			p.NumComments, p.NumCrossposts, p.Encoding,
-		)
+		).Scan(&id)
 		if err != nil {
 			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
 		}
-		id, err := res.LastInsertId()
-		if err != nil {
-			return err
-		}
-		p.ID = uint64(id)
+		p.ID = id
 
 		// Set in postBatch
 		postKey := model.EncodePostKey(p.ID)

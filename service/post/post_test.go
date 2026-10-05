@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	"pttbbs/big5uao"
+	"pttbbs/post/config"
 	"pttbbs/post/daemon"
+	"pttbbs/post/importer"
 	"pttbbs/post/model"
 	"pttbbs/post/storage"
 )
@@ -1618,4 +1621,301 @@ func TestPurgePost(t *testing.T) {
 		t.Fatalf("expected positive ID on recreated post")
 	}
 	t.Logf("PurgePost and recreation verified successfully!")
+}
+
+func TestImportBoardCancellationAndWorkers(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "post_import_cancel_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	sockPath := filepath.Join(tmpDir, "post.sock")
+	dbDir := filepath.Join(tmpDir, "db")
+	cacheDir := filepath.Join(tmpDir, "cache")
+	bbsHome := filepath.Join(tmpDir, "bbshome")
+
+	cfg := config.DefaultConfig(bbsHome)
+	cfg.Engines = []config.EngineLocation{
+		{
+			Index:    0,
+			DataDir:  dbDir,
+			CacheDir: cacheDir,
+		},
+	}
+	cfg.UnixSocket = sockPath
+	cfg.ImportWorkers = 2
+
+	st, err := storage.OpenStorage(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome:        bbsHome,
+		UnixSocket:     sockPath,
+		FilterEncoding: "utf-8",
+		ImportWorkers:  cfg.ImportWorkers,
+	}, st)
+
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	// Create test board with 50 posts
+	boardDir := filepath.Join(bbsHome, "boards", "t", "testboard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	var dirBuf []byte
+	for i := 1; i <= 50; i++ {
+		fn := fmt.Sprintf("M.1728000000.A.%03d", i)
+		content := fmt.Sprintf("Article content %d\n--\n※ 發信站: 批踢踢實業坊\n推 user: 推文 %d 10/01 12:00\n", i, i)
+		if err := os.WriteFile(filepath.Join(boardDir, fn), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		hdr := make([]byte, importer.FileHeaderSize)
+		copy(hdr[0:28], fn)
+		binary.LittleEndian.PutUint32(hdr[28:32], uint32(1728000000+i))
+		hdr[33] = 1
+		copy(hdr[34:48], "tester")
+		copy(hdr[48:54], "10/01")
+		copy(hdr[54:119], fmt.Sprintf("Test post %d", i))
+		dirBuf = append(dirBuf, hdr...)
+	}
+	if err := os.WriteFile(filepath.Join(boardDir, ".DIR"), dirBuf, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Test Cancellation on Disconnect: start import with workers=2, read 1 byte, then close conn immediately!
+	conn1, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial unix socket failed: %v", err)
+	}
+	// IMPORT_BOARD testboard - 0 0 0 0 - 0 0 2
+	conn1.Write([]byte("IMPORT_BOARD testboard - 0 0 0 0 - 0 0 2\n"))
+	buf := make([]byte, 16)
+	conn1.Read(buf)
+	conn1.Close() // Disconnect abruptly!
+
+	// Give a few ms for cancel to propagate
+	time.Sleep(50 * time.Millisecond)
+
+	// 2. Server should remain responsive and healthy after client dropped
+	conn2, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial unix socket failed after disconnect: %v", err)
+	}
+	defer conn2.Close()
+	conn2.Write([]byte("PING\n"))
+	r2 := bufio.NewReader(conn2)
+	pingResp, err := r2.ReadString('\n')
+	if err != nil || strings.TrimSpace(pingResp) != "PONG" {
+		t.Fatalf("Server not responsive after cancellation, ping got: %q, err: %v", pingResp, err)
+	}
+
+	// 3. Perform a full migration with custom workers=4
+	conn3, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial unix socket failed: %v", err)
+	}
+	defer conn3.Close()
+	conn3.Write([]byte("IMPORT_BOARD testboard - 1 0 0 0 - 0 0 4\n"))
+	r3 := bufio.NewReader(conn3)
+	var finalResp string
+	for {
+		line, err := r3.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if strings.HasPrefix(line, "OK") {
+			finalResp = strings.TrimSpace(line)
+			break
+		}
+	}
+	if !strings.HasPrefix(finalResp, "OK") {
+		t.Fatalf("Expected OK response, got: %q", finalResp)
+	}
+	t.Logf("Import finished successfully with workers=4: %s", finalResp)
+}
+
+func TestImportBoardDuplicateFilenamesAndUpsert(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "post_import_dup_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	sockPath := filepath.Join(tmpDir, "post.sock")
+	dbDir := filepath.Join(tmpDir, "db")
+	cacheDir := filepath.Join(tmpDir, "cache")
+	bbsHome := filepath.Join(tmpDir, "bbshome")
+
+	cfg := config.DefaultConfig(bbsHome)
+	cfg.Engines = []config.EngineLocation{
+		{
+			Index:    0,
+			DataDir:  dbDir,
+			CacheDir: cacheDir,
+		},
+	}
+	cfg.UnixSocket = sockPath
+	cfg.ImportWorkers = 2
+
+	st, err := storage.OpenStorage(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome:        bbsHome,
+		UnixSocket:     sockPath,
+		FilterEncoding: "utf-8",
+		ImportWorkers:  cfg.ImportWorkers,
+	}, st)
+
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	boardDir := filepath.Join(bbsHome, "boards", "d", "dupboard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create 2 post files on disk
+	fn1 := "M.1004284007.A"
+	fn2 := "M.1004284008.A"
+	if err := os.WriteFile(filepath.Join(boardDir, fn1), []byte("Article 1\n--\n※ 發信站: 批踢踢實業坊\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(boardDir, fn2), []byte("Article 2\n--\n※ 發信站: 批踢踢實業坊\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pack .DIR with fn1, fn2, AND fn1 again (duplicate entry in .DIR!)
+	var dirBuf []byte
+	packHdr := func(fn, title string) {
+		hdr := make([]byte, importer.FileHeaderSize)
+		copy(hdr[0:28], fn)
+		binary.LittleEndian.PutUint32(hdr[28:32], uint32(1004284007))
+		hdr[33] = 1
+		copy(hdr[34:48], "tester")
+		copy(hdr[48:54], "10/01")
+		copy(hdr[54:119], title)
+		dirBuf = append(dirBuf, hdr...)
+	}
+
+	packHdr(fn1, "Title 1")
+	packHdr(fn2, "Title 2")
+	packHdr(fn1, "Title 1 Duplicate In DIR") // Duplicate!
+
+	// Add more posts to make board substantial
+	for i := 3; i <= 200; i++ {
+		fn := fmt.Sprintf("M.1004284%03d.A", i)
+		if err := os.WriteFile(filepath.Join(boardDir, fn), []byte("Article\n--\n※ 發信站: 批踢踢實業坊\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		packHdr(fn, fmt.Sprintf("Title %d", i))
+	}
+	if err := os.WriteFile(filepath.Join(boardDir, ".DIR"), dirBuf, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. First import: must succeed without unique constraint failure
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial unix socket failed: %v", err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 2\n")); err != nil {
+		t.Fatal(err)
+	}
+	r := bufio.NewReader(conn)
+	var finalResp string
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if strings.HasPrefix(line, "OK") {
+			finalResp = strings.TrimSpace(line)
+			break
+		}
+	}
+	if !strings.HasPrefix(finalResp, "OK") {
+		t.Fatalf("First import failed with duplicate in .DIR: %q", finalResp)
+	}
+
+	// 2. Second import without --overwrite: must also succeed via UPSERT without unique constraint error!
+	conn2, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial unix socket failed: %v", err)
+	}
+	defer conn2.Close()
+	if _, err := conn2.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 2\n")); err != nil {
+		t.Fatal(err)
+	}
+	r2 := bufio.NewReader(conn2)
+	var finalResp2 string
+	for {
+		line, err := r2.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if strings.HasPrefix(line, "OK") {
+			finalResp2 = strings.TrimSpace(line)
+			break
+		}
+	}
+	if !strings.HasPrefix(finalResp2, "OK") {
+		t.Fatalf("Second re-import failed without overwrite: %q", finalResp2)
+	}
+	t.Logf("Both imports with duplicate filenames succeeded: %s, %s", finalResp, finalResp2)
+
+	// 3. Test concurrent import on the same board: should reject immediately
+	connA, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer connA.Close()
+
+	started := make(chan struct{})
+	go func() {
+		close(started)
+		_, _ = connA.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 1\n"))
+		buf := make([]byte, 1024)
+		for {
+			if _, err := connA.Read(buf); err != nil {
+				return
+			}
+		}
+	}()
+
+	<-started
+	var respB string
+	for attempt := 0; attempt < 10; attempt++ {
+		connB, err := net.Dial("unix", sockPath)
+		if err == nil {
+			_, _ = connB.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 1\n"))
+			rB := bufio.NewReader(connB)
+			resp, _ := rB.ReadString('\n')
+			connB.Close()
+			if strings.Contains(resp, "already being imported") {
+				respB = resp
+				break
+			}
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !strings.Contains(respB, "already being imported") {
+		t.Fatalf("Expected already being imported error, got: %q", respB)
+	}
+	t.Logf("Concurrent import rejection verified: %s", strings.TrimSpace(respB))
 }

@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -24,6 +25,7 @@ type ServerConfig struct {
 	BBSHome        string
 	UnixSocket     string // e.g. "$BBSHOME/run/post.svc.sock"
 	FilterEncoding string // "big5" (default) or "utf-8"
+	ImportWorkers  int    // Default worker threads for board import (default: 8)
 }
 
 func (c ServerConfig) IsBig5() bool {
@@ -32,11 +34,13 @@ func (c ServerConfig) IsBig5() bool {
 }
 
 type Server struct {
-	cfg       ServerConfig
-	storage   storage.Storage
-	listeners []net.Listener
-	wg        sync.WaitGroup
-	quit      chan struct{}
+	cfg             ServerConfig
+	storage         storage.Storage
+	listeners       []net.Listener
+	wg              sync.WaitGroup
+	quit            chan struct{}
+	activeImportsMu sync.Mutex
+	activeImports   map[string]bool
 }
 
 func NewServer(cfg ServerConfig, st storage.Storage) *Server {
@@ -46,10 +50,14 @@ func NewServer(cfg ServerConfig, st storage.Storage) *Server {
 	if cfg.UnixSocket == "" {
 		cfg.UnixSocket = filepath.Join(cfg.BBSHome, "run", "post.svc.sock")
 	}
+	if cfg.ImportWorkers <= 0 {
+		cfg.ImportWorkers = 8
+	}
 	return &Server{
-		cfg:     cfg,
-		storage: st,
-		quit:    make(chan struct{}),
+		cfg:           cfg,
+		storage:       st,
+		quit:          make(chan struct{}),
+		activeImports: make(map[string]bool),
 	}
 }
 
@@ -708,12 +716,28 @@ func (s *Server) handleIPC(conn net.Conn) {
 		s.writeRenderOutput(conn, p, outputPath, legacy)
 
 	case "IMPORT_BOARD", "MIGRATE_BOARD":
-		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset]
+		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset] [nomerge:0|1] [commentd_addr] [legacy:0|1] [dryrun:0|1] [workers]
 		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for IMPORT_BOARD\n"))
 			return
 		}
 		community := parts[1]
+		normBoard := strings.ToLower(strings.TrimSpace(community))
+		s.activeImportsMu.Lock()
+		if s.activeImports[normBoard] {
+			s.activeImportsMu.Unlock()
+			conn.Write([]byte(fmt.Sprintf("ERR board '%s' is already being imported\n", community)))
+			return
+		}
+		s.activeImports[normBoard] = true
+		s.activeImportsMu.Unlock()
+
+		defer func() {
+			s.activeImportsMu.Lock()
+			delete(s.activeImports, normBoard)
+			s.activeImportsMu.Unlock()
+		}()
+
 		targetDir := ""
 		if len(parts) >= 3 && parts[2] != "-" && parts[2] != "" {
 			targetDir = parts[2]
@@ -749,8 +773,32 @@ func (s *Server) handleIPC(conn net.Conn) {
 			dryRun = true
 		}
 
+		workers := s.cfg.ImportWorkers
+		if len(parts) >= 11 {
+			if w, err := strconv.Atoi(parts[10]); err == nil && w > 0 {
+				workers = w
+			}
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Monitor connection disconnect to cancel migration immediately if client drops
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				_, err := reader.Read(buf)
+				if err != nil {
+					cancel()
+					return
+				}
+			}
+		}()
+
 		lastProgress := time.Now()
 		opts := importer.ImportBoardOptions{
+			Ctx:          ctx,
+			Workers:      workers,
 			BBSHome:      s.cfg.BBSHome,
 			Board:        community,
 			RenderTarget: targetDir,
@@ -765,7 +813,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			ProgressFn: func(current, total int) {
 				if time.Since(lastProgress) >= 100*time.Millisecond || current == total {
 					lastProgress = time.Now()
-					conn.Write([]byte(fmt.Sprintf("PROGRESS %d %d\n", current, total)))
+					if _, err := conn.Write([]byte(fmt.Sprintf("PROGRESS %d %d\n", current, total))); err != nil {
+						cancel()
+					}
 				}
 			},
 		}
