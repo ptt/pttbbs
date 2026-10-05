@@ -30,7 +30,8 @@
 #define RET_RECYCLEBIN	    (989)
 #define RET_EDITPOST	    (988)
 #define RET_EDITTITLE	    (987)
-#define RET_DOVOTE	    (986)
+#define RET_DORATE	    (986)
+#define RET_DOVOTE	    RET_DORATE
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

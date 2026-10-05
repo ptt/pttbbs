@@ -705,9 +705,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
 		     "增加條件 推文數: ": "搜尋推文數高於多少"
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 		     " (<0則搜噓文數) "
-#endif // CONFIG_OLD_RECOMMEND
 		     "的文章: ",
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||

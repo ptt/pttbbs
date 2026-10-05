@@ -998,7 +998,7 @@ userlist_header(PSB_CTX *ctx)
            ANSI_RESET,
            MSG_PICKUP_WAY[*cx->pickup_way], SHM->UTMPnumber,
            cx->myfriend, cx->friendme, currutmp->brc_id ? cx->bfriend : 0, cx->badfriend);
-    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp) {
+    if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && currutmp) {
         static const char *modestr[ANGELPAUSE_MODES] = {
             "開放", ANSI_COLOR(32) "停收" ANSI_RESET, ANSI_COLOR(31) "關閉" ANSI_RESET
         };

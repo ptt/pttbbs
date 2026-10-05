@@ -600,7 +600,6 @@ bcfg_get_title(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
     return buf;
 }
 
-#ifndef OLDRECOMMEND
 static const char *
 bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                char *buf, size_t sz)
@@ -609,7 +608,6 @@ bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                  ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
     return buf;
 }
-#endif
 
 static const char *
 bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
@@ -770,7 +768,6 @@ bcfg_set_norecommend(cmd_ctx_t *ctx)
     return 0;
 }
 
-#ifndef OLDRECOMMEND
 static int
 bcfg_set_noboo(cmd_ctx_t *ctx)
 {
@@ -785,7 +782,6 @@ bcfg_set_noboo(cmd_ctx_t *ctx)
         bp->brdattr &= ~BRD_NORECOMMEND;
     return 0;
 }
-#endif
 
 static int
 bcfg_set_fastrecmd(cmd_ctx_t *ctx)
@@ -979,9 +975,7 @@ static const BConfigItem bconfig_items[] = {
     { "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
     { "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
-#ifndef OLDRECOMMEND
     { "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
-#endif
     { "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
     { "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_IPLOGRECMD, PERM_BM, NULL, bcfg_set_iplogrecmd },
     { "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
@@ -1107,9 +1101,7 @@ static const cmd_t bconfig_edit_cmds[] = {
     { 'y', NULL, "切換是否開放回應文章", bcfg_set_noreply, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
     { 'd', NULL, "切換是否開放自刪文章", bcfg_set_noselfdelpost, PERM_SELFDEL, CMD_PRIO_NONE, true },
     { 'r', NULL, "切換是否開放推文", bcfg_set_norecommend, PERM_BM, CMD_PRIO_NONE, true },
-#ifndef OLDRECOMMEND
     { 's', NULL, "切換是否開放噓文", bcfg_set_noboo, PERM_BM, CMD_PRIO_NONE, true },
-#endif
     { 'f', NULL, "設定快速連推間隔限制", bcfg_set_fastrecmd, PERM_BM, CMD_PRIO_NONE, true },
     { 'i', NULL, "切換推文是否記錄來源 IP", bcfg_set_iplogrecmd, PERM_BM, CMD_PRIO_NONE, true },
     { 'a', NULL, "切換推文開頭是否自動對齊", bcfg_set_alignedcmt, PERM_BM, CMD_PRIO_NONE, true },

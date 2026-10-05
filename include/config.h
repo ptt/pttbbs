@@ -28,6 +28,10 @@
 #define _config_enabled(cfg)        _config_test(_config_val(cfg))
 #define IS_ENABLED(option)          _config_enabled(option)
 
+#ifndef CONFIG_RATING
+#define CONFIG_RATING 1
+#endif
+
 
 #define BBSPROG         BBSHOME "/bin/mbbsd"         /* 主程式 */
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
