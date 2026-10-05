@@ -10,7 +10,7 @@
 #define REPORT_AUTHOR   "[天使公會]"
 #define REPORT_SUBJECT  "小天使統計資料"
 
-#ifndef PLAY_ANGEL
+#if !IS_ENABLED(CONFIG_ANGEL)
 int main(){ return 0; }
 #else
 
@@ -246,4 +246,4 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-#endif /* defined PLAY_ANGEL */
+#endif /* IS_ENABLED(CONFIG_ANGEL) */

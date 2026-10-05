@@ -586,11 +586,13 @@
 # define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
 
-#ifdef PLAY_ANGEL
-#define HAS_ANGEL 1
-#else
-#define HAS_ANGEL 0
-#endif // PLAY_ANGEL
+#if defined(PLAY_ANGEL) && !defined(CONFIG_ANGEL)
+#define CONFIG_ANGEL 1
+#endif
+
+#if defined(ALL_REEDIT_LOG) && !defined(CONFIG_ALL_REEDIT_LOG)
+#define CONFIG_ALL_REEDIT_LOG 1
+#endif
 
 #ifdef DEBUG
 #define IS_DEBUG 1

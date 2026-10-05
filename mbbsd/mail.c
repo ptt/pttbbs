@@ -241,7 +241,7 @@ get_max_keepmail(const userec_t *u) {
         keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 5.0;
     } else if (lvl & (PERM_BM)) {
         keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 2.5;
-    } else if (HAS_ANGEL && (lvl & (PERM_ANGEL))) {
+    } else if (IS_ENABLED(CONFIG_ANGEL) && (lvl & (PERM_ANGEL))) {
         keep = MAX_KEEPMAIL * 3.5;
     } else if (!(lvl & (PERM_LOGINOK))) {
         // less than normal user

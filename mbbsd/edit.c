@@ -28,11 +28,6 @@
  * 當操作到一段落之後才 check b_lines 是否有改變.
  */
 #include "bbs.h"
-#ifdef ALL_REEDIT_LOG
-# define HAS_ALL_REEDIT_LOG 1
-#else
-# define HAS_ALL_REEDIT_LOG 0
-#endif
 
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
@@ -1986,7 +1981,7 @@ write_header(FILE * fp,  const char *mytitle)
             int use_userid = 1;
 
             // dirty hack here... sorry
-            if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS)) {
+            if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS)) {
                 angel_load_my_fullnick(default_name, sizeof(default_name));
             }
 
@@ -2385,7 +2380,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     }
     else if (currstat == REEDIT)
     {
-	if (HAS_ALL_REEDIT_LOG || strcmp(currboard, BN_SYSOP) == 0)
+	if (IS_ENABLED(CONFIG_ALL_REEDIT_LOG) || strcmp(currboard, BN_SYSOP) == 0)
 	{
 	    char sbuf[WRAPMARGIN];
 	    snprintf(sbuf, sizeof(sbuf),

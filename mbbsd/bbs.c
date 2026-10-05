@@ -1386,7 +1386,7 @@ do_post_article(int edflags)
         edflags |= EDITFLAG_WARN_NOSELFDEL;
 
     // XXX 惡搞的 code。
-    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS))
+    if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS))
     {
 	currbrdattr |= BRD_ANONYMOUS;
 	currbrdattr |= BRD_DEFAULTANONYMOUS;
@@ -2881,7 +2881,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	logIP = 1;
     }
 
-    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
+    if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
 	vans("要使用小天使匿名推文嗎？ [Y/n]: ") != 'n')
     {
 	// angel push
