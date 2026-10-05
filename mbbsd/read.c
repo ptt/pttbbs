@@ -423,7 +423,7 @@ search_read(read_ctx_t *cx, const int bid, int stypen)
     fileheader_t fh;
     int     pos = locmem->crs_ln;
     int     rk;
-    int     fd = -1;
+    autoclose int fd = -1;
     int     forward = (stypen & RS_FORWARD) ? 1 : 0;
     time4_t ftime, result;
     int     ret;
@@ -434,7 +434,7 @@ search_read(read_ctx_t *cx, const int bid, int stypen)
     /* First load the timestamp of article where cursor points to */
 reload_fh: GCC_UNUSED;
     rk = search_read_fh(cx, &fh, pos, &fd);
-    if( rk < 0 ) goto out;
+    if( rk < 0 ) return pos;
     if( rk == 0 /* EOF */ ) {
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
         ftime = 2147483647;
@@ -446,7 +446,7 @@ reload_fh: GCC_UNUSED;
             pos += step;
             if (pos < 1 || pos > last_line) {
                 pos = locmem->crs_ln;
-                goto out;
+                return pos;
             }
             goto reload_fh;
         }
@@ -466,11 +466,11 @@ reload_fh: GCC_UNUSED;
 
         for( i = last_line; i >= 1; --i ) {
             rk = search_read_fh(cx, &fh, i, &fd);
-            if (rk < 0) goto out;
+            if (rk < 0) return pos;
             if (rk == 0) continue;
             if( 0 == brc_unread( bid, fh.filename, 0 ) ) {
                 pos = i;
-                goto out;
+                return pos;
             }
         }
     } else if( ret ) {
@@ -480,7 +480,7 @@ reload_fh: GCC_UNUSED;
         /* find out the position for the article result */
         for( i = pos; i >= 1 && i <= last_line; i += step ) {
             rk = search_read_fh(cx, &fh, i, &fd);
-            if (rk < 0) goto out;
+            if (rk < 0) return pos;
             if (rk == 0) continue;
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
             if (fh.filename[0] == '.' || fh.owner[0] == '-') {
@@ -490,13 +490,11 @@ reload_fh: GCC_UNUSED;
 #endif
             if( get_fhdr_stamp_ts(fh.filename) == result ) {
                 pos = i;
-                goto out;
+                return pos;
             }
         }
     }
 
-out:
-    if( fd != -1 ) close(fd);
     return pos;
 }
 

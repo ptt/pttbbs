@@ -17,7 +17,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     char path[PATHLEN];
     int update = 0;
     int fd;
-    BEGINSTAT(STAT_DOCOMMENT);
+    SCOPED_STAT(STAT_DOCOMMENT);
 
     /* Lock and append, (lock may be caused other add_comment or edit_post) */
     setdirpath(path, direct, fhdr->filename);
@@ -45,7 +45,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         close(fd);
         if (!lock_success) {
             vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
-            goto error;
+            return -1;
         }
 #else
         write(fd, formatted, strlen(formatted));
@@ -54,7 +54,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     } else {
         vmsg((errno == EROFS) ? "錯誤: 系統目前唯讀中，無法修改。" :
              "錯誤: 原檔案已被刪除。 無法寫入。");
-        goto error;
+        return -1;
     }
 
     if (type == RECTYPE_GOOD && fhdr->recommend < MAX_RECOMMENDS)
@@ -69,15 +69,10 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     if (fhdr->modified != 0) {
         if (modify_dir_lite(direct, ent, fhdr->filename,
                             fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
-            goto error;
+            return -1;
         /* mark my self as 'read this file'. */
         brc_addlist(fhdr->filename, fhdr->modified);
     }
 
-    ENDSTAT(STAT_DOCOMMENT);
     return 0;
-
-error:
-    ENDSTAT(STAT_DOCOMMENT);
-    return -1;
 }
