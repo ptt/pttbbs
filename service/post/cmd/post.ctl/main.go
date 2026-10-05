@@ -458,7 +458,7 @@ func main() {
 
 	case "import-community", "import-board", "migrate-community", "migrate-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR]")
+			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -466,7 +466,7 @@ func main() {
 		limit := 0
 		offset := 0
 		noMerge := false
-		commentdAddr := "-"
+		commentdDB := "-"
 		legacyFormat := false
 		dryRun := false
 		workers := 0
@@ -498,11 +498,13 @@ func main() {
 				offset, _ = strconv.Atoi(strings.TrimPrefix(arg, "--offset="))
 			} else if arg == "--no-merge" || arg == "--no-merge-consecutive" {
 				noMerge = true
-			} else if arg == "--commentd-addr" && i+1 < len(args) {
-				commentdAddr = args[i+1]
+			} else if (arg == "--commentd-db" || arg == "-commentd-db") && i+1 < len(args) {
+				commentdDB = args[i+1]
 				i++
-			} else if strings.HasPrefix(arg, "--commentd-addr=") {
-				commentdAddr = strings.TrimPrefix(arg, "--commentd-addr=")
+			} else if strings.HasPrefix(arg, "--commentd-db=") {
+				commentdDB = strings.TrimPrefix(arg, "--commentd-db=")
+			} else if strings.HasPrefix(arg, "-commentd-db=") {
+				commentdDB = strings.TrimPrefix(arg, "-commentd-db=")
 			} else if arg == "--re-render" || arg == "-re-render" {
 				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 					renderTarget = args[i+1]
@@ -525,6 +527,12 @@ func main() {
 			}
 		}
 
+		if commentdDB != "-" && commentdDB != "" {
+			if abs, err := filepath.Abs(commentdDB); err == nil {
+				commentdDB = abs
+			}
+		}
+
 		ovStr := "0"
 		if overwrite {
 			ovStr = "1"
@@ -541,7 +549,7 @@ func main() {
 		if dryRun {
 			dryStr = "1"
 		}
-		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s %d\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdAddr, legStr, dryStr, workers)
+		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s %d\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdDB, legStr, dryStr, workers)
 
 		sockPath := getSocketPath()
 		conn, err := net.Dial("unix", sockPath)
@@ -568,6 +576,9 @@ func main() {
 		}
 		if overwrite {
 			fmt.Println("    Mode: overwrite (clearing existing board data)")
+		}
+		if commentdDB != "-" && commentdDB != "" {
+			fmt.Printf("    Commentd DB: %s\n", commentdDB)
 		}
 
 		reader := bufio.NewReader(conn)
@@ -1163,7 +1174,7 @@ Usage:
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
-  post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR] [--re-render [target_dir]] [--legacy-format]
+  post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]

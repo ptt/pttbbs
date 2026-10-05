@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+
 	"pttbbs/post/model"
 	"pttbbs/post/storage"
 )
@@ -580,5 +582,66 @@ func TestReadArticleFileRules(t *testing.T) {
 	}
 	if !bytes.Equal(b3, prefixData) {
 		t.Errorf("Expected prefix data %q, got %q", string(prefixData), string(b3))
+	}
+}
+
+func TestQueryCommentDB(t *testing.T) {
+	dbDir := t.TempDir()
+	db, err := leveldb.OpenFile(dbDir, nil)
+	if err != nil {
+		t.Fatalf("OpenFile failed: %v", err)
+	}
+
+	// Pack comment using commentd.py format (IIII13s81s = 110 bytes)
+	val := make([]byte, 110)
+	binary.LittleEndian.PutUint32(val[0:4], 1727800000) // time
+	val[4] = 140
+	val[5] = 112
+	val[6] = 1
+	val[7] = 1 // ip: 140.112.1.1
+	binary.LittleEndian.PutUint32(val[8:12], 999) // userref
+	binary.LittleEndian.PutUint32(val[12:16], 1) // type (推)
+	copy(val[16:29], "testuser\x00")
+	copy(val[29:110], "這是測試推文\x00")
+
+	// 1st comment for TestBoard/M.1727800000.A.001
+	key := "TestBoard/M.1727800000.A.001#00000001"
+	if err := db.Put([]byte(key), val, nil); err != nil {
+		t.Fatalf("Put failed: %v", err)
+	}
+	db.Close()
+
+	// Reopen read-only like MigrateBoard does
+	rdb, err := leveldb.OpenFile(dbDir, nil)
+	if err != nil {
+		t.Fatalf("OpenFile read failed: %v", err)
+	}
+	defer rdb.Close()
+
+	// Query 1st comment (seq 0)
+	ts, ip, err := QueryCommentDB(rdb, "TestBoard", "M.1727800000.A.001", 0)
+	if err != nil {
+		t.Fatalf("QueryCommentDB failed: %v", err)
+	}
+	if ts != 1727800000 {
+		t.Errorf("Expected ts=1727800000, got %d", ts)
+	}
+	if ip != "140.112.1.1" {
+		t.Errorf("Expected ip=140.112.1.1, got %s", ip)
+	}
+
+	// Query non-existent comment (seq 1)
+	ts2, ip2, err := QueryCommentDB(rdb, "TestBoard", "M.1727800000.A.001", 1)
+	if err != nil {
+		t.Fatalf("QueryCommentDB seq 1 failed: %v", err)
+	}
+	if ts2 != 0 || ip2 != "" {
+		t.Errorf("Expected empty result for seq 1, got ts=%d, ip=%s", ts2, ip2)
+	}
+
+	// Query nil db
+	tsNil, ipNil, err := QueryCommentDB(nil, "TestBoard", "M.1727800000.A.001", 0)
+	if err != nil || tsNil != 0 || ipNil != "" {
+		t.Errorf("Expected zero values for nil db, got ts=%d, ip=%s, err=%v", tsNil, ipNil, err)
 	}
 }

@@ -716,7 +716,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		s.writeRenderOutput(conn, p, outputPath, legacy)
 
 	case "IMPORT_BOARD", "MIGRATE_BOARD":
-		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset] [nomerge:0|1] [commentd_addr] [legacy:0|1] [dryrun:0|1] [workers]
+		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset] [nomerge:0|1] [commentd_db] [legacy:0|1] [dryrun:0|1] [workers]
 		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for IMPORT_BOARD\n"))
 			return
@@ -758,9 +758,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		if len(parts) >= 7 && (parts[6] == "1" || strings.ToLower(parts[6]) == "true" || strings.ToLower(parts[6]) == "nomerge") {
 			noMerge = true
 		}
-		commentdAddr := ""
+		commentdDB := ""
 		if len(parts) >= 8 && parts[7] != "-" && parts[7] != "" {
-			commentdAddr = parts[7]
+			commentdDB = parts[7]
 		}
 
 		legacyFormat := false
@@ -807,7 +807,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			Offset:       offset,
 			IsBig5:       s.cfg.IsBig5(),
 			NoMerge:      noMerge,
-			CommentdAddr: commentdAddr,
+			CommentdDB:   commentdDB,
 			LegacyFormat: legacyFormat,
 			DryRun:       dryRun,
 			ProgressFn: func(current, total int) {
