@@ -1482,7 +1482,7 @@ regular_check()
         g_overload = 1;
     }
     else if (SHM->UTMPnumber >= MAX_ACTIVE
-#ifdef DYMAX_ACTIVE
+#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
             || (SHM->GV2.e.dymaxactive > 2000 &&
                 SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
 #endif

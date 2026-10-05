@@ -23,7 +23,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     setdirpath(path, direct, fhdr->filename);
     fd = open(path, O_APPEND | O_WRONLY);
     if (fd >= 0) {
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
         int lock_retry = 5, lock_wait = 1, lock_success = 0;
         while (lock_retry-- > 0) {
             /* try several times */

@@ -432,9 +432,9 @@ set_user_new_passwd(int y, userec_t *u)
 }
 
 /* ----------------------------------------------------- */
-/* use mmap() to malloc large memory in CRITICAL_MEMORY  */
+/* use mmap() to malloc large memory in CONFIG_CRITICAL_MEMORY  */
 /* ----------------------------------------------------- */
-#ifdef CRITICAL_MEMORY
+#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
 void *MALLOC(int size)
 {
     int     *p;
