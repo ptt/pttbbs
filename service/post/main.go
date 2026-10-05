@@ -35,6 +35,7 @@ var (
 	flagMinReplyRunes  = flag.Int("min-reply-runes", 20, "Minimum net new characters for a reply post before auto-demoting to comment (0 to disable)")
 	flagFilterEncoding = flag.String("filter-encoding", "big5", "Encoding for legacy import/export and materialized cache files (big5 or utf-8)")
 	flagMaxOpenFiles   = flag.Int("max-files", 0, "Max open files per Pebble DB (0 for auto)")
+	flagWorkers        = flag.Int("workers", 0, "Default worker threads for board import (0 to use config or default 8)")
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
 	flagVerbose        = flag.Bool("v", false, "Enable verbose debug logging")
 )
@@ -161,6 +162,9 @@ func main() {
 	if *flagMaxOpenFiles > 0 {
 		svcConf.MaxOpenFiles = *flagMaxOpenFiles
 	}
+	if *flagWorkers > 0 {
+		svcConf.ImportWorkers = *flagWorkers
+	}
 
 	sockPath := svcConf.UnixSocket
 	logPath := svcConf.LogPath
@@ -223,6 +227,7 @@ func main() {
 		BBSHome:        svcConf.BBSHome,
 		UnixSocket:     sockPath,
 		FilterEncoding: svcConf.FilterEncoding,
+		ImportWorkers:  svcConf.ImportWorkers,
 	}, st)
 
 	if err := srv.Start(); err != nil {

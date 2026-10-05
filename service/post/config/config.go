@@ -27,6 +27,7 @@ type ServiceConfig struct {
 	MinReplyRunes  int              `json:"min_reply_runes"`
 	FilterEncoding string           `json:"filter_encoding"`
 	MaxOpenFiles   int              `json:"max_open_files"`
+	ImportWorkers  int              `json:"import_workers"`
 	Engines        []EngineLocation `json:"engines"`
 	Pins           map[string]int   `json:"pins"`
 }
@@ -49,6 +50,7 @@ func DefaultConfig(bbshome string) *ServiceConfig {
 		FlushSeconds:   2,
 		MinReplyRunes:  20,
 		FilterEncoding: "big5",
+		ImportWorkers:  8,
 		Engines: []EngineLocation{
 			{
 				Index:    0,
@@ -198,6 +200,10 @@ func LoadConfigFile(path string, bbshome string) (*ServiceConfig, error) {
 			case "max_open_files", "max_files":
 				if n, err := strconv.Atoi(val); err == nil && n > 0 {
 					cfg.MaxOpenFiles = n
+				}
+			case "workers", "import_workers":
+				if n, err := strconv.Atoi(val); err == nil && n > 0 {
+					cfg.ImportWorkers = n
 				}
 			case "engine":
 				rawEngines = append(rawEngines, expandPath(val, bbshome))

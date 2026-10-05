@@ -2,6 +2,7 @@ package importer
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -550,6 +551,7 @@ type ImportStats struct {
 
 // ImportBoardOptions specifies configuration for board migration
 type ImportBoardOptions struct {
+	Ctx          context.Context
 	BBSHome      string
 	Board        string
 	RenderTarget string
@@ -561,6 +563,7 @@ type ImportBoardOptions struct {
 	CommentdAddr string
 	LegacyFormat bool
 	DryRun       bool
+	Workers      int
 	ProgressFn   func(current, total int)
 }
 
@@ -645,7 +648,15 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		TotalRecords: totalRecords,
 	}
 
-	numWorkers := 32
+	ctx := opts.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	numWorkers := opts.Workers
+	if numWorkers <= 0 {
+		numWorkers = 8
+	}
 	type parseJob struct {
 		seq         int
 		fhdr        *FileHeader
@@ -666,99 +677,119 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			for job := range jobs {
-				rawBytes, err := os.ReadFile(job.articlePath)
-				if err != nil {
-					results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}
-					continue
-				}
-
-				postCtime := int64(job.fhdr.Modified)
-				mFn := postFilenameCtimeRegex.FindStringSubmatch(job.fhdr.Filename)
-				if len(mFn) >= 2 {
-					if v, err := strconv.ParseInt(mFn[1], 10, 64); err == nil {
-						postCtime = v
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case job, ok := <-jobs:
+					if !ok {
+						return
 					}
-				}
-				if postCtime == 0 {
-					if afi, err := os.Stat(job.articlePath); err == nil {
-						postCtime = afi.ModTime().Unix()
+					rawBytes, err := os.ReadFile(job.articlePath)
+					if err != nil {
+						select {
+						case <-ctx.Done():
+							return
+						case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
+						}
+						continue
 					}
-				}
 
-				parsed, err := ParseArticleText(rawBytes, job.fhdr.Owner, postCtime, opts.Board, job.fhdr.Filename, opts.IsBig5, opts.NoMerge)
-				if err != nil {
-					results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}
-					continue
-				}
+					postCtime := int64(job.fhdr.Modified)
+					mFn := postFilenameCtimeRegex.FindStringSubmatch(job.fhdr.Filename)
+					if len(mFn) >= 2 {
+						if v, err := strconv.ParseInt(mFn[1], 10, 64); err == nil {
+							postCtime = v
+						}
+					}
+					if postCtime == 0 {
+						if afi, err := os.Stat(job.articlePath); err == nil {
+							postCtime = afi.ModTime().Unix()
+						}
+					}
 
-				if opts.CommentdAddr != "" {
-					for idx, pc := range parsed.Comments {
-						if ts, ip, err := QueryCommentd(opts.CommentdAddr, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
-							pc.CTime = ts
-							if ip != "" && pc.IP == "" {
-								pc.IP = ip
+					parsed, err := ParseArticleText(rawBytes, job.fhdr.Owner, postCtime, opts.Board, job.fhdr.Filename, opts.IsBig5, opts.NoMerge)
+					if err != nil {
+						select {
+						case <-ctx.Done():
+							return
+						case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
+						}
+						continue
+					}
+
+					if opts.CommentdAddr != "" {
+						for idx, pc := range parsed.Comments {
+							if ts, ip, err := QueryCommentd(opts.CommentdAddr, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
+								pc.CTime = ts
+								if ip != "" && pc.IP == "" {
+									pc.IP = ip
+								}
 							}
 						}
 					}
-				}
 
-				title := job.fhdr.Title
-				if opts.IsBig5 {
-					title = big5uao.DecodeSGR66([]byte(title))
-				}
-
-				upvotes := 0
-				downvotes := 0
-				var comments []*model.Comment
-				for _, pc := range parsed.Comments {
-					if pc.CommentType == "推" {
-						upvotes++
-					} else if pc.CommentType == "噓" {
-						downvotes++
+					title := job.fhdr.Title
+					if opts.IsBig5 {
+						title = big5uao.DecodeSGR66([]byte(title))
 					}
-					comments = append(comments, &model.Comment{
-						Author:     pc.Author,
-						Content:    pc.Content,
-						IP:         pc.IP,
-						CreatedAt:  pc.CTime,
-						LegacyType: pc.LegacyType,
-					})
-				}
 
-				var crossposts []*model.CrosspostRecord
-				for _, cp := range parsed.Crossposts {
-					crossposts = append(crossposts, &model.CrosspostRecord{
-						TargetCommunity: cp.TargetBoard,
-						TargetPostFile:  cp.TargetFile,
-						Operator:        cp.Operator,
-						CreatedAt:       cp.CTime,
-					})
-				}
+					upvotes := 0
+					downvotes := 0
+					var comments []*model.Comment
+					for _, pc := range parsed.Comments {
+						if pc.CommentType == "推" {
+							upvotes++
+						} else if pc.CommentType == "噓" {
+							downvotes++
+						}
+						comments = append(comments, &model.Comment{
+							Author:     pc.Author,
+							Content:    pc.Content,
+							IP:         pc.IP,
+							CreatedAt:  pc.CTime,
+							LegacyType: pc.LegacyType,
+						})
+					}
 
-				post := &model.Post{
-					ParentID:    0,
-					Community:   opts.Board,
-					PostFile:    job.fhdr.Filename,
-					Title:       title,
-					Author:      job.fhdr.Owner,
-					CreatedAt:   postCtime,
-					Modified:    postCtime,
-					Filemode:    int(job.fhdr.Filemode),
-					Upvotes:     upvotes,
-					Downvotes:   downvotes,
-					Content:     parsed.BodyContent,
-					Encoding:    "utf-8",
-				}
+					var crossposts []*model.CrosspostRecord
+					for _, cp := range parsed.Crossposts {
+						crossposts = append(crossposts, &model.CrosspostRecord{
+							TargetCommunity: cp.TargetBoard,
+							TargetPostFile:  cp.TargetFile,
+							Operator:        cp.Operator,
+							CreatedAt:       cp.CTime,
+						})
+					}
 
-				results <- &parseResult{
-					seq:      job.seq,
-					filename: job.fhdr.Filename,
-					data: &storage.ImportedPostData{
-						Post:       post,
-						Comments:   comments,
-						Crossposts: crossposts,
-					},
+					post := &model.Post{
+						ParentID:    0,
+						Community:   opts.Board,
+						PostFile:    job.fhdr.Filename,
+						Title:       title,
+						Author:      job.fhdr.Owner,
+						CreatedAt:   postCtime,
+						Modified:    postCtime,
+						Filemode:    int(job.fhdr.Filemode),
+						Upvotes:     upvotes,
+						Downvotes:   downvotes,
+						Content:     parsed.BodyContent,
+						Encoding:    "utf-8",
+					}
+
+					select {
+					case <-ctx.Done():
+						return
+					case results <- &parseResult{
+						seq:      job.seq,
+						filename: job.fhdr.Filename,
+						data: &storage.ImportedPostData{
+							Post:       post,
+							Comments:   comments,
+							Crossposts: crossposts,
+						},
+					}:
+					}
 				}
 			}
 		}()
@@ -770,8 +801,15 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		buf := make([]byte, FileHeaderSize)
 		idx := 0
 		validCount := 0
+		seenFiles := make(map[string]bool)
 
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
 			_, err := io.ReadFull(dirFile, buf)
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
@@ -790,12 +828,21 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 				continue
 			}
 
+			if seenFiles[fhdr.Filename] {
+				continue
+			}
+			seenFiles[fhdr.Filename] = true
+
 			articlePath := filepath.Join(boardDir, fhdr.Filename)
 			validCount++
-			jobs <- &parseJob{
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- &parseJob{
 				seq:         validCount,
 				fhdr:        fhdr,
 				articlePath: articlePath,
+			}:
 			}
 		}
 	}()
@@ -832,40 +879,53 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		return nil
 	}
 
-	for res := range results {
-		stats.ValidPosts++
-		if res.err != nil {
-			stats.Errors++
-			pending[res.seq] = nil
-			if len(stats.ErrorDetails) < 20 {
-				stats.ErrorDetails = append(stats.ErrorDetails, fmt.Sprintf("%s: %v", res.filename, res.err))
-			}
-		} else {
-			pending[res.seq] = res.data
-		}
-
-		for {
-			data, ok := pending[expectedSeq]
+	for {
+		select {
+		case <-ctx.Done():
+			return stats, ctx.Err()
+		case res, ok := <-results:
 			if !ok {
-				break
+				goto finished
 			}
-			delete(pending, expectedSeq)
-			expectedSeq++
-			if data != nil {
-				batch = append(batch, data)
-				if len(batch) >= batchSize {
-					_ = flushBatch()
+			stats.ValidPosts++
+			if res.err != nil {
+				stats.Errors++
+				pending[res.seq] = nil
+				if len(stats.ErrorDetails) < 20 {
+					stats.ErrorDetails = append(stats.ErrorDetails, fmt.Sprintf("%s: %v", res.filename, res.err))
+				}
+			} else {
+				pending[res.seq] = res.data
+			}
+
+			for {
+				data, ok := pending[expectedSeq]
+				if !ok {
+					break
+				}
+				delete(pending, expectedSeq)
+				expectedSeq++
+				if data != nil {
+					batch = append(batch, data)
+					if len(batch) >= batchSize {
+						if err := flushBatch(); err != nil {
+							return stats, err
+						}
+					}
 				}
 			}
-		}
 
-		if opts.ProgressFn != nil {
-			opts.ProgressFn(stats.ValidPosts, totalRecords)
+			if opts.ProgressFn != nil {
+				opts.ProgressFn(stats.ValidPosts, totalRecords)
+			}
 		}
 	}
 
+finished:
 	// Final flush
-	_ = flushBatch()
+	if err := flushBatch(); err != nil {
+		return stats, err
+	}
 
 	stats.Elapsed = time.Since(startTime)
 	return stats, nil
