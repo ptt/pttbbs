@@ -158,7 +158,7 @@ func main() {
 		req.Target = args[1]
 
 	case "fix", "utmpfix":
-		req.Action = "fix" 
+		req.Action = "fix"
 
 	default:
 		fmt.Printf("Unknown action: %s\n\n", action)

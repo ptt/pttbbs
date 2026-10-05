@@ -164,16 +164,16 @@ func handleTop(socketPath string, args []string) {
 		for i, item := range items {
 			scanTimeStr := formatScanDuration(item.ScanDurationMs)
 			btrackStr := "-"
-		if item.MaxBacktrack >= 0 {
-			btrackStr = fmt.Sprintf("%d", item.MaxBacktrack)
-		}
-		fmt.Fprintf(w, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%d\n",
-			i+1, item.Board, item.Bid,
-			item.SearchMisses, item.SearchQueries,
-			item.AIDMisses, item.AIDQueries,
-			scanTimeStr,
-			btrackStr,
-			item.CachedEntries, item.CachedIndices, item.CachedAID)
+			if item.MaxBacktrack >= 0 {
+				btrackStr = fmt.Sprintf("%d", item.MaxBacktrack)
+			}
+			fmt.Fprintf(w, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%d\n",
+				i+1, item.Board, item.Bid,
+				item.SearchMisses, item.SearchQueries,
+				item.AIDMisses, item.AIDQueries,
+				scanTimeStr,
+				btrackStr,
+				item.CachedEntries, item.CachedIndices, item.CachedAID)
 		}
 	}
 	w.Flush()
@@ -486,7 +486,7 @@ func handlePprof(socketPath string, args []string) {
 			outFile = args[i]
 		} else if arg == "-debug" && i+1 < len(args) {
 			i++
-			fmt.Sscanf(args[i], "%d", &debug)
+			_, _ = fmt.Sscanf(args[i], "%d", &debug)
 		} else if n, err := strconv.Atoi(arg); err == nil && n > 0 {
 			seconds = n
 		}

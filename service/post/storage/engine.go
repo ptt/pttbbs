@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -917,7 +918,9 @@ func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int
 	defer batch.Close()
 
 	for _, t := range targets {
-		delStmt.Exec(t.ID)
+		if _, err := delStmt.Exec(t.ID); err != nil {
+			return 0, err
+		}
 
 		// Mark as Deleted in Pebble posts.db (so Rebuild won't restore it)
 		key := model.EncodePostKey(t.ID)
@@ -1309,7 +1312,6 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 	return nil
 }
 
-
 // -----------------------------------------------------------------------------
 // Votes (Independent DB: One Vote per User per Post)
 // -----------------------------------------------------------------------------
@@ -1417,9 +1419,13 @@ func (e *Engine) FlushDirtyDeltas() {
 	defer stmt.Close()
 
 	for postID, delta := range toFlush {
-		stmt.Exec(delta.UpvotesDelta, delta.DownvotesDelta, delta.CommentsDelta, postID)
+		if _, err := stmt.Exec(delta.UpvotesDelta, delta.DownvotesDelta, delta.CommentsDelta, postID); err != nil {
+			log.Printf("[post.svc] Warning: failed to flush score delta for post %d: %v", postID, err)
+		}
 	}
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		log.Printf("[post.svc] Warning: failed to commit flush transaction: %v", err)
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -1676,8 +1682,12 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	}
 	defer tx.Rollback()
 
-	tx.Exec("DELETE FROM posts")
-	tx.Exec("DELETE FROM crossposts")
+	if _, err := tx.Exec("DELETE FROM posts"); err != nil {
+		return 0, 0, err
+	}
+	if _, err := tx.Exec("DELETE FROM crossposts"); err != nil {
+		return 0, 0, err
+	}
 
 	stmt, err := tx.Prepare(`
 		INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason)
@@ -1709,7 +1719,9 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		if len(pIter.Key()) > 0 && pIter.Key()[0] == 'x' {
 			xRec, err := model.DecodeRFC822Crosspost(pIter.Value())
 			if err == nil {
-				crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunity, xRec.TargetPostFile, xRec.Operator, xRec.OperatorToken, xRec.CreatedAt)
+				if _, err := crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunity, xRec.TargetPostFile, xRec.Operator, xRec.OperatorToken, xRec.CreatedAt); err != nil {
+					return 0, 0, err
+				}
 				postCrosspostCounts[xRec.SourcePostID]++
 			}
 			continue
@@ -1735,7 +1747,9 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		}
 		filemode, _ := strconv.Atoi(meta["Filemode"])
 		authorToken, _ := strconv.ParseUint(meta["AuthorToken"], 10, 32)
-		stmt.Exec(postID, parentID, meta["Community"], meta["PostFile"], meta["Title"], meta["Author"], uint32(authorToken), ctime, mtime, filemode, isDeleted, deletedAt, deletedBy, deleteReason)
+		if _, err := stmt.Exec(postID, parentID, meta["Community"], meta["PostFile"], meta["Title"], meta["Author"], uint32(authorToken), ctime, mtime, filemode, isDeleted, deletedAt, deletedBy, deleteReason); err != nil {
+			return 0, 0, err
+		}
 		if isDeleted == 0 {
 			postCount++
 		}
@@ -1813,7 +1827,9 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	}
 
 	for postID := range allPostIDs {
-		updateStmt.Exec(postUpvotes[postID], postDownvotes[postID], postCommentCounts[postID], postCrosspostCounts[postID], postID)
+		if _, err := updateStmt.Exec(postUpvotes[postID], postDownvotes[postID], postCommentCounts[postID], postCrosspostCounts[postID], postID); err != nil {
+			return 0, 0, err
+		}
 	}
 
 	return postCount, commentCount, tx.Commit()
@@ -2834,4 +2850,3 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 
 	return int(renderedCount.Load()), nil
 }
-

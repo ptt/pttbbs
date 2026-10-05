@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"pttbbs/friend/storage"
 	"pttbbs/bbs"
+	"pttbbs/friend/storage"
 )
 
 const (
@@ -95,7 +95,6 @@ func UnpackFriendOnline(entry uint32) (stat int, uidTag uint32, slot int) {
 	rawStat, uidTag, slot := UnpackFriendOnlineRaw(entry)
 	return NormalizeFriendStat(rawStat), uidTag, slot
 }
-
 
 type SubscriberSession struct {
 	PID     int
@@ -373,12 +372,12 @@ func (s *Service) handleConnection(conn net.Conn) {
 
 	var req Request
 	if err := decoder.Decode(&req); err != nil {
-		encoder.Encode(Response{Success: false, Message: err.Error()})
+		_ = encoder.Encode(Response{Success: false, Message: err.Error()})
 		return
 	}
 
 	resp := s.ProcessRequest(req)
-	encoder.Encode(resp)
+	_ = encoder.Encode(resp)
 }
 
 func FormatFriendStat(stat int) string {
@@ -709,7 +708,6 @@ func (s *Service) HandleQueryUser(userID string) Response {
 	}
 }
 
-
 func (s *Service) migrateTestUIDLocked(oldUID, newUID int) {
 	if oldUID <= 0 || newUID <= 0 || oldUID == newUID {
 		return
@@ -806,7 +804,6 @@ func (s *Service) loadSessionFriendData(userID string, hintUID int, pid int, sid
 	}
 	return uid, nil, nil, true
 }
-
 
 func (s *Service) HandleFriendSync(userID string, uid int, pid int, sid int) Response {
 	if userID == "" || pid <= 0 || sid < 0 {
@@ -2060,4 +2057,3 @@ func (s *Service) HandleHBFLBoard(bid int, brdName string) Response {
 		Data:    info,
 	}
 }
-

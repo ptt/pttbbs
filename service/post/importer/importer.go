@@ -100,8 +100,8 @@ var (
 		`\s+(?:(` + ipPattern + `)\s+)?(\d{2}/\d{2}(?:\s+\d{2}:\d{2}(?::\d{2})?)?)\s*$`,
 	)
 
-	crosspostLogRegex  = regexp.MustCompile(`^※\s*([A-Za-z0-9_]+)\s*:\s*轉錄至看板\s+([A-Za-z0-9_\-\.]+)(.*)$`)
-	crosspostFromRegex = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:([A-Za-z0-9_\-\.]+))?\]`)
+	crosspostLogRegex      = regexp.MustCompile(`^※\s*([A-Za-z0-9_]+)\s*:\s*轉錄至看板\s+([A-Za-z0-9_\-\.]+)(.*)$`)
+	crosspostFromRegex     = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:([A-Za-z0-9_\-\.]+))?\]`)
 	postFilenameCtimeRegex = regexp.MustCompile(`^[A-Z]\.(\d+)\.`)
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
 )
@@ -763,18 +763,18 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 					}
 
 					post := &model.Post{
-						ParentID:    0,
-						Community:   opts.Board,
-						PostFile:    job.fhdr.Filename,
-						Title:       title,
-						Author:      job.fhdr.Owner,
-						CreatedAt:   postCtime,
-						Modified:    postCtime,
-						Filemode:    int(job.fhdr.Filemode),
-						Upvotes:     upvotes,
-						Downvotes:   downvotes,
-						Content:     parsed.BodyContent,
-						Encoding:    "utf-8",
+						ParentID:  0,
+						Community: opts.Board,
+						PostFile:  job.fhdr.Filename,
+						Title:     title,
+						Author:    job.fhdr.Owner,
+						CreatedAt: postCtime,
+						Modified:  postCtime,
+						Filemode:  int(job.fhdr.Filemode),
+						Upvotes:   upvotes,
+						Downvotes: downvotes,
+						Content:   parsed.BodyContent,
+						Encoding:  "utf-8",
 					}
 
 					select {

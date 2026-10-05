@@ -102,8 +102,8 @@ func main() {
 			os.Exit(1)
 		}
 		req.UserID = args[1]
-		fmt.Sscanf(args[2], "%d", &req.PID)
-		fmt.Sscanf(args[3], "%d", &req.SID)
+		_, _ = fmt.Sscanf(args[2], "%d", &req.PID)
+		_, _ = fmt.Sscanf(args[3], "%d", &req.SID)
 
 	case "friend_sync":
 		if len(args) < 5 {
@@ -111,9 +111,9 @@ func main() {
 			os.Exit(1)
 		}
 		req.UserID = args[1]
-		fmt.Sscanf(args[2], "%d", &req.UID)
-		fmt.Sscanf(args[3], "%d", &req.PID)
-		fmt.Sscanf(args[4], "%d", &req.SID)
+		_, _ = fmt.Sscanf(args[2], "%d", &req.UID)
+		_, _ = fmt.Sscanf(args[3], "%d", &req.PID)
+		_, _ = fmt.Sscanf(args[4], "%d", &req.SID)
 
 	case "logout":
 		if len(args) < 3 {
@@ -121,7 +121,7 @@ func main() {
 			os.Exit(1)
 		}
 		req.UserID = args[1]
-		fmt.Sscanf(args[2], "%d", &req.PID)
+		_, _ = fmt.Sscanf(args[2], "%d", &req.PID)
 
 	case "reload":
 		if len(args) < 2 {
@@ -134,7 +134,6 @@ func main() {
 		fmt.Printf("Unknown action: %s\n", action)
 		os.Exit(1)
 	}
-
 
 	resp, err := sendRequest(*socketPath, req)
 	if err != nil {

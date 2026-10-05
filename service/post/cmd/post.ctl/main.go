@@ -633,7 +633,7 @@ func main() {
 				}
 			}
 		}
-		os.MkdirAll(outDir, 0755)
+		_ = os.MkdirAll(outDir, 0755)
 
 		fmtStr := "modern"
 		if legacyFormat {

@@ -21,9 +21,9 @@ func StripANSI(s string) string {
 type VoteType int8
 
 const (
-	VoteNeutral  VoteType = 0  // No vote / canceled
-	VoteUp       VoteType = 1  // Upvote
-	VoteDown     VoteType = -1 // Downvote
+	VoteNeutral VoteType = 0  // No vote / canceled
+	VoteUp      VoteType = 1  // Upvote
+	VoteDown    VoteType = -1 // Downvote
 )
 
 func (v VoteType) String() string {
@@ -40,26 +40,26 @@ func (v VoteType) String() string {
 // Post represents a submission in a Community
 type Post struct {
 	ID               uint64 `json:"id"`
-	ParentID         uint64 `json:"parent_id"`                    // 0: Root post, >0: Reply to ParentID (回文)
-	Community        string `json:"community"`                    // Formerly Board
-	PostFile         string `json:"post_file"`                    // Legacy filename (e.g. M.1417074209.A.393)
-	Title            string `json:"title"`                        // UTF-8
-	Author           string `json:"author"`                       // OP username
-	AuthorToken      uint32 `json:"author_token"`                  // cuser.firstlogin
+	ParentID         uint64 `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
+	Community        string `json:"community"`    // Formerly Board
+	PostFile         string `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
+	Title            string `json:"title"`        // UTF-8
+	Author           string `json:"author"`       // OP username
+	AuthorToken      uint32 `json:"author_token"` // cuser.firstlogin
 	CreatedAt        int64  `json:"created_at"`
 	Modified         int64  `json:"modified"`
 	Filemode         int    `json:"filemode"`
-	Upvotes          int    `json:"upvotes"`                       // Upvotes count
-	Downvotes        int    `json:"downvotes"`                     // Downvotes count
-	NumComments      int    `json:"num_comments"`                  // Total comments count
-	NumCrossposts    int    `json:"num_crossposts"`                // Total crossposts count (shares)
-	Encoding         string `json:"encoding"`                      // Always "utf-8" in DB
+	Upvotes          int    `json:"upvotes"`        // Upvotes count
+	Downvotes        int    `json:"downvotes"`      // Downvotes count
+	NumComments      int    `json:"num_comments"`   // Total comments count
+	NumCrossposts    int    `json:"num_crossposts"` // Total crossposts count (shares)
+	Encoding         string `json:"encoding"`       // Always "utf-8" in DB
 	IsDeleted        bool   `json:"is_deleted,omitempty"`
 	DeletedAt        int64  `json:"deleted_at,omitempty"`
 	DeletedBy        string `json:"deleted_by,omitempty"`
 	DeleteReason     string `json:"delete_reason,omitempty"`
-	Content          string `json:"content"`                       // UTF-8 Post Body
-	DemotedToComment bool   `json:"demoted_to_comment,omitempty"`  // True if content was too short and converted to comment
+	Content          string `json:"content"`                      // UTF-8 Post Body
+	DemotedToComment bool   `json:"demoted_to_comment,omitempty"` // True if content was too short and converted to comment
 }
 
 // CrosspostRecord represents a cross-post to another community (share / 轉錄)
@@ -723,4 +723,3 @@ func RenderLegacyComment(c *Comment) string {
 		return fmt.Sprintf("→ %-12s: %s %s", c.Author, content, tail)
 	}
 }
-

@@ -793,8 +793,6 @@ func BenchmarkBoardAIDTable(b *testing.B) {
 	})
 }
 
-
-
 func queryAIDClientWithSource(t *testing.T, socketPath string, bid int32, direct string, aidu uint64, requiredMode int32, source int32) int32 {
 	t.Helper()
 	conn, err := net.Dial("unix", socketPath)
@@ -1140,7 +1138,7 @@ func TestQueryWebSearchTailEarlyExit(t *testing.T) {
 
 	// Requesting far past the end (offset = -3000, limit = 20):
 	// Total must remain exact 1250, and items should clamp or return empty.
-	indices, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -3000, 20, SrcBoarddWeb)
+	_, total = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, -3000, 20, SrcBoarddWeb)
 	if total != 1250 {
 		t.Fatalf("expected exact total 1250 past end of matches, got %d", total)
 	}
@@ -1189,5 +1187,3 @@ func TestQueryWebSearchTailEarlyExit(t *testing.T) {
 		t.Errorf("expected 0 cached entries from web tail searches, got %d", stats.CachedEntries)
 	}
 }
-
-

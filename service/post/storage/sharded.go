@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strings"
-	"sync"
 	"time"
 
 	"pttbbs/post/config"
@@ -16,7 +15,6 @@ type ShardedEngine struct {
 	baseCfg Config
 	engines []*Engine
 	pins    map[string]int
-	mu      sync.RWMutex
 }
 
 // OpenStorage creates either a single Engine or a ShardedEngine based on ServiceConfig

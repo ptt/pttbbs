@@ -508,7 +508,3 @@ func TestSignaturePreservation(t *testing.T) {
 		t.Errorf("Comment 2 mismatch: %+v", parsed2.Comments[2])
 	}
 }
-
-
-
-

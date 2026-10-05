@@ -72,11 +72,11 @@ func NewService(bbsHome string, socketPath string, opts ...ServiceOption) (*Serv
 	}
 
 	s := &Service{
-		bbsHome:        bbsHome,
-		socketPath:     socketPath,
-		shmClient:      shm,
-		interval:       1 * time.Second,
-		stopChan:       make(chan struct{}),
+		bbsHome:    bbsHome,
+		socketPath: socketPath,
+		shmClient:  shm,
+		interval:   1 * time.Second,
+		stopChan:   make(chan struct{}),
 	}
 
 	for _, opt := range opts {

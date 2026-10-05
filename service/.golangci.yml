@@ -1,0 +1,33 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - errcheck
+    - gofmt
+
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*github.com/cockroachdb/pebble.Batch).Delete
+      - (*github.com/cockroachdb/pebble.Batch).Set
+      - (*github.com/cockroachdb/pebble.DB).Set
+      - (*github.com/cockroachdb/pebble.DB).Delete
+      - (*database/sql.Tx).Rollback
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - fmt.Printf
+      - fmt.Println
+      - os.Remove
+      - (net.Conn).Write
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

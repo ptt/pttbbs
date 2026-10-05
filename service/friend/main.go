@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"pttbbs/friend/daemon"
 	"pttbbs/bbs"
+	"pttbbs/friend/daemon"
 )
 
 type verboseValue int
