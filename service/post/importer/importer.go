@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"pttbbs/big5uao"
@@ -20,7 +21,62 @@ import (
 	"pttbbs/post/storage"
 )
 
-const FileHeaderSize = 128
+// MaxArticleFileSize is the absolute upper limit for article file size,
+// aligned with mbbsd/edit.c EDIT_SIZE_LIMIT (32MB).
+const (
+	FileHeaderSize     = 128
+	MaxArticleFileSize = 32 * 1024 * 1024 // 32MB
+)
+
+// ReadArticleFile reads an article file safely according to PTT BBS rules:
+// (1) Sparse file detection: if allocated blocks * 512 is less than claimed size, cap read to allocated size.
+// (2) NUL truncation: BBS text files never contain NUL bytes; if NUL is found, discard everything from NUL onward.
+// (3) Absolute limit: cap maximum read size to 32MB (EDIT_SIZE_LIMIT).
+func ReadArticleFile(path string) ([]byte, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	maxRead := fi.Size()
+	// Rule 1: Sparse file detection
+	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
+		allocated := int64(stat.Blocks) * 512
+		if allocated < maxRead {
+			// If allocated == 0 and size <= 4096, it could be ext4 inline data
+			if !(allocated == 0 && maxRead <= 4096) {
+				maxRead = allocated
+			}
+		}
+	}
+
+	// Rule 3: 32MB absolute limit
+	if maxRead > MaxArticleFileSize {
+		maxRead = MaxArticleFileSize
+	}
+
+	if maxRead <= 0 {
+		return []byte{}, nil
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	rawBytes, err := io.ReadAll(io.LimitReader(f, maxRead))
+	if err != nil {
+		return nil, err
+	}
+
+	// Rule 2: Truncate at first NUL byte
+	if idx := bytes.IndexByte(rawBytes, 0); idx >= 0 {
+		rawBytes = rawBytes[:idx]
+	}
+
+	return rawBytes, nil
+}
 
 // FileHeader represents the 128-byte BBS fileheader_t
 type FileHeader struct {
@@ -685,111 +741,125 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 					if !ok {
 						return
 					}
-					rawBytes, err := os.ReadFile(job.articlePath)
-					if err != nil {
-						select {
-						case <-ctx.Done():
+
+					func() {
+						defer func() {
+							if r := recover(); r != nil {
+								select {
+								case <-ctx.Done():
+								case results <- &parseResult{
+									seq:      job.seq,
+									filename: job.fhdr.Filename,
+									err:      fmt.Errorf("panic parsing %s: %v", job.fhdr.Filename, r),
+								}:
+								}
+							}
+						}()
+
+						rawBytes, err := ReadArticleFile(job.articlePath)
+						if err != nil {
+							select {
+							case <-ctx.Done():
+							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
+							}
 							return
-						case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
 						}
-						continue
-					}
 
-					postCtime := int64(job.fhdr.Modified)
-					mFn := postFilenameCtimeRegex.FindStringSubmatch(job.fhdr.Filename)
-					if len(mFn) >= 2 {
-						if v, err := strconv.ParseInt(mFn[1], 10, 64); err == nil {
-							postCtime = v
+						postCtime := int64(job.fhdr.Modified)
+						mFn := postFilenameCtimeRegex.FindStringSubmatch(job.fhdr.Filename)
+						if len(mFn) >= 2 {
+							if v, err := strconv.ParseInt(mFn[1], 10, 64); err == nil {
+								postCtime = v
+							}
 						}
-					}
-					if postCtime == 0 {
-						if afi, err := os.Stat(job.articlePath); err == nil {
-							postCtime = afi.ModTime().Unix()
+						if postCtime == 0 {
+							if afi, err := os.Stat(job.articlePath); err == nil {
+								postCtime = afi.ModTime().Unix()
+							}
 						}
-					}
 
-					parsed, err := ParseArticleText(rawBytes, job.fhdr.Owner, postCtime, opts.Board, job.fhdr.Filename, opts.IsBig5, opts.NoMerge)
-					if err != nil {
-						select {
-						case <-ctx.Done():
+						parsed, err := ParseArticleText(rawBytes, job.fhdr.Owner, postCtime, opts.Board, job.fhdr.Filename, opts.IsBig5, opts.NoMerge)
+						if err != nil {
+							select {
+							case <-ctx.Done():
+							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
+							}
 							return
-						case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
 						}
-						continue
-					}
 
-					if opts.CommentdAddr != "" {
-						for idx, pc := range parsed.Comments {
-							if ts, ip, err := QueryCommentd(opts.CommentdAddr, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
-								pc.CTime = ts
-								if ip != "" && pc.IP == "" {
-									pc.IP = ip
+						if opts.CommentdAddr != "" {
+							for idx, pc := range parsed.Comments {
+								if ts, ip, err := QueryCommentd(opts.CommentdAddr, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
+									pc.CTime = ts
+									if ip != "" && pc.IP == "" {
+										pc.IP = ip
+									}
 								}
 							}
 						}
-					}
 
-					title := job.fhdr.Title
-					if opts.IsBig5 {
-						title = big5uao.DecodeSGR66([]byte(title))
-					}
-
-					upvotes := 0
-					downvotes := 0
-					var comments []*model.Comment
-					for _, pc := range parsed.Comments {
-						if pc.CommentType == "推" {
-							upvotes++
-						} else if pc.CommentType == "噓" {
-							downvotes++
+						title := job.fhdr.Title
+						if opts.IsBig5 {
+							title = big5uao.DecodeSGR66([]byte(title))
 						}
-						comments = append(comments, &model.Comment{
-							Author:     pc.Author,
-							Content:    pc.Content,
-							IP:         pc.IP,
-							CreatedAt:  pc.CTime,
-							LegacyType: pc.LegacyType,
-						})
-					}
 
-					var crossposts []*model.CrosspostRecord
-					for _, cp := range parsed.Crossposts {
-						crossposts = append(crossposts, &model.CrosspostRecord{
-							TargetCommunity: cp.TargetBoard,
-							TargetPostFile:  cp.TargetFile,
-							Operator:        cp.Operator,
-							CreatedAt:       cp.CTime,
-						})
-					}
+						upvotes := 0
+						downvotes := 0
+						var comments []*model.Comment
+						for _, pc := range parsed.Comments {
+							if pc.CommentType == "推" {
+								upvotes++
+							} else if pc.CommentType == "噓" {
+								downvotes++
+							}
+							comments = append(comments, &model.Comment{
+								Author:     pc.Author,
+								Content:    pc.Content,
+								IP:         pc.IP,
+								CreatedAt:  pc.CTime,
+								LegacyType: pc.LegacyType,
+							})
+						}
 
-					post := &model.Post{
-						ParentID:  0,
-						Community: opts.Board,
-						PostFile:  job.fhdr.Filename,
-						Title:     title,
-						Author:    job.fhdr.Owner,
-						CreatedAt: postCtime,
-						Modified:  postCtime,
-						Filemode:  int(job.fhdr.Filemode),
-						Upvotes:   upvotes,
-						Downvotes: downvotes,
-						Content:   parsed.BodyContent,
-						Encoding:  "utf-8",
-					}
+						var crossposts []*model.CrosspostRecord
+						for _, cp := range parsed.Crossposts {
+							crossposts = append(crossposts, &model.CrosspostRecord{
+								TargetCommunity: cp.TargetBoard,
+								TargetPostFile:  cp.TargetFile,
+								Operator:        cp.Operator,
+								CreatedAt:       cp.CTime,
+							})
+						}
 
-					select {
-					case <-ctx.Done():
-						return
-					case results <- &parseResult{
-						seq:      job.seq,
-						filename: job.fhdr.Filename,
-						data: &storage.ImportedPostData{
-							Post:       post,
-							Comments:   comments,
-							Crossposts: crossposts,
-						},
-					}:
-					}
+						post := &model.Post{
+							ParentID:  0,
+							Community: opts.Board,
+							PostFile:  job.fhdr.Filename,
+							Title:     title,
+							Author:    job.fhdr.Owner,
+							CreatedAt: postCtime,
+							Modified:  postCtime,
+							Filemode:  int(job.fhdr.Filemode),
+							Upvotes:   upvotes,
+							Downvotes: downvotes,
+							Content:   parsed.BodyContent,
+							Encoding:  "utf-8",
+						}
+
+						select {
+						case <-ctx.Done():
+							return
+						case results <- &parseResult{
+							seq:      job.seq,
+							filename: job.fhdr.Filename,
+							data: &storage.ImportedPostData{
+								Post:       post,
+								Comments:   comments,
+								Crossposts: crossposts,
+							},
+						}:
+						}
+					}()
 				}
 			}
 		}()
