@@ -175,7 +175,7 @@ do_order_song(void)
 	}
 	while ((po = mbs_strstr(buf, "<~Des~>"))) {
         const char *r = receiver;
-        if (HAS_ANGEL && mbs_strstr(po, "小天使") && mbs_strstr(receiver, "小天使") &&
+        if (IS_ENABLED(CONFIG_ANGEL) && mbs_strstr(po, "小天使") && mbs_strstr(receiver, "小天使") &&
             override_receiver) {
             r = override_receiver;
         }

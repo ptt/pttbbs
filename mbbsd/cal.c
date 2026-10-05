@@ -358,7 +358,7 @@ give_money_ui_list(struct Vector *namelist)
                "對方實得: $%d\n",
                cuser.userid, first_id, m, mtax, m - mtax);
 
-        if (HAS_ANGEL && HasUserPerm(PERM_ANGEL)) {
+        if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL)) {
             userec_t xuser = {0};
             getuser(first_id, &xuser);
             while (strcmp(xuser.myangel, cuser.userid) == 0) {
@@ -385,7 +385,7 @@ give_money_ui_list(struct Vector *namelist)
         prints("交易內容: %s 將發送紅包給 %d 人 (每人 [未稅] $%d / 實得 $%d)\n"
                "總計支出: " ANSI_COLOR(1;33) "$%lld" ANSI_RESET " (您目前餘額: $%d)\n",
                cuser.userid, count, m, m - mtax, (long long)total_cost, cuser.money);
-        if (HAS_ANGEL && HasUserPerm(PERM_ANGEL)) {
+        if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL)) {
             mvouts(3, 0, "注意多人名單內若有小主人是不會匿名的。\n");
         }
         getdata(6, 0, "紅包袋附言(可直接按 Enter 略過): ",

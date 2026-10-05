@@ -1045,7 +1045,7 @@ static const menuitem_t talklist[] = {
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "Chat          多人聊天室"},
     {t_qchicken, 0,         "Watch Pet     查詢寵物"},
-#ifdef PLAY_ANGEL
+#if IS_ENABLED(CONFIG_ANGEL)
     {a_changeangel,
 	PERM_LOGINOK,	    "AChange Angel 更換小天使"},
     {

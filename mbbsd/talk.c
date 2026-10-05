@@ -1005,7 +1005,7 @@ t_showhelp(void)
         "  [" ANSI_COLOR(1;37) "N" ANSI_RESET "]    修改暱稱        "
         "[" ANSI_COLOR(1;37) "Q" ANSI_RESET "]    查詢指定網友     "
         "[" ANSI_COLOR(1;37) "TAB" ANSI_RESET "]        變更排序方式\n"
-#ifdef PLAY_ANGEL
+#if IS_ENABLED(CONFIG_ANGEL)
         "  [" ANSI_COLOR(1;37) "^P" ANSI_RESET "]   切換小天使呼叫器\n"
 #endif
         "\n"
@@ -1067,7 +1067,7 @@ userlist_header(PSB_CTX *ctx)
 static int
 userlist_footer(PSB_CTX *ctx GCC_UNUSED)
 {
-    if (HAS_ANGEL && HasUserPerm(PERM_ANGEL) && currutmp) {
+    if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && currutmp) {
         static const char *modestr[ANGELPAUSE_MODES] = {
             ANSI_COLOR(0;30;47) "開放",
             ANSI_COLOR(0;32;47) "停收",
@@ -1691,7 +1691,7 @@ userlist_cmd_pager(cmd_ctx_t *ctx) {
 
 static int
 userlist_cmd_angel_pause(cmd_ctx_t *ctx) {
-    if (HAS_ANGEL && currutmp) {
+    if (IS_ENABLED(CONFIG_ANGEL) && currutmp) {
         angel_toggle_pause();
         ctx->reload = true;
     }

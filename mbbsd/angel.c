@@ -1,5 +1,5 @@
 #include "bbs.h"
-#ifdef PLAY_ANGEL
+#if IS_ENABLED(CONFIG_ANGEL)
 
 // PTT-BBS Angel System
 
@@ -995,7 +995,7 @@ pressanykey_or_callangel(){
     clrtoeol();
 }
 
-#else  // !PLAY_ANGEL
+#else  // !CONFIG_ANGEL
 
 int angel_reject_me(userinfo_t *uin GCC_UNUSED) { return 0; }
 void angel_register_new(const char *userid GCC_UNUSED) { }
@@ -1010,4 +1010,4 @@ void angel_load_my_fullnick(char *buf GCC_UNUSED, int szbuf GCC_UNUSED) { }
 const char *angel_get_nick(void) { return ""; }
 void pressanykey_or_callangel(void){ pressanykey(); }
 
-#endif // PLAY_ANGEL
+#endif // CONFIG_ANGEL

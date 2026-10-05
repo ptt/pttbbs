@@ -229,7 +229,7 @@ user_display(const userec_t * u, int adminmode)
     prints("\t退文數目: %u\n", (unsigned int)u->badpost);
 #endif // ASSESS
 
-    if (HAS_ANGEL && adminmode)
+    if (IS_ENABLED(CONFIG_ANGEL) && adminmode)
 	prints("\t小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 
@@ -467,7 +467,7 @@ static const CustomItem items[] = { {
     }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_PAGER_OFO,
-#ifdef PLAY_ANGEL
+#if IS_ENABLED(CONFIG_ANGEL)
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,
@@ -770,7 +770,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
         mvprints(y, 0, "是否年滿十八歲: %s\n\n", x.over_18 ? "是" : "否");
         y++;
 
-	if (HAS_ANGEL && adminmode) {
+	if (IS_ENABLED(CONFIG_ANGEL) && adminmode) {
 	    const char* prompt;
 	    userec_t the_angel;
 	    if (x.myangel[0] == 0 || x.myangel[0] == '-' ||
@@ -1130,7 +1130,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
 	post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
         // TODO notify Angelbeats
-	if (HAS_ANGEL && (x.userlevel & ~changefrom & PERM_ANGEL)) {
+	if (IS_ENABLED(CONFIG_ANGEL) && (x.userlevel & ~changefrom & PERM_ANGEL)) {
             angel_register_new(x.userid);
             mail_send_file(x.userid, "翅膀長出來了！", "etc/angel_notify",
                     "[天使公會]");
