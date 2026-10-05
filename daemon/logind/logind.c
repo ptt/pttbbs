@@ -1025,7 +1025,6 @@ static bool
 screen_extent_chain_conv_utf8(screen_extent_chain_t *out,
                               screen_extent_chain_t *in)
 {
-    struct evbuffer *evb = NULL;
     for (screen_extent_t *ext = in->head; ext; ext = ext->next) {
         if (ext->type) {
             screen_extent_chain_add_dynamic(out, ext->type);
@@ -1033,30 +1032,27 @@ screen_extent_chain_conv_utf8(screen_extent_chain_t *out,
         }
 
         // Text.
-        evb = evbuffer_new();
+        auto_evbuffer_free struct evbuffer *evb = evbuffer_new();
         if (!evb)
-            goto fail;
+            return false;
 
         if (screen_extent_add_to_evbuffer(ext, evb) < 0)
-            goto fail;
+            return false;
 
-        evb = evbuffer_b2u(evb);
-        if (!evb)
-            goto fail;
-
-        size_t sz = evbuffer_get_length(evb);
-        if (!screen_extent_chain_add(
-                    out, (char *)evbuffer_pullup(evb, sz), sz))
-            goto fail;
-
-        evbuffer_free(evb);
+        // evbuffer_b2u frees source on both success and failure.
+        // Disarm evb by setting it to NULL, and assign the converted buffer to utf8_evb.
+        struct evbuffer *src = evb;
         evb = NULL;
+        auto_evbuffer_free struct evbuffer *utf8_evb = evbuffer_b2u(src);
+        if (!utf8_evb)
+            return false;
+
+        size_t sz = evbuffer_get_length(utf8_evb);
+        if (!screen_extent_chain_add(
+                    out, (char *)evbuffer_pullup(utf8_evb, sz), sz))
+            return false;
     }
     return true;
-fail:
-    if (evb)
-        evbuffer_free(evb);
-    return false;
 }
 
 static screen_t *
