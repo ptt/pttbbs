@@ -11,7 +11,8 @@ bot_on_login_attempt(const char *userid GCC_UNUSED, const char *hostip GCC_UNUSE
 
 int
 bot_on_auth_result(const char *userid GCC_UNUSED, const char *hostip GCC_UNUSED,
-                   int is_free_userid GCC_UNUSED, int *out_delay_sec GCC_UNUSED,
+                   int is_free_userid GCC_UNUSED, int is_exempt GCC_UNUSED,
+                   int *out_delay_sec GCC_UNUSED,
                    char *msg_buf GCC_UNUSED, size_t msg_size GCC_UNUSED)
 {
     return 0;

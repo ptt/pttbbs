@@ -9,7 +9,8 @@ int bot_on_login_attempt(const char *userid, const char *hostip,
                          int is_free_userid, int *out_delay_sec,
                          char *msg_buf, size_t msg_size);
 int bot_on_auth_result(const char *userid, const char *hostip,
-                       int is_free_userid, int *out_delay_sec,
+                       int is_free_userid, int is_exempt,
+                       int *out_delay_sec,
                        char *msg_buf, size_t msg_size);
 
 int bot_user_set_penalty(const char *userid, const char *hostip,
