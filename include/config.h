@@ -532,37 +532,58 @@
 /////////////////////////////////////////////////////////////////////////////
 // Default Configurations 預設參數
 
-// 若想停用下列參數請在 pttbbs.conf 定義 NO_XXX (ex, NO_LOGINASNEW)
-#ifndef NO_LOGINASNEW
-#define    LOGINASNEW           /* 採用上站申請帳號制度 */
+// 正向 CONFIG_* (預設開啟)。若在 pttbbs.conf 定義舊式 NO_XXX，則對應的 CONFIG_* 為 0。
+#if !defined(NO_LOGINASNEW) && !defined(CONFIG_LOGINASNEW)
+#define CONFIG_LOGINASNEW 1           /* 採用上站申請帳號制度 */
+#endif
+#if IS_ENABLED(CONFIG_LOGINASNEW)
+#define LOGINASNEW 1                  /* legacy compat */
 #endif
 
-#ifndef NO_DOTIMEOUT
-#define    CONFIG_TIMEOUT 1     /* 處理閒置時間 */
+#if !defined(NO_DOTIMEOUT) && !defined(CONFIG_TIMEOUT)
+#define CONFIG_TIMEOUT 1              /* 處理閒置時間 */
 #endif
 
-#ifndef NO_INTERNET_EMAIL
-#define    INTERNET_EMAIL       /* 支援 InterNet Email 功能(含 Forward) */
+#if !defined(NO_INTERNET_EMAIL) && !defined(CONFIG_INTERNET_EMAIL)
+#define CONFIG_INTERNET_EMAIL 1       /* 支援 InterNet Email 功能(含 Forward) */
+#endif
+#if IS_ENABLED(CONFIG_INTERNET_EMAIL)
+#define INTERNET_EMAIL 1              /* legacy compat */
 #endif
 
-#ifndef NO_SHOWUID
-#define    SHOWUID              /* 站長可看見使用者 UID */
+#if !defined(NO_SHOWUID) && !defined(CONFIG_SHOWUID)
+#define CONFIG_SHOWUID 1              /* 站長可看見使用者 UID */
+#endif
+#if IS_ENABLED(CONFIG_SHOWUID)
+#define SHOWUID 1                     /* legacy compat */
 #endif
 
-#ifndef NO_SHOWBOARD
-#define    SHOWBOARD            /* 站長可看見使用者看板 */
+#if !defined(NO_SHOWBOARD) && !defined(CONFIG_SHOWBOARD)
+#define CONFIG_SHOWBOARD 1            /* 站長可看見使用者看板 */
+#endif
+#if IS_ENABLED(CONFIG_SHOWBOARD)
+#define SHOWBOARD 1                   /* legacy compat */
 #endif
 
-#ifndef NO_SHOWPID
-#define    SHOWPID              /* 站長可看見使用者 PID */
+#if !defined(NO_SHOWPID) && !defined(CONFIG_SHOWPID)
+#define CONFIG_SHOWPID 1              /* 站長可看見使用者 PID */
+#endif
+#if IS_ENABLED(CONFIG_SHOWPID)
+#define SHOWPID 1                     /* legacy compat */
 #endif
 
-#ifndef NO_HAVE_ANONYMOUS
-#define    HAVE_ANONYMOUS       /* 提供 Anonymous 板 */
+#if !defined(NO_HAVE_ANONYMOUS) && !defined(CONFIG_ANONYMOUS)
+#define CONFIG_ANONYMOUS 1            /* 提供 Anonymous 板 */
+#endif
+#if IS_ENABLED(CONFIG_ANONYMOUS)
+#define HAVE_ANONYMOUS 1              /* legacy compat */
 #endif
 
-#ifndef NO_HAVE_ORIGIN
-#define    HAVE_ORIGIN          /* 顯示 author 來自何處 */
+#if !defined(NO_HAVE_ORIGIN) && !defined(CONFIG_ORIGIN)
+#define CONFIG_ORIGIN 1               /* 顯示 author 來自何處 */
+#endif
+#if IS_ENABLED(CONFIG_ORIGIN)
+#define HAVE_ORIGIN 1                 /* legacy compat */
 #endif
 
 #ifndef SITE_MAIL_FACTOR
@@ -573,8 +594,40 @@
 #define POST_KEYWORDS_MAX (0)
 #endif
 
-#ifndef NO_REJECT_FLOOD_POST
-#define    REJECT_FLOOD_POST    /* 防止BlahBlah式灌水 */
+#if !defined(NO_REJECT_FLOOD_POST) && !defined(CONFIG_REJECT_FLOOD_POST)
+#define CONFIG_REJECT_FLOOD_POST 1    /* 防止BlahBlah式灌水 */
+#endif
+#if IS_ENABLED(CONFIG_REJECT_FLOOD_POST)
+#define REJECT_FLOOD_POST 1           /* legacy compat */
+#endif
+
+// 其他預設開啟之功能，若定義了 NO_XXX 則不定義 CONFIG_XXX (即 false)
+#if !defined(NO_GAMBLE) && !defined(CONFIG_GAMBLE)
+#define CONFIG_GAMBLE 1
+#endif
+
+#if !defined(NO_SYSOP_ACCOUNT) && !defined(CONFIG_SYSOP_ACCOUNT)
+#define CONFIG_SYSOP_ACCOUNT 1
+#endif
+
+#if !defined(NO_GUEST_ACCOUNT_REG) && !defined(CONFIG_GUEST_ACCOUNT_REG)
+#define CONFIG_GUEST_ACCOUNT_REG 1
+#endif
+
+#if !defined(NO_INSCREEN) && !defined(CONFIG_INSCREEN)
+#define CONFIG_INSCREEN 1
+#endif
+
+#if !defined(NO_CHECK_AMBIGUOUS_USERID) && !defined(CONFIG_CHECK_AMBIGUOUS_USERID)
+#define CONFIG_CHECK_AMBIGUOUS_USERID 1
+#endif
+
+#if !defined(NO_ADJUST_CPU_LIMITS) && !defined(CONFIG_ADJUST_CPU_LIMITS)
+#define CONFIG_ADJUST_CPU_LIMITS 1
+#endif
+
+#if !defined(NO_CONST_CUSER) && !defined(CONFIG_CONST_CUSER)
+#define CONFIG_CONST_CUSER 1
 #endif
 
 // #define  HAVE_INFO               /* 顯示程式版本說明 */

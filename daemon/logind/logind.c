@@ -1564,7 +1564,7 @@ is_tunnel_available() {
 static const char *
 auth_is_free_userid(const char *userid)
 {
-#if defined(STR_GUEST) && !defined(NO_GUEST_ACCOUNT_REG)
+#if defined(STR_GUEST) && IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
     if (strcasecmp(userid, STR_GUEST) == 0)
         return STR_GUEST;
 #endif

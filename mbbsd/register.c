@@ -124,7 +124,7 @@ bad_user_id(const char *userid)
 	return 1;
 #endif
 
-#if defined(STR_GUEST) && !defined(NO_GUEST_ACCOUNT_REG)
+#if defined(STR_GUEST) && IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
@@ -784,7 +784,7 @@ new_register(void)
 	}
 	else if (reserved_user_id(passbuf))
 	    outs("此代號已由系統保留，請使用別的代號\n");
-#if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
+#if IS_ENABLED(CONFIG_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
 	// XXX if we check id == 0 here, replacing an expired id will be delayed.
 	else if (/*id == 0 && */
 		 regcheck_ambiguous_userid_exist(passbuf) > 0) // ignore if error occurs
