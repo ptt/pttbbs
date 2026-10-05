@@ -27,9 +27,41 @@
     STATINC(name); \
 } while(0);
 
+typedef struct {
+    int id;
+    int scpu;
+    int ucpu;
+    struct rusage start;
+} stat_scope_t;
+
+static inline void cleanup_stat(stat_scope_t *ss) {
+    if (ss && ss->id >= 0) {
+        struct rusage end;
+        getrusage(RUSAGE_SELF, &end);
+        STATADD(ss->scpu, TVALDIFF_TO_MS(ss->start.ru_stime, end.ru_stime));
+        STATADD(ss->ucpu, TVALDIFF_TO_MS(ss->start.ru_utime, end.ru_utime));
+        STATINC(ss->id);
+    }
+}
+
+#define SCOPED_STAT(name) \
+    stat_scope_t _stat_##name __attribute__((cleanup(cleanup_stat))) = { \
+        .id = name, \
+        .scpu = name##_SCPU, \
+        .ucpu = name##_UCPU, \
+    }; \
+    getrusage(RUSAGE_SELF, &_stat_##name.start)
+
 #else
 #define BEGINSTAT(name) STATINC(name)
 #define ENDSTAT(name)
+
+typedef int stat_scope_t;
+static inline void cleanup_stat(stat_scope_t *ss) { (void)ss; }
+#define SCOPED_STAT(name) \
+    STATINC(name); \
+    stat_scope_t _stat_##name __attribute__((cleanup(cleanup_stat), unused)) = 0
+
 #endif
 
 
