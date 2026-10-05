@@ -579,7 +579,7 @@ int stampfile_u(char *fpath, fileheader_t *fh);
 int stampadir(char *fpath, fileheader_t * fh, int large_set);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
 void set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle);
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 #ifndef _BBS_UTIL_C_
 void safe_delete_range(const char *fpath, int id1, int id2);
 #endif
@@ -713,7 +713,7 @@ int ParseDate(const char *date, int *year, int *month, int *day);
 int ParseDateTime(const char *date, int *year, int *month, int *day,
 		  int *hour, int *min, int *sec);
 
-#ifndef CRITICAL_MEMORY
+#if !IS_ENABLED(CONFIG_CRITICAL_MEMORY)
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)
 #else

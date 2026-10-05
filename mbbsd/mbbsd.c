@@ -308,7 +308,7 @@ abort_bbs_debug(int sig)
     }
     */
 
-#ifdef DEBUGSLEEP
+#if IS_ENABLED(CONFIG_DEBUGSLEEP)
 
 #ifndef VALGRIND
     setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
@@ -776,7 +776,7 @@ setup_utmp(int mode)
 
     mbs_sanitize(currutmp->nickname, sizeof(currutmp->nickname));
 
-#ifdef FROMD
+#if IS_ENABLED(CONFIG_FROMD)
     // resolve fromhost
     {
 	int fd;
@@ -963,7 +963,7 @@ user_login(void)
     STRLCPY(fromhost_masked, fromhost);
     obfuscate_ipstr(fromhost_masked);
 
-#ifndef MULTI_WELCOME_LOGIN
+#if !IS_ENABLED(CONFIG_MULTI_WELCOME_LOGIN)
     more("etc/Welcome_login", NA);
 #else
     if( SHM->GV2.e.nWelcomes ){
@@ -1255,7 +1255,7 @@ static void init(void)
     Signal(SIGUSR2, SIG_IGN);
 
 #ifdef __GLIBC__
-#ifdef CRITICAL_MEMORY
+#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
     mallopt(M_MMAP_THRESHOLD, 1024 * 8);
     mallopt(M_MMAP_MAX, 0);
     mallopt(M_TRIM_THRESHOLD, 1024 * 8);
@@ -1875,7 +1875,7 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 	if(cpuload(NULL) > MAX_CPULOAD)
 	    overload = 1;
 	else if (SHM->UTMPnumber >= MAX_ACTIVE
-#ifdef DYMAX_ACTIVE
+#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
 		|| (SHM->GV2.e.dymaxactive > 2000 &&
 		    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
 #endif

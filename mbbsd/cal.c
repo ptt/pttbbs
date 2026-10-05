@@ -696,7 +696,7 @@ p_sysinfo(void)
 	   "起始時間: %s\n"
 	   "編譯時間: %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
-#ifdef DYMAX_ACTIVE
+#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
 	   // XXX check the related logic in mbbsd.c
 	   (SHM->GV2.e.dymaxactive > 2000 && SHM->GV2.e.dymaxactive < MAX_ACTIVE) ?
 	    SHM->GV2.e.dymaxactive : MAX_ACTIVE,
@@ -720,7 +720,7 @@ p_sysinfo(void)
 #if defined(USE_PIAIP_MORE) || defined(USE_PMORE)
 	    "\tpmore (piaip's more) 2007 w/Movie\n"
 #endif
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
 	    "\tSmart Merge 修文自動合併\n"
 #endif
 #if defined(USE_PFTERM)
@@ -748,11 +748,11 @@ p_sysinfo(void)
 	prints(" (limit %d secs per day)", CPULIMIT_PER_DAY);
 #endif
 	outs("\n特別參數:"
-#ifdef CRITICAL_MEMORY
-		" CRITICAL_MEMORY"
+#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
+		" CONFIG_CRITICAL_MEMORY"
 #endif
-#ifdef FROMD
-		" FROMD"
+#if IS_ENABLED(CONFIG_FROMD)
+		" CONFIG_FROMD"
 #endif
 #ifdef USE_MBBSD_CXX
 		" CXX"

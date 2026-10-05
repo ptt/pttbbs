@@ -639,7 +639,7 @@ void pwcuInitGuestPerm	()
     cuser.userlevel = 0;
     cuser.uflag = UF_BRDSORT;
     cuser.pager = PAGER_OFF;
-# ifdef GUEST_DEFAULT_DBCS_NOINTRESC
+#if IS_ENABLED(CONFIG_GUEST_DEFAULT_DBCS_NOINTRESC)
     _ENABLE_BIT(cuser.uflag, UF_DBCS_NOINTRESC);
 # endif
 }

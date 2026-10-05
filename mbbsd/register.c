@@ -728,24 +728,24 @@ new_register(void)
     newuser.ua_version = ua_version;
     STRLCPY(newuser.lasthost, fromhost);
 
-#ifdef REQUIRE_VERIFY_EMAIL_AT_REGISTER
+#if IS_ENABLED(CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER)
     email_input_t ein = {};
     ein.email = newuser.email;
 
-#   ifdef ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
-#	ifndef USEREC_EMAIL_IS_CONTACT
-#	    error "ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL requires USEREC_EMAIL_IS_CONTACT"
+#if IS_ENABLED(CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL)
+#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+#	    error "CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL requires CONFIG_USEREC_EMAIL_IS_CONTACT"
 #	endif
     ein.allow_untrusted = true;
     ein.warn_untrusted = true;
-#   endif  // ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
+#   endif  // CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
 
     if (register_email_verification(&ein, 0) == REGISTER_OK) {
 	email_verified = ein.is_trusted;
     } else {
 	exit(1);
     }
-#endif  // REQUIRE_VERIFY_EMAIL_AT_REGISTER
+#endif  // CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER
 
 #ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))
@@ -1115,7 +1115,7 @@ check_register(void)
     char fn[PATHLEN];
     int ret GCC_UNUSED = 0;
 
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     // 確認一定要有聯絡信箱
     if (!is_valid_email(cuser.email)) {
         more("etc/ensurevalidcontactemail", NA);
@@ -1132,7 +1132,7 @@ check_register(void)
         while ((ret = change_contact_email(1)));
 #endif //FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
     }
-#endif //USEREC_EMAIL_IS_CONTACT
+#endif //CONFIG_USEREC_EMAIL_IS_CONTACT
 
     // 已經通過的就不用了
     if (HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_SYSOP))
@@ -1651,7 +1651,7 @@ u_register()
 // Contact Email Functions
 ////////////////////////////////////////////////////////////////////////////
 
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 
 static int notify_email_change(const char *userid, const char *email)
 {

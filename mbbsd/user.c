@@ -158,7 +158,7 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t職業學歷: %s\n", u->career);
 	prints("\t居住地址: %s\n", u->address);
 
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 	prints("\t聯絡信箱: %s\n", u->email);
 #else
 	prints("\t電子信箱: %s\n", u->email);
@@ -654,19 +654,19 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     }
 
     ans = vans(adminmode ?
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(M)信箱(V)認證 " :
 #else
     "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(V)認證 [0]結束 " :
 #endif
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     "請選擇 (1)修改資料 (2)設定密碼 (M)聯絡信箱 (V)認證資料 [0]結束 ");
 #else
     "請選擇 (1)修改資料 (2)設定密碼 (V)認證資料 [0]結束 ");
 #endif
 
     if (ans != '1' && ans != '2' && ans != 'v'
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 	    && ans != 'm'
 #endif
 	    && !adminmode)
@@ -692,7 +692,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		return;
     }
     switch (ans) {
-#ifdef USEREC_EMAIL_IS_CONTACT
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     case 'm':
 	if (!adminmode) {
 	    change_contact_email(0);
@@ -925,8 +925,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     case '2':
 	y = 19;
 	if (!adminmode) {
-#ifdef USEREC_EMAIL_IS_CONTACT
-#   ifdef REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+#if IS_ENABLED(CONFIG_REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD)
 	    if (!is_valid_email(cuser.email)) {
 		move(y, 0);
 		outs("設定聯絡信箱後才能修改密碼唷!");
@@ -1214,7 +1214,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef USE_EMAILDB
 	// If we separate email in userec_t and emaildb, there is no way for us
 	// to find out the real verified email here. Don't update it.
-#   ifndef USEREC_EMAIL_IS_CONTACT
+#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 	// We only want to update emaildb when user is known to use email
 	// verification. It's okay to keep existing entry for old userid; it
 	// will get filtered out when read. This is best-effort, and does not

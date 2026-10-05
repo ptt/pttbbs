@@ -3,12 +3,12 @@
 #include "daemons.h"
 #include <arpa/inet.h>
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
 
 #include "fnv_hash.h"
 #define SMHASHLEN (64/8)
 
-#endif // EDITPOST_SMARTMERGE
+#endif // CONFIG_EDITPOST_SMARTMERGE
 
 #define WHEREAMI_LEVEL	16
 
@@ -715,7 +715,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     ent->title[sizeof(ent->title) - 1] = 0;
     mbs_sanitize(ent->title, sizeof(ent->title));
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     // TODO maybe we should also check .filename because admin can't change that
     char iscorpse = (ent->owner[0] == '-') && (ent->owner[1] == 0);
 
@@ -735,7 +735,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         oisunread = isunread = 0;
 #endif // COLORIZED_SAFEDEL
     } else
-#endif // SAFE_ARTICLE_DELETE
+#endif // CONFIG_SAFE_ARTICLE_DELETE
     oisunread = isunread =
 	brc_unread(currbid, ent->filename, ent->modified);
 
@@ -782,7 +782,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     if (ent->filename[0] == 'L')
         title_type = SUBJECT_LOCKED;
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     if (iscorpse)
 	color = '0', mark = "□";
         // color = '0', mark = "╳";
@@ -847,7 +847,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         else
             SNPRINTF(col_date, "%5d ", m);
     } else {
-#ifdef COLORDATE
+#if IS_ENABLED(CONFIG_COLORDATE)
         SNPRINTF(col_date, ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
                  (ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
 #else
@@ -988,7 +988,7 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     // because getindex safe_article_delete will change fh in some case
     if( (i=getindex(bdir, &newfh, 0))>0)
     {
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
         if(bp && bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
             safe_article_delete(i, &newfh, bdir, NULL);
         else
@@ -1744,7 +1744,7 @@ reply_post(int ent GCC_UNUSED, fileheader_t * fhdr,
     return do_reply(fhdr);
 }
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
 
 #define HASHPF_RET_OK (0)
 
@@ -1826,7 +1826,7 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
     close(fd_src);
     return ret;
 }
-#endif // EDITPOST_SMARTMERGE
+#endif // CONFIG_EDITPOST_SMARTMERGE
 
 int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
@@ -1842,9 +1842,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     int rev = 0;
     time4_t oldmt = 0;
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
     unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
-#endif // EDITPOST_SMARTMERGE
+#endif // CONFIG_EDITPOST_SMARTMERGE
 
 #ifdef EXP_EDITPOST_TEXTONLY
     // experimental: "text only" editing
@@ -1867,7 +1867,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_VOTE)
 	return DONOTHING;
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     if( fhdr->filename[0] == '.' )
 	return DONOTHING;
 #endif
@@ -1930,7 +1930,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // to prevent genbuf being modified after copy, use dashs(fpath) instead.
     oldsz = dashs(fpath);
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
     if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
         vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
         unlink(fpath);
@@ -1943,7 +1943,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
     }
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
     outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
     refresh();
 
@@ -1971,7 +1971,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     oldmt = dasht(genbuf);
     rev = timecapsule_add_revision(genbuf);
 
-#ifdef EDITPOST_SMARTMERGE
+#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
     // atomic lock-merge-replace
     append_merge_replace(genbuf, fpath, oldsz);
 #else
@@ -2232,7 +2232,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
-#ifdef GUESTRECOMMEND
+#if IS_ENABLED(CONFIG_GUESTRECOMMEND)
 	    SNPRINTF(tail, "%15s %s",
 		    FROMHOST, Cdate_md(&now));
 #else
@@ -2645,7 +2645,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     const char	    *myid = cuser.userid;
     char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     static const char *ctype[RECTYPE_SIZE] = {
 		       "推", "噓", "→",
 		   };
@@ -2695,7 +2695,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
 	vmsg("本文已刪除");
 	return FULLUPDATE;
@@ -2775,7 +2775,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     // they tend to use the counter to identify whether an arcitle
     // has new recommends or not.
     // so, make them happy here.
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     // no matter it is first time or not.
     if (is_file_owner(fhdr, &cuser))
 #else
@@ -2786,7 +2786,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	// owner recommend
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 	outs("作者本人, 使用 → 加註方式\n");
 #else
 	outs("作者本人首推, 使用 → 加註方式\n");
@@ -2803,7 +2803,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     else
     {
 	int i;
@@ -2898,16 +2898,16 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	myid = mynick;
     }
 
-#ifdef OLDRECOMMEND
+#if IS_ENABLED(CONFIG_OLD_RECOMMEND)
     maxlength -= 2; /* '推' */
     maxlength -= strlen(myid);
     sprintf(buf, "%s %s:", "→" , myid);
 
-#else // !OLDRECOMMEND
+#else // !CONFIG_OLD_RECOMMEND
     maxlength -= strlen(myid);
     sprintf(buf, "%s%s%s %s:",
 	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
-#endif // !OLDRECOMMEND
+#endif // !CONFIG_OLD_RECOMMEND
 
     move(b_lines, 0);
     clrtoeol();
@@ -2989,7 +2989,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
         // is_home = (*direct == 'h'),
         is_man = (*direct == 'm');
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     int use_safe_delete = 0;
 
     if (is_board) {
@@ -3097,7 +3097,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
                 continue;
             }
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
             if (use_safe_delete &&
                 safe_article_delete(id, fh, direct, NULL) == 0) {
                 id++;
@@ -3237,7 +3237,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     // query if user really wants to delete it
     if (not_owned && !is_anon && fhdr->owner[0])
     {
@@ -3308,7 +3308,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         }
 
 	if(
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 	   ((reason[0] || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
             !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
@@ -3781,7 +3781,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
 static int
 tar_addqueue(void)
 {
-#if defined(OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
+#if IS_ENABLED(CONFIG_OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
     char            email[60], qfn[80], ans[2];
     FILE           *fp;
     char            bakboard, bakman;

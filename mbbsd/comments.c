@@ -5,7 +5,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
                          const char *myid, int maxlength,
                          const char *msg, const char *tail)
 {
-#ifdef OLDRECOMMEND
+#if IS_ENABLED(CONFIG_OLD_RECOMMEND)
     snprintf(buf, szbuf,
              ANSI_COLOR(1;31) "¡÷ " ANSI_COLOR(33) "%s" ANSI_RESET
              ANSI_COLOR(33) ":%-*s" ANSI_RESET "±À%s\n",
@@ -28,7 +28,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
              ":%-*s" ANSI_RESET "%s\n",
              ctype_attr2[type], ctype[type], myid,
              maxlength, msg, tail);
-#endif // OLDRECOMMEND
+#endif // CONFIG_OLD_RECOMMEND
 
 }
 

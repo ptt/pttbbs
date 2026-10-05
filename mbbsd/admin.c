@@ -1068,7 +1068,7 @@ m_newbrd(int whatclass, int recover)
         }
     }
     newboard.brdattr = 0;
-#ifdef DEFAULT_AUTOCPLOG
+#if IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG)
     newboard.brdattr |= BRD_CPLOG;
 #endif
 
