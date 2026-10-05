@@ -57,7 +57,7 @@ show_msg(int save, const msgque_t *msg)
     char buf[ANSILINELEN];
     int mode = msg->msgmode;
 
-    if (HAS_ANGEL && mode == MSGMODE_TOANGEL) {
+    if (IS_ENABLED(CONFIG_ANGEL) && mode == MSGMODE_TOANGEL) {
         SNPRINTF(buf, ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45)
                  " %s " ANSI_RESET,
                  msg->userid,
@@ -202,7 +202,7 @@ wmsg_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
     char online_mark = uin ? ' ' : (is_vertical ? 'x' : '#');
 
     char dispname[STRLEN];
-    if (HAS_ANGEL && is_angel_msgmode(w->msg[0].msgmode) && !mbs_strstr(w->userid, STR_ANGEL)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && is_angel_msgmode(w->msg[0].msgmode) && !mbs_strstr(w->userid, STR_ANGEL)) {
         snprintf(dispname, sizeof(dispname), "★小主人 %s", w->userid);
     } else {
         STRLCPY(dispname, w->userid);
@@ -229,7 +229,7 @@ ofo_water_scr(const water_t *tw, int which, char type)
 
     move(0, 0);
     clrtoeol();
-    if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && is_angel_msgmode(tw->msg[0].msgmode)) {
         if (mbs_strstr(tw->userid, STR_ANGEL))
             outs(PROMPT_ANGEL_AGAIN);
         else
@@ -303,7 +303,7 @@ ofo_switch_user(int delta)
 static int
 ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
 {
-    if (HAS_ANGEL && is_angel_msgmode(tw->msg[0].msgmode)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && is_angel_msgmode(tw->msg[0].msgmode)) {
         if (mbs_strstr(tw->userid, STR_ANGEL)) {
             strlcpy(genbuf, PROMPT_ANGEL_AGAIN, sz);
             return WATERBALL_CONFIRM_ANGEL;
@@ -408,13 +408,13 @@ ofo_my_write(void)
  *               flag = WATERBALL_PREEDIT, 1 otherwise
  * 5. 丟訊息     flag = WATERBALL_GENERAL, 0
  * 6. ofo_my_write  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
- * 7. (when defined PLAY_ANGEL)
+ * 7. (when IS_ENABLED(CONFIG_ANGEL))
  *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = STR_ANGEL)
- * 8. (when defined PLAY_ANGEL)
+ * 8. (when IS_ENABLED(CONFIG_ANGEL))
  *    回答小主人 flag = WATERBALL_ANSWER,  6 (隱藏 id)
- * 9. (when defined PLAY_ANGEL)
+ * 9. (when IS_ENABLED(CONFIG_ANGEL))
  *    呼叫小天使 flag = WATERBALL_CONFIRM_ANGEL, 7 (pre-edit)
- * 10. (when defined PLAY_ANGEL)
+ * 10. (when IS_ENABLED(CONFIG_ANGEL))
  *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
 static inline int
@@ -423,10 +423,10 @@ waterball_flag_to_msgmode(int flag)
     switch (flag) {
     case WATERBALL_ANGEL:
     case WATERBALL_CONFIRM_ANGEL:
-        return HAS_ANGEL ? MSGMODE_TOANGEL : MSGMODE_WRITE;
+        return IS_ENABLED(CONFIG_ANGEL) ? MSGMODE_TOANGEL : MSGMODE_WRITE;
     case WATERBALL_ANSWER:
     case WATERBALL_CONFIRM_ANSWER:
-        return HAS_ANGEL ? MSGMODE_FROMANGEL : MSGMODE_WRITE;
+        return IS_ENABLED(CONFIG_ANGEL) ? MSGMODE_FROMANGEL : MSGMODE_WRITE;
     case WATERBALL_ALOHA:
         return MSGMODE_ALOHA;
     default:
@@ -483,7 +483,7 @@ my_write_get_input(const char *prompt, char *msg, size_t msg_size,
         int i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
         userinfo_t *sender = resolve_msg_sender(&water_which->msg[i]);
         *uin_out = sender;
-        if (HAS_ANGEL) {
+        if (IS_ENABLED(CONFIG_ANGEL)) {
             if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
                 *flag_out = WATERBALL_ANGEL;
             else if (water_which->msg[i].msgmode == MSGMODE_TOANGEL)
@@ -501,7 +501,7 @@ my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t 
 {
     bool is_confirm_needed = (
         flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM ||
-        (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
+        (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
                        flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
     );
 
@@ -527,11 +527,11 @@ my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
         return false;
 
     if (strcasecmp(destid, uin->userid) != 0) {
-        if (!HAS_ANGEL || (flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL))
+        if (!IS_ENABLED(CONFIG_ANGEL) || (flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL))
             return false;
     }
 
-    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
         if (strcasecmp(cuser.myangel, uin->userid) != 0 || uin->angelpause >= ANGELPAUSE_REJALL)
             return false;
     }
@@ -557,7 +557,7 @@ my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
 {
     if (flag == WATERBALL_ALOHA)
         return false;
-    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
         if (angel_reject_me(uin))
             return true;
     }
@@ -565,7 +565,7 @@ my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
     if (HasUserPerm(PERM_SYSOP))
         return false;
 
-    if (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
                       flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
         return false;
 
@@ -589,13 +589,13 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         return;
 
     char from_id[IDLEN + 1];
-    if (HAS_ANGEL && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)) {
         angel_load_my_fullnick(from_id, sizeof(from_id));
     } else {
         STRLCPY(from_id, cuser.userid);
     }
 
-    if (HAS_ANGEL && flag == WATERBALL_ANGEL)
+    if (IS_ENABLED(CONFIG_ANGEL) && flag == WATERBALL_ANGEL)
         angel_log_msg_to_angel();
 
     int my_slot = currutmp ? get_utmp_slot(currutmp) : -1;
@@ -633,7 +633,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     check_water_init();
 
     bool is_interactive = (flag == WATERBALL_GENERAL ||
-                           (HAS_ANGEL && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
+                           (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
 
     if ((!uin || !*uin->userid) && !(is_interactive && water_which->count > 0)) {
         vmsg(ERR_TARGET_NOT_ONLINE);
@@ -897,7 +897,7 @@ wmsg_handle_ctrl_r_default(int ch)
         const char *prompt = NULL;
         int flag = WATERBALL_GENERAL;
 
-        if (HAS_ANGEL) {
+        if (IS_ENABLED(CONFIG_ANGEL)) {
             switch (msgmode) {
             case MSGMODE_FROMANGEL:
                 prompt = PROMPT_ANGEL_AGAIN;
@@ -1061,7 +1061,7 @@ is_swater_compatible(const water_t *w, const msgque_t *msg)
     if (w->pid != msg->pid)
         return 0;
 
-    if (!HAS_ANGEL)
+    if (!IS_ENABLED(CONFIG_ANGEL))
         return 1;
 
     if (w->count == 0 && w->msg[0].msgmode == 0)

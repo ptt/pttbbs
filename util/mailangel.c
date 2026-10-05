@@ -1,6 +1,6 @@
 #include "bbs.h"
 
-#ifndef PLAY_ANGEL
+#if !IS_ENABLED(CONFIG_ANGEL)
 int main(){ return 0; }
 #else
 
@@ -139,4 +139,4 @@ void mailUser(char *userid)
     mailalertuser(userid);
     printf("%s\n", userid);
 }
-#endif /* defined PLAY_ANGEL */
+#endif /* IS_ENABLED(CONFIG_ANGEL) */

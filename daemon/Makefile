@@ -5,7 +5,7 @@ include $(SRCROOT)/pttbbs.mk
 SUBDIRS := logind
 
 # Conditional daemons based on pttbbs.conf
-ifneq ($(call DEF_CHECK,PLAY_ANGEL),)
+ifneq ($(call DEF_CHECK,CONFIG_ANGEL)$(call DEF_CHECK,PLAY_ANGEL),)
 SUBDIRS += angelbeats
 endif
 
