@@ -604,27 +604,8 @@ static const char *
 bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                char *buf, size_t sz)
 {
-    strlcpy(buf, ((cx->bp->brdattr & BRD_NORECOMMEND) || (cx->bp->brdattr & BRD_NOBOO))
+    strlcpy(buf, (cx->bp->brdattr & BRD_NOBOO)
                  ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
-    return buf;
-}
-
-static const char *
-bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
-                   char *buf, size_t sz)
-{
-    const boardheader_t *bp = cx->bp;
-    int d = 0;
-    if (bp->brdattr & BRD_NORECOMMEND)
-        d = -1;
-    else if ((bp->brdattr & BRD_NOFASTRECMD) && bp->fastrecommend_pause > 0)
-        d = bp->fastrecommend_pause;
-    if (d > 0)
-        snprintf(buf, sz, ANSI_COLOR(1) "限制 (間隔 %d 秒)" ANSI_RESET, d);
-    else if (d < 0)
-        strlcpy(buf, ANSI_COLOR(1) "限制 (已禁推)" ANSI_RESET, sz);
-    else
-        strlcpy(buf, "開放", sz);
     return buf;
 }
 
@@ -759,10 +740,20 @@ bcfg_set_noselfdelpost(cmd_ctx_t *ctx)
 }
 
 static int
-bcfg_set_norecommend(cmd_ctx_t *ctx)
+bcfg_set_nocomment(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    cx->bp->brdattr ^= BRD_NORECOMMEND;
+    cx->bp->brdattr ^= BRD_NOCOMMENT;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+
+static int
+bcfg_set_norate(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_NORATING;
     cx->touched = 1;
     ctx->reload = true;
     return 0;
@@ -772,73 +763,32 @@ static int
 bcfg_set_noboo(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    boardheader_t *bp = cx->bp;
-    if (bp->brdattr & BRD_NORECOMMEND)
-        bp->brdattr |= BRD_NOBOO;
-    bp->brdattr ^= BRD_NOBOO;
+    cx->bp->brdattr ^= BRD_NOBOO;
     cx->touched = 1;
     ctx->reload = true;
-    if (!(bp->brdattr & BRD_NOBOO))
-        bp->brdattr &= ~BRD_NORECOMMEND;
     return 0;
 }
 
 static int
-bcfg_set_fastrecmd(cmd_ctx_t *ctx)
-{
-    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    boardheader_t *bp = cx->bp;
-    bp->brdattr &= ~BRD_NORECOMMEND;
-    bp->brdattr ^= BRD_NOFASTRECMD;
-    cx->touched = 1;
-    ctx->reload = true;
-    if (bp->brdattr & BRD_NOFASTRECMD) {
-        char buf[8] = "";
-        if (bp->fastrecommend_pause > 0)
-            sprintf(buf, "%d", bp->fastrecommend_pause);
-        getdata_str(b_lines - 1, 0,
-                    "請輸入連推時間限制(單位: 秒) [5~240]: ",
-                    buf, 4, NUMECHO, buf);
-        if (buf[0] >= '0' && buf[0] <= '9')
-            bp->fastrecommend_pause = atoi(buf);
-        if (bp->fastrecommend_pause < 5 || bp->fastrecommend_pause > 240) {
-            if (buf[0])
-                vmsg("輸入時間無效，請使用 5~240 之間的數字。");
-            bp->fastrecommend_pause = 0;
-            bp->brdattr &= ~BRD_NOFASTRECMD;
-        }
-    }
-    return 0;
-}
-
-static int
-bcfg_set_iplogrecmd(cmd_ctx_t *ctx)
+bcfg_set_commentshowip(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
     char ans[2];
     ctx->reload = true;
     move(b_lines - 2, 0); clrtobot();
-    if (getdata(b_lines - 1, 0, (bp->brdattr & BRD_IPLOGRECMD) ?
-            ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
-            ANSI_COLOR(1;31) " +++ 確定要記錄推文 IP 嗎?" ANSI_RESET " [y/N]: ",
+    if (getdata(b_lines - 1, 0, (bp->brdattr & BRD_COMMENTSHOWIP) ?
+            ANSI_COLOR(1;32) " --- 確定要改為預設不顯示留言 IP 嗎?" ANSI_RESET " [y/N]: " :
+            ANSI_COLOR(1;31) " +++ 確定要改為顯示留言 IP 嗎?" ANSI_RESET " [y/N]: ",
             ans, sizeof(ans), LCECHO) < 1 || ans[0] != 'y')
         return 0;
-    bp->brdattr ^= BRD_IPLOGRECMD;
+    bp->brdattr ^= BRD_COMMENTSHOWIP;
     cx->touched = 1;
-    vmsg((bp->brdattr & BRD_IPLOGRECMD) ? " 注意: 開始記錄推文IP" : " 注意: 已停止記錄推文IP");
+    vmsg((bp->brdattr & BRD_COMMENTSHOWIP) ? " 注意: 設定為顯示留言IP" : " 注意: 設定為預設不顯示留言IP");
     return 0;
 }
 
-static int
-bcfg_set_alignedcmt(cmd_ctx_t *ctx)
-{
-    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    cx->bp->brdattr ^= BRD_ALIGNEDCMT;
-    cx->touched = 1;
-    ctx->reload = true;
-    return 0;
-}
+
 
 static int
 bcfg_set_mask_content(cmd_ctx_t *ctx)
@@ -974,11 +924,10 @@ static const BConfigItem bconfig_items[] = {
     { "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
     { "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
-    { "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
-    { "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
-    { "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
-    { "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_IPLOGRECMD, PERM_BM, NULL, bcfg_set_iplogrecmd },
-    { "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
+    { "文章留言", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOCOMMENT, PERM_BM, NULL, bcfg_set_nocomment },
+    { "文章評分", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORATING, PERM_BM, NULL, bcfg_set_norate },
+    { "評分負評 (噓文)", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
+    { "留言預設不顯示 IP", ANSI_COLOR(1) "顯示" ANSI_RESET, "不顯示", BRD_COMMENTSHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
 #ifdef USE_AUTOCPLOG
     { "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
@@ -1100,11 +1049,10 @@ static const cmd_t bconfig_edit_cmds[] = {
     { 'e', NULL, "切換非看板會員發文限制", bcfg_set_restrictedpost, PERM_SYSOP, CMD_PRIO_NONE, true },
     { 'y', NULL, "切換是否開放回應文章", bcfg_set_noreply, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
     { 'd', NULL, "切換是否開放自刪文章", bcfg_set_noselfdelpost, PERM_SELFDEL, CMD_PRIO_NONE, true },
-    { 'r', NULL, "切換是否開放推文", bcfg_set_norecommend, PERM_BM, CMD_PRIO_NONE, true },
-    { 's', NULL, "切換是否開放噓文", bcfg_set_noboo, PERM_BM, CMD_PRIO_NONE, true },
-    { 'f', NULL, "設定快速連推間隔限制", bcfg_set_fastrecmd, PERM_BM, CMD_PRIO_NONE, true },
-    { 'i', NULL, "切換推文是否記錄來源 IP", bcfg_set_iplogrecmd, PERM_BM, CMD_PRIO_NONE, true },
-    { 'a', NULL, "切換推文開頭是否自動對齊", bcfg_set_alignedcmt, PERM_BM, CMD_PRIO_NONE, true },
+    { 'r', NULL, "切換是否開放留言", bcfg_set_nocomment, PERM_BM, CMD_PRIO_NONE, true },
+    { 'f', NULL, "切換是否開放評分", bcfg_set_norate, PERM_BM, CMD_PRIO_NONE, true },
+    { 's', NULL, "切換是否開放負評", bcfg_set_noboo, PERM_BM, CMD_PRIO_NONE, true },
+    { 'i', NULL, "切換留言是否顯示 IP", bcfg_set_commentshowip, PERM_BM, CMD_PRIO_NONE, true },
 #ifdef USE_AUTOCPLOG
     { 'x', NULL, "切換轉錄文章是否自動記錄", bcfg_set_cplog, PERM_BM, CMD_PRIO_NONE, true },
 #endif

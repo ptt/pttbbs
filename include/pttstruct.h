@@ -258,7 +258,8 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
 #define BRD_WARNEL		0x00000400	/* 已警告要廢除 */
 #define BRD_TOP			0x00000800	/* 熱門看板群組 */
-#define BRD_NORECOMMEND		0x00001000	/* 不可推薦 */
+#define BRD_NORECOMMEND		0x00001000	/* 禁留言 */
+#define BRD_NOCOMMENT		BRD_NORECOMMEND
 #define BRD_ANGELANONYMOUS	0x00002000	/* 小天使可匿名 */
 #define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
@@ -268,13 +269,16 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_GUESTPOST		0x00080000	/* guest能 post */
 #define BRD_COOLDOWN		0x00100000	/* 冷靜 */
 #define BRD_CPLOG		0x00200000	/* 自動留轉錄記錄 */
-#define BRD_NOFASTRECMD		0x00400000	/* 禁止快速推文 */
-#define BRD_IPLOGRECMD		0x00800000	/* 推文記錄 IP */
+#define BRD_NOFASTRECMD		0x00400000	/* 禁快速推 (deprecated) */
+#define BRD_COMMENTSHOWIP	0x00800000	/* 留言顯示 IP */
+#define BRD_IPLOGRECMD		BRD_COMMENTSHOWIP
 #define BRD_OVER18		0x01000000	/* 十八禁 */
 #define BRD_NOREPLY		0x02000000	/* 不可回文 */
 #define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
 #define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
+#define BRD_NORATING		0x20000000	/* 禁評分 */
+#define BRD_NORATE		BRD_NORATING
 
 // Board group linked-list type. Used for array index of firstchild and next.
 #define BRD_GROUP_LL_TYPE_NAME  (0)

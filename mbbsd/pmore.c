@@ -498,12 +498,14 @@ typedef struct
                         //  Just trying to notify you that it's
                         //  NOT REAL MAX LINENO NOR FILELENGTH!!!
                         //  You may consider "S" of "Start" (disps).
+    int   show_comment_ip;
     void (*detachHandler)();
 } MmappedFile;
 
 MmappedFile mf = {
     0, 0, 0, 0, 0, 0, 0L,
     0, -1L, 0, 0, -1L, -1L, -1L, -1L,
+    1, // show_comment_ip
     NULL // detachHandler
 };      // current file
 
@@ -616,7 +618,8 @@ enum MFSEARCH_DIRECTION {
 
 // Reset structures
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); \
-    mf.lastpagelines = mf.maxlinenoS = mf.oldlineno = -1; }
+    mf.lastpagelines = mf.maxlinenoS = mf.oldlineno = -1; \
+    mf.show_comment_ip = 1; }
 #define RESETFH() { memset(&fh, 0, sizeof(fh)); \
     fh.lines = -1; }
 
@@ -940,6 +943,13 @@ mf_postattach()
     mf.end = mf.start + mf.len;
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
+
+    mf.show_comment_ip = 1;
+    if (currbid > 0 && currbid <= MAX_BOARD) {
+        boardheader_t *bp = getbcache(currbid);
+        if (bp && !(bp->brdattr & BRD_COMMENTSHOWIP))
+            mf.show_comment_ip = 0;
+    }
 
     mf_determinemaxdisps(MFNAV_PAGE, 0);
 
@@ -1527,6 +1537,16 @@ mf_display_comment_header(int max_width)
         c_end--;
 
     c_len = c_end - c_start;
+
+    if (!mf.show_comment_ip) {
+        const char *sp1 = (const char *)memchr(c_start, ' ', c_len);
+        if (sp1 && memchr(sp1 + 1, ' ', (size_t)(c_end - (sp1 + 1)))) {
+            c_start = sp1 + 1;
+            while (c_start < c_end && *c_start == ' ')
+                c_start++;
+            c_len = c_end - c_start;
+        }
+    }
 
     /* 3. Width: reserve >= 1 space between ID and CREATION */
     int left_width = u_end - line;

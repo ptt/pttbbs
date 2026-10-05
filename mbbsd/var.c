@@ -84,7 +84,7 @@ const char * const str_permboard[] = {
     "連署專用看板",		/* BRD_VOTEBOARD */
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
-    "不可推薦",                 /* BRD_NORECOMMEND */
+    "禁留言",                   /* BRD_NOCOMMENT */
     "小天使可匿名",		/* BRD_ANGELANONYMOUS */
     "板主設定列入記錄",		/* BRD_BMCOUNT */
     "連結看板",                 /* BRD_SYMBOLIC */
@@ -99,13 +99,13 @@ const char * const str_permboard[] = {
     "轉錄記錄(本站無效)",	/* BRD_CPLOG */
 #endif
     "禁止快速推文",		/* BRD_NOFASTRECMD */
-    "推文記錄 IP",		/* BRD_IPLOGRECMD */
+    "顯示留言 IP",              /* BRD_COMMENTSHOWIP */
     "十八禁",			/* BRD_OVER18 */
-    "對齊式推文",		/* BRD_ALIGNEDCMT */
+    "(無作用)",                 /* deprecated: BRD_ALIGNEDCMT */
     "不可自刪",                 /* BRD_NOSELFDELPOST */
     "板主可刪特定文字",         /* BRD_BM_MASK_CONTENT */
     "沒想到",
-    "沒想到",
+    "禁評分",                   /* BRD_NORATING */
     "沒想到",
     "沒想到",
 };

@@ -2584,12 +2584,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 int
 comment_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            buf[4096], msg[2048];
+    char            msg[2048];
     msg[0] = '\0';
-    buf[0] = '\0';
-    const char	    *myid = cuser.userid;
-    char	    aligncmt = 0;
-    char	    mynick[IDLEN+1];
 
     int             type;
     boardheader_t  *bp;
@@ -2605,14 +2601,14 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
+    if (bp->brdattr & BRD_NOCOMMENT || fhdr->filename[0] == 'L' ||
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
-	vmsg("抱歉, 禁止推薦");
+	vmsg("抱歉, 禁止留言");
 	return FULLUPDATE;
     }
     if (!CheckPostPerm2(&reason) || isGuest)
     {
-	vmsgf("無法推文: %s", reason); //  "(可按大寫 I 查看限制)"
+	vmsgf("無法留言: %s", reason); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
     }
 
@@ -2647,20 +2643,7 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-    aligncmt = (bp->brdattr & BRD_ALIGNEDCMT) ? 1 : 0;
-    if((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
-    {
-	/* I'm BM or SYSOP. */
-    }
-    else if (bp->brdattr & BRD_NOFASTRECMD)
-    {
-	int d = (int)bp->fastrecommend_pause - (int)time4_diff(now, lastcomment);
-	if (d > 0)
-	{
-	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
-	    return FULLUPDATE;
-	}
-    }
+
     {
 	// kcwu
 	static unsigned char lastcomment_minute = 0;
@@ -2726,22 +2709,9 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
     if(type >  RECTYPE_MAX || type < 0)
 	type = RECTYPE_ARROW;
 
-    if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
-	vans("要使用小天使匿名推文嗎？ [Y/n]: ") != 'n')
-    {
-	// angel push
-	mynick[0] = 0;
-	angel_load_my_fullnick(mynick, sizeof(mynick));
-	myid = mynick;
-    }
 
-    if (aligncmt)
-    {
-	// left align, voted by LydiaWu and LadyNotorious
-	SNPRINTF(buf, "%-*s", IDLEN, myid);
-	STRLCPY(mynick, buf);
-	myid = mynick;
-    }
+
+
 
 
     if (v_multiline_text(msg, sizeof(msg), V_MULTILINE_MAX_LINES, STRLEN - 3, NULL, " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ", VMULTI_SCROLL) <= 0)
@@ -2778,7 +2748,7 @@ rate_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!bp)
 	return DONOTHING;
 
-    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
+    if (bp->brdattr & BRD_NORATING || fhdr->filename[0] == 'L' ||
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("抱歉, 禁止評分");
 	return FULLUPDATE;
