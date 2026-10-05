@@ -891,6 +891,84 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("COMMENTS_FILE verified: %s\n%s", strings.TrimSpace(cmtsHdr), string(cmtsBody))
 
+	// 30b. COMMENTS_FILE query filtered by author
+	conn30b, _ := net.Dial("unix", sockPath)
+	defer conn30b.Close()
+	conn30b.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 piaip -\n"))
+	r30b := bufio.NewReader(conn30b)
+	cmtsHdrB, _ := r30b.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrB, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE filtered by author failed: %s", cmtsHdrB)
+	}
+
+	// 30c. COMMENTS_FILE query filtered by non-existent author
+	conn30c, _ := net.Dial("unix", sockPath)
+	defer conn30c.Close()
+	conn30c.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 non_existent_user -\n"))
+	r30c := bufio.NewReader(conn30c)
+	cmtsHdrC, _ := r30c.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrC, "OK 0 0") {
+		t.Fatalf("COMMENTS_FILE filtered by non-existent author failed: %s", cmtsHdrC)
+	}
+
+	// 30d. Multiline comment and COMMENTS_FILE single-line TSV escaping test
+	conn30d, _ := net.Dial("unix", sockPath)
+	defer conn30d.Close()
+	multilineB := big5uao.Encode("第一行留言\n第二行留言\n第三行留言")
+	hdr30d := fmt.Sprintf("COMMENT gossiping M.1727800000.A.003 hungte 12345 127.0.0.1 0 %d 1\n", len(multilineB))
+	conn30d.Write([]byte(hdr30d))
+	conn30d.Write(multilineB)
+	r30d := bufio.NewReader(conn30d)
+	cmtRespD, _ := r30d.ReadString('\n')
+	if !strings.HasPrefix(cmtRespD, "OK 2") {
+		t.Fatalf("Add multiline comment failed: %s", cmtRespD)
+	}
+
+	conn30e, _ := net.Dial("unix", sockPath)
+	defer conn30e.Close()
+	conn30e.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 2 1 hungte -\n"))
+	r30e := bufio.NewReader(conn30e)
+	cmtsHdrE, _ := r30e.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrE, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE multiline query header failed: %s", cmtsHdrE)
+	}
+	cmtsBodyE, _ := io.ReadAll(r30e)
+	bodyStr := strings.TrimRight(string(cmtsBodyE), "\n")
+	tsvLines := strings.Split(bodyStr, "\n")
+	if len(tsvLines) != 1 {
+		t.Fatalf("Expected exactly 1 TSV line for multiline comment, got %d lines: %q", len(tsvLines), bodyStr)
+	}
+	if !strings.Contains(tsvLines[0], "第一行留言\t第二行留言\t第三行留言") {
+		t.Fatalf("Expected escaped newlines in TSV, got: %s", tsvLines[0])
+	}
+
+	// 30f. Test UPDATE_COMMENT_FILE with multiline and verify COMMENTS_FILE returns \r
+	conn30f, _ := net.Dial("unix", sockPath)
+	defer conn30f.Close()
+	multilineUpdateB := big5uao.Encode("修改第一行\n修改第二行\n修改第三行")
+	hdr30f := fmt.Sprintf("UPDATE_COMMENT_FILE gossiping M.1727800000.A.003 1 piaip %d\n", len(multilineUpdateB))
+	conn30f.Write([]byte(hdr30f))
+	conn30f.Write(multilineUpdateB)
+	r30f := bufio.NewReader(conn30f)
+	upRespF, _ := r30f.ReadString('\n')
+	if !strings.HasPrefix(upRespF, "OK") {
+		t.Fatalf("UPDATE_COMMENT_FILE with multiline failed: %s", upRespF)
+	}
+
+	conn30g, _ := net.Dial("unix", sockPath)
+	defer conn30g.Close()
+	conn30g.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 1 piaip -\n"))
+	r30g := bufio.NewReader(conn30g)
+	cmtsHdrG, _ := r30g.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrG, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE after multiline update failed: %s", cmtsHdrG)
+	}
+	cmtsBodyG, _ := io.ReadAll(r30g)
+	bodyStrG := strings.TrimRight(string(cmtsBodyG), "\n")
+	if !strings.Contains(bodyStrG, "修改第一行	修改第二行	修改第三行") {
+		t.Fatalf("Expected \\r multiline in COMMENTS_FILE after update, got: %s", bodyStrG)
+	}
+
 	// 31. COMMENT_COUNT_FILE query via IPC
 	conn31, _ := net.Dial("unix", sockPath)
 	defer conn31.Close()

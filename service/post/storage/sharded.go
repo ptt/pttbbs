@@ -185,6 +185,10 @@ func (s *ShardedEngine) GetComments(postID uint64, startFloor, limit uint32) ([]
 	return s.GetEngineByPostID(postID).GetComments(postID, startFloor, limit)
 }
 
+func (s *ShardedEngine) GetCommentsFiltered(postID uint64, startFloor, limit uint32, author, authorToken string) ([]*model.Comment, error) {
+	return s.GetEngineByPostID(postID).GetCommentsFiltered(postID, startFloor, limit, author, authorToken)
+}
+
 func (s *ShardedEngine) GetCommentCount(postID uint64) (int, error) {
 	return s.GetEngineByPostID(postID).GetCommentCount(postID)
 }
@@ -195,6 +199,10 @@ func (s *ShardedEngine) GetCommentCountByCommunityFile(community, postFile strin
 
 func (s *ShardedEngine) GetCommentsByCommunityFile(community, postFile string, startFloor, limit uint32) ([]*model.Comment, error) {
 	return s.GetEngineByCommunity(community).GetCommentsByCommunityFile(community, postFile, startFloor, limit)
+}
+
+func (s *ShardedEngine) GetCommentsByCommunityFileFiltered(community, postFile string, startFloor, limit uint32, author, authorToken string) ([]*model.Comment, error) {
+	return s.GetEngineByCommunity(community).GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, author, authorToken)
 }
 
 func (s *ShardedEngine) PurgeUserComments(author string, maxAge time.Duration) (int, error) {

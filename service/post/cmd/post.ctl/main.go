@@ -1223,9 +1223,10 @@ func printCommentsTable(resp string, payload []byte) {
 		ts, _ := strconv.ParseInt(cols[2], 10, 64)
 		dateStr := time.Unix(ts, 0).Format("01/02 15:04")
 		ip := cols[3]
-		isDel := cols[4] == "1"
+		typeVal, _ := strconv.Atoi(cols[4])
+		isDel := (typeVal < 0)
 		reason := cols[5]
-		content := cols[6]
+		content := strings.Join(cols[6:], " / ")
 		status := "ACTIVE"
 		if isDel {
 			status = "DELETED"
@@ -1314,3 +1315,6 @@ func printCommentHistory(resp string, payload []byte, rev int) {
 		}
 	}
 }
+
+
+

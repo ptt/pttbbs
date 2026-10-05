@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"errors"
 	"database/sql"
 	"encoding/binary"
 	"fmt"
@@ -334,6 +335,18 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		}
 	}
 
+	// Check if post already exists in SQLite
+	if p.ID == 0 && p.Community != "" && p.PostFile != "" {
+		var existingID uint64
+		err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community = ? AND post_file = ?`, p.Community, p.PostFile).Scan(&existingID)
+		if err == nil && existingID > 0 {
+			p.ID = existingID
+			key := model.EncodePostKey(p.ID)
+			_ = e.postsDB.Set(key, model.EncodeRFC822Post(p), pebble.NoSync)
+			return p, nil
+		}
+	}
+
 	// 1. Insert into SQLite to get unique ID if not provided
 	if p.ID == 0 {
 		if e.cfg.NumShards > 1 {
@@ -415,6 +428,20 @@ func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	key := model.EncodePostKey(postID)
 	val, closer, err := e.postsDB.Get(key)
 	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			boardPath := e.BoardFilePath(&p)
+			if boardPath != "" {
+				if rawBytes, errR := os.ReadFile(boardPath); errR == nil && len(rawBytes) > 0 {
+					body := string(rawBytes)
+					if e.cfg.IsBig5() {
+						body = big5uao.DecodeSGR66(rawBytes)
+					}
+					p.Content = body
+					_ = e.postsDB.Set(key, model.EncodeRFC822Post(&p), pebble.NoSync)
+					return &p, nil
+				}
+			}
+		}
 		return nil, fmt.Errorf("get pebble post %d: %w", postID, err)
 	}
 	defer closer.Close()
@@ -770,6 +797,10 @@ func (e *Engine) lookupMaxSequence(postID uint64) uint32 {
 }
 
 func (e *Engine) GetComments(postID uint64, startFloor, limit uint32) ([]*model.Comment, error) {
+	return e.GetCommentsFiltered(postID, startFloor, limit, "", "")
+}
+
+func (e *Engine) GetCommentsFiltered(postID uint64, startFloor, limit uint32, author, authorToken string) ([]*model.Comment, error) {
 	if limit == 0 {
 		limit = 1000
 	}
@@ -782,12 +813,25 @@ func (e *Engine) GetComments(postID uint64, startFloor, limit uint32) ([]*model.
 	}
 	defer iter.Close()
 
+	var reqToken uint32
+	if authorToken != "" && authorToken != "-" && authorToken != "0" {
+		if t, err := strconv.ParseUint(authorToken, 10, 32); err == nil {
+			reqToken = uint32(t)
+		}
+	}
+
 	var comments []*model.Comment
 	for iter.SeekGE(startKey); iter.Valid() && bytes.HasPrefix(iter.Key(), prefix) && uint32(len(comments)) < limit; iter.Next() {
 		_, seq, err := model.DecodeCommentKey(iter.Key())
 		if err == nil {
 			c, err := model.DecodeRFC822Comment(postID, seq, iter.Value())
 			if err == nil {
+				if author != "" && !strings.EqualFold(c.Author, author) {
+					continue
+				}
+				if reqToken > 0 && c.AuthorToken > 0 && c.AuthorToken != reqToken {
+					continue
+				}
 				comments = append(comments, c)
 			}
 		}
@@ -806,15 +850,25 @@ func (e *Engine) GetCommentCountByCommunityFile(community, postFile string) (int
 	if err != nil {
 		return 0, err
 	}
+	if p == nil {
+		return 0, fmt.Errorf("post not found: %s/%s", community, postFile)
+	}
 	return e.GetCommentCount(p.ID)
 }
 
 func (e *Engine) GetCommentsByCommunityFile(community, postFile string, startFloor, limit uint32) ([]*model.Comment, error) {
+	return e.GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, "", "")
+}
+
+func (e *Engine) GetCommentsByCommunityFileFiltered(community, postFile string, startFloor, limit uint32, author, authorToken string) ([]*model.Comment, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return nil, err
 	}
-	return e.GetComments(p.ID, startFloor, limit)
+	if p == nil {
+		return nil, fmt.Errorf("post not found: %s/%s", community, postFile)
+	}
+	return e.GetCommentsFiltered(p.ID, startFloor, limit, author, authorToken)
 }
 
 // PurgeUserComments deletes all comments from an author created within maxAge (e.g. 7 days for anti-spam)
@@ -1529,6 +1583,13 @@ func (e *Engine) AppendCommentCache(c *model.Comment) error {
 		data = []byte(text)
 	}
 	_, err = f.Write(data)
+	boardPath := e.BoardFilePath(p)
+	if boardPath != "" && boardPath != path {
+		if fb, errB := os.OpenFile(boardPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); errB == nil {
+			_, _ = fb.Write(data)
+			_ = fb.Close()
+		}
+	}
 	return err
 }
 
@@ -2210,6 +2271,15 @@ func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editor str
 	newVal := model.EncodeRFC822Comment(currentComment)
 	if err := e.commentsDB.Set(cKey, newVal, pebble.NoSync); err != nil {
 		return 0, fmt.Errorf("update comment failed: %w", err)
+	}
+
+	// 4. Re-render and save canonical file
+	if p, err := e.GetPost(postID); err == nil && p != nil {
+		p.Modified = now
+		e.metaWriteMu.Lock()
+		_, _ = e.metaDB.Exec("UPDATE posts SET modified = ? WHERE id = ?", now, p.ID)
+		e.metaWriteMu.Unlock()
+		_ = e.RenderAndSave(p)
 	}
 
 	return nextRev, nil

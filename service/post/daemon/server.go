@@ -456,6 +456,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		} else {
 			commentContent = string(contentBytes)
 		}
+		commentContent = strings.ReplaceAll(commentContent, "\r\n", "\n")
+		commentContent = strings.ReplaceAll(commentContent, "\r", "\n")
 
 		var legType uint8 = model.LegacyTypeArrow
 		if len(parts) >= 9 {
@@ -478,7 +480,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d\n", added.Sequence)))
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes)))
 
 	case "VOTE_FILE":
 		// VOTE_FILE <community> <post_file> <author> <token> <vote>\n
@@ -840,6 +842,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		outputPath := parts[3]
+		if outputPath != "-" && outputPath != "" && !filepath.IsAbs(outputPath) {
+			outputPath = filepath.Join(s.cfg.BBSHome, outputPath)
+		}
 		legacy := false
 		if len(parts) >= 5 && (strings.ToLower(parts[4]) == "legacy" || parts[4] == "1") {
 			legacy = true
@@ -891,7 +896,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d %.2f\n", totalRendered, time.Since(startTime).Seconds())))
 
 	case "FETCH_POST_FILE", "PULL_POST_FILE":
-		// FETCH_POST_FILE <community> <post_file> <target_path>
+		// FETCH_POST_FILE <community> <post_file> <target_path> [source_path]
 		if len(parts) < 4 {
 			conn.Write([]byte("ERR invalid arguments for FETCH_POST_FILE\n"))
 			return
@@ -899,10 +904,44 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		targetPath := parts[3]
+		sourcePath := ""
+		if len(parts) >= 5 && parts[4] != "-" && parts[4] != "" {
+			sourcePath = parts[4]
+		}
+
+		if !filepath.IsAbs(targetPath) {
+			targetPath = filepath.Join(s.cfg.BBSHome, targetPath)
+		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
 		if err != nil || p == nil {
-			p = s.autoImportPost(community, postFile)
+			if sourcePath != "" {
+				srcAbs := sourcePath
+				if !filepath.IsAbs(srcAbs) {
+					srcAbs = filepath.Join(s.cfg.BBSHome, srcAbs)
+				}
+				if rawBytes, rErr := os.ReadFile(srcAbs); rErr == nil && len(rawBytes) > 0 {
+					postContent := string(rawBytes)
+					if s.cfg.IsBig5() {
+						postContent = big5uao.DecodeSGR66(rawBytes)
+					}
+					t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
+					if s.cfg.IsBig5() {
+						t = big5uao.DecodeSGR66([]byte(t))
+					}
+					autoP := &model.Post{
+						Community: community,
+						PostFile:  postFile,
+						Title:     t,
+						Encoding:  "utf-8",
+						Content:   postContent,
+					}
+					p, _ = s.storage.CreatePost(autoP)
+				}
+			}
+			if p == nil {
+				p = s.autoImportPost(community, postFile)
+			}
 		}
 		if p == nil {
 			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
@@ -921,6 +960,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 				_ = s.storage.SetPostContent(p.ID, content)
 			}
 		}
+
 
 		var data []byte
 		if s.cfg.IsBig5() {
@@ -1009,6 +1049,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		} else {
 			newContent = string(contentBytes)
 		}
+		newContent = strings.ReplaceAll(newContent, "\r\n", "\n")
+		newContent = strings.ReplaceAll(newContent, "\r", "\n")
 
 		rev, newModified, err := s.storage.UpdatePost(postID, newTitle, newContent, editor, expectedModified)
 		if err != nil {
@@ -1220,7 +1262,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 			newContent = string(contentBytes)
 		}
 
-		rev, err := s.storage.UpdateCommentByCommunityFile(community, postFile, uint32(seqVal), newContent, editor)
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		rev, err := s.storage.UpdateComment(p.ID, uint32(seqVal), newContent, editor)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1394,7 +1444,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 		if len(parts) >= 6 {
 			reason = strings.Join(parts[5:], " ")
 		}
-		rev, err := s.storage.DeleteCommentByCommunityFile(community, postFile, uint32(seqVal), deleter, reason)
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		rev, err := s.storage.DeleteComment(p.ID, uint32(seqVal), deleter, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1436,7 +1494,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR invalid seq: %s\n", parts[3])))
 			return
 		}
-		if err := s.storage.UndeleteCommentByCommunityFile(community, postFile, uint32(seqVal)); err != nil {
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		if err := s.storage.UndeleteComment(p.ID, uint32(seqVal)); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
@@ -1474,19 +1540,12 @@ func (s *Server) handleIPC(conn net.Conn) {
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d %d\n", len(comments), totalCount))
 		for _, c := range comments {
-			cleanContent := strings.ReplaceAll(strings.TrimRight(c.Content, "\r\n"), "\t", " ")
-			cleanReason := strings.ReplaceAll(strings.TrimRight(c.DeleteReason, "\r\n"), "\t", " ")
-			delFlag := 0
-			if c.IsDeleted {
-				delFlag = 1
-			}
-			buf.WriteString(fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
-				c.Sequence, c.Author, c.CreatedAt, c.IP, delFlag, cleanReason, cleanContent))
+			buf.WriteString(formatTSVComment(c))
 		}
 		conn.Write(buf.Bytes())
 
 	case "COMMENTS_FILE":
-		// COMMENTS_FILE <community> <post_file> [start [limit]]
+		// COMMENTS_FILE <community> <post_file> [start [limit [author [author_token]]]]
 		if len(parts) < 3 {
 			conn.Write([]byte("ERR invalid arguments for COMMENTS_FILE\n"))
 			return
@@ -1505,23 +1564,31 @@ func (s *Server) handleIPC(conn net.Conn) {
 				limit = uint32(l)
 			}
 		}
-		comments, err := s.storage.GetCommentsByCommunityFile(community, postFile, startFloor, limit)
+		author := ""
+		if len(parts) >= 6 && parts[5] != "-" {
+			author = parts[5]
+		}
+		token := ""
+		if len(parts) >= 7 && parts[6] != "-" {
+			token = parts[6]
+		}
+		p, _ := s.storage.GetPostByCommunityFile(community, postFile)
+		if p == nil {
+			_ = s.autoImportPost(community, postFile)
+		}
+		comments, err := s.storage.GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, author, token)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
 		totalCount, _ := s.storage.GetCommentCountByCommunityFile(community, postFile)
+		if author != "" {
+			totalCount = len(comments)
+		}
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d %d\n", len(comments), totalCount))
 		for _, c := range comments {
-			cleanContent := strings.ReplaceAll(strings.TrimRight(c.Content, "\r\n"), "\t", " ")
-			cleanReason := strings.ReplaceAll(strings.TrimRight(c.DeleteReason, "\r\n"), "\t", " ")
-			delFlag := 0
-			if c.IsDeleted {
-				delFlag = 1
-			}
-			buf.WriteString(fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
-				c.Sequence, c.Author, c.CreatedAt, c.IP, delFlag, cleanReason, cleanContent))
+			buf.WriteString(formatTSVComment(c))
 		}
 		conn.Write(buf.Bytes())
 
@@ -1673,8 +1740,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			var buf bytes.Buffer
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
-				cleanContent := strings.ReplaceAll(strings.TrimRight(r.Content, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanContent))
+				buf.WriteString(formatTSVCommentRevision(r))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1716,8 +1782,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			var buf bytes.Buffer
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
-				cleanContent := strings.ReplaceAll(strings.TrimRight(r.Content, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanContent))
+				buf.WriteString(formatTSVCommentRevision(r))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1795,4 +1860,48 @@ func (s *Server) handleIPC(conn net.Conn) {
 	default:
 		conn.Write([]byte(fmt.Sprintf("ERR unknown command: %s\n", cmd)))
 	}
+}
+
+func formatTSVComment(c *model.Comment) string {
+	cleanReason := strings.ReplaceAll(strings.TrimRight(c.DeleteReason, "\r\n"), "\t", " ")
+	typeVal := int(c.LegacyType)
+	if c.IsDeleted {
+		typeVal = -1
+	}
+
+	rawContent := strings.ReplaceAll(c.Content, "\r\n", "\n")
+	rawContent = strings.ReplaceAll(rawContent, "\r", "\n")
+	rawLines := strings.Split(rawContent, "\n")
+	var contentLines []string
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			contentLines = append(contentLines, strings.ReplaceAll(trimmed, "\t", " "))
+		}
+	}
+	contentField := strings.Join(contentLines, "\t")
+	if contentField == "" {
+		contentField = " "
+	}
+
+	return fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
+		c.Sequence, c.Author, c.CreatedAt, c.IP, typeVal, cleanReason, contentField)
+}
+
+func formatTSVCommentRevision(r *model.CommentRevision) string {
+	rawContent := strings.ReplaceAll(r.Content, "\r\n", "\n")
+	rawContent = strings.ReplaceAll(rawContent, "\r", "\n")
+	rawLines := strings.Split(rawContent, "\n")
+	var contentLines []string
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			contentLines = append(contentLines, strings.ReplaceAll(trimmed, "\t", " "))
+		}
+	}
+	contentField := strings.Join(contentLines, "\t")
+	if contentField == "" {
+		contentField = " "
+	}
+	return fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, contentField)
 }
