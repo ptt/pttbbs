@@ -4,6 +4,31 @@
 #include <syslog.h>
 #include "../pttbbs.conf"
 
+/////////////////////////////////////////////////////////////////////////////
+// Configuration Helper: IS_ENABLED()
+//
+// 仿 Linux Kernel 的 IS_ENABLED 巨集，可以 if (IS_ENABLED(CONFIG_XXX))
+// 進行編譯期條件判斷，讓編譯器執行 Dead Code Elimination,
+// 同時保留語法與型別檢查，避免 #ifdef 造成的不可預期性。
+//
+// 行為規則：
+//   - 未定義 (Undefined)              -> 0 (false)
+//   - 定義為 0 (#define CONFIG_XXX 0)  -> 0 (false)
+//   - 空定義   (#define CONFIG_XXX)    -> 1 (true)
+//   - 定義為 1 (#define CONFIG_XXX 1)  -> 1 (true)
+//
+// 注意由於我們沒有使用 Kconfig, 在這裡 #define CONFIG_XXX 的行為與 Linux
+// 不同。 Linux kernel 會視為 false, 這裡視為 true。
+//
+#define __ARG_PLACEHOLDER_          0,
+#define __ARG_PLACEHOLDER_1         0,
+#define _config_val(val)            __ARG_PLACEHOLDER_##val
+#define _config_test(arg1_or_junk)  ___config_test(arg1_or_junk 1, 0)
+#define ___config_test(__ignored, val, ...) val
+#define _config_enabled(cfg)        _config_test(_config_val(cfg))
+#define IS_ENABLED(option)          _config_enabled(option)
+
+
 #define BBSPROG         BBSHOME "/bin/mbbsd"         /* 主程式 */
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
 #define LOAD_FILE       "/proc/loadavg"              /* for Linux */
