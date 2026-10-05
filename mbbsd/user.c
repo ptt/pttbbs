@@ -1072,7 +1072,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    } else if (searchuser(genbuf, NULL)) {
 		outs("錯誤! 已經有同樣 ID 的使用者\n");
 		fail++;
-#if !defined(NO_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
+#if IS_ENABLED(CONFIG_CHECK_AMBIGUOUS_USERID) && defined(USE_REGCHECKD)
 	    } else if ( regcheck_ambiguous_userid_exist(genbuf) > 0 &&
 			vans("此代號過於近似它人帳號，"
                              "確定使用者沒有要幹壞事嗎? [y/N] ") != 'y')

@@ -1973,7 +1973,7 @@ write_header(FILE * fp,  const char *mytitle)
 	STRLCPY(postlog.author, cuser.userid);
 	if (curr_buf)
 	    curr_buf->ifuseanony = 0;
-#ifdef HAVE_ANONYMOUS
+#if IS_ENABLED(CONFIG_ANONYMOUS)
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
             char default_name[IDLEN + 1] = "";
@@ -2202,8 +2202,8 @@ browse_sigs:
 	    }
 	}
     }
-#ifdef HAVE_ORIGIN
-#ifdef HAVE_ANONYMOUS
+#if IS_ENABLED(CONFIG_ORIGIN)
+#if IS_ENABLED(CONFIG_ANONYMOUS)
     if (ifuseanony)
         addsimplesignature(fp, "匿名天使的家");
     else

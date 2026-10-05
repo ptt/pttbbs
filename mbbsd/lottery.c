@@ -271,7 +271,7 @@ doesnt_catch_up:
     return -1;
 }
 
-#ifndef NO_GAMBLE
+#if IS_ENABLED(CONFIG_GAMBLE)
 int
 openticket(int bid)
 {
@@ -419,7 +419,7 @@ int
 join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
             const char *direct GCC_UNUSED)
 {
-#ifdef NO_GAMBLE
+#if !IS_ENABLED(CONFIG_GAMBLE)
     return DONOTHING;
 #else
 
@@ -438,7 +438,7 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
 int
 hold_gamble(void)
 {
-#ifdef NO_GAMBLE
+#if !IS_ENABLED(CONFIG_GAMBLE)
     return DONOTHING;
 #else
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
@@ -518,6 +518,7 @@ hold_gamble(void)
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
+    time4_t endgamble = bp->endgamble;
     move(6, 0);
     SNPRINTF(genbuf, "\n請到 %s 板 按'f'參與樂透!\n\n"
 	     "一張 %d " MONEYNAME " (%s)\n%s%s\n",
@@ -525,7 +526,7 @@ hold_gamble(void)
 	     i, i < 100 ? "迷你級" : i < 500 ? "平民級" :
 	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
 	     bp->endgamble ? "樂透結束時間: " : "",
-	     bp->endgamble ? Cdate(&bp->endgamble) : ""
+	     endgamble ? Cdate(&endgamble) : ""
 	     );
     strcat(msg, genbuf);
     outs("請依次輸入彩券名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");

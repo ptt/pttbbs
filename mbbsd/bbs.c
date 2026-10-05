@@ -1411,7 +1411,7 @@ do_post_article(int edflags)
     tn_safe_strip(save_title);
 
     /* set owner to Anonymous for Anonymous board */
-#ifdef HAVE_ANONYMOUS
+#if IS_ENABLED(CONFIG_ANONYMOUS)
     /* Ptt and Jaky */
     if ((currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
 	strcat(real_name, ".");

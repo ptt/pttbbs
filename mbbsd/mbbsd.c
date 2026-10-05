@@ -464,7 +464,7 @@ load_current_user(const char *uid)
 #ifdef STR_REGNEW
     if (!is_admin_only && strcasecmp(uid, STR_REGNEW) == 0) {
 
-# ifndef LOGINASNEW
+# if !IS_ENABLED(CONFIG_LOGINASNEW)
 	assert(false);
 	exit(0);
 # endif // !LOGINASNEW
@@ -518,7 +518,7 @@ load_current_user(const char *uid)
 	LOCAL_LOGIN_MOD();
 #endif
 	if (strcasecmp(str_sysop, cuser.userid) == 0){
-#ifdef NO_SYSOP_ACCOUNT
+#if !IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
 	    exit(0);
 #else /* 自動加上各個主要權限 */
 	    // TODO only allow in local connection?
@@ -644,7 +644,7 @@ login_query(char *ruid)
 
 #ifdef STR_REGNEW
 	} else if (strcasecmp(uid, STR_REGNEW) == 0) {
-# ifndef LOGINASNEW
+# if !IS_ENABLED(CONFIG_LOGINASNEW)
 	    outs("本系統目前無法以 " STR_REGNEW " 註冊"
 #  ifdef STR_GUEST
 		 ", 請用 " STR_GUEST " 進入"
@@ -1861,7 +1861,7 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 
     // if you have your own banner, define as INSCREEN in pttbbs.conf
     // if you don't want anny benner, define NO_INSCREEN
-#ifndef NO_INSCREEN
+#if IS_ENABLED(CONFIG_INSCREEN)
 # ifndef   INSCREEN
 #  define  INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
 # endif

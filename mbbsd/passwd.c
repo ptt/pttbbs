@@ -6,7 +6,7 @@
 #error sorry, mbbsd/passwd.c does not support utility mode anymore. please use libcmbbs instead.
 #endif
 
-#ifndef NO_CONST_CUSER
+#if IS_ENABLED(CONFIG_CONST_CUSER)
  #undef  cuser
  #define cuser pwcuser
 #endif
