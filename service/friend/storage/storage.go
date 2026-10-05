@@ -168,5 +168,3 @@ func LoadFriendLists(bbsHome string, subscriberUserID string) (friends []string,
 	}
 	return friends, rejects, nil
 }
-
-

@@ -28,25 +28,25 @@ import (
 )
 
 const (
-	SearchSvcMagic       uint32 = 0x53524348 // "SRCH" (legacy V1)
-	SearchSvcMagicV2     uint32 = 0x53524332 // "SRC2" (V2 with explicit source)
-	SearchAIDMagic       uint32 = 0x53414944 // "SAID" (legacy V1)
-	SearchAIDMagicV2     uint32 = 0x53414932 // "SAI2" (V2 with explicit source)
-	SearchInvalMagic     uint32 = 0x53494E56 // "SINV"
-	SearchHintMagic      uint32 = 0x53484E54 // "SHNT"
-	MaxSearchPredicates  int32  = 8
-	DefaultMaxEntries    int    = 2048
-	DefaultMaxIndices    int64  = 16 * 1024 * 1024 // 16M int32s (~64MB)
-	DefaultMaxAIDEntries     int           = 16384 // 16K AID cache entries (~2.5MB)
-	DefaultMaxAIDTables      int           = 64    // 64 boards with in-memory AID table (~30-60MB)
-	DefaultAIDTableMinReqs   int64         = 100   // Min cumulative queries (search + aid) before admitting board to AID table cache
+	SearchSvcMagic           uint32        = 0x53524348 // "SRCH" (legacy V1)
+	SearchSvcMagicV2         uint32        = 0x53524332 // "SRC2" (V2 with explicit source)
+	SearchAIDMagic           uint32        = 0x53414944 // "SAID" (legacy V1)
+	SearchAIDMagicV2         uint32        = 0x53414932 // "SAI2" (V2 with explicit source)
+	SearchInvalMagic         uint32        = 0x53494E56 // "SINV"
+	SearchHintMagic          uint32        = 0x53484E54 // "SHNT"
+	MaxSearchPredicates      int32         = 8
+	DefaultMaxEntries        int           = 2048
+	DefaultMaxIndices        int64         = 16 * 1024 * 1024 // 16M int32s (~64MB)
+	DefaultMaxAIDEntries     int           = 16384            // 16K AID cache entries (~2.5MB)
+	DefaultMaxAIDTables      int           = 64               // 64 boards with in-memory AID table (~30-60MB)
+	DefaultAIDTableMinReqs   int64         = 100              // Min cumulative queries (search + aid) before admitting board to AID table cache
 	DefaultAIDTableTTL       time.Duration = 1 * time.Hour
 	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
-	DefaultWebSearchMaxDepth int           = 0 // Max records to scan backwards for web tail search (0 = unlimited)
+	DefaultWebSearchMaxDepth int           = 0   // Max records to scan backwards for web tail search (0 = unlimited)
 	DefaultCacheTTL                        = 1 * time.Hour
-	aiduRawMask          uint64 = 0x00001FFFFFFFFFFF
-	aiduTypeG            uint64 = 1 << 44
-	aiduIdxShift                = 45
+	aiduRawMask              uint64        = 0x00001FFFFFFFFFFF
+	aiduTypeG                uint64        = 1 << 44
+	aiduIdxShift                           = 45
 )
 
 const (
@@ -368,7 +368,7 @@ func (t *BoardAIDTable) SearchAID(targetAIDU uint64) int32 {
 	}
 
 	// 2. Binary search by timestamp
-	low, high := 0, len(t.aids) - 1
+	low, high := 0, len(t.aids)-1
 	mid := 0
 	for low <= high {
 		mid = low + (high-low)/2
@@ -618,22 +618,22 @@ func NewService(bbsHome, socketPath string) (*Service, error) {
 // newService creates the service with an optional SHM (nil only in tests).
 func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 	return &Service{
-		bbsHome:       bbsHome,
-		socketPath:    socketPath,
-		shm:           shm,
-		startTime:     time.Now(),
-		entries:       make(map[cacheKey]*cacheEntry),
-		lruList:       list.New(),
-		maxEntries:    DefaultMaxEntries,
-		maxIndices:    DefaultMaxIndices,
-		cacheTTL:      DefaultCacheTTL,
-		aidEntries:    make(map[aidCacheKey]*aidCacheEntry),
-		aidLRU:        list.New(),
-		maxAIDEntries: DefaultMaxAIDEntries,
-		inflight:      make(map[cacheKey]*inflightCall),
-		aidInflight:   make(map[aidCacheKey]*aidInflightCall),
-		boards:        make(map[string]*boardActivity),
-		backtrack:     make(map[string]*BoardBacktrackInfo),
+		bbsHome:           bbsHome,
+		socketPath:        socketPath,
+		shm:               shm,
+		startTime:         time.Now(),
+		entries:           make(map[cacheKey]*cacheEntry),
+		lruList:           list.New(),
+		maxEntries:        DefaultMaxEntries,
+		maxIndices:        DefaultMaxIndices,
+		cacheTTL:          DefaultCacheTTL,
+		aidEntries:        make(map[aidCacheKey]*aidCacheEntry),
+		aidLRU:            list.New(),
+		maxAIDEntries:     DefaultMaxAIDEntries,
+		inflight:          make(map[cacheKey]*inflightCall),
+		aidInflight:       make(map[aidCacheKey]*aidInflightCall),
+		boards:            make(map[string]*boardActivity),
+		backtrack:         make(map[string]*BoardBacktrackInfo),
 		aidTables:         make(map[string]*BoardAIDTable),
 		maxAIDTables:      DefaultMaxAIDTables,
 		aidTableMinReqs:   DefaultAIDTableMinReqs,

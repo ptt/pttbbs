@@ -380,8 +380,3 @@ func TestUppercaseHomeAndAlohaAndPriorityTruncation(t *testing.T) {
 		t.Fatalf("Expected Troll to have FriendBitHRM from Alice (sid=5), got flags=0x%x sid=%d", tFlags, tSid)
 	}
 }
-
-
-
-
-
