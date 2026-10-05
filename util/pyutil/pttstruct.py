@@ -164,15 +164,15 @@ DISP_TTLEN = 46
 FILEHEADER_FMT = (
         ("filename", "%ds" % FNLEN),
         ("modified", "I"),
-        ("pad", "B"),
-        ("recommend", "b"),
+        ("downvote", "B"),
+        ("upvote", "B"),
         ("owner", "%ds" % (IDLEN + 2)),
         ("date", "6s"),
         ("title", "%ds" % (TTLEN + 1)),
         ("pad2", "B"),
         ("multi", "i"),
-        ("filemode", "B"),
-        ("pad3", "3s"))
+        ("filemode", "H"),
+        ("comments", "H"))
 
 FILEHEADER_SIZE = 128
 

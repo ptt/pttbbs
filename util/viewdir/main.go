@@ -18,30 +18,33 @@ import (
 
 // RawFileHeader represents fileheader_t structure in PTT (128 bytes)
 type RawFileHeader struct {
-	Filename  [28]byte
-	Modified  uint32
-	Pad       byte
-	Recommend int8
-	Owner     [14]byte
-	Date      [6]byte
-	Title     [65]byte
-	Pad2      byte
-	Multi     uint32
-	Filemode  uint8
-	Pad3      [3]byte
+	Filename [28]byte
+	Modified uint32
+	Downvote uint8
+	Upvote   uint8
+	Owner    [14]byte
+	Date     [6]byte
+	Title    [65]byte
+	Pad2     byte
+	Multi    uint32
+	Filemode uint16
+	Comments uint16
 }
 
 type ArticleHeader struct {
 	Filename  string
 	Modified  uint32
+	Downvote  uint8
+	Upvote    uint8
 	Recommend int8
+	Comments  uint16
 	Owner     string
 	Date      string
 	Title     string
-	Filemode  uint8
+	Filemode  uint16
 }
 
-const FILE_SOLVED uint8 = 0x10
+const FILE_SOLVED uint16 = 0x10
 
 type ViewMode int
 
@@ -221,7 +224,10 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 		articles = append(articles, ArticleHeader{
 			Filename:  filename,
 			Modified:  raw.Modified,
-			Recommend: raw.Recommend,
+			Downvote:  raw.Downvote,
+			Upvote:    raw.Upvote,
+			Recommend: int8(int(raw.Upvote) - int(raw.Downvote)),
+			Comments:  raw.Comments,
 			Owner:     owner,
 			Date:      date,
 			Title:     title,
@@ -1193,7 +1199,7 @@ func (app *AppState) toggleSolve() {
 	_ = updateArticleFilemode(app.dirPath, idxInAll, newFilemode)
 }
 
-func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint8) error {
+func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint16) error {
 	if articleIdx < 0 {
 		return fmt.Errorf("invalid article index")
 	}

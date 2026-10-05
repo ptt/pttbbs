@@ -293,8 +293,8 @@ typedef struct boardheader_t { /* 256 bytes */
 typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
     time4_t modified;		     /* last modified time */
-    char    pad;		     /* padding, not used */
-    char    recommend;               /* important level */
+    uint8_t downvote;
+    uint8_t upvote;  // was: 'recommend'
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
@@ -314,7 +314,7 @@ typedef struct fileheader_t { /* 128 bytes */
     }	    multi;
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
-    char    pad3[2];
+    uint16_t comments;
 } PACKSTRUCT fileheader_t;
 
 #define FILE_LOCAL      0x0001  /* local saved,  non-mail */

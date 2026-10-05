@@ -52,9 +52,12 @@ static int c_fhdr_size(void) {
 }
 
 enum {
-    FHDR_OFF_RECOMMEND = offsetof(fileheader_t, recommend),
+    FHDR_OFF_DOWNVOTE  = offsetof(fileheader_t, downvote),
+    FHDR_OFF_UPVOTE    = offsetof(fileheader_t, upvote),
+    FHDR_OFF_RECOMMEND = offsetof(fileheader_t, upvote),
     FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
     FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
+    FHDR_OFF_COMMENTS  = offsetof(fileheader_t, comments),
 };
 
 static int64_t c_get_board_srexpire(int bid) {
@@ -115,7 +118,7 @@ static int c_append_fileheader(const char *direct, const char *filename,
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.recommend = (int8_t)recommend;
+    fh.upvote = (uint8_t)recommend;
     fh.multi.money = money;
     return append_fileheader(direct, &fh);
 }
@@ -826,9 +829,12 @@ const (
 	FILE_MARKED        = int(C.FILE_MARKED)
 	FILE_BOTTOM        = int(C.FILE_BOTTOM)
 
+	FHDR_OFF_DOWNVOTE  = int(C.FHDR_OFF_DOWNVOTE)
+	FHDR_OFF_UPVOTE    = int(C.FHDR_OFF_UPVOTE)
 	FHDR_OFF_RECOMMEND = int(C.FHDR_OFF_RECOMMEND)
 	FHDR_OFF_OWNER     = int(C.FHDR_OFF_OWNER)
 	FHDR_OFF_FILEMODE  = int(C.FHDR_OFF_FILEMODE)
+	FHDR_OFF_COMMENTS  = int(C.FHDR_OFF_COMMENTS)
 )
 
 func PredSize() int {

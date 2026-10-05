@@ -194,7 +194,7 @@ int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *filep
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg);
 int CommentUpdateRecord(const char *board, const char *file, int seq, const char *msg, const char *editor);
-int RatePostRecord(const char *board, const char *file, int vote);
+int RatePostRecord(const char *board, const char *direct, fileheader_t *fhdr, int ent, int vote);
 #define VotePostRecord RatePostRecord
 int CrosspostRecord(const char *src_board, const char *src_file,
                     const char *target_board, const char *target_file);
@@ -212,7 +212,8 @@ int CommentUndeleteRecord(const char *board, const char *file, int seq);
 int CommentsUserHasComments(const char *board, const char *file, const char *userid);
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
-                    char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
+                    int up_delta, int down_delta, int comments_delta,
+                    void *multi, uint8_t enable_modes, uint8_t disable_modes);
 
 /* psb (page and service browser) */
 int psb_view_edit_history(const char *base, const char *subject,

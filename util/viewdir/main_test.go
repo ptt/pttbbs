@@ -14,6 +14,15 @@ func createMockDirFile(t *testing.T, dirFile string, articles []ArticleHeader) {
 	for _, art := range articles {
 		var raw RawFileHeader
 		copy(raw.Filename[:], art.Filename)
+		raw.Modified = art.Modified
+		raw.Downvote = art.Downvote
+		raw.Upvote = art.Upvote
+		raw.Comments = art.Comments
+		if art.Recommend > 0 && art.Upvote == 0 {
+			raw.Upvote = uint8(art.Recommend)
+		} else if art.Recommend < 0 && art.Downvote == 0 {
+			raw.Downvote = uint8(-art.Recommend)
+		}
 		copy(raw.Owner[:], art.Owner)
 		copy(raw.Date[:], art.Date)
 		b5Title := encodeToBig5(art.Title)

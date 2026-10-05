@@ -82,11 +82,14 @@ func ReadArticleFile(path string) ([]byte, error) {
 type FileHeader struct {
 	Filename  string
 	Modified  uint32
+	Downvote  uint8
+	Upvote    uint8
 	Recommend int8
 	Owner     string
 	Date      string
 	Title     string
 	Filemode  uint16
+	Comments  uint16
 }
 
 func cString(b []byte) string {
@@ -103,20 +106,26 @@ func UnpackFileHeader(buf []byte) (*FileHeader, error) {
 	}
 	fn := cString(buf[0:28])
 	mod := binary.LittleEndian.Uint32(buf[28:32])
+	downvote := buf[32]
+	upvote := buf[33]
 	rec := int8(buf[33])
 	owner := cString(buf[34:48])
 	date := cString(buf[48:54])
 	title := cString(buf[54:119])
 	fmode := binary.LittleEndian.Uint16(buf[124:126])
+	comments := binary.LittleEndian.Uint16(buf[126:128])
 
 	return &FileHeader{
 		Filename:  fn,
 		Modified:  mod,
+		Downvote:  downvote,
+		Upvote:    upvote,
 		Recommend: rec,
 		Owner:     owner,
 		Date:      date,
 		Title:     title,
 		Filemode:  fmode,
+		Comments:  comments,
 	}, nil
 }
 

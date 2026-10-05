@@ -70,7 +70,8 @@ int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name, time4_t modified,
         const char *title, const char *owner, const char *date,
-        char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes)
+        int up_delta, int down_delta, int comments_delta,
+        void *multi, uint8_t enable_modes, uint8_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -109,11 +110,23 @@ modify_dir_lite(
     if (multi)
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
-    if (comment) {
-	comment += fhdr.recommend;
-	if (comment > MAX_RECOMMENDS) comment = MAX_RECOMMENDS;
-	else if (comment < -MAX_RECOMMENDS) comment = -MAX_RECOMMENDS;
-	fhdr.recommend = comment;
+    if (up_delta) {
+        int v = (int)fhdr.upvote + up_delta;
+        if (v < 0) v = 0;
+        else if (v > 255) v = 255;
+        fhdr.upvote = (uint8_t)v;
+    }
+    if (down_delta) {
+        int v = (int)fhdr.downvote + down_delta;
+        if (v < 0) v = 0;
+        else if (v > 255) v = 255;
+        fhdr.downvote = (uint8_t)v;
+    }
+    if (comments_delta) {
+        int v = (int)fhdr.comments + comments_delta;
+        if (v < 0) v = 0;
+        else if (v > 65535) v = 65535;
+        fhdr.comments = (uint16_t)v;
     }
 
 
@@ -129,7 +142,7 @@ modify_dir_lite(
 	    syncnow();
 	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 	}
-	search_svc_hint_comment(currboard, currbid, ent, fhdr.recommend);
+	search_svc_hint_comment(currboard, currbid, ent, (int)fhdr.upvote);
     }
     return 0;
 }
@@ -808,18 +821,22 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     isonline = query_online(ent->owner);
 
+    int score = (int)ent->upvote - (int)ent->downvote;
+
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
-    else if(ent->recommend >= MAX_RECOMMENDS)
+    else if(score >= MAX_RECOMMENDS)
 	  strcpy(recom,"1m爆");
-    else if(ent->recommend>9)
-	  sprintf(recom,"3m%2d",ent->recommend);
-    else if(ent->recommend>0)
-	  sprintf(recom,"2m%2d",ent->recommend);
-    else if(ent->recommend <= -MAX_RECOMMENDS)
+    else if(score>9)
+	  sprintf(recom,"3m%2d",score);
+    else if(score>0)
+	  sprintf(recom,"2m%2d",score);
+    else if(score <= -MAX_RECOMMENDS)
 	  sprintf(recom,"0mXX");
-    else if(ent->recommend<-10)
-	  sprintf(recom,"0mX%d",-ent->recommend);
+    else if(score <= -10)
+	  sprintf(recom,"0mX%d",-score / 10);
+    else if(score < 0)
+	  sprintf(recom,"0m%2d",score);
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
@@ -1825,7 +1842,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
                 time4_t new_mod = dasht(genbuf);
                 if (new_mod > 0) {
                     fhdr->modified = new_mod;
-                    modify_dir_lite(direct, ent, fhdr->filename, new_mod, NULL, NULL, NULL, 0, NULL, 0, 0);
+                    modify_dir_lite(direct, ent, fhdr->filename, new_mod, NULL, NULL, NULL, 0, 0, 0, NULL, 0, 0);
                     brc_addlist(fhdr->filename, new_mod);
                 }
             }
@@ -1857,7 +1874,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
                     time4_t new_mod = dasht(genbuf);
                     if (new_mod > 0) {
                         fhdr->modified = new_mod;
-                        modify_dir_lite(direct, ent, fhdr->filename, new_mod, NULL, NULL, NULL, 0, NULL, 0, 0);
+                        modify_dir_lite(direct, ent, fhdr->filename, new_mod, NULL, NULL, NULL, 0, 0, 0, NULL, 0, 0);
                         brc_addlist(fhdr->filename, new_mod);
                     }
                 }
@@ -1933,7 +1950,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
                 STRLCPY(fhdr->title, save_title);
             }
             modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
-                            NULL, NULL, 0, NULL, 0, 0);
+                            NULL, NULL, 0, 0, 0, NULL, 0, 0);
             brc_addlist(fhdr->filename, fhdr->modified);
             return FULLUPDATE;
         } else if (edit_rc == POST_UPDATE_CONFLICT) {
@@ -2436,7 +2453,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	editLimits(
 		&fhdr->multi.vote_limits.logins,
 		&fhdr->multi.vote_limits.badpost);
-        if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0,
+        if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0, 0, 0,
                             &fhdr->multi, 0, 0) != 0) {
             vmsg("修改失敗，請重新進入看板再試試。");
             return FULLUPDATE;
@@ -2548,7 +2565,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
 
     if (modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
-                        tmpfhdr.owner, tmpfhdr.date, 0, NULL, 0, 0) != 0) {
+                        tmpfhdr.owner, tmpfhdr.date, 0, 0, 0, NULL, 0, 0) != 0) {
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
     }
@@ -2743,7 +2760,7 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-rate_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
+rate_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     if (!IS_ENABLED(CONFIG_RATING))
         return comment_post(ent, fhdr, direct);
@@ -2814,7 +2831,7 @@ rate_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 
     move(b_lines, 0);
     clrtoeol();
-    if (RatePostRecord(bp->brdname, fhdr->filename, vote) != 0) {
+    if (RatePostRecord(bp->brdname, direct, fhdr, ent, vote) != 0) {
 	vmsg("評分失敗");
 	return FULLUPDATE;
     }
@@ -3377,13 +3394,13 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
         if (fhdr->filemode & mode_mask) {
             // clear
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, 0, mode_mask)) != 0)
+                                       NULL, NULL, 0, 0, 0, NULL, 0, mode_mask)) != 0)
                 break;
             fhdr->filemode &= ~mode_mask;
         } else {
             // set
             if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, mode_mask, 0)) != 0)
+                                       NULL, NULL, 0, 0, 0, NULL, mode_mask, 0)) != 0)
                 break;
             fhdr->filemode |= mode_mask;
         }
@@ -3426,7 +3443,8 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-    fhdr->recommend = 0;
+    fhdr->upvote = 0;
+    fhdr->downvote = 0;
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     if (currbid > 0 && !(currmode & MODE_DIGEST)) {
@@ -3851,7 +3869,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
             return FULLUPDATE;
         }
         if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
-                            NULL, 0, NULL, FILE_BOTTOM | FILE_MARKED, 0) < 0) {
+                            NULL, 0, 0, 0, NULL, FILE_BOTTOM | FILE_MARKED, 0) < 0) {
             vmsg("置底設定失敗，請重新進入看板後再試一次。");
             return FULLUPDATE;
         }
@@ -3859,7 +3877,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
         bp->bottom[num] = aidu_with_idx(target_raw, ent);
     } else {
         if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
-                            NULL, 0, NULL, 0, FILE_BOTTOM) < 0) {
+                            NULL, 0, 0, 0, NULL, 0, FILE_BOTTOM) < 0) {
             vmsg("置底設定失敗，請重新進入看板後再試一次。");
             return FULLUPDATE;
         }

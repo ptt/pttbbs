@@ -110,7 +110,6 @@ int
 CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                  int ent, int type, const char *msg)
 {
-    int update = 0;
     BEGINSTAT(STAT_DOCOMMENT);
 
     if (!msg) {
@@ -141,14 +140,12 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
         fhdr->modified = (time4_t)now;
     }
 
-    if (type == RECTYPE_GOOD && fhdr->recommend < MAX_RECOMMENDS)
-        update = 1;
-    else if (type == RECTYPE_BAD && fhdr->recommend > -MAX_RECOMMENDS)
-        update = -1;
-    fhdr->recommend += update;
+    if (fhdr->comments < UINT16_MAX)
+        fhdr->comments++;
 
     if (modify_dir_lite(direct, ent, fhdr->filename,
-                        fhdr->modified, NULL, NULL, NULL, update, NULL, 0, 0) < 0)
+                        fhdr->modified, NULL, NULL, NULL,
+                        0, 0, 1, NULL, 0, 0) < 0)
         goto error;
 
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -172,11 +169,40 @@ CommentUpdateRecord(const char *board, const char *file, int seq, const char *ms
 }
 
 int
-RatePostRecord(const char *board, const char *file, int vote)
+RatePostRecord(const char *board, const char *direct, fileheader_t *fhdr, int ent, int vote)
 {
-    return (postsvc_cmd(NULL, 0, "VOTE_FILE %s %s %s %u %d\n",
-                        board, file, cuser.userid,
-                        (unsigned int)cuser.firstlogin, vote) == 0) ? 0 : 1;
+    char resp[64] = {0};
+    if (postsvc_cmd(resp, sizeof(resp), "VOTE_FILE %s %s %s %u %d\n",
+                    board, fhdr->filename, cuser.userid,
+                    (unsigned int)cuser.firstlogin, vote) != 0) {
+        return -1;
+    }
+
+    int up_delta = 0, down_delta = 0;
+    if (sscanf(resp, "OK %d %d", &up_delta, &down_delta) < 2) {
+        if (vote == 1)
+            up_delta = 1;
+        else if (vote == -1)
+            down_delta = 1;
+    }
+
+    int new_up = (int)fhdr->upvote + up_delta;
+    if (new_up < 0) new_up = 0;
+    else if (new_up > 255) new_up = 255;
+    fhdr->upvote = (uint8_t)new_up;
+
+    int new_down = (int)fhdr->downvote + down_delta;
+    if (new_down < 0) new_down = 0;
+    else if (new_down > 255) new_down = 255;
+    fhdr->downvote = (uint8_t)new_down;
+
+    if (direct && ent > 0) {
+        if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL,
+                            up_delta, down_delta, 0, NULL, 0, 0) < 0)
+            return -1;
+    }
+
+    return 0;
 }
 
 int

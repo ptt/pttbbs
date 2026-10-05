@@ -114,7 +114,7 @@ Post AsPost(size_t index, const fileheader_t &fh) {
   p.set_index(index);
   p.set_filename(fh.filename);
   p.set_raw_date(strings::b2u(fh.date));
-  p.set_num_recommends(fh.recommend);
+  p.set_num_recommends((int)fh.upvote - (int)fh.downvote);
   p.set_filemode(fh.filemode);
   p.set_owner(strings::b2u(fh.owner));
   p.set_title(strings::b2u(fh.title));
