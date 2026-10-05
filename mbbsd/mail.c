@@ -100,7 +100,7 @@ invalidaddr(const char *addr) {
     if (r)
         return 0;
 
-#ifdef DEBUG_FWDADDRERR
+#if IS_ENABLED(CONFIG_DEBUG_FWDADDRERR)
     clear();
     mvouts(2, 0,
            "您輸入的 email 位址錯誤 (address error)。 \n\n"
@@ -2230,7 +2230,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
                const char *direct GCC_UNUSED)
 {
     assert(is_valid_fileheader(fhdr));
-#ifdef OUTJOBSPOOL
+#if IS_ENABLED(CONFIG_OUTJOBSPOOL)
     char            address[60] = "", cmode = 1;
     char            fname[500], genbuf[PATHLEN];
     FILE           *fp;

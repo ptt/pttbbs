@@ -534,7 +534,7 @@ int fav_load(void)
 
     if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
-#ifdef CRITICAL_MEMORY
+#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
     // kcwu: dirty hack, avoid 64byte slot. use 128 instead.
     fp = (fav_t *)fav_malloc(sizeof(fav_t)+64);
 #else

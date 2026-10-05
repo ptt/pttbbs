@@ -68,7 +68,7 @@ nolfilename(nol_t * n, const char *fpath)
     SNPRINTF(n->lockfn, "%s.lock", fpath);
 }
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 void safe_delete_range(const char *fpath, int id1, int id2)
 {
     int     fd, i;
@@ -202,7 +202,7 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
     fhdr->modified = now;
 }
 
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 int
 safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle)
 {

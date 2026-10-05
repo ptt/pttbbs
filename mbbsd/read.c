@@ -82,7 +82,7 @@ TagPruner(int bid)
     apply_fileheader(direct, _iter_delete_tagged, direct);
 
     // now, delete the header
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     if(bp && !(currmode & MODE_DIGEST) &&
        bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
         safe_delete_range(currdirect, 0, 0);
@@ -439,7 +439,7 @@ reload_fh: GCC_UNUSED;
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
         ftime = 2147483647;
     } else {
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
         if (fh.filename[0] == '.' || fh.owner[0] == '-') {
             /* 游標所在文章已被刪除, 跳過, 往下找下一篇文章 */
             /* Keep fd: it is the same .DIR and reused by search_read_fh(). */
@@ -482,7 +482,7 @@ reload_fh: GCC_UNUSED;
             rk = search_read_fh(cx, &fh, i, &fd);
             if (rk < 0) goto out;
             if (rk == 0) continue;
-#ifdef SAFE_ARTICLE_DELETE
+#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
             if (fh.filename[0] == '.' || fh.owner[0] == '-') {
                 /* 這篇文章已被刪除, 跳過, 試試下一篇 */
                 continue;
@@ -649,7 +649,7 @@ forward_file(const fileheader_t * fhdr, const char *direct)
 	vmsg(MSG_FWD_ERR1);
 	break;
     case -2:
-#ifndef DEBUG_FWDADDRERR
+#if !IS_ENABLED(CONFIG_DEBUG_FWDADDRERR)
 	vmsg(MSG_FWD_ERR2);
 #endif
 	break;
@@ -705,9 +705,9 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
 		     "增加條件 推文數: ": "搜尋推文數高於多少"
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 		     " (<0則搜噓文數) "
-#endif // OLDRECOMMEND
+#endif // CONFIG_OLD_RECOMMEND
 		     "的文章: ",
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||

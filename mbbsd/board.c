@@ -589,9 +589,9 @@ b_config(void)
 
     bp = getbcache(currbid);
 
-#ifdef OLDRECOMMEND
+#if IS_ENABLED(CONFIG_OLD_RECOMMEND)
     ytitle ++;
-#endif  // OLDRECOMMEND
+#endif  // CONFIG_OLD_RECOMMEND
 #ifdef USE_AUTOCPLOG
     ytitle--;
 #endif
@@ -658,7 +658,7 @@ b_config(void)
 		ANSI_COLOR(1)"不開放":"開放"
 		);
 
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 	prints( " " ANSI_COLOR(1;36) "s" ANSI_RESET
 	        " - %s " ANSI_RESET "噓文\n",
 		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
@@ -1003,7 +1003,7 @@ b_config(void)
 		    }
 		}
 		break;
-#ifndef OLDRECOMMEND
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 	    case 's':
 		if(bp->brdattr & BRD_NORECOMMEND)
 		    bp->brdattr |= BRD_NOBOO;
