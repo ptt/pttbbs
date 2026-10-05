@@ -162,19 +162,6 @@ typedef struct {
 }   angel_beats_uid_list;
 
 ///////////////////////////////////////////////////////////////////////
-// Brc Storage Daemon
-
-#ifndef BRCSTORED_ADDR
-#define BRCSTORED_ADDR   ":5133"
-#endif
-
-enum BRCSTORED_OPERATIONS {
-    BRCSTORED_REQ_INVALID = 0,
-    BRCSTORED_REQ_READ = 'r',
-    BRCSTORED_REQ_WRITE = 'w',
-};
-
-///////////////////////////////////////////////////////////////////////
 // Comments Daemon
 
 #ifndef COMMENTD_ADDR

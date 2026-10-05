@@ -436,99 +436,6 @@ brc_update(){
     }
 }
 
-#ifdef LOG_REMOTE_BRC_FAILURE
-# define BRC_FAILURE(msg) { syncnow(); \
-    log_filef("log/brc_remote_failure.log", "%s ERR: %s", \
-              msg, command); break; }
-#else
-# define BRC_FAILURE(msg) { break; }
-#endif
-
-/**
- * Use BRC data on remote daemon.
- */
-int
-load_remote_brc() {
-    int fd;
-    int32_t len;
-    char command[PATHLEN];
-    int err = 1;
-
-    brc_size = 0;
-    SNPRINTF(command, "%c%s#%d\n",
-             BRCSTORED_REQ_READ, cuser.userid, cuser.firstlogin);
-
-    do {
-        int conn_retries = 10;
-        while (conn_retries-- > 0 &&
-               (fd = toconnectex(BRCSTORED_ADDR, 5)) < 0) {
-            mvprints(b_lines, 0, (conn_retries == 0) ?
-                     ANSI_COLOR(1;31)
-                     "無法載入最新的看板已讀未讀資料, 將使用上次備份... (#%d)"
-                     ANSI_RESET: "正在同步看板已讀未讀資料,請稍候... (#%d)",
-                     conn_retries + 1);
-            refresh();
-            sleep(1);
-        }
-        if (fd < 0) {
-            BRC_FAILURE("(load) connect");
-        }
-        if (towrite(fd, command, strlen(command)) < 0)
-            BRC_FAILURE("(load) send_command");
-        if (toread(fd, &len, sizeof(len)) < 0)
-            BRC_FAILURE("(load) read_len");
-        if (len < 0) // not found
-            break;
-        brc_get_buf(len);
-        if (len && toread(fd, brc_buf, len) < 0)
-            BRC_FAILURE("(load) read_data");
-        brc_size = len;
-        err = 0;
-    } while (0);
-
-    if (fd >= 0)
-        close(fd);
-
-    if (err) {
-        brc_release();
-        return 0;
-    }
-
-    return 1;
-}
-
-int
-save_remote_brc() {
-    int fd;
-    int32_t len;
-    char command[PATHLEN];
-    int err = 1;
-
-    SNPRINTF(command, "%c%s#%d\n",
-             BRCSTORED_REQ_WRITE, cuser.userid, cuser.firstlogin);
-    len = brc_size;
-
-    do {
-        if ((fd = toconnectex(BRCSTORED_ADDR, 10)) < 0)
-            BRC_FAILURE("(save) connect");
-        if (towrite(fd, command, strlen(command)) < 0)
-            BRC_FAILURE("(save) send_command");
-        if (towrite(fd, &len, sizeof(len)) < 0)
-            BRC_FAILURE("(save) write_len");
-        if (len && towrite(fd, brc_buf ? brc_buf : "", len) < 0)
-            BRC_FAILURE("(save) write_data");
-        err = 0;
-    } while (0);
-
-    if (fd >= 0)
-        close(fd);
-
-    if (err)
-        return 0;
-
-    return 1;
-}
-
 int
 load_local_brc() {
     char            brcfile[STRLEN];
@@ -578,9 +485,6 @@ read_brc_buf(void)
     if (brc_buf != NULL)
 	return;
 
-#ifdef USE_REMOTE_BRC
-    if (!load_remote_brc())
-#endif
     load_local_brc();
 }
 
@@ -590,15 +494,6 @@ brc_finalize(){
 	return;
 
     brc_update();
-
-#ifdef USE_REMOTE_BRC
-    if (!save_remote_brc() ||
-#ifdef REMOTE_BRC_BACKUP_DAYS
-        (is_first_login_of_today &&
-         cuser.numlogindays % REMOTE_BRC_BACKUP_DAYS == 0) ||
-#endif
-        0)
-#endif
     save_local_brc();
 
     brc_release();
