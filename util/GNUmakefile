@@ -10,7 +10,7 @@ UTIL_OBJS := util_var.o
 
 END :=
 
-# ¤U­±³o¨Çµ{¦¡, ·|³Q compile ¨Ã¥B©M $(UTIL_OBJS) Ápµ²
+# ä¸‹é¢é€™äº›ç¨‹å¼, æœƒè¢« compile ä¸¦ä¸”å’Œ $(UTIL_OBJS) è¯çµ
 CPROG_WITH_UTIL := \
 	boardlist	post		poststat	\
 	account		deluserfile	\
@@ -23,15 +23,15 @@ CPROG_WITH_UTIL := \
 	tunepasswd	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
-	munin		useractive_munin	\
+	munin		useractive_munin	chkfnlen	\
 	$(END)
 
-# ¤U­±¬O C++ ªºµ{¦¡
+# ä¸‹é¢æ˜¯ C++ çš„ç¨‹å¼
 CPP_WITH_UTIL := \
 	mergedir2	buildir2    \
 	$(END)
 
-# ¤U­±³o¨Çµ{¦¡, ·|ª½±µ³Q compile
+# ä¸‹é¢é€™äº›ç¨‹å¼, æœƒç›´æ¥è¢« compile
 CPROG_WITHOUT_UTIL := \
 	showboard	bbsrf		initbbs		merge_board	\
 	bbsmail		\
@@ -43,7 +43,7 @@ SCRIPT_PROGS := \
 	filtermail.pl	getbackup.pl	timecap_expire.sh	\
 	$(END)
 
-# ¤U­±³o¨Çµ{¦¡·|³Q install
+# ä¸‹é¢é€™äº›ç¨‹å¼æœƒè¢« install
 CPROG_WITH_UTIL_BUILD    := $(foreach p,$(CPROG_WITH_UTIL),$(if $(wildcard $(p).c),$(p)))
 CPP_WITH_UTIL_BUILD       := $(foreach p,$(CPP_WITH_UTIL),$(if $(wildcard $(p).cc),$(p)))
 CPROG_WITHOUT_UTIL_BUILD := $(foreach p,$(CPROG_WITHOUT_UTIL),$(if $(wildcard $(p).c),$(p)))
