@@ -92,25 +92,21 @@ substitute_record(const char *fpath, const void *rptr, size_t size, int id)
 int
 append_record(const char *fpath, const void *record, size_t size)
 {
-    int fd, index = -2, fsize = 0;
-
-    if ((fd = OpenCreate(fpath, O_WRONLY)) == -1)
+    autoclose int fd = OpenCreate(fpath, O_WRONLY);
+    if (fd == -1)
 	return -1;
 
     flock(fd, LOCK_EX);
+    autounlock_flock int lock_fd = fd;
 
+    int fsize = 0;
     if ((fsize = lseek(fd, 0, SEEK_END)) < 0)
-	goto out;
+	return -1;
 
-    index = fsize / size;
+    int index = fsize / size;
     lseek(fd, index * size, SEEK_SET);  // avoid offset
 
     write(fd, record, size);
-
-out:
-    flock(fd, LOCK_UN);
-    close(fd);
-
     return index + 1;
 }
 
