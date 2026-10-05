@@ -216,6 +216,7 @@ typedef struct {
     int  icurr;         // cursor (only available in userid input mode)
     Fnv32_t client_code;
     int  is_secure_connection;
+    int  is_exempt;
     char userid [IDBOXLEN]; // 14
     char pad0;  // for safety
     char hostip [IPV4LEN+1]; // 16
@@ -1415,6 +1416,7 @@ static int bot_check_post_auth_ban(login_conn_ctx *conn, int fd)
 
     if (bot_on_auth_result(conn->ctx.userid, conn->ctx.hostip,
                            auth_is_free_userid(conn->ctx.userid) != NULL,
+                           conn->ctx.is_exempt,
                            &delay_sec, msg, sizeof(msg)) < 0) {
         _mt_clear(conn);
         if (msg[0])
@@ -1674,6 +1676,9 @@ auth_user_challenge(login_ctx *ctx)
 
     // normalize user id
     strlcpy(uid, user.userid, IDLEN + 1);
+
+    if ((user.userlevel & (PERM_BM | PERM_ADMIN)) != 0)
+        ctx->is_exempt = 1;
 
     if (ctx->state == LOGIN_STATE_2FA || ctx->totp[0] != '\0')
     {
