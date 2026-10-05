@@ -458,7 +458,7 @@ func main() {
 
 	case "import-community", "import-board", "migrate-community", "migrate-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR]")
+			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -469,6 +469,7 @@ func main() {
 		commentdAddr := "-"
 		legacyFormat := false
 		dryRun := false
+		workers := 0
 
 		for i := 2; i < len(args); i++ {
 			arg := args[i]
@@ -476,6 +477,15 @@ func main() {
 				overwrite = true
 			} else if arg == "--dry-run" || arg == "-dry-run" || arg == "--dryrun" || arg == "-n" {
 				dryRun = true
+			} else if (arg == "--workers" || arg == "-workers" || arg == "-w") && i+1 < len(args) {
+				workers, _ = strconv.Atoi(args[i+1])
+				i++
+			} else if strings.HasPrefix(arg, "--workers=") {
+				workers, _ = strconv.Atoi(strings.TrimPrefix(arg, "--workers="))
+			} else if strings.HasPrefix(arg, "-workers=") {
+				workers, _ = strconv.Atoi(strings.TrimPrefix(arg, "-workers="))
+			} else if strings.HasPrefix(arg, "-w=") {
+				workers, _ = strconv.Atoi(strings.TrimPrefix(arg, "-w="))
 			} else if arg == "--limit" && i+1 < len(args) {
 				limit, _ = strconv.Atoi(args[i+1])
 				i++
@@ -531,7 +541,7 @@ func main() {
 		if dryRun {
 			dryStr = "1"
 		}
-		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdAddr, legStr, dryStr)
+		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s %d\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdAddr, legStr, dryStr, workers)
 
 		sockPath := getSocketPath()
 		conn, err := net.Dial("unix", sockPath)
@@ -547,6 +557,9 @@ func main() {
 		fmt.Printf("[*] Starting fast Go migration for board '%s'...\n", comm)
 		if dryRun {
 			fmt.Println("    Mode: dry-run (simulation only, database and disk will not be modified)")
+		}
+		if workers > 0 {
+			fmt.Printf("    Workers: %d\n", workers)
 		}
 		if renderTarget != "-" && renderTarget != "" {
 			fmt.Printf("    Render target: %s\n", renderTarget)
@@ -1149,7 +1162,7 @@ Usage:
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
-  post.ctl import-community <community> [--overwrite] [--dry-run] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR] [--re-render [target_dir]] [--legacy-format]
+  post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-addr ADDR] [--re-render [target_dir]] [--legacy-format]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
