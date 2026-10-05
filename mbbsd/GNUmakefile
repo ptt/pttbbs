@@ -20,7 +20,7 @@ PLUGOBJS  := ordersong.o angel.o timecap.o
 CHESSOBJS := chess.o chc.o chc_tab.o ch_gomo.o
 GAMEOBJS  := chicken.o lottery.o
 
-OBJS := admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o comments.o post.o \
+OBJS := admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o postsvc.o \
 	$(COREOBJS) $(ABUSEOBJS) $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
 	$(UIOBJS) $(PAGEROBJS) $(PLUGOBJS) \
 	$(CHESSOBJS) $(GAMEOBJS)

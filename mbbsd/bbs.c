@@ -1975,7 +1975,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     time4_t orig_modified = 0;
 
     if (USE_POST_SVC &&
-        PostFetchOriginal(currboard, fhdr->filename, fpath, &orig_modified) == 0) {
+        PostFetchOriginal(currboard, fhdr->filename, fpath, genbuf, &orig_modified) == 0) {
         use_post_svc_edit = 1;
         oldsz = dashs(fpath);
     } else {
@@ -2345,7 +2345,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
             // use do_add_recommend to log forward info and also modify the file
             // record
-            CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW, NULL, buf);
+            CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW, NULL);
 	} else
 #endif
 	{
@@ -3091,7 +3091,7 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
         }
     }
 
-    if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
+    if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg) < 0)
         return DIRCHANGED;
 
     lastcomment = now;

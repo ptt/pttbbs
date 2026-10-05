@@ -164,9 +164,8 @@ int ccw_chat(int fd);			// common chat window: chatroom
 /* comments */
 #if defined(USE_COMMENTD) || defined(USE_POST_SVC)
 struct CommentsBodyReq;
-int CommentsAddRecord(const char *board, const char *file,
-                      int type, const char *msg);
 void *CommentsOpen(const char *board, const char *file);
+void *CommentsOpenUser(const char *board, const char *file, const char *userid, const char *token);
 int CommentsClose(void *ctx);
 int CommentsGetCount(void *ctx);
 const struct CommentBodyReq *CommentsRead(void *ctx, int i);
@@ -195,12 +194,15 @@ enum {
 /* post & comment storage */
 int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *filepath);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
-                     int ent, int type, const char *msg, const char *formatted);
-int VotePostRecord(const char *board, const char *file, int vote);
+                     int ent, int type, const char *msg);
+int CommentUpdateRecord(const char *board, const char *file, int seq, const char *msg, const char *editor);
+int RatePostRecord(const char *board, const char *file, int vote);
+#define VotePostRecord RatePostRecord
 int CrosspostRecord(const char *src_board, const char *src_file,
                     const char *target_board, const char *target_file);
 int PostFetchOriginal(const char *board, const char *file, const char *out_path,
-                     time4_t *out_modified);
+                     const char *src_path, time4_t *out_modified);
+int PostRenderFile(const char *board, const char *file, const char *out_path);
 int PostUpdateRecord(const char *board, const char *file, const char *title,
                      const char *filepath, time4_t expected_modified,
                      time4_t *out_latest_modified);
@@ -209,13 +211,14 @@ int PostDeleteRecord(const char *board, const char *file, const char *deleter, c
 int PostUndeleteRecord(const char *board, const char *file);
 int CommentDeleteRecord(const char *board, const char *file, int seq, const char *deleter, const char *reason);
 int CommentUndeleteRecord(const char *board, const char *file, int seq);
+int CommentsUserHasComments(const char *board, const char *file, const char *userid);
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
                     char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
 
-void FormatCommentString(char *buf, size_t szbuf, int type,
-                         const char *myid, int maxlength,
-                         const char *msg, const char *tail);
+static inline void FormatCommentString(char *b, size_t sz, int t, const char *u, int l, const char *m, const char *tail) {
+    (void)b; (void)sz; (void)t; (void)u; (void)l; (void)m; (void)tail;
+}
 
 /* psb (page and service browser) */
 int psb_view_edit_history(const char *base, const char *subject,
@@ -223,6 +226,7 @@ int psb_view_edit_history(const char *base, const char *subject,
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
 int psb_comment_manager(const char *board, const char *file);
+int psb_comment_editor(const char *board, const char *file, const char *userid);
 
 /* chc */
 void chc(int s, ChessGameMode mode);

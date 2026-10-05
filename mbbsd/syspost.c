@@ -7,7 +7,6 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     FILE           *fp;
     int             bid;
     fileheader_t    fhdr;
-    char	    dirfn[PATHLEN];
 
     /* 在 bname 板發表新文章 */
     setbpath(fname, bname);
@@ -29,10 +28,10 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     /* 將檔案加入列表 */
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
-    setbdir(dirfn, bname);
-    if (append_fileheader(dirfn, &fhdr) != -1)
+    if (PostAddRecord(bname, &fhdr, fname) == 0) {
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
+    }
     return 0;
 }
 
