@@ -193,7 +193,7 @@ enum {
 };
 
 /* post & comment storage */
-int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
+int PostAddRecord(const char *board, const fileheader_t *fhdr, const char *filepath);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 int VotePostRecord(const char *board, const char *file, int vote);

@@ -1489,20 +1489,25 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (rename(genbuf, fpath) == -1)
-    {
-        unlink(genbuf);
-        unlink(fpath);
-        return -1;
-    }
+    if (USE_POST_SVC) {
+        if (PostAddRecord(currboard, &postfile, genbuf) == -1) {
+            unlink(genbuf);
+            return -1;
+        }
+    } else {
+        if (rename(genbuf, fpath) == -1)
+        {
+            unlink(genbuf);
+            unlink(fpath);
+            return -1;
+        }
 
-    if (PostAddRecord(currboard, &postfile, dashc(fpath)) == -1)
-    {
-        unlink(fpath);
+        if (PostAddRecord(currboard, &postfile, fpath) == -1)
+        {
+            unlink(fpath);
+        }
     }
-    else
-    {
-	setbtotal(currbid);
+    setbtotal(currbid);
 
         if (LOG_CONF_POST) {
             char bfilepath[PATHLEN];
@@ -1606,7 +1611,6 @@ do_post_article(int edflags)
 
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
-    }
     pressanykey();
     return FULLUPDATE;
 }
@@ -2356,9 +2360,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
 	setbdir(fname, xboard);
-	append_fileheader(fname, &xfile);
 	setbtotal(getbnum(xboard));
-	PostAddRecord(xboard, &xfile, dashc(xfpath));
+	PostAddRecord(xboard, &xfile, xfpath);
 	CrosspostRecord(currboard, fhdr->filename, xboard, xfile.filename);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 

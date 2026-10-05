@@ -6,32 +6,82 @@ static inline int connect_post_svc() {
 }
 
 int
-PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNUSED)
+PostAddRecord(const char *board, const fileheader_t *fhdr, const char *filepath)
 {
     char dir[PATHLEN];
     setbdir(dir, board);
-    if (append_fileheader(dir, fhdr) == -1)
-        return -1;
 
-    if(!USE_POST_SVC)
-        return 0;
+    if (USE_POST_SVC && filepath) {
+        int s = connect_post_svc();
+        if (s < 0) {
+            vmsg("給路錯誤: 貼文服務無法連暉。");
+            return -1;
+        }
 
-    int s = connect_post_svc();
-    if (s >= 0) {
+        FILE *fp = fopen(filepath, "rb");
+        if (!fp) {
+            close(s);
+            return -1;
+        }
+        fseek(fp, 0, SEEK_END);
+        long sz = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        char *buf = (char *)malloc(sz + 1);
+        if (!buf) {
+            fclose(fp);
+            close(s);
+            return -1;
+        }
+        if (sz > 0 && fread(buf, 1, sz, fp) != (size_t)sz) {
+            free(buf);
+            fclose(fp);
+            close(s);
+            return -1;
+        }
+        fclose(fp);
+        buf[sz] = '\0';
+
         size_t title_len = strlen(fhdr->title);
         char hdr_buf[256];
         int hlen = snprintf(hdr_buf, sizeof(hdr_buf),
-                            "POST_FILE %s %s %s %u %d %ld %zu\n",
+                            "POST %s %s %s %u %d %ld 0 %zu %ld\n",
                             board, fhdr->filename, cuser.userid,
                             (unsigned int)cuser.firstlogin,
-                            fhdr->filemode, (long)ctime, title_len);
-        if (towrite(s, hdr_buf, hlen) >= 0 &&
-            (title_len == 0 || towrite(s, fhdr->title, title_len) >= 0)) {
-            char resp[64] = {0};
-            toread(s, resp, sizeof(resp) - 1);
+                            fhdr->filemode, (long)now, title_len, sz);
+        if (towrite(s, hdr_buf, hlen) < 0 ||
+            (title_len > 0 && towrite(s, fhdr->title, title_len) < 0) ||
+            (sz > 0 && towrite(s, buf, sz) < 0)) {
+            free(buf);
+            close(s);
+            return -1;
         }
+        free(buf);
+
+        char resp[64] = {0};
+        toread(s, resp, sizeof(resp) - 1);
         close(s);
+
+        if (strncmp(resp, "OK", 2) != 0) {
+            return -1;
+        }
+
+        char can_path[PATHLEN];
+        setbfile(can_path, board, fhdr->filename);
+        if (strcmp(filepath, can_path) != 0) {
+            unlink(filepath);
+        }
+    } else if (filepath) {
+        char can_path[PATHLEN];
+        setbfile(can_path, board, fhdr->filename);
+        if (strcmp(filepath, can_path) != 0) {
+            rename(filepath, can_path);
+        }
     }
+
+    if (append_fileheader(dir, fhdr) == -1)
+        return -1;
+
     return 0;
 }
 

@@ -384,7 +384,8 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		return nil, fmt.Errorf("write pebble post failed: %w", err)
 	}
 
-	// 3. Update local Cache File
+	// 3. Render and save canonical BBS file (and cache file)
+	_ = e.RenderAndSave(p)
 	_ = e.WritePostCache(p)
 
 	return p, nil
