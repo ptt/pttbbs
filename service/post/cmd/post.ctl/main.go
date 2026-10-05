@@ -575,7 +575,8 @@ func main() {
 			line, err := reader.ReadString('\n')
 			if err != nil {
 				if err == io.EOF {
-					break
+					fmt.Println()
+					log.Fatalf("[!] Connection closed prematurely by post.svc (service crashed or stopped)")
 				}
 				log.Fatalf("\nRead error: %v", err)
 			}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -1578,7 +1579,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 			paths = matches
 		}
 		for _, pth := range paths {
-			if b, rErr := os.ReadFile(pth); rErr == nil && len(b) > 0 {
+			if b, rErr := readArticleFileLimited(pth); rErr == nil && len(b) > 0 {
 				if e.cfg.IsBig5() {
 					p.Content = big5uao.DecodeSGR66(b)
 				} else {
@@ -2636,6 +2637,49 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 		return big5uao.Encode(buf.String())
 	}
 	return buf.Bytes()
+}
+
+const maxArticleFileSize = 32 * 1024 * 1024 // 32MB
+
+// readArticleFileLimited reads an article file with sparse detection, NUL truncation, and 32MB limit.
+func readArticleFileLimited(path string) ([]byte, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	maxRead := fi.Size()
+	if stat, ok := fi.Sys().(*unix.Stat_t); ok {
+		allocated := int64(stat.Blocks) * 512
+		if allocated < maxRead && !(allocated == 0 && maxRead <= 4096) {
+			maxRead = allocated
+		}
+	}
+
+	if maxRead > maxArticleFileSize {
+		maxRead = maxArticleFileSize
+	}
+
+	if maxRead <= 0 {
+		return []byte{}, nil
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	rawBytes, err := io.ReadAll(io.LimitReader(f, maxRead))
+	if err != nil {
+		return nil, err
+	}
+
+	if idx := bytes.IndexByte(rawBytes, 0); idx >= 0 {
+		rawBytes = rawBytes[:idx]
+	}
+
+	return rawBytes, nil
 }
 
 func visualWidth(s string) int {

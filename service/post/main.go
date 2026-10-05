@@ -53,7 +53,7 @@ func isSocketOccupied(socketPath string) bool {
 	return false
 }
 
-func forkDaemon() error {
+func forkDaemon(logPath string) error {
 	execPath, err := os.Executable()
 	if err != nil {
 		execPath = os.Args[0]
@@ -74,8 +74,13 @@ func forkDaemon() error {
 		Setsid: true,
 	}
 	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	if logPath != "" {
+		_ = os.MkdirAll(filepath.Dir(logPath), 0755)
+		if lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
+			cmd.Stdout = lf
+			cmd.Stderr = lf
+		}
+	}
 
 	return cmd.Start()
 }
@@ -178,7 +183,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := forkDaemon(); err != nil {
+		if err := forkDaemon(logPath); err != nil {
 			fmt.Fprintf(os.Stderr, "[post.svc] Failed to daemonize: %v\n", err)
 			os.Exit(1)
 		}
@@ -193,6 +198,8 @@ func main() {
 		if err := os.MkdirAll(filepath.Dir(logPath), 0755); err == nil {
 			if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
 				log.SetOutput(logFile)
+				_ = unix.Dup2(int(logFile.Fd()), 1)
+				_ = unix.Dup2(int(logFile.Fd()), 2)
 			} else {
 				log.Printf("[post.svc] Warning: failed to open log file %s: %v", logPath, err)
 			}

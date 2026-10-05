@@ -1,7 +1,9 @@
 package importer
 
 import (
+	"bytes"
 	"encoding/binary"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -506,5 +508,77 @@ func TestSignaturePreservation(t *testing.T) {
 	}
 	if parsed2.Comments[2].Author != "user2" || parsed2.Comments[2].Content != "第二推" {
 		t.Errorf("Comment 2 mismatch: %+v", parsed2.Comments[2])
+	}
+}
+
+func TestReadArticleFileRules(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "read_article_test_*")
+	if err != nil {
+		t.Fatalf("MkdirTemp failed: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Case 1: Normal file
+	normalPath := filepath.Join(tmpDir, "normal.txt")
+	normalContent := []byte("Normal BBS article content line 1\nline 2\n")
+	if err := os.WriteFile(normalPath, normalContent, 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	b1, err := ReadArticleFile(normalPath)
+	if err != nil {
+		t.Fatalf("ReadArticleFile normal failed: %v", err)
+	}
+	if !bytes.Equal(b1, normalContent) {
+		t.Errorf("Expected %q, got %q", string(normalContent), string(b1))
+	}
+
+	// Case 2: Rule 2 - NUL byte truncation
+	nulPath := filepath.Join(tmpDir, "with_nul.txt")
+	nulContent := []byte("Header and valid body text\n--\n\x00Corrupted garbage data that should be discarded")
+	if err := os.WriteFile(nulPath, nulContent, 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	b2, err := ReadArticleFile(nulPath)
+	if err != nil {
+		t.Fatalf("ReadArticleFile nul failed: %v", err)
+	}
+	expectedB2 := []byte("Header and valid body text\n--\n")
+	if !bytes.Equal(b2, expectedB2) {
+		t.Errorf("Expected truncated at NUL %q, got %q", string(expectedB2), string(b2))
+	}
+
+	// Case 3: Rule 1 - Sparse file detection (claimed 1GB, allocated 4KB)
+	sparsePath := filepath.Join(tmpDir, "sparse.txt")
+	sf, err := os.Create(sparsePath)
+	if err != nil {
+		t.Fatalf("Create sparse failed: %v", err)
+	}
+	prefixData := []byte("Important BBS post text\n--\n※ 發信站: 批踢踢實業坊\n")
+	sf.Write(prefixData)
+	// Seek to 1GB to create a sparse file with a huge hole
+	const oneGB = int64(1024 * 1024 * 1024)
+	if _, err := sf.Seek(oneGB, io.SeekStart); err == nil {
+		sf.Write([]byte("Z"))
+	}
+	sf.Close()
+
+	fi, err := os.Stat(sparsePath)
+	if err != nil {
+		t.Fatalf("Stat sparse failed: %v", err)
+	}
+	if fi.Size() < oneGB {
+		t.Skip("Filesystem does not support sparse files, skipping sparse test")
+	}
+
+	b3, err := ReadArticleFile(sparsePath)
+	if err != nil {
+		t.Fatalf("ReadArticleFile sparse failed: %v", err)
+	}
+	// It should NOT read 1GB, and because the hole is filled with NUL, Rule 2 truncates at prefixData!
+	if len(b3) > 1024*1024 {
+		t.Errorf("Expected sparse file to be capped, got len=%d", len(b3))
+	}
+	if !bytes.Equal(b3, prefixData) {
+		t.Errorf("Expected prefix data %q, got %q", string(prefixData), string(b3))
 	}
 }
