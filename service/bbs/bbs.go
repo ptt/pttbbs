@@ -61,7 +61,6 @@ func (c *SHMClient) GetUID(userid string) int {
 	return int(C.get_uid_by_userid(cStr))
 }
 
-
 // SetSessionFriends updates SHM->uinfo[sid].friend_online[] and friendtotal as the single writer
 func (c *SHMClient) SetSessionFriends(sid int, expectedPID int, expectedUID int, entries []uint32) bool {
 	if c == nil || sid < 0 {
@@ -134,7 +133,6 @@ func (c *SHMClient) GetSessionDetail(sid int) (SessionDetail, bool) {
 		FriendOnline: online,
 	}, true
 }
-
 
 // IsAlohaSvcEnabled returns true if SHM->GV2.e.aloha_svc is non-zero
 func (c *SHMClient) IsAlohaSvcEnabled() bool {
@@ -462,4 +460,3 @@ func (c *SHMClient) GetUtmpCandidates() []UtmpCandidate {
 	}
 	return res
 }
-

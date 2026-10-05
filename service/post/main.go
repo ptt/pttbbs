@@ -37,7 +37,6 @@ var (
 	flagMaxOpenFiles   = flag.Int("max-files", 0, "Max open files per Pebble DB (0 for auto)")
 	flagWorkers        = flag.Int("workers", 0, "Default worker threads for board import (0 to use config or default 8)")
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
-	flagVerbose        = flag.Bool("v", false, "Enable verbose debug logging")
 )
 
 func init() {
