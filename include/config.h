@@ -538,7 +538,7 @@
 #endif
 
 #ifndef NO_DOTIMEOUT
-#define    DOTIMEOUT            /* 處理閒置時間 */
+#define    CONFIG_TIMEOUT 1     /* 處理閒置時間 */
 #endif
 
 #ifndef NO_INTERNET_EMAIL
@@ -581,9 +581,10 @@
 // #define  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
 // #define  HAVE_REPORT             /* (轉信)系統追蹤報告 */
 
-#ifdef  DOTIMEOUT
+#if IS_ENABLED(CONFIG_TIMEOUT)
 # define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
 # define SHOW_IDLE_TIME          /* 顯示閒置時間 */
+# define DOTIMEOUT       1       /* legacy compat */
 #endif
 
 #if defined(PLAY_ANGEL) && !defined(CONFIG_ANGEL)
@@ -592,6 +593,10 @@
 
 #if defined(ALL_REEDIT_LOG) && !defined(CONFIG_ALL_REEDIT_LOG)
 #define CONFIG_ALL_REEDIT_LOG 1
+#endif
+
+#if defined(DOTIMEOUT) && !defined(CONFIG_TIMEOUT)
+#define CONFIG_TIMEOUT 1
 #endif
 
 #ifdef DEBUG
