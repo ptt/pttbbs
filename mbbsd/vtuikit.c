@@ -1694,6 +1694,7 @@ multiline_peek_cb(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
     if (key == '\t' || key == KEY_TAB ||
         key == KEY_UP || key == KEY_DOWN || key == KEY_STAB ||
         key == KEY_ENTER || key == KEY_CR || key == KEY_LF ||
+        key == Ctrl('X') ||
         key == KEY_ESC || key == Ctrl('C')) {
         ctx->exit_key = key;
         return VGETCB_END;
@@ -1725,16 +1726,14 @@ v_multiline_refresh(const char *prompt, const char *footer_prefix,
     move(b_lines - 1, 0);
     clrtoeol();
     vs_footer(footer_prefix ? footer_prefix : " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ",
-              " (TAB)\xa4\xc7\xa6\xe6 (\xa1\xdc \xa1\xdd)\xa4\xc1\xb4\xab (Enter)\xb0\x65\xa5\x58 (Ctrl-C) \xa9\xf1\xb1\xf3");
+              " (TAB)\xa5\x5b\xa6\xe6 (\xa1\xf4/\xa1\xf5)\xa4\xc1\xb4\xab (Enter)\xb4\xab\xa6\xe6/\xb0\x65\xa5\x58 (Ctrl-C) \xa9\xf1\xb1\xf3");
 }
 
 int
-v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix)
+v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix, int flags)
 {
     if (!out_buf || out_bufsz == 0)
         return 0;
-
-    out_buf[0] = '\0';
 
     if (max_lines <= 0 || max_lines > 16)
         max_lines = V_MULTILINE_MAX_LINES;
@@ -1757,6 +1756,29 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
     int num_lines = 1;
     int curr_line = 0;
 
+    if (out_buf[0] != '\0') {
+        const char *p = out_buf;
+        num_lines = 0;
+        while (*p && num_lines < max_lines) {
+            const char *eol = strchr(p, '\n');
+            size_t seg_len = eol ? (size_t)(eol - p) : strlen(p);
+            if (seg_len >= sizeof(lines[num_lines]))
+                seg_len = sizeof(lines[num_lines]) - 1;
+            memcpy(lines[num_lines], p, seg_len);
+            lines[num_lines][seg_len] = '\0';
+            while (seg_len > 0 && (lines[num_lines][seg_len - 1] == '\r' || lines[num_lines][seg_len - 1] == '\n')) {
+                seg_len--;
+                lines[num_lines][seg_len] = '\0';
+            }
+            num_lines++;
+            if (!eol)
+                break;
+            p = eol + 1;
+        }
+        if (num_lines == 0)
+            num_lines = 1;
+    }
+
     v_multiline_ctx_t ctx;
     VGET_CALLBACKS cbs;
     memset(&cbs, 0, sizeof(cbs));
@@ -1777,16 +1799,17 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
             key = KEY_ENTER;
 
         if (key == '\t' || key == KEY_TAB) {
-            if (curr_line == num_lines - 1) {
-                if (num_lines < max_lines) {
+            if (num_lines < max_lines) {
+                if (flags & VMULTI_SCROLL)
                     scroll();
-                    num_lines++;
-                    curr_line++;
-                } else {
-                    curr_line = 0;
+                for (int i = num_lines; i > curr_line + 1; i--) {
+                    memcpy(lines[i], lines[i - 1], sizeof(lines[i]));
                 }
-            } else {
+                lines[curr_line + 1][0] = '\0';
+                num_lines++;
                 curr_line++;
+            } else {
+                curr_line = (curr_line + 1) % num_lines;
             }
             v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
             continue;
@@ -1842,7 +1865,7 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
             continue;
         }
 
-        if (key == KEY_ENTER || key == KEY_CR || key == KEY_LF) {
+        if (key == Ctrl('X') || ((key == KEY_ENTER || key == KEY_CR || key == KEY_LF) && curr_line >= num_lines - 1)) {
             bool is_empty = true;
             for (int i = 0; i < num_lines; i++) {
                 if (lines[i][0] != '\0') {
@@ -1855,7 +1878,11 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
                 return 0;
             }
 
-            int ans = vans("確定要送出嗎？[Y/n]: ");
+            int ans = vans("確定要送出嗎？[Y/n/q]: ");
+            if (ans == 'q' || ans == 'Q') {
+                vscr_restore(scr);
+                return 0;
+            }
             if (ans == 'y' || ans == '\0' || ans == '\r' || ans == '\n') {
                 int end = num_lines;
                 while (end > 0 && lines[end - 1][0] == '\0')
@@ -1885,6 +1912,14 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
             }
 
             v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            continue;
+        }
+
+        if (key == KEY_ENTER || key == KEY_CR || key == KEY_LF) {
+            if (curr_line < num_lines - 1) {
+                curr_line++;
+                v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            }
             continue;
         }
 

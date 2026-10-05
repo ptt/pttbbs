@@ -194,13 +194,23 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
     vgetstring_sz((buf), __builtin_object_size((buf), 0), (len), (flags), (defstr), (pcbs), (instance))
 
 
+#ifndef COMMENT_LINES
+#define COMMENT_LINES   (5)
+#endif
+
 // v_multiline: micro-textarea input widget
-#define V_MULTILINE_MAX_LINES   5
+#define V_MULTILINE_MAX_LINES   COMMENT_LINES
 #define V_MULTILINE_LINE_LEN    77
 
-int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix);
+enum {
+    VMULTI_DEFAULT      = 0x00,
+    VMULTI_NO_SCROLL    = 0x00,     // do not scroll screen, expand in-place (recommended for dialogs/windows)
+    VMULTI_SCROLL       = 0x01,     // scroll screen up when adding lines (recommended for pmore)
+};
+
+int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix, int flags);
 #define v_multiline(buf, max_lines, prompt, footer_prefix) \
-    v_multiline_text((buf), sizeof(buf), (max_lines), V_MULTILINE_LINE_LEN, (prompt), (footer_prefix))
+    v_multiline_text((buf), sizeof(buf), (max_lines), V_MULTILINE_LINE_LEN, (prompt), (footer_prefix), VMULTI_DEFAULT)
 
 // vs_*: formatted and themed virtual screen layout
 void vs_header	(const char *title,   const char *mid, const char *right,

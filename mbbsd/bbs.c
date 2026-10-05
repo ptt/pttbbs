@@ -3013,7 +3013,8 @@ comment_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif // !CONFIG_OLD_RECOMMEND
 
     if (USE_POST_SVC) {
-        if (v_multiline_text(msg, sizeof(msg), V_MULTILINE_MAX_LINES, STRLEN - 3, NULL, " \xbd\x73\xbf\xe8\xaf\x64\xa8\xa5 ") <= 0)
+        msg[0] = 0;
+        if (v_multiline_text(msg, sizeof(msg), V_MULTILINE_MAX_LINES, STRLEN - 3, NULL, " ½s¿è¯d¨¥ ", VMULTI_SCROLL) <= 0)
             return FULLUPDATE;
     } else {
         move(b_lines, 0);

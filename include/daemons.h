@@ -168,8 +168,12 @@ typedef struct {
 #define COMMENTD_ADDR   ":5134"
 #endif
 
+#ifndef COMMENT_LINES
+#define COMMENT_LINES   (5)
+#endif
+
 #ifndef COMMENTLEN
-#define COMMENTLEN (80)
+#define COMMENTLEN      (STRLEN * COMMENT_LINES)
 #endif
 
 enum {
