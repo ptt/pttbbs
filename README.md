@@ -49,7 +49,6 @@
   - `banipd/`：IP 封鎖動態判斷服務 (experimental)
   - `barebone/`：Daemon 伺服程式骨架
   - `boardd/`：看板文章服務 (for Web)
-  - `brcstored/`：BRC 儲存服務 (failed experimental)
   - `commentd/`：推文記錄服務 (experimental)
   - `fromd/`：故鄉 (IP/Domain) 查詢服務
   - `logind/`：海量登入前導與連線分流服務
