@@ -393,10 +393,6 @@ func EncodeRFC822Post(p *Post) []byte {
 	}
 	b.WriteString(fmt.Sprintf("Modified: %d\n", m))
 	b.WriteString(fmt.Sprintf("Filemode: %d\n", p.Filemode))
-	b.WriteString(fmt.Sprintf("Upvotes: %d\n", p.Upvotes))
-	b.WriteString(fmt.Sprintf("Downvotes: %d\n", p.Downvotes))
-	b.WriteString(fmt.Sprintf("NumComments: %d\n", p.NumComments))
-	b.WriteString(fmt.Sprintf("NumCrossposts: %d\n", p.NumCrossposts))
 	if p.IsDeleted {
 		b.WriteString("Deleted: true\n")
 		if p.DeletedAt > 0 {

@@ -582,3 +582,98 @@ func TestReadArticleFileRules(t *testing.T) {
 		t.Errorf("Expected prefix data %q, got %q", string(prefixData), string(b3))
 	}
 }
+
+
+func TestImporterVoteDeduplicationAndMeta(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "import_vote_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	boardDir := filepath.Join(tempDir, "boards", "VoteBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `本文內容
+--
+※ 發信站: 批踢踢實業坊
+推 userA: 推第一次 10/01 12:00
+推 userA: 推第二次 10/01 12:01
+噓 userB: 噓第一次 10/01 12:02
+推 userB: 改推文 10/01 12:03
+推 userC: 先推文 10/01 12:04
+噓 userC: 後給劣 10/01 12:05
+→ userD: 純箭頭一 10/01 12:06
+→ userE: 純箭頭二 10/01 12:07
+`
+	fn := "M.1728000099.A.001"
+	if err := os.WriteFile(filepath.Join(boardDir, fn), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	hdr := make([]byte, FileHeaderSize)
+	copy(hdr[0:28], fn)
+	binary.LittleEndian.PutUint32(hdr[28:32], 1728000000)
+	copy(hdr[34:48], "author1")
+	copy(hdr[48:54], "10/01")
+	copy(hdr[54:119], "推噓文換算測試")
+	dirPath := filepath.Join(boardDir, ".DIR")
+	if err := os.WriteFile(dirPath, hdr, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	engineDir := filepath.Join(tempDir, "engine")
+	engine, err := storage.OpenEngine(storage.Config{
+		DataDir:        engineDir,
+		CacheDir:       filepath.Join(engineDir, "cache"),
+		FlushSeconds:   2,
+		FilterEncoding: "utf-8",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	stats, err := MigrateBoard(engine, ImportBoardOptions{
+		BBSHome:   tempDir,
+		Board:     "VoteBoard",
+		Overwrite: true,
+	})
+	if err != nil {
+		t.Fatalf("MigrateBoard failed: %v", err)
+	}
+	if stats.PostsImported != 1 || stats.CommentsImported != 8 {
+		t.Errorf("Unexpected stats: %+v", stats)
+	}
+
+	p, err := engine.GetPostByCommunityFile("VoteBoard", fn)
+	if err != nil {
+		t.Fatalf("GetPostByCommunityFile failed: %v", err)
+	}
+
+	// userA (Up), userB (Down->Up: Up), userC (Up->Down: Down) => 2 Upvotes, 1 Downvote, 8 Comments
+	if p.Upvotes != 2 {
+		t.Errorf("Expected 2 upvotes, got %d", p.Upvotes)
+	}
+	if p.Downvotes != 1 {
+		t.Errorf("Expected 1 downvote, got %d", p.Downvotes)
+	}
+	if p.NumComments != 8 {
+		t.Errorf("Expected 8 comments, got %d", p.NumComments)
+	}
+
+	// Verify votesDB integration:
+	// userA should already have Upvote recorded, so duplicate Upvote should be (0, 0)
+	up, down, err := engine.VotePost(p.ID, "userA", 1, model.VoteUp)
+	if err != nil || up != 0 || down != 0 {
+		t.Errorf("Expected duplicate vote (0, 0), got up=%d, down=%d, err=%v", up, down, err)
+	}
+
+	// userA changing vote to Downvote should yield (-1, 1)
+	up, down, err = engine.VotePost(p.ID, "userA", 1, model.VoteDown)
+	if err != nil || up != -1 || down != 1 {
+		t.Errorf("Expected vote change (-1, 1), got up=%d, down=%d, err=%v", up, down, err)
+	}
+}

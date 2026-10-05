@@ -191,18 +191,81 @@ func (s *Server) autoImportPost(community, postFile string) *model.Post {
 	if len(rawBytes) == 0 {
 		return nil
 	}
-	postContent := string(rawBytes)
-	if s.cfg.IsBig5() {
-		postContent = big5uao.DecodeSGR66(rawBytes)
-	}
 	t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
 	if s.cfg.IsBig5() {
 		t = big5uao.DecodeSGR66([]byte(t))
+	}
+	author := extractHeaderField(rawBytes, []byte("作者: "), []byte("Author: "))
+	if idx := strings.IndexByte(author, ' '); idx != -1 {
+		author = author[:idx]
+	}
+	if idx := strings.IndexByte(author, '('); idx != -1 {
+		author = strings.TrimSpace(author[:idx])
+	}
+
+	postCtime := int64(0)
+	parsed, err := importer.ParseArticleText(rawBytes, author, postCtime, community, postFile, s.cfg.IsBig5())
+	if err == nil && parsed != nil && len(parsed.Comments) > 0 {
+		userVotes := make(map[string]model.VoteType)
+		var comments []*model.Comment
+		for _, pc := range parsed.Comments {
+			if pc.CommentType == "推" || pc.LegacyType == 1 {
+				userVotes[pc.Author] = model.VoteUp
+			} else if pc.CommentType == "噓" || pc.LegacyType == 2 {
+				userVotes[pc.Author] = model.VoteDown
+			}
+			comments = append(comments, &model.Comment{
+				Author:     pc.Author,
+				Content:    pc.Content,
+				IP:         pc.IP,
+				CreatedAt:  pc.CTime,
+				LegacyType: pc.LegacyType,
+			})
+		}
+		upvotes := 0
+		downvotes := 0
+		for _, v := range userVotes {
+			if v == model.VoteUp {
+				upvotes++
+			} else if v == model.VoteDown {
+				downvotes++
+			}
+		}
+
+		post := &model.Post{
+			ParentID:    0,
+			Community:   community,
+			PostFile:    postFile,
+			Title:       t,
+			Author:      author,
+			CreatedAt:   postCtime,
+			Modified:    postCtime,
+			Upvotes:     upvotes,
+			Downvotes:   downvotes,
+			NumComments: len(comments),
+			Content:     parsed.BodyContent,
+			Encoding:    "utf-8",
+		}
+
+		item := &storage.ImportedPostData{
+			Post:      post,
+			Comments:  comments,
+			UserVotes: userVotes,
+		}
+		if err := s.storage.ImportPostBatch([]*storage.ImportedPostData{item}, ""); err == nil {
+			return post
+		}
+	}
+
+	postContent := string(rawBytes)
+	if s.cfg.IsBig5() {
+		postContent = big5uao.DecodeSGR66(rawBytes)
 	}
 	autoP := &model.Post{
 		Community: community,
 		PostFile:  postFile,
 		Title:     t,
+		Author:    author,
 		Encoding:  "utf-8",
 		Content:   postContent,
 	}
@@ -438,7 +501,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
-		if err != nil {
+		if err != nil || p == nil {
 			p = s.autoImportPost(community, postFile)
 		}
 		if p == nil {
@@ -495,7 +558,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		voteVal, _ := strconv.Atoi(parts[5])
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
-		if err != nil {
+		if err != nil || p == nil {
 			p = s.autoImportPost(community, postFile)
 		}
 		if p == nil {

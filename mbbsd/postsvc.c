@@ -186,6 +186,10 @@ RatePostRecord(const char *board, const char *direct, fileheader_t *fhdr, int en
             down_delta = 1;
     }
 
+    if (up_delta == 0 && down_delta == 0 && vote != 0) {
+        return 1;
+    }
+
     int new_up = (int)fhdr->upvote + up_delta;
     if (new_up < 0) new_up = 0;
     else if (new_up > 255) new_up = 255;

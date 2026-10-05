@@ -812,14 +812,13 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 							title = big5uao.DecodeSGR66([]byte(title))
 						}
 
-						upvotes := 0
-						downvotes := 0
+						userVotes := make(map[string]model.VoteType)
 						var comments []*model.Comment
 						for _, pc := range parsed.Comments {
-							if pc.CommentType == "推" {
-								upvotes++
-							} else if pc.CommentType == "噓" {
-								downvotes++
+							if pc.CommentType == "推" || pc.LegacyType == 1 {
+								userVotes[pc.Author] = model.VoteUp
+							} else if pc.CommentType == "噓" || pc.LegacyType == 2 {
+								userVotes[pc.Author] = model.VoteDown
 							}
 							comments = append(comments, &model.Comment{
 								Author:     pc.Author,
@@ -828,6 +827,16 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 								CreatedAt:  pc.CTime,
 								LegacyType: pc.LegacyType,
 							})
+						}
+
+						upvotes := 0
+						downvotes := 0
+						for _, v := range userVotes {
+							if v == model.VoteUp {
+								upvotes++
+							} else if v == model.VoteDown {
+								downvotes++
+							}
 						}
 
 						var crossposts []*model.CrosspostRecord
@@ -841,18 +850,19 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 						}
 
 						post := &model.Post{
-							ParentID:  0,
-							Community: opts.Board,
-							PostFile:  job.fhdr.Filename,
-							Title:     title,
-							Author:    job.fhdr.Owner,
-							CreatedAt: postCtime,
-							Modified:  postCtime,
-							Filemode:  int(job.fhdr.Filemode),
-							Upvotes:   upvotes,
-							Downvotes: downvotes,
-							Content:   parsed.BodyContent,
-							Encoding:  "utf-8",
+							ParentID:    0,
+							Community:   opts.Board,
+							PostFile:    job.fhdr.Filename,
+							Title:       title,
+							Author:      job.fhdr.Owner,
+							CreatedAt:   postCtime,
+							Modified:    postCtime,
+							Filemode:    int(job.fhdr.Filemode),
+							Upvotes:     upvotes,
+							Downvotes:   downvotes,
+							NumComments: len(comments),
+							Content:     parsed.BodyContent,
+							Encoding:    "utf-8",
 						}
 
 						select {
@@ -865,6 +875,7 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 								Post:       post,
 								Comments:   comments,
 								Crossposts: crossposts,
+								UserVotes:  userVotes,
 							},
 						}:
 						}

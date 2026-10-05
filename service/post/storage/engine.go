@@ -2493,6 +2493,7 @@ type ImportedPostData struct {
 	Post       *model.Post
 	Comments   []*model.Comment
 	Crossposts []*model.CrosspostRecord
+	UserVotes  map[string]model.VoteType
 }
 
 // ImportPostBatch imports a slice of posts and their comments atomically into SQLite and Pebble,
@@ -2551,6 +2552,8 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer postBatch.Close()
 	commentBatch := e.commentsDB.NewBatch()
 	defer commentBatch.Close()
+	voteBatch := e.votesDB.NewBatch()
+	defer voteBatch.Close()
 
 	for _, item := range batch {
 		p := item.Post
@@ -2601,6 +2604,19 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			}
 		}
 
+		// User Votes
+		for user, vote := range item.UserVotes {
+			key := model.EncodeVoteKey(p.ID, user)
+			valBuf := make([]byte, 5)
+			if vote == model.VoteUp {
+				valBuf[0] = 'U'
+				_ = voteBatch.Set(key, valBuf, nil)
+			} else if vote == model.VoteDown {
+				valBuf[0] = 'D'
+				_ = voteBatch.Set(key, valBuf, nil)
+			}
+		}
+
 		// Crossposts
 		for i, cp := range item.Crossposts {
 			cp.SourcePostID = p.ID
@@ -2628,6 +2644,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	}
 	if err := commentBatch.Commit(pebble.NoSync); err != nil {
 		return fmt.Errorf("commit commentBatch failed: %w", err)
+	}
+	if err := voteBatch.Commit(pebble.NoSync); err != nil {
+		return fmt.Errorf("commit voteBatch failed: %w", err)
 	}
 
 	// Commit SQLite transaction

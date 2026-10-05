@@ -2801,12 +2801,18 @@ rate_post(int ent, fileheader_t * fhdr, const char *direct)
 
     move(b_lines, 0);
     clrtoeol();
-    if (RatePostRecord(bp->brdname, direct, fhdr, ent, vote) != 0) {
+    int rc = RatePostRecord(bp->brdname, direct, fhdr, ent, vote);
+    if (rc < 0) {
 	vmsg("評分失敗");
 	return FULLUPDATE;
     }
 
-    if (vote == 1)
+    if (rc == 1) {
+	if (vote == 1)
+	    vmsg("先前已推薦過，未重覆計分");
+	else if (vote == -1)
+	    vmsg("先前已給劣過，未重覆計分");
+    } else if (vote == 1)
 	vmsg("已完成推薦");
     else if (vote == -1)
 	vmsg("已完成劣評");
