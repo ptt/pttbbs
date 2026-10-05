@@ -68,7 +68,7 @@ hugetlb_open_shm(const char *name, int *is_created)
     void *shmptr;
     int create = !!is_created;
     int is_new = 0;
-    int fd, err;
+    autoclose int fd = -1;
     size_t page_size = 0, map_size;
     struct statfs sfs;
     struct stat st;
@@ -93,16 +93,18 @@ hugetlb_open_shm(const char *name, int *is_created)
         return NULL;
     }
 
+    autounlink_guard unlinker = { .path = real_path, .active = is_new };
+
     if (fstatfs(fd, &sfs) < 0) {
         hugetlb_error("fstatfs", real_path, 0, errno);
-        goto fail;
+        return NULL;
     }
     if ((unsigned long)sfs.f_type != (unsigned long)HUGETLBFS_MAGIC ||
         sfs.f_bsize <= 0) {
         fprintf(stderr, "[hugetlb error] %s is not on hugetlbfs "
                 "(f_type = 0x%lx). Mount hugetlbfs on %s.\n",
                 real_path, (unsigned long)sfs.f_type, HUGETLBFS_PATH);
-        goto fail;
+        return NULL;
     }
     page_size = (size_t)sfs.f_bsize;
     map_size = round_up_align(sizeof(SHM_t), page_size);
@@ -110,16 +112,16 @@ hugetlb_open_shm(const char *name, int *is_created)
     if (is_new) {
         if (ftruncate(fd, (off_t)map_size) < 0) {
             hugetlb_error("ftruncate", real_path, page_size, errno);
-            goto fail;
+            return NULL;
         }
     } else if (fstat(fd, &st) < 0) {
         hugetlb_error("fstat", real_path, page_size, errno);
-        goto fail;
+        return NULL;
     } else if (st.st_size < (off_t)sizeof(SHM_t)) {
         fprintf(stderr, "[hugetlb error] %s is too small (%lld < %zu). "
                 "Remove it and run shmctl init again.\n",
                 real_path, (long long)st.st_size, sizeof(SHM_t));
-        goto fail;
+        return NULL;
     }
 
     shmptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -127,20 +129,12 @@ hugetlb_open_shm(const char *name, int *is_created)
         hugetlb_error("mmap", real_path, page_size, errno);
         fprintf(stderr, "Check HugePages_Free in /proc/meminfo "
                 "(vm.nr_hugepages).\n");
-        goto fail;
+        return NULL;
     }
-    close(fd);
+    unlinker.active = 0;
     if (is_created)
         *is_created = is_new;
     return (SHM_t *)shmptr;
-
-fail:
-    err = errno;
-    close(fd);
-    if (is_new)
-        unlink(real_path);
-    errno = err;
-    return NULL;
 }
 #elif defined(__FreeBSD__)
 #ifndef SHM_LARGEPAGE_ALLOC_DEFAULT
@@ -152,7 +146,7 @@ hugetlb_open_shm(const char *name, int *is_created)
     void *shmptr;
     int create = !!is_created;
     int is_new = 0;
-    int fd, err;
+    autoclose int fd = -1;
     int flags = MAP_SHARED;
     size_t page_size = HUGEPAGE_DEFAULT_ALIGN;
     size_t map_size = round_up_align(sizeof(SHM_t), page_size);
@@ -174,19 +168,21 @@ hugetlb_open_shm(const char *name, int *is_created)
         return NULL;
     }
 
+    autoshm_unlink_guard unlinker = { .name = name, .active = is_new };
+
     if (is_new) {
         if (ftruncate(fd, (off_t)map_size) < 0) {
             hugetlb_error("ftruncate", name, page_size, errno);
-            goto fail;
+            return NULL;
         }
     } else if (fstat(fd, &st) < 0) {
         hugetlb_error("fstat", name, page_size, errno);
-        goto fail;
+        return NULL;
     } else if (st.st_size < (off_t)sizeof(SHM_t)) {
         fprintf(stderr, "[hugetlb error] %s is too small (%lld < %zu). "
                 "Remove it and run shmctl init again.\n",
                 name, (long long)st.st_size, sizeof(SHM_t));
-        goto fail;
+        return NULL;
     }
 
 #ifdef MAP_ALIGNED_SUPER
@@ -195,20 +191,12 @@ hugetlb_open_shm(const char *name, int *is_created)
     shmptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, flags, fd, 0);
     if (shmptr == MAP_FAILED) {
         hugetlb_error("mmap", name, page_size, errno);
-        goto fail;
+        return NULL;
     }
-    close(fd);
+    unlinker.active = 0;
     if (is_created)
         *is_created = is_new;
     return (SHM_t *)shmptr;
-
-fail:
-    err = errno;
-    close(fd);
-    if (is_new)
-        shm_unlink(name);
-    errno = err;
-    return NULL;
 }
 #else
 #error "USE_HUGETLB with USE_POSIX_SHM is only supported on Linux and FreeBSD."
@@ -402,3 +390,17 @@ get_utmp_slot(const userinfo_t *uentp)
         return -1;
     return (int)(uentp - &SHM->uinfo[0]);
 }
+
+#ifdef CPU_STATS
+void
+cleanup_stat(stat_scope_t *ss)
+{
+    if (ss && ss->id >= 0) {
+        struct rusage end;
+        getrusage(RUSAGE_SELF, &end);
+        STATADD(ss->scpu, TVALDIFF_TO_MS(ss->start.ru_stime, end.ru_stime));
+        STATADD(ss->ucpu, TVALDIFF_TO_MS(ss->start.ru_utime, end.ru_utime));
+        STATINC(ss->id);
+    }
+}
+#endif

@@ -34,15 +34,7 @@ typedef struct {
     struct rusage start;
 } stat_scope_t;
 
-static inline void cleanup_stat(stat_scope_t *ss) {
-    if (ss && ss->id >= 0) {
-        struct rusage end;
-        getrusage(RUSAGE_SELF, &end);
-        STATADD(ss->scpu, TVALDIFF_TO_MS(ss->start.ru_stime, end.ru_stime));
-        STATADD(ss->ucpu, TVALDIFF_TO_MS(ss->start.ru_utime, end.ru_utime));
-        STATINC(ss->id);
-    }
-}
+void cleanup_stat(stat_scope_t *ss);
 
 #define SCOPED_STAT(name) \
     stat_scope_t _stat_##name __attribute__((cleanup(cleanup_stat))) = { \
