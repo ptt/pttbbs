@@ -250,18 +250,13 @@ brc_compact(int needed, brcbid_t protect_bid)
 	brc_size -= diff;
     }
 
-    /* Fallback: if all eligible boards are num=1 and buffer is still exceeding,
-     * drop oldest boards from the tail */
-    if (brc_size + needed > BRC_MAXSIZE) {
-	brc_compact_tail_drop(needed);
-    }
 }
 
 static void
 brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 {
     char           *ptr;
-    int             new_size, end_size;
+    int             new_size;
     brcnbrd_t       tnum;
 
     brc_needs_file_update = 1;
@@ -270,70 +265,61 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
     while (num > 0 && time4_lt(list[num - 1].create, brc_expire_time))
 	num--; /* don't write the times before brc_expire_time */
 
-    if (!ptr) {
-	brc_size -= (int)tnum;
+    new_size = num ? (sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(brc_rec)) : 0;
 
-	/* put on the beginning */
-	if (num){
-	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
-		+ num * sizeof(brc_rec);
-
-	    if (brc_size + new_size > BRC_MAXSIZE)
-		brc_compact(new_size, bid);
-
-	    if (!brc_buf)
-		brc_get_buf(new_size);
-
-	    while (brc_size + new_size > brc_alloc && brc_enlarge_buf())
-		;
-
-	    if (brc_size + new_size > BRC_MAXSIZE)
-		brc_compact_tail_drop(new_size);
-
-	    if (brc_size + new_size <= BRC_MAXSIZE) {
-		if (brc_size > 0)
-		    memmove(brc_buf + new_size, brc_buf, brc_size);
-		brc_size += new_size;
-		brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
-	    }
-	}
-    } else {
-	/* ptr points to the old current brc list.
-	 * tmpp is the end of it (exclusive).       */
+    if (ptr) {
 	int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(brc_rec);
-	char *tmpp = ptr + len;
-	end_size = brc_buf + brc_size - tmpp;
-	if (num) {
-	    new_size = (sizeof(brcbid_t) + sizeof(brcnbrd_t)
-			+ num * sizeof(brc_rec));
-	    int delta = new_size - len;
 
-	    if (delta > 0 && brc_size + delta > BRC_MAXSIZE) {
-		brc_compact(delta, bid);
-		ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
-		assert(ptr != NULL);
-		tmpp = ptr + len;
-		end_size = brc_buf + brc_size - tmpp;
-	    }
-
-	    brc_size += delta;
-	    if (brc_size > brc_alloc) {
-		int sindex = ptr - brc_buf;
-		if (brc_enlarge_buf()) {
-		    ptr = brc_buf + sindex;
-		    tmpp = ptr + len;
-		} else {
-		    end_size -= brc_size - BRC_MAXSIZE;
-		    brc_size = BRC_MAXSIZE;
-		}
-	    }
-	    if (end_size > 0 && ptr + new_size != tmpp)
-		memmove(ptr + new_size, tmpp, end_size);
-	    brc_putrecord(ptr, brc_buf + brc_alloc, bid, num, list);
-	} else { /* deleting record */
-	    memmove(ptr, tmpp, end_size);
-	    brc_size -= len;
+	/* If already at the head and size is identical, just overwrite in-place */
+	if (ptr == brc_buf && new_size == len) {
+	    brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
+	    brc_changed = 0;
+	    return;
 	}
+
+	/* Move-to-front (MRU/LRU): remove old record from its current position */
+	char *tmpp = ptr + len;
+	int end_size = brc_buf + brc_size - tmpp;
+	if (end_size > 0)
+	    memmove(ptr, tmpp, end_size);
+	brc_size -= len;
+    } else {
+	/* Clean trailing corrupted/dangling bytes if any */
+	brc_size -= (int)tnum;
+    }
+
+    /* If deleting record (num == 0), record was already removed above */
+    if (!num) {
+	brc_changed = 0;
+	return;
+    }
+
+    /* Insert at the head of brc_buf */
+    if (brc_size + new_size > BRC_MAXSIZE)
+	brc_compact(new_size, bid);
+
+    /* If other boards were all compacted to num=1 but buffer still exceeds,
+     * compact current board to num=1 before dropping other boards from tail */
+    if (brc_size + new_size > BRC_MAXSIZE && num > 1) {
+	num = 1;
+	new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t) + sizeof(brc_rec);
+    }
+
+    if (!brc_buf)
+	brc_get_buf(new_size);
+
+    while (brc_size + new_size > brc_alloc && brc_enlarge_buf())
+	;
+
+    /* Absolute fallback: even with every board at num=1, buffer exceeds -> drop tail */
+    if (brc_size + new_size > BRC_MAXSIZE)
+	brc_compact_tail_drop(new_size);
+
+    if (brc_size + new_size <= BRC_MAXSIZE) {
+	if (brc_size > 0)
+	    memmove(brc_buf + new_size, brc_buf, brc_size);
+	brc_size += new_size;
+	brc_putrecord(brc_buf, brc_buf + new_size, bid, num, list);
     }
 
     brc_changed = 0;
