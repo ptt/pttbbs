@@ -4,6 +4,13 @@
 #include <assert.h>
 #include "bbs.h"
 
+#ifdef BRC_MAXSIZE
+#undef BRC_MAXSIZE
+#endif
+#ifdef BRC_MAXNUM
+#undef BRC_MAXNUM
+#endif
+
 // Include brc.c directly to test internal static functions
 #include "brc.c"
 
@@ -65,8 +72,8 @@ static void test_basic_unread(void) {
     printf("  -> PASS\n");
 }
 
-static void test_in_place_update(void) {
-    printf("Testing in-place update for existing boards (stable board order)...\n");
+static void test_move_to_front(void) {
+    printf("Testing move-to-front for existing boards (MRU/LRU board order)...\n");
     setup_test();
 
     brc_rec r[3];
@@ -87,18 +94,31 @@ static void test_in_place_update(void) {
     // Now update board 10 with 3 records (growing the record)
     brc_insert_record(10, 3, r);
 
-    // CRITICAL: board 20 must STILL be at offset 0 (board 10 was updated in-place!)
+    // Move-to-front: board 10 MUST move to offset 0 (head)!
     first_bid = brc_read_bid(brc_buf);
-    assert(first_bid == 20);
+    assert(first_bid == 10);
 
     int bnum = 0;
     const brc_rec *rec = brc_find_record(10, &bnum);
     assert(rec != NULL && bnum == 3);
 
-    // Now shrink board 10 back to 1 record
+    // Board 20 is now behind board 10
+    rec = brc_find_record(20, &bnum);
+    assert(rec != NULL && bnum == 2);
+
+    // Now shrink board 10 back to 1 record (board 10 is already at head)
     brc_insert_record(10, 1, r);
     first_bid = brc_read_bid(brc_buf);
+    assert(first_bid == 10);
+    rec = brc_find_record(10, &bnum);
+    assert(rec != NULL && bnum == 1);
+
+    // Now update board 20 (behind board 10): it must move back to offset 0!
+    brc_insert_record(20, 3, r);
+    first_bid = brc_read_bid(brc_buf);
     assert(first_bid == 20);
+    rec = brc_find_record(20, &bnum);
+    assert(rec != NULL && bnum == 3);
     rec = brc_find_record(10, &bnum);
     assert(rec != NULL && bnum == 1);
 
@@ -143,6 +163,21 @@ static void test_on_demand_tail_compact(void) {
     assert(brc_find_record(10, &bnum) && bnum == 1);
     assert(brc_find_record(20, &bnum) && bnum == 1);
     assert(brc_find_record(30, &bnum) && bnum == 5); // Most recent Board 30 still num == 5!
+
+    // Now re-access Board 10 (which was at the tail with num = 1) with 5 records!
+    // Move-to-front moves Board 10 to the HEAD (offset 0)!
+    brc_insert_record(10, 5, r);
+    assert(brc_read_bid(brc_buf) == 10);
+    assert(brc_find_record(10, &bnum) && bnum == 5);
+
+    // Buffer order is now: Board 10 (head), Board 30 (middle), Board 20 (tail).
+    // If compaction triggers again, Board 30 (now LRU among num > 1) MUST be compacted,
+    // and Board 10 (most recently used) MUST be protected!
+    needed = (BRC_MAXSIZE - brc_size) + 10;
+    brc_compact(needed, 0);
+
+    assert(brc_find_record(30, &bnum) && bnum == 1); // Board 30 compacted!
+    assert(brc_find_record(10, &bnum) && bnum == 5); // Board 10 STILL intact at 5!
 
     printf("  -> PASS\n");
 }
@@ -322,7 +357,7 @@ static void test_brcstore_filename(void) {
 int main(void) {
     printf("Running comprehensive BRC on-demand compacting tests...\n");
     test_basic_unread();
-    test_in_place_update();
+    test_move_to_front();
     test_head_insert_for_new_board();
     test_delete_record();
     test_on_demand_tail_compact();
