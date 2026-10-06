@@ -54,7 +54,7 @@ static int             brc_currbid;
 static int             brc_num;
 static brc_rec         brc_list[BRC_MAXNUM];
 
-static char * const fn_brc = ".brc3";
+static char * const fn_brc GCC_UNUSED = ".brc3";
 
 static inline brcbid_t brc_read_bid(const void *p) {
     brcbid_t v;
@@ -365,17 +365,52 @@ brc_update(){
     }
 }
 
+static inline int
+use_brcstore(void)
+{
+    return IS_ENABLED(CONFIG_BRC_STORE);
+}
+
+static void
+get_brc_alt_filename(char *filename)
+{
+    unsigned hash = StringHash(cuser.userid) & 0xffff;
+
+    assert(is_validuserid(cuser.userid));
+    snprintf(filename, PATHLEN, BRCSTORE_DIR "/%02x/%02x/brc.%s",
+	    (hash >> 8) & 0xff, hash & 0xff,
+	    cuser.userid);
+}
+
+static void
+get_brc_filename(char *filename)
+{
+    if (use_brcstore()) {
+	get_brc_alt_filename(filename);
+    } else {
+	setuserfile(filename, fn_brc);
+    }
+}
+
 int
 load_local_brc() {
-    char            brcfile[STRLEN];
+    char            brcfile[PATHLEN];
     int             fd;
     struct stat     brcstat;
 
     brc_size = 0;
-    setuserfile(brcfile, fn_brc);
+    get_brc_filename(brcfile);
 
-    if ((fd = open(brcfile, O_RDONLY)) == -1)
-	return 0;
+    if ((fd = open(brcfile, O_RDONLY)) == -1) {
+	if (use_brcstore()) {
+	    /* Migration fallback: load legacy home .brc3 if brcstore file is not created yet */
+	    char homebrc[PATHLEN];
+	    setuserfile(homebrc, fn_brc);
+	    fd = open(homebrc, O_RDONLY);
+	}
+	if (fd == -1)
+	    return 0;
+    }
 
     posix_fadvise(fd, 0, 0, POSIX_FADV_WILLNEED);
     fstat(fd, &brcstat);
@@ -394,14 +429,23 @@ save_local_brc() {
 	return 1;
 
     int ok = 1;
-    char brcfile[STRLEN];
-    char tmpfile[STRLEN];
+    char brcfile[PATHLEN];
+    char tmpfile[PATHLEN];
 
-    setuserfile(brcfile, fn_brc);
-    SNPRINTF(tmpfile, "%s.tmp.%x", brcfile, getpid());
+    get_brc_filename(brcfile);
+    if (use_brcstore()) {
+	snprintf(tmpfile, sizeof(tmpfile), BRCSTORE_DIR "/tmp/brc.%s.%x", cuser.userid, getpid());
+    } else {
+	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
+    }
 
     if (brc_buf != NULL) {
 	int fd = OpenCreate(tmpfile, O_WRONLY | O_TRUNC);
+	if (fd == -1 && use_brcstore()) {
+	    /* Fallback if BRCSTORE_DIR/tmp is missing or inaccessible */
+	    snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
+	    fd = OpenCreate(tmpfile, O_WRONLY | O_TRUNC);
+	}
 	if (fd != -1) {
 	    int write_ok = 0;
 	    posix_fallocate(fd, 0, brc_size);

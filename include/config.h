@@ -106,6 +106,10 @@
 #define PATHLEN (256)
 #endif
 
+#ifndef BRCSTORE_DIR
+#define BRCSTORE_DIR "brcstore"
+#endif
+
 #ifndef DEFAULT_FOLDER_CREATE_PERM
 #define DEFAULT_FOLDER_CREATE_PERM (0755)
 #endif
@@ -705,6 +709,9 @@
 #endif
 #if defined(REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD) && !defined(CONFIG_REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD)
 #define CONFIG_REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD 1
+#endif
+#if defined(USE_BRC_STORE) && !defined(CONFIG_BRC_STORE)
+#define CONFIG_BRC_STORE 1
 #endif
 
 #ifdef DEBUG
