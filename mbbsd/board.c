@@ -587,7 +587,10 @@ b_config(void)
 
     int ytitle = b_lines - LNBOARDINFO;
 
-    bp = getbcache(currbid);
+    boardheader_t bh;
+    if (get_boardheader(&bh, currbid) <= 0)
+        return FULLUPDATE;
+    bp = &bh;
 
 #if IS_ENABLED(CONFIG_OLD_RECOMMEND)
     ytitle ++;
@@ -883,7 +886,7 @@ b_config(void)
 		    strip_control_sequence(genbuf, genbuf);
 		    strlcpy(bp->desc, genbuf, sizeof(bp->desc));
 		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-		    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+		    modify_boardheader(bp, currbid);
 		    log_usies("SetBoard", currboard);
 		}
 		break;
@@ -1104,7 +1107,7 @@ b_config(void)
     if(touched)
     {
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	modify_boardheader(bp, currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("已儲存新設定");
     }
@@ -1212,6 +1215,7 @@ addnewbrdstat(int n, int state)
 static void
 load_boards(char *key)
 {
+    const char     *storage_key = (key && key[0]) ? TEMP_MB_TO_STORAGE(key) : "";
     int             type = (HasUserFlag(UF_BRDSORT)) ? 1 : 0;
     int             i;
     int             state;
@@ -1280,7 +1284,7 @@ load_boards(char *key)
 			if ((fav_getid(&fav->favh[i]) < 1 || fav_getid(&fav->favh[i]) > MAX_BOARD))
 			    continue;
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
-			if (strcasestr(bptr->desc, key) || strcasestr(bptr->bclass, key))
+			if (strcasestr(bptr->desc, storage_key) || strcasestr(bptr->bclass, storage_key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
@@ -1317,7 +1321,7 @@ load_boards(char *key)
 		int bidx = SHM->hotboards.bids[i];
 		if(bidx < 0 || bidx >= MAX_BOARD)
 		    continue;
-		if (TITLE_MATCH(&bcache[bidx], key))
+		if (TITLE_MATCH(&bcache[bidx], storage_key))
 		    continue;
 		addnewbrdstat(bidx, HasBoardPerm(&bcache[bidx]));
 	    }
@@ -1337,7 +1341,7 @@ load_boards(char *key)
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
 		    !((state = HasBoardPerm(bptr)) || GROUPOP()) ||
-		    TITLE_MATCH(bptr, key))
+		    TITLE_MATCH(bptr, storage_key))
 		    continue;
 		addnewbrdstat(n, state);
 	    }
@@ -1361,7 +1365,7 @@ load_boards(char *key)
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
             bptr = getbcache(bid);
 	    state = HasBoardPerm(bptr);
-	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, key) )
+	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, storage_key) )
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
@@ -1645,8 +1649,8 @@ brdlist_folder(int newflag, int head, boardstat_t *ptr) {
 }
 
 static int
-brdlist_hidden(int newflag, int head, boardstat_t *ptr) {
-    const char *reason = (B_BH(ptr)->brdattr & BRD_HIDE) ? "[隱板]" : "[禁入]";
+brdlist_hidden(int newflag, int head, boardstat_t *ptr, const boardheader_t *bh) {
+    const char *reason = (bh->brdattr & BRD_HIDE) ? "[隱板]" : "[禁入]";
 
     if (newflag)
         prints("%7s", "");
@@ -1657,10 +1661,10 @@ brdlist_hidden(int newflag, int head, boardstat_t *ptr) {
     // longer
     prints("X%c %-13.13s%-7.7s %-48.48s",
            ptr->myattr & NBRD_TAG ? 'D' : ' ',
-           B_BH(ptr)->brdname,
+           bh->brdname,
            reason,
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
-           B_BH(ptr)->desc
+           bh->desc
 #else
            "<目前無法進入此看板>"
 #endif
@@ -1687,6 +1691,10 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     if (ptr->myattr & NBRD_FOLDER)
         return brdlist_folder(newflag, head, ptr);
 
+    boardheader_t bh;
+    if (get_boardheader(&bh, ptr->bid) <= 0)
+        return 0;
+
 #ifdef USE_REAL_DESC_FOR_HIDDEN_BOARD_IN_MYFAV
     const int should_show_sensitive_info = true;
 #else
@@ -1699,15 +1707,15 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
 
     if (IN_CLASSROOT()) {
         char col_num[32];
-        if (newflag && (B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
+        if (newflag && (bh.brdattr & BRD_GROUPBOARD)) {
             SNPRINTF(col_num, "          ");
         } else if (should_show_sensitive_info) {
             SNPRINTF(col_num, "%7d%c%s",
                     newflag ? (int)(B_TOTAL(ptr)) : head,
-                    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-                    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+                    !(bh.brdattr & BRD_HIDE) ? ' ' :
+                    (bh.brdattr & BRD_POSTMASK) ? ')' : '-',
                     (ptr->myattr & NBRD_TAG) ? "D " :
-                    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+                    (bh.brdattr & BRD_GROUPBOARD) ? "  " :
                     unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
         } else {
             if (newflag)
@@ -1716,28 +1724,40 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                 SNPRINTF(col_num, "%7dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
         }
 
-        prints("          %s%-40.40s %.*s", col_num, B_BH(ptr)->desc,
-               t_columns - 68, B_BH(ptr)->BM);
+        char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
+        const char *mb_desc = bh.desc;
+        int d_cols = 0;
+        int d_off = stream_col_offset(40, mb_desc, &d_cols);
+        strlcpy(t_desc, mb_desc, d_off + 1);
+
+        const char *mb_bm = bh.BM;
+        int max_bm = (t_columns > 68) ? t_columns - 68 : 0;
+        int bm_off = stream_col_offset(max_bm, mb_bm, NULL);
+        strlcpy(t_bm, mb_bm, bm_off + 1);
+
+        prints("          %s%s%*s %s", col_num, t_desc,
+               40 - d_cols > 0 ? 40 - d_cols : 0, "",
+               t_bm);
         clrtoeol();
         return 0;
     }
 
     if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-        return brdlist_hidden(newflag, head, ptr);
+        return brdlist_hidden(newflag, head, ptr, &bh);
     }
 
     // Normal entries.
 
     char col_num[32];
-    if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD) {
+    if (newflag && (bh.brdattr & BRD_GROUPBOARD)) {
         SNPRINTF(col_num, "         ");
     } else if (should_show_sensitive_info) {
         SNPRINTF(col_num, "%6d%c%s",
                 newflag ? (int)(B_TOTAL(ptr)) : head,
-                !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-                (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+                !(bh.brdattr & BRD_HIDE) ? ' ' :
+                (bh.brdattr & BRD_POSTMASK) ? ')' : '-',
                 (ptr->myattr & NBRD_TAG) ? "D " :
-                (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+                (bh.brdattr & BRD_GROUPBOARD) ? "  " :
                 unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
     } else {
         if (newflag)
@@ -1750,54 +1770,55 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     SNPRINTF(col_name, "%s%s" ANSI_RESET,
             ((!(HasUserFlag(UF_FAV_NOHILIGHT)) &&
               getboard(ptr->bid) != NULL))?  HILIGHT_COLOR : "",
-            B_BH(ptr)->brdname);
+            bh.brdname);
 
-    const char *sym = (B_BH(ptr)->brdattr & BRD_SYMBOLIC) ? "☆" :
-                      (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "Σ" : "◎";
+    const char *sym = (bh.brdattr & BRD_SYMBOLIC) ? "☆" :
+                      (bh.brdattr & BRD_GROUPBOARD) ? "Σ" : "◎";
 
     char col_class[64];
     SNPRINTF(col_class, "%s%s " ANSI_COLOR(0;37) "%s" ANSI_RESET,
-            make_class_color(B_BH(ptr)->bclass),
-            B_BH(ptr)->bclass,
+            make_class_color(bh.bclass),
+            bh.bclass,
             should_show_sensitive_info ? sym : "");
 
     char col_desc[128];
     SNPRINTF(col_desc, "%s",
-            should_show_sensitive_info ? B_BH(ptr)->desc : "");
+            should_show_sensitive_info ? bh.desc : "");
 
     char col_nuser[64];
     if (!should_show_sensitive_info)
         SNPRINTF(col_nuser, "   ");
-    else if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+    else if (bh.brdattr & BRD_COOLDOWN)
         SNPRINTF(col_nuser, "靜 ");
-    else if (B_BH(ptr)->nuser < 1)
-        SNPRINTF(col_nuser, " %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-    else if (B_BH(ptr)->nuser <= 10)
-        SNPRINTF(col_nuser, "%2d ", B_BH(ptr)->nuser);
-    else if (B_BH(ptr)->nuser <= 50)
-        SNPRINTF(col_nuser, ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+    else if (bh.nuser < 1)
+        SNPRINTF(col_nuser, " %c ", bh.bvote ? 'V' : ' ');
+    else if (bh.nuser <= 10)
+        SNPRINTF(col_nuser, "%2d ", bh.nuser);
+    else if (bh.nuser <= 50)
+        SNPRINTF(col_nuser, ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", bh.nuser);
 #ifdef EXTRA_HOTBOARD_COLORS
-    else if (B_BH(ptr)->nuser >= 100000)
+    else if (bh.nuser >= 100000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;35) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 60000)
+    else if (bh.nuser >= 60000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;33) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 30000)
+    else if (bh.nuser >= 30000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;32) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 10000)
+    else if (bh.nuser >= 10000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;36) "爆!" ANSI_RESET);
 #endif
-    else if (B_BH(ptr)->nuser >= 5000)
+    else if (bh.nuser >= 5000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;34) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 2000)
+    else if (bh.nuser >= 2000)
         SNPRINTF(col_nuser, ANSI_COLOR(1;31) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 1000)
+    else if (bh.nuser >= 1000)
         SNPRINTF(col_nuser, ANSI_COLOR(1) "爆!" ANSI_RESET);
-    else if (B_BH(ptr)->nuser >= 100)
+    else if (bh.nuser >= 100)
         SNPRINTF(col_nuser, ANSI_COLOR(1) "HOT" ANSI_RESET);
     else
-        SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+        SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", bh.nuser);
 
-    render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser, B_BH(ptr)->BM);
+    render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser,
+            bh.BM);
     return 0;
 }
 
