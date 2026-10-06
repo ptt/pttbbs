@@ -305,6 +305,20 @@ static void test_buffer_overflow_with_compact(void) {
     printf("  -> PASS\n");
 }
 
+static void test_brcstore_filename(void) {
+    printf("Testing brcstore filename hashing and generation...\n");
+    char path[PATHLEN];
+    strcpy(pwcuser.userid, "SYSOP");
+    get_brc_alt_filename(path);
+    unsigned hash = StringHash("SYSOP") & 0xffff;
+    char expected[PATHLEN];
+    snprintf(expected, sizeof(expected), "%s/%02x/%02x/brc.SYSOP",
+             BRCSTORE_DIR, (hash >> 8) & 0xff, hash & 0xff);
+    assert(strcmp(path, expected) == 0);
+    assert(strncmp(path, BRCSTORE_DIR "/", strlen(BRCSTORE_DIR) + 1) == 0);
+    printf("  -> PASS (path: %s)\n", path);
+}
+
 int main(void) {
     printf("Running comprehensive BRC on-demand compacting tests...\n");
     test_basic_unread();
@@ -315,6 +329,7 @@ int main(void) {
     test_preserve_latest_read_timestamp_and_unread_semantics();
     test_recovery_after_compact();
     test_buffer_overflow_with_compact();
+    test_brcstore_filename();
     printf("\nAll BRC on-demand compacting tests PASSED successfully!\n");
     return 0;
 }
