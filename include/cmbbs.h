@@ -176,6 +176,13 @@ int substitute_fileheader(const char *dir_path, const void *srcptr, const void *
 int delete_fileheader(const char *dir_path, const void *rptr, int id);
 int is_valid_fileheader(const fileheader_t *fhdr);
 
+/* boardhdr.c */
+void boardheader_storage_to_mem(boardheader_t *bh, size_t count);
+void boardheader_mem_to_storage(boardheader_t *bh);
+int get_boardheader(boardheader_t *bh, int bid);
+int get_boardheader_by_name(boardheader_t *bh, const char *brdname);
+int modify_boardheader(const boardheader_t *bh, int bid);
+
 /* search.c */
 #define MAX_SEARCH_PREDICATES   8
 #define SEARCH_SVC_WINDOW_SIZE  4096
