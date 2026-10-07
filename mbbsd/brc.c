@@ -10,7 +10,7 @@
 // WARNING: Check ../pttbbs.conf, you may have overide these value there
 // TODO MAXSIZE may be better smaller to fit into memory page.
 #ifndef BRC_MAXNUM
-#define BRC_MAXSIZE     49152   /* Effective size of brc rc file, 8192 * 3 * 2 */
+#define BRC_MAXSIZE     65536   /* Effective size of brc rc file, 64KB (8192 * 8) */
 #define BRC_MAXNUM      80      /* Upper bound of brc_num, size of brc_list  */
 #endif
 
@@ -19,9 +19,8 @@
 // Note: BRC v3 should already support BRC_MAXSIZE > 65535,
 // but not widely tested yet.
 // MAX_BOARD >65535 is already tested on PTT2 since 2009/09/10.
-#if BRC_MAXSIZE > 65535
-#error Max number of boards or BRC_MAXSIZE cannot fit in unsigned short, \
- please rewrite brc.c (v2)
+#if BRC_MAXSIZE > 65536
+#error BRC_MAXSIZE exceeds 64KB
 #endif
 
 typedef uint32_t brcbid_t;
@@ -89,7 +88,7 @@ static inline void brc_write_num(void *p, brcnbrd_t v) {
  * if the record is found. If not found the record, *num will be the number
  * of dangling bytes. */
 static char *
-brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
+brc_findrecord_in(char *begin, char *endp, brcbid_t bid, int *num)
 {
     char     *tmpp, *ptr = begin;
     brcbid_t tbid;
@@ -103,7 +102,7 @@ brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
 
 	if ( tmpp > endp ){
 	    /* dangling, ignore the trailing data */
-	    *num = (brcnbrd_t)(endp - ptr); /* for brc_insert_record() */
+	    *num = (int)(endp - ptr); /* for brc_insert_record() */
 	    return 0;
 	}
 	if ( tbid == bid )
@@ -119,7 +118,7 @@ static brc_rec *
 brc_find_record(int bid, int *num)
 {
     char *p;
-    brcnbrd_t tnum;
+    int tnum;
     p = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
     *num = tnum;
     if (p)
@@ -257,7 +256,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const brc_rec* list)
 {
     char           *ptr;
     int             new_size;
-    brcnbrd_t       tnum;
+    int             tnum;
 
     brc_needs_file_update = 1;
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
@@ -496,7 +495,7 @@ brc_initialize(){
 static int
 brc_read_record(int bid, int *num, brc_rec *list){
     char *ptr;
-    brcnbrd_t tnum;
+    int tnum;
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
     *num = tnum;
     if ( ptr ){

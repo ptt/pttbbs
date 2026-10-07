@@ -316,18 +316,18 @@ static void test_buffer_overflow_with_compact(void) {
         r[i].modified = now - 100 - i * 10;
     }
 
-    // Insert 600 boards with 10 records each (each board takes 6 + 10*8 = 86 bytes)
-    // Total raw data: 600 * 86 = 51,600 bytes > BRC_MAXSIZE (49,152)
-    for (int b = 1; b <= 600; b++) {
+    // Insert 800 boards with 10 records each (each board takes 6 + 10*8 = 86 bytes)
+    // Total raw data: 800 * 86 = 68,800 bytes > BRC_MAXSIZE (65,536)
+    for (int b = 1; b <= 800; b++) {
         brc_insert_record(b, 10, r);
         assert(brc_size <= BRC_MAXSIZE);
     }
 
     assert(brc_size <= BRC_MAXSIZE);
 
-    // The most recently inserted board (600) must be at the head and fully intact with 10 records
+    // The most recently inserted board (800) must be at the head and fully intact with 10 records
     int bnum = 0;
-    const brc_rec *rec = brc_find_record(600, &bnum);
+    const brc_rec *rec = brc_find_record(800, &bnum);
     assert(rec != NULL && bnum == 10);
 
     // Earlier boards should have been compacted to num = 1 rather than being dropped!
