@@ -606,8 +606,14 @@
 #endif
 
 // 其他預設開啟之功能，若定義了 NO_XXX 則不定義 CONFIG_XXX (即 false)
-#if !defined(NO_GAMBLE) && !defined(CONFIG_GAMBLE)
-#define CONFIG_GAMBLE 1
+#if defined(CONFIG_GAMBLE) && !defined(CONFIG_LOTTERY)
+#define CONFIG_LOTTERY CONFIG_GAMBLE  /* legacy compat */
+#endif
+#if !defined(NO_LOTTERY) && !defined(NO_GAMBLE) && !defined(CONFIG_LOTTERY)
+#define CONFIG_LOTTERY 1
+#endif
+#if !defined(CONFIG_GAMBLE)
+#define CONFIG_GAMBLE CONFIG_LOTTERY  /* legacy compat */
 #endif
 
 #if !defined(NO_SYSOP_ACCOUNT) && !defined(CONFIG_SYSOP_ACCOUNT)

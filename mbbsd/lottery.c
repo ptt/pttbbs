@@ -46,7 +46,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	SNPRINTF(genbuf, "%s 樂透", bh->brdname);
 	if (bh->endgamble && time4_lt(now, bh->endgamble) &&
 	    time4_diff(bh->endgamble, now) < 3600) {
-	    showtitle(genbuf, TEMPFORMAT(25, "封盤倒數 %d 秒", (int)time4_diff(bh->endgamble, now)));
+	    showtitle(genbuf, TEMPFORMAT(25, "截止倒數 %d 秒", (int)time4_diff(bh->endgamble, now)));
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
@@ -77,7 +77,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 "      5." ANSI_COLOR(1;31) "如遇系統故障造成帳號回溯等各種問題，"
 	 "原則上不予以賠償，風險自擔。" ANSI_RESET "\n"
 	    ANSI_COLOR(32) "%s:" ANSI_RESET, *price,
-	   bh ? "此樂透由板主負責舉辦並決定開獎時間結果, 站方不管, 願賭服輸。" :
+	   bh ? "此樂透由板主負責舉辦並決定開獎時間結果, 站方不管, 結果自負。" :
 	        "系統每天 2:00 11:00 16:00 21:00 開獎。",
 	   bh ? ", 其中 0.05% 分給開獎板主, 最多 500" : "",
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
@@ -89,7 +89,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     }
     show_file(genbuf, 8, -1, SHOWFILE_ALLOW_ALL);
     move(15, 0); clrtobot();
-    outs(ANSI_COLOR(1;32) "目前下注狀況:" ANSI_RESET "\n");
+    outs(ANSI_COLOR(1;32) "目前投注狀況:" ANSI_RESET "\n");
 
     total = load_ticket_record(direct, ticket);
 
@@ -113,10 +113,10 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
                 outc('\n');
         }
     }
-    prints(ANSI_RESET "\n已下注總額: "
+    prints(ANSI_RESET "\n已投注總額: "
            ANSI_COLOR(1;33) "%lld" ANSI_RESET, total * (*price));
     if (end) {
-	outs("，已經停止下注\n");
+	outs("，已經截止投注\n");
 	return -count;
     }
     return count;
@@ -262,11 +262,11 @@ ticket(int bid)
 doesnt_catch_up:
 
     price = price * n;
-    // XXX 這是因為停止下注所以退錢？ 感覺好危險+race condition
+    // XXX 這是因為截止投注所以退錢？ 感覺好危險+race condition
     if (price > 0) {
-        pay_as_uid(currutmp->uid, -price, "下注失敗退費");
+        pay_as_uid(currutmp->uid, -price, "投注失敗退費");
     }
-    vmsg("板主已經停止下注了");
+    vmsg("板主已經截止投注了");
     unlockutmpmode();
     return -1;
 }
@@ -274,7 +274,7 @@ doesnt_catch_up:
 int
 openticket(int bid)
 {
-    if (!IS_ENABLED(CONFIG_GAMBLE))
+    if (!IS_ENABLED(CONFIG_LOTTERY))
         return 0;
     char            path[PATHLEN], buf[PATHLEN], outcome[PATHLEN];
     boardheader_t  *bh = getbcache(bid);
@@ -419,7 +419,7 @@ int
 join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
             const char *direct GCC_UNUSED)
 {
-    if (!IS_ENABLED(CONFIG_GAMBLE))
+    if (!IS_ENABLED(CONFIG_LOTTERY))
         return DONOTHING;
 
     if (!HasBasicUserPerm(PERM_LOGINOK))
@@ -436,7 +436,7 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
 int
 hold_gamble(void)
 {
-    if (!IS_ENABLED(CONFIG_GAMBLE))
+    if (!IS_ENABLED(CONFIG_LOTTERY))
         return DONOTHING;
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
@@ -459,7 +459,7 @@ hold_gamble(void)
 
     if (dashf(fn_ticket)) {
 	getdata(b_lines - 1, 0, "已經有舉辦樂透, "
-		"是否要 [停止下注]?(N/y)：", yn, 3, LCECHO);
+		"是否要 [截止投注]?(N/y)：", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
 	rename(fn_ticket, fn_ticket_end);
@@ -510,8 +510,8 @@ hold_gamble(void)
 	i = atoi(yn);
     } while (i < 10 || i > 10000);
     fprintf(fp, "%d\n", i);
-    if (!getdata(3, 0, "設定自動封盤時間?(Y/n)", yn, 3, LCECHO) || yn[0] != 'n') {
-	bp->endgamble = gettime(4, now, "封盤於");
+    if (!getdata(3, 0, "設定自動截止時間?(Y/n)", yn, 3, LCECHO) || yn[0] != 'n') {
+	bp->endgamble = gettime(4, now, "截止於");
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }

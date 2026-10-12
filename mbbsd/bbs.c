@@ -4413,7 +4413,7 @@ const cmd_t read_comms[] = {
     { Ctrl('V'), NULL, "發起活動連署", bbs_cmd_post_vote, 0, CMD_PRIO_NONE },
     { 'V', NULL, "參與看板投票", bbs_cmd_vote, 0, CMD_PRIO_NONE },
     { 'R', NULL, "查看投票結果", bbs_cmd_vote_results, 0, CMD_PRIO_NONE },
-    { 'f', NULL, "參與看板樂透下注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
+    { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
     { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, 0, CMD_PRIO_NONE, true },
     { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, 0, CMD_PRIO_NONE, true },

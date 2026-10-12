@@ -241,7 +241,7 @@ int main(int argc, char **argv)
             fputs(buf, fp);
         }
 
-        fprintf(fp, "\n下注情況\n");
+        fprintf(fp, "\n投注情況\n");
         for (int i = 0; i < count && !wide; i++) {
             if (stream_width(betname[i]) > NARROW_ITEM_WIDTH || ticket[i] > 999999)
                 wide = 1;
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
             fprintf(fp,
                     "開獎時間: %s\n"
                     "開獎結果: %s\n"
-                    "下注總額: %lld\n"
+                    "投注總額: %lld\n"
                     "中獎比例: %lld張/%lld張  (%f)\n"
                     "每張中獎彩券可得 %lld " MONEYNAME "\n\n",
                     Cdatelite(&now), betname[win_idx],
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
             const char *body;
             if (win_idx == 98) {
                 snprintf(reason, sizeof(reason), "樂透彩退費 (%s x %d)", betname[mybet], num);
-                body = "樂透取消，下注金額已全額退回。";
+                body = "樂透取消，投注金額已全額退回。";
             } else {
                 snprintf(reason, sizeof(reason), "彩券中獎 (%s x %d)", betname[mybet], num);
                 body = "恭喜中獎！";
@@ -342,13 +342,13 @@ int main(int argc, char **argv)
         snprintf(rec_title, sizeof(rec_title), "%s 樂透取消", brdname);
     }
 
-    post_result_file(brdname, buf, outcome, "[彩卷]");
+    post_result_file(brdname, buf, outcome, "[彩券]");
     post_result_file("Record", rec_title, outcome, "[馬路探子]");
     post_result_file(BN_SECURITY, rec_title, outcome, "[馬路探子]");
 
     /* Backup bets log to Security */
     setbfile(buf, brdname, FN_TICKET_USER);
-    post_result_file(BN_SECURITY, brdname, buf, "[下注紀錄]");
+    post_result_file(BN_SECURITY, brdname, buf, "[投注紀錄]");
     unlink(buf);
 
     setbfile(buf, brdname, FN_TICKET_RECORD);
