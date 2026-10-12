@@ -647,9 +647,8 @@ forward_file(const fileheader_t * fhdr, const char *direct)
 	vmsg(MSG_FWD_ERR1);
 	break;
     case -2:
-#if !IS_ENABLED(CONFIG_DEBUG_FWDADDRERR)
-	vmsg(MSG_FWD_ERR2);
-#endif
+	if (!IS_ENABLED(CONFIG_DEBUG_FWDADDRERR))
+	    vmsg(MSG_FWD_ERR2);
 	break;
     case -4:
 	vmsg("對方信箱已滿");
@@ -702,11 +701,10 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
     } else if (sr_mode & RS_RECOMMEND) {
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
-		     "增加條件 推文數: ": "搜尋推文數高於多少"
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-		     " (<0則搜噓文數) "
-#endif // CONFIG_OLD_RECOMMEND
-		     "的文章: ",
+		     "增加條件 推文數: " :
+		     (!IS_ENABLED(CONFIG_OLD_RECOMMEND) ?
+		      "搜尋推文數高於多少 (<0則搜噓文數) 的文章: " :
+		      "搜尋推文數高於多少的文章: "),
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||
 	    (pred->recommend = atoi(keyword)) == 0)

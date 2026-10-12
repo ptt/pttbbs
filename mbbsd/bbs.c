@@ -3,13 +3,7 @@
 #include "daemons.h"
 #include <arpa/inet.h>
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-
-#include "fnv_hash.h"
 #define SMHASHLEN (64/8)
-
-#endif // CONFIG_EDITPOST_SMARTMERGE
-
 #define WHEREAMI_LEVEL	16
 
 #define NEWIDPOST_LIMIT_DAYS (14)
@@ -847,12 +841,12 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         else
             SNPRINTF(col_date, "%5d ", m);
     } else {
-#if IS_ENABLED(CONFIG_COLORDATE)
-        SNPRINTF(col_date, ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
-                 (ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
-#else
-        SNPRINTF(col_date, "%-6.5s", ent->date);
-#endif
+        if (IS_ENABLED(CONFIG_COLORDATE)) {
+            SNPRINTF(col_date, ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
+                     (ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
+        } else {
+            SNPRINTF(col_date, "%-6.5s", ent->date);
+        }
     }
 
     char col_author[64];
@@ -1411,17 +1405,15 @@ do_post_article(int edflags)
     tn_safe_strip(save_title);
 
     /* set owner to Anonymous for Anonymous board */
-#if IS_ENABLED(CONFIG_ANONYMOUS)
     /* Ptt and Jaky */
-    if ((currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
+    if (IS_ENABLED(CONFIG_ANONYMOUS) &&
+	(currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
 	strcat(real_name, ".");
 	owner = real_name;
 	ifuseanony = 1;
-    } else
+    } else {
 	owner = cuser.userid;
-#else
-    owner = cuser.userid;
-#endif
+    }
 
     // ---- BEGIN OF MONEY VERIFICATION ----
 
@@ -1744,7 +1736,6 @@ reply_post(int ent GCC_UNUSED, fileheader_t * fhdr,
     return do_reply(fhdr);
 }
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
 
 #define HASHPF_RET_OK (0)
 
@@ -1826,7 +1817,6 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
     close(fd_src);
     return ret;
 }
-#endif // CONFIG_EDITPOST_SMARTMERGE
 
 int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
@@ -1842,9 +1832,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     int rev = 0;
     time4_t oldmt = 0;
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
     unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
-#endif // CONFIG_EDITPOST_SMARTMERGE
 
 #ifdef EXP_EDITPOST_TEXTONLY
     // experimental: "text only" editing
@@ -1930,39 +1918,39 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // to prevent genbuf being modified after copy, use dashs(fpath) instead.
     oldsz = dashs(fpath);
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-    if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
-        vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
-        unlink(fpath);
-        return FULLUPDATE;
+    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
+        if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
+            vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
+            unlink(fpath);
+            return FULLUPDATE;
+        }
     }
-#endif
 
     if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
     }
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-    outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
-    refresh();
+    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
+        outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
+        refresh();
 
-    if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
-        memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
-        is_race_condition = 1;
+        if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
+            memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
+            is_race_condition = 1;
+        }
+    } else {
+        // without smart merge, simply alert by size and mtime.
+        if (dashs(genbuf) != oldsz || time4_gt(dasht(genbuf), dashc(fpath)))
+            is_race_condition = 1;
     }
-#else
-    // without smart merge, simply alert by size and mtime.
-    if (dashs(genbuf) != oldsz || time4_gt(dasht(genbuf), dashc(fpath)))
-        is_race_condition = 1;
-#endif
     if (is_race_condition) {
         // save to ~/buf.0
         setuserfile(genbuf, "buf.0");
         Rename(fpath, genbuf);
         // alert uesr
-        outs("\n\n" ANSI_COLOR(1;31) "檔案已被其它人修改過，無法寫入。\n"
-             "剛才的內容已存入您的暫存檔[0]。 請重新編輯。");
+        outs("\n\n" ANSI_COLOR(1;31) "檔案全被其他人修改過，無法寫入。\n"
+             "新內容已存入您的暫存檔[0]。 請重新編輯。");
         pressanykey();
         return FULLUPDATE;
     }
@@ -1971,19 +1959,19 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     oldmt = dasht(genbuf);
     rev = timecapsule_add_revision(genbuf);
 
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-    // atomic lock-merge-replace
-    append_merge_replace(genbuf, fpath, oldsz);
-#else
-    // piaip Wed Jan  9 11:11:33 CST 2008
-    // in order to prevent calling system 'mv' all the
-    // time, it is better to unlink() first, which
-    // increased the chance of succesfully using rename().
-    // WARNING: if genbuf and fpath are in different directory,
-    // you should disable pre-unlinking
-    unlink(genbuf);
-    Rename(fpath, genbuf);
-#endif
+    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
+        // atomic lock-merge-replace
+        append_merge_replace(genbuf, fpath, oldsz);
+    } else {
+        // piaip Wed Jan  9 11:11:33 CST 2008
+        // in order to prevent calling system 'mv' all the
+        // time, it is better to unlink() first, which
+        // increased the chance of succesfully using rename().
+        // WARNING: if genbuf and fpath are in different directory,
+        // you should disable pre-unlinking
+        unlink(genbuf);
+        Rename(fpath, genbuf);
+    }
 
     fhdr->modified = dasht(genbuf);
     if (strcmp(save_title, fhdr->title) != 0) {
@@ -2232,14 +2220,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
-#if IS_ENABLED(CONFIG_GUESTRECOMMEND)
-	    SNPRINTF(tail, "%15s %s",
-		    FROMHOST, Cdate_md(&now));
-#else
-	    maxlength += (15 - 6);
-	    SNPRINTF(tail, " %s",
-		    Cdate_mdHM(&now));
-#endif
+	    if (IS_ENABLED(CONFIG_GUESTRECOMMEND)) {
+		SNPRINTF(tail, "%15s %s",
+			FROMHOST, Cdate_md(&now));
+	    } else {
+		maxlength += (15 - 6);
+		SNPRINTF(tail, " %s",
+			Cdate_mdHM(&now));
+	    }
 	    SNPRINTF(buf, // ANSI_COLOR(32) <- system will add green
 		    "※ " ANSI_COLOR(1;32) "%s"
 		    ANSI_COLOR(0;32) ":轉錄至"

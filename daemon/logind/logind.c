@@ -1477,12 +1477,10 @@ regular_check()
         // Don't leave overload state unless the load is halved.
         g_overload = 1;
     }
-    else if (SHM->UTMPnumber >= MAX_ACTIVE
-#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
-            || (SHM->GV2.e.dymaxactive > 2000 &&
-                SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
-#endif
-        )
+    else if (SHM->UTMPnumber >= MAX_ACTIVE ||
+             (IS_ENABLED(CONFIG_DYMAX_ACTIVE) &&
+              SHM->GV2.e.dymaxactive > 2000 &&
+              SHM->UTMPnumber >= SHM->GV2.e.dymaxactive))
     {
         ++SHM->GV2.e.toomanyusers;
         g_overload = 2;

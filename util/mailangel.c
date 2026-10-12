@@ -1,8 +1,5 @@
 #include "bbs.h"
 
-#if !IS_ENABLED(CONFIG_ANGEL)
-int main(){ return 0; }
-#else
 
 int total[MAX_USERS + 1];
 int *list;
@@ -15,6 +12,8 @@ void sendResult();
 void mailUser(char *userid);
 
 int main(int argc, char* argv[]){
+    if (!IS_ENABLED(CONFIG_ANGEL))
+        return 0;
     if (chdir(BBSHOME) != 0) {
 	perror("chdir");
 	return 1;
@@ -139,4 +138,3 @@ void mailUser(char *userid)
     mailalertuser(userid);
     printf("%s\n", userid);
 }
-#endif /* IS_ENABLED(CONFIG_ANGEL) */

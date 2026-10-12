@@ -100,32 +100,32 @@ invalidaddr(const char *addr) {
     if (r)
         return 0;
 
-#if IS_ENABLED(CONFIG_DEBUG_FWDADDRERR)
-    clear();
-    mvouts(2, 0,
-           "您輸入的 email 位址錯誤 (address error)。 \n\n"
-           "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
-           "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
-           "如果你確實打錯了，請直接略過下面的說明。\n"
-           "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
-           "並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
-           ANSI_COLOR(1;33));
-    prints("原始輸入位址: [%s]\n", addr);
+    if (IS_ENABLED(CONFIG_DEBUG_FWDADDRERR)) {
+        clear();
+        mvouts(2, 0,
+               "您輸入的 email 位址錯誤 (address error)。 \n\n"
+               "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
+               "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
+               "如果你確實打錯了，請直接略過下面的說明。\n"
+               "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
+               "並貼到 " BN_BUGREPORT " 板。本站為造成不便深感抱歉。\n\n"
+               ANSI_COLOR(1;33));
+        prints("原始輸入位址: [%s]\n", addr);
 
 
-    if (bad_email_offset >= 0) {
-        char c = addr[bad_email_offset];
-        prints("錯誤位置: 第 %d 字元: 0x%02X [ %c ]",
-               bad_email_offset,  (unsigned char)c,
-               isascii(c) && isprint(c) ? c : ' ');
-    } else {
-        outs("錯誤原因: email 形式不正確 (非 user@host.domain)");
-    }
-    outs(ANSI_RESET "\n");
+        if (bad_email_offset >= 0) {
+            char c = addr[bad_email_offset];
+            prints("錯誤位置: 第 %d 字元: 0x%02X [ %c ]",
+                   bad_email_offset,  (unsigned char)c,
+                   isascii(c) && isprint(c) ? c : ' ');
+        } else {
+            outs("錯誤原因: email 形式不正確 (非 user@host.domain)");
+        }
+        outs(ANSI_RESET "\n");
 
-    pressanykey();
-    clear();
-#endif
+        pressanykey();
+        clear();
+        }
     return 1;
 }
 
@@ -2230,7 +2230,9 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
                const char *direct GCC_UNUSED)
 {
     assert(is_valid_fileheader(fhdr));
-#if IS_ENABLED(CONFIG_OUTJOBSPOOL)
+    if (!IS_ENABLED(CONFIG_OUTJOBSPOOL))
+	return DONOTHING;
+
     char            address[60] = "", cmode = 1;
     char            fname[500], genbuf[PATHLEN];
     FILE           *fp;
@@ -2308,9 +2310,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
     fclose(fp);
     vmsg("設定完成, 系統將在下一個整點(尖峰時段除外)將資料寄給您");
     return FULLUPDATE;
-#else
-    return DONOTHING;
-#endif
+
 }
 
 static int

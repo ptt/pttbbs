@@ -38,11 +38,9 @@ int main(void) {
         PERMCHECK(PERM_ACTION),
         PERMCHECK(PERM_PAINT),
 #endif
-#if IS_ENABLED(CONFIG_ANGEL)
         PERMCHECK(ROLE_ANGEL_CIA),
         PERMCHECK(ROLE_ANGEL_ACTIVITY),
         PERMCHECK(ROLE_ANGEL_ARCHANGEL),
-#endif
         PERMCHECK(ROLE_POLICE_ANONYMOUS),
         {0, NULL},
     };
@@ -62,6 +60,8 @@ int main(void) {
         if (!usr.userlevel && !usr.role)
             continue;
         for (i = 0; checks[i].mask; i++) {
+            if (!IS_ENABLED(CONFIG_ANGEL) && strncmp(checks[i].desc, "ROLE_ANGEL_", 11) == 0)
+                continue;
             int mask = checks[i].mask;
             uint32_t *pvalue = NULL;
             const char *desc = checks[i].desc;
@@ -98,6 +98,8 @@ int main(void) {
 
     // Now, iterate through all permissions and print out list.
     for (i = 0; checks[i].mask; i++) {
+        if (!IS_ENABLED(CONFIG_ANGEL) && strncmp(checks[i].desc, "ROLE_ANGEL_", 11) == 0)
+            continue;
         printf("%s %s\n%stotal %d users\n\n",
                checks[i].desc, checks[i].caption,
                checks[i].list ? checks[i].list : "",

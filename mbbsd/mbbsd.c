@@ -308,18 +308,17 @@ abort_bbs_debug(int sig)
     }
     */
 
-#if IS_ENABLED(CONFIG_DEBUGSLEEP)
-
+    if (IS_ENABLED(CONFIG_DEBUGSLEEP)) {
 #ifndef VALGRIND
-    setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
+	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 #endif
-    /* do this manually to prevent broken stuff */
-    /* will broken currutmp cause problems here? hope not... */
-    if(currutmp && strncmp(cuser.userid, currutmp->userid, IDLEN) == EQUSTR)
-	currutmp->mode = DEBUGSLEEPING;
+	/* do this manually to prevent broken stuff */
+	/* will broken currutmp cause problems here? hope not... */
+	if (currutmp && strncmp(cuser.userid, currutmp->userid, IDLEN) == EQUSTR)
+	    currutmp->mode = DEBUGSLEEPING;
 
-    sleep(DEBUGSLEEP_SECONDS);
-#endif
+	sleep(DEBUGSLEEP_SECONDS);
+    }
 
     exit(0);
 }
@@ -464,10 +463,10 @@ load_current_user(const char *uid)
 #ifdef STR_REGNEW
     if (!is_admin_only && strcasecmp(uid, STR_REGNEW) == 0) {
 
-# if !IS_ENABLED(CONFIG_LOGINASNEW)
-	assert(false);
-	exit(0);
-# endif // !LOGINASNEW
+	if (!IS_ENABLED(CONFIG_LOGINASNEW)) {
+	    assert(false);
+	    exit(0);
+	}
 
 	new_register();
 	clear();
@@ -517,13 +516,13 @@ load_current_user(const char *uid)
 #ifdef LOCAL_LOGIN_MOD
 	LOCAL_LOGIN_MOD();
 #endif
-	if (strcasecmp(str_sysop, cuser.userid) == 0){
-#if !IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
-	    exit(0);
-#else /* 自動加上各個主要權限 */
-	    // TODO only allow in local connection?
-	    pwcuInitAdminPerm();
-#endif
+	if (strcasecmp(str_sysop, cuser.userid) == 0) {
+	    if (!IS_ENABLED(CONFIG_SYSOP_ACCOUNT)) {
+		exit(0);
+	    } else { /* 自動加上各個主要權限 */
+		// TODO only allow in local connection?
+		pwcuInitAdminPerm();
+	    }
 	}
 	/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
 	mkuserdir(cuser.userid);
@@ -644,14 +643,14 @@ login_query(char *ruid)
 
 #ifdef STR_REGNEW
 	} else if (strcasecmp(uid, STR_REGNEW) == 0) {
-# if !IS_ENABLED(CONFIG_LOGINASNEW)
-	    outs("本系統目前無法以 " STR_REGNEW " 註冊"
-#  ifdef STR_GUEST
-		 ", 請用 " STR_GUEST " 進入"
-#  endif  // STR_GUEST
-		 "\n");
-	    continue;
-# endif // !LOGINASNEW
+	    if (!IS_ENABLED(CONFIG_LOGINASNEW)) {
+		outs("本系統目前無法以 " STR_REGNEW " 註冊"
+# ifdef STR_GUEST
+		     ", 請用 " STR_GUEST " 進入"
+# endif  // STR_GUEST
+		     "\n");
+		continue;
+	    }
 
 	    strlcpy(ruid, STR_REGNEW, IDLEN+1);
 	    break;
@@ -776,9 +775,8 @@ setup_utmp(int mode)
 
     mbs_sanitize(currutmp->nickname, sizeof(currutmp->nickname));
 
-#if IS_ENABLED(CONFIG_FROMD)
-    // resolve fromhost
-    {
+    if (IS_ENABLED(CONFIG_FROMD)) {
+	// resolve fromhost
 	int fd;
 	if ((fd = toconnect(FROMD_ADDR)) >= 0) {
 	    char *p, *ptr;
@@ -804,7 +802,6 @@ setup_utmp(int mode)
 	    }
 	}
     }
-#endif // WHERE
 
     /* Sync friend_online via friend.svc. */
     if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
@@ -963,14 +960,14 @@ user_login(void)
     STRLCPY(fromhost_masked, fromhost);
     obfuscate_ipstr(fromhost_masked);
 
-#if !IS_ENABLED(CONFIG_MULTI_WELCOME_LOGIN)
-    more("etc/Welcome_login", NA);
-#else
-    if( SHM->GV2.e.nWelcomes ){
-        more(TEMPFORMAT(80, "etc/Welcome_login.%d",
-                        (int)login_start_time % SHM->GV2.e.nWelcomes), NA);
+    if (!IS_ENABLED(CONFIG_MULTI_WELCOME_LOGIN)) {
+	more("etc/Welcome_login", NA);
+    } else {
+	if (SHM->GV2.e.nWelcomes) {
+	    more(TEMPFORMAT(80, "etc/Welcome_login.%d",
+			    (int)login_start_time % SHM->GV2.e.nWelcomes), NA);
+	}
     }
-#endif
 
     refresh();
     currutmp->alerts |= load_mailalert(cuser.userid);
@@ -1255,15 +1252,15 @@ static void init(void)
     Signal(SIGUSR2, SIG_IGN);
 
 #ifdef __GLIBC__
-#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
-    mallopt(M_MMAP_THRESHOLD, 1024 * 8);
-    mallopt(M_MMAP_MAX, 0);
-    mallopt(M_TRIM_THRESHOLD, 1024 * 8);
-    mallopt(M_TOP_PAD, 0);
-#else
-    mallopt(M_TRIM_THRESHOLD, 1024 * 16);
-    mallopt(M_TOP_PAD, 1024 * 4);
-#endif
+    if (IS_ENABLED(CONFIG_CRITICAL_MEMORY)) {
+	mallopt(M_MMAP_THRESHOLD, 1024 * 8);
+	mallopt(M_MMAP_MAX, 0);
+	mallopt(M_TRIM_THRESHOLD, 1024 * 8);
+	mallopt(M_TOP_PAD, 0);
+    } else {
+	mallopt(M_TRIM_THRESHOLD, 1024 * 16);
+	mallopt(M_TOP_PAD, 1024 * 4);
+    }
 #endif
 
 
@@ -1861,12 +1858,11 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 
     // if you have your own banner, define as INSCREEN in pttbbs.conf
     // if you don't want anny benner, define NO_INSCREEN
-#if IS_ENABLED(CONFIG_INSCREEN)
-# ifndef   INSCREEN
-#  define  INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
-# endif
-    write(fd, INSCREEN, sizeof(INSCREEN));
+#ifndef INSCREEN
+#define INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
 #endif
+    if (IS_ENABLED(CONFIG_INSCREEN))
+        write(fd, INSCREEN, sizeof(INSCREEN));
 
     if ((time(0) - time4_to_time(chkload_time)) > 1) {
 	overload = 0;
@@ -1874,12 +1870,10 @@ check_ban_and_load(int fd, struct ProgramOption *option,
 
 	if(cpuload(NULL) > MAX_CPULOAD)
 	    overload = 1;
-	else if (SHM->UTMPnumber >= MAX_ACTIVE
-#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
-		|| (SHM->GV2.e.dymaxactive > 2000 &&
-		    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
-#endif
-		) {
+	else if (SHM->UTMPnumber >= MAX_ACTIVE ||
+		 (IS_ENABLED(CONFIG_DYMAX_ACTIVE) &&
+		  SHM->GV2.e.dymaxactive > 2000 &&
+		  SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)) {
 	    __atomic_fetch_add(&SHM->GV2.e.toomanyusers, 1, __ATOMIC_RELAXED);
 	    overload = 2;
 	} else if(!access(BBSHOME "/" BAN_FILE, R_OK))

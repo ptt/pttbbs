@@ -696,13 +696,10 @@ p_sysinfo(void)
 	   "癬﹍丁: %s\n"
 	   "絪亩丁: %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
-#if IS_ENABLED(CONFIG_DYMAX_ACTIVE)
-	   // XXX check the related logic in mbbsd.c
-	   (SHM->GV2.e.dymaxactive > 2000 && SHM->GV2.e.dymaxactive < MAX_ACTIVE) ?
-	    SHM->GV2.e.dymaxactive : MAX_ACTIVE,
-#else
-	   MAX_ACTIVE,
-#endif
+	   (IS_ENABLED(CONFIG_DYMAX_ACTIVE) &&
+	    SHM->GV2.e.dymaxactive > 2000 &&
+	    SHM->GV2.e.dymaxactive < MAX_ACTIVE) ?
+	       SHM->GV2.e.dymaxactive : MAX_ACTIVE,
 #ifdef DETECT_CLIENT
 	   client_code,
 #endif
@@ -747,17 +744,14 @@ p_sysinfo(void)
 #ifdef CPULIMIT_PER_DAY
 	prints(" (limit %d secs per day)", CPULIMIT_PER_DAY);
 #endif
-	outs("\n疭把计:"
-#if IS_ENABLED(CONFIG_CRITICAL_MEMORY)
-		" CONFIG_CRITICAL_MEMORY"
-#endif
-#if IS_ENABLED(CONFIG_FROMD)
-		" CONFIG_FROMD"
-#endif
+	outs("\n疭把计:");
+	if (IS_ENABLED(CONFIG_CRITICAL_MEMORY))
+	    outs(" CONFIG_CRITICAL_MEMORY");
+	if (IS_ENABLED(CONFIG_FROMD))
+	    outs(" CONFIG_FROMD");
 #ifdef USE_MBBSD_CXX
-		" CXX"
+	outs(" CXX");
 #endif
-		);
     }
     pressanykey();
     return 0;

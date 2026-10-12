@@ -23,34 +23,34 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     setdirpath(path, direct, fhdr->filename);
     fd = open(path, O_APPEND | O_WRONLY);
     if (fd >= 0) {
-#if IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)
-        int lock_retry = 5, lock_wait = 1, lock_success = 0;
-        while (lock_retry-- > 0) {
-            /* try several times */
-            if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
-                move(b_lines, 0);
-                prints("==> 檔案正被它人編輯中，等待完成: %d\n", lock_retry + 1);
-                doupdate();
-                sleep(lock_wait);
-                /* reopen the file because edit_post creates a new file. */
-                close(fd);
-                fd = open(path, O_APPEND | O_WRONLY);
-                continue;
+            if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
+            int lock_retry = 5, lock_wait = 1, lock_success = 0;
+            while (lock_retry-- > 0) {
+                /* try several times */
+                if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
+                    move(b_lines, 0);
+                    prints("==> 檔案正被它人編輯中，等待完成: %d\n", lock_retry + 1);
+                    doupdate();
+                    sleep(lock_wait);
+                    /* reopen the file because edit_post creates a new file. */
+                    close(fd);
+                    fd = open(path, O_APPEND | O_WRONLY);
+                    continue;
+                }
+                lock_success = 1;
+                write(fd, formatted, strlen(formatted));
+                flock(fd, LOCK_UN);
+                break;
             }
-            lock_success = 1;
+            close(fd);
+            if (!lock_success) {
+                vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
+                return -1;
+        }
+        } else {
             write(fd, formatted, strlen(formatted));
-            flock(fd, LOCK_UN);
-            break;
+            close(fd);
         }
-        close(fd);
-        if (!lock_success) {
-            vmsg("錯誤: 檔案正被它人編輯中，無法寫入。");
-            return -1;
-        }
-#else
-        write(fd, formatted, strlen(formatted));
-        close(fd);
-#endif
     } else {
         vmsg((errno == EROFS) ? "錯誤: 系統目前唯讀中，無法修改。" :
              "錯誤: 原檔案已被刪除。 無法寫入。");

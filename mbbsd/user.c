@@ -467,13 +467,11 @@ static const CustomItem items[] = { {
     }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_PAGER_OFO,
-#if IS_ENABLED(CONFIG_ANGEL)
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,
         .getter = angel_getter,
         .setter = angel_setter,
-#endif
     },
 };
 
@@ -550,6 +548,8 @@ void Customize(void)
     customize_ctx_t cx;
     cx.valid_count = 0;
     for (size_t i = 0; i < ARRAY_SIZE(items); i++) {
+        if (!IS_ENABLED(CONFIG_ANGEL) && items[i].perm == PERM_ANGEL)
+            continue;
         if (items[i].perm && !HasUserPerm(items[i].perm))
             continue;
         cx.valid_indices[cx.valid_count++] = i;

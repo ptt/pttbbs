@@ -1068,9 +1068,8 @@ m_newbrd(int whatclass, int recover)
         }
     }
     newboard.brdattr = 0;
-#if IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG)
-    newboard.brdattr |= BRD_CPLOG;
-#endif
+    if (IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG))
+        newboard.brdattr |= BRD_CPLOG;
 
     if (HasUserPerm(PERM_BOARD)) {
 	move(1, 0);

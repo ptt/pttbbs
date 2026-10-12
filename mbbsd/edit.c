@@ -1973,8 +1973,7 @@ write_header(FILE * fp,  const char *mytitle)
 	STRLCPY(postlog.author, cuser.userid);
 	if (curr_buf)
 	    curr_buf->ifuseanony = 0;
-#if IS_ENABLED(CONFIG_ANONYMOUS)
-	if (currbrdattr & BRD_ANONYMOUS) {
+	if (IS_ENABLED(CONFIG_ANONYMOUS) && (currbrdattr & BRD_ANONYMOUS)) {
 	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
             char default_name[IDLEN + 1] = "";
             char ans[3];
@@ -2034,7 +2033,6 @@ write_header(FILE * fp,  const char *mytitle)
                     curr_buf->ifuseanony = 1;
             }
 	}
-#endif
 	STRLCPY(postlog.board, currboard);
         ptr = subject(ptr);
 	STRLCPY(postlog.title, ptr);
@@ -2202,16 +2200,12 @@ browse_sigs:
 	    }
 	}
     }
-#if IS_ENABLED(CONFIG_ORIGIN)
-#if IS_ENABLED(CONFIG_ANONYMOUS)
-    if (ifuseanony)
-        addsimplesignature(fp, "匿名天使的家");
-    else
-#endif
-    {
-        addsimplesignature(fp, NULL);
+    if (IS_ENABLED(CONFIG_ORIGIN)) {
+        if (IS_ENABLED(CONFIG_ANONYMOUS) && ifuseanony)
+            addsimplesignature(fp, "匿名天使的家");
+        else
+            addsimplesignature(fp, NULL);
     }
-#endif
 }
 
 #ifdef USE_POST_ENTROPY

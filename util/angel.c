@@ -10,9 +10,6 @@
 #define REPORT_AUTHOR   "[天使公會]"
 #define REPORT_SUBJECT  "小天使統計資料"
 
-#if !IS_ENABLED(CONFIG_ANGEL)
-int main(){ return 0; }
-#else
 
 void slurp(FILE* to, FILE* from) {
     char buf[4096]; // 4K block
@@ -163,6 +160,8 @@ void usage(const char *myname) {
 }
 
 int main(int argc, char *argv[]){
+    if (!IS_ENABLED(CONFIG_ANGEL))
+        return 0;
     AngelRecord *rec, *angels;
     int count, i, iangel;
     int uid, bid;
@@ -246,4 +245,3 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-#endif /* IS_ENABLED(CONFIG_ANGEL) */
