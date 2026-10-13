@@ -1106,12 +1106,7 @@ announce_cmd_num_search(cmd_ctx_t *ctx)
     ctx->reload = true;
     if (n > 0) {
         cx->me->now = n - 1;
-        if (cx->me->now >= cx->me->num)
-            cx->me->now = cx->me->num > 0 ? cx->me->num - 1 : 0;
         ctx->curr = cx->me->now;
-        ctx->base = (ctx->curr > ctx->rows / 2) ?
-                    (ctx->curr - ctx->rows / 2) :
-                    (ctx->curr - (ctx->curr % ctx->rows));
     } else if (n == 0 && cx->sess->z_indexes[0] == 0) {
         // empty/invalid input
     } else {
@@ -1483,140 +1478,7 @@ static const cmd_t announce_bm_cmds[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
-static void
-a_showhelp(int level)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  進入目錄/文章", "→r Enter",
-        "  回到上一層",   "← q",
-        "  移到該選項",   "(數字)",
-        "  我在哪裡",     "^Y",
-        "  寄回電子郵箱", "F U",
-        "", "",
-        "【移動瀏覽】", NULL,
-        "  上個選項",     "↑ k",
-        "  下個選項",     "↓ j",
-        "  往前翻頁",     "^B PgUp",
-        "  往後翻頁",     "^F PgDn 空白鍵",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【板主專用鍵】", NULL,
-        "  切換閱讀權限", "H",
-        "  建新文章",      "n",
-        "  建新目錄",      "g",
-        "  移動文章",      "m",
-        "  刪除文章",      "d",
-        "  範圍刪除",      "D",
-        "  修改符號",      "f",
-        "  修改標題",      "T",
-        "  修改內容",      "e",
-        "  複製項目",      "c",
-        "  貼上項目",      "p",
-        "  附加項目",      "a",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【看板與信箱】", NULL,
-        "  標記內容",     "(看板或信箱內)t",
-        "  貼上標記",     "^P",
-        "  附加標記",     "^A",
-        "", "",
-        "【站長專用鍵】", NULL,
-        "  查詢檔名",     "N",
-        NULL,
-    };
-
-    const char * const *p[] = {col1, col2, col3};
-    int n = level ? ARRAY_SIZE(p) : 1;
-    show_help_table(p, n, "公佈欄輔助說明");
-}
-
-static int
-announce_cmd_help(cmd_ctx_t *ctx) {
-    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
-    a_showhelp(cx->me->level);
-    ctx->redraw = true;
-    return 0;
-}
-
-static int
-announce_cmd_quit(cmd_ctx_t *ctx) {
-    ctx->quit = true;
-    return 0;
-}
-
-static int
-announce_cmd_up(cmd_ctx_t *ctx) {
-    if (ctx->total > 0)
-        ctx->curr = (ctx->curr - 1 < 0) ? ctx->total - 1 : ctx->curr - 1;
-    return 0;
-}
-
-static int
-announce_cmd_down(cmd_ctx_t *ctx) {
-    if (ctx->total > 0)
-        ctx->curr = (ctx->curr + 1 >= ctx->total) ? 0 : ctx->curr + 1;
-    return 0;
-}
-
-static int
-announce_cmd_pgup(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0)
-        return 0;
-    if (ctx->curr >= p_lines)
-        ctx->curr -= p_lines;
-    else if (ctx->curr > 0)
-        ctx->curr = 0;
-    else
-        ctx->curr = ctx->total - 1;
-    return 0;
-}
-
-static int
-announce_cmd_pgdn(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0)
-        return 0;
-    if (ctx->curr < ctx->total - p_lines)
-        ctx->curr += p_lines;
-    else if (ctx->curr < ctx->total - 1)
-        ctx->curr = ctx->total - 1;
-    else
-        ctx->curr = 0;
-    return 0;
-}
-
-static int
-announce_cmd_home(cmd_ctx_t *ctx) {
-    ctx->curr = 0;
-    return 0;
-}
-
-static int
-announce_cmd_end(cmd_ctx_t *ctx) {
-    ctx->curr = (ctx->total > 0) ? ctx->total - 1 : 0;
-    return 0;
-}
-
 static const cmd_t announce_base_cmds[] = {
-    { KEY_LEFT, "離開", "離開精華區", announce_cmd_quit, 0, CMD_PRIO_MAX },
-    { 'q', NULL, NULL, announce_cmd_quit, 0, CMD_PRIO_NONE },
-    { 'Q', NULL, NULL, announce_cmd_quit, 0, CMD_PRIO_NONE },
-    { KEY_UP, NULL, "向上移動", announce_cmd_up, 0, CMD_PRIO_NONE, true },
-    { 'k', NULL, NULL, announce_cmd_up, 0, CMD_PRIO_NONE, true },
-    { KEY_DOWN, NULL, "向下移動", announce_cmd_down, 0, CMD_PRIO_NONE, true },
-    { 'j', NULL, NULL, announce_cmd_down, 0, CMD_PRIO_NONE, true },
-    { KEY_PGUP, "上頁", "向上翻頁", announce_cmd_pgup, 0, CMD_PRIO_NAV, true },
-    { Ctrl('B'), NULL, NULL, announce_cmd_pgup, 0, CMD_PRIO_NONE, true },
-    { KEY_PGDN, "下頁", "向下翻頁", announce_cmd_pgdn, 0, CMD_PRIO_NAV, true },
-    { ' ', NULL, NULL, announce_cmd_pgdn, 0, CMD_PRIO_NONE, true },
-    { Ctrl('F'), NULL, NULL, announce_cmd_pgdn, 0, CMD_PRIO_NONE, true },
-    { KEY_HOME, NULL, "移至首筆", announce_cmd_home, 0, CMD_PRIO_NONE, true },
-    { '0', NULL, NULL, announce_cmd_home, 0, CMD_PRIO_NONE, true },
-    { KEY_END, NULL, "移至末筆", announce_cmd_end, 0, CMD_PRIO_NONE, true },
-    { '$', NULL, NULL, announce_cmd_end, 0, CMD_PRIO_NONE, true },
-    { 'h', "說明", "顯示操作說明", announce_cmd_help, 0, CMD_PRIO_NONE },
     { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
     { 'r', NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
     { KEY_ENTER, NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
@@ -1628,15 +1490,6 @@ static const cmd_t announce_base_cmds[] = {
     { 't', NULL, NULL, announce_cmd_copy, 0, CMD_PRIO_NONE, true },
     { Ctrl('Y'), NULL, "查詢目前所在目錄位置與路徑(我在哪裡)", announce_cmd_whereami, 0, CMD_PRIO_NONE },
     { Ctrl('W'), NULL, NULL, announce_cmd_whereami, 0, CMD_PRIO_NONE },
-    { '1', NULL, "輸入編號或路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '2', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '3', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '4', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '5', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '6', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '7', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '8', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
-    { '9', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 'z', NULL, "輸入路徑(z)快速跳轉", announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 'Z', NULL, NULL, announce_cmd_num_search, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
@@ -1650,13 +1503,14 @@ static const char *
 announce_caption(const menu_t *pm)
 {
     if (copyqueue_querysize() > 0)
-        return " 標記項目 ";
+        return "標記項目";
     if (pm->level)
-        return " 精華管理 ";
-    return " 精華列表 ";
+        return "精華管理";
+    return "精華列表";
 }
 
-static VCOL announce_coldefs[] = {
+// Kept const to stay in .rodata / .data.rel.ro and avoid dirtying .data RSS.
+static const VCOL announce_coldefs[] = {
     {"", 1, 1, 100},
     {"  編號   ", 9, 9, 20},
     {"標  題", 20, 46, 100},
@@ -1681,28 +1535,6 @@ static int
 announce_empty_renderer(PSB_CTX *psbctx GCC_UNUSED)
 {
     outs("  《精華區》尚在吸取天地間的日月精華中... :)");
-    return 0;
-}
-
-static int
-announce_footer(PSB_CTX *psbctx)
-{
-    announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
-    menu_t *pm = cx->me;
-    move(b_lines, 0);
-    if (copyqueue_querysize() > 0) {
-        char buf[STRLEN];
-        SNPRINTF(buf, "【已標記(複製) %d 項】", copyqueue_querysize());
-        vs_footer(buf, pm->level == 0 ?
-                  " (c)標記/複製 - 無管理權限，無法貼上 " :
-                  " (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
-    } else if (pm->level) {
-        vs_footer(" 【板  主】 ",
-                  " (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
-    } else {
-        vs_footer(" 【功能鍵】 ",
-                  " (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
-    }
     return 0;
 }
 
@@ -1804,7 +1636,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	root = &me;
     }
 
-    me.header_size = p_lines;
+    me.header_size = (t_lines - 3 > 0) ? t_lines - 3 : 1;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
     STRLCPY(me.mtitle, maintitle);
@@ -1875,12 +1707,11 @@ a_menu_rec(const char *maintitle, const char *path,
             .caption = announce_caption(&me),
         },
         .header_lines = 2,
-        .footer_lines = 2,
+        .footer_lines = 1,
         .cols = ANNOUNCE_COLS,
         .vcols = announce_coldefs,
         .loader = announce_loader,
         .header = announce_header,
-        .footer = announce_footer,
         .renderer = announce_renderer,
         .empty_renderer = announce_empty_renderer,
         .layers = layers,
