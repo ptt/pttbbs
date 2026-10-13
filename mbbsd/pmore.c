@@ -102,7 +102,7 @@
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_VKEY                 // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
-#define PMORE_USE_INTERNAL_HELP      // display pmore internal help
+// #define PMORE_USE_INTERNAL_HELP      // display pmore internal help
 //#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
 //#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
@@ -265,7 +265,7 @@
  # define FULLUPDATE XO_HEAD
  #endif
  // environments and features
- #undef PMORE_USE_INTERNAL_HELP
+ // #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_USE_REPLYKEY_HINTS
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_VKEY
@@ -2541,7 +2541,7 @@ MFPROTO void pmore_Preference();
 MFPROTO void pmore_QuickRawModePref();
 
 #ifdef PMORE_USE_INTERNAL_HELP
-MFPROTO void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
+void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
 #endif
 
 /*
@@ -3219,6 +3219,18 @@ _pmore2(
 
         /* vkey() will do refresh(); */
         ch = cb->vkey ? cb->vkey(ctx) : vkey();
+        if (ch == KEY_MOUSE) {
+            const vtkbd_mouse_t *m = vkey_get_mouse();
+            if (m && !m->is_release &&
+                (m->button == MOUSE_BTN_WHEEL_UP || m->button == MOUSE_BTN_WHEEL_DOWN)) {
+                vs_locator_on_wheel(m->y, m->x);
+                ch = (m->button == MOUSE_BTN_WHEEL_UP) ? 'k' : 'j';
+            } else if (m && m->button == MOUSE_BTN_LEFT) {
+                vs_locator_reset_hover();
+            }
+        } else if (ch != KEY_INCOMPLETE) {
+            vs_locator_reset_hover();
+        }
 
         // first, try custom process_key
         if (cb->process_key)
@@ -3595,7 +3607,7 @@ static const char
 
 #define PMHLP_BLOCKS    (3)
 
-MFPROTO void
+void
 pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 {
     const char * const *t_tables[PMHLP_BLOCKS] = { hlp_basic, hlp_adv, hlp_sys};

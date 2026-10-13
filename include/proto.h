@@ -481,11 +481,12 @@ int m_sob(void);
 void m_sob_brd(char *bname,char *fromdir);
 #endif
 
-/* pager */
+/* pager (more) */
 int more(const char *fpath, int promptend);
 int more_inmemory(void *content, int size, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
+void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
 extern const cmd_t pmore_cmds[];
 extern const cmd_t pmore_movie_cmds[];
 

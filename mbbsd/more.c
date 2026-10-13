@@ -85,17 +85,39 @@ static int pager_cmd_relate_next(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->r
 static int pager_cmd_relate_prev(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RELATE_PREV; return 0; }
 static int pager_cmd_relate_first(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RELATE_FIRST; return 0; }
 
+static int
+pager_cmd_quit(cmd_ctx_t *ctx)
+{
+    ((pager_ctx_t *)ctx->priv)->retval = FULLUPDATE;
+    ctx->quit = true;
+    return 0;
+}
+
+#ifdef USE_PMORE
+static int pager_cmd_help(cmd_ctx_t *ctx);
+#endif
+
 static const cmd_t pager_reading_cmds[] = {
+    { 'y', "回應", "回覆文章至看板或信箱", pager_cmd_replyall, 0, CMD_PRIO_HIGH },
+    { 'X', "推文", "給予文章評論/評分", pager_cmd_comment, 0, CMD_PRIO_HIGH },
+    { '%', NULL, NULL, pager_cmd_vote, 0, CMD_PRIO_NONE },
     { 's', "切換看板", "搜尋並切換至其他看板", pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
     { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", pager_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
+static const cmd_t pager_mail_cmds[] = {
+    { 'y', "回信", "回覆信件至信箱", pager_cmd_reply, 0, CMD_PRIO_HIGH },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
 static const cmd_t pager_common_cmds[] = {
-    { 'y', "回文", "回覆文章至看板或信箱", pager_cmd_replyall, 0, CMD_PRIO_HIGH },
-    { 'Y', NULL, NULL, pager_cmd_replyall, 0, CMD_PRIO_NONE },
-    { 'X', "留言", "留言給予文章評論", pager_cmd_comment, 0, CMD_PRIO_HIGH },
-    { '%', "評分", "評價文章(推/噓)", pager_cmd_vote, 0, CMD_PRIO_HIGH },
+    { KEY_LEFT, "離開", "離開目前文章", pager_cmd_quit, 0, CMD_PRIO_QUIT },
+    { 'q', NULL, NULL, pager_cmd_quit, 0, CMD_PRIO_NONE },
+#ifdef USE_PMORE
+    { 'h', "說明", "顯示按鍵說明", pager_cmd_help, 0, CMD_PRIO_USAGE },
+    { '?', NULL, NULL, pager_cmd_help, 0, CMD_PRIO_NONE },
+#endif
     { 'r', "回信回文", "回覆給作者或回文", pager_cmd_reply, 0, CMD_PRIO_NORM },
     { 'R', NULL, NULL, pager_cmd_reply, 0, CMD_PRIO_NONE },
     { ']', "同主題下篇", "閱讀同主題的下一篇文章", pager_cmd_relate_next, 0, CMD_PRIO_NORM },
@@ -126,17 +148,54 @@ static const cmd_t pager_empty_cmds[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
+#ifdef USE_PMORE
+static int
+pager_cmd_help(cmd_ctx_t *ctx)
+{
+    screen_backup_t old_screen;
+    scr_dump(&old_screen);
+    pager_ctx_t *cx = (pager_ctx_t *)ctx->priv;
+    const cmd_layer_t layers[] = {
+        { (currstat == READING) ? pager_reading_cmds :
+          (currstat == RMAIL) ? pager_mail_cmds : pager_empty_cmds, cx },
+        { pager_common_cmds, cx },
+        { pmore_cmds, NULL },
+        { pmore_movie_cmds, NULL },
+        { NULL, NULL }
+    };
+    int sel_key = cmd_show_help_layers((currstat == RMAIL) ? "信件閱讀" : "文章閱讀", layers);
+    scr_restore(&old_screen);
+    if (sel_key == 'h' || sel_key == 'H') {
+        if (IS_ENABLED(CONFIG_ANGEL) &&
+            HasBasicUserPerm(PERM_LOGINOK) &&
+            strcmp(cuser.myangel, "-") != 0) {
+            CallAngel();
+        }
+        ctx->redraw = true;
+        return 0;
+    }
+    if (sel_key > 0 && sel_key != ctx->key) {
+        vk_ungetc(sel_key);
+    }
+    ctx->redraw = true;
+    return 0;
+}
+#endif
+
 static int
 common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 {
     pager_ctx_t cx = { .retval = DONOTHING };
     const cmd_layer_t layers[] = {
-        { currstat == READING ? pager_reading_cmds : pager_empty_cmds, &cx },
+        { (currstat == READING) ? pager_reading_cmds :
+          (currstat == RMAIL) ? pager_mail_cmds : pager_empty_cmds, &cx },
         { pager_common_cmds, &cx },
         { NULL, NULL }
     };
     cmd_ctx_t cctx = { .key = ch, .priv = &cx };
     cmd_dispatch_layers(layers, &cctx, NULL);
+    if (cctx.redraw)
+        return -1;
     return cx.retval;
 }
 
@@ -378,7 +437,7 @@ int more(const char *fpath, int promptend)
 	};
 	const cmd_layer_t layers[] = {
 	    { minimore_nav_cmds, &cx },
-	    { currstat == READING ? pager_reading_cmds : pager_empty_cmds, &cx },
+	    { (currstat == READING) ? pager_reading_cmds : (currstat == RMAIL) ? pager_mail_cmds : pager_empty_cmds, &cx },
 	    { pager_common_cmds, &cx },
 	    { bbs_global_cmds, NULL },
 	    { NULL, NULL }
@@ -405,117 +464,18 @@ int more(const char *fpath, int promptend)
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
 
-static const char
-* const hlp_nav [] =
-{ "【瀏覽指令】", NULL,
-    "  下篇文章  ", "f",
-    "  前篇文章  ", "b",
-    "  同主題下篇", "]  +",
-    "  同主題前篇", "[  -",
-    "  同主題首篇", "=",
-    "  同主題循序", "t",
-    "  同作者前篇", "A",
-    "  同作者下篇", "a",
-    NULL,
-},
-* const hlp_reply [] =
-{ "【回應指令】", NULL,
-    "  推薦文章", "% X",
-    "  回信回文", "r",
-    "  全部回覆", "y",
-    NULL,
-},
-* const hlp_spc [] =
-{ "【特殊指令】", NULL,
-    "  查詢資訊  ", "Q",
-    "  文章代碼搜尋", "#",
-    "  存入暫存檔", "^K",
-    "  切換看板  ", "s",
-    "  棋局打譜  ", "z",
-#if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-    "  執行BBSLua", "L l",
-#endif
-    NULL,
-};
-
-static int
-common_pmore_help_handler(int y, void *ctx GCC_UNUSED)
-{
-    const char * const* p[3] = { hlp_nav, hlp_reply, hlp_spc };
-    const int  cols[3] = { 29, 27, 20 },    // columns, to fit pmore built-ins
-               desc[3] = { 15, 13, 15 };    // desc width
-    move(y, 0);
-    vs_multi_T_table_simple(p, 3, cols, desc,
-	    HLP_CATEGORY_COLOR, HLP_DESCRIPTION_COLOR, HLP_KEYLIST_COLOR);
-    PRESSANYKEY();
-    return 0;
-}
-
-static void
-display_hotkey_footer(const char *caption, const char *kattr, const char *vattr)
-{
-    while (*caption)
-    {
-	int c = *caption ++;
-	if (c == '(')
-	    outs(kattr);
-	outc(c);
-	if (c == ')')
-	    outs(vattr);
-    }
-}
-
 static int
 common_pmore_footer_handler(int ratio GCC_UNUSED,
                             void *ctx GCC_UNUSED)
 {
-    int width = (t_columns - 1) - vgetx();
-    if (width <= 0)
-	return 0;
-
-#define FOOTERMSG_MAIL_LONG  "(y)回信 (h)說明 (←/q)離開 "
-#define FOOTERMSG_READ_LONG  "(y)回應(X%)推文(h)說明(←)離開 "
-#define FOOTERMSG_READ_MID   "(y)回應(X/%)推文 (←)離開 "
-#define FOOTERMSG_SHORT	     "(h)說明 (←/q)離開 "
-#define FOOTERMSG_VERYSHORT  "(←q)離開 "
-#define FOOTERATTR_KEY	     ANSI_COLOR(31)
-#define FOOTERATTR_TEXT	     ANSI_COLOR(30)
-
-    int w;
-    // XXX if you want to refine code here to use for-loop,
-    // remember to use a pre-calculated array to hold MACROSTRLEN
-    // or use real strlen(). do not pass string pointer to MACROSTRLEN.
-    if (currstat == RMAIL && (w = stream_width(FOOTERMSG_MAIL_LONG)) <= width)
-    {
-	while (width-- > w) outc(' ');
-	display_hotkey_footer(FOOTERMSG_MAIL_LONG,
-		FOOTERATTR_KEY, FOOTERATTR_TEXT);
-    }
-    else if (currstat == READING && (w = stream_width(FOOTERMSG_READ_LONG)) <= width)
-    {
-	while (width-- > w) outc(' ');
-	display_hotkey_footer(FOOTERMSG_READ_LONG,
-		FOOTERATTR_KEY, FOOTERATTR_TEXT);
-    }
-    else if (currstat == READING && (w = stream_width(FOOTERMSG_READ_MID)) <= width)
-    {
-	while (width-- > w) outc(' ');
-	display_hotkey_footer(FOOTERMSG_READ_MID,
-		FOOTERATTR_KEY, FOOTERATTR_TEXT);
-    }
-    else if ( (w = stream_width(FOOTERMSG_SHORT)) <= width)
-    {
-	while (width-- > w) outc(' ');
-	display_hotkey_footer(FOOTERMSG_SHORT,
-		FOOTERATTR_KEY, FOOTERATTR_TEXT);
-    }
-    else if ( (w = stream_width(FOOTERMSG_VERYSHORT)) <= width)
-    {
-	while (width-- > w) outc(' ');
-	display_hotkey_footer(FOOTERMSG_VERYSHORT,
-		FOOTERATTR_KEY, FOOTERATTR_TEXT);
-    }
-    else while (width-- > w) outc(' ');
+    pager_ctx_t cx = { .retval = DONOTHING };
+    const cmd_layer_t layers[] = {
+        { (currstat == READING) ? pager_reading_cmds :
+          (currstat == RMAIL) ? pager_mail_cmds : pager_empty_cmds, &cx },
+        { pager_common_cmds, &cx },
+        { NULL, NULL }
+    };
+    vs_cmd_bar(VS_FOOTER, NULL, layers);
     return 0;
 }
 
@@ -523,7 +483,6 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 static const struct pmore_callbacks common_pager_cb = {
     .process_key = common_pager_key_handler,
     .footer = common_pmore_footer_handler,
-    .help = common_pmore_help_handler,
 };
 
 int
