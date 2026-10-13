@@ -263,4 +263,15 @@ void	vscr_restore(VREFSCR);
 VREFCUR vcur_save   (void);
 void	vcur_restore(VREFCUR);
 
+void vs_locator_set(int y);
+void vs_locator_clear(void);
+void vs_locator_set_bounds(int top, int bottom);
+int  vs_locator_handle_motion(int y, int x);
+void vs_locator_on_wheel(int y, int x);
+void vs_locator_reset_hover(void);
+void cmd_bar_set_hotspots_enabled(bool enabled);
+void cmd_bar_clear_hotspots(void);
+void cmd_bar_clear_row_hotspots(int y);
+bool cmd_bar_get_hotspot_rect(int y, int x, int *out_x_start, int *out_x_end);
+
 #endif // _VTUIKIT_H

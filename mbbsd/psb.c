@@ -1,6 +1,7 @@
 #include "bbs.h"
 #include "daemons.h"
 #include "psb.h"
+#include <sys/time.h>
 
 // Page & Service Browser
 //
@@ -120,7 +121,7 @@ psb_cmd_num(cmd_ctx_t *ctx) {
 }
 
 const cmd_t psb_base_cmds[] = {
-    { KEY_UP, "移動", "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NAV, true },
+    { KEY_UP, NULL, "向上移動一列", psb_cmd_up, 0, CMD_PRIO_NONE, true },
     { KEY_DOWN, NULL, "向下移動一列", psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'k', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
     { 'p', NULL, NULL, psb_cmd_up, 0, CMD_PRIO_NONE, true },
@@ -128,8 +129,8 @@ const cmd_t psb_base_cmds[] = {
     { 'j', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'n', NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
     { Ctrl('N'), NULL, NULL, psb_cmd_down, 0, CMD_PRIO_NONE, true },
-    { KEY_PGUP, "翻頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
-    { KEY_PGDN, NULL, "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
+    { KEY_PGUP, "上頁", "向上翻一頁", psb_cmd_pgup, 0, CMD_PRIO_NAV, true },
+    { KEY_PGDN, "下頁", "向下翻一頁", psb_cmd_pgdn, 0, CMD_PRIO_NAV, true },
     { ' ', NULL, NULL, psb_cmd_pgdn, 0, CMD_PRIO_NONE, true },
     { Ctrl('B'), NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
     { 'P', NULL, NULL, psb_cmd_pgup, 0, CMD_PRIO_NONE, true },
@@ -148,9 +149,9 @@ const cmd_t psb_base_cmds[] = {
     { '7', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '8', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
     { '9', NULL, NULL, psb_cmd_num, 0, CMD_PRIO_NONE, true },
-    { 'q', NULL, "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_LEFT, "離開", "離開本畫面", psb_cmd_quit, 0, CMD_PRIO_QUIT },
+    { 'q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 'Q', NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
-    { KEY_LEFT, NULL, NULL, psb_cmd_quit, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -163,6 +164,18 @@ bbs_cmd_za(cmd_ctx_t *ctx) {
         ctx->quit = true;
     else
         ctx->redraw = true;
+    return 0;
+}
+
+static int
+bbs_cmd_za_mail(cmd_ctx_t *ctx) {
+    if (currstat == RMAIL) {
+        ctx->reload = true;
+        ctx->redraw = true;
+        return 0;
+    }
+    if (ZA_Set('m'))
+        ctx->quit = true;
     return 0;
 }
 
@@ -209,11 +222,12 @@ bbs_cmd_ctrl_r(cmd_ctx_t *ctx) {
 }
 
 const cmd_t bbs_global_cmds[] = {
-    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_NONE },
+    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_USAGE },
     { 'H', NULL, NULL, bbs_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('Z'), "隨處切換(ZA)", "快速切換到文章列表、分類、信箱、使用者名單等", bbs_cmd_za, PERM_BASIC, CMD_PRIO_NONE },
     { Ctrl('U'), "線上使用者", "查看線上使用者名單", bbs_cmd_ctrl_u, PERM_LOGINOK, CMD_PRIO_NONE },
     { Ctrl('R'), "回應水球", "即時回應剛收到的水球", bbs_cmd_ctrl_r, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, bbs_cmd_za_mail, PERM_BASIC, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -237,6 +251,7 @@ psb_key_name(int key, char *buf, size_t sz) {
         case KEY_DEL:   strlcpy(buf, "DEL", sz); break;
         case KEY_BS:    strlcpy(buf, "BS", sz); break;
         case KEY_TAB:   strlcpy(buf, "Tab", sz); break;
+        case KEY_STAB:  strlcpy(buf, "S-Tab", sz); break;
         case KEY_ESC:   strlcpy(buf, "ESC", sz); break;
         case ' ':       strlcpy(buf, "Space", sz); break;
         default:
@@ -246,11 +261,11 @@ psb_key_name(int key, char *buf, size_t sz) {
                 snprintf(buf, sz, "^%c", key + 'A' - 1);
             else if (key >= 32 && key <= 126)
                 snprintf(buf, sz, "%c", key);
-            else if ((key & 0xff00) == 0x2000) {
+            else if ((key & 0xff00) == KEY_ESC_PREFIX) {
                 if ((key & 0xff) == ' ')
-                    strlcpy(buf, "ESC-Space", sz);
+                    strlcpy(buf, "Esc-Space", sz);
                 else
-                    snprintf(buf, sz, "ESC-%c", key & 0xff);
+                    snprintf(buf, sz, "Esc-%c", key & 0xff);
             } else
                 snprintf(buf, sz, "0x%x", key);
             break;
@@ -285,6 +300,7 @@ typedef struct {
     const cmd_t *cmd;
     int keys[16];
     int n_keys;
+    int order;
 } psb_help_item_t;
 
 static void
@@ -298,16 +314,27 @@ psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
         snprintf(buf, sz, "%c-9", item->keys[0]);
         return;
     }
-    if (item->keys[0] == (0x2000 | '0') &&
-        item->n_keys >= 10 && item->keys[item->n_keys - 1] == (0x2000 | '9')) {
-        strlcpy(buf, "ESC-0..9", sz);
+    if (item->keys[0] == KEY_ESC_KEY('0') &&
+        item->n_keys >= 10 && item->keys[item->n_keys - 1] == KEY_ESC_KEY('9')) {
+        strlcpy(buf, "Esc-0..9", sz);
         return;
     }
     buf[0] = '\0';
     for (int i = 0; i < item->n_keys; i++) {
+        if (i > 0 && isupper(item->keys[0]) && item->keys[i] == tolower(item->keys[0]))
+            continue;
+        if (i > 0 && item->keys[i] == 'E' && item->keys[i - 1] == 'e')
+            continue;
+        if (item->keys[i] == '1' && i + 8 < item->n_keys && item->keys[i + 8] == '9') {
+            if (buf[0] != '\0')
+                strlcat(buf, "/", sz);
+            strlcat(buf, "1-9", sz);
+            i += 8;
+            continue;
+        }
         char kbuf[16];
         psb_key_name(item->keys[i], kbuf, sizeof(kbuf));
-        if (i > 0)
+        if (buf[0] != '\0')
             strlcat(buf, "/", sz);
         strlcat(buf, kbuf, sz);
     }
@@ -326,53 +353,188 @@ psb_help_print_row(const psb_help_item_t *item) {
            item->cmd->helpstr ? item->cmd->helpstr : "");
 }
 
-static bool cmd_bar_has_item = true;
+typedef struct {
+    int y;
+    int x_start;
+    int x_end;
+    int key;
+    const cmd_t *cmd;
+} cmd_bar_hotspot_t;
 
-void
-cmd_set_has_item(bool has_item) {
-    cmd_bar_has_item = has_item;
+#define MAX_CMD_BAR_HOTSPOTS 64
+
+typedef struct {
+    cmd_bar_hotspot_t items[MAX_CMD_BAR_HOTSPOTS];
+    int n_items;
+    const cmd_t *layer_cmds[PSB_MAX_CMD_LAYERS];
+    int n_layer_cmds;
+} cmd_bar_hotspot_state_t;
+
+static cmd_bar_hotspot_state_t *hs_state = NULL;
+
+static inline int
+clamp_int(int val, int vmin, int vmax) {
+    if (val < vmin) return vmin;
+    if (val > vmax) return vmax;
+    return val;
 }
 
-int
-cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
-    const cmd_layer_t *layer;
-    const cmd_t *cmd;
-    int seen_keys[256];
-    int n_seen = 0;
-    psb_help_item_t items[128];
-    int count = 0;
+static int
+cmd_bar_find_key_at(int y, int x) {
+    if (!hs_state)
+        return 0;
+    for (int i = 0; i < hs_state->n_items; i++) {
+        const cmd_bar_hotspot_t *hs = &hs_state->items[i];
+        if (hs->y == y && x >= hs->x_start && x < hs->x_end)
+            return hs->key;
+    }
+    return 0;
+}
 
-    for (layer = layers; layer && layer->cmds; layer++) {
-        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
-            if (cmd->key == EOF || cmd->key == 0)
-                continue;
-            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
-            if (n_seen < (int)ARRAY_SIZE(seen_keys))
-                seen_keys[n_seen++] = cmd->key;
-            if (masked || !psb_check_perm(cmd->permission) ||
-                (cmd->need_item && !cmd_bar_has_item))
-                continue;
-            if (cmd->label || cmd->helpstr) {
-                if (count < (int)ARRAY_SIZE(items)) {
-                    items[count].cmd = cmd;
-                    items[count].keys[0] = cmd->key;
-                    items[count].n_keys = 1;
-                    count++;
+void
+cmd_bar_set_hotspots_enabled(bool enabled) {
+    if (enabled) {
+        if (!hs_state)
+            hs_state = (cmd_bar_hotspot_state_t *)calloc(1, sizeof(cmd_bar_hotspot_state_t));
+    } else {
+        if (hs_state) {
+            free(hs_state);
+            hs_state = NULL;
+        }
+    }
+}
+
+static void
+cmd_bar_add_hotspot(int y, int x_start, int x_end, int key, const cmd_t *cmd) {
+    if (!hs_state || y < 0 || x_end <= x_start || hs_state->n_items >= MAX_CMD_BAR_HOTSPOTS)
+        return;
+    cmd_bar_hotspot_t *hs = &hs_state->items[hs_state->n_items++];
+    hs->y = y;
+    hs->x_start = x_start;
+    hs->x_end = x_end;
+    hs->key = key;
+    hs->cmd = cmd;
+}
+
+void
+cmd_bar_clear_hotspots(void) {
+    if (!hs_state)
+        return;
+    hs_state->n_items = 0;
+    hs_state->n_layer_cmds = 0;
+}
+
+void
+cmd_bar_clear_row_hotspots(int y) {
+    if (!hs_state)
+        return;
+    int dst = 0;
+    for (int i = 0; i < hs_state->n_items; i++) {
+        if (hs_state->items[i].y != y)
+            hs_state->items[dst++] = hs_state->items[i];
+    }
+    hs_state->n_items = dst;
+}
+
+void
+cmd_bar_register_custom_hotspot(int y, int x_start, int x_end, int key, const cmd_t *layer_cmd) {
+    if (!hs_state)
+        return;
+    const cmd_t *matched_cmd = NULL;
+    if (layer_cmd) {
+        if (hs_state->n_layer_cmds < PSB_MAX_CMD_LAYERS) {
+            bool found = false;
+            for (int i = 0; i < hs_state->n_layer_cmds; i++) {
+                if (hs_state->layer_cmds[i] == layer_cmd) {
+                    found = true;
+                    break;
                 }
-            } else if (cmd->func) {
-                for (int i = count - 1; i >= 0; i--) {
-                    if (items[i].cmd->func == cmd->func) {
-                        if (items[i].n_keys < 16)
-                            items[i].keys[items[i].n_keys++] = cmd->key;
-                        break;
-                    }
-                }
+            }
+            if (!found)
+                hs_state->layer_cmds[hs_state->n_layer_cmds++] = layer_cmd;
+        }
+        for (const cmd_t *c = layer_cmd; c->key || c->func; c++) {
+            if (c->key == key) {
+                matched_cmd = c;
+                break;
             }
         }
     }
-    if (count <= 0)
-        return 0;
+    cmd_bar_add_hotspot(y, x_start, x_end, key, matched_cmd);
+}
 
+bool
+cmd_bar_get_hotspot_rect(int y, int x, int *out_x_start, int *out_x_end) {
+    if (!hs_state)
+        return false;
+    for (int i = 0; i < hs_state->n_items; i++) {
+        const cmd_bar_hotspot_t *hs = &hs_state->items[i];
+        if (hs->y == y && x >= hs->x_start && x < hs->x_end) {
+            if (out_x_start) *out_x_start = hs->x_start;
+            if (out_x_end)   *out_x_end   = hs->x_end;
+            return true;
+        }
+    }
+    return false;
+}
+
+int
+cmd_bar_cmd_raw_width(const cmd_t *cmd, const char *alt_key_name) {
+    if (!cmd)
+        return 0;
+    char kbuf[16];
+    if (alt_key_name)
+        strlcpy(kbuf, alt_key_name, sizeof(kbuf));
+    else
+        psb_key_name(cmd->key, kbuf, sizeof(kbuf));
+    int kw = stream_width(kbuf);
+    int lw = cmd->label ? stream_width(cmd->label) : 0;
+    return 2 + kw + lw;
+}
+
+int
+cmd_bar_cmd_width(const cmd_t *cmd, int row_bit GCC_UNUSED, const char *alt_key_name) {
+    if (!cmd)
+        return 0;
+    return 1 + cmd_bar_cmd_raw_width(cmd, alt_key_name);
+}
+
+void
+cmd_bar_draw_cmd_ex(int line, int row_bit, const cmd_t *cmd, const char *alt_key_name, bool need_space) {
+    if (!cmd)
+        return;
+    char kbuf[16];
+    if (alt_key_name)
+        strlcpy(kbuf, alt_key_name, sizeof(kbuf));
+    else
+        psb_key_name(cmd->key, kbuf, sizeof(kbuf));
+
+    if (need_space)
+        outc(' ');
+
+    int start_x = vgetx();
+    if (row_bit == VS_FOOTER) {
+        outs(VCLR_FOOTER_QUOTE "(");
+        outs(kbuf);
+        outs(")" VCLR_FOOTER);
+    } else {
+        outc('[');
+        outs(kbuf);
+        outc(']');
+    }
+    if (cmd->label)
+        outs(cmd->label);
+    int end_x = vgetx();
+    cmd_bar_add_hotspot(line, start_x, end_x, cmd->key, cmd);
+}
+
+void
+cmd_bar_draw_cmd(int line, int row_bit, const cmd_t *cmd, const char *alt_key_name) {
+    cmd_bar_draw_cmd_ex(line, row_bit, cmd, alt_key_name, true);
+}
+
+static int
+cmd_show_help_layers_inner(const char *caption, const psb_help_item_t *items, int count) {
     int curr = 0;
     int base = 0;
     int old_base = -1;
@@ -394,9 +556,31 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
         if (curr < base || curr >= base + rows)
             base = (curr / rows) * rows;
 
+        const char *angel_hint = "";
+        if (IS_ENABLED(CONFIG_ANGEL) &&
+            HasBasicUserPerm(PERM_LOGINOK) &&
+            strcmp(cuser.myangel, "-") != 0) {
+            angel_hint = " (h)小天使";
+        }
         if (base != old_base) {
-            clear();
-            vs_draw_hdr2(caption ? caption : " P&S Browser ", " 操作說明 (Help)");
+            int total_pages = (count + rows - 1) / rows;
+            int curr_page = (base / rows) + 1;
+            char pagebuf[32] = "";
+            int page_len = 0;
+            if (total_pages > 1) {
+                snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
+                page_len = stream_width(pagebuf);
+            }
+            char clean_cap[64] = "操作說明";
+            if (caption) {
+                while (*caption == ' ') caption++;
+                strlcpy(clean_cap, caption, sizeof(clean_cap));
+                int clen = strlen(clean_cap);
+                while (clen > 0 && clean_cap[clen - 1] == ' ')
+                    clean_cap[--clen] = '\0';
+            }
+            cmd_bar_clear_hotspots();
+            vs_header(clean_cap, "操作說明 (Help)", NULL);
             move(1, 0);
             vbar(ANSI_REVERSE "  按鍵 / 標籤                   功能說明");
             for (int i = 0; i < rows && base + i < count; i++) {
@@ -404,29 +588,114 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
                 psb_help_print_row(&items[base + i]);
             }
 
-            int total_pages = (count + rows - 1) / rows;
-            int curr_page = (base / rows) + 1;
-            const char *capbuf = " 操作說明 ";
-            char pagebuf[32] = "";
-            if (total_pages > 1)
-                snprintf(pagebuf, sizeof(pagebuf), " [第 %d/%d 頁]", curr_page, total_pages);
-            const char *angel_hint = "";
-            if (IS_ENABLED(CONFIG_ANGEL) &&
-                HasBasicUserPerm(PERM_LOGINOK) &&
-                strcmp(cuser.myangel, "-") != 0) {
-                angel_hint = " (h)小天使";
+            const char *capbuf = "操作說明";
+            int cap_len = vs_footer_caption_width(capbuf);
+
+            cmd_t core[4];
+            int n_core = 0;
+            if (total_pages > 1) {
+                core[n_core++] = (cmd_t){ .key = KEY_PGUP, .label = "上頁" };
+                core[n_core++] = (cmd_t){ .key = KEY_PGDN, .label = "下頁" };
             }
-            char prompt[128];
-            snprintf(prompt, sizeof(prompt),
-                     "%s (↑/↓/PgUp/Dn)移動 (Enter/→)執行%s\t(q/←)離開",
-                     pagebuf, angel_hint);
+            core[n_core++] = (cmd_t){ .key = KEY_ENTER, .label = "執行" };
+            if (angel_hint[0])
+                core[n_core++] = (cmd_t){ .key = 'h', .label = "小天使" };
+
+            static const cmd_t exit_cmd = { .key = 'q', .label = "離開" };
+            int tail_w = cmd_bar_cmd_width(&exit_cmd, VS_FOOTER, "q/←");
+            int avail = SAFE_MAX_COL - cap_len - page_len - tail_w;
+
+            int core_len = 0;
+            for (int i = 0; i < n_core; i++)
+                core_len += cmd_bar_cmd_width(&core[i], VS_FOOTER, NULL);
+
+            cmd_t btns[6];
+            int n_btns = 0;
+            static const cmd_t nav_btns[] = {
+                { .key = KEY_UP, .label = "上移" },
+                { .key = KEY_DOWN, .label = "下移" },
+            };
+            int nav_len = cmd_bar_cmd_width(&nav_btns[0], VS_FOOTER, NULL) +
+                          cmd_bar_cmd_width(&nav_btns[1], VS_FOOTER, NULL);
+            if (core_len + nav_len <= avail) {
+                btns[n_btns++] = nav_btns[0];
+                btns[n_btns++] = nav_btns[1];
+            }
+            for (int i = 0; i < n_core; i++)
+                btns[n_btns++] = core[i];
+
             move(b_lines, 0);
-            vs_footer(capbuf, prompt);
+            clrtoeol();
+            vs_footer_draw_caption(capbuf);
+            outs(VCLR_FOOTER);
+            if (page_len > 0)
+                outs(pagebuf);
+            for (int i = 0; i < n_btns; i++) {
+                cmd_bar_draw_cmd(b_lines, VS_FOOTER, &btns[i], NULL);
+            }
+
+            int target_x = SAFE_MAX_COL - tail_w;
+            int cur_x = vgetx();
+            if (target_x > cur_x)
+                nblank(target_x - cur_x);
+            cmd_bar_draw_cmd(b_lines, VS_FOOTER, &exit_cmd, "q/←");
+
+            cur_x = vgetx();
+            if (cur_x < SAFE_MAX_COL)
+                nblank(SAFE_MAX_COL - cur_x);
+            outc(' ');
+            outs(ANSI_RESET);
             old_base = base;
         }
 
+        int vis = count - base;
+        if (vis > rows) vis = rows;
+        if (vis < 0) vis = 0;
+        vs_locator_set_bounds(2, 2 + vis);
         int ch = cursor_key(2 + curr - base, 0);
+        vs_locator_set_bounds(-1, -1);
+        if (ch != KEY_MOUSE)
+            vs_locator_reset_hover();
+
+dispatch_key:
         switch (ch) {
+            case KEY_MOUSE: {
+                const vtkbd_mouse_t *m = vkey_get_mouse();
+                if (!m || m->is_release)
+                    break;
+                if (m->is_motion) {
+                    break;
+                }
+                if (m->button == MOUSE_BTN_WHEEL_UP || m->button == MOUSE_BTN_WHEEL_DOWN) {
+                    vs_locator_on_wheel(m->y, m->x);
+                    int delta = (m->button == MOUSE_BTN_WHEEL_UP) ? -1 : 1;
+                    int max_base = (count > rows && rows > 0) ? count - rows : 0;
+                    int new_base = base + delta;
+                    if (rows > 0 && new_base >= 0 && new_base <= max_base) {
+                        base = new_base;
+                        curr += delta;
+                    } else if (curr + delta >= 0 && curr + delta < count) {
+                        curr += delta;
+                    }
+                } else if (m->button == MOUSE_BTN_LEFT) {
+                    vs_locator_reset_hover();
+                    if (m->y >= 2 && m->y < 2 + vis) {
+                        curr = base + (m->y - 2);
+                        return items[curr].keys[0];
+                    } else if (m->y == b_lines) {
+                        int key = cmd_bar_find_key_at(m->y, m->x);
+                        if (key) {
+                            ch = key;
+                            goto dispatch_key;
+                        }
+                    }
+                } else if (m->button == MOUSE_BTN_RIGHT) {
+                    vs_locator_reset_hover();
+                    if (m->y >= 2 && m->y < 2 + vis)
+                        curr = base + (m->y - 2);
+                }
+                break;
+            }
             case KEY_UP:
             case 'k':
             case 'p':
@@ -476,6 +745,79 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
     }
 }
 
+static bool cmd_bar_has_item = true;
+
+void
+cmd_set_has_item(bool has_item) {
+    cmd_bar_has_item = has_item;
+}
+
+static int
+psb_help_item_cmp(const void *a, const void *b) {
+    const psb_help_item_t *ia = (const psb_help_item_t *)a;
+    const psb_help_item_t *ib = (const psb_help_item_t *)b;
+    if (ia->cmd->prio != ib->cmd->prio)
+        return ib->cmd->prio - ia->cmd->prio;
+    return ia->order - ib->order;
+}
+
+int
+cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
+    const cmd_layer_t *layer;
+    const cmd_t *cmd;
+    int seen_keys[256];
+    int n_seen = 0;
+    psb_help_item_t items[128];
+    int count = 0;
+
+    for (layer = layers; layer && layer->cmds; layer++) {
+        for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
+            if (cmd->key == EOF || cmd->key == 0)
+                continue;
+            bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
+            if (n_seen < (int)ARRAY_SIZE(seen_keys))
+                seen_keys[n_seen++] = cmd->key;
+            if (masked || !psb_check_perm(cmd->permission) ||
+                (cmd->need_item && !cmd_bar_has_item))
+                continue;
+            if (cmd->label || cmd->helpstr) {
+                if (count < (int)ARRAY_SIZE(items)) {
+                    items[count].cmd = cmd;
+                    items[count].keys[0] = cmd->key;
+                    items[count].n_keys = 1;
+                    items[count].order = count;
+                    count++;
+                }
+            } else if (cmd->func) {
+                for (int i = count - 1; i >= 0; i--) {
+                    if (items[i].cmd->func == cmd->func) {
+                        if (items[i].n_keys < 16)
+                            items[i].keys[items[i].n_keys++] = cmd->key;
+                        break;
+                    }
+                }
+            } else if (count > 0) {
+                if (items[count - 1].n_keys < 16)
+                    items[count - 1].keys[items[count - 1].n_keys++] = cmd->key;
+            }
+        }
+    }
+    if (count <= 0)
+        return 0;
+
+    qsort(items, count, sizeof(psb_help_item_t), psb_help_item_cmp);
+
+    cmd_bar_hotspot_state_t saved_state;
+    if (hs_state)
+        saved_state = *hs_state;
+
+    int ret = cmd_show_help_layers_inner(caption, items, count);
+
+    if (hs_state)
+        *hs_state = saved_state;
+    return ret;
+}
+
 typedef struct {
     const cmd_t *cmd;
     int prio;
@@ -491,40 +833,52 @@ cmd_cand_cmp(const void *a, const void *b) {
     return ca->order - cb->order;
 }
 
-static void
-format_cmd_for_row(const cmd_t *cmd, int row_bit, bool is_first_on_row,
-                   const char *row_prompt, char *buf, size_t sz) {
-    char kbuf[16];
-    psb_key_name(cmd->key, kbuf, sizeof(kbuf));
-    if (row_bit == VS_FOOTER) {
-        snprintf(buf, sz, " (%s)%s", kbuf, cmd->label);
-    } else {
-        bool need_space = !is_first_on_row;
-        if (is_first_on_row && row_prompt && row_prompt[0]) {
-            size_t plen = strlen(row_prompt);
-            if (row_prompt[plen - 1] != ' ')
-                need_space = true;
+
+static const cmd_bar_hotspot_t *
+cmd_bar_find_hotspot(int y, int x, const cmd_layer_t *layers) {
+    if (!hs_state)
+        return NULL;
+    bool layer_match = false;
+    for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
+        if (l->cmds == bbs_global_cmds)
+            continue;
+        for (int i = 0; i < hs_state->n_layer_cmds; i++) {
+            if (l->cmds == hs_state->layer_cmds[i]) {
+                layer_match = true;
+                break;
+            }
         }
-        snprintf(buf, sz, "%s[%s]%s", need_space ? " " : "", kbuf, cmd->label);
+        if (layer_match)
+            break;
     }
+    for (int i = 0; i < hs_state->n_items; i++) {
+        const cmd_bar_hotspot_t *hs = &hs_state->items[i];
+        if (hs->y == y && x >= hs->x_start && x < hs->x_end) {
+            if (hs->cmd == NULL) {
+                if (layer_match)
+                    return hs;
+                continue;
+            }
+            for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
+                for (const cmd_t *c = l->cmds; c->key || c->func; c++) {
+                    if (c == hs->cmd)
+                        return hs;
+                }
+            }
+        }
+    }
+    return NULL;
 }
 
 static bool
-cmd_bar_try_place(int r, int row_bit, const char *sub_prompt,
-                  const cmd_t *cmd, char row_bufs[][256],
-                  int *avail_cols, int *row_item_count)
-{
-    char item_str[64];
-    const char *r_prompt = (r == 0 && row_bit != VS_FOOTER) ? sub_prompt : "";
-    format_cmd_for_row(cmd, row_bit, row_item_count[r] == 0, r_prompt,
-                       item_str, sizeof(item_str));
-    int item_len = stream_width(item_str);
-    if (item_len > avail_cols[r])
+cmd_bar_place(int r, int row_bit, const cmd_t *cmd,
+              const cmd_t *row_cmds[][64], int *row_cmd_count, int *avail_cols, bool is_inline) {
+    int w = is_inline ? ((row_cmd_count[r] == 0 ? 1 : 0) + cmd_bar_cmd_raw_width(cmd, NULL))
+                      : cmd_bar_cmd_width(cmd, row_bit, NULL);
+    if (w > avail_cols[r] || row_cmd_count[r] >= 64)
         return false;
-
-    strlcat(row_bufs[r], item_str, sizeof(row_bufs[r]));
-    avail_cols[r] -= item_len;
-    row_item_count[r]++;
+    row_cmds[r][row_cmd_count[r]++] = cmd;
+    avail_cols[r] -= w;
     return true;
 }
 
@@ -544,7 +898,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
         return;
 
     const char *sub_prompt = "";
-    const char *footer_caption = " 頁面瀏覽 ";
+    const char *footer_caption = NULL;
 
     if (prompt) {
         if (row_type & VS_FOOTER)
@@ -553,6 +907,9 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
             sub_prompt = prompt;
     }
 
+    bool is_inline = (n_rows == 1 && active_rows[0] == VS_FOOTER &&
+                      (!footer_caption || !*footer_caption));
+
     int seen_keys[256];
     int n_seen = 0;
     cmd_cand_t cands[64];
@@ -560,17 +917,47 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
     const cmd_layer_t *layer;
     const cmd_t *cmd;
 
+    if (hs_state) {
+        hs_state->n_layer_cmds = 0;
+        for (layer = cmd_layers; layer && layer->cmds; layer++) {
+            if (hs_state->n_layer_cmds < PSB_MAX_CMD_LAYERS)
+                hs_state->layer_cmds[hs_state->n_layer_cmds++] = layer->cmds;
+        }
+    }
+    const cmd_t *usage_cmd = NULL;
+    const cmd_t *quit_cmd = NULL;
     for (layer = cmd_layers; layer && layer->cmds; layer++) {
         for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
             if (cmd->key == EOF || cmd->key == 0)
                 continue;
+            if (cmd->prio == CMD_PRIO_USAGE && cmd->label && !usage_cmd) {
+                if (psb_check_perm(cmd->permission) &&
+                    (!cmd->need_item || cmd_bar_has_item))
+                    usage_cmd = cmd;
+            }
+            if (cmd->prio == CMD_PRIO_QUIT && cmd->label && !quit_cmd) {
+                if (psb_check_perm(cmd->permission) &&
+                    (!cmd->need_item || cmd_bar_has_item))
+                    quit_cmd = cmd;
+            }
+            if ((cmd->key == 'h' || cmd->key == 'H') && cmd->label && !usage_cmd) {
+                if (psb_check_perm(cmd->permission) &&
+                    (!cmd->need_item || cmd_bar_has_item))
+                    usage_cmd = cmd;
+            }
+            if (cmd->key == KEY_LEFT && cmd->label && !quit_cmd) {
+                if (psb_check_perm(cmd->permission) &&
+                    (!cmd->need_item || cmd_bar_has_item))
+                    quit_cmd = cmd;
+            }
             bool masked = psb_is_key_seen(seen_keys, n_seen, cmd->key);
             if (n_seen < (int)ARRAY_SIZE(seen_keys))
                 seen_keys[n_seen++] = cmd->key;
             if (masked || !psb_check_perm(cmd->permission) ||
                 (cmd->need_item && !cmd_bar_has_item))
                 continue;
-            if ((row_type & VS_FOOTER) && (cmd->key == 'h' || cmd->key == 'H'))
+            if (cmd->prio == CMD_PRIO_QUIT || cmd->prio == CMD_PRIO_USAGE ||
+                cmd->key == 'h' || cmd->key == 'H' || cmd->key == KEY_LEFT)
                 continue;
             if (cmd->label && cmd->prio > CMD_PRIO_NONE && n_cands < (int)ARRAY_SIZE(cands)) {
                 cands[n_cands].cmd = cmd;
@@ -581,23 +968,69 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
         }
     }
 
+    for (int r = 0; r < n_rows; r++)
+        cmd_bar_clear_row_hotspots(vs_row_line(active_rows[r]));
+
     qsort(cands, n_cands, sizeof(cmd_cand_t), cmd_cand_cmp);
 
-    char row_bufs[VS_ROW_COUNT][256];
+    int footer_r = -1;
+    for (int r = 0; r < n_rows; r++) {
+        if (active_rows[r] == VS_FOOTER) {
+            footer_r = r;
+            break;
+        }
+    }
+
+    const cmd_t *right_cmds[2];
+    int n_right_cmds = 0;
+    int right_tail_width = 0;
+
+    if (footer_r >= 0) {
+        int prefix_w = is_inline ? vgetx() : (footer_caption ? vs_footer_caption_width(footer_caption) : 0);
+        int usage_w = usage_cmd ? (is_inline ? cmd_bar_cmd_raw_width(usage_cmd, NULL)
+                                             : cmd_bar_cmd_width(usage_cmd, VS_FOOTER, NULL))
+                                : 0;
+        int quit_w = quit_cmd ? (is_inline ? cmd_bar_cmd_raw_width(quit_cmd, NULL)
+                                           : cmd_bar_cmd_width(quit_cmd, VS_FOOTER, NULL))
+                              : 0;
+
+        int high_cmds_w = 0;
+        for (int i = 0; i < n_cands; i++) {
+            if (cands[i].prio >= CMD_PRIO_HIGH) {
+                if (is_inline) {
+                    high_cmds_w += (high_cmds_w == 0 ? 1 : 0) +
+                                   cmd_bar_cmd_raw_width(cands[i].cmd, NULL);
+                } else {
+                    high_cmds_w += cmd_bar_cmd_width(cands[i].cmd, VS_FOOTER, NULL);
+                }
+            }
+        }
+
+        bool show_quit = false;
+        if (quit_cmd && (prefix_w + high_cmds_w + usage_w + quit_w <= SAFE_MAX_COL))
+            show_quit = true;
+
+        if (show_quit) {
+            right_cmds[n_right_cmds++] = quit_cmd;
+            right_tail_width += quit_w;
+        }
+        if (usage_cmd && (prefix_w + right_tail_width + usage_w <= SAFE_MAX_COL || n_right_cmds == 0)) {
+            right_cmds[n_right_cmds++] = usage_cmd;
+            right_tail_width += usage_w;
+        }
+    }
+
+    const cmd_t *row_cmds[VS_ROW_COUNT][64];
+    int row_cmd_count[VS_ROW_COUNT] = {0};
     int avail_cols[VS_ROW_COUNT];
-    int row_item_count[VS_ROW_COUNT];
-    const char *footer_tail = "\t(h)說明";
 
     for (int r = 0; r < n_rows; r++) {
-        row_bufs[r][0] = '\0';
-        row_item_count[r] = 0;
         if (active_rows[r] == VS_FOOTER) {
-            avail_cols[r] = (t_columns - 1) - stream_width(footer_caption) - strlen("(h)說明");
+            int prefix_w = is_inline ? vgetx() : (footer_caption ? vs_footer_caption_width(footer_caption) : 0);
+            avail_cols[r] = SAFE_MAX_COL - prefix_w - right_tail_width;
         } else {
             const char *p = (r == 0) ? sub_prompt : "";
             avail_cols[r] = (t_columns - 1) - stream_width(p);
-            if (!(row_type & VS_FOOTER) && r == n_rows - 1)
-                avail_cols[r] -= strlen(" [h]說明");
         }
         if (avail_cols[r] < 0)
             avail_cols[r] = 0;
@@ -605,64 +1038,77 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
     bool placed[ARRAY_SIZE(cands)] = {false};
 
-    // Always place KEY_LEFT first on the top-most active row
-    for (int i = 0; i < n_cands; i++) {
-        if (cands[i].cmd->key == KEY_LEFT) {
-            if (cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
-                                  row_bufs, avail_cols, row_item_count)) {
-                placed[i] = true;
-            }
-            break;
-        }
-    }
-
     if (n_rows > 1) {
-        // Multi-row mode (e.g., VS_SUB_HEADER + VS_FOOTER):
-        // Upper row gets navigation/view commands (prio <= CMD_PRIO_NORM).
-        // Lower row gets state-changing/frequent actions (prio >= CMD_PRIO_HIGH).
         for (int i = 0; i < n_cands; i++) {
             if (!placed[i] && cands[i].prio <= CMD_PRIO_NORM) {
-                if (cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
-                                      row_bufs, avail_cols, row_item_count)) {
+                if (cmd_bar_place(0, active_rows[0], cands[i].cmd, row_cmds, row_cmd_count, avail_cols, is_inline))
                     placed[i] = true;
-                }
             }
         }
         int bottom_r = n_rows - 1;
         for (int i = 0; i < n_cands; i++) {
             if (!placed[i] && cands[i].prio >= CMD_PRIO_HIGH) {
-                if (cmd_bar_try_place(bottom_r, active_rows[bottom_r], sub_prompt, cands[i].cmd,
-                                      row_bufs, avail_cols, row_item_count)) {
+                if (cmd_bar_place(bottom_r, active_rows[bottom_r], cands[i].cmd, row_cmds, row_cmd_count, avail_cols, is_inline))
                     placed[i] = true;
-                }
             }
         }
-        // Pass 2 (Overflow): any unplaced commands fill remaining space on any row
         for (int i = 0; i < n_cands; i++) {
-            if (placed[i])
-                continue;
+            if (placed[i]) continue;
             for (int r = 0; r < n_rows; r++) {
-                if (cmd_bar_try_place(r, active_rows[r], sub_prompt, cands[i].cmd,
-                                      row_bufs, avail_cols, row_item_count)) {
+                if (cmd_bar_place(r, active_rows[r], cands[i].cmd, row_cmds, row_cmd_count, avail_cols, is_inline)) {
                     placed[i] = true;
                     break;
                 }
             }
         }
+    } else if (active_rows[0] == VS_SUB_HEADER) {
+        for (int i = 0; i < n_cands; i++) {
+            if (!placed[i] && cands[i].prio <= CMD_PRIO_NORM) {
+                if (cmd_bar_place(0, active_rows[0], cands[i].cmd, row_cmds, row_cmd_count, avail_cols, is_inline))
+                    placed[i] = true;
+            }
+        }
     } else {
-        // Single-row mode: fill by priority descending
         for (int i = 0; i < n_cands; i++) {
             if (!placed[i]) {
-                cmd_bar_try_place(0, active_rows[0], sub_prompt, cands[i].cmd,
-                                  row_bufs, avail_cols, row_item_count);
+                if (cmd_bar_place(0, active_rows[0], cands[i].cmd, row_cmds, row_cmd_count, avail_cols, is_inline))
+                    placed[i] = true;
             }
         }
     }
 
     for (int r = 0; r < n_rows; r++) {
         if (active_rows[r] == VS_FOOTER) {
-            strlcat(row_bufs[r], footer_tail, sizeof(row_bufs[r]));
-            vs_footer(footer_caption, row_bufs[r]);
+            if (!is_inline) {
+                move(b_lines, 0);
+                clrtoeol();
+                if (footer_caption && *footer_caption)
+                    vs_footer_draw_caption(footer_caption);
+            }
+            outs(VCLR_FOOTER);
+
+            for (int i = 0; i < row_cmd_count[r]; i++) {
+                bool need_sp = is_inline ? (i == 0) : true;
+                cmd_bar_draw_cmd_ex(b_lines, VS_FOOTER, row_cmds[r][i], NULL, need_sp);
+            }
+
+            if (n_right_cmds > 0) {
+                int target_x = SAFE_MAX_COL - right_tail_width;
+                int cur_x = vgetx();
+                if (target_x > cur_x)
+                    nblank(target_x - cur_x);
+
+                for (int i = 0; i < n_right_cmds; i++) {
+                    bool need_sp = is_inline ? false : true;
+                    cmd_bar_draw_cmd_ex(b_lines, VS_FOOTER, right_cmds[i], NULL, need_sp);
+                }
+            }
+
+            int cur_x = vgetx();
+            if (cur_x < SAFE_MAX_COL)
+                nblank(SAFE_MAX_COL - cur_x);
+            outc(' ');
+            outs(ANSI_RESET);
         } else {
             int line = vs_row_line(active_rows[r]);
             if (line >= 0) {
@@ -670,9 +1116,10 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
                 clrtoeol();
                 if (r == 0 && sub_prompt[0])
                     outs(sub_prompt);
-                outs(row_bufs[r]);
-                if (!(row_type & VS_FOOTER) && r == n_rows - 1) {
-                    outs(" [h]說明");
+
+                for (int i = 0; i < row_cmd_count[r]; i++) {
+                    bool need_sp = (i > 0 || (r == 0 && sub_prompt[0] && sub_prompt[strlen(sub_prompt) - 1] != ' '));
+                    cmd_bar_draw_cmd_ex(line, active_rows[r], row_cmds[r][i], NULL, need_sp);
                 }
             }
         }
@@ -681,16 +1128,33 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
 void
 cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers) {
-    vs_cmd_bar(VS_FOOTER, caption, layers);
+    vs_cmd_bar(VS_FOOTER, caption ? caption : "頁面瀏覽", layers);
+}
+
+static void
+cmd_set_curr(cmd_ctx_t *ctx, int new_curr) {
+    if (ctx->curr == new_curr)
+        return;
+    if (ctx->on_select)
+        ctx->on_select(ctx, new_curr);
+    ctx->curr = new_curr;
 }
 
 static int
-cmd_dispatch_single_layer(const cmd_layer_t *layer, cmd_ctx_t *ctx, void *default_priv) {
+cmd_dispatch_single_layer(const cmd_layer_t *layer, cmd_ctx_t *ctx,
+                          void *default_priv, const cmd_t *target_cmd) {
     const cmd_t *cmd;
     ctx->priv = layer->priv ? layer->priv : default_priv;
 
     for (cmd = layer->cmds; cmd->key || cmd->func; cmd++) {
-        if (cmd->key != ctx->key || !cmd->func || !psb_check_perm(cmd->permission) ||
+        if (target_cmd) {
+            if (cmd != target_cmd)
+                continue;
+        } else {
+            if (cmd->key != ctx->key)
+                continue;
+        }
+        if (!cmd->func || !psb_check_perm(cmd->permission) ||
             (cmd->need_item && ctx->total <= 0))
             continue;
         int ret = cmd->func(ctx);
@@ -709,22 +1173,110 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
     const cmd_layer_t *layer;
     void *default_priv = ctx->priv;
     bool redispatched = false;
+    const cmd_t *target_cmd = NULL;
+    bool is_item_click_enter = false;
     ctx->active_layers = layers;
     ctx->caption = caption;
     cmd_set_has_item(ctx->total > 0);
+
+    vs_locator_set_bounds(-1, -1);
+
+    if (ctx->key != KEY_MOUSE) {
+        vs_locator_reset_hover();
+    } else {
+        const vtkbd_mouse_t *m = vkey_get_mouse();
+        if (!m)
+            return PSB_NA;
+
+        int list_top = (ctx->header_lines > 0) ? ctx->header_lines : vs_row_line(VS_DATA);
+        int vis = ctx->visible_rows;
+        if (vis <= 0) {
+            vis = ctx->total - ctx->base;
+            if (ctx->rows > 0 && vis > ctx->rows)
+                vis = ctx->rows;
+        }
+        if (vis < 0)
+            vis = 0;
+        bool in_list = (m->y >= list_top && m->y < list_top + vis);
+
+        if (m->is_motion) {
+            if (in_list)
+                vs_locator_set(m->y);
+            else
+                vs_locator_clear();
+            return 0;
+        }
+        if (m->is_release)
+            return 0;
+
+        if (m->button == MOUSE_BTN_WHEEL_UP || m->button == MOUSE_BTN_WHEEL_DOWN) {
+            vs_locator_on_wheel(m->y, m->x);
+            int delta = (m->button == MOUSE_BTN_WHEEL_UP) ? -1 : 1;
+            int max_base = (ctx->total > ctx->rows && ctx->rows > 0)
+                           ? ctx->total - ctx->rows : 0;
+            int new_base = ctx->base + delta;
+            if (ctx->rows > 0 && new_base >= 0 && new_base <= max_base) {
+                ctx->base = new_base;
+                ctx->curr += delta;
+                int max_curr = (ctx->base + ctx->rows - 1 < ctx->total - 1)
+                               ? ctx->base + ctx->rows - 1
+                               : ctx->total - 1;
+                ctx->curr = clamp_int(ctx->curr, ctx->base, max_curr > 0 ? max_curr : 0);
+                return 0;
+            }
+            ctx->key = (m->button == MOUSE_BTN_WHEEL_UP) ? KEY_UP : KEY_DOWN;
+        } else if (m->button == MOUSE_BTN_LEFT) {
+            vs_locator_reset_hover();
+            const cmd_bar_hotspot_t *hs = cmd_bar_find_hotspot(m->y, m->x, layers);
+            if (hs) {
+                ctx->key = hs->key;
+                target_cmd = hs->cmd;
+            } else if (in_list) {
+                int clicked_idx = ctx->base + (m->y - list_top);
+                cmd_set_curr(ctx, clicked_idx);
+                ctx->key = KEY_ENTER;
+                is_item_click_enter = true;
+            } else {
+                return 0;
+            }
+        } else if (m->button == MOUSE_BTN_RIGHT) {
+            vs_locator_reset_hover();
+            if (in_list) {
+                int clicked_idx = ctx->base + (m->y - list_top);
+                cmd_set_curr(ctx, clicked_idx);
+            }
+            return 0;
+        } else {
+            return PSB_NA;
+        }
+    }
+
+    cmd_bar_hotspot_state_t saved_state;
+    if (hs_state) {
+        saved_state = *hs_state;
+        cmd_bar_clear_hotspots();
+    }
 
     while (1) {
         int ret = PSB_NA;
         ctx->redispatch = false;
         for (layer = layers; layer && layer->cmds; layer++) {
-            ret = cmd_dispatch_single_layer(layer, ctx, default_priv);
+            ret = cmd_dispatch_single_layer(layer, ctx, default_priv, target_cmd);
             if (ret != PSB_NA)
                 break;
         }
-        if (ctx->redispatch && !redispatched) {
-            redispatched = true;
+        if (ret == PSB_NA && is_item_click_enter && ctx->key == KEY_ENTER) {
+            ctx->key = KEY_RIGHT;
+            is_item_click_enter = false;
             continue;
         }
+        if (ctx->redispatch && !redispatched) {
+            redispatched = true;
+            target_cmd = NULL;
+            continue;
+        }
+        if (hs_state)
+            *hs_state = saved_state;
         ctx->priv = default_priv;
         return ret;
     }
@@ -734,9 +1286,17 @@ static void
 psb_build_default_layers(PSB_CTX *psbctx, cmd_layer_t *buf, size_t max_layers) {
     size_t idx = 0;
     if (psbctx->layers) {
+        bool has_base = false;
         const cmd_layer_t *l = psbctx->layers;
         while (l->cmds && idx + 1 < max_layers) {
+            if (l->cmds == psb_base_cmds)
+                has_base = true;
             buf[idx++] = *l++;
+        }
+        if (!has_base && idx + 1 < max_layers) {
+            buf[idx].cmds = psb_base_cmds;
+            buf[idx].priv = NULL;
+            idx++;
         }
     } else {
         if (psbctx->cmds && idx + 1 < max_layers) {
@@ -797,8 +1357,6 @@ psb_init_defaults(PSB_CTX *psbctx) {
 static void
 psb_sync_cols(PSB_CTX *psbctx)
 {
-    if (!psbctx || !psbctx->vcols)
-        return;
     int n = psbctx->cols;
     if (n <= 0) {
         for (n = 0; n < PSB_MAX_COLS && (psbctx->vcols[n].label ||
@@ -833,11 +1391,12 @@ psb_render_header_columns(PSB_CTX *ctx, const char *right_str)
     VCOLW hdr_widths[PSB_MAX_COLS];
     memcpy(hdr_widths, widths, sizeof(VCOLW) * (ctx->cols < PSB_MAX_COLS ? ctx->cols : PSB_MAX_COLS));
     if (right_w > 0 && ctx->cols > 0) {
-        int last = ctx->cols - 1;
+        int last = (ctx->cols < PSB_MAX_COLS ? ctx->cols : PSB_MAX_COLS) - 1;
         if (hdr_widths[last] > right_w)
             hdr_widths[last] -= right_w;
     }
 
+    clrtoeol();
     outs(ANSI_REVERSE);
     vs_cols_labels(ctx->vcols, hdr_widths, ctx->cols);
 
@@ -916,7 +1475,12 @@ psb_sync_cache(PSB_CTX *psbctx) {
         if (psbctx->loader)
             psbctx->loader(psbctx);
         psbctx->cmd.reload = false;
+        rows = t_lines - psbctx->header_lines - psbctx->footer_lines;
+        assert(rows > 0);
+        psbctx->cmd.rows = rows;
     }
+    if (psbctx->cmd.quit)
+        return;
 
     if (psbctx->cmd.total <= 0) {
         psbctx->cmd.curr = 0;
@@ -971,6 +1535,8 @@ psb_sync_cache(PSB_CTX *psbctx) {
             (psbctx->cmd.base != psbctx->cached_base || rows != psbctx->cached_rows ||
              t_columns != psbctx->cached_cols))
             psbctx->loader(psbctx);
+        if (psbctx->cmd.quit)
+            return;
         psbctx->cached_base = psbctx->cmd.base;
         psbctx->cached_rows = rows;
         psbctx->cached_cols = t_columns;
@@ -1018,8 +1584,11 @@ psb_main(PSB_CTX *psbctx)
 
         assert(rows > 0);
         psbctx->cmd.rows = rows;
-        psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
         psb_sync_cache(psbctx);
+        if (psbctx->cmd.quit)
+            break;
+        rows = psbctx->cmd.rows;
+        psb_build_default_layers(psbctx, active_layers, PSB_MAX_CMD_LAYERS);
         cmd_set_has_item(psbctx->cmd.total > 0);
 
         base = psbctx->cmd.base;
@@ -1100,11 +1669,27 @@ psb_main(PSB_CTX *psbctx)
         psbctx->cmd.redraw_footer_lines = 0;
 
         old_curr = psbctx->cmd.curr;
-        i = psbctx->header_lines + psbctx->cmd.curr - base;
-        move(i, 0);
-        psbctx->cursor(i, psbctx);
+        if (psbctx->cmd.total > 0) {
+            i = psbctx->header_lines + psbctx->cmd.curr - base;
+            move(i, 0);
+            psbctx->cursor(i, psbctx);
+        } else {
+            move(b_lines, t_columns - 1);
+        }
         int old_newmail = ISNEWMAIL(currutmp);
+        int vis = psbctx->cmd.total - base;
+        if (vis > rows) vis = rows;
+        if (vis < 0) vis = 0;
+        psbctx->cmd.header_lines = psbctx->header_lines;
+        psbctx->cmd.visible_rows = vis;
+        psbctx->cmd.on_select = psb_on_select;
+        vs_locator_set_bounds(psbctx->header_lines, psbctx->header_lines + vis);
         psbctx->cmd.key = vkey();
+        vs_locator_set_bounds(-1, -1);
+        if (psbctx->cmd.key == EOF) {
+            psbctx->cmd.quit = true;
+            break;
+        }
 
         int ret = PSB_NA;
         if (psbctx->on_key) {
@@ -1116,7 +1701,6 @@ psb_main(PSB_CTX *psbctx)
             ret = cmd_dispatch_layers(active_layers, &psbctx->cmd, psbctx->cmd.caption);
         }
 
-
         if (ISNEWMAIL(currutmp) != old_newmail && !psbctx->cmd.redraw && !psbctx->cmd.reload) {
             psbctx->cmd.redraw = true;
         }
@@ -1124,6 +1708,7 @@ psb_main(PSB_CTX *psbctx)
             psbctx->cmd.quit = true;
         }
     }
+    cmd_bar_clear_hotspots();
     return 0;
 }
 
@@ -1296,7 +1881,7 @@ psb_view_edit_history(const char *base, const char *subject,
             .curr = 0,
             .total = maxrev + pvehctx.base_as_current,
             .priv = (void*)&pvehctx,
-            .caption = " 編輯歷史 ",
+            .caption = "編輯歷史",
         },
         .header_lines = 3,
         .footer_lines = 2,
@@ -1568,7 +2153,7 @@ psb_recycle_bin(const char *base, const char *title) {
             .curr = 0,
             .total = 0,
             .priv = (void*)&pvrbctx,
-            .caption = " 已刪檔案 ",
+            .caption = "已刪檔案",
         },
         .header_lines = 3,
         .footer_lines = 2,
@@ -1709,7 +2294,7 @@ psb_comment_manager(const char *board, const char *file) {
             .curr = 0,
             .total = 0,
             .priv = (void*)&pvcmctx,
-            .caption = " 推文管理 ",
+            .caption = "推文管理",
         },
         .header_lines = 2,
         .footer_lines = 2,
@@ -1845,7 +2430,7 @@ psb_admin_edit() {
             .curr = 0,
             .total = 0,
             .priv = (void*)&paectx,
-            .caption = " 系統檔案 ",
+            .caption = "系統檔案",
         },
         .header_lines = 4,
         .footer_lines = 2,
