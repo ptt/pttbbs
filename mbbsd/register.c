@@ -2626,7 +2626,7 @@ reg_cmd_reject(cmd_ctx_t *ctx)
 }
 
 static const cmd_t regform_cmds[] = {
-    { 'q', "結束", "離開審核(不儲存本頁變更)", reg_cmd_quit, 0, CMD_PRIO_MAX },
+    { 'q', "結束", "離開審核(不儲存本頁變更)", reg_cmd_quit, 0, CMD_PRIO_QUIT },
     { KEY_END, NULL, NULL, reg_cmd_quit, 0, CMD_PRIO_NONE },
     { 'y', "接受", "通過此份註冊單", reg_cmd_mark, 0, CMD_PRIO_MAX, true },
     { 'n', "拒絕", "退回此份註冊單並選擇原因", reg_cmd_reject, 0, CMD_PRIO_MAX, true },
@@ -2658,8 +2658,12 @@ static const cmd_t regform_cmds[] = {
 static void
 prompt_regform_ui(void)
 {
-    vs_footer(" 審核 ",
-	    " (y)接受(n)拒絕(d)丟掉 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
+    const cmd_layer_t layers[] = {
+        { regform_cmds, NULL },
+        { bbs_global_cmds, NULL },
+        { NULL, NULL }
+    };
+    vs_cmd_bar(VS_FOOTER, "註冊審核", layers);
 }
 
 static void
