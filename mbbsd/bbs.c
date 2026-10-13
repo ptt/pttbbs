@@ -186,10 +186,6 @@ enum LISTMODES {
     LISTMODE_DATE = 0,
     LISTMODE_MONEY,
 };
-static char *listmode_desc[] = {
-    "日 期",
-    "價 格",
-};
 static int currlistmode = LISTMODE_DATE;
 
 #define IS_LISTING_MONEY \
@@ -387,6 +383,7 @@ void
 set_board(void)
 {
     boardheader_t  *bp;
+    boardheader_t   bh;
 
     bp = getbcache(currbid);
     if (!HasBoardPerm(bp)) {
@@ -400,16 +397,19 @@ set_board(void)
 
     board_note_time = &bp->bupdate;
 
-    if (!does_board_have_public_bm(bp)) {
+    if (get_boardheader(&bh, currbid) <= 0)
+        bh = *bp;
+
+    if (!does_board_have_public_bm(&bh)) {
 	strcpy(currBM, "徵求中");
     } else {
 	/* calculate with other title information */
 	int l = 0;
 
-	SNPRINTF(currBM, "板主:%s", bp->BM);
-	l += stream_width(bp->desc);
+	SNPRINTF(currBM, "板主:%s", bh.BM);
+	l += stream_width(bh.desc);
 	l += 8 + stream_width(currboard); /* trailing stuff */
-	l += stream_width(bp->brdname);
+	l += stream_width(bh.brdname);
 	l = t_columns - l - stream_width(currBM);
 
 #ifdef _DEBUG
@@ -616,11 +616,21 @@ int CheckPostRestriction(int bid) {
 }
 
 
-static VCOL bbs_coldefs[] = {
+// Kept const to stay in .rodata / .data.rel.ro and avoid dirtying .data RSS.
+static const VCOL bbs_coldefs[] = {
     {"", 1, 1, 100},
     {"  編號", 6, 6, 20},
     {"    ", 4, 4, 90},
     {"日 期", 6, 6, 70},
+    {"作  者       ", 13, 13, 80},
+    {"文  章  標  題", 16, TTLEN + 1, 100},
+    {0},
+};
+static const VCOL bbs_coldefs_money[] = {
+    {"", 1, 1, 100},
+    {"  編號", 6, 6, 20},
+    {"    ", 4, 4, 90},
+    {"價 格", 6, 6, 70},
     {"作  者       ", 13, 13, 80},
     {"文  章  標  題", 16, TTLEN + 1, 100},
     {0},
@@ -631,24 +641,24 @@ static void
 readtitle(PSB_CTX *ctx)
 {
     boardheader_t  *bp;
-    char    *brd_title;
+    boardheader_t   bh;
+    const char     *brd_title;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
+    if (get_boardheader(&bh, currbid) <= 0)
+        bh = *bp;
 
     if(bp->bvote != 2 && bp->bvote)
 	brd_title = "本看板進行投票中";
     else
-	brd_title = bp->desc;
+	brd_title = bh.desc;
 
     redraw_title(currBM, brd_title);
-    outs("[←]離開 [→]閱讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
-
-    bbs_coldefs[3].label = IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :
-                           listmode_desc[currlistmode];
+    move(vs_row_line(VS_COL_HEADER), 0);
     if (ctx) {
         ctx->cols = BBS_COLS;
-        ctx->vcols = bbs_coldefs;
+        ctx->vcols = IS_LISTING_MONEY ? bbs_coldefs_money : bbs_coldefs;
         ctx->col_paddings = 1;
         if (bp->brdattr & BRD_COOLDOWN) {
             SNPRINTF(ctx->col_header_right, "[靜] ");
@@ -1676,8 +1686,6 @@ b_call_in(int ent GCC_UNUSED, const fileheader_t * fhdr,
           const char *direct GCC_UNUSED)
 {
     userinfo_t *u;
-    if (!HasBasicUserPerm(PERM_LOGINOK))
-        return DONOTHING;
 
     u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
@@ -2003,8 +2011,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 int
 forward_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
-    if (!HasUserPerm(PERM_FORWARD) || fhdr->filename[0] == '.' ||
-        fhdr->filename[0] == 'L')
+    if (fhdr->filename[0] == '.' || fhdr->filename[0] == 'L')
         return DONOTHING;
 
 #ifdef QUERY_ARTICLE_URL
@@ -3409,7 +3416,6 @@ static int  // Ptt: 修石頭文
 show_filename(int ent GCC_UNUSED, const fileheader_t * fhdr,
               const char *direct GCC_UNUSED)
 {
-    if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
     vmsgf("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
 }
@@ -3680,7 +3686,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
     }
     prints("\n");
-    prints("└─────────────────────────────────────┘\n");
+    prints("└──────────────────────── [再按 Q 切換價格列表]  ─┘\n");
 
     /* 印對話框的右邊界 */
     {
@@ -4071,92 +4077,6 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-b_help(void)
-{
-    static const char * const col1[] = {
-        "【基本命令】", NULL,
-        "  閱讀文章",     "r →",
-        "  發表文章",     "^P",
-        "  回覆/連署",    "y",
-        "  推薦文章",     "X %",
-        "  刪除文章",     "d",
-        "  編輯文章",     "E",
-        "  轉寄信箱",     "F",
-        "  轉錄看板",     "^X",
-        "", "",
-        "【看板資料與活動】", NULL,
-        "  進入精華區",   "z",
-        "  進入文摘",     "TAB",
-        "  進板畫面",     "b",
-        "  我在哪裡",     "^Y",
-        "  其它看板",     "s",
-        "  查詢看板設定", "i I",
-        "  設定已讀未讀", "v",
-        "  活動連署",     "^V",
-        "  投票",         "V",
-        "  投票結果",     "R",
-        "  參與樂透",     "f",
-        NULL,
-    };
-    static const char * const col2[] = {
-        "【移動瀏覽】", NULL,
-        "  上篇文章",     "p k ↑",
-        "  下篇文章",     "n j ↓",
-        "  往前翻頁",     "^B P PgUp",
-        "  往後翻頁",     "^F N PgDn",
-        "  跳至首篇",     "Home 0",
-        "  跳至末篇",     "End $",
-        "  指定位置",     "(數字鍵)",
-        "  主題式閱讀",   "=[]<>-+S",
-        "  尋找前/後已讀", "{ }",
-        "", "",
-        "【搜尋】", NULL,
-        "  搜尋文章代碼", "#",
-        "  搜尋關鍵字",   "/ ?",
-        "  搜尋作者",     "a",
-        "  搜尋推文數",   "Z",
-        "  搜尋標記",     "G",
-        "  搜尋稿酬",     "A",
-        "  只列標題",     "^H",
-        "  不列關鍵字",   "!",
-        NULL,
-    };
-    static const char * const col3[] = {
-        "【文章資訊】", NULL,
-        "  查詢作者資料", "^Q",
-        "  丟作者水球",   "w",
-        "  查詢文章資訊", "Q",
-        "  切換價格列表", "QQ",
-        "", "",
-        "【板主命令】", NULL,
-        "  看板綜合設定", "i I",
-        "  文章編輯歷史", "~",
-        "  設定門檻",     "C",
-        "  管理樂透",     "^G",
-        "  快速水桶",     "U",
-        "  保留文章",     "m",
-        "  收入精華區",   "c",
-        "  收入文摘",     "g",
-        "  置底文章",     "_",
-        "  設定結案",     "L",
-        "  標記文章",     "t / *",
-        "  砍除已標文",   "^D",
-        "  刪除大範圍",   "D",
-        "  重編標題",     "T",
-        "  管理文章",     "^E",
-        NULL,
-    };
-    const char * const *p[] = {
-        col1,
-        col2,
-        col3,
-    };
-
-    show_help_table(p, ARRAY_SIZE(p), "看板選單輔助說明");
-    return FULLUPDATE;
-}
-
-static int
 b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
                    const char *direct GCC_UNUSED) {
     char ans[3];
@@ -4344,7 +4264,6 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
-/* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
 DEFINE_READ_ITEM_CMD(bbs_cmd_show_filename, show_filename)
 DEFINE_READ_ITEM_CMD(bbs_cmd_manage_post, manage_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_hold_gamble, hold_gamble)
@@ -4371,11 +4290,6 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_cite_post, cite_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_post, del_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_join_gamble, join_gamble)
 DEFINE_READ_ITEM_CMD(bbs_cmd_good_post, good_post)
-static int bbs_cmd_help(cmd_ctx_t *ctx) {
-    if (currmode & MODE_DIGEST)
-        return 0;
-    return read_exec_noitem((read_noitem_func_t)(void *)(b_help), ctx);
-}
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_post, mark_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_read_post, read_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_select_board, do_select)
@@ -4397,7 +4311,6 @@ const cmd_t read_comms[] = {
     { 'b', "進板", "查看進板畫面與備忘錄", bbs_cmd_notes, 0, CMD_PRIO_NORM },
     { 'i', "看板設定", "查詢或修改看板設定", bbs_cmd_config, 0, CMD_PRIO_NORM },
     { 'I', NULL, NULL, bbs_cmd_config, 0, CMD_PRIO_NONE },
-    { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('X'), "轉錄", "轉錄文章至其他看板", bbs_cmd_cross_post, 0, CMD_PRIO_NORM, true },
     { Ctrl('P'), "發表", "發表新文章", bbs_cmd_new_post, 0, CMD_PRIO_HIGH },
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },
@@ -4415,20 +4328,20 @@ const cmd_t read_comms[] = {
     { 'R', NULL, "查看投票結果", bbs_cmd_vote_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
-    { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, 0, CMD_PRIO_NONE, true },
-    { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, 0, CMD_PRIO_NONE, true },
-    { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, 0, CMD_PRIO_NONE },
-    { 'U', NULL, "快速水桶處分", bbs_cmd_quick_acl, 0, CMD_PRIO_NONE, true },
-    { 'm', NULL, "標記/取消 m 保留文章", bbs_cmd_mark_post, 0, CMD_PRIO_NONE, true },
+    { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
+    { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARD | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
+    { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, PERM_BM, CMD_PRIO_NONE },
+    { 'U', NULL, "快速水桶處分", bbs_cmd_quick_acl, PERM_BM, CMD_PRIO_NONE, true },
+    { 'm', NULL, "標記/取消 m 保留文章", bbs_cmd_mark_post, PERM_BM, CMD_PRIO_NONE, true },
     { 'c', NULL, "收入文章至精華區", bbs_cmd_cite_post, 0, CMD_PRIO_NONE, true },
-    { 'g', NULL, "收入文章至文摘", bbs_cmd_good_post, 0, CMD_PRIO_NONE, true },
-    { '_', NULL, "設定置底文章", bbs_cmd_pin_post, 0, CMD_PRIO_NONE, true },
-    { 'L', NULL, "設定文章結案標記", bbs_cmd_solve_post, 0, CMD_PRIO_NONE, true },
-    { 'D', NULL, "刪除大範圍文章", bbs_cmd_del_range, 0, CMD_PRIO_NONE, true },
+    { 'g', NULL, "收入文章至文摘", bbs_cmd_good_post, PERM_BM, CMD_PRIO_NONE, true },
+    { '_', NULL, "設定置底文章", bbs_cmd_pin_post, PERM_BM, CMD_PRIO_NONE, true },
+    { 'L', NULL, "設定文章結案標記", bbs_cmd_solve_post, PERM_BM, CMD_PRIO_NONE, true },
+    { 'D', NULL, "刪除大範圍文章", bbs_cmd_del_range, PERM_BM, CMD_PRIO_NONE, true },
     { 'T', NULL, "修改文章標題", bbs_cmd_edit_title, 0, CMD_PRIO_NONE, true },
-    { Ctrl('E'), NULL, "管理文章", bbs_cmd_manage_post, 0, CMD_PRIO_NONE, true },
+    { Ctrl('E'), NULL, "管理文章", bbs_cmd_manage_post, PERM_BM | PERM_POLICE, CMD_PRIO_NONE, true },
     { Ctrl('A'), NULL, "顯示文章檔名", bbs_cmd_show_filename, PERM_SYSOP, CMD_PRIO_NONE, true },
-    { 'u', NULL, "加入精華區打包佇列", bbs_cmd_tar_queue, 0, CMD_PRIO_NONE },
+    { 'u', NULL, "加入精華區打包佇列", bbs_cmd_tar_queue, PERM_BM | PERM_BOARD, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
