@@ -480,7 +480,8 @@ typedef struct {
     int valid_count;
 } customize_ctx_t;
 
-static VCOL customize_coldefs[] = {
+// Kept const to stay in .rodata / .data.rel.ro and avoid dirtying .data RSS.
+static const VCOL customize_coldefs[] = {
     {"", 1, 1, 100},
     {"  項", 6, 6, 20},
     {"項目", 30, 54, 80},
@@ -497,7 +498,7 @@ static int customize_header(PSB_CTX *ctx) {
 }
 
 static int customize_footer(PSB_CTX *ctx GCC_UNUSED) {
-    vs_footer(" 偏好設定 ",
+    vs_footer("偏好設定",
               " (↑/↓/PgUp/PgDn)移動 (Enter/Space/→)切換/修改 (q/←)結束");
     move(b_lines - 1, 0);
     return 0;
@@ -560,7 +561,7 @@ void Customize(void)
             .curr = 0,
             .total = cx.valid_count,
             .priv = &cx,
-            .caption = " 個人化設定 ",
+            .caption = "個人化設定",
         },
         .header_lines = 3,
         .footer_lines = 2,

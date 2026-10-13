@@ -209,7 +209,32 @@ void vs_draw_header(const char *title, const char *mid, const char *right);	/// 
 void vs_hdr	(const char *title);				/// simple header for single-topic forms/dialogs (e.g., give money, mail)
 void vs_hdr2	(const char *left, const char *right);		/// two-part header for category+subtitle/target/long-desc or dynamic state
 void vs_draw_hdr2(const char *left, const char *right);		/// draw two-part header at top without clearing screen
+// Virtual Screen Row Bitmasks
+enum {
+    VS_HEADER     = (1 << 0), // Row 0 (Top header)
+    VS_SUB_HEADER = (1 << 1), // Row 1 (Sub header)
+    VS_COL_HEADER = (1 << 2), // Row 2 (Column headers)
+    VS_DATA       = (1 << 3), // Row 3 (Start of data rows)
+    VS_SUB_FOOTER = (1 << 4), // Row b_lines - 1 (Sub footer)
+    VS_FOOTER     = (1 << 5), // Row b_lines (Bottom footer)
+};
+#define VS_ROW_COUNT 6
+
+#ifndef MAX_COL
+#define MAX_COL         (t_columns - 1)
+#endif
+#ifndef SAFE_MAX_COL
+#define SAFE_MAX_COL    (MAX_COL - 1)
+#endif
+
+int vs_row_line(int row_bit);
+
+struct cmd_layer;
 void vs_footer	(const char *caption, const char *prompt);
+int  vs_footer_caption_width(const char *caption);
+void vs_footer_draw_caption(const char *caption);
+void nblank(int n);
+void vs_cmd_bar	(int row_type, const char *prompt, const struct cmd_layer *cmd_layers);
 
 int vs_quick_pref(int default_value, const char *title, const char *entry,
                   const char *options, const char *prompt);

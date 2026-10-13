@@ -88,7 +88,7 @@ int EntryBrowser::Header() {
 }
 
 int EntryBrowser::Footer() {
-  vs_footer(" 瀏覽資料 ", " (↑↓)移動 (Enter/r/→)使用者資料 "
+  vs_footer("瀏覽資料", " (↑↓)移動 (Enter/r/→)使用者資料 "
                           "\t(q/←)跳出");
   move(b_lines - 1, 0);
   return 0;
