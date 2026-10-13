@@ -146,6 +146,7 @@ void cmd_bar_draw_cmd_ex(int line, int row_bit, const cmd_t *cmd, const char *al
 void cmd_bar_clear_hotspots(void);
 void cmd_bar_clear_row_hotspots(int y);
 void cmd_bar_register_custom_hotspot(int y, int x_start, int x_end, int key, const cmd_t *layer_cmd);
+void cmd_bar_register_newmail_hotspot(int x_start, int x_end);
 
 void psb_render_header_columns(PSB_CTX *ctx, const char *right_str);
 void render_columns_array(PSB_CTX *ctx, const char *const *data, int n);

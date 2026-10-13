@@ -437,6 +437,19 @@ cmd_bar_clear_row_hotspots(int y) {
 }
 
 void
+cmd_bar_register_newmail_hotspot(int x_start, int x_end) {
+    if (!hs_state)
+        return;
+    cmd_bar_clear_row_hotspots(0);
+    for (const cmd_t *c = bbs_global_cmds; c->key || c->func; c++) {
+        if (c->func == bbs_cmd_za_mail) {
+            cmd_bar_add_hotspot(0, x_start, x_end, 0, c);
+            break;
+        }
+    }
+}
+
+void
 cmd_bar_register_custom_hotspot(int y, int x_start, int x_end, int key, const cmd_t *layer_cmd) {
     if (!hs_state)
         return;
@@ -580,7 +593,7 @@ cmd_show_help_layers_inner(const char *caption, const psb_help_item_t *items, in
                     clean_cap[--clen] = '\0';
             }
             cmd_bar_clear_hotspots();
-            vs_header(clean_cap, "操作說明 (Help)", NULL);
+            vs_header(clean_cap, "操作說明 (Help)", NULL, NULL);
             move(1, 0);
             vbar(ANSI_REVERSE "  按鍵 / 標籤                   功能說明");
             for (int i = 0; i < rows && base + i < count; i++) {

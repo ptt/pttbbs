@@ -2824,7 +2824,7 @@ choose_board(int newflag)
         .cols = BRDLIST_COLS,
         .vcols = brdlist_coldefs,
         .col_paddings = 1,
-        .custom_header_columns = true,
+        .custom_header_columns = IN_CLASSROOT() ? true : false,
         .layers = layers,
         .loader = brdlist_loader,
         .header = brdlist_header,
