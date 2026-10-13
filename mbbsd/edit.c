@@ -457,6 +457,19 @@ show_phone_mode_panel(void)
 /**
  * Show the bottom status/help bar, and BIG5/table in phone_mode.
  */
+#define KEY_EDIT_ESC(c) KEY_ESC_KEY(c)
+static const cmd_t edit_cmds[];
+
+static const cmd_t *
+edit_find_cmd(int key)
+{
+    for (const cmd_t *c = edit_cmds; c->key || c->func; c++) {
+	if (c->key == key)
+	    return c;
+    }
+    return NULL;
+}
+
 static void
 edit_msg(void)
 {
@@ -466,15 +479,91 @@ edit_msg(void)
     if (curr_buf->phone_mode)
 	show_phone_mode_panel();
 
-    vs_footer(" 編輯文章 ",
-	    TEMPFORMAT(STRLEN, " (^Z/F1)說明 (^P/^G)插入符號/範本 (^X/^Q)離開\t"
-		"║%s│%c%c%c%c║%3d:%3d",
-		curr_buf->insert_mode ? "插入" : "取代",
-		curr_buf->ansimode ? 'A' : 'a',
-		curr_buf->indent_mode ? 'I' : 'i',
-		curr_buf->phone_mode ? 'P' : 'p',
-		curr_buf->raw_mode ? 'R' : 'r',
-		curr_buf->currln + 1, n + 1));
+    const char *caption = "編輯文章";
+    int cap_len = vs_footer_caption_width(caption);
+
+    char status_tail[64];
+    snprintf(status_tail, sizeof(status_tail), "║%s│%c%c%c%c║%3d:%3d",
+	     curr_buf->insert_mode ? "插入" : "取代",
+	     curr_buf->ansimode ? 'A' : 'a',
+	     curr_buf->indent_mode ? 'I' : 'i',
+	     curr_buf->phone_mode ? 'P' : 'p',
+	     curr_buf->raw_mode ? 'R' : 'r',
+	     curr_buf->currln + 1, n + 1);
+    int status_len = stream_width(status_tail);
+
+    const struct {
+	const char *kname;
+	int key;
+    } right_btns[] = {
+	{ "Esc-h", KEY_EDIT_ESC('h') },
+	{ "^Z", Ctrl('Z') },
+    }, left_btns[] = {
+	{ "^X", Ctrl('X') },
+	{ "^C", Ctrl('C') },
+	{ "^V", Ctrl('V') },
+	{ "^P", Ctrl('P') },
+	{ "^Q", Ctrl('Q') },
+	{ "^G", Ctrl('G') },
+    };
+
+    const cmd_t *rcmds[ARRAY_SIZE(right_btns)];
+    int help_len = 0;
+    for (size_t i = 0; i < ARRAY_SIZE(right_btns); i++) {
+	rcmds[i] = edit_find_cmd(right_btns[i].key);
+	if (rcmds[i])
+	    help_len += cmd_bar_cmd_width(rcmds[i], VS_FOOTER, right_btns[i].kname);
+    }
+    bool show_help = (cap_len + help_len + status_len <= SAFE_MAX_COL);
+    int right_len = (show_help ? help_len : 0) + status_len;
+
+    cmd_bar_clear_row_hotspots(b_lines);
+
+    move(b_lines, 0);
+    clrtoeol();
+    vs_footer_draw_caption(caption);
+    outs(VCLR_FOOTER);
+
+    int avail_left = SAFE_MAX_COL - cap_len - right_len;
+    for (size_t i = 0; i < ARRAY_SIZE(left_btns); i++) {
+	const cmd_t *c = edit_find_cmd(left_btns[i].key);
+	if (!c)
+	    continue;
+	int l = cmd_bar_cmd_width(c, VS_FOOTER, left_btns[i].kname);
+	if (l > avail_left)
+	    break;
+	cmd_bar_draw_cmd(b_lines, VS_FOOTER, c, left_btns[i].kname);
+	avail_left -= l;
+    }
+
+    int target_x = SAFE_MAX_COL - right_len;
+    int cur_x = vgetx();
+    if (target_x > cur_x)
+	nblank(target_x - cur_x);
+
+    if (show_help) {
+	for (size_t i = 0; i < ARRAY_SIZE(right_btns); i++) {
+	    if (rcmds[i])
+		cmd_bar_draw_cmd(b_lines, VS_FOOTER, rcmds[i], right_btns[i].kname);
+	}
+    }
+
+    if (cap_len + status_len <= SAFE_MAX_COL) {
+	int rx = vgetx();
+	outs(status_tail);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 2, rx + 6, Ctrl('O'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 8, rx + 9, Ctrl('V'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 9, rx + 10, KEY_EDIT_ESC('I'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 10, rx + 11, Ctrl('P'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 11, rx + 12, KEY_EDIT_ESC('R'), edit_cmds);
+	cmd_bar_register_custom_hotspot(b_lines, rx + 14, SAFE_MAX_COL, KEY_F5, edit_cmds);
+    }
+
+    cur_x = vgetx();
+    if (cur_x < SAFE_MAX_COL)
+	nblank(SAFE_MAX_COL - cur_x);
+    outc(' ');
+    outs(ANSI_RESET);
 }
 
 static const char *
@@ -3264,8 +3353,10 @@ display_textline_internal(textline_t *p, int i)
     clrtoeol();
 
     if (!p) {
-	outc('~');
-	outs(ANSI_CLRTOEND);
+        // In ANSI preview mode, the attributes were not cleared so we have to
+        // enforce a reset before showing '~'.
+        outs(ANSI_RESET "~");
+        clrtoeol();
 	return;
     }
 
@@ -3308,9 +3399,7 @@ display_textline_internal(textline_t *p, int i)
 
     if (attr)
 	outs(ANSI_RESET);
-
-    // workaround poor terminal
-    outs(ANSI_CLRTOEND);
+    clrtoeol();
 }
 
 static void
@@ -3889,8 +3978,6 @@ upload_file(void)
  * 		>= 0		編輯錢數
  * 由於各處都以 == EDIT_ABORTED 判斷, 若想傳回其他負值要注意
  */
-#define KEY_EDIT_ESC(c) (0x2000 | (unsigned char)(c))
-
 typedef struct {
     const char *fpath;
     int saveheader;
@@ -4213,9 +4300,15 @@ edit_cmd_help(cmd_ctx_t *ctx GCC_UNUSED)
 }
 
 static int
-edit_cmd_keys_help(cmd_ctx_t *ctx GCC_UNUSED)
+edit_cmd_keys_help(cmd_ctx_t *ctx)
 {
-    return PSB_NA;
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    curr_buf->redraw_everything = YEA;
+    if (sel_key > 0 && sel_key != ctx->key) {
+        ctx->key = sel_key;
+        ctx->redispatch = true;
+    }
+    return PSB_OK;
 }
 
 static int
@@ -4490,8 +4583,8 @@ static const cmd_t edit_cmds[] = {
     { KEY_EDIT_ESC('L'), NULL, NULL, edit_cmd_goto_line },
     { KEY_EDIT_ESC('J'), NULL, NULL, edit_cmd_goto_line },
     { KEY_EDIT_ESC(']'), "括號配對", "跳至對應的括號", edit_cmd_match_paren },
-    { KEY_F8, "線上名單", "查看線上使用者", edit_cmd_users },
-    { KEY_EDIT_ESC('U'), NULL, NULL, edit_cmd_users },
+    { KEY_F8, "線上名單", "查看線上使用者", edit_cmd_users, PERM_LOGINOK },
+    { KEY_EDIT_ESC('U'), NULL, NULL, edit_cmd_users, PERM_LOGINOK },
     { Ctrl('U'), "插入ESC", "插入 ESC 控制字元", edit_cmd_esc_char },
     { Ctrl('W'), "區塊剪下", "剪下標記區塊", edit_cmd_cut },
     { KEY_EDIT_ESC('w'), NULL, NULL, edit_cmd_cut },
@@ -4637,7 +4730,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		 curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
+	vs_locator_set_bounds(0, 0);
 	ch = edit_vkey();
+	vs_locator_set_bounds(-1, -1);
 	/* jochang debug */
 	if ((interval = (now - th))) {
 	    th = now;
@@ -4681,8 +4776,35 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    } else
 		curr_buf->lastindent = -1;
 
+	    if (ch == KEY_MOUSE) {
+		const vtkbd_mouse_t *m = vkey_get_mouse();
+		if (m && !m->is_motion && !m->is_release &&
+		    m->button == MOUSE_BTN_LEFT && m->y >= 0 && m->y < b_lines) {
+		    int top_ln = curr_buf->currln - curr_buf->curr_window_line;
+		    textline_t *p = curr_buf->top_of_win;
+		    int k = 0;
+		    while (k < m->y && p->next) {
+			p = p->next;
+			k++;
+		    }
+
+		    curr_buf->currline = p;
+		    curr_buf->curr_window_line = k;
+		    curr_buf->currln = top_ln + k;
+		    int col = m->x + curr_buf->edit_margin;
+		    if (col < 0)
+			col = 0;
+		    curr_buf->currpnt = line_col_to_pos(p, col, curr_buf->ansimode);
+		    if (mbcs_mode)
+			curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
+		    edit_msg();
+		    continue;
+		}
+	    }
+
 	    cmd_dispatch_layers(edit_layers, &cctx, "【文章編輯】");
 	    if (ec.finished) {
+		cmd_bar_clear_hotspots();
 		return ec.retval;
 	    }
 
