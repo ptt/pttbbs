@@ -200,30 +200,41 @@ ZA_Set(char cmd)
     return 1;
 }
 
-// Promp user our ZA bar and return for selection.
+static int
+za_cmd_action(cmd_ctx_t *ctx)
+{
+    zacmd = tolower(ctx->key);
+    return 1;
+}
+
+static int
+za_cmd_quit(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    return 0;
+}
+
+static const cmd_t za_cmds[] = {
+    { 'b', "文章列表", "切換至文章列表", za_cmd_action, 0, CMD_PRIO_HIGH },
+    { 'c', "分類",     "切換至分類討論區", za_cmd_action, 0, CMD_PRIO_HIGH },
+    { 't', "熱門",     "切換至熱門看板", za_cmd_action, 0, CMD_PRIO_HIGH },
+    { 'f', "我的最愛", "切換至我的最愛看板", za_cmd_action, 0, CMD_PRIO_HIGH },
+    { 'm', "信箱",     "切換至私人信箱", za_cmd_action, PERM_READMAIL, CMD_PRIO_HIGH },
+    { 'u', "使用者名單", "切換至線上使用者名單", za_cmd_action, PERM_LOGINOK, CMD_PRIO_HIGH },
+    { KEY_LEFT, "離開", "取消切換", za_cmd_quit, 0, CMD_PRIO_QUIT },
+    { 'q', NULL, NULL, za_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_ESC, NULL, NULL, za_cmd_quit, 0, CMD_PRIO_NONE },
+    { 0 }
+};
+
 int
 ZA_Select(void)
 {
-    int k;
-
     if (!is_login_ready ||
         !HasUserPerm(PERM_BASIC) ||
         HasUserPerm(PERM_VIOLATELAW))
         return 0;
 
-    // TODO refresh status bar?
-    vs_footer(VCLR_ZA_CAPTION " 快速切換 ",
-	    " (b)文章列表 (c)分類 (t)熱門 (f)我的最愛 (m)信箱 (u)使用者名單");
-    k = vkey();
-
-    if (k < ' ' || k >= 'z') return 0;
-    k = tolower(k);
-
-    if(strchr("bcfmut", k) == NULL)
-	return 0;
-
-    zacmd = k;
-    return 1;
+    return cmd_footer_select_cmd(VCLR_ZA_CAPTION "快速切換", za_cmds, NULL);
 }
 
 // The ZA processor, only invoked in menu.

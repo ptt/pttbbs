@@ -1338,6 +1338,106 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
     }
 }
 
+int
+cmd_footer_select(const char *caption, const cmd_layer_t *layers, cmd_ctx_t *ctx) {
+    cmd_ctx_t local_ctx;
+    if (!ctx) {
+        memset(&local_ctx, 0, sizeof(local_ctx));
+        ctx = &local_ctx;
+    }
+    cmd_set_has_item(ctx->total > 0);
+    ctx->caption = caption;
+    ctx->active_layers = layers;
+
+    vs_cmd_bar(VS_FOOTER, caption, layers);
+
+    vs_locator_set_bounds(0, 0);
+    int ch = vkey();
+    vs_locator_set_bounds(-1, -1);
+
+    ctx->key = ch;
+
+    const cmd_t *target_cmd = NULL;
+
+    if (ch == KEY_MOUSE) {
+        const vtkbd_mouse_t *m = vkey_get_mouse();
+        if (!m || m->button != MOUSE_BTN_LEFT || m->is_release || m->is_motion) {
+            vs_locator_reset_hover();
+            return 0;
+        }
+        const cmd_bar_hotspot_t *hs = cmd_bar_find_hotspot(m->y, m->x, layers);
+        if (!hs) {
+            vs_locator_reset_hover();
+            return 0;
+        }
+        ctx->key = hs->key;
+        target_cmd = hs->cmd;
+        if (!target_cmd && ctx->key) {
+            for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
+                for (const cmd_t *c = l->cmds; c->key || c->func; c++) {
+                    if (c->key == ctx->key) {
+                        if (psb_check_perm(c->permission) && (!c->need_item || cmd_bar_has_item)) {
+                            target_cmd = c;
+                            break;
+                        }
+                    }
+                }
+                if (target_cmd)
+                    break;
+            }
+        }
+    } else {
+        int ch_lower = (ch >= 'A' && ch <= 'Z') ? (ch - 'A' + 'a') : ch;
+        for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
+            for (const cmd_t *c = l->cmds; c->key || c->func; c++) {
+                int c_lower = (c->key >= 'A' && c->key <= 'Z') ? (c->key - 'A' + 'a') : c->key;
+                if (c->key == ch || (c->key && c_lower == ch_lower)) {
+                    if (psb_check_perm(c->permission) && (!c->need_item || cmd_bar_has_item)) {
+                        target_cmd = c;
+                        break;
+                    }
+                }
+            }
+            if (target_cmd)
+                break;
+        }
+    }
+
+    if (target_cmd) {
+        if (target_cmd->func) {
+            void *orig_priv = ctx->priv;
+            for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
+                for (const cmd_t *c = l->cmds; c->key || c->func; c++) {
+                    if (c == target_cmd) {
+                        ctx->priv = l->priv ? l->priv : orig_priv;
+                        break;
+                    }
+                }
+            }
+            int ret = target_cmd->func(ctx);
+            ctx->priv = orig_priv;
+            vs_locator_reset_hover();
+            return ret;
+        }
+        vs_locator_reset_hover();
+        return target_cmd->key;
+    }
+
+    vs_locator_reset_hover();
+    if (ch == KEY_MOUSE && ctx->key)
+        return ctx->key;
+    return 0;
+}
+
+int
+cmd_footer_select_cmd(const char *caption, const cmd_t *cmds, void *priv) {
+    const cmd_layer_t layers[] = {
+        { cmds, priv },
+        { NULL, NULL }
+    };
+    return cmd_footer_select(caption, layers, NULL);
+}
+
 static void
 psb_build_default_layers(PSB_CTX *psbctx, cmd_layer_t *buf, size_t max_layers) {
     size_t idx = 0;
