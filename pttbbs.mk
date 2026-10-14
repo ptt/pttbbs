@@ -34,10 +34,18 @@ endif
 ifeq ($(MB_IS_UTF8),1)
 EXT_CFLAGS+=	-DMB_IS_UTF8=1
 EXT_CXXFLAGS+=	-DMB_IS_UTF8=1
-ifeq ($(CLANG),1)
-CC:=		$(abspath $(SRCROOT)/util/clang_utf8.py) $(CC)
-CXX:=		$(abspath $(SRCROOT)/util/clang_utf8.py) $(CXX)
+EXEC_CHARSET:=	utf-8
 else
+EXEC_CHARSET:=	big5
+endif
+
+ifeq ($(CLANG),1)
+CC:=		$(abspath $(SRCROOT)/mk/clang_src.py) $(CC)
+CXX:=		$(abspath $(SRCROOT)/mk/clang_src.py) $(CXX)
+EXT_CFLAGS+=	-finput-charset=big5 -fexec-charset=$(EXEC_CHARSET)
+EXT_CXXFLAGS+=	-finput-charset=big5 -fexec-charset=$(EXEC_CHARSET)
+else
+ifeq ($(MB_IS_UTF8),1)
 EXT_CFLAGS+=	-finput-charset=big5 -fexec-charset=utf-8
 EXT_CXXFLAGS+=	-finput-charset=big5 -fexec-charset=utf-8
 endif
