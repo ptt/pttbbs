@@ -93,7 +93,7 @@ void verify_entry_email_edit(const VerifyDb::Entry *entry, bool *dirty) {
       // clang-format off
       outs(ANSI_COLOR(1;31));
       // clang-format on
-      outs("系統目前不允許\以此信箱註冊, 錯誤訊息為:");
+      outs("系統目前不允許以此信箱註冊, 錯誤訊息為:");
       outs(ANSI_RESET);
       move(y + 2, 2 + 11);
       outs(ANSI_COLOR(1));
@@ -272,7 +272,7 @@ void verify_entry_add_popup(const userec_t *u,
   switch (method_str[0]) {
   case '1':
     if (used.count(VMETHOD_EMAIL)) {
-      vmsg("已有此認證方式之資料，請使用修改功\能。");
+      vmsg("已有此認證方式之資料，請使用修改功能。");
       return;
     }
     // Create a fake entry for calling edit.

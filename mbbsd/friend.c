@@ -391,7 +391,7 @@ void friend_load(void)
         if (has_friend_or_reject_file()) {
             vs_hdr("系統通知");
             outs("\n\n"
-                 "  好友功\能目前無法同步，好友跟黑名單功\能可能暫時失效，\n"
+                 "  好友功能目前無法同步，好友跟黑名單功能可能暫時失效，\n"
                  "  如果擔心請直接斷線離開。\n\n");
             pressanykey();
         }

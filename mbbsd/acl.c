@@ -349,7 +349,7 @@ edit_banned_list_for_board(const char *board) {
         move(3, 0);
         outs(ANSI_COLOR(1)
         "                   歡迎使用 Bakuman 權限設定系統!\n\n" ANSI_RESET
-        "      本系統提供下列功\能:" ANSI_COLOR(1;33)
+        "      本系統提供下列功能:" ANSI_COLOR(1;33)
                                  " - 無人數上限的名單設定\n"
         "                          - 自動生效的時效限制\n"
         "                          - 名單內舊帳號過期重新註冊時自動失效\n\n"

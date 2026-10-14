@@ -162,7 +162,7 @@ check_locked(fileheader_t *fhdr)
         scr = vscr_save();
         vs_hdr("結案並停止回應");
         move(5, 0);
-        outs("  請注意，本功\能 (m+L) 是「結案並終止回應」(禁回文推文)，\n"
+        outs("  請注意，本功能 (m+L) 是「結案並終止回應」(禁回文推文)，\n"
              "  一直都不是「鎖定文章(變唯讀)」。"
              "正牌「鎖定文章」是只有站長可用的 ^E。\n\n"
              "  所以終止回應後使用者仍可修改此檔。\n\n"
@@ -170,7 +170,7 @@ check_locked(fileheader_t *fhdr)
              "但短期內此行為不會改變。\n\n"
              "  請勿再提報此項為「鎖定有 bug」, 謝謝\n\n"
              ANSI_COLOR(1;31)
-             "  另外，此功\能目前有同步問題，"
+             "  另外，此功能目前有同步問題，"
              "已在線上的板友在離開看板前都有機會回應/推文。\n"
              ANSI_RESET
              );
@@ -642,7 +642,7 @@ readtitle(PSB_CTX *ctx)
 	brd_title = bp->desc;
 
     redraw_title(currBM, brd_title);
-    outs("[←]離開 [→]閱\讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
+    outs("[←]離開 [→]閱讀 [Ctrl-P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
 
     bbs_coldefs[3].label = IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] :
                            listmode_desc[currlistmode];
@@ -4075,7 +4075,7 @@ b_help(void)
 {
     static const char * const col1[] = {
         "【基本命令】", NULL,
-        "  閱\讀文章",     "r →",
+        "  閱讀文章",     "r →",
         "  發表文章",     "^P",
         "  回覆/連署",    "y",
         "  推薦文章",     "X %",
@@ -4107,7 +4107,7 @@ b_help(void)
         "  跳至首篇",     "Home 0",
         "  跳至末篇",     "End $",
         "  指定位置",     "(數字鍵)",
-        "  主題式閱\讀",   "=[]<>-+S",
+        "  主題式閱讀",   "=[]<>-+S",
         "  尋找前/後已讀", "{ }",
         "", "",
         "【搜尋】", NULL,
@@ -4208,7 +4208,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     assert(bp);
 
     if (!(bp->brdattr & BRD_BM_MASK_CONTENT)) {
-        vmsg("要開啟此項功\能請洽群組長。");
+        vmsg("要開啟此項功能請洽群組長。");
         return FULLUPDATE;
     }
 
@@ -4387,7 +4387,7 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_man, b_man)
 DEFINE_READ_ITEM_CMD(bbs_cmd_view_history, view_posthistory)
 
 const cmd_t read_comms[] = {
-    { KEY_RIGHT, "閱\讀", "閱\讀選取的文章", bbs_cmd_read_post, 0, CMD_PRIO_NORM, true },
+    { KEY_RIGHT, "閱讀", "閱讀選取的文章", bbs_cmd_read_post, 0, CMD_PRIO_NORM, true },
     { KEY_ENTER, NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },
     { 'r', NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },
     { 'l', NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },

@@ -21,7 +21,7 @@ const char * const str_permid[] = {
     "不列入排行榜",		/* PERM_NOTOP */
     "違法通緝中",		/* PERM_VIOLATELAW */
     IS_ENABLED(CONFIG_ANGEL) ? "可擔任小天使" : "小天使(本站無效)", /* PERM_ANGEL */
-    "不允許\認證碼註冊",	/* PERM_NOREGCODE */
+    "不允許認證碼註冊",	/* PERM_NOREGCODE */
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */
     "禠奪公權",		        /* PERM_NOCITIZEN */
@@ -196,7 +196,7 @@ char           * const ModeTypeTable[MODE_MAX] = {
     [PSALE]            = BBSMNAME2 "量販店",
     [POSTING]          = "發表文章",
     [READBRD]          = "看板列表",
-    [READING]          = "閱\讀文章",
+    [READING]          = "閱讀文章",
     [READNEW]          = "新文章列表",
     [SELECT]           = "選擇看板",
     [RMAIL]            = "讀信",

@@ -318,11 +318,11 @@ TagThreadView(read_ctx_t *cx, const char *direct)
  *           CURSOR_FIRST, CURSOR_NEXT, CURSOR_PREV:
  *             與游標目前位置的文章同標題 的 第一篇/下一篇/前一篇 文章。
  *           RELATE_FIRST, RELATE_NEXT, RELATE_PREV:
- *             與目前正閱\讀的文章同標題 的 第一篇/下一篇/前一篇 文章。
+ *             與目前正閱讀的文章同標題 的 第一篇/下一篇/前一篇 文章。
  *           NEWPOST_NEXT, NEWPOST_PREV:
  *             下一個/前一個 thread 的第一篇。
  *           AUTHOR_NEXT, AUTHOR_PREV:
- *             XXX 這功\能目前好像沒用到?
+ *             XXX 這功能目前好像沒用到?
  *
  * @return 新的游標位置
  */
@@ -522,7 +522,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	move(21, 0);
 	clrtobot();
 	move(22, 0);
-	prints("此狀態下無法使用搜尋" AID_DISPLAYNAME "功\能");
+	prints("此狀態下無法使用搜尋" AID_DISPLAYNAME "功能");
 	pressanykey();
 	return FULLUPDATE;
     }

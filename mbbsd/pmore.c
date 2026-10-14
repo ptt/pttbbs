@@ -135,7 +135,7 @@
 #define PMORE_MSG_HELP_PAUSE \
      "請按任意鍵離開此說明畫面"
 #define PMORE_MSG_WARN_FAKEUSERINFO \
-     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
+     " ▲此頁內容會依閱讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_WARN_MOVECMD \
      " ▲此頁內容含移位碼,可能會顯示偽造的系統訊息 "
 #define PMORE_MSG_SEARCH_KEYWORD \

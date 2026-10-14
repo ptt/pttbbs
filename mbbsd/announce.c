@@ -1474,7 +1474,7 @@ static const cmd_t announce_bm_cmds[] = {
     { 'm', "移動文章", "調整精華區項目的順序位置", announce_cmd_move, 0, CMD_PRIO_HIGH, true },
     { 'd', "刪除文章", "刪除選取的精華區項目", announce_cmd_del, 0, CMD_PRIO_HIGH, true },
     { 'D', "範圍刪除", "刪除指定編號範圍內的多個項目", announce_cmd_delrange, 0, CMD_PRIO_LOW, true },
-    { 'H', "閱\讀權限", "切換項目的隱藏/板主專用/公開閱\讀權限", announce_cmd_hide, 0, CMD_PRIO_HIGH, true },
+    { 'H', "閱讀權限", "切換項目的隱藏/板主專用/公開閱讀權限", announce_cmd_hide, 0, CMD_PRIO_HIGH, true },
     { 'f', "修改符號", "修改目錄的看板/進板畫面符號", announce_cmd_editsign, 0, CMD_PRIO_LOW, true },
     { 'p', "貼上項目", "貼上已複製的項目或重設標記", announce_cmd_paste, 0, CMD_PRIO_HIGH },
     { 'a', "附加項目", "將已複製的項目附加至選取文章之後", announce_cmd_append, 0, CMD_PRIO_HIGH, true },
@@ -1503,7 +1503,7 @@ a_showhelp(int level)
     };
     static const char * const col2[] = {
         "【板主專用鍵】", NULL,
-        "  切換閱\讀權限", "H",
+        "  切換閱讀權限", "H",
         "  建新文章",      "n",
         "  建新目錄",      "g",
         "  移動文章",      "m",
@@ -1617,7 +1617,7 @@ static const cmd_t announce_base_cmds[] = {
     { KEY_END, NULL, "移至末筆", announce_cmd_end, 0, CMD_PRIO_NONE, true },
     { '$', NULL, NULL, announce_cmd_end, 0, CMD_PRIO_NONE, true },
     { 'h', "說明", "顯示操作說明", announce_cmd_help, 0, CMD_PRIO_NONE },
-    { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱\讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
+    { KEY_RIGHT, "讀取資料", "進入選取的目錄或閱讀文章", announce_cmd_select, 0, CMD_PRIO_NORM, true },
     { 'r', NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
     { KEY_ENTER, NULL, NULL, announce_cmd_select, 0, CMD_PRIO_NONE, true },
     { '/', "搜尋", "搜尋目前目錄下的標題關鍵字", announce_cmd_search, 0, CMD_PRIO_NORM, true },
@@ -1700,7 +1700,7 @@ announce_footer(PSB_CTX *psbctx)
         vs_footer(" 【板  主】 ",
                   " (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
     } else {
-        vs_footer(" 【功\能鍵】 ",
+        vs_footer(" 【功能鍵】 ",
                   " (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
     }
     return 0;

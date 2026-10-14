@@ -56,45 +56,45 @@ class TestFlagParsing(unittest.TestCase):
 
 class TestBig5ToUtf8(unittest.TestCase):
     def test_escaped_quote_in_string(self):
-        # "許\"多\"" -> must preserve \" and not break into "許"多\""
-        raw = bytes([0x22, 0xB3, 0x5C, 0x5C, 0x22, 0xA6, 0x68, 0x5C, 0x22, 0x22])
-        out = big5_to_utf8_c(raw)
+        # Clean "許\"多\"" pre-escaped by big5_to_big5_c -> transcode to UTF-8
+        clean = bytes([0x22, 0xB3, 0x5C, 0x5C, 0x22, 0xA6, 0x68, 0x5C, 0x22, 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
         self.assertEqual(out.decode("utf-8"), '"許\\"多\\""')
 
     def test_c_escape_newline(self):
-        # "許\n" -> must preserve \n and not turn into "許n"
-        raw = bytes([0x22, 0xB3, 0x5C, 0x5C, ord("n"), 0x22])
-        out = big5_to_utf8_c(raw)
+        # Clean "許\n" pre-escaped by big5_to_big5_c -> transcode to UTF-8
+        clean = bytes([0x22, 0xB3, 0x5C, 0x5C, ord("n"), 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
         self.assertEqual(out.decode("utf-8"), '"許\\n"')
 
     def test_c_escape_tab(self):
-        # "許\t" -> must preserve \t and not turn into "許t"
-        raw = bytes([0x22, 0xB3, 0x5C, 0x5C, ord("t"), 0x22])
-        out = big5_to_utf8_c(raw)
+        # Clean "許\t" pre-escaped by big5_to_big5_c -> transcode to UTF-8
+        clean = bytes([0x22, 0xB3, 0x5C, 0x5C, ord("t"), 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
         self.assertEqual(out.decode("utf-8"), '"許\\t"')
 
-    def test_manual_big5_escape_middle(self):
-        # "閱\讀" (with 0x5c escape) -> should unescape to "閱讀"
-        raw = bytes([0x22, 0xBE, 0x5C, 0x5C, 0xC5, 0xAA, 0x22])
-        out = big5_to_utf8_c(raw)
-        self.assertEqual(out.decode("utf-8"), '"閱讀"')
-
     def test_clean_big5_middle(self):
-        # "閱讀" (clean Big5 without 0x5c escape) -> should transcode to "閱讀"
-        raw = bytes([0x22, 0xBE, 0x5C, 0xC5, 0xAA, 0x22])
-        out = big5_to_utf8_c(raw)
+        # "閱讀" -> should transcode to "閱讀"
+        clean = bytes([0x22, 0xBE, 0x5C, 0xC5, 0xAA, 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
         self.assertEqual(out.decode("utf-8"), '"閱讀"')
 
-    def test_string_ending_with_big5_escape(self):
-        # "氣功\" (with trailing \ to prevent string termination collision) -> "氣功",
-        raw = bytes([0x22, 0xAE, 0xF0, 0xA5, 0x5C, 0x5C, 0x22, ord(",")])
-        out = big5_to_utf8_c(raw)
-        self.assertEqual(out.decode("utf-8"), '"氣功",')
+    def test_string_ending_with_big5(self):
+        # "氣功" ending with 0x5c trail byte before quote -> "氣功"
+        clean = bytes([0x22, 0xAE, 0xF0, 0xA5, 0x5C, 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
+        self.assertEqual(out.decode("utf-8"), '"氣功"')
 
     def test_clean_string_ending_with_big5(self):
         # "許" (clean Big5 string literal ending with 0x5c trail byte) -> "許"
-        raw = bytes([0x22, 0xB3, 0x5C, 0x22])
-        out = big5_to_utf8_c(raw)
+        clean = bytes([0x22, 0xB3, 0x5C, 0x22])
+        escaped = big5_to_big5_c(clean)
+        out = big5_to_utf8_c(escaped)
         self.assertEqual(out.decode("utf-8"), '"許"')
 
 
@@ -102,12 +102,6 @@ class TestBig5ToBig5(unittest.TestCase):
     def test_clean_big5_reading(self):
         # Clean "閱讀" -> inserts backslash so Clang sees \\ and emits single 0x5c
         raw = bytes([0x22, 0xBE, 0x5C, 0xC5, 0xAA, 0x22])
-        out = big5_to_big5_c(raw)
-        self.assertEqual(out, bytes([0x22, 0xBE, 0x5C, 0x5C, 0xC5, 0xAA, 0x22]))
-
-    def test_legacy_big5_reading(self):
-        # Legacy "閱\讀" -> already has \\, keeps single \\
-        raw = bytes([0x22, 0xBE, 0x5C, 0x5C, 0xC5, 0xAA, 0x22])
         out = big5_to_big5_c(raw)
         self.assertEqual(out, bytes([0x22, 0xBE, 0x5C, 0x5C, 0xC5, 0xAA, 0x22]))
 
@@ -169,6 +163,70 @@ class TestTranscodeDispatcher(unittest.TestCase):
         raw = b'"\xe9\x96\xb1\xe8\xae\x80"'
         out = transcode_c(raw, "utf8", "big5")
         self.assertEqual(out, bytes([0x22, 0xBE, 0x5C, 0x5C, 0xC5, 0xAA, 0x22]))
+
+
+class TestCompilerWrapper(unittest.TestCase):
+    def test_compile_clean_big5_trailing_0x5c_quote(self):
+        import shutil
+        import subprocess
+        import tempfile
+
+        if not shutil.which("clang"):
+            self.skipTest("clang not found")
+
+        wrapper = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "clang_src.py"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            src = os.path.join(td, "test_bokan.c")
+            obj = os.path.join(td, "test_bokan.o")
+            # Big5 "氣功" followed immediately by quote: [..., 0xAE, 0xF0, 0xA5, 0x5C, 0x22, ...]
+            with open(src, "wb") as f:
+                f.write(
+                    bytes(
+                        [
+                            0x63, 0x6F, 0x6E, 0x73, 0x74, 0x20, 0x63, 0x68,
+                            0x61, 0x72, 0x20, 0x2A, 0x73, 0x20, 0x3D, 0x20,
+                            0x22, 0xAE, 0xF0, 0xA5, 0x5C, 0x22, 0x3B, 0x0A,
+                        ]
+                    )
+                )
+
+            # Test big5 -> big5
+            cmd = [
+                sys.executable,
+                wrapper,
+                "clang",
+                "-finput-charset=big5",
+                "-fexec-charset=big5",
+                "-c",
+                src,
+                "-o",
+                obj,
+            ]
+            p = subprocess.run(cmd, capture_output=True)
+            self.assertEqual(p.returncode, 0, p.stderr.decode("latin1"))
+            with open(obj, "rb") as f:
+                d = f.read()
+            self.assertIn(bytes([0xAE, 0xF0, 0xA5, 0x5C]), d)
+
+            # Test big5 -> utf8
+            cmd_utf8 = [
+                sys.executable,
+                wrapper,
+                "clang",
+                "-finput-charset=big5",
+                "-fexec-charset=utf8",
+                "-c",
+                src,
+                "-o",
+                obj,
+            ]
+            p_utf8 = subprocess.run(cmd_utf8, capture_output=True)
+            self.assertEqual(p_utf8.returncode, 0, p_utf8.stderr.decode("latin1"))
+            with open(obj, "rb") as f:
+                d = f.read()
+            self.assertIn("氣功".encode("utf-8"), d)
 
 
 if __name__ == "__main__":

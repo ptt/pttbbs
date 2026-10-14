@@ -61,7 +61,6 @@ def big5_to_utf8_c(big5_data: bytes) -> bytes:
     out = bytearray()
     i = 0
     n = len(big5_data)
-    c_escape_chars = set(b"ntrabfv01234567xXuU?")
 
     while i < n:
         b = big5_data[i]
@@ -71,32 +70,7 @@ def big5_to_utf8_c(big5_data: bytes) -> bytes:
                 out.append(b)
                 out.append(b2)
                 if b2 == 0x5C and i + 2 < n and big5_data[i + 2] == 0x5C:
-                    c3 = big5_data[i + 3] if i + 3 < n else None
-                    if c3 == 0x5C:
-                        # 3+ consecutive backslashes (e.g. 許\\ or manual 許\"):
-                        # Eat the Big5 escape backslash, keep remaining backslashes.
-                        i += 3
-                    elif c3 in c_escape_chars:
-                        # Followed by standard C escape like \n, \t, \r, \0: keep the backslash!
-                        i += 2
-                    elif c3 in (0x22, 0x27):  # \" or \'
-                        # Determine if this quote is closing the literal or an escaped quote inside:
-                        j = i + 4
-                        while j < n and big5_data[j] in b" \t\r\n":
-                            j += 1
-                        # If followed by non-ASCII (e.g. Chinese) or identifier character,
-                        # this is an escaped quote inside the string (e.g. "許\"多\"").
-                        if j < n and (
-                            big5_data[j] >= 0x80
-                            or chr(big5_data[j]).isalnum()
-                            or big5_data[j] == ord("_")
-                        ):
-                            i += 2  # Keep the backslash for \"
-                        else:
-                            i += 3  # Closing quote with Big5 escape (e.g. "許\"), eat it
-                    else:
-                        # Regular character (e.g. 閱\讀, 功\能): eat the Big5 escape backslash
-                        i += 3
+                    i += 3
                 else:
                     i += 2
                 continue
@@ -121,7 +95,6 @@ def big5_to_big5_c(big5_data: bytes) -> bytes:
     out = bytearray()
     i = 0
     n = len(big5_data)
-    c_escape_chars = set(b"ntrabfv01234567xXuU?")
 
     while i < n:
         b = big5_data[i]
@@ -131,46 +104,9 @@ def big5_to_big5_c(big5_data: bytes) -> bytes:
                 out.append(b)
                 out.append(b2)
                 if b2 == 0x5C:
-                    c3 = big5_data[i + 2] if i + 2 < n else None
-                    if c3 == 0x5C:
-                        # Already has a backslash after b2 (b1 0x5c 0x5c)
-                        out.append(0x5C)
-                        c4 = big5_data[i + 3] if i + 3 < n else None
-                        if c4 in c_escape_chars:
-                            # e.g. "許\n" (b1 0x5c 0x5c n): add extra \ so Clang sees \\ followed by \n
-                            out.append(0x5C)
-                            i += 3
-                            continue
-                        elif c4 in (0x22, 0x27):
-                            # e.g. "許\"多\""
-                            j = i + 4
-                            while j < n and big5_data[j] in b" \t\r\n":
-                                j += 1
-                            if j < n and (
-                                big5_data[j] >= 0x80
-                                or chr(big5_data[j]).isalnum()
-                                or big5_data[j] == ord("_")
-                            ):
-                                # Internal escaped quote: add extra \ so Clang sees \\ followed by \"
-                                out.append(0x5C)
-                                i += 3
-                                continue
-                            else:
-                                # Closing quote: already b1 0x5c 0x5c ", Clang sees \\ then closing quote
-                                i += 3
-                                continue
-                        else:
-                            # e.g. legacy "閱\讀" (b1 0x5c 0x5c c5): keep as-is
-                            i += 3
-                            continue
-                    else:
-                        # Clean Big5 (not followed by \): insert \ so Clang sees \\
-                        out.append(0x5C)
-                        i += 2
-                        continue
-                else:
-                    i += 2
-                    continue
+                    out.append(0x5C)
+                i += 2
+                continue
         out.append(b)
         i += 1
     return bytes(out)
@@ -271,27 +207,56 @@ def main() -> int:
     src_lang = "c++" if is_cxx else "c"
 
     # Step 1: Run preprocessor (clang -E -frewrite-includes)
-    pp_cmd = [
-        raw_compiler,
-        "-E",
-        "-frewrite-includes",
-        "-Wno-invalid-source-encoding",
-        "-Wno-macro-redefined",
-    ] + pp_flags + [src_file]
-    pp_proc = subprocess.run(pp_cmd, capture_output=True)
+    # When input_charset is big5, pre-escape Big5 0x5C trail bytes before feeding
+    # into Clang's preprocessor, to prevent Clang from mistaking Big5 trail 0x5C
+    # preceding a quote (e.g. "氣功\"") as an escaped quote.
+    src_dir = os.path.dirname(src_file) or "."
+
+    if input_charset == "big5":
+        with open(src_file, "rb") as f:
+            src_bytes = f.read()
+        pp_input = f'# 1 "{src_file}"\n'.encode() + big5_to_big5_c(src_bytes)
+        pp_cmd = [
+            raw_compiler,
+            "-E",
+            "-frewrite-includes",
+            "-Wno-invalid-source-encoding",
+            "-Wno-macro-redefined",
+            "-iquote",
+            src_dir,
+        ] + pp_flags + ["-x", src_lang, "-"]
+    else:
+        pp_input = None
+        pp_cmd = [
+            raw_compiler,
+            "-E",
+            "-frewrite-includes",
+            "-Wno-invalid-source-encoding",
+            "-Wno-macro-redefined",
+        ] + pp_flags + [src_file]
+
+    pp_proc = subprocess.run(pp_cmd, input=pp_input, capture_output=True)
     if pp_proc.returncode != 0:
         sys.stderr.buffer.write(pp_proc.stderr)
         return pp_proc.returncode
 
     # Step 2: Transcode source according to input & exec charset
-    transcoded_code = transcode_c(pp_proc.stdout, input_charset, exec_charset)
+    if input_charset == "big5" and exec_charset == "big5":
+        # Already pre-escaped for Clang in Step 1
+        transcoded_code = pp_proc.stdout
+    elif input_charset == "big5" and exec_charset == "utf8":
+        # Unescape the extra backslash and convert to UTF-8
+        transcoded_code = big5_to_utf8_c(pp_proc.stdout)
+    elif input_charset == "utf8" and exec_charset == "big5":
+        transcoded_code = utf8_to_big5_c(pp_proc.stdout)
+    else:
+        transcoded_code = pp_proc.stdout
 
     # Step 3: Feed preprocessed stream back to clang
     tail = args[src_idx + 1 :]
     has_more_inputs = any(
-        not a.startswith("-") and tail[i - 1] != "-o"
+        not a.startswith("-") and (i == 0 or tail[i - 1] != "-o")
         for i, a in enumerate(tail)
-        if i > 0 or not a.startswith("-")
     )
     mid = ["-x", src_lang, "-"] + (["-x", "none"] if has_more_inputs else [])
     if "-c" in args and not any(a == "-o" or a.startswith("-o") for a in args):

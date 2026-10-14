@@ -1803,7 +1803,7 @@ static const cmd_t userlist_cmds[] = {
     { 'l', "回顧水球", "檢視水球歷史記錄", userlist_cmd_review, PERM_LOGINOK, CMD_PRIO_LOW },
     { 'p', "呼叫器", "切換呼叫器開關模式", userlist_cmd_pager, PERM_BASIC, CMD_PRIO_NORM },
     { Ctrl('P'), "神諭呼叫", "切換小天使暫停狀態", userlist_cmd_angel_pause, PERM_ANGEL, CMD_PRIO_LOW },
-    { 'r', "讀信", "閱\讀個人信箱", userlist_cmd_readmail, PERM_READMAIL, CMD_PRIO_NORM },
+    { 'r', "讀信", "閱讀個人信箱", userlist_cmd_readmail, PERM_READMAIL, CMD_PRIO_NORM },
     { 'N', "改暱稱", "修改個人暫時暱稱", userlist_cmd_nickname, PERM_LOGINOK, CMD_PRIO_NORM },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };

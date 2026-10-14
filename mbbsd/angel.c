@@ -430,10 +430,10 @@ int angel_check_master(void) {
             prints("小天使與主人的關係已維持了 %d 天。\n",
                    time4_days_remaining(now, xuser.timesetangel));
         if (xuser.timeplayangel && time4_gt(xuser.timeplayangel, xuser.timesetangel))
-            prints("小主人最後與天使互動(hh成功\呼叫或點歌)的時間: %s\n",
+            prints("小主人最後與天使互動(hh成功呼叫或點歌)的時間: %s\n",
                    Cdatelite(&xuser.timeplayangel));
         else if (xuser.timesetangel)
-            prints("但小主人似乎從來沒與你互動(成功\呼叫或點歌)過\n"
+            prints("但小主人似乎從來沒與你互動(成功呼叫或點歌)過\n"
                    " (常見於洗天使或誤按的主人)。\n");
     } else {
         prints(ANSI_COLOR(1;31) "%s 不是你的小主人。" ANSI_RESET "\n",

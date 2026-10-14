@@ -262,7 +262,7 @@ get_userec_filter(int row, userec_filter_t *uf)
 
     move(row, 0);
     outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.認證\n");
-    outs("          [a]不允許\認證碼註冊 [b]註冊時間\n");
+    outs("          [a]不允許認證碼註冊 [b]註冊時間\n");
     row += 2;
     do {
 	memset(uf, 0, sizeof(*uf));
@@ -445,7 +445,7 @@ search_key_user(const char *passwdfile, int mode)
 	    if (ch == 's' && !mode) {
 		if (retrieve_backup(&user) >= 0) {
 		    fclose(fp1);
-		    vmsg("已成功\取用備份資料。");
+		    vmsg("已成功取用備份資料。");
 		    return 0;
 		} else {
 		    vmsg("錯誤: 取用備份資料失敗。");
@@ -506,7 +506,7 @@ static void
 bperm_msg(const boardheader_t * board)
 {
     prints("\n設定 [%s] 看板之(%s)權限：", board->brdname,
-	   board->brdattr & BRD_POSTMASK ? "發表" : "閱\讀");
+	   board->brdattr & BRD_POSTMASK ? "發表" : "閱讀");
 }
 
 unsigned int
@@ -860,7 +860,7 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
             getdata(y++, 0, "設定讀寫權限(y/N)？", ans, sizeof(ans), LCECHO);
 	    if (*ans == 'y') {
-		getdata_str(y++, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,
+		getdata_str(y++, 0, "限制 [R]閱讀 (P)發表？", ans, sizeof(ans), LCECHO,
 			    "R");
 		if (*ans == 'p')
 		    newbh.brdattr |= BRD_POSTMASK;
@@ -970,7 +970,7 @@ test_banip_conf(const char *filename)
             outs(banmsg);
             outs("\n--------------------\n");
         } else {
-            outs(ANSI_COLOR(1;32) "[ 連線成功\ ]" ANSI_RESET);
+            outs(ANSI_COLOR(1;32) "[ 連線成功 ]" ANSI_RESET);
             prints("\n\n使用者可以正常連線。");
         }
         pressanykey();
@@ -1092,7 +1092,7 @@ m_newbrd(int whatclass, int recover)
     if (HasUserPerm(PERM_BOARD) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	if (*ans == 'y') {
-	    getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO, "R");
+	    getdata_str(15, 0, "限制 [R]閱讀 (P)發表？", ans, sizeof(ans), LCECHO, "R");
 	    if (*ans == 'p')
 		newboard.brdattr |= BRD_POSTMASK;
 	    else

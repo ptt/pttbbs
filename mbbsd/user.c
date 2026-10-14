@@ -125,7 +125,7 @@ int u_cancelbadpost(void)
 	   "%s 刪除一篇退文 (%d -> %d 篇)\n",
 	   cuser.userid, prev, cuser.badpost);
 
-   vmsgf("恭喜您已成功\刪除一篇退文 (由 %d 變為 %d 篇)",
+   vmsgf("恭喜您已成功刪除一篇退文 (由 %d 變為 %d 篇)",
 	   prev, cuser.badpost);
    return 0;
 }
@@ -762,7 +762,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 
         do {
             SNPRINTF(buf, x.over_18 ? "y" : "n");
-            mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱\讀。");
+            mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱讀。");
             getdata_buf(y+1, 0,"您是否年滿十八歲並同意觀看此類看板"
                         "(若否請輸入n)[y/n]: ", buf, 3, LCECHO);
         } while (buf[0] != 'y' && buf[0] != 'n');
@@ -1061,7 +1061,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
            "且有不少管理/維護的問題，"
            ANSI_COLOR(1;31)
            "所以請停止讓使用者自行申請改大小寫的服務。\n" ANSI_RESET
-           "除非是站務需求(如解決近似ID) 不然請勿使用此功\能改大小寫\n");
+           "除非是站務需求(如解決近似ID) 不然請勿使用此功能改大小寫\n");
         clrtobot();
 
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
@@ -1104,7 +1104,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #ifdef USE_VERIFYDB
 	verify_info(&x, adminmode);
 #else
-	vmsg("本站目前無開放此功\能。");
+	vmsg("本站目前無開放此功能。");
 #endif
 	return;
 
@@ -1540,7 +1540,7 @@ int u_setup_2fa(void)
             }
             pwcuSet2FA(cuser.u_2fa ? 0 : 1);
             user_delete_2fa(cuser.userid);
-            outs("\n" ANSI_COLOR(1;32) "已成功\停用 2FA 雙重驗證！" ANSI_RESET "\n");
+            outs("\n" ANSI_COLOR(1;32) "已成功停用 2FA 雙重驗證！" ANSI_RESET "\n");
             log_user_security(cuser.userid, "%s 2FA Disabled.\n", fromhost);
             pressanykey();
             return 0;
@@ -1619,7 +1619,7 @@ int u_setup_2fa(void)
                     mode_ans, sizeof(mode_ans), DOECHO);
             uint8_t init_mode = (mode_ans[0] == '1') ? U_2FA_ALWAYS : U_2FA_NEWIP;
             pwcuSet2FA(init_mode);
-            mvouts(b_lines - 1, 0, ANSI_COLOR(1;32) "[成功\] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
+            mvouts(b_lines - 1, 0, ANSI_COLOR(1;32) "[成功] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
             log_user_security(cuser.userid, "%s 2FA Enabled (%s mode).\n", fromhost,
                               init_mode == U_2FA_ALWAYS ? "ALWAYS" : "NEWIP");
             break;
@@ -1636,7 +1636,7 @@ int u_setup_2fa(void)
 
 int u_admin_disable_2fa(void) {
     if (!HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS)) {
-        vmsg("權限不足！此功\能僅限站長或帳號站長使用。");
+        vmsg("權限不足！此功能僅限站長或帳號站長使用。");
         return -1;
     }
 
@@ -1674,7 +1674,7 @@ int u_admin_disable_2fa(void) {
                         target_id, cuser.userid, reason),
              "[系統安全局]");
 
-    vmsgf("已成功\強制關閉使用者 %s 的 2FA 雙重驗證！", target_id);
+    vmsgf("已成功強制關閉使用者 %s 的 2FA 雙重驗證！", target_id);
     return 0;
 }
 

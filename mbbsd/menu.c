@@ -749,7 +749,7 @@ static const cmd_t menu_nav_cmds[] = {
 
 static const cmd_t menu_board_shortcut_cmds[] = {
     { 's', "選擇看板", "搜尋並切換至指定看板", menu_cmd_select_board, 0, CMD_PRIO_NORM },
-    { 'r', "進入看板", "進入目前看板閱\讀文章", menu_cmd_read_board, 0, CMD_PRIO_NORM },
+    { 'r', "進入看板", "進入目前看板閱讀文章", menu_cmd_read_board, 0, CMD_PRIO_NORM },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -968,7 +968,7 @@ static const menuitem_t m_admin_user[] = {
                                         "Security Log   帳號安全記錄"},
     {u_list, PERM_SYSOP,		"Users List     列出註冊名單"},
     {search_user_bybakpwd, PERM_SYSOP|PERM_ACCOUNTS,
-                                        "DOld User data 查閱\備份使用者資料"},
+                                        "DOld User data 查閱備份使用者資料"},
     {u_admin_disable_2fa, PERM_SYSOP|PERM_ACCOUNTS,
                                         "2FA Disable    強制關閉 2FA"},
     {NULL, 0, NULL}
@@ -1397,7 +1397,7 @@ main_menu(void)
 	.submenu = cmdlist,
 	.mode = M_MMENU,
 	.status = "主選單",
-	.title = "主功\能表",
+	.title = "主功能表",
 	.default_enter = ISNEWMAIL(currutmp) ? 'M' : 'C',
 	.default_exit = 'G',
     };

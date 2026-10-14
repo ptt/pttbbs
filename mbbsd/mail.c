@@ -104,7 +104,7 @@ invalidaddr(const char *addr) {
         clear();
         mvouts(2, 0,
                "您輸入的 email 位址錯誤 (address error)。 \n\n"
-               "由於最近許\多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
+               "由於最近許多人反應打入正確的位址(id或mail)後系統會判斷錯誤\n"
                "但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
                "如果你確實打錯了，請直接略過下面的說明。\n"
                "如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
@@ -697,7 +697,7 @@ setforward(void) {
         if (getdata(5, 0, "請輸入上面轉寄信箱收到的的驗證碼: ", input,
                     sizeof(input), LCECHO) &&
             strcmp(auth_code, input) == 0) {
-            outs(ANSI_COLOR(1;32) "確認驗證成功\ " ANSI_RESET "\n");
+            outs(ANSI_COLOR(1;32) "確認驗證成功 " ANSI_RESET "\n");
             unlink(buf);
             // write auth!
             setuserfile(buf, FN_FORWARD);
@@ -738,7 +738,7 @@ setforward(void) {
     // create new one.
     vs_hdr("設定自動轉寄");
     outs(ANSI_COLOR(1;36) "\n\n"
-	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
+	"由於許多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
 	"本站基於安全性及防止廣告信的考量，自動轉寄有以下設定:\n"
         " - 寄件者一律改為設定自動轉寄者的 ID\n"
         " - 要先經過 Email 認證\n"
@@ -849,8 +849,8 @@ built_mail_index(void)
         return DONOTHING;
 
     move(b_lines - 4, 0);
-    outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
-	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
+    outs("本功能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
+	 "除非您清楚這個功能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
 	 "警告：任意的使用將導致" ANSI_COLOR(1;33) "不可預期的結果" ANSI_RESET "！\n");
     getdata(b_lines - 1, 0,
 	    "確定重建信箱?(y/N)", genbuf, 3,
@@ -1217,7 +1217,7 @@ show_mail_account_sysop_desc(void)
 	return 0;
 
     char yn[2];
-    getdata(b_lines, 0, "請問您是否閱\讀以上說明? [y/N]: ", yn, sizeof(yn),
+    getdata(b_lines, 0, "請問您是否閱讀以上說明? [y/N]: ", yn, sizeof(yn),
 	    LCECHO);
     if (yn[0] == 'y')
 	return 0;
@@ -1578,7 +1578,7 @@ static void
 mailtitle(PSB_CTX *ctx)
 {
     redraw_title("郵件選單", BBSNAME);
-    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [O]站外信:%s [h]求助 %s\n" ,
+    prints("[←]離開[↑↓]選擇[→]閱讀信件 [O]站外信:%s [h]求助 %s\n" ,
 	    REJECT_OUTTAMAIL(cuser) ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
             "[~]" RECYCLE_BIN_NAME
             );
@@ -2281,8 +2281,8 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
     if( strstr(address, ".bbs") && REJECT_OUTTAMAIL(cuser) ){
 	outs("\n您必須要打開接受站外信, 水球整理系統才能寄入結果\n"
 	     "請麻煩到【郵件選單】按大寫 O改成接受站外信 (在右上角)\n"
-	     "再重新執行本功\能 :)\n");
-	vmsg("請打開站外信, 再重新執行本功\能");
+	     "再重新執行本功能 :)\n");
+	vmsg("請打開站外信, 再重新執行本功能");
 	return FULLUPDATE;
     }
 
@@ -2345,7 +2345,7 @@ DEFINE_READ_NOITEM_CMD(mail_cmd_man, mail_man)
 DEFINE_READ_NOITEM_CMD(mail_cmd_recycle_bin, mail_recycle_bin)
 
 static const cmd_t mail_comms[] = {
-    { KEY_RIGHT, "讀信", "閱\讀選取的信件", mail_cmd_read, 0, CMD_PRIO_NORM, true },
+    { KEY_RIGHT, "讀信", "閱讀選取的信件", mail_cmd_read, 0, CMD_PRIO_NORM, true },
     { KEY_ENTER, NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
     { 'r', NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },
     { 'l', NULL, NULL, mail_cmd_read, 0, CMD_PRIO_NONE, true },

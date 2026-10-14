@@ -562,7 +562,7 @@ checkuser_2fa(int lineno, const userec_t *u)
         getdata(lineno, 0, "請輸入兩階段(2FA)驗證碼(6位限時數字 或 8位救援碼):",
                 totp_code, sizeof(totp_code), DOECHO);
         if (user_verify_2fa_or_backup(cuser.userid, totp_code)) {
-            mvouts(lineno, 0, "2FA 兩階段驗證成功\。");
+            mvouts(lineno, 0, "2FA 兩階段驗證成功。");
             move(lineno + 1, 0); clrtoeol();
             return 1;
         }
@@ -1008,7 +1008,7 @@ user_login(void)
 	check_mailbox_quota();
 
         if (!HasUserPerm(PERM_BASIC)) {
-            vs_hdr2("停權通知", "部份功\能已被暫停使用");
+            vs_hdr2("停權通知", "部份功能已被暫停使用");
             outs(ANSI_COLOR(1;31) "\n\n\t抱歉，你的帳號已被停權。\n"
                  "\t詳情請至 ViolateLaw 看板搜尋你的 ID。\n" ANSI_RESET);
             pressanykey();

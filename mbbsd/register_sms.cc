@@ -319,7 +319,7 @@ void SmsValidation::Run() {
                                      VMETHOD_SMS))
     return;
   if (cuser.userlevel & PERM_NOREGCODE) {
-    vmsg("您不被允許\使用認證碼認證。");
+    vmsg("您不被允許使用認證碼認證。");
     return;
   }
 

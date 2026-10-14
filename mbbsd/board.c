@@ -724,7 +724,7 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET
 		" - %s" ANSI_RESET "未滿十八歲進入\n",
 		(bp->brdattr & BRD_OVER18) ?
-		ANSI_COLOR(1) "禁止 " : "允許\ " );
+		ANSI_COLOR(1) "禁止 " : "允許 " );
 
 	if (!canpost)
 	    outs(ANSI_COLOR(1;31)"  ★ 您在此看板無發文或推文權限，"
@@ -1578,7 +1578,7 @@ brdlist_header(PSB_CTX *ctx)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else {
 	redraw_title("看板列表", BBSNAME);
-	outs("[←][q]回上層 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
+	outs("[←][q]回上層 [→][r]閱讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [c]新文章 [/]搜尋 [h]求助\n");
 	vbar(TEMPFORMAT(STRLEN, ANSI_REVERSE "   %s   看  板       類別   中   文   測   述"
               "               人氣 板   主", newflag ? "總數" : "編號"));
     }
@@ -2251,9 +2251,9 @@ board_cmd_save_brc(cmd_ctx_t *ctx) {
         fav_save();
         brc_finalize();
         last_save_fav_and_brc = now;
-        vmsg("已儲存看板閱\讀記錄");
+        vmsg("已儲存看板閱讀記錄");
     } else {
-        vmsgf("間隔時間太短, 暫不儲存看板閱\讀記錄 [請等 %d 秒]",
+        vmsgf("間隔時間太短, 暫不儲存看板閱讀記錄 [請等 %d 秒]",
               (int)(600 - time4_diff(now, last_save_fav_and_brc)));
     }
     ctx->redraw_footer_lines = 1;
@@ -2381,7 +2381,7 @@ static const cmd_t boardlist_cmds[] = {
     { KEY_ENTER, NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
     { 'r', NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
     { 'l', NULL, NULL, board_cmd_select, 0, CMD_PRIO_NONE, true },
-    { 'w', NULL, "手動儲存閱\讀記錄", board_cmd_save_brc, 0, CMD_PRIO_NONE },
+    { 'w', NULL, "手動儲存閱讀記錄", board_cmd_save_brc, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -2647,7 +2647,7 @@ fav_cmd_backup(cmd_ctx_t *ctx) {
     brdnum = -1;
     ctx->reload = true;
     if (get_current_fav() != get_fav_root()) {
-        vmsg("請到我的最愛最上層執行本功\能");
+        vmsg("請到我的最愛最上層執行本功能");
         return 0;
     }
     c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");

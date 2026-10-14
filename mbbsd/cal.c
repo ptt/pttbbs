@@ -558,7 +558,7 @@ give_money_ui_list(struct Vector *namelist)
                     file_append(fpath, alert_trade);
                 sendalert(id, ALERT_NEW_MAIL);
                 if (fp_receipt) {
-                    fprintf(fp_receipt, "%-12s: 收到稅後 %d (紅包袋寄送成功\)\n", id, m - mtax);
+                    fprintf(fp_receipt, "%-12s: 收到稅後 %d (紅包袋寄送成功)\n", id, m - mtax);
                     fflush(fp_receipt);
                 }
             }

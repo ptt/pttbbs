@@ -638,7 +638,7 @@ vote_logconf_print(const vote_logconf_t *logconf) {
     print_vote_logconf_feature(logconf->log_date, "投票的時間");
     print_vote_logconf_feature(logconf->log_choice, "投下的選項");
 
-    vmsg("詳閱\完畢後請按任意鍵繼續");
+    vmsg("詳閱完畢後請按任意鍵繼續");
 }
 
 static int
@@ -781,8 +781,8 @@ vote_maintain(const char *bname)
     }
 
     move(8, 0);
-    prints("以下設定之相關規範請參閱\ BoardAnnouce 板置底公告：\n");
-    prints("《[公告] 看板投票功\能更新、相關規範公告》\n");
+    prints("以下設定之相關規範請參閱 BoardAnnouce 板置底公告：\n");
+    prints("《[公告] 看板投票功能更新、相關規範公告》\n");
     prints("\n");
     prints("若板主欲於投票時記錄以下任何一項資訊，請事先與看板使用者溝通，\n");
     prints("並於投票前至少七日，事先公告將記錄之項目，違者將受處分。\n");
@@ -1007,7 +1007,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     clear();
     move(10, 0);
     prints(" " ANSI_COLOR(1;31)
-	   "請詳細閱\讀本次投票將記錄並公開之資訊，若不同意請取消投票。 "
+	   "請詳細閱讀本次投票將記錄並公開之資訊，若不同意請取消投票。 "
 	   ANSI_RESET "\n");
     prints(" " ANSI_COLOR(1;31)
 	   "若您完成投票即代表您同意將您本次投票的以下資訊公開。 "

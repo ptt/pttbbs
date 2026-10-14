@@ -1379,7 +1379,7 @@ pae_cmd_delete(cmd_ctx_t *ctx) {
         ctx->redraw_footer_lines = 1;
     }
     vmsgf("系統檔案[%s]: %s", cx->files[ctx->curr],
-          !dashf(cx->files[ctx->curr]) ?  "刪除成功\ " : "未刪除");
+          !dashf(cx->files[ctx->curr]) ?  "刪除成功 " : "未刪除");
     return 0;
 }
 
