@@ -383,7 +383,9 @@ static int
 cmd_bar_find_key_at(int y, int x) {
     if (!hs_state)
         return 0;
-    for (int i = 0; i < hs_state->n_items; i++) {
+    int n = hs_state->n_items;
+    if (n > MAX_CMD_BAR_HOTSPOTS) n = MAX_CMD_BAR_HOTSPOTS;
+    for (int i = 0; i < n; i++) {
         const cmd_bar_hotspot_t *hs = &hs_state->items[i];
         if (hs->y == y && x >= hs->x_start && x < hs->x_end)
             return hs->key;
@@ -428,6 +430,10 @@ void
 cmd_bar_clear_row_hotspots(int y) {
     if (!hs_state)
         return;
+    if (hs_state->n_items < 0 || hs_state->n_items > MAX_CMD_BAR_HOTSPOTS) {
+        hs_state->n_items = 0;
+        return;
+    }
     int dst = 0;
     for (int i = 0; i < hs_state->n_items; i++) {
         if (hs_state->items[i].y != y)
@@ -480,7 +486,9 @@ bool
 cmd_bar_get_hotspot_rect(int y, int x, int *out_x_start, int *out_x_end) {
     if (!hs_state)
         return false;
-    for (int i = 0; i < hs_state->n_items; i++) {
+    int n = hs_state->n_items;
+    if (n > MAX_CMD_BAR_HOTSPOTS) n = MAX_CMD_BAR_HOTSPOTS;
+    for (int i = 0; i < n; i++) {
         const cmd_bar_hotspot_t *hs = &hs_state->items[i];
         if (hs->y == y && x >= hs->x_start && x < hs->x_end) {
             if (out_x_start) *out_x_start = hs->x_start;
@@ -861,13 +869,16 @@ cmd_show_help_layers(const char *caption, const cmd_layer_t *layers) {
 
     qsort(items, count, sizeof(psb_help_item_t), psb_help_item_cmp);
 
-    cmd_bar_hotspot_state_t saved_state;
-    if (hs_state)
+    cmd_bar_hotspot_state_t saved_state = {0};
+    bool has_saved_state = false;
+    if (hs_state) {
         saved_state = *hs_state;
+        has_saved_state = true;
+    }
 
     int ret = cmd_show_help_layers_inner(caption, items, count);
 
-    if (hs_state)
+    if (has_saved_state && hs_state)
         *hs_state = saved_state;
     return ret;
 }
@@ -893,10 +904,12 @@ cmd_bar_find_hotspot(int y, int x, const cmd_layer_t *layers) {
     if (!hs_state)
         return NULL;
     bool layer_match = false;
+    int n_cmd_layers = hs_state->n_layer_cmds;
+    if (n_cmd_layers > PSB_MAX_CMD_LAYERS) n_cmd_layers = PSB_MAX_CMD_LAYERS;
     for (const cmd_layer_t *l = layers; l && l->cmds; l++) {
         if (l->cmds == bbs_global_cmds)
             continue;
-        for (int i = 0; i < hs_state->n_layer_cmds; i++) {
+        for (int i = 0; i < n_cmd_layers; i++) {
             if (l->cmds == hs_state->layer_cmds[i]) {
                 layer_match = true;
                 break;
@@ -905,7 +918,9 @@ cmd_bar_find_hotspot(int y, int x, const cmd_layer_t *layers) {
         if (layer_match)
             break;
     }
-    for (int i = 0; i < hs_state->n_items; i++) {
+    int n = hs_state->n_items;
+    if (n > MAX_CMD_BAR_HOTSPOTS) n = MAX_CMD_BAR_HOTSPOTS;
+    for (int i = 0; i < n; i++) {
         const cmd_bar_hotspot_t *hs = &hs_state->items[i];
         if (hs->y == y && x >= hs->x_start && x < hs->x_end) {
             if (hs->cmd == NULL) {
@@ -1307,9 +1322,11 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
         }
     }
 
-    cmd_bar_hotspot_state_t saved_state;
+    cmd_bar_hotspot_state_t saved_state = {0};
+    bool has_saved_state = false;
     if (hs_state) {
         saved_state = *hs_state;
+        has_saved_state = true;
         cmd_bar_clear_hotspots();
     }
 
@@ -1331,7 +1348,7 @@ cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
             target_cmd = NULL;
             continue;
         }
-        if (hs_state)
+        if (has_saved_state && hs_state)
             *hs_state = saved_state;
         ctx->priv = default_priv;
         return ret;
