@@ -1,5 +1,8 @@
 #include "bbs.h"
 
+// Remove chicken after 2026/12/1.
+#define DEPRECATE_CHICKEN
+
 #define NUM_KINDS   15		/* 有多少種動物 */
 #define CHICKENLOG  "etc/chicken"
 #define CHICKEN_PIC "etc/chickens"
@@ -969,6 +972,15 @@ chicken_main(void)
     lockreturn0(CHICKEN, LOCK_MULTI);
     mychicken = load_live_chicken(cuser.userid);
     debug_timediff(mychicken);
+#ifdef DEPRECATE_CHICKEN
+    if (!mychicken || !mychicken->name[0])
+    {
+	free_live_chicken(mychicken);
+	unlockutmpmode();
+	vmsg("你沒有活著的寵物。");
+	return 0;
+    }
+#endif
     if (mychicken && !mychicken->name[0])
     {
 	// possible for recovery
