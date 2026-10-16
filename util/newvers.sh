@@ -5,7 +5,7 @@ LC_ALL=C
 export LC_ALL
 
 build_remote="$(git config --get remote.origin.url 2>/dev/null)"
-build_origin="$(git rev-parse --short origin/master 2>/dev/null)"
+build_origin="$(git rev-parse --short origin/main 2>/dev/null)"
 build_hash="$(git rev-parse --short HEAD 2>/dev/null)"
 [ "${build_hash}" = "${build_origin}" ] && build_origin=""
 if ! git diff --quiet 2>/dev/null; then
