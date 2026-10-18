@@ -1009,7 +1009,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
                     (!cmd->need_item || cmd_bar_has_item))
                     quit_cmd = cmd;
             }
-            if ((cmd->key == 'h' || cmd->key == 'H') && cmd->label && !usage_cmd) {
+            if (cmd->key == 'h' && cmd->label && !usage_cmd) {
                 if (psb_check_perm(cmd->permission) &&
                     (!cmd->need_item || cmd_bar_has_item))
                     usage_cmd = cmd;
@@ -1026,7 +1026,7 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
                 (cmd->need_item && !cmd_bar_has_item))
                 continue;
             if (cmd->prio == CMD_PRIO_QUIT || cmd->prio == CMD_PRIO_USAGE ||
-                cmd->key == 'h' || cmd->key == 'H' || cmd->key == KEY_LEFT)
+                cmd->key == 'h' || cmd->key == KEY_LEFT)
                 continue;
             if (cmd->label && cmd->prio > CMD_PRIO_NONE && n_cands < (int)ARRAY_SIZE(cands)) {
                 cands[n_cands].cmd = cmd;
