@@ -177,7 +177,9 @@ a_loadname(menu_t * pm)
     char            buf[PATHLEN];
     int             len;
 
-    int rows = (t_columns < 70) ? (t_lines - 3) / 2 : (t_lines - 3);
+    int rows = (t_columns < 70) ? (t_lines - 4) / 2 : (t_lines - 4);
+    if (rows <= 0)
+	rows = 1;
     if (rows != pm->header_size) {
 	pm->header_size = rows;
 	pm->header = (fileheader_t *) realloc(pm->header, pm->header_size*FHSZ);
@@ -1525,9 +1527,8 @@ announce_header(PSB_CTX *psbctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
     redraw_title("精華文章", cx->me->mtitle);
-    move(1, 0);
-    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_RESET,
-           "編    選      日    期");
+    cmd_set_has_item(psbctx->cmd.total > 0);
+    vs_cmd_bar(VS_SUB_HEADER, NULL, cx->layers);
     return 0;
 }
 
@@ -1636,7 +1637,7 @@ a_menu_rec(const char *maintitle, const char *path,
 	root = &me;
     }
 
-    me.header_size = (t_lines - 3 > 0) ? t_lines - 3 : 1;
+    me.header_size = (t_lines - 4 > 0) ? t_lines - 4 : 1;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
     STRLCPY(me.mtitle, maintitle);
@@ -1706,7 +1707,7 @@ a_menu_rec(const char *maintitle, const char *path,
             .priv = &cx,
             .caption = announce_caption(&me),
         },
-        .header_lines = 2,
+        .header_lines = 3,
         .footer_lines = 1,
         .cols = ANNOUNCE_COLS,
         .vcols = announce_coldefs,
