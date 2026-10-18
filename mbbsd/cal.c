@@ -15,14 +15,13 @@ char *get_restriction_reason(
     syncnow();
     if (numlogindays / 10 < limits_logins) {
         snprintf(msg, sz_msg,
-                 STR_LOGINDAYS "未滿 %d " STR_LOGINDAYS
-                 "(目前%d" STR_LOGINDAYS_QTY ") ",
+                 STR_LOGINDAYS "未滿 %d (目前%d)",
                  limits_logins * 10, numlogindays);
         return msg;
     }
 #ifdef ASSESS
     if  (badpost > (255 - limits_badpost)) {
-        snprintf(msg, sz_msg, "退文超過 %d 篇(目前%d篇)",
+        snprintf(msg, sz_msg, "退文超過 %d (目前%d)",
                  255 - limits_badpost, badpost);
         return msg;
     }

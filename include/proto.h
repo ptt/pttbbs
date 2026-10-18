@@ -86,6 +86,8 @@ int board_select(void);
 int board_digest(void);
 int does_board_have_public_bm(const boardheader_t *bp);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
+void editLimits(unsigned char *plogins, unsigned char *pbadpost);
+char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);
 void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 
 /* board */

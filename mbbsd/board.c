@@ -576,6 +576,7 @@ typedef struct {
 } bconfig_ctx_t;
 
 typedef struct BConfigItem {
+    char hotkey;
     const char *desc;
     const char *on_str;
     const char *off_str;
@@ -647,6 +648,83 @@ bcfg_get_enter_entry(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED
     return buf;
 }
 
+static const char *
+bcfg_get_post_logins(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                     char *buf, size_t sz)
+{
+    const boardheader_t *bp = cx->bp;
+    int limit = (int)bp->post_limit_logins * 10;
+    if (limit == 0) {
+        strlcpy(buf, "無限制", sz);
+    } else {
+        int my_logins = (int)cuser.numlogindays;
+        if (my_logins < limit) {
+            snprintf(buf, sz, "%d 次以上 " ANSI_COLOR(1;31) "*未達標" ANSI_RESET " (您: %d 次)", limit, my_logins);
+        } else {
+            snprintf(buf, sz, "%d 次以上 (您: %d 次)", limit, my_logins);
+        }
+    }
+    return buf;
+}
+
+static const char *
+bcfg_get_post_badpost(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                      char *buf, size_t sz)
+{
+    const boardheader_t *bp = cx->bp;
+    if (bp->post_limit_badpost == 0) {
+        strlcpy(buf, "無限制", sz);
+    } else {
+        int limit = 255 - (int)bp->post_limit_badpost;
+        int my_bad = (int)cuser.badpost;
+        if (my_bad > limit) {
+            snprintf(buf, sz, "%d 篇以下 " ANSI_COLOR(1;31) "*已超標" ANSI_RESET " (您: %d 篇)", limit, my_bad);
+        } else {
+            snprintf(buf, sz, "%d 篇以下 (您: %d 篇)", limit, my_bad);
+        }
+    }
+    return buf;
+}
+
+static const char *
+bcfg_get_post_perm(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                   char *buf, size_t sz)
+{
+    const boardheader_t *bp = cx->bp;
+    char reason[128];
+    const char *pmsg = postperm_msg(bp->brdname);
+    char *rmsg = get_board_restriction_reason(currbid, sizeof(reason), reason);
+
+    if (!pmsg && !rmsg) {
+        snprintf(buf, sz, ANSI_COLOR(1;32) "具有發文與推文權限" ANSI_RESET);
+    } else if (pmsg) {
+        snprintf(buf, sz, ANSI_COLOR(1;31) "★受限:" ANSI_RESET " %s", pmsg);
+    } else {
+        snprintf(buf, sz, ANSI_COLOR(1;31) "★受限:" ANSI_RESET " %s", rmsg);
+    }
+    return buf;
+}
+
+static const char *
+bcfg_get_vote_limits(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                     char *buf, size_t sz)
+{
+    const boardheader_t *bp = cx->bp;
+    int llogin = (int)bp->vote_limit_logins * 10;
+    int lbad = bp->vote_limit_badpost ? (255 - (int)bp->vote_limit_badpost) : -1;
+    if (llogin == 0 && lbad < 0) {
+        strlcpy(buf, "無特別限制", sz);
+    } else if (llogin > 0 && lbad >= 0) {
+        snprintf(buf, sz, "登入 %d 次以上 / 退文 %d 篇以下", llogin, lbad);
+    } else if (llogin > 0) {
+        snprintf(buf, sz, "登入 %d 次以上", llogin);
+    } else {
+        snprintf(buf, sz, "退文 %d 篇以下", lbad);
+    }
+    return buf;
+}
+
+#define PERM_POSTLIMIT  (PERM_BOARD | PERM_SYSGROUPOP)
 #define PERM_SYSGROUPOP (PERM_SYSOP | PERM_SYSSUPERSUBOP)
 #define PERM_POLICEOP   (PERM_SYSOP | PERM_POLICE | PERM_SYSSUPERSUBOP)
 #ifdef ALLOW_BM_SET_NOSELFDELPOST
@@ -667,6 +745,8 @@ bcfg_getter(const bconfig_ctx_t *cx, const BConfigItem *item, char *buf, size_t 
             note = " (限群組長/站長)";
         else if (item->perm == (int)PERM_POLICEOP)
             note = " (限警察/群組長/站長)";
+        else if (item->perm == (int)PERM_POSTLIMIT)
+            note = " (限總管/群組長)";
         if (note)
             strlcat(buf, note, sz);
     }
@@ -896,6 +976,93 @@ bcfg_set_over18(cmd_ctx_t *ctx)
 }
 
 static int
+bcfg_set_post_logins(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    char buf[16] = "";
+    ctx->reload = true;
+    if (bp->post_limit_logins > 0)
+        snprintf(buf, sizeof(buf), "%d", (int)bp->post_limit_logins * 10);
+    getdata_str(b_lines - 1, 0,
+                STR_LOGINDAYS "下限 (0~2550，以10為單位，0表示無限制)：",
+                buf, 6, NUMECHO, buf);
+    int temp = atoi(buf);
+    if (temp < 0 || temp > 2550) {
+        vmsg("輸入數值無效，請使用 0~2550 之間的數字。");
+        return 0;
+    }
+    bp->post_limit_logins = (uint8_t)(temp / 10);
+    cx->touched = 1;
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    modify_boardheader(bp, currbid);
+    log_usies("SetBoard", bp->brdname);
+    vmsg("已更新發文登入次數限制。");
+    return 0;
+}
+
+static int
+bcfg_set_post_badpost(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    char buf[16] = "";
+    ctx->reload = true;
+    if (bp->post_limit_badpost > 0)
+        snprintf(buf, sizeof(buf), "%d", 255 - (int)bp->post_limit_badpost);
+    else
+        strcpy(buf, "255");
+    getdata_str(b_lines - 1, 0,
+                "退文篇數上限 (0~255，不限制請輸入 255)：",
+                buf, 4, NUMECHO, buf);
+    int temp = atoi(buf);
+    if (temp < 0 || temp > 255) {
+        vmsg("輸入數值無效，請使用 0~255 之間的數字。");
+        return 0;
+    }
+    bp->post_limit_badpost = (temp == 255) ? 0 : (uint8_t)(255 - temp);
+    cx->touched = 1;
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    modify_boardheader(bp, currbid);
+    log_usies("SetBoard", bp->brdname);
+    vmsg("已更新發文退文篇數限制。");
+    return 0;
+}
+
+static int
+bcfg_show_post_perm(cmd_ctx_t *ctx GCC_UNUSED)
+{
+    char reason[128];
+    char buf[256];
+    const char *pmsg = postperm_msg(currboard);
+    char *rmsg = get_board_restriction_reason(currbid, sizeof(reason), reason);
+    if (!pmsg && !rmsg) {
+        snprintf(buf, sizeof(buf), "您的登入: %d 次, 退文: %d 篇, 目前具有發文推文權限。",
+                 (int)cuser.numlogindays, (int)cuser.badpost);
+    } else {
+        snprintf(buf, sizeof(buf), "您的登入: %d 次, 退文: %d 篇, 無發文推文權限 (%s)。",
+                 (int)cuser.numlogindays, (int)cuser.badpost, pmsg ? pmsg : rmsg);
+    }
+    vmsg(buf);
+    return 0;
+}
+
+static int
+bcfg_set_vote_limits(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    boardheader_t *bp = cx->bp;
+    ctx->reload = true;
+    editLimits(&bp->vote_limit_logins, &bp->vote_limit_badpost);
+    cx->touched = 1;
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    modify_boardheader(bp, currbid);
+    log_usies("SetBoard", bp->brdname);
+    vmsg("已更新預設連署限制。");
+    return 0;
+}
+
+static int
 bcfg_set_banned(cmd_ctx_t *ctx)
 {
     ctx->reload = true;
@@ -968,86 +1135,37 @@ bcfg_set_notes_edit(cmd_ctx_t *ctx)
 }
 
 static const BConfigItem bconfig_items[] = {
-    { "中文敘述", NULL, NULL, 0, PERM_BM, bcfg_get_title, bcfg_set_title },
-    { "公開狀態 (是否隱形)", ANSI_COLOR(1;31) "隱形" ANSI_RESET, "公開", BRD_HIDE, PERM_BM, NULL, bcfg_set_hide },
-    { "隱板時進入十大排行榜", ANSI_COLOR(1) "可以" ANSI_RESET, "不可", BRD_BMCOUNT, PERM_BM, NULL, bcfg_set_bmcount },
-    { "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
-    { "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
-    { "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
-    { "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
+    { 'b', "中文敘述", NULL, NULL, 0, PERM_BM, bcfg_get_title, bcfg_set_title },
+    { 0,   "公開狀態 (是否隱形)", ANSI_COLOR(1;31) "隱形" ANSI_RESET, "公開", BRD_HIDE, PERM_BM, NULL, bcfg_set_hide },
+    { 'g', "隱板時進入十大排行榜", ANSI_COLOR(1) "可以" ANSI_RESET, "不可", BRD_BMCOUNT, PERM_BM, NULL, bcfg_set_bmcount },
+    { 'e', "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
+    { 'y', "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
+    { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
+    { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-    { "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
+    { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
 #endif
-    { "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
-    { "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_IPLOGRECMD, PERM_BM, NULL, bcfg_set_iplogrecmd },
-    { "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
-    { "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
+    { 'f', "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
+    { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_IPLOGRECMD, PERM_BM, NULL, bcfg_set_iplogrecmd },
+    { 'a', "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
+    { 'k', "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
 #ifdef USE_AUTOCPLOG
-    { "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
+    { 'x', "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
 #endif
-    { "冷靜模式", ANSI_COLOR(1;31) "已設為冷靜模式" ANSI_RESET, "未設定", BRD_COOLDOWN, PERM_POLICEOP, NULL, bcfg_set_cooldown },
-    { "未滿十八歲進入", ANSI_COLOR(1) "禁止" ANSI_RESET, "允許", BRD_OVER18, PERM_BM, NULL, bcfg_set_over18 },
-    { "[名單] 設定水桶名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
-    { "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
-    { "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
-    { "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
-    { "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype },
-    { "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote },
-    { "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit },
+    { 'j', "冷靜模式", ANSI_COLOR(1;31) "已設為冷靜模式" ANSI_RESET, "未設定", BRD_COOLDOWN, PERM_POLICEOP, NULL, bcfg_set_cooldown },
+    { 0,   "未滿十八歲進入", ANSI_COLOR(1) "禁止" ANSI_RESET, "允許", BRD_OVER18, PERM_BM, NULL, bcfg_set_over18 },
+    { 0,   "[發文條件] 登入次數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_logins, bcfg_set_post_logins },
+    { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
+    { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
+    { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_vote_limits, bcfg_set_vote_limits },
+    { 'w', "[名單] 設定水桶名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+    { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
+    { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
+    { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
+    { 'c', "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype },
+    { 'n', "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote },
+    { 'p', "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit },
 };
-
-static int
-bconfig_col_measurer(int i, int col, PSB_CTX *ctx) {
-    if (i < 0)
-        return 0;
-    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
-    const BConfigItem *item = &bconfig_items[i];
-    if (col == 0)
-        return stream_width(item->desc);
-    if (col == 1) {
-        char val[64];
-        bcfg_getter(cx, item, val, sizeof(val));
-        return stream_width(val);
-    }
-    return 0;
-}
-
-static int
-bconfig_header(PSB_CTX *ctx) {
-    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
-    boardheader_t *bp = cx->bp;
-    const char *mode;
-
-    if (cx->readonly)
-        mode = cx->can_edit ? "[唯讀模式 (按 Ctrl-P 編輯)]" : "[唯讀檢視]";
-    else
-        mode = "[編輯模式 (按 Ctrl-P 唯讀)]";
-
-    vs_draw_hdr2("看板設定與管理", mode);
-
-    const char *bm = does_board_have_public_bm(bp) ? bp->BM : "(無)";
-    prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
-           " 板主名單: " ANSI_COLOR(1;36) "%s" ANSI_RESET "\n",
-           bp->brdname, bm);
-    return 0;
-}
-
-static int
-bconfig_renderer(int i, PSB_CTX *ctx) {
-    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
-    int w0 = ctx->col_widths[0];
-    int w1 = ctx->col_widths[1];
-    const BConfigItem *item = &bconfig_items[i];
-    char val[SZ_COLS(64)];
-    bcfg_getter(cx, item, val, sizeof(val));
-    if (w1 > 0) {
-        val[stream_col_offset(w1, val, NULL)] = 0;
-    }
-    int pad0 = w0 - stream_width(item->desc);
-    prints("  " ANSI_COLOR(1;36) "%2d" ANSI_RESET ".   %s%*s  %s" ANSI_RESET "\n",
-           i + 1, item->desc, pad0 > 0 ? pad0 : 0, "", val);
-    return 0;
-}
 
 static int
 bconfig_cmd_select(cmd_ctx_t *ctx) {
@@ -1057,7 +1175,34 @@ bconfig_cmd_select(cmd_ctx_t *ctx) {
         vmsg("您沒有修改此項設定的權限");
         return 0;
     }
-    return item->setter(ctx);
+    if (item->setter)
+        return item->setter(ctx);
+    return 0;
+}
+
+static int
+bconfig_find_item_by_key(int key) {
+    if (key <= 0)
+        return -1;
+    int k_lower = (key >= 'A' && key <= 'Z') ? (key - 'A' + 'a') : key;
+    for (size_t i = 0; i < ARRAY_SIZE(bconfig_items); i++) {
+        int item_k = bconfig_items[i].hotkey;
+        int item_k_lower = (item_k >= 'A' && item_k <= 'Z') ? (item_k - 'A' + 'a') : item_k;
+        if (item_k && item_k_lower == k_lower)
+            return (int)i;
+    }
+    return -1;
+}
+
+static int
+bconfig_cmd_hotkey(cmd_ctx_t *ctx) {
+    int idx = bconfig_find_item_by_key(ctx->key);
+    if (idx >= 0) {
+        ctx->curr = idx;
+        ctx->redraw = true;
+        return bconfig_cmd_select(ctx);
+    }
+    return 0;
 }
 
 static const cmd_t bconfig_edit_cmds[];
@@ -1090,28 +1235,95 @@ static const cmd_t bconfig_edit_cmds[] = {
     { KEY_RIGHT, NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { ' ', NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { Ctrl('P'), NULL, "切換回唯讀檢視模式", bconfig_cmd_toggle_edit, 0, CMD_PRIO_NONE },
-    { 'w', "水桶名單", "設定看板水桶名單", bcfg_set_banned, PERM_BM, CMD_PRIO_HIGH, true },
-    { 'v', "可見名單", "編輯看板可見會員名單", bcfg_set_visible, PERM_BM, CMD_PRIO_NORM, true },
-    { 'm', "舉辦投票", "舉辦或管理看板投票", bcfg_set_vote_maintain, PERM_BM, CMD_PRIO_NORM, true },
-    { 'c', "文章類別", "設定看板文章類別", bcfg_set_posttype, PERM_BM, CMD_PRIO_NORM, true },
-    { 'o', NULL, "編輯投票限制名單", bcfg_set_canvote, PERM_BM, CMD_PRIO_NONE, true },
-    { 'b', NULL, "修改看板中文敘述", bcfg_set_title, PERM_BM, CMD_PRIO_NONE, true },
-    { 'g', NULL, "切換隱板是否進入十大排行榜", bcfg_set_bmcount, PERM_BM, CMD_PRIO_NONE, true },
-    { 'e', NULL, "切換非看板會員發文限制", bcfg_set_restrictedpost, PERM_SYSOP, CMD_PRIO_NONE, true },
-    { 'y', NULL, "切換是否開放回應文章", bcfg_set_noreply, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
-    { 'd', NULL, "切換是否開放自刪文章", bcfg_set_noselfdelpost, PERM_SELFDEL, CMD_PRIO_NONE, true },
-    { 'r', NULL, "切換是否開放推文", bcfg_set_norecommend, PERM_BM, CMD_PRIO_NONE, true },
+    { 'w', "水桶名單", "設定看板水桶名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'v', "可見名單", "編輯看板可見會員名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
+    { 'm', "舉辦投票", "舉辦或管理看板投票", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
+    { 'c', "文章類別", "設定看板文章類別", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
+    { 'o', NULL, "編輯投票限制名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'b', NULL, "修改看板中文敘述", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'g', NULL, "切換隱板是否進入十大排行榜", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'e', NULL, "切換非看板會員發文限制", bconfig_cmd_hotkey, PERM_SYSOP, CMD_PRIO_NONE, true },
+    { 'y', NULL, "切換是否開放回應文章", bconfig_cmd_hotkey, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
+    { 'd', NULL, "切換是否開放自刪文章", bconfig_cmd_hotkey, PERM_SELFDEL, CMD_PRIO_NONE, true },
+    { 'r', NULL, "切換是否開放推文", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-    { 's', NULL, "切換是否開放噓文", bcfg_set_noboo, PERM_BM, CMD_PRIO_NONE, true },
+    { 's', NULL, "切換是否開放噓文", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #endif
-    { 'f', NULL, "設定快速連推間隔限制", bcfg_set_fastrecmd, PERM_BM, CMD_PRIO_NONE, true },
-    { 'i', NULL, "切換推文是否記錄來源 IP", bcfg_set_iplogrecmd, PERM_BM, CMD_PRIO_NONE, true },
-    { 'a', NULL, "切換推文開頭是否自動對齊", bcfg_set_alignedcmt, PERM_BM, CMD_PRIO_NONE, true },
+    { 'f', NULL, "設定快速連推間隔限制", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'i', NULL, "切換推文是否記錄來源 IP", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'a', NULL, "切換推文開頭是否自動對齊", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'k', NULL, "切換板主刪除部份違規文字", bconfig_cmd_hotkey, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
 #ifdef USE_AUTOCPLOG
-    { 'x', NULL, "切換轉錄文章是否自動記錄", bcfg_set_cplog, PERM_BM, CMD_PRIO_NONE, true },
+    { 'x', NULL, "切換轉錄文章是否自動記錄", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #endif
+    { 'j', NULL, "切換冷靜模式", bconfig_cmd_hotkey, PERM_POLICEOP, CMD_PRIO_NONE, true },
+    { 'p', NULL, "編輯進板畫面", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'n', NULL, "編輯發文注意事項", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
+
+static int
+bconfig_col_measurer(int i, int col, PSB_CTX *ctx) {
+    if (i < 0)
+        return 0;
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    const BConfigItem *item = &bconfig_items[i];
+    if (col == 0)
+        return stream_width(item->desc);
+    if (col == 1) {
+        char val[128];
+        bcfg_getter(cx, item, val, sizeof(val));
+        return stream_width(val);
+    }
+    return 0;
+}
+
+static int
+bconfig_header(PSB_CTX *ctx) {
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    boardheader_t *bp = cx->bp;
+    const char *mode;
+
+    if (cx->readonly)
+        mode = cx->can_edit ? "[唯讀模式 (按 Ctrl-P 編輯)]" : "[唯讀檢視]";
+    else
+        mode = "[編輯模式 (按 Ctrl-P 唯讀)]";
+
+    vs_draw_hdr2("看板設定與管理", mode);
+
+    const char *bm = does_board_have_public_bm(bp) ? bp->BM : "(無)";
+    prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
+           " 板主名單: " ANSI_COLOR(1;36) "%s" ANSI_RESET "\n",
+           bp->brdname, bm);
+    return 0;
+}
+
+static int
+bconfig_renderer(int i, PSB_CTX *ctx) {
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
+    int w0 = ctx->col_widths[0];
+    int w1 = ctx->col_widths[1];
+    const BConfigItem *item = &bconfig_items[i];
+    char val[SZ_COLS(128)];
+    bcfg_getter(cx, item, val, sizeof(val));
+    if (w1 > 0) {
+        val[stream_col_offset(w1, val, NULL)] = 0;
+    }
+    int pad0 = w0 - stream_width(item->desc);
+    char key = 0;
+    if (!cx->readonly && psb_check_perm(item->perm)) {
+        key = item->hotkey;
+    }
+    char key_buf[32];
+    if (key) {
+        snprintf(key_buf, sizeof(key_buf), "(" ANSI_COLOR(1;33) "%c" ANSI_RESET ")", key);
+    } else {
+        strcpy(key_buf, "   ");
+    }
+    prints("  " ANSI_COLOR(1;36) "%2d" ANSI_RESET ". %s%s%*s  %s" ANSI_RESET "\n",
+           i + 1, key_buf, item->desc, pad0 > 0 ? pad0 : 0, "", val);
+    return 0;
+}
 
 int
 b_config(void)
