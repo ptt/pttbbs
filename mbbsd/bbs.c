@@ -2413,18 +2413,8 @@ editLimits(unsigned char *plogins,
 	badpost = *pbadpost;
 
     // query UI
-    y = b_lines - 12;
-    move(y, 0); clrtobot();
-
-    y++;
-    move(y+2, 0); clrtobot();
-    outs(ANSI_COLOR(1;32)
-         "請注意「註冊時間」已被取消(由" STR_LOGINDAYS "取代)，若您收到的修改請求\n"
-         "仍有該數值，請重新向提出申請者確認。 另外請注意這是一天一次計算，不是\n"
-         "舊的上站次數。  有的板主可能拿舊的上站次數來申請，造成使用者忽然無法發文\n"
-         "但板主又以為沒改過。 設定前請跟板主確認過這不是舊的設定數值。\n"
-        ANSI_RESET);
-
+    y = b_lines - 4;
+    move(y++, 0); clrtobot();
     sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(y, 0,
@@ -2433,9 +2423,7 @@ editLimits(unsigned char *plogins,
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
-    move(y+1, 0); clrtobot();
-
-    y++;
+    move(++y, 0); clrtobot();
     temp = 255 - (unsigned int)badpost;
     sprintf(genbuf, "%u", temp);
     do {
