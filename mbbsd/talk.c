@@ -13,7 +13,7 @@ static const char *MODE_STRING[] = {
     "故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
 };
 static const char * const MSG_PICKUP_WAY[] = {
-    "嗨! 朋友", "來自何方",
+    "朋友", "來源",
 };
 #define PICKUP_WAYS ARRAY_SIZE(MSG_PICKUP_WAY)
 #define MAX_SHOW_MODE ARRAY_SIZE(MODE_STRING)
@@ -992,19 +992,18 @@ userlist_header(PSB_CTX *ctx)
     redraw_title((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
     move(vs_row_line(VS_SUB_HEADER), 0);
-    prints("  排序:[%s] 上站人數:%-4d "
-           ANSI_COLOR(1;32) "我的朋友:%-3d "
-           ANSI_COLOR(33) "與我為友:%-3d "
-           ANSI_COLOR(36) "板友:%-4d "
-           ANSI_COLOR(31) "壞人:%-2d"
-           ANSI_RESET,
+    prints(" 排序:[%s] 站上:%d "
+           ANSI_COLOR(1;32) "朋友:%d "
+           ANSI_COLOR(33) "與我為友:%d "
+           ANSI_COLOR(36) "板友:%d "
+           ANSI_COLOR(31) "壞人:%d" ANSI_RESET,
            MSG_PICKUP_WAY[*cx->pickup_way], SHM->UTMPnumber,
            cx->myfriend, cx->friendme, currutmp->brc_id ? cx->bfriend : 0, cx->badfriend);
     if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && currutmp) {
         static const char *modestr[ANGELPAUSE_MODES] = {
             "開放", ANSI_COLOR(32) "停收" ANSI_RESET, ANSI_COLOR(31) "關閉" ANSI_RESET
         };
-        prints(" 神諭:[%s]", modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
+        prints( " 神諭:%s", modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
     }
     clrtoeol();
 
