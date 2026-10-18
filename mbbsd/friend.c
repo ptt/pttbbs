@@ -446,7 +446,10 @@ friend_edit(int type)
 	/* TODO move (0, 40) just won't really work as it hints.
 	 * The ANSI secapes will change x coordinate. */
 	move(0, 40);
-	prints("(名單上限: %d 人)", friend_max[type]);
+	if (friend_max[type] >= MAX_USERS)
+	    prints("(名單上限: 不限)");
+	else
+	    prints("(名單上限: %d 人)", friend_max[type]);
 	count = 0;
 	Vector_clear(&namelist, IDLEN + 1);
 
