@@ -340,6 +340,18 @@
 #define MAX_POST_MONEY          (100)
 #endif
 
+#ifndef ENTROPY_RATIO
+#define ENTROPY_RATIO           (0.1f)
+#endif
+
+#ifndef ENTROPY_MIN_THRESH
+#define ENTROPY_MIN_THRESH      (40)
+#endif
+
+#ifndef ENTROPY_MAX
+#define ENTROPY_MAX             (MAX_POST_MONEY/ENTROPY_RATIO)
+#endif
+
 #ifndef MAX_CHICKEN_MONEY                   /* 養雞場獲利上限 */
 #define MAX_CHICKEN_MONEY       (100)
 #endif

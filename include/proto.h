@@ -221,6 +221,7 @@ void chicken_toggle_death(const char *uid);
 int dice_main(void);
 
 /* edit */
+int calc_post_entropy(const char *fpath);
 int vedit(const char *fpath, int saveheader, char save_title[STRLEN]);
 int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags);
 int veditfile(const char *fpath);
