@@ -85,6 +85,7 @@ int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
 int does_board_have_public_bm(const boardheader_t *bp);
+int is_minimal_pay_post(const char *title);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
 void editLimits(unsigned char *plogins, unsigned char *pbadpost);
 char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);
@@ -221,6 +222,7 @@ void chicken_toggle_death(const char *uid);
 int dice_main(void);
 
 /* edit */
+int calc_post_entropy(const char *fpath);
 int vedit(const char *fpath, int saveheader, char save_title[STRLEN]);
 int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags);
 int veditfile(const char *fpath);

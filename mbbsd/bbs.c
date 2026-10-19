@@ -1229,6 +1229,12 @@ does_board_have_public_bm(const boardheader_t *bp) {
     return bp->BM[0] > ' ';
 }
 
+GCC_WEAK int
+is_minimal_pay_post(const char *title GCC_UNUSED)
+{
+    return 0;
+}
+
 
 static int
 do_post_article(int edflags)
@@ -1432,6 +1438,11 @@ do_post_article(int edflags)
     if (money > MAX_POST_MONEY)
 	money = MAX_POST_MONEY;
 #endif
+
+    if (is_minimal_pay_post(save_title)) {
+        if (money > 1)
+            money = 1;
+    }
 
     // drop money & numposts for free boards, or user without login information
     // (they may post on free boards like SYSOP)

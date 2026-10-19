@@ -32,16 +32,6 @@
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
 
-#ifndef POST_MONEY_RATIO
-#define POST_MONEY_RATIO (0.5f)
-#endif
-
-#ifndef ENTROPY_RATIO
-#define ENTROPY_RATIO	(0.25f)
-#endif
-
-#define ENTROPY_MAX	(MAX_POST_MONEY/ENTROPY_RATIO)
-
 // #define DEBUG
 
 /**
@@ -2297,20 +2287,48 @@ browse_sigs:
     }
 }
 
-#ifdef USE_POST_ENTROPY
-static int
-get_string_entropy(const char *s)
+GCC_WEAK int
+calc_post_entropy(const char *fpath)
 {
-    int ent = 0;
-    while (*s)
-    {
-	char c = *s++;
-	if (!isascii(c) || isalnum(c))
-	    ent++;
+    FILE *fp = fopen(fpath, "r");
+    if (!fp)
+        return 0;
+
+    int entropy = 0;
+    char buf[1024];
+    int check_header = 1;
+
+    while (fgets(buf, sizeof(buf), fp) && entropy < ENTROPY_MAX) {
+        chomp(buf);
+
+        if (check_header) {
+            if (strncmp(buf, STR_AUTHOR1, LEN_AUTHOR1) == 0 ||
+                strncmp(buf, STR_AUTHOR2, LEN_AUTHOR2) == 0) {
+                while (fgets(buf, sizeof(buf), fp)) {
+                    chomp(buf);
+                    const char *p = buf;
+                    while (*p == ' ' || *p == '\t')
+                        p++;
+                    if (!*p)
+                        break;
+                }
+                check_header = 0;
+                continue;
+            }
+            check_header = 0;
+        }
+
+        for (const char *s = buf; *s; s++) {
+            if (!isascii((unsigned char)*s) || isalnum((unsigned char)*s))
+                entropy++;
+        }
     }
-    return ent;
+    fclose(fp);
+
+    if (entropy > ENTROPY_MAX)
+        entropy = ENTROPY_MAX;
+    return entropy;
 }
-#endif
 
 #ifdef EXP_EDIT_UPLOAD
 static void upload_file(void);
@@ -2327,7 +2345,6 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     textline_t     *p;
     char            ans[TTLEN], *msg;
     int             aborted = 0;
-    int             entropy = 0;
 
     int upload GCC_UNUSED = (flags & EDITFLAG_UPLOAD) ? 1 : 0;
     int chtitle = (flags & EDITFLAG_ALLOWTITLE) ? 1 : 0;
@@ -2437,20 +2454,12 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 	    trim(msg);
             strip_move_control_sequence(msg);
 
-#ifdef USE_POST_ENTROPY
-	    // calculate the real content of msg
-	    if (entropy < ENTROPY_MAX)
-		entropy += get_string_entropy(msg);
-	    else
-#endif
-		entropy = ENTROPY_MAX;
 	    // write the message body
 	    edit_fprintf_line(fp, msg);
 	}
     }
     curr_buf->currline = NULL;
 
-    *pentropy = entropy;
     if (aborted)
 	return aborted;
 
@@ -2475,6 +2484,10 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
     }
 
     fclose(fp);
+
+    if (pentropy)
+        *pentropy = calc_post_entropy(fpath);
+
     return 0;
 }
 
@@ -4007,11 +4020,14 @@ edit_cmd_save(cmd_ctx_t *ctx)
 
         exit_edit_buffer();
 
-        // adjust final money
-        ec->money *= POST_MONEY_RATIO;
-        // money or entropy?
-        if (ec->money > (ec->entropy * ENTROPY_RATIO) && ec->entropy >= 0)
-            ec->money = (ec->entropy * ENTROPY_RATIO) + 1;
+        // calculate final money directly from improved entropy
+        if (ec->entropy < ENTROPY_MIN_THRESH)
+            ec->money = 0;
+        else {
+            ec->money = (int)(ec->entropy * ENTROPY_RATIO);
+            if (ec->money > MAX_POST_MONEY)
+                ec->money = MAX_POST_MONEY;
+        }
 
         ec->finished = 1;
         ec->retval = !tmp ? ec->money : tmp;
@@ -4649,11 +4665,8 @@ static const cmd_t edit_cmds[] = {
 int
 vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 {
-    char            last = 0;	/* the last key you press */
     int             ch, tmp;
-    int             interval = 0;
-    time4_t         th = now;
-    int             count = 0, tin = 0, quoted = 0;
+    int             quoted = 0;
     edit_ctx_t      ec = {0};
     const cmd_layer_t edit_layers[] = {
         { edit_cmds, &ec },
@@ -4733,24 +4746,6 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	vs_locator_set_bounds(0, 0);
 	ch = edit_vkey();
 	vs_locator_set_bounds(-1, -1);
-	/* jochang debug */
-	if ((interval = (now - th))) {
-	    th = now;
-	    if ((char)ch != last) {
-		ec.money++;
-		last = (char)ch;
-	    }
-	}
-	if (interval && interval == tin) {
-	    count++;
-            if (count > 60) {
-                ec.money = 0;
-                count = 0;
-            }
-	} else if (interval) {
-	    count = 0;
-	    tin = interval;
-	}
 	if (phone_mode_filter(ch))
 	    continue;
 
