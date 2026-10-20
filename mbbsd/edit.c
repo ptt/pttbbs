@@ -1828,7 +1828,7 @@ garbage_line(const char *str)
     while (*str == ' ' || *str == '\t')
 	str++;
     if (qlevel >= 1) {
-	if (!strncmp(str, "※ ", strlen("※ ")) || !strncmp(str, "==>", 3) ||
+	if (IS_POST_MARK(str) || !strncmp(str, "==>", 3) ||
 	    mbs_strstr(str, ") 提到:\n"))
 	    return 1;
     }
@@ -1908,7 +1908,7 @@ do_quote(void)
 		ptr = quote_user;
 
 	    curr_buf->indent_mode = 0;
-	    insert_string("※ 引述《");
+	    insert_string(STR_POST_MARK "引述《");
 	    insert_string(ptr);
 	    insert_string("》之銘言：\n");
 
@@ -1935,7 +1935,7 @@ do_quote(void)
 	    else {
                 /* 去掉 mail list 之 header */
 		if (curr_buf->flags & EDITFLAG_KIND_MAILLIST)
-		    while (edit_fgets_line(buf, sizeof(buf), inf) && (!strncmp(buf, "※ ", strlen("※ "))));
+		    while (edit_fgets_line(buf, sizeof(buf), inf) && IS_POST_MARK(buf));
 		while (edit_fgets_line(buf, sizeof(buf), inf)) {
 		    if (!strcmp(buf, "--\n"))
 			break;
@@ -2185,8 +2185,8 @@ addforwardsignature(FILE *fp, const char *host) {
     char sbuf[WRAPMARGIN];
     syncnow();
     fputc('\n', fp);
-    edit_fprintf_line(fp, "※ 發信站: " BBSNAME "(" MYHOSTNAME ")");
-    snprintf(sbuf, sizeof(sbuf), "※ 轉錄者: %s (%s), %s",
+    edit_fprintf_line(fp, STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME ")");
+    snprintf(sbuf, sizeof(sbuf), STR_POST_MARK "轉錄者: %s (%s), %s",
              cuser.userid, host, Cdatelite(&now));
     edit_fprintf_line(fp, sbuf);
 }
@@ -2204,7 +2204,7 @@ addsimplesignature(FILE *fp, const char *host) {
     }
     fputs("\n--\n", fp);
     snprintf(sbuf, sizeof(sbuf),
-             "※ 發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s", host);
+             STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s", host);
     edit_fprintf_line(fp, sbuf);
 }
 
@@ -2476,7 +2476,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN],
 	{
 	    char sbuf[WRAPMARGIN];
 	    snprintf(sbuf, sizeof(sbuf),
-		     "※ 編輯: %s (%s%s%s), %s",
+		     STR_POST_MARK "編輯: %s (%s%s%s), %s",
 		     cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
 		     Cdatelite(&now));
 	    edit_fprintf_line(fp, sbuf);

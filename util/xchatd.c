@@ -295,7 +295,7 @@ static int valid_chatid(register char *id) {
     register int ch, len;
     
     if (mbs_strstr(id, "¡»") ||
-        mbs_strstr(id, "¡°"))
+        mbs_strstr(id, STR_REF_MARK))
         return 0;
     for(len = 0; (ch = *id); id++) {
 	/* Thor: check for endless */

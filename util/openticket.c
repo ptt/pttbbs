@@ -328,7 +328,7 @@ int main(int argc, char **argv)
     }
 
     if (fp) {
-        fprintf(fp, "\n--\n※ 開獎站 : %s (%s)\n", BBSNAME, MYHOSTNAME);
+        fprintf(fp, "\n--\n" STR_POST_MARK "開獎站 : %s (%s)\n", BBSNAME, MYHOSTNAME);
         fclose(fp);
     }
 

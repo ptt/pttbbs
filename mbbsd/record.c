@@ -302,8 +302,8 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
         // FIXME maybe for non-board files we should do this by simply touching
         // file instead of full log.
         if (reason && *reason)
-            file_appendf(fpath, "\n※ 刪除原因: %s", reason);
-        file_appendf(fpath, "\n※ Deleted by: %s (%s) %s\n",
+            file_appendf(fpath, "\n" STR_POST_MARK "刪除原因: %s", reason);
+        file_appendf(fpath, "\n" STR_POST_MARK "Deleted by: %s (%s) %s\n",
                   cuser.userid, fromhost, Cdatelite(&now));
 
         // TODO or only memcpy(&backup, fh, sizeof(backup)); ?

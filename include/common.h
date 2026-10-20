@@ -158,6 +158,34 @@
 #define URL_DISPLAYNAME "文章網址"
 /* end of QUERY_ARTICLE_URL */
 
+/* Post mark and reference mark (※) */
+#define STR_REF_MARK        "※"
+#define STR_REFMARK         STR_REF_MARK
+#define STR_POST_MARK       "※ "
+#ifndef POST_END_MARK
+#define POST_END_MARK       STR_POST_MARK
+#endif
+
+#define LEN_REF_MARK        (sizeof(STR_REF_MARK) - 1)
+#define LEN_POST_MARK       (sizeof(STR_POST_MARK) - 1)
+
+static inline int
+is_ref_mark(const char *s)
+{
+    return s && (*(const unsigned char *)s == (unsigned char)STR_REF_MARK[0]) &&
+           (strncmp(s, STR_REF_MARK, LEN_REF_MARK) == 0);
+}
+
+static inline int
+is_post_mark(const char *s)
+{
+    return s && (*(const unsigned char *)s == (unsigned char)STR_POST_MARK[0]) &&
+           (strncmp(s, STR_POST_MARK, LEN_POST_MARK) == 0);
+}
+
+#define IS_REF_MARK(s)      is_ref_mark((const char *)(s))
+#define IS_POST_MARK(s)     is_post_mark((const char *)(s))
+
 /* LONG MESSAGES */
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋): "

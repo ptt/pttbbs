@@ -1015,13 +1015,13 @@ multi_send(const char *title)
 	fp = fopen(quote_file, "r");
 	assert(fp);
 	while (fgets(genbuf, sizeof(genbuf), fp)) {
-	    if (strncmp(genbuf, "※ ", 3)) {
+	    if (!IS_POST_MARK(genbuf)) {
 		if (listing)
 		    break;
 	    } else {
 		if (listing) {
 		    char *strtok_pos;
-		    ptr = genbuf + 3;
+		    ptr = genbuf + LEN_POST_MARK;
 		    for (ptr = strtok_r(ptr, " \n\r", &strtok_pos);
 			    ptr;
 			    ptr = strtok_r(NULL, " \n\r", &strtok_pos)) {
@@ -1069,7 +1069,7 @@ multi_send(const char *title)
 
         // TODO we should not let user edit this stupid list.
 	if ((fp = fopen(fpath, "w"))) {
-	    fprintf(fp, "※ [通告] 共 %d 人收件", recipient);
+	    fprintf(fp, STR_POST_MARK "[通告] 共 %d 人收件", recipient);
 	    listing = 80;
 
 	    for (i = 0; i < Vector_length(&namelist); i++) {
@@ -1077,7 +1077,7 @@ multi_send(const char *title)
 		recipient = strlen(p) + 1;
 		if (listing + recipient > 75) {
 		    listing = recipient;
-		    fprintf(fp, "\n※");
+		    fprintf(fp, "\n" STR_REF_MARK);
 		} else
 		    listing += recipient;
 
@@ -1972,7 +1972,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	    write_header(xptr, xfile.title);
 	    currboard = save_currboard;
 
-	    fprintf(xptr, "※ [本文轉錄自 %s 信箱]\n\n", cuser.userid);
+	    fprintf(xptr, STR_POST_MARK "[本文轉錄自 %s 信箱]\n\n", cuser.userid);
 
 	    b_suckinfile(xptr, fname);
             addforwardsignature(xptr, NULL);
