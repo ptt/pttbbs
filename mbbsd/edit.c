@@ -1261,13 +1261,14 @@ insert_dchar(const char *dchar)
 	    del_currchar();
     } else if (!curr_buf->insert_mode) {
 	old_width = del_currchar();
-	/* If a 2-column dchar overwrote a 1-byte ASCII char, also overwrite the next 1-byte ASCII char */
+	/* If a 2-column dchar overwrote a 1-column char, also overwrite the next char.
+	 * If the next char is 2 columns, old_width becomes 3 and the logic below
+	 * will pad a space to keep visual alignment. */
 	if (old_width == 1 &&
 	    mb_width(dchar) >= 2 &&
 	    curr_buf->currpnt < curr_buf->currline->len &&
-	    mb_bytes(curr_buf->currline->data + curr_buf->currpnt) == 1 &&
 	    (!curr_buf->ansimode || curr_buf->currline->data[curr_buf->currpnt] != ESC_CHR)) {
-	    del_currchar();
+	    old_width += del_currchar();
 	}
     }
     textline_t *p = curr_buf->currline;
