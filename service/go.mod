@@ -3,10 +3,12 @@
 // while nested inside cPTTBBS's service/ directory.
 module pttbbs
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/cockroachdb/pebble v1.1.5
+	github.com/syndtr/goleveldb v1.0.0
+	golang.org/x/sys v0.22.0
 	golang.org/x/text v0.28.0
 	modernc.org/sqlite v1.34.5
 )
@@ -26,7 +28,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -39,9 +41,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
-	golang.org/x/sys v0.22.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
