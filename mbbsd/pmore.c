@@ -516,7 +516,6 @@ enum MF_NAV_COMMANDS {
 /* Navigation units (dynamic, so not in enum const) */
 #define MFNAV_PAGE  (t_lines-2) // when navigation, how many lines in a page to move
 
-#define POST_END_MARK "¡° "
 
 /* Display system */
 enum MF_DISP_CONST {
@@ -1033,9 +1032,7 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
 
                 /* 1. Fast match: check [0] first, then strncmp */
                 if (!found_comments) {
-                    if (*line_start == (unsigned char)POST_END_MARK[0] &&
-                        strncmp((const char *)line_start, POST_END_MARK,
-                                sizeof(POST_END_MARK) - 1) == 0) {
+                    if (IS_POST_MARK(line_start)) {
                         unsigned char *cstart = next_line;
                         while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
                             cstart++;
@@ -1064,9 +1061,7 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
             unsigned char *line_start = mf.start;
             real_moved++;
             if (!found_comments) {
-                if (*line_start == (unsigned char)POST_END_MARK[0] &&
-                    strncmp((const char *)line_start, POST_END_MARK,
-                            sizeof(POST_END_MARK) - 1) == 0) {
+                if (IS_POST_MARK(line_start)) {
                     unsigned char *cstart = next_line;
                     while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
                         cstart++;
@@ -1942,7 +1937,7 @@ mf_display()
                 {
                     outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
-                } else if (!strncmp((char*)line_head, "¡°", 2) ||
+                } else if (IS_REF_MARK(line_head) ||
                            !strncmp((char*)line_head, "==>", 3))
                 {
                     outs(ANSI_COLOR(0;32));

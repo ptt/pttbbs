@@ -1490,7 +1490,7 @@ do_post_article(int edflags)
         char url[STRLEN];
         if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
             file_appendf(genbuf,
-                         "※ " URL_DISPLAYNAME ": %s\n", url);
+                         STR_POST_MARK URL_DISPLAYNAME ": %s\n", url);
         }
     }
 #endif
@@ -2014,7 +2014,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         char revfn[PATHLEN];
         timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
         if (dashf(revfn))
-            file_appendf(revfn, "\n※ Last modified: %s", Cdatelite(&oldmt));
+            file_appendf(revfn, "\n" STR_POST_MARK "Last modified: %s", Cdatelite(&oldmt));
     }
 
     return FULLUPDATE;
@@ -2191,7 +2191,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (!IS_OPENBRD(bp))
 	{
 	    /* invisible board */
-	    fprintf(xptr, "※ [本文轉錄自某隱形看板]\n\n");
+	    fprintf(xptr, STR_POST_MARK "[本文轉錄自某隱形看板]\n\n");
 	    b_suckinfile_invis(xptr, fname, currboard);
 	} else {
 	    /* public board */
@@ -2208,7 +2208,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		// add trailing space
 		strcat(aidc, " ");
 	    }
-	    fprintf(xptr, "※ [本文轉錄自 %s 看板%s]\n\n", currboard, aidc);
+	    fprintf(xptr, STR_POST_MARK "[本文轉錄自 %s 看板%s]\n\n", currboard, aidc);
 	    b_suckinfile(xptr, fname);
 	}
 
@@ -2247,7 +2247,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 			Cdate_mdHM(&now));
 	    }
 	    SNPRINTF(buf, // ANSI_COLOR(32) <- system will add green
-		    "※ " ANSI_COLOR(1;32) "%s"
+		    STR_POST_MARK ANSI_COLOR(1;32) "%s"
 		    ANSI_COLOR(0;32) ":轉錄至"
 		    "%s" ANSI_RESET "%*s%s\n" ,
 		    cuser.userid, bname, maxlength, "",
@@ -3358,7 +3358,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #endif // ASSESS
             if (*newpath && *reason) {
-                file_appendf(newpath, "※ Delete Reason: %s\n", reason);
+                file_appendf(newpath, STR_POST_MARK "Delete Reason: %s\n", reason);
             }
 
             if (del_fee <= 0)
@@ -3572,7 +3572,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     }
     setdirpath(fn, direct, fhdr->filename);
     if (dashf(fn))
-        file_appendf(fn, "※%s 於 %s 將推薦值歸零\n", cuser.userid,
+        file_appendf(fn, STR_REF_MARK "%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
     return FULLUPDATE;
 }
@@ -4192,18 +4192,18 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     while (fgets(buf, sizeof(buf), fp)) {
         strip_control_sequence(buf2, buf);
         if (mbs_strstr(buf2, pattern)) {
-            fputs("※ [部份違規文字已刪除]\n", fpw);
+            fputs(STR_POST_MARK "[部份違規文字已刪除]\n", fpw);
             continue;
         }
         fputs(buf, fpw);
     }
     fclose(fp);
     fclose(fpw);
-    file_appendf(fpath, "※ %s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
+    file_appendf(fpath, STR_POST_MARK "%s 於 %s 刪除部份違規文字,原因: %s\n", cuser.userid,
               Cdatelite(&now), reason);
     file_appendf(revpath,
-              "※ %s 於 %s 刪除部份違規文字,原因: %s\n"
-              "※ 違規文字樣式: %s\n",
+              STR_POST_MARK "%s 於 %s 刪除部份違規文字,原因: %s\n"
+              STR_POST_MARK "違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);
 
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
