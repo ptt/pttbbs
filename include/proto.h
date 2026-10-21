@@ -86,6 +86,7 @@ int board_select(void);
 int board_digest(void);
 int does_board_have_public_bm(const boardheader_t *bp);
 int is_minimal_pay_post(const char *title);
+int calc_post_cap(int post_count, int base_cap);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
 void editLimits(unsigned char *plogins, unsigned char *pbadpost);
 char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);

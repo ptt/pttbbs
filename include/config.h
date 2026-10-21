@@ -352,6 +352,10 @@
 #define ENTROPY_MAX             (MAX_POST_MONEY/ENTROPY_RATIO)
 #endif
 
+#ifndef POST_CAP_MIN
+#define POST_CAP_MIN            (1)
+#endif
+
 #ifndef MAX_CHICKEN_MONEY                   /* 養雞場獲利上限 */
 #define MAX_CHICKEN_MONEY       (100)
 #endif

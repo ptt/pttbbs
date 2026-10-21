@@ -1235,6 +1235,17 @@ is_minimal_pay_post(const char *title GCC_UNUSED)
     return 0;
 }
 
+GCC_WEAK int
+calc_post_cap(int post_count, int base_cap)
+{
+    if (base_cap <= 0)
+        return 0;
+    int cap = base_cap - post_count;
+    if (cap < POST_CAP_MIN)
+        cap = POST_CAP_MIN;
+    return cap;
+}
+
 
 static int
 do_post_article(int edflags)
@@ -1439,6 +1450,12 @@ do_post_article(int edflags)
 	money = MAX_POST_MONEY;
 #endif
 
+    if (money > 0) {
+        int post_cap = calc_post_cap(StatGetDailyPost(), money);
+        if (money > post_cap)
+            money = post_cap;
+    }
+
     if (is_minimal_pay_post(save_title)) {
         if (money > 1)
             money = 1;
@@ -1532,6 +1549,7 @@ do_post_article(int edflags)
 	    {
                 pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title);
 		pwcuIncNumPost();
+		StatIncDailyPost();
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d "
                         MONEYNAME "\n", cuser.numposts, money);
 		prints("\n (若之後自行或被板主刪文"
