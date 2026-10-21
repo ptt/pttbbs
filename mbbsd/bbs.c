@@ -57,7 +57,7 @@ is_file_owner_id(const fileheader_t *fhdr, const char *userid) {
 int
 query_file_money(const fileheader_t *pfh)
 {
-    if(pfh->filemode & INVALIDMONEY_MODES || pfh->multi.money > MAX_POST_MONEY)
+    if(pfh->filemode & INVALIDMONEY_MODES || pfh->multi.money > VALID_POST_MONEY)
 	return -1;
 
     return pfh->multi.money;
@@ -1445,10 +1445,8 @@ do_post_article(int edflags)
     // ---- BEGIN OF MONEY VERIFICATION ----
 
     // money verification
-#ifdef MAX_POST_MONEY
     if (money > MAX_POST_MONEY)
 	money = MAX_POST_MONEY;
-#endif
 
     if (money > 0) {
         int post_cap = calc_post_cap(StatGetDailyPost(), money);
@@ -3298,13 +3296,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         // numpost (to solve deleting cross-posts).
         // DIGEST mode 不用管
         // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
-        // also check MAX_POST_MONEY in case any error made bad money...
+        // also check VALID_POST_MONEY in case any error made bad money...
         if (del_fee < 0 ||
             IsFreeBoardName(currboard) ||
             (currbrdattr & BRD_NOCREDIT) ||
             (currmode & MODE_DIGEST) ||
             (fhdr->filemode & INVALIDMONEY_MODES) ||
-            del_fee > MAX_POST_MONEY ||
+            del_fee > VALID_POST_MONEY ||
             0)
             del_fee = 0;
 

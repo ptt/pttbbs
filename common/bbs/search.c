@@ -38,7 +38,7 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	    (fh->recommend <= pred->recommend);
     else if (sr_mode & RS_MONEY) {
 	if (fh->filemode & INVALIDMONEY_MODES ||
-	    fh->multi.money > MAX_POST_MONEY) {
+	    fh->multi.money > VALID_POST_MONEY) {
 	    return 0;
 	}
 	return fh->multi.money >= pred->money;

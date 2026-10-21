@@ -340,6 +340,10 @@
 #define MAX_POST_MONEY          (100)
 #endif
 
+#ifndef VALID_POST_MONEY                    /* 稿費的合理值(歷史值)上限 */
+#define VALID_POST_MONEY        MAX_POST_MONEY
+#endif
+
 #ifndef ENTROPY_RATIO
 #define ENTROPY_RATIO           (0.1f)
 #endif
