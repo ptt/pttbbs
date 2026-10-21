@@ -4,8 +4,9 @@ include $(SRCROOT)/pttbbs.mk
 SRCS:=	log.c money.c names.c path.c time.c string.c fhdr_stamp.c cache.c \
 	passwd.c filehdr.c boardhdr.c banip.c search.c shm.c cgo.c message.c \
 	friend.c 2fa.c aids.c svc.c stat.c
-ifneq ($(wildcard bot.c),)
-SRCS += bot.c
+BOT_C = $(wildcard $(SRCROOT)/mbbsd/local/bot.c)
+ifneq ($(BOT_C),)
+SRCS += $(BOT_C)
 else
 SRCS += bot_stub.c
 endif

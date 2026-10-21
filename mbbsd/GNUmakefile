@@ -25,8 +25,11 @@ OBJS := admin.o assess.o edit.o xyz.o var.o vote.o voteboard.o comments.o post.o
 	$(UIOBJS) $(PAGEROBJS) $(PLUGOBJS) \
 	$(CHESSOBJS) $(GAMEOBJS)
 
-ifneq ($(wildcard local.c),)
-OBJS += local.o
+ifneq ($(wildcard local),)
+CFLAGS += -Ilocal
+LOCAL_SRCS := $(wildcard local/*.c)
+LOCAL_OBJS := $(LOCAL_SRCS:.c=.o)
+OBJS += $(LOCAL_OBJS)
 endif
 
 # reduce .bss align overhead
@@ -155,4 +158,4 @@ install: $(PROG)
 	@[ -x "$(SCRIPT_DIR)/mkdiff" ] && $(SCRIPT_DIR)/mkdiff $(SRCROOT)/diff
 
 clean:
-	rm -f $(OBJS) $(PROG) testsz vers.c $(TEST_PROGS)
+	rm -f $(OBJS) $(PROG) testsz vers.c $(TEST_PROGS) local/*.o
