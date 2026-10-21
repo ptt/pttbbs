@@ -238,7 +238,7 @@ int start_services()
     int err = 0;
     char buf[PATHLEN];
     const char *services[] = {
-        "utmp", "friend", "search",
+        "utmp", "friend", "search", "stat",
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

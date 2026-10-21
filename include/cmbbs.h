@@ -278,6 +278,21 @@ int friend_svc_hbfl_reload(int bid);
 int friend_svc_is_hidden_board_friend(int bid, int uid);
 int logout_friend_online(userinfo_t *utmp);
 
+/* stat.c */
+int StatGetUserDailyPost(const char *userid);
+int StatIncUserDailyPost(const char *userid);
+int StatGetUserDailyMail(const char *userid);
+int StatAddUserDailyMail(const char *userid, int count);
+int StatGetUserDailySong(const char *userid);
+int StatIncUserDailySong(const char *userid);
+
+int StatGetDailyPost(void);
+int StatIncDailyPost(void);
+int StatGetDailyMail(void);
+int StatAddDailyMail(int count);
+int StatGetDailySong(void);
+int StatIncDailySong(void);
+
 
 /* cgo.c */
 const char *get_bbshome(void);
