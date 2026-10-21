@@ -13,6 +13,10 @@
 
 #define DEFAULT_BOARD   str_sysop
 
+#ifndef GET_SVC_SOCKET
+#define GET_SVC_SOCKET(name) (BBSHOME "/run/" #name ".svc.sock")
+#endif
+
 // BBS Configuration Files
 #define FN_CONF_EDITABLE	"etc/editable"	    // 站務可編輯的系統檔案列表
 #define FN_CONF_RESERVED_ID	"etc/reserved.id"   // 保留系統用無法註冊的 ID

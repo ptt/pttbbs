@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include "cmbbs.h"
+#include "common.h"
 #include "modes.h"
 #include "pttstruct.h"
 #include "var.h"
@@ -93,11 +94,7 @@ typedef struct {
 int
 search_svc_connect(void)
 {
-    char sock_path[PATHLEN];
-    snprintf(sock_path, sizeof(sock_path), "%s/run/search.svc.sock", BBSHOME);
-
-    int sfd = toconnect_timed(sock_path, SEARCH_SVC_IO_TIMEOUT, 0, SEARCH_SVC_IO_TIMEOUT);
-    return sfd;
+    return toconnect_timed(GET_SVC_SOCKET(search), SEARCH_SVC_IO_TIMEOUT, 0, SEARCH_SVC_IO_TIMEOUT);
 }
 
 /*
@@ -152,10 +149,7 @@ search_svc_invalidate(const char *direct, int bid)
 static int
 search_svc_hint_send(const search_hint_req_t *req)
 {
-    char sock_path[PATHLEN];
-    snprintf(sock_path, sizeof(sock_path), "%s/run/search.svc.sock", BBSHOME);
-
-    int sfd = toconnect_timed(sock_path, 0, 20000, 0);
+    int sfd = toconnect_timed(GET_SVC_SOCKET(search), 0, 20000, 0);
     if (sfd < 0)
         return -1;
 

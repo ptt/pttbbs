@@ -12,10 +12,7 @@
 #include <unistd.h>
 
 static int send_friendd_req(const char *json_payload) {
-    char sock_path[PATHLEN];
-    SNPRINTF(sock_path, "%s/run/friend.svc.sock", BBSHOME);
-
-    int sfd = toconnect3(sock_path, 0, 10000); // non-blocking connect with 10ms timeout
+    int sfd = toconnect3(GET_SVC_SOCKET(friend), 0, 10000); // non-blocking connect with 10ms timeout
     if (sfd < 0) {
         return -1;
     }
@@ -124,10 +121,7 @@ int friend_svc_hbfl_reload(int bid) {
 }
 
 static int friend_svc_hbfl_query_user(int uid) {
-    char sock_path[PATHLEN];
-    SNPRINTF(sock_path, "%s/run/friend.svc.sock", BBSHOME);
-
-    int sfd = toconnect3(sock_path, 0, 10000);
+    int sfd = toconnect3(GET_SVC_SOCKET(friend), 0, 10000);
     if (sfd < 0) {
         return -1;
     }
