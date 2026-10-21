@@ -517,7 +517,7 @@ mail_precheck_quota(int count)
         return 1;
 
     int free_limit = get_daily_free_mail_limit();
-    int sent_today = pwcuGetDailyMailCount();
+    int sent_today = StatGetDailyMail();
     int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
     if (count <= free_left)
         return 1;
@@ -563,7 +563,7 @@ mail_charge_quota(int count, const char *desc)
 
     if (!is_mail_quota_exempt()) {
         int free_limit = get_daily_free_mail_limit();
-        int sent_today = pwcuGetDailyMailCount();
+        int sent_today = StatGetDailyMail();
         int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
         int chargeable = (count > free_left) ? (count - free_left) : 0;
         int cost = chargeable * EXTRA_MAIL_COST;
@@ -578,7 +578,7 @@ mail_charge_quota(int count, const char *desc)
         }
     }
 
-    pwcuAddMailCount(count);
+    StatAddDailyMail(count);
     return 0;
 }
 

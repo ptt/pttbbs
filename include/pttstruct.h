@@ -99,7 +99,7 @@ typedef struct userec_t {
     time4_t     timesetangel;   /* 上次得到天使時間 */
     time4_t	timeplayangel;	/* 上次與天使互動時間 (by day) */
 
-    time4_t	lastsong;	/* 上次點歌時間 */
+    time4_t	deprecated_lastsong;	/* 上次點歌時間 */
     uint32_t	loginview;	/* 進站畫面 */
     uint8_t	_unused8;	// was: channel
     uint8_t	pad_2;
@@ -133,8 +133,8 @@ typedef struct userec_t {
     uint32_t    deprecated_withme;	 	 /* 我想找人下棋，聊天.... */
     time4_t	timeremovebadpost;/* 上次刪除劣文時間 */
     time4_t	timeviolatelaw;  /* 被開罰單時間 */
-    time4_t	last_mail_time;  /* 上次寄信時間 */
-    uint32_t	daily_mail_count;/* 當日寄信數量 */
+    time4_t	deprecated_last_mail_time;  /* 上次寄信時間 */
+    uint32_t	deprecated_daily_mail_count;/* 當日寄信數量 */
 
     char	pad_tail[20];
 } PACKSTRUCT userec_t;

@@ -181,9 +181,10 @@ user_display(const userec_t * u, int adminmode)
     }
 
     {
-	char today_str[16], mail_quota_buf[32];
-	STRLCPY(today_str, Cdatedate(&now));
-	int today_mails = (strcmp(today_str, Cdatedate(&u->last_mail_time)) == 0) ? u->daily_mail_count : 0;
+	char mail_quota_buf[32];
+	int today_mails = StatGetUserDailyMail(u->userid);
+	if (today_mails < 0)
+	    today_mails = 0;
 	if (user_is_mail_quota_exempt(u)) {
 	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d «Ê", today_mails);
 	} else {

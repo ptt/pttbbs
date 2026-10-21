@@ -54,7 +54,7 @@ do_order_song(void)
     pwcuReload();
 
     /* Jaky 一人一天點一首 */
-    if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HasUserPerm(PERM_SYSOP)) {
+    if (StatGetDailySong() > 0 && !HasUserPerm(PERM_SYSOP)) {
 	move(22, 0);
 	vmsg("你今天已經留過言囉，明天再來吧....");
 	unlockutmpmode();
@@ -209,7 +209,7 @@ do_order_song(void)
 #endif
 
     if (append_fileheader(OSONGPATH "/" FN_DIR, &mail) != -1) {
-	pwcuSetLastSongTime(now);
+	StatIncDailySong();
 	/* Jaky 超過 MAX_ADBANNER 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:
 	// 3. ◆ <系統> 動態看板   SYSOP [01/23/08]
