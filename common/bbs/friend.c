@@ -3,7 +3,6 @@
 #include "var.h"
 #include <assert.h>
 #include <errno.h>
-#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,38 +11,11 @@
 #include <unistd.h>
 
 static int send_friendd_req(const char *json_payload) {
-    int sfd = toconnect3(GET_SVC_SOCKET(friend), 0, 10000); // non-blocking connect with 10ms timeout
-    if (sfd < 0) {
+    char resp[256];
+    if (svc_request(GET_SVC_SOCKET(friend), json_payload, resp, sizeof(resp)) < 0) {
         return -1;
     }
-
-    int len = (int)strlen(json_payload);
-    if (towrite(sfd, json_payload, len) != len) {
-        close(sfd);
-        return -1;
-    }
-
-    struct pollfd pfd;
-    pfd.fd = sfd;
-    pfd.events = POLLIN;
-    int ret = -1;
-    int pr;
-    /* mbbsd receives signals (e.g. water balls); don't treat EINTR as a failure. */
-    do {
-        pr = poll(&pfd, 1, 50);
-    } while (pr < 0 && errno == EINTR);
-    if (pr > 0 && (pfd.revents & POLLIN)) {
-        char resp[256];
-        ssize_t r = read(sfd, resp, sizeof(resp) - 1);
-        if (r > 0) {
-            resp[r] = '\0';
-            if (strstr(resp, "\"success\":true") != NULL) {
-                ret = 0;
-            }
-        }
-    }
-    close(sfd);
-    return ret;
+    return (strstr(resp, "\"success\":true") != NULL) ? 0 : -1;
 }
 
 /* For state-changing, idempotent requests: with no local fallback, a request
@@ -121,45 +93,14 @@ int friend_svc_hbfl_reload(int bid) {
 }
 
 static int friend_svc_hbfl_query_user(int uid) {
-    int sfd = toconnect3(GET_SVC_SOCKET(friend), 0, 10000);
-    if (sfd < 0) {
-        return -1;
-    }
-
     char payload[128];
     SNPRINTF(payload, "{\"action\":\"hbfl_user\",\"uid\":%d}\n", uid);
-    int len = (int)strlen(payload);
-    if (towrite(sfd, payload, len) != len) {
-        close(sfd);
-        return -1;
-    }
 
     char resp[16384];
-    size_t total = 0;
-    struct pollfd pfd;
-    pfd.fd = sfd;
-    pfd.events = POLLIN;
-
-    while (total < sizeof(resp) - 1) {
-        if (poll(&pfd, 1, 50) <= 0 || !(pfd.revents & (POLLIN | POLLHUP))) {
-            break;
-        }
-        ssize_t r = read(sfd, resp + total, sizeof(resp) - 1 - total);
-        if (r <= 0) {
-            break;
-        }
-        total += (size_t)r;
-        resp[total] = '\0';
-        if (strchr(resp, '\n') != NULL) {
-            break;
-        }
-    }
-    close(sfd);
-
-    if (total == 0 || strchr(resp, '\n') == NULL) {
+    if (svc_request(GET_SVC_SOCKET(friend), payload, resp, sizeof(resp)) < 0) {
         return -1;
     }
-    resp[total] = '\0';
+
     if (strstr(resp, "\"success\":true") == NULL) {
         return -1;
     }

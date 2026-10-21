@@ -335,4 +335,13 @@ int user_save_2fa(const char *userid, const user_2fa_t *totp);
 int user_delete_2fa(const char *userid);
 int user_verify_2fa_or_backup(const char *userid, const char *input_code);
 
+/* svc.c */
+#define SVC_CONNECT_TIMEOUT_US  10000  /* 10ms */
+#define SVC_READ_TIMEOUT_MS     50     /* 50ms */
+
+int svc_connect(const char *sock_path);
+int svc_write(int fd, const void *buf, size_t len);
+int svc_read(int fd, void *buf, size_t maxlen, int timeout_ms);
+int svc_request(const char *sock_path, const char *req, char *resp, size_t resp_size);
+
 #endif
