@@ -541,24 +541,6 @@ do_register_captcha()
 #endif
 }
 
-static bool
-query_yn(int y, const char *msg)
-{
-    int try = 0;
-    do {
-        char ans[3];
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-        getdata(y, 0, msg, ans, 3, LCECHO);
-        if (ans[0] == 'y')
-	    return true;
-        if (ans[0] == 'n')
-	    return false;
-        bell();
-    } while (1);
-}
 
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
@@ -714,6 +696,59 @@ register_email_verification(email_input_t *ein, bool skip_same_email_check)
     return REGISTER_OK;
 }
 
+static const char *
+validate_newuser_nickname(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *s = (const char *)val;
+    if (!s || strlen(s) < 2)
+        return "暱稱長度太短，至少需 2 個字元";
+    return NULL;
+}
+
+static const char *
+validate_newuser_name(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *s = (const char *)val;
+    if (!s || strlen(s) < 4)
+        return "真實姓名長度不足";
+    return isvalidname((char *)val);
+}
+
+static const char *
+validate_newuser_career(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *s = (const char *)val;
+    if (!s || strlen(s) < 6)
+        return "服務單位/學歷職業長度不足";
+    return isvalidcareer((char *)val);
+}
+
+static const char *
+validate_newuser_addr(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *s = (const char *)val;
+    if (!s || strlen(s) < 8)
+        return "聯絡地址長度不足";
+    return isvalidaddr((char *)val, 1);
+}
+
+static const vform_field_t newuser_profile_fields[] = {
+    VFORM_FIELD_TEXT("綽號暱稱", "請輸入綽號或暱稱 (至少 2 字元)", NULL, userec_t, nickname, 0, validate_newuser_nickname),
+    VFORM_FIELD_TEXT("真實姓名", "請輸入真實中文姓名", NULL, userec_t, realname, 0, validate_newuser_name),
+    VFORM_FIELD_TEXT("服務單位", "請輸入服務單位或學校系所", NULL, userec_t, career, 0, validate_newuser_career),
+    VFORM_FIELD_TEXT("聯絡地址", "請輸入目前聯絡居住地址", NULL, userec_t, address, 0, validate_newuser_addr),
+    VFORM_FIELD_BOOL("年滿 18 歲", "本站部份看板可能有限制級內容只適合成年人士閱讀", userec_t, over_18),
+};
+
+static const vform_def_t newuser_profile_form = {
+    .title        = "填寫個人資料",
+    .subtitle     = "歡迎註冊！本站基於台灣教育部BBS站管理使用公約，需要使用者填寫以下基本個人資料。\n"
+                    "完成後按 Ctrl-X 儲存",
+    .mode         = VFORM_MODE_INPLACE,
+    .fields       = newuser_profile_fields,
+    .num_fields   = ARRAY_SIZE(newuser_profile_fields),
+};
+
 void
 new_register(void)
 {
@@ -831,85 +866,10 @@ new_register(void)
         vmsg("請確實輸入要使用的新密碼。");
     }
 
-    // set-up more information.
-    int y = 17;
-    move(y, 0); clrtobot();
-    outs("[ " ANSI_COLOR(1;33));
-    outs(newuser.userid);
-    outs(ANSI_RESET " ] 您好，請填寫您的個人資料。");
-    y++;
-
-    // warning: because currutmp=NULL, we can simply pass newuser.* to getdata.
-    // DON'T DO THIS IF YOUR currutmp != NULL.
-    try = 0;
-    while (strlen(newuser.nickname) < 2)
-    {
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-	getdata(y, 0, "綽號暱稱：", newuser.nickname,
-		sizeof(newuser.nickname), DOECHO);
+    while (!vform_run(&newuser_profile_form, &newuser, NULL)) {
+        if (vans("確定要放棄註冊並離開嗎？(y/N): ") == 'y')
+            exit(0);
     }
-
-    try = 0;
-    y++;
-    while (strlen(newuser.realname) < 4)
-    {
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-	getdata(y, 0, "真實姓名：", newuser.realname,
-		sizeof(newuser.realname), DOECHO);
-
-	if ((errmsg = isvalidname(newuser.realname))) {
-	    memset(newuser.realname, 0, sizeof(newuser.realname));
-	    vmsg(errmsg);
-	}
-    }
-
-    try = 0;
-    y++;
-    while (strlen(newuser.career) < 6)
-    {
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-	getdata(y, 0, "服務單位：", newuser.career,
-		sizeof(newuser.career), DOECHO);
-
-	if ((errmsg = isvalidcareer(newuser.career))) {
-	    memset(newuser.career, 0, sizeof(newuser.career));
-	    vmsg(errmsg);
-	}
-    }
-
-    try = 0;
-    y++;
-    while (strlen(newuser.address) < 8)
-    {
-	if (++try > 10) {
-	    vmsg(MSG_ERR_MAXTRIES);
-	    exit(1);
-	}
-	getdata(y, 0, "聯絡地址：", newuser.address,
-		sizeof(newuser.address), DOECHO);
-
-        // We haven't ask isForeign yet, so assume that's one (for lesser check)
-	if ((errmsg = isvalidaddr(newuser.address, 1))) {
-	    memset(newuser.address, 0, sizeof(newuser.address));
-	    vmsg(errmsg);
-	}
-    }
-
-    // Over 18.
-    y++;
-    mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱讀。");
-    if (query_yn(y + 1,
-		"您是否年滿十八歲並同意觀看此類看板(若否請輸入n)? [y/n]:"))
-	newuser.over_18 = 1;
 
 #ifdef REGISTER_VERIFY_CAPTCHA
     if (!verify_captcha("為了繼續您的註冊程序\n"))
