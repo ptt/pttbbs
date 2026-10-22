@@ -10,7 +10,6 @@
 #define CHESS_PHOTO_LINE      15
 #define CHESS_PHOTO_COLUMN    (256 + 25)
 
-struct ChessBroadcastList;
 struct ChessActions;
 struct ChessConstants;
 
@@ -33,24 +32,6 @@ private typedef struct {
     void *body;
 } ChessHistory;
 
-/*   棋類觀戰
- *
- * 雙人對戰時，雙方都會有一個 broadcast_list 的 linked-list，紀錄著每下一
- * 步棋，必須將這個訊息丟給那些人（sock）。
- * 每當一個觀棋者加入（觀棋可以從紅方或黑方的觀點進行），其中一方的下棋者
- * 的 broadcast_list 就會多一筆記錄，之後就會將下的或收到對方下的每一步棋
- * 傳給 broadcast_list 中所有需要的人，達到觀棋的效果。
- */
-private typedef struct ChessBroadcastListNode {
-    int    sock;
-    struct ChessBroadcastListNode *next;
-} ChessBroadcastListNode;
-
-private typedef struct ChessBroadcastList {
-    struct ChessBroadcastListNode head; /* dummy node */
-} ChessBroadcastList;
-
-
 typedef struct {
     int     limit_hand;
     int     limit_time;
@@ -63,7 +44,6 @@ typedef struct {
 
 typedef enum {
     CHESS_MODE_VERSUS,   /* 對奕 */
-    CHESS_MODE_WATCH,    /* 觀棋 */
     CHESS_MODE_PERSONAL, /* 打譜 */
     CHESS_MODE_REPLAY    /* 看譜 */
 } ChessGameMode;
@@ -73,7 +53,7 @@ typedef enum {
     CHESS_RESULT_WIN,
     CHESS_RESULT_LOST,
     CHESS_RESULT_TIE,
-    CHESS_RESULT_END   /* watching or replaying */
+    CHESS_RESULT_END   /* replaying */
 } ChessGameResult;
 
 typedef struct ChessInfo {
@@ -105,10 +85,9 @@ typedef struct ChessInfo {
 
     private int    sock;
     private ChessHistory history;
-    private ChessBroadcastList broadcast_list;
     private ChessGameResult (*play_func[2])(struct ChessInfo* info);
 
-    private int  current_step;  /* used by watch and replay */
+    private int  current_step;  /* used by replay */
     private char step_tmp[0];
 } ChessInfo;
 
@@ -180,8 +159,6 @@ const void* ChessHistoryRetrieve(ChessInfo* info, int n);
 
 void ChessPlay(ChessInfo* info);
 int ChessStartGame(char func_char, int sig, const char* title);
-int ChessWatchGame(void (*play)(int, ChessGameMode),
-	int game, const char* title);
 int ChessReplayGame(const char* fname);
 
 ChessInfo* NewChessInfo(const ChessActions* actions,

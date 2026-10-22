@@ -62,7 +62,6 @@ static const struct ChessReplayMap_t ChessReplayMap[] = {
     { NULL     ,0, NULL }
 };
 
-static ChessInfo * CurrentPlayingGameInfo;
 static sigjmp_buf *sigjmpEnv;
 
 /* XXX: This is a BAD way to pass information.
@@ -105,24 +104,6 @@ ChessHistoryAppend(ChessInfo* info, void* step)
 }
 
 static void
-ChessBroadcastListInit(ChessBroadcastList* list)
-{
-    list->head.next = NULL;
-}
-
-static void
-ChessBroadcastListClear(ChessBroadcastList* list)
-{
-    ChessBroadcastListNode* p = list->head.next;
-    while (p) {
-	ChessBroadcastListNode* t = p->next;
-	close(p->sock);
-	free(p);
-	p = t;
-    }
-}
-
-static void
 ChessDrawHelpLine(const ChessInfo* info)
 {
     static const char* const HelpStr[] =
@@ -134,14 +115,6 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "認輸 "
 	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "虛手/和棋 "
 	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "悔棋 "
-	ANSI_RESET,
-
-	/* CHESS_MODE_WATCH, 觀棋 */
-	ANSI_COLOR(1;33;42) " 觀棋 "
-	ANSI_COLOR(;31;47) " (←→)" ANSI_COLOR(30) " 前後一步   "
-	ANSI_COLOR(31) "(↑↓)" ANSI_COLOR(30) " 前後十步  "
-	ANSI_COLOR(31) "(PGUP/PGDN)" ANSI_COLOR(30) " 最初/目前盤面  "
-	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "離開 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_PERSONAL, 打譜 */
@@ -299,38 +272,10 @@ ChessStepSendOpposite(ChessInfo* info, const void* step)
     return result;
 }
 
-static void
-ChessStepBroadcast(ChessInfo* info, const void *step)
-{
-    ChessBroadcastListNode *p = &(info->broadcast_list.head);
-    void (*orig_handler)(int);
-
-    orig_handler = Signal(SIGPIPE, SIG_IGN);
-
-    while(p->next){
-	if (!ChessSendMove(info, p->next->sock, step)) {
-	    /* remove viewer */
-	    ChessBroadcastListNode *tmp = p->next->next;
-	    free(p->next);
-	    p->next = tmp;
-	} else
-	    p = p->next;
-    }
-
-    Signal(SIGPIPE, orig_handler);
-}
-
 int
 ChessStepSend(ChessInfo* info, const void* step)
 {
-    /* send to opposite... */
-    if (!ChessStepSendOpposite(info, step))
-	return 0;
-
-    /* and watchers */
-    ChessStepBroadcast(info, step);
-
-    return 1;
+    return ChessStepSendOpposite(info, step);
 }
 
 int
@@ -350,10 +295,6 @@ ChessStepType
 ChessStepReceive(ChessInfo* info, void* step)
 {
     ChessStepType result = ChessRecvMove(info, info->sock, step);
-
-    /* automatical routing */
-    if (result != CHESS_STEP_FAILURE)
-	ChessStepBroadcast(info, step);
 
     /* and logging */
     if (result == CHESS_STEP_NORMAL || result == CHESS_STEP_PASS)
@@ -379,7 +320,7 @@ ChessReplayUntil(ChessInfo* info, int n)
     /* spcial for last one to maintian information correct */
     step = ChessHistoryRetrieve(info, info->current_step);
 
-    if (info->mode == CHESS_MODE_WATCH || info->mode == CHESS_MODE_REPLAY)
+    if (info->mode == CHESS_MODE_REPLAY)
 	info->turn = info->current_step & 1;
     info->actions->prepare_step(info, step);
     info->actions->apply_step(info->board, step);
@@ -736,52 +677,17 @@ ChessPlayFuncHis(ChessInfo* info)
 }
 
 static ChessGameResult
-ChessPlayFuncWatch(ChessInfo* info)
+ChessPlayFuncReplay(ChessInfo* info)
 {
-    int end_watch = 0;
+    int end_replay = 0;
 
-    while (!end_watch) {
-	ChessStepType result;
-
+    while (!end_replay) {
 	info->actions->prepare_play(info);
-	if (info->sock == -1)
-	    STRLCPY(info->warnmsg, ANSI_COLOR(1;33) "棋局已結束" ANSI_RESET);
-
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
 	move(1, 0);
 
 	switch (vkey()) {
-	    case I_OTHERDATA: /* new step */
-		result = ChessStepReceive(info, &info->step_tmp);
-
-		if (result == CHESS_STEP_FAILURE) {
-		    IGNORE_PEER();
-		    info->sock = -1;
-		    break;
-		} else if (result == CHESS_STEP_UNDO_ACC) {
-		    if (info->current_step == info->history.used) {
-			/* at head but redo-ed */
-			info->actions->init_board(info->board);
-			info->current_step = 0;
-			ChessReplayUntil(info, info->history.used - 1);
-			ChessRedraw(info);
-		    }
-		    info->history.used--;
-		} else if (result == CHESS_STEP_NORMAL ||
-			result == CHESS_STEP_SPECIAL) {
-		    if (info->current_step == info->history.used - 1) {
-			/* was watching up-to-date board */
-			info->turn = info->current_step++ & 1;
-			info->actions->prepare_step(info, &info->step_tmp);
-			info->actions->apply_step(info->board, &info->step_tmp);
-			info->actions->drawstep(info, &info->step_tmp);
-		    }
-		} else if (result == CHESS_STEP_PASS)
-		    strcpy(info->last_movestr, "虛手");
-
-		break;
-
 	    case KEY_LEFT: /* 往前一步 */
 		if (info->current_step == 0)
 		    bell();
@@ -856,36 +762,11 @@ ChessPlayFuncWatch(ChessInfo* info)
 		break;
 
 	    case 'q':
-		end_watch = 1;
+		end_replay = 1;
 	}
     }
 
     return CHESS_RESULT_END;
-}
-
-static void
-ChessReceiveWatchInfo(ChessInfo* info)
-{
-    char time_mode;
-#define RECV(X) read(info->sock, &(X), sizeof(X))
-    RECV(info->myturn);
-    RECV(info->turn);
-
-    RECV(time_mode);
-    if (time_mode == 'L') {
-	info->timelimit = (ChessTimeLimit*) malloc(sizeof(ChessTimeLimit));
-	RECV(*(info->timelimit));
-    }
-
-    RECV(info->history.used);
-    for (info->history.size = CHESS_HISTORY_INITIAL_BUFFER_SIZE;
-	    info->history.size < info->history.used;
-	    info->history.size += CHESS_HISTORY_BUFFER_INCREMENT);
-    info->history.body =
-	calloc(info->history.size, info->constants->step_entry_size);
-    read(info->sock, info->history.body,
-	    info->history.used * info->constants->step_entry_size);
-#undef RECV
 }
 
 static void
@@ -992,25 +873,15 @@ ChessPlay(ChessInfo* info)
 	_current_time_limit = NULL;
     }
 
-    CurrentPlayingGameInfo = info;
-
     {
 	sigset_t sigset;
 
-        // Previously for ChessWatchPlay
+        // Ignore pages (SIGUSR1) during the game.
         old_handler = Signal(SIGUSR1, SIG_IGN);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
 	sigprocmask(SIG_UNBLOCK, &sigset, &old_sigset);
-    }
-
-    if (info->mode == CHESS_MODE_WATCH) {
-	int i;
-	for (i = 0; i < info->history.used; ++i)
-	    info->actions->apply_step(info->board,
-		    ChessHistoryRetrieve(info, i));
-	info->current_step = info->history.used;
     }
 
     /* playing initialization */
@@ -1066,9 +937,7 @@ ChessPlay(ChessInfo* info)
 	    default:
 		assert_not_reached();
 	}
-    } else if (info->mode == CHESS_MODE_WATCH)
-	game_result_str = "結束觀棋";
-    else if (info->mode == CHESS_MODE_PERSONAL)
+    } else if (info->mode == CHESS_MODE_PERSONAL)
 	game_result_str = "結束打譜";
     else if (info->mode == CHESS_MODE_REPLAY)
 	game_result_str = "結束看譜";
@@ -1086,8 +955,6 @@ ChessPlay(ChessInfo* info)
     // currutmp->sig = -1;
     sigprocmask(SIG_SETMASK, &old_sigset, NULL);
     Signal(SIGUSR1, old_handler);
-
-    CurrentPlayingGameInfo = NULL;
 }
 
 static userinfo_t*
@@ -1174,38 +1041,6 @@ ChessStartGame(char func_char, int sig, const char* title)
 }
 
 int
-ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
-{
-    int 	    sock, msgsock;
-    userinfo_t     *uin;
-
-    if ((uin = ChessSearchUser(-1, title)) == NULL)
-	return -1;
-
-    if (uin->uid == currutmp->uid || uin->mode != game) {
-	vmsg("無法建立連線");
-	return -1;
-    }
-
-    if (vans("是否進行觀棋? [N/y]") != 'y')
-	return 0;
-
-    if ((sock = make_connection_to_somebody(uin, 10)) < 0) {
-	vmsg("無法建立連線");
-	return -1;
-    }
-    msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-    close(sock);
-    if (msgsock < 0)
-	return -1;
-
-    STRLCPY(currutmp->mateid, uin->userid);
-    play(msgsock, CHESS_MODE_WATCH);
-    close(msgsock);
-    return 0;
-}
-
-int
 ChessReplayGame(const char* fname)
 {
     ChessInfo *info;
@@ -1269,17 +1104,6 @@ ChessInitUser(ChessInfo* info)
 	    STRLCPY(userid[1], cuser.userid);
 	    break;
 
-	case CHESS_MODE_WATCH:
-	    uinfo = search_ulist_userid(currutmp->mateid);
-	    if (uinfo) {
-		STRLCPY(userid[0], uinfo->userid);
-		STRLCPY(userid[1], uinfo->mateid);
-	    } else {
-		STRLCPY(userid[0], currutmp->mateid);
-		userid[1][0] = 0;
-	    }
-	    break;
-
 	case CHESS_MODE_VERSUS:
 	    STRLCPY(userid[0], cuser.userid);
 	    STRLCPY(userid[1], currutmp->mateid);
@@ -1311,9 +1135,8 @@ ChessInitPlayFunc(ChessInfo* info)
 	    info->play_func[info->myturn ^ 1]   = &ChessPlayFuncHis;
 	    break;
 
-	case CHESS_MODE_WATCH:
 	case CHESS_MODE_REPLAY:
-	    info->play_func[0] = info->play_func[1] = &ChessPlayFuncWatch;
+	    info->play_func[0] = info->play_func[1] = &ChessPlayFuncReplay;
 	    break;
 
 	case CHESS_MODE_PERSONAL:
@@ -1346,15 +1169,9 @@ NewChessInfo(const ChessActions* actions, const ChessConstants* constants,
 	info->myturn = 1;
     else if (mode == CHESS_MODE_REPLAY)
 	info->myturn = 1;
-    else if (mode == CHESS_MODE_WATCH)
-	ChessReceiveWatchInfo(info);
 
     ChessInitUser(info);
-
-    if (mode != CHESS_MODE_WATCH)
-	ChessHistoryInit(&info->history, constants->step_entry_size);
-
-    ChessBroadcastListInit(&info->broadcast_list);
+    ChessHistoryInit(&info->history, constants->step_entry_size);
     ChessInitPlayFunc(info);
 
     return info;
@@ -1373,8 +1190,6 @@ DeleteChessInfo(ChessInfo* info)
     NULL_OR_FREE(info->timelimit);
     NULL_OR_FREE(info->photo);
     NULL_OR_FREE(info->history.body);
-
-    ChessBroadcastListClear(&info->broadcast_list);
     free(info);
 #undef NULL_OR_FREE
 }
@@ -1463,13 +1278,7 @@ ChessDrawExtraInfo(const ChessInfo* info, int line, int space)
 		prints(ANSI_COLOR(1;33) "%s" ANSI_RESET,
 			info->myturn == info->turn ? "輪到你下棋了" : "等待對方下棋");
 	    else if (line == CHESS_DRAWING_PHOTOED_TIME_ROW1) {
-		if (info->mode == CHESS_MODE_WATCH) {
-		    if (!info->timelimit)
-			prints("每手限時五分鐘");
-		    else
-			prints("局時: %5s",
-				ChessTimeStr(info->timelimit->free_time));
-		} else if (info->lefthand[0])
+		if (info->lefthand[0])
 		    prints("我方剩餘時間 %s / %2d 步",
 			    ChessTimeStr(info->lefttime[0]),
 			    info->lefthand[0]);
@@ -1477,18 +1286,7 @@ ChessDrawExtraInfo(const ChessInfo* info, int line, int space)
 		    prints("我方剩餘時間 %s",
 			    ChessTimeStr(info->lefttime[0]));
 	    } else if (line == CHESS_DRAWING_PHOTOED_TIME_ROW2) {
-		if (info->mode == CHESS_MODE_WATCH) {
-		    if (info->timelimit) {
-			if (info->timelimit->time_mode ==
-				CHESS_TIMEMODE_MULTIHAND)
-			    prints("步時: %s / %2d 步",
-				    ChessTimeStr(info->timelimit->limit_time),
-				    info->timelimit->limit_hand);
-			else
-			    prints("讀秒: %5d 秒",
-				    info->timelimit->limit_time);
-		    }
-		} else if (info->lefthand[1])
+		if (info->lefthand[1])
 		    prints("對方剩餘時間 %s / %2d 步",
 			    ChessTimeStr(info->lefttime[1]),
 			    info->lefthand[1]);
