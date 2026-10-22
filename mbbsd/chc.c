@@ -48,6 +48,7 @@ static ChessGameResult chc_movechess(board_t board, const drc_t* move);
 static void chc_drawstep(ChessInfo* info, const drc_t* move);
 static void chc_gameend(ChessInfo* info, ChessGameResult result);
 static void chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
+static int  chc_check_step(const drc_t* step);
 
 
 static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
@@ -102,7 +103,8 @@ static const ChessActions chc_actions = {
     (void (*)(ChessInfo*, const void*)) &chc_drawstep,
     NULL, /* post_game */
     &chc_gameend,
-    &chc_genlog
+    &chc_genlog,
+    (int (*)(const void*)) &chc_check_step
 };
 
 static const ChessConstants chc_constants = {
@@ -451,6 +453,22 @@ chc_movechess(board_t board, const drc_t* move)
     board[move->from.r][move->from.c] = 0;
 
     return end ? CHESS_RESULT_WIN : CHESS_RESULT_CONTINUE;
+}
+
+static int
+chc_check_step(const drc_t* step)
+{
+    /* from and to index the board (and num_str in getstep); the other
+     * indices getstep and chc_movechess use come from the board itself */
+#define INVALID_ROW(R) ((R) < 0 || (R) >= BRD_ROW)
+#define INVALID_COL(C) ((C) < 0 || (C) >= BRD_COL)
+#define INVALID_LOC(S) (INVALID_ROW(S.r) || INVALID_COL(S.c))
+    if (INVALID_LOC(step->from) || INVALID_LOC(step->to))
+	return 0;
+#undef INVALID_ROW
+#undef INVALID_COL
+#undef INVALID_LOC
+    return 1;
 }
 
 static void
