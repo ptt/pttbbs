@@ -296,6 +296,12 @@ ChessStepReceive(ChessInfo* info, void* step)
 {
     ChessStepType result = ChessRecvMove(info, info->sock, step);
 
+    /* a step the game rejects is handled like a broken connection */
+    if ((result == CHESS_STEP_NORMAL || result == CHESS_STEP_PASS ||
+		result == CHESS_STEP_SPECIAL) &&
+	    info->actions->check_step && !info->actions->check_step(step))
+	result = CHESS_STEP_FAILURE;
+
     /* and logging */
     if (result == CHESS_STEP_NORMAL || result == CHESS_STEP_PASS)
 	ChessHistoryAppend(info, step);
