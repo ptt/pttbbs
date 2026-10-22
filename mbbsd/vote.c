@@ -560,34 +560,37 @@ vote_logconf_init(vote_logconf_t *logconf) {
     memset(logconf, 0, sizeof(*logconf));
 }
 
+static const vform_field_t vote_logconf_fields[] = {
+    VFORM_FIELD_BOOL("記錄投票帳號", "是否於投票時記錄投票者 ID", vote_logconf_t, log_id),
+    VFORM_FIELD_BOOL("記錄投票 IP", "是否於投票時記錄投票者來源 IP", vote_logconf_t, log_ip),
+    VFORM_FIELD_BOOL("記錄投票時間", "是否於投票時記錄投票確切時間", vote_logconf_t, log_date),
+    VFORM_FIELD_BOOL("記錄投票選項", "是否記錄投票者的具體選擇 (記名投票)", vote_logconf_t, log_choice),
+};
+
+static const char *
+validate_vote_logconf(const vform_def_t *def GCC_UNUSED, const void *data, void *priv GCC_UNUSED)
+{
+    const vote_logconf_t *lc = (const vote_logconf_t *)data;
+    if (lc->log_id && lc->log_choice) {
+        if (vans("本次投票包含帳號與選項(記名投票)，確定嗎？[y/N]: ") != 'y')
+            return "已取消記名設定，請重新確認";
+    }
+    return NULL;
+}
+
+static const vform_def_t vote_logconf_form = {
+    .title        = "投票記錄選項設定",
+    .subtitle     = "若欲記錄以下項目，請務必於投票前事先公告",
+    .mode         = VFORM_MODE_INPLACE,
+    .fields       = vote_logconf_fields,
+    .num_fields   = ARRAY_SIZE(vote_logconf_fields),
+    .form_validator = validate_vote_logconf,
+};
+
 static void
 vote_logconf_ask(vote_logconf_t *logconf) {
-    char inbuf[STRLEN];
     vote_logconf_init(logconf);
-
-    getdata(14, 0,
-	    "是否記錄投票帳號：(y)記錄投票帳號[n]不記錄:[N]",
-	    inbuf, 2, LCECHO);
-    if (inbuf[0] == 'y')
-	logconf->log_id = 1;
-
-    getdata(15, 0,
-	    "是否記錄投票IP：(y)記錄投票IP[n]不記錄:[N]",
-	    inbuf, 2, LCECHO);
-    if (inbuf[0] == 'y')
-	logconf->log_ip = 1;
-
-    getdata(16, 0,
-	    "是否記錄投票時間：(y)記錄投票時間[n]不記錄:[N]",
-	    inbuf, 2, LCECHO);
-    if (inbuf[0] == 'y')
-	logconf->log_date = 1;
-
-    getdata(17, 0,
-	    "是否記錄投票選項：(y)記錄投票選項[n]不記錄:[N]",
-	    inbuf, 2, LCECHO);
-    if (inbuf[0] == 'y')
-	logconf->log_choice = 1;
+    vform_run(&vote_logconf_form, logconf, NULL);
 }
 
 static int
@@ -793,24 +796,10 @@ vote_maintain(const char *bname)
 
     setbfile(buf, bname, vbuf.logconf);
 
-    while (1) {
+    {
 	vote_logconf_t logconf;
-
-	move(14, 0);
-	clrtobot();
-
 	vote_logconf_ask(&logconf);
-
-	if (logconf.log_id && logconf.log_choice) {
-	    getdata(19, 0, "本次投票設定為記名投票，請再次確認是否記名："
-	    	    "(y)確認記名[n]重新設定:[N]",
-		    inbuf, 2, LCECHO);
-	    if (inbuf[0] != 'y')
-		continue;
-	}
-
 	vote_logconf_save(&logconf, buf);
-	break;
     }
 
     clear();
