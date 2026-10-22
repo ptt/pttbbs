@@ -624,6 +624,51 @@ uinfo_copy_self_edit(userec_t *dst, const userec_t *src, int ans)
     }
 }
 
+static bool
+uinfo_is_admin_field(const vform_field_t *field, const void *data, void *priv)
+{
+    (void)field;
+    (void)data;
+    return priv != NULL && *(const int *)priv != 0;
+}
+
+static const vform_field_t user_profile_fields[] = {
+    VFORM_FIELD_TEXT("暱稱", "使用者暱稱", NULL, userec_t, nickname, 0, NULL),
+    {
+        .label = "真實姓名",
+        .hint = "使用者真實姓名 (管理員限定)",
+        .type = VFORM_TEXT,
+        .offset = offsetof(userec_t, realname),
+        .size = sizeof(((userec_t *)0)->realname),
+        .is_visible = uinfo_is_admin_field,
+    },
+    {
+        .label = "居住地址",
+        .hint = "使用者居住地址 (管理員限定)",
+        .type = VFORM_TEXT,
+        .offset = offsetof(userec_t, address),
+        .size = sizeof(((userec_t *)0)->address),
+        .is_visible = uinfo_is_admin_field,
+    },
+    {
+        .label = "學歷職業",
+        .hint = "使用者學歷職業 (管理員限定)",
+        .type = VFORM_TEXT,
+        .offset = offsetof(userec_t, career),
+        .size = sizeof(((userec_t *)0)->career),
+        .is_visible = uinfo_is_admin_field,
+    },
+    VFORM_FIELD_BOOL("年滿 18 歲", "本站部份看板可能有限制級內容只適合成年人士閱讀", userec_t, over_18),
+};
+
+static const vform_def_t user_profile_form = {
+    .title        = "修改個人資料",
+    .subtitle     = "請修改個人資料，完成後按 Ctrl-X 儲存",
+    .mode         = VFORM_MODE_INPLACE,
+    .fields       = user_profile_fields,
+    .num_fields   = ARRAY_SIZE(user_profile_fields),
+};
+
 void
 uinfo_query(const char *orig_uid, int adminmode, int unum)
 {
@@ -786,29 +831,16 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #endif
 
     case '1':
-	move(0, 0);
-	outs("請逐項修改。");
+        if (!vform_run(&user_profile_form, &x, &adminmode))
+            return;
 
-	getdata_buf(y++, 0, " 暱 稱  ：", x.nickname,
-		    sizeof(x.nickname), DOECHO);
-	if (adminmode) {
-	    getdata_buf(y++, 0, "真實姓名：",
-			x.realname, sizeof(x.realname), DOECHO);
-	    getdata_buf(y++, 0, "居住地址：",
-			x.address, sizeof(x.address), DOECHO);
-	    getdata_buf(y++, 0, "學歷職業：", x.career,
-		    sizeof(x.career), DOECHO);
-	}
-
-        do {
-            SNPRINTF(buf, x.over_18 ? "y" : "n");
-            mvouts(y, 0, "本站部份看板可能有限制級內容只適合成年人士閱讀。");
-            getdata_buf(y+1, 0,"您是否年滿十八歲並同意觀看此類看板"
-                        "(若否請輸入n)[y/n]: ", buf, 3, LCECHO);
-        } while (buf[0] != 'y' && buf[0] != 'n');
-        x.over_18 = buf[0] == 'y' ? 1 : 0;
-        mvprints(y, 0, "是否年滿十八歲: %s\n\n", x.over_18 ? "是" : "否");
-        y++;
+        if (adminmode) {
+            clear();
+            y = 1;
+            move(y++, 0);
+            outs(MSG_UID);
+            outs(x.userid);
+        }
 
 	if (IS_ENABLED(CONFIG_ANGEL) && adminmode) {
 	    const char* prompt;
