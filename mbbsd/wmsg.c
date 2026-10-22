@@ -163,14 +163,21 @@ resolve_msg_sender(const msgque_t *msg)
     if (!msg || !msg->pid)
         return NULL;
 
+    const char *expected_id = msg->userid;
+    if (IS_ENABLED(CONFIG_ANGEL) && msg->msgmode == MSGMODE_FROMANGEL) {
+        if (!cuser.myangel[0])
+            return NULL;
+        expected_id = cuser.myangel;
+    }
+
     if (VALID_USHM_ENTRY(msg->uslot)) {
         userinfo_t *u = &SHM->uinfo[msg->uslot];
-        if (u->pid == msg->pid && (!msg->userid[0] || strcasecmp(u->userid, msg->userid) == 0))
+        if (u->pid == msg->pid && (!expected_id[0] || strcasecmp(u->userid, expected_id) == 0))
             return u;
     }
 
-    if (msg->userid[0]) {
-        userinfo_t *u = search_ulist_userid(msg->userid);
+    if (expected_id && expected_id[0]) {
+        userinfo_t *u = search_ulist_userid(expected_id);
         if (u && u->pid == msg->pid)
             return u;
     }
@@ -187,7 +194,7 @@ wmsg_render_tab_item(const water_t *w, bool is_selected, bool is_vertical)
     }
 
     userinfo_t *uin = w->uin;
-    if (uin && (w->pid != uin->pid || w->userid[0] != uin->userid[0]))
+    if (uin && (w->pid != uin->pid || (!is_angel_msgmode(w->msg[0].msgmode) && w->userid[0] != uin->userid[0])))
         uin = NULL;
     if (!uin && w->count > 0) {
         int last_idx = (w->top - 1 + MAX_REVIEW) % MAX_REVIEW;
@@ -258,7 +265,8 @@ ofo_init_screen(void)
 
         if (swater[i]->uin &&
             (swater[i]->pid != swater[i]->uin->pid ||
-             swater[i]->userid[0] != swater[i]->uin->userid[0]))
+             (!is_angel_msgmode(swater[i]->msg[0].msgmode) &&
+              swater[i]->userid[0] != swater[i]->uin->userid[0])))
             swater[i]->uin = NULL;
         if (!swater[i]->uin && swater[i]->count > 0) {
             int last_idx = (swater[i]->top - 1 + MAX_REVIEW) % MAX_REVIEW;
@@ -623,6 +631,11 @@ int
 my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *puin)
 {
     userinfo_t *uin = puin;
+    if (!uin && IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+        userinfo_t *cand = search_ulist_userid(cuser.myangel);
+        if (cand && (pid <= 0 || cand->pid == pid))
+            uin = cand;
+    }
     if (!uin && id && *id) {
         userinfo_t *cand = search_ulist_userid(id);
         if (cand && (pid <= 0 || cand->pid == pid))
@@ -701,6 +714,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         dummy_msg.pid = uin->pid;
         STRLCPY(dummy_msg.userid, destid);
         dummy_msg.msgmode = waterball_flag_to_msgmode(flag);
+        dummy_msg.uslot = get_utmp_slot(uin);
         water_t *target_slot = swater_get_slot(&dummy_msg);
         if (target_slot)
             STRLCPY(target_slot->msg[5].last_call_in, t_last_write);
@@ -913,7 +927,7 @@ wmsg_handle_ctrl_r_default(int ch)
         if (!prompt)
             prompt = PROMPT_TO;
 
-        my_write(target_pid, prompt, target_id, flag, NULL);
+        my_write(target_pid, prompt, target_id, flag, w->uin);
         vkey_attach(my_newfd);
 
         scr_restore(&old_screen);
