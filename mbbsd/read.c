@@ -858,31 +858,64 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
             read_view_ensure_window(cx, recbase, count);
             rv = 0;
             int stale = 0;
-            for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
-                int real_recno = read_view_real_recno(cx, recbase + i);
-                if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
-                    !buf[rv].filename[0]) {
-                    stale = 1;
-                    break;
-                }
-                for (int p = 0; p < cx->sr_pred_count; p++) {
-                    /* Any mismatch (shifted remap after a physical delete,
-                     * or an in-place edit) means the cached window is stale. */
-                    if (!match_fileheader_predicate(&buf[rv], &cx->sr_preds[p])) {
+            if (attempt == 0) {
+                for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
+                    int real_recno = read_view_real_recno(cx, recbase + i);
+                    if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
+                        !buf[rv].filename[0]) {
                         stale = 1;
                         break;
                     }
+                    for (int p = 0; p < cx->sr_pred_count; p++) {
+                        /* Any mismatch (shifted remap after a physical delete,
+                         * or an in-place edit) means the cached window is stale. */
+                        if (!match_fileheader_predicate(&buf[rv], &cx->sr_preds[p])) {
+                            stale = 1;
+                            break;
+                        }
+                    }
+                    if (stale)
+                        break;
+                    rv++;
                 }
-                if (stale)
+                if (!stale)
                     break;
-                rv++;
-            }
-            if (!stale || attempt > 0)
+                /* Mismatch detected on attempt 0! Notify search.svc that its cached index remap is wrong */
+                int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+                search_svc_invalidate(direct, bid);
+                cx->view.remap_count = 0;
+            } else {
+                /* Attempt 1: Graceful Skip & Backfill across mismatches or stale indices.
+                 * Do not abort prematurely; skip invalid records and keep filling buf. */
+                int offset = 0;
+                while (rv < count && (recbase + offset) <= view->total) {
+                    int real_recno = read_view_real_recno(cx, recbase + offset);
+                    offset++;
+                    if (real_recno <= 0)
+                        continue;
+                    if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
+                        !buf[rv].filename[0]) {
+                        continue;
+                    }
+                    bool matched = true;
+                    for (int p = 0; p < cx->sr_pred_count; p++) {
+                        if (!match_fileheader_predicate(&buf[rv], &cx->sr_preds[p])) {
+                            matched = false;
+                            break;
+                        }
+                    }
+                    if (!matched)
+                        continue;
+                    rv++;
+                }
+                /* If we reached the end of the view but found fewer valid records than
+                 * view->total, self-heal view->total so PSB can shrink its item count. */
+                if ((recbase + offset) > view->total && (recbase - 1 + rv) < cx->view.total) {
+                    cx->view.total = recbase - 1 + rv;
+                    last_line = cx->bottom_line = cx->view.total;
+                }
                 break;
-            /* Mismatch detected! Notify search.svc that its cached index remap is wrong */
-            int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
-            search_svc_invalidate(direct, bid);
-            cx->view.remap_count = 0;
+            }
         }
         if (fd != -1)
             close(fd);
@@ -1579,6 +1612,8 @@ read_renderer(int idx, PSB_CTX *psbctx)
                 fh.filemode &= ~FILE_BOTTOM;  /* original of a pinned post */
         }
         (*cx->doentry)(disp_num, &fh, psbctx);
+    } else {
+        clrtoeol();
     }
     return 0;
 }
