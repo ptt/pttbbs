@@ -118,6 +118,8 @@ typedef struct vform_def {
 
 #define VFORM_FIELD_BOOL(lbl, hnt, struct_t, member)     { .label = (lbl), .hint = (hnt), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member) }
 
+#define VFORM_FIELD_BOOL_NOTES(lbl, hnt, notes, struct_t, member)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member) }
+
 #define VFORM_FIELD_SELECT(lbl, hnt, struct_t, member, opts, num_opts)     { .label = (lbl), .hint = (hnt), .type = VFORM_SELECT,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .options = (opts), .num_options = (num_opts) }
 
 #define VFORM_FIELD_NOTE(lbl, hnt)     { .label = (lbl), .hint = (hnt), .type = VFORM_NOTE }

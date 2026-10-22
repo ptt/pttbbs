@@ -1436,14 +1436,56 @@ static reg_method_t sms_reg_method_ops = {
 // Manual Verification
 ////////////////////////////////////////////////////////////////////////////
 
+typedef struct {
+    bool is_living_in_tw;
+    char rname[20];
+    char career[40];
+    char addr[50];
+} manual_reg_form_data_t;
+
+static const char *
+validate_manual_reg_name(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    return isvalidname((char *)val);
+}
+
+static const char *
+validate_manual_reg_career(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    return isvalidcareer((char *)val);
+}
+
+static const char *
+validate_manual_reg_addr(const vform_field_t *f GCC_UNUSED, const void *val, void *priv)
+{
+    const manual_reg_form_data_t *data = (const manual_reg_form_data_t *)priv;
+    return isvalidaddr((char *)val, data->is_living_in_tw ? 0 : 1);
+}
+
+static const vform_field_t manual_reg_fields[] = {
+    VFORM_FIELD_BOOL_NOTES("是否現在住在台灣", "若居住於海外請選否",
+                           REGNOTES_ROOT "foreign", manual_reg_form_data_t, is_living_in_tw),
+    VFORM_FIELD_TEXT("真實姓名", "請用本名",
+                     REGNOTES_ROOT "name", manual_reg_form_data_t, rname, 0, validate_manual_reg_name),
+    VFORM_FIELD_TEXT("服務單位", "(畢業)學校(含系所年級)或單位職稱",
+                     REGNOTES_ROOT "career", manual_reg_form_data_t, career, 0, validate_manual_reg_career),
+    VFORM_FIELD_TEXT("目前住址", "含縣市及門寢號碼(台北請加行政區)",
+                     REGNOTES_ROOT "address", manual_reg_form_data_t, addr, 0, validate_manual_reg_addr),
+};
+
+static const vform_def_t manual_reg_form = {
+    .title        = "註冊單人工審核",
+    .mode         = VFORM_MODE_WIZARD,
+    .fields       = manual_reg_fields,
+    .num_fields   = ARRAY_SIZE(manual_reg_fields),
+    .submit_prompt = "以上資料是否正確(Y/N)？(Q)取消註冊 [N]: ",
+    .show_summary = true,
+};
+
 void
 u_manual_verification(void)
 {
-    char            rname[20], addr[50];
-    char            career[40];
-    char            ans[3], *errcode;
     int		    i = 0;
-    int             isForeign = (HasUserFlag(UF_FOREIGN)) ? 1 : 0;
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	vmsg("您已經通過認證了, 無法再填寫註冊單.");
@@ -1471,9 +1513,12 @@ u_manual_verification(void)
 	return;
     }
 
-    STRLCPY(rname, cuser.realname);
-    STRLCPY(addr, cuser.address);
-    STRLCPY(career, cuser.career);
+    manual_reg_form_data_t regdata = {
+	.is_living_in_tw = !HasUserFlag(UF_FOREIGN),
+    };
+    STRLCPY(regdata.rname, cuser.realname);
+    STRLCPY(regdata.addr, cuser.address);
+    STRLCPY(regdata.career, cuser.career);
 
     // show REGNOTES_ROOT front page
     if (dashs(REGNOTES_ROOT "front") > 0)
@@ -1484,71 +1529,12 @@ u_manual_verification(void)
 	vmsg(NULL);
     }
 
-    move(2, 0);
-    clrtobot();
+    if (!vform_run_wizard(&manual_reg_form, &regdata, &regdata))
+	return;
 
-    while (1) {
-	clear();
-	move(1, 0);
-	prints("%s(%s) 您好，請據實填寫以下的資料:",
-	       cuser.userid, cuser.nickname);
-	{
-	    char not_fore[2] = "";  // use default values instead of pre-inputs
-
-	    getfield(2, isForeign ? "y/N" : "Y/n", REGNOTES_ROOT "foreign",  "是否現在住在台灣", not_fore, 2);
-
-            // XXX NOTE: the question we ask was "Aren't you a foreigner" in
-            // Chinese, so the answer must be opposite to isForeign.
-	    if (isForeign)
-	    {
-		// default n
-		isForeign = (not_fore[0] == 'y' || not_fore[0] == 'Y') ? 0 : 1;
-	    } else {
-		// default y
-		isForeign = (not_fore[0] == 'n' || not_fore[0] == 'N') ? 1 : 0;
-	    }
-	}
-	move(2, 0); prints("  是否現在住在台灣: %s\n", isForeign ? "N (否)" : "Y (是)");
-	while (1) {
-	    getfield(4,
-                     "請用本名",
-		     REGNOTES_ROOT "name",
-                     "真實姓名", rname, 20);
-	    if( (errcode = isvalidname(rname)) == NULL )
-		break;
-	    else
-		vmsg(errcode);
-	}
-
-	while (1) {
-	    getfield(5, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
-		    REGNOTES_ROOT "career", "服務單位", career, 40);
-	    if ((errcode = isvalidcareer(career)) == NULL)
-		break;
-	    else
-		vmsg(errcode);
-	}
-
-	while (1) {
-	    getfield(6, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
-		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
-		     REGNOTES_ROOT "address", "目前住址", addr, sizeof(addr));
-	    if ((errcode = isvalidaddr(addr, isForeign)) == NULL)
-		break;
-	    else
-		vmsg(errcode);
-	}
-
-	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
-		ans, 3, LCECHO);
-	if (ans[0] == 'q')
-	    return;
-	if (ans[0] == 'y')
-	    break;
-    }
-
+    int isForeign = regdata.is_living_in_tw ? 0 : 1;
     // copy values to cuser
-    pwcuRegisterSetInfo(rname, addr, career, "x", isForeign);
+    pwcuRegisterSetInfo(regdata.rname, regdata.addr, regdata.career, "x", isForeign);
 
     // Manual verification.
     if (!create_regform_request())
