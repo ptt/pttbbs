@@ -4345,7 +4345,7 @@ const cmd_t read_comms[] = {
     { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
     { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARD | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
     { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, PERM_BM, CMD_PRIO_NONE },
-    { 'U', NULL, "快速水桶處分", bbs_cmd_quick_acl, PERM_BM, CMD_PRIO_NONE, true },
+    { 'U', NULL, "快速禁言處分", bbs_cmd_quick_acl, PERM_BM, CMD_PRIO_NONE, true },
     { 'm', NULL, "標記/取消 m 保留文章", bbs_cmd_mark_post, PERM_BM, CMD_PRIO_NONE, true },
     { 'c', NULL, "收入文章至精華區", bbs_cmd_cite_post, 0, CMD_PRIO_NONE, true },
     { 'g', NULL, "收入文章至文摘", bbs_cmd_good_post, PERM_BM, CMD_PRIO_NONE, true },

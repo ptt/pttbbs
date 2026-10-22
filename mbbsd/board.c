@@ -556,6 +556,142 @@ b_posttype(void)
 }
 
 static int
+b_mute_follow_boards(void)
+{
+    boardheader_t *bp;
+    char fpath[PATHLEN];
+    char tmpfile[PATHLEN];
+    char out_tmp[PATHLEN];
+    char bdir[PATHLEN];
+    FILE *fp_in, *fp_out;
+    char buf[256];
+
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    bp = getbcache(currbid);
+    setbfile(fpath, bp->brdname, FN_MUTE_FOLLOW_BOARDS);
+
+    snprintf(tmpfile, sizeof(tmpfile), "tmp/mute_follow_boards.%d", (int)getpid());
+
+    fp_in = fopen(fpath, "r");
+    fp_out = fopen(tmpfile, "w");
+    if (!fp_out) {
+        if (fp_in)
+            fclose(fp_in);
+        vmsg("無法建立暫存檔");
+        return FULLUPDATE;
+    }
+
+    fputs("# 每一行輸入一個要連動（跟隨）的看板名稱\n"
+          "# 當該看板有設定連動禁言時，本板亦會同步暫停發言\n"
+          "# 以 # 開頭為註解，儲存檔案時會自動忽略\n"
+          "# 若清空內容儲存，將會清除連動設定\n", fp_out);
+    if (fp_in) {
+        while (fgets(buf, sizeof(buf), fp_in)) {
+            fputs(buf, fp_out);
+        }
+        fclose(fp_in);
+    }
+    fclose(fp_out);
+
+    while (1) {
+        int res = veditfile(tmpfile);
+        if (res < 0) {
+            // Aborted by user
+            break;
+        }
+
+        fp_in = fopen(tmpfile, "r");
+        if (!fp_in) {
+            vmsg("無法讀取暫存檔");
+            break;
+        }
+
+        char err_msg[STRLEN] = "";
+        int valid_bids[MAX_MUTE_FOLLOW_BOARDS];
+        char valid_boards[MAX_MUTE_FOLLOW_BOARDS][IDLEN + 1];
+        int valid_count = 0;
+        int line_no = 0;
+
+        while (fgets(buf, sizeof(buf), fp_in)) {
+            line_no++;
+            char *p = strtok(buf, " \t\r\n");
+            if (!p || *p == '#')
+                continue;
+
+            int bid = getbnum(p);
+            const boardheader_t *target_bp = (bid > 0) ? getbcache(bid) : NULL;
+            if (!target_bp) {
+                snprintf(err_msg, sizeof(err_msg), "第 %d 行錯誤: 看板 '%s' 不存在", line_no, p);
+                break;
+            }
+            if (bid == currbid) {
+                snprintf(err_msg, sizeof(err_msg), "第 %d 行錯誤: 不能設定連動自己", line_no);
+                break;
+            }
+
+            bool duplicate = false;
+            for (int i = 0; i < valid_count; i++) {
+                if (valid_bids[i] == bid) {
+                    snprintf(err_msg, sizeof(err_msg), "第 %d 行錯誤: 看板 '%s' 重複設定", line_no, target_bp->brdname);
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate)
+                break;
+
+            if (valid_count >= MAX_MUTE_FOLLOW_BOARDS) {
+                snprintf(err_msg, sizeof(err_msg), "超過連動禁言看板數量上限 (最多 %d 個)", MAX_MUTE_FOLLOW_BOARDS);
+                break;
+            }
+
+            valid_bids[valid_count] = bid;
+            strlcpy(valid_boards[valid_count], target_bp->brdname, sizeof(valid_boards[valid_count]));
+            valid_count++;
+        }
+        fclose(fp_in);
+
+        if (err_msg[0]) {
+            vmsgf("%s，請按任意鍵重新編輯修改", err_msg);
+            continue;
+        }
+
+        // Validation passed!
+        if (valid_count > 0) {
+            snprintf(out_tmp, sizeof(out_tmp), "%s.new", fpath);
+            fp_out = fopen(out_tmp, "w");
+            if (fp_out) {
+                for (int i = 0; i < valid_count; i++) {
+                    fprintf(fp_out, "%s\n", valid_boards[i]);
+                }
+                fclose(fp_out);
+
+                setbpath(bdir, bp->brdname);
+                if (!dashd(bdir))
+                    Mkdir(bdir);
+                rename(out_tmp, fpath);
+                invalid_board_permission_cache(bp->brdname);
+                vmsgf("已成功更新連動禁言看板設定 (共 %d 個看板)。", valid_count);
+            } else {
+                vmsg("寫入檔案失敗");
+            }
+        } else {
+            if (dashf(fpath)) {
+                unlink(fpath);
+                invalid_board_permission_cache(bp->brdname);
+                vmsg("已清除連動禁言看板設定。");
+            } else {
+                vmsg("未設定任何連動禁言看板。");
+            }
+        }
+        break;
+    }
+
+    unlink(tmpfile);
+    return FULLUPDATE;
+}
+
+static int
 b_notes_edit(void)
 {
     if (currmode & MODE_BOARD) {
@@ -638,6 +774,34 @@ bcfg_get_edit_entry(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
 {
     strlcpy(buf, cx->readonly ? "[唯讀檢視]" : "[進入編輯]", sz);
     return buf;
+}
+
+const char *
+bcfg_get_mute_follow_boards(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                       char *buf, size_t sz)
+{
+    if (cx->readonly) {
+        char fpath[PATHLEN];
+        setbfile(fpath, cx->bp->brdname, FN_MUTE_FOLLOW_BOARDS);
+        FILE *fp = fopen(fpath, "r");
+        if (fp) {
+            int count = 0;
+            char line[256];
+            while (fgets(line, sizeof(line), fp)) {
+                chomp(line);
+                if (line[0])
+                    count++;
+            }
+            fclose(fp);
+            if (count > 0) {
+                snprintf(buf, sz, "%d 個看板", count);
+                return buf;
+            }
+        }
+        strlcpy(buf, "無", sz);
+        return buf;
+    }
+    return bcfg_get_edit_entry(cx, item, buf, sz);
 }
 
 static const char *
@@ -1072,6 +1236,16 @@ bcfg_set_banned(cmd_ctx_t *ctx)
     return 0;
 }
 
+int
+bcfg_set_mute_follow_boards(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    b_mute_follow_boards();
+    clear();
+    return 0;
+}
+
 static int
 bcfg_set_visible(cmd_ctx_t *ctx)
 {
@@ -1158,7 +1332,10 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
     { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
     { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_vote_limits, bcfg_set_vote_limits },
-    { 'w', "[名單] 設定水桶名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+    { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+#if IS_ENABLED(CONFIG_SHARED_MUTE)
+    { 'l', "[名單] 設定連動禁言來源", NULL, NULL, 0, PERM_BM, bcfg_get_mute_follow_boards, bcfg_set_mute_follow_boards },
+#endif
     { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
     { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
     { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
@@ -1235,7 +1412,8 @@ static const cmd_t bconfig_edit_cmds[] = {
     { KEY_RIGHT, NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { ' ', NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { Ctrl('P'), NULL, "切換回唯讀檢視模式", bconfig_cmd_toggle_edit, 0, CMD_PRIO_NONE },
-    { 'w', "水桶名單", "設定看板水桶名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'w', "禁言名單", "設定看板禁言名單(水桶)", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'l', "連動名單", "設定連動禁言來源看板", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 'v', "可見名單", "編輯看板可見會員名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 'm', "舉辦投票", "舉辦或管理看板投票", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 'c', "文章類別", "設定看板文章類別", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },

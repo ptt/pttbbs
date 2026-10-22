@@ -30,35 +30,50 @@ bakuman_make_tag_filename(const char *who, const char *object, char object_type,
 
 static int
 bakuman_get_info(const char *filename,
-                 time4_t *pexpire, size_t szreason, char *reason) {
+                 time4_t *pexpire, unsigned int *pflags,
+                 size_t szreason, char *reason) {
     FILE *fp = fopen(filename, "rt");
     uint32_t ts = 0;
+    unsigned int fl = 0;
     char buf[STRLEN];
 
     if(!fp)
         return 0;
 
     // banned file format:
-    //  EXPIRE_TIME
-    //  REASON
+    //  Line 1: EXPIRE_TIME
+    //  Line 2: REASON
+    //  Line 3: EXTRA_FLAGS (e.g. SHARED)
     buf[0] = 0;
-    fgets(buf, sizeof(buf), fp);
-    if (pexpire) {
+    if (fgets(buf, sizeof(buf), fp)) {
         sscanf(buf, "%u", &ts);
-        *pexpire = (time4_t) ts;
+        if (pexpire) {
+            *pexpire = (time4_t) ts;
+        }
     }
     buf[0] = 0;
-    fgets(buf, sizeof(buf), fp);
-    if (szreason && reason) {
+    if (fgets(buf, sizeof(buf), fp)) {
+        if (szreason && reason) {
+            chomp(buf);
+            strlcpy(reason, buf, szreason);
+        }
+    }
+    buf[0] = 0;
+    if (fgets(buf, sizeof(buf), fp)) {
         chomp(buf);
-        strlcpy(reason, buf, szreason);
+        if (strstr(buf, "SHARED")) {
+            fl |= BAKUMAN_FLAG_SHARED;
+        }
+    }
+    if (pflags) {
+        *pflags = fl;
     }
     fclose(fp);
     return 1;
 }
 
 static int
-bakuman_set_info(const char *filename, time4_t expire, const char *reason) {
+bakuman_set_info(const char *filename, time4_t expire, unsigned int flags, const char *reason) {
     FILE *fp = fopen(filename, "wt");
     if (!fp)
         return 0;
@@ -66,6 +81,9 @@ bakuman_set_info(const char *filename, time4_t expire, const char *reason) {
         reason = "";
 
     fprintf(fp, "%u\n%s\n", (unsigned)expire, reason);
+    if (flags & BAKUMAN_FLAG_SHARED) {
+        fprintf(fp, "SHARED\n");
+    }
     fclose(fp);
     return 1;
 }
@@ -73,7 +91,7 @@ bakuman_set_info(const char *filename, time4_t expire, const char *reason) {
 // return if 'who (NULL=self)' is banned by 'object'
 static time4_t
 is_banned_by(const char *who, const char *object, char object_type,
-             size_t szreason, char *reason) {
+             unsigned int *pflags, size_t szreason, char *reason) {
     char tag_fn[PATHLEN];
     time4_t expire = 0;
 
@@ -83,7 +101,7 @@ is_banned_by(const char *who, const char *object, char object_type,
         return 0;
 
     // check expire
-    if (bakuman_get_info(tag_fn, &expire, szreason, reason) && time4_gt(now, expire)) {
+    if (bakuman_get_info(tag_fn, &expire, pflags, szreason, reason) && time4_gt(now, expire)) {
         unlink(tag_fn);
         return 0;
     }
@@ -93,24 +111,24 @@ is_banned_by(const char *who, const char *object, char object_type,
 // add 'who (NULL=self)' to the ban list of 'object'
 static int
 ban_user_as(const char *who, const char *object, char object_type,
-            time_t expire, const char *reason) {
+            time4_t expire, unsigned int flags, const char *reason) {
     char tag_fn[PATHLEN];
 
     bakuman_make_tag_filename(who, object, object_type,
                               sizeof(tag_fn), tag_fn, 1);
-    return bakuman_set_info(tag_fn, expire, reason);
+    return bakuman_set_info(tag_fn, expire, flags, reason);
 }
 
 int
 get_user_banned_status_by_board(const char *user, const char *board,
                                 size_t szreason, char *reason) {
     return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
-                        szreason, reason);
+                        NULL, szreason, reason);
 }
 
 time4_t
 is_user_banned_by_board(const char *user, const char *board) {
-    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD, 0, NULL);
+    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD, NULL, 0, NULL);
 }
 
 time4_t
@@ -118,10 +136,88 @@ is_banned_by_board(const char *board) {
     return is_user_banned_by_board(cuser.userid, board);
 }
 
+time4_t
+is_user_muted_by_board_shared(const char *user, const char *board) {
+    unsigned int flags = 0;
+    time4_t expire = is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
+                                 &flags, 0, NULL);
+    if (expire && (flags & BAKUMAN_FLAG_SHARED))
+        return expire;
+    return 0;
+}
+
+static bool
+is_user_board_moderator(const char *user, const char *board) {
+    if (!user || !*user || !board || !*board)
+        return false;
+    int bid = getbnum(board);
+    if (bid <= 0 || bid > MAX_BOARD)
+        return false;
+    if (currbid == bid && (currmode & MODE_BOARD) && strcasecmp(user, cuser.userid) == 0)
+        return true;
+    int u = searchuser(user, NULL);
+    if (u <= 0)
+        return false;
+    for (int i = 0; i < MAX_BMs; i++) {
+        if (SHM->BMcache[bid - 1][i] == u)
+            return true;
+    }
+    return false;
+}
+
+time4_t
+is_muted_by_follow_boards(const char *user, const char *board,
+                          char *out_src_board, size_t sz_src_board) {
+    char fpath[PATHLEN];
+    char buf[256];
+    FILE *fp;
+
+    if (!user || !*user || !board || !*board)
+        return 0;
+
+    // Board moderators are exempt from follow-board mutes
+    if (is_user_board_moderator(user, board))
+        return 0;
+
+    setbfile(fpath, board, FN_MUTE_FOLLOW_BOARDS);
+    fp = fopen(fpath, "r");
+    if (!fp)
+        return 0;
+
+    time4_t max_expire = 0;
+    char max_board[IDLEN + 1] = "";
+
+    while (fgets(buf, sizeof(buf), fp)) {
+        chomp(buf);
+        if (!buf[0])
+            continue;
+
+        time4_t exp = is_user_muted_by_board_shared(user, buf);
+        if (time4_gt(exp, now) && time4_gt(exp, max_expire)) {
+            max_expire = exp;
+            strlcpy(max_board, buf, sizeof(max_board));
+        }
+    }
+    fclose(fp);
+
+    if (time4_gt(max_expire, now)) {
+        if (out_src_board && sz_src_board)
+            strlcpy(out_src_board, max_board, sz_src_board);
+        return max_expire;
+    }
+    return 0;
+}
+
+int
+ban_user_for_board_flags(const char *user, const char *board,
+                         time4_t expire, unsigned int flags, const char *reason) {
+    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BOARD, expire, flags, reason);
+}
+
 int
 ban_user_for_board(const char *user, const char *board,
                    time4_t expire, const char *reason) {
-    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BOARD, expire, reason);
+    return ban_user_for_board_flags(user, board, expire, 0, reason);
 }
 
 int
@@ -144,8 +240,15 @@ ui_print_user_banned_status_for_board(const char *uid, const char *board) {
                uid, time4_days_remaining(expire, now),
                Cdatelite(&expire), reason);
     } else {
-        prints("使用者 %s 目前不在禁言名單中。\n",
-               uid);
+        char src_board[IDLEN + 1];
+        time4_t f_expire = is_muted_by_follow_boards(uid, board, src_board, sizeof(src_board));
+        if (time4_gt(f_expire, now)) {
+            prints("使用者 %s 目前因連動看板 %s 禁言中 (尚有 %d 天: %s)。\n",
+                   uid, src_board, time4_days_remaining(f_expire, now), Cdatelite(&f_expire));
+        } else {
+            prints("使用者 %s 目前不在禁言名單中。\n",
+                   uid);
+        }
         expire = 0;
     }
     return expire;
@@ -229,11 +332,19 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     }
 
+    char ans_shared[3] = "";
+    move(y+5, 0); clrtoeol();
+    getdata(y+5, 0, "是否設定為連動禁言 (供其他看板同步禁言)？ [y/N]: ",
+            ans_shared, sizeof(ans_shared), LCECHO);
+    unsigned int flags = (ans_shared[0] == 'y') ? BAKUMAN_FLAG_SHARED : 0;
+
     move(y, 0); clrtobot();
-    prints("\n使用者 %s 即將加入禁言名單 (期限: %s)\n"
+    prints("\n使用者 %s 即將加入禁言名單 (期限: %s%s)\n"
            "理由: %s\n"
            ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET "\n",
-           uid, datebuf, reason);
+           uid, datebuf,
+           flags ? "，連動" : "",
+           reason);
 
     // last chance
     getdata(y+5, 0, "確認以上資料全部正確嗎？ [y/N]: ",
@@ -243,14 +354,16 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     }
 
-    result = ban_user_for_board(uid, board, expire, reason);
+    result = ban_user_for_board_flags(uid, board, expire, flags, reason);
     log_filef(history_log,
               ANSI_COLOR(1) "%s" ANSI_COLOR(33) "%s" ANSI_RESET
               " 暫停 " ANSI_COLOR(1;31) "%s" ANSI_RESET
-              " 發言，期限為 %s\n  理由: %s\n",
+              " 發言，期限為 %s%s\n  理由: %s\n",
               result ? "" :
               ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
-              cuser.userid, uid,  datebuf, reason);
+              cuser.userid, uid,  datebuf,
+              flags ? " [連動]" : "",
+              reason);
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     if (result) {
         char xtitle[STRLEN];
@@ -276,12 +389,14 @@ ui_ban_user_for_board(const char *uid, const char *board) {
             "請勿濫行提告。\n";
         char xmsg[STRLEN*5 + sizeof(anti_pettifogger)];
 
-        SNPRINTF(xtitle, "%s 看板暫停發言通知(水桶)", board);
+        SNPRINTF(xtitle, "%s 看板暫停發言通知", board);
         SNPRINTF(xmsg, "%s 看板已暫時停止讓您發表意見。\n"
-                 "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)\n"
+                 "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)%s\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n\n%s",
-                 board, Cdatelite(&now), datebuf, reason, anti_pettifogger);
+                 board, Cdatelite(&now), datebuf,
+                 flags ? "\n注意: 此設定已啟用連動禁言，其他有設定連動此看板之看板亦會同步暫停發言。" : "",
+                 reason, anti_pettifogger);
         mail_send_text(uid,  xtitle,  xmsg,  "[系統通知]");
         sendalert(uid, ALERT_NEW_MAIL);
     }
@@ -360,8 +475,8 @@ edit_banned_list_for_board(const char *board) {
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
         "         - 想確認是否設錯或查某個使用者是不是仍在禁言中，可用(S)來檢查\n"
         "           另外也可用(L)看設定歷史記錄 (此記錄原則上系統不會清除)\n"
-        "         - 目前沒有[永久禁言]的設定，若有需要請設個 50年之類的大數字\n"
-        "         - 目前新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
+        "         - 沒有[永久禁言]的設定，若有需要請設個 50年之類的大數字\n"
+        "         - 新增/解除不會寄信通知，另外請注意" ANSI_COLOR(1;33)
                    "帳號被砍後禁言會自動解除\n" ANSI_RESET
         "         - 禁言自動解除不會出現在記錄裡，只有手動提前解除的才會\n"
         ANSI_COLOR(1)

@@ -2444,7 +2444,7 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
 static const cmd_t pvcm_cmds[] = {
     { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
-    { 'U', "快速水桶", "設定該推文作者的看板水桶權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

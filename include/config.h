@@ -264,6 +264,10 @@
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #endif
 
+#ifndef MAX_MUTE_FOLLOW_BOARDS
+#define MAX_MUTE_FOLLOW_BOARDS (64)      /* 硈笆窽ē狾计秖 */
+#endif
+
 
 #ifndef MAX_MSGS
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */
