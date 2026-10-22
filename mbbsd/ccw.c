@@ -550,14 +550,16 @@ ccw_talk_send(CCW_CTX *ctx, const char *msg)
 CCW_PROTO ssize_t
 ccw_talk_recv(CCW_CTX *ctx, char *buf, size_t szbuf)
 {
-    char len = 0;
+    unsigned char len = 0;
     buf[0] = 0;
     // XXX blocking call here... (change to recv?)
     if (toread(ctx->fd, &len, sizeof(len)) < 0)
         return -1;
+    // len comes from the peer; never trust it beyond our buffer.
+    if ((size_t)len >= szbuf)
+        return -1;
     if (toread(ctx->fd, buf, len) < 0)
         return -1;
-    assert(len >= 0 && len < (int)szbuf);
     buf[(size_t)len] = 0;
     return len;
 }
