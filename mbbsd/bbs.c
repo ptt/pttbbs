@@ -1230,9 +1230,9 @@ does_board_have_public_bm(const boardheader_t *bp) {
 }
 
 GCC_WEAK int
-is_minimal_pay_post(const char *title GCC_UNUSED)
+get_max_pay_by_post_title(const char *title GCC_UNUSED)
 {
-    return 0;
+    return MAX_POST_MONEY;
 }
 
 GCC_WEAK int
@@ -1454,10 +1454,9 @@ do_post_article(int edflags)
             money = post_cap;
     }
 
-    if (is_minimal_pay_post(save_title)) {
-        if (money > 1)
-            money = 1;
-    }
+    int max_pay = get_max_pay_by_post_title(save_title);
+    if (max_pay >= 0 && money > max_pay)
+        money = max_pay;
 
     // drop money & numposts for free boards, or user without login information
     // (they may post on free boards like SYSOP)
