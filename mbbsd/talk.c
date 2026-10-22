@@ -501,33 +501,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	ch == CHESSWATCHING  ||
 		(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == M_CONN6 || uin->lockmode == CHC) {
-	if (ch == CHC || ch == M_FIVE || ch == CHESSWATCHING) {
-	    sock = make_connection_to_somebody(uin, 20);
-	    if (sock < 0)
-		vmsg("無法建立連線");
-	    else {
-		msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-		if (msgsock == -1) {
-		    perror("accept");
-		    close(sock);
-		    return;
-		}
-		close(sock);
-		STRLCPY(currutmp->mateid, uin->userid);
-
-		switch (uin->sig) {
-		    case SIG_CHC:
-			chc(msgsock, CHESS_MODE_WATCH);
-			break;
-
-		    case SIG_GOMO:
-			gomoku(msgsock, CHESS_MODE_WATCH);
-			break;
-		}
-	    }
-	}
-	else
-	    outs("人家在忙啦");
+	outs("人家在忙啦");
     } else if (!HasUserPerm(PERM_SYSOP) &&
 	       ((fri_stat & HRM) || ((!uin->pager) && !(fri_stat & HFM)))) {
 	outs("對方關掉呼叫器了");

@@ -199,9 +199,8 @@ chc_drawline(const ChessInfo* info, int line)
 
     if (line == 0) {
 	prints(ANSI_COLOR(1;46) "   象棋對戰   " ANSI_COLOR(45)
-		"%30s VS %-20s%10s" ANSI_RESET,
-	       info->user1.userid, info->user2.userid,
-	       info->mode == CHESS_MODE_WATCH ? "[觀棋模式]" : "");
+		"%30s VS %-30s" ANSI_RESET,
+	       info->user1.userid, info->user2.userid);
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
 	for (i = 0; i < 9; i++) {
@@ -818,10 +817,7 @@ chc(int s, ChessGameMode mode)
 	pwcuChessResult(SIG_CHC, CHESS_RESULT_LOST);
     }
 
-    if (mode == CHESS_MODE_WATCH)
-	setutmpmode(CHESSWATCHING);
-    else
-	setutmpmode(CHC);
+    setutmpmode(CHC);
     currutmp->sig = SIG_CHC;
 
     ChessPlay(info);
