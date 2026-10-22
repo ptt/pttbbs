@@ -389,8 +389,9 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	unlockutmpmode();
 	return -1;
     }
+    memset(&server, 0, sizeof(server));
     server.sin_family = PF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     server.sin_port = 0;
     if (bind(sock, (struct sockaddr *) & server, sizeof(server)) < 0) {
 	close(sock);
