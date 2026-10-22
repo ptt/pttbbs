@@ -20,6 +20,77 @@
 
 static void sortsong(void);
 
+typedef struct {
+    char sender[IDLEN + 1];
+    char receiver[IDLEN + 1];
+    char say[51];
+    char address[IDLEN + 1];
+    bool has_override;
+} order_song_form_data_t;
+
+static bool
+song_is_not_override(const vform_field_t *f GCC_UNUSED, const void *data, void *priv GCC_UNUSED)
+{
+    const order_song_form_data_t *d = (const order_song_form_data_t *)data;
+    return !d->has_override;
+}
+
+static const char *
+validate_song_say(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *s = (const char *)val;
+    while (*s == ' ' || *s == '\t') s++;
+    if (!*s)
+        return "請輸入想說的內容";
+    return NULL;
+}
+
+static const char *
+validate_song_address(const vform_field_t *f GCC_UNUSED, const void *val, void *priv GCC_UNUSED)
+{
+    const char *addr = (const char *)val;
+    if (!*addr)
+        return NULL;
+    char resolved[IDLEN + 1];
+    if (!searchuser((char *)addr, resolved))
+        return "找不到此使用者，請輸入站內有效 ID 或直接留空";
+    if (is_rejected(resolved))
+        return "對方拒收您的信件";
+    return NULL;
+}
+
+static const vform_field_t order_song_fields[] = {
+    VFORM_FIELD_TEXT("留言者", "可填暱稱或匿名", NULL,
+                     order_song_form_data_t, sender, 0, NULL),
+    {
+        .label = "留言給",
+        .hint = "可填暱稱或匿名",
+        .type = VFORM_TEXT,
+        .offset = offsetof(order_song_form_data_t, receiver),
+        .size = sizeof(((order_song_form_data_t *)0)->receiver),
+        .is_visible = song_is_not_override,
+    },
+    VFORM_FIELD_TEXT("想說的話", "想對他/她說的內容 (必填)", NULL,
+                     order_song_form_data_t, say, 0, validate_song_say),
+    {
+        .label = "轉寄信箱",
+        .hint = "寄到信箱的站內真實ID (選填)",
+        .type = VFORM_TEXT,
+        .offset = offsetof(order_song_form_data_t, address),
+        .size = sizeof(((order_song_form_data_t *)0)->address),
+        .vget_flags = VGET_LOWERCASE | VGET_ASCII_ONLY,
+        .validator = validate_song_address,
+        .is_visible = song_is_not_override,
+    },
+};
+
+static const vform_def_t order_song_form = {
+    .title        = "心情點播留言",
+    .mode         = VFORM_MODE_INPLACE,
+    .fields       = order_song_fields,
+    .num_fields   = ARRAY_SIZE(order_song_fields),
+};
+
 static int
 do_order_song(void)
 {
@@ -90,45 +161,27 @@ do_order_song(void)
         }
     }
 
-    getdata_str(19, 0, "留言者(可匿名): ", sender, sizeof(sender), DOECHO,
-                cuser.userid);
+    order_song_form_data_t sdata;
+    memset(&sdata, 0, sizeof(sdata));
+    STRLCPY(sdata.sender, cuser.userid);
 
 #ifdef USE_ANGEL_SONG
-    override_receiver = angel_order_song(receiver, sizeof(receiver));
+    override_receiver = angel_order_song(sdata.receiver, sizeof(sdata.receiver));
+    if (override_receiver)
+        sdata.has_override = true;
 #endif
 
-    if (!*receiver)
-        getdata(20, 0, "留言給(可匿名): ", receiver, sizeof(receiver), DOECHO);
+    if (!vform_run(&order_song_form, &sdata, NULL)) {
+        unlockutmpmode();
+        return 0;
+    }
 
-    do {
-	getdata(21, 0, "想要要對他/她說..:", say, sizeof(say), DOECHO);
-	reduce_blank(say, say);
-	if (!say[0]) {
-	    bell();
-	    mvouts(22, 0, "請重新輸入想說的內容");
-	}
-    } while (!say[0]);
-
+    reduce_blank(sdata.say, sdata.say);
+    STRLCPY(sender, sdata.sender);
+    STRLCPY(receiver, sdata.receiver);
+    STRLCPY(say, sdata.say);
+    STRLCPY(address, sdata.address);
     SNPRINTF(save_title, "%s:%s", sender, say);
-
-    if (override_receiver) {
-        *address = 0;
-    } else do {
-        move(22, 0); clrtobot();
-        getdata_str(22, 0, "寄到誰的信箱(站內真實ID)?",
-                    address, sizeof(address), LCECHO, receiver);
-        if (!*address)
-            break;
-        if (searchuser(address, address)) {
-            if (is_rejected(address)) {
-                vmsg("對方拒收");
-                continue;
-            } else {
-                break;
-            }
-        }
-        vmsg("請輸入站內 ID 或直接 ENTER");
-    } while (1);
 
     vmsg("接著要選範本囉...");
     a_menu("留言範本", SONGBOOK, 0, 0, trans_buffer, NULL);
