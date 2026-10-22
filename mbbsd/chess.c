@@ -400,7 +400,8 @@ ChessPlayFuncMy(ChessInfo* info)
 		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "求和被拒!" ANSI_RESET);
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		} else if (result == CHESS_STEP_UNDO) {
-		    if (ChessAnswerRequest(info, "悔棋")) {
+		    if (info->history.used > 0 &&
+			    ChessAnswerRequest(info, "悔棋")) {
 			ChessMessageSend(info, CHESS_STEP_UNDO_ACC);
 
 			info->actions->init_board(info->board);
@@ -642,7 +643,8 @@ ChessPlayFuncHis(ChessInfo* info)
 		    info->pass[(int) info->turn] = 0;
 		    ChessStepMade(info, 1);
 		    info->actions->drawstep(info, &info->step_tmp);
-		} else if (result == CHESS_STEP_UNDO_ACC) {
+		} else if (result == CHESS_STEP_UNDO_ACC &&
+			info->history.used > 0) {
 		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "接受悔棋!" ANSI_RESET);
 
 		    info->actions->init_board(info->board);
