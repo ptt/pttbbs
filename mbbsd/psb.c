@@ -1710,6 +1710,17 @@ psb_sync_cache(PSB_CTX *psbctx) {
             psbctx->loader(psbctx);
         if (psbctx->cmd.quit)
             return;
+        if (psbctx->cmd.total <= 0) {
+            psbctx->cmd.curr = 0;
+            psbctx->cmd.base = 0;
+        } else {
+            if (psbctx->cmd.curr >= psbctx->cmd.total)
+                psbctx->cmd.curr = psbctx->cmd.total - 1;
+            if (psbctx->cmd.curr < 0)
+                psbctx->cmd.curr = 0;
+            if (psbctx->cmd.curr < psbctx->cmd.base || psbctx->cmd.curr >= psbctx->cmd.base + rows)
+                psbctx->cmd.base = (psbctx->cmd.curr / rows) * rows;
+        }
         psbctx->cached_base = psbctx->cmd.base;
         psbctx->cached_rows = rows;
         psbctx->cached_cols = t_columns;
@@ -1790,13 +1801,11 @@ psb_main(PSB_CTX *psbctx)
         }
 
         if (psbctx->cmd.total == 0) {
-            if (full || top_dirty > 0) {
-                move(psbctx->header_lines, 0);
-                if (!full)
-                    clrtoln(psbctx->header_lines + rows);
-                if (psbctx->empty_renderer) {
-                    psbctx->empty_renderer(psbctx);
-                }
+            move(psbctx->header_lines, 0);
+            if (!full)
+                clrtoln(psbctx->header_lines + rows);
+            if (psbctx->empty_renderer) {
+                psbctx->empty_renderer(psbctx);
             }
         } else {
             int max_i = psbctx->cmd.total - base;

@@ -1000,11 +1000,8 @@ read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
         ctx->reload = true;
         break;
     case TITLE_REDRAW:
-        ctx->redraw = true;
-        break;
     case READ_REDRAW:
-        ctx->redraw_header_lines = 2;
-        ctx->redraw_footer_lines = 1;
+        ctx->redraw = true;
         break;
     case DONOTHING:
     default:
@@ -1714,14 +1711,22 @@ read_loader(PSB_CTX *psbctx)
     cx->locmem->crs_ln = read_view_v2p(&cx->view, psbctx->cmd.curr);
     cx->entries = read_view_load_window(cx, currdirect, headers,
                                         psbctx->cmd.base, headers_size);
-    if (psbctx->cmd.base == 0 && cx->entries == 0 && cx->view.bottom_count == 0 && cx->view.total > 0) {
+    if (cx->entries == 0 && psbctx->cmd.base > 0) {
+        psbctx->cmd.base = 0;
+        psbctx->cmd.curr = 0;
+        cx->locmem->top_ln = read_view_v2p(&cx->view, 0);
+        cx->locmem->crs_ln = read_view_v2p(&cx->view, 0);
+        cx->entries = read_view_load_window(cx, currdirect, headers,
+                                            0, headers_size);
+    }
+    if (psbctx->cmd.base == 0 && cx->entries == 0 && cx->view.total > 0) {
         cx->view.total = 0;
         cx->bottom_line = 0;
         last_line = 0;
         psbctx->cmd.total = 0;
         psbctx->cmd.curr = 0;
         psbctx->cmd.base = 0;
-        if (cx->bidcache > 0)
+        if (cx->bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST)))
             setbtotal(cx->bidcache);
     }
     /* view.total may also have been changed by commands (e.g. select_by_aid,
