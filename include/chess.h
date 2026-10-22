@@ -116,6 +116,10 @@ typedef struct ChessActions {
     /* ending */
     void (*gameend)    (ChessInfo* info, ChessGameResult result);
     void (*genlog)     (ChessInfo* info, FILE* fp, ChessGameResult result);
+
+    /* checking a step from the peer before it is recorded or applied;
+     * returns 0 to reject it. may be NULL. */
+    int  (*check_step) (const void* step);
 } ChessActions;
 
 typedef struct ChessConstants {
