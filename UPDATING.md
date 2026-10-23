@@ -15,6 +15,30 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## fileheader, board: Combine pad and recommend into int16_t rating
+
+為擴充推噓評價數值範圍並清理無用欄位，`fileheader_t` 將原本的 `char pad`（1 byte）
+與 `char recommend`（1 byte）整合成 16 位元的 `int16_t rating`（2 bytes，佔用 offset 32..33）。
+
+因舊格式在 x86（Little-Endian）架構下將推文數儲存在 offset 33，若直接讀取會導致數值錯位（移位 8 bits），
+因此升級時**必須關站（停止所有 mbbsd 與相關服務）**，並執行轉換程式掃描全站看板目錄進行轉換：
+
+```bash
+# 編譯轉換程式
+make -C upgrade dir_recommend_to_rating
+
+# 建議先以 dry-run 模擬確認
+./upgrade/dir_recommend_to_rating --dry-run ~/.BRD
+
+# 關站後進行實際轉換（可選擇加上 --backup 自動備份 .DIR.bak）
+./upgrade/dir_recommend_to_rating --backup ~/.BRD
+```
+
+轉換程式會自動走訪 `~/.BRD` 內的所有看板目錄，將看板文章索引 `.DIR`、文摘索引 `.Names`
+及舊版底層推文檔 `.DIR.bottom` 內的所有紀錄安全轉換為 `int16_t rating`。程式內建特徵比對與防呆機制，
+已轉換的看板會自動略過以避免重複轉換。完成全站轉檔後再重啟 BBS 服務。
+
+---
 ## board, mbbsd: Move posttype to per-board files
 
 將原本固定存在 `boardheader_t` 內的 `posttype` 與 `posttype_f`
