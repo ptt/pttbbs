@@ -131,6 +131,19 @@ bad_user_id(const char *userid)
     return 0;
 }
 
+#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
+// Returns 1 if no account exists yet, i.e. a brand new site.
+static int
+no_user_exists(void)
+{
+    int i;
+    for (i = 0; i < MAX_USERS; i++)
+	if (SHM->userid[i][0])
+	    return 0;
+    return 1;
+}
+#endif
+
 static char *
 isvalidname(char *rname)
 {
@@ -215,6 +228,11 @@ compute_user_value(const userec_t * urec, time4_t clock)
     /* || (urec->userlevel & PERM_LOGINOK) */
 	|| !strcmp(STR_GUEST, urec->userid))
 	return 999999;
+#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
+    /* str_sysop gets admin permissions on login (see load_current_user) */
+    if (strcasecmp(str_sysop, urec->userid) == 0)
+	return 999999;
+#endif
     value = time4_diff(clock, urec->lastlogin) / 60;	/* minutes */
 
 #ifdef STR_REGNEW
@@ -769,6 +787,12 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
+#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
+	// load_current_user() grants admin permissions to str_sysop, so it may
+	// only be registered to set up a new site that has no accounts yet.
+	else if (strcasecmp(passbuf, str_sysop) == 0 && !no_user_exists())
+	    outs("此代號已由系統保留，請使用別的代號\n");
+#endif
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0)

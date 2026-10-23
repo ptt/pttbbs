@@ -65,6 +65,12 @@ int check(void *data GCC_UNUSED, int n, userec_t *u) {
 		return 0;
 	    if (u->userlevel & PERM_XEMPT)
 		return 0;
+#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
+	    // str_sysop gets admin permissions on login (see load_current_user
+	    // in mbbsd), but only in memory, so the record may lack the bits above.
+	    if (strcasecmp(u->userid, str_sysop) == 0)
+		return 0;
+#endif
 
 	    // if((d > MAX_GUEST_LIFE && (u->userlevel & PERM_LOGINOK) == 0) 
 	    // || (d > MAX_LIFE && (u->userlevel & PERM_XEMPT) == 0)) {
