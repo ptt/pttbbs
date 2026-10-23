@@ -1210,7 +1210,7 @@ voteperm_msg(const char *bname)
     if (HasUserPerm(PERM_VIOLATELAW))
         return "罰單未繳清，無法投票。";
 
-    if ((msg = banned_msg(bname)) != NULL)
+    if ((msg = muted_msg(bname)) != NULL)
         return msg;
 
     return NULL;

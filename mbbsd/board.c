@@ -1227,11 +1227,11 @@ bcfg_set_vote_limits(cmd_ctx_t *ctx)
 }
 
 static int
-bcfg_set_banned(cmd_ctx_t *ctx)
+bcfg_set_muted(cmd_ctx_t *ctx)
 {
     ctx->reload = true;
     clear();
-    edit_banned_list_for_board(currboard);
+    edit_muted_list_for_board(currboard);
     clear();
     return 0;
 }
@@ -1332,7 +1332,7 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
     { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
     { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_vote_limits, bcfg_set_vote_limits },
-    { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+    { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_muted },
 #if IS_ENABLED(CONFIG_SHARED_MUTE)
     { 'l', "[名單] 設定連動禁言來源", NULL, NULL, 0, PERM_BM, bcfg_get_mute_follow_boards, bcfg_set_mute_follow_boards },
 #endif

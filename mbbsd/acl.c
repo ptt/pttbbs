@@ -18,9 +18,9 @@ bakuman_make_tag_filename(const char *who, const char *object, char object_type,
     char prefix[3] = { object_type, '_', 0 };
 
     if (!who)
-        setuserfile(buf, FN_BANNED "/");
+        setuserfile(buf, FN_MUTED "/");
     else
-        sethomefile(buf, who, FN_BANNED "/");
+        sethomefile(buf, who, FN_MUTED "/");
     if (create_folder && !dashd(buf)) {
         Mkdir(buf);
     }
@@ -90,7 +90,7 @@ bakuman_set_info(const char *filename, time4_t expire, unsigned int flags, const
 
 // return if 'who (NULL=self)' is banned by 'object'
 static time4_t
-is_banned_by(const char *who, const char *object, char object_type,
+is_muted_by(const char *who, const char *object, char object_type,
              unsigned int *pflags, size_t szreason, char *reason) {
     char tag_fn[PATHLEN];
     time4_t expire = 0;
@@ -110,7 +110,7 @@ is_banned_by(const char *who, const char *object, char object_type,
 
 // add 'who (NULL=self)' to the ban list of 'object'
 static int
-ban_user_as(const char *who, const char *object, char object_type,
+mute_user_as(const char *who, const char *object, char object_type,
             time4_t expire, unsigned int flags, const char *reason) {
     char tag_fn[PATHLEN];
 
@@ -120,26 +120,26 @@ ban_user_as(const char *who, const char *object, char object_type,
 }
 
 int
-get_user_banned_status_by_board(const char *user, const char *board,
+get_user_muted_status_by_board(const char *user, const char *board,
                                 size_t szreason, char *reason) {
-    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
+    return is_muted_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
                         NULL, szreason, reason);
 }
 
 time4_t
-is_user_banned_by_board(const char *user, const char *board) {
-    return is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD, NULL, 0, NULL);
+is_user_muted_by_board(const char *user, const char *board) {
+    return is_muted_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD, NULL, 0, NULL);
 }
 
 time4_t
-is_banned_by_board(const char *board) {
-    return is_user_banned_by_board(cuser.userid, board);
+is_muted_by_board(const char *board) {
+    return is_user_muted_by_board(cuser.userid, board);
 }
 
 time4_t
 is_user_muted_by_board_shared(const char *user, const char *board) {
     unsigned int flags = 0;
-    time4_t expire = is_banned_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
+    time4_t expire = is_muted_by(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
                                  &flags, 0, NULL);
     if (expire && (flags & BAKUMAN_FLAG_SHARED))
         return expire;
@@ -209,19 +209,19 @@ is_muted_by_follow_boards(const char *user, const char *board,
 }
 
 int
-ban_user_for_board_flags(const char *user, const char *board,
+mute_user_for_board_flags(const char *user, const char *board,
                          time4_t expire, unsigned int flags, const char *reason) {
-    return ban_user_as(user, board, BAKUMAN_OBJECT_TYPE_BOARD, expire, flags, reason);
+    return mute_user_as(user, board, BAKUMAN_OBJECT_TYPE_BOARD, expire, flags, reason);
 }
 
 int
-ban_user_for_board(const char *user, const char *board,
+mute_user_for_board(const char *user, const char *board,
                    time4_t expire, const char *reason) {
-    return ban_user_for_board_flags(user, board, expire, 0, reason);
+    return mute_user_for_board_flags(user, board, expire, 0, reason);
 }
 
 int
-unban_user_for_board(const char *user, const char *board) {
+unmute_user_for_board(const char *user, const char *board) {
     char tag_fn[PATHLEN];
 
     bakuman_make_tag_filename(user, board, BAKUMAN_OBJECT_TYPE_BOARD,
@@ -230,9 +230,9 @@ unban_user_for_board(const char *user, const char *board) {
 }
 
 static time4_t
-ui_print_user_banned_status_for_board(const char *uid, const char *board) {
+ui_print_user_muted_status_for_board(const char *uid, const char *board) {
     char reason[STRLEN];
-    time4_t expire = get_user_banned_status_by_board(
+    time4_t expire = get_user_muted_status_by_board(
         uid, board, sizeof(reason), reason);
 
     if (time4_gt(expire, now)) {
@@ -255,7 +255,7 @@ ui_print_user_banned_status_for_board(const char *uid, const char *board) {
 }
 
 static int
-ui_ban_user_for_board(const char *uid, const char *board) {
+ui_mute_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
     int y;
     int result;
@@ -264,10 +264,10 @@ ui_ban_user_for_board(const char *uid, const char *board) {
     char reason[STRLEN];
     char datebuf[STRLEN];
 
-    setbfile(history_log, board, FN_BANNED_HISTORY);
+    setbfile(history_log, board, FN_MUTED_HISTORY);
 
     y = vgety();
-    if ((expire = is_user_banned_by_board(uid, board))) {
+    if ((expire = is_user_muted_by_board(uid, board))) {
         vmsgf("使用者之前已被禁言，尚有 %d 天；詳情可用(S)或(L)查看",
               time4_days_remaining(expire, now));
         return -1;
@@ -354,7 +354,7 @@ ui_ban_user_for_board(const char *uid, const char *board) {
         return -1;
     }
 
-    result = ban_user_for_board_flags(uid, board, expire, flags, reason);
+    result = mute_user_for_board_flags(uid, board, expire, flags, reason);
     log_filef(history_log,
               ANSI_COLOR(1) "%s" ANSI_COLOR(33) "%s" ANSI_RESET
               " 暫停 " ANSI_COLOR(1;31) "%s" ANSI_RESET
@@ -405,17 +405,17 @@ ui_ban_user_for_board(const char *uid, const char *board) {
 }
 
 static int
-ui_unban_user_for_board(const char *uid, const char *board) {
+ui_unmute_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
     int y;
     char ans[3];
     char history_log[PATHLEN];
     char reason[STRLEN];
 
-    setbfile(history_log, board, FN_BANNED_HISTORY);
+    setbfile(history_log, board, FN_MUTED_HISTORY);
 
     y = vgety();
-    if (!(expire = is_user_banned_by_board(uid, board))) {
+    if (!(expire = is_user_muted_by_board(uid, board))) {
         vmsg("使用者未在禁言名單。");
         return -1;
     }
@@ -438,7 +438,7 @@ ui_unban_user_for_board(const char *uid, const char *board) {
         return -1;
     }
 
-    unban_user_for_board(uid, board);
+    unmute_user_for_board(uid, board);
     log_filef(history_log,
               ANSI_COLOR(1) ANSI_COLOR(33) "%s" ANSI_RESET
               " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET
@@ -451,7 +451,7 @@ ui_unban_user_for_board(const char *uid, const char *board) {
 }
 
 int
-edit_banned_list_for_board(const char *board) {
+edit_muted_list_for_board(const char *board) {
     // TODO generalize this.
     char uid[IDLEN+1], ans[3];
 
@@ -499,7 +499,7 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
-                ui_print_user_banned_status_for_board(uid, board);
+                ui_print_user_muted_status_for_board(uid, board);
                 pressanykey();
                 break;
 
@@ -509,7 +509,7 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0); clrtobot();
-                if (ui_ban_user_for_board(uid, board) < 0)
+                if (ui_mute_user_for_board(uid, board) < 0)
                     continue;
                 break;
 
@@ -519,14 +519,14 @@ edit_banned_list_for_board(const char *board) {
                 if (!*uid || !searchuser(uid, uid))
                     continue;
                 move(1, 0);
-                if (ui_unban_user_for_board(uid, board) < 0)
+                if (ui_unmute_user_for_board(uid, board) < 0)
                     continue;
                 break;
 
             case 'l':
                 do {
                     char history_log[PATHLEN];
-                    setbfile(history_log, board, FN_BANNED_HISTORY);
+                    setbfile(history_log, board, FN_MUTED_HISTORY);
                     if (more(history_log, YEA) == -1)
                         vmsg("目前尚無設定記錄。");
                 } while (0);
@@ -555,7 +555,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
         vbar(TEMPFORMAT(STRLEN, " 設定使用者 %s 於看板《%s》之權限", uid, board));
 
         move(ytitle+2, 0);
-        expire = ui_print_user_banned_status_for_board(uid, board);
+        expire = ui_print_user_muted_status_for_board(uid, board);
 
         move(ytitle+5, 0);
         prints(" " ANSI_COLOR(1;36) "%s" ANSI_RESET " - %s\n",
@@ -572,7 +572,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 outs("\n" ANSI_REVERSE);
                 vbar(" 禁言使用者");
                 move(ytitle+2, 0);
-                if (ui_ban_user_for_board(uid, board) < 0)
+                if (ui_mute_user_for_board(uid, board) < 0)
                     continue;
                 break;
 
@@ -585,7 +585,7 @@ edit_user_acl_for_board(const char *uid, const char *board) {
                 outs("\n" ANSI_REVERSE);
                 vbar(" 提前解除禁言");
                 move(ytitle+2, 0);
-                if (ui_unban_user_for_board(uid, board) < 0)
+                if (ui_unmute_user_for_board(uid, board) < 0)
                     continue;
                 break;
 

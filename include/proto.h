@@ -50,13 +50,13 @@ void a_copyitem(const char* fpath, const char* title, const char* owner, int mod
 int Announce(void);
 
 /* acl */
-time4_t is_user_banned_by_board(const char *user, const char *board);
-time4_t is_banned_by_board(const char *board);
+time4_t is_user_muted_by_board(const char *user, const char *board);
+time4_t is_muted_by_board(const char *board);
 time4_t is_user_muted_by_board_shared(const char *user, const char *board);
 time4_t is_muted_by_follow_boards(const char *user, const char *board, char *out_src_board, size_t sz_src_board);
-int ban_user_for_board_flags(const char *user, const char *board, time4_t expire, unsigned int flags, const char *reason);
-int ban_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
-int edit_banned_list_for_board(const char *board);
+int mute_user_for_board_flags(const char *user, const char *board, time4_t expire, unsigned int flags, const char *reason);
+int mute_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
+int edit_muted_list_for_board(const char *board);
 int edit_user_acl_for_board(const char *uid, const char *board);
 
 /* assess */
@@ -140,7 +140,7 @@ int is_BM_cache(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);
 const char *postperm_msg(const char *bname);
-const char *banned_msg(const char *bname);
+const char *muted_msg(const char *bname);
 
 /* cal */
 const char* money_level(int money);

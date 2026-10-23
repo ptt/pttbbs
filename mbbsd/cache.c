@@ -183,23 +183,23 @@ is_BM_cache(int bid) /* bid starts from 1 */
 
 // TODO move this to board.c
 const char *
-banned_msg(const char *bname)
+muted_msg(const char *bname)
 {
     // static is bad, but this is faster...
-    static char ban_msg[80];
-    time4_t expire = is_banned_by_board(bname);
+    static char mute_msg[80];
+    time4_t expire = is_muted_by_board(bname);
     if (time4_gt(expire, now)) {
-        SNPRINTF(ban_msg, "使用者不可發言(尚有%d天)",
+        SNPRINTF(mute_msg, "使用者不可發言(尚有%d天)",
                 time4_days_remaining(expire, now));
-        return ban_msg;
+        return mute_msg;
     }
     if (cuser.userid[0]) {
         char src_board[IDLEN + 1];
         expire = is_muted_by_follow_boards(cuser.userid, bname, src_board, sizeof(src_board));
         if (time4_gt(expire, now)) {
-            SNPRINTF(ban_msg, "連動看板 %s 禁言中(尚有%d天)",
+            SNPRINTF(mute_msg, "連動看板 %s 禁言中(尚有%d天)",
                     src_board, time4_days_remaining(expire, now));
-            return ban_msg;
+            return mute_msg;
         }
     }
     return NULL;
@@ -224,7 +224,7 @@ postperm_msg(const char *bname)
 
     do {
         const char *msg;
-        if ((msg = banned_msg(bname)) != NULL)
+        if ((msg = muted_msg(bname)) != NULL)
             return msg;
     } while (0);
 

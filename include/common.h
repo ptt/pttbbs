@@ -33,8 +33,8 @@
 #define FN_OVERRIDES    "overrides"
 #define FN_REJECT       "reject"
 #define FN_WATER        "water"         // 舊水桶
-#define FN_BANNED       "banned"        // 新水桶
-#define FN_BANNED_HISTORY "banned.history"  // 新水桶之歷史記錄
+#define FN_MUTED        "banned"        // 禁言/水桶名單
+#define FN_MUTED_HISTORY "banned.history"  // 禁言歷史記錄
 #define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
 #define FN_MUTE_FOLLOW_BOARDS ".mute_follow_boards"  // 連動禁言名單
 #define BAKUMAN_FLAG_SHARED 0x1                      // 連動禁言旗標 (shared mute)
