@@ -700,11 +700,12 @@ is_tn_allowed(const char *title)
 static void
 tn_safe_strip(char *title)
 {
-    if (is_tn_allowed(title))
-	return;
-    assert(is_tn_announce(title));
-    memmove(title, title + strlen(TN_ANNOUNCE),
-	    strlen(title) - strlen(TN_ANNOUNCE)+1);
+    // Strip repeatedly so a stacked prefix cannot leave one behind.
+    while (!is_tn_allowed(title)) {
+	assert(is_tn_announce(title));
+	memmove(title, title + strlen(TN_ANNOUNCE),
+		strlen(title) - strlen(TN_ANNOUNCE)+1);
+    }
 }
 
 static void
@@ -1963,6 +1964,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
+    }
+
+    // check TN_ANNOUNCE for non-BMs if the title was changed in the editor,
+    // and keep the original title if nothing is left.
+    if (strcmp(save_title, fhdr->title) != 0) {
+        tn_safe_strip(save_title);
+        if (!save_title[0])
+            STRLCPY(save_title, fhdr->title);
     }
 
     if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
