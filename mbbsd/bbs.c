@@ -108,10 +108,10 @@ modify_dir_lite(
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
     if (comment) {
-	comment += fhdr.recommend;
+	comment += fhdr.rating;
 	if (comment > MAX_RECOMMENDS) comment = MAX_RECOMMENDS;
 	else if (comment < -MAX_RECOMMENDS) comment = -MAX_RECOMMENDS;
-	fhdr.recommend = comment;
+	fhdr.rating = comment;
     }
 
 
@@ -127,7 +127,7 @@ modify_dir_lite(
 	    syncnow();
 	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 	}
-	search_svc_hint_comment(currboard, currbid, ent, fhdr.recommend);
+	search_svc_hint_comment(currboard, currbid, ent, fhdr.rating);
     }
     return 0;
 }
@@ -818,16 +818,16 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
-    else if(ent->recommend >= MAX_RECOMMENDS)
+    else if(ent->rating >= MAX_RECOMMENDS)
 	  strcpy(recom,"1mÃz");
-    else if(ent->recommend>9)
-	  sprintf(recom,"3m%2d",ent->recommend);
-    else if(ent->recommend>0)
-	  sprintf(recom,"2m%2d",ent->recommend);
-    else if(ent->recommend <= -MAX_RECOMMENDS)
+    else if(ent->rating>9)
+	  sprintf(recom,"3m%2d",ent->rating);
+    else if(ent->rating>0)
+	  sprintf(recom,"2m%2d",ent->rating);
+    else if(ent->rating <= -MAX_RECOMMENDS)
 	  sprintf(recom,"0mXX");
-    else if(ent->recommend<-10)
-	  sprintf(recom,"0mX%d",-ent->recommend);
+    else if(ent->rating<-10)
+	  sprintf(recom,"0mX%d",-ent->rating);
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
@@ -2683,7 +2683,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' ||
+    if (bp->brdattr & BRD_NO_COMMENTS || fhdr->filename[0] == 'L' ||
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("©êºp, ¸T¤î±ÀÂË");
 	return FULLUPDATE;
@@ -2789,7 +2789,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     if (is_file_owner(fhdr, &cuser))
 #else
     // old format is one way counter, so let's relax.
-    if (fhdr->recommend == 0 && is_file_owner(fhdr, &cuser))
+    if (fhdr->rating == 0 && is_file_owner(fhdr, &cuser))
 #endif
     {
 	// owner recommend
@@ -3575,7 +3575,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(b_lines - 1, 0, "½T©w­n±ÀÂËÂk¹s[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-    fhdr->recommend = 0;
+    fhdr->rating = 0;
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     if (currbid > 0 && !(currmode & MODE_DIGEST)) {

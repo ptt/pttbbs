@@ -258,7 +258,7 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
 #define BRD_WARNEL		0x00000400	/* 已警告要廢除 */
 #define BRD_TOP			0x00000800	/* 熱門看板群組 */
-#define BRD_NORECOMMEND		0x00001000	/* 不可推薦 */
+#define BRD_NO_COMMENTS		0x00001000	/* 不可推薦 */
 #define BRD_ANGELANONYMOUS	0x00002000	/* 小天使可匿名 */
 #define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
@@ -293,8 +293,7 @@ typedef struct boardheader_t { /* 256 bytes */
 typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
     time4_t modified;		     /* last modified time */
-    char    pad;		     /* padding, not used */
-    char    recommend;               /* important level */
+    int16_t rating;                  /* was pad + recommend (important level) */
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];

@@ -698,7 +698,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	    vmsg("反向搜尋(!)只能在已進入搜尋時使用(例: 先用 / 搜尋)");
 	    return READ_REDRAW;
 	}
-    } else if (sr_mode & RS_RECOMMEND) {
+    } else if (sr_mode & RS_RATING) {
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
 		     "增加條件 推文數: " :
@@ -707,7 +707,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		      "搜尋推文數高於多少的文章: "),
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||
-	    (pred->recommend = atoi(keyword)) == 0)
+	    (pred->rating = atoi(keyword)) == 0)
 	    return READ_REDRAW;
     } else if (sr_mode & RS_MONEY) {
 	if (currstat == RMAIL ||
@@ -1202,7 +1202,7 @@ static int
 read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx, RS_RECOMMEND));
+    read_apply_mode(cx, ctx, select_read(cx, RS_RATING));
     return 0;
 }
 

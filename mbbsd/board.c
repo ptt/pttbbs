@@ -743,7 +743,7 @@ static const char *
 bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                char *buf, size_t sz)
 {
-    strlcpy(buf, ((cx->bp->brdattr & BRD_NORECOMMEND) || (cx->bp->brdattr & BRD_NOBOO))
+    strlcpy(buf, ((cx->bp->brdattr & BRD_NO_COMMENTS) || (cx->bp->brdattr & BRD_NOBOO))
                  ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
     return buf;
 }
@@ -755,7 +755,7 @@ bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
 {
     const boardheader_t *bp = cx->bp;
     int d = 0;
-    if (bp->brdattr & BRD_NORECOMMEND)
+    if (bp->brdattr & BRD_NO_COMMENTS)
         d = -1;
     else if ((bp->brdattr & BRD_NOFASTRECMD) && bp->fastrecommend_pause > 0)
         d = bp->fastrecommend_pause;
@@ -1006,7 +1006,7 @@ static int
 bcfg_set_norecommend(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    cx->bp->brdattr ^= BRD_NORECOMMEND;
+    cx->bp->brdattr ^= BRD_NO_COMMENTS;
     cx->touched = 1;
     ctx->reload = true;
     return 0;
@@ -1018,13 +1018,13 @@ bcfg_set_noboo(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
-    if (bp->brdattr & BRD_NORECOMMEND)
+    if (bp->brdattr & BRD_NO_COMMENTS)
         bp->brdattr |= BRD_NOBOO;
     bp->brdattr ^= BRD_NOBOO;
     cx->touched = 1;
     ctx->reload = true;
     if (!(bp->brdattr & BRD_NOBOO))
-        bp->brdattr &= ~BRD_NORECOMMEND;
+        bp->brdattr &= ~BRD_NO_COMMENTS;
     return 0;
 }
 #endif
@@ -1034,7 +1034,7 @@ bcfg_set_fastrecmd(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
-    bp->brdattr &= ~BRD_NORECOMMEND;
+    bp->brdattr &= ~BRD_NO_COMMENTS;
     bp->brdattr ^= BRD_NOFASTRECMD;
     cx->touched = 1;
     ctx->reload = true;
@@ -1315,7 +1315,7 @@ static const BConfigItem bconfig_items[] = {
     { 'e', "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
     { 'y', "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
-    { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
+    { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
 #endif

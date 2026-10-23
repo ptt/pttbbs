@@ -606,7 +606,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
          if(!fh[i-1].filename[0]) continue;
          if(i == pn+sn ||  strcmp(fh[i-1].filename, fh[i].filename))
 	 {
-                fh[i-1].recommend =0;
+                fh[i-1].rating = 0;
 		fh[i-1].filemode |= 1;
                 append_fileheader(dir1, &fh[i-1]);
 		strcpy(p1, fh[i-1].filename);

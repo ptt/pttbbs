@@ -35,7 +35,7 @@ static void c_format_preds(const void *buf, int n, char *out, int outlen) {
         const char *mstr = "kw";
         if (p[i].mode & RS_AUTHOR) mstr = "author";
         else if (p[i].mode & RS_TITLE) mstr = "title";
-        else if (p[i].mode & RS_RECOMMEND) mstr = "push";
+        else if (p[i].mode & RS_RATING) mstr = "rating";
         else if (p[i].mode & RS_MARK) mstr = "mark";
         else if (p[i].mode & RS_MONEY) mstr = "money";
         snprintf(item, sizeof(item), "%s%s=%s", (i > 0 ? " " : ""), mstr, p[i].keyword);
@@ -52,7 +52,7 @@ static int c_fhdr_size(void) {
 }
 
 enum {
-    FHDR_OFF_RECOMMEND = offsetof(fileheader_t, recommend),
+    FHDR_OFF_RATING    = offsetof(fileheader_t, rating),
     FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
     FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
 };
@@ -92,19 +92,19 @@ static int c_read_filename_at(const char *direct, int recno, char *out, int outl
     return 0;
 }
 
-static void c_fill_predicate(void *buf, int mode, const char *kw, int recommend, int money) {
+static void c_fill_predicate(void *buf, int mode, const char *kw, int rating, int money) {
     fileheader_predicate_t *p = (fileheader_predicate_t *)buf;
     memset(p, 0, sizeof(*p));
     p->mode = mode;
     if (kw)
         strlcpy(p->keyword, kw, sizeof(p->keyword));
-    p->recommend = recommend;
+    p->rating = rating;
     p->money = money;
 }
 
 static int c_append_fileheader(const char *direct, const char *filename,
                                const char *owner, const char *title,
-                               int filemode, int recommend, int money)
+                               int filemode, int rating, int money)
 {
     fileheader_t fh;
     memset(&fh, 0, sizeof(fh));
@@ -115,7 +115,7 @@ static int c_append_fileheader(const char *direct, const char *filename,
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.recommend = (int8_t)recommend;
+    fh.rating = (int16_t)rating;
     fh.multi.money = money;
     return append_fileheader(direct, &fh);
 }
@@ -819,14 +819,15 @@ const (
 	RS_KEYWORD         = int(C.RS_KEYWORD)
 	RS_NEWPOST         = int(C.RS_NEWPOST)
 	RS_MARK            = int(C.RS_MARK)
-	RS_RECOMMEND       = int(C.RS_RECOMMEND)
+	RS_RATING          = int(C.RS_RATING)
+	RS_RECOMMEND       = RS_RATING
 	RS_SOLVED          = int(C.RS_SOLVED)
 	RS_MONEY           = int(C.RS_MONEY)
 	RS_KEYWORD_EXCLUDE = int(C.RS_KEYWORD_EXCLUDE)
 	FILE_MARKED        = int(C.FILE_MARKED)
 	FILE_BOTTOM        = int(C.FILE_BOTTOM)
 
-	FHDR_OFF_RECOMMEND = int(C.FHDR_OFF_RECOMMEND)
+	FHDR_OFF_RATING    = int(C.FHDR_OFF_RATING)
 	FHDR_OFF_OWNER     = int(C.FHDR_OFF_OWNER)
 	FHDR_OFF_FILEMODE  = int(C.FHDR_OFF_FILEMODE)
 )
@@ -890,10 +891,17 @@ func ReadFilenameAt(directPath string, rec int32) (string, bool) {
 	return C.GoString(&buf[0]), true
 }
 
-func SetFileheaderRecommend(fh *[128]byte, recommend int) {
+func SetFileheaderRating(fh *[128]byte, rating int) {
 	if fh != nil {
-		fh[FHDR_OFF_RECOMMEND] = byte(recommend)
+		binary.NativeEndian.PutUint16(fh[FHDR_OFF_RATING:], uint16(int16(rating)))
 	}
+}
+
+func FileheaderRating(fh *[128]byte) int16 {
+	if fh == nil {
+		return 0
+	}
+	return int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_RATING:]))
 }
 
 func FileheaderFilemode(fh *[128]byte) int {
@@ -955,15 +963,15 @@ func LoadDirAIDs(directPath string) ([]uint64, error) {
 	return aids[:n], nil
 }
 
-func MakePredBytes(mode int, keyword string, recommend int, money int) []byte {
+func MakePredBytes(mode int, keyword string, rating int, money int) []byte {
 	buf := make([]byte, PredSize())
 	cKw := C.CString(keyword)
 	defer C.free(unsafe.Pointer(cKw))
-	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(recommend), C.int(money))
+	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(rating), C.int(money))
 	return buf
 }
 
-func AppendTestFileheader(directPath, filename, owner, title string, filemode int, recommend int, money int) error {
+func AppendTestFileheader(directPath, filename, owner, title string, filemode int, rating int, money int) error {
 	cDir := C.CString(directPath)
 	cFn := C.CString(filename)
 	cOwn := C.CString(owner)
@@ -974,7 +982,7 @@ func AppendTestFileheader(directPath, filename, owner, title string, filemode in
 		C.free(unsafe.Pointer(cOwn))
 		C.free(unsafe.Pointer(cTit))
 	}()
-	rc := C.c_append_fileheader(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(recommend), C.int(money))
+	rc := C.c_append_fileheader(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(rating), C.int(money))
 	if rc < 0 {
 		return fmt.Errorf("append_fileheader failed on %s", directPath)
 	}

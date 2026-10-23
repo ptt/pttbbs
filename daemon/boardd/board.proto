@@ -67,7 +67,7 @@ message Post {
     uint32 index = 1;
     string filename = 2;
     string raw_date = 3;
-    int32 num_recommends = 4;
+    int32 num_ratings = 4;
     int32 filemode = 5;
     string owner = 6;
     string title = 7;
@@ -111,7 +111,7 @@ message SearchFilter {
         TYPE_EXACT_TITLE = 1;
         TYPE_TITLE = 2;
         TYPE_AUTHOR = 3;
-        TYPE_RECOMMEND = 4;
+        TYPE_RATING = 4;
         TYPE_MONEY = 5;
         TYPE_MARK = 6;
         TYPE_SOLVED = 7;

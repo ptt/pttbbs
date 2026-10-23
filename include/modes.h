@@ -152,7 +152,7 @@
 #define RS_AUTHOR       0x40    /* search author's article */
 #define RS_NEWPOST	0x80	/* search new posts */
 #define RS_KEYWORD_EXCLUDE	0x100	/* exclude keyword */
-#define RS_RECOMMEND	0x200	/* search by recommends */
+#define RS_RATING	0x200	/* search by ratings */
 #define RS_MONEY	0x400	/* search by money */
 #define RS_SOLVED	0x800	/* search by 's' mark */
 

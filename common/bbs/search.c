@@ -32,10 +32,10 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	return mbs_strcasestr(fh->title, keyword) == NULL;
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
-    else if (sr_mode & RS_RECOMMEND)
-	return pred->recommend > 0 ?
-	    (fh->recommend >= pred->recommend) :
-	    (fh->recommend <= pred->recommend);
+    else if (sr_mode & RS_RATING)
+	return pred->rating > 0 ?
+	    (fh->rating >= pred->rating) :
+	    (fh->rating <= pred->rating);
     else if (sr_mode & RS_MONEY) {
 	if (fh->filemode & INVALIDMONEY_MODES ||
 	    fh->multi.money > VALID_POST_MONEY) {

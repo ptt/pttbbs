@@ -139,7 +139,7 @@ BRD_NOCREDIT           = 0x00000100      # 發文無獎勵看板
 BRD_VOTEBOARD          = 0x00000200      # 連署機看板
 BRD_WARNEL             = 0x00000400      # 已警告要廢除
 BRD_TOP                = 0x00000800      # 熱門看板群組
-BRD_NORECOMMEND        = 0x00001000      # 不可推薦
+BRD_NO_COMMENTS        = 0x00001000      # 不可推薦
 BRD_BLOG               = 0x00002000      # (已停用) 部落格
 BRD_BMCOUNT            = 0x00004000      # 板主設定列入記錄
 BRD_SYMBOLIC           = 0x00008000      # symbolic link to board
@@ -164,15 +164,14 @@ DISP_TTLEN = 46
 FILEHEADER_FMT = (
         ("filename", "%ds" % FNLEN),
         ("modified", "I"),
-        ("pad", "B"),
-        ("recommend", "b"),
+        ("rating", "h"),
         ("owner", "%ds" % (IDLEN + 2)),
         ("date", "6s"),
         ("title", "%ds" % (TTLEN + 1)),
         ("pad2", "B"),
         ("multi", "i"),
-        ("filemode", "B"),
-        ("pad3", "3s"))
+        ("filemode", "H"),
+        ("pad3", "2s"))
 
 FILEHEADER_SIZE = 128
 

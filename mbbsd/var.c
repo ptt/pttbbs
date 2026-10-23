@@ -84,7 +84,7 @@ const char * const str_permboard[] = {
     "連署專用看板",		/* BRD_VOTEBOARD */
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
-    "不可推薦",                 /* BRD_NORECOMMEND */
+    "不可推薦",                 /* BRD_NO_COMMENTS */
     "小天使可匿名",		/* BRD_ANGELANONYMOUS */
     "板主設定列入記錄",		/* BRD_BMCOUNT */
     "連結看板",                 /* BRD_SYMBOLIC */

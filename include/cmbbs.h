@@ -193,7 +193,7 @@ int modify_boardheader(const boardheader_t *bh, int bid);
 typedef struct fileheader_predicate_t {
     int32_t mode;
     char keyword[TTLEN + 1];
-    int32_t recommend;
+    int32_t rating;
     int32_t money;
 } fileheader_predicate_t;
 
@@ -228,7 +228,7 @@ int search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu);
 enum {
     SEARCH_SRC_UNKNOWN     = 0,
     SEARCH_SRC_MBBSD_HASH  = 1, /* mbbsd '#' command (user / app / bot AID lookup) */
-    SEARCH_SRC_MBBSD_SR    = 2, /* mbbsd select_read (title, author, mark, push search) */
+    SEARCH_SRC_MBBSD_SR    = 2, /* mbbsd select_read (title, author, mark, rating search) */
     SEARCH_SRC_MBBSD_LUA   = 3, /* mbbsd bbslua banner / dynamic template */
     SEARCH_SRC_BOARDD_WEB  = 4, /* web / boardd query */
     SEARCH_SRC_EXTERNAL    = 5, /* external maintenance tools / scripts */

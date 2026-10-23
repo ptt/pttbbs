@@ -44,6 +44,8 @@ int main()
     ENSURE(time8_t, 8);
     ENSURE(userec_t, 512);
     ENSURE(fileheader_t, 128);
+    assert(offsetof(fileheader_t, rating) == 32);
+    assert(offsetof(fileheader_t, owner) == 34);
     ENSURE(boardheader_t, 256);
     ENSURE(chicken_t, 128);
     ENSURE(fav_board_t, 12);
