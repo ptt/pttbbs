@@ -600,8 +600,7 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
 	return;
 
 #ifdef CHAT_MSG_LOGFILE
-    if (room && room->name && 
-	strcmp(room->name, MAIN_NAME) == 0)
+    if (room && strcmp(room->name, MAIN_NAME) == 0)
     {
 	time4_t now = time(0);
 	const char *dtstr = Cdate_mdHM(&now);
