@@ -36,8 +36,6 @@
 #define FN_MUTED        "banned"        // 禁言/水桶名單
 #define FN_MUTED_HISTORY "banned.history"  // 禁言歷史記錄
 #define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
-#define FN_MUTE_FOLLOW_BOARDS ".mute_follow_boards"  // 連動禁言名單
-#define BAKUMAN_FLAG_SHARED 0x1                      // 連動禁言旗標 (shared mute)
 #define FN_CANVOTE      "can_vote"
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
