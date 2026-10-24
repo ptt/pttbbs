@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <grp.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>
@@ -2629,6 +2630,23 @@ tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 ///////////////////////////////////////////////////////////////////////
 // Main
 
+// Gives up root for good, and exits if that fails so logind never goes
+// on running as root by accident. Does nothing if not started as root.
+static void
+drop_privileges(void)
+{
+    if (geteuid() != 0)
+        return;
+
+    if (setgroups(0, NULL) < 0 ||
+        setgid(BBSGID) < 0 ||
+        setuid(BBSUID) < 0)
+    {
+        perror(LOG_PREFIX "cannot drop root privileges");
+        exit(1);
+    }
+}
+
 static int
 logattempt_daemon()
 {
@@ -2658,6 +2676,7 @@ logattempt_daemon()
     }
 
     // child here.
+    drop_privileges();
     g_logattempt_pipe = pipe_fds[0];
     close(pipe_fds[1]);
     setproctitle(MY_SVC_NAME " [logattempts]");
@@ -3076,7 +3095,6 @@ main(int argc, char *argv[], char *envp[])
         return 5;
     }
 
-    reload_data();
     evb = event_init();
     event_base_priority_init(evb, MY_EVENT_PRIORITY_NUMBERS);
 
@@ -3127,8 +3145,11 @@ main(int argc, char *argv[], char *envp[])
     }
 
     /* Give up root privileges: no way back from here */
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
+
+    // Load the files staff can edit (banip.conf, screens) only now, so a
+    // parsing bug cannot run as root.
+    reload_data();
 
     // create tunnel
     fprintf(stderr, LOG_PREFIX "creating tunnel: %s...", tunnel_path);
