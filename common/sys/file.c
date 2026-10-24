@@ -395,9 +395,22 @@ file_append_len(const char *file, const char *buf, int len)
     if (len == 0)
         return 0;
 
-    int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
+    autoclose int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
     if (fd < 0)
         return -1;
+
+    // This will be very slow. STORAGE_CONV should be used only for testing.
+    autofree char *abuf = NULL;
+    if (NEED_STORAGE_CONV) {
+        size_t sz = MB_CONVERT_SIZE(len + 1);
+        abuf = malloc(sz);
+        if (!abuf) {
+            return -1;
+        }
+        mb_to_storage(buf, abuf, sz);
+        buf = abuf;
+        len = strlen(buf);
+    }
 
     int res;
     /* Linux / POSIX guarantees O_APPEND write <= 4KB (PIPE_BUF) is atomic without flock */
@@ -409,7 +422,6 @@ file_append_len(const char *file, const char *buf, int len)
         flock(fd, LOCK_UN);
     }
 
-    close(fd);
     return (res == len) ? 0 : -1;
 }
 
