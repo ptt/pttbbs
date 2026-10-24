@@ -2303,11 +2303,33 @@ static void replace_link_by_target(boardstat_t *board)
     board->myattr &= ~NBRD_SYMBOLIC;
 }
 
+/* Whether moving bid into group gid would make a gid cycle: gid is bid itself
+ * or inside it. Only a group can have gid inside it. A plain board can still
+ * be gid itself when it is bid 1, the class root list, as initbbs sets it up.
+ * Every group is inside the class root, so the walk stops there even if the
+ * root's own gid lists it in a group, and a root group can never be moved. */
+static int
+gid_is_within(int gid, int bid)
+{
+    int depth;
+
+    if (!IS_GROUP(getbcache(bid)))
+        return gid == bid;
+    for (depth = 0; depth < MAX_BOARD && 0 < gid && gid <= MAX_BOARD; depth++) {
+        if (gid == bid)
+            return 1;
+        if (gid == 1)
+            break;
+        gid = getbcache(gid)->gid;
+    }
+    return 0;
+}
+
 static int
 paste_taged_brds(int gid)
 {
     fav_t *fav;
-    int  bid, tmp;
+    int  bid, tmp, looped = 0;
 
     if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || GROUPOP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
@@ -2321,6 +2343,10 @@ paste_taged_brds(int gid)
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, FALSE);
 	    if (bh->gid != gid) {
+		if (gid_is_within(gid, bid)) {
+		    looped++;
+		    continue;
+		}
 		bh->gid = gid;
 		assert(0<=bid-1 && bid-1<MAX_BOARD);
 		substitute_record(FN_BOARD, bh,
@@ -2330,6 +2356,8 @@ paste_taged_brds(int gid)
 	    }
 	}
     sort_bcache();
+    if (looped)
+	vmsg("群組不能搬進自己底下，未搬移。");
     return 1;
 }
 
