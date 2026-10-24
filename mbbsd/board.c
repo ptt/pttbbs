@@ -2787,7 +2787,12 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
     boardstat_t *ptr = &nbrd[num];
     move(1, 1);
     clrtobot();
-    m_mod_board(B_BH(ptr)->brdname);
+    // m_mod_board() looks the board up by name, and several links can share
+    // a name (see make_board_link()), so the name may lead to another link.
+    if (getbnum(B_BH(ptr)->brdname) == ptr->bid)
+        m_mod_board(B_BH(ptr)->brdname);
+    else
+        vmsg("有其他同名的看板連結，請改用 D 刪除此連結。");
     brdnum = -1;
     ctx->reload = true;
     return 0;
