@@ -321,7 +321,8 @@ psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
     }
     buf[0] = '\0';
     for (int i = 0; i < item->n_keys; i++) {
-        if (i > 0 && isupper(item->keys[0]) && item->keys[i] == tolower(item->keys[0]))
+        if (i > 0 && isascii(item->keys[0]) && isupper(item->keys[0]) &&
+            item->keys[i] == tolower(item->keys[0]))
             continue;
         if (i > 0 && item->keys[i] == 'E' && item->keys[i - 1] == 'e')
             continue;
