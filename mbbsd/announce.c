@@ -177,7 +177,9 @@ a_loadname(menu_t * pm)
     char            buf[PATHLEN];
     int             len;
 
-    int rows = (t_columns < 70) ? (t_lines - 4) / 2 : (t_lines - 4);
+    // Must match the rows PSB shows in a_menu_rec(): t_lines minus the
+    // 3 header lines and 1 footer line.
+    int rows = t_lines - 4;
     if (rows <= 0)
 	rows = 1;
     if (rows != pm->header_size) {
