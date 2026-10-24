@@ -750,7 +750,6 @@ FindAngel(void){
 static void
 GotoNewHand(){
     char old_board[IDLEN + 1] = "";
-    int canRead = 1;
 
     if (currutmp && currutmp->mode == EDITING)
 	return;
@@ -762,12 +761,12 @@ GotoNewHand(){
     }
 
     if (enter_board(BN_NEWBIE) == 0)
-	canRead = 1;
-
-    if (canRead)
 	Read();
+    else
+	vmsg("無法進入新手板。");
 
-    if (canRead && old_board[0])
+    // Go back even if BN_NEWBIE could not be entered: currboard was cleared.
+    if (old_board[0])
 	enter_board(old_board);
 }
 #endif
