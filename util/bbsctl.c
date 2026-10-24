@@ -466,7 +466,7 @@ int bbstest(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
 #ifdef __FreeBSD__
-    char    buf[256], cmd[256];
+    char    buf[256];
     FILE    *fp;
     setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
     sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");
@@ -477,7 +477,7 @@ int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     while( fgets(buf, sizeof(buf), fp) != NULL ){
 	if( buf[0] == 't' || buf[0] == 'm' || buf[0] == 's' ){
 	    buf[strlen(buf) - 1] = 0;
-	    sprintf(cmd, IPCRM " -%c %s\n", buf[0], &buf[1]);
+	    AUTO_STR(cmd, IPCRM " -%c %s\n", buf[0], &buf[1]);
 	    system(cmd);
 	}
     }
@@ -485,7 +485,7 @@ int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     system(IPCS);
     return 0;
 #elif defined(__linux__)
-    char    buf[256], cmd[256], *type = "ms";
+    char    buf[256], *type = "ms";
     FILE    *fp;
     setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
     for( ;*type != '\0';type++ ){
@@ -497,7 +497,7 @@ int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
         while( fgets(buf, sizeof(buf), fp) != NULL ){
             if( isdigit(buf[0]) ){
                 buf[strlen(buf) - 1] = 0;
-                sprintf(cmd, IPCRM " -%c %s\n", *type, buf);
+                AUTO_STR(cmd, IPCRM " -%c %s\n", *type, buf);
                 system(cmd);
             }
         }

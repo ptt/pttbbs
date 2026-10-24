@@ -13,7 +13,6 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     // do not use: GQV
     const char *alphabet = "ABCDEFHIJKLMNOPRSTUWXYZ";
     int calphas = strlen(alphabet);
-    char cmd[PATHLEN], opts[PATHLEN];
     int i, coptSpace, coptFont;
     static const char *optSpace[] = {
 	"-S", "-s", "-k", "-W",
@@ -41,13 +40,13 @@ gen_captcha(char *buf, int szbuf, char *fpath)
     coptSpace = coptFont = 0;
     while (optSpace[coptSpace]) coptSpace++;
     while (optFont[coptFont]) coptFont++;
-    SNPRINTF(opts, "%s -f %s",
+    AUTO_STR(opts, "%s -f %s",
 	    optSpace[arc4random_uniform(coptSpace)],
 	    optFont [arc4random_uniform(coptFont) ]);
 
     // create file
     snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);
-    SNPRINTF(cmd, FIGLET_PATH
+    AUTO_STR(cmd, FIGLET_PATH
              " %s %s >%s 2>/dev/null || rm %s",
              opts, buf, fpath, fpath);
 

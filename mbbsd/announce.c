@@ -831,13 +831,13 @@ a_editsign(const menu_t * pm)
 static void
 a_showname(const menu_t * pm)
 {
-    char            buf[PATHLEN], target[PATHLEN];
+    char            target[PATHLEN];
     int             len;
     int             i;
     int             sym;
 
     move(b_lines - 1, 0);
-    SNPRINTF(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+    AUTO_STR(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     if (dashl(buf)) {
 	prints("¦¹ symbolic link ¦WºÙ¬° %s\n",
 	       pm->header[pm->now - pm->page].filename);
@@ -1135,11 +1135,10 @@ static int
 announce_cmd_copy(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
-    char fname[PATHLEN];
     announce_sync_pos(ctx);
     if (!isvisible_man(cx->me))
         return 0;
-    SNPRINTF(fname, "%s/%s", cx->path,
+    AUTO_STR(fname, "%s/%s", cx->path,
              cx->me->header[cx->me->now - cx->me->page].filename);
     if (!cx->me->level && !HasUserPerm(PERM_SYSOP) &&
         (cx->me->bid == 0 || !is_BM_cache(cx->me->bid)) && dashd(fname))
@@ -1276,8 +1275,7 @@ announce_cmd_edit(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    char fname[PATHLEN];
-    SNPRINTF(fname, "%s/%s", cx->path, cx->me->header[cx->me->now - cx->me->page].filename);
+    AUTO_STR(fname, "%s/%s", cx->path, cx->me->header[cx->me->now - cx->me->page].filename);
     if (dashf(fname) && cx->me->level >= MANAGER) {
         int edflags = 0;
         *quote_file = 0;

@@ -494,11 +494,8 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
             break;
         if (c == 'm')
         {
-            char subj[STRLEN];
-            if (is_chat)
-                SNPRINTF(subj, "會議記錄");
-            else
-                SNPRINTF(subj, "對話記錄 (%s)", ctx->remote_id);
+            AUTO_STR(subj, is_chat ? "%s" : "對話記錄 (%s)",
+                     is_chat ? "會議記錄" : ctx->remote_id);
 
             if (mail_send_file(cuser.userid,  subj,  fpath,  "[備.忘.錄]") < 0)
                 vmsg("錯誤: 備忘錄儲存失敗。");

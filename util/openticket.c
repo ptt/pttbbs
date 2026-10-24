@@ -110,12 +110,11 @@ static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX
 
 static bignum_t load_records(const char *direct, bignum_t ticket[MAX_ITEM])
 {
-    char buf[PATHLEN];
     FILE *fp;
     bignum_t total = 0;
     int i;
 
-    snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
+    AUTO_STR(buf, "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
         return 0;
     for (i = 0; i < MAX_ITEM && fscanf(fp, "%lld ", &ticket[i]) == 1; i++)
@@ -196,8 +195,7 @@ int main(int argc, char **argv)
                 int oldm = moneyof(bmuid);
                 deumoney(bmuid, forBM);
                 int newm = moneyof(bmuid);
-                char reason[256];
-                snprintf(reason, sizeof(reason), "%s 彩金抽成", brdname);
+                AUTO_STR(reason, "%s 彩金抽成", brdname);
                 char fn_pay[PATHLEN];
                 sethomefile(fn_pay, bm_userid, FN_RECENTPAY);
                 log_payment(fn_pay, -forBM, oldm, newm, reason, now);
@@ -222,8 +220,7 @@ int main(int argc, char **argv)
                 int oldm = moneyof(bmuid);
                 deumoney(bmuid, -fee);
                 int newm = moneyof(bmuid);
-                char reason[256];
-                snprintf(reason, sizeof(reason), "%s 樂透退費手續費", brdname);
+                AUTO_STR(reason, "%s 樂透退費手續費", brdname);
                 char fn_pay[PATHLEN];
                 sethomefile(fn_pay, bm_userid, FN_RECENTPAY);
                 log_payment(fn_pay, fee, oldm, newm, reason, now);
@@ -309,13 +306,13 @@ int main(int argc, char **argv)
             int oldm = moneyof(uid);
             deumoney(uid, money * num);
             int newm = moneyof(uid);
-            char reason[256];
             const char *body;
+            AUTO_STR(reason, "%s (%s x %d)",
+                     win_idx == 98 ? "樂透彩退費" : "彩券中獎",
+                     betname[mybet], num);
             if (win_idx == 98) {
-                snprintf(reason, sizeof(reason), "樂透彩退費 (%s x %d)", betname[mybet], num);
                 body = "樂透取消，投注金額已全額退回。";
             } else {
-                snprintf(reason, sizeof(reason), "彩券中獎 (%s x %d)", betname[mybet], num);
                 body = "恭喜中獎！";
             }
             char fn_pay[PATHLEN];
@@ -333,16 +330,12 @@ int main(int argc, char **argv)
     }
 
     /* Post announcements */
-    char rec_title[PATHLEN];
-    if (win_idx != 98) {
-        snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透開獎", brdname);
-        snprintf(rec_title, sizeof(rec_title), "%s 樂透開獎", brdname);
-    } else {
-        snprintf(buf, sizeof(buf), TN_ANNOUNCE " %s 樂透取消", brdname);
-        snprintf(rec_title, sizeof(rec_title), "%s 樂透取消", brdname);
-    }
+    AUTO_STR(post_title, TN_ANNOUNCE " %s %s", brdname,
+             win_idx != 98 ? "樂透開獎" : "樂透取消");
+    AUTO_STR(rec_title, "%s %s", brdname,
+             win_idx != 98 ? "樂透開獎" : "樂透取消");
 
-    post_result_file(brdname, buf, outcome, "[彩券]");
+    post_result_file(brdname, post_title, outcome, "[彩券]");
     post_result_file("Record", rec_title, outcome, "[馬路探子]");
     post_result_file(BN_SECURITY, rec_title, outcome, "[馬路探子]");
 

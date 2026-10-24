@@ -1492,35 +1492,31 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
         char hpath[PATHLEN];
         sethomepath(hpath, cuser.userid);
 #ifdef MUTT_PATH
-        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
                  "-czf /tmp/home.%s.tgz %s; "
                  MUTT_PATH " -s 'home.%s.tgz' "
                  "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
                  "rm /tmp/home.%s.tgz",
                  cuser.userid, hpath,
                  cuser.userid, cuser.userid, address, cuser.userid);
-        system(fname);
+        system(cmd);
         return 0;
 #else
-        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
                  "-czf - %s | "
                  "/usr/bin/uuencode %s.tgz > %s",
                  hpath, cuser.userid, direct);
-        system(fname);
+        system(cmd);
         STRLCPY(fname, direct);
 #endif
     } else if (mode == 'U') {
-	char            tmp_buf[PATHLEN];
-
 	SNPRINTF(fname, "/tmp/bbs.uu%05d", (int)currpid);
-	SNPRINTF(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
+	AUTO_STR(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
 		 direct, fh->filename, (int)currpid, fname);
 	system(tmp_buf);
     } else if (mode == 'F') {
-	char            tmp_buf[PATHLEN];
-
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
-	SNPRINTF(tmp_buf, "%s/%s", direct, fh->filename);
+	AUTO_STR(tmp_buf, "%s/%s", direct, fh->filename);
         if (!dashf(tmp_buf)) {
             unlink(fname);
             return -1;

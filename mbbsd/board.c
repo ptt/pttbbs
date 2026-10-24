@@ -3011,7 +3011,7 @@ fav_cmd_edit_title(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_backup(cmd_ctx_t *ctx) {
-    char c, fname[80], buf[PATHLEN];
+    char c, fname[80];
     brdnum = -1;
     ctx->reload = true;
     if (get_current_fav() != get_fav_root()) {
@@ -3022,7 +3022,7 @@ fav_cmd_backup(cmd_ctx_t *ctx) {
     if (!c || vans("½T©w¶Ü [y/N] ") != 'y')
         return 0;
     setuserfile(fname, FAV);
-    sprintf(buf, "%s.bak", fname);
+    AUTO_STR(buf, "%s.bak", fname);
     if (c == '2') {
         fav_save();
         Copy(fname, buf);

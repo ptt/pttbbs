@@ -143,12 +143,9 @@ int copy_file_to_file(const char *src, const char *dst)
 
 int copy_file_to_dir(const char *src, const char *dst)
 {
-    char buf[PATH_MAX];
-    char *slash;
-    if ((slash = rindex(src, '/')) == NULL)
-	SNPRINTF(buf, "%s/%s", dst, src);
-    else
-	SNPRINTF(buf, "%s/%s", dst, slash);
+    const char *slash = strrchr(src, '/');
+    const char *fname = slash ? slash + 1 : src;
+    AUTO_STR(buf, "%s/%s", dst, fname);
     return copy_file_to_file(src, buf);
 }
 
@@ -157,7 +154,6 @@ int copy_dir_to_dir(const char *src, const char *dst)
     DIR *dir;
     struct dirent *entry;
     struct stat st;
-    char buf[PATH_MAX], buf2[PATH_MAX];
 
     if (stat(dst, &st) < 0)
 	if (Mkdir(dst) < 0)
@@ -170,8 +166,8 @@ int copy_dir_to_dir(const char *src, const char *dst)
 	if (strcmp(entry->d_name, ".") == 0 ||
 	    strcmp(entry->d_name, "..") == 0)
 	    continue;
-	SNPRINTF(buf, "%s/%s", src, entry->d_name);
-	SNPRINTF(buf2, "%s/%s", dst, entry->d_name);
+	AUTO_STR(buf, "%s/%s", src, entry->d_name);
+	AUTO_STR(buf2, "%s/%s", dst, entry->d_name);
 	if (stat(buf, &st) < 0)
 	    continue;
 	if (S_ISDIR(st.st_mode))

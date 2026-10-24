@@ -408,7 +408,6 @@ BanIpList*
 cached_banip_list(const char *basefile, const char *cachefile) {
     BanIpList *blist = NULL;
     IPv4List *list = NULL;
-    char tmpfn[PATHLEN];
     FILE *fp;
     time4_t m_base = dasht(basefile);
 
@@ -457,7 +456,7 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     if (!list)
         return NULL;
 
-    SNPRINTF(tmpfn, "%s.%d", cachefile, getpid());
+    AUTO_STR(tmpfn, "%s.%d", cachefile, getpid());
     fp = fopen(tmpfn, "wb");
     if (fp) {
         fwrite(&list->sz, sizeof(size_t), 1, fp);

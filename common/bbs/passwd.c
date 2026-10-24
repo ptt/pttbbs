@@ -290,7 +290,7 @@ int
 purge_user_account(int unum, const char *userid, const char *action_tag)
 {
     userec_t u = {0};
-    char src[PATH_MAX], dst[PATH_MAX];
+    char src[PATH_MAX];
     const char *uid_shm;
     int ret;
 
@@ -325,8 +325,8 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
 
     // Archive or remove user home directory
     sethomepath(src, userid);
-    SNPRINTF(dst, "tmp/%s", userid);
     if (dashd(src)) {
+        AUTO_STR(dst, "tmp/%s", userid);
         if (Rename(src, dst) != 0) {
             RmTree(src);
         }

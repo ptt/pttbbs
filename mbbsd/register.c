@@ -929,10 +929,10 @@ new_register(void)
 
     // 確實的把舊資料清掉
     {
-        char home[PATHLEN], tmp[PATHLEN];
+        char home[PATHLEN];
         syncnow();
         sethomepath(home, newuser.userid);
-        sprintf(tmp, "tmp/%s.%u", newuser.userid, (unsigned int)now);
+        AUTO_STR(tmp, "tmp/%s.%u", newuser.userid, (unsigned int)now);
         if (dashd(home) && Rename(home, tmp) != 0) {
             // failed to active account.
             pwcuBitDisableLevel(PERM_BASIC);
@@ -945,8 +945,7 @@ new_register(void)
 
 #ifdef USE_REMOVEBM_ON_NEWREG
     {
-        char buf[PATHLEN];
-        SNPRINTF(buf, BBSHOME "/bin/removebm '%s' >>"
+        AUTO_STR(buf, BBSHOME "/bin/removebm '%s' >>"
                  BBSHOME "/log/removebm.log 2>&1",
                  newuser.userid);
         system(buf);
@@ -1838,13 +1837,12 @@ regform_log2board(const RegformEntry *pre GCC_UNUSED, char accepted GCC_UNUSED,
                   const char *reason GCC_UNUSED, int priority GCC_UNUSED)
 {
 #ifdef BN_ID_RECORD
-    char title[STRLEN];
     char *title2 = NULL;
 
     // The message may contain ANSI escape sequences (regform_concat_reasons)
     char msg[ANSILINELEN * REJECT_REASONS + REGFORM_LOCALIZED_ENTRIES_BUFSIZE];
 
-    SNPRINTF(title, "[審核] %s: %s (%s: %s)",
+    AUTO_STR(title, "[審核] %s: %s (%s: %s)",
 	    accepted ? "○通過":"╳退回", pre->u.userid,
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);

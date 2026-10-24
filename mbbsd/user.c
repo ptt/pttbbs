@@ -728,17 +728,15 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    pre_confirmed = 1;
 
 	    // Log change for security reasons.
-	    char title[TTLEN], buf[STRLEN + EMAILSZ*2 + sizeof(reason)];
-	    SNPRINTF(title, "%s 的聯絡信箱變更通知 (by %s)",
+	    AUTO_STR(title, "%s 的聯絡信箱變更通知 (by %s)",
 		     orig_uid, cuser.userid);
-	    SNPRINTF(buf, "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
+	    AUTO_STR(buf, "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
 		     cuser.userid, orig_uid, x.email, email, reason);
 	    post_msg(BN_SECURITY, title, buf, "[系統安全局]");
 
 	    // Notify user
-	    STRLCPY(title, "聯絡信箱變更通知");
-	    SNPRINTF(buf, "您的聯絡信箱已變更為 %s\n", email);
-	    mail_send_text(orig_uid,  title,  buf,  cuser.userid);
+	    AUTO_STR(user_buf, "您的聯絡信箱已變更為 %s\n", email);
+	    mail_send_text(orig_uid,  "聯絡信箱變更通知",  user_buf,  cuser.userid);
             log_user_security(x.userid, "%s (ContactEmail) %s -> %s\n",
                               "[Admin]", x.email, email);
 	    STRLCPY(x.email, email);
@@ -954,7 +952,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (adminmode)
 	{
             FILE *fp;
-	    char  witness[3][IDLEN+1], title[100];
+	    char  witness[3][IDLEN+1];
 	    int uid;
 	    for (i = 0; i < 3; i++) {
 		if (!getdata(y + i, 0, "請輸入協助證明之使用者：",
@@ -989,7 +987,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
 	    pre_confirmed = 1;
 
-	    sprintf(title, "%s 的密碼重設通知 (by %s)",x.userid, cuser.userid);
+	    AUTO_STR(title, "%s 的密碼重設通知 (by %s)", x.userid, cuser.userid);
             unlink("etc/updatepwd.log");
 	    if(! (fp = fopen("etc/updatepwd.log", "w")))
 	    {
@@ -1047,12 +1045,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    }
 	    pre_confirmed = 1;
+	    AUTO_STR(msg, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+			  "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
+			  x.userid, cuser.userid, reason,
+			  x.realname, x.address, x.justify, x.email);
 	    post_msg(BN_SECURITY,
 		     TEMPFORMAT(STRLEN, "刪除ID: %s (站長: %s)", x.userid, cuser.userid),
-		     TEMPFORMAT(1024, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
-			     "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
-			     x.userid, cuser.userid, reason,
-			     x.realname, x.address, x.justify, x.email),
+		     msg,
 		     "[系統安全局]");
 	}
 	break;
@@ -1153,8 +1152,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	update_emaildb = true;
 
 	// log change for security reasons.
-	char title[STRLEN];
-	SNPRINTF(title, "變更ID: %s -> %s (站長: %s)",
+	AUTO_STR(title, "變更ID: %s -> %s (站長: %s)",
 		 orig_uid, x.userid, cuser.userid);
 	post_msg(BN_SECURITY, title, title, "[系統安全局]");
     }

@@ -62,12 +62,11 @@ void del_file(char *userid)
 
 void mv_user_home(char *userid)
 {
-    char command[PATHLEN*2];
     char user_home[PATHLEN];
 
     printf("move user %s to tmp\n", userid);
     sethomepath(user_home, userid);
-    sprintf(command, "cp -R %s tmp", user_home);
+    AUTO_STR(command, "cp -R %s tmp", user_home);
     if (!system(command))
     {				//Copy success
 
@@ -79,7 +78,7 @@ int main(void)
 {
     struct dirent *de;
     DIR *dirp;
-    char *userid, buf[200], ch;
+    char *userid, ch;
     int count = 0;
 /* visit all users  */
 
@@ -93,10 +92,10 @@ int main(void)
 	if(ch > 'Z' && ch < 'a')
 	    continue;
 	printf("Cleaning %c\n", ch);
-	sprintf(buf, BBSHOME "/home/%c", ch);
-	if (!(dirp = opendir(buf)))
+	AUTO_STR(homedir, BBSHOME "/home/%c", ch);
+	if (!(dirp = opendir(homedir)))
 	{
-	    printf("unable to open %s\n", buf);
+	    printf("unable to open %s\n", homedir);
 	    continue;
 	}
 

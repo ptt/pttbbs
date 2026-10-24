@@ -236,7 +236,6 @@ int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 int start_services()
 {
     int err = 0;
-    char buf[PATHLEN];
     const char *services[] = {
         "utmp", "friend", "search", "stat",
     };
@@ -244,15 +243,15 @@ int start_services()
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {
         const char *name = services[i];
         char rchar = ' ';
-        SNPRINTF(buf, "bin/%s.svc", name);
-        if (!dashf(buf)) {
+        AUTO_STR(path, "bin/%s.svc", name);
+        if (!dashf(path)) {
             rchar = '-';
             err++;
         } else {
-            STRLCAT(buf, " >/dev/null");
+            AUTO_STR(cmd, "%s >/dev/null", path);
             // All svc should return 0 on success, 1 if a previous service is
             // still serving.
-            int r = system(buf);
+            int r = system(cmd);
             if (r < 0 || !WIFEXITED(r)) {
                 rchar = '!';
                 err++;

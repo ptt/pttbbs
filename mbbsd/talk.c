@@ -1198,8 +1198,7 @@ userlist_broadcast(void)
                 return;
             }
 
-            char msgbuf[PATHLEN];
-            SNPRINTF(msgbuf, "[¼s¼½]%s", genbuf);
+            AUTO_STR(msgbuf, "[¼s¼½]%s", genbuf);
             for (int uslot = 0; uslot < USHM_SIZE; ++uslot) {
                 userinfo_t *uentp = &SHM->uinfo[uslot];
                 if (uentp->pid && kill(uentp->pid, 0) != -1) {

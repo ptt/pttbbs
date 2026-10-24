@@ -881,8 +881,6 @@ m_mod_board(char *bname)
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
-	    char buf[64];
-
 	    if (strcmp(bh.brdname, newbh.brdname)) {
 		char            src[60], tar[60];
 
@@ -902,11 +900,11 @@ m_mod_board(char *bname)
             sort_bcache();
 	    log_usies("SetBoard", newbh.brdname);
 
-	    SNPRINTF(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    SNPRINTF(genbuf, "板名: %s => %s\n"
+	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    AUTO_STR(msg, "板名: %s => %s\n"
 		    "板主: %s => %s\n",
 		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
-	    post_msg(BN_SECURITY, buf, genbuf, "[系統安全局]");
+	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	}
     }
     return 0;

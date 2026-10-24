@@ -607,7 +607,7 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 int fav_save(void)
 {
     FILE *fwp;
-    char buf[PATHLEN], buf2[PATHLEN];
+    char buf2[PATHLEN];
     unsigned short version = FAV_VERSION;
     fav_t *fp = get_fav_root();
     if (fp == NULL)
@@ -618,7 +618,7 @@ int fav_save(void)
 	return 0;
 
     setuserfile(buf2, FAV);
-    SNPRINTF(buf, "%s.tmp.%x",buf2, getpid());
+    AUTO_STR(buf, "%s.tmp.%x", buf2, getpid());
     fwp = fopen(buf, "w");
     if(fwp == NULL)
 	return -1;
