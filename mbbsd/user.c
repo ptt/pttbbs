@@ -210,7 +210,7 @@ user_display(const userec_t * u, int adminmode)
     }
 
     /* Thor: 想看看這個 user 是那些板的板主 */
-    if (u->userlevel >= PERM_BM) {
+    if (u->userlevel & PERM_BM) {
 	int             i;
 	boardheader_t  *bhdr;
 

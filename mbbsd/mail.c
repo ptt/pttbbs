@@ -2027,7 +2027,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     SNPRINTF(title, "¡º %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
 
-    if (cuser.userlevel >= PERM_BM) {
+    if (HasUserPerm(PERM_BM | PERM_BOARD)) {
 	move(2, 0);
 	clrtoeol();
 	move(3, 0);
