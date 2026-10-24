@@ -118,12 +118,12 @@ aidu_t fn2aidu(const char *fn);
 char *aidu2aidc(char *buf, aidu_t aidu);
 char *aidu2fn(char *buf, aidu_t aidu);
 aidu_t aidc2aidu(const char *aidc);
-int  search_aidu(char *bfile, aidu_t aidu, int source);
-int  search_aidu_legacy(char *bfile, aidu_t aidu);
-static inline int search_aid(char *bfile, aidu_t aidu, int source) {
+int  search_aidu(const char *bfile, aidu_t aidu, int source);
+int  search_aidu_legacy(const char *bfile, aidu_t aidu);
+static inline int search_aid(const char *bfile, aidu_t aidu, int source) {
     return search_aidu(bfile, aidu, source);
 }
-static inline int search_aid_legacy(char *bfile, aidu_t aidu) {
+static inline int search_aid_legacy(const char *bfile, aidu_t aidu) {
     return search_aidu_legacy(bfile, aidu);
 }
 void setbtotal(int bid);

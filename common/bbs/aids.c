@@ -442,14 +442,14 @@ aidu_t aidc2aidu(const char *aidc)
 }
 
 int
-search_aidu(char *bfile, aidu_t aidu, int source)
+search_aidu(const char *bfile, aidu_t aidu, int source)
 {
     int idx = search_dir_by_aidu(bfile, aidu, 0, NULL, source);
     return idx > 0 ? idx - 1 : -1;
 }
 
 int
-search_aidu_legacy(char *bfile, aidu_t aidu)
+search_aidu_legacy(const char *bfile, aidu_t aidu)
 {
     return search_aidu(bfile, aidu, SEARCH_SRC_UNKNOWN);
 }
