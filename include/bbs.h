@@ -62,6 +62,8 @@ extern "C" {
     #include "var.h"
 #endif
 
+#include "path_helper.h"
+
 #ifdef __cplusplus
 }
 #endif
