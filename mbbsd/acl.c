@@ -159,11 +159,9 @@ ui_mute_user_for_board(const char *uid, const char *board) {
     int y;
     int result;
     char ans[3];
-    char history_log[PATHLEN];
     char reason[STRLEN];
     char datebuf[STRLEN];
-
-    setbfile(history_log, board, FN_MUTED_HISTORY);
+    AUTO_BFILE(history_log, board, FN_MUTED_HISTORY);
 
     y = vgety();
     if ((expire = is_user_muted_by_board(uid, board))) {
@@ -296,10 +294,8 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     time4_t expire = now;
     int y;
     char ans[3];
-    char history_log[PATHLEN];
     char reason[STRLEN];
-
-    setbfile(history_log, board, FN_MUTED_HISTORY);
+    AUTO_BFILE(history_log, board, FN_MUTED_HISTORY);
 
     y = vgety();
     if (!(expire = is_user_muted_by_board(uid, board))) {
@@ -411,12 +407,8 @@ edit_muted_list_for_board(const char *board) {
                 break;
 
             case 'l':
-                do {
-                    char history_log[PATHLEN];
-                    setbfile(history_log, board, FN_MUTED_HISTORY);
-                    if (more(history_log, YEA) == -1)
-                        vmsg("目前尚無設定記錄。");
-                } while (0);
+                if (more(TEMP_BFILE(board, FN_MUTED_HISTORY), YEA) == -1)
+                    vmsg("目前尚無設定記錄。");
                 break;
 
             default:

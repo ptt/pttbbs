@@ -98,28 +98,24 @@ friend_add(const char *uident, int type, const char* des)
 int
 is_rejected(const char *userid) {
     userinfo_t *uentp;
-    char fpath[PATHLEN];
     /* friend_online may be truncated or stale; only trust a positive hit. */
     if (currutmp && (uentp = search_ulist_userid(userid)) &&
         (friend_stat(currutmp, uentp) & HRM))
         return 1;
-    sethomefile(fpath, userid, FN_REJECT);
-    if (!file_exist_entry(fpath, cuser.userid))
+    if (!file_exist_entry(TEMP_HOMEFILE(userid, FN_REJECT), cuser.userid))
         return 0;
-    sethomefile(fpath, userid, FN_OVERRIDES);
-    return !file_exist_entry(fpath, cuser.userid);
+    return !file_exist_entry(TEMP_HOMEFILE(userid, FN_OVERRIDES), cuser.userid);
 }
 
 void
 friend_special(void)
 {
-    char            genbuf[STRLEN], i, fname[PATHLEN];
+    char            genbuf[STRLEN], i;
     FILE           *fp;
     for (i = 0; i <= 9; i++) {
 	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
 	special_des[5] = i + '0';
-	setuserfile(fname, special_des);
-	if( (fp = fopen(fname, "r")) != NULL ){
+	if( (fp = fopen(TEMP_USERFILE(special_des), "r")) != NULL ){
 	    fgets(genbuf + 15, 40, fp);
 	    genbuf[47] = 0;
 	    fclose(fp);
@@ -422,7 +418,7 @@ friend_water(const char *message, int type)
 void
 friend_edit(int type)
 {
-    char            fpath[PATHLEN], line[PATHLEN], uident[IDLEN + 1];
+    char            fpath[PATHLEN], uident[IDLEN + 1];
     int             count, column, dirty;
     FILE           *fp;
     char            genbuf[PATHLEN];
@@ -543,10 +539,11 @@ friend_edit(int type)
 	    dirty = 1;
 	} else if (uident[0] == 'w' && count) {
 	    char            wall[60];
+	    char            ans[4];
 	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
 		continue;
-	    if (getdata(0, 0, "確定丟出群體水球? [Y]", line, 4, LCECHO) &&
-		*line == 'n')
+	    if (getdata(0, 0, "確定丟出群體水球? [Y]", ans, sizeof(ans), LCECHO) &&
+		*ans == 'n')
 		continue;
 	    friend_water(wall, type);
 	} else
@@ -561,14 +558,14 @@ friend_edit(int type)
             friend_svc_reload(cuser.userid);
 	} else if (type == FRIEND_SPECIAL) {
 	    genbuf[0] = 0;
-	    setuserfile(line, special_des);
-	    if ((fp = fopen(line, "r"))) {
+	    AUTO_USERFILE(spec_file, special_des);
+	    if ((fp = fopen(spec_file, "r"))) {
 		fgets(genbuf, 30, fp);
 		fclose(fp);
 	    }
 	    getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", genbuf, 30,
 			DOECHO);
-	    if ((fp = fopen(line, "w"))) {
+	    if ((fp = fopen(spec_file, "w"))) {
 		fputs(genbuf, fp);
 		fclose(fp);
 	    }

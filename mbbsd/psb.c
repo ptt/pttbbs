@@ -2208,13 +2208,12 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
 
 static int
 pvrb_cmd_view(cmd_ctx_t *ctx) {
-    char fname[PATHLEN];
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    setdirpath(fname, cx->dirbase, fh->filename);
+    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
     maxrev = timecapsule_get_max_revision_number(fname);
     if (maxrev == 1) {
         char revfname[PATHLEN];
@@ -2234,13 +2233,12 @@ pvrb_cmd_view(cmd_ctx_t *ctx) {
 
 static int
 pvrb_cmd_mail(cmd_ctx_t *ctx) {
-    char fname[PATHLEN];
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    setdirpath(fname, cx->dirbase, fh->filename);
+    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
     maxrev = timecapsule_get_max_revision_number(fname);
     if (maxrev < 1) {
         vmsg(err_no_rev);

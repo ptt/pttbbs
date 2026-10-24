@@ -505,7 +505,6 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
     const keeploc_t *locmem = cx->locmem;
     char aidc[100];
     aidu_t aidu = 0;
-    char dirfile[PATHLEN];
     char *sp;
     int n = -1;
 
@@ -576,8 +575,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	if(n < 0 && aidu_type(aidu) == 0)
 	    /* search board */
 	{
-	    setbfile(dirfile, currboard, FN_DIR);
-	    n = search_aidu(dirfile, aidu, SEARCH_SRC_MBBSD_HASH);
+	    n = search_aidu(TEMP_BFILE(currboard, FN_DIR), aidu, SEARCH_SRC_MBBSD_HASH);
 	    if(n >= 0 && (currmode & MODE_DIGEST))
 		/* switch to normal read mode */
 	    {
@@ -593,8 +591,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	if(n < 0 && aidu_type(aidu) == 1)
 	    /* search digest */
 	{
-	    setbfile(dirfile, currboard, fn_mandex);
-	    n = search_aidu(dirfile, aidu, SEARCH_SRC_MBBSD_HASH);
+	    n = search_aidu(TEMP_BFILE(currboard, fn_mandex), aidu, SEARCH_SRC_MBBSD_HASH);
 	    if(n >= 0 && !(currmode & MODE_DIGEST))
 		/* switch to digest mode */
 	    {
@@ -1061,7 +1058,6 @@ read_cmd_quit(cmd_ctx_t *ctx) {
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
     cx->locmem->top_ln = read_view_v2p(&cx->view, ctx->base);
     if (currmode & MODE_SELECT) {
-        char genbuf[PATHLEN];
         int real_recno = (cx->view.total > 0 && cx->locmem->crs_ln > 0) ? read_view_real_recno(cx, cx->locmem->crs_ln) : 0;
         board_select();
         cx->sr_pred_count = 0;
@@ -1070,11 +1066,8 @@ read_cmd_quit(cmd_ctx_t *ctx) {
         cx->view.remap = NULL;
         cx->view.remap_base = 0;
         cx->view.remap_count = 0;
-        if (currstat == RMAIL)
-            sethomedir(genbuf, cuser.userid);
-        else
-            setbdir(genbuf, currboard);
-        cx->locmem = getkeep(genbuf, 0, 1);
+        cx->locmem = getkeep((currstat == RMAIL) ? TEMP_HOMEDIR(cuser.userid) :
+                             TEMP_BDIR(currboard), 0, 1);
         if (real_recno > 0) {
             cx->locmem->crs_ln = real_recno;
             int num = cx->locmem->crs_ln - p_lines + 1;

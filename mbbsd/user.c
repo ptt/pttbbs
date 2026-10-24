@@ -191,9 +191,8 @@ user_display(const userec_t * u, int adminmode)
 	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d/%d 封",
 		     today_mails, user_get_daily_free_mail_limit(u));
 	}
-	sethomedir(genbuf, u->userid);
 	prints("\t私人信箱: %d 封  (購買信箱: %d 封, 今日寄信: %s)\n",
-	       get_num_records(genbuf, sizeof(fileheader_t)),
+	       get_num_records(TEMP_HOMEDIR(u->userid), sizeof(fileheader_t)),
 	       u->exmailbox, mail_quota_buf);
     }
     prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
@@ -255,12 +254,10 @@ user_display(const userec_t * u, int adminmode)
 	    UF_FAV_ADDNEW,
 	    UF_FOREIGN,
 	};
-	char buf[PATHLEN];
 
 	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
 		"已註冊" : "未註冊");
-	sethomefile(buf, u->userid, FN_FORWARD);
-	if (dashs(buf) > 0)
+	if (dashs(TEMP_HOMEFILE(u->userid, FN_FORWARD)) > 0)
 	    outs("[自動轉寄]");
 
 	for (i = 0; (size_t)i < ARRAY_SIZE(uflag_mask); i++)
@@ -300,8 +297,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
     STRLCPY(fhdr.owner, "[" BBSMNAME "警察局]");
-    sethomedir(genbuf, crime);
-    append_fileheader(genbuf, &fhdr);
+    append_fileheader(TEMP_HOMEDIR(crime), &fhdr);
 }
 
 void
@@ -826,9 +822,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    x.exmailbox = (int)tmp;
 
 	    {
-		char exempt_fpath[PATHLEN];
-		sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
-		int old_exempt = dashf(exempt_fpath) ? 1 : 0;
+		int old_exempt = dashf(TEMP_HOMEFILE(x.userid, FN_MAIL_QUOTA_EXEMPT)) ? 1 : 0;
 		if (getdata_str(y++, 0, "免費寄信不計額度(y/n)：", buf, 3,
 				LCECHO, old_exempt ? "y" : "n")) {
 		    int want_exempt = (buf[0] == 'y') ? 1 : 0;
@@ -1169,8 +1163,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	log_usies("SetUser", x.userid);
 
     if (mail_exempt_changed) {
-	char exempt_fpath[PATHLEN];
-	sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
+	AUTO_HOMEFILE(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
 	if (new_mail_exempt) {
 	    int fd = OpenCreate(exempt_fpath, O_WRONLY);
 	    if (fd >= 0)
@@ -1246,8 +1239,6 @@ u_info(void)
 void
 showplans_userec(userec_t *user)
 {
-    char genbuf[ANSILINELEN];
-
     if(user->userlevel & PERM_VIOLATELAW)
     {
         int can_save = ((user->userlevel & PERM_LOGINOK) &&
@@ -1261,8 +1252,7 @@ showplans_userec(userec_t *user)
 	return;
     }
 
-    sethomefile(genbuf, user->userid, fn_plans);
-    if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
+    if (!show_file(TEMP_HOMEFILE(user->userid, fn_plans), 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
         prints("《個人名片》%s 目前沒有名片\n", user->userid);
 }
 
@@ -1383,19 +1373,18 @@ u_editplan(void)
     getdata(b_lines - 1, 0, "名片 (D)刪除 (E)編輯 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);
 
+    AUTO_USERFILE(plan_path, fn_plans);
     if (genbuf[0] == 'e') {
 	int             aborted;
 
 	setutmpmode(EDITPLAN);
-	setuserfile(genbuf, fn_plans);
-	aborted = veditfile(genbuf);
+	aborted = veditfile(plan_path);
 	if (aborted != EDIT_ABORTED)
 	    outs("名片更新完畢");
 	pressanykey();
 	return 0;
     } else if (genbuf[0] == 'd') {
-	setuserfile(genbuf, fn_plans);
-	unlink(genbuf);
+	unlink(plan_path);
 	outmsg("名片刪除完畢");
     }
     return 0;

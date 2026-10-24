@@ -950,11 +950,8 @@ cancelpost(const char *direct, const fileheader_t *fh,
            int not_owned GCC_UNUSED, char *newpath, size_t sznewpath,
            const char *reason) {
     int ret = 0;
-    char bakdir[PATHLEN];
 
-    setbdir(bakdir, currboard);
-
-    ret = delete_file_content2(direct, fh, bakdir, newpath, sznewpath, reason);
+    ret = delete_file_content2(direct, fh, TEMP_BDIR(currboard), newpath, sznewpath, reason);
     if (!IS_DELETE_FILE_CONTENT_OK(ret))
         return ret;
 
@@ -967,7 +964,6 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     // TODO FIXME this function is used when some user violates policy (ex,
     // crosspost) and system is trying to delete all the posts in every boards.
 
-    char bdir[PATHLEN], file[PATHLEN];
     fileheader_t newfh;
     boardheader_t  *bp;
     int i, bid;
@@ -981,8 +977,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     bp = getbcache(bid);
     if(!bp) return;
 
-    setbdir(bdir, bname);
-    setbfile(file, bname, fh->filename);
+    AUTO_BDIR(bdir, bname);
+    AUTO_BFILE(file, bname, fh->filename);
     memcpy(&newfh, fh, sizeof(fileheader_t));
 
     // XXX TODO FIXME This (finding file by getindex) sucks. getindex checks
@@ -1044,9 +1040,7 @@ deleteCrossPost(const fileheader_t *fhdr, char *bname)
         // because that will be reset by cron jobs
         // Note in USE_LIVE_ALLPOST, there should be no files.
 #ifndef USE_LIVE_ALLPOST
-        char file[PATHLEN];
-        setbfile(file, BN_ALLPOST, fhdr->filename);
-        unlink(file);
+        unlink(TEMP_BFILE(BN_ALLPOST, fhdr->filename));
 #endif
     }
 }
@@ -1056,11 +1050,10 @@ delete_allpost(const char *userid)
 {
     fileheader_t fhdr;
     int     fd;
-    char    bdir[PATHLEN], file[PATHLEN];
 
     if(!userid) return;
 
-    setbdir(bdir, BN_ALLPOST);
+    AUTO_BDIR(bdir, BN_ALLPOST);
     if( (fd = open(bdir, O_RDWR)) != -1)
     {
        while (read(fd, &fhdr, sizeof(fileheader_t)) > 0) {
@@ -1068,8 +1061,7 @@ delete_allpost(const char *userid)
              continue;
            deleteCrossPost(&fhdr, BN_ALLPOST);
            // No need to touch the file since ALLPOST is cleared weekly.
-	   setbfile(file, BN_ALLPOST, fhdr.filename);
-	   unlink(file);
+	   unlink(TEMP_BFILE(BN_ALLPOST, fhdr.filename));
            // No need to touch header in ALLPOST.
        }
        close(fd);
@@ -1146,8 +1138,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     }
     SNPRINTF(fh.title, "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
 
-    setbdir(genbuf, BN_ALLPOST);
-    if (append_fileheader(genbuf, &fh) != -1) {
+    if (append_fileheader(TEMP_BDIR(BN_ALLPOST), &fh) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1169,7 +1160,6 @@ dbcs_safe_trim_title(char *output, const char *title, int len) {
 void
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 {
-    char            genbuf[200];
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
     int bid = getbnum(brd);
@@ -1189,7 +1179,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     }
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
-    setbfile(genbuf, brd, postfile->filename);
+    AUTO_BFILE(dest_file, brd, postfile->filename);
 
     if(!strcasecmp(brd, BN_UNANONYMOUS))
        STRLCPY(fh.owner, cuser.userid);
@@ -1198,7 +1188,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     dbcs_safe_trim_title(fh.title + strlen(fh.title), title, len);
     snprintf(fh.title + strlen(fh.title), sizeof(fh.title) - strlen(fh.title),
              "(%s)", currboard);
-    if (dashs(genbuf) > 0) {
+    if (dashs(dest_file) > 0) {
         log_filef("log/conflict.log",
                   "%s->%s %s: %s\n",
                   currboard, brd, fh.filename, fh.title);
@@ -1208,13 +1198,12 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     if (strcmp(brd, BN_ALLPOST) != 0)
 #endif
     {
-        Copy(fpath, genbuf);
+        Copy(fpath, dest_file);
     }
 
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
-    setbdir(genbuf, brd);
-    if (append_fileheader(genbuf, &fh) != -1) {
+    if (append_fileheader(TEMP_BDIR(brd), &fh) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1252,7 +1241,7 @@ static int
 do_post_article(int edflags)
 {
     fileheader_t    postfile;
-    char            fpath[PATHLEN], buf[PATHLEN];
+    char            fpath[PATHLEN];
     int i, j;
     int             ifuseanony;
     int             money = 0;
@@ -1299,9 +1288,7 @@ do_post_article(int edflags)
     }
 #endif
 
-    setbfile(genbuf, currboard, FN_POST_NOTE);
-
-    if (more(genbuf, NA) == -1) {
+    if (more(TEMP_BFILE(currboard, FN_POST_NOTE), NA) == -1) {
 	more("etc/" FN_POST_NOTE, NA);
     }
     move(19, 0);
@@ -1317,10 +1304,7 @@ do_post_article(int edflags)
 	char tmp_title[STRLEN]="";
 	move(21,0);
 	outs("種類：");
-	char posttype_file[PATHLEN];
-	FILE *fp_pt;
-	setbfile(posttype_file, bp->brdname, FN_POSTTYPE);
-	fp_pt = fopen(posttype_file, "r");
+	FILE *fp_pt = fopen(TEMP_BFILE(bp->brdname, FN_POSTTYPE), "r");
 	i = 0;
 	if (fp_pt) {
 	    char linebuf[128];
@@ -1397,9 +1381,9 @@ do_post_article(int edflags)
         return FULLUPDATE;
     }
     if (posttype != -1) {
-	setbnfile(genbuf, bp->brdname, "postsample", posttype);
-	if (dashf(genbuf))
-	    Copy(genbuf, fpath);
+	AUTO_BNFILE(sample_path, bp->brdname, "postsample", posttype);
+	if (dashf(sample_path))
+	    Copy(sample_path, fpath);
     }
 
     edflags |= EDITFLAG_ALLOWTITLE;
@@ -1491,8 +1475,6 @@ do_post_article(int edflags)
     STRLCPY(postfile.owner, owner);
     STRLCPY(postfile.title, save_title);
 
-    setbdir(buf, currboard);
-
     // Ptt: stamp file again to make it order
     //      fix the bug that search failure in getindex
     //      stampfile_u is used when you don't want to clear other fields
@@ -1520,10 +1502,9 @@ do_post_article(int edflags)
 	setbtotal(currbid);
 
         if (LOG_CONF_POST) {
-            char bfilepath[PATHLEN];
-            setbfile(bfilepath, currboard, postfile.filename);
             file_appendf("log/post", "%d %s %s %d\n",
-                      (int)now, cuser.userid, bfilepath, money);
+                      (int)now, cuser.userid,
+                      TEMP_BFILE(currboard, postfile.filename), money);
         }
 
 	brc_addlist(postfile.filename, postfile.modified);
@@ -1597,9 +1578,8 @@ do_post_article(int edflags)
 
 		STRLCPY(mailfile.owner, cuser.userid);
 		STRLCPY(mailfile.title, save_title);
-		sethomedir(genbuf, quote_user);
                 msg = "回應至作者信箱";
-		if (append_fileheader(genbuf, &mailfile) == -1)
+		if (append_fileheader(TEMP_HOMEDIR(quote_user), &mailfile) == -1)
 		    msg = ERR_UID;
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
@@ -2087,8 +2067,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->owner[0] == '-')
 	return DONOTHING;
 
-    setbfile(fname, currboard, fhdr->filename);
-    if (!dashf(fname))
+    if (!dashf(TEMP_BFILE(currboard, fhdr->filename)))
     {
 	vmsg("檔案已不存在。");
 	return FULLUPDATE;
@@ -2293,8 +2272,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	/*
 	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
-	setbdir(fname, xboard);
-	append_fileheader(fname, &xfile);
+	append_fileheader(TEMP_BDIR(xboard), &xfile);
 	setbtotal(getbnum(xboard));
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
@@ -2549,10 +2527,8 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 static int
 b_man(void)
 {
-    char apath[PATHLEN], backup_path[PATHLEN];
-
-    setbdir(backup_path, currboard);
-    setapath(apath, currboard);
+    AUTO_BDIR(backup_path, currboard);
+    AUTO_APATH(apath, currboard);
 
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)) {
 	AUTO_STR(rebuild_path, "%s/.rebuild", apath);
@@ -2569,14 +2545,12 @@ static int
 cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
           const char *direct GCC_UNUSED)
 {
-    char            fpath[PATHLEN];
     char            title[TTLEN + 1];
 
-    setbfile(fpath, currboard, fhdr->filename);
     STRLCPY(title, "◇ ");
     strlcpy(title + 3, fhdr->title, TTLEN - 3);
     title[TTLEN] = '\0';
-    a_copyitem(fpath, title, 0, 1);
+    a_copyitem(TEMP_BFILE(currboard, fhdr->filename), title, 0, 1);
     b_man();
     return FULLUPDATE;
 }
@@ -2761,10 +2735,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
     {
 	// kcwu
-	char path[PATHLEN];
-	off_t size;
-	setdirpath(path, direct, fhdr->filename);
-	size = dashs(path);
+	off_t size = dashs(TEMP_DIRPATH(direct, fhdr->filename));
 	if (size > 5*1024*1024) {
 	    vmsg("檔案太大, 無法繼續推文, 請另撰文發表");
 	    return FULLUPDATE;
@@ -3097,9 +3068,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
                 /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
                 bypass = "文摘";
             } else {
-                char xfpath[PATHLEN];
-                setdirpath(xfpath, direct, fh->filename);
-                if (dashd(xfpath)) {
+                if (dashd(TEMP_DIRPATH(direct, fh->filename))) {
                     bypass = "子目錄";
                 }
             }
@@ -3442,8 +3411,6 @@ show_filename(int ent GCC_UNUSED, const fileheader_t * fhdr,
 static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char fn1[PATHLEN];
-    char fnx[PATHLEN];
     char genbuf[PATHLEN] = "";
     int i;
     boardheader_t *bp = NULL;
@@ -3479,7 +3446,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (vans("要將文章鎖定嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 
-        setbfile(fn1, currboard, fhdr->filename);
+        AUTO_BFILE(fn1, currboard, fhdr->filename);
 
 	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] > 0; i++)
             mail_send_file(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
@@ -3491,16 +3458,16 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         // We can not use L-dot prefix since there may be some code that
         // doesn't recognize locked files and end up in reading the file.
         fhdr->filename[0] = 'X';
-        setbfile(fnx, currboard, fhdr->filename);
+        AUTO_BFILE(fnx, currboard, fhdr->filename);
         Rename(fn1, fnx);
         fhdr->filename[0] = 'L';
     } else if (fhdr->filename[0]=='L') {
 	if (vans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'X';
-        setbfile(fnx, currboard, fhdr->filename);
+        AUTO_BFILE(fnx, currboard, fhdr->filename);
         fhdr->filename[0] = 'M';
-        setbfile(fn1, currboard, fhdr->filename);
+        AUTO_BFILE(fn1, currboard, fhdr->filename);
         // Rename it back, no check for errors because old locked files
         // are not renamed.
         if (access(fnx, 0) == 0)
@@ -3572,7 +3539,6 @@ static int
 comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
     char yn[5];
-    char fn[PATHLEN];
 
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
@@ -3590,7 +3556,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 	}
     }
-    setdirpath(fn, direct, fhdr->filename);
+    AUTO_DIRPATH(fn, direct, fhdr->filename);
     if (dashf(fn))
         file_appendf(fn, STR_REF_MARK "%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
@@ -3736,7 +3702,6 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 static int
 view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *direct)
 {
-    char fpath[PATHLEN];
     const char *err_no_history = "此篇文章暫無編輯歷史記錄。"
                                  "要進資源回收筒請再按一次 ~";
     int maxrev = 0;
@@ -3769,7 +3734,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
         current_as_base = 0;
     }
 
-    setbfile(fpath, currboard, fhdr->filename);
+    AUTO_BFILE(fpath, currboard, fhdr->filename);
     if (!current_as_base) {
         char *prefix = strrchr(fpath, '/');
         assert(prefix);
@@ -3862,12 +3827,11 @@ tar_addqueue(void)
 int
 b_note_edit_bname(int bid)
 {
-    char            buf[PATHLEN];
+    char            ans[3];
     int             aborted;
     boardheader_t  *fh = getbcache(bid);
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    setbfile(buf, fh->brdname, fn_notes);
-    aborted = veditfile(buf);
+    aborted = veditfile(TEMP_BFILE(fh->brdname, fn_notes));
     if (aborted == -1) {
 	clear();
 	outs(MSG_CANCEL);
@@ -3884,9 +3848,9 @@ b_note_edit_bname(int bid)
 
        // 設定日期的效果其實很早就不會動了,所以拔掉
        getdata(10, 0, TEMPFORMAT(STRLEN, "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
-	       fh->bupdate ? 'Y' : 'N'), buf, 3, LCECHO);
+	       fh->bupdate ? 'Y' : 'N'), ans, 3, LCECHO);
 
-       switch(buf[0])
+       switch(ans[0])
        {
            case 'y':
                // assign a large, max date.
@@ -3911,11 +3875,7 @@ b_note_edit_bname(int bid)
 static int
 b_notes(void)
 {
-    char            buf[PATHLEN];
-    int mr = 0;
-
-    setbfile(buf, currboard, fn_notes);
-    mr = more(buf, NA);
+    int mr = more(TEMP_BFILE(currboard, fn_notes), NA);
 
     if (mr == -1)
     {
@@ -4132,7 +4092,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     char pattern[STRLEN];
     char reason[15];
     char buf[ANSILINELEN], buf2[ANSILINELEN];
-    char fpath[PATHLEN], revpath[PATHLEN];
+    char revpath[PATHLEN];
     char ans[3];
     FILE *fp, *fpw;
     int i, rev, found = 0;
@@ -4157,7 +4117,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         return FULLUPDATE;
 
     // try to render and build.
-    setdirpath(fpath, direct, fhdr->filename);
+    AUTO_DIRPATH(fpath, direct, fhdr->filename);
     fp = fopen(fpath, "rt");
     if (!fp) {
         vmsg("文章已被刪除或鎖定。");
@@ -4367,7 +4327,6 @@ Read(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
-    char            buf[PATHLEN];
 
     const char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
     int enter_ret = enter_board(bname);
@@ -4385,8 +4344,7 @@ Read(void)
 	board_note_time && *board_note_time) {
 	int mr;
 
-	setbfile(buf, currboard, fn_notes);
-	mr = more(buf, NA);
+	mr = more(TEMP_BFILE(currboard, fn_notes), NA);
 	if(mr == -1)
             *board_note_time=0;
 	else if (mr != READ_NEXT)

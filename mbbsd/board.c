@@ -202,12 +202,12 @@ BoardPermNeedsSysopOverride(boardheader_t *bptr)
 static int
 b_post_note(void)
 {
-    char            buf[PATHLEN], yn[3];
+    char            yn[3];
 
     // if(!(currmode & MODE_BOARD)) return DONOTHING;
     vs_hdr("自訂注意事項");
 
-    setbfile(buf, currboard, FN_POST_NOTE);
+    AUTO_BFILE(buf, currboard, FN_POST_NOTE);
     move(b_lines-2, 0); clrtobot();
 
     if (more(buf, NA) == -1)
@@ -391,15 +391,13 @@ static const cmd_t tmpl_cmds[] = {
 static int
 b_posttype_templates(boardheader_t *bp)
 {
-    char posttype_path[PATHLEN];
     FILE *fp;
     char buf[256];
     posttype_tmpl_ctx_t cx;
 
     memset(&cx, 0, sizeof(cx));
     cx.bp = bp;
-    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
-    fp = fopen(posttype_path, "r");
+    fp = fopen(TEMP_BFILE(bp->brdname, FN_POSTTYPE), "r");
     if (!fp)
         return 0;
 
@@ -462,7 +460,6 @@ static int
 b_posttype(void)
 {
     boardheader_t *bp;
-    char posttype_path[PATHLEN];
     char tmpfile[PATHLEN];
     char out_tmp[PATHLEN];
     char bdir[PATHLEN];
@@ -471,7 +468,7 @@ b_posttype(void)
 
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
     bp = getbcache(currbid);
-    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
+    AUTO_BFILE(posttype_path, bp->brdname, FN_POSTTYPE);
 
     snprintf(tmpfile, sizeof(tmpfile), "tmp/posttype.%d", (int)getpid());
     fp_out = fopen(tmpfile, "w");
@@ -2470,7 +2467,6 @@ board_enter_normal(boardstat_t *ptr, cmd_ctx_t *ctx) {
 static void
 board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
-    char buf[PATHLEN];
     move(12, 1);
     int bidtmp = class_bid;
     int currmodetmp = currmode;
@@ -2482,8 +2478,7 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
         set_menu_group_op(B_BH(ptr)->BM);
 
     if (time4_lt(now, B_BH(ptr)->bupdate)) {
-        setbfile(buf, B_BH(ptr)->brdname, fn_notes);
-        int mr = more(buf, NA);
+        int mr = more(TEMP_BFILE(B_BH(ptr)->brdname, fn_notes), NA);
         if (mr != -1 && mr != READ_NEXT)
             pressanykey();
     }
@@ -2861,7 +2856,7 @@ fav_cmd_edit_title(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_backup(cmd_ctx_t *ctx) {
-    char c, fname[80];
+    char c;
     brdnum = -1;
     ctx->reload = true;
     if (get_current_fav() != get_fav_root()) {
@@ -2871,7 +2866,7 @@ fav_cmd_backup(cmd_ctx_t *ctx) {
     c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
     if (!c || vans("確定嗎 [y/N] ") != 'y')
         return 0;
-    setuserfile(fname, FAV);
+    AUTO_USERFILE(fname, FAV);
     AUTO_STR(buf, "%s.bak", fname);
     if (c == '2') {
         fav_save();

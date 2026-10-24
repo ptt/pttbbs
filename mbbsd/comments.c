@@ -201,7 +201,6 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     CommentsCtx *c = (CommentsCtx *)ctx;
     const CommentBodyReq *req;
     char buf[ANSILINELEN], pattern[ANSILINELEN], pattern2[ANSILINELEN];
-    char filename[PATHLEN];
     FILE *in, *out;
     int found = 0;
 
@@ -209,7 +208,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     if (!req || req->type < 0)
         return -1;
 
-    setbfile(filename, c->key.board, c->key.file);
+    AUTO_BFILE(filename, c->key.board, c->key.file);
     AUTO_STR(tmpfile, "%s.tmp", filename);
     FormatCommentString(pattern, sizeof(pattern), req->type,
                         req->userid, 0, req->msg, "");

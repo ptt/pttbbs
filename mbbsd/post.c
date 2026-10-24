@@ -3,9 +3,7 @@
 int
 PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNUSED)
 {
-    char dir[PATHLEN];
-    setbdir(dir, board);
-    if (append_fileheader(dir, fhdr) == -1)
+    if (append_fileheader(TEMP_BDIR(board), fhdr) == -1)
         return -1;
     return 0;
 }
@@ -14,13 +12,12 @@ int
 CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t *fhdr,
                  int ent, int type, const char *msg GCC_UNUSED, const char *formatted)
 {
-    char path[PATHLEN];
+    AUTO_DIRPATH(path, direct, fhdr->filename);
     int update = 0;
     int fd;
     SCOPED_STAT(STAT_DOCOMMENT);
 
     /* Lock and append, (lock may be caused other add_comment or edit_post) */
-    setdirpath(path, direct, fhdr->filename);
     fd = open(path, O_APPEND | O_WRONLY);
     if (fd >= 0) {
             if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
