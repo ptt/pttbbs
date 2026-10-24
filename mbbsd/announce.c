@@ -1123,9 +1123,25 @@ announce_cmd_num_search(cmd_ctx_t *ctx)
         }
         if (**cx->preselect > 0) {
             cx->me->now = **cx->preselect - 1;
+            if (cx->me->now >= cx->me->num)
+                cx->me->now = cx->me->num > 0 ? cx->me->num - 1 : 0;
             ctx->curr = cx->me->now;
-            if ((*cx->preselect)[1])
+            if ((*cx->preselect)[1]) {
+                if (cx->me->num <= 0) {
+                    *cx->preselect = NULL;
+                    return 0;
+                }
+                if (cx->me->now < cx->me->page ||
+                    cx->me->now >= cx->me->page + cx->me->header_size) {
+                    cx->me->page = (cx->me->now / cx->me->header_size) * cx->me->header_size;
+                    if (!a_loadname(cx->me)) {
+                        *cx->preselect = NULL;
+                        return 0;
+                    }
+                    ctx->base = cx->me->page;
+                }
                 return announce_cmd_select(ctx);
+            }
         } else {
             *cx->preselect = NULL;
         }
@@ -1161,7 +1177,8 @@ announce_cmd_select(cmd_ctx_t *ctx)
     cx->me->now = ctx->curr;
     cx->me->page = ctx->base;
     char fname[PATHLEN];
-    if (cx->me->now < 0) {
+    if (cx->me->now < 0 || cx->me->now < cx->me->page ||
+        cx->me->now >= cx->me->page + cx->me->header_size) {
         *cx->preselect = NULL;
         return 0;
     }
