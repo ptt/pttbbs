@@ -2041,14 +2041,16 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 		buf);
 	if (*buf)
 	    STRLCPY(xboard, buf);
-	if (*xboard && ((bid = getbnum(xboard)) > 0)){ /* XXXbid */
+	if (*xboard && ((bid = getbnum(xboard)) > 0) &&
+	    HasBoardPerm(getbcache(bid))){ /* XXXbid */
             char backup_path[PATHLEN];
 	    setapath(fpath, xboard);
             setbdir(backup_path, xboard);
 	    setutmpmode(ANNOUNCE);
             // TODO what's the backup_path here?
 	    a_menu(xboard, fpath,
-		   HasUserPerm(PERM_BOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		   HasUserPerm(PERM_BOARD) ? 2 :
+		   (!HasUserPerm(PERM_NOCITIZEN) && is_BM_cache(bid)) ? 1 : 0,
 		   bid, NULL, backup_path);
 	} else {
 	    mail_man();
