@@ -130,13 +130,13 @@ static inline void cleanup_sqlite3_stmt(struct sqlite3_stmt **pstmt) {
  */
 struct evbuffer;
 extern void evbuffer_free(struct evbuffer *buf);
-static inline void cleanup_evbuffer(struct evbuffer **pevb) {
+static inline void _cleanup_evbuffer(struct evbuffer **pevb) {
     if (pevb && *pevb) {
         evbuffer_free(*pevb);
         *pevb = NULL;
     }
 }
-#define auto_evbuffer_free __attribute__((cleanup(cleanup_evbuffer), unused))
+#define auto_evbuffer_free __attribute__((cleanup(_cleanup_evbuffer), unused))
 
 /*
  * Automatic string buffer with Stack SSO (Small String Optimization):
