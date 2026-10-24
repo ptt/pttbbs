@@ -366,7 +366,6 @@ ui_mute_user_for_board(const char *uid, const char *board) {
               reason);
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     if (result) {
-        char xtitle[STRLEN];
         char anti_pettifogger[] =
             "請注意，\n"
             ANSI_COLOR(1;31) "您目前使用的網站服務乃本站無償提供,\n"
@@ -387,10 +386,8 @@ ui_mute_user_for_board(const char *uid, const char *board) {
             "應無由成立刑法妨礙電腦使用罪、公然侮辱罪、誹謗罪。\n"
             "\n"
             "請勿濫行提告。\n";
-        char xmsg[STRLEN*5 + sizeof(anti_pettifogger)];
-
-        SNPRINTF(xtitle, "%s 看板暫停發言通知", board);
-        SNPRINTF(xmsg, "%s 看板已暫時停止讓您發表意見。\n"
+        AUTO_STR(xtitle, "%s 看板暫停發言通知", board);
+        AUTO_STR(xmsg, "%s 看板已暫時停止讓您發表意見。\n"
                  "開始時間: %s (期限 %s，此為執行時間，非原始犯規時間)%s\n"
                  "原因: %s\n"
                  "其它資訊請洽該看板板規與公告。\n\n%s",

@@ -40,7 +40,7 @@ user_info_admin(const char *userid)
 static int retrieve_backup(userec_t *user)
 {
     int     uid;
-    char    src[PATHLEN], dst[PATHLEN];
+    char    dst[PATHLEN];
     char    ans;
 
     if ((uid = searchuser(user->userid, user->userid))) {
@@ -63,7 +63,7 @@ static int retrieve_backup(userec_t *user)
     if (setupnewuser((const userec_t *)user) >= 0) {
 	sethomepath(dst, user->userid);
 	if (!dashd(dst)) {
-	    SNPRINTF(src, "tmp/%s", user->userid);
+	    AUTO_STR(src, "tmp/%s", user->userid);
 	    if (!dashd(src) || !Rename(src, dst))
 		mkuserdir(user->userid);
 	}
@@ -574,7 +574,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
 {
      int i, pn, sn;
      fileheader_t *fh;
-     char *p1, *p2, bakdir[PATHLEN], file1[PATHLEN], file2[PATHLEN];
+     char *p1, *p2, file1[PATHLEN], file2[PATHLEN];
      STRLCPY(file1, dir1);
      STRLCPY(file2, dir2);
      if((p1=strrchr(file1,'/')))
@@ -599,7 +599,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
                    STRLCAT(fh[pn+i].owner, ".");
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
-     SNPRINTF(bakdir, "%s.bak", dir1);
+     AUTO_STR(bakdir, "%s.bak", dir1);
      Rename(dir1, bakdir);
      for(i=1; i<=pn+sn; i++ )
         {
@@ -680,8 +680,8 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_BOARD)) {
 	  char bpath[PATHLEN];
 	  setbpath(bpath, bh.brdname);
-	  SNPRINTF(genbuf, BBSHOME "/bin/buildir %s &", bpath);
-	    system(genbuf);
+	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
+	  system(cmd);
 	}
 	break;
     case 'c':
@@ -745,9 +745,9 @@ m_mod_board(char *bname)
 	    char bpath[PATHLEN], apath[PATHLEN];
 	    setbpath(bpath, bname);
 	    setapath(apath, bname);
-	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
+	    AUTO_STR(cmd, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
 		    bname, bpath, apath);
-	    system(genbuf);
+	    system(cmd);
 	    RmTree(bpath);
 	    RmTree(apath);
 	    memset(&bh, 0, sizeof(bh));

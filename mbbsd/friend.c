@@ -216,11 +216,10 @@ static int
 delete_friend_from_file(const char *file, const char *string, int  case_sensitive)
 {
     FILE *fp = NULL, *nfp = NULL;
-    char fnew[PATHLEN];
     char genbuf[STRLEN + 1], buf[STRLEN];
     int ret = 0;
 
-    SNPRINTF(fnew, "%s.%3.3X", file,
+    AUTO_STR(fnew, "%s.%3.3X", file,
              (unsigned int)(arc4random_uniform(0x1000)));
     if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
 	while (fgets(genbuf, sizeof(genbuf), fp))
@@ -342,9 +341,9 @@ static void
 friend_editdesc(const char *uident, int type)
 {
     FILE           *fp=NULL, *nfp=NULL;
-    char            fnnew[PATHLEN], genbuf[STRLEN], fn[PATHLEN];
+    char            genbuf[STRLEN], fn[PATHLEN];
     setfriendfile(fn, type);
-    SNPRINTF(fnnew, "%s-", fn);
+    AUTO_STR(fnnew, "%s-", fn);
     if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
 	int             length = strlen(uident);
 

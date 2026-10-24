@@ -2555,12 +2555,8 @@ b_man(void)
     setapath(apath, currboard);
 
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)) {
-	char rebuild_path[PATHLEN];
-	int  fd;
-
-	SNPRINTF(rebuild_path, "%s/.rebuild", apath);
-	if ((fd = OpenCreate(rebuild_path, O_RDWR)) > 0)
-	    close(fd);
+	AUTO_STR(rebuild_path, "%s/.rebuild", apath);
+	autoclose int fd = OpenCreate(rebuild_path, O_RDWR);
     }
 
     return a_menu(currboard, apath,HasUserPerm(PERM_BOARD) ? 2 :
@@ -3799,14 +3795,14 @@ static int
 tar_addqueue(void)
 {
 #if IS_ENABLED(CONFIG_OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
-    char            email[60], qfn[80], ans[2];
+    char            email[60], ans[2];
     FILE           *fp;
     char            bakboard, bakman;
 
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)))
         return DONOTHING;
 
-    SNPRINTF(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
+    AUTO_STR(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
         vmsg("已經排定行程, 會於每日" TARQUEUE_TIME_STR "依序進行備份");
 	return FULLUPDATE;
@@ -4037,8 +4033,6 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 static int
 good_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200];
-    char            genbuf2[200];
 
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
@@ -4070,13 +4064,13 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	assert(ptr);
 	ptr++;
 	ptr[0] = '\0';
-	SNPRINTF(genbuf, "%s%s", buf, digest.filename);
+	AUTO_STR(genbuf, "%s%s", buf, digest.filename);
 
 	if (dashf(genbuf))
 	    unlink(genbuf);
 
 	digest.filemode = 0;
-	SNPRINTF(genbuf2, "%s%s", buf, fhdr->filename);
+	AUTO_STR(genbuf2, "%s%s", buf, fhdr->filename);
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_fileheader(buf, &digest);

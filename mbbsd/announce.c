@@ -455,7 +455,6 @@ a_pasteitem(menu_t * pm, int mode)
 static void
 a_appenditem(const menu_t * pm, int isask)
 {
-    char            fname[PATHLEN];
     char            buf[ANSILINELEN];
     char            ans[2] = "y";
     FILE           *fp, *fin;
@@ -477,7 +476,7 @@ a_appenditem(const menu_t * pm, int isask)
 	    return;
 	}
 
-	SNPRINTF(fname, "%s/%s", pm->path,
+	AUTO_STR(fname, "%s/%s", pm->path,
 		pm->header[pm->now - pm->page].filename);
 
 	// if same file, abort.
@@ -660,9 +659,7 @@ a_moveitem(menu_t * pm)
 static void
 a_delrange(menu_t * pm, const char *backup_dir)
 {
-    char            fname[PATHLEN];
-
-    SNPRINTF(fname, "%s/" FN_DIR, pm->path);
+    AUTO_STR(fname, "%s/" FN_DIR, pm->path);
     del_range(0, NULL, fname, backup_dir);
     pm->num = get_num_records(fname, FHSZ);
 }
@@ -670,7 +667,7 @@ a_delrange(menu_t * pm, const char *backup_dir)
 static void
 a_delete(menu_t * pm, const char *backup_dir)
 {
-    char            fpath[PATHLEN], buf[PATHLEN];
+    char            buf[PATHLEN];
     char            ans[4];
     fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
     const char *msg_errsync = "刪除檔案失敗，請退回上層目錄後再重試一次",
@@ -678,7 +675,7 @@ a_delete(menu_t * pm, const char *backup_dir)
                *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT
                                 "報告您試圖刪除檔案的位置。";
 
-    SNPRINTF(fpath, "%s/%s", pm->path, fhdr->filename);
+    AUTO_STR(fpath, "%s/%s", pm->path, fhdr->filename);
     setadir(buf, pm->path);
 
     if (fhdr->filename[0] == 'H' && fhdr->filename[1] == '.') {
@@ -1261,11 +1258,10 @@ announce_cmd_forward(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    char fname[PATHLEN];
     fileheader_t *fhdr = &cx->me->header[cx->me->now - cx->me->page];
     if (!isvisible_man(cx->me))
         return 0;
-    SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
+    AUTO_STR(fname, "%s/%s", cx->path, fhdr->filename);
     if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
         a_forward(cx->path, fhdr, ctx->key);
     } else {

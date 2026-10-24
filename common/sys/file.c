@@ -436,30 +436,8 @@ int file_append(const char *file, const char *string)
 int
 file_appendv(const char *file, const char *fmt, va_list ap)
 {
-    char sbuf[512];
-    va_list ap_copy;
-    va_copy(ap_copy, ap);
-    int len = vsnprintf(sbuf, sizeof(sbuf), fmt, ap);
-    if (len < 0) {
-        va_end(ap_copy);
-        return -1;
-    }
-    if ((size_t)len < sizeof(sbuf)) {
-        va_end(ap_copy);
-        return file_append_len(file, sbuf, len);
-    }
-
-    char *hbuf = (char *)malloc((size_t)len + 1);
-    if (!hbuf) {
-        va_end(ap_copy);
-        return -1;
-    }
-    vsnprintf(hbuf, (size_t)len + 1, fmt, ap_copy);
-    va_end(ap_copy);
-
-    int ret = file_append_len(file, hbuf, len);
-    free(hbuf);
-    return ret;
+    AUTO_VSTR(buf, fmt, ap);
+    return file_append_len(file, buf, buf_len);
 }
 
 int
@@ -483,26 +461,8 @@ int file_append_entry(const char *file, const char *key)
     if (!key || !*key)
         return -1;
 
-    char buf[512];
-    char *allocated = NULL;
-    const char *final_str;
-    size_t len = strlen(key);
-
-    if (len + 2 <= sizeof(buf)) {
-        STRLCPY(buf, key);
-        STRLCAT(buf, "\n");
-        final_str = buf;
-    } else {
-        if (asprintf(&allocated, "%s\n", key) < 0 || !allocated)
-            return -1;
-        final_str = allocated;
-    }
-
-    int res = file_append(file, final_str);
-    if (allocated)
-        free(allocated);
-
-    return res;
+    AUTO_STR(final_str, "%s\n", key);
+    return file_append_len(file, final_str, final_str_len);
 }
 
 /**

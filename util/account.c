@@ -80,8 +80,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 static void 
 gzip(const char *source, const char *target, const char *suffix)
 {
-    char buf[PATHLEN];
-    SNPRINTF(buf, "gzip -f9n adm/%s%s", target, suffix);
+    AUTO_STR(buf, "gzip -f9n adm/%s%s", target, suffix);
     Rename(source, &buf[14]);
     system(buf);
 }

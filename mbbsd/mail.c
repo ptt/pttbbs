@@ -842,7 +842,6 @@ int
 built_mail_index(void)
 {
     char            genbuf[128];
-    char command[1024];
     char homepath[PATHLEN];
 
     move(b_lines - 4, 0);
@@ -856,7 +855,7 @@ built_mail_index(void)
 	return FULLUPDATE;
 
     sethomepath(homepath, cuser.userid);
-    SNPRINTF(command, "bin/buildir '%s' > /dev/null", homepath);
+    AUTO_STR(command, "bin/buildir '%s' > /dev/null", homepath);
     mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     system(command);
     pressanykey();
@@ -1290,7 +1289,6 @@ int
 mail_mbox(void)
 {
     char tagname[PATHLEN];
-    char cmd[PATHLEN*2];
     fileheader_t fhdr;
     time4_t last_tag = 0;
 
@@ -1304,7 +1302,7 @@ mail_mbox(void)
         return 0;
     }
 
-    SNPRINTF(cmd, "/tmp/%s.uu", cuser.userid);
+    AUTO_STR(cmd, "/tmp/%s.uu", cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
     // TODO doforward does not return real execution code... we may need to
     // fix it in future.
