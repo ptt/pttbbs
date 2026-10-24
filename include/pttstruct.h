@@ -542,10 +542,6 @@ typedef struct {
     char    gap_2[sizeof(int)];
     int     money[MAX_USERS];
     char    gap_3[sizeof(int)];
-    // TODO(piaip) Always have this var - no more #ifdefs in structure.
-#ifdef USE_COOLDOWN
-    time4_t deprecated_cooldown[MAX_USERS];
-#endif
     char    gap_4[sizeof(int)];
     int     hash_head[1 << HASH_BITS];
     char    gap_5[sizeof(int)];
@@ -578,11 +574,6 @@ typedef struct {
     char    gap_10[sizeof(int)];
     int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
     char    gap_11[sizeof(int)];
-    // TODO(piaip) Always have this var - no more #ifdefs in structure.
-#if HOTBOARDCACHE
-    unsigned char    nHOTs;
-    int              HBcache[HOTBOARDCACHE];
-#endif
     char    gap_12[sizeof(int)];
     time4_t busystate_b[MAX_BOARD];
     char    gap_13[sizeof(int)];

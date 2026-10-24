@@ -15,6 +15,12 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+# cleanup(pttstruct): Remove USE_COOLDOWN and HOTBOARDCACHE
+
+正式移除 pttstruct 裡兩個已不再需要的條件定義。
+注意若你原有使用，需要關站、重設SHM (`bbsctl ipcrm; shmctl init`) 或重開機
+
+---
 ## fileheader, board: Combine pad and recommend into int16_t rating
 
 為擴充推噓評價數值範圍並清理無用欄位，`fileheader_t` 將原本的 `char pad`（1 byte）

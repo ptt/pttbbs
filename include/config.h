@@ -277,10 +277,6 @@
 #define MAX_SWAPUSED      (0.7)          /* SWAP最高使用率 */
 #endif
 
-#ifndef HOTBOARDCACHE
-#define HOTBOARDCACHE     (0)            /* 熱門看板快取 */
-#endif
-
 #ifndef MAX_HOTBOARDS
 #define MAX_HOTBOARDS     (128)          /* 熱門看板最大數量 */
 #endif

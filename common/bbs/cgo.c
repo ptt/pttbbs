@@ -326,18 +326,6 @@ utmp_update(void)
         }
         memcpy(SHM->hotboards.bids, hot_bids, sizeof(hot_bids));
         SHM->hotboards.num = top;
-#if HOTBOARDCACHE
-        {
-            int old_max = (int)HOTBOARDCACHE;
-            int n_copy = top < old_max ? top : old_max;
-            if (n_copy > 255)
-                n_copy = 255;
-            for (i = 0; i < old_max; i++) {
-                SHM->HBcache[i] = (i < n_copy) ? hot_bids[i] : -1;
-            }
-            SHM->nHOTs = (unsigned char)n_copy;
-        }
-#endif
     }
     SHM->UTMPbusystate = 0;
 }
