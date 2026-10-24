@@ -376,6 +376,10 @@ do_voteboard(int type)
     for (temp = 12; temp < 17; temp++) {
 	    if (!getdata(temp, 0, "¡G", topic, 60, DOECHO))
 		break;
+	    // do_voteboardreply treats lines starting with VOTE_DIVIDER as
+	    // section dividers; indent such lines so they stay plain text.
+	    if (is_vote_divider(topic))
+		strcat(genbuf, " ");
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
