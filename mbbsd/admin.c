@@ -527,6 +527,11 @@ setperms(unsigned int pbits, const char * const pstring[])
     while (
        (i = vmsg("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
     {
+	// Special keys such as KEY_UP are out of range for ctype functions
+	if (i < 0 || i > 0x7f) {
+	    bell();
+	    continue;
+	}
 	if (isdigit(i))
 	    i = i - '0' + 26;
 	else if (isalpha(i))
@@ -535,8 +540,12 @@ setperms(unsigned int pbits, const char * const pstring[])
 	    bell();
 	    continue;
 	}
+	if (i >= NUMPERMS) {
+	    bell();
+	    continue;
+	}
 
-	pbits ^= (1 << i);
+	pbits ^= (1U << i);
 	move(i % 16 + 4, i <= 15 ? 24 : 64);
 	outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
     }
