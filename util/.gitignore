@@ -30,6 +30,7 @@ removebm
 setrole
 shmctl
 showboard
+showbot
 showuser
 timecap_buildref
 toplazyBM
