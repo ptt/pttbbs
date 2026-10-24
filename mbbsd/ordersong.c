@@ -155,6 +155,7 @@ do_order_song(void)
 
     while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
+	size_t          off, end;
 	if (!strncmp(buf, "標題: ", 6)) {
 	    clear();
 	    move(10, 10);
@@ -165,28 +166,39 @@ do_order_song(void)
 	    unlockutmpmode();
 	    return 0;
 	}
-	while ((po = mbs_strstr(buf, "<~Src~>"))) {
+	/* Resume each search after the inserted text, so a value that
+	 * contains the same marker is not expanded again (endless loop). */
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Src~>"))) {
 	    const char *dot = "";
 	    if (is_validuserid(sender) && strcmp(sender, cuser.userid) != 0)
 		dot = ".";
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(sender) + strlen(dot);
 	    SNPRINTF(genbuf, "%s%s%s%s", buf, sender, dot, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
-	while ((po = mbs_strstr(buf, "<~Des~>"))) {
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Des~>"))) {
         const char *r = receiver;
         if (IS_ENABLED(CONFIG_ANGEL) && mbs_strstr(po, "小天使") && mbs_strstr(receiver, "小天使") &&
             override_receiver) {
             r = override_receiver;
         }
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(r);
 	    SNPRINTF(genbuf, "%s%s%s", buf, r, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
-	while ((po = mbs_strstr(buf, "<~Say~>"))) {
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Say~>"))) {
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(say);
 	    SNPRINTF(genbuf, "%s%s%s", buf, say, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
 	fputs(buf, fp1);
     }
