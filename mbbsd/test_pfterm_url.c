@@ -585,6 +585,56 @@ static void test_pmore_url_modes(void) {
     printf("  -> PASS\n");
 }
 
+static void test_osc8_rejects_control_bytes(void) {
+    printf("Testing OSC 8 URLs containing control bytes are rejected...\n");
+    clear();
+    reset_outbuf();
+
+    // ESC embedded in a streamed OSC 8 URL must not reach the client.
+    outs("\x1b]8;;https://evil.test/\x1b[6nPWNED\x1b\\Evil\x1b]8;;\x1b\\ Tail");
+    for (int x = 0; x < 9; x++)
+        assert(get_url_at(0, x) == NULL);
+
+    // Other C0 controls, DEL and 8-bit (C1) bytes are rejected as well.
+    move(1, 0);
+    start_url("https://bel.test/\x07x");
+    outs("Bel");
+    end_url();
+    move(2, 0);
+    start_url("https://del.test/\x7f" "x");
+    outs("Del");
+    end_url();
+    move(3, 0);
+    start_url("https://c1.test/\x9b" "31m");
+    outs("C1");
+    end_url();
+    assert(get_url_at(1, 0) == NULL);
+    assert(get_url_at(2, 0) == NULL);
+    assert(get_url_at(3, 0) == NULL);
+
+    // A rejected URL closes any active link rather than inheriting it.
+    move(4, 0);
+    start_url("https://ok.test/a?b=1|2");
+    outs("Ok");
+    start_url("https://bad.test/\x1b[2J");
+    outs("Bad");
+    end_url();
+    assert(get_url_at(4, 0) != NULL && strcmp(get_url_at(4, 0), "https://ok.test/a?b=1|2") == 0);
+    assert(get_url_at(4, 2) == NULL);
+
+    reset_outbuf();
+    doupdate();
+    assert(strstr(outbuf, "PWNED") == NULL);
+    assert(strstr(outbuf, "evil.test") == NULL);
+    assert(strstr(outbuf, "bel.test") == NULL);
+    assert(strstr(outbuf, "del.test") == NULL);
+    assert(strstr(outbuf, "c1.test") == NULL);
+    assert(strstr(outbuf, "bad.test") == NULL);
+    assert(strstr(outbuf, "Evil") != NULL);
+    assert(strstr(outbuf, "\x1b]8;;https://ok.test/a?b=1|2\x1b\\Ok\x1b]8;;\x1b\\Bad") != NULL);
+    printf("  -> PASS\n");
+}
+
 int main(void) {
     printf("Running comprehensive pfterm hyperlink tests...\n");
     test_basic_hyperlink();
@@ -597,6 +647,7 @@ int main(void) {
     test_multibyte_cjk();
     test_url_matching();
     test_pmore_url_modes();
-    printf("\nAll 10 test suites PASSED successfully!\n");
+    test_osc8_rejects_control_bytes();
+    printf("\nAll 11 test suites PASSED successfully!\n");
     return 0;
 }
