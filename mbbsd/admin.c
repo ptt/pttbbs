@@ -555,12 +555,15 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED
 
 void delete_board_link(boardheader_t *bh, int bid)
 {
+    char bname[IDLEN + 1];
+
     assert(0<=bid-1 && bid-1<MAX_BOARD);
+    STRLCPY(bname, bh->brdname);
     memset(bh, 0, sizeof(boardheader_t));
     substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
     sort_bcache();
-    log_usies("DelLink", bh->brdname);
+    log_usies("DelLink", bname);
 }
 
 int dir_cmp(const void *a, const void *b)
