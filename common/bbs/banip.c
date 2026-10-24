@@ -102,6 +102,11 @@ parse_ip_or_range(const char *s, uint32_t *pstart, uint32_t *pend) {
         int i = 0, j_min = 0, j_max = 0;
 
         for (i = 0; buf[i]; i++) {
+            // Reject tokens whose expansion (plus NUL) would not fit.
+            int need_max = (buf[i] == '*') ? 3 : 1;
+            if (j_min + 1 >= (int)sizeof(s_min) ||
+                j_max + need_max >= (int)sizeof(s_max))
+                return 0;
             if (buf[i] == '*') {
                 s_min[j_min++] = '0';
                 s_max[j_max++] = '2';
