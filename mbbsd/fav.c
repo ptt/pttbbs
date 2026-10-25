@@ -497,18 +497,16 @@ static int read_favrec(FILE *frp, fav_t *fp)
 int fav_load(void)
 {
     FILE *frp;
-    char buf[PATHLEN];
     unsigned short version;
     fav_t *fp;
     if (fav_stack_num > 0)
 	return -1;
 
-    setuserfile(buf, FAV);
+    AUTO_USERFILE(buf, FAV);
 
     if (!dashf(buf)) {
 #if 1 // DEPRECATED
-	char old[PATHLEN];
-	setuserfile(old, FAV4);
+	AUTO_USERFILE(old, FAV4);
 	if (dashf(old)) {
 	    if ((frp = fopen(old, "r")) == NULL)
 		return -1;
@@ -519,8 +517,7 @@ int fav_load(void)
 	    fclose(frp);
 
     	    fav_save();
-	    setuserfile(old, FAV ".bak");
-	    Copy(buf, old);
+	    Copy(buf, TEMP_USERFILE(FAV ".bak"));
 	}
 	else
 #endif
@@ -607,7 +604,6 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 int fav_save(void)
 {
     FILE *fwp;
-    char buf[PATHLEN], buf2[PATHLEN];
     unsigned short version = FAV_VERSION;
     fav_t *fp = get_fav_root();
     if (fp == NULL)
@@ -617,8 +613,8 @@ int fav_save(void)
     if (!dirty)
 	return 0;
 
-    setuserfile(buf2, FAV);
-    SNPRINTF(buf, "%s.tmp.%x",buf2, getpid());
+    AUTO_USERFILE(buf2, FAV);
+    AUTO_STR(buf, "%s.tmp.%x", buf2, getpid());
     fwp = fopen(buf, "w");
     if(fwp == NULL)
 	return -1;
@@ -1130,12 +1126,12 @@ int updatenewfav(int mode)
     /* mode: 0: don't write to fav  1: write to fav */
     int i, fd, brdnum;
     int count = 0;
-    char fname[80], *brd;
+    char *brd;
 
     if(!(HasUserFlag(UF_FAV_ADDNEW)))
 	return 0;
 
-    setuserfile(fname, FAVNB);
+    AUTO_USERFILE(fname, FAVNB);
 
     if( (fd = OpenCreate(fname, O_RDWR)) != -1 ){
 

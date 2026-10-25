@@ -733,10 +733,25 @@ fterm_url_get(fturl_id id)
     return NULL;
 }
 
+// URLs are written raw to the client inside OSC 8 (see fterm_rawurl), so
+// only printable ASCII (0x20-0x7E) is allowed. ESC, BEL and other C0
+// controls, DEL and 8-bit (C1) bytes could terminate the OSC early and
+// inject arbitrary escape sequences into the client terminal.
+static int
+fterm_url_is_safe(const char *url)
+{
+    for (const unsigned char *p = (const unsigned char *)url; *p; p++)
+    {
+        if (*p < 0x20 || *p > 0x7E)
+            return 0;
+    }
+    return 1;
+}
+
 void
 start_url(const char *url)
 {
-    if (!url || !*url)
+    if (!url || !*url || !fterm_url_is_safe(url))
     {
         end_url();
         return;
@@ -765,7 +780,7 @@ fterm_rawurl(fturl_id url_id)
         return;
 
     const char *url = fterm_url_get(url_id);
-    if (url && *url)
+    if (url && *url && fterm_url_is_safe(url))
     {
         fterm_raws(ESC_STR "]8;;");
         fterm_raws(url);

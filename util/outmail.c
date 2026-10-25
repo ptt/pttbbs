@@ -140,11 +140,10 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
 void sendMail() {
     int fd, smtpsock, counter = 0;
     long int total_count;
-    char spool_path[PATHLEN];
     struct stat st;
     MailQueue mq;
 
-    SNPRINTF(spool_path, NEWINDEX_PATTERN, getpid());
+    AUTO_STR(spool_path, NEWINDEX_PATTERN, getpid());
 
     if(access(spool_path, R_OK | W_OK)) {
 	if(link(INDEX, spool_path) || unlink(INDEX))

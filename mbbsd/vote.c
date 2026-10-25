@@ -109,9 +109,13 @@ b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname)
 		    *post++ = '?';
 		    */
 		// mosaic method 2
-		strcpy(post, "(某隱形看板)\n");
-	    }
-	    fputs(inbuf, fp);
+		// Write the label to fp: post may be too close to the end of
+		// inbuf to hold it.
+		*post = 0;
+		fputs(inbuf, fp);
+		fputs("(某隱形看板)\n", fp);
+	    } else
+		fputs(inbuf, fp);
 	    while (fgets(inbuf, sizeof(inbuf), sfp))
 		fputs(inbuf, fp);
 	}
@@ -1210,7 +1214,7 @@ voteperm_msg(const char *bname)
     if (HasUserPerm(PERM_VIOLATELAW))
         return "罰單未繳清，無法投票。";
 
-    if ((msg = banned_msg(bname)) != NULL)
+    if ((msg = muted_msg(bname)) != NULL)
         return msg;
 
     return NULL;

@@ -143,12 +143,9 @@ int copy_file_to_file(const char *src, const char *dst)
 
 int copy_file_to_dir(const char *src, const char *dst)
 {
-    char buf[PATH_MAX];
-    char *slash;
-    if ((slash = rindex(src, '/')) == NULL)
-	SNPRINTF(buf, "%s/%s", dst, src);
-    else
-	SNPRINTF(buf, "%s/%s", dst, slash);
+    const char *slash = strrchr(src, '/');
+    const char *fname = slash ? slash + 1 : src;
+    AUTO_STR(buf, "%s/%s", dst, fname);
     return copy_file_to_file(src, buf);
 }
 
@@ -157,7 +154,6 @@ int copy_dir_to_dir(const char *src, const char *dst)
     DIR *dir;
     struct dirent *entry;
     struct stat st;
-    char buf[PATH_MAX], buf2[PATH_MAX];
 
     if (stat(dst, &st) < 0)
 	if (Mkdir(dst) < 0)
@@ -170,8 +166,8 @@ int copy_dir_to_dir(const char *src, const char *dst)
 	if (strcmp(entry->d_name, ".") == 0 ||
 	    strcmp(entry->d_name, "..") == 0)
 	    continue;
-	SNPRINTF(buf, "%s/%s", src, entry->d_name);
-	SNPRINTF(buf2, "%s/%s", dst, entry->d_name);
+	AUTO_STR(buf, "%s/%s", src, entry->d_name);
+	AUTO_STR(buf2, "%s/%s", dst, entry->d_name);
 	if (stat(buf, &st) < 0)
 	    continue;
 	if (S_ISDIR(st.st_mode))
@@ -395,9 +391,22 @@ file_append_len(const char *file, const char *buf, int len)
     if (len == 0)
         return 0;
 
-    int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
+    autoclose int fd = open(file, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_FILE_CREATE_PERM);
     if (fd < 0)
         return -1;
+
+    // This will be very slow. STORAGE_CONV should be used only for testing.
+    autofree char *abuf = NULL;
+    if (NEED_STORAGE_CONV) {
+        size_t sz = MB_CONVERT_SIZE(len + 1);
+        abuf = malloc(sz);
+        if (!abuf) {
+            return -1;
+        }
+        mb_to_storage(buf, abuf, sz);
+        buf = abuf;
+        len = strlen(buf);
+    }
 
     int res;
     /* Linux / POSIX guarantees O_APPEND write <= 4KB (PIPE_BUF) is atomic without flock */
@@ -409,7 +418,6 @@ file_append_len(const char *file, const char *buf, int len)
         flock(fd, LOCK_UN);
     }
 
-    close(fd);
     return (res == len) ? 0 : -1;
 }
 
@@ -424,30 +432,8 @@ int file_append(const char *file, const char *string)
 int
 file_appendv(const char *file, const char *fmt, va_list ap)
 {
-    char sbuf[512];
-    va_list ap_copy;
-    va_copy(ap_copy, ap);
-    int len = vsnprintf(sbuf, sizeof(sbuf), fmt, ap);
-    if (len < 0) {
-        va_end(ap_copy);
-        return -1;
-    }
-    if ((size_t)len < sizeof(sbuf)) {
-        va_end(ap_copy);
-        return file_append_len(file, sbuf, len);
-    }
-
-    char *hbuf = (char *)malloc((size_t)len + 1);
-    if (!hbuf) {
-        va_end(ap_copy);
-        return -1;
-    }
-    vsnprintf(hbuf, (size_t)len + 1, fmt, ap_copy);
-    va_end(ap_copy);
-
-    int ret = file_append_len(file, hbuf, len);
-    free(hbuf);
-    return ret;
+    AUTO_VSTR(buf, fmt, ap);
+    return file_append_len(file, buf, buf_len);
 }
 
 int
@@ -471,26 +457,8 @@ int file_append_entry(const char *file, const char *key)
     if (!key || !*key)
         return -1;
 
-    char buf[512];
-    char *allocated = NULL;
-    const char *final_str;
-    size_t len = strlen(key);
-
-    if (len + 2 <= sizeof(buf)) {
-        STRLCPY(buf, key);
-        STRLCAT(buf, "\n");
-        final_str = buf;
-    } else {
-        if (asprintf(&allocated, "%s\n", key) < 0 || !allocated)
-            return -1;
-        final_str = allocated;
-    }
-
-    int res = file_append(file, final_str);
-    if (allocated)
-        free(allocated);
-
-    return res;
+    AUTO_STR(final_str, "%s\n", key);
+    return file_append_len(file, final_str, final_str_len);
 }
 
 /**

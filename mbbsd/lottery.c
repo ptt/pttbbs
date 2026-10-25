@@ -16,12 +16,11 @@ typedef long long bignum_t;
 static bignum_t
 load_ticket_record(const char *direct, bignum_t ticket[])
 {
-    char buf[256];
     FILE *fp;
     int i;
     bignum_t total = 0;
 
-    SNPRINTF(buf, "%s/" FN_TICKET_RECORD, direct);
+    AUTO_STR(buf, "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
 	return 0;
     for (i = 0; i < MAX_ITEM && fscanf(fp, "%lld ", &ticket[i]) == 1; i++)

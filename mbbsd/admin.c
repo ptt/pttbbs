@@ -40,7 +40,7 @@ user_info_admin(const char *userid)
 static int retrieve_backup(userec_t *user)
 {
     int     uid;
-    char    src[PATHLEN], dst[PATHLEN];
+    char    dst[PATHLEN];
     char    ans;
 
     if ((uid = searchuser(user->userid, user->userid))) {
@@ -63,7 +63,7 @@ static int retrieve_backup(userec_t *user)
     if (setupnewuser((const userec_t *)user) >= 0) {
 	sethomepath(dst, user->userid);
 	if (!dashd(dst)) {
-	    SNPRINTF(src, "tmp/%s", user->userid);
+	    AUTO_STR(src, "tmp/%s", user->userid);
 	    if (!dashd(src) || !Rename(src, dst))
 		mkuserdir(user->userid);
 	}
@@ -527,6 +527,11 @@ setperms(unsigned int pbits, const char * const pstring[])
     while (
        (i = vmsg("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
     {
+	// Special keys such as KEY_UP are out of range for ctype functions
+	if (i < 0 || i > 0x7f) {
+	    bell();
+	    continue;
+	}
 	if (isdigit(i))
 	    i = i - '0' + 26;
 	else if (isalpha(i))
@@ -535,8 +540,12 @@ setperms(unsigned int pbits, const char * const pstring[])
 	    bell();
 	    continue;
 	}
+	if (i >= NUMPERMS) {
+	    bell();
+	    continue;
+	}
 
-	pbits ^= (1 << i);
+	pbits ^= (1U << i);
 	move(i % 16 + 4, i <= 15 ? 24 : 64);
 	outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
     }
@@ -555,12 +564,15 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED
 
 void delete_board_link(boardheader_t *bh, int bid)
 {
+    char bname[IDLEN + 1];
+
     assert(0<=bid-1 && bid-1<MAX_BOARD);
+    STRLCPY(bname, bh->brdname);
     memset(bh, 0, sizeof(boardheader_t));
     substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
     sort_bcache();
-    log_usies("DelLink", bh->brdname);
+    log_usies("DelLink", bname);
 }
 
 int dir_cmp(const void *a, const void *b)
@@ -574,7 +586,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
 {
      int i, pn, sn;
      fileheader_t *fh;
-     char *p1, *p2, bakdir[PATHLEN], file1[PATHLEN], file2[PATHLEN];
+     char *p1, *p2, file1[PATHLEN], file2[PATHLEN];
      STRLCPY(file1, dir1);
      STRLCPY(file2, dir2);
      if((p1=strrchr(file1,'/')))
@@ -599,14 +611,14 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
                    STRLCAT(fh[pn+i].owner, ".");
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
-     SNPRINTF(bakdir, "%s.bak", dir1);
+     AUTO_STR(bakdir, "%s.bak", dir1);
      Rename(dir1, bakdir);
      for(i=1; i<=pn+sn; i++ )
         {
          if(!fh[i-1].filename[0]) continue;
          if(i == pn+sn ||  strcmp(fh[i-1].filename, fh[i].filename))
 	 {
-                fh[i-1].recommend =0;
+                fh[i-1].rating = 0;
 		fh[i-1].filemode |= 1;
                 append_fileheader(dir1, &fh[i-1]);
 		strcpy(p1, fh[i-1].filename);
@@ -663,7 +675,7 @@ m_mod_board(char *bname)
                 break;
             default:
                 vmsg("禁止更動連結看板，請直接修正原看板");
-                break;
+                return 0;
         }
     }
 
@@ -680,8 +692,8 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_BOARD)) {
 	  char bpath[PATHLEN];
 	  setbpath(bpath, bh.brdname);
-	  SNPRINTF(genbuf, BBSHOME "/bin/buildir %s &", bpath);
-	    system(genbuf);
+	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
+	  system(cmd);
 	}
 	break;
     case 'c':
@@ -745,9 +757,9 @@ m_mod_board(char *bname)
 	    char bpath[PATHLEN], apath[PATHLEN];
 	    setbpath(bpath, bname);
 	    setapath(apath, bname);
-	    SNPRINTF(genbuf, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
+	    AUTO_STR(cmd, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
 		    bname, bpath, apath);
-	    system(genbuf);
+	    system(cmd);
 	    RmTree(bpath);
 	    RmTree(apath);
 	    memset(&bh, 0, sizeof(bh));
@@ -878,8 +890,6 @@ m_mod_board(char *bname)
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
-	    char buf[64];
-
 	    if (strcmp(bh.brdname, newbh.brdname)) {
 		char            src[60], tar[60];
 
@@ -899,11 +909,11 @@ m_mod_board(char *bname)
             sort_bcache();
 	    log_usies("SetBoard", newbh.brdname);
 
-	    SNPRINTF(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    SNPRINTF(genbuf, "板名: %s => %s\n"
+	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    AUTO_STR(msg, "板名: %s => %s\n"
 		    "板主: %s => %s\n",
 		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
-	    post_msg(BN_SECURITY, buf, genbuf, "[系統安全局]");
+	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	}
     }
     return 0;

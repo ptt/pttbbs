@@ -46,7 +46,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 {
     fileheader_t    fhdr;
     int             bid;
-    char            genbuf[PATHLEN], buf[256];
+    char            genbuf[PATHLEN];
 
     if (!board)
 	board = BN_RECORD;
@@ -56,12 +56,10 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     Rename(fpath, genbuf);
 
     if (sym) {
-	char genbuf2[PATHLEN];
-	STRLCPY(genbuf2, "../");
-	STRLCAT(genbuf2, genbuf);
-        sprintf(buf, "log/%s", sym);
-        unlink(buf);
-        symlink(genbuf2, buf);
+	AUTO_STR(genbuf2, "../%s", genbuf);
+	AUTO_STR(sympath, "log/%s", sym);
+        unlink(sympath);
+        symlink(genbuf2, sympath);
     }
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
@@ -80,8 +78,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 static void 
 gzip(const char *source, const char *target, const char *suffix)
 {
-    char buf[PATHLEN];
-    SNPRINTF(buf, "gzip -f9n adm/%s%s", target, suffix);
+    AUTO_STR(buf, "gzip -f9n adm/%s%s", target, suffix);
     Rename(source, &buf[14]);
     system(buf);
 }
@@ -443,12 +440,10 @@ main(/*int argc, char **argv*/)
 	printf("歡迎畫面處理\n");
 
 	if ((fp = fopen("etc/Welcome.date", "r"))) {
-	    char            temp[50];
 	    while (fscanf(fp, "%d %d %s\n", &mo, &da, buf1) == 3) {
 		if (tm_now.tm_mday == da && tm_now.tm_mon + 1 == mo) {
-		    STRLCPY(temp, buf1);
-		    sprintf(buf1, "cp -f etc/Welcomes/%s etc/Welcome", temp);
-		    system(buf1);
+		    AUTO_STR(cmd, "cp -f etc/Welcomes/%s etc/Welcome", buf1);
+		    system(cmd);
 		    break;
 		}
 	    }
@@ -469,9 +464,9 @@ main(/*int argc, char **argv*/)
 
 	rename(fn1, fn2);
 	Mkdir(fn1);
-	sprintf(buf, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
-		fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
-	system(buf);
+	AUTO_STR(tar_cmd, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
+		 fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
+	system(tar_cmd);
 	RmTree(fn2);
     }
 

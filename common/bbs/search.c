@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include "cmbbs.h"
+#include "common.h"
 #include "modes.h"
 #include "pttstruct.h"
 #include "var.h"
@@ -31,13 +32,13 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	return mbs_strcasestr(fh->title, keyword) == NULL;
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
-    else if (sr_mode & RS_RECOMMEND)
-	return pred->recommend > 0 ?
-	    (fh->recommend >= pred->recommend) :
-	    (fh->recommend <= pred->recommend);
+    else if (sr_mode & RS_RATING)
+	return pred->rating > 0 ?
+	    (fh->rating >= pred->rating) :
+	    (fh->rating <= pred->rating);
     else if (sr_mode & RS_MONEY) {
 	if (fh->filemode & INVALIDMONEY_MODES ||
-	    fh->multi.money > MAX_POST_MONEY) {
+	    fh->multi.money > VALID_POST_MONEY) {
 	    return 0;
 	}
 	return fh->multi.money >= pred->money;
@@ -93,11 +94,7 @@ typedef struct {
 int
 search_svc_connect(void)
 {
-    char sock_path[PATHLEN];
-    snprintf(sock_path, sizeof(sock_path), "%s/run/search.svc.sock", BBSHOME);
-
-    int sfd = toconnect_timed(sock_path, SEARCH_SVC_IO_TIMEOUT, 0, SEARCH_SVC_IO_TIMEOUT);
-    return sfd;
+    return toconnect_timed(GET_SVC_SOCKET(search), SEARCH_SVC_IO_TIMEOUT, 0, SEARCH_SVC_IO_TIMEOUT);
 }
 
 /*
@@ -152,10 +149,7 @@ search_svc_invalidate(const char *direct, int bid)
 static int
 search_svc_hint_send(const search_hint_req_t *req)
 {
-    char sock_path[PATHLEN];
-    snprintf(sock_path, sizeof(sock_path), "%s/run/search.svc.sock", BBSHOME);
-
-    int sfd = toconnect_timed(sock_path, 0, 20000, 0);
+    int sfd = toconnect_timed(GET_SVC_SOCKET(search), 0, 20000, 0);
     if (sfd < 0)
         return -1;
 

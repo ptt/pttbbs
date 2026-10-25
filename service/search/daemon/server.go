@@ -58,7 +58,7 @@ const (
 const (
 	SrcUnknown   int32 = 0
 	SrcMbbsdHash int32 = 1 // mbbsd '#' AID search (user / mobile app / bot)
-	SrcMbbsdSR   int32 = 2 // mbbsd select_read (title, author, mark, push search)
+	SrcMbbsdSR   int32 = 2 // mbbsd select_read (title, author, mark, rating search)
 	SrcMbbsdLua  int32 = 3 // mbbsd bbslua banner / dynamic template (setaidfile)
 	SrcBoarddWeb int32 = 4 // web / boardd query
 	SrcExternal  int32 = 5 // external tools / scripts
@@ -1881,18 +1881,18 @@ func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu
 	}
 }
 
-func (s *Service) handleHintComment(peerInfo, direct string, bid, recno int32, recommend int32) {
+func (s *Service) handleHintComment(peerInfo, direct string, bid, recno int32, rating int32) {
 	s.aidMu.Lock()
 	for _, e := range s.aidEntries {
 		if e.foundIdx == recno && (e.key.bid == bid || bid == 0 || e.key.direct == direct) {
-			SetFileheaderRecommend(&e.fhBytes, int(recommend))
+			SetFileheaderRating(&e.fhBytes, int(rating))
 		}
 	}
 	s.aidMu.Unlock()
 
 	if s.Verbose() >= 2 {
-		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d recommend=%d",
-			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, recommend)
+		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d rating=%d",
+			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, rating)
 	}
 }
 
@@ -2431,7 +2431,7 @@ func predsRequireSRExpire(predsRaw []byte, numPreds int) bool {
 		offset := i * predSize
 		if offset+4 <= len(predsRaw) {
 			mode := int(binary.LittleEndian.Uint32(predsRaw[offset : offset+4]))
-			if mode&(RS_RECOMMEND|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
+			if mode&(RS_RATING|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
 				return true
 			}
 		}

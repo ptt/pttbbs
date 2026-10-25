@@ -1197,17 +1197,21 @@ isreturn(unsigned char c)
 
 static inline
 int
-mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst)
+mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst, size_t dstlen)
 {
     /* Thor.980901: src和dst可相同, 但src 一定有?或\0結束 */
     /* Thor.980901: 注意, decode出的結果不會自己加上 \0 */
+    /* dstlen is the size of dst; decoding stops silently once it is full. */
     unsigned char  *t = dst;
-    int             pattern = 0, bits = 0;
+    unsigned int    pattern = 0;
+    int             bits = 0;
     encode |= 0x20;		/* Thor: to lower */
     switch (encode) {
     case 'q':			/* Thor: quoted-printable */
 	while (*src && *src != '?') {	/* Thor: delimiter *//* Thor.980901:
 					 * 0 算是 delimiter */
+	    if ((size_t)(t - dst) >= dstlen)
+		break;
 	    if (*src == '=') {
 		int             x = *++src, y = x ? *++src : 0;
 		if (isreturn(x))
@@ -1236,6 +1240,8 @@ mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst)
 	    if (!*src)
 		return -1;	/* Thor: no delimiter is not successful */
 #endif
+	    if ((size_t)(t - dst) >= dstlen)
+		break;
 	    x = base64_code(*src++);
 	    if (x < 0)
 		continue;	/* Thor: ignore everything not in the
@@ -1270,6 +1276,8 @@ str_iconv(
     iconv_t         iconv_descriptor;
     size_t          iconv_ret, dstlen_old;
 
+    if (dstlen == 0)		/* no room even for the '\0' */
+	return 0;
     dstlen--;			/* keep space for '\0' */
 
     dstlen_old = dstlen;
@@ -1278,36 +1286,36 @@ str_iconv(
     iconv_descriptor = iconv_open(tocode, fromcode);
 
     if (iconv_descriptor == ((iconv_t) (-1))) {	/* if open fail */
-	strncpy(dst, src, dstlen);
-	return dstlen;
+	size_t          n = (srclen < dstlen) ? srclen : dstlen;
+	memcpy(dst, src, n);
+	dst[n] = '\0';
+	return n;
     }
     /* Start translation */
     while (srclen > 0 && dstlen > 0) {
 	iconv_ret = iconv(iconv_descriptor, &src, &srclen,
 			  &dst, &dstlen);
-	if (iconv_ret != 0) {
+	if (iconv_ret == (size_t) -1) {
 	    switch (errno) {
-		/* invalid multibyte happened */
-	    case EILSEQ:
-		/* forward that byte */
+	    case EILSEQ:	/* invalid multibyte happened */
+	    case EINVAL:	/* incomplete multibyte happened */
+		/*
+		 * Forward that byte (maybe wrong). If the output is already full,
+		 * stop: one more byte here would take dstlen below zero and, being
+		 * unsigned, remove the output bound on the next iconv() call.
+		 */
+		if (dstlen == 0) {
+		    srclen = 0;
+		    break;
+		}
 		*dst = *src;
 		src++;
 		srclen--;
 		dst++;
 		dstlen--;
 		break;
-		/* incomplete multibyte happened */
-	    case EINVAL:
-		/* forward that byte (maybe wrong) */
-		*dst = *src;
-		src++;
-		srclen--;
-		dst++;
-		dstlen--;
-		break;
-		/* dst no rooms */
-	    case E2BIG:
-		/* break out the while loop */
+	    case E2BIG:		/* dst no rooms */
+	    default:		/* unexpected error: stop rather than spin */
 		srclen = 0;
 		break;
 	    }
@@ -1321,37 +1329,123 @@ str_iconv(
 }
 
 
+/*
+ * Map the charset of a MIME encoded word to the name str_decode_M3 passes
+ * to iconv, or NULL if it is not one we convert. The name comes from the
+ * mail sender, so only these fixed names reach iconv_open(), never an
+ * arbitrary (and possibly buggy) iconv module.
+ *
+ * Case, '-' and '_' are ignored and an RFC 2231 language tag is dropped,
+ * so "UTF8" and "utf_8*en" both give "UTF-8". The name built for
+ * iso-8859-N is written to out (outlen bytes).
+ */
+static const char *
+mime_charset_name(const char *cs, char *out, size_t outlen)
+{
+    static const struct {
+	const char     *key;	/* lower case, without '-' and '_' */
+	const char     *name;
+    } known[] = {
+	{"usascii", "US-ASCII"}, {"ascii", "US-ASCII"},
+	{"utf8", "UTF-8"},
+	{"big5", "BIG5"}, {"big5hkscs", "BIG5-HKSCS"}, {"cp950", "CP950"},
+	{"gb2312", "GB2312"}, {"gbk", "GBK"}, {"gb18030", "GB18030"},
+	{"euctw", "EUC-TW"},
+	{"windows1252", "CP1252"}, {"cp1252", "CP1252"},
+	{"latin1", "ISO-8859-1"},
+    };
+    char            key[32];
+    size_t          n = 0, i;
+
+    for (; *cs && *cs != '*'; cs++) {
+	if (*cs == '-' || *cs == '_')
+	    continue;
+	if (n + 1 >= sizeof(key))
+	    return NULL;
+	key[n++] = tolower((unsigned char)*cs);
+    }
+    key[n] = '\0';
+
+    for (i = 0; i < sizeof(known) / sizeof(known[0]); i++)
+	if (strcmp(key, known[i].key) == 0)
+	    return known[i].name;
+
+    /* iso-8859-1 .. iso-8859-16 */
+    if (strncmp(key, "iso8859", 7) == 0) {
+	const char     *d = key + 7;
+	int             v = 0;
+
+	if (!*d || strlen(d) > 2)
+	    return NULL;
+	for (; *d; d++) {
+	    if (!isdigit((unsigned char)*d))
+		return NULL;
+	    v = v * 10 + (*d - '0');
+	}
+	if (v < 1 || v > 16)
+	    return NULL;
+	snprintf(out, outlen, "ISO-8859-%d", v);
+	return out;
+    }
+    return NULL;
+}
+
 /**
  * inplace decode mime header string (rfc2047) to big5 encoding
  *
- * @param str	[in,out] string, output size is limited to 512. Assume output size is shorter than input size.
+ * @param str	[in,out] NUL-terminated string, decoded in place.
+ * @param size	size of the buffer str points to. The decoded text can be
+ *		longer than the input (e.g. latin1 -> big5), so it is
+ *		truncated to min(size, 512) - 1 bytes plus the NUL, without
+ *		leaving half of a Big5 character at the end.
  *
- * TODO rewrite, don't hardcode 512
+ * Only charsets known to mime_charset_name() are converted with iconv;
+ * words in other charsets are decoded but their bytes are kept as they
+ * are. Control characters in decoded words become spaces.
  */
 void
-str_decode_M3(char *str)
+str_decode_M3(char *str, size_t size)
 {
     int             adj;
     int             i;
+    int             cap;
     unsigned char  *src, *dst;
+    unsigned char  *ws = NULL;	/* space skipped after an encoded word */
+    unsigned char  *lastlead = NULL;	/* a lone Big5 lead byte just copied */
     unsigned char   buf[512];
     unsigned char   charset[512], dst1[512];
+    char            csname[16];
 
+    if (size == 0)
+	return;
+    /* never produce more than buf, or the caller's buffer, can hold */
+    cap = (int)(size < sizeof(buf) ? size : sizeof(buf));
 
     src = (unsigned char*)str;
     dst = buf;
     adj = 0;
 
-    while (*src && (dst - buf) < (int)sizeof(buf) - 1) {
+    while (*src && (dst - buf) < cap - 1) {
 	if (*src != '=') {	/* Thor: not coded */
 	    unsigned char  *tmp = src;
 	    while (adj && *tmp && isspace(*tmp))
 		tmp++;
 	    if (adj && *tmp == '=') {	/* Thor: jump over space */
 		adj = 0;
+		ws = src;
 		src = tmp;
-	    } else
+	    } else if (big5_is_valid_lead(*src) &&
+		       big5_is_valid_trail((unsigned char)src[1])) {
+		/* a Big5 lead byte and its trail move together */
+		if ((dst - buf) + 2 > cap - 1)
+		    break;	/* no room for the whole character */
 		*dst++ = *src++;
+		*dst++ = *src++;
+		lastlead = NULL;
+	    } else {
+		*dst++ = *src++;
+		lastlead = big5_is_valid_lead(dst[-1]) ? dst : NULL;
+	    }
 	    /* continue; *//* Thor: take out */
 	} else {		/* Thor: *src == '=' */
 	    unsigned char  *tmp = src + 1;
@@ -1369,11 +1463,25 @@ str_decode_M3(char *str)
 		    tmp++;
 		}
 		if (*tmp && tmp[1] && tmp[2] == '?') {	/* Thor: *tmp == '?' */
-		    int             i = mmdecode(tmp + 3, tmp[1], dst1);
-		    if (i >= 0)
-			i = str_iconv((char*)charset, "big5", (char*)dst1, i, (char*)dst,
-				      sizeof(buf) - ((int)(dst - buf)));
-		    if (i >= 0) {
+		    int             n = mmdecode(tmp + 3, tmp[1], dst1, sizeof(dst1));
+		    if (n >= 0) {
+			const char     *cs = mime_charset_name((char*)charset,
+							   csname, sizeof(csname));
+			size_t          room = (size_t)(cap - (dst - buf));
+			int             k;
+
+			if (cs)
+			    n = (int)str_iconv(cs, "big5", (char*)dst1, n,
+					       (char*)dst, room);
+			else {	/* not a charset we convert: keep the bytes */
+			    if ((size_t)n > room - 1)
+				n = (int)(room - 1);
+			    memcpy(dst, dst1, n);
+			}
+			/* a decoded word must not bring in NUL, CR, ESC, ... */
+			for (k = 0; k < n; k++)
+			    if (dst[k] < 0x20 || dst[k] == 0x7f)
+				dst[k] = ' ';
 			tmp += 3;	/* Thor: decode's src */
 #if 0
 			while (*tmp++ != '?');	/* Thor: no ? end, mmdecode
@@ -1385,18 +1493,45 @@ str_decode_M3(char *str)
 			if (*tmp == '=')
 			    tmp++;
 			src = tmp;	/* Thor: decode over */
-			dst += i;
+			dst += n;
+			lastlead = NULL;
 			adj = 1;/* Thor: adjcent */
 		    }
 		}
 	    }
-	    while (src != tmp)	/* Thor: not coded */
-		*dst++ = *src++;
+	    if (src != tmp && ws)	/* no encoded word here after all: */
+		src = ws;	/* keep the space skipped before it */
+	    ws = NULL;
+	    /*
+	     * Copy a run that is not an encoded word. A Big5 lead byte and
+	     * its trail move together, so stopping at the size limit lands
+	     * on a character boundary instead of splitting a character.
+	     */
+	    while (src != tmp && (dst - buf) < cap - 1) {	/* Thor: not coded */
+		if (big5_is_valid_lead(*src) && src + 1 != tmp &&
+		    big5_is_valid_trail((unsigned char)src[1])) {
+		    if ((dst - buf) + 2 > cap - 1)
+			break;
+		    *dst++ = *src++;
+		    *dst++ = *src++;
+		    lastlead = NULL;
+		} else {
+		    *dst++ = *src++;
+		    lastlead = big5_is_valid_lead(dst[-1]) ? dst : NULL;
+		}
+	    }
 	}
     }
+    /*
+     * The decoded text is whole Big5 characters, except that copying a
+     * run can end on a lone lead byte (input truncated mid-character).
+     * Drop that dangling lead so it cannot swallow the next character.
+     */
+    if (lastlead == dst)
+	dst--;
     *dst = 0;
-    assert(strlen(str) >= strlen((char*)buf));
-    strcpy(str, (char*)buf);
+    /* dst - buf <= cap - 1 and cap <= size, so this fits in str */
+    memcpy(str, buf, (size_t)(dst - buf) + 1);
 }
 
 /**

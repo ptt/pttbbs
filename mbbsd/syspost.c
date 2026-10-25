@@ -7,7 +7,6 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     FILE           *fp;
     int             bid;
     fileheader_t    fhdr;
-    char	    dirfn[PATHLEN];
 
     /* 在 bname 板發表新文章 */
     setbpath(fname, bname);
@@ -29,8 +28,7 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     /* 將檔案加入列表 */
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
-    setbdir(dirfn, bname);
-    if (append_fileheader(dirfn, &fhdr) != -1)
+    if (append_fileheader(TEMP_BDIR(bname), &fhdr) != -1)
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;
@@ -105,13 +103,10 @@ void
 post_violatelaw2(const char *crime, const char *police, const char *reason, const
                 char *result, const char *memo)
 {
-    char title[TTLEN+1];
-    char msg[ANSILINELEN * 10];
-
-    SNPRINTF(title, "[報告] %s:%-*s 判決", crime,
+    AUTO_STR(title, "[報告] %s:%-*s 判決", crime,
 	    (int)(30 - stream_width(crime)), reason);
 
-    SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+    AUTO_STR(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
             ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
@@ -121,12 +116,14 @@ post_violatelaw2(const char *crime, const char *police, const char *reason, cons
     if (!mbs_strstr(police, "警察")) {
 	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
 
-	SNPRINTF(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+	AUTO_STR(police_msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
                 ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
                 "，特此公告\n\n\n%s\n",
 		"站務警察", crime, reason, result, memo ? memo : "");
+	post_msg("ViolateLaw", title, police_msg, "[" BBSMNAME "法院]");
+	return;
     }
 
     post_msg("ViolateLaw", title, msg, "[" BBSMNAME "法院]");

@@ -95,6 +95,10 @@ typedef struct conn_data
 
 #define CONN_FLAG_SECURE (1 << 0)
 
+#ifndef GET_SVC_SOCKET
+#define GET_SVC_SOCKET(name) (BBSHOME "/run/" #name ".svc.sock")
+#endif
+
 ///////////////////////////////////////////////////////////////////////
 // Angel Beats! Daemon
 

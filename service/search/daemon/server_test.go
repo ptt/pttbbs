@@ -122,10 +122,10 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	records := []struct {
 		fn    string
 		owner string
-		title string
-		mode  int
-		rec   int
-		money int
+		title  string
+		mode   int
+		rating int
+		money  int
 	}{
 		{"M.1700000001.A.001", "alice", "[閒聊] 地震警報", 0, 10, 100},
 		{"M.1700000002.A.002", "bob", "[新聞] 天氣預報", FILE_MARKED, 5, 50},
@@ -135,7 +135,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		{"M.1700000006.A.006", "alice", "[問題] 測試置底", FILE_BOTTOM | FILE_MARKED, 30, 300},
 	}
 	for _, r := range records {
-		if err := AppendTestFileheader(dirPath, r.fn, r.owner, r.title, r.mode, r.rec, r.money); err != nil {
+		if err := AppendTestFileheader(dirPath, r.fn, r.owner, r.title, r.mode, r.rating, r.money); err != nil {
 			t.Fatalf("append record: %v", err)
 		}
 	}
@@ -445,7 +445,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		t.Fatalf("expected post hint to prewarm aidCache idx=8, got %d", idx)
 	}
 
-	// Send HINT_COMMENT to update recommend to 99
+	// Send HINT_COMMENT to update rating to 99
 	hintConn2, err := net.Dial("unix", socketPath)
 	if err != nil {
 		t.Fatalf("dial hintConn2: %v", err)
@@ -740,11 +740,19 @@ func TestFileheaderModeHelpers(t *testing.T) {
 	}
 	fh[FHDR_OFF_OWNER] = 't'
 
-	// Test recommend
-	SetFileheaderRecommend(nil, 50) // should not panic
-	SetFileheaderRecommend(&fh, 77)
-	if fh[FHDR_OFF_RECOMMEND] != 77 {
-		t.Errorf("expected recommend=77, got %d", fh[FHDR_OFF_RECOMMEND])
+	// Test rating
+	SetFileheaderRating(nil, 50) // should not panic
+	SetFileheaderRating(&fh, 77)
+	if FileheaderRating(&fh) != 77 {
+		t.Errorf("expected rating=77, got %d", FileheaderRating(&fh))
+	}
+}
+
+func TestFormatPreds(t *testing.T) {
+	predBytes := MakePredBytes(RS_RATING, "10", 10, 0)
+	formatted := FormatPreds(predBytes, 1)
+	if formatted != "rating=10" {
+		t.Errorf("expected 'rating=10', got %q", formatted)
 	}
 }
 

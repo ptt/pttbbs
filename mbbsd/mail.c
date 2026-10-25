@@ -517,7 +517,7 @@ mail_precheck_quota(int count)
         return 1;
 
     int free_limit = get_daily_free_mail_limit();
-    int sent_today = pwcuGetDailyMailCount();
+    int sent_today = StatGetDailyMail();
     int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
     if (count <= free_left)
         return 1;
@@ -563,7 +563,7 @@ mail_charge_quota(int count, const char *desc)
 
     if (!is_mail_quota_exempt()) {
         int free_limit = get_daily_free_mail_limit();
-        int sent_today = pwcuGetDailyMailCount();
+        int sent_today = StatGetDailyMail();
         int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
         int chargeable = (count > free_left) ? (count - free_left) : 0;
         int cost = chargeable * EXTRA_MAIL_COST;
@@ -578,7 +578,7 @@ mail_charge_quota(int count, const char *desc)
         }
     }
 
-    pwcuAddMailCount(count);
+    StatAddDailyMail(count);
     return 0;
 }
 
@@ -842,7 +842,6 @@ int
 built_mail_index(void)
 {
     char            genbuf[128];
-    char command[1024];
     char homepath[PATHLEN];
 
     move(b_lines - 4, 0);
@@ -856,7 +855,7 @@ built_mail_index(void)
 	return FULLUPDATE;
 
     sethomepath(homepath, cuser.userid);
-    SNPRINTF(command, "bin/buildir '%s' > /dev/null", homepath);
+    AUTO_STR(command, "bin/buildir '%s' > /dev/null", homepath);
     mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     system(command);
     pressanykey();
@@ -1290,7 +1289,6 @@ int
 mail_mbox(void)
 {
     char tagname[PATHLEN];
-    char cmd[PATHLEN*2];
     fileheader_t fhdr;
     time4_t last_tag = 0;
 
@@ -1304,7 +1302,7 @@ mail_mbox(void)
         return 0;
     }
 
-    SNPRINTF(cmd, "/tmp/%s.uu", cuser.userid);
+    AUTO_STR(cmd, "/tmp/%s.uu", cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
     // TODO doforward does not return real execution code... we may need to
     // fix it in future.
@@ -1494,35 +1492,31 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
         char hpath[PATHLEN];
         sethomepath(hpath, cuser.userid);
 #ifdef MUTT_PATH
-        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
                  "-czf /tmp/home.%s.tgz %s; "
                  MUTT_PATH " -s 'home.%s.tgz' "
                  "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
                  "rm /tmp/home.%s.tgz",
                  cuser.userid, hpath,
                  cuser.userid, cuser.userid, address, cuser.userid);
-        system(fname);
+        system(cmd);
         return 0;
 #else
-        SNPRINTF(fname, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
+        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
                  "-czf - %s | "
                  "/usr/bin/uuencode %s.tgz > %s",
                  hpath, cuser.userid, direct);
-        system(fname);
+        system(cmd);
         STRLCPY(fname, direct);
 #endif
     } else if (mode == 'U') {
-	char            tmp_buf[PATHLEN];
-
 	SNPRINTF(fname, "/tmp/bbs.uu%05d", (int)currpid);
-	SNPRINTF(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
+	AUTO_STR(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
 		 direct, fh->filename, (int)currpid, fname);
 	system(tmp_buf);
     } else if (mode == 'F') {
-	char            tmp_buf[PATHLEN];
-
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
-	SNPRINTF(tmp_buf, "%s/%s", direct, fh->filename);
+	AUTO_STR(tmp_buf, "%s/%s", direct, fh->filename);
         if (!dashf(tmp_buf)) {
             unlink(fname);
             return -1;
@@ -2033,7 +2027,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     SNPRINTF(title, "◇ %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
 
-    if (cuser.userlevel >= PERM_BM) {
+    if (HasUserPerm(PERM_BM | PERM_BOARD)) {
 	move(2, 0);
 	clrtoeol();
 	move(3, 0);
@@ -2047,14 +2041,16 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 		buf);
 	if (*buf)
 	    STRLCPY(xboard, buf);
-	if (*xboard && ((bid = getbnum(xboard)) > 0)){ /* XXXbid */
+	if (*xboard && ((bid = getbnum(xboard)) > 0) &&
+	    HasBoardPerm(getbcache(bid))){ /* XXXbid */
             char backup_path[PATHLEN];
 	    setapath(fpath, xboard);
             setbdir(backup_path, xboard);
 	    setutmpmode(ANNOUNCE);
             // TODO what's the backup_path here?
 	    a_menu(xboard, fpath,
-		   HasUserPerm(PERM_BOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		   HasUserPerm(PERM_BOARD) ? 2 :
+		   (!HasUserPerm(PERM_NOCITIZEN) && is_BM_cache(bid)) ? 1 : 0,
 		   bid, NULL, backup_path);
 	} else {
 	    mail_man();

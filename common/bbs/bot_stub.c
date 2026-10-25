@@ -31,3 +31,29 @@ bot_user_track_read(const char *userid GCC_UNUSED, time4_t firstlogin GCC_UNUSED
 {
     return delta;
 }
+
+int
+bot_dump_shm(FILE *fp, uint32_t min_read_count GCC_UNUSED, int banned_only GCC_UNUSED)
+{
+    if (fp)
+        fprintf(fp, "bot_dump_shm: stub implementation (no SHM active)\n");
+    return 0;
+}
+
+int
+bot_user_reset(const char *userid GCC_UNUSED, int clear_all GCC_UNUSED)
+{
+    return 0;
+}
+
+int
+bot_user_reset_all(int clear_all GCC_UNUSED)
+{
+    return 0;
+}
+
+int
+bot_clear_all_shm(int clear_ips GCC_UNUSED)
+{
+    return 0;
+}

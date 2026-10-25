@@ -2,6 +2,9 @@
 
 #define VOTEBOARD "NewBoard"
 
+// Petition files are split into sections by lines that start with this.
+#define VOTE_DIVIDER "----------"
+
 char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 {
     boardheader_t *bh = getbcache(bid);
@@ -26,6 +29,12 @@ char *CheckVoteRestrictionFile(
         fhdr->multi.vote_limits.logins,
         fhdr->multi.vote_limits.badpost,
         sz_msg, msg);
+}
+
+static int
+is_vote_divider(const char *line)
+{
+    return strncmp(line, VOTE_DIVIDER, strlen(VOTE_DIVIDER)) == 0;
 }
 
 static char *
@@ -89,7 +98,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 
         if (yes>=0)
            {
-            if (!strncmp(genbuf, "----------",10))
+            if (is_vote_divider(genbuf))
                {yes=-1; continue;}
             else
                 yes++;
@@ -150,7 +159,7 @@ do_voteboardreply(const fileheader_t * fhdr)
        }
 
     while (fgets(genbuf, sizeof(genbuf), fi)) {
-        if (!strncmp("----------", genbuf, 10))
+        if (is_vote_divider(genbuf))
 	    break;
 	fputs(genbuf, fo);
     }
@@ -162,7 +171,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     fputs(genbuf, fo);
     len = strlen(cuser.userid);
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (!strncmp("----------", genbuf, 10))
+	if (is_vote_divider(genbuf))
 	    break;
 	if (strlen(genbuf)<30)
             continue;
@@ -176,7 +185,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     fputs(genbuf, fo);
 
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (!strncmp("----------", genbuf, 10))
+	if (is_vote_divider(genbuf))
 	    break;
 	if (strlen(genbuf)<30)
             continue;
@@ -187,7 +196,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     }
     if (opnion[0] == 'n')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
-    fprintf(fo, "----------總計----------\n");
+    fprintf(fo, VOTE_DIVIDER "總計" VOTE_DIVIDER "\n");
     fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
     fprintf(fo, "\n--\n" STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME
                 ") \n◆ From: 連署文章\n");
@@ -367,6 +376,10 @@ do_voteboard(int type)
     for (temp = 12; temp < 17; temp++) {
 	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
 		break;
+	    // do_voteboardreply treats lines starting with VOTE_DIVIDER as
+	    // section dividers; indent such lines so they stay plain text.
+	    if (is_vote_divider(topic))
+		strcat(genbuf, " ");
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
@@ -379,8 +392,8 @@ do_voteboard(int type)
     strcat(genbuf, Cdate(&now));
     strcat(genbuf, "\n\n");
     now -= 14 * DAY_SECONDS;
-    strcat(genbuf, "----------支持----------\n");
-    strcat(genbuf, "----------反對----------\n");
+    strcat(genbuf, VOTE_DIVIDER "支持" VOTE_DIVIDER "\n");
+    strcat(genbuf, VOTE_DIVIDER "反對" VOTE_DIVIDER "\n");
     outs("開始連署嘍");
     setbpath(fpath, currboard);
     stampfile(fpath, &votefile);

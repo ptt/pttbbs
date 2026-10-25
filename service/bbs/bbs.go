@@ -10,14 +10,19 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 	"unsafe"
 
 	"pttbbs/big5uao"
 )
 
-// BBSHome returns the default BBSHOME path defined in the C build environment
+// BBSHome returns the BBSHOME path, respecting the BBSHOME environment variable
+// if set, or falling back to the default path defined in the C build environment.
 func BBSHome() string {
+	if h := os.Getenv("BBSHOME"); h != "" {
+		return h
+	}
 	return C.GoString(C.get_bbshome())
 }
 

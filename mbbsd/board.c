@@ -202,12 +202,12 @@ BoardPermNeedsSysopOverride(boardheader_t *bptr)
 static int
 b_post_note(void)
 {
-    char            buf[PATHLEN], yn[3];
+    char            yn[3];
 
     // if(!(currmode & MODE_BOARD)) return DONOTHING;
     vs_hdr("自訂注意事項");
 
-    setbfile(buf, currboard, FN_POST_NOTE);
+    AUTO_BFILE(buf, currboard, FN_POST_NOTE);
     move(b_lines-2, 0); clrtobot();
 
     if (more(buf, NA) == -1)
@@ -391,15 +391,13 @@ static const cmd_t tmpl_cmds[] = {
 static int
 b_posttype_templates(boardheader_t *bp)
 {
-    char posttype_path[PATHLEN];
     FILE *fp;
     char buf[256];
     posttype_tmpl_ctx_t cx;
 
     memset(&cx, 0, sizeof(cx));
     cx.bp = bp;
-    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
-    fp = fopen(posttype_path, "r");
+    fp = fopen(TEMP_BFILE(bp->brdname, FN_POSTTYPE), "r");
     if (!fp)
         return 0;
 
@@ -462,7 +460,6 @@ static int
 b_posttype(void)
 {
     boardheader_t *bp;
-    char posttype_path[PATHLEN];
     char tmpfile[PATHLEN];
     char out_tmp[PATHLEN];
     char bdir[PATHLEN];
@@ -471,7 +468,7 @@ b_posttype(void)
 
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
     bp = getbcache(currbid);
-    setbfile(posttype_path, bp->brdname, FN_POSTTYPE);
+    AUTO_BFILE(posttype_path, bp->brdname, FN_POSTTYPE);
 
     snprintf(tmpfile, sizeof(tmpfile), "tmp/posttype.%d", (int)getpid());
     fp_out = fopen(tmpfile, "w");
@@ -607,7 +604,7 @@ static const char *
 bcfg_get_noboo(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                char *buf, size_t sz)
 {
-    strlcpy(buf, ((cx->bp->brdattr & BRD_NORECOMMEND) || (cx->bp->brdattr & BRD_NOBOO))
+    strlcpy(buf, ((cx->bp->brdattr & BRD_NO_COMMENTS) || (cx->bp->brdattr & BRD_NOBOO))
                  ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
     return buf;
 }
@@ -619,7 +616,7 @@ bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
 {
     const boardheader_t *bp = cx->bp;
     int d = 0;
-    if (bp->brdattr & BRD_NORECOMMEND)
+    if (bp->brdattr & BRD_NO_COMMENTS)
         d = -1;
     else if ((bp->brdattr & BRD_NOFASTRECMD) && bp->fastrecommend_pause > 0)
         d = bp->fastrecommend_pause;
@@ -842,7 +839,7 @@ static int
 bcfg_set_norecommend(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    cx->bp->brdattr ^= BRD_NORECOMMEND;
+    cx->bp->brdattr ^= BRD_NO_COMMENTS;
     cx->touched = 1;
     ctx->reload = true;
     return 0;
@@ -854,13 +851,13 @@ bcfg_set_noboo(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
-    if (bp->brdattr & BRD_NORECOMMEND)
+    if (bp->brdattr & BRD_NO_COMMENTS)
         bp->brdattr |= BRD_NOBOO;
     bp->brdattr ^= BRD_NOBOO;
     cx->touched = 1;
     ctx->reload = true;
     if (!(bp->brdattr & BRD_NOBOO))
-        bp->brdattr &= ~BRD_NORECOMMEND;
+        bp->brdattr &= ~BRD_NO_COMMENTS;
     return 0;
 }
 #endif
@@ -870,7 +867,7 @@ bcfg_set_fastrecmd(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
-    bp->brdattr &= ~BRD_NORECOMMEND;
+    bp->brdattr &= ~BRD_NO_COMMENTS;
     bp->brdattr ^= BRD_NOFASTRECMD;
     cx->touched = 1;
     ctx->reload = true;
@@ -1063,11 +1060,11 @@ bcfg_set_vote_limits(cmd_ctx_t *ctx)
 }
 
 static int
-bcfg_set_banned(cmd_ctx_t *ctx)
+bcfg_set_muted(cmd_ctx_t *ctx)
 {
     ctx->reload = true;
     clear();
-    edit_banned_list_for_board(currboard);
+    edit_muted_list_for_board(currboard);
     clear();
     return 0;
 }
@@ -1141,7 +1138,7 @@ static const BConfigItem bconfig_items[] = {
     { 'e', "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
     { 'y', "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
-    { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NORECOMMEND, PERM_BM, NULL, bcfg_set_norecommend },
+    { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_noboo, bcfg_set_noboo },
 #endif
@@ -1158,7 +1155,7 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
     { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
     { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_vote_limits, bcfg_set_vote_limits },
-    { 'w', "[名單] 設定水桶名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_banned },
+    { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_muted },
     { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
     { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
     { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
@@ -1235,7 +1232,7 @@ static const cmd_t bconfig_edit_cmds[] = {
     { KEY_RIGHT, NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { ' ', NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
     { Ctrl('P'), NULL, "切換回唯讀檢視模式", bconfig_cmd_toggle_edit, 0, CMD_PRIO_NONE },
-    { 'w', "水桶名單", "設定看板水桶名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'w', "禁言名單", "設定看板禁言名單(水桶)", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
     { 'v', "可見名單", "編輯看板可見會員名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 'm', "舉辦投票", "舉辦或管理看板投票", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 'c', "文章類別", "設定看板文章類別", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
@@ -2125,11 +2122,33 @@ static void replace_link_by_target(boardstat_t *board)
     board->myattr &= ~NBRD_SYMBOLIC;
 }
 
+/* Whether moving bid into group gid would make a gid cycle: gid is bid itself
+ * or inside it. Only a group can have gid inside it. A plain board can still
+ * be gid itself when it is bid 1, the class root list, as initbbs sets it up.
+ * Every group is inside the class root, so the walk stops there even if the
+ * root's own gid lists it in a group, and a root group can never be moved. */
+static int
+gid_is_within(int gid, int bid)
+{
+    int depth;
+
+    if (!IS_GROUP(getbcache(bid)))
+        return gid == bid;
+    for (depth = 0; depth < MAX_BOARD && 0 < gid && gid <= MAX_BOARD; depth++) {
+        if (gid == bid)
+            return 1;
+        if (gid == 1)
+            break;
+        gid = getbcache(gid)->gid;
+    }
+    return 0;
+}
+
 static int
 paste_taged_brds(int gid)
 {
     fav_t *fav;
-    int  bid, tmp;
+    int  bid, tmp, looped = 0;
 
     if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || GROUPOP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
@@ -2143,6 +2162,10 @@ paste_taged_brds(int gid)
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, FALSE);
 	    if (bh->gid != gid) {
+		if (gid_is_within(gid, bid)) {
+		    looped++;
+		    continue;
+		}
 		bh->gid = gid;
 		assert(0<=bid-1 && bid-1<MAX_BOARD);
 		substitute_record(FN_BOARD, bh,
@@ -2152,6 +2175,8 @@ paste_taged_brds(int gid)
 	    }
 	}
     sort_bcache();
+    if (looped)
+	vmsg("群組不能搬進自己底下，未搬移。");
     return 1;
 }
 
@@ -2442,7 +2467,6 @@ board_enter_normal(boardstat_t *ptr, cmd_ctx_t *ctx) {
 static void
 board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
-    char buf[PATHLEN];
     move(12, 1);
     int bidtmp = class_bid;
     int currmodetmp = currmode;
@@ -2454,8 +2478,7 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
         set_menu_group_op(B_BH(ptr)->BM);
 
     if (time4_lt(now, B_BH(ptr)->bupdate)) {
-        setbfile(buf, B_BH(ptr)->brdname, fn_notes);
-        int mr = more(buf, NA);
+        int mr = more(TEMP_BFILE(B_BH(ptr)->brdname, fn_notes), NA);
         if (mr != -1 && mr != READ_NEXT)
             pressanykey();
     }
@@ -2609,7 +2632,12 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
     boardstat_t *ptr = &nbrd[num];
     move(1, 1);
     clrtobot();
-    m_mod_board(B_BH(ptr)->brdname);
+    // m_mod_board() looks the board up by name, and several links can share
+    // a name (see make_board_link()), so the name may lead to another link.
+    if (getbnum(B_BH(ptr)->brdname) == ptr->bid)
+        m_mod_board(B_BH(ptr)->brdname);
+    else
+        vmsg("有其他同名的看板連結，請改用 D 刪除此連結。");
     brdnum = -1;
     ctx->reload = true;
     return 0;
@@ -2828,7 +2856,7 @@ fav_cmd_edit_title(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_backup(cmd_ctx_t *ctx) {
-    char c, fname[80], buf[PATHLEN];
+    char c;
     brdnum = -1;
     ctx->reload = true;
     if (get_current_fav() != get_fav_root()) {
@@ -2838,8 +2866,8 @@ fav_cmd_backup(cmd_ctx_t *ctx) {
     c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
     if (!c || vans("確定嗎 [y/N] ") != 'y')
         return 0;
-    setuserfile(fname, FAV);
-    sprintf(buf, "%s.bak", fname);
+    AUTO_USERFILE(fname, FAV);
+    AUTO_STR(buf, "%s.bak", fname);
     if (c == '2') {
         fav_save();
         Copy(fname, buf);

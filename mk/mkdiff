@@ -31,12 +31,12 @@ build_change_list() {
 
 output_local_files() {
     local X
-    for X in local.h mbbsd/local.c mbbsd/chicken_cs.c; do
-        if [ -f "$X" ]; then
+    if [ -d mbbsd/local ]; then
+        for X in $(find mbbsd/local -name "*.[ch]" | sort); do
             echo "--- $X ---"
             cat "$X"
-        fi
-    done
+        done
+    fi
 }
 
 main() {

@@ -6,9 +6,9 @@
 tags
 var.h
 /pttbbs.conf
-/local.h
 common/sys/big5.c
 mbbsd/mbbsd
+mbbsd/local/
 mbbsd/testmbbsd
 mbbsd/testsz
 mbbsd/vers.c

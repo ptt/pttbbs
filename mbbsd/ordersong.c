@@ -54,7 +54,7 @@ do_order_song(void)
     pwcuReload();
 
     /* Jaky 一人一天點一首 */
-    if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HasUserPerm(PERM_SYSOP)) {
+    if (StatGetDailySong() > 0 && !HasUserPerm(PERM_SYSOP)) {
 	move(22, 0);
 	vmsg("你今天已經留過言囉，明天再來吧....");
 	unlockutmpmode();
@@ -155,6 +155,7 @@ do_order_song(void)
 
     while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
+	size_t          off, end;
 	if (!strncmp(buf, "標題: ", 6)) {
 	    clear();
 	    move(10, 10);
@@ -165,28 +166,39 @@ do_order_song(void)
 	    unlockutmpmode();
 	    return 0;
 	}
-	while ((po = mbs_strstr(buf, "<~Src~>"))) {
+	/* Resume each search after the inserted text, so a value that
+	 * contains the same marker is not expanded again (endless loop). */
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Src~>"))) {
 	    const char *dot = "";
 	    if (is_validuserid(sender) && strcmp(sender, cuser.userid) != 0)
 		dot = ".";
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(sender) + strlen(dot);
 	    SNPRINTF(genbuf, "%s%s%s%s", buf, sender, dot, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
-	while ((po = mbs_strstr(buf, "<~Des~>"))) {
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Des~>"))) {
         const char *r = receiver;
         if (IS_ENABLED(CONFIG_ANGEL) && mbs_strstr(po, "小天使") && mbs_strstr(receiver, "小天使") &&
             override_receiver) {
             r = override_receiver;
         }
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(r);
 	    SNPRINTF(genbuf, "%s%s%s", buf, r, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
-	while ((po = mbs_strstr(buf, "<~Say~>"))) {
+	off = 0;
+	while ((po = mbs_strstr(buf + off, "<~Say~>"))) {
 	    po[0] = 0;
+	    end = (size_t)(po - buf) + strlen(say);
 	    SNPRINTF(genbuf, "%s%s%s", buf, say, po + 7);
 	    STRLCPY(buf, genbuf);
+	    off = end < strlen(buf) ? end : strlen(buf);
 	}
 	fputs(buf, fp1);
     }
@@ -209,7 +221,7 @@ do_order_song(void)
 #endif
 
     if (append_fileheader(OSONGPATH "/" FN_DIR, &mail) != -1) {
-	pwcuSetLastSongTime(now);
+	StatIncDailySong();
 	/* Jaky 超過 MAX_ADBANNER 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:
 	// 3. ◆ <系統> 動態看板   SYSOP [01/23/08]

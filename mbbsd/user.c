@@ -181,18 +181,18 @@ user_display(const userec_t * u, int adminmode)
     }
 
     {
-	char today_str[16], mail_quota_buf[32];
-	STRLCPY(today_str, Cdatedate(&now));
-	int today_mails = (strcmp(today_str, Cdatedate(&u->last_mail_time)) == 0) ? u->daily_mail_count : 0;
+	char mail_quota_buf[32];
+	int today_mails = StatGetUserDailyMail(u->userid);
+	if (today_mails < 0)
+	    today_mails = 0;
 	if (user_is_mail_quota_exempt(u)) {
 	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d 封", today_mails);
 	} else {
 	    snprintf(mail_quota_buf, sizeof(mail_quota_buf), "%d/%d 封",
 		     today_mails, user_get_daily_free_mail_limit(u));
 	}
-	sethomedir(genbuf, u->userid);
 	prints("\t私人信箱: %d 封  (購買信箱: %d 封, 今日寄信: %s)\n",
-	       get_num_records(genbuf, sizeof(fileheader_t)),
+	       get_num_records(TEMP_HOMEDIR(u->userid), sizeof(fileheader_t)),
 	       u->exmailbox, mail_quota_buf);
     }
     prints("\t使用記錄: " STR_LOGINDAYS " %d " STR_LOGINDAYS_QTY
@@ -209,7 +209,7 @@ user_display(const userec_t * u, int adminmode)
     }
 
     /* Thor: 想看看這個 user 是那些板的板主 */
-    if (u->userlevel >= PERM_BM) {
+    if (u->userlevel & PERM_BM) {
 	int             i;
 	boardheader_t  *bhdr;
 
@@ -254,12 +254,10 @@ user_display(const userec_t * u, int adminmode)
 	    UF_FAV_ADDNEW,
 	    UF_FOREIGN,
 	};
-	char buf[PATHLEN];
 
 	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
 		"已註冊" : "未註冊");
-	sethomefile(buf, u->userid, FN_FORWARD);
-	if (dashs(buf) > 0)
+	if (dashs(TEMP_HOMEFILE(u->userid, FN_FORWARD)) > 0)
 	    outs("[自動轉寄]");
 
 	for (i = 0; (size_t)i < ARRAY_SIZE(uflag_mask); i++)
@@ -299,8 +297,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
     STRLCPY(fhdr.owner, "[" BBSMNAME "警察局]");
-    sethomedir(genbuf, crime);
-    append_fileheader(genbuf, &fhdr);
+    append_fileheader(TEMP_HOMEDIR(crime), &fhdr);
 }
 
 void
@@ -727,17 +724,15 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    pre_confirmed = 1;
 
 	    // Log change for security reasons.
-	    char title[TTLEN], buf[STRLEN + EMAILSZ*2 + sizeof(reason)];
-	    SNPRINTF(title, "%s 的聯絡信箱變更通知 (by %s)",
+	    AUTO_STR(title, "%s 的聯絡信箱變更通知 (by %s)",
 		     orig_uid, cuser.userid);
-	    SNPRINTF(buf, "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
+	    AUTO_STR(buf, "站長 %s 修改 %s 的聯絡信箱 %s -> %s\n理由：%s\n",
 		     cuser.userid, orig_uid, x.email, email, reason);
 	    post_msg(BN_SECURITY, title, buf, "[系統安全局]");
 
 	    // Notify user
-	    STRLCPY(title, "聯絡信箱變更通知");
-	    SNPRINTF(buf, "您的聯絡信箱已變更為 %s\n", email);
-	    mail_send_text(orig_uid,  title,  buf,  cuser.userid);
+	    AUTO_STR(user_buf, "您的聯絡信箱已變更為 %s\n", email);
+	    mail_send_text(orig_uid,  "聯絡信箱變更通知",  user_buf,  cuser.userid);
             log_user_security(x.userid, "%s (ContactEmail) %s -> %s\n",
                               "[Admin]", x.email, email);
 	    STRLCPY(x.email, email);
@@ -827,9 +822,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		    x.exmailbox = (int)tmp;
 
 	    {
-		char exempt_fpath[PATHLEN];
-		sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
-		int old_exempt = dashf(exempt_fpath) ? 1 : 0;
+		int old_exempt = dashf(TEMP_HOMEFILE(x.userid, FN_MAIL_QUOTA_EXEMPT)) ? 1 : 0;
 		if (getdata_str(y++, 0, "免費寄信不計額度(y/n)：", buf, 3,
 				LCECHO, old_exempt ? "y" : "n")) {
 		    int want_exempt = (buf[0] == 'y') ? 1 : 0;
@@ -953,7 +946,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	if (adminmode)
 	{
             FILE *fp;
-	    char  witness[3][IDLEN+1], title[100];
+	    char  witness[3][IDLEN+1];
 	    int uid;
 	    for (i = 0; i < 3; i++) {
 		if (!getdata(y + i, 0, "請輸入協助證明之使用者：",
@@ -988,7 +981,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	    }
 	    pre_confirmed = 1;
 
-	    sprintf(title, "%s 的密碼重設通知 (by %s)",x.userid, cuser.userid);
+	    AUTO_STR(title, "%s 的密碼重設通知 (by %s)", x.userid, cuser.userid);
             unlink("etc/updatepwd.log");
 	    if(! (fp = fopen("etc/updatepwd.log", "w")))
 	    {
@@ -1046,12 +1039,13 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		break;
 	    }
 	    pre_confirmed = 1;
+	    AUTO_STR(msg, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+			  "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
+			  x.userid, cuser.userid, reason,
+			  x.realname, x.address, x.justify, x.email);
 	    post_msg(BN_SECURITY,
 		     TEMPFORMAT(STRLEN, "刪除ID: %s (站長: %s)", x.userid, cuser.userid),
-		     TEMPFORMAT(1024, "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
-			     "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
-			     x.userid, cuser.userid, reason,
-			     x.realname, x.address, x.justify, x.email),
+		     msg,
 		     "[系統安全局]");
 	}
 	break;
@@ -1152,8 +1146,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	update_emaildb = true;
 
 	// log change for security reasons.
-	char title[STRLEN];
-	SNPRINTF(title, "變更ID: %s -> %s (站長: %s)",
+	AUTO_STR(title, "變更ID: %s -> %s (站長: %s)",
 		 orig_uid, x.userid, cuser.userid);
 	post_msg(BN_SECURITY, title, title, "[系統安全局]");
     }
@@ -1170,8 +1163,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	log_usies("SetUser", x.userid);
 
     if (mail_exempt_changed) {
-	char exempt_fpath[PATHLEN];
-	sethomefile(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
+	AUTO_HOMEFILE(exempt_fpath, x.userid, FN_MAIL_QUOTA_EXEMPT);
 	if (new_mail_exempt) {
 	    int fd = OpenCreate(exempt_fpath, O_WRONLY);
 	    if (fd >= 0)
@@ -1247,8 +1239,6 @@ u_info(void)
 void
 showplans_userec(userec_t *user)
 {
-    char genbuf[ANSILINELEN];
-
     if(user->userlevel & PERM_VIOLATELAW)
     {
         int can_save = ((user->userlevel & PERM_LOGINOK) &&
@@ -1262,8 +1252,7 @@ showplans_userec(userec_t *user)
 	return;
     }
 
-    sethomefile(genbuf, user->userid, fn_plans);
-    if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
+    if (!show_file(TEMP_HOMEFILE(user->userid, fn_plans), 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
         prints("《個人名片》%s 目前沒有名片\n", user->userid);
 }
 
@@ -1384,19 +1373,18 @@ u_editplan(void)
     getdata(b_lines - 1, 0, "名片 (D)刪除 (E)編輯 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);
 
+    AUTO_USERFILE(plan_path, fn_plans);
     if (genbuf[0] == 'e') {
 	int             aborted;
 
 	setutmpmode(EDITPLAN);
-	setuserfile(genbuf, fn_plans);
-	aborted = veditfile(genbuf);
+	aborted = veditfile(plan_path);
 	if (aborted != EDIT_ABORTED)
 	    outs("名片更新完畢");
 	pressanykey();
 	return 0;
     } else if (genbuf[0] == 'd') {
-	setuserfile(genbuf, fn_plans);
-	unlink(genbuf);
+	unlink(plan_path);
 	outmsg("名片刪除完畢");
     }
     return 0;

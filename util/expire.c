@@ -59,7 +59,6 @@ void expire(life_t *brd)
 {
     fileheader_t head;
     struct stat state;
-    char lockfile[128], tmpfile[128], bakfile[128], cmd[256];
     char fpath[128], index[128], *fname;
     int total, bid;
     int fdlock, fdr, fdw = 0, done, keep;
@@ -70,7 +69,7 @@ void expire(life_t *brd)
     if( (bid = getbnum(brd->bname)) == 0 ||
 	strcmp(brd->bname, bcache[bid - 1].brdname) ){
 	printf("no such board?: %s\n", brd->bname);
-	sprintf(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
+	AUTO_STR(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
 		brd->bname[0], brd->bname, brd->bname);
 	callsystem(cmd);
         return;
@@ -84,7 +83,7 @@ void expire(life_t *brd)
     cleanSR(brd->bname);
 
     setbfile(index, brd->bname, ".DIR");
-    sprintf(lockfile, "%s.lock", index);
+    AUTO_STR(lockfile, "%s.lock", index);
     if ((fdlock = OpenCreate(lockfile, O_RDWR | O_APPEND)) == -1){
 	perror("open lock file error");
 	return;
@@ -95,11 +94,11 @@ void expire(life_t *brd)
     fname = (char *) strrchr(fpath, '.');
 
     done = 0;
+    AUTO_STR(tmpfile, "%s.new", index);
     if( (fdr = open(index, O_RDONLY, 0)) >= 0 ){
 	fstat(fdr, &state);
 	total = state.st_size / sizeof(head);
 	if( !checkmode ){
-	    sprintf(tmpfile, "%s.new", index);
 	    unlink(tmpfile);
 	}
 	// TODO use fread/fwrite to reduce system calls
@@ -163,7 +162,7 @@ void expire(life_t *brd)
     }
 
     if( !checkmode && done ){
-	sprintf(bakfile, "%s.old", index);
+	AUTO_STR(bakfile, "%s.old", index);
 	if( rename(index, bakfile) == 0 ){
 	    rename(tmpfile, index);
 	    touchbtotal(bid);
@@ -200,9 +199,8 @@ void visitdir(char c)
 {
     DIR     *dirp;
     struct  dirent *de;
-    char bpath[PATHLEN];
+    AUTO_STR(bpath, BBSHOME "/boards/%c", c);
 
-    sprintf(bpath, BBSHOME "/boards/%c", c);
     if (!(dirp = opendir(bpath))){
 	printf(":Err: unable to open %s\n", bpath);
 	return;

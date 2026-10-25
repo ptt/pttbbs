@@ -81,7 +81,6 @@ void die_usage(const char *myname) {
 
 int main(int argc, char **argv)
 {
-    char index_path[PATHLEN];
     const char *dirpath, *myname = argv[0];
     int opt;
     int num_keep = 0, num_remove = 0;
@@ -129,7 +128,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    SNPRINTF(index_path, "%s/%s", dirpath, FN_DIR);
+    AUTO_STR(index_path, "%s/%s", dirpath, FN_DIR);
     if (dashs(index_path) <= 0) {
         // no archive. abort.
         // fprintf(stderr, "missing time capsule archive: %s\n", index_path);
@@ -145,11 +144,9 @@ int main(int argc, char **argv)
     if ((num_remove = process(fin, NULL, index_path, &num_keep,
                               remove_spam, remove_days, remove_deleted,
                               remove_modified_days))) {
-	char tmp_index_path[PATHLEN];
 	FILE *fout;
 
-	STRLCPY(tmp_index_path, index_path);
-	STRLCAT(tmp_index_path, ".tmp");
+	AUTO_STR(tmp_index_path, "%s.tmp", index_path);
 	fout = fopen(tmp_index_path, "wb");
 	if (!fout) {
 	    fprintf(stderr, "failed to create ouptut file.\n");

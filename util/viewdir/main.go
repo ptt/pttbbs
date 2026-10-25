@@ -18,30 +18,29 @@ import (
 
 // RawFileHeader represents fileheader_t structure in PTT (128 bytes)
 type RawFileHeader struct {
-	Filename  [28]byte
-	Modified  uint32
-	Pad       byte
-	Recommend int8
-	Owner     [14]byte
-	Date      [6]byte
-	Title     [65]byte
-	Pad2      byte
-	Multi     uint32
-	Filemode  uint8
-	Pad3      [3]byte
+	Filename [28]byte
+	Modified uint32
+	Rating   int16
+	Owner    [14]byte
+	Date     [6]byte
+	Title    [65]byte
+	Pad2     byte
+	Multi    uint32
+	Filemode uint16
+	Pad3     [2]byte
 }
 
 type ArticleHeader struct {
-	Filename  string
-	Modified  uint32
-	Recommend int8
-	Owner     string
-	Date      string
-	Title     string
-	Filemode  uint8
+	Filename string
+	Modified uint32
+	Rating   int16
+	Owner    string
+	Date     string
+	Title    string
+	Filemode uint16
 }
 
-const FILE_SOLVED uint8 = 0x10
+const FILE_SOLVED uint16 = 0x10
 
 type ViewMode int
 
@@ -219,55 +218,55 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 		title := decodeBig5(raw.Title[:])
 
 		articles = append(articles, ArticleHeader{
-			Filename:  filename,
-			Modified:  raw.Modified,
-			Recommend: raw.Recommend,
-			Owner:     owner,
-			Date:      date,
-			Title:     title,
-			Filemode:  raw.Filemode,
+			Filename: filename,
+			Modified: raw.Modified,
+			Rating:   raw.Rating,
+			Owner:    owner,
+			Date:     date,
+			Title:    title,
+			Filemode: raw.Filemode,
 		})
 	}
 	return articles, nil
 }
 
-func formatRecommend(rec int8, isSelected bool) string {
-	if rec == 0 {
+func formatRating(rating int16, isSelected bool) string {
+	if rating == 0 {
 		return "  "
 	}
 
 	if isSelected {
-		if rec >= 100 {
+		if rating >= 100 {
 			return "爆"
 		}
-		if rec > 0 {
-			return fmt.Sprintf("%2d", rec)
+		if rating > 0 {
+			return fmt.Sprintf("%2d", rating)
 		}
-		if rec <= -100 {
+		if rating <= -100 {
 			return "XX"
 		}
-		if rec <= -10 {
-			return fmt.Sprintf("X%1d", -rec/10)
+		if rating <= -10 {
+			return fmt.Sprintf("X%1d", -rating/10)
 		}
-		return fmt.Sprintf("%2d", rec)
+		return fmt.Sprintf("%2d", rating)
 	}
 
-	if rec >= 100 {
+	if rating >= 100 {
 		return "\x1b[1;35m爆\x1b[0m"
 	}
-	if rec > 9 {
-		return fmt.Sprintf("\x1b[1;31m%2d\x1b[0m", rec)
+	if rating > 9 {
+		return fmt.Sprintf("\x1b[1;31m%2d\x1b[0m", rating)
 	}
-	if rec > 0 {
-		return fmt.Sprintf("\x1b[1;33m%2d\x1b[0m", rec)
+	if rating > 0 {
+		return fmt.Sprintf("\x1b[1;33m%2d\x1b[0m", rating)
 	}
-	if rec <= -100 {
+	if rating <= -100 {
 		return "\x1b[1;30mXX\x1b[0m"
 	}
-	if rec <= -10 {
-		return fmt.Sprintf("\x1b[1;30mX%1d\x1b[0m", -rec/10)
+	if rating <= -10 {
+		return fmt.Sprintf("\x1b[1;30mX%1d\x1b[0m", -rating/10)
 	}
-	return fmt.Sprintf("\x1b[1;30m%2d\x1b[0m", rec)
+	return fmt.Sprintf("\x1b[1;30m%2d\x1b[0m", rating)
 }
 
 func runeWidth(r rune) int {
@@ -434,7 +433,7 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		art := app.articles[idx]
 		isSelected := (idx == app.selectedIndex)
 
-		recStr := formatRecommend(art.Recommend, isSelected)
+		ratingStr := formatRating(art.Rating, isSelected)
 		ownerStr := art.Owner
 		if stringWidth(ownerStr) > 12 {
 			ownerStr = truncateWidth(ownerStr, 12)
@@ -461,7 +460,7 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		}
 		titleStr := truncateWidth(art.Title, titleMaxLen)
 
-		lineContent := fmt.Sprintf("%s%s %s %s %s %s", prefix, itemNo, recStr, dateStr, ownerStr, titleStr)
+		lineContent := fmt.Sprintf("%s%s %s %s %s %s", prefix, itemNo, ratingStr, dateStr, ownerStr, titleStr)
 
 		if isSelected {
 			buf.WriteString(fmt.Sprintf("\x1b[7m%s\x1b[0m\r\n", padRightWidth(lineContent, app.termWidth)))
@@ -1193,7 +1192,7 @@ func (app *AppState) toggleSolve() {
 	_ = updateArticleFilemode(app.dirPath, idxInAll, newFilemode)
 }
 
-func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint8) error {
+func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint16) error {
 	if articleIdx < 0 {
 		return fmt.Errorf("invalid article index")
 	}

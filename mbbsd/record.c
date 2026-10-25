@@ -404,7 +404,6 @@ int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
     FILE *fp;
-    char buf[PATHLEN];
     char address[64] = "";
     char fwd_title[STRLEN] = "";
     int r;
@@ -422,8 +421,8 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
                   "%s %s\n", cuser.userid, fpath);
         return -1;
     }
-    setdirpath(buf, fpath, FN_FORWARD);
-    fp = fopen(buf, "r");
+    AUTO_DIRPATH(fwd_path, fpath, FN_FORWARD);
+    fp = fopen(fwd_path, "r");
     if (!fp)
         return 0;
 
@@ -435,7 +434,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     strip_blank(address, address);
 
     if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
-        unlink(buf);
+        unlink(fwd_path);
         // TODO add a mail so that origid knows what happened.
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
@@ -451,7 +450,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     if (!*address ||
         strchr(address, '@') == NULL ||
         strcasestr(address, str_mail_address)) {
-        unlink(buf);
+        unlink(fwd_path);
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
                          "[%s] Removed bad address: %s (%s)\n",
@@ -460,7 +459,6 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
         return 0;
     }
 
-    setdirpath(buf, fpath, record->filename);
     // because too many user set wrong forward address,
     // let's put their own address instead.
     // and again because some really stupid user
@@ -468,7 +466,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     // let's mark this in the title.
     snprintf(fwd_title, sizeof(fwd_title)-1,
              "[¦Û°ÊÂà±H] %s", record->title);
-    bsmtp(buf, fwd_title, address, origid);
+    bsmtp(TEMP_DIRPATH(fpath, record->filename), fwd_title, address, origid);
     LOG_IF(LOG_CONF_INTERNETMAIL,
            log_filef("log/internet_mail.log",
                      "[%s] %s -> (%s) %s: %s\n",
@@ -540,7 +538,6 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     // try to load by AID
     int bid = 0;
     int n = 0, fd = 0;
-    char bfpath[PATHLEN];
     boardheader_t  *bh = NULL;
     fileheader_t fh;
 
@@ -552,7 +549,7 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     bh = getbcache(bid);
     if (!HasBoardPerm(bh)) return;
 
-    setbfile(bfpath, bh->brdname, FN_DIR);
+    AUTO_BFILE(bfpath, bh->brdname, FN_DIR);
     n = search_aidu(bfpath, aidu, SEARCH_SRC_MBBSD_LUA);
 
     if (n < 0) return;

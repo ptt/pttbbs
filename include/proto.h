@@ -50,10 +50,10 @@ void a_copyitem(const char* fpath, const char* title, const char* owner, int mod
 int Announce(void);
 
 /* acl */
-time4_t is_user_banned_by_board(const char *user, const char *board);
-time4_t is_banned_by_board(const char *board);
-int ban_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
-int edit_banned_list_for_board(const char *board);
+time4_t is_user_muted_by_board(const char *user, const char *board);
+time4_t is_muted_by_board(const char *board);
+int mute_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
+int edit_muted_list_for_board(const char *board);
 int edit_user_acl_for_board(const char *uid, const char *board);
 
 /* assess */
@@ -85,6 +85,8 @@ int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
 int does_board_have_public_bm(const boardheader_t *bp);
+int get_max_pay_by_post_title(const char *title);
+int calc_post_cap(int post_count, int base_cap);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
 void editLimits(unsigned char *plogins, unsigned char *pbadpost);
 char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);
@@ -135,7 +137,7 @@ int is_BM_cache(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);
 const char *postperm_msg(const char *bname);
-const char *banned_msg(const char *bname);
+const char *muted_msg(const char *bname);
 
 /* cal */
 const char* money_level(int money);
@@ -897,11 +899,8 @@ int pwcuViolateLaw	(void);
 int pwcuSaveViolateLaw	(void);
 int pwcuCancelBadpost	(void);
 int pwcuAddExMailBox	(int m);
-int pwcuAddMailCount	(int count);
-int pwcuGetDailyMailCount(void);
 int pwcuToggleOutMail	(void);
 int pwcuSetLoginView	(unsigned int bits);
-int pwcuSetLastSongTime (time4_t clk);
 int pwcuSetMyAngel	(const char *angel_uid);
 int pwcuPlayAngel	(void);
 int pwcuSetNickname	(const char *nickname);

@@ -321,7 +321,8 @@ psb_help_format_keys(const psb_help_item_t *item, char *buf, size_t sz) {
     }
     buf[0] = '\0';
     for (int i = 0; i < item->n_keys; i++) {
-        if (i > 0 && isupper(item->keys[0]) && item->keys[i] == tolower(item->keys[0]))
+        if (i > 0 && isascii(item->keys[0]) && isupper(item->keys[0]) &&
+            item->keys[i] == tolower(item->keys[0]))
             continue;
         if (i > 0 && item->keys[i] == 'E' && item->keys[i - 1] == 'e')
             continue;
@@ -1710,6 +1711,17 @@ psb_sync_cache(PSB_CTX *psbctx) {
             psbctx->loader(psbctx);
         if (psbctx->cmd.quit)
             return;
+        if (psbctx->cmd.total <= 0) {
+            psbctx->cmd.curr = 0;
+            psbctx->cmd.base = 0;
+        } else {
+            if (psbctx->cmd.curr >= psbctx->cmd.total)
+                psbctx->cmd.curr = psbctx->cmd.total - 1;
+            if (psbctx->cmd.curr < 0)
+                psbctx->cmd.curr = 0;
+            if (psbctx->cmd.curr < psbctx->cmd.base || psbctx->cmd.curr >= psbctx->cmd.base + rows)
+                psbctx->cmd.base = (psbctx->cmd.curr / rows) * rows;
+        }
         psbctx->cached_base = psbctx->cmd.base;
         psbctx->cached_rows = rows;
         psbctx->cached_cols = t_columns;
@@ -1790,13 +1802,11 @@ psb_main(PSB_CTX *psbctx)
         }
 
         if (psbctx->cmd.total == 0) {
-            if (full || top_dirty > 0) {
-                move(psbctx->header_lines, 0);
-                if (!full)
-                    clrtoln(psbctx->header_lines + rows);
-                if (psbctx->empty_renderer) {
-                    psbctx->empty_renderer(psbctx);
-                }
+            move(psbctx->header_lines, 0);
+            if (!full)
+                clrtoln(psbctx->header_lines + rows);
+            if (psbctx->empty_renderer) {
+                psbctx->empty_renderer(psbctx);
             }
         } else {
             int max_i = psbctx->cmd.total - base;
@@ -2198,13 +2208,12 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
 
 static int
 pvrb_cmd_view(cmd_ctx_t *ctx) {
-    char fname[PATHLEN];
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    setdirpath(fname, cx->dirbase, fh->filename);
+    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
     maxrev = timecapsule_get_max_revision_number(fname);
     if (maxrev == 1) {
         char revfname[PATHLEN];
@@ -2224,13 +2233,12 @@ pvrb_cmd_view(cmd_ctx_t *ctx) {
 
 static int
 pvrb_cmd_mail(cmd_ctx_t *ctx) {
-    char fname[PATHLEN];
     int maxrev;
     pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    setdirpath(fname, cx->dirbase, fh->filename);
+    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
     maxrev = timecapsule_get_max_revision_number(fname);
     if (maxrev < 1) {
         vmsg(err_no_rev);
@@ -2435,7 +2443,7 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
 static const cmd_t pvcm_cmds[] = {
     { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
-    { 'U', "快速水桶", "設定該推文作者的看板水桶權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

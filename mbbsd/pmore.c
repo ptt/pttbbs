@@ -865,19 +865,24 @@ mf_attach_file(void *fnptr)
     }
 
     /*
-     * POSIX guarantees zero-fill for any partial page at EOF (mf.len % pg != 0).
-     * Only when mf.len is an exact multiple of page size do we need to reserve
-     * an extra MAP_ANONYMOUS page and overlay the file with MAP_FIXED.
+     * Reserve mf.len + 1 bytes of zero-filled MAP_ANONYMOUS memory so *mf.end
+     * is always NUL, and overlay only the whole pages of the file with
+     * MAP_FIXED. A partial page at EOF is copied in with pread() instead of
+     * being mapped: its zero-filled tail is shared with the page cache, so
+     * bytes appended to the file later (e.g. comments) would overwrite the
+     * NUL terminator at *mf.end while we are still reading.
      */
-    if (mf.len % getpagesize() != 0) {
-        mf.start = mmap(NULL, mf.len, PROT_READ, MF_MMAP_OPTION, fd, 0);
-    } else {
-        mf.start = mmap(NULL, mf.len + 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (mf.start != MAP_FAILED &&
-            mmap(mf.start, mf.len, PROT_READ, MF_MMAP_OPTION | MAP_FIXED, fd, 0) == MAP_FAILED) {
-            munmap(mf.start, mf.len + 1);
-            mf.start = MAP_FAILED;
-        }
+    off_t full = mf.len - mf.len % getpagesize();
+    mf.start = mmap(NULL, mf.len + 1, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mf.start != MAP_FAILED &&
+        ((full > 0 &&
+          mmap(mf.start, full, PROT_READ, MF_MMAP_OPTION | MAP_FIXED, fd, 0) == MAP_FAILED) ||
+         (mf.len > full &&
+          pread(fd, mf.start + full, mf.len - full, full) != (ssize_t)(mf.len - full)) ||
+         mprotect(mf.start + full, mf.len + 1 - full, PROT_READ) != 0)) {
+        munmap(mf.start, mf.len + 1);
+        mf.start = MAP_FAILED;
     }
     close(fd);
 

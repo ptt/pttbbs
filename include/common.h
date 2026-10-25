@@ -13,6 +13,10 @@
 
 #define DEFAULT_BOARD   str_sysop
 
+#ifndef GET_SVC_SOCKET
+#define GET_SVC_SOCKET(name) (BBSHOME "/run/" #name ".svc.sock")
+#endif
+
 // BBS Configuration Files
 #define FN_CONF_EDITABLE	"etc/editable"	    // 站務可編輯的系統檔案列表
 #define FN_CONF_RESERVED_ID	"etc/reserved.id"   // 保留系統用無法註冊的 ID
@@ -29,8 +33,8 @@
 #define FN_OVERRIDES    "overrides"
 #define FN_REJECT       "reject"
 #define FN_WATER        "water"         // 舊水桶
-#define FN_BANNED       "banned"        // 新水桶
-#define FN_BANNED_HISTORY "banned.history"  // 新水桶之歷史記錄
+#define FN_MUTED        "banned"        // 禁言/水桶名單
+#define FN_MUTED_HISTORY "banned.history"  // 禁言歷史記錄
 #define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
 #define FN_CANVOTE      "can_vote"
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...

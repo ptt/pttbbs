@@ -93,7 +93,8 @@ int utmpnum(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 }
 
 const char    *GV2str[] = {"dymaxactive", "toomanyusers",
-                           "noonlineuser","now", "nWelcomes", "shutdown",
+                           "noonlineuser","deprecated_now",
+                           "nWelcomes", "shutdown",
                            NULL};
 int showglobal(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
@@ -165,7 +166,7 @@ int listbrd(int argc, char **argv)
 	SHOWBRDATTR(BRD_VOTEBOARD);
 	SHOWBRDATTR(BRD_WARNEL);
 	SHOWBRDATTR(BRD_TOP);
-	SHOWBRDATTR(BRD_NORECOMMEND);
+	SHOWBRDATTR(BRD_NO_COMMENTS);
 	// SHOWBRDATTR(BRD_BLOG);
 	SHOWBRDATTR(BRD_BMCOUNT);
 	SHOWBRDATTR(BRD_SYMBOLIC);
@@ -236,23 +237,22 @@ int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 int start_services()
 {
     int err = 0;
-    char buf[PATHLEN];
     const char *services[] = {
-        "utmp", "friend", "search",
+        "utmp", "friend", "search", "stat",
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {
         const char *name = services[i];
         char rchar = ' ';
-        SNPRINTF(buf, "bin/%s.svc", name);
-        if (!dashf(buf)) {
+        AUTO_STR(path, "bin/%s.svc", name);
+        if (!dashf(path)) {
             rchar = '-';
             err++;
         } else {
-            STRLCAT(buf, " >/dev/null");
+            AUTO_STR(cmd, "%s >/dev/null", path);
             // All svc should return 0 on success, 1 if a previous service is
             // still serving.
-            int r = system(buf);
+            int r = system(cmd);
             if (r < 0 || !WIFEXITED(r)) {
                 rchar = '!';
                 err++;
@@ -484,7 +484,7 @@ int iszero(void *addr, int size)
     return 1;
 }
 
-#define TESTZERO(x,i) do { if(!iszero((x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
+#define TESTZERO(x,i) do { if(!iszero((&x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
 int testgap(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int i;

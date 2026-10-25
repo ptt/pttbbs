@@ -35,6 +35,7 @@ static ChessGameResult gomo_apply_step(board_t board, const gomo_step_t* step);
 static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
 static void gomo_gameend(ChessInfo* info, ChessGameResult result);
 static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
+static int  gomo_check_step(const gomo_step_t* step);
 
 static const ChessActions gomo_actions = {
     &gomo_init_user,
@@ -50,7 +51,8 @@ static const ChessActions gomo_actions = {
     (void (*)(ChessInfo*, const void*)) &gomo_drawstep,
     NULL, /* post_game */
     &gomo_gameend,
-    &gomo_genlog
+    &gomo_genlog,
+    (int (*)(const void*)) &gomo_check_step
 };
 
 static const ChessConstants gomo_constants = {
@@ -291,9 +293,8 @@ gomo_drawline(const ChessInfo* info, int line)
 
     if (line == 0) {
 	prints(ANSI_COLOR(1;46) "  五子棋對戰  " ANSI_COLOR(45)
-		"%30s VS %-20s%10s" ANSI_RESET,
-	       info->user1.userid, info->user2.userid,
-	       info->mode == CHESS_MODE_WATCH ? "[觀棋模式]" : "");
+		"%30s VS %-30s" ANSI_RESET,
+	       info->user1.userid, info->user2.userid);
     } else if (line == 1) {
 	outs("    A B C D E F G H I J K L M N");
     } else if (line >= 2 && line <= 16) {
@@ -379,6 +380,17 @@ gomo_apply_step(board_t board, const gomo_step_t* step)
 	    step->color, step->color == BLK);
     board[step->loc.r][step->loc.c] = step->color;
     return chkwin(style, step->color == BLK);
+}
+
+static int
+gomo_check_step(const gomo_step_t* step)
+{
+    if (step->loc.r < 0 || step->loc.r >= BRDSIZ ||
+	    step->loc.c < 0 || step->loc.c >= BRDSIZ)
+	return 0;
+    if (step->color != WHT && step->color != BLK)
+	return 0;
+    return 1;
 }
 
 static void
@@ -521,10 +533,7 @@ gomoku(int s, ChessGameMode mode)
 	pwcuChessResult(SIG_GOMO, CHESS_RESULT_LOST);
     }
 
-    if (mode == CHESS_MODE_WATCH)
-	setutmpmode(CHESSWATCHING);
-    else
-	setutmpmode(M_FIVE);
+    setutmpmode(M_FIVE);
     currutmp->sig = SIG_GOMO;
 
     ChessPlay(info);

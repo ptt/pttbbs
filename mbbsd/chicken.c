@@ -72,12 +72,11 @@ show_chicken_picture(const char *fpath)
 static chicken_t*
 load_live_chicken(const char *uid)
 {
-    char fn[PATHLEN];
     int fd = 0;
     chicken_t *p = NULL;
 
     if (!uid || !uid[0]) return NULL;
-    sethomefile(fn, uid, FN_CHICKEN);
+    AUTO_HOMEFILE(fn, uid, FN_CHICKEN);
     if (!dashf(fn)) return NULL;
     fd = open(fn, O_RDWR);
     if (fd < 0) return NULL;
@@ -92,12 +91,11 @@ load_live_chicken(const char *uid)
 static int
 load_chicken(const char *uid, chicken_t *mychicken)
 {
-    char fn[PATHLEN];
     int fd = 0;
 
     memset(mychicken, 0, sizeof(chicken_t));
     if (!uid || !uid[0]) return 0;
-    sethomefile(fn, uid, FN_CHICKEN);
+    AUTO_HOMEFILE(fn, uid, FN_CHICKEN);
     if (!dashf(fn)) return 0;
     fd = open(fn, O_RDONLY);
     if (fd < 0) return 0;
@@ -122,7 +120,6 @@ new_chicken(void)
     chicken_t mychicken;
     int  price, i;
     int fd;
-    char fn[PATHLEN];
     const short *delta = NULL;
 
     memset(&mychicken, 0, sizeof(chicken_t));
@@ -185,7 +182,7 @@ new_chicken(void)
     pay(price, "Ãdª«³J");
 
     // flush it
-    setuserfile(fn, FN_CHICKEN);
+    AUTO_USERFILE(fn, FN_CHICKEN);
     fd = OpenCreate(fn, O_WRONLY);
     if (fd < 0)
     {

@@ -836,14 +836,13 @@ void
 check_bad_clients(void) {
     // check bad clients
     int i, y;
-    char src[PATHLEN], dest[PATHLEN], buf[STRLEN];
+    char buf[STRLEN];
     FILE *fp;
-    SNPRINTF(src, "bad_clients/%s", cuser.userid);
+    AUTO_STR(src, "bad_clients/%s", cuser.userid);
     if (!dashf(src))
 	return;
 
-    STRLCPY(dest, src);
-    STRLCAT(dest, ".reply");
+    AUTO_STR(dest, "%s.reply", src);
     if (dashf(dest))
 	return;
 

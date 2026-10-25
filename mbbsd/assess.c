@@ -145,8 +145,6 @@ reassign_badpost(const char *userid) {
     //
     // 所以，如果真的要補劣，一定要告知使用者。
     userec_t u;
-    char title[TTLEN+1];
-    char msg[512];
     char buf[10];
     char reason[50];
     int orig_badpost = 0;
@@ -187,12 +185,12 @@ reassign_badpost(const char *userid) {
     }
 
     // GOGOGO
-    SNPRINTF(msg, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
+    AUTO_STR(msg, "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32)
              "%s" ANSI_RESET "的退文從" ANSI_COLOR(1;35) "%d" ANSI_RESET
              "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
              "   " ANSI_COLOR(1;37) "修改理由是：%s" ANSI_RESET,
              cuser.userid, u.userid, orig_badpost, u.badpost, reason);
-    SNPRINTF(title, "[安全報告] 站長%s修改%s退文報告", cuser.userid, u.userid);
+    AUTO_STR(title, "[安全報告] 站長%s修改%s退文報告", cuser.userid, u.userid);
     post_msg(BN_SECURITY, title, msg, "[系統安全局]");
     mail_send_text(u.userid, "[系統通知] 退文變更", msg,
                    "[系統安全局]");

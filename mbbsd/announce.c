@@ -177,7 +177,9 @@ a_loadname(menu_t * pm)
     char            buf[PATHLEN];
     int             len;
 
-    int rows = (t_columns < 70) ? (t_lines - 4) / 2 : (t_lines - 4);
+    // Must match the rows PSB shows in a_menu_rec(): t_lines minus the
+    // 3 header lines and 1 footer line.
+    int rows = t_lines - 4;
     if (rows <= 0)
 	rows = 1;
     if (rows != pm->header_size) {
@@ -455,7 +457,6 @@ a_pasteitem(menu_t * pm, int mode)
 static void
 a_appenditem(const menu_t * pm, int isask)
 {
-    char            fname[PATHLEN];
     char            buf[ANSILINELEN];
     char            ans[2] = "y";
     FILE           *fp, *fin;
@@ -477,7 +478,7 @@ a_appenditem(const menu_t * pm, int isask)
 	    return;
 	}
 
-	SNPRINTF(fname, "%s/%s", pm->path,
+	AUTO_STR(fname, "%s/%s", pm->path,
 		pm->header[pm->now - pm->page].filename);
 
 	// if same file, abort.
@@ -660,9 +661,7 @@ a_moveitem(menu_t * pm)
 static void
 a_delrange(menu_t * pm, const char *backup_dir)
 {
-    char            fname[PATHLEN];
-
-    SNPRINTF(fname, "%s/" FN_DIR, pm->path);
+    AUTO_STR(fname, "%s/" FN_DIR, pm->path);
     del_range(0, NULL, fname, backup_dir);
     pm->num = get_num_records(fname, FHSZ);
 }
@@ -670,7 +669,7 @@ a_delrange(menu_t * pm, const char *backup_dir)
 static void
 a_delete(menu_t * pm, const char *backup_dir)
 {
-    char            fpath[PATHLEN], buf[PATHLEN];
+    char            buf[PATHLEN];
     char            ans[4];
     fileheader_t    backup, *fhdr = &(pm->header[pm->now - pm->page]);
     const char *msg_errsync = "刪除檔案失敗，請退回上層目錄後再重試一次",
@@ -678,7 +677,7 @@ a_delete(menu_t * pm, const char *backup_dir)
                *msg_errbackup = "檔案已刪除但無法備份。請至 " BN_BUGREPORT
                                 "報告您試圖刪除檔案的位置。";
 
-    SNPRINTF(fpath, "%s/%s", pm->path, fhdr->filename);
+    AUTO_STR(fpath, "%s/%s", pm->path, fhdr->filename);
     setadir(buf, pm->path);
 
     if (fhdr->filename[0] == 'H' && fhdr->filename[1] == '.') {
@@ -834,13 +833,13 @@ a_editsign(const menu_t * pm)
 static void
 a_showname(const menu_t * pm)
 {
-    char            buf[PATHLEN], target[PATHLEN];
+    char            target[PATHLEN];
     int             len;
     int             i;
     int             sym;
 
     move(b_lines - 1, 0);
-    SNPRINTF(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+    AUTO_STR(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     if (dashl(buf)) {
 	prints("此 symbolic link 名稱為 %s\n",
 	       pm->header[pm->now - pm->page].filename);
@@ -1138,11 +1137,10 @@ static int
 announce_cmd_copy(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
-    char fname[PATHLEN];
     announce_sync_pos(ctx);
     if (!isvisible_man(cx->me))
         return 0;
-    SNPRINTF(fname, "%s/%s", cx->path,
+    AUTO_STR(fname, "%s/%s", cx->path,
              cx->me->header[cx->me->now - cx->me->page].filename);
     if (!cx->me->level && !HasUserPerm(PERM_SYSOP) &&
         (cx->me->bid == 0 || !is_BM_cache(cx->me->bid)) && dashd(fname))
@@ -1261,11 +1259,10 @@ announce_cmd_forward(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    char fname[PATHLEN];
     fileheader_t *fhdr = &cx->me->header[cx->me->now - cx->me->page];
     if (!isvisible_man(cx->me))
         return 0;
-    SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
+    AUTO_STR(fname, "%s/%s", cx->path, fhdr->filename);
     if (HasBasicUserPerm(PERM_LOGINOK) && dashf(fname)) {
         a_forward(cx->path, fhdr, ctx->key);
     } else {
@@ -1280,8 +1277,7 @@ announce_cmd_edit(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    char fname[PATHLEN];
-    SNPRINTF(fname, "%s/%s", cx->path, cx->me->header[cx->me->now - cx->me->page].filename);
+    AUTO_STR(fname, "%s/%s", cx->path, cx->me->header[cx->me->now - cx->me->page].filename);
     if (dashf(fname) && cx->me->level >= MANAGER) {
         int edflags = 0;
         *quote_file = 0;

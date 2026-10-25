@@ -74,6 +74,9 @@ int mail2bbs(char *userid)
     FILE *fout;
     userec_t xuser;
 
+    /* a mail may lack Subject: or From: */
+    title[0] = sender[0] = '\0';
+
     /* check if the userid is in our bbs now */
     if( (uid = passwd_load_user(userid, &xuser)) < 1 ){
 	SNPRINTF(genbuf, "BBS user <%s> not existed", userid);
@@ -104,7 +107,7 @@ int mail2bbs(char *userid)
 	    break;
 	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
 	    STRLCPY(title, genbuf + 9);
-	    str_decode_M3(title);
+	    str_decode_M3(title, sizeof(title));
 	    continue;
 	}
 	if( strncmp(genbuf, "Content-Type:", 13) == 0 ){

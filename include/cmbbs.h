@@ -118,12 +118,12 @@ aidu_t fn2aidu(const char *fn);
 char *aidu2aidc(char *buf, aidu_t aidu);
 char *aidu2fn(char *buf, aidu_t aidu);
 aidu_t aidc2aidu(const char *aidc);
-int  search_aidu(char *bfile, aidu_t aidu, int source);
-int  search_aidu_legacy(char *bfile, aidu_t aidu);
-static inline int search_aid(char *bfile, aidu_t aidu, int source) {
+int  search_aidu(const char *bfile, aidu_t aidu, int source);
+int  search_aidu_legacy(const char *bfile, aidu_t aidu);
+static inline int search_aid(const char *bfile, aidu_t aidu, int source) {
     return search_aidu(bfile, aidu, source);
 }
-static inline int search_aid_legacy(char *bfile, aidu_t aidu) {
+static inline int search_aid_legacy(const char *bfile, aidu_t aidu) {
     return search_aidu_legacy(bfile, aidu);
 }
 void setbtotal(int bid);
@@ -193,7 +193,7 @@ int modify_boardheader(const boardheader_t *bh, int bid);
 typedef struct fileheader_predicate_t {
     int32_t mode;
     char keyword[TTLEN + 1];
-    int32_t recommend;
+    int32_t rating;
     int32_t money;
 } fileheader_predicate_t;
 
@@ -228,7 +228,7 @@ int search_svc_hint_delete(const char *direct, int bid, int recno, aidu_t aidu);
 enum {
     SEARCH_SRC_UNKNOWN     = 0,
     SEARCH_SRC_MBBSD_HASH  = 1, /* mbbsd '#' command (user / app / bot AID lookup) */
-    SEARCH_SRC_MBBSD_SR    = 2, /* mbbsd select_read (title, author, mark, push search) */
+    SEARCH_SRC_MBBSD_SR    = 2, /* mbbsd select_read (title, author, mark, rating search) */
     SEARCH_SRC_MBBSD_LUA   = 3, /* mbbsd bbslua banner / dynamic template */
     SEARCH_SRC_BOARDD_WEB  = 4, /* web / boardd query */
     SEARCH_SRC_EXTERNAL    = 5, /* external maintenance tools / scripts */
@@ -277,6 +277,21 @@ int friend_svc_sync(const char *userid, int uid, pid_t pid, int sid);
 int friend_svc_hbfl_reload(int bid);
 int friend_svc_is_hidden_board_friend(int bid, int uid);
 int logout_friend_online(userinfo_t *utmp);
+
+/* stat.c */
+int StatGetUserDailyPost(const char *userid);
+int StatIncUserDailyPost(const char *userid);
+int StatGetUserDailyMail(const char *userid);
+int StatAddUserDailyMail(const char *userid, int count);
+int StatGetUserDailySong(const char *userid);
+int StatIncUserDailySong(const char *userid);
+
+int StatGetDailyPost(void);
+int StatIncDailyPost(void);
+int StatGetDailyMail(void);
+int StatAddDailyMail(int count);
+int StatGetDailySong(void);
+int StatIncDailySong(void);
 
 
 /* cgo.c */
@@ -334,5 +349,14 @@ int user_load_2fa(const char *userid, user_2fa_t *totp);
 int user_save_2fa(const char *userid, const user_2fa_t *totp);
 int user_delete_2fa(const char *userid);
 int user_verify_2fa_or_backup(const char *userid, const char *input_code);
+
+/* svc.c */
+#define SVC_CONNECT_TIMEOUT_US  10000  /* 10ms */
+#define SVC_READ_TIMEOUT_MS     50     /* 50ms */
+
+int svc_connect(const char *sock_path);
+int svc_write(int fd, const void *buf, size_t len);
+int svc_read(int fd, void *buf, size_t maxlen, int timeout_ms);
+int svc_request(const char *sock_path, const char *req, char *resp, size_t resp_size);
 
 #endif

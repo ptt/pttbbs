@@ -16,7 +16,6 @@ int cmpboardclass(const void *a, const void *b)
 } 
 void buildchilds(int level,char *path,int gid)
 {
-    char newpath[512];
     int i,count=0;
     boardheader_t *ptr, **selected=NULL;
     fileheader_t item;
@@ -51,18 +50,18 @@ void buildchilds(int level,char *path,int gid)
 	       ptr->brdname, ptr->bclass, ptr->desc);
 
         if(ptr->brdattr & BRD_GROUPBOARD){
-	    SNPRINTF(newpath, "%s/%s",path,ptr->brdname);
+	    AUTO_STR(newpath, "%s/%s", path, ptr->brdname);
 	    Mkdir(newpath);
-	    buildchilds(level+1,newpath,ptr-bcache+1); 
+	    buildchilds(level+1, newpath, ptr-bcache+1); 
 	}
 	else{
 	    if(!invalid_pname(path) && !invalid_pname(ptr->brdname) &&
 		    isalpha(ptr->brdname[0])) {
 		char apath[PATHLEN];
 		setapath(apath, ptr->brdname);
-		SNPRINTF(newpath, "/bin/ln -s " BBSHOME "/%s %s/%s",
+		AUTO_STR(cmd, "/bin/ln -s " BBSHOME "/%s %s/%s",
 			apath, path, ptr->brdname);
-		system(newpath);
+		system(cmd);
 	    } else {
 		printf("something wrong: %s, %s\n",path, ptr->brdname);
 	    }
@@ -73,8 +72,8 @@ void buildchilds(int level,char *path,int gid)
         SNPRINTF(item.title, "%-13.13s %-32.32s", level?ptr->brdname:"", ptr->desc);
         item.filemode =  0 ;
 	STRLCPY(item.filename, ptr->brdname);
-        SNPRINTF(newpath, "%s/.DIR",path);
-	append_fileheader(newpath, &item);
+        AUTO_STR(dirpath, "%s/.DIR", path);
+	append_fileheader(dirpath, &item);
     }
     free(selected);
 }

@@ -102,6 +102,11 @@ parse_ip_or_range(const char *s, uint32_t *pstart, uint32_t *pend) {
         int i = 0, j_min = 0, j_max = 0;
 
         for (i = 0; buf[i]; i++) {
+            // Reject tokens whose expansion (plus NUL) would not fit.
+            int need_max = (buf[i] == '*') ? 3 : 1;
+            if (j_min + 1 >= (int)sizeof(s_min) ||
+                j_max + need_max >= (int)sizeof(s_max))
+                return 0;
             if (buf[i] == '*') {
                 s_min[j_min++] = '0';
                 s_max[j_max++] = '2';
@@ -403,7 +408,6 @@ BanIpList*
 cached_banip_list(const char *basefile, const char *cachefile) {
     BanIpList *blist = NULL;
     IPv4List *list = NULL;
-    char tmpfn[PATHLEN];
     FILE *fp;
     time4_t m_base = dasht(basefile);
 
@@ -452,7 +456,7 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     if (!list)
         return NULL;
 
-    SNPRINTF(tmpfn, "%s.%d", cachefile, getpid());
+    AUTO_STR(tmpfn, "%s.%d", cachefile, getpid());
     fp = fopen(tmpfn, "wb");
     if (fp) {
         fwrite(&list->sz, sizeof(size_t), 1, fp);
