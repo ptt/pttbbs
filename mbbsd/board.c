@@ -1279,12 +1279,31 @@ static int
 bconfig_header(PSB_CTX *ctx) {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->cmd.priv;
     boardheader_t *bp = cx->bp;
+    char mode_buf[80];
     const char *mode;
 
-    if (cx->readonly)
+    if (cx->readonly) {
         mode = cx->can_edit ? "[唯讀模式 (按 Ctrl-P 編輯)]" : "[唯讀檢視]";
-    else
-        mode = "[編輯模式 (按 Ctrl-P 唯讀)]";
+    } else {
+        char perms[64] = "";
+        if (HasUserPerm(PERM_SYSOP))
+            strlcat(perms, " 站長", sizeof(perms));
+        else if (HasUserPerm(PERM_BOARDS))
+            strlcat(perms, " 看板總管", sizeof(perms));
+
+        if (CBRD_IS_GROUP_LEAD())
+            strlcat(perms, " 群組長", sizeof(perms));
+        if (CBRD_IS_GROUP_OP())
+            strlcat(perms, " 小組長", sizeof(perms));
+        if (CBRD_IS_BM())
+            strlcat(perms, " 板主", sizeof(perms));
+
+        if (HasUserPerm(PERM_POLICEOP))
+            strlcat(perms, " 警察", sizeof(perms));
+
+        snprintf(mode_buf, sizeof(mode_buf), "[管理權限:%s]", perms[0] ? perms : " 無");
+        mode = mode_buf;
+    }
 
     vs_draw_hdr2("看板設定與管理", mode);
 
