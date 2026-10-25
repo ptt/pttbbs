@@ -47,7 +47,8 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
 	goto answer_file_errout;
     }
 
-    if (maxlen < 0 || offset + maxlen > st->st_size)
+    // offset is within [0, st_size] here, so this cannot overflow.
+    if (maxlen < 0 || maxlen > st->st_size - offset)
 	maxlen = st->st_size - offset;
 
     if (maxlen == 0) {
