@@ -14,6 +14,7 @@ Usage:
 """
 
 import os
+import re
 import subprocess
 import sys
 
@@ -145,6 +146,19 @@ def is_source_file(arg: str) -> bool:
     return not arg.startswith("-") and arg.endswith((".c", ".cc", ".cpp"))
 
 
+def fix_stdin_line_markers(code: bytes, src_file: str) -> bytes:
+    """Replace '<stdin>' in preprocessor line directives with src_file."""
+    pattern = re.compile(rb'(?m)^#(\s*line)?\s+(\d+)\s+"<stdin>"')
+    escaped_src = src_file.replace("\\", "\\\\").replace('"', '\\"').encode()
+
+    def repl(m: re.Match[bytes]) -> bytes:
+        prefix = m.group(1) or b""
+        line_num = m.group(2)
+        return b"#" + prefix + b" " + line_num + b' "' + escaped_src + b'"'
+
+    return pattern.sub(repl, code)
+
+
 def main() -> int:
     args, input_charset, exec_charset = parse_and_strip_charset_flags(sys.argv[1:])
 
@@ -237,7 +251,7 @@ def main() -> int:
 
     pp_proc = subprocess.run(pp_cmd, input=pp_input, capture_output=True)
     if pp_proc.returncode != 0:
-        sys.stderr.buffer.write(pp_proc.stderr)
+        sys.stderr.buffer.write(pp_proc.stderr.replace(b"<stdin>", src_file.encode()))
         return pp_proc.returncode
 
     # Step 2: Transcode source according to input & exec charset
@@ -251,6 +265,8 @@ def main() -> int:
         transcoded_code = utf8_to_big5_c(pp_proc.stdout)
     else:
         transcoded_code = pp_proc.stdout
+
+    transcoded_code = fix_stdin_line_markers(transcoded_code, src_file)
 
     # Step 3: Feed preprocessed stream back to clang
     tail = args[src_idx + 1 :]
