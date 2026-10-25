@@ -2491,7 +2491,15 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
     login_conn_ctx *conn;
     bind_event *pbindev = (bind_event*) arg;
 
-    while ( (fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) >= 0 ) {
+    for (;;) {
+        // accept() writes back the peer's full address length, which is
+        // longer than xsin when a unix socket peer has a long name.
+        szxsin = sizeof(xsin);
+        if ((fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) < 0)
+            break;
+        if (szxsin > sizeof(xsin))
+            szxsin = sizeof(xsin);
+
         STATINC(STAT_LOGIND_NEWCONN);
 
         // XXX note: NONBLOCK is not always inherited (eg, not on Linux).
