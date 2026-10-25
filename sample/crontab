@@ -19,8 +19,8 @@
 # 每個月初一, 十五點歌排行榜
 20	6	1,15	*	*	bin/topsong.sh
 
-# 每週三, 六統計轉信所有板
-35	6	*	*	6	bin/showboard .BOARDS > etc/BOARD.rec
+# 每週六清理板主、小組長與群組長權限
+55	3	*	*	6	bin/cleanbmperm -w
 
 # 每天清 logins.bad
 20	3	*	*	*	/bin/rm -f logins.bad

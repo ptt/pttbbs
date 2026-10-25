@@ -718,24 +718,6 @@ login_query(char *ruid)
 }
 
 static void
-check_BM(void)
-{
-    int i, total;
-
-    assert(HasUserPerm(PERM_BM));
-    for( i = 0, total = num_boards() ; i < total ; ++i )
-	if( is_BM_cache(i + 1) ) /* XXXbid */
-	    return;
-
-    // disable BM permission
-    pwcuBitDisableLevel(PERM_BM);
-    clear();
-    outs("\n由於您已有一段時間未再擔任任何看板板主，\n"
-         "\n板主權(包含進入BM板及加大信箱等)已被收回。\n");
-    pressanykey();
-}
-
-static void
 setup_utmp(int mode)
 {
     /* NOTE, 在 getnewutmpent 之前不應該有任何 slow/blocking function */
@@ -996,12 +978,6 @@ user_login(void)
 	check_register();
 	pwcuLoginSave();	// is_first_login_of_today is only valid after pwcuLoginSave.
 	// cuser.lastlogin 由 pwcuLoginSave 後值就變了，要看 last_login_time
-
-	// XXX 這個 check 花不少時間，有點間隔比較好
-	if (HasUserPerm(PERM_BM) &&
-	    (cuser.numlogindays % 10 == 0) &&	// when using numlogindays, check with is_first_login_of_today
-	    is_first_login_of_today )
-	    check_BM();		/* 自動取下離職板主權力 */
 
 	restore_backup();
 	check_mailbox_quota();
