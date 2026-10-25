@@ -1247,6 +1247,7 @@ do_post_article(int edflags)
     int             money = 0;
     char            genbuf[PATHLEN];
     const char	    *owner;
+    char            anon_owner[IDLEN + 2];
     char            ctype[8][SZ_COLS(5)] = {"問題", "建議", "討論", "心得",
 				   "閒聊", "請益", "情報",
 				   "公告" // TN_ANNOUNCE
@@ -1420,8 +1421,9 @@ do_post_article(int edflags)
     /* Ptt and Jaky */
     if (IS_ENABLED(CONFIG_ANONYMOUS) &&
 	(currbrdattr & BRD_ANONYMOUS) && strcmp(real_name, "r") != 0) {
-	strcat(real_name, ".");
-	owner = real_name;
+	// real_name has no room for the ".", so build the owner separately.
+	SNPRINTF(anon_owner, "%s.", real_name);
+	owner = anon_owner;
 	ifuseanony = 1;
     } else {
 	owner = cuser.userid;
