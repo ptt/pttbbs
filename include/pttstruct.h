@@ -519,38 +519,38 @@ _Static_assert((ST_FRIEND | ST_SUPER | ST_REJECT) <= FRIEND_ONLINE_STAT_MASK,
                "friend status flags exceed FRIEND_ONLINE_STAT_BITS capacity");
 #endif
 /* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
- * 會造成找 shm 空位的無窮迴圈. 
+ * 會造成找 shm 空位的無窮迴圈.
  * 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
 
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
 // TODO
-// 哪天請好心人整理 shm: 
+// 哪天請好心人整理 shm:
 // (2) userinfo_t 可以移掉一些已不用的
 
 #define SHM_VERSION 4842
 typedef struct {
     int   version;  // SHM_VERSION   for verification
-    int   size;	    // sizeof(SHM_t) for verification
+    int   size;     // sizeof(SHM_t) for verification
 
     /* uhash */
     /* uhash is a userid->uid hash table -- jochang */
     char    userid[MAX_USERS][IDLEN + 1];
     char    gap_1[IDLEN+1];
     int     next_in_hash[MAX_USERS];
-    char    gap_2[sizeof(int)];
+    int     gap_2;
     int     money[MAX_USERS];
-    char    gap_3[sizeof(int)];
-    char    gap_4[sizeof(int)];
+    int     gap_3;
+    int     gap_4;
     int     hash_head[1 << HASH_BITS];
-    char    gap_5[sizeof(int)];
+    int     gap_5;
     int     number;				/* # of users total */
     int     loaded;				/* .PASSWD has been loaded? */
 
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
-    char    gap_6[sizeof(userinfo_t)];
+    userinfo_t      gap_6;
     struct {
         int     user_head[MAX_USERS + 1];
         int     next_session[USHM_SIZE];
@@ -559,7 +559,7 @@ typedef struct {
         char    _pad_remaining[(2 * 9 * USHM_SIZE * sizeof(int)) - ((MAX_USERS + 1 + 2 * USHM_SIZE) * sizeof(int))];
 #endif
     } utmp_user;
-    char    gap_7[sizeof(int)];
+    int     gap_7;
     int     currsorted;
     time4_t UTMPuptime;
     int     UTMPnumber;
@@ -567,27 +567,27 @@ typedef struct {
     char    UTMPbusystate;
 
     /* brdshm */
-    char    gap_8[sizeof(int)];
+    int     gap_8;
     int     BMcache[MAX_BOARD][MAX_BMs];
-    char    gap_9[sizeof(int)];
+    int     gap_9;
     boardheader_t   bcache[MAX_BOARD];
-    char    gap_10[sizeof(int)];
+    int     gap_10;
     int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
-    char    gap_11[sizeof(int)];
-    char    gap_12[sizeof(int)];
+    int     gap_11;
+    int     gap_12;
     time4_t busystate_b[MAX_BOARD];
-    char    gap_13[sizeof(int)];
+    int     gap_13;
     int     total[MAX_BOARD];
-    char    gap_14[sizeof(int)];
+    int     gap_14;
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
-    char    gap_15[sizeof(int)];
+    int     gap_15;
     union {
         int     deprecated_hbfl[MAX_BOARD][MAX_FRIEND + 1] __attribute__ ((deprecated));
         hotboards_t hotboards;
     }; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
-    char    gap_16[sizeof(int)];
+    int     gap_16;
     time4_t lastposttime[MAX_BOARD];
-    char    gap_17[sizeof(int)];
+    int     gap_17;
     time4_t Buptime;
     time4_t Btouchtime;
     int     Bnumber;
@@ -596,15 +596,15 @@ typedef struct {
 
     /* pttcache */
     char    notes[MAX_ADBANNER][256*MAX_ADBANNER_HEIGHT];
-    char    gap_18[sizeof(int)];
+    int     gap_18;
     char    today_is[20];
     // FIXME remove it
     int     __never_used__n_notes[MAX_ADBANNER_SECTION];      /* 一節中有幾個 看板 */
-    char    gap_19[sizeof(int)];
+    int     gap_19;
     // FIXME remove it
     int     __never_used__next_refresh[MAX_ADBANNER_SECTION]; /* 下一次要refresh的 看板 */
-    char    gap_20[sizeof(int)];
-    msgque_t loginmsg;  /* 進站水球 */
+    int     gap_20;
+    msgque_t unused_loginmsg;
     int     last_film;
     int     last_usong;
     time4_t Puptime;
@@ -618,10 +618,10 @@ typedef struct {
 	    int     dymaxactive;  /* 動態設定最大人數上限     */
 	    int     toomanyusers; /* 超過人數上限不給進的個數 */
 	    int     noonlineuser; /* 站上使用者不高亮度顯示   */
-        time4_t deprecated_now __attribute__ ((deprecated));
+            time4_t deprecated_now __attribute__ ((deprecated));
 	    int     nWelcomes;
 	    int     shutdown;     /* shutdown flag */
-	    int     deprecated_aloha_svc __attribute__ ((deprecated));    /* Enable aloha.svc microservice */
+            int     gap_var;      /* A simple gap between public defined and local vars */
 
 	    /* 注意, 應保持 align sizeof(int) */
 	} e;
@@ -631,12 +631,7 @@ typedef struct {
 
     /* SHM dynamic variables (formerly _deprecated_home_*, 12004 bytes / 3001 ints) */
     union {
-        struct {
-            unsigned int    _home_ip[MAX_FROM];
-            unsigned int    _home_mask[MAX_FROM];
-            char            _home_desc[MAX_FROM][32];
-            int             _home_num;
-        } _deprecated __attribute__ ((deprecated));
+        int unused_home[MAX_FROM * 10 + 1];
         struct {
             // Only used if USE_PTHREAD_MUTEX_PASSWD is set, but we always keep
             // it to prevent changing SHM size.

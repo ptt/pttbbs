@@ -93,7 +93,8 @@ int utmpnum(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 }
 
 const char    *GV2str[] = {"dymaxactive", "toomanyusers",
-                           "noonlineuser","now", "nWelcomes", "shutdown",
+                           "noonlineuser","deprecated_now",
+                           "nWelcomes", "shutdown",
                            NULL};
 int showglobal(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
@@ -483,7 +484,7 @@ int iszero(void *addr, int size)
     return 1;
 }
 
-#define TESTZERO(x,i) do { if(!iszero((x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
+#define TESTZERO(x,i) do { if(!iszero((&x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
 int testgap(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     int i;
