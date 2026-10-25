@@ -19,8 +19,8 @@ CPROG_WITH_UTIL := \
 	toplazyBM	writemoney	\
 	reaper		buildAnnounce	mailangel	\
 	outmail		chkhbf		userlist	\
-	angel		gamblegive	openticket	\
-	tunepasswd	buildir		xchatd		\
+	angel		openticket	\
+	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
 	munin		useractive_munin	chkfnlen	showbot	\
@@ -41,7 +41,7 @@ CPROG_WITHOUT_UTIL := \
 SCRIPT_PROGS := \
 	backpasswd.sh	mailog.sh	topsong.sh	\
 	toplazyBM.sh	dailybackup.pl	tarqueue.pl	waterball.pl	\
-	filtermail.pl	getbackup.pl	timecap_expire.sh	\
+	filtermail.pl	timecap_expire.sh	\
 	$(END)
 
 # 下面這些程式會被 install
@@ -102,6 +102,3 @@ installbbsctl: bbsctl
 	cp $(SRCROOT)/util/bbsctl $(BBSHOME)/bin/bbsctl
 	chown root $(BBSHOME)/bin/bbsctl
 	chmod 4755 $(BBSHOME)/bin/bbsctl
-
-cleanpasswd: cleanpasswd.c $(BBSBASE) $(UTIL_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< $(UTIL_OBJS) $(LDLIBS)
