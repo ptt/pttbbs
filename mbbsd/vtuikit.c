@@ -1689,7 +1689,7 @@ vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, 
 	buf[0] = tolower(buf[0]);
 
     // save the history except password mode
-    if (buf[0] && !(flags & VGET_NOECHO))
+    if (buf[0] && !(flags & (VGET_NOECHO | VGET_PASSWORD)))
 	InputHistoryAdd(buf);
 
     // copy buffer!
