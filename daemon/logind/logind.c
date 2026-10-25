@@ -178,6 +178,7 @@ enum {
 enum {
     LOGIN_CONN_STATE_CONNDATA = 1,
     LOGIN_CONN_STATE_TERMINAL,
+    LOGIN_CONN_STATE_TUNNEL,
 
     LOGIN_STATE_INIT  = 1,
     LOGIN_STATE_USERID,
@@ -626,6 +627,20 @@ _mt_move_yx(login_conn_ctx *conn, const char *mcmd)
     _buff_write(conn, cmd1, sizeof(cmd1)-1);
     _buff_write(conn, mcmd, strlen(mcmd));
     _buff_write(conn, cmd2, sizeof(cmd2)-1);
+}
+
+static void
+_mt_disable_wrap(login_conn_ctx *conn)
+{
+    static const char cmd[] = ESC_STR "[?7l";
+    _buff_write(conn, cmd, sizeof(cmd)-1);
+}
+
+static void
+_mt_enable_wrap(login_conn_ctx *conn)
+{
+    static const char cmd[] = ESC_STR "[?7h";
+    _buff_write(conn, cmd, sizeof(cmd)-1);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1245,6 +1260,7 @@ static void
 draw_goodbye(login_conn_ctx *conn)
 {
     draw_text_screen(conn, goodbye_screen);
+    _mt_enable_wrap(conn);
 }
 
 static void
@@ -1798,6 +1814,8 @@ start_service(int fd, login_conn_ctx *conn)
     }
     DEBUG_IO(g_tunnel, "after  start_service:towrite(g_tunnel)");
 
+    conn->state = LOGIN_CONN_STATE_TUNNEL;
+
     // to prevent buffer full, we set priority here to force all ackes processed
     // (otherwise tunnel daemon may try to send act and
     event_priority_set(&conn->ev, EVTPRIORITY_ACK);
@@ -2014,6 +2032,8 @@ endconn_cb(int fd, short event GCC_UNUSED, void *arg)
 
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
+    if (conn->state == LOGIN_CONN_STATE_TERMINAL)
+        (void)write(fd, ESC_STR "[?7h", sizeof(ESC_STR "[?7h") - 1);
     close(fd);
     g_opened_fd--;
     free(conn);
@@ -2034,6 +2054,8 @@ static void
 login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
 {
     assert(conn->cb == sizeof(login_conn_ctx));
+    if (conn->state == LOGIN_CONN_STATE_TERMINAL)
+        _mt_enable_wrap(conn);
     if (!sleep_sec)
     {
         endconn_cb(fd, EV_TIMEOUT, (void*) conn);
@@ -2215,7 +2237,7 @@ client_cb(int fd, short event, void *arg)
         }
         // end report ---------------------------
 
-        endconn_cb(fd, EV_TIMEOUT, (void*) conn);
+        login_conn_remove(conn, fd, 0);
         return;
     }
 
@@ -2252,6 +2274,9 @@ client_cb(int fd, short event, void *arg)
             case LOGIN_CONN_STATE_TERMINAL:
                 consumed = login_conn_handle_terminal(conn, fd, buf, len);
                 break;
+
+            case LOGIN_CONN_STATE_TUNNEL:
+                return;
 
             default:
                 consumed = -1;
@@ -2578,6 +2603,8 @@ static int
 login_ctx_activate(login_conn_ctx *conn, int fd)
 {
     const char *banmsg;
+
+    _mt_disable_wrap(conn);
 
     if (g_banned) {
         STATINC(STAT_LOGIND_BANNED);
