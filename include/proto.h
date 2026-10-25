@@ -710,11 +710,11 @@ int  set_user_new_passwd(int y, userec_t *u);
 int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 #define getdata(line, col, prompt, buf, len, echo) \
-    getdata_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo))
+    getdata_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 1), (len), (echo))
 #define getdata_str(line, col, prompt, buf, len, echo, defaultstr) \
-    getdata_str_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo), (defaultstr))
+    getdata_str_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 1), (len), (echo), (defaultstr))
 #define getdata_buf(line, col, prompt, buf, len, echo) \
-    getdata_buf_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 0), (len), (echo))
+    getdata_buf_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 1), (len), (echo))
 int ParseDate(const char *date, int *year, int *month, int *day);
 int ParseDateTime(const char *date, int *year, int *month, int *day,
 		  int *hour, int *min, int *sec);

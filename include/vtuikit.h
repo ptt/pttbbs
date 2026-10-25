@@ -187,11 +187,11 @@ int vgetstr (char *buf, int len, int flags, const char *str);/// input with defa
 int vget    (int y, int x, const char *prompt, char *buf, int len, int mode);
 int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance);
 #define vgets(buf, len, flags) \
-    vgets_sz((buf), __builtin_object_size((buf), 0), (len), (flags))
+    vgets_sz((buf), __builtin_object_size((buf), 1), (len), (flags))
 #define vgetstr(buf, len, flags, str) \
-    vgetstr_sz((buf), __builtin_object_size((buf), 0), (len), (flags), (str))
+    vgetstr_sz((buf), __builtin_object_size((buf), 1), (len), (flags), (str))
 #define vgetstring(buf, len, flags, defstr, pcbs, instance) \
-    vgetstring_sz((buf), __builtin_object_size((buf), 0), (len), (flags), (defstr), (pcbs), (instance))
+    vgetstring_sz((buf), __builtin_object_size((buf), 1), (len), (flags), (defstr), (pcbs), (instance))
 
 
 // v_multiline: micro-textarea input widget
