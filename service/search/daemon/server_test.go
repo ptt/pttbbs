@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1047,6 +1049,74 @@ func TestQuerySearchNegativeOffset(t *testing.T) {
 	}
 	if len(indices) != 2 || indices[0] != 1 || indices[1] != 2 {
 		t.Fatalf("expected [1, 2], got %v", indices)
+	}
+}
+
+// The client picks offset and limit freely. Neither may size the scan buffer
+// or overflow the window arithmetic past what the board's records allow.
+func TestQueryWebSearchTailHugeOffsetAndLimit(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "T", "TestBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir boardDir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "T", "TestBoard", ".DIR")
+
+	for i := 1; i <= 5; i++ {
+		fn := fmt.Sprintf("M.170000000%d.A.00%d", i, i)
+		if err := AppendTestFileheader(dirPath, fn, "tester", fmt.Sprintf("title post %d", i), 0, 10, 100); err != nil {
+			t.Fatalf("append rec %d: %v", i, err)
+		}
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() {
+		_ = svc.Start()
+	}()
+	defer svc.Stop()
+
+	for i := 0; i < 50; i++ {
+		if IsSocketOccupied(socketPath) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	predBytes := MakePredBytes(RS_KEYWORD, "title", 0, 0)
+	query := func(offset, limit int32) ([]int32, int32, uint64) {
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		indices, total := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, offset, limit, SrcBoarddWeb)
+		runtime.ReadMemStats(&after)
+		return indices, total, after.TotalAlloc - before.TotalAlloc
+	}
+	const maxAlloc = 64 << 20
+
+	// Cache miss with a huge negative offset: oldest match, small scan buffer.
+	indices, total, alloc := query(-(1 << 28), 1)
+	if total != 5 || len(indices) != 1 || indices[0] != 1 {
+		t.Fatalf("offset -(1<<28): expected total 5 and [1], got %d and %v", total, indices)
+	}
+	if alloc > maxAlloc {
+		t.Fatalf("offset -(1<<28): allocated %d bytes for a 5-record board", alloc)
+	}
+
+	// Cache miss with a huge limit: newest match, small scan buffer.
+	indices, total, alloc = query(-1, 1<<28)
+	if total != 5 || len(indices) != 1 || indices[0] != 5 {
+		t.Fatalf("limit 1<<28: expected total 5 and [5], got %d and %v", total, indices)
+	}
+	if alloc > maxAlloc {
+		t.Fatalf("limit 1<<28: allocated %d bytes for a 5-record board", alloc)
+	}
+
+	// Fill the cache with a full scan, then hit it with the largest limit.
+	_, _ = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, 0, 1, SrcBoarddWeb)
+	indices, total, _ = query(-1, math.MaxInt32)
+	if total != 5 || len(indices) != 1 || indices[0] != 5 {
+		t.Fatalf("cached, limit MaxInt32: expected total 5 and [5], got %d and %v", total, indices)
 	}
 }
 

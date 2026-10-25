@@ -2763,6 +2763,16 @@ func (s *Service) QueryWebSearchTail(
 	curInode := fileInode(st)
 	curSRExpire := GetBoardSRExpire(bid)
 
+	// offset and limit come from the client. No page reaches further back
+	// or holds more than the board's records, so bound both by that count.
+	// This keeps the scan buffer and the window arithmetic below small.
+	if limit > curTotalRecs {
+		limit = curTotalRecs
+	}
+	if offset < -curTotalRecs {
+		offset = -curTotalRecs
+	}
+
 	key := cacheKey{
 		direct:   resolvedDirect,
 		bid:      bid,
