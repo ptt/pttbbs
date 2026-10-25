@@ -2547,9 +2547,14 @@ listen_cb(int lfd, short event GCC_UNUSED, void *arg)
         telnet_ctx_send_init_cmds(&conn->telnet);
 
         // get remote ip & local port info
-        conn->ctx.addr_len = szxsin;
-        memcpy(&conn->ctx.addr, &xsin, szxsin);
-        inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
+        // Only TCP peers have an IPv4 address here. For a unix socket peer,
+        // leave addr and hostip empty; conn_data sets them later.
+        if (xsin.sin_family == AF_INET && szxsin == sizeof(xsin)) {
+            conn->ctx.addr_len = szxsin;
+            memcpy(&conn->ctx.addr, &xsin, szxsin);
+            inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip,
+                      sizeof(conn->ctx.hostip));
+        }
         strlcpy(conn->ctx.port, pbindev->bind_name, sizeof(conn->ctx.port));
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
