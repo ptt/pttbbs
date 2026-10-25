@@ -304,14 +304,21 @@ Status BoardServiceImpl::Search(ServerContext *context,
     RETURN_ON_FAIL(SetPredicate(filter, &preds[num_preds++]));
   }
 
+  std::string dir_path = paths::bfile(bp->brdname, FN_DIR);
+
+  // length comes from the client and sizes indices below. A page holds no
+  // more posts than the board has, so bound it by the record count.
   int limit = req->length();
   if (limit < 0) {
     limit = 0;
   }
+  const size_t num_records = records::Count<fileheader_t>(dir_path);
+  if (static_cast<size_t>(limit) > num_records) {
+    limit = static_cast<int>(num_records);
+  }
 
   int total_posts = 0;
   std::vector<int32_t> indices(limit);
-  std::string dir_path = paths::bfile(bp->brdname, FN_DIR);
 
   int loaded = search_predicates_window(
       dir_path.c_str(), bid,
