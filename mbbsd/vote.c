@@ -443,7 +443,7 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	chomp(inbuf);
 	inbuf[30] = '\0';	/* truncate */
 #ifdef RESTRICT_PREVIEW_VOTE_RESULTS
-        if (HasUserPerm(PERM_BOARD | PERM_SYSSUPERSUBOP))
+        if (HasUserPerm(PERM_BOARDS | PERM_GROUP_LEAD))
 #endif
         {
             move(num % 15 + 6, num / 15 * 40);
@@ -656,7 +656,7 @@ vote_maintain(const char *bname)
     char            genbuf[4];
     vote_buffer_t   vbuf;
 
-    if (!(currmode & MODE_BOARD))
+    if (!CBRD_IS_BM())
 	return 0;
     if ((pos = getbnum(bname)) <= 0)
 	return 0;

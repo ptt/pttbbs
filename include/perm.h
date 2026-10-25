@@ -17,7 +17,7 @@
 #define PERM_BM           000000002000 /* 板主           */
 #define PERM_ACCOUNTS     000000004000 /* 帳號總管       */
 #define PERM_CHATROOM     000000010000 /* 聊天室總管     */
-#define PERM_BOARD        000000020000 /* 看板總管       */
+#define PERM_BOARDS       000000020000 /* 看板總管       */
 #define PERM_SYSOP        000000040000 /* 站長           */
 #define PERM_BBSADM       000000100000 /* BBSADM         */
 #define PERM_NOTOP        000000200000 /* 不列入排行榜   */
@@ -27,13 +27,13 @@
 #define PERM_VIEWSYSOP    000004000000 /* 視覺站長       */
 #define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
 #define PERM_NOCITIZEN    000020000000 /* 搋奪公權       */
-#define PERM_SYSSUPERSUBOP 000040000000 /* 群組長         */
+#define PERM_GROUP_LEAD   000040000000 /* 群組長         */
 #define PERM_ACCTREG      000100000000 /* 帳號審核組     */
 #define PERM_PRG          000200000000 /* 程式組         */
 #define PERM_ACTION       000400000000 /* 活動組         */
 #define PERM_PAINT        001000000000 /* 美工組         */
 #define PERM_POLICE_MAN   002000000000 /* 警察總管       */
-#define PERM_SYSSUBOP     004000000000 /* 小組長         */
+#define PERM_GROUP_OP     004000000000 /* 小組長         */
 #define PERM_OLDSYSOP     010000000000 /* 退休站長       */
 #define PERM_POLICE       020000000000 /* 警察 */
 // 32 個已經全部用光了。 後面沒有了。
@@ -42,8 +42,8 @@
 
 #define PERM_DEFAULT    (PERM_BASIC | PERM_CHAT | PERM_PAGE )
 #define PERM_MANAGER    (PERM_ACCTREG | PERM_ACTION | PERM_PAINT)
-#define PERM_ADMIN      (PERM_ACCOUNTS | PERM_BOARD | PERM_SYSOP | \
-                         PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_MANAGER)
+#define PERM_ADMIN      (PERM_ACCOUNTS | PERM_BOARDS | PERM_SYSOP | \
+                         PERM_GROUP_OP | PERM_GROUP_LEAD | PERM_MANAGER)
 #define PERM_LOGINCLOAK (PERM_SYSOP | PERM_ACCOUNTS)
 #define PERM_SEEULEVELS (PERM_SYSOP)
 #define PERM_SEEBLEVELS (PERM_SYSOP | PERM_BM)

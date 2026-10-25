@@ -445,7 +445,7 @@ hold_gamble(void)
     FILE           *fp = NULL;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (!(currmode & MODE_BOARD))
+    if (!CBRD_IS_BM())
 	return 0;
     if (bp->brdattr & BRD_NOCREDIT ) {
         vmsg("本看板目前被設定為發文無獎勵，無法使用樂透");

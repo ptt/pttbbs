@@ -430,12 +430,12 @@ set_board(void)
     }
 
     /* init basic perm, but post perm is checked on demand */
-    currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
+    currmode = (currmode & (MODE_DIRTY | MODE_GROUP_OP | MODE_GROUP_LEAD)) | MODE_STARTED;
     if (!HasUserPerm(PERM_NOCITIZEN) &&
-        (HasUserPerm(PERM_BOARD) ||
+        (HasUserPerm(PERM_BOARDS) ||
          is_BM_cache(currbid) ||
-         (bp->BM[0] <= ' ' && GROUPOP()))) {
-	currmode |= MODE_BOARD;
+         (bp->BM[0] <= ' ' && CBRD_IS_GROUP_OP()))) {
+	currmode |= MODE_BM;
     }
 }
 
@@ -680,16 +680,16 @@ static int
 is_tn_allowed(const char *title)
 {
     // TN_ANNOUNCE is prohibited for non-BMs
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP) ||
-	HasUserPerm(PERM_ACCOUNTS | PERM_BOARD | PERM_BBSADM |
+    if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP) ||
+	HasUserPerm(PERM_ACCOUNTS | PERM_BOARDS | PERM_BBSADM |
 		    PERM_VIEWSYSOP| PERM_POLICE_MAN))
 	return 1;
 
     // Note: 關於 subgroup op 的判定目前也是一團糟 - 小組長要從自己的分類
-    // 進去才會有 GROUPOP(). 不過反正小組長跟群組長的人沒那麼多，就開放他們
+    // 進去才會有 CBRD_IS_GROUP_OP(). 不過反正小組長跟群組長的人沒那麼多，就開放他們
     // always 可以使用 TN_ANNOUNCE 吧。
-    if (HasUserPerm(PERM_SYSSUPERSUBOP) ||
-	HasUserPerm(PERM_SYSSUBOP))
+    if (HasUserPerm(PERM_GROUP_LEAD) ||
+	HasUserPerm(PERM_GROUP_OP))
 	return 1;
 
     if (is_tn_announce(title))
@@ -748,7 +748,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     type = isunread ? '+' : ' ';
     if (isunread == 2) type = '~';
 
-    if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
+    if (CBRD_IS_BM() && (ent->filemode & FILE_DIGEST))
     {
 	type = (type == ' ') ? '*' : '#';
     }
@@ -2463,12 +2463,11 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     boardheader_t  *bp = getbcache(currbid);
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD) ||
-		(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
+    if (!(CBRD_IS_BM() || HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()))
 	return DONOTHING;
 
     strcpy(buf, "更改 ");
-    if (HasUserPerm(PERM_BOARD) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))
+    if (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())
 	strcat(buf, "(A)本板發表限制 ");
     strcat(buf, "(B)本板預設");
     if (fhdr->filemode & FILE_VOTE)
@@ -2476,7 +2475,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     strcat(buf, "連署限制 (Q)取消？[Q]");
     buf[0] = vans(buf);
 
-    if ((HasUserPerm(PERM_BOARD) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
+    if ((HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) && buf[0] == 'a') {
 
 	editLimits(
 		&bp->post_limit_logins,
@@ -2532,13 +2531,13 @@ b_man(void)
     AUTO_BDIR(backup_path, currboard);
     AUTO_APATH(apath, currboard);
 
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)) {
+    if (CBRD_IS_BM() || HasUserPerm(PERM_BOARDS)) {
 	AUTO_STR(rebuild_path, "%s/.rebuild", apath);
 	autoclose int fd = OpenCreate(rebuild_path, O_RDWR);
     }
 
-    return a_menu(currboard, apath,HasUserPerm(PERM_BOARD) ? 2 :
-		  (currmode & MODE_BOARD ? 1 : 0),
+    return a_menu(currboard, apath,HasUserPerm(PERM_BOARDS) ? 2 :
+		  (CBRD_IS_BM() ? 1 : 0),
 		  currbid, // getbnum(currboard)?
 		  NULL, backup_path);
 }
@@ -2567,11 +2566,11 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     // should we allow edit-title here?
     if (currstat == RMAIL)
 	allow = 0;
-    else if (HasUserPerm(PERM_BOARD))
+    else if (HasUserPerm(PERM_BOARDS))
 	allow = 2;
     else if (strcmp(BN_ALLPOST, currboard) == 0)
         allow = 0;
-    else if (currmode & MODE_BOARD || is_file_owner(fhdr, &cuser))
+    else if (CBRD_IS_BM() || is_file_owner(fhdr, &cuser))
 	allow = 1;
 
     if (!allow || !fhdr)
@@ -2678,7 +2677,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     // TODO 未來可以考慮作成有選項可設定。
 #ifdef BN_ONLY_OP_CAN_ADD_COMMENT
     if (  strcmp(bp->brdname, BN_ONLY_OP_CAN_ADD_COMMENT) == 0 &&
-	!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP|PERM_SYSSUPERSUBOP|PERM_SYSSUBOP)) )
+	!(CBRD_IS_BM() || HasUserPerm(PERM_SYSOP|PERM_GROUP_LEAD|PERM_GROUP_OP)) )
     {
 	vmsg("本板推文限定管理人員使用。");
 	return FULLUPDATE;
@@ -2707,7 +2706,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     aligncmt = (bp->brdattr & BRD_ALIGNEDCMT) ? 1 : 0;
-    if((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    if(CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
     {
 	/* I'm BM or SYSOP. */
     }
@@ -2781,7 +2780,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     }
 #ifndef DEBUG
-    else if (!(currmode & MODE_BOARD) &&
+    else if (!CBRD_IS_BM() &&
 	    time4_diff(now, lastcomment) < 90) {
 	// too close
 	type = RECTYPE_ARROW;
@@ -3126,7 +3125,7 @@ static int
 del_range_post(int ent, fileheader_t * fhdr, char *direct)
 {
     int ret = 0;
-   if (!(currmode & MODE_BOARD))
+   if (!CBRD_IS_BM())
         return DONOTHING;
 
     if (currbid) {
@@ -3198,11 +3197,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         tusernum = searchuser(fhdr->owner, NULL);
 
     not_owned = (tusernum == usernum ? 0: 1);
-    if (!(currmode & MODE_BOARD) &&
+    if (!CBRD_IS_BM() &&
         (not_owned || !is_file_owner(fhdr, &cuser)))
             return DONOTHING;
 
-    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARD)) ||
+    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARDS)) ||
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
@@ -3210,12 +3209,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
     if (!HasUserPerm(PERM_BASIC) ||	// including guests
-	!( (currmode & MODE_DIGEST) ? (currmode & MODE_BOARD) : CheckPostPerm() ) || // allow BM to delete posts in digest mode
+	!( (currmode & MODE_DIGEST) ? CBRD_IS_BM() : CheckPostPerm() ) || // allow BM to delete posts in digest mode
 	!CheckPostRestriction(currbid)
 	)
 	return DONOTHING;
 
-    if ((bp->brdattr & BRD_NOSELFDELPOST) && !(currmode & MODE_BOARD)) {
+    if ((bp->brdattr & BRD_NOSELFDELPOST) && !CBRD_IS_BM()) {
         vmsg("抱歉，本看板目前禁止自刪文章。");
 	return DONOTHING;
     }
@@ -3421,7 +3420,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     // SYSOP/POLICE can lock, BM can unlock
-    if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
+    if (!CBRD_IS_BM() && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
 	return DONOTHING;
 
     bp = getbcache(currbid);
@@ -3493,7 +3492,7 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
 {
     int ret = 0;
 
-    if (!(currmode & MODE_BOARD))
+    if (!CBRD_IS_BM())
         return DONOTHING;
 
     do {
@@ -3542,7 +3541,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
     char yn[5];
 
-    if (!(currmode & MODE_BOARD))
+    if (!CBRD_IS_BM())
 	return DONOTHING;
 
     getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
@@ -3710,8 +3709,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
     int current_as_base = 1;
 
     // TODO allow author?
-    if (!((currmode & MODE_BOARD) ||
-          (HasUserPerm(PERM_SYSSUPERSUBOP | PERM_SYSSUBOP) && GROUPOP())))
+    if (!(CBRD_IS_BM() || CBRD_IS_GROUP_OP()))
         return DONOTHING;
 
     if (!fhdr || !fhdr->filename[0]) {
@@ -3766,7 +3764,7 @@ tar_addqueue(void)
     FILE           *fp;
     char            bakboard, bakman;
 
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_BOARD)))
+    if (!(CBRD_IS_BM() || HasUserPerm(PERM_BOARDS)))
         return DONOTHING;
 
     AUTO_STR(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
@@ -3920,7 +3918,7 @@ board_digest(void)
 static int
 pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 {
-    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD) ||
+    if ((currmode & MODE_DIGEST) || !CBRD_IS_BM() ||
         old_fhdr->filename[0] == 'L')
         return DONOTHING;
 
@@ -3996,7 +3994,7 @@ static int
 good_post(int ent, fileheader_t * fhdr, const char *direct)
 {
 
-    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
+    if ((currmode & MODE_DIGEST) || !CBRD_IS_BM())
 	return DONOTHING;
 
     if(vans(fhdr->filemode & FILE_DIGEST ?
@@ -4203,7 +4201,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     if (currstat == RMAIL)
         return DONOTHING;
 
-    if (!(currmode & MODE_BOARD)) {
+    if (!CBRD_IS_BM()) {
         if (HasUserPerm(PERM_POLICE))
             return lock_post(ent, fhdr, direct);
         else
@@ -4307,8 +4305,8 @@ const cmd_t read_comms[] = {
     { 'R', NULL, "查看投票結果", bbs_cmd_vote_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
-    { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
-    { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARD | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
+    { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_GROUP_OP | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
+    { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARDS | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, PERM_BM, CMD_PRIO_NONE },
     { 'U', NULL, "快速禁言處分", bbs_cmd_quick_acl, PERM_BM, CMD_PRIO_NONE, true },
     { 'm', NULL, "標記/取消 m 保留文章", bbs_cmd_mark_post, PERM_BM, CMD_PRIO_NONE, true },
@@ -4320,7 +4318,7 @@ const cmd_t read_comms[] = {
     { 'T', NULL, "修改文章標題", bbs_cmd_edit_title, 0, CMD_PRIO_NONE, true },
     { Ctrl('E'), NULL, "管理文章", bbs_cmd_manage_post, PERM_BM | PERM_POLICE, CMD_PRIO_NONE, true },
     { Ctrl('A'), NULL, "顯示文章檔名", bbs_cmd_show_filename, PERM_SYSOP, CMD_PRIO_NONE, true },
-    { 'u', NULL, "加入精華區打包佇列", bbs_cmd_tar_queue, PERM_BM | PERM_BOARD, CMD_PRIO_NONE },
+    { 'u', NULL, "加入精華區打包佇列", bbs_cmd_tar_queue, PERM_BM | PERM_BOARDS, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

@@ -15,7 +15,7 @@ const char * const str_permid[] = {
     "板主",			/* PERM_BM */
     "帳號總管",			/* PERM_ACCOUNTS */
     "聊天室總管",		/* PERM_CHATCLOAK */
-    "看板總管",			/* PERM_BOARD */
+    "看板總管",			/* PERM_BOARDS */
     "站長",			/* PERM_SYSOP */
     "BBSADM",			/* PERM_POSTMARK */
     "不列入排行榜",		/* PERM_NOTOP */
@@ -25,13 +25,13 @@ const char * const str_permid[] = {
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */
     "禠奪公權",		        /* PERM_NOCITIZEN */
-    "群組長",			/* PERM_SYSSUPERSUBOP */
+    "群組長",			/* PERM_GROUP_LEAD */
     "帳號審核組",		/* PERM_ACCTREG */
     "程式組",			/* PERM_PRG */
     "活動組",			/* PERM_ACTION */
     "美工組",			/* PERM_PAINT */
     "警察總管",			/* PERM_POLICE_MAN */
-    "小組長",			/* PERM_SYSSUBOP */
+    "小組長",			/* PERM_GROUP_OP */
     "退休站長",			/* PERM_OLDSYSOP */
     "警察"			/* PERM_POLICE */
 };

@@ -1491,7 +1491,7 @@ u_list_CB(void *data, int num GCC_UNUSED, userec_t * uentp)
     else if (level & PERM_SYSOPHIDE)
 	permstr[0] = 'p';
 
-    if (level & (PERM_BOARD))
+    if (level & (PERM_BOARDS))
 	permstr[1] = 'B';
     else if (level & (PERM_BM))
 	permstr[1] = 'b';

@@ -505,7 +505,7 @@ load_current_user(const char *uid)
             exit(0);
 
         if (is_admin_only) {
-            if (!HasUserPerm(PERM_SYSOP | PERM_BBSADM | PERM_BOARD |
+            if (!HasUserPerm(PERM_SYSOP | PERM_BBSADM | PERM_BOARDS |
                              PERM_ACCOUNTS | PERM_CHATROOM |
                              PERM_VIEWSYSOP | PERM_PRG)) {
                 puts("\r\n權限不足，請換其它 port 連線。\r\n");

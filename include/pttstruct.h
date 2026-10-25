@@ -281,7 +281,9 @@ typedef struct boardheader_t { /* 256 bytes */
 #define BRD_GROUP_LL_TYPE_CLASS (1)
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
-#define GROUPOP()               (currmode & MODE_GROUPOP)
+#define CBRD_IS_BM()            (currmode & MODE_BM)
+#define CBRD_IS_GROUP_OP()      (currmode & MODE_GROUP_OP)
+#define CBRD_IS_GROUP_LEAD()    (currmode & MODE_GROUP_LEAD)
 
 #define TTLEN      64             /* Length of title */
 #define FNLEN      28             /* Length of filename */

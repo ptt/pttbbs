@@ -956,7 +956,7 @@ static const menuitem_t m_admin_money[] = {
 static const menuitem_t m_admin_user[] = {
     {view_user_money_log, PERM_SYSOP|PERM_ACCOUNTS,
                                         "Money Log      最近交易記錄"},
-    {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD,
+    {view_user_login_log, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARDS,
                                         "OLogin Log     最近上線記錄"},
     {view_security_log, PERM_SYSOP|PERM_ACCOUNTS,
                                         "Security Log   帳號安全記錄"},
@@ -971,7 +971,7 @@ static const menuitem_t m_admin_user[] = {
 /* administrator's maintain menu */
 static const menuitem_t adminlist[] = {
     {m_user, PERM_SYSOP,		"User          使用者資料"},
-    {m_board, PERM_BOARD,		"Board         設定看板"},
+    {m_board, PERM_BOARDS,		"Board         設定看板"},
     {m_register,
 	PERM_ACCOUNTS|PERM_ACCTREG,	"Register      審核註冊表單"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,	"Xfile         編輯系統檔案"},
@@ -986,7 +986,7 @@ static const menuitem_t adminlist[] = {
     },
     {
 	.submenu = m_admin_user,
-	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_POLICE_MAN,
+	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARDS|PERM_POLICE_MAN,
 	.desc = "LUser Log     【使用者資料記錄】",
 	.mode = M_XMENU,
 	.status = "記錄管理",
@@ -1314,7 +1314,7 @@ static const menuitem_t playlist[] = {
 static const menuitem_t cmdlist[] = {
     {
 	.submenu = adminlist,
-	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
+	.level = PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARDS|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN,
 	.desc = "0Admin       【 系統維護區 】",
 	.mode = M_ADMIN,
 	.status = "系統維護",

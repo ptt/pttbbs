@@ -69,7 +69,7 @@ TagPruner(int bid)
         return FULLUPDATE;
     }
 
-    if (IsEmptyTagList() || (currstat == READING && !(currmode & MODE_BOARD)))
+    if (IsEmptyTagList() || (currstat == READING && !CBRD_IS_BM()))
         return DONOTHING;
     if (vans("刪除所有標記[N]?") != 'y')
         return READ_REDRAW;

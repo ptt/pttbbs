@@ -158,7 +158,7 @@ friend_append(int type, int count)
 		++j;
 		prints("  (%d) %-s\n", j, friend_list[(int)i]);
 	    }
-	if (HasUserPerm(PERM_SYSOP) || currmode & MODE_BOARD)
+	if (HasUserPerm(PERM_SYSOP) || CBRD_IS_BM())
 	    for (; i < 8; ++i)
 		if (i != type) {
 		    ++j;
@@ -181,7 +181,7 @@ friend_append(int type, int count)
 	j = buf[0] - '1';
 	if (j >= type)
 	    j++;
-	if (!(HasUserPerm(PERM_SYSOP) || currmode & MODE_BOARD) && j >= 5)
+	if (!(HasUserPerm(PERM_SYSOP) || CBRD_IS_BM()) && j >= 5)
 	{
 	    if (boardChanged)
 		enter_board(myboard);

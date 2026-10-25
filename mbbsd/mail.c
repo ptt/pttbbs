@@ -235,9 +235,9 @@ get_max_keepmail(const userec_t *u) {
         return 0;
     }
 
-    if (lvl & (PERM_SYSSUPERSUBOP)) {
+    if (lvl & (PERM_GROUP_LEAD)) {
         keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 10.0;
-    } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_SYSSUBOP)) {
+    } else if (lvl & (PERM_MANAGER | PERM_PRG | PERM_GROUP_OP)) {
         keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 5.0;
     } else if (lvl & (PERM_BM)) {
         keep = MAX_KEEPMAIL * SITE_MAIL_FACTOR * 2.5;
@@ -2027,7 +2027,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     SNPRINTF(title, "¡º %s", fhdr->title);
     a_copyitem(fpath, title, 0, 1);
 
-    if (HasUserPerm(PERM_BM | PERM_BOARD)) {
+    if (HasUserPerm(PERM_BM | PERM_BOARDS)) {
 	move(2, 0);
 	clrtoeol();
 	move(3, 0);
@@ -2049,7 +2049,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 	    setutmpmode(ANNOUNCE);
             // TODO what's the backup_path here?
 	    a_menu(xboard, fpath,
-		   HasUserPerm(PERM_BOARD) ? 2 :
+		   HasUserPerm(PERM_BOARDS) ? 2 :
 		   (!HasUserPerm(PERM_NOCITIZEN) && is_BM_cache(bid)) ? 1 : 0,
 		   bid, NULL, backup_path);
 	} else {

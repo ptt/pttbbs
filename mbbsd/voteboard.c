@@ -8,7 +8,7 @@
 char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 {
     boardheader_t *bh = getbcache(bid);
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
 	return NULL;
 
     return get_restriction_reason(
@@ -21,7 +21,7 @@ char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 char *CheckVoteRestrictionFile(
         const fileheader_t * fhdr, size_t sz_msg, char *msg)
 {
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
         return NULL;
 
     return get_restriction_reason(

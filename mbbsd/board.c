@@ -204,7 +204,7 @@ b_post_note(void)
 {
     char            yn[3];
 
-    // if(!(currmode & MODE_BOARD)) return DONOTHING;
+    // if(!CBRD_IS_BM()) return DONOTHING;
     vs_hdr("自訂注意事項");
 
     AUTO_BFILE(buf, currboard, FN_POST_NOTE);
@@ -555,7 +555,7 @@ b_posttype(void)
 static int
 b_notes_edit(void)
 {
-    if (currmode & MODE_BOARD) {
+    if (CBRD_IS_BM()) {
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	b_note_edit_bname(currbid);
 	return FULLUPDATE;
@@ -721,9 +721,9 @@ bcfg_get_vote_limits(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED
     return buf;
 }
 
-#define PERM_POSTLIMIT  (PERM_BOARD | PERM_SYSGROUPOP)
-#define PERM_SYSGROUPOP (PERM_SYSOP | PERM_SYSSUPERSUBOP)
-#define PERM_POLICEOP   (PERM_SYSOP | PERM_POLICE | PERM_SYSSUPERSUBOP)
+#define PERM_POSTLIMIT  (PERM_BOARDS | PERM_SYSGROUPOP)
+#define PERM_SYSGROUPOP (PERM_SYSOP | PERM_GROUP_LEAD)
+#define PERM_POLICEOP   (PERM_SYSOP | PERM_POLICE | PERM_GROUP_LEAD)
 #ifdef ALLOW_BM_SET_NOSELFDELPOST
 # define PERM_SELFDEL   (PERM_BM | PERM_SYSGROUPOP)
 #else
@@ -1379,7 +1379,7 @@ b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr GCC_UNUSED,
     if (!bp)
         return FULLUPDATE;
 
-    if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP))
+    if (!CBRD_IS_BM() && !HasUserPerm(PERM_SYSOP))
         return FULLUPDATE;
 
     char uid[IDLEN+2];
@@ -1588,7 +1588,7 @@ load_boards(char *key)
 		    continue;
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
-		    !((state = HasBoardPerm(bptr)) || GROUPOP()) ||
+		    !((state = HasBoardPerm(bptr)) || CBRD_IS_GROUP_OP()) ||
 		    TITLE_MATCH(bptr, storage_key))
 		    continue;
 		addnewbrdstat(n, state);
@@ -1613,12 +1613,12 @@ load_boards(char *key)
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
             bptr = getbcache(bid);
 	    state = HasBoardPerm(bptr);
-	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, storage_key) )
+	    if ( !(state || CBRD_IS_GROUP_OP()) || TITLE_MATCH(bptr, storage_key) )
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
-		/* Only SYSOP/SYSSUPERSUBOP knows a board is a link or not. */
-		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
+		/* Only SYSOP/GroupLead knows a board is a link or not. */
+		if (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_LEAD())
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = BRD_LINK_TARGET(bptr);
@@ -1956,10 +1956,10 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     const int should_show_sensitive_info = true;
 #else
     // Show sensitive info if permission is *not* given by solely
-    // PERM_SYSOP, GROUPOP, or both.
+    // PERM_SYSOP, CBRD_IS_GROUP_OP, or both.
     const int should_show_sensitive_info =
         !BoardPermNeedsSysopOverride(B_BH(ptr)) &&
-        !(GROUPOP() && !HasBoardPerm(B_BH(ptr)));
+        !(CBRD_IS_GROUP_OP() && !HasBoardPerm(B_BH(ptr)));
 #endif
 
     if (IN_CLASSROOT()) {
@@ -1999,7 +1999,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         return 0;
     }
 
-    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
+    if (!CBRD_IS_GROUP_OP() && !HasBoardPerm(B_BH(ptr))) {
         return brdlist_hidden(newflag, head, ptr, &bh);
     }
 
@@ -2093,25 +2093,27 @@ brdlist_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
 }
 
 static void
-set_menu_group_op(const char *BM)
+set_menu_group_op(const boardheader_t *bp)
 {
     int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
         return;
-    if (HasUserPerm(PERM_BOARD)) {
+    if (HasUserPerm(PERM_BOARDS)) {
         is_bm = 1;
-    } else if (is_uBM(BM, cuser.userid)) {
+    } else if (is_uBM(bp->BM, cuser.userid)) {
         is_bm = 1;
     }
 
     if (!is_bm)
         return;
 
-    currmode |= MODE_GROUPOP;
+    currmode |= MODE_GROUP_OP;
+    if (bp->gid == 1)
+        currmode |= MODE_GROUP_LEAD;
 
     // XXX 不是很確定是否該在這邊 save level?
-    if (!HasUserPerm(PERM_SYSSUBOP) || !HasUserPerm(PERM_BM))
-        pwcuBitEnableLevel(PERM_SYSSUBOP | PERM_BM);
+    if (!HasUserPerm(PERM_GROUP_OP) || !HasUserPerm(PERM_BM))
+        pwcuBitEnableLevel(PERM_GROUP_OP | PERM_BM);
 
 }
 
@@ -2150,7 +2152,7 @@ paste_taged_brds(int gid)
     fav_t *fav;
     int  bid, tmp, looped = 0;
 
-    if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || GROUPOP()) ||
+    if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_OP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
     fav = get_fav_root();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
@@ -2314,9 +2316,9 @@ board_cmd_tag(cmd_ctx_t *ctx) {
         if (get_fav_type(&nbrd[0]) != 0)
             fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
     } else if (HasUserPerm(PERM_SYSOP) ||
-               HasUserPerm(PERM_SYSSUPERSUBOP) ||
-               HasUserPerm(PERM_SYSSUBOP) ||
-               HasUserPerm(PERM_BOARD)) {
+               HasUserPerm(PERM_GROUP_LEAD) ||
+               HasUserPerm(PERM_GROUP_OP) ||
+               HasUserPerm(PERM_BOARDS)) {
         if (ptr->myattr & NBRD_TAG)
             set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
         else
@@ -2474,8 +2476,8 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
     *cx->num = 0;
     class_bid = (B_BH(ptr)->brdattr & BRD_TOP) ? -1 : ptr->bid;
 
-    if (!GROUPOP())
-        set_menu_group_op(B_BH(ptr)->BM);
+    if (!CBRD_IS_GROUP_OP())
+        set_menu_group_op(B_BH(ptr));
 
     if (time4_lt(now, B_BH(ptr)->bupdate)) {
         int mr = more(TEMP_BFILE(B_BH(ptr)->brdname, fn_notes), NA);
@@ -2609,7 +2611,7 @@ board_cmd_reset_sort(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_del_link(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_LEAD()))
         return 0;
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
@@ -2625,7 +2627,7 @@ board_cmd_del_link(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_edit_board(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
@@ -2645,7 +2647,7 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_new_group(cmd_ctx_t *ctx) {
-    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
     m_newbrd(class_bid, 1);
     brdnum = -1;
@@ -2655,7 +2657,7 @@ board_cmd_new_group(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_new_board(cmd_ctx_t *ctx) {
-    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
     m_newbrd(class_bid, 0);
     brdnum = -1;
@@ -2665,7 +2667,7 @@ board_cmd_new_board(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_edit_note(cmd_ctx_t *ctx) {
-    if (!IN_SUBCLASS() || (!HasUserPerm(PERM_BOARD) && !GROUPOP()))
+    if (!IN_SUBCLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
     char buf[PATHLEN];
     setbpath(buf, getbcache(class_bid)->brdname);
@@ -2676,12 +2678,12 @@ board_cmd_edit_note(cmd_ctx_t *ctx) {
     return 0;
 }
 
-#define PERM_BRD_OR_GROUPOP (PERM_BOARD | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP)
+#define PERM_BRD_OR_GROUPOP (PERM_BOARDS | PERM_GROUP_OP | PERM_GROUP_LEAD)
 
 static const cmd_t board_admin_cmds[] = {
     { 'F', NULL, "重設群組排序快取", board_cmd_reset_sort, PERM_SYSOP, CMD_PRIO_NONE },
     { 'f', NULL, NULL, board_cmd_reset_sort, PERM_SYSOP, CMD_PRIO_NONE },
-    { 'D', NULL, "刪除看板連結", board_cmd_del_link, PERM_BOARD | PERM_SYSSUPERSUBOP, CMD_PRIO_NONE, true },
+    { 'D', NULL, "刪除看板連結", board_cmd_del_link, PERM_BOARDS | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { 'E', NULL, "修改看板設定", board_cmd_edit_board, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE, true },
     { 'R', NULL, "新增群組目錄", board_cmd_new_group, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
     { 'B', NULL, "開闢新看板", board_cmd_new_board, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
@@ -2757,8 +2759,7 @@ static int
 fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
     int num = ctx->curr;
     if (IN_CLASS() &&
-        (HasUserPerm(PERM_BOARD) ||
-         (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))) {
+        (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())) {
         brdnum = -1;
         ctx->reload = true;
         if (make_board_link_interactively(class_bid) < 0)
@@ -2941,7 +2942,7 @@ board_reload_and_check_empty(char *keyword) {
     }
     if (!IS_LISTING_BRD())
         return 1;
-    if (!HasUserPerm(PERM_SYSOP) && !GROUPOP())
+    if (!HasUserPerm(PERM_SYSOP) && !CBRD_IS_GROUP_OP())
         return -1;
     if (paste_taged_brds(class_bid) || m_newbrd(class_bid, 0) == -1)
         return -1;

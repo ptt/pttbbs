@@ -456,7 +456,7 @@ my_write_check_wmsg_status(void)
     switch (currutmp->pager) {
     case PAGER_DISABLE:
     case PAGER_ANTIWB:
-        if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARD)) {
+        if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARDS)) {
             move(1, 0);
             clrtoeol();
             outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人傳訊息，對方可能無法回話。" ANSI_RESET);

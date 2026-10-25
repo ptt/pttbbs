@@ -131,9 +131,10 @@
 #define MODE_STARTED     0x0001    /* 是否已經進入系統 */
 #define MODE_POST        0x0002    /* 是否可以在 currboard 發表文章 */
 #define MODE_POSTCHECKED 0x0004    /* 是否已檢查在 currboard 發表文章的權限 */
-#define MODE_BOARD       0x0008    /* 是否可以在 currboard 刪除、mark文章 */
-#define MODE_GROUPOP     0x0010    /* 是否為小組長 (可以在 MENU 開板) */
+#define MODE_BM          0x0008    /* 是否在 currboard 是板主身份 */
+#define MODE_GROUP_OP    0x0010    /* 是否在 currboard 是小組長身份 */
 #define MODE_DIGEST      0x0020    /* 是否為 digest mode */
+#define MODE_GROUP_LEAD  0x0040    /* 是否在 currboard 是群組長身份 */
 #define MODE_SELECT      0x0080    /* 搜尋使用者標題 */
 #define MODE_DIRTY       0x0100    /* 是否更動過 userflag */
 

@@ -276,12 +276,12 @@ bool
 psb_check_perm(int perm) {
     if (!perm)
         return true;
-    if ((perm & PERM_BM) && ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+    if ((perm & PERM_BM) && (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP)))
         return true;
-    if ((perm & PERM_SYSSUPERSUBOP) &&
-        (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
+    if ((perm & PERM_GROUP_LEAD) &&
+        (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_LEAD()))
         return true;
-    perm &= ~(PERM_BM | PERM_SYSSUPERSUBOP);
+    perm &= ~(PERM_BM | PERM_GROUP_LEAD);
     if (!perm)
         return false;
     return HasBasicUserPerm(perm);
