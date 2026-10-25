@@ -2095,12 +2095,16 @@ brdlist_cursor_clear(int y, PSB_CTX *ctx GCC_UNUSED)
 static void
 set_menu_group_op(const boardheader_t *bp)
 {
-    int is_bm = 0;
     if (HasUserPerm(PERM_NOCITIZEN))
         return;
-    if (HasUserPerm(PERM_BOARDS)) {
+    if (!bp)
+        return;
+
+    int bid = bp - bcache + 1;
+    int is_bm = 0;
+    if (bid > 0 && bid <= MAX_BOARD && is_BM_cache(bid)) {
         is_bm = 1;
-    } else if (is_uBM(bp->BM, cuser.userid)) {
+    } else if (HasUserPerm(PERM_BOARDS)) {
         is_bm = 1;
     }
 
@@ -2110,11 +2114,6 @@ set_menu_group_op(const boardheader_t *bp)
     currmode |= MODE_GROUP_OP;
     if (bp->gid == 1)
         currmode |= MODE_GROUP_LEAD;
-
-    // XXX 不是很確定是否該在這邊 save level?
-    if (!HasUserPerm(PERM_GROUP_OP) || !HasUserPerm(PERM_BM))
-        pwcuBitEnableLevel(PERM_GROUP_OP | PERM_BM);
-
 }
 
 static void replace_link_by_target(boardstat_t *board)

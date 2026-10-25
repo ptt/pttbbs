@@ -94,6 +94,31 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 }
 
 void
+post_auto_enable_perm(const char *userid, int perm_bit, const char *brdname)
+{
+    if (!userid || !*userid)
+	return;
+
+    const char *perm_name = "管理";
+    for (int i = 0; i < NUMPERMS; i++) {
+	if ((1 << i) == perm_bit) {
+	    perm_name = str_permid[i];
+	    break;
+	}
+    }
+
+    AUTO_STR(title, "[安全報告] 系統自動修改%s權限報告", userid);
+    AUTO_STR(msg,
+	     "   系統自動為 " ANSI_COLOR(1;32) "%s" ANSI_RESET " 開啟 " ANSI_COLOR(1;33) "%s" ANSI_RESET " 的權限\n\n"
+	     "   " ANSI_COLOR(1;37) "修改權限理由是：使用者名列看板 %s 管理名單，由系統自動判定補上靜態權限" ANSI_RESET "\n",
+	     userid, perm_name, brdname ? brdname : "");
+
+    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+    log_usies("AutoPerm", TEMPFORMAT(STRLEN, "%s (%s)", brdname ? brdname : "", perm_name));
+    log_user_security(userid, "[AutoPerm] Enabled %s on board %s\n", perm_name, brdname ? brdname : "");
+}
+
+void
 post_violatelaw(const char *crime, const char *police, const char *reason, const
                 char *result) {
     return post_violatelaw2(crime, police, reason, result, "");

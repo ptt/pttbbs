@@ -173,9 +173,14 @@ is_BM_cache(int bid) /* bid starts from 1 */
 	currutmp->uid == pbm[2] ||
 	currutmp->uid == pbm[3] )
     {
-	// auto enable BM permission
-	if (!HasUserPerm(PERM_BM))
-	    pwcuBitEnableLevel(PERM_BM);
+	// auto enable permission corresponding to board type
+	const boardheader_t *bp = getbcache(bid);
+	unsigned int mask = (bp && (bp->brdattr & BRD_GROUPBOARD)) ?
+	    (bp->gid == 1 ? PERM_GROUP_LEAD : PERM_GROUP_OP) : PERM_BM;
+	if (!HasUserPerm(mask)) {
+	    if (pwcuBitEnableLevel(mask) == 0)
+		post_auto_enable_perm(cuser.userid, mask, bp ? bp->brdname : NULL);
+	}
 	return 1;
     }
     return 0;

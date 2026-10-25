@@ -736,6 +736,7 @@ void post_newboard(const char *bgroup, const char *bname, const char *bms);
 void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);
 void post_violatelaw2(const char *crime, const char *police, const char *reason, const char *result, const char *memo);
 void post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid);
+void post_auto_enable_perm(const char *userid, int perm_bit, const char *brdname);
 void post_policelog(const char *bname, const char *atitle, const char *action,
                     const char *reason, const int toggle);
 void post_policelog2(const char *bname, const char *atitle, const char *action,
