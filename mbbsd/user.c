@@ -605,6 +605,25 @@ static void set_chess(const char *name, int y,
     *p_tie = atoi(p);
 }
 
+// Copy from src to dst the fields that option ans of uinfo_query() lets
+// users change in their own record. Keep this in sync with those options:
+// uinfo_query() refuses to save a self-edit that changed anything else.
+static void
+uinfo_copy_self_edit(userec_t *dst, const userec_t *src, int ans)
+{
+    switch (ans) {
+    case '1':
+	memcpy(dst->nickname, src->nickname, sizeof(dst->nickname));
+	dst->over_18 = src->over_18;
+	break;
+    case '2':
+	// The two hashes are one password, so always save them together.
+	memcpy(dst->pw_fhash, src->pw_fhash, sizeof(dst->pw_fhash));
+	memcpy(dst->pw_bhash, src->pw_bhash, sizeof(dst->pw_bhash));
+	break;
+    }
+}
+
 void
 uinfo_query(const char *orig_uid, int adminmode, int unum)
 {
@@ -650,6 +669,9 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	vmsg("系統錯誤: 使用者 ID 記錄不不合。請至 " BN_BUGREPORT "報告。");
 	return;
     }
+
+    // The record as loaded, to tell what this call changed.
+    const userec_t x_orig = x;
 
     ans = vans(adminmode ?
 #if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
@@ -1198,7 +1220,32 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	setumoney(unum, x.money);
     }
 
-    passwd_sync_update(unum, &x);
+    if (!adminmode) {
+	// x was loaded before the prompts above, and other sessions may have
+	// changed the record since (badpost, numposts, ...). Reload it and
+	// save only the fields this option lets the user change.
+	userec_t latest = x_orig;
+
+	// Check that the option changed nothing uinfo_copy_self_edit() would
+	// drop, so a newly editable field fails here instead of being lost.
+	uinfo_copy_self_edit(&latest, &x, ans);
+	if (memcmp(&latest, &x, sizeof(latest)) != 0) {
+	    vmsg("系統錯誤: 修改的資料無法儲存。請至 " BN_BUGREPORT "報告。");
+	    return;
+	}
+
+	passwd_lock();
+	if (passwd_sync_query(unum, &latest) != 0 ||
+	    strcmp(latest.userid, x.userid) != 0) {
+	    passwd_unlock();
+	    vmsg("系統錯誤: 使用者 ID 記錄不合。請至 " BN_BUGREPORT "報告。");
+	    return;
+	}
+	uinfo_copy_self_edit(&latest, &x, ans);
+	passwd_sync_update(unum, &latest);
+	passwd_unlock();
+    } else
+	passwd_sync_update(unum, &x);
 
     if (adminmode)
 	kick_all(x.userid);
