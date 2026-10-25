@@ -849,7 +849,7 @@ DEBUG_IO(int fd, const char *msg) {
 #define PASSWD_PROMPT_YX    "22;1"
 #define TFA_PROMPT_MSG      ANSI_RESET "請輸入兩階段(2FA)驗證碼(6位限時數字 或8位救援碼):"
 #define TFA_PROMPT_YX       "22;1"
-#define TFA_FAIL_MSG        ANSI_RESET ANSI_COLOR(1;31) "驗證碼錯誤！請確認後重新輸入。" ANSI_RESET
+#define TFA_FAIL_MSG        ANSI_RESET ANSI_COLOR(1;31) "驗證碼錯誤！請確認後重新輸入；剛用過的驗證碼請等下一組。" ANSI_RESET
 #define TFA_FAIL_YX         "21;1"
 #define PASSWD_CHECK_MSG    ANSI_RESET "正在檢查帳號與密碼..."
 #define PASSWD_CHECK_YX     PASSWD_PROMPT_YX

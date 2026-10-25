@@ -225,7 +225,8 @@ void generate_2fa_secret(char secret_base32[17]) {
     base32_encode(random_bytes, sizeof(random_bytes), secret_base32, 17);
 }
 
-int verify_2fa(const char *secret_base32, const char *user_code, int time_window) {
+int verify_2fa_step(const char *secret_base32, const char *user_code, int time_window,
+                    uint64_t last_step, uint64_t *matched_step) {
     if (!secret_base32 || !user_code || strlen(user_code) != 6)
         return 0;
 
@@ -237,10 +238,24 @@ int verify_2fa(const char *secret_base32, const char *user_code, int time_window
     uint64_t now = (uint64_t)time(NULL);
     char expected_code[7];
 
+    // A step is recorded only while it is inside the window, so one past
+    // the window's newest step means this clock went back since then (for
+    // example after running ahead) or the record is garbled. Honouring it
+    // would refuse every code until the clock caught up, so ignore it.
+    if (last_step > (now + (uint64_t)time_window * 30) / 30)
+        last_step = 0;
+
     for (int i = -time_window; i <= time_window; i++) {
         uint64_t ts = (uint64_t)((int64_t)now + i * 30);
+        uint64_t step = ts / 30;
+        // RFC 6238 5.2: never accept an OTP for an already accepted step,
+        // nor for an earlier one.
+        if (step <= last_step)
+            continue;
         generate_2fa(secret, (size_t)secret_len, ts, 30, expected_code);
         if (strcmp(expected_code, user_code) == 0) {
+            if (matched_step)
+                *matched_step = step;
             return 1;
         }
     }

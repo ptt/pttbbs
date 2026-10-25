@@ -505,8 +505,14 @@ int bcrypt_checkpass(const char *pass, const char *goodhash);
 int generate_2fa(const uint8_t *secret, size_t secret_len, uint64_t timestamp, uint32_t step_seconds, char code_out[7]);
 /* Generate 16-character Base32 random secret key. secret_base32 size >= 17. */
 void generate_2fa_secret(char secret_base32[17]);
-/* Verify 6-digit user input code against secret. Returns 1 if valid, 0 if invalid. */
-int verify_2fa(const char *secret_base32, const char *user_code, int time_window);
+/* Verify 6-digit user input code against secret, accepting the 30-second
+ * time steps within time_window of now. Returns 1 if valid, 0 if invalid.
+ * Never accepts a code for a step at or before last_step, the step of the
+ * last accepted code (0 for none); a last_step newer than the window allows
+ * (the clock went back) is ignored. On success stores the matched step
+ * (timestamp / 30) in *matched_step if it is not NULL. */
+int verify_2fa_step(const char *secret_base32, const char *user_code, int time_window,
+                    uint64_t last_step, uint64_t *matched_step);
 /* Generate 8-digit random backup recovery code */
 void generate_backup_code(char code_out[9]);
 

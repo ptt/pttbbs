@@ -1523,7 +1523,7 @@ int u_setup_2fa(void)
             y += 2;
             getdata(y, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in, sizeof(code_in), DOECHO);
             if (!user_verify_2fa_or_backup(cuser.userid, code_in)) {
-                outs("\n" ANSI_COLOR(1;31) "驗證碼錯誤！無法停用 2FA。" ANSI_RESET "\n");
+                outs("\n" ANSI_COLOR(1;31) "驗證碼錯誤！無法停用 2FA。剛用過的驗證碼請等下一組。" ANSI_RESET "\n");
                 pressanykey();
                 return 0;
             }
@@ -1601,7 +1601,12 @@ int u_setup_2fa(void)
         if (!*input_code)
             break;
 
-        if (verify_2fa(tfa.secret, input_code, 1)) {
+        uint64_t step = 0;
+        if (verify_2fa_step(tfa.secret, input_code, 1, 0, &step)) {
+            // Mark the enrollment code as used, replacing any step left from
+            // an earlier secret. Like user_save_2fa below, a failure here
+            // does not block setup.
+            user_save_2fa_step(cuser.userid, step);
             user_save_2fa(cuser.userid, &tfa);
             char mode_ans[4];
             getdata(b_lines - 2, 0, "請選擇模式 (1)每次登入皆驗證 (2)同IP免驗證 [2]: ",

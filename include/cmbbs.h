@@ -349,6 +349,8 @@ int user_load_2fa(const char *userid, user_2fa_t *totp);
 int user_save_2fa(const char *userid, const user_2fa_t *totp);
 int user_delete_2fa(const char *userid);
 int user_verify_2fa_or_backup(const char *userid, const char *input_code);
+/* Records `step` as the user's last accepted TOTP time step. Returns 1 on success. */
+int user_save_2fa_step(const char *userid, uint64_t step);
 
 /* svc.c */
 #define SVC_CONNECT_TIMEOUT_US  10000  /* 10ms */

@@ -566,7 +566,7 @@ checkuser_2fa(int lineno, const userec_t *u)
             move(lineno + 1, 0); clrtoeol();
             return 1;
         }
-        mvouts(lineno+1, 0, ANSI_COLOR(1;31) "驗證碼錯誤。請確定在時限前輸入完畢。" ANSI_RESET);
+        mvouts(lineno+1, 0, ANSI_COLOR(1;31) "驗證碼錯誤。請確定在時限前輸入完畢；剛用過的驗證碼請等下一組。" ANSI_RESET);
     }
     mvouts(lineno, 0, ANSI_COLOR(1;31) "兩階段驗證失敗次數過多。" ANSI_RESET);
     move(lineno + 1, 0); clrtoeol();

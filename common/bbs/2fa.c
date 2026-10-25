@@ -7,6 +7,7 @@
 #include "cmsys.h"
 
 #define OTPAUTH_FILENAME ".otpauth"
+#define OTPSTEP_FILENAME ".otpauth.step"
 
 int user_load_2fa(const char *userid, user_2fa_t *totp) {
     if (!userid || !totp)
@@ -93,8 +94,57 @@ int user_delete_2fa(const char *userid) {
     if (!userid)
         return 0;
     char path[PATHLEN];
+    sethomefile(path, userid, OTPSTEP_FILENAME);
+    unlink(path);
     sethomefile(path, userid, OTPAUTH_FILENAME);
     return unlink(path) == 0;
+}
+
+/* OTPSTEP_FILENAME holds the time step of the last accepted TOTP code as one
+ * decimal number (RFC 6238 5.2 replay protection). */
+
+/* Returns the stored step, or 0 if there is none or it cannot be read. A
+ * garbled value is harmless: verify_2fa_step() ignores one in the future. */
+static uint64_t
+user_load_2fa_step(const char *userid)
+{
+    char path[PATHLEN], buf[32];
+    uint64_t step = 0;
+
+    sethomefile(path, userid, OTPSTEP_FILENAME);
+    FILE *fp = fopen(path, "r");
+    if (!fp)
+        return 0;
+    if (fgets(buf, sizeof(buf), fp))
+        step = strtoull(buf, NULL, 10);
+    fclose(fp);
+    return step;
+}
+
+int user_save_2fa_step(const char *userid, uint64_t step) {
+    if (!userid)
+        return 0;
+
+    char path[PATHLEN], tmppath[PATHLEN], buf[32];
+    sethomefile(path, userid, OTPSTEP_FILENAME);
+    int len = snprintf(tmppath, sizeof(tmppath), "%s.XXXXXX", path);
+    if (len < 0 || (size_t)len >= sizeof(tmppath))
+        return 0;
+
+    // Write a temporary file and rename it over the old one, so a reader
+    // never sees a partial value. mkstemp creates it with mode 0600.
+    int fd = mkstemp(tmppath);
+    if (fd < 0)
+        return 0;
+    len = snprintf(buf, sizeof(buf), "%llu\n", (unsigned long long)step);
+    int ok = write(fd, buf, len) == len;
+    if (close(fd) != 0)
+        ok = 0;
+    if (ok && rename(tmppath, path) != 0)
+        ok = 0;
+    if (!ok)
+        unlink(tmppath);
+    return ok;
 }
 
 int user_verify_2fa_or_backup(const char *userid, const char *input_code) {
@@ -108,8 +158,17 @@ int user_verify_2fa_or_backup(const char *userid, const char *input_code) {
     size_t len = strlen(input_code);
 
     // Case 1: 6-digit 2FA verification
-    if (len == 6)
-        return verify_2fa(totp.secret, input_code, 1);
+    if (len == 6) {
+        uint64_t matched = 0;
+        if (!verify_2fa_step(totp.secret, input_code, 1,
+                             user_load_2fa_step(userid), &matched))
+            return 0;
+        // The code is valid; failing to record it must not reject it. No
+        // lock is taken, so logins never wait on each other; two logins at
+        // the same moment may overwrite each other's step.
+        user_save_2fa_step(userid, matched);
+        return 1;
+    }
 
     // Case 2: 8-digit Backup Recovery Code
     if (len == 8) {
