@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <stdint.h>
 #include "cmbbs.h"
 #include "cmsys.h"
@@ -53,14 +52,25 @@ int user_save_2fa(const char *userid, const user_2fa_t *totp) {
     if (!userid || !totp)
         return 0;
 
-    char path[PATHLEN];
+    char path[PATHLEN], tmppath[PATHLEN];
     sethomefile(path, userid, OTPAUTH_FILENAME);
-
-    FILE *fp = fopen(path, "w");
-    if (!fp)
+    int len = snprintf(tmppath, sizeof(tmppath), "%s.XXXXXX", path);
+    if (len < 0 || (size_t)len >= sizeof(tmppath))
         return 0;
 
-    chmod(path, 0600); // Only readable/writable by bbs user
+    // Write a temporary file and rename it over the old one. Truncating
+    // .otpauth in place would let a login reading it meanwhile find no
+    // secret and turn 2FA off for the account. mkstemp creates the file
+    // with mode 0600, so it is never readable by others.
+    int fd = mkstemp(tmppath);
+    if (fd < 0)
+        return 0;
+    FILE *fp = fdopen(fd, "w");
+    if (!fp) {
+        close(fd);
+        unlink(tmppath);
+        return 0;
+    }
 
     fprintf(fp, "version=1\n");
     fprintf(fp, "secret=%s\n", totp->secret);
@@ -69,8 +79,14 @@ int user_save_2fa(const char *userid, const user_2fa_t *totp) {
             fprintf(fp, "backup=%s,%d\n", totp->backup_codes[i], totp->backup_used[i]);
         }
     }
-    fclose(fp);
-    return 1;
+    int ok = !ferror(fp);
+    if (fclose(fp) != 0)
+        ok = 0;
+    if (ok && rename(tmppath, path) != 0)
+        ok = 0;
+    if (!ok)
+        unlink(tmppath);
+    return ok;
 }
 
 int user_delete_2fa(const char *userid) {
