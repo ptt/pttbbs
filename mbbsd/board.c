@@ -1329,17 +1329,18 @@ bconfig_header(PSB_CTX *ctx) {
 
     char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
     board_format_moderators(bp, bm_buf, sizeof(bm_buf));
-    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bp->moderator_notes) + 1];
-    if (bm_buf[0] && bp->moderator_notes[0])
-        snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bp->moderator_notes);
-    else if (bm_buf[0])
-        strlcpy(full_bm, bm_buf, sizeof(full_bm));
-    else
-        strlcpy(full_bm, bp->moderator_notes, sizeof(full_bm));
-    const char *bm = full_bm[0] ? full_bm : "(無)";
     prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
-           " 板主名單: " ANSI_COLOR(1;36) "%s" ANSI_RESET "\n",
-           bp->brdname, bm);
+           " 板主名單: ", bp->brdname);
+    if (bm_buf[0] && bp->moderator_notes[0]) {
+        prints(ANSI_COLOR(1;36) "%s" ANSI_RESET " " ANSI_COLOR(1;32) "%s" ANSI_RESET "\n",
+               bm_buf, bp->moderator_notes);
+    } else if (bm_buf[0]) {
+        prints(ANSI_COLOR(1;36) "%s" ANSI_RESET "\n", bm_buf);
+    } else if (bp->moderator_notes[0]) {
+        prints(ANSI_COLOR(1;32) "%s" ANSI_RESET "\n", bp->moderator_notes);
+    } else {
+        prints("(無)\n");
+    }
     return 0;
 }
 
@@ -2779,7 +2780,7 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
     boardstat_t *ptr = &nbrd[num];
     if (!brdstat_is_board(ptr))
         return 0;
-    move(1, 1);
+    move(1, 0);
     clrtobot();
     // m_mod_board() looks the board up by name, and several links can share
     // a name (see make_board_link()), so the name may lead to another link.

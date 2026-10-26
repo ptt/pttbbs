@@ -702,6 +702,93 @@ delete_links_to(int bid)
 
 #define MSG_LINK_BY_L "看板連結請在群組列表按 L 建立。"
 
+
+typedef struct {
+    user_t  moderator[MAX_BMs];
+    char    notes[IDLEN + 1];
+} b_mod_form_t;
+
+static const char *
+b_mod_notes_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = (const char *)val_ptr;
+    if (val && (int)strlen(val) > IDLEN) {
+        return "板主名單彩蛋長度不可超過 12 位元組/字元";
+    }
+    return NULL;
+}
+
+static const vform_field_t b_mod_fields[] = {
+    VFORM_FIELD_USER("板主 1", "請輸入第 1 位板主 ID (編輯時按空白鍵可補完ID，留空表示無)", NULL, b_mod_form_t, moderator[0], NULL),
+    VFORM_FIELD_USER("板主 2", "請輸入第 2 位板主 ID (編輯時按空白鍵可補完ID，留空表示無)", NULL, b_mod_form_t, moderator[1], NULL),
+    VFORM_FIELD_USER("板主 3", "請輸入第 3 位板主 ID (編輯時按空白鍵可補完ID，留空表示無)", NULL, b_mod_form_t, moderator[2], NULL),
+    VFORM_FIELD_USER("板主 4", "請輸入第 4 位板主 ID (編輯時按空白鍵可補完ID，留空表示無)", NULL, b_mod_form_t, moderator[3], NULL),
+    VFORM_FIELD_TEXT("名單彩蛋", "板主名單彩蛋/備註 (最多 12 字)", NULL, b_mod_form_t, notes, 0, b_mod_notes_validator),
+};
+
+static const char *
+b_mod_form_validator(const vform_def_t *def GCC_UNUSED, const void *data, void *priv GCC_UNUSED)
+{
+    const b_mod_form_t *form = (const b_mod_form_t *)data;
+    for (int i = 0; i < MAX_BMs; i++) {
+        if (form->moderator[i].unum <= 0)
+            continue;
+        for (int j = i + 1; j < MAX_BMs; j++) {
+            if (form->moderator[j].unum > 0 &&
+                form->moderator[i].unum == form->moderator[j].unum) {
+                return "板主名單不可重複設定相同使用者";
+            }
+        }
+    }
+    return NULL;
+}
+
+static const vform_def_t b_mod_form_def = {
+    .title = "看板板主設定",
+    .subtitle = "設定板主名單 (最多 4 位) 與名單彩蛋",
+    .mode = VFORM_MODE_INPLACE,
+    .fields = b_mod_fields,
+    .num_fields = ARRAY_SIZE(b_mod_fields),
+    .form_validator = b_mod_form_validator,
+    .submit_prompt = "確定儲存板主設定嗎？[Y/n] ",
+};
+
+static int
+edit_board_moderators_form(boardheader_t *bh)
+{
+    b_mod_form_t form;
+    memset(&form, 0, sizeof(form));
+
+    for (int i = 0; i < MAX_BMs; i++) {
+        form.moderator[i] = bh->moderators[i];
+    }
+    strlcpy(form.notes, bh->moderator_notes, sizeof(form.notes));
+    if ((int)strlen(form.notes) > IDLEN) {
+        form.notes[IDLEN] = '\0';
+    }
+    mbs_safe_trim(form.notes);
+
+    if (vform_run(&b_mod_form_def, &form, NULL) <= 0)
+        return 0;
+
+    memset(bh->moderators, 0, sizeof(bh->moderators));
+    int count = 0;
+    for (int i = 0; i < MAX_BMs; i++) {
+        if (form.moderator[i].unum > 0) {
+            bh->moderators[count++] = form.moderator[i];
+        }
+    }
+    if ((int)strlen(form.notes) > IDLEN) {
+        form.notes[IDLEN] = '\0';
+    }
+    mbs_safe_trim(form.notes);
+    int l = strlen(form.notes);
+    while (l > 0 && form.notes[l - 1] == ' ')
+        form.notes[--l] = '\0';
+    strlcpy(bh->moderator_notes, form.notes, sizeof(bh->moderator_notes));
+    return 1;
+}
+
 int
 m_mod_board(char *bname)
 {
@@ -716,27 +803,25 @@ m_mod_board(char *bname)
 	return -1;
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
+    vs_hdr("看板設定");
     char cur_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
     board_format_moderators(&bh, cur_bm, sizeof(cur_bm));
     prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
-	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
+	   "有效板主名單：%s\n"
+	   "板主名單彩蛋：%s\n",
+	   bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
            ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
-           bh.desc, bh.bclass, bid, bh.gid, cur_bm);
-    if (bh.moderator_notes[0])
-        prints(" " ANSI_COLOR(1;32) "[notes: %s]" ANSI_RESET, bh.moderator_notes);
-    prints("\n");
-    bperm_msg(&bh);
-
-    /* Ptt 這邊斷行會檔到下面 */
-    move(9, 0);
+           bh.desc, bh.bclass, bid, bh.gid,
+           cur_bm,
+           bh.moderator_notes);
     if (bh.brdattr & BRD_SYMBOLIC) {
         SNPRINTF(genbuf, "[看板連結] (D)刪除 [Q]取消? ");
     } else {
-        SNPRINTF(genbuf, "(E)設定 (V)發文獎勵%s%s [Q]取消? ",
-                 HasUserPerm(PERM_BOARDS) ? " (B)Vote (S)救回 (C)合併 (G)樂透解卡" : "",
+        SNPRINTF(genbuf, "(E)設定 (M)板主 (V)獎勵%s%s [Q]取消? ",
+                 HasUserPerm(PERM_BOARDS) ? " (B)Vote (S)救回 (C)合併 (G)樂透" : "",
                  (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) ? " (D)刪除" : "");
     }
-    getdata(10, 0, genbuf, ans, 3, LCECHO);
+    getdata(8, 0, genbuf, ans, 3, LCECHO);
     if (isascii(*ans))
         *ans = tolower(*ans);
 
@@ -752,6 +837,32 @@ m_mod_board(char *bname)
     }
 
     switch (*ans) {
+    case 'm':
+	memcpy(&newbh, &bh, sizeof(bh));
+	if (edit_board_moderators_form(&newbh)) {
+	    if (memcmp(&newbh, &bh, sizeof(bh)) != 0) {
+		assert(0<=bid-1 && bid-1<MAX_BOARD);
+		memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
+		substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
+		reset_board(bid);
+		sort_bcache();
+		log_usies("SetBoard", newbh.brdname);
+
+		AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+		char bm_buf1[BOARD_MODERATORS_FORMAT_MAX_LEN];
+		char bm_buf2[BOARD_MODERATORS_FORMAT_MAX_LEN];
+		board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
+		board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
+		AUTO_STR(msg, "板名: %s\n"
+			      "板主: %s => %s\n"
+			      "彩蛋: %s => %s\n",
+			 bh.brdname, bm_buf1, bm_buf2,
+			 bh.moderator_notes, newbh.moderator_notes);
+		post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+		vmsg("板主名單已更新完畢");
+	    }
+	}
+	break;
     case 'g':
 	if (HasUserPerm(PERM_BOARDS)) {
 	    char            path[PATHLEN];
@@ -902,40 +1013,7 @@ m_mod_board(char *bname)
 	if (genbuf[0])
 	    strlcpy(newbh.desc, genbuf, sizeof(newbh.desc));
 
-        do {
-            int uids[MAX_BMs], i;
-            char cur_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
-            board_format_moderators(&bh, cur_bm, sizeof(cur_bm));
-            if (!getdata_str(y, 0, "新板主名單：", genbuf, IDLEN * 3 + 3,
-                             DOECHO, cur_bm) || strcmp(genbuf, cur_bm) == 0)
-                break;
-            trim(genbuf);
-            parseBMlist(genbuf, uids);
-            mvouts(y + 2, 0, " 實際生效的板主ID: " ANSI_COLOR(1));
-            for (i = 0; i < MAX_BMs && uids[i] >= 0; i++) {
-                prints("%s ", getuserid(uids[i]));
-            }
-            outs(ANSI_RESET "\n");
-
-            mvprints(y + 3, 0, "注意: 資源回收筒與編輯歷史已不用先把自己設成板主。\n"
-                     "詳情請見(X)->(L)系統更新記錄。\n");
-            if (getdata(y + 5, 0, "確定此板主名單正確?[y/N] ", ans,
-                        sizeof(ans), LCECHO) &&
-                ans[0] == 'y') {
-                memset(newbh.moderators, 0, sizeof(newbh.moderators));
-                for (i = 0; i < MAX_BMs && uids[i] > 0; i++) {
-                    userec_t u;
-                    if (passwd_query(uids[i], &u) == 0) {
-                        newbh.moderators[i].unum = uids[i];
-                        newbh.moderators[i].firstlogin = u.firstlogin;
-                    }
-                }
-                newbh.moderator_notes[0] = '\0';
-                move(y + 1, 0); clrtobot();
-                break;
-            }
-            move(y, 0); clrtobot();
-        } while (1);
+        edit_board_moderators_form(&newbh);
         y++;
 
 	if (HasUserPerm(PERM_BOARDS)) {
@@ -1009,8 +1087,10 @@ m_mod_board(char *bname)
 	    board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
 	    board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
 	    AUTO_STR(msg, "板名: %s => %s\n"
-		    "板主: %s => %s\n",
-		    bh.brdname, newbh.brdname, bm_buf1, bm_buf2);
+		    "板主: %s => %s\n"
+		    "彩蛋: %s => %s\n",
+		    bh.brdname, newbh.brdname, bm_buf1, bm_buf2,
+		    bh.moderator_notes, newbh.moderator_notes);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	}
     }
