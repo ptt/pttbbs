@@ -1484,6 +1484,14 @@ addnewbrdstat(int n, int state)
     return ptr;
 }
 
+/* Whether a board list row is a board. In My Favorites, folder and line rows
+ * hold the folder or line id where board rows hold the bid. */
+static int
+brdstat_is_board(const boardstat_t *ptr)
+{
+    return !(ptr->myattr & (NBRD_LINE | NBRD_FOLDER));
+}
+
 
 static void
 load_boards(char *key)
@@ -1681,7 +1689,8 @@ search_local_board()
 
 
     for (num = 0; num < brdnum; num++)
-        if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
+        if (brdstat_is_board(&nbrd[num]) &&
+            !strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
             return num;
     return -1;
 }
@@ -2221,7 +2230,7 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
     if (ptr != NULL) {
         int i;
         for (i = 0; i < nbrdsize; ++i) {
-            if (bid == nbrd[i].bid) {
+            if (bid == nbrd[i].bid && brdstat_is_board(&nbrd[i])) {
                 *num_ptr = i;
                 break;
             }
@@ -2401,7 +2410,8 @@ board_cmd_mark_read(cmd_ctx_t *ctx) {
     boardstat_t *ptr;
     assert(0 <= num && num < nbrdsize);
     ptr = &nbrd[num];
-    if (nbrd[num].bid < 0 || !HasBoardPerm(B_BH(ptr)))
+    if (nbrd[num].bid < 0 || !brdstat_is_board(ptr) ||
+        !HasBoardPerm(B_BH(ptr)))
         return 0;
     if (ch == 'v') {
         ptr->myattr &= ~NBRD_UNREAD;
@@ -2650,6 +2660,8 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
     boardstat_t *ptr = &nbrd[num];
+    if (!brdstat_is_board(ptr))
+        return 0;
     move(1, 1);
     clrtobot();
     // m_mod_board() looks the board up by name, and several links can share
