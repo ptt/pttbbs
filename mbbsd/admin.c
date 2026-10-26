@@ -854,18 +854,37 @@ static const vform_def_t b_general_form_def = {
     .submit_prompt = "確定儲存看板設定嗎？[Y/n] ",
 };
 
+static const vform_def_t b_new_board_form_def = {
+    .title = "建立新板",
+    .subtitle = "設定新看板基本資料與發文金錢獎勵",
+    .mode = VFORM_MODE_INPLACE,
+    .fields = b_general_fields,
+    .num_fields = ARRAY_SIZE(b_general_fields),
+    .form_validator = NULL,
+    .submit_prompt = "確定建立看板嗎？[Y/n] ",
+};
+
+static int
+run_board_general_form(boardheader_t *bh, b_general_form_t *form, bool is_new)
+{
+    memset(form, 0, sizeof(*form));
+    strlcpy(form->brdname, bh->brdname, sizeof(form->brdname));
+    strlcpy(form->bclass, bh->bclass, sizeof(form->bclass));
+    strlcpy(form->desc, bh->desc, sizeof(form->desc));
+    if (is_new)
+        form->post_reward = true;
+    else
+        form->post_reward = !(bh->brdattr & BRD_NOCREDIT);
+
+    const vform_def_t *def = is_new ? &b_new_board_form_def : &b_general_form_def;
+    return vform_run(def, form, bh);
+}
+
 static int
 edit_board_general_form(boardheader_t *bh, int bid)
 {
     b_general_form_t form;
-    memset(&form, 0, sizeof(form));
-
-    strlcpy(form.brdname, bh->brdname, sizeof(form.brdname));
-    strlcpy(form.bclass, bh->bclass, sizeof(form.bclass));
-    strlcpy(form.desc, bh->desc, sizeof(form.desc));
-    form.post_reward = !(bh->brdattr & BRD_NOCREDIT);
-
-    if (vform_run(&b_general_form_def, &form, bh) <= 0)
+    if (run_board_general_form(bh, &form, false) <= 0)
         return 0;
 
     boardheader_t newbh;
@@ -1338,7 +1357,7 @@ static int add_board_record(const boardheader_t *board)
  * open a new board
  * @param whatclass In which sub class
  * @param recover   Forcely open a new board, often used for recovery.
- * @return -1 if failed
+ * @return Board id (> 0) on success, or -1 if failed
  */
 int
 m_newbrd(int whatclass, int recover)
@@ -1347,7 +1366,6 @@ m_newbrd(int whatclass, int recover)
     char            ans[4];
     char            genbuf[200];
 
-    vs_hdr("建立新板");
     memset(&newboard, 0, sizeof(newboard));
 
     newboard.gid = whatclass;
@@ -1359,27 +1377,19 @@ m_newbrd(int whatclass, int recover)
 	vmsg(MSG_GROUP_GONE);
 	return -1;
     }
-    do {
-	if (!getdata(3, 0, MSG_BID, newboard.brdname,
-		     sizeof(newboard.brdname), DOECHO))
-	    return -1;
-        if (is_valid_brdname(newboard.brdname))
-            break;
-        // some i* need to be acknowledged
-        vmsg("無法使用此名稱，請使用英數字或 _-. 且開頭不得為數字。");
-    } while (true);
+    b_general_form_t form;
+    if (run_board_general_form(&newboard, &form, true) <= 0)
+        return -1;
 
-    do {
-	getdata(6, 0, "看板類別：", genbuf, 5, DOECHO);
-	if (strlen(genbuf) == 4)
-	    break;
-    } while (1);
+    strlcpy(newboard.brdname, form.brdname, sizeof(newboard.brdname));
+    strlcpy(newboard.bclass, form.bclass, sizeof(newboard.bclass));
+    strlcpy(newboard.desc, form.desc, sizeof(newboard.desc));
+    newboard.brdattr = 0;
+    if (!form.post_reward)
+        newboard.brdattr |= BRD_NOCREDIT;
+    if (IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG))
+        newboard.brdattr |= BRD_CPLOG;
 
-    STRLCPY(newboard.bclass, genbuf);
-
-    getdata(8, 0, "看板主題：", genbuf, sizeof(newboard.desc), DOECHO);
-    if (genbuf[0])
-	strlcpy(newboard.desc, genbuf, sizeof(newboard.desc));
     setbpath(genbuf, newboard.brdname);
 
     // Recover 應只拿來處理目錄已存在(但.BRD沒有)的情況，不然就會在
@@ -1401,9 +1411,12 @@ m_newbrd(int whatclass, int recover)
             return -1;
         }
     }
-    newboard.brdattr = 0;
-    if (IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG))
-        newboard.brdattr |= BRD_CPLOG;
+
+    if (!edit_board_moderators_form(&newboard)) {
+        if (!recover)
+            rmdir(genbuf);
+        return -1;
+    }
 
     if (HasUserPerm(PERM_BOARDS)) {
 	move(1, 0);
@@ -1424,25 +1437,7 @@ m_newbrd(int whatclass, int recover)
 	newboard.brdattr &= ~BRD_CPLOG;
     }
 
-
     newboard.level = 0;
-    getdata(11, 0, "板主名單：", genbuf, sizeof(genbuf), DOECHO);
-    {
-        int uids[MAX_BMs];
-        int n_uids = parseBMlist(genbuf, uids);
-        memset(newboard.moderators, 0, sizeof(newboard.moderators));
-        for (int i = 0; i < n_uids && i < MAX_BMs; i++) {
-            if (uids[i] > 0 && uids[i] <= MAX_USERS) {
-                userec_t u;
-                if (passwd_query(uids[i], &u) == 0) {
-                    newboard.moderators[i].unum = uids[i];
-                    newboard.moderators[i].firstlogin = u.firstlogin;
-                }
-            }
-        }
-    }
-    newboard.moderator_notes[0] = '\0';
-
     if (HasUserPerm(PERM_BOARDS) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	if (*ans == 'y') {
@@ -1467,15 +1462,17 @@ m_newbrd(int whatclass, int recover)
 	else if (SHM->Bnumber >= MAX_BOARD)
 	    vmsg("看板已滿，請洽系統站長");
 	else
-    	    vmsg("看板寫入失敗");
+	    vmsg("看板寫入失敗");
 
 	setbpath(genbuf, newboard.brdname);
 	rmdir(genbuf);
 	return -1;
     }
 
-    getbcache(whatclass)->childcount = 0;
-    pressanykey();
+    boardheader_t *parent_bh = getbcache(whatclass);
+    parent_bh->childcount = 0;
+    parent_bh->firstchild[0] = 0;
+    parent_bh->firstchild[1] = 0;
     setup_man(&newboard, NULL);
     outs("\n新板成立");
     char nb_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
@@ -1483,7 +1480,7 @@ m_newbrd(int whatclass, int recover)
     post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, nb_bm);
     log_usies("NewBoard", newboard.desc);
     pressanykey();
-    return 0;
+    return getbnum(newboard.brdname);
 }
 
 int make_board_link(const char *bname, int gid)

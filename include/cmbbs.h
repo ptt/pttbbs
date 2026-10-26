@@ -151,7 +151,6 @@ void setbtotal(int bid);
 void touchbpostnum(int bid, int delta);
 int  getbnum(const char *bname);
 void buildBMcache(int);
-int parseBMlist(const char *input, int uids[MAX_BMs]);
 char *board_format_moderators(const boardheader_t *bh, char *buf, size_t buflen);
 int does_board_have_bm(const boardheader_t *bp);
 #define does_board_have_public_bm does_board_have_bm

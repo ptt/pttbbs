@@ -41,6 +41,38 @@ usage(const char *prog)
 }
 
 static int
+parseBMlist(const char *input, int uids[MAX_BMs]) {
+    int i, uid;
+    char *ptr, *strtok_pos;
+    char s[128];
+
+    STRLCPY(s, input);
+    // reset BM list
+    for (i = 0; i < MAX_BMs; i++)
+        uids[i] = -1;
+
+    for (i = 0; s[i] != '\0'; ) {
+        unsigned char c = (unsigned char)s[i];
+        if (big5_is_valid_lead(c) && s[i + 1] != '\0') {
+            s[i] = ' ';
+            s[i + 1] = ' ';
+            i += 2;
+        } else if (!isalpha(c) && !isdigit(c)) {
+            s[i] = ' ';
+            i++;
+        } else {
+            i++;
+        }
+    }
+    for (ptr = strtok_r(s, " ", &strtok_pos), i = 0;
+	 i < MAX_BMs && ptr != NULL;
+         ptr = strtok_r(NULL, " ", &strtok_pos))
+        if((uid = searchuser(ptr, NULL)) != 0)
+            uids[i++] = uid;
+    return i;
+}
+
+static int
 parse_moderators(const char *input, user_t moderators[MAX_BMs])
 {
     int uids[MAX_BMs];

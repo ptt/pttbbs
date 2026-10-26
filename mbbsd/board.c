@@ -2797,9 +2797,18 @@ static int
 board_cmd_new_group(cmd_ctx_t *ctx) {
     if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
-    m_newbrd(class_bid, 1);
+    int new_bid = m_newbrd(class_bid, 1);
     brdnum = -1;
     ctx->reload = true;
+    if (new_bid > 0) {
+        load_boards("");
+        for (int i = 0; i < brdnum; i++) {
+            if (nbrd[i].bid == new_bid) {
+                ctx->curr = i;
+                break;
+            }
+        }
+    }
     return 0;
 }
 
@@ -2807,9 +2816,18 @@ static int
 board_cmd_new_board(cmd_ctx_t *ctx) {
     if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
         return 0;
-    m_newbrd(class_bid, 0);
+    int new_bid = m_newbrd(class_bid, 0);
     brdnum = -1;
     ctx->reload = true;
+    if (new_bid > 0) {
+        load_boards("");
+        for (int i = 0; i < brdnum; i++) {
+            if (nbrd[i].bid == new_bid) {
+                ctx->curr = i;
+                break;
+            }
+        }
+    }
     return 0;
 }
 
