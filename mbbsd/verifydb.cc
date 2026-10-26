@@ -15,11 +15,7 @@ extern "C" {
 
 namespace {
 
-bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
-  int fd = toconnect(REGMAILD_ADDR);
-  if (fd < 0)
-    return false;
-
+bool verifydb_transact_fd(int fd, const void *msg, size_t len, Bytes *out) {
   // Send request.
   verifydb_message_t rep = {};
   rep.header.cb = sizeof(rep.header) + len;
@@ -37,6 +33,16 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
     return false;
 
   return true;
+}
+
+bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
+  int fd = toconnect(REGMAILD_ADDR);
+  if (fd < 0)
+    return false;
+
+  bool ok = verifydb_transact_fd(fd, msg, len, out);
+  close(fd);
+  return ok;
 }
 
 std::string Highlighed(const char *txt, bool ansi_color) {

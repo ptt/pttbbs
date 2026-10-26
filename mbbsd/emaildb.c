@@ -10,14 +10,13 @@ int regmail_transact(const void *in, ssize_t inlen, void *out, ssize_t outlen)
     if (fd < 0)
         return -1;
 
+    int ret = 0;
     if (towrite(fd, in, inlen) != inlen ||
         toread(fd, out, outlen) != outlen)
-    {
-        close(fd);
-        return -1;
-    }
+        ret = -1;
 
-    return 0;
+    close(fd);
+    return ret;
 }
 #endif
 
