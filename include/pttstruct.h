@@ -205,6 +205,13 @@ static inline aidu_t aidu_with_idx(aidu_t a, int idx) {
            (((aidu_t)safe_idx) << AIDU_IDX_SHIFT);
 }
 
+/* A unique user tracking identifier. */
+typedef struct {
+    int unum;                    // 1-based index in PASSWD, same as usernum
+    time4_t firstlogin;         // Should be used as a verification token.
+} PACKSTRUCT user_t;
+_Static_assert(sizeof(user_t) == 8, "user_t size mismatch");
+
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */

@@ -1065,20 +1065,8 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
                                            : cmd_bar_cmd_width(quit_cmd, VS_FOOTER, NULL))
                               : 0;
 
-        int high_cmds_w = 0;
-        for (int i = 0; i < n_cands; i++) {
-            if (cands[i].prio >= CMD_PRIO_HIGH) {
-                if (is_inline) {
-                    high_cmds_w += (high_cmds_w == 0 ? 1 : 0) +
-                                   cmd_bar_cmd_raw_width(cands[i].cmd, NULL);
-                } else {
-                    high_cmds_w += cmd_bar_cmd_width(cands[i].cmd, VS_FOOTER, NULL);
-                }
-            }
-        }
-
         bool show_quit = false;
-        if (quit_cmd && (prefix_w + high_cmds_w + usage_w + quit_w <= SAFE_MAX_COL))
+        if (quit_cmd && (prefix_w + quit_w <= SAFE_MAX_COL))
             show_quit = true;
 
         if (show_quit) {

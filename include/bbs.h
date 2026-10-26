@@ -50,6 +50,7 @@ extern "C" {
 #include "modes.h"
 #include "chess.h"
 #include "psb.h"
+#include "vform.h"
 #include "proto.h"
 #include "fnv_hash.h"
 #include "convert.h"
