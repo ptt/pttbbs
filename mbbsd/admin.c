@@ -789,13 +789,150 @@ edit_board_moderators_form(boardheader_t *bh)
     return 1;
 }
 
+
+typedef struct {
+    char    brdname[IDLEN + 1];
+    char    bclass[BCLEN + 1];
+    char    desc[BTLEN + 1];
+    bool    post_reward;
+} b_general_form_t;
+
+static const char *
+b_gen_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr, void *priv)
+{
+    const boardheader_t *orig_bh = (const boardheader_t *)priv;
+    const char *val = (const char *)val_ptr;
+    if (!val || !*val)
+        return "看板名稱不得為空";
+    if (orig_bh && strcmp(orig_bh->brdname, val) == 0)
+        return NULL;
+    if (!HasUserPerm(PERM_BOARDS))
+        return "只有看板總管才能修改看板名稱";
+    if (getbnum(val))
+        return "錯誤: 此新看板名已存在";
+    if (!is_valid_brdname(val))
+        return "錯誤: 看板名稱不合規定 (需英數字或 _-. 且開頭需為英文字母)";
+    return NULL;
+}
+
+static const char *
+b_gen_bclass_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = (const char *)val_ptr;
+    if (!val || strlen(val) != 4)
+        return "看板類別必須恰為 4 個半形字元或 2 個中文字";
+    return NULL;
+}
+
+static const char *
+b_gen_desc_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = (const char *)val_ptr;
+    if (!val || !*val)
+        return "看板說明不得為空";
+    return NULL;
+}
+
+static const vform_field_t b_general_fields[] = {
+    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (英數字或 _-., 僅總管可修改)", NULL,
+                     b_general_form_t, brdname, 0, b_gen_brdname_validator),
+    VFORM_FIELD_TEXT("看板類別", "分類標籤 (恰為 4 半形字元或 2 個中文字)", NULL,
+                     b_general_form_t, bclass, 0, b_gen_bclass_validator),
+    VFORM_FIELD_TEXT("看板主題", "看板中文說明與主題 (最多 41 字)", NULL,
+                     b_general_form_t, desc, 0, b_gen_desc_validator),
+    VFORM_FIELD_BOOL("發文獎勵", "是否給予發文文章金錢獎勵 (按空白鍵切換)",
+                     b_general_form_t, post_reward),
+};
+
+static const vform_def_t b_general_form_def = {
+    .title = "看板一般設定",
+    .subtitle = "設定看板基本資料與發文金錢獎勵",
+    .mode = VFORM_MODE_INPLACE,
+    .fields = b_general_fields,
+    .num_fields = ARRAY_SIZE(b_general_fields),
+    .form_validator = NULL,
+    .submit_prompt = "確定儲存看板設定嗎？[Y/n] ",
+};
+
+static int
+edit_board_general_form(boardheader_t *bh, int bid)
+{
+    b_general_form_t form;
+    memset(&form, 0, sizeof(form));
+
+    strlcpy(form.brdname, bh->brdname, sizeof(form.brdname));
+    strlcpy(form.bclass, bh->bclass, sizeof(form.bclass));
+    strlcpy(form.desc, bh->desc, sizeof(form.desc));
+    form.post_reward = !(bh->brdattr & BRD_NOCREDIT);
+
+    if (vform_run(&b_general_form_def, &form, bh) <= 0)
+        return 0;
+
+    boardheader_t newbh;
+    memcpy(&newbh, bh, sizeof(newbh));
+
+    bool name_changed = strcmp(bh->brdname, form.brdname) != 0;
+    bool class_changed = strcmp(bh->bclass, form.bclass) != 0;
+    bool desc_changed = strcmp(bh->desc, form.desc) != 0;
+    bool reward_changed = form.post_reward != !(bh->brdattr & BRD_NOCREDIT);
+
+    if (!name_changed && !class_changed && !desc_changed && !reward_changed)
+        return 0;
+
+    if (name_changed && form.brdname[0] != bh->brdname[0]) {
+        if (vans("警告: 看板首字不同需搬移目錄，確定改名嗎？[y/N]: ") != 'y')
+            return 0;
+    }
+
+    strlcpy(newbh.brdname, form.brdname, sizeof(newbh.brdname));
+    strlcpy(newbh.bclass, form.bclass, sizeof(newbh.bclass));
+    strlcpy(newbh.desc, form.desc, sizeof(newbh.desc));
+    if (form.post_reward)
+        newbh.brdattr &= ~BRD_NOCREDIT;
+    else
+        newbh.brdattr |= BRD_NOCREDIT;
+
+    if (name_changed) {
+        char src[60], tar[60];
+        setbpath(src, bh->brdname);
+        setbpath(tar, newbh.brdname);
+        Rename(src, tar);
+
+        setapath(src, bh->brdname);
+        setapath(tar, newbh.brdname);
+        Rename(src, tar);
+    }
+
+    setup_man(&newbh, bh);
+    assert(0 <= bid - 1 && bid - 1 < MAX_BOARD);
+    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
+    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
+    reset_board(bid);
+    sort_bcache();
+    log_usies("SetBoard", newbh.brdname);
+
+    AUTO_STR(buf, "[看板變更] %s (by %s)", bh->brdname, cuser.userid);
+    AUTO_STR(msg, "板名: %s => %s\n"
+                  "類別: %s => %s\n"
+                  "主題: %s => %s\n"
+                  "獎勵: %s => %s\n",
+             bh->brdname, newbh.brdname,
+             bh->bclass, newbh.bclass,
+             bh->desc, newbh.desc,
+             (bh->brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
+             (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
+    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+    memcpy(bh, &newbh, sizeof(boardheader_t));
+    vmsg("看板設定已更新完畢");
+    return 1;
+}
+
 int
 m_mod_board(char *bname)
 {
     boardheader_t   bh, newbh;
     int             bid;
     char            genbuf[PATHLEN], ans[4];
-    int y;
 
     bid = getbnum(bname);
     if (!bid || !bname[0] || get_record(FN_BOARD, &bh, sizeof(bh), bid) == -1) {
@@ -965,134 +1102,10 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'e':
-        y = 8;
-	move(y++, 0); clrtobot();
-	outs("直接按 [Return] 不修改該項設定");
-	memcpy(&newbh, &bh, sizeof(bh));
-
-	while (getdata(y, 0, "新看板名稱：", genbuf, IDLEN + 1, DOECHO)) {
-	    if (getbnum(genbuf)) {
-                mvouts(y + 1, 0, "錯誤: 此新看板名已存在\n");
-            } else if ( !is_valid_brdname(genbuf) ) {
-                mvouts(y + 1, 0, "錯誤: 無法使用此名稱。"
-                       "請使用英數字或 _-. 且開頭不得為數字。\n");
-            } else {
-                if (genbuf[0] != bh.brdname[0]) {
-                    // change to 0 if you want to force permission when renaming
-                    // with different initial character.
-                    const int free_rename = 1;
-                    if (free_rename || HasUserPerm(PERM_BOARDS)) {
-                        mvouts(y + 1, 0, ANSI_COLOR(1;31)
-                                "警告: 看板首字母不同,大看板改名會非常久,"
-                                "千萬不可中途斷線否則看板會壞掉"
-                                ANSI_RESET "\n");
-                    } else {
-                        mvouts(y + 1, 0,
-                                "錯誤: 新舊名稱第一個字母若不同(大小寫有別)"
-                                "要看板總管以上等級才可設定\n");
-                        continue;
-                    }
-                }
-		STRLCPY(newbh.brdname, genbuf);
-		break;
-	    }
+	if (edit_board_general_form(&bh, bid)) {
+	    strlcpy(bname, bh.brdname, IDLEN + 1);
 	}
-        y++;
-
-	do {
-	    getdata_str(y, 0, "看板類別：", genbuf, 5, DOECHO, bh.bclass);
-	    if (strlen(genbuf) == 4)
-		break;
-	} while (1);
-        y++;
-
-	STRLCPY(newbh.bclass, genbuf);
-
-	getdata_str(y++, 0, "看板主題：", genbuf, sizeof(newbh.desc),
-                    DOECHO, bh.desc);
-	if (genbuf[0])
-	    strlcpy(newbh.desc, genbuf, sizeof(newbh.desc));
-
-        edit_board_moderators_form(&newbh);
-        y++;
-
-	if (HasUserPerm(PERM_BOARDS)) {
-	    move(1, 0);
-	    clrtobot();
-	    newbh.brdattr = setperms(newbh.brdattr, str_permboard);
-	    move(1, 0);
-	    clrtobot();
-	    // Only make_board_link() makes links, setting their target; here
-	    // the flag would make whatever postexpire holds the target, and a
-	    // link can't be edited back here. Links never get this far.
-	    if (newbh.brdattr & BRD_SYMBOLIC) {
-		newbh.brdattr &= ~BRD_SYMBOLIC;
-		vmsg(MSG_LINK_BY_L);
-	    }
-	    // A group that stops listing its boards, by losing its flag or
-	    // becoming the hot board group, leaves them listed nowhere, as a
-	    // deleted group does.
-	    if (GROUP_LISTS_BOARDS(&bh) && !GROUP_LISTS_BOARDS(&newbh) &&
-		board_first_child(bid)) {
-		newbh.brdattr = (newbh.brdattr & ~(BRD_GROUPBOARD | BRD_TOP)) |
-				(bh.brdattr & (BRD_GROUPBOARD | BRD_TOP));
-		vmsg("群組內還有看板，不能取消群組或改成熱門看板群組。");
-	    }
-	}
-
-
-	if (HasUserPerm(PERM_BOARDS) && !(newbh.brdattr & BRD_HIDE)) {
-            getdata(y++, 0, "設定讀寫權限(y/N)？", ans, sizeof(ans), LCECHO);
-	    if (*ans == 'y') {
-		getdata_str(y++, 0, "限制 [R]閱讀 (P)發表？", ans, sizeof(ans), LCECHO,
-			    "R");
-		if (*ans == 'p')
-		    newbh.brdattr |= BRD_POSTMASK;
-		else
-		    newbh.brdattr &= ~BRD_POSTMASK;
-
-		move(1, 0);
-		clrtobot();
-		bperm_msg(&newbh);
-		newbh.level = setperms(newbh.level, str_permid);
-		clear();
-	    }
-	}
-
-	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
-
-	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
-	    if (strcmp(bh.brdname, newbh.brdname)) {
-		char            src[60], tar[60];
-
-		setbpath(src, bh.brdname);
-		setbpath(tar, newbh.brdname);
-		Rename(src, tar);
-
-		setapath(src, bh.brdname);
-		setapath(tar, newbh.brdname);
-		Rename(src, tar);
-	    }
-	    setup_man(&newbh, &bh);
-	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-	    reset_board(bid);
-            sort_bcache();
-	    log_usies("SetBoard", newbh.brdname);
-
-	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    char bm_buf1[BOARD_MODERATORS_FORMAT_MAX_LEN];
-	    char bm_buf2[BOARD_MODERATORS_FORMAT_MAX_LEN];
-	    board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
-	    board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
-	    AUTO_STR(msg, "板名: %s => %s\n"
-		    "板主: %s => %s\n"
-		    "彩蛋: %s => %s\n",
-		    bh.brdname, newbh.brdname, bm_buf1, bm_buf2,
-		    bh.moderator_notes, newbh.moderator_notes);
-	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
-	}
+	break;
     }
     return 0;
 }
