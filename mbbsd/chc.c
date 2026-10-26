@@ -886,11 +886,10 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	}
 	currutmp->chess_elo_rating = user1->rating;
 	pwcuSetChessEloRating(user1->rating);
-
-    } else if (info->mode == CHESS_MODE_REPLAY) {
-	free(info->board);
-	free(info->tag);
     }
+    // Replay-mode board/tag are freed once by DeleteChessInfo, the single
+    // owner. Freeing them here as well double-freed them (DeleteChessInfo
+    // runs right after ChessPlay returns).
 }
 
 int

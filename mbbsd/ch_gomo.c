@@ -407,11 +407,10 @@ gomo_gameend(ChessInfo* info, ChessGameResult result)
 	// lost was already initialized
 	if (result != CHESS_RESULT_LOST)
 	    pwcuChessResult(SIG_GOMO, result);
-
-    } else if (info->mode == CHESS_MODE_REPLAY) {
-	free(info->board);
-	free(info->tag);
     }
+    // Replay-mode board/tag are freed once by DeleteChessInfo, the single
+    // owner. Freeing them here as well double-freed them (DeleteChessInfo
+    // runs right after ChessPlay returns).
 }
 
 static void
