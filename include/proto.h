@@ -532,6 +532,9 @@ void multi_user_list(struct Vector *namelist, int *recipient,
 
 void usercomplete(const char *prompt, char *data);
 void usercomplete2(const char *prompt, char *data, const char *defval);
+int usercomplete_ex(const char *prompt, char *data, const char *defval,
+		    int (*check_exit_key)(int key));
+int usercomplete_vform(const char *prompt, char *data, const char *defval);
 int generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		       gnc_comp_func compar, gnc_perm_func permission,
 		       gnc_getname_func getname);

@@ -405,6 +405,8 @@ struct complete_engine_ctx {
     const complete_ops_t *ops;
     void *provider_ctx;
     int flags;
+    int (*check_exit_key)(int key);
+    int *exit_key_ptr;
 
     int start_y;
     int max_items;
@@ -441,8 +443,31 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
     struct complete_engine_ctx *ctx = (struct complete_engine_ctx *)instance;
     prt->buf[prt->iend] = '\0';
 
+    if (ctx->check_exit_key) {
+	int exit_type = ctx->check_exit_key(key);
+	if (exit_type != 0) {
+	    if (ctx->exit_key_ptr)
+		*ctx->exit_key_ptr = key;
+	    if (exit_type > 0 && prt->iend > 0) {
+		if (ctx->dirty < 0)
+		    complete_refresh_candidates(ctx, prt->buf);
+		if (ctx->selected_idx >= 0) {
+		    strlcpy(prt->buf, ctx->selected_name, prt->len);
+		} else {
+		    if (!(ctx->flags & COMPL_ALLOW_NONEXISTENT_PREFIX))
+			prt->buf[0] = '\0';
+		    ctx->selected_idx = -1;
+		}
+		prt->icurr = prt->iend = strlen(prt->buf);
+	    }
+	    return VGETCB_END;
+	}
+    }
+
     switch (key) {
     case KEY_ENTER:
+	if (ctx->exit_key_ptr)
+	    *ctx->exit_key_ptr = KEY_ENTER;
 	if (prt->iend == 0) {
 	    prt->buf[0] = '\0';
 	    ctx->selected_idx = -1;
@@ -454,7 +479,8 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	if (ctx->selected_idx >= 0) {
 	    strlcpy(prt->buf, ctx->selected_name, prt->len);
 	} else {
-	    prt->buf[0] = '\0';
+	    if (!(ctx->flags & COMPL_ALLOW_NONEXISTENT_PREFIX))
+		prt->buf[0] = '\0';
 	    ctx->selected_idx = -1;
 	}
 	prt->icurr = prt->iend = strlen(prt->buf);
@@ -542,8 +568,12 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 
 static int
 complete_engine(const char *prompt, char *data, int len, const char *defval,
-		int flags, const complete_ops_t *ops, void *provider_ctx)
+		int flags, const complete_ops_t *ops, void *provider_ctx,
+		int (*check_exit_key)(int key), int *out_exit_key)
 {
+    if (out_exit_key)
+	*out_exit_key = KEY_ENTER;
+
     if (prompt && *prompt) {
 	outs(prompt);
 	clrtoeol();
@@ -562,6 +592,8 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
 	.ops = ops,
 	.provider_ctx = provider_ctx,
 	.flags = flags,
+	.check_exit_key = check_exit_key,
+	.exit_key_ptr = out_exit_key,
 	.start_y = start_y,
 	.max_items = get_complete_capacity(start_y, len > IDLEN ? IDLEN : len),
 	.page_dirty = 0,
@@ -579,6 +611,8 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
     };
 
     int vflags = VGET_NO_NAV_EDIT;
+    if (check_exit_key != NULL)
+	vflags |= VGET_NO_NAV_HISTORY;
     if (flags & COMPL_ASCII_ONLY)
 	vflags |= VGET_ASCII_ONLY;
 
@@ -593,13 +627,21 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
     }
     Vector_delete(&ctx.sublist);
 
-    if (ret < 1 || ctx.selected_idx < 0) {
+    if (ret < 1) {
+	if (out_exit_key && *out_exit_key == KEY_ENTER)
+	    *out_exit_key = Ctrl('C');
 	data[0] = '\0';
 	return -1;
     }
 
-    strlcpy(data, ctx.selected_name, len);
-    return ctx.selected_idx;
+    if (ctx.selected_idx >= 0) {
+	strlcpy(data, ctx.selected_name, len);
+	return ctx.selected_idx;
+    }
+
+    if (!(flags & COMPL_ALLOW_NONEXISTENT_PREFIX))
+	data[0] = '\0';
+    return -1;
 }
 
 void
@@ -609,7 +651,7 @@ namecomplete3(const struct Vector *namelist, const char *prompt, char *data, con
 	.base = namelist,
 	.is_usercomplete = false,
     };
-    complete_engine(prompt, data, IDLEN + 1, defval, COMPL_ASCII_ONLY, &vec_ops, &vec_ctx);
+    complete_engine(prompt, data, IDLEN + 1, defval, COMPL_ASCII_ONLY, &vec_ops, &vec_ctx, NULL, NULL);
 }
 
 void
@@ -618,8 +660,28 @@ namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
     namecomplete3(namelist, prompt, data, NULL);
 }
 
-void
-usercomplete2(const char *prompt, char *data, const char *defval)
+static int
+vform_check_exit_key(int key)
+{
+    switch (key) {
+    case KEY_UP:
+    case KEY_DOWN:
+    case KEY_STAB:
+    case Ctrl('X'):
+    case Ctrl('S'):
+    case KEY_F10:
+	return 1;
+    case KEY_ESC:
+    case Ctrl('C'):
+	return -1;
+    default:
+	return 0;
+    }
+}
+
+int
+usercomplete_ex(const char *prompt, char *data, const char *defval,
+		int (*check_exit_key)(int key))
 {
     struct Vector namelist;
     Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN + 1);
@@ -628,7 +690,22 @@ usercomplete2(const char *prompt, char *data, const char *defval)
 	.is_usercomplete = true,
     };
     int flags = COMPL_ASCII_ONLY | COMPL_ALLOW_NONEXISTENT_PREFIX | COMPL_NO_EMPTY_LIST;
-    complete_engine(prompt, data, IDLEN + 1, defval, flags, &vec_ops, &vec_ctx);
+    int exit_key = KEY_ENTER;
+    complete_engine(prompt, data, IDLEN + 1, defval, flags, &vec_ops, &vec_ctx,
+		    check_exit_key, check_exit_key ? &exit_key : NULL);
+    return exit_key;
+}
+
+int
+usercomplete_vform(const char *prompt, char *data, const char *defval)
+{
+    return usercomplete_ex(prompt, data, defval, vform_check_exit_key);
+}
+
+void
+usercomplete2(const char *prompt, char *data, const char *defval)
+{
+    usercomplete_ex(prompt, data, defval, NULL);
 }
 
 void
@@ -652,7 +729,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
     int flags = COMPL_ASCII_ONLY | COMPL_NEWLINE_ON_EXIT;
     if (gnc_ctx.is_online_user)
 	flags |= COMPL_NO_EMPTY_LIST;
-    return complete_engine(prompt, data, len, NULL, flags, &gnc_ops, &gnc_ctx);
+    return complete_engine(prompt, data, len, NULL, flags, &gnc_ops, &gnc_ctx, NULL, NULL);
 }
 
 /* general complete functions (brdshm) */
