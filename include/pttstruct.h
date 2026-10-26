@@ -484,6 +484,7 @@ typedef struct menu_t {
     const char     *path;
     struct  menu_t *next;
     char    mtitle[STRLEN];
+    int     depth;
 } menu_t;
 
 

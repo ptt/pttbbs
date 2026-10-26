@@ -310,6 +310,11 @@ a_newitem(menu_t * pm, int mode)
 	break;
 
     case ADDGROUP:
+	if (pm->depth >= MAX_MAN_DEPTH)
+	{
+	    vmsgf("抱歉，精華區目錄最多 %d 層，無法再建立子目錄！", MAX_MAN_DEPTH);
+	    return;
+	}
 	if (stampadir(fpath, &item, 0) == -1)
 	{
 	    vmsg("抱歉，無法在本層建立新目錄。");
@@ -353,6 +358,40 @@ a_newitem(menu_t * pm, int mode)
 
     STRLCPY(item.owner, cuser.userid);
     a_additem(pm, &item);
+}
+
+static int
+get_dir_subdepth(const char *dirpath, int max_check)
+{
+    DIR *dir = opendir(dirpath);
+    struct dirent *entry;
+    int max_sub = 0;
+
+    if (!dir)
+	return 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+	if (entry->d_name[0] == '.')
+	    continue;
+	char subpath[PATHLEN];
+	if (snprintf(subpath, sizeof(subpath), "%s/%s", dirpath, entry->d_name) >= (int)sizeof(subpath)) {
+	    max_sub = max_check + 1;
+	    break;
+	}
+	struct stat st;
+	if (stat(subpath, &st) == 0 && S_ISDIR(st.st_mode)) {
+	    int sub = 1;
+	    if (max_check > 0)
+		sub += get_dir_subdepth(subpath, max_check - 1);
+	    if (sub > max_sub) {
+		max_sub = sub;
+		if (max_sub > max_check)
+		    break;
+	    }
+	}
+    }
+    closedir(dir);
+    return max_sub;
 }
 
 void
@@ -405,8 +444,13 @@ a_pasteitem(menu_t * pm, int mode)
 
 	if (dashd(cq->copyfile)) {
 	    for (i = 0; cq->copyfile[i] && cq->copyfile[i] == pm->path[i]; i++);
-	    if (!cq->copyfile[i]) {
+	    if (!cq->copyfile[i] && (pm->path[i] == '/' || pm->path[i] == '\0')) {
 		vmsg("將目錄拷進自己的子目錄中，會造成無窮迴圈！");
+		continue;
+	    }
+	    int max_budget = MAX_MAN_PASTE_DEPTH - (pm->depth + 1);
+	    if (max_budget < 0 || get_dir_subdepth(cq->copyfile, max_budget) > max_budget) {
+		vmsgf("貼上後目錄層數將超過上限 (%d層)，無法貼上！", MAX_MAN_PASTE_DEPTH);
 		continue;
 	    }
 	}
@@ -1645,9 +1689,11 @@ a_menu_rec(const char *maintitle, const char *path,
     if (parent)
     {
 	parent->next = &me;
+	me.depth = parent->depth + 1;
     } else {
 	assert(root == NULL);
 	root = &me;
+	me.depth = 0;
     }
 
     me.header_size = (t_lines - 4 > 0) ? t_lines - 4 : 1;

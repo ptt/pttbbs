@@ -106,6 +106,14 @@
 #define PATHLEN (256)
 #endif
 
+#ifndef MAX_MAN_DEPTH
+#define MAX_MAN_DEPTH (12)
+#endif
+
+#ifndef MAX_MAN_PASTE_DEPTH
+#define MAX_MAN_PASTE_DEPTH (13)
+#endif
+
 #ifndef BRCSTORE_DIR
 #define BRCSTORE_DIR "brcstore"
 #endif
