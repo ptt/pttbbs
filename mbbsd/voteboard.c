@@ -341,7 +341,18 @@ do_voteboard(int type)
 	do {
 	    if (!getdata(7, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
-        }while (!is_uBM(bcache[temp - 1].BM, topic));
+        } while (!({
+            int is_bm = 0;
+            int unum = searchuser(topic, NULL);
+            const boardheader_t *bp = &bcache[temp - 1];
+            for (int m = 0; m < MAX_BMs; m++) {
+                if (unum > 0 && bp->moderators[m].unum == unum) {
+                    is_bm = 1;
+                    break;
+                }
+            }
+            is_bm;
+        }));
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
 	break;

@@ -716,10 +716,15 @@ m_mod_board(char *bname)
 	return -1;
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
+    char cur_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(&bh, cur_bm, sizeof(cur_bm));
     prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
 	   "板主名單：%s", bh.brdname, (bh.brdattr & BRD_NOCREDIT) ?
            ANSI_COLOR(1;31) "[已設定發文無文章金錢獎勵]" ANSI_RESET : "",
-           bh.desc, bh.bclass, bid, bh.gid, bh.BM);
+           bh.desc, bh.bclass, bid, bh.gid, cur_bm);
+    if (bh.moderator_notes[0])
+        prints(" " ANSI_COLOR(1;32) "[notes: %s]" ANSI_RESET, bh.moderator_notes);
+    prints("\n");
     bperm_msg(&bh);
 
     /* Ptt 這邊斷行會檔到下面 */
@@ -899,16 +904,12 @@ m_mod_board(char *bname)
 
         do {
             int uids[MAX_BMs], i;
+            char cur_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+            board_format_moderators(&bh, cur_bm, sizeof(cur_bm));
             if (!getdata_str(y, 0, "新板主名單：", genbuf, IDLEN * 3 + 3,
-                             DOECHO, bh.BM) || strcmp(genbuf, bh.BM) == 0)
+                             DOECHO, cur_bm) || strcmp(genbuf, cur_bm) == 0)
                 break;
-            // TODO 照理來說在這裡 normalize 一次比較好；可惜目前似乎有奇怪的
-            // 代管制度，會有人把 BM list 設定 [ ...... / some_uid]，就會變成
-            // 一面徵求板主同時又有人(maybe小組長)有管理權限而且還不顯示出來。
-            // 這設計很糟糕，也無法判斷是不小心誤設(多了空白)或是故意的，再者
-            // 還有人以為這裡打句英文很帥氣結果造成該英文的ID意外獲得權限。
-            // 未來應該整個取消，完全 normalize。
-	    trim(genbuf);
+            trim(genbuf);
             parseBMlist(genbuf, uids);
             mvouts(y + 2, 0, " 實際生效的板主ID: " ANSI_COLOR(1));
             for (i = 0; i < MAX_BMs && uids[i] >= 0; i++) {
@@ -916,18 +917,20 @@ m_mod_board(char *bname)
             }
             outs(ANSI_RESET "\n");
 
-            // ref: does_board_have_public_bm
-            if (genbuf[0] <= ' ')
-                outs(ANSI_COLOR(1;31)
-                     " *** 因為開頭是空白或中文, 看板內左上角或按i的"
-                     "板主名單會顯示為徵求中或無 ***"
-                     ANSI_RESET "\n");
-            mvprints(y+5, 0, "注意: 資源回收筒與編輯歷史已不用先把自己設成板主。\n"
+            mvprints(y + 3, 0, "注意: 資源回收筒與編輯歷史已不用先把自己設成板主。\n"
                      "詳情請見(X)->(L)系統更新記錄。\n");
-            if (getdata(y + 4, 0, "確定此板主名單正確?[y/N] ", ans,
+            if (getdata(y + 5, 0, "確定此板主名單正確?[y/N] ", ans,
                         sizeof(ans), LCECHO) &&
                 ans[0] == 'y') {
-                STRLCPY(newbh.BM, genbuf);
+                memset(newbh.moderators, 0, sizeof(newbh.moderators));
+                for (i = 0; i < MAX_BMs && uids[i] > 0; i++) {
+                    userec_t u;
+                    if (passwd_query(uids[i], &u) == 0) {
+                        newbh.moderators[i].unum = uids[i];
+                        newbh.moderators[i].firstlogin = u.firstlogin;
+                    }
+                }
+                newbh.moderator_notes[0] = '\0';
                 move(y + 1, 0); clrtobot();
                 break;
             }
@@ -1001,9 +1004,13 @@ m_mod_board(char *bname)
 	    log_usies("SetBoard", newbh.brdname);
 
 	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    char bm_buf1[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    char bm_buf2[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
+	    board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
 	    AUTO_STR(msg, "板名: %s => %s\n"
 		    "板主: %s => %s\n",
-		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
+		    bh.brdname, newbh.brdname, bm_buf1, bm_buf2);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	}
     }
@@ -1248,7 +1255,22 @@ m_newbrd(int whatclass, int recover)
 
 
     newboard.level = 0;
-    getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
+    getdata(11, 0, "板主名單：", genbuf, sizeof(genbuf), DOECHO);
+    {
+        int uids[MAX_BMs];
+        int n_uids = parseBMlist(genbuf, uids);
+        memset(newboard.moderators, 0, sizeof(newboard.moderators));
+        for (int i = 0; i < n_uids && i < MAX_BMs; i++) {
+            if (uids[i] > 0 && uids[i] <= MAX_USERS) {
+                userec_t u;
+                if (passwd_query(uids[i], &u) == 0) {
+                    newboard.moderators[i].unum = uids[i];
+                    newboard.moderators[i].firstlogin = u.firstlogin;
+                }
+            }
+        }
+    }
+    newboard.moderator_notes[0] = '\0';
 
     if (HasUserPerm(PERM_BOARDS) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
@@ -1285,7 +1307,9 @@ m_newbrd(int whatclass, int recover)
     pressanykey();
     setup_man(&newboard, NULL);
     outs("\n新板成立");
-    post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, newboard.BM);
+    char nb_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(&newboard, nb_bm, sizeof(nb_bm));
+    post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, nb_bm);
     log_usies("NewBoard", newboard.desc);
     pressanykey();
     return 0;

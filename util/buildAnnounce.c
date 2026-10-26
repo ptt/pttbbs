@@ -19,7 +19,6 @@ void buildchilds(int level,char *path,int gid)
     int i,count=0;
     boardheader_t *ptr, **selected=NULL;
     fileheader_t item;
-    char *p;
     int preserved=32;
     selected=malloc(preserved * sizeof(boardheader_t*));
     assert(selected);
@@ -66,9 +65,11 @@ void buildchilds(int level,char *path,int gid)
 		printf("something wrong: %s, %s\n",path, ptr->brdname);
 	    }
 	}
-        STRLCPY(item.owner, ptr->BM);
-	if((p=strchr(item.owner,'/'))!=NULL)
-	    *p='\0';
+        memset(&item, 0, sizeof(item));
+        if (ptr->moderators[0].unum > 0) {
+            const char *mid = getuserid(ptr->moderators[0].unum);
+            STRLCPY(item.owner, mid ? mid : "");
+        }
         SNPRINTF(item.title, "%-13.13s %-32.32s", level?ptr->brdname:"", ptr->desc);
         item.filemode =  0 ;
 	STRLCPY(item.filename, ptr->brdname);

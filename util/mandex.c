@@ -195,7 +195,7 @@ output_chart(const boardinfo_t * board, const int nbrds)
 	fprintf(fp, "%3d.[33m%15s[m %5d %7d %10d   %6d [31m%-24.24s[m\n",
 		++place, board[i].bname, board[i].ndir, board[i].nfile, board[i].k
 		,board[i].k / 100 + board[i].nfile + board[i].ndir
-		,bptr->BM);
+		,board_format_moderators(bptr, (char[BOARD_MODERATORS_FORMAT_MAX_LEN]){0}, BOARD_MODERATORS_FORMAT_MAX_LEN));
     }
     fclose(fp);
 }

@@ -18,6 +18,8 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 
+    attach_SHM();
+
 
     inf = open(argv[1], O_RDONLY);
     if (inf == -1) {
@@ -57,15 +59,20 @@ int main(int argc, char *argv[])
 		"     看板名稱     板主                     類別   中文敘述\n"
 		"     ------------------------------------------------------------------------\n");
 	for (i = 0; i < count; i++) {
+            char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+            board_format_moderators(&allbrd[i], bm_buf, sizeof(bm_buf));
             printf("%4d %-13s%-24.24s %4.4s %-35.35s\n", i+1, allbrd[i].brdname,
-                    allbrd[i].BM,
+                    bm_buf,
                     allbrd[i].bclass, allbrd[i].desc);
 	}
     } else {
 	/* print details */
 	boardheader_t b = allbrd[detail_i - 1];
 	printf("brdname(bid):\t%s\n", b.brdname);
-	printf("BM:\t%s\n", b.BM);
+	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	printf("BM:\t%s\n", board_format_moderators(&b, bm_buf, sizeof(bm_buf)));
+	if (b.moderator_notes[0])
+	    printf("moderator_notes:\t%s\n", b.moderator_notes);
 	printf("bclass:\t%s\n", b.bclass);
 	printf("desc:\t%s\n", b.desc);
 	printf("brdattr:\t%08x\n", b.brdattr);
@@ -84,10 +91,13 @@ int main(int argc, char *argv[])
 	/* traverse to find my children */
 	printf("---- children: ---- \n");
 	for (i = 0; i < count; i++) {
-	    if(allbrd[i].gid == detail_i)
+	    if(allbrd[i].gid == detail_i) {
+		char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+		board_format_moderators(&allbrd[i], bm_buf, sizeof(bm_buf));
 		printf("%4d %-13s%-5.5s %-25.25s%s\n", 
 			i+1, allbrd[i].brdname, 
-			allbrd[i].bclass, allbrd[i].BM, allbrd[i].desc);
+			allbrd[i].bclass, bm_buf, allbrd[i].desc);
+	    }
 	}
     }
     return 0;

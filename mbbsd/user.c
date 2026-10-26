@@ -130,6 +130,20 @@ int u_cancelbadpost(void)
    return 0;
 }
 
+static int
+is_user_board_moderator(const boardheader_t *bhdr, int unum, time4_t firstlogin)
+{
+    if (!bhdr || !bhdr->brdname[0] || unum <= 0)
+        return 0;
+    for (int m = 0; m < MAX_BMs; m++) {
+        if (bhdr->moderators[m].unum == unum &&
+            (bhdr->moderators[m].firstlogin == 0 || bhdr->moderators[m].firstlogin == firstlogin)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void
 user_display(const userec_t * u, int adminmode)
 {
@@ -214,29 +228,29 @@ user_display(const userec_t * u, int adminmode)
 	boardheader_t  *bhdr;
 	int             total = 0;
 
+	int unum = searchuser(u->userid, NULL);
 	for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
-	    if (bhdr->brdname[0] && is_uBM(bhdr->BM, u->userid))
+	    if (is_user_board_moderator(bhdr, unum, u->firstlogin))
 		total++;
 	}
 
 	if (total == 0) {
-	    prints("\t擔任板主: (無)\n");
+	    prints("\t瘁任板主: (無)\n");
 	} else {
 	    const int max_col = 78;
-	    int col = 18; // \t (8) + "擔任板主: " (10) = 18 欄
+	    int col = 18; // 	 (8) + "..." (10) = 18
 	    int printed = 0;
 
-	    outs("\t擔任板主: ");
+	    outs("	瘁任板主: ");
 
 	    for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
-		if (!bhdr->brdname[0] || !is_uBM(bhdr->BM, u->userid))
+		if (!is_user_board_moderator(bhdr, unum, u->firstlogin))
 		    continue;
 
 		int blen = strlen(bhdr->brdname);
-		int needed = blen + 1; // 板名 + 空白
+		int needed = blen + 1;
 		int remaining = total - printed;
 
-		// 若後面還有看板，保留空間印 "... (共 N 個板)"
 		if (remaining > 1) {
 		    char trunc_buf[32];
 		    snprintf(trunc_buf, sizeof(trunc_buf), "... (共 %d 個板)", total);
@@ -719,9 +733,15 @@ user_browse_bm(const char *userid)
     if (!bm_list)
 	return;
 
+    int unum = searchuser(userid, NULL);
+    userec_t u;
+    time4_t firstlogin = 0;
+    if (unum > 0 && passwd_query(unum, &u) == 0)
+        firstlogin = u.firstlogin;
+
     int count = 0;
     for (int i = 0; i < nboards; i++) {
-	if (bcache[i].brdname[0] && is_uBM(bcache[i].BM, userid))
+	if (is_user_board_moderator(&bcache[i], unum, firstlogin))
 	    bm_list[count++] = &bcache[i];
     }
 
@@ -755,7 +775,16 @@ user_browse_bm(const char *userid)
 	    prints(" %3d. %-13s [%-4.4s] ", i + 1, bp->brdname, bp->bclass);
 	    vfill(30, VFILL_NO_BORDER, bp->desc);
 	    outc(' ');
-	    vfill(20, VFILL_NO_BORDER, bp->BM);
+	    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    board_format_moderators(bp, bm_buf, sizeof(bm_buf));
+	    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bp->moderator_notes) + 1];
+	    if (bm_buf[0] && bp->moderator_notes[0])
+		snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bp->moderator_notes);
+	    else if (bm_buf[0])
+		strlcpy(full_bm, bm_buf, sizeof(full_bm));
+	    else
+		strlcpy(full_bm, bp->moderator_notes, sizeof(full_bm));
+	    vfill(20, VFILL_NO_BORDER, full_bm);
 	    outc('\n');
 	}
 	clrtobot();

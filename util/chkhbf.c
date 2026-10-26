@@ -46,13 +46,13 @@ char *CTIMEx(char *buf, time_t t)
     return buf;
 }
 
-void informBM(char *userid, boardheader_t *bptr, int nEXP)
+void informBM(const char *userid, boardheader_t *bptr, int nEXP)
 {
     int     uid, i;
     char    filename[PATHLEN], buf[64];
     fileheader_t mymail;
     FILE    *fp;
-    if( !(uid = searchuser(userid, userid)) )
+    if( !(uid = searchuser(userid, NULL)) )
 	return;
     sethomepath(filename, userid);
     stampfile(filename, &mymail);
@@ -123,14 +123,15 @@ void chkhbf(boardheader_t *bptr)
 	}
     }
     fclose(fp);
-    if( nEXP ){
-	char    BM[IDLEN * 3 + 3], *p;
-	STRLCPY(BM, bptr->BM);
-	for( p = BM ; *p != 0 ; ++p )
-	    if( !isalpha(*p) && !isdigit(*p) )
-		*p = ' ';
-	for(p = strtok(BM, " ") ; p != NULL ; p = strtok(NULL, " ") )
-	    informBM(p, bptr, nEXP);
+    if (nEXP) {
+	for (int m = 0; m < MAX_BMs; m++) {
+	    int uid = bptr->moderators[m].unum;
+	    if (uid > 0 && uid <= MAX_USERS) {
+		const char *mid = getuserid(uid);
+		if (mid && mid[0])
+		    informBM(mid, bptr, nEXP);
+	    }
+	}
     }
 }
 

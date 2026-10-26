@@ -61,19 +61,19 @@ parse_moderators(const char *input, user_t moderators[MAX_BMs])
 }
 
 static void
-clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
+clean_moderator_notes(char *moderator_notes, const user_t moderators[MAX_BMs])
 {
-    if (!legacy_bm || legacy_bm[0] == '\0')
+    if (!moderator_notes || moderator_notes[0] == '\0')
         return;
 
     // 1. Replace Big-5 full-width spaces (0xa1 0x40) with ASCII spaces
-    for (int i = 0; legacy_bm[i] != '\0'; ) {
-        unsigned char c1 = (unsigned char)legacy_bm[i];
-        if (big5_is_valid_lead(c1) && legacy_bm[i + 1] != '\0') {
-            unsigned char c2 = (unsigned char)legacy_bm[i + 1];
+    for (int i = 0; moderator_notes[i] != '\0'; ) {
+        unsigned char c1 = (unsigned char)moderator_notes[i];
+        if (big5_is_valid_lead(c1) && moderator_notes[i + 1] != '\0') {
+            unsigned char c2 = (unsigned char)moderator_notes[i + 1];
             if (c1 == 0xa1 && c2 == 0x40) {
-                legacy_bm[i] = ' ';
-                legacy_bm[i + 1] = ' ';
+                moderator_notes[i] = ' ';
+                moderator_notes[i + 1] = ' ';
             }
             i += 2;
         } else {
@@ -82,13 +82,13 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
     }
 
     // 2. Strip out user IDs present in moderators (case-insensitive)
-    for (int i = 0; legacy_bm[i] != '\0'; ) {
-        unsigned char c = (unsigned char)legacy_bm[i];
-        if (big5_is_valid_lead(c) && legacy_bm[i + 1] != '\0') {
+    for (int i = 0; moderator_notes[i] != '\0'; ) {
+        unsigned char c = (unsigned char)moderator_notes[i];
+        if (big5_is_valid_lead(c) && moderator_notes[i + 1] != '\0') {
             i += 2;
         } else if (isalnum(c)) {
             int start = i;
-            while (legacy_bm[i] != '\0' && isalnum((unsigned char)legacy_bm[i])) {
+            while (moderator_notes[i] != '\0' && isalnum((unsigned char)moderator_notes[i])) {
                 i++;
             }
             int tok_len = i - start;
@@ -105,9 +105,9 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
                         }
                     }
                     if (m_id && (int)strlen(m_id) == tok_len &&
-                        strncasecmp(&legacy_bm[start], m_id, tok_len) == 0) {
+                        strncasecmp(&moderator_notes[start], m_id, tok_len) == 0) {
                         for (int k = start; k < i; k++) {
-                            legacy_bm[k] = ' ';
+                            moderator_notes[k] = ' ';
                         }
                         break;
                     }
@@ -119,31 +119,31 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
     }
 
     // 3. Remove delimiters: '/', '\', '.', ',' -> replace with space
-    for (int i = 0; legacy_bm[i] != '\0'; ) {
-        unsigned char c = (unsigned char)legacy_bm[i];
-        if (big5_is_valid_lead(c) && legacy_bm[i + 1] != '\0') {
+    for (int i = 0; moderator_notes[i] != '\0'; ) {
+        unsigned char c = (unsigned char)moderator_notes[i];
+        if (big5_is_valid_lead(c) && moderator_notes[i + 1] != '\0') {
             i += 2;
         } else {
             if (c == '/' || c == '\\' || c == '.' || c == ',') {
-                legacy_bm[i] = ' ';
+                moderator_notes[i] = ' ';
             }
             i++;
         }
     }
 
     // 4. Remove empty brackets: [] and ()
-    for (int i = 0; legacy_bm[i] != '\0'; ) {
-        unsigned char c = (unsigned char)legacy_bm[i];
-        if (big5_is_valid_lead(c) && legacy_bm[i + 1] != '\0') {
+    for (int i = 0; moderator_notes[i] != '\0'; ) {
+        unsigned char c = (unsigned char)moderator_notes[i];
+        if (big5_is_valid_lead(c) && moderator_notes[i + 1] != '\0') {
             i += 2;
         } else if (c == '[' || c == '(') {
             char close_c = (c == '[') ? ']' : ')';
             int j = i + 1;
-            while (legacy_bm[j] == ' ')
+            while (moderator_notes[j] == ' ')
                 j++;
-            if (legacy_bm[j] == close_c) {
+            if (moderator_notes[j] == close_c) {
                 for (int k = i; k <= j; k++)
-                    legacy_bm[k] = ' ';
+                    moderator_notes[k] = ' ';
                 i = j + 1;
             } else {
                 i++;
@@ -154,16 +154,16 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
     }
 
     // 5. Collapse multiple spaces and trim leading/trailing whitespace
-    char tmp[sizeof(((boardheader_t *)0)->BM) + 1];
+    char tmp[sizeof(((boardheader_t *)0)->moderator_notes) + 1];
     int out_len = 0;
     int in_space = 1;
 
-    for (int i = 0; legacy_bm[i] != '\0'; ) {
-        unsigned char c = (unsigned char)legacy_bm[i];
-        if (big5_is_valid_lead(c) && legacy_bm[i + 1] != '\0') {
+    for (int i = 0; moderator_notes[i] != '\0'; ) {
+        unsigned char c = (unsigned char)moderator_notes[i];
+        if (big5_is_valid_lead(c) && moderator_notes[i + 1] != '\0') {
             if (out_len + 2 < (int)sizeof(tmp)) {
-                tmp[out_len++] = legacy_bm[i];
-                tmp[out_len++] = legacy_bm[i + 1];
+                tmp[out_len++] = moderator_notes[i];
+                tmp[out_len++] = moderator_notes[i + 1];
             }
             in_space = 0;
             i += 2;
@@ -177,7 +177,7 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
             i++;
         } else {
             if (out_len + 1 < (int)sizeof(tmp)) {
-                tmp[out_len++] = legacy_bm[i];
+                tmp[out_len++] = moderator_notes[i];
             }
             in_space = 0;
             i++;
@@ -188,14 +188,21 @@ clean_legacy_bm(char *legacy_bm, const user_t moderators[MAX_BMs])
         out_len--;
     }
     tmp[out_len] = '\0';
-    strlcpy(legacy_bm, tmp, sizeof(((boardheader_t *)0)->BM));
+    if ((int)strlen(tmp) > IDLEN) {
+        tmp[IDLEN] = '\0';
+        mbs_safe_trim(tmp);
+        int l = strlen(tmp);
+        while (l > 0 && tmp[l - 1] == ' ')
+            tmp[--l] = '\0';
+    }
+    strlcpy(moderator_notes, tmp, sizeof(((boardheader_t *)0)->moderator_notes));
 }
 
 static int
 fill_board_moderators(boardheader_t *bh)
 {
-    int n = parse_moderators(bh->BM, bh->moderators);
-    clean_legacy_bm(bh->BM, bh->moderators);
+    int n = parse_moderators(bh->moderator_notes, bh->moderators);
+    clean_moderator_notes(bh->moderator_notes, bh->moderators);
     return n;
 }
 
@@ -340,27 +347,24 @@ main(int argc, char **argv)
 
         int is_legacy = (bh._vote_limit_badpost != 0 ||
                          bh._fastrecommend_pause != 0 ||
-                         bh._post_limit_badpost != 0 ||
-                         bh.pad[0] != '\0' ||
-                         bh.pad[1] != '\0');
+                         bh._post_limit_badpost != 0);
 
         if (is_legacy) {
             new_bh.vote_limit_badpost = bh._vote_limit_badpost;
             new_bh.fastrecommend_pause = bh._fastrecommend_pause;
             new_bh.post_limit_badpost = bh._post_limit_badpost;
-            new_bh._vote_limit_badpost = 0;
-            new_bh._fastrecommend_pause = 0;
-            new_bh._post_limit_badpost = 0;
-            new_bh.pad[0] = '\0';
-            new_bh.pad[1] = '\0';
             changed = 1;
-        } else if (opt_force) {
-            new_bh.pad[0] = '\0';
-            new_bh.pad[1] = '\0';
-            new_bh._vote_limit_badpost = 0;
-            new_bh._fastrecommend_pause = 0;
-            new_bh._post_limit_badpost = 0;
         }
+
+        /* Clear legacy limit and pad fields */
+        new_bh.pad[0] = '\0';
+        new_bh.pad[1] = '\0';
+        new_bh._fastrecommend_pause = 0;
+        new_bh._vote_limit_badpost = 0;
+        new_bh._post_limit_badpost = 0;
+        new_bh.pad3[0] = '\0';
+        new_bh.pad3[1] = '\0';
+        new_bh.pad3[2] = '\0';
 
         /* Check if board was already migrated with valid moderators */
         int already_migrated = 0;
@@ -387,7 +391,7 @@ main(int argc, char **argv)
         }
 
         if (already_migrated) {
-            clean_legacy_bm(new_bh.BM, new_bh.moderators);
+            clean_moderator_notes(new_bh.moderator_notes, new_bh.moderators);
         } else {
             fill_board_moderators(&new_bh);
         }
@@ -395,7 +399,7 @@ main(int argc, char **argv)
         if (memcmp(new_bh.moderators, bh.moderators, sizeof(new_bh.moderators)) != 0) {
             changed = 1;
         }
-        if (strcmp(new_bh.BM, bh.BM) != 0) {
+        if (strcmp(new_bh.moderator_notes, bh.moderator_notes) != 0) {
             changed = 1;
         }
 
@@ -414,9 +418,9 @@ main(int argc, char **argv)
         /* Check for any BM tokens that could not be resolved */
         char unres_toks[MAX_BMs][IDLEN + 1];
         int unres_cnt = 0;
-        if (bh.BM[0] != '\0') {
-            char bm_copy[sizeof(bh.BM) + 32];
-            strlcpy(bm_copy, bh.BM, sizeof(bm_copy));
+        if (bh.moderator_notes[0] != '\0') {
+            char bm_copy[sizeof(bh.moderator_notes) + 32];
+            strlcpy(bm_copy, bh.moderator_notes, sizeof(bm_copy));
             for (int k = 0; bm_copy[k] != '\0'; ) {
                 unsigned char c = (unsigned char)bm_copy[k];
                 if (big5_is_valid_lead(c) && bm_copy[k + 1] != '\0') {
@@ -456,12 +460,12 @@ main(int argc, char **argv)
             }
             count_migrated++;
             if (!opt_quiet && (opt_verbose || is_legacy || mods_in_board > 0 || unres_cnt > 0 || changed)) {
-                if (strcmp(bh.BM, new_bh.BM) != 0) {
+                if (strcmp(bh.moderator_notes, new_bh.moderator_notes) != 0) {
                     printf("[#%d %-13s] migrated: BM=\"%s\" -> \"%s\" (%d moderators)",
-                           i + 1, bh.brdname, bh.BM, new_bh.BM, mods_in_board);
+                           i + 1, bh.brdname, bh.moderator_notes, new_bh.moderator_notes, mods_in_board);
                 } else {
                     printf("[#%d %-13s] migrated: BM=\"%s\" (%d moderators)",
-                           i + 1, bh.brdname, bh.BM, mods_in_board);
+                           i + 1, bh.brdname, bh.moderator_notes, mods_in_board);
                 }
                 if (mods_in_board > 0) {
                     printf(" [mods:");
@@ -494,7 +498,7 @@ main(int argc, char **argv)
             count_already_ok++;
             if (opt_verbose) {
                 printf("[#%d %-13s] already ok: BM=\"%s\" (%d moderators)\n",
-                       i + 1, bh.brdname, bh.BM, mods_in_board);
+                       i + 1, bh.brdname, bh.moderator_notes, mods_in_board);
             }
         }
     }

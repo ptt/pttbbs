@@ -400,13 +400,21 @@ set_board(void)
     if (get_boardheader(&bh, currbid) <= 0)
         bh = *bp;
 
-    if (!does_board_have_public_bm(&bh)) {
-	strcpy(currBM, "徵求中");
+    if (!does_board_have_bm(&bh)) {
+	if (bh.moderator_notes[0])
+	    SNPRINTF(currBM, "板主:%s", bh.moderator_notes);
+	else
+	    strcpy(currBM, "徵求中");
     } else {
 	/* calculate with other title information */
 	int l = 0;
 
-	SNPRINTF(currBM, "板主:%s", bh.BM);
+	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
+	if (bh.moderator_notes[0])
+	    SNPRINTF(currBM, "板主:%s/%s", bm_buf, bh.moderator_notes);
+	else
+	    SNPRINTF(currBM, "板主:%s", bm_buf);
 	l += stream_width(bh.desc);
 	l += 8 + stream_width(currboard); /* trailing stuff */
 	l += stream_width(bh.brdname);
@@ -434,7 +442,7 @@ set_board(void)
     if (!HasUserPerm(PERM_NOCITIZEN) &&
         (HasUserPerm(PERM_BOARDS) ||
          is_BM_cache(currbid) ||
-         (bp->BM[0] <= ' ' && CBRD_IS_GROUP_OP()))) {
+         (bp->moderators[0].unum <= 0 && CBRD_IS_GROUP_OP()))) {
 	currmode |= MODE_BM;
     }
 }
@@ -906,11 +914,12 @@ whereami(void)
          i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
-    prints("我在哪?\n%-40.40s %.13s\n", p[j]->desc, p[j]->BM);
+    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    prints("我在哪?\n%-40.40s %.13s\n", p[j]->desc, board_format_moderators(p[j], bm_buf, sizeof(bm_buf)));
     for (j--; j >= 0; j--)
 	prints("%*s %-13.13s %-37.37s %.13s\n", (i - j) * 2, "",
 	       p[j]->brdname, p[j]->desc,
-	       p[j]->BM);
+	       board_format_moderators(p[j], bm_buf, sizeof(bm_buf)));
 
     move(b_lines - 2, 0);
     STRLCPY(category, p[i]->desc);
@@ -1209,15 +1218,6 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     }
 }
 
-int
-does_board_have_public_bm(const boardheader_t *bp) {
-    // Usually we can assume SHM->BMcache contains complete BM list; however
-    // sometimes boards may contains only private BMs (ex: [ <-space  some_uid])
-    // 另外還有人不知為了自己加了 [] 上去
-    // 搞了半天還是revert回原始的 BM[0] < ' ' 好了，
-    // 很糟但是還沒想到更好的作法。
-    return bp->BM[0] > ' ';
-}
 
 GCC_WEAK int
 get_max_pay_by_post_title(const char *title GCC_UNUSED)
@@ -1543,7 +1543,7 @@ do_post_article(int edflags)
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         !(currbrdattr & BRD_HIDE) &&
 #endif
-        does_board_have_public_bm(bp))
+        does_board_have_bm(bp))
     {
         money = calc_post_money(cuser.userid, currboard, fpath);
         if (money > MAX_POST_MONEY)
@@ -3609,9 +3609,14 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
         AUTO_BFILE(fn1, currboard, fhdr->filename);
 
-	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] > 0; i++)
-            mail_send_file(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1,
-                    "[鎖文通知]");
+	for (i = 0; i < MAX_BMs; i++) {
+            int uid = bp->moderators[i].unum;
+            if (uid > 0 && uid <= MAX_USERS) {
+                const char *mid = getuserid(uid);
+                if (mid)
+                    mail_send_file(mid, genbuf, fn1, "[鎖文通知]");
+            }
+        }
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
 

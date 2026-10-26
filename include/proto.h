@@ -85,7 +85,8 @@ int ReadSelect(void);
 int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
-int does_board_have_public_bm(const boardheader_t *bp);
+int does_board_have_bm(const boardheader_t *bp);
+#define does_board_have_public_bm does_board_have_bm
 int get_max_pay_by_post_title(const char *title);
 int check_title_change_fee(const fileheader_t *fhdr, const char *new_title);
 int calc_post_cap(int post_count, int base_cap);

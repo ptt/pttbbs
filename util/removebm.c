@@ -5,55 +5,50 @@
 
 int check(void *data, int bid, boardheader_t *bh)
 {
-    char changed = 0;
-    char has_quote = 0;
-    char *p;
+    int changed = 0;
     const char *userid = (const char *) data;
-    char bmsrc[IDLEN * 3 + 3], bmout[IDLEN * 3 + 3] = "";
-    if (!bh->brdname[0] || !bh->BM[0])
+    if (!bh->brdname[0])
         return 0;
 
-    if (!strcasestr(bh->BM, userid))
-        return 0;
+    int target_uid = searchuser(userid, NULL);
+    char old_bms[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(bh, old_bms, sizeof(old_bms));
 
-    STRLCPY(bmsrc, bh->BM);
-    p = bmsrc;
-
-    if (*p == '[') {
-        p++;
-        has_quote = 1;
-    }
-    p = strtok(p,"/ ]");
-
-    while (p) {
-        const char *bmid = p;
-        p = strtok(NULL, "/ ]");
-
-        if (!*bmid)
-            continue;
-
-        if (strcasecmp(bmid, userid) == 0) {
-            // found match, to remove it
-            changed = 1;
-            continue;
+    // Remove from moderators array
+    int mod_idx = 0;
+    for (int m = 0; m < MAX_BMs; m++) {
+        if (bh->moderators[m].unum > 0) {
+            int is_match = 0;
+            if (target_uid > 0 && bh->moderators[m].unum == target_uid) {
+                is_match = 1;
+            } else {
+                const char *uname = getuserid(bh->moderators[m].unum);
+                if (uname && strcasecmp(uname, userid) == 0)
+                    is_match = 1;
+            }
+            if (is_match) {
+                changed = 1;
+            } else {
+                if (mod_idx != m)
+                    bh->moderators[mod_idx] = bh->moderators[m];
+                mod_idx++;
+            }
         }
-        if (bmout[0])
-            STRLCAT(bmout, "/");
-        STRLCAT(bmout, bmid);
+    }
+    for (; mod_idx < MAX_BMs; mod_idx++) {
+        memset(&bh->moderators[mod_idx], 0, sizeof(user_t));
     }
 
     if (!changed)
         return 0;
 
+    char new_bms[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(bh, new_bms, sizeof(new_bms));
+
     now = time(0);
     log_filef(BBSHOME "/log/removebm.log",
               "[%s] %s: %s->%s\n", userid,
-              bh->brdname, bh->BM, bmout);
-
-    if (has_quote)
-        SNPRINTF(bh->BM, "[%s]", bmout);
-    else
-        STRLCPY(bh->BM, bmout);
+              bh->brdname, old_bms, new_bms);
 
     substitute_record(BBSHOME "/" FN_BOARD, bh, sizeof(boardheader_t), bid);
     reset_board(bid);

@@ -32,7 +32,7 @@ typedef struct BMarray{
     char bmname[IDLEN + 1];
     int  flag;
 }  BMArray;
-BMArray bms[5];
+BMArray bms[MAX_BMs];
 
 int need_alert(int days) {
     // alerts will be sent at:
@@ -118,29 +118,32 @@ int main(void)
 
     j = 0;
     for (i = 0; i < numboards; i++) {
-	char *p, bmbuf[IDLEN * 3 + 3];
-	int   index = 0, flag = 0, k, n;
+	int   index = 0, flag = 0, k;
 	userec_t xuser;
-	p = allbrd[i].BM;
 
-	if (*p == '[') p++;
 	if (allbrd[i].brdname[0] == '\0' ||
 		!isalpha(allbrd[i].brdname[0])
 	   ) continue;
 
-	p = strtok(p,"/ ]");
-	for(index=0; p && index<5; index++) {
-	    int diff;
-	    // XXX what if bmid is invalid?
-	    if(!p[0] || (bmid = passwd_load_user(p, &xuser)) < 1) {
-		index--;
-		p=strtok(NULL,"/ ]");
+	for (int m = 0; m < MAX_BMs; m++) {
+	    int uid = allbrd[i].moderators[m].unum;
+	    if (uid <= 0 || uid > MAX_USERS)
 		continue;
-	    }
-	    STRLCPY(bms[index].bmname, p);
+	    if (passwd_query(uid, &xuser) != 0)
+		continue;
+	    if (allbrd[i].moderators[m].firstlogin != 0 &&
+		xuser.firstlogin != allbrd[i].moderators[m].firstlogin)
+		continue;
+
+	    const char *mid = xuser.userid[0] ? xuser.userid : getuserid(uid);
+	    if (!mid || !mid[0])
+		continue;
+
+	    bmid = uid;
+	    STRLCPY(bms[index].bmname, mid);
 	    bms[index].flag = 0;
 
-	    diff = time4_diff(now, xuser.lastlogin);
+	    int diff = time4_diff(now, xuser.lastlogin);
 	    if (diff < 0)
 		diff = 0;
 
@@ -148,7 +151,7 @@ int main(void)
                 !(xuser.userlevel & PERM_SYSOPHIDE) &&
                 !(xuser.userlevel & PERM_SYSOP))
             {
-		strlcpy(lostbms[j].bmname, p, sizeof(bms[index].bmname));
+		strlcpy(lostbms[j].bmname, mid, sizeof(bms[index].bmname));
 		lostbms[j].title = allbrd[i].brdname;
 		lostbms[j].ctitle = allbrd[i].bclass;
 		lostbms[j].lostdays = time4_days_elapsed(now, xuser.lastlogin);
@@ -163,7 +166,7 @@ int main(void)
 		}
 		j++;
 	    }
-	    p = strtok(NULL,"/ ]");
+	    index++;
 	}
 
 	if (flag == 1) {
@@ -179,17 +182,38 @@ int main(void)
                 memcpy(&allbrd[i], bp, sizeof(boardheader_t));
             }
 
-	    bmbuf[0] = '\0';
-	    for (k = 0, n = 0; k < index; k++) {
-		if (!bms[k].flag) {
-		    if (n++ != 0) strcat(bmbuf, "/");
-		    strcat(bmbuf, bms[k].bmname);
+	    char old_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    board_format_moderators(bp, old_bm, sizeof(old_bm));
+
+	    // Remove lazy BMs from moderators array
+	    int mod_idx = 0;
+	    for (int m = 0; m < MAX_BMs; m++) {
+		if (allbrd[i].moderators[m].unum > 0) {
+		    const char *uname = getuserid(allbrd[i].moderators[m].unum);
+		    int removed = 0;
+		    for (k = 0; k < index; k++) {
+			if (bms[k].flag && uname && strcasecmp(uname, bms[k].bmname) == 0) {
+			    removed = 1;
+			    break;
+			}
+		    }
+		    if (!removed) {
+			if (mod_idx != m)
+			    allbrd[i].moderators[mod_idx] = allbrd[i].moderators[m];
+			mod_idx++;
+		    }
 		}
 	    }
-	    STRLCPY(allbrd[i].BM, bmbuf);
+	    for (; mod_idx < MAX_BMs; mod_idx++) {
+		memset(&allbrd[i].moderators[mod_idx], 0, sizeof(user_t));
+	    }
+
+	    char new_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    board_format_moderators(&allbrd[i], new_bm, sizeof(new_bm));
             printf("board %s: %s -> %s\n",
-                    allbrd[i].brdname, bp->BM, allbrd[i].BM);
-            STRLCPY(bp->BM, allbrd[i].BM);
+                    allbrd[i].brdname, old_bm, new_bm);
+
+            memcpy(bp->moderators, allbrd[i].moderators, sizeof(bp->moderators));
 	    if (substitute_record(BBSHOME"/"FN_BOARD, &allbrd[i], 
 			sizeof(boardheader_t), i+1) == -1) {
 		printf("Update Board Failed: %s\n", allbrd[i].brdname);

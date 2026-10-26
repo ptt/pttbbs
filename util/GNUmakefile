@@ -24,7 +24,7 @@ CPROG_WITH_UTIL := \
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
 	munin		useractive_munin	chkfnlen	showbot	\
-	cleanbmperm	\
+	cleanbmperm	showboard	\
 	$(END)
 
 # 下面是 C++ 的程式
@@ -34,7 +34,7 @@ CPP_WITH_UTIL := \
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL := \
-	showboard	bbsrf		initbbs		merge_board	\
+	bbsrf		initbbs		merge_board	\
 	bbsmail		\
 	$(END)
 

@@ -66,7 +66,7 @@ static void scan_boards(uint8_t *user_roles, board_stats_t *stats, int verbose)
 
     for (int bid = 1; bid <= nboards; bid++) {
         const boardheader_t *bh = getbcache(bid);
-        if (!bh || !bh->brdname[0] || (bh->brdattr & BRD_SYMBOLIC) || !bh->BM[0])
+        if (!bh || !bh->brdname[0] || (bh->brdattr & BRD_SYMBOLIC) || !bh->moderators[0].unum)
             continue;
 
         stats->boards_scanned++;
@@ -85,31 +85,26 @@ static void scan_boards(uint8_t *user_roles, board_stats_t *stats, int verbose)
             stats->regular_boards++;
         }
 
-        char buf[sizeof(bh->BM) + 1];
-        strlcpy(buf, bh->BM, sizeof(buf));
-        for (char *p = buf; *p; p++) {
-            if (!isalnum((unsigned char)*p))
-                *p = ' ';
-        }
-
-        char *saveptr = NULL;
-        for (char *tok = strtok_r(buf, " ", &saveptr); tok; tok = strtok_r(NULL, " ", &saveptr)) {
-            if (!*tok)
+        for (int m = 0; m < MAX_BMs; m++) {
+            int uid = bh->moderators[m].unum;
+            if (uid <= 0 || uid > MAX_USERS)
                 continue;
-            int uid = searchuser(tok, NULL);
-            if (uid > 0 && uid <= MAX_USERS) {
-                if (!user_roles[uid])
-                    stats->unique_managers++;
-                user_roles[uid] |= role_bit;
-                if (verbose > 1) {
-                    printf("  Board %-15s Role: %-10s User: %-12s (uid=%d)\n",
-                           bh->brdname,
-                           (role_bit == ROLE_HAS_GROUP_LEAD) ? "GROUP_LEAD" :
-                           (role_bit == ROLE_HAS_GROUP_OP) ? "GROUP_OP" : "BM",
-                           tok, uid);
-                }
-            } else if (verbose > 1) {
-                printf("  [WARN] Board %-15s invalid BM user: '%s'\n", bh->brdname, tok);
+            userec_t u;
+            if (passwd_query(uid, &u) != 0)
+                continue;
+            if (bh->moderators[m].firstlogin != 0 &&
+                u.firstlogin != bh->moderators[m].firstlogin)
+                continue;
+
+            if (!user_roles[uid])
+                stats->unique_managers++;
+            user_roles[uid] |= role_bit;
+            if (verbose > 1) {
+                printf("  Board %-15s Role: %-10s User: %-12s (uid=%d)\n",
+                       bh->brdname,
+                       (role_bit == ROLE_HAS_GROUP_LEAD) ? "GROUP_LEAD" :
+                       (role_bit == ROLE_HAS_GROUP_OP) ? "GROUP_OP" : "BM",
+                       u.userid, uid);
             }
         }
     }

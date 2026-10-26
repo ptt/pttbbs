@@ -93,7 +93,7 @@ BOARDHEADER_SIZE = 256
 BOARDHEADER_FMT = (
     ("brdname", "%ds" % (IDLEN + 1)),
     ("title", "%ds" % (BTLEN + 1)),
-    ("BM", "%ds" % (IDLEN * 3 + 3)),
+    ("moderator_notes", "%ds" % (IDLEN * 3 + 3)),
     ("pad1", "3s"),
     ("brdattr", "I"),  # uint32_t
     ("chesscountry", "B"),

@@ -149,7 +149,10 @@ int listbrd(int argc, char **argv)
 	printf("brdname(bid):\t%s\n", b.brdname);
 	printf("bclass:\t%s\n", b.bclass);
 	printf("desc:\t%s\n", b.desc);
-	printf("BM:\t%s\n", b.BM);
+	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	printf("BM:\t%s\n", board_format_moderators(&b, bm_buf, sizeof(bm_buf)));
+	if (b.moderator_notes[0])
+	    printf("moderator_notes:\t%s\n", b.moderator_notes);
 	printf("brdattr:\t%08x ", b.brdattr);
 
 #define SHOWBRDATTR(x) if(b.brdattr & x) printf(#x " ");
@@ -198,16 +201,22 @@ int listbrd(int argc, char **argv)
         printf("---- children: ---- \n");
         for (i = 0; i < MAX_BOARD; i++)
         {
-            if(bcache[i].gid == di && bcache[i].brdname[0])
+            if(bcache[i].gid == di && bcache[i].brdname[0]) {
+                char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+                board_format_moderators(&bcache[i], bm_buf, sizeof(bm_buf));
                 printf("%4d %-13s%-5.5s %-25.25s%s\n",
                         i+1, bcache[i].brdname, bcache[i].bclass,
-                        bcache[i].BM, bcache[i].desc);
+                        bm_buf, bcache[i].desc);
+            }
         }
     } else
     for( i = 0 ; i < MAX_BOARD ; ++i )
     {
-	if(bcache[i].brdname[0])
-	    printf("%03d %-13s%-5.5s %-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].bclass, bcache[i].BM, bcache[i].desc);
+	if(bcache[i].brdname[0]) {
+            char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+            board_format_moderators(&bcache[i], bm_buf, sizeof(bm_buf));
+	    printf("%03d %-13s%-5.5s %-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].bclass, bm_buf, bcache[i].desc);
+        }
     }
     return 0;
 }
@@ -227,10 +236,7 @@ int fixbrd(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
-    int     i;
-    for( i = 0 ; i < MAX_BOARD ; ++i )
-	if( bcache[i].brdname[0] )
-	    buildBMcache(i + 1); /* XXXbid */
+    /* Deprecated: board moderators are stored in boardheader_t.moderators */
     return 0;
 }
 
@@ -300,9 +306,6 @@ do_shm_init(int force_reset, int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
     puts("loading bcache...");
     reload_bcache();
-
-    puts("building BMcache...");
-    bBMC(1, argv);
 
     /* utmp.svc is started via start_services() */
 
@@ -609,7 +612,7 @@ struct Cmd {
     {torb,       "reloadbcache", "reload bcache"},
     {fixbcache,  "fixbcache",  "fix bcache"},
     {rlfcache,   "reloadfcache", "reload fcache"},
-    {bBMC,       "bBMC",       "build BM cache"},
+    {bBMC,       "bBMC",       "build BM cache (deprecated, no-op)"},
     {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user. Options: [-h: see full usage]"},
     {utmpreset,  "utmpreset",  "SHM->busystate=0"},
     {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
@@ -628,7 +631,7 @@ struct Cmd {
     {dummy,      "\b\b\b\bMisc:", ""},
     {showglobal, "showglobal", "show GLOBALVAR[]"},
     {setglobal,  "setglobal",  "set GLOBALVAR[]. Options: [-h: see full usage]"},
-    {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, rebuild bcache & BMcache, and start services"},
+    {SHMinit,    "init",       "initialize: calling uhash_loader to set up SHM, reload bcache, and start services"},
     {SHMreset,   "reset",      "reset SHM in-place (wipe uinfo/utmp/uhash and re-initialize without recreating SHM)"},
     {SHMrebuild_utmp, "rebuild_utmp", "rebuild utmp_user table in-place from active sessions without kicking users"},
     {NULL, NULL, NULL}

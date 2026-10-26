@@ -214,6 +214,7 @@ _Static_assert(sizeof(user_t) == 8, "user_t size mismatch");
 
 // TODO(hungte): Increase to 5 when possible.
 #define MAX_BMs         4   /* Up to 4 moderators per board */
+#define BOARD_MODERATORS_FORMAT_MAX_LEN ((IDLEN + 1) * MAX_BMs)
 
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
@@ -222,7 +223,7 @@ typedef struct boardheader_t { /* 256 bytes */
     char    bclass[BCLEN + 1];	    /* 4 bytes class + \0 */
     char    pad_symbol[2];	    /* deprecated symbol */
     char    desc[BTLEN + 1];	    /* board title/desc (42 bytes) */
-    char    BM[IDLEN * 3 + 3];     /* BMs' userid, token '/' */
+    char    moderator_notes[IDLEN * 3 + 3]; // notes for the moderator list
     char    pad1[3];
     uint32_t brdattr;		    /* board的屬性 */
     char    deprecated_chesscountry;	    /* deprecated: 棋國 */
@@ -579,7 +580,7 @@ typedef struct {
 
     /* brdshm */
     int     gap_8;
-    int     BMcache[MAX_BOARD][MAX_BMs];
+    int     deprecated_BMcache[MAX_BOARD][4];   /* Hard-coded as 4 because we'll deprecate this soon */
     int     gap_9;
     boardheader_t   bcache[MAX_BOARD];
     int     gap_10;

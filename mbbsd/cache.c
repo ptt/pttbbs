@@ -154,27 +154,29 @@ int
 is_BM_cache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    int *pbm = SHM->BMcache[bid-1];
 
-    // XXX potential issue: (thanks for mtdas@ptt)
-    //  buildBMcache use -1 as "none".
-    //  some function may call is_BM_cache early
-    //  without having currutmp->uid (maybe?)
-    //  and may get BM permission accidentally.
     // quick check
     if (!HasUserPerm(PERM_BASIC) || !currutmp->uid || currutmp->uid == -1)
 	return 0;
     // reject user who haven't complete registration.
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return 0;
-    // XXX hard coded MAX_BMs=4
-    if( currutmp->uid == pbm[0] ||
-	currutmp->uid == pbm[1] ||
-	currutmp->uid == pbm[2] ||
-	currutmp->uid == pbm[3] )
+    const boardheader_t *bp = getbcache(bid);
+    int is_bm = 0;
+    if (bp) {
+        for (int m = 0; m < MAX_BMs; m++) {
+            if (bp->moderators[m].unum > 0 && bp->moderators[m].unum == currutmp->uid) {
+                if (bp->moderators[m].firstlogin == 0 || bp->moderators[m].firstlogin == cuser.firstlogin) {
+                    is_bm = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (is_bm)
     {
 	// auto enable permission corresponding to board type
-	const boardheader_t *bp = getbcache(bid);
 	unsigned int mask = (bp && (bp->brdattr & BRD_GROUPBOARD)) ?
 	    (bp->gid == 1 ? PERM_GROUP_LEAD : PERM_GROUP_OP) : PERM_BM;
 	if (!HasUserPerm(mask)) {

@@ -18,7 +18,7 @@ boardheader_storage_to_mem(boardheader_t *bh, size_t count)
             bh[i].bclass[4] = '\0';
         storage_to_mb(bh[i].bclass, bh[i].bclass, sizeof(bh[i].bclass));
         storage_to_mb(bh[i].desc, bh[i].desc, sizeof(bh[i].desc));
-        storage_to_mb(bh[i].BM, bh[i].BM, sizeof(bh[i].BM));
+        storage_to_mb(bh[i].moderator_notes, bh[i].moderator_notes, sizeof(bh[i].moderator_notes));
     }
 }
 
@@ -29,7 +29,7 @@ boardheader_mem_to_storage(boardheader_t *bh)
         return;
     mb_to_storage(bh->bclass, bh->bclass, sizeof(bh->bclass));
     mb_to_storage(bh->desc, bh->desc, sizeof(bh->desc));
-    mb_to_storage(bh->BM, bh->BM, sizeof(bh->BM));
+    mb_to_storage(bh->moderator_notes, bh->moderator_notes, sizeof(bh->moderator_notes));
 }
 
 int

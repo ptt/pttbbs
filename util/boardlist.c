@@ -32,7 +32,7 @@ void dumpdetail(void)
 {
     int     i, k, bid;
     boardheader_t  *bptr;
-    char    BM[IDLEN * 3 + 3], *p;
+    char   *p;
     char    smallbrdname[IDLEN + 1];
     for( i = 0 ; i < MAX_BOARD ; ++i ){
 	bptr = &bcache[i];
@@ -62,11 +62,12 @@ void dumpdetail(void)
 	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(bptr->desc));
 	printf("$db{'%d.over18'} = '%d';\n",
 	       bid, (bptr->brdattr & BRD_OVER18) ? 1 : 0);
-	STRLCPY(BM, bptr->BM);
-	for( p = BM ; *p != 0 ; ++p )
+	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	board_format_moderators(bptr, bm_buf, sizeof(bm_buf));
+	for( p = bm_buf ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
 		*p = ' ';
-	for( k = 0, p = strtok(BM, " ") ; p != NULL ; ++k, p = strtok(NULL, " ") )
+	for( k = 0, p = strtok(bm_buf, " ") ; p != NULL ; ++k, p = strtok(NULL, " ") )
 	    printf("$db{'%d.BM.%d'} = '%s';\n", bid, k, p);
     }
 }

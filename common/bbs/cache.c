@@ -148,7 +148,7 @@ searchuser(const char *userid, char *rightid)
 char           *
 getuserid(int num)
 {
-    if (--num >= 0 && num < MAX_USERS)
+    if (SHM && --num >= 0 && num < MAX_USERS)
 	return ((char *)SHM->userid[num]);
     return NULL;
 }
@@ -822,16 +822,26 @@ int
 parseBMlist(const char *input, int uids[MAX_BMs]) {
     int i, uid;
     char *ptr, *strtok_pos;
-    char s[(IDLEN + 1) * MAX_BMs];
+    char s[128];
 
     STRLCPY(s, input);
     // reset BM list
     for (i = 0; i < MAX_BMs; i++)
         uids[i] = -1;
 
-    for (i = 0 ; s[i] != 0 ; ++i)
-	if (!isalpha((int)s[i]) && !isdigit((int)s[i]))
+    for (i = 0; s[i] != '\0'; ) {
+        unsigned char c = (unsigned char)s[i];
+        if (big5_is_valid_lead(c) && s[i + 1] != '\0') {
             s[i] = ' ';
+            s[i + 1] = ' ';
+            i += 2;
+        } else if (!isalpha(c) && !isdigit(c)) {
+            s[i] = ' ';
+            i++;
+        } else {
+            i++;
+        }
+    }
     for (ptr = strtok_r(s, " ", &strtok_pos), i = 0;
 	 i < MAX_BMs && ptr != NULL;
          ptr = strtok_r(NULL, " ", &strtok_pos))
@@ -841,11 +851,57 @@ parseBMlist(const char *input, int uids[MAX_BMs]) {
 }
 
 
+int
+does_board_have_bm(const boardheader_t *bp)
+{
+    return bp && (bp->moderators[0].unum > 0);
+}
+
+char *
+board_format_moderators(const boardheader_t *bh, char *buf, size_t buflen)
+{
+    if (!bh || !buf || buflen == 0)
+        return buf;
+
+    buf[0] = '\0';
+
+    for (int m = 0; m < MAX_BMs; m++) {
+        int uid = bh->moderators[m].unum;
+        if (uid > 0 && uid <= MAX_USERS) {
+            const char *uid_name = NULL;
+            userec_t u;
+            if (passwd_query(uid, &u) == 0) {
+                if (bh->moderators[m].firstlogin != 0 &&
+                    u.firstlogin != bh->moderators[m].firstlogin) {
+                    continue;
+                }
+                uid_name = u.userid[0] ? u.userid : getuserid(uid);
+            } else if (bh->moderators[m].firstlogin == 0) {
+                uid_name = getuserid(uid);
+            }
+            if (uid_name && uid_name[0]) {
+                if (buf[0] != '\0')
+                    strlcat(buf, "/", buflen);
+                strlcat(buf, uid_name, buflen);
+            }
+        }
+    }
+
+    return buf;
+}
+
 void
 buildBMcache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    parseBMlist(getbcache(bid)->BM, SHM->BMcache[bid - 1]);
+    boardheader_t *bh = getbcache(bid);
+    for (int i = 0; i < MAX_BMs; i++) {
+        if (bh->moderators[i].unum > 0) {
+            SHM->deprecated_BMcache[bid - 1][i] = bh->moderators[i].unum;
+        } else {
+            SHM->deprecated_BMcache[bid - 1][i] = -1;
+        }
+    }
 }
 
 /*

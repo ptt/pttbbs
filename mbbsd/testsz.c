@@ -47,6 +47,7 @@ int main()
     assert(offsetof(fileheader_t, rating) == 32);
     assert(offsetof(fileheader_t, owner) == 34);
     ENSURE(boardheader_t, 256);
+    assert(offsetof(boardheader_t, moderator_notes) == 62);
     ENSURE(user_t, 8);
     ENSURE(chicken_t, 128);
     ENSURE(fav_board_t, 12);

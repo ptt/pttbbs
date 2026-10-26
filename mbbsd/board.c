@@ -1327,7 +1327,16 @@ bconfig_header(PSB_CTX *ctx) {
 
     vs_draw_hdr2("看板設定與管理", mode);
 
-    const char *bm = does_board_have_public_bm(bp) ? bp->BM : "(無)";
+    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(bp, bm_buf, sizeof(bm_buf));
+    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bp->moderator_notes) + 1];
+    if (bm_buf[0] && bp->moderator_notes[0])
+        snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bp->moderator_notes);
+    else if (bm_buf[0])
+        strlcpy(full_bm, bm_buf, sizeof(full_bm));
+    else
+        strlcpy(full_bm, bp->moderator_notes, sizeof(full_bm));
+    const char *bm = full_bm[0] ? full_bm : "(無)";
     prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
            " 板主名單: " ANSI_COLOR(1;36) "%s" ANSI_RESET "\n",
            bp->brdname, bm);
@@ -2063,7 +2072,16 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         int d_off = stream_col_offset(40, mb_desc, &d_cols);
         strlcpy(t_desc, mb_desc, d_off + 1);
 
-        const char *mb_bm = bh.BM;
+        char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+        board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
+        char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bh.moderator_notes) + 1];
+        if (bm_buf[0] && bh.moderator_notes[0])
+            snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bh.moderator_notes);
+        else if (bm_buf[0])
+            strlcpy(full_bm, bm_buf, sizeof(full_bm));
+        else
+            strlcpy(full_bm, bh.moderator_notes, sizeof(full_bm));
+        const char *mb_bm = full_bm;
         int max_bm = (t_columns > 68) ? t_columns - 68 : 0;
         int bm_off = stream_col_offset(max_bm, mb_bm, NULL);
         strlcpy(t_bm, mb_bm, bm_off + 1);
@@ -2150,8 +2168,17 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     else
         SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", bh.nuser);
 
+    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
+    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bh.moderator_notes) + 1];
+    if (bm_buf[0] && bh.moderator_notes[0])
+        snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bh.moderator_notes);
+    else if (bm_buf[0])
+        strlcpy(full_bm, bm_buf, sizeof(full_bm));
+    else
+        strlcpy(full_bm, bh.moderator_notes, sizeof(full_bm));
     render_columns(ctx, "", col_num, col_name, col_class, col_desc, col_nuser,
-            bh.BM);
+            full_bm);
     return 0;
 }
 
