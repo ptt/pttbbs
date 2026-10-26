@@ -28,6 +28,38 @@ usage(const char *prog)
             prog);
 }
 
+static int
+is_printable_cat(const char *cat)
+{
+    const unsigned char *p = (const unsigned char *)cat;
+    size_t i = 0;
+
+    while (p[i] != '\0') {
+        unsigned char c = p[i];
+
+        /* Printable ASCII: 0x20..0x7E, plus tab ('\t' = 0x09) */
+        if ((c >= 0x20 && c <= 0x7e) || c == '\t') {
+            i++;
+            continue;
+        }
+
+        /* Big-5 two-byte character: lead byte + trail byte */
+        if (big5_is_valid_lead(c)) {
+            if (p[i + 1] != '\0') {
+                unsigned char c2 = p[i + 1];
+                if (big5_is_valid_trail(c2) && c2 != 0x7f) {
+                    i += 2;
+                    continue;
+                }
+            }
+            return 0;
+        }
+
+        return 0;
+    }
+    return 1;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -126,12 +158,19 @@ main(int argc, char **argv)
             continue;
         }
 
+        /* In legacy unmigrated .BRD, offset 172..205 holds deprecated_posttype[33] and deprecated_posttype_f */
+        const char *legacy_posttype = (const char *)&bh.moderators;
         char cats[8][32];
         int n_cats = 0;
 
-        for (int j = 0; j < 8 && bh.deprecated_posttype[j * 4] != '\0'; j++) {
+        for (int j = 0; j < 8 && legacy_posttype[j * 4] != '\0'; j++) {
             char cat[5];
-            snprintf(cat, sizeof(cat), "%.4s", bh.deprecated_posttype + j * 4);
+            snprintf(cat, sizeof(cat), "%.4s", legacy_posttype + j * 4);
+            if (!is_printable_cat(cat)) {
+                fprintf(stderr, "probably already converted, abort\n");
+                close(fd);
+                return 1;
+            }
             char *end = cat + strlen(cat) - 1;
             while (end >= cat && (*end == ' ' || *end == '\t')) {
                 *end = '\0';
@@ -189,7 +228,7 @@ main(int argc, char **argv)
         }
 
         if (bdir_exists) {
-            unsigned char posttype_f = (unsigned char)bh.deprecated_posttype_f;
+            unsigned char posttype_f = (unsigned char)bh.pad[1];
             const char * const tmpl_prefixes[] = {"postsample", "sample"};
 
             for (int j = 0; j < 8; j++) {

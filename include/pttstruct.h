@@ -212,6 +212,9 @@ typedef struct {
 } PACKSTRUCT user_t;
 _Static_assert(sizeof(user_t) == 8, "user_t size mismatch");
 
+// TODO(hungte): Increase to 5 when possible.
+#define MAX_BMs         4   /* Up to 4 moderators per board */
+
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */
@@ -219,17 +222,17 @@ typedef struct boardheader_t { /* 256 bytes */
     char    bclass[BCLEN + 1];	    /* 4 bytes class + \0 */
     char    pad_symbol[2];	    /* deprecated symbol */
     char    desc[BTLEN + 1];	    /* board title/desc (42 bytes) */
-    char    BM[IDLEN * 3 + 3];	    /* BMs' userid, token '/' */
+    char    BM[IDLEN * 3 + 3];     /* BMs' userid, token '/' */
     char    pad1[3];
     uint32_t brdattr;		    /* board的屬性 */
     char    deprecated_chesscountry;	    /* deprecated: 棋國 */
     uint8_t _vote_limit_posts;	    /* (已停用) 連署 : 文章篇數下限 */
     uint8_t vote_limit_logins;	    /* 連署 : 登入次數下限 */
-    uint8_t pad2_1[1];	            /* (已停用) 連署 : 註冊時間限制 */
+    uint8_t vote_limit_badpost;	    /* 連署 : 劣文上限 */
     time4_t bupdate;		    /* note update time */
-    uint8_t _post_limit_posts;	    /* (已停用) 發表文章 : 文章篇數下限 */
+    uint8_t fastrecommend_pause;    /* 快速連推間隔 */
     uint8_t post_limit_logins;	    /* 發表文章 : 登入次數下限 */
-    uint8_t pad2_2[1];	            /* (已停用) 發表文章 : 註冊時間限制 */
+    uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     uint8_t bvote;		    /* 正舉辦 Vote 數 */
     time4_t vtime;		    /* Vote close time */
     uint32_t level;		    /* 可以看此板的權限 */
@@ -242,15 +245,16 @@ typedef struct boardheader_t { /* 256 bytes */
     int32_t nuser;		    /* 多少人在這板 */
     int32_t postexpire;		    /* postexpire */
     time4_t endgamble;
-    char    deprecated_posttype[33];	    /* (已停用) 移至 boards/<board>/posttype */
-    char    deprecated_posttype_f;	    /* (已停用) */
-    uint8_t fastrecommend_pause;    /* 快速連推間隔 */
-    uint8_t vote_limit_badpost;	    /* 連署 : 劣文上限 */
-    uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
+    user_t moderators[MAX_BMs];    /* board moderators (BM) */
+    char    pad[2];                 /* TODO: migrate to moderators when we have enough bytes. */
+    uint8_t _fastrecommend_pause;    /* 快速連推間隔 */
+    uint8_t _vote_limit_badpost;	    /* 連署 : 劣文上限 */
+    uint8_t _post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
     time4_t SRexpire;		    /* SR Records expire time */
     aidu_t  bottom[MAX_BOTTOM_POSTS]; /* 5 * 8 = 40 bytes */
 } PACKSTRUCT boardheader_t;
+_Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
 // #define BRD_NOZAP       	0x00000001	/* 不可 ZAP */
@@ -531,9 +535,6 @@ _Static_assert((ST_FRIEND | ST_SUPER | ST_REJECT) <= FRIEND_ONLINE_STAT_MASK,
 /* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
  * 會造成找 shm 空位的無窮迴圈.
  * 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
-
-/* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
-#define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
 // TODO
 // 哪天請好心人整理 shm:

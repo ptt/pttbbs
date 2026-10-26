@@ -15,6 +15,38 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## board, cache: Migrate boardheader_t BM to numeric user_t index
+
+為將看板板主（BM）改為數值索引追蹤，`boardheader_t` 擴充支援數值化的板主結構：
+- `moderators[MAX_BMs]`: 每個板主以 `user_t`（8 bytes，內含 1-based 使用者編號
+  `int unum` 與註冊時間驗證 `time4_t firstlogin`）記錄，最多支援 4 位板主。
+- 看板限制欄位搬移：為挪出空間讓未來板主可以增加到五位，看板限制設定欄位搬移至
+  前面已廢棄的保留空間。
+
+> [!CAUTION]
+> **升級前重要前置作業（必讀）**：
+> 1. **必須先執行過 `upgrade/board_posttype_to_file` 升級**：
+>    因為 `boardheader_t` 內原有的發文分類欄位（`posttype[33]` 與 `posttype_f`）
+>    空間已被 `moderators` 覆用，若先前尚未將分類匯出成檔案，直接執行此升級會
+>    導致看板發文分類永久消失！升級前請務必先確認已轉換好 posttype。
+> 2. **升級必須停機（關站）執行**：
+>    此轉檔會直接改寫 `.BRD` 檔案內容，為避免運作中的 `mbbsd` 或相關 daemon
+>    覆寫資料造成錯亂，升級時**必須關閉所有 BBS 相關服務與舊的 mbbsd**。
+
+升級方式為執行 `upgrade/migrate_board_moderators`,  建議先以 dry-run 模擬確認:
+```
+./upgrade/migrate_board_moderators --dry-run ~/.BRD
+```
+再 進行實際轉換（預設會自動備份成 .BRD.bak）:
+```
+./upgrade/migrate_board_moderators ~/.BRD
+```
+最後重設或重載 SHM 快取並重啟 BBS 服務:
+```
+shmctl reload
+```
+
+---
 # cleanup(pttstruct): Remove USE_COOLDOWN and HOTBOARDCACHE
 
 正式移除 pttstruct 裡兩個已不再需要的條件定義。
