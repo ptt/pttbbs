@@ -44,9 +44,12 @@ ShowVector(struct Vector *list, int row, int col, const char * msg, int idx)
     }
     col = 0;
 
-    len = Vector_MaxLen(list, idx, b_lines - row);
+    int max_rows = b_lines - 1 - row;
+    if (max_rows <= 0) max_rows = 1;
+
+    len = Vector_MaxLen(list, idx, max_rows);
     while (len + col < t_columns) {
-	for (i = row; idx < Vector_length(list) && (i < b_lines); i++) {
+	for (i = row; idx < Vector_length(list) && (i < row + max_rows); i++) {
 	    move(i, col);
 	    outs(Vector_get(list, idx));
 	    idx++;
@@ -56,255 +59,206 @@ ShowVector(struct Vector *list, int row, int col, const char * msg, int idx)
 	    idx = 0;
 	    break;
 	}
-	len = Vector_MaxLen(list, idx, b_lines - row);
+	len = Vector_MaxLen(list, idx, max_rows);
     }
 
     return idx;
 }
 
-#define MAX_COMPLETE_LIST   25
-
-struct namecomplete_int {
-    const struct Vector * base;
-    struct Vector sublist;
-    char sublist_buf[(MAX_COMPLETE_LIST + 1) * (IDLEN + 1)];
-    int idx, dirty;
-    int allow_nonexistent_prefix;
-    int is_usercomplete;
-    bool is_truncated;
-};
+#define MAX_COMPLETE_CAP    128
 
 static int
-nc_sublist(struct namecomplete_int *nc_int, const struct Vector *src, const char *tag,
-	   char *dst_buf, bool *out_truncated)
+get_complete_capacity(int start_y, int item_len)
 {
-    int i, len = strlen(tag);
-    int count = 0;
-    bool truncated = false;
-    char exact_id[IDLEN + 1] = "";
-    int first_uc = len > 0 ? chartoupper((unsigned char)tag[0]) : 0;
+    int list_top = start_y + 1;
+    int max_rows = b_lines - 1 - list_top;
+    if (max_rows <= 0)
+	max_rows = 1;
+    int col_width = item_len + 2;
+    if (col_width <= 0)
+	col_width = 1;
+    int max_cols = (t_columns - 1) / col_width;
+    if (max_cols <= 0)
+	max_cols = 1;
+    int cap = max_rows * max_cols;
+    if (cap > MAX_COMPLETE_CAP)
+	cap = MAX_COMPLETE_CAP;
+    if (cap <= 0)
+	cap = 1;
+    return cap;
+}
 
-    if (len == 0 && nc_int->is_usercomplete) {
+static int
+nc_cmp_id(const void *a, const void *b)
+{
+    return strcasecmp((const char *)a, (const char *)b);
+}
+
+static int
+compute_lcp(const char *s1, const char *s2)
+{
+    int i = 0;
+    while (s1[i] && s2[i] &&
+	   chartoupper((unsigned char)s1[i]) == chartoupper((unsigned char)s2[i]))
+	i++;
+    return i;
+}
+
+/* Completion Provider Interface */
+
+typedef struct {
+    bool (*has_match)(const char *prefix, void *ctx);
+    int (*get_candidates)(const char *prefix, void *ctx, int max_items,
+			  char *dst_buf, bool *out_truncated,
+			  int *out_selected_idx, char *out_selected_name,
+			  char *first_match, char *last_match);
+} complete_ops_t;
+
+/* Vector Provider */
+
+typedef struct {
+    const struct Vector *base;
+    bool is_usercomplete;
+} vec_ctx_t;
+
+static bool
+vec_has_match(const char *prefix, void *ctx)
+{
+    vec_ctx_t *v = (vec_ctx_t *)ctx;
+    int len = strlen(prefix);
+    if (len == 0)
+	return true;
+    int first_uc = chartoupper((unsigned char)prefix[0]);
+    for (int i = 0; i < v->base->length; ++i) {
+	const char *item = v->base->base + v->base->size * i;
+	if (!item[0])
+	    continue;
+	if (chartoupper((unsigned char)item[0]) != first_uc)
+	    continue;
+	if (len > 1 && strncasecmp(item + 1, prefix + 1, len - 1) != 0)
+	    continue;
+	return true;
+    }
+    return false;
+}
+
+static int
+vec_get_candidates(const char *prefix, void *ctx, int max_items,
+		   char *dst_buf, bool *out_truncated,
+		   int *out_selected_idx, char *out_selected_name,
+		   char *first_match, char *last_match)
+{
+    vec_ctx_t *v = (vec_ctx_t *)ctx;
+    int len = strlen(prefix);
+    int count = 0;
+    int limit = max_items > 0 ? max_items : MAX_COMPLETE_CAP;
+    char exact_id[IDLEN + 1] = "";
+    int exact_idx = -1;
+    int match_count = 0;
+    int single_match_idx = -1;
+    int first_uc = len > 0 ? chartoupper((unsigned char)prefix[0]) : 0;
+
+    *out_truncated = false;
+    *out_selected_idx = -1;
+    out_selected_name[0] = '\0';
+    first_match[0] = '\0';
+    last_match[0] = '\0';
+
+    if (len == 0 && v->is_usercomplete) {
 	*out_truncated = true;
 	return 0;
     }
 
-    if (len > 0 && src == nc_int->base) {
-	if (nc_int->is_usercomplete) {
-	    if (searchuser(tag, exact_id) > 0) {
+    if (len > 0) {
+	if (v->is_usercomplete) {
+	    if (searchuser(prefix, exact_id) > 0) {
+		exact_idx = 0;
 		strlcpy(dst_buf, exact_id, IDLEN + 1);
 		count = 1;
+		match_count = 1;
 	    }
 	} else {
-	    int idx = Vector_search(src, tag);
-	    if (idx >= 0) {
-		strlcpy(exact_id, Vector_get(src, idx), IDLEN + 1);
+	    exact_idx = Vector_search(v->base, prefix);
+	    if (exact_idx >= 0) {
+		strlcpy(exact_id, Vector_get(v->base, exact_idx), IDLEN + 1);
 		strlcpy(dst_buf, exact_id, IDLEN + 1);
 		count = 1;
+		match_count = 1;
 	    }
 	}
     }
 
-    for (i = 0; i < src->length; i++) {
-	const char *item = src->base + src->size * i;
+    for (int i = 0; i < v->base->length; i++) {
+	const char *item = v->base->base + v->base->size * i;
 	if (!item[0])
 	    continue;
 	if (len > 0) {
 	    if (chartoupper((unsigned char)item[0]) != first_uc)
 		continue;
-	    if (len > 1 && strncasecmp(item + 1, tag + 1, len - 1) != 0)
+	    if (len > 1 && strncasecmp(item + 1, prefix + 1, len - 1) != 0)
 		continue;
 	}
 	if (exact_id[0] && strcasecmp(item, exact_id) == 0)
 	    continue;
 
-	if (count < MAX_COMPLETE_LIST) {
+	match_count++;
+	single_match_idx = i;
+
+	if (count < limit) {
 	    strlcpy(dst_buf + count * (IDLEN + 1), item, IDLEN + 1);
 	    count++;
 	} else {
-	    strlcpy(dst_buf + MAX_COMPLETE_LIST * (IDLEN + 1), "...", IDLEN + 1);
-	    count = MAX_COMPLETE_LIST + 1;
-	    truncated = true;
+	    strlcpy(dst_buf + limit * (IDLEN + 1), "...", IDLEN + 1);
+	    count = limit + 1;
+	    *out_truncated = true;
 	    break;
 	}
     }
 
-    *out_truncated = truncated;
+    if (count > 1) {
+	int sort_count = *out_truncated ? (count - 1) : count;
+	if (sort_count > 1)
+	    qsort(dst_buf, sort_count, IDLEN + 1, nc_cmp_id);
+    }
+
+    if (count > 0) {
+	int last_idx = *out_truncated ? (count - 2) : (count - 1);
+	if (last_idx >= 0) {
+	    strlcpy(first_match, dst_buf, IDLEN + 1);
+	    strlcpy(last_match, dst_buf + last_idx * (IDLEN + 1), IDLEN + 1);
+	}
+    }
+
+    if (!*out_truncated && match_count == 1 && count == 1) {
+	*out_selected_idx = (single_match_idx >= 0 ? single_match_idx : 0);
+	strlcpy(out_selected_name, dst_buf, IDLEN + 1);
+    } else if (exact_id[0]) {
+	*out_selected_idx = (exact_idx >= 0 ? exact_idx : 0);
+	strlcpy(out_selected_name, exact_id, IDLEN + 1);
+    }
+
     return count;
 }
 
-static int
-nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
-{
-    struct namecomplete_int * nc_int = (struct namecomplete_int *) instance;
-    int tmp;
+static const complete_ops_t vec_ops = {
+    .has_match = vec_has_match,
+    .get_candidates = vec_get_candidates,
+};
 
-    prt->buf[prt->iend] = 0;
-
-    switch (key) {
-	case KEY_ENTER:
-	    if (prt->iend == 0) {
-		prt->buf[0] = '\0';
-		break;
-	    }
-	    if (nc_int->dirty < 0) {
-		int count = nc_sublist(nc_int, nc_int->base, prt->buf,
-				       nc_int->sublist_buf, &nc_int->is_truncated);
-		Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
-		nc_int->idx = 0;
-		nc_int->dirty = 0;
-	    }
-	    if (!nc_int->is_truncated && Vector_length(&nc_int->sublist) == 1)
-		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
-	    else if ((tmp = Vector_search(&nc_int->sublist, prt->buf)) >= 0 &&
-		     !(nc_int->is_truncated && tmp == Vector_length(&nc_int->sublist) - 1))
-		strlcpy(prt->buf, Vector_get(&nc_int->sublist, tmp), prt->len);
-	    else
-		prt->buf[0] = '\0';
-	    prt->icurr = prt->iend = strlen(prt->buf);
-	    break;
-
-	case ' ':
-	    if (nc_int->is_usercomplete && prt->iend == 0)
-		return VGETCB_NEXT;
-	    if (nc_int->dirty < 0) {
-		int count = nc_sublist(nc_int, nc_int->base, prt->buf,
-				       nc_int->sublist_buf, &nc_int->is_truncated);
-		Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
-		nc_int->idx = 0;
-		nc_int->dirty = 0;
-	    }
-	    if (!nc_int->is_truncated && Vector_length(&nc_int->sublist) == 1) {
-		const char *target = Vector_get(&nc_int->sublist, 0);
-		// Update the buffer if the current input does not match the
-		// completion target, using exact matching.
-		if (strcmp(prt->buf, target)) {
-		    strlcpy(prt->buf, target, prt->len);
-		    prt->icurr = prt->iend = strlen(prt->buf);
-		}
-		// When the current input perfectly matches, show the list to
-		// indicate user that the completion has exactly one match.
-		// Otherwise, there no indication to the user, and might confuse
-		// them when allow_nonexistent_prefix is on.
-	    }
-
-	    move(2, 0);
-	    clrtobot();
-	    printdash(COMPLETE_LIST_TITLE, 0);
-
-	    nc_int->idx = ShowVector(&nc_int->sublist, 3, 0, NULL, nc_int->idx);
-	    if (nc_int->idx > 0)
-		vshowmsg(COMPLETE_MORE_MSG);
-	    return VGETCB_NEXT;
-	    break;
-
-	case KEY_BS:	/* backspace */
-	case KEY_UP:	/* history */
-	case KEY_DOWN:	/* history */
-	    nc_int->dirty = -1;
-	    break;
-
-	default:
-	    if (isascii(key) && isprint(key)) {
-		char tmp_buf[(MAX_COMPLETE_LIST + 1) * (IDLEN + 1)];
-		bool tmp_truncated = false;
-		const struct Vector *src = (nc_int->dirty < 0 || nc_int->is_truncated)
-					   ? nc_int->base : &nc_int->sublist;
-		int count;
-
-		prt->buf[prt->iend] = key;
-		prt->buf[prt->iend + 1] = 0;
-
-		count = nc_sublist(nc_int, src, prt->buf, tmp_buf, &tmp_truncated);
-
-		if (!nc_int->allow_nonexistent_prefix && count == 0) {
-		    prt->buf[prt->iend] = 0;
-		    bell();
-		    return VGETCB_NEXT;
-		} else {
-		    memcpy(nc_int->sublist_buf, tmp_buf, count * (IDLEN + 1));
-		    Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
-		    nc_int->is_truncated = tmp_truncated;
-		    nc_int->idx = 0;
-		    nc_int->dirty = 0;
-		    prt->buf[prt->iend] = 0;
-		}
-	    }
-    }
-
-    return VGETCB_NONE;
-}
-
-void
-namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
-{
-    return namecomplete3(namelist, prompt, data, NULL);
-}
-
-static void
-namecomplete_internal(struct namecomplete_int *nc_int, const char *prompt, char *data, const char *defval)
-{
-    VGET_CALLBACKS vcb = {
-	.peek = nc_cb_peek,
-	.data = NULL,
-	.change = NULL,
-	.redraw = NULL,
-    };
-    int count;
-
-    outs(prompt);
-    clrtoeol();
-    count = nc_sublist(nc_int, nc_int->base, defval ? defval : "",
-		       nc_int->sublist_buf, &nc_int->is_truncated);
-    Vector_init_const(&nc_int->sublist, nc_int->sublist_buf, count, IDLEN + 1);
-    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY|VGET_NO_NAV_EDIT, defval, &vcb, nc_int);
-    Vector_delete(&nc_int->sublist);
-}
-
-void
-namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval)
-{
-    struct namecomplete_int nc_int = {
-	.base = namelist,
-	.dirty = 0,
-	.is_usercomplete = 0,
-    };
-    namecomplete_internal(&nc_int, prompt, data, defval);
-}
-
-void
-usercomplete2(const char *prompt, char *data, const char *defval)
-{
-    struct Vector namelist;
-    struct namecomplete_int nc_int = {
-	.base = &namelist,
-	.dirty = 0,
-	.allow_nonexistent_prefix = 1,
-	.is_usercomplete = 1,
-    };
-
-    Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN+1);
-    namecomplete_internal(&nc_int, prompt, data, defval);
-}
-
-void
-usercomplete(const char *prompt, char *data)
-{
-    usercomplete2(prompt, data, NULL);
-}
-
-// General Complete: used for boards and online users.
+/* GNC (Sorted Array with Callbacks) Provider */
 
 static int
-gnc_findbound(char *str, int *START, int *END,
+gnc_findbound(const char *str, int *START, int *END,
 	      size_t nmemb, gnc_comp_func compar)
 {
-    int             start, end, mid, cmp, strl;
+    int start, end, mid, cmp, strl;
     strl = strlen(str);
 
-    start = -1, end = nmemb - 1;
-    /* The first available element is always in the half-open interval
-     * (start, end]. (or `end'-th it self if start == end) */
+    start = -1, end = (int)nmemb - 1;
+    if (end < 0) {
+	*START = *END = -1;
+	return -1;
+    }
     while (end > start + 1) {
 	mid = (start + end) / 2;
 	cmp = (*compar)(mid, str, strl);
@@ -320,9 +274,7 @@ gnc_findbound(char *str, int *START, int *END,
     *START = end;
 
     start = end;
-    end = nmemb;
-    /* The last available element is always in the half-open interval
-     * [start, end). (or `start'-th it self if start == end) */
+    end = (int)nmemb;
     while (end > start + 1) {
 	mid = (start + end) / 2;
 	cmp = (*compar)(mid, str, strl);
@@ -335,220 +287,372 @@ gnc_findbound(char *str, int *START, int *END,
     return 0;
 }
 
-static int
-gnc_complete(char *data, int *start, int *end,
-		gnc_perm_func permission, gnc_getname_func getname, int limit)
-{
-    int             i, count, first = -1, last = *end;
-    if (*start < 0 || *end < 0)
-	return 0;
-    for (i = *start, count = 0; i <= *end; ++i)
-	if ((*permission)(i)) {
-	    if (first == -1)
-		first = i;
-	    last = i;
-	    ++count;
-	    if (limit > 0 && count >= limit)
-		break;
-	}
-    if (count == 1)
-	strcpy(data, (*getname)(first));
+typedef struct {
+    size_t nmemb;
+    gnc_comp_func compar;
+    gnc_perm_func permission;
+    gnc_getname_func getname;
+    bool is_online_user;
+} gnc_ctx_t;
 
-    *start = first;
-    if (limit == 0 || count < limit)
-	*end = last;
+static bool
+gnc_has_match(const char *prefix, void *ctx)
+{
+    gnc_ctx_t *g = (gnc_ctx_t *)ctx;
+    int start = 0, end = 0;
+    if (gnc_findbound(prefix, &start, &end, g->nmemb, g->compar) < 0)
+	return false;
+    for (int i = start; i <= end; ++i) {
+	if ((*g->permission)(i))
+	    return true;
+    }
+    return false;
+}
+
+static int
+gnc_get_candidates(const char *prefix, void *ctx, int max_items,
+		   char *dst_buf, bool *out_truncated,
+		   int *out_selected_idx, char *out_selected_name,
+		   char *first_match, char *last_match)
+{
+    gnc_ctx_t *g = (gnc_ctx_t *)ctx;
+    int len = strlen(prefix);
+    int limit = max_items > 0 ? max_items : MAX_COMPLETE_CAP;
+    int start = 0, end = 0;
+
+    *out_truncated = false;
+    *out_selected_idx = -1;
+    out_selected_name[0] = '\0';
+    first_match[0] = '\0';
+    last_match[0] = '\0';
+
+    if (len == 0 && g->is_online_user) {
+	*out_truncated = true;
+	return 0;
+    }
+
+    if (gnc_findbound(prefix, &start, &end, g->nmemb, g->compar) < 0)
+	return 0;
+
+    int first = -1, last = -1;
+    for (int i = start; i <= end; ++i) {
+	if ((*g->permission)(i)) {
+	    first = i;
+	    break;
+	}
+    }
+    if (first < 0)
+	return 0;
+
+    for (int i = end; i >= start; --i) {
+	if ((*g->permission)(i)) {
+	    last = i;
+	    break;
+	}
+    }
+
+    strlcpy(first_match, (*g->getname)(first), IDLEN + 1);
+    strlcpy(last_match, (*g->getname)(last), IDLEN + 1);
+
+    int count = 0;
+    int permitted_count = 0;
+    int exact_idx = -1;
+    char exact_name[IDLEN + 1] = "";
+
+    for (int i = first; i <= last; ++i) {
+	if ((*g->permission)(i)) {
+	    permitted_count++;
+	    const char *name = (*g->getname)(i);
+	    if (len > 0 && strcasecmp(name, prefix) == 0) {
+		exact_idx = i;
+		strlcpy(exact_name, name, IDLEN + 1);
+	    }
+	    if (count < limit) {
+		strlcpy(dst_buf + count * (IDLEN + 1), name, IDLEN + 1);
+		count++;
+	    } else if (!*out_truncated) {
+		strlcpy(dst_buf + limit * (IDLEN + 1), "...", IDLEN + 1);
+		count = limit + 1;
+		*out_truncated = true;
+	    }
+	}
+    }
+
+    if (permitted_count == 1) {
+	*out_selected_idx = first;
+	strlcpy(out_selected_name, (*g->getname)(first), IDLEN + 1);
+    } else if (exact_idx >= 0) {
+	*out_selected_idx = exact_idx;
+	strlcpy(out_selected_name, exact_name, IDLEN + 1);
+    }
+
     return count;
 }
 
-typedef struct {
-    int  start, end, nmemb, ptr;
-    int  morelist;
-    int  page_dirty;  // YEA if screen was dirty and needs a clrtobot().
-    int  is_online_user;
-    gnc_comp_func    compar;
-    gnc_perm_func    permission;
-    gnc_getname_func getname;
-} generalcomplete_int;
+static const complete_ops_t gnc_ops = {
+    .has_match = gnc_has_match,
+    .get_candidates = gnc_get_candidates,
+};
 
-static int
-gnc_cb_data(int key, VGET_RUNTIME *prt, void *instance)
+/* Unified Completion Engine */
+
+#define COMPL_ALLOW_NONEXISTENT_PREFIX  (1 << 0)
+#define COMPL_NO_EMPTY_LIST             (1 << 1)
+#define COMPL_ASCII_ONLY                (1 << 2)
+#define COMPL_NEWLINE_ON_EXIT           (1 << 3)
+
+struct complete_engine_ctx {
+    const complete_ops_t *ops;
+    void *provider_ctx;
+    int flags;
+
+    int start_y;
+    int max_items;
+    int page_dirty;
+
+    char sublist_buf[(MAX_COMPLETE_CAP + 1) * (IDLEN + 1)];
+    struct Vector sublist;
+    int sublist_count;
+    bool is_truncated;
+    int selected_idx;
+    char selected_name[IDLEN + 1];
+    char first_match[IDLEN + 1];
+    char last_match[IDLEN + 1];
+
+    int dirty;
+    int page_idx;
+};
+
+static void
+complete_refresh_candidates(struct complete_engine_ctx *ctx, const char *prefix)
 {
-    generalcomplete_int *gc_int = (generalcomplete_int*) instance;
-    char *data = prt->buf;
-    int   ret  = VGETCB_NEXT;	// reject by default
-    int   i;
-
-    if (!isascii(key)) {
-	bell();
-	return VGETCB_NEXT;
-    }
-    assert(prt->icurr+1 < prt->len);	// verify size
-    assert(prt->icurr == prt->iend);	// verify cursor position
-    gc_int->morelist = -1;
-    // try to add character
-    data[prt->icurr]  = key;
-    data[prt->icurr+1]= 0;
-    if (gnc_findbound(data, &gc_int->start, &gc_int->end, gc_int->nmemb, gc_int->compar) >= 0)
-    {
-	// verify permission
-	for (i = gc_int->start; i <= gc_int->end; ++i)
-	    if ((*gc_int->permission)(i))
-		break;
-	// found something? accept it
-	if (i != gc_int->end + 1)
-	    ret = VGETCB_NONE;
-    }
-    // restore data buffer
-    data[prt->icurr]= 0;
-    if (ret != VGETCB_NONE)
-	bell();
-    return ret;
+    ctx->sublist_count = ctx->ops->get_candidates(
+	prefix, ctx->provider_ctx, ctx->max_items, ctx->sublist_buf,
+	&ctx->is_truncated, &ctx->selected_idx, ctx->selected_name,
+	ctx->first_match, ctx->last_match);
+    Vector_init_const(&ctx->sublist, ctx->sublist_buf, ctx->sublist_count, IDLEN + 1);
+    ctx->dirty = 0;
+    ctx->page_idx = 0;
 }
 
-#define GNC_PAGE_START_Y    (2)
-
 static int
-gnc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
+complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 {
-    generalcomplete_int *gc_int = (generalcomplete_int*) instance;
-    char *data = prt->buf;
+    struct complete_engine_ctx *ctx = (struct complete_engine_ctx *)instance;
+    prt->buf[prt->iend] = '\0';
 
-    switch(key) {
-	case KEY_BS:	// backspace
-	    gc_int->morelist = -1;
+    switch (key) {
+    case KEY_ENTER:
+	if (prt->iend == 0) {
+	    prt->buf[0] = '\0';
+	    ctx->selected_idx = -1;
 	    break;
+	}
+	if (ctx->dirty < 0)
+	    complete_refresh_candidates(ctx, prt->buf);
 
-	case ' ':	// render complete page
-	    assert(prt->icurr == prt->iend);
-	    if (gc_int->is_online_user && prt->iend == 0)
-		return VGETCB_NEXT;
-	    if (gc_int->morelist == -1)
-	    {
-		int i;
-		char *first;
-		int limit = gc_int->is_online_user ? (MAX_COMPLETE_LIST + 1) : 0;
-		if (gnc_findbound(data, &gc_int->start, &gc_int->end,
-				         gc_int->nmemb,  gc_int->compar) == -1)
-		    return VGETCB_NEXT;
+	if (ctx->selected_idx >= 0) {
+	    strlcpy(prt->buf, ctx->selected_name, prt->len);
+	} else {
+	    prt->buf[0] = '\0';
+	    ctx->selected_idx = -1;
+	}
+	prt->icurr = prt->iend = strlen(prt->buf);
+	break;
 
-		i = gnc_complete (data, &gc_int->start, &gc_int->end,
-					 gc_int->permission, gc_int->getname, limit);
-		if (i <= 0) {
-		    if (gc_int->page_dirty) {
-			move(GNC_PAGE_START_Y, 0);
-			clrtobot();
-			printdash(COMPLETE_LIST_TITLE, 0);
-		    }
-		    return VGETCB_NEXT;
-		}
-		if (i == 1) {
-		    prt->iend = prt->icurr = strlen(data);
-		} else {
-		    first = (*gc_int->getname)(gc_int->start);
-		    i = prt->icurr;
-		    while (first[i] && (*gc_int->compar)(gc_int->end, first, i + 1) == 0) {
-			data[i] = first[i];
-			++i;
-		    }
-		    data[i] = '\0';
-		    prt->iend = prt->icurr = i;
-		}
-		gc_int->morelist = gc_int->start;
-	    } else if (gc_int->morelist > gc_int->end)
-		return VGETCB_NEXT;
+    case ' ':
+    case KEY_TAB:
+	if ((ctx->flags & COMPL_NO_EMPTY_LIST) && prt->iend == 0)
+	    return VGETCB_NEXT;
 
-	    // rendef list
-	    gc_int->page_dirty = YEA;
-	    move(GNC_PAGE_START_Y, 0);
-	    clrtobot();
-	    printdash(COMPLETE_LIST_TITLE, 0);
-	    {
-		int col = 0, i = 0;
-		int len = prt->len;
-		int printed = 0;
-		while (len + col < t_columns-1) {
-		    for (i = 0; gc_int->morelist <= gc_int->end && i < p_lines; ++gc_int->morelist) {
-			if ((*gc_int->permission)(gc_int->morelist)) {
-			    move(3 + i, col);
-			    if (gc_int->is_online_user && printed >= MAX_COMPLETE_LIST) {
-				prints("... ");
-				++i;
-				gc_int->morelist = gc_int->end + 1;
-				break;
-			    }
-			    prints("%s ", (*gc_int->getname)(gc_int->morelist));
-			    ++i;
-			    ++printed;
-			}
-		    }
-		    if (gc_int->is_online_user && gc_int->morelist > gc_int->end)
-			break;
-		    col += len + 2;
-		}
-	    }
-	    if (gc_int->morelist != gc_int->end + 1) {
-		vshowmsg(COMPLETE_MORE_MSG);
+	if (ctx->dirty < 0)
+	    complete_refresh_candidates(ctx, prt->buf);
+
+	if (ctx->sublist_count == 0) {
+	    if (ctx->page_dirty) {
+		move(ctx->start_y, 0);
+		clrtobot();
+		printdash(COMPLETE_LIST_TITLE, 0);
 	    }
 	    return VGETCB_NEXT;
+	}
+
+	if (!ctx->is_truncated && ctx->sublist_count == 1) {
+	    const char *target = Vector_get(&ctx->sublist, 0);
+	    if (strcmp(prt->buf, target) != 0) {
+		strlcpy(prt->buf, target, prt->len);
+		prt->icurr = prt->iend = strlen(prt->buf);
+	    }
+	} else if (ctx->sublist_count > 1) {
+	    int lcp_len = compute_lcp(ctx->first_match, ctx->last_match);
+	    if (lcp_len > (int)prt->iend ||
+		(lcp_len == (int)prt->iend &&
+		 strncmp(prt->buf, ctx->first_match, lcp_len) != 0)) {
+		if (lcp_len >= (int)prt->len)
+		    lcp_len = prt->len - 1;
+		memcpy(prt->buf, ctx->first_match, lcp_len);
+		prt->buf[lcp_len] = '\0';
+		prt->icurr = prt->iend = lcp_len;
+	    }
+	}
+
+	ctx->page_dirty = 1;
+	move(ctx->start_y, 0);
+	clrtobot();
+	printdash(COMPLETE_LIST_TITLE, 0);
+	ctx->page_idx = ShowVector(&ctx->sublist, ctx->start_y + 1, 0, NULL, ctx->page_idx);
+	if (ctx->page_idx > 0)
+	    vshowmsg(COMPLETE_MORE_MSG);
+	return VGETCB_NEXT;
+
+    case KEY_BS:
+    case KEY_UP:
+    case KEY_DOWN:
+    case KEY_LEFT:
+    case KEY_RIGHT:
+    case KEY_HOME:
+    case KEY_END:
+	ctx->dirty = -1;
+	break;
+
+    default:
+	if (isascii(key) && isprint(key)) {
+	    if (!(ctx->flags & COMPL_ALLOW_NONEXISTENT_PREFIX)) {
+		char temp_buf[STRLEN];
+		if (prt->iend + 1 < (int)prt->len && prt->iend + 1 < (int)sizeof(temp_buf)) {
+		    memcpy(temp_buf, prt->buf, prt->iend);
+		    temp_buf[prt->iend] = (char)key;
+		    temp_buf[prt->iend + 1] = '\0';
+		    if (!ctx->ops->has_match(temp_buf, ctx->provider_ctx)) {
+			bell();
+			return VGETCB_NEXT;
+		    }
+		} else {
+		    bell();
+		    return VGETCB_NEXT;
+		}
+	    }
+	    ctx->dirty = -1;
+	}
+	break;
     }
+
     return VGETCB_NONE;
 }
 
+static int
+complete_engine(const char *prompt, char *data, int len, const char *defval,
+		int flags, const complete_ops_t *ops, void *provider_ctx)
+{
+    if (prompt && *prompt) {
+	outs(prompt);
+	clrtoeol();
+    }
+
+    int start_y = vgety() + 1;
+    if (flags & COMPL_NEWLINE_ON_EXIT) {
+	if (start_y >= b_lines - 3)
+	    start_y = b_lines - 3;
+    } else {
+	if (start_y >= b_lines - 2)
+	    start_y = b_lines - 2;
+    }
+
+    struct complete_engine_ctx ctx = {
+	.ops = ops,
+	.provider_ctx = provider_ctx,
+	.flags = flags,
+	.start_y = start_y,
+	.max_items = get_complete_capacity(start_y, len > IDLEN ? IDLEN : len),
+	.page_dirty = 0,
+	.sublist_count = 0,
+	.is_truncated = false,
+	.selected_idx = -1,
+	.dirty = -1,
+	.page_idx = 0,
+    };
+
+    complete_refresh_candidates(&ctx, defval ? defval : "");
+
+    const VGET_CALLBACKS vcb = {
+	.peek = complete_cb_peek,
+    };
+
+    int vflags = VGET_NO_NAV_EDIT;
+    if (flags & COMPL_ASCII_ONLY)
+	vflags |= VGET_ASCII_ONLY;
+
+    int ret = vgetstring(data, len, vflags, defval, &vcb, &ctx);
+
+    if (flags & COMPL_NEWLINE_ON_EXIT)
+	outc('\n');
+
+    if (ctx.page_dirty) {
+	move(ctx.start_y, 0);
+	clrtobot();
+    }
+    Vector_delete(&ctx.sublist);
+
+    if (ret < 1 || ctx.selected_idx < 0) {
+	data[0] = '\0';
+	return -1;
+    }
+
+    strlcpy(data, ctx.selected_name, len);
+    return ctx.selected_idx;
+}
+
+void
+namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval)
+{
+    vec_ctx_t vec_ctx = {
+	.base = namelist,
+	.is_usercomplete = false,
+    };
+    complete_engine(prompt, data, IDLEN + 1, defval, COMPL_ASCII_ONLY, &vec_ops, &vec_ctx);
+}
+
+void
+namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
+{
+    namecomplete3(namelist, prompt, data, NULL);
+}
+
+void
+usercomplete2(const char *prompt, char *data, const char *defval)
+{
+    struct Vector namelist;
+    Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN + 1);
+    vec_ctx_t vec_ctx = {
+	.base = &namelist,
+	.is_usercomplete = true,
+    };
+    int flags = COMPL_ASCII_ONLY | COMPL_ALLOW_NONEXISTENT_PREFIX | COMPL_NO_EMPTY_LIST;
+    complete_engine(prompt, data, IDLEN + 1, defval, flags, &vec_ops, &vec_ctx);
+}
+
+void
+usercomplete(const char *prompt, char *data)
+{
+    usercomplete2(prompt, data, NULL);
+}
 
 int
 generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    gnc_comp_func compar, gnc_perm_func permission,
 		    gnc_getname_func getname)
 {
-    generalcomplete_int gc_int = {
-	.start = 0,
-	.end   = nmemb-1,
+    gnc_ctx_t gnc_ctx = {
 	.nmemb = nmemb,
-	.morelist = -1,
-	.page_dirty = NA,
-	.is_online_user = (getname == &completeutmp_getname),
-	.compar     = compar,
+	.compar = compar,
 	.permission = permission,
-	.getname    = getname,
+	.getname = getname,
+	.is_online_user = (getname == &completeutmp_getname),
     };
-    const VGET_CALLBACKS vcb = {
-	.peek = gnc_cb_peek,
-	.data = gnc_cb_data,
-    };
-    int ret = -1;
-
-    outs(prompt);
-    clrtoeol();
-
-    // init vector
-    ret = vgetstring(data, len, VGET_NO_NAV_EDIT, NULL, &vcb, &gc_int);
-    outc('\n');
-    if (gc_int.page_dirty) {
-	move(GNC_PAGE_START_Y, 0);
-	clrtobot();
-    }
-
-    // vgetstring() return string length, but namecomplete needs to return
-    // the index of input string.
-
-    if (ret < 1)
-    {
-	data[0] = '\0';
-	return -1;
-    }
-
-    gnc_findbound(data, &gc_int.start, &gc_int.end, nmemb, compar);
-    if (gnc_complete(data, &gc_int.start, &gc_int.end, permission, getname, 2) == 1 ||
-	(gc_int.start >= 0 && (*compar)(gc_int.start, data, len) == 0))
-    {
-	strlcpy(data, (*getname)(gc_int.start), len);
-	ret = gc_int.start;
-    } else {
-	data[0] = '\0';
-	ret = -1;
-    }
-
-    return ret;
+    int flags = COMPL_ASCII_ONLY | COMPL_NEWLINE_ON_EXIT;
+    if (gnc_ctx.is_online_user)
+	flags |= COMPL_NO_EMPTY_LIST;
+    return complete_engine(prompt, data, len, NULL, flags, &gnc_ops, &gnc_ctx);
 }
 
 /* general complete functions (brdshm) */
