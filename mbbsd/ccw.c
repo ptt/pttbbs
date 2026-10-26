@@ -1205,8 +1205,10 @@ ccw_chat(int fd)
                 "使用的暱稱 (輸入 /b 可離開): ",
                 chatid, sizeof(chatid), DOECHO);
 
-        if (strcmp(chatid, "*") == 0 || strcasecmp(chatid, "/b") == 0)
+        if (strcmp(chatid, "*") == 0 || strcasecmp(chatid, "/b") == 0) {
+            close(fd);
             return 0;
+        }
 
         if(!chatid[0])
             STRLCPY(chatid, cuser.userid);

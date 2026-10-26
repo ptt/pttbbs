@@ -192,6 +192,7 @@ int CommentsGetCount(void *ctx)
         close(s);
         return 0;
     }
+    close(s);
     return num;
 }
 
