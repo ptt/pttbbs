@@ -232,6 +232,12 @@ verifydb_message_put_request_handler(const VerifyDb::PutRequest *req) {
 }  // namespace
 
 void verifydb_message_handler(const verifydb_message_t *vm, int fd) {
+  // header.cb is attacker-controlled. client_cb already rejects cb below the
+  // header size, but guard again here so this handler is safe on its own: a
+  // short cb would otherwise underflow this unsigned subtraction and hand the
+  // flatbuffers Verifier a near-2^64 length over a ~1KB heap buffer.
+  if (vm->header.cb < sizeof(vm->header))
+    return;
   size_t len = vm->header.cb - sizeof(vm->header);
   auto verifier = flatbuffers::Verifier(
       reinterpret_cast<const uint8_t *>(vm->message), len);

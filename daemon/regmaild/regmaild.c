@@ -735,6 +735,10 @@ client_cb(int fd, short event, void *arg)
         fprintf(stderr, "fd %d: request too big\n", fd);
         goto close_conn;
     }
+    if (header->cb < sizeof(regmaildb_req_header)) {
+        fprintf(stderr, "fd %d: request too small\n", fd);
+        goto close_conn;
+    }
 
     if (conn->len < header->cb)
         return;
