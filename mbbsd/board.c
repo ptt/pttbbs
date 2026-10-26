@@ -2538,6 +2538,7 @@ board_cmd_select(cmd_ctx_t *ctx) {
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
     boardstat_t *ptr = &nbrd[num];
+    boardstat_t target;
 
     if (IS_LISTING_FAV()) {
         if (get_fav_type(&nbrd[0]) == 0 || (ptr->myattr & NBRD_LINE))
@@ -2547,7 +2548,10 @@ board_cmd_select(cmd_ctx_t *ctx) {
             return 0;
         }
     } else if (ptr->myattr & NBRD_SYMBOLIC) {
-        replace_link_by_target(ptr);
+        // Enter the target through a copy, so that the row stays the link.
+        target = *ptr;
+        replace_link_by_target(&target);
+        ptr = &target;
     }
 
     assert(0 <= ptr->bid - 1 && ptr->bid - 1 < MAX_BOARD);
