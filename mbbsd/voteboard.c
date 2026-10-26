@@ -107,7 +107,10 @@ do_voteboardreply(const fileheader_t * fhdr)
 
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    ptr = strchr(genbuf, '(');
-	    assert(ptr);
+	    // Petition reason lines are author-controlled; a line that starts
+	    // with the end-time prefix but has no '(' must be skipped, not
+	    // asserted on (abort) or sscanf'd through a NULL pointer.
+	    if (!ptr) continue;
 	    sscanf(ptr + 1, "%lu", &endtime);
 	    if (endtime < (unsigned long)now) {
 		vmsg("連署時間已過");
