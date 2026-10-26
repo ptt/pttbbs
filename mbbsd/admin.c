@@ -506,7 +506,7 @@ search_user_bybakpwd(void)
 static void
 bperm_msg(const boardheader_t * board)
 {
-    prints("\n設定 [%s] 看板之(%s)權限：", board->brdname,
+    prints("\n【設定 [%s] 看板之(%s)權限】\n", board->brdname,
 	   board->brdattr & BRD_POSTMASK ? "發表" : "閱讀");
 }
 
@@ -951,14 +951,18 @@ m_mod_board(char *bname)
            bh.desc, bh.bclass, bid, bh.gid,
            cur_bm,
            bh.moderator_notes);
+    move(8, 0);
+    clrtoeol();
     if (bh.brdattr & BRD_SYMBOLIC) {
-        SNPRINTF(genbuf, "[看板連結] (D)刪除 [Q]取消? ");
+        prints("[看板連結] (D)刪除");
     } else {
-        SNPRINTF(genbuf, "(E)設定 (M)板主 (V)獎勵%s%s [Q]取消? ",
-                 HasUserPerm(PERM_BOARDS) ? " (B)Vote (S)救回 (C)合併 (G)樂透" : "",
-                 (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) ? " (D)刪除" : "");
+        prints("(E)一般設定 (M)板主%s%s",
+               HasUserPerm(PERM_BOARDS) ? " (A)屬性 (P)權限 (S)救回 (C)合併 (G)樂透解卡" : "",
+               (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) ? " (D)刪除" : "");
     }
-    getdata(8, 0, genbuf, ans, 3, LCECHO);
+    move(9, 0);
+    clrtoeol();
+    getdata(9, 0, "[Q]取消? ", ans, 3, LCECHO);
     if (isascii(*ans))
         *ans = tolower(*ans);
 
@@ -974,6 +978,74 @@ m_mod_board(char *bname)
     }
 
     switch (*ans) {
+    case 'a':
+	if (!HasUserPerm(PERM_BOARDS))
+	    break;
+	memcpy(&newbh, &bh, sizeof(bh));
+	move(1, 0);
+	clrtobot();
+	prints("\n【設定 [%s] 看板之屬性】\n", newbh.brdname);
+	newbh.brdattr = setperms(newbh.brdattr, str_permboard);
+
+	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
+	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
+	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
+	    reset_board(bid);
+	    sort_bcache();
+	    log_usies("SetBoardAttr", newbh.brdname);
+
+	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    AUTO_STR(msg, "板名: %s\n"
+			  "屬性: 0x%08x => 0x%08x\n",
+		     bh.brdname, bh.brdattr, newbh.brdattr);
+	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+	    vmsg("看板屬性已更新完畢");
+	}
+	break;
+    case 'p':
+	if (!HasUserPerm(PERM_BOARDS))
+	    break;
+	memcpy(&newbh, &bh, sizeof(bh));
+	if (newbh.brdattr & BRD_HIDE) {
+	    vmsg("隱藏看板不需設定讀寫權限");
+	    break;
+	}
+	move(1, 0);
+	clrtobot();
+	getdata_str(3, 0, "限制 [R]閱讀 (P)發表？", ans, sizeof(ans), LCECHO,
+		    (newbh.brdattr & BRD_POSTMASK) ? "P" : "R");
+	if (*ans != 'p' && *ans != 'r')
+	    break;
+	if (*ans == 'p')
+	    newbh.brdattr |= BRD_POSTMASK;
+	else
+	    newbh.brdattr &= ~BRD_POSTMASK;
+
+	move(1, 0);
+	clrtobot();
+	bperm_msg(&newbh);
+	newbh.level = setperms(newbh.level, str_permid);
+
+	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
+	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
+	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
+	    reset_board(bid);
+	    sort_bcache();
+	    log_usies("SetBoardPerm", newbh.brdname);
+
+	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
+	    AUTO_STR(msg, "板名: %s\n"
+			  "屬性: 0x%08x => 0x%08x\n"
+			  "權限: 0x%08x => 0x%08x\n",
+		     bh.brdname, bh.brdattr, newbh.brdattr, bh.level, newbh.level);
+	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+	    vmsg("看板權限已更新完畢");
+	}
+	break;
     case 'm':
 	memcpy(&newbh, &bh, sizeof(bh));
 	if (edit_board_moderators_form(&newbh)) {
@@ -1018,15 +1090,21 @@ m_mod_board(char *bname)
 	break;
     case 'c':
 	if (HasUserPerm(PERM_BOARDS)) {
-	   char frombname[20], fromdir[PATHLEN];
-	    CompleteBoard(MSG_SELECT_BOARD, frombname);
-            if (frombname[0] == '\0' || !getbnum(frombname) ||
-		!strcmp(frombname,bname))
-	                     break;
+	    char frombname[20], fromdir[PATHLEN];
+	    move(10, 0);
+	    clrtoeol();
+	    CompleteBoard("請輸入要合併的看板名稱(按空白鍵自動搜尋): ", frombname);
+            if (frombname[0] == '\0' || !getbnum(frombname))
+		break;
+	    if (!strcmp(frombname, bname)) {
+		vmsg("不可合併相同看板");
+		break;
+	    }
             setbdir(genbuf, bname);
             setbdir(fromdir, frombname);
             merge_dir(genbuf, fromdir, 0);
 	    touchbtotal(bid);
+	    vmsg("看板合併完畢");
 	}
 	break;
     case 'b':
@@ -1463,7 +1541,9 @@ int make_board_link_interactively(int gid)
     if (tolower(vmsg("確定要建立新看板連結嗎？ [y/N]: ")) != 'y')
         return -1;
 
-    CompleteBoard(MSG_BID, buf);
+    move(9, 0);
+    clrtobot();
+    CompleteBoard("請輸入欲連結的看板名稱(按空白鍵自動搜尋): ", buf);
     if (!buf[0])
 	return -1;
 
