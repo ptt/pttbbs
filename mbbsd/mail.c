@@ -335,8 +335,13 @@ parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len)
     } else {
         char *dot_bbs = strcasestr(buf, ".bbs@");
         if (dot_bbs) {
-            *dot_bbs = '\0';
-            is_local = true;
+            // Local only when the host after ".bbs@" is exactly MYHOSTNAME.
+            // A look-alike host such as "<id>.bbs@MYHOSTNAME.evil" must be
+            // treated as external, not delivered to local user <id>.
+            if (strcasecmp(dot_bbs + 5, MYHOSTNAME) == 0) {
+                *dot_bbs = '\0';
+                is_local = true;
+            }
         } else if (strcasestr(addr, str_mail_address)) {
             char *p = strchr(buf, '.');
             if (p) *p = '\0';
@@ -1534,7 +1539,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
                          cuser.userid, address, direct, fh->title));
     }
 
-    if (strcasestr(address, str_mail_address) || strchr(address, '@') == NULL) {
+    if (is_local_mail_address(address)) {
         return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, MAILSEND_FLAG_CHECK_QUOTA | MAILSEND_FLAG_ALLOW_FORWARD, NULL);
     } else {
         return_no = bsmtp(fname, fh->title, address, NULL);
