@@ -41,6 +41,9 @@ static int      class_bid = 0;
 
 static int nbrdsize = 0;
 static boardstat_t *nbrd = NULL;
+/* Whether nbrd holds only the placeholder row that load_boards() puts in an
+ * empty My Favorites or hot board list, so that the list stays open. */
+static int nbrd_placeholder = 0;
 static char	choose_board_depth = 0;
 static int      brdnum;
 static char     yank_flag = 1;
@@ -1523,6 +1526,7 @@ load_boards(char *key)
 	type = 1;
 
     brdnum = 0;
+    nbrd_placeholder = 0;
     if (nbrd) {
         free(nbrd);
 	nbrdsize = 0;
@@ -1547,6 +1551,7 @@ load_boards(char *key)
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
 		addnewbrdstat(0, 0); // dummy
+		nbrd_placeholder = 1;
     		return;
 	    }
 	    nbrdsize = nfav;
@@ -1599,22 +1604,23 @@ load_boards(char *key)
 	    }
 	}
 	else if(IN_HOTBOARD()){
-	    nbrdsize = SHM->hotboards.num;
-	    if(nbrdsize == 0) {
-		nbrdsize = 1;
-		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
-		addnewbrdstat(0, 0); // dummy
-		return;
-	    }
-	    assert(0<nbrdsize);
+	    int nhot = SHM->hotboards.num;
+
+	    nbrdsize = nhot > 0 ? nhot : 1; // room for the placeholder
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nbrdsize);
-	    for( i = 0 ; i < nbrdsize; ++i ) {
+	    for( i = 0 ; i < nhot; ++i ) {
 		int bidx = SHM->hotboards.bids[i];
 		if(bidx < 0 || bidx >= MAX_BOARD)
 		    continue;
 		if (TITLE_MATCH(&bcache[bidx], storage_key))
 		    continue;
 		addnewbrdstat(bidx, HasBoardPerm(&bcache[bidx]));
+	    }
+	    // Every hot board can be skipped, when SHM is read while the hot
+	    // boards are rewritten.
+	    if (brdnum == 0) {
+		addnewbrdstat(0, 0); // dummy
+		nbrd_placeholder = 1;
 	    }
 	}
 	else { // general case
@@ -1683,6 +1689,13 @@ load_boards(char *key)
     }
 }
 
+/* The number of rows in nbrd, not counting the placeholder row. */
+static int
+brdlist_rows(void)
+{
+    return nbrd_placeholder ? 0 : brdnum;
+}
+
 static int
 search_local_board()
 {
@@ -1695,7 +1708,7 @@ search_local_board()
     Vector_init(&namelist, IDLEN + 1);
     assert(brdnum<=nbrdsize);
     Vector_resize(&namelist, brdnum);
-    for (num = 0; num < brdnum; num++)
+    for (num = 0; num < brdlist_rows(); num++)
         if (!IS_LISTING_FAV() ||
             (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
             Vector_add(&namelist, B_BH(&nbrd[num])->brdname);
@@ -1704,7 +1717,7 @@ search_local_board()
     Vector_delete(&namelist);
 
 
-    for (num = 0; num < brdnum; num++)
+    for (num = 0; num < brdlist_rows(); num++)
         if (brdstat_is_board(&nbrd[num]) &&
             !strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
             return num;
@@ -1717,7 +1730,7 @@ search_board(const char *bname)
     int num = 0;
     assert(brdnum<=nbrdsize);
 
-    for (num = 0; num < brdnum; num++) {
+    for (num = 0; num < brdlist_rows(); num++) {
 	boardstat_t *bptr = &nbrd[num];
 	if (IS_LISTING_FAV() && !(bptr->myattr & NBRD_BOARD))
 	    continue;
@@ -2368,9 +2381,7 @@ board_cmd_tag(cmd_ctx_t *ctx) {
     assert(0 <= num && num < nbrdsize);
     ptr = &nbrd[num];
     if (IS_LISTING_FAV()) {
-        assert(nbrdsize > 0);
-        if (get_fav_type(&nbrd[0]) != 0)
-            fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
+        fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
     } else if (HasUserPerm(PERM_SYSOP) ||
                HasUserPerm(PERM_GROUP_LEAD) ||
                HasUserPerm(PERM_GROUP_OP) ||
@@ -2573,7 +2584,7 @@ board_cmd_select(cmd_ctx_t *ctx) {
     boardstat_t target;
 
     if (IS_LISTING_FAV()) {
-        if (get_fav_type(&nbrd[0]) == 0 || (ptr->myattr & NBRD_LINE))
+        if (ptr->myattr & NBRD_LINE)
             return 0;
         if (ptr->myattr & NBRD_FOLDER) {
             board_enter_fav_folder(ptr, ctx);
@@ -2836,8 +2847,7 @@ fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
             vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
             return 0;
         }
-        assert(nbrdsize > 0);
-        if (get_fav_type(&nbrd[0]) != 0)
+        if (brdlist_rows() > 0)
             move_in_current_folder(brdnum, num);
         brdnum = -1;
         ctx->reload = true;
@@ -2898,8 +2908,7 @@ fav_cmd_add_folder(cmd_ctx_t *ctx) {
         return 0;
     }
     fav_set_folder_title(ft, "新的目錄");
-    assert(nbrdsize > 0);
-    if (get_fav_type(&nbrd[0]) != 0)
+    if (brdlist_rows() > 0)
         move_in_current_folder(brdnum, ctx->curr);
     brdnum = -1;
     ctx->reload = true;
@@ -3045,16 +3054,13 @@ brdlist_loader(PSB_CTX *ctx)
             if (status > 0)
                 break;
         }
-        if (*cx->newflag && brdnum > 0) {
-            ctx->cmd.curr = board_find_first_unread(ctx->cmd.curr, brdnum);
+        if (*cx->newflag && brdlist_rows() > 0) {
+            ctx->cmd.curr = board_find_first_unread(ctx->cmd.curr,
+                                                    brdlist_rows());
         }
     }
 
-    if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
-        ctx->cmd.total = 0;
-    } else {
-        ctx->cmd.total = brdnum;
-    }
+    ctx->cmd.total = brdlist_rows();
     return 0;
 }
 
