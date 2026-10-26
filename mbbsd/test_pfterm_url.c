@@ -635,6 +635,45 @@ static void test_osc8_rejects_control_bytes(void) {
     printf("  -> PASS\n");
 }
 
+static void test_osc8_rejects_non_http_scheme(void) {
+    printf("Testing OSC 8 URLs with a non-http(s) scheme are rejected...\n");
+    clear();
+    reset_outbuf();
+
+    // Content authors control OSC 8 targets. Only http:// and https:// may
+    // become a hyperlink; javascript:, file:, data: and bare text must not.
+    const char *bad[] = {
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "data:text/html,<script>x</script>",
+        "ftp://ptt.cc/x",
+        "ptt.cc/no-scheme",
+    };
+    for (int i = 0; i < (int)(sizeof(bad) / sizeof(bad[0])); i++) {
+        move(i, 0);
+        start_url(bad[i]);
+        outc('X');
+        end_url();
+        assert(get_url_at(i, 0) == NULL);
+    }
+
+    // http:// and https:// still work.
+    move(6, 0);
+    start_url("http://plain.test/a");
+    outc('Y');
+    end_url();
+    assert(get_url_at(6, 0) != NULL &&
+           strcmp(get_url_at(6, 0), "http://plain.test/a") == 0);
+
+    reset_outbuf();
+    doupdate();
+    assert(strstr(outbuf, "javascript:") == NULL);
+    assert(strstr(outbuf, "file://") == NULL);
+    assert(strstr(outbuf, "data:") == NULL);
+    assert(strstr(outbuf, "\x1b]8;;http://plain.test/a\x1b\\") != NULL);
+    printf("  -> PASS\n");
+}
+
 int main(void) {
     printf("Running comprehensive pfterm hyperlink tests...\n");
     test_basic_hyperlink();
@@ -648,6 +687,7 @@ int main(void) {
     test_url_matching();
     test_pmore_url_modes();
     test_osc8_rejects_control_bytes();
-    printf("\nAll 11 test suites PASSED successfully!\n");
+    test_osc8_rejects_non_http_scheme();
+    printf("\nAll 12 test suites PASSED successfully!\n");
     return 0;
 }

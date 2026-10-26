@@ -737,9 +737,18 @@ fterm_url_get(fturl_id id)
 // only printable ASCII (0x20-0x7E) is allowed. ESC, BEL and other C0
 // controls, DEL and 8-bit (C1) bytes could terminate the OSC early and
 // inject arbitrary escape sequences into the client terminal.
+//
+// Only http:// and https:// targets are allowed, matching the auto-linker
+// policy in match_url(). Content authors control OSC 8 link targets, so
+// without this a link could use javascript:, file:, data: or a custom
+// protocol-handler scheme, or point somewhere other than its visible text.
 static int
 fterm_url_is_safe(const char *url)
 {
+    if (strncasecmp(url, "http://", 7) != 0 &&
+        strncasecmp(url, "https://", 8) != 0)
+        return 0;
+
     for (const unsigned char *p = (const unsigned char *)url; *p; p++)
     {
         if (*p < 0x20 || *p > 0x7E)
