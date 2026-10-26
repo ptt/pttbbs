@@ -196,6 +196,7 @@ int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CA
 // v_multiline: micro-textarea input widget
 #define V_MULTILINE_MAX_LINES   5
 #define V_MULTILINE_LINE_LEN    77
+#define V_MULTILINE_BUFSZ(lines) (SZ_COLS(STRLEN) * (lines))
 
 int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix);
 #define v_multiline(buf, max_lines, prompt, footer_prefix) \

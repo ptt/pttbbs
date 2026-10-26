@@ -462,6 +462,63 @@ int file_append_entry(const char *file, const char *key)
 }
 
 /**
+ * Append a multi-line string to a file, prepending each non-empty line with prefix.
+ *
+ * @param file Destination file path.
+ * @param prefix Prefix prepended to each non-empty line (e.g. "  "). If NULL, no prefix.
+ * @param string Multi-line string with lines separated by '\n'.
+ * @return 0 on success, -1 on failure.
+ */
+int
+file_append_multiline(const char *file, const char *prefix, const char *string)
+{
+    if (!file || !*file || !string || !*string)
+        return 0;
+
+    if (!prefix)
+        prefix = "";
+
+    size_t prefix_len = strlen(prefix);
+    size_t str_len = strlen(string);
+    size_t max_out = str_len + (str_len + 1) * prefix_len + 2;
+
+    autofree char *out = malloc(max_out);
+    if (!out)
+        return -1;
+
+    size_t out_len = 0;
+    const char *p = string;
+    while (*p) {
+        const char *eol = strchr(p, '\n');
+        size_t line_len = eol ? (size_t)(eol - p) : strlen(p);
+
+        size_t trimmed_len = line_len;
+        if (trimmed_len > 0 && p[trimmed_len - 1] == '\r')
+            trimmed_len--;
+
+        if (trimmed_len > 0) {
+            if (prefix_len > 0) {
+                memcpy(out + out_len, prefix, prefix_len);
+                out_len += prefix_len;
+            }
+            memcpy(out + out_len, p, trimmed_len);
+            out_len += trimmed_len;
+            out[out_len++] = '\n';
+        }
+
+        if (!eol)
+            break;
+        p = eol + 1;
+    }
+
+    if (out_len == 0)
+        return 0;
+
+    out[out_len] = '\0';
+    return file_append_len(file, out, out_len);
+}
+
+/**
  * 傳回檔案 file 中 key 所在行數
  */
 int file_find_entry(const char *file, const char *key)

@@ -1131,10 +1131,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		outs("礚猭щ布詏\n");
 	    else {
 		struct stat     statb;
-		char            buf[3], mycomments[3][74], b_comments[80];
-
-		for (i = 0; i < 3; i++)
-		    STRLCPY(mycomments[i], "\n");
+		char            b_comments[STRLEN];
 
 		flock(fd, LOCK_EX);
 		for (count = 0; count < item_num; count++) {
@@ -1144,33 +1141,17 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		flock(fd, LOCK_UN);
 		fstat(fd, &statb);
 		close(fd);
-		getdata(b_lines - 2, 0,
-			"眤癸硂Ωщ布Τぐ或腳禥種ǎ盾(y/n)[N]",
-			buf, 3, DOECHO);
-		if (buf[0] == 'Y' || buf[0] == 'y') {
-		    do {
-			move(5, 0);
-			clrtobot();
-			outs("叫拜眤癸硂Ωщ布Τぐ或腳禥種ǎ"
-			     "程︽[Enter]挡");
-			for (i = 0; (i < 3) &&
-			     getdata(7 + i, 0, "",
-				     mycomments[i], sizeof(mycomments[i]),
-				     DOECHO); i++);
-			getdata(b_lines - 2, 0, "(S)纗 (E)穝ㄓ筁 "
-				"(Q)[S]", buf, 3, LCECHO);
-		    } while (buf[0] == 'e');
-		    if (buf[0] == 'q')
-			break;
-		    setbfile(b_comments, bname, vbuf->comments);
-		    if (mycomments[0][0])
-		    {
+		if (vans("眤癸硂Ωщ布Τぐ或腳禥種ǎ盾(y/N)[N]: ") == 'y') {
+		    char comments[V_MULTILINE_BUFSZ(3)];
+		    if (v_multiline(comments, 3,
+				    ANSI_COLOR(1;36) "叫拜眤癸硂Ωщ布Τぐ或腳禥種ǎ(程︽)" ANSI_RESET,
+				    "щ布種ǎ") > 0) {
+			setbfile(b_comments, bname, vbuf->comments);
 			file_appendf(b_comments,
 				ANSI_COLOR(36) "〕ㄏノ" ANSI_COLOR(1;36) " %s "
 				ANSI_COLOR(;36) "某" ANSI_RESET "\n",
 				cuser.userid);
-			for (i = 0; i < 3; i++)
-			    file_appendf(b_comments, "    %s\n", mycomments[i]);
+			file_append_multiline(b_comments, "  ", comments);
 			file_append(b_comments, "\n");
 		    }
 		}
