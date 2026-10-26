@@ -715,6 +715,28 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 #if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     case 'm':
 	if (!adminmode) {
+	    // The contact email is a password-reset channel (/recover), so
+	    // changing it is re-authenticated like a password change:
+	    // require the current password, and the 2FA code when 2FA is
+	    // enabled. Otherwise brief access to a logged-in session
+	    // becomes a lasting account takeover that bypasses the
+	    // old-password check on direct password changes.
+	    char pw[PW_PLAIN_SIZE];
+	    clear();
+	    if (!getdata(2, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO) ||
+		!checkuser_passwd(&x, pw)) {
+		vmsg("密碼錯誤，未變更聯絡信箱。");
+		return;
+	    }
+	    if (cuser.u_2fa) {
+		char code_in[TFA_INPUT_LEN + 1];
+		if (!getdata(4, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in,
+			     sizeof(code_in), DOECHO) ||
+		    !user_verify_2fa_or_backup(cuser.userid, code_in)) {
+		    vmsg("驗證碼錯誤，未變更聯絡信箱。");
+		    return;
+		}
+	    }
 	    change_contact_email(0);
 	    return;
 	} else {
