@@ -679,6 +679,26 @@ board_delete_blocked(int bid)
     return 1;
 }
 
+/* Deletes the links to board bid, which is being deleted: they would keep its
+ * slot from being used again, and lead nowhere. Returns how many it deleted.
+ */
+static int
+delete_links_to(int bid)
+{
+    int i, n = num_boards(), deleted = 0;
+
+    for (i = 0; i < n; i++) {
+	if ((bcache[i].brdattr & BRD_SYMBOLIC) &&
+	    BRD_LINK_TARGET(&bcache[i]) == bid) {
+	    // delete_board_link() clears the record it is given.
+	    boardheader_t lh = bcache[i];
+	    delete_board_link(&lh, i + 1);
+	    deleted++;
+	}
+    }
+    return deleted;
+}
+
 int
 m_mod_board(char *bname)
 {
@@ -808,9 +828,15 @@ m_mod_board(char *bname)
 	    system(cmd);
 	    RmTree(bpath);
 	    RmTree(apath);
+	    // The links to it can be in other groups, so the notice counts them.
+	    int links = delete_links_to(bid);
+	    char note[STRLEN] = "請注意刪除的合法性";
+	    if (links)
+		snprintf(note, sizeof(note), "請注意刪除的合法性\n"
+			 "一併刪除連到此看板的連結 %d 個。", links);
 	    memset(&bh, 0, sizeof(bh));
 	    SNPRINTF(bh.desc, "%s 看板 %s 刪除", bname, cuser.userid);
-	    post_msg(BN_SECURITY, bh.desc, "請注意刪除的合法性", "[系統安全局]");
+	    post_msg(BN_SECURITY, bh.desc, note, "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(FN_BOARD, &bh, sizeof(bh), bid);
 	    reset_board(bid);
