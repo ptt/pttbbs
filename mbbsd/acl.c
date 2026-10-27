@@ -162,6 +162,7 @@ ui_mute_user_for_board(const char *uid, const char *board) {
     char reason[STRLEN];
     char datebuf[STRLEN];
     AUTO_BFILE(history_log, board, FN_MUTED_HISTORY);
+    AUTO_HOMEFILE(user_history_log, uid, FN_USER_MUTED_HISTORY);
 
     y = vgety();
     if ((expire = is_user_muted_by_board(uid, board))) {
@@ -245,14 +246,21 @@ ui_mute_user_for_board(const char *uid, const char *board) {
     }
 
     result = mute_user_for_board(uid, board, expire, reason);
-    log_filef(history_log,
-              ANSI_COLOR(1) "%s" ANSI_COLOR(33) "%s" ANSI_RESET
+    AUTO_STR(msg_moderator,
+             ANSI_COLOR(1) "%s" ANSI_COLOR(33) "%s" ANSI_RESET,
+             result ? "" : ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
+             cuser.userid);
+    AUTO_STR(msg_board, ANSI_COLOR(1) ANSI_COLOR(33) "%s" ANSI_RESET "看板",
+             board);
+    AUTO_STR(msg_tail,
               " 暫停 " ANSI_COLOR(1;31) "%s" ANSI_RESET
               " 發言，期限為 %s\n  理由: %s\n",
-              result ? "" :
-              ANSI_COLOR(0;31)"[系統錯誤] "ANSI_COLOR(1),
-              cuser.userid, uid,  datebuf,
-              reason);
+              uid, datebuf, reason);
+    log_filef(history_log, "%s%s", msg_moderator, msg_tail);
+    if (result) {
+        mkuserdir(uid);
+        log_filef(user_history_log, "%s%s", msg_board, msg_tail);
+    }
     vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     if (result) {
         char anti_pettifogger[] =
@@ -296,6 +304,7 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     char ans[3];
     char reason[STRLEN];
     AUTO_BFILE(history_log, board, FN_MUTED_HISTORY);
+    AUTO_HOMEFILE(user_history_log, uid, FN_USER_MUTED_HISTORY);
 
     y = vgety();
     if (!(expire = is_user_muted_by_board(uid, board))) {
@@ -322,12 +331,17 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     }
 
     unmute_user_for_board(uid, board);
-    log_filef(history_log,
-              ANSI_COLOR(1) ANSI_COLOR(33) "%s" ANSI_RESET
+    AUTO_STR(msg_moderator, ANSI_COLOR(1) ANSI_COLOR(33) "%s" ANSI_RESET,
+             cuser.userid);
+    AUTO_STR(msg_board, ANSI_COLOR(1) ANSI_COLOR(33) "%s" ANSI_RESET "看板",
+             board);
+    AUTO_STR(msg_tail,
               " 解除 " ANSI_COLOR(1;32) "%s" ANSI_RESET
               " 的禁言限制 (距原期限尚有 %d 天)\n  理由: %s\n",
-              cuser.userid, uid,
-              time4_days_remaining(expire, now), reason);
+              uid, time4_days_remaining(expire, now), reason);
+    log_filef(history_log, "%s%s", msg_moderator, msg_tail);
+    mkuserdir(uid);
+    log_filef(user_history_log, "%s%s", msg_board, msg_tail);
     vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
     invalid_board_permission_cache(board);
     return 0;
