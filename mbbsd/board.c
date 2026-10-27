@@ -2271,13 +2271,13 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
     fav_type_t *ptr = getboard(bid);
     if (ptr != NULL) {
         int i;
-        for (i = 0; i < nbrdsize; ++i) {
+        for (i = 0; i < brdlist_rows(); ++i) {
             if (bid == nbrd[i].bid && brdstat_is_board(&nbrd[i])) {
                 *num_ptr = i;
                 break;
             }
         }
-        if (i == nbrdsize) {
+        if (i == brdlist_rows()) {
             assert(keyword[0]);
             vmsg("已經在我的最愛裡了, 取消關鍵字就能看到囉");
             keyword[0] = '\0';
