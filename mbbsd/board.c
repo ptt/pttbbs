@@ -2251,6 +2251,18 @@ paste_taged_brds(int gid)
     return 1;
 }
 
+/* Whether a '/' keyword filter is on, and if so says that the command can't
+ * run. The rows of a filtered list are not positions in the folder, so
+ * commands that put an item at a position refuse while it is on. */
+static int
+fav_filter_blocks(const char *keyword)
+{
+    if (!keyword[0])
+        return 0;
+    vmsg("搜尋關鍵字時不能用這個功能，請先按 ← 取消關鍵字。");
+    return 1;
+}
+
 static void
 choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
 {
@@ -2282,6 +2294,8 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
             vmsg("已經在我的最愛裡了, 取消關鍵字就能看到囉");
             keyword[0] = '\0';
         }
+    } else if (ch == 'i' && fav_filter_blocks(keyword)) {
+        return;
     } else {
         ptr = fav_add_board(bid);
         if (ptr == NULL) {
@@ -2835,6 +2849,7 @@ fav_cmd_paste_tagged(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
     int num = ctx->curr;
     if (IN_CLASS() &&
         (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())) {
@@ -2843,6 +2858,10 @@ fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
         if (make_board_link_interactively(class_bid) < 0)
             return 0;
     } else if (IS_LISTING_FAV()) {
+        if (fav_filter_blocks(cx->keyword)) {
+            ctx->redraw_footer_lines = 1;
+            return 0;
+        }
         if (fav_add_line() == NULL) {
             vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
             return 0;
@@ -2886,7 +2905,12 @@ fav_cmd_toggle_or_del(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_move(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
     if (IN_FAVORITE() && IS_LISTING_FAV()) {
+        if (fav_filter_blocks(cx->keyword)) {
+            ctx->redraw_footer_lines = 1;
+            return 0;
+        }
         imovefav(ctx->curr);
         brdnum = -1;
         ctx->reload = true;
@@ -2896,8 +2920,13 @@ fav_cmd_move(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_add_folder(cmd_ctx_t *ctx) {
+    boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
     if (!IS_LISTING_FAV())
         return 0;
+    if (fav_filter_blocks(cx->keyword)) {
+        ctx->redraw_footer_lines = 1;
+        return 0;
+    }
     if (fav_stack_full()) {
         vmsg("目錄已達最大層數!!");
         return 0;
