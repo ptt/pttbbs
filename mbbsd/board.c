@@ -2346,6 +2346,51 @@ gid_is_within(int gid, int bid)
     return 0;
 }
 
+/* Group-op and group-lead modes of the board list the user is in, kept by
+ * board_enter_group(). */
+static int list_groupop;
+
+/* Drops the group modes that roles, as group_roles() returns them, does not
+ * give. Sysops and board admins keep the modes. */
+static void
+groupop_keep(int roles)
+{
+    if (!groupop_unlimited())
+        currmode &= ~(GROUP_MODES & ~roles);
+}
+
+/* Drops the group modes that do not cover board or group bid: group-op mode
+ * unless bid is a group the user manages or is inside one, and group-lead
+ * mode unless bid is a group the user leads or is inside one. Sysops and
+ * board admins keep the modes. */
+static void
+groupop_narrow(int bid)
+{
+    // With no modes to drop, skip walking up the groups.
+    if (currmode & GROUP_MODES)
+        groupop_keep(group_roles(bid));
+}
+
+/* Sets the group modes as set_board() enters board bid: those of the board
+ * list the board is read from, less any that bid is not inside a group to
+ * give, since a link, the hot board list or a jump by name can lead outside.
+ * Starting from the list's modes each time gives them back on a jump back
+ * into the user's groups. Sysops and board admins keep the modes. */
+void
+groupop_set_board(int bid)
+{
+    if (groupop_unlimited())
+        return;
+    currmode = (currmode & ~GROUP_MODES) | list_groupop;
+    // To group_roles(), bid 1 is the class root, but initbbs makes it the
+    // SYSOP board, which is in a group like other boards.
+    if (bid == 1 && !(getbcache(1)->brdattr & BRD_GROUPBOARD)) {
+        groupop_keep(group_roles_above(1));
+        return;
+    }
+    groupop_narrow(bid);
+}
+
 /* The group modes to give back to groupop_restore() after entering boards,
  * which changes them. */
 int
@@ -2724,12 +2769,20 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
     move(12, 1);
     int bidtmp = class_bid;
     int currmodetmp = currmode;
+    int list_groupop_tmp = list_groupop;
     int tmp1 = ctx->curr;
     *cx->num = 0;
     class_bid = (B_BH(ptr)->brdattr & BRD_TOP) ? -1 : ptr->bid;
 
-    if (!CBRD_IS_GROUP_OP())
+    // Add the modes this group gives, as entering a group the user leads from
+    // one they only manage does, then keep only those that the groups it is
+    // in give: a link can lead to a group the user does not manage or lead,
+    // and set_menu_group_op() also gives modes in the class root, which is
+    // not a group anyone manages or leads here.
+    if (!CBRD_IS_GROUP_OP() || !CBRD_IS_GROUP_LEAD())
         set_menu_group_op(B_BH(ptr));
+    groupop_narrow(ptr->bid);
+    list_groupop = groupop_save();
 
     if (time4_lt(now, B_BH(ptr)->bupdate)) {
         int mr = more(TEMP_BFILE(B_BH(ptr)->brdname, fn_notes), NA);
@@ -2749,6 +2802,7 @@ board_enter_group(boardstat_t *ptr, cmd_ctx_t *ctx) {
         choose_board(0);
     }
     currmode = currmodetmp;
+    list_groupop = list_groupop_tmp;
     *cx->num = tmp1;
     ctx->curr = tmp1;
     class_bid = bidtmp;

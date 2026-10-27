@@ -104,6 +104,7 @@ int is_readonly_board(const char *bname);
 int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
 int BoardPermNeedsSysopOverride(boardheader_t *bptr);
+void groupop_set_board(int bid);
 int groupop_save(void);
 void groupop_restore(int saved);
 void save_brdbuf(void);

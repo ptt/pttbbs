@@ -439,6 +439,8 @@ set_board(void)
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUP_OP | MODE_GROUP_LEAD)) | MODE_STARTED;
+    // Group-op and group-lead modes hold only inside the groups giving them.
+    groupop_set_board(currbid);
     if (!HasUserPerm(PERM_NOCITIZEN) &&
         (HasUserPerm(PERM_BOARDS) ||
          is_board_moderator(currbid) ||
