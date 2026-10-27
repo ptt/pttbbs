@@ -1262,6 +1262,88 @@ check_title_change_fee(const fileheader_t *fhdr, const char *new_title)
 
 
 static int
+calc_post_entropy(const char *fpath, int max)
+{
+    FILE *fp = fopen(fpath, "r");
+    if (!fp)
+        return 0;
+
+    int entropy = 0;
+    char buf[1024];
+    int check_header = 1;
+
+    while (fgets(buf, sizeof(buf), fp) && entropy < max) {
+        chomp(buf);
+
+        if (check_header) {
+            if (strncmp(buf, STR_AUTHOR1, LEN_AUTHOR1) == 0 ||
+                strncmp(buf, STR_AUTHOR2, LEN_AUTHOR2) == 0) {
+                while (fgets(buf, sizeof(buf), fp)) {
+                    chomp(buf);
+                    const char *p = buf;
+                    while (*p == ' ' || *p == '\t')
+                        p++;
+                    if (!*p)
+                        break;
+                }
+                check_header = 0;
+                continue;
+            }
+            check_header = 0;
+        }
+
+        for (const char *s = buf; *s; s++) {
+            if (!isascii((unsigned char)*s) || isalnum((unsigned char)*s))
+                entropy++;
+        }
+    }
+    fclose(fp);
+
+    if (entropy > max)
+        entropy = max;
+    return entropy;
+}
+
+static int
+calc_post_money(const char *userid, const char *board, const char *fpath)
+{
+    if (!fpath || !*fpath)
+        return 0;
+    if (strncmp(fpath, "boards/", 7) != 0)
+        return 0;
+    int entropy = -1, money = -1;
+
+    if (IS_ENABLED(CONFIG_ENTROPY_SVC)) {
+        AUTO_STR(payload,
+                 "{\"action\":\"calc\",\"userid\":\"%s\",\"board\":\"%s\",\"path\":\"%s\"}\n",
+                 userid ? userid : "", board ? board : "", fpath);
+        char resp[1024];
+
+        if (svc_request(GET_SVC_SOCKET(entropy), payload, resp, sizeof(resp)) > 0) {
+            if (strstr(resp, "\"success\":true") != NULL) {
+                char *p = strstr(resp, "\"entropy\":");
+                if (p)
+                    entropy = atoi(p + 10);
+                p = strstr(resp, "\"money\":");
+                if (p)
+                    money = atoi(p + 8);
+            }
+        }
+    }
+
+    if (money >= 0)
+        return money;
+    if (entropy < 0)
+        entropy = calc_post_entropy(fpath, ENTROPY_MAX);
+    if (entropy < ENTROPY_MIN_THRESH)
+        return 0;
+    if (entropy > ENTROPY_MAX)
+        entropy = ENTROPY_MAX;
+    int m = (int)(entropy * ENTROPY_RATIO + 0.5f);
+    return m < 1 ? 1 : m;
+}
+
+static int
 do_post_article(int edflags)
 {
     fileheader_t    postfile;
@@ -1423,8 +1505,7 @@ do_post_article(int edflags)
 	currbrdattr |= BRD_DEFAULTANONYMOUS;
     };
 
-    money = vedit2(fpath, YEA, save_title, edflags);
-    if (money == EDIT_ABORTED) {
+    if (vedit2(fpath, YEA, save_title, edflags) == EDIT_ABORTED) {
 	unlink(fpath);
 	pressanykey();
 	return FULLUPDATE;
@@ -1455,39 +1536,36 @@ do_post_article(int edflags)
 
     // ---- BEGIN OF MONEY VERIFICATION ----
 
-    // money verification
-    if (money > MAX_POST_MONEY)
-	money = MAX_POST_MONEY;
-
-    if (money > 0) {
-        int post_cap = calc_post_cap(StatGetDailyPost(), money);
-        if (money > post_cap)
-            money = post_cap;
-    }
-
-    int max_pay = get_max_pay_by_post_title(save_title);
-    if (max_pay >= 0 && money > max_pay)
-        money = max_pay;
-
-    // drop money & numposts for free boards, or user without login information
-    // (they may post on free boards like SYSOP)
-    // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
-    if (!HasBasicUserPerm(PERM_LOGINOK) ||
-	IsFreeBoardName(currboard) ||
-	(currbrdattr & BRD_NOCREDIT) ||
+    if (!ifuseanony &&
+        HasBasicUserPerm(PERM_LOGINOK) &&
+        !IsFreeBoardName(currboard) &&
+        !(currbrdattr & BRD_NOCREDIT) &&
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
-        (currbrdattr & BRD_HIDE) ||
+        !(currbrdattr & BRD_HIDE) &&
 #endif
-        !does_board_have_public_bm(bp))
+        does_board_have_public_bm(bp))
     {
-	money = 0;
+        money = calc_post_money(cuser.userid, currboard, fpath);
+        if (money > MAX_POST_MONEY)
+            money = MAX_POST_MONEY;
+
+        if (money > 0) {
+            int post_cap = calc_post_cap(StatGetDailyPost(), money);
+            if (money > post_cap)
+                money = post_cap;
+        }
+
+        int max_pay = get_max_pay_by_post_title(save_title);
+        if (max_pay >= 0 && money > max_pay)
+            money = max_pay;
+    } else {
+        money = 0;
     }
 
     // also drop for anonymos/bid posts
-    if(ifuseanony) {
-	money = 0;
-	postfile.filemode |= FILE_ANONYMOUS;
-	postfile.multi.anon_uid = currutmp->uid;
+    if (ifuseanony) {
+        postfile.filemode |= FILE_ANONYMOUS;
+        postfile.multi.anon_uid = currutmp->uid;
     }
     else
     {

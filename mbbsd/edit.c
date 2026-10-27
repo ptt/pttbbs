@@ -2288,86 +2288,6 @@ browse_sigs:
     }
 }
 
-static int
-calc_post_entropy(const char *fpath, int max)
-{
-    FILE *fp = fopen(fpath, "r");
-    if (!fp)
-        return 0;
-
-    int entropy = 0;
-    char buf[1024];
-    int check_header = 1;
-
-    while (fgets(buf, sizeof(buf), fp) && entropy < max) {
-        chomp(buf);
-
-        if (check_header) {
-            if (strncmp(buf, STR_AUTHOR1, LEN_AUTHOR1) == 0 ||
-                strncmp(buf, STR_AUTHOR2, LEN_AUTHOR2) == 0) {
-                while (fgets(buf, sizeof(buf), fp)) {
-                    chomp(buf);
-                    const char *p = buf;
-                    while (*p == ' ' || *p == '\t')
-                        p++;
-                    if (!*p)
-                        break;
-                }
-                check_header = 0;
-                continue;
-            }
-            check_header = 0;
-        }
-
-        for (const char *s = buf; *s; s++) {
-            if (!isascii((unsigned char)*s) || isalnum((unsigned char)*s))
-                entropy++;
-        }
-    }
-    fclose(fp);
-
-    if (entropy > max)
-        entropy = max;
-    return entropy;
-}
-
-static int
-calc_post_money(const char *userid, const char *board, const char *fpath)
-{
-    if (!fpath || !*fpath)
-        return 0;
-    int entropy = -1, money = -1;
-
-    if (IS_ENABLED(CONFIG_ENTROPY_SVC)) {
-        AUTO_STR(payload,
-                 "{\"action\":\"calc\",\"userid\":\"%s\",\"board\":\"%s\",\"path\":\"%s\"}\n",
-                 userid ? userid : "", board ? board : "", fpath);
-        char resp[1024];
-
-        if (svc_request(GET_SVC_SOCKET(entropy), payload, resp, sizeof(resp)) > 0) {
-            if (strstr(resp, "\"success\":true") != NULL) {
-                char *p = strstr(resp, "\"entropy\":");
-                if (p)
-                    entropy = atoi(p + 10);
-                p = strstr(resp, "\"money\":");
-                if (p)
-                    money = atoi(p + 8);
-            }
-        }
-    }
-
-    if (money >= 0)
-        return money;
-    if (entropy < 0)
-        entropy = calc_post_entropy(fpath, ENTROPY_MAX);
-    if (entropy < ENTROPY_MIN_THRESH)
-        return 0;
-    if (entropy > ENTROPY_MAX)
-        entropy = ENTROPY_MAX;
-    int m = (int)(entropy * ENTROPY_RATIO + 0.5f);
-    return m < 1 ? 1 : m;
-}
-
 #ifdef EXP_EDIT_UPLOAD
 static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
@@ -4031,7 +3951,6 @@ typedef struct {
     int flags;
     int mode0;
     int destunum0;
-    int money;
     int finished;
     int retval;
     char trans_buffer[256];
@@ -4055,12 +3974,8 @@ edit_cmd_save(cmd_ctx_t *ctx)
 
     exit_edit_buffer();
 
-    ec->money = calc_post_money(cuser.userid, currboard, ec->fpath);
-    if (ec->money > MAX_POST_MONEY)
-        ec->money = MAX_POST_MONEY;
-
     ec->finished = 1;
-    ec->retval = !tmp ? ec->money : tmp;
+    ec->retval = tmp;
     return PSB_OK;
 }
 
