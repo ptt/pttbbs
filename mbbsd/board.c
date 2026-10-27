@@ -2659,6 +2659,15 @@ board_cmd_select(cmd_ctx_t *ctx) {
     }
 
     assert(0 <= ptr->bid - 1 && ptr->bid - 1 < MAX_BOARD);
+    // The board may have been deleted since the list was loaded, leaving
+    // an empty record. brc_initial_board() would then find no board by
+    // that name and enter DEFAULT_BOARD instead.
+    if (!B_BH(ptr)->brdname[0]) {
+        vmsg("此看板已不存在。");
+        brdnum = -1;
+        ctx->reload = true;
+        return 0;
+    }
     if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
         board_enter_group(ptr, ctx);
     else
