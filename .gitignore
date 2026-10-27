@@ -16,3 +16,4 @@ util/pyutil/big5_tbl.py
 diff/
 *.svc
 *.ctl
+service-private/

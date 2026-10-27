@@ -28,6 +28,12 @@
 #define _config_enabled(cfg)        _config_test(_config_val(cfg))
 #define IS_ENABLED(option)          _config_enabled(option)
 
+#define __IF_ENABLED_1(...)         __VA_ARGS__
+#define __IF_ENABLED_0(...)
+#define ___IF_ENABLED(val, ...)     __IF_ENABLED_##val(__VA_ARGS__)
+#define __IF_ENABLED(val, ...)      ___IF_ENABLED(val, __VA_ARGS__)
+#define IF_ENABLED(cfg, ...)        __IF_ENABLED(IS_ENABLED(cfg), __VA_ARGS__)
+
 
 #define BBSPROG         BBSHOME "/bin/mbbsd"         /* 主程式 */
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
@@ -353,7 +359,7 @@
 #endif
 
 #ifndef ENTROPY_MIN_THRESH
-#define ENTROPY_MIN_THRESH      (40)
+#define ENTROPY_MIN_THRESH      (5)
 #endif
 
 #ifndef ENTROPY_MAX
@@ -742,6 +748,9 @@
 #endif
 #if defined(USE_BRC_STORE) && !defined(CONFIG_BRC_STORE)
 #define CONFIG_BRC_STORE 1
+#endif
+#ifndef CONFIG_ENTROPY_SVC
+#define CONFIG_ENTROPY_SVC 0
 #endif
 
 #ifdef DEBUG

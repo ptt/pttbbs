@@ -234,11 +234,14 @@ int bBMC(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     return 0;
 }
 
+#define CONDITIONAL_SVC(tag, name) IF_ENABLED(CONFIG_##tag##_SVC, name,)
+
 int start_services()
 {
     int err = 0;
     const char *services[] = {
         "utmp", "friend", "search", "stat",
+        CONDITIONAL_SVC(ENTROPY, "entropy")
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

@@ -1,5 +1,8 @@
 SUBDIRS:=	common mbbsd util service
 
+# Local services
+SUBDIRS+=$(wildcard service-private)
+
 .PHONY: all clean install $(SUBDIRS)
 
 all: $(SUBDIRS)
