@@ -2237,6 +2237,9 @@ paste_taged_brds(int gid)
 	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, FALSE);
+	    // The tagged board may have been deleted since.
+	    if (!bh->brdname[0])
+		continue;
 	    if (bh->gid != gid) {
 		if (gid_is_within(gid, bid)) {
 		    looped++;
