@@ -760,14 +760,26 @@ GotoNewHand(){
 	currboard = ""; // force enter_board
     }
 
+    int groupop = groupop_save();
+    // Read() sets READING. Anything else, a board list or a screen opened on
+    // top of one, keeps the modes it has.
+    int reading = currutmp && currutmp->mode == READING;
     if (enter_board(BN_NEWBIE) == 0)
 	Read();
     else
 	vmsg("無法進入新手板。");
 
     // Go back even if BN_NEWBIE could not be entered: currboard was cleared.
-    if (old_board[0])
-	enter_board(old_board);
+    // Then give the caller its group modes back. With no board to go back
+    // to, the caller is not reading one. A board being read gets back only
+    // those that entering it again gives, as its group may have moved
+    // meanwhile; a board list's are its own, whatever board was read last.
+    // If the board can't be entered, the board read last stays current, with
+    // the modes set_board() gave it.
+    if (!old_board[0])
+	groupop_restore(groupop);
+    else if (enter_board(old_board) == 0)
+	groupop_restore(reading ? groupop & groupop_save() : groupop);
 }
 #endif
 

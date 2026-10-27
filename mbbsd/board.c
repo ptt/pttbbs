@@ -2346,6 +2346,20 @@ gid_is_within(int gid, int bid)
     return 0;
 }
 
+/* The group modes to give back to groupop_restore() after entering boards,
+ * which changes them. */
+int
+groupop_save(void)
+{
+    return currmode & GROUP_MODES;
+}
+
+void
+groupop_restore(int saved)
+{
+    currmode = (currmode & ~GROUP_MODES) | (saved & GROUP_MODES);
+}
+
 static int
 paste_taged_brds(int gid)
 {
@@ -2657,8 +2671,10 @@ board_cmd_search_global(cmd_ctx_t *ctx) {
         ctx->curr = tmp;
         return 0;
     }
+    int saved = groupop_save();
     if (enter_board(bname) >= 0)
         Read();
+    groupop_restore(saved);
     setutmpbid(tmpbid);
     setutmpmode(*cx->newflag ? READNEW : READBRD);
     return 0;
@@ -2693,7 +2709,10 @@ board_enter_normal(boardstat_t *ptr, cmd_ctx_t *ctx) {
         int head = tmp - t_lines / 2;
         getkeep(buf, head > 1 ? head : 1, tmp + 1);
     }
+    int saved = groupop_save();
     Read();
+    // Reading enters boards through set_board(); the list has its own modes.
+    groupop_restore(saved);
     check_newpost(ptr);
     ctx->redraw = true;
     setutmpmode(*cx->newflag ? READNEW : READBRD);
