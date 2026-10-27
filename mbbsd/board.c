@@ -2350,7 +2350,7 @@ static int
 paste_taged_brds(int gid)
 {
     fav_t *fav;
-    int  bid, tmp, denied = 0, looped = 0;
+    int  bid, tmp, denied = 0, raised = 0, looped = 0;
 
     if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_OP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
@@ -2359,7 +2359,9 @@ paste_taged_brds(int gid)
         vmsg(MSG_GROUP_GONE);
         return 0;
     }
-    /* Group ops may only move boards between groups they manage. */
+    /* Group ops may only move boards between groups they manage, and not to
+     * where the groups give them modes the board's group does not, as a
+     * group they lead does for a board from a group they only manage. */
     int unlimited = groupop_unlimited();
     int into_roles = unlimited ? 0 : group_roles(gid);
     fav = get_fav_root();
@@ -2375,10 +2377,16 @@ paste_taged_brds(int gid)
 	    if (!bh->brdname[0])
 		continue;
 	    if (bh->gid != gid) {
-		if (!unlimited &&
-		    !(into_roles & group_roles_above(bid) & MODE_GROUP_OP)) {
-		    denied++;
-		    continue;
+		if (!unlimited) {
+		    int from_roles = group_roles_above(bid);
+		    if (!(into_roles & from_roles & MODE_GROUP_OP)) {
+			denied++;
+			continue;
+		    }
+		    if (into_roles & ~from_roles) {
+			raised++;
+			continue;
+		    }
 		}
 		if (gid_is_within(gid, bid)) {
 		    looped++;
@@ -2397,6 +2405,8 @@ paste_taged_brds(int gid)
     sort_bcache();
     if (denied)
 	vmsg("部分看板不在您管理的群組內，未搬移。");
+    if (raised)
+	vmsg("部分看板搬到這裡會讓您取得群組長權限，未搬移。");
     if (looped)
 	vmsg("群組不能搬進自己底下，未搬移。");
     return 1;
