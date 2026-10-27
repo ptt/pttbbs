@@ -2431,11 +2431,14 @@ static int
 board_cmd_mark_read(cmd_ctx_t *ctx) {
     int num = ctx->curr;
     int ch = ctx->key;
-    boardstat_t *ptr;
+    boardstat_t *ptr, target;
     assert(0 <= num && num < nbrdsize);
     ptr = &nbrd[num];
-    if (nbrd[num].bid < 0 || !brdstat_is_board(ptr) ||
-        !HasBoardPerm(B_BH(ptr)))
+    if (nbrd[num].bid < 0 || !brdstat_is_board(ptr))
+        return 0;
+    // A link marks the board it leads to.
+    ptr = follow_link(ptr, &target);
+    if (ptr == NULL || !HasBoardPerm(B_BH(ptr)))
         return 0;
     if (ch == 'v') {
         ptr->myattr &= ~NBRD_UNREAD;
