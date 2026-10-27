@@ -36,12 +36,7 @@ int detect_header(fileheader_t *fhdr, const char *path)
 
     /* set file time */
     time4_t filetime = get_fhdr_stamp_ts(filename);
-    if(time4_gt(filetime, 740000000)) {
-	struct tm *ptime = localtime4(&filetime);
-	sprintf(fhdr->date, "%2d/%02d", ptime->tm_mon + 1,
-		ptime->tm_mday);
-    } else
-	strcpy(fhdr->date, "     ");
+    fhdr_set_date(fhdr, filetime);
 
     /* set file mode */
     fhdr->filemode = FILE_READ;
@@ -234,7 +229,6 @@ int main(int argc, char **argv)
 	perror(outdir.c_str());
     }
 
-    char path[MAXPATHLEN];
     fileheader_t fhdr;
     for (int i = 0; i < total; ++i) {
 	const char *filename = dirlist[i]->d_name;
@@ -242,11 +236,11 @@ int main(int argc, char **argv)
 	    ++nr_indexed;
 	    continue;
 	}
-	snprintf(path, sizeof(path), "%s/%s", bdir.c_str(), filename);
+	std::string path = bdir + "/" + filename;
 	time4_t posttime = get_fhdr_stamp_ts(filename);
 	if (time4_lt(posttime, ignore_before)) {
 	    ++nr_skip;
-	} else if (detect_header(&fhdr, path) == DETECT_OK) {
+	} else if (detect_header(&fhdr, path.c_str()) == DETECT_OK) {
 	    write(fout, &fhdr, sizeof(fhdr));
 	    ++nr_written;
 	} else {

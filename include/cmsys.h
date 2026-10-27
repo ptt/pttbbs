@@ -211,9 +211,17 @@ void chomp(char *src);
 #  define mb_to_storage(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #  define storage_to_mb_n(src, slen, dst, dlen) utf8_to_big5_n((src), (slen), (dst), (dlen))
 #else
-#  define storage_to_mb(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
-#  define mb_to_storage(src, dst, sz) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (sz)), mbs_safe_trim(dst), (dst)))
-#  define storage_to_mb_n(src, slen, dst, dlen) ((src) == (dst) ? (mbs_safe_trim(dst), (dst)) : (strlcpy((dst), (src), (dlen)), mbs_safe_trim(dst), (dst)))
+void   mbs_safe_trim(char *s);
+static inline char *conv_same_storage(const char *src, char *dst, size_t sz) {
+    if ((const void *)src != (const void *)dst) {
+        strlcpy(dst, src, sz);
+    }
+    mbs_safe_trim(dst);
+    return dst;
+}
+#  define storage_to_mb(src, dst, sz) conv_same_storage((src), (dst), (sz))
+#  define mb_to_storage(src, dst, sz) conv_same_storage((src), (dst), (sz))
+#  define storage_to_mb_n(src, slen, dst, dlen) conv_same_storage((src), (dst), (dlen))
 #endif
 
 #if NEED_STORAGE_CONV

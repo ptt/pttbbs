@@ -35,6 +35,27 @@ const char *subject(const char *title);
 const char *Now(void);	// m3 flavor time string
 
 /* fhdr_stamp.c */
+static inline void fhdr_set_date_tm(fileheader_t *fh, const struct tm *tm) {
+    if (tm) {
+        int m = (tm->tm_mon + 1) % 100;
+        int d = tm->tm_mday % 100;
+        snprintf(fh->date, sizeof(fh->date), "%2d/%02d",
+                 m < 0 ? 0 : m, d < 0 ? 0 : d);
+    } else {
+        snprintf(fh->date, sizeof(fh->date), "%*s", (int)sizeof(fh->date) - 1, "");
+    }
+}
+
+static inline void fhdr_set_date(fileheader_t *fh, time4_t ts) {
+    if (time4_gt(ts, 740000000)) {
+        struct tm ptime;
+        localtime4_r(&ts, &ptime);
+        fhdr_set_date_tm(fh, &ptime);
+    } else {
+        fhdr_set_date_tm(fh, NULL);
+    }
+}
+
 int stampfile(char *fpath, fileheader_t * fh);
 int stampdir(char *fpath, fileheader_t * fh);
 int stamplink(char *fpath, fileheader_t * fh);

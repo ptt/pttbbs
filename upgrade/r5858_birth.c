@@ -13,7 +13,7 @@ int resolve_over18_user(const userec_t *u)
     time4_t now = time4(NULL);
     localtime4_r(&now, &ptime);
 
-    // 照實歲計算，沒生日的當作未滿 18
+    // Calculate by actual age, treat missing birthday as under 18
     if (year < 1 || month < 1)
         return 0;
     else if (ptime.tm_year - year > 18)

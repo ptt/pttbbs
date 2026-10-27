@@ -443,7 +443,7 @@ static void test_pmore_url_modes(void) {
     assert(strstr(outbuf, "\x1b]8;;") == NULL);
     assert(strstr(outbuf, "https://ptt.cc") != NULL);
 
-    // 2. Soft-wrap (折行) of a 120-char URL across 2 rows (row width 78):
+    // 2. Soft-wrap of a 120-char URL across 2 rows (row width 78):
     clear();
     reset_outbuf();
     const char *long_url = "https://example.com/very/long/path/query?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5&extra=abcdefgh";
@@ -481,7 +481,7 @@ static void test_pmore_url_modes(void) {
     // Both lines must contain OSC 8 with the full URL
     assert(strstr(outbuf, "\x1b]8;;https://example.com/very/long/path/query?param1=value1") != NULL);
 
-    // 2b. Truncate mode (截行) of a 120-char URL on Row 0 (not wrapped to Row 1):
+    // 2b. Truncate mode of a 120-char URL on Row 0 (not wrapped to Row 1):
     clear();
     reset_outbuf();
     const char *trunc_url = "https://trunc.example.com/very/long/path/query?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5";
@@ -505,7 +505,7 @@ static void test_pmore_url_modes(void) {
     // Outbuf still contains OSC 8 with the full URL for Row 0
     assert(strstr(outbuf, "\x1b]8;;https://trunc.example.com/very/long/path/query?param1=value1") != NULL);
 
-    // 3. Multi-line hard break (斷行) joining simulation:
+    // 3. Multi-line hard break joining simulation:
     clear();
     reset_outbuf();
     const char *part1 = "https://ptt.cc/search?q=query_part1+";

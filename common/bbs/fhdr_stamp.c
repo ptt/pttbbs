@@ -34,7 +34,6 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 {
     char       *ip = fpath;
     time4_t     dtime = time(0);
-    struct tm   ptime;
     int         res = 0;
 
     if (access(fpath, X_OK | R_OK | W_OK))
@@ -75,8 +74,7 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 
     if (fh) {
         STRLCPY(fh->filename, ip);
-        localtime4_r(&dtime, &ptime);
-        SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+        fhdr_set_date(fh, dtime);
     }
 
     return 0;

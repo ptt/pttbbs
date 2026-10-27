@@ -362,7 +362,6 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
 {
     register char  *ip = fpath;
     time4_t         dtime = COMMON_TIME;
-    struct tm       ptime;
     const int	    mask_small = 0xFFF,	    // basic (4096)
 		    mask_large = 0xFFFF;    // large (65536)
     int		    mask = mask_small;
@@ -394,8 +393,7 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
     } while (Mkdir(fpath) == -1);
 
     STRLCPY(fh->filename, ip);
-    localtime4_r(&dtime, &ptime);
-    SNPRINTF(fh->date, "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    fhdr_set_date(fh, dtime);
 
     return 0;
 }

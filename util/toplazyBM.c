@@ -234,11 +234,11 @@ int main(void)
 
 	STRLCPY(mymail.owner, "[" BBSMNAME "警察局]");
 	if (lostdays <= LAZY_BM_LIMIT_DAYS)
-	    sprintf(mymail.title,
+	    SNPRINTF(mymail.title,
 		    ANSI_COLOR(32) "版主通知" ANSI_RESET " %s版版主%s",
 		    lostbms[i].title, lostbms[i].bmname);
 	else
-	    sprintf(mymail.title,
+	    SNPRINTF(mymail.title,
 		    ANSI_COLOR(32) "版主自動免職通知" ANSI_RESET " %s 版主 %s",
 		    lostbms[i].title, lostbms[i].bmname);
 

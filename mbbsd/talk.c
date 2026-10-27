@@ -333,7 +333,7 @@ my_query(const char *uident)
             // do nothing
         } else {
             prints("《上次上站》%-28.28s《上次故鄉》",
-                   PERM_HIDE(&muser) ? "秘密" :
+                   (muser.userlevel & PERM_SYSOPHIDE) ? "秘密" :
                    Cdate(muser.lastseen ? &muser.lastseen : &muser.lastlogin));
             // print out muser.lasthost
 #ifdef USE_MASKED_FROMHOST

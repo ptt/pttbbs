@@ -309,7 +309,7 @@ vbuf_getblk(VBUF *v, void *p, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_TAIL_SZ(v);
-        assert(rw >= 0 && rw <= v->capacity+1);
+        assert(rw <= v->capacity+1);
         if (rw > sz) rw = sz;
         memcpy(s, v->head, rw);
         v->head += rw; s += rw; sz -= rw;
@@ -334,7 +334,7 @@ vbuf_putblk(VBUF *v, const void *p, size_t sz)
     for (i = 0; sz && i < 2; i++)
     {
         rw = VBUF_HEAD_SZ(v);
-        assert(rw >= 0 && rw <= v->capacity+1);
+        assert(rw <= v->capacity+1);
         if (rw > sz) rw = sz;
         memcpy(v->tail, s, rw);
         v->tail += rw; s += rw; sz -= rw;

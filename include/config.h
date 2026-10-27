@@ -750,4 +750,10 @@
 #define IS_DEBUG 0
 #endif
 
+#ifdef __cplusplus
+#ifndef _Static_assert
+#define _Static_assert static_assert
+#endif
+#endif
+
 #endif // INCLUDE_CONFIG_H

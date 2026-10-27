@@ -381,8 +381,7 @@ char *aidu2aidc(char *buf, const aidu_t orig_aidu)
   *(sp --) = '\0';
   while(sp >= buf)
   {
-    /* FIXME: 能保證 aidu2aidc_tablesize 是 2 的冪次的話，
-              這裡可以改用 bitwise operation 做 */
+    /* FIXME: If aidu2aidc_tablesize is a power of 2, we can use bitwise ops here */
     v = aidu % aidu2aidc_tablesize;
     aidu = aidu / aidu2aidc_tablesize;
     *(sp --) = aidu2aidc_table[v];
@@ -416,7 +415,7 @@ aidu_t aidc2aidu(const char *aidc)
   while(*sp != '\0' && /* ignore trailing spaces */ *sp != ' ')
   {
     aidu_t v = 0;
-    /* FIXME: 查表法會不會比較快？ */
+    /* FIXME: Would lookup table be faster? */
     if(*sp >= '0' && *sp <= '9')
       v = *sp - '0';
     else if(*sp >= 'A' && *sp <= 'Z')

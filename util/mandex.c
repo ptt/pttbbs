@@ -114,7 +114,7 @@ man_index(const char * brdname)
     rename(buf, fpath);
     setdirpath(fpath, buf, FN_DIR);
 
-    sprintf(buf, "%s.new", fpath);
+    SNPRINTF(buf, "%s.new", fpath);
 
     if ((fp_dir = fopen(fpath, "r+")) == NULL)
 	return;
@@ -146,7 +146,7 @@ man_index(const char * brdname)
     SNPRINTF(fhdr.title, "%s (%.1fk)", index_title, st.st_size / 1024.);
     fhdr.filemode = filemode;
 
-    sprintf(buf, "%s.new", fpath);
+    SNPRINTF(buf, "%s.new", fpath);
 
     if (index_pos >= 0) {
 	fseek(fp_dir, index_pos * sizeof(fhdr), SEEK_SET);

@@ -210,12 +210,10 @@ static void initBoards() {
 static void initMan() {
     FILE *fp;
     fileheader_t f;
-    time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
     
     memset(&f, 0, sizeof(f));
     STRLCPY(f.owner, "SYSOP");
-    sprintf(f.date, "%2d/%02d", tm->tm_mon + 1, tm->tm_mday);
+    fhdr_set_date(&f, (time4_t)time(NULL));
     f.multi.money = 0;
     f.filemode = 0;
     

@@ -403,7 +403,7 @@ int usermode(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 	if( SHM->uinfo[i].userid[0] )
 	    ++modes[ (int)SHM->uinfo[i].mode ];
 
-    for( i = 0 ; i < MAX_MODES ; ++i )
+    for( i = 0 ; i < MODE_MAX ; ++i )
 	printf("%03d|%05d|%s\n", i, modes[i], ModeTypeTable[i]);
     return 0;
 }

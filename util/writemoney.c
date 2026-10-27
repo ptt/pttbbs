@@ -1,4 +1,4 @@
-/* 把 SHM 中的 money 全部寫回 .PASSWDS */
+/* Write all money in SHM back to .PASSWDS */
 #define _UTIL_C_
 #include "bbs.h"
 #include "var.h"
