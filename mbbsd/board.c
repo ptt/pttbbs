@@ -2265,6 +2265,65 @@ follow_link(boardstat_t *ptr, boardstat_t *target)
     return target;
 }
 
+/* Group trees are shallow, so walks up a gid chain give up after this many
+ * steps in case of a gid cycle. */
+#define GROUP_DEPTH_MAX 64
+
+#define GROUP_MODES (MODE_GROUP_OP | MODE_GROUP_LEAD)
+
+/* Sysops and board admins are not limited to the groups they manage. */
+static int
+groupop_unlimited(void)
+{
+    return HasUserPerm(PERM_SYSOP | PERM_BOARDS);
+}
+
+/* The group modes that the groups on gid's chain (gid itself and the groups
+ * above it) give the user by listing them as moderators, as
+ * set_menu_group_op() does: MODE_GROUP_OP for any such group, and
+ * MODE_GROUP_LEAD as well for one right under the class root. As there,
+ * users with PERM_NOCITIZEN get none. gid may also be a board, which is then
+ * checked against the groups it is in. gid 1 is the class root. */
+static int
+group_roles(int gid)
+{
+    int depth, roles = 0;
+
+    if (HasUserPerm(PERM_NOCITIZEN))
+        return 0;
+    for (depth = 0; depth < GROUP_DEPTH_MAX && 1 < gid && gid <= MAX_BOARD;
+         depth++) {
+        const boardheader_t *gh = getbcache(gid);
+        if (!GROUP_LISTS_BOARDS(gh)) {
+            // Above gid, only a group that lists its boards counts. A board
+            // or link there took the slot of a group deleted with boards in
+            // it (old records: free_board_slot() keeps such slots free now),
+            // and the boards of the hot board group are listed nowhere.
+            if (depth > 0)
+                break;
+        } else if (is_board_moderator(gid)) {
+            roles |= (gh->gid == 1) ? GROUP_MODES : MODE_GROUP_OP;
+        }
+        gid = gh->gid;
+    }
+    return roles;
+}
+
+/* The group modes that the groups above board or group bid give, not bid
+ * itself: those of its group, which gives none unless it is a group that
+ * lists its boards, as in group_roles(), and is not bid. A few old groups
+ * have their own bid as gid. */
+static int
+group_roles_above(int bid)
+{
+    int gid = getbcache(bid)->gid;
+
+    if (gid < 1 || gid > MAX_BOARD || gid == bid ||
+        !GROUP_LISTS_BOARDS(getbcache(gid)))
+        return 0;
+    return group_roles(gid);
+}
+
 /* Whether moving bid into group gid would make a gid cycle: gid is bid itself
  * or inside it. Only a group can have gid inside it. A plain board can still
  * be gid itself when it is bid 1, the class root list, as initbbs sets it up.
@@ -2291,7 +2350,7 @@ static int
 paste_taged_brds(int gid)
 {
     fav_t *fav;
-    int  bid, tmp, looped = 0;
+    int  bid, tmp, denied = 0, looped = 0;
 
     if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_OP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
@@ -2300,6 +2359,9 @@ paste_taged_brds(int gid)
         vmsg(MSG_GROUP_GONE);
         return 0;
     }
+    /* Group ops may only move boards between groups they manage. */
+    int unlimited = groupop_unlimited();
+    int into_roles = unlimited ? 0 : group_roles(gid);
     fav = get_fav_root();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
@@ -2313,6 +2375,11 @@ paste_taged_brds(int gid)
 	    if (!bh->brdname[0])
 		continue;
 	    if (bh->gid != gid) {
+		if (!unlimited &&
+		    !(into_roles & group_roles_above(bid) & MODE_GROUP_OP)) {
+		    denied++;
+		    continue;
+		}
 		if (gid_is_within(gid, bid)) {
 		    looped++;
 		    continue;
@@ -2328,6 +2395,8 @@ paste_taged_brds(int gid)
 	    }
 	}
     sort_bcache();
+    if (denied)
+	vmsg("部分看板不在您管理的群組內，未搬移。");
     if (looped)
 	vmsg("群組不能搬進自己底下，未搬移。");
     return 1;
