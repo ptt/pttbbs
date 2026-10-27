@@ -796,8 +796,8 @@ completeboard_permission(int where)
 {
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
-	    (CBRD_IS_GROUP_OP() || HasBoardPerm(bptr)) &&
-	    !(bptr->brdattr & BRD_GROUPBOARD));
+	    !(bptr->brdattr & BRD_GROUPBOARD) &&
+	    (HasBoardPerm(bptr) || groupop_covers(bptr - bcache + 1)));
 }
 
 int
@@ -805,7 +805,7 @@ complete_board_and_group_permission(int where)
 {
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
-	    (CBRD_IS_GROUP_OP() || HasBoardPerm(bptr)));
+	    (HasBoardPerm(bptr) || groupop_covers(bptr - bcache + 1)));
 
 }
 

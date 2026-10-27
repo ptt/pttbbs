@@ -2119,7 +2119,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         return 0;
     }
 
-    if (!CBRD_IS_GROUP_OP() && !HasBoardPerm(B_BH(ptr))) {
+    if (!HasBoardPerm(B_BH(ptr)) && !groupop_covers(ptr->bid)) {
         return brdlist_hidden(newflag, head, ptr, &bh);
     }
 
@@ -2403,6 +2403,24 @@ void
 groupop_restore(int saved)
 {
     currmode = (currmode & ~GROUP_MODES) | (saved & GROUP_MODES);
+}
+
+/* Whether group mode `mode`, MODE_GROUP_OP or MODE_GROUP_LEAD, is on and
+ * covers board or group bid: as in groupop_narrow(), bid must be inside a
+ * group that gives the user that mode, unless the user is a sysop or board
+ * admin. */
+static int
+group_mode_covers(int mode, int bid)
+{
+    if (groupop_unlimited())
+        return 1;
+    return (currmode & mode) && (group_roles(bid) & mode);
+}
+
+int
+groupop_covers(int bid)
+{
+    return group_mode_covers(MODE_GROUP_OP, bid);
 }
 
 static int
