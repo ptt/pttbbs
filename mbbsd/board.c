@@ -2171,8 +2171,13 @@ follow_link(boardstat_t *ptr, boardstat_t *target)
         return ptr;
     *target = *ptr;
     target->bid = link_target_bid(B_BH(ptr));
+    if (!target->bid)
+        return NULL;
     target->myattr &= ~NBRD_SYMBOLIC;
-    return target->bid ? target : NULL;
+    // A link has no unread state; take the target's, so that new-post mode
+    // starts at its first unread post.
+    check_newpost(target);
+    return target;
 }
 
 /* Whether moving bid into group gid would make a gid cycle: gid is bid itself
