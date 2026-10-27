@@ -531,8 +531,16 @@ void ToggleVector(struct Vector *list, int *recipient, const char *listfile, con
 void multi_user_list(struct Vector *namelist, int *recipient,
                      const char *title, const char *msg_prefix, int flags);
 
+typedef struct complete_hooks {
+    VGET_FCALLBACK peek;      /* called before complete_engine processes key */
+    VGET_FCALLBACK fallback;  /* called when key is unhandled by complete_engine */
+    void *ctx;                /* user context passed as instance to callbacks */
+} complete_hooks_t;
+
 void usercomplete(const char *prompt, char *data);
 void usercomplete2(const char *prompt, char *data, const char *defval);
+int usercomplete_hooks(const char *prompt, char *data, const char *defval,
+		       const complete_hooks_t *hooks, int *out_exit_key);
 int usercomplete_ex(const char *prompt, char *data, const char *defval,
 		    int (*check_exit_key)(int key));
 int usercomplete_vform(const char *prompt, char *data, const char *defval);

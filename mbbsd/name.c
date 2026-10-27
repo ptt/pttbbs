@@ -405,7 +405,7 @@ struct complete_engine_ctx {
     const complete_ops_t *ops;
     void *provider_ctx;
     int flags;
-    int (*check_exit_key)(int key);
+    const complete_hooks_t *hooks;
     int *exit_key_ptr;
 
     int start_y;
@@ -443,12 +443,12 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
     struct complete_engine_ctx *ctx = (struct complete_engine_ctx *)instance;
     prt->buf[prt->iend] = '\0';
 
-    if (ctx->check_exit_key) {
-	int exit_type = ctx->check_exit_key(key);
-	if (exit_type != 0) {
+    if (ctx->hooks && ctx->hooks->peek) {
+	int r = ctx->hooks->peek(key, prt, ctx->hooks->ctx);
+	if (r != VGETCB_NONE) {
 	    if (ctx->exit_key_ptr)
 		*ctx->exit_key_ptr = key;
-	    if (exit_type > 0 && prt->iend > 0) {
+	    if (r == VGETCB_END && prt->iend > 0) {
 		if (ctx->dirty < 0)
 		    complete_refresh_candidates(ctx, prt->buf);
 		if (ctx->selected_idx >= 0) {
@@ -459,8 +459,15 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		    ctx->selected_idx = -1;
 		}
 		prt->icurr = prt->iend = strlen(prt->buf);
+	    } else if (r == VGETCB_ABORT) {
+		prt->buf[0] = '\0';
+		if (prt->len >= 2)
+		    prt->buf[1] = (char)key;
+		prt->icurr = prt->iend = 0;
+		ctx->selected_idx = -1;
+		return VGETCB_ABORT;
 	    }
-	    return VGETCB_END;
+	    return r;
 	}
     }
 
@@ -534,6 +541,8 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
     case KEY_BS:
     case KEY_UP:
     case KEY_DOWN:
+    case Ctrl('P'):
+    case Ctrl('N'):
     case KEY_LEFT:
     case KEY_RIGHT:
     case KEY_HOME:
@@ -559,6 +568,13 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		}
 	    }
 	    ctx->dirty = -1;
+	} else if (ctx->hooks && ctx->hooks->fallback) {
+	    int r = ctx->hooks->fallback(key, prt, ctx->hooks->ctx);
+	    if (r != VGETCB_NONE) {
+		if (ctx->exit_key_ptr)
+		    *ctx->exit_key_ptr = key;
+		return r;
+	    }
 	}
 	break;
     }
@@ -569,7 +585,7 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 static int
 complete_engine(const char *prompt, char *data, int len, const char *defval,
 		int flags, const complete_ops_t *ops, void *provider_ctx,
-		int (*check_exit_key)(int key), int *out_exit_key)
+		const complete_hooks_t *hooks, int *out_exit_key)
 {
     if (out_exit_key)
 	*out_exit_key = KEY_ENTER;
@@ -592,7 +608,7 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
 	.ops = ops,
 	.provider_ctx = provider_ctx,
 	.flags = flags,
-	.check_exit_key = check_exit_key,
+	.hooks = hooks,
 	.exit_key_ptr = out_exit_key,
 	.start_y = start_y,
 	.max_items = get_complete_capacity(start_y, len > IDLEN ? IDLEN : len),
@@ -611,8 +627,6 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
     };
 
     int vflags = VGET_NO_NAV_EDIT;
-    if (check_exit_key != NULL)
-	vflags |= VGET_NO_NAV_HISTORY;
     if (flags & COMPL_ASCII_ONLY)
 	vflags |= VGET_ASCII_ONLY;
 
@@ -628,8 +642,10 @@ complete_engine(const char *prompt, char *data, int len, const char *defval,
     Vector_delete(&ctx.sublist);
 
     if (ret < 1) {
-	if (out_exit_key && *out_exit_key == KEY_ENTER)
-	    *out_exit_key = Ctrl('C');
+	if (data[1] == Ctrl('C') || data[1] == KEY_ESC) {
+	    if (out_exit_key)
+		*out_exit_key = (unsigned char)data[1];
+	}
 	data[0] = '\0';
 	return -1;
     }
@@ -661,7 +677,7 @@ namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
 }
 
 static int
-vform_check_exit_key(int key)
+vform_complete_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance GCC_UNUSED)
 {
     switch (key) {
     case KEY_UP:
@@ -670,18 +686,30 @@ vform_check_exit_key(int key)
     case Ctrl('X'):
     case Ctrl('S'):
     case KEY_F10:
-	return 1;
+	return VGETCB_END;
     case KEY_ESC:
     case Ctrl('C'):
-	return -1;
+	return VGETCB_ABORT;
     default:
-	return 0;
+	return VGETCB_NONE;
     }
 }
 
+static int
+compat_check_exit_key_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
+{
+    int (*check_exit_key)(int key) = (int (*)(int))instance;
+    int exit_type = check_exit_key(key);
+    if (exit_type > 0)
+	return VGETCB_END;
+    if (exit_type < 0)
+	return VGETCB_ABORT;
+    return VGETCB_NONE;
+}
+
 int
-usercomplete_ex(const char *prompt, char *data, const char *defval,
-		int (*check_exit_key)(int key))
+usercomplete_hooks(const char *prompt, char *data, const char *defval,
+		   const complete_hooks_t *hooks, int *out_exit_key)
 {
     struct Vector namelist;
     Vector_init_const(&namelist, SHM->userid[0], MAX_USERS, IDLEN + 1);
@@ -692,20 +720,42 @@ usercomplete_ex(const char *prompt, char *data, const char *defval,
     int flags = COMPL_ASCII_ONLY | COMPL_ALLOW_NONEXISTENT_PREFIX | COMPL_NO_EMPTY_LIST;
     int exit_key = KEY_ENTER;
     complete_engine(prompt, data, IDLEN + 1, defval, flags, &vec_ops, &vec_ctx,
-		    check_exit_key, check_exit_key ? &exit_key : NULL);
+		    hooks, &exit_key);
+    if (out_exit_key)
+	*out_exit_key = exit_key;
     return exit_key;
+}
+
+int
+usercomplete_ex(const char *prompt, char *data, const char *defval,
+		int (*check_exit_key)(int key))
+{
+    if (check_exit_key) {
+	complete_hooks_t hooks = {
+	    .peek = compat_check_exit_key_peek,
+	    .fallback = NULL,
+	    .ctx = (void *)check_exit_key,
+	};
+	return usercomplete_hooks(prompt, data, defval, &hooks, NULL);
+    }
+    return usercomplete_hooks(prompt, data, defval, NULL, NULL);
 }
 
 int
 usercomplete_vform(const char *prompt, char *data, const char *defval)
 {
-    return usercomplete_ex(prompt, data, defval, vform_check_exit_key);
+    complete_hooks_t hooks = {
+	.peek = vform_complete_peek,
+	.fallback = NULL,
+	.ctx = NULL,
+    };
+    return usercomplete_hooks(prompt, data, defval, &hooks, NULL);
 }
 
 void
 usercomplete2(const char *prompt, char *data, const char *defval)
 {
-    usercomplete_ex(prompt, data, defval, NULL);
+    usercomplete_hooks(prompt, data, defval, NULL, NULL);
 }
 
 void

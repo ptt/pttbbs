@@ -1414,9 +1414,6 @@ vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, 
     // runtime structure
     VGET_RUNTIME    rt = { buf, max_bytes };
 
-    // adjust flags
-    if (flags & (VGET_NOECHO | VGET_DIGITS))
-	flags |= VGET_NO_NAV_HISTORY;
 
     // memset(buf, 0, len);
     if (defstr && *defstr)
@@ -1557,15 +1554,14 @@ vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, 
 		continue;
 	}
 
-	if (flags & VGET_NO_NAV_HISTORY) {
-	    // skip navigation history keys
-	} else switch (c) {
+	switch (c) {
 	    // history navigation
 	    case KEY_DOWN: case Ctrl('N'):
 		c = KEY_DOWN;
 		// let UP do the magic.
 	    case KEY_UP:   case Ctrl('P'):
-		// NOECHO is already checked...
+		if (flags & (VGET_NOECHO | VGET_PASSWORD | VGET_DIGITS))
+		    continue;
 		if (!InputHistoryExists(buf))
 		    InputHistoryAdd(buf);
 
@@ -1827,7 +1823,7 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
         int cur_row = b_lines - 1 - num_lines + curr_line;
         move(cur_row, 2);
         vgetstring_sz(lines[curr_line], sizeof(lines[curr_line]),
-                      line_len, VGET_NO_NAV_HISTORY, lines[curr_line],
+                      line_len, 0, lines[curr_line],
                       &cbs, &ctx);
 
         int key = ctx.exit_key;
