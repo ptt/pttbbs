@@ -212,16 +212,53 @@ user_display(const userec_t * u, int adminmode)
     if (u->userlevel & PERM_BM) {
 	int             i;
 	boardheader_t  *bhdr;
-
-	outs("\t擔任板主: ");
+	int             total = 0;
 
 	for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
-	    if ( is_uBM(bhdr->BM, u->userid)) {
+	    if (bhdr->brdname[0] && is_uBM(bhdr->BM, u->userid))
+		total++;
+	}
+
+	if (total == 0) {
+	    prints("\t擔任板主: (無)\n");
+	} else {
+	    const int max_col = 78;
+	    int col = 18; // \t (8) + "擔任板主: " (10) = 18 欄
+	    int printed = 0;
+
+	    outs("\t擔任板主: ");
+
+	    for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
+		if (!bhdr->brdname[0] || !is_uBM(bhdr->BM, u->userid))
+		    continue;
+
+		int blen = strlen(bhdr->brdname);
+		int needed = blen + 1; // 板名 + 空白
+		int remaining = total - printed;
+
+		// 若後面還有看板，保留空間印 "... (共 N 個板)"
+		if (remaining > 1) {
+		    char trunc_buf[32];
+		    snprintf(trunc_buf, sizeof(trunc_buf), "... (共 %d 個板)", total);
+		    int trunc_len = stream_width(trunc_buf);
+		    if (col + needed + trunc_len > max_col) {
+			outs(trunc_buf);
+			break;
+		    }
+		}
+
+		if (col + needed > max_col) {
+		    prints("... (共 %d 個板)", total);
+		    break;
+		}
+
 		outs(bhdr->brdname);
 		outc(' ');
+		col += needed;
+		printed++;
 	    }
+	    outc('\n');
 	}
-	outc('\n');
     }
 
     // conditional fields
@@ -669,12 +706,100 @@ static const vform_def_t user_profile_form = {
     .num_fields   = ARRAY_SIZE(user_profile_fields),
 };
 
+static void
+user_browse_bm(const char *userid)
+{
+    int nboards = num_boards();
+    if (nboards <= 0) {
+	vmsg("系統目前無看板資料。");
+	return;
+    }
+
+    const boardheader_t **bm_list = calloc(nboards, sizeof(const boardheader_t *));
+    if (!bm_list)
+	return;
+
+    int count = 0;
+    for (int i = 0; i < nboards; i++) {
+	if (bcache[i].brdname[0] && is_uBM(bcache[i].BM, userid))
+	    bm_list[count++] = &bcache[i];
+    }
+
+    if (count == 0) {
+	free(bm_list);
+	vmsg("未擔任任何看板板主。");
+	return;
+    }
+
+    int page = 0;
+    int page_size = b_lines - 2;
+    if (page_size < 5)
+	page_size = 5;
+    int total_pages = (count + page_size - 1) / page_size;
+
+    while (1) {
+	vs_hdr(TEMPFORMAT(80, "擔任板主清單: %s (共 %d 個看板)", userid, count));
+
+	move(1, 0);
+	prints(ANSI_COLOR(1;37;44) " 編號 看板名稱       類別  看板中文敘述                   共同板主            " ANSI_RESET "\n");
+
+	int start = page * page_size;
+	int end = start + page_size;
+	if (end > count)
+	    end = count;
+
+	for (int i = start; i < end; i++) {
+	    const boardheader_t *bp = bm_list[i];
+	    move(2 + (i - start), 0);
+	    clrtoeol();
+	    prints(" %3d. %-13s [%-4.4s] ", i + 1, bp->brdname, bp->bclass);
+	    vfill(30, VFILL_NO_BORDER, bp->desc);
+	    outc(' ');
+	    vfill(20, VFILL_NO_BORDER, bp->BM);
+	    outc('\n');
+	}
+	clrtobot();
+
+	move(b_lines, 0);
+	clrtoeol();
+	if (total_pages > 1) {
+	    prints(ANSI_COLOR(34;46) "  第 %d/%d 頁 (共 %d 個看板)  " ANSI_COLOR(31;47)
+		   "  [Space/PgDn]下一頁  [PgUp]上一頁  [Q]離開  " ANSI_RESET,
+		   page + 1, total_pages, count);
+	} else {
+	    prints(ANSI_COLOR(34;46) "  共 %d 個看板  " ANSI_COLOR(31;47)
+		   "  (請按任意鍵離開)  " ANSI_RESET, count);
+	}
+
+	int ch = vkey();
+	if (total_pages <= 1)
+	    break;
+
+	if (ch == 'q' || ch == 'Q' || ch == KEY_LEFT || ch == ESC_CHR || ch == '0')
+	    break;
+	if (ch == ' ' || ch == 'n' || ch == 'N' || ch == KEY_PGDN || ch == KEY_DOWN || ch == KEY_RIGHT || ch == KEY_ENTER) {
+	    if (page + 1 < total_pages)
+		page++;
+	    else
+		page = 0;
+	} else if (ch == 'p' || ch == 'P' || ch == KEY_PGUP || ch == KEY_UP) {
+	    if (page > 0)
+		page--;
+	    else
+		page = total_pages - 1;
+	}
+    }
+
+    free(bm_list);
+}
+
 void
 uinfo_query(const char *orig_uid, int adminmode, int unum)
 {
     userec_t        x;
     int    i = 0, fail;
     int             ans;
+    const char     *prompt;
     char            buf[STRLEN];
     char            genbuf[200];
     char	    pre_confirmed = 0;
@@ -718,22 +843,14 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
     // The record as loaded, to tell what this call changed.
     const userec_t x_orig = x;
 
-    ans = vans(adminmode ?
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(M)信箱(V)認證 " :
-#else
-    "(1)改資料(2)密碼(3)權限(4)砍帳(5)改ID(6)寵物(7)審判(8)退文(V)認證 [0]結束 " :
-#endif
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-    "請選擇 (1)修改資料 (2)設定密碼 (M)聯絡信箱 (V)認證資料 [0]結束 ");
-#else
-    "請選擇 (1)修改資料 (2)設定密碼 (V)認證資料 [0]結束 ");
-#endif
+prompt_again:
+    if (adminmode)
+	prompt = "(1)資料(2)密碼(3)權限(4)砍帳(5)改ID(7)審判(8)退文(M)信箱(B)板主(V)認證[0]結束 ";
+    else
+	prompt = "請選擇 (1)修改資料 (2)設定密碼 (M)聯絡信箱 (B)擔任板主 (V)認證資料 [0]結束 ";
+    ans = vans(prompt);
 
-    if (ans != '1' && ans != '2' && ans != 'v'
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-	    && ans != 'm'
-#endif
+    if (ans != '1' && ans != '2' && ans != 'v' && ans != 'b' && ans != 'm'
 	    && !adminmode)
 	ans = '0';
 
@@ -745,7 +862,8 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	outs(x.userid);
     }
 
-    if (adminmode && (ans >= '1' && ans <= '8') &&
+    if (adminmode &&
+	((ans >= '1' && ans <= '5') || ans == '7' || ans == '8') &&
 	search_ulist(unum))
     {
 	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ")
@@ -757,8 +875,22 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 		return;
     }
     switch (ans) {
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+    case 'b':
+	user_browse_bm(x.userid);
+	clear();
+	if (adminmode)
+	    vs_hdr("使用者設定");
+	else
+	    redraw_title("個人設定區", BBSNAME);
+	move(1, 0);
+	user_display(&x, adminmode);
+	goto prompt_again;
+
     case 'm':
+#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+	vmsg("本站目前未開放聯絡信箱功能。");
+	return;
+#else
 	if (!adminmode) {
 	    // The contact email is a password-reset channel (/recover), so
 	    // changing it is re-authenticated like a password change:
@@ -1155,9 +1287,6 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 	}
 	break;
 
-    case '6':
-	chicken_toggle_death(x.userid);
-	break;
 
     case '7':
 	violate_law(&x, unum);
@@ -1328,7 +1457,7 @@ uinfo_query(const char *orig_uid, int adminmode, int unum)
 int
 u_info(void)
 {
-    move(2, 0);
+    move(1, 0);
     reload_money();
     user_display(cuser_ref, 0);
     uinfo_query (cuser.userid, 0, usernum);
