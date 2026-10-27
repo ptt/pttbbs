@@ -1949,15 +1949,17 @@ brdlist_separator(int newflag, int head, boardstat_t *ptr) {
 static int
 brdlist_folder(int newflag, int head, boardstat_t *ptr) {
     const char *title = get_folder_title(ptr->bid);
+    fav_type_t *folder = getfolder(ptr->bid);
+    fav_t *fp = folder ? get_fav_folder(folder) : NULL;
     prints("%7d %c ",
            newflag ?
-           get_data_number(get_fav_folder(getfolder(ptr->bid))) :
+           get_data_number(fp) :
            head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 
     prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s",
            !(HasUserFlag(UF_FAV_NOHILIGHT)) ?
            HILIGHT_COLOR : "",
-           title);
+           title ? title : "");
     clrtoeol();
     return 0;
 }
@@ -2530,9 +2532,10 @@ board_enter_fav_folder(boardstat_t *ptr, cmd_ctx_t *ctx) {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
     int t = ctx->curr;
     *cx->num = 0;
-    fav_folder_in(ptr->bid);
-    choose_board(0);
-    fav_folder_out();
+    if (fav_folder_in(ptr->bid) == 0) {
+        choose_board(0);
+        fav_folder_out();
+    }
     *cx->num = t;
     ctx->curr = t;
     LIST_FAV();
@@ -2959,6 +2962,8 @@ fav_cmd_edit_title(cmd_ctx_t *ctx) {
     assert(0 <= num && num < nbrdsize);
     if ((nbrd[num].myattr & NBRD_FOLDER)) {
         fav_type_t *ft = getfolder(nbrd[num].bid);
+        if (!ft)
+            return 0;
         STRLCPY(buf, get_item_title(ft));
         getdata_buf(b_lines - 1, 0, "請修改名稱: ", buf, FAV_FOLDER_TITLE_LEN + 1, DOECHO);
         fav_set_folder_title(ft, buf);

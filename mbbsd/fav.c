@@ -77,6 +77,8 @@ static fav_folder_t *cast_folder(fav_type_t *p){
  * 傳回指定 dir 中所用的 entry 的總數 (只算真的在裡面，而不算已被移除的)
  */
 inline int get_data_number(fav_t *fp){
+    if (fp == NULL)
+        return 0;
     return fp->nBoards + fp->nLines + fp->nFolders;
 }
 
@@ -93,10 +95,12 @@ inline fav_t *get_current_fav(void){
  * 將 ft(entry) cast 成一個 dir
  */
 inline fav_t *get_fav_folder(fav_type_t *ft){
-    return cast_folder(ft)->this_folder;
+    return ft ? cast_folder(ft)->this_folder : NULL;
 }
 
 inline int get_item_type(fav_type_t *ft){
+    if (!ft)
+        return 0;
     return ft->type;
 }
 
@@ -187,6 +191,9 @@ inline int is_set_attr(fav_type_t *ft, char bit){
 
 char *get_item_title(fav_type_t *ft)
 {
+    if (ft == NULL)
+        return "";
+
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
 	    if ((cast_board(ft)->bid < 1 || cast_board(ft)->bid > MAX_BOARD))
@@ -197,11 +204,14 @@ char *get_item_title(fav_type_t *ft)
 	case FAVT_LINE:
 	    return "----";
     }
-    return NULL;
+    return "";
 }
 
 static char *get_item_class(fav_type_t *ft)
 {
+    if (ft == NULL)
+        return "";
+
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
 	    if ((cast_board(ft)->bid < 1 || cast_board(ft)->bid > MAX_BOARD))
@@ -212,7 +222,7 @@ static char *get_item_class(fav_type_t *ft)
 	case FAVT_LINE:
 	    return "----";
     }
-    return NULL;
+    return "";
 }
 
 
@@ -399,15 +409,17 @@ static int fav_stack_push(fav_type_t *ft){
 }
 
 static void fav_stack_pop(void){
-    fav_stack[--fav_stack_num] = NULL;
+    if (fav_stack_num > 0)
+        fav_stack[--fav_stack_num] = NULL;
 }
 
-void fav_folder_in(int fid)
+int fav_folder_in(int fid)
 {
     fav_type_t *tmp = getfolder(fid);
-    if (get_item_type(tmp) == FAVT_FOLDER){
-	fav_stack_push(tmp);
+    if (get_item_type(tmp) == FAVT_FOLDER && get_fav_folder(tmp)){
+	return fav_stack_push(tmp);
     }
+    return -1;
 }
 
 void fav_folder_out(void)
@@ -748,7 +760,8 @@ fav_type_t *getfolder(int fid)
 
 char *get_folder_title(int fid)
 {
-    return get_item_title(get_fav_item(fid, FAVT_FOLDER));
+    fav_type_t *ft = get_fav_item(fid, FAVT_FOLDER);
+    return ft ? get_item_title(ft) : "";
 }
 
 

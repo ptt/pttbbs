@@ -279,7 +279,7 @@ void fav_add_all_tagged_item(void);
 void fav_remove_all_tag(void);
 void fav_set_folder_title(fav_type_t *ft, char *title);
 int fav_stack_full(void);
-void fav_folder_in(int fid);
+int fav_folder_in(int fid);
 void fav_folder_out(void);
 void fav_free(void);
 int fav_v3_to_v4(void);
