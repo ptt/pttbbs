@@ -699,6 +699,8 @@ delete_links_to(int bid)
     return deleted;
 }
 
+#define MSG_LINK_BY_L "看板連結請在群組列表按 L 建立。"
+
 int
 m_mod_board(char *bname)
 {
@@ -938,6 +940,22 @@ m_mod_board(char *bname)
 	    newbh.brdattr = setperms(newbh.brdattr, str_permboard);
 	    move(1, 0);
 	    clrtobot();
+	    // Only make_board_link() makes links, setting their target; here
+	    // the flag would make whatever postexpire holds the target, and a
+	    // link can't be edited back here. Links never get this far.
+	    if (newbh.brdattr & BRD_SYMBOLIC) {
+		newbh.brdattr &= ~BRD_SYMBOLIC;
+		vmsg(MSG_LINK_BY_L);
+	    }
+	    // A group that stops listing its boards, by losing its flag or
+	    // becoming the hot board group, leaves them listed nowhere, as a
+	    // deleted group does.
+	    if (GROUP_LISTS_BOARDS(&bh) && !GROUP_LISTS_BOARDS(&newbh) &&
+		board_first_child(bid)) {
+		newbh.brdattr = (newbh.brdattr & ~(BRD_GROUPBOARD | BRD_TOP)) |
+				(bh.brdattr & (BRD_GROUPBOARD | BRD_TOP));
+		vmsg("群組內還有看板，不能取消群組或改成熱門看板群組。");
+	    }
 	}
 
 
@@ -1212,6 +1230,11 @@ m_newbrd(int whatclass, int recover)
 	move(1, 0);
 	clrtobot();
 	newboard.brdattr = setperms(newboard.brdattr, str_permboard);
+	// Only make_board_link() makes links, as in m_mod_board().
+	if (newboard.brdattr & BRD_SYMBOLIC) {
+	    newboard.brdattr &= ~BRD_SYMBOLIC;
+	    vmsg(MSG_LINK_BY_L);
+	}
 	move(1, 0);
 	clrtobot();
     }
