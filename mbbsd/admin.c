@@ -702,6 +702,32 @@ delete_links_to(int bid)
 
 #define MSG_LINK_BY_L "看板連結請在群組列表按 L 建立。"
 
+/* Checks, once m_mod_board()'s prompts are answered, that board bid, read as
+ * bh before them, is still that board and that the user may still change it
+ * with group mode `mode` (see groupop_may_edit()), saying why not. While the
+ * prompts wait, another session can move it out of the user's groups, or
+ * delete it and let a new board take its slot. */
+static int
+mod_board_still_allowed(int bid, const boardheader_t *bh, int mode)
+{
+    const boardheader_t *now = getbcache(bid);
+
+    // Links share names, so a link is also known by its target.
+    if (strcmp(now->brdname, bh->brdname) ||
+	((bh->brdattr & BRD_SYMBOLIC) &&
+	 BRD_LINK_TARGET(now) != BRD_LINK_TARGET(bh))) {
+	vmsg("此看板已不存在。");
+	return 0;
+    }
+    if (!groupop_may_edit(bid, mode)) {
+	vmsg(mode == MODE_GROUP_LEAD ?
+	     "此看板已不在您擔任群組長的群組內。" :
+	     "此看板已不在您管理的群組內。");
+	return 0;
+    }
+    return 1;
+}
+
 
 typedef struct {
     user_t  moderator[MAX_BMs];
@@ -1000,6 +1026,12 @@ edit_board_general_form(boardheader_t *bh, int bid)
     else
         newbh.brdattr |= BRD_NOCREDIT;
 
+    if (!mod_board_still_allowed(bid, bh, MODE_GROUP_OP))
+        return 0;
+    // The board may have moved meanwhile; the editor does not change
+    // its group.
+    newbh.gid = getbcache(bid)->gid;
+
     if (name_changed) {
         char src[60], tar[60];
         setbpath(src, bh->brdname);
@@ -1098,6 +1130,11 @@ m_mod_board(char *bname)
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
+	        break;
+	    // The board may have moved meanwhile; the editor does not change
+	    // its group.
+	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
@@ -1141,6 +1178,11 @@ m_mod_board(char *bname)
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
+	        break;
+	    // The board may have moved meanwhile; the editor does not change
+	    // its group.
+	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
@@ -1161,6 +1203,11 @@ m_mod_board(char *bname)
 	if (edit_board_moderators_form(&newbh)) {
 	    if (memcmp(&newbh, &bh, sizeof(bh)) != 0) {
 		assert(0<=bid-1 && bid-1<MAX_BOARD);
+		if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
+		    break;
+		// The board may have moved meanwhile; the editor does not change
+		// its group.
+		newbh.gid = getbcache(bid)->gid;
 		memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 		substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 		reset_board(bid);
@@ -1229,6 +1276,11 @@ m_mod_board(char *bname)
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
+		break;
+	    // The board may have moved meanwhile; the editor does not change
+	    // its group.
+	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
@@ -1245,6 +1297,11 @@ m_mod_board(char *bname)
 	if (genbuf[0] == 'y') {
             newbh.brdattr ^= BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
+		break;
+	    // The board may have moved meanwhile; the editor does not change
+	    // its group.
+	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
@@ -1258,6 +1315,8 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	// Checked once confirmed, as boards can be moved in while asking.
+	else if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_LEAD))
+	    break;
 	else if (board_delete_blocked(bid))
 	    break;
 	else if (bh.brdattr & BRD_SYMBOLIC) {
@@ -1547,9 +1606,18 @@ m_newbrd(int whatclass, int recover)
 	}
     }
 
-    int added = add_board_record(&newboard);
+    // The board list's group modes can be out of date by now, after the
+    // prompts: its group may have moved, or another group taken its slot.
+    const char *refused = NULL;
+    if (!group_exists(whatclass))
+	refused = MSG_GROUP_GONE;
+    else if (!groupop_covers(whatclass))
+	refused = "此群組不在您管理的群組內。";
+    int added = refused ? -1 : add_board_record(&newboard);
     if (added < 0) {
-	if (added == ADD_BOARD_GROUP_GONE)
+	if (refused)
+	    vmsg(refused);
+	else if (added == ADD_BOARD_GROUP_GONE)
 	    vmsg(MSG_GROUP_GONE);
 	else if (SHM->Bnumber >= MAX_BOARD)
 	    vmsg("看板已滿，請洽系統站長");
@@ -1636,7 +1704,15 @@ int make_board_link_interactively(int gid)
     if (!buf[0])
 	return -1;
 
-
+    // As in m_newbrd(), the list's modes can be out of date by now.
+    if (!group_exists(gid)) {
+	vmsg(MSG_GROUP_GONE);
+	return -1;
+    }
+    if (!groupop_leads(gid)) {
+	vmsg("此群組不在您擔任群組長的群組內。");
+	return -1;
+    }
     int made = make_board_link(buf, gid);
     if (made < 0) {
 	vmsg(made == ADD_BOARD_GROUP_GONE ? MSG_GROUP_GONE : "看板連結建立失敗");

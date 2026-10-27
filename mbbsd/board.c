@@ -1559,6 +1559,9 @@ link_target_bid(const boardheader_t *link)
 }
 
 
+static int groupop_unlimited(void);
+static int group_modes_covering(int bid);
+
 static void
 load_boards(char *key)
 {
@@ -1698,6 +1701,14 @@ load_boards(char *key)
 	assert(0<=class_bid-1 && class_bid-1<MAX_BOARD);
 	if (bptr->firstchild[type] == 0 || bptr->childcount==0)
 	    resolve_board_group(class_bid, type);
+	// The list's modes can be out of date: see list_groupop_now(). Its
+	// group can even be gone, its slot now holding a board or link, and
+	// group_modes_covering() would go by the group that one is in.
+	// Sysops and board admins are not limited.
+	int list_modes = (groupop_unlimited() || group_exists(class_bid)) ?
+	    group_modes_covering(class_bid) : 0;
+	int list_op = list_modes & MODE_GROUP_OP;
+	int list_lead = list_modes & MODE_GROUP_LEAD;
 
         childcount = bptr->childcount;  // Ptt: child count after resolve_board_group
 
@@ -1709,12 +1720,12 @@ load_boards(char *key)
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
             bptr = getbcache(bid);
 	    state = HasBoardPerm(bptr);
-	    if ( !(state || CBRD_IS_GROUP_OP()) || TITLE_MATCH(bptr, storage_key) )
+	    if ( !(state || list_op) || TITLE_MATCH(bptr, storage_key) )
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
 		/* Only SYSOP/GroupLead knows a board is a link or not. */
-		if (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_LEAD())
+		if (list_lead)
 		    state |= NBRD_SYMBOLIC;
 		else {
 		    bid = link_target_bid(bptr);
@@ -2405,16 +2416,26 @@ groupop_restore(int saved)
     currmode = (currmode & ~GROUP_MODES) | (saved & GROUP_MODES);
 }
 
+/* The group modes that are on and cover board or group bid: as in
+ * groupop_narrow(), bid must be inside a group that gives the user the mode,
+ * unless the user is a sysop or board admin. */
+static int
+group_modes_covering(int bid)
+{
+    if (groupop_unlimited())
+        return GROUP_MODES;
+    // With no modes on, skip walking up the groups.
+    if (!(currmode & GROUP_MODES))
+        return 0;
+    return currmode & GROUP_MODES & group_roles(bid);
+}
+
 /* Whether group mode `mode`, MODE_GROUP_OP or MODE_GROUP_LEAD, is on and
- * covers board or group bid: as in groupop_narrow(), bid must be inside a
- * group that gives the user that mode, unless the user is a sysop or board
- * admin. */
+ * covers board or group bid. */
 static int
 group_mode_covers(int mode, int bid)
 {
-    if (groupop_unlimited())
-        return 1;
-    return (currmode & mode) && (group_roles(bid) & mode);
+    return (group_modes_covering(bid) & mode) != 0;
 }
 
 int
@@ -2429,9 +2450,29 @@ groupop_leads(int bid)
     return group_mode_covers(MODE_GROUP_LEAD, bid);
 }
 
+/* Whether group mode `mode` still holds in the group list the user is in,
+ * for the commands that add to it or change it, saying so when the group is
+ * gone and then closing the list (when ctx is given), whose rows are gone
+ * too. The list got its modes when it was entered, but while it is open,
+ * another session can move the group into one the user only manages, or
+ * delete it and let another group take its slot. m_newbrd() and
+ * make_board_link_interactively() check again before writing. */
+static int
+list_groupop_now(cmd_ctx_t *ctx, int mode)
+{
+    if (IN_CLASS() && !group_exists(class_bid)) {
+        vmsg(MSG_GROUP_GONE);
+        if (ctx)
+            ctx->quit = true;
+        return 0;
+    }
+    return group_mode_covers(mode, class_bid);
+}
+
 /* Whether group mode `mode` is on and lets the user change the settings of
  * board or group bid, going by the groups above it as they are now: the
- * settings, a group's BM list included, belong to those. Sysops and board
+ * settings, a group's BM list included, belong to those. 'E' checks it before
+ * opening m_mod_board(), which checks again before writing. Sysops and board
  * admins may. */
 int
 groupop_may_edit(int bid, int mode)
@@ -3033,8 +3074,10 @@ board_cmd_edit_board(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_new_group(cmd_ctx_t *ctx) {
-    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
+    if (!IN_CLASS() || !list_groupop_now(ctx, MODE_GROUP_OP)) {
+        ctx->redraw = true;
         return 0;
+    }
     int new_bid = m_newbrd(class_bid, 1);
     brdnum = -1;
     ctx->reload = true;
@@ -3052,8 +3095,10 @@ board_cmd_new_group(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_new_board(cmd_ctx_t *ctx) {
-    if (!IN_CLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
+    if (!IN_CLASS() || !list_groupop_now(ctx, MODE_GROUP_OP)) {
+        ctx->redraw = true;
         return 0;
+    }
     int new_bid = m_newbrd(class_bid, 0);
     brdnum = -1;
     ctx->reload = true;
@@ -3071,8 +3116,10 @@ board_cmd_new_board(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_edit_note(cmd_ctx_t *ctx) {
-    if (!IN_SUBCLASS() || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
+    if (!IN_SUBCLASS() || !list_groupop_now(ctx, MODE_GROUP_OP)) {
+        ctx->redraw = true;
         return 0;
+    }
     char buf[PATHLEN];
     setbpath(buf, getbcache(class_bid)->brdname);
     Mkdir(buf);
@@ -3152,6 +3199,11 @@ fav_cmd_untag_all(cmd_ctx_t *ctx) {
 
 static int
 fav_cmd_paste_tagged(cmd_ctx_t *ctx) {
+    // As for 'B' and the others, the list's modes may be out of date.
+    if (IN_CLASS() && !list_groupop_now(ctx, MODE_GROUP_OP)) {
+        ctx->redraw = true;
+        return 0;
+    }
     if (IN_CLASS() && paste_taged_brds(class_bid)) {
         brdnum = -1;
         ctx->reload = true;
@@ -3163,8 +3215,11 @@ static int
 fav_cmd_add_line_or_link(cmd_ctx_t *ctx) {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
     int num = ctx->curr;
-    if (IN_CLASS() &&
-        (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())) {
+    if (IN_CLASS()) {
+        if (!list_groupop_now(ctx, MODE_GROUP_LEAD)) {
+            ctx->redraw = true;
+            return 0;
+        }
         brdnum = -1;
         ctx->reload = true;
         if (make_board_link_interactively(class_bid) < 0)
@@ -3361,13 +3416,10 @@ board_reload_and_check_empty(char *keyword) {
     }
     if (!IS_LISTING_BRD())
         return 1;
-    if (!HasUserPerm(PERM_SYSOP) && !CBRD_IS_GROUP_OP())
+    // Another session may have deleted the group, which is why it is empty;
+    // list_groupop_now() says so.
+    if (!list_groupop_now(NULL, MODE_GROUP_OP))
         return -1;
-    // Another session may have deleted the group, which is why it is empty.
-    if (IN_CLASS() && !group_exists(class_bid)) {
-        vmsg(MSG_GROUP_GONE);
-        return -1;
-    }
     if (paste_taged_brds(class_bid) || m_newbrd(class_bid, 0) == -1)
         return -1;
     brdnum = -1;
