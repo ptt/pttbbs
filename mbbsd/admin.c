@@ -995,10 +995,43 @@ x_file(void)
     return psb_admin_edit();
 }
 
+/* An empty slot to put a new board in, or 0 if there is none: one that no
+ * board has as its group and no link has as its target. Boards and links
+ * that a deleted board left behind still point to its slot, and would take
+ * whatever board got it next as their group or target. */
+static int
+free_board_slot(void)
+{
+    char *used = calloc(MAX_BOARD + 1, 1);
+    int i, n, bid = 0;
+
+    if (!used)
+	return 0;
+    // As getbnum() does: bcache may be being reloaded.
+    if (SHM->Bbusystate)
+	sleep(1);
+    n = num_boards();
+    for (i = 0; i < n; i++) {
+	const boardheader_t *bh = &bcache[i];
+	if (!bh->brdname[0])
+	    continue;
+	if (0 < bh->gid && bh->gid <= MAX_BOARD)
+	    used[bh->gid] = 1;
+	if ((bh->brdattr & BRD_SYMBOLIC) &&
+	    0 < BRD_LINK_TARGET(bh) && BRD_LINK_TARGET(bh) <= MAX_BOARD)
+	    used[BRD_LINK_TARGET(bh)] = 1;
+    }
+    for (i = 0; i < n && !bid; i++)
+	if (!bcache[i].brdname[0] && !used[i + 1])
+	    bid = i + 1;
+    free(used);
+    return bid;
+}
+
 static int add_board_record(const boardheader_t *board)
 {
     int bid;
-    if ((bid = getbnum("")) > 0) {
+    if ((bid = free_board_slot()) > 0) {
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
