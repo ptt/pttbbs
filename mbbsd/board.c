@@ -2423,6 +2423,12 @@ groupop_covers(int bid)
     return group_mode_covers(MODE_GROUP_OP, bid);
 }
 
+int
+groupop_leads(int bid)
+{
+    return group_mode_covers(MODE_GROUP_LEAD, bid);
+}
+
 /* Whether group mode `mode` is on and lets the user change the settings of
  * board or group bid, going by the groups above it as they are now: the
  * settings, a group's BM list included, belong to those. Sysops and board
@@ -2955,13 +2961,31 @@ board_cmd_reset_sort(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_del_link(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_LEAD()))
+    if (ctx->total <= 0)
         return 0;
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
     boardstat_t *ptr = &nbrd[num];
     if (ptr->myattr & NBRD_SYMBOLIC) {
-        if (vans("確定刪除連結？[N/y]") == 'y')
+        char name[IDLEN + 1];
+        STRLCPY(name, B_BH(ptr)->brdname);
+        int target = BRD_LINK_TARGET(B_BH(ptr));
+        if (vans("確定刪除連結？[N/y]") != 'y') {
+            ctx->redraw = true;
+            return 0;
+        }
+        // Checked once confirmed, as the list may be older than the record:
+        // another session can delete the link, and a new board or link take
+        // its slot, while the prompt waits. Links share names (see
+        // make_board_link()), so compare the target as well.
+        if (!(B_BH(ptr)->brdattr & BRD_SYMBOLIC) ||
+            strcmp(B_BH(ptr)->brdname, name) ||
+            BRD_LINK_TARGET(B_BH(ptr)) != target)
+            vmsg("此連結已不存在。");
+        // The link itself must be inside a group the user leads.
+        else if (!groupop_leads(ptr->bid))
+            vmsg("此連結不在您擔任群組長的群組內。");
+        else
             delete_board_link(getbcache(ptr->bid), ptr->bid);
     }
     brdnum = -1;
