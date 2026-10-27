@@ -2423,6 +2423,18 @@ groupop_covers(int bid)
     return group_mode_covers(MODE_GROUP_OP, bid);
 }
 
+/* Whether group mode `mode` is on and lets the user change the settings of
+ * board or group bid, going by the groups above it as they are now: the
+ * settings, a group's BM list included, belong to those. Sysops and board
+ * admins may. */
+int
+groupop_may_edit(int bid, int mode)
+{
+    if (groupop_unlimited())
+        return 1;
+    return (currmode & mode) && (group_roles_above(bid) & mode);
+}
+
 static int
 paste_taged_brds(int gid)
 {
@@ -2959,21 +2971,37 @@ board_cmd_del_link(cmd_ctx_t *ctx) {
 
 static int
 board_cmd_edit_board(cmd_ctx_t *ctx) {
-    if (ctx->total <= 0 || (!HasUserPerm(PERM_BOARDS) && !CBRD_IS_GROUP_OP()))
+    if (ctx->total <= 0)
         return 0;
     int num = ctx->curr;
     assert(0 <= num && num < nbrdsize);
     boardstat_t *ptr = &nbrd[num];
     if (!brdstat_is_board(ptr))
         return 0;
+    // The row may be a link target or a hot board outside the user's groups.
+    // A group's settings, BM list included, belong to the groups above it,
+    // so go by those, not by the row.
+    int roles = group_roles_above(ptr->bid);
+    if (!groupop_may_edit(ptr->bid, MODE_GROUP_OP)) {
+        vmsg((B_BH(ptr)->brdattr & BRD_GROUPBOARD) ?
+             "群組的設定要由上一層群組的小組長修改。" :
+             "此看板不在您管理的群組內。");
+        ctx->redraw = true;
+        return 0;
+    }
     move(1, 0);
     clrtobot();
+    // Deleting a board in m_mod_board() takes group-lead mode, which must
+    // come from those groups as well.
+    int saved = groupop_save();
+    groupop_keep(roles);
     // m_mod_board() looks the board up by name, and several links can share
     // a name (see make_board_link()), so the name may lead to another link.
     if (getbnum(B_BH(ptr)->brdname) == ptr->bid)
         m_mod_board(B_BH(ptr)->brdname);
     else
         vmsg("有其他同名的看板連結，請改用 D 刪除此連結。");
+    groupop_restore(saved);
     brdnum = -1;
     ctx->reload = true;
     return 0;

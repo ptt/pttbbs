@@ -105,6 +105,7 @@ int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
 int BoardPermNeedsSysopOverride(boardheader_t *bptr);
 int groupop_covers(int bid);
+int groupop_may_edit(int bid, int mode);
 void groupop_set_board(int bid);
 int groupop_save(void);
 void groupop_restore(int saved);

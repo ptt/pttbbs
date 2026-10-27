@@ -1619,10 +1619,9 @@ int make_board_link_interactively(int gid)
     char buf[32];
     vs_hdr("建立看板連結");
 
-    outs("\n\n請注意: 看板連結會導致連結所在的群組之小組長一樣有群組管理權限。\n"
+    outs("\n\n請注意: 小組長只對自己管理的群組內的看板有群組管理權限。\n"
          "(例，在群組 A [小組長: abc]下建立了通往群組 B 的看板 C 的連結，\n"
-         " 結果會導致 abc 在進入看板 C 時也有群組管理權限。)\n\n"
-         "這是已知現象而且無解。在建立看板時請確定您已了解可能會發生的問題。\n");
+         " abc 進入看板 C 時，不會因為這個連結而有群組管理權限。)\n");
 
     if (!group_exists(gid)) {
         vmsg(MSG_GROUP_GONE);
