@@ -2223,6 +2223,11 @@ paste_taged_brds(int gid)
 
     if (gid <= 0  || ! (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_OP()) ||
         vans("貼上標記的看板?(y/N)")!='y') return 0;
+    // The group of the list may be deleted by now.
+    if (!group_exists(gid)) {
+        vmsg(MSG_GROUP_GONE);
+        return 0;
+    }
     fav = get_fav_root();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
@@ -3049,6 +3054,11 @@ board_reload_and_check_empty(char *keyword) {
         return 1;
     if (!HasUserPerm(PERM_SYSOP) && !CBRD_IS_GROUP_OP())
         return -1;
+    // Another session may have deleted the group, which is why it is empty.
+    if (IN_CLASS() && !group_exists(class_bid)) {
+        vmsg(MSG_GROUP_GONE);
+        return -1;
+    }
     if (paste_taged_brds(class_bid) || m_newbrd(class_bid, 0) == -1)
         return -1;
     brdnum = -1;

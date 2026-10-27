@@ -113,6 +113,7 @@
 #define MSG_DEL_CANCEL  "取消刪除"
 #define MSG_DEL_ERROR   "刪除錯誤"
 #define MSG_DEL_NY      "請確定刪除(Y/N)?[N] "
+#define MSG_GROUP_GONE  "此群組已不存在。"
 
 #define MSG_FWD_OK      "文章轉寄完成!"
 #define MSG_FWD_ERR1    "轉寄錯誤: 系統錯誤 system error"

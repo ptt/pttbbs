@@ -662,7 +662,7 @@ board_delete_blocked(int bid)
     int child, target;
     const boardheader_t *ch;
 
-    if (bid != 1 && !GROUP_LISTS_BOARDS(getbcache(bid)))
+    if (!group_exists(bid))
         return 0;
     if (!(child = board_first_child(bid)))
         return 0;
@@ -1042,6 +1042,17 @@ x_file(void)
     return psb_admin_edit();
 }
 
+/* Whether gid is still a group that boards can be added to, or the class
+ * root, bid 1, which initbbs makes a plain board. A board list keeps its
+ * group's bid while it is open, and another session can delete the group
+ * once it is empty, or change it so that it no longer lists boards. */
+int
+group_exists(int gid)
+{
+    return gid == 1 ||
+	(0 < gid && gid <= MAX_BOARD && GROUP_LISTS_BOARDS(getbcache(gid)));
+}
+
 /* An empty slot to put a new board in, or 0 if there is none: one that no
  * board has as its group and no link has as its target. Boards and links
  * that a deleted board left behind still point to its slot, and would take
@@ -1075,9 +1086,16 @@ free_board_slot(void)
     return bid;
 }
 
+/* add_board_record() and make_board_link() return this when the group is
+ * gone, which is checked right before writing, as the callers ask for the
+ * board's details first. */
+#define ADD_BOARD_GROUP_GONE (-2)
+
 static int add_board_record(const boardheader_t *board)
 {
     int bid;
+    if (!group_exists(board->gid))
+	return ADD_BOARD_GROUP_GONE;
     if ((bid = free_board_slot()) > 0) {
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, board, sizeof(boardheader_t), bid);
@@ -1112,6 +1130,10 @@ m_newbrd(int whatclass, int recover)
     newboard.gid = whatclass;
     if (newboard.gid == 0) {
 	vmsg("請先選擇一個類別再開板!");
+	return -1;
+    }
+    if (!group_exists(whatclass)) {
+	vmsg(MSG_GROUP_GONE);
 	return -1;
     }
     do {
@@ -1195,8 +1217,11 @@ m_newbrd(int whatclass, int recover)
 	}
     }
 
-    if (add_board_record(&newboard) < 0) {
-	if (SHM->Bnumber >= MAX_BOARD)
+    int added = add_board_record(&newboard);
+    if (added < 0) {
+	if (added == ADD_BOARD_GROUP_GONE)
+	    vmsg(MSG_GROUP_GONE);
+	else if (SHM->Bnumber >= MAX_BOARD)
 	    vmsg("看板已滿，請洽系統站長");
 	else
     	    vmsg("看板寫入失敗");
@@ -1248,8 +1273,9 @@ int make_board_link(const char *bname, int gid)
     BRD_LINK_TARGET(&newboard) = bid;
     newboard.brdattr = BRD_SYMBOLIC;
 
-    if (add_board_record(&newboard) < 0)
-	return -1;
+    int added = add_board_record(&newboard);
+    if (added < 0)
+	return added;
     return bid;
 }
 
@@ -1263,6 +1289,10 @@ int make_board_link_interactively(int gid)
          " 結果會導致 abc 在進入看板 C 時也有群組管理權限。)\n\n"
          "這是已知現象而且無解。在建立看板時請確定您已了解可能會發生的問題。\n");
 
+    if (!group_exists(gid)) {
+        vmsg(MSG_GROUP_GONE);
+        return -1;
+    }
     if (tolower(vmsg("確定要建立新看板連結嗎？ [y/N]: ")) != 'y')
         return -1;
 
@@ -1271,8 +1301,9 @@ int make_board_link_interactively(int gid)
 	return -1;
 
 
-    if (make_board_link(buf, gid) < 0) {
-	vmsg("看板連結建立失敗");
+    int made = make_board_link(buf, gid);
+    if (made < 0) {
+	vmsg(made == ADD_BOARD_GROUP_GONE ? MSG_GROUP_GONE : "看板連結建立失敗");
 	return -1;
     }
     log_usies("NewSymbolic", buf);
