@@ -1236,6 +1236,30 @@ calc_post_cap(int post_count, int base_cap)
     return cap;
 }
 
+int
+check_title_change_fee(const fileheader_t *fhdr, const char *new_title)
+{
+    if (!fhdr || !is_file_owner(fhdr, &cuser))
+        return 0;
+
+    if (!new_title || !*new_title || strcmp(new_title, fhdr->title) == 0)
+        return 0;
+
+    if (IsFreeBoardName(currboard) || (currbrdattr & BRD_NOCREDIT) ||
+        (currmode & MODE_DIGEST))
+        return 0;
+
+    int entry_money = query_file_money(fhdr);
+    if (entry_money <= 0)
+        return 0;
+
+    int max_pay = get_max_pay_by_post_title(new_title);
+    if (max_pay >= 0 && max_pay < entry_money)
+        return entry_money;
+
+    return 0;
+}
+
 
 static int
 do_post_article(int edflags)
@@ -1981,6 +2005,30 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // OK to save file.
+    int fee = check_title_change_fee(fhdr, save_title);
+    if (fee > 0) {
+        reload_money();
+        if (cuser.money < fee) {
+            vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME "，標題維持不變。", fee);
+            STRLCPY(save_title, fhdr->title);
+            fee = 0;
+        } else {
+            char ans[3] = "";
+            getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "修改此標題需扣除全部稿費 %d " MONEYNAME "，確定(Y/N)?[n] ", fee), ans, 3, LCECHO);
+            if (ans[0] != 'y') {
+                STRLCPY(save_title, fhdr->title);
+                fee = 0;
+            }
+        }
+
+        // Check again because of getdata and we hope the code below is fast enough.
+        reload_money();
+        if (fee && cuser.money < fee) {
+            STRLCPY(save_title, fhdr->title);
+            fee = 0;
+        }
+    }
+
     oldmt = dasht(genbuf);
     rev = timecapsule_add_revision(genbuf);
 
@@ -1999,6 +2047,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     fhdr->modified = dasht(genbuf);
+    if (fee > 0)
+        fhdr->multi.money = 0;
     if (strcmp(save_title, fhdr->title) != 0) {
         LOG_IF(LOG_CONF_EDIT_TITLE,
                log_filef("log/edit_title.log",
@@ -2010,7 +2060,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // substitute_ref_record(direct, fhdr, ent);
     modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
-                    NULL, NULL, 0, NULL, 0, 0);
+                    NULL, NULL, 0, &fhdr->multi, 0, 0);
+
+    if (fee > 0) {
+        pay(fee, "%s 看板修改此標題扣除稿費: %s", currboard, save_title);
+        vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
+    }
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2600,6 +2655,15 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     if (memcmp(&tmpfhdr, fhdr, sizeof(tmpfhdr)) == 0)
         return FULLUPDATE;
 
+    int fee = check_title_change_fee(fhdr, tmpfhdr.title);
+    if (fee > 0) {
+        reload_money();
+        if (cuser.money < fee) {
+            vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME, fee);
+            return FULLUPDATE;
+        }
+    }
+
     if (allow >= 2) {
         // Render in b_lines -2
         move(b_lines - 4, 0); clrtobot();
@@ -2607,14 +2671,32 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
                tmpfhdr.title);
     }
 
-    getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
+    if (fee > 0) {
+        getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "修改此標題需扣除全部稿費 %d " MONEYNAME "，確定(Y/N)?[n] ", fee), genbuf, 3, LCECHO);
+    } else {
+        getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
+    }
     if (genbuf[0] != 'y')
         return FULLUPDATE;
 
+    // Check again because of getdata and we hope the code below is fast enough.
+    reload_money();
+    if (fee && cuser.money < fee) {
+        vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME, fee);
+        return FULLUPDATE;
+    }
+
+    if (fee > 0)
+        tmpfhdr.multi.money = 0;
+
     if (modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
-                        tmpfhdr.owner, tmpfhdr.date, 0, NULL, 0, 0) != 0) {
+                        tmpfhdr.owner, tmpfhdr.date, 0, &tmpfhdr.multi, 0, 0) != 0) {
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
+    }
+    if (fee > 0) {
+        pay(fee, "%s 看板修改此標題扣除稿費: %s", currboard, tmpfhdr.title);
+        vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
     }
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
