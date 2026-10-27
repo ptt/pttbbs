@@ -2166,7 +2166,8 @@ set_menu_group_op(const boardheader_t *bp)
 static boardstat_t *
 follow_link(boardstat_t *ptr, boardstat_t *target)
 {
-    if (!(ptr->myattr & NBRD_SYMBOLIC))
+    // Ask the board: My Favorites rows never have NBRD_SYMBOLIC.
+    if (!brdstat_is_board(ptr) || !(B_BH(ptr)->brdattr & BRD_SYMBOLIC))
         return ptr;
     *target = *ptr;
     target->bid = link_target_bid(B_BH(ptr));
