@@ -1492,6 +1492,22 @@ brdstat_is_board(const boardstat_t *ptr)
     return !(ptr->myattr & (NBRD_LINE | NBRD_FOLDER));
 }
 
+/* The bid a link leads to, or 0 when its target is gone. Deleting the target
+ * empties its slot, and a new link can take the slot. */
+static int
+link_target_bid(const boardheader_t *link)
+{
+    int bid = BRD_LINK_TARGET(link);
+    const boardheader_t *bh;
+
+    if (bid < 1 || bid > MAX_BOARD)
+        return 0;
+    bh = getbcache(bid);
+    if (!bh->brdname[0] || (bh->brdattr & BRD_SYMBOLIC))
+        return 0;
+    return bid;
+}
+
 
 static void
 load_boards(char *key)
@@ -1648,8 +1664,8 @@ load_boards(char *key)
 		if (HasUserPerm(PERM_SYSOP) || CBRD_IS_GROUP_LEAD())
 		    state |= NBRD_SYMBOLIC;
 		else {
-		    bid = BRD_LINK_TARGET(bptr);
-		    if (bcache[bid - 1].brdname[0] == 0) {
+		    bid = link_target_bid(bptr);
+		    if (!bid) {
 			vmsg("連結已損毀，請至 SYSOP 回報此問題。");
 			continue;
 		    }
@@ -2144,11 +2160,18 @@ set_menu_group_op(const boardheader_t *bp)
         currmode |= MODE_GROUP_LEAD;
 }
 
-static void replace_link_by_target(boardstat_t *board)
+/* For a link row, copies the row to target with the link's target in place
+ * of the link, and returns target, so that the row itself stays the link.
+ * Returns ptr for other rows, and NULL when the link's target is gone. */
+static boardstat_t *
+follow_link(boardstat_t *ptr, boardstat_t *target)
 {
-    assert(0<=board->bid-1 && board->bid-1<MAX_BOARD);
-    board->bid = BRD_LINK_TARGET(getbcache(board->bid));
-    board->myattr &= ~NBRD_SYMBOLIC;
+    if (!(ptr->myattr & NBRD_SYMBOLIC))
+        return ptr;
+    *target = *ptr;
+    target->bid = link_target_bid(B_BH(ptr));
+    target->myattr &= ~NBRD_SYMBOLIC;
+    return target->bid ? target : NULL;
 }
 
 /* Whether moving bid into group gid would make a gid cycle: gid is bid itself
@@ -2547,11 +2570,12 @@ board_cmd_select(cmd_ctx_t *ctx) {
             board_enter_fav_folder(ptr, ctx);
             return 0;
         }
-    } else if (ptr->myattr & NBRD_SYMBOLIC) {
-        // Enter the target through a copy, so that the row stays the link.
-        target = *ptr;
-        replace_link_by_target(&target);
-        ptr = &target;
+    }
+    ptr = follow_link(ptr, &target);
+    if (ptr == NULL) {
+        vmsg("此連結的看板已不存在。");
+        ctx->redraw_footer_lines = 1;
+        return 0;
     }
 
     assert(0 <= ptr->bid - 1 && ptr->bid - 1 < MAX_BOARD);
