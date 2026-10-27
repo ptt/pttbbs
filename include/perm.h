@@ -70,6 +70,10 @@
                           !((bptr)->brdattr & BRD_GROUPBOARD))
 #define IS_GROUP(bptr)   ((bptr)->brdname[0] && \
                           ((bptr)->brdattr & BRD_GROUPBOARD))
+/* A group whose list shows the boards in it: entering a link follows it, and
+ * entering the hot board group shows the hot boards. */
+#define GROUP_LISTS_BOARDS(bptr) (IS_GROUP(bptr) && \
+                          !((bptr)->brdattr & (BRD_SYMBOLIC | BRD_TOP)))
 
 #define IS_OPENBRD(bptr) \
    (!(((bptr)->brdattr & (BRD_HIDE | BRD_TOP)) ||             \

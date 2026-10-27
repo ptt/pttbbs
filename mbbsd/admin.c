@@ -635,6 +635,50 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
      free(fh);
 }
 
+/* A board or link that still has board bid as its group, or 0. */
+static int
+board_first_child(int bid)
+{
+    int i, n = num_boards();
+
+    for (i = 0; i < n; i++)
+        if (i + 1 != bid && bcache[i].brdname[0] && bcache[i].gid == bid)
+            return i + 1;
+    return 0;
+}
+
+/* Whether group bid can't be deleted because boards are still in it, and if
+ * so says which. Deleting it would leave them listed nowhere.
+ *
+ * Bid 1, the class root, counts as such a group even where initbbs makes it
+ * the SYSOP board. Other boards and links can have boards in them only when
+ * they took the slot of a group deleted with boards in it, and the hot board
+ * group shows hot boards instead of its own. Boards in those are listed
+ * nowhere already, and free_board_slot() keeps the slot from being used
+ * again, so deleting such a board changes nothing for them. */
+static int
+board_delete_blocked(int bid)
+{
+    int child, target;
+    const boardheader_t *ch;
+
+    if (bid != 1 && !GROUP_LISTS_BOARDS(getbcache(bid)))
+        return 0;
+    if (!(child = board_first_child(bid)))
+        return 0;
+    ch = getbcache(child);
+    target = BRD_LINK_TARGET(ch);
+    // A link's name is its target's with the last letter turned into '~',
+    // which can't be looked up, so name the target while there is one.
+    if ((ch->brdattr & BRD_SYMBOLIC) && 0 < target && target <= MAX_BOARD &&
+        getbcache(target)->brdname[0])
+        vmsgf("連到 %s 的看板連結等仍在其中，請先移走再刪除。",
+              getbcache(target)->brdname);
+    else
+        vmsgf("%s 等看板仍在其中，請先移走再刪除。", ch->brdname);
+    return 1;
+}
+
 int
 m_mod_board(char *bname)
 {
@@ -748,6 +792,9 @@ m_mod_board(char *bname)
 	getdata_str(9, 0, MSG_SURE_NY, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
+	// Checked once confirmed, as boards can be moved in while asking.
+	else if (board_delete_blocked(bid))
+	    break;
 	else if (bh.brdattr & BRD_SYMBOLIC) {
 	    delete_board_link(&bh, bid);
 	}
