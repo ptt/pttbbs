@@ -339,7 +339,6 @@ const char     * const friend_file[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = FN_OVERRIDES,
     [FRIEND_REJECT] = FN_REJECT,
     [FRIEND_ALOHA] = FN_ALOHAED,
-    [FRIEND_SPECIAL] = "", /* may point to other filename */
 };
 
 

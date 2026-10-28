@@ -309,8 +309,7 @@ _Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
 #define FRIEND_OVERRIDE 0
 #define FRIEND_REJECT   1
 #define FRIEND_ALOHA    2
-#define FRIEND_SPECIAL  3
-#define FRIEND_MAX      4
+#define FRIEND_MAX      3
 
 #define LOCK_THIS   1    // lock這線不能重複玩
 #define LOCK_MULTI  2    // lock所有線不能重複玩   

@@ -4,34 +4,27 @@
 /* 特別名單                              */
 /* ------------------------------------- */
 
-/* Ptt 其他特別名單的檔名 */
-static char     special_list[7] = "list.0";
-static char     special_des[7] = "ldes.0";
-
-/* 特別名單的上限 */
+/* 好友名單的上限 */
 static const unsigned int friend_max[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = MAX_FRIEND,
     [FRIEND_REJECT]   = MAX_REJECT,
     [FRIEND_ALOHA]    = MAX_LOGIN_INFO,
-    [FRIEND_SPECIAL]  = MAX_NAMELIST,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
 
-/* Ptt 各種特別名單的補述 */
+/* Ptt 各種好友名單的補述 */
 static const char * const friend_desc[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = "友誼描述：",
     [FRIEND_REJECT]   = "惡形惡狀：",
     [FRIEND_ALOHA]    = "",
-    [FRIEND_SPECIAL]  = "描述一下：",
 };
 
-/* Ptt 各種特別名單的中文敘述 */
+/* Ptt 各種好友名單的中文敘述 */
 static const char * const friend_list[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = "好友名單",
     [FRIEND_REJECT]   = "壞人名單",
     [FRIEND_ALOHA]    = "上線通知",
-    [FRIEND_SPECIAL]  = "其它特別名單",
 };
 
 /* sized in screen width */
@@ -41,10 +34,10 @@ static const char * const friend_list[FRIEND_MAX] = {
 void
 setfriendfile(char *fpath, int type)
 {
-    if (type == FRIEND_SPECIAL)
-	setuserfile(fpath, special_list);
-    else
+    if (type >= 0 && type < FRIEND_MAX)
 	setuserfile(fpath, friend_file[type]);
+    else
+	fpath[0] = '\0';
 }
 static int
 delete_friend_from_file(const char *file, const char *string, int  case_sensitive)
@@ -81,7 +74,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 #define MAX_EXPIRE_MONTH (800)
 
 
-static int
+int
 user_list_add(const char *fpath, const char *uident, const char *des,
               const char *desc_prompt, unsigned int max_entries)
 {
@@ -391,30 +384,86 @@ is_rejected(const char *userid) {
 }
 
 void
-friend_special(void)
+special_list_path(char *fpath, int index)
 {
-    char            genbuf[STRLEN], i;
-    FILE           *fp;
-    for (i = 0; i <= 9; i++) {
-	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
-	special_des[5] = i + '0';
-	if( (fp = fopen(TEMP_USERFILE(special_des), "r")) != NULL ){
-	    fgets(genbuf + 15, 40, fp);
-	    genbuf[47] = 0;
-	    fclose(fp);
+    if (index < 0 || index >= MAX_SPECIAL_LIST) {
+	fpath[0] = '\0';
+	return;
+    }
+    char fn[16];
+    snprintf(fn, sizeof(fn), "list.%d", index);
+    setuserfile(fpath, fn);
+}
+
+void
+special_list_desc_path(char *fpath, int index)
+{
+    if (index < 0 || index >= MAX_SPECIAL_LIST) {
+	fpath[0] = '\0';
+	return;
+    }
+    char fn[16];
+    snprintf(fn, sizeof(fn), "ldes.%d", index);
+    setuserfile(fpath, fn);
+}
+
+int
+special_list_get_title(int index, char *title, size_t sz)
+{
+    if (index < 0 || index >= MAX_SPECIAL_LIST || !title || sz == 0)
+	return -1;
+    title[0] = '\0';
+    char fpath[PATHLEN];
+    special_list_desc_path(fpath, index);
+    FILE *fp = fopen(fpath, "r");
+    if (fp) {
+	if (fgets(title, sz, fp)) {
+	    char *p = strpbrk(title, "\r\n");
+	    if (p)
+		*p = '\0';
 	}
+	fclose(fp);
+	return 0;
+    }
+    return -1;
+}
+
+int
+special_list_set_title(int index, const char *title)
+{
+    if (index < 0 || index >= MAX_SPECIAL_LIST || !title)
+	return -1;
+    char fpath[PATHLEN];
+    special_list_desc_path(fpath, index);
+    FILE *fp = fopen(fpath, "w");
+    if (fp) {
+	fputs(title, fp);
+	fclose(fp);
+	return 0;
+    }
+    return -1;
+}
+
+int
+select_special_list(void)
+{
+    char genbuf[STRLEN];
+    char title[MAX_DESCLEN];
+
+    for (int i = 0; i < MAX_SPECIAL_LIST; i++) {
+	title[0] = '\0';
+	special_list_get_title(i, title, sizeof(title));
+	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. %s", i, title);
 	move(i + 12, 0);
 	clrtoeol();
 	outs(genbuf);
     }
-    getdata(22, 0, "請選擇第幾號特別名單 (0~9)[0]?", genbuf, 3, LCECHO);
-    if (genbuf[0] >= '0' && genbuf[0] <= '9') {
-	special_list[5] = genbuf[0];
-	special_des[5] = genbuf[0];
-    } else {
-	special_list[5] = '0';
-	special_des[5] = '0';
-    }
+    int rc = getdata(22, 0, "請選擇第幾號特別名單 (0~9)[0]?", genbuf, 3, LCECHO);
+    if (rc < 0 || genbuf[0] == 'q')
+	return -1;
+    if (genbuf[0] >= '0' && genbuf[0] <= '9')
+	return genbuf[0] - '0';
+    return 0;
 }
 
 
@@ -438,10 +487,22 @@ friend_append(const char *fpath, unsigned int max_entries, int count)
 		prints("  (%d) %-s\n", j, friend_list[i]);
 	    }
 	}
+	int special_choice = ++j;
+	prints("  (%d) 自訂特別名單 (0~9)\n", special_choice);
 
 	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
 	if (!buf[0])
 	    return 0;
+
+	if (buf[0] == 's' || (buf[0] - '0') == special_choice) {
+	    int idx = select_special_list();
+	    if (idx < 0)
+		continue;
+	    special_list_path(sfile, idx);
+	    if (strcmp(sfile, fpath) == 0)
+		continue;
+	    break;
+	}
 
 	int choice = buf[0] - '1';
 	int sel = -1;
@@ -460,10 +521,6 @@ friend_append(const char *fpath, unsigned int max_entries, int count)
 	if (sel < 0)
 	    continue;
 
-	if (sel == FRIEND_SPECIAL)
-	    friend_special();
-	else if (!*friend_file[sel])
-	    return 0;
 	setfriendfile(sfile, sel);
 	break;
     } while (1);
@@ -514,18 +571,53 @@ friend_validate(int type, int expire, int badpost)
     return user_list_validate(fpath, expire, badpost);
 }
 
+int
+edit_special_list(void)
+{
+    int idx = select_special_list();
+    if (idx < 0)
+	return 0;
+
+    char fpath[PATHLEN];
+    special_list_path(fpath, idx);
+
+    char list_title[MAX_DESCLEN] = "";
+    special_list_get_title(idx, list_title, sizeof(list_title));
+
+    char title_buf[64];
+    if (list_title[0])
+	snprintf(title_buf, sizeof(title_buf), "特別名單 (%d) %s", idx, list_title);
+    else
+	snprintf(title_buf, sizeof(title_buf), "特別名單 (%d)", idx);
+
+    user_list_cfg_t cfg = {
+	.title = title_buf,
+	.desc_prompt = "描述一下：",
+	.max_entries = MAX_NAMELIST,
+	.allow_waterball = 1,
+	.allow_clean = 1,
+	.import_fn = friend_append,
+    };
+
+    if (edit_user_list(fpath, &cfg)) {
+	char namebuf[32] = "";
+	STRLCPY(namebuf, list_title);
+	getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", namebuf, 30, DOECHO);
+	special_list_set_title(idx, namebuf);
+	friend_load();
+	return 1;
+    }
+    return 0;
+}
+
 void
 friend_edit(int type)
 {
     char            fpath[PATHLEN];
-    char            genbuf[PATHLEN];
-    FILE           *fp;
 
     if (type < 0 || (size_t)type >= ARRAY_SIZE(friend_list))
 	return;
 
-    if (type == FRIEND_SPECIAL)
-	friend_special();
     setfriendfile(fpath, type);
 
     user_list_cfg_t cfg = {
@@ -540,19 +632,6 @@ friend_edit(int type)
     if (edit_user_list(fpath, &cfg)) {
 	if (type == FRIEND_ALOHA) {
             friend_svc_reload(cuser.userid);
-	} else if (type == FRIEND_SPECIAL) {
-	    genbuf[0] = 0;
-	    AUTO_USERFILE(spec_file, special_des);
-	    if ((fp = fopen(spec_file, "r"))) {
-		fgets(genbuf, 30, fp);
-		fclose(fp);
-	    }
-	    getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", genbuf, 30,
-			DOECHO);
-	    if ((fp = fopen(spec_file, "w"))) {
-		fputs(genbuf, fp);
-		fclose(fp);
-	    }
 	}
 	friend_load();
     }

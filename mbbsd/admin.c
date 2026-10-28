@@ -413,12 +413,13 @@ search_key_user(const char *passwdfile, int mode)
 	    while ((ch = vkey()) == 0)
 		;
 	    if (ch == 'a' || ch == 'A') {
-		if(!friendfile[0])
-		{
-		    friend_special();
-		    setfriendfile(friendfile, FRIEND_SPECIAL);
+		if (!friendfile[0]) {
+		    int idx = select_special_list();
+		    if (idx < 0)
+			continue;
+		    special_list_path(friendfile, idx);
 		}
-		friend_add(user.userid, FRIEND_SPECIAL, keymatch);
+		user_list_add(friendfile, user.userid, keymatch, "´y­z¤@¤U¡G", MAX_NAMELIST);
 		break;
 	    }
 	    if (mode && (ch == 'f' || ch == 'F')) {

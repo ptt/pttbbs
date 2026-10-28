@@ -1062,8 +1062,8 @@ static int t_aloha() {
     return 0;
 }
 
-static int t_special() {
-    friend_edit(FRIEND_SPECIAL);
+static int t_special(void) {
+    edit_special_list();
     return 0;
 }
 

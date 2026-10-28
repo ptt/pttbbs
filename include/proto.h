@@ -302,6 +302,8 @@ typedef struct user_list_cfg {
 } user_list_cfg_t;
 
 int edit_user_list(const char *fpath, const user_list_cfg_t *cfg);
+int user_list_add(const char *fpath, const char *uident, const char *des,
+                  const char *desc_prompt, unsigned int max_entries);
 
 /* friend */
 void friend_edit(int type);
@@ -310,9 +312,17 @@ int t_override(void);
 int t_reject(void);
 void friend_add(const char *uident, int type, const char *des);
 void friend_delete(const char *uident, int type);
-void friend_special(void);
 void setfriendfile(char *fpath, int type);
 int is_rejected(const char *userid);
+
+/* special list */
+#define MAX_SPECIAL_LIST 10
+void special_list_path(char *fpath, int index);
+void special_list_desc_path(char *fpath, int index);
+int special_list_get_title(int index, char *title, size_t sz);
+int special_list_set_title(int index, const char *title);
+int select_special_list(void);
+int edit_special_list(void);
 
 /* gamble */
 int openticket(int bid);

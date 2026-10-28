@@ -889,7 +889,6 @@ multi_user_list(struct Vector *namelist, int *recipient,
 {
     char uid[IDLEN + 1];
     char genbuf[PATHLEN];
-    char listfile[] = "list.0";
     char msg_title[80];
     int i, cRemoved;
 
@@ -1019,10 +1018,11 @@ multi_user_list(struct Vector *namelist, int *recipient,
         case '7':
         case '8':
         case '9':
-            listfile[5] = genbuf[0];
-            genbuf[0] = '1';
+            special_list_path(genbuf, genbuf[0] - '0');
+            ToggleVector(namelist, recipient, genbuf, msg_title);
+            break;
         case 'i':
-            setuserfile(genbuf, genbuf[0] == '1' ? listfile : FN_OVERRIDES);
+            setuserfile(genbuf, FN_OVERRIDES);
             ToggleVector(namelist, recipient, genbuf, msg_title);
             break;
         case 'o':
