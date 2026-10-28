@@ -563,12 +563,13 @@ typedef struct
 
         oldwrapmode,    // traditional wrap
         oldstatusbar,   // traditional statusbar
-        rawmode;        // show file as-is.
+        rawmode,        // show file as-is.
+        comment_theme;  // comment color theme
 } MF_BrowsingPreference;
 
 MF_BrowsingPreference bpref =
 { MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1,
-    0, 0, 0, };
+    0, 0, 0, 0 };
 
 /* structure generalized for the one-arg mf_attach_handler */
 struct SimpleBuffer {
@@ -1486,6 +1487,7 @@ static char *override_attr = NULL;
  * display mf content from disps for MFDISP_PAGE
  */
 
+
 static void PMORE_UINAV_FORWARDPAGE(void);
 
 #ifdef PMORE_EXPAND_ESC_STAR
@@ -1672,7 +1674,12 @@ mf_display()
         .op_author = fh.op_author,
         .show_comment_ip = 1,
         .max_width = headerw,
+        .theme = bpref.comment_theme,
+        .cur_is_op = 0,
     };
+
+    if (mf.disps >= mf.comments_start && strncmp((const char *)mf.disps, "  ", 2) == 0)
+        comment_init_op_state(&cmt_ctx, mf.disps);
 
     while (lines < MFDISP_PAGE)
     {
@@ -1832,7 +1839,7 @@ mf_display()
             MFDISP_SKIPCURLINE();
         }
         else if (mf.dispe >= mf.comments_start && bpref.rawmode == MFDISP_RAW_NA &&
-                 *mf.dispe == '[' && comment_render_header(&cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
+                 comment_render_header(&cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
         {
             /* case 2.5, comment header */
             wrapping = 0;
@@ -1866,15 +1873,21 @@ mf_display()
                 {
                     outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
+                    cmt_ctx.cur_is_op = 0;
                 } else if (IS_REF_MARK(line_head) ||
                            !strncmp((char*)line_head, "==>", 3))
                 {
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
+                    cmt_ctx.cur_is_op = 0;
                 }
-                else if (comment_render_body_prefix(&cmt_ctx, line_head, &mf.dispe))
+                else if (comment_render_body_prefix(&cmt_ctx, line_head, &mf.dispe, &col, (int *)&flResetColor))
                 {
                     /* case 2.6, comment body */
+                }
+                else
+                {
+                    cmt_ctx.cur_is_op = 0;
                 }
             }
 
@@ -2837,6 +2850,7 @@ pmore_cmd_rawmode(cmd_ctx_t *ctx GCC_UNUSED)
     return 0;
 }
 
+
 #ifdef PMORE_USE_ASCII_MOVIE
 MFPROTO int
 pmore_cmd_movie(cmd_ctx_t *ctx GCC_UNUSED)
@@ -3398,7 +3412,7 @@ pmore_QuickRawModePref()
 MFPROTO void
 pmore_Preference()
 {
-    int ystart = b_lines - 9;
+    int ystart = b_lines - 10;
     // TODO even better pref navigation, like arrow keys
     // static int lastkey = '\\'; // default key
 
@@ -3432,6 +3446,10 @@ pmore_Preference()
                 "\\", 1, "色彩顯示方式:", -1,
                 "預設格式化內容\t原始ANSI控制碼\t純文字");
 
+        pmore_prefEntry(bpref.comment_theme,
+                "c", 1, "留言色彩主題:", -1,
+                comment_theme_menu_options());
+
         pmore_prefEntry(bpref.wrapmode,
                 "w", 1, "斷行方式:", -1,
                 "直接截行\t自動斷行");
@@ -3453,6 +3471,9 @@ pmore_Preference()
             case '\\':
             case '|':
                 bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
+                break;
+            case 'c':
+                bpref.comment_theme = (bpref.comment_theme + 1) % comment_theme_count();
                 break;
             case 'w':
                 bpref.wrapmode = (bpref.wrapmode+1) % MFDISP_WRAP_MODES;

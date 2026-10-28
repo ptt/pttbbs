@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include "bbs.h"
 #include "ansi.h"
 #include "daemons.h"
@@ -277,14 +278,170 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx)
 
 /* Comment rendering for pagers */
 
-#define COLOR_COMMENTER       ANSI_COLOR(0;33)
-#define COLOR_COMMENTER_OP    ANSI_COLOR(1;36)
+#define COLOR_COMMENTER       ANSI_COLOR(1;33)
+#define COLOR_COMMENTER_OP    ANSI_COLOR(1;37)
+#define COLOR_COMMENT_TEXT    ANSI_COLOR(0;33)
+#define COLOR_COMMENT_TEXT_OP ANSI_COLOR(0;37)
 #define COLOR_COMMENTER_INFO  ANSI_COLOR(1;30)
 
+static const comment_theme_t comment_themes[] = {
+    [COMMENT_THEME_CLASSIC] = {
+        .name = "經典醒目",
+        .color_commenter = COLOR_COMMENTER,
+        .color_commenter_op = COLOR_COMMENTER_OP,
+        .color_comment_text = COLOR_COMMENT_TEXT,
+        .color_comment_text_op = COLOR_COMMENT_TEXT_OP,
+        .color_commenter_info = COLOR_COMMENTER_INFO,
+        .color_border = NULL,
+        .border_first = NULL,
+        .border_next = NULL,
+        .border_fill = NULL,
+        .body_indent = "│ ",
+    },
+    [COMMENT_THEME_SIMPLE] = {
+        .name = "單純易讀",
+        .color_commenter = ANSI_COLOR(0;33),
+        .color_commenter_op = ANSI_COLOR(1;36),
+        .color_comment_text = NULL,
+        .color_comment_text_op = NULL,
+        .color_commenter_info = COLOR_COMMENTER_INFO,
+        .color_border = NULL,
+        .border_first = NULL,
+        .border_next = NULL,
+        .border_fill = NULL,
+        .body_indent = "│ ",
+    },
+    [COMMENT_THEME_BORDERED] = {
+        .name = "典雅邊框",
+        .color_commenter = ANSI_COLOR(0;33),
+        .color_commenter_op = ANSI_COLOR(1;36),
+        .color_comment_text = NULL,
+        .color_comment_text_op = NULL,
+        .color_commenter_info = COLOR_COMMENTER_INFO,
+        .color_border = ANSI_COLOR(1;30),
+        .border_first = "╭ ",
+        .border_next = "├ ",
+        .border_fill = "─",
+        .body_indent = "│ ",
+    },
+};
+
+const comment_theme_t *
+comment_get_theme(int theme_idx)
+{
+    if (theme_idx < 0 || theme_idx >= COMMENT_THEMES)
+        theme_idx = 0;
+    return &comment_themes[theme_idx];
+}
+
 int
-comment_render_header(const comment_ctx_t *ctx,
-                      const unsigned char *line_u,
-                      const unsigned char **next_line)
+comment_theme_count(void)
+{
+    return COMMENT_THEMES;
+}
+
+const char *
+comment_theme_name(int theme_idx)
+{
+    return comment_get_theme(theme_idx)->name;
+}
+
+const char *
+comment_theme_menu_options(void)
+{
+    return "經典醒目\t單純易讀\t典雅邊框";
+}
+
+static void
+comment_print_fill(const comment_theme_t *thm, int pad)
+{
+    if (pad <= 0)
+        return;
+
+    if (thm->border_fill && pad >= 4) {
+        outs(" ");
+        int dash_width = pad - 2;
+        int num_dashes = dash_width / 2;
+        int rem = dash_width % 2;
+        if (thm->color_border && *thm->color_border)
+            outs(thm->color_border);
+        for (int i = 0; i < num_dashes; i++)
+            outs(thm->border_fill);
+        if (rem > 0)
+            prints("%*s", rem, "");
+        if (thm->color_border && *thm->color_border)
+            outs(ANSI_RESET);
+        outs(" ");
+    } else {
+        prints("%*s", pad, "");
+    }
+}
+
+static int
+is_modern_header_op(const comment_ctx_t *ctx, const unsigned char *line)
+{
+    if (!ctx || !ctx->op_author || !ctx->op_author[0] || *line != '[')
+        return 0;
+
+    const char *eol = (const char *)strchrnul((const char *)line, '\n');
+    if (eol > (const char *)ctx->buf_end)
+        eol = (const char *)ctx->buf_end;
+
+    if (eol <= (const char *)(line + 1))
+        return 0;
+
+    /* 1. Find closing ']' followed by space */
+    const char *p_close = (const char *)memchr((const char *)line + 1, ']', eol - ((const char *)line + 1));
+    if (!p_close || *(p_close + 1) != ' ')
+        return 0;
+
+    const char *u_start = p_close + 2;
+
+    /* 2. Find next space to separate id from CREATION */
+    const char *u_end = (const char *)memchr(u_start, ' ', eol - u_start);
+    if (!u_end)
+        return 0;
+
+    int user_len = u_end - u_start;
+    int op_len = (int)strlen(ctx->op_author);
+    return (user_len == op_len && strncasecmp(u_start, ctx->op_author, user_len) == 0);
+}
+
+void
+comment_init_op_state(comment_ctx_t *ctx,
+                      const unsigned char *line_head)
+{
+    if (!ctx)
+        return;
+    ctx->cur_is_op = 0;
+
+    if (!ctx->op_author || !ctx->op_author[0] ||
+        !ctx->comments_start || !line_head || line_head <= ctx->comments_start)
+        return;
+
+    const unsigned char *p = line_head;
+    while (p > ctx->comments_start) {
+        p--;
+        if (p > ctx->comments_start && *p == '\n' && *(p - 1) == '\r')
+            p--;
+        while (p > ctx->comments_start && *(p - 1) != '\n')
+            p--;
+
+        if (*p == '[') {
+            if (is_modern_header_op(ctx, p))
+                ctx->cur_is_op = 1;
+            return;
+        }
+
+        if (strncmp((const char *)p, "  ", 2) != 0)
+            return;
+    }
+}
+
+static int
+comment_render_modern_header(comment_ctx_t *ctx,
+                                   const unsigned char *line_u,
+                                   const unsigned char **next_line)
 {
     const char *line = (const char *)line_u;
     const char *buf_end = (const char *)ctx->buf_end;
@@ -321,14 +478,58 @@ comment_render_header(const comment_ctx_t *ctx,
 
     int c_len = c_end - c_start;
 
+    const comment_theme_t *thm = comment_get_theme(ctx->theme);
+    int is_op = (ctx->op_author && ctx->op_author[0] != '\0' &&
+                 (int)strlen(ctx->op_author) == user_len &&
+                 strncasecmp(u_start, ctx->op_author, user_len) == 0);
+    ctx->cur_is_op = is_op;
+    const char *c_color = is_op ? thm->color_commenter_op : thm->color_commenter;
+
+    int is_first_comment = (line_u == ctx->comments_start ||
+                           (line[0] == '[' && line[1] == '1' && line[2] == ']'));
+    const char *pfx = thm->border_first ? (is_first_comment ? thm->border_first : thm->border_next) : NULL;
+    int pfx_width = pfx ? stream_width(pfx) : 0;
+
+    /* Check for deleted comment marker: "[N] author 留言已刪除" */
+    if (strncmp(c_start, "留言已刪除", strlen("留言已刪除")) == 0 ||
+        strncmp(c_start, "的留言已刪除", strlen("的留言已刪除")) == 0) {
+        if (pfx) {
+            if (thm->color_border && *thm->color_border)
+                outs(thm->color_border);
+            outs(pfx);
+            if (thm->color_border && *thm->color_border)
+                outs(ANSI_RESET);
+        }
+        prints("%.*s", (int)(u_start - line), line);        /* "[N] " */
+        outs(c_color);
+        prints("%.*s", user_len, u_start);                  /* ID */
+        outs(ANSI_RESET);
+        outs(ANSI_COLOR(1;30) " ");
+        prints("%.*s", c_len, c_start);                     /* "留言已刪除" */
+        outs(ANSI_RESET);
+
+        if (next_line)
+            *next_line = (const unsigned char *)eol;
+        return 1;
+    }
+
+    if (!ctx->show_comment_ip) {
+        const char *sp1 = (const char *)memchr(c_start, ' ', c_len);
+        if (sp1 && memchr(sp1 + 1, ' ', (size_t)(c_end - (sp1 + 1)))) {
+            c_start = sp1 + 1;
+            while (c_start < c_end && *c_start == ' ')
+                c_start++;
+            c_len = c_end - c_start;
+        }
+    }
+
     /* 3. Width: reserve >= 1 space between ID and CREATION */
-    int left_width = u_end - line;
+    int left_width = (u_end - line) + pfx_width;
     int avail = ctx->max_width - left_width - 1;
     int fitted_len = 0;
 
     if (avail > 0) {
         while (c_len > avail) {
-            /* Skip past first space and retry when space is insufficient */
             const char *sp = (const char *)memchr(c_start, ' ', c_len);
             if (!sp)
                 break;
@@ -344,19 +545,35 @@ comment_render_header(const comment_ctx_t *ctx,
 
     int pad = (fitted_len > 0) ? (ctx->max_width - left_width - fitted_len) : 0;
 
-    int is_op = (ctx->op_author && ctx->op_author[0] != '\0' &&
-                 (int)strlen(ctx->op_author) == user_len &&
-                 strncmp(u_start, ctx->op_author, user_len) == 0);
-
     /* 4. Sequential Zero-Copy rendering */
+    if (pfx) {
+        if (thm->color_border && *thm->color_border)
+            outs(thm->color_border);
+        outs(pfx);
+        if (thm->color_border && *thm->color_border)
+            outs(ANSI_RESET);
+    }
     prints("%.*s", (int)(u_start - line), line);        /* "[N] " */
-    outs(is_op ? COLOR_COMMENTER_OP : COLOR_COMMENTER);
+    outs(c_color);
     prints("%.*s", user_len, u_start);                  /* ID */
     outs(ANSI_RESET);
     if (fitted_len > 0) {
-        prints("%*s", pad, "");                         /* Padding */
-        outs(COLOR_COMMENTER_INFO);
-        prints("%.*s", fitted_len, c_start);            /* CREATION (100% Zero-Copy) */
+        comment_print_fill(thm, pad);             /* Fill / Padding */
+        const char *info_color = thm->color_commenter_info ? thm->color_commenter_info : COLOR_COMMENTER_INFO;
+        outs(info_color);
+        const char *tilde = (const char *)memchr(c_start, '~', fitted_len);
+        if (tilde) {
+            int pre_len = (int)(tilde - c_start);
+            if (pre_len > 0)
+                prints("%.*s", pre_len, c_start);
+            outs(ANSI_COLOR(1;33) "~" ANSI_RESET);
+            outs(info_color);
+            int post_len = fitted_len - pre_len - 1;
+            if (post_len > 0)
+                prints("%.*s", post_len, tilde + 1);
+        } else {
+            prints("%.*s", fitted_len, c_start);        /* CREATION */
+        }
         outs(ANSI_RESET);
     }
 
@@ -366,9 +583,28 @@ comment_render_header(const comment_ctx_t *ctx,
 }
 
 int
+comment_render_header(comment_ctx_t *ctx,
+                      const unsigned char *line,
+                      const unsigned char **next_line)
+{
+    if (!line || line >= ctx->buf_end)
+        return 0;
+
+    /* 1. Modern comment header: [N] author creation */
+    if (ctx->comments_start && line >= ctx->comments_start && *line == '[') {
+        if (comment_render_modern_header(ctx, line, next_line))
+            return 1;
+    }
+
+    return 0;
+}
+
+int
 comment_render_body_prefix(const comment_ctx_t *ctx,
-                           const unsigned char *line_head,
-                           unsigned char **dispe)
+                                 const unsigned char *line_head,
+                                 unsigned char **dispe,
+                                 int *col,
+                                 int *need_reset_color)
 {
     if (!ctx || !ctx->comments_start || line_head < ctx->comments_start)
         return 0;
@@ -376,9 +612,38 @@ comment_render_body_prefix(const comment_ctx_t *ctx,
     if (strncmp((const char *)line_head, "  ", 2) != 0)
         return 0;
 
-    if (*dispe == line_head) {
-        outs("│");
-        *dispe += 2;
+    const comment_theme_t *thm = comment_get_theme(ctx->theme);
+    int is_op = ctx->cur_is_op;
+    const char *t_color = is_op ? thm->color_comment_text_op : thm->color_comment_text;
+    const char *indent = thm->body_indent ? thm->body_indent : "│ ";
+
+    if (thm->color_border && *thm->color_border) {
+        if (*dispe == line_head) {
+            outs(thm->color_border);
+            outs(indent);
+            outs(ANSI_RESET);
+            *dispe += 2;
+            if (col)
+                *col += stream_width(indent);
+        }
+        if (t_color && *t_color) {
+            outs(t_color);
+            if (need_reset_color)
+                *need_reset_color = 1;
+        }
+    } else {
+        if (t_color && *t_color) {
+            outs(t_color);
+            if (need_reset_color)
+                *need_reset_color = 1;
+        }
+        if (*dispe == line_head) {
+            outs(indent);
+            *dispe += 2;
+            if (col)
+                *col += stream_width(indent);
+        }
     }
+
     return 1;
 }
