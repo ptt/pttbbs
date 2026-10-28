@@ -792,8 +792,8 @@ func TestServerIPC(t *testing.T) {
 	}
 	delCommentRenderBody, _ := io.ReadAll(r22)
 	decodedDelComment := big5uao.DecodeSGR66(delCommentRenderBody)
-	if !strings.Contains(decodedDelComment, "違規廣告") {
-		t.Fatalf("RENDER_FILE missing deleted comment reason: %s", decodedDelComment)
+	if !strings.Contains(decodedDelComment, "[1] piaip 留言不顯示 (違規廣告)") {
+		t.Fatalf("RENDER_FILE missing '[1] piaip 留言不顯示 (違規廣告)': %s", decodedDelComment)
 	}
 	t.Logf("DELETE_COMMENT_FILE and tombstone render verified: %s", decodedDelComment)
 
@@ -1200,10 +1200,35 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	if strings.Contains(rStr, "買點數卡") {
 		t.Fatalf("rendered output still contains deleted spam content:\n%s", rStr)
 	}
-	if !strings.Contains(rStr, "違規廣告推文") {
-		t.Fatalf("rendered output missing tombstone reason:\n%s", rStr)
+	if !strings.Contains(rStr, "[2] spammer 留言不顯示 (違規廣告推文)") {
+		t.Fatalf("rendered output missing '[2] spammer 留言不顯示 (違規廣告推文)':\n%s", rStr)
 	}
 	t.Logf("Rendered text with deleted comment:\n%s", rStr)
+
+	// Non-self deletion requires reason
+	if _, err := engine.DeleteComment(post.ID, 3, "sysop", ""); err == nil {
+		t.Fatalf("expected error for non-self deletion without reason, got nil")
+	}
+
+	// Self-deletion succeeds without reason
+	c3Rev, err := engine.DeleteComment(post.ID, 3, "commenter3", "")
+	if err != nil {
+		t.Fatalf("self DeleteComment failed: %v", err)
+	}
+	if c3Rev != 1 {
+		t.Fatalf("expected comment revision 1, got %d", c3Rev)
+	}
+	rSelfDel, err := engine.RenderFullPostText(post.ID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(rSelfDel), "[3] commenter3 留言已刪除") {
+		t.Fatalf("expected '[3] commenter3 留言已刪除', got:\n%s", string(rSelfDel))
+	}
+	// Restore comment #3 for subsequent tests
+	if err := engine.UndeleteComment(post.ID, 3); err != nil {
+		t.Fatalf("UndeleteComment 3 failed: %v", err)
+	}
 
 	// Verify SQLite num_comments was decremented to 2
 	updatedPost, _ := engine.GetPost(post.ID)

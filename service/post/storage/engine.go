@@ -1603,6 +1603,14 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 	}
 
 	for _, c := range comments {
+		if c.IsDeleted {
+			if c.DeletedBy == c.Author || (c.DeletedBy != "" && strings.EqualFold(c.DeletedBy, c.Author)) {
+				buf.WriteString(fmt.Sprintf("[%d] %s 留言已刪除\n", c.Sequence, c.Author))
+			} else {
+				buf.WriteString(fmt.Sprintf("[%d] %s 留言不顯示 (%s)\n", c.Sequence, c.Author, strings.TrimSpace(c.DeleteReason)))
+			}
+			continue
+		}
 		t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
 		var creation string
 		if c.IP != "" && c.IP != "-" {
@@ -1611,14 +1619,6 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 			creation = t
 		}
 		buf.WriteString(fmt.Sprintf("[%d] %s %s\n", c.Sequence, c.Author, creation))
-		if c.IsDeleted {
-			reason := c.DeleteReason
-			if reason == "" {
-				reason = "[部份違規或廣告推文已被系統自動刪除]"
-			}
-			buf.WriteString("  " + reason + "\n")
-			continue
-		}
 		lines := strings.Split(c.Content, "\n")
 		for _, l := range lines {
 			trimmed := strings.TrimRight(l, "\r ")
@@ -2239,6 +2239,10 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string
 	if deleter == "" {
 		deleter = currentComment.Author
 	}
+	reason = strings.TrimSpace(reason)
+	if !strings.EqualFold(deleter, currentComment.Author) && reason == "" {
+		return 0, fmt.Errorf("reason is required for non-self deletion")
+	}
 
 	// 1. Determine next revision
 	prefix := model.EncodeCommentHistoryPrefix(postID, seq)
@@ -2605,6 +2609,14 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 	}
 
 	for _, c := range comments {
+		if c.IsDeleted {
+			if c.DeletedBy == c.Author || (c.DeletedBy != "" && strings.EqualFold(c.DeletedBy, c.Author)) {
+				buf.WriteString(fmt.Sprintf("[%d] %s 留言已刪除\n", c.Sequence, c.Author))
+			} else {
+				buf.WriteString(fmt.Sprintf("[%d] %s 留言不顯示 (%s)\n", c.Sequence, c.Author, strings.TrimSpace(c.DeleteReason)))
+			}
+			continue
+		}
 		t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
 		var creation string
 		if c.IP != "" && c.IP != "-" {
@@ -2613,14 +2625,6 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 			creation = t
 		}
 		buf.WriteString(fmt.Sprintf("[%d] %s %s\n", c.Sequence, c.Author, creation))
-		if c.IsDeleted {
-			reason := c.DeleteReason
-			if reason == "" {
-				reason = "[部份違規或廣告推文已被系統自動刪除]"
-			}
-			buf.WriteString("  " + reason + "\n")
-			continue
-		}
 		lines := strings.Split(c.Content, "\n")
 		for _, l := range lines {
 			trimmed := strings.TrimRight(l, "\r ")

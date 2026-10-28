@@ -490,9 +490,8 @@ comment_render_modern_header(comment_ctx_t *ctx,
     const char *pfx = thm->border_first ? (is_first_comment ? thm->border_first : thm->border_next) : NULL;
     int pfx_width = pfx ? stream_width(pfx) : 0;
 
-    /* Check for deleted comment marker: "[N] author 留言已刪除" */
-    if (strncmp(c_start, "留言已刪除", strlen("留言已刪除")) == 0 ||
-        strncmp(c_start, "的留言已刪除", strlen("的留言已刪除")) == 0) {
+    /* Check for deleted comment marker: "[N] author 留言..." */
+    if (strncmp(c_start, "留言", strlen("留言")) == 0) {
         if (pfx) {
             if (thm->color_border && *thm->color_border)
                 outs(thm->color_border);
