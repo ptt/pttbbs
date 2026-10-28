@@ -23,6 +23,7 @@
 #include <sys/ioctl.h>
 #include <sys/file.h>      /* for flock() */
 #include <strings.h>       /* for strcasecmp() */
+#include <string.h>        /* for strchrnul() */
 
 #if defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 38)
 #  define HAVE_STRLCPY
