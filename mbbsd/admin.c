@@ -804,10 +804,12 @@ b_gen_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_p
     const char *val = (const char *)val_ptr;
     if (!val || !*val)
         return "看板名稱不得為空";
-    if (orig_bh && strcmp(orig_bh->brdname, val) == 0)
-        return NULL;
-    if (!HasUserPerm(PERM_BOARDS))
-        return "只有看板總管才能修改看板名稱";
+    if (orig_bh && orig_bh->brdname[0]) {
+        if (strcmp(orig_bh->brdname, val) == 0)
+            return NULL;
+        if (!HasUserPerm(PERM_BOARDS))
+            return "只有看板總管才能修改看板名稱";
+    }
     if (getbnum(val))
         return "錯誤: 此新看板名已存在";
     if (!is_valid_brdname(val))
@@ -844,6 +846,30 @@ static const vform_field_t b_general_fields[] = {
                      b_general_form_t, post_reward),
 };
 
+static const char *
+b_new_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = (const char *)val_ptr;
+    if (!val || !*val)
+        return "看板名稱不得為空";
+    if (getbnum(val))
+        return "錯誤: 此新看板名已存在";
+    if (!is_valid_brdname(val))
+        return "錯誤: 看板名稱不合規定 (需英數字或 _-. 且開頭需為英文字母)";
+    return NULL;
+}
+
+static const vform_field_t b_new_board_fields[] = {
+    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (英數字或 _-.)", NULL,
+                     b_general_form_t, brdname, 0, b_new_brdname_validator),
+    VFORM_FIELD_TEXT("看板類別", "分類標籤 (恰為 4 半形字元或 2 個中文字)", NULL,
+                     b_general_form_t, bclass, 0, b_gen_bclass_validator),
+    VFORM_FIELD_TEXT("看板主題", "看板中文說明與主題 (最多 41 字)", NULL,
+                     b_general_form_t, desc, 0, b_gen_desc_validator),
+    VFORM_FIELD_BOOL("發文獎勵", "是否給予發文文章金錢獎勵 (按空白鍵切換)",
+                     b_general_form_t, post_reward),
+};
+
 static const vform_def_t b_general_form_def = {
     .title = "看板一般設定",
     .subtitle = "設定看板基本資料與發文金錢獎勵",
@@ -858,8 +884,8 @@ static const vform_def_t b_new_board_form_def = {
     .title = "建立新板",
     .subtitle = "設定新看板基本資料與發文金錢獎勵",
     .mode = VFORM_MODE_INPLACE,
-    .fields = b_general_fields,
-    .num_fields = ARRAY_SIZE(b_general_fields),
+    .fields = b_new_board_fields,
+    .num_fields = ARRAY_SIZE(b_new_board_fields),
     .form_validator = NULL,
     .submit_prompt = "確定建立看板嗎？[Y/n] ",
 };
