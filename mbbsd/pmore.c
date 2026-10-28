@@ -2021,7 +2021,11 @@ mf_display()
                         {
                             int limit = (bpref.rawmode == MFDISP_RAW_NOANSI ? t_columns : maxcol + 1);
 
+                            // At or past the limit nothing would be output and
+                            // the loop would come back here; let the normal
+                            // path wrap or truncate the line.
                             if (srlen < 0 && !url_state.in_url && is_comment_body &&
+                                col < limit &&
                                 c == '>' && mf.dispe + 1 < mf.end && *(mf.dispe + 1) == '>')
                             {
                                 int ref_len = comment_match_ref(mf.dispe, mf.end, NULL);
