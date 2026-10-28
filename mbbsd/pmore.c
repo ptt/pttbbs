@@ -1893,6 +1893,8 @@ mf_display()
                 }
             }
 
+            int text_start_col = col;
+
             const unsigned char *ansi_end = NULL;
             while (!breaknow && (c = *mf.dispe) != '\0' && c != '\n')
             {
@@ -2192,13 +2194,9 @@ mf_display()
                             else
                             {
 #ifdef PMORE_USE_DBCS_WRAP
-                                if (mf.xpos > 0 && dbcs_incomplete && col < 2)
+                                if (mf.xpos > 0 && xprefix == 0 && dbcs_incomplete && col <= text_start_col)
                                 {
-                                    /* col = 0 or 1 only */
-                                    if (col == 0) /* no indicators */
-                                        c = ' ';
-                                    else if (!bpref.oldwrapmode && bpref.wrapindicator)
-                                        c = ' ';
+                                    c = ' ';
                                 }
 
                                 if (dbcs_incomplete)
