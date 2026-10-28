@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Convert and migrate board banned.history into each user's muted.history.
+Migrate board ban history (banned.history -> muted.history) to user muted.history,
+and migrate user banned/ directories to muted/.
 
 Usage:
-    convert_banned_history.py [options]
+    convert_banned_muted.py [options]
 
 Options:
     -b, --bbshome <dir>   Path to BBSHOME (default: auto-detected)
@@ -13,6 +14,7 @@ Options:
     -v, --verbose         Verbose logging
     -f, --overwrite       Overwrite muted.history instead of appending
     --clean               Delete existing muted.history before migrating
+    --no-rename           Do not rename board history or user banned/ directories
     --board <board>       Process only a specific board
     --user <userid>       Process only a specific user
     -h, --help            Show this help message
@@ -55,7 +57,7 @@ def find_bbshome(custom_path=None):
 
 def scan_target_user_ids(history_files, target_user=None):
     """
-    Fast pre-scan of banned.history files to collect user IDs who actually have records.
+    Fast pre-scan of board history files to collect user IDs who actually have records.
     Allows load_passwds to load only relevant users, reducing memory usage from ~500MB to ~25MB.
     """
     if target_user:
@@ -104,7 +106,7 @@ def load_passwds(bbshome, target_uids=None, verbose=False):
 
 def parse_banned_history(file_path, users, target_user=None, verbose=False):
     """
-    Parses a board's banned.history file.
+    Parses a board's ban history file (banned.history or muted.history).
     Returns:
         valid_records: dict of user_lower -> list of (timestamp, line1_bytes, line2_bytes)
         stats: dict of counters
@@ -132,8 +134,6 @@ def parse_banned_history(file_path, users, target_user=None, verbose=False):
         line1 = lines[i]
         line2 = lines[i + 1] if i + 1 < len(lines) else b''
 
-        # If line2 is not a reason line (e.g. malformed single line), check if next line is reason
-        # In PttBBS banned.history, each entry is 2 lines: action and reason.
         clean_line1 = ANSI_ESCAPE.sub('', line1.decode('big5', errors='replace')).strip()
         if not clean_line1 or clean_line1.startswith('理由:'):
             i += 1
@@ -166,7 +166,6 @@ def parse_banned_history(file_path, users, target_user=None, verbose=False):
                         print(f"  [Skip <= firstlogin] {canonical_uid}: ban_time={dt_str} <= firstlogin={datetime.datetime.fromtimestamp(firstlogin)}")
                 else:
                     stats['matched'] += 1
-                    # Replace executing BM with board name + "看板" for user home muted.history
                     user_line1 = RAW_BM_REPLACE.sub(
                         lambda m: m.group(1) + board_bytes + b'\x1b[m' + KANBAN_BIG5 + b' ' + m.group(4),
                         line1,
@@ -249,9 +248,237 @@ def write_user_muted_history(bbshome, canonical_uid, records, user_home=None, ov
     return len(new_records)
 
 
+def merge_board_history(banned_path, muted_path, dry_run=False, verbose=False):
+    """
+    Merges banned.history (older records) into muted.history (newer records),
+    saves into muted.history, and removes banned.history.
+    """
+    if dry_run:
+        if verbose:
+            print(f"  [Merge] [Dry-run] Would merge {banned_path} into {muted_path} and remove {banned_path}")
+        return True
+    try:
+        with open(banned_path, 'rb') as f1:
+            old_bytes = f1.read()
+        with open(muted_path, 'rb') as f2:
+            new_bytes = f2.read()
+
+        if old_bytes in new_bytes:
+            os.remove(banned_path)
+            if verbose:
+                print(f"  [Merge] Removed redundant {banned_path} (already in {muted_path})")
+            return True
+
+        combined = old_bytes
+        if not combined.endswith(b'\n'):
+            combined += b'\n'
+        combined += new_bytes
+
+        tmp_path = muted_path + '.tmp'
+        with open(tmp_path, 'wb') as f_tmp:
+            f_tmp.write(combined)
+        try:
+            st = os.stat(muted_path)
+            os.chmod(tmp_path, st.st_mode)
+        except Exception:
+            pass
+        os.replace(tmp_path, muted_path)
+        os.remove(banned_path)
+        if verbose:
+            print(f"  [Merge] Merged {banned_path} into {muted_path} and removed {banned_path}")
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to merge {banned_path} into {muted_path}: {e}", file=sys.stderr)
+        return False
+
+
+def rename_board_file(banned_path, muted_path, dry_run=False, verbose=False):
+    """
+    Renames banned.history to muted.history.
+    """
+    if dry_run:
+        if verbose:
+            print(f"  [Rename] [Dry-run] Would rename {banned_path} -> {muted_path}")
+        return True
+    try:
+        os.rename(banned_path, muted_path)
+        if verbose:
+            print(f"  [Rename] Renamed {banned_path} -> {muted_path}")
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to rename {banned_path} to {muted_path}: {e}", file=sys.stderr)
+        return False
+
+
+def prepare_board_history_files(bbshome, target_board=None, dry_run=False, no_rename=False, verbose=False):
+    """
+    Initial search of boards for history files:
+    - Checks both old (banned.history) and new (muted.history).
+    - If both exist: merges banned.history and muted.history, saves into muted.history, removes banned.history.
+    - If only banned.history exists: renames to muted.history.
+    - If only muted.history exists: keeps it.
+    Returns:
+        history_files: list of paths to load for exporting user history (muted.history).
+        stats: counters for boards found, merged, renamed, already_new.
+    """
+    board_dirs = set()
+    if target_board:
+        b_target = target_board.lower()
+        for pattern in (
+            os.path.join(bbshome, 'boards', '*', '*'),
+            os.path.join(bbshome, 'boards', '*'),
+        ):
+            for d in glob.glob(pattern):
+                if os.path.isdir(d) and os.path.basename(d).lower() == b_target:
+                    board_dirs.add(d)
+        if not board_dirs:
+            b_name = target_board
+            for d in (
+                os.path.join(bbshome, 'boards', b_name[0], b_name),
+                os.path.join(bbshome, 'boards', b_name),
+            ):
+                if os.path.isdir(d):
+                    board_dirs.add(d)
+    else:
+        for pattern in (
+            os.path.join(bbshome, 'boards', '*', '*', 'banned.history'),
+            os.path.join(bbshome, 'boards', '*', '*', 'muted.history'),
+            os.path.join(bbshome, 'boards', '*', 'banned.history'),
+            os.path.join(bbshome, 'boards', '*', 'muted.history'),
+        ):
+            for p in glob.glob(pattern):
+                board_dirs.add(os.path.dirname(p))
+
+    stats = {
+        'total_boards': len(board_dirs),
+        'merged': 0,
+        'renamed': 0,
+        'already_new': 0,
+    }
+
+    history_files = []
+
+    for d in sorted(board_dirs):
+        banned_path = os.path.join(d, 'banned.history')
+        muted_path = os.path.join(d, 'muted.history')
+
+        has_banned = os.path.isfile(banned_path)
+        has_muted = os.path.isfile(muted_path)
+
+        if has_banned and has_muted:
+            stats['merged'] += 1
+            if not no_rename:
+                merge_board_history(banned_path, muted_path, dry_run=dry_run, verbose=verbose)
+            if dry_run or no_rename:
+                # In dry-run or no-rename, disk wasn't updated, so parse both in memory
+                history_files.extend([banned_path, muted_path])
+            else:
+                # On disk, merged into muted.history
+                history_files.append(muted_path)
+
+        elif has_banned and not has_muted:
+            stats['renamed'] += 1
+            if not no_rename:
+                rename_board_file(banned_path, muted_path, dry_run=dry_run, verbose=verbose)
+            if dry_run or no_rename:
+                history_files.append(banned_path)
+            else:
+                history_files.append(muted_path)
+
+        elif has_muted and not has_banned:
+            stats['already_new'] += 1
+            history_files.append(muted_path)
+
+    return history_files, stats
+
+
+def rename_user_banned_to_muted(banned_path, dry_run=False, verbose=False):
+    """
+    Renames a user's banned/ directory to muted/.
+    If muted/ already exists, merges the contents and removes banned/.
+    """
+    if not (os.path.exists(banned_path) or os.path.islink(banned_path)):
+        return False
+    parent = os.path.dirname(banned_path)
+    muted_path = os.path.join(parent, 'muted')
+
+    if not os.path.exists(muted_path):
+        if dry_run:
+            if verbose:
+                print(f"  [User] [Dry-run] Would rename {banned_path} -> {muted_path}")
+            return True
+        try:
+            os.rename(banned_path, muted_path)
+            if verbose:
+                print(f"  [User] Renamed {banned_path} -> {muted_path}")
+            return True
+        except Exception as e:
+            print(f"Warning: Failed to rename {banned_path} to {muted_path}: {e}", file=sys.stderr)
+            return False
+    else:
+        # Both exist: merge contents
+        if dry_run:
+            if verbose:
+                print(f"  [User] [Dry-run] Would merge {banned_path} into {muted_path} and remove {banned_path}")
+            return True
+        try:
+            if os.path.isdir(banned_path) and os.path.isdir(muted_path):
+                for item in os.listdir(banned_path):
+                    src_item = os.path.join(banned_path, item)
+                    dst_item = os.path.join(muted_path, item)
+                    if not os.path.exists(dst_item):
+                        os.rename(src_item, dst_item)
+                    else:
+                        if os.path.isfile(src_item) or os.path.islink(src_item):
+                            os.remove(src_item)
+                try:
+                    os.rmdir(banned_path)
+                except OSError:
+                    pass
+            elif os.path.islink(banned_path):
+                os.remove(banned_path)
+            if verbose:
+                print(f"  [User] Merged {banned_path} into {muted_path}")
+            return True
+        except Exception as e:
+            print(f"Warning: Failed to merge {banned_path} into {muted_path}: {e}", file=sys.stderr)
+            return False
+
+
+def migrate_all_user_banned_to_muted(bbshome, user_home=None, target_user=None, dry_run=False, verbose=False):
+    """
+    Finds and renames all user banned/ directories to muted/.
+    """
+    base_dir = user_home if user_home else os.path.join(bbshome, 'home')
+    banned_dirs = set()
+
+    if target_user:
+        u_name = target_user
+        for candidate in (
+            os.path.join(base_dir, u_name[0].lower(), u_name, 'banned'),
+            os.path.join(base_dir, u_name[0].upper(), u_name, 'banned'),
+            os.path.join(base_dir, u_name[0], u_name, 'banned'),
+            os.path.join(base_dir, u_name, 'banned'),
+        ):
+            if os.path.exists(candidate) or os.path.islink(candidate):
+                banned_dirs.add(candidate)
+    else:
+        for p in glob.glob(os.path.join(base_dir, '*', '*', 'banned')):
+            banned_dirs.add(p)
+        for p in glob.glob(os.path.join(base_dir, '*', 'banned')):
+            banned_dirs.add(p)
+
+    renamed_count = 0
+    for p in sorted(banned_dirs):
+        if rename_user_banned_to_muted(p, dry_run=dry_run, verbose=verbose):
+            renamed_count += 1
+
+    return renamed_count
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Migrate board banned.history to user muted.history"
+        description="Migrate board banned.history to muted.history and user banned/ to muted/"
     )
     parser.add_argument('-b', '--bbshome', help="BBSHOME directory (default: auto-detected)")
     parser.add_argument('--user-home', help="Path to custom user home directory (writes to PATH/u/userid/muted.history)")
@@ -259,6 +486,7 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_true', help="Verbose output")
     parser.add_argument('-f', '--overwrite', action='store_true', help="Overwrite matched users' muted.history instead of appending")
     parser.add_argument('--clean', action='store_true', help="Delete all existing home/*/*/muted.history before migrating")
+    parser.add_argument('--no-rename', action='store_true', help="Do not rename board history or user banned/ directories")
     parser.add_argument('--board', help="Only process specified board")
     parser.add_argument('--user', help="Only process specified user ID")
 
@@ -281,28 +509,25 @@ def main():
     if args.clean:
         clean_all_muted_history(bbshome, user_home=user_home, dry_run=args.dry_run, verbose=args.verbose)
 
-    # Locate banned.history files
-    if args.board:
-        b_target = args.board.lower()
-        history_files = []
-        for p in glob.glob(os.path.join(bbshome, 'boards', '*', '*', 'banned.history')):
-            board_dir_name = os.path.basename(os.path.dirname(p))
-            if board_dir_name.lower() == b_target:
-                history_files.append(p)
-        if not history_files:
-            # Fallback to direct check
-            b_name = args.board
-            for p in (
-                os.path.join(bbshome, 'boards', b_name[0], b_name, 'banned.history'),
-                os.path.join(bbshome, 'boards', b_name, 'banned.history'),
-            ):
-                if os.path.isfile(p):
-                    history_files.append(p)
-    else:
-        history_files = glob.glob(os.path.join(bbshome, 'boards', '*', '*', 'banned.history'))
+    # Stage 1: Initial search of boards for history files:
+    # Check both old and new names, merge if both exist, rename if only old, load muted.history.
+    history_files, board_stats = prepare_board_history_files(
+        bbshome, target_board=args.board, dry_run=args.dry_run,
+        no_rename=args.no_rename, verbose=args.verbose
+    )
 
-    print(f"Found {len(history_files)} banned.history file(s) to process.")
+    print(f"Board history preparation: {board_stats['total_boards']} board(s) found.")
+    if board_stats['merged']:
+        m_word = "Would merge" if args.dry_run else "Merged"
+        print(f"  {m_word} {board_stats['merged']} board(s) having both banned.history and muted.history.")
+    if board_stats['renamed']:
+        r_word = "Would rename" if args.dry_run else "Renamed"
+        print(f"  {r_word} {board_stats['renamed']} board(s) from banned.history to muted.history.")
+    if board_stats['already_new']:
+        print(f"  {board_stats['already_new']} board(s) already using muted.history.")
+    print(f"Loading {len(history_files)} history file(s) for exporting user history.")
 
+    # Stage 2: Export user history
     target_uids = scan_target_user_ids(history_files, target_user=args.user)
     users = load_passwds(bbshome, target_uids=target_uids, verbose=args.verbose)
     if not users and target_uids:
@@ -352,8 +577,18 @@ def main():
         )
         total_written += written
 
-    action_word = "Would write" if args.dry_run else "Successfully wrote"
-    print(f"{action_word} {total_written} record(s) across {len(aggregated_user_records)} user(s).")
+    write_action = "Would write" if args.dry_run else "Successfully wrote"
+    print(f"{write_action} {total_written} record(s) across {len(aggregated_user_records)} user(s).")
+
+    # Stage 3: Migrate all user banned/ directories to muted/
+    if not args.no_rename:
+        user_migrated = migrate_all_user_banned_to_muted(
+            bbshome, user_home=user_home, target_user=args.user,
+            dry_run=args.dry_run, verbose=args.verbose
+        )
+        u_action = "Would rename" if args.dry_run else "Successfully renamed"
+        print(f"{u_action} {user_migrated} user banned/ target(s) to muted/.")
+
     return 0
 
 
