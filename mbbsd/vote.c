@@ -759,7 +759,15 @@ vote_maintain(const char *bname)
 	assert(fp);
 	//fprintf(fp, "此次投票設限");
 	fclose(fp);
-	friend_edit(FRIEND_CANVOTE);
+	static const user_list_cfg_t cfg = {
+	    .title = "私人投票名單",
+	    .desc_prompt = "投票者描述：",
+	    .max_entries = MAX_FRIEND,
+	    .allow_waterball = 0,
+	    .allow_clean = 1,
+	    .import_fn = NULL,
+	};
+	edit_user_list(TEMP_BFILE(bname, FN_CANVOTE), &cfg);
     } else {
 	if (dashf(buf))
 	    unlink(buf);

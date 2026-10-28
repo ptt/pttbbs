@@ -642,7 +642,7 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
     if ((friend_stat(currutmp, uentp) & IFH) == 0)
 	return space_buf;
 
-    setuserfile(fpath, friend_file[0]);
+    setuserfile(fpath, friend_file[FRIEND_OVERRIDE]);
 
     STATINC(STAT_FRIENDDESC_FILE);
     if ((fp = fopen(fpath, "r"))) {

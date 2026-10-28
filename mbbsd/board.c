@@ -1075,11 +1075,20 @@ bcfg_set_muted(cmd_ctx_t *ctx)
 static int
 bcfg_set_visible(cmd_ctx_t *ctx)
 {
+    static const user_list_cfg_t cfg = {
+        .title = "看板會員名單",
+        .desc_prompt = "看板會員描述：",
+        .max_entries = MAX_USERS,
+        .allow_waterball = 1,
+        .allow_clean = 1,
+        .import_fn = NULL,
+    };
     ctx->reload = true;
     clear();
-    friend_edit(BOARD_VISABLE);
-    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
-    hbflreload(currbid);
+    if (edit_user_list(TEMP_BFILE(currboard, FN_VISABLE), &cfg)) {
+        assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+        hbflreload(currbid);
+    }
     clear();
     return 0;
 }
@@ -1087,9 +1096,17 @@ bcfg_set_visible(cmd_ctx_t *ctx)
 static int
 bcfg_set_canvote(cmd_ctx_t *ctx)
 {
+    static const user_list_cfg_t cfg = {
+        .title = "私人投票名單",
+        .desc_prompt = "投票者描述：",
+        .max_entries = MAX_FRIEND,
+        .allow_waterball = 0,
+        .allow_clean = 1,
+        .import_fn = NULL,
+    };
     ctx->reload = true;
     clear();
-    friend_edit(FRIEND_CANVOTE);
+    edit_user_list(TEMP_BFILE(currboard, FN_CANVOTE), &cfg);
     clear();
     return 0;
 }

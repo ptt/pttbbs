@@ -9,205 +9,43 @@ static char     special_list[7] = "list.0";
 static char     special_des[7] = "ldes.0";
 
 /* 特別名單的上限 */
-static const unsigned int friend_max[8] = {
+static const unsigned int friend_max[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = MAX_FRIEND,
     [FRIEND_REJECT]   = MAX_REJECT,
     [FRIEND_ALOHA]    = MAX_LOGIN_INFO,
-    // [FRIEND_POST]  = MAX_POST_INFO,
     [FRIEND_SPECIAL]  = MAX_NAMELIST,
-    [FRIEND_CANVOTE]  = MAX_FRIEND,
-    // [BOARD_WATER]  = BOARD_WATER,
-    [BOARD_VISABLE]   = MAX_USERS,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
 
 /* Ptt 各種特別名單的補述 */
-static const char * const friend_desc[8] = {
+static const char * const friend_desc[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = "友誼描述：",
     [FRIEND_REJECT]   = "惡形惡狀：",
     [FRIEND_ALOHA]    = "",
-    // [FRIEND_POST]  = "",
     [FRIEND_SPECIAL]  = "描述一下：",
-    [FRIEND_CANVOTE]  = "投票者描述：",
-    // [BOARD_WATER]  = "惡形惡狀：",
-    [BOARD_VISABLE]   = "看板會員描述",
 };
 
 /* Ptt 各種特別名單的中文敘述 */
-static const char * const friend_list[8] = {
+static const char * const friend_list[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = "好友名單",
     [FRIEND_REJECT]   = "壞人名單",
     [FRIEND_ALOHA]    = "上線通知",
-    // [FRIEND_POST]  = "",
     [FRIEND_SPECIAL]  = "其它特別名單",
-    [FRIEND_CANVOTE]  = "私人投票名單",
-    // [BOARD_WATER]  = "看板舊水桶名單",
-    [BOARD_VISABLE]   = "看板會員名單",
 };
 
 /* sized in screen width */
 #define MAX_DESCLEN (40)
+#define MAX_EXPIRE_MONTH (800)
 
 void
 setfriendfile(char *fpath, int type)
 {
     if (type == FRIEND_SPECIAL)
 	setuserfile(fpath, special_list);
-    else if (type <= 4)		/* user list Ptt */
+    else
 	setuserfile(fpath, friend_file[type]);
-    else			/* board list */
-	setbfile(fpath, currboard, friend_file[type]);
 }
-
-static int
-friend_count(const char *fname)
-{
-    return file_count_line(fname);
-}
-
-void
-friend_add(const char *uident, int type, const char* des)
-{
-    char            fpath[PATHLEN];
-
-    setfriendfile(fpath, type);
-    if (friend_count(fpath) > (int)friend_max[type])
-	return;
-
-    if ((uident[0] > ' ') && !file_exist_entry(fpath, uident)) {
-	char buf[MAX_DESCLEN] = "", buf2[STRLEN];
-	char t_uident[IDLEN + 1];
-
-	/* Thor: avoid uident run away when get data */
-	STRLCPY(t_uident, uident);
-
-	if (type != FRIEND_ALOHA){
-           if(!des)
-	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
-           else
-	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
-	}
-
-    	SNPRINTF(buf2, "%-13s%s", t_uident, buf);
-     	file_append_entry(fpath, buf2);
-    }
-}
-
-
-int
-is_rejected(const char *userid) {
-    userinfo_t *uentp;
-    /* friend_online may be truncated or stale; only trust a positive hit. */
-    if (currutmp && (uentp = search_ulist_userid(userid)) &&
-        (friend_stat(currutmp, uentp) & HRM))
-        return 1;
-    if (!file_exist_entry(TEMP_HOMEFILE(userid, FN_REJECT), cuser.userid))
-        return 0;
-    return !file_exist_entry(TEMP_HOMEFILE(userid, FN_OVERRIDES), cuser.userid);
-}
-
-void
-friend_special(void)
-{
-    char            genbuf[STRLEN], i;
-    FILE           *fp;
-    for (i = 0; i <= 9; i++) {
-	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
-	special_des[5] = i + '0';
-	if( (fp = fopen(TEMP_USERFILE(special_des), "r")) != NULL ){
-	    fgets(genbuf + 15, 40, fp);
-	    genbuf[47] = 0;
-	    fclose(fp);
-	}
-	move(i + 12, 0);
-	clrtoeol();
-	outs(genbuf);
-    }
-    getdata(22, 0, "請選擇第幾號特別名單 (0~9)[0]?", genbuf, 3, LCECHO);
-    if (genbuf[0] >= '0' && genbuf[0] <= '9') {
-	special_list[5] = genbuf[0];
-	special_des[5] = genbuf[0];
-    } else {
-	special_list[5] = '0';
-	special_des[5] = '0';
-    }
-}
-
-static void
-friend_append(int type, int count)
-{
-    char            fpath[PATHLEN], i, j, buf[STRLEN], sfile[PATHLEN];
-    FILE           *fp;
-    char	    myboard[IDLEN+1] = "";
-    int		    boardChanged = 0;
-
-    setfriendfile(fpath, type);
-
-    if (currboard && *currboard)
-	STRLCPY(myboard, currboard);
-
-    do {
-	move(2, 0);
-	clrtobot();
-	outs("要引入哪一個名單?\n");
-
-        // TODO make the selection algorithm better here.
-	for (j = i = 0; i < 4; i++)
-	    if (i != type) {
-		++j;
-		prints("  (%d) %-s\n", j, friend_list[(int)i]);
-	    }
-	if (HasUserPerm(PERM_SYSOP) || CBRD_IS_BM())
-	    for (; i < 8; ++i)
-		if (i != type) {
-		    ++j;
-		    prints("  (%d) %s 板的 %s\n", j, currboard,
-			     friend_list[(int)i]);
-		}
-	if (HasUserPerm(PERM_SYSOP))
-	    outs("  (S) 選擇其他看板的特別名單");
-
-	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
-	if (!buf[0])
-	    return;
-
-	if (HasUserPerm(PERM_SYSOP) && buf[0] == 's')
-	{
-	    Select();
-	    boardChanged = 1;
-	}
-
-	j = buf[0] - '1';
-	if (j >= type)
-	    j++;
-	if (!(HasUserPerm(PERM_SYSOP) || CBRD_IS_BM()) && j >= 5)
-	{
-	    if (boardChanged)
-		enter_board(myboard);
-	   return;
-	}
-    } while (buf[0] < '1' || buf[0] > '9');
-
-    if (j == FRIEND_SPECIAL)
-	friend_special();
-    else if (!*friend_file[(int)j])
-        return;
-    setfriendfile(sfile, j);
-
-    if ((fp = fopen(sfile, "r")) != NULL) {
-	while (fgets(buf, sizeof(buf), fp) && (unsigned)count <= friend_max[type]) {
-	    char the_id[IDLEN + 1];
-	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
-	    if (!file_exist_entry(fpath, the_id))
-		file_append(fpath, buf);
-	}
-	fclose(fp);
-    }
-    if (boardChanged)
-	enter_board(myboard);
-}
-
 static int
 delete_friend_from_file(const char *file, const char *string, int  case_sensitive)
 {
@@ -242,27 +80,79 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 // (2^31)/DAY_SECONDS/30 = 828
 #define MAX_EXPIRE_MONTH (800)
 
-int
-friend_validate(int type, int expire, int badpost)
+
+static int
+user_list_add(const char *fpath, const char *uident, const char *des,
+              const char *desc_prompt, unsigned int max_entries)
+{
+    if ((unsigned int)file_count_line(fpath) >= max_entries)
+	return 0;
+
+    if ((uident[0] > ' ') && !file_exist_entry(fpath, uident)) {
+	char buf[MAX_DESCLEN] = "", buf2[STRLEN];
+	char t_uident[IDLEN + 1];
+
+	/* Thor: avoid uident run away when get data */
+	STRLCPY(t_uident, uident);
+
+	if (desc_prompt && *desc_prompt) {
+	    if (!des)
+		getdata(2, 0, desc_prompt, buf, sizeof(buf), DOECHO);
+	    else
+		getdata_str(2, 0, desc_prompt, buf, sizeof(buf), DOECHO, des);
+	}
+
+    	SNPRINTF(buf2, "%-13s%s", t_uident, buf);
+     	file_append_entry(fpath, buf2);
+	return 1;
+    }
+    return 0;
+}
+
+static void
+user_list_editdesc(const char *fn, const char *uident, const char *desc_prompt)
+{
+    FILE           *fp = NULL, *nfp = NULL;
+    char            genbuf[STRLEN];
+    AUTO_STR(fnnew, "%s-", fn);
+    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
+	int             length = strlen(uident);
+
+	while (fgets(genbuf, STRLEN, fp)) {
+	    if ((genbuf[0] > ' ') && strncmp(genbuf, uident, length))
+		fputs(genbuf, nfp);
+	    else if (!strncmp(genbuf, uident, length)) {
+		char buf[MAX_DESCLEN];
+		getdata(2, 0, desc_prompt, buf, MAX_DESCLEN, DOECHO);
+		fprintf(nfp, "%-13s%s\n", uident, buf);
+	    }
+	}
+	Rename(fnnew, fn);
+    }
+    if (fp)
+	fclose(fp);
+    if (nfp)
+	fclose(nfp);
+}
+
+static int
+user_list_validate(const char *fpath, int expire, int badpost)
 {
     FILE *fp = NULL, *nfp = NULL;
-    char fpath[PATHLEN];
     char genbuf[STRLEN+1], buf[STRLEN+1];
     int ret = 0;
     userec_t u;
 
     // expire is measured in month
     if (expire > 0 && expire < MAX_EXPIRE_MONTH)
-	expire *= DAY_SECONDS *30;
+	expire *= DAY_SECONDS * 30;
     else
 	expire = 0;
     if (badpost < 0 || (unsigned)badpost > (unsigned)UCHAR_MAX)
 	badpost = 0;
     syncnow();
 
-    setfriendfile(fpath, type);
     nfp = tmpfile();
-
     if (!nfp)
 	return ret;
     fp = fopen(fpath, "rt");
@@ -271,7 +161,7 @@ friend_validate(int type, int expire, int badpost)
 	return ret;
     }
 
-    while(fgets(genbuf, sizeof(genbuf), fp))
+    while (fgets(genbuf, sizeof(genbuf), fp))
     {
 	if (genbuf[0] <= ' ')
 	    continue;
@@ -320,46 +210,353 @@ friend_validate(int type, int expire, int badpost)
     fclose(fp);
     fclose(nfp);
 
-    return ret;
+    return 1;
+}
+
+static void
+user_list_water(const char *fpath, const char *message)
+{				/* 群體水球 added by Ptt */
+    char            line[STRLEN], userid[IDLEN + 1];
+    FILE           *fp;
+
+    if ((fp = fopen(fpath, "r"))) {
+	while (fgets(line, STRLEN, fp)) {
+	    userinfo_t     *uentp;
+	    int             tuid;
+
+	    sscanf(line, "%" toSTR(IDLEN) "s", userid);
+	    if ((tuid = searchuser(userid, NULL)) && tuid != usernum &&
+		(uentp = (userinfo_t *) search_ulist(tuid)) &&
+		isvisible_uid(tuid))
+		my_write(uentp->pid, message, uentp->userid, WATERBALL_PREEDIT, NULL);
+	}
+	fclose(fp);
+    }
+}
+
+int
+edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
+{
+    char            uident[IDLEN + 1];
+    int             count, column, dirty;
+    FILE           *fp;
+    char            genbuf[PATHLEN];
+    struct Vector   namelist;
+
+    if (!fpath || !*fpath || !cfg)
+	return 0;
+
+    Vector_init(&namelist, IDLEN + 1);
+    dirty = 0;
+    while (1) {
+	vs_hdr(cfg->title ? cfg->title : "");
+	move(0, 40);
+	if (cfg->max_entries >= MAX_USERS)
+	    prints("(名單上限: 不限)");
+	else
+	    prints("(名單上限: %u 人)", cfg->max_entries);
+	count = 0;
+	Vector_clear(&namelist, IDLEN + 1);
+
+	if ((fp = fopen(fpath, "r"))) {
+	    move(3, 0);
+	    column = 0;
+	    while (fgets(genbuf, STRLEN, fp)) {
+		char *space;
+		if (genbuf[0] <= ' ')
+		    continue;
+		space = strpbrk(genbuf, str_space);
+		if (space) *space = '\0';
+		Vector_add(&namelist, genbuf);
+		prints("%-13s", genbuf);
+		count++;
+		if (++column > 5) {
+		    column = 0;
+		    outc('\n');
+		}
+	    }
+	    fclose(fp);
+	}
+
+	char prompt[128];
+	if (count > 0) {
+	    snprintf(prompt, sizeof(prompt),
+		     "(A)增加(D)刪除%s%s(L)列出(K)清空%s%s(Q)結束?[Q] ",
+		     (cfg->desc_prompt && *cfg->desc_prompt) ? "(E)修改" : "",
+		     cfg->import_fn ? "(P)引入" : "",
+		     cfg->allow_clean ? "(C)整理有效名單" : "",
+		     cfg->allow_waterball ? "(W)水球" : "");
+	} else {
+	    snprintf(prompt, sizeof(prompt),
+		     "(A)增加 %s(Q)結束?[Q] ",
+		     cfg->import_fn ? "(P)引入其他名單 " : "");
+	}
+	getdata(1, 0, prompt, uident, 3, LCECHO);
+
+	if (uident[0] == 'a') {
+	    move(1, 0);
+	    usercomplete(MSG_UID, uident);
+	    if (uident[0] && searchuser(uident, uident) && Vector_search(&namelist, uident) < 0) {
+		if (user_list_add(fpath, uident, NULL, cfg->desc_prompt, cfg->max_entries))
+		    dirty = 1;
+	    }
+	} else if (uident[0] == 'c' && count && cfg->allow_clean) {
+	    int expire = 0, badpost = 0;
+
+            move(1, 0); clrtobot();
+            outs("整理名單可清除已消失、過期、或已有退文的帳號。\n\n");
+
+	    getdata(2, 0,
+		    "要從名單中清除幾個月沒上站的使用者？ (0=不清除)[0] ",
+		    uident, 4, NUMECHO);
+	    expire = atoi(uident);
+#ifdef ASSESS
+	    getdata(3, 0,
+		    "要從名單中清除有幾篇以上退文的使用者？ (0=不清除)[0] ",
+		    uident, 4, NUMECHO);
+	    badpost = atoi(uident);
+#endif
+            move(4, 0);
+            outs("將清除下列類別的帳號:\n");
+            outs(" * 已消失的帳號\n");
+            if (expire)
+                prints(" * %d 個月沒上站的使用者\n", expire);
+            if (badpost)
+                prints(" * 已有 %d 篇退文的使用者\n", badpost);
+
+            getdata(9, 0,
+                    "確定要執行嗎? [y/N] ",
+                    uident, 3, LCECHO);
+            if (uident[0] != 'y')
+                continue;
+
+	    if (user_list_validate(fpath, expire, badpost))
+		dirty = 1;
+	} else if (uident[0] == 'p' && cfg->import_fn) {
+	    if (cfg->import_fn(fpath, cfg->max_entries, count))
+		dirty = 1;
+	} else if (uident[0] == 'e' && count && cfg->desc_prompt && *cfg->desc_prompt) {
+	    move(1, 0);
+	    namecomplete2(&namelist, MSG_UID, uident);
+	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
+		user_list_editdesc(fpath, uident, cfg->desc_prompt);
+		dirty = 1;
+	    }
+	} else if (uident[0] == 'd' && count) {
+	    move(1, 0);
+	    namecomplete2(&namelist, MSG_UID, uident);
+	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
+		delete_friend_from_file(fpath, uident, 0);
+		dirty = 1;
+	    }
+	} else if (uident[0] == 'l' && count) {
+	    more(fpath, YEA);
+	} else if (uident[0] == 'k' && count) {
+	    getdata(2, 0, "刪除整份名單,確定嗎 (a/N)?", uident, 3, LCECHO);
+	    if (uident[0] == 'a') {
+		unlink(fpath);
+		dirty = 1;
+	    }
+	} else if (uident[0] == 'w' && count && cfg->allow_waterball) {
+	    char            wall[60];
+	    char            ans[4];
+	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
+		continue;
+	    if (getdata(0, 0, "確定丟出群體水球? [Y]", ans, sizeof(ans), LCECHO) &&
+		*ans == 'n')
+		continue;
+	    user_list_water(fpath, wall);
+	} else {
+	    break;
+	}
+    }
+    Vector_delete(&namelist);
+    if (dirty) {
+	move(2, 0);
+	outs("更新資料中..請稍候.....");
+	refresh();
+    }
+    return dirty;
+}
+int
+is_rejected(const char *userid) {
+    userinfo_t *uentp;
+    /* friend_online may be truncated or stale; only trust a positive hit. */
+    if (currutmp && (uentp = search_ulist_userid(userid)) &&
+        (friend_stat(currutmp, uentp) & HRM))
+        return 1;
+    if (!file_exist_entry(TEMP_HOMEFILE(userid, FN_REJECT), cuser.userid))
+        return 0;
+    return !file_exist_entry(TEMP_HOMEFILE(userid, FN_OVERRIDES), cuser.userid);
+}
+
+void
+friend_special(void)
+{
+    char            genbuf[STRLEN], i;
+    FILE           *fp;
+    for (i = 0; i <= 9; i++) {
+	SNPRINTF(genbuf, "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
+	special_des[5] = i + '0';
+	if( (fp = fopen(TEMP_USERFILE(special_des), "r")) != NULL ){
+	    fgets(genbuf + 15, 40, fp);
+	    genbuf[47] = 0;
+	    fclose(fp);
+	}
+	move(i + 12, 0);
+	clrtoeol();
+	outs(genbuf);
+    }
+    getdata(22, 0, "請選擇第幾號特別名單 (0~9)[0]?", genbuf, 3, LCECHO);
+    if (genbuf[0] >= '0' && genbuf[0] <= '9') {
+	special_list[5] = genbuf[0];
+	special_des[5] = genbuf[0];
+    } else {
+	special_list[5] = '0';
+	special_des[5] = '0';
+    }
+}
+
+
+static int
+friend_append(const char *fpath, unsigned int max_entries, int count)
+{
+    char            buf[STRLEN], sfile[PATHLEN];
+    FILE           *fp;
+
+    do {
+	move(2, 0);
+	clrtobot();
+	outs("要引入哪一個名單?\n");
+
+	int j = 0;
+	for (int i = 0; (size_t)i < ARRAY_SIZE(friend_list); i++) {
+	    char cur_path[PATHLEN];
+	    setfriendfile(cur_path, i);
+	    if (strcmp(cur_path, fpath) != 0) {
+		++j;
+		prints("  (%d) %-s\n", j, friend_list[i]);
+	    }
+	}
+
+	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
+	if (!buf[0])
+	    return 0;
+
+	int choice = buf[0] - '1';
+	int sel = -1;
+	int cur_j = 0;
+	for (int i = 0; (size_t)i < ARRAY_SIZE(friend_list); i++) {
+	    char cur_path[PATHLEN];
+	    setfriendfile(cur_path, i);
+	    if (strcmp(cur_path, fpath) != 0) {
+		if (cur_j == choice) {
+		    sel = i;
+		    break;
+		}
+		cur_j++;
+	    }
+	}
+	if (sel < 0)
+	    continue;
+
+	if (sel == FRIEND_SPECIAL)
+	    friend_special();
+	else if (!*friend_file[sel])
+	    return 0;
+	setfriendfile(sfile, sel);
+	break;
+    } while (1);
+
+    int added = 0;
+    if ((fp = fopen(sfile, "r")) != NULL) {
+	while (fgets(buf, sizeof(buf), fp) && (unsigned int)count < max_entries) {
+	    char the_id[IDLEN + 1];
+	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
+	    if (!file_exist_entry(fpath, the_id)) {
+		file_append(fpath, buf);
+		count++;
+		added = 1;
+	    }
+	}
+	fclose(fp);
+    }
+    return added;
+}
+
+void
+friend_add(const char *uident, int type, const char* des)
+{
+    char fpath[PATHLEN];
+    if (type < 0 || (size_t)type >= ARRAY_SIZE(friend_list))
+	return;
+    setfriendfile(fpath, type);
+    user_list_add(fpath, uident, des, friend_desc[type], friend_max[type]);
 }
 
 void
 friend_delete(const char *uident, int type)
 {
     char fn[PATHLEN];
+    if (type < 0 || (size_t)type >= ARRAY_SIZE(friend_list))
+	return;
     setfriendfile(fn, type);
     delete_friend_from_file(fn, uident, 0);
 }
 
-
-
-static void
-friend_editdesc(const char *uident, int type)
+int
+friend_validate(int type, int expire, int badpost)
 {
-    FILE           *fp=NULL, *nfp=NULL;
-    char            genbuf[STRLEN], fn[PATHLEN];
-    setfriendfile(fn, type);
-    AUTO_STR(fnnew, "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
-	int             length = strlen(uident);
-
-	while (fgets(genbuf, STRLEN, fp)) {
-	    if ((genbuf[0] > ' ') && strncmp(genbuf, uident, length))
-		fputs(genbuf, nfp);
-	    else if (!strncmp(genbuf, uident, length)) {
-		char buf[MAX_DESCLEN];
-		getdata(2, 0, "修改描述：", buf, MAX_DESCLEN, DOECHO);
-		fprintf(nfp, "%-13s%s\n", uident, buf);
-	    }
-	}
-	Rename(fnnew, fn);
-    }
-    if(fp)
-	fclose(fp);
-    if(nfp)
-	fclose(nfp);
+    char fpath[PATHLEN];
+    if (type < 0 || (size_t)type >= ARRAY_SIZE(friend_list))
+	return 0;
+    setfriendfile(fpath, type);
+    return user_list_validate(fpath, expire, badpost);
 }
 
+void
+friend_edit(int type)
+{
+    char            fpath[PATHLEN];
+    char            genbuf[PATHLEN];
+    FILE           *fp;
+
+    if (type < 0 || (size_t)type >= ARRAY_SIZE(friend_list))
+	return;
+
+    if (type == FRIEND_SPECIAL)
+	friend_special();
+    setfriendfile(fpath, type);
+
+    user_list_cfg_t cfg = {
+	.title = friend_list[type],
+	.desc_prompt = friend_desc[type],
+	.max_entries = friend_max[type],
+	.allow_waterball = 1,
+	.allow_clean = 1,
+	.import_fn = friend_append,
+    };
+
+    if (edit_user_list(fpath, &cfg)) {
+	if (type == FRIEND_ALOHA) {
+            friend_svc_reload(cuser.userid);
+	} else if (type == FRIEND_SPECIAL) {
+	    genbuf[0] = 0;
+	    AUTO_USERFILE(spec_file, special_des);
+	    if ((fp = fopen(spec_file, "r"))) {
+		fgets(genbuf, 30, fp);
+		fclose(fp);
+	    }
+	    getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", genbuf, 30,
+			DOECHO);
+	    if ((fp = fopen(spec_file, "w"))) {
+		fputs(genbuf, fp);
+		fclose(fp);
+	    }
+	}
+	friend_load();
+    }
+}
 static int
 has_friend_or_reject_file(void)
 {
@@ -390,187 +587,6 @@ void friend_load(void)
                  "  如果擔心請直接斷線離開。\n\n");
             pressanykey();
         }
-    }
-}
-
-static void
-friend_water(const char *message, int type)
-{				/* 群體水球 added by Ptt */
-    char            fpath[PATHLEN], line[STRLEN], userid[IDLEN + 1];
-    FILE           *fp;
-
-    setfriendfile(fpath, type);
-    if ((fp = fopen(fpath, "r"))) {
-	while (fgets(line, STRLEN, fp)) {
-	    userinfo_t     *uentp;
-	    int             tuid;
-
-	    sscanf(line, "%" toSTR(IDLEN) "s", userid);
-	    if ((tuid = searchuser(userid, NULL)) && tuid != usernum &&
-		(uentp = (userinfo_t *) search_ulist(tuid)) &&
-		isvisible_uid(tuid))
-		my_write(uentp->pid, message, uentp->userid, WATERBALL_PREEDIT, NULL);
-	}
-	fclose(fp);
-    }
-}
-
-void
-friend_edit(int type)
-{
-    char            fpath[PATHLEN], uident[IDLEN + 1];
-    int             count, column, dirty;
-    FILE           *fp;
-    char            genbuf[PATHLEN];
-    struct Vector   namelist;
-
-    if (type == FRIEND_SPECIAL)
-	friend_special();
-    setfriendfile(fpath, type);
-
-    if (type == FRIEND_ALOHA) {
-	if (dashf(fpath)) {
-            SNPRINTF(genbuf, "%s.old", fpath);
-            Copy(fpath, genbuf);
-	}
-    }
-    Vector_init(&namelist, IDLEN + 1);
-    dirty = 0;
-    while (1) {
-	vs_hdr(friend_list[type]);
-	/* TODO move (0, 40) just won't really work as it hints.
-	 * The ANSI secapes will change x coordinate. */
-	move(0, 40);
-	if (friend_max[type] >= MAX_USERS)
-	    prints("(名單上限: 不限)");
-	else
-	    prints("(名單上限: %d 人)", friend_max[type]);
-	count = 0;
-	Vector_clear(&namelist, IDLEN + 1);
-
-	if ((fp = fopen(fpath, "r"))) {
-	    move(3, 0);
-	    column = 0;
-	    while (fgets(genbuf, STRLEN, fp)) {
-		char *space;
-		if (genbuf[0] <= ' ')
-		    continue;
-		space = strpbrk(genbuf, str_space);
-		if (space) *space = '\0';
-		Vector_add(&namelist, genbuf);
-		prints("%-13s", genbuf);
-		count++;
-		if (++column > 5) {
-		    column = 0;
-		    outc('\n');
-		}
-	    }
-	    fclose(fp);
-	}
-	getdata(1, 0, (count ?
-		    "(A)增加(D)刪除(E)修改(P)引入(L)列出(K)清空"
-		    "(C)整理有效名單(W)水球(Q)結束?[Q] " :
-		    "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
-		uident, 3, LCECHO);
-	if (uident[0] == 'a') {
-	    move(1, 0);
-	    usercomplete(MSG_UID, uident);
-	    if (uident[0] && searchuser(uident, uident) && Vector_search(&namelist, uident) < 0) {
-		friend_add(uident, type, NULL);
-		dirty = 1;
-	    }
-	} else if (uident[0] == 'c') {
-	    int expire = 0, badpost = 0;
-
-            move(1, 0); clrtobot();
-            // we have seen some BM hit this accidentally.. so ask again.
-            outs("整理名單可清除已消失、過期、或已有退文的帳號。\n\n");
-
-	    getdata(2, 0,
-		    "要從名單中清除幾個月沒上站的使用者？ (0=不清除)[0] ",
-		    uident, 4, NUMECHO);
-	    expire = atoi(uident);
-#ifdef ASSESS
-	    getdata(3, 0,
-		    "要從名單中清除有幾篇以上退文的使用者？ (0=不清除)[0] ",
-		    uident, 4, NUMECHO);
-	    badpost = atoi(uident);
-#endif
-            move(4, 0);
-            outs("將清除下列類別的帳號:\n");
-            outs(" * 已消失的帳號\n");
-            if (expire)
-                prints(" * %d 個月沒上站的使用者\n", expire);
-            if (badpost)
-                prints(" * 已有 %d 篇退文的使用者\n", badpost);
-
-            getdata(9, 0,
-                    "確定要執行嗎? [y/N] ",
-                    uident, 3, LCECHO);
-            if (uident[0] != 'y')
-                break;
-
-	    // delete all users that not in list.
-	    friend_validate(type, expire, badpost);
-	    dirty = 1;
-	} else if (uident[0] == 'p') {
-	    friend_append(type, count);
-	    dirty = 1;
-	} else if (uident[0] == 'e' && count) {
-	    move(1, 0);
-	    namecomplete2(&namelist, MSG_UID, uident);
-	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
-		friend_editdesc(uident, type);
-	    }
-	} else if (uident[0] == 'd' && count) {
-	    move(1, 0);
-	    namecomplete2(&namelist, MSG_UID, uident);
-	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
-		friend_delete(uident, type);
-		dirty = 1;
-	    }
-	} else if (uident[0] == 'l' && count)
-	    more(fpath, YEA);
-	else if (uident[0] == 'k' && count) {
-	    getdata(2, 0, "刪除整份名單,確定嗎 (a/N)?", uident, 3,
-		    LCECHO);
-	    if (uident[0] == 'a')
-		unlink(fpath);
-	    dirty = 1;
-	} else if (uident[0] == 'w' && count) {
-	    char            wall[60];
-	    char            ans[4];
-	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
-		continue;
-	    if (getdata(0, 0, "確定丟出群體水球? [Y]", ans, sizeof(ans), LCECHO) &&
-		*ans == 'n')
-		continue;
-	    friend_water(wall, type);
-	} else
-	    break;
-    }
-    Vector_delete(&namelist);
-    if (dirty) {
-	move(2, 0);
-	outs("更新資料中..請稍候.....");
-	refresh();
-	if (type == FRIEND_ALOHA) {
-            friend_svc_reload(cuser.userid);
-	} else if (type == FRIEND_SPECIAL) {
-	    genbuf[0] = 0;
-	    AUTO_USERFILE(spec_file, special_des);
-	    if ((fp = fopen(spec_file, "r"))) {
-		fgets(genbuf, 30, fp);
-		fclose(fp);
-	    }
-	    getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", genbuf, 30,
-			DOECHO);
-	    if ((fp = fopen(spec_file, "w"))) {
-		fputs(genbuf, fp);
-		fclose(fp);
-	    }
-	}
-	friend_load();
     }
 }
 

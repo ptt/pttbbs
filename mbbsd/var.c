@@ -335,15 +335,11 @@ const char     * const bw_chess[] = {"○", "●", "。", "‧"};
 
 /* friend.c */
 /* Ptt 各種特別名單的檔名 */
-const char     * const friend_file[8] = {
+const char     * const friend_file[FRIEND_MAX] = {
     [FRIEND_OVERRIDE] = FN_OVERRIDES,
     [FRIEND_REJECT] = FN_REJECT,
     [FRIEND_ALOHA] = FN_ALOHAED,
-    [3] = "", /* deprecated: post list */
     [FRIEND_SPECIAL] = "", /* may point to other filename */
-    [FRIEND_CANVOTE] = FN_CANVOTE,
-    [6] = FN_WATER, /* deprecated: board water ban */
-    [BOARD_VISABLE] = FN_VISABLE,
 };
 
 

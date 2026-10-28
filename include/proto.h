@@ -291,6 +291,18 @@ int updatenewfav(int mode);
 void subscribe_newfav(void);
 void reginit_fav(void);
 
+/* user list editor */
+typedef struct user_list_cfg {
+    const char   *title;
+    const char   *desc_prompt;
+    unsigned int  max_entries;
+    int           allow_waterball;
+    int           allow_clean;
+    int         (*import_fn)(const char *fpath, unsigned int max_entries, int count);
+} user_list_cfg_t;
+
+int edit_user_list(const char *fpath, const user_list_cfg_t *cfg);
+
 /* friend */
 void friend_edit(int type);
 void friend_load(void);
