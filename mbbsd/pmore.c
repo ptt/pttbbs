@@ -1850,6 +1850,7 @@ mf_display()
             long flResetColor = 0;
             int  srlen = -1;
             int breaknow = 0;
+            int is_comment_body = 0;
 
             unsigned char c;
 
@@ -1884,6 +1885,7 @@ mf_display()
                 else if (comment_render_body_prefix(&cmt_ctx, line_head, &mf.dispe, &col, (int *)&flResetColor))
                 {
                     /* case 2.6, comment body */
+                    is_comment_body = 1;
                 }
                 else
                 {
@@ -2015,6 +2017,38 @@ mf_display()
                         if (bpref.rawmode == MFDISP_RAW_NA || bpref.rawmode == MFDISP_RAW_NOANSI)
                         {
                             int limit = (bpref.rawmode == MFDISP_RAW_NOANSI ? t_columns : maxcol + 1);
+
+                            if (srlen < 0 && !url_state.in_url && is_comment_body &&
+                                c == '>' && mf.dispe + 1 < mf.end && *(mf.dispe + 1) == '>')
+                            {
+                                int ref_len = comment_match_ref(mf.dispe, mf.end, NULL);
+                                if (ref_len > 0)
+                                {
+                                    outs(ANSI_COLOR(1));
+                                    while (ref_len > 0 && col < limit)
+                                    {
+                                        char ch = *mf.dispe;
+                                        if (xprefix > 0)
+                                            xprefix--;
+                                        else
+                                        {
+                                            outc(ch);
+                                            col++;
+                                        }
+                                        mf.dispe++;
+                                        ref_len--;
+                                    }
+
+                                    const char *t_color = comment_get_body_color(&cmt_ctx);
+                                    if (t_color && *t_color)
+                                        outs(t_color);
+                                    else
+                                        outs(ANSI_RESET);
+
+                                    continue;
+                                }
+                            }
+
                             int ulen = 0;
 
                             if (!url_state.in_url && (c == 'h' || c == 'H') &&

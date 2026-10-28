@@ -82,4 +82,15 @@ int comment_render_body_prefix(const comment_ctx_t *ctx,
                                int *col,
                                int *need_reset_color);
 
+/* Checks if *p points to a comment reference ">>N" (where N > 0).
+ * If matched, returns the length of the reference (e.g. strlen(">>12")).
+ * If not matched, returns 0.
+ */
+int comment_match_ref(const unsigned char *p,
+                      const unsigned char *end,
+                      int *ref_num);
+
+/* Returns current body text color according to theme and OP state */
+const char *comment_get_body_color(const comment_ctx_t *ctx);
+
 #endif /* _COMMENTS_H_ */

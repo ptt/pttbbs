@@ -646,3 +646,44 @@ comment_render_body_prefix(const comment_ctx_t *ctx,
 
     return 1;
 }
+
+
+int
+comment_match_ref(const unsigned char *p,
+                  const unsigned char *end,
+                  int *ref_num)
+{
+    if (!p || p + 2 >= end)
+        return 0;
+    if (p[0] != '>' || p[1] != '>')
+        return 0;
+
+    const unsigned char *d = p + 2;
+    /* First digit must be 1-9 (N must be > 0) */
+    if (*d < '1' || *d > '9')
+        return 0;
+
+    int val = 0;
+    while (d < end && isdigit(*d)) {
+        if (val < 100000000)
+            val = val * 10 + (*d - '0');
+        d++;
+    }
+
+    /* Do not match if immediately followed by ASCII letters or underscore */
+    if (d < end && ((*d >= 'a' && *d <= 'z') || (*d >= 'A' && *d <= 'Z') || *d == '_'))
+        return 0;
+
+    if (ref_num)
+        *ref_num = val;
+    return (int)(d - p);
+}
+
+const char *
+comment_get_body_color(const comment_ctx_t *ctx)
+{
+    if (!ctx)
+        return NULL;
+    const comment_theme_t *thm = comment_get_theme(ctx->theme);
+    return ctx->cur_is_op ? thm->color_comment_text_op : thm->color_comment_text;
+}
