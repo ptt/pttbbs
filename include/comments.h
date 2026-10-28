@@ -52,6 +52,10 @@ const char *comment_theme_menu_options(void);
 void comment_init_op_state(comment_ctx_t *ctx,
                            const unsigned char *line_head);
 
+/* Updates OP state when skipping lines in pagers */
+void comment_update_line_state(comment_ctx_t *ctx,
+                               const unsigned char *line);
+
 /* Renders comment header ([N] author creation).
  * If line is recognized and rendered:
  *   - outputs formatted line to screen

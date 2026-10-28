@@ -1756,6 +1756,7 @@ mf_display()
         /* Is currentline visible? */
         if (lines < startline || lines > endline)
         {
+            comment_update_line_state(&cmt_ctx, mf.dispe);
             MFDISP_SKIPCURLINE();
             newline = MFDISP_NEWLINE_SKIP;
         }

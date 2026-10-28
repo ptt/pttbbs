@@ -438,6 +438,19 @@ comment_init_op_state(comment_ctx_t *ctx,
     }
 }
 
+void
+comment_update_line_state(comment_ctx_t *ctx, const unsigned char *line)
+{
+    if (!ctx || !ctx->comments_start || !line || line < ctx->comments_start)
+        return;
+
+    if (*line == '[') {
+        ctx->cur_is_op = is_modern_header_op(ctx, line);
+    } else if (strncmp((const char *)line, "  ", 2) != 0) {
+        ctx->cur_is_op = 0;
+    }
+}
+
 static int
 comment_render_modern_header(comment_ctx_t *ctx,
                                    const unsigned char *line_u,
