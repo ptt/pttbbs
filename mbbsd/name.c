@@ -221,8 +221,8 @@ vec_get_candidates(const char *prefix, void *ctx, int max_items,
 	    qsort(dst_buf, sort_count, IDLEN + 1, nc_cmp_id);
     }
 
-    if (count > 0) {
-	int last_idx = *out_truncated ? (count - 2) : (count - 1);
+    if (count > 0 && !*out_truncated) {
+	int last_idx = count - 1;
 	if (last_idx >= 0) {
 	    strlcpy(first_match, dst_buf, IDLEN + 1);
 	    strlcpy(last_match, dst_buf + last_idx * (IDLEN + 1), IDLEN + 1);
@@ -449,7 +449,7 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    if (ctx->exit_key_ptr)
 		*ctx->exit_key_ptr = key;
 	    if (r == VGETCB_END && prt->iend > 0) {
-		if (ctx->dirty < 0)
+		if (ctx->dirty < 0 || ctx->selected_idx < 0)
 		    complete_refresh_candidates(ctx, prt->buf);
 		if (ctx->selected_idx >= 0) {
 		    strlcpy(prt->buf, ctx->selected_name, prt->len);
@@ -480,7 +480,7 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    ctx->selected_idx = -1;
 	    break;
 	}
-	if (ctx->dirty < 0)
+	if (ctx->dirty < 0 || ctx->selected_idx < 0)
 	    complete_refresh_candidates(ctx, prt->buf);
 
 	if (ctx->selected_idx >= 0) {
@@ -526,6 +526,7 @@ complete_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		memcpy(prt->buf, ctx->first_match, lcp_len);
 		prt->buf[lcp_len] = '\0';
 		prt->icurr = prt->iend = lcp_len;
+		complete_refresh_candidates(ctx, prt->buf);
 	    }
 	}
 
