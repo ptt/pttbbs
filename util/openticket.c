@@ -99,7 +99,7 @@ static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX
     if ((fp = fopen(genbuf, "r"))) {
         if (fgets(genbuf, sizeof(genbuf), fp) && *genbuf)
             *pPrice = atoi(genbuf);
-        for (i = 0; fgets(betname[i], MAX_ITEM_LEN, fp) && i < MAX_ITEM; i++) {
+        for (i = 0; i < MAX_ITEM && fgets(betname[i], MAX_ITEM_LEN, fp); i++) {
             chomp(betname[i]);
             count++;
         }
