@@ -803,17 +803,17 @@ static const cmd_t vform_inplace_cmds[] = {
     { Ctrl('S'), NULL, NULL, vform_cmd_save, 0, CMD_PRIO_NONE },
     { KEY_F10, NULL, NULL, vform_cmd_save, 0, CMD_PRIO_NONE },
 
-    // Abort
-    { Ctrl('C'), "放棄", "放棄變更並離開表單", vform_cmd_abort, 0, CMD_PRIO_HIGH },
+    // Quit
+    { 'q', "離開", "離開表單(詢問是否儲存)", vform_cmd_quit, 0, CMD_PRIO_HIGH },
+    { 'Q', NULL, NULL, vform_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_ESC, NULL, NULL, vform_cmd_quit, 0, CMD_PRIO_NONE },
 
     // Home / End
     { KEY_HOME, NULL, "移動至第一欄位", vform_cmd_home, 0, CMD_PRIO_NONE },
     { KEY_END, NULL, "移動至最後欄位", vform_cmd_end, 0, CMD_PRIO_NONE },
 
-    // Quit (right-aligned)
-    { 'q', "離開", "離開表單(詢問是否儲存)", vform_cmd_quit, 0, CMD_PRIO_QUIT },
-    { 'Q', NULL, NULL, vform_cmd_quit, 0, CMD_PRIO_NONE },
-    { KEY_ESC, NULL, NULL, vform_cmd_quit, 0, CMD_PRIO_NONE },
+    // Abort (right-aligned)
+    { Ctrl('C'), "放棄", "放棄變更並離開表單", vform_cmd_abort, 0, CMD_PRIO_QUIT },
 
     // Help (right-aligned)
     { 'h', "說明", "顯示操作說明", vform_cmd_help, 0, CMD_PRIO_USAGE },
