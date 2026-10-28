@@ -1126,12 +1126,31 @@ m_mod_board(char *bname)
 	clrtobot();
 	prints("\n【設定 [%s] 看板之屬性】\n", newbh.brdname);
 	newbh.brdattr = setperms(newbh.brdattr, str_permboard);
+	// Only make_board_link() makes links, setting their target; here the
+	// flag would make whatever postexpire holds the target, and a link
+	// can't be edited back here. Links never get this far.
+	if (newbh.brdattr & BRD_SYMBOLIC) {
+	    newbh.brdattr &= ~BRD_SYMBOLIC;
+	    vmsg(MSG_LINK_BY_L);
+	}
 
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
 	        break;
+	    // A group that stops listing its boards, by losing its flag or
+	    // becoming the hot board group, leaves them listed nowhere, as a
+	    // deleted group does. Checked once confirmed, as boards can be
+	    // moved in while asking.
+	    if (GROUP_LISTS_BOARDS(&bh) && !GROUP_LISTS_BOARDS(&newbh) &&
+		board_first_child(bid)) {
+		newbh.brdattr = (newbh.brdattr & ~(BRD_GROUPBOARD | BRD_TOP)) |
+				(bh.brdattr & (BRD_GROUPBOARD | BRD_TOP));
+		vmsg("群組內還有看板，不能取消群組或改成熱門看板群組。");
+		if (newbh.brdattr == bh.brdattr)
+		    break;
+	    }
 	    // The board may have moved meanwhile; the editor does not change
 	    // its group.
 	    newbh.gid = getbcache(bid)->gid;
