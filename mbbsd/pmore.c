@@ -189,12 +189,6 @@
     ANSI_COLOR(30)
 #define PMORE_COLOR_FOOTER3 \
     ANSI_COLOR(0;47)
-#define PMORE_COLOR_COMMENTER \
-    ANSI_COLOR(0;33)
-#define PMORE_COLOR_COMMENTER_OP \
-    ANSI_COLOR(1;36)
-#define PMORE_COLOR_COMMENTER_INFO \
-    ANSI_COLOR(1;30)
 
 // Preference
 // header separator default style
@@ -208,6 +202,7 @@
 // ---------------------------------------------------------- </LOCALIZATION>
 
 #include "bbs.h"
+#include "comments.h"
 
 // ---------------------------------------------------------------- <PORTING>
 // Generic Porting
@@ -1491,86 +1486,6 @@ static char *override_attr = NULL;
  * display mf content from disps for MFDISP_PAGE
  */
 
-MFFPROTO int
-mf_display_comment_header(int max_width)
-{
-    const char *line = (const char *)mf.dispe;
-    const char *eol = (const char *)strchrnul(line, '\n');
-    const char *p_close, *u_start, *u_end, *c_start, *c_end;
-    int user_len, c_len, pad;
-
-    if (*line != '[')
-        return 0;
-
-    /* 1. Find closing ']' followed by space */
-    p_close = (const char *)memchr(line + 1, ']', eol - (line + 1));
-    if (!p_close || *(p_close + 1) != ' ')
-        return 0;
-
-    u_start = p_close + 2;
-
-    /* 2. Find next space to separate id from CREATION */
-    u_end = (const char *)memchr(u_start, ' ', eol - u_start);
-    if (!u_end)
-        return 0;
-
-    user_len = u_end - u_start;
-    if (user_len <= 0)
-        return 0;
-
-    c_start = u_end + 1;
-    while (c_start < eol && *c_start == ' ')
-        c_start++;
-
-    c_end = eol;
-    while (c_end > c_start && (*(c_end - 1) == '\r' || *(c_end - 1) == ' '))
-        c_end--;
-
-    c_len = c_end - c_start;
-
-    /* 3. Width: reserve >= 1 space between ID and CREATION */
-    int left_width = u_end - line;
-    int avail = max_width - left_width - 1;
-    int fitted_len = 0;
-
-    if (avail > 0) {
-        while (c_len > avail) {
-            /* Skip past first space and retry when space is insufficient */
-            const char *sp = (const char *)memchr(c_start, ' ', c_len);
-            if (!sp)
-                break;
-            c_start = sp + 1;
-            while (c_start < c_end && *c_start == ' ')
-                c_start++;
-            c_len = c_end - c_start;
-        }
-        if (c_len <= avail && c_len > 0) {
-            fitted_len = c_len;
-        }
-    }
-
-    pad = (fitted_len > 0) ? (max_width - left_width - fitted_len) : 0;
-
-    int is_op = (fh.op_author[0] != '\0' &&
-                 (int)strlen(fh.op_author) == user_len &&
-                 strncmp(u_start, fh.op_author, user_len) == 0);
-
-    /* 4. Sequential Zero-Copy rendering */
-    prints("%.*s", (int)(u_start - line), line);        /* "[N] " */
-    outs(is_op ? PMORE_COLOR_COMMENTER_OP : PMORE_COLOR_COMMENTER);
-    prints("%.*s", user_len, u_start);                  /* ID */
-    outs(ANSI_RESET);
-    if (fitted_len > 0) {
-        prints("%*s", pad, "");                         /* Padding */
-        outs(PMORE_COLOR_COMMENTER_INFO);
-        prints("%.*s", fitted_len, c_start);            /* CREATION (100% Zero-Copy) */
-        outs(ANSI_RESET);
-    }
-
-    MFDISP_SKIPCURLINE();
-    return 1;
-}
-
 static void PMORE_UINAV_FORWARDPAGE(void);
 
 #ifdef PMORE_EXPAND_ESC_STAR
@@ -1750,6 +1665,15 @@ mf_display()
     url_tracker_init_from_prev_line(&url_state, (const char *)mf.disps,
                                     (const char *)mf.start, (const char *)mf.end);
 
+    comment_ctx_t cmt_ctx = {
+        .buf_start = mf.start,
+        .buf_end = mf.end,
+        .comments_start = mf.comments_start,
+        .op_author = fh.op_author,
+        .show_comment_ip = 1,
+        .max_width = headerw,
+    };
+
     while (lines < MFDISP_PAGE)
     {
         int inAnsi = 0;
@@ -1908,7 +1832,7 @@ mf_display()
             MFDISP_SKIPCURLINE();
         }
         else if (mf.dispe >= mf.comments_start && bpref.rawmode == MFDISP_RAW_NA &&
-                 *mf.dispe == '[' && mf_display_comment_header(headerw))
+                 *mf.dispe == '[' && comment_render_header(&cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
         {
             /* case 2.5, comment header */
             wrapping = 0;
@@ -1948,10 +1872,9 @@ mf_display()
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
                 }
-                else if (mf.dispe >= mf.comments_start &&
-                         strncmp((char *)line_head, "  ", 2) == 0) {
-                    outs("¢x");
-                    mf.dispe +=2;
+                else if (comment_render_body_prefix(&cmt_ctx, line_head, &mf.dispe))
+                {
+                    /* case 2.6, comment body */
                 }
             }
 

@@ -1,5 +1,7 @@
 #include "bbs.h"
+#include "ansi.h"
 #include "daemons.h"
+#include "comments.h"
 
 void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
                          const char *myid, int maxlength,
@@ -271,3 +273,112 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx)
     return &c->key;
 }
 #endif
+
+
+/* Comment rendering for pagers */
+
+#define COLOR_COMMENTER       ANSI_COLOR(0;33)
+#define COLOR_COMMENTER_OP    ANSI_COLOR(1;36)
+#define COLOR_COMMENTER_INFO  ANSI_COLOR(1;30)
+
+int
+comment_render_header(const comment_ctx_t *ctx,
+                      const unsigned char *line_u,
+                      const unsigned char **next_line)
+{
+    const char *line = (const char *)line_u;
+    const char *buf_end = (const char *)ctx->buf_end;
+    const char *eol = (const char *)strchrnul(line, '\n');
+    if (eol > buf_end)
+        eol = buf_end;
+
+    if (*line != '[')
+        return 0;
+
+    /* 1. Find closing ']' followed by space */
+    const char *p_close = (const char *)memchr(line + 1, ']', eol - (line + 1));
+    if (!p_close || *(p_close + 1) != ' ')
+        return 0;
+
+    const char *u_start = p_close + 2;
+
+    /* 2. Find next space to separate id from CREATION */
+    const char *u_end = (const char *)memchr(u_start, ' ', eol - u_start);
+    if (!u_end)
+        return 0;
+
+    int user_len = u_end - u_start;
+    if (user_len <= 0)
+        return 0;
+
+    const char *c_start = u_end + 1;
+    while (c_start < eol && *c_start == ' ')
+        c_start++;
+
+    const char *c_end = eol;
+    while (c_end > c_start && (*(c_end - 1) == '\r' || *(c_end - 1) == ' '))
+        c_end--;
+
+    int c_len = c_end - c_start;
+
+    /* 3. Width: reserve >= 1 space between ID and CREATION */
+    int left_width = u_end - line;
+    int avail = ctx->max_width - left_width - 1;
+    int fitted_len = 0;
+
+    if (avail > 0) {
+        while (c_len > avail) {
+            /* Skip past first space and retry when space is insufficient */
+            const char *sp = (const char *)memchr(c_start, ' ', c_len);
+            if (!sp)
+                break;
+            c_start = sp + 1;
+            while (c_start < c_end && *c_start == ' ')
+                c_start++;
+            c_len = c_end - c_start;
+        }
+        if (c_len <= avail && c_len > 0) {
+            fitted_len = c_len;
+        }
+    }
+
+    int pad = (fitted_len > 0) ? (ctx->max_width - left_width - fitted_len) : 0;
+
+    int is_op = (ctx->op_author && ctx->op_author[0] != '\0' &&
+                 (int)strlen(ctx->op_author) == user_len &&
+                 strncmp(u_start, ctx->op_author, user_len) == 0);
+
+    /* 4. Sequential Zero-Copy rendering */
+    prints("%.*s", (int)(u_start - line), line);        /* "[N] " */
+    outs(is_op ? COLOR_COMMENTER_OP : COLOR_COMMENTER);
+    prints("%.*s", user_len, u_start);                  /* ID */
+    outs(ANSI_RESET);
+    if (fitted_len > 0) {
+        prints("%*s", pad, "");                         /* Padding */
+        outs(COLOR_COMMENTER_INFO);
+        prints("%.*s", fitted_len, c_start);            /* CREATION (100% Zero-Copy) */
+        outs(ANSI_RESET);
+    }
+
+    if (next_line)
+        *next_line = (const unsigned char *)eol;
+    return 1;
+}
+
+int
+comment_render_body_prefix(const comment_ctx_t *ctx,
+                           const unsigned char *line_head,
+                           unsigned char **dispe)
+{
+    if (!ctx || !ctx->comments_start || line_head < ctx->comments_start)
+        return 0;
+
+    if (strncmp((const char *)line_head, "  ", 2) != 0)
+        return 0;
+
+    if (*dispe == line_head) {
+        outs("¢x");
+        *dispe += 2;
+    }
+    return 1;
+}
