@@ -2071,7 +2071,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
                 SNPRINTF(col_num, "%7dX%s", head, (ptr->myattr & NBRD_TAG) ? "D " : unread[0]);
         }
 
-        char t_desc[SZ_COLS(BTLEN + 1)], t_bm[SZ_COLS(IDLEN * 3 + 3)];
+        char t_desc[SZ_COLS(BTLEN + 1)];
         const char *mb_desc = bh.desc;
         int d_cols = 0;
         int d_off = stream_col_offset(40, mb_desc, &d_cols);
@@ -2087,6 +2087,8 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         else
             strlcpy(full_bm, bh.moderator_notes, sizeof(full_bm));
         const char *mb_bm = full_bm;
+        // bm_off below is at most strlen(full_bm), so t_bm holds it all.
+        char t_bm[sizeof(full_bm)];
         int max_bm = (t_columns > 68) ? t_columns - 68 : 0;
         int bm_off = stream_col_offset(max_bm, mb_bm, NULL);
         strlcpy(t_bm, mb_bm, bm_off + 1);
