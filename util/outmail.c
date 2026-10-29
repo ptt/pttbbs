@@ -7,18 +7,24 @@
 #define NEWINDEX_PATTERN SPOOL "/.DIR.sending.%d"
 #define FROM ".bbs@" MYHOSTNAME
 #define SMTPPORT 25
+#define MAX_RETRY 3 /* give up a mail that has to be sent again this often */
 char    *smtpname;
 int     smtpport;
 char	disclaimer[1024];
 bool	one_shot;
 
+/* Returns the reply code (e.g. 250), 0 if the reply doesn't start with
+ * three digits and -1 if the connection is lost */
 int waitReply(int sock) {
     char buf[256];
-    
-    if(read(sock, buf, sizeof(buf)) <= 0)
+    ssize_t n;
+
+    if ((n = read(sock, buf, sizeof(buf))) <= 0)
 	return -1;
-    else
-	return buf[0] - '0';
+    if (n < 3 || !isdigit((unsigned char)buf[0]) ||
+	    !isdigit((unsigned char)buf[1]) || !isdigit((unsigned char)buf[2]))
+	return 0;
+    return (buf[0] - '0') * 100 + (buf[1] - '0') * 10 + (buf[2] - '0');
 }
 
 int writeAll(int sock, const char *p, size_t n) {
@@ -38,6 +44,17 @@ int writeAll(int sock, const char *p, size_t n) {
 
 int sendRequest(int sock, char *request) {
     return writeAll(sock, request, strlen(request));
+}
+
+/* Sends one SMTP command. Returns 1 if the reply is of the wanted class
+ * (the first digit), -1 if the connection is lost or the relay server is
+ * closing it (421), and 0 for any other reply. */
+int smtpCommand(int sock, char *request, int want) {
+    int r;
+
+    if (sendRequest(sock, request) || (r = waitReply(sock)) < 0 || r == 421)
+	return -1;
+    return r / 100 == want;
 }
 
 int connectMailServer(char *servername, int serverport)
@@ -65,12 +82,12 @@ int connectMailServer(char *servername, int serverport)
 	return -1;
     }
     
-    if(waitReply(sock) != 2) {
+    if(waitReply(sock) / 100 != 2) {
 	close(sock);
 	return -1;
     }
     
-    if(sendRequest(sock, "helo " MYHOSTNAME "\r\n") || waitReply(sock) != 2) {
+    if(sendRequest(sock, "helo " MYHOSTNAME "\r\n") || waitReply(sock) / 100 != 2) {
 	close(sock);
 	return -1;
     } else
@@ -160,28 +177,30 @@ int doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     return writeAll(sock, buf, n);
 }
 
-void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
+/* Returns 1 if the mail is sent, 0 if the relay server refuses it and -1
+ * if it should be sent again later (see smtpCommand). */
+int doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
     char buf[256];
-    
-    if (sendRequest(sock, "rset\r\n") || waitReply(sock) != 2)
-	return;
+    int r;
+
+    if ((r = smtpCommand(sock, "rset\r\n", 2)) <= 0)
+	return r;
 
     SNPRINTF(buf, "mail from: %s\r\n", from);
-    if(sendRequest(sock, buf) || waitReply(sock) != 2)
-	return;
-    
-    SNPRINTF(buf, "rcpt to: %s\r\n", to);
-    if(sendRequest(sock, buf) || waitReply(sock) != 2)
-	return;
-    
-    if(sendRequest(sock, "data\r\n") || waitReply(sock) != 3)
-	return;
-    
-    if (doSendBody(sock, fp, from, to, subject))
-	return;
+    if ((r = smtpCommand(sock, buf, 2)) <= 0)
+	return r;
 
-    if(sendRequest(sock, "\r\n.\r\n") || waitReply(sock) != 2)
-	return;
+    SNPRINTF(buf, "rcpt to: %s\r\n", to);
+    if ((r = smtpCommand(sock, buf, 2)) <= 0)
+	return r;
+
+    if ((r = smtpCommand(sock, "data\r\n", 3)) <= 0)
+	return r;
+
+    if (doSendBody(sock, fp, from, to, subject))
+	return -1;
+
+    return smtpCommand(sock, "\r\n.\r\n", 2);
 }
 
 /* Records in the spool aren't trusted to be NUL-terminated */
@@ -195,9 +214,16 @@ void terminateMailQueue(MailQueue *mq) {
 
 void sendMail() {
     int fd, smtpsock, counter = 0;
+    bool retry = false;
     long int total_count;
     struct stat st;
     MailQueue mq;
+    off_t pos;
+    /* Where to go on in the kept spool_path: the record of the mail to send
+     * again, and how many times it was tried. The mails before it are done;
+     * their files may be gone, and bsmtp may reuse the names. */
+    static off_t resume_at;
+    static int retry_count;
 
     AUTO_STR(spool_path, NEWINDEX_PATTERN, getpid());
 
@@ -205,6 +231,9 @@ void sendMail() {
 	if(link(INDEX, spool_path) || unlink(INDEX))
 	    /* nothing to do */
 	    return;
+	/* a new spool_path, even if the kept one was removed */
+	resume_at = 0;
+	retry_count = 0;
     }
 
     smtpsock = connectMailServer(smtpname, smtpport);
@@ -218,8 +247,11 @@ void sendMail() {
     flock(fd, LOCK_EX);
     fstat(fd, &st);
     total_count = st.st_size / sizeof(mq);
+    lseek(fd, resume_at, SEEK_SET);
+    counter = resume_at / sizeof(mq);
 
-    while(read(fd, &mq, sizeof(mq)) > 0) {
+    while ((pos = lseek(fd, 0, SEEK_CUR)) >= 0 &&
+	    read(fd, &mq, sizeof(mq)) > 0) {
 	FILE *fp;
 	char buf[256];
 	
@@ -237,8 +269,24 @@ void sendMail() {
 	    setproctitle("outmail: sending %d/%ld %s", counter, total_count, mq.filepath);
 	    printf("mailto: %s, %d of %ld, relay server: %s:%d\n", mq.rcpt, counter, total_count,
 		   smtpname, smtpport);
-	    doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject);
+	    retry = doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject) < 0;
 	    fclose(fp);
+	    if (retry) {
+		if (pos != resume_at) {
+		    resume_at = pos;
+		    retry_count = 0;
+		}
+		if (++retry_count >= MAX_RETRY) {
+		    fprintf(stderr, "%s: not sent after %d tries, dropped\n",
+			    mq.filepath, retry_count);
+		    unlink(mq.filepath);
+		    resume_at = pos + sizeof(mq);
+		    retry_count = 0;
+		    /* done if it was the last one */
+		    retry = resume_at < st.st_size;
+		}
+		break;
+	    }
 	    unlink(mq.filepath);
 	} else {
 	    perror(mq.filepath);
@@ -246,8 +294,16 @@ void sendMail() {
     }
     flock(fd, LOCK_UN);
     close(fd);
-    unlink(spool_path);
-    
+
+    if (retry) {
+	/* Keep this mail and the rest: the next round goes on from
+	 * resume_at */
+	fprintf(stderr, "relay server connection lost, retry later\n");
+    } else {
+	unlink(spool_path);
+	resume_at = 0;
+	retry_count = 0;
+    }
     disconnectMailServer(smtpsock);
 }
 
@@ -296,6 +352,8 @@ int main(int argc, char **argv, char **envp) {
     int ch;
  
     Signal(SIGHUP, wakeup);
+    /* A lost relay connection is handled where a write fails */
+    Signal(SIGPIPE, SIG_IGN);
     initsetproctitle(argc, argv, envp);
     
     if(chdir(BBSHOME))
