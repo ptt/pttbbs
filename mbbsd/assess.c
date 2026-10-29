@@ -36,53 +36,65 @@ static char * const badpost_reason[] = {
 };
 
 
-int assign_badpost(const char *userid, fileheader_t *fhdr,
-	const char *newpath, const char *comment)
+// Asks for the reason of a bad post. Returns 0 with the reason in reason,
+// or -1 when cancelled.
+int
+ask_badpost_reason(char *reason, size_t size)
 {
     char genbuf[STRLEN];
-    char reason[STRLEN];
-    char rptpath[PATHLEN];
-    int i, tusernum = searchuser(userid, NULL);
+    int i;
 
-    STRLCPY(rptpath, newpath);
-    assert(tusernum > 0 && tusernum < MAX_USERS);
-    move(b_lines - 2, 0);
-    clrtobot();
-    for (i = 0; i < (int)ARRAY_SIZE(badpost_reason); i++)
-	prints("%d.%s ", i + 1, badpost_reason[i]);
-    prints("%d.%s ", i + 1, "其他");
-    prints("0.取消退文 ");
-    do {
-        getdata(b_lines - 1, 0, "請選擇: ", genbuf, 2, NUMECHO);
-        i = genbuf[0] - '1';
-        if (i == -1) {
-            vmsg("取消設定退文。");
-            return -1;
-        }
-        if (i < 0 || i > (int)ARRAY_SIZE(badpost_reason))
-            bell();
-        else
-            break;
-    } while (1);
-
-    if (i < (int)ARRAY_SIZE(badpost_reason)) {
-        SNPRINTF(reason, "%s", badpost_reason[i]);
-    } else if (i == ARRAY_SIZE(badpost_reason)) {
-        while (!getdata(b_lines, 0, "請輸入原因", reason, 50, DOECHO)) {
-            // 對於 comment 目前可以重來，但非comment 文直接刪掉所以沒法 cancel
-            if (comment) {
+    while (1) {
+        move(b_lines - 2, 0);
+        clrtobot();
+        for (i = 0; i < (int)ARRAY_SIZE(badpost_reason); i++)
+            prints("%d.%s ", i + 1, badpost_reason[i]);
+        prints("%d.%s ", i + 1, "其他");
+        prints("0.取消退文 ");
+        do {
+            getdata(b_lines - 1, 0, "請選擇: ", genbuf, 2, NUMECHO);
+            // An empty answer cancels too: callers ask before deleting.
+            if (!genbuf[0] || genbuf[0] == '0') {
                 vmsg("取消設定退文。");
                 return -1;
             }
-            bell();
-            continue;
+            i = genbuf[0] - '1';
+            if (i < 0 || i > (int)ARRAY_SIZE(badpost_reason))
+                bell();
+            else
+                break;
+        } while (1);
+
+        if (i < (int)ARRAY_SIZE(badpost_reason)) {
+            strlcpy(reason, badpost_reason[i], size);
+            return 0;
         }
+        // "other": an empty reason goes back to the menu
+        if (getdata(b_lines, 0, "請輸入原因", reason,
+                    size < 50 ? size : 50, DOECHO))
+            return 0;
+        bell();
     }
-    assert(i >= 0 && i <= (int)ARRAY_SIZE(badpost_reason));
+}
 
-    sprintf(genbuf,"退回%s(%s)", comment ? "推文" : "文章", reason);
+// Records a bad post with the reason from ask_badpost_reason(), without
+// asking anything.
+void
+apply_badpost(const char *userid, const fileheader_t *fhdr,
+	      const char *newpath, const char *reason)
+{
+    char genbuf[STRLEN];
+    char rptpath[PATHLEN];
+    int tusernum = searchuser(userid, NULL);
 
-    if (fhdr) strncat(genbuf, fhdr->title, 64-strlen(genbuf));
+    // The account may be gone since the caller looked it up.
+    if (tusernum <= 0 || tusernum >= MAX_USERS)
+        return;
+    STRLCPY(rptpath, newpath);
+
+    snprintf(genbuf, sizeof(genbuf), "退回文章(%s)", reason);
+    if (fhdr && strlen(genbuf) < 64)
+        strncat(genbuf, fhdr->title, 64 - strlen(genbuf));
 
 
     if (!(inc_badpost(userid, 1) % 5)){
@@ -100,9 +112,7 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	passwd_sync_update(tusernum, &xuser);
     }
 
-    if (!comment) {
-        file_appendf(newpath, STR_POST_MARK "BadPost Reason: %s\n", reason);
-    }
+    file_appendf(newpath, STR_POST_MARK "BadPost Reason: %s\n", reason);
 
 #ifdef BAD_POST_RECORD
     // we also change rptpath because such record contains more information
@@ -116,12 +126,10 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 	    stampfile(rptpath, &report_fh);
 
 	    strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
-	    SNPRINTF(report_fh.title, "%s 板 %s 板主退回 %s %s",
-		    currboard, cuser.userid, userid, comment ? "推文" : "文章");
+	    SNPRINTF(report_fh.title, "%s 板 %s 板主退回 %s 文章",
+		    currboard, cuser.userid, userid);
 	    Copy(newpath, rptpath);
 	    file_appendf(rptpath, "\n退文原因: %s\n", genbuf);
-	    if (comment)
-		file_appendf(rptpath, "\n退回推文項目:\n%s", comment);
 	    file_append(rptpath, "\n");
 
 	    setbdir(rptdir, BAD_POST_RECORD);
@@ -134,8 +142,6 @@ int assign_badpost(const char *userid, fileheader_t *fhdr,
 
     sendalert(userid,  ALERT_PWD_PERM);
     mail_send_file(userid, genbuf, rptpath, cuser.userid);
-
-    return 0;
 }
 
 int

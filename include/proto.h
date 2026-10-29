@@ -60,8 +60,8 @@ int edit_user_acl_for_board(const char *uid, const char *board);
 
 /* assess */
 int inc_badpost(const char *, int num);
-int bad_comment(const char *fn);
-int assign_badpost(const char *userid, fileheader_t *fhdr, const char *newpath, const char *comment);
+int ask_badpost_reason(char *reason, size_t size);
+void apply_badpost(const char *userid, const fileheader_t *fhdr, const char *newpath, const char *reason);
 int reassign_badpost(const char *userid);
 
 /* bbs */

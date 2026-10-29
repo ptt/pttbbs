@@ -3479,6 +3479,25 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             0)
             del_fee = 0;
 
+#ifdef ASSESS
+        // Ask about the bad post before deleting anything: moderators may
+        // drop the connection at these prompts.
+        // Not for self-owned posts, invalid authors or digest mode.
+        char bp_reason[STRLEN] = "";
+        int bp_can = not_owned && tusernum > 0 && !(currmode & MODE_DIGEST);
+        // TODO use macro for the duration
+        int bp_old = bp_can &&
+            time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS;
+        if (bp_can && !bp_old) {
+            char ans[3];
+            move(5, 0); clrtobot();
+            getdata(5, 0, "惡退文章?(y/N)[N] ", ans, sizeof(ans), LCECHO);
+            if (ans[0] == 'y' &&
+                ask_badpost_reason(bp_reason, sizeof(bp_reason)) == 0)
+                as_badpost = 1;
+        }
+#endif
+
         if (!not_owned) {
             reload_money();
             if (cuser.money < del_fee) {
@@ -3521,29 +3540,16 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                      BN_BUGREPORT "報告" ANSI_RESET "\n");
             }
 #ifdef ASSESS
-	    // badpost assignment
-
-	    if (!not_owned || tusernum <= 0 || (currmode & MODE_DIGEST) ) {
-                // case one, self-owned, invalid author, or digest mode - should not give bad posts
+	    // badpost assignment, asked before deleting
+	    if (!bp_can) {
 	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
-                // case 2, got error in file deletion (already deleted, also skip badpost)
+                // got error in file deletion (already deleted, also skip badpost)
                 outs("退文設定: 已刪或刪除錯誤 (跳過)\n");
-	    } else if (time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS) {
-                // case 3, post older than one week (TODO use macro for the duration)
+                as_badpost = 0;
+	    } else if (bp_old) {
 		outs("退文設定: 文章超過一週 (跳過)\n");
-	    } else {
-                // case 4, can assign badpost
-		move(1, 40); clrtoeol();
-		// TODO not_owned 時也要改變 numpost?
-                outs("惡退文章?(y/N) ");
-                // FIXME 有板主會在這裡不小心斷掉連線所以要小心...
-                // 重要的事最好在前面作完。
-                vgets(genbuf, 3, VGET_LOWERCASE);
-
-		if (genbuf[0]=='y') {
-                    as_badpost = 1;
-		    assign_badpost(getuserid(tusernum), fhdr, newpath, NULL);
-                }
+	    } else if (as_badpost) {
+		apply_badpost(getuserid(tusernum), fhdr, newpath, bp_reason);
 	    }
 #endif // ASSESS
             if (*newpath && *reason) {
@@ -3593,7 +3599,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             pressanykey();
 	    return DIRCHANGED;
 	} else { // delete_fileheader
-            vmsg("無法刪除檔案記錄。請稍候再試。");
+            vmsg(as_badpost ? "無法刪除檔案記錄，也未退文。請稍候再試。" :
+                 "無法刪除檔案記錄。請稍候再試。");
             return DIRCHANGED;
         }
     } // genbuf[0] == 'y'
