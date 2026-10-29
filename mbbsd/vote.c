@@ -1142,7 +1142,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	    outs("狡щ布! ぃぉ璸布");
 	else {
 	    setbfile(buf, bname, vbuf->ballots);
-	    if ((fd = OpenCreate(buf, O_WRONLY | O_APPEND)) == 0)
+	    if ((fd = OpenCreate(buf, O_WRONLY | O_APPEND)) < 0)
 		outs("礚猭щ布詏\n");
 	    else {
 		struct stat     statb;
@@ -1156,6 +1156,14 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		flock(fd, LOCK_UN);
 		fstat(fd, &statb);
 		close(fd);
+
+		/* log this vote, before asking anything: dropping the
+		 * connection at the prompts below must not keep a vote out
+		 * of the log. */
+		char b_logs[STRLEN];
+		setbfile(b_logs, bname, vbuf->logs);
+		maybe_log_vote(&logconf, chosen, item_num, b_logs);
+
 		if (vans("眤癸硂Ωщ布Τぐ或腳禥種ǎ盾(y/N)[N]: ") == 'y') {
 		    char comments[V_MULTILINE_BUFSZ(3)];
 		    if (v_multiline(comments, 3,
@@ -1171,12 +1179,6 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		    }
 		}
 		move(b_lines - 1, 0);
-
-		/* log this vote */
-		char b_logs[STRLEN];
-		setbfile(b_logs, bname, vbuf->logs);
-		maybe_log_vote(&logconf, chosen, item_num, b_logs);
-
 		outs("ЧΘщ布\n");
 	    }
 	}
