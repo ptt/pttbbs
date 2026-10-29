@@ -421,7 +421,11 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
     setbfile(buf, bname, vbuf->control);
     fp = fopen(buf, "r");
 
-    assert(fp);
+    // closed or cancelled since the caller looked
+    if (!fp) {
+	vmsg("沒有這號投票。");
+	return FULLUPDATE;
+    }
     fscanf(fp, "%hd,%hd\n%d\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
 
@@ -542,17 +546,20 @@ vote_view_all(const char *bname)
     SNPRINTF(buf, "要看幾號投票 [%d] ", x);
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
-
-    if (atoi(genbuf) < 0 || atoi(genbuf) > MAX_VOTE_NR)
-	SNPRINTF(genbuf, "%d", x);
-
-    votebuf_init(&vbuf, atoi(genbuf));
-    setbfile(buf, bname, vbuf.control);
-
-    if (dashf(buf)) {
-	return vote_view(&vbuf, bname);
-    } else
+    // x: default (the last one listed), i: user selection. Enter alone
+    // gives "", which atoi() reads as vote 0, so take the default for it.
+    // Other text (e.g. q) leaves, as it did. A number must be one of the
+    // votes listed above: the next screen can cancel the vote, so never
+    // show another one instead; vote_view() says when there is none.
+    if (genbuf[0] && !isdigit((unsigned char)genbuf[0]))
 	return FULLUPDATE;
+    i = genbuf[0] ? atoi(genbuf) : x;
+    if (i < 0 || i >= MAX_VOTE_NR) {
+	vmsg("沒有這號投票。");
+	return FULLUPDATE;
+    }
+    votebuf_init(&vbuf, i);
+    return vote_view(&vbuf, bname);
 }
 
 static void
