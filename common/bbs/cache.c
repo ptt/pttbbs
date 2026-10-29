@@ -835,17 +835,10 @@ board_format_moderators(const boardheader_t *bh, char *buf, size_t buflen)
     for (int m = 0; m < MAX_BMs; m++) {
         int uid = bh->moderators[m].unum;
         if (uid > 0 && uid <= MAX_USERS) {
-            const char *uid_name = NULL;
-            userec_t u;
-            if (passwd_query(uid, &u) == 0) {
-                if (bh->moderators[m].firstlogin != 0 &&
-                    u.firstlogin != bh->moderators[m].firstlogin) {
-                    continue;
-                }
-                uid_name = u.userid[0] ? u.userid : getuserid(uid);
-            } else if (bh->moderators[m].firstlogin == 0) {
-                uid_name = getuserid(uid);
-            }
+            /* The firstlogin check is removed for performance, but invalid BMs
+             * will be moved out weekly by util/check_moderators. This can be
+             * added back if we have firstlogin in SHM. */
+            const char *uid_name = getuserid(uid);
             if (uid_name && uid_name[0]) {
                 if (buf[0] != '\0')
                     strlcat(buf, "/", buflen);

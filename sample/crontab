@@ -20,7 +20,7 @@
 20	6	1,15	*	*	bin/topsong.sh
 
 # 每週六清理板主、小組長與群組長權限
-55	3	*	*	6	bin/cleanbmperm -w
+55	3	*	*	6	bin/check_moderators -w
 
 # 每天清 logins.bad
 20	3	*	*	*	/bin/rm -f logins.bad
