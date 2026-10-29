@@ -13,18 +13,61 @@ int     smtpport;
 char	disclaimer[1024];
 bool	one_shot;
 
-/* Returns the reply code (e.g. 250), 0 if the reply doesn't start with
- * three digits and -1 if the connection is lost */
-int waitReply(int sock) {
-    char buf[256];
-    ssize_t n;
+/* Bytes read from the relay server but not used yet. There is one
+ * connection at a time, and connectMailServer empties it. */
+static char rbuf[512];
+static size_t rlen;
 
-    if ((n = read(sock, buf, sizeof(buf))) <= 0)
-	return -1;
-    if (n < 3 || !isdigit((unsigned char)buf[0]) ||
-	    !isdigit((unsigned char)buf[1]) || !isdigit((unsigned char)buf[2]))
-	return 0;
-    return (buf[0] - '0') * 100 + (buf[1] - '0') * 10 + (buf[2] - '0');
+/* Reads one line of a reply into line, without the line end; a longer
+ * line is cut. Returns -1 if the connection is lost. */
+int readReplyLine(int sock, char *line, size_t size) {
+    size_t len = 0, take, n;
+    char *nl;
+    ssize_t r;
+
+    for (;;) {
+	nl = memchr(rbuf, '\n', rlen);
+	take = nl ? (size_t)(nl - rbuf) + 1 : rlen;
+	n = take < size - 1 - len ? take : size - 1 - len;
+	memcpy(line + len, rbuf, n);
+	len += n;
+	memmove(rbuf, rbuf + take, rlen - take);
+	rlen -= take;
+	if (nl)
+	    break;
+	while ((r = read(sock, rbuf, sizeof(rbuf))) < 0 && errno == EINTR)
+	    ;
+	if (r <= 0)
+	    return -1;
+	rlen = r;
+    }
+    while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+	len--;
+    line[len] = '\0';
+    return 0;
+}
+
+/* Reads a whole reply, which may have several lines (RFC 5321 4.2.1).
+ * Returns the reply code (e.g. 250), or -1 if the connection is lost or a
+ * line doesn't start with three digits: the rest of the session can't be
+ * trusted to line up then. Empty lines are skipped. */
+int waitReply(int sock) {
+    char line[512];
+    int code;
+
+    for (;;) {
+	if (readReplyLine(sock, line, sizeof(line)))
+	    return -1;
+	if (!line[0])
+	    continue;
+	if (!isdigit((unsigned char)line[0]) ||
+		!isdigit((unsigned char)line[1]) ||
+		!isdigit((unsigned char)line[2]))
+	    return -1;
+	code = (line[0] - '0') * 100 + (line[1] - '0') * 10 + (line[2] - '0');
+	if (line[3] != '-')
+	    return code;
+    }
 }
 
 int writeAll(int sock, const char *p, size_t n) {
@@ -62,6 +105,7 @@ int connectMailServer(char *servername, int serverport)
     int sock;
     struct sockaddr_in addr;
     
+    rlen = 0;
     if((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 	perror("socket");
 	return -1;
