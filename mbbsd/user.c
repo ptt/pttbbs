@@ -1803,6 +1803,20 @@ int u_setup_2fa(void)
         return 0;
     }
 
+    // Ask for the mode before the code, so that nothing is asked between
+    // turning 2FA on and the end: a dropped connection must not leave the
+    // secret saved with 2FA off, or 2FA on in a mode the user did not pick.
+    // It comes before the secret is shown, so that a code typed too early
+    // cannot land here, and nothing below covers the instructions.
+    char mode_ans[4];
+    do {
+        getdata(6, 0, "請選擇模式 (1)每次登入皆驗證 (2)同IP免驗證 (Q)取消 [2]: ",
+                mode_ans, sizeof(mode_ans), LCECHO);
+        if (strcmp(mode_ans, "q") == 0)
+            return 0;
+    } while (mode_ans[0] && strcmp(mode_ans, "1") && strcmp(mode_ans, "2"));
+    uint8_t init_mode = (mode_ans[0] == '1') ? U_2FA_ALWAYS : U_2FA_NEWIP;
+
     user_2fa_t tfa;
     memset(&tfa, 0, sizeof(tfa));
     tfa.enabled = true;
@@ -1861,13 +1875,21 @@ int u_setup_2fa(void)
             break;
 
         if (verify_2fa(tfa.secret, input_code, 1)) {
-            user_save_2fa(cuser.userid, &tfa);
-            char mode_ans[4];
-            getdata(b_lines - 2, 0, "請選擇模式 (1)每次登入皆驗證 (2)同IP免驗證 [2]: ",
-                    mode_ans, sizeof(mode_ans), DOECHO);
-            uint8_t init_mode = (mode_ans[0] == '1') ? U_2FA_ALWAYS : U_2FA_NEWIP;
-            pwcuSet2FA(init_mode);
-            mvouts(b_lines - 1, 0, ANSI_COLOR(1;32) "[成功] 2FA 雙重驗證已正式啟用！" ANSI_RESET "\n");
+            if (!user_save_2fa(cuser.userid, &tfa)) {
+                mvouts(b_lines - 2, 0, ANSI_COLOR(1;31) "[失敗] 系統錯誤，無法儲存設定。" ANSI_RESET "\n");
+                break;
+            }
+            if (pwcuSet2FA(init_mode) != 0) {
+                user_delete_2fa(cuser.userid);
+                mvouts(b_lines - 2, 0, ANSI_COLOR(1;31) "[失敗] 系統錯誤，無法儲存設定。" ANSI_RESET "\n");
+                break;
+            }
+            // say the mode: it was asked on an earlier screen. Clear the
+            // line above too, which may hold a wrong-code message.
+            move(b_lines - 2, 0); clrtoeol();
+            move(b_lines - 1, 0); clrtoeol();
+            prints(ANSI_COLOR(1;32) "[成功] 2FA 雙重驗證已正式啟用！(%s)" ANSI_RESET "\n",
+                   init_mode == U_2FA_ALWAYS ? "每次登入皆驗證" : "同 IP 免驗證");
             log_user_security(cuser.userid, "%s 2FA Enabled (%s mode).\n", fromhost,
                               init_mode == U_2FA_ALWAYS ? "ALWAYS" : "NEWIP");
             break;
