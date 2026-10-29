@@ -1292,32 +1292,45 @@ mail_account_sysop(void)
 }
 
 
-int
-mail_mbox(void)
+// The weekly limit of home backups, kept in .zipped_home. Returns 0 when a
+// backup is allowed now; otherwise says when the next one is and returns -1.
+// With mark, it also records the backup: doforward() calls it so right
+// before the backup starts, which keeps the check and the record together
+// (sessions waiting at doforward()'s prompts all passed mail_mbox()'s
+// check) and records it before the long tar, during which the session
+// may be stopped.
+static int
+zipped_home_limit(int mark)
 {
     char tagname[PATHLEN];
-    fileheader_t fhdr;
-    time4_t last_tag = 0;
+    time4_t last_tag;
 
     setuserfile(tagname, ".zipped_home");
     last_tag = dasht(tagname);
-
     if (time4_is_valid(last_tag) && time4_days_elapsed(now, last_tag) < 7 &&
         !HasUserPerm(PERM_SYSOP)) {
         vmsgf("每週僅可備份一次，離下次還有 %d 天。",
               7 - time4_days_elapsed(now, last_tag));
-        return 0;
+        return -1;
     }
+    if (mark) {
+        log_filef(tagname, "/tmp/%s.uu\n", cuser.userid);
+        rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
+    }
+    return 0;
+}
+
+int
+mail_mbox(void)
+{
+    fileheader_t fhdr;
+
+    if (zipped_home_limit(0) < 0)
+        return 0;
 
     AUTO_STR(cmd, "/tmp/%s.uu", cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
-    // TODO doforward does not return real execution code... we may need to
-    // fix it in future.
-    if (doforward(cmd, &fhdr, 'Z') == 0) {
-        log_filef(tagname,
-                  "%s\n", cmd);
-        rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
-    }
+    doforward(cmd, &fhdr, 'Z');
     return 0;
 }
 
@@ -1483,8 +1496,16 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	STRLCPY(xid, address);
 	dot = strchr(xid, '.');
 	if (dot) *dot = 0;
-	if (!(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0)) {
-	    if (!mail_precheck_quota(1) || mail_charge_quota(1, "超額轉寄手續費") < 0)
+	int charge = !(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0);
+	if (charge && !mail_precheck_quota(1))
+	    return 1;
+	// Check the weekly limit again and record the backup, once nothing
+	// more is asked (another session may have passed the checks too) and
+	// before charging for it and starting the long tar.
+	if (mode == 'Z' && zipped_home_limit(1) < 0)
+	    return 1;
+	if (charge) {
+	    if (mail_charge_quota(1, "超額轉寄手續費") < 0)
 		return 1;
 	    outmsg("轉寄中請稍候...");
 	    refresh();
