@@ -21,8 +21,23 @@ int waitReply(int sock) {
 	return buf[0] - '0';
 }
 
+int writeAll(int sock, const char *p, size_t n) {
+    ssize_t w;
+
+    while (n > 0) {
+	if ((w = write(sock, p, n)) <= 0) {
+	    if (w < 0 && errno == EINTR)
+		continue;
+	    return -1;
+	}
+	p += w;
+	n -= w;
+    }
+    return 0;
+}
+
 int sendRequest(int sock, char *request) {
-    return write(sock, request, strlen(request)) < 0 ? -1 : 0;
+    return writeAll(sock, request, strlen(request));
 }
 
 int connectMailServer(char *servername, int serverport)
@@ -55,7 +70,7 @@ int connectMailServer(char *servername, int serverport)
 	return -1;
     }
     
-    if(sendRequest(sock, "helo " MYHOSTNAME "\n") || waitReply(sock) != 2) {
+    if(sendRequest(sock, "helo " MYHOSTNAME "\r\n") || waitReply(sock) != 2) {
 	close(sock);
 	return -1;
     } else
@@ -63,7 +78,7 @@ int connectMailServer(char *servername, int serverport)
 }
 
 void disconnectMailServer(int sock) {
-    sendRequest(sock, "quit\n");
+    sendRequest(sock, "quit\r\n");
     /* drop the reply :p */
     close(sock);
 }
@@ -78,15 +93,22 @@ int need_qp(const char *_s)
     return 0;
 }
 
-void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
+int doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     size_t n;
+    int c;
     char buf[2048];
     char subject_qp[STRLEN*3+100];
+    char subject_safe[STRLEN];
+    bool bol = true, cr = false;
     static  int     starttime = -1, msgid = 0;
     if( starttime == -1 ){
 	starttime = (int)time(NULL);
 	msgid = arc4random();
     }
+    /* Keep the subject on its own header line */
+    STRLCPY(subject_safe, subject);
+    mbs_sanitize(subject_safe, sizeof(subject_safe));
+    subject = subject_safe;
     n = SNPRINTF(buf, "From: %s <%s>\r\n"
 		 "To: %s\r\n"
 		 "Subject: %s\r\n"
@@ -105,36 +127,70 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     assert(n < sizeof(buf));
     if (n > sizeof(buf))
 	n = sizeof(buf);
-    write(sock, buf, n);
+    if (writeAll(sock, buf, n))
+	return -1;
 
-    while(fgets(buf, sizeof(buf), fp)) {
-	if(buf[0] == '.' && buf[1] == '\n')
-	    STRLCPY(buf, "..\n");
-	write(sock, buf, strlen(buf));
+    /* End every line (LF, CR or CRLF) with CRLF and dot-stuff every line
+     * starting with '.' (RFC 5321 4.5.2), so the body can't end DATA */
+    n = 0;
+    while ((c = getc(fp)) != EOF) {
+	if (n + 2 > sizeof(buf)) {
+	    if (writeAll(sock, buf, n))
+		return -1;
+	    n = 0;
+	}
+	if (cr && c == '\n') {
+	    cr = false;
+	    continue;
+	}
+	if (c == '\0')
+	    continue;
+	cr = (c == '\r');
+	if (c == '\r' || c == '\n') {
+	    buf[n++] = '\r';
+	    buf[n++] = '\n';
+	    bol = true;
+	    continue;
+	}
+	if (bol && c == '.')
+	    buf[n++] = '.';
+	buf[n++] = c;
+	bol = false;
     }
+    return writeAll(sock, buf, n);
 }
 
 void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
     char buf[256];
     
-    if (sendRequest(sock, "rset\n") || waitReply(sock) != 2)
+    if (sendRequest(sock, "rset\r\n") || waitReply(sock) != 2)
 	return;
 
-    SNPRINTF(buf, "mail from: %s\n", from);
+    SNPRINTF(buf, "mail from: %s\r\n", from);
     if(sendRequest(sock, buf) || waitReply(sock) != 2)
 	return;
     
-    SNPRINTF(buf, "rcpt to: %s\n", to);
+    SNPRINTF(buf, "rcpt to: %s\r\n", to);
     if(sendRequest(sock, buf) || waitReply(sock) != 2)
 	return;
     
-    if(sendRequest(sock, "data\n") || waitReply(sock) != 3)
+    if(sendRequest(sock, "data\r\n") || waitReply(sock) != 3)
 	return;
     
-    doSendBody(sock, fp, from, to, subject);
-
-    if(sendRequest(sock, "\n.\n") || waitReply(sock) != 2)
+    if (doSendBody(sock, fp, from, to, subject))
 	return;
+
+    if(sendRequest(sock, "\r\n.\r\n") || waitReply(sock) != 2)
+	return;
+}
+
+/* Records in the spool aren't trusted to be NUL-terminated */
+void terminateMailQueue(MailQueue *mq) {
+    mq->filepath[sizeof(mq->filepath) - 1] = '\0';
+    mq->subject[sizeof(mq->subject) - 1] = '\0';
+    mq->sender[sizeof(mq->sender) - 1] = '\0';
+    mq->username[sizeof(mq->username) - 1] = '\0';
+    mq->rcpt[sizeof(mq->rcpt) - 1] = '\0';
 }
 
 void sendMail() {
@@ -168,7 +224,15 @@ void sendMail() {
 	char buf[256];
 	
 	counter++;
+	terminateMailQueue(&mq);
 	SNPRINTF(buf, "%s%s", mq.sender, FROM);
+	/* CR/LF would end the SMTP command and start a new one */
+	if (strpbrk(buf, "\r\n") || strpbrk(mq.rcpt, "\r\n")) {
+	    fprintf(stderr, "%s: CR/LF in sender or recipient, dropped\n",
+		    mq.filepath);
+	    unlink(mq.filepath);
+	    continue;
+	}
 	if((fp = fopen(mq.filepath, "r"))) {
 	    setproctitle("outmail: sending %d/%ld %s", counter, total_count, mq.filepath);
 	    printf("mailto: %s, %d of %ld, relay server: %s:%d\n", mq.rcpt, counter, total_count,
@@ -196,6 +260,7 @@ void listQueue() {
 	
 	flock(fd, LOCK_EX);
 	while(read(fd, &mq, sizeof(mq)) > 0) {
+	    terminateMailQueue(&mq);
 	    printf("%s:%s -> %s:%s\n", mq.filepath, mq.sender, mq.rcpt,
 		   mq.subject);
 	    counter++;
