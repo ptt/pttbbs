@@ -854,11 +854,11 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	    /* 由紅方作 log. 記的是下棋前的原始分數 */
 	    /* NOTE, 若紅方斷線則無 log */
 	    time_t t = time(NULL);
-	    char buf[100];
+	    char buf[256];
 	    uint16_t lose1 = user1->lose, lose2 = user2->lose;
 	    if (lose1 > 0) lose1--;
 	    if (lose2 > 0) lose2--;
-	    sprintf(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/L%d)\n",
+	    SNPRINTF(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/L%d)\n",
 		    ctime(&t),
 		    user1->userid, user1->rating, user1->win,
 		    user1->tie, lose1,
