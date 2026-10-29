@@ -400,7 +400,7 @@ int more(const char *fpath, int promptend)
 
 			chomp(buf);
 			if (q2 == NULL) q2 = mbs_strstr(buf, STR_POST2);
-			if (q2)	    { *(q2-1) = 0; q2 = strchr(q2, ':'); }
+			if (q2 && q2 > buf) { *(q2-1) = 0; q2 = strchr(q2, ':'); }
 			else q2 = q1;
 
 			*q1++ = 0;	*q2++ = 0;
