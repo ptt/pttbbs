@@ -261,7 +261,6 @@ ui_mute_user_for_board(const char *uid, const char *board) {
         mkuserdir(uid);
         log_filef(user_history_log, "%s%s", msg_board, msg_tail);
     }
-    vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     if (result) {
         char anti_pettifogger[] =
             "請注意，\n"
@@ -294,6 +293,8 @@ ui_mute_user_for_board(const char *uid, const char *board) {
         sendalert(uid, ALERT_NEW_MAIL);
     }
     invalid_board_permission_cache(board);
+    // Last: a dropped connection at this prompt must not skip the above.
+    vmsg(result ? "已將使用者加入禁言名單" : "失敗，請向站長報告");
     return 0;
 }
 
@@ -342,8 +343,8 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     log_filef(history_log, "%s%s", msg_moderator, msg_tail);
     mkuserdir(uid);
     log_filef(user_history_log, "%s%s", msg_board, msg_tail);
-    vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
     invalid_board_permission_cache(board);
+    vmsg("使用者的禁言限制已解除，最晚至該使用者重新上站後生效");
     return 0;
 }
 
