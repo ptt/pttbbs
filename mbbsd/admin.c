@@ -789,6 +789,48 @@ edit_board_moderators_form(boardheader_t *bh)
     return 1;
 }
 
+static void
+board_enable_moderator_perms(const boardheader_t *bh)
+{
+    if (!bh || !bh->brdname[0] || (bh->brdattr & BRD_SYMBOLIC))
+        return;
+
+    // auto enable permission corresponding to board type
+    unsigned int mask = (bh->brdattr & BRD_GROUPBOARD) ?
+        (bh->gid == 1 ? PERM_GROUP_LEAD : PERM_GROUP_OP) : PERM_BM;
+
+    for (int m = 0; m < MAX_BMs; m++) {
+        int uid = bh->moderators[m].unum;
+        if (uid <= 0 || uid > MAX_USERS)
+            continue;
+
+        if (currutmp && uid == currutmp->uid) {
+            if (!HasUserPerm(mask)) {
+                if (pwcuBitEnableLevel(mask) == 0)
+                    post_auto_enable_perm(cuser.userid, mask, bh->brdname);
+            }
+        } else {
+            passwd_lock();
+            userec_t u;
+            if (passwd_query(uid, &u) == 0) {
+                if (!(u.userlevel & mask)) {
+                    u.userlevel |= mask;
+                    passwd_update(uid, &u);
+                    passwd_unlock();
+                    sendalert(u.userid, ALERT_PWD_PERM);
+                    post_auto_enable_perm(u.userid, mask, bh->brdname);
+                } else {
+                    passwd_unlock();
+                }
+            } else {
+                passwd_unlock();
+            }
+        }
+    }
+
+    // removal will be done by check_moderators program
+}
+
 
 typedef struct {
     char    brdname[IDLEN + 1];
@@ -1113,6 +1155,7 @@ m_mod_board(char *bname)
 			 bh.brdname, bm_buf1, bm_buf2,
 			 bh.moderator_notes, newbh.moderator_notes);
 		post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+		board_enable_moderator_perms(&newbh);
 		vmsg("板主名單已更新完畢");
 	    }
 	}
@@ -1500,6 +1543,7 @@ m_newbrd(int whatclass, int recover)
     parent_bh->firstchild[0] = 0;
     parent_bh->firstchild[1] = 0;
     setup_man(&newboard, NULL);
+    board_enable_moderator_perms(&newboard);
     outs("\n新板成立");
     char nb_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
     board_format_moderators(&newboard, nb_bm, sizeof(nb_bm));

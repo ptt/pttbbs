@@ -162,28 +162,14 @@ is_BM_cache(int bid) /* bid starts from 1 */
     if (!HasBasicUserPerm(PERM_LOGINOK))
 	return 0;
     const boardheader_t *bp = getbcache(bid);
-    int is_bm = 0;
     if (bp) {
         for (int m = 0; m < MAX_BMs; m++) {
             if (bp->moderators[m].unum > 0 && bp->moderators[m].unum == currutmp->uid) {
                 if (bp->moderators[m].firstlogin == 0 || bp->moderators[m].firstlogin == cuser.firstlogin) {
-                    is_bm = 1;
-                    break;
+                    return 1;
                 }
             }
         }
-    }
-
-    if (is_bm)
-    {
-	// auto enable permission corresponding to board type
-	unsigned int mask = (bp && (bp->brdattr & BRD_GROUPBOARD)) ?
-	    (bp->gid == 1 ? PERM_GROUP_LEAD : PERM_GROUP_OP) : PERM_BM;
-	if (!HasUserPerm(mask)) {
-	    if (pwcuBitEnableLevel(mask) == 0)
-		post_auto_enable_perm(cuser.userid, mask, bp ? bp->brdname : NULL);
-	}
-	return 1;
     }
     return 0;
 }
