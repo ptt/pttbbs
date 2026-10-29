@@ -105,6 +105,7 @@ struct ChatUser
     int uflag;
     int isize;                    /* current size of ibuf */
     time4_t tconnect;             /* when the connection was accepted */
+    int dead;                     /* kicked: main() logs it out (not in use) */
     uint32_t numlogindays;	  /* login counter */
     uint32_t numposts;		  /* post number */
     char userid[IDLEN+1];         /* real userid */
@@ -145,6 +146,7 @@ struct ChatCmd
 
 static ChatRoom mainroom;
 static ChatUser *mainuser;
+static int deadusers;           /* users marked dead, for main() to log out */
 static fd_set mainfds;
 static int maxfds;              /* number of sockets to select on */
 static int totaluser;           /* current number of connections */
@@ -372,7 +374,7 @@ cuser_by_userid(char *userid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
-	if (str_equal(userid, cu->userid))
+	if (!cu->dead && str_equal(userid, cu->userid))
 	    break;
     }
     return cu;
@@ -386,7 +388,7 @@ cuser_by_chatid(char *chatid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
-	if (str_equal(chatid, cu->chatid))
+	if (!cu->dead && str_equal(chatid, cu->chatid))
 	    break;
     }
     return cu;
@@ -404,6 +406,8 @@ fuzzy_cuser_by_chatid(char *chatid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
+	if (cu->dead)
+	    continue;
 	mode = str_match(chatid, cu->chatid);
 	if (mode == 0)
 	    return cu;
@@ -587,6 +591,8 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
+	if (cu->dead)
+	    continue;
 	if (room == cu->room || room == ROOM_ALL)
 	{
 	    if (!userno || !list_belong(cu->ignore, userno))
@@ -912,6 +918,8 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 
     for (user = mainuser; user; user = user->unext)
     {
+	if (user->dead)
+	    continue;
 
 	room = user->room;
 	if ((theroom != ROOM_ALL) && (theroom != room))
@@ -1017,6 +1025,8 @@ chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: 還沒有作不同間的 */
 
     for (user = mainuser; user; user = user->unext)
     {
+	if (user->dead)
+	    continue;
 	room = user->room;
 	if (whichroom != ROOM_ALL && whichroom != room)
 	    continue;
@@ -1332,6 +1342,8 @@ logout_user(ChatUser *cuser)
 
     FD_CLR(sock, &mainfds);
 
+    if (cuser->dead)
+	deadusers--;
     list_free(cuser->ignore);
 
     xuser = mainuser;
@@ -1721,9 +1733,12 @@ chat_kick(ChatUser *cu, char *msg)
 
     exit_room(xuser, EXIT_KICK, (char *) NULL);
 
-    if (room == &mainroom)
-	logout_user(xuser);
-    else
+    // Callers still use xuser (it may be cu itself, or the user main()
+    // serves next), so leave freeing it to main().
+    if (room == &mainroom) {
+	xuser->dead = 1;
+	deadusers++;
+    } else
 	enter_room(xuser, MAIN_NAME, (char *) NULL);
 }
 
@@ -2528,7 +2543,7 @@ cuser_serve(ChatUser *cu)
 	    cmd[isize]='\0';
 	    isize = 0;
 
-	    if (command_execute(cu) < 0)
+	    if (command_execute(cu) < 0 || cu->dead)
 		return -1;
 
 	    continue;
@@ -3058,9 +3073,13 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 
 	for (cu = mainuser; cu && nfds>0; cu = cunext) {
 	    /* logout_user() 會 free(cu); 先把 cu->next 記下來 */
-	    /* FIXME 若剛好 cu 在 main room /kick cu->next, 則 cu->next 會被 free 掉 */
 	    cunext = cu->unext;
 	    csock = cu->sock;
+	    if (cu->dead) {
+		if (FD_ISSET(csock, xptr) || FD_ISSET(csock, rptr))
+		    nfds--;
+		continue;
+	    }
 	    if (FD_ISSET(csock, xptr)) {
 		logout_user(cu);
 		nfds--;
@@ -3069,6 +3088,13 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 		    logout_user(cu);
 		nfds--;
 	    }
+	}
+
+	/* the users kicked out of the main room while serving */
+	for (cu = mainuser; cu && deadusers > 0; cu = cunext) {
+	    cunext = cu->unext;
+	    if (cu->dead)
+		logout_user(cu);
 	}
 
 	/* end of main loop */
