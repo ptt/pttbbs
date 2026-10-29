@@ -29,6 +29,16 @@ mailog(const char *msg)
 	    msg);
 }
 
+/* Strip control sequences, and turn other control bytes into spaces. */
+static void
+strip_control_header(char *s)
+{
+    strip_control_sequence(s, s);
+    for (; *s; s++)
+	if ((unsigned char)*s < ' ' || *s == 0x7f)
+	    *s = ' ';
+}
+
 static const char *
 bbsmail_pretty_subject(const char *subject)
 {
@@ -147,6 +157,9 @@ int mail2bbs(char *userid)
     if( (ptr = strchr(title, '\n')) )
 	*ptr = '\0';
 
+    strip_control_header(sender);
+    strip_control_header(title);
+
     if( strchr(sender, '@') == NULL )	/* ¥Ñ local host ±H«H */
 	STRLCAT(sender, "@" MYHOSTNAME);
 
@@ -208,10 +221,9 @@ int mail2bbs(char *userid)
     mailog(genbuf);
 
     /* append the record to the MAIL control file */
-    strip_control_sequence(title, title);
     STRLCPY(mymail.title, bbsmail_pretty_subject(title));
 
-    if (strtok(sender, " .@\t\n\r")) {
+    if (strtok(sender, " .@")) {
       STRLCAT(sender, ".");
       sender[IDLEN] = '.';
     }
