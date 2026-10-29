@@ -14,6 +14,11 @@ int cmpboardclass(const void *a, const void *b)
 	    return cmp;
 	return strncasecmp((*brd)->brdname, (*tmp)->brdname, IDLEN);
 } 
+/* Groups built or being built. The class root may be listed inside one of
+ * its own groups (on Ptt, 0ClassRoot is in PttBoard), and building it again
+ * there would recurse until the stack runs out. */
+static unsigned char building[MAX_BOARD + 1];
+
 void buildchilds(int level,char *path,int gid)
 {
     int i,count=0;
@@ -23,11 +28,16 @@ void buildchilds(int level,char *path,int gid)
     selected=malloc(preserved * sizeof(boardheader_t*));
     assert(selected);
     
+    assert(0 < gid && gid <= MAX_BOARD);
+    building[gid] = 1;
+
     int boardcount = num_boards();
     /* XXX It will cost O(ngroup * boardcount) totally. */
     for(i=0; i<boardcount;  i++) {
         ptr =&SHM->bcache[i];
 	if(ptr->gid != gid)
+	    continue;
+	if((ptr->brdattr & BRD_GROUPBOARD) && building[i + 1])
 	    continue;
 	if((ptr->brdattr&(BRD_NOCREDIT | BRD_HIDE))!=0)
 	    continue;
