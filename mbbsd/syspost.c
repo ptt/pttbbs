@@ -114,7 +114,11 @@ post_auto_enable_perm(const char *userid, int perm_bit, const char *brdname)
 	     userid, perm_name, brdname ? brdname : "");
 
     post_msg(BN_SECURITY, title, msg, "[系統安全局]");
-    log_usies("AutoPerm", TEMPFORMAT(STRLEN, "%s (%s)", brdname ? brdname : "", perm_name));
+    // usies names the user doing it; name the one given the permission too
+    if (strcmp(userid, cuser.userid) == 0)
+	log_usies("AutoPerm", TEMPFORMAT(STRLEN, "%s (%s)", brdname ? brdname : "", perm_name));
+    else
+	log_usies("AutoPerm", TEMPFORMAT(STRLEN, "%s (%s) for %s", brdname ? brdname : "", perm_name, userid));
     log_user_security(userid, "[AutoPerm] Enabled %s on board %s\n", perm_name, brdname ? brdname : "");
 }
 

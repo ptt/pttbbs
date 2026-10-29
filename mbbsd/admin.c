@@ -789,7 +789,10 @@ edit_board_moderators_form(boardheader_t *bh)
     return 1;
 }
 
-static void
+/* Gives the moderators of bh the permission that goes with moderating it.
+ * Call it after saving a board record whose moderators, group flag or gid
+ * changed. */
+void
 board_enable_moderator_perms(const boardheader_t *bh)
 {
     if (!bh || !bh->brdname[0] || (bh->brdattr & BRD_SYMBOLIC))
@@ -801,31 +804,49 @@ board_enable_moderator_perms(const boardheader_t *bh)
 
     for (int m = 0; m < MAX_BMs; m++) {
         int uid = bh->moderators[m].unum;
+        userec_t u;
         if (uid <= 0 || uid > MAX_USERS)
             continue;
 
-        if (currutmp && uid == currutmp->uid) {
-            if (!HasUserPerm(mask)) {
-                if (pwcuBitEnableLevel(mask) == 0)
-                    post_auto_enable_perm(cuser.userid, mask, bh->brdname);
-            }
-        } else {
-            passwd_lock();
-            userec_t u;
-            if (passwd_query(uid, &u) == 0) {
-                if (!(u.userlevel & mask)) {
-                    u.userlevel |= mask;
-                    passwd_update(uid, &u);
-                    passwd_unlock();
-                    sendalert(u.userid, ALERT_PWD_PERM);
-                    post_auto_enable_perm(u.userid, mask, bh->brdname);
-                } else {
-                    passwd_unlock();
-                }
-            } else {
-                passwd_unlock();
-            }
+        // Go by the record on disk, also for the user's own: the session's
+        // copy can differ (the SYSOP account's session-only permissions, or
+        // check_moderators clearing the bit).
+        passwd_lock();
+        if (passwd_query(uid, &u) != 0 || !u.userid[0] ||
+            // the entry of a deleted account whose uid was given to another
+            (bh->moderators[m].firstlogin &&
+             bh->moderators[m].firstlogin != u.firstlogin)) {
+            passwd_unlock();
+            continue;
         }
+
+        if (currutmp && uid == currutmp->uid) {
+            passwd_unlock();
+            // pwcu sets it in this session's copy too, without reloading it,
+            // which would drop the SYSOP account's session-only permissions
+            // (pwcuInitAdminPerm).
+            int had = (u.userlevel & mask) != 0;
+            if (pwcuBitEnableLevel(mask) != 0 || had)
+                continue;
+            // the account's other sessions pick it up (check_new_perm)
+            for (int i = 1, n = count_logins(uid, 0); i <= n; i++) {
+                userinfo_t *uentp = (userinfo_t *)search_ulistn(uid, i);
+                if (uentp && uentp != currutmp)
+                    uentp->alerts |= ALERT_PWD_PERM;
+            }
+            post_auto_enable_perm(cuser.userid, mask, bh->brdname);
+            continue;
+        }
+
+        if (u.userlevel & mask) {
+            passwd_unlock();
+            continue;
+        }
+        u.userlevel |= mask;
+        passwd_update(uid, &u);
+        passwd_unlock();
+        sendalert(u.userid, ALERT_PWD_PERM);
+        post_auto_enable_perm(u.userid, mask, bh->brdname);
     }
 
     // removal will be done by check_moderators program
@@ -1082,6 +1103,8 @@ m_mod_board(char *bname)
 	    reset_board(bid);
 	    sort_bcache();
 	    log_usies("SetBoardAttr", newbh.brdname);
+	    // the group flag decides which permission the moderators need
+	    board_enable_moderator_perms(&newbh);
 
 	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
 	    AUTO_STR(msg, "板名: %s\n"

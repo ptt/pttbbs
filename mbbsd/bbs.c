@@ -441,7 +441,7 @@ set_board(void)
     currmode = (currmode & (MODE_DIRTY | MODE_GROUP_OP | MODE_GROUP_LEAD)) | MODE_STARTED;
     if (!HasUserPerm(PERM_NOCITIZEN) &&
         (HasUserPerm(PERM_BOARDS) ||
-         is_BM_cache(currbid) ||
+         is_board_moderator(currbid) ||
          (bp->moderators[0].unum <= 0 && CBRD_IS_GROUP_OP()))) {
 	currmode |= MODE_BM;
     }
@@ -499,6 +499,22 @@ int IsFreeBoardName(const char *brdname)
     return 0;
 }
 
+/* Picks up a permission change that someone else made (ALERT_PWD_PERM). */
+void
+check_new_perm(void)
+{
+    if (!ISNEWPERM(currutmp))
+	return;
+#ifdef DEBUG
+    file_appendf("log/newperm.log",
+	    "%-13s: reloaded perm %s\n",
+	    cuser.userid, Cdate(&now));
+#endif
+    currmode &= ~MODE_POSTCHECKED;
+    pwcuReload();
+    CLEAR_ALERT_NEWPERM(currutmp);
+}
+
 int
 CheckModifyPerm(const char **preason)
 {
@@ -511,18 +527,7 @@ CheckModifyPerm(const char **preason)
     assert(preason);
 
     // check if my own permission is changed.
-    if (ISNEWPERM(currutmp))
-    {
-#ifdef DEBUG
-	file_appendf("log/newperm.log",
-		"%-13s: reloaded perm %s\n",
-		cuser.userid, Cdate(&now));
-#endif
-	currmode &= ~MODE_POSTCHECKED;
-	pwcuReload();
-	// XXX let pwcuReload handle NEWPERM?
-	CLEAR_ALERT_NEWPERM(currutmp);
-    }
+    check_new_perm();
 
     if (currmode & MODE_POSTCHECKED)
     {
@@ -608,7 +613,7 @@ char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
     assert(0<=bid-1 && bid-1<MAX_BOARD);
 
     // XXX currmode 是目前看板不是 bid...
-    if (is_BM_cache(bid))
+    if (is_board_moderator(bid))
 	return NULL;
     bp = getbcache(bid);
 
@@ -2228,7 +2233,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // prompt user what he's going to do now.
     move(2, 0);
-    if (is_BM_cache(currbid)) {
+    if (is_board_moderator(currbid)) {
         clrtoeol();
         outs("準備進行文章轉錄。板主要置底文章請改按 "
                 ANSI_COLOR(1;31) "_" ANSI_RESET " (壓住 "
@@ -2424,7 +2429,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
                          currboard, xboard, fhdr->filename, fhdr->title));
 
 	// update crosspost record
-	if (is_BM_cache(xbid)) {
+	if (is_board_moderator(xbid)) {
 #ifdef NOTIFY_BM_CP_IGNORE
 	    // ignore BM for cross-posting.
 	    outs(ANSI_COLOR(1;32)
@@ -3346,7 +3351,7 @@ del_post_check_mode(const fileheader_t *fhdr, int mode, char key, const char *la
 {
     if (!(fhdr->filemode & mode))
         return false;
-    if (is_BM_cache(currbid))
+    if (is_board_moderator(currbid))
         vmsgf("文章被%s(%c)，請先解除", label, key);
     else
         vmsgf("文章被%s，無法刪除，請洽板主", label);
