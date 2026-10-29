@@ -41,6 +41,8 @@
 #define CHAT_PIDFILE    "log/chat.pid"
 #define CHAT_LOGFILE    "log/chat.log"
 #define CHAT_INTERVAL   (60 * 30)
+#define CHAT_LOGIN_TIMEOUT  (60 * 3) /* includes the time to enter a chatid */
+#define CHAT_LOGIN_CHECK    60       /* how often to check CHAT_LOGIN_TIMEOUT */
 #define SOCK_QLEN       1
 
 
@@ -102,6 +104,7 @@ struct ChatUser
     int userno;			  /* userno 是 PASSWD 來的 unum, 幾乎是唯一的 */
     int uflag;
     int isize;                    /* current size of ibuf */
+    time4_t tconnect;             /* when the connection was accepted */
     uint32_t numlogindays;	  /* login counter */
     uint32_t numposts;		  /* post number */
     char userid[IDLEN+1];         /* real userid */
@@ -2913,7 +2916,8 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     register fd_set *rptr, *xptr;
     fd_set rset, xset;
     struct timeval tv;
-    time4_t uptime, tmaintain;
+    time4_t uptime, tmaintain, tlogin, trefused = 0;
+    int nrefused = 0;
 
 #ifdef SELFTESTER
     if(argc>1) {
@@ -2961,6 +2965,7 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     xptr = &xset;
     maxfds = msock + 1;
     tmaintain = time(0) + CHAT_INTERVAL;
+    tlogin = time(0) + CHAT_LOGIN_CHECK;
 
     for (;;)
     {
@@ -2978,12 +2983,32 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 #endif
 	}
 
+	/* close connections that have not logged in in time, and log the
+	 * connections refused since the last log line */
+	if (tlogin <= uptime)
+	{
+	    tlogin = uptime + CHAT_LOGIN_CHECK;
+	    for (cu = mainuser; cu; cu = cunext) {
+		cunext = cu->unext;
+		if (!cu->userno && cu->tconnect + CHAT_LOGIN_TIMEOUT <= uptime)
+		    logout_user(cu);
+	    }
+	    if (nrefused && trefused + CHAT_LOGIN_TIMEOUT <= uptime) {
+		SNPRINTF(chatbuf, "too many connections, %d refused",
+			nrefused);
+		logit("accept", chatbuf);
+		trefused = uptime;
+		nrefused = 0;
+	    }
+	}
+
 	memcpy(rptr, &mainfds, sizeof(fd_set));
 	memcpy(xptr, &mainfds, sizeof(fd_set));
 
 	/* Thor: for future reservation bug */
 
-	tv.tv_sec = CHAT_INTERVAL;
+	/* wake up for the next check (1 to CHAT_LOGIN_CHECK seconds) */
+	tv.tv_sec = tlogin - uptime;
 	tv.tv_usec = 0;
 
 	nfds = select(maxfds, rptr, NULL, xptr, &tv);
@@ -3004,6 +3029,9 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 		if(errno != EINTR) {
 		    // TODO
 		}
+	    } else if (csock >= FD_SETSIZE) {
+		close(csock);
+		nrefused++;
 	    } else {
 		cu = (ChatUser *) malloc(sizeof(ChatUser));
 		if(cu == NULL) {
@@ -3012,6 +3040,7 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 		} else {
 		    memset(cu, 0, sizeof(ChatUser));
 		    cu->sock = csock;
+		    cu->tconnect = time(0);
 		    cu->unext = mainuser;
 		    mainuser = cu;
 
