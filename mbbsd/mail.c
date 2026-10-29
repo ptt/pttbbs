@@ -1954,9 +1954,11 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 
-	currmode = 0;
 	setbpath(xfpath, xboard);
-	stampfile(xfpath, &xfile);
+	if (stampfile(xfpath, &xfile) < 0) {
+	    vmsg("系統錯誤: 無法寫入檔案");
+	    return FULLUPDATE;
+	}
         STRLCPY(xfile.owner, cuser.userid);
 	STRLCPY(xfile.title, xtitle);
 	if (genbuf[0] == 'l') {
@@ -1966,7 +1968,15 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	{
 	    const char *save_currboard;
 	    xptr = fopen(xfpath, "w");
-	    assert(xptr);
+	    if (!xptr) {
+		unlink(xfpath);
+		vmsg("系統錯誤: 無法寫入檔案");
+		return FULLUPDATE;
+	    }
+
+	    // Drop the board modes while writing to the board, but keep
+	    // MODE_STARTED: abort_bbs() skips u_exit() without it.
+	    currmode &= MODE_STARTED;
 
 	    save_currboard = currboard;
 	    currboard = xboard;

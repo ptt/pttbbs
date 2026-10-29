@@ -2315,7 +2315,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	int             currmode0 = currmode;
 	const char     *save_currboard;
 
-	currmode = 0;
 	setbpath(xfpath, xboard);
         if (stampfile(xfpath, &xfile) < 0) {
             vmsg("系統錯誤: 無法寫入檔案");
@@ -2328,6 +2327,15 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 	setbfile(fname, currboard, fhdr->filename);
 	xptr = fopen(xfpath, "w");
+	if (!xptr) {
+	    unlink(xfpath);
+	    vmsg("系統錯誤: 無法寫入檔案");
+	    return FULLUPDATE;
+	}
+
+	// Drop the board modes while writing to the other board, but keep
+	// MODE_STARTED: abort_bbs() skips u_exit() without it.
+	currmode &= MODE_STARTED;
 
 	save_currboard = currboard;
 	currboard = xboard;
