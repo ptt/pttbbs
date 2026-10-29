@@ -59,18 +59,25 @@ void buildchilds(int level,char *path,int gid)
 	       ptr->brdname, ptr->bclass, ptr->desc);
 
         if(ptr->brdattr & BRD_GROUPBOARD){
-	    AUTO_STR(newpath, "%s/%s", path, ptr->brdname);
-	    Mkdir(newpath);
-	    buildchilds(level+1, newpath, ptr-bcache+1); 
+	    // The paths below are made of the group names: check them here.
+	    if (invalid_pname(ptr->brdname)) {
+		printf("something wrong: %s, %s\n", path, ptr->brdname);
+	    } else {
+		AUTO_STR(newpath, "%s/%s", path, ptr->brdname);
+		Mkdir(newpath);
+		buildchilds(level+1, newpath, ptr-bcache+1);
+	    }
 	}
 	else{
-	    if(!invalid_pname(path) && !invalid_pname(ptr->brdname) &&
-		    isalpha(ptr->brdname[0])) {
+	    // Check the name only: invalid_pname() refuses the absolute path,
+	    // which is GROUPROOT and the group names checked above.
+	    if(!invalid_pname(ptr->brdname) && isalpha(ptr->brdname[0])) {
 		char apath[PATHLEN];
 		setapath(apath, ptr->brdname);
-		AUTO_STR(cmd, "/bin/ln -s " BBSHOME "/%s %s/%s",
-			apath, path, ptr->brdname);
-		system(cmd);
+		AUTO_STR(target, BBSHOME "/%s", apath);
+		AUTO_STR(linkpath, "%s/%s", path, ptr->brdname);
+		if (symlink(target, linkpath) < 0)
+		    fprintf(stderr, "%s: %s\n", linkpath, strerror(errno));
 	    } else {
 		printf("something wrong: %s, %s\n",path, ptr->brdname);
 	    }
