@@ -41,7 +41,7 @@ CPROG_WITHOUT_UTIL := \
 SCRIPT_PROGS := \
 	backpasswd.sh	mailog.sh	topsong.sh	\
 	toplazyBM.sh	dailybackup.pl	tarqueue.pl	waterball.pl	\
-	filtermail.pl	timecap_expire.sh	\
+	timecap_expire.sh	\
 	$(END)
 
 # 下面這些程式會被 install
@@ -59,7 +59,7 @@ LDLIBS := $(SRCROOT)/common/bbs/libcmbbs.a \
 	  $(SRCROOT)/common/osdep/libosdep.a \
 	  $(LDLIBS)
 
-.PHONY: all clean install installfiltermail bbsctl installbbsctl
+.PHONY: all clean install bbsctl installbbsctl
 
 all: $(BBSBASE) $(PROGS)
 
@@ -82,16 +82,9 @@ install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 	chmod 4755 $(BBSHOME)/bin/post
-ifdef WITHFILTERMAIL
-	$(MAKE) installfiltermail
-endif
 
 clean:
 	rm -f *.o $(COMPILED_PROGS)
-
-installfiltermail:
-	mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
-	ln -sf $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl: bbsctl.c
