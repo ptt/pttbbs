@@ -2192,6 +2192,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     int             xbid;
     boardheader_t  *bp;
 
+#ifndef USE_AUTOCPLOG
+    (void)ent;    // used only with USE_AUTOCPLOG
+    (void)direct;
+#endif
+
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 

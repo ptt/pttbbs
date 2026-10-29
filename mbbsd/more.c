@@ -182,6 +182,8 @@ pager_cmd_help(cmd_ctx_t *ctx)
 }
 #endif
 
+#ifdef USE_PMORE
+// The mini pager (no USE_PMORE) dispatches the same layers itself.
 static int
 common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 {
@@ -198,6 +200,7 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
         return -1;
     return cx.retval;
 }
+#endif
 
 static int
 common_pager_exit_handler(int r, const char *fpath)
