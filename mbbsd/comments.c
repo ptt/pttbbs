@@ -1,3 +1,4 @@
+#define _GNU_SOURCE // for strchrnul
 #include <ctype.h>
 #include "bbs.h"
 #include "ansi.h"
