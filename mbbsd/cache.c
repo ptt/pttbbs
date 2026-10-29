@@ -150,8 +150,9 @@ apply_boards(int (*func) (boardheader_t *))
     return 0;
 }
 
+/* Whether board bid's moderators include the user. */
 int
-is_BM_cache(int bid) /* bid starts from 1 */
+is_board_moderator(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
 

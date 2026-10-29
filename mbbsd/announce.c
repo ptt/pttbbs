@@ -1203,7 +1203,7 @@ announce_cmd_copy(cmd_ctx_t *ctx)
     AUTO_STR(fname, "%s/%s", cx->path,
              cx->me->header[cx->me->now - cx->me->page].filename);
     if (!cx->me->level && !HasUserPerm(PERM_SYSOP) &&
-        (cx->me->bid == 0 || !is_BM_cache(cx->me->bid)) && dashd(fname))
+        (cx->me->bid == 0 || !is_board_moderator(cx->me->bid)) && dashd(fname))
         vmsg("只有板主才可以拷貝目錄唷!");
     else
         a_copyitem(fname, cx->me->header[cx->me->now - cx->me->page].title, 0, 1);

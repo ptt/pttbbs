@@ -159,7 +159,7 @@ HasBoardPermNormally(boardheader_t *bptr)
 	return 1;
 
     /* 板主 */
-    if( is_BM_cache(bptr - bcache + 1) ) /* XXXbid */
+    if( is_board_moderator(bptr - bcache + 1) ) /* XXXbid */
 	return 1;
 
     /* 祕密看板：核對首席板主的好友名單 */
@@ -2210,7 +2210,7 @@ set_menu_group_op(const boardheader_t *bp)
 
     int bid = bp - bcache + 1;
     int is_bm = 0;
-    if (bid > 0 && bid <= MAX_BOARD && is_BM_cache(bid)) {
+    if (bid > 0 && bid <= MAX_BOARD && is_board_moderator(bid)) {
         is_bm = 1;
     } else if (HasUserPerm(PERM_BOARDS)) {
         is_bm = 1;
@@ -2302,6 +2302,8 @@ paste_taged_brds(int gid)
 				  sizeof(boardheader_t), bid);
 		reset_board(bid);
 		log_usies("SetBoardGID", bh->brdname);
+		// a group moved to or from the root needs another permission
+		board_enable_moderator_perms(bh);
 	    }
 	}
     sort_bcache();
@@ -3179,6 +3181,8 @@ choose_board(int newflag)
     cx.layers = layers;
 
     setutmpmode(newflag ? READNEW : READBRD);
+    // made a moderator meanwhile: the list commands need the permission
+    check_new_perm();
     if (get_fav_root() == NULL) {
         fav_load();
         if (!get_current_fav()) {

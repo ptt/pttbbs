@@ -2057,7 +2057,7 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
             // TODO what's the backup_path here?
 	    a_menu(xboard, fpath,
 		   HasUserPerm(PERM_BOARDS) ? 2 :
-		   (!HasUserPerm(PERM_NOCITIZEN) && is_BM_cache(bid)) ? 1 : 0,
+		   (!HasUserPerm(PERM_NOCITIZEN) && is_board_moderator(bid)) ? 1 : 0,
 		   bid, NULL, backup_path);
 	} else {
 	    mail_man();
