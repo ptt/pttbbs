@@ -232,7 +232,7 @@ int dice_main(void);
 int vedit(const char *fpath, int saveheader, char save_title[STRLEN]);
 int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags);
 int veditfile(const char *fpath);
-void write_header(FILE *fp, const char *mytitle);
+void write_header(FILE *fp, const char *mytitle, int allow_anon);
 void addsignature(FILE *fp, int ifuseanony);
 void addsimplesignature(FILE *fp, const char *fromhost);
 void addforwardsignature(FILE *fp, const char *fromhost);

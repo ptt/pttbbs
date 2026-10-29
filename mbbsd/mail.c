@@ -2008,7 +2008,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 
 	    save_currboard = currboard;
 	    currboard = xboard;
-	    write_header(xptr, xfile.title);
+	    write_header(xptr, xfile.title, 0);
 	    currboard = save_currboard;
 
 	    fprintf(xptr, STR_POST_MARK "[本文轉錄自 %s 信箱]\n\n", cuser.userid);

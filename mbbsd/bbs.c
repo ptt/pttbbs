@@ -2395,9 +2395,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	save_currboard = currboard;
 	currboard = xboard;
-        // TODO(piaip) write_header allows anonymous "if current board is
-        // anonymous" - so we probably need to fix that here.
-	write_header(xptr, xfile.title);
+	write_header(xptr, xfile.title, 0);
 	currboard = save_currboard;
 
 	if (!IS_OPENBRD(bp))

@@ -2024,8 +2024,13 @@ read_file(const char *fpath, int splitSig)
     return 0;
 }
 
+// allow_anon: offer an anonymous name on a BRD_ANONYMOUS board. Only the
+// editor saving a new post or a reply passes 1; the cross-posts pass 0, as
+// their currbrdattr is that of another board and the post is owned by the
+// real ID anyway (and they may run from inside the editor, e.g. mail read
+// from the user list, so curr_buf cannot tell).
 void
-write_header(FILE * fp,  const char *mytitle)
+write_header(FILE * fp,  const char *mytitle, int allow_anon)
 {
     assert(mytitle);
     // cross_post may call this without setting curr_buf.
@@ -2052,7 +2057,8 @@ write_header(FILE * fp,  const char *mytitle)
 	STRLCPY(postlog.author, cuser.userid);
 	if (curr_buf)
 	    curr_buf->ifuseanony = 0;
-	if (IS_ENABLED(CONFIG_ANONYMOUS) && (currbrdattr & BRD_ANONYMOUS)) {
+	if (IS_ENABLED(CONFIG_ANONYMOUS) && allow_anon &&
+	    (currbrdattr & BRD_ANONYMOUS)) {
 	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
             char default_name[IDLEN + 1] = "";
             char ans[3];
@@ -2398,7 +2404,9 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
 	    abort_bbs(0);
 	}
 	if (saveheader)
-	    write_header(fp, mytitle);
+	    write_header(fp, mytitle,
+			 (curr_buf->flags & (EDITFLAG_KIND_NEWPOST |
+					     EDITFLAG_KIND_REPLYPOST)) != 0);
     }
     if (!aborted) {
 	for (p = curr_buf->firstline; p; p = p->next) {
@@ -4633,8 +4641,15 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     if (*fpath) {
 	int tmp = read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
 
-	if (tmp < 0)
+	if (tmp < 0) {
+	    // Undo enter_edit_buffer(), the mode and a pending quote: left
+	    // behind, they leak into whatever runs next.
+	    *quote_file = '\0';
+	    exit_edit_buffer();
+	    currutmp->mode = ec.mode0;
+	    currutmp->destunum = ec.destunum0;
 	    return tmp;
+	}
     }
 
     if (*quote_file) {
