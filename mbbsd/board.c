@@ -1442,8 +1442,11 @@ b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr GCC_UNUSED,
             ps += 2;
             char *pe = strchr(ps, ']');
             if (pe) {
-                strncpy(uid, ps, pe - ps);
-                uid[pe - ps] = '\0';
+                size_t len = pe - ps;
+                if (len >= sizeof(uid))
+                    len = 0; // Too long to be a user ID.
+                memcpy(uid, ps, len);
+                uid[len] = '\0';
             }
         }
     }
