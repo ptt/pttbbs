@@ -495,7 +495,8 @@ rotate_bin_logfile(const char *filename, off_t record_size,
 int
 rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio)
 {
-    off_t sz = dashs(filename), newsz;
+    off_t sz = dashs(filename);
+    size_t keep = keep_ratio * max_size, nread;
     char *buf, *newent;
     FILE *fp;
     assert(keep_ratio >= 0 && keep_ratio <= 1.0f);
@@ -507,23 +508,36 @@ rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio)
     // however since these log are just for reference...
     // let's pretend there's no race condition with it.
 
-    // now, calculate a starting seek point
-    fp = fopen(filename, "r+b");
-    fseek(fp, - keep_ratio * max_size, SEEK_END);
-    newsz = sz - ftell(fp);
-    buf = (char*)malloc(newsz);
-    memset(buf, 0, newsz);
-    assert(buf);
-    fread(buf, newsz, 1, fp);
+    // read the last keep bytes
+    fp = fopen(filename, "rb");
+    if (!fp)
+        return 0;
+    buf = (char*)malloc(keep + 1);  // + 1: never malloc(0)
+    if (!buf || fseek(fp, -(off_t)keep, SEEK_END) != 0) {
+        fclose(fp);
+        free(buf);
+        return 0;
+    }
+    // A short read means an I/O error or that the file shrank meanwhile:
+    // leave the log alone rather than replace it with a partial tail.
+    nread = fread(buf, 1, keep, fp);
     fclose(fp);
+    if (nread != keep) {
+        free(buf);
+        return 0;
+    }
 
-    // find a newline or \0
-    newent = buf;
-    while (*newent && *newent++ != '\n') ;
+    // start after the first newline, so the log begins with a whole line
+    newent = memchr(buf, '\n', nread);
+    newent = newent ? newent + 1 : buf;
 
     // replace file with new content
     fp = fopen(filename, "wb");
-    fwrite(newent, 1, newsz - (newent - buf), fp);
+    if (!fp) {
+        free(buf);
+        return 0;
+    }
+    fwrite(newent, 1, nread - (newent - buf), fp);
     fclose(fp);
 
     free(buf);
