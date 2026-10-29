@@ -2696,6 +2696,9 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[PATHLEN] = "";
     int allow = 0;
 
+    if (!fhdr)
+	return DONOTHING;
+
     // should we allow edit-title here?
     if (currstat == RMAIL)
 	allow = 0;
@@ -2703,10 +2706,36 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	allow = 2;
     else if (strcmp(BN_ALLPOST, currboard) == 0)
         allow = 0;
-    else if (CBRD_IS_BM() || is_file_owner(fhdr, &cuser))
+    else if (CBRD_IS_BM())
 	allow = 1;
+    else if (is_file_owner(fhdr, &cuser)) {
+	const char *reason = "無法發文";
+	char msg[STRLEN];
+	boardheader_t *bp;
 
-    if (!allow || !fhdr)
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	bp = getbcache(currbid);
+	if ((bp->brdattr & BRD_VOTEBOARD) ||
+	    (fhdr->filemode & FILE_VOTE) ||
+	    fhdr->filename[0] == 'L')		// locked
+	    return DONOTHING;
+
+	// owners need the same permission as edit_post
+	// reason 1: BM may alter post restrictions to this board
+	// reason 2: this account may be occupied by someone else.
+	if (!HasUserPerm(PERM_BASIC) ||	// excludes guests
+	    !CheckPostPerm2(&reason)) {
+	    vmsgf("無法修改標題: %s", reason);
+	    return FULLUPDATE;
+	}
+	if (get_board_restriction_reason(currbid, sizeof(msg), msg)) {
+	    vmsgf("未達看板發文限制: %s", msg);
+	    return FULLUPDATE;
+	}
+	allow = 1;
+    }
+
+    if (!allow)
 	return DONOTHING;
 
     if (currmode & MODE_SELECT) {
