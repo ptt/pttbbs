@@ -1138,7 +1138,9 @@ mailbox_reply(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     // Use group-reply or single-reply?
-    if (fhdr->filemode & FILE_MULTI) {
+    // Group reply needs the same permission as mail_list.
+    if ((fhdr->filemode & FILE_MULTI) &&
+        HasSendMailUserPerm() && !HasUserPerm(PERM_VIOLATELAW)) {
         char ans[3] = "";
         vs_hdr("¸s²Õ«H¥ó");
         do {
