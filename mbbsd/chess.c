@@ -875,6 +875,9 @@ ChessPlay(ChessInfo* info)
 	return;
     }
 
+    if (info->mode == CHESS_MODE_VERSUS && info->actions->start_versus)
+	info->actions->start_versus(info);
+
     /* XXX */
     if (!info->timelimit) {
 	info->timelimit = _current_time_limit;

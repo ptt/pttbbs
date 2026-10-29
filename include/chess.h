@@ -120,6 +120,11 @@ typedef struct ChessActions {
     /* checking a step from the peer before it is recorded or applied;
      * returns 0 to reject it. may be NULL. */
     int  (*check_step) (const void* step);
+
+    /* a versus game has started: the peer is still there and no move is
+     * made yet. records the game as lost until gameend says otherwise,
+     * so leaving the game does not avoid a loss. may be NULL. */
+    void (*start_versus)(ChessInfo* info);
 } ChessActions;
 
 typedef struct ChessConstants {

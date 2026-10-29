@@ -36,6 +36,7 @@ static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
 static void gomo_gameend(ChessInfo* info, ChessGameResult result);
 static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 static int  gomo_check_step(const gomo_step_t* step);
+static void gomo_start_versus(ChessInfo* info);
 
 static const ChessActions gomo_actions = {
     &gomo_init_user,
@@ -52,7 +53,8 @@ static const ChessActions gomo_actions = {
     NULL, /* post_game */
     &gomo_gameend,
     &gomo_genlog,
-    (int (*)(const void*)) &gomo_check_step
+    (int (*)(const void*)) &gomo_check_step,
+    &gomo_start_versus,
 };
 
 static const ChessConstants gomo_constants = {
@@ -324,6 +326,14 @@ gomo_movecur(int r, int c)
     move(r + 2, c * 2 + 3);
 }
 
+static void
+gomo_start_versus(ChessInfo* info)
+{
+    /* Assume that info->user1 is me. */
+    info->user1.lose++;
+    pwcuChessResult(SIG_GOMO, CHESS_RESULT_LOST);
+}
+
 static int
 gomo_prepare_play(ChessInfo* info)
 {
@@ -525,12 +535,6 @@ gomoku(int s, ChessGameMode mode)
 
     info->cursor.r = 7;
     info->cursor.c = 7;
-
-    if (info->mode == CHESS_MODE_VERSUS) {
-	/* Assume that info->user1 is me. */
-	info->user1.lose++;
-	pwcuChessResult(SIG_GOMO, CHESS_RESULT_LOST);
-    }
 
     setutmpmode(M_FIVE);
     currutmp->sig = SIG_GOMO;

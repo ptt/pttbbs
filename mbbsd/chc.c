@@ -49,6 +49,7 @@ static void chc_drawstep(ChessInfo* info, const drc_t* move);
 static void chc_gameend(ChessInfo* info, ChessGameResult result);
 static void chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 static int  chc_check_step(const drc_t* step);
+static void chc_start_versus(ChessInfo* info);
 
 
 static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
@@ -104,7 +105,8 @@ static const ChessActions chc_actions = {
     NULL, /* post_game */
     &chc_gameend,
     &chc_genlog,
-    (int (*)(const void*)) &chc_check_step
+    (int (*)(const void*)) &chc_check_step,
+    &chc_start_versus,
 };
 
 static const ChessConstants chc_constants = {
@@ -828,19 +830,31 @@ chc(int s, ChessGameMode mode)
     info->board = board;
     info->tag   = &tag;
 
-    if (info->mode == CHESS_MODE_VERSUS) {
-	/* Assume that info->user1 is me. */
-	info->user1.lose++;
-	count_chess_elo_rating(&info->user1, &info->user2, 0.0);
-	pwcuChessResult(SIG_CHC, CHESS_RESULT_LOST);
-    }
-
     setutmpmode(CHC);
     currutmp->sig = SIG_CHC;
 
     ChessPlay(info);
 
     DeleteChessInfo(info);
+}
+
+static void
+chc_start_versus(ChessInfo* info)
+{
+    /* Assume that info->user1 is me. Save the rating of a loss too:
+     * chc_gameend() saves the real one, from orig_rating. Leave the one
+     * in utmp alone: the peer may still read it as our rating. */
+    userec_t u;
+
+    /* Start from the rating saved in passwd, not the one in this
+     * session's utmp: another session of ours may have saved a newer one,
+     * e.g. that of a game left unfinished, which this utmp lacks. */
+    if (passwd_sync_query(usernum, &u) == 0 && u.chess_elo_rating)
+	info->user1.rating = info->user1.orig_rating = u.chess_elo_rating;
+    info->user1.lose++;
+    count_chess_elo_rating(&info->user1, &info->user2, 0.0);
+    pwcuChessResult(SIG_CHC, CHESS_RESULT_LOST);
+    pwcuSetChessEloRating(info->user1.rating);
 }
 
 static void
@@ -860,7 +874,7 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	    if (lose2 > 0) lose2--;
 	    SNPRINTF(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/L%d)\n",
 		    ctime(&t),
-		    user1->userid, user1->rating, user1->win,
+		    user1->userid, user1->orig_rating, user1->win,
 		    user1->tie, lose1,
 		    (result == CHESS_RESULT_TIE ? "©M" :
 		     result == CHESS_RESULT_WIN ? "³Ó" : "­t"),
