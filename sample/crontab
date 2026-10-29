@@ -59,9 +59,7 @@
 #*/5	*	*	*	*	bin/shmctl utmpnum > /tmp/utmpnum
 
 # ???
-10	7	*	*	*	bin/buildAnnounce
 #10	7	*	*	*	bin/toplazyBM.sh
-#*/5	*	*	*	*	bin/shmsweep
 #*/10	*	*	*	*	bin/userlist
 
 # jobspool
@@ -73,9 +71,6 @@
 
 # 每日砍除 ALLPOST
 30	5	*	*	*	/bin/rm boards/A/ALLPOST boards/A/ALLHIDPOST; mkdir boards/A/ALLPOST boards/A/ALLHIDPOST
-
-# for safty
-9	*	*	*	*	bin/shmctl bBMC
 
 # 過期板友通知
 #17	7	25	*	*	bin/chkhbf

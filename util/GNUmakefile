@@ -17,7 +17,7 @@ CPROG_WITH_UTIL := \
 	expire		mandex		broadcast	\
 	topusr		\
 	toplazyBM	writemoney	\
-	reaper		buildAnnounce	mailangel	\
+	reaper		mailangel	\
 	outmail		chkhbf		userlist	\
 	angel		openticket	\
 	buildir		xchatd		\
