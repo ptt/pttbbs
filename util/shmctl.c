@@ -381,18 +381,19 @@ int hotboard(int argc, char **argv)
 	     SHM->bcache[i].nuser > brd[nbrds - 1].nusers) ){
 
 	    nusers = SHM->bcache[i].nuser; // no race ?
-	    for( k = nbrds - 2 ; k >= 0 ; --k )
+	    // insert after the last entry with more users
+	    for( k = nbrds - 1 ; k >= 0 ; --k )
 		if( brd[k].nusers > nusers )
 		    break;
 
-	    if( (k + 1) < nbrds && (k + 2) < topn )
-		for( j = nbrds - 1 ; j >= k + 1 ; --j )
-		    brd[j] = brd[j - 1];
-	    brd[k + 1].nusers = nusers;
-	    brd[k + 1].b = &SHM->bcache[i];
-
+	    // Make room at k + 1. While the list is not full it grows by one,
+	    // so the last entry moves down too; once full, the last one drops.
 	    if( nbrds < topn )
 		++nbrds;
+	    for( j = nbrds - 1 ; j > k + 1 ; --j )
+		brd[j] = brd[j - 1];
+	    brd[k + 1].nusers = nusers;
+	    brd[k + 1].b = &SHM->bcache[i];
 	}
 
     for( i = 0 ; i < nbrds ; ++i )
