@@ -1394,6 +1394,7 @@ b_config(void)
             .priv = &cx,
             .caption = can_edit ? "看板設定" : "看板資訊",
         },
+        .wrap = true,
         .header_lines = 2,
         .footer_lines = 1,
         .allow_pbs_version_message = 0,
@@ -2427,20 +2428,6 @@ board_cmd_pgdn(cmd_ctx_t *ctx) {
 }
 
 static int
-board_cmd_up(cmd_ctx_t *ctx) {
-    if (--ctx->curr < 0)
-        ctx->curr = ctx->total - 1;
-    return 0;
-}
-
-static int
-board_cmd_down(cmd_ctx_t *ctx) {
-    if (++ctx->curr >= ctx->total)
-        ctx->curr = 0;
-    return 0;
-}
-
-static int
 board_cmd_home(cmd_ctx_t *ctx) {
     ctx->curr = 0;
     return 0;
@@ -2714,12 +2701,6 @@ static const cmd_t boardlist_cmds[] = {
     { ' ', NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
     { 'N', NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
     { Ctrl('F'), NULL, NULL, board_cmd_pgdn, 0, CMD_PRIO_NONE },
-    { KEY_UP, NULL, "向上移動", board_cmd_up, 0, CMD_PRIO_NONE },
-    { 'p', NULL, NULL, board_cmd_up, 0, CMD_PRIO_NONE },
-    { 'k', NULL, NULL, board_cmd_up, 0, CMD_PRIO_NONE },
-    { KEY_DOWN, NULL, "向下移動", board_cmd_down, 0, CMD_PRIO_NONE },
-    { 'n', NULL, NULL, board_cmd_down, 0, CMD_PRIO_NONE },
-    { 'j', NULL, NULL, board_cmd_down, 0, CMD_PRIO_NONE },
     { '0', NULL, "移至第一筆", board_cmd_home, 0, CMD_PRIO_NONE },
     { KEY_HOME, NULL, NULL, board_cmd_home, 0, CMD_PRIO_NONE },
     { KEY_END, NULL, "移至最後一筆", board_cmd_end, 0, CMD_PRIO_NONE },
@@ -3225,6 +3206,7 @@ choose_board(int newflag)
         .vcols = newflag ? brdlist_coldefs_unread : brdlist_coldefs,
         .col_paddings = 1,
         .custom_header_columns = IN_CLASSROOT() ? true : false,
+        .wrap = true,
         .layers = layers,
         .loader = brdlist_loader,
         .header = brdlist_header,

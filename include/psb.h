@@ -69,6 +69,7 @@ typedef struct cmd_ctx {
     bool reload;
     bool quit;
     bool redispatch;
+    bool wrap;
     void *priv;
     const struct cmd_layer *active_layers;
     const char *caption;
@@ -123,6 +124,7 @@ typedef struct PSB_CTX {
     bool (*cursor_clear)(int y, struct PSB_CTX *ctx);
     int (*on_key)(struct PSB_CTX *ctx);
     int (*col_measurer)(int i, int col, struct PSB_CTX *ctx);
+    bool wrap;
     const cmd_t *cmds;
     const cmd_layer_t *layers;
 } PSB_CTX;
@@ -130,6 +132,8 @@ typedef struct PSB_CTX {
 extern const cmd_t psb_base_cmds[];
 extern const cmd_t bbs_global_cmds[];
 
+int psb_cmd_up(cmd_ctx_t *ctx);
+int psb_cmd_down(cmd_ctx_t *ctx);
 int cmd_dispatch_layers(const cmd_layer_t *layers, cmd_ctx_t *ctx,
                         const char *caption);
 void psb_sync_cache(PSB_CTX *psbctx);

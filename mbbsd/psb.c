@@ -93,17 +93,21 @@ psb_cmd_pgdn(cmd_ctx_t *ctx) {
     return 0;
 }
 
-static int
+int
 psb_cmd_up(cmd_ctx_t *ctx) {
     if (ctx->curr > 0)
         ctx->curr--;
+    else if (ctx->wrap && ctx->total > 0)
+        ctx->curr = ctx->total - 1;
     return 0;
 }
 
-static int
+int
 psb_cmd_down(cmd_ctx_t *ctx) {
     if (ctx->curr + 1 < ctx->total)
         ctx->curr++;
+    else if (ctx->wrap)
+        ctx->curr = 0;
     return 0;
 }
 
@@ -1496,6 +1500,9 @@ psb_init_defaults(PSB_CTX *psbctx) {
         psbctx->cursor = psb_default_cursor;
     if (!psbctx->cursor_clear)
         psbctx->cursor_clear = psb_default_cursor_clear;
+
+    if (psbctx->wrap)
+        psbctx->cmd.wrap = true;
 
     psbctx->cmd.reload = true;
     psbctx->cmd.redraw = true;

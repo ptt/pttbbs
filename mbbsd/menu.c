@@ -608,22 +608,6 @@ menu_loader(PSB_CTX *ctx)
 }
 
 static int
-menu_cmd_up(cmd_ctx_t *ctx)
-{
-    if (--ctx->curr < 0)
-        ctx->curr = ctx->total - 1;
-    return 0;
-}
-
-static int
-menu_cmd_down(cmd_ctx_t *ctx)
-{
-    if (++ctx->curr >= ctx->total)
-        ctx->curr = 0;
-    return 0;
-}
-
-static int
 menu_cmd_home(cmd_ctx_t *ctx)
 {
     ctx->curr = 0;
@@ -730,8 +714,8 @@ menu_cmd_read_board(cmd_ctx_t *ctx)
 }
 
 static const cmd_t menu_nav_cmds[] = {
-    { KEY_UP, "上個選項", "移動至上一個選單項目", menu_cmd_up, 0, CMD_PRIO_NAV, true },
-    { KEY_DOWN, "下個選項", "移動至下一個選單項目", menu_cmd_down, 0, CMD_PRIO_NAV, true },
+    { KEY_UP, "上個選項", "移動至上一個選單項目", psb_cmd_up, 0, CMD_PRIO_NAV, true },
+    { KEY_DOWN, "下個選項", "移動至下一個選單項目", psb_cmd_down, 0, CMD_PRIO_NAV, true },
     { KEY_RIGHT, "執行選項", "執行目前選取的選單項目", menu_cmd_enter, 0, CMD_PRIO_NORM, true },
     { KEY_ENTER, NULL, NULL, menu_cmd_enter, 0, CMD_PRIO_NONE, true },
     { KEY_LEFT, "回到前一層", "離開目前選單或回到上一層", menu_cmd_left, 0, CMD_PRIO_QUIT },
@@ -870,6 +854,7 @@ domenu(const menuitem_t *menu)
         },
         .header_lines = decide_menu_row(cmdtable),
         .footer_lines = 1,
+        .wrap = true,
         .layers = layers,
         .loader = menu_loader,
         .header = menu_header,
