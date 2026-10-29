@@ -1329,8 +1329,8 @@ bconfig_header(PSB_CTX *ctx) {
 
     char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
     board_format_moderators(bp, bm_buf, sizeof(bm_buf));
-    prints("看板名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
-           " 板主名單: ", bp->brdname);
+    prints("名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
+           "  板主: ", bp->brdname);
     if (bm_buf[0] && bp->moderator_notes[0]) {
         prints(ANSI_COLOR(1;36) "%s" ANSI_RESET " " ANSI_COLOR(1;32) "%s" ANSI_RESET "\n",
                bm_buf, bp->moderator_notes);
