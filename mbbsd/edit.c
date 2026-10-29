@@ -1900,7 +1900,6 @@ do_quote(void)
                     (str = strchr(quote_user, '.'))) {
 		    quote_user[0] = '.';
 		    strlcpy(quote_user + 1, ptr, sizeof(quote_user) - 1);
-		    strcpy(++str, ptr);
 		    str = strchr(quote_user, ' ');
 		    if (str)
 			str[0] = '\0';
