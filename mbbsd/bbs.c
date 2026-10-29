@@ -2187,6 +2187,23 @@ forward_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
 
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
+// Whether the board a cross-post goes to is still there under the name it
+// was picked by: it may be deleted or renamed while the user sits at the
+// prompts. Checks the name at bid, as getbnum() can miss a board while the
+// list is re-sorted, and the directory, which admin.c removes or renames
+// before it updates the cache (stampfile() would recreate it).
+int
+crosspost_target_ok(int bid, const char *bname)
+{
+    char path[PATHLEN];
+
+    if (bid < 1 || bid > MAX_BOARD ||
+        strcmp(getbcache(bid)->brdname, bname) != 0)
+        return 0;
+    setbpath(path, bname);
+    return dashd(path);
+}
+
 static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -2277,7 +2294,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     /* 不要借用變數，記憶體沒那麼缺，人腦混亂的代價比較高 */
     xbid = getbnum(xboard);
-    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
+    if (xbid <= 0) {
+	vmsg("看板不存在，請稍候再試。");
+	return FULLUPDATE;
+    }
 
     if (xbid == currbid)
     {
@@ -2315,6 +2335,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	int             currmode0 = currmode;
 	const char     *save_currboard;
 
+	if (!crosspost_target_ok(xbid, xboard)) {
+	    vmsg("看板已不存在，文章未轉錄。");
+	    return FULLUPDATE;
+	}
 	setbpath(xfpath, xboard);
         if (stampfile(xfpath, &xfile) < 0) {
             vmsg("系統錯誤: 無法寫入檔案");
@@ -2371,6 +2395,15 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         addforwardsignature(xptr, NULL);
 	fclose(xptr);
 
+	// Check again, now that the file is written, so that the post does
+	// not go into a board deleted or renamed meanwhile.
+	if (!crosspost_target_ok(xbid, xboard)) {
+	    unlink(xfpath);
+	    currmode = currmode0;
+	    vmsg("看板已不存在，文章未轉錄。");
+	    return FULLUPDATE;
+	}
+
         // try to record in ALLPOST
         log_crosspost_in_allpost(xboard, &xfile);
 
@@ -2381,10 +2414,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    char buf[PATHLEN], tail[STRLEN];
 	    char bname[STRLEN] = "";
 	    int maxlength = 51 +2 - 6;
-	    int bid = getbnum(xboard);
 
-	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    bp = getbcache(bid);
+	    bp = getbcache(xbid);
 	    if (IS_OPENBRD(bp))
 	    {
 		sprintf(bname, "看板 %s", xboard);
@@ -2415,10 +2446,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	} else
 #endif
 	{
-	    /* now point bp to new bord */
-	    // NOTE: xbid should be already fetched before.
-	    assert(xbid == getbnum(xboard));
-	    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
+	    /* now point bp to new bord; xbid was checked above */
 	    bp = getbcache(xbid);
 	}
 
@@ -2426,7 +2454,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
 	append_fileheader(TEMP_BDIR(xboard), &xfile);
-	setbtotal(getbnum(xboard));
+	setbtotal(xbid);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
         LOG_IF(LOG_CONF_CROSSPOST,

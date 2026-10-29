@@ -1960,7 +1960,10 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     }
 
     xbid = getbnum(xboard);
-    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
+    if (xbid <= 0) {
+	vmsg("看板不存在，請稍候再試。");
+	return FULLUPDATE;
+    }
 
     if (!CheckPostRestriction(xbid))
     {
@@ -1975,6 +1978,10 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 
+	if (!crosspost_target_ok(xbid, xboard)) {
+	    vmsg("看板已不存在，文章未轉錄。");
+	    return FULLUPDATE;
+	}
 	setbpath(xfpath, xboard);
 	if (stampfile(xfpath, &xfile) < 0) {
 	    vmsg("系統錯誤: 無法寫入檔案");
@@ -2011,9 +2018,17 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	    fclose(xptr);
 	}
 
+	// Check again, now that the file is written, so that the post does
+	// not go into a board deleted or renamed meanwhile.
+	if (!crosspost_target_ok(xbid, xboard)) {
+	    unlink(xfpath);
+	    currmode = currmode0;
+	    vmsg("看板已不存在，文章未轉錄。");
+	    return FULLUPDATE;
+	}
 	setbdir(fname, xboard);
 	append_fileheader(fname, &xfile);
-	setbtotal(getbnum(xboard));
+	setbtotal(xbid);
 
         log_crosspost_in_allpost(xboard, &xfile);
 
