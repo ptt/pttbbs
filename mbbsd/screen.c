@@ -493,6 +493,10 @@ outc(unsigned char c)
 	return;
     }
 
+    // Keep slp->len <= ANSILINELEN so data[len] stays in bounds.
+    if (cur_col >= ANSILINELEN)
+	return;
+
     if (cur_col >= slp->len) {
 	if (cur_col > slp->len)
 	    memset(&slp->data[slp->len], ' ', cur_col - slp->len);
@@ -522,8 +526,7 @@ outc(unsigned char c)
 #endif
     }
 
-    if(cur_col < SCR_COLS)
-        cur_col++;
+    cur_col++;
 }
 
 void
@@ -737,10 +740,22 @@ grayout(int y, int end, int level)
 	{
 	    case GRAYOUT_DARK: // dark text
 	    case GRAYOUT_BOLD:// bold text
-		slp->len = snprintf((char*)slp->data, ANSILINELEN,
+	    {
+		const char *prefix = level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40);
+		// Cut the text, not the escapes, and don't split a character.
+		int maxlen = sizeof(slp->data) - 1 - strlen(prefix) -
+			     strlen(ANSI_RESET ANSI_CLRTOEND);
+		if (slp->len > maxlen) {
+		    buf[maxlen] = 0;
+		    mbs_safe_trim(buf);
+		    slp->len = strlen(buf);
+		}
+		int n = snprintf((char*)slp->data, sizeof(slp->data),
 			"%s%.*s" ANSI_RESET ANSI_CLRTOEND,
-			level < 0 ? ANSI_COLOR(1) : ANSI_COLOR(1;30;40),
-			slp->len, buf);
+			prefix, slp->len, buf);
+		// snprintf returns the untruncated length.
+		slp->len = MIN(n, (int)sizeof(slp->data) - 1);
+	    }
 		break;
 
 	    case GRAYOUT_NORM: // Plain text
