@@ -408,6 +408,9 @@ _Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
 #ifndef MACROSTRLEN
 #define MACROSTRLEN(x)	(sizeof(x) - 1)
 #endif
+#ifndef MEMBER_SIZE
+#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
+#endif
 
 #include <stddef.h>
 #ifndef container_of

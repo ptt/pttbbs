@@ -732,7 +732,7 @@ static const vform_field_t user_profile_fields[] = {
         .hint = "使用者真實姓名 (管理員限定)",
         .type = VFORM_TEXT,
         .offset = offsetof(userec_t, realname),
-        .size = sizeof(((userec_t *)0)->realname),
+        .size = MEMBER_SIZE(userec_t, realname),
         .is_visible = uinfo_is_admin_field,
     },
     {
@@ -740,7 +740,7 @@ static const vform_field_t user_profile_fields[] = {
         .hint = "使用者居住地址 (管理員限定)",
         .type = VFORM_TEXT,
         .offset = offsetof(userec_t, address),
-        .size = sizeof(((userec_t *)0)->address),
+        .size = MEMBER_SIZE(userec_t, address),
         .is_visible = uinfo_is_admin_field,
     },
     {
@@ -748,7 +748,7 @@ static const vform_field_t user_profile_fields[] = {
         .hint = "使用者學歷職業 (管理員限定)",
         .type = VFORM_TEXT,
         .offset = offsetof(userec_t, career),
-        .size = sizeof(((userec_t *)0)->career),
+        .size = MEMBER_SIZE(userec_t, career),
         .is_visible = uinfo_is_admin_field,
     },
     VFORM_FIELD_BOOL("年滿 18 歲", "本站部份看板可能有限制級內容只適合成年人士閱讀", userec_t, over_18),

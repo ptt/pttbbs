@@ -186,7 +186,7 @@ clean_moderator_notes(char *moderator_notes, const user_t moderators[MAX_BMs])
     }
 
     // 5. Collapse multiple spaces and trim leading/trailing whitespace
-    char tmp[sizeof(((boardheader_t *)0)->moderator_notes) + 1];
+    char tmp[MEMBER_SIZE(boardheader_t, moderator_notes) + 1];
     int out_len = 0;
     int in_space = 1;
 
@@ -227,7 +227,7 @@ clean_moderator_notes(char *moderator_notes, const user_t moderators[MAX_BMs])
         while (l > 0 && tmp[l - 1] == ' ')
             tmp[--l] = '\0';
     }
-    strlcpy(moderator_notes, tmp, sizeof(((boardheader_t *)0)->moderator_notes));
+    strlcpy(moderator_notes, tmp, MEMBER_SIZE(boardheader_t, moderator_notes));
 }
 
 static int

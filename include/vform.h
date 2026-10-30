@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "common.h"
 #include "vtuikit.h"
 
 #ifdef __cplusplus
@@ -108,19 +109,19 @@ typedef struct vform_def {
 // -----------------------------------------------------------------------------
 // Helper Declarative Macros
 // -----------------------------------------------------------------------------
-#define VFORM_FIELD_TEXT(lbl, hnt, notes, struct_t, member, flags, val_fn)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_TEXT,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .vget_flags = (flags), .validator = (val_fn) }
+#define VFORM_FIELD_TEXT(lbl, hnt, notes, struct_t, member, flags, val_fn)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_TEXT,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member),       .vget_flags = (flags), .validator = (val_fn) }
 
-#define VFORM_FIELD_PASSWORD(lbl, hnt, struct_t, member, val_fn)     { .label = (lbl), .hint = (hnt), .type = VFORM_PASSWORD,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .vget_flags = VGET_PASSWORD, .validator = (val_fn) }
+#define VFORM_FIELD_PASSWORD(lbl, hnt, struct_t, member, val_fn)     { .label = (lbl), .hint = (hnt), .type = VFORM_PASSWORD,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member),       .vget_flags = VGET_PASSWORD, .validator = (val_fn) }
 
-#define VFORM_FIELD_USER(lbl, hnt, notes, struct_t, member, val_fn)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_USER,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .validator = (val_fn) }
+#define VFORM_FIELD_USER(lbl, hnt, notes, struct_t, member, val_fn)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_USER,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member),       .validator = (val_fn) }
 
-#define VFORM_FIELD_INT(lbl, hnt, struct_t, member, min_v, max_v, val_fn)     { .label = (lbl), .hint = (hnt), .type = VFORM_INT,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .min_val = (min_v), .max_val = (max_v), .validator = (val_fn) }
+#define VFORM_FIELD_INT(lbl, hnt, struct_t, member, min_v, max_v, val_fn)     { .label = (lbl), .hint = (hnt), .type = VFORM_INT,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member),       .min_val = (min_v), .max_val = (max_v), .validator = (val_fn) }
 
-#define VFORM_FIELD_BOOL(lbl, hnt, struct_t, member)     { .label = (lbl), .hint = (hnt), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member) }
+#define VFORM_FIELD_BOOL(lbl, hnt, struct_t, member)     { .label = (lbl), .hint = (hnt), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member) }
 
-#define VFORM_FIELD_BOOL_NOTES(lbl, hnt, notes, struct_t, member)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member) }
+#define VFORM_FIELD_BOOL_NOTES(lbl, hnt, notes, struct_t, member)     { .label = (lbl), .hint = (hnt), .notes_file = (notes), .type = VFORM_BOOL,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member) }
 
-#define VFORM_FIELD_SELECT(lbl, hnt, struct_t, member, opts, num_opts)     { .label = (lbl), .hint = (hnt), .type = VFORM_SELECT,       .offset = offsetof(struct_t, member), .size = sizeof(((struct_t *)0)->member),       .options = (opts), .num_options = (num_opts) }
+#define VFORM_FIELD_SELECT(lbl, hnt, struct_t, member, opts, num_opts)     { .label = (lbl), .hint = (hnt), .type = VFORM_SELECT,       .offset = offsetof(struct_t, member), .size = MEMBER_SIZE(struct_t, member),       .options = (opts), .num_options = (num_opts) }
 
 #define VFORM_FIELD_NOTE(lbl, hnt)     { .label = (lbl), .hint = (hnt), .type = VFORM_NOTE }
 

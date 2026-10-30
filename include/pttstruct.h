@@ -7,6 +7,7 @@
 #include "config.h"	// various sizes in SHM
 #include "statistic.h"	// for MAX_STATS
 #include "cmsys.h"      // for time4_t
+#include "common.h"
 
 // warning: because some other places is using #IDLEN to convert as string,
 // so don't quote it - otherwise those code will fail.
@@ -664,7 +665,7 @@ typedef struct {
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #if ((2 * 9 * USHM_SIZE * 4) >= ((MAX_USERS + 1 + 2 * USHM_SIZE) * 4))
-_Static_assert(sizeof(((SHM_t *)0)->utmp_user) == sizeof(int[2][9][USHM_SIZE]),
+_Static_assert(MEMBER_SIZE(SHM_t, utmp_user) == sizeof(int[2][9][USHM_SIZE]),
                "utmp_user must match sorted array capacity when padded");
 #endif
 #endif
