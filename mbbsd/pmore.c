@@ -181,6 +181,8 @@
     ANSI_COLOR(33;45)
 #define PMORE_COLOR_FOOTER1 \
     ANSI_COLOR(34;46)
+#define PMORE_COLOR_FOOTER1_LIVE \
+    ANSI_COLOR(1;37;42)
 #define PMORE_COLOR_FOOTER2 \
     ANSI_COLOR(1;30;47)
 #define PMORE_COLOR_FOOTER3_KEY \
@@ -502,6 +504,19 @@ MmappedFile mf = {
     NULL // detachHandler
 };      // current file
 
+static int  pmore_live_active = 0;
+static char pmore_pending_comment[IPC_TEXT_LEN] = "";
+static int  pmore_has_pending_comment = 0;
+
+void
+pmore_feed_comment(const char *text)
+{
+    if (!pmore_live_active || !text || !*text)
+        return;
+    STRLCPY(pmore_pending_comment, text);
+    pmore_has_pending_comment = 1;
+}
+
 /* mf_* navigation commands return value meanings */
 enum MF_NAV_COMMANDS {
     MFNAV_OK,           // navigation ok
@@ -564,12 +579,19 @@ typedef struct
         oldwrapmode,    // traditional wrap
         oldstatusbar,   // traditional statusbar
         rawmode,        // show file as-is.
-        comment_theme;  // comment color theme
+        comment_theme,  // comment color theme
+        live_notify;    // 0: 直接顯示, 1: 鈴聲
 } MF_BrowsingPreference;
+
+enum {
+    PMORE_LIVE_NOTIFY_NONE = 0,    // 直接顯示
+    PMORE_LIVE_NOTIFY_BEEP = 1,    // 鈴聲
+    PMORE_LIVE_NOTIFY_MODES = 2,
+};
 
 MF_BrowsingPreference bpref =
 { MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1,
-    0, 0, 0, 0 };
+    0, 0, 0, 0, PMORE_LIVE_NOTIFY_NONE };
 
 /* structure generalized for the one-arg mf_attach_handler */
 struct SimpleBuffer {
@@ -2422,17 +2444,21 @@ mf_display_footer(
 
     // determine summary colours
     outs(ANSI_RESET);
-    if (mf_viewedAll())
+    if (pmore_live_active)
+        outs(PMORE_COLOR_FOOTER1_LIVE);
+    else if (mf_viewedAll())
         outs(PMORE_COLOR_FOOTER1_VIEWALL);
     else if (mf_viewedNone())
         outs(PMORE_COLOR_FOOTER1_VIEWNONE);
     else
         outs(PMORE_COLOR_FOOTER1);
 
+    const char *mode_str = pmore_live_active ? "實況" : "瀏覽";
+
     // old status bar: quick draw
     if (bpref.oldstatusbar)
     {
-        prints("  瀏覽 P.%d(%d%%)  ", nowpage, progress);
+        prints("  %s P.%d(%d%%)  ", mode_str, nowpage, progress);
         outs(
                 PMORE_COLOR_FOOTER3      "  "
                 PMORE_COLOR_FOOTER3_KEY  "(h)"
@@ -2450,12 +2476,14 @@ mf_display_footer(
 
     // part 1, brief report (SUMMAR)
     if (allpages >= 0)
-        prints("  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
+        prints("  %s 第 %1d/%1d 頁 (%3d%%) ",
+                mode_str,
                 nowpage,
                 allpages,
                 progress);
     else
-        prints("  瀏覽 第 %1d 頁 (%3d%%) ",
+        prints("  %s 第 %1d 頁 (%3d%%) ",
+                mode_str,
                 nowpage,
                 progress);
 
@@ -2983,6 +3011,7 @@ const cmd_t pmore_cmds[] = {
     { 'q', NULL, NULL, pmore_cmd_quit, 0, CMD_PRIO_NONE },
     { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
     { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
+    { 'v', "切換實況", "切換實況模式 (Live) 開啟/關閉", NULL, 0, CMD_PRIO_NORM },
 #ifdef PMORE_USE_INTERNAL_HELP
     { 'h', "說明", "顯示 pmore 操作說明", pmore_cmd_help, 0, CMD_PRIO_LOW },
     { 'H', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
@@ -3006,6 +3035,50 @@ pmore_dispatch_cmds(const cmd_t *cmds, cmd_ctx_t *ctx)
             return cmds[i].func(ctx);
     }
     return PSB_NA;
+}
+
+static void
+pmore_print_live_line(const char *line)
+{
+    if (mf.dispedlines < b_lines) {
+        move(mf.dispedlines, 0);
+        outs(line);
+        clrtoeol();
+        mf.dispedlines++;
+    } else {
+        pmore_clrtoeol(b_lines, 0);
+        scroll();
+        move(b_lines - 1, 0);
+        outs(line);
+        clrtoeol();
+        mf.lineno++;
+        mf.oldlineno = mf.lineno;
+    }
+}
+
+static void
+pmore_print_live_comment(const char *text, int (*footer_handler)(int ratio, void *ctx), void *ctx)
+{
+    if (!text || !*text)
+        return;
+
+    char buf[IPC_TEXT_LEN];
+    STRLCPY(buf, text);
+
+    char *line = buf;
+    while (line) {
+        char *next = strchr(line, '\n');
+        if (next)
+            *next++ = '\0';
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\r')
+            line[len - 1] = '\0';
+        if (*line || next)
+            pmore_print_live_line(line);
+        line = next;
+    }
+    move(b_lines, 0);
+    mf_display_footer(footer_handler, ctx);
 }
 
 static int
@@ -3050,6 +3123,9 @@ _pmore2(
         REENTRANT_RESTORE();
         return -1;
     }
+
+    pmore_live_active = 0;
+    pmore_has_pending_comment = 0;
 
     clear();
     while (!flExit)
@@ -3193,6 +3269,35 @@ _pmore2(
 
         /* vkey() will do refresh(); */
         ch = cb->vkey ? cb->vkey(ctx) : vkey();
+
+        if (ch == I_OTHERDATA) {
+            if (pmore_live_active && pmore_has_pending_comment) {
+                pmore_has_pending_comment = 0;
+                if (bpref.live_notify == PMORE_LIVE_NOTIFY_BEEP)
+                    bell();
+                pmore_print_live_comment(pmore_pending_comment, cb->footer, ctx);
+            }
+            invalidate = 0;
+            continue;
+        }
+
+        if ((ch == 'v' || ch == 'V') && cb && cb->live_toggle) {
+            if (pmore_live_active) {
+                if (cb->live_toggle(0, ctx) == 0)
+                    pmore_live_active = 0;
+            } else {
+                if (cb->live_toggle(1, ctx) == 0) {
+                    pmore_live_active = 1;
+                    if (!mf_viewedAll())
+                        mf_goBottom();
+                } else {
+                    override_msg = " [系統連線服務異常] ";
+                }
+            }
+            invalidate = 1;
+            continue;
+        }
+
         if (ch == KEY_MOUSE) {
             const vtkbd_mouse_t *m = vkey_get_mouse();
             if (m && !m->is_release &&
@@ -3244,6 +3349,7 @@ _pmore2(
                 .quit = false,
                 .priv = &pctx,
             };
+            long old_lineno = mf.lineno;
             if (pmore_dispatch_cmds(pmore_cmds, &cctx) == PSB_NA &&
                 pmore_dispatch_cmds(pmore_movie_cmds, &cctx) == PSB_NA) {
 #ifndef PMORE_IGNORE_UNKNOWN_NAVKEYS
@@ -3254,8 +3360,21 @@ _pmore2(
             invalidate = cctx.redraw;
             if (cctx.quit)
                 flExit = 1;
+
+            if (pmore_live_active && (mf.lineno != old_lineno || !mf_viewedAll())) {
+                if (cb && cb->live_toggle)
+                    cb->live_toggle(0, ctx);
+                pmore_live_active = 0;
+                invalidate = 1;
+            }
         }
         /* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
+    }
+
+    if (pmore_live_active) {
+        if (cb && cb->live_toggle)
+            cb->live_toggle(0, ctx);
+        pmore_live_active = 0;
     }
 
     if (cb->exit)
@@ -3449,7 +3568,7 @@ pmore_QuickRawModePref()
 MFPROTO void
 pmore_Preference()
 {
-    int ystart = b_lines - 10;
+    int ystart = b_lines - 11;
     // TODO even better pref navigation, like arrow keys
     // static int lastkey = '\\'; // default key
 
@@ -3502,7 +3621,10 @@ pmore_Preference()
         pmore_prefEntry(bpref.oldstatusbar,
                 "t", 1, "傳統狀態列與斷行方式: ", -1,
                 "停用\t啟用");
-
+        pmore_prefEntry(bpref.live_notify,
+                "v", 1, "實況文通知:", -1,
+                "直接顯示	鈴聲");
+        
         switch (vmsg("請調整設定或其它任意鍵結束。"))
         {
             case '\\':
@@ -3528,7 +3650,11 @@ pmore_Preference()
                 bpref.oldwrapmode  = !bpref.oldwrapmode;
                 bpref.oldstatusbar = !bpref.oldstatusbar;
                 break;
-
+            case 'v':
+            case 'V':
+                bpref.live_notify = (bpref.live_notify + 1) % PMORE_LIVE_NOTIFY_MODES;
+                break;
+            
             default:
                 // finished settings
                 return;
@@ -3579,6 +3705,7 @@ static const char
 #endif
     "  選項設定    ", "o",
     "  色彩顯示模式", "\\",
+    "  切換實況模式", "v",
     "  說明        ", "h ? F1",
 #ifdef DEBUG
     "  DBG 除錯模式", "d",

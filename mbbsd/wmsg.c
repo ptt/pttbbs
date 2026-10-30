@@ -1312,6 +1312,14 @@ wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload)
         return 1; /* Consumed event, screen updated */
     }
 
+    case IPC_TYPE_LIVE_COMMENT: {
+        const ipc_pubsub_t *ps = (const ipc_pubsub_t *)payload;
+        if (ps) {
+            more_on_live_comment(ps->bid, ps->aid, ps->text);
+        }
+        return -1;
+    }
+
     case IPC_TYPE_TALK_REQ: {
         const ipc_talk_t *t = (const ipc_talk_t *)payload;
         if (currutmp && t) {

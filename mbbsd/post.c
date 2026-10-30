@@ -61,6 +61,22 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     fhdr->rating += update;
 
     /* since we want to do 'modification'... */
+    /* Publish live comment to IPC service (clean ASCIIZ) */
+    {
+        aidu_t aid = fn2aidu(fhdr->filename);
+        int bid = currbid;
+        if (bid <= 0 && board && *board)
+            bid = get_board_bid(board);
+        if (bid > 0 && aid > 0) {
+            char buf[IPC_TEXT_LEN];
+            STRLCPY(buf, formatted);
+            size_t len = strlen(buf);
+            while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
+                buf[--len] = '\0';
+            ipc_pub((uint32_t)bid, aid, buf);
+        }
+    }
+
     fhdr->modified = dasht(path);
 
     if (fhdr->modified != 0) {

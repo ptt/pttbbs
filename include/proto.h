@@ -497,6 +497,8 @@ void show_call_in(int save, int which);
 void write_request (int sig);
 int  wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
 void ipc_init(const char *userid, pid_t pid, int uslot);
+void more_on_live_comment(uint32_t bid, aidu_t aid, const char *text);
+void pmore_feed_comment(const char *text);
 void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
@@ -541,6 +543,7 @@ struct pmore_callbacks {
     int (*help)(int y, void *ctx);
     int (*vkey)(void *ctx);
     int (*exit)(void *ctx);
+    int (*live_toggle)(int enable, void *ctx);
 };
 
 int pmore2(

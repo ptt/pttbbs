@@ -369,6 +369,9 @@ ipc_pub(uint32_t bid, aidu_t aid, const char *text)
     ps.timestamp = (uint32_t)time(NULL);
     ps.aid = aid;
     STRLCPY(ps.text, text);
+    size_t len = strlen(ps.text);
+    while (len > 0 && (ps.text[len - 1] == '\n' || ps.text[len - 1] == '\r'))
+        ps.text[--len] = '\0';
 
     uint32_t seq = ++g_ipc_seq;
     ipc_hdr_t hdr = {

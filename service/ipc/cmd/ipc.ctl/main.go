@@ -333,6 +333,8 @@ func doLivePub(sockPath string, bid uint32, aid uint64, comment string) {
 	conn := connect(sockPath)
 	defer conn.Close()
 
+	comment = strings.TrimRight(comment, "\r\n")
+
 	ps := &daemon.PubSubPayload{
 		Bid:       bid,
 		Timestamp: uint32(time.Now().Unix()),

@@ -465,6 +465,12 @@ int more(const char *fpath, int promptend)
     return abort > 0 ? common_pager_exit_handler(abort, fpath) : 0;
 }
 
+void
+more_on_live_comment(uint32_t bid GCC_UNUSED, aidu_t aid GCC_UNUSED, const char *text GCC_UNUSED)
+{
+    // Not supported.
+}
+
 #else	// USE_PMORE ////////////////////////////////////////////////////////
 
 static int
@@ -482,16 +488,92 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
     return 0;
 }
 
+static uint32_t s_live_bid = 0;
+static aidu_t   s_live_aid = 0;
+bool          s_live_active = false;
+
+static void
+get_live_target(const char *fpath, uint32_t *out_bid, aidu_t *out_aid)
+{
+    *out_bid = 0;
+    *out_aid = 0;
+    if (!fpath || !strstr(fpath, "boards/"))
+        return;
+    const char *last_slash = strrchr(fpath, '/');
+    if (!last_slash)
+        return;
+    const char *fname = last_slash + 1;
+    aidu_t aid = fn2aidu(fname);
+    if (aid == 0)
+        return;
+
+    int bid = currbid;
+    if (bid <= 0 && currboard[0]) {
+        bid = get_board_bid(currboard);
+    }
+    if (bid <= 0)
+        return;
+
+    *out_bid = (uint32_t)bid;
+    *out_aid = aid;
+}
+
+void
+more_on_live_comment(uint32_t bid, aidu_t aid, const char *text)
+{
+    if (s_live_active && s_live_bid == bid && s_live_aid == aid && text && *text) {
+        pmore_feed_comment(text);
+    }
+}
+
+static int
+common_pager_live_toggle(int enable, void *ctx GCC_UNUSED)
+{
+    if (s_live_bid == 0 || s_live_aid == 0)
+        return -1;
+
+    if (enable) {
+        if (!ipc_is_connected())
+            ipc_check_reconnect();
+        if (ipc_sub(s_live_bid, s_live_aid) != 0)
+            return -1;
+        s_live_active = true;
+        return 0;
+    } else {
+        if (s_live_active) {
+            ipc_unsub(s_live_bid, s_live_aid);
+            s_live_active = false;
+        }
+        return 0;
+    }
+}
+
 /* use new pager: piaip's more. */
 static const struct pmore_callbacks common_pager_cb = {
     .process_key = common_pager_key_handler,
     .footer = common_pmore_footer_handler,
+    .live_toggle = common_pager_live_toggle,
 };
 
 int
 more(const char *fpath, int promptend)
 {
-    int r = pmore2(fpath, promptend, (void *)fpath, &common_pager_cb);
+    get_live_target(fpath, &s_live_bid, &s_live_aid);
+    s_live_active = false;
+
+    struct pmore_callbacks cb = common_pager_cb;
+    if (s_live_bid == 0 || s_live_aid == 0)
+        cb.live_toggle = NULL;
+
+    int r = pmore2(fpath, promptend, (void *)fpath, &cb);
+
+    if (s_live_active) {
+        ipc_unsub(s_live_bid, s_live_aid);
+        s_live_active = false;
+    }
+    s_live_bid = 0;
+    s_live_aid = 0;
+
     return common_pager_exit_handler(r, fpath);
 }
 
