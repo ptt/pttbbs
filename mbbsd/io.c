@@ -357,6 +357,56 @@ vkey_detach(void)
 }
 
 int
+vkey_attach_ipc(int fd)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return 0;
+    int r = ctx->ipc_fd;
+    ctx->ipc_fd = fd;
+    return r;
+}
+
+int
+vkey_detach_ipc(void)
+{
+    return vkey_attach_ipc(0);
+}
+
+void
+vkey_set_ipc_handler(vkey_ipc_handler_t handler)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (ctx)
+        ctx->ipc_handler = handler;
+}
+
+int
+vkey_process_ipc(void)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx || ctx->ipc_fd <= 0)
+        return 0;
+
+    ipc_hdr_t hdr;
+    char payload[1024];
+    int res = ipc_read_packet(ctx->ipc_fd, &hdr, payload, sizeof(payload));
+    if (res <= 0) {
+        if (res < 0) {
+            /* Socket error or disconnect */
+            vkey_detach_ipc();
+            ipc_disconnect();
+        }
+        return 0;
+    }
+
+    if (ctx->ipc_handler) {
+        return ctx->ipc_handler(&hdr, payload);
+    }
+    return 0;
+}
+
+int
 vkey_decode(VBUF *inbuf, int raw_ch)
 {
     VKEY_CTX *ctx = vkey_get_context();

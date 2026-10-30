@@ -1,6 +1,7 @@
 #include "bbs.h"
 #include "chess.h"
 #include <setjmp.h>
+#include <poll.h>
 
 #define assert_not_reached() assert(!"Should never be here!!!")
 
@@ -1217,20 +1218,30 @@ ChessEstablishRequest(int sock)
     }
 }
 
-void
+int
 ChessAcceptingRequest(int sock)
 {
     /* XXX */
-    char mode;
-    read(sock, &mode, 1);
+    char mode = 0;
+    struct pollfd pfd = { .fd = sock, .events = POLLIN };
+    if (poll(&pfd, 1, 5000) <= 0)
+	return -1;
+    if (read(sock, &mode, 1) != 1)
+	return -1;
     if (_current_time_limit) {
 	free(_current_time_limit);
 	_current_time_limit = NULL;
     }
     if (mode != 'T') {
 	_current_time_limit = (ChessTimeLimit*) malloc(sizeof(ChessTimeLimit));
-	read(sock, _current_time_limit, sizeof(ChessTimeLimit));
+	if (poll(&pfd, 1, 3000) <= 0 ||
+	    read(sock, _current_time_limit, sizeof(ChessTimeLimit)) != sizeof(ChessTimeLimit)) {
+	    free(_current_time_limit);
+	    _current_time_limit = NULL;
+	    return -1;
+	}
     }
+    return 0;
 }
 
 void

@@ -110,6 +110,7 @@
 #define MSG_CANCEL      "取消。"
 #define MSG_USR_LEFT    "使用者已經離開了"
 #define MSG_NOBODY      "目前無人上線"
+#define MSG_IPC_ERR     "系統連線服務異常，請稍候再試。"
 
 #define MSG_DEL_OK      "刪除完畢"
 #define MSG_DEL_CANCEL  "取消刪除"

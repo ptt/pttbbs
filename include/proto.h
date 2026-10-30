@@ -357,16 +357,23 @@ void oend_frame(void);
 void wmsg_init_hooks(void);
 void talk_init_hooks(void);
 
+#include "ipc.h"
+
 // new input api
 /* io.c / nios.c / igetch.c */
 ///////// virtual key: convert from cin(fd) -> buffer -> virtual key //////////
 // timeout: in milliseconds. 0 for 'do not block' and INFTIM(-1) for 'forever'
 ///////////////////////////////////////////////////////////////////////////////
 // vkey context
+typedef int (*vkey_ipc_handler_t)(const ipc_hdr_t *hdr, const void *payload);
+
 typedef struct VKEY_CTX {
-    int         peek_ch;
-    int         attached_fd;
-    VtkbdCtx    vtkbd;
+    int                 peek_ch;
+    int                 attached_fd;
+    int                 ipc_fd;
+    int                 ipc_notify;
+    vkey_ipc_handler_t  ipc_handler;
+    VtkbdCtx            vtkbd;
 } VKEY_CTX;
 
 VKEY_CTX *vkey_get_context(void);
@@ -387,6 +394,10 @@ int  vkey_is_typeahead(void);// check if input buffer has data arrived (maybe no
 // additional fd to listen
 int  vkey_attach(int fd);    // attach (and replace) additional fd to vkey API, returning previous attached fd
 int  vkey_detach(void);      // detach any additional fd and return previous attached fd
+int  vkey_attach_ipc(int fd); // attach IPC service fd
+int  vkey_detach_ipc(void);   // detach IPC service fd
+void vkey_set_ipc_handler(vkey_ipc_handler_t handler); // set IPC packet handler
+int  vkey_process_ipc(void);  // read and dispatch pending IPC packet(s)
 // input buffer management
 int  vkey_is_full(void);     // test if input buffer is full
 void vkey_purge(void);		// discard clear all data in input buffer
@@ -484,6 +495,8 @@ bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_le
 /* mbbsd */
 void show_call_in(int save, int which);
 void write_request (int sig);
+int  wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
+void ipc_init(const char *userid, pid_t pid, int uslot);
 void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);

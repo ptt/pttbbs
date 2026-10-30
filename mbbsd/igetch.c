@@ -67,42 +67,74 @@ dogetch(void)
     while (vbuf_is_empty(pvin)) {
 	refresh();
 
-	if (vkctx.attached_fd) {
-
-	    fd_set          readfds;
-
-	    FD_ZERO(&readfds);
-	    FD_SET(0, &readfds);
-	    FD_SET(vkctx.attached_fd, &readfds);
-
-	    /* jochang: modify first argument of select from FD_SETSIZE */
-	    /* since we are only waiting input from fd 0 and attached_fd(>0) */
-
-	    STATINC(STAT_SYSSELECT);
-	    while ((len = select(vkctx.attached_fd + 1, &readfds, NULL, NULL, NULL)) < 0) {
-		if (errno != EINTR)
-		    abort_bbs(0);
-		/* raise(SIGHUP); */
-	    }
-
-	    if (len == 0){
-		syncnow();
-		return I_TIMEOUT;
-	    }
-
-	    if (vkctx.attached_fd && FD_ISSET(vkctx.attached_fd, &readfds)){
-		syncnow();
-		return I_OTHERDATA;
-	    }
+	if (vkctx.ipc_fd <= 0) {
+	    ipc_check_reconnect();
 	}
 
+	fd_set          readfds;
+	int             maxfd = 0;
 
-	STATINC(STAT_SYSREADSOCKET);
+	FD_ZERO(&readfds);
+	FD_SET(0, &readfds);
+	if (vkctx.attached_fd > 0) {
+	    FD_SET(vkctx.attached_fd, &readfds);
+	    if (vkctx.attached_fd > maxfd)
+		maxfd = vkctx.attached_fd;
+	}
+	if (vkctx.ipc_fd > 0) {
+	    FD_SET(vkctx.ipc_fd, &readfds);
+	    if (vkctx.ipc_fd > maxfd)
+		maxfd = vkctx.ipc_fd;
+	}
 
-	do {
-            len = read_vin();
-            // warning: len is 1/0/-1 now, not real length.
-	} while (len <= 0);
+	/* If disconnected from IPC service, set a 2-second timeout on select()
+	 * so we wake up periodically during idle to retry reconnecting with backoff.
+	 * If connected, timeout is NULL (wait forever on keyboard or IPC events). */
+	struct timeval tv;
+	struct timeval *ptv = NULL;
+	if (vkctx.ipc_fd <= 0) {
+	    tv.tv_sec = 2;
+	    tv.tv_usec = 0;
+	    ptv = &tv;
+	}
+
+	STATINC(STAT_SYSSELECT);
+	while ((len = select(maxfd + 1, &readfds, NULL, NULL, ptv)) < 0) {
+	    if (errno != EINTR)
+		abort_bbs(0);
+	}
+
+	if (len == 0) {
+	    /* Timeout during idle: check reconnect and loop */
+	    if (vkctx.ipc_fd <= 0) {
+		ipc_check_reconnect();
+	    }
+	    continue;
+	}
+
+	if (vkctx.ipc_fd > 0 && FD_ISSET(vkctx.ipc_fd, &readfds)) {
+	    syncnow();
+	    int handled = vkey_process_ipc();
+	    if (handled > 0) {
+		refresh();
+		continue;
+	    } else if (handled < 0) {
+		return I_OTHERDATA;
+	    }
+	    continue;
+	}
+
+	if (vkctx.attached_fd > 0 && FD_ISSET(vkctx.attached_fd, &readfds)) {
+	    syncnow();
+	    return I_OTHERDATA;
+	}
+
+	if (FD_ISSET(0, &readfds)) {
+	    STATINC(STAT_SYSREADSOCKET);
+	    do {
+		len = read_vin();
+	    } while (len <= 0);
+	}
     }
 
     // see vtkbd.c for CR/LF Rules
@@ -161,7 +193,17 @@ wait_input(float f, int bIgnoreBuf)
 
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
-    if (vkctx.attached_fd) FD_SET(vkctx.attached_fd, &readfds);
+    int maxfd = 0;
+    if (vkctx.attached_fd > 0) {
+        FD_SET(vkctx.attached_fd, &readfds);
+        if (vkctx.attached_fd > maxfd)
+            maxfd = vkctx.attached_fd;
+    }
+    if (vkctx.ipc_fd > 0) {
+        FD_SET(vkctx.ipc_fd, &readfds);
+        if (vkctx.ipc_fd > maxfd)
+            maxfd = vkctx.ipc_fd;
+    }
 
     // adjust time
     if(f > 0)
@@ -184,8 +226,7 @@ wait_input(float f, int bIgnoreBuf)
 #endif
 
     do {
-	assert(vkctx.attached_fd >= 0);	// if == 0, use only fd=0 => count sill u_newfd+1.
-	sel = select(vkctx.attached_fd+1, &readfds, NULL, NULL, ptv);
+	sel = select(maxfd + 1, &readfds, NULL, NULL, ptv);
 
     } while (sel < 0 && errno == EINTR);
     /* EINTR, interrupted. I don't care! */

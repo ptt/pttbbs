@@ -614,10 +614,13 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         return;
 
     if (res < 0) {
-        if (res == -3)
+        if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK) && (res == -5 || !ipc_is_connected())) {
+            outmsg(ANSI_COLOR(1;33;41) MSG_IPC_ERR ANSI_RESET);
+        } else if (res == -3) {
             outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多訊息) " ANSI_COLOR(37) "@_@" ANSI_RESET);
-        else
+        } else {
             outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
+        }
     } else if (uin->msgcount == 1) {
         outmsg(ANSI_COLOR(1;33;44) "訊息砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
     } else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS) {
@@ -647,6 +650,13 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
 
     bool is_interactive = (flag == WATERBALL_GENERAL ||
                            (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
+
+    if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK) && is_interactive &&
+        !ipc_is_connected() && ipc_check_reconnect() < 0) {
+        vmsg(MSG_IPC_ERR);
+        watermode = -1;
+        return 0;
+    }
 
     if ((!uin || !*uin->userid) && !(is_interactive && water_which->count > 0)) {
         vmsg(ERR_TARGET_NOT_ONLINE);
@@ -703,8 +713,18 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     if (flag == WATERBALL_SYSOP && uin->msgcount) {
         uin->destuslot = get_utmp_slot(currutmp);
         uin->sig = 2;
-        if (uin->pid > 0)
-            kill(uin->pid, SIGUSR1);
+        int sent_ipc = 0;
+        if (ipc_is_connected()) {
+            sent_ipc = (ipc_talk_send(uin->userid, currutmp->userid, getpid(), get_utmp_slot(currutmp), 2, 1) == 0);
+        }
+        if (!sent_ipc) {
+            if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+                if (uin->pid > 0)
+                    kill(uin->pid, SIGUSR1);
+            } else {
+                outmsg(ANSI_COLOR(1;33;41) MSG_IPC_ERR ANSI_RESET);
+            }
+        }
     } else if (my_write_is_rejected(flag, uin, fri_stat)) {
         outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方拒收了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
@@ -1267,5 +1287,84 @@ write_request(int sig)
         write_request_ofo(sig);
     } else {
         write_request_default();
+    }
+}
+
+int
+wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload)
+{
+    if (!hdr)
+        return 0;
+
+    switch (hdr->type) {
+    case IPC_TYPE_WMSG_DELIVER: {
+        const ipc_wmsg_t *w = (const ipc_wmsg_t *)payload;
+        if (currutmp && currutmp->msgcount == 0 && w) {
+            msgque_t *m = &currutmp->msgs[0];
+            m->pid = (pid_t)w->from_pid;
+            STRLCPY(m->userid, w->from_userid);
+            STRLCPY(m->last_call_in, w->text);
+            m->msgmode = w->msgmode;
+            m->uslot = w->from_uslot;
+            currutmp->msgcount = 1;
+        }
+        write_request(SIGUSR2);
+        return 1; /* Consumed event, screen updated */
+    }
+
+    case IPC_TYPE_TALK_REQ: {
+        const ipc_talk_t *t = (const ipc_talk_t *)payload;
+        if (currutmp && t) {
+            if (t->from_uslot >= 0)
+                currutmp->destuslot = t->from_uslot;
+            currutmp->sig = t->sig;
+            talk_request(0);
+            return 1;
+        }
+        return 0;
+    }
+
+    case IPC_TYPE_SYS_BROADCAST: {
+        if (payload) {
+            const ipc_broadcast_t *b = (const ipc_broadcast_t *)payload;
+            outmsg(b->text);
+            bell();
+        }
+        return 1;
+    }
+
+    default:
+        return 0;
+    }
+}
+
+static void
+wmsg_ipc_reconnect_cb(int new_fd)
+{
+    if (currutmp && currutmp->userid[0]) {
+        ipc_register(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
+    }
+    vkey_attach_ipc(new_fd);
+    vkey_set_ipc_handler(wmsg_ipc_handler);
+}
+
+void
+ipc_init(const char *userid, pid_t pid, int uslot)
+{
+    if (!userid || !*userid || pid <= 0)
+        return;
+
+    ipc_set_reconnect_callback(wmsg_ipc_reconnect_cb);
+
+    int fd = ipc_connect();
+    if (fd >= 0) {
+        if (ipc_register(userid, pid, uslot) == 0) {
+            vkey_attach_ipc(fd);
+            vkey_set_ipc_handler(wmsg_ipc_handler);
+        } else {
+            ipc_disconnect();
+        }
+    } else {
+        ipc_disconnect();
     }
 }

@@ -175,7 +175,7 @@ ChessInfo* NewChessInfo(const ChessActions* actions,
 void DeleteChessInfo(ChessInfo* info);
 
 void ChessEstablishRequest(int sock);
-void ChessAcceptingRequest(int sock);
+int ChessAcceptingRequest(int sock);
 void ChessShowRequest(void);
 
 void ChessRedraw(const ChessInfo* info);

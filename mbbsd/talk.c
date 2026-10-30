@@ -380,35 +380,54 @@ my_query(const char *uident)
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
 int make_connection_to_somebody(userinfo_t *uin, int timeout){
-    int sock, length, pid, ch;
-    struct sockaddr_in server;
+    int sock = -1, ch;
 
-    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (!ipc_is_connected()) {
+        ipc_check_reconnect();
+    }
+    if (ipc_is_connected()) {
+	sock = ipc_chess_create_session(currutmp->userid, uin->userid, uin->sig);
+	if (sock >= 0) {
+	    currutmp->sockactive = YEA;
+	    currutmp->sockaddr = 0;
+	    currutmp->destunum = uin->uid;
+	}
+    }
     if (sock < 0) {
-	perror("sock err");
-	unlockutmpmode();
-	return -1;
+	if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+	    struct sockaddr_in server;
+	    sock = socket(AF_INET, SOCK_STREAM, 0);
+	    if (sock < 0) {
+		perror("sock err");
+		unlockutmpmode();
+		return -1;
+	    }
+	    memset(&server, 0, sizeof(server));
+	    server.sin_family = PF_INET;
+	    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	    server.sin_port = 0;
+	    if (bind(sock, (struct sockaddr *) & server, sizeof(server)) < 0) {
+		close(sock);
+		perror("bind err");
+		unlockutmpmode();
+		return -1;
+	    }
+	    int length = sizeof(server);
+	    if (getsockname(sock, (struct sockaddr *) & server, (socklen_t *) & length) < 0) {
+		close(sock);
+		perror("sock name err");
+		unlockutmpmode();
+		return -1;
+	    }
+	    currutmp->sockactive = YEA;
+	    currutmp->sockaddr = server.sin_port;
+	    currutmp->destunum = uin->uid;
+	} else {
+	    unlockutmpmode();
+	    vmsg(MSG_IPC_ERR);
+	    return -1;
+	}
     }
-    memset(&server, 0, sizeof(server));
-    server.sin_family = PF_INET;
-    server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    server.sin_port = 0;
-    if (bind(sock, (struct sockaddr *) & server, sizeof(server)) < 0) {
-	close(sock);
-	perror("bind err");
-	unlockutmpmode();
-	return -1;
-    }
-    length = sizeof(server);
-    if (getsockname(sock, (struct sockaddr *) & server, (socklen_t *) & length) < 0) {
-	close(sock);
-	perror("sock name err");
-	unlockutmpmode();
-	return -1;
-    }
-    currutmp->sockactive = YEA;
-    currutmp->sockaddr = server.sin_port;
-    currutmp->destunum = uin->uid;
     // WORKAROUND setutmpmode() checks currstat as cache of currutmp->mode.
     // however if you invoke page -> rejected -> do something -> page again,
     // the currstat=PAGE but currutmp->mode!=PAGE, and then the paging will fail.
@@ -416,15 +435,29 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     currstat = IDLE;
     setutmpmode(PAGE);
     uin->destuslot = get_utmp_slot(currutmp);
-    pid = uin->pid;
-    if (pid > 0)
-	kill(pid, SIGUSR1);
+    int sent_ipc = 0;
+    if (ipc_is_connected()) {
+	sent_ipc = (ipc_talk_send(uin->userid, currutmp->userid, getpid(), get_utmp_slot(currutmp), uin->sig, 0) == 0);
+    }
+    if (!sent_ipc) {
+	if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+	    if (uin->pid > 0)
+		kill(uin->pid, SIGUSR1);
+	} else {
+	    close(sock);
+	    unlockutmpmode();
+	    vmsg(MSG_IPC_ERR);
+	    return -1;
+	}
+    }
     clear();
     prints("正呼叫 %s.....\n鍵入 Ctrl-D 中止....", uin->userid);
 
-    if(listen(sock, 1)<0) {
-	close(sock);
-	return -1;
+    if (currutmp->sockaddr != 0) {
+	if(listen(sock, 1)<0) {
+	    close(sock);
+	    return -1;
+	}
     }
 
     vkey_attach(sock);
@@ -459,13 +492,25 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		refresh();
 
 		uin->destuslot = get_utmp_slot(currutmp);
-		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
+		sent_ipc = 0;
+		if (ipc_is_connected()) {
+		    sent_ipc = (ipc_talk_send(uin->userid, currutmp->userid, getpid(), get_utmp_slot(currutmp), uin->sig, 0) == 0);
+		}
+		if (!sent_ipc) {
 		    close(sock);
 		    currutmp->sockactive = currutmp->destunum = 0;
 		    vkey_detach();
-		    vmsg(MSG_USR_LEFT);
-		    unlockutmpmode();
-		    return -1;
+		    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+			if (uin->pid <= 0 || kill(uin->pid, SIGUSR1) == -1) {
+			    vmsg(MSG_USR_LEFT);
+			    unlockutmpmode();
+			    return -1;
+			}
+		    } else {
+			vmsg(MSG_IPC_ERR);
+			unlockutmpmode();
+			return -1;
+		    }
 		}
 		continue;
 	    }
@@ -478,6 +523,23 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	    close(sock);
 	    currutmp->sockactive = currutmp->destunum = 0;
 	    unlockutmpmode();
+	    return -1;
+	}
+    }
+    if (currutmp->sockaddr == 0) {
+	char rdy[16];
+	ssize_t rn = read(sock, rdy, sizeof(rdy) - 1);
+	if (rn <= 0 || strncmp(rdy, "READY", 5) != 0) {
+	    vkey_detach();
+	    close(sock);
+	    currutmp->sockactive = currutmp->destunum = 0;
+	    unlockutmpmode();
+	    if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+		if (!ipc_is_connected())
+		    vmsg(MSG_IPC_ERR);
+		else
+		    vmsg("連線中斷或對方取消！");
+	    }
 	    return -1;
 	}
     }
@@ -495,6 +557,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
     genbuf[0] = defact;
     ch = uin->mode;
+
+    if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK) && !ipc_is_connected() && ipc_check_reconnect() < 0) {
+        vmsg(MSG_IPC_ERR);
+        return;
+    }
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
@@ -545,19 +612,25 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 	sock = make_connection_to_somebody(uin, 5);
 	if(sock==-1) {
-	    vmsg("無法建立連線");
+	    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK))
+		vmsg("無法建立連線");
 	    return;
 	}
 
-	msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-	if (msgsock == -1) {
-	    perror("accept");
+	if (currutmp->sockaddr == 0) {
+	    vkey_detach();
+	    msgsock = sock;
+	} else {
+	    msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+	    if (msgsock == -1) {
+		perror("accept");
+		close(sock);
+		unlockutmpmode();
+		return;
+	    }
+	    vkey_detach();
 	    close(sock);
-	    unlockutmpmode();
-	    return;
 	}
-	vkey_detach();
-	close(sock);
 	currutmp->sockactive = NA;
 
 	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO)
@@ -1980,24 +2053,39 @@ reply_connection_request(const userinfo_t *uip)
 int
 establish_talk_connection(const userinfo_t *uip)
 {
-    int                    a;
-    struct sockaddr_in sin;
+    int                    a = -1;
 
     currutmp->msgcount = 0;
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = PF_INET;
-    sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    sin.sin_port = uip->sockaddr;
-    if ((a = socket(sin.sin_family, SOCK_STREAM, 0)) < 0) {
-	perror("socket err");
-	return -1;
+    if (!ipc_is_connected()) {
+        ipc_check_reconnect();
     }
-    if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
-	//perror("connect err");
-	close(a);
-	return -1;
+    if (ipc_is_connected()) {
+	a = ipc_chess_join_session(currutmp->userid, uip->userid);
+	if (a >= 0)
+	    return a;
     }
-    return a;
+
+    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+	if (uip->sockaddr == 0)
+	    return -1;
+
+	struct sockaddr_in sin = {0};
+	sin.sin_family = PF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	sin.sin_port = uip->sockaddr;
+	if ((a = socket(sin.sin_family, SOCK_STREAM, 0)) < 0) {
+	    perror("socket err");
+	    return -1;
+	}
+	if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
+	    close(a);
+	    return -1;
+	}
+	return a;
+    }
+
+    vmsg(MSG_IPC_ERR);
+    return -1;
 }
 
 /* 有人來串門子了，回應呼叫器 */
@@ -2029,8 +2117,14 @@ talkreply(void)
 	currstat = currstat0;
 	return;
     }
-    if (is_chess)
-	ChessAcceptingRequest(a);
+    if (is_chess) {
+	if (ChessAcceptingRequest(a) < 0) {
+	    close(a);
+	    clear();
+	    currstat = currstat0;
+	    return;
+	}
+    }
 
     clear();
 
@@ -2141,11 +2235,19 @@ t_chat(void)
     move(b_lines, 0); clrtoeol();
     outs(" 正在與聊天室連線... ");
     refresh();
-    fd = toconnect(XCHATD_ADDR);
+    fd = ipc_chat_connect();
+    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+	if (fd < 0)
+	    fd = toconnect(XCHATD_ADDR);
+    }
     move(b_lines-1, 0); clrtobot();
     if (fd < 0) {
-	outs(" 聊天室正在整理中，請稍候再試。");
-	system("bin/xchatd");
+	if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+	    outs(" 聊天室正在整理中，請稍候再試。");
+	    system("bin/xchatd");
+	} else {
+	    outs(" " MSG_IPC_ERR);
+	}
 	pressanykey();
 	return -1;
     }

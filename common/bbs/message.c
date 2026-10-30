@@ -59,9 +59,19 @@ int write_message_full(int uslot, pid_t to_pid, pid_t from_pid, int from_uslot,
             break;
     }
 
-    int r = kill(uentp->pid, SIGUSR2);
-    if (r != 0) {
-        return errno ? -errno : -10;
+    /* Try delivering via IPC service first to replace kill() */
+    const char *to_id = uentp->userid;
+    if (to_id && *to_id && ipc_wmsg_send(to_id, from_id, from_pid, from_uslot, msgmode, text) == 0) {
+        return 0;
     }
-    return 0;
+
+    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+        /* Fallback to legacy kill(uentp->pid, SIGUSR2) if IPC service not available */
+        int r = kill(uentp->pid, SIGUSR2);
+        if (r != 0) {
+            return errno ? -errno : -10;
+        }
+        return 0;
+    }
+    return -5;
 }

@@ -964,6 +964,9 @@ user_login(void)
     }
 
     do_aloha();
+    if (currutmp) {
+        ipc_init(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
+    }
 
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
@@ -1105,8 +1108,10 @@ start_client(struct ProgramOption *option)
     Signal(SIGXCPU, signal_xcpu_handler);
 #endif
 
-    signal_restart(SIGUSR1, talk_request);
-    signal_restart(SIGUSR2, write_request);
+    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
+        signal_restart(SIGUSR1, talk_request);
+        signal_restart(SIGUSR2, write_request);
+    }
 
     Signal(SIGALRM, abort_bbs);
     alarm(600);

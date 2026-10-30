@@ -114,7 +114,7 @@ CIN_PROTO void cin_clear_buffer(void);      // drop everying in buffer
 CIN_PROTO int  cin_scan_buffer(char c);     // return if buffer has given character
 // fd management
 CIN_PROTO int  cin_is_fd_empty(int fd);     // quick determine if a fd is empty
-CIN_PROTO int  cin_poll_fds(int fd1, int fd2, int ms); // poll fd1 and fd2 for ms milliseconds
+CIN_PROTO int  cin_poll_fds(int fd1, int fd2, int ipc_fd, int ms); // poll fds for ms milliseconds
 CIN_PROTO void cin_clear_fd(int fd);        // drop everying in fd
 CIN_PROTO void cin_fetch_fd(int fd);        // read more data from fd to buffer
 // virtual combination
@@ -191,13 +191,14 @@ cin_is_fd_empty(int fd)
         // handling.
         return 0;
     }
-    return cin_poll_fds(fd, -1, 0) == 0;
+    return cin_poll_fds(fd, -1, -1, 0) == 0;
 }
 
 /**
- * cin_poll_fds(fd1, fd2, ms): query the input status of given fds.
- * @param fd1: primary fd to check
- * @param fd2: skip if <= 0
+ * cin_poll_fds(fd1, fd2, ipc_fd, ms): query the input status of given fds.
+ * @param fd1: primary fd to check (cin)
+ * @param fd2: secondary fd (skip if <= 0)
+ * @param ipc_fd: IPC service fd (skip if <= 0)
  * @param ms: 0 for non-blocking, INFTIM(-1) for infinite, otherwise timeout milliseconds
  * @return: bitmask of fds having data/error, 0 for timeout, and -1 if error.
  */
@@ -205,32 +206,52 @@ cin_is_fd_empty(int fd)
 // mask to check the return value of cin_poll_fds
 #define CIN_POLL_CINFD  (1)
 #define CIN_POLL_FD2    (2)
+#define CIN_POLL_IPCFD  (4)
 
 #define CIN_IS_VALID_FD2(fd)    ((fd) > 0)
 
 CIN_PROTO int
-cin_poll_fds(int fd1, int fd2, int timeout)
+cin_poll_fds(int fd1, int fd2, int ipc_fd, int timeout)
 {
-    CINDBGLOG("cin_poll_fds(fd1=%d, fd2=%d, timeout=%d)", fd1, fd2, timeout);
+    CINDBGLOG("cin_poll_fds(fd1=%d, fd2=%d, ipc=%d, timeout=%d)", fd1, fd2, ipc_fd, timeout);
 
-    int r;
-    struct pollfd fds[2] ={
-        { .fd = fd1, .events = POLLIN, .revents = 0, },
-        { .fd = fd2, .events = POLLIN, .revents = 0, },
+    struct pollfd fds[3] = {
+        { .fd = fd1, .events = POLLIN, .revents = 0 },
+        { .fd = fd2, .events = POLLIN, .revents = 0 },
+        { .fd = ipc_fd, .events = POLLIN, .revents = 0 },
     };
+    int nfds = 1;
+    int idx_fd2 = -1;
+    int idx_ipc = -1;
+
+    if (CIN_IS_VALID_FD2(fd2)) {
+        idx_fd2 = nfds++;
+        fds[idx_fd2].fd = fd2;
+    }
+    if (ipc_fd > 0) {
+        idx_ipc = nfds++;
+        fds[idx_ipc].fd = ipc_fd;
+    }
 
 #ifdef STAT_SYSSELECT
     STATINC(STAT_SYSSELECT);
 #endif
-    while ( 0 > (r = poll(fds, CIN_IS_VALID_FD2(fd2) ? 2 : 1, timeout)) &&
+    int r;
+    while ( 0 > (r = poll(fds, nfds, timeout)) &&
             errno == EINTR);
     assert(r >= 0);
     if (r <= 0)
         return r;
 
-    r = ((fds[0].revents & CIN_POLL_FDS_MASK) ? CIN_POLL_CINFD : 0) |
-        ((fds[1].revents & CIN_POLL_FDS_MASK) ? CIN_POLL_FD2   : 0);
-    return r;
+    int mask = 0;
+    if (fds[0].revents & CIN_POLL_FDS_MASK)
+        mask |= CIN_POLL_CINFD;
+    if (idx_fd2 >= 0 && (fds[idx_fd2].revents & CIN_POLL_FDS_MASK))
+        mask |= CIN_POLL_FD2;
+    if (idx_ipc >= 0 && (fds[idx_ipc].revents & CIN_POLL_FDS_MASK))
+        mask |= CIN_POLL_IPCFD;
+
+    return mask;
 }
 
 /**
@@ -460,8 +481,16 @@ vkey_poll(int timeout)
             return 1;
 
         if (timeout == 0) {
-            if (CIN_IS_VALID_FD2(vkctx.attached_fd))
-                return (cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, 0) & CIN_POLL_FD2) != 0;
+            int mask = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, vkctx.ipc_fd, 0);
+            if (mask & CIN_POLL_FD2)
+                return 1;
+            if (mask & CIN_POLL_IPCFD) {
+                int handled = vkey_process_ipc();
+                if (handled < 0) {
+                    vkctx.ipc_notify = 1;
+                    return 1;
+                }
+            }
             return 0;
         }
 
@@ -472,19 +501,46 @@ vkey_poll(int timeout)
         // to be false here (!VKEY_HAS_PEEK() && cin_is_empty()).
         doupdate();
 
-        if (timeout == INFTIM && !CIN_IS_VALID_FD2(vkctx.attached_fd)) {
-            cin_fetch_fd(CIN_DEFAULT_FD);
-            continue;
+        if (vkctx.ipc_fd <= 0) {
+            ipc_check_reconnect();
         }
 
-        int r = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, timeout);
+        int poll_timeout = timeout;
+        if (poll_timeout == INFTIM && vkctx.ipc_fd <= 0 && !CIN_IS_VALID_FD2(vkctx.attached_fd)) {
+            /* When disconnected from IPC service, wake up every 3s during idle
+             * to check backoff timer and reconnect automatically */
+            poll_timeout = 3000;
+        }
+
+        int r = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, vkctx.ipc_fd, poll_timeout);
         if (r <= 0) {
+            if (poll_timeout == 3000 && timeout == INFTIM) {
+                if (vkctx.ipc_fd <= 0) {
+                    ipc_check_reconnect();
+                }
+                continue;
+            }
             if (timeout > 0)
                 syncnow();
             return 0;
         }
         if (r & CIN_POLL_CINFD) {
             cin_fetch_fd(CIN_DEFAULT_FD);
+            continue;
+        }
+        if (r & CIN_POLL_IPCFD) {
+            syncnow();
+            int handled = vkey_process_ipc();
+            if (handled > 0) {
+                /* Event was consumed and handled (e.g. waterball displayed),
+                 * update screen and continue waiting for user keyboard input */
+                doupdate();
+                continue;
+            } else if (handled < 0) {
+                /* Event handler requested caller notification (e.g. Live comment) */
+                vkctx.ipc_notify = 1;
+                return 1;
+            }
             continue;
         }
         if (r & CIN_POLL_FD2) {
@@ -516,7 +572,7 @@ vkey_prefetch(int timeout)
     VKEYDBGLOG("vkey_prefetch(%d)", timeout);
 
     // always only prefetch cin_fd
-    if (cin_poll_fds(CIN_DEFAULT_FD, -1, timeout) == 0)  // timeout
+    if (cin_poll_fds(CIN_DEFAULT_FD, -1, -1, timeout) == 0)  // timeout
         return 0;
 
     // error or valid date
@@ -558,8 +614,10 @@ vk_byte()
             VKEY_RESET_PEEK();
             return c;
         }
-        if (CIN_IS_VALID_FD2(vkctx.attached_fd))
+        if (CIN_IS_VALID_FD2(vkctx.attached_fd) || vkctx.ipc_notify) {
+            vkctx.ipc_notify = 0;
             return I_OTHERDATA;
+        }
     }
 }
 
