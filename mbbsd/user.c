@@ -144,6 +144,48 @@ is_user_board_moderator(const boardheader_t *bhdr, int unum, time4_t firstlogin)
     return 0;
 }
 
+/* Asks for the current password, and the 2FA code when 2FA is enabled, as
+ * before changing a password-reset channel: brief access to a logged-in
+ * session must not turn into a lasting account takeover. Returns 0 when
+ * both are right; otherwise says so, adding nochange, and returns -1. */
+int
+reauth_password_and_2fa(const char *nochange)
+{
+    userec_t u;
+    char pw[PW_PLAIN_SIZE];
+
+    clear();
+    outs("請先確認您的身分。\n");
+    if (!getdata(2, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO)) {
+	vmsgf("密碼錯誤，%s。", nochange);
+	return -1;
+    }
+    // Check against the record on disk, read once the password is typed,
+    // not cuser: another session may have changed the password or 2FA
+    // since this one loaded cuser, or while the prompt waited.
+    if (passwd_sync_query(usernum, &u) != 0 ||
+	strcmp(u.userid, cuser.userid) != 0 ||
+	u.firstlogin != cuser.firstlogin) {
+	explicit_bzero(pw, sizeof(pw));
+	vmsgf("系統錯誤，%s。", nochange);
+	return -1;
+    }
+    if (!checkuser_passwd(&u, pw)) {
+	vmsgf("密碼錯誤，%s。", nochange);
+	return -1;
+    }
+    if (u.u_2fa) {
+	char code_in[TFA_INPUT_LEN + 1];
+	if (!getdata(4, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in,
+		     sizeof(code_in), DOECHO) ||
+	    !user_verify_2fa_or_backup(u.userid, code_in)) {
+	    vmsgf("驗證碼錯誤，%s。", nochange);
+	    return -1;
+	}
+    }
+    return 0;
+}
+
 void
 user_display(const userec_t * u, int adminmode)
 {
@@ -922,27 +964,9 @@ prompt_again:
 #else
 	if (!adminmode) {
 	    // The contact email is a password-reset channel (/recover), so
-	    // changing it is re-authenticated like a password change:
-	    // require the current password, and the 2FA code when 2FA is
-	    // enabled. Otherwise brief access to a logged-in session
-	    // becomes a lasting account takeover that bypasses the
-	    // old-password check on direct password changes.
-	    char pw[PW_PLAIN_SIZE];
-	    clear();
-	    if (!getdata(2, 0, "請輸入您的登入密碼: ", pw, sizeof(pw), NOECHO) ||
-		!checkuser_passwd(&x, pw)) {
-		vmsg("密碼錯誤，未變更聯絡信箱。");
+	    // changing it is re-authenticated like a password change.
+	    if (reauth_password_and_2fa("未變更聯絡信箱") != 0)
 		return;
-	    }
-	    if (cuser.u_2fa) {
-		char code_in[TFA_INPUT_LEN + 1];
-		if (!getdata(4, 0, "請輸入當前 6 位數 2FA 驗證碼: ", code_in,
-			     sizeof(code_in), DOECHO) ||
-		    !user_verify_2fa_or_backup(cuser.userid, code_in)) {
-		    vmsg("驗證碼錯誤，未變更聯絡信箱。");
-		    return;
-		}
-	    }
 	    change_contact_email(0);
 	    return;
 	} else {

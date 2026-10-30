@@ -860,6 +860,7 @@ void kick_all(const char *user);
 void violate_law(userec_t * u, int unum);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
 int u_info(void);
+int reauth_password_and_2fa(const char *nochange);
 void showplans(const char *uid);
 void showplans_userec(userec_t *u);
 int u_loginview(void);
