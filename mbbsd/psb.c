@@ -2392,13 +2392,23 @@ pvcm_renderer(int i, PSB_CTX *ctx) {
     pvcm_ctx *cx = (pvcm_ctx*) ctx->cmd.priv;
     int curr = ctx->cmd.curr;
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
+    char msg[sizeof(resp->msg)];
     if (!resp)
         return 0;
+    // msg is as commentd replays it. Keep control sequences, control bytes
+    // and broken multibyte characters off the screen, but clean only this
+    // copy: deleting matches the record's msg against the post's text.
+    if (resp->type >= 0) {
+        memcpy(msg, resp->msg, sizeof(msg) - 1);
+        msg[sizeof(msg) - 1] = '\0';
+        strip_control_sequence(msg, msg);
+        mbs_sanitize(msg, sizeof(msg));
+    }
     prints("%c %06d %-12.12s %s",
            (i == curr) ? '>' : ' ',
            i + 1,
            resp->userid,
-           (resp->type >= 0) ? resp->msg : (ANSI_COLOR(0;30;47) "<¤w§R>" ANSI_RESET));
+           (resp->type >= 0) ? msg : (ANSI_COLOR(0;30;47) "<¤w§R>" ANSI_RESET));
     return 0;
 }
 
