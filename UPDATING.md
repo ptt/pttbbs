@@ -15,6 +15,51 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## vote: Count bvote from the votes' control files
+
+看板的投票數 `bvote`（`boardheader_t`）改為依各投票的 control 檔（`controlN`）
+重新計算，不再在舉辦、結算、取消投票時加減。舊程式會讓 bvote 跟實際的投票脫節，
+例如板主開投票時在輸入選項的地方斷線；bvote 降到 0 的看板，上面的投票既不會
+列出也不會結算。新程式在板主進投票選單、使用者查看投票（bvote 為 0 時）以及
+每日開票時修正 bvote，這些卡住的投票會被重新算進來：已過截止時間的會在下一次
+每日開票時開票，並把結果貼到看板與 Record 板，即使那是很多年前的投票。
+
+> [!IMPORTANT]
+> **更新 mbbsd 之前，先用 `util/checkvotes` 檢查並封存卡住的投票。**
+> 不需要關站：bvote 為 0 的看板，舊的 mbbsd 不會讀它的投票，開新投票也只會用
+> 沒有 control 檔的編號。
+
+```bash
+# 編譯
+make -C util checkvotes
+
+# 1. 列出需要注意的看板與投票（只讀，不改任何檔案）
+util/checkvotes
+
+# 2. 預演：列出會被封存的投票（不搬任何檔案）
+util/checkvotes -a ~/vote-archive
+
+# 3. 確認清單後實際封存
+util/checkvotes -a ~/vote-archive -y
+```
+
+最後再更新並重啟 mbbsd。
+
+會被封存的是 bvote 為 0 的看板上，截止時間已超過一週的投票（含沒有選項的空投票）；
+control 檔讀不到截止時間的，看它的修改時間。封存方式是把該投票的所有檔案
+（`controlN`、`ballotsN`、`flagsN`、`descN`、`vtitleN`、`commentsN`、`vlogsN`、
+`logconfN`、`limitedN`、`limitsN`、`vlockN`）搬到 `封存目錄/看板名稱/`，檔名不變，
+不刪除，也不改 `.BRD`。一週內才截止的投票會保留，新程式修正 bvote 後照常開票。
+
+- 封存目錄必須跟 BBSHOME 在同一個檔案系統上（例如放在 `~` 底下）。
+- 搬每個投票之前，會再讀一次 `.BRD` 和 SHM 裡的 bvote，已經不是 0 就跳過。
+- 封存目錄裡已有同名檔案的投票不會搬。搬到一半失敗時，已搬的檔案會搬回去；
+  若搬不回去，會標示 `PARTLY archived` 並列出檔案位置，需手動處理。
+  有任何投票沒封存成功時，結束碼是 1。
+- 列表裡標示 `lock file left` 的投票，新舊程式都不會開票，需手動刪除 `vlockN`。
+- `-v` 會列出所有有投票或 bvote 不為 0 的看板。BBSHOME 可以當最後一個參數指定。
+
+---
 ## board, cache: Migrate boardheader_t BM to numeric user_t index
 
 為將看板板主（BM）改為數值索引追蹤，`boardheader_t` 擴充支援數值化的板主結構：
