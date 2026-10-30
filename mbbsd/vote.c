@@ -78,6 +78,26 @@ vote_unlink_files(const vote_buffer_t *vbuf, const char *bname)
     }
 }
 
+// The number of items in a vote's control file: 0 when it has none, or its
+// head cannot be read as user_vote_one() reads it, as for an opening not
+// done or cut off at the items.
+static int
+vote_item_count(const vote_buffer_t *vbuf, const char *bname)
+{
+    char buf[PATHLEN];
+    short n = 0, tickets;
+    int closetime;
+    FILE *fp;
+
+    setbfile(buf, bname, vbuf->control);
+    if (!(fp = fopen(buf, "r")))
+        return 0;
+    if (fscanf(fp, "%hd,%hd\n%d\n", &n, &tickets, &closetime) != 3)
+        n = 0;
+    fclose(fp);
+    return n > 0 ? n : 0;
+}
+
 static int
 vote_stampfile(char *filepath, const char *boardname)
 {
@@ -1048,7 +1068,14 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     }
 
     assert(cfp);
-    fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime);
+    // Read again: the vote may have been cancelled and its slot taken by
+    // an opening not done, while the user read the description.
+    if (fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime) != 3 ||
+	item_num <= 0) {
+	fclose(cfp);
+	vmsg("抱歉，此投票已取消或無效。");
+	return FULLUPDATE;
+    }
     chosen = (char *)malloc(item_num+100); // XXX dirty fix 板主增加選項的問題
     memset(chosen, 0, item_num+100);
     memset(choices, 0, sizeof(choices));
@@ -1242,10 +1269,10 @@ user_vote(const char *bname)
 
     // XXX I think such loop is ineffective...
     // According to the creation code, the vote is ranged as [1..MAX_VOTE_NR]
-    for (i = 1; i <= MAX_VOTE_NR; i++) {
+    for (i = 1; i < MAX_VOTE_NR; i++) {
 	votebuf_init(&vbuf, i);
-	setbfile(buf, bname, vbuf.control);
-	if (!dashf(buf))
+	// one without items cannot be voted in
+	if (vote_item_count(&vbuf, bname) <= 0)
 	    continue;
 
 	x = i;
@@ -1262,17 +1289,24 @@ user_vote(const char *bname)
 	prints("%s\n", inbuf);
     }
 
-    if (x < 0)
+    if (x < 0) {
+	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
+    }
 
     getdata(b_lines - 1, 0, TEMPFORMAT(64, "要投幾號投票 [%d] ", x), genbuf, 4, LCECHO);
     i = atoi(genbuf);
 
     // x: default (max), i: user selection
-    if (i < 1 || i > MAX_VOTE_NR)
+    if (i < 1 || i >= MAX_VOTE_NR)
 	i = x;
 
     votebuf_init(&vbuf, i);
+    // only one of those listed
+    if (vote_item_count(&vbuf, bname) <= 0) {
+	vmsg("沒有這號投票。");
+	return FULLUPDATE;
+    }
     return user_vote_one(&vbuf, bname);
 }
 
