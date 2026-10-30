@@ -41,6 +41,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
 typedef struct {
     uint32_t allocated;
     uint32_t loaded;
+    int stopped;    // commentd is down or out of records: stop asking it
     CommentKeyReq key;
     CommentBodyReq *resp;
 } CommentsCtx;
@@ -105,18 +106,24 @@ int CommentsClose(void *ctx)
     return 0;
 }
 
+// A deleted comment's type has this bit set.
+#define COMMENT_DELETED ((int32_t)0x80000000)
+
+// Loads record i into c->resp[i]. Returns 0 when it is filled: with the
+// record, or with an empty deleted one when commentd did not answer with a
+// whole record. Returns -1 when commentd cannot be reached or has no more
+// records, so that the caller stops.
 static int CommentsLoad(CommentsCtx *c, int i)
 {
     int s;
     uint16_t resp_size;
     CommentQueryRequest req = {0};
-    CommentBodyReq *resp;
+    CommentBodyReq resp;
 
     if (i >= (int)c->allocated)
         CommentsAlloc(c, i);
     assert(c->resp);
 
-    resp = &c->resp[i];
     req.cb = sizeof(req);
     req.operation = COMMENTD_REQ_QUERY_BODY;
     STRLCPY(req.key.board, c->key.board);
@@ -126,13 +133,26 @@ static int CommentsLoad(CommentsCtx *c, int i)
     if (s < 0) {
         return -1;
     }
+    // commentd sends a whole record, or a size of 0 when there are no more.
     if (towrite(s, &req, sizeof(req)) < 0 ||
-        toread(s, &resp_size, sizeof(resp_size)) < 0 ||
-        !resp_size || toread(s, resp, resp_size) < 0) {
+        toread(s, &resp_size, sizeof(resp_size)) < 0)
+        goto unusable;
+    if (resp_size == 0) {
         close(s);
         return -1;
     }
+    if (resp_size != sizeof(resp) || toread(s, &resp, sizeof(resp)) < 0)
+        goto unusable;
     close(s);
+    c->resp[i] = resp;
+    return 0;
+
+unusable:
+    // Keep an empty deleted record, so that the records after it can still
+    // be read. If commentd has gone away, the next connect fails and stops.
+    close(s);
+    memset(&c->resp[i], 0, sizeof(c->resp[i]));
+    c->resp[i].type = COMMENT_DELETED;
     return 0;
 }
 
@@ -140,9 +160,15 @@ const struct CommentBodyReq *CommentsRead(void *ctx, int i)
 {
     CommentsCtx *c = (CommentsCtx *)ctx;
 
-    while (i >= (int)c->loaded) {
-        if (CommentsLoad(c, c->loaded++))
+    // Count a record as loaded only once it is in the array. When commentd
+    // cannot be reached or has no more records, don't ask it again on every
+    // redraw: it may be down, or slow to answer.
+    while (!c->stopped && i >= (int)c->loaded) {
+        if (CommentsLoad(c, c->loaded)) {
+            c->stopped = 1;
             break;
+        }
+        c->loaded++;
     }
     if (i >= (int)c->loaded)
         return NULL;
@@ -157,7 +183,7 @@ static int CommentsDelete(void *ctx, int i)
     if (!CommentsRead(ctx, i))
         return -1;
     // TODO(piaip) Notif commentd.
-    c->resp[i].type |= 0x80000000;
+    c->resp[i].type |= COMMENT_DELETED;
 
     CommentQueryRequest req = {0};
     req.cb = sizeof(req);
