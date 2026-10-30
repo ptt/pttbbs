@@ -1380,6 +1380,46 @@ void register_mail_complete_and_exit() {
 // Email Verification
 ////////////////////////////////////////////////////////////////////////////
 
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+// The email on disk: another session may have changed it since this one
+// loaded cuser. Returns -1, saying so, when the slot does not hold this
+// account any more (or cannot be read): nothing may be written to it then.
+static int
+disk_email(char *buf, size_t size)
+{
+    userec_t u;
+
+    if (passwd_sync_query(usernum, &u) != 0 ||
+	strcmp(u.userid, cuser.userid) != 0 ||
+	u.firstlogin != cuser.firstlogin) {
+	vmsg("系統錯誤，無法讀取帳號資料。");
+	return -1;
+    }
+    strlcpy(buf, u.email, size);
+    return 0;
+}
+
+static int notify_email_change(const char *userid, const char *email)
+{
+    int ret = bsmtp("etc/emailchanged",
+		    TEMPFORMAT(128, " %s - %s (%s) - 聯絡信箱已變更",
+			       BBSNAME, userid, fromhost),
+		    email, "non-exist");
+
+    return ret > 0 ? 0 : -1;
+}
+
+// Logs a change of the contact email and tells the old address.
+static void
+contact_email_changed(const char *tag, const char *oldemail, const char *email)
+{
+    log_user_security(cuser.userid, "%s (%s) %s -> %s\n", fromhost, tag,
+		      oldemail, email);
+    if (is_valid_email(oldemail))
+	notify_email_change(cuser.userid, oldemail);
+}
+#endif
+
 static void
 u_email_verification()
 {
@@ -1627,16 +1667,6 @@ u_register()
 
 #if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 
-static int notify_email_change(const char *userid, const char *email)
-{
-    int ret = bsmtp("etc/emailchanged",
-		    TEMPFORMAT(128, " %s - %s (%s) - 聯絡信箱已變更",
-			       BBSNAME, userid, fromhost),
-		    email, "non-exist");
-
-    return ret > 0 ? 0 : -1;
-}
-
 // change_contact_email
 //
 // Params:
@@ -1647,7 +1677,10 @@ static int notify_email_change(const char *userid, const char *email)
 //     1: skip checking (not to check whether they are the same.)
 //
 // Return:
-//   int: 0: ok -1: err
+//   int: 0: saved (when the account's record cannot be read or saved,
+//   the session ends) -1: not done
+//   (the user cancelled or the address was refused; check_register() asks
+//   again)
 int
 change_contact_email(bool skip_same_email_check)
 {
@@ -1660,15 +1693,27 @@ change_contact_email(bool skip_same_email_check)
     if (register_email_verification(&ein, skip_same_email_check) != REGISTER_OK)
 	return -1;
 
-    log_user_security(cuser.userid, "%s (ContactEmail) %s -> %s\n", fromhost,
-                      cuser.email, email);
-
-    // Send notification to old email address if it was valid
-    if (is_valid_email(cuser.email))
-	notify_email_change(cuser.userid, cuser.email);
-
-    // Write.
-    pwcuSetEmail(email);
+    // When the record no longer holds this account (disk_email(), or the
+    // save failing in pwcuInitCUser()), end the session rather than go on
+    // with it; returning would also let check_register() go on without a
+    // contact email, or ask again and again.
+    char oldemail[sizeof(cuser.email)];
+    if (disk_email(oldemail, sizeof(oldemail)) != 0) {
+	u_exit("emailfail");
+	exit(0);
+    }
+    if (pwcuSetEmail(email) != 0) {
+	log_user_security(cuser.userid,
+			  "%s (ContactEmail) saving %s to passwd failed\n",
+			  fromhost, email);
+	vmsg("聯絡信箱更新失敗，請重新上站。");
+	u_exit("emailfail");
+	exit(0);
+    }
+    // Compare with the address on disk, which another session may have
+    // set to this one already: then nothing changed to log or tell.
+    if (strcmp(oldemail, email) != 0)
+	contact_email_changed("ContactEmail", oldemail, email);
 
     vmsg("聯絡信箱更新完成。");
 
