@@ -202,6 +202,14 @@ void chomp(char *src);
 #  define SZ_COLS(n) (n)
 #  define MB_CONVERT_SIZE(x) (x)
 #endif
+void   mbs_safe_trim(char *s);
+static inline char *conv_same_storage(const char *src, char *dst, size_t sz) {
+    if ((const void *)src != (const void *)dst) {
+        strlcpy(dst, src, sz);
+    }
+    mbs_safe_trim(dst);
+    return dst;
+}
 #if MB_IS_UTF8 && STORAGE_IS_BIG5
 #  define storage_to_mb(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #  define mb_to_storage(src, dst, sz) utf8_to_big5((src), (dst), (sz))
@@ -211,17 +219,23 @@ void chomp(char *src);
 #  define mb_to_storage(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #  define storage_to_mb_n(src, slen, dst, dlen) utf8_to_big5_n((src), (slen), (dst), (dlen))
 #else
-void   mbs_safe_trim(char *s);
-static inline char *conv_same_storage(const char *src, char *dst, size_t sz) {
-    if ((const void *)src != (const void *)dst) {
-        strlcpy(dst, src, sz);
-    }
-    mbs_safe_trim(dst);
-    return dst;
-}
 #  define storage_to_mb(src, dst, sz) conv_same_storage((src), (dst), (sz))
 #  define mb_to_storage(src, dst, sz) conv_same_storage((src), (dst), (sz))
 #  define storage_to_mb_n(src, slen, dst, dlen) conv_same_storage((src), (dst), (dlen))
+#endif
+
+/* Strings exchanged with services (post.svc, etc) are always UTF-8. */
+#if MB_IS_BIG5
+#  define MB_TO_SERVICE(src, dst, sz) big5_to_utf8((src), (dst), (sz))
+#  define SERVICE_TO_MB(src, dst, sz) utf8_to_big5((src), (dst), (sz))
+#else
+#  define MB_TO_SERVICE(src, dst, sz) conv_same_storage((src), (dst), (sz))
+#  define SERVICE_TO_MB(src, dst, sz) conv_same_storage((src), (dst), (sz))
+#endif
+#if STORAGE_IS_BIG5
+#  define STORAGE_TO_SERVICE_N(src, slen, dst, dlen) big5_to_utf8_n((src), (slen), (dst), (dlen))
+#else
+#  define STORAGE_TO_SERVICE_N(src, slen, dst, dlen) conv_same_storage((src), (dst), (dlen))
 #endif
 
 #if NEED_STORAGE_CONV
