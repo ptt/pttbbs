@@ -2080,11 +2080,15 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
             STRLCPY(save_title, fhdr->title);
     }
 
+    // The post checked here: the merge below must replace this same file,
+    // not one a mask or another edit put there during the prompts between.
+    struct stat st_post;
     if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
         outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
         refresh();
 
-        if (hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
+        if (stat(genbuf, &st_post) != 0 ||
+            hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
             memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
             is_race_condition = 1;
         }
@@ -2134,7 +2138,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
         // atomic lock-merge-replace
-        if (!append_merge_replace(genbuf, fpath, oldsz, NULL) &&
+        if (!append_merge_replace(genbuf, fpath, oldsz, &st_post) &&
             dashf(fpath)) {
             // Not replaced: the post was deleted or replaced since the
             // check above. Keep the edit as for a race there.
