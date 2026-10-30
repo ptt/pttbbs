@@ -1394,6 +1394,11 @@ u_email_verification()
 	vmsg("您不被允許使用認證碼認證。");
 	return;
     }
+    // The verified email becomes a password-reset channel (/recover), and
+    // with CONFIG_USEREC_EMAIL_IS_CONTACT replaces the contact email, so
+    // re-authenticate as change_contact_email's caller does.
+    if (reauth_password_and_2fa("未進行信箱認證") != 0)
+	return;
 
     email_input_t ein = {};
     ein.email = email;
