@@ -1922,6 +1922,13 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
 
     // during lock, only record error and never break.
     flock(fd_src, LOCK_EX);
+    struct stat st_src, st_ref;
+    if (fstat(fd_src, &st_src) != 0) {
+        flock(fd_src, LOCK_UN);
+        close(fd_src);
+        close(fd_dest);
+        return 0;
+    }
     if (lseek(fd_src, (off_t)sz_orig, SEEK_SET) != (off_t)sz_orig)
         ret = 0;
     while ((sz = read(fd_src, buf, sizeof(buf))) > 0) {
@@ -1933,7 +1940,12 @@ append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig) {
     // close and flush the merged file
     close(fd_dest);
 
-    if (unlink(ref_fn) != 0 ||
+    // Rename() replaces ref_fn at once; unlinking it first left a moment
+    // in which the post did not exist for readers and comments. But only
+    // while ref_fn is still the file read: one deleted or replaced
+    // meanwhile must not be brought back or overwritten.
+    if (stat(ref_fn, &st_ref) != 0 ||
+        st_src.st_dev != st_ref.st_dev || st_src.st_ino != st_ref.st_ino ||
         Rename(mod_fn, ref_fn) != 0)
         ret = 0;
 
@@ -2117,7 +2129,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
         // atomic lock-merge-replace
-        append_merge_replace(genbuf, fpath, oldsz);
+        if (!append_merge_replace(genbuf, fpath, oldsz) && dashf(fpath)) {
+            // Not replaced: the post was deleted or replaced since the
+            // check above. Keep the edit as for a race there.
+            char bufpath[PATHLEN];
+            setuserfile(bufpath, "buf.0");
+            Rename(fpath, bufpath);
+            outs("\n\n" ANSI_COLOR(1;31) "檔案全被其他人修改過，無法寫入。\n"
+                 "新內容已存入您的暫存檔[0]。 請重新編輯。");
+            pressanykey();
+            return FULLUPDATE;
+        }
     } else {
         // piaip Wed Jan  9 11:11:33 CST 2008
         // in order to prevent calling system 'mv' all the
