@@ -752,6 +752,9 @@
 #ifndef CONFIG_ENTROPY_SVC
 #define CONFIG_ENTROPY_SVC 0
 #endif
+#ifndef CONFIG_IPC_SVC_FALLBACK
+#define CONFIG_IPC_SVC_FALLBACK 1
+#endif
 
 #ifdef DEBUG
 #define IS_DEBUG 1

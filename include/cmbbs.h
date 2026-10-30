@@ -2,6 +2,7 @@
 #define LIBBBS_H_
 
 #include "pttstruct.h" /* for fileheader_t */
+#include "ipc.h"
 
 /* name.c */
 int is_validuserid(const char *id);
@@ -303,6 +304,28 @@ int logout_friend_online(userinfo_t *utmp);
 
 /* stat.c */
 int StatGetUserDailyPost(const char *userid);
+
+/* ipc.c */
+typedef void (*ipc_reconnect_cb_t)(int new_fd);
+int  ipc_get_fd(void);
+int  ipc_is_connected(void);
+int  ipc_connect(void);
+void ipc_disconnect(void);
+void ipc_set_reconnect_callback(ipc_reconnect_cb_t cb);
+int  ipc_try_reconnect(void);
+int  ipc_check_reconnect(void);
+int  ipc_register(const char *userid, pid_t pid, int uslot);
+int  ipc_wmsg_send(const char *to_userid, const char *from_userid,
+                   pid_t from_pid, int from_uslot, int msgmode, const char *text);
+int  ipc_talk_send(const char *to_userid, const char *from_userid,
+                   pid_t from_pid, int from_uslot, int sig, int is_urgent);
+int  ipc_chat_connect(void);
+int  ipc_sub(uint32_t bid, aidu_t aid);
+int  ipc_unsub(uint32_t bid, aidu_t aid);
+int  ipc_pub(uint32_t bid, aidu_t aid, const char *text);
+int  ipc_chess_create_session(const char *caller, const char *callee, int sig);
+int  ipc_chess_join_session(const char *callee, const char *caller);
+int  ipc_read_packet(int fd, ipc_hdr_t *hdr, void *payload_buf, size_t bufsz);
 int StatIncUserDailyPost(const char *userid);
 int StatGetUserDailyMail(const char *userid);
 int StatAddUserDailyMail(const char *userid, int count);

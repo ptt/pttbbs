@@ -465,3 +465,17 @@ func (c *SHMClient) GetUtmpCandidates() []UtmpCandidate {
 	}
 	return res
 }
+
+// Fn2Aidu converts a post filename (e.g. "M.1792562949.A.8CB") to uint64 aidu_t
+func Fn2Aidu(fn string) uint64 {
+	cStr := C.CString(fn)
+	defer C.free(unsafe.Pointer(cStr))
+	return uint64(C.fn2aidu(cStr))
+}
+
+// Aidu2Fn converts a uint64 aidu_t to post filename (e.g. "M.1792562949.A.8CB")
+func Aidu2Fn(aid uint64) string {
+	var buf [64]C.char
+	C.aidu2fn(&buf[0], C.aidu_t(aid))
+	return C.GoString(&buf[0])
+}
