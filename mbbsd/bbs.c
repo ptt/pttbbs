@@ -4405,14 +4405,15 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
     }
 
     rev = timecapsule_add_revision(fpath);
-    if (!timecapsule_get_by_revision(fpath, rev, revpath, sizeof(revpath))) {
+    if (rev <= 0 ||
+        !timecapsule_get_by_revision(fpath, rev, revpath, sizeof(revpath)) ||
+        !(fp = fopen(revpath, "rt"))) {
         vmsg("系統錯誤，無法修改。");
         return FULLUPDATE;
     }
     // Enforce building a new file.
     unlink(fpath);
 
-    fp = fopen(revpath, "rt");
     fpw = fopen(fpath, "wt");
     while (fgets(buf, sizeof(buf), fp)) {
         strip_control_sequence(buf2, buf);
