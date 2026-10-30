@@ -119,6 +119,7 @@ static inline bool vkey_isprint(int c) {
 #define KEY_DOWN        0xD902
 #define KEY_RIGHT       0xD903
 #define KEY_LEFT        0xD904
+#define KEY_UP_DOWN     0xD905  /* pseudo key for Up/Down */
 
 #define KEY_STAB        0xD909  /* shift-tab */
 

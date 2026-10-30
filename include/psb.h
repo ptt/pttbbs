@@ -151,6 +151,7 @@ void cmd_bar_draw_cmd(int line, int row_bit, const cmd_t *cmd, const char *alt_k
 void cmd_bar_draw_cmd_ex(int line, int row_bit, const cmd_t *cmd, const char *alt_key_name, bool need_space);
 void cmd_bar_clear_hotspots(void);
 void cmd_bar_clear_row_hotspots(int y);
+int  cmd_bar_find_hotspot_key(int y, int x, const cmd_layer_t *layers);
 void cmd_bar_register_custom_hotspot(int y, int x_start, int x_end, int key, const cmd_t *layer_cmd);
 void cmd_bar_register_newmail_hotspot(int x_start, int x_end);
 

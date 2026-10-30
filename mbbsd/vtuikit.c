@@ -1735,71 +1735,179 @@ int
 // v_multiline_text: in-place micro-textarea input widget
 // -----------------------------------------------------------------------------
 
+static const cmd_t multiline_cmds[] = {
+    { '\t',         "加行", "增加一行",         NULL, 0, CMD_PRIO_HIGH, false },
+    { KEY_BS,       "刪空行", "空行時刪除此行",     NULL, 0, CMD_PRIO_HIGH, false },
+    { KEY_UP_DOWN,  "切換", "上下切換編輯行",     NULL, 0, CMD_PRIO_HIGH, false },
+    { KEY_ENTER,    "送出", "送出留言",         NULL, 0, CMD_PRIO_HIGH, false },
+    { Ctrl('C'),    "放棄", "放棄編輯並離開",     NULL, 0, CMD_PRIO_QUIT, false },
+    { Ctrl('Z'),    "說明", "顯示操作說明",       NULL, 0, CMD_PRIO_USAGE, false },
+    { 0, NULL, NULL, NULL, 0, 0, false }
+};
+
 typedef struct {
     int exit_key;
+    const cmd_layer_t *layers;
+    int num_lines;
+    int curr_line;
 } v_multiline_ctx_t;
 
 static int
-multiline_peek_cb(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
+multiline_peek_cb(int key, VGET_RUNTIME *prt, void *instance)
 {
     v_multiline_ctx_t *ctx = (v_multiline_ctx_t *)instance;
+    if (key == KEY_BS || key == 0x08 || key == 0x7f) {
+        if (prt && prt->iend == 0) {
+            ctx->exit_key = KEY_BS;
+            return VGETCB_END;
+        }
+    }
     if (key == '\t' || key == KEY_TAB ||
         key == KEY_UP || key == KEY_DOWN || key == KEY_STAB ||
         key == KEY_ENTER || key == KEY_CR || key == KEY_LF ||
+        key == Ctrl('X') ||
         key == KEY_ESC || key == Ctrl('C')) {
         ctx->exit_key = key;
         return VGETCB_END;
+    }
+    if (key == Ctrl('Z') || key == KEY_F1) {
+        ctx->exit_key = Ctrl('Z');
+        return VGETCB_END;
+    }
+    if (key == KEY_MOUSE) {
+        const vtkbd_mouse_t *m = vkey_get_mouse();
+        if (m && !m->is_motion && !m->is_release) {
+            if (m->button == MOUSE_BTN_WHEEL_UP) {
+                ctx->exit_key = KEY_UP;
+                return VGETCB_END;
+            } else if (m->button == MOUSE_BTN_WHEEL_DOWN) {
+                ctx->exit_key = KEY_DOWN;
+                return VGETCB_END;
+            } else if (m->button == MOUSE_BTN_LEFT) {
+                if (m->y == b_lines) {
+                    int clicked_key = cmd_bar_find_hotspot_key(m->y, m->x, ctx->layers);
+                    if (clicked_key) {
+                        ctx->exit_key = clicked_key;
+                        return VGETCB_END;
+                    }
+                } else if (ctx->num_lines > 0 &&
+                           m->y >= b_lines - ctx->num_lines &&
+                           m->y < b_lines) {
+                    int target_line = m->y - (b_lines - ctx->num_lines);
+                    if (target_line >= 0 && target_line < ctx->num_lines && target_line != ctx->curr_line) {
+                        ctx->curr_line = target_line;
+                        ctx->exit_key = KEY_UP_DOWN;
+                        return VGETCB_END;
+                    }
+                }
+            }
+        }
+        return VGETCB_NONE;
     }
     return VGETCB_NONE;
 }
 
 static void
 v_multiline_refresh(const char *prompt, const char *footer_prefix,
+                    const char *line_prefix,
                     char lines[][SZ_COLS(STRLEN)],
-                    int num_lines, int curr_line)
+                    int num_lines, int curr_line,
+                    const cmd_layer_t *layers)
 {
-    int prompt_row = b_lines - 2 - num_lines;
-    move(prompt_row, 0);
-    clrtoeol();
-    outs(prompt);
+    int prompt_lines = 1;
+    for (const char *p = prompt; *p; p++) {
+        if (*p == '\n')
+            prompt_lines++;
+    }
+    int prompt_row = b_lines - num_lines - prompt_lines;
+
+    const char *p = prompt;
+    int cur_r = prompt_row;
+    while (*p) {
+        const char *nl = strchr(p, '\n');
+        move(cur_r++, 0);
+        clrtoeol();
+        if (nl) {
+            prints("%.*s", (int)(nl - p), p);
+            p = nl + 1;
+        } else {
+            outs(p);
+            break;
+        }
+    }
+
+    int pfx_w = (line_prefix && *line_prefix) ? stream_width(line_prefix) : 0;
 
     for (int i = 0; i < num_lines; i++) {
-        int r = b_lines - 1 - num_lines + i;
+        int r = b_lines - num_lines + i;
         move(r, 0);
         clrtoeol();
-        if (i == curr_line) {
-            outs(ANSI_COLOR(1;33) " >" ANSI_RESET);
+        if (line_prefix && *line_prefix) {
+            if (i == 0) {
+                outs(line_prefix);
+                if (i == curr_line) {
+                    outs(ANSI_COLOR(1;36) ">" ANSI_RESET);
+                } else {
+                    outs(" ");
+                }
+            } else {
+                if (pfx_w > 0)
+                    prints("%*s", pfx_w, "");
+                if (i == curr_line) {
+                    outs(ANSI_COLOR(1;36) ">" ANSI_RESET);
+                } else {
+                    outs(" ");
+                }
+            }
         } else {
-            outs("  ");
+            if (i == curr_line) {
+                outs(ANSI_COLOR(1;36) " >" ANSI_RESET);
+            } else {
+                outs("  ");
+            }
+        }
+        if (i != curr_line) {
             outs(lines[i]);
         }
     }
-    move(b_lines - 1, 0);
-    clrtoeol();
-    vs_footer(footer_prefix ? footer_prefix : "編輯留言",
-              " (TAB)加行 (↑ ↓)換行 (Enter)送出 (Ctrl-C) 放棄");
+    vs_cmd_bar(VS_FOOTER, footer_prefix ? footer_prefix : " 編輯留言 ", layers);
 }
 
 int
-v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, const char *prompt, const char *footer_prefix)
+v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len,
+                 const char *prompt, const char *footer_prefix,
+                 const char *line_prefix, int flags)
 {
     if (!out_buf || out_bufsz == 0)
         return 0;
 
-    out_buf[0] = '\0';
-
     if (max_lines <= 0 || max_lines > 16)
-        max_lines = V_MULTILINE_MAX_LINES;
+        max_lines = 5;
     if (line_len <= 0 || line_len > STRLEN - 3)
-        line_len = V_MULTILINE_LINE_LEN;
+        line_len = STRLEN - 3;
 
-    if (b_lines - max_lines - 2 < 0)
-        max_lines = b_lines - 3;
+    if (b_lines - max_lines - 1 < 0)
+        max_lines = b_lines - 2;
     if (max_lines < 1)
         max_lines = 1;
 
     if (!prompt || !*prompt)
-        prompt = ANSI_COLOR(1;36) "請輸入留言內容: " ANSI_RESET "(按 TAB 加行，Ctrl-C 放棄)" ANSI_RESET;
+        prompt = ANSI_COLOR(1;36) "請輸入留言內容: " ANSI_RESET "(可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)" ANSI_RESET;
+
+    int prompt_lines = 1;
+    for (const char *p = prompt; *p; p++) {
+        if (*p == '\n')
+            prompt_lines++;
+    }
+    if (b_lines - max_lines - prompt_lines < 0)
+        max_lines = b_lines - prompt_lines - 1;
+    if (max_lines < 1)
+        max_lines = 1;
+
+    cmd_layer_t layers[] = {
+        { multiline_cmds, NULL },
+        { NULL, NULL }
+    };
 
     VREFSCR scr = vscr_save();
 
@@ -1809,17 +1917,59 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
     int num_lines = 1;
     int curr_line = 0;
 
+    if (out_buf[0] != '\0') {
+        const char *p = out_buf;
+        num_lines = 0;
+        while (*p && num_lines < max_lines) {
+            const char *eol = strchr(p, '\n');
+            size_t seg_len = eol ? (size_t)(eol - p) : strlen(p);
+            if (seg_len >= sizeof(lines[num_lines]))
+                seg_len = sizeof(lines[num_lines]) - 1;
+            memcpy(lines[num_lines], p, seg_len);
+            lines[num_lines][seg_len] = '\0';
+            while (seg_len > 0 && (lines[num_lines][seg_len - 1] == '\r' || lines[num_lines][seg_len - 1] == '\n')) {
+                seg_len--;
+                lines[num_lines][seg_len] = '\0';
+            }
+            num_lines++;
+            if (!eol)
+                break;
+            p = eol + 1;
+        }
+        if (num_lines == 0)
+            num_lines = 1;
+    }
+
+    int pfx_w = (line_prefix && *line_prefix) ? stream_width(line_prefix) : 0;
+    int pfx_col = (line_prefix && *line_prefix) ? (pfx_w + 1) : 2;
+
+    int total_cols = (t_columns > 0 ? t_columns : 80);
+    int avail_cols = total_cols - pfx_col;
+    if (avail_cols > 2) {
+        if (line_len <= 0 || line_len > avail_cols)
+            line_len = avail_cols;
+    }
+    if (line_len > STRLEN - 3)
+        line_len = STRLEN - 3;
+
     v_multiline_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.layers = layers;
+    ctx.num_lines = num_lines;
+    ctx.curr_line = curr_line;
+
     VGET_CALLBACKS cbs;
     memset(&cbs, 0, sizeof(cbs));
     cbs.peek = multiline_peek_cb;
 
-    v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+    v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
 
     while (1) {
         ctx.exit_key = 0;
-        int cur_row = b_lines - 1 - num_lines + curr_line;
-        move(cur_row, 2);
+        ctx.num_lines = num_lines;
+        ctx.curr_line = curr_line;
+        int cur_row = b_lines - num_lines + curr_line;
+        move(cur_row, pfx_col);
         vgetstring_sz(lines[curr_line], sizeof(lines[curr_line]),
                       line_len, 0, lines[curr_line],
                       &cbs, &ctx);
@@ -1829,25 +1979,58 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
             key = KEY_ENTER;
 
         if (key == '\t' || key == KEY_TAB) {
-            if (curr_line == num_lines - 1) {
-                if (num_lines < max_lines) {
+            if (num_lines < max_lines) {
+                if (flags & VMULTI_SCROLL)
                     scroll();
-                    num_lines++;
-                    curr_line++;
-                } else {
-                    curr_line = 0;
+                for (int i = num_lines; i > curr_line + 1; i--) {
+                    memcpy(lines[i], lines[i - 1], sizeof(lines[i]));
                 }
-            } else {
+                lines[curr_line + 1][0] = '\0';
+                num_lines++;
                 curr_line++;
+            } else {
+                curr_line = (curr_line + 1) % num_lines;
             }
-            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
+            continue;
+        }
+
+        if (key == KEY_BS || key == 0x08 || key == 0x7f) {
+            if (num_lines > 1 && lines[curr_line][0] == '\0') {
+                int old_num_lines = num_lines;
+                for (int i = curr_line; i < num_lines - 1; i++) {
+                    memcpy(lines[i], lines[i + 1], sizeof(lines[i]));
+                }
+                lines[num_lines - 1][0] = '\0';
+                num_lines--;
+                if (curr_line > 0)
+                    curr_line--;
+
+                if (flags & VMULTI_SCROLL) {
+                    rscroll();
+                } else {
+                    int prompt_lines = 1;
+                    for (const char *p = prompt; *p; p++) {
+                        if (*p == '\n')
+                            prompt_lines++;
+                    }
+                    int old_top_row = b_lines - old_num_lines - prompt_lines;
+                    if (old_top_row >= 0 && old_top_row < b_lines) {
+                        move(old_top_row, 0);
+                        clrtoeol();
+                    }
+                }
+                v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
+            } else {
+                bell();
+            }
             continue;
         }
 
         if (key == KEY_UP) {
             if (curr_line > 0) {
                 curr_line--;
-                v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+                v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             } else {
                 bell();
             }
@@ -1857,10 +2040,20 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
         if (key == KEY_DOWN) {
             if (curr_line < num_lines - 1) {
                 curr_line++;
-                v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+                v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             } else {
                 bell();
             }
+            continue;
+        }
+
+        if (key == KEY_UP_DOWN) {
+            if (ctx.curr_line != curr_line && ctx.curr_line >= 0 && ctx.curr_line < num_lines) {
+                curr_line = ctx.curr_line;
+            } else if (num_lines > 1) {
+                curr_line = (curr_line + 1) % num_lines;
+            }
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             continue;
         }
 
@@ -1869,7 +2062,16 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
                 curr_line--;
             else
                 curr_line = num_lines - 1;
-            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
+            continue;
+        }
+
+        if (key == Ctrl('Z') || key == KEY_F1) {
+            screen_backup_t old_screen;
+            scr_dump(&old_screen);
+            cmd_show_help_layers(footer_prefix ? footer_prefix : " 編輯留言 ", layers);
+            scr_restore(&old_screen);
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             continue;
         }
 
@@ -1890,11 +2092,11 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
                 vscr_restore(scr);
                 return 0;
             }
-            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             continue;
         }
 
-        if (key == KEY_ENTER || key == KEY_CR || key == KEY_LF) {
+        if (key == Ctrl('X') || key == KEY_ENTER || key == KEY_CR || key == KEY_LF) {
             bool is_empty = true;
             for (int i = 0; i < num_lines; i++) {
                 if (lines[i][0] != '\0') {
@@ -1907,7 +2109,11 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
                 return 0;
             }
 
-            int ans = vans("確定要送出嗎？[Y/n]: ");
+            int ans = vans("確定要送出嗎？[Y/n/q]: ");
+            if (ans == 'q' || ans == 'Q') {
+                vscr_restore(scr);
+                return 0;
+            }
             if (ans == 'y' || ans == '\0' || ans == '\r' || ans == '\n') {
                 int end = num_lines;
                 while (end > 0 && lines[end - 1][0] == '\0')
@@ -1936,10 +2142,10 @@ v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len, c
                 return (int)cur_len;
             }
 
-            v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+            v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
             continue;
         }
 
-        v_multiline_refresh(prompt, footer_prefix, lines, num_lines, curr_line);
+        v_multiline_refresh(prompt, footer_prefix, line_prefix, lines, num_lines, curr_line, layers);
     }
 }

@@ -248,6 +248,7 @@ psb_key_name(int key, char *buf, size_t sz) {
         case KEY_LEFT:  strlcpy(buf, "¡ö", sz); break;
         case KEY_UP:    strlcpy(buf, "¡ô", sz); break;
         case KEY_DOWN:  strlcpy(buf, "¡õ", sz); break;
+        case KEY_UP_DOWN: strlcpy(buf, "¡ô/¡õ", sz); break;
         case KEY_PGUP:  strlcpy(buf, "PgUp", sz); break;
         case KEY_PGDN:  strlcpy(buf, "PgDn", sz); break;
         case KEY_HOME:  strlcpy(buf, "Home", sz); break;
@@ -916,6 +917,7 @@ cmd_bar_find_hotspot(int y, int x, const cmd_layer_t *layers) {
                 layer_match = true;
                 break;
             }
+
         }
         if (layer_match)
             break;
@@ -939,6 +941,12 @@ cmd_bar_find_hotspot(int y, int x, const cmd_layer_t *layers) {
         }
     }
     return NULL;
+}
+
+int
+cmd_bar_find_hotspot_key(int y, int x, const cmd_layer_t *layers) {
+    const cmd_bar_hotspot_t *hs = cmd_bar_find_hotspot(y, x, layers);
+    return hs ? hs->key : 0;
 }
 
 static bool

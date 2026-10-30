@@ -1275,7 +1275,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		maybe_log_vote(&logconf, chosen, item_num, b_logs);
 
 		if (vans("眤癸硂Ωщ布Τぐ或腳禥種ǎ盾(y/N)[N]: ") == 'y') {
-		    char comments[V_MULTILINE_BUFSZ(3)];
+		    char comments[V_MULTILINE_BUFSZ(3)] = "";
 		    if (v_multiline(comments, 3,
 				    ANSI_COLOR(1;36) "叫拜眤癸硂Ωщ布Τぐ或腳禥種ǎ(程︽)" ANSI_RESET,
 				    "щ布種ǎ") > 0) {
