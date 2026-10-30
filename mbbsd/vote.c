@@ -266,7 +266,7 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     char            inbuf[ANSILINELEN];
     int            *counts;
     int             people_num;
-    short	    item_num, junk;
+    short	    item_num = 0, junk = 0;
     char            b_control   [PATHLEN];
     char            b_report    [PATHLEN];
     char            buf		[PATHLEN];
@@ -284,16 +284,27 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     // Read in the control file
     setbfile(b_control, bname, vbuf->control);
     cfp = fopen(b_control, "r");
-    assert(cfp);
+    if (!cfp) {
+	// cancelled since the caller looked
+	setbfile(buf, bname, vbuf->lock);
+	unlink(buf);
+	return;
+    }
     unlink(b_control);
-    fgets(inbuf, sizeof(inbuf), cfp);
+    if (!fgets(inbuf, sizeof(inbuf), cfp))
+	inbuf[0] = '\0';
     sscanf(inbuf, "%hd,%hd", &item_num, &junk);
-    fgets(inbuf, sizeof(inbuf), cfp);
-    sscanf(inbuf, "%d", &closetime);
+    if (!fgets(inbuf, sizeof(inbuf), cfp) ||
+	sscanf(inbuf, "%d", &closetime) != 1)
+	closetime = now;	// closed now
 
-    // prevent death caused by a bug, it should be remove later.
+    // A vote without items, as an opening cut off at the items leaves:
+    // nothing to report, so drop it with its files and the lock.
     if (item_num <= 0) {
 	fclose(cfp);
+	vote_unlink_files(vbuf, bname);
+	setbfile(buf, bname, vbuf->lock);
+	unlink(buf);
 	return;
     }
 
@@ -339,9 +350,11 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 	    people_num, junk);
     fprintf(tfp, "    匡    兜                                   羆布计  眔布瞯  眔布だガ\n");
     for (junk = 0; junk < item_num; junk++) {
-	fgets(inbuf, sizeof(inbuf), cfp);
+	if (!fgets(inbuf, sizeof(inbuf), cfp))
+	    inbuf[0] = '\0';
 	chomp(inbuf);
-	fprintf(tfp, "    %-42s %3d 布 %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],
+	fprintf(tfp, "    %-42s %3d 布 %6.2f%%  %6.2f%%\n",
+		strlen(inbuf) > 3 ? inbuf + 3 : "", counts[junk],
 		(float)(counts[junk] * 100) / (float)(people_num),
 		(float)(counts[junk] * 100) / (float)(*total));
     }
@@ -408,8 +421,13 @@ b_result(boardheader_t * fh)
 	cfp = fopen(buf, "r");
 	if (!cfp)
 	    continue;
-	fgets(temp, sizeof(temp), cfp);
-	fscanf(cfp, "%d\n", &closetime);
+	// A control file without a close time closes a day after it was
+	// last written: an opening by older mbbsd keeps its control file
+	// empty until the items are in. closetime must not carry over from
+	// the slot before.
+	if (!fgets(temp, sizeof(temp), cfp) ||
+	    fscanf(cfp, "%d\n", &closetime) != 1)
+	    closetime = dasht(buf) + DAY_SECONDS;
 	fclose(cfp);
 	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);
@@ -480,9 +498,9 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
     boardheader_t  *fhp;
     FILE           *fp;
     char            buf[STRLEN], genbuf[STRLEN], inbuf[STRLEN];
-    short	    item_num, i;
+    short	    item_num = 0, i;
     int             num = 0, pos, *counts, total;
-    time4_t         closetime;
+    time4_t         closetime = 0;
 
     setbfile(buf, bname, vbuf->ballots);
     if ((num = dashs(buf)) < 0) /* file size */
