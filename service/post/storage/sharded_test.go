@@ -64,12 +64,12 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 
 	// 2. Create posts on different shards and verify ID modulo
 	p0 := &model.Post{
-		Community: "Gossiping",
-		PostFile:  "M.1700000000.A.001",
-		Title:     "八卦板測試文",
-		Author:    "user1",
-		CreatedAt: time.Now().Unix(),
-		Content:   "八卦板首篇分片文章",
+		Community:   "Gossiping",
+		PostFile:    "M.1700000000.A.001",
+		Title:       "八卦板測試文",
+		CreatorName: "user1",
+		CreatedAt:   time.Now().Unix(),
+		Content:     "八卦板首篇分片文章",
 	}
 	c0, err := sharded.CreatePost(p0)
 	if err != nil {
@@ -80,12 +80,12 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 	}
 
 	p1 := &model.Post{
-		Community: "Marginalman",
-		PostFile:  "M.1700000000.A.002",
-		Title:     "邊緣人板測試文",
-		Author:    "user2",
-		CreatedAt: time.Now().Unix(),
-		Content:   "邊緣人板首篇分片文章",
+		Community:   "Marginalman",
+		PostFile:    "M.1700000000.A.002",
+		Title:       "邊緣人板測試文",
+		CreatorName: "user2",
+		CreatedAt:   time.Now().Unix(),
+		Content:     "邊緣人板首篇分片文章",
 	}
 	c1, err := sharded.CreatePost(p1)
 	if err != nil {
@@ -114,10 +114,10 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 
 	// 4. Verify Comments across shards
 	cmt0 := &model.Comment{
-		PostID:    c0.ID,
-		Author:    "commenter_gossip",
-		Content:   "推八卦",
-		CreatedAt: time.Now().Unix(),
+		PostID:      c0.ID,
+		CreatorName: "commenter_gossip",
+		Content:     "推八卦",
+		CreatedAt:   time.Now().Unix(),
 	}
 	addedCmt, err := sharded.AddComment(cmt0)
 	if err != nil {
@@ -136,12 +136,19 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 	}
 
 	// 5. Verify Votes across shards
-	up, down, err := sharded.VotePost(c1.ID, "voter1", 1234, model.VoteUp)
+	up, down, err := sharded.VotePost(c1.ID, "voter1", 1234, model.VoteUp, 1792778690, "127.0.0.1")
 	if err != nil {
 		t.Fatalf("VotePost on post %d failed: %v", c1.ID, err)
 	}
 	if up != 1 || down != 0 {
 		t.Errorf("expected up=1 down=0, got up=%d down=%d", up, down)
+	}
+	votes, err := sharded.GetVotes(c1.ID)
+	if err != nil || len(votes) != 1 {
+		t.Fatalf("GetVotes failed: len=%d, err=%v", len(votes), err)
+	}
+	if votes[0].PersonName != "voter1" || votes[0].PersonID != 1234 || votes[0].Vote != model.VoteUp || votes[0].CreatedAt != 1792778690 || votes[0].IP != "127.0.0.1" {
+		t.Errorf("VoteRecord mismatch: %+v", votes[0])
 	}
 
 	// 6. Verify cross-shard PurgeUserPosts and PurgeUserComments

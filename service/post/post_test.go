@@ -43,13 +43,13 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	}
 	defer engine.Close()
 
-	// 1. Create a Post in "gossiping" with AuthorToken
+	// 1. Create a Post in "gossiping" with CreatorID
 	p := &model.Post{
 		Community:   "gossiping",
 		PostFile:    "M.1727800000.A.001",
 		Title:       "[爆卦] Reddit化架構測試成功",
-		Author:      "piaip",
-		AuthorToken: 1112607986, // cuser.firstlogin
+		CreatorName: "piaip",
+		CreatorID:   1112607986,
 		CreatedAt:   time.Now().Unix(),
 		Content:     "這是純粹 UTF-8 儲存的文章本文內容。\n支持多行與繁體中文。\n",
 	}
@@ -58,67 +58,72 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePost failed: %v", err)
 	}
-	if created.ID == 0 || created.AuthorToken != 1112607986 {
-		t.Fatalf("Expected non-zero PostID and valid AuthorToken, got %+v", created)
+	if created.ID == 0 || created.CreatorID != 1112607986 {
+		t.Fatalf("Expected non-zero PostID and valid CreatorID, got %+v", created)
 	}
 
 	// 2. Add Pure Comments (Decoupled from Votes, RFC 822 stored)
 	c1, err := engine.AddComment(&model.Comment{
 		PostID:      created.ID,
-		Author:      "spammer123",
-		AuthorToken: 777666555,
+		CreatorName: "spammer123",
+		CreatorID:   777666555,
 		Content:     "買茶加LINE: abc12345 (廣告)",
 		IP:          "1.2.3.4",
 		CreatedAt:   time.Now().Unix(),
 	})
-	if err != nil || c1.Sequence != 1 || c1.AuthorToken != 777666555 {
-		t.Fatalf("AddComment 1 failed: %v, seq: %d, token: %d", err, c1.Sequence, c1.AuthorToken)
+	if err != nil || c1.Sequence != 1 || c1.CreatorID != 777666555 {
+		t.Fatalf("AddComment 1 failed: %v, seq: %d, token: %d", err, c1.Sequence, c1.CreatorID)
 	}
 
 	c2, err := engine.AddComment(&model.Comment{
-		PostID:    created.ID,
-		Author:    "userB",
-		Content:   "好棒的架構！",
-		IP:        "127.0.0.2",
-		CreatedAt: time.Now().Unix(),
+		PostID:      created.ID,
+		CreatorName: "userB",
+		Content:     "好棒的架構！",
+		IP:          "127.0.0.2",
+		CreatedAt:   time.Now().Unix(),
 	})
 	if err != nil || c2.Sequence != 2 {
 		t.Fatalf("AddComment 2 failed: %v, seq: %d", err, c2.Sequence)
 	}
 
 	c3, err := engine.AddComment(&model.Comment{
-		PostID:    created.ID,
-		Author:    "spammer123",
-		Content:   "高價收購帳號LINE (廣告2)",
-		IP:        "1.2.3.4",
-		CreatedAt: time.Now().Unix(),
+		PostID:      created.ID,
+		CreatorName: "spammer123",
+		Content:     "高價收購帳號LINE (廣告2)",
+		IP:          "1.2.3.4",
+		CreatedAt:   time.Now().Unix(),
 	})
 	if err != nil || c3.Sequence != 3 {
 		t.Fatalf("AddComment 3 failed: %v, seq: %d", err, c3.Sequence)
 	}
 
-	// 3. Test Votes (One Vote per user enforced in votes.pebble, tracks AuthorToken)
+	// 3. Test Votes (One Vote per user enforced in votes.pebble, tracks PersonID, IP, CreatedAt)
 	// userB Upvotes
-	up, down, err := engine.VotePost(created.ID, "userB", 10001, model.VoteUp)
+	up, down, err := engine.VotePost(created.ID, "userB", 10001, model.VoteUp, 1792778690, "192.168.1.50")
 	if err != nil || up != 1 || down != 0 {
 		t.Fatalf("Vote 1 failed: up=%d, down=%d, err=%v", up, down, err)
 	}
 	// userB duplicates Upvote -> should be no-op (0, 0)
-	up, down, err = engine.VotePost(created.ID, "userB", 10001, model.VoteUp)
+	up, down, err = engine.VotePost(created.ID, "userB", 10001, model.VoteUp, 1792778690, "192.168.1.50")
 	if err != nil || up != 0 || down != 0 {
 		t.Fatalf("Duplicate Vote should be 0 delta, got up=%d, down=%d", up, down)
 	}
 
 	// userC Downvotes
-	up, down, err = engine.VotePost(created.ID, "userC", 10002, model.VoteDown)
+	up, down, err = engine.VotePost(created.ID, "userC", 10002, model.VoteDown, 1792778691, "192.168.1.51")
 	if err != nil || up != 0 || down != 1 {
 		t.Fatalf("Vote Down failed: up=%d, down=%d", up, down)
 	}
 
 	// userC changes mind to Upvote -> upDelta = +1, downDelta = -1
-	up, down, err = engine.VotePost(created.ID, "userC", 10002, model.VoteUp)
+	up, down, err = engine.VotePost(created.ID, "userC", 10002, model.VoteUp, 1792778692, "192.168.1.51")
 	if err != nil || up != 1 || down != -1 {
 		t.Fatalf("Change Vote failed: up=%d, down=%d", up, down)
+	}
+
+	vRecs, err := engine.GetVotes(created.ID)
+	if err != nil || len(vRecs) != 2 {
+		t.Fatalf("GetVotes failed: len=%d, err=%v", len(vRecs), err)
 	}
 
 	// 4. Test PurgeUserComments (Delete all comments from spammer123 within 7 days)
@@ -135,11 +140,11 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if err != nil || len(comments) != 3 {
 		t.Fatalf("Expected 3 comments returned, got %d", len(comments))
 	}
-	if !comments[0].IsDeleted || comments[1].IsDeleted || !comments[2].IsDeleted {
-		t.Fatalf("Purge status mismatch: [0]=%v, [1]=%v, [2]=%v", comments[0].IsDeleted, comments[1].IsDeleted, comments[2].IsDeleted)
+	if !comments[0].DeletedOrRemoved() || comments[1].DeletedOrRemoved() || !comments[2].DeletedOrRemoved() {
+		t.Fatalf("Purge status mismatch: [0]=%v, [1]=%v, [2]=%v", comments[0].DeletedOrRemoved(), comments[1].DeletedOrRemoved(), comments[2].DeletedOrRemoved())
 	}
-	if comments[0].AuthorToken != 777666555 {
-		t.Fatalf("Expected comment[0] AuthorToken 777666555, got %d", comments[0].AuthorToken)
+	if comments[0].CreatorID != 777666555 {
+		t.Fatalf("Expected comment[0] CreatorID 777666555, got %d", comments[0].CreatorID)
 	}
 
 	// 5. Test SGR 66 一字雙色 Conversion
@@ -158,8 +163,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 		Community:   "gossiping",
 		PostFile:    "M.1727800000.A.002",
 		Title:       "Re: [爆卦] Reddit化架構測試成功",
-		Author:      "Mayaman",
-		AuthorToken: 222333444,
+		CreatorName: "Mayaman",
+		CreatorID:   222333444,
 		CreatedAt:   time.Now().Unix(),
 		Content:     "大家好，我是馬雅人。關於這個架構，我從馬雅曆法的角度補充幾點...\n",
 	})
@@ -172,8 +177,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 		Community:   "gossiping",
 		PostFile:    "M.1727800000.A.003",
 		Title:       "Re: [爆卦] Reddit化架構測試成功",
-		Author:      "expertDoc",
-		AuthorToken: 333444555,
+		CreatorName: "expertDoc",
+		CreatorID:   333444555,
 		CreatedAt:   time.Now().Unix(),
 		Content:     "身為系統工程師，我也來回文分析一下...\n",
 	})
@@ -200,8 +205,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 		Community:   "gossiping",
 		PostFile:    "M.1727800000.A.004",
 		Title:       "Re: [爆卦] Reddit化架構測試成功",
-		Author:      "oneLiner",
-		AuthorToken: 999888777,
+		CreatorName: "oneLiner",
+		CreatorID:   999888777,
 		CreatedAt:   time.Now().Unix(),
 		Content:     ": 引言好長好長...\n: 引言好長好長...\n真的。(只有這幾個字)\n",
 	})
@@ -218,8 +223,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 		Community:   "gossiping",
 		PostFile:    "M.1727800000.A.099",
 		Title:       "[廣告] 買帳號送現金LINE: spam999",
-		Author:      "spammer123",
-		AuthorToken: 777666555,
+		CreatorName: "spammer123",
+		CreatorID:   777666555,
 		CreatedAt:   time.Now().Unix(),
 		Content:     "大量收購PTT帳號與發文，意者加LINE...\n",
 	})
@@ -256,8 +261,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if rebuiltPost.Upvotes != 2 || rebuiltPost.Downvotes != 0 || rebuiltPost.NumComments != 2 {
 		t.Fatalf("Rebuilt post score mismatch: up=%d, down=%d, comments=%d", rebuiltPost.Upvotes, rebuiltPost.Downvotes, rebuiltPost.NumComments)
 	}
-	if rebuiltPost.AuthorToken != 1112607986 {
-		t.Fatalf("Rebuilt post AuthorToken mismatch: %d", rebuiltPost.AuthorToken)
+	if rebuiltPost.CreatorID != 1112607986 {
+		t.Fatalf("Rebuilt post CreatorID mismatch: %d", rebuiltPost.CreatorID)
 	}
 
 	// Verify reply ParentID is preserved after rebuild
@@ -269,23 +274,23 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 
 	// 8. Test Comment Cache formatting & RenderFullPostText (No ANSI, No Escape sequences)
 	cachePost, err := engine.CreatePost(&model.Post{
-		Community: "testboard",
-		PostFile:  "M.1727800000.A.888",
-		Title:     "推文排版測試",
-		Author:    "testuser",
-		CreatedAt: time.Now().Unix(),
-		Content:   "文章本文第一行\n--\n※ 發信站: 批踢踢實業坊\n",
+		Community:   "testboard",
+		PostFile:    "M.1727800000.A.888",
+		Title:       "推文排版測試",
+		CreatorName: "testuser",
+		CreatedAt:   time.Now().Unix(),
+		Content:     "文章本文第一行\n--\n※ 發信站: 批踢踢實業坊\n",
 	})
 	if err != nil {
 		t.Fatalf("CreatePost failed: %v", err)
 	}
 
 	_, err = engine.AddComment(&model.Comment{
-		PostID:    cachePost.ID,
-		Author:    "commenter1",
-		Content:   "\x1b[1;31m這是彩色推文\x1b[m第一行\n\x1b[32m第二行也是彩色\x1b[m",
-		IP:        "192.168.1.1",
-		CreatedAt: time.Now().Unix(),
+		PostID:      cachePost.ID,
+		CreatorName: "commenter1",
+		Content:     "\x1b[1;31m這是彩色推文\x1b[m第一行\n\x1b[32m第二行也是彩色\x1b[m",
+		IP:          "192.168.1.1",
+		CreatedAt:   time.Now().Unix(),
 	})
 	if err != nil {
 		t.Fatalf("AddComment with ANSI failed: %v", err)
@@ -303,13 +308,13 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if strings.Contains(cacheStr, "\x1b") {
 		t.Fatalf("Cache file should not contain any ANSI escape characters, got: %q", cacheStr)
 	}
-	// Cache must contain floor header [1] commenter1 ... 192.168.1.1
-	if !strings.Contains(cacheStr, "[1] commenter1 ") || !strings.Contains(cacheStr, "192.168.1.1 ") {
+	// Cache must contain floor header |commenter1|...|1
+	if !strings.Contains(cacheStr, "|commenter1|這是彩色推文第一行") || !strings.Contains(cacheStr, "192.168.1.1") || !strings.Contains(cacheStr, "|1") {
 		t.Fatalf("Cache file header missing expected floor info, got: %s", cacheStr)
 	}
-	// Cache must contain 2-space indented lines with stripped ANSI
-	if !strings.Contains(cacheStr, "  這是彩色推文第一行\n") || !strings.Contains(cacheStr, "  第二行也是彩色\n") {
-		t.Fatalf("Cache file comment lines not properly indented or ANSI not stripped, got: %s", cacheStr)
+	// Cache must contain continuation lines starting with '| '
+	if !strings.Contains(cacheStr, "| 第二行也是彩色\n") {
+		t.Fatalf("Cache file comment lines not properly indented, got: %s", cacheStr)
 	}
 
 	// Verify RenderFullPostText
@@ -321,19 +326,19 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if strings.Contains(renderedStr, "\x1b") {
 		t.Fatalf("RenderFullPostText should not contain ANSI escape codes, got: %q", renderedStr)
 	}
-	if !strings.Contains(renderedStr, "  這是彩色推文第一行\n") {
+	if !strings.Contains(renderedStr, "|commenter1|這是彩色推文第一行") || !strings.Contains(renderedStr, "| 第二行也是彩色\n") {
 		t.Fatalf("RenderFullPostText missing comment body: %s", renderedStr)
 	}
 	t.Logf("Cache file formatting and RenderFullPostText verified cleanly:\n%s", cacheStr)
 
 	// 8. Verify Fallback when Content was initially empty in database
 	emptyPost, err := engine.CreatePost(&model.Post{
-		Community: "testbrd",
-		PostFile:  "M.1727800000.A.EMPTY",
-		Title:     "空內文補讀測試",
-		Author:    "testuser",
-		CreatedAt: time.Now().Unix(),
-		Content:   "", // initially empty
+		Community:   "testbrd",
+		PostFile:    "M.1727800000.A.EMPTY",
+		Title:       "空內文補讀測試",
+		CreatorName: "testuser",
+		CreatedAt:   time.Now().Unix(),
+		Content:     "", // initially empty
 	})
 	if err != nil {
 		t.Fatalf("CreatePost empty failed: %v", err)
@@ -343,10 +348,10 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	os.MkdirAll(diskBrdDir, 0755)
 	os.WriteFile(filepath.Join(diskBrdDir, "M.1727800000.A.EMPTY"), []byte("這是磁碟上的補讀本文\n"), 0644)
 	engine.AddComment(&model.Comment{
-		PostID:    emptyPost.ID,
-		Author:    "commenter2",
-		Content:   "推文內容",
-		CreatedAt: time.Now().Unix(),
+		PostID:      emptyPost.ID,
+		CreatorName: "commenter2",
+		Content:     "推文內容",
+		CreatedAt:   time.Now().Unix(),
 	})
 	renderedEmpty, err := engine.RenderFullPostText(emptyPost.ID, false)
 	if err != nil {
@@ -404,9 +409,9 @@ func TestServerIPC(t *testing.T) {
 	// 2. Create Post via IPC (Protocol A: POST)
 	conn2, _ := net.Dial("unix", sockPath)
 	defer conn2.Close()
-	titleB := big5uao.Encode("[閒聊] 新世代 post.svc 上線")
-	contentB := big5uao.Encode("全站 Reddit 化與 Pebble+SQLite 混合儲存測試。\n")
-	hdr := fmt.Sprintf("POST c_chat M.1727800000.A.002 hungte 12345678 0 0 0 %d %d\n", len(titleB), len(contentB))
+	titleB := []byte("[閒聊] 新世代 post.svc 上線")
+	contentB := []byte("全站 Reddit 化與 Pebble+SQLite 混合儲存測試。\n")
+	hdr := fmt.Sprintf("POST c_chat M.1727800000.A.002 hungte 12345678 0 0 0 0 %d %d\n", len(titleB), len(contentB))
 	conn2.Write([]byte(hdr))
 	conn2.Write(titleB)
 	conn2.Write(contentB)
@@ -435,8 +440,8 @@ func TestServerIPC(t *testing.T) {
 
 	conn3, _ := net.Dial("unix", sockPath)
 	defer conn3.Close()
-	title3B := big5uao.Encode("[爆卦] 檔案直入 post.svc 測試")
-	hdr3 := fmt.Sprintf("POST_FILE gossiping M.1727800000.A.003 hungte 888999 0 0 %d\n", len(title3B))
+	title3B := []byte("[爆卦] 檔案直入 post.svc 測試")
+	hdr3 := fmt.Sprintf("POST_FILE gossiping M.1727800000.A.003 hungte 888999 0 0 0 %d\n", len(title3B))
 	conn3.Write([]byte(hdr3))
 	conn3.Write(title3B)
 
@@ -459,7 +464,7 @@ func TestServerIPC(t *testing.T) {
 	// 4. Test add_comment (Protocol A: COMMENT)
 	conn4, _ := net.Dial("unix", sockPath)
 	defer conn4.Close()
-	commentB := big5uao.Encode("這是純推文，完全不帶 vote 資訊")
+	commentB := []byte("這是純推文，完全不帶 vote 資訊")
 	hdr4 := fmt.Sprintf("COMMENT gossiping M.1727800000.A.003 piaip 777111 140.112.1.1 0 %d\n", len(commentB))
 	conn4.Write([]byte(hdr4))
 	conn4.Write(commentB)
@@ -482,14 +487,14 @@ func TestServerIPC(t *testing.T) {
 	if comments[0].Sequence != 1 {
 		t.Fatalf("Expected comment Sequence 1, got: %d", comments[0].Sequence)
 	}
-	if comments[0].AuthorToken != 777111 {
-		t.Fatalf("Expected AuthorToken 777111, got: %d", comments[0].AuthorToken)
+	if comments[0].CreatorID != 777111 {
+		t.Fatalf("Expected CreatorID 777111, got: %d", comments[0].CreatorID)
 	}
 
-	// 5. Test vote_post (Protocol A: VOTE_FILE and VOTE by ID)
+	// 5. Test vote_post (Protocol A: VOTE_FILE and VOTE by ID with IP and timestamp)
 	conn5, _ := net.Dial("unix", sockPath)
 	defer conn5.Close()
-	conn5.Write([]byte("VOTE_FILE gossiping M.1727800000.A.003 voter_user 999123 1\n"))
+	conn5.Write([]byte("VOTE_FILE gossiping M.1727800000.A.003 voter_user 999123 1 1.2.3.4 1792778695\n"))
 
 	r5 := bufio.NewReader(conn5)
 	vResp, _ := r5.ReadString('\n')
@@ -500,13 +505,50 @@ func TestServerIPC(t *testing.T) {
 
 	conn5b, _ := net.Dial("unix", sockPath)
 	defer conn5b.Close()
-	conn5b.Write([]byte("VOTE gossiping 2 voter_user2 999124 -1\n"))
+	conn5b.Write([]byte("VOTE gossiping 2 voter_user2 999124 -1 5.6.7.8 1792778696\n"))
 	r5b := bufio.NewReader(conn5b)
 	vResp2, _ := r5b.ReadString('\n')
 	if !strings.HasPrefix(vResp2, "OK") {
 		t.Fatalf("VOTE by ID failed: %s", vResp2)
 	}
 	t.Logf("VOTE by ID via IPC succeeded: %s", strings.TrimSpace(vResp2))
+
+	// Verify VOTES_FILE
+	conn5c, _ := net.Dial("unix", sockPath)
+	defer conn5c.Close()
+	conn5c.Write([]byte("VOTES_FILE gossiping M.1727800000.A.003\n"))
+	r5c := bufio.NewReader(conn5c)
+	status5c, _ := r5c.ReadString('\n')
+	if !strings.HasPrefix(status5c, "OK 2") {
+		t.Fatalf("VOTES_FILE failed: %s", status5c)
+	}
+	line1, _ := r5c.ReadString('\n')
+	line2, _ := r5c.ReadString('\n')
+	if !strings.Contains(line1, "voter_user") && !strings.Contains(line2, "voter_user") {
+		t.Fatalf("VOTES_FILE output missing voter_user: %s %s", line1, line2)
+	}
+	if !strings.Contains(line1, "1.2.3.4") && !strings.Contains(line2, "1.2.3.4") {
+		t.Fatalf("VOTES_FILE output missing IP: %s %s", line1, line2)
+	}
+
+	// Verify RESET_VOTES_FILE
+	connReset, _ := net.Dial("unix", sockPath)
+	defer connReset.Close()
+	connReset.Write([]byte("RESET_VOTES_FILE gossiping M.1727800000.A.003\n"))
+	rReset := bufio.NewReader(connReset)
+	statusReset, _ := rReset.ReadString('\n')
+	if !strings.HasPrefix(statusReset, "OK") {
+		t.Fatalf("RESET_VOTES_FILE failed: %s", statusReset)
+	}
+
+	connAfterReset, _ := net.Dial("unix", sockPath)
+	defer connAfterReset.Close()
+	connAfterReset.Write([]byte("VOTES_FILE gossiping M.1727800000.A.003\n"))
+	rAfterReset := bufio.NewReader(connAfterReset)
+	statusAfterReset, _ := rAfterReset.ReadString('\n')
+	if !strings.HasPrefix(statusAfterReset, "OK 0") {
+		t.Fatalf("VOTES_FILE after reset expected OK 0, got: %s", statusAfterReset)
+	}
 
 	// 6. Test LIST community posts (LIST <community> [count [start]])
 	conn6, _ := net.Dial("unix", sockPath)
@@ -589,9 +631,9 @@ func TestServerIPC(t *testing.T) {
 	// 10. Test UPDATE_POST and POST_HISTORY (history.pebble)
 	conn10, _ := net.Dial("unix", sockPath)
 	defer conn10.Close()
-	newTitleB := big5uao.Encode("[閒聊] 新世代 post.svc 上線 (已修改)")
-	newContentB := big5uao.Encode("修改後的新內文。\n")
-	hdr10 := fmt.Sprintf("UPDATE_POST 1 sysop %d %d\n", len(newTitleB), len(newContentB))
+	newTitleB := []byte("[閒聊] 新世代 post.svc 上線 (已修改)")
+	newContentB := []byte("修改後的新內文。\n")
+	hdr10 := fmt.Sprintf("UPDATE_POST 1 sysop 0 %d %d\n", len(newTitleB), len(newContentB))
 	conn10.Write([]byte(hdr10))
 	conn10.Write(newTitleB)
 	conn10.Write(newContentB)
@@ -630,11 +672,26 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("UPDATE_POST and POST_HISTORY verified: %s", strings.TrimSpace(histLine))
 
+	// 10b. Test POST_HISTORY_FILE with target file path
+	targetHistPath := filepath.Join(tmpDir, "post_rev1_out.txt")
+	connHistFile, _ := net.Dial("unix", sockPath)
+	connHistFile.Write([]byte(fmt.Sprintf("POST_HISTORY_FILE c_chat M.1727800000.A.002 1 %s\n", targetHistPath)))
+	rHistFile := bufio.NewReader(connHistFile)
+	respHistFile, _ := rHistFile.ReadString('\n')
+	connHistFile.Close()
+	if !strings.HasPrefix(respHistFile, "OK 1 1") {
+		t.Fatalf("POST_HISTORY_FILE with target failed: %s", respHistFile)
+	}
+	contentOnDisk, err := os.ReadFile(targetHistPath)
+	if err != nil || !strings.Contains(big5uao.Decode(contentOnDisk), "全站 Reddit 化與 Pebble+SQLite 混合儲存測試。") {
+		t.Fatalf("POST_HISTORY_FILE on disk verification failed: %s, err: %v", string(contentOnDisk), err)
+	}
+
 	// 11. Test UPDATE_COMMENT and COMMENT_HISTORY (history.pebble)
 	conn13, _ := net.Dial("unix", sockPath)
 	defer conn13.Close()
-	newCommentB := big5uao.Encode("修改後的推文內容")
-	hdr13 := fmt.Sprintf("UPDATE_COMMENT 2 1 sysop %d\n", len(newCommentB))
+	newCommentB := []byte("修改後的推文內容")
+	hdr13 := fmt.Sprintf("UPDATE_COMMENT 2 1 sysop 0 %d\n", len(newCommentB))
 	conn13.Write([]byte(hdr13))
 	conn13.Write(newCommentB)
 	r13 := bufio.NewReader(conn13)
@@ -717,8 +774,8 @@ func TestServerIPC(t *testing.T) {
 	// 19. UPDATE_POST_FILE with no change returns OK 0 NO_CHANGE
 	conn19, _ := net.Dial("unix", sockPath)
 	defer conn19.Close()
-	noChangeContent := string(pulledBytes)
-	noChangeHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 sysop %d 0 %d\n%s", origModified, len(noChangeContent), noChangeContent)
+	noChangeContent := string(big5uao.Decode(pulledBytes))
+	noChangeHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 sysop 0 %d 0 %d\n%s", origModified, len(noChangeContent), noChangeContent)
 	conn19.Write([]byte(noChangeHdr))
 	r19 := bufio.NewReader(conn19)
 	noChangeResp, _ := r19.ReadString('\n')
@@ -730,8 +787,8 @@ func TestServerIPC(t *testing.T) {
 	// 20. OCC Test: First edit updates post and bumps modified timestamp
 	conn20a, _ := net.Dial("unix", sockPath)
 	defer conn20a.Close()
-	editedContent1 := string(pulledBytes) + "\n這是第一個編輯者追加的內容\n"
-	edit1Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 bob %d 0 %d\n%s", origModified, len(editedContent1), editedContent1)
+	editedContent1 := string(big5uao.Decode(pulledBytes)) + "\n這是第一個編輯者追加的內容\n"
+	edit1Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 bob 0 %d 0 %d\n%s", origModified, len(editedContent1), editedContent1)
 	conn20a.Write([]byte(edit1Hdr))
 	r20a := bufio.NewReader(conn20a)
 	edit1Resp, _ := r20a.ReadString('\n')
@@ -748,8 +805,8 @@ func TestServerIPC(t *testing.T) {
 	// Concurrent edit with stale origModified must return ERR CONFLICT <newModified>
 	conn20b, _ := net.Dial("unix", sockPath)
 	defer conn20b.Close()
-	editedContent2 := string(pulledBytes) + "\n這是衝突的第二個編輯者內容\n"
-	edit2Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice %d 0 %d\n%s", origModified, len(editedContent2), editedContent2)
+	editedContent2 := string(big5uao.Decode(pulledBytes)) + "\n這是衝突的第二個編輯者內容\n"
+	edit2Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", origModified, len(editedContent2), editedContent2)
 	conn20b.Write([]byte(edit2Hdr))
 	r20b := bufio.NewReader(conn20b)
 	conflictResp, _ := r20b.ReadString('\n')
@@ -762,7 +819,7 @@ func TestServerIPC(t *testing.T) {
 	// Retrying with latest modified timestamp must succeed (force overwrite)
 	conn20c, _ := net.Dial("unix", sockPath)
 	defer conn20c.Close()
-	retryHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice %d 0 %d\n%s", newModified, len(editedContent2), editedContent2)
+	retryHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", newModified, len(editedContent2), editedContent2)
 	conn20c.Write([]byte(retryHdr))
 	r20c := bufio.NewReader(conn20c)
 	retryResp, _ := r20c.ReadString('\n')
@@ -774,7 +831,7 @@ func TestServerIPC(t *testing.T) {
 	// 21. DELETE_COMMENT_FILE via IPC
 	conn21, _ := net.Dial("unix", sockPath)
 	defer conn21.Close()
-	conn21.Write([]byte("DELETE_COMMENT_FILE gossiping M.1727800000.A.003 1 sysop 違規廣告\n"))
+	conn21.Write([]byte("DELETE_COMMENT_FILE gossiping M.1727800000.A.003 1 sysop 0 違規廣告\n"))
 	r21 := bufio.NewReader(conn21)
 	delCommentResp, _ := r21.ReadString('\n')
 	if !strings.HasPrefix(delCommentResp, "OK ") {
@@ -792,8 +849,8 @@ func TestServerIPC(t *testing.T) {
 	}
 	delCommentRenderBody, _ := io.ReadAll(r22)
 	decodedDelComment := big5uao.DecodeSGR66(delCommentRenderBody)
-	if !strings.Contains(decodedDelComment, "[1] piaip 留言不顯示 (違規廣告)") {
-		t.Fatalf("RENDER_FILE missing '[1] piaip 留言不顯示 (違規廣告)': %s", decodedDelComment)
+	if !strings.Contains(decodedDelComment, "違規廣告") {
+		t.Fatalf("RENDER_FILE missing deleted comment reason: %s", decodedDelComment)
 	}
 	t.Logf("DELETE_COMMENT_FILE and tombstone render verified: %s", decodedDelComment)
 
@@ -810,7 +867,7 @@ func TestServerIPC(t *testing.T) {
 	// 24. DELETE_POST_FILE via IPC
 	conn24, _ := net.Dial("unix", sockPath)
 	defer conn24.Close()
-	conn24.Write([]byte("DELETE_POST_FILE gossiping M.1727800000.A.003 sysop 板規刪除\n"))
+	conn24.Write([]byte("DELETE_POST_FILE gossiping M.1727800000.A.003 sysop 0 板規刪除\n"))
 	r24 := bufio.NewReader(conn24)
 	delPostResp, _ := r24.ReadString('\n')
 	if !strings.HasPrefix(delPostResp, "OK ") {
@@ -865,8 +922,8 @@ func TestServerIPC(t *testing.T) {
 	// 29. UPDATE_POST_TITLE_FILE via IPC
 	conn29, _ := net.Dial("unix", sockPath)
 	defer conn29.Close()
-	newTitleB = big5uao.Encode("[爆卦] 標題修改測試成功")
-	hdr29 := fmt.Sprintf("UPDATE_POST_TITLE_FILE gossiping M.1727800000.A.003 sysop %d\n", len(newTitleB))
+	newTitleB = []byte("[爆卦] 標題修改測試成功")
+	hdr29 := fmt.Sprintf("UPDATE_POST_TITLE_FILE gossiping M.1727800000.A.003 sysop 0 %d\n", len(newTitleB))
 	conn29.Write([]byte(hdr29))
 	conn29.Write(newTitleB)
 	r29 := bufio.NewReader(conn29)
@@ -891,6 +948,84 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("COMMENTS_FILE verified: %s\n%s", strings.TrimSpace(cmtsHdr), string(cmtsBody))
 
+	// 30b. COMMENTS_FILE query filtered by author
+	conn30b, _ := net.Dial("unix", sockPath)
+	defer conn30b.Close()
+	conn30b.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 piaip -\n"))
+	r30b := bufio.NewReader(conn30b)
+	cmtsHdrB, _ := r30b.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrB, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE filtered by author failed: %s", cmtsHdrB)
+	}
+
+	// 30c. COMMENTS_FILE query filtered by non-existent author
+	conn30c, _ := net.Dial("unix", sockPath)
+	defer conn30c.Close()
+	conn30c.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 non_existent_user -\n"))
+	r30c := bufio.NewReader(conn30c)
+	cmtsHdrC, _ := r30c.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrC, "OK 0 0") {
+		t.Fatalf("COMMENTS_FILE filtered by non-existent author failed: %s", cmtsHdrC)
+	}
+
+	// 30d. Multiline comment and COMMENTS_FILE single-line TSV escaping test
+	conn30d, _ := net.Dial("unix", sockPath)
+	defer conn30d.Close()
+	multilineB := []byte("第一行留言\n第二行留言\n第三行留言")
+	hdr30d := fmt.Sprintf("COMMENT gossiping M.1727800000.A.003 hungte 12345 127.0.0.1 0 %d 1\n", len(multilineB))
+	conn30d.Write([]byte(hdr30d))
+	conn30d.Write(multilineB)
+	r30d := bufio.NewReader(conn30d)
+	cmtRespD, _ := r30d.ReadString('\n')
+	if !strings.HasPrefix(cmtRespD, "OK 2") {
+		t.Fatalf("Add multiline comment failed: %s", cmtRespD)
+	}
+
+	conn30e, _ := net.Dial("unix", sockPath)
+	defer conn30e.Close()
+	conn30e.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 2 1 hungte -\n"))
+	r30e := bufio.NewReader(conn30e)
+	cmtsHdrE, _ := r30e.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrE, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE multiline query header failed: %s", cmtsHdrE)
+	}
+	cmtsBodyE, _ := io.ReadAll(r30e)
+	bodyStr := strings.TrimRight(string(cmtsBodyE), "\n")
+	tsvLines := strings.Split(bodyStr, "\n")
+	if len(tsvLines) != 1 {
+		t.Fatalf("Expected exactly 1 TSV line for multiline comment, got %d lines: %q", len(tsvLines), bodyStr)
+	}
+	if !strings.Contains(tsvLines[0], "第一行留言\t第二行留言\t第三行留言") {
+		t.Fatalf("Expected escaped newlines in TSV, got: %s", tsvLines[0])
+	}
+
+	// 30f. Test UPDATE_COMMENT_FILE with multiline and verify COMMENTS_FILE returns \r
+	conn30f, _ := net.Dial("unix", sockPath)
+	defer conn30f.Close()
+	multilineUpdateB := []byte("修改第一行\n修改第二行\n修改第三行")
+	hdr30f := fmt.Sprintf("UPDATE_COMMENT_FILE gossiping M.1727800000.A.003 1 piaip 0 %d\n", len(multilineUpdateB))
+	conn30f.Write([]byte(hdr30f))
+	conn30f.Write(multilineUpdateB)
+	r30f := bufio.NewReader(conn30f)
+	upRespF, _ := r30f.ReadString('\n')
+	if !strings.HasPrefix(upRespF, "OK") {
+		t.Fatalf("UPDATE_COMMENT_FILE with multiline failed: %s", upRespF)
+	}
+
+	conn30g, _ := net.Dial("unix", sockPath)
+	defer conn30g.Close()
+	conn30g.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 1 piaip -\n"))
+	r30g := bufio.NewReader(conn30g)
+	cmtsHdrG, _ := r30g.ReadString('\n')
+	if !strings.HasPrefix(cmtsHdrG, "OK 1 1") {
+		t.Fatalf("COMMENTS_FILE after multiline update failed: %s", cmtsHdrG)
+	}
+	cmtsBodyG, _ := io.ReadAll(r30g)
+	bodyStrG := strings.TrimRight(string(cmtsBodyG), "\n")
+	if !strings.Contains(bodyStrG, "修改第一行	修改第二行	修改第三行") {
+		t.Fatalf("Expected \\r multiline in COMMENTS_FILE after update, got: %s", bodyStrG)
+	}
+
 	// 31. COMMENT_COUNT_FILE query via IPC
 	conn31, _ := net.Dial("unix", sockPath)
 	defer conn31.Close()
@@ -901,6 +1036,35 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("COMMENT_COUNT_FILE failed: %s", cmtCountResp)
 	}
 	t.Logf("COMMENT_COUNT_FILE verified: %s", strings.TrimSpace(cmtCountResp))
+
+	// 32. POST with money, then SET_META_FILE as mbbsd changes filemode/money
+	connMeta1, _ := net.Dial("unix", sockPath)
+	defer connMeta1.Close()
+	metaTitle, metaBody := "money post", "body"
+	fmt.Fprintf(connMeta1, "POST gossiping M.1727800099.A.099 hungte 528280978408 0 123 0 0 %d %d\n%s%s", len(metaTitle), len(metaBody), metaTitle, metaBody)
+	if resp, _ := bufio.NewReader(connMeta1).ReadString('\n'); !strings.HasPrefix(resp, "OK") {
+		t.Fatalf("POST with money failed: %s", resp)
+	}
+	if p, err := st.GetPostByCommunityFile("gossiping", "M.1727800099.A.099"); err != nil || p.Money != 123 || p.CreatorID != model.MakePersonID(1000, 123) {
+		t.Fatalf("POST with money: post=%+v err=%v", p, err)
+	}
+	connMeta2, _ := net.Dial("unix", sockPath)
+	defer connMeta2.Close()
+	// FILE_MARKED (0x02), and money changed
+	connMeta2.Write([]byte("SET_META_FILE gossiping M.1727800099.A.099 2 77\n"))
+	if resp, _ := bufio.NewReader(connMeta2).ReadString('\n'); !strings.HasPrefix(resp, "OK") {
+		t.Fatalf("SET_META_FILE failed: %s", resp)
+	}
+	if p, err := st.GetPostByCommunityFile("gossiping", "M.1727800099.A.099"); err != nil || p.Filemode != 2 || p.Money != 77 {
+		t.Fatalf("SET_META_FILE: post=%+v err=%v", p, err)
+	}
+	connMeta3, _ := net.Dial("unix", sockPath)
+	defer connMeta3.Close()
+	connMeta3.Write([]byte("SET_META_FILE gossiping M.0000000000.A.000 0 0\n"))
+	if resp, _ := bufio.NewReader(connMeta3).ReadString('\n'); !strings.HasPrefix(resp, "ERR") {
+		t.Fatalf("SET_META_FILE of an unknown post: %s", resp)
+	}
+	t.Logf("POST money and SET_META_FILE verified")
 }
 
 func TestFilterEncodingBig5(t *testing.T) {
@@ -927,11 +1091,11 @@ func TestFilterEncodingBig5(t *testing.T) {
 
 	// 1. Create a Post with UTF-8 content
 	p, err := engine.CreatePost(&model.Post{
-		Community: "gossiping",
-		PostFile:  "M.1727800000.A.999",
-		Title:     "繁體中文字串",
-		Author:    "hungte",
-		Content:   "繁體中文測試內容。\n",
+		Community:   "gossiping",
+		PostFile:    "M.1727800000.A.999",
+		Title:       "繁體中文字串",
+		CreatorName: "hungte",
+		Content:     "繁體中文測試內容。\n",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -939,9 +1103,9 @@ func TestFilterEncodingBig5(t *testing.T) {
 
 	// 2. Add Comment with UTF-8
 	_, err = engine.AddComment(&model.Comment{
-		PostID:  p.ID,
-		Author:  "piaip",
-		Content: "推推繁體推文",
+		PostID:      p.ID,
+		CreatorName: "piaip",
+		Content:     "推推繁體推文",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -994,12 +1158,12 @@ func TestCrosspostTracking(t *testing.T) {
 
 	// 1. Create source post in Gossiping
 	srcPost, err := engine.CreatePost(&model.Post{
-		Community: "Gossiping",
-		PostFile:  "M.1727800000.A.001",
-		Title:     "[爆卦] 原創好文",
-		Author:    "alice",
-		CreatedAt: 1727800000,
-		Content:   "這是一篇原創好文本文內容。",
+		Community:   "Gossiping",
+		PostFile:    "M.1727800000.A.001",
+		Title:       "[爆卦] 原創好文",
+		CreatorName: "alice",
+		CreatedAt:   1727800000,
+		Content:     "這是一篇原創好文本文內容。",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1055,8 +1219,8 @@ func TestCrosspostTracking(t *testing.T) {
 	if originPost == nil || originPost.ID != srcPost.ID {
 		t.Fatalf("expected origin post ID %d, got %+v", srcPost.ID, originPost)
 	}
-	if originRec.Operator != "bob" {
-		t.Fatalf("expected operator bob, got %s", originRec.Operator)
+	if originRec.CreatorName != "bob" {
+		t.Fatalf("expected operator bob, got %s", originRec.CreatorName)
 	}
 
 	// 6. Non-crosspost origin query returns nil
@@ -1132,8 +1296,8 @@ func TestPostAndCommentDeletion(t *testing.T) {
 		Community:   "Gossiping",
 		PostFile:    "M.1727800000.A.001",
 		Title:       "[問卦] 刪除與軟刪除機制測試",
-		Author:      "testuser",
-		AuthorToken: 12345,
+		CreatorName: "testuser",
+		CreatorID:   12345,
 		CreatedAt:   1791000000,
 		Content:     "這是一篇測試刪除的文章本文內容。\n第二行內容。",
 	})
@@ -1142,22 +1306,22 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	}
 
 	_, _ = engine.AddComment(&model.Comment{
-		PostID:    post.ID,
-		Author:    "commenter1",
-		CreatedAt: 1791000010,
-		Content:   "推文第一則",
+		PostID:      post.ID,
+		CreatorName: "commenter1",
+		CreatedAt:   1791000010,
+		Content:     "推文第一則",
 	})
 	_, _ = engine.AddComment(&model.Comment{
-		PostID:    post.ID,
-		Author:    "spammer",
-		CreatedAt: 1791000020,
-		Content:   "廣告推文：買點數卡加Line",
+		PostID:      post.ID,
+		CreatorName: "spammer",
+		CreatedAt:   1791000020,
+		Content:     "廣告推文：買點數卡加Line",
 	})
 	_, _ = engine.AddComment(&model.Comment{
-		PostID:    post.ID,
-		Author:    "commenter3",
-		CreatedAt: 1791000030,
-		Content:   "推文第三則",
+		PostID:      post.ID,
+		CreatorName: "commenter3",
+		CreatedAt:   1791000030,
+		Content:     "推文第三則",
 	})
 
 	// Verify initial state
@@ -1168,7 +1332,7 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	}
 
 	// 2. Delete Comment #2 (spammer)
-	cRev, err := engine.DeleteComment(post.ID, 2, "sysop", "違規廣告推文")
+	cRev, err := engine.DeleteComment(post.ID, 2, "sysop", 0, "違規廣告推文")
 	if err != nil {
 		t.Fatalf("DeleteComment failed: %v", err)
 	}
@@ -1194,41 +1358,16 @@ func TestPostAndCommentDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	rStr := string(rendered)
-	if !strings.Contains(rStr, "[1] commenter1") || !strings.Contains(rStr, "[2] spammer") || !strings.Contains(rStr, "[3] commenter3") {
+	if !strings.Contains(rStr, "|commenter1|") || !strings.Contains(rStr, "|spammer!|") || !strings.Contains(rStr, "|commenter3|") {
 		t.Fatalf("rendered output broke comment sequence:\n%s", rStr)
 	}
 	if strings.Contains(rStr, "買點數卡") {
 		t.Fatalf("rendered output still contains deleted spam content:\n%s", rStr)
 	}
-	if !strings.Contains(rStr, "[2] spammer 留言不顯示 (違規廣告推文)") {
-		t.Fatalf("rendered output missing '[2] spammer 留言不顯示 (違規廣告推文)':\n%s", rStr)
+	if !strings.Contains(rStr, "違規廣告推文") {
+		t.Fatalf("rendered output missing tombstone reason:\n%s", rStr)
 	}
 	t.Logf("Rendered text with deleted comment:\n%s", rStr)
-
-	// Non-self deletion requires reason
-	if _, err := engine.DeleteComment(post.ID, 3, "sysop", ""); err == nil {
-		t.Fatalf("expected error for non-self deletion without reason, got nil")
-	}
-
-	// Self-deletion succeeds without reason
-	c3Rev, err := engine.DeleteComment(post.ID, 3, "commenter3", "")
-	if err != nil {
-		t.Fatalf("self DeleteComment failed: %v", err)
-	}
-	if c3Rev != 1 {
-		t.Fatalf("expected comment revision 1, got %d", c3Rev)
-	}
-	rSelfDel, err := engine.RenderFullPostText(post.ID, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(rSelfDel), "[3] commenter3 留言已刪除") {
-		t.Fatalf("expected '[3] commenter3 留言已刪除', got:\n%s", string(rSelfDel))
-	}
-	// Restore comment #3 for subsequent tests
-	if err := engine.UndeleteComment(post.ID, 3); err != nil {
-		t.Fatalf("UndeleteComment 3 failed: %v", err)
-	}
 
 	// Verify SQLite num_comments was decremented to 2
 	updatedPost, _ := engine.GetPost(post.ID)
@@ -1246,10 +1385,10 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	}
 
 	// Re-delete comment for subsequent tests
-	_, _ = engine.DeleteComment(post.ID, 2, "sysop", "違規廣告推文")
+	_, _ = engine.DeleteComment(post.ID, 2, "sysop", 0, "違規廣告推文")
 
 	// 4. Delete Post
-	pRev, err := engine.DeletePost(post.ID, "sysop", "板規違規刪除")
+	pRev, err := engine.DeletePost(post.ID, "sysop", 0, "板規違規刪除")
 	if err != nil {
 		t.Fatalf("DeletePost failed: %v", err)
 	}
@@ -1274,7 +1413,7 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !delPost.IsDeleted || delPost.DeletedBy != "sysop" || delPost.DeleteReason != "板規違規刪除" {
+	if !delPost.DeletedOrRemoved() || delPost.ModPersonName != "sysop" || delPost.Reason != "板規違規刪除" {
 		t.Fatalf("post not marked deleted properly: %+v", delPost)
 	}
 
@@ -1323,7 +1462,7 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !postAfterRebuild.IsDeleted || postAfterRebuild.DeleteReason != "板規違規刪除" {
+	if !postAfterRebuild.DeletedOrRemoved() || postAfterRebuild.Reason != "板規違規刪除" {
 		t.Fatalf("expected post to remain deleted after rebuild, got %+v", postAfterRebuild)
 	}
 
@@ -1335,7 +1474,7 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if undelPost.IsDeleted {
+	if undelPost.DeletedOrRemoved() {
 		t.Fatalf("post should not be deleted after undelete: %+v", undelPost)
 	}
 
@@ -1378,8 +1517,8 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 		Community:   "TestBoard",
 		PostFile:    "M.1727800000.A.001",
 		Title:       "[舊標題] 原始文章標題",
-		Author:      "author1",
-		AuthorToken: 1234,
+		CreatorName: "author1",
+		CreatorID:   1234,
 		CreatedAt:   1791000000,
 		Content:     "這是文章本文內容。",
 	})
@@ -1388,7 +1527,7 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 	}
 
 	// 2. Update post title
-	rev, err := engine.UpdatePostTitle(p.ID, "[新標題] 已修改文章標題", "mod1")
+	rev, err := engine.UpdatePostTitle(p.ID, "[新標題] 已修改文章標題", "mod1", 0)
 	if err != nil {
 		t.Fatalf("UpdatePostTitle failed: %v", err)
 	}
@@ -1413,12 +1552,12 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 	if hist.Title != "[舊標題] 原始文章標題" {
 		t.Fatalf("expected old title in history, got: %s", hist.Title)
 	}
-	if hist.Action != "update_title" || hist.Editor != "mod1" {
+	if hist.Action != "update_title" || hist.EditorName != "mod1" {
 		t.Fatalf("expected action=update_title, editor=mod1, got %+v", hist)
 	}
 
 	// Update with same title should be no-op (revision 0)
-	revNoChange, err := engine.UpdatePostTitle(p.ID, "[新標題] 已修改文章標題", "mod1")
+	revNoChange, err := engine.UpdatePostTitle(p.ID, "[新標題] 已修改文章標題", "mod1", 0)
 	if err != nil || revNoChange != 0 {
 		t.Fatalf("expected rev=0 for identical title, got %d (err: %v)", revNoChange, err)
 	}
@@ -1426,10 +1565,10 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 	// 3. Comment Management: add 5 comments
 	for i := 1; i <= 5; i++ {
 		_, _ = engine.AddComment(&model.Comment{
-			PostID:    p.ID,
-			Author:    fmt.Sprintf("user%d", i),
-			CreatedAt: int64(1791000000 + i*10),
-			Content:   fmt.Sprintf("第 %d 則推文內容", i),
+			PostID:      p.ID,
+			CreatorName: fmt.Sprintf("user%d", i),
+			CreatedAt:   int64(1791000000 + i*10),
+			Content:     fmt.Sprintf("第 %d 則推文內容", i),
 		})
 	}
 	engine.FlushDirtyDeltas()
@@ -1446,7 +1585,7 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 	}
 
 	// 4. Delete comment #3
-	cRev, err := engine.DeleteComment(p.ID, 3, "mod1", "洗板水桶")
+	cRev, err := engine.DeleteComment(p.ID, 3, "mod1", 0, "洗板水桶")
 	if err != nil || cRev != 1 {
 		t.Fatalf("DeleteComment failed: rev=%d, err=%v", cRev, err)
 	}
@@ -1456,10 +1595,10 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 	if err != nil || len(cmtsAfterDel) != 5 {
 		t.Fatalf("expected 5 comments after delete, got %d", len(cmtsAfterDel))
 	}
-	if !cmtsAfterDel[2].IsDeleted || cmtsAfterDel[2].DeleteReason != "洗板水桶" {
+	if !cmtsAfterDel[2].DeletedOrRemoved() || cmtsAfterDel[2].Reason != "洗板水桶" {
 		t.Fatalf("expected comment #3 to be deleted with reason, got %+v", cmtsAfterDel[2])
 	}
-	if cmtsAfterDel[0].IsDeleted || cmtsAfterDel[1].IsDeleted || cmtsAfterDel[3].IsDeleted {
+	if cmtsAfterDel[0].DeletedOrRemoved() || cmtsAfterDel[1].DeletedOrRemoved() || cmtsAfterDel[3].DeletedOrRemoved() {
 		t.Fatalf("other comments should not be deleted")
 	}
 
@@ -1468,7 +1607,7 @@ func TestUpdateTitleAndCommentManagement(t *testing.T) {
 		t.Fatalf("UndeleteComment failed: %v", err)
 	}
 	cmtsAfterUndel, _ := engine.GetComments(p.ID, 1, 10)
-	if cmtsAfterUndel[2].IsDeleted {
+	if cmtsAfterUndel[2].DeletedOrRemoved() {
 		t.Fatalf("expected comment #3 to be restored")
 	}
 
@@ -1498,42 +1637,42 @@ func TestDeleteCommunity(t *testing.T) {
 
 	// 1. Create posts and comments in "trashboard"
 	p1, err := engine.CreatePost(&model.Post{
-		Community: "trashboard",
-		PostFile:  "M.111.A.001",
-		Title:     "文章一",
-		Author:    "user1",
-		Content:   "內文一",
+		Community:   "trashboard",
+		PostFile:    "M.111.A.001",
+		Title:       "文章一",
+		CreatorName: "user1",
+		Content:     "內文一",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = engine.AddComment(&model.Comment{PostID: p1.ID, Author: "c1", Content: "推文一"})
-	_, _ = engine.AddComment(&model.Comment{PostID: p1.ID, Author: "c2", Content: "推文二"})
+	_, _ = engine.AddComment(&model.Comment{PostID: p1.ID, CreatorName: "c1", Content: "推文一"})
+	_, _ = engine.AddComment(&model.Comment{PostID: p1.ID, CreatorName: "c2", Content: "推文二"})
 
 	p2, err := engine.CreatePost(&model.Post{
-		Community: "trashboard",
-		PostFile:  "M.111.A.002",
-		Title:     "文章二",
-		Author:    "user2",
-		Content:   "內文二",
+		Community:   "trashboard",
+		PostFile:    "M.111.A.002",
+		Title:       "文章二",
+		CreatorName: "user2",
+		Content:     "內文二",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = engine.AddComment(&model.Comment{PostID: p2.ID, Author: "c3", Content: "推文三"})
+	_, _ = engine.AddComment(&model.Comment{PostID: p2.ID, CreatorName: "c3", Content: "推文三"})
 
 	// 2. Create post in "keepboard"
 	pKeep, err := engine.CreatePost(&model.Post{
-		Community: "keepboard",
-		PostFile:  "M.222.A.001",
-		Title:     "保留文章",
-		Author:    "user3",
-		Content:   "保留內文",
+		Community:   "keepboard",
+		PostFile:    "M.222.A.001",
+		Title:       "保留文章",
+		CreatorName: "user3",
+		Content:     "保留內文",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = engine.AddComment(&model.Comment{PostID: pKeep.ID, Author: "c4", Content: "保留推文"})
+	_, _ = engine.AddComment(&model.Comment{PostID: pKeep.ID, CreatorName: "c4", Content: "保留推文"})
 
 	// 3. Delete community "trashboard"
 	postsDel, commentsDel, err := engine.DeleteCommunity("trashboard")
@@ -1595,22 +1734,22 @@ func TestPurgePost(t *testing.T) {
 	defer engine.Close()
 
 	p, err := engine.CreatePost(&model.Post{
-		Community: "testboard",
-		PostFile:  "M.111.A.001",
-		Title:     "To be purged",
-		Author:    "tester",
-		CreatedAt: 1727800000,
-		Content:   "This post will be purged",
+		Community:   "testboard",
+		PostFile:    "M.111.A.001",
+		Title:       "To be purged",
+		CreatorName: "tester",
+		CreatedAt:   1727800000,
+		Content:     "This post will be purged",
 	})
 	if err != nil {
 		t.Fatalf("CreatePost failed: %v", err)
 	}
 
 	_, err = engine.AddComment(&model.Comment{
-		PostID:    p.ID,
-		Author:    "commenter",
-		Content:   "A comment",
-		CreatedAt: 1727800001,
+		PostID:      p.ID,
+		CreatorName: "commenter",
+		Content:     "A comment",
+		CreatedAt:   1727800001,
 	})
 	if err != nil {
 		t.Fatalf("AddComment failed: %v", err)
@@ -1632,12 +1771,12 @@ func TestPurgePost(t *testing.T) {
 
 	// Re-create should succeed with same community and post_file (unique constraint not violated)
 	p2, err := engine.CreatePost(&model.Post{
-		Community: "testboard",
-		PostFile:  "M.111.A.001",
-		Title:     "Re-created post",
-		Author:    "tester",
-		CreatedAt: 1727800000,
-		Content:   "This is new content",
+		Community:   "testboard",
+		PostFile:    "M.111.A.001",
+		Title:       "Re-created post",
+		CreatorName: "tester",
+		CreatedAt:   1727800000,
+		Content:     "This is new content",
 	})
 	if err != nil {
 		t.Fatalf("Re-creating post after purge failed: %v", err)
@@ -1842,7 +1981,7 @@ func TestImportBoardDuplicateFilenamesAndUpsert(t *testing.T) {
 	packHdr(fn1, "Title 1 Duplicate In DIR") // Duplicate!
 
 	// Add more posts to make board substantial
-	for i := 3; i <= 200; i++ {
+	for i := 3; i <= 2500; i++ {
 		fn := fmt.Sprintf("M.1004284%03d.A", i)
 		if err := os.WriteFile(filepath.Join(boardDir, fn), []byte("Article\n--\n※ 發信站: 批踢踢實業坊\n"), 0644); err != nil {
 			t.Fatal(err)
@@ -1909,15 +2048,17 @@ func TestImportBoardDuplicateFilenamesAndUpsert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer connA.Close()
 
 	started := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
-		close(started)
+		defer close(done)
 		_, _ = connA.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 1\n"))
-		buf := make([]byte, 1024)
+		rA := bufio.NewReader(connA)
+		_, _ = rA.ReadString('\n')
+		close(started)
 		for {
-			if _, err := connA.Read(buf); err != nil {
+			if _, err := rA.ReadString('\n'); err != nil {
 				return
 			}
 		}
@@ -1925,7 +2066,7 @@ func TestImportBoardDuplicateFilenamesAndUpsert(t *testing.T) {
 
 	<-started
 	var respB string
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := 0; attempt < 50; attempt++ {
 		connB, err := net.Dial("unix", sockPath)
 		if err == nil {
 			_, _ = connB.Write([]byte("IMPORT_BOARD dupboard - 0 0 0 0 - 0 0 1\n"))
@@ -1937,10 +2078,483 @@ func TestImportBoardDuplicateFilenamesAndUpsert(t *testing.T) {
 				break
 			}
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 	if !strings.Contains(respB, "already being imported") {
 		t.Fatalf("Expected already being imported error, got: %q", respB)
 	}
 	t.Logf("Concurrent import rejection verified: %s", strings.TrimSpace(respB))
+
+	connA.Close()
+	<-done
+}
+
+func TestUTF8CommentSubmissionAndLegacyRender(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "post_utf8_cmt_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dataDir := filepath.Join(tmpDir, "data")
+	sockPath := filepath.Join(tmpDir, "post.sock")
+
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:        dataDir,
+		BBSHome:        tmpDir,
+		CacheSizeMB:    16,
+		FlushSeconds:   1,
+		FilterEncoding: "big5",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	srv := daemon.NewServer(daemon.ServerConfig{
+		UnixSocket:     sockPath,
+		BBSHome:        tmpDir,
+		FilterEncoding: "big5",
+	}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatalf("Server start failed: %v", err)
+	}
+	defer srv.Stop()
+
+	// 1. Create Post
+	post, err := st.CreatePost(&model.Post{
+		Community:   "SYSOP",
+		PostFile:    "M.1700000001.A.001",
+		Title:       "推文編碼測試文章",
+		CreatorName: "sysop",
+		Content:     "文章本文內容\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Submit comment via IPC using raw UTF-8 bytes (as mbbsd does with MB_IS_UTF8=1)
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commentUTF8 := []byte("這是由 UTF-8 mbbsd 發送的繁體推文第一則")
+	hdr := fmt.Sprintf("COMMENT SYSOP M.1700000001.A.001 testuser 12345 127.0.0.1 0 %d 1\n", len(commentUTF8))
+	conn.Write([]byte(hdr))
+	conn.Write(commentUTF8)
+	r := bufio.NewReader(conn)
+	resp, _ := r.ReadString('\n')
+	conn.Close()
+	if !strings.HasPrefix(resp, "OK") {
+		t.Fatalf("COMMENT failed: %s", resp)
+	}
+
+	// 3. Verify comment in Pebble storage is clean UTF-8 (NO MOJIBAKE)
+	cmts, err := st.GetComments(post.ID, 1, 10)
+	if err != nil || len(cmts) != 1 {
+		t.Fatalf("GetComments failed: %v, count=%d", err, len(cmts))
+	}
+	if cmts[0].Content != "這是由 UTF-8 mbbsd 發送的繁體推文第一則" {
+		t.Fatalf("Comment content corrupted in DB! Expected original UTF-8, got: %q", cmts[0].Content)
+	}
+	if strings.Contains(cmts[0].Content, "伨") {
+		t.Fatalf("Comment contains mojibake: %s", cmts[0].Content)
+	}
+
+	// 4. RENDER_FILE to stdout (defaulting to legacy format)
+	connR, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	connR.Write([]byte("RENDER_FILE SYSOP M.1700000001.A.001 -\n"))
+	rR := bufio.NewReader(connR)
+	renderHdr, _ := rR.ReadString('\n')
+	if !strings.HasPrefix(renderHdr, "OK") {
+		t.Fatalf("RENDER_FILE failed: %s", renderHdr)
+	}
+	renderBytes, _ := io.ReadAll(rR)
+	connR.Close()
+
+	// Decoding Big5-UAO rendered output MUST contain legacy push tag "推" and original comment!
+	renderedDecoded := big5uao.Decode(renderBytes)
+	if !strings.Contains(renderedDecoded, "testuser") || !strings.Contains(renderedDecoded, "這是由 UTF-8 mbbsd 發送的繁體推文第一則") {
+		t.Fatalf("RENDER_FILE missing legacy formatted push comment: %s", renderedDecoded)
+	}
+}
+
+func TestCommentModifiedAndDeletedRendering(t *testing.T) {
+	p := &model.Post{
+		ID:        100,
+		Community: "test",
+		Content:   "文章本文內容\n--\n",
+	}
+
+	comments := []*model.Comment{
+		{
+			PostID:      100,
+			Sequence:    1,
+			CreatorName: "user1",
+			IP:          "1.1.1.1",
+			CreatedAt:   1700000000,
+			Content:     "未修改留言",
+			LegacyType:  1,
+		},
+		{
+			PostID:      100,
+			Sequence:    2,
+			CreatorName: "user2",
+			IP:          "2.2.2.2",
+			CreatedAt:   1700000000,
+			ModifiedAt:  1700000050,
+			Content:     "已修改留言 (帶 IP)",
+			LegacyType:  1,
+		},
+		{
+			PostID:      100,
+			Sequence:    3,
+			CreatorName: "user3",
+			CreatedAt:   1700000000,
+			ModifiedAt:  1700000060,
+			Content:     "已修改留言 (無 IP)",
+			LegacyType:  1,
+		},
+		{
+			PostID:      100,
+			Sequence:    4,
+			CreatorName: "user4",
+			CreatedAt:   1700000000,
+			Deletion:    model.Deletion{Deleted: true},
+		},
+		{
+			PostID:      100,
+			Sequence:    5,
+			CreatorName: "user5",
+			CreatedAt:   1700000000,
+			Deletion:    model.Deletion{Removed: true, Reason: "違規水桶"},
+		},
+		{
+			PostID:      100,
+			Sequence:    6,
+			CreatorName: "user6",
+			CreatedAt:   1700000000,
+			Deletion:    model.Deletion{Removed: true, ModPersonName: "sysop"},
+		},
+	}
+
+	rendered := string(storage.RenderPostWithComments(p, comments, false))
+
+	// Verify user1: standard IP and Date
+	if !strings.Contains(rendered, "|user1|未修改留言|1.1.1.1 11/15/2023 06:13|1\n") {
+		t.Errorf("user1 unedited format mismatch:\n%s", rendered)
+	}
+	// Verify user2: ~ IP DATE
+	if !strings.Contains(rendered, "|user2|已修改留言 (帶 IP)|2.2.2.2 11/15/2023 06:13|~2\n") {
+		t.Errorf("user2 edited with IP format mismatch:\n%s", rendered)
+	}
+	// Verify user3: ~ DATE
+	if !strings.Contains(rendered, "|user3|已修改留言 (無 IP)|11/15/2023 06:13|~3\n") {
+		t.Errorf("user3 edited without IP format mismatch:\n%s", rendered)
+	}
+	// Verify user4: 自刪 -> "|user4!|留言已刪除|11/15/2023 06:13|4\n"
+	if !strings.Contains(rendered, "|user4!|留言已刪除|11/15/2023 06:13|4\n") {
+		t.Errorf("user4 self-deleted format mismatch:\n%s", rendered)
+	}
+	// Verify user5: custom reason -> "|user5!|留言已隱藏 (違規水桶)|11/15/2023 06:13|5\n"
+	if !strings.Contains(rendered, "|user5!|留言已隱藏 (違規水桶)|11/15/2023 06:13|5\n") {
+		t.Errorf("user5 admin-deleted format mismatch:\n%s", rendered)
+	}
+	// Verify user6: admin deletion without reason -> "|user6!|留言已隱藏|11/15/2023 06:13|6\n"
+	if !strings.Contains(rendered, "|user6!|留言已隱藏|11/15/2023 06:13|6\n") {
+		t.Errorf("user6 admin-deleted without reason format mismatch:\n%s", rendered)
+	}
+}
+
+func TestConsecutiveCommentAutoMerge(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "post_merge_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dataDir := filepath.Join(tmpDir, "data")
+	cacheDir := filepath.Join(tmpDir, "cache")
+	bbsHome := filepath.Join(tmpDir, "bbshome")
+
+	engine, err := storage.OpenEngine(storage.Config{
+		BBSHome:        bbsHome,
+		DataDir:        dataDir,
+		CacheDir:       cacheDir,
+		CacheSizeMB:    32,
+		FlushSeconds:   1,
+		FilterEncoding: "utf-8",
+	})
+	if err != nil {
+		t.Fatalf("OpenEngine failed: %v", err)
+	}
+	defer engine.Close()
+
+	// Create test post
+	post, err := engine.CreatePost(&model.Post{
+		Community:   "test",
+		PostFile:    "M.1700000000.A.001",
+		Title:       "測試自動合併留言",
+		CreatorName: "op",
+		Content:     "文章本文內容",
+	})
+	if err != nil {
+		t.Fatalf("CreatePost failed: %v", err)
+	}
+
+	baseTime := int64(1700000000)
+
+	// 1. userA: First comment
+	c1, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第一句",
+		CreatedAt:   baseTime,
+	})
+	if err != nil || c1.IsMerged || c1.Sequence != 1 {
+		t.Fatalf("c1 failed: err=%v, merged=%v, seq=%d", err, c1.IsMerged, c1.Sequence)
+	}
+
+	// 2. userA: Second comment at +60s (< 180s) -> should merge
+	c2, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第二句",
+		CreatedAt:   baseTime + 60,
+	})
+	if err != nil || !c2.IsMerged || c2.Sequence != 1 {
+		t.Fatalf("c2 merge failed: err=%v, merged=%v, seq=%d", err, c2.IsMerged, c2.Sequence)
+	}
+	if c2.Content != "第一句\n第二句" {
+		t.Fatalf("c2 content mismatch: %q", c2.Content)
+	}
+
+	// 3. userA: Third comment at +160s (100s after c2, < 180s) -> should merge
+	c3, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第三句",
+		CreatedAt:   baseTime + 160,
+	})
+	if err != nil || !c3.IsMerged || c3.Sequence != 1 {
+		t.Fatalf("c3 merge failed: err=%v, merged=%v, seq=%d", err, c3.IsMerged, c3.Sequence)
+	}
+	if c3.Content != "第一句\n第二句\n第三句" {
+		t.Fatalf("c3 content mismatch: %q", c3.Content)
+	}
+
+	// 4. userB: Intervening comment at +200s
+	c4, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userB",
+		CreatorID:   1002,
+		IP:          "2.2.2.2",
+		Content:     "路人甲插話",
+		CreatedAt:   baseTime + 200,
+	})
+	if err != nil || c4.IsMerged || c4.Sequence != 2 {
+		t.Fatalf("c4 failed: err=%v, merged=%v, seq=%d", err, c4.IsMerged, c4.Sequence)
+	}
+
+	// 5. userA: Interrupted comment at +220s (< 180s from c3, but userB intervened) -> should NOT merge
+	c5, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "我又來了",
+		CreatedAt:   baseTime + 220,
+	})
+	if err != nil || c5.IsMerged || c5.Sequence != 3 {
+		t.Fatalf("c5 should not merge: err=%v, merged=%v, seq=%d", err, c5.IsMerged, c5.Sequence)
+	}
+
+	// 6. userA: Comment at +450s (450 - 220 = 230s >= 180s) -> should NOT merge (timeout)
+	c6, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "超時新留言",
+		CreatedAt:   baseTime + 450,
+	})
+	if err != nil || c6.IsMerged || c6.Sequence != 4 {
+		t.Fatalf("c6 should not merge (timeout): err=%v, merged=%v, seq=%d", err, c6.IsMerged, c6.Sequence)
+	}
+
+	// 7. userA: Add 3 lines to c6 -> 1 + 3 = 4 lines <= 5 lines -> should merge
+	c7, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第二行\n第三行\n第四行",
+		CreatedAt:   baseTime + 460,
+	})
+	if err != nil || !c7.IsMerged || c7.Sequence != 4 {
+		t.Fatalf("c7 merge failed: err=%v, merged=%v, seq=%d", err, c7.IsMerged, c7.Sequence)
+	}
+	if model.CountCommentLines(c7.Content) != 4 {
+		t.Fatalf("c7 expected 4 lines, got %d", model.CountCommentLines(c7.Content))
+	}
+
+	// 8. userA: Add 1 line to c6 -> 4 + 1 = 5 lines <= 5 lines (hits cap) -> should merge
+	c8, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第五行 (達上限)",
+		CreatedAt:   baseTime + 470,
+	})
+	if err != nil || !c8.IsMerged || c8.Sequence != 4 {
+		t.Fatalf("c8 merge failed: err=%v, merged=%v, seq=%d", err, c8.IsMerged, c8.Sequence)
+	}
+	if model.CountCommentLines(c8.Content) != 5 {
+		t.Fatalf("c8 expected 5 lines, got %d", model.CountCommentLines(c8.Content))
+	}
+
+	// 9. userA: Add 1 line within 180s -> 5 + 1 = 6 > 5 lines -> should NOT merge into seq 4! Must create seq 5
+	c9, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第六行 (超過五行新起一則)",
+		CreatedAt:   baseTime + 480,
+	})
+	if err != nil || c9.IsMerged || c9.Sequence != 5 {
+		t.Fatalf("c9 should NOT merge: err=%v, merged=%v, seq=%d", err, c9.IsMerged, c9.Sequence)
+	}
+
+	// 10. userA: Add 1 line to seq 5 -> 1 + 1 = 2 lines <= 5 -> should merge into seq 5
+	c10, err := engine.AddComment(&model.Comment{
+		PostID:      post.ID,
+		CreatorName: "userA",
+		CreatorID:   1001,
+		IP:          "1.1.1.1",
+		Content:     "第七行 (併入第六行之新樓層)",
+		CreatedAt:   baseTime + 490,
+	})
+	if err != nil || !c10.IsMerged || c10.Sequence != 5 {
+		t.Fatalf("c10 merge failed: err=%v, merged=%v, seq=%d", err, c10.IsMerged, c10.Sequence)
+	}
+
+	// Verify all comments from storage
+	comments, err := engine.GetComments(post.ID, 1, 10)
+	if err != nil || len(comments) != 5 {
+		t.Fatalf("Expected 5 comments, got %d (err: %v)", len(comments), err)
+	}
+	if comments[0].Content != "第一句\n第二句\n第三句" || comments[0].Sequence != 1 {
+		t.Fatalf("Floor 1 mismatch: %v", comments[0])
+	}
+	if comments[1].Content != "路人甲插話" || comments[1].Sequence != 2 {
+		t.Fatalf("Floor 2 mismatch: %v", comments[1])
+	}
+	if comments[2].Content != "我又來了" || comments[2].Sequence != 3 {
+		t.Fatalf("Floor 3 mismatch: %v", comments[2])
+	}
+	if comments[3].Content != "超時新留言\n第二行\n第三行\n第四行\n第五行 (達上限)" || comments[3].Sequence != 4 {
+		t.Fatalf("Floor 4 mismatch: %v", comments[3])
+	}
+	if comments[4].Content != "第六行 (超過五行新起一則)\n第七行 (併入第六行之新樓層)" || comments[4].Sequence != 5 {
+		t.Fatalf("Floor 5 mismatch: %v", comments[4])
+	}
+
+	// Verify rendered post text
+	renderedBytes, err := engine.RenderFullPostText(post.ID, false)
+	if err != nil {
+		t.Fatalf("RenderFullPostText failed: %v", err)
+	}
+	rendered := string(renderedBytes)
+	if !strings.Contains(rendered, "|userA|第一句|1.1.1.1 11/15/2023 06:13|1\n| 第二句\n| 第三句\n") {
+		t.Fatalf("Rendered text mismatch for merged comment:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "|userB|路人甲插話|2.2.2.2 11/15/2023 06:16|2\n") {
+		t.Fatalf("Rendered text mismatch for floor 2:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "|userA|我又來了|1.1.1.1 11/15/2023 06:17|3\n") {
+		t.Fatalf("Rendered text mismatch for floor 3:\n%s", rendered)
+	}
+
+	// Verify disk file directly (produced via AppendCommentCache and AppendMergedCommentCache)
+	diskBytes, err := os.ReadFile(engine.BoardFilePath(post))
+	if err != nil {
+		t.Fatalf("ReadFile from BoardFilePath failed: %v", err)
+	}
+	diskContent := string(diskBytes)
+	if !strings.Contains(diskContent, "|userA|第一句|1.1.1.1 11/15/2023 06:13|1\n| 第二句\n| 第三句\n") {
+		t.Fatalf("Disk file mismatch for merged comment:\n%s", diskContent)
+	}
+
+	// 7. Verify IPC protocol returns MERGED
+	sockPath := filepath.Join(tmpDir, "merge_test.sock")
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome:    bbsHome,
+		UnixSocket: sockPath,
+	}, engine)
+	if err := srv.Start(); err != nil {
+		t.Fatalf("srv.Start failed: %v", err)
+	}
+	defer srv.Stop()
+
+	// Add comment 1 via IPC: userC at baseTime
+	conn1, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	msg1 := []byte("IPC第一行")
+	hdr1 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+500, len(msg1))
+	conn1.Write([]byte(hdr1))
+	conn1.Write(msg1)
+	r1 := bufio.NewReader(conn1)
+	resp1, _ := r1.ReadString('\n')
+	conn1.Close()
+
+	if !strings.HasPrefix(resp1, "OK 6 ") || strings.Contains(resp1, "MERGED") {
+		t.Fatalf("IPC comment 1 expected new floor 6 without MERGED, got: %s", resp1)
+	}
+
+	// Add comment 2 via IPC: userC at baseTime+550 (< 180s) -> should be MERGED
+	conn2, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	msg2 := []byte("IPC第二行")
+	hdr2 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+550, len(msg2))
+	conn2.Write([]byte(hdr2))
+	conn2.Write(msg2)
+	r2 := bufio.NewReader(conn2)
+	resp2, _ := r2.ReadString('\n')
+	conn2.Close()
+
+	if !strings.HasPrefix(resp2, "OK 6 ") || !strings.Contains(resp2, "MERGED") {
+		t.Fatalf("IPC comment 2 expected floor 6 with MERGED, got: %s", resp2)
+	}
+
+	// Add comment 3 via IPC: userD at baseTime+560 -> should NOT be MERGED
+	conn3, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	msg3 := []byte("IPC第三行插話")
+	hdr3 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userD 2002 4.4.4.4 %d %d 1\n", baseTime+560, len(msg3))
+	conn3.Write([]byte(hdr3))
+	conn3.Write(msg3)
+	r3 := bufio.NewReader(conn3)
+	resp3, _ := r3.ReadString('\n')
+	conn3.Close()
+
+	if !strings.HasPrefix(resp3, "OK 7 ") || strings.Contains(resp3, "MERGED") {
+		t.Fatalf("IPC comment 3 expected floor 7 without MERGED, got: %s", resp3)
+	}
 }

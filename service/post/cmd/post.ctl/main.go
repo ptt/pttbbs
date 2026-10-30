@@ -13,8 +13,10 @@ import (
 	"strings"
 	"text/tabwriter"
 	"time"
+	"unicode/utf8"
 
 	"pttbbs/bbs"
+	"pttbbs/big5uao"
 )
 
 var (
@@ -45,9 +47,14 @@ func getSocketPath() string {
 	return "/tmp/post.sock"
 }
 
+func connectDaemon() (net.Conn, error) {
+	sockPath := getSocketPath()
+	return net.Dial("unix", sockPath)
+}
+
 func sendCmd(header string, payload []byte) (string, []byte, error) {
 	sockPath := getSocketPath()
-	conn, err := net.Dial("unix", sockPath)
+	conn, err := connectDaemon()
 	if err != nil {
 		return "", nil, fmt.Errorf("connect to %s failed: %w", sockPath, err)
 	}
@@ -182,15 +189,15 @@ func main() {
 
 	case "add-file":
 		if len(args) < 5 {
-			log.Fatalf("Usage: post.ctl add-file <community> <post_file> <author> <title> [author_token]")
+			log.Fatalf("Usage: post.ctl add-file <community> <post_file> <author> <title> [creator_id]")
 		}
-		var token uint32
+		var uid uint64
 		if len(args) >= 6 {
-			val, _ := strconv.ParseUint(args[5], 10, 32)
-			token = uint32(val)
+			val, _ := strconv.ParseUint(args[5], 10, 64)
+			uid = val
 		}
 		titleB := []byte(args[4])
-		header := fmt.Sprintf("POST_FILE %s %s %s %d 0 %d %d\n", args[1], args[2], args[3], token, time.Now().Unix(), len(titleB))
+		header := fmt.Sprintf("POST_FILE %s %s %s %d 0 0 %d %d\n", args[1], args[2], args[3], uid, time.Now().Unix(), len(titleB))
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
 			log.Fatalf("add-file failed: %v", err)
@@ -213,7 +220,7 @@ func main() {
 
 	case "comment":
 		if len(args) < 4 {
-			log.Fatalf("Usage: post.ctl comment <post> <author> <content> [ip] [author_token]\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl comment <post> <author> <content> [ip] [creator_id]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
@@ -221,7 +228,7 @@ func main() {
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx+1 {
-			log.Fatalf("Usage: post.ctl comment <post> <author> <content> [ip] [author_token]")
+			log.Fatalf("Usage: post.ctl comment <post> <author> <content> [ip] [creator_id]")
 		}
 		author := args[nextIdx]
 		contentB := []byte(args[nextIdx+1])
@@ -229,10 +236,10 @@ func main() {
 		if len(args) > nextIdx+2 {
 			ip = args[nextIdx+2]
 		}
-		var token uint32
+		var uid uint64
 		if len(args) > nextIdx+3 {
-			val, _ := strconv.ParseUint(args[nextIdx+3], 10, 32)
-			token = uint32(val)
+			val, _ := strconv.ParseUint(args[nextIdx+3], 10, 64)
+			uid = val
 		}
 		var legType uint8 = 3 // default 箭頭
 		if len(args) > nextIdx+4 {
@@ -242,7 +249,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		header := fmt.Sprintf("COMMENT %s %s %s %d %s %d %d %d\n", target.community, target.postFile, author, token, ip, time.Now().Unix(), len(contentB), legType)
+		header := fmt.Sprintf("COMMENT %s %s %s %d %s %d %d %d\n", target.community, target.postFile, author, uid, ip, time.Now().Unix(), len(contentB), legType)
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
 			log.Fatalf("comment failed: %v", err)
@@ -251,7 +258,7 @@ func main() {
 
 	case "vote", "vote-file":
 		if len(args) < 3 {
-			log.Fatalf("Usage: post.ctl vote <post> <user> [1|-1|0] [author_token]\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
@@ -259,29 +266,114 @@ func main() {
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: post.ctl vote <post> <user> [1|-1|0] [author_token]")
+			log.Fatalf("Usage: post.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]")
 		}
 		user := args[nextIdx]
 		voteVal := 1
 		if len(args) > nextIdx+1 {
 			voteVal, _ = strconv.Atoi(args[nextIdx+1])
 		}
-		var token uint32
+		var uid uint64
 		if len(args) > nextIdx+2 {
-			v, _ := strconv.ParseUint(args[nextIdx+2], 10, 32)
-			token = uint32(v)
+			v, _ := strconv.ParseUint(args[nextIdx+2], 10, 64)
+			uid = v
+		}
+		var ip string
+		var ctime int64
+		if len(args) > nextIdx+3 {
+			ip = args[nextIdx+3]
+		}
+		if len(args) > nextIdx+4 {
+			ctime, _ = strconv.ParseInt(args[nextIdx+4], 10, 64)
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("VOTE_FILE %s %s %s %d %d\n", target.community, target.postFile, user, token, voteVal)
+			if ip != "" || ctime != 0 {
+				if ip == "" {
+					ip = "-"
+				}
+				header = fmt.Sprintf("VOTE_FILE %s %s %s %d %d %s %d\n", target.community, target.postFile, user, uid, voteVal, ip, ctime)
+			} else {
+				header = fmt.Sprintf("VOTE_FILE %s %s %s %d %d\n", target.community, target.postFile, user, uid, voteVal)
+			}
 		} else {
-			header = fmt.Sprintf("VOTE %d %s %d %d\n", target.postID, user, token, voteVal)
+			if ip != "" || ctime != 0 {
+				if ip == "" {
+					ip = "-"
+				}
+				header = fmt.Sprintf("VOTE %d %s %d %d %s %d\n", target.postID, user, uid, voteVal, ip, ctime)
+			} else {
+				header = fmt.Sprintf("VOTE %d %s %d %d\n", target.postID, user, uid, voteVal)
+			}
 		}
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("vote failed: %v", err)
 		}
 		fmt.Println(resp)
+
+	case "votes", "votes-file":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl votes <post>\n  <post>: <post_id> or <post_file>@<community>")
+		}
+		target, _, err := parsePostArg(args, 1)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
+		var header string
+		if target.isFile {
+			header = fmt.Sprintf("VOTES_FILE %s %s\n", target.community, target.postFile)
+		} else {
+			header = fmt.Sprintf("VOTES %d\n", target.postID)
+		}
+		conn, err := connectDaemon()
+		if err != nil {
+			log.Fatalf("connect daemon failed: %v", err)
+		}
+		defer conn.Close()
+
+		if _, err := conn.Write([]byte(header)); err != nil {
+			log.Fatalf("send votes cmd failed: %v", err)
+		}
+		reader := bufio.NewReader(conn)
+		statusLine, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatalf("read response failed: %v", err)
+		}
+		statusLine = strings.TrimSpace(statusLine)
+		if !strings.HasPrefix(statusLine, "OK") {
+			log.Fatalf("votes failed: %s", statusLine)
+		}
+		var total int
+		fmt.Sscanf(statusLine, "OK %d", &total)
+		if total == 0 {
+			fmt.Println("No votes")
+			return
+		}
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "USER\tTOKEN\tVOTE\tTIME\tIP")
+		for i := 0; i < total; i++ {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				break
+			}
+			line = strings.TrimRight(line, "\r\n")
+			cols := strings.Split(line, "\t")
+			if len(cols) >= 5 {
+				u := cols[0]
+				tok := cols[1]
+				vVal := cols[2]
+				tInt, _ := strconv.ParseInt(cols[3], 10, 64)
+				timeStr := time.Unix(tInt, 0).Format("01/02 15:04:05")
+				uIP := cols[4]
+				voteStr := "+1"
+				if vVal == "-1" {
+					voteStr = "-1"
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", u, tok, voteStr, timeStr, uIP)
+			}
+		}
+		w.Flush()
 
 	case "get", "get-post":
 		if len(args) < 2 {
@@ -451,7 +543,11 @@ func main() {
 		}
 
 		if outPath == "-" {
-			os.Stdout.Write(payload)
+			if !utf8.Valid(payload) {
+				os.Stdout.WriteString(big5uao.DecodeSGR66(payload))
+			} else {
+				os.Stdout.Write(payload)
+			}
 		} else {
 			fmt.Println(resp)
 		}
@@ -616,6 +712,9 @@ func main() {
 						fmt.Printf("[+] Migration completed in %ss:\n    Posts imported:     %s\n    Comments imported:  %s\n    Crossposts logged:  %s\n    Errors encountered: %s\n",
 							parts[5], parts[1], parts[2], parts[3], parts[4])
 					}
+					if len(parts) >= 8 {
+						fmt.Printf("    Deleted posts:      %s imported, %s marked deleted\n", parts[6], parts[7])
+					}
 				} else {
 					fmt.Println(line)
 				}
@@ -724,7 +823,7 @@ func main() {
 		if target.isFile {
 			header = fmt.Sprintf("UPDATE_POST_FILE %s %s %s 0 0 %d %d\n", target.community, target.postFile, editor, len(titleB), len(contentB))
 		} else {
-			header = fmt.Sprintf("UPDATE_POST %d %s %d %d\n", target.postID, editor, len(titleB), len(contentB))
+			header = fmt.Sprintf("UPDATE_POST %d %s 0 %d %d\n", target.postID, editor, len(titleB), len(contentB))
 		}
 		resp, _, err := sendCmd(header, append(titleB, contentB...))
 		if err != nil {
@@ -751,9 +850,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("UPDATE_POST_TITLE_FILE %s %s %s %d\n", target.community, target.postFile, editor, len(titleB))
+			header = fmt.Sprintf("UPDATE_POST_TITLE_FILE %s %s %s 0 %d\n", target.community, target.postFile, editor, len(titleB))
 		} else {
-			header = fmt.Sprintf("UPDATE_POST_TITLE %d %s %d\n", target.postID, editor, len(titleB))
+			header = fmt.Sprintf("UPDATE_POST_TITLE %d %s 0 %d\n", target.postID, editor, len(titleB))
 		}
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
@@ -814,9 +913,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("UPDATE_COMMENT_FILE %s %s %s %s %d\n", target.community, target.postFile, seq, editor, len(contentB))
+			header = fmt.Sprintf("UPDATE_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
 		} else {
-			header = fmt.Sprintf("UPDATE_COMMENT %d %s %s %d\n", target.postID, seq, editor, len(contentB))
+			header = fmt.Sprintf("UPDATE_COMMENT %d %s %s 0 %d\n", target.postID, seq, editor, len(contentB))
 		}
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
@@ -880,7 +979,7 @@ func main() {
 
 	case "crosspost", "share":
 		if len(args) < 3 {
-			log.Fatalf("Usage: post.ctl crosspost <src_post> <target_post> <operator> [token]\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl crosspost <src_post> <target_post> <operator> [person_id]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		srcTarget, srcConsumed, srcErr := parsePostArg(args, 1)
 		if srcErr != nil {
@@ -972,7 +1071,7 @@ func main() {
 			dateStr := time.Unix(tVal, 0).Format("01/02/2006 15:04:05")
 			fmt.Printf("Origin Community : %s\n", cols[0])
 			fmt.Printf("Origin Post File : %s\n", cols[1])
-			fmt.Printf("Original Author  : %s\n", cols[2])
+			fmt.Printf("Original CreatorName  : %s\n", cols[2])
 			fmt.Printf("Original Title   : %s\n", cols[3])
 			fmt.Printf("Crossposted By   : %s\n", cols[4])
 			fmt.Printf("Crossposted At   : %s\n", dateStr)
@@ -1003,6 +1102,65 @@ func main() {
 			log.Fatalf("fetch failed: %v", err)
 		}
 		fmt.Println(resp)
+
+	case "sync-dir":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl sync-dir <community> [--only-scores | --full] [--prune] [--add-missing] [--dry-run]")
+		}
+		comm := args[1]
+		dryRun := false
+		var modes []string
+		for _, arg := range args[2:] {
+			switch strings.TrimLeft(arg, "-") {
+			case "dry-run", "dryrun", "n":
+				dryRun = true
+			case "only-scores":
+				// default
+			case "full":
+				modes = append(modes, "full")
+			case "prune":
+				modes = append(modes, "prune")
+			case "add-missing":
+				modes = append(modes, "add-missing")
+			default:
+				log.Fatalf("sync-dir: unknown argument: %s", arg)
+			}
+		}
+		dryStr := "0"
+		if dryRun {
+			dryStr = "1"
+		}
+		modeStr := "-"
+		if len(modes) > 0 {
+			modeStr = strings.Join(modes, ",")
+		}
+		resp, _, err := sendCmd(fmt.Sprintf("SYNC_DIR %s %s %s\n", comm, dryStr, modeStr), nil)
+		if err != nil {
+			log.Fatalf("sync-dir failed: %v", err)
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 7 || parts[0] != "OK" {
+			log.Fatalf("sync-dir failed: %s", resp)
+		}
+		what := "score and comments"
+		if strings.Contains(modeStr, "full") {
+			what = "all fields"
+		}
+		if dryRun {
+			fmt.Printf("[+] Dry-run of syncing %s of '%s' to .DIR (nothing written):\n", what, comm)
+		} else {
+			fmt.Printf("[+] Synced %s of '%s' to .DIR:\n", what, comm)
+		}
+		fmt.Printf("    Records in .DIR:    %s\n    Known by post.svc:  %s\n    Records updated:    %s\n", parts[1], parts[2], parts[3])
+		if strings.Contains(modeStr, "prune") {
+			fmt.Printf("    Records pruned:     %s\n", parts[4])
+		}
+		if strings.Contains(modeStr, "add-missing") {
+			fmt.Printf("    Records added:      %s (%s without article file)\n", parts[5], parts[6])
+		}
+		if !dryRun && (strings.Contains(modeStr, "prune") || strings.Contains(modeStr, "add-missing")) {
+			fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+		}
 
 	case "delete-community", "purge-community":
 		if len(args) < 2 {
@@ -1067,9 +1225,9 @@ func main() {
 		}
 		var cmd string
 		if target.isFile {
-			cmd = fmt.Sprintf("DELETE_POST_FILE %s %s %s %s\n", target.community, target.postFile, deleter, reason)
+			cmd = fmt.Sprintf("DELETE_POST_FILE %s %s %s 0 %s\n", target.community, target.postFile, deleter, reason)
 		} else {
-			cmd = fmt.Sprintf("DELETE_POST %d %s %s\n", target.postID, deleter, reason)
+			cmd = fmt.Sprintf("DELETE_POST %d %s 0 %s\n", target.postID, deleter, reason)
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
@@ -1120,9 +1278,9 @@ func main() {
 		}
 		var cmd string
 		if target.isFile {
-			cmd = fmt.Sprintf("DELETE_COMMENT_FILE %s %s %s %s %s\n", target.community, target.postFile, seq, deleter, reason)
+			cmd = fmt.Sprintf("DELETE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, deleter, reason)
 		} else {
-			cmd = fmt.Sprintf("DELETE_COMMENT %d %s %s %s\n", target.postID, seq, deleter, reason)
+			cmd = fmt.Sprintf("DELETE_COMMENT %d %s %s 0 %s\n", target.postID, seq, deleter, reason)
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
@@ -1175,6 +1333,7 @@ Usage:
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
   post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
+  post.ctl sync-dir <community> [--only-scores | --full] [--prune] [--add-missing] [--dry-run]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
@@ -1182,19 +1341,20 @@ Usage:
   post.ctl undelete <post>
   post.ctl purge <post>
   post.ctl delete-community <community>
-  post.ctl vote <post> <user> [1|-1|0] [token]
+  post.ctl vote <post> <user> [1|-1|0] [person_id] [ip] [ctime]
+  post.ctl votes <post>
   post.ctl comments <post> [start [limit]]
-  post.ctl comment <post> <author> <content> [ip] [token]
+  post.ctl comment <post> <author> <content> [ip] [person_id]
   post.ctl delete-comment <post> <seq> [deleter] [reason]
   post.ctl undelete-comment <post> <seq>
   post.ctl update-comment <post> <seq> <content> [editor]
   post.ctl history <post> [rev]
   post.ctl comment-history <post> <seq> [rev]
-  post.ctl crosspost <src_post> <target_post> <operator> [token]
+  post.ctl crosspost <src_post> <target_post> <operator> [person_id]
   post.ctl crossposts <post>
   post.ctl origin <post>
   post.ctl add <community> <author> <title> <content>
-  post.ctl add-file <community> <post_file> <author> <title> [token]
+  post.ctl add-file <community> <post_file> <author> <title> [person_id]
   post.ctl purge-posts <author> [days=7]
   post.ctl purge-comments <author> [days=7]
 `)
@@ -1234,9 +1394,10 @@ func printCommentsTable(resp string, payload []byte) {
 		ts, _ := strconv.ParseInt(cols[2], 10, 64)
 		dateStr := time.Unix(ts, 0).Format("01/02 15:04")
 		ip := cols[3]
-		isDel := cols[4] == "1"
+		typeVal, _ := strconv.Atoi(cols[4])
+		isDel := (typeVal < 0)
 		reason := cols[5]
-		content := cols[6]
+		content := strings.Join(cols[6:], " / ")
 		status := "ACTIVE"
 		if isDel {
 			status = "DELETED"
@@ -1325,3 +1486,6 @@ func printCommentHistory(resp string, payload []byte, rev int) {
 		}
 	}
 }
+
+// -----------------------------------------------------------------------------
+// Legacy Man (精華區) Importer

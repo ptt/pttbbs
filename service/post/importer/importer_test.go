@@ -62,8 +62,8 @@ func TestImporterP2AndP1Comments(t *testing.T) {
 
 	// Comment 0: P2 merged
 	c0 := parsed.Comments[0]
-	if c0.Author != "lantw44" || c0.CommentType != "推" {
-		t.Errorf("c0 author/type mismatch: %s / %s", c0.Author, c0.CommentType)
+	if c0.CreatorName != "lantw44" || c0.CommentType != "推" {
+		t.Errorf("c0 author/type mismatch: %s / %s", c0.CreatorName, c0.CommentType)
 	}
 	expectedContent0 := "咦 PTT2 會解讀 Markdown 嗎？\n看起來好像真的可以耶！"
 	if c0.Content != expectedContent0 {
@@ -72,25 +72,25 @@ func TestImporterP2AndP1Comments(t *testing.T) {
 
 	// Comment 1: White text
 	c1 := parsed.Comments[1]
-	if c1.Author != "op" || c1.CommentType != "white" {
-		t.Errorf("c1 author/type mismatch: %s / %s", c1.Author, c1.CommentType)
+	if c1.CreatorName != "op" || c1.CommentType != "white" {
+		t.Errorf("c1 author/type mismatch: %s / %s", c1.CreatorName, c1.CommentType)
 	}
 
 	// Comment 2: PTT1
 	c2 := parsed.Comments[2]
-	if c2.Author != "user1" || c2.CommentType != "推" || c2.Content != "這是 PTT1 標準推文" {
+	if c2.CreatorName != "user1" || c2.CommentType != "推" || c2.Content != "這是 PTT1 標準推文" {
 		t.Errorf("c2 mismatch: %+v", c2)
 	}
 
 	// Comment 3: jim '推' not eaten
 	c3 := parsed.Comments[3]
-	if c3.Author != "jim" || c3.CommentType != "推" || c3.Content != "推" {
+	if c3.CreatorName != "jim" || c3.CommentType != "推" || c3.Content != "推" {
 		t.Errorf("c3 mismatch: got content %q, expected '推'", c3.Content)
 	}
 
 	// Comment 4: user2 arrow
 	c4 := parsed.Comments[4]
-	if c4.Author != "user2" || c4.CommentType != "→" || c4.Content != "這是 PTT1 箭頭推文" {
+	if c4.CreatorName != "user2" || c4.CommentType != "→" || c4.Content != "這是 PTT1 箭頭推文" {
 		t.Errorf("c4 mismatch: %+v", c4)
 	}
 	if c0.LegacyType != model.LegacyTypeOldRecommend {
@@ -159,7 +159,7 @@ func TestCommentMergeRules(t *testing.T) {
 
 	if len(parsed.Comments) != 5 {
 		for i, c := range parsed.Comments {
-			t.Logf("[%d] type=%d author=%s content=%q", i, c.LegacyType, c.Author, c.Content)
+			t.Logf("[%d] type=%d author=%s content=%q", i, c.LegacyType, c.CreatorName, c.Content)
 		}
 		t.Fatalf("Expected 5 comments, got %d", len(parsed.Comments))
 	}
@@ -185,8 +185,66 @@ func TestCommentMergeRules(t *testing.T) {
 	}
 
 	c4 := parsed.Comments[4]
-	if c4.Author != "userB" || c4.LegacyType != model.LegacyTypeArrow || c4.Content != "純箭頭第一行\n純箭頭第二行要合併" {
+	if c4.CreatorName != "userB" || c4.LegacyType != model.LegacyTypeArrow || c4.Content != "純箭頭第一行\n純箭頭第二行要合併" {
 		t.Errorf("c4 mismatch: type=%d, content=%q", c4.LegacyType, c4.Content)
+	}
+}
+
+func TestCommentMergeTimeLimit(t *testing.T) {
+	article := `作者: op (operator) 看板: TestBoard
+標題: 推文時間上限測試
+時間: Fri Nov 25 18:00:00 2016
+
+本文
+--
+※ 發信站: 批踢踢實業坊
+推 userA: 推文第一行                                             11/25 18:00
+→ userA: 兩分鐘內箭頭要合併                                     11/25 18:02
+→ userA: 兩分鐘後箭頭繼續合併                                   11/25 18:04
+→ userA: 五分鐘後箭頭不可合併(超過3分鐘)                         11/25 18:09
+→ userA: 三分鐘整箭頭要合併                                     11/25 18:12
+→ userA: 當天晚上箭頭不可合併                                   11/25 22:00
+`
+	baseTime := time.Date(2016, 11, 25, 18, 0, 0, 0, time.Local).Unix()
+	parsed, err := ParseArticleText([]byte(article), "op", baseTime, "TestBoard", "M.1480068000.A.003", false)
+	if err != nil {
+		t.Fatalf("ParseArticleText failed: %v", err)
+	}
+
+	// Expected comments:
+	// 0: userA (18:00 + 18:02 + 18:04: 3 lines merged)
+	// 1: userA (18:09 + 18:12: 2 lines merged)
+	// 2: userA (22:00: 1 line)
+	if len(parsed.Comments) != 3 {
+		for i, c := range parsed.Comments {
+			t.Logf("[%d] type=%d ctime=%d last_ctime=%d author=%s content=%q", i, c.LegacyType, c.CTime, c.LastCTime, c.CreatorName, c.Content)
+		}
+		t.Fatalf("Expected 3 comments, got %d", len(parsed.Comments))
+	}
+
+	c0 := parsed.Comments[0]
+	if c0.LegacyType != model.LegacyTypePush || c0.Content != "推文第一行\n兩分鐘內箭頭要合併\n兩分鐘後箭頭繼續合併" {
+		t.Errorf("c0 mismatch: %+v", c0)
+	}
+	t1800 := time.Date(2016, 11, 25, 18, 0, 0, 0, time.Local).Unix()
+	t1804 := time.Date(2016, 11, 25, 18, 4, 0, 0, time.Local).Unix()
+	if c0.CTime != t1800 || c0.LastCTime != t1804 {
+		t.Errorf("c0 time mismatch: ctime=%d (expected %d), last_ctime=%d (expected %d)", c0.CTime, t1800, c0.LastCTime, t1804)
+	}
+
+	c1 := parsed.Comments[1]
+	if c1.LegacyType != model.LegacyTypeArrow || c1.Content != "五分鐘後箭頭不可合併(超過3分鐘)\n三分鐘整箭頭要合併" {
+		t.Errorf("c1 mismatch: %+v", c1)
+	}
+	t1809 := time.Date(2016, 11, 25, 18, 9, 0, 0, time.Local).Unix()
+	t1812 := time.Date(2016, 11, 25, 18, 12, 0, 0, time.Local).Unix()
+	if c1.CTime != t1809 || c1.LastCTime != t1812 {
+		t.Errorf("c1 time mismatch: ctime=%d (expected %d), last_ctime=%d (expected %d)", c1.CTime, t1809, c1.LastCTime, t1812)
+	}
+
+	c2 := parsed.Comments[2]
+	if c2.LegacyType != model.LegacyTypeArrow || c2.Content != "當天晚上箭頭不可合併" {
+		t.Errorf("c2 mismatch: %+v", c2)
 	}
 }
 
@@ -315,7 +373,7 @@ func TestImportBoard(t *testing.T) {
 			t.Errorf("Failed to read rendered file %s: %v", p.filename, err)
 			continue
 		}
-		if !strings.Contains(string(data), "本文") || !strings.Contains(string(data), "[1]") {
+		if !strings.Contains(string(data), "本文") || !strings.Contains(string(data), "|1") {
 			t.Errorf("Rendered file missing expected content: %s", string(data))
 		}
 	}
@@ -328,28 +386,28 @@ func TestRenderLegacyPostWithComments(t *testing.T) {
 	}
 	comments := []*model.Comment{
 		{
-			Author:     "user1",
-			Content:    "這是推文",
-			LegacyType: model.LegacyTypePush,
-			CreatedAt:  1728000000,
+			CreatorName: "user1",
+			Content:     "這是推文",
+			LegacyType:  model.LegacyTypePush,
+			CreatedAt:   1728000000,
 		},
 		{
-			Author:     "user2",
-			Content:    "這是噓文",
-			LegacyType: model.LegacyTypeBoo,
-			CreatedAt:  1728000000,
+			CreatorName: "user2",
+			Content:     "這是噓文",
+			LegacyType:  model.LegacyTypeBoo,
+			CreatedAt:   1728000000,
 		},
 		{
-			Author:     "user3",
-			Content:    "這是箭頭",
-			LegacyType: model.LegacyTypeArrow,
-			CreatedAt:  1728000000,
+			CreatorName: "user3",
+			Content:     "這是箭頭",
+			LegacyType:  model.LegacyTypeArrow,
+			CreatedAt:   1728000000,
 		},
 		{
-			Author:     "lantw44",
-			Content:    "這是 P2 推文",
-			LegacyType: model.LegacyTypeOldRecommend,
-			CreatedAt:  1728000000,
+			CreatorName: "lantw44",
+			Content:     "這是 P2 推文",
+			LegacyType:  model.LegacyTypeOldRecommend,
+			CreatedAt:   1728000000,
 		},
 	}
 
@@ -430,8 +488,8 @@ func TestIPv6AndIPParsing(t *testing.T) {
 
 	for i, exp := range expected {
 		c := parsed.Comments[i]
-		if c.Author != exp.author {
-			t.Errorf("[%d] Author mismatch: got %q, expected %q", i, c.Author, exp.author)
+		if c.CreatorName != exp.author {
+			t.Errorf("[%d] CreatorName mismatch: got %q, expected %q", i, c.CreatorName, exp.author)
 		}
 		if c.Content != exp.content {
 			t.Errorf("[%d] Content mismatch: got %q, expected %q", i, c.Content, exp.content)
@@ -502,13 +560,13 @@ func TestSignaturePreservation(t *testing.T) {
 	if len(parsed2.Comments) != 3 {
 		t.Fatalf("Expected 3 comments, got %d", len(parsed2.Comments))
 	}
-	if parsed2.Comments[0].Author != "user1" || parsed2.Comments[0].Content != "第一推" {
+	if parsed2.Comments[0].CreatorName != "user1" || parsed2.Comments[0].Content != "第一推" {
 		t.Errorf("Comment 0 mismatch: %+v", parsed2.Comments[0])
 	}
-	if parsed2.Comments[1].Author != "test" || parsed2.Comments[1].Content != "作者回覆的白字補充" || parsed2.Comments[1].CommentType != "white" {
+	if parsed2.Comments[1].CreatorName != "test" || parsed2.Comments[1].Content != "作者回覆的白字補充" || parsed2.Comments[1].CommentType != "white" {
 		t.Errorf("Comment 1 mismatch: %+v", parsed2.Comments[1])
 	}
-	if parsed2.Comments[2].Author != "user2" || parsed2.Comments[2].Content != "第二推" {
+	if parsed2.Comments[2].CreatorName != "user2" || parsed2.Comments[2].Content != "第二推" {
 		t.Errorf("Comment 2 mismatch: %+v", parsed2.Comments[2])
 	}
 }
@@ -598,9 +656,9 @@ func TestQueryCommentDB(t *testing.T) {
 	val[4] = 140
 	val[5] = 112
 	val[6] = 1
-	val[7] = 1 // ip: 140.112.1.1
+	val[7] = 1                                    // ip: 140.112.1.1
 	binary.LittleEndian.PutUint32(val[8:12], 999) // userref
-	binary.LittleEndian.PutUint32(val[12:16], 1) // type (推)
+	binary.LittleEndian.PutUint32(val[12:16], 1)  // type (推)
 	copy(val[16:29], "testuser\x00")
 	copy(val[29:110], "這是測試推文\x00")
 
@@ -643,5 +701,178 @@ func TestQueryCommentDB(t *testing.T) {
 	tsNil, ipNil, err := QueryCommentDB(nil, "TestBoard", "M.1727800000.A.001", 0)
 	if err != nil || tsNil != 0 || ipNil != "" {
 		t.Errorf("Expected zero values for nil db, got ts=%d, ip=%s, err=%v", tsNil, ipNil, err)
+	}
+}
+
+func TestImporterVoteDeduplicationAndMeta(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "import_vote_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	boardDir := filepath.Join(tempDir, "boards", "VoteBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `本文內容
+--
+※ 發信站: 批踢踢實業坊
+推 userA: 推第一次 10/01 12:00
+推 userA: 推第二次 10/01 12:01
+噓 userB: 噓第一次 10/01 12:02
+推 userB: 改推文 10/01 12:03
+推 userC: 先推文 10/01 12:04
+噓 userC: 後給劣 10/01 12:05
+→ userD: 純箭頭一 10/01 12:06
+→ userE: 純箭頭二 10/01 12:07
+`
+	fn := "M.1728000099.A.001"
+	if err := os.WriteFile(filepath.Join(boardDir, fn), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	hdr := make([]byte, FileHeaderSize)
+	copy(hdr[0:28], fn)
+	binary.LittleEndian.PutUint32(hdr[28:32], 1728000000)
+	copy(hdr[34:48], "author1")
+	copy(hdr[48:54], "10/01")
+	copy(hdr[54:119], "推噓文換算測試")
+	dirPath := filepath.Join(boardDir, ".DIR")
+	if err := os.WriteFile(dirPath, hdr, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	engineDir := filepath.Join(tempDir, "engine")
+	engine, err := storage.OpenEngine(storage.Config{
+		DataDir:        engineDir,
+		CacheDir:       filepath.Join(engineDir, "cache"),
+		FlushSeconds:   2,
+		FilterEncoding: "utf-8",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	stats, err := MigrateBoard(engine, ImportBoardOptions{
+		BBSHome:   tempDir,
+		Board:     "VoteBoard",
+		Overwrite: true,
+	})
+	if err != nil {
+		t.Fatalf("MigrateBoard failed: %v", err)
+	}
+	if stats.PostsImported != 1 || stats.CommentsImported != 8 {
+		t.Errorf("Unexpected stats: %+v", stats)
+	}
+
+	p, err := engine.GetPostByCommunityFile("VoteBoard", fn)
+	if err != nil {
+		t.Fatalf("GetPostByCommunityFile failed: %v", err)
+	}
+
+	// userA (Up), userB (Down->Up: Up), userC (Up->Down: Down) => 2 Upvotes, 1 Downvote, 8 Comments
+	if p.Upvotes != 2 {
+		t.Errorf("Expected 2 upvotes, got %d", p.Upvotes)
+	}
+	if p.Downvotes != 1 {
+		t.Errorf("Expected 1 downvote, got %d", p.Downvotes)
+	}
+	if p.NumComments != 8 {
+		t.Errorf("Expected 8 comments, got %d", p.NumComments)
+	}
+
+	// Verify votesDB integration:
+	// userA should already have Upvote recorded, so duplicate Upvote should be (0, 0)
+	up, down, err := engine.VotePost(p.ID, "userA", 1, model.VoteUp, 0, "")
+	if err != nil || up != 0 || down != 0 {
+		t.Errorf("Expected duplicate vote (0, 0), got up=%d, down=%d, err=%v", up, down, err)
+	}
+
+	// userA changing vote to Downvote should yield (-1, 1)
+	up, down, err = engine.VotePost(p.ID, "userA", 1, model.VoteDown, 0, "")
+	if err != nil || up != -1 || down != 1 {
+		t.Errorf("Expected vote change (-1, 1), got up=%d, down=%d, err=%v", up, down, err)
+	}
+}
+
+func TestLegacyManFilemodeFlags(t *testing.T) {
+	if FileHide != 0x0020 {
+		t.Fatalf("expected FileHide=0x0020, got 0x%04x", FileHide)
+	}
+	if FileBM != 0x0040 {
+		t.Fatalf("expected FileBM=0x0040, got 0x%04x", FileBM)
+	}
+
+	buf := make([]byte, FileHeaderSize)
+	copy(buf[0:28], "D.1234567890.A")
+	binary.LittleEndian.PutUint16(buf[124:126], FileBM)
+
+	hdr, err := UnpackFileHeader(buf)
+	if err != nil {
+		t.Fatalf("UnpackFileHeader failed: %v", err)
+	}
+	if (hdr.Filemode & FileBM) == 0 {
+		t.Fatalf("expected FileBM to be set, got 0x%04x", hdr.Filemode)
+	}
+	if (hdr.Filemode & (FileHide | FileBM)) == 0 {
+		t.Fatalf("expected hidden/BM check to be true")
+	}
+
+	// Normal file should not be flagged
+	binary.LittleEndian.PutUint16(buf[124:126], 0)
+	hdrNormal, _ := UnpackFileHeader(buf)
+	if (hdrNormal.Filemode & (FileHide | FileBM)) != 0 {
+		t.Fatalf("expected normal file to not be hidden/BM")
+	}
+}
+
+func TestCommentMergeFiveLinesLimit(t *testing.T) {
+	article := `作者: op (operator) 看板: TestBoard
+標題: 超過五行合併測試
+時間: Fri Nov 25 18:00:00 2016
+
+本文
+--
+※ 發信站: 批踢踢實業坊
+推 userA: 第1行                                                  11/25 18:01
+→ userA: 第2行                                                  11/25 18:01
+→ userA: 第3行                                                  11/25 18:01
+→ userA: 第4行                                                  11/25 18:01
+→ userA: 第5行 (上限)                                           11/25 18:01
+→ userA: 第6行 (不可併入前則，新起一則)                         11/25 18:01
+→ userA: 第7行 (併入第6行)                                      11/25 18:01
+`
+	baseTime := time.Date(2016, 11, 25, 18, 0, 0, 0, time.Local).Unix()
+	parsed, err := ParseArticleText([]byte(article), "op", baseTime, "TestBoard", "M.1480068000.A.005", false)
+	if err != nil {
+		t.Fatalf("ParseArticleText failed: %v", err)
+	}
+
+	if len(parsed.Comments) != 2 {
+		for i, c := range parsed.Comments {
+			t.Logf("[%d] author=%s content=%q", i, c.CreatorName, c.Content)
+		}
+		t.Fatalf("Expected 2 comments due to 5-line limit, got %d", len(parsed.Comments))
+	}
+
+	c0 := parsed.Comments[0]
+	expected0 := "第1行\n第2行\n第3行\n第4行\n第5行 (上限)"
+	if c0.Content != expected0 {
+		t.Errorf("c0 content mismatch: got %q, expected %q", c0.Content, expected0)
+	}
+	if model.CountCommentLines(c0.Content) != 5 {
+		t.Errorf("c0 line count should be 5, got %d", model.CountCommentLines(c0.Content))
+	}
+
+	c1 := parsed.Comments[1]
+	expected1 := "第6行 (不可併入前則，新起一則)\n第7行 (併入第6行)"
+	if c1.Content != expected1 {
+		t.Errorf("c1 content mismatch: got %q, expected %q", c1.Content, expected1)
+	}
+	if model.CountCommentLines(c1.Content) != 2 {
+		t.Errorf("c1 line count should be 2, got %d", model.CountCommentLines(c1.Content))
 	}
 }

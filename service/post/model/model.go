@@ -39,38 +39,36 @@ func (v VoteType) String() string {
 
 // Post represents a submission in a Community
 type Post struct {
-	ID               uint64 `json:"id"`
-	ParentID         uint64 `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
-	Community        string `json:"community"`    // Formerly Board
-	PostFile         string `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
-	Title            string `json:"title"`        // UTF-8
-	Author           string `json:"author"`       // OP username
-	AuthorToken      uint32 `json:"author_token"` // cuser.firstlogin
-	CreatedAt        int64  `json:"created_at"`
-	Modified         int64  `json:"modified"`
-	Filemode         int    `json:"filemode"`
-	Upvotes          int    `json:"upvotes"`        // Upvotes count
-	Downvotes        int    `json:"downvotes"`      // Downvotes count
-	NumComments      int    `json:"num_comments"`   // Total comments count
-	NumCrossposts    int    `json:"num_crossposts"` // Total crossposts count (shares)
-	Encoding         string `json:"encoding"`       // Always "utf-8" in DB
-	IsDeleted        bool   `json:"is_deleted,omitempty"`
-	DeletedAt        int64  `json:"deleted_at,omitempty"`
-	DeletedBy        string `json:"deleted_by,omitempty"`
-	DeleteReason     string `json:"delete_reason,omitempty"`
+	ID            uint64   `json:"id"`
+	ParentID      uint64   `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
+	Community     string   `json:"community"`    // Formerly Board
+	PostFile      string   `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
+	Title         string   `json:"title"`        // UTF-8
+	CreatorName   string   `json:"creator_name"` // shown name of the OP (a nickname for anonymous posts)
+	CreatorID     PersonID `json:"creator_id"`   // who the OP really is
+	CreatedAt     int64    `json:"created_at"`
+	Modified      int64    `json:"modified"`
+	Filemode      int      `json:"filemode"`
+	Money         int      `json:"money,omitempty"` // fileheader_t.multi.money
+	Upvotes       int      `json:"upvotes"`         // Upvotes count
+	Downvotes     int      `json:"downvotes"`       // Downvotes count
+	NumComments   int      `json:"num_comments"`    // Total comments count
+	NumCrossposts int      `json:"num_crossposts"`  // Total crossposts count (shares)
+	Encoding      string   `json:"encoding"`        // Always "utf-8" in DB
+	Deletion
 	Content          string `json:"content"`                      // UTF-8 Post Body
 	DemotedToComment bool   `json:"demoted_to_comment,omitempty"` // True if content was too short and converted to comment
 }
 
 // CrosspostRecord represents a cross-post to another community (share / 轉錄)
 type CrosspostRecord struct {
-	ID              uint64 `json:"id"`
-	SourcePostID    uint64 `json:"source_post_id"`
-	TargetCommunity string `json:"target_community"`
-	TargetPostFile  string `json:"target_post_file"`
-	Operator        string `json:"operator"`
-	OperatorToken   uint32 `json:"operator_token"`
-	CreatedAt       int64  `json:"created_at"`
+	ID              uint64   `json:"id"`
+	SourcePostID    uint64   `json:"source_post_id"`
+	TargetCommunity string   `json:"target_community"`
+	TargetPostFile  string   `json:"target_post_file"`
+	CreatorName     string   `json:"creator_name"`
+	CreatorID       PersonID `json:"creator_id"`
+	CreatedAt       int64    `json:"created_at"`
 }
 
 // NetScore calculates upvotes - downvotes
@@ -116,65 +114,106 @@ const (
 	LegacyTypeArrow        uint8 = 3 // PTT1 箭頭 (→)
 )
 
+// MaxCommentLines defines the maximum number of lines allowed per comment (consistent with COMMENT_LINES in mbbsd)
+const MaxCommentLines = 5
+
+// CountCommentLines returns the number of non-empty content lines in a comment
+func CountCommentLines(content string) int {
+	rawLines := strings.Split(content, "\n")
+	cnt := 0
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			cnt++
+		}
+	}
+	if cnt == 0 && strings.TrimSpace(content) != "" {
+		return 1
+	}
+	return cnt
+}
+
+// TruncateCommentLines limits the comment to at most maxLines non-empty lines
+func TruncateCommentLines(content string, maxLines int) string {
+	if maxLines <= 0 {
+		return content
+	}
+	rawLines := strings.Split(content, "\n")
+	var validLines []string
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			validLines = append(validLines, trimmed)
+			if len(validLines) >= maxLines {
+				break
+			}
+		}
+	}
+	return strings.Join(validLines, "\n")
+}
+
 // Comment represents a reply / discussion item (decoupled from votes)
 type Comment struct {
-	PostID       uint64 `json:"post_id"`
-	Sequence     uint32 `json:"sequence"` // 1-indexed sequential position
-	Author       string `json:"author"`
-	AuthorToken  uint32 `json:"author_token"` // cuser.firstlogin / userref
-	IP           string `json:"ip"`
-	CreatedAt    int64  `json:"created_at"`
-	IsDeleted    bool   `json:"is_deleted,omitempty"`
-	DeletedAt    int64  `json:"deleted_at,omitempty"`
-	DeletedBy    string `json:"deleted_by,omitempty"`
-	DeleteReason string `json:"delete_reason,omitempty"`
-	LegacyType   uint8  `json:"legacy_type"` // 0: OLD_RECOMMEND, 1: 推, 2: 噓, 3: 箭頭
-	Content      string `json:"content"`     // UTF-8 text
+	PostID        uint64   `json:"post_id"`
+	Sequence      uint32   `json:"sequence"` // 1-indexed sequential position
+	CreatorName   string   `json:"creator_name"`
+	CreatorID     PersonID `json:"creator_id"`
+	IP            string   `json:"ip"`
+	CreatedAt     int64    `json:"created_at"`
+	ModifiedAt    int64    `json:"modified_at,omitempty"`
+	LastCommentAt int64    `json:"last_comment_at,omitempty"`
+	Deletion
+	LegacyType uint8  `json:"legacy_type"` // 0: OLD_RECOMMEND, 1: 推, 2: 噓, 3: 箭頭
+	Content    string `json:"content"`     // UTF-8 text
+	IsMerged   bool   `json:"-"`           // Transient flag indicating comment was merged with previous
 }
 
 // VoteRecord represents a user's vote on a post (1 vote per user per post)
 type VoteRecord struct {
-	PostID      uint64   `json:"post_id"`
-	User        string   `json:"user"`
-	AuthorToken uint32   `json:"author_token"`
-	Vote        VoteType `json:"vote"` // 1 (Upvote), -1 (Downvote)
-	CreatedAt   int64    `json:"created_at"`
+	PostID     uint64   `json:"post_id"`
+	PersonName string   `json:"person_name"` // not in Lemmy, which joins person
+	PersonID   PersonID `json:"person_id"`
+	Vote       VoteType `json:"vote"` // 1 (Upvote), -1 (Downvote)
+	CreatedAt  int64    `json:"created_at"`
+	IP         string   `json:"ip,omitempty"`
 }
 
 // PostRevision represents an archived previous version of an edited post
 type PostRevision struct {
-	PostID      uint64 `json:"post_id"`
-	Revision    uint32 `json:"revision"`
-	Community   string `json:"community"`
-	PostFile    string `json:"post_file"`
-	Title       string `json:"title"`
-	Author      string `json:"author"`
-	AuthorToken uint32 `json:"author_token"`
-	CreatedAt   int64  `json:"created_at"`
-	EditedAt    int64  `json:"edited_at"`
-	Editor      string `json:"editor"`
-	Action      string `json:"action,omitempty"` // "update" or "delete"
-	Reason      string `json:"reason,omitempty"`
-	Content     string `json:"content"`
-	Encoding    string `json:"encoding"`
+	PostID      uint64   `json:"post_id"`
+	Revision    uint32   `json:"revision"`
+	Community   string   `json:"community"`
+	PostFile    string   `json:"post_file"`
+	Title       string   `json:"title"`
+	CreatorName string   `json:"creator_name"`
+	CreatorID   PersonID `json:"creator_id"`
+	CreatedAt   int64    `json:"created_at"`
+	EditedAt    int64    `json:"edited_at"`
+	EditorName  string   `json:"editor_name"` // who made this revision; Lemmy keeps no revisions
+	EditorID    PersonID `json:"editor_id"`
+	Action      string   `json:"action,omitempty"` // "update" or "delete"
+	Reason      string   `json:"reason,omitempty"`
+	Content     string   `json:"content"`
+	Encoding    string   `json:"encoding"`
 }
 
 // CommentRevision represents an archived previous version of an edited comment
 type CommentRevision struct {
-	PostID      uint64 `json:"post_id"`
-	Sequence    uint32 `json:"sequence"`
-	Revision    uint32 `json:"revision"`
-	Author      string `json:"author"`
-	AuthorToken uint32 `json:"author_token"`
-	CreatedAt   int64  `json:"created_at"`
-	EditedAt    int64  `json:"edited_at"`
-	Editor      string `json:"editor"`
-	IP          string `json:"ip"`
-	LegacyType  uint8  `json:"legacy_type"`
-	Action      string `json:"action,omitempty"` // "update" or "delete"
-	Reason      string `json:"reason,omitempty"`
-	Content     string `json:"content"`
-	Encoding    string `json:"encoding"`
+	PostID      uint64   `json:"post_id"`
+	Sequence    uint32   `json:"sequence"`
+	Revision    uint32   `json:"revision"`
+	CreatorName string   `json:"creator_name"`
+	CreatorID   PersonID `json:"creator_id"`
+	CreatedAt   int64    `json:"created_at"`
+	EditedAt    int64    `json:"edited_at"`
+	EditorName  string   `json:"editor_name"` // who made this revision; Lemmy keeps no revisions
+	EditorID    PersonID `json:"editor_id"`
+	IP          string   `json:"ip"`
+	LegacyType  uint8    `json:"legacy_type"`
+	Action      string   `json:"action,omitempty"` // "update" or "delete"
+	Reason      string   `json:"reason,omitempty"`
+	Content     string   `json:"content"`
+	Encoding    string   `json:"encoding"`
 }
 
 // ConflictError indicates an optimistic concurrency check failure when editing a post
@@ -346,6 +385,50 @@ func DecodeVoteKey(k []byte) (postID uint64, user string, err error) {
 	return postID, user, nil
 }
 
+// EncodeVoteValue encodes a vote record value:
+// Byte 0: 'U' (Upvote) or 'D' (Downvote)
+// Bytes 1..8: PersonID of the voter (uint64, BigEndian)
+// Bytes 9..16: CreatedAt (int64, BigEndian)
+// Bytes 17..: IP (UTF-8 string)
+func EncodeVoteValue(vote VoteType, personID PersonID, createdAt int64, ip string) []byte {
+	ipBytes := []byte(ip)
+	buf := make([]byte, 17+len(ipBytes))
+	if vote == VoteUp {
+		buf[0] = 'U'
+	} else if vote == VoteDown {
+		buf[0] = 'D'
+	} else {
+		buf[0] = '0'
+	}
+	binary.BigEndian.PutUint64(buf[1:9], uint64(personID))
+	binary.BigEndian.PutUint64(buf[9:17], uint64(createdAt))
+	copy(buf[17:], ipBytes)
+	return buf
+}
+
+func DecodeVoteValue(val []byte) (vote VoteType, personID PersonID, createdAt int64, ip string, err error) {
+	if len(val) == 0 {
+		return VoteNeutral, 0, 0, "", fmt.Errorf("empty vote value")
+	}
+	if val[0] == 'U' {
+		vote = VoteUp
+	} else if val[0] == 'D' {
+		vote = VoteDown
+	} else {
+		vote = VoteNeutral
+	}
+	if len(val) >= 9 {
+		personID = PersonID(binary.BigEndian.Uint64(val[1:9]))
+	}
+	if len(val) >= 17 {
+		createdAt = int64(binary.BigEndian.Uint64(val[9:17]))
+		if len(val) > 17 {
+			ip = string(val[17:])
+		}
+	}
+	return vote, personID, createdAt, ip, nil
+}
+
 // Crosspost Key: 'x' (1 byte) + 8-byte uint64 SourcePostID + 4-byte uint32 Seq = 13 bytes
 func EncodeCrosspostKey(sourcePostID uint64, seq uint32) []byte {
 	k := make([]byte, 13)
@@ -384,8 +467,8 @@ func EncodeRFC822Post(p *Post) []byte {
 	b.WriteString(fmt.Sprintf("ParentID: %d\n", p.ParentID))
 	b.WriteString(fmt.Sprintf("PostFile: %s\n", p.PostFile))
 	b.WriteString(fmt.Sprintf("Title: %s\n", p.Title))
-	b.WriteString(fmt.Sprintf("Author: %s\n", p.Author))
-	b.WriteString(fmt.Sprintf("AuthorToken: %d\n", p.AuthorToken))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", p.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorID: %d\n", p.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", p.CreatedAt))
 	m := p.Modified
 	if m == 0 {
@@ -393,22 +476,10 @@ func EncodeRFC822Post(p *Post) []byte {
 	}
 	b.WriteString(fmt.Sprintf("Modified: %d\n", m))
 	b.WriteString(fmt.Sprintf("Filemode: %d\n", p.Filemode))
-	b.WriteString(fmt.Sprintf("Upvotes: %d\n", p.Upvotes))
-	b.WriteString(fmt.Sprintf("Downvotes: %d\n", p.Downvotes))
-	b.WriteString(fmt.Sprintf("NumComments: %d\n", p.NumComments))
-	b.WriteString(fmt.Sprintf("NumCrossposts: %d\n", p.NumCrossposts))
-	if p.IsDeleted {
-		b.WriteString("Deleted: true\n")
-		if p.DeletedAt > 0 {
-			b.WriteString(fmt.Sprintf("DeletedAt: %d\n", p.DeletedAt))
-		}
-		if p.DeletedBy != "" {
-			b.WriteString(fmt.Sprintf("DeletedBy: %s\n", p.DeletedBy))
-		}
-		if p.DeleteReason != "" {
-			b.WriteString(fmt.Sprintf("DeleteReason: %s\n", p.DeleteReason))
-		}
+	if p.Money != 0 {
+		b.WriteString(fmt.Sprintf("Money: %d\n", p.Money))
 	}
+	p.Deletion.writeRFC822(&b)
 	b.WriteString("\n")
 	b.WriteString(p.Content)
 	return []byte(b.String())
@@ -436,23 +507,18 @@ func DecodeRFC822Post(val []byte) (meta map[string]string, body string) {
 func EncodeRFC822Comment(c *Comment) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
-	b.WriteString(fmt.Sprintf("Author: %s\n", c.Author))
-	b.WriteString(fmt.Sprintf("AuthorToken: %d\n", c.AuthorToken))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", c.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorID: %d\n", c.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", c.CreatedAt))
+	if c.ModifiedAt > 0 {
+		b.WriteString(fmt.Sprintf("ModifiedAt: %d\n", c.ModifiedAt))
+	}
+	if c.LastCommentAt > 0 {
+		b.WriteString(fmt.Sprintf("LastCommentAt: %d\n", c.LastCommentAt))
+	}
 	b.WriteString(fmt.Sprintf("IP: %s\n", c.IP))
 	b.WriteString(fmt.Sprintf("LegacyType: %d\n", c.LegacyType))
-	b.WriteString(fmt.Sprintf("Deleted: %t\n", c.IsDeleted))
-	if c.IsDeleted {
-		if c.DeletedAt > 0 {
-			b.WriteString(fmt.Sprintf("DeletedAt: %d\n", c.DeletedAt))
-		}
-		if c.DeletedBy != "" {
-			b.WriteString(fmt.Sprintf("DeletedBy: %s\n", c.DeletedBy))
-		}
-		if c.DeleteReason != "" {
-			b.WriteString(fmt.Sprintf("DeleteReason: %s\n", c.DeleteReason))
-		}
-	}
+	c.Deletion.writeRFC822(&b)
 	b.WriteString("\n")
 	b.WriteString(c.Content)
 	return []byte(b.String())
@@ -476,26 +542,33 @@ func DecodeRFC822Comment(postID uint64, seq uint32, val []byte) (*Comment, error
 	for _, l := range lines {
 		if k, v, ok := strings.Cut(l, ": "); ok {
 			switch k {
-			case "Author":
-				c.Author = v
-			case "AuthorToken":
-				val, _ := strconv.ParseUint(v, 10, 32)
-				c.AuthorToken = uint32(val)
+			case "CreatorName":
+				c.CreatorName = v
+			case "CreatorID":
+				c.CreatorID = ParsePersonID(v)
 			case "CreatedAt":
 				c.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
+			case "ModifiedAt":
+				c.ModifiedAt, _ = strconv.ParseInt(v, 10, 64)
+			case "LastCommentAt":
+				c.LastCommentAt, _ = strconv.ParseInt(v, 10, 64)
 			case "IP":
 				c.IP = v
 			case "LegacyType":
 				val, _ := strconv.ParseUint(v, 10, 8)
 				c.LegacyType = uint8(val)
 			case "Deleted":
-				c.IsDeleted = (v == "true")
+				c.Deleted = v == "true"
+			case "Removed":
+				c.Removed = v == "true"
 			case "DeletedAt":
 				c.DeletedAt, _ = strconv.ParseInt(v, 10, 64)
-			case "DeletedBy":
-				c.DeletedBy = v
-			case "DeleteReason":
-				c.DeleteReason = v
+			case "ModPersonName":
+				c.ModPersonName = v
+			case "ModPersonID":
+				c.ModPersonID = ParsePersonID(v)
+			case "Reason":
+				c.Reason = v
 			}
 		}
 	}
@@ -511,11 +584,12 @@ func EncodeRFC822PostRevision(r *PostRevision) []byte {
 	b.WriteString(fmt.Sprintf("Community: %s\n", r.Community))
 	b.WriteString(fmt.Sprintf("PostFile: %s\n", r.PostFile))
 	b.WriteString(fmt.Sprintf("Title: %s\n", r.Title))
-	b.WriteString(fmt.Sprintf("Author: %s\n", r.Author))
-	b.WriteString(fmt.Sprintf("AuthorToken: %d\n", r.AuthorToken))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", r.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorID: %d\n", r.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", r.CreatedAt))
 	b.WriteString(fmt.Sprintf("EditedAt: %d\n", r.EditedAt))
-	b.WriteString(fmt.Sprintf("Editor: %s\n", r.Editor))
+	b.WriteString(fmt.Sprintf("EditorName: %s\n", r.EditorName))
+	b.WriteString(fmt.Sprintf("EditorID: %d\n", r.EditorID))
 	if r.Action != "" {
 		b.WriteString(fmt.Sprintf("Action: %s\n", r.Action))
 	}
@@ -555,17 +629,18 @@ func DecodeRFC822PostRevision(val []byte) (*PostRevision, error) {
 				r.PostFile = v
 			case "Title":
 				r.Title = v
-			case "Author":
-				r.Author = v
-			case "AuthorToken":
-				val, _ := strconv.ParseUint(v, 10, 32)
-				r.AuthorToken = uint32(val)
+			case "CreatorName":
+				r.CreatorName = v
+			case "CreatorID":
+				r.CreatorID = ParsePersonID(v)
 			case "CreatedAt":
 				r.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
 			case "EditedAt":
 				r.EditedAt, _ = strconv.ParseInt(v, 10, 64)
-			case "Editor":
-				r.Editor = v
+			case "EditorName":
+				r.EditorName = v
+			case "EditorID":
+				r.EditorID = ParsePersonID(v)
 			case "Action":
 				r.Action = v
 			case "Reason":
@@ -583,11 +658,12 @@ func EncodeRFC822CommentRevision(r *CommentRevision) []byte {
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Sequence: %d\n", r.Sequence))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
-	b.WriteString(fmt.Sprintf("Author: %s\n", r.Author))
-	b.WriteString(fmt.Sprintf("AuthorToken: %d\n", r.AuthorToken))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", r.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorID: %d\n", r.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", r.CreatedAt))
 	b.WriteString(fmt.Sprintf("EditedAt: %d\n", r.EditedAt))
-	b.WriteString(fmt.Sprintf("Editor: %s\n", r.Editor))
+	b.WriteString(fmt.Sprintf("EditorName: %s\n", r.EditorName))
+	b.WriteString(fmt.Sprintf("EditorID: %d\n", r.EditorID))
 	b.WriteString(fmt.Sprintf("IP: %s\n", r.IP))
 	b.WriteString(fmt.Sprintf("LegacyType: %d\n", r.LegacyType))
 	if r.Action != "" {
@@ -626,17 +702,18 @@ func DecodeRFC822CommentRevision(val []byte) (*CommentRevision, error) {
 			case "Revision":
 				val, _ := strconv.ParseUint(v, 10, 32)
 				r.Revision = uint32(val)
-			case "Author":
-				r.Author = v
-			case "AuthorToken":
-				val, _ := strconv.ParseUint(v, 10, 32)
-				r.AuthorToken = uint32(val)
+			case "CreatorName":
+				r.CreatorName = v
+			case "CreatorID":
+				r.CreatorID = ParsePersonID(v)
 			case "CreatedAt":
 				r.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
 			case "EditedAt":
 				r.EditedAt, _ = strconv.ParseInt(v, 10, 64)
-			case "Editor":
-				r.Editor = v
+			case "EditorName":
+				r.EditorName = v
+			case "EditorID":
+				r.EditorID = ParsePersonID(v)
 			case "IP":
 				r.IP = v
 			case "LegacyType":
@@ -659,8 +736,8 @@ func EncodeRFC822Crosspost(x *CrosspostRecord) []byte {
 	b.WriteString(fmt.Sprintf("SourcePostID: %d\n", x.SourcePostID))
 	b.WriteString(fmt.Sprintf("TargetCommunity: %s\n", x.TargetCommunity))
 	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", x.TargetPostFile))
-	b.WriteString(fmt.Sprintf("Operator: %s\n", x.Operator))
-	b.WriteString(fmt.Sprintf("OperatorToken: %d\n", x.OperatorToken))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", x.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorID: %d\n", x.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n\n", x.CreatedAt))
 	return []byte(b.String())
 }
@@ -683,11 +760,10 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 				rec.TargetCommunity = v
 			case "TargetPostFile":
 				rec.TargetPostFile = v
-			case "Operator":
-				rec.Operator = v
-			case "OperatorToken":
-				tok, _ := strconv.ParseUint(v, 10, 32)
-				rec.OperatorToken = uint32(tok)
+			case "CreatorName":
+				rec.CreatorName = v
+			case "CreatorID":
+				rec.CreatorID = ParsePersonID(v)
 			case "CreatedAt":
 				rec.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
 			}
@@ -698,6 +774,20 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 
 // RenderLegacyComment formats a Comment back into legacy BBS push line format
 func RenderLegacyComment(c *Comment) string {
+	if c.DeletedOrRemoved() {
+		cleanReason := strings.TrimSpace(c.Reason)
+		isSelf := c.Deleted || cleanReason == "自刪"
+		if isSelf {
+			if cleanReason != "" && cleanReason != "自刪" {
+				return fmt.Sprintf("\x1b[1;30m[此推文已被刪除: %s]\x1b[m\n", cleanReason)
+			}
+			return "\x1b[1;30m[此推文已被刪除]\x1b[m\n"
+		}
+		if cleanReason != "" {
+			return fmt.Sprintf("\x1b[1;30m[此推文已被隱藏: %s]\x1b[m\n", cleanReason)
+		}
+		return "\x1b[1;30m[此推文已被隱藏]\x1b[m\n"
+	}
 	t := time.Unix(c.CreatedAt, 0)
 	dateStr := t.Format("01/02 15:04")
 	var tail string
@@ -712,14 +802,14 @@ func RenderLegacyComment(c *Comment) string {
 	switch c.LegacyType {
 	case LegacyTypeOldRecommend:
 		// PTT2 OLD_RECOMMEND: → author: msg pad 推 tail
-		return fmt.Sprintf("→ %-12s: %s 推 %s", c.Author, content, dateStr)
+		return fmt.Sprintf("→ %-12s: %s 推 %s", c.CreatorName, content, dateStr)
 	case LegacyTypePush:
-		return fmt.Sprintf("推 %-12s: %s %s", c.Author, content, tail)
+		return fmt.Sprintf("推 %-12s: %s %s", c.CreatorName, content, tail)
 	case LegacyTypeBoo:
-		return fmt.Sprintf("噓 %-12s: %s %s", c.Author, content, tail)
+		return fmt.Sprintf("噓 %-12s: %s %s", c.CreatorName, content, tail)
 	case LegacyTypeArrow:
 		fallthrough
 	default:
-		return fmt.Sprintf("→ %-12s: %s %s", c.Author, content, tail)
+		return fmt.Sprintf("→ %-12s: %s %s", c.CreatorName, content, tail)
 	}
 }

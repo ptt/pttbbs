@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"pttbbs/big5uao"
 	"pttbbs/post/importer"
@@ -26,6 +27,9 @@ type ServerConfig struct {
 	UnixSocket     string // e.g. "$BBSHOME/run/post.svc.sock"
 	FilterEncoding string // "big5" (default) or "utf-8"
 	ImportWorkers  int    // Default worker threads for board import (default: 8)
+	// Users resolves the person IDs of the users named in legacy articles and
+	// .DIR (import-community, and posts imported on demand). Optional.
+	Users importer.UserResolver
 }
 
 func (c ServerConfig) IsBig5() bool {
@@ -41,6 +45,7 @@ type Server struct {
 	quit            chan struct{}
 	activeImportsMu sync.Mutex
 	activeImports   map[string]bool
+	users           importer.UserResolver
 }
 
 func NewServer(cfg ServerConfig, st storage.Storage) *Server {
@@ -56,6 +61,7 @@ func NewServer(cfg ServerConfig, st storage.Storage) *Server {
 	return &Server{
 		cfg:           cfg,
 		storage:       st,
+		users:         importer.NewCachedResolver(cfg.Users),
 		quit:          make(chan struct{}),
 		activeImports: make(map[string]bool),
 	}
@@ -191,20 +197,59 @@ func (s *Server) autoImportPost(community, postFile string) *model.Post {
 	if len(rawBytes) == 0 {
 		return nil
 	}
-	postContent := string(rawBytes)
-	if s.cfg.IsBig5() {
-		postContent = big5uao.DecodeSGR66(rawBytes)
-	}
 	t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
-	if s.cfg.IsBig5() {
+	if s.cfg.IsBig5() && !utf8.Valid([]byte(t)) {
 		t = big5uao.DecodeSGR66([]byte(t))
 	}
+	author := extractHeaderField(rawBytes, []byte("作者: "), []byte("Author: "))
+	if idx := strings.IndexByte(author, ' '); idx != -1 {
+		author = author[:idx]
+	}
+	if idx := strings.IndexByte(author, '('); idx != -1 {
+		author = strings.TrimSpace(author[:idx])
+	}
+
+	postCtime := int64(0)
+	parsed, err := importer.ParseArticleText(rawBytes, author, postCtime, community, postFile, s.cfg.IsBig5())
+	if err == nil && parsed != nil && len(parsed.Comments) > 0 {
+		comments, votes, upvotes, downvotes := importer.ConvertParsedComments(parsed.Comments, s.users)
+
+		post := &model.Post{
+			ParentID:    0,
+			Community:   community,
+			PostFile:    postFile,
+			Title:       t,
+			CreatorName: author,
+			CreatedAt:   postCtime,
+			Modified:    postCtime,
+			Upvotes:     upvotes,
+			Downvotes:   downvotes,
+			NumComments: len(comments),
+			Content:     parsed.BodyContent,
+			Encoding:    "utf-8",
+		}
+
+		item := &storage.ImportedPostData{
+			Post:     post,
+			Comments: comments,
+			Votes:    votes,
+		}
+		if err := s.storage.ImportPostBatch([]*storage.ImportedPostData{item}, ""); err == nil {
+			return post
+		}
+	}
+
+	postContent := string(rawBytes)
+	if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
+		postContent = big5uao.DecodeSGR66(rawBytes)
+	}
 	autoP := &model.Post{
-		Community: community,
-		PostFile:  postFile,
-		Title:     t,
-		Encoding:  "utf-8",
-		Content:   postContent,
+		Community:   community,
+		PostFile:    postFile,
+		Title:       t,
+		CreatorName: author,
+		Encoding:    "utf-8",
+		Content:     postContent,
 	}
 	p, _ := s.storage.CreatePost(autoP)
 	return p
@@ -273,18 +318,19 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte("PONG\n"))
 
 	case "POST_FILE":
-		// POST_FILE <community> <post_file> <author> <token> <filemode> <ctime> <title_bytes>\n<title>
-		if len(parts) < 8 {
+		// POST_FILE <community> <post_file> <creator_name> <creator_id> <filemode> <money> <ctime> <title_bytes>\n<title>
+		if len(parts) < 9 {
 			conn.Write([]byte("ERR invalid arguments for POST_FILE\n"))
 			return
 		}
 		community := parts[1]
 		postFile := parts[2]
 		author := parts[3]
-		authorToken, _ := strconv.ParseUint(parts[4], 10, 32)
+		creatorID := model.ParsePersonID(parts[4])
 		filemode, _ := strconv.Atoi(parts[5])
-		ctime, _ := strconv.ParseInt(parts[6], 10, 64)
-		titleLen, _ := strconv.Atoi(parts[7])
+		money, _ := strconv.Atoi(parts[6])
+		ctime, _ := strconv.ParseInt(parts[7], 10, 64)
+		titleLen, _ := strconv.Atoi(parts[8])
 
 		titleBytes := make([]byte, titleLen)
 		if titleLen > 0 {
@@ -301,7 +347,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 		var content string
-		if s.cfg.IsBig5() {
+		if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
 			content = big5uao.DecodeSGR66(rawBytes)
 		} else {
 			content = string(rawBytes)
@@ -309,15 +355,11 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 		var title string
 		if len(titleBytes) > 0 {
-			if s.cfg.IsBig5() {
-				title = big5uao.DecodeSGR66(titleBytes)
-			} else {
-				title = string(titleBytes)
-			}
+			title = string(titleBytes)
 		}
 		if title == "" {
 			rawTitle := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
-			if s.cfg.IsBig5() {
+			if s.cfg.IsBig5() && !utf8.Valid([]byte(rawTitle)) {
 				title = big5uao.DecodeSGR66([]byte(rawTitle))
 			} else {
 				title = rawTitle
@@ -332,9 +374,10 @@ func (s *Server) handleIPC(conn net.Conn) {
 			Community:   community,
 			PostFile:    postFile,
 			Title:       title,
-			Author:      author,
-			AuthorToken: uint32(authorToken),
+			CreatorName: author,
+			CreatorID:   creatorID,
 			Filemode:    filemode,
+			Money:       money,
 			CreatedAt:   ctime,
 			Content:     content,
 		}
@@ -346,20 +389,21 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", created.ID)))
 
 	case "POST":
-		// POST <community> <post_file> <author> <token> <filemode> <ctime> <parent_id> <title_bytes> <content_bytes>\n<title><content>
-		if len(parts) < 10 {
+		// POST <community> <post_file> <creator_name> <creator_id> <filemode> <money> <ctime> <parent_id> <title_bytes> <content_bytes>\n<title><content>
+		if len(parts) < 11 {
 			conn.Write([]byte("ERR invalid arguments for POST\n"))
 			return
 		}
 		community := parts[1]
 		postFile := parts[2]
 		author := parts[3]
-		authorToken, _ := strconv.ParseUint(parts[4], 10, 32)
+		creatorID := model.ParsePersonID(parts[4])
 		filemode, _ := strconv.Atoi(parts[5])
-		ctime, _ := strconv.ParseInt(parts[6], 10, 64)
-		parentID, _ := strconv.ParseUint(parts[7], 10, 64)
-		titleLen, _ := strconv.Atoi(parts[8])
-		contentLen, _ := strconv.Atoi(parts[9])
+		money, _ := strconv.Atoi(parts[6])
+		ctime, _ := strconv.ParseInt(parts[7], 10, 64)
+		parentID, _ := strconv.ParseUint(parts[8], 10, 64)
+		titleLen, _ := strconv.Atoi(parts[9])
+		contentLen, _ := strconv.Atoi(parts[10])
 
 		titleBytes := make([]byte, titleLen)
 		if titleLen > 0 {
@@ -380,28 +424,18 @@ func (s *Server) handleIPC(conn net.Conn) {
 			ctime = time.Now().Unix()
 		}
 
-		var postTitle string
-		if s.cfg.IsBig5() {
-			postTitle = big5uao.DecodeSGR66(titleBytes)
-		} else {
-			postTitle = string(titleBytes)
-		}
-
-		var postContent string
-		if s.cfg.IsBig5() {
-			postContent = big5uao.DecodeSGR66(contentBytes)
-		} else {
-			postContent = string(contentBytes)
-		}
+		postTitle := string(titleBytes)
+		postContent := string(contentBytes)
 
 		p := &model.Post{
 			ParentID:    parentID,
 			Community:   community,
 			PostFile:    postFile,
 			Title:       postTitle,
-			Author:      author,
-			AuthorToken: uint32(authorToken),
+			CreatorName: author,
+			CreatorID:   creatorID,
 			Filemode:    filemode,
+			Money:       money,
 			CreatedAt:   ctime,
 			Content:     postContent,
 		}
@@ -413,7 +447,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", created.ID)))
 
 	case "COMMENT":
-		// COMMENT <community> <post_file> <author> <token> <ip> <ctime> <content_bytes>\n<content>
+		// COMMENT <community> <post_file> <creator_name> <creator_id> <ip> <ctime> <content_bytes>\n<content>
 		if len(parts) < 8 {
 			conn.Write([]byte("ERR invalid arguments for COMMENT\n"))
 			return
@@ -421,7 +455,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		author := parts[3]
-		authorToken, _ := strconv.ParseUint(parts[4], 10, 32)
+		creatorID := model.ParsePersonID(parts[4])
 		ip := parts[5]
 		if ip == "-" {
 			ip = ""
@@ -438,7 +472,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
-		if err != nil {
+		if err != nil || p == nil {
 			p = s.autoImportPost(community, postFile)
 		}
 		if p == nil {
@@ -450,12 +484,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			ctime = time.Now().Unix()
 		}
 
-		var commentContent string
-		if s.cfg.IsBig5() {
-			commentContent = big5uao.DecodeSGR66(contentBytes)
-		} else {
-			commentContent = string(contentBytes)
-		}
+		commentContent := string(contentBytes)
+		commentContent = strings.ReplaceAll(commentContent, "\r\n", "\n")
+		commentContent = strings.ReplaceAll(commentContent, "\r", "\n")
 
 		var legType uint8 = model.LegacyTypeArrow
 		if len(parts) >= 9 {
@@ -466,8 +497,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 		c := &model.Comment{
 			PostID:      p.ID,
-			Author:      author,
-			AuthorToken: uint32(authorToken),
+			CreatorName: author,
+			CreatorID:   creatorID,
 			IP:          ip,
 			Content:     commentContent,
 			CreatedAt:   ctime,
@@ -478,10 +509,14 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d\n", added.Sequence)))
+		if added.IsMerged {
+			conn.Write([]byte(fmt.Sprintf("OK %d %d %d MERGED\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes)))
+		} else {
+			conn.Write([]byte(fmt.Sprintf("OK %d %d %d\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes)))
+		}
 
 	case "VOTE_FILE":
-		// VOTE_FILE <community> <post_file> <author> <token> <vote>\n
+		// VOTE_FILE <community> <post_file> <person_name> <person_id> <vote> [ip] [ctime]\n
 		if len(parts) < 6 {
 			conn.Write([]byte("ERR invalid arguments for VOTE_FILE\n"))
 			return
@@ -489,11 +524,25 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		author := parts[3]
-		authorToken, _ := strconv.ParseUint(parts[4], 10, 32)
+		creatorID := model.ParsePersonID(parts[4])
 		voteVal, _ := strconv.Atoi(parts[5])
+		var ip string
+		var ctime int64
+		if len(parts) >= 7 {
+			ip = parts[6]
+			if ip == "-" {
+				ip = ""
+			}
+		}
+		if len(parts) >= 8 {
+			ctime, _ = strconv.ParseInt(parts[7], 10, 64)
+		}
+		if ctime == 0 {
+			ctime = time.Now().Unix()
+		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
-		if err != nil {
+		if err != nil || p == nil {
 			p = s.autoImportPost(community, postFile)
 		}
 		if p == nil {
@@ -501,7 +550,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 
-		upDelta, downDelta, err := s.storage.VotePost(p.ID, author, uint32(authorToken), model.VoteType(voteVal))
+		upDelta, downDelta, err := s.storage.VotePost(p.ID, author, creatorID, model.VoteType(voteVal), ctime, ip)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -509,33 +558,53 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", upDelta, downDelta)))
 
 	case "VOTE":
-		// VOTE <community> <post_id> <author> <token> <vote>\n
-		// or: VOTE <post_id> <author> <token> <vote>\n
-		// (Also supports legacy VOTE <community> <post_file> <author> <token> <vote>)
+		// VOTE <community> <post_id> <person_name> <person_id> <vote> [ip] [ctime]\n
+		// or: VOTE <post_id> <person_name> <person_id> <vote> [ip] [ctime]\n
+		// (Also supports legacy VOTE <community> <post_file> <person_name> <person_id> <vote> [ip] [ctime])
 		if len(parts) < 5 {
 			conn.Write([]byte("ERR invalid arguments for VOTE\n"))
 			return
 		}
 		var postID uint64
 		var author string
-		var authorToken uint64
+		var creatorID model.PersonID
 		var voteVal int
+		var ip string
+		var ctime int64
 
 		if len(parts) >= 6 {
 			id, err := strconv.ParseUint(parts[2], 10, 64)
 			if err == nil {
-				// VOTE <community> <post_id> <author> <token> <vote>
+				// VOTE <community> <post_id> <person_name> <person_id> <vote> [ip] [ctime]
 				postID = id
 				author = parts[3]
-				authorToken, _ = strconv.ParseUint(parts[4], 10, 32)
+				creatorID = model.ParsePersonID(parts[4])
 				voteVal, _ = strconv.Atoi(parts[5])
+				if len(parts) >= 7 {
+					ip = parts[6]
+					if ip == "-" {
+						ip = ""
+					}
+				}
+				if len(parts) >= 8 {
+					ctime, _ = strconv.ParseInt(parts[7], 10, 64)
+				}
 			} else {
-				// Legacy: VOTE <community> <post_file> <author> <token> <vote>
+				// Legacy: VOTE <community> <post_file> <person_name> <person_id> <vote> [ip] [ctime]
 				community := parts[1]
 				postFile := parts[2]
 				author = parts[3]
-				authorToken, _ = strconv.ParseUint(parts[4], 10, 32)
+				creatorID = model.ParsePersonID(parts[4])
 				voteVal, _ = strconv.Atoi(parts[5])
+				if len(parts) >= 7 {
+					ip = parts[6]
+					if ip == "-" {
+						ip = ""
+					}
+				}
+				if len(parts) >= 8 {
+					ctime, _ = strconv.ParseInt(parts[7], 10, 64)
+				}
 
 				p, gErr := s.storage.GetPostByCommunityFile(community, postFile)
 				if gErr != nil {
@@ -548,7 +617,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 				postID = p.ID
 			}
 		} else {
-			// VOTE <post_id> <author> <token> <vote>
+			// VOTE <post_id> <person_name> <person_id> <vote>
 			id, err := strconv.ParseUint(parts[1], 10, 64)
 			if err != nil {
 				conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
@@ -556,16 +625,74 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 			postID = id
 			author = parts[2]
-			authorToken, _ = strconv.ParseUint(parts[3], 10, 32)
+			creatorID = model.ParsePersonID(parts[3])
 			voteVal, _ = strconv.Atoi(parts[4])
 		}
+		if ctime == 0 {
+			ctime = time.Now().Unix()
+		}
 
-		upDelta, downDelta, err := s.storage.VotePost(postID, author, uint32(authorToken), model.VoteType(voteVal))
+		upDelta, downDelta, err := s.storage.VotePost(postID, author, creatorID, model.VoteType(voteVal), ctime, ip)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
 		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", upDelta, downDelta)))
+
+	case "VOTES":
+		// VOTES <post_id>
+		if len(parts) < 2 {
+			conn.Write([]byte("ERR invalid arguments for VOTES\n"))
+			return
+		}
+		postID, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			conn.Write([]byte("ERR invalid post_id for VOTES\n"))
+			return
+		}
+		votes, err := s.storage.GetVotes(postID)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		var buf bytes.Buffer
+		buf.WriteString(fmt.Sprintf("OK %d\n", len(votes)))
+		for _, v := range votes {
+			buf.WriteString(fmt.Sprintf("%s\t%d\t%d\t%d\t%s\n",
+				v.PersonName, v.PersonID, v.Vote, v.CreatedAt, v.IP))
+		}
+		conn.Write(buf.Bytes())
+
+	case "VOTES_FILE":
+		// VOTES_FILE <community> <post_file>
+		if len(parts) < 3 {
+			conn.Write([]byte("ERR invalid arguments for VOTES_FILE\n"))
+			return
+		}
+		votes, err := s.storage.GetVotesByCommunityFile(parts[1], parts[2])
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		var buf bytes.Buffer
+		buf.WriteString(fmt.Sprintf("OK %d\n", len(votes)))
+		for _, v := range votes {
+			buf.WriteString(fmt.Sprintf("%s\t%d\t%d\t%d\t%s\n",
+				v.PersonName, v.PersonID, v.Vote, v.CreatedAt, v.IP))
+		}
+		conn.Write(buf.Bytes())
+
+	case "RESET_VOTES_FILE":
+		// RESET_VOTES_FILE <community> <post_file>\n
+		if len(parts) < 3 {
+			conn.Write([]byte("ERR invalid arguments for RESET_VOTES_FILE\n"))
+			return
+		}
+		if err := s.storage.ResetVotesByCommunityFile(parts[1], parts[2]); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte("OK\n"))
 
 	case "GET_POST":
 		// GET_POST <community> <post_file>\n
@@ -581,7 +708,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		titleB := []byte(p.Title)
 		contentB := []byte(p.Content)
 		conn.Write([]byte(fmt.Sprintf("OK %d %d %s %s %s %d %d %d %d %d %d %d %d\n",
-			p.ID, p.ParentID, p.Community, p.PostFile, p.Author, p.AuthorToken,
+			p.ID, p.ParentID, p.Community, p.PostFile, p.CreatorName, p.CreatorID,
 			p.CreatedAt, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments,
 			len(titleB), len(contentB))))
 		conn.Write(titleB)
@@ -602,7 +729,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		titleB := []byte(p.Title)
 		contentB := []byte(p.Content)
 		conn.Write([]byte(fmt.Sprintf("OK %d %d %s %s %s %d %d %d %d %d %d %d %d\n",
-			p.ID, p.ParentID, p.Community, p.PostFile, p.Author, p.AuthorToken,
+			p.ID, p.ParentID, p.Community, p.PostFile, p.CreatorName, p.CreatorID,
 			p.CreatedAt, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments,
 			len(titleB), len(contentB))))
 		conn.Write(titleB)
@@ -687,7 +814,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		for _, p := range posts {
 			cleanTitle := strings.ReplaceAll(strings.TrimRight(p.Title, "\r\n"), "\t", " ")
 			buf.WriteString(fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\n",
-				p.ID, p.PostFile, p.Author, p.CreatedAt, p.Filemode,
+				p.ID, p.PostFile, p.CreatorName, p.CreatedAt, p.Filemode,
 				p.Upvotes, p.Downvotes, p.NumComments, p.ParentID, cleanTitle))
 		}
 		conn.Write(buf.Bytes())
@@ -810,6 +937,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			CommentdDB:   commentdDB,
 			LegacyFormat: legacyFormat,
 			DryRun:       dryRun,
+			Users:        s.users,
 			ProgressFn: func(current, total int) {
 				if time.Since(lastProgress) >= 100*time.Millisecond || current == total {
 					lastProgress = time.Now()
@@ -828,8 +956,59 @@ func (s *Server) handleIPC(conn net.Conn) {
 		for _, errStr := range stats.ErrorDetails {
 			conn.Write([]byte(fmt.Sprintf("ERR_DETAIL %s\n", errStr)))
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %.2f\n",
-			stats.PostsImported, stats.CommentsImported, stats.CrosspostsLogged, stats.Errors, stats.Elapsed.Seconds())))
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %.2f %d %d\n",
+			stats.PostsImported, stats.CommentsImported, stats.CrosspostsLogged, stats.Errors, stats.Elapsed.Seconds(),
+			stats.DeletedImported, stats.DeletedMarked)))
+
+	case "SET_META_FILE":
+		// SET_META_FILE <community> <post_file> <filemode> <money>
+		if len(parts) < 5 {
+			conn.Write([]byte("ERR invalid arguments for SET_META_FILE\n"))
+			return
+		}
+		filemode, _ := strconv.Atoi(parts[3])
+		money, _ := strconv.Atoi(parts[4])
+		if err := s.storage.SetPostMeta(parts[1], parts[2], filemode, money); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte("OK\n"))
+
+	case "SYNC_DIR":
+		// SYNC_DIR <community> [dryrun:0|1] [modes: comma separated full,prune,add-missing, or -]
+		if len(parts) < 2 {
+			conn.Write([]byte("ERR invalid arguments for SYNC_DIR\n"))
+			return
+		}
+		opts := importer.SyncDirOptions{
+			BBSHome: s.cfg.BBSHome,
+			Board:   parts[1],
+			IsBig5:  s.cfg.IsBig5(),
+			DryRun:  len(parts) >= 3 && (parts[2] == "1" || strings.ToLower(parts[2]) == "true" || strings.ToLower(parts[2]) == "dryrun"),
+		}
+		if len(parts) >= 4 && parts[3] != "-" {
+			for _, mode := range strings.Split(parts[3], ",") {
+				switch mode {
+				case "full":
+					opts.Full = true
+				case "prune":
+					opts.Prune = true
+				case "add-missing":
+					opts.AddMissing = true
+				case "only-scores", "":
+				default:
+					conn.Write([]byte(fmt.Sprintf("ERR unknown SYNC_DIR mode: %s\n", mode)))
+					return
+				}
+			}
+		}
+		stats, err := importer.SyncDir(s.storage, opts)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d %d\n",
+			stats.Records, stats.Matched, stats.Updated, stats.Pruned, stats.Added, stats.AddedNoFile)))
 
 	case "RENDER_FILE":
 		// RENDER_FILE <community> <post_file> <output_path> [format]
@@ -840,6 +1019,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		outputPath := parts[3]
+		if outputPath != "-" && outputPath != "" && !filepath.IsAbs(outputPath) {
+			outputPath = filepath.Join(s.cfg.BBSHome, outputPath)
+		}
 		legacy := false
 		if len(parts) >= 5 && (strings.ToLower(parts[4]) == "legacy" || parts[4] == "1") {
 			legacy = true
@@ -891,7 +1073,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d %.2f\n", totalRendered, time.Since(startTime).Seconds())))
 
 	case "FETCH_POST_FILE", "PULL_POST_FILE":
-		// FETCH_POST_FILE <community> <post_file> <target_path>
+		// FETCH_POST_FILE <community> <post_file> <target_path> [source_path]
 		if len(parts) < 4 {
 			conn.Write([]byte("ERR invalid arguments for FETCH_POST_FILE\n"))
 			return
@@ -899,10 +1081,44 @@ func (s *Server) handleIPC(conn net.Conn) {
 		community := parts[1]
 		postFile := parts[2]
 		targetPath := parts[3]
+		sourcePath := ""
+		if len(parts) >= 5 && parts[4] != "-" && parts[4] != "" {
+			sourcePath = parts[4]
+		}
+
+		if !filepath.IsAbs(targetPath) {
+			targetPath = filepath.Join(s.cfg.BBSHome, targetPath)
+		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
 		if err != nil || p == nil {
-			p = s.autoImportPost(community, postFile)
+			if sourcePath != "" {
+				srcAbs := sourcePath
+				if !filepath.IsAbs(srcAbs) {
+					srcAbs = filepath.Join(s.cfg.BBSHome, srcAbs)
+				}
+				if rawBytes, rErr := os.ReadFile(srcAbs); rErr == nil && len(rawBytes) > 0 {
+					postContent := string(rawBytes)
+					if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
+						postContent = big5uao.DecodeSGR66(rawBytes)
+					}
+					t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
+					if s.cfg.IsBig5() && !utf8.Valid([]byte(t)) {
+						t = big5uao.DecodeSGR66([]byte(t))
+					}
+					autoP := &model.Post{
+						Community: community,
+						PostFile:  postFile,
+						Title:     t,
+						Encoding:  "utf-8",
+						Content:   postContent,
+					}
+					p, _ = s.storage.CreatePost(autoP)
+				}
+			}
+			if p == nil {
+				p = s.autoImportPost(community, postFile)
+			}
 		}
 		if p == nil {
 			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
@@ -913,7 +1129,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		if content == "" && p.PostFile != "" && p.PostFile != "-" {
 			rawBytes := s.readDiskPostFile(community, postFile)
 			if len(rawBytes) > 0 {
-				if s.cfg.IsBig5() {
+				if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
 					content = big5uao.DecodeSGR66(rawBytes)
 				} else {
 					content = string(rawBytes)
@@ -959,8 +1175,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 	case "UPDATE_POST", "EDIT_POST":
-		// UPDATE_POST <post_id> <editor> [<expected_modified>] <title_bytes> <content_bytes>\n<title><content>
-		if len(parts) < 5 {
+		// UPDATE_POST <post_id> <editor_name> <editor_id> [<expected_modified>] <title_bytes> <content_bytes>\n<title><content>
+		if len(parts) < 6 {
 			conn.Write([]byte("ERR invalid arguments for UPDATE_POST\n"))
 			return
 		}
@@ -970,70 +1186,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		editor := parts[2]
-		var expectedModified int64
-		var titleLen, contentLen int
-		if len(parts) >= 6 {
-			expectedModified, _ = strconv.ParseInt(parts[3], 10, 64)
-			titleLen, _ = strconv.Atoi(parts[4])
-			contentLen, _ = strconv.Atoi(parts[5])
-		} else {
-			titleLen, _ = strconv.Atoi(parts[3])
-			contentLen, _ = strconv.Atoi(parts[4])
-		}
-
-		titleBytes := make([]byte, titleLen)
-		if titleLen > 0 {
-			if _, err := io.ReadFull(reader, titleBytes); err != nil {
-				conn.Write([]byte(fmt.Sprintf("ERR read title failed: %v\n", err)))
-				return
-			}
-		}
-		contentBytes := make([]byte, contentLen)
-		if contentLen > 0 {
-			if _, err := io.ReadFull(reader, contentBytes); err != nil {
-				conn.Write([]byte(fmt.Sprintf("ERR read content failed: %v\n", err)))
-				return
-			}
-		}
-
-		var newTitle string
-		if s.cfg.IsBig5() {
-			newTitle = big5uao.DecodeSGR66(titleBytes)
-		} else {
-			newTitle = string(titleBytes)
-		}
-
-		var newContent string
-		if s.cfg.IsBig5() {
-			newContent = big5uao.DecodeSGR66(contentBytes)
-		} else {
-			newContent = string(contentBytes)
-		}
-
-		rev, newModified, err := s.storage.UpdatePost(postID, newTitle, newContent, editor, expectedModified)
-		if err != nil {
-			if cErr, ok := err.(*model.ConflictError); ok {
-				conn.Write([]byte(fmt.Sprintf("ERR CONFLICT %d\n", cErr.LatestModified)))
-				return
-			}
-			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
-			return
-		}
-		if rev == 0 {
-			conn.Write([]byte(fmt.Sprintf("OK 0 NO_CHANGE %d\n", newModified)))
-		} else {
-			conn.Write([]byte(fmt.Sprintf("OK %d %d\n", rev, newModified)))
-		}
-
-	case "UPDATE_POST_FILE", "EDIT_POST_FILE":
-		// UPDATE_POST_FILE <community> <post_file> <editor> [<expected_modified>] <title_bytes> <content_bytes>\n<title><content>
-		if len(parts) < 6 {
-			conn.Write([]byte("ERR invalid arguments for UPDATE_POST_FILE\n"))
-			return
-		}
-		community := parts[1]
-		postFile := parts[2]
-		editor := parts[3]
+		editorID := model.ParsePersonID(parts[3])
 		var expectedModified int64
 		var titleLen, contentLen int
 		if len(parts) >= 7 {
@@ -1060,21 +1213,66 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 		}
 
-		var newTitle string
-		if s.cfg.IsBig5() {
-			newTitle = big5uao.DecodeSGR66(titleBytes)
+		newTitle := string(titleBytes)
+		newContent := string(contentBytes)
+		newContent = strings.ReplaceAll(newContent, "\r\n", "\n")
+		newContent = strings.ReplaceAll(newContent, "\r", "\n")
+
+		rev, newModified, err := s.storage.UpdatePost(postID, newTitle, newContent, editor, editorID, expectedModified)
+		if err != nil {
+			if cErr, ok := err.(*model.ConflictError); ok {
+				conn.Write([]byte(fmt.Sprintf("ERR CONFLICT %d\n", cErr.LatestModified)))
+				return
+			}
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		if rev == 0 {
+			conn.Write([]byte(fmt.Sprintf("OK 0 NO_CHANGE %d\n", newModified)))
 		} else {
-			newTitle = string(titleBytes)
+			conn.Write([]byte(fmt.Sprintf("OK %d %d\n", rev, newModified)))
 		}
 
-		var newContent string
-		if s.cfg.IsBig5() {
-			newContent = big5uao.DecodeSGR66(contentBytes)
+	case "UPDATE_POST_FILE", "EDIT_POST_FILE":
+		// UPDATE_POST_FILE <community> <post_file> <editor_name> <editor_id> [<expected_modified>] <title_bytes> <content_bytes>\n<title><content>
+		if len(parts) < 7 {
+			conn.Write([]byte("ERR invalid arguments for UPDATE_POST_FILE\n"))
+			return
+		}
+		community := parts[1]
+		postFile := parts[2]
+		editor := parts[3]
+		editorID := model.ParsePersonID(parts[4])
+		var expectedModified int64
+		var titleLen, contentLen int
+		if len(parts) >= 8 {
+			expectedModified, _ = strconv.ParseInt(parts[5], 10, 64)
+			titleLen, _ = strconv.Atoi(parts[6])
+			contentLen, _ = strconv.Atoi(parts[7])
 		} else {
-			newContent = string(contentBytes)
+			titleLen, _ = strconv.Atoi(parts[5])
+			contentLen, _ = strconv.Atoi(parts[6])
 		}
 
-		rev, newModified, err := s.storage.UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor, expectedModified)
+		titleBytes := make([]byte, titleLen)
+		if titleLen > 0 {
+			if _, err := io.ReadFull(reader, titleBytes); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR read title failed: %v\n", err)))
+				return
+			}
+		}
+		contentBytes := make([]byte, contentLen)
+		if contentLen > 0 {
+			if _, err := io.ReadFull(reader, contentBytes); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR read content failed: %v\n", err)))
+				return
+			}
+		}
+
+		newTitle := string(titleBytes)
+		newContent := string(contentBytes)
+
+		rev, newModified, err := s.storage.UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor, editorID, expectedModified)
 		if err != nil {
 			if cErr, ok := err.(*model.ConflictError); ok {
 				conn.Write([]byte(fmt.Sprintf("ERR CONFLICT %d\n", cErr.LatestModified)))
@@ -1090,8 +1288,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 	case "UPDATE_POST_TITLE":
-		// UPDATE_POST_TITLE <post_id> <editor> <title_bytes>\n<title>
-		if len(parts) < 4 {
+		// UPDATE_POST_TITLE <post_id> <editor_name> <editor_id> <title_bytes>\n<title>
+		if len(parts) < 5 {
 			conn.Write([]byte("ERR invalid arguments for UPDATE_POST_TITLE\n"))
 			return
 		}
@@ -1101,36 +1299,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		editor := parts[2]
-		titleLen, _ := strconv.Atoi(parts[3])
-		titleBytes := make([]byte, titleLen)
-		if titleLen > 0 {
-			if _, err := io.ReadFull(reader, titleBytes); err != nil {
-				conn.Write([]byte(fmt.Sprintf("ERR read title failed: %v\n", err)))
-				return
-			}
-		}
-		var newTitle string
-		if s.cfg.IsBig5() {
-			newTitle = big5uao.Decode(titleBytes)
-		} else {
-			newTitle = string(titleBytes)
-		}
-		rev, err := s.storage.UpdatePostTitle(postID, newTitle, editor)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
-			return
-		}
-		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
-
-	case "UPDATE_POST_TITLE_FILE":
-		// UPDATE_POST_TITLE_FILE <community> <post_file> <editor> <title_bytes>\n<title>
-		if len(parts) < 5 {
-			conn.Write([]byte("ERR invalid arguments for UPDATE_POST_TITLE_FILE\n"))
-			return
-		}
-		community := parts[1]
-		postFile := parts[2]
-		editor := parts[3]
+		editorID := model.ParsePersonID(parts[3])
 		titleLen, _ := strconv.Atoi(parts[4])
 		titleBytes := make([]byte, titleLen)
 		if titleLen > 0 {
@@ -1139,13 +1308,34 @@ func (s *Server) handleIPC(conn net.Conn) {
 				return
 			}
 		}
-		var newTitle string
-		if s.cfg.IsBig5() {
-			newTitle = big5uao.Decode(titleBytes)
-		} else {
-			newTitle = string(titleBytes)
+		newTitle := string(titleBytes)
+		rev, err := s.storage.UpdatePostTitle(postID, newTitle, editor, editorID)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
 		}
-		rev, err := s.storage.UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor)
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
+
+	case "UPDATE_POST_TITLE_FILE":
+		// UPDATE_POST_TITLE_FILE <community> <post_file> <editor_name> <editor_id> <title_bytes>\n<title>
+		if len(parts) < 6 {
+			conn.Write([]byte("ERR invalid arguments for UPDATE_POST_TITLE_FILE\n"))
+			return
+		}
+		community := parts[1]
+		postFile := parts[2]
+		editor := parts[3]
+		editorID := model.ParsePersonID(parts[4])
+		titleLen, _ := strconv.Atoi(parts[5])
+		titleBytes := make([]byte, titleLen)
+		if titleLen > 0 {
+			if _, err := io.ReadFull(reader, titleBytes); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR read title failed: %v\n", err)))
+				return
+			}
+		}
+		newTitle := string(titleBytes)
+		rev, err := s.storage.UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor, editorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1153,8 +1343,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
 	case "UPDATE_COMMENT", "EDIT_COMMENT":
-		// UPDATE_COMMENT <post_id> <seq> <editor> <content_bytes>\n<content>
-		if len(parts) < 5 {
+		// UPDATE_COMMENT <post_id> <seq> <editor_name> <editor_id> <content_bytes>\n<content>
+		if len(parts) < 6 {
 			conn.Write([]byte("ERR invalid arguments for UPDATE_COMMENT\n"))
 			return
 		}
@@ -1165,7 +1355,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		seqVal, _ := strconv.ParseUint(parts[2], 10, 32)
 		editor := parts[3]
-		contentLen, _ := strconv.Atoi(parts[4])
+		editorID := model.ParsePersonID(parts[4])
+		contentLen, _ := strconv.Atoi(parts[5])
 
 		contentBytes := make([]byte, contentLen)
 		if contentLen > 0 {
@@ -1175,14 +1366,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 		}
 
-		var newContent string
-		if s.cfg.IsBig5() {
-			newContent = big5uao.DecodeSGR66(contentBytes)
-		} else {
-			newContent = string(contentBytes)
-		}
+		newContent := string(contentBytes)
 
-		rev, err := s.storage.UpdateComment(postID, uint32(seqVal), newContent, editor)
+		rev, err := s.storage.UpdateComment(postID, uint32(seqVal), newContent, editor, editorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1194,8 +1380,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 	case "UPDATE_COMMENT_FILE", "EDIT_COMMENT_FILE":
-		// UPDATE_COMMENT_FILE <community> <post_file> <seq> <editor> <content_bytes>\n<content>
-		if len(parts) < 6 {
+		// UPDATE_COMMENT_FILE <community> <post_file> <seq> <editor_name> <editor_id> <content_bytes>\n<content>
+		if len(parts) < 7 {
 			conn.Write([]byte("ERR invalid arguments for UPDATE_COMMENT_FILE\n"))
 			return
 		}
@@ -1203,7 +1389,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		postFile := parts[2]
 		seqVal, _ := strconv.ParseUint(parts[3], 10, 32)
 		editor := parts[4]
-		contentLen, _ := strconv.Atoi(parts[5])
+		editorID := model.ParsePersonID(parts[5])
+		contentLen, _ := strconv.Atoi(parts[6])
 
 		contentBytes := make([]byte, contentLen)
 		if contentLen > 0 {
@@ -1213,14 +1400,17 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 		}
 
-		var newContent string
-		if s.cfg.IsBig5() {
-			newContent = big5uao.DecodeSGR66(contentBytes)
-		} else {
-			newContent = string(contentBytes)
-		}
+		newContent := string(contentBytes)
 
-		rev, err := s.storage.UpdateCommentByCommunityFile(community, postFile, uint32(seqVal), newContent, editor)
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		rev, err := s.storage.UpdateComment(p.ID, uint32(seqVal), newContent, editor, editorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1275,8 +1465,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte("OK\n"))
 
 	case "DELETE_POST":
-		// DELETE_POST <post_id> <deleter> [reason...]
-		if len(parts) < 3 {
+		// DELETE_POST <post_id> <deleter_name> <deleter_id> [reason...]
+		if len(parts) < 4 {
 			conn.Write([]byte("ERR invalid arguments for DELETE_POST\n"))
 			return
 		}
@@ -1286,11 +1476,12 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		deleter := parts[2]
+		deleterID := model.ParsePersonID(parts[3])
 		reason := ""
-		if len(parts) >= 4 {
-			reason = strings.Join(parts[3:], " ")
+		if len(parts) >= 5 {
+			reason = strings.Join(parts[4:], " ")
 		}
-		rev, err := s.storage.DeletePost(postID, deleter, reason)
+		rev, err := s.storage.DeletePost(postID, deleter, deleterID, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1298,19 +1489,23 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
 	case "DELETE_POST_FILE":
-		// DELETE_POST_FILE <community> <post_file> <deleter> [reason...]
-		if len(parts) < 4 {
+		// DELETE_POST_FILE <community> <post_file> <deleter_name> <deleter_id> [reason...]
+		if len(parts) < 5 {
 			conn.Write([]byte("ERR invalid arguments for DELETE_POST_FILE\n"))
 			return
 		}
 		community := parts[1]
 		postFile := parts[2]
 		deleter := parts[3]
+		deleterID := model.ParsePersonID(parts[4])
 		reason := ""
-		if len(parts) >= 5 {
-			reason = strings.Join(parts[4:], " ")
+		if len(parts) >= 6 {
+			reason = strings.Join(parts[5:], " ")
 		}
-		rev, err := s.storage.DeletePostByCommunityFile(community, postFile, deleter, reason)
+		if !utf8.ValidString(reason) {
+			reason = big5uao.Decode([]byte(reason))
+		}
+		rev, err := s.storage.DeletePostByCommunityFile(community, postFile, deleter, deleterID, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1349,8 +1544,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte("OK\n"))
 
 	case "DELETE_COMMENT":
-		// DELETE_COMMENT <post_id> <seq> <deleter> [reason...]
-		if len(parts) < 4 {
+		// DELETE_COMMENT <post_id> <seq> <deleter_name> <deleter_id> [reason...]
+		if len(parts) < 5 {
 			conn.Write([]byte("ERR invalid arguments for DELETE_COMMENT\n"))
 			return
 		}
@@ -1365,11 +1560,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		deleter := parts[3]
+		deleterID := model.ParsePersonID(parts[4])
 		reason := ""
-		if len(parts) >= 5 {
-			reason = strings.Join(parts[4:], " ")
+		if len(parts) >= 6 {
+			reason = strings.Join(parts[5:], " ")
 		}
-		rev, err := s.storage.DeleteComment(postID, uint32(seqVal), deleter, reason)
+		if !utf8.ValidString(reason) {
+			reason = big5uao.Decode([]byte(reason))
+		}
+		rev, err := s.storage.DeleteComment(postID, uint32(seqVal), deleter, deleterID, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1377,8 +1576,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
 	case "DELETE_COMMENT_FILE":
-		// DELETE_COMMENT_FILE <community> <post_file> <seq> <deleter> [reason...]
-		if len(parts) < 5 {
+		// DELETE_COMMENT_FILE <community> <post_file> <seq> <deleter_name> <deleter_id> [reason...]
+		if len(parts) < 6 {
 			conn.Write([]byte("ERR invalid arguments for DELETE_COMMENT_FILE\n"))
 			return
 		}
@@ -1390,11 +1589,23 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		deleter := parts[4]
+		deleterID := model.ParsePersonID(parts[5])
 		reason := ""
-		if len(parts) >= 6 {
-			reason = strings.Join(parts[5:], " ")
+		if len(parts) >= 7 {
+			reason = strings.Join(parts[6:], " ")
 		}
-		rev, err := s.storage.DeleteCommentByCommunityFile(community, postFile, uint32(seqVal), deleter, reason)
+		if !utf8.ValidString(reason) {
+			reason = big5uao.Decode([]byte(reason))
+		}
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		rev, err := s.storage.DeleteComment(p.ID, uint32(seqVal), deleter, deleterID, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1436,7 +1647,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR invalid seq: %s\n", parts[3])))
 			return
 		}
-		if err := s.storage.UndeleteCommentByCommunityFile(community, postFile, uint32(seqVal)); err != nil {
+		p, err := s.storage.GetPostByCommunityFile(community, postFile)
+		if err != nil || p == nil {
+			p = s.autoImportPost(community, postFile)
+		}
+		if p == nil {
+			conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+			return
+		}
+		if err := s.storage.UndeleteComment(p.ID, uint32(seqVal)); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
@@ -1474,19 +1693,12 @@ func (s *Server) handleIPC(conn net.Conn) {
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d %d\n", len(comments), totalCount))
 		for _, c := range comments {
-			cleanContent := strings.ReplaceAll(strings.TrimRight(c.Content, "\r\n"), "\t", " ")
-			cleanReason := strings.ReplaceAll(strings.TrimRight(c.DeleteReason, "\r\n"), "\t", " ")
-			delFlag := 0
-			if c.IsDeleted {
-				delFlag = 1
-			}
-			buf.WriteString(fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
-				c.Sequence, c.Author, c.CreatedAt, c.IP, delFlag, cleanReason, cleanContent))
+			buf.WriteString(formatTSVComment(c))
 		}
 		conn.Write(buf.Bytes())
 
 	case "COMMENTS_FILE":
-		// COMMENTS_FILE <community> <post_file> [start [limit]]
+		// COMMENTS_FILE <community> <post_file> [start [limit [creator_name [creator_id]]]]
 		if len(parts) < 3 {
 			conn.Write([]byte("ERR invalid arguments for COMMENTS_FILE\n"))
 			return
@@ -1505,23 +1717,31 @@ func (s *Server) handleIPC(conn net.Conn) {
 				limit = uint32(l)
 			}
 		}
-		comments, err := s.storage.GetCommentsByCommunityFile(community, postFile, startFloor, limit)
+		author := ""
+		if len(parts) >= 6 && parts[5] != "-" {
+			author = parts[5]
+		}
+		var creatorID model.PersonID
+		if len(parts) >= 7 && parts[6] != "-" {
+			creatorID = model.ParsePersonID(parts[6])
+		}
+		p, _ := s.storage.GetPostByCommunityFile(community, postFile)
+		if p == nil {
+			_ = s.autoImportPost(community, postFile)
+		}
+		comments, err := s.storage.GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, author, creatorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
 		totalCount, _ := s.storage.GetCommentCountByCommunityFile(community, postFile)
+		if author != "" {
+			totalCount = len(comments)
+		}
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d %d\n", len(comments), totalCount))
 		for _, c := range comments {
-			cleanContent := strings.ReplaceAll(strings.TrimRight(c.Content, "\r\n"), "\t", " ")
-			cleanReason := strings.ReplaceAll(strings.TrimRight(c.DeleteReason, "\r\n"), "\t", " ")
-			delFlag := 0
-			if c.IsDeleted {
-				delFlag = 1
-			}
-			buf.WriteString(fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
-				c.Sequence, c.Author, c.CreatedAt, c.IP, delFlag, cleanReason, cleanContent))
+			buf.WriteString(formatTSVComment(c))
 		}
 		conn.Write(buf.Bytes())
 
@@ -1585,7 +1805,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
 				cleanTitle := strings.ReplaceAll(strings.TrimRight(r.Title, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanTitle))
+				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.EditorName, cleanTitle))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1597,19 +1817,22 @@ func (s *Server) handleIPC(conn net.Conn) {
 			titleB := []byte(r.Title)
 			contentB := []byte(r.Content)
 			conn.Write([]byte(fmt.Sprintf("OK %d %d %d %s %d %d\n",
-				r.PostID, r.Revision, r.EditedAt, r.Editor, len(titleB), len(contentB))))
+				r.PostID, r.Revision, r.EditedAt, r.EditorName, len(titleB), len(contentB))))
 			conn.Write(titleB)
 			conn.Write(contentB)
 		}
 
 	case "POST_HISTORY_FILE":
-		// POST_HISTORY_FILE <community> <post_file> [rev]
+		// POST_HISTORY_FILE <community> <post_file> [rev] [out_file]
 		if len(parts) < 3 {
 			conn.Write([]byte("ERR invalid arguments for POST_HISTORY_FILE\n"))
 			return
 		}
 		p, err := s.storage.GetPostByCommunityFile(parts[1], parts[2])
-		if err != nil {
+		if err != nil || p == nil {
+			p = s.autoImportPost(parts[1], parts[2])
+		}
+		if p == nil {
 			conn.Write([]byte("ERR post not found\n"))
 			return
 		}
@@ -1629,7 +1852,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
 				cleanTitle := strings.ReplaceAll(strings.TrimRight(r.Title, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanTitle))
+				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.EditorName, cleanTitle))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1640,8 +1863,32 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 			titleB := []byte(r.Title)
 			contentB := []byte(r.Content)
+			if len(parts) >= 5 && parts[4] != "-" && parts[4] != "" {
+				targetPath := parts[4]
+				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+					conn.Write([]byte(fmt.Sprintf("ERR mkdir failed: %v\n", err)))
+					return
+				}
+				fileContentB := contentB
+				if s.cfg.IsBig5() {
+					fileContentB = big5uao.Encode(r.Content)
+				}
+				tmpTarget := fmt.Sprintf("%s.tmp.%d", targetPath, os.Getpid())
+				if err := os.WriteFile(tmpTarget, fileContentB, 0644); err != nil {
+					conn.Write([]byte(fmt.Sprintf("ERR write file failed: %v\n", err)))
+					return
+				}
+				if err := os.Rename(tmpTarget, targetPath); err != nil {
+					os.Remove(tmpTarget)
+					conn.Write([]byte(fmt.Sprintf("ERR rename file failed: %v\n", err)))
+					return
+				}
+				conn.Write([]byte(fmt.Sprintf("OK %d %d %d %s %d %d\n",
+					r.PostID, r.Revision, r.EditedAt, r.EditorName, len(titleB), len(contentB))))
+				return
+			}
 			conn.Write([]byte(fmt.Sprintf("OK %d %d %d %s %d %d\n",
-				r.PostID, r.Revision, r.EditedAt, r.Editor, len(titleB), len(contentB))))
+				r.PostID, r.Revision, r.EditedAt, r.EditorName, len(titleB), len(contentB))))
 			conn.Write(titleB)
 			conn.Write(contentB)
 		}
@@ -1673,8 +1920,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			var buf bytes.Buffer
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
-				cleanContent := strings.ReplaceAll(strings.TrimRight(r.Content, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanContent))
+				buf.WriteString(formatTSVCommentRevision(r))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1685,7 +1931,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 			contentB := []byte(r.Content)
 			conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %s %d\n",
-				r.PostID, r.Sequence, r.Revision, r.EditedAt, r.Editor, len(contentB))))
+				r.PostID, r.Sequence, r.Revision, r.EditedAt, r.EditorName, len(contentB))))
 			conn.Write(contentB)
 		}
 
@@ -1696,7 +1942,10 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		p, err := s.storage.GetPostByCommunityFile(parts[1], parts[2])
-		if err != nil {
+		if err != nil || p == nil {
+			p = s.autoImportPost(parts[1], parts[2])
+		}
+		if p == nil {
 			conn.Write([]byte("ERR post not found\n"))
 			return
 		}
@@ -1716,8 +1965,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			var buf bytes.Buffer
 			buf.WriteString(fmt.Sprintf("OK %d\n", len(revs)))
 			for _, r := range revs {
-				cleanContent := strings.ReplaceAll(strings.TrimRight(r.Content, "\r\n"), "\t", " ")
-				buf.WriteString(fmt.Sprintf("%d\t%d\t%s\t%s\n", r.Revision, r.EditedAt, r.Editor, cleanContent))
+				buf.WriteString(formatTSVCommentRevision(r))
 			}
 			conn.Write(buf.Bytes())
 		} else {
@@ -1728,12 +1976,12 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 			contentB := []byte(r.Content)
 			conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %s %d\n",
-				r.PostID, r.Sequence, r.Revision, r.EditedAt, r.Editor, len(contentB))))
+				r.PostID, r.Sequence, r.Revision, r.EditedAt, r.EditorName, len(contentB))))
 			conn.Write(contentB)
 		}
 
 	case "CROSSPOST":
-		// CROSSPOST <src_community> <src_file> <target_community> <target_file> <operator> <operator_token> [ctime]
+		// CROSSPOST <src_community> <src_file> <target_community> <target_file> <creator_name> <creator_id> [ctime]
 		if len(parts) < 7 {
 			conn.Write([]byte("ERR invalid arguments for CROSSPOST\n"))
 			return
@@ -1743,13 +1991,13 @@ func (s *Server) handleIPC(conn net.Conn) {
 		targetComm := parts[3]
 		targetFile := parts[4]
 		operator := parts[5]
-		opToken, _ := strconv.ParseUint(parts[6], 10, 32)
+		creatorID := model.ParsePersonID(parts[6])
 		var ctime int64
 		if len(parts) >= 8 {
 			ctime, _ = strconv.ParseInt(parts[7], 10, 64)
 		}
 
-		rec, count, err := s.storage.AddCrosspost(srcComm, srcFile, targetComm, targetFile, operator, uint32(opToken), ctime)
+		rec, count, err := s.storage.AddCrosspost(srcComm, srcFile, targetComm, targetFile, operator, creatorID, ctime)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1770,7 +2018,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d\n", len(records)))
 		for _, r := range records {
-			buf.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\n", r.TargetCommunity, r.TargetPostFile, r.Operator, r.CreatedAt))
+			buf.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\n", r.TargetCommunity, r.TargetPostFile, r.CreatorName, r.CreatedAt))
 		}
 		conn.Write(buf.Bytes())
 
@@ -1790,9 +2038,69 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		conn.Write([]byte(fmt.Sprintf("OK %s\t%s\t%s\t%s\t%s\t%d\n",
-			srcPost.Community, srcPost.PostFile, srcPost.Author, srcPost.Title, r.Operator, r.CreatedAt)))
+			srcPost.Community, srcPost.PostFile, srcPost.CreatorName, srcPost.Title, r.CreatorName, r.CreatedAt)))
 
 	default:
 		conn.Write([]byte(fmt.Sprintf("ERR unknown command: %s\n", cmd)))
 	}
+}
+
+func formatTSVComment(c *model.Comment) string {
+	cleanReason := strings.ReplaceAll(strings.TrimRight(c.Reason, "\r\n"), "\t", " ")
+	if !utf8.ValidString(cleanReason) {
+		cleanReason = big5uao.Decode([]byte(cleanReason))
+	}
+	typeVal := int(c.LegacyType)
+	if c.DeletedOrRemoved() {
+		typeVal = -1
+	}
+
+	rawContent := strings.ReplaceAll(c.Content, "\r\n", "\n")
+	rawContent = strings.ReplaceAll(rawContent, "\r", "\n")
+	rawLines := strings.Split(rawContent, "\n")
+	var contentLines []string
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			contentLines = append(contentLines, strings.ReplaceAll(trimmed, "\t", " "))
+		}
+	}
+	contentField := strings.Join(contentLines, "\t")
+	if contentField == "" {
+		contentField = " "
+	}
+
+	return fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
+		c.Sequence, c.CreatorName, c.CreatedAt, c.IP, typeVal, cleanReason, contentField)
+}
+
+func formatTSVCommentRevision(r *model.CommentRevision) string {
+	action := r.Action
+	if action == "" {
+		action = "edit"
+	}
+	cleanReason := strings.ReplaceAll(strings.TrimRight(r.Reason, "\r\n"), "\t", " ")
+	if !utf8.ValidString(cleanReason) {
+		cleanReason = big5uao.Decode([]byte(cleanReason))
+	}
+	if cleanReason == "" {
+		cleanReason = "-"
+	}
+
+	rawContent := strings.ReplaceAll(r.Content, "\r\n", "\n")
+	rawContent = strings.ReplaceAll(rawContent, "\r", "\n")
+	rawLines := strings.Split(rawContent, "\n")
+	var contentLines []string
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			contentLines = append(contentLines, strings.ReplaceAll(trimmed, "\t", " "))
+		}
+	}
+	contentField := strings.Join(contentLines, "\t")
+	if contentField == "" {
+		contentField = " "
+	}
+	return fmt.Sprintf("%d\t%d\t%s\t%s\t%s\t%s\n",
+		r.Revision, r.EditedAt, r.EditorName, action, cleanReason, contentField)
 }

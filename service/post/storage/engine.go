@@ -3,7 +3,7 @@ package storage
 import (
 	"bytes"
 	"database/sql"
-	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/cockroachdb/pebble"
 	"golang.org/x/sys/unix"
@@ -227,8 +228,8 @@ func initSQLiteSchema(db *sql.DB) error {
 		community TEXT NOT NULL,
 		post_file TEXT NOT NULL,
 		title TEXT NOT NULL,
-		author TEXT NOT NULL,
-		author_token INTEGER NOT NULL DEFAULT 0,
+		creator_name TEXT NOT NULL,
+		creator_id INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL,
 		modified INTEGER NOT NULL DEFAULT 0,
 		filemode INTEGER DEFAULT 0,
@@ -237,15 +238,18 @@ func initSQLiteSchema(db *sql.DB) error {
 		num_comments INTEGER DEFAULT 0,
 		num_crossposts INTEGER DEFAULT 0,
 		encoding TEXT DEFAULT 'utf-8',
-		is_deleted INTEGER DEFAULT 0,
+		deleted INTEGER DEFAULT 0,
+		removed INTEGER DEFAULT 0,
 		deleted_at INTEGER DEFAULT 0,
-		deleted_by TEXT DEFAULT '',
-		delete_reason TEXT DEFAULT ''
+		mod_person_name TEXT DEFAULT '',
+		mod_person_id INTEGER DEFAULT 0,
+		reason TEXT DEFAULT '',
+		money INTEGER DEFAULT 0
 	);
 	CREATE INDEX IF NOT EXISTS idx_posts_comm_id ON posts(community, id DESC);
-	CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community, is_deleted, id DESC);
+	CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community, deleted, removed, id DESC);
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_comm_file ON posts(community, post_file);
-	CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author);
+	CREATE INDEX IF NOT EXISTS idx_posts_creator ON posts(creator_name);
 	CREATE INDEX IF NOT EXISTS idx_posts_parent_id ON posts(parent_id);
 
 	CREATE TABLE IF NOT EXISTS crossposts (
@@ -253,8 +257,8 @@ func initSQLiteSchema(db *sql.DB) error {
 		source_post_id INTEGER NOT NULL,
 		target_community TEXT NOT NULL,
 		target_post_file TEXT NOT NULL,
-		operator TEXT NOT NULL,
-		operator_token INTEGER NOT NULL DEFAULT 0,
+		creator_name TEXT NOT NULL,
+		creator_id INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_source ON crossposts(source_post_id);
@@ -263,14 +267,6 @@ func initSQLiteSchema(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	// Migration for existing databases
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN num_crossposts INTEGER DEFAULT 0")
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN modified INTEGER DEFAULT 0")
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN is_deleted INTEGER DEFAULT 0")
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN deleted_at INTEGER DEFAULT 0")
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN deleted_by TEXT DEFAULT ''")
-	_, _ = db.Exec("ALTER TABLE posts ADD COLUMN delete_reason TEXT DEFAULT ''")
-	_, _ = db.Exec("CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community, is_deleted, id DESC)")
 	return nil
 }
 
@@ -315,10 +311,10 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		netText := model.ExtractNetNewContent(p.Content)
 		if len([]rune(netText)) < e.cfg.MinReplyRunes {
 			comment := &model.Comment{
-				PostID:    p.ParentID,
-				Author:    p.Author,
-				Content:   netText,
-				CreatedAt: p.CreatedAt,
+				PostID:      p.ParentID,
+				CreatorName: p.CreatorName,
+				Content:     netText,
+				CreatedAt:   p.CreatedAt,
 			}
 			if len(comment.Content) == 0 {
 				comment.Content = "(回文無實質內容)"
@@ -334,6 +330,18 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		}
 	}
 
+	// Check if post already exists in SQLite
+	if p.ID == 0 && p.Community != "" && p.PostFile != "" {
+		var existingID uint64
+		err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community = ? AND post_file = ?`, p.Community, p.PostFile).Scan(&existingID)
+		if err == nil && existingID > 0 {
+			p.ID = existingID
+			key := model.EncodePostKey(p.ID)
+			_ = e.postsDB.Set(key, model.EncodeRFC822Post(p), pebble.NoSync)
+			return p, nil
+		}
+	}
+
 	// 1. Insert into SQLite to get unique ID if not provided
 	if p.ID == 0 {
 		if e.cfg.NumShards > 1 {
@@ -341,9 +349,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 			p.ID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
 			e.metaWriteMu.Lock()
 			_, err := e.metaDB.Exec(`
-				INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
+				INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 			e.metaWriteMu.Unlock()
 			if err != nil {
 				return nil, fmt.Errorf("insert sqlite post with shard id failed: %w", err)
@@ -351,9 +359,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		} else {
 			e.metaWriteMu.Lock()
 			res, err := e.metaDB.Exec(`
-				INSERT INTO posts (parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
+				INSERT INTO posts (parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 			if err != nil {
 				e.metaWriteMu.Unlock()
 				return nil, fmt.Errorf("insert sqlite post failed: %w", err)
@@ -368,9 +376,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	} else {
 		e.metaWriteMu.Lock()
 		_, err := e.metaDB.Exec(`
-			INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding)
+			INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 		e.metaWriteMu.Unlock()
 		if err != nil {
 			return nil, fmt.Errorf("insert sqlite post with explicit id failed: %w", err)
@@ -384,7 +392,8 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		return nil, fmt.Errorf("write pebble post failed: %w", err)
 	}
 
-	// 3. Update local Cache File
+	// 3. Render and save canonical BBS file (and cache file)
+	_ = e.RenderAndSave(p)
 	_ = e.WritePostCache(p)
 
 	return p, nil
@@ -392,45 +401,43 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 
 func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	var p model.Post
-	var isDeleted int
-	var deletedAt int64
-	var deletedBy, deleteReason string
 	err := e.metaDB.QueryRow(`
-		SELECT id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason
+		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts WHERE id = ?
-	`, postID).Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.Author, &p.AuthorToken, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &isDeleted, &deletedAt, &deletedBy, &deleteReason)
+	`, postID).Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money)
 	if err != nil {
 		return nil, err
 	}
 	if p.Modified == 0 {
 		p.Modified = p.CreatedAt
 	}
-	p.IsDeleted = (isDeleted != 0)
-	p.DeletedAt = deletedAt
-	p.DeletedBy = deletedBy
-	p.DeleteReason = deleteReason
 
 	// Read content from Pebble
 	key := model.EncodePostKey(postID)
 	val, closer, err := e.postsDB.Get(key)
 	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			boardPath := e.BoardFilePath(&p)
+			if boardPath != "" {
+				if rawBytes, errR := os.ReadFile(boardPath); errR == nil && len(rawBytes) > 0 {
+					body := string(rawBytes)
+					if e.cfg.IsBig5() && !utf8.Valid(rawBytes) {
+						body = big5uao.DecodeSGR66(rawBytes)
+					}
+					p.Content = body
+					_ = e.postsDB.Set(key, model.EncodeRFC822Post(&p), pebble.NoSync)
+					return &p, nil
+				}
+			}
+		}
 		return nil, fmt.Errorf("get pebble post %d: %w", postID, err)
 	}
 	defer closer.Close()
 
 	meta, body := model.DecodeRFC822Post(val)
 	p.Content = body
-	if meta["Deleted"] == "true" {
-		p.IsDeleted = true
-	}
-	if p.DeletedAt == 0 && meta["DeletedAt"] != "" {
-		p.DeletedAt, _ = strconv.ParseInt(meta["DeletedAt"], 10, 64)
-	}
-	if p.DeletedBy == "" {
-		p.DeletedBy = meta["DeletedBy"]
-	}
-	if p.DeleteReason == "" {
-		p.DeleteReason = meta["DeleteReason"]
+	if !p.DeletedOrRemoved() {
+		p.Deletion = model.DeletionFromRFC822(meta)
 	}
 	return &p, nil
 }
@@ -449,9 +456,73 @@ func (e *Engine) GetPostByCommunityFile(community, postFile string) (*model.Post
 func (e *Engine) CountPosts(community string) (int, error) {
 	var count int
 	err := e.metaDB.QueryRow(`
-		SELECT count(*) FROM posts WHERE community = ? AND is_deleted = 0
+		SELECT count(*) FROM posts WHERE community = ? AND deleted = 0 AND removed = 0
 	`, community).Scan(&count)
 	return count, err
+}
+
+// ListPostMeta returns the metadata (without content) of every post,
+// including deleted ones, in community, ordered by ID.
+func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
+	// Counts of recent votes and comments may still be pending in memory.
+	e.FlushDirtyDeltas()
+
+	rows, err := e.metaDB.Query(`
+		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community = ? ORDER BY id
+	`, community)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*model.Post
+	for rows.Next() {
+		var p model.Post
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+			return nil, err
+		}
+		if p.Modified == 0 {
+			p.Modified = p.CreatedAt
+		}
+		posts = append(posts, &p)
+	}
+	return posts, rows.Err()
+}
+
+// SetPostMeta updates the filemode and money of a post, as mbbsd changes
+// them in .DIR.
+func (e *Engine) SetPostMeta(community, postFile string, filemode, money int) error {
+	var id uint64
+	if err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community = ? AND post_file = ?`, community, postFile).Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("post not found: %s/%s", community, postFile)
+		}
+		return err
+	}
+
+	e.metaWriteMu.Lock()
+	_, err := e.metaDB.Exec(`
+		UPDATE posts SET filemode = ?, money = ? WHERE id = ?
+	`, filemode, money, id)
+	e.metaWriteMu.Unlock()
+	if err != nil {
+		return err
+	}
+
+	// Keep the copy in Pebble (used by RebuildSQLiteFromPebble) in sync.
+	p, err := e.GetPost(id)
+	if err != nil {
+		return err
+	}
+	return e.postsDB.Set(model.EncodePostKey(id), model.EncodeRFC822Post(p), pebble.NoSync)
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, error) {
@@ -462,8 +533,8 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 		offset = 0
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason
-		FROM posts WHERE community = ? AND is_deleted = 0 ORDER BY id DESC LIMIT ? OFFSET ?
+		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community = ? AND deleted = 0 AND removed = 0 ORDER BY id DESC LIMIT ? OFFSET ?
 	`, community, limit, offset)
 	if err != nil {
 		return nil, err
@@ -473,19 +544,12 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		var isDeleted int
-		var deletedAt int64
-		var deletedBy, deleteReason string
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.Author, &p.AuthorToken, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &isDeleted, &deletedAt, &deletedBy, &deleteReason); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
-		p.IsDeleted = (isDeleted != 0)
-		p.DeletedAt = deletedAt
-		p.DeletedBy = deletedBy
-		p.DeleteReason = deleteReason
 		posts = append(posts, &p)
 	}
 	return posts, nil
@@ -499,8 +563,8 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 		offset = 0
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason
-		FROM posts WHERE community = ? AND is_deleted = 1 ORDER BY id DESC LIMIT ? OFFSET ?
+		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community = ? AND (deleted = 1 OR removed = 1) ORDER BY id DESC LIMIT ? OFFSET ?
 	`, community, limit, offset)
 	if err != nil {
 		return nil, err
@@ -510,19 +574,12 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		var isDeleted int
-		var deletedAt int64
-		var deletedBy, deleteReason string
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.Author, &p.AuthorToken, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &isDeleted, &deletedAt, &deletedBy, &deleteReason); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
-		p.IsDeleted = (isDeleted != 0)
-		p.DeletedAt = deletedAt
-		p.DeletedBy = deletedBy
-		p.DeleteReason = deleteReason
 		posts = append(posts, &p)
 	}
 	return posts, nil
@@ -534,7 +591,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 		limit = 50
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason
+		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts WHERE parent_id = ? ORDER BY id ASC LIMIT ? OFFSET ?
 	`, parentID, limit, offset)
 	if err != nil {
@@ -545,19 +602,12 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 	var replies []*model.Post
 	for rows.Next() {
 		var p model.Post
-		var isDeleted int
-		var deletedAt int64
-		var deletedBy, deleteReason string
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.Author, &p.AuthorToken, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &isDeleted, &deletedAt, &deletedBy, &deleteReason); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
-		p.IsDeleted = (isDeleted != 0)
-		p.DeletedAt = deletedAt
-		p.DeletedBy = deletedBy
-		p.DeleteReason = deleteReason
 		replies = append(replies, &p)
 	}
 	return replies, nil
@@ -581,7 +631,7 @@ func (e *Engine) GetThread(rootID uint64) ([]*model.Post, error) {
 // -----------------------------------------------------------------------------
 
 // AddCrosspost records that a post was cross-posted to a target community
-func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, operator string, operatorToken uint32, createdAt int64) (*model.CrosspostRecord, int, error) {
+func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
 	srcPost, err := e.GetPostByCommunityFile(srcCommunity, srcPostFile)
 	if err != nil {
 		return nil, 0, fmt.Errorf("source post not found: %w", err)
@@ -594,9 +644,9 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	// 1. Insert into SQLite crossposts table
 	e.metaWriteMu.Lock()
 	res, err := e.metaDB.Exec(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, operator, operator_token, created_at)
+		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
-	`, srcPost.ID, targetCommunity, targetPostFile, operator, operatorToken, createdAt)
+	`, srcPost.ID, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
 	if err != nil {
 		e.metaWriteMu.Unlock()
 		return nil, 0, fmt.Errorf("insert crosspost failed: %w", err)
@@ -623,8 +673,8 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 		SourcePostID:    srcPost.ID,
 		TargetCommunity: targetCommunity,
 		TargetPostFile:  targetPostFile,
-		Operator:        operator,
-		OperatorToken:   operatorToken,
+		CreatorName:     creatorName,
+		CreatorID:       creatorID,
 		CreatedAt:       createdAt,
 	}
 
@@ -650,7 +700,7 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	}
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, source_post_id, target_community, target_post_file, operator, operator_token, created_at
+		SELECT id, source_post_id, target_community, target_post_file, creator_name, creator_id, created_at
 		FROM crossposts WHERE source_post_id = ? ORDER BY id ASC
 	`, post.ID)
 	if err != nil {
@@ -661,7 +711,7 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	var records []*model.CrosspostRecord
 	for rows.Next() {
 		var r model.CrosspostRecord
-		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.Operator, &r.OperatorToken, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		records = append(records, &r)
@@ -673,9 +723,9 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.Post, *model.CrosspostRecord, error) {
 	var r model.CrosspostRecord
 	err := e.metaDB.QueryRow(`
-		SELECT id, source_post_id, target_community, target_post_file, operator, operator_token, created_at
+		SELECT id, source_post_id, target_community, target_post_file, creator_name, creator_id, created_at
 		FROM crossposts WHERE target_community = ? AND target_post_file = ?
-	`, targetCommunity, targetPostFile).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.Operator, &r.OperatorToken, &r.CreatedAt)
+	`, targetCommunity, targetPostFile).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
@@ -694,14 +744,85 @@ func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.P
 // Comments (Decoupled from Votes, RFC 822 formatted)
 // -----------------------------------------------------------------------------
 
-// AddComment appends a comment, storing it in Pebble (RFC 822) and updating dirty counts
+// AddComment appends a comment, storing it in Pebble (RFC 822) and updating dirty counts.
+// Consecutive comments by the same author without intervening comments within 3 minutes (< 180s)
+// are automatically merged into the same comment floor.
 func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 	if c.CreatedAt == 0 {
 		c.CreatedAt = time.Now().Unix()
 	}
 
-	// 1. Get next sequence number
-	seq := e.nextSequence(c.PostID)
+	// 1. Check if previous comment is from the same author within 3 minutes (< 180s)
+	e.seqMu.Lock()
+	ptr, ok := e.postSeqs[c.PostID]
+	var lastSeq uint32
+	if ok {
+		lastSeq = *ptr
+	} else {
+		lastSeq = e.lookupMaxSequence(c.PostID)
+	}
+
+	var prev *model.Comment
+	if lastSeq > 0 {
+		cKey := model.EncodeCommentKey(c.PostID, lastSeq)
+		if val, closer, err := e.commentsDB.Get(cKey); err == nil {
+			prev, _ = model.DecodeRFC822Comment(c.PostID, lastSeq, val)
+			closer.Close()
+		}
+	}
+
+	c.Content = model.TruncateCommentLines(c.Content, model.MaxCommentLines)
+
+	var lastTime int64
+	if prev != nil {
+		lastTime = prev.LastCommentAt
+		if lastTime == 0 {
+			lastTime = prev.CreatedAt
+		}
+	}
+	diff := c.CreatedAt - lastTime
+	canMerge := prev != nil && !prev.DeletedOrRemoved() &&
+		strings.EqualFold(prev.CreatorName, c.CreatorName) &&
+		(c.CreatorID == 0 || prev.CreatorID == 0 || c.CreatorID == prev.CreatorID) &&
+		diff >= 0 && diff <= 180
+
+	if canMerge {
+		prevLines := model.CountCommentLines(prev.Content)
+		curLines := model.CountCommentLines(c.Content)
+		if prevLines+curLines > model.MaxCommentLines {
+			canMerge = false
+		}
+	}
+
+	if canMerge {
+		if !ok {
+			e.postSeqs[c.PostID] = &lastSeq
+		}
+		e.seqMu.Unlock()
+
+		prev.Content = strings.TrimRight(prev.Content, "\r\n") + "\n" + c.Content
+		prev.LastCommentAt = c.CreatedAt
+		cKey := model.EncodeCommentKey(prev.PostID, prev.Sequence)
+		val := model.EncodeRFC822Comment(prev)
+		if err := e.commentsDB.Set(cKey, val, pebble.NoSync); err != nil {
+			return nil, fmt.Errorf("update pebble comment failed: %w", err)
+		}
+
+		_ = e.AppendMergedCommentCache(c.PostID, c.Content)
+
+		prev.IsMerged = true
+		return prev, nil
+	}
+
+	var seq uint32
+	if ok {
+		seq = atomic.AddUint32(ptr, 1)
+	} else {
+		seq = lastSeq + 1
+		e.postSeqs[c.PostID] = &seq
+	}
+	e.seqMu.Unlock()
+
 	c.Sequence = seq
 
 	// 2. Package RFC 822 for comment (Encoding is the first header!)
@@ -713,7 +834,7 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 	}
 
 	// 3. Write secondary author index: u:{author}:{created_at}:{post_id}:{sequence}
-	secKey := model.EncodeAuthorCommentKey(c.Author, c.CreatedAt, c.PostID, c.Sequence)
+	secKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, c.PostID, c.Sequence)
 	if err := e.commentsDB.Set(secKey, []byte{}, pebble.NoSync); err != nil {
 		return nil, fmt.Errorf("write comment author index failed: %w", err)
 	}
@@ -769,6 +890,10 @@ func (e *Engine) lookupMaxSequence(postID uint64) uint32 {
 }
 
 func (e *Engine) GetComments(postID uint64, startFloor, limit uint32) ([]*model.Comment, error) {
+	return e.GetCommentsFiltered(postID, startFloor, limit, "", 0)
+}
+
+func (e *Engine) GetCommentsFiltered(postID uint64, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error) {
 	if limit == 0 {
 		limit = 1000
 	}
@@ -787,6 +912,12 @@ func (e *Engine) GetComments(postID uint64, startFloor, limit uint32) ([]*model.
 		if err == nil {
 			c, err := model.DecodeRFC822Comment(postID, seq, iter.Value())
 			if err == nil {
+				if creatorName != "" && !strings.EqualFold(c.CreatorName, creatorName) {
+					continue
+				}
+				if creatorID != 0 && c.CreatorID != 0 && c.CreatorID != creatorID {
+					continue
+				}
 				comments = append(comments, c)
 			}
 		}
@@ -805,15 +936,25 @@ func (e *Engine) GetCommentCountByCommunityFile(community, postFile string) (int
 	if err != nil {
 		return 0, err
 	}
+	if p == nil {
+		return 0, fmt.Errorf("post not found: %s/%s", community, postFile)
+	}
 	return e.GetCommentCount(p.ID)
 }
 
 func (e *Engine) GetCommentsByCommunityFile(community, postFile string, startFloor, limit uint32) ([]*model.Comment, error) {
+	return e.GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, "", 0)
+}
+
+func (e *Engine) GetCommentsByCommunityFileFiltered(community, postFile string, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return nil, err
 	}
-	return e.GetComments(p.ID, startFloor, limit)
+	if p == nil {
+		return nil, fmt.Errorf("post not found: %s/%s", community, postFile)
+	}
+	return e.GetCommentsFiltered(p.ID, startFloor, limit, creatorName, creatorID)
 }
 
 // PurgeUserComments deletes all comments from an author created within maxAge (e.g. 7 days for anti-spam)
@@ -859,7 +1000,7 @@ func (e *Engine) PurgeUserComments(author string, maxAge time.Duration) (purged 
 			c, err := model.DecodeRFC822Comment(toPurgePostComments[i].PostID, toPurgePostComments[i].Sequence, val)
 			closer.Close()
 			if err == nil {
-				c.IsDeleted = true
+				c.Removed = true
 				batch.Set(cKey, model.EncodeRFC822Comment(c), nil)
 			}
 		}
@@ -876,7 +1017,7 @@ func (e *Engine) PurgeUserComments(author string, maxAge time.Duration) (purged 
 func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int, err error) {
 	minTimestamp := time.Now().Add(-maxAge).Unix()
 	rows, err := e.metaDB.Query(`
-		SELECT id, community, post_file FROM posts WHERE author = ? AND created_at >= ?
+		SELECT id, community, post_file FROM posts WHERE creator_name = ? AND created_at >= ?
 	`, author, minTimestamp)
 	if err != nil {
 		return 0, err
@@ -1089,7 +1230,7 @@ func (e *Engine) DeleteCommunity(community string) (postsDeleted int, commentsDe
 				if dErr == nil {
 					c, cErr := model.DecodeRFC822Comment(p.id, seq, cIter.Value())
 					if cErr == nil && c != nil {
-						authKey := model.EncodeAuthorCommentKey(c.Author, c.CreatedAt, p.id, seq)
+						authKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, p.id, seq)
 						commentBatch.Delete(authKey, nil)
 						ops++
 					}
@@ -1255,7 +1396,7 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 			if dErr == nil {
 				c, cErr := model.DecodeRFC822Comment(p.ID, seq, cIter.Value())
 				if cErr == nil && c != nil {
-					authKey := model.EncodeAuthorCommentKey(c.Author, c.CreatedAt, p.ID, seq)
+					authKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, p.ID, seq)
 					commentBatch.Delete(authKey, nil)
 				}
 				cHistPrefix := model.EncodeCommentHistoryPrefix(p.ID, seq)
@@ -1318,8 +1459,8 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 // -----------------------------------------------------------------------------
 
 // VotePost records a user's vote (1: Upvote, -1: Downvote, 0: Cancel vote)
-func (e *Engine) VotePost(postID uint64, user string, authorToken uint32, newVote model.VoteType) (upDelta, downDelta int, err error) {
-	key := model.EncodeVoteKey(postID, user)
+func (e *Engine) VotePost(postID uint64, personName string, personID model.PersonID, newVote model.VoteType, createdAt int64, ip string) (upDelta, downDelta int, err error) {
+	key := model.EncodeVoteKey(postID, personName)
 	val, closer, err := e.votesDB.Get(key)
 
 	var prevVote model.VoteType = model.VoteNeutral
@@ -1345,16 +1486,16 @@ func (e *Engine) VotePost(postID uint64, user string, authorToken uint32, newVot
 		downDelta -= 1
 	}
 
-	valBuf := make([]byte, 5)
-	binary.BigEndian.PutUint32(valBuf[1:5], authorToken)
-
-	if newVote == model.VoteUp {
-		upDelta += 1
-		valBuf[0] = 'U'
-		e.votesDB.Set(key, valBuf, pebble.NoSync)
-	} else if newVote == model.VoteDown {
-		downDelta += 1
-		valBuf[0] = 'D'
+	if newVote == model.VoteUp || newVote == model.VoteDown {
+		if createdAt == 0 {
+			createdAt = time.Now().Unix()
+		}
+		if newVote == model.VoteUp {
+			upDelta += 1
+		} else {
+			downDelta += 1
+		}
+		valBuf := model.EncodeVoteValue(newVote, personID, createdAt, ip)
 		e.votesDB.Set(key, valBuf, pebble.NoSync)
 	} else {
 		// Cancel vote
@@ -1373,6 +1514,89 @@ func (e *Engine) VotePost(postID uint64, user string, authorToken uint32, newVot
 	e.dirtyMu.Unlock()
 
 	return upDelta, downDelta, nil
+}
+
+// GetVotes returns all active votes for a post
+func (e *Engine) GetVotes(postID uint64) ([]*model.VoteRecord, error) {
+	vPrefix := model.EncodeVotePrefix(postID)
+	iter, err := e.votesDB.NewIter(&pebble.IterOptions{
+		LowerBound: vPrefix,
+		UpperBound: append(vPrefix, 0xff),
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var votes []*model.VoteRecord
+	for iter.First(); iter.Valid() && bytes.HasPrefix(iter.Key(), vPrefix); iter.Next() {
+		pID, user, err := model.DecodeVoteKey(iter.Key())
+		if err != nil || pID != postID {
+			continue
+		}
+		vType, personID, ctime, ip, err := model.DecodeVoteValue(iter.Value())
+		if err != nil || (vType != model.VoteUp && vType != model.VoteDown) {
+			continue
+		}
+		votes = append(votes, &model.VoteRecord{
+			PostID:     pID,
+			PersonName: user,
+			PersonID:   personID,
+			Vote:       vType,
+			CreatedAt:  ctime,
+			IP:         ip,
+		})
+	}
+	return votes, nil
+}
+
+// GetVotesByCommunityFile returns all active votes for a post identified by community and postFile
+func (e *Engine) GetVotesByCommunityFile(community, postFile string) ([]*model.VoteRecord, error) {
+	p, err := e.GetPostByCommunityFile(community, postFile)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, fmt.Errorf("post not found: %s@%s", postFile, community)
+	}
+	return e.GetVotes(p.ID)
+}
+
+// ResetVotes clears all user votes and resets upvotes and downvotes to 0
+func (e *Engine) ResetVotes(postID uint64) error {
+	vPrefix := model.EncodeVotePrefix(postID)
+	iter, err := e.votesDB.NewIter(&pebble.IterOptions{
+		LowerBound: vPrefix,
+		UpperBound: append(vPrefix, 0xff),
+	})
+	if err == nil {
+		batch := e.votesDB.NewBatch()
+		for iter.First(); iter.Valid() && bytes.HasPrefix(iter.Key(), vPrefix); iter.Next() {
+			_ = batch.Delete(iter.Key(), pebble.NoSync)
+		}
+		iter.Close()
+		_ = batch.Commit(pebble.NoSync)
+	}
+
+	e.dirtyMu.Lock()
+	if d, ok := e.dirtyDeltas[postID]; ok {
+		d.UpvotesDelta = 0
+		d.DownvotesDelta = 0
+	}
+	e.dirtyMu.Unlock()
+
+	e.metaWriteMu.Lock()
+	_, err = e.metaDB.Exec("UPDATE posts SET upvotes = 0, downvotes = 0 WHERE id = ?", postID)
+	e.metaWriteMu.Unlock()
+	return err
+}
+
+func (e *Engine) ResetVotesByCommunityFile(community, postFile string) error {
+	p, err := e.GetPostByCommunityFile(community, postFile)
+	if err != nil {
+		return err
+	}
+	return e.ResetVotes(p.ID)
 }
 
 // -----------------------------------------------------------------------------
@@ -1486,18 +1710,10 @@ func (e *Engine) WritePostCache(p *model.Post) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func (e *Engine) AppendCommentCache(c *model.Comment) error {
-	p, err := e.GetPost(c.PostID)
-	if err != nil {
-		return err
-	}
-	path := e.CacheFilePath(p)
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
+// FormatCommentBlock formats a comment into the structured pipe-delimited format:
+// Line 1:  |userid[modmark]|comment|ip time|[~]No
+// Line 2+: | comment
+func FormatCommentBlock(c *model.Comment) string {
 	t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
 	var creation string
 	if c.IP != "" && c.IP != "-" {
@@ -1505,30 +1721,155 @@ func (e *Engine) AppendCommentCache(c *model.Comment) error {
 	} else {
 		creation = t
 	}
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("[%d] %s %s\n", c.Sequence, c.Author, creation))
 
-	// Indent content lines by 2 spaces, without ANSI codes
-	lines := strings.Split(c.Content, "\n")
-	for _, l := range lines {
+	authorMark := c.CreatorName
+	if c.DeletedOrRemoved() {
+		authorMark = c.CreatorName + "!"
+	}
+
+	modMark := ""
+	if c.ModifiedAt > 0 {
+		modMark = "~"
+	}
+
+	if c.DeletedOrRemoved() {
+		cleanReason := c.Reason
+		if !utf8.ValidString(cleanReason) {
+			cleanReason = big5uao.Decode([]byte(cleanReason))
+		}
+		cleanReason = strings.TrimSpace(cleanReason)
+		isSelf := c.Deleted || cleanReason == "自刪"
+		var msg string
+		if isSelf {
+			msg = "留言已刪除"
+		} else {
+			if cleanReason != "" {
+				cleanReason = strings.TrimRight(cleanReason, "\r\n")
+				cleanReason = strings.ReplaceAll(cleanReason, "--", "-")
+				cleanReason = strings.ReplaceAll(cleanReason, "|", "-")
+				msg = fmt.Sprintf("留言已隱藏 (%s)", cleanReason)
+			} else {
+				msg = "留言已隱藏"
+			}
+		}
+		return fmt.Sprintf("|%s|%s|%s|%s%d\n", authorMark, msg, creation, modMark, c.Sequence)
+	}
+
+	rawLines := strings.Split(c.Content, "\n")
+	var cleanLines []string
+	for _, l := range rawLines {
 		trimmed := strings.TrimRight(l, "\r ")
 		if trimmed != "" {
 			clean := model.StripANSI(trimmed)
+			clean = strings.ReplaceAll(clean, "\t", "  ")
 			if clean != "" {
-				b.WriteString("  " + clean + "\n")
+				cleanLines = append(cleanLines, clean)
 			}
 		}
 	}
 
-	text := b.String()
+	firstLine := ""
+	if len(cleanLines) > 0 {
+		firstLine = cleanLines[0]
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("|%s|%s|%s|%s%d\n", authorMark, firstLine, creation, modMark, c.Sequence))
+	for i := 1; i < len(cleanLines); i++ {
+		b.WriteString("| " + cleanLines[i] + "\n")
+	}
+
+	return b.String()
+}
+
+func (e *Engine) AppendCommentCache(c *model.Comment) error {
+	p, err := e.GetPost(c.PostID)
+	if err != nil {
+		return err
+	}
+	boardPath := e.BoardFilePath(p)
+	if boardPath != "" {
+		if _, statErr := os.Stat(boardPath); os.IsNotExist(statErr) {
+			return e.RenderAndSave(p)
+		}
+	}
+
+	path := e.CacheFilePath(p)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	formatted := FormatCommentBlock(c)
 	var data []byte
 	if e.cfg.IsBig5() {
-		data = big5uao.Encode(text)
+		data = big5uao.Encode(formatted)
 	} else {
-		data = []byte(text)
+		data = []byte(formatted)
 	}
+
 	_, err = f.Write(data)
+	if boardPath != "" && boardPath != path {
+		if fb, errB := os.OpenFile(boardPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); errB == nil {
+			_, _ = fb.Write(data)
+			_ = fb.Close()
+		}
+	}
 	return err
+}
+
+func FormatMergedCommentLines(content string) string {
+	rawLines := strings.Split(content, "\n")
+	var b strings.Builder
+	for _, l := range rawLines {
+		trimmed := strings.TrimRight(l, "\r ")
+		if trimmed != "" {
+			clean := model.StripANSI(trimmed)
+			clean = strings.ReplaceAll(clean, "\t", "  ")
+			if clean != "" {
+				b.WriteString("| " + clean + "\n")
+			}
+		}
+	}
+	return b.String()
+}
+
+func (e *Engine) AppendMergedCommentCache(postID uint64, content string) error {
+	p, err := e.GetPost(postID)
+	if err != nil {
+		return err
+	}
+	boardPath := e.BoardFilePath(p)
+	if boardPath != "" {
+		if _, statErr := os.Stat(boardPath); os.IsNotExist(statErr) {
+			return e.RenderAndSave(p)
+		}
+	}
+
+	formatted := FormatMergedCommentLines(content)
+	if formatted == "" {
+		return nil
+	}
+	var data []byte
+	if e.cfg.IsBig5() {
+		data = big5uao.Encode(formatted)
+	} else {
+		data = []byte(formatted)
+	}
+
+	path := e.CacheFilePath(p)
+	if f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+		_, _ = f.Write(data)
+		_ = f.Close()
+	}
+	if boardPath != "" && boardPath != path {
+		if fb, errB := os.OpenFile(boardPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); errB == nil {
+			_, _ = fb.Write(data)
+			_ = fb.Close()
+		}
+	}
+	return nil
 }
 
 func (e *Engine) SetPostContent(postID uint64, content string) error {
@@ -1548,13 +1889,17 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 		return nil, err
 	}
 
-	if p.IsDeleted {
-		reason := p.DeleteReason
+	if p.DeletedOrRemoved() {
+		reason := p.Reason
 		if reason == "" {
-			reason = "本文已被刪除"
+			if p.Removed {
+				reason = "本文已被隱藏"
+			} else {
+				reason = "本文已被刪除"
+			}
 		}
 		deletedNotice := fmt.Sprintf("[%s]\n", reason)
-		if asBig5 || e.cfg.IsBig5() {
+		if asBig5 {
 			return big5uao.Encode(deletedNotice), nil
 		}
 		return []byte(deletedNotice), nil
@@ -1580,7 +1925,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 		}
 		for _, pth := range paths {
 			if b, rErr := readArticleFileLimited(pth); rErr == nil && len(b) > 0 {
-				if e.cfg.IsBig5() {
+				if e.cfg.IsBig5() && !utf8.Valid(b) {
 					p.Content = big5uao.DecodeSGR66(b)
 				} else {
 					p.Content = string(b)
@@ -1596,46 +1941,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	buf.WriteString(p.Content)
-	if len(p.Content) > 0 && p.Content[len(p.Content)-1] != '\n' {
-		buf.WriteByte('\n')
-	}
-
-	for _, c := range comments {
-		if c.IsDeleted {
-			if c.DeletedBy == c.Author || (c.DeletedBy != "" && strings.EqualFold(c.DeletedBy, c.Author)) {
-				buf.WriteString(fmt.Sprintf("[%d] %s 留言已刪除\n", c.Sequence, c.Author))
-			} else {
-				buf.WriteString(fmt.Sprintf("[%d] %s 留言不顯示 (%s)\n", c.Sequence, c.Author, strings.TrimSpace(c.DeleteReason)))
-			}
-			continue
-		}
-		t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
-		var creation string
-		if c.IP != "" && c.IP != "-" {
-			creation = c.IP + " " + t
-		} else {
-			creation = t
-		}
-		buf.WriteString(fmt.Sprintf("[%d] %s %s\n", c.Sequence, c.Author, creation))
-		lines := strings.Split(c.Content, "\n")
-		for _, l := range lines {
-			trimmed := strings.TrimRight(l, "\r ")
-			if trimmed != "" {
-				clean := model.StripANSI(trimmed)
-				if clean != "" {
-					buf.WriteString("  " + clean + "\n")
-				}
-			}
-		}
-	}
-
-	utf8Bytes := buf.Bytes()
-	if asBig5 || e.cfg.IsBig5() {
-		return big5uao.Encode(string(utf8Bytes)), nil
-	}
-	return utf8Bytes, nil
+	return RenderPostWithComments(p, comments, asBig5), nil
 }
 
 // RenderAndSave renders the full post (content + active comments) and updates the canonical BBS disk file
@@ -1691,8 +1997,8 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, is_deleted, deleted_at, deleted_by, delete_reason)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'utf-8', ?, ?, ?, ?)
+		INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'utf-8', ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, 0, err
@@ -1700,7 +2006,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	defer stmt.Close()
 
 	crosspostStmt, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, operator, operator_token, created_at)
+		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -1720,7 +2026,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		if len(pIter.Key()) > 0 && pIter.Key()[0] == 'x' {
 			xRec, err := model.DecodeRFC822Crosspost(pIter.Value())
 			if err == nil {
-				if _, err := crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunity, xRec.TargetPostFile, xRec.Operator, xRec.OperatorToken, xRec.CreatedAt); err != nil {
+				if _, err := crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunity, xRec.TargetPostFile, xRec.CreatorName, xRec.CreatorID, xRec.CreatedAt); err != nil {
 					return 0, 0, err
 				}
 				postCrosspostCounts[xRec.SourcePostID]++
@@ -1733,13 +2039,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 			continue
 		}
 		meta, _ := model.DecodeRFC822Post(pIter.Value())
-		isDeleted := 0
-		if meta["Deleted"] == "true" {
-			isDeleted = 1
-		}
-		deletedAt, _ := strconv.ParseInt(meta["DeletedAt"], 10, 64)
-		deletedBy := meta["DeletedBy"]
-		deleteReason := meta["DeleteReason"]
+		del := model.DeletionFromRFC822(meta)
 		parentID, _ := strconv.ParseUint(meta["ParentID"], 10, 64)
 		ctime, _ := strconv.ParseInt(meta["CreatedAt"], 10, 64)
 		mtime, _ := strconv.ParseInt(meta["Modified"], 10, 64)
@@ -1747,11 +2047,12 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 			mtime = ctime
 		}
 		filemode, _ := strconv.Atoi(meta["Filemode"])
-		authorToken, _ := strconv.ParseUint(meta["AuthorToken"], 10, 32)
-		if _, err := stmt.Exec(postID, parentID, meta["Community"], meta["PostFile"], meta["Title"], meta["Author"], uint32(authorToken), ctime, mtime, filemode, isDeleted, deletedAt, deletedBy, deleteReason); err != nil {
+		money, _ := strconv.Atoi(meta["Money"])
+		if _, err := stmt.Exec(postID, parentID, meta["Community"], meta["PostFile"], meta["Title"], meta["CreatorName"], model.ParsePersonID(meta["CreatorID"]), ctime, mtime, filemode,
+			boolToInt(del.Deleted), boolToInt(del.Removed), del.DeletedAt, del.ModPersonName, del.ModPersonID, del.Reason, money); err != nil {
 			return 0, 0, err
 		}
-		if isDeleted == 0 {
+		if !del.DeletedOrRemoved() {
 			postCount++
 		}
 	}
@@ -1774,7 +2075,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 			continue
 		}
 		c, err := model.DecodeRFC822Comment(postID, seq, cIter.Value())
-		if err == nil && c.IsDeleted {
+		if err == nil && c.DeletedOrRemoved() {
 			continue
 		}
 		postCommentCounts[postID]++
@@ -1840,13 +2141,13 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 // History and Editing (Old revisions stored in history.pebble)
 // -----------------------------------------------------------------------------
 
-func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editor string, expectedModified int64) (uint32, int64, error) {
+func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error) {
 	p, err := e.GetPost(postID)
 	if err != nil {
 		return 0, 0, err
 	}
-	if editor == "" {
-		editor = p.Author
+	if editorName == "" {
+		editorName, editorID = p.CreatorName, p.CreatorID
 	}
 
 	// Optimistic concurrency check: if expectedModified > 0 and doesn't match current modified timestamp, abort!
@@ -1891,11 +2192,12 @@ func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editor string, 
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
-		Author:      p.Author,
-		AuthorToken: p.AuthorToken,
+		CreatorName: p.CreatorName,
+		CreatorID:   p.CreatorID,
 		CreatedAt:   p.CreatedAt,
 		EditedAt:    now,
-		Editor:      editor,
+		EditorName:  editorName,
+		EditorID:    editorID,
 		Content:     p.Content,
 		Encoding:    "utf-8",
 	}
@@ -1928,15 +2230,15 @@ func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editor string, 
 	return nextRev, p.Modified, nil
 }
 
-func (e *Engine) UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor string, expectedModified int64) (uint32, int64, error) {
+func (e *Engine) UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return 0, 0, err
 	}
-	return e.UpdatePost(p.ID, newTitle, newContent, editor, expectedModified)
+	return e.UpdatePost(p.ID, newTitle, newContent, editorName, editorID, expectedModified)
 }
 
-func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editor string) (uint32, error) {
+func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editorName string, editorID model.PersonID) (uint32, error) {
 	p, err := e.GetPost(postID)
 	if err != nil {
 		return 0, err
@@ -1945,8 +2247,8 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editor string) (uint32
 	if newTitle == "" || newTitle == p.Title {
 		return 0, nil
 	}
-	if editor == "" {
-		editor = p.Author
+	if editorName == "" {
+		editorName, editorID = p.CreatorName, p.CreatorID
 	}
 
 	// 1. Determine next revision
@@ -1977,11 +2279,12 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editor string) (uint32
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
-		Author:      p.Author,
-		AuthorToken: p.AuthorToken,
+		CreatorName: p.CreatorName,
+		CreatorID:   p.CreatorID,
 		CreatedAt:   p.CreatedAt,
 		EditedAt:    now,
-		Editor:      editor,
+		EditorName:  editorName,
+		EditorID:    editorID,
 		Action:      "update_title",
 		Content:     p.Content,
 		Encoding:    "utf-8",
@@ -1992,44 +2295,38 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editor string) (uint32
 		return 0, fmt.Errorf("write post history failed: %w", err)
 	}
 
-	// 3. Update post title in Pebble
 	p.Title = newTitle
 	p.Modified = now
-	postKey := model.EncodePostKey(p.ID)
-	postVal := model.EncodeRFC822Post(p)
-	if err := e.postsDB.Set(postKey, postVal, pebble.NoSync); err != nil {
-		return 0, fmt.Errorf("update post failed: %w", err)
-	}
 
-	// 4. Update SQLite title and modified
+	// 3. Update SQLite title and modified (metaDB)
 	e.metaWriteMu.Lock()
 	_, _ = e.metaDB.Exec("UPDATE posts SET title = ?, modified = ? WHERE id = ?", p.Title, p.Modified, p.ID)
 	e.metaWriteMu.Unlock()
 
-	// 5. Re-render cache
+	// 4. Re-render cache
 	_ = e.RenderAndSave(p)
 
 	return nextRev, nil
 }
 
-func (e *Engine) UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor string) (uint32, error) {
+func (e *Engine) UpdatePostTitleByCommunityFile(community, postFile, newTitle, editorName string, editorID model.PersonID) (uint32, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return 0, err
 	}
-	return e.UpdatePostTitle(p.ID, newTitle, editor)
+	return e.UpdatePostTitle(p.ID, newTitle, editorName, editorID)
 }
 
-func (e *Engine) DeletePost(postID uint64, deleter, reason string) (uint32, error) {
+func (e *Engine) DeletePost(postID uint64, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	p, err := e.GetPost(postID)
 	if err != nil {
 		return 0, err
 	}
-	if p.IsDeleted {
+	if p.DeletedOrRemoved() {
 		return 0, nil // Already deleted
 	}
-	if deleter == "" {
-		deleter = p.Author
+	if deleterName == "" {
+		deleterName, deleterID = p.CreatorName, p.CreatorID
 	}
 
 	// 1. Determine next revision
@@ -2060,11 +2357,12 @@ func (e *Engine) DeletePost(postID uint64, deleter, reason string) (uint32, erro
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
-		Author:      p.Author,
-		AuthorToken: p.AuthorToken,
+		CreatorName: p.CreatorName,
+		CreatorID:   p.CreatorID,
 		CreatedAt:   p.CreatedAt,
 		EditedAt:    now,
-		Editor:      deleter,
+		EditorName:  deleterName,
+		EditorID:    deleterID,
 		Action:      "delete",
 		Reason:      reason,
 		Content:     p.Content,
@@ -2077,10 +2375,7 @@ func (e *Engine) DeletePost(postID uint64, deleter, reason string) (uint32, erro
 	}
 
 	// 3. Update post state
-	p.IsDeleted = true
-	p.DeletedAt = now
-	p.DeletedBy = deleter
-	p.DeleteReason = reason
+	p.Deletion.Delete(p.CreatorName, p.CreatorID, deleterName, deleterID, reason, now)
 	p.Modified = now
 	postKey := model.EncodePostKey(p.ID)
 	postVal := model.EncodeRFC822Post(p)
@@ -2090,8 +2385,8 @@ func (e *Engine) DeletePost(postID uint64, deleter, reason string) (uint32, erro
 
 	// 4. Update SQLite
 	e.metaWriteMu.Lock()
-	_, _ = e.metaDB.Exec("UPDATE posts SET is_deleted = 1, deleted_at = ?, deleted_by = ?, delete_reason = ?, modified = ? WHERE id = ?",
-		now, deleter, reason, now, p.ID)
+	_, _ = e.metaDB.Exec("UPDATE posts SET deleted = ?, removed = ?, deleted_at = ?, mod_person_name = ?, mod_person_id = ?, reason = ?, modified = ? WHERE id = ?",
+		boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason, now, p.ID)
 	e.metaWriteMu.Unlock()
 
 	// 5. Update Cache and BBS disk file
@@ -2100,12 +2395,12 @@ func (e *Engine) DeletePost(postID uint64, deleter, reason string) (uint32, erro
 	return nextRev, nil
 }
 
-func (e *Engine) DeletePostByCommunityFile(community, postFile, deleter, reason string) (uint32, error) {
+func (e *Engine) DeletePostByCommunityFile(community, postFile, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return 0, err
 	}
-	return e.DeletePost(p.ID, deleter, reason)
+	return e.DeletePost(p.ID, deleterName, deleterID, reason)
 }
 
 func (e *Engine) UndeletePost(postID uint64) error {
@@ -2113,14 +2408,11 @@ func (e *Engine) UndeletePost(postID uint64) error {
 	if err != nil {
 		return err
 	}
-	if !p.IsDeleted {
+	if !p.DeletedOrRemoved() {
 		return nil
 	}
 	now := time.Now().Unix()
-	p.IsDeleted = false
-	p.DeletedAt = 0
-	p.DeletedBy = ""
-	p.DeleteReason = ""
+	p.Deletion.Restore()
 	p.Modified = now
 
 	postKey := model.EncodePostKey(p.ID)
@@ -2130,7 +2422,7 @@ func (e *Engine) UndeletePost(postID uint64) error {
 	}
 
 	e.metaWriteMu.Lock()
-	_, _ = e.metaDB.Exec("UPDATE posts SET is_deleted = 0, deleted_at = 0, deleted_by = '', delete_reason = '', modified = ? WHERE id = ?",
+	_, _ = e.metaDB.Exec("UPDATE posts SET deleted = 0, removed = 0, deleted_at = 0, mod_person_name = '', mod_person_id = 0, reason = '', modified = ? WHERE id = ?",
 		now, p.ID)
 	e.metaWriteMu.Unlock()
 
@@ -2146,7 +2438,7 @@ func (e *Engine) UndeletePostByCommunityFile(community, postFile string) error {
 	return e.UndeletePost(p.ID)
 }
 
-func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editor string) (uint32, error) {
+func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error) {
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -2157,9 +2449,11 @@ func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editor str
 	if err != nil {
 		return 0, err
 	}
-	if editor == "" {
-		editor = currentComment.Author
+	if editorName == "" {
+		editorName, editorID = currentComment.CreatorName, currentComment.CreatorID
 	}
+
+	newContent = model.TruncateCommentLines(newContent, model.MaxCommentLines)
 
 	if newContent == currentComment.Content {
 		// No changes made! Return revision 0
@@ -2189,12 +2483,14 @@ func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editor str
 		PostID:      postID,
 		Sequence:    seq,
 		Revision:    nextRev,
-		Author:      currentComment.Author,
-		AuthorToken: currentComment.AuthorToken,
+		CreatorName: currentComment.CreatorName,
+		CreatorID:   currentComment.CreatorID,
 		CreatedAt:   currentComment.CreatedAt,
 		EditedAt:    now,
-		Editor:      editor,
+		EditorName:  editorName,
+		EditorID:    editorID,
 		IP:          currentComment.IP,
+		Action:      "edit",
 		Content:     currentComment.Content,
 		Encoding:    "utf-8",
 	}
@@ -2206,23 +2502,33 @@ func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editor str
 
 	// 3. Update current comment
 	currentComment.Content = newContent
+	currentComment.ModifiedAt = now
 	newVal := model.EncodeRFC822Comment(currentComment)
 	if err := e.commentsDB.Set(cKey, newVal, pebble.NoSync); err != nil {
 		return 0, fmt.Errorf("update comment failed: %w", err)
 	}
 
+	// 4. Re-render and save canonical file
+	if p, err := e.GetPost(postID); err == nil && p != nil {
+		p.Modified = now
+		e.metaWriteMu.Lock()
+		_, _ = e.metaDB.Exec("UPDATE posts SET modified = ? WHERE id = ?", now, p.ID)
+		e.metaWriteMu.Unlock()
+		_ = e.RenderAndSave(p)
+	}
+
 	return nextRev, nil
 }
 
-func (e *Engine) UpdateCommentByCommunityFile(community, postFile string, seq uint32, newContent, editor string) (uint32, error) {
+func (e *Engine) UpdateCommentByCommunityFile(community, postFile string, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return 0, err
 	}
-	return e.UpdateComment(p.ID, seq, newContent, editor)
+	return e.UpdateComment(p.ID, seq, newContent, editorName, editorID)
 }
 
-func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string) (uint32, error) {
+func (e *Engine) DeleteComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -2233,15 +2539,11 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string
 	if err != nil {
 		return 0, err
 	}
-	if currentComment.IsDeleted {
+	if currentComment.DeletedOrRemoved() {
 		return 0, nil // Already deleted
 	}
-	if deleter == "" {
-		deleter = currentComment.Author
-	}
-	reason = strings.TrimSpace(reason)
-	if !strings.EqualFold(deleter, currentComment.Author) && reason == "" {
-		return 0, fmt.Errorf("reason is required for non-self deletion")
+	if deleterName == "" {
+		deleterName, deleterID = currentComment.CreatorName, currentComment.CreatorID
 	}
 
 	// 1. Determine next revision
@@ -2267,11 +2569,12 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string
 		PostID:      postID,
 		Sequence:    seq,
 		Revision:    nextRev,
-		Author:      currentComment.Author,
-		AuthorToken: currentComment.AuthorToken,
+		CreatorName: currentComment.CreatorName,
+		CreatorID:   currentComment.CreatorID,
 		CreatedAt:   currentComment.CreatedAt,
 		EditedAt:    now,
-		Editor:      deleter,
+		EditorName:  deleterName,
+		EditorID:    deleterID,
 		IP:          currentComment.IP,
 		Action:      "delete",
 		Reason:      reason,
@@ -2285,10 +2588,7 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string
 	}
 
 	// 3. Update current comment state
-	currentComment.IsDeleted = true
-	currentComment.DeletedAt = now
-	currentComment.DeletedBy = deleter
-	currentComment.DeleteReason = reason
+	currentComment.Deletion.Delete(currentComment.CreatorName, currentComment.CreatorID, deleterName, deleterID, reason, now)
 	newVal := model.EncodeRFC822Comment(currentComment)
 	if err := e.commentsDB.Set(cKey, newVal, pebble.NoSync); err != nil {
 		return 0, fmt.Errorf("delete comment failed: %w", err)
@@ -2308,12 +2608,12 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleter, reason string
 	return nextRev, nil
 }
 
-func (e *Engine) DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleter, reason string) (uint32, error) {
+func (e *Engine) DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	p, err := e.GetPostByCommunityFile(community, postFile)
 	if err != nil {
 		return 0, err
 	}
-	return e.DeleteComment(p.ID, seq, deleter, reason)
+	return e.DeleteComment(p.ID, seq, deleterName, deleterID, reason)
 }
 
 func (e *Engine) UndeleteComment(postID uint64, seq uint32) error {
@@ -2327,13 +2627,10 @@ func (e *Engine) UndeleteComment(postID uint64, seq uint32) error {
 	if err != nil {
 		return err
 	}
-	if !c.IsDeleted {
+	if !c.DeletedOrRemoved() {
 		return nil
 	}
-	c.IsDeleted = false
-	c.DeletedAt = 0
-	c.DeletedBy = ""
-	c.DeleteReason = ""
+	c.Deletion.Restore()
 
 	newVal := model.EncodeRFC822Comment(c)
 	if err := e.commentsDB.Set(cKey, newVal, pebble.NoSync); err != nil {
@@ -2426,6 +2723,7 @@ type ImportedPostData struct {
 	Post       *model.Post
 	Comments   []*model.Comment
 	Crossposts []*model.CrosspostRecord
+	Votes      []*model.VoteRecord
 }
 
 // ImportPostBatch imports a slice of posts and their comments atomically into SQLite and Pebble,
@@ -2450,12 +2748,13 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer tx.Rollback()
 
 	stmtPost, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community, post_file, title, author, author_token, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
+			deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(community, post_file) DO UPDATE SET
 			title = excluded.title,
-			author = excluded.author,
-			author_token = excluded.author_token,
+			creator_name = excluded.creator_name,
+			creator_id = excluded.creator_id,
 			created_at = excluded.created_at,
 			modified = excluded.modified,
 			filemode = excluded.filemode,
@@ -2463,7 +2762,8 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			downvotes = excluded.downvotes,
 			num_comments = excluded.num_comments,
 			num_crossposts = excluded.num_crossposts,
-			encoding = excluded.encoding
+			encoding = excluded.encoding,
+			money = excluded.money
 		RETURNING id
 	`)
 	if err != nil {
@@ -2472,7 +2772,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer stmtPost.Close()
 
 	stmtCP, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, operator, operator_token, created_at)
+		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -2484,10 +2784,15 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer postBatch.Close()
 	commentBatch := e.commentsDB.NewBatch()
 	defer commentBatch.Close()
+	voteBatch := e.votesDB.NewBatch()
+	defer voteBatch.Close()
 
 	for _, item := range batch {
 		p := item.Post
-		p.NumComments = len(item.Comments)
+		if len(item.Comments) > 0 || !p.DeletedOrRemoved() {
+			// A deleted post imported from .DIR has no comments, only a count.
+			p.NumComments = len(item.Comments)
+		}
 		p.NumCrossposts = len(item.Crossposts)
 		if p.Encoding == "" {
 			p.Encoding = "utf-8"
@@ -2503,9 +2808,11 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 
 		var id uint64
 		err := stmtPost.QueryRow(
-			candidateID, p.ParentID, p.Community, p.PostFile, p.Title, p.Author, p.AuthorToken,
+			candidateID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
 			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
 			p.NumComments, p.NumCrossposts, p.Encoding,
+			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
+			p.Money,
 		).Scan(&id)
 		if err != nil {
 			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
@@ -2528,16 +2835,25 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			if err := commentBatch.Set(cKey, cVal, nil); err != nil {
 				return fmt.Errorf("commentBatch.Set failed: %w", err)
 			}
-			authKey := model.EncodeAuthorCommentKey(c.Author, c.CreatedAt, p.ID, c.Sequence)
+			authKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, p.ID, c.Sequence)
 			if err := commentBatch.Set(authKey, []byte{}, nil); err != nil {
 				return fmt.Errorf("commentBatch.Set author failed: %w", err)
 			}
 		}
 
+		// User Votes
+		for _, v := range item.Votes {
+			if v.Vote != model.VoteUp && v.Vote != model.VoteDown {
+				continue
+			}
+			key := model.EncodeVoteKey(p.ID, v.PersonName)
+			_ = voteBatch.Set(key, model.EncodeVoteValue(v.Vote, v.PersonID, v.CreatedAt, v.IP), nil)
+		}
+
 		// Crossposts
 		for i, cp := range item.Crossposts {
 			cp.SourcePostID = p.ID
-			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunity, cp.TargetPostFile, cp.Operator, cp.OperatorToken, cp.CreatedAt)
+			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunity, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt)
 			if cpErr == nil {
 				cpID, _ := cpRes.LastInsertId()
 				cp.ID = uint64(cpID)
@@ -2562,6 +2878,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	if err := commentBatch.Commit(pebble.NoSync); err != nil {
 		return fmt.Errorf("commit commentBatch failed: %w", err)
 	}
+	if err := voteBatch.Commit(pebble.NoSync); err != nil {
+		return fmt.Errorf("commit voteBatch failed: %w", err)
+	}
 
 	// Commit SQLite transaction
 	if err := tx.Commit(); err != nil {
@@ -2579,6 +2898,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		var wg sync.WaitGroup
 		sem := make(chan struct{}, 16)
 		for _, item := range batch {
+			if item.Post.DeletedOrRemoved() {
+				continue // deleted posts have no file on the board
+			}
 			wg.Add(1)
 			sem <- struct{}{}
 			go func(it *ImportedPostData) {
@@ -2609,32 +2931,7 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 	}
 
 	for _, c := range comments {
-		if c.IsDeleted {
-			if c.DeletedBy == c.Author || (c.DeletedBy != "" && strings.EqualFold(c.DeletedBy, c.Author)) {
-				buf.WriteString(fmt.Sprintf("[%d] %s 留言已刪除\n", c.Sequence, c.Author))
-			} else {
-				buf.WriteString(fmt.Sprintf("[%d] %s 留言不顯示 (%s)\n", c.Sequence, c.Author, strings.TrimSpace(c.DeleteReason)))
-			}
-			continue
-		}
-		t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
-		var creation string
-		if c.IP != "" && c.IP != "-" {
-			creation = c.IP + " " + t
-		} else {
-			creation = t
-		}
-		buf.WriteString(fmt.Sprintf("[%d] %s %s\n", c.Sequence, c.Author, creation))
-		lines := strings.Split(c.Content, "\n")
-		for _, l := range lines {
-			trimmed := strings.TrimRight(l, "\r ")
-			if trimmed != "" {
-				clean := model.StripANSI(trimmed)
-				if clean != "" {
-					buf.WriteString("  " + clean + "\n")
-				}
-			}
-		}
+		buf.WriteString(FormatCommentBlock(c))
 	}
 
 	if asBig5 {
@@ -2698,6 +2995,110 @@ func visualWidth(s string) int {
 	return w
 }
 
+// RenderLegacyComment renders a single comment in legacy BBS push format
+func RenderLegacyComment(c *model.Comment, asBig5 bool) []byte {
+	if c.DeletedOrRemoved() {
+		cleanReason := c.Reason
+		if !utf8.ValidString(cleanReason) {
+			cleanReason = big5uao.Decode([]byte(cleanReason))
+		}
+		cleanReason = strings.TrimSpace(cleanReason)
+		isSelf := c.Deleted || cleanReason == "自刪"
+		var s string
+		if isSelf {
+			if cleanReason != "" && cleanReason != "自刪" {
+				s = fmt.Sprintf("\x1b[1;30m[此推文已被刪除: %s]\x1b[m\n", cleanReason)
+			} else {
+				s = "\x1b[1;30m[此推文已被刪除]\x1b[m\n"
+			}
+		} else {
+			if cleanReason != "" {
+				s = fmt.Sprintf("\x1b[1;30m[此推文已被隱藏: %s]\x1b[m\n", cleanReason)
+			} else {
+				s = "\x1b[1;30m[此推文已被隱藏]\x1b[m\n"
+			}
+		}
+		if asBig5 {
+			return big5uao.Encode(s)
+		}
+		return []byte(s)
+	}
+
+	var buf bytes.Buffer
+	lines := strings.Split(c.Content, "\n")
+	t := time.Unix(c.CreatedAt, 0)
+	dateStr := t.Format("01/02 15:04")
+
+	for lineIdx, rawLine := range lines {
+		line := strings.TrimRight(rawLine, "\r ")
+		if line == "" && lineIdx > 0 {
+			continue
+		}
+
+		// First line gets c.LegacyType; subsequent merged lines are arrows (or OLD_RECOMMEND)
+		lineType := c.LegacyType
+		if lineIdx > 0 {
+			if c.LegacyType == model.LegacyTypeOldRecommend {
+				lineType = model.LegacyTypeOldRecommend
+			} else {
+				lineType = model.LegacyTypeArrow
+			}
+		}
+
+		var tag, tagColor string
+		switch lineType {
+		case model.LegacyTypeOldRecommend:
+			tag = "→ "
+			tagColor = "\x1b[1;31m"
+		case model.LegacyTypePush:
+			tag = "推 "
+			tagColor = "\x1b[1;37m"
+		case model.LegacyTypeBoo:
+			tag = "噓 "
+			tagColor = "\x1b[1;31m"
+		case model.LegacyTypeArrow:
+			fallthrough
+		default:
+			tag = "→ "
+			tagColor = "\x1b[1;31m"
+		}
+
+		var tail string
+		if lineType == model.LegacyTypeOldRecommend {
+			if c.IP != "" && c.IP != "-" {
+				tail = fmt.Sprintf("推 %s %s", c.IP, dateStr)
+			} else {
+				tail = fmt.Sprintf("推 %s", dateStr)
+			}
+		} else {
+			if c.IP != "" && c.IP != "-" {
+				tail = fmt.Sprintf(" %-15s %s", c.IP, dateStr)
+			} else {
+				tail = fmt.Sprintf(" %s", dateStr)
+			}
+		}
+
+		// Calculate padding for 80-column alignment
+		prefixWidth := 3 + len(c.CreatorName) + 2 // tag(3) + author + ": "(2)
+		msgWidth := visualWidth(line)
+		tailWidth := len(tail)
+		totalWidth := prefixWidth + msgWidth + tailWidth
+
+		pad := 78 - totalWidth
+		if pad < 1 {
+			pad = 1
+		}
+
+		buf.WriteString(fmt.Sprintf("%s%s\x1b[33m%s\x1b[m\x1b[33m: %s%s\x1b[m%s\n",
+			tagColor, tag, c.CreatorName, line, strings.Repeat(" ", pad), tail))
+	}
+
+	if asBig5 {
+		return big5uao.Encode(buf.String())
+	}
+	return buf.Bytes()
+}
+
 // RenderLegacyPostWithComments renders a post and its comments directly in memory in legacy BBS push format
 func RenderLegacyPostWithComments(p *model.Post, comments []*model.Comment, asBig5 bool) []byte {
 	var buf bytes.Buffer
@@ -2707,78 +3108,7 @@ func RenderLegacyPostWithComments(p *model.Post, comments []*model.Comment, asBi
 	}
 
 	for _, c := range comments {
-		if c.IsDeleted {
-			buf.WriteString("\x1b[1;30m[此推文已被刪除]\x1b[m\n")
-			continue
-		}
-
-		lines := strings.Split(c.Content, "\n")
-		t := time.Unix(c.CreatedAt, 0)
-		dateStr := t.Format("01/02 15:04")
-
-		for lineIdx, rawLine := range lines {
-			line := strings.TrimRight(rawLine, "\r ")
-			if line == "" && lineIdx > 0 {
-				continue
-			}
-
-			// First line gets c.LegacyType; subsequent merged lines are arrows (or OLD_RECOMMEND)
-			lineType := c.LegacyType
-			if lineIdx > 0 {
-				if c.LegacyType == model.LegacyTypeOldRecommend {
-					lineType = model.LegacyTypeOldRecommend
-				} else {
-					lineType = model.LegacyTypeArrow
-				}
-			}
-
-			var tag, tagColor string
-			switch lineType {
-			case model.LegacyTypeOldRecommend:
-				tag = "→ "
-				tagColor = "\x1b[1;31m"
-			case model.LegacyTypePush:
-				tag = "推 "
-				tagColor = "\x1b[1;37m"
-			case model.LegacyTypeBoo:
-				tag = "噓 "
-				tagColor = "\x1b[1;31m"
-			case model.LegacyTypeArrow:
-				fallthrough
-			default:
-				tag = "→ "
-				tagColor = "\x1b[1;31m"
-			}
-
-			var tail string
-			if lineType == model.LegacyTypeOldRecommend {
-				if c.IP != "" && c.IP != "-" {
-					tail = fmt.Sprintf("推 %s %s", c.IP, dateStr)
-				} else {
-					tail = fmt.Sprintf("推 %s", dateStr)
-				}
-			} else {
-				if c.IP != "" && c.IP != "-" {
-					tail = fmt.Sprintf(" %-15s %s", c.IP, dateStr)
-				} else {
-					tail = fmt.Sprintf(" %s", dateStr)
-				}
-			}
-
-			// Calculate padding for 80-column alignment
-			prefixWidth := 3 + len(c.Author) + 2 // tag(3) + author + ": "(2)
-			msgWidth := visualWidth(line)
-			tailWidth := len(tail)
-			totalWidth := prefixWidth + msgWidth + tailWidth
-
-			pad := 78 - totalWidth
-			if pad < 1 {
-				pad = 1
-			}
-
-			buf.WriteString(fmt.Sprintf("%s%s\x1b[33m%s\x1b[m\x1b[33m: %s%s\x1b[m%s\n",
-				tagColor, tag, c.Author, line, strings.Repeat(" ", pad), tail))
-		}
+		buf.Write(RenderLegacyComment(c, false))
 	}
 
 	if asBig5 {
@@ -2793,10 +3123,14 @@ func (e *Engine) RenderLegacyPostText(postID uint64, asBig5 bool) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	if p.IsDeleted {
-		reason := p.DeleteReason
+	if p.DeletedOrRemoved() {
+		reason := p.Reason
 		if reason == "" {
-			reason = "本文已被刪除"
+			if p.Removed {
+				reason = "本文已被隱藏"
+			} else {
+				reason = "本文已被刪除"
+			}
 		}
 		deletedNotice := fmt.Sprintf("[%s]\n", reason)
 		if asBig5 || e.cfg.IsBig5() {
@@ -2831,7 +3165,7 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 		return 0, fmt.Errorf("mkdir targetDir failed: %w", err)
 	}
 
-	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community = ? AND is_deleted = 0 ORDER BY id ASC", opts.Community)
+	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community = ? AND deleted = 0 AND removed = 0 ORDER BY id ASC", opts.Community)
 	if err != nil {
 		return 0, fmt.Errorf("query posts failed: %w", err)
 	}
@@ -2898,3 +3232,5 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 
 	return int(renderedCount.Load()), nil
 }
+
+// -----------------------------------------------------------------------------

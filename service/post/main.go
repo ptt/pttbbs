@@ -18,6 +18,7 @@ import (
 	"pttbbs/bbs"
 	"pttbbs/post/config"
 	"pttbbs/post/daemon"
+	"pttbbs/post/importer"
 	"pttbbs/post/storage"
 )
 
@@ -229,11 +230,21 @@ func main() {
 		return
 	}
 
+	// Resolves the person IDs of the users in legacy articles; without SHM they are
+	// imported as unknown.
+	var users importer.UserResolver
+	if shm, err := bbs.AttachSHM(); err == nil {
+		users = bbs.NewUserResolver(shm)
+	} else {
+		log.Printf("[post.svc] Warning: %v; person IDs of legacy authors will not be resolved", err)
+	}
+
 	srv := daemon.NewServer(daemon.ServerConfig{
 		BBSHome:        svcConf.BBSHome,
 		UnixSocket:     sockPath,
 		FilterEncoding: svcConf.FilterEncoding,
 		ImportWorkers:  svcConf.ImportWorkers,
+		Users:          users,
 	}, st)
 
 	if err := srv.Start(); err != nil {

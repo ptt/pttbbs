@@ -1,9 +1,30 @@
 package bbs
 
 /*
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "cmbbs.h"
+#include "common.h"
+
+// Reads the userid and firstlogin of the account in slot unum of .PASSWDS.
+static int read_passwd_user(int unum, char *userid, int sz, int *firstlogin) {
+    userec_t u;
+    int fd;
+    ssize_t n;
+    if (unum < 1 || unum > MAX_USERS)
+        return -1;
+    if ((fd = open(FN_PASSWD, O_RDONLY)) < 0)
+        return -1;
+    n = pread(fd, &u, sizeof(u), (off_t)sizeof(u) * (unum - 1));
+    close(fd);
+    if (n != (ssize_t)sizeof(u) || !u.userid[0])
+        return -1;
+    strlcpy(userid, u.userid, sz);
+    *firstlogin = (int)u.firstlogin;
+    return 0;
+}
 */
 import "C"
 
@@ -11,6 +32,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -476,4 +498,39 @@ func Aidu2Fn(aid uint64) string {
 	var buf [64]C.char
 	C.aidu2fn(&buf[0], C.aidu_t(aid))
 	return C.GoString(&buf[0])
+}
+
+// UserResolver looks up accounts by user ID (in SHM) or by usernum (in
+// .PASSWDS), for resolving the UIDs of the users named in legacy records.
+type UserResolver struct {
+	shm *SHMClient
+}
+
+// NewUserResolver returns a UserResolver using the attached SHM.
+func NewUserResolver(c *SHMClient) *UserResolver {
+	return &UserResolver{shm: c}
+}
+
+// LookupUsernum returns the userid and firstlogin of the account in slot
+// usernum.
+func (r *UserResolver) LookupUsernum(usernum int) (string, uint32, bool) {
+	var buf [C.IDLEN + 1]C.char
+	var firstlogin C.int
+	if C.read_passwd_user(C.int(usernum), &buf[0], C.int(len(buf)), &firstlogin) != 0 {
+		return "", 0, false
+	}
+	return C.GoString(&buf[0]), uint32(firstlogin), true
+}
+
+// LookupUserid returns the usernum and firstlogin of the account userid.
+func (r *UserResolver) LookupUserid(userid string) (int, uint32, bool) {
+	usernum := r.shm.GetUID(userid)
+	if usernum <= 0 {
+		return 0, 0, false
+	}
+	id, firstlogin, ok := r.LookupUsernum(usernum)
+	if !ok || !strings.EqualFold(id, userid) {
+		return 0, 0, false
+	}
+	return usernum, firstlogin, true
 }

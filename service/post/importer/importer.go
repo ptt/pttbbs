@@ -15,6 +15,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -29,6 +30,10 @@ import (
 const (
 	FileHeaderSize     = 128
 	MaxArticleFileSize = 32 * 1024 * 1024 // 32MB
+
+	// Filemode flags in legacy announce (.DIR)
+	FileHide uint16 = 0x0020 // FILE_HIDE: hide, in announce
+	FileBM   uint16 = 0x0040 // FILE_BM: BM only, in announce
 )
 
 // ReadArticleFile reads an article file safely according to PTT BBS rules:
@@ -85,11 +90,16 @@ func ReadArticleFile(path string) ([]byte, error) {
 type FileHeader struct {
 	Filename  string
 	Modified  uint32
+	Score     int16
+	Downvote  uint8
+	Upvote    uint8
 	Recommend int8
 	Owner     string
 	Date      string
 	Title     string
 	Filemode  uint16
+	Multi     uint32 // fileheader_t.multi; see model.UnpackMulti
+	Comments  uint16
 }
 
 func cString(b []byte) string {
@@ -106,20 +116,30 @@ func UnpackFileHeader(buf []byte) (*FileHeader, error) {
 	}
 	fn := cString(buf[0:28])
 	mod := binary.LittleEndian.Uint32(buf[28:32])
-	rec := int8(buf[33])
+	score := int16(binary.LittleEndian.Uint16(buf[32:34]))
+	downvote := buf[32]
+	upvote := buf[33]
+	rec := int8(score)
 	owner := cString(buf[34:48])
 	date := cString(buf[48:54])
 	title := cString(buf[54:119])
+	multi := binary.LittleEndian.Uint32(buf[120:124])
 	fmode := binary.LittleEndian.Uint16(buf[124:126])
+	comments := binary.LittleEndian.Uint16(buf[126:128])
 
 	return &FileHeader{
 		Filename:  fn,
 		Modified:  mod,
+		Score:     score,
+		Downvote:  downvote,
+		Upvote:    upvote,
 		Recommend: rec,
 		Owner:     owner,
 		Date:      date,
 		Title:     title,
 		Filemode:  fmode,
+		Multi:     multi,
+		Comments:  comments,
 	}, nil
 }
 
@@ -175,10 +195,11 @@ func isPushLine(clean string) bool {
 
 // ParsedComment represents an extracted comment
 type ParsedComment struct {
-	Author      string
+	CreatorName string
 	Content     string
 	IP          string
 	CTime       int64
+	LastCTime   int64
 	CommentType string // "推", "噓", "→", "white"
 	LegacyType  uint8  // 0: OLD_RECOMMEND, 1: 推, 2: 噓, 3: 箭頭
 }
@@ -189,7 +210,7 @@ type ParsedCrosspost struct {
 	SrcFile     string
 	TargetBoard string
 	TargetFile  string
-	Operator    string
+	CreatorName string
 	CTime       int64
 }
 
@@ -245,7 +266,7 @@ func RollDate(dateStr string, currYear, prevMonth, prevDay int, lastTs int64) (i
 }
 
 // MergeConsecutiveComments merges consecutive comments from the same author
-// if they occur on the same day OR within 60 seconds
+// if they occur within 3 minutes (180 seconds), consistent with mbbsd merge comment.
 func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 	if len(comments) == 0 {
 		return nil
@@ -255,17 +276,17 @@ func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 		if strings.TrimSpace(c.Content) == "" {
 			continue
 		}
-		if len(merged) > 0 && strings.EqualFold(merged[len(merged)-1].Author, c.Author) {
+		if len(merged) > 0 && strings.EqualFold(merged[len(merged)-1].CreatorName, c.CreatorName) {
 			prev := merged[len(merged)-1]
-			tPrev := time.Unix(prev.CTime, 0)
-			tCurr := time.Unix(c.CTime, 0)
-			sameDay := tPrev.Year() == tCurr.Year() && tPrev.Month() == tCurr.Month() && tPrev.Day() == tCurr.Day()
-			diff := c.CTime - prev.CTime
+			lastTime := prev.LastCTime
+			if lastTime == 0 {
+				lastTime = prev.CTime
+			}
+			diff := c.CTime - lastTime
 			if diff < 0 {
 				diff = -diff
 			}
-			within1Min := diff <= 60
-			if sameDay || within1Min {
+			if diff <= 180 {
 				canMerge := false
 				if c.LegacyType == model.LegacyTypeArrow {
 					// 箭頭 (3) merges into 推 (1), 噓 (2), or 箭頭 (3): 一推多箭=一推, 一噓多箭=一噓, 多箭=一箭
@@ -276,10 +297,19 @@ func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 				}
 
 				if canMerge {
+					prevLines := model.CountCommentLines(prev.Content)
+					curLines := model.CountCommentLines(c.Content)
+					if prevLines+curLines > model.MaxCommentLines {
+						canMerge = false
+					}
+				}
+
+				if canMerge {
 					prev.Content += "\n" + c.Content
 					if prev.IP == "" && c.IP != "" {
 						prev.IP = c.IP
 					}
+					prev.LastCTime = c.CTime
 					continue
 				}
 			}
@@ -292,7 +322,7 @@ func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 // ParseArticleText parses raw article bytes into body, comments, and crossposts
 func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, community, postFile string, isBig5 bool, noMerge ...bool) (*ParsedArticle, error) {
 	var fullText string
-	if isBig5 {
+	if isBig5 && !utf8.Valid(rawBytes) {
 		fullText = big5uao.DecodeSGR66(rawBytes)
 	} else {
 		fullText = string(rawBytes)
@@ -345,7 +375,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				SrcFile:     srcFile,
 				TargetBoard: community,
 				TargetFile:  postFile,
-				Operator:    defaultAuthor,
+				CreatorName: defaultAuthor,
 				CTime:       postCtime,
 			})
 		}
@@ -405,7 +435,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				SrcFile:     postFile,
 				TargetBoard: targetBrd,
 				TargetFile:  "-",
-				Operator:    op,
+				CreatorName: op,
 				CTime:       cpTime,
 			})
 			continue
@@ -512,10 +542,11 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 			lastTs = commentTs
 
 			comments = append(comments, &ParsedComment{
-				Author:      author,
+				CreatorName: author,
 				Content:     content,
 				IP:          ip,
 				CTime:       commentTs,
+				LastCTime:   commentTs,
 				CommentType: tag,
 				LegacyType:  legacyType,
 			})
@@ -524,10 +555,11 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 
 		// Interspersed white text
 		comments = append(comments, &ParsedComment{
-			Author:      defaultAuthor,
+			CreatorName: defaultAuthor,
 			Content:     cleanTrimmed,
 			IP:          "",
 			CTime:       lastTs,
+			LastCTime:   lastTs,
 			CommentType: "white",
 			LegacyType:  model.LegacyTypeArrow,
 		})
@@ -603,6 +635,8 @@ type ImportStats struct {
 	PostsImported    int
 	CommentsImported int
 	CrosspostsLogged int
+	DeletedImported  int // safe-deleted .DIR records imported as deleted posts
+	DeletedMarked    int // existing posts marked deleted as .DIR has them safe-deleted
 	Errors           int
 	ErrorDetails     []string
 	Elapsed          time.Duration
@@ -623,7 +657,10 @@ type ImportBoardOptions struct {
 	LegacyFormat bool
 	DryRun       bool
 	Workers      int
-	ProgressFn   func(current, total int)
+	// Users resolves the person IDs of the authors in .DIR and in the articles.
+	// Without it, they are imported with unknown (0) person IDs.
+	Users      UserResolver
+	ProgressFn func(current, total int)
 }
 
 // QueryCommentDB queries legacy COMMENTD LevelDB database for authoritative (ctime, ip)
@@ -715,6 +752,7 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		ctx = context.Background()
 	}
 
+	users := NewCachedResolver(opts.Users)
 	numWorkers := opts.Workers
 	if numWorkers <= 0 {
 		numWorkers = 8
@@ -723,11 +761,13 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		seq         int
 		fhdr        *FileHeader
 		articlePath string
+		deleted     bool // safe-deleted record; fhdr.Filename is the original name
 	}
 	type parseResult struct {
 		seq      int
 		filename string
 		data     *storage.ImportedPostData
+		marked   bool // an existing post was marked deleted
 		err      error
 	}
 
@@ -761,6 +801,15 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 								}
 							}
 						}()
+
+						if job.deleted {
+							data, marked, err := importSafeDeleted(engine, opts, users, job.fhdr)
+							select {
+							case <-ctx.Done():
+							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, data: data, marked: marked, err: err}:
+							}
+							return
+						}
 
 						rawBytes, err := ReadArticleFile(job.articlePath)
 						if err != nil {
@@ -805,51 +854,39 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 						}
 
 						title := job.fhdr.Title
-						if opts.IsBig5 {
+						if opts.IsBig5 && !utf8.Valid([]byte(title)) {
 							title = big5uao.DecodeSGR66([]byte(title))
 						}
 
-						upvotes := 0
-						downvotes := 0
-						var comments []*model.Comment
-						for _, pc := range parsed.Comments {
-							if pc.CommentType == "推" {
-								upvotes++
-							} else if pc.CommentType == "噓" {
-								downvotes++
-							}
-							comments = append(comments, &model.Comment{
-								Author:     pc.Author,
-								Content:    pc.Content,
-								IP:         pc.IP,
-								CreatedAt:  pc.CTime,
-								LegacyType: pc.LegacyType,
-							})
-						}
+						comments, votes, upvotes, downvotes := ConvertParsedComments(parsed.Comments, users)
 
 						var crossposts []*model.CrosspostRecord
 						for _, cp := range parsed.Crossposts {
 							crossposts = append(crossposts, &model.CrosspostRecord{
 								TargetCommunity: cp.TargetBoard,
 								TargetPostFile:  cp.TargetFile,
-								Operator:        cp.Operator,
+								CreatorName:     cp.CreatorName,
+								CreatorID:       ResolvePersonID(users, cp.CreatorName, 0, cp.CTime),
 								CreatedAt:       cp.CTime,
 							})
 						}
 
 						post := &model.Post{
-							ParentID:  0,
-							Community: opts.Board,
-							PostFile:  job.fhdr.Filename,
-							Title:     title,
-							Author:    job.fhdr.Owner,
-							CreatedAt: postCtime,
-							Modified:  postCtime,
-							Filemode:  int(job.fhdr.Filemode),
-							Upvotes:   upvotes,
-							Downvotes: downvotes,
-							Content:   parsed.BodyContent,
-							Encoding:  "utf-8",
+							ParentID:    0,
+							Community:   opts.Board,
+							PostFile:    job.fhdr.Filename,
+							Title:       title,
+							CreatorName: job.fhdr.Owner,
+							CreatorID:   resolveAuthor(users, job.fhdr, postCtime),
+							CreatedAt:   postCtime,
+							Modified:    postModified(job.fhdr, postCtime),
+							Filemode:    int(job.fhdr.Filemode),
+							Money:       moneyOf(job.fhdr),
+							Upvotes:     upvotes,
+							Downvotes:   downvotes,
+							NumComments: len(comments),
+							Content:     parsed.BodyContent,
+							Encoding:    "utf-8",
 						}
 
 						select {
@@ -862,6 +899,7 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 								Post:       post,
 								Comments:   comments,
 								Crossposts: crossposts,
+								Votes:      votes,
 							},
 						}:
 						}
@@ -900,7 +938,14 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 			}
 
 			fhdr, err := UnpackFileHeader(buf)
-			if err != nil || fhdr.Filename == "" || strings.HasPrefix(fhdr.Filename, ".") || (fhdr.Filemode&0x0020 != 0) {
+			if err != nil || fhdr.Filename == "" || (fhdr.Filemode&0x0020 != 0) {
+				continue
+			}
+			deleted := false
+			if orig, ok := IsSafeDeletedFilename(fhdr.Filename); ok {
+				fhdr.Filename = orig
+				deleted = true
+			} else if strings.HasPrefix(fhdr.Filename, ".") {
 				continue
 			}
 
@@ -918,6 +963,7 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 				seq:         validCount,
 				fhdr:        fhdr,
 				articlePath: articlePath,
+				deleted:     deleted,
 			}:
 			}
 		}
@@ -948,6 +994,9 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 		}
 		for _, item := range batch {
 			stats.PostsImported++
+			if item.Post.DeletedOrRemoved() {
+				stats.DeletedImported++
+			}
 			stats.CommentsImported += len(item.Comments)
 			stats.CrosspostsLogged += len(item.Crossposts)
 		}
@@ -964,6 +1013,9 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 				goto finished
 			}
 			stats.ValidPosts++
+			if res.marked {
+				stats.DeletedMarked++
+			}
 			if res.err != nil {
 				stats.Errors++
 				pending[res.seq] = nil
@@ -1005,4 +1057,119 @@ finished:
 
 	stats.Elapsed = time.Since(startTime)
 	return stats, nil
+}
+
+// postModified returns the modification time of a post from its .DIR record.
+func postModified(fhdr *FileHeader, ctime int64) int64 {
+	if fhdr.Modified > 0 {
+		return int64(fhdr.Modified)
+	}
+	return ctime
+}
+
+// parseDeletedTitle recovers who wrote and who deleted a post from the title
+// that mbbsd gave its safe-deleted .DIR record (see DeletedTitle). A title
+// in none of the standard forms was entered by the moderator who deleted the
+// post, and is kept as the reason, so that DeletedTitle reproduces it.
+func parseDeletedTitle(title string) (author, deletedBy, reason string) {
+	if title == safeDelTitle {
+		return "", "", ""
+	}
+	if rest, ok := strings.CutPrefix(title, safeDelTitle+" "); ok && len(rest) > 2 {
+		inner := rest[1 : len(rest)-1]
+		switch {
+		case rest[0] == '[' && rest[len(rest)-1] == ']' && !strings.ContainsAny(inner, " []<>"):
+			return inner, inner, ""
+		case rest[0] == '<' && rest[len(rest)-1] == '>' && !strings.ContainsAny(inner, " []<>"):
+			return inner, safeDelOwner, ""
+		}
+	}
+	// Moderator's title, by default "(已被<moderator>刪除) <author>".
+	author, deletedBy = "", safeDelOwner
+	if i := strings.LastIndex(title, "<"); i >= 0 && strings.HasSuffix(title, ">") {
+		author = title[i+1 : len(title)-1]
+	}
+	if rest, ok := strings.CutPrefix(title, "(已被"); ok {
+		if i := strings.Index(rest, "刪除)"); i > 0 {
+			deletedBy = rest[:i]
+		}
+	}
+	return author, deletedBy, title
+}
+
+// resolveAuthor returns the person ID of the author of a post in .DIR. Anonymous
+// posts keep the usernum of their author in multi.
+func resolveAuthor(users UserResolver, fhdr *FileHeader, ctime int64) model.PersonID {
+	if int(fhdr.Filemode)&model.FileAnonymous != 0 {
+		return ResolvePersonID(users, "", int(int32(fhdr.Multi)), ctime)
+	}
+	return ResolvePersonID(users, fhdr.Owner, 0, ctime)
+}
+
+// moneyOf returns the money of a post in .DIR, whose multi holds something
+// else for anonymous and petition posts.
+func moneyOf(fhdr *FileHeader) int {
+	if int(fhdr.Filemode)&(model.FileAnonymous|model.FilePetition) != 0 {
+		return 0
+	}
+	return int(int32(fhdr.Multi))
+}
+
+// importSafeDeleted handles a record that mbbsd has safe-deleted: its
+// article file is gone, so only what the record tells is kept. A post that
+// post.svc already has is marked deleted (unless it already is); otherwise
+// a deleted post without content is imported.
+func importSafeDeleted(engine storage.Storage, opts ImportBoardOptions, users UserResolver, fhdr *FileHeader) (*storage.ImportedPostData, bool, error) {
+	title := fhdr.Title
+	if opts.IsBig5 && !utf8.Valid([]byte(title)) {
+		title = big5uao.DecodeSGR66([]byte(title))
+	}
+	creatorName, deletedByName, reason := parseDeletedTitle(title)
+	deletedAt := int64(fhdr.Modified)
+
+	if p, err := engine.GetPostByCommunityFile(opts.Board, fhdr.Filename); err == nil && p != nil {
+		if p.DeletedOrRemoved() || opts.DryRun {
+			return nil, !p.DeletedOrRemoved(), nil
+		}
+		deletedByID := p.CreatorID
+		if deletedByName != "" && deletedByName != p.CreatorName {
+			deletedByID = ResolvePersonID(users, deletedByName, 0, deletedAt)
+		} else {
+			deletedByName = p.CreatorName
+		}
+		if _, err := engine.DeletePostByCommunityFile(opts.Board, fhdr.Filename, deletedByName, deletedByID, reason); err != nil {
+			return nil, false, err
+		}
+		return nil, true, nil
+	}
+
+	ctime := stampTime(fhdr.Filename)
+	if ctime == 0 {
+		ctime = deletedAt
+	}
+	creatorID := ResolvePersonID(users, creatorName, 0, ctime)
+	if int(fhdr.Filemode)&model.FileAnonymous != 0 {
+		creatorID = ResolvePersonID(users, "", int(int32(fhdr.Multi)), ctime)
+	}
+	deletedByID := creatorID
+	if deletedByName != creatorName {
+		deletedByID = ResolvePersonID(users, deletedByName, 0, deletedAt)
+	}
+	score := int(fhdr.Score)
+	post := &model.Post{
+		Community:   opts.Board,
+		PostFile:    fhdr.Filename,
+		CreatorName: creatorName,
+		CreatorID:   creatorID,
+		CreatedAt:   ctime,
+		Modified:    deletedAt,
+		Filemode:    int(fhdr.Filemode),
+		Money:       moneyOf(fhdr),
+		Upvotes:     max(score, 0),
+		Downvotes:   max(-score, 0),
+		NumComments: int(fhdr.Comments),
+		Encoding:    "utf-8",
+	}
+	post.Deletion.Delete(creatorName, creatorID, deletedByName, deletedByID, reason, deletedAt)
+	return &storage.ImportedPostData{Post: post}, false, nil
 }

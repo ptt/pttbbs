@@ -149,6 +149,14 @@ func (s *ShardedEngine) CountPosts(community string) (int, error) {
 	return s.GetEngineByCommunity(community).CountPosts(community)
 }
 
+func (s *ShardedEngine) ListPostMeta(community string) ([]*model.Post, error) {
+	return s.GetEngineByCommunity(community).ListPostMeta(community)
+}
+
+func (s *ShardedEngine) SetPostMeta(community, postFile string, filemode, money int) error {
+	return s.GetEngineByCommunity(community).SetPostMeta(community, postFile, filemode, money)
+}
+
 func (s *ShardedEngine) ListPosts(community string, limit, offset int) ([]*model.Post, error) {
 	return s.GetEngineByCommunity(community).ListPosts(community, limit, offset)
 }
@@ -165,8 +173,8 @@ func (s *ShardedEngine) GetThread(rootID uint64) ([]*model.Post, error) {
 	return s.GetEngineByPostID(rootID).GetThread(rootID)
 }
 
-func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, operator string, operatorToken uint32, createdAt int64) (*model.CrosspostRecord, int, error) {
-	return s.GetEngineByCommunity(targetCommunity).AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, operator, operatorToken, createdAt)
+func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
+	return s.GetEngineByCommunity(targetCommunity).AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
 }
 
 func (s *ShardedEngine) GetCrossposts(community, postFile string) ([]*model.CrosspostRecord, error) {
@@ -185,6 +193,10 @@ func (s *ShardedEngine) GetComments(postID uint64, startFloor, limit uint32) ([]
 	return s.GetEngineByPostID(postID).GetComments(postID, startFloor, limit)
 }
 
+func (s *ShardedEngine) GetCommentsFiltered(postID uint64, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error) {
+	return s.GetEngineByPostID(postID).GetCommentsFiltered(postID, startFloor, limit, creatorName, creatorID)
+}
+
 func (s *ShardedEngine) GetCommentCount(postID uint64) (int, error) {
 	return s.GetEngineByPostID(postID).GetCommentCount(postID)
 }
@@ -195,6 +207,10 @@ func (s *ShardedEngine) GetCommentCountByCommunityFile(community, postFile strin
 
 func (s *ShardedEngine) GetCommentsByCommunityFile(community, postFile string, startFloor, limit uint32) ([]*model.Comment, error) {
 	return s.GetEngineByCommunity(community).GetCommentsByCommunityFile(community, postFile, startFloor, limit)
+}
+
+func (s *ShardedEngine) GetCommentsByCommunityFileFiltered(community, postFile string, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error) {
+	return s.GetEngineByCommunity(community).GetCommentsByCommunityFileFiltered(community, postFile, startFloor, limit, creatorName, creatorID)
 }
 
 func (s *ShardedEngine) PurgeUserComments(author string, maxAge time.Duration) (int, error) {
@@ -233,8 +249,31 @@ func (s *ShardedEngine) PurgePostByCommunityFile(community, postFile string) err
 	return s.GetEngineByCommunity(community).PurgePostByCommunityFile(community, postFile)
 }
 
-func (s *ShardedEngine) VotePost(postID uint64, user string, authorToken uint32, newVote model.VoteType) (int, int, error) {
-	return s.GetEngineByPostID(postID).VotePost(postID, user, authorToken, newVote)
+func (s *ShardedEngine) VotePost(postID uint64, personName string, personID model.PersonID, newVote model.VoteType, createdAt int64, ip string) (int, int, error) {
+	return s.GetEngineByPostID(postID).VotePost(postID, personName, personID, newVote, createdAt, ip)
+}
+
+func (s *ShardedEngine) GetVotes(postID uint64) ([]*model.VoteRecord, error) {
+	return s.GetEngineByPostID(postID).GetVotes(postID)
+}
+
+func (s *ShardedEngine) GetVotesByCommunityFile(community, postFile string) ([]*model.VoteRecord, error) {
+	p, err := s.GetPostByCommunityFile(community, postFile)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, fmt.Errorf("post not found: %s@%s", postFile, community)
+	}
+	return s.GetVotes(p.ID)
+}
+
+func (s *ShardedEngine) ResetVotes(postID uint64) error {
+	return s.GetEngineByPostID(postID).ResetVotes(postID)
+}
+
+func (s *ShardedEngine) ResetVotesByCommunityFile(community, postFile string) error {
+	return s.GetEngineByCommunity(community).ResetVotesByCommunityFile(community, postFile)
 }
 
 func (s *ShardedEngine) SetPostContent(postID uint64, content string) error {
@@ -253,28 +292,28 @@ func (s *ShardedEngine) RenderCommunity(opts RenderCommunityOptions) (int, error
 	return s.GetEngineByCommunity(opts.Community).RenderCommunity(opts)
 }
 
-func (s *ShardedEngine) UpdatePost(postID uint64, newTitle, newContent, editor string, expectedModified int64) (uint32, int64, error) {
-	return s.GetEngineByPostID(postID).UpdatePost(postID, newTitle, newContent, editor, expectedModified)
+func (s *ShardedEngine) UpdatePost(postID uint64, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error) {
+	return s.GetEngineByPostID(postID).UpdatePost(postID, newTitle, newContent, editorName, editorID, expectedModified)
 }
 
-func (s *ShardedEngine) UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor string, expectedModified int64) (uint32, int64, error) {
-	return s.GetEngineByCommunity(community).UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor, expectedModified)
+func (s *ShardedEngine) UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error) {
+	return s.GetEngineByCommunity(community).UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName, editorID, expectedModified)
 }
 
-func (s *ShardedEngine) UpdatePostTitle(postID uint64, newTitle, editor string) (uint32, error) {
-	return s.GetEngineByPostID(postID).UpdatePostTitle(postID, newTitle, editor)
+func (s *ShardedEngine) UpdatePostTitle(postID uint64, newTitle, editorName string, editorID model.PersonID) (uint32, error) {
+	return s.GetEngineByPostID(postID).UpdatePostTitle(postID, newTitle, editorName, editorID)
 }
 
-func (s *ShardedEngine) UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor string) (uint32, error) {
-	return s.GetEngineByCommunity(community).UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor)
+func (s *ShardedEngine) UpdatePostTitleByCommunityFile(community, postFile, newTitle, editorName string, editorID model.PersonID) (uint32, error) {
+	return s.GetEngineByCommunity(community).UpdatePostTitleByCommunityFile(community, postFile, newTitle, editorName, editorID)
 }
 
-func (s *ShardedEngine) DeletePost(postID uint64, deleter, reason string) (uint32, error) {
-	return s.GetEngineByPostID(postID).DeletePost(postID, deleter, reason)
+func (s *ShardedEngine) DeletePost(postID uint64, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByPostID(postID).DeletePost(postID, deleterName, deleterID, reason)
 }
 
-func (s *ShardedEngine) DeletePostByCommunityFile(community, postFile, deleter, reason string) (uint32, error) {
-	return s.GetEngineByCommunity(community).DeletePostByCommunityFile(community, postFile, deleter, reason)
+func (s *ShardedEngine) DeletePostByCommunityFile(community, postFile, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByCommunity(community).DeletePostByCommunityFile(community, postFile, deleterName, deleterID, reason)
 }
 
 func (s *ShardedEngine) UndeletePost(postID uint64) error {
@@ -285,20 +324,20 @@ func (s *ShardedEngine) UndeletePostByCommunityFile(community, postFile string) 
 	return s.GetEngineByCommunity(community).UndeletePostByCommunityFile(community, postFile)
 }
 
-func (s *ShardedEngine) UpdateComment(postID uint64, seq uint32, newContent, editor string) (uint32, error) {
-	return s.GetEngineByPostID(postID).UpdateComment(postID, seq, newContent, editor)
+func (s *ShardedEngine) UpdateComment(postID uint64, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error) {
+	return s.GetEngineByPostID(postID).UpdateComment(postID, seq, newContent, editorName, editorID)
 }
 
-func (s *ShardedEngine) UpdateCommentByCommunityFile(community, postFile string, seq uint32, newContent, editor string) (uint32, error) {
-	return s.GetEngineByCommunity(community).UpdateCommentByCommunityFile(community, postFile, seq, newContent, editor)
+func (s *ShardedEngine) UpdateCommentByCommunityFile(community, postFile string, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error) {
+	return s.GetEngineByCommunity(community).UpdateCommentByCommunityFile(community, postFile, seq, newContent, editorName, editorID)
 }
 
-func (s *ShardedEngine) DeleteComment(postID uint64, seq uint32, deleter, reason string) (uint32, error) {
-	return s.GetEngineByPostID(postID).DeleteComment(postID, seq, deleter, reason)
+func (s *ShardedEngine) DeleteComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByPostID(postID).DeleteComment(postID, seq, deleterName, deleterID, reason)
 }
 
-func (s *ShardedEngine) DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleter, reason string) (uint32, error) {
-	return s.GetEngineByCommunity(community).DeleteCommentByCommunityFile(community, postFile, seq, deleter, reason)
+func (s *ShardedEngine) DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByCommunity(community).DeleteCommentByCommunityFile(community, postFile, seq, deleterName, deleterID, reason)
 }
 
 func (s *ShardedEngine) UndeleteComment(postID uint64, seq uint32) error {
