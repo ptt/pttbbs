@@ -17,16 +17,20 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
     } else {
     // TODO(piaip) Make bbs.c#recomment use same structure.
     // Now we just assume they are the same.
-    enum { RECTYPE_SIZE = 3 };
-    static const char *ctype[RECTYPE_SIZE] = {
+    static const char *ctype[] = {
         "±À", "¼N", "¡÷",
     };
     // Note attr2 is slightly different from ctype_attr in bbs.c#recommend
-    static const char *ctype_attr2[RECTYPE_SIZE] = {
+    static const char *ctype_attr2[] = {
         ANSI_COLOR(1;37),
         ANSI_COLOR(1;31),
         ANSI_COLOR(1;31),
     };
+    // Callers check type against RECTYPE_SIZE; these must cover it all.
+    _Static_assert(ARRAY_SIZE(ctype) == RECTYPE_SIZE,
+                   "ctype must have one entry per comment type");
+    _Static_assert(ARRAY_SIZE(ctype_attr2) == RECTYPE_SIZE,
+                   "ctype_attr2 must have one entry per comment type");
     snprintf(buf, szbuf,
              "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
              ":%-*s" ANSI_RESET "%s\n",
