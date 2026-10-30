@@ -14,7 +14,7 @@ extern  boardheader_t *bcache;
 int     checkmode = 0;
 
 typedef struct {
-    char    bname[IDLEN + 1];	/* board ID */
+    char    bname[BRDNAME_SIZE];	/* board ID */
     int     maxp;		/* max post */
 } life_t;
 

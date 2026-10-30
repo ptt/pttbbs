@@ -565,7 +565,7 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED
 
 void delete_board_link(boardheader_t *bh, int bid)
 {
-    char bname[IDLEN + 1];
+    char bname[BRDNAME_SIZE];
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     STRLCPY(bname, bh->brdname);
@@ -854,7 +854,7 @@ board_enable_moderator_perms(const boardheader_t *bh)
 
 
 typedef struct {
-    char    brdname[IDLEN + 1];
+    char    brdname[BRDNAME_SIZE];
     char    bclass[BCLEN + 1];
     char    desc[BTLEN + 1];
     bool    post_reward;
@@ -1201,7 +1201,7 @@ m_mod_board(char *bname)
 	break;
     case 'c':
 	if (HasUserPerm(PERM_BOARDS)) {
-	    char frombname[20], fromdir[PATHLEN];
+	    char frombname[BRDNAME_SIZE], fromdir[PATHLEN];
 	    move(10, 0);
 	    clrtoeol();
 	    CompleteBoard("請輸入要合併的看板名稱(按空白鍵自動搜尋): ", frombname);
@@ -1292,7 +1292,7 @@ m_mod_board(char *bname)
 	break;
     case 'e':
 	if (edit_board_general_form(&bh, bid)) {
-	    strlcpy(bname, bh.brdname, IDLEN + 1);
+	    strlcpy(bname, bh.brdname, BRDNAME_SIZE);
 	}
 	break;
     }
@@ -1303,7 +1303,7 @@ m_mod_board(char *bname)
 int
 m_board(void)
 {
-    char            bname[32];
+    char            bname[BRDNAME_SIZE];
 
     vs_hdr("看板設定");
     CompleteBoardAndGroup(MSG_BID, bname);

@@ -4,7 +4,7 @@
 #include "bbs.h"
 
 typedef struct {
-    char bname[40];
+    char bname[BRDNAME_SIZE];
     int ndir, nfile, k;
 } boardinfo_t;
 

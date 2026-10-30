@@ -12,6 +12,7 @@
 // warning: because some other places is using #IDLEN to convert as string,
 // so don't quote it - otherwise those code will fail.
 #define IDLEN	     12     /* Length of bid/uid */
+#define BRDNAME_SIZE (IDLEN + 1)
 #define IPV4LEN	    (15)    /* a.b.c.d form */
 
 // GCC pragma to prevent paddings
@@ -215,12 +216,12 @@ _Static_assert(sizeof(user_t) == 8, "user_t size mismatch");
 
 // TODO(hungte): Increase to 5 when possible.
 #define MAX_BMs         4   /* Up to 4 moderators per board */
-#define BOARD_MODERATORS_FORMAT_MAX_LEN ((IDLEN + 1) * MAX_BMs)
+#define BOARD_MODERATORS_FORMAT_MAX_LEN (BRDNAME_SIZE * MAX_BMs)
 
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t { /* 256 bytes */
-    char    brdname[IDLEN + 1];	    /* bid */
+    char    brdname[BRDNAME_SIZE];    /* bid */
     char    bclass[BCLEN + 1];	    /* 4 bytes class + \0 */
     char    pad_symbol[2];	    /* deprecated symbol */
     char    desc[BTLEN + 1];	    /* board title/desc (42 bytes) */

@@ -193,7 +193,7 @@ typedef struct CommentBodyReq {
 } PACKSTRUCT CommentBodyReq;
 
 typedef struct CommentKeyReq {
-    char board[IDLEN + 1];
+    char board[BRDNAME_SIZE];
     char file[FNLEN + 1];
 } PACKSTRUCT CommentKeyReq;
 

@@ -642,7 +642,7 @@ handle_brd_file(const char *src_brd, const char *dest)
     int rc = 0;
     boardheader_t bh;
     while (read(fd, &bh, sizeof(bh)) == (ssize_t)sizeof(bh)) {
-        char bname[IDLEN + 1];
+        char bname[BRDNAME_SIZE];
         memcpy(bname, bh.brdname, IDLEN);
         bname[IDLEN] = '\0';
 

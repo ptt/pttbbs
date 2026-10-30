@@ -2072,8 +2072,8 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 {
     char            fpath[PATHLEN];
     char            title[TTLEN + 1];
-    static char     xboard[20] = "";
-    char            buf[20];
+    static char     xboard[BRDNAME_SIZE] = "";
+    char            buf[BRDNAME_SIZE];
     int             bid;
 
     setuserfile(fpath, fhdr->filename);

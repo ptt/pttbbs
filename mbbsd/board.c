@@ -81,7 +81,7 @@ int enter_board(const char *boardname)
 {
     boardheader_t  *bh;
     int bid;
-    char bname[IDLEN+1];
+    char bname[BRDNAME_SIZE];
     char bpath[60];
     struct stat     st;
 
@@ -1731,12 +1731,12 @@ static int
 search_local_board()
 {
     int             num;
-    char            genbuf[IDLEN + 2];
+    char            genbuf[BRDNAME_SIZE];
     struct Vector namelist;
 
     move(0, 0);
     clrtoeol();
-    Vector_init(&namelist, IDLEN + 1);
+    Vector_init(&namelist, BRDNAME_SIZE);
     assert(brdnum<=nbrdsize);
     Vector_resize(&namelist, brdnum);
     for (num = 0; num < brdlist_rows(); num++)
@@ -2332,7 +2332,7 @@ choose_board_add_favorite(int ch, int brdnum, int *num_ptr, char *keyword)
     if (!IN_FAVORITE() || !HasFavEditPerm())
         return;
 
-    char bname[IDLEN + 1];
+    char bname[BRDNAME_SIZE];
     int bid;
     move(0, 0);
     clrtoeol();
@@ -2542,7 +2542,7 @@ board_cmd_search_local(cmd_ctx_t *ctx) {
 static int
 board_cmd_search_global(cmd_ctx_t *ctx) {
     boardlist_ctx_t *cx = (boardlist_ctx_t *)ctx->priv;
-    char bname[IDLEN + 1];
+    char bname[BRDNAME_SIZE];
     int tmp;
     int tmpbid = currutmp->brc_id;
     move(0, 0);

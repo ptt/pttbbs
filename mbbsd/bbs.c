@@ -944,7 +944,7 @@ whereami(void)
 static int
 do_select(void)
 {
-    char            bname[20];
+    char            bname[BRDNAME_SIZE];
 
     setutmpmode(SELECT);
     move(0, 0);

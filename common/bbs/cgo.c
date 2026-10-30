@@ -182,7 +182,7 @@ get_board_info(int bid, char *out_brdname, unsigned int *out_brdattr)
         return 0;
     }
     if (out_brdname) {
-        strlcpy(out_brdname, bh->brdname, IDLEN + 1);
+        strlcpy(out_brdname, bh->brdname, BRDNAME_SIZE);
     }
     if (out_brdattr) {
         *out_brdattr = bh->brdattr;

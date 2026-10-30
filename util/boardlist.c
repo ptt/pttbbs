@@ -33,7 +33,7 @@ void dumpdetail(void)
     int     i, k, bid;
     boardheader_t  *bptr;
     char   *p;
-    char    smallbrdname[IDLEN + 1];
+    char    smallbrdname[BRDNAME_SIZE];
     for( i = 0 ; i < MAX_BOARD ; ++i ){
 	bptr = &bcache[i];
 	
