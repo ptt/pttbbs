@@ -1728,38 +1728,10 @@ brdlist_rows(void)
 }
 
 static int
-search_local_board()
-{
-    int             num;
-    char            genbuf[BRDNAME_SIZE];
-    struct Vector namelist;
-
-    move(0, 0);
-    clrtoeol();
-    Vector_init(&namelist, BRDNAME_SIZE);
-    assert(brdnum<=nbrdsize);
-    Vector_resize(&namelist, brdnum);
-    for (num = 0; num < brdlist_rows(); num++)
-        if (!IS_LISTING_FAV() ||
-            (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
-            Vector_add(&namelist, B_BH(&nbrd[num])->brdname);
-    namecomplete2(&namelist, ANSI_REVERSE "【 搜尋所在位置看板 】"
-	    ANSI_RESET "\n請輸入看板名稱(按空白鍵自動搜尋): ", genbuf);
-    Vector_delete(&namelist);
-
-
-    for (num = 0; num < brdlist_rows(); num++)
-        if (brdstat_is_board(&nbrd[num]) &&
-            !strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
-            return num;
-    return -1;
-}
-
-static int
 search_board(const char *bname)
 {
     int num = 0;
-    assert(brdnum<=nbrdsize);
+    assert(brdnum <= nbrdsize);
 
     for (num = 0; num < brdlist_rows(); num++) {
 	boardstat_t *bptr = &nbrd[num];
@@ -1769,6 +1741,37 @@ search_board(const char *bname)
 	    return num;
     }
     return -1;
+}
+
+static int
+search_local_board(void)
+{
+    char            genbuf[BRDNAME_SIZE];
+    struct Vector   namelist;
+
+    move(0, 0);
+    clrtoeol();
+    move(1, 0);
+    clrtoeol();
+    move(0, 0);
+
+    Vector_init(&namelist, BRDNAME_SIZE);
+    assert(brdnum <= nbrdsize);
+    Vector_resize(&namelist, brdlist_rows());
+    for (int num = 0; num < brdlist_rows(); num++) {
+        boardstat_t *bptr = &nbrd[num];
+        if (brdstat_is_board(bptr) &&
+            (HasBoardPerm(B_BH(bptr)) || CBRD_IS_GROUP_OP()))
+            Vector_add(&namelist, B_BH(bptr)->brdname);
+    }
+    namecomplete2(&namelist, ANSI_REVERSE "【 搜尋所在位置看板 】"
+	    ANSI_RESET "\n請輸入看板名稱(空白自動搜尋): ", genbuf);
+    Vector_delete(&namelist);
+
+    if (!*genbuf)
+        return -1;
+
+    return search_board(genbuf);
 }
 
 static int
