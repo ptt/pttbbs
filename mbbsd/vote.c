@@ -60,6 +60,24 @@ votebuf_init(vote_buffer_t *vbuf, int n)
     SNPRINTF(vbuf->logconf, "%s%d", STR_bv_logconf, n);
 }
 
+// Removes the files of a vote but its control file and its lock. Callers
+// remove the control file first, so that the vote is gone before the rest.
+static void
+vote_unlink_files(const vote_buffer_t *vbuf, const char *bname)
+{
+    const char *names[] = {
+        vbuf->flags, vbuf->ballots, vbuf->desc, vbuf->limited,
+        vbuf->limits, vbuf->title, vbuf->logs, vbuf->comments,
+        vbuf->logconf,
+    };
+    char buf[PATHLEN];
+
+    for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
+        setbfile(buf, bname, names[i]);
+        unlink(buf);
+    }
+}
+
 static int
 vote_stampfile(char *filepath, const char *boardname)
 {
@@ -311,6 +329,9 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     fclose(tfp);
     Rename(b_report, buf);
 
+    // and the files not taken in above: title, limited, limits
+    vote_unlink_files(vbuf, bname);
+
     // Remove the lock file
     setbfile(buf, bname, vbuf->lock);
     unlink(buf);
@@ -478,22 +499,7 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 
 	setbfile(buf, bname, vbuf->control);
 	unlink(buf);
-	setbfile(buf, bname, vbuf->flags);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->ballots);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->desc);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->limited);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->limits);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->title);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->logs);
-	unlink(buf);
-	setbfile(buf, bname, vbuf->comments);
-	unlink(buf);
+	vote_unlink_files(vbuf, bname);
 
 	if (fhp->bvote > 0)
 	    fhp->bvote--;
@@ -690,16 +696,10 @@ vote_maintain(const char *bname)
 	    fhp->bvote = 0;
 
 	    for (i = 0; i < MAX_VOTE_NR; i++) {
-		int j;
-		const char *filename[] = {
-		    STR_bv_ballots, STR_bv_control, STR_bv_desc, STR_bv_desc,
-		    STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_limits,
-		    STR_bv_title, STR_bv_logs, STR_bv_logconf, NULL
-		};
-		for (j = 0; filename[j] != NULL; j++) {
-		    setbfile(buf, bname, TEMPFORMAT(64, "%s%d", filename[j], i));
-		    unlink(buf);
-		}
+		votebuf_init(&vbuf, i);
+		setbfile(buf, bname, vbuf.control);
+		unlink(buf);
+		vote_unlink_files(&vbuf, bname);
 	    }
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
@@ -731,6 +731,9 @@ vote_maintain(const char *bname)
 
     vs_hdr("舉辦投票");
     votebuf_init(&vbuf, x);
+    // A slot without a control file may still hold files of an earlier
+    // vote, as one closed without items left them: they are not this one's.
+    vote_unlink_files(&vbuf, bname);
     setbfile(buf, bname, vbuf.lock);
     unlink(buf);
 
