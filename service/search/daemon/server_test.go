@@ -780,6 +780,72 @@ func TestFormatPreds(t *testing.T) {
 			t.Errorf("FormatPreds() = %q, want %q", got, tc.want)
 		}
 	}
+
+	predComments := MakePredBytesWithComments(RS_COMMENTS, "25", 0, 0, 25)
+	formattedComments := FormatPreds(predComments, 1)
+	if formattedComments != "comments=25" {
+		t.Errorf("expected 'comments=25', got %q", formattedComments)
+	}
+}
+
+func TestSearchCommentsPredicate(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "C", "CommentsBrd")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir boardDir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "C", "CommentsBrd", ".DIR")
+
+	if err := AppendTestFileheaderWithComments(dirPath, "M.1700000001.A.001", "user1", "Post with 5 comments", 0, 0, 0, 5); err != nil {
+		t.Fatalf("append rec 1: %v", err)
+	}
+	if err := AppendTestFileheaderWithComments(dirPath, "M.1700000002.A.002", "user2", "Post with 20 comments", 0, 0, 0, 20); err != nil {
+		t.Fatalf("append rec 2: %v", err)
+	}
+	if err := AppendTestFileheaderWithComments(dirPath, "M.1700000003.A.003", "user3", "Post with 10 comments", 0, 0, 0, 10); err != nil {
+		t.Fatalf("append rec 3: %v", err)
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() {
+		_ = svc.Start()
+	}()
+	defer svc.Stop()
+
+	for i := 0; i < 50; i++ {
+		if IsSocketOccupied(socketPath) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	predBytes := MakePredBytesWithComments(RS_COMMENTS, "10", 0, 0, 10)
+	indices, total := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes}, 0, 10, SrcMbbsdSR)
+	if total != 2 || len(indices) != 2 {
+		t.Fatalf("expected 2 matches, got len=%d, total=%d", len(indices), total)
+	}
+	if indices[0] != 2 || indices[1] != 3 {
+		t.Errorf("expected indices [2, 3], got %v", indices)
+	}
+
+	predBytes2 := MakePredBytesWithComments(RS_COMMENTS, "15", 0, 0, 15)
+	indices2, total2 := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predBytes2}, 0, 10, SrcMbbsdSR)
+	if total2 != 1 || len(indices2) != 1 {
+		t.Fatalf("expected 1 match, got len=%d, total=%d", len(indices2), total2)
+	}
+	if indices2[0] != 2 {
+		t.Errorf("expected index 2, got %v", indices2)
+	}
+
+	// Legacy clients carry the threshold in the rating field only; the
+	// sanitizer must keep it (as comments) instead of dropping the predicate.
+	predLegacy := MakePredBytes(RS_COMMENTS, "10", 10, 0)
+	indices3, total3 := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predLegacy}, 0, 10, SrcMbbsdSR)
+	if total3 != 2 || !reflect.DeepEqual(indices3, indices) {
+		t.Fatalf("legacy comments predicate: got total=%d indices=%v, want %v", total3, indices3, indices)
+	}
 }
 
 func BenchmarkBoardAIDTable(b *testing.B) {

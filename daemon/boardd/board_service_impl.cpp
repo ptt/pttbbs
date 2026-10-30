@@ -280,6 +280,13 @@ Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
       pred->mode = RS_SOLVED;
       break;
 
+    case SearchFilter::TYPE_COMMENTS:
+      pred->mode = RS_COMMENTS;
+      pred->comments = filter.number_data();
+      pred->rating = pred->comments;
+      SetPredicateKeyword(pred, std::to_string(pred->comments));
+      break;
+
     default:
       return Status(StatusCode::UNIMPLEMENTED, "Unimplemented");
   }

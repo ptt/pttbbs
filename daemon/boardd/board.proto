@@ -115,6 +115,7 @@ message SearchFilter {
         TYPE_MONEY = 5;
         TYPE_MARK = 6;
         TYPE_SOLVED = 7;
+        TYPE_COMMENTS = 8;
     }
     Type type = 1;
     int64 number_data = 2;

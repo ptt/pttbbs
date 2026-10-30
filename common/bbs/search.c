@@ -36,6 +36,8 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	return pred->rating > 0 ?
 	    (fh->rating >= pred->rating) :
 	    (fh->rating <= pred->rating);
+    else if (sr_mode & RS_COMMENTS)
+	return (int)fh->comments >= (pred->comments > 0 ? pred->comments : pred->rating);
     else if (sr_mode & RS_MONEY) {
 	if (fh->filemode & INVALIDMONEY_MODES ||
 	    fh->multi.money > VALID_POST_MONEY) {

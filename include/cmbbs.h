@@ -219,6 +219,7 @@ typedef struct fileheader_predicate_t {
     char keyword[TTLEN + 1];
     int32_t rating;
     int32_t money;
+    int32_t comments;
 } fileheader_predicate_t;
 
 int match_fileheader_predicate(const fileheader_t *fh, void *arg);

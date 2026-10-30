@@ -2872,7 +2872,7 @@ func predsRequireSRExpire(predsRaw []byte, numPreds int) bool {
 		offset := i * predSize
 		if offset+4 <= len(predsRaw) {
 			mode := int(binary.LittleEndian.Uint32(predsRaw[offset : offset+4]))
-			if mode&(RS_RATING|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
+			if mode&(RS_RATING|RS_COMMENTS|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
 				return true
 			}
 		}
