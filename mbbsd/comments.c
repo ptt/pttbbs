@@ -144,6 +144,18 @@ static int CommentsLoad(CommentsCtx *c, int i)
     if (resp_size != sizeof(resp) || toread(s, &resp, sizeof(resp)) < 0)
         goto unusable;
     close(s);
+    // commentd stores records as its clients sent them, so check them here.
+    // A record of an unknown type or with an invalid user ID is kept, as a
+    // deleted one, so that the records after it can still be read. An ID
+    // that fills its field without a NUL is invalid: mbbsd never sends one.
+    if (!memchr(resp.userid, '\0', sizeof(resp.userid)) ||
+        !is_validuserid(resp.userid)) {
+        resp.userid[0] = '\0';
+        resp.type = COMMENT_DELETED;
+    }
+    resp.msg[sizeof(resp.msg) - 1] = '\0';
+    if (((uint32_t)resp.type & ~(uint32_t)COMMENT_DELETED) >= RECTYPE_SIZE)
+        resp.type = COMMENT_DELETED;
     c->resp[i] = resp;
     return 0;
 
