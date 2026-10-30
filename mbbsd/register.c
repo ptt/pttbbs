@@ -1380,7 +1380,6 @@ void register_mail_complete_and_exit() {
 // Email Verification
 ////////////////////////////////////////////////////////////////////////////
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 // The email on disk: another session may have changed it since this one
 // loaded cuser. Returns -1, saying so, when the slot does not hold this
 // account any more (or cannot be read): nothing may be written to it then.
@@ -1399,6 +1398,7 @@ disk_email(char *buf, size_t size)
     return 0;
 }
 
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 static int notify_email_change(const char *userid, const char *email)
 {
     int ret = bsmtp("etc/emailchanged",
@@ -1446,7 +1446,30 @@ u_email_verification()
 	return;
     assert(ein.is_trusted);
 
+    // Log the verification before anything is saved: the emaildb
+    // (verifydb when used) may store the address and still report a
+    // failure, and a failed passwd save may not return at all
+    // (pwcuInitCUser() asserts on a mismatched record).
+    // Also make sure the slot still holds this account before writing.
+    // The save replaces the email in passwd, which with
+    // CONFIG_USEREC_EMAIL_IS_CONTACT is the contact email.
+    const char *oldemail = NULL;
+    char diskemail[sizeof(cuser.email)];
+    if (disk_email(diskemail, sizeof(diskemail)) != 0)
+	return;
+    if (diskemail[0] && strcmp(diskemail, email) != 0)
+	oldemail = diskemail;
+    if (oldemail)
+	log_user_security(cuser.userid, "%s (EmailVerify) %s -> %s\n",
+			  fromhost, oldemail, email);
+    else
+	log_user_security(cuser.userid, "%s (EmailVerify) %s\n",
+			  fromhost, email);
+
     if (register_check_and_update_emaildb(&cuser, email) != REGISTER_OK) {
+	log_user_security(cuser.userid,
+			  "%s (EmailVerify) saving %s to emaildb failed\n",
+			  fromhost, email);
 	vmsg("Email 認證設定失敗, 請稍後自行再次填寫註冊單");
 	return;
     }
@@ -1454,7 +1477,22 @@ u_email_verification()
     // Update passwd.
     char justify[sizeof(cuser.justify)];
     SNPRINTF(justify, "<E-Mail>: %s", Cdate(&now));
-    pwcuRegCompleteEmailJustify(email, justify);
+    if (pwcuRegCompleteEmailJustify(email, justify) != 0) {
+	log_user_security(cuser.userid,
+			  "%s (EmailVerify) saving %s to passwd failed\n",
+			  fromhost, email);
+	// The save fails only when the record no longer holds this account
+	// (pwcuInitCUser()): end the session, as success does.
+	vmsg("Email 認證設定失敗，請重新上站。");
+	u_exit("regfail");
+	exit(0);
+    }
+#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+    // Tell the old contact address, as change_contact_email does, once it
+    // is really replaced.
+    if (oldemail && is_valid_email(oldemail))
+	notify_email_change(cuser.userid, oldemail);
+#endif
 
     register_mail_complete_and_exit();
 }
