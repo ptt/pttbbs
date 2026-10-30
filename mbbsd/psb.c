@@ -2430,8 +2430,19 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
-    if (resp)
-        edit_user_acl_for_board(resp->userid, key->board);
+    // commentd replays what its clients sent: check the ID (the ACL code
+    // asserts on an invalid one) and take its stored case, as board.c does.
+    if (resp) {
+        char uid[IDLEN + 1] = "";
+        _Static_assert(sizeof(uid) == sizeof(resp->userid), "userid size");
+        // An ID that fills the field without its NUL is invalid too.
+        if (strnlen(resp->userid, sizeof(resp->userid)) < sizeof(uid))
+            strcpy(uid, resp->userid);
+        if (!is_validuserid(uid) || !searchuser(uid, uid))
+            vmsg("該使用者帳號不存在");
+        else
+            edit_user_acl_for_board(uid, key->board);
+    }
     ctx->redraw = true;
     return 0;
 }
