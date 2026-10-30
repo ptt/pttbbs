@@ -1,6 +1,5 @@
 #include "bbs.h"
 
-// XXX TODO bvote 跟實際的 vote control file 有時會不同步...
 // XXX TODO 開票還是給獨立的 utility 或 daemon 去跑比較好
 
 #define MAX_VOTE_NR	(20)
@@ -96,6 +95,45 @@ vote_item_count(const vote_buffer_t *vbuf, const char *bname)
         n = 0;
     fclose(fp);
     return n > 0 ? n : 0;
+}
+
+// The number of votes on a board: the slots with a control file, as
+// b_result() closes them and vote_view_all() lists them. bvote is set to
+// this rather than counted up and down, so that it follows the files: an
+// opening cut off before bvote++ left a vote that b_result_one() then
+// counted down. Two counts at once can still leave a stale one, until the
+// next. An empty control file is not counted: older mbbsd, still running
+// during an upgrade, keeps it so while the items are typed, and counts the
+// vote only when they are in.
+static int
+vote_count(const char *bname)
+{
+    vote_buffer_t vbuf;
+    char buf[PATHLEN];
+    int i, n = 0;
+
+    for (i = 0; i < MAX_VOTE_NR; i++) {
+        votebuf_init(&vbuf, i);
+        setbfile(buf, bname, vbuf.control);
+        if (dashs(buf) > 0)
+            n++;
+    }
+    return n;
+}
+
+// Sets bvote of board pos from its files, and saves it, when it has
+// drifted from them, as older code could leave it.
+static void
+vote_repair_count(boardheader_t *fhp, int pos)
+{
+    int n = vote_count(fhp->brdname);
+
+    if (fhp->bvote == n)
+        return;
+    fhp->bvote = n;
+    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+        outs(ERR_BOARD_UPDATE);
+    reset_board(pos);
 }
 
 static int
@@ -243,9 +281,6 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 
     // XXX TODO backup vote files?
 
-    if (fh->bvote > 0)
-	fh->bvote--;
-
     // Read in the control file
     setbfile(b_control, bname, vbuf->control);
     cfp = fopen(b_control, "r");
@@ -379,6 +414,9 @@ b_result(boardheader_t * fh)
 	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);
     }
+    // Set bvote from the files once all are closed. This also repairs a
+    // bvote that has drifted too high, as older code could leave it.
+    fh->bvote = vote_count(fh->brdname);
 }
 
 static int
@@ -520,15 +558,14 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 	setbfile(buf, bname, vbuf->control);
 	unlink(buf);
 	vote_unlink_files(vbuf, bname);
-
-	if (fhp->bvote > 0)
-	    fhp->bvote--;
+	fhp->bvote = vote_count(bname);
 
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
 	b_result_one(vbuf, fhp, &total);
+	fhp->bvote = vote_count(bname);
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 
@@ -700,6 +737,9 @@ vote_maintain(const char *bname)
     assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
 
+    // before going by bvote
+    vote_repair_count(fhp, pos);
+
     if (fhp->bvote != 0) {
 
 	getdata(b_lines - 1, 0,
@@ -713,14 +753,14 @@ vote_maintain(const char *bname)
             if (genbuf[0] != 'y')
                 return FULLUPDATE;
 
-	    fhp->bvote = 0;
-
 	    for (i = 0; i < MAX_VOTE_NR; i++) {
 		votebuf_init(&vbuf, i);
 		setbfile(buf, bname, vbuf.control);
 		unlink(buf);
 		vote_unlink_files(&vbuf, bname);
 	    }
+	    // 0, unless a vote was opened meanwhile
+	    fhp->bvote = vote_count(bname);
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
 
@@ -850,10 +890,32 @@ vote_maintain(const char *bname)
 	closetime = 30;
 
     time4_add_sec(now, (uint64_t)closetime * DAY_SECONDS, &closetime);
+    // Write the control file's head to a temp file and link it in place,
+    // so that the control file is never seen without its close time; the
+    // items then go on in the same file. A link, unlike a rename, does not
+    // replace a vote another opening has put in this slot meanwhile.
+    char tmpctl[PATHLEN];
     setbfile(buf, bname, vbuf.control);
-    fp = fopen(buf, "w");
+    snprintf(tmpctl, sizeof(tmpctl), "%s.new%d", buf, (int)currpid);
+    fp = fopen(tmpctl, "w");
     assert(fp);
     fprintf(fp, "000,000\n%d\n", closetime);
+    if (fflush(fp) != 0 || link(tmpctl, buf) != 0) {
+	int taken = (errno == EEXIST);
+	fclose(fp);
+	unlink(tmpctl);
+	vmsg(taken ? "此投票已被其他板主先建立，請重新舉辦。" :
+	     "系統錯誤，無法舉辦投票。");
+	return FULLUPDATE;
+    }
+    unlink(tmpctl);
+    // Count the vote now: one whose opening is cut off at the items then
+    // stays counted, so that b_closepolls(), which skips boards whose bvote
+    // is 0, gets to close it.
+    fhp->bvote = vote_count(bname);
+    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	outs(ERR_BOARD_UPDATE);
+    reset_board(pos);
 
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
     num = 0;
@@ -892,7 +954,7 @@ vote_maintain(const char *bname)
     fprintf(fp, "%3d,%3d\n", x * ITEM_PER_PAGE + num, MAX(1, atoi(inbuf)));
     fclose(fp);
 
-    fhp->bvote++;
+    fhp->bvote = vote_count(bname);
 
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
@@ -1258,6 +1320,9 @@ user_vote(const char *bname)
 
     clear();
 
+    // A board whose bvote has drifted to 0 hides its votes: repair it.
+    if (bh->bvote == 0)
+	vote_repair_count(bh, bid);
     if (bh->bvote == 0) {
 	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
