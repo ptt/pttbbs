@@ -29,8 +29,9 @@
  * can run while the site is up. It reads the board's bvote again just
  * before moving each vote, from .BRD and from the shared memory mbbsd goes
  * by when it is there, never writes .BRD, and never replaces a
- * file: each file is linked to its new name and then unlinked, so DIR must
- * be on the file system of BBSHOME. The control file goes first; when a
+ * file: each file is linked to its new name and then unlinked, or, when DIR
+ * is on another file system than the board, copied, synced and then
+ * unlinked. The control file goes first; when a
  * file cannot be moved, those moved go back, the control file last and
  * only if all the others did.
  *
@@ -165,11 +166,81 @@ archive_path(char *buf, const char *bname, const char *file, int slot)
     return 0;
 }
 
-// Moves src to dst without replacing a file at dst.
+// Copies src to a new file dst, with its mode and times, and syncs it.
+// Never replaces a file at dst; removes what it wrote when it fails.
+static int
+copy_new_file(const char *src, const char *dst)
+{
+    struct stat st;
+    struct timespec times[2];
+    char buf[8192];
+    ssize_t len, done, w;
+    int fi, fo, err;
+
+    if ((fi = open(src, O_RDONLY)) < 0)
+        return -1;
+    if (fstat(fi, &st) != 0) {
+        err = errno;
+        close(fi);
+        errno = err;
+        return -1;
+    }
+    if ((fo = open(dst, O_WRONLY | O_CREAT | O_EXCL, 0600)) < 0) {
+        err = errno;
+        close(fi);
+        errno = err;
+        return -1;
+    }
+    for (;;) {
+        len = read(fi, buf, sizeof(buf));
+        if (len < 0 && errno == EINTR)
+            continue;
+        if (len <= 0)
+            break;
+        for (done = 0; done < len; done += w) {
+            w = write(fo, buf + done, len - done);
+            if (w < 0 && errno == EINTR)
+                w = 0;
+            else if (w <= 0) {
+                if (w == 0)
+                    errno = EIO;
+                break;
+            }
+        }
+        if (done < len) {
+            len = -1;
+            break;
+        }
+    }
+    times[0] = st.st_atim;
+    times[1] = st.st_mtim;
+    if (len < 0 || fchmod(fo, st.st_mode & 07777) != 0 ||
+        futimens(fo, times) != 0 || fsync(fo) != 0) {
+        err = errno;
+        close(fo);
+        close(fi);
+        unlink(dst);
+        errno = err;
+        return -1;
+    }
+    close(fi);
+    if (close(fo) != 0) {
+        err = errno;
+        unlink(dst);
+        errno = err;
+        return -1;
+    }
+    return 0;
+}
+
+// Moves src to dst without replacing a file at dst: a hard link, or a
+// copy when they are on different file systems (Ptt keeps boards on
+// several disks, linked under boards/).
 static int
 move_file(const char *src, const char *dst)
 {
-    if (link(src, dst) != 0)
+    if (link(src, dst) != 0 &&
+        (errno != EXDEV || copy_new_file(src, dst) != 0))
         return -1;
     if (unlink(src) != 0) {
         int err = errno;
@@ -433,19 +504,6 @@ main(int argc, char **argv)
     if (chdir(home) != 0) {
         perror(home);
         return 1;
-    }
-    if (apply) {
-        struct stat st_home, st_dir;
-
-        if (stat("boards", &st_home) != 0 || stat(archive_dir, &st_dir) != 0) {
-            perror("stat");
-            return 1;
-        }
-        if (st_home.st_dev != st_dir.st_dev) {
-            fprintf(stderr, "%s: not on the file system of %s/boards\n",
-                    archive_dir, home);
-            return 1;
-        }
     }
     if (apply && !attach_check_SHM())
         fprintf(stderr, "shared memory not found: going by .BRD alone\n");
