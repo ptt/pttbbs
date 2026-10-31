@@ -1612,3 +1612,82 @@ func TestScanScratchPoolConcurrencyAndDefaultGrace(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSanitizePredsCanonicalization(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "G", "Gossiping")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "G", "Gossiping", ".DIR")
+
+	for i := 1; i <= 10; i++ {
+		if err := AppendTestFileheader(dirPath, fmt.Sprintf("M.170000%04d.A.123", i), "u1", fmt.Sprintf("post %d", i), FILE_MARKED, i, i*10); err != nil {
+			t.Fatalf("append %d: %v", i, err)
+		}
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() { _ = svc.Start() }()
+	defer svc.Stop()
+	for i := 0; i < 50 && !IsSocketOccupied(socketPath); i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// 1. Seed cache with standard rating=2 (keyword="2").
+	resBase, totalBase := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{
+		MakePredBytes(RS_RATING, "2", 2, 0),
+	}, 0, 100)
+	if totalBase != 9 || len(resBase) != 9 {
+		t.Fatalf("expected 9 matches for rating=2, got total=%d len=%d", totalBase, len(resBase))
+	}
+	missesAfterSeed := svc.misses.Load()
+	if missesAfterSeed != 1 {
+		t.Fatalf("expected 1 miss after seeding rating=2, got %d", missesAfterSeed)
+	}
+
+	// 2. Query "2r5", "+2", "", dirty padding bytes, and duplicate [rating=2, rating=2r5]:
+	// ALL must hit the existing rating=2 cache entry with ZERO new misses!
+	dirtyPred := MakePredBytes(RS_RATING, "2r5", 2, 999)
+	for i := 69; i < 72 && i < len(dirtyPred); i++ {
+		dirtyPred[i] = 0xFF // Simulate uninitialized C struct alignment padding
+	}
+	variants := [][][]byte{
+		{MakePredBytes(RS_RATING, "2r5", 2, 0)},
+		{MakePredBytes(RS_RATING, "+2", 2, 0)},
+		{MakePredBytes(RS_RATING, "", 2, 0)},
+		{dirtyPred},
+		{MakePredBytes(RS_RATING, "2", 2, 0), MakePredBytes(RS_RATING, "2r5", 2, 0)},
+	}
+	for idx, preds := range variants {
+		res, total := queryBinaryClient(t, socketPath, 569, relDir, preds, 0, 100)
+		if total != 9 || !reflect.DeepEqual(res, resBase) {
+			t.Fatalf("variant %d mismatch: total=%d res=%v", idx, total, res)
+		}
+		if svc.misses.Load() != missesAfterSeed {
+			t.Fatalf("variant %d bypassed cache! misses=%d want=%d", idx, svc.misses.Load(), missesAfterSeed)
+		}
+	}
+
+	// 3. Verify RS_MONEY ("50M" vs "") and RS_MARK (with garbage keyword/rating) also unify.
+	_, totalM1 := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MONEY, "50M", 0, 50)}, 0, 100)
+	missesAfterMoney := svc.misses.Load()
+	_, totalM2 := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MONEY, "", 77, 50)}, 0, 100)
+	if totalM1 != 6 || totalM2 != 6 || svc.misses.Load() != missesAfterMoney {
+		t.Fatalf("RS_MONEY canonicalization failed: m1=%d m2=%d misses=%d wantMisses=%d", totalM1, totalM2, svc.misses.Load(), missesAfterMoney)
+	}
+
+	_, _ = queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MARK, "junk", 42, 99)}, 0, 100)
+	missesAfterMark := svc.misses.Load()
+	_, _ = queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MARK, "", 0, 0)}, 0, 100)
+	if svc.misses.Load() != missesAfterMark {
+		t.Fatalf("RS_MARK canonicalization failed: misses=%d want=%d", svc.misses.Load(), missesAfterMark)
+	}
+
+	if got := FormatPreds(dirtyPred, 1); got != "rating=2" {
+		t.Fatalf("FormatPreds(dirtyPred) = %q, want %q", got, "rating=2")
+	}
+}
+
+

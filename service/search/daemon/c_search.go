@@ -17,14 +17,63 @@ static int c_shm_ready(void) {
     return SHM != NULL;
 }
 
-// Forces NUL termination and zeroes trailing bytes of every predicate keyword.
-static void c_sanitize_preds(void *buf, int n) {
+// Canonicalizes predicates in place to prevent cache-key fragmentation/bypass:
+// 1. Zeroes struct alignment padding and trailing keyword bytes after NUL.
+// 2. Strips unused fields according to match_fileheader_predicate() semantics
+//    (e.g., clearing keyword/money on RS_RATING so "2r5" and "2" hash identically).
+// 3. Deduplicates identical canonical predicates and returns the compacted count.
+static int c_sanitize_preds(void *buf, int n) {
+    if (!buf || n <= 0)
+        return 0;
     fileheader_predicate_t *p = (fileheader_predicate_t *)buf;
+    int out_n = 0;
     for (int i = 0; i < n; i++) {
         p[i].keyword[sizeof(p[i].keyword) - 1] = '\0';
-        size_t len = strlen(p[i].keyword);
-        memset(p[i].keyword + len + 1, 0, sizeof(p[i].keyword) - (len + 1));
+        int sr_mode = p[i].mode;
+
+        fileheader_predicate_t clean;
+        memset(&clean, 0, sizeof(clean));
+
+        if (sr_mode & RS_MARK) {
+            clean.mode = RS_MARK;
+        } else if (sr_mode & RS_SOLVED) {
+            clean.mode = RS_SOLVED;
+        } else if (sr_mode & RS_NEWPOST) {
+            clean.mode = RS_NEWPOST;
+        } else if (sr_mode & RS_AUTHOR) {
+            clean.mode = RS_AUTHOR;
+            strlcpy(clean.keyword, p[i].keyword, sizeof(clean.keyword));
+        } else if (sr_mode & RS_KEYWORD) {
+            clean.mode = RS_KEYWORD;
+            strlcpy(clean.keyword, p[i].keyword, sizeof(clean.keyword));
+        } else if (sr_mode & RS_KEYWORD_EXCLUDE) {
+            clean.mode = RS_KEYWORD_EXCLUDE;
+            strlcpy(clean.keyword, p[i].keyword, sizeof(clean.keyword));
+        } else if (sr_mode & RS_TITLE) {
+            clean.mode = RS_TITLE;
+            strlcpy(clean.keyword, p[i].keyword, sizeof(clean.keyword));
+        } else if (sr_mode & RS_RATING) {
+            clean.mode = RS_RATING;
+            clean.rating = p[i].rating;
+        } else if (sr_mode & RS_MONEY) {
+            clean.mode = RS_MONEY;
+            clean.money = p[i].money;
+        } else {
+            clean.mode = 0;
+        }
+
+        int dup = 0;
+        for (int j = 0; j < out_n; j++) {
+            if (memcmp(&p[j], &clean, sizeof(clean)) == 0) {
+                dup = 1;
+                break;
+            }
+        }
+        if (!dup) {
+            memcpy(&p[out_n++], &clean, sizeof(clean));
+        }
     }
+    return out_n;
 }
 
 static void c_format_preds(const void *buf, int n, char *out, int outlen) {
@@ -46,15 +95,9 @@ static void c_format_preds(const void *buf, int n, char *out, int outlen) {
         } else if (p[i].mode & RS_TITLE) {
             snprintf(item, sizeof(item), "%stitle=%s", sep, p[i].keyword);
         } else if (p[i].mode & RS_RATING) {
-            if (p[i].keyword[0] != '\0')
-                snprintf(item, sizeof(item), "%srating=%s", sep, p[i].keyword);
-            else
-                snprintf(item, sizeof(item), "%srating=%d", sep, (int)p[i].rating);
+            snprintf(item, sizeof(item), "%srating=%d", sep, (int)p[i].rating);
         } else if (p[i].mode & RS_MONEY) {
-            if (p[i].keyword[0] != '\0')
-                snprintf(item, sizeof(item), "%smoney=%s", sep, p[i].keyword);
-            else
-                snprintf(item, sizeof(item), "%smoney=%d", sep, (int)p[i].money);
+            snprintf(item, sizeof(item), "%smoney=%d", sep, (int)p[i].money);
         } else {
             snprintf(item, sizeof(item), "%skw=%s", sep, p[i].keyword);
         }
@@ -871,11 +914,18 @@ func SHMReady() bool {
 	return C.c_shm_ready() != 0
 }
 
-// SanitizePreds forces NUL termination of every predicate keyword in place.
-func SanitizePreds(predsRaw []byte, numPreds int) {
-	if numPreds > 0 && len(predsRaw) >= numPreds*PredSize() {
-		C.c_sanitize_preds(unsafe.Pointer(&predsRaw[0]), C.int(numPreds))
+// SanitizePreds canonicalizes and deduplicates predicates in place, returning
+// the compacted slice and predicate count.
+func SanitizePreds(predsRaw []byte, numPreds int) ([]byte, int) {
+	predSize := PredSize()
+	if numPreds <= 0 || predSize <= 0 || len(predsRaw) < numPreds*predSize {
+		return predsRaw, numPreds
 	}
+	outN := int(C.c_sanitize_preds(unsafe.Pointer(&predsRaw[0]), C.int(numPreds)))
+	if outN <= 0 {
+		return predsRaw[:0], 0
+	}
+	return predsRaw[:outN*predSize], outN
 }
 
 // FormatPreds returns a human-readable representation of search predicates.

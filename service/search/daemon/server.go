@@ -2486,7 +2486,11 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, conn net.Conn
 		writeBinaryError(w, -2)
 		return
 	}
-	SanitizePreds(predsRaw, numPreds)
+	predsRaw, numPreds = SanitizePreds(predsRaw, numPreds)
+	if numPreds <= 0 {
+		writeBinaryError(w, -1)
+		return
+	}
 
 	resolvedDirect := s.resolveDirectPath(directBytes)
 	if resolvedDirect == "" {
@@ -2921,7 +2925,9 @@ func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte
 }
 
 func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
-	return s.queryIndicesInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
+	cp := append([]byte(nil), predsRaw...)
+	cp, numPreds = SanitizePreds(cp, numPreds)
+	return s.queryIndicesInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, cp, numPreds)
 }
 
 func (s *Service) queryIndicesInternal(conn net.Conn, peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
@@ -3192,7 +3198,9 @@ func (s *Service) QueryWebSearchTail(
 	predsRaw []byte, numPreds int,
 	offset, limit int32,
 ) ([]int32, int32, error) {
-	return s.queryWebSearchTailInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds, offset, limit)
+	cp := append([]byte(nil), predsRaw...)
+	cp, numPreds = SanitizePreds(cp, numPreds)
+	return s.queryWebSearchTailInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, cp, numPreds, offset, limit)
 }
 
 func (s *Service) queryWebSearchTailInternal(
