@@ -381,29 +381,68 @@ vkey_set_ipc_handler(vkey_ipc_handler_t handler)
         ctx->ipc_handler = handler;
 }
 
+/* Re-sync the IPC fd we poll on with the IPC client library, which owns the
+ * connection. Any library call (ipc_sub, ipc_wmsg_send, a failed reconnect
+ * registration...) may close the socket via ipc_disconnect(); polling the
+ * stale fd number would make select() fail with EBADF (abort_bbs, kicking the
+ * user) or, once the number is reused by another open(), read garbage from an
+ * unrelated file. Must be called before every poll/select. */
+int
+vkey_sync_ipc(void)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return 0;
+    int fd = ipc_get_fd();
+    ctx->ipc_fd = (fd > 0) ? fd : 0;
+    return ctx->ipc_fd;
+}
+
+/* Max IPC packets handled per wake-up. Draining several packets at once
+ * amortizes poll/refresh cost when notifications arrive in bursts. */
+#define VKEY_IPC_MAX_BATCH  32
+
 int
 vkey_process_ipc(void)
 {
     VKEY_CTX *ctx = vkey_get_context();
-    if (!ctx || ctx->ipc_fd <= 0)
+    if (!ctx)
         return 0;
 
-    ipc_hdr_t hdr;
-    char payload[1024];
-    int res = ipc_read_packet(ctx->ipc_fd, &hdr, payload, sizeof(payload));
-    if (res <= 0) {
-        if (res < 0) {
-            /* Socket error or disconnect */
-            vkey_detach_ipc();
-            ipc_disconnect();
+    int result = 0;
+    for (int i = 0; i < VKEY_IPC_MAX_BATCH; i++) {
+        int fd = vkey_sync_ipc();
+        if (fd <= 0)
+            break;
+
+        ipc_hdr_t hdr;
+        char payload[1024];
+        int res = ipc_read_packet(fd, &hdr, payload, sizeof(payload));
+        if (res <= 0) {
+            if (res < 0) {
+                /* Socket error or disconnect (the library may have already
+                 * closed it; don't double the reconnect backoff). */
+                if (ipc_is_connected())
+                    ipc_disconnect();
+                vkey_sync_ipc();
+            }
+            break;
         }
-        return 0;
-    }
 
-    if (ctx->ipc_handler) {
-        return ctx->ipc_handler(&hdr, payload);
+        if (!ctx->ipc_handler)
+            continue;
+
+        int r = ctx->ipc_handler(&hdr, payload);
+        if (r < 0) {
+            /* Caller notification requested (e.g. live comment). Handlers
+             * returning -1 buffer their event (the live provider keeps a
+             * ring), so keep draining and notify once for the whole batch. */
+            result = -1;
+        } else if (r > 0 && result == 0) {
+            result = 1;
+        }
     }
-    return 0;
+    return result;
 }
 
 int

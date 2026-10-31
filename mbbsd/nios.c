@@ -480,6 +480,18 @@ vkey_poll(int timeout)
         if (vkey_process())
             return 1;
 
+        vkey_sync_ipc();
+        if (ipc_has_pending()) {
+            int handled = vkey_process_ipc();
+            if (handled > 0) {
+                doupdate();
+                continue;
+            } else if (handled < 0) {
+                vkctx.ipc_notify = 1;
+                return 1;
+            }
+        }
+
         if (timeout == 0) {
             int mask = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, vkctx.ipc_fd, 0);
             if (mask & CIN_POLL_FD2)
@@ -501,23 +513,26 @@ vkey_poll(int timeout)
         // to be false here (!VKEY_HAS_PEEK() && cin_is_empty()).
         doupdate();
 
-        if (vkctx.ipc_fd <= 0) {
+        /* Auto-reconnect is enabled only after login (ipc_init). */
+        int want_reconnect = (vkctx.ipc_fd <= 0 && ipc_reconnect_enabled());
+        if (want_reconnect) {
             ipc_check_reconnect();
+            want_reconnect = (vkey_sync_ipc() <= 0);
         }
 
         int poll_timeout = timeout;
-        if (poll_timeout == INFTIM && vkctx.ipc_fd <= 0 && !CIN_IS_VALID_FD2(vkctx.attached_fd)) {
+        int idle_wakeup = 0;
+        if (poll_timeout == INFTIM && want_reconnect && !CIN_IS_VALID_FD2(vkctx.attached_fd)) {
             /* When disconnected from IPC service, wake up every 3s during idle
              * to check backoff timer and reconnect automatically */
             poll_timeout = 3000;
+            idle_wakeup = 1;
         }
 
         int r = cin_poll_fds(CIN_DEFAULT_FD, vkctx.attached_fd, vkctx.ipc_fd, poll_timeout);
         if (r <= 0) {
-            if (poll_timeout == 3000 && timeout == INFTIM) {
-                if (vkctx.ipc_fd <= 0) {
-                    ipc_check_reconnect();
-                }
+            if (idle_wakeup) {
+                /* Reconnect is retried at the top of the loop. */
                 continue;
             }
             if (timeout > 0)

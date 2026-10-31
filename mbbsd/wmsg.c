@@ -1291,88 +1291,29 @@ write_request(int sig)
 }
 
 int
-wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload)
+wmsg_on_deliver(const ipc_wmsg_t *w)
 {
-    if (!hdr)
+    if (!currutmp || !w)
         return 0;
 
-    switch (hdr->type) {
-    case IPC_TYPE_WMSG_DELIVER: {
-        const ipc_wmsg_t *w = (const ipc_wmsg_t *)payload;
-        if (currutmp && currutmp->msgcount == 0 && w) {
-            msgque_t *m = &currutmp->msgs[0];
-            m->pid = (pid_t)w->from_pid;
-            STRLCPY(m->userid, w->from_userid);
-            STRLCPY(m->last_call_in, w->text);
-            m->msgmode = w->msgmode;
-            m->uslot = w->from_uslot;
-            currutmp->msgcount = 1;
+    int found = 0;
+    int count = (int)currutmp->msgcount;
+    for (int i = 0; i < count && i < MAX_MSGS; i++) {
+        if (currutmp->msgs[i].pid == (pid_t)w->from_pid &&
+            strcmp(currutmp->msgs[i].last_call_in, w->text) == 0) {
+            found = 1;
+            break;
         }
-        write_request(SIGUSR2);
-        return 1; /* Consumed event, screen updated */
     }
-
-    case IPC_TYPE_LIVE_COMMENT: {
-        const ipc_pubsub_t *ps = (const ipc_pubsub_t *)payload;
-        if (ps) {
-            more_on_live_comment(ps->bid, ps->aid, ps->text);
-        }
-        return -1;
+    if (!found && count < MAX_MSGS) {
+        msgque_t *m = &currutmp->msgs[count];
+        m->pid = (pid_t)w->from_pid;
+        STRLCPY(m->userid, w->from_userid);
+        STRLCPY(m->last_call_in, w->text);
+        m->msgmode = w->msgmode;
+        m->uslot = w->from_uslot;
+        currutmp->msgcount++;
     }
-
-    case IPC_TYPE_TALK_REQ: {
-        const ipc_talk_t *t = (const ipc_talk_t *)payload;
-        if (currutmp && t) {
-            if (t->from_uslot >= 0)
-                currutmp->destuslot = t->from_uslot;
-            currutmp->sig = t->sig;
-            talk_request(0);
-            return 1;
-        }
-        return 0;
-    }
-
-    case IPC_TYPE_SYS_BROADCAST: {
-        if (payload) {
-            const ipc_broadcast_t *b = (const ipc_broadcast_t *)payload;
-            outmsg(b->text);
-            bell();
-        }
-        return 1;
-    }
-
-    default:
-        return 0;
-    }
-}
-
-static void
-wmsg_ipc_reconnect_cb(int new_fd)
-{
-    if (currutmp && currutmp->userid[0]) {
-        ipc_register(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
-    }
-    vkey_attach_ipc(new_fd);
-    vkey_set_ipc_handler(wmsg_ipc_handler);
-}
-
-void
-ipc_init(const char *userid, pid_t pid, int uslot)
-{
-    if (!userid || !*userid || pid <= 0)
-        return;
-
-    ipc_set_reconnect_callback(wmsg_ipc_reconnect_cb);
-
-    int fd = ipc_connect();
-    if (fd >= 0) {
-        if (ipc_register(userid, pid, uslot) == 0) {
-            vkey_attach_ipc(fd);
-            vkey_set_ipc_handler(wmsg_ipc_handler);
-        } else {
-            ipc_disconnect();
-        }
-    } else {
-        ipc_disconnect();
-    }
+    write_request(SIGUSR2);
+    return 1; /* Consumed event, screen updated */
 }

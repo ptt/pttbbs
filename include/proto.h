@@ -397,6 +397,7 @@ int  vkey_attach(int fd);    // attach (and replace) additional fd to vkey API, 
 int  vkey_detach(void);      // detach any additional fd and return previous attached fd
 int  vkey_attach_ipc(int fd); // attach IPC service fd
 int  vkey_detach_ipc(void);   // detach IPC service fd
+int  vkey_sync_ipc(void);     // re-sync polled IPC fd with the IPC library; returns fd or 0
 void vkey_set_ipc_handler(vkey_ipc_handler_t handler); // set IPC packet handler
 int  vkey_process_ipc(void);  // read and dispatch pending IPC packet(s)
 // input buffer management
@@ -496,7 +497,9 @@ bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_le
 /* mbbsd */
 void show_call_in(int save, int which);
 void write_request (int sig);
-int  wmsg_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
+int  mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
+int  wmsg_on_deliver(const ipc_wmsg_t *w);
+int  talk_on_request(const ipc_talk_t *t);
 void ipc_init(const char *userid, pid_t pid, int uslot);
 void more_on_live_comment(uint32_t bid, aidu_t aid, const char *text);
 void pmore_feed_comment(const char *text);

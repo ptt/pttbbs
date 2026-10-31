@@ -2302,3 +2302,16 @@ talk_init_hooks(void)
 {
     vkey_register_hook(VKEY_HOOK_PRIO_NORMAL, talk_key_hook);
 }
+
+int
+talk_on_request(const ipc_talk_t *t)
+{
+    if (!currutmp || !t)
+        return 0;
+
+    if (t->from_uslot >= 0)
+        currutmp->destuslot = t->from_uslot;
+    currutmp->sig = t->sig;
+    talk_request(0);
+    return 1;
+}

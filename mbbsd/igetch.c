@@ -67,8 +67,22 @@ dogetch(void)
     while (vbuf_is_empty(pvin)) {
 	refresh();
 
-	if (vkctx.ipc_fd <= 0) {
+	vkey_sync_ipc();
+	if (ipc_has_pending()) {
+	    int handled = vkey_process_ipc();
+	    if (handled > 0) {
+		refresh();
+		continue;
+	    } else if (handled < 0) {
+		return I_IPCDATA;
+	    }
+	}
+
+	/* Auto-reconnect is enabled only after login (ipc_init). */
+	int want_reconnect = (vkctx.ipc_fd <= 0 && ipc_reconnect_enabled());
+	if (want_reconnect) {
 	    ipc_check_reconnect();
+	    want_reconnect = (vkey_sync_ipc() <= 0);
 	}
 
 	fd_set          readfds;
@@ -92,7 +106,7 @@ dogetch(void)
 	 * If connected, timeout is NULL (wait forever on keyboard or IPC events). */
 	struct timeval tv;
 	struct timeval *ptv = NULL;
-	if (vkctx.ipc_fd <= 0) {
+	if (want_reconnect) {
 	    tv.tv_sec = 2;
 	    tv.tv_usec = 0;
 	    ptv = &tv;
@@ -105,10 +119,7 @@ dogetch(void)
 	}
 
 	if (len == 0) {
-	    /* Timeout during idle: check reconnect and loop */
-	    if (vkctx.ipc_fd <= 0) {
-		ipc_check_reconnect();
-	    }
+	    /* Timeout during idle: reconnect is retried at the top of the loop */
 	    continue;
 	}
 
@@ -194,6 +205,7 @@ wait_input(float f, int bIgnoreBuf)
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
     int maxfd = 0;
+    vkey_sync_ipc();
     if (vkctx.attached_fd > 0) {
         FD_SET(vkctx.attached_fd, &readfds);
         if (vkctx.attached_fd > maxfd)
