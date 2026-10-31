@@ -119,7 +119,7 @@ dogetch(void)
 		refresh();
 		continue;
 	    } else if (handled < 0) {
-		return I_OTHERDATA;
+		return I_IPCDATA;
 	    }
 	    continue;
 	}
@@ -164,7 +164,7 @@ igetch(void)
     while (1)
     {
 	int ch = dogetch();
-	if (ch == I_TIMEOUT || ch == I_OTHERDATA)
+	if (ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_IPCDATA)
 	    return ch;
 
 	ch = vkey_decode(pvin, ch);

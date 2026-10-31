@@ -434,6 +434,28 @@ vkey_decode(VBUF *inbuf, int raw_ch)
     return vkey_dispatch_hooks(ch);
 }
 
+/**
+ * vkey_any(): wait for a real key for "press any key" style prompts.
+ * Events that are not key presses are never taken as the answer:
+ * - I_IPCDATA: IPC events are consumed by the handler; just keep waiting.
+ * - I_OTHERDATA: the attached fd (talk/chat/chess peer) is detached while
+ *   waiting, so its data stays queued in the socket for the owner of the fd
+ *   to read afterwards (same as the waterball reply modal). Merely ignoring
+ *   it would busy-loop, since the unread fd stays readable.
+ */
+int
+vkey_any(void)
+{
+    int fd = vkey_detach();
+    int ch;
+    do {
+        ch = vkey();
+    } while (ch == 0 || ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_IPCDATA);
+    if (fd > 0)
+        vkey_attach(fd);
+    return ch;
+}
+
 int
 vkey(void)
 {

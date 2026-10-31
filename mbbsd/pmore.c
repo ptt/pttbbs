@@ -3270,7 +3270,7 @@ _pmore2(
         /* vkey() will do refresh(); */
         ch = cb->vkey ? cb->vkey(ctx) : vkey();
 
-        if (ch == I_OTHERDATA) {
+        if (ch == I_IPCDATA) {
             if (pmore_live_active && pmore_has_pending_comment) {
                 pmore_has_pending_comment = 0;
                 if (bpref.live_notify == PMORE_LIVE_NOTIFY_BEEP)

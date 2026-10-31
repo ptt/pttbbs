@@ -377,9 +377,7 @@ vmsg(const char *msg)
     vshowmsg(msg);
 
     // wait for key
-    do {
-	i = vkey();
-    } while( i == 0 );
+    i = vkey_any();
 
     // clear message bar
     move(b_lines, 0);

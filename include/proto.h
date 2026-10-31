@@ -382,6 +382,7 @@ VKEY_CTX *vkey_get_context(void);
 void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
 int  vkey(void);	     // receive next key (KEY_*, ASCII, or decoded wchar)
+int  vkey_any(void);         // like vkey() but only returns real keys (for "press any key")
 int  vk_byte(void);	     // receive next key in raw byte mode (KEY_*, ASCII, or raw byte)
 void vk_ungetc(int c);       // push back a key into peek buffer
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)

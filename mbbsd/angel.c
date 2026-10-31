@@ -987,7 +987,7 @@ pressanykey_or_callangel(){
     vpad(w - w / 2, VMSG_PAUSE_PAD);
     outs(" " ANSI_RESET);
 
-    if (tolower(vkey()) == 'h')
+    if (tolower(vkey_any()) == 'h')
         CallAngel();
 
     move(b_lines, 0);

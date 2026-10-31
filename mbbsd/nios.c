@@ -614,10 +614,12 @@ vk_byte()
             VKEY_RESET_PEEK();
             return c;
         }
-        if (CIN_IS_VALID_FD2(vkctx.attached_fd) || vkctx.ipc_notify) {
+        if (vkctx.ipc_notify) {
             vkctx.ipc_notify = 0;
-            return I_OTHERDATA;
+            return I_IPCDATA;
         }
+        if (CIN_IS_VALID_FD2(vkctx.attached_fd))
+            return I_OTHERDATA;
     }
 }
 
