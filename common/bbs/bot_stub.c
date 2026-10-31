@@ -33,11 +33,26 @@ bot_user_track_read(const char *userid GCC_UNUSED, time4_t firstlogin GCC_UNUSED
 }
 
 int
-bot_dump_shm(FILE *fp, uint32_t min_read_count GCC_UNUSED, int banned_only GCC_UNUSED)
+bot_on_mbbsd_nav(const char *userid GCC_UNUSED, time4_t firstlogin GCC_UNUSED,
+                 const char *hostip GCC_UNUSED, uint32_t client_code GCC_UNUSED,
+                 int is_exempt GCC_UNUSED, int nav_type GCC_UNUSED,
+                 int target_bid GCC_UNUSED)
+{
+    return 0;
+}
+
+int
+bot_dump_shm_ex(FILE *fp, const bot_dump_filter_t *filter GCC_UNUSED)
 {
     if (fp)
         fprintf(fp, "bot_dump_shm: stub implementation (no SHM active)\n");
     return 0;
+}
+
+int
+bot_dump_shm(FILE *fp, uint32_t min_read_count GCC_UNUSED, int banned_only GCC_UNUSED)
+{
+    return bot_dump_shm_ex(fp, NULL);
 }
 
 int

@@ -1,5 +1,6 @@
 #include "bbs.h"
 #include "psb.h"
+#include "bot.h"
 
 static int headers_size = 0;
 static fileheader_t *headers = NULL;
@@ -569,6 +570,20 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 
     if(aidu > 0)
     {
+	{
+#ifdef DETECT_CLIENT
+	    extern Fnv32_t client_code;
+	    uint32_t cc = client_code;
+#else
+	    uint32_t cc = 0;
+#endif
+	    int is_exempt = HasUserPerm(PERM_BM | PERM_ADMIN | PERM_POLICE | PERM_POLICE_MAN);
+	    if (bot_on_mbbsd_nav(cuser.userid, cuser.firstlogin, fromhost,
+	                         cc, is_exempt, BOT_NAV_SEARCH_AID, currbid) < 0) {
+		vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
+		abort_bbs(0);
+	    }
+	}
 	/* search bottom in boardheader_t.bottom[] */
 	if (currbid > 0) {
 	    boardheader_t *bp = getbcache(currbid);
@@ -805,6 +820,20 @@ select_read(read_ctx_t *cx, int sr_mode)
     }
 
     int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+    {
+#ifdef DETECT_CLIENT
+        extern Fnv32_t client_code;
+        uint32_t cc = client_code;
+#else
+        uint32_t cc = 0;
+#endif
+        int is_exempt = HasUserPerm(PERM_BM | PERM_ADMIN | PERM_POLICE | PERM_POLICE_MAN);
+        if (bot_on_mbbsd_nav(cuser.userid, cuser.firstlogin, fromhost,
+                             cc, is_exempt, BOT_NAV_SEARCH_SR, bid) < 0) {
+            vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
+            abort_bbs(0);
+        }
+    }
     int total = 0;
     int loaded = search_predicates_window(currdirect, bid,
                                           cx->sr_preds, next_pred_count,
