@@ -44,6 +44,9 @@ const (
 	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
 	DefaultWebSearchMaxDepth int           = 0   // Max records to scan backwards for web tail search (0 = unlimited)
 	DefaultCacheTTL                        = 1 * time.Hour
+	DefaultSRExpireGrace     time.Duration = 5 * time.Second
+	peerCacheTTL             time.Duration = 5 * time.Second
+	maxPeerCacheEntries      int           = 4096
 	aiduRawMask              uint64        = 0x00001FFFFFFFFFFF
 	aiduTypeG                uint64        = 1 << 44
 	aiduIdxShift                           = 45
@@ -208,26 +211,33 @@ type cacheKey struct {
 }
 
 type cacheEntry struct {
-	key         cacheKey
-	indices     []int32
-	scannedRecs int32
-	tailName    string // filename of record #scannedRecs, to detect shifted records
-	dirMtime    time.Time
-	dirInode    uint64
-	srExpire    int64
-	createdAt   time.Time
-	elem        *list.Element
+	key               cacheKey
+	indices           []int32
+	scannedRecs       int32
+	tailName          string // filename of record #scannedRecs, to detect shifted records
+	dirMtime          time.Time
+	tailVerifiedMtime time.Time
+	dirInode          uint64
+	srExpire          int64
+	validatedAt       time.Time
+	createdAt         time.Time
+	elem              *list.Element
 }
 
 type aidCacheKey struct {
 	direct       string
-	bid          int32
 	aiduRaw      uint64
 	requiredMode int32
 }
 
+type boardRecKey struct {
+	direct string
+	recno  int32
+}
+
 type aidCacheEntry struct {
 	key         aidCacheKey
+	bid         int32
 	foundIdx    int32 // >0 if found, 0 for negative cache (not found in [1..scannedRecs])
 	fhBytes     [128]byte
 	scannedRecs int32
@@ -236,6 +246,13 @@ type aidCacheEntry struct {
 	srExpire    int64
 	createdAt   time.Time
 	elem        *list.Element
+}
+
+type cachedPeerInfo struct {
+	peerInfo  string
+	comm      string
+	hasUser   bool
+	expiresAt time.Time
 }
 
 func fileInode(st os.FileInfo) uint64 {
@@ -469,6 +486,25 @@ func (t *BoardAIDTable) DeletePost(recno int32) {
 	}
 }
 
+func (t *BoardAIDTable) DeletePostChecked(recno int32, aidu uint64) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	idx := int(recno - 1)
+	if idx < 0 {
+		return false
+	}
+	raw := aidu & aiduRawMask
+	if idx < len(t.aids) {
+		if raw != 0 && t.aids[idx] != 0 && t.aids[idx] != raw {
+			return false
+		}
+		t.aids = append(t.aids[:idx], t.aids[idx+1:]...)
+		return true
+	}
+	return idx == len(t.aids)
+}
+
 func (t *BoardAIDTable) SyncTail(direct string, curTotal int32) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -535,18 +571,26 @@ type Service struct {
 	verbose    atomic.Int32
 	startTime  time.Time
 
-	cacheMu      sync.Mutex
-	entries      map[cacheKey]*cacheEntry
-	lruList      *list.List
-	totalIndices int64
-	maxEntries   int
-	maxIndices   int64
-	cacheTTL     time.Duration
+	cacheMu         sync.Mutex
+	entries         map[cacheKey]*cacheEntry
+	entriesByDirect map[string]map[cacheKey]*cacheEntry
+	lruList         *list.List
+	totalIndices    int64
+	maxEntries      int
+	maxIndices      int64
+	cacheTTL        time.Duration
+	srExpireGrace   time.Duration
 
 	aidMu         sync.Mutex
 	aidEntries    map[aidCacheKey]*aidCacheEntry
+	aidByDirect   map[string]map[aidCacheKey]*aidCacheEntry
+	aidByRec      map[boardRecKey][]*aidCacheEntry
 	aidLRU        *list.List
 	maxAIDEntries int
+
+	peerCacheMu sync.Mutex
+	peerCache   map[int32]cachedPeerInfo
+	peerLookups atomic.Int64
 
 	sfMu        sync.Mutex
 	inflight    map[cacheKey]*inflightCall
@@ -623,13 +667,18 @@ func newService(bbsHome, socketPath string, shm *bbs.SHMClient) *Service {
 		shm:               shm,
 		startTime:         time.Now(),
 		entries:           make(map[cacheKey]*cacheEntry),
+		entriesByDirect:   make(map[string]map[cacheKey]*cacheEntry),
 		lruList:           list.New(),
 		maxEntries:        DefaultMaxEntries,
 		maxIndices:        DefaultMaxIndices,
 		cacheTTL:          DefaultCacheTTL,
+		srExpireGrace:     DefaultSRExpireGrace,
 		aidEntries:        make(map[aidCacheKey]*aidCacheEntry),
+		aidByDirect:       make(map[string]map[aidCacheKey]*aidCacheEntry),
+		aidByRec:          make(map[boardRecKey][]*aidCacheEntry),
 		aidLRU:            list.New(),
 		maxAIDEntries:     DefaultMaxAIDEntries,
+		peerCache:         make(map[int32]cachedPeerInfo),
 		inflight:          make(map[cacheKey]*inflightCall),
 		aidInflight:       make(map[aidCacheKey]*aidInflightCall),
 		boards:            make(map[string]*boardActivity),
@@ -701,6 +750,15 @@ func (s *Service) SetWebSearchPolicy(maxDepth int) {
 	s.cacheMu.Unlock()
 }
 
+func (s *Service) SetSRExpireGrace(d time.Duration) {
+	s.cacheMu.Lock()
+	if d < 0 {
+		d = 0
+	}
+	s.srExpireGrace = d
+	s.cacheMu.Unlock()
+}
+
 func (s *Service) boardTotalQueries(act *boardActivity) int64 {
 	if act == nil {
 		return 0
@@ -769,14 +827,17 @@ func (s *Service) Stop() {
 	s.wg.Wait()
 }
 
-func (s *Service) getPeerInfo(conn net.Conn) (string, string) {
+func getConnPID(conn net.Conn) int32 {
+	if conn == nil {
+		return 0
+	}
 	unixConn, ok := conn.(*net.UnixConn)
 	if !ok {
-		return "", ""
+		return 0
 	}
 	raw, err := unixConn.SyscallConn()
 	if err != nil {
-		return "", ""
+		return 0
 	}
 	var ucred *syscall.Ucred
 	var sysErr error
@@ -784,30 +845,130 @@ func (s *Service) getPeerInfo(conn net.Conn) (string, string) {
 		ucred, sysErr = syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
 	})
 	if sysErr != nil || ucred == nil || ucred.Pid <= 0 {
-		return "", ""
+		return 0
 	}
-	pid := ucred.Pid
+	return ucred.Pid
+}
+
+func (s *Service) getClientComm(conn net.Conn) string {
+	pid := getConnPID(conn)
+	if pid <= 0 {
+		return ""
+	}
+	now := time.Now()
+	s.peerCacheMu.Lock()
+	if cached, ok := s.peerCache[pid]; ok && now.Before(cached.expiresAt) {
+		s.peerCacheMu.Unlock()
+		return cached.comm
+	}
+	s.peerCacheMu.Unlock()
+
 	var clientComm string
 	if comm, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid)); err == nil {
 		clientComm = strings.TrimSpace(string(comm))
 	}
+
+	s.peerCacheMu.Lock()
+	if len(s.peerCache) >= maxPeerCacheEntries {
+		for k, v := range s.peerCache {
+			if !now.Before(v.expiresAt) {
+				delete(s.peerCache, k)
+			}
+		}
+		if len(s.peerCache) >= maxPeerCacheEntries {
+			s.peerCache = make(map[int32]cachedPeerInfo)
+		}
+	}
+	s.peerCache[pid] = cachedPeerInfo{
+		comm:      clientComm,
+		hasUser:   false,
+		expiresAt: now.Add(peerCacheTTL),
+	}
+	s.peerCacheMu.Unlock()
+	return clientComm
+}
+
+func (s *Service) getPeerInfo(conn net.Conn) (string, string) {
+	pid := getConnPID(conn)
+	if pid <= 0 {
+		return "", ""
+	}
+	now := time.Now()
+	var clientComm string
+	hasComm := false
+
+	s.peerCacheMu.Lock()
+	if cached, ok := s.peerCache[pid]; ok && now.Before(cached.expiresAt) {
+		if cached.hasUser {
+			s.peerCacheMu.Unlock()
+			return cached.peerInfo, cached.comm
+		}
+		clientComm = cached.comm
+		hasComm = true
+	}
+	s.peerCacheMu.Unlock()
+
+	s.peerLookups.Add(1)
+	if !hasComm {
+		if comm, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid)); err == nil {
+			clientComm = strings.TrimSpace(string(comm))
+		}
+	}
+
+	var peerInfo string
 	if userid := UserIDByPID(pid); userid != "" {
 		if clientComm != "" {
-			return fmt.Sprintf("user=%s(%s,pid=%d)", userid, clientComm, pid), clientComm
+			peerInfo = fmt.Sprintf("user=%s(%s,pid=%d)", userid, clientComm, pid)
+		} else {
+			peerInfo = fmt.Sprintf("user=%s(pid=%d)", userid, pid)
 		}
-		return fmt.Sprintf("user=%s(pid=%d)", userid, pid), clientComm
+	} else if clientComm != "" {
+		peerInfo = fmt.Sprintf("pid=%d(%s)", pid, clientComm)
+	} else {
+		peerInfo = fmt.Sprintf("pid=%d", pid)
 	}
-	if clientComm != "" {
-		return fmt.Sprintf("pid=%d(%s)", pid, clientComm), clientComm
+
+	s.peerCacheMu.Lock()
+	if len(s.peerCache) >= maxPeerCacheEntries {
+		for k, v := range s.peerCache {
+			if !now.Before(v.expiresAt) {
+				delete(s.peerCache, k)
+			}
+		}
+		if len(s.peerCache) >= maxPeerCacheEntries {
+			s.peerCache = make(map[int32]cachedPeerInfo)
+		}
 	}
-	return fmt.Sprintf("pid=%d", pid), clientComm
+	s.peerCache[pid] = cachedPeerInfo{
+		peerInfo:  peerInfo,
+		comm:      clientComm,
+		hasUser:   true,
+		expiresAt: now.Add(peerCacheTTL),
+	}
+	s.peerCacheMu.Unlock()
+	return peerInfo, clientComm
+}
+
+func (s *Service) resolvePeerInfo(conn net.Conn, explicitPeer string) string {
+	if explicitPeer != "" {
+		return explicitPeer
+	}
+	info, _ := s.getPeerInfo(conn)
+	return info
+}
+
+func (s *Service) formatPeerPrefix(source int32, conn net.Conn, explicitPeer string) string {
+	srcTag := SourceTag(source)
+	peer := s.resolvePeerInfo(conn, explicitPeer)
+	if peer != "" {
+		return fmt.Sprintf("[%s] %s ", srcTag, peer)
+	}
+	return fmt.Sprintf("[%s] ", srcTag)
 }
 
 func (s *Service) handleConn(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-	peerInfo, clientComm := s.getPeerInfo(conn)
 
 	br := bufio.NewReader(conn)
 	first, err := br.Peek(1)
@@ -818,7 +979,7 @@ func (s *Service) handleConn(conn net.Conn) {
 		s.handleControlConn(br, conn, conn)
 		return
 	}
-	s.handleBinaryConn(br, conn, peerInfo, clientComm)
+	s.handleBinaryConn(br, conn, conn)
 }
 
 func (s *Service) handleControlConn(r io.Reader, w io.Writer, conn net.Conn) {
@@ -1290,19 +1451,19 @@ func (s *Service) TopBoards(limit int, sortBy string) []BoardStats {
 	s.cacheMu.Unlock()
 
 	s.aidMu.Lock()
-	for k := range s.aidEntries {
+	for k, e := range s.aidEntries {
 		bs, ok := statsMap[k.direct]
 		if !ok {
 			bs = &BoardStats{
 				Direct: k.direct,
-				Board:  s.ResolveBoardName(k.direct, k.bid),
-				Bid:    k.bid,
+				Board:  s.ResolveBoardName(k.direct, e.bid),
+				Bid:    e.bid,
 			}
 			statsMap[k.direct] = bs
 		}
 		bs.CachedAID++
-		if bs.Bid == 0 && k.bid > 0 {
-			bs.Bid = k.bid
+		if bs.Bid == 0 && e.bid > 0 {
+			bs.Bid = e.bid
 		}
 	}
 	s.aidMu.Unlock()
@@ -1471,11 +1632,30 @@ func (s *Service) Invalidate(resolvedDirect string, bid int32) int {
 }
 
 func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid int32) int {
+	return s.invalidateInternal(nil, peerInfo, resolvedDirect, bid, true)
+}
+
+func (s *Service) invalidateInternal(conn net.Conn, peerInfo string, resolvedDirect string, bid int32, dropAIDTable bool) int {
 	flushed := 0
 	match := func(kDirect string, kBid int32) bool {
 		return (bid == 0 && resolvedDirect == "") ||
 			(resolvedDirect != "" && kDirect == resolvedDirect) ||
 			(bid > 0 && kBid == bid)
+	}
+
+	// Collect any additional direct paths associated with bid > 0 in s.boards
+	var targetDirects map[string]struct{}
+	if resolvedDirect != "" {
+		targetDirects = map[string]struct{}{resolvedDirect: {}}
+		if bid > 0 {
+			s.boardMu.RLock()
+			for dir, act := range s.boards {
+				if act.bid.Load() == bid {
+					targetDirects[dir] = struct{}{}
+				}
+			}
+			s.boardMu.RUnlock()
+		}
 	}
 
 	// Bump gen first: an in-flight scan either stores before this (and is
@@ -1491,46 +1671,107 @@ func (s *Service) InvalidateWithPeer(peerInfo string, resolvedDirect string, bid
 		}
 	}
 	for k := range s.aidInflight {
-		if match(k.direct, k.bid) {
+		if (bid == 0 && resolvedDirect == "") || (targetDirects != nil && hasDirectKey(targetDirects, k.direct)) || (bid > 0 && s.ResolveBoardBID(k.direct, 0) == bid) {
 			delete(s.aidInflight, k)
 		}
 	}
 	s.sfMu.Unlock()
 
 	s.cacheMu.Lock()
-	for k, e := range s.entries {
-		if match(k.direct, k.bid) {
-			s.removeEntryLocked(e)
-			flushed++
+	if targetDirects != nil && bid == 0 {
+		for dir := range targetDirects {
+			for _, e := range s.entriesByDirect[dir] {
+				s.removeEntryLocked(e)
+				flushed++
+			}
+		}
+	} else if targetDirects != nil {
+		for dir := range targetDirects {
+			for _, e := range s.entriesByDirect[dir] {
+				s.removeEntryLocked(e)
+				flushed++
+			}
+		}
+		for dir, m := range s.entriesByDirect {
+			if hasDirectKey(targetDirects, dir) {
+				continue
+			}
+			for k, e := range m {
+				if k.bid == bid {
+					s.removeEntryLocked(e)
+					flushed++
+				}
+			}
+		}
+	} else {
+		for k, e := range s.entries {
+			if match(k.direct, k.bid) {
+				s.removeEntryLocked(e)
+				flushed++
+			}
 		}
 	}
 	s.cacheMu.Unlock()
 
 	s.aidMu.Lock()
-	for k, e := range s.aidEntries {
-		if match(k.direct, k.bid) {
-			s.removeAIDEntryLocked(e)
-			flushed++
+	if targetDirects != nil && bid == 0 {
+		for dir := range targetDirects {
+			for _, e := range s.aidByDirect[dir] {
+				s.removeAIDEntryLocked(e)
+				flushed++
+			}
+		}
+	} else if targetDirects != nil {
+		for dir := range targetDirects {
+			for _, e := range s.aidByDirect[dir] {
+				s.removeAIDEntryLocked(e)
+				flushed++
+			}
+		}
+		for dir, m := range s.aidByDirect {
+			if hasDirectKey(targetDirects, dir) {
+				continue
+			}
+			for _, e := range m {
+				if e.bid == bid {
+					s.removeAIDEntryLocked(e)
+					flushed++
+				}
+			}
+		}
+	} else {
+		for k, e := range s.aidEntries {
+			if match(k.direct, e.bid) {
+				s.removeAIDEntryLocked(e)
+				flushed++
+			}
 		}
 	}
 	s.aidMu.Unlock()
 
-	s.aidTableMu.Lock()
-	for k, tbl := range s.aidTables {
-		if match(k, tbl.bid) {
-			delete(s.aidTables, k)
+	if dropAIDTable {
+		s.aidTableMu.Lock()
+		for k, tbl := range s.aidTables {
+			if match(k, tbl.bid) {
+				delete(s.aidTables, k)
+			}
 		}
+		s.aidTableMu.Unlock()
 	}
-	s.aidTableMu.Unlock()
 
 	if s.Verbose() >= 1 {
 		peerPrefix := ""
-		if peerInfo != "" {
-			peerPrefix = peerInfo + " "
+		if p := s.resolvePeerInfo(conn, peerInfo); p != "" {
+			peerPrefix = p + " "
 		}
 		log.Printf("[search.svc] [INVAL] Invalidate: %sboard=%s bid=%d flushed=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, flushed)
 	}
 	return flushed
+}
+
+func hasDirectKey(m map[string]struct{}, k string) bool {
+	_, ok := m[k]
+	return ok
 }
 
 func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAIDTable {
@@ -1665,6 +1906,12 @@ func (s *Service) GetOrCreateAIDTable(resolvedDirect string, bid int32) *BoardAI
 
 func (s *Service) removeEntryLocked(e *cacheEntry) {
 	delete(s.entries, e.key)
+	if bm := s.entriesByDirect[e.key.direct]; bm != nil {
+		delete(bm, e.key)
+		if len(bm) == 0 {
+			delete(s.entriesByDirect, e.key.direct)
+		}
+	}
 	if e.elem != nil {
 		s.lruList.Remove(e.elem)
 		e.elem = nil
@@ -1681,6 +1928,12 @@ func (s *Service) putEntryLocked(e *cacheEntry) {
 	}
 	e.elem = s.lruList.PushFront(e)
 	s.entries[e.key] = e
+	bm := s.entriesByDirect[e.key.direct]
+	if bm == nil {
+		bm = make(map[cacheKey]*cacheEntry)
+		s.entriesByDirect[e.key.direct] = bm
+	}
+	bm[e.key] = e
 	s.totalIndices += int64(len(e.indices))
 
 	for (len(s.entries) > s.maxEntries || s.totalIndices > s.maxIndices) && s.lruList.Len() > 1 {
@@ -1696,6 +1949,30 @@ func (s *Service) putEntryLocked(e *cacheEntry) {
 
 func (s *Service) removeAIDEntryLocked(e *aidCacheEntry) {
 	delete(s.aidEntries, e.key)
+	if bm := s.aidByDirect[e.key.direct]; bm != nil {
+		delete(bm, e.key)
+		if len(bm) == 0 {
+			delete(s.aidByDirect, e.key.direct)
+		}
+	}
+	if e.foundIdx > 0 {
+		rk := boardRecKey{direct: e.key.direct, recno: e.foundIdx}
+		if list := s.aidByRec[rk]; len(list) > 0 {
+			for i, item := range list {
+				if item == e {
+					list[i] = list[len(list)-1]
+					list[len(list)-1] = nil
+					list = list[:len(list)-1]
+					break
+				}
+			}
+			if len(list) == 0 {
+				delete(s.aidByRec, rk)
+			} else {
+				s.aidByRec[rk] = list
+			}
+		}
+	}
 	if e.elem != nil {
 		s.aidLRU.Remove(e.elem)
 		e.elem = nil
@@ -1708,6 +1985,16 @@ func (s *Service) putAIDEntryLocked(e *aidCacheEntry) {
 	}
 	e.elem = s.aidLRU.PushFront(e)
 	s.aidEntries[e.key] = e
+	bm := s.aidByDirect[e.key.direct]
+	if bm == nil {
+		bm = make(map[aidCacheKey]*aidCacheEntry)
+		s.aidByDirect[e.key.direct] = bm
+	}
+	bm[e.key] = e
+	if e.foundIdx > 0 {
+		rk := boardRecKey{direct: e.key.direct, recno: e.foundIdx}
+		s.aidByRec[rk] = append(s.aidByRec[rk], e)
+	}
 
 	for len(s.aidEntries) > s.maxAIDEntries && s.aidLRU.Len() > 1 {
 		back := s.aidLRU.Back()
@@ -1796,7 +2083,7 @@ func writeBinaryError(w io.Writer, status int32) {
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo, clientComm string) {
+func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, conn net.Conn) {
 	magicBytes, err := r.Peek(4)
 	if err != nil {
 		return
@@ -1804,60 +2091,61 @@ func (s *Service) handleBinaryConn(r *bufio.Reader, w io.Writer, peerInfo, clien
 	magic := binary.LittleEndian.Uint32(magicBytes)
 	switch magic {
 	case SearchSvcMagic:
-		s.handleBinarySearchConn(r, w, peerInfo, clientComm, false)
+		s.handleBinarySearchConn(r, w, conn, false)
 	case SearchSvcMagicV2:
-		s.handleBinarySearchConn(r, w, peerInfo, clientComm, true)
+		s.handleBinarySearchConn(r, w, conn, true)
 	case SearchAIDMagic:
-		s.handleBinaryAIDConn(r, w, peerInfo, clientComm, false)
+		s.handleBinaryAIDConn(r, w, conn, false)
 	case SearchAIDMagicV2:
-		s.handleBinaryAIDConn(r, w, peerInfo, clientComm, true)
+		s.handleBinaryAIDConn(r, w, conn, true)
 	case SearchInvalMagic:
-		s.handleBinaryInvalConn(r, w, peerInfo)
+		s.handleBinaryInvalConn(r, w, conn)
 	case SearchHintMagic:
-		s.handleBinaryHintConn(r, w, peerInfo)
+		s.handleBinaryHintConn(r, w, conn)
 	default:
 		writeBinaryError(w, -1)
 	}
 }
 
-func (s *Service) handleBinaryHintConn(r io.Reader, w io.Writer, peerInfo string) {
+func (s *Service) handleBinaryHintConn(r io.Reader, w io.Writer, conn net.Conn) {
 	var req binaryHintReqHeader
 	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
 		return
 	}
-	resolvedDirect := s.resolveDirectPath(req.Direct)
+	resolvedDirect := s.resolveHintDirect(req.Direct, req.Bid)
 
 	switch req.Type {
 	case HintTypePost:
-		s.handleHintPost(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Aidu, req.Fh)
+		s.handleHintPost(conn, "", resolvedDirect, req.Bid, req.Recno, req.Aidu, req.Fh)
 	case HintTypeComment:
-		s.handleHintComment(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Data)
+		s.handleHintComment(conn, "", resolvedDirect, req.Bid, req.Recno, req.Data)
 	case HintTypeDelete:
-		s.handleHintDelete(peerInfo, resolvedDirect, req.Bid, req.Recno, req.Aidu)
+		s.handleHintDelete(conn, "", resolvedDirect, req.Bid, req.Recno, req.Aidu)
 	}
 
 	status := int32(0)
 	_ = binary.Write(w, binary.LittleEndian, &status)
 }
 
-func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu uint64, fhBytes [128]byte) {
+func (s *Service) handleHintPost(conn net.Conn, peerInfo, direct string, bid, recno int32, aidu uint64, fhBytes [128]byte) {
 	if aidu == 0 {
 		fnBytes := bytes.TrimRight(fhBytes[:33], "\x00")
 		aidu = FNToAIDU(string(fnBytes))
 	}
-	if aidu == 0 || recno <= 0 {
+	if aidu == 0 || recno <= 0 || direct == "" {
 		return
 	}
+	resolvedBid := s.ResolveBoardBID(direct, bid)
 
 	key := aidCacheKey{
 		direct:       direct,
-		bid:          bid,
 		aiduRaw:      aidu & aiduRawMask,
 		requiredMode: 0,
 	}
 
 	entry := &aidCacheEntry{
 		key:         key,
+		bid:         resolvedBid,
 		foundIdx:    recno,
 		fhBytes:     fhBytes,
 		scannedRecs: recno,
@@ -1876,31 +2164,107 @@ func (s *Service) handleHintPost(peerInfo, direct string, bid, recno int32, aidu
 	}
 
 	if s.Verbose() >= 1 {
+		peerPrefix := ""
+		if p := s.resolvePeerInfo(conn, peerInfo); p != "" {
+			peerPrefix = p + " "
+		}
 		log.Printf("[search.svc] [HINT-POST] %sboard=%s bid=%d recno=%d aidu=%012x",
-			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, aidu)
+			peerPrefix, s.ResolveBoardName(direct, resolvedBid), resolvedBid, recno, aidu)
 	}
 }
 
-func (s *Service) handleHintComment(peerInfo, direct string, bid, recno int32, rating int32) {
-	s.aidMu.Lock()
-	for _, e := range s.aidEntries {
-		if e.foundIdx == recno && (e.key.bid == bid || bid == 0 || e.key.direct == direct) {
-			SetFileheaderRating(&e.fhBytes, int(rating))
+func matchRatingThreshold(rating, predRating int32) bool {
+	if predRating > 0 {
+		return rating >= predRating
+	}
+	return rating <= predRating
+}
+
+func inspectRatingPredicates(predsRaw []byte, predSize int, rating int32) (hasRating bool, allRating bool, allRatingMatch bool) {
+	if predSize <= 0 || len(predsRaw) < predSize {
+		return false, false, false
+	}
+	numPreds := len(predsRaw) / predSize
+	allRating = true
+	allRatingMatch = true
+	for i := 0; i < numPreds; i++ {
+		off := i * predSize
+		if off+PRED_OFF_RATING+4 > len(predsRaw) || off+PRED_OFF_MODE+4 > len(predsRaw) {
+			return false, false, false
 		}
+		mode := int(int32(binary.NativeEndian.Uint32(predsRaw[off+PRED_OFF_MODE:])))
+		if mode&RS_RATING != 0 {
+			hasRating = true
+			predRating := int32(binary.NativeEndian.Uint32(predsRaw[off+PRED_OFF_RATING:]))
+			if !matchRatingThreshold(rating, predRating) {
+				allRatingMatch = false
+			}
+		} else {
+			allRating = false
+		}
+	}
+	return hasRating, allRating, allRatingMatch
+}
+
+func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid, recno int32, rating int32) {
+	if direct == "" || recno <= 0 {
+		return
+	}
+
+	s.aidMu.Lock()
+	for _, e := range s.aidByRec[boardRecKey{direct: direct, recno: recno}] {
+		SetFileheaderRating(&e.fhBytes, int(rating))
 	}
 	s.aidMu.Unlock()
 
+	predSize := PredSize()
+	s.cacheMu.Lock()
+	if bm := s.entriesByDirect[direct]; len(bm) > 0 {
+		for _, e := range bm {
+			if recno > e.scannedRecs {
+				continue
+			}
+			hasRating, allRating, allRatingMatch := inspectRatingPredicates([]byte(e.key.predsHex), predSize, rating)
+			if !hasRating {
+				continue
+			}
+			idx := sort.Search(len(e.indices), func(i int) bool { return e.indices[i] >= recno })
+			present := idx < len(e.indices) && e.indices[idx] == recno
+			if !allRatingMatch && present {
+				newIndices := make([]int32, len(e.indices)-1)
+				copy(newIndices, e.indices[:idx])
+				copy(newIndices[idx:], e.indices[idx+1:])
+				e.indices = newIndices
+				s.totalIndices--
+				if s.totalIndices < 0 {
+					s.totalIndices = 0
+				}
+			} else if allRatingMatch && !present && allRating {
+				newIndices := make([]int32, len(e.indices)+1)
+				copy(newIndices, e.indices[:idx])
+				newIndices[idx] = recno
+				copy(newIndices[idx+1:], e.indices[idx:])
+				e.indices = newIndices
+				s.totalIndices++
+			}
+		}
+	}
+	s.cacheMu.Unlock()
+
 	if s.Verbose() >= 2 {
+		peerPrefix := ""
+		if p := s.resolvePeerInfo(conn, peerInfo); p != "" {
+			peerPrefix = p + " "
+		}
 		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d rating=%d",
-			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, rating)
+			peerPrefix, s.ResolveBoardName(direct, bid), bid, recno, rating)
 	}
 }
 
-func (s *Service) handleHintDelete(peerInfo, direct string, bid, recno int32, aidu uint64) {
-	if aidu != 0 {
+func (s *Service) handleHintDelete(conn net.Conn, peerInfo, direct string, bid, recno int32, aidu uint64) {
+	if aidu != 0 && direct != "" {
 		key := aidCacheKey{
 			direct:       direct,
-			bid:          bid,
 			aiduRaw:      aidu & aiduRawMask,
 			requiredMode: 0,
 		}
@@ -1911,31 +2275,36 @@ func (s *Service) handleHintDelete(peerInfo, direct string, bid, recno int32, ai
 		s.aidMu.Unlock()
 	}
 
+	dropTable := true
 	s.aidTableMu.Lock()
 	if tbl, ok := s.aidTables[direct]; ok {
-		if recno > 0 {
-			tbl.DeletePost(recno)
+		if recno > 0 && tbl.DeletePostChecked(recno, aidu) {
+			dropTable = false
 		} else {
 			delete(s.aidTables, direct)
 		}
 	}
 	s.aidTableMu.Unlock()
 
-	s.InvalidateWithPeer(peerInfo, direct, bid)
+	s.invalidateInternal(conn, peerInfo, direct, bid, dropTable)
 
 	if s.Verbose() >= 1 {
+		peerPrefix := ""
+		if p := s.resolvePeerInfo(conn, peerInfo); p != "" {
+			peerPrefix = p + " "
+		}
 		log.Printf("[search.svc] [HINT-DEL] %sboard=%s bid=%d recno=%d aidu=%012x",
-			peerInfo, s.ResolveBoardName(direct, bid), bid, recno, aidu)
+			peerPrefix, s.ResolveBoardName(direct, bid), bid, recno, aidu)
 	}
 }
 
-func (s *Service) handleBinaryInvalConn(r io.Reader, w io.Writer, peerInfo string) {
+func (s *Service) handleBinaryInvalConn(r io.Reader, w io.Writer, conn net.Conn) {
 	var req binaryInvalReqHeader
 	if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
 		return
 	}
 	resolvedDirect := s.resolveDirectPath(req.Direct)
-	s.InvalidateWithPeer(peerInfo, resolvedDirect, req.Bid)
+	s.invalidateInternal(conn, "", resolvedDirect, req.Bid, true)
 	s.invalidations.Add(1)
 	status := int32(0)
 	_ = binary.Write(w, binary.LittleEndian, &status)
@@ -1958,7 +2327,32 @@ func (s *Service) resolveDirectPath(raw [256]byte) string {
 	return directStr
 }
 
-func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo, clientComm string, isV2 bool) {
+func (s *Service) resolveHintDirect(raw [256]byte, bid int32) string {
+	nulIdx := bytes.IndexByte(raw[:], 0)
+	var directStr string
+	if nulIdx >= 0 {
+		directStr = string(raw[:nulIdx])
+	} else {
+		directStr = string(raw[:])
+	}
+	if directStr == "" && bid > 0 {
+		directStr = BoardName(bid)
+	}
+	if directStr == "" {
+		return ""
+	}
+	// Backward compatibility: older mbbsd passed currboard (e.g. "Gossiping")
+	// instead of "boards/G/Gossiping/.DIR" in HINT_TYPE_COMMENT.
+	if !strings.ContainsRune(directStr, '/') {
+		return filepath.Join(s.bbsHome, "boards", string(directStr[0]), directStr, ".DIR")
+	}
+	if !filepath.IsAbs(directStr) {
+		return filepath.Join(s.bbsHome, directStr)
+	}
+	return directStr
+}
+
+func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, conn net.Conn, isV2 bool) {
 	var bid int32
 	var aidu uint64
 	var requiredMode int32
@@ -1987,7 +2381,9 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo, client
 		directBytes = req.Direct
 	}
 
+	var clientComm string
 	if source == SrcUnknown {
+		clientComm = s.getClientComm(conn)
 		if clientComm == "boardd" {
 			source = SrcBoarddWeb
 		} else if clientComm == "mbbsd" {
@@ -2002,7 +2398,7 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo, client
 		return
 	}
 
-	foundIdx, fhBytes, err := s.QueryAIDWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, aidu, requiredMode)
+	foundIdx, fhBytes, err := s.queryAIDInternal(conn, "", clientComm, source, resolvedDirect, bid, aidu, requiredMode)
 	if err != nil {
 		resp := binaryAIDResp{Status: -2}
 		_ = binary.Write(w, binary.LittleEndian, &resp)
@@ -2017,7 +2413,7 @@ func (s *Service) handleBinaryAIDConn(r io.Reader, w io.Writer, peerInfo, client
 	_ = binary.Write(w, binary.LittleEndian, &resp)
 }
 
-func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, clientComm string, isV2 bool) {
+func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, conn net.Conn, isV2 bool) {
 	var bid int32
 	var offset int32
 	var limit int32
@@ -2049,7 +2445,9 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, cli
 		directBytes = hdr.Direct
 	}
 
+	var clientComm string
 	if source == SrcUnknown {
+		clientComm = s.getClientComm(conn)
 		if clientComm == "boardd" {
 			source = SrcBoarddWeb
 		} else if clientComm == "mbbsd" {
@@ -2082,12 +2480,12 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, cli
 	var err error
 
 	if source == SrcBoarddWeb && offset < 0 && limit > 0 {
-		window, total, err = s.QueryWebSearchTail(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds, offset, limit)
+		window, total, err = s.queryWebSearchTailInternal(conn, "", clientComm, source, resolvedDirect, bid, predsRaw, numPreds, offset, limit)
 		if err != nil {
 			if s.Verbose() > 0 {
 				peerPrefix := ""
-				if peerInfo != "" {
-					peerPrefix = peerInfo + " "
+				if p := s.resolvePeerInfo(conn, ""); p != "" {
+					peerPrefix = p + " "
 				}
 				log.Printf("[search.svc] QueryWebSearchTail error on %s%s: %v", peerPrefix, resolvedDirect, err)
 			}
@@ -2095,12 +2493,12 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, peerInfo, cli
 			return
 		}
 	} else {
-		indices, err := s.QueryIndicesWithPeer(peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
+		indices, err := s.queryIndicesInternal(conn, "", clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
 		if err != nil {
 			if s.Verbose() > 0 {
 				peerPrefix := ""
-				if peerInfo != "" {
-					peerPrefix = peerInfo + " "
+				if p := s.resolvePeerInfo(conn, ""); p != "" {
+					peerPrefix = p + " "
 				}
 				log.Printf("[search.svc] QueryIndices error on %s%s: %v", peerPrefix, resolvedDirect, err)
 			}
@@ -2164,6 +2562,10 @@ func (s *Service) QueryAID(resolvedDirect string, bid int32, aidu uint64, requir
 }
 
 func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
+	return s.queryAIDInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, aidu, requiredMode)
+}
+
+func (s *Service) queryAIDInternal(conn net.Conn, peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, aidu uint64, requiredMode int32) (int32, [128]byte, error) {
 	if source < 0 || source >= 6 {
 		source = SrcUnknown
 	}
@@ -2173,12 +2575,9 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 	act.aidBySrc[source].Add(1)
 	s.aidBySrc[source].Add(1)
 
-	srcTag := SourceTag(source)
-	peerPrefix := ""
-	if peerInfo != "" {
-		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
-	} else {
-		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
+	resolvedBid := act.bid.Load()
+	if resolvedBid == 0 && bid > 0 {
+		resolvedBid = bid
 	}
 
 	var emptyFH [128]byte
@@ -2205,11 +2604,10 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 	curTotalRecs := int32(st.Size() / fhSize)
 	curMtime := st.ModTime()
 	curInode := fileInode(st)
-	curSRExpire := GetBoardSRExpire(bid)
+	curSRExpire := GetBoardSRExpire(resolvedBid)
 
 	key := aidCacheKey{
 		direct:       resolvedDirect,
-		bid:          bid,
 		aiduRaw:      aidu & aiduRawMask,
 		requiredMode: requiredMode,
 	}
@@ -2219,7 +2617,10 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 
 	s.aidMu.Lock()
 	if entry, ok := s.aidEntries[key]; ok && s.isAIDEntryValidLocked(entry, curTotalRecs, curInode) {
-		if entry.scannedRecs == curTotalRecs {
+		if entry.bid == 0 && resolvedBid > 0 {
+			entry.bid = resolvedBid
+		}
+		if entry.scannedRecs == curTotalRecs || entry.foundIdx > 0 {
 			s.aidLRU.MoveToFront(entry.elem)
 			idx := entry.foundIdx
 			fh := entry.fhBytes
@@ -2234,20 +2635,19 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 				s.aidMissBySrc[source].Add(1)
 			}
 			if s.Verbose() >= 2 {
-				log.Printf("[search.svc] [AID-HIT] QueryAID: %sboard=%s bid=%d foundIdx=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, idx)
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
+				log.Printf("[search.svc] [AID-HIT] QueryAID: %sboard=%s bid=%d foundIdx=%d", peerPrefix, s.ResolveBoardName(resolvedDirect, resolvedBid), resolvedBid, idx)
 			}
 			return idx, fh, nil
 		}
-		if entry.foundIdx > 0 {
-			cachedHintIdx = entry.foundIdx
-		} else if entry.foundIdx == 0 && entry.scannedRecs > 0 && curTotalRecs > entry.scannedRecs {
+		if entry.foundIdx == 0 && entry.scannedRecs > 0 && curTotalRecs > entry.scannedRecs {
 			startRec = entry.scannedRecs + 1
 		}
 	}
 	s.aidMu.Unlock()
 
 	// Try in-memory BoardAIDTable (nanosecond lookup & negative resolution)
-	tbl := s.GetOrCreateAIDTable(resolvedDirect, bid)
+	tbl := s.GetOrCreateAIDTable(resolvedDirect, resolvedBid)
 	if tbl != nil {
 		if curTotalRecs > int32(len(tbl.aids)) {
 			tbl.SyncTail(resolvedDirect, curTotalRecs)
@@ -2256,7 +2656,7 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 			s.aidTableMu.Lock()
 			delete(s.aidTables, resolvedDirect)
 			s.aidTableMu.Unlock()
-			tbl = s.GetOrCreateAIDTable(resolvedDirect, bid)
+			tbl = s.GetOrCreateAIDTable(resolvedDirect, resolvedBid)
 		}
 
 		if tbl != nil {
@@ -2266,6 +2666,7 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 				gen := s.gen.Load()
 				newEntry := &aidCacheEntry{
 					key:         key,
+					bid:         resolvedBid,
 					foundIdx:    0,
 					fhBytes:     emptyFH,
 					scannedRecs: curTotalRecs,
@@ -2288,8 +2689,9 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 				s.aidMissBySrc[source].Add(1)
 				s.aidTableHits.Add(1)
 				if s.Verbose() >= 2 {
+					peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 					log.Printf("[search.svc] [AID-TABLE-NEG] QueryAID: %sboard=%s bid=%d aidu=%012x dur=%v",
-						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, dur)
+						peerPrefix, s.ResolveBoardName(resolvedDirect, resolvedBid), resolvedBid, aidu, dur)
 				}
 				return 0, emptyFH, nil
 			}
@@ -2301,6 +2703,7 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 					gen := s.gen.Load()
 					newEntry := &aidCacheEntry{
 						key:         key,
+						bid:         resolvedBid,
 						foundIdx:    foundRec,
 						fhBytes:     fhBytes,
 						scannedRecs: curTotalRecs,
@@ -2321,8 +2724,9 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 					act.aidMisses.Add(1)
 					s.aidTableHits.Add(1)
 					if s.Verbose() >= 2 {
+						peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 						log.Printf("[search.svc] [AID-TABLE-HIT] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
-							peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundRec, dur)
+							peerPrefix, s.ResolveBoardName(resolvedDirect, resolvedBid), resolvedBid, aidu, foundRec, dur)
 					}
 					return foundRec, fhBytes, nil
 				}
@@ -2372,8 +2776,8 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 		s.backtrackMu.Lock()
 		s.backtrack[resolvedDirect] = &BoardBacktrackInfo{
 			Direct:          resolvedDirect,
-			Board:           s.ResolveBoardName(resolvedDirect, bid),
-			Bid:             bid,
+			Board:           s.ResolveBoardName(resolvedDirect, resolvedBid),
+			Bid:             resolvedBid,
 			TotalRecs:       actualTotal,
 			MaxBacktrack:    computedBacktrack,
 			MaxTimeDiffSecs: computedTimeDiff,
@@ -2385,6 +2789,7 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 
 	newEntry := &aidCacheEntry{
 		key:         key,
+		bid:         resolvedBid,
 		foundIdx:    foundIdx,
 		fhBytes:     fhBytes,
 		scannedRecs: actualTotal,
@@ -2405,8 +2810,9 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 		s.aidHits.Add(1)
 		act.aidHits.Add(1)
 		if s.Verbose() >= 2 {
+			peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 			log.Printf("[search.svc] [AID-HINT-HIT] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
-				peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundIdx, dur)
+				peerPrefix, s.ResolveBoardName(resolvedDirect, resolvedBid), resolvedBid, aidu, foundIdx, dur)
 		}
 	} else {
 		s.aidMisses.Add(1)
@@ -2416,8 +2822,9 @@ func (s *Service) QueryAIDWithPeer(peerInfo, clientComm string, source int32, re
 			s.aidMissBySrc[source].Add(1)
 		}
 		if s.Verbose() >= 1 {
+			peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 			log.Printf("[search.svc] [AID-MISS] QueryAID: %sboard=%s bid=%d aidu=%012x foundIdx=%d dur=%v",
-				peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, aidu, foundIdx, dur)
+				peerPrefix, s.ResolveBoardName(resolvedDirect, resolvedBid), resolvedBid, aidu, foundIdx, dur)
 		}
 	}
 
@@ -2439,7 +2846,7 @@ func predsRequireSRExpire(predsRaw []byte, numPreds int) bool {
 	return false
 }
 
-func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalRecs int32, curInode uint64, requireSRExpire bool) bool {
+func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalRecs int32, curInode uint64, curMtime time.Time, requireSRExpire bool) bool {
 	if e == nil {
 		return false
 	}
@@ -2449,11 +2856,32 @@ func (s *Service) isEntryValidLocked(e *cacheEntry, curSRExpire int64, curTotalR
 	if curInode != 0 && e.dirInode != 0 && e.dirInode != curInode {
 		return false
 	}
-	if requireSRExpire && curSRExpire != 0 && e.srExpire != curSRExpire {
-		return false
+	if requireSRExpire {
+		srChanged := (e.srExpire != curSRExpire) ||
+			(curTotalRecs == e.scannedRecs && !e.dirMtime.Equal(curMtime))
+		if srChanged {
+			if s.srExpireGrace <= 0 || e.validatedAt.IsZero() || time.Since(e.validatedAt) > s.srExpireGrace {
+				return false
+			}
+		}
 	}
 	if curTotalRecs < e.scannedRecs {
 		return false
+	}
+	return true
+}
+
+func (s *Service) verifyEntryTailLocked(e *cacheEntry, resolvedDirect string, curMtime time.Time, curSRExpire int64, requireSRExpire bool) bool {
+	if e.dirMtime.Equal(curMtime) || e.tailVerifiedMtime.Equal(curMtime) {
+		return true
+	}
+	name, ok := ReadFilenameAt(resolvedDirect, e.scannedRecs)
+	if !ok || name != e.tailName {
+		return false
+	}
+	e.tailVerifiedMtime = curMtime
+	if !requireSRExpire {
+		e.dirMtime = curMtime
 	}
 	return true
 }
@@ -2463,6 +2891,10 @@ func (s *Service) QueryIndices(resolvedDirect string, bid int32, predsRaw []byte
 }
 
 func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
+	return s.queryIndicesInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds)
+}
+
+func (s *Service) queryIndicesInternal(conn net.Conn, peerInfo, clientComm string, source int32, resolvedDirect string, bid int32, predsRaw []byte, numPreds int) ([]int32, error) {
 	if source < 0 || source >= 6 {
 		source = SrcUnknown
 	}
@@ -2471,14 +2903,6 @@ func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32
 	act.searchQueries.Add(1)
 	act.searchBySrc[source].Add(1)
 	s.searchBySrc[source].Add(1)
-
-	srcTag := SourceTag(source)
-	peerPrefix := ""
-	if peerInfo != "" {
-		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
-	} else {
-		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
-	}
 
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
@@ -2501,27 +2925,20 @@ func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32
 	// Fast-path cache check
 	s.cacheMu.Lock()
 	if entry, ok := s.entries[key]; ok {
-		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) &&
-			entry.scannedRecs == curTotalRecs {
-			valid := entry.dirMtime.Equal(curMtime)
-			if !valid && !requireSRExpire {
-				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
-					entry.dirMtime = curMtime
-					valid = true
-				}
+		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, curMtime, requireSRExpire) &&
+			entry.scannedRecs == curTotalRecs &&
+			s.verifyEntryTailLocked(entry, resolvedDirect, curMtime, curSRExpire, requireSRExpire) {
+			s.lruList.MoveToFront(entry.elem)
+			res := entry.indices
+			s.cacheMu.Unlock()
+			s.hits.Add(1)
+			act.searchHits.Add(1)
+			if s.Verbose() >= 2 {
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
+				log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(res))
 			}
-			if valid {
-				s.lruList.MoveToFront(entry.elem)
-				res := entry.indices
-				s.cacheMu.Unlock()
-				s.hits.Add(1)
-				act.searchHits.Add(1)
-				if s.Verbose() >= 2 {
-					log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
-						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(res))
-				}
-				return res, nil
-			}
+			return res, nil
 		}
 	}
 	s.cacheMu.Unlock()
@@ -2547,11 +2964,13 @@ func (s *Service) QueryIndicesWithPeer(peerInfo, clientComm string, source int32
 		s.sfMu.Unlock()
 	}()
 
-	call.indices, call.err = s.computeAndCache(key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire, act, start, peerPrefix, source)
+	call.indices, call.err = s.computeAndCache(conn, peerInfo, key, resolvedDirect, bid, predsRaw, numPreds, curTotalRecs, curMtime, curInode, curSRExpire, act, start, source)
 	return call.indices, call.err
 }
 
 func (s *Service) computeAndCache(
+	conn net.Conn,
+	peerInfo string,
 	key cacheKey,
 	resolvedDirect string,
 	bid int32,
@@ -2563,7 +2982,6 @@ func (s *Service) computeAndCache(
 	curSRExpire int64,
 	act *boardActivity,
 	start time.Time,
-	peerPrefix string,
 	source int32,
 ) ([]int32, error) {
 	var baseEntryCopy *cacheEntry
@@ -2571,32 +2989,24 @@ func (s *Service) computeAndCache(
 	hasPrefix := false
 
 	predSize := PredSize()
-	predsStr := FormatPreds(predsRaw, numPreds)
 	gen := s.gen.Load()
 	requireSRExpire := predsRequireSRExpire(predsRaw, numPreds)
 
 	s.cacheMu.Lock()
-	if entry, ok := s.entries[key]; ok && s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) {
-		if entry.scannedRecs == curTotalRecs {
-			valid := entry.dirMtime.Equal(curMtime)
-			if !valid && !requireSRExpire {
-				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
-					entry.dirMtime = curMtime
-					valid = true
-				}
+	if entry, ok := s.entries[key]; ok && s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, curMtime, requireSRExpire) {
+		if entry.scannedRecs == curTotalRecs &&
+			s.verifyEntryTailLocked(entry, resolvedDirect, curMtime, curSRExpire, requireSRExpire) {
+			s.lruList.MoveToFront(entry.elem)
+			res := entry.indices
+			s.cacheMu.Unlock()
+			s.hits.Add(1)
+			act.searchHits.Add(1)
+			if s.Verbose() >= 2 {
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
+				log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(res))
 			}
-			if valid {
-				s.lruList.MoveToFront(entry.elem)
-				res := entry.indices
-				s.cacheMu.Unlock()
-				s.hits.Add(1)
-				act.searchHits.Add(1)
-				if s.Verbose() >= 2 {
-					log.Printf("[search.svc] [HIT] QueryIndices: %sboard=%s bid=%d preds=[%s] matches=%d",
-						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, len(res))
-				}
-				return res, nil
-			}
+			return res, nil
 		}
 		// Incremental tail reuse is safe when the prefix is unchanged.
 		if curTotalRecs > entry.scannedRecs && entry.scannedRecs > 0 {
@@ -2613,19 +3023,11 @@ func (s *Service) computeAndCache(
 		}
 		prefixRequireSRExpire := predsRequireSRExpire(predsRaw[:(numPreds-1)*predSize], numPreds-1)
 		if pEntry, ok := s.entries[prefixKey]; ok &&
-			s.isEntryValidLocked(pEntry, curSRExpire, curTotalRecs, curInode, prefixRequireSRExpire) &&
-			pEntry.scannedRecs == curTotalRecs {
-			valid := pEntry.dirMtime.Equal(curMtime)
-			if !valid && !prefixRequireSRExpire {
-				if name, ok := ReadFilenameAt(resolvedDirect, pEntry.scannedRecs); ok && name == pEntry.tailName {
-					pEntry.dirMtime = curMtime
-					valid = true
-				}
-			}
-			if valid {
-				prefixIndices = append([]int32(nil), pEntry.indices...)
-				hasPrefix = true
-			}
+			s.isEntryValidLocked(pEntry, curSRExpire, curTotalRecs, curInode, curMtime, prefixRequireSRExpire) &&
+			pEntry.scannedRecs == curTotalRecs &&
+			s.verifyEntryTailLocked(pEntry, resolvedDirect, curMtime, curSRExpire, prefixRequireSRExpire) {
+			prefixIndices = append([]int32(nil), pEntry.indices...)
+			hasPrefix = true
 		}
 	}
 	s.cacheMu.Unlock()
@@ -2641,14 +3043,26 @@ func (s *Service) computeAndCache(
 		tailIndices, actualTotal, err := ScanDirRange(resolvedDirect, predsRaw, numPreds, baseEntryCopy.scannedRecs+1)
 		if err == nil && actualTotal >= baseEntryCopy.scannedRecs {
 			combined := append(baseEntryCopy.indices, tailIndices...)
+			now := time.Now()
+			nextSRExpire := curSRExpire
+			nextValidatedAt := now
+			nextDirMtime := curMtime
+			if requireSRExpire && (baseEntryCopy.srExpire != curSRExpire || !baseEntryCopy.tailVerifiedMtime.Equal(baseEntryCopy.dirMtime)) {
+				// Preserve grace-window baseline so unhinted in-place edits still expire on schedule.
+				nextSRExpire = baseEntryCopy.srExpire
+				nextValidatedAt = baseEntryCopy.validatedAt
+				nextDirMtime = baseEntryCopy.dirMtime
+			}
 			newEntry := &cacheEntry{
-				key:         key,
-				indices:     combined,
-				scannedRecs: actualTotal,
-				dirMtime:    curMtime,
-				dirInode:    curInode,
-				srExpire:    curSRExpire,
-				createdAt:   baseEntryCopy.createdAt,
+				key:               key,
+				indices:           combined,
+				scannedRecs:       actualTotal,
+				dirMtime:          nextDirMtime,
+				tailVerifiedMtime: curMtime,
+				dirInode:          curInode,
+				srExpire:          nextSRExpire,
+				validatedAt:       nextValidatedAt,
+				createdAt:         baseEntryCopy.createdAt,
 			}
 			newEntry.tailName, _ = ReadFilenameAt(resolvedDirect, newEntry.scannedRecs)
 			s.cacheMu.Lock()
@@ -2661,8 +3075,9 @@ func (s *Service) computeAndCache(
 			act.searchHits.Add(1)
 			s.incrementalUpdates.Add(1)
 			if s.Verbose() >= 1 {
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 				log.Printf("[search.svc] [INCR] IncrementalUpdate: %sboard=%s bid=%d preds=[%s] scanned=%d..%d newMatches=%d total=%d dur=%v",
-					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, baseEntryCopy.scannedRecs+1, actualTotal, len(tailIndices), len(combined), dur)
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), baseEntryCopy.scannedRecs+1, actualTotal, len(tailIndices), len(combined), dur)
 			}
 			return combined, nil
 		}
@@ -2673,14 +3088,17 @@ func (s *Service) computeAndCache(
 		lastPredRaw := predsRaw[(numPreds-1)*predSize : numPreds*predSize]
 		filtered, err := FilterCandidates(resolvedDirect, lastPredRaw, 1, prefixIndices)
 		if err == nil {
+			now := time.Now()
 			newEntry := &cacheEntry{
-				key:         key,
-				indices:     filtered,
-				scannedRecs: curTotalRecs,
-				dirMtime:    curMtime,
-				dirInode:    curInode,
-				srExpire:    curSRExpire,
-				createdAt:   time.Now(),
+				key:               key,
+				indices:           filtered,
+				scannedRecs:       curTotalRecs,
+				dirMtime:          curMtime,
+				tailVerifiedMtime: curMtime,
+				dirInode:          curInode,
+				srExpire:          curSRExpire,
+				validatedAt:       now,
+				createdAt:         now,
 			}
 			newEntry.tailName, _ = ReadFilenameAt(resolvedDirect, newEntry.scannedRecs)
 			s.cacheMu.Lock()
@@ -2693,8 +3111,9 @@ func (s *Service) computeAndCache(
 			act.searchHits.Add(1)
 			s.chainedHits.Add(1)
 			if s.Verbose() >= 2 {
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 				log.Printf("[search.svc] [CHAIN] ChainedHit: %sboard=%s bid=%d preds=[%s] cands=%d filtered=%d dur=%v",
-					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, len(prefixIndices), len(filtered), dur)
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), len(prefixIndices), len(filtered), dur)
 			}
 			return filtered, nil
 		}
@@ -2705,14 +3124,17 @@ func (s *Service) computeAndCache(
 	if err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	newEntry := &cacheEntry{
-		key:         key,
-		indices:     indices,
-		scannedRecs: actualTotal,
-		dirMtime:    curMtime,
-		dirInode:    curInode,
-		srExpire:    curSRExpire,
-		createdAt:   time.Now(),
+		key:               key,
+		indices:           indices,
+		scannedRecs:       actualTotal,
+		dirMtime:          curMtime,
+		tailVerifiedMtime: curMtime,
+		dirInode:          curInode,
+		srExpire:          curSRExpire,
+		validatedAt:       now,
+		createdAt:         now,
 	}
 	newEntry.tailName, _ = ReadFilenameAt(resolvedDirect, newEntry.scannedRecs)
 	s.cacheMu.Lock()
@@ -2727,8 +3149,9 @@ func (s *Service) computeAndCache(
 	s.misses.Add(1)
 	s.searchMissBySrc[source].Add(1)
 	if s.Verbose() >= 1 {
+		peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 		log.Printf("[search.svc] [MISS] ScanDirRange: %sboard=%s bid=%d preds=[%s] total=%d matches=%d dur=%v",
-			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, predsStr, actualTotal, len(indices), dur)
+			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), actualTotal, len(indices), dur)
 	}
 	return indices, nil
 }
@@ -2739,19 +3162,21 @@ func (s *Service) QueryWebSearchTail(
 	predsRaw []byte, numPreds int,
 	offset, limit int32,
 ) ([]int32, int32, error) {
+	return s.queryWebSearchTailInternal(nil, peerInfo, clientComm, source, resolvedDirect, bid, predsRaw, numPreds, offset, limit)
+}
+
+func (s *Service) queryWebSearchTailInternal(
+	conn net.Conn,
+	peerInfo, clientComm string, source int32,
+	resolvedDirect string, bid int32,
+	predsRaw []byte, numPreds int,
+	offset, limit int32,
+) ([]int32, int32, error) {
 	start := time.Now()
 	act := s.getBoardActivity(resolvedDirect, bid)
 	act.searchQueries.Add(1)
 	act.searchBySrc[source].Add(1)
 	s.searchBySrc[source].Add(1)
-
-	srcTag := SourceTag(source)
-	peerPrefix := ""
-	if peerInfo != "" {
-		peerPrefix = fmt.Sprintf("[%s] %s ", srcTag, peerInfo)
-	} else {
-		peerPrefix = fmt.Sprintf("[%s] ", srcTag)
-	}
 
 	st, err := os.Stat(resolvedDirect)
 	if err != nil {
@@ -2784,41 +3209,34 @@ func (s *Service) QueryWebSearchTail(
 	// Step 1: Check fast-path cache in s.entries (from prior full scan)
 	s.cacheMu.Lock()
 	if entry, ok := s.entries[key]; ok {
-		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, requireSRExpire) &&
-			entry.scannedRecs == curTotalRecs {
-			valid := entry.dirMtime.Equal(curMtime)
-			if !valid && !requireSRExpire {
-				if name, ok := ReadFilenameAt(resolvedDirect, entry.scannedRecs); ok && name == entry.tailName {
-					entry.dirMtime = curMtime
-					valid = true
-				}
-			}
-			if valid {
-				s.lruList.MoveToFront(entry.elem)
-				indices := entry.indices
-				s.cacheMu.Unlock()
-				s.hits.Add(1)
-				act.searchHits.Add(1)
+		if s.isEntryValidLocked(entry, curSRExpire, curTotalRecs, curInode, curMtime, requireSRExpire) &&
+			entry.scannedRecs == curTotalRecs &&
+			s.verifyEntryTailLocked(entry, resolvedDirect, curMtime, curSRExpire, requireSRExpire) {
+			s.lruList.MoveToFront(entry.elem)
+			indices := entry.indices
+			s.cacheMu.Unlock()
+			s.hits.Add(1)
+			act.searchHits.Add(1)
 
-				total := int32(len(indices))
-				wOffset := offset + total
-				if wOffset < 0 {
-					wOffset = 0
-				}
-				var window []int32
-				if wOffset < total && limit > 0 {
-					end := wOffset + limit
-					if end > total {
-						end = total
-					}
-					window = indices[wOffset:end]
-				}
-				if s.Verbose() >= 2 {
-					log.Printf("[search.svc] [HIT] QueryWebSearchTail: %sboard=%s bid=%d preds=[%s] matches=%d",
-						peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), total)
-				}
-				return window, total, nil
+			total := int32(len(indices))
+			wOffset := offset + total
+			if wOffset < 0 {
+				wOffset = 0
 			}
+			var window []int32
+			if wOffset < total && limit > 0 {
+				end := wOffset + limit
+				if end > total {
+					end = total
+				}
+				window = indices[wOffset:end]
+			}
+			if s.Verbose() >= 2 {
+				peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
+				log.Printf("[search.svc] [HIT] QueryWebSearchTail: %sboard=%s bid=%d preds=[%s] matches=%d",
+					peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), total)
+			}
+			return window, total, nil
 		}
 	}
 	s.cacheMu.Unlock()
@@ -2888,6 +3306,7 @@ func (s *Service) QueryWebSearchTail(
 	}
 
 	if s.Verbose() >= 1 {
+		peerPrefix := s.formatPeerPrefix(source, conn, peerInfo)
 		log.Printf("[search.svc] [WEB-TAIL] QueryWebSearchTail: %sboard=%s bid=%d preds=[%s] offset=%d limit=%d matches=%d total=%d stoppedEarly=%v dur=%v",
 			peerPrefix, s.ResolveBoardName(resolvedDirect, bid), bid, FormatPreds(predsRaw, numPreds), offset, limit, len(window), totalMatches, stoppedEarly, dur)
 	}

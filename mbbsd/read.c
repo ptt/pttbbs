@@ -216,7 +216,39 @@ typedef struct {
     int             sr_pred_count;
     int             sr_mode_mask;
     bool            sr_just_selected;
+    bool            sr_force_reload;
+    off_t           sr_last_dir_size;
+    time4_t         sr_last_srexpire;
 } read_ctx_t;
+
+static void
+sr_record_sync_state(read_ctx_t *cx, const char *direct, int bid)
+{
+    cx->sr_last_dir_size = direct ? dashs(direct) : (off_t)-1;
+    boardheader_t *bp = (bid > 0) ? getbcache(bid) : NULL;
+    cx->sr_last_srexpire = bp ? bp->SRexpire : 0;
+    cx->sr_force_reload = false;
+}
+
+static bool
+sr_needs_reload_rpc(const read_ctx_t *cx, const char *direct, int bid)
+{
+    if (cx->is_newdirect || cx->sr_force_reload ||
+        cx->view.remap_count <= 0 || cx->sr_last_dir_size < 0)
+        return true;
+    off_t cur_size = direct ? dashs(direct) : (off_t)-1;
+    if (cur_size != cx->sr_last_dir_size)
+        return true;
+    if (cx->sr_mode_mask & (RS_RATING | RS_MARK | RS_SOLVED | RS_MONEY)) {
+        if (bid <= 0)
+            return true;
+        boardheader_t *bp = getbcache(bid);
+        time4_t cur_sr = bp ? bp->SRexpire : 0;
+        if (cur_sr != cx->sr_last_srexpire)
+            return true;
+    }
+    return false;
+}
 
 static void
 read_view_ensure_window(read_ctx_t *cx, int start_disp_ln, int count)
@@ -759,12 +791,24 @@ select_read(read_ctx_t *cx, int sr_mode)
         assert(cx->view.remap != NULL);
     }
 
-    cx->sr_preds[cx->sr_pred_count] = predicate;
+    bool is_dup_pred = false;
+    for (int i = 0; i < cx->sr_pred_count; i++) {
+        if (memcmp(&cx->sr_preds[i], &predicate, sizeof(predicate)) == 0) {
+            is_dup_pred = true;
+            break;
+        }
+    }
+    int next_pred_count = cx->sr_pred_count;
+    if (!is_dup_pred) {
+        cx->sr_preds[cx->sr_pred_count] = predicate;
+        next_pred_count = cx->sr_pred_count + 1;
+    }
+
     int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
     int total = 0;
     int loaded = search_predicates_window(currdirect, bid,
-                                          cx->sr_preds, cx->sr_pred_count + 1,
-                                          0, SEARCH_SVC_WINDOW_SIZE,
+                                          cx->sr_preds, next_pred_count,
+                                          -SEARCH_SVC_WINDOW_SIZE, SEARCH_SVC_WINDOW_SIZE,
                                           cx->view.remap, &total,
                                           SEARCH_SRC_MBBSD_SR);
     if (loaded < 0) {
@@ -776,26 +820,14 @@ select_read(read_ctx_t *cx, int sr_mode)
         return READ_REDRAW;
     }
 
-    cx->sr_pred_count++;
+    cx->sr_pred_count = next_pred_count;
     cx->sr_mode_mask |= sr_mode;
     cx->view.total = total;
     cx->view.bottom_line = total;
     cx->view.bottom_count = 0;
-    cx->view.remap_base = 0;
+    cx->view.remap_base = (total > loaded) ? (total - loaded) : 0;
     cx->view.remap_count = loaded;
-
-    if (total > SEARCH_SVC_WINDOW_SIZE) {
-        int tail_base = total - SEARCH_SVC_WINDOW_SIZE;
-        int tail_loaded = search_predicates_window(currdirect, bid,
-                                                   cx->sr_preds, cx->sr_pred_count,
-                                                   tail_base, SEARCH_SVC_WINDOW_SIZE,
-                                                   cx->view.remap, &total,
-                                                   SEARCH_SRC_MBBSD_SR);
-        if (tail_loaded > 0) {
-            cx->view.remap_base = tail_base;
-            cx->view.remap_count = tail_loaded;
-        }
-    }
+    sr_record_sync_state(cx, currdirect, bid);
 
     currmode |= MODE_SELECT;
     currsrmode |= sr_mode;
@@ -855,12 +887,14 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
             read_view_ensure_window(cx, recbase, count);
             rv = 0;
             int stale = 0;
+            int structural_stale = 0;
             if (attempt == 0) {
                 for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
                     int real_recno = read_view_real_recno(cx, recbase + i);
                     if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
                         !buf[rv].filename[0]) {
                         stale = 1;
+                        structural_stale = 1;
                         break;
                     }
                     for (int p = 0; p < cx->sr_pred_count; p++) {
@@ -877,9 +911,13 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
                 }
                 if (!stale)
                     break;
-                /* Mismatch detected on attempt 0! Notify search.svc that its cached index remap is wrong */
-                int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
-                search_svc_invalidate(direct, bid);
+                /* Only flush search.svc when records physically disappeared/shrank;
+                 * in-place edits (soft-delete corpses, rating/mark changes) are handled
+                 * by reloading the window and Attempt 1 backfill without nuking board caches. */
+                if (structural_stale) {
+                    int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+                    search_svc_invalidate(direct, bid);
+                }
                 cx->view.remap_count = 0;
             } else {
                 /* Attempt 1: Graceful Skip & Backfill across mismatches or stale indices.
@@ -1018,6 +1056,7 @@ read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
         ctx->reload = true;
         break;
     case DIRCHANGED:
+        cx->sr_force_reload = true;
         ctx->reload = true;
         break;
     case FULLUPDATE:
@@ -1644,8 +1683,9 @@ read_loader(PSB_CTX *psbctx)
 
     if (psbctx->cmd.reload) {
         if (currmode & MODE_SELECT) {
-            if (!cx->sr_just_selected && cx->sr_pred_count > 0) {
-                int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+            int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+            if (!cx->sr_just_selected && cx->sr_pred_count > 0 &&
+                sr_needs_reload_rpc(cx, currdirect, bid)) {
                 int total = 0;
                 int loaded = search_predicates_window(currdirect, bid,
                                                       cx->sr_preds, cx->sr_pred_count,
@@ -1655,7 +1695,10 @@ read_loader(PSB_CTX *psbctx)
                 if (loaded >= 0) {
                     cx->view.total = total;
                     cx->view.remap_count = loaded;
+                    sr_record_sync_state(cx, currdirect, bid);
                 }
+            } else {
+                cx->sr_force_reload = false;
             }
             cx->sr_just_selected = false;
             cx->bottom_line = last_line = cx->view.total;

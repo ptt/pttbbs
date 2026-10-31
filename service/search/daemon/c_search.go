@@ -32,13 +32,32 @@ static void c_format_preds(const void *buf, int n, char *out, int outlen) {
     out[0] = '\0';
     for (int i = 0; i < n; i++) {
         char item[128];
-        const char *mstr = "kw";
-        if (p[i].mode & RS_AUTHOR) mstr = "author";
-        else if (p[i].mode & RS_TITLE) mstr = "title";
-        else if (p[i].mode & RS_RATING) mstr = "rating";
-        else if (p[i].mode & RS_MARK) mstr = "mark";
-        else if (p[i].mode & RS_MONEY) mstr = "money";
-        snprintf(item, sizeof(item), "%s%s=%s", (i > 0 ? " " : ""), mstr, p[i].keyword);
+        const char *sep = (i > 0) ? " " : "";
+        if (p[i].mode & RS_MARK) {
+            snprintf(item, sizeof(item), "%smark", sep);
+        } else if (p[i].mode & RS_SOLVED) {
+            snprintf(item, sizeof(item), "%ssolved", sep);
+        } else if (p[i].mode & RS_NEWPOST) {
+            snprintf(item, sizeof(item), "%snewpost", sep);
+        } else if (p[i].mode & RS_KEYWORD_EXCLUDE) {
+            snprintf(item, sizeof(item), "%s!kw=%s", sep, p[i].keyword);
+        } else if (p[i].mode & RS_AUTHOR) {
+            snprintf(item, sizeof(item), "%sauthor=%s", sep, p[i].keyword);
+        } else if (p[i].mode & RS_TITLE) {
+            snprintf(item, sizeof(item), "%stitle=%s", sep, p[i].keyword);
+        } else if (p[i].mode & RS_RATING) {
+            if (p[i].keyword[0] != '\0')
+                snprintf(item, sizeof(item), "%srating=%s", sep, p[i].keyword);
+            else
+                snprintf(item, sizeof(item), "%srating=%d", sep, (int)p[i].rating);
+        } else if (p[i].mode & RS_MONEY) {
+            if (p[i].keyword[0] != '\0')
+                snprintf(item, sizeof(item), "%smoney=%s", sep, p[i].keyword);
+            else
+                snprintf(item, sizeof(item), "%smoney=%d", sep, (int)p[i].money);
+        } else {
+            snprintf(item, sizeof(item), "%skw=%s", sep, p[i].keyword);
+        }
         strlcat(out, item, outlen);
     }
 }
@@ -55,6 +74,8 @@ enum {
     FHDR_OFF_RATING    = offsetof(fileheader_t, rating),
     FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
     FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
+    PRED_OFF_MODE      = offsetof(fileheader_predicate_t, mode),
+    PRED_OFF_RATING    = offsetof(fileheader_predicate_t, rating),
 };
 
 static int64_t c_get_board_srexpire(int bid) {
@@ -375,6 +396,8 @@ static const char *c_get_userid_by_pid(pid_t pid) {
     if (SHM == NULL || pid <= 0)
         return "";
     for (int i = 0; i < USHM_SIZE; i++) {
+        if (SHM->utmp_user.session_user[i] <= 0)
+            continue;
         if (SHM->uinfo[i].pid == pid && SHM->uinfo[i].userid[0] != '\0')
             return SHM->uinfo[i].userid;
     }
@@ -830,6 +853,8 @@ const (
 	FHDR_OFF_RATING    = int(C.FHDR_OFF_RATING)
 	FHDR_OFF_OWNER     = int(C.FHDR_OFF_OWNER)
 	FHDR_OFF_FILEMODE  = int(C.FHDR_OFF_FILEMODE)
+	PRED_OFF_MODE      = int(C.PRED_OFF_MODE)
+	PRED_OFF_RATING    = int(C.PRED_OFF_RATING)
 )
 
 func PredSize() int {

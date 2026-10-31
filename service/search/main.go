@@ -197,6 +197,7 @@ func main() {
 	aidTableEvictLead := flag.Int64("aid-table-evict-lead", daemon.DefaultAIDTableEvictLead, "Query lead required to replace an expired cached board (default: 100)")
 	webSearchMaxDepth := flag.Int("web-search-max-depth", daemon.DefaultWebSearchMaxDepth, "Max records to scan backwards for web tail search (default: 0=unlimited)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
+	srExpireGrace := flag.Duration("srexpire-grace", daemon.DefaultSRExpireGrace, "Grace window before SRexpire changes trigger full rescan (default: 5s, 0=immediate)")
 	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
@@ -260,8 +261,8 @@ func main() {
 	}
 	fmt.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d\n",
 		runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, web-search-max-depth=%d\n",
-		*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *webSearchMaxDepth)
+	fmt.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, srexpire-grace=%v, web-search-max-depth=%d\n",
+		*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *srExpireGrace, *webSearchMaxDepth)
 
 	if *debugMode {
 		log.SetOutput(os.Stdout)
@@ -277,8 +278,8 @@ func main() {
 				}
 				log.Printf("[search.svc] Performance settings: GOMAXPROCS=%d, MaxThreads=%d, GCPercent=%d, Verbose=%d",
 					runtime.GOMAXPROCS(0), *maxThreads, *gcPercent, int(verbose))
-				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, web-search-max-depth=%d",
-					*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *webSearchMaxDepth)
+				log.Printf("[search.svc] Cache limits: max-entries=%d, max-indices=%d, max-aid-entries=%d, max-aid-tables=%d, cache-ttl=%v, srexpire-grace=%v, web-search-max-depth=%d",
+					*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL, *srExpireGrace, *webSearchMaxDepth)
 			}
 		}
 	}
@@ -291,6 +292,7 @@ func main() {
 	service.SetCacheLimits(*maxEntries, *maxIndices, *maxAIDEntries, *maxAIDTables, *cacheTTL)
 	service.SetAIDTablePolicy(*aidTableMinReqs, *aidTableTTL, *aidTableEvictLead)
 	service.SetWebSearchPolicy(*webSearchMaxDepth)
+	service.SetSRExpireGrace(*srExpireGrace)
 
 	if *pprofAddr != "" {
 		go func() {

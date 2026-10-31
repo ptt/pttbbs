@@ -15,6 +15,7 @@ max-indices: 67108864
 max_aid_entries = 131072
 max_aid_tables = 64
 aid_table_min_reqs = 100
+srexpire_grace = 5s
 gcpercent 100
 pprof-addr = 127.0.0.1:6060
 
@@ -39,6 +40,7 @@ pprof-addr = 127.0.0.1:6060
 		"-max-aid-entries=131072",
 		"-max-aid-tables=64",
 		"-aid-table-min-reqs=100",
+		"-srexpire-grace=5s",
 		"-gcpercent=100",
 		"-pprof-addr=127.0.0.1:6060",
 		"-v",

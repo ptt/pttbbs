@@ -127,7 +127,7 @@ modify_dir_lite(
 	    syncnow();
 	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 	}
-	search_svc_hint_comment(currboard, currbid, ent, fhdr.rating);
+	search_svc_hint_comment(direct, currbid, ent, fhdr.rating);
     }
     return 0;
 }

@@ -751,10 +751,33 @@ func TestFileheaderModeHelpers(t *testing.T) {
 }
 
 func TestFormatPreds(t *testing.T) {
-	predBytes := MakePredBytes(RS_RATING, "10", 10, 0)
-	formatted := FormatPreds(predBytes, 1)
-	if formatted != "rating=10" {
-		t.Errorf("expected 'rating=10', got %q", formatted)
+	cases := []struct {
+		preds [][]byte
+		want  string
+	}{
+		{[][]byte{MakePredBytes(RS_RATING, "10", 10, 0)}, "rating=10"},
+		{[][]byte{MakePredBytes(RS_RATING, "", -5, 0)}, "rating=-5"},
+		{[][]byte{MakePredBytes(RS_NEWPOST, "", 0, 0)}, "newpost"},
+		{[][]byte{MakePredBytes(RS_MARK, "", 0, 0)}, "mark"},
+		{[][]byte{MakePredBytes(RS_SOLVED, "", 0, 0)}, "solved"},
+		{[][]byte{MakePredBytes(RS_KEYWORD_EXCLUDE, "廢文", 0, 0)}, "!kw=廢文"},
+		{[][]byte{MakePredBytes(RS_MONEY, "", 0, 100)}, "money=100"},
+		{
+			[][]byte{
+				MakePredBytes(RS_NEWPOST, "", 0, 0),
+				MakePredBytes(RS_RATING, "10", 10, 0),
+			},
+			"newpost rating=10",
+		},
+	}
+	for _, tc := range cases {
+		var raw []byte
+		for _, p := range tc.preds {
+			raw = append(raw, p...)
+		}
+		if got := FormatPreds(raw, len(tc.preds)); got != tc.want {
+			t.Errorf("FormatPreds() = %q, want %q", got, tc.want)
+		}
 	}
 }
 
@@ -1263,5 +1286,275 @@ func TestQueryWebSearchTailEarlyExit(t *testing.T) {
 	}
 	if stats.CachedEntries != 0 {
 		t.Errorf("expected 0 cached entries from web tail searches, got %d", stats.CachedEntries)
+	}
+}
+
+func overwriteFileheaderRatingOnDisk(t *testing.T, dirPath string, recno int, rating int16) {
+	t.Helper()
+	f, err := os.OpenFile(dirPath, os.O_RDWR, 0644)
+	if err != nil {
+		t.Fatalf("open %s: %v", dirPath, err)
+	}
+	defer f.Close()
+	off := int64(recno-1)*int64(FileheaderSize()) + int64(FHDR_OFF_RATING)
+	var buf [2]byte
+	binary.NativeEndian.PutUint16(buf[:], uint16(rating))
+	if _, err := f.WriteAt(buf[:], off); err != nil {
+		t.Fatalf("write rating at rec %d: %v", recno, err)
+	}
+	st, err := f.Stat()
+	if err != nil {
+		t.Fatalf("stat %s: %v", dirPath, err)
+	}
+	future := st.ModTime().Add(time.Second)
+	if err := os.Chtimes(dirPath, future, future); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+}
+
+func sendHintCommentClient(t *testing.T, socketPath string, bid int32, direct string, recno int32, rating int32) {
+	t.Helper()
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial %s: %v", socketPath, err)
+	}
+	defer conn.Close()
+	var req binaryHintReqHeader
+	req.Magic = SearchHintMagic
+	req.Type = HintTypeComment
+	req.Bid = bid
+	req.Recno = recno
+	req.Data = rating
+	copy(req.Direct[:], direct)
+	if err := binary.Write(conn, binary.LittleEndian, &req); err != nil {
+		t.Fatalf("write hint: %v", err)
+	}
+	var status int32
+	if err := binary.Read(conn, binary.LittleEndian, &status); err != nil || status != 0 {
+		t.Fatalf("hint status: err=%v status=%d", err, status)
+	}
+}
+
+func TestLazyPeerInfoAndPIDCache(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "T", "TestBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "T", "TestBoard", ".DIR")
+	if err := AppendTestFileheader(dirPath, "M.1700000001.A.001", "user1", "post 1", 0, 10, 100); err != nil {
+		t.Fatalf("append: %v", err)
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	svc.SetVerbose(0)
+	go func() { _ = svc.Start() }()
+	defer svc.Stop()
+	for i := 0; i < 50 && !IsSocketOccupied(socketPath); i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	pred := MakePredBytes(RS_KEYWORD, "post", 0, 0)
+	aidu1 := (uint64(1700000001) << 12) | 0x001
+
+	// At verbose=0, V2 queries and hints must NEVER call getPeerInfo / UserIDByPID.
+	for i := 0; i < 10; i++ {
+		_, _ = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{pred}, 0, 20, SrcMbbsdSR)
+		_ = queryAIDClientWithSource(t, socketPath, 0, relDir, aidu1, 0, SrcMbbsdHash)
+		sendHintCommentClient(t, socketPath, 1, relDir, 1, 11)
+	}
+	if got := svc.peerLookups.Load(); got != 0 {
+		t.Fatalf("expected 0 peerLookups when verbose=0, got %d", got)
+	}
+
+	// At verbose=2, repeated requests from the same client PID must hit peerCache (1 lookup total).
+	svc.SetVerbose(2)
+	for i := 0; i < 10; i++ {
+		_, _ = queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{pred}, 0, 20, SrcMbbsdSR)
+		_ = queryAIDClientWithSource(t, socketPath, 0, relDir, aidu1, 0, SrcMbbsdHash)
+	}
+	if got := svc.peerLookups.Load(); got != 1 {
+		t.Fatalf("expected 1 cached peerLookup at verbose=2, got %d", got)
+	}
+}
+
+func TestSRExpireGraceAndHintCommentRating(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "T", "TestBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "T", "TestBoard", ".DIR")
+
+	if err := AppendTestFileheader(dirPath, "M.1700000001.A.001", "u1", "post 1", 0, 10, 0); err != nil {
+		t.Fatalf("append 1: %v", err)
+	}
+	if err := AppendTestFileheader(dirPath, "M.1700000002.A.002", "u2", "post 2", 0, 5, 0); err != nil {
+		t.Fatalf("append 2: %v", err)
+	}
+	if err := AppendTestFileheader(dirPath, "M.1700000003.A.003", "u3", "post 3", 0, 20, 0); err != nil {
+		t.Fatalf("append 3: %v", err)
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	svc.SetSRExpireGrace(250 * time.Millisecond)
+	go func() { _ = svc.Start() }()
+	defer svc.Stop()
+	for i := 0; i < 50 && !IsSocketOccupied(socketPath); i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Cache AID entry for recno 2 (with bid=0, like aids.c)
+	aidu2 := (uint64(1700000002) << 12) | 0x002
+	if idx := queryAIDClientWithSource(t, socketPath, 0, relDir, aidu2, 0, SrcMbbsdHash); idx != 2 {
+		t.Fatalf("expected idx=2, got %d", idx)
+	}
+
+	// Initial RS_RATING >= 10 scan -> [1, 3]
+	predR10 := MakePredBytes(RS_RATING, "10", 10, 0)
+	indices, total := queryBinaryClientWithSource(t, socketPath, 99999, relDir, [][]byte{predR10}, 0, 50, SrcMbbsdSR)
+	if total != 2 || !reflect.DeepEqual(indices, []int32{1, 3}) {
+		t.Fatalf("initial rating=10 mismatch: total=%d indices=%v", total, indices)
+	}
+	missesAfterInit := svc.misses.Load()
+
+	// Push recno 2 from 5 -> 12 using LEGACY currboard ("TestBoard") hint, and boo recno 1 from 10 -> 8 using relDir.
+	overwriteFileheaderRatingOnDisk(t, dirPath, 2, 12)
+	sendHintCommentClient(t, socketPath, 99999, "TestBoard", 2, 12)
+	overwriteFileheaderRatingOnDisk(t, dirPath, 1, 8)
+	sendHintCommentClient(t, socketPath, 99999, relDir, 1, 8)
+
+	// Within grace window: must be a CACHE HIT (0 new full scans) AND already reflect [2, 3]!
+	indices2, total2 := queryBinaryClientWithSource(t, socketPath, 99999, relDir, [][]byte{predR10}, 0, 50, SrcMbbsdSR)
+	if total2 != 2 || !reflect.DeepEqual(indices2, []int32{2, 3}) {
+		t.Fatalf("in-place rating update mismatch: total=%d indices=%v, want [2 3]", total2, indices2)
+	}
+	if svc.misses.Load() != missesAfterInit {
+		t.Fatalf("expected 0 misses during srexpire-grace, got %d -> %d", missesAfterInit, svc.misses.Load())
+	}
+
+	// Verify O(1) aidByRec updated cached fhBytes rating for recno 2 (even though AID was cached with bid=0 and hint passed "TestBoard").
+	_, fh2, err := svc.QueryAID(dirPath, 0, aidu2, 0)
+	if err != nil || FileheaderRating(&fh2) != 12 {
+		t.Fatalf("expected cached AID fh rating=12, got %d (err=%v)", FileheaderRating(&fh2), err)
+	}
+
+	// Now simulate an UNHINTED rating reset on recno 3 (20 -> 0 on disk, e.g. BM reset):
+	overwriteFileheaderRatingOnDisk(t, dirPath, 3, 0)
+
+	// Wait for srexpire-grace (250ms) to expire -> next query must rescan and return [2]!
+	time.Sleep(300 * time.Millisecond)
+	indices3, total3 := queryBinaryClientWithSource(t, socketPath, 99999, relDir, [][]byte{predR10}, 0, 50, SrcMbbsdSR)
+	if total3 != 1 || !reflect.DeepEqual(indices3, []int32{2}) {
+		t.Fatalf("after grace expiry expected [2], got total=%d indices=%v", total3, indices3)
+	}
+	if svc.misses.Load() != missesAfterInit+1 {
+		t.Fatalf("expected 1 rescan miss after grace expiry, got %d -> %d", missesAfterInit, svc.misses.Load())
+	}
+}
+
+func TestPositiveAIDCacheSurvivesNewPostsAndSharesAcrossBid(t *testing.T) {
+	tmpDir := t.TempDir()
+	socketPath := filepath.Join(tmpDir, "run", "search.svc.sock")
+	boardDir := filepath.Join(tmpDir, "boards", "C", "C_Chat")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	relDir := filepath.Join("boards", "C", "C_Chat", ".DIR")
+
+	if err := AppendTestFileheader(dirPath, "M.1700000001.A.001", "u1", "post 1", 0, 0, 0); err != nil {
+		t.Fatalf("append 1: %v", err)
+	}
+	if err := AppendTestFileheader(dirPath, "M.1700000002.A.002", "u2", "post 2", 0, 0, 0); err != nil {
+		t.Fatalf("append 2: %v", err)
+	}
+
+	svc := newService(tmpDir, socketPath, nil)
+	go func() { _ = svc.Start() }()
+	defer svc.Stop()
+	for i := 0; i < 50 && !IsSocketOccupied(socketPath); i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	aidu1 := (uint64(1700000001) << 12) | 0x001
+	// 1. Query with bid=0 (mbbsd aids.c): 1 miss
+	if idx := queryAIDClientWithSource(t, socketPath, 0, relDir, aidu1, 0, SrcMbbsdHash); idx != 1 {
+		t.Fatalf("expected 1, got %d", idx)
+	}
+	missesAfterFirst := svc.aidMisses.Load()
+	hitsAfterFirst := svc.aidHits.Load()
+
+	// 2. Query same AID with bid=13120 (boardd): must share aidCacheKey and HIT!
+	if idx := queryAIDClientWithSource(t, socketPath, 13120, relDir, aidu1, 0, SrcBoarddWeb); idx != 1 {
+		t.Fatalf("expected 1, got %d", idx)
+	}
+	if svc.aidHits.Load() != hitsAfterFirst+1 || svc.aidMisses.Load() != missesAfterFirst {
+		t.Fatalf("expected cross-bid cache hit: hits=%d misses=%d", svc.aidHits.Load(), svc.aidMisses.Load())
+	}
+
+	// 3. Cache a negative lookup for a future AID M.1700000009.A.009
+	aiduFuture := (uint64(1700000009) << 12) | 0x009
+	if idx := queryAIDClientWithSource(t, socketPath, 0, relDir, aiduFuture, 0, SrcMbbsdHash); idx != 0 {
+		t.Fatalf("expected 0 for future AID, got %d", idx)
+	}
+
+	// 4. Append new posts to .DIR (including M.1700000009.A.009 at recno 4!)
+	if err := AppendTestFileheader(dirPath, "M.1700000005.A.005", "u3", "post 3", 0, 0, 0); err != nil {
+		t.Fatalf("append 3: %v", err)
+	}
+	if err := AppendTestFileheader(dirPath, "M.1700000009.A.009", "u4", "post 4", 0, 0, 0); err != nil {
+		t.Fatalf("append 4: %v", err)
+	}
+
+	// Positive entry aidu1 MUST hit fast-path immediately without re-verifying disk!
+	hitsBeforeGrow := svc.aidHits.Load()
+	missesBeforeGrow := svc.aidMisses.Load()
+	if idx := queryAIDClientWithSource(t, socketPath, 0, relDir, aidu1, 0, SrcMbbsdHash); idx != 1 {
+		t.Fatalf("expected 1 after .DIR grew, got %d", idx)
+	}
+	if svc.aidHits.Load() != hitsBeforeGrow+1 || svc.aidMisses.Load() != missesBeforeGrow {
+		t.Fatalf("expected fast-path hit for positive AID after .DIR grew: hits=%d misses=%d", svc.aidHits.Load(), svc.aidMisses.Load())
+	}
+
+	// Negative entry aiduFuture MUST NOT serve stale 0; it must tail-scan [3..4] and find recno 4!
+	if idx := queryAIDClientWithSource(t, socketPath, 0, relDir, aiduFuture, 0, SrcMbbsdHash); idx != 4 {
+		t.Fatalf("expected tail-scan to find aiduFuture at 4, got %d", idx)
+	}
+
+	// 5. Verify HintDelete updates BoardAIDTable in-place without dropping it!
+	act := svc.getBoardActivity(dirPath, 13120)
+	act.aidQueries.Store(500)
+	if tbl := svc.GetOrCreateAIDTable(dirPath, 13120); tbl == nil {
+		t.Fatalf("expected BoardAIDTable to be created")
+	}
+	delConn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial delConn: %v", err)
+	}
+	var delHint binaryHintReqHeader
+	delHint.Magic = SearchHintMagic
+	delHint.Type = HintTypeDelete
+	delHint.Bid = 13120
+	delHint.Recno = 4
+	delHint.Aidu = aiduFuture
+	copy(delHint.Direct[:], relDir)
+	_ = binary.Write(delConn, binary.LittleEndian, &delHint)
+	var delStatus int32
+	_ = binary.Read(delConn, binary.LittleEndian, &delStatus)
+	delConn.Close()
+
+	svc.aidTableMu.Lock()
+	tblAfterDel := svc.aidTables[dirPath]
+	svc.aidTableMu.Unlock()
+	if tblAfterDel == nil {
+		t.Fatalf("expected BoardAIDTable to remain cached in-memory after single-post HintDelete")
+	}
+	if got := tblAfterDel.SearchAID(aiduFuture); got != 0 {
+		t.Fatalf("expected deleted AID to be absent from BoardAIDTable, got %d", got)
 	}
 }
