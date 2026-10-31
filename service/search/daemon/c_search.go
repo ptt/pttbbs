@@ -833,6 +833,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"sync"
 	"unsafe"
 )
 
@@ -1067,6 +1068,44 @@ func SearchAIDInDir(directPath string, aidu uint64, requiredMode int, startRec i
 	return int32(found), fhBuf, int32(totalRecs), int32(cComputedBacktrack), int64(cComputedTimeDiff), nil
 }
 
+const (
+	defaultScanScratchCap = 64 * 1024
+	maxPooledScanCap      = 2 * 1024 * 1024 // 2M int32s (~8MB); avoids retaining freak oversized buffers
+)
+
+var scanScratchPool = sync.Pool{
+	New: func() any {
+		b := make([]int32, 0, defaultScanScratchCap)
+		return &b
+	},
+}
+
+func acquireScanScratch(n int) (*[]int32, []int32) {
+	if n < 1 {
+		n = 1
+	}
+	bp := scanScratchPool.Get().(*[]int32)
+	buf := *bp
+	if cap(buf) < n {
+		allocCap := n
+		if allocCap < defaultScanScratchCap {
+			allocCap = defaultScanScratchCap
+		}
+		buf = make([]int32, n, allocCap)
+	} else {
+		buf = buf[:n]
+	}
+	return bp, buf
+}
+
+func releaseScanScratch(bp *[]int32, buf []int32) {
+	if bp == nil || cap(buf) > maxPooledScanCap {
+		return
+	}
+	*bp = buf[:0]
+	scanScratchPool.Put(bp)
+}
+
 // ScanDirRange scans directPath starting from 1-based startRec through the end of the file,
 // returning all matching 1-based record indices and the total record count in the file.
 func ScanDirRange(directPath string, predsRaw []byte, numPreds int, startRec int32) ([]int32, int32, error) {
@@ -1088,7 +1127,8 @@ func ScanDirRange(directPath string, predsRaw []byte, numPreds int, startRec int
 	if maxOut < 1 {
 		maxOut = 1
 	}
-	outBuf := make([]int32, maxOut)
+	bp, outBuf := acquireScanScratch(maxOut)
+	defer releaseScanScratch(bp, outBuf)
 
 	cPath := C.CString(directPath)
 	defer C.free(unsafe.Pointer(cPath))
@@ -1123,7 +1163,8 @@ func FilterCandidates(directPath string, predsRaw []byte, numPreds int, candidat
 		return nil, fmt.Errorf("invalid predicates buffer")
 	}
 
-	outBuf := make([]int32, len(candidates))
+	bp, outBuf := acquireScanScratch(len(candidates))
+	defer releaseScanScratch(bp, outBuf)
 	cPath := C.CString(directPath)
 	defer C.free(unsafe.Pointer(cPath))
 
@@ -1154,7 +1195,8 @@ func ScanDirReverse(directPath string, predsRaw []byte, numPreds int, maxMatches
 	if maxOut < 1024 {
 		maxOut = 1024
 	}
-	outBuf := make([]int32, maxOut)
+	bp, outBuf := acquireScanScratch(maxOut)
+	defer releaseScanScratch(bp, outBuf)
 	cPath := C.CString(directPath)
 	defer C.free(unsafe.Pointer(cPath))
 

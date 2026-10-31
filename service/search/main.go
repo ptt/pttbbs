@@ -197,7 +197,7 @@ func main() {
 	aidTableEvictLead := flag.Int64("aid-table-evict-lead", daemon.DefaultAIDTableEvictLead, "Query lead required to replace an expired cached board (default: 100)")
 	webSearchMaxDepth := flag.Int("web-search-max-depth", daemon.DefaultWebSearchMaxDepth, "Max records to scan backwards for web tail search (default: 0=unlimited)")
 	cacheTTL := flag.Duration("cache-ttl", daemon.DefaultCacheTTL, "Cache entry TTL (default: 1h)")
-	srExpireGrace := flag.Duration("srexpire-grace", daemon.DefaultSRExpireGrace, "Grace window before SRexpire changes trigger full rescan (default: 5s, 0=immediate)")
+	srExpireGrace := flag.Duration("srexpire-grace", daemon.DefaultSRExpireGrace, "Grace window before SRexpire changes trigger full rescan (default: 15s, 0=immediate)")
 	pprofAddr := flag.String("pprof-addr", "", "Listen address for HTTP pprof server (e.g. 127.0.0.1:6060)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")

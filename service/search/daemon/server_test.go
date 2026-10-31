@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1558,3 +1559,56 @@ func TestPositiveAIDCacheSurvivesNewPostsAndSharesAcrossBid(t *testing.T) {
 		t.Fatalf("expected deleted AID to be absent from BoardAIDTable, got %d", got)
 	}
 }
+
+func TestScanScratchPoolConcurrencyAndDefaultGrace(t *testing.T) {
+	if DefaultSRExpireGrace != 15*time.Second {
+		t.Fatalf("expected DefaultSRExpireGrace=15s, got %v", DefaultSRExpireGrace)
+	}
+
+	tmpHome := t.TempDir()
+	socketPath := filepath.Join(tmpHome, "search.sock")
+	svc := newService(tmpHome, socketPath, nil)
+	if svc.srExpireGrace != 15*time.Second {
+		t.Fatalf("expected newService default srExpireGrace=15s, got %v", svc.srExpireGrace)
+	}
+
+	dirPath := filepath.Join(tmpHome, "boards", "G", "Gossiping", ".DIR")
+	if err := os.MkdirAll(filepath.Dir(dirPath), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	for i := 1; i <= 200; i++ {
+		if err := AppendTestFileheader(dirPath, fmt.Sprintf("M.170000%04d.A.123", i), "tester", fmt.Sprintf("[閒聊] Post %d", i), 0, i%25, 0); err != nil {
+			t.Fatalf("append %d: %v", i, err)
+		}
+	}
+
+	predRating10 := MakePredBytes(RS_RATING, "10", 10, 0)
+	predRating20 := MakePredBytes(RS_RATING, "20", 20, 0)
+
+	var wg sync.WaitGroup
+	for g := 0; g < 16; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for iter := 0; iter < 20; iter++ {
+				res10, total, err := ScanDirRange(dirPath, predRating10, 1, 1)
+				if err != nil || total != 200 || len(res10) != 120 {
+					t.Errorf("ScanDirRange unexpected: len=%d total=%d err=%v", len(res10), total, err)
+					return
+				}
+				filtered, err := FilterCandidates(dirPath, predRating20, 1, res10)
+				if err != nil || len(filtered) != 40 {
+					t.Errorf("FilterCandidates unexpected: len=%d err=%v", len(filtered), err)
+					return
+				}
+				rev, revTotal, _, err := ScanDirReverse(dirPath, predRating20, 1, 15, 0)
+				if err != nil || revTotal != 40 || len(rev) < 15 || rev[0] <= rev[1] {
+					t.Errorf("ScanDirReverse unexpected: len=%d revTotal=%d err=%v", len(rev), revTotal, err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
+

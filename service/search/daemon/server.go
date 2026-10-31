@@ -44,7 +44,7 @@ const (
 	DefaultAIDTableEvictLead int64         = 100 // Query lead required to replace an expired cached board
 	DefaultWebSearchMaxDepth int           = 0   // Max records to scan backwards for web tail search (0 = unlimited)
 	DefaultCacheTTL                        = 1 * time.Hour
-	DefaultSRExpireGrace     time.Duration = 5 * time.Second
+	DefaultSRExpireGrace     time.Duration = 15 * time.Second
 	peerCacheTTL             time.Duration = 5 * time.Second
 	maxPeerCacheEntries      int           = 4096
 	aiduRawMask              uint64        = 0x00001FFFFFFFFFFF
@@ -966,11 +966,30 @@ func (s *Service) formatPeerPrefix(source int32, conn net.Conn, explicitPeer str
 	return fmt.Sprintf("[%s] ", srcTag)
 }
 
+var connReaderPool = sync.Pool{
+	New: func() any {
+		return bufio.NewReaderSize(nil, 4096)
+	},
+}
+
+var searchRespBufPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, 0, 8192)
+		return &b
+	},
+}
+
 func (s *Service) handleConn(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-	br := bufio.NewReader(conn)
+	br := connReaderPool.Get().(*bufio.Reader)
+	br.Reset(conn)
+	defer func() {
+		br.Reset(nil)
+		connReaderPool.Put(br)
+	}()
+
 	first, err := br.Peek(1)
 	if err != nil {
 		return
@@ -2527,18 +2546,29 @@ func (s *Service) handleBinarySearchConn(r io.Reader, w io.Writer, conn net.Conn
 		}
 	}
 
-	resp := binaryRespHeader{
-		Status: 0,
-		Total:  total,
-		Count:  int32(len(window)),
+	need := 12 + len(window)*4
+	bp := searchRespBufPool.Get().(*[]byte)
+	outBuf := *bp
+	if cap(outBuf) < need {
+		allocCap := need
+		if allocCap < 8192 {
+			allocCap = 8192
+		}
+		outBuf = make([]byte, need, allocCap)
+	} else {
+		outBuf = outBuf[:need]
 	}
-	var outBuf bytes.Buffer
-	outBuf.Grow(12 + len(window)*4)
-	_ = binary.Write(&outBuf, binary.LittleEndian, &resp)
-	if len(window) > 0 {
-		_ = binary.Write(&outBuf, binary.LittleEndian, window)
+	binary.LittleEndian.PutUint32(outBuf[0:4], 0)
+	binary.LittleEndian.PutUint32(outBuf[4:8], uint32(total))
+	binary.LittleEndian.PutUint32(outBuf[8:12], uint32(len(window)))
+	for i, idx := range window {
+		binary.LittleEndian.PutUint32(outBuf[12+i*4:], uint32(idx))
 	}
-	_, _ = w.Write(outBuf.Bytes())
+	_, _ = w.Write(outBuf)
+	if cap(outBuf) <= 1024*1024 {
+		*bp = outBuf[:0]
+		searchRespBufPool.Put(bp)
+	}
 }
 
 func (s *Service) isAIDEntryValidLocked(e *aidCacheEntry, curTotalRecs int32, curInode uint64) bool {
